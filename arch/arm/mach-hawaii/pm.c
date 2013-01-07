@@ -23,6 +23,7 @@
 #include <linux/debugfs.h>
 #include <linux/clk.h>
 #include <linux/io.h>
+#include <plat/kona_pm_dbg.h>
 #include <plat/kona_pm.h>
 #include <plat/pwr_mgr.h>
 #include <plat/pi_mgr.h>
@@ -428,6 +429,9 @@ int enter_idle_state(struct kona_idle_state *state, u32 ctrl_params)
 	if (clk_dbg_dsm)
 		if (ctrl_params & CTRL_PARAMS_ENTER_SUSPEND)
 			__clock_print_act_clks();
+	if (smp_processor_id() == 0)
+		log_pm(num_dbg_args[DBG_MSG_PM_LPM_ENTER],
+			DBG_MSG_PM_LPM_ENTER, pi->id, state->state);
 
 	switch (state->state) {
 	case CSTATE_SUSPEND_RETN:
@@ -438,6 +442,10 @@ int enter_idle_state(struct kona_idle_state *state, u32 ctrl_params)
 		enter_dormant_state(ctrl_params);
 		break;
 	}
+
+	if (smp_processor_id() == 0)
+		log_pm(num_dbg_args[DBG_MSG_PM_LPM_EXIT],
+			DBG_MSG_PM_LPM_EXIT, pi->id, state->state);
 
 	pm_dbg(LOG_SW2_STATUS,
 		"SW2 state: %d\n", pwr_mgr_is_event_active(SOFTWARE_2_EVENT));

@@ -210,6 +210,14 @@ config KONA_PMU_BSC_USE_PMGR_HW_SEM
 	  bus while SW driver can still generate the same. To sync
 	  between the two use HW semaphore.
 
+config PM_LOG_TO_UNCACHED_MEM
+       bool "Enable power manager event logging to uncached memory"
+       default y
+       help
+        Say Y if you want to enable logging of power events to uncached memory.
+        Logging will happen in a 32K circular buffer in the RAM. Useful to
+        retrieve information from RAM-dumps in case of errors or failures.
+
 config KONA_AVS
        bool "Enable Kona AVS driver"
        help

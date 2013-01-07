@@ -22,6 +22,7 @@
 #include <linux/clkdev.h>
 #include <linux/ctype.h>
 
+#include <plat/kona_pm_dbg.h>
 #include <plat/clock.h>
 #include <plat/pi_mgr.h>
 #include <plat/pwr_mgr.h>
@@ -583,6 +584,10 @@ static int pi_set_ccu_freq(struct pi *pi, u32 policy, u32 opp_inx)
 			__func__, pi->pi_ccu[inx]->name,
 			policy, opp_info->freq_id);
 
+			log_pm(num_dbg_args[DBG_MSG_PI_SET_FREQ_OPP],
+				DBG_MSG_PI_SET_FREQ_OPP, pi->id,
+					opp_inx, opp_info->freq_id);
+
 			res = ccu_set_freq_policy(to_ccu_clk
 				(pi->pi_ccu[inx]),
 				CCU_POLICY(policy), opp_info);
@@ -612,6 +617,8 @@ int pi_set_policy(const struct pi *pi, u32 policy, int type)
 
 		pi_change_notify(pi->id, PI_NOTIFY_POLICY_CHANGE,
 				 old_pol, policy, PI_PRECHANGE);
+		log_pm(num_dbg_args[DBG_MSG_PI_SET_FREQ_POLICY],
+			DBG_MSG_PI_SET_FREQ_POLICY, pi->id, old_pol, policy);
 		res =
 		    pwr_mgr_event_set_pi_policy(pi->qos_sw_event_id, pi->id,
 						&cfg);
@@ -635,7 +642,8 @@ int pi_set_policy(const struct pi *pi, u32 policy, int type)
 
 		pi_change_notify(pi->id, PI_NOTIFY_POLICY_CHANGE,
 				 old_pol, policy, PI_PRECHANGE);
-
+		log_pm(num_dbg_args[DBG_MSG_PI_SET_FREQ_POLICY],
+			DBG_MSG_PI_SET_FREQ_POLICY, pi->id, old_pol, policy);
 		res =
 		    pwr_mgr_event_set_pi_policy(pi->dfs_sw_event_id, pi->id,
 						&cfg);
@@ -766,6 +774,8 @@ static int pi_def_enable(struct pi *pi, int enable)
 	pi_dbg(pi->id, PI_LOG_EN_DIS,
 	       "%s: pi_name:%s, enable:%d usageCount:%d\n",
 	       __func__, pi->name, enable, pi->usg_cnt);
+	log_pm(num_dbg_args[DBG_MSG_PI_ENABLE],
+		DBG_MSG_PI_ENABLE, pi->id, enable);
 	if (enable) {
 		policy = pi->pi_state[PI_MGR_ACTIVE_STATE_INX].state_policy;
 		pi_dbg(pi->id, PI_LOG_EN_DIS,

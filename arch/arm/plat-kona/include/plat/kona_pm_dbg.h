@@ -13,8 +13,6 @@
 
 #include <linux/suspend.h>
 
-#define PM_LOG_BUF_SIZE         SZ_32K
-
 /* Types of snapshot parms */
 enum {
 	SNAPSHOT_SIMPLE,
@@ -22,6 +20,7 @@ enum {
 	SNAPSHOT_AHB_REG,
 	SNAPSHOT_USER_DEFINED,
 };
+
 
 struct snapshot {
 	void *data;		/* data for snapshot handler        */
@@ -88,12 +87,29 @@ extern void instrument_idle_entry(void);
 extern void instrument_idle_exit(void);
 
 #ifdef CONFIG_PM_LOG_TO_UNCACHED_MEM
-int print_pm_log(void);
-int log_pm(const char *fmt, ...);
-#else
-#define print_pm_log()
-#define log_pm(fmt, ...) \
-	printk(KERN_INFO fmt, ##__VA_ARGS__)
+#define PM_LOG_BUF_SIZE         SZ_32K
+
+/* Debug messages for each event */
+enum {					/* additional parameters: */
+	DBG_MSG_PI_ENABLE,		/* pi_id, enable */
+	DBG_MSG_PI_SET_FREQ_POLICY,	/* pi_id, old_pol, new_pol */
+	DBG_MSG_PI_SET_FREQ_OPP,	/* pi_id, opp_inx, freq_id */
+	DBG_MSG_PM_LPM_ENTER,		/* pi_id, state */
+	DBG_MSG_PM_LPM_EXIT,		/* pi_id, state */
+	DBG_MSG_MAX,
+};
+
+static const int num_dbg_args[DBG_MSG_MAX] = {3, 4, 4, 3, 3};
+#ifdef CONFIG_DEBUG_FS
+int __init uncached_logging_debug_init(void);
+#endif
+#define RET_FAILURE -1
+#define	RET_SUCCESS 0
+#define	RET_PARTIAL_SUCCESS 1
+#define MAX_PM_LOGGER_ARGS 4
 #endif /* CONFIG_PM_LOG_TO_UNCACHED_MEM  */
+
+int log_pm(int num, ...);
+int print_pm_log(void);
 
 #endif /* _KONA_PM_DBG_H_ */

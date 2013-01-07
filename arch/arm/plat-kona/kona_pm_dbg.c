@@ -17,18 +17,45 @@
 #include <plat/kona_pm_dbg.h>
 #include <linux/dma-mapping.h>
 
+#ifdef CONFIG_DEBUG_FS
+#include <linux/debugfs.h>
+#endif
+
 #ifdef CONFIG_PM_LOG_TO_UNCACHED_MEM
 /* PM log buf pointer */
 static char *pm_log_buf;
 static dma_addr_t pm_log_buf_p;
-#define PM_LOG_LINE_SIZE	1024
-#define PM_LOG_BUF_MASK (PM_LOG_BUF_SIZE - 1)
-#define PM_LOG_BUF(idx) (pm_log_buf[(idx) & PM_LOG_BUF_MASK])
-static int new_text_line = 1;
+#define ENABLE		1
+#define DISABLE		0
+#define PM_LOG_BUF_MASK		(PM_LOG_BUF_SIZE - 1)
+#define PM_LOG_BUF(idx)		(pm_log_buf[(idx) & PM_LOG_BUF_MASK])
+#define CIRC_INC(idx)		(idx = ((idx+1) & PM_LOG_BUF_MASK))
+#define CIRC_CHK(idx1, idx2)	(idx2 == ((idx1+1) & PM_LOG_BUF_MASK))
+#define emit_pm_char(c)		(PM_LOG_BUF(log_end) = (c) ,\
+				(CIRC_INC(log_end) == log_start) ? \
+				CIRC_INC(log_start) : ++logged_chars)
+
+const char *pi_name_list[6] = {
+	"arm_core",
+	"mm",
+	"hub",
+	"aon",
+	"sub_sys",
+	"modem"
+};
+
+int dbg_en[DBG_MSG_MAX] = {
+	ENABLE,		/* DBG_MSG_PI_ENABLE */
+	ENABLE,		/* DBG_MSG_PI_SET_FREQ_POLICY */
+	ENABLE,		/* DBG_MSG_PI_SET_FREQ_OPP */
+	ENABLE,		/* DBG_MSG_PM_LPM_ENTER */
+	ENABLE		/* DBG_MSG_PM_LPM_EXIT */
+};
+
+int timestamp_en = ENABLE;
 static unsigned log_start;
 static unsigned log_end;
 static unsigned logged_chars;
-static char pm_log_line[PM_LOG_LINE_SIZE];
 static DEFINE_SPINLOCK(pm_logbuf_lock);
 #endif
 
@@ -71,6 +98,7 @@ module_param_named(debug, debug, debug, S_IRUGO | S_IWUSR | S_IWGRP);
 /* List of supported commands */
 enum {
 	CMD_SNAPSHOT = 's',
+	CMD_PRINT_LOG = 'p',
 	CMD_SHOW_HELP = 'h',
 };
 
@@ -163,6 +191,9 @@ static int param_set_debug(const char *val, const struct kernel_param *kp)
 	switch (val[0]) {
 	case CMD_SNAPSHOT:
 		cmd_snapshot(p);
+		break;
+	case CMD_PRINT_LOG:
+		print_pm_log();
 		break;
 	case CMD_SHOW_HELP: /* Fall-through */
 	default:
@@ -277,7 +308,6 @@ static u32 handle_simple_parm(struct snapshot *s)
 
 	return ret;
 }
-
 /* Returns the current use count of the clk */
 static u32 handle_clk_parm(struct snapshot *s)
 {
@@ -426,99 +456,210 @@ EXPORT_SYMBOL(snapshot_table_register);
 /*****************************************************************************
  *                     PM logging to uncached memory                         *
  *****************************************************************************/
+
+
 int print_pm_log(void)
 {
-	u32 len;
-
-	pr_info(" ******** pm log buf ******** size:%d start:%d end:%d\n",
-			PM_LOG_BUF_SIZE, log_start, log_end);
-
-	for (len = log_start; len < PM_LOG_BUF_SIZE && pm_log_buf[len]; len++)
-		printk(KERN_CONT "%c", pm_log_buf[len]);
-	if (log_end < log_start) {
-		for (len = 0; len <= log_end && pm_log_buf[len]; len++)
-			printk(KERN_CONT "%c", pm_log_buf[len]);
-	}
-
-	pr_info("\n");
-
-	return 0;
-
-}
-EXPORT_SYMBOL(print_pm_log);
-
-static int emit_pm_char(char c)
-{
-	PM_LOG_BUF(log_end) = c;
-	log_end++;
-	if (log_end == PM_LOG_BUF_SIZE) {
-		log_end = 0;
-		log_start++;
-	}
-	if (log_end == log_start)
-		log_start++;
-	if (log_start == PM_LOG_BUF_SIZE)
-		log_start = 0;
-
-	if (logged_chars < PM_LOG_BUF_SIZE)
-		logged_chars++;
-	return 0;
-}
-
-static int __log_pm(const char *fmt, va_list args)
-{
-	int line_len = 0;
-	char tbuf[50], *tp, *p;
-	unsigned tlen;
-	unsigned long long t;
-	unsigned long nanosec_rem;
+	u32 idx, pi_id, val1, val2, dbg_flag, i;
+	u32 sz = PM_LOG_BUF_SIZE;
 	unsigned long flags;
-	int this_cpu;
-
-	this_cpu = smp_processor_id();
+	int ret = RET_SUCCESS;
+	char timestamp[50];
 
 	spin_lock_irqsave(&pm_logbuf_lock, flags);
 
-	memset(pm_log_line, 0, sizeof(pm_log_line));
-	line_len = vscnprintf(pm_log_line, sizeof(pm_log_line) - 1, fmt, args);
-	p = &pm_log_line[0];
+	pr_info("************************** PM LOG BUFFER ************************** (size:%d start:%d end:%d)\n",
+		sz, log_start, log_end);
 
-	for (; *p; p++) {
-		if (new_text_line) {
-			new_text_line = 0;
-			/* Add the current time stamp */
-			t = cpu_clock(this_cpu);
-			nanosec_rem = do_div(t, 1000000000);
-			tlen = sprintf(tbuf, "[%5lu.%06lu] ",
-				(unsigned long) t,
-				nanosec_rem / 1000);
-			for (tp = tbuf; tp < tbuf + tlen; tp++)
-				emit_pm_char(*tp);
-				line_len += tlen;
-			if (!*p)
-				break;
+	idx = log_start;
+
+	/* Buffer is circular so if buffer is full, then first entry could be
+	 * a partially overwritten one. To begin printing with a valid entry,
+	 * initial few bytes until the first '\n' are ommited.
+	 */
+	if (CIRC_CHK(log_end, log_start)) {
+		pr_info("Partial entry : Omitting bytes - ");
+		while (pm_log_buf[idx] != '\n') {
+			pr_info("%d ", pm_log_buf[idx]);
+			CIRC_INC(idx);
 		}
-		emit_pm_char(*p);
-		if (*p == '\n')
-			new_text_line = 1;
+	pr_info("\n");
 	}
+	/* If buffer is not full, then first byte present at log_start is a
+	 * valid dbg_flag. We can set the unused last byte of the buffer as
+	 * new line and index it to indicate valid dbg_flag at start.
+	 */
+	else
+		pm_log_buf[idx = (sz-1)] = '\n';
+
+	while (!CIRC_CHK(idx, log_end)) {
+		BUG_ON(pm_log_buf[idx] != '\n');
+		if (timestamp_en) {
+			i = -1;
+			while (pm_log_buf[idx] != ']')
+				timestamp[++i] = pm_log_buf[CIRC_INC(idx)];
+			timestamp[++i] = '\0';
+		}
+		CIRC_INC(idx);
+		dbg_flag = (int)pm_log_buf[idx];
+		switch (dbg_flag) {
+
+		case DBG_MSG_PI_ENABLE:
+			pi_id = (int)pm_log_buf[CIRC_INC(idx)];
+			val1 = (int)pm_log_buf[CIRC_INC(idx)];
+			if (val1) {
+				pr_info("%s Enable PI : pi_id=%d (%s)\n",
+					timestamp, pi_id, pi_name_list[pi_id]);
+			}
+
+			else {
+				pr_info("%s Disable PI : pi_id=%d (%s)\n",
+					timestamp, pi_id, pi_name_list[pi_id]);
+			}
+			CIRC_INC(idx);
+				break;
+
+		case DBG_MSG_PI_SET_FREQ_POLICY:
+			pi_id = (int)pm_log_buf[CIRC_INC(idx)];
+			val1 = (int)pm_log_buf[CIRC_INC(idx)];
+			val2 = (int)pm_log_buf[CIRC_INC(idx)];
+			pr_info("%s Policy Change (%d -> %d) : pi_id=%d (%s)\n",
+					timestamp, val1, val2, pi_id,
+						pi_name_list[pi_id]);
+			CIRC_INC(idx);
+			break;
+
+		case DBG_MSG_PI_SET_FREQ_OPP:
+			pi_id = (int)pm_log_buf[CIRC_INC(idx)];
+			val1 = (int)pm_log_buf[CIRC_INC(idx)];
+			val2 = (int)pm_log_buf[CIRC_INC(idx)];
+			pr_info("%s OPP Change, New_OPP=%d, freq_id=%d : pi_id=%d (%s)\n",
+					timestamp, val1, val2, pi_id,
+						pi_name_list[pi_id]);
+			CIRC_INC(idx);
+			break;
+
+		case DBG_MSG_PM_LPM_ENTER:
+			pi_id = (int)pm_log_buf[CIRC_INC(idx)];
+			val1 = (int)pm_log_buf[CIRC_INC(idx)];
+			pr_info("%s Enter Low-Power, state=%d : pi_id=%d (%s)\n",
+					timestamp, val1, pi_id,
+						pi_name_list[pi_id]);
+			CIRC_INC(idx);
+			break;
+
+		case DBG_MSG_PM_LPM_EXIT:
+			pi_id = (int)pm_log_buf[CIRC_INC(idx)];
+			val1 = (int)pm_log_buf[CIRC_INC(idx)];
+			pr_info("%s Exit Low-Power, state=%d : pi_id=%d (%s)\n",
+					timestamp, val1, pi_id,
+						pi_name_list[pi_id]);
+			CIRC_INC(idx);
+			break;
+
+		default:
+			pr_info("%s Unknown debug flag %d : Omitting bytes - ",
+					timestamp, dbg_flag);
+			while (!CIRC_CHK(idx, log_end)
+				&& pm_log_buf[idx] != '\n') {
+				pr_info("%d ", pm_log_buf[idx]);
+				CIRC_INC(idx);
+			}
+			ret = RET_PARTIAL_SUCCESS;
+			break;
+		}
+	}
+	pr_info("************************ END OF LOG BUFFER ************************\n");
 	spin_unlock_irqrestore(&pm_logbuf_lock, flags);
-
-	return line_len;
+	return ret;
 }
+EXPORT_SYMBOL(print_pm_log);
 
-int log_pm(const char *fmt, ...)
+int log_pm(int num, ...)
 {
 	va_list args;
-	int r;
+	unsigned long long t;
+	unsigned long nanosec_rem, flags;
+	char tbuf[50], *tp;
+	int byte, i, bytes = 0, this_cpu;
+	unsigned tlen;
 
-	va_start(args, fmt);
-	r = __log_pm(fmt, args);
+	if (num > MAX_PM_LOGGER_ARGS)
+		return bytes;
+
+	va_start(args, num);
+	byte = va_arg(args, int);
+	if (byte < 0 || byte >= DBG_MSG_MAX || !dbg_en[byte])
+		return bytes;
+
+	this_cpu = smp_processor_id();
+	spin_lock_irqsave(&pm_logbuf_lock, flags);
+	if (timestamp_en) {
+		/* Add the current time stamp */
+		t = cpu_clock(this_cpu);
+		nanosec_rem = do_div(t, 1000000000);
+		tlen = sprintf(tbuf, "[%5lu.%06lu]", (unsigned long) t,
+			nanosec_rem / 1000);
+		for (tp = tbuf; tp < tbuf + tlen; tp++)
+			emit_pm_char(*tp);
+		bytes += tlen;
+	}
+
+	/* Store the debug msg byte */
+	emit_pm_char((char)byte);
+	bytes++;
+	/* Store rest of the parameter bytes from the arguments */
+	for (i = 1; i < num; i++) {
+		byte = va_arg(args, int);
+		emit_pm_char((char)byte);
+		bytes++;
+	}
 	va_end(args);
 
-	return r;
+	emit_pm_char('\n');
+	bytes++;
+	spin_unlock_irqrestore(&pm_logbuf_lock, flags);
+	return bytes;
 }
 EXPORT_SYMBOL(log_pm);
+
+#ifdef CONFIG_DEBUG_FS
+static struct dentry *dent_uncached_logging;
+int __init uncached_logging_debug_init(void)
+{
+	/* create uncached logging dir /log */
+	dent_uncached_logging = debugfs_create_dir("log", 0);
+	if (!dent_uncached_logging)
+		return -ENOMEM;
+	printk(KERN_CRIT "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&& Successful &&&&&&&&&");
+
+	if (!debugfs_create_u32("enable", S_IRUGO | S_IWUSR,
+				dent_uncached_logging, (int *)&dbg_en[0]))
+		return -ENOMEM;
+
+	if (!debugfs_create_u32("policy_switch", S_IRUGO | S_IWUSR,
+				dent_uncached_logging, (int *)&dbg_en[1]))
+		return -ENOMEM;
+
+	if (!debugfs_create_u32("opp_switch", S_IRUGO | S_IWUSR,
+				dent_uncached_logging, (int *)&dbg_en[2]))
+		return -ENOMEM;
+
+	if (!debugfs_create_u32("lpm_enter", S_IRUGO | S_IWUSR,
+				dent_uncached_logging, (int *)&dbg_en[3]))
+		return -ENOMEM;
+
+	if (!debugfs_create_u32("lpm_exit", S_IRUGO | S_IWUSR,
+				dent_uncached_logging, (int *)&dbg_en[4]))
+		return -ENOMEM;
+
+	if (!debugfs_create_u32("timestamp", S_IRUGO | S_IWUSR,
+				dent_uncached_logging, (int *)&timestamp_en))
+		return -ENOMEM;
+	return 0;
+}
+#endif /* CONFIG_DEBUG_FS */
+
 int __init kona_pmdbg_init(void)
 {
 	pm_log_buf = dma_alloc_coherent(NULL, PM_LOG_BUF_SIZE,
@@ -530,9 +671,21 @@ int __init kona_pmdbg_init(void)
 
 	pr_info("pm_log_buf v:0x%x, p:0x%x\n", (u32)pm_log_buf,
 			(u32)&pm_log_buf_p);
-
+#ifdef CONFIG_DEBUG_FS
+	uncached_logging_debug_init();
+#endif
 	return 0;
 }
 
 arch_initcall(kona_pmdbg_init);
+#else
+int log_pm(int num, ...)
+{
+return 0;
+}
+
+int print_pm_log(void)
+{
+return 0;
+}
 #endif /* CONFIG_PM_LOG_TO_UNCACHED_MEM */
