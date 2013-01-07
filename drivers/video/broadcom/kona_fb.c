@@ -997,10 +997,15 @@ static int kona_fb_reboot_cb(struct notifier_block *nb,
 {
 	struct kona_fb *fb = container_of(nb, struct kona_fb, reboot_nb);
 	pr_err("Turning off display\n");
+	if (fb->g_stop_drawing) {
+		pr_err("Display is already suspended, nothing to do\n");
+		goto exit;
+	}
 	kona_clock_start(fb);
 	disable_display(fb);
 	kona_clock_stop(fb);
 	pr_err("Display disabled\n");
+exit:
 	return 0;
 }
 
