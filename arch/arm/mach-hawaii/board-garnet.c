@@ -804,9 +804,6 @@ struct platform_device *hawaii_common_plat_devices[] __initdata = {
 	&caph_i2s_device,
 	&caph_pcm_device,
 #endif
-#ifdef CONFIG_KONA_MEMC
-	&kona_memc_device,
-#endif
 };
 
 #if defined(CONFIG_LEDS_GPIO) || defined(CONFIG_LEDS_GPIO_MODULE)
