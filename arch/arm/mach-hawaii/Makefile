@@ -40,7 +40,11 @@ ifeq ($(CONFIG_MFD_BCM_PMU59056), y)
 obj-y += board-bcm59056.o
 endif
 ifeq ($(CONFIG_MFD_BCM_PMU59xxx), y)
+ifeq ($(CONFIG_MACH_HAWAII_GARNET), y)
+obj-y += board-bcm59xxx_garnet.o
+else
 obj-y += board-bcm59xxx.o
+endif
 endif
 
 CFLAGS_dm.o :=$(call as-instr,.arch_extension sec,-DSMC_INSTR=1)
