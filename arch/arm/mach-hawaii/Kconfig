@@ -41,7 +41,21 @@ config	MACH_HAWAII_GARNET
 	help
 	  Support for Broadcom Hawaii garnet board.
 
+
+config	MACH_HAWAII_SS_EVAL_REV00
+	bool "Support Broadcom Hawaii SS eval board"
+	help
+	  Support for the Broadcom Hawaii SS eval board.
+
+
+
 endchoice
+
+config	MACH_HAWAII_SS_COMMON
+	bool "Support Broadcom Hawaii SS Common Features"
+	default n
+	help
+	  Support for the Broadcom Hawaii SS Common Features.
 
 choice
 	prompt "Hawaii GARNET type"
@@ -93,6 +107,24 @@ config	MACH_HAWAII_SS_EVAL
 	  Support for the Broadcom Hawaii Samsung Evaluate board.
 
 endchoice
+
+config	MACH_HAWAII_SS_LOGAN
+	bool "Support Broadcom Hawaii Samsung Logan board"
+	help
+	  Support for the Broadcom Hawaii Samsung Logan board.
+
+choice
+	prompt "Hawaii SS based board type"
+	depends on MACH_HAWAII_SS_LOGAN
+	default MACH_HAWAII_SS_LOGAN_REV00
+
+config	MACH_HAWAII_SS_LOGAN_REV00
+	bool "Support Broadcom Hawaii SS logan board"
+	help
+	  Support for the Broadcom Hawaii SS logan board.
+	
+endchoice
+
 
 
 config	IGNORE_DAP_POWERUP_REQ

@@ -17,6 +17,8 @@ obj-$(CONFIG_ARCH_HAWAII) += clock.o
 obj-$(CONFIG_MACH_HAWAII_RAY) += hawaii.o board-hawaii.o hawaii_wifi.o
 obj-$(CONFIG_MACH_HAWAII_STONE) += hawaii.o board-hawaii.o hawaii_wifi.o
 obj-$(CONFIG_MACH_HAWAII_GARNET) += hawaii.o board-garnet.o garnet_wifi.o
+obj-$(CONFIG_MACH_HAWAII_SS_EVAL_REV00) += hawaii.o board-hawaii_ss_eval.o hawaii_ss_eval_wifi.o board-bcm59xxx-ss-eval.o
+obj-$(CONFIG_MACH_HAWAII_SS_LOGAN_REV00) += hawaii.o board-hawaii_ss_logan.o hawaii_ss_logan_wifi.o board-bcm59xxx-ss-logan.o
 obj-$(CONFIG_MACH_HAWAII_FPGA) += hawaii_fpga.o
 obj-$(CONFIG_MACH_HAWAII_FPGA_E) += hawaii_fpga.o
 obj-$(CONFIG_CDEBUGGER) += crash_debugger.o
@@ -40,10 +42,12 @@ ifeq ($(CONFIG_MFD_BCM_PMU59056), y)
 obj-y += board-bcm59056.o
 endif
 ifeq ($(CONFIG_MFD_BCM_PMU59xxx), y)
+ifeq ($(CONFIG_MACH_HAWAII_SS_COMMON),)
 ifeq ($(CONFIG_MACH_HAWAII_GARNET), y)
 obj-y += board-bcm59xxx_garnet.o
 else
 obj-y += board-bcm59xxx.o
+endif
 endif
 endif
 
