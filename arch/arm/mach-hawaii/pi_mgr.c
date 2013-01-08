@@ -46,11 +46,11 @@
 #define OPP_TURBO_STRING	"TURBO"
 #define OPP_SUPER_TURBO_STRING	"SUPER TURBO"
 
-#define	ARM_PI_NUM_OPP			4
-#define	MM_PI_NUM_OPP			3
-#define	HUB_PI_NUM_OPP			2
-#define	AON_PI_NUM_OPP			2
-#define	SUB_SYS_PI_NUM_OPP		2
+#define	ARM_PI_NUM_OPP			ARRAY_SIZE(__arm_opp_info)
+#define	MM_PI_NUM_OPP			ARRAY_SIZE(__mm_opp_info)
+#define	HUB_PI_NUM_OPP			ARRAY_SIZE(__hub_opp_info)
+#define	AON_PI_NUM_OPP			ARRAY_SIZE(__aon_opp_info)
+#define	SUB_SYS_PI_NUM_OPP		ARRAY_SIZE(kpm_opp_info)
 
 
 #define PI_STATE(state_id, policy, latency, flg) \
@@ -124,7 +124,7 @@ static struct pi arm_core_pi = {
 	.pi_state = arm_core_states,
 	.num_states = ARRAY_SIZE(arm_core_states),
 	.opp_inx_act = 3,
-	.opp_lmt_max = 3,
+	.opp_lmt_max = ARM_PI_NUM_OPP - 1,
 	.opp_lmt_min = 0,
 	.pi_opp = &arm_opp,
 	.qos_sw_event_id = SOFTWARE_0_EVENT,
@@ -159,39 +159,6 @@ static struct pi arm_core_pi = {
 };
 
 /*MM PI CCU Id*/
-static char *mm_ccu[] = { MM_CCU_CLK_NAME_STR };
-
-struct opp_info __mm_opp_info[] = {
-	[0] = {
-		.freq_id = MM_CCU_FREQ_ID_ECO,
-		.opp_id = PI_OPP_ECONOMY,
-	},
-	[1] = {
-		.freq_id = MM_CCU_FREQ_ID_NRML,
-		.opp_id = PI_OPP_NORMAL,
-	},
-	[2] = {
-		.freq_id = MM_CCU_FREQ_ID_TURBO,
-		.opp_id = PI_OPP_TURBO,
-	},
-};
-
-struct opp_info *mm_opp_info[] = {__mm_opp_info};
-u32 mm_weightage[] = {35, 50, 0};
-
-struct pi_opp mm_opp = {
-	.opp_info = mm_opp_info,
-	.num_opp = MM_PI_NUM_OPP,
-	.opp_map = OPP_ID_MASK(PI_OPP_ECONOMY) | OPP_ID_MASK(PI_OPP_NORMAL) |
-		OPP_ID_MASK(PI_OPP_TURBO),
-	.def_weightage = mm_weightage,
-};
-
-static struct pi_state mm_states[] = {
-	PI_STATE(PI_STATE_ACTIVE, RUN_POLICY, 0, 0),
-	PI_STATE(PI_STATE_RETENTION, RETN_POLICY, 10, 0),
-	PI_STATE(PI_STATE_SHUTDOWN, SHTDWN_POLICY, 100, PI_STATE_SAVE_CONTEXT),
-};
 
 #if defined(CONFIG_PLL1_8PHASE_OFF_ERRATUM) || \
 		defined(CONFIG_MM_FREEZE_VAR500M_ERRATUM)
@@ -229,10 +196,54 @@ static int mm_pi_enable(struct pi *pi, int enable)
 static struct pi_ops mm_pi_ops;
 #endif
 
+static char *mm_ccu[] = { MM_CCU_CLK_NAME_STR };
+
+struct opp_info __mm_opp_info[] = {
+	[0] = {
+		.freq_id = MM_CCU_FREQ_ID_ECO,
+		.opp_id = PI_OPP_ECONOMY,
+	},
+	[1] = {
+		.freq_id = MM_CCU_FREQ_ID_NRML,
+		.opp_id = PI_OPP_NORMAL,
+	},
+	[2] = {
+		.freq_id = MM_CCU_FREQ_ID_TURBO,
+		.opp_id = PI_OPP_TURBO,
+	},
+#ifdef CONFIG_PI_MGR_MM_STURBO_ENABLE
+	[3] = {
+		.freq_id = MM_CCU_FREQ_ID_SUPER_TURBO,
+		.opp_id = PI_OPP_SUPER_TURBO,
+	},
+#endif
+};
+
+struct opp_info *mm_opp_info[] = {__mm_opp_info};
+u32 mm_weightage[] = {35, 50, 0, 0};
+
+struct pi_opp mm_opp = {
+	.opp_info = mm_opp_info,
+	.num_opp = MM_PI_NUM_OPP,
+	.opp_map = OPP_ID_MASK(PI_OPP_ECONOMY) | OPP_ID_MASK(PI_OPP_NORMAL) |
+#ifdef CONFIG_PI_MGR_MM_STURBO_ENABLE
+		OPP_ID_MASK(PI_OPP_SUPER_TURBO) |
+#endif
+		OPP_ID_MASK(PI_OPP_TURBO),
+	.def_weightage = mm_weightage,
+};
+
+static struct pi_state mm_states[] = {
+	PI_STATE(PI_STATE_ACTIVE, RUN_POLICY, 0, 0),
+	PI_STATE(PI_STATE_RETENTION, RETN_POLICY, 10, 0),
+	PI_STATE(PI_STATE_SHUTDOWN, SHTDWN_POLICY, 100, PI_STATE_SAVE_CONTEXT),
+};
+
 #ifdef CONFIG_KONA_PI_DFS_STATS
 static cputime64_t mm_time_in_state[MM_PI_NUM_OPP];
 static u32 mm_trans_table[MM_PI_NUM_OPP * MM_PI_NUM_OPP];
 #endif
+
 static struct pi mm_pi = {
 	.name = "mm",
 	.id = PI_MGR_PI_ID_MM,
@@ -248,7 +259,7 @@ static struct pi mm_pi = {
 	.num_states = ARRAY_SIZE(mm_states),
 	.opp_inx_act = 0,
 	.pi_opp = &mm_opp,
-	.opp_lmt_max = 2,
+	.opp_lmt_max = MM_PI_NUM_OPP - 1,
 	.opp_lmt_min = 0,
 	.qos_sw_event_id = SOFTWARE_0_EVENT,
 
@@ -342,7 +353,7 @@ static struct pi hub_pi = {
 	.num_states = ARRAY_SIZE(hub_states),
 	.opp_inx_act = 0,
 	.pi_opp = &hub_opp,
-	.opp_lmt_max = 1,
+	.opp_lmt_max = HUB_PI_NUM_OPP - 1,
 	.opp_lmt_min = 0,
 	.qos_sw_event_id = SOFTWARE_0_EVENT,
 
@@ -429,7 +440,7 @@ static struct pi aon_pi = {
 	.num_states = ARRAY_SIZE(aon_states),
 	.opp_inx_act = 0,
 	.pi_opp = &aon_opp,
-	.opp_lmt_max = 1,
+	.opp_lmt_max = AON_PI_NUM_OPP - 1,
 	.opp_lmt_min = 0,
 	.qos_sw_event_id = SOFTWARE_0_EVENT,
 
@@ -528,7 +539,7 @@ static struct pi sub_sys_pi = {
 	.num_states = ARRAY_SIZE(sub_sys_states),
 	.opp_inx_act = 0,
 	.pi_opp = &sub_sys_opp,
-	.opp_lmt_max = 1,
+	.opp_lmt_max = SUB_SYS_PI_NUM_OPP - 1,
 	.opp_lmt_min = 0,
 
 	.qos_sw_event_id = SOFTWARE_0_EVENT,

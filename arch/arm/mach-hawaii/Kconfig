@@ -133,6 +133,15 @@ config	PWRMGR_1P2GHZ_OPS_SET_SELECT
 	  ops gets adjusted accordingly. If this is not selected,
 	  default OPP set is with Turbo at 1GHz.
 
+config	PI_MGR_MM_STURBO_ENABLE
+	depends on ARCH_HAWAII && KONA_PI_MGR
+	bool "Enable super turbo OPP for MM Power Island"
+	default n
+	help
+	  Say Y to enable super turbo DFS OPP for MM power Island
+	  MM super turbo OPP frequency is set to 312MHz. Total 4
+	  OPPs will be defined for MM if the support is enabled
+
 config	PWRMGR_DUMMY_SEQUENCER
 	bool "Use dummy PWRMGR HW I2C sequencer"
 	default n

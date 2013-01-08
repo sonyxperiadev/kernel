@@ -945,6 +945,9 @@ static u32 pi_mgr_dfs_update(struct pi_mgr_dfs_node *node,
 		break;
 	}
 	new_inx = check_dfs_limit(pi, pi_mgr_dfs_get_opp_inx(dfs));
+	pi_dbg(pi->id, PI_LOG_OPP_CHANGE,
+				"%s:pi_id= %d old_inx = %d => new_inx = %d\n",
+				__func__, pi_id, old_inx, new_inx);
 
 	if (old_inx != new_inx) {
 		BUG_ON(new_inx >= pi_opp->num_opp);
@@ -1479,6 +1482,9 @@ int pi_mgr_set_dfs_opp_limit(int pi_id, int min, int max)
 		if ((u32) max_inx >= pi_opp->num_opp)
 			return -EINVAL;
 		pi->opp_lmt_max = (u32) max_inx;
+		pi_dbg(pi_id, PI_LOG_POLICY,
+			"%s: pi->opp_lmt_max = %d\n", __func__,
+			pi->opp_lmt_max);
 		update = true;
 	}
 	if (update)
@@ -2053,13 +2059,13 @@ static const struct file_operations pi_dfs_request_list_fops = {
 
 static int pi_opp_set_min_lmt(void *data, u64 val)
 {
+	int val_inx;
 	struct pi *pi = data;
 	BUG_ON(pi == NULL);
+	val_inx = get_opp_inx((u32)val, pi->pi_opp->opp_map);
 
-	if (unlikely(val > pi->opp_lmt_max)) {
-		pi_dbg(pi->id, PI_LOG_ERR, "%s: min > max\n", __func__);
+	if (unlikely(val_inx < 0 || val_inx > pi->opp_lmt_max))
 		return 0;
-	}
 	return pi_mgr_set_dfs_opp_limit(pi->id, (int)val, -1);
 }
 
@@ -2067,7 +2073,7 @@ static int pi_opp_get_min_lmt(void *data, u64 * val)
 {
 	struct pi *pi = data;
 	BUG_ON(pi == NULL);
-	*val = pi->opp_lmt_min;
+	*val = opp_inx_to_id(pi->pi_opp, pi->opp_lmt_min);
 	return 0;
 }
 
@@ -2076,14 +2082,15 @@ DEFINE_SIMPLE_ATTRIBUTE(pi_opp_min_lmt_fops, pi_opp_get_min_lmt,
 
 static int pi_opp_set_max_lmt(void *data, u64 val)
 {
+	int val_inx;
 	struct pi *pi = data;
 	BUG_ON(pi == NULL);
+	val_inx = get_opp_inx((u32)val, pi->pi_opp->opp_map);
 
-	if (unlikely(val < pi->opp_lmt_min || val >= pi->pi_opp->num_opp)) {
-		pi_dbg(pi->id, PI_LOG_ERR,
-		       "%s: min > max or max > max supported opp\n", __func__);
+	if (unlikely(val_inx < 0 ||
+				val_inx < pi->opp_lmt_min ||
+				val_inx >= pi->pi_opp->num_opp))
 		return 0;
-	}
 	return pi_mgr_set_dfs_opp_limit(pi->id, -1, (int)val);
 }
 
@@ -2091,7 +2098,7 @@ static int pi_opp_get_max_lmt(void *data, u64 * val)
 {
 	struct pi *pi = data;
 	BUG_ON(pi == NULL);
-	*val = pi->opp_lmt_max;
+	*val = opp_inx_to_id(pi->pi_opp, pi->opp_lmt_max);
 	return 0;
 }
 
