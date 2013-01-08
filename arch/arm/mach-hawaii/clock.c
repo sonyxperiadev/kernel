@@ -7743,7 +7743,7 @@ int debug_bus_mux_sel(int mux_sel, int mux_param, u32 dbg_bit_sel)
 			KONA_CHIPREG_VA+CHIPREG_PERIPH_SPARE_CONTROL0_OFFSET);
 
 	} else if (mux_sel == 1) {  /*SDDATA*/
-		if (!IS_ERR_OR_NULL(rgltr) && (!regulator_is_enabled(rgltr))) {
+		if (!IS_ERR_OR_NULL(rgltr) && !reg_enabled) {
 			regulator_enable(rgltr);
 			reg_enabled = 1;
 		}
