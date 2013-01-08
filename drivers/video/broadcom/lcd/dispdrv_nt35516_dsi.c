@@ -440,7 +440,7 @@ static int NT35516_panel_shut_down(NT35516_PANEL_t *pPanel)
 
 	msg.dsiCmnd = DSI_DT_SH_SHUT_DOWN;
 	msg.msg	       = &msg_buff[0];
-	msg.msgLen     = 1;
+	msg.msgLen     = 0;
 	msg.vc	       = NT35516_VC;
 	msg.isLP       = NT35516_CMND_IS_LP;
 	msg.isLong     = FALSE;
@@ -448,8 +448,6 @@ static int NT35516_panel_shut_down(NT35516_PANEL_t *pPanel)
 	msg.reply = NULL;
 
 	res = CSL_DSI_SendPacket(pPanel->clientH, &msg, FALSE);
-	pr_err("[DISPDRV] %s: DT[0x%02lX] SIZE[%lu]\n",
-			__func__, msg.dsiCmnd, msg.msgLen);
 	return res;
 }
 
@@ -461,7 +459,7 @@ static int NT35516_panel_turn_on(NT35516_PANEL_t *pPanel)
 
 	msg.dsiCmnd = DSI_DT_SH_TURN_ON;
 	msg.msg	       = &msg_buff[0];
-	msg.msgLen     = 1;
+	msg.msgLen     = 0;
 	msg.vc	       = NT35516_VC;
 	msg.isLP       = NT35516_CMND_IS_LP;
 	msg.isLong     = FALSE;
@@ -469,8 +467,6 @@ static int NT35516_panel_turn_on(NT35516_PANEL_t *pPanel)
 	msg.reply = NULL;
 
 	res = CSL_DSI_SendPacket(pPanel->clientH, &msg, FALSE);
-	pr_err("[DISPDRV] %s: DT[0x%02lX] SIZE[%lu]\n",
-			__func__, msg.dsiCmnd, msg.msgLen);
 	return res;
 }
 #endif
@@ -492,17 +488,19 @@ static void NT35516_panel_init(NT35516_PANEL_t *pPanel)
 		{DISPCTRL_WR_CMND_DATA, NT35516_CMD_COLMOD, 0x77},
 		{DISPCTRL_WR_CMND_DATA, NT35516_CMD_TEON, 0x0},
 #endif
-		{DISPCTRL_WR_CMND_DATA, NT35516_CMD_MAUCCTR, 0x55},
+		{DISPCTRL_WR_CMND, NT35516_CMD_MAUCCTR, 0x0},
+		{DISPCTRL_WR_DATA, 0, 0x55},
 		{DISPCTRL_WR_DATA, 0, 0xAA},
 		{DISPCTRL_WR_DATA, 0, 0x52},
 		{DISPCTRL_WR_DATA, 0, 0x08},
 		{DISPCTRL_WR_DATA, 0, 0x00},
-		{DISPCTRL_WR_CMND_DATA, NT35516_CMD_DOPCTR, 0x7C},
+		{DISPCTRL_WR_CMND, NT35516_CMD_DOPCTR, 0x0},
+		{DISPCTRL_WR_DATA, 0, 0x7C},
 		{DISPCTRL_WR_DATA, 0, 0x00},
 		{DISPCTRL_WR_DATA, 0, 0x00},
 #ifndef CONFIG_VIDEO_MODE
-		{DISPCTRL_WR_CMND_DATA, NT35516_CMD_STESL, (TE_SCAN_LINE &
-		0xFF00) >> 16},
+		{DISPCTRL_WR_CMND, NT35516_CMD_STESL, 0},
+		{DISPCTRL_WR_DATA, 0, (TE_SCAN_LINE & 0xFF00) >> 16},
 		{DISPCTRL_WR_DATA, 0, (TE_SCAN_LINE & 0xFF)},
 #endif
 		{DISPCTRL_LIST_END, 0, 0},
