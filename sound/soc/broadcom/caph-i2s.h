@@ -35,6 +35,38 @@
 #ifndef _CAPH_I2S_H
 #define _CAPH_I2S_H
 
+#include <linux/clk.h>
+#include "csl_caph_i2s_sspi.h"
+#include "chal_caph.h"
+#include "caph-pcm.h"
+#include "csl_caph_switch.h"
 
+/* cpu_dai(i2s_dai) private driver data structure*/
+struct caph_i2s {
+	struct resource *mem;
+	void __iomem *base;
+	dma_addr_t phys_base;
 
+	struct clk *clk_aic;
+	struct clk *clk_i2s;
+
+	CSL_HANDLE fmHandleSSP;
+	CAPH_SWITCH_TRIGGER_e fmTxTrigger;
+	CAPH_SWITCH_TRIGGER_e fmRxTrigger;
+	CSL_I2S_CONFIG_t fmCfg;
+	Boolean fmTxRunning;
+	Boolean fmRxRunning;
+
+	struct caph_pcm_config pcm_config_playback;
+	struct caph_pcm_config pcm_config_capture;
+};
+
+/*****************************************************************************
+*
+*Function Name: void ssp_ControlHWClock(Boolean enable)
+*
+*Description: This is to enable/disable SSP clock
+*
+*****************************************************************************/
+void ssp_ControlHWClock(Boolean);
 #endif

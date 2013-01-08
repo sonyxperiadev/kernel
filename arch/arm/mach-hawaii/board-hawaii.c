@@ -760,8 +760,11 @@ struct platform_device *hawaii_common_plat_devices[] __initdata = {
 #endif
 
 #ifdef CONFIG_SND_BCM_SOC
+	&hawaii_audio_device,
 	&caph_i2s_device,
 	&caph_pcm_device,
+	&spdif_dit_device,
+
 #endif
 };
 

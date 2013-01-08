@@ -42,6 +42,11 @@
 #define	PCM_MIN_PLAYBACK_PERIOD_BYTES		(256)
 #define	PCM_MAX_PLAYBACK_PERIOD_BYTES		(PCM_MAX_PLAYBACK_BUF_BYTES/2)
 
+#define	PCM_MAX_CAPTURE_BUF_BYTES			(32*1024)
+#define	PCM_MIN_CAPTURE_PERIOD_BYTES		(4*1024)
+#define	PCM_MAX_CAPTURE_PERIOD_BYTES		(PCM_MAX_CAPTURE_BUF_BYTES/2)
+
+/*cpu_dai(i2s_dai) private dma data structure*/
 struct caph_pcm_config {
 	CSL_CAPH_DMA_CHNL_e dmaCH;
 	CSL_CAPH_CFIFO_FIFO_e fifo;

@@ -898,6 +898,14 @@ struct platform_device caph_i2s_device = {
 struct platform_device caph_pcm_device = {
 	.name = "caph-pcm-audio",
 };
+
+struct platform_device hawaii_audio_device = {
+	.name = "hawaii-audio",
+};
+
+struct platform_device spdif_dit_device = {
+	.name = "spdif-dit",
+};
 #endif
 
 static int __init setup_etm(char *p)
