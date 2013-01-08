@@ -135,14 +135,9 @@
 #include <mach/al3006_i2c_settings.h>
 #endif
 
-#if defined(CONFIG_MPU_SENSORS_MPU6050B1) || defined(CONFIG_MPU_SENSORS_MPU6050B1_MODULE)
+#if defined(CONFIG_INV_MPU_IIO) || defined(CONFIG_INV_MPU_IIO_MODULE)
 #include <linux/mpu.h>
-#include <mach/mpu6050_settings.h>
-#endif
-
-#if defined(CONFIG_MPU_SENSORS_MPU3050)
-#include <linux/mpu.h>
-#include <linux/i2c/mpu3050_settings.h>
+#include <linux/i2c/inv_mpu_settings.h>
 #endif
 
 #if defined(CONFIG_SENSORS_KIONIX_KXTIK)	\
@@ -154,12 +149,6 @@
 #include <linux/akm8963.h>
 #include <linux/i2c/akm8963_i2c_settings.h>
 #endif /* CONFIG_SENSORS_AK8963 */
-
-#if defined(CONFIG_MPU_SENSORS_AMI306) || defined(CONFIG_MPU_SENSORS_AMI306_MODULE)
-#include <linux/ami306_def.h>
-#include <linux/ami_sensor.h>
-#include <mach/ami306_settings.h>
-#endif
 
 #ifdef CONFIG_BACKLIGHT_PWM
 #include <linux/pwm_backlight.h>
@@ -1071,15 +1060,6 @@ static struct i2c_board_info __initdata i2c_al3006_info[] = {
 };
 #endif
 
-#if defined(CONFIG_MPU_SENSORS_AMI306) || defined(CONFIG_MPU_SENSORS_AMI306_MODULE)
-static struct ami306_platform_data ami306_data = AMI306_DATA;
-static struct i2c_board_info __initdata i2c_ami306_info[] = {
-	{
-	 I2C_BOARD_INFO(AMI_DRV_NAME, AMI_I2C_ADDRESS),
-	 .platform_data = &ami306_data,
-	 },
-};
-#endif
 #if defined(CONFIG_SENSORS_KIONIX_KXTIK) \
 	|| defined(CONFIG_SENSORS_KIONIX_KXTIK_MODULE)
 #define KXTIK_DEVICE_MAP    2
@@ -1162,52 +1142,6 @@ static int akm8963_init_platform_hw(void)
 }
 #endif /* CONFIG_SENSORS_AK8963 */
 
-#if defined(CONFIG_MPU_SENSORS_MPU3050)
-static struct bcm_mpu_platform_data bcm_mpu3050_platform_data = {
-	.base_data = {
-		      .int_config = MPU3050_INIT_CFG,
-		      .orientation = MPU3050_DRIVER_GYRO_ORIENTATION,
-		      },
-	.irq_gpio = MPU3050_IRQ_GPIO,
-};
-
-static struct i2c_board_info __initdata inv_mpu_i2c0_boardinfo[] = {
-	{
-	 I2C_BOARD_INFO("mpu3050", MPU3050_SLAVE_ADDR),
-	 .platform_data = &bcm_mpu3050_platform_data,
-	 },
-};
-#endif /* CONFIG_MPU_SENSORS_MPU3050 */
-
-#if defined(CONFIG_MPU_SENSORS_KXTF9)
-static struct ext_slave_platform_data inv_mpu_kxtf9_data = {
-	.bus = EXT_SLAVE_BUS_SECONDARY,
-	.orientation = MPU3050_DRIVER_ACCEL_KXTF9_ORIENTATION,
-};
-
-static struct i2c_board_info __initdata inv_mpu_kxtf9_boardinfo[] = {
-	{
-	 I2C_BOARD_INFO("kxtf9", MPU_SENSORS_KXTF9_SLAVE_ADDR),
-	 .platform_data = &inv_mpu_kxtf9_data,
-	 },
-};
-#endif /* CONFIG_MPU_SENSORS_KXTF9 */
-
-#if defined(CONFIG_MPU_SENSORS_AK8975)
-static struct ext_slave_platform_data inv_mpu_akm8975_data = {
-	.bus = EXT_SLAVE_BUS_PRIMARY,
-	.orientation = MPU3050_DRIVER_COMPASS_ORIENTATION
-};
-
-static struct i2c_board_info __initdata inv_mpu_akm8975_boardinfo[] = {
-	{
-		I2C_BOARD_INFO("ak8975", 0x0c),
-		.platform_data = &inv_mpu_akm8975_data,
-	},
-};
-#endif /*CONFIG_MPU_SENSORS_AK8975*/
-
-
 #if defined(CONFIG_SENSORS_BMA222)
 static struct bma222_accl_platform_data bma_pdata = {
 	.orientation = BMA_ROT_90,
@@ -1215,33 +1149,21 @@ static struct bma222_accl_platform_data bma_pdata = {
 };
 #endif
 
-#if defined(CONFIG_MPU_SENSORS_MPU6050B1) || defined(CONFIG_MPU_SENSORS_MPU6050B1_MODULE)
+#if defined(CONFIG_INV_MPU_IIO) || defined(CONFIG_INV_MPU_IIO_MODULE)
 
-static struct mpu_platform_data mpu6050_platform_data = {
-	.int_config = MPU6050_INIT_CFG,
+static struct mpu_platform_data inv_mpu_platform_data = {
+	.int_config = INV_MPU_INIT_CFG,
 	.level_shifter = 0,
-	.orientation = MPU6050_DRIVER_ACCEL_GYRO_ORIENTATION,
+	.orientation = INV_MPU_DRIVER_GYRO_ORIENTATION,
 };
-
-/*static struct ext_slave_platform_data mpu_compass_data =
-{
-//	.bus = EXT_SLAVE_BUS_SECONDARY,
-	.orientation = MPU6050_DRIVER_COMPASS_ORIENTATION,
-};*/
 
 static struct i2c_board_info __initdata inv_mpu_i2c0_boardinfo[] = {
 	{
-	 I2C_BOARD_INFO("mpu6050", MPU6050_SLAVE_ADDR),
-	 .platform_data = &mpu6050_platform_data,
+	 I2C_BOARD_INFO(INV_MPU_DRIVER_NAME, INV_MPU_SLAVE_ADDR),
+	 .platform_data = &inv_mpu_platform_data,
 	 },
-/*	{
-		I2C_BOARD_INFO("ami_sensor", MPU6050_COMPASS_SLAVE_ADDR),
-		.platform_data = &mpu_compass_data,
-		.irq =  gpio_to_irq(3),
-	},*/
 };
-
-#endif /* CONFIG_MPU_SENSORS_MPU6050B1 */
+#endif /* CONFIG_INV_MPU_IIO */
 
 #ifdef CONFIG_KONA_HEADSET_MULTI_BUTTON
 
@@ -1665,25 +1587,6 @@ static void __init hawaii_add_i2c_devices(void)
 				ARRAY_SIZE(bma222_accl_info));
 #endif
 
-#if defined(CONFIG_MPU_SENSORS_MPU3050)
-	inv_mpu_i2c0_boardinfo[0].irq = gpio_to_irq(MPU3050_IRQ_GPIO);
-
-	i2c_register_board_info(2, inv_mpu_i2c0_boardinfo,
-				ARRAY_SIZE(inv_mpu_i2c0_boardinfo));
-#endif /* CONFIG_MPU_SENSORS_MPU3050 */
-
-#if defined(CONFIG_MPU_SENSORS_KXTF9)
-	inv_mpu_kxtf9_boardinfo[0].irq =
-		gpio_to_irq(MPU_SENSORS_KXTF9_IRQ_GPIO);
-	i2c_register_board_info(2, inv_mpu_kxtf9_boardinfo,
-		ARRAY_SIZE(inv_mpu_kxtf9_boardinfo));
-#endif /* CONFIG_MPU_SENSORS_KXTF9 */
-
-#if defined(CONFIG_MPU_SENSORS_AK8975)
-	i2c_register_board_info(2, inv_mpu_akm8975_boardinfo,
-		ARRAY_SIZE(inv_mpu_akm8975_boardinfo));
-#endif /* CONFIG_MPU_SENSORS_AK8975 */
-
 #if defined(CONFIG_SENSORS_KIONIX_KXTIK)	\
 			|| defined(CONFIG_SENSORS_KIONIX_KXTIK_MODULE)
 	i2c_register_board_info(2,
@@ -1705,14 +1608,15 @@ static void __init hawaii_add_i2c_devices(void)
 	i2c_register_board_info(1, bcmi2cnfc, ARRAY_SIZE(bcmi2cnfc));
 #endif
 
-#if defined(CONFIG_MPU_SENSORS_MPU6050B1) || defined(CONFIG_MPU_SENSORS_MPU6050B1_MODULE)
-#if defined(MPU6050_IRQ_GPIO)
-	inv_mpu_i2c0_boardinfo[0].irq = gpio_to_irq(MPU6050_IRQ_GPIO);
+#if defined(CONFIG_INV_MPU_IIO) || defined(CONFIG_INV_MPU_IIO_MODULE)
+#if defined(INV_MPU_IRQ_GPIO)
+	inv_mpu_i2c0_boardinfo[0].irq = gpio_to_irq(INV_MPU_IRQ_GPIO);
 #endif
-	i2c_register_board_info(MPU6050_I2C_BUS_ID,
+	i2c_register_board_info(INV_MPU_I2C_BUS_ID,
 				inv_mpu_i2c0_boardinfo,
 				ARRAY_SIZE(inv_mpu_i2c0_boardinfo));
-#endif
+#endif /* CONFIG_INV_MPU_IIO */
+
 #if defined(CONFIG_TMD2771)
 	i2c_register_board_info(2,
 					i2c_tmd2771_info,
@@ -1745,17 +1649,6 @@ static void __init hawaii_add_i2c_devices(void)
 				       i2c_al3006_info,
 				       ARRAY_SIZE(i2c_al3006_info));
 #endif /* CONFIG_AL3006 */
-
-#if  defined(CONFIG_MPU_SENSORS_AMI306) || defined(CONFIG_MPU_SENSORS_AMI306)
-	i2c_register_board_info(
-#ifdef AMI306_I2C_BUS_ID
-				       AMI306_I2C_BUS_ID,
-#else
-				       -1,
-#endif
-				       i2c_ami306_info,
-				       ARRAY_SIZE(i2c_ami306_info));
-#endif
 
 }
 

@@ -128,14 +128,9 @@
 #include <mach/al3006_i2c_settings.h>
 #endif
 
-#if defined(CONFIG_MPU_SENSORS_MPU6050B1) || defined(CONFIG_MPU_SENSORS_MPU6050B1_MODULE)
+#if defined(CONFIG_INV_MPU_IIO) || defined(CONFIG_INV_MPU_IIO_MODULE)
 #include <linux/mpu.h>
-#include <mach/mpu6050_settings.h>
-#endif
-
-#if defined(CONFIG_MPU_SENSORS_MPU3050)
-#include <linux/mpu.h>
-#include <linux/i2c/mpu3050_settings.h>
+#include <linux/i2c/inv_mpu_settings.h>
 #endif
 
 #if defined(CONFIG_SENSORS_KIONIX_KXTIK)	\
@@ -1008,22 +1003,21 @@ static int akm8963_init_platform_hw(void)
 }
 #endif /* CONFIG_SENSORS_AK8963 */
 
-#if defined(CONFIG_MPU_SENSORS_MPU3050)
-static struct bcm_mpu_platform_data bcm_mpu3050_platform_data = {
-	.base_data = {
-		      .int_config = MPU3050_INIT_CFG,
-		      .orientation = MPU3050_DRIVER_GYRO_ORIENTATION,
-		      },
-	.irq_gpio = MPU3050_IRQ_GPIO,
+#if defined(CONFIG_INV_MPU_IIO) || defined(CONFIG_INV_MPU_IIO_MODULE)
+
+static struct mpu_platform_data inv_mpu_platform_data = {
+	.int_config = INV_MPU_INIT_CFG,
+	.level_shifter = 0,
+	.orientation = INV_MPU_DRIVER_GYRO_ORIENTATION,
 };
 
 static struct i2c_board_info __initdata inv_mpu_i2c0_boardinfo[] = {
 	{
-	 I2C_BOARD_INFO("mpu3050", MPU3050_SLAVE_ADDR),
-	 .platform_data = &bcm_mpu3050_platform_data,
+	 I2C_BOARD_INFO(INV_MPU_DRIVER_NAME, INV_MPU_SLAVE_ADDR),
+	 .platform_data = &inv_mpu_platform_data,
 	 },
 };
-#endif /* CONFIG_MPU_SENSORS_MPU3050 */
+#endif /* CONFIG_INV_MPU_IIO */
 
 #if defined(CONFIG_MPU_SENSORS_KXTF9)
 static struct ext_slave_platform_data inv_mpu_kxtf9_data = {
@@ -1045,34 +1039,6 @@ static struct bma222_accl_platform_data bma_pdata = {
 	.invert = false,
 };
 #endif
-
-#if defined(CONFIG_MPU_SENSORS_MPU6050B1) || defined(CONFIG_MPU_SENSORS_MPU6050B1_MODULE)
-
-static struct mpu_platform_data mpu6050_platform_data = {
-	.int_config = MPU6050_INIT_CFG,
-	.level_shifter = 0,
-	.orientation = MPU6050_DRIVER_ACCEL_GYRO_ORIENTATION,
-};
-
-/*static struct ext_slave_platform_data mpu_compass_data =
-{
-//	.bus = EXT_SLAVE_BUS_SECONDARY,
-	.orientation = MPU6050_DRIVER_COMPASS_ORIENTATION,
-};*/
-
-static struct i2c_board_info __initdata inv_mpu_i2c0_boardinfo[] = {
-	{
-	 I2C_BOARD_INFO("mpu6050", MPU6050_SLAVE_ADDR),
-	 .platform_data = &mpu6050_platform_data,
-	 },
-/*	{
-		I2C_BOARD_INFO("ami_sensor", MPU6050_COMPASS_SLAVE_ADDR),
-		.platform_data = &mpu_compass_data,
-		.irq =  gpio_to_irq(3),
-	},*/
-};
-
-#endif /* CONFIG_MPU_SENSORS_MPU6050B1 */
 
 #ifdef CONFIG_KONA_HEADSET_MULTI_BUTTON
 
@@ -1485,12 +1451,14 @@ static void __init hawaii_add_i2c_devices(void)
 				ARRAY_SIZE(bma222_accl_info));
 #endif
 
-#if defined(CONFIG_MPU_SENSORS_MPU3050)
-	inv_mpu_i2c0_boardinfo[0].irq = gpio_to_irq(MPU3050_IRQ_GPIO);
-
-	i2c_register_board_info(MPU3050_I2C_BUS_ID, inv_mpu_i2c0_boardinfo,
+#if defined(CONFIG_INV_MPU_IIO) || defined(CONFIG_INV_MPU_IIO_MODULE)
+#if defined(INV_MPU_IRQ_GPIO)
+	inv_mpu_i2c0_boardinfo[0].irq = gpio_to_irq(INV_MPU_IRQ_GPIO);
+#endif
+	i2c_register_board_info(INV_MPU_I2C_BUS_ID,
+				inv_mpu_i2c0_boardinfo,
 				ARRAY_SIZE(inv_mpu_i2c0_boardinfo));
-#endif /* CONFIG_MPU_SENSORS_MPU3050 */
+#endif /* CONFIG_INV_MPU_IIO */
 
 #if defined(CONFIG_MPU_SENSORS_KXTF9)
 	inv_mpu_kxtf9_boardinfo[0].irq =
@@ -1518,15 +1486,6 @@ static void __init hawaii_add_i2c_devices(void)
 
 #if defined(CONFIG_BCMI2CNFC)
 	i2c_register_board_info(1, bcmi2cnfc, ARRAY_SIZE(bcmi2cnfc));
-#endif
-
-#if defined(CONFIG_MPU_SENSORS_MPU6050B1) || defined(CONFIG_MPU_SENSORS_MPU6050B1_MODULE)
-#if defined(MPU6050_IRQ_GPIO)
-	inv_mpu_i2c0_boardinfo[0].irq = gpio_to_irq(MPU6050_IRQ_GPIO);
-#endif
-	i2c_register_board_info(MPU6050_I2C_BUS_ID,
-				inv_mpu_i2c0_boardinfo,
-				ARRAY_SIZE(inv_mpu_i2c0_boardinfo));
 #endif
 
 #if  defined(CONFIG_BMP18X) || defined(CONFIG_BMP18X_I2C) || defined(CONFIG_BMP18X_I2C_MODULE)

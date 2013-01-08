@@ -7,7 +7,7 @@
  * the Free Software Foundation.
  */
 #include <linux/err.h>
-#include <linux/export.h>
+//#include <linux/export.h>
 #include <linux/slab.h>
 #include <linux/mutex.h>
 

@@ -367,7 +367,7 @@ static ssize_t iio_trigger_write_current(struct device *dev,
 	return len;
 }
 
-static DEVICE_ATTR(current_trigger, S_IRUGO | S_IWUSR,
+static DEVICE_ATTR(current_trigger, S_IRUGO | S_IWUGO,
 		   iio_trigger_read_current,
 		   iio_trigger_write_current);
 
