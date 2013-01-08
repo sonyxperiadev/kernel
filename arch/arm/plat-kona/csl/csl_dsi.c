@@ -256,6 +256,29 @@ static void axipv_release_cb(u32 free_buf);
 static void pv_err_cb(int err);
 static void pv_eof_cb(void);
 
+#if 0
+/* For debugging purposes*/
+void dump_regs()
+{
+	int base, i;
+	int reg[] = {
+		0x3c200000,
+		0x3c200004,
+		0x3c200008,
+		0x3c20000c,
+		0x3c200010,
+		0x3c200028,
+		0x3c20002c,
+		0x3c200030,
+		0x3c200034,
+		0x3c200038
+		};
+	for (i = 0; i < sizeof(reg) / 4; i++) {
+		base = reg[i];
+		pr_err("0x%x=0x%x\n", base, readl(HW_IO_PHYS_TO_VIRT(base)));
+	}
+}
+#endif
 
 static CSL_LCD_RES_T cslDsiPixTxStart(DSI_UPD_REQ_MSG_T *updMsg)
 {
@@ -1176,6 +1199,7 @@ CSL_LCD_RES_T CSL_DSI_SendPacket(CSL_LCD_HANDLE client,
 	txPkt.vmWhen = CHAL_DSI_CMND_WHEN_BEST_EFFORT;
 	txPkt.repeat = 1;
 	txPkt.start = 1;
+	txPkt.dispEngine = 1;
 
 	chal_dsi_clr_status(dsiH->chalH, 0xFFFFFFFF);
 
