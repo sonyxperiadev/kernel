@@ -111,7 +111,9 @@ struct kona_fb {
 	atomic_t force_update;
 	struct dispdrv_init_parms lcd_drv_parms;
 	struct notifier_block reboot_nb;
+#ifdef CONFIG_FB_BRCM_CP_CRASH_DUMP_IMAGE_SUPPORT
 	struct notifier_block die_nb;
+#endif
 };
 
 static struct kona_fb *g_kona_fb;
@@ -122,7 +124,9 @@ static void kona_fb_unpack_565rle(void *, void *, uint32_t, uint32_t, uint32_t);
 #endif
 
 static int kona_fb_reboot_cb(struct notifier_block *, unsigned long, void *);
+#ifdef CONFIG_FB_BRCM_CP_CRASH_DUMP_IMAGE_SUPPORT
 static int kona_fb_die_cb(struct notifier_block *, unsigned long, void *);
+#endif
 
 #ifdef KONA_FB_DEBUG
 #define KONA_PROF_N_RECORDS 50
@@ -959,9 +963,10 @@ static int kona_fb_probe(struct platform_device *pdev)
 
 	fb->reboot_nb.notifier_call = kona_fb_reboot_cb;
 	register_reboot_notifier(&fb->reboot_nb);
+#ifdef CONFIG_FB_BRCM_CP_CRASH_DUMP_IMAGE_SUPPORT
 	fb->die_nb.notifier_call = kona_fb_die_cb;
 	register_die_notifier(&fb->die_nb);
-
+#endif
 	return 0;
 
 err_fb_register_failed:
@@ -999,14 +1004,14 @@ static int kona_fb_reboot_cb(struct notifier_block *nb,
 	return 0;
 }
 
-
+#ifdef CONFIG_FB_BRCM_CP_CRASH_DUMP_IMAGE_SUPPORT
 static int kona_fb_die_cb(struct notifier_block *nb, unsigned long val, void *v)
 {
 	pr_err("kona_fb: die notifier invoked\n");
 	kona_display_crash_image(AP_CRASH_DUMP_START);
 	return NOTIFY_DONE;
 }
-
+#endif
 
 static int __devexit kona_fb_remove(struct platform_device *pdev)
 {
