@@ -1340,10 +1340,32 @@ CSL_LCD_RES_T CSL_DSI_SendPacket(CSL_LCD_HANDLE client,
 		}
 	} else {
 		if (res != CSL_LCD_OK) {
+			int tries = 3;
 			LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI][%d] %s: "
 				"WARNING, VC[%d] "
 				"Timed Out Waiting For TX end\n",
 				dsiH->bus, __func__, txPkt.vc);
+			while ((res == CSL_LCD_OS_TOUT) && --tries) {
+				printk("Trying once more\n");
+				if (!clientH->hasLock)
+					cslDsiEnaIntEvent(dsiH, event);
+				chal_dsi_tx_start(dsiH->chalH, TX_PKT_ENG_1,
+						FALSE);
+				chal_dsi_tx_start(dsiH->chalH, TX_PKT_ENG_1,
+						TRUE);
+				if (!clientH->hasLock) {
+					cslDsiEnaIntEvent(dsiH, event);
+					res = cslDsiWaitForInt(dsiH, 100);
+					stat = chal_dsi_get_status(dsiH->chalH);
+				} else {
+					res = cslDsiWaitForStatAny_Poll(dsiH,
+						event, &stat, 100);
+				}
+			}
+			if (!tries)
+				printk("Couldn't recover!\n");
+			else
+				goto exit_ok;
 		} else {
 			goto exit_ok;
 		}
