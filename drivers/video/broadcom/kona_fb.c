@@ -501,7 +501,8 @@ static int kona_fb_pan_display(struct fb_var_screeninfo *var,
 			p_region = NULL;
 		}
 #ifndef CONFIG_VIDEO_MODE
-		wait_for_completion(&fb->prev_buf_done_sem);
+		wait_for_completion_interruptible_timeout(
+			&fb->prev_buf_done_sem,	msecs_to_jiffies(100));
 #endif
 
 		kona_clock_start(fb);
@@ -514,7 +515,8 @@ static int kona_fb_pan_display(struct fb_var_screeninfo *var,
 #ifdef CONFIG_VIDEO_MODE
 		konafb_debug("waiting for release of 0x%x\n",
 				buff_idx ? fb->buff0 : fb->buff1);
-		wait_for_completion(&fb->prev_buf_done_sem);
+		wait_for_completion_interruptible_timeout(
+			&fb->prev_buf_done_sem,	msecs_to_jiffies(100));
 #endif
 	}
 skip_drawing:
@@ -595,11 +597,16 @@ static int kona_fb_ioctl(struct fb_info *info, unsigned int cmd,
 			return -EFAULT;
 		}
 
-		wait_for_completion(&fb->prev_buf_done_sem);
+#ifndef CONFIG_VIDEO_MODE
+		wait_for_completion_interruptible_timeout(
+			&fb->prev_buf_done_sem,	msecs_to_jiffies(100));
+#endif
 		kona_clock_start(fb);
 		ret = fb->display_ops->update(fb->display_hdl, ptr, NULL, NULL);
 		kona_clock_stop(fb);
+#ifndef CONFIG_VIDEO_MODE
 		complete(&g_kona_fb->prev_buf_done_sem);
+#endif
 		mutex_unlock(&fb->update_sem);
 		break;
 
@@ -625,8 +632,11 @@ static void kona_fb_early_suspend(struct early_suspend *h)
 		/* Turn off the backlight */
 		fb = container_of(h, struct kona_fb, early_suspend_level1);
 		mutex_lock(&fb->update_sem);
+		/* In case of video mode, DSI commands can be sent out-of-sync
+		 * of buffers */
 #ifndef CONFIG_VIDEO_MODE
-		wait_for_completion(&fb->prev_buf_done_sem);
+		wait_for_completion_interruptible_timeout(
+			&fb->prev_buf_done_sem,	msecs_to_jiffies(100));
 #endif
 		kona_clock_start(fb);
 		if (fb->display_ops->power_control(fb->display_hdl,
@@ -644,7 +654,8 @@ static void kona_fb_early_suspend(struct early_suspend *h)
 		fb = container_of(h, struct kona_fb, early_suspend_level2);
 		mutex_lock(&fb->update_sem);
 #ifndef CONFIG_VIDEO_MODE
-		wait_for_completion(&fb->prev_buf_done_sem);
+		wait_for_completion_interruptible_timeout(
+			&fb->prev_buf_done_sem,	msecs_to_jiffies(100));
 #endif
 		fb->g_stop_drawing = 1;
 #ifndef CONFIG_VIDEO_MODE
@@ -714,12 +725,19 @@ static void kona_fb_late_resume(struct early_suspend *h)
 		framesize = fb->display_info->width * fb->display_info->height *
 		    fb->display_info->Bpp * 2;
 		memset(fb->fb.screen_base, 0, framesize);
-		wait_for_completion(&fb->prev_buf_done_sem);
+#ifndef CONFIG_VIDEO_MODE
+		wait_for_completion_interruptible_timeout(
+			&fb->prev_buf_done_sem,	msecs_to_jiffies(100));
+#endif
 		kona_clock_start(fb);
 		fb->display_ops->update(fb->display_hdl,
 				fb->fb.var.yoffset ? fb->buff1 : fb->buff0,
 				NULL,
 				(DISPDRV_CB_T)kona_display_done_cb);
+#ifdef CONFIG_VIDEO_MODE
+		wait_for_completion_interruptible_timeout(
+			&fb->prev_buf_done_sem,	msecs_to_jiffies(100));
+#endif
 		break;
 
 	default:
