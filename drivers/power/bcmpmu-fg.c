@@ -26,7 +26,7 @@
 #include <linux/uaccess.h>
 #include <linux/poll.h>
 #include <linux/power_supply.h>
-#include <linux/time.h>
+#include <linux/ktime.h>
 #include <linux/sort.h>
 #include <linux/wakelock.h>
 #ifdef CONFIG_DEBUG_FS
@@ -247,6 +247,8 @@ struct bcmpmu_fg_data {
 	struct avg_sample_buff avg_samples;
 	struct batt_adc_data adc_data;
 
+	ktime_t last_sample_tm;
+
 	enum bcmpmu_fg_cal_state cal_state;
 	enum bcmpmu_batt_charging_state charging_state;
 	enum bcmpmu_batt_discharging_state discharge_state;
@@ -262,9 +264,11 @@ struct bcmpmu_fg_data {
 };
 
 #ifdef CONFIG_DEBUG_FS
+#define DEBUG_FS_PERMISSIONS	(S_IRUSR | S_IWUSR)
+#endif
+
 static u32 debug_mask = BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT | \
 			BCMPMU_PRINT_FLOW;
-#define DEBUG_FS_PERMISSIONS	(S_IRUSR | S_IWUSR)
 
 #define pr_fg(debug_level, args...) \
 	do { \
@@ -272,7 +276,6 @@ static u32 debug_mask = BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT | \
 			pr_info("[FG]:"args); \
 		} \
 	} while (0)
-#endif
 
 static inline int capacity_to_percentage(struct bcmpmu_fg_data *fg, int cap)
 {
@@ -381,6 +384,29 @@ static inline int bcmpmu_fg_sample_rate_to_actual(
 		BUG_ON(1);
 	}
 	return actual;
+}
+
+static inline int bcmpmu_fg_sample_rate_to_time(
+		enum bcmpmu_fg_sample_rate rate)
+{
+	int ms;
+	switch (rate) {
+	case SAMPLE_RATE_2HZ:
+		ms = 500;
+		break;
+	case SAMPLE_RATE_4HZ:
+		ms = 250;
+		break;
+	case SAMPLE_RATE_8HZ:
+		ms = 125;
+		break;
+	case SAMPLE_RATE_16HZ:
+		ms = 62;
+		break;
+	default:
+		BUG_ON(1);
+	}
+	return ms;
 }
 
 __weak int bcmpmu_fg_accumulator_to_capacity(struct bcmpmu_fg_data *fg,
@@ -848,6 +874,9 @@ static void bcmpmu_fg_get_capacity_adj_factor(struct bcmpmu_fg_data *fg)
 
 static void bcmpmu_fg_get_coulomb_counter(struct bcmpmu_fg_data *fg)
 {
+	ktime_t t_now;
+	ktime_t t_diff;
+	u32 t_ms;
 	int ret;
 	int sample_count;
 	int sleep_count;
@@ -857,6 +886,19 @@ static void bcmpmu_fg_get_coulomb_counter(struct bcmpmu_fg_data *fg)
 	u8 accm[4];
 	u8 act_cnt[2];
 	u8 sleep_cnt[2];
+
+	/**
+	 * Avoid reading accumulator register earlier than
+	 * next sample available
+	 */
+	t_now = ktime_get();
+	t_diff = ktime_sub(t_now, fg->last_sample_tm);
+	t_ms = ktime_to_ms(t_diff);
+
+	if (t_ms < bcmpmu_fg_sample_rate_to_time(fg->sample_rate))
+		return;
+
+	fg->last_sample_tm = t_now;
 
 	capacity_load_comp = bcmpmu_fg_get_load_comp_capacity(fg, true, false);
 
@@ -1239,7 +1281,7 @@ static int bcmpmu_fg_sw_maint_charging_init(struct bcmpmu_fg_data *fg)
 static void bcmpmu_fg_hw_init(struct bcmpmu_fg_data *fg)
 {
 	bcmpmu_fg_reset(fg);
-	bcmpmu_fg_set_sample_rate(fg, fg->sample_rate);
+	bcmpmu_fg_set_sample_rate(fg, SAMPLE_RATE_8HZ);
 	/**
 	 * Enable synchronous mode to save battery current
 	 * during deep sleep condition
@@ -1512,6 +1554,15 @@ static void bcmpmu_fg_periodic_work(struct work_struct *work)
 
 	if (fg->flags.init_capacity) {
 		fg->capacity_info.initial = bcmpmu_fg_get_init_cap(fg);
+		/**
+		 * During initial capacity calculation, sample rate is set
+		 * to 8HZ for faster capacity calculation.
+		 * Now we set to default sampling rate (2 HZ)
+		 */
+		bcmpmu_fg_enable(fg, false);
+		bcmpmu_fg_set_sample_rate(fg, fg->sample_rate);
+		bcmpmu_fg_enable(fg, true);
+
 		fg->capacity_info.capacity = fg->capacity_info.initial;
 		fg->capacity_info.prev_percentage = capacity_to_percentage(fg,
 				fg->capacity_info.capacity);
