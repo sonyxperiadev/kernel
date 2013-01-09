@@ -734,6 +734,24 @@ static void usb_adp_work(struct work_struct *work)
 	}
 }
 
+int bcmpmu_usb_otg_bost(struct bcmpmu59xxx *bcmpmu, bool en)
+{
+	int ret = 0;
+	u8 reg;
+
+	ret |= bcmpmu->read_dev(bcmpmu,
+				PMU_REG_OTGCTRL1, &reg);
+
+	if (en)
+		reg |= OTGCTRL1_OTG_VBUS_BOOST_MASK;
+	else
+		reg &= (~OTGCTRL1_OTG_VBUS_BOOST_MASK);
+
+	ret |= bcmpmu->write_dev(bcmpmu,
+				PMU_REG_OTGCTRL1, reg);
+	return ret;
+
+}
 int bcmpmu_usb_set(struct bcmpmu59xxx *bcmpmu,
 		int ctrl, unsigned long data)
 {
@@ -968,6 +986,12 @@ int bcmpmu_usb_set(struct bcmpmu59xxx *bcmpmu,
 					PMU_REG_OTGCTRL10,
 					TPROBE_MAX_GET_LSB(val));
 		}
+		break;
+	case BCMPMU_OTG_CTRL_BOST_ON_OFF:
+		if (data == 0)
+			bcmpmu_usb_otg_bost(bcmpmu, 0);
+		else
+			bcmpmu_usb_otg_bost(bcmpmu, 1);
 		break;
 
 	default:
