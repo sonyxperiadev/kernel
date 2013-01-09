@@ -135,7 +135,7 @@ static void kona_reset(char mode, const char *cmd)
 		     KONA_ROOT_RST_VA +
 		     IROOT_RST_MGR_REG_CHIP_SOFT_RSTN_OFFSET);
 #else
-	/*Reset the CP */
+
 	/* enable reset register access */
 	val = __raw_readl(KONA_ROOT_RST_VA + ROOT_RST_MGR_REG_WR_ACCESS_OFFSET);
 	val &= ROOT_RST_MGR_REG_WR_ACCESS_PRIV_ACCESS_MODE_MASK;	/* retain access mode          */
@@ -143,41 +143,17 @@ static void kona_reset(char mode, const char *cmd)
 	val |= ROOT_RST_MGR_REG_WR_ACCESS_RSTMGR_ACC_MASK;	/* set access enable           */
 	__raw_writel(val, KONA_ROOT_RST_VA + ROOT_RST_MGR_REG_WR_ACCESS_OFFSET);
 
-	val =
-	    __raw_readl(KONA_ROOT_RST_VA +
-			ROOT_RST_MGR_REG_PD_SOFT_RSTN_OFFSET);
-	val &= ~ROOT_RST_MGR_REG_PD_SOFT_RSTN_MDM_SOFT_RSTN_MASK;
-	__raw_writel(val,
-		     KONA_ROOT_RST_VA + ROOT_RST_MGR_REG_PD_SOFT_RSTN_OFFSET);
-
-	val =
-	    __raw_readl(KONA_ROOT_RST_VA +
-			ROOT_RST_MGR_REG_PD_SOFT_RSTN_OFFSET);
-	val |= ROOT_RST_MGR_REG_PD_SOFT_RSTN_MDM_SOFT_RSTN_MASK;
-	__raw_writel(val,
-		     KONA_ROOT_RST_VA + ROOT_RST_MGR_REG_PD_SOFT_RSTN_OFFSET);
-
-	val = __raw_readl(KONA_BMDM_RST_VA + BMDM_RST_MGR_REG_WR_ACCESS_OFFSET);
-	val &= BMDM_RST_MGR_REG_WR_ACCESS_PRIV_ACCESS_MODE_MASK;	/* retain access mode          */
-#ifndef CONFIG_ARCH_HAWAII
-	val |= (0xA5A5 << BMDM_RST_MGR_REG_WR_ACCESS_PASSWORD_SHIFT);	/* set password                        */
-#endif
-	val |= BMDM_RST_MGR_REG_WR_ACCESS_RSTMGR_ACC_MASK;	/* set access enable           */
-	__raw_writel(val, KONA_BMDM_RST_VA + BMDM_RST_MGR_REG_WR_ACCESS_OFFSET);
-
-	/* trigger reset */
-	val = __raw_readl(KONA_BMDM_RST_VA + BMDM_RST_MGR_REG_CP_RSTN_OFFSET);
-	val &= BMDM_RST_MGR_REG_CP_RSTN_PRIV_ACCESS_MODE_MASK;	/* retain access mode          */
-	val |= BMDM_RST_MGR_REG_CP_RSTN_CP_DEBUG_RSTN_MASK;
-	__raw_writel(val, KONA_BMDM_RST_VA + BMDM_RST_MGR_REG_CP_RSTN_OFFSET);
-
-	val = __raw_readl(KONA_BMDM_RST_VA + BMDM_RST_MGR_REG_CP_RSTN_OFFSET);
-	val &= BMDM_RST_MGR_REG_CP_RSTN_PRIV_ACCESS_MODE_MASK;	/* retain access mode          */
-	val |=
-	    (BMDM_RST_MGR_REG_CP_RSTN_CP_RSTN_MASK |
-	     BMDM_RST_MGR_REG_CP_RSTN_CP_DEBUG_RSTN_MASK);
-	__raw_writel(val, KONA_BMDM_RST_VA + BMDM_RST_MGR_REG_CP_RSTN_OFFSET);
-
+	/*
+	 * Its safe to reset the R4 only after Chip Soft Reset.
+	 * Otherwise if CP is performing some register access that is pending
+	 * and if we reset the CP that could potentially lock up the bus.
+	 *
+	 * R4 reset is done from the Loader any way, which is after
+	 * Chip Soft Reset. So we should not perform CP reset from here
+	 *
+	 * The problem becauase this is seen only on few Ivory Phones
+	 * CSP 570028
+	 */
 	/*Reset the AP */
 	/* trigger reset */
 	val =
