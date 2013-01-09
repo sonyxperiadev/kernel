@@ -32,6 +32,7 @@
 char *get_supply_type_str(int chrgr_type);
 static int debug_mask = (BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT);
 module_param_named(dbgmsk, debug_mask, int, S_IRUGO | S_IWUSR | S_IWGRP);
+static int icc_fcc;
 #define pr_chrgr(debug_level, args...) \
 	do { \
 		if (debug_mask & BCMPMU_PRINT_##debug_level) { \
@@ -61,6 +62,8 @@ struct bcmpmu_chrgr_data {
 	struct notifier_block chgr_detect;
 	struct notifier_block chgr_curr_lmt;
 };
+
+struct bcmpmu_chrgr_data *gbl_di;
 
 static enum power_supply_property bcmpmu_chrgr_props[] = {
 	POWER_SUPPLY_PROP_ONLINE,
@@ -109,6 +112,34 @@ static u32 bcmpmu_pmu_curr_table[] = {
 const char *supplies_to[] = {
 	"battery",
 };
+static int set_icc_fcc(const char *val, const struct kernel_param *kp)
+{
+	struct bcmpmu_chrgr_data *di;
+	int curr;
+	int rv = 0;
+
+	di = gbl_di;
+	if (!di)
+		return -1;
+
+	sscanf(val, "%d", &curr);
+
+	bcmpmu_set_icc_fc(di->bcmpmu, curr);
+
+	rv = param_set_int(val, kp);
+
+	if (rv)
+		return rv;
+
+	return 0;
+}
+
+static struct kernel_param_ops icc_fcc_param_ops = {
+	.set = set_icc_fcc,
+	.get = param_get_int,
+};
+
+module_param_cb(icc_fcc, &icc_fcc_param_ops, &icc_fcc, 0644);
 
 static int bcmpmu_get_curr_val(int curr)
 {
@@ -146,6 +177,7 @@ int bcmpmu_set_icc_fc(struct bcmpmu59xxx *bcmpmu, int curr)
 {
 	int ret = 0;
 	int val ;
+	struct bcmpmu_accy *accy = bcmpmu->accyinfo;
 	if (curr < 0)
 		return -EINVAL;
 	if (curr == 0) {
@@ -155,6 +187,9 @@ int bcmpmu_set_icc_fc(struct bcmpmu59xxx *bcmpmu, int curr)
 	val = bcmpmu_get_curr_val(curr);
 	pr_chrgr(INIT , "%s: curr set to val %x\n", __func__, (val & 0xF));
 	ret = bcmpmu->write_dev(bcmpmu, PMU_REG_MBCCTRL10, (val & 0xF));
+	if (!ret)
+		accy->usb_accy_data.max_curr_chrgr = val;
+
 	return ret;
 }
 EXPORT_SYMBOL(bcmpmu_set_icc_fc);
@@ -420,6 +455,7 @@ static int __devinit bcmpmu_chrgr_probe(struct platform_device *pdev)
 	di->dev = &pdev->dev;
 	di->bcmpmu = bcmpmu;
 	paccy = bcmpmu->accyinfo;
+	gbl_di = di;
 
 	platform_set_drvdata(pdev, di);
 	/*do not register psy if SPA is enabled*/
