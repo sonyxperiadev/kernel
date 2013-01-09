@@ -101,9 +101,11 @@ static struct ccu_clk CLK_NAME(bmdm) = {
 	.wr_access_offset = BMDM_CLK_MGR_REG_WR_ACCESS_OFFSET,
 	.lvm_en_offset = BMDM_CLK_MGR_REG_LVM_EN_OFFSET,
 	.policy_ctl_offset = BMDM_CLK_MGR_REG_POLICY_CTL_OFFSET,
-
+	.vlt_peri_offset = BMDM_CLK_MGR_REG_VLT_PERI_OFFSET,
 	.vlt0_3_offset = BMDM_CLK_MGR_REG_VLT0_3_OFFSET,
 	.vlt4_7_offset = BMDM_CLK_MGR_REG_VLT4_7_OFFSET,
+	.volt_peri = DEFINE_ARRAY_ARGS(VLT_NORMAL_PERI_MDM,
+			VLT_HIGH_PERI_MDM),
 	.freq_volt = BMDM_CCU_FREQ_VOLT_TBL,
 	.freq_count = BMDM_CCU_FREQ_VOLT_TBL_SZ,
 	.clk_mon_offset = BMDM_CLK_MGR_REG_CLKMON_OFFSET,
