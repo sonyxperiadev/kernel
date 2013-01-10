@@ -1423,7 +1423,11 @@ void csl_caph_srcmixer_release_outchnl(CSL_CAPH_MIXER_e chnl)
 					INFIFO_NO_THRES);
 			/* Clear output FIFO */
 			chal_caph_srcmixer_clr_fifo(handle, fifo);
-			/* Set gain to default value */
+
+			/* clear out hardware compressor related fields */
+			csl_caph_srcmixer_clear_compressor_outchnl(chnl);
+
+			/* set gain to default value */
 			if (chalOutChnl & CAPH_M0_Left) {
 				chal_caph_srcmixer_set_spkrgain_bitsel(handle,
 						CAPH_M0_Left,
@@ -1519,6 +1523,51 @@ void csl_caph_srcmixer_set_inchnl_status(CSL_CAPH_SRCM_INCHNL_e chnl)
 		}
 	}
 	return;
+}
+
+/****************************************************************************
+ *
+ *  Function Name: void csl_caph_srcmixer_clear_compressor_outchnl
+ *  (CSL_CAPH_MIXER_e chnl)
+ *
+ *  Description: clear CAPH srcmixer compressor related fields in output
+ *  channel
+ *
+ ****************************************************************************/
+void csl_caph_srcmixer_clear_compressor_outchnl(CSL_CAPH_MIXER_e chnl)
+{
+	UInt8 chalOutChnl = 0x0;
+	UInt8 iir_coeff = 0;
+	int i;
+
+/* get the cHAL output channel from CSL output channel */
+chalOutChnl = csl_caph_srcmixer_get_chaloutchnl(chnl);
+
+for (i = CAPH_M0_Left; i <= CAPH_M1_Right; i = i << 1) {
+	if (chalOutChnl & i) {
+		chal_caph_srcmixer_disable_aldc(handle, i);
+		chal_caph_srcmixer_disable_spkrgain_compresser
+					(handle, i);
+		chal_caph_srcmixer_load_spkrgain_iir_coeff(handle,
+				i, &iir_coeff);
+		chal_caph_srcmixer_reset_spkrgain_iir
+					(handle, i);
+		chal_caph_srcmixer_set_spkrgain_compresser_attack
+			(handle, i, 0, 0);
+		chal_caph_srcmixer_set_spkrgain_compresser_attackslope
+			(handle, i, 0);
+		chal_caph_srcmixer_disable_spkrgain_compresser_attackslope
+			(handle, i);
+		chal_caph_srcmixer_set_spkrgain_compresser_decayslope
+			(handle, i, 0);
+		chal_caph_srcmixer_disable_spkrgain_compresser_decayslope
+			(handle, i);
+		aTrace(LOG_AUDIO_CSL, "%s disable aldc mixer out = %d\n",
+			__func__, i);
+	}
+}
+return;
+
 }
 
 /****************************************************************************
@@ -2447,6 +2496,330 @@ void csl_srcmixer_setMixOutGain(CSL_CAPH_MIXER_e outChnl,
 		chal_caph_srcmixer_set_spkrgain(handle, CAPH_M1_Left, scale_l);
 	if (chalOutChnl & CAPH_M1_Right)
 		chal_caph_srcmixer_set_spkrgain(handle, CAPH_M1_Right, scale_r);
+
+	return;
+}
+
+/****************************************************************************
+ *
+ *  Function Name: csl_srcmixer_load_spkrgain_iir_coeff
+ *  (CSL_CAPH_MIXER_e outChnl, int iir_coeff)
+ *
+ *  Description: Set the SRCMixer mixer iir coeff
+ *
+ ****************************************************************************/
+void csl_srcmixer_load_spkrgain_iir_coeff(CSL_CAPH_MIXER_e outChnl,
+				UInt8 *iir_coeff)
+{
+	UInt8 chalOutChnl = 0x0;
+
+	/* get the cHAL output channel from CSL output channel */
+	chalOutChnl = csl_caph_srcmixer_get_chaloutchnl(outChnl);
+
+	if (chalOutChnl & CAPH_M0_Left)
+		chal_caph_srcmixer_load_spkrgain_iir_coeff(handle,
+				CAPH_M0_Left, iir_coeff);
+	if (chalOutChnl & CAPH_M0_Right)
+		chal_caph_srcmixer_load_spkrgain_iir_coeff(handle,
+				CAPH_M0_Right, iir_coeff);
+	if (chalOutChnl & CAPH_M1_Left)
+		chal_caph_srcmixer_load_spkrgain_iir_coeff(handle,
+				CAPH_M1_Left, iir_coeff);
+	if (chalOutChnl & CAPH_M1_Right)
+		chal_caph_srcmixer_load_spkrgain_iir_coeff(handle,
+				CAPH_M1_Right, iir_coeff);
+
+	return;
+}
+
+/****************************************************************************
+ *
+ *  Function Name: csl_srcmixer_aldc_control
+ *  (CSL_CAPH_MIXER_e outChnl, Boolean enable)
+ *
+ *  Description: enable or disable SRCMixer speaker aldc
+ *
+ ****************************************************************************/
+void csl_srcmixer_aldc_control(CSL_CAPH_MIXER_e outChnl,
+				Boolean enable)
+{
+	UInt8 chalOutChnl = 0x0;
+
+	/* get the cHAL output channel from CSL output channel */
+	chalOutChnl = csl_caph_srcmixer_get_chaloutchnl(outChnl);
+
+	if (chalOutChnl & CAPH_M0_Left) {
+		if (enable)
+			chal_caph_srcmixer_enable_aldc(handle, CAPH_M0_Left);
+		else
+			chal_caph_srcmixer_disable_aldc(handle, CAPH_M0_Left);
+	}
+	if (chalOutChnl & CAPH_M0_Right) {
+		if (enable)
+			chal_caph_srcmixer_enable_aldc(handle, CAPH_M0_Right);
+		else
+			chal_caph_srcmixer_disable_aldc(handle, CAPH_M0_Right);
+	}
+	if (chalOutChnl & CAPH_M1_Left) {
+		if (enable)
+			chal_caph_srcmixer_enable_aldc(handle, CAPH_M1_Left);
+		else
+			chal_caph_srcmixer_disable_aldc(handle, CAPH_M1_Left);
+	}
+	if (chalOutChnl & CAPH_M1_Right) {
+		if (enable)
+			chal_caph_srcmixer_enable_aldc(handle, CAPH_M1_Right);
+		else
+			chal_caph_srcmixer_disable_aldc(handle, CAPH_M1_Right);
+	}
+	return;
+}
+
+/****************************************************************************
+ *
+ *  Function Name: csl_srcmixer_spkrgain_compresser_control
+ *  (CSL_CAPH_MIXER_e outChnl, Boolean enable)
+ *
+ *  Description: enable or disable SRCMixer speaker compressor
+ *
+ ****************************************************************************/
+void csl_srcmixer_spkrgain_compresser_control(CSL_CAPH_MIXER_e outChnl,
+				Boolean enable)
+{
+	UInt8 chalOutChnl = 0x0;
+
+	/* get the cHAL output channel from CSL output channel */
+	chalOutChnl = csl_caph_srcmixer_get_chaloutchnl(outChnl);
+
+	if (chalOutChnl & CAPH_M0_Left) {
+		if (enable)
+			chal_caph_srcmixer_enable_spkrgain_compresser(handle,
+					CAPH_M0_Left);
+		else
+			chal_caph_srcmixer_disable_spkrgain_compresser(handle,
+					CAPH_M0_Left);
+	}
+	if (chalOutChnl & CAPH_M0_Right) {
+		if (enable)
+			chal_caph_srcmixer_enable_spkrgain_compresser(handle,
+					CAPH_M0_Right);
+		else
+			chal_caph_srcmixer_disable_spkrgain_compresser(handle,
+					CAPH_M0_Right);
+	}
+	if (chalOutChnl & CAPH_M1_Left) {
+		if (enable)
+			chal_caph_srcmixer_enable_spkrgain_compresser(handle,
+					CAPH_M1_Left);
+		else
+			chal_caph_srcmixer_disable_spkrgain_compresser(handle,
+					CAPH_M1_Left);
+	}
+	if (chalOutChnl & CAPH_M1_Right) {
+		if (enable)
+			chal_caph_srcmixer_enable_spkrgain_compresser(handle,
+					CAPH_M1_Right);
+		else
+			chal_caph_srcmixer_disable_spkrgain_compresser(handle,
+					CAPH_M1_Right);
+	}
+	return;
+}
+
+/****************************************************************************
+ *
+ *  Function Name: csl_srcmixer_set_spkrgain_compresser_attack
+ *  (CSL_CAPH_MIXER_e outChnl, UInt16 step, UInt16 thres)
+ *
+ *  Description: set SRCMixer speaker compressor attack steps and threshold
+ *
+ ****************************************************************************/
+void csl_srcmixer_set_spkrgain_compresser_attack(CSL_CAPH_MIXER_e outChnl,
+					UInt16 step, UInt16 thres)
+{
+	UInt8 chalOutChnl = 0x0;
+
+	/* get the cHAL output channel from CSL output channel */
+	chalOutChnl = csl_caph_srcmixer_get_chaloutchnl(outChnl);
+
+	if (chalOutChnl & CAPH_M0_Left)
+		chal_caph_srcmixer_set_spkrgain_compresser_attack(handle,
+				CAPH_M0_Left, step, thres);
+	if (chalOutChnl & CAPH_M0_Right)
+		chal_caph_srcmixer_set_spkrgain_compresser_attack(handle,
+				CAPH_M0_Right, step, thres);
+	if (chalOutChnl & CAPH_M1_Left)
+		chal_caph_srcmixer_set_spkrgain_compresser_attack(handle,
+				CAPH_M1_Left, step, thres);
+	if (chalOutChnl & CAPH_M1_Right)
+		chal_caph_srcmixer_set_spkrgain_compresser_attack(handle,
+				CAPH_M1_Right, step, thres);
+
+	return;
+}
+
+/****************************************************************************
+ *
+ *  Function Name: csl_srcmixer_spkrgain_compresser_attackslope_control
+ *  (CSL_CAPH_MIXER_e outChnl, Boolean enable)
+ *
+ *  Description: enable or disable SRCMixer speaker attack slope
+ *
+ ****************************************************************************/
+void csl_srcmixer_spkrgain_compresser_attackslope_control(CSL_CAPH_MIXER_e
+					outChnl, Boolean enable)
+{
+UInt8 chalOutChnl = 0x0;
+
+/* get the cHAL output channel from CSL output channel */
+chalOutChnl = csl_caph_srcmixer_get_chaloutchnl(outChnl);
+
+if (chalOutChnl & CAPH_M0_Left) {
+	if (enable)
+		chal_caph_srcmixer_enable_spkrgain_compresser_attackslope
+				(handle, CAPH_M0_Left);
+	else
+		chal_caph_srcmixer_disable_spkrgain_compresser_attackslope
+				(handle, CAPH_M0_Left);
+}
+if (chalOutChnl & CAPH_M0_Right) {
+	if (enable)
+		chal_caph_srcmixer_enable_spkrgain_compresser_attackslope
+				(handle, CAPH_M0_Right);
+	else
+		chal_caph_srcmixer_disable_spkrgain_compresser_attackslope
+				(handle, CAPH_M0_Right);
+}
+if (chalOutChnl & CAPH_M1_Left) {
+	if (enable)
+		chal_caph_srcmixer_enable_spkrgain_compresser_attackslope
+				(handle, CAPH_M1_Left);
+	else
+		chal_caph_srcmixer_disable_spkrgain_compresser_attackslope
+				(handle, CAPH_M1_Left);
+}
+if (chalOutChnl & CAPH_M1_Right) {
+	if (enable)
+		chal_caph_srcmixer_enable_spkrgain_compresser_attackslope
+				(handle, CAPH_M1_Right);
+	else
+		chal_caph_srcmixer_disable_spkrgain_compresser_attackslope
+				(handle, CAPH_M1_Right);
+}
+return;
+}
+
+/****************************************************************************
+ *
+ *  Function Name: csl_srcmixer_set_spkrgain_compresser_attackslope
+ *  (CSL_CAPH_MIXER_e outChnl, UInt32 slope)
+ *
+ *  Description: set SRCMixer speaker compressor attack slope
+ *
+ ****************************************************************************/
+void csl_srcmixer_set_spkrgain_compresser_attackslope(CSL_CAPH_MIXER_e
+					outChnl, UInt32 slope)
+{
+	UInt8 chalOutChnl = 0x0;
+
+	/* get the cHAL output channel from CSL output channel */
+	chalOutChnl = csl_caph_srcmixer_get_chaloutchnl(outChnl);
+
+	if (chalOutChnl & CAPH_M0_Left)
+		chal_caph_srcmixer_set_spkrgain_compresser_attackslope(handle,
+						CAPH_M0_Left, slope);
+	if (chalOutChnl & CAPH_M0_Right)
+		chal_caph_srcmixer_set_spkrgain_compresser_attackslope(handle,
+						CAPH_M0_Right, slope);
+	if (chalOutChnl & CAPH_M1_Left)
+		chal_caph_srcmixer_set_spkrgain_compresser_attackslope(handle,
+						CAPH_M1_Left, slope);
+	if (chalOutChnl & CAPH_M1_Right)
+		chal_caph_srcmixer_set_spkrgain_compresser_attackslope(handle,
+						CAPH_M1_Right, slope);
+
+	return;
+}
+
+/****************************************************************************
+ *
+ *  Function Name: csl_srcmixer_spkrgain_compresser_decayslope_control
+ *  (CSL_CAPH_MIXER_e outChnl, Boolean enable)
+ *
+ *  Description: enable or disable SRCMixer speaker decay slope
+ *
+ ****************************************************************************/
+void csl_srcmixer_spkrgain_compresser_decayslope_control(CSL_CAPH_MIXER_e
+					outChnl, Boolean enable)
+{
+UInt8 chalOutChnl = 0x0;
+
+/* get the cHAL output channel from CSL output channel */
+chalOutChnl = csl_caph_srcmixer_get_chaloutchnl(outChnl);
+
+if (chalOutChnl & CAPH_M0_Left) {
+	if (enable)
+		chal_caph_srcmixer_enable_spkrgain_compresser_decayslope
+				(handle, CAPH_M0_Left);
+	else
+		chal_caph_srcmixer_disable_spkrgain_compresser_decayslope
+				(handle, CAPH_M0_Left);
+}
+if (chalOutChnl & CAPH_M0_Right) {
+	if (enable)
+		chal_caph_srcmixer_enable_spkrgain_compresser_decayslope
+				(handle, CAPH_M0_Right);
+	else
+		chal_caph_srcmixer_disable_spkrgain_compresser_decayslope
+				(handle, CAPH_M0_Right);
+}
+if (chalOutChnl & CAPH_M1_Left) {
+	if (enable)
+		chal_caph_srcmixer_enable_spkrgain_compresser_decayslope
+				(handle, CAPH_M1_Left);
+	else
+		chal_caph_srcmixer_disable_spkrgain_compresser_decayslope
+				(handle, CAPH_M1_Left);
+}
+if (chalOutChnl & CAPH_M1_Right) {
+	if (enable)
+		chal_caph_srcmixer_enable_spkrgain_compresser_decayslope
+				(handle, CAPH_M1_Right);
+	else
+		chal_caph_srcmixer_disable_spkrgain_compresser_decayslope
+				(handle, CAPH_M1_Right);
+}
+return;
+}
+
+/****************************************************************************
+ *
+ *  Function Name: csl_srcmixer_set_spkrgain_compresser_decayslope
+ *  (CSL_CAPH_MIXER_e outChnl, UInt32 slope)
+ *
+ *  Description: set SRCMixer speaker compressor decay slope
+ *
+ ****************************************************************************/
+void csl_srcmixer_set_spkrgain_compresser_decayslope(CSL_CAPH_MIXER_e outChnl,
+						UInt32 slope)
+{
+	UInt8 chalOutChnl = 0x0;
+
+	/* get the cHAL output channel from CSL output channel */
+	chalOutChnl = csl_caph_srcmixer_get_chaloutchnl(outChnl);
+
+	if (chalOutChnl & CAPH_M0_Left)
+		chal_caph_srcmixer_set_spkrgain_compresser_decayslope(handle,
+						CAPH_M0_Left, slope);
+	if (chalOutChnl & CAPH_M0_Right)
+		chal_caph_srcmixer_set_spkrgain_compresser_decayslope(handle,
+						CAPH_M0_Right, slope);
+	if (chalOutChnl & CAPH_M1_Left)
+		chal_caph_srcmixer_set_spkrgain_compresser_decayslope(handle,
+						CAPH_M1_Left, slope);
+	if (chalOutChnl & CAPH_M1_Right)
+		chal_caph_srcmixer_set_spkrgain_compresser_decayslope(handle,
+						CAPH_M1_Right, slope);
 
 	return;
 }

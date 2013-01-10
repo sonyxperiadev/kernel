@@ -358,13 +358,23 @@ typedef struct
 
 	/*in mB (0.01 dB).*/
 	Int32 fm_radio_digital_vol[NUM_OF_ENTRY_IN_FM_RADIO_DIGITAL_VOLUME];
+
+	UInt16 mpm_niir_coeff;
+	UInt16 mpm_gain_attack_step;
+	UInt32 mpm_gain_attack_slope;
+	UInt32 mpm_gain_decay_slope;
+	UInt16 mpm_gain_attack_thre;
+	UInt16 ihf_protection_enable;
 } SysMultimediaAudioParm_t;
 
 
 typedef struct
 {
 	UInt32 treq_biquad_num;
-	UInt32 treq_coef[12*10];	
+	UInt32 treq_coef[NUM_OF_SPEAKER_EQ_BIQUAD*COEF_NUM_OF_EACH_EQ_BIQUAD*2];
+	UInt32 treq_gain[NUM_OF_SPEAKER_EQ_BIQUAD*2];
+	UInt32 treq_outbit_sel[2];
+	UInt32 treq_output_gain;
 } SysIndMultimediaAudioParm_t;
 
 #endif /*_SYSPARM_SHARED_H_*/

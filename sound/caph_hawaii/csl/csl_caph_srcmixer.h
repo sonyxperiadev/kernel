@@ -375,6 +375,113 @@ void csl_srcmixer_setMixAllInGain(CSL_CAPH_MIXER_e outChnl,
 void csl_srcmixer_setMixOutGain(CSL_CAPH_MIXER_e outChnl,
 		int gainL_mB, int gainR_mB);
 
+/**
+*
+*  @brief  Set the SRCMixer mixer iir coeff
+*
+*  @param   outChnl  (in) caph srcmixer mixer output channel
+*  @param   iir_coeff  (in) caph srcmixer mixer iir coeff
+*
+*  @return void
+*****************************************************************************/
+void csl_srcmixer_load_spkrgain_iir_coeff(CSL_CAPH_MIXER_e outChnl,
+				UInt8 *iir_coeff);
+
+/**
+*
+*  @brief  enable or disable SRCMixer speaker aldc
+*
+*  @param   outChnl  (in) caph srcmixer mixer output channel
+*  @param   enable  (in) enable or disable
+*
+*  @return void
+*****************************************************************************/
+void csl_srcmixer_aldc_control(CSL_CAPH_MIXER_e outChnl,
+				Boolean enable);
+
+/**
+*
+*  @brief  enable or disable SRCMixer speaker compressor
+*
+*  @param   outChnl  (in) caph srcmixer mixer output channel
+*  @param   enable  (in) enable or disable
+*
+*  @return void
+*****************************************************************************/
+void csl_srcmixer_spkrgain_compresser_control(CSL_CAPH_MIXER_e outChnl,
+				Boolean enable);
+
+/**
+*
+*  @brief  set SRCMixer speaker compressor attack step and
+*			threshold
+*
+*  @param   outChnl  (in) caph srcmixer mixer output channel
+*  @param   step  (in) attack step
+*  @param   thres  (in) attack threshold
+*
+*  @return void
+*****************************************************************************/
+void csl_srcmixer_set_spkrgain_compresser_attack(CSL_CAPH_MIXER_e outChnl,
+				UInt16 step, UInt16 thres);
+
+/**
+*
+*  @brief  enable or disable SRCMixer speaker attack slope
+*
+*  @param   outChnl  (in) caph srcmixer mixer output channel
+*  @param   enable  (in) enable or disable
+*
+*  @return void
+*****************************************************************************/
+void csl_srcmixer_spkrgain_compresser_attackslope_control(CSL_CAPH_MIXER_e
+				outChnl, Boolean enable);
+
+/**
+*
+*  @brief  set SRCMixer speaker compressor attack slope
+*
+*  @param   outChnl  (in) caph srcmixer mixer output channel
+*  @param   slope  (in) attack slope
+*
+*  @return void
+*****************************************************************************/
+void csl_srcmixer_set_spkrgain_compresser_attackslope(CSL_CAPH_MIXER_e
+				outChnl, UInt32 slope);
+
+/**
+*
+*  @brief  enable or disable SRCMixer speaker decay slope
+*
+*  @param   outChnl  (in) caph srcmixer mixer output channel
+*  @param   enable  (in) enable or disable
+*
+*  @return void
+*****************************************************************************/
+void csl_srcmixer_spkrgain_compresser_decayslope_control(CSL_CAPH_MIXER_e
+				outChnl, Boolean enable);
+
+/**
+*
+*  @brief  set SRCMixer speaker compressor decay slope
+*
+*  @param   outChnl  (in) caph srcmixer mixer output channel
+*  @param   slope  (in) decay slope
+*
+*  @return void
+*****************************************************************************/
+void csl_srcmixer_set_spkrgain_compresser_decayslope(CSL_CAPH_MIXER_e
+				outChnl, UInt32 slope);
+
+/**
+*  @brief  clear CAPH srcmixer compressor related fields in
+*			output channel
+*
+*  @param   mixerOutput  (out) CSL output chnl
+*  @return void
+*
+****************************************************************************/
+void csl_caph_srcmixer_clear_compressor_outchnl(CSL_CAPH_MIXER_e chnl);
 
 /**
 *

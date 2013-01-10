@@ -1214,6 +1214,8 @@ void AUDDRV_SetAudioMode_Speaker(SetAudioMode_Sp_t param)
 {
 	int mixInGain, mixOutGain, mixBitSel;	/* Register value. */
 	int mixInGainR, mixOutGainR, mixBitSelR;	/* Register value. */
+	int ihf_prot_enable, niir_coeff, gain_attack_step;
+	int gain_attack_thres, gain_attack_slope, gain_decay_slope;
 	CSL_CAPH_HWConfig_Table_t *path = NULL;
 	CSL_CAPH_MIXER_e outChnl = CSL_CAPH_SRCM_CH_NONE;
 
@@ -1239,6 +1241,13 @@ void AUDDRV_SetAudioMode_Speaker(SetAudioMode_Sp_t param)
 
 	mixInGain = mixOutGain = mixBitSel = 0;
 	mixInGainR = mixOutGainR = mixBitSelR = 0;
+	ihf_prot_enable = 0;
+	niir_coeff = 0;
+	gain_attack_step = 0;
+	gain_attack_thres = 0;
+	gain_attack_slope = 0;
+	gain_decay_slope = 0;
+
 	/* Load the speaker gains form sysparm. */
 
 	/*determine which mixer output to apply the gains to */
@@ -1448,6 +1457,39 @@ void AUDDRV_SetAudioMode_Speaker(SetAudioMode_Sp_t param)
 			mixBitSel, mixBitSelR);
 		csl_srcmixer_setMixBitSel(outChnl, mixBitSel, mixBitSelR);
 		csl_srcmixer_setMixOutGain(outChnl, mixOutGain, mixOutGainR);
+
+		/* hardware compressor initialization */
+		if (param.app >= AUDIO_APP_NUMBER)
+			ihf_prot_enable = (short)p1->ihf_protection_enable;
+
+		if (ihf_prot_enable) {
+			csl_srcmixer_aldc_control(outChnl, TRUE);
+			csl_srcmixer_spkrgain_compresser_control(outChnl, TRUE);
+			niir_coeff = (short)p1->mpm_niir_coeff;
+			csl_srcmixer_load_spkrgain_iir_coeff(outChnl,
+							(UInt8 *)&niir_coeff);
+			gain_attack_step = (short)p1->mpm_gain_attack_step;
+			gain_attack_thres = (short)p1->mpm_gain_attack_thre;
+			csl_srcmixer_set_spkrgain_compresser_attack(outChnl,
+					gain_attack_step, gain_attack_thres);
+			gain_attack_slope = p1->mpm_gain_attack_slope;
+			csl_srcmixer_set_spkrgain_compresser_attackslope
+					(outChnl, gain_attack_slope);
+			csl_srcmixer_spkrgain_compresser_attackslope_control
+							(outChnl, TRUE);
+			gain_decay_slope = p1->mpm_gain_decay_slope;
+			csl_srcmixer_set_spkrgain_compresser_decayslope
+					(outChnl, gain_decay_slope);
+			csl_srcmixer_spkrgain_compresser_decayslope_control
+							(outChnl, TRUE);
+			aTrace(LOG_AUDIO_DRIVER,
+			"%s : ihf_prot_enable %d, niir_coeff 0x%x, "
+			"gain_attack_step 0x%x, gain_attack_thres 0x%x, "
+			"gain_attack_slope 0x%x, gain_decay_slope 0x%x\n",
+			__func__, ihf_prot_enable, niir_coeff,
+			gain_attack_step, gain_attack_thres,
+			gain_attack_slope, gain_decay_slope);
+		}
 	}
 
 	if (path != 0) {
