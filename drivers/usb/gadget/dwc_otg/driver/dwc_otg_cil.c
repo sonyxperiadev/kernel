@@ -154,6 +154,15 @@ void w_wakeup_core(void *p)
 void w_shutdown_core(void *p)
 {
 	dwc_otg_core_if_t *core_if = p;
+	dwc_otg_core_global_regs_t *global_regs = core_if->core_global_regs;
+
+	/* Clear any pending OTG Interrupts */
+	dwc_write_reg32(&global_regs->gotgint, 0xFFFFFFFF);
+
+	/* Clear any pending interrupts */
+	dwc_write_reg32(&global_regs->gintsts, 0xFFFFFFFF);
+
+	dwc_otg_disable_global_interrupts(core_if);
 
 	if (core_if) {
 #ifdef CONFIG_USB_DELAYED_SUSPEND_POWER_SAVING

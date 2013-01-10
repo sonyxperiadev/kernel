@@ -67,8 +67,8 @@ static bool CTableSize;
 static bool STableSize;
 
 static int USB_MDIO[6] = {
-	0x0000,			/* MDIO Register 0 initial value 0x0000 */
-	0x0000,			/* MDIO Register 1 initial value 0x0000 */
+	0x0018,			/* MDIO Register 0 initial value 0x0000 */
+	0x0080,			/* MDIO Register 1 initial value 0x0000 */
 	0x0000,			/* MDIO Register 2 initial value 0x0000 */
 	0x0000,			/* MDIO Register 3 initial value 0x0000 */
 	0x0000,			/* MDIO Register 4 initial value 0x0000 */
@@ -130,6 +130,9 @@ int bcm_hsotgctrl_phy_mdio_read(int mdio_num)
 	struct bcm_hsotgctrl_drv_data *bcm_hsotgctrl_handle
 		= local_usb_mdio_handle;
 
+	if (NULL == bcm_hsotgctrl_handle)
+		return -ENODEV;
+
 	if ((!bcm_hsotgctrl_handle->mdio_master_clk) ||
 		  (!bcm_hsotgctrl_handle->dev))
 		return -EIO;
@@ -174,6 +177,9 @@ int bcm_hsotgctrl_phy_mdio_write(int mdio_num, int value)
 	int val;
 	struct bcm_hsotgctrl_drv_data *bcm_hsotgctrl_handle
 		= local_usb_mdio_handle;
+
+	if (NULL == bcm_hsotgctrl_handle)
+		return -ENODEV;
 
 	if ((!bcm_hsotgctrl_handle->mdio_master_clk) ||
 		  (!bcm_hsotgctrl_handle->dev))
