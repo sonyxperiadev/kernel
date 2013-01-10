@@ -1456,7 +1456,8 @@ static void bcmpmu_fg_charging_algo(struct bcmpmu_fg_data *fg)
 
 	bcmpmu_fg_get_coulomb_counter(fg);
 
-	bcmpmu_fg_moniter_battery_temp(fg);
+	if (!(fg->bcmpmu->flags & BCMPMU_SPA_EN))
+		bcmpmu_fg_moniter_battery_temp(fg);
 
 	if (!fg->pdata->hw_maintenance_charging)
 		bcmpmu_fg_sw_maint_charging_algo(fg);
