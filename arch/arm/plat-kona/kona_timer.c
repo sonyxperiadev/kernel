@@ -1114,6 +1114,9 @@ static inline void __disable_channel(struct kona_timer *kt)
 
 static inline unsigned long __get_counter(struct kona_timer_module *ktm)
 {
+#ifdef CONFIG_MACH_HAWAII_FPGA_E
+	readl(ktm->reg_base + KONA_GPTIMER_STCLO_OFFSET);
+#endif
 #define KONA_MAX_REPEAT_TIMES	100
 	unsigned long lsw;
 	int i = 0;
