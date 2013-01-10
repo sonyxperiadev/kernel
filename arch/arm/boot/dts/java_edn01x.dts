@@ -1,0 +1,137 @@
+/* Hawaii_edn01X Dts file */
+
+/dts-v1/;
+
+/include/ "java.dtsi"
+
+/ {
+	model = "javafpga_eve";
+	compatible = "bcm,java";
+
+	chosen {
+		bootargs = "console=ttyS0,115200n8 gpt mem=96M pmem=0 user_debug=31 carveout=0 lpj=10395648 ap_only_boot root=/dev/ram0 rw rootfstype=rootfs initrd=0x84000000,4M init=/linuxrc"; /*lpj=10395648*/
+	};
+
+	memory@82000000 {
+		device_type = "memory";
+		reg = <0x82000000 0x6000000>; /* 96 MB */
+	};
+
+	wd-tapper {
+		count = <120>; /* Time in seconds */
+		ch-num = <1>; /* Kona hub timer Channel number */
+		timer-name = "aon-timer";
+		status = "disabled";
+	};
+
+	uart@3e000000 {
+		clock-frequency = <26000000>;
+		port-name = "console";
+		clk-name = "uartb_clk";
+	};
+
+	uart@3e001000 {
+		clock-frequency = <48000000>;
+		port-name = "bluetooth";
+		clk-name = "uartb2_clk";
+	};
+
+	uart@3e002000 {
+		clock-frequency = <26000000>;
+		port-name = "gps";
+		clk-name = "uartb3_clk";
+	};
+
+	i2c0: i2c@3e016000 {
+		speed = <5>; /* BSC_BUS_SPEED_400 K */
+		dynamic-speed = <1>;
+		bsc-clk = "bsc1_clk";
+		bsc-apb-clk = "bsc1_apb_clk";
+		retries = <1>;
+		is-pmu-i2c = <0>;
+		fs-ref-frequency = <13000000>;
+		hs-ref-frequency = <104000000>;
+		status = "disabled";
+	};
+
+	i2c1: i2c@3e017000 {
+		speed = <5>; /* BSC_BUS_SPEED_400 K */
+		dynamic-speed = <1>;
+		bsc-clk = "bsc2_clk";
+		bsc-apb-clk = "bsc2_apb_clk";
+		retries = <3>;
+		is-pmu-i2c = <0>;
+		fs-ref-frequency = <13000000>;
+		hs-ref-frequency = <104000000>;
+		status = "disabled";
+	};
+
+	i2c2: i2c@3e018000 {
+		speed = <5>; /* BSC_BUS_SPEED_400 K */
+		dynamic-speed = <1>;
+		bsc-clk = "bsc3_clk";
+		bsc-apb-clk = "bsc3_apb_clk";
+		retries = <1>;
+		is-pmu-i2c = <0>;
+		fs-ref-frequency = <13000000>;
+		hs-ref-frequency = <104000000>;
+		status = "disabled";
+	};
+
+	i2c3: i2c@3e01c000 {
+		speed = <5>; /* BSC_BUS_SPEED_400 K */
+		dynamic-speed = <1>;
+		bsc-clk = "bsc4_clk";
+		bsc-apb-clk = "bsc4_apb_clk";
+		retries = <1>;
+		is-pmu-i2c = <0>;
+		fs-ref-frequency = <13000000>;
+		hs-ref-frequency = <104000000>;
+		status = "disabled";
+
+		tango_ts@46 {
+			compatible = "bcm,tango_ts";
+			reg = <0x46>;
+			gpio-irq-pin = <73>;
+			gpio-reset-pin = <70>;
+			x-max-value = <480>;
+			y-max-value = <800>;
+			layout = <1>;
+			num-bytes-to-read = <14>;
+			is-multi-touch = <1>;
+			is-resetable = <1>;
+			num-fingers-idx = <0>;
+			old-touching-idx = <1>;
+			x1-lo-idx = <2>;
+			x1-hi-idx = <3>;
+			y1-lo-idx = <4>;
+			y1-hi-idx = <5>;
+			x2-lo-idx = <6>;
+			x2-hi-idx = <7>;
+			y2-lo-idx = <8>;
+			y2-hi-idx = <9>;
+			x1-width-idx = <10>;
+			y1-width-idx = <11>;
+			x2-width-idx = <12>;
+			y2-width-idx = <13>;
+			power-mode-idx = <20>;
+			int-mode-idx = <21>;
+			int-width-idx = <22>;
+			min-finger-val = <0>;
+			max-finger-val = <2>;
+			panel-width = <56>;
+		};
+	};
+
+	i2c4: i2c@3500d000 {
+		speed = <7>; /* BSC_BUS_SPEED_HS */
+		dynamic-speed = <0>;
+		bsc-clk = "pmu_bsc_clk";
+		bsc-apb-clk = "pmu_bsc_apb";
+		retries = <5>;
+		is-pmu-i2c = <1>;
+		fs-ref-frequency = <13000000>;
+		hs-ref-frequency = <26000000>;
+		status = "disabled";
+	};
+};
