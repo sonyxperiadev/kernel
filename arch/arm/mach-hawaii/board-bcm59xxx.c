@@ -337,7 +337,7 @@ static struct regulator_init_data bcm59xxx_usbldo_data = {
 			.max_uV = 3300000,
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
-			.always_on = 1,
+			.always_on = 0,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(usb_supply),
 	.consumer_supplies = usb_supply,
@@ -667,7 +667,7 @@ struct bcmpmu59xxx_regulator_init_data
 		[BCMPMU_REGULATOR_USBLDO] = {
 			.id = BCMPMU_REGULATOR_USBLDO,
 			.initdata = &bcm59xxx_usbldo_data,
-			.dsm_mode = BCMPMU_REGL_OFF_IN_DSM,
+			.dsm_mode = BCMPMU_REGL_ON_IN_DSM,
 			.pc_pins_map =
 				PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
 		},
