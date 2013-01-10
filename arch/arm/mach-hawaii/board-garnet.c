@@ -420,11 +420,11 @@ static int hawaii_camera_power(struct device *dev, int on)
 	if (on) {
 		if (pi_mgr_dfs_request_update(&unicam_dfs_node, PI_OPP_TURBO))
 			printk("DVFS for UNICAM failed\n");
+		regulator_enable(d_gpsr_cam0_1v8);
+		usleep_range(1000, 1010);
 		regulator_enable(d_3v0_mmc1_vcc);
 		usleep_range(1000, 1010);
 		regulator_enable(d_1v8_mmc1_vcc);
-		usleep_range(1000, 1010);
-		regulator_enable(d_gpsr_cam0_1v8);
 		usleep_range(1000, 1010);
 
 		if (mm_ccu_set_pll_select(CSI0_BYTE1_PLL, 8)) {
