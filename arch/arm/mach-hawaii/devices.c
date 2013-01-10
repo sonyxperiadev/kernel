@@ -49,8 +49,8 @@
 #include <plat/chal/chal_trace.h>
 #ifdef CONFIG_KONA_AVS
 #include <plat/kona_avs.h>
-#include "pm_params.h"
 #endif
+#include "pm_params.h"
 #include <trace/stm.h>
 #if defined(CONFIG_KONA_CPU_FREQ_DRV)
 #include <plat/kona_cpufreq_drv.h>
@@ -710,32 +710,32 @@ struct platform_device kona_cpufreq_device = {
 #endif /*CONFIG_KONA_CPU_FREQ_DRV */
 
 #ifdef CONFIG_KONA_AVS
-void avs_silicon_type_notify(u32 silicon_type, int *freq_id,
-		struct adj_param *param)
+void avs_silicon_type_notify(u32 silicon_type, u32 ate_freq)
 {
-	pr_info("%s : silicon type = %d freq = %d\n", __func__,
-			silicon_type, *freq_id);
+	u32 freq_id = A9_FREQ_1000_MHZ;
+	pr_info("%s : silicon type = %d freq_id = %d\n", __func__,
+			silicon_type, freq_id);
 
-	switch ((*freq_id)) {
+	switch (ate_freq) {
 	case A9_FREQ_UNKNOWN:
 		printk(KERN_ALERT "Unknown freqid. Set to max supported\n");
-#ifdef CONFIG_PWRMGR_1P2GHZ_OPS_SET_SELECT
-		*freq_id = A9_FREQ_1200_MHZ;
-#else
-		*freq_id = A9_FREQ_1000_MHZ;
-#endif
+		#ifdef CONFIG_PWRMGR_1P2GHZ_OPS_SET_SELECT
+		freq_id = A9_FREQ_1200_MHZ;
+		#else
+		freq_id = A9_FREQ_1000_MHZ;
+		#endif
 		break;
 	case A9_FREQ_1000_MHZ:
-#ifdef CONFIG_PWRMGR_1P2GHZ_OPS_SET_SELECT
+		#ifdef CONFIG_PWRMGR_1P2GHZ_OPS_SET_SELECT
 		printk(KERN_ALERT "AVS says 1 GHZ, system conf says 1.2 GHZ");
 		BUG();
-#endif
+		#endif
 		break;
 	case A9_FREQ_1200_MHZ:
-#ifndef CONFIG_PWRMGR_1P2GHZ_OPS_SET_SELECT
+		#ifndef CONFIG_PWRMGR_1P2GHZ_OPS_SET_SELECT
 		printk(KERN_ALERT "AVS says 1.2 GHZ, system conf for 1GHZ");
-		*freq_id = A9_FREQ_1000_MHZ;
-#endif
+		freq_id = A9_FREQ_1000_MHZ;
+		#endif
 		break;
 	case A9_FREQ_1500_MHZ:
 		break;
@@ -743,7 +743,7 @@ void avs_silicon_type_notify(u32 silicon_type, int *freq_id,
 		BUG();
 	}
 
-	pm_init_pmu_sr_vlt_map_table(silicon_type, freq_id, param);
+	pm_init_pmu_sr_vlt_map_table(silicon_type, freq_id);
 }
 
 u32 silicon_type_lut[] = {

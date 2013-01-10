@@ -152,14 +152,12 @@ u32 kona_avs_get_silicon_type(void)
 }
 EXPORT_SYMBOL(kona_avs_get_silicon_type);
 
-u32 kona_avs_is_supp_freq(int freq_id)
+u32 kona_avs_get_ate_freq(void)
 {
-	if (freq_id <= avs_info.freq)
-		return 0;
-	else
-		return -EINVAL;
+	BUG_ON(avs_info.pdata == NULL);
+	return avs_info.freq;
 }
-EXPORT_SYMBOL(kona_avs_is_supp_freq);
+EXPORT_SYMBOL(kona_avs_get_ate_freq);
 
 struct adj_param *kona_avs_get_vlt_adj_param(void)
 {
@@ -445,12 +443,12 @@ static int avs_find_silicon_type(void)
 
 	if (ret) {
 		avs_info.silicon_type = SILICON_TYPE_SLOW;
-		avs_info.freq = 0;
+		avs_info.freq = A9_FREQ_UNKNOWN;
 	}
 
 	if (avs_info.pdata->silicon_type_notify)
 		avs_info.pdata->silicon_type_notify(avs_info.silicon_type,
-				&avs_info.freq, avs_info.pdata->adj_param);
+				avs_info.freq);
 
 	avs_dbg(AVS_LOG_INIT, "%s: silicon type: %d\n",
 			__func__, avs_info.silicon_type);

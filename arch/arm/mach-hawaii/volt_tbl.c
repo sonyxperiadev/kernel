@@ -311,14 +311,10 @@ u8 pmu_vlt_table_1500m[SILICON_TYPE_MAX][SR_VLT_LUT_SIZE] = {
 
 const u8 *get_sr_vlt_table(u32 silicon_type, int freq_id, void *param)
 {
-	u8 *vlt_table = (u8 *) pmu_vlt_table_1g[0];
-#ifdef CONFIG_KONA_AVS
-	int i = 0;
-	struct adj_param *adj_param = (struct adj_param *)param;
-#endif
+	u8 *vlt_table;
+
 	pr_info("%s silicon_type = %d, freq_id = %d\n", __func__,
 		silicon_type, freq_id);
-#ifdef CONFIG_KONA_AVS
 	if (silicon_type > SILICON_TYPE_MAX || freq_id > A9_FREQ_MAX)
 		BUG();
 	switch (freq_id) {
@@ -334,10 +330,14 @@ const u8 *get_sr_vlt_table(u32 silicon_type, int freq_id, void *param)
 	default:
 			BUG();
 	}
-	if (adj_param && (adj_param->flags & AVS_VDDVAR_A9_ADJ_EN)) {
-		for (i = 8; i < 0x10; (i = i+2))
-			vlt_table[i] += adj_param->
-				vddvar_a9_adj_val[silicon_type]/10;
+#ifdef CONFIG_KONA_AVS
+	if (param) {
+		int i;
+		struct adj_param *adj_param = (struct adj_param *)param;
+		if (adj_param->flags & AVS_VDDVAR_A9_ADJ_EN)
+			for (i = 8; i < 0x10; (i = i+2))
+				vlt_table[i] += adj_param->
+					vddvar_a9_adj_val[silicon_type]/10;
 	}
 #endif
 	return vlt_table;
