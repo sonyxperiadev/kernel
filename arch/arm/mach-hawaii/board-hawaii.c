@@ -449,6 +449,8 @@ static int hawaii_camera_power(struct device *dev, int on)
 		gpio_set_value(SENSOR_0_GPIO_RST, 1);
 		msleep(30);
 	} else {
+		gpio_set_value(SENSOR_0_GPIO_RST, 0);
+		usleep_range(1000, 1100);
 		gpio_set_value(SENSOR_0_GPIO_PWRDN, 1);
 		clk_disable(clock);
 		clk_disable(lp_clock);
