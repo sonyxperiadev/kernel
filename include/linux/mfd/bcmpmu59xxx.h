@@ -492,12 +492,14 @@ enum bcmpmu_usb_adp_mode_t {
 };
 
 enum bcmpmu_usb_id_lvl_t {
-	PMU_USB_ID_NOT_SUPPORTED,
-	PMU_USB_ID_GROUND,
-	PMU_USB_ID_RID_A,
-	PMU_USB_ID_RID_B,
-	PMU_USB_ID_RID_C,
-	PMU_USB_ID_FLOAT,
+	PMU_USB_ID_GROUND,		/* 000 */
+	PMU_USB_B_DEVICE,		/* 001 */
+	PMU_USB_ID_RESERVED1,	/* 010 */
+	PMU_USB_ID_RID_A,		/* 011 */
+	PMU_USB_ID_RID_B,		/* 100 */
+	PMU_USB_ID_RID_C,		/* 101 */
+	PMU_USB_ID_RESERVED2,	/* 110 */
+	PMU_USB_ID_FLOAT,		/* 111 */
 };
 
 enum {
