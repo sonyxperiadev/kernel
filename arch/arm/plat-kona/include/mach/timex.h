@@ -34,7 +34,8 @@
 #define CLOCK_TICK_RATE     (32000)
 #else
 #ifdef CONFIG_MACH_HAWAII_FPGA_E
-#define CLOCK_TICK_RATE     (1*1048576)
+//#define CLOCK_TICK_RATE     (1*1048576)
+#define CLOCK_TICK_RATE     (32767)
 #else
 #define CLOCK_TICK_RATE     (32768)
 #endif

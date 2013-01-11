@@ -9,7 +9,7 @@
 	compatible = "bcm,java";
 
 	chosen {
-		bootargs = "console=ttyS0,115200n8 gpt mem=96M pmem=0 user_debug=31 carveout=0 lpj=10395648 ap_only_boot root=/dev/ram0 rw rootfstype=rootfs initrd=0x84000000,4M init=/linuxrc"; /*lpj=10395648*/
+		bootargs = "console=ttyS0,115200n8 gpt mem=96M pmem=0 carveout=0 ap_only_boot root=/dev/ram0 rw rootfstype=rootfs initrd=0x84000000,4M init=/linuxrc"; /*lpj=10461184*/
 	};
 
 	memory@82000000 {
