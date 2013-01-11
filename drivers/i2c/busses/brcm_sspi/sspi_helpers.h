@@ -16,7 +16,7 @@
 #ifndef _SSPI_HELPERS_H_
 #define _SSPI_HELPERS_H_
 
-#include "chal_sspi.h"
+#include <plat/chal/chal_sspi_hawaii.h>
 
 typedef unsigned int UINT32;
 typedef int BOOLEAN;

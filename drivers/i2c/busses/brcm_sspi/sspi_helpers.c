@@ -31,11 +31,6 @@ SSPI_hw_status_t SSPI_hw_init(SSPI_hw_core_t *pCore)
 
 
     pCore->handle = chal_sspi_init((unsigned int)pCore->base);
-    if(pCore->core_id == SSPI_CORE_ID_SSP2)
-        chal_sspi_set_type(pCore->handle, SSPI_TYPE_FULL);
-    else
-        chal_sspi_set_type(pCore->handle, SSPI_TYPE_LITE);
-
 
 #if    0
     chal_ccu_unlock_khub_clk_mgr();
@@ -233,7 +228,7 @@ SSPI_hw_status_t SSPI_hw_i2c_init(SSPI_hw_core_t *pCore)
 	chal_sspi_enable(pCore->handle, 1);
 	chal_sspi_clear_intr(pCore->handle, SSPIL_INTR_STATUS_SCHEDULER, 0);
 
-	if(chal_sspi_set_frame(pCore->handle, &frmMask,SSPI_PROT_I2C, 8, 0))
+	if (chal_sspi_set_i2c_frame(pCore->handle, &frmMask, 8))
 		return(SSPI_HW_ERR_FRAME);
 
 	if(chal_sspi_set_pattern(pCore->handle, 0, CHAL_SSPI_PATT_TYPE_I2C_STD_START))
