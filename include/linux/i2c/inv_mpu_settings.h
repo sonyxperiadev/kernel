@@ -15,7 +15,7 @@
 #ifndef INV_MPU_SETTINGS_H
 #define INV_MPU_SETTINGS_H
 
-#define INV_MPU_I2C_BUS_ID	0
+#define INV_MPU_I2C_BUS_ID	2
 #define INV_MPU_SLAVE_ADDR	0x68
 
 #define INV_MPU_INIT_CFG	0x10
@@ -24,7 +24,7 @@
 #define INV_MPU_IRQ_GPIO	33
 #else
 #define INV_MPU_DRIVER_NAME	"mpu6050"
-#define INV_MPU_IRQ_GPIO	64
+#define INV_MPU_IRQ_GPIO	33
 #endif
 
 /*

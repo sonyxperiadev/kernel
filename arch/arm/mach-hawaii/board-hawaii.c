@@ -143,7 +143,7 @@
 #include <linux/i2c/akm8963_i2c_settings.h>
 #endif /* CONFIG_SENSORS_AK8963 */
 
-#if defined(CONFIG_MPU_SENSORS_AMI306) || defined(CONFIG_MPU_SENSORS_AMI306_MODULE)
+#if defined(CONFIG_AMI306) || defined(CONFIG_AMI306_MODULE)
 #include <linux/ami306_def.h>
 #include <linux/ami_sensor.h>
 #include <mach/ami306_settings.h>
@@ -917,7 +917,7 @@ static struct i2c_board_info __initdata i2c_al3006_info[] = {
 };
 #endif
 
-#if defined(CONFIG_MPU_SENSORS_AMI306) || defined(CONFIG_MPU_SENSORS_AMI306_MODULE)
+#if defined(CONFIG_AMI306) || defined(CONFIG_AMI306_MODULE)
 static struct ami306_platform_data ami306_data = AMI306_DATA;
 static struct i2c_board_info __initdata i2c_ami306_info[] = {
 	{
@@ -1520,7 +1520,7 @@ static void __init hawaii_add_i2c_devices(void)
 				       ARRAY_SIZE(i2c_al3006_info));
 #endif /* CONFIG_AL3006 */
 
-#if  defined(CONFIG_MPU_SENSORS_AMI306) || defined(CONFIG_MPU_SENSORS_AMI306)
+#if  defined(CONFIG_AMI306) || defined(CONFIG_AMI306)
 	i2c_register_board_info(
 #ifdef AMI306_I2C_BUS_ID
 				       AMI306_I2C_BUS_ID,
