@@ -34,16 +34,16 @@ subdir-ccflags-$(CONFIG_SND_BCM_SOC) += -I./include/linux/broadcom
 subdir-ccflags-$(CONFIG_SND_BCM_SOC) += -I./drivers/misc/
 subdir-ccflags-$(CONFIG_SND_BCM_SOC) += -I./drivers/char/broadcom/modem/public/soc/debug/public
 #Audio Controller header files
-subdir-ccflags-$(CONFIG_SND_BCM_SOC) += -I./sound/caph_hawaii -I./sound/caph_hawaii/include
-subdir-ccflags-$(CONFIG_SND_BCM_SOC) += -I./sound/caph_hawaii/audio_controller
-subdir-ccflags-$(CONFIG_SND_BCM_SOC) += -I./sound/caph_hawaii/audio_driver/
+subdir-ccflags-$(CONFIG_SND_BCM_SOC) += -I./sound/soc/broadcom -I./sound/soc/broadcom/include
+#subdir-ccflags-$(CONFIG_SND_BCM_SOC) += -I./sound/soc/broadcom/audio_controller
+#subdir-ccflags-$(CONFIG_SND_BCM_SOC) += -I./sound/soc/broadcom/audio_driver/
 
 #CSL header files
-subdir-ccflags-$(CONFIG_SND_BCM_SOC) += -I./sound/caph_hawaii/csl/
-subdir-ccflags-$(CONFIG_SND_BCM_SOC) += -I./sound/caph_hawaii/dsp/
+subdir-ccflags-$(CONFIG_SND_BCM_SOC) += -I./sound/soc/broadcom/csl/
+subdir-ccflags-$(CONFIG_SND_BCM_SOC) += -I./sound/soc/broadcom/dsp/
 #CHAL header files
-subdir-ccflags-$(CONFIG_SND_BCM_SOC) += -I$(src)/chal/capri/inc/
-subdir-ccflags-$(CONFIG_SND_BCM_SOC) += -I./sound/caph_hawaii/chal/capri/inc/
+#subdir-ccflags-$(CONFIG_SND_BCM_SOC) += -I$(src)/chal/capri/inc/
+subdir-ccflags-$(CONFIG_SND_BCM_SOC) += -I./sound/soc/broadcom/chal/capri/inc/
 #RPC Header files
 subdir-ccflags-$(CONFIG_SND_BCM_SOC) += -I./drivers/char/broadcom/modem/rpc/rpc_CIB/public/
 subdir-ccflags-$(CONFIG_SND_BCM_SOC) += -I./drivers/char/broadcom/fuse_log
@@ -75,6 +75,6 @@ snd-soc-hawaii-objs := hawaii.o
 
 obj-$(CONFIG_SND_BCM_SOC_HAWAII) += snd-soc-hawaii.o
 
-obj-$(CONFIG_SND_BCM_SOC) += ../../caph_hawaii/chal/capri/src/
-obj-$(CONFIG_SND_BCM_SOC) += ../../caph_hawaii/csl/
-obj-$(CONFIG_SND_BCM_SOC) += ../../caph_hawaii/dsp/
+obj-$(CONFIG_SND_BCM_SOC) += chal/capri/src/
+obj-$(CONFIG_SND_BCM_SOC) += csl/
+obj-$(CONFIG_SND_BCM_SOC) += dsp/

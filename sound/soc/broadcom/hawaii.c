@@ -135,7 +135,7 @@ static int hawaii_hw_free(struct snd_pcm_substream *substream)
 	return 0;
 }
 
-static struct snd_soc_ops caph_i2s_ops = {
+static struct snd_soc_ops hawaii_ops = {
 	.startup = hawaii_startup,
 	.hw_params = hawaii_hw_params,
 	.hw_free = hawaii_hw_free,
@@ -149,7 +149,7 @@ static struct snd_soc_dai_link hawaii_dai = {
 	.codec_dai_name = "dit-hifi",
 	.codec_name = "spdif-dit.0",
 	.init = caph_soc_init,
-	.ops = &caph_i2s_ops,
+	.ops = &hawaii_ops,
 };
 
 static struct snd_soc_card hawaii = {

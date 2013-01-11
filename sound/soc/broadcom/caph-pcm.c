@@ -44,7 +44,10 @@
 #include <sound/pcm_params.h>
 #include <sound/soc.h>
 
+#include "chal_caph.h"
 #include "caph-pcm.h"
+#include "caph-i2s.h"
+#include "csl_caph_switch.h"
 
 static struct snd_pcm_substream *substream_record;
 static struct snd_pcm_substream *substream_playback;
@@ -104,6 +107,57 @@ static const struct snd_pcm_hardware caph_pcm_hardware_capture = {
 	.periods_max = 2,
 
 };
+
+/*****************************************************************************
+*
+*  Function Name: caph_pcm_configure
+*
+*  Description: configure DMA
+*
+*****************************************************************************/
+static void caph_pcm_configure(struct snd_pcm_substream *substream,
+					struct caph_runtime_data *prtd)
+{
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct snd_soc_dai *dai = rtd->cpu_dai;
+	struct caph_i2s *i2s = snd_soc_dai_get_drvdata(dai);
+	struct snd_dma_buffer *buf = &substream->dma_buffer;
+	struct caph_pcm_config *config;
+	CSL_CAPH_DMA_CONFIG_t dmaCfg;
+
+	pr_info("caph-pcm: caph_pcm_configure()");
+	if (substream->stream == SNDRV_PCM_STREAM_CAPTURE) {
+		substream_record = substream;
+
+		dmaCfg.direction = CSL_CAPH_DMA_OUT;
+		dmaCfg.dmaCB = record_callback;
+		dmaCfg.fifo = CSL_CAPH_CFIFO_FIFO2;
+		config = &(i2s->pcm_config_capture);
+	} else {
+		substream_playback = substream;
+
+		dmaCfg.direction = CSL_CAPH_DMA_IN;
+		dmaCfg.dmaCB = playback_callback;
+		dmaCfg.fifo = CSL_CAPH_CFIFO_FIFO1;
+		config = &i2s->pcm_config_playback;
+	}
+
+	dmaCfg.dma_ch = csl_caph_dma_obtain_channel();
+	dmaCfg.Tsize = CSL_AADMAC_TSIZE;
+	dmaCfg.mem_addr = (void *)buf->addr;
+	dmaCfg.dma_buf_size = prtd->dma_period;
+	dmaCfg.n_dma_buf = prtd->num_block;
+	dmaCfg.mem_size = prtd->dma_period*prtd->num_block;
+
+	csl_caph_dma_config_channel(dmaCfg);
+	csl_caph_dma_enable_intr(dmaCfg.dma_ch, CSL_CAPH_ARM);
+
+	config->dmaCH = dmaCfg.dma_ch;
+	config->fifo = dmaCfg.fifo;
+	config->sw = csl_caph_switch_obtain_channel();
+	prtd->dmaCH = config->dmaCH;
+	snd_soc_dai_set_dma_data(dai, substream, config);
+}
 
 /*****************************************************************************
 *
@@ -256,7 +310,7 @@ static void record_callback(CSL_CAPH_DMA_CHNL_e chnl)
 *
 *  Function Name: caph_pcm_hw_params
 *
-*  Description: configure DMA and runtime dma buffer
+*  Description: configure runtime dma buffer
 *
 *****************************************************************************/
 static int caph_pcm_hw_params(struct snd_pcm_substream *substream,
@@ -264,48 +318,17 @@ static int caph_pcm_hw_params(struct snd_pcm_substream *substream,
 {
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct caph_runtime_data *prtd = runtime->private_data;
-	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct snd_dma_buffer *buf = &substream->dma_buffer;
-	struct caph_pcm_config *config;
-	CSL_CAPH_DMA_CONFIG_t dmaCfg;
-
-	pr_info("caph-pcm: caph_pcm_hw_params()");
-
-	config = snd_soc_dai_get_dma_data(rtd->cpu_dai, substream);
-	if (!config)
-		return 0;
-
-	if (substream->stream == SNDRV_PCM_STREAM_CAPTURE) {
-		substream_record = substream;
-		dmaCfg.direction = CSL_CAPH_DMA_OUT;
-		dmaCfg.dmaCB = record_callback;
-	} else {
-		substream_playback = substream;
-		dmaCfg.direction = CSL_CAPH_DMA_IN;
-		dmaCfg.dmaCB = playback_callback;
-	}
-	dmaCfg.dma_ch = config->dmaCH;
-	dmaCfg.fifo = config->fifo;
-	dmaCfg.Tsize = CSL_AADMAC_TSIZE;
-	dmaCfg.mem_addr = (void *)buf->addr;
-	dmaCfg.mem_size = params_buffer_bytes(params);
-	dmaCfg.n_dma_buf = 2;
-	dmaCfg.dma_buf_size = params_period_bytes(params);
-
-	csl_caph_dma_config_channel(dmaCfg);
-	csl_caph_dma_enable_intr(dmaCfg.dma_ch, CSL_CAPH_ARM);
 
 	snd_pcm_set_runtime_buffer(substream, &substream->dma_buffer);
 	runtime->dma_bytes = params_buffer_bytes(params);
 
-	prtd->dmaCH = config->dmaCH;
-	prtd->dma_period = dmaCfg.dma_buf_size;
-	prtd->num_block = dmaCfg.n_dma_buf;
+	prtd->dma_period = params_period_bytes(params);
+	prtd->num_block = 2;
 	prtd->block_index = 1;
-
 	prtd->dma_start = runtime->dma_addr;
 	prtd->dma_pos = prtd->dma_start;
 	prtd->dma_end = prtd->dma_start + runtime->dma_bytes;
+
 	return 0;
 }
 
@@ -326,13 +349,14 @@ static int caph_pcm_hw_free(struct snd_pcm_substream *substream)
 *
 *  Function Name: caph_pcm_prepare
 *
-*  Description: prepare DMA
+*  Description: configure switch, cfifo, i2s port and DMA
 *
 *****************************************************************************/
 static int caph_pcm_prepare(struct snd_pcm_substream *substream)
 {
 	struct caph_runtime_data *prtd = substream->runtime->private_data;
 
+	caph_pcm_configure(substream, prtd);
 	prtd->dma_pos = 0;
 	return 0;
 }

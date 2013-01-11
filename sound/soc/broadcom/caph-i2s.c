@@ -75,6 +75,186 @@
 
 static struct clk *clkIDSSP;
 
+static void caph_i2s_start(struct snd_pcm_substream *substream,
+				struct caph_i2s *i2s);
+static void caph_i2s_stop(struct snd_pcm_substream *substream,
+				struct caph_i2s *i2s);
+static int caph_i2s_configure(struct snd_pcm_substream
+					*substream, struct snd_soc_dai *dai);
+/*****************************************************************************
+*
+*Function Name: static struct int caph_i2s_configure
+*		(struct snd_pcm_substream *substream, struct snd_soc_dai *dai)
+*
+*Description: This is to configure cfifo, switch and i2s port
+*
+*****************************************************************************/
+static int caph_i2s_configure(struct snd_pcm_substream
+					*substream, struct snd_soc_dai *dai)
+{
+	struct caph_i2s *i2s = snd_soc_dai_get_drvdata(dai);
+	CSL_CAPH_CFIFO_FIFO_e fifo = CSL_CAPH_CFIFO_NONE;
+	CSL_CAPH_CFIFO_DIRECTION_e direction = CSL_CAPH_CFIFO_IN;
+	UInt16 threshold = 0;
+	struct caph_pcm_config *pcm_config = snd_soc_dai_get_dma_data(dai,
+								substream);
+	CSL_CAPH_SWITCH_CONFIG_t swCfg;
+
+	pr_info("caph_i2s_configure: stream %d", substream->stream);
+	if (!pcm_config) {
+		pr_info("caph_i2s_configure: could not get dma_data\n");
+		return -1;
+	}
+	fifo = pcm_config->fifo;
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
+		swCfg.FIFO_srcAddr = csl_caph_cfifo_get_fifo_addr(fifo);
+		swCfg.trigger = i2s->fmTxTrigger;
+		swCfg.dataFmt = CSL_CAPH_16BIT_STEREO;
+		swCfg.FIFO_dstAddr =
+		    csl_i2s_get_tx0_fifo_data_port(i2s->fmHandleSSP);
+
+	} else {
+		direction = CSL_CAPH_CFIFO_OUT;
+
+		swCfg.FIFO_srcAddr =
+		    csl_i2s_get_rx0_fifo_data_port(i2s->fmHandleSSP);
+		swCfg.trigger = i2s->fmRxTrigger;
+		swCfg.dataFmt = CSL_CAPH_16BIT_STEREO;
+		swCfg.FIFO_dstAddr = csl_caph_cfifo_get_fifo_addr(fifo);
+
+	}
+
+	/* configure cfifo */
+	threshold = csl_caph_cfifo_get_fifo_thres(fifo);
+	csl_caph_cfifo_config_fifo(fifo, direction, threshold);
+
+	/* configur swicth */
+	swCfg.chnl = pcm_config->sw;
+	csl_caph_switch_config_channel(swCfg);
+
+	/* configur i2s port */
+	if (!i2s->fmTxRunning && !i2s->fmRxRunning) {
+		i2s->fmCfg.mode = CSL_I2S_MASTER_MODE;
+		i2s->fmCfg.tx_loopback_ena = 0;/*Internal loopback is disable*/
+		i2s->fmCfg.rx_loopback_ena = 0;
+
+		i2s->fmCfg.trans_size = CSL_I2S_SSP_TSIZE;
+		i2s->fmCfg.prot = SSPI_HW_I2S_MODE2;
+		i2s->fmCfg.interleave = TRUE;
+
+		i2s->fmCfg.sampleRate = 48000; /*48kHz or 8kHz?*/
+		/* rx start from 1st bit of the frame */
+		i2s->fmCfg.rx_delay_bits = 0;
+		i2s->fmCfg.rx_len = 16; /* 16 bits for rx data in this chan */
+		i2s->fmCfg.rx_ena = 1; /* rx enable for this chan */
+		i2s->fmCfg.rx_pack = 1; /* rx data is packed for this chan */
+		/* No pad data before tx data of the frame */
+		i2s->fmCfg.tx_prepad_bits = 0;
+		/* No pad data after tx data of the frame */
+		i2s->fmCfg.tx_postpad_bits = 0;
+		i2s->fmCfg.tx_padval = 0; /* pad data as 0 */
+		i2s->fmCfg.tx_len = 16; /* 16 bits for tx data in this chan */
+		i2s->fmCfg.tx_ena = 1; /* tx enable for this chan */
+		i2s->fmCfg.tx_pack = 1; /* tx data is packed for this chan */
+		csl_i2s_config(i2s->fmHandleSSP, &i2s->fmCfg);
+	}
+
+	return 0;
+}
+
+/*****************************************************************************
+*
+*Function Name:void caph_i2s_start(struct snd_pcm_substream *substream,
+*					struct caph_i2s *i2s)
+*
+*Description: This is to start for i2s dai
+*
+*****************************************************************************/
+static void caph_i2s_start(struct snd_pcm_substream *substream,
+				struct caph_i2s *i2s)
+{
+	struct caph_pcm_config *pcm_config;
+
+	pr_info("caph_i2s_start stream %d", substream->stream);
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
+		pcm_config = &i2s->pcm_config_playback;
+		/* start cfifo */
+		csl_caph_cfifo_start_fifo(pcm_config->fifo);
+
+		/* start switch */
+		csl_caph_switch_start_transfer(pcm_config->sw);
+	} else if (substream->stream == SNDRV_PCM_STREAM_CAPTURE) {
+		pcm_config = &i2s->pcm_config_capture;
+		/* start switch */
+		csl_caph_switch_start_transfer(pcm_config->sw);
+
+		/* start cfifo */
+		csl_caph_cfifo_start_fifo(pcm_config->fifo);
+		}
+
+	/* start DMA */
+	csl_caph_dma_start_transfer(pcm_config->dmaCH);
+	/* start i2s */
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
+		if (!i2s->fmTxRunning) {
+			csl_sspi_enable_scheduler(i2s->fmHandleSSP, 1);
+			csl_i2s_start_tx(i2s->fmHandleSSP, &i2s->fmCfg);
+			i2s->fmTxRunning = TRUE;
+		}
+	} else if (substream->stream == SNDRV_PCM_STREAM_CAPTURE) {
+		if (!i2s->fmRxRunning) {
+			csl_sspi_enable_scheduler(i2s->fmHandleSSP, 1);
+			csl_i2s_start_rx(i2s->fmHandleSSP, &i2s->fmCfg);
+			i2s->fmRxRunning = TRUE;
+		}
+	}
+}
+
+/*****************************************************************************
+*
+*Function Name:void caph_i2s_stopt(struct snd_pcm_substream *substream,
+*					struct caph_i2s *i2s)
+*
+*Description: This is to stop for i2s dai
+*
+*****************************************************************************/
+static void caph_i2s_stop(struct snd_pcm_substream *substream,
+				struct caph_i2s *i2s)
+{
+	struct caph_pcm_config *pcm_config;
+
+	pr_info("caph-i2s: caph_i2s_stop stream %d", substream->stream);
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
+		pcm_config = &i2s->pcm_config_playback;
+	else
+		pcm_config = &i2s->pcm_config_capture;
+
+	/* stop cfifo */
+	csl_caph_cfifo_stop_fifo(pcm_config->fifo);
+	csl_caph_cfifo_release_fifo(pcm_config->fifo);
+
+	/* stop swicth */
+	csl_caph_switch_stop_transfer(pcm_config->sw);
+	csl_caph_switch_release_channel(pcm_config->sw);
+
+	/* stop i2s */
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
+		if (i2s->fmTxRunning == TRUE) {
+			csl_i2s_stop_tx(i2s->fmHandleSSP);
+			i2s->fmTxRunning = FALSE;
+			if (i2s->fmRxRunning == FALSE)
+				csl_sspi_enable_scheduler(i2s->fmHandleSSP, 0);
+		}
+	} else {
+		if (i2s->fmRxRunning == TRUE) {
+			csl_i2s_stop_rx(i2s->fmHandleSSP);
+			i2s->fmRxRunning = FALSE;
+			if (i2s->fmTxRunning == FALSE)
+				csl_sspi_enable_scheduler(i2s->fmHandleSSP, 0);
+		}
+	}
+}
+
 /*****************************************************************************
 *
 *Function Name: void ssp_ControlHWClock(Boolean enable)
@@ -137,84 +317,23 @@ static int caph_i2s_trigger(struct snd_pcm_substream *substream, int cmd,
 			    struct snd_soc_dai *dai)
 {
 	struct caph_i2s *i2s = snd_soc_dai_get_drvdata(dai);
-	struct caph_pcm_config *pcm_config;
 	pr_info("caph-i2s: caph_i2s_trigger cmd: %d", cmd);
+
 	switch (cmd) {
 	case SNDRV_PCM_TRIGGER_START:
 	case SNDRV_PCM_TRIGGER_RESUME:
 	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
-		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
-			pcm_config = &i2s->pcm_config_playback;
-			/* start cfifo */
-			csl_caph_cfifo_start_fifo(pcm_config->fifo);
-			/* start switch */
-			csl_caph_switch_start_transfer(pcm_config->sw);
-			}
-		else if (substream->stream == SNDRV_PCM_STREAM_CAPTURE) {
-			pcm_config = &i2s->pcm_config_capture;
-			/* start switch */
-			csl_caph_switch_start_transfer(pcm_config->sw);
-			/* start cfifo */
-			csl_caph_cfifo_start_fifo(pcm_config->fifo);
-			}
-
-		/* start DMA */
-		csl_caph_dma_start_transfer(pcm_config->dmaCH);
-
-		/* start i2s */
-		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
-			if (!i2s->fmTxRunning) {
-				csl_sspi_enable_scheduler(i2s->fmHandleSSP, 1);
-				csl_i2s_start_tx(i2s->fmHandleSSP, &i2s->fmCfg);
-				i2s->fmTxRunning = TRUE;
-			}
-		} else if (substream->stream == SNDRV_PCM_STREAM_CAPTURE) {
-			if (!i2s->fmRxRunning) {
-				csl_sspi_enable_scheduler(i2s->fmHandleSSP, 1);
-				csl_i2s_start_rx(i2s->fmHandleSSP, &i2s->fmCfg);
-				i2s->fmRxRunning = TRUE;
-			}
-		}
-
+		caph_i2s_start(substream, i2s);
 		break;
 	case SNDRV_PCM_TRIGGER_STOP:
 	case SNDRV_PCM_TRIGGER_SUSPEND:
 	case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
-		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
-			pcm_config = &i2s->pcm_config_playback;
-		else
-			pcm_config = &i2s->pcm_config_capture;
-		/* stop cfifo */
-		csl_caph_cfifo_stop_fifo(pcm_config->fifo);
-		csl_caph_cfifo_release_fifo(pcm_config->fifo);
-		/* stop swicth */
-		csl_caph_switch_stop_transfer(pcm_config->sw);
-		csl_caph_switch_release_channel(pcm_config->sw);
-		/* stop i2s */
-		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
-			if (i2s->fmTxRunning == TRUE) {
-				csl_i2s_stop_tx(i2s->fmHandleSSP);
-				i2s->fmTxRunning = FALSE;
-				if (i2s->fmTxRunning == FALSE &&
-						i2s->fmRxRunning == FALSE)
-					csl_sspi_enable_scheduler(i2s->
-						fmHandleSSP, 0);
-			}
-		} else {
-
-			if (i2s->fmRxRunning == TRUE) {
-				csl_i2s_stop_rx(i2s->fmHandleSSP);
-				i2s->fmRxRunning = FALSE;
-				if (i2s->fmTxRunning == FALSE &&
-						i2s->fmRxRunning == FALSE)
-					csl_sspi_enable_scheduler(i2s->
-						fmHandleSSP, 0);
-			}
-		}
+		caph_i2s_stop(substream, i2s);
 		break;
 	default:
 		return -EINVAL;
 	}
+
 	return 0;
 }
 
@@ -227,88 +346,30 @@ static int caph_i2s_set_fmt(struct snd_soc_dai *dai, unsigned int fmt)
 *
 *  Function Name: caph_i2s_hw_params
 *
-*  Description: configure cfifo, switch and i2s for i2s_dai
+*  Description:
 *
 *****************************************************************************/
 static int caph_i2s_hw_params(struct snd_pcm_substream *substream,
 			      struct snd_pcm_hw_params *params,
 			      struct snd_soc_dai *dai)
 {
-	struct caph_i2s *i2s = snd_soc_dai_get_drvdata(dai);
-	struct caph_pcm_config *pcm_config;
-	CSL_CAPH_CFIFO_FIFO_e fifo = CSL_CAPH_CFIFO_NONE;
-	CSL_CAPH_CFIFO_DIRECTION_e direction = CSL_CAPH_CFIFO_IN;
-	UInt16 threshold = 0;
-	CSL_CAPH_SWITCH_CONFIG_t swCfg;
-	pr_info("caph-i2s: caph_i2s_hw_params");
-	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
-		pcm_config = &i2s->pcm_config_playback;
-	else
-		pcm_config = &i2s->pcm_config_capture;
-
-	/* configur CFIFO */
-	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
-		fifo = CSL_CAPH_CFIFO_FIFO1;
-
-	} else {
-		fifo = CSL_CAPH_CFIFO_FIFO2;
-		direction = CSL_CAPH_CFIFO_OUT;
-
-	}
-	threshold = csl_caph_cfifo_get_fifo_thres(fifo);
-	csl_caph_cfifo_config_fifo(fifo, direction, threshold);
-
-	/* configur swicth */
-	pcm_config->sw = csl_caph_switch_obtain_channel();
-	swCfg.chnl = pcm_config->sw;
-
-	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
-		swCfg.FIFO_srcAddr = csl_caph_cfifo_get_fifo_addr(fifo);
-		swCfg.trigger = i2s->fmTxTrigger;
-		swCfg.dataFmt = CSL_CAPH_16BIT_STEREO;
-		swCfg.FIFO_dstAddr =
-		    csl_i2s_get_tx0_fifo_data_port(i2s->fmHandleSSP);
-	} else {
-		swCfg.FIFO_srcAddr =
-		    csl_i2s_get_rx0_fifo_data_port(i2s->fmHandleSSP);
-		swCfg.trigger = i2s->fmRxTrigger;
-		swCfg.dataFmt = CSL_CAPH_16BIT_STEREO;
-		swCfg.FIFO_dstAddr = csl_caph_cfifo_get_fifo_addr(fifo);
-	}
-	csl_caph_switch_config_channel(swCfg);
-
-	/* configur i2s port */
-	if (!i2s->fmTxRunning && !i2s->fmRxRunning) {
-		i2s->fmCfg.mode = CSL_I2S_MASTER_MODE;
-		i2s->fmCfg.tx_loopback_ena = 0;/*Internal loopback is disable*/
-		i2s->fmCfg.rx_loopback_ena = 0;
-
-		i2s->fmCfg.trans_size = CSL_I2S_SSP_TSIZE;
-		i2s->fmCfg.prot = SSPI_HW_I2S_MODE2;
-		i2s->fmCfg.interleave = TRUE;
-
-		i2s->fmCfg.sampleRate = 48000; /*48kHz or 8kHz?*/
-		/* rx start from 1st bit of the frame */
-		i2s->fmCfg.rx_delay_bits = 0;
-		i2s->fmCfg.rx_len = 16; /* 16 bits for rx data in this chan */
-		i2s->fmCfg.rx_ena = 1; /* rx enable for this chan */
-		i2s->fmCfg.rx_pack = 1; /* rx data is packed for this chan */
-		/* No pad data before tx data of the frame */
-		i2s->fmCfg.tx_prepad_bits = 0;
-		/* No pad data after tx data of the frame */
-		i2s->fmCfg.tx_postpad_bits = 0;
-		i2s->fmCfg.tx_padval = 0; /* pad data as 0 */
-		i2s->fmCfg.tx_len = 16; /* 16 bits for tx data in this chan */
-		i2s->fmCfg.tx_ena = 1; /* tx enable for this chan */
-		i2s->fmCfg.tx_pack = 1; /* tx data is packed for this chan */
-		csl_i2s_config(i2s->fmHandleSSP, &i2s->fmCfg);
-	}
-
-	/* configur DMA channel */
-	pcm_config->dmaCH = csl_caph_dma_obtain_channel();
-	pcm_config->fifo = fifo;
-	snd_soc_dai_set_dma_data(dai, substream, pcm_config);
 	return 0;
+}
+
+/*****************************************************************************
+*
+*  Function Name: caph_i2s_hw_params
+*
+*  Description: configure cfifo, Switch and i2s port
+*
+*****************************************************************************/
+static int caph_i2s_prepare(struct snd_pcm_substream *substream,
+			struct snd_soc_dai *dai)
+{
+	int ret = 0;
+
+	ret = caph_i2s_configure(substream, dai);
+	return ret;
 }
 
 static int caph_i2s_set_sysclk(struct snd_soc_dai *dai, int clk_id,
@@ -344,6 +405,7 @@ static struct snd_soc_dai_ops caph_i2s_dai_ops = {
 	.hw_params = caph_i2s_hw_params,
 	.set_fmt = caph_i2s_set_fmt,
 	.set_sysclk = caph_i2s_set_sysclk,
+	.prepare = caph_i2s_prepare,
 };
 
 static struct snd_soc_dai_driver caph_i2s_dai = {
