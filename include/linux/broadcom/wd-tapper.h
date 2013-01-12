@@ -26,6 +26,7 @@
 #ifndef __LINUX_WD_TAPPER_H
 #define __LINUX_WD_TAPPER_H
 #include <mach/timex.h>
+#include <linux/plist.h>
 
 /* Seconds to ticks conversion */
 #define sec_to_ticks(x) ((x)*CLOCK_TICK_RATE)
@@ -34,12 +35,23 @@
 #define TAPPER_DEFAULT_TIMEOUT	0xFFFFFFFF
 
 unsigned int wd_tapper_get_timeout(void);
-int wd_tapper_set_timeout(unsigned int timeout_in_sec);
 
 struct wd_tapper_platform_data {
 	unsigned int count;
 	unsigned int ch_num;
 	char name[255];
 };
+
+struct wd_tapper_node {
+	char *name;
+	struct plist_node node;
+	u32 timeout;
+	bool valid;
+};
+
+int wd_tapper_add_timeout_req(struct wd_tapper_node *wd_node,
+		char *client_name, u32 timeout);
+int wd_tapper_del_timeout_req(struct wd_tapper_node *wd_node);
+int wd_tapper_update_timeout_req(struct wd_tapper_node *wd_node, u32 timeout);
 
 #endif

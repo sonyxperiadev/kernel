@@ -33,6 +33,13 @@
 #include <linux/of.h>
 #include <linux/of_irq.h>
 #include <linux/of_platform.h>
+#include <linux/debugfs.h>
+
+enum {
+	WD_NODE_ADD,
+	WD_NODE_DEL,
+	WD_NODE_UPDATE,
+};
 
 static DEFINE_SPINLOCK(tapper_lock);
 
@@ -41,25 +48,11 @@ struct wd_tapper_data {
 	struct kona_timer *kt;
 	unsigned int count;
 	unsigned int def_count;
+	struct plist_head timeout_list;
+	u32 active_timeout;
 };
 
 struct wd_tapper_data *wd_tapper_data;
-
-int wd_tapper_set_timeout(unsigned int timeout_in_sec)
-{
-	int ret = -EINVAL;
-	if (wd_tapper_data) {
-		spin_lock(&tapper_lock);
-		if (timeout_in_sec == TAPPER_DEFAULT_TIMEOUT)
-			wd_tapper_data->count = wd_tapper_data->def_count;
-		else
-			wd_tapper_data->count = sec_to_ticks(timeout_in_sec);
-		spin_unlock(&tapper_lock);
-		ret = 0;
-	}
-	return ret;
-}
-EXPORT_SYMBOL(wd_tapper_set_timeout);
 
 unsigned int wd_tapper_get_timeout(void)
 {
@@ -89,12 +82,18 @@ int wd_tapper_callback(void *dev)
  */
 static int wd_tapper_start(struct platform_device *pdev, pm_message_t state)
 {
-	if (kona_timer_set_match_start
-	    (wd_tapper_data->kt, wd_tapper_data->count) < 0) {
+	unsigned long flags;
+	int ret;
+
+	spin_lock_irqsave(&tapper_lock, flags);
+
+	ret = kona_timer_set_match_start(wd_tapper_data->kt,
+			wd_tapper_data->count);
+	if (ret < 0)
 		pr_err("kona_timer_set_match_start returned error \r\n");
-		return -1;
-	}
-	return 0;
+
+	spin_unlock_irqrestore(&tapper_lock, flags);
+	return ret;
 }
 
 /**
@@ -111,6 +110,130 @@ static int wd_tapper_stop(struct platform_device *pdev)
 	}
 	return 0;
 }
+
+static int wd_tapper_timeout_update(struct wd_tapper_data *wd_tapper,
+		struct wd_tapper_node *wd_node, int action)
+{
+	unsigned long flags;
+	u32 new_val;
+	int ret = 0;
+
+	spin_lock_irqsave(&tapper_lock, flags);
+
+	switch (action) {
+	case WD_NODE_ADD:
+		plist_node_init(&wd_node->node, wd_node->timeout);
+		plist_add(&wd_node->node, &wd_tapper->timeout_list);
+		break;
+	case WD_NODE_DEL:
+		plist_del(&wd_node->node, &wd_tapper->timeout_list);
+		break;
+	case WD_NODE_UPDATE:
+		plist_del(&wd_node->node, &wd_tapper->timeout_list);
+		plist_node_init(&wd_node->node, wd_node->timeout);
+		plist_add(&wd_node->node, &wd_tapper->timeout_list);
+		break;
+	default:
+		BUG();
+		break;
+	}
+	new_val = plist_first(&wd_tapper->timeout_list)->prio;
+	if (new_val != wd_tapper->active_timeout) {
+		/*setting the timeout value */
+		wd_tapper_data->count = sec_to_ticks(new_val);
+		pr_info("%s: new timeout: %d ticks\n", __func__,
+				wd_tapper_data->count);
+		wd_tapper->active_timeout = new_val;
+	}
+
+	spin_unlock_irqrestore(&tapper_lock, flags);
+	return ret;
+}
+
+
+int wd_tapper_add_timeout_req(struct wd_tapper_node *wd_node,
+		char *client, u32 timeout)
+{
+	if ((wd_node == NULL) || (client == NULL))
+		return -EINVAL;
+
+	if (unlikely(wd_node->valid))
+		return -EINVAL;
+
+	pr_info("%s: client: %s timeout: %d\n", __func__, client, timeout);
+	wd_node->name = client;
+
+	if (timeout == TAPPER_DEFAULT_TIMEOUT)
+		wd_node->timeout = ticks_to_sec(wd_tapper_data->def_count);
+	else
+		wd_node->timeout = timeout;
+
+	wd_node->valid = 1;
+
+	return wd_tapper_timeout_update(wd_tapper_data, wd_node, WD_NODE_ADD);
+
+}
+EXPORT_SYMBOL(wd_tapper_add_timeout_req);
+
+int wd_tapper_del_timeout_req(struct wd_tapper_node *wd_node)
+{
+	int ret;
+
+	if ((wd_node == NULL) || (!wd_node->valid))
+		return -EINVAL;
+
+	ret = wd_tapper_timeout_update(wd_tapper_data, wd_node, WD_NODE_DEL);
+
+	wd_node->valid = 0;
+	wd_node->name = NULL;
+	return ret;
+}
+EXPORT_SYMBOL(wd_tapper_del_timeout_req);
+
+int wd_tapper_update_timeout_req(struct wd_tapper_node *wd_node, u32 timeout)
+{
+	if (unlikely(wd_node->valid == 0)) {
+		BUG();
+		return -EINVAL;
+	}
+	if (timeout == TAPPER_DEFAULT_TIMEOUT)
+		timeout =  ticks_to_sec(wd_tapper_data->def_count);
+	if (wd_node->timeout != timeout) {
+		wd_node->timeout = timeout;
+		return wd_tapper_timeout_update(wd_tapper_data,
+				wd_node, WD_NODE_UPDATE);
+	}
+	return 0;
+}
+EXPORT_SYMBOL(wd_tapper_update_timeout_req);
+
+#ifdef CONFIG_DEBUG_FS
+static int wd_tapper_dbg_get_timeout(void *data, u64 *val)
+{
+	struct wd_tapper_data *di = data;
+	*val = ticks_to_sec(di->count);
+	return 0;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(wd_tapper_timeout_fops,
+		wd_tapper_dbg_get_timeout,
+		NULL, "%llu\n");
+
+static void wd_tapper_debugfs_init(struct wd_tapper_data *di)
+{
+	struct dentry *dir;
+	struct dentry *file;
+
+	dir = debugfs_create_dir("wd_tapper", 0);
+
+	if (dir) {
+		file = debugfs_create_file("timeout", S_IRUSR, dir, di,
+				&wd_tapper_timeout_fops);
+		if (!file)
+			debugfs_remove_recursive(dir);
+	}
+}
+#endif
 
 /**
  * wd_tapper_pltfm_probe - Function where the timer is obtained and configured
@@ -176,8 +299,10 @@ static int __devinit wd_tapper_pltfm_probe(struct platform_device *pdev)
 
 	if (pltfm_data == NULL) {
 		/* Get the platform data form dt-blob */
-		if (!of_property_read_u32(np, "count", &val))
+		if (!of_property_read_u32(np, "count", &val)) {
 			wd_tapper_data->count = sec_to_ticks(val);
+			wd_tapper_data->def_count = wd_tapper_data->count;
+		}
 
 		if (wd_tapper_data->count == 0) {
 			dev_err(&pdev->dev, "count value set is 0 - INVALID\n");
@@ -217,6 +342,12 @@ static int __devinit wd_tapper_pltfm_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "kona_timer_config returned error \r\n");
 		goto out;
 	}
+
+	plist_head_init(&wd_tapper_data->timeout_list);
+
+#ifdef CONFIG_DEBUG_FS
+	wd_tapper_debugfs_init(wd_tapper_data);
+#endif
 
 	dev_info(&pdev->dev, "Probe Success\n");
 	return 0;
@@ -262,7 +393,7 @@ static int __init wd_tapper_init(void)
 	return platform_driver_register(&wd_tapper_pltfm_driver);
 }
 
-module_init(wd_tapper_init);
+subsys_initcall(wd_tapper_init);
 
 static void __exit wd_tapper_exit(void)
 {

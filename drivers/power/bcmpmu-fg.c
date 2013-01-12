@@ -35,6 +35,7 @@
 #include <linux/mfd/bcmpmu59xxx.h>
 #include <linux/mfd/bcmpmu59xxx_reg.h>
 #include <linux/power/bcmpmu-fg.h>
+#include <linux/broadcom/wd-tapper.h>
 
 #define FG_CAPACITY_SAVE_REG		(PMU_REG_FGGNRL1)
 
@@ -48,11 +49,12 @@
 #define ADC_READ_TRIES			5
 #define AVG_SAMPLES			5
 
-#define FG_PERIODIC_WORK_POLL_TIME	msecs_to_jiffies(5000)
-#define CHARG_ALGO_POLL_TIME		msecs_to_jiffies(5000)
-#define DISCHARGE_ALGO_POLL_TIME	msecs_to_jiffies(60000)
-#define LOW_BATT_POLL_TIME		msecs_to_jiffies(5000)
-#define FAKE_BATT_POLL_TIME		msecs_to_jiffies(60000)
+#define FG_WORK_POLL_TIME_MS		(5000)
+#define CHARG_ALGO_POLL_TIME_MS		(5000)
+#define DISCHARGE_ALGO_POLL_TIME_MS	(60000)
+#define LOW_BATT_POLL_TIME_MS		(5000)
+#define CRIT_BATT_POLL_TIME_MS		(2000)
+#define FAKE_BATT_POLL_TIME_MS		(60000)
 
 #define INTERPOLATE_LINEAR(X, Xa, Ya, Xb, Yb) \
 	(Ya + (((Yb - Ya) * (X - Xa))/(Xb - Xa)))
@@ -163,9 +165,24 @@ enum bcmpmu_batt_charging_state {
 	CHARG_STATE_MC,
 };
 
+static const char * const charging_state_dbg[] = {
+	"chrgr_idle",
+	"chrgr_fc",
+	"chrgr_mc"
+};
+
 enum bcmpmu_batt_discharging_state {
-	DISCHARG_STATE_NORMAL,
+	DISCHARG_STATE_HIGH_BATT,
 	DISCHARG_STATE_LOW_BATT,
+	DISCHARG_STATE_CRIT_BATT,
+	DISCHARG_STATE_CRIT_VOLT,
+};
+
+static const char * const discharge_state_dbg[] = {
+	"high_batt",
+	"low_bat",
+	"crit_batt",
+	"crit_volt",
 };
 
 static enum power_supply_property bcmpmu_fg_props[] = {
@@ -233,8 +250,6 @@ struct bcmpmu_fg_data {
 	/* works and workQ */
 	struct workqueue_struct *fg_wq;
 	struct delayed_work fg_periodic_work;
-	struct delayed_work fg_cal_work;
-	struct delayed_work fg_low_batt_work;
 
 	/* Notifier blocks */
 	struct notifier_block accy_nb;
@@ -246,6 +261,7 @@ struct bcmpmu_fg_data {
 	struct bcmpmu_fg_status_flags flags;
 	struct avg_sample_buff avg_samples;
 	struct batt_adc_data adc_data;
+	struct wd_tapper_node wd_tap_node;
 
 	ktime_t last_sample_tm;
 
@@ -269,7 +285,6 @@ struct bcmpmu_fg_data {
 
 static u32 debug_mask = BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT | \
 			BCMPMU_PRINT_FLOW;
-
 #define pr_fg(debug_level, args...) \
 	do { \
 		if (debug_mask & BCMPMU_PRINT_##debug_level) { \
@@ -876,7 +891,7 @@ static void bcmpmu_fg_get_coulomb_counter(struct bcmpmu_fg_data *fg)
 {
 	ktime_t t_now;
 	ktime_t t_diff;
-	u32 t_ms;
+	u64 t_ms;
 	int ret;
 	int sample_count;
 	int sleep_count;
@@ -886,6 +901,8 @@ static void bcmpmu_fg_get_coulomb_counter(struct bcmpmu_fg_data *fg)
 	u8 accm[4];
 	u8 act_cnt[2];
 	u8 sleep_cnt[2];
+
+	capacity_load_comp = bcmpmu_fg_get_load_comp_capacity(fg, true, false);
 
 	/**
 	 * Avoid reading accumulator register earlier than
@@ -899,8 +916,6 @@ static void bcmpmu_fg_get_coulomb_counter(struct bcmpmu_fg_data *fg)
 		return;
 
 	fg->last_sample_tm = t_now;
-
-	capacity_load_comp = bcmpmu_fg_get_load_comp_capacity(fg, true, false);
 
 	bcmpmu_fg_get_capacity_adj_factor(fg);
 
@@ -967,8 +982,9 @@ static void bcmpmu_fg_get_coulomb_counter(struct bcmpmu_fg_data *fg)
 	fg->capacity_info.percentage = capacity_to_percentage(fg,
 			fg->capacity_info.capacity);
 
-	pr_fg(FLOW, "accm: %d accm_adj: %d cap_percentage: %d\n",
+	pr_fg(FLOW, "accm: %d accm_adj: %d capacity: %d percentage: %d\n",
 			capacity_delta, capacity_adj,
+			fg->capacity_info.capacity,
 			fg->capacity_info.percentage);
 }
 
@@ -1450,9 +1466,15 @@ static void bcmpmu_fg_moniter_battery_temp(struct bcmpmu_fg_data *fg)
 }
 static void bcmpmu_fg_charging_algo(struct bcmpmu_fg_data *fg)
 {
-	int poll_time = CHARG_ALGO_POLL_TIME;
+	int poll_time = CHARG_ALGO_POLL_TIME_MS;
 
 	pr_fg(VERBOSE, "%s\n", __func__);
+
+	if (fg->discharge_state != DISCHARG_STATE_HIGH_BATT) {
+		wd_tapper_update_timeout_req(&fg->wd_tap_node,
+				TAPPER_DEFAULT_TIMEOUT);
+		fg->discharge_state = DISCHARG_STATE_HIGH_BATT;
+	}
 
 	bcmpmu_fg_get_coulomb_counter(fg);
 
@@ -1480,54 +1502,128 @@ static void bcmpmu_fg_charging_algo(struct bcmpmu_fg_data *fg)
 
 	if (fg->flags.reschedule_work)
 		queue_delayed_work(fg->fg_wq, &fg->fg_periodic_work,
-				poll_time);
+				msecs_to_jiffies(poll_time));
 	FG_UNLOCK(fg);
 }
 
 static void bcmpmu_fg_discharging_algo(struct bcmpmu_fg_data *fg)
 {
-	int poll_time = DISCHARGE_ALGO_POLL_TIME;
+	struct bcmpmu_batt_volt_levels *volt_levels;
+	struct bcmpmu_batt_cap_levels *cap_levels;
+	struct bcmpmu_batt_cap_info *cap_info;
+	int volt;
+	int cap_per;
+	int poll_time = DISCHARGE_ALGO_POLL_TIME_MS;
+	int ret = 0;
 	bool force_update_psy = false;
+	bool config_tapper = false;
 
-	pr_fg(VERBOSE, "discharging_algo\n");
+	pr_fg(FLOW, "discharging_algo: state %s\n",
+			discharge_state_dbg[fg->discharge_state]);
+
+	volt_levels = fg->pdata->volt_levels;
+	cap_levels = fg->pdata->cap_levels;
+	cap_info = &fg->capacity_info;
 
 	bcmpmu_fg_get_coulomb_counter(fg);
 
-	if (fg->adc_data.volt <= fg->pdata->volt_levels->critical) {
-		if (++fg->crit_cutoff_cnt >
-				fg->pdata->volt_levels->crit_cutoff_cnt) {
-			pr_fg(ERROR, "dischrgr_algo: Critical volt cutoff\n");
-			/**
-			 * force the capacity level to 0
-			 */
-			fg->capacity_info.percentage = 0;
+	volt = fg->adc_data.volt;
+	cap_per = cap_info->percentage;
+
+	if (volt <= volt_levels->critical)
+		fg->discharge_state = DISCHARG_STATE_CRIT_VOLT;
+
+	switch (fg->discharge_state) {
+	case DISCHARG_STATE_HIGH_BATT:
+		if (cap_per <= cap_levels->low) /* fall through */
+			fg->discharge_state = DISCHARG_STATE_LOW_BATT;
+		else
+			break;
+	case DISCHARG_STATE_LOW_BATT:
+		if (cap_per <= cap_levels->critical)
+			fg->discharge_state = DISCHARG_STATE_CRIT_BATT;
+		poll_time = fg->pdata->poll_rate_low_batt;
+		config_tapper = true;
+		break;
+	case DISCHARG_STATE_CRIT_BATT:
+		poll_time = fg->pdata->poll_rate_crit_batt;
+		config_tapper = true;
+		break;
+	case DISCHARG_STATE_CRIT_VOLT:
+		pr_fg(FLOW, "crit_cutoff_cnt: %d\n", fg->crit_cutoff_cnt);
+		if ((volt <= volt_levels->critical) &&
+				(fg->crit_cutoff_cnt <=
+				 volt_levels->crit_cutoff_cnt))
+			fg->crit_cutoff_cnt++;
+		else if (fg->crit_cutoff_cnt > volt_levels->crit_cutoff_cnt) {
+			if ((cap_per > 0) &&
+					(cap_per <= cap_levels->critical)) {
+				/**
+				 * Gradually reduce capacity by 1%
+				 */
+				cap_info->prev_percentage =
+					cap_info->percentage--;
+				cap_info->capacity = percentage_to_capacity(fg,
+						cap_info->percentage);
+			} else if (cap_per > cap_levels->critical) {
+				pr_fg(ERROR, "Emergency!! Sudden VBAT drop\n");
+				/**
+				 * should be shutdown or just clear the counter
+				 * (may be it was just load problem)??
+				 */
+				fg->crit_cutoff_cnt = 0;
+			}
 			force_update_psy = true;
-		} else
-			poll_time = LOW_BATT_POLL_TIME;
-	} else if (fg->crit_cutoff_cnt > 0)
-		fg->crit_cutoff_cnt = 0;
+		} else if ((volt > volt_levels->critical) &&
+				(fg->crit_cutoff_cnt > 0) &&
+				(fg->crit_cutoff_cnt <
+				 volt_levels->crit_cutoff_cnt)) {
+			/**
+			 * Was it a random voltage droop for some
+			 * reson?? or it was fake VBAT reading??
+			 */
+			pr_fg(FLOW, "clear crit cutoff volt cnt\n");
+			fg->crit_cutoff_cnt = 0;
+			if (cap_per <= cap_levels->critical)
+				fg->discharge_state = DISCHARG_STATE_CRIT_BATT;
+			else if (cap_per <= cap_levels->low)
+				fg->discharge_state = DISCHARG_STATE_LOW_BATT;
+			else {
+				fg->discharge_state = DISCHARG_STATE_HIGH_BATT;
+				ret = wd_tapper_update_timeout_req(
+						&fg->wd_tap_node,
+						TAPPER_DEFAULT_TIMEOUT);
+				BUG_ON(ret);
+				break;
+			}
+		}
+		poll_time = fg->pdata->poll_rate_crit_batt;
+		config_tapper = true;
+		break;
+	default:
+		BUG();
+		break;
+	}
+
+	/**
+	 * reconfigure wakeup time in case of low battery
+	 * or critical battery
+	 */
+	if (config_tapper) {
+		pr_fg(VERBOSE, "set tapper timeout to %d\n",
+				(poll_time / 1000));
+		ret = wd_tapper_update_timeout_req(&fg->wd_tap_node,
+				(poll_time / 1000));
+		BUG_ON(ret);
+	}
 
 	bcmpmu_fg_update_psy(fg, force_update_psy);
 
 	FG_LOCK(fg);
 	if (fg->flags.reschedule_work)
 		queue_delayed_work(fg->fg_wq, &fg->fg_periodic_work,
-				poll_time);
+				msecs_to_jiffies(poll_time));
 	FG_UNLOCK(fg);
-}
-
-static void bcmpmu_fg_calibration_algo(struct bcmpmu_fg_data *fg)
-{
-
-}
-static void bcmpmu_fg_cal_work(struct work_struct *work)
-{
-
-}
-
-static void bcmpmu_fg_low_batt_work(struct work_struct *work)
-{
-
 }
 
 static void bcmpmu_fg_periodic_work(struct work_struct *work)
@@ -1549,7 +1645,7 @@ static void bcmpmu_fg_periodic_work(struct work_struct *work)
 	 */
 	if (!fg->flags.batt_present && !fg->flags.init_capacity) {
 		queue_delayed_work(fg->fg_wq, &fg->fg_periodic_work,
-				FAKE_BATT_POLL_TIME);
+				msecs_to_jiffies(FAKE_BATT_POLL_TIME_MS));
 		return;
 	}
 
@@ -1660,9 +1756,10 @@ static int bcmpmu_fg_get_properties(struct power_supply *psy,
 		if (BATTERY_STATUS_UNKNOWN(flags))
 			val->intval = CAPACITY_PERCENTAGE_FULL;
 		else
-			val->intval = fg->capacity_info.prev_percentage;
+			val->intval = fg->capacity_info.percentage;
 		pr_fg(VERBOSE, "POWER_SUPPLY_PROP_CAPACITY = %d\n",
 				val->intval);
+		BUG_ON(val->intval < 0);
 		break;
 	case POWER_SUPPLY_PROP_CAPACITY_LEVEL:
 		if (BATTERY_STATUS_UNKNOWN(flags))
@@ -2171,16 +2268,23 @@ static int __devinit bcmpmu_fg_probe(struct platform_device *pdev)
 	 * Dont want to keep CPU busy with this work when CPU is idle
 	 */
 	INIT_DELAYED_WORK(&fg->fg_periodic_work, bcmpmu_fg_periodic_work);
-	INIT_DELAYED_WORK(&fg->fg_cal_work, bcmpmu_fg_cal_work);
-	INIT_DELAYED_WORK(&fg->fg_low_batt_work, bcmpmu_fg_low_batt_work);
 
 	mutex_init(&fg->mutex);
 	ret = bcmpmu_fg_register_notifiers(fg);
 	if (ret)
 		goto destroy_workq;
 
+	ret = wd_tapper_add_timeout_req(&fg->wd_tap_node, "fg",
+			TAPPER_DEFAULT_TIMEOUT);
+	if (ret) {
+		pr_fg(ERROR, "failed to register with wd-tapper\n");
+		goto destroy_workq;
+	}
+
 	fg->flags.batt_status = POWER_SUPPLY_STATUS_UNKNOWN;
 	fg->flags.prev_batt_status = POWER_SUPPLY_STATUS_UNKNOWN;
+	fg->discharge_state = DISCHARG_STATE_HIGH_BATT;
+
 	fg->flags.init_capacity = true;
 
 	if (bcmpmu_fg_is_batt_present(fg)) {

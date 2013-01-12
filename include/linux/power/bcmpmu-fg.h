@@ -175,6 +175,9 @@ struct bcmpmu_fg_pdata {
 	int recovery_temp_hot;
 	int suspend_temp_cold;
 	int recovery_temp_cold;
+
+	int poll_rate_low_batt;
+	int poll_rate_crit_batt;
 };
 
 int bcmpmu_fg_set_sw_eoc_current(struct bcmpmu59xxx *bcmpmu, int eoc_current);

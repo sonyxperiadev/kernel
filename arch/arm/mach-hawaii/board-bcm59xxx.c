@@ -1081,7 +1081,7 @@ static struct bcmpmu_batt_cap_levels bl_84_cap_levels = {
 };
 
 static struct bcmpmu_batt_volt_levels bl_84_volt_levels = {
-	.critical = 3300,
+	.critical = 3400,
 	.low = 3500,
 	.normal = 3700,
 	.high = 4140, /* should be ~60mv less than vfloat_lvl */
@@ -1112,6 +1112,8 @@ static struct bcmpmu_fg_pdata fg_pdata = {
 	.recovery_temp_hot = 450,
 	.suspend_temp_cold = -60,
 	.recovery_temp_cold = -10,
+	.poll_rate_low_batt = 5000, /* every 5 seconds */
+	.poll_rate_crit_batt = 2000, /* every 2 Seconds */
 };
 
 #ifdef CONFIG_CHARGER_BCMPMU_SPA
