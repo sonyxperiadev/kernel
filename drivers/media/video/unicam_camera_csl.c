@@ -205,8 +205,7 @@ static int unicam_camera_update_buf(struct unicam_camera_dev *unicam_dev)
 	dprintk("-enter");
 
 	if (!unicam_dev->active) {
-		dev_err(unicam_dev->dev,
-			"%s unicam_camera_update_buf no active buffer found:"
+		pr_debug("%s unicam_camera_update_buf no active buffer found:"
 			" WARNING\n", __func__);
 		return -ENOMEM;
 	}
@@ -340,8 +339,7 @@ static int unicam_camera_capture(struct unicam_camera_dev *unicam_dev)
 	dprintk("-enter");
 
 	if (!unicam_dev->active) {
-		dev_err(unicam_dev->dev,
-			"%s: unicam_camera_capture no active buffer :"
+		pr_debug("%s: unicam_camera_capture no active buffer :"
 			" WARNING\n", __func__);
 		return ret;
 	}
@@ -1187,8 +1185,7 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 
 			ret = unicam_camera_update_buf(unicam_dev);
 			if (ret)
-				dev_err(unicam_dev->dev,
-					"%s: error while queueing"
+				pr_debug("%s: error while queueing"
 					" the buffer\n", __func__);
 			if (unicam_dev->if_params.if_mode ==
 				V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2) {
