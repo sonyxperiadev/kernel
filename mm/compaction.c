@@ -562,8 +562,6 @@ static int compact_finished(struct zone *zone,
 {
 	unsigned int order;
 	unsigned long watermark;
-	int alloc_flags = (cc->migratetype == MIGRATE_MOVABLE) ? 0
-					: ALLOC_UNMOVABLE;
 
 	if (fatal_signal_pending(current))
 		return COMPACT_PARTIAL;
@@ -583,7 +581,7 @@ static int compact_finished(struct zone *zone,
 	watermark = low_wmark_pages(zone);
 	watermark += (1 << cc->order);
 
-	if (!zone_watermark_ok(zone, cc->order, watermark, 0, alloc_flags))
+	if (!zone_watermark_ok(zone, cc->order, watermark, 0, 0))
 		return COMPACT_CONTINUE;
 
 	/* Direct compactor: Is a suitable page free? */
@@ -643,13 +641,8 @@ unsigned long compaction_suitable(struct zone *zone, int order)
 	if (fragindex >= 0 && fragindex <= sysctl_extfrag_threshold)
 		return COMPACT_SKIPPED;
 
-	/*
-	 * Always make sure watermarks are checked against ALLOC_UNMOVABLE
-	 * other wise we will never end up running COMPACTION at all and will
-	 * be stuck in indefinite loop
-	 */
 	if (fragindex == -1000 && zone_watermark_ok(zone, order, watermark,
-	    0, ALLOC_UNMOVABLE))
+	    0, 0))
 		return COMPACT_PARTIAL;
 
 	return COMPACT_CONTINUE;
@@ -764,7 +757,7 @@ unsigned long try_to_compact_pages(struct zonelist *zonelist,
 	struct zoneref *z;
 	struct zone *zone;
 	int rc = COMPACT_SKIPPED;
-	int alloc_flags = (gfp_mask & __GFP_MOVABLE) ? 0 : ALLOC_UNMOVABLE;
+	int alloc_flags = 0;
 
 	/*
 	 * Check whether it is worth even starting compaction. The order check is
@@ -775,6 +768,11 @@ unsigned long try_to_compact_pages(struct zonelist *zonelist,
 		return rc;
 
 	count_vm_event(COMPACTSTALL);
+
+#ifdef CONFIG_CMA
+	if (allocflags_to_migratetype(gfp_mask) == MIGRATE_MOVABLE)
+		alloc_flags |= ALLOC_CMA;
+#endif
 
 	/* Compact each zone in the list */
 	for_each_zone_zonelist_nodemask(zone, z, zonelist, high_zoneidx,

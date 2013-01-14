@@ -1676,19 +1676,6 @@ failed:
 	return NULL;
 }
 
-/* The ALLOC_WMARK bits are used as an index to zone->watermark */
-#define ALLOC_WMARK_MIN		WMARK_MIN
-#define ALLOC_WMARK_LOW		WMARK_LOW
-#define ALLOC_WMARK_HIGH	WMARK_HIGH
-#define ALLOC_NO_WATERMARKS	0x04 /* don't check watermarks at all */
-
-/* Mask to get the watermark bits */
-#define ALLOC_WMARK_MASK	(ALLOC_NO_WATERMARKS-1)
-
-#define ALLOC_HARDER		0x10 /* try to alloc harder */
-#define ALLOC_HIGH		0x20 /* __GFP_HIGH set */
-#define ALLOC_CPUSET		0x40 /* check for correct cpuset */
-
 #ifdef CONFIG_FAIL_PAGE_ALLOC
 
 static struct {
@@ -1783,39 +1770,31 @@ static bool __zone_watermark_ok(struct zone *z, int order, unsigned long mark,
 	if (alloc_flags & ALLOC_HARDER)
 		min -= min / 4;
 
-	if (alloc_flags & ALLOC_UNMOVABLE) {
-		if ((free_pages - zone_page_state(z, NR_FREE_CMA_PAGES)) <=
-				(min + z->lowmem_reserve[classzone_idx]))
-			return false;
-	}
+#ifdef CONFIG_CMA
+	/* If allocation can't use CMA areas don't use free CMA pages */
+	if (!(alloc_flags & ALLOC_CMA))
+		free_pages -= zone_page_state(z, NR_FREE_CMA_PAGES);
+#endif
 
 	if (free_pages <= min + z->lowmem_reserve[classzone_idx])
 		return false;
-	for (o = 0; o < MAX_ORDER; o++) {
-		if (o < order) {
-			/* At the next order, this order's
-			 * pages become unavailable
-			 */
-			free_pages -= z->free_area[o].nr_free << o;
-
-			/* Require fewer higher order pages to be free */
-			min >>= min_free_order_shift;
-
-			if (free_pages <= min)
-				return false;
-		}
+	for (o = 0; o < order; o++) {
+		/* At the next order, this order's
+		 * pages become unavailable
+		 */
 #ifdef CONFIG_CMA
-		else if (alloc_flags & ALLOC_UNMOVABLE) {
-			/* If cma is enabled, ignore free pages from
-			 * MIGRATE_CMA list for watermark checks
-			 */
-			free_pages -= (z->nr_cma_free[o] << o);
-			if (free_pages <= min)
-				return false;
-		}
+		if (!(alloc_flags & ALLOC_CMA))
+			free_pages -= (z->free_area[o].nr_free -
+					z->nr_cma_free[o]) << o;
 #else
-		break;
+		free_pages -= z->free_area[o].nr_free << o;
 #endif
+
+		/* Require fewer higher order pages to be free */
+		min >>= min_free_order_shift;
+
+		if (free_pages <= min)
+			return false;
 	}
 
 	return true;
@@ -2046,8 +2025,6 @@ zonelist_scan:
 			int ret;
 
 			mark = zone->watermark[alloc_flags & ALLOC_WMARK_MASK];
-			if (!(gfp_mask & __GFP_MOVABLE))
-				alloc_flags |= ALLOC_UNMOVABLE;
 			if (zone_watermark_ok(zone, order, mark,
 				    classzone_idx, alloc_flags))
 				goto try_this_zone;
@@ -2477,6 +2454,10 @@ gfp_to_alloc_flags(gfp_t gfp_mask)
 			alloc_flags |= ALLOC_NO_WATERMARKS;
 	}
 
+#ifdef CONFIG_CMA
+	if (allocflags_to_migratetype(gfp_mask) == MIGRATE_MOVABLE)
+		alloc_flags |= ALLOC_CMA;
+#endif
 	return alloc_flags;
 }
 
@@ -2685,6 +2666,7 @@ __alloc_pages_nodemask(gfp_t gfp_mask, unsigned int order,
 	struct page *page = NULL;
 	int migratetype = allocflags_to_migratetype(gfp_mask);
 	unsigned int cpuset_mems_cookie;
+	int alloc_flags = ALLOC_WMARK_LOW|ALLOC_CPUSET;
 
 	gfp_mask &= gfp_allowed_mask;
 
@@ -2713,9 +2695,13 @@ retry_cpuset:
 	if (!preferred_zone)
 		goto out;
 
+#ifdef CONFIG_CMA
+	if (allocflags_to_migratetype(gfp_mask) == MIGRATE_MOVABLE)
+		alloc_flags |= ALLOC_CMA;
+#endif
 	/* First allocation attempt */
 	page = get_page_from_freelist(gfp_mask|__GFP_HARDWALL, nodemask, order,
-			zonelist, high_zoneidx, ALLOC_WMARK_LOW|ALLOC_CPUSET,
+			zonelist, high_zoneidx, alloc_flags,
 			preferred_zone, migratetype);
 	if (unlikely(!page))
 		page = __alloc_pages_slowpath(gfp_mask, order,

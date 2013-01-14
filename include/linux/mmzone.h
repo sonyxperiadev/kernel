@@ -245,21 +245,6 @@ enum zone_watermarks {
 #define low_wmark_pages(z) (z->watermark[WMARK_LOW])
 #define high_wmark_pages(z) (z->watermark[WMARK_HIGH])
 
-/*
- * Allow reclaim/compaction to check watermarks for unmovable allocations when
- * CMA is enabled.
- *
- * This is a bit problematic, as ALLOC_* flags are actually only ever
- * used by page_alloc.c, so we *must* keep up with page_alloc.c changes
- * to make sure this alloc_flags doens't conflict
- **/
-
-#ifdef CONFIG_CMA
-#define ALLOC_UNMOVABLE		(0x80)
-#else
-#define ALLOC_UNMOVABLE		(0)
-#endif
-
 struct per_cpu_pages {
 	int count;		/* number of pages in the list */
 	int high;		/* high watermark, emptying needed */

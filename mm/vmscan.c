@@ -2848,7 +2848,7 @@ static bool sleeping_prematurely(pg_data_t *pgdat, int order, long remaining,
 		}
 
 		if (!zone_watermark_ok_safe(zone, order, high_wmark_pages(zone),
-							i, ALLOC_UNMOVABLE))
+							i, 0))
 			all_zones_ok = false;
 		else
 			balanced += zone->present_pages;
@@ -2962,7 +2962,7 @@ loop_again:
 
 			if (!zone_watermark_ok_safe(zone, order,
 						high_wmark_pages(zone), 0,
-						ALLOC_UNMOVABLE)) {
+						0)) {
 				end_zone = i;
 				break;
 			} else {
@@ -3039,7 +3039,7 @@ loop_again:
 			if ((buffer_heads_over_limit && is_highmem_idx(i)) ||
 				    !zone_watermark_ok_safe(zone, testorder,
 					high_wmark_pages(zone) + balance_gap,
-					end_zone, ALLOC_UNMOVABLE)) {
+					end_zone, 0)) {
 				shrink_zone(priority, zone, &sc);
 
 				reclaim_state->reclaimed_slab = 0;
@@ -3068,7 +3068,7 @@ loop_again:
 
 			if (!zone_watermark_ok_safe(zone, order,
 					high_wmark_pages(zone),
-					end_zone, ALLOC_UNMOVABLE)) {
+					end_zone, 0)) {
 				all_zones_ok = 0;
 				/*
 				 * We are still under min water mark.  This
@@ -3077,7 +3077,7 @@ loop_again:
 				 */
 				if (!zone_watermark_ok_safe(zone, order,
 					    min_wmark_pages(zone),
-					    end_zone, ALLOC_UNMOVABLE))
+					    end_zone, 0))
 					has_under_min_watermark_zone = 1;
 			} else {
 				/*
@@ -3175,14 +3175,15 @@ out:
 			/* Confirm the zone is balanced for order-0 */
 			if (!zone_watermark_ok(zone, 0,
 					high_wmark_pages(zone), 0,
-					ALLOC_UNMOVABLE)) {
+					0)) {
 				order = sc.order = 0;
 				goto loop_again;
 			}
 
 			/* Check if the memory needs to be defragmented. */
 			if (zone_watermark_ok(zone, order,
-				    low_wmark_pages(zone), *classzone_idx, ALLOC_UNMOVABLE))
+				low_wmark_pages(zone), *classzone_idx,
+				0))
 				zones_need_compaction = 0;
 
 			/* If balanced, clear the congested flag */
@@ -3371,7 +3372,7 @@ void wakeup_kswapd(struct zone *zone, int order, enum zone_type classzone_idx)
 	if (!waitqueue_active(&pgdat->kswapd_wait))
 		return;
 	if (zone_watermark_ok_safe(zone, order, low_wmark_pages(zone),
-					0, ALLOC_UNMOVABLE))
+					0, 0))
 		return;
 
 	trace_mm_vmscan_wakeup_kswapd(pgdat->node_id, zone_idx(zone), order);
