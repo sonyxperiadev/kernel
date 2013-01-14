@@ -122,6 +122,9 @@ typedef enum {
 #define POWER_MODE_DEEP_SLEEP		2
 #define POWER_MODE_FREEZE			3
 
+#define POWER_MODE_SLEEP_PERIOD		0xA0
+#define POWER_MODE_ALLOW_SLEEP		4
+
 /* Inerrupt Modes */
 #define ENABLE_IND_MODE			(1 << 3)
 
@@ -314,7 +317,8 @@ static int i2c_ts_driver_check_mod_params(void)
 		/* User wants to change the auto low power mode. */
 		g_low_power_changed = 0;
 		gp_buffer[0] = gp_i2c_ts->power_mode_idx;
-		gp_buffer[1] = POWER_MODE_ACTIVE;
+		gp_buffer[1] = POWER_MODE_ACTIVE | POWER_MODE_ALLOW_SLEEP |
+				POWER_MODE_SLEEP_PERIOD;
 		gp_buffer[2] = INT_MODE_ACT_LOW_TOUCH;
 		rc = i2c_ts_driver_write(3);
 		if ((rc > 0) && mod_param_debug)
@@ -1010,7 +1014,8 @@ static int i2c_ts_driver_probe(struct i2c_client *p_i2c_client,
 	}
 
 	gp_buffer[0] = gp_i2c_ts->power_mode_idx;
-	gp_buffer[1] = POWER_MODE_ACTIVE;
+	gp_buffer[1] = POWER_MODE_ACTIVE | POWER_MODE_ALLOW_SLEEP |
+		       POWER_MODE_SLEEP_PERIOD;
 	gp_buffer[2] = INT_MODE_ACT_LOW_TOUCH;
 
 	p_tango_i2c_dev->client = p_i2c_client;
