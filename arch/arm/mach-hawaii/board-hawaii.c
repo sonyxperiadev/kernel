@@ -872,8 +872,7 @@ static int bcmi2cnfc_gpio_clear(void *this)
 
 static struct i2c_board_info __initdata bcmi2cnfc[] = {
 	{
-	 I2C_BOARD_INFO("bcmi2cnfc", 0x1F0),
-	 .flags = I2C_CLIENT_TEN,
+	 I2C_BOARD_INFO("bcmi2cnfc", 0x77),
 	 .platform_data = (void *)&bcmi2cnfc_pdata,
 	 .irq = gpio_to_irq(NFC_INT),
 	 },
