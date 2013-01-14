@@ -197,6 +197,10 @@ struct pwr_mgr {
 };
 
 static struct pwr_mgr pwr_mgr;
+#ifdef CONFIG_KONA_CPU_FREQ_DRV
+static struct cpufreq_lmt_node frq_min_lmt_node;
+#endif
+
 int pwr_mgr_event_trg_enable(int event_id, int event_trg_type)
 {
 	u32 reg_val = 0;
@@ -871,8 +875,14 @@ int pwr_mgr_pm_i2c_sem_lock()
 	if ((pwr_mgr.info->flags & PM_HW_SEM_NO_DFS_REQ) == 0) {
 #ifdef CONFIG_KONA_CPU_FREQ_DRV
 		cpu_freq = get_cpu_freq_from_opp(PWRMGR_HW_SEM_LOCK_WA_PI_OPP);
-		if (cpu_freq != 0)
-			set_cpufreq_limit(cpu_freq, MIN_LIMIT);
+		if (cpu_freq != 0) {
+			if (!frq_min_lmt_node.valid)
+				cpufreq_add_lmt_req(&frq_min_lmt_node,
+						"sem_wa", cpu_freq, MIN_LIMIT);
+			else
+				cpufreq_update_lmt_req(&frq_min_lmt_node,
+						cpu_freq);
+		}
 #endif
 		if (!pwr_mgr.sem_qos_client.valid)
 			ret =
@@ -923,7 +933,7 @@ int pwr_mgr_pm_i2c_sem_unlock()
 		cpu_freq =
 			get_cpu_freq_from_opp(PWRMGR_HW_SEM_UNLOCK_WA_PI_OPP);
 		if (cpu_freq != 0)
-			set_cpufreq_limit(cpu_freq, MIN_LIMIT);
+			cpufreq_update_lmt_req(&frq_min_lmt_node, cpu_freq);
 #endif
 		pi_mgr_qos_request_update(&pwr_mgr.sem_qos_client,
 					  PWRMGR_HW_SEM_UNLOCK_WA_PI_LATENCY);
@@ -956,8 +966,14 @@ int pwr_mgr_pm_i2c_sem_lock()
 	if ((pwr_mgr.info->flags & PM_HW_SEM_NO_DFS_REQ) == 0) {
 #ifdef CONFIG_KONA_CPU_FREQ_DRV
 		cpu_freq = get_cpu_freq_from_opp(PWRMGR_HW_SEM_LOCK_WA_PI_OPP);
-		if (cpu_freq != 0)
-			set_cpufreq_limit(cpu_freq, MIN_LIMIT);
+		if (cpu_freq != 0) {
+			if (!frq_min_lmt_node.valid)
+				cpufreq_add_lmt_req(&frq_min_lmt_node,
+					"sem_wa", cpu_freq, MIN_LIMIT);
+		else
+				cpufreq_update_lmt_req(&frq_min_lmt_node,
+					cpu_freq);
+		}
 #endif
 		if (!pwr_mgr.sem_qos_client.valid)
 			ret =
@@ -1034,7 +1050,7 @@ int pwr_mgr_pm_i2c_sem_unlock()
 		cpu_freq =
 			get_cpu_freq_from_opp(PWRMGR_HW_SEM_UNLOCK_WA_PI_OPP);
 		if (cpu_freq != 0)
-			set_cpufreq_limit(cpu_freq, MIN_LIMIT);
+			cpufreq_update_lmt_req(&frq_min_lmt_node, cpu_freq);
 #endif
 		pi_mgr_qos_request_update(&pwr_mgr.sem_qos_client,
 					  PWRMGR_HW_SEM_UNLOCK_WA_PI_LATENCY);

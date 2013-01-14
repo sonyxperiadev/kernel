@@ -23,7 +23,7 @@
 #include <linux/slab.h>
 #include <linux/module.h>
 #include <plat/kona_cpufreq_drv.h>
-
+#include <linux/smp.h>
 #include <plat/pi_mgr.h>
 #include <mach/pwr_mgr.h>
 #include <asm/cpu.h>
@@ -58,6 +58,12 @@ struct kona_freq_map {
 	int opp;		/* Operating point eg: ECONOMY, NORMAL, TURBO */
 };
 
+enum {
+	FREQ_LMT_NODE_ADD,
+	FREQ_LMT_NODE_DEL,
+	FREQ_LMT_NODE_UPDATE,
+};
+
 struct kona_cpufreq {
 	int pi_id;
 	struct pi_mgr_dfs_node dfs_node;
@@ -66,6 +72,11 @@ struct kona_cpufreq {
 	int no_of_opps;
 	struct cpufreq_policy *policy;
 	struct kona_cpufreq_drv_pdata *pdata;
+	spinlock_t freq_lmt_lock;
+	struct plist_head min_lmt_list;
+	struct plist_head max_lmt_list;
+	int active_min_lmt;
+	int active_max_lmt;
 #ifdef CONFIG_SMP
 	unsigned long l_p_j_ref;
 	unsigned int l_p_j_ref_freq;
@@ -74,9 +85,18 @@ struct kona_cpufreq {
 	struct notifier_block tmon_nb;
 	int r_inx;
 	int f_inx;
+	struct cpufreq_lmt_node tmon_node;
 #endif
 };
 static struct kona_cpufreq *kona_cpufreq;
+
+static struct cpufreq_lmt_node usr_min_lmt_node = {
+	.name = "usr_min_lmt",
+};
+
+static struct cpufreq_lmt_node usr_max_lmt_node = {
+	.name = "usr_max_lmt",
+};
 
 #ifdef CONFIG_KONA_TMON
 static int cpufreq_tmon_notify_handler(struct notifier_block *nb,
@@ -92,8 +112,8 @@ static int cpufreq_tmon_notify_handler(struct notifier_block *nb,
 	if ((f_inx != INVALID_INX) &&
 		curr_temp < pdata->freq_tbl[f_inx].max_temp) {
 
-		set_cpufreq_limit(pdata->freq_tbl[f_inx].cpu_freq,
-				MAX_LIMIT);
+		cpufreq_update_lmt_req(&kona_cpufreq->tmon_node,
+				pdata->freq_tbl[f_inx].cpu_freq);
 		kona_cpufreq->r_inx = f_inx;
 		for (i = f_inx + 1; i < pdata->num_freqs; i++) {
 			if (pdata->freq_tbl[i].max_temp != TEMP_DONT_CARE) {
@@ -106,8 +126,8 @@ static int cpufreq_tmon_notify_handler(struct notifier_block *nb,
 	} else if ((r_inx != INVALID_INX) &&
 			curr_temp >= pdata->freq_tbl[r_inx].max_temp) {
 		BUG_ON(r_inx == 0);
-		set_cpufreq_limit(pdata->freq_tbl[r_inx - 1].cpu_freq,
-				MAX_LIMIT);
+		cpufreq_update_lmt_req(&kona_cpufreq->tmon_node,
+				pdata->freq_tbl[r_inx - 1].cpu_freq);
 		kona_cpufreq->f_inx = r_inx;
 		for (i = r_inx - 1; i > 0; i--) {
 			if (pdata->freq_tbl[i].max_temp != TEMP_DONT_CARE) {
@@ -330,8 +350,9 @@ static int kona_cpufreq_exit(struct cpufreq_policy *policy)
 u32 get_cpu_freq_from_opp(int opp)
 {
 	int i, ret = 0;
-	int cpu = smp_processor_id();
 	struct cpufreq_policy policy;
+	int cpu = get_cpu();
+	put_cpu();
 
 	ret = cpufreq_get_policy(&policy, cpu);
 	if (ret) {
@@ -351,9 +372,9 @@ u32 get_cpu_freq_from_opp(int opp)
 int get_cpufreq_limit(unsigned int *val, int limit_type)
 {
 	int ret = 0;
-	int cpu = smp_processor_id();
 	struct cpufreq_policy policy;
-
+	int cpu	= get_cpu();
+	put_cpu();
 	ret = cpufreq_get_policy(&policy, cpu);
 	if (ret)
 		return -1;
@@ -377,7 +398,8 @@ int get_cpufreq_limit(unsigned int *val, int limit_type)
 int set_cpufreq_limit(unsigned int val, int limit_type)
 {
 	struct cpufreq_policy *policy;
-	int cpu = smp_processor_id();
+	int cpu = get_cpu();
+	put_cpu();
 
 	if (limit_type != MAX_LIMIT && limit_type != MIN_LIMIT)
 		return -EINVAL;
@@ -389,17 +411,182 @@ int set_cpufreq_limit(unsigned int val, int limit_type)
 	kcf_dbg("%s: val:%u  limit_type: %s\n", __func__, val,
 				limit_type ? "Max" : "Min");
 	if (limit_type == MAX_LIMIT) {
-		if (val == DEFAULT_LIMIT)
-			val = (long)policy->cpuinfo.max_freq;
+		val = (long)policy->cpuinfo.max_freq;
 		policy->user_policy.max = val;
 	} else {
-		if (val == DEFAULT_LIMIT)
-			val = (long)policy->cpuinfo.min_freq;
+		val = (long)policy->cpuinfo.min_freq;
 		policy->user_policy.min = val;
 	}
 	cpufreq_cpu_put(policy);
 	cpufreq_update_policy(cpu);
 
+	return 0;
+}
+
+static int cpufreq_min_lmt_update(struct cpufreq_lmt_node *lmt_node, int action)
+{
+	int new_val;
+	int ret = 0;
+	struct cpufreq_policy *policy;
+	int cpu = get_cpu();
+	put_cpu();
+
+	policy = cpufreq_cpu_get(cpu);
+	if (!policy) {
+		pr_err("%s:cpufreq not initialized yet\n", __func__);
+		return -EINVAL;
+	}
+		if (lmt_node->lmt == DEFAULT_LIMIT)
+			lmt_node->lmt = (int)policy->cpuinfo.min_freq;
+	cpufreq_cpu_put(policy);
+
+	spin_lock(&kona_cpufreq->freq_lmt_lock);
+	switch (action) {
+	case FREQ_LMT_NODE_ADD:
+		plist_node_init(&lmt_node->node, lmt_node->lmt);
+		plist_add(&lmt_node->node, &kona_cpufreq->min_lmt_list);
+		break;
+	case FREQ_LMT_NODE_DEL:
+		plist_del(&lmt_node->node, &kona_cpufreq->min_lmt_list);
+		break;
+	case FREQ_LMT_NODE_UPDATE:
+			plist_del(&lmt_node->node, &kona_cpufreq->min_lmt_list);
+			plist_node_init(&lmt_node->node, lmt_node->lmt);
+			plist_add(&lmt_node->node, &kona_cpufreq->min_lmt_list);
+		break;
+	default:
+		BUG();
+	}
+	new_val = plist_last(&kona_cpufreq->min_lmt_list)->prio;
+		if (new_val != kona_cpufreq->active_min_lmt) {
+			ret = set_cpufreq_limit(new_val, MIN_LIMIT);
+			if (!ret)
+				kona_cpufreq->active_min_lmt = new_val;
+	}
+
+	spin_unlock(&kona_cpufreq->freq_lmt_lock);
+	return ret;
+}
+
+static int cpufreq_max_lmt_update(struct cpufreq_lmt_node *lmt_node, int action)
+{
+	int new_val;
+	int ret = 0;
+	struct cpufreq_policy *policy;
+	int cpu = get_cpu();
+	put_cpu();
+
+	policy = cpufreq_cpu_get(cpu);
+	if (!policy) {
+		pr_err("%s:cpufreq not initialized yet\n", __func__);
+		return -EINVAL;
+	}
+	if (lmt_node->lmt == DEFAULT_LIMIT)
+			lmt_node->lmt = (int)policy->cpuinfo.max_freq;
+	cpufreq_cpu_put(policy);
+
+	spin_lock(&kona_cpufreq->freq_lmt_lock);
+	switch (action) {
+	case FREQ_LMT_NODE_ADD:
+		plist_node_init(&lmt_node->node, lmt_node->lmt);
+		plist_add(&lmt_node->node, &kona_cpufreq->max_lmt_list);
+		break;
+	case FREQ_LMT_NODE_DEL:
+		plist_del(&lmt_node->node, &kona_cpufreq->max_lmt_list);
+		break;
+	case FREQ_LMT_NODE_UPDATE:
+		plist_del(&lmt_node->node, &kona_cpufreq->max_lmt_list);
+		plist_node_init(&lmt_node->node, lmt_node->lmt);
+		plist_add(&lmt_node->node, &kona_cpufreq->max_lmt_list);
+		break;
+	default:
+		BUG();
+	}
+	new_val = plist_first(&kona_cpufreq->max_lmt_list)->prio;
+	if (new_val != kona_cpufreq->active_max_lmt) {
+		ret = set_cpufreq_limit(new_val, MAX_LIMIT);
+		if (!ret)
+			kona_cpufreq->active_max_lmt = new_val;
+	}
+
+	spin_unlock(&kona_cpufreq->freq_lmt_lock);
+	return ret;
+}
+
+int cpufreq_add_lmt_req(struct cpufreq_lmt_node *lmt_node,
+		char *client_name, int lmt, int lmt_typ)
+{
+	BUG_ON(lmt_node->valid);
+
+	if (lmt_typ != MAX_LIMIT && lmt_typ != MIN_LIMIT)
+		return -EINVAL;
+
+	lmt_node->lmt = lmt;
+	lmt_node->name = client_name;
+	lmt_node->lmt_typ = lmt_typ;
+	lmt_node->valid = 1;
+
+	if (lmt_typ == MAX_LIMIT)
+		return cpufreq_max_lmt_update(lmt_node, FREQ_LMT_NODE_ADD);
+	else
+		return cpufreq_min_lmt_update(lmt_node, FREQ_LMT_NODE_ADD);
+
+}
+EXPORT_SYMBOL(cpufreq_add_lmt_req);
+
+int cpufreq_del_lmt_req(struct cpufreq_lmt_node *lmt_node)
+{
+	int ret;
+	BUG_ON(lmt_node->valid == 0);
+
+	if (lmt_node->lmt_typ == MIN_LIMIT)
+		ret = cpufreq_min_lmt_update(lmt_node, FREQ_LMT_NODE_DEL);
+	else
+		ret = cpufreq_max_lmt_update(lmt_node, FREQ_LMT_NODE_DEL);
+
+	lmt_node->valid = 0;
+	lmt_node->name = NULL;
+	return ret;
+}
+EXPORT_SYMBOL(cpufreq_del_lmt_req);
+
+int cpufreq_update_lmt_req(struct cpufreq_lmt_node *lmt_node, int lmt)
+{
+	int ret = 0;
+	BUG_ON(lmt_node->valid == 0);
+
+	if (lmt_node->lmt != lmt) {
+		lmt_node->lmt = lmt;
+		if (lmt_node->lmt_typ == MIN_LIMIT)
+			ret =
+			cpufreq_min_lmt_update(lmt_node, FREQ_LMT_NODE_UPDATE);
+		else
+			ret =
+			cpufreq_max_lmt_update(lmt_node, FREQ_LMT_NODE_UPDATE);
+	}
+	return ret;
+}
+EXPORT_SYMBOL(cpufreq_update_lmt_req);
+
+static int cpufreq_update_usr_lmt_req(int val, int lmt_typ)
+{
+
+	if (lmt_typ != MAX_LIMIT && lmt_typ != MIN_LIMIT)
+		return -EINVAL;
+
+	if (lmt_typ == MAX_LIMIT) {
+		if (!usr_max_lmt_node.valid)
+			cpufreq_add_lmt_req(&usr_max_lmt_node,
+			usr_max_lmt_node.name, val, lmt_typ);
+		else
+			cpufreq_update_lmt_req(&usr_max_lmt_node, val);
+	} else {
+		if (!usr_min_lmt_node.valid)
+			cpufreq_add_lmt_req(&usr_min_lmt_node,
+			usr_min_lmt_node.name, val, lmt_typ);
+		else
+			cpufreq_update_lmt_req(&usr_min_lmt_node, val);
+	}
 	return 0;
 }
 
@@ -434,7 +621,7 @@ static ssize_t fname##_store(struct kobject *kobj,		\
 	long val;                                               \
 	if (strict_strtol(buf, 10, &val))			\
 		return -EINVAL;					\
-	set_cpufreq_limit(val, lmt_typ);			\
+	cpufreq_update_usr_lmt_req(val, lmt_typ);		\
 	return n;						\
 }
 
@@ -525,6 +712,11 @@ static int cpufreq_drv_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 	memset(kona_cpufreq, 0, sizeof(struct kona_cpufreq));
+	spin_lock_init(&kona_cpufreq->freq_lmt_lock);
+	plist_head_init(&kona_cpufreq->min_lmt_list);
+	plist_head_init(&kona_cpufreq->max_lmt_list);
+
+
 	kona_cpufreq->freq_map = kzalloc(pdata->num_freqs *
 					 sizeof(struct kona_freq_map),
 					 GFP_KERNEL);
@@ -555,6 +747,9 @@ static int cpufreq_drv_probe(struct platform_device *pdev)
 		    pdata->freq_tbl[i].cpu_freq;
 		kona_cpufreq->freq_map[i].opp = pdata->freq_tbl[i].opp;
 	}
+	kona_cpufreq->active_min_lmt = kona_cpufreq->freq_map[0].cpu_freq;
+	kona_cpufreq->active_max_lmt =
+		kona_cpufreq->freq_map[kona_cpufreq->no_of_opps-1].cpu_freq;
 
 	/*Add a DFS client for ARM CCU. this client will be used later
 	   for changinf ARM freq via cpu-freq. */
@@ -589,13 +784,18 @@ static int cpufreq_drv_probe(struct platform_device *pdev)
 		curr_temp = tmon_get_current_temp();
 		kona_cpufreq->r_inx = pdata->num_freqs - 1;
 		kona_cpufreq->f_inx = INVALID_INX;
+		if (cpufreq_add_lmt_req(&kona_cpufreq->tmon_node,
+				"tmon", DEFAULT_LIMIT, MAX_LIMIT)) {
+			printk(KERN_ALERT "TMON REGN CPUFREQ FAILED\n");
+			return -EINVAL;
+		}
 		for (i = 0; i < pdata->num_freqs; i++) {
 			max_temp = pdata->freq_tbl[i].max_temp;
 			if (curr_temp >= max_temp &&
 					TEMP_DONT_CARE != max_temp) {
 				BUG_ON(i == 0);
-				set_cpufreq_limit(pdata->freq_tbl[i-1].cpu_freq,
-						MAX_LIMIT);
+				cpufreq_update_lmt_req(&kona_cpufreq->tmon_node,
+					pdata->freq_tbl[i-1].cpu_freq);
 				for (j = i - 1; j > 0; j--) {
 					max_temp = pdata->freq_tbl[j].max_temp;
 					if (max_temp != TEMP_DONT_CARE) {
@@ -657,6 +857,12 @@ module_exit(cpufreq_drv_exit);
 
 #ifdef CONFIG_DEBUG_FS
 
+static int cpufreq_debugfs_open(struct inode *inode, struct file *file)
+{
+	file->private_data = inode->i_private;
+	return 0;
+}
+
 static ssize_t kona_cpufreq_bogmips_get(struct file *file,
 					char __user *user_buf, size_t count,
 					loff_t *ppos)
@@ -715,12 +921,46 @@ static struct file_operations bogo_mips_fops = {
 	.read = kona_cpufreq_bogmips_get,
 };
 
-#ifdef CONFIG_KONA_CPU_FREQ_ENABLE_OPP_SET_CHANGE
-static int cpufreq_debugfs_open(struct inode *inode, struct file *file)
+char debug_fs_buf[1000];
+
+static ssize_t cpufreq_read_requests(struct file *file,
+			char __user *user_buf, size_t count, loff_t *ppos)
 {
-	file->private_data = inode->i_private;
-	return 0;
+	u32 len = 0;
+	struct kona_cpufreq *cpufreq = (struct kona_cpufreq *)
+			file->private_data;
+	struct cpufreq_lmt_node *lmt_node;
+
+	len += snprintf(debug_fs_buf + len, sizeof(debug_fs_buf) - len,
+		"***** CPUFREQ min limit requests ******\n");
+	plist_for_each_entry(lmt_node, &cpufreq->min_lmt_list, node) {
+		len += snprintf(debug_fs_buf + len,
+				sizeof(debug_fs_buf) - len,
+				"Name: %s, limit: %d, valid: %d\n",
+				lmt_node->name, lmt_node->lmt,
+				lmt_node->valid);
+	}
+
+	len += snprintf(debug_fs_buf + len, sizeof(debug_fs_buf) - len,
+		"***** CPUFREQ max limit requests ******\n");
+	plist_for_each_entry(lmt_node, &cpufreq->max_lmt_list, node) {
+		len += snprintf(debug_fs_buf + len,
+				sizeof(debug_fs_buf) - len,
+				"Name: %s, limit: %d, valid: %d\n",
+				lmt_node->name, lmt_node->lmt,
+				lmt_node->valid);
+	}
+
+	return simple_read_from_buffer(user_buf, count, ppos, debug_fs_buf,
+				       len);
 }
+
+static const struct file_operations request_list_ops = {
+	.open = cpufreq_debugfs_open,
+	.read = cpufreq_read_requests,
+};
+
+#ifdef CONFIG_KONA_CPU_FREQ_ENABLE_OPP_SET_CHANGE
 
 static ssize_t cpufreq_get_ops_set(struct file *file,
 					char __user *user_buf,
@@ -816,6 +1056,7 @@ static const struct file_operations cpu_config_set_ops_fops = {
 	.read = cpufreq_get_ops_set,
 };
 #endif
+
 static struct dentry *dent_kcf_root_dir;
 int __init kona_cpufreq_debug_init(void)
 {
@@ -828,6 +1069,9 @@ int __init kona_cpufreq_debug_init(void)
 
 	if (!debugfs_create_file
 	    ("bogo_mips", S_IRUSR, dent_kcf_root_dir, NULL, &bogo_mips_fops))
+		return -ENOMEM;
+	if (!debugfs_create_file("read_requests", S_IRUSR,
+			dent_kcf_root_dir, kona_cpufreq, &request_list_ops))
 		return -ENOMEM;
 #ifdef CONFIG_KONA_CPU_FREQ_ENABLE_OPP_SET_CHANGE
 	if (!debugfs_create_file
