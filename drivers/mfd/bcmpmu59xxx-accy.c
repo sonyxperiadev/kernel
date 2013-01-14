@@ -365,7 +365,7 @@ static void usb_handle_state(struct bcmpmu_accy *paccy)
 			enable_bc_clock(paccy, 0);
 		bcmpmu_notify_charger_state(paccy);
 		bcmpmu_accy_chrgr_detect_state(paccy->bcmpmu, 0);
-
+		paccy_set_ldo_bit(paccy, 0);
 		if (paccy->bc == BCMPMU_BC_BB_BC12)
 			bcmpmu_update_pmu_chrgr_type(paccy);
 		schedule_delayed_work(&paccy->det_work, ACCY_WORK_DELAY);
@@ -378,6 +378,7 @@ static void usb_handle_state(struct bcmpmu_accy *paccy)
 		paccy->usb_accy_data.usb_type = PMU_USB_TYPE_NONE;
 		paccy->usb_accy_data.chrgr_type = PMU_CHRGR_TYPE_NONE;
 		bcmpmu_notify_charger_state(paccy);
+		paccy_set_ldo_bit(paccy, 0);
 #ifdef CONFIG_HAS_WAKELOCK
 		if (wake_lock_active(&paccy->wake_lock))
 			wake_unlock(&paccy->wake_lock);
