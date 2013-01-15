@@ -190,6 +190,7 @@ static BRCM_AUDIO_Param_Second_Dev_t second_dev_info;
 
 static int needDualMic(AudioMode_t mode, AudioApp_t app);
 static AudioMode_t GetAudioModeFromCaptureDev(CSL_CAPH_DEVICE_e source);
+static AudioMode_t GetAudioModeFromSource(AUDIO_SOURCE_Enum_t source);
 static void powerOnExternalAmp(AUDIO_SINK_Enum_t speaker,
 				   enum ExtSpkrUsage_en_t usage_flag,
 				   int use, int force);
@@ -2568,7 +2569,7 @@ void AUDCTRL_EnableRecord(AUDIO_SOURCE_Enum_t source,
 {
 	unsigned int pathID;
 	AudioApp_t app = AUDCTRL_GetAudioApp();
-	AudioMode_t mode = 0 ;//AUDCTRL_GetAudioMode();
+	AudioMode_t mode = 0 ;/*AUDCTRL_GetAudioMode();*/
 	aTrace(LOG_AUDIO_CNTLR,
 			"%s src 0x%x, sink 0x%x,sr %d",
 			__func__, source, sink, sr);
@@ -2586,6 +2587,14 @@ void AUDCTRL_EnableRecord(AUDIO_SOURCE_Enum_t source,
 		sr == AUDIO_SAMPLING_RATE_16000) {
 		app = AUDIO_APP_RECORDING_WB;
 		AUDCTRL_SaveAudioApp(app);
+	}
+
+/* If the app is not record app and we are in enable
+    record could mean its a concurrency case and shud
+    retain the audiomode set by the higher priority app */
+	if (AUDCTRL_IsRecApp(AUDCTRL_GetAudioApp())) {
+		mode = GetAudioModeFromSource(source);
+		AUDCTRL_SaveAudioMode(mode); /* recording case */
 	}
 
 	/*in call mode, return the UL path*/
@@ -3850,6 +3859,31 @@ AudioMode_t GetAudioModeBySink(AUDIO_SINK_Enum_t sink)
 			"%s can not find mode %d\n", __func__, sink);
 		return AUDIO_MODE_INVALID;
 	}
+}
+
+static AudioMode_t GetAudioModeFromSource(AUDIO_SOURCE_Enum_t source)
+{
+	AudioMode_t mode = AUDIO_MODE_INVALID;
+	aTrace(LOG_AUDIO_CNTLR, "%s src 0x%x", __func__, source);
+
+	if (source == AUDIO_SOURCE_ANALOG_MAIN) {
+		mode = AUDIO_MODE_SPEAKERPHONE;
+		/* AUDIO_MODE_SPEAKERPHONE? use which mode? */
+	} else if (source == AUDIO_SOURCE_ANALOG_AUX)
+		mode = AUDIO_MODE_HEADSET;
+	else if (source == AUDIO_SOURCE_DIGI1
+		 || source == AUDIO_SOURCE_DIGI2
+		 || source == AUDIO_SOURCE_DIGI3
+		 || source == AUDIO_SOURCE_DIGI4
+		 || source == AUDIO_SOURCE_MIC_ARRAY1
+		 || source == AUDIO_SOURCE_MIC_ARRAY2
+				) {
+		mode = AUDIO_MODE_SPEAKERPHONE;
+		/* AUDIO_MODE_HANDSET?  use which mode? */
+	} else if (source == AUDIO_SOURCE_BTM)
+		mode = AUDIO_MODE_BLUETOOTH;
+	aTrace(LOG_AUDIO_CNTLR, "%s mode 0x%x", __func__, mode);
+	return mode;
 }
 
 static AudioMode_t GetAudioModeFromCaptureDev(CSL_CAPH_DEVICE_e source)
