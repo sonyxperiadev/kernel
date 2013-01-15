@@ -20,16 +20,33 @@ struct kona_fb_platform_data {
 	struct 	dispdrv_init_parms   parms;
 };
 
-extern void *DISPDRV_GetFuncTable(void);
-extern void *DISP_DRV_LQ043Y1DX01_GetFuncTable(void);
-extern void *DISP_DRV_NT35582_WVGA_SMI_GetFuncTable(void);
 extern void *DISP_DRV_NT35516_GetFuncTable(void);
 extern void *DISP_DRV_LG4591_GetFuncTable(void);
-extern void *DISP_DRV_BCM91008_ALEX_GetFuncTable(void);
-extern void *DISP_DRV_R61581_HVGA_SMI_GetFuncTable(void);
-extern void *DISPDRV_ili9486_GetFuncTable(void);
-extern void *DISPDRV_R61531_GetFuncTable(void);
-extern void *DISPDRV_ili9341_GetFuncTable(void);
 extern void *DISP_DRV_OTM1281A_GetFuncTable(void);
-extern void *LCD_DISPDRV_GetFuncTable(void);
+
+struct dispdrv_name_entry {
+	char name[10];
+	void *(*entry) (void);
+};
+
+static struct dispdrv_name_entry dispdrvs[] = {
+	{"NT35516", DISP_DRV_NT35516_GetFuncTable},
+	{"LG4591", DISP_DRV_LG4591_GetFuncTable},
+	{"OTM1281A", DISP_DRV_OTM1281A_GetFuncTable},
+};
+static void *get_dispdrv_entry(const char *name)
+{
+	int i;
+	void *ret = NULL;
+	i = sizeof(dispdrvs) / sizeof(struct dispdrv_name_entry);
+	while (i--) {
+		if (!strcmp(name, dispdrvs[i].name)) {
+			ret = dispdrvs[i].entry;
+			pr_err("Found %s\n", dispdrvs[i].name);
+			break;
+		}
+	}
+	return ret;
+}
+
 #endif /* KONA_FB_H_ */

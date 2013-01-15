@@ -55,6 +55,10 @@
 #include "kona_fb.h"
 #include "lcd/display_drv.h"
 
+#include <linux/of.h>
+#include <linux/of_irq.h>
+#include <linux/of_platform.h>
+
 #ifdef CONFIG_FB_BRCM_CP_CRASH_DUMP_IMAGE_SUPPORT
 #include <video/kona_fb_image_dump.h>
 #include "lcd/dump_start_img.h"
@@ -769,6 +773,7 @@ static int kona_fb_probe(struct platform_device *pdev)
 	int ret_val = -1;
 	struct kona_fb_platform_data *fb_data;
 
+	konafb_info("start\n");
 	if (g_kona_fb && (g_kona_fb->is_display_found == 1)) {
 		konafb_info("A right display device is already found!\n");
 		return -EINVAL;
@@ -792,10 +797,67 @@ static int kona_fb_probe(struct platform_device *pdev)
 		goto fb_data_failed;
 	}
 
-	fb_data = pdev->dev.platform_data;
-	if (!fb_data) {
-		ret = -EINVAL;
-		goto fb_data_failed;
+	if (pdev->dev.of_node) {
+		u32 val;
+		const char *str;
+		fb_data = kzalloc(sizeof(struct kona_fb_platform_data),
+			GFP_KERNEL);
+		if (!fb_data) {
+			pr_err("couldn't allocate memory for pdata");
+			ret = -ENOMEM;
+			goto platform_alloc_failed1;
+		}
+		if (of_property_read_string(pdev->dev.of_node,
+			"module-name", &str))
+			goto platform_alloc_failed2;
+		fb_data->dispdrv_name = kzalloc(strlen(str), GFP_KERNEL);
+		if (!fb_data->dispdrv_name) {
+			pr_err("couldn't allocate memory for dispdrv_name");
+			ret = -ENOMEM;
+			goto platform_alloc_failed2;
+		}
+		strcpy(fb_data->dispdrv_name, str);
+		fb_data->dispdrv_entry = get_dispdrv_entry(str);
+		if (!fb_data->dispdrv_entry)
+			goto of_err;
+		if (of_property_read_u32(pdev->dev.of_node, "boot-mode", &val))
+			goto of_err;
+		fb_data->parms.w0.bits.boot_mode = val;
+		if (of_property_read_u32(pdev->dev.of_node, "bus-type", &val))
+			goto of_err;
+		fb_data->parms.w0.bits.bus_type = val;
+		if (of_property_read_u32(pdev->dev.of_node, "bus-no", &val))
+			goto of_err;
+		fb_data->parms.w0.bits.bus_no = val;
+		if (of_property_read_u32(pdev->dev.of_node, "bus-ch", &val))
+			goto of_err;
+		fb_data->parms.w0.bits.bus_ch = val;
+		if (of_property_read_u32(pdev->dev.of_node, "bus-width", &val))
+			goto of_err;
+		fb_data->parms.w0.bits.bus_width = val;
+		if (of_property_read_u32(pdev->dev.of_node, "te-input", &val))
+			goto of_err;
+		fb_data->parms.w0.bits.te_input = val;
+		if (of_property_read_u32(pdev->dev.of_node, "col-mod-i", &val))
+			goto of_err;
+		fb_data->parms.w0.bits.col_mode_i = val;
+		if (of_property_read_u32(pdev->dev.of_node, "col-mod-o", &val))
+			goto of_err;
+		fb_data->parms.w0.bits.col_mode_o = val;
+		if (of_property_read_u32(pdev->dev.of_node, "api-rev", &val))
+			goto of_err;
+		fb_data->parms.w1.bits.api_rev = val;
+		if (of_property_read_u32(pdev->dev.of_node, "rst", &val))
+			goto of_err;
+		fb_data->parms.w1.bits.lcd_rst0 = val;
+		/* To get the pointer in remove */
+		pdev->dev.platform_data = fb_data;
+	} else {
+		fb_data = pdev->dev.platform_data;
+		if (!fb_data) {
+			ret = -EINVAL;
+			goto fb_data_failed;
+		}
 	}
 	fb->display_ops = (DISPDRV_T *) fb_data->dispdrv_entry();
 
@@ -1003,10 +1065,18 @@ err_enable_display_failed:
 #if (KONA_FB_ENABLE_DYNAMIC_CLOCK != 1)
 	fb->display_ops->stop(&fb->dfs_node);
 #endif
+of_err:
+	if (pdev->dev.of_node)
+		kfree(fb_data->dispdrv_name);
+platform_alloc_failed2:
+	if (pdev->dev.of_node)
+		kfree(fb_data);
+platform_alloc_failed1:
 fb_data_failed:
 	kfree(fb);
 	g_kona_fb = NULL;
 err_fb_alloc_failed:
+	pr_err("%s failed ret=%d\n", __func__, ret);
 	return ret;
 }
 
@@ -1038,10 +1108,9 @@ static int kona_fb_die_cb(struct notifier_block *nb, unsigned long val, void *v)
 
 static int __devexit kona_fb_remove(struct platform_device *pdev)
 {
-	size_t framesize;
 	struct kona_fb *fb = platform_get_drvdata(pdev);
-
-	framesize = fb->fb.var.xres_virtual * fb->fb.var.yres_virtual * 2;
+	struct kona_fb_platform_data *pdata = (struct kona_fb_platform_data *)
+						pdev->dev.platform_data;
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
 	unregister_early_suspend(&fb->early_suspend_level1);
@@ -1054,16 +1123,32 @@ static int __devexit kona_fb_remove(struct platform_device *pdev)
 #endif
 	unregister_framebuffer(&fb->fb);
 	disable_display(fb);
+	if (pdev->dev.of_node) {
+		kfree(pdata->dispdrv_name);
+		kfree(pdata);
+		pdev->dev.platform_data = NULL;
+	}
+
 	kfree(fb);
 	konafb_info("kona FB removed !!\n");
 	return 0;
 }
 
+static const struct of_device_id kona_fb_of_match[] = {
+	{ .compatible = "bcm,kona-fb", },
+	{},
+};
+MODULE_DEVICE_TABLE(of, kona_fb_of_match);
+
+
 static struct platform_driver kona_fb_driver = {
 	.probe = kona_fb_probe,
 	.remove = __devexit_p(kona_fb_remove),
 	.driver = {
-		   .name = "kona_fb"}
+		   .name = "kona_fb",
+		   .owner = THIS_MODULE,
+		   .of_match_table = kona_fb_of_match,
+		   },
 };
 
 static int __init kona_fb_init(void)

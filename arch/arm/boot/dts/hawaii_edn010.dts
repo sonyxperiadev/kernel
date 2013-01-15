@@ -181,6 +181,23 @@
 
 	};
 
+	kona-fb {
+		compatible = "bcm,kona-fb";
+		reg = <0x3c200000 0x1000>;
+		module-name = "NT35516";
+		boot-mode = <0>;
+		bus-type = <2>;
+		bus-no = <1>;
+		bus-ch = <1>;
+		bus-width = <3>;
+		te-input = <2>;
+		col-mod-i = <1>;
+		col-mod-o = <4>;
+		api-rev = <0x10>;
+		rst = <22>;
+	};
+
+
 	tmon@0x34008000 {
 		compatible = "bcm,tmon";
 		reg = <0x34008000 0x1000>;
