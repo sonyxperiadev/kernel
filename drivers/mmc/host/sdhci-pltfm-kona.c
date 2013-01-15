@@ -36,6 +36,12 @@
 #include <linux/regulator/consumer.h>
 #include <linux/pm_runtime.h>
 #include <mach/sdio_platform.h>
+
+#include <linux/of.h>
+#include <linux/of_irq.h>
+#include <linux/of_platform.h>
+
+
 #ifdef CONFIG_APANIC_ON_MMC
 #include <linux/mmc-poll/mmc_poll_stack.h>
 #endif
@@ -671,23 +677,114 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 	struct sdhci_host *host;
 	struct sdio_dev *dev;
 	struct resource *iomem;
-	struct sdio_platform_cfg *hw_cfg;
+	struct sdio_platform_cfg *hw_cfg = NULL;
 	char devname[MAX_DEV_NAME_SIZE];
-	int ret;
+	int ret = 0;
 
 	pr_debug("%s: ENTRY\n", __func__);
 
 	BUG_ON(pdev == NULL);
 
-	if (pdev->dev.platform_data == NULL) {
-		dev_err(&pdev->dev, "platform_data missing\n");
-		ret = -EFAULT;
-		goto err;
+	if (pdev->dev.platform_data)
+		hw_cfg = (struct sdio_platform_cfg *)pdev->dev.platform_data;
+
+	if (pdev->dev.of_node) {
+		const char *prop;
+		u32 val;
+
+		if (!pdev->dev.platform_data)
+			hw_cfg = kzalloc(sizeof(struct sdio_platform_cfg),
+				GFP_KERNEL);
+
+		if (!hw_cfg) {
+			dev_err(&pdev->dev,
+				"unable to allocate mem for private data\n");
+			ret = -ENOMEM;
+			goto err;
+		}
+		if (of_property_read_u32(pdev->dev.of_node, "id", &val))
+			goto err_free_priv_data_mem;
+
+		hw_cfg->id = val;
+		pdev->id = val;
+
+		if (of_property_read_u32(pdev->dev.of_node, "data-pullup",
+			&val))
+			goto err_free_priv_data_mem;
+
+		hw_cfg->data_pullup = val;
+
+		if (of_property_read_u32(pdev->dev.of_node, "devtype", &val))
+			goto err_free_priv_data_mem;
+
+		hw_cfg->devtype = val;
+
+		if (of_property_read_u32(pdev->dev.of_node, "flags", &val))
+			goto err_free_priv_data_mem;
+
+		hw_cfg->flags = val;
+
+		of_property_read_string(pdev->dev.of_node, "peri-clk-name",
+			&prop);
+		if (prop == NULL)
+			goto err_free_priv_data_mem;
+
+		hw_cfg->peri_clk_name = (char *)prop;
+
+		of_property_read_string(pdev->dev.of_node, "ahb-clk-name",
+			&prop);
+		if (prop == NULL)
+			goto err_free_priv_data_mem;
+
+		hw_cfg->ahb_clk_name = (char *)prop;
+
+		of_property_read_string(pdev->dev.of_node, "sleep-clk-name",
+			&prop);
+		if (prop == NULL)
+			goto err_free_priv_data_mem;
+
+		hw_cfg->sleep_clk_name = (char *)prop;
+
+		if (of_property_read_u32(pdev->dev.of_node, "peri-clk-rate",
+			&val))
+			goto err_free_priv_data_mem;
+
+		hw_cfg->peri_clk_rate = val;
+
+		if (hw_cfg->devtype == SDIO_DEV_TYPE_SDMMC) {
+			of_property_read_string(pdev->dev.of_node,
+				"vddo-regulator-name", &prop);
+			if (prop == NULL)
+				goto err_free_priv_data_mem;
+
+			hw_cfg->vddo_regulator_name = (char *)prop;
+
+			of_property_read_string(pdev->dev.of_node,
+				"vddsdxc-regulator-name", &prop);
+			if (prop == NULL)
+				goto err_free_priv_data_mem;
+
+			hw_cfg->vddsdxc_regulator_name = (char *)prop;
+
+
+			if (of_property_read_u32(pdev->dev.of_node,
+				"cd-gpio", &val))
+				goto err_free_priv_data_mem;
+
+			hw_cfg->cd_gpio = val;
+		}
+
+		else if (hw_cfg->devtype == SDIO_DEV_TYPE_EMMC) {
+
+			if (of_property_read_u32(pdev->dev.of_node,
+				"is-8bit", &val))
+				goto err_free_priv_data_mem;
+
+			hw_cfg->is_8bit = val;
+		}
+
+		pdev->dev.platform_data = hw_cfg;
 	}
-
-	pr_debug("%s: GET PLATFORM DATA\n", __func__);
-
-	hw_cfg = (struct sdio_platform_cfg *)pdev->dev.platform_data;
 	if (hw_cfg->devtype >= SDIO_DEV_TYPE_MAX) {
 		dev_err(&pdev->dev, "unknown device type\n");
 		ret = -EFAULT;
@@ -1062,6 +1159,11 @@ err_free_mem_region:
 err_free_host:
 	sdhci_free_host(host);
 
+err_free_priv_data_mem:
+	if (pdev->dev.of_node) {
+		ret = -EFAULT;
+		kfree(hw_cfg);
+	}
 err:
 	pr_err("Probing of sdhci-pltfm %d failed: %d\n", pdev->id,
 	       ret);
@@ -1129,6 +1231,11 @@ static int __devexit sdhci_pltfm_remove(struct platform_device *pdev)
 	kfree(dev->cd_int_wake_lock_name);
 	wake_lock_destroy(&dev->cd_int_wake_lock);
 	platform_set_drvdata(pdev, NULL);
+	if (dev->devtype == SDIO_DEV_TYPE_EMMC ||
+		dev->devtype == SDIO_DEV_TYPE_SDMMC) {
+		kfree(pdev->dev.platform_data);
+		pdev->dev.platform_data = NULL;
+	}
 	kfree(dev);
 	iounmap(host->ioaddr);
 	release_mem_region(iomem->start, resource_size(iomem));
@@ -1257,11 +1364,19 @@ static const struct dev_pm_ops sdhci_pltfm_pm_ops = {
 	.resume = sdhci_pltfm_resume,
 };
 
+static const struct of_device_id sdhci_of_match[] = {
+	{ .compatible = "bcm,sdhci", },
+	{},
+}
+
+MODULE_DEVICE_TABLE(of, sdhci_of_match)
+;
 static struct platform_driver sdhci_pltfm_driver = {
 	.driver = {
 		   .name = "sdhci",
 		   .owner = THIS_MODULE,
 		   .pm = &sdhci_pltfm_pm_ops,
+		   .of_match_table = sdhci_of_match,
 		   },
 	.probe = sdhci_pltfm_probe,
 	.remove = __devexit_p(sdhci_pltfm_remove),

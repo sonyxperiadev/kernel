@@ -665,13 +665,6 @@ static struct soc_camera_link iclink_ov7692 = {
 };
 
 #endif /* CONFIG_VIDEO_UNICAM_CAMERA */
-static const struct of_dev_auxdata hawaii_auxdata_lookup[] __initconst = {
-	OF_DEV_AUXDATA("bcm,soc-camera", 0x3c,
-		"soc-back-camera", &iclink_ov5640),
-	OF_DEV_AUXDATA("bcm,soc-camera", 0x3e,
-		"soc-front-camera", &iclink_ov7692),
-	{},
-};
 
 static struct spi_kona_platform_data hawaii_ssp0_info = {
 #ifdef CONFIG_DMAC_PL330
@@ -1175,63 +1168,31 @@ struct platform_device haptic_pwm_device = {
 
 #endif /* CONFIG_HAPTIC_SAMSUNG_PWM */
 
-static struct sdio_platform_cfg hawaii_sdio_param[] = {
-	{
-	 .id = 0,
-	 .data_pullup = 0,
-	 .cd_gpio = SD_CARDDET_GPIO_PIN,
-	 .devtype = SDIO_DEV_TYPE_SDMMC,
-	 .flags = KONA_SDIO_FLAGS_DEVICE_REMOVABLE,
-	 .peri_clk_name = "sdio1_clk",
-	 .ahb_clk_name = "sdio1_ahb_clk",
-	 .sleep_clk_name = "sdio1_sleep_clk",
-	 .peri_clk_rate = 48000000,
-	 /*The SD card regulator */
-	 .vddo_regulator_name = "vdd_sdio",
-	 /*The SD controller regulator */
-	 .vddsdxc_regulator_name = "vdd_sdxc",
-	 },
-	{
-	 .id = 1,
-	 .data_pullup = 0,
-	 .is_8bit = 1,
-	 .devtype = SDIO_DEV_TYPE_EMMC,
-	 .flags = KONA_SDIO_FLAGS_DEVICE_NON_REMOVABLE,
-	 .peri_clk_name = "sdio2_clk",
-	 .ahb_clk_name = "sdio2_ahb_clk",
-	 .sleep_clk_name = "sdio2_sleep_clk",
-	 .peri_clk_rate = 52000000,
-	 },
+static struct sdio_platform_cfg hawaii_sdio_param = {
+
 #ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
-	{
-	 .id = 2,
-	 .data_pullup = 0,
-	 .devtype = SDIO_DEV_TYPE_WIFI,
-	 .flags = KONA_SDIO_FLAGS_DEVICE_REMOVABLE,
-	 .peri_clk_name = "sdio3_clk",
-	 .ahb_clk_name = "sdio3_ahb_clk",
-	 .sleep_clk_name = "sdio3_sleep_clk",
-	 .peri_clk_rate = 48000000,
-	 .register_status_notify = hawaii_wifi_status_register,
-	 },
-#else
-	{
-	 .id = 2,
-	 .data_pullup = 0,
-	 .devtype = SDIO_DEV_TYPE_WIFI,
-	 .wifi_gpio = {
-		       .reset = 3,
-		       .reg = -1,
-		       .host_wake = 74,
-		       .shutdown = -1,
-		       },
-	 .flags = KONA_SDIO_FLAGS_DEVICE_REMOVABLE,
-	 .peri_clk_name = "sdio3_clk",
-	 .ahb_clk_name = "sdio3_ahb_clk",
-	 .sleep_clk_name = "sdio3_sleep_clk",
-	 .peri_clk_rate = 48000000,
-	 },
+	.register_status_notify = hawaii_wifi_status_register,
 #endif
+
+};
+
+static const struct of_dev_auxdata hawaii_auxdata_lookup[] __initconst = {
+
+	OF_DEV_AUXDATA("bcm,sdhci", 0x3F190000,
+		"sdhci.1", NULL),
+
+	OF_DEV_AUXDATA("bcm,sdhci", 0x3F1A0000,
+		"sdhci.2", &hawaii_sdio_param),
+
+	OF_DEV_AUXDATA("bcm,sdhci", 0x3F180000,
+		"sdhci.0", NULL),
+
+	OF_DEV_AUXDATA("bcm,soc-camera", 0x3c,
+		"soc-back-camera", &iclink_ov5640),
+
+	OF_DEV_AUXDATA("bcm,soc-camera", 0x3e,
+		"soc-front-camera", &iclink_ov7692),
+	{},
 };
 
 #ifdef CONFIG_BACKLIGHT_PWM
@@ -1429,12 +1390,6 @@ static struct platform_device *hawaii_devices[] __initdata = {
 
 };
 
-struct platform_device *hawaii_sdio_devices[] __initdata = {
-	&hawaii_sdio2_device,
-	&hawaii_sdio3_device,
-	&hawaii_sdio1_device,
-};
-
 static void __init hawaii_add_i2c_devices(void)
 {
 
@@ -1530,9 +1485,6 @@ static void __init hawaii_add_i2c_devices(void)
 
 static void hawaii_add_pdata(void)
 {
-	hawaii_sdio1_device.dev.platform_data = &hawaii_sdio_param[0];
-	hawaii_sdio2_device.dev.platform_data = &hawaii_sdio_param[1];
-	hawaii_sdio3_device.dev.platform_data = &hawaii_sdio_param[2];
 	hawaii_ssp0_device.dev.platform_data = &hawaii_ssp0_info;
 	hawaii_ssp1_device.dev.platform_data = &hawaii_ssp1_info;
 	hawaii_stm_device.dev.platform_data = &hawaii_stm_pdata;
@@ -1588,12 +1540,6 @@ static void __init hawaii_add_devices(void)
 
 }
 
-static void __init hawaii_add_sdio_devices(void)
-{
-	platform_add_devices(hawaii_sdio_devices,
-			     ARRAY_SIZE(hawaii_sdio_devices));
-}
-
 static struct of_device_id hawaii_dt_match_table[] __initdata = {
 	{ .compatible = "simple-bus", },
 	{}
@@ -1605,13 +1551,12 @@ static void __init hawaii_init(void)
 	hawaii_add_common_devices();
 	/* Populate platform_devices from device tree data */
 	of_platform_populate(NULL, hawaii_dt_match_table,
-			hawaii_auxdata_lookup, NULL);
+			hawaii_auxdata_lookup, &platform_bus);
 	return;
 }
 
 static int __init hawaii_add_lateinit_devices(void)
 {
-	hawaii_add_sdio_devices();
 
 #ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
 	hawaii_wlan_init();
