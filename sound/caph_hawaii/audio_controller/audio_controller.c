@@ -170,7 +170,6 @@ static unsigned int pathIDTuning;	/* init to 0, for tuning purpose only */
 
 
 bool sAudioAppStates[AUDIO_APP_TOTAL];
-static AudioApp_t currAudioApp = AUDIO_APP_DEFAULT;
 static AudioMode_t currAudioMode = AUDIO_MODE_HANDSET;
  /* need to update this on AP and also in audioapi.c on CP. */
 static AudioMode_t currAudioMode_playback = AUDIO_MODE_SPEAKERPHONE;
@@ -203,10 +202,12 @@ static void AUDCTRL_FinalizeAudioApp(AudioMode_t mode);
 
 static void audctl_usleep_range(int min, int max)
 {
+	AudioApp_t currApp = AUDCTRL_GetAudioApp();
+
 	/*to reduce voip loopback, no wait for pmu rampup*/
-	if (currAudioApp == AUDIO_APP_VOIP ||
-		currAudioApp == AUDIO_APP_VOIP_INCOMM ||
-		currAudioApp == AUDIO_APP_LOOPBACK)
+	if (currApp == AUDIO_APP_VOIP ||
+		currApp == AUDIO_APP_VOIP_INCOMM ||
+		currApp == AUDIO_APP_LOOPBACK)
 		return;
 	if (min)
 		usleep_range(min, max);
@@ -888,6 +889,7 @@ void AUDCTRL_SetTelephonyMicMute(AUDIO_SOURCE_Enum_t mic, Boolean mute)
 ****************************************************************************/
 AudioApp_t AUDCTRL_GetAudioApp(void)
 {
+	static AudioApp_t currAudioApp = AUDIO_APP_DEFAULT;
 #ifdef CONFIG_BCM_MODEM
 	/*Get the app to access sysparm by priority*/
 	if (sForcedApp != AUDIO_APP_DEFAULT)
@@ -958,9 +960,10 @@ AudioApp_t AUDCTRL_GetAudioApp(void)
 ****************************************************************************/
 void AUDCTRL_SaveAudioApp(AudioApp_t app)
 {
+	AudioApp_t currApp = AUDCTRL_GetAudioApp();
 	aTrace(LOG_AUDIO_CNTLR, "%s app=%d", __func__, app);
 
-	if (currAudioApp == app ||
+	if (currApp == app ||
 		app >= AUDIO_APP_TOTAL)
 		return;
 
@@ -968,12 +971,12 @@ void AUDCTRL_SaveAudioApp(AudioApp_t app)
 		if (app > AUDIO_APP_VOIP_INCOMM)
 			return;
 
-	AUDCTRL_RemoveVoiceApp(currAudioApp);
-	AUDCTRL_RemoveRecApp(currAudioApp);
+	AUDCTRL_RemoveVoiceApp(currApp);
+	AUDCTRL_RemoveRecApp(currApp);
 	sAudioAppStates[app] = TRUE;
 
 	aTrace(LOG_AUDIO_CNTLR, "%s currAudioApp=%d new app=%d", __func__,
-			currAudioApp, app);
+			currApp, app);
 }
 
 /****************************************************************************
