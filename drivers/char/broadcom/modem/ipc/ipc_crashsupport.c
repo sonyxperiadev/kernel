@@ -99,19 +99,22 @@ struct T_CRASH_SUMMARY {
 #define	ASSERT_BUF_SIZE	    512
 #define MAX_RAMDUMP_BLOCKS  16
 static char assert_buf[ASSERT_BUF_SIZE];
-static int crashCount;
 static struct T_CRASH_SUMMARY *dumped_crash_summary_ptr = { 0 };
+
+static int crashCount;
 
 /* maximum number of times we'll try to re-establish comms with
  * CP during crash log dump */
 #define MAX_CP_DUMP_RETRIES 5
 #define TICKS_ONE_SECOND 1024
 
-typedef struct {
+struct T_CP_IMGS {
 	const char *img_name;	/* CP image filename */
 	int ram_addr;		/* RAM address */
-	int img_size;	/* CP image size. 0 means the size is calculated. */
-} T_CP_IMGS;
+	int img_size;		/* CP image size.
+				 * 0 means the size is calculated.
+				 */
+};
 
 /* main image signature and offset */
 #define MSP_SIGNATURE_VALUE      0xBABEFACE
@@ -120,44 +123,14 @@ typedef struct {
 #define CP_IMAGE_SIZE_OFFSET     0x24
 #define LINKER_FLAG_OFFSET_VALUE 0x4b4e494c
 
-/* from kernel/arch/arm/mach-capri/include/mach/comms/platform_mconfig_rhea.h */
-#define CP_RO_RAM_OFFSET             0x200000
-#define CP_RO_RAM_ADDR              (EXT_RAM_BASE_ADDR + CP_RO_RAM_OFFSET)
-#if 0
-#define PARM_IND_RAM_OFFSET         0x100000
-#define PARM_IND_RAM_ADDR           (EXT_RAM_BASE_ADDR + PARM_IND_RAM_OFFSET)
-#define PARM_IND_SIZE               0x00040000
-#endif
-#define DSP_DRAM_RAM_OFFSET         0x1800000
-#define DSP_DRAM_RAM_ADDR           (EXT_RAM_BASE_ADDR + DSP_DRAM_RAM_OFFSET)
-#define DSP_DRAM_SIZE               0x00200000
-#if 0
-#define DSP_PRAM_RAM_OFFSET         0x160000
-#define DSP_PRAM_RAM_ADDR           (EXT_RAM_BASE_ADDR + DSP_PRAM_RAM_OFFSET)
-#define DSP_PRAM_SIZE               0x00004000
-#endif
-#if 0
-#define UMTS_CAL_RAM_OFFSET         0x64000
-#define UMTS_CAL_RAM_ADDR           (EXT_RAM_BASE_ADDR + UMTS_CAL_RAM_OFFSET)
-#define UMTS_CAL_SIZE               0x00020000
-#endif
-
-#define PARM_SPML_IND_RAM_OFFSET    0x1B0000
-#define PARM_SPML_IND_RAM_ADDR   (EXT_RAM_BASE_ADDR + PARM_SPML_IND_RAM_OFFSET)
-#define PARM_SPML_IND_SIZE          0x00040000
-
-#define PARM_SPML_DEP_RAM_OFFSET    0x1F0000
-#define PARM_SPML_DEP_RAM_ADDR   (EXT_RAM_BASE_ADDR + PARM_SPML_DEP_RAM_OFFSET)
-#define PARM_SPML_DEP_SIZE          0x00010000
-
 /* from msp/cboot/bootldr/loader/capri/loader.h: */
 #define CP_RUN_ADDR                 CP_RO_RAM_ADDR
 #define CP_IMG_SIZE                 0	/* image size is calculated */
 
 #define CP_BOOT_RUN_ADDR            MODEM_DTCM_ADDRESS
-#define CP_BOOT_IMAGE_SIZE          0x00008000 /*CP_BOOT_SIZE*/
+#define CP_BOOT_IMAGE_SIZE          0x00008000	/* CP_BOOT_SIZE */
 
-static T_CP_IMGS g_cp_imgs[] = {
+static struct T_CP_IMGS g_cp_imgs[] = {
 		/* name,	addr,	size */
 	{ "sysparm_ind.img", PARM_IND_RAM_ADDR, PARM_IND_SIZE },
 	{ "sysparm_dep.img", PARM_DEP_RAM_ADDR, PARM_DEP_SIZE },
@@ -171,11 +144,9 @@ static T_CP_IMGS g_cp_imgs[] = {
 	{ NULL, 0, 0 }
 };
 
-
 /* internal helper functions */
 static void DUMP_CP_assert_log(void);
 static void DUMP_CPMemoryByList(struct T_RAMDUMP_BLOCK *mem_dump);
-
 static void GetStringFromPA(UInt32 inPhysAddr, char *inStrBuf,
 		UInt32 inStrBufLen);
 static void ReloadCP(void);
@@ -196,6 +167,9 @@ static struct timer_list cp_reset_timer;
 /* wait for 500ms, 20ms at a time, for CP to be ready to reset */
 #define WAIT_FOR_CP_RESET_READY_MILLISEC	20
 #define WAIT_FOR_CP_RESET_READY_ITERATIONS	25
+
+/* flag indicating that all cp reset clients have acked */
+static int cp_reset_clients_acked;
 
 extern int RpcDbgDumpHistoryLogging(int type, int level);
 extern int cpStart(int isReset);
@@ -270,33 +244,45 @@ void ResetCP(void)
 	 * D.S ZSD:0x35001F08 %LE %LONG 0x3fd	;clear
 	 */
 	cp_root_reset_base = ioremap(ROOT_RST_BASE_ADDR,
-				ROOT_RST_MGR_REG_PD_SOFT_RSTN_OFFSET+4);
+				ROOT_RST_MGR_REG_PD_SOFT_RSTN_OFFSET + 4);
 	if (!cp_root_reset_base) {
 		IPC_DEBUG(DBG_ERROR,
 			"failed to remap ROOT_RST_BASE_ADDR, crashing\n");
 		BUG();
 	}
-	writel(0xa5a501, cp_root_reset_base+ROOT_RST_MGR_REG_WR_ACCESS_OFFSET);
-	writel(0x3bd, cp_root_reset_base+ROOT_RST_MGR_REG_PD_SOFT_RSTN_OFFSET);
-	writel(0x3fd, cp_root_reset_base+ROOT_RST_MGR_REG_PD_SOFT_RSTN_OFFSET);
 
-	/* reset R4 - copy from cp_reset.cmm rxd from CP team */
-	/*;R4 reset
-	*
-	* D.S ZSD:0x3a055f00 %LE %LONG 0xa5a501
-	* D.S ZSD:0x3a055f18 %LE %LONG 0x2 ;reset
-	* D.S ZSD:0x3a055f18 %LE %LONG 0x3  ;clear
-	*/
 	cp_bmdm_reset_base = ioremap(BMDM_RST_BASE_ADDR,
-				BMDM_RST_MGR_REG_CP_RSTN_OFFSET+4);
+				BMDM_RST_MGR_REG_CP_RSTN_OFFSET + 4);
 	if (!cp_bmdm_reset_base) {
 		IPC_DEBUG(DBG_ERROR,
 			"failed to remap BMDM_RST_BASE_ADDR, crashing\n");
 		BUG();
 	}
-	writel(0xa5a501, cp_bmdm_reset_base+BMDM_RST_MGR_REG_WR_ACCESS_OFFSET);
-	writel(0x2, cp_bmdm_reset_base+BMDM_RST_MGR_REG_CP_RSTN_OFFSET);
-	writel(0x3, cp_bmdm_reset_base+BMDM_RST_MGR_REG_CP_RSTN_OFFSET);
+
+	writel(0xa5a501,
+	       cp_root_reset_base + ROOT_RST_MGR_REG_WR_ACCESS_OFFSET);
+	udelay(1);
+	writel(0x3bd,
+	       cp_root_reset_base + ROOT_RST_MGR_REG_PD_SOFT_RSTN_OFFSET);
+	udelay(1);
+	writel(0x3fd,
+	       cp_root_reset_base + ROOT_RST_MGR_REG_PD_SOFT_RSTN_OFFSET);
+	udelay(1);
+
+	/* reset R4 - copy from cp_reset.cmm rxd from CP team */
+	/*;R4 reset
+	 *
+	 * D.S ZSD:0x3a055f00 %LE %LONG 0xa5a501
+	 * D.S ZSD:0x3a055f18 %LE %LONG 0x2 ;reset
+	 * D.S ZSD:0x3a055f18 %LE %LONG 0x3  ;clear
+	 */
+	writel(0xa5a501,
+	       cp_bmdm_reset_base + BMDM_RST_MGR_REG_WR_ACCESS_OFFSET);
+	udelay(1);
+	writel(0x2, cp_bmdm_reset_base + BMDM_RST_MGR_REG_CP_RSTN_OFFSET);
+	udelay(1);
+	writel(0x3, cp_bmdm_reset_base + BMDM_RST_MGR_REG_CP_RSTN_OFFSET);
+	udelay(1);
 
 	iounmap(cp_root_reset_base);
 	iounmap(cp_bmdm_reset_base);
@@ -338,7 +324,7 @@ int HandleRestartCP(void *data)
 	 */
 	msleep(2000);
 
-	/* notify clients that we're back in business...*/
+	/* notify clients that we're back in business... */
 	IPC_DEBUG(DBG_INFO, "notifying clients CP reset is complete\n");
 	HandleCPResetDone();
 	IPC_DEBUG(DBG_INFO, "notification done, exiting reset thread\n");
@@ -355,10 +341,7 @@ void IPCAP_ReadyForReset(int inClientID)
 	/* get rid of the ack timeout timer */
 	del_timer(&cp_reset_timer);
 
-	IPC_DEBUG(DBG_INFO, "starting cp_reset thread\n");
-
-	/* kick off CP restart thread */
-	kthread_run(HandleRestartCP, 0, "cp_reset");
+	cp_reset_clients_acked = 1;
 }
 
 void CPReset_Timer_Callback(unsigned long data)
@@ -391,7 +374,7 @@ void HandleCPResetStart(void)
 	 * there will be no IPC_CP_SILENT_RESET_START that we must ack
 	 * with  IPC_AP_ACK_CP_RESET_START
 	 */
-	/* SmLocalControl.SmControl->CrashCode = IPC_AP_ACK_CP_RESET_START;*/
+	/* SmLocalControl.SmControl->CrashCode = IPC_AP_ACK_CP_RESET_START; */
 
 	/* exit low power mode:
 	 * ipc_wake_lock acquired on IPC interrupt that triggered this
@@ -410,11 +393,10 @@ void HandleCPResetStart(void)
 	ret = mod_timer(&cp_reset_timer, jiffies +
 		msecs_to_jiffies(CP_RESET_TIMEOUT_MILLISEC));
 	if (ret)
-		IPC_DEBUG(DBG_ERROR, "ERROR starting CP reset timer %d\n",
-					ret);
+		IPC_DEBUG(DBG_ERROR, "ERROR starting CP reset timer %d\n", ret);
 	else
 		IPC_DEBUG(DBG_INFO, "CP reset timeout timer set for %d ms\n",
-				CP_RESET_TIMEOUT_MILLISEC);
+			CP_RESET_TIMEOUT_MILLISEC);
 
 	IPC_DEBUG(DBG_INFO, "start notifying cp reset IPC_CPRESET_START\n");
 
@@ -425,14 +407,16 @@ void HandleCPResetStart(void)
 	IPC_DEBUG(DBG_INFO, "DONE notifying cp reset IPC_CPRESET_START\n");
 }
 
-/**
+/*************************************************
 *   Loads the image into RAM.
 *
 *	@param	len		(in) The size of the image.
 *	@param	p_data		(in) Pointer to the image data.
 *	@param	addr		(in) The RAM address to load the image into.
 *
-******************************************************************************/
+*	@return Returns 0 on success, non-zero otherwise.
+*
+*****************************************************/
 static int DownloadFirmware(uint32_t len, const uint8_t *p_data, uint32_t addr)
 {
 	void __iomem *virtAddr;
@@ -443,11 +427,11 @@ static int DownloadFirmware(uint32_t len, const uint8_t *p_data, uint32_t addr)
 
 	virtAddr = ioremap_nocache(addr, len);
 	if (NULL == virtAddr) {
-		IPC_DEBUG(DBG_ERROR, "ioremap_nocache failed\n");
+		IPC_DEBUG(DBG_ERROR, "*** ERROR: ioremap_nocache failed\n");
 		ret = -1;
 	} else {
 		IPC_DEBUG(DBG_INFO, "copying to virtual addr %p\n",
-				(void *)virtAddr);
+			(void *)virtAddr);
 		memcpy(virtAddr, p_data, len);
 		iounmap(virtAddr);
 	}
@@ -455,7 +439,7 @@ static int DownloadFirmware(uint32_t len, const uint8_t *p_data, uint32_t addr)
 	return ret;
 }
 
-/**
+/*************************************************
 *   Loads the image with the given name into RAM.
 *
 *	@param	p_device	(in) The kernel device.
@@ -465,7 +449,7 @@ static int DownloadFirmware(uint32_t len, const uint8_t *p_data, uint32_t addr)
 *	@param	expectedSize (in) The expected size of the image file, or 0
 *                             if the size is to be calculated.
 *
-******************************************************************************/
+*****************************************************/
 static int32_t LoadFirmware(struct device *p_device, const char *p_name,
 				int addr, int expectedSize)
 {
@@ -474,7 +458,7 @@ static int32_t LoadFirmware(struct device *p_device, const char *p_name,
 	int imgSize;
 
 	IPC_DEBUG(DBG_INFO, "calling request_firmware for %s, device=%p\n",
-			p_name, p_device);
+		p_name, p_device);
 
 	/** call kernel to start firmware load **/
 	/* request_firmware(const struct firmware **fw,
@@ -483,8 +467,7 @@ static int32_t LoadFirmware(struct device *p_device, const char *p_name,
 	*/
 	err = request_firmware(&fw, p_name, p_device);
 	if (err) {
-		IPC_DEBUG(DBG_ERROR, "firmware request failed (%d)\n",
-			err);
+		IPC_DEBUG(DBG_ERROR, "firmware request failed (%d)\n", err);
 		return err;
 	}
 
@@ -509,9 +492,7 @@ static int32_t LoadFirmware(struct device *p_device, const char *p_name,
 		ptr = ((UInt8 *) fw->data) + CP_IMAGE_SIZE_OFFSET;
 
 		imgSize = (ptr[3] << 24) |
-					(ptr[2] << 16) |
-					(ptr[1] << 8) |
-					ptr[0];
+			(ptr[2] << 16) | (ptr[1] << 8) | ptr[0];
 		IPC_DEBUG(DBG_INFO, "calculated CP image size = 0x%x\n",
 			imgSize);
 	} else if (expectedSize != imgSize) {
@@ -551,7 +532,7 @@ static int32_t LoadFirmware(struct device *p_device, const char *p_name,
 			iounmap(virtAddr);
 		} else {
 			IPC_DEBUG(DBG_ERROR,
-				"ioremap_nocache FAILED for addr %p\n",
+				  "*** ERROR: ioremap_nocache FAILED for addr %p\n",
 				(void *)addr);
 		}
 	}
@@ -562,10 +543,10 @@ static int32_t LoadFirmware(struct device *p_device, const char *p_name,
 	return err;
 }
 
-/**
+/*************************************************
 *   Reloads the CP images.
 *
-******************************************************************************/
+*****************************************************/
 static void ReloadCP(void)
 {
 	int ret;
@@ -585,11 +566,11 @@ static void ReloadCP(void)
 	}
 }
 
-/**
+/*************************************************
 *   Verifies the comms image signature.
 *
 *	@param	ram_addr (in) The address to verify.
-******************************************************************************/
+*****************************************************/
 static UInt32 IsCommsImageValid(const UInt8 *ram_addr)
 {
 	UInt32 msp_signature;
@@ -620,17 +601,17 @@ static UInt32 IsCommsImageValid(const UInt8 *ram_addr)
 	return cp_loaded;
 }
 
-/**
+/*************************************************
 *   Verifies the comms image signature.
 *
 *	@param	p (in) The address to verify.
-******************************************************************************/
+*****************************************************/
 static UInt32 CheckCommsImageSignature(UInt8 *p)
 {
 	UInt8 *ptr;
 	UInt32 msp_signature = 0;
 
-	ptr =  p + MSP_SIGNATURE_OFFSET;
+	ptr = p + MSP_SIGNATURE_OFFSET;
 	msp_signature = (UInt32)(*ptr++);
 	msp_signature += ((UInt32)(*ptr++)) << 8;
 	msp_signature += ((UInt32)(*ptr++)) << 16;
@@ -653,6 +634,8 @@ void ProcessCPCrashedDump(struct work_struct *work)
 	char outString[512] = { 0 };
 	IPC_U32 *Dump;
 	void __iomem *DumpVAddr;
+	int cpReset = SmLocalControl.SmControl->CrashCode ==
+	    IPC_CP_SILENT_RESET_READY;
 
 #ifdef CONFIG_FB_BRCM_CP_CRASH_DUMP_IMAGE_SUPPORT
 	kona_display_crash_image(CP_CRASH_DUMP_START);
@@ -675,14 +658,15 @@ void ProcessCPCrashedDump(struct work_struct *work)
 		abort();
 #endif /* CONFIG_SEC_DEBUG */
 	}
-	if ((BCMLOG_OUTDEV_NONE == BCMLOG_GetCpCrashLogDevice() ||
-		BCMLOG_OUTDEV_PANIC == BCMLOG_GetCpCrashLogDevice() ||
+	if ((BCMLOG_OUTDEV_PANIC == BCMLOG_GetCpCrashLogDevice() ||
+		BCMLOG_OUTDEV_NONE == BCMLOG_GetCpCrashLogDevice() ||
 		BCMLOG_OUTDEV_STM == BCMLOG_GetCpCrashLogDevice() ||
-		BCMLOG_OUTDEV_RNDIS == BCMLOG_GetCpCrashLogDevice())
+		BCMLOG_OUTDEV_RNDIS == BCMLOG_GetCpCrashLogDevice()) &&
+			!cpReset
 #ifdef CONFIG_APANIC_ON_MMC
-		&& ap_triggered == 0
+		&& !ap_triggered
 #endif
-	    ) {
+		) {
 		/* we kill AP when CP crashes */
 		IPC_DEBUG(DBG_ERROR, "Crashing AP now ...\n\n");
 #ifdef CONFIG_SEC_DEBUG
@@ -692,14 +676,6 @@ void ProcessCPCrashedDump(struct work_struct *work)
 #endif /* CONFIG_SEC_DEBUG */
 	}
 #endif
-	/* check for CP Reset here? Assuming CP Reset is just signified by
-	a different crash code
-	*/
-	if (SmLocalControl.SmControl->CrashCode ==
-			IPC_CP_SILENT_RESET_READY) {
-		HandleCPResetStart();
-		return;
-	}
 
 	IPC_Dump();
 
@@ -728,7 +704,6 @@ void ProcessCPCrashedDump(struct work_struct *work)
 			"ioremap failed in ProcessCPCrashedDump\n");
 		goto cleanUp;
 	}
-
 	IPC_DEBUG(DBG_ERROR, "Crash Summary Virtual Addr: 0x%08X\n",
 		  (unsigned int)DumpVAddr);
 
@@ -737,41 +712,44 @@ void ProcessCPCrashedDump(struct work_struct *work)
 	IPC_DEBUG(DBG_ERROR, "===== COMMS_PROCESSOR crash summary =====\r\n");
 
 	if (dumped_crash_summary_ptr->link_signature) {
-		GetStringFromPA((UInt32) dumped_crash_summary_ptr->
-				link_signature, outString, 128);
+		GetStringFromPA((UInt32)
+				dumped_crash_summary_ptr->link_signature,
+				outString, 128);
 		IPC_DEBUG(DBG_ERROR, "%s\r\n", outString);
 	}
 
 	if (dumped_crash_summary_ptr->project_version) {
-		GetStringFromPA((UInt32) dumped_crash_summary_ptr->
-				project_version, outString, 128);
+		GetStringFromPA((UInt32)
+				dumped_crash_summary_ptr->project_version,
+				outString, 128);
 		IPC_DEBUG(DBG_ERROR, "%s\r\n", outString);
 	}
 
 	if (dumped_crash_summary_ptr->DSP_version) {
-		GetStringFromPA((UInt32) dumped_crash_summary_ptr->DSP_version,
+		GetStringFromPA((UInt32)dumped_crash_summary_ptr->DSP_version,
 				outString, 128);
 		IPC_DEBUG(DBG_ERROR, "%s\r\n", outString);
 	}
 
 	if (dumped_crash_summary_ptr->FW_version) {
-		GetStringFromPA((UInt32) dumped_crash_summary_ptr->FW_version,
+		GetStringFromPA((UInt32)dumped_crash_summary_ptr->FW_version,
 				outString, 128);
 		IPC_DEBUG(DBG_ERROR, "%s\r\n", outString);
 	}
 
 	if (dumped_crash_summary_ptr->decoder_version) {
-		GetStringFromPA((UInt32) dumped_crash_summary_ptr->
-				decoder_version, outString, 128);
+		GetStringFromPA((UInt32)
+				dumped_crash_summary_ptr->decoder_version,
+				outString, 128);
 		IPC_DEBUG(DBG_ERROR, "%s\r\n", outString);
 	}
 
-	GetStringFromPA((UInt32) dumped_crash_summary_ptr->reason, crashReason,
+	GetStringFromPA((UInt32)dumped_crash_summary_ptr->reason, crashReason,
 			40);
 
-	GetStringFromPA((UInt32) dumped_crash_summary_ptr->file, crashFile, 40);
+	GetStringFromPA((UInt32)dumped_crash_summary_ptr->file, crashFile, 40);
 
-	GetStringFromPA((UInt32) dumped_crash_summary_ptr->thread, crashThread,
+	GetStringFromPA((UInt32)dumped_crash_summary_ptr->thread, crashThread,
 			40);
 
 	IPC_DEBUG(DBG_ERROR, "%s f=%s l=%d v=%d/0x%x t=%s TS=%d\r\n",
@@ -781,6 +759,14 @@ void ProcessCPCrashedDump(struct work_struct *work)
 		  dumped_crash_summary_ptr->value,
 		  dumped_crash_summary_ptr->value,
 		  crashThread, dumped_crash_summary_ptr->time);
+
+	/* notify clients about CP reset */
+	if (cpReset
+#ifdef CONFIG_BRCM_CP_CRASH_DUMP_EMMC
+	    && !ap_triggered
+#endif
+	    )
+		HandleCPResetStart();
 
 	/* done with "simple" dump, so now pull the full assert
 	 * log from CP and dump out to MTT */
@@ -792,8 +778,23 @@ cleanUp:
 		plat_iounmap_ns(get_vaddr(IPC_CP_CRASH_SUMMARY_AREA),
 				free_size_ipc(IPC_CP_CRASH_SUMMARY_AREA_SZ));
 
+	/* crash dump is done, so trigger CP reset */
+	if (cpReset
+#ifdef CONFIG_BRCM_CP_CRASH_DUMP_EMMC
+	    && !ap_triggered
+#endif
+	    ) {
+		IPC_DEBUG(DBG_INFO, "waiting for clients to ack...\n");
+		while (!cp_reset_clients_acked)
+			msleep(300);
+		cp_reset_clients_acked = 0;
+
+		IPC_DEBUG(DBG_INFO, "starting cp_reset thread\n");
+		kthread_run(HandleRestartCP, 0, "cp_reset");
+	}
 #ifdef CONFIG_HAS_WAKELOCK
-	wake_unlock(&ipc_wake_lock);
+	else
+		wake_unlock(&ipc_wake_lock);
 #endif
 
 #ifdef CONFIG_BCM_AP_PANIC_ON_CPCRASH
@@ -827,8 +828,8 @@ int IpcCPCrashCheck(void)
 	CpCrashReason = SmLocalControl.SmControl->CrashCode;
 	Dump = (void *)SmLocalControl.SmControl->CrashDump;
 
-	if (IPC_CP_NOT_CRASHED != CpCrashReason
-	    && IPC_CP_MAX_CRASH_CODE > CpCrashReason && NULL != Dump) {
+	if (IPC_CP_NOT_CRASHED != CpCrashReason &&
+	    IPC_CP_MAX_CRASH_CODE > CpCrashReason && NULL != Dump) {
 		crashCount++;
 		IPC_DEBUG(DBG_ERROR,
 			  "CP Crashed!! CP Ticks[%ld] reason:%d count:%d Dump:0x%X\n",
@@ -852,11 +853,13 @@ int IpcCPCrashCheck(void)
 ********************************************************************/
 void DUMP_CP_assert_log(void)
 {
-	UInt32 t0, t1, i, size, retryCount;
+	UInt32 t1, i, size, retryCount;
 	UInt8 *p;
 	UInt32 packetCount = 0;
 	void __iomem *AssertLogVAddr = NULL;
 	struct file *sdDumpFile = NULL;
+	int cpReset = SmLocalControl.SmControl->CrashCode ==
+	    IPC_CP_SILENT_RESET_READY;
 
 	/* put logging driver into crash dump mode; messages will be sent
 	 * straight out to MTT via RNDIS (or dump file) instead of buffering
@@ -867,101 +870,104 @@ void DUMP_CP_assert_log(void)
 
 	BCMLOG_StartCpCrashDump(sdDumpFile);
 
-	retryCount = 0;
-	t0 = TIMER_GetValue();
-	while (1) {
-		t1 = TIMER_GetValue();
+	/* only grab RAM dump for CP reset case */
+	if (!cpReset) {
+		retryCount = 0;
+		while (1) {
+			t1 = TIMER_GetValue();
 
-		/* signal to CP that we're ready to receive crash log... */
-		SmLocalControl.SmControl->CrashCode = IPC_AP_CLEAR_TO_SEND;
+			/* signal to CP that we're ready to rx crash log... */
+			SmLocalControl.SmControl->CrashCode =
+			    IPC_AP_CLEAR_TO_SEND;
 
-		/* wait for CP to "dump"; CrashCode field will be
-		 * set to physical address of current assert buf */
-		while (SmLocalControl.SmControl->CrashCode ==
-		       IPC_AP_CLEAR_TO_SEND) {
-			for (i = 0; i < 256; i++)
-				;
-			if (TIMER_GetValue() - t1 > TICKS_ONE_SECOND * 20)
-				break;
-		}
+			/* wait for CP to "dump"; CrashCode field will be
+			 * set to physical address of current assert buf */
+			while (SmLocalControl.SmControl->CrashCode ==
+			       IPC_AP_CLEAR_TO_SEND) {
+				for (i = 0; i < 256; i++)
+					;
+				if (TIMER_GetValue() - t1 >
+				    TICKS_ONE_SECOND * 20)
+					break;
+			}
 
-		/* check for time out */
-		if (SmLocalControl.SmControl->CrashCode ==
-			IPC_AP_CLEAR_TO_SEND) {
-			if (retryCount < MAX_CP_DUMP_RETRIES) {
-				retryCount++;
-				IPC_DEBUG(DBG_TRACE,
-					  "timeout %d, trying again...\n",
-					  (int)retryCount);
-				continue;
-			} else {
-				/* no response from CP, so get out of here */
+			/* check for time out */
+			if (SmLocalControl.SmControl->CrashCode ==
+			    IPC_AP_CLEAR_TO_SEND) {
+				if (retryCount < MAX_CP_DUMP_RETRIES) {
+					retryCount++;
+					IPC_DEBUG(
+						DBG_TRACE,
+						"timeout %d, trying again..\n",
+						(int)retryCount);
+					continue;
+				} else {
+					/* no response from CP,
+					 * so get out of here
+					 */
+					IPC_DEBUG(
+						DBG_ERROR,
+						"Abort --- max retries %d reached\n",
+						(int)retryCount);
+					break;
+				}
+			}
+
+			/* reset retry counter */
+			retryCount = 0;
+
+			/* get virtual address of CP assert buffer */
+			AssertLogVAddr = plat_ioremap_ns((unsigned long __force)
+				get_vaddr(IPC_CP_ASSERT_BUF_AREA),
+				IPC_CP_ASSERT_BUF_AREA_SZ,
+				(phys_addr_t)
+				SmLocalControl.SmControl->CrashCode);
+
+			if (!AssertLogVAddr) {
 				IPC_DEBUG(DBG_ERROR,
-					  "Abort --- max retries %d reached\n",
-					  (int)retryCount);
+				  "ioremap failed in DUMP_CP_assert_log\n");
 				break;
 			}
-		}
-		/* reset retry counter */
-		retryCount = 0;
+			p = (UInt8 *)AssertLogVAddr;
 
-		/* get virtual address of CP assert buffer */
-		AssertLogVAddr = plat_ioremap_ns((unsigned long __force)
-			get_vaddr(IPC_CP_ASSERT_BUF_AREA),
-			IPC_CP_ASSERT_BUF_AREA_SZ,
-			(phys_addr_t)SmLocalControl.SmControl->CrashCode);
+			/* number of bytes in assert buffer */
+			size = (p[0] << 8) + p[1];
 
-		if (!AssertLogVAddr) {
-			IPC_DEBUG(DBG_ERROR,
-				  "ioremap failed in DUMP_CP_assert_log\n");
-			break;
-		}
+			/* size of 0 means CP is done dumping assert log */
+			if (size == 0) {
+				IPC_DEBUG(DBG_ERROR,
+					  "assert log size 0, exiting, packetCount:0x%x\n",
+					  (int)packetCount);
+				plat_iounmap_ns(get_vaddr
+					(IPC_CP_ASSERT_BUF_AREA),
+				free_size_ipc(IPC_CP_ASSERT_BUF_AREA_SZ));
+				AssertLogVAddr = NULL;
+				break;
+			}
+			/* sanity check for too beaucoup... */
+			if (size > ASSERT_BUF_SIZE - 2) {
+				IPC_DEBUG(DBG_ERROR,
+					  "Abort --- improper size [%08x]=%d\n",
+					  SmLocalControl.SmControl->CrashCode,
+					  (int)size);
+				plat_iounmap_ns(get_vaddr
+					(IPC_CP_ASSERT_BUF_AREA),
+				free_size_ipc(IPC_CP_ASSERT_BUF_AREA_SZ));
+				AssertLogVAddr = NULL;
+				break;
+			}
+			/* send packet out to log
+			 * (MTT via RNDIS or crash dump file)
+			 */
+			BCMLOG_HandleCpCrashDumpData((const char *)(p + 2),
+						     size);
 
-		p = (UInt8 *) AssertLogVAddr;
-
-		/* number of bytes in assert buffer */
-		size = (p[0] << 8) + p[1];
-
-		/* size of 0 means CP is done dumping assert log */
-		if (size == 0) {
-			IPC_DEBUG(DBG_ERROR,
-				  "assert log size 0, exiting, packetCount:0x%x\n",
-				  (int)packetCount);
+			packetCount++;
 			plat_iounmap_ns(get_vaddr(IPC_CP_ASSERT_BUF_AREA),
 				free_size_ipc(IPC_CP_ASSERT_BUF_AREA_SZ));
 			AssertLogVAddr = NULL;
-			break;
-		}
-		/* sanity check for too beaucoup... */
-		if (size > ASSERT_BUF_SIZE - 2) {
-			IPC_DEBUG(DBG_ERROR,
-				  "Abort --- improper size [%08x]=%d\n",
-				  SmLocalControl.SmControl->CrashCode,
-				  (int)size);
-			plat_iounmap_ns(get_vaddr(IPC_CP_ASSERT_BUF_AREA),
-				free_size_ipc(IPC_CP_ASSERT_BUF_AREA_SZ));
-			AssertLogVAddr = NULL;
-			break;
-		}
-		/* send packet out to log (MTT via RNDIS or crash dump file) */
-		BCMLOG_HandleCpCrashDumpData((const char *)(p + 2), size);
 
-		packetCount++;
-		plat_iounmap_ns(get_vaddr(IPC_CP_ASSERT_BUF_AREA),
-				free_size_ipc(IPC_CP_ASSERT_BUF_AREA_SZ));
-		AssertLogVAddr = NULL;
-
-#if 0
-		/* **FIXME** this is Nucleus timeout code - do we want
-		 * something similar for Android? Maybe if we get to the
-		 * point of restarting CP with restarting AP
-		 */
-		if (TIMER_GetValue() - t0 > TICKS_ONE_SECOND * 10 * 60) {
-			IPC_DEBUG(DBG_ERROR,
-				  "Abort --- CP assertion log too long\n");
-			break;
 		}
-#endif
 	}
 
 	RpcDbgDumpHistoryLogging(2, 1);
@@ -985,9 +991,9 @@ void DUMP_CP_assert_log(void)
 	IPC_DEBUG(DBG_ERROR, "CP crash dump complete\n");
 
 #ifdef CONFIG_BCM_AP_PANIC_ON_CPCRASH
-		if ((BCMLOG_OUTDEV_SDCARD == BCMLOG_GetCpCrashLogDevice())
-			&& cp_crashed == 1)
-			abort();
+	if ((BCMLOG_OUTDEV_SDCARD == BCMLOG_GetCpCrashLogDevice())
+	    && cp_crashed == 1 && !cpReset)
+		abort();
 #endif
 
 }
@@ -1022,32 +1028,38 @@ void DUMP_CPMemoryByList(struct T_RAMDUMP_BLOCK *mem_dump)
 	while (i < MAX_RAMDUMP_BLOCKS && pBlockVAddr[i].name[0] != '\0'
 	       && pBlockVAddr[i].mem_size != 0) {
 		if (pBlockVAddr[i].mem_start == SIM_DEBUG_DATA) {
-			offset =
-			    (pBlockVAddr[i].name[4] << 24) +
-			    (pBlockVAddr[i].name[5] << 16) +
-			    (pBlockVAddr[i].name[6] << 8) +
-			    pBlockVAddr[i].name[7];
-			snprintf(assert_buf, ASSERT_BUF_SIZE,
-				 "FLASH DUMP: %8s, start=0x%08x, size=0x%08x, image_start=0x%08x, offset_in_image=0x%08x",
-				 pBlockVAddr[i].name, pBlockVAddr[i].mem_start,
-				 pBlockVAddr[i].mem_size, 0, (int)offset);
+			offset = (pBlockVAddr[i].name[4] << 24) +
+				(pBlockVAddr[i].name[5] << 16) +
+				(pBlockVAddr[i].name[6] << 8) +
+				pBlockVAddr[i].name[7];
+			snprintf(assert_buf,
+				ASSERT_BUF_SIZE,
+				"FLASH DUMP: %8s, start=0x%08x, size=0x%08x, image_start=0x%08x, offset_in_image=0x%08x",
+				pBlockVAddr[i].name,
+				pBlockVAddr[i].mem_start,
+				pBlockVAddr[i].mem_size,
+				0,	/* MSP_IMAGE_ADDR, */
+				(int)offset);
 		} else if (pBlockVAddr[i].mem_start == SIM_AP_DEBUG_DATA) {
-			offset =
-			    (pBlockVAddr[i].name[4] << 24) +
-			    (pBlockVAddr[i].name[5] << 16) +
-			    (pBlockVAddr[i].name[6] << 8) +
-			    pBlockVAddr[i].name[7];
-			snprintf(assert_buf, ASSERT_BUF_SIZE,
-				 "FLASH DUMP: %8s, start=0x%08x, size=0x%08x, image_start=0x%08x, offset_in_image=0x%08x",
-				 pBlockVAddr[i].name, pBlockVAddr[i].mem_start,
-				 pBlockVAddr[i].mem_size, 0, (int)offset);
+			offset = (pBlockVAddr[i].name[4] << 24) +
+				(pBlockVAddr[i].name[5] << 16) +
+				(pBlockVAddr[i].name[6] << 8) +
+				pBlockVAddr[i].name[7];
+			snprintf(assert_buf,
+				ASSERT_BUF_SIZE,
+				"FLASH DUMP: %8s, start=0x%08x, size=0x%08x, image_start=0x%08x, offset_in_image=0x%08x",
+				pBlockVAddr[i].name,
+				pBlockVAddr[i].mem_start,
+				pBlockVAddr[i].mem_size,
+				0,	/* AP_IMAGE_ADDR, */
+				(int)offset);
 		} else {
 			snprintf(assert_buf, ASSERT_BUF_SIZE,
-				 "RAM   DUMP: %8s, start=0x%08x, size=0x%08x, buffer_in_main=0x%08x",
-				 pBlockVAddr[i].name,
-				 pBlockVAddr[i].mem_start,
-				 pBlockVAddr[i].mem_size,
-				 pBlockVAddr[i].buffer_in_main);
+				"RAM   DUMP: %8s, start=0x%08x, size=0x%08x, buffer_in_main=0x%08x",
+				pBlockVAddr[i].name,
+				pBlockVAddr[i].mem_start,
+				pBlockVAddr[i].mem_size,
+				pBlockVAddr[i].buffer_in_main);
 		}
 		BCMLOG_LogCPCrashDumpString(assert_buf);
 		i++;
@@ -1056,55 +1068,53 @@ void DUMP_CPMemoryByList(struct T_RAMDUMP_BLOCK *mem_dump)
 	while (i < MAX_RAMDUMP_BLOCKS && pBlockVAddr[i].name[0] != '\0'
 	       && pBlockVAddr[i].mem_size != 0) {
 		if (pBlockVAddr[i].mem_start == SIM_DEBUG_DATA) {
-			offset =
-			    (pBlockVAddr[i].name[4] << 24) +
-			    (pBlockVAddr[i].name[5] << 16) +
-			    (pBlockVAddr[i].name[6] << 8) +
-			    pBlockVAddr[i].name[7];
+			offset = (pBlockVAddr[i].name[4] << 24) +
+				(pBlockVAddr[i].name[5] << 16) +
+				(pBlockVAddr[i].name[6] << 8) +
+				pBlockVAddr[i].name[7];
 			BCMLOG_LogCPCrashDumpString(pBlockVAddr[i].name);
 			snprintf(assert_buf, ASSERT_BUF_SIZE,
-				 "FLASH DUMP Begin: 0x%08x, 0x%08x",
-				 pBlockVAddr[i].mem_start,
-				 pBlockVAddr[i].mem_size);
+				"FLASH DUMP Begin: 0x%08x, 0x%08x",
+				pBlockVAddr[i].mem_start,
+				pBlockVAddr[i].mem_size);
 			BCMLOG_LogCPCrashDumpString(assert_buf);
 			/* **FIXME** MAG - flash dump not supported yet... */
 			/* DUMP_CompressedFlash(cpu, pBlockVAddr[i].mem_start,
 			   pBlockVAddr[i].mem_size, MSP_IMAGE_ADDR, offset); */
 			BCMLOG_LogCPCrashDumpString
-			    ("*** FLASH DUMP NOT SUPPORTED YET ***");
+				("*** FLASH DUMP NOT SUPPORTED YET ***");
 			snprintf(assert_buf, ASSERT_BUF_SIZE,
-				 "FLASH DUMP End: 0x%08x, 0x%08x",
+				"FLASH DUMP End: 0x%08x, 0x%08x",
 				 pBlockVAddr[i].mem_start,
 				 pBlockVAddr[i].mem_size);
 			BCMLOG_LogCPCrashDumpString(assert_buf);
 		} else if (pBlockVAddr[i].mem_start == SIM_AP_DEBUG_DATA) {
-			offset =
-			    (pBlockVAddr[i].name[4] << 24) +
-			    (pBlockVAddr[i].name[5] << 16) +
-			    (pBlockVAddr[i].name[6] << 8) +
-			    pBlockVAddr[i].name[7];
+			offset = (pBlockVAddr[i].name[4] << 24) +
+				(pBlockVAddr[i].name[5] << 16) +
+				(pBlockVAddr[i].name[6] << 8) +
+				pBlockVAddr[i].name[7];
 			BCMLOG_LogCPCrashDumpString(pBlockVAddr[i].name);
 			snprintf(assert_buf, ASSERT_BUF_SIZE,
-				 "FLASH DUMP Begin: 0x%08x, 0x%08x",
-				 pBlockVAddr[i].mem_start,
-				 pBlockVAddr[i].mem_size);
+				"FLASH DUMP Begin: 0x%08x, 0x%08x",
+				pBlockVAddr[i].mem_start,
+				pBlockVAddr[i].mem_size);
 			BCMLOG_LogCPCrashDumpString(assert_buf);
 			/* **FIXME** MAG - flash dump not supported yet... */
 			BCMLOG_LogCPCrashDumpString
-			    ("*** FLASH DUMP NOT SUPPORTED YET ***");
+				("*** FLASH DUMP NOT SUPPORTED YET ***");
 			/* DUMP_CompressedFlash(cpu, pBlockVAddr[i].mem_start,
 			   pBlockVAddr[i].mem_size, AP_IMAGE_ADDR, offset); */
 			snprintf(assert_buf, ASSERT_BUF_SIZE,
-				 "FLASH DUMP End: 0x%08x, 0x%08x",
-				 pBlockVAddr[i].mem_start,
-				 pBlockVAddr[i].mem_size);
+				"FLASH DUMP End: 0x%08x, 0x%08x",
+				pBlockVAddr[i].mem_start,
+				pBlockVAddr[i].mem_size);
 			BCMLOG_LogCPCrashDumpString(assert_buf);
 		} else if (pBlockVAddr[i].buffer_in_main == 0xFFFFFFFF) {
 			BCMLOG_LogCPCrashDumpString(pBlockVAddr[i].name);
 			snprintf(assert_buf, ASSERT_BUF_SIZE,
-				 "RAM DUMP Begin: 0x%08x, 0x%08x",
-				 pBlockVAddr[i].mem_start,
-				 pBlockVAddr[i].mem_size);
+				"RAM DUMP Begin: 0x%08x, 0x%08x",
+				pBlockVAddr[i].mem_start,
+				pBlockVAddr[i].mem_size);
 			BCMLOG_LogCPCrashDumpString(assert_buf);
 
 			/* BCMLOG_HandleCpCrashMemDumpData takes
@@ -1116,9 +1126,9 @@ void DUMP_CPMemoryByList(struct T_RAMDUMP_BLOCK *mem_dump)
 							mem_size);
 
 			snprintf(assert_buf, ASSERT_BUF_SIZE,
-				 "RAM DUMP End: 0x%08x, 0x%08x",
-				 pBlockVAddr[i].mem_start,
-				 pBlockVAddr[i].mem_size);
+				"RAM DUMP End: 0x%08x, 0x%08x",
+				pBlockVAddr[i].mem_start,
+				pBlockVAddr[i].mem_size);
 			BCMLOG_LogCPCrashDumpString(assert_buf);
 		}
 		i++;

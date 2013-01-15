@@ -49,7 +49,7 @@ static Boolean gRpcInit = FALSE;
 static RPC_USER_LOCK_DECLARE(gRpcLock);
 RPC_USER_LOCK_DECLARE(gRpcFreeLock);
 
-static Boolean sCpResetting = FALSE;
+static Boolean sCpResetting;
 
 /******************************************************************************
 *                              RPC Apps EP Register
@@ -211,11 +211,12 @@ void RPC_AckCPReset(UInt8 clientID)
 	if (index <= gClientIndex)
 		gClientLocalMap[index].ackdCPReset = TRUE;
 
-	/* check if all for given PACKET_InterfaceType_t have ack'd
+	/* check if all for given PACKET_InterfaceType_t have ack'd;
 	   if so, ack to rpc_ipc layer
 	*/
 	for (i = 1; i <= gClientIndex; i++)
 		if (gClientMap[index].iType == gClientMap[i].iType &&
+		    gClientMap[i].cpResetCb &&
 				!gClientLocalMap[i].ackdCPReset) {
 			/* at least one client for given
 			   interface type has not yet ack'd
@@ -225,8 +226,7 @@ void RPC_AckCPReset(UInt8 clientID)
 				("RPC_AckCPReset fail index %d\n", i));
 			bReady = FALSE;
 			break;
-		}
-		else {
+		} else {
 			_DBG_(RPC_TRACE("RPC_AckCPReset %d %d %d %d %d\n",
 				i, index, gClientMap[index].iType,
 				gClientMap[i].iType,

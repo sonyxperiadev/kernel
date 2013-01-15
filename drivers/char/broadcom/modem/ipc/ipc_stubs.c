@@ -49,7 +49,8 @@ void IPC_AlignTime(void)
 
 	IpcSyncJiffies = (UInt32)jiffies;
 
-	t = cpu_clock(smp_processor_id());
+	t = cpu_clock(get_cpu());
+	put_cpu();
 	if (do_div(t, JIFFIES_TO_NS) >= JIFFIES_TO_NS/2)
 	{
 		IpcSyncTime = (UInt32)t + 1;

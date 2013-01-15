@@ -274,11 +274,14 @@ int ipc_ipc_init(void *smbase, unsigned int size)
 void WaitForCpIpc(void *pSmBase)
 {
 	int k = 0, ret = 0;
+	void __iomem *cp_boot_base;
+	u32 reg_val;
 
 	cp_running = 0;
 
 
-	IPC_DEBUG(DBG_WARN, "Waiting for CP IPC to init ...\n");
+	IPC_DEBUG(DBG_WARN, "Waiting for CP IPC to init 0x%x\n",
+		  (unsigned int)pSmBase);
 
 	/* Debug info to show is_ap_only_boot() status */
 	if (is_ap_only_boot())
@@ -321,6 +324,22 @@ void WaitForCpIpc(void *pSmBase)
 			  "*                                                                  *\n");
 		IPC_DEBUG(DBG_ERROR,
 			  "********************************************************************\n");
+		cp_boot_base = ioremap_nocache(MODEM_ITCM_ADDRESS, 0x20);
+		if (!cp_boot_base) {
+			IPC_DEBUG(DBG_ERROR,
+				  "ITCM Addr=0x%x, length=0x%x",
+				  MODEM_ITCM_ADDRESS, 0x20);
+			IPC_DEBUG(DBG_ERROR, "ioremap cp_boot_base error\n");
+			return;
+		}
+		reg_val = readl(cp_boot_base);
+		IPC_DEBUG(DBG_ERROR, "reset vector value is 0x%x\n", reg_val);
+
+		reg_val = readl(cp_boot_base + 0x20);
+		IPC_DEBUG(DBG_ERROR, "CP Boot flag 0x%x\n", reg_val);
+
+		iounmap(cp_boot_base);
+
 		/* SKIP reset is_ap_only_boot() non zero */
 		if (!is_ap_only_boot())
 			BUG_ON(ret == 0);
@@ -347,7 +366,7 @@ void WaitForCpIpc(void *pSmBase)
 			  "*                                                                  *\n");
 		IPC_DEBUG(DBG_ERROR,
 			  "********************************************************************\n");
-		//BUG_ON(ret);
+		/* BUG_ON(ret); */
 	}
 }
 
@@ -446,8 +465,9 @@ static int CP_Boot(void)
 		IPC_DEBUG(DBG_TRACE, "boot (R4 COMMS) - init code 0x%x ...\n",
 			  r4init);
 
-		/* Set the CP jump to address.
-		   CP must jump to DTCM offset 0x400 */
+		/* Set the CP jump to address.  CP must jump to DTCM offset
+		 * 0x400
+		 */
 		cp_boot_itcm = ioremap(MODEM_ITCM_ADDRESS, CP_ITCM_BASE_SIZE);
 		if (!cp_boot_itcm) {
 			IPC_DEBUG(DBG_ERROR,
@@ -460,11 +480,11 @@ static int CP_Boot(void)
 		 * cp_boot.img at 0x20400
 		 */
 		jump_instruction |=
-		    (0x00FFFFFFUL & (((0x10000 + RESERVED_HEADER) / 4) - 2));
-
-		IPC_DEBUG(DBG_TRACE, "cp_boot_itcm 0x%x jump_instruction 0x%x\n",
-				(unsigned int)cp_boot_itcm,
-				jump_instruction);
+		    (0x00FFFFFFUL & (((0x20000 + RESERVED_HEADER)
+				      / 4) - 2));
+		IPC_DEBUG(DBG_TRACE,
+			  "cp_boot_itcm 0x%x jump_instruction 0x%x\n",
+			  (unsigned int)cp_boot_itcm, jump_instruction);
 		/* write jump instruction to cp reset vector */
 		*(unsigned int *)(cp_boot_itcm) = jump_instruction;
 
@@ -472,8 +492,7 @@ static int CP_Boot(void)
 
 		/* start CP - should jump to 0x20400 and spin there */
 		*(unsigned int *)(cp_bmodem_r4cfg) = 0x5;
-	}
-	else {
+	} else {
 		IPC_DEBUG(DBG_TRACE,
 			"(R4 COMMS) already started - init code 0x%x ...\n",
 			r4init);
