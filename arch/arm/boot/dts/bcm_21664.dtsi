@@ -98,4 +98,9 @@
 		reg = <0x35003800 0x800>;
 	};
 
+	kona-fb {
+		compatible = "bcm,kona-fb";
+		reg = <0x3c200000 0x1000>;
+	};
+
 };

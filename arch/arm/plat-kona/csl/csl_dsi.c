@@ -22,9 +22,7 @@
 *
 ****************************************************************************/
 
-#define UNDER_LINUX
 
-#ifdef UNDER_LINUX
 #include <linux/string.h>
 #include <linux/workqueue.h>
 #include <linux/time.h>
@@ -40,46 +38,17 @@
 #include <mach/memory.h>
 #include <linux/kernel.h>
 #include <mach/io_map.h>
-#else
-#include <stdio.h>
-#include <string.h>
-#include "mobcom_types.h"
-#include "msconsts.h"
-#include "ostypes.h"
-#include "osheap.h"
-#include "ostask.h"
-#include "ossemaphore.h"
-#include "osqueue.h"
-#include "irqctrl.h"
-#include "osinterrupt.h"
-#include "sio.h"
-#include "chip_irq.h"
-#endif
 
-#ifdef UNDER_LINUX
 #include <plat/csl/csl_dma_vc4lite.h>
 #include <plat/axipv.h>
 #include <plat/pv.h>
 #include <mach/clock.h>
-#else
-#include "csl_dma_vc4lite.h"
-#endif
 
-#ifdef UNDER_LINUX
 #include <plat/chal/chal_common.h>
 #include <plat/chal/chal_dsi.h>
 #include <plat/chal/chal_clk.h>
 #include <plat/csl/csl_lcd.h>
 #include <plat/csl/csl_dsi.h>
-#else
-#include "chal_common.h"
-#include "chal_dsi.h"
-#include "chal_clk.h"
-#include "dbg.h"
-#include "logapi.h"
-#include "csl_lcd.h"
-#include "csl_dsi.h"
-#endif
 
 #define DSI_CORE_CLK_MAX_MHZ	125000000
 
@@ -98,13 +67,8 @@
 #define STACKSIZE_DSI		(STACKSIZE_BASIC * 5)
 #define HISRSTACKSIZE_DSISTAT	(256 + RESERVED_STACK_FOR_LISR)
 
-#ifdef UNDER_LINUX
 #define CSL_DSI0_IRQ		BCM_INT_ID_DSI0
 #define CSL_DSI1_IRQ		BCM_INT_ID_DSI1
-#else
-#define CSL_DSI0_IRQ		MM_DSI0_IRQ
-#define CSL_DSI1_IRQ		MM_DSI1_IRQ
-#endif
 
 #define CSL_DSI0_BASE_ADDR	KONA_DSI0_VA
 #define CSL_DSI1_BASE_ADDR	KONA_DSI1_VA
@@ -127,12 +91,7 @@ int DE1_DEF_THRESHOLD_B = 256 * 3;
 #define DE1_DEF_THRESHOLD_B	(CM_PKT_SIZE_B)
 #endif
 
-#ifdef UNDER_LINUX
 #define HW_REG_WRITE(a, v) writel(v, HW_IO_PHYS_TO_VIRT(a))
-#else
-#define HW_REG_WRITE(a, v) \
-	(*(volatile unsigned long *)HW_IO_PHYS_TO_VIRT(a) = (v))
-#endif
 
 #define AXIPV_MIN_BUFF_SIZE (3 * 8)
 
@@ -194,25 +153,18 @@ typedef struct {
 	Semaphore_t semaDma;
 	Semaphore_t semaAxipv;
 	Semaphore_t semaPV;
-#ifdef UNDER_LINUX
 	irq_handler_t lisr;
-#else
-	void (*lisr) (void);
-#endif
 	void (*hisr) (void);
 	void (*task) (void);
 	void (*dma_cb) (DMA_VC4LITE_CALLBACK_STATUS);
 	Interrupt_t iHisr;
-#ifdef UNDER_LINUX
 	UInt32 interruptId;
 	spinlock_t bcm_dsi_spin_Lock;
-#else
-	InterruptId_t interruptId;
-#endif
 	DSI_CLIENT_t client[DSI_MAX_CLIENT];
 	DSI_CM_HANDLE_t chCm[DSI_CM_MAX_HANDLES];
 	struct axipv_config_t *axipvCfg;
 	struct pv_config_t *pvCfg;
+	Boolean vmode;		/* 1 = Video Mode, 0 = Command Mode */
 	UInt32 dispEngine;	/* Display Engine- 0=DE0 via Pixel Valve
 						 / 1=DE1 via TXPKT_PIXD_FIFO
 					:Corresponds to Display engine
@@ -381,12 +333,9 @@ static void axipv_irq_cb(int stat)
 {
 	static uint32_t w_lvl_2_cnt;
 	DSI_HANDLE dsiH = &dsiBus[0];
-#ifdef CONFIG_VIDEO_MODE
-	if (stat & AXIPV_DISABLED_INT)
-		OSSEMAPHORE_Release(dsiH->semaAxipv);
-	else
-#endif
-	if (stat & WATER_LVL2_INT)
+	if (dsiH->vmode && (stat & AXIPV_DISABLED_INT))
+			OSSEMAPHORE_Release(dsiH->semaAxipv);
+	else if (stat & WATER_LVL2_INT)
 		pr_err("AXIPV hit W_LVL_2 threshold %d times\n", ++w_lvl_2_cnt);
 	if (stat & PV_START_THRESH_INT)
 		OSSEMAPHORE_Release(dsiH->semaAxipv);
@@ -416,11 +365,7 @@ static void pv_eof_cb()
  * Description:    DSI Controller 0 LISR
  *
  */
-#ifdef __KERNEL__
 static irqreturn_t cslDsi0Stat_LISR(int i, void *j)
-#else
-static void cslDsi0Stat_LISR(void)
-#endif
 {
 	DSI_HANDLE dsiH = &dsiBus[0];
 
@@ -440,9 +385,7 @@ static void cslDsi0Stat_LISR(void)
 
 	OSSEMAPHORE_Release(dsiH->semaInt);
 
-#ifdef __KERNEL__
 	return IRQ_HANDLED;
-#endif
 }
 
 /*
@@ -520,23 +463,24 @@ static void cslDsi0UpdateTask(void)
 			cslDsiPixTxStop(&updMsg);
 		}
 
-#ifndef CONFIG_VIDEO_MODE
-		if (res == CSL_LCD_OK)
-			res = cslDsiWaitForInt(dsiH, updMsg.updReq.timeOut_ms);
-		else
-			cslDsiWaitForInt(dsiH, 1);
+		if (!dsiH->vmode) {
+			if (res == CSL_LCD_OK)
+				res = cslDsiWaitForInt(dsiH,
+						updMsg.updReq.timeOut_ms);
+			else
+				cslDsiWaitForInt(dsiH, 1);
 
-		chal_dsi_tx_start(dsiH->chalH, TX_PKT_ENG_1, FALSE);
-		chal_dsi_tx_start(dsiH->chalH, TX_PKT_ENG_2, FALSE);
+			chal_dsi_tx_start(dsiH->chalH, TX_PKT_ENG_1, FALSE);
+			chal_dsi_tx_start(dsiH->chalH, TX_PKT_ENG_2, FALSE);
 
-		if (dsiH->dispEngine)
-			chal_dsi_de1_enable(dsiH->chalH, FALSE);
-		else
-			chal_dsi_de0_enable(dsiH->chalH, FALSE);
+			if (dsiH->dispEngine)
+				chal_dsi_de1_enable(dsiH->chalH, FALSE);
+			else
+				chal_dsi_de0_enable(dsiH->chalH, FALSE);
 
-		if (!updMsg.clientH->hasLock)
-			OSSEMAPHORE_Release(dsiH->semaDsi);
-#endif
+			if (!updMsg.clientH->hasLock)
+				OSSEMAPHORE_Release(dsiH->semaDsi);
+		}
 
 		if (updMsg.updReq.cslLcdCb)
 			updMsg.updReq.cslLcdCb(res, &updMsg.updReq.cslLcdCbRec);
@@ -557,10 +501,7 @@ static void cslDsi0UpdateTask(void)
 Boolean cslDsiOsInit(DSI_HANDLE dsiH)
 {
 	Boolean res = TRUE;
-
-#ifdef UNDER_LINUX
 	int ret;
-#endif
 
 	/* Update Request Queue */
 	dsiH->updReqQ = OSQUEUE_Create(FLUSH_Q_SIZE,
@@ -638,14 +579,6 @@ Boolean cslDsiOsInit(DSI_HANDLE dsiH)
 				dsiH->bus ? "Dsi1PV" : "Dsi0PV");
 	}
 
-#ifndef __KERNEL__
-	/* DSI Controller Interrupt */
-	dsiH->iHisr = OSINTERRUPT_Create((IEntry_t)dsiH->hisr,
-			dsiH->bus ? (IName_t)"Dsi1" : (IName_t)"Dsi0",
-			IPRIORITY_MIDDLE, HISRSTACKSIZE_DSISTAT);
-#endif
-
-#ifdef __KERNEL__
 	ret = request_irq(dsiH->interruptId, dsiH->lisr, IRQF_DISABLED |
 			  IRQF_NO_SUSPEND, "BRCM DSI CSL", NULL);
 	if (ret < 0) {
@@ -653,17 +586,12 @@ Boolean cslDsiOsInit(DSI_HANDLE dsiH)
 		       __func__, __FILE__, __LINE__, dsiH->interruptId);
 		goto free_irq;
 	}
-#else
-	IRQ_Register(dsiH->interruptId, dsiH->lisr);
-#endif
 
 	return res;
 
-#ifdef __KERNEL__
 free_irq:
 	free_irq(dsiH->interruptId, NULL);
 	return res;
-#endif
 }
 
 /*
@@ -954,11 +882,6 @@ static void cslDsiClearAllFifos(DSI_HANDLE dsiH)
 static void cslDsiEnaIntEvent(DSI_HANDLE dsiH, UInt32 intEventMask)
 {
 	chal_dsi_ena_int(dsiH->chalH, intEventMask);
-#ifdef UNDER_LINUX
-/*      enable_irq(dsiH->interruptId); */
-#else
-	IRQ_Enable(dsiH->interruptId);
-#endif
 }
 
 /*
@@ -970,16 +893,8 @@ static void cslDsiEnaIntEvent(DSI_HANDLE dsiH, UInt32 intEventMask)
  */
 static void cslDsiDisInt(DSI_HANDLE dsiH)
 {
-#ifdef UNDER_LINUX
-	/*disable_irq(dsiH->interruptId); */
-#else
-	IRQ_Disable(dsiH->interruptId);
-#endif
 	chal_dsi_ena_int(dsiH->chalH, 0);
 	chal_dsi_clr_int(dsiH->chalH, 0xFFFFFFFF);
-#ifndef UNDER_LINUX
-	IRQ_Clear(dsiH->interruptId);
-#endif
 }
 
 /*
@@ -1468,26 +1383,29 @@ CSL_LCD_RES_T CSL_DSI_OpenCmVc(CSL_LCD_HANDLE client,
 
 	switch (dsiCmVcCfg->cm_in) {
 		/* 1x888 pixel per 32-bit word (MSB DontCare) */
-	case LCD_IF_CM_I_RGB888U:
+	case LCD_IF_CM_I_xBGR8888:
+	case LCD_IF_CM_I_xRGB8888:
 		switch (dsiCmVcCfg->cm_out) {
 		case LCD_IF_CM_O_RGB666:
-		case LCD_IF_CM_O_RGB888:
+		case LCD_IF_CM_O_xRGB8888:
 			cmVcH->bpp_dma = 4;
 			cmVcH->bpp_wire = 3;
 			cmVcH->wc_rshift = 0;
 			cmVcH->cm = dsiH->dispEngine ?
 					DE1_CM_888U : DE0_CM_888U;
 			if (!dsiH->pixTxporter)
-				dsiH->axipvCfg->pix_fmt =
-						AXIPV_PIXEL_FORMAT_24BPP_BGR;
+				dsiH->axipvCfg->pix_fmt = (dsiCmVcCfg->cm_in ==
+							LCD_IF_CM_I_xBGR8888) ?
+						AXIPV_PIXEL_FORMAT_24BPP_BGR :
+						AXIPV_PIXEL_FORMAT_24BPP_RGB;
 			if (!dsiH->dispEngine)
 				dsiH->pvCfg->pix_fmt = DSI_VIDEO_CMD_18_24BPP;
 			break;
 		default:
 			LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI][%d] %s: "
 				"ERR, Invalid OutCol Mode[%d] for "
-				"InCol xRGB888\n",
-				dsiH->bus, __func__, dsiCmVcCfg->cm_out);
+				"InCol %d\n", dsiH->bus, __func__,
+				dsiCmVcCfg->cm_out, dsiCmVcCfg->cm_in);
 			res = CSL_LCD_COL_MODE;
 			goto exit_err;
 			break;
@@ -2353,6 +2271,7 @@ CSL_LCD_RES_T CSL_DSI_Init(const pCSL_DSI_CFG dsiCfg)
 		dsiH->dlCount = dsiCfg->dlCount;
 		dsiH->dispEngine = dsiCfg->dispEngine;
 		dsiH->pixTxporter = dsiCfg->pixTxporter;
+		dsiH->vmode = dsiCfg->vmode;
 		if(!dsiH->dispEngine && dsiH->pixTxporter) {
 			pr_err("Error:MMDMA cannot feed DE0! Default to DE1\n");
 			dsiH->dispEngine = 1;
@@ -2368,25 +2287,19 @@ CSL_LCD_RES_T CSL_DSI_Init(const pCSL_DSI_CFG dsiCfg)
 					return CSL_LCD_ERR;
 				}
 				dsiH->pvCfg->pclk_sel = DISP_CTRL_DSI;
-#ifdef CONFIG_VIDEO_MODE
-				dsiH->pvCfg->cmd = false;
-				dsiH->pvCfg->cont = true;
-				dsiH->pvCfg->vs = 20;
-				dsiH->pvCfg->vbp = 20;
-				dsiH->pvCfg->vfp = 20;
-				dsiH->pvCfg->hs = 46;
-				dsiH->pvCfg->hbp = 46;
-				dsiH->pvCfg->hfp = 46;
-#else
-				dsiH->pvCfg->cmd = true;
-				dsiH->pvCfg->cont = false;
-				dsiH->pvCfg->vs = 0;
-				dsiH->pvCfg->vbp = 0;
-				dsiH->pvCfg->vfp = 1;
-				dsiH->pvCfg->hs = 0;
-				dsiH->pvCfg->hbp = 0;
-				dsiH->pvCfg->hfp = 0;
-#endif
+				if (dsiCfg->vmode) {
+					dsiH->pvCfg->cmd = false;
+					dsiH->pvCfg->cont = true;
+				} else {
+					dsiH->pvCfg->cmd = true;
+					dsiH->pvCfg->cont = false;
+				}
+				dsiH->pvCfg->vs = dsiCfg->vs;
+				dsiH->pvCfg->vbp = dsiCfg->vbp;
+				dsiH->pvCfg->vfp = dsiCfg->vfp;
+				dsiH->pvCfg->hs = dsiCfg->hs;
+				dsiH->pvCfg->hbp = dsiCfg->hbp;
+				dsiH->pvCfg->hfp = dsiCfg->hfp;
 				dsiH->pvCfg->interlaced = false;
 				dsiH->pvCfg->vsyncd = 0;
 				dsiH->pvCfg->pix_stretch = 0;
@@ -2401,20 +2314,18 @@ CSL_LCD_RES_T CSL_DSI_Init(const pCSL_DSI_CFG dsiCfg)
 				return CSL_LCD_ERR;
 			}
 			dsiH->axipvCfg->test = false;
-#ifdef CONFIG_VIDEO_MODE
-			dsiH->axipvCfg->cmd = false;
-			dsiH->axipvCfg->async = true;
-#else
-			dsiH->axipvCfg->async = false;
-			dsiH->axipvCfg->cmd = true;
-#endif
+			if (dsiCfg->vmode) {
+				dsiH->axipvCfg->cmd = false;
+				dsiH->axipvCfg->async = true;
+			} else {
+				dsiH->axipvCfg->async = false;
+				dsiH->axipvCfg->cmd = true;
+			}
 		}
 
 		dsiH->bus = dsiCfg->bus;
 
-#ifdef UNDER_LINUX
 		spin_lock_init(&(dsiH->bcm_dsi_spin_Lock));
-#endif
 
 		if (dsiH->bus == 0) {
 			dsiH->dsiCoreRegAddr = CSL_DSI0_BASE_ADDR;
@@ -2507,7 +2418,6 @@ CSL_LCD_RES_T CSL_DSI_Init(const pCSL_DSI_CFG dsiCfg)
 	return res;
 }
 
-#ifdef UNDER_LINUX
 int Log_DebugPrintf(UInt16 logID, char *fmt, ...)
 {
 	char p[255];
@@ -2521,5 +2431,4 @@ int Log_DebugPrintf(UInt16 logID, char *fmt, ...)
 
 	return 1;
 }
-#endif
 
