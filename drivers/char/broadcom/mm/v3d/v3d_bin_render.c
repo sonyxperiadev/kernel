@@ -55,6 +55,9 @@ typedef struct {
 	int v3d_bin_oom_size ;
 } v3d_boom_t;
 
+unsigned int *job_va;
+unsigned int job_pa;
+
 typedef struct {
 #ifdef CONFIG_ION
 	struct ion_client *v3d_bin_oom_client;
@@ -126,6 +129,7 @@ static int v3d_bin_render_reset(void *device_id)
 
 	v3d_write(id, V3D_L2CACTL_OFFSET, 4);
 	v3d_write(id, V3D_L2CACTL_OFFSET, 1);
+	v3d_write(id, V3D_L2CACTL_OFFSET, 4);
 
 	v3d_write(id, V3D_CT0CS_OFFSET, 0x8000);
 	v3d_write(id, V3D_CT1CS_OFFSET, 0x8000);
@@ -250,6 +254,11 @@ mm_job_status_e v3d_bin_render_start_job(void *device_id, mm_job_post_t *job, un
 	case MM_JOB_STATUS_READY:
 		{
 			v3d_bin_render_reset(id);
+			job_va[0] = job->type;
+			job_va[1] = job_params->v3d_ct0ca;
+			job_va[2] = job_params->v3d_ct0ea;
+			job_va[3] = job_params->v3d_ct1ca;
+			job_va[4] = job_params->v3d_ct1ea;
 			if (job->type == V3D_REND_JOB) {
 				job->status = MM_JOB_STATUS_RUNNING;
 				v3d_write(id, V3D_CT1CA_OFFSET, job_params->v3d_ct1ca);
@@ -275,6 +284,11 @@ mm_job_status_e v3d_bin_render_start_job(void *device_id, mm_job_post_t *job, un
 	break;
 	case MM_JOB_STATUS_RUNNING:
 		{
+			job_va[0] = 0;
+			job_va[1] = 0;
+			job_va[2] = 0;
+			job_va[3] = 0;
+			job_va[4] = 0;
 			job->status = MM_JOB_STATUS_SUCCESS;
 			return MM_JOB_STATUS_SUCCESS;
 		}
@@ -351,6 +365,8 @@ int v3d_bin_render_init(MM_CORE_HW_IFC *core_param)
 	core_param->mm_get_regs = NULL;
 	core_param->mm_device_id = (void *)v3d_device;
 	core_param->mm_virt_addr = NULL;
+	job_va = (unsigned int *)dma_alloc_coherent(NULL, 32, &job_pa, GFP_DMA);
+	pr_err("v3d_init job va = %x job pa = %x", job_va, job_pa);
 	return ret;
 
 err:
