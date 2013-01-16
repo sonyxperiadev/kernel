@@ -1036,9 +1036,11 @@ static struct i2c_board_info __initdata i2c_bmp18x_info[] = {
 #endif
 
 #if defined(CONFIG_TMD2771)
+#define TAOS_INT_GPIO   89
 static struct i2c_board_info __initdata i2c_tmd2771_info[] = {
 	{
 		I2C_BOARD_INFO("tmd2771", 0x39),
+		.irq = gpio_to_irq(TAOS_INT_GPIO),
 	},
 };
 #endif
@@ -1082,7 +1084,7 @@ struct kxtik_platform_data kxtik_pdata = {
 	.g_range = KXTIK_G_2G,
 };
 
-#define KXTIK_GPIO_IRQ_PIN          (64)
+#define KXTIK_GPIO_IRQ_PIN          (1)
 #define KXTIK_I2C_BUS_ID            (0)
 
 static struct i2c_board_info __initdata kxtik_i2c_boardinfo[] = {
@@ -1596,7 +1598,7 @@ static void __init hawaii_add_i2c_devices(void)
 
 #if defined(CONFIG_SENSORS_AK8963) || defined(CONFIG_SENSORS_AK8963_MODULE)
 	i2c_register_board_info(AKM8963_I2C_BUS_ID,
-				km8963_info, ARRAY_SIZE(akm8963_info));
+				akm8963_info, ARRAY_SIZE(akm8963_info));
 #endif /* CONFIG_SENSORS_AK8963 */
 
 #if defined(CONFIG_TOUCHSCREEN_BCM915500) || defined(CONFIG_TOUCHSCREEN_BCM915500_MODULE)
@@ -1706,6 +1708,14 @@ static void __init hawaii_add_devices(void)
 	platform_add_devices(hawaii_devices, ARRAY_SIZE(hawaii_devices));
 
 	hawaii_add_i2c_devices();
+
+#if defined(CONFIG_SENSORS_KIONIX_KXTIK)
+	kxtik_init_platform_hw();
+#endif /* CONFIG_SENSORS_KIONIX_KXTIK */
+
+#if defined(CONFIG_SENSORS_AK8963) || defined(CONFIG_SENSORS_AK8963_MODULE)
+	akm8963_init_platform_hw();
+#endif /* CONFIG_SENSORS_AK8963 */
 
 	spi_register_board_info(spi_slave_board_info,
 				ARRAY_SIZE(spi_slave_board_info));

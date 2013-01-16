@@ -1,7 +1,6 @@
 #ifndef __TK_PSENSOR_TMD2771_H
 #define __TK_PSENSOR_TMD2771_H
 
-
 #define TAOS_DEVICE_ID		"tmd2771"
 #define TAOS_ID_NAME_SIZE	10
 #define TAOS_DEVICE_ADDR1	0x29
@@ -41,6 +40,5 @@ struct taos_prox_info {
 struct tmd2771_platform_data {
 	struct taos_cfg *cfg_data;
 };
-
 
 #endif /* __TK_PSENSOR_TMD2771_H */

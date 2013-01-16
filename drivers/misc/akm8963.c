@@ -30,6 +30,7 @@
 #include <linux/workqueue.h>
 #include <linux/freezer.h>
 #include <linux/akm8963.h>
+#include  <linux/module.h>
 #ifdef CONFIG_HAS_EARLYSUSPEND
 #include <linux/earlysuspend.h>
 #endif
@@ -101,7 +102,6 @@ static int akm8963_i2c_rxdata(struct i2c_client *i2c,
 		 .buf = rxData,
 		 },
 	};
-	unsigned char addr = rxData[0];
 
 	if (i2c_transfer(i2c->adapter, msgs, 2) < 0) {
 		dev_err(&i2c->dev, "[akm8963]%s: transfer failed.\n", __func__);
@@ -169,7 +169,7 @@ static const struct file_operations AKECS_fops = {
 	.unlocked_ioctl = AKECS_ioctl,
 };
 
-static const struct miscdevice akm8963_dev = {
+static struct miscdevice akm8963_dev = {
 	.minor = MISC_DYNAMIC_MINOR,
 	.name = "akm8963_dev",
 	.fops = &AKECS_fops,

@@ -226,11 +226,9 @@ static void kxtik_irq_work(struct work_struct *work)
 static int kxtik_power_on_init(struct kxtik_data *tik)
 {
 	int err;
-	FUNCDBG("kxtik_power_on_init, tik->ctrl_reg1 = %d ,
-		 tik->data_ctrl = %d , tik->int_ctrl = %d\n",
+	FUNCDBG("tik->ctrl_reg1 =%d,tik->data_ctrl=%d,tik->int_ctrl=%d\n",
 		tik->ctrl_reg1, tik->data_ctrl, tik->int_ctrl);
-	FUNCDBG("kxtik_power_on_init, tik->client->irq = %d,
-		atomic_read(&tik->acc_enabled) = %d\n",
+	FUNCDBG("tik->client->irq=%d,atomic_read(&tik->acc_enabled) = %d\n",
 		tik->client->irq, atomic_read(&tik->acc_enabled));
 
 	/* ensure that PC1 is cleared before updating control registers */
@@ -313,8 +311,7 @@ static int kxtik_update_odr(struct kxtik_data *tik, unsigned int poll_interval)
 	int err;
 	int i;
 	u8 odr;
-	FUNCDBG("kxtik_update_odr, tik->int_ctrl = %d , tik->data_ctrl = %d,
-			poll_interval = %lld \n",
+	FUNCDBG("tik->int_ctrl=%d,tik->data_ctrl=%d,poll_interval=%lld\n",
 		tik->int_ctrl, tik->data_ctrl, poll_interval);
 
 	/* Use the lowest ODR that can support the requested poll interval */
@@ -345,8 +342,7 @@ static int kxtik_update_odr(struct kxtik_data *tik, unsigned int poll_interval)
 		if (err < 0)
 			return err;
 	}
-	FUNCDBG("kxtik_update_odr, tik->ctrl_reg1=%d , tik->data_ctrl = %d ,
-			poll_interval = %d , odr = %d \n",
+	FUNCDBG("tik->ctrl_reg1=%d,tik->data_ctrl=%d,poll_interval=%d,odr=%d\n",
 		tik->ctrl_reg1, tik->data_ctrl, poll_interval, odr);
 
 	return 0;
