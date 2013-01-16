@@ -669,7 +669,11 @@ void ProcessCPCrashedDump(struct work_struct *work)
 		) {
 		/* we kill AP when CP crashes */
 		IPC_DEBUG(DBG_ERROR, "Crashing AP for Ramdump ...\n\n");
+#ifdef CONFIG_SEC_DEBUG
+		cp_abort();
+#else /* CONFIG_SEC_DEBUG */
 		abort();
+#endif /* CONFIG_SEC_DEBUG */
 	}
 	if ((BCMLOG_OUTDEV_NONE == BCMLOG_GetCpCrashLogDevice() ||
 		BCMLOG_OUTDEV_PANIC == BCMLOG_GetCpCrashLogDevice() ||
@@ -681,7 +685,11 @@ void ProcessCPCrashedDump(struct work_struct *work)
 	    ) {
 		/* we kill AP when CP crashes */
 		IPC_DEBUG(DBG_ERROR, "Crashing AP now ...\n\n");
+#ifdef CONFIG_SEC_DEBUG
+		cp_abort();
+#else /* CONFIG_SEC_DEBUG */
 		abort();
+#endif /* CONFIG_SEC_DEBUG */
 	}
 #endif
 	/* check for CP Reset here? Assuming CP Reset is just signified by
