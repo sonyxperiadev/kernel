@@ -1626,6 +1626,7 @@ kona_sdxc_regulator_power(struct sdio_dev *dev, int power_state)
 	struct device *pdev = dev->dev;
 	struct sdio_platform_cfg *hw_cfg =
 		(struct sdio_platform_cfg *)pdev->platform_data;
+	static atomic_t sdxc_regulator_enable;
 
 	/*
 	 * Note that from the board file the appropriate regualtor names are
@@ -1649,9 +1650,11 @@ kona_sdxc_regulator_power(struct sdio_dev *dev, int power_state)
 			}
 			pr_info("Turning ON sdxc sd\n");
 			ret = regulator_enable(dev->vdd_sdxc_regulator);
-		} else if (regulator_is_enabled(dev->vdd_sdxc_regulator)) {
+			atomic_set(&sdxc_regulator_enable, 1);
+		} else if (atomic_read(&sdxc_regulator_enable)) {
 			pr_info("Turning OFF sdxc sd\n");
 			ret = regulator_disable(dev->vdd_sdxc_regulator);
+			atomic_set(&sdxc_regulator_enable, 0);
 
 			if ((hw_cfg->devtype == SDIO_DEV_TYPE_SDMMC) &&
 			(hw_cfg->configure_sdio_pullup)) {
