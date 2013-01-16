@@ -7578,7 +7578,11 @@ static int proc_ccu_set_freq_policy(struct ccu_clk *ccu_clk, int policy_id,
 		if (opp_info->opp_id > curr_opp)
 			ccu_set_voltage(ccu_clk,
 				opp_info->freq_id, target_volt);
-		clk_set_rate(src_clk, opp_info->ctrl_prms);
+		if (clk_set_rate(src_clk, opp_info->ctrl_prms)) {
+			pr_err("%s: coundn't set the rate: %u",
+				__func__, opp_info->ctrl_prms);
+			return -EINVAL;
+		}
 		if (opp_info->opp_id < curr_opp)
 			ccu_set_voltage(ccu_clk, opp_info->freq_id,
 				target_volt);
