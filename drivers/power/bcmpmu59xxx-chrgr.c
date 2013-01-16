@@ -115,15 +115,20 @@ const char *supplies_to[] = {
 static int set_icc_fcc(const char *val, const struct kernel_param *kp)
 {
 	struct bcmpmu_chrgr_data *di;
-	int curr;
+	struct bcmpmu_accy *paccy;
+	u32 curr;
 	int rv = 0;
 
 	di = gbl_di;
 	if (!di)
 		return -1;
-
-	sscanf(val, "%d", &curr);
-
+	sscanf(val, "%u", &curr);
+	if (curr == CURR_LMT_MAX) {
+		paccy = di->bcmpmu->accyinfo;
+		BUG_ON(!paccy);
+		curr =
+		bcmpmu_get_chrgr_curr_lmt(paccy->usb_accy_data.chrgr_type);
+	}
 	bcmpmu_set_icc_fc(di->bcmpmu, curr);
 
 	rv = param_set_int(val, kp);

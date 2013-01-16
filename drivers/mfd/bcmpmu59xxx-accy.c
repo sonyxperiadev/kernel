@@ -249,6 +249,14 @@ char *get_supply_type_str(int chrgr_type)
 }
 EXPORT_SYMBOL_GPL(get_supply_type_str);
 
+u32 bcmpmu_get_chrgr_curr_lmt(u32 chrgr_type)
+{
+	if (PMU_CHRGR_TYPE_MAX > chrgr_type)
+		return chrgr_curr_lmt[chrgr_type];
+	return 0;
+}
+EXPORT_SYMBOL_GPL(bcmpmu_get_chrgr_curr_lmt);
+
 void paccy_set_ldo_bit(struct bcmpmu_accy *paccy, int val)
 {
 	u8 status;

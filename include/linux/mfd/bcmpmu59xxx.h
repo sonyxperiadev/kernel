@@ -66,7 +66,7 @@
 #define PMU_BC_DCP		3
 #define PMU_CHP_TYPE_MASK	0x3
 
-
+#define CURR_LMT_MAX	0xFFFF
 /*helper macros to manage regulator PC pin map*/
 /*
 SET0 holds ORed list of PC pin - regualtor will be enabled if
@@ -951,6 +951,7 @@ int bcmpmu_usb_get(struct bcmpmu59xxx *bcmpmu,
 
 int bcmpmu_usb_set(struct bcmpmu59xxx *bcmpmu,
 			int ctrl, unsigned long data);
+u32 bcmpmu_get_chrgr_curr_lmt(u32 chrgr_type);
 int bcmpmu_chrgr_usb_en(struct bcmpmu59xxx *bcmpmu, int enable);
 int bcmpmu_is_usb_host_enabled(struct bcmpmu59xxx *bcmpmu);
 int bcmpmu_set_icc_fc(struct bcmpmu59xxx *bcmpmu, int curr);
