@@ -2173,3 +2173,33 @@ void AUDDRV_SetIHFDLSampleRate(int mode)
 		__func__, isIHFDL48k, mode);
 	isIHFDL48k = mode;
 }
+
+int AUDDRV_Get_TrEqParm(void *param, unsigned int size, AudioApp_t app)
+{
+#ifndef CONFIG_BCM_MODEM
+		return -EINVAL;
+#else
+		SysIndMultimediaAudioParm_t *p;
+
+		if (app != AUDIO_APP_MUSIC)
+			return -EINVAL;
+
+		if (size != sizeof(*p)) {
+			aError("SysIndMultimediaAudioParm_t changed %s",
+				__func__);
+			BUG();
+			return -EINVAL;
+		}
+		p = APSYSPARM_GetIndMultimediaAudioParmAccessPtr();
+		if (p == NULL) {
+			aError("%s cannot read TREQ param", __func__);
+			return -EINVAL;
+		}
+
+		/* get current audio mode.
+		hardcode to SPEAKER for now*/
+		memcpy(param, p+AUDIO_MODE_SPEAKERPHONE, size);
+
+		return 0;
+#endif
+}

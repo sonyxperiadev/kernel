@@ -327,4 +327,5 @@ CSL_CAPH_DEVICE_e AUDDRV_GetDRVDeviceFromSpkr(AUDIO_SINK_Enum_t spkr);
 CSL_CAPH_DEVICE_e AUDDRV_GetDRVDeviceFromMic(AUDIO_SOURCE_Enum_t mic);
 void AUDDRV_SetCallSampleRate(UInt32 voiceSampleRate);
 void AUDDRV_SetIHFDLSampleRate(int mode);
+int AUDDRV_Get_TrEqParm(void *param, unsigned int size, AudioApp_t app);
 #endif				/* __AUDIO_VDRIVER_H__ */

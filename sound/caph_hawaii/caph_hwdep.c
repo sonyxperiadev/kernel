@@ -429,6 +429,7 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file,
 	int data;
 	static UserCtrl_data_t *dataptr;
 	brcm_alsa_chip_t *pChip = NULL;
+	struct treq_sysparm_t *eq;
 
 	pChip = (brcm_alsa_chip_t *)hw->card->private_data;
 
@@ -851,6 +852,34 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file,
 		if (!enable) {
 			kfree(dataptr);
 			dataptr = NULL;
+		}
+		break;
+	case Ctrl_Ioctl_SWEQParm:
+		aTrace(LOG_ALSA_INTERFACE,
+			"ALSA-CAPH hwdep_ioctl Ctrl_Ioctl_SWEQParm");
+		eq = kzalloc(sizeof(*eq), GFP_KERNEL);
+		if (eq == NULL) {
+			aError("treq_sysparm_t mem alloc failed");
+			return -ENOMEM;
+		}
+		/* get the sysparm from driver
+		 SW EQ is only for music playback for now*/
+		ret = AUDDRV_Get_TrEqParm((void *)eq,
+			sizeof(*eq), AUDIO_APP_MUSIC);
+		if (!ret) {
+			if (copy_to_user((void __user *)arg, eq,
+			sizeof(*eq))) {
+				if (eq != NULL) {
+					kfree(eq);
+					eq = NULL;
+				}
+				return -EFAULT;
+			}
+		}
+
+		if (eq != NULL) {
+			kfree(eq);
+			eq = NULL;
 		}
 		break;
 	default:

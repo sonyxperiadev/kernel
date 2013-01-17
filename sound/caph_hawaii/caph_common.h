@@ -85,6 +85,12 @@ struct __userCtrl_data {
 };
 #define	UserCtrl_data_t	struct __userCtrl_data
 
+#define TREQ_DATA_SIZE 148
+struct treq_sysparm_t {
+	unsigned int data[TREQ_DATA_SIZE];
+};
+
+
 enum {
 	VoIP_Ioctl_GetVersion = _IOR('H', 0x10, int),
 	VoIP_Ioctl_Start = _IOW('H', 0x11, voip_start_stop_type_t),
@@ -105,7 +111,8 @@ enum {
 	DSPCtrl_Ioctl_SPCtrl = _IOW('H', 0x30, UserCtrl_data_t),
 	DSPCtrl_Ioctl_SPSetVar = _IOW('H', 0x31, UserCtrl_data_t),
 	DSPCtrl_Ioctl_SPQuery = _IOR('H', 0x32, UserCtrl_data_t),
-	DSPCtrl_Ioctl_EQCtrl = _IOW('H', 0x33, UserCtrl_data_t)
+	DSPCtrl_Ioctl_EQCtrl = _IOW('H', 0x33, UserCtrl_data_t),
+	Ctrl_Ioctl_SWEQParm = _IOR('H', 0x34, struct treq_sysparm_t)
 };
 
 /*
