@@ -43,6 +43,8 @@
 #define BC_MAX_RETRIES	10
 
 #define ACCY_WORK_DELAY  msecs_to_jiffies(5)
+#define RETRY_WORK_DELAY msecs_to_jiffies(100)
+
 static int debug_mask = BCMPMU_PRINT_ERROR |
 	BCMPMU_PRINT_INIT |  BCMPMU_PRINT_FLOW;
 static int prev_chrgr_type;
@@ -316,6 +318,8 @@ static void usb_detect_state(struct bcmpmu_accy *paccy)
 					usb_type = PMU_USB_TYPE_NONE;
 					break;
 				}
+				if (paccy->retry_cnt)
+					paccy->retry_cnt = 0;
 			} else {
 				paccy->det_state = USB_RETRY;
 			}
@@ -356,7 +360,7 @@ static void usb_handle_state(struct bcmpmu_accy *paccy)
 			reset_bc(paccy);
 			bcdldo_cycle_power(paccy);
 			schedule_delayed_work(&paccy->det_work,
-						ACCY_WORK_DELAY);
+						RETRY_WORK_DELAY);
 		} else {
 			pr_accy(ERROR, "%s, failed, retry times=%d\n",
 					__func__, paccy->retry_cnt);
