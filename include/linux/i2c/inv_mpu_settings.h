@@ -48,13 +48,6 @@
 	 0, 0, -1, \
 }
 #else
-#define INV_MPU_DRIVER_GYRO_ORIENTATION \
-{ \
-	-1, 0, 0, \
-	 0, 1, 0, \
-	 0, 0, -1, \
-}
-
 #define INV_MPU_DRIVER_COMPASS_ORIENTATION \
 { \
 	 -1, 0, 0, \

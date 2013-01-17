@@ -44,6 +44,10 @@
 #include "sysfs.h"
 #include "inv_test/inv_counters.h"
 
+#include <linux/of.h>
+#include <linux/of_fdt.h>
+#include <linux/of_platform.h>
+
 s64 get_time_ns(void)
 {
 	struct timespec ts;
@@ -1836,8 +1840,39 @@ static int inv_mpu_probe(struct i2c_client *client,
 	st->client = client;
 	st->sl_handle = client->adapter;
 	st->i2c_addr = client->addr;
-	st->plat_data =
-		*(struct mpu_platform_data *)dev_get_platdata(&client->dev);
+	if (client->dev.platform_data)
+		st->plat_data =
+			*(struct mpu_platform_data *)
+			dev_get_platdata(&client->dev);
+
+	else if (client->dev.of_node) {
+
+		struct device_node *np = client->dev.of_node;
+		u32 val;
+		int or_count;
+		unsigned long size = sizeof(st->plat_data.orientation);
+		u32 val_orientation[size];
+
+		if (of_property_read_u32(np, "gpio-irq-pin", &val))
+			goto err_read;
+		client->irq = gpio_to_irq(val);
+
+		if (of_property_read_u32(np, "int-config", &val))
+			goto err_read;
+		st->plat_data.int_config = val;
+
+		if (of_property_read_u32(np, "level-shifter", &val))
+			goto err_read;
+		st->plat_data.level_shifter = val;
+
+		if (of_property_read_u32_array(np, "orientation",
+			val_orientation, size))
+			goto err_read;
+		for (or_count = 0; or_count < size; or_count++)
+			st->plat_data.orientation[or_count] =
+				(__s8)val_orientation[or_count];
+		}
+
 	/* power is turned on inside check chip type*/
 	result = inv_check_chip_type(st, id);
 	if (result)
@@ -1925,7 +1960,7 @@ out_free:
 	iio_free_device(indio_dev);
 out_no_free:
 	dev_err(&client->adapter->dev, "%s failed %d\n", __func__, result);
-
+err_read:
 	return -EIO;
 }
 
@@ -2013,6 +2048,13 @@ static const struct i2c_device_id inv_mpu_id[] = {
 
 MODULE_DEVICE_TABLE(i2c, inv_mpu_id);
 
+static const struct of_device_id mpu_of_match[] = {
+	{ .compatible = "bcm,mpu", },
+	{},
+}
+
+MODULE_DEVICE_TABLE(of, mpu_of_match);
+
 static struct i2c_driver inv_mpu_driver = {
 	.class = I2C_CLASS_HWMON,
 	.probe		=	inv_mpu_probe,
@@ -2023,6 +2065,7 @@ static struct i2c_driver inv_mpu_driver = {
 		.owner	=	THIS_MODULE,
 		.name	=	"inv-mpu-iio",
 		.pm     =       INV_MPU_PMOPS,
+		.of_match_table = mpu_of_match,
 	},
 	.address_list = normal_i2c,
 };

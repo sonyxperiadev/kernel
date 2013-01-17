@@ -996,22 +996,6 @@ static int akm8963_init_platform_hw(void)
 }
 #endif /* CONFIG_SENSORS_AK8963 */
 
-#if defined(CONFIG_INV_MPU_IIO) || defined(CONFIG_INV_MPU_IIO_MODULE)
-
-static struct mpu_platform_data inv_mpu_platform_data = {
-	.int_config = INV_MPU_INIT_CFG,
-	.level_shifter = 0,
-	.orientation = INV_MPU_DRIVER_GYRO_ORIENTATION,
-};
-
-static struct i2c_board_info __initdata inv_mpu_i2c0_boardinfo[] = {
-	{
-	 I2C_BOARD_INFO(INV_MPU_DRIVER_NAME, INV_MPU_SLAVE_ADDR),
-	 .platform_data = &inv_mpu_platform_data,
-	 },
-};
-#endif /* CONFIG_INV_MPU_IIO */
-
 #if defined(CONFIG_MPU_SENSORS_KXTF9)
 static struct ext_slave_platform_data inv_mpu_kxtf9_data = {
 	.bus = EXT_SLAVE_BUS_SECONDARY,
@@ -1405,15 +1389,6 @@ static void __init hawaii_add_i2c_devices(void)
 	i2c_register_board_info(2, bma222_accl_info,
 				ARRAY_SIZE(bma222_accl_info));
 #endif
-
-#if defined(CONFIG_INV_MPU_IIO) || defined(CONFIG_INV_MPU_IIO_MODULE)
-#if defined(INV_MPU_IRQ_GPIO)
-	inv_mpu_i2c0_boardinfo[0].irq = gpio_to_irq(INV_MPU_IRQ_GPIO);
-#endif
-	i2c_register_board_info(INV_MPU_I2C_BUS_ID,
-				inv_mpu_i2c0_boardinfo,
-				ARRAY_SIZE(inv_mpu_i2c0_boardinfo));
-#endif /* CONFIG_INV_MPU_IIO */
 
 #if defined(CONFIG_MPU_SENSORS_KXTF9)
 	inv_mpu_kxtf9_boardinfo[0].irq =
