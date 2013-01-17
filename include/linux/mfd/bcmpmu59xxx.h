@@ -603,7 +603,6 @@ enum bcmpmu_usb_ctrl_t {
 	BCMPMU_USB_CTRL_GET_USB_TYPE,
 	BCMPMU_USB_CTRL_SW_UP,
 	BCMPMU_USB_CTRL_TPROBE_MAX,
-	BCMPMU_OTG_CTRL_BOST_ON_OFF,
 };
 
 enum bcmpmu_usb_det_state_t {

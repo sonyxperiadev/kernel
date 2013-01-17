@@ -43,8 +43,6 @@
 #define BC_MAX_RETRIES	10
 
 #define ACCY_WORK_DELAY  msecs_to_jiffies(5)
-#define RETRY_WORK_DELAY msecs_to_jiffies(100)
-
 static int debug_mask = BCMPMU_PRINT_ERROR |
 	BCMPMU_PRINT_INIT |  BCMPMU_PRINT_FLOW;
 static int prev_chrgr_type;
@@ -318,8 +316,6 @@ static void usb_detect_state(struct bcmpmu_accy *paccy)
 					usb_type = PMU_USB_TYPE_NONE;
 					break;
 				}
-				if (paccy->retry_cnt)
-					paccy->retry_cnt = 0;
 			} else {
 				paccy->det_state = USB_RETRY;
 			}
@@ -360,7 +356,7 @@ static void usb_handle_state(struct bcmpmu_accy *paccy)
 			reset_bc(paccy);
 			bcdldo_cycle_power(paccy);
 			schedule_delayed_work(&paccy->det_work,
-						RETRY_WORK_DELAY);
+						ACCY_WORK_DELAY);
 		} else {
 			pr_accy(ERROR, "%s, failed, retry times=%d\n",
 					__func__, paccy->retry_cnt);
@@ -747,21 +743,28 @@ static void usb_adp_work(struct work_struct *work)
 	}
 }
 
-int bcmpmu_usb_otg_bost(struct bcmpmu59xxx *bcmpmu, bool en)
+int bcmpmu_usb_otg_bost_en(struct bcmpmu59xxx *bcmpmu, bool en)
 {
 	int ret = 0;
 	u8 reg;
 
-	ret |= bcmpmu->read_dev(bcmpmu,
+	ret = bcmpmu->read_dev(bcmpmu,
 				PMU_REG_OTGCTRL1, &reg);
-
+	/*
+	OTGCTRL1_OTG_SHUTDOWNB  = 1 => Enable the OTG block
+	OTGCTRL1_OFFVBUSB = 1 => enable Vbus boost
+	*/
 	if (en)
-		reg |= OTGCTRL1_OTG_VBUS_BOOST_MASK;
+		reg |= OTGCTRL1_OFFVBUSB_MASK |
+				OTGCTRL1_OTG_SHUTDOWNB_MASK;
 	else
-		reg &= (~OTGCTRL1_OTG_VBUS_BOOST_MASK);
+		reg &= ~(OTGCTRL1_OFFVBUSB_MASK |
+					OTGCTRL1_OTG_SHUTDOWNB_MASK);
 
 	ret |= bcmpmu->write_dev(bcmpmu,
 				PMU_REG_OTGCTRL1, reg);
+	pr_accy(FLOW, "%s,en = %d, reg = %x\n", __func__, en,
+		reg);
 	return ret;
 
 }
@@ -782,12 +785,7 @@ int bcmpmu_usb_set(struct bcmpmu59xxx *bcmpmu,
 				&paccy->usb_accy_data.max_curr_chrgr);
 		break;
 	case BCMPMU_USB_CTRL_VBUS_ON_OFF:
-		ret = bcmpmu->read_dev(bcmpmu, PMU_REG_OTGCTRL1, &temp);
-		if (data == 0)
-			temp &= (~OTGCTRL1_OFFVBUSB_MASK);
-		else
-			temp |= (OTGCTRL1_OFFVBUSB_MASK);
-		ret = bcmpmu->write_dev(bcmpmu, PMU_REG_OTGCTRL1, temp);
+		ret = bcmpmu_usb_otg_bost_en(bcmpmu, !!data);
 		break;
 
 	case BCMPMU_USB_CTRL_SET_VBUS_DEB_TIME:
@@ -999,12 +997,6 @@ int bcmpmu_usb_set(struct bcmpmu59xxx *bcmpmu,
 					PMU_REG_OTGCTRL10,
 					TPROBE_MAX_GET_LSB(val));
 		}
-		break;
-	case BCMPMU_OTG_CTRL_BOST_ON_OFF:
-		if (data == 0)
-			bcmpmu_usb_otg_bost(bcmpmu, 0);
-		else
-			bcmpmu_usb_otg_bost(bcmpmu, 1);
 		break;
 
 	default:
