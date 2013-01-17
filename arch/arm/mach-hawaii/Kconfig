@@ -47,6 +47,10 @@ config	MACH_HAWAII_SS_EVAL_REV00
 	help
 	  Support for the Broadcom Hawaii SS eval board.
 
+config	MACH_HAWAII_SS_LOGAN_REV00
+	bool "Support Broadcom Hawaii SS logan board"
+	help
+	  Support for the Broadcom Hawaii SS logan board.
 
 
 endchoice

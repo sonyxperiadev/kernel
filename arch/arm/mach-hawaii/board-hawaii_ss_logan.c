@@ -34,6 +34,10 @@
 #include <linux/interrupt.h>
 #include <linux/irq.h>
 #include <linux/mfd/bcm590xx/pmic.h>
+#include <linux/of_platform.h>
+#include <linux/of.h>
+#include <linux/of_fdt.h>
+
 #ifdef CONFIG_ANDROID_PMEM
 #include <linux/android_pmem.h>
 #endif
@@ -236,26 +240,6 @@ extern int hawaii_wifi_status_register(
 #define NFC_WAKE 25
 #define NFC_ENABLE 100
 
-#define KONA_UART0_PA   UARTB_BASE_ADDR
-#define KONA_UART1_PA   UARTB2_BASE_ADDR
-#define KONA_UART2_PA   UARTB3_BASE_ADDR
-
-#define HAWAII_8250PORT(name, clk, freq, uart_name)		\
-{								\
-	.membase    = (void __iomem *)(KONA_##name##_VA),	\
-	.mapbase    = (resource_size_t)(KONA_##name##_PA),	\
-	.irq        = BCM_INT_ID_##name,			\
-	.uartclk    = freq,					\
-	.regshift   = 2,					\
-	.iotype     = UPIO_MEM32,				\
-	.type       = PORT_16550A,				\
-	.flags      = UPF_BOOT_AUTOCONF | UPF_BUG_THRE |	\
-			UPF_FIXED_TYPE | UPF_SKIP_TEST,		\
-	.private_data = (void __iomem *)((KONA_##name##_VA) +	\
-					UARTB_USR_OFFSET),	\
-	.clk_name = clk,					\
-	.port_name = uart_name,					\
-}
 
 #ifdef CONFIG_VIDEO_ADP1653
 #define ADP1653_I2C_ADDR 0x60
@@ -455,97 +439,6 @@ static struct platform_device hawaii_camera_sub = {
 };
 #endif /* CONFIG_VIDEO_UNICAM_CAMERA */
 
-
-
-static struct plat_serial8250_port hawaii_uart_platform_data[] = {
-	HAWAII_8250PORT(UART0, UARTB_PERI_CLK_NAME_STR, 48000000, "bluetooth"),
-	HAWAII_8250PORT(UART1, UARTB2_PERI_CLK_NAME_STR, 26000000, "gps"),
-	HAWAII_8250PORT(UART2, UARTB3_PERI_CLK_NAME_STR, 26000000, "console"),
-	{
-		.flags = 0,
-	},
-};
-
-static struct bsc_adap_cfg bsc_i2c_cfg[] = {
-	{
-		.speed = BSC_BUS_SPEED_400K,
-		.dynamic_speed = 1,
-		.bsc_clk = "bsc1_clk",
-		.bsc_apb_clk = "bsc1_apb_clk",
-		.retries = 1,
-		.is_pmu_i2c = false,
-		.fs_ref = BSC_BUS_REF_13MHZ,
-		.hs_ref = BSC_BUS_REF_104MHZ,
-	},
-
-	{
-		.speed = BSC_BUS_SPEED_400K,
-		.dynamic_speed = 1,
-		.bsc_clk = "bsc2_clk",
-		.bsc_apb_clk = "bsc2_apb_clk",
-		.retries = 3,
-		.is_pmu_i2c = false,
-		.fs_ref = BSC_BUS_REF_13MHZ,
-		.hs_ref = BSC_BUS_REF_104MHZ,
-	},
-
-	{
-		.speed = BSC_BUS_SPEED_400K,
-		.dynamic_speed = 1,
-		.bsc_clk = "bsc3_clk",
-		.bsc_apb_clk = "bsc3_apb_clk",
-		.retries = 1,
-		.is_pmu_i2c = false,
-		.fs_ref = BSC_BUS_REF_13MHZ,
-		.hs_ref = BSC_BUS_REF_104MHZ,
-	},
-
-	{
-		.speed = BSC_BUS_SPEED_400K,
-		.dynamic_speed = 1,
-		.bsc_clk = "bsc4_clk",
-		.bsc_apb_clk = "bsc4_apb_clk",
-		.retries = 1,
-		.is_pmu_i2c = false,
-		.fs_ref = BSC_BUS_REF_13MHZ,
-		.hs_ref = BSC_BUS_REF_104MHZ,
-	},
-
-	{
-#if defined(CONFIG_KONA_PMU_BSC_HS_MODE)
-		.speed = BSC_BUS_SPEED_HS,
-		/* No dynamic speed in HS mode */
-		.dynamic_speed = 0,
-		/*
-		 * PMU can NAK certain I2C read commands, while write
-		 * is in progress; and it takes a while to synchronise
-		 * writes between HS clock domain(3.25MHz) and
-		 * internal clock domains (32k). In such cases, we retry
-		 * PMU reads until the writes are through. PMU need more
-		 * retry counts in HS mode to handle this.
-		 */
-		.retries = 5,
-#elif defined(CONFIG_KONA_PMU_BSC_HS_1MHZ)
-		.speed = BSC_BUS_SPEED_HS_1MHZ,
-		.dynamic_speed = 0,
-		.retries = 5,
-#elif defined(CONFIG_KONA_PMU_BSC_HS_1625KHZ)
-		.speed = BSC_BUS_SPEED_HS_1625KHZ,
-		.dynamic_speed = 0,
-		.retries = 5,
-#else
-		.speed = BSC_BUS_SPEED_50K,
-		.dynamic_speed = 1,
-		.retries = 3,
-#endif
-		.bsc_clk = "pmu_bsc_clk",
-		.bsc_apb_clk = "pmu_bsc_apb",
-		.is_pmu_i2c = true,
-		.fs_ref = BSC_BUS_REF_13MHZ,
-		.hs_ref = BSC_BUS_REF_26MHZ,
-	 },
-};
-
 static struct spi_kona_platform_data hawaii_ssp0_info = {
 #ifdef CONFIG_DMAC_PL330
 	.enable_dma = 1,
@@ -584,18 +477,10 @@ static struct bcm_hsotgctrl_platform_data hsotgctrl_plat_data = {
 #endif
 
 struct platform_device *hawaii_common_plat_devices[] __initdata = {
-	&hawaii_serial_device,
-	&hawaii_i2c_adap_devices[0],
-	&hawaii_i2c_adap_devices[1],
-	&hawaii_i2c_adap_devices[2],
-	&hawaii_i2c_adap_devices[3],
-	&hawaii_i2c_adap_devices[4],
 	&pmu_device,
-	&hawaii_pwm_device,
 	&hawaii_ssp0_device,
 
 #ifdef CONFIG_SENSORS_KONA
-	&hawaii_tmon_device,
 	&thermal_device,
 #endif
 
@@ -1063,63 +948,26 @@ struct platform_device haptic_pwm_device = {
 
 #endif /* CONFIG_HAPTIC_SAMSUNG_PWM */
 
-static struct sdio_platform_cfg hawaii_sdio_param[] = {
-	{
-		.id = 0,
-		.data_pullup = 0,
-		.cd_gpio = SD_CARDDET_GPIO_PIN,
-		.devtype = SDIO_DEV_TYPE_SDMMC,
-		.flags = KONA_SDIO_FLAGS_DEVICE_REMOVABLE,
-		.peri_clk_name = "sdio1_clk",
-		.ahb_clk_name = "sdio1_ahb_clk",
-		.sleep_clk_name = "sdio1_sleep_clk",
-		.peri_clk_rate = 48000000,
-		/*The SD card regulator*/
-		.vddo_regulator_name = "vdd_sdio",
-		/*The SD controller regulator*/
-		.vddsdxc_regulator_name = "vdd_sdxc",
-	},
-	{
-		.id = 1,
-		.data_pullup = 0,
-		.is_8bit = 1,
-		.devtype = SDIO_DEV_TYPE_EMMC,
-		.flags = KONA_SDIO_FLAGS_DEVICE_NON_REMOVABLE ,
-		.peri_clk_name = "sdio2_clk",
-		.ahb_clk_name = "sdio2_ahb_clk",
-		.sleep_clk_name = "sdio2_sleep_clk",
-		.peri_clk_rate = 52000000,
-	},
+static struct sdio_platform_cfg hawaii_sdio_param = {
+
 #ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
-	{
-		.id = 2,
-		.data_pullup = 0,
-		.devtype = SDIO_DEV_TYPE_WIFI,
-		.flags = KONA_SDIO_FLAGS_DEVICE_REMOVABLE,
-		.peri_clk_name = "sdio3_clk",
-		.ahb_clk_name = "sdio3_ahb_clk",
-		.sleep_clk_name = "sdio3_sleep_clk",
-		.peri_clk_rate = 48000000,
-		.register_status_notify = hawaii_wifi_status_register,
-	},
-#else
-	{
-		.id = 2,
-		.data_pullup = 0,
-		.devtype = SDIO_DEV_TYPE_WIFI,
-		.wifi_gpio = {
-			.reset		= 3,
-			.reg		= -1,
-			.host_wake	= 74,
-			.shutdown	= -1,
-		},
-		.flags = KONA_SDIO_FLAGS_DEVICE_REMOVABLE,
-		.peri_clk_name = "sdio3_clk",
-			.ahb_clk_name = "sdio3_ahb_clk",
-			.sleep_clk_name = "sdio3_sleep_clk",
-			.peri_clk_rate = 48000000,
-		},
+	.register_status_notify = hawaii_wifi_status_register,
 #endif
+
+};
+
+static const struct of_dev_auxdata hawaii_auxdata_lookup[] __initconst = {
+
+	OF_DEV_AUXDATA("bcm,sdhci", 0x3F190000,
+		"sdhci.1", NULL),
+
+	OF_DEV_AUXDATA("bcm,sdhci", 0x3F1A0000,
+		"sdhci.2", &hawaii_sdio_param),
+
+	OF_DEV_AUXDATA("bcm,sdhci", 0x3F180000,
+		"sdhci.0", NULL),
+
+	{},
 };
 
 #ifdef CONFIG_BACKLIGHT_PWM
@@ -1155,24 +1003,6 @@ struct platform_device hawaii_backlight_device = {
 
 /* Remove this comment when camera data for Hawaii is updated */
 
-#ifdef CONFIG_WD_TAPPER
-static struct wd_tapper_platform_data wd_tapper_data = {
-	/* Set the count to the time equivalent to the time-out in seconds
-	 * required to pet the PMU watchdog to overcome the problem of reset in
-	 * suspend*/
-	.count = 120,
-	.ch_num = 1,
-	.name = "aon-timer",
-};
-
-static struct platform_device wd_tapper = {
-	.name = "wd_tapper",
-	.id = 0,
-	.dev = {
-		.platform_data = &wd_tapper_data,
-	},
-};
-#endif
 
 #if defined (CONFIG_TOUCHSCREEN_MMS134S)
 #define TSP_INT_GPIO_PIN   	(73)
@@ -1181,49 +1011,6 @@ static struct i2c_board_info __initdata zinitix_i2c_devices[] = {
 		I2C_BOARD_INFO("sec_touch", 0x48),
 		.irq = gpio_to_irq(TSP_INT_GPIO_PIN),
 	  },
-};
-#endif
-
-#ifdef CONFIG_TOUCHSCREEN_TANGO
-static struct TANGO_I2C_TS_t tango_plat_data = {
-	.i2c_pdata	= {ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_400K),},
-	.i2c_slave_address	= 0,
-	.gpio_irq_pin		= TSC_GPIO_IRQ_PIN,
-	.gpio_reset_pin		= TSC_GPIO_RESET_PIN,
-	.x_max_value		= 480,
-	.y_max_value		= 800,
-	.layout			= TANGO_S32_LAYOUT,
-	.num_bytes_to_read = TANGO_I2C_TS_DRIVER_NUM_BYTES_TO_READ,
-	.is_multi_touch		= 1,
-	.is_resetable		= 1,
-	.num_fingers_idx	= 0,
-	.old_touching_idx	= 1,
-	.x1_lo_idx		= 2,
-	.x1_hi_idx		= 3,
-	.y1_lo_idx		= 4,
-	.y1_hi_idx		= 5,
-	.x2_lo_idx		= 6,
-	.x2_hi_idx		= 7,
-	.y2_lo_idx		= 8,
-	.y2_hi_idx		= 9,
-	.x1_width_idx		= 10,	/* X1 coordinate touch area of the first finger */
-	.y1_width_idx		= 11,	/* Y1 coordinate touch area of the first finger */
-	.x2_width_idx		= 12,	/* X2 coordinate touch area of the first finger */
-	.y2_width_idx		= 13,	/* Y2 coordinate touch area of the first finger */
-	.power_mode_idx		= 20,
-	.int_mode_idx		= 21,	/* INT)mode register */
-	.int_width_idx		= 22,	/* Interrupt pulse width */
-	.min_finger_val		= 0,
-	.max_finger_val		= 2,
-	.panel_width		= 56,
-};
-
-static struct i2c_board_info __initdata tango_info[] = {
-	{
-		I2C_BOARD_INFO(I2C_TS_DRIVER_NAME, TANGO_M29_SLAVE_ADDR),
-		.platform_data = &tango_plat_data,
-		.irq = gpio_to_irq(TSC_GPIO_IRQ_PIN),
-	},
 };
 #endif
 
@@ -1414,20 +1201,10 @@ static struct platform_device *hawaii_devices[] __initdata = {
 	&hawaii_unicam_device,
 #endif
 
-#ifdef CONFIG_WD_TAPPER
-	&wd_tapper,
-#endif
-
 #if defined(CONFIG_BCM_ALSA_SOUND)
 	        &board_caph_device,
 #endif
 
-};
-
-struct platform_device *hawaii_sdio_devices[] __initdata = {
-	&hawaii_sdio2_device,
-	&hawaii_sdio3_device,
-	&hawaii_sdio1_device,
 };
 
 static void __init hawaii_add_i2c_devices(void)
@@ -1435,9 +1212,6 @@ static void __init hawaii_add_i2c_devices(void)
 
 #ifdef CONFIG_VIDEO_ADP1653
 	i2c_register_board_info(0, adp1653_flash, ARRAY_SIZE(adp1653_flash));
-#endif
-#ifdef CONFIG_TOUCHSCREEN_TANGO
-	i2c_register_board_info(3, tango_info, ARRAY_SIZE(tango_info));
 #endif
 #if defined (CONFIG_TOUCHSCREEN_MMS134S)
 	i2c_register_board_info(3, zinitix_i2c_devices, ARRAY_SIZE(zinitix_i2c_devices));
@@ -1529,15 +1303,6 @@ static void __init hawaii_add_i2c_devices(void)
 
 static void hawaii_add_pdata(void)
 {
-	hawaii_serial_device.dev.platform_data = &hawaii_uart_platform_data;
-	hawaii_i2c_adap_devices[0].dev.platform_data = &bsc_i2c_cfg[0];
-	hawaii_i2c_adap_devices[1].dev.platform_data = &bsc_i2c_cfg[1];
-	hawaii_i2c_adap_devices[2].dev.platform_data = &bsc_i2c_cfg[2];
-	hawaii_i2c_adap_devices[3].dev.platform_data = &bsc_i2c_cfg[3];
-	hawaii_i2c_adap_devices[4].dev.platform_data = &bsc_i2c_cfg[4];
-	hawaii_sdio1_device.dev.platform_data = &hawaii_sdio_param[0];
-	hawaii_sdio2_device.dev.platform_data = &hawaii_sdio_param[1];
-	hawaii_sdio3_device.dev.platform_data = &hawaii_sdio_param[2];
 	hawaii_ssp0_device.dev.platform_data = &hawaii_ssp0_info;
 	hawaii_ssp1_device.dev.platform_data = &hawaii_ssp1_info;
 	hawaii_stm_device.dev.platform_data = &hawaii_stm_pdata;
@@ -1586,12 +1351,6 @@ static void __init hawaii_add_devices(void)
 				ARRAY_SIZE(spi_slave_board_info));
 }
 
-static void __init hawaii_add_sdio_devices(void)
-{
-	platform_add_devices(hawaii_sdio_devices,
-				ARRAY_SIZE(hawaii_sdio_devices));
-}
-
 #ifdef CONFIG_FB_BRCM_KONA
 /*
  * KONA FRAME BUFFER DISPLAY DRIVER PLATFORM CONFIG
@@ -1629,6 +1388,10 @@ struct kona_fb_platform_data konafb_devices[] __initdata = {
 #include "kona_fb_init.c"
 #endif /* #ifdef CONFIG_FB_BRCM_KONA */
 
+static struct of_device_id hawaii_dt_match_table[] __initdata = {
+	{ .compatible = "simple-bus", },
+	{}
+};
 
 static void __init hawaii_init(void)
 {
@@ -1637,12 +1400,14 @@ static void __init hawaii_init(void)
 	konafb_init();
 #endif
 	hawaii_add_common_devices();
+	/* Populate platform_devices from device tree data */
+	of_platform_populate(NULL, hawaii_dt_match_table,
+			hawaii_auxdata_lookup, &platform_bus);
 	return;
 }
 
 static int __init hawaii_add_lateinit_devices(void)
 {
-	hawaii_add_sdio_devices();
 
 #ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
 	hawaii_wlan_init();
@@ -1652,7 +1417,8 @@ static int __init hawaii_add_lateinit_devices(void)
 
 late_initcall(hawaii_add_lateinit_devices);
 
-MACHINE_START(HAWAII, "hawaii_ss_logan")
+static const char * const hawaii_dt_compat[] = { "bcm,hawaii", NULL, };
+DT_MACHINE_START(HAWAII, "hawaii_ss_logan")
 	.atag_offset = 0x100,
 	.map_io = hawaii_map_io,
 	.init_irq = kona_init_irq,
@@ -1661,4 +1427,5 @@ MACHINE_START(HAWAII, "hawaii_ss_logan")
 	.init_machine = hawaii_init,
 	.reserve = hawaii_reserve,
 	.restart = hawaii_restart,
+	.dt_compat = hawaii_dt_compat,
 MACHINE_END
