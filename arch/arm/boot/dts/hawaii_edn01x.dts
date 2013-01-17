@@ -84,6 +84,12 @@
 					0 1 0
 					0 0 0xFFFFFFFF>;
 		};
+
+		al3006@1d {
+			compatible = "bcm,al3006";
+			reg = <0x1d>;
+			gpio-irq-pin = <0xFFFFFFFF>;
+		};
 	};
 
 	i2c3: i2c@3e01c000 {

@@ -888,23 +888,6 @@ static struct i2c_board_info __initdata i2c_bmp18x_info[] = {
 };
 #endif
 
-#if defined(CONFIG_AL3006) || defined(CONFIG_AL3006_MODULE)
-static struct al3006_platform_data al3006_pdata = {
-#ifdef AL3006_IRQ_GPIO
-	.irq_gpio = AL3006_IRQ_GPIO,
-#else
-	.irq_gpio = -1,
-#endif
-};
-
-static struct i2c_board_info __initdata i2c_al3006_info[] = {
-	{
-	 I2C_BOARD_INFO("al3006", AL3006_I2C_ADDRESS),
-	 .platform_data = &al3006_pdata,
-	 },
-};
-#endif
-
 #if defined(CONFIG_AMI306) || defined(CONFIG_AMI306_MODULE)
 static struct ami306_platform_data ami306_data = AMI306_DATA;
 static struct i2c_board_info __initdata i2c_ami306_info[] = {
@@ -1428,22 +1411,6 @@ static void __init hawaii_add_i2c_devices(void)
 				       i2c_bmp18x_info,
 				       ARRAY_SIZE(i2c_bmp18x_info));
 #endif
-
-#if defined(CONFIG_AL3006) || defined(CONFIG_AL3006_MODULE)
-#ifdef AL3006_IRQ
-	i2c_al3006_info[0].irq = gpio_to_irq(AL3006_IRQ_GPIO);
-#else
-	i2c_al3006_info[0].irq = -1;
-#endif
-	i2c_register_board_info(
-#ifdef AL3006_I2C_BUS_ID
-				       AL3006_I2C_BUS_ID,
-#else
-				       -1,
-#endif
-				       i2c_al3006_info,
-				       ARRAY_SIZE(i2c_al3006_info));
-#endif /* CONFIG_AL3006 */
 
 #if  defined(CONFIG_AMI306) || defined(CONFIG_AMI306)
 	i2c_register_board_info(

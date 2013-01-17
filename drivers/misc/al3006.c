@@ -991,12 +991,37 @@ static int __devinit al3006_probe(struct i2c_client *client,
 				  const struct i2c_device_id *id)
 {
 	struct i2c_adapter *adapter = to_i2c_adapter(client->dev.parent);
-#ifdef CONFIG_ARCH_KONA
-	struct al3006_platform_data *pdata = client->dev.platform_data;
-#endif
 	struct al3006_data *data;
 	int err = 0;
-  int gpio_pin;
+	int gpio_pin;
+
+#ifdef CONFIG_ARCH_KONA
+	struct al3006_platform_data *pdata = NULL;
+
+	if (client->dev.platform_data)
+		pdata = client->dev.platform_data;
+	else if (client->dev.of_node) {
+
+		struct device_node *np = client->dev.of_node;
+		u32 val;
+
+		pdata = kzalloc(sizeof(struct al3006_platform_data),
+			GFP_KERNEL);
+		if (!pdata)
+			return -ENOMEM;
+
+		if (of_property_read_u32(np, "gpio-irq-pin", &val))
+			goto err_read;
+		pdata->irq_gpio = val;
+		if (pdata->irq_gpio != -1)
+			client->irq = gpio_to_irq(val);
+		else
+			client->irq = -1;
+
+		client->dev.platform_data = pdata;
+	} else
+		return -ENODEV;
+#endif
 
 	if (!i2c_check_functionality(adapter, I2C_FUNC_SMBUS_BYTE))
 		return -EIO;
@@ -1068,6 +1093,9 @@ exit_err:
 
 exit_kfree:
 	kfree(data);
+err_read:
+	if (client->dev.of_node)
+		kfree(pdata);
 	return err;
 }
 
@@ -1087,6 +1115,10 @@ static int __devexit al3006_remove(struct i2c_client *client)
 			   &al3006_android_attr_group);
 
 	al3006_set_power_state(client, 0);
+
+	if (client->dev.of_node)
+		kfree(pdata);
+
 	kfree(i2c_get_clientdata(client));
 
 	if (pdata && client->irq >= 0)
@@ -1163,6 +1195,11 @@ static int al3006_resume(struct device *dev)
 
 	return ret;
 }
+static const struct of_device_id al3006_of_match[] = {
+	{ .compatible = "bcm,al3006", },
+	{},
+}
+MODULE_DEVICE_TABLE(of, al3006_of_match);
 
 static const struct dev_pm_ops al3006_pm_ops = {
 	.suspend	= al3006_suspend,
@@ -1177,6 +1214,7 @@ static struct i2c_driver al3006_driver = {
 #ifdef CONFIG_PM
 		.pm	= &al3006_pm_ops,
 #endif
+		.of_match_table = al3006_of_match,
 
 	},
 	.probe	= al3006_probe,
