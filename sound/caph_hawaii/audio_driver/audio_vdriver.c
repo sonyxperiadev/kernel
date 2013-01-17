@@ -1351,30 +1351,6 @@ void AUDDRV_SetAudioMode_Speaker(SetAudioMode_Sp_t param)
 					aTrace(LOG_AUDIO_DRIVER,
 						"mixInGain 0x%x, mixInGainR 0x%x\n",
 						mixInGain, mixInGainR);
-					/* don't change the mixer
-					gain if it is muted */
-					if (mixInGain != GAIN_NA &&
-						mixInGainR != GAIN_NA) {
-						if (path->srcmRoute[i][j].outChnl
-							== CSL_CAPH_SRCM_STEREO_CH2_L
-							|| path->srcmRoute[i][j].outChnl
-							== CSL_CAPH_SRCM_STEREO_CH2_R
-					) {
-						/*mono output*/
-					if (path->srcmRoute[i][j].inChnl
-					== CSL_CAPH_SRCM_STEREO_CH5 ||
-						path->srcmRoute[i][j].inChnl
-					== CSL_CAPH_SRCM_STEREO_PASS_CH1 ||
-						path->srcmRoute[i][j].inChnl
-					== CSL_CAPH_SRCM_STEREO_PASS_CH2) {
-						/*only on stereo inputs.*/
-									mixInGain =
-										mixInGain - 602;
-									mixInGainR =
-										mixInGainR - 602;
-							}
-					}
-					}
 					csl_srcmixer_setMixInGain(
 						  path->srcmRoute[i][j].inChnl,
 						  path->srcmRoute[i][j].outChnl,

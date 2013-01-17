@@ -1793,10 +1793,7 @@ void csl_caph_srcmixer_config_mix_route(CSL_CAPH_SRCM_ROUTE_t routeConfig)
 						MIX_IN_GAINSTEP);
 			}
 			if (chalOutChnl & (UInt8) CAPH_M1_Left) {
-				chalInChnlMono = chalInChnl;
-				if (isSTIHF == TRUE
-					&& routeConfig.sink == CSL_CAPH_DEV_IHF)
-					chalInChnlMono =
+				chalInChnlMono =
 					csl_caph_srcmixer_get_mono_inchnl
 					(chalInChnl, CAPH_M1_Left);
 
@@ -1810,10 +1807,7 @@ void csl_caph_srcmixer_config_mix_route(CSL_CAPH_SRCM_ROUTE_t routeConfig)
 						MIX_IN_GAINSTEP);
 			}
 			if (chalOutChnl & (UInt8) CAPH_M1_Right) {
-				chalInChnlMono = chalInChnl;
-				if (isSTIHF == TRUE
-					&& routeConfig.sink == CSL_CAPH_DEV_IHF)
-					chalInChnlMono =
+				chalInChnlMono =
 					csl_caph_srcmixer_get_mono_inchnl(
 						chalInChnl, CAPH_M1_Right);
 
