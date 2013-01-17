@@ -297,7 +297,7 @@ static void WriteToLogDev_SDCARD(void)
 
 	set_fs(oldfs);
 }
-
+#ifdef CONFIG_BCM_STM
 static void WriteToLogDev_STM(void)
 {
 	u32 nFifo;
@@ -328,6 +328,7 @@ static void WriteToLogDev_STM(void)
 		}
 	}
 }
+#endif
 
 static void WriteToLogDev_CUSTOM(void)
 {
@@ -574,11 +575,13 @@ static void WriteToLogDev(struct work_struct *work)
 		WriteToLogDev_ACM();
 		break;
 
+#ifdef CONFIG_BCM_STM
 	case BCMLOG_OUTDEV_STM:
 		irql = AcquireOutputLock();
 		WriteToLogDev_STM();
 		ReleaseOutputLock(irql);
 		break;
+#endif
 
 	case BCMLOG_OUTDEV_CUSTOM:
 		irql = AcquireOutputLock();

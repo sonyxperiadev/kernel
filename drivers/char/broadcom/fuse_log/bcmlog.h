@@ -304,12 +304,14 @@ extern "C" {
 #endif
 
 /* help functions for STM crash dump */
+#ifdef CONFIG_BCM_STM
 	extern int stm_trace_buffer_onchannel(int channel, const void *data,
 					      size_t length);
 	extern void stm_trace_buffer_end(int channel);
 	extern int stm_trace_buffer_data(int channel, const void *data_ptr,
 					 size_t length);
 	extern void stm_trace_buffer_start(int channel);
+#endif
 
 /**
  *	Get runtime log device

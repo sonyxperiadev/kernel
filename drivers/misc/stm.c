@@ -22,10 +22,10 @@
 #include "mach/rdb/brcm_rdb_util.h"
 #include "mach/rdb/brcm_rdb_chipreg.h"
 #include <mach/hardware.h>
-#include <mach/clock.h>
 #include <plat/chal/chal_trace.h>
 #include <mach/io_map.h>
 #endif
+#include <mach/clock.h>
 
 /* define to disable PTI for ETM and PTM */
 #define PTI_OFF	0x013

@@ -349,8 +349,10 @@ static ssize_t set_log_store(const char *buf, size_t size,
 		if (!log->lock && !((idx == BCMLOG_OUTDEV_CUSTOM) &&
 				log->handler)) {
 			log->dev = idx;
+#ifdef CONFIG_BCM_STM
 			if (idx != BCMLOG_OUTDEV_STM)
 				check_pti_disable();
+#endif
 			return size;
 		}
 	}

@@ -758,6 +758,7 @@ static void BCMLOG_LogString_AP_Crash(const char *inLogString,
  * @param	size	(in)	message length
  * @note	data from IPC is not alligned by MTT frame.
  **/
+#ifdef CONFIG_BCM_STM
 static void BCMLOG_HandleCpCrashDumpData_Custom_STM(const char *buf, int size)
 {
 	static int rem_data_len;
@@ -923,7 +924,7 @@ static void BCMLOG_HandleCpCrashDumpData_Custom_STM(const char *buf, int size)
 		     (unsigned short)(p_buf[tmp_size + 11])) - rem_size;
 	}
 }
-
+#endif
 /**
 	Log a formatted list of arguments
 	@param		inSender (in) ID of the source module
@@ -1593,18 +1594,22 @@ void BCMLOG_HandleCpCrashDumpData(const char *buf, int size)
 		BCMLOG_WriteMTD(buf, size);
 #endif
 		break;
+#ifdef CONFIG_BCM_STM
 	case BCMLOG_OUTDEV_STM:
 		BCMLOG_HandleCpCrashDumpData_Custom_STM(buf, size);
 		break;
+#endif
 	case BCMLOG_OUTDEV_RNDIS:
 		BCMLOG_klogging_crashdump(buf, size);
 		break;
 	case BCMLOG_OUTDEV_ACM:
 		BCMLOG_Output((unsigned char *)buf, size, 0);
 		break;
+#ifdef CONFIG_BCM_STM
 	case BCMLOG_OUTDEV_CUSTOM:
 		BCMLOG_HandleCpCrashDumpData_Custom_STM(buf, size);
 		break;
+#endif
 	case BCMLOG_OUTDEV_NONE:
 		break;
 	}
@@ -1656,10 +1661,12 @@ void BCMLOG_LogCPCrashDumpString(const char *inLogString)
 			BCMLOG_WriteMTD(kbuf_mtt, mttFrameSize);
 #endif
 			break;
+#ifdef CONFIG_BCM_STM
 		case BCMLOG_OUTDEV_STM:
 			stm_trace_buffer_onchannel(FUSE_LOG_CHANNEL, kbuf_mtt,
 						   mttFrameSize);
 			break;
+#endif
 		case BCMLOG_OUTDEV_RNDIS:
 			BCMLOG_klogging_crashdump(kbuf_mtt, mttFrameSize);
 			break;

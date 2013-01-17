@@ -1389,7 +1389,9 @@ static void hawaii_add_pdata(void)
 {
 	hawaii_ssp0_device.dev.platform_data = &hawaii_ssp0_info;
 	hawaii_ssp1_device.dev.platform_data = &hawaii_ssp1_info;
+#ifdef CONFIG_BCM_STM
 	hawaii_stm_device.dev.platform_data = &hawaii_stm_pdata;
+#endif
 	hawaii_headset_device.dev.platform_data = &hawaii_headset_data;
 	hawaii_pl330_dmac_device.dev.platform_data = &hawaii_pl330_pdata;
 	hawaii_backlight_device.dev.platform_data = &hawaii_backlight_data;
