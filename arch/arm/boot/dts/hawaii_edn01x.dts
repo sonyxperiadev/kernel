@@ -99,6 +99,11 @@
 			dir = <6>;		/*AMI_DIR*/
 			polarity = <2>;		/*AMI_POLARITY*/
 		};
+
+		bmp18x@77 {
+			compatible = "bcm,bmp18x";
+			reg = <0x77>;
+		};
 	};
 
 	i2c3: i2c@3e01c000 {

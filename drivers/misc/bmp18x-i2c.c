@@ -25,6 +25,10 @@
 #include <linux/input.h>
 #include "linux/bmp18x.h"
 
+#include <linux/of.h>
+#include <linux/of_fdt.h>
+#include <linux/of_platform.h>
+
 #ifdef CONFIG_ARCH_KONA
 #include <linux/regulator/consumer.h>
 static struct regulator *regulator;
@@ -221,6 +225,12 @@ static const struct i2c_device_id bmp18x_id[] = {
 };
 MODULE_DEVICE_TABLE(i2c, bmp18x_id);
 
+static const struct of_device_id bmp18x_of_match[] = {
+	{ .compatible = "bcm,bmp18x", },
+	{},
+}
+MODULE_DEVICE_TABLE(of, bmp18x_of_match);
+
 static struct i2c_driver bmp18x_i2c_driver =
 {
 	.driver =
@@ -229,6 +239,7 @@ static struct i2c_driver bmp18x_i2c_driver =
 		.name	= BMP18X_NAME,
 #ifdef CONFIG_PM
 		.pm	= &bmp18x_i2c_pm_ops,
+		.of_match_table = bmp18x_of_match,
 #endif
 	},
 	.id_table	= bmp18x_id,
