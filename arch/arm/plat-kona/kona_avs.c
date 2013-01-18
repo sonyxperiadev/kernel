@@ -530,7 +530,7 @@ static int __init kona_avs_drv_init(void)
 	return platform_driver_register(&kona_avs_driver);
 }
 
-subsys_initcall_sync(kona_avs_drv_init);
+core_initcall(kona_avs_drv_init);
 
 static void __exit kona_avs_drv_exit(void)
 {

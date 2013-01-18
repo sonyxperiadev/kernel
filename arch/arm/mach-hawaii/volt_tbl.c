@@ -22,6 +22,11 @@
 #define ARRAY_LIST(...) {__VA_ARGS__}
 
 #define MSR_RETN_ID				0x1
+#define MSR_RETN_ID_SS				0x2
+#define MSR_RETN_ID_TS				0x2
+#define MSR_RETN_ID_TT				0x1
+#define MSR_RETN_ID_TF				0x1
+#define MSR_RETN_ID_FF				0x1
 
 #define CSR_ECO_ID_1G_SS			0xB
 #define CSR_NM_ID_1G_SS				0xB
@@ -341,4 +346,35 @@ const u8 *get_sr_vlt_table(u32 silicon_type, int freq_id, void *param)
 	}
 #endif
 	return vlt_table;
+}
+
+u8 get_retention_vlt_id(u32 vlt_domain, u32 silicon_type)
+{
+	u8 ret_vlt;
+
+#ifdef CONFIG_KONA_AVS
+	if (vlt_domain == AVS_VDDVAR_A9 || vlt_domain == AVS_VDDFIX)
+		BUG();
+	switch (silicon_type) {
+	case SILICON_TYPE_SLOW:
+		ret_vlt = MSR_RETN_ID_SS;
+		break;
+	case SILICON_TYPE_TYP_SLOW:
+		ret_vlt = MSR_RETN_ID_TS;
+		break;
+	case SILICON_TYPE_TYPICAL:
+		ret_vlt = MSR_RETN_ID_TT;
+		break;
+	case SILICON_TYPE_TYP_FAST:
+		ret_vlt = MSR_RETN_ID_TF;
+		break;
+	case SILICON_TYPE_FAST:
+		ret_vlt = MSR_RETN_ID_FF;
+		break;
+	default:
+		BUG();
+	}
+	return ret_vlt;
+#endif
+	return MSR_RETN_ID_SS;
 }

@@ -143,8 +143,12 @@ static struct bcmpmu59xxx_rw_data register_init_data[] = {
 
 	/* MMSR LPM voltage - 0.88V */
 	{.addr = PMU_REG_MMSRVOUT2 , .val = 0x4, .mask = 0x3F},
+	/* SDSR1 NM1 voltage - 1.2V */
+	{.addr = PMU_REG_SDSR1VOUT1 , .val = 0x24, .mask = 0x3F},
 	/* SDSR1 LPM voltage - 0.9V */
 	{.addr = PMU_REG_SDSR1VOUT2 , .val = 0x6, .mask = 0x3F},
+	/* SDSR2 NM1 voltage - 1.24 */
+	{.addr = PMU_REG_SDSR2VOUT1 , .val = 0x28, .mask = 0x3F},
 	/* SDSR2 LPM voltage - 1.24V */
 	{.addr = PMU_REG_SDSR2VOUT2 , .val = 0x28, .mask = 0x3F},
 	/* IOSR1 LPM voltage - 1.8V */
@@ -1272,7 +1276,16 @@ void bcmpmu_set_pullup_reg(void)
 
 static int bcmpmu_init_platform_hw(struct bcmpmu59xxx *bcmpmu)
 {
-	pr_info("REG: pmu_exit_platform_hw called\n");
+	u32 silicon_type;
+	u8 ret_vlt;
+
+	pr_info("REG: pmu_init_platform_hw called\n");
+	BUG_ON(!bcmpmu);
+#ifdef CONFIG_KONA_AVS
+	silicon_type = kona_avs_get_silicon_type();
+	ret_vlt = get_retention_vlt_id(AVS_VDDVAR, silicon_type);
+	bcmpmu->write_dev(bcmpmu, PMU_REG_MMSRVOUT2, ret_vlt);
+#endif
 	return 0;
 }
 

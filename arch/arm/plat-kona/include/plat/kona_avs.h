@@ -44,6 +44,12 @@ enum {
 	AVS_VDDFIX_ADJ_EN = 1 << 1,
 };
 
+enum {
+	AVS_VDDVAR_A9 = 1,
+	AVS_VDDVAR = 1 << 1,
+	AVS_VDDFIX = 1 << 2,
+};
+
 struct kona_ate_lut_entry {
 	int freq;
 	int silicon_type;

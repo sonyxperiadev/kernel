@@ -642,6 +642,7 @@ static int __devinit bcmpmu59xxx_probe(struct platform_device *pdev)
 {
 	int ret = 0, size, i;
 	struct bcmpmu59xxx *bcmpmu = pdev->dev.platform_data;
+	struct bcmpmu59xxx_platform_data *pdata = bcmpmu->pdata;
 	struct mfd_cell *pmucells ;
 
 	pr_pmucore(INIT, " <%s>\n", __func__);
@@ -652,6 +653,9 @@ static int __devinit bcmpmu59xxx_probe(struct platform_device *pdev)
 		goto err;
 	}
 	bcmpmu_register_init(bcmpmu);
+
+	if (pdata->init)
+		pdata->init(bcmpmu);
 
 #ifdef CONFIG_DEBUG_FS
 	bcmpmu59xxx_debug_init(bcmpmu);
