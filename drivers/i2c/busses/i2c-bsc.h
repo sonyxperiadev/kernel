@@ -23,7 +23,7 @@
  *working - This has to be done as a part of adding the changes in the B0
  *specific RDB to the A0 RDB
  */
-#if defined(CONFIG_ARCH_RHEA_BX) || defined(CONFIG_ARCH_HAWAII)
+#if defined(CONFIG_ARCH_RHEA_BX) || defined(CONFIG_ARCH_HAWAII) || defined(CONFIG_ARCH_JAVA)
 #define I2C_MM_HS_CS_CMD_CMD_GEN_START          I2C_MM_HS_CS_CMD_CMD_START_RESTART
 #define I2C_MM_HS_CS_EN_CMD_RST_BSC             I2C_MM_HS_CS_EN_CMD_RESET_BSC
 #define I2C_MM_HS_TIM_PRESCALE_CMD_NODIV        I2C_MM_HS_TIM_PRESCALE_CMD_DIV1

@@ -190,6 +190,7 @@ machine-$(CONFIG_ARCH_PXA)		:= pxa
 machine-$(CONFIG_ARCH_REALVIEW)		:= realview
 machine-$(CONFIG_ARCH_RHEA)             := rhea
 machine-$(CONFIG_ARCH_HAWAII)           := hawaii
+machine-$(CONFIG_ARCH_JAVA)		:= java
 machine-$(CONFIG_ARCH_RPC)		:= rpc
 machine-$(CONFIG_ARCH_S3C24XX)		:= s3c24xx s3c2412 s3c2440
 machine-$(CONFIG_ARCH_S3C64XX)		:= s3c64xx
@@ -301,6 +302,10 @@ ifeq ($(CONFIG_ARCH_HAWAII),y)
 	ln -fsn $(srctree)/arch/arm/mach-hawaii/include/mach/rdb_A0 $(srctree)/arch/arm/mach-hawaii/include/mach/rdb
 endif
 
+ifeq ($(CONFIG_ARCH_JAVA),y)
+	$(Q)echo "Creating rdb link for Java"; \
+	ln -fsn $(srctree)/arch/arm/mach-java/include/mach/rdb_A0 $(srctree)/arch/arm/mach-java/include/mach/rdb
+endif
 
 # Convert bzImage to zImage
 bzImage: zImage
@@ -330,6 +335,13 @@ ifeq ($(CONFIG_ARCH_HAWAII),y)
 	$(Q)echo "Removing rdb link for Hawaii"; \
 	if test -e $(srctree)/arch/arm/mach-hawaii/include/mach/rdb; then \
 		rm $(srctree)/arch/arm/mach-hawaii/include/mach/rdb; \
+	fi;
+endif
+
+ifeq ($(CONFIG_ARCH_JAVA),y)
+	$(Q)echo "Removing rdb link for Hawaii"; \
+	if test -e $(srctree)/arch/arm/mach-java/include/mach/rdb; then \
+		rm $(srctree)/arch/arm/mach-java/include/mach/rdb; \
 	fi;
 endif
 

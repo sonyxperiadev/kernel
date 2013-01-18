@@ -25,6 +25,7 @@
 #include <linux/io.h>
 #include <plat/kona_pm_dbg.h>
 #include <plat/kona_pm.h>
+#include <mach/rdb/brcm_rdb_scu.h>
 #include <plat/pwr_mgr.h>
 #include <plat/pi_mgr.h>
 #include <plat/scu.h>

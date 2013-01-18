@@ -12,7 +12,8 @@
 # consent.
 #*****************************************************************************
 
-obj-y := irq.o kona_timer.o timer.o profile_timer.o pinmux.o sysfs.o scu.o kona_mic_bias.o ns_ioremap.o
+obj-y := irq.o kona_timer.o timer.o pinmux.o sysfs.o kona_mic_bias.o ns_ioremap.o
+obj-$(CONFIG_ARCH_HAWAII) += scu.o profile_timer.o
 obj-$(CONFIG_SMP) += headsmp.o platsmp.o
 obj-$(CONFIG_HOTPLUG_CPU)  += hotplug.o
 obj-$(CONFIG_ARCH_REQUIRE_GPIOLIB)  += gpio.o
@@ -35,6 +36,8 @@ obj-$(CONFIG_MACH_RHEA_BERRI_EDN40) += chal/
 obj-$(CONFIG_MACH_RHEALC_BERRI) += chal/
 obj-$(CONFIG_ARCH_HAWAII) += chal/
 obj-$(CONFIG_ARCH_HAWAII) += csl/
+obj-$(CONFIG_ARCH_JAVA) += chal/
+obj-$(CONFIG_ARCH_JAVA) += csl/
 obj-$(CONFIG_MACH_RHEA_RAY) += csl/
 obj-$(CONFIG_MACH_RHEA_FARADAY_EB10) += csl/
 obj-$(CONFIG_MACH_RHEA_RAY_EDN1X) += csl/

@@ -14,7 +14,7 @@
 #include <linux/err.h>
 #include <linux/spinlock.h>
 #include <plat/scu.h>
-
+#include <mach/rdb/brcm_rdb_scu.h>
 
 static void __iomem *scu_base;
 static DEFINE_SPINLOCK(scu_lock);

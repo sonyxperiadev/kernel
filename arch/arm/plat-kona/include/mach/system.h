@@ -28,7 +28,12 @@
 
 #include <linux/io.h>
 #include <mach/io_map.h>
+#if defined(CONFIG_ARCH_HAWAII)
 #include <mach/rdb/brcm_rdb_gicdist.h>
+#endif
+#if defined(CONFIG_ARCH_JAVA)
+#include <mach/rdb/brcm_rdb_gic.h>
+#endif
 #if defined(CONFIG_ARCH_ISLAND)
 #include <mach/rdb/brcm_rdb_iroot_rst_mgr_reg.h>
 #else
@@ -59,7 +64,12 @@ static void kona_reset(char mode, const char *cmd)
 	/*
 	 * Disable GIC interrupt distribution.
 	 */
+#if defined(CONFIG_ARCH_HAWAII)
 	__raw_writel(0, KONA_GICDIST_VA + GICDIST_ENABLE_S_OFFSET);
+#endif
+#if defined(CONFIG_ARCH_JAVA)
+	__raw_writel(0, KONA_GICDIST_VA + GIC_GICD_CTLR_OFFSET);
+#endif
 
 #if defined(CONFIG_ARCH_ISLAND)
 	/* enable reset register access */

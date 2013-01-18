@@ -30,6 +30,12 @@ config ARCH_HAWAII
 	help
 	  Support for the Broadcom Hawaii Soc platform.
 
+config ARCH_JAVA
+	bool "Broadcom Hawaii Soc"
+	select HAVE_SMP
+	select HAVE_PWM
+	help
+	  Support for the Broadcom Java Soc platform.
 endchoice
 
 source "arch/arm/plat-kona/Kconfig.common"
@@ -42,7 +48,7 @@ config GP_TIMER_CLOCK_OFF_FIX
 
 config GP_TIMER_COMPARATOR_LOAD_DELAY
         bool "Enable the delay after loading general purpose timer compare register"
-        depends on ARCH_RHEA || ARCH_ISLAND || ARCH_HAWAII
+        depends on ARCH_RHEA || ARCH_ISLAND || ARCH_HAWAII || ARCH_JAVA
         default y
 
 config KONA_DCACHE_INVALIDATION
@@ -71,7 +77,7 @@ config BCM_STM
 
 config DMAC_PL330
 	bool "PL330 DMAC driver support for Kona architecture"
-	depends on ARCH_RHEA || ARCH_HAWAII
+	depends on ARCH_RHEA || ARCH_HAWAII || ARCH_JAVA
 	select PL330
 	select ARM_PL330_FIX_ERRATA_716336
 	help
@@ -220,7 +226,7 @@ config KONA_PWRMGR_REV2
 
 config KONA_PMU_BSC_USE_PMGR_HW_SEM
 	bool "use HW sem to sync i2c between sw & sequencer"
-	depends on (ARCH_RHEA || ARCH_HAWAII) && KONA_POWER_MGR
+	depends on (ARCH_RHEA || ARCH_HAWAII || ARCH_JAVA) && KONA_POWER_MGR
 	default y
 	help
 	  The HW sequencer can generate i2c transcations on the PMU i2c
@@ -322,7 +328,7 @@ config KONA_KEYPAD
 	tristate
 config BRCM_UART_CHANGES
 	bool "Enable the Uart 8250.c changes"
-	depends on ARCH_RHEA || ARCH_HAWAII
+	depends on ARCH_RHEA || ARCH_HAWAII || ARCH_JAVA
 	default y
 	help
 	  Say Y if you want to enable BRCM UART changes in 8250.c file

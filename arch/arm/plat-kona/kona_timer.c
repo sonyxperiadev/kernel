@@ -38,7 +38,8 @@
 #include <mach/rdb/brcm_rdb_kona_gptimer.h>
 #include <mach/rdb/brcm_rdb_khubaon_clk_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_chipreg.h>
-#if defined(CONFIG_ARCH_RHEA) || defined(CONFIG_ARCH_CAPRI) ||  defined(CONFIG_ARCH_HAWAII)
+#if defined(CONFIG_ARCH_RHEA) || defined(CONFIG_ARCH_CAPRI) ||  \
+	defined(CONFIG_ARCH_HAWAII) || defined(CONFIG_ARCH_JAVA)
 #include <mach/rdb/brcm_rdb_kps_clk_mgr_reg.h>
 #ifdef CONFIG_GP_TIMER_CLOCK_OFF_FIX
 #include <mach/rdb/brcm_rdb_root_clk_mgr_reg.h>
@@ -228,7 +229,8 @@ int kona_timer_module_set_rate(char *name, unsigned int rate)
 			ret = __config_aon_hub_timer_clock(rate);
 	}
 
-#if defined(CONFIG_ARCH_RHEA) || defined(CONFIG_ARCH_HAWAII)
+#if defined(CONFIG_ARCH_RHEA) || defined(CONFIG_ARCH_HAWAII) || \
+					defined(CONFIG_ARCH_JAVA)
 	/* Configure KONA Timer count in 32 bit mode */
 	writel(reg, KONA_CHIPREG_VA + CHIPREG_HUB_TIMER_WIDTH_OFFSET);
 #else
@@ -813,7 +815,8 @@ More explanations in plat-kona/include/mach/timex.h*/
 		return -1;
 
 	/* Adjust clock source to 1Mhz */
-#if defined(CONFIG_ARCH_RHEA) || defined(CONFIG_ARCH_CAPRI) || defined(CONFIG_ARCH_HAWAII)
+#if defined(CONFIG_ARCH_RHEA) || defined(CONFIG_ARCH_CAPRI) || \
+		defined(CONFIG_ARCH_HAWAII) || defined(CONFIG_ARCH_JAVA)
 	/* unlock slave clock manager */
 	val = readl(slaveClockMgr_regs + KPS_CLK_MGR_REG_WR_ACCESS_OFFSET);
 	old_enable = val & 0x1;

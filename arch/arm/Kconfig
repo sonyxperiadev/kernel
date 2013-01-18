@@ -1073,7 +1073,6 @@ source "arch/arm/mach-ixp23xx/Kconfig"
 
 source "arch/arm/mach-kirkwood/Kconfig"
 
-
 source "arch/arm/mach-ks8695/Kconfig"
 
 source "arch/arm/mach-lpc32xx/Kconfig"
@@ -1098,6 +1097,7 @@ source "arch/arm/mach-omap1/Kconfig"
 source "arch/arm/mach-omap2/Kconfig"
 
 source "arch/arm/mach-hawaii/Kconfig"
+source "arch/arm/mach-java/Kconfig"
 source "arch/arm/plat-kona/Kconfig"
 source "arch/arm/mach-rhea/Kconfig"
 

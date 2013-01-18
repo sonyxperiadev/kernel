@@ -18,7 +18,9 @@
 #ifndef __SCU_H__
 #define __SCU_H__
 
+#ifdef CONFIG_MACH_HAWAII
 #include <mach/rdb/brcm_rdb_scu.h>
+#endif
 
 enum {
 	SCU_STATUS_NORMAL = 0,

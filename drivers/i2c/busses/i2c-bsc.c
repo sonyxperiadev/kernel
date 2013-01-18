@@ -1997,7 +1997,7 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 	if (hw_cfg && !hw_cfg->is_pmu_i2c &&
 #if defined(CONFIG_ARCH_RHEA)
 		get_chip_id() >= RHEA_CHIP_ID(RHEA_CHIP_REV_B1)
-#elif defined(CONFIG_ARCH_HAWAII)
+#elif defined(CONFIG_ARCH_HAWAII) || defined(CONFIG_ARCH_JAVA)
 		get_chip_id() >= HAWAII_CHIP_ID(HAWAII_CHIP_REV_A0)
 #else
 #error "unsupported platform"
