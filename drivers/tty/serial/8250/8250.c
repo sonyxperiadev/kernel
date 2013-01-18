@@ -3427,8 +3427,9 @@ int serial8250_register_port(struct uart_port *port)
 {
 	struct uart_8250_port *uart;
 	int ret = -ENOSPC;
+
 #ifdef CONFIG_BRCM_UART_CHANGES
-	struct plat_serial8250_port *p = port->dev->platform_data;
+	struct plat_serial8250_port *p;
 	const char *prop;
 #endif
 
@@ -3444,6 +3445,11 @@ int serial8250_register_port(struct uart_port *port)
 #if defined(CONFIG_HAS_WAKELOCK)
 		wake_lock_init(&uart->uart_lock, WAKE_LOCK_IDLE, "UARTWAKE");
 #endif /* CONFIG_HAS_WAKELOCK */
+		if (!port->dev) {
+			printk(KERN_ERR "port->dev is NULL\n");
+			return -EINVAL;
+		}
+		p = port->dev->platform_data;
 		if (p) {
 			ret = pi_mgr_qos_add_request(&uart->qos_tx_node,
 					(char *)p->clk_name,
