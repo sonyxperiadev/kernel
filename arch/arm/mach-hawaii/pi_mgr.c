@@ -71,12 +71,10 @@ struct opp_info __arm_opp_info[] = {
 	[1] = {
 		.freq_id = PROC_CCU_FREQ_ID_NRML,
 		.opp_id = PI_OPP_NORMAL,
-		.ctrl_prms = A9_NORMAL_FREQ,
 	},
 	[2] = {
 		.freq_id = PROC_CCU_FREQ_ID_TURBO,
 		.opp_id = PI_OPP_TURBO,
-		.ctrl_prms = A9_TURBO_FREQ,
 	},
 	[3] = {
 		.freq_id = PROC_CCU_FREQ_ID_SUPER_TURBO,
@@ -652,6 +650,12 @@ u32 get_opp_from_name(char *name)
 		if (strnicmp(opp_names[i], name, strlen(opp_names[i])) == 0)
 			return i;
 	return -EINVAL;
+}
+
+void pi_mgr_update_arm_opp_info(u32 vco_rate)
+{
+	arm_opp.opp_info[0][1].ctrl_prms = vco_rate/A9_FREQ_NORMAL_DIV;
+	arm_opp.opp_info[0][2].ctrl_prms = vco_rate/A9_FREQ_TURBO_DIV;
 }
 
 void __init hawaii_pi_mgr_init()

@@ -222,6 +222,11 @@ int mach_config_a9_pll(int turbo_val, int update_volt_tbl)
 	pm_init_pmu_sr_vlt_map_table(silicon_type, freq_id);
 #endif
 	}
-	clk_set_rate(clk, vco_rate);
+	ret = clk_set_rate(clk, vco_rate);
+	if (ret) {
+		pr_err("%s: Unable to set a9_pll rate\n", __func__);
+		return ret;
+	}
+	pi_mgr_update_arm_opp_info(vco_rate);
 	return switch_a9_pll(PROC_CCU_FREQ_ID_SUPER_TURBO, PM_WKP);
 }

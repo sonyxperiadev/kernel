@@ -35,9 +35,6 @@
 #define VLT_ID_A9_SUPER_TURBO		0xE
 #define VLT_ID_OTHER_SUPER_TURBO	0xF
 
-#define A9_NORMAL_FREQ	FREQ_MHZ(500)
-#define A9_TURBO_FREQ	666666667
-
 #define INIT_A9_VLT_TABLE(ECO, NM, TURBO, STURBO) \
 				[VLT_ID_A9_ECO] = ECO, \
 				[VLT_ID_A9_NORMAL] = NM, \
@@ -61,6 +58,9 @@
 				[0x5] =		init_val, \
 				[0x6] =		init_val, \
 				[0x7] =		init_val
+
+#define A9_FREQ_NORMAL_DIV	4
+#define A9_FREQ_TURBO_DIV	3
 
 #define PROC_CCU_FREQ_ID_ECO		4
 #define PROC_CCU_FREQ_ID_NRML		6
