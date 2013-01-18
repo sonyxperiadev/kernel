@@ -888,15 +888,6 @@ static struct i2c_board_info __initdata i2c_bmp18x_info[] = {
 };
 #endif
 
-#if defined(CONFIG_AMI306) || defined(CONFIG_AMI306_MODULE)
-static struct ami306_platform_data ami306_data = AMI306_DATA;
-static struct i2c_board_info __initdata i2c_ami306_info[] = {
-	{
-	 I2C_BOARD_INFO(AMI_DRV_NAME, AMI_I2C_ADDRESS),
-	 .platform_data = &ami306_data,
-	 },
-};
-#endif
 #if defined(CONFIG_SENSORS_KIONIX_KXTIK) \
 	|| defined(CONFIG_SENSORS_KIONIX_KXTIK_MODULE)
 #define KXTIK_DEVICE_MAP    2
@@ -1410,17 +1401,6 @@ static void __init hawaii_add_i2c_devices(void)
 #endif
 				       i2c_bmp18x_info,
 				       ARRAY_SIZE(i2c_bmp18x_info));
-#endif
-
-#if  defined(CONFIG_AMI306) || defined(CONFIG_AMI306)
-	i2c_register_board_info(
-#ifdef AMI306_I2C_BUS_ID
-				       AMI306_I2C_BUS_ID,
-#else
-				       -1,
-#endif
-				       i2c_ami306_info,
-				       ARRAY_SIZE(i2c_ami306_info));
 #endif
 
 }

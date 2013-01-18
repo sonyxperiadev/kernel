@@ -40,6 +40,10 @@
 #include "linux/ami_sensor.h"
 #include "linux/ami_sensor_pif.h"
 
+#include <linux/of.h>
+#include <linux/of_fdt.h>
+#include <linux/of_platform.h>
+
 #ifdef CONFIG_ARCH_KONA
 #include <linux/regulator/consumer.h>
 #endif
@@ -627,8 +631,38 @@ static int __devinit ami_probe(struct i2c_client *client,
 		return -ENOMEM;
 	}
 
+	if (client->dev.platform_data)
+		pdata = (struct ami306_platform_data *)
+		client->dev.platform_data;
 
-	pdata = (struct ami306_platform_data *)client->dev.platform_data;
+	else if (client->dev.of_node) {
+		struct device_node *np = client->dev.of_node;
+		u32 val;
+
+		pdata = kzalloc(sizeof(struct ami306_platform_data),
+			GFP_KERNEL);
+		if (!pdata)
+			return -ENOMEM;
+
+		if (of_property_read_u32(np, "gpio-intr", &val))
+			goto err_read;
+		pdata->gpio_intr = val;
+
+		if (of_property_read_u32(np, "gpio-drdy", &val))
+			goto err_read;
+		pdata->gpio_drdy = val;
+
+		if (of_property_read_u32(np, "dir", &val))
+			goto err_read;
+		pdata->dir = val;
+
+		if (of_property_read_u32(np, "polarity", &val))
+			goto err_read;
+		pdata->polarity = val;
+
+		client->dev.platform_data = pdata;
+	}
+
 	if (!pdata) {
 		printk("ami_probe: missing platform data info\n");
 	}
@@ -792,6 +826,9 @@ err_misc_deregister:
 err_free_pdev:
 	kfree(pdev);
 	i2c_set_clientdata(client, NULL);
+err_read:
+	if (client->dev.of_node)
+		kfree(pdata);
 	return res;
 }
 
@@ -799,6 +836,9 @@ err_free_pdev:
 static int __devexit ami_remove(struct i2c_client *client)
 {
 	struct ami306_dev_data *pdata = i2c_get_clientdata(client);
+	struct ami306_platform_data  *pltdata =
+		(struct ami306_platform_data *)client->dev.platform_data;
+
 	int ret = 0;
 
 	AMI_LOG("%s %s %s", AMI_DRV_NAME, __func__, "start");
@@ -820,6 +860,8 @@ static int __devexit ami_remove(struct i2c_client *client)
 
 	sysfs_remove_group(&client->dev.kobj, &ami_attr_group);
 	misc_deregister(&pdata->dev);
+	if (client->dev.of_node)
+		kfree(pltdata);
 	kfree(pdata);
 	i2c_set_clientdata(client, NULL);
 	if (k_mem) {
@@ -878,11 +920,19 @@ static const struct i2c_device_id ami_idtable[] = {
 };
 
 /*---------------------------------------------------------------------------*/
+static const struct of_device_id ami_of_match[] = {
+	{ .compatible = "bcm,ami_sensor", },
+	{},
+}
+
+MODULE_DEVICE_TABLE(of, ami_of_match);
+
 static struct i2c_driver ami_i2c_driver = {
 	.driver = {
 		.name = AMI_DRV_NAME,
 #if defined(CONFIG_PM) && defined(CONFIG_ARCH_KONA)
 		.pm	= &ami306_pm_ops,
+		.of_match_table = ami_of_match,
 #endif
 	},
 	.probe = ami_probe,
