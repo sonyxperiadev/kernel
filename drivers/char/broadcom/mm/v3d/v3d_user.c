@@ -172,6 +172,8 @@ int v3d_user_init(MM_CORE_HW_IFC *core_param)
 	core_param->mm_init = v3d_user_reset;
 	core_param->mm_deinit = v3d_user_reset;
 	core_param->mm_abort = v3d_user_abort;
+	core_param->mm_version_init = NULL;
+	core_param->mm_update_virt_addr = v3d_user_update_virt;
 	core_param->mm_get_regs = NULL;
 	core_param->mm_device_id = (void *)v3d_user_device;
 	core_param->mm_virt_addr = NULL;

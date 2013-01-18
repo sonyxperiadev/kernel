@@ -15,7 +15,6 @@ the GPL, without Broadcom's express prior written consent.
 
 #include "mm_core.h"
 
-
 void dev_timer_callback(unsigned long data)
 {
 	struct mm_core *core_dev = (struct mm_core *)data;
@@ -89,7 +88,6 @@ static void mm_core_disable_clock(struct mm_core *core_dev)
 		/* Release interrupt */
 		if (hw_ifc->mm_irq)
 			free_irq(hw_ifc->mm_irq, core_dev);
-
 		hw_ifc->mm_deinit(hw_ifc->mm_device_id);
 		core_dev->mm_core_is_on = false;
 		pr_debug("dev turned off ");
@@ -222,8 +220,15 @@ void *mm_core_init(struct mm_common *mm_common, \
 		/* core_params is known to device, device can make use of KVA */
 		core_params->mm_virt_addr = (void *)core_dev->dev_base;
 		}
-
+	core_params->mm_update_virt_addr(core_params->mm_virt_addr);
 	core_dev->mm_device = *core_params;
+	if (core_params->mm_version_init != NULL) {
+		mm_core_enable_clock(core_dev);
+		core_params->mm_version_init(core_params->mm_device_id,
+					     core_params->mm_virt_addr,
+					     &mm_common->version_info);
+		mm_core_disable_clock(core_dev);
+	}
 
 	return core_dev;
 

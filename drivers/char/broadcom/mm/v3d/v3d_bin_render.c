@@ -273,8 +273,6 @@ mm_job_status_e v3d_bin_render_start_job(void *device_id, mm_job_post_t *job, un
 				v3d_write(id, V3D_CT1CA_OFFSET, job_params->v3d_ct1ca);
 				v3d_write(id, V3D_CT1EA_OFFSET, job_params->v3d_ct1ea);
 				pr_debug("v3d_ct0ca = %x, v3d_ct0ea = %x, v3d_ct1ca = %x, v3d_ct1ea = %x", job_params->v3d_ct0ca, job_params->v3d_ct0ea, job_params->v3d_ct1ca, job_params->v3d_ct1ea);
-				v3d_write(id, V3D_BPOA_OFFSET, id->mem_block->v3d_bin_oom_block);
-				v3d_write(id, V3D_BPOS_OFFSET, id->mem_block->v3d_bin_oom_size);
 				pr_debug("supply boom from v3d_start_job %x %x\n",
 					id->mem_block->v3d_bin_oom_block,
 					id->mem_block->v3d_bin_oom_size);
@@ -319,6 +317,43 @@ void v3d_bin_render_deinit()
 #endif
 	kfree(v3d_device);
 }
+
+static inline unsigned int extract(unsigned int reg,
+				   unsigned int ms,
+				   unsigned int ls)
+{
+	return (reg & (0xFFFFFFFF >> (31 - ms)) & (0xFFFFFFFF << ls)) >> ls;
+}
+
+int v3d_bin_render_version_init(void *device_id, void *vaddr,
+			mm_version_info_t *version_info)
+{
+	uint32_t V3D_IDENT1, V3D_IDENT2;
+	v3d_bin_render_device_t *id = (v3d_bin_render_device_t *)device_id;
+	version_info->size = sizeof(struct v3d_version_info_t);
+	version_info->version_info_ptr =
+			kzalloc(sizeof(struct v3d_version_info_t), GFP_KERNEL);
+	struct v3d_version_info_t *vinfo =
+		(struct v3d_version_info_t *)version_info->version_info_ptr;
+	vinfo->v3d_technology_version =
+			mm_read_reg(vaddr, V3D_IDENT0_OFFSET) >> 24;
+	V3D_IDENT1 = mm_read_reg(vaddr, V3D_IDENT1_OFFSET);
+	vinfo->vpm_size = extract(V3D_IDENT1, 31, 28);
+	vinfo->hdr_support = extract(V3D_IDENT1, 27, 24);
+	vinfo->nsem = extract(V3D_IDENT1, 23, 16);
+	vinfo->tpus = extract(V3D_IDENT1, 15, 12);
+	vinfo->qpus = extract(V3D_IDENT1, 11, 8);
+	vinfo->nslc = extract(V3D_IDENT1, 7, 4);
+	vinfo->rev = extract(V3D_IDENT1, 3, 0);
+	V3D_IDENT2 = mm_read_reg(vaddr, V3D_IDENT2_OFFSET);
+	vinfo->tlbdb = extract(V3D_IDENT2, 11, 8);
+	vinfo->tlbsz = TLB_QUARTER_BUFFER_SIZE + extract(V3D_IDENT2, 7, 4);
+	vinfo->vrisz = VRI_HALF_SIZE + extract(V3D_IDENT2, 3, 0);
+	vinfo->bin_mem_addr = id->mem_block->v3d_bin_oom_block;
+	vinfo->bin_mem_size = V3D_BIN_OOM_SIZE;
+	return 0;
+}
+
 
 int v3d_bin_render_init(MM_CORE_HW_IFC *core_param)
 {
@@ -365,6 +400,8 @@ int v3d_bin_render_init(MM_CORE_HW_IFC *core_param)
 	core_param->mm_get_regs = NULL;
 	core_param->mm_device_id = (void *)v3d_device;
 	core_param->mm_virt_addr = NULL;
+	core_param->mm_version_init = v3d_bin_render_version_init;
+	core_param->mm_update_virt_addr = v3d_bin_render_update_virt;
 	job_va = (unsigned int *)dma_alloc_coherent(NULL, 32, &job_pa, GFP_DMA);
 	pr_err("v3d_init job va = %x job pa = %x", job_va, job_pa);
 	return ret;

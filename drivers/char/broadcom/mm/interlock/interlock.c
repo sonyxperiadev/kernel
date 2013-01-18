@@ -70,6 +70,8 @@ mm_job_status_e interlock_start_job(void *device_id, mm_job_post_t *job,
 }
 static struct interlock_device_t *interlock_device;
 
+static int interlock_virt_addr_update(void *vaddr) {}
+
 int __init interlock_init(void)
 {
 	int ret = 0;
@@ -94,6 +96,8 @@ int __init interlock_init(void)
 	core_param.mm_deinit = interlock_reset;
 	core_param.mm_abort = interlock_abort;
 	core_param.mm_get_regs = interlock_get_regs;
+	core_param.mm_update_virt_addr = interlock_virt_addr_update;
+	core_param.mm_version_init = NULL;
 	core_param.mm_device_id = (void *)interlock_device;
 	core_param.mm_virt_addr = NULL;
 

@@ -661,6 +661,20 @@ static long mm_file_ioctl(struct file *filp, \
 			}
 		}
 		break;
+	case MM_IOCTL_VERSION_REQ:
+		if (common->version_info.version_info_ptr != NULL) {
+			mm_version_info_t *user_virsion_info =
+					(mm_version_info_t *)arg;
+			if (user_virsion_info->size <
+					common->version_info.size)
+				ret = -EINVAL;
+			else
+				ret = copy_to_user(
+					user_virsion_info->version_info_ptr,
+					common->version_info.version_info_ptr,
+					common->version_info.size);
+		}
+	break;
 	default:
 		pr_err("cmd[0x%08x] not supported", cmd);
 		ret = -EINVAL;

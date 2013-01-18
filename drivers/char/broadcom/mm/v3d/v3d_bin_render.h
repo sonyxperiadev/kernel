@@ -22,4 +22,31 @@ typedef struct {
 	uint32_t v3d_ct1ea;
 } v3d_job_t;
 
+enum tlb_buffer_size_t {
+	TLB_QUARTER_BUFFER_SIZE,
+	TLB_HALF_SIZE,
+	TLB_FULL_SIZE,
+};
+
+enum vri_memory_size_t {
+	VRI_HALF_SIZE,
+	VRI_FULL_SIZE,
+};
+
+struct v3d_version_info_t {
+	int v3d_technology_version;
+	int vpm_size;			/*In the multiples of 1K*/
+	bool hdr_support;		/*True if HDR rendering is supported*/
+	int nsem;			/*Number of semaphores*/
+	int tpus;			/*Number of TMUs per slice*/
+	int qpus;			/*Number of QPU's per slice*/
+	int nslc;			/*Number of slices*/
+	int rev;			/*V3D revision*/
+	bool tlbdb;			/*TLB double buffer mode support*/
+	enum tlb_buffer_size_t tlbsz;	/*Tile buffer size*/
+	enum vri_memory_size_t vrisz;	/*VRI memory size*/
+	uint32_t bin_mem_addr;		/*Physical address of binning memory*/
+	uint32_t bin_mem_size;/*Size of the allocated memory for tile binning*/
+};
+
 #endif

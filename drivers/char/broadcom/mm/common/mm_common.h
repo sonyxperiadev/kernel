@@ -42,6 +42,8 @@ struct mm_common {
 	struct workqueue_struct *single_wq;
 	char *mm_name;
 
+	mm_version_info_t version_info;
+
 	/*HW status*/
 	unsigned int mm_hw_is_on;
 	struct clk *common_clk;

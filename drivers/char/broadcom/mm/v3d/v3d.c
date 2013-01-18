@@ -25,7 +25,6 @@ the GPL, without Broadcom's express prior written consent.
 
 typedef struct {
 	void	*fmwk_handle;
-	void	(*subdev_update_virt[V3D_SUBDEV_COUNT])(void *virt);
 	int		(*subdev_init[V3D_SUBDEV_COUNT])(MM_CORE_HW_IFC * core_param);
 	void	(*subdev_deinit[V3D_SUBDEV_COUNT])(void);
 } v3d_device_t;
@@ -48,12 +47,9 @@ int __init mm_v3d_init(void)
 		goto err;
 	}
 
-	v3d_device->subdev_update_virt[0] = &v3d_bin_render_update_virt;
-	pr_err("Virt Address : %p", v3d_device->subdev_update_virt[0]);
 	v3d_device->subdev_init[0] = &v3d_bin_render_init;
 	v3d_device->subdev_deinit[0] = &v3d_bin_render_deinit;
 
-	v3d_device->subdev_update_virt[1] = &v3d_user_update_virt;
 	v3d_device->subdev_init[1] = &v3d_user_init;
 	v3d_device->subdev_deinit[1] = &v3d_user_deinit;
 
@@ -88,16 +84,6 @@ int __init mm_v3d_init(void)
 		goto err1;
 	}
 
-	for (i = 0; i < V3D_SUBDEV_COUNT; i++) {
-		if ((core_param[i].mm_virt_addr == NULL)) {
-			ret = -ENOMEM;
-			goto err1;
-		}
-	}
-
-	/*Update the virtual address for sub devices*/
-	for (i = 0; i < V3D_SUBDEV_COUNT; i++)
-		v3d_device->subdev_update_virt[i](core_param[i].mm_virt_addr);
 
 	pr_debug("v3d_init: H264 driver Module Init over");
 	return ret;

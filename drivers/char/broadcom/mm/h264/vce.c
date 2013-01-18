@@ -395,6 +395,8 @@ int h264_vce_init(MM_CORE_HW_IFC *core_param)
 	core_param->mm_deinit = vce_reset;
 	core_param->mm_abort = vce_abort;
 	core_param->mm_get_regs = vce_get_regs;
+	core_param->mm_update_virt_addr = h264_vce_update_virt;
+	core_param->mm_version_init = NULL;
 	core_param->mm_device_id = (void *)vce_device;
 	core_param->mm_virt_addr = NULL;
 

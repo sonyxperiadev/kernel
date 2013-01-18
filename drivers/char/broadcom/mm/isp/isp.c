@@ -573,6 +573,11 @@ static mm_job_status_e isp_start_job(void *id , mm_job_post_t *job,
 
 static struct isp_device_t *isp_device;
 
+static int mm_isp_update_virt_addr(void *vaddr)
+{
+	isp_device->vaddr = vaddr;
+}
+
 int __init mm_isp_init(void)
 {
 	int ret = 0;
@@ -597,6 +602,8 @@ int __init mm_isp_init(void)
 	core_param.mm_deinit = isp_reset;
 	core_param.mm_abort = isp_reset;
 	core_param.mm_get_regs = NULL;
+	core_param.mm_update_virt_addr = mm_isp_update_virt_addr;
+	core_param.mm_version_init = NULL;
 	core_param.mm_device_id = (void *)isp_device;
 	core_param.mm_virt_addr = NULL;
 
@@ -612,8 +619,6 @@ int __init mm_isp_init(void)
 	isp_device->fmwk_handle = mm_fmwk_register(ISP_DEV_NAME,
 					ISP_AXI_BUS_CLK_NAME_STR, 1,
 					&core_param, &dvfs_param, &prof_param);
-	/* get kva from fmwk */
-	isp_device->vaddr = core_param.mm_virt_addr;
 
 	if ((isp_device->fmwk_handle == NULL) ||
 		(isp_device->vaddr == NULL)) {

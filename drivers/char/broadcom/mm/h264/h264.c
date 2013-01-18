@@ -25,7 +25,6 @@ the GPL, without Broadcom's express prior written consent.
 
 struct h264_device_t {
 	void	*fmwk_handle;
-	void	(*subdev_update_virt[H264_SUBDEV_COUNT])(void *virt);
 	int	(*subdev_init[H264_SUBDEV_COUNT])(MM_CORE_HW_IFC * core_param);
 	void	(*subdev_deinit[H264_SUBDEV_COUNT])(void);
 };
@@ -48,19 +47,15 @@ int __init mm_h264_init(void)
 		goto err;
 	}
 
-	h264_device->subdev_update_virt[0] = &cme_update_virt;
 	h264_device->subdev_init[0] = &cme_init;
 	h264_device->subdev_deinit[0] = &cme_deinit;
 
-	h264_device->subdev_update_virt[1] = &mcin_update_virt;
 	h264_device->subdev_init[1] = &mcin_init;
 	h264_device->subdev_deinit[1] = &mcin_deinit;
 
-	h264_device->subdev_update_virt[2] = &cabac_update_virt;
 	h264_device->subdev_init[2] = &cabac_init;
 	h264_device->subdev_deinit[2] = &cabac_deinit;
 
-	h264_device->subdev_update_virt[3] = &h264_vce_update_virt;
 	h264_device->subdev_init[3] = &h264_vce_init;
 	h264_device->subdev_deinit[3] = &h264_vce_deinit;
 
@@ -94,17 +89,6 @@ int __init mm_h264_init(void)
 		ret = -ENOMEM;
 		goto err1;
 	}
-
-	for (i = 0; i < H264_SUBDEV_COUNT; i++) {
-		if ((core_param[i].mm_virt_addr == NULL)) {
-			ret = -ENOMEM;
-			goto err1;
-		}
-	}
-
-	/*Update the virtual address for sub devices*/
-	for (i = 0; i < H264_SUBDEV_COUNT; i++)
-		h264_device->subdev_update_virt[i](core_param[i].mm_virt_addr);
 
 	pr_debug("h264_init: H264 driver Module Init over");
 	return ret;

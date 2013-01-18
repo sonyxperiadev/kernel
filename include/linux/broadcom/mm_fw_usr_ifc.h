@@ -85,7 +85,7 @@ struct MM_JOB_POST_T {
 #define MM_DEV_MAGIC	'M'
 
 enum {
-	MM_CMD_QUERY = 0x80,
+	MM_CMD_GET_VERSION = 0x80,
 	MM_CMD_POST_JOB,
 	MM_CMD_WAIT_JOB,
 	MM_CMD_WAIT_HANDLES,
@@ -104,10 +104,20 @@ struct MM_HANDLE_STATUS_T {
 	uint32_t handles[MAX_HANDLES];
 	mm_job_status_e status[MAX_HANDLES];
 };
+
+struct MM_VERSION_INFO_T {
+	int size;
+	void *version_info_ptr;
+};
+
+#define mm_version_info_t struct MM_VERSION_INFO_T
+
 #define mm_handle_status_t struct MM_HANDLE_STATUS_T
 
 #define MM_IOCTL_POST_JOB     _IOWR(MM_DEV_MAGIC, MM_CMD_POST_JOB, \
 						mm_job_post_t)
+#define MM_IOCTL_VERSION_REQ  _IOWR(MM_DEV_MAGIC, MM_CMD_GET_VERSION, \
+						mm_version_info_t)
 #define MM_IOCTL_WAIT_JOB     _IOWR(MM_DEV_MAGIC, MM_CMD_WAIT_JOB, \
 						mm_job_status_t)
 #define MM_IOCTL_WAIT_HANDLES _IOWR(MM_DEV_MAGIC, MM_CMD_WAIT_HANDLES, \
