@@ -345,8 +345,13 @@ int dhd_check_rdwr_macaddr(struct dhd_info *dhd, dhd_pub_t *dhdp,
 
 	g_imac_flag = MACADDR_NONE;
 
+	/* Replace the nvmac check below since it is
+	 * not used in the MPS reference platforms
 	fp_nvm = filp_open(nvfilepath, O_RDONLY, 0);
-	if (IS_ERR(fp_nvm)) { /* file does not exist */
+	if (IS_ERR(fp_nvm)) {
+	*/
+
+	if (TRUE) { /* file does not exist */
 
 		/* Create the .nvmac.info */
 		fp_nvm = filp_open(nvfilepath, O_RDWR | O_CREAT, 0666);
