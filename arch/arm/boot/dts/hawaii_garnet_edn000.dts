@@ -3,6 +3,7 @@
 /dts-v1/;
 
 /include/ "bcm_21664.dtsi"
+/include/ "hawaii_garnet_bcmpmu_edn000.dtsi"
 
 / {
 	model = "Hawaiigarnet EDN00x";
@@ -18,7 +19,7 @@
 	};
 
 	wd-tapper {
-		count = <120>; /* Time in seconds */
+		count = <300>; /* Time in seconds */
 		ch-num = <1>; /* Kona hub timer Channel number */
 		timer-name = "aon-timer";
 	};
