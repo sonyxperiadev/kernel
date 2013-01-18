@@ -73,8 +73,6 @@ static AudioEnableDoneStatusCB_t AudioEnableDoneHandler = NULL;
 static spinlock_t AudioEnableDoneLock;
 static ARM2SP_HQ_DL_InitDoneStatusCB_t ARM2SP_HQ_DL_InitDoneHandler = NULL;
 static spinlock_t ARM2SP_HQ_DL_InitDoneLock;
-static ARM2SP2_HQ_DL_InitDoneStatusCB_t ARM2SP2_HQ_DL_InitDoneHandler = NULL;
-static spinlock_t ARM2SP2_HQ_DL_InitDoneLock;
 static PTTStatusCB_t PTTStatusHandler = NULL;
 static spinlock_t PTTStatusLock;
 static ExtModemCallDoneStatusCB_t ExtModemCallDoneHandler = NULL;
@@ -104,11 +102,13 @@ void VPSHAREDMEM_Init(UInt32 *dsp_shared_mem)
 	vp_shared_mem->vp_shared_statusq_in = 0;
 	vp_shared_mem->vp_shared_statusq_out = 0;
 
+	vp_shared_mem->shared_ap_supported_features =
+		(SUPP_FEAT_AADMAC_BUF_SCRATCH_MEM_BITF);
+
 	/* Setting various mixer gains to unity gain */
 	CSL_SetARM2SpeechDLGain(0);
 	CSL_SetARM2Speech2DLGain(0);
 	CSL_SetARM2SpeechHQDLGain(0);
-	CSL_SetARM2Speech2HQDLGain(0);
 	CSL_SetInpSpeechToARM2SpeechMixerDLGain(0);
 
 	CSL_SetARM2SpeechULGain(0);
@@ -399,24 +399,6 @@ void CSL_RegisterARM2SP_HQ_DL_InitDoneHandler(ARM2SP_HQ_DL_InitDoneStatusCB_t
 
 }
 
-/*********************************************************************/
-/**
-*
-*   CSL_RegisterARM2SP2_HQ_DL_InitDoneHandler registers audio enable done
-*   status handler.
-*
-*   @param    callbackFunction	(in)	callback function to register
-*
-**********************************************************************/
-void CSL_RegisterARM2SP2_HQ_DL_InitDoneHandler(ARM2SP2_HQ_DL_InitDoneStatusCB_t
-					callbackFunction)
-{
-	spin_lock_bh(&ARM2SP2_HQ_DL_InitDoneLock);
-	ARM2SP2_HQ_DL_InitDoneHandler = callbackFunction;
-	spin_unlock_bh(&ARM2SP2_HQ_DL_InitDoneLock);
-
-}
-
 /*****************************************************************************/
 /**
 *
@@ -568,39 +550,6 @@ void AP_ProcessStatus(void)
 				break;
 			}
 
-		case VP_STATUS_ARM2SP_HQ_DL_EMPTY:
-			{
-				spin_lock_bh(&ARM2SPRenderStatusLock);
-				if (ARM2SPRenderStatusHandler != NULL) {
-					ARM2SPRenderStatusHandler(status_msg.
-								  arg1);
-				} else {
-					aTrace(LOG_AUDIO_DSP,
-					       "AP DSP Interrupt:"
-					       "ARM2SPRenderStatusHandler"
-					       "is not registered");
-				}
-				spin_unlock_bh(&ARM2SPRenderStatusLock);
-				break;
-			}
-
-		case VP_STATUS_ARM2SP2_HQ_DL_EMPTY:
-			{
-				spin_lock_bh(&ARM2SP2RenderStatusLock);
-				if (ARM2SP2RenderStatusHandler != NULL) {
-					ARM2SP2RenderStatusHandler(status_msg.
-								   arg1);
-				} else {
-					aTrace(LOG_AUDIO_DSP,
-					       "AP DSP Interrupt:"
-					       "ARM2SP2RenderStatusHandler"
-					       "is not registered");
-				}
-				spin_unlock_bh(&ARM2SP2RenderStatusLock);
-				break;
-			}
-
-
 		case VP_STATUS_MAIN_AMR_DONE:
 			{
 				spin_lock_bh(&MainAMRStatusLock);
@@ -684,21 +633,6 @@ void AP_ProcessStatus(void)
 						"is not registered");
 				}
 				spin_unlock_bh(&ARM2SP_HQ_DL_InitDoneLock);
-				break;
-			}
-
-		case VP_STATUS_ARM2SP2_HQ_DL_INIT_DONE:
-			{
-				spin_lock_bh(&ARM2SP2_HQ_DL_InitDoneLock);
-				if (ARM2SP2_HQ_DL_InitDoneHandler != NULL) {
-					ARM2SP2_HQ_DL_InitDoneHandler();
-				} else {
-					aTrace(LOG_AUDIO_DSP,
-						"AP DSP Interrupt:"
-						"ARM2SP2_HQ_DL_InitDoneHandler"
-						"is not registered");
-				}
-				spin_unlock_bh(&ARM2SP2_HQ_DL_InitDoneLock);
 				break;
 			}
 
@@ -913,8 +847,21 @@ void AP_ProcessStatus(void)
 UInt32 *AUDIO_Return_IHF_48kHz_buffer_base_address(void)
 {
 	AP_SharedMem_t *ap_shared_mem_ptr;
-	ap_shared_mem_ptr = DSPDRV_GetPhysicalSharedMemoryAddress();
+	struct Dsp_AP_ScratchMem_t *dsp_scratch_mem_ptr;
 
-	return &ap_shared_mem_ptr->shared_aadmac_spkr_low[0];
+	if (((vp_shared_mem->shared_dsp_supported_features
+			& SUPP_FEAT_AADMAC_BUF_SCRATCH_MEM_BITF)
+			== SUPP_FEAT_AADMAC_BUF_SCRATCH_MEM_BITF) &&
+		((vp_shared_mem->shared_ap_supported_features
+			& SUPP_FEAT_AADMAC_BUF_SCRATCH_MEM_BITF)
+			== SUPP_FEAT_AADMAC_BUF_SCRATCH_MEM_BITF)) {
+		dsp_scratch_mem_ptr = DSPDRV_GetPhysicalScratchMemoryAddress();
+
+		return &(dsp_scratch_mem_ptr->scr_ram_aadmac_spkr_low[0]);
+		/*return (UInt32 *)(0x34051a80);*/
+	} else {
+		ap_shared_mem_ptr = DSPDRV_GetPhysicalSharedMemoryAddress();
+		return &ap_shared_mem_ptr->shared_aadmac_spkr_low[0];
+	}
 }
 

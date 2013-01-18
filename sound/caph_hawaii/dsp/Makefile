@@ -19,7 +19,6 @@
 obj-$(CONFIG_BCM_MODEM) 	+= csl_apcmd.o
 obj-$(CONFIG_BCM_MODEM) 	+= csl_dsp.o
 obj-$(CONFIG_BCM_MODEM) 	+= csl_arm2sp.o
-obj-$(CONFIG_BCM_MODEM) 	+= csl_bttap.o
 obj-$(CONFIG_BCM_MODEM) 	+= csl_vpu.o
 obj-$(CONFIG_BCM_MODEM) 	+= csl_log.o
 obj-$(CONFIG_BCM_MODEM) 	+= csl_voip.o

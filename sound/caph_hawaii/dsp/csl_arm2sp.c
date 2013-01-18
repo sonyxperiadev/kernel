@@ -19,16 +19,17 @@
 #include "mobcom_types.h"
 #include "shared.h"
 #include "csl_arm2sp.h"
+#include "csl_apcmd.h"
 #include "csl_dsp_common_util.h"
 #include "osdw_dsp_drv.h"
 #include "audio_trace.h"
+
+/* #define HIJACK_ARM2SP_INTERF_2_TEST_ARM2SP_HQ_DL */
 
 extern AP_SharedMem_t	*vp_shared_mem;
 extern AP_SharedMem_t   *DSPDRV_GetPhysicalSharedMemoryAddress(void);
 extern void VPRIPCMDQ_SetARM2SP(UInt16 arg0, UInt16 arg1);
 extern void VPRIPCMDQ_SetARM2SP2(UInt16 arg0, UInt16 arg1);
-extern void VPRIPCMDQ_SetARM2SP_HQDL(UInt16 arg0, UInt16 arg1);
-extern void VPRIPCMDQ_SetARM2SP2_HQDL(UInt16 arg0, UInt16 arg1);
 
 
 /*********************************************************************/
@@ -702,65 +703,6 @@ void CSL_MuteARM2SpeechHQDL(void)
 /*********************************************************************/
 /**
 *
-*   CSL_SetARM2Speech2HQDLGain sets ARM2SP2_HQ downlink gain.
-*
-*   @param	mBGain	(in)	gain in millibels
-*				(min = -8430 millibel,
-*				 max = 0 millibel)
-*   @return   Boolean		TRUE if value is out of limits
-*
-**********************************************************************/
-Boolean CSL_SetARM2Speech2HQDLGain(Int16 mBGain)
-{
-	Boolean result = FALSE;
-	UInt32 scale;
-	UInt16 gain;
-	UInt16 i;
-
-	/* convert millibel value to fixed point scale factor */
-	scale = CSL_ConvertMillibel2Scale(mBGain);
-
-	/* adjust DL scale factor to DSP Q1.14 format */
-	scale >>= (GAIN_FRACTION_BITS_NUMBER-14);
-
-	gain = (UInt16)scale;
-
-	/* limit gain to DSP range */
-	if (gain > MAX_ARM2SP2_HQ_DL_GAIN) {
-		gain = MAX_ARM2SP2_HQ_DL_GAIN;
-
-		result = TRUE;
-
-	}
-
-	/* apply DL ARM2SP downlink gain with an automatic 5ms ramp */
-	for (i = 0; i < 5; i++)
-		vp_shared_mem->shared_arm2speech2_hq_call_gain_dl[i] = gain;
-
-	return result;
-
-} /* CSL_SetARM2Speech2HQDLGain */
-
-/*********************************************************************/
-/**
-*
-*   CSL_MuteARM2Speech2HQDL mutes ARM2SP2_HQ downlink.
-*
-*
-**********************************************************************/
-void CSL_MuteARM2Speech2HQDL(void)
-{
-	UInt16 i;
-
-	/* mute DL ARM2SP */
-	for (i = 0; i < 5; i++)
-		vp_shared_mem->shared_arm2speech2_hq_call_gain_dl[i] = 0;
-
-} /* CSL_MuteARM2Speech2HQDL */
-
-/*********************************************************************/
-/**
-*
 * Function Name: csl_dsp_arm2sp_get_phy_base_addr
 *
 *   @note	This function returns the base address of the low part of
@@ -886,7 +828,7 @@ Function Name: csl_arm2sp_set_arm2sp
 				Used for PAUSE/RESUME the same arm2sp2 session.
 	@param	UInt16 dl_mix_or_repl_location
 	@param	UInt16 ul_mix_or_repl_location
-	@param	UInt16 arm2sp_hq_dl = 1 for 48kHz DL High Quality mode
+	@param	UInt16 arm2sp_hq_dl(OBSOLETE) = 1 for 48kHz DL High Quality mode
 			(only valid for playbackMode = CSL_ARM2SP_PLAYBACK_DL
 			and Rate = 48000)
 			= 0 for normal mode
@@ -995,20 +937,21 @@ void csl_arm2sp_set_arm2sp(UInt32 samplingRate,
 		break;
 	}
 
+#ifdef HIJACK_ARM2SP_INTERF_2_TEST_ARM2SP_HQ_DL
 	if (((playbackMode == CSL_ARM2SP_PLAYBACK_DL) ||
-		(playbackMode == CSL_ARM2SP_PLAYBACK_NONE))&&
+		(playbackMode == CSL_ARM2SP_PLAYBACK_NONE)) &&
 		(samplingRate == 48000) &&
 		(arm2sp_hq_dl)) {
-		VPRIPCMDQ_SetARM2SP_HQDL(arg0, Reset_out_ptr_flag);
-	} else {
+		VPRIPCMDQ_SetARM2SP_HQDL(arg0);
+	} else
+#else
 		VPRIPCMDQ_SetARM2SP(arg0, Reset_out_ptr_flag);
-	}
+#endif
+
 	aTrace(LOG_AUDIO_DSP, "ARM2SP Start, playbackMode = %d,"
 			"mixMode = %d, arg0 = 0x%x instanceID=1,"
-			"Reset_out_ptr_flag = %d\n"
-			"48kHz HQ DL mode = %d\n",
-			playbackMode, mixMode, arg0, Reset_out_ptr_flag,
-			arm2sp_hq_dl);
+			"Reset_out_ptr_flag = %d\n",
+			playbackMode, mixMode, arg0, Reset_out_ptr_flag);
 
 }
 
@@ -1034,10 +977,7 @@ Function Name: csl_arm2sp_set_arm2sp2
 				Used for PAUSE/RESUME the same arm2sp2 session.
 	@param	UInt16 dl_mix_or_repl_location
 	@param	UInt16 ul_mix_or_repl_location
-	@param	UInt16 arm2sp_hq_dl = 1 for 48kHz DL High Quality mode
-			(only valid for playbackMode = CSL_ARM2SP_PLAYBACK_DL
-			and Rate = 48000)
-			= 0 for normal mode
+	@param	UInt16 unused
 
 	@return	None
 
@@ -1051,7 +991,7 @@ void csl_arm2sp_set_arm2sp2(UInt32			samplingRate,
 				UInt16			Reset_out_ptr_flag,
 				UInt16			dl_mix_or_repl_location,
 				UInt16			ul_mix_or_repl_location,
-				UInt16			arm2sp_hq_dl
+				UInt16			unused
 				)
 {
 	UInt16 arg0 = 0;
@@ -1143,19 +1083,116 @@ void csl_arm2sp_set_arm2sp2(UInt32			samplingRate,
 		break;
 	}
 
-	if (((playbackMode == CSL_ARM2SP_PLAYBACK_DL) ||
-		(playbackMode == CSL_ARM2SP_PLAYBACK_NONE)) &&
-		(samplingRate == 48000) &&
-		(arm2sp_hq_dl)) {
-		VPRIPCMDQ_SetARM2SP2_HQDL(arg0, Reset_out_ptr_flag);
-	} else {
-		VPRIPCMDQ_SetARM2SP2(arg0, Reset_out_ptr_flag);
-	}
+	VPRIPCMDQ_SetARM2SP2(arg0, Reset_out_ptr_flag);
 	aTrace(LOG_AUDIO_DSP, "ARM2SP Start, playbackMode = %d,"
 			"mixMode = %d, arg0 = 0x%x instanceID=2,"
-			"Reset_out_ptr_flag = %d\n"
-			"48kHz HQ DL mode = %d\n",
-			playbackMode, mixMode, arg0, Reset_out_ptr_flag,
-			arm2sp_hq_dl);
+			"Reset_out_ptr_flag = %d\n",
+			playbackMode, mixMode, arg0, Reset_out_ptr_flag);
+
+}
+
+/**********************************************************************/
+/**
+*
+* Function Name: csl_dsp_arm2sp_hq_dl_get_phy_base_addr
+*
+*   @note	This function returns the base address of the low part of
+*		ARM2SP_HQ_DL Input Buffer
+*		for programming the AADMAC (this function should not be
+*		used for any software access).
+*
+*   @return	Physical Base address of the ARM2SP_HQ_DL
+*		input buffer
+*
+**/
+/**********************************************************************/
+UInt16 *csl_dsp_arm2sp_hq_dl_get_phy_base_addr(void)
+{
+	AP_SharedMem_t   *ap_shared_mem_ptr;
+	struct Dsp_AP_ScratchMem_t *dsp_scratch_mem_ptr;
+
+	if (((vp_shared_mem->shared_dsp_supported_features
+			& SUPP_FEAT_AADMAC_BUF_SCRATCH_MEM_BITF)
+			== SUPP_FEAT_AADMAC_BUF_SCRATCH_MEM_BITF) &&
+		((vp_shared_mem->shared_ap_supported_features
+			& SUPP_FEAT_AADMAC_BUF_SCRATCH_MEM_BITF)
+			== SUPP_FEAT_AADMAC_BUF_SCRATCH_MEM_BITF)) {
+		dsp_scratch_mem_ptr = DSPDRV_GetPhysicalScratchMemoryAddress();
+
+		return (UInt16 *)(
+			&(dsp_scratch_mem_ptr->scr_ram_Arm2SP_HQ_DL_InBuf[0]));
+		/*return (UInt16 *)(0x34051800);*/
+	} else {
+		ap_shared_mem_ptr = DSPDRV_GetPhysicalSharedMemoryAddress();
+
+		return (UInt16 *)(&(
+			ap_shared_mem_ptr->shared_Arm2SP_HQ_DL_InBuf[0]));
+	}
+}
+
+/**********************************************************************/
+/**
+
+Function Name: csl_arm2sp_hq_dl_set_arm2sp_hq_dl
+
+	@note	This function Starts and Stops and configures the
+		ARM2SP_HQ_DL interface.
+
+	@param	CSL_ARM2SP_PLAYBACK_MODE_t playbackMode
+		(only supports CSL_ARM2SP_PLAYBACK_NONE or
+		CSL_ARM2SP_PLAYBACK_DL)
+	@param	CSL_ARM2SP_VOICE_MIX_MODE_t mixMode
+		(only supports CSL_ARM2SP_VOICE_MIX_NONE or
+		CSL_ARM2SP_VOICE_MIX_DL)
+	@param	UInt8 audMode	= 0 -> Mono \BR
+				= 1 -> Stereo
+
+	@return	None
+
+**/
+/**********************************************************************/
+void csl_arm2sp_hq_dl_set_arm2sp_hq_dl(
+				CSL_ARM2SP_PLAYBACK_MODE_t	playbackMode,
+				CSL_ARM2SP_VOICE_MIX_MODE_t	mixMode,
+				UInt8			audMode
+				)
+{
+	UInt16 arg0 = 0;
+
+	/* samplingRate*/
+	arg0 |= ARM2SP_48K;
+
+	if (audMode)
+		arg0 |= ARM2SP_MONO_ST;
+
+	/* set dl*/
+	switch (playbackMode) {
+	case CSL_ARM2SP_PLAYBACK_DL:
+		/* set DL_enable*/
+		arg0 |= ARM2SP_DL_ENABLE_MASK;
+
+		if (mixMode == CSL_ARM2SP_VOICE_MIX_DL) {
+			/* mixing DL*/
+			arg0 |= ARM2SP_DL_MIX;
+		} else {
+			/*overwirte DL*/
+			arg0 |= ARM2SP_DL_OVERWRITE;
+		}
+		break;
+
+	case CSL_ARM2SP_PLAYBACK_NONE:
+		arg0 = 0;
+		break;
+
+	default:
+		/*Assert*/
+		/*xassert(0,playbackMode);*/
+		break;
+	}
+
+	VPRIPCMDQ_SetARM2SP_HQDL(arg0);
+	aTrace(LOG_AUDIO_DSP, "ARM2SP Start, playbackMode = %d,"
+			"mixMode = %d, arg0 = 0x%x\n",
+			playbackMode, mixMode, arg0);
 
 }

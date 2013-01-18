@@ -56,9 +56,11 @@ typedef enum {
 	DSP_AADMAC_PRI_MIC_EN = 0x10,
 	DSP_AADMAC_SEC_MIC_EN = 0x20,
 	DSP_AADMAC_SPKR_EN = 0x40,
-	DSP_AADMAC_IHF_SPKR_EN = 0x80,
+	DSP_AADMAC_48KHZ_SPKR_EN = 0x80,
 	DSP_AADMAC_LEG_IHF_SPKR_EN = 0x100,
 	DSP_AADMAC_PACKED_16BIT_IN_OUT_EN = 0x200,
+	DSP_AADMAC_48KHZ_SPKR_STEREO = 0x400,
+	DSP_AADMAC_ECHO_REF_EN = 0x800,
 	DSP_AADMAC_RETIRE_DS_CMD = 0x8000
 } DSP_AADMAC_Audio_Connections_t;
 
@@ -68,7 +70,6 @@ typedef enum {
 	DSP_AADMAC_EXT_MODEM_DL
 } DSP_AADMAC_Ext_Modem_Connections_t;
 #endif
-
 /* ---- Function Declarations ----------------------------------------- */
 
 /*****************************************************************************/

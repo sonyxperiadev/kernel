@@ -62,10 +62,6 @@
 							   Q1.14 format */
 #define MIN_ARM2SP_HQ_DL_GAIN		0
 
-#define MAX_ARM2SP2_HQ_DL_GAIN		(1<<14)		/* unity gain in DSP
-							   Q1.14 format */
-#define MIN_ARM2SP2_HQ_DL_GAIN		0
-
 typedef enum CSL_ARM2SP_PLAYBACK_MODE_t {
 	CSL_ARM2SP_PLAYBACK_NONE,
 	CSL_ARM2SP_PLAYBACK_DL,
@@ -344,28 +340,6 @@ Boolean CSL_SetARM2SpeechHQDLGain(Int16 mBGain);
 **********************************************************************/
 void CSL_MuteARM2SpeechHQDL(void);
 
-/*********************************************************************/
-/**
-*
-*   CSL_SetARM2Speech2HQDLGain sets ARM2SP2_HQ downlink gain.
-*
-*   @param	mBGain	(in)	gain in millibels
-*				(min = -8430 millibel,
-*				 max = 0 millibel)
-*   @return   Boolean		TRUE if value is out of limits
-*
-**********************************************************************/
-Boolean CSL_SetARM2Speech2HQDLGain(Int16 mBGain);
-
-/*********************************************************************/
-/**
-*
-*   CSL_MuteARM2Speech2HQDL mutes ARM2SP_HQ downlink.
-*
-*
-**********************************************************************/
-void CSL_MuteARM2Speech2HQDL(void);
-
 /**********************************************************************/
 /**
 *
@@ -452,7 +426,7 @@ Function Name: csl_arm2sp_set_arm2sp
 				Used for PAUSE/RESUME the same arm2sp2 session.
 	@param	UInt16 dl_mix_or_repl_location
 	@param	UInt16 ul_mix_or_repl_location
-	@param	UInt16 arm2sp_hq_dl = 1 for 48kHz DL High Quality mode
+	@param	UInt16 arm2sp_hq_dl(OBSOLETE) = 1 for 48kHz DL High Quality mode
 			(only valid for playbackMode = CSL_ARM2SP_PLAYBACK_DL
 			and Rate = 48000)
 			= 0 for normal mode
@@ -494,10 +468,7 @@ Function Name: csl_arm2sp_set_arm2sp2
 				Used for PAUSE/RESUME the same arm2sp2 session.
 	@param	UInt16 dl_mix_or_repl_location
 	@param	UInt16 ul_mix_or_repl_location
-	@param	UInt16 arm2sp_hq_dl = 1 for 48kHz DL High Quality mode
-			(only valid for playbackMode = CSL_ARM2SP_PLAYBACK_DL
-			and Rate = 48000)
-			= 0 for normal mode
+	@param	UInt16 unused
 
 	@return	None
 
@@ -511,7 +482,51 @@ void csl_arm2sp_set_arm2sp2(UInt32			samplingRate,
 				UInt16			Reset_out_ptr_flag,
 				UInt16			dl_mix_or_repl_location,
 				UInt16			ul_mix_or_repl_location,
-				UInt16			arm2sp_hq_dl
+				UInt16			unused
+				);
+
+/**********************************************************************/
+/**
+*
+* Function Name: csl_dsp_arm2sp_hq_dl_get_phy_base_addr
+*
+*   @note	This function returns the base address of the low part of
+*		ARM2SP_HQ_DL Input Buffer
+*		for programming the AADMAC (this function should not be
+*		used for any software access).
+*
+*   @return	Physical Base address of the ARM2SP_HQ_DL
+*		input buffer
+*
+**/
+/**********************************************************************/
+UInt16 *csl_dsp_arm2sp_hq_dl_get_phy_base_addr(void);
+
+/**********************************************************************/
+/**
+
+Function Name: csl_arm2sp_hq_dl_set_arm2sp_hq_dl
+
+	@note	This function Starts and Stops and configures the
+		ARM2SP_HQ_DL interface.
+
+	@param	CSL_ARM2SP_PLAYBACK_MODE_t playbackMode
+		(only supports CSL_ARM2SP_PLAYBACK_NONE or
+		CSL_ARM2SP_PLAYBACK_DL)
+	@param	CSL_ARM2SP_VOICE_MIX_MODE_t mixMode
+		(only supports CSL_ARM2SP_VOICE_MIX_NONE or
+		CSL_ARM2SP_VOICE_MIX_DL)
+	@param	UInt8 audMode	= 0 -> Mono \BR
+				= 1 -> Stereo
+
+	@return	None
+
+**/
+/**********************************************************************/
+void csl_arm2sp_hq_dl_set_arm2sp_hq_dl(
+				CSL_ARM2SP_PLAYBACK_MODE_t	playbackMode,
+				CSL_ARM2SP_VOICE_MIX_MODE_t	mixMode,
+				UInt8			audMode
 				);
 
 /** @} */

@@ -50,5 +50,6 @@ void DSPDRV_DeInit(void);
 
 void VPSHAREDMEM_TriggerRIPInt(void);
 
+struct Dsp_AP_ScratchMem_t *DSPDRV_GetPhysicalScratchMemoryAddress(void);
 
 #endif /* _OSDW_DSP_DRV_H_ */

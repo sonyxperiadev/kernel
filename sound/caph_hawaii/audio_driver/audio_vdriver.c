@@ -134,6 +134,7 @@ static UInt32 curCallSampleRate = AUDIO_SAMPLING_RATE_8000;
 static int isIHFDL48k = 1; /*set to enable 48k IHF call DL*/
 
 struct completion audioEnableDone;
+struct completion arm2spHqDLInitDone;
 
 struct AUDCTRL_SPKR_Mapping_t {
 	AUDIO_SINK_Enum_t spkr;
@@ -308,7 +309,7 @@ static void AUDDRV_HW_SetFilter(AUDDRV_HWCTRL_FILTER_e filter,
 static void AUDDRV_HW_EnableSideTone(AudioMode_t audio_mode);
 static void AUDDRV_HW_DisableSideTone(AudioMode_t audio_mode);
 static void AP_ProcessAudioEnableDone(UInt16 enabled_path);
-
+static void AP_ProcessArm2spHqDLInitDone(void);
 /*=============================================================================
 // Functions
 //=============================================================================
@@ -355,10 +356,15 @@ void AUDDRV_Init(void)
 		AUDIO_MODEM(CSL_RegisterAudioEnableDoneHandler
 			((AudioEnableDoneStatusCB_t)
 			&AP_ProcessAudioEnableDone);)
+		AUDIO_MODEM(CSL_RegisterARM2SP_HQ_DL_InitDoneHandler
+			((ARM2SP_HQ_DL_InitDoneStatusCB_t)
+			&AP_ProcessArm2spHqDLInitDone);)
+
 
 	    Audio_InitRpc();
 	sAudDrv.isRunning = TRUE;
 	init_completion(&audioEnableDone);
+	init_completion(&arm2spHqDLInitDone);
 }
 
 /**********************************************************************
@@ -448,7 +454,7 @@ void AUDDRV_Telephony_Init(AUDIO_SOURCE_Enum_t mic, AUDIO_SINK_Enum_t speaker,
 			 (UInt16) (DSP_AADMAC_PACKED_16BIT_IN_OUT_EN));
 		/* dma_mic_spk = (UInt16) DSP_AADMAC_PRI_MIC_EN;*/
 		dma_mic_spk = ((UInt16)(DSP_AADMAC_PRI_MIC_EN)) | ((UInt16)
-			(DSP_AADMAC_IHF_SPKR_EN)) |
+			(DSP_AADMAC_48KHZ_SPKR_EN)) |
 			((UInt16)DSP_AADMAC_RETIRE_DS_CMD);
 
 		csl_dsp_caph_control_aadmac_enable_path(dma_mic_spk);
@@ -458,7 +464,7 @@ void AUDDRV_Telephony_Init(AUDIO_SOURCE_Enum_t mic, AUDIO_SINK_Enum_t speaker,
 	} else {
 #if defined(ENABLE_DMA_VOICE)
 		csl_dsp_caph_control_aadmac_disable_path((UInt16)
-			 (DSP_AADMAC_IHF_SPKR_EN) |
+			 (DSP_AADMAC_48KHZ_SPKR_EN) |
 			 (UInt16) (DSP_AADMAC_PACKED_16BIT_IN_OUT_EN));
 		dma_mic_spk =
 		    (UInt16) (DSP_AADMAC_PRI_MIC_EN) |
@@ -676,7 +682,7 @@ void AUDDRV_Telephony_Deinit(void)
 #if defined(ENABLE_DMA_VOICE)
 		dma_mic_spk =
 			(UInt16) (DSP_AADMAC_PRI_MIC_EN) |
-			(UInt16) (DSP_AADMAC_IHF_SPKR_EN) |
+			(UInt16) (DSP_AADMAC_48KHZ_SPKR_EN) |
 			(UInt16) (DSP_AADMAC_SPKR_EN) |
 			(UInt16) (DSP_AADMAC_SEC_MIC_EN) |
 			(UInt16) (DSP_AADMAC_PACKED_16BIT_IN_OUT_EN);
@@ -789,7 +795,7 @@ void AUDDRV_DisableDSPOutput(void)
 
 #if defined(ENABLE_DMA_VOICE)
 	csl_dsp_caph_control_aadmac_disable_path(((UInt16)
-		DSP_AADMAC_SPKR_EN) | ((UInt16)(DSP_AADMAC_IHF_SPKR_EN)) |
+		DSP_AADMAC_SPKR_EN) | ((UInt16)(DSP_AADMAC_48KHZ_SPKR_EN)) |
 		((UInt16)(DSP_AADMAC_PACKED_16BIT_IN_OUT_EN)));
 #endif
 	audio_control_dsp(AUDDRV_DSPCMD_AUDIO_ENABLE, FALSE, 0, 0, 0, 0);
@@ -2081,6 +2087,18 @@ static void AP_ProcessAudioEnableDone(UInt16 enabled_path)
 	/*aError("i_e");*/
 
 	complete(&audioEnableDone);
+
+	/*aError("i_f");*/
+}
+
+static void AP_ProcessArm2spHqDLInitDone()
+{
+	aTrace(LOG_AUDIO_DRIVER,
+	"%s, Got Arm2spHqDL RESP FROM DSP\n", __func__);
+
+	/*aError("i_e");*/
+
+	complete(&arm2spHqDLInitDone);
 
 	/*aError("i_f");*/
 }

@@ -103,7 +103,6 @@
 #define MAX_TX_SLOTS              ((UInt16) 4   )     // # of multislot transmission slots
 #define N_MS_RAMPS                ((UInt16) 5   )     // # of multislot ramps
 #define N_MS_DN_RAMPS             ((UInt16) (N_MS_RAMPS - 1))
-
 #define EDGE_RX_BUFF_CNT          ((UInt16) 8   )    // Number of EDGE control channel receive buffers
 #define EDGE_TX_BUFF_CNT          ((UInt16) 8   )    // Number of EDGE control channel transmit buffers
 #define EDGE_TX_CONTENTS_SIZE_G1  ((UInt16) 36  )  // words
@@ -281,7 +280,6 @@ typedef enum
     MOD_DUMMY= 2
 } Modulation_t;
 
-
 typedef struct       // linear PCM speech Recording/Playback data for a 20ms frame
 {
     Int16 param[WB_LIN_PCM_FRAME_SIZE];    
@@ -387,7 +385,6 @@ typedef enum
     AMR_MR795	= 5,
     AMR_MR102	= 6,
     AMR_MR122	= 7,            
-
 	AMR_MRDTX	= 8,
 	    
     AMR_N_MODES	= 9,     /* number of (SPC) modes */
@@ -435,7 +432,6 @@ typedef enum
 *       AMR-NB C reference program.                                   
 *****************************************************************************
 */
-
 typedef enum 
 {
     AMR_RX_SPEECH_GOOD = 0,

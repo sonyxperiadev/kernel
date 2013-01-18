@@ -55,6 +55,10 @@
 #include "csl_arm2sp.h"
 #include "audio_trace.h"
 
+/* Note the base address for Hawaii is different than for Capri */
+#define	DSP_AP_SCRATCHMEM_BASE					0x3404F800
+#define DSP_AP_SCRATCHMEM_SIZE					0x00001800
+
 struct Dspdrv_t {
 	struct tasklet_struct task;
 	CHAL_HANDLE h;
@@ -253,4 +257,21 @@ AP_SharedMem_t *DSPDRV_GetPhysicalSharedMemoryAddress(void)
 
 	dsp_shared_mem = (AP_SharedMem_t *) AP_SH_BASE;
 	return dsp_shared_mem;
+}
+
+/*****************************************************************************/
+/**
+*	Function Name:	DSPDRV_GetPhysicalScratchMemoryAddress
+*
+*	Description: Gets DSP scratch memory base address
+*
+*	Notes:
+*
+******************************************************************************/
+struct Dsp_AP_ScratchMem_t *DSPDRV_GetPhysicalScratchMemoryAddress()
+{
+	struct Dsp_AP_ScratchMem_t *dsp_scratch_mem;
+
+	dsp_scratch_mem = (struct Dsp_AP_ScratchMem_t *) DSP_AP_SCRATCHMEM_BASE;
+	return dsp_scratch_mem;
 }

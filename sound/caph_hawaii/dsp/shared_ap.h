@@ -62,6 +62,8 @@
 #define AP_SHARED_SEC_GEN_AUDIO        __attribute__( ( section( ".DSECT ap_shared_sec_gen_audio") ) )          
 // Debug
 #define AP_SHARED_SEC_DIAGNOS          __attribute__( ( section( ".DSECT ap_shared_sec_diagnos") ) )          
+#define DSP_AP_SCRATCHMEM_SEC	\
+	__attribute__((section(".DSECT dsp_ap_scratchmem_sec")))
 #    undef EXTERN
 #    ifdef RIP_EXTERN_DECLARE
 #        define EXTERN
@@ -75,6 +77,7 @@
 #define    AP_SHARED_SEC_CMD_STATUS        
 #define    AP_SHARED_SEC_GEN_AUDIO
 #define    AP_SHARED_SEC_DIAGNOS         
+#define	DSP_AP_SCRATCHMEM_SEC
 #endif	// MSP
 
 
@@ -105,6 +108,15 @@
 
 #define DJB_BUFFER_SIZE     			600		// 600 words ~ 300ms
 
+/*---------- Defining supported features --------*/
+
+/* AADMAC buffers are in scratch memory instead of shared memory */
+#define SUPP_FEAT_AADMAC_BUF_SCRATCH_MEM_BIT 0
+#define SUPP_FEAT_AADMAC_BUF_SCRATCH_MEM_BITF \
+	(1<<SUPP_FEAT_AADMAC_BUF_SCRATCH_MEM_BIT)
+
+
+/*---------- Typedefs --------*/
 typedef struct
 {
 	UInt32 array2[35];
@@ -569,7 +581,7 @@ typedef enum
     *  
     *              \note  To prevent the 20ms speech fragments left in the audio output buffer from repeatedly being played 
     *              out to the speaker/ear-piece in IDLE mode, it is necessary for the ARM to instruct the DSP to disable the
-    *              audio path via the “vp_disable_audio_path” flag.
+    *              audio path via the â€œvp_disable_audio_pathâ€ flag.
     */
 	VP_COMMAND_STOP_PLAYBACK,				// 0x9 	()
    /** \HR */
@@ -1282,7 +1294,77 @@ typedef enum
     *  \see Software_Sidetone
     */
 	VP_COMMAND_SIDETONE_COEFS_9,			// 0x31		( SIDETONE_FILTER Biquad filter coef 9 )
-	VP_COMMAND_INIT_SIDETONE_EXPANDER		// 0x32
+	VP_COMMAND_INIT_SIDETONE_EXPANDER,		/* 0x32 */
+   /** \HR */
+   /** \par Module
+    *                    Audio
+    *  \par Command Code
+    *                    0x33
+    *  \par Description
+    *       This command enables/disables the Audio interrupts and configures
+    *       the hardware audio paths.
+    *       Currently this command comes before the VP_COMMAND_AUDIO_CONNECT.
+    *
+    *              @param  UInt16 AUDIO_DAC_ENABLE = 1 - Enable DAC,\BR
+    *                             AUDIO_ADC_ENABLE = 2 - Enable ADC,\BR
+    *                             0 - Disable both ADC and DAC
+    *              @param  Boolean 16k_sampling - 0 = 8k mode, 1 = 16k mode
+    *              @param  Boolean WB_DUAL_MIC_ENABLE - Enables Wide-band dual
+    *              mics.
+    *              When enabled, always uses 16k mode irrespective of what is
+    *              set in 16k_sampling argument above
+    *
+    */
+	VP_COMMAND_AUDIO_ENABLE,			/* 0x33	( enable ) */
+   /** \HR */
+   /** \par Module
+    *                    Audio
+    *  \par Command Code
+    *                    0x34
+    *  \par Description
+    *       Connect/disconnect the audio input/output from ADC/DAC
+    *
+    *              @param  Boolean pg_aud_in_enable - Used to enable or disable
+    *              the input samples from ADC
+    *              @param  Boolean pg_aud_out_enable - Used to enable or
+    *              disable the input samples to DAC
+    */
+	VP_COMMAND_AUDIO_CONNECT,			/* 0x34	(in_enable,
+							   out_enable ) */
+   /** \HR */
+   /** \par Module
+    *                    Audio
+    *  \par Command Code
+    *                    0x35
+    *  \par Description
+    *       This command is used to Start and Stop the
+    *       secondary speaker AADMAC channel (channel 16).
+    *
+    *       It also defines whether the speaker path is mono or stereo.
+    *
+    *       The actual enable of the AADMAC channel happens in the ISR of the
+    *       primary microphone channel interrupt to the DSP.
+    *
+    *       It also determines whether to use Echo Reference from this path
+    *       instead of from the primary speaker channel path. This is valid
+    *       only for mono speaker channel.
+    *
+    *       @param  UInt16 enable = 0 -> Disable
+    *                             = 1 -> Enable
+    *       @param  UInt8 stereo_enable = 0 ->Mono
+    *                                   = 1 -> Stereo
+    *       @param  UInt16 use_ec_ref_from_this_path = 0 -> Use the primary
+    *                                          speaker channel for echo
+    *                                          reference(valid only if
+    *                                          primary speaker is mono).
+    *                                   = 1 -> use secondary speaker
+    *                                          channel  for echo reference
+    *                                          (valid only if secondary
+    *                                          speaker is mono).
+    *
+    */
+	VP_COMMAND_SPKR2_EN				/* 0x35	(in_enable,
+							   out_enable ) */
 
 } VPCommand_t;                                 
 /**
@@ -2336,8 +2418,46 @@ EXTERN UInt16 shared_usb_headset_audio_out_buf_48k1[960]     AP_SHARED_SEC_GEN_A
 /** 
  * @} 
  */
-EXTERN UInt16 shared_BTnbdinLR[2][640]					     AP_SHARED_SEC_GEN_AUDIO;
-/** 
+EXTERN UInt16 shared_BTnbdinLR_unused[1] AP_SHARED_SEC_GEN_AUDIO;
+
+/**
+ * @addtogroup ARM2SP_HQ_DL_Interface
+ *
+ * This interface is used for mixing/playing \Bold{48kHz Mono/Stereo PCM data
+ * to Downlink}.\BR
+ *
+ * \note This interface works in only one way - from ARM to DSP. \BR
+ *
+ * One use-case of this interface is to support S-barge-in feature where a
+ * music might be playing in the downlink using this interface and an
+ * uplink record/speech recognition happens at the same time, then this
+ * UL would get the benefit of echo cancellation of the music.
+ *
+ * To start ARM2SP_HQ_DL: ARM enables ARM2SP_HQ_DL by
+ * VP_COMMAND_SET_ARM2SP_HQ_DL.\BR
+ *
+ * Once the DSP completes the processing of this command it sends
+ * the VP_STATUS_ARM2SP_HQ_DL_INIT_DONE to the AP to indicate to it
+ * that the AADMAC channel is ready for transmission.
+ *
+ * To stop ARM2SP_HQ_DL:\BR
+ * Quick stop: ARM disables ARM2SP_HQ_DL using
+ * VP_COMMAND_SET_ARM2SP_HQ_DL (arg0=0).\BR
+ * \note The ARM2SP_HQ_DL will be stopped right away.
+ * There may be un-finished PCM data in shared_Arm2SP_HQ_DL_InBuf[].\BR
+ *
+ * \see shared_Arm2SP_HQ_DL_InBuf,
+ *      VP_COMMAND_SET_ARM2SP_HQ_DL,
+ *      VP_STATUS_ARM2SP_HQ_DL_INIT_DONE
+ *
+ * @{ */
+EXTERN UInt32 shared_Arm2SP_HQ_DL_InBuf[NUM_OF_48K_SAMP_PER_INT0_INT*2]
+	AP_SHARED_SEC_GEN_AUDIO;
+ /* @} */
+
+EXTERN UInt16 shared_BTnbdinLR_1_unused[
+	2*640-1-(NUM_OF_48K_SAMP_PER_INT0_INT*2*2)] AP_SHARED_SEC_GEN_AUDIO;
+/**
  * @addtogroup VPU_Shared_Memory_Interface NOT_USED 
  *
  * This frame-aware interface is provided for transfer of both data and control 
@@ -2499,7 +2619,8 @@ EXTERN VR_Frame_AMR_WB_t AP_UL_MainAMR_buf    				   AP_SHARED_SEC_GEN_AUDIO; //
  * shared_Arm2SP_InBuf_out, Arm2SP_flag )
  *
  * \note The speech processing occurs at the rate specified by AP. If there is a mis-match 
- * between the rate set by the AP and ARM2SP\’s rate, the Sample Rate Conversion occurs right at the start.
+ * between the rate set by the AP and ARM2SP\â€™s rate, the Sample Rate
+ * Conversion occurs right at the start.
  *
  * \note For the second instance of the ARM2SP, please read ARM2SP2 everywhere ARM2SP is written above.
  * 
@@ -2839,13 +2960,25 @@ EXTERN UInt32 shared_aadmac_sec_mic_high[NUM_OF_8K_SAMP_PER_INT0_INT*2]         
 EXTERN UInt32 shared_aadmac_spkr_low[NUM_OF_48K_SAMP_PER_INT0_INT]                   AP_SHARED_SEC_GEN_AUDIO;
 EXTERN UInt32 shared_aadmac_spkr_high[NUM_OF_48K_SAMP_PER_INT0_INT]                  AP_SHARED_SEC_GEN_AUDIO;
 /**
+ * These buffers are used for getting mono data for echo reference from AADMAC.
+ *
+ * \see
+ *
+ * \note The order of the buffers below is important. First should be the low
+ * buffer followed by the high buffer.
+ */
+EXTERN UInt32 shared_aadmac_echo_ref_low[NUM_OF_8K_SAMP_PER_INT0_INT*2]
+	AP_SHARED_SEC_GEN_AUDIO;
+EXTERN UInt32 shared_aadmac_echo_ref_high[NUM_OF_8K_SAMP_PER_INT0_INT*2]
+	AP_SHARED_SEC_GEN_AUDIO;
+/**
  * @}
  */
 /**
  * @}
  */
-
-EXTERN UInt32 shared_UNUSED[95-10]									        AP_SHARED_SEC_GEN_AUDIO;	// 10 - sizeof(DJB_STATS) in UInt32
+/* 20 - size of JB stats and delays below + 32 echo ref buffers above */
+EXTERN UInt32 shared_UNUSED[95-10-32] AP_SHARED_SEC_GEN_AUDIO;
 /**
  * @addtogroup Adaptive Jitter Buffer
  * @{
@@ -2855,7 +2988,7 @@ EXTERN UInt32 shared_UNUSED[95-10]									        AP_SHARED_SEC_GEN_AUDIO;	// 1
  * Adaptive Jitter Buffer statistics for reporting to ARM .\BR
  * 
  */
-EXTERN DJB_STATS shared_AjcStatistics										AP_SHARED_SEC_GEN_AUDIO;
+EXTERN DJB_STATS shared_AjcStatistics AP_SHARED_SEC_GEN_AUDIO;
 /**
  * @}
  */
@@ -3283,18 +3416,109 @@ EXTERN Int16	shared_arm2speech2_hq_call_gain_dl[5]               					AP_SHARED_
  * @}
  */
 
-EXTERN UInt32 NOT_USE_shared_memory_end                                     AP_SHARED_SEC_DIAGNOS;
+EXTERN UInt16 shared_dsp_supported_features AP_SHARED_SEC_DIAGNOS;
+EXTERN UInt16 shared_ap_supported_features AP_SHARED_SEC_DIAGNOS;
+
+EXTERN UInt32 NOT_USE_shared_memory_end AP_SHARED_SEC_DIAGNOS;
 
 #ifdef MSP
 } AP_SharedMem_t;
 #endif
 
-/* TODO: To go away later !!!!! */
-#define shared_Arm2SP_HQ_DL_InBuf shared_Arm2SP_InBuf
+#ifdef MSP
+struct Dsp_AP_ScratchMem_t {
+#endif
 
-//******************************************************************************
-// Function Prototypes
-//******************************************************************************
+EXTERN UInt32 scr_ram_Arm2SP_HQ_DL_InBuf[NUM_OF_48K_SAMP_PER_INT0_INT*2]
+	DSP_AP_SCRATCHMEM_SEC;	/* 2ms stereo music frames of 16-bit samples */
+
+/**
+ * @addtogroup HANDSET_AADMAC_BUFFERS
+ *
+ * This interface is used for receiving 8/16 KHz input data from the AADMAC
+ * which then passed over to the regular hand-set.
+ *
+ * \see
+ * @{
+ */
+/**
+ * These buffers are used for getting mono data for primary mic from AADMAC.
+ *
+ * \see
+ *
+ * \note The order of the buffers below is important. First should be the low
+ * buffer followed by
+ * the high buffer.
+ */
+EXTERN UInt32 scr_ram_aadmac_pri_mic_low[NUM_OF_8K_SAMP_PER_INT0_INT*2]
+	DSP_AP_SCRATCHMEM_SEC;
+EXTERN UInt32 scr_ram_aadmac_pri_mic_high[NUM_OF_8K_SAMP_PER_INT0_INT*2]
+	DSP_AP_SCRATCHMEM_SEC;
+
+/**
+ * These buffers are used for getting mono data for primary mic from AADMAC.
+ *
+ * \see
+ *
+ * \note The order of the buffers below is important. First should be the low
+ * buffer followed by
+ * the high buffer.
+ */
+EXTERN UInt32 scr_ram_aadmac_sec_mic_low[NUM_OF_8K_SAMP_PER_INT0_INT*2]
+	DSP_AP_SCRATCHMEM_SEC;
+EXTERN UInt32 scr_ram_aadmac_sec_mic_high[NUM_OF_8K_SAMP_PER_INT0_INT*2]
+	DSP_AP_SCRATCHMEM_SEC;
+
+/**
+ * These buffers are used for sending mono data for speaker from AADMAC (all
+ * paths other than IHF).
+ *
+ * \see
+ *
+ * \note The order of the buffers below is important. First should be the low
+ * buffer followed by
+ * the high buffer.
+ */
+EXTERN UInt32 scr_ram_aadmac_spkr_low[NUM_OF_48K_SAMP_PER_INT0_INT]
+	DSP_AP_SCRATCHMEM_SEC;
+EXTERN UInt32 scr_ram_aadmac_spkr_high[NUM_OF_48K_SAMP_PER_INT0_INT]
+	DSP_AP_SCRATCHMEM_SEC;
+/**
+ * These buffers are used for getting mono data for echo reference from AADMAC.
+ *
+ * \see
+ *
+ * \note The order of the buffers below is important. First should be the low
+ * buffer followed by
+ * the high buffer.
+ */
+EXTERN UInt32 scr_ram_aadmac_echo_ref_low[NUM_OF_8K_SAMP_PER_INT0_INT*2]
+	DSP_AP_SCRATCHMEM_SEC;
+EXTERN UInt32 scr_ram_aadmac_echo_ref_high[NUM_OF_8K_SAMP_PER_INT0_INT*2]
+	DSP_AP_SCRATCHMEM_SEC;
+/**
+ * This buffers is used for sending mono/stereo data for secondary speaker
+ * from AADMAC.
+ *
+ * \see
+ *
+ * \note Only the low half of the AADMAC buffer is used. The size of the low
+ * half is doubled as the data in it can be stereo.
+ */
+EXTERN UInt32 scr_ram_aadmac_sec_spkr_low[2*NUM_OF_48K_SAMP_PER_INT0_INT]
+	DSP_AP_SCRATCHMEM_SEC;
+
+/**
+ * @}
+ */
+
+#ifdef MSP
+};
+#endif
+
+/******************************************************************************
+* Function Prototypes
+******************************************************************************/
 
 #ifdef RIP
 void VPSHARED_Init( void );              // Initialize the shared memory
