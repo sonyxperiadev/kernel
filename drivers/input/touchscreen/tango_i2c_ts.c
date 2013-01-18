@@ -924,6 +924,12 @@ static int i2c_ts_driver_probe(struct i2c_client *p_i2c_client,
 		if (!of_property_read_u32(np, "panel-width", &val))
 			dt_i2c_ts->panel_width = val;
 
+		if (!of_property_read_u32(np, "client_func_magic", &val))
+			dt_i2c_ts->i2c_pdata.client_func_magic = val;
+
+		if (!of_property_read_u32(np, "client_func_map", &val))
+			dt_i2c_ts->i2c_pdata.client_func_map = val;
+
 	}
 
 	if (!i2c_check_functionality(p_i2c_client->adapter,
@@ -1046,6 +1052,7 @@ static int i2c_ts_driver_probe(struct i2c_client *p_i2c_client,
 	p_tango_i2c_dev->ktouch_wq = create_workqueue("tango_touch_wq");
 	INIT_DELAYED_WORK(&p_tango_i2c_dev->work, tango_i2c_wq);
 	i2c_set_clientdata(p_i2c_client, p_tango_i2c_dev);
+	p_i2c_client->dev.platform_data = &dt_i2c_ts->i2c_pdata;
 #ifdef CONFIG_HAS_EARLYSUSPEND
 	p_tango_i2c_dev->suspend_desc.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN,
 	    p_tango_i2c_dev->suspend_desc.suspend = i2c_ts_early_suspend,

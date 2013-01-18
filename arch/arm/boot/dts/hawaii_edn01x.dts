@@ -147,6 +147,9 @@
 			min-finger-val = <0>;
 			max-finger-val = <2>;
 			panel-width = <56>;
+			/* Enable I2C autosense but disable timeout */
+			client_func_magic = <0x666C6167>;
+			client_func_map = <1>;
 		};
 	};
 
