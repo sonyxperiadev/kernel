@@ -257,6 +257,7 @@ static int verify_cma(int takelock)
 			++zone) {
 
 			unsigned long zone_cmafreelist = 0;
+			unsigned long zone_migratecmafreelist = 0;
 
 			if (!populated_zone(zone))
 				continue;
@@ -274,6 +275,8 @@ static int verify_cma(int takelock)
 					zone_cmafreelist += (1 << order);
 
 			}
+
+			zone_migratecmafreelist = zone_cmafreelist;
 
 			/* compare here */
 			for (order = 0; order < MAX_ORDER; ++order) {
@@ -300,14 +303,17 @@ static int verify_cma(int takelock)
 				zone_page_state(zone, NR_FREE_CMA_PAGES);
 
 			if ((zone_cmafreelist != zone_cma_nr_free) ||
-				(zone_cmafreelist != nr_free_cma_pages)) {
+				(zone_migratecmafreelist !=
+					nr_free_cma_pages)) {
 				printk(KERN_ERR"Zone %s cma_freelist :"
 						" %lu per_order_cma_nr_free :"
 						" %lu vmstat_free_cma_pages :"
+						" %lu zone_migratecmafreelist:"
 						" %lu\n",
 						zone->name, zone_cmafreelist,
 						zone_cma_nr_free,
-						nr_free_cma_pages);
+						nr_free_cma_pages,
+						zone_migratecmafreelist);
 				ret = 1;
 			}
 
@@ -1092,9 +1098,6 @@ static int move_freepages(struct zone *zone,
 			  &zone->free_area[order].free_list[migratetype]);
 		page += 1 << order;
 		pages_moved += 1 << order;
-		if (PageCma(page))
-			WARN_ON(verify_cma(0));
-
 	}
 	return pages_moved;
 }
