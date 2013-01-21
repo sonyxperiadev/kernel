@@ -193,25 +193,6 @@ hawaii_wifi_status_register(void (*callback) (int card_present, void *dev_id),
 /* SD */
 #define SD_CARDDET_GPIO_PIN	91
 
-/* keypad map */
-#define BCM_KEY_ROW_0  0
-#define BCM_KEY_ROW_1  1
-#define BCM_KEY_ROW_2  2
-#define BCM_KEY_ROW_3  3
-#define BCM_KEY_ROW_4  4
-#define BCM_KEY_ROW_5  5
-#define BCM_KEY_ROW_6  6
-#define BCM_KEY_ROW_7  7
-
-#define BCM_KEY_COL_0  0
-#define BCM_KEY_COL_1  1
-#define BCM_KEY_COL_2  2
-#define BCM_KEY_COL_3  3
-#define BCM_KEY_COL_4  4
-#define BCM_KEY_COL_5  5
-#define BCM_KEY_COL_6  6
-#define BCM_KEY_COL_7  7
-
 /* Touch */
 #define TSC_GPIO_IRQ_PIN			73
 
@@ -771,83 +752,6 @@ struct regulator_consumer_supply sdx_supply[] = {
 	{.supply = "sddat_debug_bus"},
 };
 
-#ifdef CONFIG_KEYBOARD_BCM
-static struct bcm_keymap hawaii_keymap[] = {
-	{BCM_KEY_ROW_0, BCM_KEY_COL_0, "Vol Down Key", KEY_VOLUMEDOWN},
-	{BCM_KEY_ROW_0, BCM_KEY_COL_1, "Vol Up Key", KEY_VOLUMEUP},
-	{BCM_KEY_ROW_0, BCM_KEY_COL_2, "Search Key", KEY_SEARCH},
-	{BCM_KEY_ROW_0, BCM_KEY_COL_3, "unused", 0},
-	{BCM_KEY_ROW_0, BCM_KEY_COL_4, "unused", 0},
-	{BCM_KEY_ROW_0, BCM_KEY_COL_5, "unused", 0},
-	{BCM_KEY_ROW_0, BCM_KEY_COL_6, "unused", 0},
-	{BCM_KEY_ROW_0, BCM_KEY_COL_7, "unused", 0},
-	{BCM_KEY_ROW_1, BCM_KEY_COL_0, "Home-Key", KEY_HOME},
-	{BCM_KEY_ROW_1, BCM_KEY_COL_1, "Back Key", KEY_BACK},
-	{BCM_KEY_ROW_1, BCM_KEY_COL_2, "Menu-Key", KEY_MENU},
-	{BCM_KEY_ROW_1, BCM_KEY_COL_3, "unused", 0},
-	{BCM_KEY_ROW_1, BCM_KEY_COL_4, "unused", 0},
-	{BCM_KEY_ROW_1, BCM_KEY_COL_5, "unused", 0},
-	{BCM_KEY_ROW_1, BCM_KEY_COL_6, "unused", 0},
-	{BCM_KEY_ROW_1, BCM_KEY_COL_7, "unused", 0},
-	{BCM_KEY_ROW_2, BCM_KEY_COL_0, "unused", 0},
-	{BCM_KEY_ROW_2, BCM_KEY_COL_1, "unused", 0},
-	{BCM_KEY_ROW_2, BCM_KEY_COL_2, "unused", 0},
-	{BCM_KEY_ROW_2, BCM_KEY_COL_3, "unused", 0},
-	{BCM_KEY_ROW_2, BCM_KEY_COL_4, "unused", 0},
-	{BCM_KEY_ROW_2, BCM_KEY_COL_5, "unused", 0},
-	{BCM_KEY_ROW_2, BCM_KEY_COL_6, "unused", 0},
-	{BCM_KEY_ROW_2, BCM_KEY_COL_7, "unused", 0},
-	{BCM_KEY_ROW_3, BCM_KEY_COL_0, "unused", 0},
-	{BCM_KEY_ROW_3, BCM_KEY_COL_1, "unused", 0},
-	{BCM_KEY_ROW_3, BCM_KEY_COL_2, "unused", 0},
-	{BCM_KEY_ROW_3, BCM_KEY_COL_3, "unused", 0},
-	{BCM_KEY_ROW_3, BCM_KEY_COL_4, "unused", 0},
-	{BCM_KEY_ROW_3, BCM_KEY_COL_5, "unused", 0},
-	{BCM_KEY_ROW_3, BCM_KEY_COL_6, "unused", 0},
-	{BCM_KEY_ROW_3, BCM_KEY_COL_7, "unused", 0},
-	{BCM_KEY_ROW_4, BCM_KEY_COL_0, "unused", 0},
-	{BCM_KEY_ROW_4, BCM_KEY_COL_1, "unused", 0},
-	{BCM_KEY_ROW_4, BCM_KEY_COL_2, "unused", 0},
-	{BCM_KEY_ROW_4, BCM_KEY_COL_3, "unused", 0},
-	{BCM_KEY_ROW_4, BCM_KEY_COL_4, "unused", 0},
-	{BCM_KEY_ROW_4, BCM_KEY_COL_5, "unused", 0},
-	{BCM_KEY_ROW_4, BCM_KEY_COL_6, "unused", 0},
-	{BCM_KEY_ROW_4, BCM_KEY_COL_7, "unused", 0},
-	{BCM_KEY_ROW_5, BCM_KEY_COL_0, "unused", 0},
-	{BCM_KEY_ROW_5, BCM_KEY_COL_1, "unused", 0},
-	{BCM_KEY_ROW_5, BCM_KEY_COL_2, "unused", 0},
-	{BCM_KEY_ROW_5, BCM_KEY_COL_3, "unused", 0},
-	{BCM_KEY_ROW_5, BCM_KEY_COL_4, "unused", 0},
-	{BCM_KEY_ROW_5, BCM_KEY_COL_5, "unused", 0},
-	{BCM_KEY_ROW_5, BCM_KEY_COL_6, "unused", 0},
-	{BCM_KEY_ROW_5, BCM_KEY_COL_7, "unused", 0},
-	{BCM_KEY_ROW_6, BCM_KEY_COL_0, "unused", 0},
-	{BCM_KEY_ROW_6, BCM_KEY_COL_1, "unused", 0},
-	{BCM_KEY_ROW_6, BCM_KEY_COL_2, "unused", 0},
-	{BCM_KEY_ROW_6, BCM_KEY_COL_3, "unused", 0},
-	{BCM_KEY_ROW_6, BCM_KEY_COL_4, "unused", 0},
-	{BCM_KEY_ROW_6, BCM_KEY_COL_5, "unused", 0},
-	{BCM_KEY_ROW_6, BCM_KEY_COL_6, "unused", 0},
-	{BCM_KEY_ROW_6, BCM_KEY_COL_7, "unused", 0},
-	{BCM_KEY_ROW_7, BCM_KEY_COL_0, "unused", 0},
-	{BCM_KEY_ROW_7, BCM_KEY_COL_1, "unused", 0},
-	{BCM_KEY_ROW_7, BCM_KEY_COL_2, "unused", 0},
-	{BCM_KEY_ROW_7, BCM_KEY_COL_3, "unused", 0},
-	{BCM_KEY_ROW_7, BCM_KEY_COL_4, "unused", 0},
-	{BCM_KEY_ROW_7, BCM_KEY_COL_5, "unused", 0},
-	{BCM_KEY_ROW_7, BCM_KEY_COL_6, "unused", 0},
-	{BCM_KEY_ROW_7, BCM_KEY_COL_7, "unused", 0},
-};
-
-static struct bcm_keypad_platform_info hawaii_keypad_data = {
-	.row_num = 2,
-	.col_num = 3,
-	.keymap = hawaii_keymap,
-	.bcm_keypad_base = (void *)__iomem HW_IO_PHYS_TO_VIRT(KEYPAD_BASE_ADDR),
-};
-
-#endif
-
 #if defined(CONFIG_BCMI2CNFC)
 static int bcmi2cnfc_gpio_setup(void *);
 static int bcmi2cnfc_gpio_clear(void *);
@@ -1306,9 +1210,6 @@ static struct platform_device board_caph_device = {
 #endif /* CONFIG_BCM_ALSA_SOUND */
 
 static struct platform_device *hawaii_devices[] __initdata = {
-#ifdef CONFIG_KEYBOARD_BCM
-	&hawaii_kp_device,
-#endif
 #ifdef CONFIG_KONA_HEADSET_MULTI_BUTTON
 	&hawaii_headset_device,
 #endif
@@ -1420,10 +1321,6 @@ static void __init hawaii_add_devices(void)
 {
 
 	hawaii_add_pdata();
-
-#ifdef CONFIG_KEYBOARD_BCM
-	hawaii_kp_device.dev.platform_data = &hawaii_keypad_data;
-#endif
 
 #ifdef CONFIG_ION
 #ifdef CONFIG_M4U

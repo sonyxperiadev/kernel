@@ -312,4 +312,31 @@
 		board-nvram-file = "/system/vendor/firmware/fw_wifi_nvram_hs1x.txt";
 	};
 
+	keypad {
+		row-num = <2>;
+		col-num = <3>;
+		row-col-count = <8>;
+		key-name = "Vol Down Key", "Vol Up Key", "Search Key", "unused",
+			"unused", "unused", "unused", "unused", "Home-Key",
+			"Back Key", "Menu-Key", "unused", "unused", "unused",
+			"unused", "unused", "unused", "unused", "unused",
+			"unused", "unused", "unused", "unused", "unused",
+			"unused", "unused", "unused", "unused", "unused",
+			"unused", "unused", "unused", "unused", "unused",
+			"unused", "unused", "unused", "unused", "unused",
+			"unused", "unused", "unused", "unused", "unused",
+			"unused", "unused", "unused", "unused", "unused",
+			"unused", "unused", "unused", "unused", "unused",
+			"unused", "unused", "unused", "unused", "unused",
+			"unused", "unused", "unused", "unused", "unused";
+		key-code = <114 115 217 0 0 0 0 0
+			102 158 139 0 0 0 0 0
+			0 0 0 0 0 0 0 0
+			0 0 0 0 0 0 0 0
+			0 0 0 0 0 0 0 0
+			0 0 0 0 0 0 0 0
+			0 0 0 0 0 0 0 0
+			0 0 0 0 0 0 0 0>;
+	};
+
 };

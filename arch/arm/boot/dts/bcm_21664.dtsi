@@ -92,4 +92,10 @@
 		cell-index = <4>;
 		interrupts = <0 14 0x04>;
 	};
+
+	keypad {
+		compatible = "bcm,bcm_keypad" ;
+		reg = <0x35003800 0x800>;
+	};
+
 };

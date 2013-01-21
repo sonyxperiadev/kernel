@@ -42,6 +42,10 @@
 #include "plat/chal/chal_common.h"
 #include "plat/chal/chal_keypad.h"
 
+#include <linux/of.h>
+#include <linux/of_fdt.h>
+#include <linux/of_platform.h>
+
 /*Debug messages */
 #define       BCMKP_DEBUG
 #ifdef BCMKP_DEBUG
@@ -201,7 +205,6 @@ static void bcm_handle_key(struct bcm_keypad *bcm_kb,
 	 */
 	keyreadstatus1 = chal_keypad_config_read_status1();
 	keyreadstatus2 = chal_keypad_config_read_status2();
-
 	pr_debug("[KEYPAD] %s, keyreadstatus1=0x%08x, keyreadstatus2=0x%08x\n",
 		 __func__, keyreadstatus1, keyreadstatus2);
 
@@ -328,13 +331,90 @@ static int __devinit bcm_keypad_probe(struct platform_device *pdev)
 {
 	int ret;
 	u32 i;
+	u32 *keycode = NULL;
 	/*u32 reg_value; */
-
 	struct bcm_keypad *bcm_kb;
-	struct bcm_keypad_platform_info *pdata = pdev->dev.platform_data;
-	struct bcm_keymap *keymap_p = pdata->keymap;
+	struct bcm_keypad_platform_info *pdata = NULL;
+	struct bcm_keymap *keymap = NULL;
+	struct bcm_keymap *keymap_p = NULL;
 	CHAL_KEYPAD_CONFIG_t hwConfig;
 
+	if (pdev->dev.platform_data)
+		pdata = pdev->dev.platform_data;
+	else if (pdev->dev.of_node) {
+		u32 val;
+		const char *key_name;
+		int row_col_count, key_count;
+		struct resource *regs = platform_get_resource(pdev,
+				IORESOURCE_MEM, 0);
+
+		pdata = kzalloc(sizeof(struct bcm_keypad_platform_info),
+			GFP_KERNEL);
+		if (!pdata)
+			return -ENOMEM;
+
+		if (of_property_read_u32(pdev->dev.of_node, "row-num", &val)) {
+			ret = -EINVAL;
+			goto pdata_free;
+		}
+
+		pdata->row_num = val;
+
+		if (of_property_read_u32(pdev->dev.of_node, "col-num", &val)) {
+			ret = -EINVAL;
+			goto pdata_free;
+		}
+
+		pdata->col_num = val;
+
+		if (of_property_read_u32(pdev->dev.of_node,
+				"row-col-count", &val)) {
+			ret = -EINVAL;
+			goto pdata_free;
+		}
+
+		row_col_count = val * val;
+
+		keymap = kzalloc(row_col_count * sizeof(struct bcm_keymap),
+			GFP_KERNEL);
+		if (!keymap) {
+			ret = -ENOMEM;
+			goto pdata_free;
+		}
+
+		keycode = kzalloc(row_col_count * sizeof(int), GFP_KERNEL);
+		if (!keycode) {
+			ret = -ENOMEM;
+			goto keymap_free;
+		}
+
+		if (of_property_read_u32_array(pdev->dev.of_node,
+				"key-code", keycode, row_col_count)) {
+			ret = -EINVAL;
+			goto keycode_free;
+		}
+
+		for (key_count = 0; key_count < row_col_count; key_count++) {
+
+			if (of_property_read_string_index(pdev->dev.of_node,
+				"key-name", key_count, &key_name)) {
+				ret = -EINVAL;
+				goto keycode_free;
+			}
+			keymap[key_count].row = (key_count / val);
+			keymap[key_count].col = (key_count % val);
+			keymap[key_count].name = (char *)key_name;
+			keymap[key_count].key_code = keycode[key_count];
+		}
+
+		pdata->keymap = keymap;
+
+		pdata->bcm_keypad_base =
+			(void *)__iomem HW_IO_PHYS_TO_VIRT(regs->start);
+		pdev->dev.platform_data = pdata;
+	}
+
+	keymap_p = pdata->keymap;
 	bcm_keypad_base_addr = pdata->bcm_keypad_base;
 
 	BCMKP_DBG(KERN_NOTICE "bcm_keypad_probe\n");
@@ -457,15 +537,31 @@ static int __devinit bcm_keypad_probe(struct platform_device *pdev)
 
 	/* Initialization Finished */
 	BCMKP_DBG(KERN_DEBUG "BCM keypad initialization completed...\n");
+
+	if (pdev->dev.of_node)
+		kfree(keycode);
+
 	return ret;
 
 free_dev:
 	input_free_device(bcm_kb->input_dev);
+	ret = -EINVAL;
 
 free_irq:
 	free_irq(bcm_kb->irq, (void *)bcm_kb);
+	ret = -EINVAL;
 
-	return -EINVAL;
+keycode_free:
+	if (pdev->dev.of_node)
+		kfree(keycode);
+keymap_free:
+	if (pdev->dev.of_node)
+		kfree(keymap);
+pdata_free:
+	if (pdev->dev.of_node)
+		kfree(pdata);
+
+	return ret;
 }
 
 /* ****************************************************************************** */
@@ -475,17 +571,25 @@ free_irq:
 static int __devexit bcm_keypad_remove(struct platform_device *pdev)
 {
 	struct bcm_keypad *bcm_kb = platform_get_drvdata(pdev);
+	struct bcm_keypad_platform_info *pdata = NULL;
 	BCMKP_DBG(KERN_NOTICE "bcm_keypad_remove\n");
+
+	if (pdev->dev.platform_data)
+		pdata = pdev->dev.platform_data;
 
 	/* disable keypad interrupt handling */
 	tasklet_disable(&kp_tasklet);
 
 	/*disable keypad interrupt handling */
 	free_irq(bcm_kb->irq, (void *)bcm_kb);
-
 	/* unregister everything */
 	input_unregister_device(bcm_kb->input_dev);
 
+	if (pdev->dev.of_node) {
+		kfree(pdata->keymap);
+		kfree(pdata);
+		pdev->dev.platform_data = NULL;
+	}
 #ifdef CONFIG_DEBUG_FS
 	debugfs_remove_recursive(keypad_root_dir);
 #endif
@@ -526,12 +630,17 @@ static void bcm_keypad_tasklet(unsigned long data)
 }
 
 /****************************************************************************/
-
+static const struct of_device_id keypad_of_match[] = {
+	{ .compatible = "bcm,bcm_keypad", },
+	{},
+}
+MODULE_DEVICE_TABLE(of, keypad_of_match);
 struct platform_driver bcm_keypad_device_driver = {
 	.probe = bcm_keypad_probe,
 	.remove = __devexit_p(bcm_keypad_remove),
 	.driver = {
 		   .name = "bcm_keypad",
+			.of_match_table = keypad_of_match,
 		   }
 };
 
