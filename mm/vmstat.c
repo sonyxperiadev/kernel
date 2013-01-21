@@ -560,7 +560,12 @@ static void fill_contig_page_info(struct zone *zone,
 		 * couting frag index
 		 */
 		blocks -= zone->nr_cma_free[order];
-		WARN_ON((long)blocks < 0);
+		/* If this is negative, we mave have free more
+		 * free CMA pages in this order now, but still no
+		 * non-CMA pages
+		 */
+		if ((long)blocks < 0)
+			blocks = 0;
 #endif
 		info->free_blocks_total += blocks;
 
