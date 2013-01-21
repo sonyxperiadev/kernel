@@ -1962,7 +1962,7 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 	/* T-high in SS/FS mode varies when the clock gets stretched in the B0
 	 * Variant. The same was fixed in the B1 variant where a bit in the CRC
 	 * main register needs to be set. */
-	if (!hw_cfg->is_pmu_i2c &&
+	if (hw_cfg && !hw_cfg->is_pmu_i2c &&
 #if defined(CONFIG_ARCH_RHEA)
 		get_chip_id() >= RHEA_CHIP_ID(RHEA_CHIP_REV_B1)
 #elif defined(CONFIG_ARCH_HAWAII)
@@ -2100,15 +2100,18 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 	bsc_put_clk(dev);
 
 err_free_priv_data_mem:
-	if (pdev->dev.of_node)
+	if (pdev->dev.of_node) {
 		kfree(hw_cfg);
+		pdev->dev.platform_data = NULL;
+	}
 
  err_free_dev_mem:
 	kfree(dev);
 
  err_release_mem_region:
 	release_mem_region(iomem->start, resource_size(iomem));
-	dev_err(dev->device, "I2C bus %d probe failed\n", pdev->id);
+	dev_err(&pdev->dev, "I2C bus %d probe failed\n", pdev->id);
+
 	return rc;
 }
 
@@ -2117,12 +2120,19 @@ static int bsc_remove(struct platform_device *pdev)
 	struct bsc_i2c_dev *dev = platform_get_drvdata(pdev);
 	struct resource *iomem;
 	struct bsc_adap_cfg *hw_cfg = NULL;
+	if (pdev->dev.platform_data)
+		hw_cfg = pdev->dev.platform_data;
 
 	/* If Adapter in HS(PMU BSC) Switch to f/s speed and send STOP */
 	if (dev->high_speed_mode && hw_cfg)
 		shutdown_high_speed_mode_adap(dev);
 
 	i2c_del_adapter(&dev->adapter);
+
+	if (pdev->dev.of_node) {
+		kfree(hw_cfg);
+		pdev->dev.platform_data = NULL;
+	}
 
 	proc_term(pdev);
 
