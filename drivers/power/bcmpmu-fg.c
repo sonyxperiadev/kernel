@@ -674,7 +674,6 @@ static int bcmpmu_fg_get_esr_to_ocv(int volt, int curr, int offset,
 {
 	int ocv;
 	s64 temp, temp1;
-
 	temp = 1000 + (slope * curr / 1000);
 	temp1 = 1000 * volt - offset * curr;
 	ocv = div64_s64(temp1, temp);
@@ -992,7 +991,7 @@ static int bcmpmu_fg_save_cap(struct bcmpmu_fg_data *fg, int cap_percentage)
 {
 	int ret;
 
-	BUG_ON(cap_percentage > 100);
+	BUG_ON((cap_percentage < 0) || (cap_percentage > 100));
 
 	ret = fg->bcmpmu->write_dev(fg->bcmpmu, FG_CAPACITY_SAVE_REG,
 			cap_percentage);
@@ -1006,10 +1005,11 @@ static int bcmpmu_fg_get_saved_cap(struct bcmpmu_fg_data *fg)
 	u8 reg;
 
 	ret = fg->bcmpmu->read_dev(fg->bcmpmu, FG_CAPACITY_SAVE_REG, &reg);
+
 	if (!ret)
-		cap = percentage_to_capacity(fg, reg);
+		cap = reg;
 	else
-		cap = 0;
+		cap = -1;
 	return cap;
 }
 
