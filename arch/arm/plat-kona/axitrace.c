@@ -652,6 +652,7 @@ static ssize_t filter_master_store(struct kobject *kobj,
 	struct axitrace_source *sources = trace_info->p_source_info;
 	int len = strlen(buf)-1;
 	int master_count, i, filter_index;
+	unsigned int axi_id_mask;
 
 	for (master_count = 0 ; sources->masters[master_count].name != NULL ;
 							master_count++)
@@ -664,13 +665,16 @@ static ssize_t filter_master_store(struct kobject *kobj,
 	if (i == master_count) {
 		pr_warn("invalid argument\n");
 		return -EINVAL;
-	}
+	} else if (!strncmp("ALL", sources->masters[i].name, len)) {
+		pr_warn("configure trace for all masters\n");
+		axi_id_mask = 0;
+	} else
+		axi_id_mask = sources->axi_id_mask;
 
 	filter_index = find_filter_index(kobj, filter_name_prefix);
 	set_fls_state(FLS_ID, filter_index, sources->masters[i].axi_id,
 								trace_info);
-	set_fls_state(FLS_ID_MASK, filter_index, sources->axi_id_mask,
-								trace_info);
+	set_fls_state(FLS_ID_MASK, filter_index, axi_id_mask, trace_info);
 
 	return count;
 }
