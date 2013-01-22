@@ -110,10 +110,6 @@
 #include <linux/broadcom/bcmbt_lpm.h>
 #endif
 
-#if defined(CONFIG_BCMI2CNFC)
-#include <linux/bcmi2cnfc.h>
-#endif
-
 #if defined(CONFIG_SENSORS_BMA222)
 #include <linux/bma222.h>
 #endif
@@ -187,11 +183,6 @@ hawaii_wifi_status_register(void (*callback) (int card_present, void *dev_id),
 
 #define TSC_GPIO_RESET_PIN			70
 #define TANGO_I2C_TS_DRIVER_NUM_BYTES_TO_READ	14
-
-/* NFC */
-#define NFC_INT	90
-#define NFC_WAKE 25
-#define NFC_ENABLE 100
 
 #ifdef CONFIG_ANDROID_PMEM
 struct android_pmem_platform_data android_pmem_data = {
@@ -777,36 +768,6 @@ struct platform_device *hawaii_common_plat_devices[] __initdata = {
 #endif
 };
 
-#if defined(CONFIG_BCMI2CNFC)
-static int bcmi2cnfc_gpio_setup(void *);
-static int bcmi2cnfc_gpio_clear(void *);
-static struct bcmi2cnfc_i2c_platform_data bcmi2cnfc_pdata = {
-	.i2c_pdata = {ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_400K),
-		      SET_CLIENT_FUNC(TX_FIFO_ENABLE | RX_FIFO_ENABLE)},
-	.irq_gpio = NFC_INT,
-	.en_gpio = NFC_ENABLE,
-	.wake_gpio = NFC_WAKE,
-	.init = bcmi2cnfc_gpio_setup,
-	.reset = bcmi2cnfc_gpio_clear,
-};
-
-static int bcmi2cnfc_gpio_setup(void *this)
-{
-	return 0;
-}
-static int bcmi2cnfc_gpio_clear(void *this)
-{
-	return 0;
-}
-
-static struct i2c_board_info __initdata bcmi2cnfc[] = {
-	{
-	 I2C_BOARD_INFO("bcmi2cnfc", 0x77),
-	 .platform_data = (void *)&bcmi2cnfc_pdata,
-	 .irq = gpio_to_irq(NFC_INT),
-	 },
-};
-#endif
 
 #if defined(CONFIG_SENSORS_KIONIX_KXTIK) \
 	|| defined(CONFIG_SENSORS_KIONIX_KXTIK_MODULE)
@@ -1283,9 +1244,6 @@ static void __init hawaii_add_i2c_devices(void)
 				ARRAY_SIZE(bcm915500_i2c_boardinfo));
 #endif
 
-#if defined(CONFIG_BCMI2CNFC)
-	i2c_register_board_info(1, bcmi2cnfc, ARRAY_SIZE(bcmi2cnfc));
-#endif
 
 }
 

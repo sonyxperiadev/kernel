@@ -39,6 +39,10 @@
 #include <linux/wakelock.h>
 #endif
 
+#include <linux/of.h>
+#include <linux/of_irq.h>
+#include <linux/of_platform.h>
+
 #define     TRUE                1
 #define     FALSE               0
 #define     STATE_HIGH          1
@@ -85,6 +89,9 @@ struct bcmi2cnfc_dev {
 	unsigned int count_read;
 	unsigned int count_irq;
 	unsigned int original_address;
+	bool enable_txfifo;
+	bool enable_rxfifo;
+	unsigned int speed;
 };
 
 #ifdef CONFIG_HAS_WAKELOCK
@@ -121,8 +128,8 @@ static void set_client_addr(struct bcmi2cnfc_dev *bcmi2cnfc_dev, int addr)
 		client->flags |= I2C_CLIENT_TEN;
 
 	DBG2(dev_info(&client->dev,
-		"Set client device changed to (0x%04X) flag = %04x\n",
-		client->addr, client->flags));
+		      "Set client device changed to (0x%04X) flag = %04x\n",
+		      client->addr, client->flags));
 }
 
 static void change_client_addr(struct bcmi2cnfc_dev *bcmi2cnfc_dev, int addr)
@@ -151,18 +158,18 @@ static void change_client_addr(struct bcmi2cnfc_dev *bcmi2cnfc_dev, int addr)
 		ret += addr_data[i];
 	addr_data[sizeof(addr_data) - 1] = (ret & 0xFF);
 	dev_info(&client->dev,
-		 "Change client device from (0x%04X) flag = "\
+		 "Change client device from (0x%04X) flag = "
 		 "%04x, addr_data[%d] = %02x\n",
 		 client->addr, client->flags, sizeof(addr_data) - 1,
 		 addr_data[sizeof(addr_data) - 1]);
 
 	ret = i2c_master_send(client,
-			addr_data+offset, sizeof(addr_data)-offset);
-	if (ret != sizeof(addr_data)-offset) {
+			      addr_data + offset, sizeof(addr_data) - offset);
+	if (ret != sizeof(addr_data) - offset) {
 		client->addr = ALIAS_ADDRESS;
 		client->flags &= ~I2C_CLIENT_TEN;
 		dev_info(&client->dev,
-			 "Change client device from (0x%04X) flag = "\
+			 "Change client device from (0x%04X) flag = "
 			 "%04x, addr_data[%d] = %02x\n",
 			 client->addr, client->flags, sizeof(addr_data) - 1,
 			 addr_data[sizeof(addr_data) - 1]);
@@ -194,7 +201,7 @@ static irqreturn_t bcmi2cnfc_dev_irq_handler(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-static unsigned int bcmi2cnfc_dev_poll(struct file *filp, poll_table * wait)
+static unsigned int bcmi2cnfc_dev_poll(struct file *filp, poll_table *wait)
 {
 	struct bcmi2cnfc_dev *bcmi2cnfc_dev = filp->private_data;
 	unsigned int mask = 0;
@@ -214,7 +221,7 @@ static unsigned int bcmi2cnfc_dev_poll(struct file *filp, poll_table * wait)
 	return mask;
 }
 
-static ssize_t bcmi2cnfc_dev_read(struct file *filp, char __user * buf,
+static ssize_t bcmi2cnfc_dev_read(struct file *filp, char __user *buf,
 				  size_t count, loff_t *offset)
 {
 	struct bcmi2cnfc_dev *bcmi2cnfc_dev = filp->private_data;
@@ -236,7 +243,9 @@ static ssize_t bcmi2cnfc_dev_read(struct file *filp, char __user * buf,
 
 	mutex_lock(&bcmi2cnfc_dev->read_mutex);
 
-	/* Read the first 4 bytes to include the length of the NCI or HCI packet. */
+	/* Read the first 4 bytes to include the length
+		of the NCI or HCI packet. */
+
 	ret = i2c_master_recv(bcmi2cnfc_dev->client, tmp, 4);
 	if (ret == 4) {
 		total = ret;
@@ -249,9 +258,11 @@ static ssize_t bcmi2cnfc_dev_read(struct file *filp, char __user * buf,
 		case PACKET_TYPE_HCIEV:
 			len = tmp[PACKET_HEADER_SIZE_HCI - 1];
 			if (len == 0)
-				total--;	/*Since payload is 0, decrement total size (from 4 to 3) */
+				total--;
+		/*Since payload is 0, decrement total size (from 4 to 3) */
 			else
-				len--;	/*First byte of payload is in tmp[3] already */
+				len--;
+		/*First byte of payload is in tmp[3] already */
 			break;
 
 		default:
@@ -289,7 +300,7 @@ static ssize_t bcmi2cnfc_dev_read(struct file *filp, char __user * buf,
 	return total;
 }
 
-static ssize_t bcmi2cnfc_dev_write(struct file *filp, const char __user * buf,
+static ssize_t bcmi2cnfc_dev_write(struct file *filp, const char __user *buf,
 				   size_t count, loff_t *offset)
 {
 	struct bcmi2cnfc_dev *bcmi2cnfc_dev = filp->private_data;
@@ -397,7 +408,7 @@ static long bcmi2cnfc_dev_unlocked_ioctl(struct file *filp,
 			}
 			gpio_set_value(bcmi2cnfc_dev->en_gpio, 0);
 			set_client_addr(bcmi2cnfc_dev,
-				bcmi2cnfc_dev->original_address);
+					bcmi2cnfc_dev->original_address);
 		}
 		break;
 	case BCMNFC_WAKE_CTL:
@@ -435,21 +446,16 @@ static const struct file_operations bcmi2cnfc_dev_fops = {
 	.unlocked_ioctl = bcmi2cnfc_dev_unlocked_ioctl
 };
 
+static struct bcmi2cnfc_i2c_platform_data bcmi2cnfc_pdata;
+
 static int bcmi2cnfc_probe(struct i2c_client *client,
 			   const struct i2c_device_id *id)
 {
 	int ret;
-	struct bcmi2cnfc_i2c_platform_data *platform_data;
 	struct bcmi2cnfc_dev *bcmi2cnfc_dev;
-	platform_data = client->dev.platform_data;
 
-	dev_info(&client->dev, "%s, probing bcmi2cnfc driver flags = %x\n",
-		 __func__, client->flags);
-
-	if (platform_data == NULL) {
-		dev_err(&client->dev, "nfc probe fail\n");
-		return -ENODEV;
-	}
+	struct device_node *np = client->dev.of_node;
+	u32 val;
 
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C)) {
 		dev_err(&client->dev, "need I2C_FUNC_I2C\n");
@@ -464,12 +470,46 @@ static int bcmi2cnfc_probe(struct i2c_client *client,
 		goto err_exit;
 	}
 
-	bcmi2cnfc_dev->wake_gpio = platform_data->wake_gpio;
-	bcmi2cnfc_dev->irq_gpio = platform_data->irq_gpio;
-	bcmi2cnfc_dev->en_gpio = platform_data->en_gpio;
+	if (np != NULL) {
+		if (!of_property_read_u32(np, "wake_gpio", &val))
+			bcmi2cnfc_dev->wake_gpio = val;
+		if (!of_property_read_u32(np, "irq_gpio", &val))
+			bcmi2cnfc_dev->irq_gpio = val;
+		if (!of_property_read_u32(np, "en_gpio", &val))
+			bcmi2cnfc_dev->en_gpio = val;
+		if (!of_property_read_u32(np, "enable_txfifo", &val))
+			bcmi2cnfc_dev->enable_txfifo = val;
+		if (!of_property_read_u32(np, "enable_rxfifo", &val))
+			bcmi2cnfc_dev->enable_rxfifo = val;
+		if (!of_property_read_u32(np, "speed", &val))
+			bcmi2cnfc_dev->speed = val;
+
+	}
+
+	DBG(dev_info(&client->dev, "nfc: wake %d, irq %d, en %d\n\n",
+		     bcmi2cnfc_dev->wake_gpio,
+		     bcmi2cnfc_dev->irq_gpio, bcmi2cnfc_dev->en_gpio));
+
 	bcmi2cnfc_dev->client = client;
 
-	platform_data->init(platform_data);
+	if (bcmi2cnfc_dev->speed != 0) {
+		bcmi2cnfc_pdata.i2c_pdata.spd_magic = SLAVE_SPD_MAGIC_NUM;
+		bcmi2cnfc_pdata.i2c_pdata.i2c_speed = bcmi2cnfc_dev->speed;
+	}
+
+	if (bcmi2cnfc_dev->enable_rxfifo != 0) {
+		bcmi2cnfc_pdata.i2c_pdata.client_func_magic =
+		    CLIENT_FUNC_MAGIC_NUM;
+		bcmi2cnfc_pdata.i2c_pdata.client_func_map |= RX_FIFO_ENABLE;
+	}
+
+	if (bcmi2cnfc_dev->enable_txfifo != 0) {
+		bcmi2cnfc_pdata.i2c_pdata.client_func_magic =
+		    CLIENT_FUNC_MAGIC_NUM;
+		bcmi2cnfc_pdata.i2c_pdata.client_func_map |= TX_FIFO_ENABLE;
+	}
+
+	client->dev.platform_data = &bcmi2cnfc_pdata;
 
 	/* init mutex and queues */
 	init_waitqueue_head(&bcmi2cnfc_dev->read_wq);
@@ -491,8 +531,10 @@ static int bcmi2cnfc_probe(struct i2c_client *client,
 	 */
 	DBG(dev_info(&client->dev, "requesting IRQ %d\n", client->irq));
 
-	ret = request_irq(client->irq, bcmi2cnfc_dev_irq_handler,
-			  INTERRUPT_TRIGGER_TYPE, client->name, bcmi2cnfc_dev);
+	ret =
+	    request_irq(gpio_to_irq(bcmi2cnfc_dev->irq_gpio),
+			bcmi2cnfc_dev_irq_handler, INTERRUPT_TRIGGER_TYPE,
+			client->name, bcmi2cnfc_dev);
 	if (ret) {
 		dev_err(&client->dev, "request_irq failed\n");
 		goto err_request_irq_failed;
@@ -519,27 +561,20 @@ err_misc_register:
 	mutex_destroy(&bcmi2cnfc_dev->read_mutex);
 	kfree(bcmi2cnfc_dev);
 err_exit:
-	gpio_free(platform_data->wake_gpio);
-	gpio_free(platform_data->en_gpio);
-	gpio_free(platform_data->irq_gpio);
 	return ret;
 }
 
 static int bcmi2cnfc_remove(struct i2c_client *client)
 {
-	struct bcmi2cnfc_i2c_platform_data *platform_data;
 	struct bcmi2cnfc_dev *bcmi2cnfc_dev;
 	DBG(dev_info
 	    (&client->dev, "%s, Removing bcmi2cnfc driver\n", __func__));
-
-	platform_data = client->dev.platform_data;
 
 	bcmi2cnfc_dev = i2c_get_clientdata(client);
 	free_irq(client->irq, bcmi2cnfc_dev);
 	misc_deregister(&bcmi2cnfc_dev->bcmi2cnfc_device);
 	mutex_destroy(&bcmi2cnfc_dev->read_mutex);
 	kfree(bcmi2cnfc_dev);
-	platform_data->reset(platform_data);
 
 	return 0;
 }
@@ -549,6 +584,10 @@ static const struct i2c_device_id bcmi2cnfc_id[] = {
 	{}
 };
 
+static const struct of_device_id bcmi2cnfc_match[] = {
+	{.compatible = "bcm,nfc-i2c"},
+};
+
 static struct i2c_driver bcmi2cnfc_driver = {
 	.id_table = bcmi2cnfc_id,
 	.probe = bcmi2cnfc_probe,
@@ -556,6 +595,7 @@ static struct i2c_driver bcmi2cnfc_driver = {
 	.driver = {
 		   .owner = THIS_MODULE,
 		   .name = "bcmi2cnfc",
+		   .of_match_table = bcmi2cnfc_match,
 		   },
 };
 
