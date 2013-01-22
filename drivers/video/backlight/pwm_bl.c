@@ -118,11 +118,66 @@ static void backlight_driver_late_resume(struct early_suspend *h)
 static int pwm_backlight_probe(struct platform_device *pdev)
 {
 	struct backlight_properties props;
-	struct platform_pwm_backlight_data *data = pdev->dev.platform_data;
+	struct platform_pwm_backlight_data *data = NULL;
 	struct backlight_device *bl;
 	struct pwm_bl_data *pb;
+	const char *pwm_request_label;
 	int ret;
 
+	if (pdev->dev.platform_data)
+		data = pdev->dev.platform_data;
+
+	else if (pdev->dev.of_node) {
+		u32 val;
+		data = kzalloc(sizeof(struct platform_pwm_backlight_data),
+				GFP_KERNEL);
+		if (!data)
+			return -ENOMEM;
+
+		if (of_property_read_u32(pdev->dev.of_node, "pwm-id", &val)) {
+			ret = -EINVAL;
+			goto err_read;
+		}
+		data->pwm_id = val;
+
+		if (of_property_read_u32(pdev->dev.of_node,
+				"max-brightness", &val)) {
+			ret = -EINVAL;
+			goto err_read;
+		}
+		data->max_brightness = val;
+
+		if (of_property_read_u32(pdev->dev.of_node,
+				"dft-brightness", &val)) {
+			ret = -EINVAL;
+			goto err_read;
+		}
+		data->dft_brightness = val;
+
+		if (of_property_read_u32(pdev->dev.of_node,
+				"polarity", &val)) {
+			ret = -EINVAL;
+			goto err_read;
+		}
+		data->polarity = val;
+
+		if (of_property_read_u32(pdev->dev.of_node,
+				"pwm-period-ns", &val)) {
+			ret = -EINVAL;
+			goto err_read;
+		}
+		data->pwm_period_ns = val;
+
+		of_property_read_string(pdev->dev.of_node,
+			"pwm-request-label", &pwm_request_label);
+		if (pwm_request_label == NULL) {
+			ret = -EINVAL;
+			goto err_read;
+		}
+
+		pdev->dev.platform_data = data;
+
+	}
 	if (!data) {
 		dev_err(&pdev->dev, "failed to find platform data\n");
 		return -EINVAL;
@@ -142,6 +197,7 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 	}
 
 	pb->period = data->pwm_period_ns;
+
 	pb->notify = data->notify;
 	pb->notify_after = data->notify_after;
 	pb->check_fb = data->check_fb;
@@ -149,7 +205,7 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 		(data->pwm_period_ns / data->max_brightness);
 	pb->dev = &pdev->dev;
 
-	pb->pwm = pwm_request(data->pwm_id, "backlight");
+	pb->pwm = pwm_request(data->pwm_id, pwm_request_label);
 	if (IS_ERR(pb->pwm)) {
 		dev_err(&pdev->dev, "unable to request PWM for backlight\n");
 		ret = PTR_ERR(pb->pwm);
@@ -186,6 +242,9 @@ err_bl:
 err_alloc:
 	if (data->exit)
 		data->exit(&pdev->dev);
+err_read:
+	if (pdev->dev.of_node)
+		kfree(data);
 	return ret;
 }
 
@@ -199,8 +258,12 @@ static int pwm_backlight_remove(struct platform_device *pdev)
 	pwm_config(pb->pwm, 0, pb->period);
 	pwm_disable(pb->pwm);
 	pwm_free(pb->pwm);
-	if (data->exit)
+	if (data && data->exit)
 		data->exit(&pdev->dev);
+	if (data && pdev->dev.of_node) {
+		kfree(data);
+		pdev->dev.platform_data = NULL;
+	}
 	return 0;
 }
 
@@ -231,11 +294,16 @@ static SIMPLE_DEV_PM_OPS(pwm_backlight_pm_ops, pwm_backlight_suspend,
 			 pwm_backlight_resume);
 
 #endif
-
+static const struct of_device_id pwm_backlight_of_match[] = {
+	{ .compatible = "bcm,pwm-backlight", },
+	{},
+}
+MODULE_DEVICE_TABLE(of, pwm_backlight_of_match);
 static struct platform_driver pwm_backlight_driver = {
 	.driver		= {
 		.name	= "pwm-backlight",
 		.owner	= THIS_MODULE,
+		.of_match_table = pwm_backlight_of_match,
 #ifdef CONFIG_PM
 		.pm	= &pwm_backlight_pm_ops,
 #endif
