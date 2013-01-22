@@ -61,7 +61,6 @@ static char *capability_strings[] = {
 	"Read Latency Mode",
 	"Outstanding Count Enable",
 	"Outstanding Filter Enable",
-	"Outstanding Threshold (max 7)",
 };
 
 static const char filter_name_prefix[] = "filter";
@@ -127,18 +126,25 @@ fls_attrs_to_per_trace_info(void *trace_attr)
 {
 	return container_of(trace_attr, struct per_trace_info, filter_attrs);
 }
+
 static int get_cap_state(unsigned int cap, struct per_trace_info *info)
 {
-	return info->state.cap_state & cap;
+	if (cap == OUTS_THRES)
+		return ((info->state.cap_state & OUTS_THRES_VAL(MAX_OUTS_THRES))
+			>> OUTS_THRES_POS);
+	else
+		return info->state.cap_state & cap;
 }
 
-static void set_cap_state(unsigned int cap, int enable,
-			struct per_trace_info *info)
+static void set_cap_state(u32 cap, u8 value, struct per_trace_info *info)
 {
-	if (enable)
-		info->state.cap_state |= cap;
-	else
+	if (cap == OUTS_THRES) {
+		info->state.cap_state &= ~OUTS_THRES_VAL(MAX_OUTS_THRES);
+		info->state.cap_state |= OUTS_THRES_VAL(value);
+	} else {
 		info->state.cap_state &= ~cap;
+		info->state.cap_state |= (value << (ffs(cap) - 1));
+	}
 }
 
 static u32 get_fls_state(unsigned int item, int index,
@@ -311,6 +317,10 @@ static int get_cap_info(struct per_trace_info *trace_info, char *buf)
 				"%s %2d %s\n",
 				enable ? star : blank,
 				count++, capability_strings[index]);
+		if (BIT(set_bit - 1) == OUTS_COUNTING)
+			retval += sprintf(buf + retval,
+					"\t\tThreshold = %2d\n",
+					get_cap_state(OUTS_THRES, trace_info));
 	} while ((set_bit = ffs(dev_cap)) != 0);
 
 	return retval;
@@ -334,7 +344,9 @@ static ssize_t cap_store(struct kobject *kobj, struct kobj_attribute *attr,
 	struct per_trace_info *trace_info =
 				trace_attrs_to_per_trace_info(trace_attr);
 	int enable, retval;
-	unsigned long item;
+	unsigned long item, outs_threshold;
+	char *x = (char *)&buf[1];
+	char *y;
 
 	if (buf[0] == '+')
 		enable = 1;
@@ -345,9 +357,33 @@ static ssize_t cap_store(struct kobject *kobj, struct kobj_attribute *attr,
 		return count;
 	}
 
-	retval = kstrtoul(&buf[1], 10, &item);
-	if (retval < 0)
-		return retval;
+	do {
+		y = strsep(&x, "=");
+		retval = kstrtoul(y, 0, &item);
+		if (retval < 0) {
+			pr_err("invalid argument\n");
+			return -EINVAL;
+		}
+
+		if (x == NULL)
+			break;
+
+		y = strsep(&x, "=");
+		retval = kstrtoul(y, 0, &outs_threshold);
+		if (retval < 0) {
+			pr_err("invalid argument\n");
+			return -EINVAL;
+		}
+
+		if (outs_threshold > MAX_OUTS_THRES) {
+			pr_err("Max available outstanding threshold is %d\n",
+				MAX_OUTS_THRES);
+			return -EINVAL;
+		}
+		set_cap_state(OUTS_THRES, outs_threshold,
+				trace_info);
+
+	} while (0);
 
 	item = find_pos_nth_setbit(trace_info->p_source_info->cap, item);
 	item -= 1;
@@ -368,7 +404,6 @@ static int get_master_info(struct per_trace_info *trace_info, char *buf)
 				count++, masters[i].name);
 	}
 	return retval;
-
 }
 
 static ssize_t master_show(struct kobject *kobj, struct kobj_attribute *attr,
@@ -391,7 +426,6 @@ static int get_slave_info(struct per_trace_info *trace_info, char *buf)
 		retval += sprintf(buf + retval, " %2d %s\n",
 					count++, slaves[i].name);
 	return retval;
-
 }
 
 static ssize_t slave_show(struct kobject *kobj, struct kobj_attribute *attr,

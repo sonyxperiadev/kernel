@@ -167,6 +167,9 @@ struct complete_trace_src_info {
 #define	OUTS_COUNTING		BIT(14)
 #define	OUTS_FILTER		BIT(15)
 #define	OUTS_THRES		BIT(16)
+#define	OUTS_THRES_POS		16
+#define	OUTS_THRES_VAL(x)	(x << OUTS_THRES_POS)
+#define	MAX_OUTS_THRES		7
 
 #define AXITRACE_FULL_CAP	(CNTR_SAT_ENABLE | TRACE_ENABLE		|\
 				COMMANDS_COUNTING | COMMANDS_FILTER	|\
@@ -174,7 +177,7 @@ struct complete_trace_src_info {
 				BUSY_COUNTING | BUSY_FILTER		|\
 				LATENCY_MEASUREMENT | LATENCY_FILTER	|\
 				RD_LATENCY_MODE | OUTS_COUNTING		|\
-				OUTS_FILTER | OUTS_THRES)
+				OUTS_FILTER)
 
 #define	FILTER_READ		BIT(0)
 #define	FILTER_WRITE		BIT(1)
