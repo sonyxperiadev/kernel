@@ -114,8 +114,8 @@
 /*
  * Button/Hook Filter configuration
  */
-/* = 1024 / (Filter block frequencey) = 1024 / 32768 => 31ms */
-#define ACC_HW_COMP1_FILTER_WIDTH   1024
+/* = 2048 / (Filter block frequency) = 2048 / 32768 => 62ms */
+#define ACC_HW_COMP1_FILTER_WIDTH   2048
 
 /*
  * Accessory Detecting voltage
@@ -125,7 +125,7 @@
 #define HEADPHONE_DETECT_LEVEL_MIN      0
 #define HEADPHONE_DETECT_LEVEL_MAX      40
 #define HEADPHONE_DETECT_LEVEL2_MIN     91
-#define HEADPHONE_DETECT_LEVEL2_MAX     599
+#define HEADPHONE_DETECT_LEVEL2_MAX     899
 
 #define OPENCABLE_DETECT_LEVEL_MIN      1900
 #define OPENCABLE_DETECT_LEVEL_MAX      5000
@@ -215,11 +215,11 @@ enum button_state {
  */
 static unsigned int button_adc_values_no_resistor[3][2] = {
 	/* SEND/END Min, Max */
-	{0, 104},
+	{0, 110},
 	/* Volume Up  Min, Max */
-	{139, 270},
+	{111, 250},
 	/* Volue Down Min, Max */
-	{330, 680},
+	{251, 500},
 };
 static unsigned int (*button_adc_values)[2];
 
@@ -232,7 +232,7 @@ static const CHAL_ACI_filter_config_comp_t comp_values_for_button_press = {
 	CHAL_ACI_FILTER_RESET_FIRMWARE,
 	0,			/* = S */
 	0xFE,			/* = T */
-	0x500,			/* = M = 1280 / 32768 => 39ms */
+	0xA00,			/* = M = 2560 / 32768 => 78ms */
 	ACC_HW_COMP1_FILTER_WIDTH	/* = MT */
 };
 
@@ -370,7 +370,7 @@ static int config_adc_for_accessory_detection(int hst)
 		chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
 				    CHAL_ACI_BLOCK_ACTION_ADC_RANGE,
 				    CHAL_ACI_BLOCK_ADC,
-				    CHAL_ACI_BLOCK_ADC_LOW_VOLTAGE);
+				    CHAL_ACI_BLOCK_ADC_HIGH_VOLTAGE);
 
 		chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
 				    CHAL_ACI_BLOCK_ACTION_CONFIGURE_FILTER,
@@ -515,6 +515,7 @@ static int config_adc_for_bp_detection(void)
 static int read_adc_for_accessory_detection(int hst)
 {
 	int status = -1;
+	int count = 0;
 	int mic_level;
 
 	if (mic_dev == NULL) {
@@ -545,6 +546,7 @@ static int read_adc_for_accessory_detection(int hst)
 	 * If the read value is greater than  phone_ref_offset then subtract
 	 * this offset from the value read, otherwise mic_level is zero
 	 */
+
 	mic_level = chal_aci_block_read(mic_dev->aci_chal_hdl,
 					CHAL_ACI_BLOCK_ADC,
 					CHAL_ACI_BLOCK_ADC_RAW);
@@ -557,8 +559,8 @@ static int read_adc_for_accessory_detection(int hst)
 	    0 ? mic_level : ((mic_level > mic_dev->headset_pd->phone_ref_offset)
 			     ? (mic_level -
 				mic_dev->headset_pd->phone_ref_offset) : 0);
-	pr_debug
-	    (" ++ read_adc_for_accessory_detection:"
+	pr_info
+	    ("\n read_adc_for_accessory_detection:"
 				" mic_level after calc %d \r\n",
 	     mic_level);
 
@@ -586,7 +588,7 @@ static int read_adc_for_accessory_detection(int hst)
 		break;
 	}
 
-	pr_debug("status is %d mic_level is %d \r\n", status, mic_level);
+	pr_info("\n status is %d mic_level is %d \r\n", status, mic_level);
 	return status;
 }
 
@@ -658,7 +660,7 @@ int detect_button_pressed(struct mic_t *mic_dev)
 	mic_level = mic_level <= 0 ? mic_level :
 	    ((mic_level > mic_dev->headset_pd->phone_ref_offset) ?
 	     (mic_level - mic_dev->headset_pd->phone_ref_offset) : 0);
-	pr_debug("%s():mic_level after calc %d \r\n", __func__, mic_level);
+	pr_info("\n %s():mic_level after calc %d \r\n", __func__, mic_level);
 
 	/* Find out what is the button pressed */
 
@@ -2103,6 +2105,7 @@ static int __init hs_probe(struct platform_device *pdev)
 		button_adc_values =
 				button_adc_values_no_resistor;
 	}
+	 mic_dev->low_voltage_mode = false;
 	/* COMP2 irq */
 	mic->comp2_irq = platform_get_irq(pdev, irq_resource_num);
 	if (!mic->comp2_irq) {
