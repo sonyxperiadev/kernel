@@ -319,6 +319,8 @@ static int hawaii_camera_power(struct device *dev, int on)
 	struct clk *lp_clock;
 	struct clk *axi_clk;
 	static struct pi_mgr_dfs_node unicam_dfs_node;
+	struct soc_camera_device *icd = to_soc_camera_dev(dev);
+	struct soc_camera_link *icl = to_soc_camera_link(icd);
 
 	printk(KERN_INFO "%s:camera power %s\n", __func__, (on ? "on" : "off"));
 	if (!unicam_dfs_node.valid) {
@@ -339,13 +341,14 @@ static int hawaii_camera_power(struct device *dev, int on)
 			return -1;
 		}
 		/*MMC1 VCC */
-		d_1v8_mmc1_vcc = regulator_get(NULL, "mmc1_vcc");
+		d_1v8_mmc1_vcc = regulator_get(NULL, icl->regulators[1].supply);
 		if (IS_ERR_OR_NULL(d_1v8_mmc1_vcc))
 			printk(KERN_ERR "Failed to  get d_1v8_mmc1_vcc\n");
-		d_3v0_mmc1_vcc = regulator_get(NULL, "mmc2_vcc");
+		d_3v0_mmc1_vcc = regulator_get(NULL, icl->regulators[2].supply);
 		if (IS_ERR_OR_NULL(d_3v0_mmc1_vcc))
 			printk(KERN_ERR "Failed to  get d_3v0_mmc1_vcc\n");
-		d_gpsr_cam0_1v8 = regulator_get(NULL, "vsr_uc");
+		d_gpsr_cam0_1v8 = regulator_get(NULL,
+			icl->regulators[0].supply);
 		if (IS_ERR_OR_NULL(d_gpsr_cam0_1v8))
 			printk(KERN_ERR "Failed to  get d_gpsr_cam0_1v8\n");
 	}
@@ -470,6 +473,9 @@ static int hawaii_camera_power_front(struct device *dev, int on)
 	struct clk *lp_clock_0;
 	struct clk *lp_clock_1;
 	static struct pi_mgr_dfs_node unicam_dfs_node;
+	struct soc_camera_device *icd = to_soc_camera_dev(dev);
+	struct soc_camera_link *icl = to_soc_camera_link(icd);
+
 
 	printk(KERN_INFO "%s:camera power %s\n", __func__, (on ? "on" : "off"));
 	if (!unicam_dfs_node.valid) {
@@ -484,11 +490,13 @@ static int hawaii_camera_power_front(struct device *dev, int on)
 			printk(KERN_ERR "Unable to get CAM1PWDN\n");
 			return -1;
 		}
-		d_lvldo2_cam1_1v8 = regulator_get(NULL, "lvldo2_uc");
+		d_lvldo2_cam1_1v8 = regulator_get(NULL,
+			icl->regulators[0].supply);
 		if (IS_ERR_OR_NULL(d_lvldo2_cam1_1v8))
 			printk(KERN_ERR "Failed to get d_lvldo2_cam1_1v8\n");
 		if (d_1v8_mmc1_vcc == NULL) {
-			d_1v8_mmc1_vcc = regulator_get(NULL, "mmc1_vcc");
+			d_1v8_mmc1_vcc = regulator_get(NULL,
+				icl->regulators[1].supply);
 			if (IS_ERR_OR_NULL(d_1v8_mmc1_vcc))
 				printk(KERN_ERR "Err d_1v8_mmc1_vcc\n");
 		}

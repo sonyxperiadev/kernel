@@ -68,7 +68,6 @@ static int soc_camera_power_set(struct soc_camera_device *icd,
 			dev_err(&icd->dev, "Cannot enable regulators\n");
 			return ret;
 		}
-
 		if (icl->power)
 			ret = icl->power(icd->pdev, power_on);
 		if (ret < 0) {
@@ -1592,6 +1591,7 @@ static int __devinit soc_camera_pdrv_probe(struct platform_device *pdev)
 	struct soc_camera_device *icd;
 	struct i2c_board_info *i2c_camera;
 	static struct v4l2_subdev_sensor_interface_parms *parms;
+	struct regulator_bulk_data *regulators;
 
 	int ret;
 	u32 val;
@@ -1603,6 +1603,8 @@ static int __devinit soc_camera_pdrv_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	if (pdev->dev.of_node)	 {
+		int reg_count = 0, count;
+
 		i2c_camera = kzalloc(sizeof(struct i2c_board_info),
 			GFP_ATOMIC);
 		if (!i2c_camera)
@@ -1660,6 +1662,32 @@ static int __devinit soc_camera_pdrv_probe(struct platform_device *pdev)
 			goto out;
 		parms->parms.serial.pix_clk = val;
 		icl->priv = parms;
+
+		reg_count = of_property_count_strings(pdev->dev.of_node,
+				"regulators");
+		if (reg_count <= 0) {
+			pr_debug("regulator count read failed with error %d",
+				reg_count);
+			goto out;
+		}
+
+		regulators = kzalloc(reg_count *
+			sizeof(struct regulator_bulk_data), GFP_KERNEL);
+		if (!regulators)
+			return -ENOMEM;
+
+		for (count = 0; count < reg_count; count++) {
+			if (of_property_read_string_index(pdev->dev.of_node,
+				"regulators", count, &prop)) {
+				pr_debug("regulator name could not be read" \
+					"from DT");
+				goto reg_out;
+			}
+			regulators[count].supply = prop;
+		}
+
+		icl->regulators = regulators;
+		pdev->dev.platform_data = icl;
 	}
 
 	icd->iface = icl->bus_id;
@@ -1680,6 +1708,11 @@ static int __devinit soc_camera_pdrv_probe(struct platform_device *pdev)
 escdevreg:
 	kfree(icd);
 	return ret;
+
+reg_out:
+	if (pdev->dev.of_node)
+		kfree(regulators);
+
 out:
 	if (pdev->dev.of_node) {
 		kfree(i2c_camera);
@@ -1707,6 +1740,8 @@ static int __devexit soc_camera_pdrv_remove(struct platform_device *pdev)
 			kfree(icl->board_info);
 		if (icl->priv != NULL)
 			kfree(icl->priv);
+		if (icl->regulators != NULL)
+			kfree(icl->regulators);
 	}
 
 	return 0;

@@ -192,6 +192,7 @@
 		channel = <0>;
 		phy-rate = <0>;
 		pix-clk = <0>;
+		regulators = "vsr_uc", "mmc1_vcc", "mmc2_vcc";
 	};
 
 	soc-front-camera {
@@ -210,6 +211,7 @@
 		channel = <1>;
 		phy-rate = <0>;
 		pix-clk = <0>;
+		regulators = "lvldo2_uc", "mmc1_vcc";
 
 	};
 
