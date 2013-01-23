@@ -674,19 +674,6 @@ struct platform_device *hawaii_common_plat_devices[] __initdata = {
 #endif
 };
 
-struct regulator_consumer_supply sd_supply[] = {
-	{.supply = "sdldo_uc"},
-	REGULATOR_SUPPLY("vddmmc", "sdhci.3"),	/* 0x3f1b0000.sdhci */
-	{.supply = "vdd_sdio"},
-};
-
-struct regulator_consumer_supply sdx_supply[] = {
-	{.supply = "sdxldo_uc"},
-	REGULATOR_SUPPLY("vddo", "sdhci.3"),	/* 0x3f1b0000.sdhci */
-	{.supply = "vdd_sdxc"},
-	{.supply = "sddat_debug_bus"},
-};
-
 #if defined(CONFIG_BCMI2CNFC)
 static int bcmi2cnfc_gpio_setup(void *);
 static int bcmi2cnfc_gpio_clear(void *);

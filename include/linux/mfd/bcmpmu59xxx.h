@@ -847,6 +847,7 @@ struct bcmpmu59xxx_regulator_init_data {
 	struct regulator_init_data *initdata;
 	u16 dsm_mode;
 	u32 pc_pins_map;
+	char *name;
 };
 
 struct bcmpmu59xxx_regulator_pdata {
