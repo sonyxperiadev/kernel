@@ -205,24 +205,6 @@ hawaii_wifi_status_register(void (*callback) (int card_present, void *dev_id),
 /* SD */
 #define SD_CARDDET_GPIO_PIN	91
 
-/* keypad map */
-#define BCM_KEY_ROW_0  0
-#define BCM_KEY_ROW_1  1
-#define BCM_KEY_ROW_2  2
-#define BCM_KEY_ROW_3  3
-#define BCM_KEY_ROW_4  4
-#define BCM_KEY_ROW_5  5
-#define BCM_KEY_ROW_6  6
-#define BCM_KEY_ROW_7  7
-
-#define BCM_KEY_COL_0  0
-#define BCM_KEY_COL_1  1
-#define BCM_KEY_COL_2  2
-#define BCM_KEY_COL_3  3
-#define BCM_KEY_COL_4  4
-#define BCM_KEY_COL_5  5
-#define BCM_KEY_COL_6  6
-#define BCM_KEY_COL_7  7
 
 #ifdef CONFIG_MACH_HAWAII_GARNET
 #define FT5306_MAX_X 720
@@ -474,6 +456,8 @@ static int hawaii_camera_power(struct device *dev, int on)
 		gpio_set_value(SENSOR_0_GPIO_RST, 1);
 		msleep(30);
 	} else {
+		gpio_set_value(SENSOR_0_GPIO_RST, 0);
+		usleep_range(1000, 1100);
 		gpio_set_value(SENSOR_0_GPIO_PWRDN, 1);
 		clk_disable(clock);
 		clk_disable(lp_clock);
@@ -543,7 +527,6 @@ static int hawaii_camera_power_front(struct device *dev, int on)
 			if (IS_ERR_OR_NULL(d_1v8_mmc1_vcc))
 				printk(KERN_ERR "Err d_1v8_mmc1_vcc\n");
 		}
-
 	}
 
 	ret = -1;
@@ -698,13 +681,6 @@ static struct soc_camera_link iclink_ov7692 = {
 };
 
 #endif /* CONFIG_VIDEO_UNICAM_CAMERA */
-static const struct of_dev_auxdata hawaii_auxdata_lookup[] __initconst = {
-	OF_DEV_AUXDATA("bcm,soc-camera", 0x3c,
-		"soc-back-camera", &iclink_ov5640),
-	OF_DEV_AUXDATA("bcm,soc-camera", 0x3e,
-		"soc-front-camera", &iclink_ov7692),
-	{},
-};
 
 static struct spi_kona_platform_data hawaii_ssp0_info = {
 #ifdef CONFIG_DMAC_PL330
@@ -790,8 +766,11 @@ struct platform_device *hawaii_common_plat_devices[] __initdata = {
 #endif
 
 #ifdef CONFIG_SND_BCM_SOC
+	&hawaii_audio_device,
 	&caph_i2s_device,
 	&caph_pcm_device,
+	&spdif_dit_device,
+
 #endif
 };
 
@@ -839,161 +818,6 @@ struct regulator_consumer_supply sdx_supply[] = {
 	{.supply = "vdd_sdxc"},
 	{.supply = "sddat_debug_bus"},
 };
-
-#ifdef CONFIG_KEYBOARD_BCM
-#if defined(CONFIG_MACH_HAWAII_GARNET_EDN000)
-static struct bcm_keymap hawaii_keymap[] = {
-	{BCM_KEY_ROW_0, BCM_KEY_COL_0, "Vol Down Key", KEY_VOLUMEDOWN},
-	{BCM_KEY_ROW_0, BCM_KEY_COL_1, "unused", 0},
-	{BCM_KEY_ROW_0, BCM_KEY_COL_2, "unused", 0},
-	{BCM_KEY_ROW_0, BCM_KEY_COL_3, "unused", 0},
-	{BCM_KEY_ROW_0, BCM_KEY_COL_4, "unused", 0},
-	{BCM_KEY_ROW_0, BCM_KEY_COL_5, "unused", 0},
-	{BCM_KEY_ROW_0, BCM_KEY_COL_6, "unused", 0},
-	{BCM_KEY_ROW_0, BCM_KEY_COL_7, "unused", 0},
-	{BCM_KEY_ROW_1, BCM_KEY_COL_0, "Vol Up Key", KEY_VOLUMEUP},
-	{BCM_KEY_ROW_1, BCM_KEY_COL_1, "Camera Key", KEY_CAMERA},
-	{BCM_KEY_ROW_1, BCM_KEY_COL_2, "unused", 0},
-	{BCM_KEY_ROW_1, BCM_KEY_COL_3, "unused", 0},
-	{BCM_KEY_ROW_1, BCM_KEY_COL_4, "unused", 0},
-	{BCM_KEY_ROW_1, BCM_KEY_COL_5, "unused", 0},
-	{BCM_KEY_ROW_1, BCM_KEY_COL_6, "unused", 0},
-	{BCM_KEY_ROW_1, BCM_KEY_COL_7, "unused", 0},
-	{BCM_KEY_ROW_2, BCM_KEY_COL_0, "unused", 0},
-	{BCM_KEY_ROW_2, BCM_KEY_COL_1, "unused", 0},
-	{BCM_KEY_ROW_2, BCM_KEY_COL_2, "unused", 0},
-	{BCM_KEY_ROW_2, BCM_KEY_COL_3, "unused", 0},
-	{BCM_KEY_ROW_2, BCM_KEY_COL_4, "unused", 0},
-	{BCM_KEY_ROW_2, BCM_KEY_COL_5, "unused", 0},
-	{BCM_KEY_ROW_2, BCM_KEY_COL_6, "unused", 0},
-	{BCM_KEY_ROW_2, BCM_KEY_COL_7, "unused", 0},
-	{BCM_KEY_ROW_3, BCM_KEY_COL_0, "unused", 0},
-	{BCM_KEY_ROW_3, BCM_KEY_COL_1, "unused", 0},
-	{BCM_KEY_ROW_3, BCM_KEY_COL_2, "unused", 0},
-	{BCM_KEY_ROW_3, BCM_KEY_COL_3, "unused", 0},
-	{BCM_KEY_ROW_3, BCM_KEY_COL_4, "unused", 0},
-	{BCM_KEY_ROW_3, BCM_KEY_COL_5, "unused", 0},
-	{BCM_KEY_ROW_3, BCM_KEY_COL_6, "unused", 0},
-	{BCM_KEY_ROW_3, BCM_KEY_COL_7, "unused", 0},
-	{BCM_KEY_ROW_4, BCM_KEY_COL_0, "unused", 0},
-	{BCM_KEY_ROW_4, BCM_KEY_COL_1, "unused", 0},
-	{BCM_KEY_ROW_4, BCM_KEY_COL_2, "unused", 0},
-	{BCM_KEY_ROW_4, BCM_KEY_COL_3, "unused", 0},
-	{BCM_KEY_ROW_4, BCM_KEY_COL_4, "unused", 0},
-	{BCM_KEY_ROW_4, BCM_KEY_COL_5, "unused", 0},
-	{BCM_KEY_ROW_4, BCM_KEY_COL_6, "unused", 0},
-	{BCM_KEY_ROW_4, BCM_KEY_COL_7, "unused", 0},
-	{BCM_KEY_ROW_5, BCM_KEY_COL_0, "unused", 0},
-	{BCM_KEY_ROW_5, BCM_KEY_COL_1, "unused", 0},
-	{BCM_KEY_ROW_5, BCM_KEY_COL_2, "unused", 0},
-	{BCM_KEY_ROW_5, BCM_KEY_COL_3, "unused", 0},
-	{BCM_KEY_ROW_5, BCM_KEY_COL_4, "unused", 0},
-	{BCM_KEY_ROW_5, BCM_KEY_COL_5, "unused", 0},
-	{BCM_KEY_ROW_5, BCM_KEY_COL_6, "unused", 0},
-	{BCM_KEY_ROW_5, BCM_KEY_COL_7, "unused", 0},
-	{BCM_KEY_ROW_6, BCM_KEY_COL_0, "unused", 0},
-	{BCM_KEY_ROW_6, BCM_KEY_COL_1, "unused", 0},
-	{BCM_KEY_ROW_6, BCM_KEY_COL_2, "unused", 0},
-	{BCM_KEY_ROW_6, BCM_KEY_COL_3, "unused", 0},
-	{BCM_KEY_ROW_6, BCM_KEY_COL_4, "unused", 0},
-	{BCM_KEY_ROW_6, BCM_KEY_COL_5, "unused", 0},
-	{BCM_KEY_ROW_6, BCM_KEY_COL_6, "unused", 0},
-	{BCM_KEY_ROW_6, BCM_KEY_COL_7, "unused", 0},
-	{BCM_KEY_ROW_7, BCM_KEY_COL_0, "unused", 0},
-	{BCM_KEY_ROW_7, BCM_KEY_COL_1, "unused", 0},
-	{BCM_KEY_ROW_7, BCM_KEY_COL_2, "unused", 0},
-	{BCM_KEY_ROW_7, BCM_KEY_COL_3, "unused", 0},
-	{BCM_KEY_ROW_7, BCM_KEY_COL_4, "unused", 0},
-	{BCM_KEY_ROW_7, BCM_KEY_COL_5, "unused", 0},
-	{BCM_KEY_ROW_7, BCM_KEY_COL_6, "unused", 0},
-	{BCM_KEY_ROW_7, BCM_KEY_COL_7, "unused", 0},
-};
-
-static struct bcm_keypad_platform_info hawaii_keypad_data = {
-	.row_num = 2,
-	.col_num = 3,
-	.keymap = hawaii_keymap,
-	.bcm_keypad_base = (void *)__iomem HW_IO_PHYS_TO_VIRT(KEYPAD_BASE_ADDR),
-};
-
-#else
-static struct bcm_keymap hawaii_keymap[] = {
-	{BCM_KEY_ROW_0, BCM_KEY_COL_0, "Vol Down Key", KEY_VOLUMEDOWN},
-	{BCM_KEY_ROW_0, BCM_KEY_COL_1, "Vol Up Key", KEY_VOLUMEUP},
-	{BCM_KEY_ROW_0, BCM_KEY_COL_2, "Search Key", KEY_SEARCH},
-	{BCM_KEY_ROW_0, BCM_KEY_COL_3, "unused", 0},
-	{BCM_KEY_ROW_0, BCM_KEY_COL_4, "unused", 0},
-	{BCM_KEY_ROW_0, BCM_KEY_COL_5, "unused", 0},
-	{BCM_KEY_ROW_0, BCM_KEY_COL_6, "unused", 0},
-	{BCM_KEY_ROW_0, BCM_KEY_COL_7, "unused", 0},
-	{BCM_KEY_ROW_1, BCM_KEY_COL_0, "Home-Key", KEY_HOME},
-	{BCM_KEY_ROW_1, BCM_KEY_COL_1, "Back Key", KEY_BACK},
-	{BCM_KEY_ROW_1, BCM_KEY_COL_2, "Menu-Key", KEY_MENU},
-	{BCM_KEY_ROW_1, BCM_KEY_COL_3, "unused", 0},
-	{BCM_KEY_ROW_1, BCM_KEY_COL_4, "unused", 0},
-	{BCM_KEY_ROW_1, BCM_KEY_COL_5, "unused", 0},
-	{BCM_KEY_ROW_1, BCM_KEY_COL_6, "unused", 0},
-	{BCM_KEY_ROW_1, BCM_KEY_COL_7, "unused", 0},
-	{BCM_KEY_ROW_2, BCM_KEY_COL_0, "unused", 0},
-	{BCM_KEY_ROW_2, BCM_KEY_COL_1, "unused", 0},
-	{BCM_KEY_ROW_2, BCM_KEY_COL_2, "unused", 0},
-	{BCM_KEY_ROW_2, BCM_KEY_COL_3, "unused", 0},
-	{BCM_KEY_ROW_2, BCM_KEY_COL_4, "unused", 0},
-	{BCM_KEY_ROW_2, BCM_KEY_COL_5, "unused", 0},
-	{BCM_KEY_ROW_2, BCM_KEY_COL_6, "unused", 0},
-	{BCM_KEY_ROW_2, BCM_KEY_COL_7, "unused", 0},
-	{BCM_KEY_ROW_3, BCM_KEY_COL_0, "unused", 0},
-	{BCM_KEY_ROW_3, BCM_KEY_COL_1, "unused", 0},
-	{BCM_KEY_ROW_3, BCM_KEY_COL_2, "unused", 0},
-	{BCM_KEY_ROW_3, BCM_KEY_COL_3, "unused", 0},
-	{BCM_KEY_ROW_3, BCM_KEY_COL_4, "unused", 0},
-	{BCM_KEY_ROW_3, BCM_KEY_COL_5, "unused", 0},
-	{BCM_KEY_ROW_3, BCM_KEY_COL_6, "unused", 0},
-	{BCM_KEY_ROW_3, BCM_KEY_COL_7, "unused", 0},
-	{BCM_KEY_ROW_4, BCM_KEY_COL_0, "unused", 0},
-	{BCM_KEY_ROW_4, BCM_KEY_COL_1, "unused", 0},
-	{BCM_KEY_ROW_4, BCM_KEY_COL_2, "unused", 0},
-	{BCM_KEY_ROW_4, BCM_KEY_COL_3, "unused", 0},
-	{BCM_KEY_ROW_4, BCM_KEY_COL_4, "unused", 0},
-	{BCM_KEY_ROW_4, BCM_KEY_COL_5, "unused", 0},
-	{BCM_KEY_ROW_4, BCM_KEY_COL_6, "unused", 0},
-	{BCM_KEY_ROW_4, BCM_KEY_COL_7, "unused", 0},
-	{BCM_KEY_ROW_5, BCM_KEY_COL_0, "unused", 0},
-	{BCM_KEY_ROW_5, BCM_KEY_COL_1, "unused", 0},
-	{BCM_KEY_ROW_5, BCM_KEY_COL_2, "unused", 0},
-	{BCM_KEY_ROW_5, BCM_KEY_COL_3, "unused", 0},
-	{BCM_KEY_ROW_5, BCM_KEY_COL_4, "unused", 0},
-	{BCM_KEY_ROW_5, BCM_KEY_COL_5, "unused", 0},
-	{BCM_KEY_ROW_5, BCM_KEY_COL_6, "unused", 0},
-	{BCM_KEY_ROW_5, BCM_KEY_COL_7, "unused", 0},
-	{BCM_KEY_ROW_6, BCM_KEY_COL_0, "unused", 0},
-	{BCM_KEY_ROW_6, BCM_KEY_COL_1, "unused", 0},
-	{BCM_KEY_ROW_6, BCM_KEY_COL_2, "unused", 0},
-	{BCM_KEY_ROW_6, BCM_KEY_COL_3, "unused", 0},
-	{BCM_KEY_ROW_6, BCM_KEY_COL_4, "unused", 0},
-	{BCM_KEY_ROW_6, BCM_KEY_COL_5, "unused", 0},
-	{BCM_KEY_ROW_6, BCM_KEY_COL_6, "unused", 0},
-	{BCM_KEY_ROW_6, BCM_KEY_COL_7, "unused", 0},
-	{BCM_KEY_ROW_7, BCM_KEY_COL_0, "unused", 0},
-	{BCM_KEY_ROW_7, BCM_KEY_COL_1, "unused", 0},
-	{BCM_KEY_ROW_7, BCM_KEY_COL_2, "unused", 0},
-	{BCM_KEY_ROW_7, BCM_KEY_COL_3, "unused", 0},
-	{BCM_KEY_ROW_7, BCM_KEY_COL_4, "unused", 0},
-	{BCM_KEY_ROW_7, BCM_KEY_COL_5, "unused", 0},
-	{BCM_KEY_ROW_7, BCM_KEY_COL_6, "unused", 0},
-	{BCM_KEY_ROW_7, BCM_KEY_COL_7, "unused", 0},
-};
-
-static struct bcm_keypad_platform_info hawaii_keypad_data = {
-	.row_num = 2,
-	.col_num = 3,
-	.keymap = hawaii_keymap,
-	.bcm_keypad_base = (void *)__iomem HW_IO_PHYS_TO_VIRT(KEYPAD_BASE_ADDR),
-};
-
-#endif
-
-#endif
 
 #if defined(CONFIG_BCMI2CNFC)
 static int bcmi2cnfc_gpio_setup(void *);
@@ -1045,22 +869,6 @@ static struct i2c_board_info __initdata i2c_tmd2771_info[] = {
 };
 #endif
 
-#if defined(CONFIG_AL3006) || defined(CONFIG_AL3006_MODULE)
-static struct al3006_platform_data al3006_pdata = {
-#ifdef AL3006_IRQ_GPIO
-	.irq_gpio = AL3006_IRQ_GPIO,
-#else
-	.irq_gpio = -1,
-#endif
-};
-
-static struct i2c_board_info __initdata i2c_al3006_info[] = {
-	{
-	 I2C_BOARD_INFO("al3006", AL3006_I2C_ADDRESS),
-	 .platform_data = &al3006_pdata,
-	 },
-};
-#endif
 
 #if defined(CONFIG_SENSORS_KIONIX_KXTIK) \
 	|| defined(CONFIG_SENSORS_KIONIX_KXTIK_MODULE)
@@ -1302,63 +1110,31 @@ struct platform_device haptic_pwm_device = {
 
 #endif /* CONFIG_HAPTIC_SAMSUNG_PWM */
 
-static struct sdio_platform_cfg hawaii_sdio_param[] = {
-	{
-	 .id = 0,
-	 .data_pullup = 0,
-	 .cd_gpio = SD_CARDDET_GPIO_PIN,
-	 .devtype = SDIO_DEV_TYPE_SDMMC,
-	 .flags = KONA_SDIO_FLAGS_DEVICE_REMOVABLE,
-	 .peri_clk_name = "sdio1_clk",
-	 .ahb_clk_name = "sdio1_ahb_clk",
-	 .sleep_clk_name = "sdio1_sleep_clk",
-	 .peri_clk_rate = 48000000,
-	 /*The SD card regulator */
-	 .vddo_regulator_name = "vdd_sdio",
-	 /*The SD controller regulator */
-	 .vddsdxc_regulator_name = "vdd_sdxc",
-	 },
-	{
-	 .id = 1,
-	 .data_pullup = 0,
-	 .is_8bit = 1,
-	 .devtype = SDIO_DEV_TYPE_EMMC,
-	 .flags = KONA_SDIO_FLAGS_DEVICE_NON_REMOVABLE,
-	 .peri_clk_name = "sdio2_clk",
-	 .ahb_clk_name = "sdio2_ahb_clk",
-	 .sleep_clk_name = "sdio2_sleep_clk",
-	 .peri_clk_rate = 52000000,
-	 },
+static struct sdio_platform_cfg hawaii_sdio_param = {
+
 #ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
-	{
-	 .id = 2,
-	 .data_pullup = 0,
-	 .devtype = SDIO_DEV_TYPE_WIFI,
-	 .flags = KONA_SDIO_FLAGS_DEVICE_REMOVABLE,
-	 .peri_clk_name = "sdio3_clk",
-	 .ahb_clk_name = "sdio3_ahb_clk",
-	 .sleep_clk_name = "sdio3_sleep_clk",
-	 .peri_clk_rate = 48000000,
-	 .register_status_notify = hawaii_wifi_status_register,
-	 },
-#else
-	{
-	 .id = 2,
-	 .data_pullup = 0,
-	 .devtype = SDIO_DEV_TYPE_WIFI,
-	 .wifi_gpio = {
-		       .reset = 3,
-		       .reg = -1,
-		       .host_wake = 74,
-		       .shutdown = -1,
-		       },
-	 .flags = KONA_SDIO_FLAGS_DEVICE_REMOVABLE,
-	 .peri_clk_name = "sdio3_clk",
-	 .ahb_clk_name = "sdio3_ahb_clk",
-	 .sleep_clk_name = "sdio3_sleep_clk",
-	 .peri_clk_rate = 48000000,
-	 },
+	.register_status_notify = hawaii_wifi_status_register,
 #endif
+
+};
+
+static const struct of_dev_auxdata hawaii_auxdata_lookup[] __initconst = {
+
+	OF_DEV_AUXDATA("bcm,sdhci", 0x3F190000,
+		"sdhci.1", NULL),
+
+	OF_DEV_AUXDATA("bcm,sdhci", 0x3F1A0000,
+		"sdhci.2", &hawaii_sdio_param),
+
+	OF_DEV_AUXDATA("bcm,sdhci", 0x3F180000,
+		"sdhci.0", NULL),
+
+	OF_DEV_AUXDATA("bcm,soc-camera", 0x3c,
+		"soc-back-camera", &iclink_ov5640),
+
+	OF_DEV_AUXDATA("bcm,soc-camera", 0x3e,
+		"soc-front-camera", &iclink_ov7692),
+	{},
 };
 
 #ifdef CONFIG_BACKLIGHT_PWM
@@ -1528,9 +1304,6 @@ static struct platform_device board_caph_device = {
 #endif /* CONFIG_BCM_ALSA_SOUND */
 
 static struct platform_device *hawaii_devices[] __initdata = {
-#ifdef CONFIG_KEYBOARD_BCM
-	&hawaii_kp_device,
-#endif
 #if defined(CONFIG_LEDS_GPIO) || defined(CONFIG_LEDS_GPIO_MODULE)
 	&leds_gpio,
 #endif
@@ -1562,12 +1335,6 @@ static struct platform_device *hawaii_devices[] __initdata = {
 	&board_caph_device,
 #endif
 
-};
-
-struct platform_device *hawaii_sdio_devices[] __initdata = {
-	&hawaii_sdio2_device,
-	&hawaii_sdio3_device,
-	&hawaii_sdio1_device,
 };
 
 static void __init hawaii_add_i2c_devices(void)
@@ -1635,33 +1402,15 @@ static void __init hawaii_add_i2c_devices(void)
 				       i2c_bmp18x_info,
 				       ARRAY_SIZE(i2c_bmp18x_info));
 #endif
-
-#if defined(CONFIG_AL3006) || defined(CONFIG_AL3006_MODULE)
-#ifdef AL3006_IRQ
-	i2c_al3006_info[0].irq = gpio_to_irq(AL3006_IRQ_GPIO);
-#else
-	i2c_al3006_info[0].irq = -1;
-#endif
-	i2c_register_board_info(
-#ifdef AL3006_I2C_BUS_ID
-				       AL3006_I2C_BUS_ID,
-#else
-				       -1,
-#endif
-				       i2c_al3006_info,
-				       ARRAY_SIZE(i2c_al3006_info));
-#endif /* CONFIG_AL3006 */
-
 }
 
 static void hawaii_add_pdata(void)
 {
-	hawaii_sdio1_device.dev.platform_data = &hawaii_sdio_param[0];
-	hawaii_sdio2_device.dev.platform_data = &hawaii_sdio_param[1];
-	hawaii_sdio3_device.dev.platform_data = &hawaii_sdio_param[2];
 	hawaii_ssp0_device.dev.platform_data = &hawaii_ssp0_info;
 	hawaii_ssp1_device.dev.platform_data = &hawaii_ssp1_info;
+#ifdef CONFIG_BCM_STM
 	hawaii_stm_device.dev.platform_data = &hawaii_stm_pdata;
+#endif
 	hawaii_headset_device.dev.platform_data = &hawaii_headset_data;
 	hawaii_pl330_dmac_device.dev.platform_data = &hawaii_pl330_pdata;
 	hawaii_backlight_device.dev.platform_data = &hawaii_backlight_data;
@@ -1691,10 +1440,6 @@ static void __init hawaii_add_devices(void)
 
 	hawaii_add_pdata();
 
-#ifdef CONFIG_KEYBOARD_BCM
-	hawaii_kp_device.dev.platform_data = &hawaii_keypad_data;
-#endif
-
 #ifdef CONFIG_ION
 #ifdef CONFIG_M4U
 	platform_device_register(&ion_system_device);
@@ -1722,11 +1467,6 @@ static void __init hawaii_add_devices(void)
 
 }
 
-static void __init hawaii_add_sdio_devices(void)
-{
-	platform_add_devices(hawaii_sdio_devices,
-			     ARRAY_SIZE(hawaii_sdio_devices));
-}
 
 #ifdef CONFIG_FB_BRCM_KONA
 /*
@@ -1775,13 +1515,12 @@ static void __init hawaii_init(void)
 	hawaii_add_common_devices();
 	/* Populate platform_devices from device tree data */
 	of_platform_populate(NULL, hawaii_dt_match_table,
-			hawaii_auxdata_lookup, NULL);
+			hawaii_auxdata_lookup, &platform_bus);
 	return;
 }
 
 static int __init hawaii_add_lateinit_devices(void)
 {
-	hawaii_add_sdio_devices();
 
 #ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
 	hawaii_wlan_init();

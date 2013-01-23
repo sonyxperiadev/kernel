@@ -175,4 +175,85 @@
 		seq_busy_val = <2>;
 		max_pwr = <3>;
 	};
+
+	sdio1 {
+		compatible = "bcm,sdhci";
+		reg = <0x3F190000 10000>;
+		interrupts = <0 76 0x04>;
+		id = <1>;
+		data-pullup = <0>;
+		is-8bit = <1>;
+		devtype = <2>;		/*SDIO_DEV_TYPE_EMMC*/
+		flags = <1>;		/*KONA_SDIO_FLAGS_DEVICE_NON_REMOVABLE*/
+		peri-clk-name = "sdio2_clk";
+		ahb-clk-name = "sdio2_ahb_clk";
+		sleep-clk-name = "sdio2_sleep_clk";
+		peri-clk-rate = <52000000>;
+	};
+
+	sdio2 {
+		compatible = "bcm,sdhci";
+		reg = <0x3F1A0000 10000>;
+		interrupts = <0 74 0x04>;
+		id = <2>;
+		data-pullup = <0>;
+		devtype = <1>;		/*SDIO_DEV_TYPE_WIFI*/
+		flags = <0>;		/*KONA_SDIO_FLAGS_DEVICE_REMOVABLE*/
+		peri-clk-name = "sdio3_clk";
+		ahb-clk-name = "sdio3_ahb_clk";
+		sleep-clk-name = "sdio3_sleep_clk";
+		peri-clk-rate = <48000000>;
+	};
+
+	sdio0 {
+		compatible = "bcm,sdhci";
+		reg = <0x3F180000 10000>;
+		interrupts = <0 77 0x04>;
+		id = <0>;
+		data-pullup = <0>;
+		cd-gpio = <91>;		/*SD_CARDDET_GPIO_PIN*/
+		devtype = <0>;		/*SDIO_DEV_TYPE_SDMMC*/
+		flags = <0>;		/*KONA_SDIO_FLAGS_DEVICE_REMOVABLE*/
+		peri-clk-name = "sdio1_clk";
+		ahb-clk-name = "sdio1_ahb_clk";
+		sleep-clk-name = "sdio1_sleep_clk";
+		peri-clk-rate = <48000000>;
+		vddo-regulator-name = "vdd_sdio";
+		vddsdxc-regulator-name = "vdd_sdxc";
+	};
+
+	wifi-driver {
+		compatible = "bcm,bcm_wifi";
+		wl-reset-gpio = <3>;
+		host-wake-gpio = <74>;
+		board-nvram-file = "/system/vendor/firmware/fw_wifi_nvram_hs1x.txt";
+	};
+
+	keypad {
+		row-num = <2>;
+		col-num = <3>;
+		row-col-count = <8>;
+		key-name = "Vol Down Key", "unused", "unused", "unused",
+			"unused", "unused", "unused", "unused", "Vol Up Key",
+			"Camera Key", "unused", "unused", "unused", "unused",
+			"unused", "unused", "unused", "unused", "unused",
+			"unused", "unused", "unused", "unused", "unused",
+			"unused", "unused", "unused", "unused", "unused",
+			"unused", "unused", "unused", "unused", "unused",
+			"unused", "unused", "unused", "unused", "unused",
+			"unused", "unused", "unused", "unused", "unused",
+			"unused", "unused", "unused", "unused", "unused",
+			"unused", "unused", "unused", "unused", "unused",
+			"unused", "unused", "unused", "unused", "unused",
+			"unused", "unused", "unused", "unused", "unused";
+		key-code = <114 0 0 0 0 0 0 0
+			115 212 0 0 0 0 0 0
+			0 0 0 0 0 0 0 0
+			0 0 0 0 0 0 0 0
+			0 0 0 0 0 0 0 0
+			0 0 0 0 0 0 0 0
+			0 0 0 0 0 0 0 0
+			0 0 0 0 0 0 0 0>;
+	};
+
 };
