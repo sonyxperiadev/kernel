@@ -28,6 +28,8 @@
 #include <linux/earlysuspend.h>
 #include <linux/delay.h>
 #include <linux/slab.h>
+#include <linux/regulator/consumer.h>
+#include <linux/regulator/driver.h>
 
 #define GPIO_TO_IRQ gpio_to_irq
 
@@ -36,6 +38,7 @@ static int ts_gpio_reset_pin=0;
 static int ts_gpio_wakeup_pin=0;
 static int ts_x_max_value=0;
 static int ts_y_max_value=0;
+static const char *tp_power;
 
 /*******************************/
 typedef unsigned char	FTS_BYTE;
@@ -940,7 +943,7 @@ static void focaltech_ft5306_work_func(struct work_struct *work)
 	int ret = 0;
 	struct synaptics_rmi4 *ts = container_of(work,
 					struct synaptics_rmi4, work);
-	//printk(KERN_INFO "@TP work\n");
+
 	ft5306_touch_info.pst_point_info = &ft5306_touch_point;
 	ret = fts_ctpm_get_touch_info(ts, &ft5306_touch_info);
 	//printk(KERN_INFO "get_touch_info ret: %x", ret);
@@ -1210,24 +1213,47 @@ static int ft5306_focaltech_init_platform_hw(void)
     gpio_free(TP_HW_INT_PIN);*/
     return 0;
 }
+static int ts_power(ts_power_status vreg_en)
+{
+	struct regulator *reg = NULL;
+	if (!reg) {
+		reg = regulator_get(NULL, tp_power);
+		if (!reg || IS_ERR(reg)) {
+			pr_err("No Regulator available for %s\n", tp_power);
+			return -1;
+		}
+	}
+	if (reg) {
+		if (vreg_en) {
+			regulator_set_voltage(reg, 3000000, 3000000);
+			pr_err("Turn on TP (%s) to 2.8V\n", tp_power);
+			regulator_enable(reg);
+		} else {
+			pr_err("Turn off TP (%s)\n", tp_power);
+			regulator_disable(reg);
+		}
+	} else {
+		pr_err("TP Regulator Alloc Failed");
+		return -1;
+	}
+	return 0;
+}
 
 static int focaltech_ft5306_probe(
 	struct i2c_client *client, const struct i2c_device_id *id)
 {
 	int ret = 0;
+	u32 val;
 	struct synaptics_rmi4 *ts;
 	struct Synaptics_ts_platform_data *pdata;
+	struct device_node *np = client->dev.of_node;
 	struct kobject *properties_kobj;
 	ret = -1;
-    printk("ft5306 init\n");
+
 	if(client==NULL)
 	{
 	    printk(KERN_ERR "ft5306 client null.\n");
 	    goto err_i2c_client_check;
-	}
-	if (client->dev.platform_data == NULL) {
-		printk(KERN_ERR "ft5306 platform_data null.\n");
-		goto err_i2c_client_check;
 	}
 	properties_kobj = kobject_create_and_add("board_properties", NULL);
 	if (properties_kobj)
@@ -1251,18 +1277,28 @@ static int focaltech_ft5306_probe(
 #endif
 	ts->client = client;
 	i2c_set_clientdata(client, ts);
-	pdata = client->dev.platform_data;
-	if (pdata)
-	{
-		ts->power = pdata->power;
-		ts_gpio_irq_pin = pdata->gpio_irq_pin;
-		#if (TP_CNTRL_PIN_TYPE == TP_CNTRL_PIN_RESET)
-                ts_gpio_reset_pin = pdata->gpio_reset_pin;
-                #else
-                ts_gpio_wakeup_pin = pdata->gpio_wakeup_pin;
-                #endif
-		ts_x_max_value = pdata->x_max_value;
-		ts_y_max_value = pdata->y_max_value;
+
+	if (client->dev.of_node != NULL) {
+		if (!of_property_read_u32(np, "gpio-irq-pin", &val))
+			ts_gpio_irq_pin = val;
+
+#if (TP_CNTRL_PIN_TYPE == TP_CNTRL_PIN_RESET)
+		if (!of_property_read_u32(np, "gpio-reset-pin", &val))
+			ts_gpio_reset_pin = val;
+#else
+		if (!of_property_read_u32(np, "gpio-wakeup-pin", &val))
+			ts_gpio_wakeup_pin = val;
+#endif
+		if (!of_property_read_u32(np, "x-max-value", &val))
+			ts_x_max_value = val;
+		if (!of_property_read_u32(np, "y-max-value", &val))
+			ts_y_max_value = val;
+		if (!of_property_read_u32(np, "use-irq", &val))
+			client->irq = val;
+		of_property_read_string(np, "power", &tp_power);
+
+		if (tp_power)
+			ts->power = ts_power;
 	}
 
 	ts->input_dev = input_allocate_device();

@@ -199,20 +199,11 @@ extern int
 hawaii_wifi_status_register(void (*callback) (int card_present, void *dev_id),
 			    void *dev_id);
 #endif
-#ifdef CONFIG_TOUCHSCREEN_FT5306
-#include <linux/i2c/ft5306.h>
-#endif
+
 /* SD */
 #define SD_CARDDET_GPIO_PIN	91
 
 
-#ifdef CONFIG_MACH_HAWAII_GARNET
-#define FT5306_MAX_X 720
-#define FT5306_MAX_Y 1280
-#else
-#define FT5306_MAX_X 480
-#define FT5306_MAX_Y 800
-#endif
 
 /* Touch */
 #define TSC_GPIO_IRQ_PIN			73
@@ -1215,51 +1206,6 @@ static struct i2c_board_info __initdata bma222_accl_info[] = {
 };
 #endif
 
-#ifdef CONFIG_TOUCHSCREEN_FT5306
-static int ts_power(ts_power_status vreg_en)
-{
-	struct regulator *reg = NULL;
-	if (!reg) {
-/* Remove this comment when the regulator references are fixed here for Hawaii */
-		reg = regulator_get(NULL, "camldo2");
-		if (!reg || IS_ERR(reg)) {
-			pr_err("No Regulator available for ldo_camldo2\n");
-			return -1;
-		}
-	}
-	if (reg) {
-		if (vreg_en) {
-			regulator_set_voltage(reg, 3000000, 3000000);
-			pr_err("Turn on TP (ldo_camldo2) to 2.8V\n");
-			regulator_enable(reg);
-		} else {
-			pr_err("Turn off TP (ldo_camldo2)\n");
-			regulator_disable(reg);
-		}
-	} else {
-		pr_err("TP Regulator Alloc Failed");
-		return -1;
-	}
-	return 0;
-}
-
-static struct Synaptics_ts_platform_data ft5306_plat_data = {
-    .gpio_irq_pin		= TSC_GPIO_IRQ_PIN,
-    .gpio_reset_pin		= TSC_GPIO_RESET_PIN,
-    .gpio_wakeup_pin    = TSC_GPIO_WAKEUP_PIN,
-    .x_max_value		= FT5306_MAX_X-1,
-    .y_max_value	= FT5306_MAX_Y-1,
-	.power              = ts_power,
-};
-
-static struct i2c_board_info __initdata ft5306_info[] = {
-	{			/* New touch screen i2c slave address. */
-	 I2C_BOARD_INFO("FocalTech-Ft5306", (0x70 >> 1)),
-	 .platform_data = &ft5306_plat_data,
-	 .irq = gpio_to_irq(TSC_GPIO_IRQ_PIN),
-	 },
-};
-#endif
 
 #if defined(CONFIG_TOUCHSCREEN_BCM915500) || defined(CONFIG_TOUCHSCREEN_BCM915500_MODULE)
 static struct bcm915500_platform_data bcm915500_i2c_param = {
@@ -1345,10 +1291,6 @@ static void __init hawaii_add_i2c_devices(void)
 #endif
 #ifdef CONFIG_VIDEO_AS3643
 	i2c_register_board_info(0, as3643_flash, ARRAY_SIZE(as3643_flash));
-#endif
-
-#ifdef CONFIG_TOUCHSCREEN_FT5306
-	i2c_register_board_info(3, ft5306_info, ARRAY_SIZE(ft5306_info));
 #endif
 
 #ifdef CONFIG_SENSORS_BMA222

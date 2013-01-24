@@ -84,6 +84,18 @@
 		is-pmu-i2c = <0>;
 		fs-ref-frequency = <13000000>;
 		hs-ref-frequency = <104000000>;
+
+		FocalTech-Ft5306@46 {
+			compatible = "bcm,FocalTech-Ft5306";
+			reg = <0x38>;
+			gpio-irq-pin = <73>;
+			gpio-reset-pin = <70>;
+			gpio-wakeup-pin = <70>;
+			x-max-value = <720>;
+			y-max-value = <1280>;
+			use-irq = <1>;
+			power = "camldo2";
+		};
 	};
 
 	i2c4: i2c@3500d000 {
