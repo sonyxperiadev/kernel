@@ -838,63 +838,6 @@ static struct i2c_board_info __initdata bcmi2cnfc[] = {
 #endif
 
 
-
-
-#if defined(CONFIG_SENSORS_KIONIX_KXTIK) \
-	|| defined(CONFIG_SENSORS_KIONIX_KXTIK_MODULE)
-#define KXTIK_DEVICE_MAP    2
-#define KXTIK_MAP_X         ((KXTIK_DEVICE_MAP-1)%2)
-#define KXTIK_MAP_Y         (KXTIK_DEVICE_MAP%2)
-#define KXTIK_NEG_X         (((KXTIK_DEVICE_MAP+2)/2)%2)
-#define KXTIK_NEG_Y         (((KXTIK_DEVICE_MAP+5)/4)%2)
-#define KXTIK_NEG_Z         ((KXTIK_DEVICE_MAP-1)/4)
-
-struct kxtik_platform_data kxtik_pdata = {
-	.min_interval = 5,
-	.poll_interval = 200,
-	.axis_map_x = KXTIK_MAP_X,
-	.axis_map_y = KXTIK_MAP_Y,
-	.axis_map_z = 2,
-	.negate_x = KXTIK_NEG_X,
-	.negate_y = KXTIK_NEG_Y,
-	.negate_z = KXTIK_NEG_Z,
-	.res_12bit = RES_12BIT,
-	.g_range = KXTIK_G_2G,
-};
-
-#define KXTIK_GPIO_IRQ_PIN          (1)
-#define KXTIK_I2C_BUS_ID            (0)
-
-static struct i2c_board_info __initdata kxtik_i2c_boardinfo[] = {
-	{
-	 I2C_BOARD_INFO("kxtik", KXTIK_SLAVE_ADDR),
-	 .platform_data = &kxtik_pdata,
-	 .irq = gpio_to_irq(KXTIK_GPIO_IRQ_PIN),
-	 },
-};
-
-static int kxtik_init_platform_hw(void)
-{
-	int ret = 0;
-	ret = gpio_request(KXTIK_GPIO_IRQ_PIN, "kxtik-irq");
-	if (ret < 0) {
-		printk(KERN_INFO
-		       "kxtik: sensors gpio_request GPIO %d failed, err %d\n",
-		       KXTIK_GPIO_IRQ_PIN, ret);
-		return ret;
-	}
-	ret = gpio_direction_input(KXTIK_GPIO_IRQ_PIN);
-	if (ret < 0) {
-		printk(KERN_INFO
-		       "kxtik: sensors gpio_direction_input set GPIO %d as input failed, err %d\n",
-		       KXTIK_GPIO_IRQ_PIN, ret);
-		gpio_free(KXTIK_GPIO_IRQ_PIN);
-		return ret;
-	}
-	return ret;
-}
-#endif /* CONFIG_SENSORS_KIONIX_KXTIK */
-
 #if defined(CONFIG_SENSORS_AK8963) || defined(CONFIG_SENSORS_AK8963_MODULE)
 static struct akm8963_platform_data akm_platform_data_akm8963 = {
 	.gpio_DRDY = AKM8963_IRQ_GPIO,
@@ -1262,12 +1205,6 @@ static void __init hawaii_add_i2c_devices(void)
 				ARRAY_SIZE(bma222_accl_info));
 #endif
 
-#if defined(CONFIG_SENSORS_KIONIX_KXTIK)	\
-			|| defined(CONFIG_SENSORS_KIONIX_KXTIK_MODULE)
-	i2c_register_board_info(2,
-			kxtik_i2c_boardinfo,
-			ARRAY_SIZE(kxtik_i2c_boardinfo));
-#endif /* CONFIG_SENSORS_KIONIX_KXTIK */
 
 #if defined(CONFIG_SENSORS_AK8963) || defined(CONFIG_SENSORS_AK8963_MODULE)
 	i2c_register_board_info(AKM8963_I2C_BUS_ID,
@@ -1334,11 +1271,6 @@ static void __init hawaii_add_devices(void)
 	platform_add_devices(hawaii_devices, ARRAY_SIZE(hawaii_devices));
 
 	hawaii_add_i2c_devices();
-
-#if defined(CONFIG_SENSORS_KIONIX_KXTIK)
-	kxtik_init_platform_hw();
-#endif /* CONFIG_SENSORS_KIONIX_KXTIK */
-
 #if defined(CONFIG_SENSORS_AK8963) || defined(CONFIG_SENSORS_AK8963_MODULE)
 	akm8963_init_platform_hw();
 #endif /* CONFIG_SENSORS_AK8963 */

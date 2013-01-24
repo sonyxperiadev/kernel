@@ -27,6 +27,9 @@
 #include <linux/slab.h>
 #include <linux/kxtik.h>
 #include <linux/version.h>
+#include <linux/of.h>
+#include <linux/of_fdt.h>
+#include <linux/of_platform.h>
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
 #include <linux/earlysuspend.h>
@@ -626,7 +629,9 @@ static int __devinit kxtik_probe(struct i2c_client *client,
 {
 	const struct kxtik_platform_data *pdata = client->dev.platform_data;
 	struct kxtik_data *tik;
-	int err;
+	struct device_node *np;
+	u32 val = 0;
+	int err = 0;
 	printk(KERN_INFO "kxtik_probe\n");
 
 	if (!i2c_check_functionality(client->adapter,
@@ -648,7 +653,39 @@ static int __devinit kxtik_probe(struct i2c_client *client,
 
 	tik->client = client;
 	tik->pdata = *pdata;
-
+	if (tik->client->dev.of_node) {
+		np = tik->client->dev.of_node;
+		if (of_property_read_u32(np, "min_interval", &val))
+			goto err_read;
+		tik->pdata.min_interval = val;
+		if (of_property_read_u32(np, "poll_interval", &val))
+			goto err_read;
+		tik->pdata.poll_interval = val;
+		if (of_property_read_u32(np, "axis_map_x", &val))
+			goto err_read;
+		tik->pdata.axis_map_x = val;
+		if (of_property_read_u32(np, "axis_map_y", &val))
+			goto err_read;
+		tik->pdata.axis_map_y = val;
+		if (of_property_read_u32(np, "axis_map_z", &val))
+			goto err_read;
+		tik->pdata.axis_map_z = val;
+		if (of_property_read_u32(np, "negate_x", &val))
+			goto err_read;
+		tik->pdata.negate_x = val;
+		if (of_property_read_u32(np, "negate_y", &val))
+			goto err_read;
+		tik->pdata.negate_y = val;
+		if (of_property_read_u32(np, "negate_z", &val))
+			goto err_read;
+		tik->pdata.negate_z = val;
+		if (of_property_read_u32(np, "res_12bit", &val))
+			goto err_read;
+		tik->pdata.res_12bit = val;
+		if (of_property_read_u32(np, "g_range", &val))
+			goto err_read;
+		tik->pdata.g_range = val;
+	}
 	err = kxtik_device_power_on(tik);
 	if (err < 0)
 		goto err_free_mem;
@@ -730,6 +767,7 @@ static int __devinit kxtik_probe(struct i2c_client *client,
 #endif /* CONFIG_HAS_EARLYSUSPEND */
 
 	return 0;
+err_read:
 err_free_irq:
 	FUNCDBG("error :err_free_irq\n");
 
@@ -777,6 +815,13 @@ static int __devexit kxtik_remove(struct i2c_client *client)
 	return 0;
 }
 
+static const struct of_device_id kxtik_of_match[] = {
+	{.compatible = "bcm,kxtik",},
+	{},
+}
+
+MODULE_DEVICE_TABLE(of, kxtik_of_match);
+
 static const struct i2c_device_id kxtik_id[] = {
 	{KXTIK_I2C_NAME, 0},
 	{},
@@ -788,6 +833,7 @@ static struct i2c_driver kxtik_driver = {
 	.driver = {
 		   .name = KXTIK_I2C_NAME,
 		   .owner = THIS_MODULE,
+		   .of_match_table = kxtik_of_match,
 		   },
 	.probe = kxtik_probe,
 	.remove = __devexit_p(kxtik_remove),
