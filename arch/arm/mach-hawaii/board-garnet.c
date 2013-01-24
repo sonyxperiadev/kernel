@@ -837,34 +837,6 @@ static struct i2c_board_info __initdata bcmi2cnfc[] = {
 };
 #endif
 
-
-#if defined(CONFIG_SENSORS_AK8963) || defined(CONFIG_SENSORS_AK8963_MODULE)
-static struct akm8963_platform_data akm_platform_data_akm8963 = {
-	.gpio_DRDY = AKM8963_IRQ_GPIO,
-	.gpio_RST = AKM8963_GPIO_RESET_PIN,
-	.layout = 1,
-	.outbit = 1,
-};
-
-static struct i2c_board_info __initdata akm8963_info[] = {
-	{
-	 I2C_BOARD_INFO("akm8963", AKM8963_I2C_ADDRESS),
-	 .flags = I2C_CLIENT_WAKE,
-	 .platform_data = &akm_platform_data_akm8963,
-	 .irq = gpio_to_irq(AKM8963_IRQ_GPIO),
-	 },
-};
-
-static int akm8963_init_platform_hw(void)
-{
-	int ret;
-	pr_info("akm8963]init_platform_hw\n");
-	ret = gpio_request(AKM8963_IRQ_GPIO, "akm8963");
-	gpio_direction_input(AKM8963_IRQ_GPIO);
-	return 0;
-}
-#endif /* CONFIG_SENSORS_AK8963 */
-
 #if defined(CONFIG_SENSORS_BMA222)
 static struct bma222_accl_platform_data bma_pdata = {
 	.orientation = BMA_ROT_90,
@@ -1205,12 +1177,6 @@ static void __init hawaii_add_i2c_devices(void)
 				ARRAY_SIZE(bma222_accl_info));
 #endif
 
-
-#if defined(CONFIG_SENSORS_AK8963) || defined(CONFIG_SENSORS_AK8963_MODULE)
-	i2c_register_board_info(AKM8963_I2C_BUS_ID,
-				akm8963_info, ARRAY_SIZE(akm8963_info));
-#endif /* CONFIG_SENSORS_AK8963 */
-
 #if defined(CONFIG_TOUCHSCREEN_BCM915500) || defined(CONFIG_TOUCHSCREEN_BCM915500_MODULE)
 	i2c_register_board_info(3, bcm915500_i2c_boardinfo,
 				ARRAY_SIZE(bcm915500_i2c_boardinfo));
@@ -1271,9 +1237,6 @@ static void __init hawaii_add_devices(void)
 	platform_add_devices(hawaii_devices, ARRAY_SIZE(hawaii_devices));
 
 	hawaii_add_i2c_devices();
-#if defined(CONFIG_SENSORS_AK8963) || defined(CONFIG_SENSORS_AK8963_MODULE)
-	akm8963_init_platform_hw();
-#endif /* CONFIG_SENSORS_AK8963 */
 
 	spi_register_board_info(spi_slave_board_info,
 				ARRAY_SIZE(spi_slave_board_info));

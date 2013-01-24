@@ -31,6 +31,10 @@
 #include <linux/freezer.h>
 #include <linux/akm8963.h>
 #include  <linux/module.h>
+#include <linux/of.h>
+#include <linux/of_fdt.h>
+#include <linux/of_platform.h>
+
 #ifdef CONFIG_HAS_EARLYSUSPEND
 #include <linux/earlysuspend.h>
 #endif
@@ -1286,6 +1290,8 @@ static void akm8963_late_resume(struct early_suspend *handler)
 int akm8963_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
 	struct akm8963_platform_data *pdata;
+	struct device_node *np;
+	u32 val;
 	int err = 0;
 	int i;
 
@@ -1305,22 +1311,20 @@ int akm8963_probe(struct i2c_client *client, const struct i2c_device_id *id)
 		err = -ENOMEM;
 		goto exit1;
 	}
-
-	/***** Set layout information *****/
 	pdata = client->dev.platform_data;
-	if (pdata) {
-		/* Platform data is available. copy its value to local. */
-		FUNCDBG("[akm8963]Set layout information.\n");
-		s_akm->layout = pdata->layout;
-		s_akm->outbit = pdata->outbit;
-		s_akm->rstn = pdata->gpio_RST;
-	} else {
-		FUNCDBG("[akm8963]%s: No platform data.\n");
-		s_akm->layout = 0;
-		s_akm->outbit = 0;
-		s_akm->rstn = 0;
-	}
 
+	if (client->dev.of_node) {
+		np = client->dev.of_node;
+		if (of_property_read_u32(np, "gpio_RST", &val))
+			goto err_read;
+		s_akm->rstn = val;
+		if (of_property_read_u32(np, "layout", &val))
+			goto err_read;
+		if (of_property_read_u32(np, "outbit", &val))
+			goto err_read;
+		s_akm->outbit = val;
+	}
+	/***** Set layout information *****/
 	/***** I2C initialization *****/
 	s_akm->i2c = client;
 	/* check connection */
@@ -1410,6 +1414,7 @@ exit4:
 	input_unregister_device(s_akm->input);
 exit3:
 exit2:
+err_read:
 	kfree(s_akm);
 exit1:
 exit0:
@@ -1442,6 +1447,12 @@ static const struct dev_pm_ops akm8963_pm_ops = {
 	.suspend = akm8963_suspend,
 	.resume = akm8963_resume,
 };
+static const struct of_device_id akm8963_of_match[] = {
+	{.compatible = "bcm,akm8963",},
+	{},
+}
+
+MODULE_DEVICE_TABLE(of, ami_of_match);
 
 static struct i2c_driver akm8963_driver = {
 	.probe = akm8963_probe,
@@ -1450,6 +1461,7 @@ static struct i2c_driver akm8963_driver = {
 	.driver = {
 		   .name = AKM8963_I2C_NAME,
 		   .pm = &akm8963_pm_ops,
+		   .of_match_table = akm8963_of_match,
 		   },
 };
 

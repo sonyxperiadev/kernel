@@ -639,10 +639,11 @@ static int __devinit kxtik_probe(struct i2c_client *client,
 		FUNCDBG("client is not i2c capable\n");
 		return -ENXIO;
 	}
-
 	if (!pdata) {
-		FUNCDBG("platform data is NULL; exiting\n");
-		return -EINVAL;
+		FUNCDBG("platform data is NULL\n");
+		pdata = kzalloc(sizeof(struct kxtik_platform_data), GFP_KERNEL);
+		if (!pdata)
+			return -ENOMEM;
 	}
 
 	tik = kzalloc(sizeof(*tik), GFP_KERNEL);
@@ -655,6 +656,9 @@ static int __devinit kxtik_probe(struct i2c_client *client,
 	tik->pdata = *pdata;
 	if (tik->client->dev.of_node) {
 		np = tik->client->dev.of_node;
+		if (of_property_read_u32(np, "gpio-irq-pin", &val))
+			goto err_read;
+		client->irq = val;
 		if (of_property_read_u32(np, "min_interval", &val))
 			goto err_read;
 		tik->pdata.min_interval = val;
@@ -732,7 +736,8 @@ static int __devinit kxtik_probe(struct i2c_client *client,
 		tik->int_ctrl |= KXTIK_IEN | KXTIK_IEA;
 		tik->ctrl_reg1 |= DRDYE;
 
-		err = request_threaded_irq(client->irq, NULL, kxtik_isr,
+		err = request_threaded_irq(gpio_to_irq(client->irq), NULL,
+					   kxtik_isr,
 					   IRQF_TRIGGER_RISING | IRQF_ONESHOT,
 					   "kxtik-irq", tik);
 		if (err) {

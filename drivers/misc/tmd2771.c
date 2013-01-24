@@ -152,6 +152,7 @@ MODULE_DEVICE_TABLE(of, tmd2771_of_match);
 #define TAOS_INPUT_NAME_PROX  "TAOS_PROX_SENSOR"
 int isPsensorLocked;
 int als_ps_int;
+int als_ps_gpio_inr;
 
 /* forward declarations */
 static int taos_probe(struct i2c_client *clientp,
@@ -1178,15 +1179,15 @@ static int taos_probe(struct i2c_client *clientp,
 	ret = of_property_read_u32(np, "gpio-irq-pin", &val);
 	if (ret)
 		goto err_read;
-	als_ps_int = val;
-	als_ps_int = taos_datap->client->irq;
-	ret = gpio_request(irq_to_gpio(als_ps_int), "ALS_PS_INT");
+	als_ps_int = gpio_to_irq(val);
+	als_ps_gpio_inr = val;
+	ret = gpio_request(als_ps_gpio_inr, "ALS_PS_INT");
 	if (ret < 0) {
 		pr_taos(ERROR, "failed to request GPIO:%d,ERRNO:%d\n",
-			(int)(irq_to_gpio(als_ps_int)), ret);
+			(int)als_ps_gpio_inr, ret);
 		goto err_gpio_request;
 	}
-	gpio_direction_input(irq_to_gpio(als_ps_int));
+	gpio_direction_input(als_ps_gpio_inr);
 
 	ret = request_threaded_irq(als_ps_int, NULL, &taos_irq_handler,
 				   IRQF_TRIGGER_FALLING | IRQF_ONESHOT,
@@ -1209,7 +1210,7 @@ static int taos_probe(struct i2c_client *clientp,
 err_read:
 	free_irq(als_ps_int, taos_datap);
 err_request_irq:
-	gpio_free(irq_to_gpio(als_ps_int));
+	gpio_free(als_ps_gpio_inr);
 err_gpio_request:
 err_write_ctr_reg:
 	kfree(taos_cfgp);
@@ -1233,7 +1234,7 @@ static int __devexit taos_remove(struct i2c_client *client)
 
 	sysfs_remove_group(&client->dev.kobj, &taos_prox_attr_grp);
 	free_irq(als_ps_int, taos_datap);
-	gpio_free(irq_to_gpio(als_ps_int));
+	gpio_free(als_ps_gpio_inr);
 	kfree(taos_cfgp);
 	taos_cfgp = NULL;
 	input_unregister_device(taos_datap->input_dev_prox);
