@@ -838,15 +838,6 @@ static struct i2c_board_info __initdata bcmi2cnfc[] = {
 #endif
 
 
-#if defined(CONFIG_TMD2771)
-#define TAOS_INT_GPIO   89
-static struct i2c_board_info __initdata i2c_tmd2771_info[] = {
-	{
-		I2C_BOARD_INFO("tmd2771", 0x39),
-		.irq = gpio_to_irq(TAOS_INT_GPIO),
-	},
-};
-#endif
 
 
 #if defined(CONFIG_SENSORS_KIONIX_KXTIK) \
@@ -1290,13 +1281,6 @@ static void __init hawaii_add_i2c_devices(void)
 
 #if defined(CONFIG_BCMI2CNFC)
 	i2c_register_board_info(1, bcmi2cnfc, ARRAY_SIZE(bcmi2cnfc));
-#endif
-
-
-#if defined(CONFIG_TMD2771)
-	i2c_register_board_info(2,
-					i2c_tmd2771_info,
-					ARRAY_SIZE(i2c_tmd2771_info));
 #endif
 
 }

@@ -83,6 +83,11 @@
 					0 1 0
 					0 0 0xFFFFFFFF>;
 		};
+		tmd2771@39 {
+			compatible = "bcm,tmd2771";
+			reg = <0x39>;
+			gpio-irq-pin = <89>;
+		};
 
 		bmp18x@77 {
                          compatible = "bcm,bmp18x";
