@@ -1471,27 +1471,32 @@ exit:
 static void bcmpmu_fg_moniter_battery_temp(struct bcmpmu_fg_data *fg)
 {
 
-	if (unlikely(fg->adc_data.temp > fg->pdata->suspend_temp_hot)) {
-		fg->flags.temp_hot_state = 1;
+	if (unlikely((fg->adc_data.temp > fg->pdata->suspend_temp_hot) &&
+				!fg->flags.temp_hot_state)) {
+		fg->flags.temp_hot_state = true;
 		pr_fg(FLOW, "suspend temp hot\n");
 		bcmpmu_chrgr_usb_en(fg->bcmpmu, 0);
 	} else if (unlikely(fg->flags.temp_hot_state &&
-			fg->adc_data.temp < fg->pdata->recovery_temp_hot)) {
-		fg->flags.temp_hot_state = 0;
+				(fg->adc_data.temp <
+				 fg->pdata->recovery_temp_hot))) {
+		fg->flags.temp_hot_state = false;
 		pr_fg(FLOW, "recovery temp hot\n");
 		bcmpmu_chrgr_usb_en(fg->bcmpmu, 1);
-	} else if (unlikely(fg->adc_data.temp < fg->pdata->suspend_temp_cold)) {
-		fg->flags.temp_cold_state = 1;
+	} else if (unlikely((fg->adc_data.temp <
+					fg->pdata->suspend_temp_cold) &&
+				!fg->flags.temp_cold_state)) {
+		fg->flags.temp_cold_state = true;
 		pr_fg(FLOW, "suspend temp cold\n");
 		bcmpmu_chrgr_usb_en(fg->bcmpmu, 0);
 	} else if (unlikely(fg->flags.temp_cold_state &&
-			fg->adc_data.temp > fg->pdata->recovery_temp_cold)) {
-		fg->flags.temp_cold_state = 0;
+				(fg->adc_data.temp >
+				 fg->pdata->recovery_temp_cold))) {
+		fg->flags.temp_cold_state = false;
 		pr_fg(FLOW, "recovery temp cold\n");
 		bcmpmu_chrgr_usb_en(fg->bcmpmu, 1);
 	}
-
 }
+
 static void bcmpmu_fg_charging_algo(struct bcmpmu_fg_data *fg)
 {
 	int poll_time = CHARG_ALGO_POLL_TIME_MS;
@@ -1659,7 +1664,7 @@ static void bcmpmu_fg_periodic_work(struct work_struct *work)
 	struct bcmpmu_fg_data *fg = to_bcmpmu_fg_data(work,
 			fg_periodic_work.work);
 	struct bcmpmu_fg_status_flags flags;
-	enum bcmpmu_usb_type_t usb_type;
+	enum bcmpmu_chrgr_type_t chrgr_type;
 	int data;
 
 	FG_LOCK(fg);
@@ -1706,12 +1711,13 @@ static void bcmpmu_fg_periodic_work(struct work_struct *work)
 			 * fg->psy.external_power_changed(&fg->psy);
 			 * */
 			bcmpmu_usb_get(fg->bcmpmu,
-					BCMPMU_USB_CTRL_GET_USB_TYPE,
+					BCMPMU_USB_CTRL_GET_CHRGR_TYPE,
 					&data);
-			usb_type = data;
-			pr_fg(FLOW, "%s usb_type = %d\n", __func__, usb_type);
-			if ((usb_type > PMU_USB_TYPE_NONE &&
-				usb_type < PMU_USB_TYPE_MAX) &&
+			chrgr_type = data;
+			pr_fg(FLOW, "%s chrgr_type = %d\n",
+							__func__, chrgr_type);
+			if ((chrgr_type > PMU_CHRGR_TYPE_NONE &&
+				chrgr_type < PMU_CHRGR_TYPE_MAX) &&
 				!bcmpmu_is_usb_host_enabled(fg->bcmpmu) &&
 				bcmpmu_get_icc_fc(fg->bcmpmu)) {
 
