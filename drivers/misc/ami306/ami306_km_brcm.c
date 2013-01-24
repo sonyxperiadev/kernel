@@ -48,12 +48,6 @@
 #include <linux/regulator/consumer.h>
 #endif
 
-#ifdef CONFIG_MFD_BCM_PMU59056
-#define CAM2_REGULATOR "camldo2_uc"
-#else
-#define CAM2_REGULATOR "cam2"
-#endif
-
 static int mod_debug = 0x0;
 module_param(mod_debug, int, 0644);
 
@@ -618,6 +612,7 @@ static int __devinit ami_probe(struct i2c_client *client,
 	int res = 0;
 	struct ami306_dev_data *pdev = NULL;
 	struct ami306_platform_data  *pdata = NULL;
+	const char *regulator_name = NULL;
 
 	AMI_LOG("%s %s %s", AMI_DRV_NAME, __func__, "start");
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C)) {
@@ -637,6 +632,7 @@ static int __devinit ami_probe(struct i2c_client *client,
 
 	else if (client->dev.of_node) {
 		struct device_node *np = client->dev.of_node;
+		const char *prop;
 		u32 val;
 
 		pdata = kzalloc(sizeof(struct ami306_platform_data),
@@ -659,6 +655,13 @@ static int __devinit ami_probe(struct i2c_client *client,
 		if (of_property_read_u32(np, "polarity", &val))
 			goto err_read;
 		pdata->polarity = val;
+
+		if (of_property_read_string(np, "regulator-name", &prop)) {
+			printk(KERN_ERR "AMI: %s, can't get regulator" \
+				"name fom DT!\n", __func__);
+			goto err_read;
+		}
+		regulator_name = prop;
 
 		client->dev.platform_data = pdata;
 	}
@@ -719,7 +722,7 @@ static int __devinit ami_probe(struct i2c_client *client,
 		goto err_free_pdev;
 	}
 #ifdef CONFIG_ARCH_KONA
-        pdev->regulator = regulator_get(&client->dev, CAM2_REGULATOR);
+	pdev->regulator = regulator_get(&client->dev, regulator_name);
         res = IS_ERR_OR_NULL(pdev->regulator);
         if (res) {
                 pdev->regulator = NULL;
@@ -827,8 +830,10 @@ err_free_pdev:
 	kfree(pdev);
 	i2c_set_clientdata(client, NULL);
 err_read:
-	if (client->dev.of_node)
+	if (client->dev.of_node) {
+		res = -EIO;
 		kfree(pdata);
+	}
 	return res;
 }
 

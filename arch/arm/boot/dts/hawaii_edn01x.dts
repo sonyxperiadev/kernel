@@ -98,11 +98,13 @@
 			gpio-drdy = <0>;	/*AMI_GPIO_DRDY*/
 			dir = <6>;		/*AMI_DIR*/
 			polarity = <2>;		/*AMI_POLARITY*/
+			regulator-name = "cam2";
 		};
 
 		bmp18x@77 {
 			compatible = "bcm,bmp18x";
 			reg = <0x77>;
+			regulator-name = "cam2";
 		};
 	};
 

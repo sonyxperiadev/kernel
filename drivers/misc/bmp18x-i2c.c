@@ -34,12 +34,6 @@
 static struct regulator *regulator;
 #endif
 
-#ifdef CONFIG_MFD_BCM_PMU59056
-#define CAM2_REGULATOR "camldo2_uc"
-#else
-#define CAM2_REGULATOR "cam2"
-#endif
-
 #define BMP_ERROR(fmt, args...)   printk(KERN_ERR "%s, " fmt, __func__, ## args)
 #define BMP_INFO(fmt, args...)   printk(KERN_INFO "%s, " fmt, __func__, ## args)
 #define BMP_DEBUG(fmt, args...) \
@@ -77,6 +71,7 @@ static int __devinit bmp18x_i2c_probe(struct i2c_client *client,
 				      const struct i2c_device_id *id)
 {
 	int err = 0;
+	const char *regulator_name = NULL;
 	struct bmp18x_data_bus data_bus =
 	{
 		.bops = &bmp18x_i2c_bus_ops,
@@ -90,9 +85,16 @@ static int __devinit bmp18x_i2c_probe(struct i2c_client *client,
 		BMP_ERROR("bmp18x_probe failed with status: %d\n", err);
 		return err;
 	}
-
+	if (client->dev.of_node) {
+		if (of_property_read_string(client->dev.of_node,
+			"regulator-name", &regulator_name)) {
+			BMP_ERROR("%s: can't get regulator name from DT!\n",
+				BMP18X_NAME);
+			goto err_read;
+		}
+	}
 #ifdef CONFIG_ARCH_KONA
-	regulator = regulator_get(&client->dev, CAM2_REGULATOR);
+	regulator = regulator_get(&client->dev, regulator_name);
 	err = IS_ERR_OR_NULL(regulator);
 	if (err) {
 		regulator = NULL;
@@ -111,6 +113,8 @@ static int __devinit bmp18x_i2c_probe(struct i2c_client *client,
 		regulator_put(regulator);
 	}
 	return err;
+err_read:
+	return -EIO;
 #endif
 }
 
