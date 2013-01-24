@@ -47,7 +47,6 @@
 #include <asm/gpio.h>
 #include <linux/serial_8250.h>
 #include <mach/rdb/brcm_rdb_uartb.h>
-#include <mach/sdio_platform.h>
 #include <mach/kona.h>
 #include <mach/hawaii.h>
 #include <mach/clock.h>
@@ -161,86 +160,6 @@ struct ion_platform_data ion_cma_data = {
 #endif	/* CONFIG_CMA */
 #endif	/* CONFIG_ION */
 
-static struct bsc_adap_cfg bsc_i2c_cfg[] = {
-	{
-		.speed = BSC_BUS_SPEED_400K,
-		.dynamic_speed = 1,
-		.bsc_clk = "bsc1_clk",
-		.bsc_apb_clk = "bsc1_apb_clk",
-		.retries = 1,
-		.is_pmu_i2c = false,
-		.fs_ref = BSC_BUS_REF_13MHZ,
-		.hs_ref = BSC_BUS_REF_104MHZ,
-	},
-
-	{
-		.speed = BSC_BUS_SPEED_400K,
-		.dynamic_speed = 1,
-		.bsc_clk = "bsc2_clk",
-		.bsc_apb_clk = "bsc2_apb_clk",
-		.retries = 3,
-		.is_pmu_i2c = false,
-		.fs_ref = BSC_BUS_REF_13MHZ,
-		.hs_ref = BSC_BUS_REF_104MHZ,
-	},
-
-	{
-		.speed = BSC_BUS_SPEED_400K,
-		.dynamic_speed = 1,
-		.bsc_clk = "bsc3_clk",
-		.bsc_apb_clk = "bsc3_apb_clk",
-		.retries = 1,
-		.is_pmu_i2c = false,
-		.fs_ref = BSC_BUS_REF_13MHZ,
-		.hs_ref = BSC_BUS_REF_104MHZ,
-	},
-
-	{
-		.speed = BSC_BUS_SPEED_400K,
-		.dynamic_speed = 1,
-		.bsc_clk = "bsc4_clk",
-		.bsc_apb_clk = "bsc4_apb_clk",
-		.retries = 1,
-		.is_pmu_i2c = false,
-		.fs_ref = BSC_BUS_REF_13MHZ,
-		.hs_ref = BSC_BUS_REF_104MHZ,
-	},
-
-	{
-#if defined(CONFIG_KONA_PMU_BSC_HS_MODE)
-		.speed = BSC_BUS_SPEED_HS,
-		/* No dynamic speed in HS mode */
-		.dynamic_speed = 0,
-		/*
-		 * PMU can NAK certain I2C read commands, while write
-		 * is in progress; and it takes a while to synchronise
-		 * writes between HS clock domain(3.25MHz) and
-		 * internal clock domains (32k). In such cases, we retry
-		 * PMU reads until the writes are through. PMU need more
-		 * retry counts in HS mode to handle this.
-		 */
-		.retries = 5,
-#elif defined(CONFIG_KONA_PMU_BSC_HS_1MHZ)
-		.speed = BSC_BUS_SPEED_HS_1MHZ,
-		.dynamic_speed = 0,
-		.retries = 5,
-#elif defined(CONFIG_KONA_PMU_BSC_HS_1625KHZ)
-		.speed = BSC_BUS_SPEED_HS_1625KHZ,
-		.dynamic_speed = 0,
-		.retries = 5,
-#else
-		.speed = BSC_BUS_SPEED_50K,
-		.dynamic_speed = 1,
-		.retries = 3,
-#endif
-		.bsc_clk = "pmu_bsc_clk",
-		.bsc_apb_clk = "pmu_bsc_apb",
-		.is_pmu_i2c = true,
-		.fs_ref = BSC_BUS_REF_13MHZ,
-		.hs_ref = BSC_BUS_REF_26MHZ,
-	 },
-};
-
 static struct spi_kona_platform_data sspi_spi0_info = {
 #ifdef CONFIG_DMAC_PL330
 	.enable_dma = 1,
@@ -299,86 +218,7 @@ static struct spi_board_info spi_slave_board_info[] __initdata = {
 	/* TODO: adding more slaves here */
 };
 
-static struct resource board_sdio1_resource[] = {
-	[0] = {
-	       .start = SDIO1_BASE_ADDR,
-	       .end = SDIO1_BASE_ADDR + SZ_64K - 1,
-	       .flags = IORESOURCE_MEM,
-	       },
-	[1] = {
-	       .start = BCM_INT_ID_SDIO0,
-	       .end = BCM_INT_ID_SDIO0,
-	       .flags = IORESOURCE_IRQ,
-	       },
-};
-
-static struct resource board_sdio2_resource[] = {
-	[0] = {
-	       .start = SDIO2_BASE_ADDR,
-	       .end = SDIO2_BASE_ADDR + SZ_64K - 1,
-	       .flags = IORESOURCE_MEM,
-	       },
-	[1] = {
-	       .start = BCM_INT_ID_SDIO1,
-	       .end = BCM_INT_ID_SDIO1,
-	       .flags = IORESOURCE_IRQ,
-	       },
-};
-
-static struct sdio_platform_cfg board_sdio_param[] = {
-	{			/* SDIO1 */
-	 .id = 0,
-	 .data_pullup = 0,
-	 .cd_gpio = -1,
-	 .devtype = SDIO_DEV_TYPE_SDMMC,
-	 .flags = KONA_SDIO_FLAGS_DEVICE_REMOVABLE,
-	 .peri_clk_rate = 400000,
-	 },
-	{			/* SDIO2 */
-	 .id = 1,
-	 .data_pullup = 0,
-	 .is_8bit = 1,
-	 .devtype = SDIO_DEV_TYPE_EMMC,
-	 .flags = KONA_SDIO_FLAGS_DEVICE_NON_REMOVABLE,
-	 .peri_clk_rate = 400000,
-	 },
-};
-
-static struct platform_device board_sdio1_device = {
-	.name = "sdhci",
-	.id = 0,
-	.resource = board_sdio1_resource,
-	.num_resources = ARRAY_SIZE(board_sdio1_resource),
-	.dev = {
-		.platform_data = &board_sdio_param[0],
-		},
-};
-
-static struct platform_device board_sdio2_device = {
-	.name = "sdhci",
-	.id = 1,
-	.resource = board_sdio2_resource,
-	.num_resources = ARRAY_SIZE(board_sdio2_resource),
-	.dev = {
-		.platform_data = &board_sdio_param[1],
-		},
-};
-
 /* Common devices among all the boards */
-static struct platform_device *board_sdio_plat_devices[] __initdata = {
-#ifndef CONFIG_MACH_HAWAII_FPGA_USB_V1
-	&board_sdio1_device,
-#endif
-#ifndef CONFIG_MACH_HAWAII_FPGA_MM_V1
-	&board_sdio2_device,
-#endif
-};
-
-void __init board_add_sdio_devices(void)
-{
-	platform_add_devices(board_sdio_plat_devices,
-			     ARRAY_SIZE(board_sdio_plat_devices));
-}
 
 #if defined(CONFIG_USB_DWC_OTG)
 static struct bcm_hsotgctrl_platform_data hsotgctrl_plat_data = {
@@ -404,9 +244,6 @@ static struct platform_device *hawaii_ray_plat_devices[] __initdata = {
 	&hawaii_spum_aes_device,
 #endif
 #if 0
-	&board_i2c_adap_devices[0],
-	&board_i2c_adap_devices[1],
-	&board_i2c_adap_devices[2],
 	&kona_sspi_spi2_device,
 #ifdef CONFIG_STM_TRACE
 	&kona_stm_device,
@@ -415,7 +252,6 @@ static struct platform_device *hawaii_ray_plat_devices[] __initdata = {
 	&rng_device,
 #endif
 #endif
-	&hawaii_i2c_adap_devices[4],
 #ifdef CONFIG_USB_DWC_OTG
 	&hawaii_hsotgctrl_platform_device,
 	&hawaii_otg_platform_device,
@@ -430,9 +266,6 @@ static void __init hawaii_ray_add_i2c_devices(void)
 static int __init hawaii_ray_add_lateInit_devices(void)
 {
 
-#ifdef CONFIG_MMC
-	board_add_sdio_devices();
-#endif
 	return 0;
 }
 
@@ -443,11 +276,6 @@ static void __init hawaii_ray_reserve(void)
 
 static void hawaii_ray_add_pdata(void)
 {
-	hawaii_i2c_adap_devices[0].dev.platform_data = &bsc_i2c_cfg[0];
-	hawaii_i2c_adap_devices[1].dev.platform_data = &bsc_i2c_cfg[1];
-	hawaii_i2c_adap_devices[2].dev.platform_data = &bsc_i2c_cfg[2];
-	hawaii_i2c_adap_devices[3].dev.platform_data = &bsc_i2c_cfg[3];
-	hawaii_i2c_adap_devices[4].dev.platform_data = &bsc_i2c_cfg[4];
 	hawaii_ssp0_device.dev.platform_data = &sspi_spi0_info;
 	hawaii_ssp1_device.dev.platform_data = &sspi_spi2_info;
 #ifdef CONFIG_USB_DWC_OTG

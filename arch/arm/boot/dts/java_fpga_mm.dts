@@ -53,6 +53,7 @@
 		is-pmu-i2c = <0>;
 		fs-ref-frequency = <13000000>;
 		hs-ref-frequency = <104000000>;
+		status = "disabled";
 	};
 
 	i2c1: i2c@3e017000 {
@@ -64,6 +65,7 @@
 		is-pmu-i2c = <0>;
 		fs-ref-frequency = <13000000>;
 		hs-ref-frequency = <104000000>;
+		status = "disabled";
 	};
 
 	i2c2: i2c@3e018000 {
