@@ -148,34 +148,13 @@ module_param_cb(icc_fcc, &icc_fcc_param_ops, &icc_fcc, 0644);
 
 static int bcmpmu_get_curr_val(int curr)
 {
-	int low = 0;
-	int high = ARRAY_SIZE(bcmpmu_pmu_curr_table) - 1 ;
-	int middle = 0;
-	int ret = 0;
+	int i;
 
-	if (!curr)
-		return ret;
-	while (low < high) {
-		middle = low + (high - low)/2;
-
-		if (curr > bcmpmu_pmu_curr_table[middle])
-			low = middle + 1;
-		else if (curr < bcmpmu_pmu_curr_table[middle] &&
-				(curr + 10) <  bcmpmu_pmu_curr_table[middle])
-			high = middle - 1;
-		else {
-			ret =  middle;
-			return ret;
-		}
+	for (i = ARRAY_SIZE(bcmpmu_pmu_curr_table); i >= 0; i--) {
+		if (curr > bcmpmu_pmu_curr_table[i])
+			return i;
 	}
-
-	if (curr >= bcmpmu_pmu_curr_table[low] &&
-		curr < bcmpmu_pmu_curr_table[high])
-		ret = low;
-	else
-		ret =  high;
-
-	return ret;
+	return 0;
 }
 
 int bcmpmu_set_icc_fc(struct bcmpmu59xxx *bcmpmu, int curr)
