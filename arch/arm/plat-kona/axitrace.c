@@ -216,10 +216,10 @@ static void set_fls_state(u32 item, s8 index, u32 value,
 		state->filter_len = value;
 		break;
 	case FLS_ID_MASK:
-		state->id_mask = value;
+		state->id_mask = value & FLS_ID_MASK_WIDTH;
 		break;
 	case FLS_ID:
-		state->filter_id = value;
+		state->filter_id = value & FLS_ID_WIDTH;
 		break;
 	case FLS_OPEN:
 		state->open = value;
@@ -490,6 +490,9 @@ static void trace_start(struct per_trace_info *trace_info)
 								f->open);
 		dev_dbg(tracer.dev, "0x%x secure = %d\n",
 				1 << SHIFT(FILTER_SECURE), f->secure);
+
+		value |= (f->filter_id << SHIFT(FILTER_ID));
+		value |= (f->id_mask << SHIFT(FILTER_ID_MASK));
 
 		/* TODO: Lets hard code len mode for now */
 		value |= 0x3 << SHIFT(FILTER_LEN_MODE);
