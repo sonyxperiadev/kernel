@@ -72,6 +72,9 @@
 #define FG_CURR_SAMPLE_MAX		2000
 #define FG_EOC_CNT_THRLD		5
 
+#define BATT_LI_ION_MIN_VOLT		2100
+#define BATT_LI_ION_MAX_VOLT		4200
+
 /**
  * FG should go to synchronous mode (modulator turned off)
  * during system deep sleep condition i.e. PC1, PC2 & PC3
@@ -688,11 +691,17 @@ static int bcmpmu_fg_get_batt_ocv(struct bcmpmu_fg_data *fg, int volt, int curr,
 	int lut_sz = fg->pdata->batt_prop->esr_temp_lut_sz;
 	int slope, offset, ocv;
 	int idx;
+	int min_volt;
+	int max_volt;
 
 	if (!lut) {
 		pr_fg(ERROR, "ESR<->TEMP table is not defined\n");
 		return 0;
 	}
+
+	min_volt = fg->pdata->batt_prop->min_volt;
+	max_volt = fg->pdata->batt_prop->max_volt;
+	ocv = 0;
 
 	/*find esr zone */
 	for (idx = 0; idx < lut_sz; idx++) {
@@ -705,25 +714,31 @@ static int bcmpmu_fg_get_batt_ocv(struct bcmpmu_fg_data *fg, int volt, int curr,
 	slope = lut[idx].esr_vl_slope;
 	offset = lut[idx].esr_vl_offset;
 	ocv = bcmpmu_fg_get_esr_to_ocv(volt, curr, offset, slope);
-	if (ocv < lut[idx].esr_vl_lvl)
+	if ((ocv > min_volt) && (ocv < lut[idx].esr_vl_lvl))
 		goto exit;
 
 	slope = lut[idx].esr_vm_slope;
 	offset = lut[idx].esr_vm_offset;
 	ocv = bcmpmu_fg_get_esr_to_ocv(volt, curr, offset, slope);
-	if (ocv < lut[idx].esr_vm_lvl)
+	if ((ocv > lut[idx].esr_vl_lvl) && (ocv < lut[idx].esr_vm_lvl))
 		goto exit;
 
 	slope = lut[idx].esr_vh_slope;
 	offset = lut[idx].esr_vh_offset;
 	ocv = bcmpmu_fg_get_esr_to_ocv(volt, curr, offset, slope);
-	if (ocv < lut[idx].esr_vh_lvl)
+	if ((ocv > lut[idx].esr_vm_lvl) && (ocv < lut[idx].esr_vh_lvl))
 		goto exit;
 
 	slope = lut[idx].esr_vf_slope;
 	offset = lut[idx].esr_vf_offset;
 	ocv = bcmpmu_fg_get_esr_to_ocv(volt, curr, offset, slope);
-
+	if (ocv < min_volt) {
+		pr_fg(ERROR, "OCV below min voltage!!\n");
+		ocv = min_volt;
+	} else if (ocv > max_volt) {
+		pr_fg(ERROR, "OCV above max voltage!!\n");
+		ocv = max_volt;
+	}
 exit:
 	pr_fg(FLOW, "fg_zone:%d volt: %d curr: %d temp: %d\n",
 			idx, volt, curr, temp);
@@ -1962,6 +1977,10 @@ static int bcmpmu_fg_set_platform_data(struct bcmpmu_fg_data *fg,
 		pdata->sleep_sample_rate = SAMPLE_RATE_2HZ;
 	if (!pdata->fg_factor)
 		pdata->fg_factor = FG_CURR_SCALING_FACTOR;
+	if (prop->min_volt == 0)
+		prop->min_volt = BATT_LI_ION_MIN_VOLT;
+	if (prop->max_volt == 0)
+		prop->max_volt = BATT_LI_ION_MAX_VOLT;
 
 	fg->capacity_info.max_design = pdata->batt_prop->full_cap;
 
