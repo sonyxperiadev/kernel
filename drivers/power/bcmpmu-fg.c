@@ -512,8 +512,8 @@ static int bcmpmu_fg_set_sample_rate(struct bcmpmu_fg_data *fg,
 	ret = fg->bcmpmu->read_dev(fg->bcmpmu, PMU_REG_FGOCICCTRL, &reg);
 	if (ret)
 		return ret;
-	reg &= ~FGOCICCTRL1_FGCOMBRATE_MASK;
-	reg |= (rate << FGOCICCTRL1_FGCOMBRATE_SHIFT);
+	reg &= ~FGOCICCTRL_FGCOMBRATE_MASK;
+	reg |= (rate << FGOCICCTRL_FGCOMBRATE_SHIFT);
 
 	ret = fg->bcmpmu->write_dev(fg->bcmpmu, PMU_REG_FGOCICCTRL, reg);
 
@@ -1042,6 +1042,19 @@ static int bcmpmu_fg_set_sync_mode(struct bcmpmu_fg_data *fg, bool sync)
 		reg &= FGCTRL1_FGSYNCMODE_MASK;
 
 	ret = fg->bcmpmu->write_dev(fg->bcmpmu, PMU_REG_FGCTRL1, reg);
+
+	if (ret)
+		return ret;
+
+	/**
+	 * turn of FG PLL during sync mode to save power
+	 */
+	ret = fg->bcmpmu->read_dev(fg->bcmpmu, PMU_REG_FGOCICCTRL, &reg);
+	if (ret)
+		return ret;
+	reg |= FGOCICCTRL_FGSYNC_PLLOFF_MASK;
+	ret = fg->bcmpmu->write_dev(fg->bcmpmu, PMU_REG_FGOCICCTRL, reg);
+
 	return ret;
 }
 
