@@ -73,6 +73,10 @@
 		is-pmu-i2c = <0>;
 		fs-ref-frequency = <13000000>;
 		hs-ref-frequency = <104000000>;
+		bmp18x@77 {
+                         compatible = "bcm,bmp18x";
+                         reg = <0x77>;
+		};
 	};
 
 	i2c3: i2c@3e01c000 {

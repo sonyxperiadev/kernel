@@ -842,13 +842,6 @@ static struct i2c_board_info __initdata bcmi2cnfc[] = {
 };
 #endif
 
-#if  defined(CONFIG_BMP18X) || defined(CONFIG_BMP18X_I2C) || defined(CONFIG_BMP18X_I2C_MODULE)
-static struct i2c_board_info __initdata i2c_bmp18x_info[] = {
-	{
-	 I2C_BOARD_INFO(BMP18X_NAME, BMP18X_I2C_ADDRESS),
-	 },
-};
-#endif
 
 #if defined(CONFIG_TMD2771)
 #define TAOS_INT_GPIO   89
@@ -1334,16 +1327,6 @@ static void __init hawaii_add_i2c_devices(void)
 					ARRAY_SIZE(i2c_tmd2771_info));
 #endif
 
-#if  defined(CONFIG_BMP18X) || defined(CONFIG_BMP18X_I2C) || defined(CONFIG_BMP18X_I2C_MODULE)
-	i2c_register_board_info(
-#ifdef BMP18X_I2C_BUS_ID
-				       BMP18X_I2C_BUS_ID,
-#else
-				       -1,
-#endif
-				       i2c_bmp18x_info,
-				       ARRAY_SIZE(i2c_bmp18x_info));
-#endif
 }
 
 static void hawaii_add_pdata(void)
