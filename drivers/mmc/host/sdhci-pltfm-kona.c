@@ -663,6 +663,10 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 	char devname[MAX_DEV_NAME_SIZE];
 	int ret = 0;
 	char *emmc_regulator = NULL;
+#ifdef CONFIG_MACH_HAWAII_FPGA
+	u32 of_quirks = 0;
+	u32 of_quirks2 = 0;
+#endif
 
 	pr_debug("%s: ENTRY\n", __func__);
 
@@ -748,6 +752,16 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 			__func__);
 			goto err_free_priv_data_mem;
 		}
+
+#ifdef CONFIG_MACH_HAWAII_FPGA
+		if (of_property_read_u32(pdev->dev.of_node, "quirks", &of_quirks)) {
+			pr_info("quirks = 0x%08x foud for the configuration\n", of_quirks);
+		}
+
+		if (of_property_read_u32(pdev->dev.of_node, "quirks2", &of_quirks2)) {
+			pr_info("quirks2 = 0x%08x foud for the configuration\n", of_quirks2);
+		}
+#endif
 
 		hw_cfg->peri_clk_rate = val;
 
@@ -836,14 +850,16 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 	host->quirks = SDHCI_QUIRK_NO_CARD_NO_RESET
 	    | SDHCI_QUIRK_BROKEN_TIMEOUT_VAL
 	    | SDHCI_QUIRK_32BIT_DMA_ADDR
-#ifdef CONFIG_MACH_HAWAII_FPGA_MM_V1
-	    | SDHCI_QUIRK_BROKEN_ADMA
-#endif
 	    | SDHCI_QUIRK_32BIT_DMA_SIZE | SDHCI_QUIRK_32BIT_ADMA_SIZE;
 
 #ifdef CONFIG_MACH_RHEA_DALTON2_EB30
         host->quirks |= SDHCI_QUIRK_NO_MULTIBLOCK;
 #endif
+#ifdef CONFIG_MACH_HAWAII_FPGA
+	host->quirks |= of_quirks;
+	host->quirks2 |= of_quirks2;
+#endif
+
         pr_debug("%s: GET IRQ\n", __func__);
 
 	if (hw_cfg->flags & KONA_SDIO_FLAGS_DEVICE_NON_REMOVABLE)
@@ -1176,11 +1192,11 @@ err_sleep_clk_put:
 
 err_peri_clk_put:
 	clk_put(dev->peri_clk);
-#endif
 
 err_unset_pltfm:
 	platform_set_drvdata(pdev, NULL);
 	iounmap(host->ioaddr);
+#endif
 
 err_free_mem_region:
 	release_mem_region(iomem->start, resource_size(iomem));
