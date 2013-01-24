@@ -141,6 +141,10 @@
 #include <mach/ami306_settings.h>
 #endif
 
+#if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
+#include <linux/input.h>
+#include <linux/gpio_keys.h>
+#endif
 
 #ifdef CONFIG_BACKLIGHT_PWM
 #include <linux/pwm_backlight.h>
@@ -591,7 +595,7 @@ struct regulator_consumer_supply sdx_supply[] = {
 static struct bcm_keymap hawaii_keymap[] = {
 	{BCM_KEY_ROW_0, BCM_KEY_COL_0, "Vol Up Key", KEY_VOLUMEUP},
 	{BCM_KEY_ROW_0, BCM_KEY_COL_1, "Vol Down Key", KEY_VOLUMEDOWN},
-	{BCM_KEY_ROW_0, BCM_KEY_COL_2, "Home-Key", KEY_HOME},
+	{BCM_KEY_ROW_0, BCM_KEY_COL_2, "unused", 0},
 	{BCM_KEY_ROW_0, BCM_KEY_COL_3, "unused", 0},
 	{BCM_KEY_ROW_0, BCM_KEY_COL_4, "unused", 0},
 	{BCM_KEY_ROW_0, BCM_KEY_COL_5, "unused", 0},
@@ -657,11 +661,30 @@ static struct bcm_keymap hawaii_keymap[] = {
 
 static struct bcm_keypad_platform_info hawaii_keypad_data = {
 	.row_num = 1,
-	.col_num = 3,
+	.col_num = 2,
 	.keymap = hawaii_keymap,
 	.bcm_keypad_base = (void *)__iomem HW_IO_PHYS_TO_VIRT(KEYPAD_BASE_ADDR),
 };
 
+#endif
+
+#define GPIO_KEYS_SETTINGS { { KEY_HOME, 10, 1, "HOME", EV_KEY, 0, 64}, }
+
+#if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
+static struct gpio_keys_button board_gpio_keys[] = GPIO_KEYS_SETTINGS;
+
+static struct gpio_keys_platform_data gpio_keys_data = {
+	.nbuttons = ARRAY_SIZE(board_gpio_keys),
+	.buttons = board_gpio_keys,
+};
+
+static struct platform_device board_gpio_keys_device = {
+	.name = "gpio-keys",
+	.id = -1,
+	.dev = {
+		.platform_data = &gpio_keys_data,
+	},
+};
 #endif
 
 #if defined(CONFIG_BCMI2CNFC)
@@ -1380,6 +1403,10 @@ static void __init hawaii_add_devices(void)
 
 #ifdef CONFIG_KEYBOARD_BCM
 	hawaii_kp_device.dev.platform_data = &hawaii_keypad_data;
+#endif
+
+#if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
+	platform_device_register(&board_gpio_keys_device);
 #endif
 
 	platform_add_devices(hawaii_devices, ARRAY_SIZE(hawaii_devices));
