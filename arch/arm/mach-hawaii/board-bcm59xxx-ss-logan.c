@@ -199,7 +199,7 @@ static struct regulator_init_data bcm59xxx_simldo2_data = {
 			.max_uV = 3300000,
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
-			.always_on = 1,
+			.always_on = 0,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(sim2_supply),
 	.consumer_supplies = sim2_supply,
@@ -380,7 +380,7 @@ static struct regulator_init_data bcm59xxx_gpldo3_data = {
 			.min_uV = 1200000,
 			.max_uV = 3300000,
 			.valid_ops_mask =
-			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE |REGULATOR_CHANGE_MODE,
+			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE | REGULATOR_CHANGE_MODE,
 			.always_on = 0,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(gpldo3_supply),
@@ -575,14 +575,14 @@ struct bcmpmu59xxx_regulator_init_data
 			.id = BCMPMU_REGULATOR_SIMLDO1,
 			.initdata = &bcm59xxx_simldo1_data,
 			.dsm_mode = BCMPMU_REGL_LPM_IN_DSM,
-			.pc_pins_map = PCPIN_MAP_ENC(0, PMU_PC2),
+			.pc_pins_map = PCPIN_MAP_ENC(0, PMU_PC1),
 		},
 		[BCMPMU_REGULATOR_SIMLDO2] = {
 			.id = BCMPMU_REGULATOR_SIMLDO2,
 			.initdata = &bcm59xxx_simldo2_data,
 			.dsm_mode = BCMPMU_REGL_LPM_IN_DSM,
 			.pc_pins_map =
-				PCPIN_MAP_ENC(0, PMU_PC2),
+				PCPIN_MAP_ENC(0, PMU_PC1),
 		},
 		[BCMPMU_REGULATOR_SDLDO] = {
 			.id = BCMPMU_REGULATOR_SDLDO,
@@ -825,7 +825,7 @@ static struct bcmpmu59xxx_rw_data register_init_data[] = {
 
 	{.addr = PMU_REG_CSRVOUT1 , .val = 0x28, .mask = 0x3F},
 
-	//from h/w team for power consumption
+	/*from h/w team for power consumption*/
 	{.addr = PMU_REG_PASRCTRL1 , .val = 0x00, .mask = 0x06},
 	{.addr = PMU_REG_PASRCTRL6 , .val = 0x00, .mask = 0xF0},
 	{.addr = PMU_REG_PASRCTRL7 , .val = 0x00, .mask = 0x3F},
@@ -840,7 +840,8 @@ static struct bcmpmu59xxx_rw_data register_init_data[] = {
 
 };
 
-// logan compilation fix
+/* logan compilation fix */
+
 /*Ponkey platform data*/
 struct pkey_timer_act pkey_t3_action = {
 	.flags = PKEY_SMART_RST_PWR_EN,
@@ -856,7 +857,7 @@ struct bcmpmu59xxx_pkey_pdata pkey_pdata = {
 	.wakeup_deb = PKEY_WUP_DEB_1000MS,
 	.t3 = &pkey_t3_action,
 };
-/* 
+/*
 struct bcmpmu59xxx_pok_pdata pok_pdata = {
 	.hard_reset_en = -1,
 	.restart_en = -1,
@@ -864,7 +865,7 @@ struct bcmpmu59xxx_pok_pdata pok_pdata = {
 	.pok_shtdwn_dly = -1,
 	.pok_restart_dly = -1,
 	.pok_restart_deb = -1,
-	.pok_lock = 1, 
+	.pok_lock = 1,
 	.pok_turn_on_deb = -1,
 };
 */
@@ -1047,37 +1048,37 @@ struct bcmpmu_adc_pdata adc_pdata[PMU_ADC_CHANN_MAX] = {
 
 /* SS EB425161 profile */
 static struct batt_volt_cap_map ss_eb425161_volt_cap_lut[] = {
-    {4315, 100},
-    {4252, 95},
-    {4196, 90},
-    {4143, 85},
-    {4092, 80},
-    {4062, 76},
-    {3995, 71},
-    {3966, 66},
-    {3932, 61},
-    {3888, 56},
-    {3848, 51},
-    {3822, 46},
-    {3804, 41},
-    {3790, 36},
-    {3780, 31},
-    {3775, 27},
-    {3765, 22},
-    {3739, 17},
-    {3697, 12},
-    {3693, 11},
-    {3692, 10},
-    {3691, 9},
-    {3691, 8},
-    {3690, 7},
-    {3689, 6},
-    {3686, 5},
-    {3677, 4},
-    {3645, 3},
-    {3593, 2},
-    {3520, 1},
-    {3400, 0},
+	{4315, 100},
+	{4252, 95},
+	{4196, 90},
+	{4143, 85},
+	{4092, 80},
+	{4062, 76},
+	{3995, 71},
+	{3966, 66},
+	{3932, 61},
+	{3888, 56},
+	{3848, 51},
+	{3822, 46},
+	{3804, 41},
+	{3790, 36},
+	{3780, 31},
+	{3775, 27},
+	{3765, 22},
+	{3739, 17},
+	{3697, 12},
+	{3693, 11},
+	{3692, 10},
+	{3691, 9},
+	{3691, 8},
+	{3690, 7},
+	{3689, 6},
+	{3686, 5},
+	{3677, 4},
+	{3645, 3},
+	{3593, 2},
+	{3520, 1},
+	{3400, 0},
 };
 
 static struct batt_eoc_curr_cap_map ss_eb425161_eoc_cap_lut[] = {
@@ -1224,9 +1225,12 @@ static struct bcmpmu_fg_pdata fg_pdata = {
 	.calibration_data = &ss_eb425161_cal_data,
 	.sns_resist = 10,
 	.sys_impedence = 33,
-	.eoc_current = 100, /* End of charge current in mA */ /* Samsung spec TBD */
-	.hw_maintenance_charging = false, /* enable HW EOC of PMU */
-	.sleep_current_ua = 1460, /* floor during sleep from Hawaii HW workshop Dec7 2012 */
+	.eoc_current = 100,
+	/* End of charge current in mA */ /* Samsung spec TBD */
+	.hw_maintenance_charging = false,
+	/* enable HW EOC of PMU */
+	.sleep_current_ua = 1460,
+	/* floor during sleep from Hawaii HW workshop Dec7 2012 */
 	.sleep_sample_rate = 32000,
 	.fg_factor = 950, /* Logan00 board : 2.76% err Jan30 2010 */
 	.suspend_temp_hot   =  800,
@@ -1274,11 +1278,11 @@ static struct mfd_cell pmu59xxx_devs[] = {
 	{
 		.name = "bcmpmu59xxx-ponkey",
 		.id = -1,
-// logan compilation fix
+/* logan compilation fix */
 		.platform_data = &pkey_pdata,
 		.pdata_size = sizeof(pkey_pdata),
-//		.platform_data = &pok_pdata,
-//		.pdata_size = sizeof(pok_pdata),
+/*		.platform_data = &pok_pdata, */
+/*		.pdata_size = sizeof(pok_pdata), */
 	},
 	{
 		.name = "bcmpmu59xxx_rtc",
@@ -1367,9 +1371,9 @@ static struct bcmpmu59xxx_platform_data bcmpmu_i2c_pdata = {
 	.init_max = ARRAY_SIZE(register_init_data),
 #ifdef CONFIG_CHARGER_BCMPMU_SPA
 	.flags = BCMPMU_SPA_EN,
-// logan compilation fix
+/* logan compilation fix */
 	.bc = BCMPMU_BC_BB_BC12,
-//	.bc = BCMPMU_BC_JIG_BC12,
+/*	.bc = BCMPMU_BC_JIG_BC12, */
 #else
 	.bc = BCMPMU_BC_PMU_BC12,
 #endif
