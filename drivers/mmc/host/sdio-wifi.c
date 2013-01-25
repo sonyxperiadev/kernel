@@ -25,8 +25,8 @@
 #include <mach/sdio_platform.h>
 #include "sdhci-pltfm.h"
 
-#define PRINT_ERR(format, args...) printk(KERN_ERR "%s: " format, __FUNCTION__, ## args)
-#define PRINT_INFO(format, args...) printk(KERN_INFO "%s: " format, __FUNCTION__, ## args)
+#define PRINT_ERR(format, args...) printk(KERN_ERR "%s: " format, __func__, ## args)
+#define PRINT_INFO(format, args...) printk(KERN_INFO "%s: " format, __func__, ## args)
 
 struct pin_config SdioPinCfgs;
 
@@ -60,10 +60,8 @@ void bcm_sdiowl_reset_b(int onoff)
 		PRINT_ERR("gpio reset pin not defined\n");
 		return;
 	}
-
 	__wifi_reset(wifi_gpio->reset, onoff);
 }
-
 EXPORT_SYMBOL(bcm_sdiowl_reset_b);
 
 int bcm_sdiowl_rescan(void)
@@ -86,18 +84,16 @@ int bcm_sdiowl_rescan(void)
 
 	return rc;
 }
-
 EXPORT_SYMBOL(bcm_sdiowl_rescan);
 
 static int wifi_gpio_request(struct sdio_wifi_gpio_cfg *gpio)
 {
 	int rc = 0;
 
-	printk(KERN_ERR "%s:ENTRY\n",__FUNCTION__);
+	printk(KERN_ERR "%s:ENTRY\n", __func__);
 
-	if(gpio->reserved){
+	if (gpio->reserved)
 		return rc;
-	}
 
 	PRINT_INFO("gpio pins reset:%d, req:%d wake:%d shutdown:%d\n",
 		   gpio->reset, gpio->reg, gpio->host_wake, gpio->shutdown);
@@ -111,7 +107,7 @@ static int wifi_gpio_request(struct sdio_wifi_gpio_cfg *gpio)
 		}
 		PRINT_INFO("current value of reg GPIO: %d\n",
 			   gpio_get_value(gpio->reg));
-		printk(KERN_ERR "%s: REG=%x\n", __FUNCTION__, gpio->reg);
+		printk(KERN_ERR "%s: REG=%x\n", __func__, gpio->reg);
 		gpio_direction_output(gpio->reg, 1);
 		gpio_set_value(gpio->reg, 1);
 	}
@@ -123,11 +119,11 @@ static int wifi_gpio_request(struct sdio_wifi_gpio_cfg *gpio)
 				  gpio->reset);
 			goto err_free_gpio_reg;
 		}
-		printk(KERN_ERR "%s: RESET=%x\n", __FUNCTION__, gpio->reset);
+		printk(KERN_ERR "%s: RESET=%x\n", __func__, gpio->reset);
 		PRINT_INFO("current value of reset GPIO: %d\n",
 			   gpio_get_value(gpio->reset));
 		gpio_direction_output(gpio->reset, 0);
-//      gpio_set_value(gpio->reset, 0);
+/*      gpio_set_value(gpio->reset, 0); */
 	}
 
 	if (gpio->shutdown >= 0) {
@@ -137,7 +133,7 @@ static int wifi_gpio_request(struct sdio_wifi_gpio_cfg *gpio)
 				  gpio->shutdown);
 			goto err_free_gpio_reset;
 		}
-		printk(KERN_ERR "%s: SHUTDOWN=%x\n", __FUNCTION__,
+		printk(KERN_ERR "%s: SHUTDOWN=%x\n", __func__,
 		       gpio->shutdown);
 		PRINT_INFO("current value of shutdown GPIO: %d\n",
 			   gpio_get_value(gpio->shutdown));
@@ -161,7 +157,7 @@ static int wifi_gpio_request(struct sdio_wifi_gpio_cfg *gpio)
 			goto err_free_gpio_shutdown;
 		}
 	}
-	printk(KERN_ERR "%s: HOST_WAKE=%x\n",__FUNCTION__,gpio->host_wake);
+	printk(KERN_ERR "%s: HOST_WAKE=%x\n", __func__, gpio->host_wake);
 
 	gpio->reserved = 1;
 
@@ -207,60 +203,74 @@ int bcm_sdiowl_init(int onoff)
 	struct mmc_card *card;
 #endif
 
-	printk(KERN_ERR "%s:ENTRY\n", __FUNCTION__);
+	printk(KERN_ERR "%s:ENTRY\n", __func__);
 
 
-//Set the Pull of Sdio Lines first
+/* Set the Pull of Sdio Lines first */
+	SdioPinCfgs.name = PN_MMC1CK;
+	pinmux_get_pin_config(&SdioPinCfgs);
+	SdioPinCfgs.reg.b.input_dis = 0;
+	SdioPinCfgs.reg.b.pull_dn = 0;
+	SdioPinCfgs.reg.b.pull_up = 0;
+	SdioPinCfgs.reg.b.drv_sth = 3;
+	pinmux_set_pin_config(&SdioPinCfgs);
 
 	SdioPinCfgs.name = PN_MMC1CMD;
 	pinmux_get_pin_config(&SdioPinCfgs);
-	SdioPinCfgs.reg.b.pull_dn=0;
-	SdioPinCfgs.reg.b.pull_up=1;
+	SdioPinCfgs.reg.b.pull_dn = 0;
+	SdioPinCfgs.reg.b.pull_up = 1;
+	SdioPinCfgs.reg.b.drv_sth = 3;
 	pinmux_set_pin_config(&SdioPinCfgs);
 
 
 	SdioPinCfgs.name = PN_MMC1DAT0;
 	pinmux_get_pin_config(&SdioPinCfgs);
-	SdioPinCfgs.reg.b.pull_dn=0;
-	SdioPinCfgs.reg.b.pull_up=1;
+	SdioPinCfgs.reg.b.pull_dn = 0;
+	SdioPinCfgs.reg.b.pull_up = 1;
+	SdioPinCfgs.reg.b.drv_sth = 3;
 	pinmux_set_pin_config(&SdioPinCfgs);
 
 	SdioPinCfgs.name = PN_MMC1DAT1;
 	pinmux_get_pin_config(&SdioPinCfgs);
-	SdioPinCfgs.reg.b.pull_dn=0;
-	SdioPinCfgs.reg.b.pull_up=1;
+	SdioPinCfgs.reg.b.pull_dn = 0;
+	SdioPinCfgs.reg.b.pull_up = 1;
+	SdioPinCfgs.reg.b.drv_sth = 3;
 	pinmux_set_pin_config(&SdioPinCfgs);
 
 
 	SdioPinCfgs.name = PN_MMC1DAT2;
 	pinmux_get_pin_config(&SdioPinCfgs);
-	SdioPinCfgs.reg.b.pull_dn=0;
-	SdioPinCfgs.reg.b.pull_up=1;
+	SdioPinCfgs.reg.b.pull_dn = 0;
+	SdioPinCfgs.reg.b.pull_up = 1;
+	SdioPinCfgs.reg.b.drv_sth = 3;
 	pinmux_set_pin_config(&SdioPinCfgs);
 
 
 	SdioPinCfgs.name = PN_MMC1DAT3;
 	pinmux_get_pin_config(&SdioPinCfgs);
-	SdioPinCfgs.reg.b.pull_dn=0;
-	SdioPinCfgs.reg.b.pull_up=1;
+	SdioPinCfgs.reg.b.pull_dn = 0;
+	SdioPinCfgs.reg.b.pull_up = 1;
+	SdioPinCfgs.reg.b.drv_sth = 3;
 	pinmux_set_pin_config(&SdioPinCfgs);
 
 
 	SdioPinCfgs.name = PN_MMC1DAT4;
 	pinmux_get_pin_config(&SdioPinCfgs);
-	SdioPinCfgs.reg.b.pull_dn=1;
-	SdioPinCfgs.reg.b.pull_up=0;
+	SdioPinCfgs.reg.b.pull_dn = 1;
+	SdioPinCfgs.reg.b.pull_up = 0;
+	SdioPinCfgs.reg.b.drv_sth = 3;
 	pinmux_set_pin_config(&SdioPinCfgs);
-
+/*
 	SdioPinCfgs.name = PN_LCDTE;
 	pinmux_get_pin_config(&SdioPinCfgs);
-	SdioPinCfgs.reg.b.pull_dn=0;
-	SdioPinCfgs.reg.b.pull_up=0;
-	pinmux_set_pin_config(&SdioPinCfgs); 
+	SdioPinCfgs.reg.b.pull_dn = 0;
+	SdioPinCfgs.reg.b.pull_up = 0;
+	SdioPinCfgs.reg.b.drv_sth = 3;
+	pinmux_set_pin_config(&SdioPinCfgs);
+*/
 
 
-
-//-----------------------------------
+/* ----------------------------------- */
 
 
 
@@ -270,7 +280,7 @@ int bcm_sdiowl_init(int onoff)
 		PRINT_ERR("sdio interface is not initialized or err=%d\n", rc);
 		return rc;
 	}
-	printk(KERN_ERR "%s:GET_GPIO INFO\n", __FUNCTION__);
+	printk(KERN_ERR "%s:GET_GPIO INFO\n", __func__);
 
 	dev->wifi_gpio = sdio_get_wifi_gpio(SDIO_DEV_TYPE_WIFI);
 #ifndef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
@@ -283,11 +293,11 @@ int bcm_sdiowl_init(int onoff)
 
 #ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
 #if defined(CONFIG_MACH_HAWAII_RAY) || defined(CONFIG_MACH_HAWAII_STONE) || defined(CONFIG_MACH_HAWAII_GARNET) || defined(CONFIG_MACH_HAWAII_SS_EVAL_REV00) || defined(CONFIG_MACH_HAWAII_SS_LOGAN_REV00)
-      dev->wifi_gpio->reset = 3;        
-      dev->wifi_gpio->reg = -1;
-      dev->wifi_gpio->host_wake = 74;
-      dev->wifi_gpio->shutdown = -1;
-#endif	  
+	dev->wifi_gpio->reset = 3;
+	dev->wifi_gpio->reg = -1;
+	dev->wifi_gpio->host_wake = 74;
+	dev->wifi_gpio->shutdown = -1;
+#endif
 #endif
 
 	/* reserve GPIOs */
@@ -298,14 +308,16 @@ int bcm_sdiowl_init(int onoff)
 	}
 
 	/* reset the wifi chip */
-	if(onoff)
+	if (onoff)
 		__wifi_reset(dev->wifi_gpio->reset, 1);
 	else
 		__wifi_reset(dev->wifi_gpio->reset, 0);
 
- 	printk(KERN_ERR "%s: WLAN_REG_ON(GPIO%d) : value(%d)\n",__FUNCTION__, dev->wifi_gpio->reset, gpio_get_value(dev->wifi_gpio->reset));
+	printk(KERN_ERR "%s: WLAN_REG_ON(GPIO%d) : value(%d)\n",
+		__func__, dev->wifi_gpio->reset,
+		gpio_get_value(dev->wifi_gpio->reset));
 
-	printk(KERN_ERR "%s:GPIO TOGGLED AND EXIT\n", __FUNCTION__);
+	printk(KERN_ERR "%s:GPIO TOGGLED AND EXIT\n", __func__);
 
 #ifndef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
 
@@ -332,16 +344,15 @@ int bcm_sdiowl_init(int onoff)
 
 err_free_gpio:
 	wifi_gpio_free(dev->wifi_gpio);
-#endif // CONFIG_BRCM_UNIFIED_DHD_SUPPORT
+#endif /* CONFIG_BRCM_UNIFIED_DHD_SUPPORT */
 	return rc;
 }
-
 EXPORT_SYMBOL(bcm_sdiowl_init);
 
 void bcm_sdiowl_term(void)
 {
 	struct sdio_wifi_dev *dev = &gDev;
-	printk(KERN_ERR " %s ENTRY \n", __FUNCTION__);
+	printk(KERN_ERR " %s ENTRY\n", __func__);
 
 	atomic_set(&dev->dev_is_ready, 0);
 
@@ -362,70 +373,82 @@ void bcm_sdiowl_term(void)
 
 	/* free GPIOs */
 	wifi_gpio_free(dev->wifi_gpio);
-	printk(KERN_ERR " %s GPIO Released \n", __FUNCTION__);
+	printk(KERN_ERR " %s GPIO Released\n", __func__);
 
 	dev->wifi_gpio = NULL;
 
 
 /*
  * 4334 bug requires us to Pull down on sdio lines on reset
- */ 
+ */
+
+	SdioPinCfgs.name = PN_MMC1CK;
+	pinmux_get_pin_config(&SdioPinCfgs);
+	SdioPinCfgs.reg.b.input_dis = 1;
+	SdioPinCfgs.reg.b.pull_dn = 0;
+	SdioPinCfgs.reg.b.pull_up = 0;
+	SdioPinCfgs.reg.b.drv_sth = 3;
+	pinmux_set_pin_config(&SdioPinCfgs);
 
 	SdioPinCfgs.name = PN_MMC1CMD;
 	pinmux_get_pin_config(&SdioPinCfgs);
-	SdioPinCfgs.reg.b.pull_dn=1;
-	SdioPinCfgs.reg.b.pull_up=0;
+	SdioPinCfgs.reg.b.pull_dn = 1;
+	SdioPinCfgs.reg.b.pull_up = 0;
+	SdioPinCfgs.reg.b.drv_sth = 3;
 	pinmux_set_pin_config(&SdioPinCfgs);
 
 
 	SdioPinCfgs.name = PN_MMC1DAT0;
 	pinmux_get_pin_config(&SdioPinCfgs);
-	SdioPinCfgs.reg.b.pull_dn=1;
-	SdioPinCfgs.reg.b.pull_up=0;
+	SdioPinCfgs.reg.b.pull_dn = 1;
+	SdioPinCfgs.reg.b.pull_up = 0;
+	SdioPinCfgs.reg.b.drv_sth = 3;
 	pinmux_set_pin_config(&SdioPinCfgs);
 
 	SdioPinCfgs.name = PN_MMC1DAT1;
 	pinmux_get_pin_config(&SdioPinCfgs);
-	SdioPinCfgs.reg.b.pull_dn=1;
-	SdioPinCfgs.reg.b.pull_up=0;
+	SdioPinCfgs.reg.b.pull_dn = 1;
+	SdioPinCfgs.reg.b.pull_up = 0;
+	SdioPinCfgs.reg.b.drv_sth = 3;
 	pinmux_set_pin_config(&SdioPinCfgs);
 
 
 	SdioPinCfgs.name = PN_MMC1DAT2;
 	pinmux_get_pin_config(&SdioPinCfgs);
-	SdioPinCfgs.reg.b.pull_dn=1;
-	SdioPinCfgs.reg.b.pull_up=0;
+	SdioPinCfgs.reg.b.pull_dn = 1;
+	SdioPinCfgs.reg.b.pull_up = 0;
+	SdioPinCfgs.reg.b.drv_sth = 3;
 	pinmux_set_pin_config(&SdioPinCfgs);
 
 
 	SdioPinCfgs.name = PN_MMC1DAT3;
 	pinmux_get_pin_config(&SdioPinCfgs);
-	SdioPinCfgs.reg.b.pull_dn=1;
-	SdioPinCfgs.reg.b.pull_up=0;
+	SdioPinCfgs.reg.b.pull_dn = 1;
+	SdioPinCfgs.reg.b.pull_up = 0;
+	SdioPinCfgs.reg.b.drv_sth = 3;
 	pinmux_set_pin_config(&SdioPinCfgs);
 
 	SdioPinCfgs.name = PN_MMC1DAT4;
 	pinmux_get_pin_config(&SdioPinCfgs);
-	SdioPinCfgs.reg.b.pull_dn=0;
-	SdioPinCfgs.reg.b.pull_up=1;
+	SdioPinCfgs.reg.b.pull_dn = 0;
+	SdioPinCfgs.reg.b.pull_up = 1;
+	SdioPinCfgs.reg.b.drv_sth = 3;
 	pinmux_set_pin_config(&SdioPinCfgs);
 
-
+/*
 	SdioPinCfgs.name = PN_LCDTE;
 	pinmux_get_pin_config(&SdioPinCfgs);
 	SdioPinCfgs.reg.b.pull_dn=1;
 	SdioPinCfgs.reg.b.pull_up=0;
-	pinmux_set_pin_config(&SdioPinCfgs); 
+	SdioPinCfgs.reg.b.drv_sth=3;
+	pinmux_set_pin_config(&SdioPinCfgs);
+*/
 
 
-
-//-----------------------------------
-
+/* ----------------------------------- */
 
 
-	
 }
-
 EXPORT_SYMBOL(bcm_sdiowl_term);
 
 static int __init sdio_wifi_init(void)
