@@ -303,8 +303,8 @@
 		row-num = <2>;
 		col-num = <3>;
 		row-col-count = <8>;
-		key-name = "Vol Down Key", "unused", "unused", "unused",
-			"unused", "unused", "unused", "unused", "Vol Up Key",
+		key-name = "Vol Down Key", "Vol Up Key", "unused", "unused",
+			"unused", "unused", "unused", "unused", "Camera Focus Key",
 			"Camera Key", "unused", "unused", "unused", "unused",
 			"unused", "unused", "unused", "unused", "unused",
 			"unused", "unused", "unused", "unused", "unused",
@@ -316,8 +316,8 @@
 			"unused", "unused", "unused", "unused", "unused",
 			"unused", "unused", "unused", "unused", "unused",
 			"unused", "unused", "unused", "unused", "unused";
-		key-code = <114 0 0 0 0 0 0 0
-			115 212 0 0 0 0 0 0
+		key-code = <114 115 0 0 0 0 0 0
+			528 212 0 0 0 0 0 0
 			0 0 0 0 0 0 0 0
 			0 0 0 0 0 0 0 0
 			0 0 0 0 0 0 0 0
