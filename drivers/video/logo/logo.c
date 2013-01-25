@@ -100,6 +100,10 @@ const struct linux_logo * __init_refok fb_find_logo(int depth)
 		/* M32R Linux logo */
 		logo = &logo_m32r_clut224;
 #endif
+#ifdef CONFIG_LOGO_UNICOM_720PV_CLUT224
+		/* CHINA UNICOM 720*1280 Linux logo */
+		logo = &logo_unicom_720pv_clut224;
+#endif
 	}
 	return logo;
 }
