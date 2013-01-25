@@ -94,6 +94,11 @@ static RPC_XdrInfo_t SYS_Prim_dscrm[] = {
 	 (xdrproc_t) xdr_CAPI2_FLASH_SaveImage_Rsp_t, sizeof(Boolean), 0}
 	,
 #endif
+	{MSG_AT_MTEST_HANDLER_REQ, _T("MSG_AT_MTEST_HANDLER_REQ"),
+		(xdrproc_t) xdr_SYS_AT_MTEST_Handler_Req_t, 0, 0},
+	{MSG_AT_MTEST_HANDLER_RSP, _T("MSG_AT_MTEST_HANDLER_RSP"),
+		(xdrproc_t) xdr_SYS_AT_MTEST_Handler_Rsp_t,
+		sizeof(struct MtestOutput_t), 0},
 	{MSG_SYS_SIMLOCK_GET_STATUS_REQ, _T("MSG_SYS_SIMLOCK_GET_STATUS_REQ"),
 	 (xdrproc_t) xdr_SYS_SimLockApi_GetStatus_Req_t, 0, 0}
 	,
@@ -130,6 +135,19 @@ void sysGetXdrStruct(RPC_XdrInfo_t **ptr, UInt16 *size)
 {
 	*size = (sizeof(SYS_Prim_dscrm) / sizeof(RPC_XdrInfo_t));
 	*ptr = (RPC_XdrInfo_t *)SYS_Prim_dscrm;
+}
+
+bool_t xdr_MtestOutput_t(XDR *xdrs, struct MtestOutput_t *data)
+{
+	XDR_LOG(xdrs, "MtestOutput_t")
+
+	if (xdr_UInt32(xdrs, &data->len)) {
+		u_int len = (u_int)data->len;
+		return xdr_bytes(xdrs, (char **)(void *)&data->data, &len,
+				0xFFFF) && xdr_Int32(xdrs, &data->res);
+	}
+
+	return FALSE;
 }
 
 bool_t xdr_SYS_SIMLOCK_SIM_DATA_t(XDR *xdrs, SYS_SIMLOCK_SIM_DATA_t *sim_data)

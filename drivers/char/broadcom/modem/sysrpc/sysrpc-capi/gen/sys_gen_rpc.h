@@ -56,6 +56,26 @@ typedef struct {
 	Boolean val;
 } CAPI2_FLASH_SaveImage_Rsp_t;
 
+
+struct SYS_AT_MTEST_Handler_Req_t {
+	uchar_ptr_t  p1;
+	uchar_ptr_t  p2;
+	uchar_ptr_t  p3;
+	uchar_ptr_t  p4;
+	uchar_ptr_t  p5;
+	uchar_ptr_t  p6;
+	uchar_ptr_t  p7;
+	uchar_ptr_t  p8;
+	uchar_ptr_t  p9;
+	Int32  output_size;
+};
+
+struct SYS_AT_MTEST_Handler_Rsp_t {
+	struct MtestOutput_t	val;
+};
+
+
+
 typedef struct {
 	UInt8 simId;
 	SYS_SIMLOCK_SIM_DATA_t *sim_data;
@@ -100,6 +120,11 @@ bool_t xdr_CAPI2_FLASH_SaveImage_Req_t(void *xdrs,
 				       CAPI2_FLASH_SaveImage_Req_t *rsp);
 bool_t xdr_CAPI2_FLASH_SaveImage_Rsp_t(void *xdrs,
 				       CAPI2_FLASH_SaveImage_Rsp_t *rsp);
+bool_t xdr_MtestOutput_t(XDR *xdrs, struct MtestOutput_t *data);
+bool_t xdr_SYS_AT_MTEST_Handler_Req_t(void *xdrs,
+					struct SYS_AT_MTEST_Handler_Req_t *rsp);
+bool_t xdr_SYS_AT_MTEST_Handler_Rsp_t(void *xdrs,
+					struct SYS_AT_MTEST_Handler_Rsp_t *rsp);
 bool_t xdr_SYS_SimLockApi_GetStatus_Req_t(void *xdrs,
 					  SYS_SimLockApi_GetStatus_Req_t *rsp);
 bool_t xdr_SYS_SimLockApi_GetStatus_Rsp_t(void *xdrs,
@@ -127,6 +152,10 @@ Result_t Handle_CAPI2_SYSRPC_PMU_ActivateSIM(RPC_Msg_t *pReqMsg,
 					     PMU_SIMVolt_t volt);
 Result_t Handle_CAPI2_FLASH_SaveImage(RPC_Msg_t *pReqMsg, UInt32 flash_addr,
 				      UInt32 length, UInt32 shared_mem_addr);
+Result_t Handle_SYS_AT_MTEST_Handler(RPC_Msg_t *pReqMsg, uchar_ptr_t p1,
+	uchar_ptr_t p2, uchar_ptr_t p3, uchar_ptr_t p4, uchar_ptr_t p5,
+	uchar_ptr_t p6, uchar_ptr_t p7, uchar_ptr_t p8, uchar_ptr_t p9,
+	Int32 output_size);
 Result_t Handle_SYS_SimLockApi_GetStatus(RPC_Msg_t *pReqMsg, UInt8 simId,
 					 SYS_SIMLOCK_SIM_DATA_t *sim_data,
 					 Boolean is_testsim);
@@ -137,6 +166,31 @@ Result_t Handle_SYS_SimApi_GetCurrLockedSimlockTypeEx(RPC_Msg_t *pReqMsg,
 Result_t Handle_CAPI2_SYS_SoftResetSystem(RPC_Msg_t *pReqMsg, UInt32 param);
 
 /****************** < 12 > **********************/
+
+/**
+	Function response for the SYS_AT_MTEST_Handler
+	@param		tid (in) Unique exchange/transaction id which is
+			passed in the request
+	@param		clientID (in) Client ID
+	@param		p1(in) param of type uchar_ptr_t
+	@param		p2(in) param of type uchar_ptr_t
+	@param		p3(in) param of type uchar_ptr_t
+	@param		p4(in) param of type uchar_ptr_t
+	@param		p5(in) param of type uchar_ptr_t
+	@param		p6(in) param of type uchar_ptr_t
+	@param		p7(in) param of type uchar_ptr_t
+	@param		p8(in) param of type uchar_ptr_t
+	@param		p9(in) param of type uchar_ptr_t
+	@param		output_size(in) param of type Int32
+	@return		Not Applicable
+	@note
+	Payload: MtestOutput_t
+	@n Response to CP will be notified via ::MSG_AT_MTEST_HANDLER_RSP
+**/
+void SYS_AT_MTEST_Handler(UInt32 tid, UInt8 clientID, uchar_ptr_t p1,
+	uchar_ptr_t p2, uchar_ptr_t p3, uchar_ptr_t p4, uchar_ptr_t p5,
+	uchar_ptr_t p6, uchar_ptr_t p7, uchar_ptr_t p8, uchar_ptr_t p9,
+	Int32 output_size);
 
 /******************************************************************************/
 /**

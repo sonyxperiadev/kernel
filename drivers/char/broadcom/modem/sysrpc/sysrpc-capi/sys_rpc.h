@@ -77,7 +77,10 @@ typedef struct tag_SYS_ReqRep_t {
 		CAPI2_CPPS_Control_Rsp_t CAPI2_CPPS_Control_Rsp;
 		CAPI2_FLASH_SaveImage_Req_t CAPI2_FLASH_SaveImage_Req;
 		CAPI2_FLASH_SaveImage_Rsp_t CAPI2_FLASH_SaveImage_Rsp;
-
+		struct SYS_AT_MTEST_Handler_Req_t
+			SYS_AT_MTEST_Handler_Req;
+		struct SYS_AT_MTEST_Handler_Rsp_t
+			SYS_AT_MTEST_Handler_Rsp;
 		SYS_SimLockApi_GetStatus_Req_t SYS_SimLockApi_GetStatus_Req;
 		SYS_SimLockApi_GetStatus_Rsp_t SYS_SimLockApi_GetStatus_Rsp;
 		SYS_SIMLOCKApi_SetStatusEx_Req_t SYS_SIMLOCKApi_SetStatusEx_Req;

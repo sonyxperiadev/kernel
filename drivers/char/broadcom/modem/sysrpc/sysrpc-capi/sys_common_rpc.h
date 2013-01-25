@@ -58,6 +58,12 @@ typedef enum {
 	PMU_SIM0P0Volt
 } PMU_SIMVolt_t;
 
+struct MtestOutput_t {
+	Int32 res;
+	UInt8 *data;
+	UInt32 len;
+};
+
 typedef enum {
 	/* SIMLOCK/PhoneLock disabled or password verified */
 	SYS_SIM_SECURITY_OPEN,

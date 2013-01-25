@@ -115,6 +115,64 @@ bool_t xdr_CAPI2_FLASH_SaveImage_Rsp_t(void *xdrs,
 
 /***************** < 9 > **********************/
 
+bool_t xdr_SYS_AT_MTEST_Handler_Req_t(void *xdrs,
+	struct SYS_AT_MTEST_Handler_Req_t *rsp)
+{
+	XDR_LOG(xdrs, "SYS_AT_MTEST_Handler_Req_t")
+
+	if (xdr_uchar_ptr_t(xdrs, &rsp->p1) &&
+		xdr_uchar_ptr_t(xdrs, &rsp->p2) &&
+		xdr_uchar_ptr_t(xdrs, &rsp->p3) &&
+		xdr_uchar_ptr_t(xdrs, &rsp->p4) &&
+		xdr_uchar_ptr_t(xdrs, &rsp->p5) &&
+		xdr_uchar_ptr_t(xdrs, &rsp->p6) &&
+		xdr_uchar_ptr_t(xdrs, &rsp->p7) &&
+		xdr_uchar_ptr_t(xdrs, &rsp->p8) &&
+		xdr_uchar_ptr_t(xdrs, &rsp->p9) &&
+		xdr_Int32(xdrs, &rsp->output_size) && 1)
+		return TRUE;
+	else
+		return FALSE;
+}
+
+bool_t xdr_SYS_AT_MTEST_Handler_Rsp_t(void *xdrs,
+	struct SYS_AT_MTEST_Handler_Rsp_t *rsp)
+{
+	XDR_LOG(xdrs, "SYS_AT_MTEST_Handler_Rsp_t")
+
+	return xdr_MtestOutput_t(xdrs, &rsp->val);
+}
+
+void SYS_AT_MTEST_Handler(UInt32 tid, UInt8 clientID, uchar_ptr_t p1,
+	uchar_ptr_t p2, uchar_ptr_t p3, uchar_ptr_t p4, uchar_ptr_t p5,
+	uchar_ptr_t p6, uchar_ptr_t p7, uchar_ptr_t p8, uchar_ptr_t p9,
+	Int32 output_size)
+{
+	SYS_ReqRep_t req;
+	RPC_Msg_t msg;
+
+	memset(&req, 0, sizeof(SYS_ReqRep_t));
+
+	req.req_rep_u.SYS_AT_MTEST_Handler_Req.p1 = p1;
+	req.req_rep_u.SYS_AT_MTEST_Handler_Req.p2 = p2;
+	req.req_rep_u.SYS_AT_MTEST_Handler_Req.p3 = p3;
+	req.req_rep_u.SYS_AT_MTEST_Handler_Req.p4 = p4;
+	req.req_rep_u.SYS_AT_MTEST_Handler_Req.p5 = p5;
+	req.req_rep_u.SYS_AT_MTEST_Handler_Req.p6 = p6;
+	req.req_rep_u.SYS_AT_MTEST_Handler_Req.p7 = p7;
+	req.req_rep_u.SYS_AT_MTEST_Handler_Req.p8 = p8;
+	req.req_rep_u.SYS_AT_MTEST_Handler_Req.p9 = p9;
+	req.req_rep_u.SYS_AT_MTEST_Handler_Req.output_size = output_size;
+	req.respId = MSG_AT_MTEST_HANDLER_RSP;
+	msg.msgId = MSG_AT_MTEST_HANDLER_REQ;
+	msg.tid = tid;
+	msg.clientID = clientID;
+	msg.dataBuf = (void *)&req;
+	msg.dataLen = 0;
+	RPC_SerializeReq(&msg);
+}
+
+
 #if defined(FUSE_COMMS_PROCESSOR)
 
 void SYS_SimLockApi_GetStatus(UInt32 tid, UInt8 clientID, UInt8 simId,
@@ -375,6 +433,13 @@ void SYS_GenGetPayloadInfo(void *dataBuf, MsgType_t msgType, void **ppBuf,
 		{
 			CAPI2_FLASH_SaveImage_Rsp_t *pVal =
 			    (CAPI2_FLASH_SaveImage_Rsp_t *)dataBuf;
+			*ppBuf = (void *)&(pVal->val);
+			break;
+		}
+	case MSG_AT_MTEST_HANDLER_RSP:
+		{
+			struct SYS_AT_MTEST_Handler_Rsp_t *pVal =
+			(struct SYS_AT_MTEST_Handler_Rsp_t *)dataBuf;
 			*ppBuf = (void *)&(pVal->val);
 			break;
 		}

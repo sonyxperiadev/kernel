@@ -5,6 +5,8 @@ EXTRA_CFLAGS += -I$(srctree)/drivers/char/broadcom/modem/ipc/
 EXTRA_CFLAGS += -I$(srctree)/drivers/char/broadcom/modem/rpc/rpc_CIB/public
 EXTRA_CFLAGS += -I$(srctree)/drivers/char/broadcom/modem/rpc/rpc_CIB/arpc/inc
 EXTRA_CFLAGS += -I$(srctree)/drivers/char/broadcom/modem/rpc/rpc_CIB/srpc/inc
+ccflags-y += -I$(srctree)/drivers/char/broadcom/modem/sysrpc/sysrpc-capi
+ccflags-y += -I$(srctree)/drivers/char/broadcom/modem/sysrpc/sysrpc-capi/gen
 
 EXTRA_CFLAGS += -I$(srctree)/drivers/char/broadcom/modem/public/
 EXTRA_CFLAGS += -I$(srctree)/drivers/char/broadcom/modem/public/sysinterface/util/public/
