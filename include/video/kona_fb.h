@@ -14,33 +14,39 @@
 #ifndef KONA_FB_H_
 #define KONA_FB_H_
 
-#define DISPDRV_NAME_SZ 20
-#define REG_NAME_SZ DISPDRV_NAME_SZ
-
-struct hw_rst_info {
-	uint32_t gpio;	/* gpio number */
-	uint32_t setup;	/* us */
-	uint32_t pulse;	/* us */
-	uint32_t hold;	/* us */
-	bool active;/* low or high */
-};
-
 struct kona_fb_platform_data {
-	char name[DISPDRV_NAME_SZ];
-	char reg_name[REG_NAME_SZ];
-	struct hw_rst_info rst;
-	bool vmode;
-	bool vburst;
-	bool cmnd_LP;
-	bool te_ctrl;
-	uint8_t col_mod_i;
-	uint8_t col_mod_o;
-	uint16_t width;
-	uint16_t height;
-	uint8_t fps;
-	uint8_t lanes;
-	uint32_t hs_bps;
-	uint32_t lp_bps;
+	char			*dispdrv_name;
+	void *(*dispdrv_entry) (void);
+	struct 	dispdrv_init_parms   parms;
 };
+
+extern void *DISP_DRV_NT35516_GetFuncTable(void);
+extern void *DISP_DRV_LG4591_GetFuncTable(void);
+extern void *DISP_DRV_OTM1281A_GetFuncTable(void);
+
+struct dispdrv_name_entry {
+	char name[10];
+	void *(*entry) (void);
+};
+
+static struct dispdrv_name_entry dispdrvs[] = {
+	{"NT35516", DISP_DRV_NT35516_GetFuncTable},
+	{"LG4591", DISP_DRV_LG4591_GetFuncTable},
+	{"OTM1281A", DISP_DRV_OTM1281A_GetFuncTable},
+};
+static void *get_dispdrv_entry(const char *name)
+{
+	int i;
+	void *ret = NULL;
+	i = sizeof(dispdrvs) / sizeof(struct dispdrv_name_entry);
+	while (i--) {
+		if (!strcmp(name, dispdrvs[i].name)) {
+			ret = dispdrvs[i].entry;
+			pr_err("Found %s\n", dispdrvs[i].name);
+			break;
+		}
+	}
+	return ret;
+}
 
 #endif /* KONA_FB_H_ */

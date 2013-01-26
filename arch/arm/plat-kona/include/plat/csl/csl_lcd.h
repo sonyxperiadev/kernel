@@ -187,8 +187,7 @@ extern "C" {
 		LCD_IF_CM_O_RGB565,      	///< RGB565    
 		LCD_IF_CM_O_RGB565_DSI_VM,  	///< RGB565
 		LCD_IF_CM_O_RGB666,      	///< RGB666    
-		LCD_IF_CM_O_xRGB8888,		/* xRGB8888 */
-		LCD_IF_CM_O_xBGR8888,		/* xRGB8888 */
+		LCD_IF_CM_O_RGB888,      	///< RGB888    
 		LCD_IF_CM_O_INV,
 	} CSL_LCD_CM_OUT;
 
@@ -199,8 +198,7 @@ extern "C" {
 *****************************************************************************/
 	typedef enum {
 		LCD_IF_CM_I_RGB565P,	///< 2 565 pixels per 32-bit word
-		LCD_IF_CM_I_xRGB8888,
-		LCD_IF_CM_I_xBGR8888,
+		LCD_IF_CM_I_RGB888U,	///< 1 888 pixels per 32-bit word (MSB DC/A)
 		LCD_IF_CM_I_INV,
 	} CSL_LCD_CM_IN;
 
