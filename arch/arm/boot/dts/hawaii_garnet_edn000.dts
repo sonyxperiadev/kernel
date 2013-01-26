@@ -314,4 +314,14 @@
 			0 0 0 0 0 0 0 0>;
 	};
 
+	pwm-backlight {
+		compatible = "bcm,pwm-backlight";
+		reg = <0x0 0x0>;
+		pwm-id = <2>;
+		max-brightness = <32>;	/* Android calibrates to 32 levels */
+		dft-brightness = <32>;
+		polarity = <1>;		/* Inverted polarity */
+		pwm-period-ns = <1000000>;
+		pwm-request-label = "backlight";
+	};
 };

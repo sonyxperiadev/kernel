@@ -995,6 +995,9 @@ static struct sdio_platform_cfg hawaii_sdio_param = {
 
 static const struct of_dev_auxdata hawaii_auxdata_lookup[] __initconst = {
 
+	OF_DEV_AUXDATA("bcm,pwm-backlight", 0x0,
+		"pwm-backlight.0", NULL),
+
 	OF_DEV_AUXDATA("bcm,sdhci", 0x3F190000,
 		"sdhci.1", NULL),
 
@@ -1011,19 +1014,6 @@ static const struct of_dev_auxdata hawaii_auxdata_lookup[] __initconst = {
 		"soc-front-camera", &iclink_ov7692),
 	{},
 };
-
-#ifdef CONFIG_BACKLIGHT_PWM
-
-static struct platform_pwm_backlight_data hawaii_backlight_data = {
-/* backlight */
-	.pwm_id = 2,
-	.max_brightness = 32,	/* Android calibrates to 32 levels */
-	.dft_brightness = 32,
-	.polarity = 1,		/* Inverted polarity */
-	.pwm_period_ns = 1000000,
-};
-
-#endif /*CONFIG_BACKLIGHT_PWM */
 
 #ifdef CONFIG_VIDEO_KONA
 static struct ov5640_platform_data ov5640_cam1_pdata = {
@@ -1149,10 +1139,6 @@ static struct platform_device *hawaii_devices[] __initdata = {
 	&haptic_pwm_device,
 #endif
 
-#ifdef CONFIG_BACKLIGHT_PWM
-	&hawaii_backlight_device,
-#endif
-
 #ifdef CONFIG_BCM_BT_LPM
 	&board_bcmbt_lpm_device,
 #endif
@@ -1202,7 +1188,6 @@ static void hawaii_add_pdata(void)
 #endif
 	hawaii_headset_device.dev.platform_data = &hawaii_headset_data;
 	hawaii_pl330_dmac_device.dev.platform_data = &hawaii_pl330_pdata;
-	hawaii_backlight_device.dev.platform_data = &hawaii_backlight_data;
 #ifdef CONFIG_USB_DWC_OTG
 	hawaii_hsotgctrl_platform_device.dev.platform_data =
 	    &hsotgctrl_plat_data;
