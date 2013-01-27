@@ -23,6 +23,7 @@ struct kona_fb_platform_data {
 extern void *DISP_DRV_NT35516_GetFuncTable(void);
 extern void *DISP_DRV_LG4591_GetFuncTable(void);
 extern void *DISP_DRV_OTM1281A_GetFuncTable(void);
+extern void *DISP_DRV_NT35512_GetFuncTable(void);
 
 struct dispdrv_name_entry {
 	char name[10];
@@ -33,6 +34,7 @@ static struct dispdrv_name_entry dispdrvs[] = {
 	{"NT35516", DISP_DRV_NT35516_GetFuncTable},
 	{"LG4591", DISP_DRV_LG4591_GetFuncTable},
 	{"OTM1281A", DISP_DRV_OTM1281A_GetFuncTable},
+	{"NT35512", DISP_DRV_OTM1281A_GetFuncTable},
 };
 static void *get_dispdrv_entry(const char *name)
 {
