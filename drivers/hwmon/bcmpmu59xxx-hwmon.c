@@ -406,6 +406,16 @@ static ssize_t adc_read(struct device *dev,
 						PMU_ADC_REQ_SAR_MODE, &result);
 	if (ret < 0)
 		return ret;
+	/* Powersupply frame work expects temperature to be
+	 * reported in Tenth multiple of centigrade. so we are maintaning
+	 * the temperature look up table in same manner in board file.
+	 * But reporting the same to user confuses.
+	 * so again dividing by 10 and reporting*/
+	if ((attr->index == PMU_ADC_CHANN_NTC) ||
+			(attr->index == PMU_ADC_CHANN_32KTEMP) ||
+			(attr->index == PMU_ADC_CHANN_PATEMP))
+		result.conv = result.conv / 10;
+
 	len += sprintf(buf + len, " raw = 0x%x conv = %d\n",
 						result.raw, result.conv);
 
@@ -414,6 +424,15 @@ static ssize_t adc_read(struct device *dev,
 						PMU_ADC_REQ_RTM_MODE, &result);
 	if (ret < 0)
 		return ret;
+	/* Powersupply frame work expects temperature to be
+	 * reported in Tenth multiple of centigrade. so we are maintaning
+	 * the temperature look up table in same manner in board file.
+	 * But reporting the same to user confuses.
+	 * so again dividing by 10 and reporting*/
+	if ((attr->index == PMU_ADC_CHANN_NTC) ||
+			(attr->index == PMU_ADC_CHANN_32KTEMP) ||
+			(attr->index == PMU_ADC_CHANN_PATEMP))
+		result.conv = result.conv / 10;
 	len += sprintf(buf + len, " raw = 0x%x conv = %d\n",
 						result.raw, result.conv);
 
