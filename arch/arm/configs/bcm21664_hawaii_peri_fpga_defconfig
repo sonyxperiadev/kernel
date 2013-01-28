@@ -1826,7 +1826,6 @@ CONFIG_VIDEO_V4L2=y
 #
 # CONFIG_DRM is not set
 # CONFIG_ION is not set
-# CONFIG_M4U is not set
 # CONFIG_VGASTATE is not set
 # CONFIG_VIDEO_OUTPUT_CONTROL is not set
 CONFIG_FB=y

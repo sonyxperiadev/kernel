@@ -31,9 +31,6 @@
 #include <asm/dma-contiguous.h>
 #include <linux/dma-mapping.h>
 #endif /* CONFIG_OF */
-#ifdef CONFIG_M4U
-#include <linux/broadcom/m4u.h>
-#endif
 
 struct ion_device *idev;
 static int num_heaps;
@@ -42,9 +39,6 @@ static struct ion_heap **heaps;
 unsigned int kona_ion_map_dma(struct ion_client *client,
 		struct ion_handle *handle)
 {
-#ifdef CONFIG_M4U
-	struct ion_buffer *buffer;
-#endif
 	unsigned int dma_addr = 0;
 	struct sg_table *sg_table;
 
@@ -52,19 +46,11 @@ unsigned int kona_ion_map_dma(struct ion_client *client,
 	if (IS_ERR_OR_NULL(sg_table))
 		return dma_addr;
 
-#ifdef CONFIG_M4U
-	buffer = ion_lock_buffer(client, handle);
-	if (!buffer)
-		return dma_addr;
-	dma_addr = buffer->dma_addr;
-	ion_unlock_buffer(client, buffer);
-#else
 	/* Do not have IOMMU to map multiple scatterlist entries to
 	 * contiguous dma address. With M4U disabled, this should be called
 	 * only for contiguous buffer.
 	 * TODO: Add check for contiguous buffer */
 	dma_addr = sg_phys(sg_table->sgl);
-#endif
 
 	return dma_addr;
 }

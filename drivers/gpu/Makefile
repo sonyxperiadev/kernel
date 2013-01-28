@@ -1,1 +1,1 @@
-obj-y			+= drm/ vga/ stub/ ion/ m4u/
+obj-y			+= drm/ vga/ stub/ ion/

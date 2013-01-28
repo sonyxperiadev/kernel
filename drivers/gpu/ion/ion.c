@@ -43,9 +43,6 @@
 #define ION_OOM_TIMEOUT_JIFFIES		(HZ)
 /* #define ION_OOM_KILLER_DEBUG */
 #endif
-#ifdef CONFIG_M4U
-#include <linux/broadcom/m4u.h>
-#endif
 
 #include "ion_priv.h"
 
@@ -198,18 +195,6 @@ static struct ion_buffer *ion_buffer_create(struct ion_heap *heap,
 		kfree(buffer);
 		return ERR_PTR(PTR_ERR(table));
 	}
-#ifdef CONFIG_M4U
-	buffer->dma_addr = m4u_map(g_mdev, table, buffer->size,
-			buffer->align);
-	if (buffer->dma_addr == INVALID_MMA) {
-		pr_err("%s: m4u mapping failed for size(%d) align (%d)\n",
-				__func__, buffer->size, buffer->align);
-		heap->ops->unmap_dma(heap, buffer);
-		heap->ops->free(buffer);
-		kfree(buffer);
-		return ERR_PTR(ret);
-	}
-#endif
 	buffer->sg_table = table;
 	if (ion_buffer_fault_user_mappings(buffer)) {
 		for_each_sg(buffer->sg_table->sgl, sg, buffer->sg_table->nents,
@@ -247,9 +232,6 @@ static struct ion_buffer *ion_buffer_create(struct ion_heap *heap,
 	return buffer;
 
 err:
-#ifdef CONFIG_M4U
-	m4u_unmap(g_mdev, buffer->dma_addr);
-#endif
 	heap->ops->unmap_dma(heap, buffer);
 	heap->ops->free(buffer);
 	kfree(buffer);
@@ -267,10 +249,6 @@ static void ion_buffer_destroy(struct kref *kref)
 
 	if (WARN_ON(buffer->kmap_cnt > 0))
 		buffer->heap->ops->unmap_kernel(buffer->heap, buffer);
-#ifdef CONFIG_M4U
-	if (buffer->dma_addr != 0)
-		m4u_unmap(g_mdev, buffer->dma_addr);
-#endif
 	buffer->heap->ops->unmap_dma(buffer->heap, buffer);
 	buffer->heap->ops->free(buffer);
 	mutex_lock(&dev->buffer_lock);

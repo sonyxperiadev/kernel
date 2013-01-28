@@ -83,9 +83,6 @@ struct ion_buffer {
 	int custom_update_count;
 	unsigned int align;
 #endif
-#ifdef CONFIG_M4U
-	unsigned int dma_addr;
-#endif
 };
 
 /**
