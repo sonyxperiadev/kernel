@@ -33,6 +33,11 @@
 #include <mach/chip_pinmux.h>
 #include <mach/pinmux.h>
 
+#ifdef CONFIG_DEBUG_FS
+#include <linux/seq_file.h>
+#include <linux/debugfs.h>
+#endif /*CONFIG_DEBUG_FS*/
+
 #ifdef CONFIG_KONA_PMU_BSC_USE_PMGR_HW_SEM
 #include <plat/pwr_mgr.h>
 #endif
@@ -68,6 +73,17 @@
 
 #define MAX_RETRY_NUMBER        (3-1)
 
+#ifdef CONFIG_DEBUG_FS
+static struct dentry *bsc_dentry, *bsc_speed;
+static int bsc_clk_open(struct inode *inode, struct file *file);
+static ssize_t set_i2c_bus_speed(struct file *file, char const __user *buf,
+			size_t size, loff_t *offset);
+static const struct file_operations default_file_operations = {
+	.open = bsc_clk_open,
+	.read = seq_read,
+	.write = set_i2c_bus_speed,
+};
+#endif /*CONFIG_DEBUG_FS*/
 
 struct procfs {
 	char name[MAX_PROC_NAME_SIZE];
@@ -1710,6 +1726,7 @@ static void i2c_pin_cfg(int id, unsigned char slewed)
 static int __devinit bsc_probe(struct platform_device *pdev)
 {
 	int rc = 0, irq;
+	char dir_name[12];
 	struct bsc_adap_cfg *hw_cfg = 0;
 	struct bsc_i2c_dev *dev;
 	struct i2c_adapter *adap;
@@ -2069,6 +2086,21 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 		of_i2c_register_devices(adap);
 	dev_info(dev->device, "bus %d at speed %d\n", adap->nr, dev->speed);
 
+#ifdef CONFIG_DEBUG_FS
+	/*create debugfs interface for the device*/
+	snprintf(dir_name, sizeof(dir_name), "bsc-i2c%d", pdev->id);
+	bsc_dentry = debugfs_create_dir(dir_name, NULL);
+	if (!bsc_dentry && IS_ERR(bsc_dentry)) {
+		printk(KERN_ERR "Failed to create debugfs directory\n");
+	return PTR_ERR(bsc_dentry);
+	}
+	bsc_speed = debugfs_create_file("speed", 0444, bsc_dentry, adap,
+			&default_file_operations);
+	if (!bsc_speed && IS_ERR(bsc_speed)) {
+		printk(KERN_ERR "Failed to create debugfs file\n");
+		return PTR_ERR(bsc_speed);
+	}
+#endif /*CONFIG_DEBUG_FS*/
 	return 0;
 
  err_hw_sem:
@@ -2155,6 +2187,10 @@ static int bsc_remove(struct platform_device *pdev)
 	iomem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	release_mem_region(iomem->start, resource_size(iomem));
 
+#ifdef CONFIG_DEBUG_FS
+	debugfs_remove(bsc_speed);
+	debugfs_remove(bsc_dentry);
+#endif /*CONFIG_DEBUG_FS*/
 	return 0;
 }
 
@@ -2237,6 +2273,104 @@ static void __exit bsc_exit(void)
 
 arch_initcall(bsc_init);
 module_exit(bsc_exit);
+
+#ifdef CONFIG_DEBUG_FS
+static int show_i2c_bus_speed(struct seq_file *m, void *v)
+{
+	struct bsc_i2c_dev *dev;
+	struct i2c_adapter *adap;
+
+	adap = (struct i2c_adapter *)m->private;
+	if (!adap)
+		return -ENODEV;
+
+	dev = i2c_get_adapdata(adap);
+	switch (dev->speed) {
+	case BSC_SPD_400K:
+		seq_printf(m, "400K\n");
+		break;
+	case BSC_SPD_100K:
+		seq_printf(m, "100K\n");
+		break;
+	case BSC_SPD_50K:
+		seq_printf(m, "50K\n");
+		break;
+	default:
+		seq_printf(m, "%d\n", dev->speed);
+		break;
+	}
+	return 0;
+}
+
+/*sysfs interface to change bsc speed - used by hwtest*/
+static ssize_t set_i2c_bus_speed(struct file *file,
+				char const __user *buf, size_t size,
+					loff_t *offset)
+{
+	struct bsc_i2c_dev *dev;
+	struct device *d;
+	struct i2c_adapter *adap;
+	struct bsc_adap_cfg *hw_cfg = NULL;
+	int speed = 0, buf_size, bus;
+	unsigned int addr;
+	char data[64];
+
+	buf_size = min_t(int, size, 64);
+	if (strncpy_from_user(data, buf, buf_size) < 0)
+		return -EFAULT;
+	data[buf_size] = 0;
+
+	adap = (struct i2c_adapter *)
+		((struct seq_file *)file->private_data)->private;
+	if (!adap)
+		return -ENODEV;
+
+	dev = i2c_get_adapdata(adap);
+
+	sscanf(data, "%d 0x%x", &speed, &addr);
+	if (speed == 400)
+		speed = BSC_SPD_400K;
+	else if (speed == 100)
+		speed = BSC_SPD_100K;
+	else
+		speed = BSC_SPD_50K;	/* Default speed */
+
+	dev->speed = speed;
+	if (!dev) {
+		printk(KERN_ERR "Cannot find i2c device\n");
+		return -ENODEV;
+	}
+
+	d = bsc_i2c_get_client(adap, addr);
+	if (d) {
+		struct i2c_client *client = NULL;
+		struct i2c_slave_platform_data *pd = NULL;
+		client = i2c_verify_client(d);
+		pd = (struct i2c_slave_platform_data *)client->dev.
+		    platform_data;
+		if (pd)
+			pd->i2c_speed = speed;
+	} else
+		/*Not an error- as client address is optional parameter */
+		printk(KERN_ERR "Cannot find client at 0x%x\n", addr);
+
+	hw_cfg = (struct bsc_adap_cfg *)dev->device->platform_data;
+	if (hw_cfg->is_pmu_i2c)
+		bsc_set_bus_speed((uint32_t)dev->virt_base,
+					gBusSpeedTable[speed], true);
+	else
+		bsc_set_bus_speed((uint32_t)dev->virt_base,
+					gBusSpeedTable[speed], false);
+	dev->current_speed = speed;
+
+	return size;
+}
+
+static int bsc_clk_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, show_i2c_bus_speed, inode->i_private);
+}
+#endif/*CONFIG_DEBUG_FS*/
 
 MODULE_AUTHOR("Broadcom");
 MODULE_DESCRIPTION("Broadcom I2C Driver");
