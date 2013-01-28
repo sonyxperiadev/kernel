@@ -26,15 +26,18 @@
 #ifdef CONFIG_ION_KONA
 #include <linux/dma-direction.h>
 #include <asm/cacheflush.h>
-#endif
-
-/* #define RHEA_CMA */
-#ifdef RHEA_CMA
-#include <linux/dma-contiguous.h>
+#include <linux/seq_file.h>
 #endif
 
 /* for ion_heap_ops structure */
 #include "ion_priv.h"
+
+#ifdef CONFIG_ION_KONA
+struct ion_cma_heap {
+	struct ion_heap heap;
+	ion_phys_addr_t base;
+};
+#endif
 
 struct ion_cma_buffer_info {
 	void *cpu_addr;
@@ -51,10 +54,6 @@ static int ion_cma_allocate(struct ion_heap *heap, struct ion_buffer *buffer,
 	struct ion_cma_buffer_info *info;
 	int n_pages, i;
 	struct scatterlist *sg;
-#ifdef RHEA_CMA
-	struct page *page;
-	unsigned long nr_pages = len >> PAGE_SHIFT;
-#endif
 
 	dev_dbg(dev, "Request buffer allocation len %ld\n", len);
 
@@ -64,22 +63,10 @@ static int ion_cma_allocate(struct ion_heap *heap, struct ion_buffer *buffer,
 		return -ENOMEM;
 	}
 
-#ifdef RHEA_CMA
-	page = dma_alloc_from_contiguous(dev, nr_pages, 0);
-	if (!page) {
-		dev_err(dev, "Fail to allocate buffer\n");
-		goto err;
-	}
-	if (current->group_leader && current->group_leader->mm)
-		atomic_long_add(nr_pages, &current->group_leader->mm->cma_stat);
-	info->handle = page_to_phys(page);
-	info->cpu_addr = phys_to_virt(info->handle);
-#else
 	info->cpu_addr = dma_alloc_coherent(dev, len, &(info->handle), 0);
 	if (!info->cpu_addr) {
 		goto err;
 	}
-#endif
 
 	info->table = kmalloc(sizeof(struct sg_table), GFP_KERNEL);
 	if (!info->table) {
@@ -118,21 +105,10 @@ static void ion_cma_free(struct ion_buffer *buffer)
 {
 	struct device *dev = buffer->heap->priv;
 	struct ion_cma_buffer_info *info = buffer->priv_virt;
-#ifdef RHEA_CMA
-	struct page *page;
-	unsigned long nr_pages = buffer->size >> PAGE_SHIFT;
-#endif
 
 	dev_dbg(dev, "Release buffer %p\n", buffer);
 	/* release memory */
-#ifdef RHEA_CMA
-	page = phys_to_page(info->handle);
-	dma_release_from_contiguous(dev, page, nr_pages);
-	if (current->group_leader && current->group_leader->mm)
-		atomic_long_add(-nr_pages, &current->group_leader->mm->cma_stat);
-#else
 	dma_free_coherent(dev, buffer->size, info->cpu_addr, info->handle);
-#endif
 	/* release sg table */
 	sg_free_table(info->table);
 	kfree(info->table);
@@ -278,15 +254,44 @@ static struct ion_heap_ops ion_cma_ops = {
 #endif
 };
 
+#ifdef CONFIG_ION_KONA
+static int ion_cma_heap_debug_show(struct ion_heap *heap, struct seq_file *s,
+		void *unused)
+{
+	struct ion_cma_heap *cma_heap =
+		container_of(heap, struct ion_cma_heap, heap);
+
+	seq_printf(s, "%16.s: %6s(%s) %4s(%d) %6s(%u)KB %7s(%#08lx - %#08lx)\n",
+			"CMA Heap", "Name", heap->name, "Id", heap->id,
+			"Size", (heap->size>>10), "Range",
+			cma_heap->base,	(cma_heap->base + heap->size));
+#ifdef CONFIG_ION_OOM_KILLER
+	if (heap->ops->needs_shrink(heap)) {
+		int min_free = ion_minfree_get(heap);
+
+		seq_printf(s, "Lowmemkiller Info:\n");
+		seq_printf(s, "%16.s %16.s %16.s\n%13u KB %13u KB %16u\n",
+				"free mem", "threshold", "min_adj",
+				((heap->size - heap->used)>>10),
+				min_free>>10, heap->lmk_min_score_adj);
+	} else {
+		seq_printf(s, "  Lowmemkiller disabled.\n");
+	}
+#endif
+	return 0;
+}
+#endif
+
 struct ion_heap *ion_cma_heap_create(struct ion_platform_heap *data,
 				     struct device *dev)
 {
+	struct ion_cma_heap *cma_heap;
 	struct ion_heap *heap;
 
-	heap = kzalloc(sizeof(struct ion_heap), GFP_KERNEL);
-
-	if (!heap)
+	cma_heap = kzalloc(sizeof(struct ion_cma_heap), GFP_KERNEL);
+	if (!cma_heap)
 		return ERR_PTR(-ENOMEM);
+	heap = &cma_heap->heap;
 
 	heap->ops = &ion_cma_ops;
 	/* set device as private heaps data, later it will be
@@ -295,6 +300,8 @@ struct ion_heap *ion_cma_heap_create(struct ion_platform_heap *data,
 	heap->type = ION_HEAP_TYPE_DMA;
 #ifdef CONFIG_ION_KONA
 	heap->size = data->size;
+	cma_heap->base = data->base;
+	heap->debug_show = ion_cma_heap_debug_show;
 #endif
 #ifdef CONFIG_ION_OOM_KILLER
 	heap->lmk_enable = data->lmk_enable;

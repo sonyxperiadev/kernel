@@ -29,6 +29,7 @@
 #ifdef CONFIG_ION_KONA
 #include <linux/dma-direction.h>
 #include <asm/cacheflush.h>
+#include <linux/seq_file.h>
 #endif
 #include "ion_priv.h"
 
@@ -248,6 +249,35 @@ static struct ion_heap_ops carveout_heap_ops = {
 #endif
 };
 
+#ifdef CONFIG_ION_KONA
+static int ion_carveout_heap_debug_show(struct ion_heap *heap,
+		struct seq_file *s, void *unused)
+{
+	struct ion_carveout_heap *carveout_heap =
+		container_of(heap, struct ion_carveout_heap, heap);
+
+	seq_printf(s, "%16.s: %6s(%s) %4s(%d) %6s(%u)KB %7s(%#08lx - %#08lx)\n",
+			"Carveout Heap", "Name", heap->name, "Id", heap->id,
+			"Size", (heap->size>>10), "Range",
+			carveout_heap->base,
+			(carveout_heap->base + heap->size));
+#ifdef CONFIG_ION_OOM_KILLER
+	if (heap->ops->needs_shrink(heap)) {
+		int min_free = ion_minfree_get(heap);
+
+		seq_printf(s, "Lowmemkiller Info:\n");
+		seq_printf(s, "%16.s %16.s %16.s\n%13u KB %13u KB %16u\n",
+				"free mem", "threshold", "min_adj",
+				((heap->size - heap->used)>>10),
+				min_free>>10, heap->lmk_min_score_adj);
+	} else {
+		seq_printf(s, "  Lowmemkiller disabled.\n");
+	}
+#endif
+	return 0;
+}
+#endif
+
 struct ion_heap *ion_carveout_heap_create(struct ion_platform_heap *heap_data)
 {
 	struct ion_carveout_heap *carveout_heap;
@@ -268,6 +298,7 @@ struct ion_heap *ion_carveout_heap_create(struct ion_platform_heap *heap_data)
 	carveout_heap->heap.type = ION_HEAP_TYPE_CARVEOUT;
 #ifdef CONFIG_ION_KONA
 	carveout_heap->heap.size = heap_data->size;
+	carveout_heap->heap.debug_show = ion_carveout_heap_debug_show;
 #endif
 #ifdef CONFIG_ION_OOM_KILLER
 	carveout_heap->heap.lmk_enable = heap_data->lmk_enable;

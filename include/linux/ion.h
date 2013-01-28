@@ -98,7 +98,6 @@ struct ion_platform_heap {
 	unsigned int id;
 	const char *name;
 	ion_phys_addr_t base;
-	ion_phys_addr_t limit;
 	size_t size;
 	ion_phys_addr_t align;
 	void *priv;

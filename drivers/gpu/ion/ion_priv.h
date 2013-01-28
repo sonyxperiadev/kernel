@@ -263,6 +263,7 @@ extern struct ion_buffer *ion_lock_buffer(struct ion_client *client,
 		struct ion_handle *handle);
 extern void ion_unlock_buffer(struct ion_client *client,
 		struct ion_buffer *buffer);
+extern int ion_minfree_get(struct ion_heap *heap);
 
 #define pgprot_writethrough(prot) \
 	__pgprot_modify(prot, L_PTE_MT_MASK, L_PTE_MT_WRITETHROUGH)

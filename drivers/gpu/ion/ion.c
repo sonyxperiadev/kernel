@@ -1544,22 +1544,6 @@ static int ion_debug_heap_show(struct seq_file *s, void *unused)
 		seq_printf(s, "  No memory leak.\n");
 	seq_printf(s, "----------------------------------------------------\n");
 
-#ifdef CONFIG_ION_OOM_KILLER
-	seq_printf(s, "Lowmemkiller Info:\n");
-	if ((heap->ops->needs_shrink) &&
-			(heap->ops->needs_shrink(heap))) {
-		int min_free = ion_minfree_get(heap);
-
-		seq_printf(s, "%16.s %16.s %16.s\n%13u KB %13u KB %16u\n",
-				"free mem", "threshold", "min_adj",
-				((heap->size - heap->used)>>10),
-				min_free>>10, heap->lmk_min_score_adj);
-	} else {
-		seq_printf(s, "  Lowmemkiller disabled.\n");
-	}
-	seq_printf(s, "----------------------------------------------------\n");
-#endif
-
 	if (heap->debug_show)
 		heap->debug_show(heap, s, unused);
 	seq_printf(s, "----------------------------------------------------\n");
