@@ -84,13 +84,10 @@
 					0 0 0xFFFFFFFF>;
 		};
 		akm8963@0c {
-			compatible = "bcm,akm8963";
+			compatible = "bcm,akm8975";
 			reg = <0x0c>;
 			gpio-irq-pin = <4>;
-			gpio_DRDY = <4>;
-			gpio_RST = <0>;
 			layout = <6>;
-			outbit = <2>;
 		};
 
 		kxtik@0f {

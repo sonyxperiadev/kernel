@@ -6,17 +6,35 @@
 
 #include <linux/ioctl.h>
 
+#define AKM8975_I2C_NAME "akm8975"
+
+#define SENSOR_DATA_SIZE	8
+#define YPR_DATA_SIZE		12
+#define RWBUF_SIZE			16
+
+#define ACC_DATA_FLAG		0
+#define MAG_DATA_FLAG		1
+#define ORI_DATA_FLAG		2
+#define AKM_NUM_SENSORS		3
+
+#define ACC_DATA_READY		(1<<(ACC_DATA_FLAG))
+#define MAG_DATA_READY		(1<<(MAG_DATA_FLAG))
+#define ORI_DATA_READY		(1<<(ORI_DATA_FLAG))
+
+/*! \name AK8975 constant definition
+ \anchor AK8975_Def
+ Constant definitions of the AK8975.*/
+#define AK8975_MEASUREMENT_TIME_US	10000
+
 /*! \name AK8975 operation mode
  \anchor AK8975_Mode
  Defines an operation mode of the AK8975.*/
 /*! @{*/
-#define AK8975_MODE_SNG_MEASURE   0x01
-#define	AK8975_MODE_SELF_TEST     0x08
-#define	AK8975_MODE_FUSE_ACCESS   0x0F
-#define	AK8975_MODE_POWER_DOWN    0x00
+#define AK8975_MODE_SNG_MEASURE	0x01
+#define	AK8975_MODE_SELF_TEST	0x08
+#define	AK8975_MODE_FUSE_ACCESS	0x0F
+#define	AK8975_MODE_POWERDOWN	0x00
 /*! @}*/
-
-#define RBUFF_SIZE		8	/* Rx buffer size */
 
 /*! \name AK8975 register address
 \anchor AK8975_REG
@@ -52,35 +70,20 @@ Defines a read-only address of the fuse ROM of the AK8975.*/
 #define AKMIO                   0xA1
 
 /* IOCTLs for AKM library */
-#define ECS_IOCTL_WRITE                 _IOW(AKMIO, 0x02, char[5])
-#define ECS_IOCTL_READ                  _IOWR(AKMIO, 0x03, char[5])
-#define ECS_IOCTL_GETDATA               _IOR(AKMIO, 0x08, char[RBUFF_SIZE])
-#define ECS_IOCTL_SET_YPR               _IOW(AKMIO, 0x0C, short[12])
-#define ECS_IOCTL_GET_OPEN_STATUS       _IOR(AKMIO, 0x0D, int)
-#define ECS_IOCTL_GET_CLOSE_STATUS      _IOR(AKMIO, 0x0E, int)
-#define ECS_IOCTL_GET_DELAY             _IOR(AKMIO, 0x30, short)
-
-/* IOCTLs for APPs */
-#define ECS_IOCTL_APP_SET_MFLAG		_IOW(AKMIO, 0x11, short)
-#define ECS_IOCTL_APP_GET_MFLAG		_IOW(AKMIO, 0x12, short)
-#define ECS_IOCTL_APP_SET_AFLAG		_IOW(AKMIO, 0x13, short)
-#define ECS_IOCTL_APP_GET_AFLAG		_IOR(AKMIO, 0x14, short)
-#define ECS_IOCTL_APP_SET_DELAY		_IOW(AKMIO, 0x18, short)
-#define ECS_IOCTL_APP_GET_DELAY		ECS_IOCTL_GET_DELAY
-/* Set raw magnetic vector flag */
-#define ECS_IOCTL_APP_SET_MVFLAG	_IOW(AKMIO, 0x19, short)
-/* Get raw magnetic vector flag */
-#define ECS_IOCTL_APP_GET_MVFLAG	_IOR(AKMIO, 0x1A, short)
-#define ECS_IOCTL_APP_SET_TFLAG         _IOR(AKMIO, 0x15, short)
-
+#define ECS_IOCTL_READ              _IOWR(AKMIO, 0x01, char*)
+#define ECS_IOCTL_WRITE             _IOW(AKMIO, 0x02, char*)
+#define ECS_IOCTL_SET_MODE          _IOW(AKMIO, 0x03, short)
+#define ECS_IOCTL_GETDATA           _IOR(AKMIO, 0x04, char[SENSOR_DATA_SIZE])
+#define ECS_IOCTL_SET_YPR           _IOW(AKMIO, 0x05, int[YPR_DATA_SIZE])
+#define ECS_IOCTL_GET_OPEN_STATUS   _IOR(AKMIO, 0x06, int)
+#define ECS_IOCTL_GET_CLOSE_STATUS  _IOR(AKMIO, 0x07, int)
+#define ECS_IOCTL_GET_DELAY _IOR(AKMIO, 0x08, long long int[AKM_NUM_SENSORS])
+#define ECS_IOCTL_GET_LAYOUT        _IOR(AKMIO, 0x09, char)
+#define ECS_IOCTL_GET_ACCEL         _IOR(AKMIO, 0x30, short[3])
 
 struct akm8975_platform_data {
-	int intr;
-
-	int (*init)(void);
-	void (*exit)(void);
-	int (*power_on)(void);
-	int (*power_off)(void);
+	char layout;
+	int gpio_DRDY;
 };
 
 #endif

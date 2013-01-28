@@ -141,11 +141,6 @@
 #include <linux/kxtik.h>
 #endif /* CONFIG_SENSORS_KIONIX_KXTIK */
 
-#if defined(CONFIG_SENSORS_AK8963) || defined(CONFIG_SENSORS_AK8963_MODULE)
-#include <linux/akm8963.h>
-#include <linux/i2c/akm8963_i2c_settings.h>
-#endif /* CONFIG_SENSORS_AK8963 */
-
 #ifdef CONFIG_BACKLIGHT_PWM
 #include <linux/pwm_backlight.h>
 #endif
