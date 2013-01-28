@@ -74,14 +74,4 @@ extern struct platform_device spdif_dit_device;
 extern struct android_pmem_platform_data android_pmem_data;
 extern struct platform_device android_pmem;
 #endif
-#ifdef CONFIG_ION
-extern struct platform_device ion_system_device;
-extern struct ion_platform_data ion_carveout_data;
-extern struct platform_device ion_carveout_device;
-#ifdef CONFIG_CMA
-extern struct ion_platform_data ion_cma_data;
-extern struct platform_device ion_cma_device;
-#endif
-#endif
-
 #endif /* __MACH_HAWAII_DEVICE_H */

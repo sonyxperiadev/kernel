@@ -19,6 +19,9 @@
 
 #include <linux/types.h>
 #include <linux/ion.h>
+#ifdef CONFIG_OF
+#include <linux/device.h>
+#endif /* CONFIG_OF */
 
 /****************************************************************
  * Heap IDs defined here should match the heaps registered in the
@@ -29,12 +32,48 @@
 
 #define ION_INVALID_HEAP_ID		(15)
 
-#define ION_CARVEOUT0_SIZE		(16*1024*1024)
-
 extern struct ion_device *idev;
 
 extern unsigned int kona_ion_map_dma(struct ion_client *client,
 		struct ion_handle *handle);
+
+#ifdef CONFIG_OF
+/**
+ * struct kona_ion_dt_heap_data - defines the set of parameters used by
+ * platform file to search for carveout or cma nodes in DT file.
+ * This is populated by the platform file. ION platform driver reads this
+ * structure to get the reserved base, size, status and dummy device to which
+ * CMA was attached.
+ * @type:	type of the heap from ion_heap_type enum
+ *		- to identify carveout or CMA reserve to be done.
+ * @name:	tries to match with DT node-name.
+ * @base:	base of the range from where reserve to be attempted
+ * @limit:	limit of the range from where reserve to be attempted
+ * @size:	size of the heap in bytes if applicable
+ * @status:	status of carveout/cma
+ * @cma_dev:	dummy device used to attach cma.
+ *
+ */
+struct kona_ion_dt_heap_data {
+	enum ion_heap_type type;
+	const char *name;
+	ion_phys_addr_t base;
+	ion_phys_addr_t limit;
+	size_t size;
+	int status;
+	struct device cma_dev;
+};
+
+/**
+ * kona_ion_get_dt_heap_data() - Get the info about carveout/cma during bootup
+ * @data:	platform data specifying carveout/cma info
+ * @name:	Name of the heap/DT node of which info is required.
+ *
+ * To be implemented by platform file
+ */
+int kona_ion_get_dt_heap_data(struct kona_ion_dt_heap_data **data,
+		const char *name);
+#endif /* CONFIG_OF */
 
 #endif
 

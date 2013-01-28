@@ -41,10 +41,6 @@
 #ifdef CONFIG_ANDROID_PMEM
 #include <linux/android_pmem.h>
 #endif
-#ifdef CONFIG_ION
-#include <linux/ion.h>
-#include <linux/broadcom/kona_ion.h>
-#endif
 #include <linux/serial_8250.h>
 #include <linux/i2c.h>
 #include <linux/i2c-kona.h>
@@ -276,46 +272,6 @@ struct android_pmem_platform_data android_pmem_data = {
 	.carveout_size = 0,
 };
 #endif
-
-#ifdef CONFIG_ION
-struct ion_platform_data ion_carveout_data = {
-	.nr = 2,
-	.heaps = {
-		[0] = {
-			.id    = 0,
-			.type  = ION_HEAP_TYPE_CARVEOUT,
-			.name  = "ion-carveout-0",
-			.base  = 0x90000000,
-			.limit = 0xa0000000,
-			.size  = (16 * SZ_1M),
-		},
-		[1] = {
-			.id    = 2,
-			.type  = ION_HEAP_TYPE_CARVEOUT,
-			.name  = "ion-carveout-1",
-			.base  = 0,
-			.limit = 0,
-			.size  = (0 * SZ_1M),
-		},
-	},
-};
-
-#ifdef CONFIG_CMA
-struct ion_platform_data ion_cma_data = {
-	.nr = 1,
-	.heaps = {
-		[0] = {
-			.id = 1,
-			.type  = ION_HEAP_TYPE_DMA,
-			.name  = "ion-cma-0",
-			.base  = 0x90000000,
-			.limit = 0xa0000000,
-			.size  = (0 * SZ_1M),
-		},
-	},
-};
-#endif	/* CONFIG_CMA */
-#endif	/* CONFIG_ION */
 
 static struct i2c_board_info hawaii_i2c_camera[] = {
 	{
@@ -1335,13 +1291,6 @@ static void __init hawaii_add_devices(void)
 #ifdef CONFIG_KEYBOARD_BCM
 	hawaii_kp_device.dev.platform_data = &hawaii_keypad_data;
 #endif
-
-#ifdef CONFIG_ION
-	platform_device_register(&ion_carveout_device);
-#ifdef CONFIG_CMA
-	platform_device_register(&ion_cma_device);
-#endif	/* CONFIG_CMA */
-#endif	/* CONFIG_ION */
 
 	platform_add_devices(hawaii_devices, ARRAY_SIZE(hawaii_devices));
 

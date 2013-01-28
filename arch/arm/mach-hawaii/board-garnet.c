@@ -40,10 +40,6 @@
 #ifdef CONFIG_ANDROID_PMEM
 #include <linux/android_pmem.h>
 #endif
-#ifdef CONFIG_ION
-#include <linux/ion.h>
-#include <linux/broadcom/kona_ion.h>
-#endif
 #include <linux/serial_8250.h>
 #include <linux/i2c.h>
 #include <linux/i2c-kona.h>
@@ -226,75 +222,6 @@ struct android_pmem_platform_data android_pmem_data = {
 	.carveout_size = 0,
 };
 #endif
-
-#ifdef CONFIG_ION
-struct ion_platform_data ion_system_data = {
-	.nr = 1,
-	.heaps = {
-		[0] = {
-			.id    = 0,
-			.type  = ION_HEAP_TYPE_SYSTEM,
-			.name  = "ion-system-0",
-			.base  = 0,
-			.limit = 0,
-			.size  = 0,
-		},
-	},
-};
-
-struct ion_platform_data ion_carveout_data = {
-	.nr = 2,
-	.heaps = {
-		[0] = {
-			.id    = 3,
-			.type  = ION_HEAP_TYPE_CARVEOUT,
-			.name  = "ion-carveout-0",
-			.base  = 0xa0000000,
-			.limit = 0xb0000000,
-			.size  = (8 * SZ_1M),
-#ifdef CONFIG_ION_OOM_KILLER
-			.lmk_enable = 0,
-			.lmk_min_score_adj = 411,
-			.lmk_min_free = 32,
-#endif
-		},
-		[1] = {
-			.id    = 1,
-			.type  = ION_HEAP_TYPE_CARVEOUT,
-			.name  = "ion-carveout-1",
-			.base  = 0,
-			.limit = 0,
-			.size  = (0 * SZ_1M),
-#ifdef CONFIG_ION_OOM_KILLER
-			.lmk_enable = 0,
-			.lmk_min_score_adj = 411,
-			.lmk_min_free = 32,
-#endif
-		},
-	},
-};
-
-#ifdef CONFIG_CMA
-struct ion_platform_data ion_cma_data = {
-	.nr = 1,
-	.heaps = {
-		[0] = {
-			.id = 2,
-			.type  = ION_HEAP_TYPE_DMA,
-			.name  = "ion-cma-0",
-			.base  = 0xa0000000,
-			.limit = 0xb0000000,
-			.size  = (0 * SZ_1M),
-#ifdef CONFIG_ION_OOM_KILLER
-			.lmk_enable = 1,
-			.lmk_min_score_adj = 411,
-			.lmk_min_free = 32,
-#endif
-		},
-	},
-};
-#endif /* CONFIG_CMA */
-#endif /* CONFIG_ION */
 
 #ifdef CONFIG_VIDEO_ADP1653
 #define ADP1653_I2C_ADDR 0x60
@@ -1198,9 +1125,6 @@ static void hawaii_add_pdata(void)
 	hawaii_usb_phy_platform_device.dev.platform_data =
 		&hsotgctrl_plat_data;
 #endif
-#ifdef CONFIG_ION
-	ion_system_device.dev.platform_data = &ion_system_data;
-#endif
 }
 
 void __init hawaii_add_common_devices(void)
@@ -1217,16 +1141,6 @@ static void __init hawaii_add_devices(void)
 {
 
 	hawaii_add_pdata();
-
-#ifdef CONFIG_ION
-#ifdef CONFIG_M4U
-	platform_device_register(&ion_system_device);
-#endif
-	platform_device_register(&ion_carveout_device);
-#ifdef CONFIG_CMA
-	platform_device_register(&ion_cma_device);
-#endif /* CONFIG_CMA */
-#endif /* CONFIG_ION */
 
 	platform_add_devices(hawaii_devices, ARRAY_SIZE(hawaii_devices));
 
