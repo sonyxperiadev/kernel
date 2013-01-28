@@ -73,12 +73,15 @@ struct TANGO_I2C_TS_t {
 	int y1_width_idx;
 	int x2_width_idx;
 	int y2_width_idx;
+	int pressure_lo_idx;
+	int pressure_hi_idx;
 	int power_mode_idx;
 	int int_mode_idx;
 	int int_width_idx;
 	int min_finger_val;
 	int max_finger_val;
 	int panel_width;	/* LCD panel width in millimeters */
+	int max_pressure;
 };
 
 #if defined(CONFIG_RHEA_CLOVER_ICS)

@@ -126,7 +126,7 @@
 			x-max-value = <480>;
 			y-max-value = <800>;
 			layout = <1>;
-			num-bytes-to-read = <14>;
+			num-bytes-to-read = <20>;
 			is-multi-touch = <1>;
 			is-resetable = <1>;
 			num-fingers-idx = <0>;
@@ -143,12 +143,15 @@
 			y1-width-idx = <11>;
 			x2-width-idx = <12>;
 			y2-width-idx = <13>;
+			pressure-lo-idx = <18>;
+			pressure-hi-idx = <19>;
 			power-mode-idx = <20>;
 			int-mode-idx = <21>;
 			int-width-idx = <22>;
 			min-finger-val = <0>;
 			max-finger-val = <2>;
 			panel-width = <56>;
+			max-pressure = <800>;
 			/* Enable I2C autosense but disable timeout */
 			client_func_magic = <0x666C6167>;
 			client_func_map = <1>;

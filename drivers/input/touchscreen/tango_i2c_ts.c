@@ -64,6 +64,7 @@ typedef struct {
 	int version;
 	int idle;
 	int timeout;
+	int pressure;
 } t_i2c_touch_data;
 
 typedef struct {
@@ -399,6 +400,12 @@ int i2c_ts_driver_read(void)
 	}
 
 	g_num_read_errors = 0;
+
+	g_curr_touch_data.pressure = gp_buffer[gp_i2c_ts->pressure_lo_idx] |
+				(gp_buffer[gp_i2c_ts->pressure_hi_idx] << 8);
+
+	if (g_curr_touch_data.pressure > gp_i2c_ts->max_pressure)
+		g_curr_touch_data.pressure = gp_i2c_ts->max_pressure;
 
 	g_curr_touch_data.x1 = (gp_buffer[gp_i2c_ts->x1_hi_idx] << 8) |
 	    gp_buffer[gp_i2c_ts->x1_lo_idx];
@@ -766,6 +773,9 @@ void i2c_ts_driver_send_multitouch_info(void)
 	 * The surface Y coordinate of the center of the touching ellipse. */
 	input_report_abs(gp_input_dev, ABS_MT_POSITION_Y, g_curr_touch_data.y1);
 
+	input_report_abs(gp_input_dev, ABS_MT_PRESSURE,
+				 g_curr_touch_data.pressure);
+
 	/* Step 4: SYN_MT_REPORT */
 	input_mt_sync(gp_input_dev);
 
@@ -783,6 +793,10 @@ void i2c_ts_driver_send_multitouch_info(void)
 		 * touching ellipse. */
 		input_report_abs(gp_input_dev, ABS_MT_POSITION_Y,
 				 g_curr_touch_data.y2);
+
+		input_report_abs(gp_input_dev, ABS_MT_PRESSURE,
+				 g_curr_touch_data.pressure);
+
 		/* Step 8: SYN_MT_REPORT */
 		input_mt_sync(gp_input_dev);
 	}
@@ -907,6 +921,12 @@ static int i2c_ts_driver_probe(struct i2c_client *p_i2c_client,
 		if (!of_property_read_u32(np, "y2-width-idx", &val))
 			dt_i2c_ts->y2_width_idx = val;
 
+		if (!of_property_read_u32(np, "pressure-lo-idx", &val))
+			dt_i2c_ts->pressure_lo_idx = val;
+
+		if (!of_property_read_u32(np, "pressure-hi-idx", &val))
+			dt_i2c_ts->pressure_hi_idx = val;
+
 		if (!of_property_read_u32(np, "power-mode-idx", &val))
 			dt_i2c_ts->power_mode_idx = val;
 
@@ -924,6 +944,9 @@ static int i2c_ts_driver_probe(struct i2c_client *p_i2c_client,
 
 		if (!of_property_read_u32(np, "panel-width", &val))
 			dt_i2c_ts->panel_width = val;
+
+		if (!of_property_read_u32(np, "max-pressure", &val))
+			dt_i2c_ts->max_pressure = val;
 
 		if (!of_property_read_u32(np, "client_func_magic", &val))
 			dt_i2c_ts->i2c_pdata.client_func_magic = val;
@@ -1143,7 +1166,8 @@ static int i2c_ts_driver_probe(struct i2c_client *p_i2c_client,
 			     gp_i2c_ts->y_max_value, 0, 0);
 	input_set_abs_params(gp_input_dev, ABS_MT_TOUCH_MAJOR, 0,
 			     g_blob_size, 0, 0);
-
+	input_set_abs_params(gp_input_dev,  ABS_MT_PRESSURE, 0,
+				dt_i2c_ts->max_pressure, 0, 0);
 	__set_bit(INPUT_PROP_DIRECT,
 		  (volatile unsigned long *)&gp_input_dev->propbit);
 
