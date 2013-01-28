@@ -29,6 +29,7 @@
 
 #define BCMLOG_OUTDEV_SDCARD	2
 #define BCMLOG_OUTDEV_RNDIS	3
+#define BCMLOG_OUTDEV_ACM	5
 #define CP_SETTLE_TIME		300
 
 /* Prototypes */
@@ -42,7 +43,10 @@ static int do_cp_crash(struct notifier_block *this, unsigned long event,
 	/* SD card to trigger cp crash after kernel panic
 	 * is not supported as file operation in atomic context
 	 * is not possible. */
-	if (BCMLOG_OUTDEV_SDCARD == BCMLOG_GetCpCrashLogDevice() && cp_crashed)
+	if ((BCMLOG_OUTDEV_SDCARD == BCMLOG_GetCpCrashLogDevice() ||
+		BCMLOG_OUTDEV_RNDIS == BCMLOG_GetCpCrashLogDevice() ||
+		BCMLOG_OUTDEV_ACM == BCMLOG_GetCpCrashLogDevice())
+		&& cp_crashed)
 		return NOTIFY_DONE;
 
 #ifdef CONFIG_CP_CRASH

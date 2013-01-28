@@ -47,6 +47,8 @@ void BCMLOG_Output(unsigned char *pUserBuf, unsigned long userBufSz,
 int BCMLOG_OutputInit(void);
 void BCMLOG_OutputExit(void);
 
+void WriteToLogDev_ACM(void);
+
 #ifdef CONFIG_BRCM_NETCONSOLE
 extern char brcm_netconsole_register_callbacks(struct brcm_netconsole_callbacks
 					       *_cb);

@@ -660,8 +660,7 @@ void ProcessCPCrashedDump(struct work_struct *work)
 	}
 	if ((BCMLOG_OUTDEV_PANIC == BCMLOG_GetCpCrashLogDevice() ||
 		BCMLOG_OUTDEV_NONE == BCMLOG_GetCpCrashLogDevice() ||
-		BCMLOG_OUTDEV_STM == BCMLOG_GetCpCrashLogDevice() ||
-		BCMLOG_OUTDEV_RNDIS == BCMLOG_GetCpCrashLogDevice()) &&
+		BCMLOG_OUTDEV_STM == BCMLOG_GetCpCrashLogDevice()) &&
 			!cpReset
 #ifdef CONFIG_APANIC_ON_MMC
 		&& !ap_triggered
@@ -990,11 +989,13 @@ void DUMP_CP_assert_log(void)
 
 	IPC_DEBUG(DBG_ERROR, "CP crash dump complete\n");
 
+	if ((BCMLOG_OUTDEV_RNDIS == BCMLOG_GetCpCrashLogDevice() ||
+		BCMLOG_OUTDEV_ACM == BCMLOG_GetCpCrashLogDevice()
 #ifdef CONFIG_BCM_AP_PANIC_ON_CPCRASH
-	if ((BCMLOG_OUTDEV_SDCARD == BCMLOG_GetCpCrashLogDevice())
-	    && cp_crashed == 1 && !cpReset)
-		abort();
+		|| BCMLOG_OUTDEV_SDCARD == BCMLOG_GetCpCrashLogDevice()
 #endif
+	   ) && cp_crashed == 1 && !cpReset)
+		abort();
 
 }
 

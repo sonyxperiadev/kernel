@@ -460,7 +460,7 @@ static void WriteToLogDev_UART(void)
 	set_fs(oldfs);
 }
 
-static void WriteToLogDev_ACM(void)
+void WriteToLogDev_ACM(void)
 {
 	mm_segment_t oldfs;
 

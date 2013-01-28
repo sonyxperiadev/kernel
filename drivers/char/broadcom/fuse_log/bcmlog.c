@@ -1557,6 +1557,9 @@ void BCMLOG_EndCpCrashDump(void)
 		set_fs(sCrashDumpFS);
 		sDumpFile = NULL;
 		break;
+	case BCMLOG_OUTDEV_ACM:
+		WriteToLogDev_ACM();
+		break;
 	case BCMLOG_OUTDEV_PANIC:
 #ifdef CONFIG_BRCM_CP_CRASH_DUMP_EMMC
 		BCMLOG_WriteEMMC(NULL, 0);
