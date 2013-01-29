@@ -1245,7 +1245,9 @@ static struct bcmpmu_fg_pdata fg_pdata = {
 struct bcmpmu59xxx_spa_pb_pdata spa_pb_pdata = {
 	.chrgr_name = "bcmpmu_charger",
 };
+#endif /*CONFIG_CHARGER_BCMPMU_SPA*/
 
+#ifdef CONFIG_SEC_CHARGING_FEATURE
 struct spa_power_data spa_data = {
 	.charger_name = "bcmpmu_charger",
 
@@ -1260,8 +1262,23 @@ struct spa_power_data spa_data = {
 	.charging_cur_wall = 700,
 	.charge_timer_limit = 10,
 };
-#endif /*CONFIG_CHARGER_BCMPMU_SPA*/
 
+static struct platform_device spa_power_device = {
+	.name = "spa_power",
+	.id = -1,
+	.dev.platform_data = &spa_data,
+};
+
+static struct platform_device spa_ps_device = {
+	.name = "spa_ps",
+	.id = -1,
+};
+
+static struct platform_device *spa_devices[] = {
+	&spa_power_device,
+	&spa_ps_device,
+};
+#endif /*CONFIG_SEC_CHARGING_FEATURE*/
 
 /* The subdevices of the bcmpmu59xxx */
 static struct mfd_cell pmu59xxx_devs[] = {
@@ -1311,20 +1328,6 @@ static struct mfd_cell pmu59xxx_devs[] = {
 		.platform_data = &spa_pb_pdata,
 		.pdata_size = sizeof(spa_pb_pdata),
 	},
-#ifdef CONFIG_SEC_CHARGING_FEATURE
-	{
-		.name = "spa_power",
-		.id = -1,
-		.platform_data = &spa_data,
-		.pdata_size = sizeof(spa_data),
-	},
-	{
-		.name = "spa_ps",
-		.id = -1,
-		.platform_data = NULL,
-		.pdata_size = 0,
-	},
-#endif /*CONFIG_SEC_CHARGING_FEATURE*/
 #endif /*CONFIG_CHARGER_BCMPMU_SPA*/
 	{
 		.name = "bcmpmu_otg_xceiv",
@@ -1371,9 +1374,7 @@ static struct bcmpmu59xxx_platform_data bcmpmu_i2c_pdata = {
 	.init_max = ARRAY_SIZE(register_init_data),
 #ifdef CONFIG_CHARGER_BCMPMU_SPA
 	.flags = BCMPMU_SPA_EN,
-/* logan compilation fix */
-	.bc = BCMPMU_BC_BB_BC12,
-/*	.bc = BCMPMU_BC_JIG_BC12, */
+	.bc = BC_EXT_DETECT,
 #else
 	.bc = BCMPMU_BC_PMU_BC12,
 #endif
@@ -1488,6 +1489,7 @@ int board_bcm59xx_init(void)
 	bcmpmu_i2c_pdata.irq = irq;
 	ret  = i2c_register_board_info(PMU_DEVICE_I2C_BUSNO,
 			bcmpmu_i2c_info, ARRAY_SIZE(bcmpmu_i2c_info));
+	platform_add_devices(spa_devices, ARRAY_SIZE(spa_devices));
 	return 0;
 exit:
 	return ret;
