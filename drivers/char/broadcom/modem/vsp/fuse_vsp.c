@@ -40,9 +40,7 @@
 #include <asm/pgtable.h>
 #include <linux/proc_fs.h>
 
-
 #include <linux/broadcom/bcm_major.h>
-
 
 #include "rpc_ipc_config.h"
 #include "vsp_debug.h"
@@ -57,7 +55,6 @@
 #include "xdr_porting_layer.h"
 #include "xdr.h"
 #include "rpc_api.h"
-
 
 static struct class *vsp_class;
 
@@ -117,7 +114,6 @@ UInt32 GetRxBytesAvailable(void)
 #endif /* CSD_LOOPBACK_TEST */
 }
 
-
 #ifdef CSD_LOOPBACK_TEST
 /*******************************************************************************
 
@@ -134,11 +130,11 @@ UInt32 CSD_Read(UInt8 *pInBuf)
 	UInt32 dwDataSize = 0;
 
 	/* Get buffer access */
-	spin_lock(&csLocker_aploopback);
+	spin_lock_bh(&csLocker_aploopback);
 
 	if (NULL == pInBuf) {
 		sAplookback_PendingBytes = 0;
-		spin_unlock(&csLocker_aploopback);
+		spin_unlock_bh(&csLocker_aploopback);
 		return 0;
 	}
 
@@ -149,10 +145,9 @@ UInt32 CSD_Read(UInt8 *pInBuf)
 	}
 
 	/* Release buffer access */
-	spin_unlock(&csLocker_aploopback);
+	spin_unlock_bh(&csLocker_aploopback);
 	return dwDataSize;
 }
-
 
 /*******************************************************************************
 
@@ -168,7 +163,7 @@ UInt32 CSD_Read(UInt8 *pInBuf)
 UInt32 CSD_Send(const void *pBuf, const UInt32 len)
 {
 	/* Get buffer access */
-	spin_lock(&csLocker_aploopback);
+	spin_lock_bh(&csLocker_aploopback);
 
 	if (CSD_BUFFER_SIZE - sAplookback_PendingBytes >= len)	{
 		memcpy(&sAplookback_tempBuf[sAplookback_PendingBytes]
@@ -177,11 +172,10 @@ UInt32 CSD_Send(const void *pBuf, const UInt32 len)
 	}
 
 	/* Release buffer access */
-	spin_unlock(&csLocker_aploopback);
+	spin_unlock_bh(&csLocker_aploopback);
 
 	return len;
 }
-
 
 /*******************************************************************************
 
@@ -238,7 +232,6 @@ UInt32 CSD_CP_Loopback_Send(const void *pBuf, const UInt32 len)
 	return len;
 }
 
-
 /*******************************************************************************
 
 	Function to control returning CP loop back data
@@ -260,7 +253,7 @@ void CSD_CP_Lookback_Write(void)
 		UInt8 *pBuf = sCsdTempBuf;
 
 		/* Get buffer access */
-		spin_lock(&csLocker_cploopback);
+		/*spin_lock_bh(&csLocker_cploopback);*/
 
 		dwWriteLen = sCsdPendingBytes;
 
@@ -285,7 +278,7 @@ void CSD_CP_Lookback_Write(void)
 		sCsdPendingBytes = 0;
 
 		/* Release buffer access */
-		spin_unlock(&csLocker_cploopback);
+		/*spin_unlock_bh(&csLocker_cploopback);*/
 	}
 }
 
@@ -306,11 +299,11 @@ UInt32 CSD_Read(UInt8 *pInBuf)
 	UInt32 dwDataSize = 0;
 
 	/* Get buffer access */
-	spin_lock(&csLocker);
+	spin_lock_bh(&csLocker);
 
 	if (NULL == pInBuf) {
 		sCsdPendingBytes = 0;
-		spin_unlock(&csLocker);
+		spin_unlock_bh(&csLocker);
 		return 0;
 	}
 
@@ -321,10 +314,9 @@ UInt32 CSD_Read(UInt8 *pInBuf)
 	}
 
 	/* Release buffer access */
-	spin_unlock(&csLocker);
+	spin_unlock_bh(&csLocker);
 	return dwDataSize;
 }
-
 
 /*******************************************************************************
 
@@ -342,9 +334,12 @@ UInt32 CSD_Send(const void *pBuf, const UInt32 len)
 	PACKET_BufHandle_t bufHandle = NULL;
 	void *bufferPtr = NULL;
 	UInt8 cid = 0;
+	static UInt32 sSimCheckFlag = 1;
 
-	if (!(1 == sSimId || 2 == sSimId))
+	if ((!(1 == sSimId || 2 == sSimId)) && sSimCheckFlag) {
+		sSimCheckFlag = 0;
 		VSP_DEBUG(DBG_ERROR, "vsp: sSimId is %d. Error!!!\n", sSimId);
+	}
 
 	if (0 == csdULframeNum)
 		csdULframeNum++;
@@ -378,7 +373,6 @@ UInt32 CSD_Send(const void *pBuf, const UInt32 len)
 	return len;
 }
 #endif /* CSD_LOOPBACK_TEST */
-
 
 /*******************************************************************************
 
@@ -420,9 +414,9 @@ RPC_Result_t CSD_DataIndCB(PACKET_InterfaceType_t interfaceType
 
 		/* Get buffer access */
 #ifdef CSD_LOOPBACK_TEST
-	spin_lock(&csLocker_cploopback);
+	spin_lock_bh(&csLocker_cploopback);
 #else
-	spin_lock(&csLocker);
+	spin_lock_bh(&csLocker);
 #endif /* CSD_LOOPBACK_TEST */
 
 	data = (UInt8 *) RPC_PACKET_GetBufferData(dataBufHandle);
@@ -444,9 +438,9 @@ RPC_Result_t CSD_DataIndCB(PACKET_InterfaceType_t interfaceType
 
 /* Release buffer access */
 #ifdef CSD_LOOPBACK_TEST
-	spin_unlock(&csLocker_cploopback);
+	spin_unlock_bh(&csLocker_cploopback);
 #else
-	spin_unlock(&csLocker);
+	spin_unlock_bh(&csLocker);
 #endif
 
 	result = RPC_RESULT_PENDING;
@@ -454,7 +448,6 @@ RPC_Result_t CSD_DataIndCB(PACKET_InterfaceType_t interfaceType
 
 	return result;
 }
-
 
 /*******************************************************************************
 
@@ -494,7 +487,6 @@ void CSD_CPResetCB(RPC_CPResetEvent_t event,
 
  Description:  Use this function to open vsp driver
 
-
  Notes:
 
 *******************************************************************************/
@@ -517,7 +509,6 @@ static int vsp_open(struct inode *inode, struct file *filp)
 			, g_CsdClientId);
 		g_first_init = 1;
 	}
-
 #ifdef CSD_LOOPBACK_TEST
 	sAplookback_PendingBytes = 0;
 #endif
@@ -529,13 +520,11 @@ static int vsp_open(struct inode *inode, struct file *filp)
 	return 0;
 }
 
-
 /*******************************************************************************
 
  Function Name: vsp_release
 
  Description:  Use this function to close vsp driver
-
 
  Notes:
 
@@ -546,13 +535,11 @@ static int vsp_release(struct inode *inode, struct file *filp)
 	return 0;
 }
 
-
 /*******************************************************************************
 
  Function Name: vsp_read
 
  Description:  Use this function to read csd data
-
 
  Notes:
 
@@ -633,13 +620,11 @@ int vsp_read(struct file *filp, char __user *buf, size_t size, loff_t *offset)
 	return dwRetSize;
 }
 
-
 /*******************************************************************************
 
  Function Name: vsp_write
 
  Description:  Use this function to write csd data
-
 
  Notes:
 
@@ -692,13 +677,11 @@ int vsp_write(struct file *filp, const char __user *buf
 	return dwSentBytes;
 }
 
-
 /*******************************************************************************
 
  Function Name: vsp_ioctl
 
  Description:  Currently this function is empty
-
 
  Notes:
  Provide a interface for VT application can transmit SIM ID
@@ -730,23 +713,21 @@ static long vsp_ioctl(struct file *filp, unsigned int cmd, UInt32 arg)
 	return rc;
 }
 
-
 static unsigned int vsp_poll(struct file *filp, poll_table *wait)
 {
 	int mask = 0;
 
 	poll_wait(filp, &g_csd_wait, wait);
 
-	spin_lock(&csLocker);
+	spin_lock_bh(&csLocker);
 
 	if ((0 < sCsdPendingBytes) || (0 < sPendingBytes))
 		mask |= (POLLIN | POLLRDNORM);
 
-	spin_unlock(&csLocker);
+	spin_unlock_bh(&csLocker);
 
 	return mask;
 }
-
 
 static const struct file_operations vsp_ops = {
 	.owner = THIS_MODULE,
@@ -759,13 +740,11 @@ static const struct file_operations vsp_ops = {
 	.release = vsp_release,
 };
 
-
 /*******************************************************************************
 
  Function Name: VSP_Init
 
  Description:   VSP initialise
-
 
  Notes:
 
@@ -790,15 +769,11 @@ int VSP_Init(void)
 	return 0;
 }
 
-
-
-
 /*******************************************************************************
 
  Function Name: bcm_fuse_vsp_init_module
 
  Description:   Start VSP(virtual serial port) driver initialise
-
 
  Notes:
 
@@ -806,6 +781,7 @@ int VSP_Init(void)
 static int __init bcm_fuse_vsp_init_module(void)
 {
 	int ret = 0;
+	struct device *drv;
 
 	/* check for AP only boot mode
 	if ( AP_ONLY_BOOT == get_ap_boot_mode() )	{
@@ -815,20 +791,29 @@ static int __init bcm_fuse_vsp_init_module(void)
 
 	ret = register_chrdev(BCM_VSP_MAJOR, "bcm_vsp", &vsp_ops);
 	if (ret < 0) {
-		VSP_DEBUG(DBG_ERROR, "vsp: register failed major %d\n"
-			, BCM_VSP_MAJOR);
-		goto out;
+		VSP_DEBUG(DBG_ERROR, "vsp: register failed major %d\n",
+			BCM_VSP_MAJOR);
+		return ret;
 	}
 
 	vsp_class = class_create(THIS_MODULE, "bcm_vsp");
-	if (IS_ERR(vsp_class))
+	if (IS_ERR(vsp_class)) {
+		VSP_DEBUG(DBG_ERROR, "vsp: class_create failed\n");
+		unregister_chrdev(BCM_VSP_MAJOR, "bcm_vsp");
 		return PTR_ERR(vsp_class);
+	}
 
-	device_create(vsp_class, NULL, MKDEV(BCM_VSP_MAJOR, 0)
+	drv = device_create(vsp_class, NULL, MKDEV(BCM_VSP_MAJOR, 0)
 		, NULL, "bcm_vsp");
+	if (IS_ERR(drv)) {
+		VSP_DEBUG(DBG_ERROR, "device_create failed\n");
+		unregister_chrdev(BCM_VSP_MAJOR, "bcm_vsp");
+		class_destroy(vsp_class);
+		return PTR_ERR(drv);
+	}
 
-	VSP_DEBUG(DBG_INFO, "vsp: bcm_vsp driver(major %d) installed\n"
-		, BCM_VSP_MAJOR);
+	VSP_DEBUG(DBG_INFO, "vsp: bcm_vsp driver(major %d) installed\n",
+		BCM_VSP_MAJOR);
 
 	/* Init VSP Driver */
 	ret = VSP_Init();
@@ -838,7 +823,6 @@ static int __init bcm_fuse_vsp_init_module(void)
 		VSP_DEBUG(DBG_ERROR, "vsp: Initialise failed !!!\n");
 	}
 
-out:
 	return ret;
 }
 
@@ -848,15 +832,16 @@ out:
 
  Description:   Unload VSP driver
 
-
  Notes:
 
 *******************************************************************************/
 static void __exit bcm_fuse_vsp_exit_module(void)
 {
+	device_destroy(vsp_class, MKDEV(BCM_VSP_MAJOR, 0));
+	class_destroy(vsp_class);
+	unregister_chrdev(BCM_VSP_MAJOR, "bcm_vsp");
 	return;
 }
-
 
 module_init(bcm_fuse_vsp_init_module);
 module_exit(bcm_fuse_vsp_exit_module);
