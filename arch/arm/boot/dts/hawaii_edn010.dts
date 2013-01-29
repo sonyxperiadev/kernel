@@ -245,21 +245,26 @@
 	};
 
 	kona-fb {
-		compatible = "bcm,kona-fb";
-		reg = <0x3c200000 0x1000>;
 		module-name = "NT35516";
-		boot-mode = <0>;
-		bus-type = <2>;
-		bus-no = <1>;
-		bus-ch = <1>;
-		bus-width = <3>;
-		te-input = <2>;
-		col-mod-i = <1>;
-		col-mod-o = <4>;
-		api-rev = <0x10>;
-		rst = <22>;
+		reg-name = "cam2";
+		rst-gpio = <22>;
+		rst-setup = <5>;	/* 5us */
+		rst-pulse = <15>;	/* 15us */
+		rst-hold = <10000>;	/* 10ms */
+		/* rst-active-high */	/* Commented => Active Low */
+		vmode;			/* Video mode */
+		/* vburst = <0>; */	/* Non-burst mode */
+		/* cmnd-LP; */		/* Commands in HS mode*/
+		te-ctrl;		/* Tearing Effect Control enabled */
+		col-mod-i = <2>;	/* KONA_CM_I_XBGR888 */
+		col-mod-o = <3>;	/* KONA_CM_O_RGB888 */
+		width = <540>;
+		height = <960>;
+		fps = <60>;
+		lanes = <3>;
+		hs-bitrate = <330000000>;	/* 330mbps */
+		lp-bitrate = <5000000>;	/* 5mbps */
 	};
-
 
 	tmon@0x34008000 {
 		compatible = "bcm,tmon";

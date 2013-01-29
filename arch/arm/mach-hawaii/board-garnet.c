@@ -150,11 +150,6 @@
 #include <linux/pwm_backlight.h>
 #endif
 
-#ifdef CONFIG_FB_BRCM_KONA
-#include <video/kona_fb_boot.h>
-#include <video/kona_fb.h>
-#endif
-
 #if defined(CONFIG_BCM_ALSA_SOUND)
 #include <mach/caph_platform.h>
 #include <mach/caph_settings.h>
@@ -1152,67 +1147,6 @@ static void __init hawaii_add_devices(void)
 }
 
 
-#ifdef CONFIG_FB_BRCM_KONA
-/*
- * KONA FRAME BUFFER DISPLAY DRIVER PLATFORM CONFIG
- */
-struct kona_fb_platform_data konafb_devices[] __initdata = {
-#ifdef CONFIG_LCD_NT35512_SUPPORT
-{
-		.dispdrv_name  = "NT35512",
-		.dispdrv_entry = DISP_DRV_NT35512_GetFuncTable,
-		.parms = {
-			.w0 = {
-				.bits = {
-					.boot_mode  = 0,
-					.bus_type   = KONA_BUS_DSI,
-					.bus_no     = KONA_BUS_0,
-					.bus_ch     = KONA_BUS_CH_0,
-					.bus_width  = 3,
-					.te_input   = KONA_TE_IN_1_DSI0,
-					.col_mode_i = KONA_CM_I_XRGB888,
-					.col_mode_o = KONA_CM_O_RGB888,
-				},
-			},
-			.w1 = {
-			.bits = {
-					.api_rev  =  KONA_LCD_BOOT_API_REV,
-					.lcd_rst0 =  8,
-				},
-			},
-		},
-	}
-#else
-	{
-		.dispdrv_name  = "OTM1281A",
-		.dispdrv_entry = DISP_DRV_OTM1281A_GetFuncTable,
-		.parms = {
-			.w0 = {
-				.bits = {
-					.boot_mode  = 0,
-					.bus_type   = KONA_BUS_DSI,
-					.bus_no     = KONA_BUS_0,
-					.bus_ch     = KONA_BUS_CH_0,
-					.bus_width  = 3,
-					.te_input   = KONA_TE_IN_1_DSI0,
-					.col_mode_i = KONA_CM_I_XRGB888,
-					.col_mode_o = KONA_CM_O_RGB888,
-				},
-			},
-			.w1 = {
-			.bits = {
-					.api_rev  =  KONA_LCD_BOOT_API_REV,
-					.lcd_rst0 =  8,
-				},
-			},
-		},
-	},
-#endif
-};
-
-#include "kona_fb_init.c"
-#endif /* #ifdef CONFIG_FB_BRCM_KONA */
-
 static struct of_device_id hawaii_dt_match_table[] __initdata = {
 	{ .compatible = "simple-bus", },
 	{}
@@ -1220,9 +1154,6 @@ static struct of_device_id hawaii_dt_match_table[] __initdata = {
 static void __init hawaii_init(void)
 {
 	hawaii_add_devices();
-#ifdef CONFIG_FB_BRCM_KONA
-	konafb_init();
-#endif
 	hawaii_add_common_devices();
 	/* Populate platform_devices from device tree data */
 	of_platform_populate(NULL, hawaii_dt_match_table,

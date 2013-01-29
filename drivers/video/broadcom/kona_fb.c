@@ -37,7 +37,6 @@
 #include <linux/regulator/consumer.h>
 #include <linux/vt_kern.h>
 #include <linux/gpio.h>
-#include <video/kona_fb_boot.h>
 #include <video/kona_fb.h>
 #include <mach/io.h>
 #ifdef CONFIG_FRAMEBUFFER_FPS
@@ -54,6 +53,7 @@
 #include <linux/notifier.h>
 #include "kona_fb.h"
 #include "lcd/display_drv.h"
+#include "lcd/lcd.h"
 
 #include <linux/of.h>
 #include <linux/of_irq.h>
@@ -80,16 +80,12 @@ static DEFINE_SPINLOCK(g_fb_crash_spin_lock);
 #endif
 
 struct kona_fb {
-	dma_addr_t phys_fbbase;
 	spinlock_t lock;
-	struct task_struct *thread;
-	struct completion thread_sem;
 	struct mutex update_sem;
 	struct completion prev_buf_done_sem;
 	atomic_t buff_idx;
 	atomic_t is_fb_registered;
 	atomic_t is_graphics_started;
-	int base_update_count;
 	int rotation;
 	int is_display_found;
 #ifdef CONFIG_FRAMEBUFFER_FPS
@@ -98,12 +94,10 @@ struct kona_fb {
 	struct fb_info fb;
 	u32 cmap[16];
 	DISPDRV_T *display_ops;
-	const DISPDRV_INFO_T *display_info;
+	DISPDRV_INFO_T *display_info;
 	DISPDRV_HANDLE_T display_hdl;
 	struct pi_mgr_dfs_node dfs_node;
 	int g_stop_drawing;
-	u32 gpio;
-	u32 bus_width;
 	struct proc_dir_entry *proc_entry;
 #ifdef CONFIG_HAS_EARLYSUSPEND
 	struct early_suspend early_suspend_level1;
@@ -113,7 +107,6 @@ struct kona_fb {
 	void *buff0;
 	void *buff1;
 	atomic_t force_update;
-	struct dispdrv_init_parms lcd_drv_parms;
 	struct notifier_block reboot_nb;
 #ifdef CONFIG_FB_BRCM_CP_CRASH_DUMP_IMAGE_SUPPORT
 	struct notifier_block die_nb;
@@ -347,7 +340,6 @@ static void kona_fb_unpack_888rle(void *dst, void *src, uint32_t image_size,
 
 void kona_display_crash_image(enum crash_dump_image_idx image_idx)
 {
-	int ret = 0;
 	unsigned long flags, image_size, img_w, img_h;
 	void *image_buf;
 	static bool crash_displayed;
@@ -416,15 +408,11 @@ void kona_display_crash_image(enum crash_dump_image_idx image_idx)
 		kona_fb_unpack_888rle((void *)g_kona_fb->fb.screen_base,
 					image_buf, image_size, img_w, img_h);
 
-#ifdef CONFIG_VIDEO_MODE
 	/* For video mode, it is sufficient if we draw on the active buffer*/
-	if (false == crash_displayed)
-#endif
-	if (g_kona_fb->display_ops->update_no_os) {
-		ret =
-		g_kona_fb->display_ops->update_no_os(g_kona_fb->display_hdl,
-				g_kona_fb->buff0,
-				NULL);
+	if (!g_kona_fb->display_info->vmode || (false == crash_displayed)) {
+		if (g_kona_fb->display_ops->update_no_os)
+			g_kona_fb->display_ops->update_no_os(
+				g_kona_fb->display_hdl, g_kona_fb->buff0, NULL);
 	}
 
 	crash_displayed = true;
@@ -504,10 +492,9 @@ static int kona_fb_pan_display(struct fb_var_screeninfo *var,
 			region.mode	= 1;
 			p_region = NULL;
 		}
-#ifndef CONFIG_VIDEO_MODE
-		wait_for_completion_interruptible_timeout(
-			&fb->prev_buf_done_sem,	msecs_to_jiffies(100));
-#endif
+		if (!fb->display_info->vmode)
+			wait_for_completion_interruptible_timeout(
+				&fb->prev_buf_done_sem,	msecs_to_jiffies(100));
 
 		kona_clock_start(fb);
 		ret =
@@ -516,12 +503,12 @@ static int kona_fb_pan_display(struct fb_var_screeninfo *var,
 					p_region,
 					(DISPDRV_CB_T)kona_display_done_cb);
 
-#ifdef CONFIG_VIDEO_MODE
-		konafb_debug("waiting for release of 0x%x\n",
-				buff_idx ? fb->buff0 : fb->buff1);
-		wait_for_completion_interruptible_timeout(
-			&fb->prev_buf_done_sem,	msecs_to_jiffies(100));
-#endif
+		if (fb->display_info->vmode) {
+			konafb_debug("waiting for release of 0x%x\n",
+					buff_idx ? fb->buff0 : fb->buff1);
+			wait_for_completion_interruptible_timeout(
+				&fb->prev_buf_done_sem,	msecs_to_jiffies(100));
+		}
 	}
 skip_drawing:
 	mutex_unlock(&fb->update_sem);
@@ -529,17 +516,15 @@ skip_drawing:
 	return ret;
 }
 
-static int enable_display(struct kona_fb *fb, struct dispdrv_init_parms *parms)
+static int enable_display(struct kona_fb *fb)
 {
 	int ret = 0;
 
-	ret = fb->display_ops->init(parms, &fb->display_hdl);
+	ret = fb->display_ops->init(fb->display_info, &fb->display_hdl);
 	if (ret != 0) {
 		konafb_error("Failed to init this display device!\n");
 		goto fail_to_init;
 	}
-
-	fb->display_info = fb->display_ops->get_info(fb->display_hdl);
 
 	kona_clock_start(fb);
 	ret = fb->display_ops->open(fb->display_hdl);
@@ -601,16 +586,14 @@ static int kona_fb_ioctl(struct fb_info *info, unsigned int cmd,
 			return -EFAULT;
 		}
 
-#ifndef CONFIG_VIDEO_MODE
-		wait_for_completion_interruptible_timeout(
-			&fb->prev_buf_done_sem,	msecs_to_jiffies(100));
-#endif
+		if (!fb->display_info->vmode)
+			wait_for_completion_interruptible_timeout(
+				&fb->prev_buf_done_sem,	msecs_to_jiffies(100));
 		kona_clock_start(fb);
 		ret = fb->display_ops->update(fb->display_hdl, ptr, NULL, NULL);
 		kona_clock_stop(fb);
-#ifndef CONFIG_VIDEO_MODE
-		complete(&g_kona_fb->prev_buf_done_sem);
-#endif
+		if (!fb->display_info->vmode)
+			complete(&g_kona_fb->prev_buf_done_sem);
 		mutex_unlock(&fb->update_sem);
 		break;
 
@@ -638,18 +621,16 @@ static void kona_fb_early_suspend(struct early_suspend *h)
 		mutex_lock(&fb->update_sem);
 		/* In case of video mode, DSI commands can be sent out-of-sync
 		 * of buffers */
-#ifndef CONFIG_VIDEO_MODE
-		wait_for_completion_interruptible_timeout(
-			&fb->prev_buf_done_sem,	msecs_to_jiffies(100));
-#endif
+		if (!fb->display_info->vmode)
+			wait_for_completion_interruptible_timeout(
+				&fb->prev_buf_done_sem,	msecs_to_jiffies(100));
 		kona_clock_start(fb);
 		if (fb->display_ops->power_control(fb->display_hdl,
 					       CTRL_SCREEN_OFF))
 			konafb_error("Failed to blank this display device!\n");
 		kona_clock_stop(fb);
-#ifndef CONFIG_VIDEO_MODE
-		complete(&g_kona_fb->prev_buf_done_sem);
-#endif
+		if (!fb->display_info->vmode)
+			complete(&g_kona_fb->prev_buf_done_sem);
 		mutex_unlock(&fb->update_sem);
 
 		break;
@@ -657,14 +638,12 @@ static void kona_fb_early_suspend(struct early_suspend *h)
 	case EARLY_SUSPEND_LEVEL_STOP_DRAWING:
 		fb = container_of(h, struct kona_fb, early_suspend_level2);
 		mutex_lock(&fb->update_sem);
-#ifndef CONFIG_VIDEO_MODE
-		wait_for_completion_interruptible_timeout(
-			&fb->prev_buf_done_sem,	msecs_to_jiffies(100));
-#endif
+		if (!fb->display_info->vmode)
+			wait_for_completion_interruptible_timeout(
+				&fb->prev_buf_done_sem,	msecs_to_jiffies(100));
 		fb->g_stop_drawing = 1;
-#ifndef CONFIG_VIDEO_MODE
-		complete(&g_kona_fb->prev_buf_done_sem);
-#endif
+		if (!fb->display_info->vmode)
+			complete(&g_kona_fb->prev_buf_done_sem);
 		mutex_unlock(&fb->update_sem);
 		break;
 
@@ -723,25 +702,23 @@ static void kona_fb_late_resume(struct early_suspend *h)
 		/* Ok for MM going to retention but not shutdown state */
 		pi_mgr_qos_request_update(&g_mm_qos_node, 10);
 		/* screen comes out of sleep */
-		if (enable_display(fb, &fb->lcd_drv_parms))
+		if (enable_display(fb))
 			konafb_error("Failed to enable this display device\n");
 
 		framesize = fb->display_info->width * fb->display_info->height *
 		    fb->display_info->Bpp * 2;
 		memset(fb->fb.screen_base, 0, framesize);
-#ifndef CONFIG_VIDEO_MODE
-		wait_for_completion_interruptible_timeout(
-			&fb->prev_buf_done_sem,	msecs_to_jiffies(100));
-#endif
+		if (!fb->display_info->vmode)
+			wait_for_completion_interruptible_timeout(
+				&fb->prev_buf_done_sem,	msecs_to_jiffies(100));
 		kona_clock_start(fb);
 		fb->display_ops->update(fb->display_hdl,
 				fb->fb.var.yoffset ? fb->buff1 : fb->buff0,
 				NULL,
 				(DISPDRV_CB_T)kona_display_done_cb);
-#ifdef CONFIG_VIDEO_MODE
-		wait_for_completion_interruptible_timeout(
-			&fb->prev_buf_done_sem,	msecs_to_jiffies(100));
-#endif
+		if (fb->display_info->vmode)
+			wait_for_completion_interruptible_timeout(
+				&fb->prev_buf_done_sem,	msecs_to_jiffies(100));
 		break;
 
 	default:
@@ -751,6 +728,284 @@ static void kona_fb_late_resume(struct early_suspend *h)
 
 }
 #endif
+
+static struct kona_fb_platform_data *get_of_data(struct device_node *np)
+{
+	u32 val;
+	const char *str;
+	struct kona_fb_platform_data *fb_data;
+
+	fb_data = kzalloc(sizeof(struct kona_fb_platform_data),
+		GFP_KERNEL);
+	if (!fb_data) {
+		pr_err("couldn't allocate memory for pdata");
+		goto alloc_failed;
+	}
+
+	if (of_property_read_string(np,	"module-name", &str))
+		goto of_fail;
+	strcpy(fb_data->name, str);
+	if (of_property_read_string(np, "reg-name", &str))
+		goto of_fail;
+	strcpy(fb_data->reg_name, str);
+
+	if (of_property_read_u32(np, "rst-gpio", &val))
+		goto of_fail;
+	fb_data->rst.gpio = val;
+	if (of_property_read_u32(np, "rst-setup", &val))
+		goto of_fail;
+	fb_data->rst.setup = val;
+	if (of_property_read_u32(np, "rst-pulse", &val))
+		goto of_fail;
+	fb_data->rst.pulse = val;
+	if (of_property_read_u32(np, "rst-hold", &val))
+		goto of_fail;
+	fb_data->rst.hold = val;
+
+	if (of_property_read_bool(np, "rst-active-high"))
+		fb_data->rst.active = true;
+	else
+		fb_data->rst.active = false;
+	if (of_property_read_bool(np, "vmode"))
+		fb_data->vmode = true;
+	else
+		fb_data->vmode = false;
+	if (of_property_read_bool(np, "vburst"))
+		fb_data->vburst = true;
+	else
+		fb_data->vburst = false;
+	if (of_property_read_bool(np, "cmnd-LP"))
+		fb_data->cmnd_LP = true;
+	else
+		fb_data->cmnd_LP = false;
+	if (of_property_read_bool(np, "te-ctrl"))
+		fb_data->te_ctrl = true;
+	else
+		fb_data->te_ctrl = false;
+
+	if (of_property_read_u32(np, "col-mod-i", &val))
+		goto of_fail;
+	fb_data->col_mod_i = (uint8_t)val;
+	if (of_property_read_u32(np, "col-mod-o", &val))
+		goto of_fail;
+	fb_data->col_mod_o = (uint8_t)val;
+	if (of_property_read_u32(np, "width", &val))
+		goto of_fail;
+	fb_data->width = (uint16_t)val;
+	if (of_property_read_u32(np, "height", &val))
+		goto of_fail;
+	fb_data->height = (uint16_t)val;
+	if (of_property_read_u32(np, "fps", &val))
+		goto of_fail;
+	fb_data->fps = (uint8_t)val;
+	if (of_property_read_u32(np, "lanes", &val))
+		goto of_fail;
+	fb_data->lanes = (uint8_t)val;
+	if (of_property_read_u32(np, "hs-bitrate", &val))
+		goto of_fail;
+	fb_data->hs_bps = val;
+	if (of_property_read_u32(np, "lp-bitrate", &val))
+		goto of_fail;
+	fb_data->lp_bps = val;
+
+	return fb_data;
+
+of_fail:
+	kfree(fb_data);
+alloc_failed:
+	return NULL;
+}
+
+static char *get_seq(DISPCTRL_REC_T *rec)
+{
+	char *buff, *dst;
+	int list_len, cmd_len;
+	DISPCTRL_REC_T *cur;
+	int i;
+
+	buff = NULL;
+	/* Get the length of sequence in bytes = cmd+data+headersize+null */
+	cur = rec;
+	list_len = 0;
+	for (i = 0; DISPCTRL_LIST_END != cur[i].type; i++) {
+		if (DISPCTRL_WR_DATA == cur[i].type)
+			list_len++;
+		else
+			list_len += 2; /* Indicates new packet */
+	}
+
+	list_len++; /* NULL termination */
+
+	/* Allocate buff = length */
+	buff = kmalloc(list_len, GFP_KERNEL);
+	if (!buff)
+		goto seq_done;
+
+
+	/* Parse the DISPCTRL_REC_T[], extract data and fill buff */
+	cur = rec;
+	dst = buff;
+	i = 0;
+	for (i = 0; DISPCTRL_LIST_END != cur[i].type; i++) {
+		switch (cur[i].type) {
+		case DISPCTRL_WR_CMND:
+			cmd_len = 1;
+			dst++;
+			*dst++ = cur[i].val;
+			while (DISPCTRL_WR_DATA == cur[i + 1].type) {
+				i++;
+				*dst++ = cur[i].val;
+				cmd_len++;
+			}
+			*(dst - cmd_len - 1) = cmd_len;
+			break;
+		case DISPCTRL_SLEEP_MS:
+			/* Maximum packet size is limited to 254 */
+			*dst++ = ~0;
+			*dst++ = cur[i].val;
+			break;
+		default:
+			pr_err("Invalid control list type %d\n", cur[i].type);
+		}
+	}
+
+	/* Put a NULL at the end */
+	*dst = 0;
+	if (dst != (buff + list_len - 1))
+		pr_err("dst ptr mismatch\n");
+#if 0
+	pr_err("dst %p buff %p\n", dst, buff);
+	dst = buff;
+	while (*dst)
+		pr_err("%d ", *dst++);
+	pr_err("list end size %d\n", list_len);
+#endif
+seq_done:
+	return buff;
+}
+
+static int populate_dispdrv_cfg(struct kona_fb *fb,
+	struct kona_fb_platform_data *pd)
+{
+	struct lcd_config *cfg;
+	DISPDRV_INFO_T *info;
+	int ret = 0;
+
+	cfg = get_dispdrv_cfg(pd->name);
+	if (!cfg) {
+		pr_err("Couldn't find a suitable dispdrv\n");
+		ret = -ENXIO;
+		goto err_cfg;
+	}
+
+	/* Check if the cfg can be used */
+	if (strcmp(pd->name, cfg->name))
+		goto err_cfg;
+
+	if (cfg->mode_supp != LCD_CMD_VID_BOTH) {
+		if (pd->vmode && (cfg->mode_supp != LCD_VID_ONLY)) {
+			pr_err("No vid mode support\n");
+			ret = -EINVAL;
+			goto err_cfg;
+		}
+		if (!pd->vmode && (cfg->mode_supp != LCD_CMD_ONLY)) {
+			pr_err("No cmd mode support\n");
+			ret = -EINVAL;
+			goto err_cfg;
+		}
+	}
+
+	/* Allocate memory for disp_info */
+	info = kzalloc(sizeof(DISPDRV_INFO_T), GFP_KERNEL);
+	if (!info) {
+		pr_err("Failed to allocate memory fr disp_info\n");
+		ret = -ENOMEM;
+		goto err_mem_disp_info;
+	}
+
+	/* Fill up "info" using "cfg" and "pd" */
+	info->name = pd->name;
+	info->reg_name = pd->reg_name;
+	info->rst = &pd->rst;
+	info->vmode = pd->vmode;
+	info->vburst = (pd->vburst == cfg->vburst) ? pd->vburst : false;
+	info->vid_cmnds = cfg->vid_cmnds;
+	info->cmnd_LP = pd->cmnd_LP;
+	info->te_ctrl = pd->te_ctrl;
+	info->width = pd->width;
+	info->height = pd->height;
+	info->lanes = (pd->lanes > cfg->max_lanes) ? cfg->max_lanes : pd->lanes;
+
+	/* Hardcode for now */
+	info->in_fmt = DISPDRV_FB_FORMAT_xBGR8888;
+	info->out_fmt = DISPDRV_FB_FORMAT_xRGB8888;
+	info->Bpp = 4;
+
+	info->phys_width = cfg->phys_width;
+	info->phys_height = cfg->phys_height;
+	info->fps = pd->fps;
+
+	info->slp_in_seq = get_seq(cfg->slp_in_seq);
+	if (!info->slp_in_seq)
+		goto err_slp_in_seq;
+	info->slp_out_seq = get_seq(cfg->slp_out_seq);
+	if (!info->slp_out_seq)
+		goto err_slp_out_seq;
+	info->scrn_on_seq = get_seq(cfg->scrn_on_seq);
+	if (!info->scrn_on_seq)
+		goto err_scrn_on_seq;
+	info->scrn_off_seq = get_seq(cfg->scrn_off_seq);
+	if (!info->scrn_off_seq)
+		goto err_scrn_off_seq;
+	memcpy(info->phy_timing, cfg->phy_timing, sizeof(info->phy_timing));
+	if (info->vmode) {
+		info->init_seq = get_seq(cfg->init_vid_seq);
+		info->hs = cfg->hs;
+		info->hbp = cfg->hbp;
+		info->hfp = cfg->hfp;
+		info->vs = cfg->vs;
+		info->vbp = cfg->vbp;
+		info->vfp = cfg->vfp;
+	} else {
+		info->init_seq = get_seq(cfg->init_cmd_seq);
+		info->updt_win_fn = cfg->updt_win_fn;
+		info->updt_win_seq_len = cfg->updt_win_seq_len;
+	}
+	if (!info->init_seq)
+		goto err_init_seq;
+
+	if (!info->vmode) {
+		info->win_seq = kmalloc(info->updt_win_seq_len, GFP_KERNEL);
+		if (!info->win_seq)
+			goto err_win_seq;
+	}
+
+	/* burst mode changes to be taken care here or PV? */
+	info->hs_bps = (pd->hs_bps > cfg->max_hs_bps) ?
+				 cfg->max_hs_bps : pd->hs_bps;
+	info->lp_bps = (pd->lp_bps > cfg->max_lp_bps) ?
+				 cfg->max_lp_bps : pd->lp_bps;
+
+	fb->display_info = info;
+	return 0;
+
+err_win_seq:
+	kfree(info->init_seq);
+err_init_seq:
+	kfree(info->scrn_off_seq);
+err_scrn_off_seq:
+	kfree(info->scrn_on_seq);
+err_scrn_on_seq:
+	kfree(info->slp_out_seq);
+err_slp_out_seq:
+	kfree(info->slp_in_seq);
+err_slp_in_seq:
+	kfree(fb->display_info);
+err_mem_disp_info:
+err_cfg:
+	return ret;
+}
+
 
 static struct fb_ops kona_fb_ops = {
 	.owner = THIS_MODULE,
@@ -772,6 +1027,7 @@ static int kona_fb_probe(struct platform_device *pdev)
 	uint32_t width, height;
 	int ret_val = -1;
 	struct kona_fb_platform_data *fb_data;
+	dma_addr_t phys_fbbase;
 
 	konafb_info("start\n");
 	if (g_kona_fb && (g_kona_fb->is_display_found == 1)) {
@@ -798,60 +1054,11 @@ static int kona_fb_probe(struct platform_device *pdev)
 	}
 
 	if (pdev->dev.of_node) {
-		u32 val;
-		const char *str;
-		fb_data = kzalloc(sizeof(struct kona_fb_platform_data),
-			GFP_KERNEL);
-		if (!fb_data) {
-			pr_err("couldn't allocate memory for pdata");
-			ret = -ENOMEM;
-			goto platform_alloc_failed1;
-		}
-		if (of_property_read_string(pdev->dev.of_node,
-			"module-name", &str))
-			goto platform_alloc_failed2;
-		fb_data->dispdrv_name = kzalloc(strlen(str), GFP_KERNEL);
-		if (!fb_data->dispdrv_name) {
-			pr_err("couldn't allocate memory for dispdrv_name");
-			ret = -ENOMEM;
-			goto platform_alloc_failed2;
-		}
-		strcpy(fb_data->dispdrv_name, str);
-		fb_data->dispdrv_entry = get_dispdrv_entry(str);
-		if (!fb_data->dispdrv_entry)
-			goto of_err;
-		if (of_property_read_u32(pdev->dev.of_node, "boot-mode", &val))
-			goto of_err;
-		fb_data->parms.w0.bits.boot_mode = val;
-		if (of_property_read_u32(pdev->dev.of_node, "bus-type", &val))
-			goto of_err;
-		fb_data->parms.w0.bits.bus_type = val;
-		if (of_property_read_u32(pdev->dev.of_node, "bus-no", &val))
-			goto of_err;
-		fb_data->parms.w0.bits.bus_no = val;
-		if (of_property_read_u32(pdev->dev.of_node, "bus-ch", &val))
-			goto of_err;
-		fb_data->parms.w0.bits.bus_ch = val;
-		if (of_property_read_u32(pdev->dev.of_node, "bus-width", &val))
-			goto of_err;
-		fb_data->parms.w0.bits.bus_width = val;
-		if (of_property_read_u32(pdev->dev.of_node, "te-input", &val))
-			goto of_err;
-		fb_data->parms.w0.bits.te_input = val;
-		if (of_property_read_u32(pdev->dev.of_node, "col-mod-i", &val))
-			goto of_err;
-		fb_data->parms.w0.bits.col_mode_i = val;
-		if (of_property_read_u32(pdev->dev.of_node, "col-mod-o", &val))
-			goto of_err;
-		fb_data->parms.w0.bits.col_mode_o = val;
-		if (of_property_read_u32(pdev->dev.of_node, "api-rev", &val))
-			goto of_err;
-		fb_data->parms.w1.bits.api_rev = val;
-		if (of_property_read_u32(pdev->dev.of_node, "rst", &val))
-			goto of_err;
-		fb_data->parms.w1.bits.lcd_rst0 = val;
-		/* To get the pointer in remove */
-		pdev->dev.platform_data = fb_data;
+		fb_data = get_of_data(pdev->dev.of_node);
+		if (!fb_data)
+			goto fb_data_failed;
+		else /* Save the pointer needed in remove method */
+			pdev->dev.platform_data = fb_data;
 	} else {
 		fb_data = pdev->dev.platform_data;
 		if (!fb_data) {
@@ -859,7 +1066,13 @@ static int kona_fb_probe(struct platform_device *pdev)
 			goto fb_data_failed;
 		}
 	}
-	fb->display_ops = (DISPDRV_T *) fb_data->dispdrv_entry();
+
+	if (populate_dispdrv_cfg(fb, fb_data))
+		goto dispdrv_data_failed;
+
+	pr_err("Initialising in %s mode\n", fb->display_info->vmode ?
+						"VIDEO" : "COMMAND");
+	fb->display_ops = (DISPDRV_T *)DISP_DRV_GetFuncTable();
 
 	spin_lock_init(&fb->lock);
 	platform_set_drvdata(pdev, fb);
@@ -871,14 +1084,12 @@ static int kona_fb_probe(struct platform_device *pdev)
 	init_completion(&fb->prev_buf_done_sem);
 	complete(&fb->prev_buf_done_sem);
 	atomic_set(&fb->is_graphics_started, 0);
-	init_completion(&fb->thread_sem);
 
 #if (KONA_FB_ENABLE_DYNAMIC_CLOCK != 1)
 	fb->display_ops->start(&fb->dfs_node);
 #endif
 	/* Enable_display will start/stop clocks on its own if dynamic */
-	fb->lcd_drv_parms = *(struct dispdrv_init_parms *)&fb_data->parms;
-	ret = enable_display(fb, &fb->lcd_drv_parms);
+	ret = enable_display(fb);
 	if (ret) {
 		konafb_error("Failed to enable this display device\n");
 		goto err_enable_display_failed;
@@ -890,7 +1101,7 @@ static int kona_fb_probe(struct platform_device *pdev)
 	    fb->display_info->Bpp * 2;
 
 	fb->fb.screen_base = dma_alloc_writecombine(&pdev->dev,
-						    framesize, &fb->phys_fbbase,
+						    framesize, &phys_fbbase,
 						    GFP_KERNEL);
 	if (fb->fb.screen_base == NULL) {
 		ret = -ENOMEM;
@@ -901,9 +1112,9 @@ static int kona_fb_probe(struct platform_device *pdev)
 	/* Now we should get correct width and height for this display .. */
 	width = fb->display_info->width;
 	height = fb->display_info->height;
-	fb->buff0 = (void *)fb->phys_fbbase;
+	fb->buff0 = (void *)phys_fbbase;
 	fb->buff1 =
-	    (void *)fb->phys_fbbase + width * height * fb->display_info->Bpp;
+	    (void *)phys_fbbase + width * height * fb->display_info->Bpp;
 
 	fb->fb.fbops = &kona_fb_ops;
 	fb->fb.flags = FBINFO_FLAG_DEFAULT;
@@ -926,9 +1137,10 @@ static int kona_fb_probe(struct platform_device *pdev)
 	fb->fb.var.activate = FB_ACTIVATE_NOW;
 	fb->fb.var.height = fb->display_info->phys_height;
 	fb->fb.var.width = fb->display_info->phys_width;
-	fb->fb.var.pixclock = fb->display_info->pixclock;
+	fb->fb.var.pixclock = ((long long)10000000000000) /
+				 (width * height * fb->display_info->fps);
 
-	switch (fb->display_info->input_format) {
+	switch (fb->display_info->in_fmt) {
 	case DISPDRV_FB_FORMAT_RGB565:
 		fb->fb.var.red.offset = 11;
 		fb->fb.var.red.length = 5;
@@ -939,15 +1151,27 @@ static int kona_fb_probe(struct platform_device *pdev)
 		framesize = width * height * 2 * 2;
 		break;
 
-	case DISPDRV_FB_FORMAT_RGB888_U:
-		fb->fb.var.red.offset = 0;
+	case DISPDRV_FB_FORMAT_xRGB8888:
+		fb->fb.var.transp.offset = 24;
+		fb->fb.var.transp.length = 8;
+		fb->fb.var.red.offset = 16;
 		fb->fb.var.red.length = 8;
 		fb->fb.var.green.offset = 8;
 		fb->fb.var.green.length = 8;
-		fb->fb.var.blue.offset = 16;
+		fb->fb.var.blue.offset = 0;
 		fb->fb.var.blue.length = 8;
+		framesize = width * height * 4 * 2;
+		break;
+
+	case DISPDRV_FB_FORMAT_xBGR8888:
 		fb->fb.var.transp.offset = 24;
 		fb->fb.var.transp.length = 8;
+		fb->fb.var.blue.offset = 16;
+		fb->fb.var.blue.length = 8;
+		fb->fb.var.green.offset = 8;
+		fb->fb.var.green.length = 8;
+		fb->fb.var.red.offset = 0;
+		fb->fb.var.red.length = 8;
 		framesize = width * height * 4 * 2;
 		break;
 
@@ -956,12 +1180,12 @@ static int kona_fb_probe(struct platform_device *pdev)
 		break;
 	}
 
-	fb->fb.fix.smem_start = fb->phys_fbbase;
+	fb->fb.fix.smem_start = phys_fbbase;
 	fb->fb.fix.smem_len = framesize;
 
 	konafb_debug
 	    ("Framebuffer starts at phys[0x%08x], and virt[0x%08x] with frame size[0x%08x]\n",
-	     fb->phys_fbbase, (uint32_t) fb->fb.screen_base, framesize);
+	     phys_fbbase, (uint32_t) fb->fb.screen_base, framesize);
 
 	ret = fb_set_var(&fb->fb, &fb->fb.var);
 	if (ret) {
@@ -975,12 +1199,6 @@ static int kona_fb_probe(struct platform_device *pdev)
 	if (ret) {
 		konafb_error("Can not enable the LCD!\n");
 		goto err_fb_register_failed;
-	}
-
-	if (fb->display_ops->set_brightness) {
-		kona_clock_start(fb);
-		fb->display_ops->set_brightness(fb->display_hdl, 100);
-		kona_clock_stop(fb);
 	}
 
 	/* Display on after painted blank */
@@ -998,7 +1216,6 @@ static int kona_fb_probe(struct platform_device *pdev)
 	if (NULL == fb->fps_info)
 		printk(KERN_ERR "No fps display");
 #endif
-	complete(&fb->thread_sem);
 
 	atomic_set(&fb->is_fb_registered, 1);
 	konafb_info("kona Framebuffer probe successfull\n");
@@ -1065,13 +1282,7 @@ err_enable_display_failed:
 #if (KONA_FB_ENABLE_DYNAMIC_CLOCK != 1)
 	fb->display_ops->stop(&fb->dfs_node);
 #endif
-of_err:
-	if (pdev->dev.of_node)
-		kfree(fb_data->dispdrv_name);
-platform_alloc_failed2:
-	if (pdev->dev.of_node)
-		kfree(fb_data);
-platform_alloc_failed1:
+dispdrv_data_failed:
 fb_data_failed:
 	kfree(fb);
 	g_kona_fb = NULL;
@@ -1124,7 +1335,6 @@ static int __devexit kona_fb_remove(struct platform_device *pdev)
 	unregister_framebuffer(&fb->fb);
 	disable_display(fb);
 	if (pdev->dev.of_node) {
-		kfree(pdata->dispdrv_name);
 		kfree(pdata);
 		pdev->dev.platform_data = NULL;
 	}
@@ -1183,4 +1393,4 @@ late_initcall(kona_fb_init);
 module_exit(kona_fb_exit);
 
 MODULE_AUTHOR("Broadcom");
-MODULE_DESCRIPTION("kona FB Driver");
+MODULE_DESCRIPTION("KONA FB Driver");

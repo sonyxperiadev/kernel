@@ -232,6 +232,29 @@
 
 	};
 
+	kona-fb {
+		module-name = "OTM1281A";
+		reg-name = "cam2";
+		rst-gpio = <8>;
+		rst-setup = <5>;	/* 5us */
+		rst-pulse = <20>;	/* 20us */
+		rst-hold = <20000>;	/* 20ms */
+		/* rst-active-high */	/* Commented => Active Low */
+		/* vmode; */		/* Commented => Command mode */
+		/* vburst = <0>; */	/* Non-burst mode */
+		cmnd-LP;		/* Commands in LP mode*/
+		/* te-ctrl; */		/* Tearing Effect Control disabled */
+		col-mod-i = <2>;
+		col-mod-o = <3>;
+		width = <720>;
+		height = <1280>;
+		fps = <60>;
+		lanes = <4>;
+		hs-bitrate = <400000000>;	/* 400mbps */
+		lp-bitrate = <5000000>;	/* 5mbps */
+	};
+
+
 	tmon@0x34008000 {
 		compatible = "bcm,tmon";
 		reg = <0x34008000 0x1000>;

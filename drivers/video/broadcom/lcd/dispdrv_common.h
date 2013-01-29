@@ -30,7 +30,6 @@ extern "C" {
 *
 *****************************************************************************/
 #define DISP_DRV_CB_API_REV_1_0     0x00010000
-#define DISP_DRV_CB_API_REV_1_1     0x00010001
 
 	typedef enum {
 		DRV_STATE_OFF = 0,
@@ -41,30 +40,21 @@ extern "C" {
 	typedef enum {
 		STATE_PWR_OFF,	///<  PWR Off, in reset 
 		STATE_SLEEP,	///<  Sleep-in , Screen Off
-		STATE_SCREEN_ON,	///<  Sleep-out, Screen On 
+		STATE_SCREEN_ON,	/*  Sleep-out, Screen On */
 		STATE_SCREEN_OFF,	///<  Sleep-out, Screen Off
 	} DISP_PWR_STATE;
 
 	typedef enum {
-		DISPCTRL_WR_CMND_DATA,	///< write command <cmnd> followed by data <data>
+		DISPCTRL_LIST_END,	/* END OF COMMAND LIST */
 		DISPCTRL_WR_CMND,	///< write command 
 		DISPCTRL_WR_DATA,	///< write data     
-		DISPCTRL_CREATE_LOOK_UP_TABLE,
 		DISPCTRL_SLEEP_MS,	///< SLEEP for <data> msec
-		DISPCTRL_LIST_END	///< END OF COMMAND LIST
 	} DISPCTRL_T;
 
 	typedef struct {
 		DISPCTRL_T type;	///< display access control type
-		UInt32 cmnd;	///< command data 
-		UInt32 data;	///< geenric data field
+		UInt8 val;
 	} DISPCTRL_REC_T, *pDISPCTRL_REC_T;
-
-	typedef struct {
-		DISPCTRL_T type;	///< display access control type
-		UInt32 number;	///< Parameter's number
-		UInt8 data[32];	///< command data and geenric data field 
-	} NEW_DISPCTRL_REC_T, *pNEW_DISPCTRL_REC_T;
 
 /** @} */
 

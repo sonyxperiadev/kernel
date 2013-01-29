@@ -10,30 +10,11 @@ config FB_BRCM_KONA
 	help
 	  This framebuffer device driver is for the Broadcom KONA platform.
 
-config VIDEO_MODE
-	bool "Video Mode"
-	default N
-	help
-	  Enable this macro to enable the video mode capabilities in the DSI
-	  module and BRCM IP blocks- AXIPV, PV and DSI.
-
-
-config FB_BRCM_ASYNC_UPDATE
-	bool "FB Async Update"
-	default N
-	help
-	  This is used for asynchronous frame update. If you do not know about
-	  this config, please just say 'N' here.
-
 config FB_BRCM_CP_CRASH_DUMP_IMAGE_SUPPORT
 	bool "CP Crash Dump Image Support"
-	default N
+	depends on FB_BRCM_KONA
+	default Y
 	help
 	  This is used for LCD to show that cp goes into crahs dump state.
 	  If you do not know about this config, please just say 'N' here.
 
-config LCD_NT35512_SUPPORT
-        tristate "LCD Panel- NT35512 controller"
-        default N
-        help
-	  FWVGA LCD panel (NT35512 controller)
