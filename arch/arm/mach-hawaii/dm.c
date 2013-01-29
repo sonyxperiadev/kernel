@@ -158,32 +158,31 @@ static DEFINE_SPINLOCK(dormant_entry_lock);
 static volatile u32 num_cores_in_dormant;
 
 u8 gic_dist_shared_data[GIC_DIST_SHARED_DATA_SIZE];
+u32 serv;
 
 /* un-cached memory for dormant stack */
 u32 un_cached_stack_ptr;
 dma_addr_t drmt_buf_phy;
 
+/* un-cached memory for register list */
+u32 addnl_regs_v, proc_regs_v;
+dma_addr_t addnl_regs_p, proc_regs_p;
+
 #define PROC_CLK_REG_ADDR(reg_name)		((u32)(KONA_PROC_CLK_VA + \
 		(KPROC_CLK_MGR_REG_##reg_name##_OFFSET)))
 
-#define PROC_CLK_ITEM_DEFINE(reg_name)	{PROC_CLK_REG_ADDR(reg_name), 0}
-
-#define PROC_CLK_ITEM_ADDR(index)	(proc_clk_regs[(index)][0])
-#define PROC_CLK_ITEM_VALUE(index)	(proc_clk_regs[(index)][1])
+#define PROC_CLK_ITEM_DEFINE(reg_name)	PROC_CLK_REG_ADDR(reg_name)
+#define ADDNL_REG_DEFINE(base, offset)	((base) + (offset))
 
 #define LOG_BUFFER_SIZE (SEC_BUFFER_SIZE -\
 		(MAX_SECURE_BUFFER_SIZE +\
 			sizeof(u32)*NUM_API_PARAMETERS +\
 			sizeof(u32)*1))
 
-#define ADDNL_REG_DEFINE(base, offset)	{(base) + (offset), 0}
-#define ADDNL_REG_ADDR(inx)	(addnl_regs[(inx)][0])
-#define ADDNL_REG_VAL(inx)	(addnl_regs[(inx)][1])
-
 /* PROC ccu registers that are lost. Be careful
  * when changing the order etc.
  */
-static u32 proc_clk_regs[][2] = {
+static u32 proc_clk_regs[] = {
 	PROC_CLK_ITEM_DEFINE(PL310_DIV),
 	PROC_CLK_ITEM_DEFINE(ARM_SWITCH_DIV),
 	PROC_CLK_ITEM_DEFINE(APB_DIV),
@@ -234,7 +233,7 @@ static u32 proc_clk_regs[][2] = {
 
 /*List of additional registers that needs to
 be saved/restored during A9 dormant*/
-static u32 addnl_regs[][2] = {
+static u32 addnl_regs[] = {
 	ADDNL_REG_DEFINE(KONA_FUNNEL_VA, CSTF_FUNNEL_CONTROL_OFFSET),
 	ADDNL_REG_DEFINE(KONA_SWSTM_VA, SWSTM_R_CONFIG_OFFSET),
 	ADDNL_REG_DEFINE(KONA_SWSTM_ST_VA, SWSTM_R_CONFIG_OFFSET),
@@ -242,6 +241,11 @@ static u32 addnl_regs[][2] = {
 	ADDNL_REG_DEFINE(KONA_A9PTM1_VA, A9PTM_ETMTRACEIDR_OFFSET),
 };
 
+struct reg_list {
+	u32 addr;
+	u32 val;
+	u32 stored;
+};
 
 /* Structure of the parameters passed in the buffer to secure side */
 struct secure_params_t {
@@ -303,8 +307,11 @@ static inline void log_dormant_event(enum DORMANT_LOG_TYPE log)
 static void save_addnl_regs(void)
 {
 	int i;
-	for (i = 0; i < ARRAY_SIZE(addnl_regs); i++)
-		ADDNL_REG_VAL(i) = readl_relaxed(ADDNL_REG_ADDR(i));
+	struct reg_list *reg = (struct reg_list *) addnl_regs_v;
+	for (i = 0; i < ARRAY_SIZE(addnl_regs); i++, reg++) {
+		reg->val = readl_relaxed(reg->addr);
+		reg->stored = 1;
+	}
 }
 /*
  * Function to restore additional registers that are
@@ -312,8 +319,11 @@ static void save_addnl_regs(void)
 static void restore_addnl_regs(void)
 {
 	int i;
-	for (i = 0; i < ARRAY_SIZE(addnl_regs); i++)
-		writel_relaxed(ADDNL_REG_VAL(i), ADDNL_REG_ADDR(i));
+	struct reg_list *reg = (struct reg_list *) addnl_regs_v;
+	for (i = 0; i < ARRAY_SIZE(addnl_regs); i++, reg++) {
+		writel_relaxed(reg->val, reg->addr);
+		reg->stored = 0;
+	}
 }
 
 
@@ -323,8 +333,11 @@ static void restore_addnl_regs(void)
 static void save_proc_clk_regs(void)
 {
 	int i;
-	for (i = 0; i < ARRAY_SIZE(proc_clk_regs); i++)
-		PROC_CLK_ITEM_VALUE(i) = readl_relaxed(PROC_CLK_ITEM_ADDR(i));
+	struct reg_list *reg = (struct reg_list *) proc_regs_v;
+	for (i = 0; i < ARRAY_SIZE(proc_clk_regs); i++, reg++) {
+		reg->val = readl_relaxed(reg->addr);
+		reg->stored = 1;
+	}
 }
 
 /*
@@ -344,11 +357,34 @@ static u32 is_l2_disabled(void)
 static void restore_proc_clk_regs(void)
 {
 	int i;
+	struct reg_list *reg = (struct reg_list *) proc_regs_v;
+	struct reg_list *pllarm_offset_reg = NULL;
 	u32 val1, val2;
+	u32 insurance = 10000;
 
 	/* Allow write access to the CCU registers */
 	if (proc_ccu)
 		ccu_write_access_enable(proc_ccu, true);
+
+	/* Disable A9 CCU policy engine before restoring registers.
+	 * Ensures that writing values onto policy registers doesnt
+	 * take any immediate effect while restoring.
+	 */
+	writel_relaxed(readl_relaxed(PROC_CLK_REG_ADDR(LVM_EN)) |
+		       KPROC_CLK_MGR_REG_LVM_EN_POLICY_CONFIG_EN_MASK,
+		       PROC_CLK_REG_ADDR(LVM_EN));
+
+	/* Disable policy engine before beginning to restore */
+	instrument_dormant_trace(DORMANT_EXIT_BEFORE_DISABLE,
+				serv, 0);
+	while ((readl_relaxed(PROC_CLK_REG_ADDR(LVM_EN)) &
+	       KPROC_CLK_MGR_REG_LVM_EN_POLICY_CONFIG_EN_MASK) && insurance) {
+		udelay(1);
+		insurance--;
+		}
+	WARN_ON(insurance == 0);
+	instrument_dormant_trace(DORMANT_EXIT_AFTER_DISABLE,
+				serv, 0);
 
 #if defined(CONFIG_BCM_HWCAPRI_1605) || defined(CONFIG_BCM_HWCAPRI_1605_A2)
 	/* If the issue is not fixed, first step to 312 MHZ before restoring
@@ -363,30 +399,44 @@ static void restore_proc_clk_regs(void)
 		       PROC_CLK_REG_ADDR(POLICY_CTL));
 
 	/* Wait until the new frequency takes effect */
+	insurance = 10000
 	do {
 		udelay(1);
+		insurance--;
 		val1 = readl_relaxed(PROC_CLK_REG_ADDR(POLICY_CTL)) &
 		    KPROC_CLK_MGR_REG_POLICY_CTL_GO_MASK;
 
 		val2 = readl_relaxed(PROC_CLK_REG_ADDR(POLICY_CTL)) &
 		    KPROC_CLK_MGR_REG_POLICY_CTL_GO_MASK;
-	} while (val1 | val2);
+	} while ((val1 | val2) && insurance);
+	WARN_ON(insurance == 0);
 #endif
 
-	for (i = 0; i < ARRAY_SIZE(proc_clk_regs); i++) {
-		/* Restore the saved data */
-		writel_relaxed(PROC_CLK_ITEM_VALUE(i), PROC_CLK_ITEM_ADDR(i));
+	for (i = 0; i < ARRAY_SIZE(proc_clk_regs); i++, reg++) {
 
-		if ((PROC_CLK_ITEM_ADDR(i) ==
+		/* If register is PLLARM OFFSET - do not restore now */
+		if ((reg->addr == PROC_CLK_REG_ADDR(PLLARM_OFFSET))) {
+			instrument_dormant_trace(DORMANT_EXIT_PLLARM_SAVE,
+					serv, 0);
+			pllarm_offset_reg = reg;
+			continue;
+		}
+
+		/* Restore the saved data */
+		writel_relaxed(reg->val, reg->addr);
+
+		if ((reg->addr ==
 		     PROC_CLK_REG_ADDR(ARM_SEG_TRG_OVERRIDE)) &&
-		    (PROC_CLK_ITEM_VALUE(i) & 1)) {
+		    (reg->val & 1)) {
 
 			/* We just restored arm_seg_trigger override
 			 * and the override was set before.  trigger
 			 * to take effect
 			 */
+			insurance = 10000;
 			do {
 				udelay(1);
+				insurance--;
 				val1 =
 				    readl_relaxed(PROC_CLK_REG_ADDR
 							(ARM_SEG_TRG)) &
@@ -396,26 +446,35 @@ static void restore_proc_clk_regs(void)
 				    readl_relaxed(PROC_CLK_REG_ADDR
 							(ARM_SEG_TRG)) &
 				KPROC_CLK_MGR_REG_ARM_SEG_TRG_ARM_TRIGGER_MASK;
-			} while (val1 | val2);
+			} while ((val1 | val2) && insurance);
+			WARN_ON(insurance == 0);
 		}
 	}
 
-	/* Finished restoring all the PROC_CLOCK registers
-	 * lock the state machine and write the go bit
-	 */
-	writel_relaxed(readl_relaxed(PROC_CLK_REG_ADDR(LVM_EN)) |
-		       KPROC_CLK_MGR_REG_LVM_EN_POLICY_CONFIG_EN_MASK,
-		       PROC_CLK_REG_ADDR(LVM_EN));
+	/* Write the GO bit to initiate freq change */
+	instrument_dormant_trace(DORMANT_EXIT_POLICY_GO, serv, 0);
+	writel_relaxed(KPROC_CLK_MGR_REG_POLICY_CTL_GO_ATL_MASK |
+			KPROC_CLK_MGR_REG_POLICY_CTL_GO_MASK,
+			PROC_CLK_REG_ADDR(POLICY_CTL));
 
-	while (readl_relaxed(PROC_CLK_REG_ADDR(LVM_EN)) &
-	       KPROC_CLK_MGR_REG_LVM_EN_POLICY_CONFIG_EN_MASK) {
+	/* Wait until the new frequency takes effect */
+	insurance = 10000;
+	instrument_dormant_trace(DORMANT_EXIT_BEFORE_FREQ, serv, 0);
+	do {
 		udelay(1);
-		}
+		insurance--;
+		val1 =	readl(PROC_CLK_REG_ADDR(POLICY_CTL)) &
+			KPROC_CLK_MGR_REG_POLICY_CTL_GO_MASK;
+		val2 =  readl(PROC_CLK_REG_ADDR(POLICY_CTL)) &
+			KPROC_CLK_MGR_REG_POLICY_CTL_GO_MASK;
+	} while ((val1 | val2) && insurance);
+	instrument_dormant_trace(DORMANT_EXIT_AFTER_FREQ, serv, 0);
+	WARN_ON(insurance == 0);
 
-	/* Write the GO bit */
-	writel_relaxed(KPROC_CLK_MGR_REG_POLICY_CTL_GO_AC_MASK |
-		       KPROC_CLK_MGR_REG_POLICY_CTL_GO_MASK,
-		       PROC_CLK_REG_ADDR(POLICY_CTL));
+	/* Restore PLLARM OFFSET register */
+	writel_relaxed(pllarm_offset_reg->val, pllarm_offset_reg->addr);
+	pllarm_offset_reg->stored = 0;
+
 	/* Lock CCU registers */
 	if (proc_ccu)
 		ccu_write_access_enable(proc_ccu, false);
@@ -486,6 +545,7 @@ void dormant_enter(u32 service)
 	u32 dormant_return;
 	u32 reg_val;
 #if defined(CONFIG_CAPRI_DORMANT_MODE)
+	serv = service;
 	spin_lock_irqsave(&dormant_entry_lock, flgs);
 	if (dormant_disable || fake_dormant ||
 			(force_retention_in_idle &&
@@ -700,6 +760,8 @@ void dormant_enter(u32 service)
 			 * True dormant exit and we are core-0.  Let
 			 * us first restore the proc registers
 			 */
+			instrument_dormant_trace(DORMANT_EXIT_PROC_RESTORE,
+				service, dormant_return);
 			restore_proc_clk_regs();
 			restore_addnl_regs();
 		}
@@ -883,11 +945,10 @@ static int dormant_enter_continue(unsigned long data)
 static int __init dormant_init(void)
 {
 	struct resource *res;
-
-
-	void *vptr = NULL;
+	void *vptr = NULL, *proc = NULL, *addnl = NULL;
 	struct clk *clk;
-
+	int i;
+	struct reg_list *reg;
 
 	clk = clk_get(NULL, KPROC_CCU_CLK_NAME_STR);
 	if (IS_ERR_OR_NULL(clk))
@@ -903,6 +964,7 @@ static int __init dormant_init(void)
 		pr_info("%s: dormant dma buffer alloc failed\n", __func__);
 		return -ENOMEM;
 	}
+
 	un_cached_stack_ptr = (u32)vptr;
 	pr_info("%s:secure side dram log buffer; drmt_buf_phy = 0x%x",
 		__func__, drmt_buf_phy);
@@ -937,6 +999,35 @@ static int __init dormant_init(void)
 			       CHIPREG_PERIPH_MISC_REG2_OFFSET);
 	}
 #endif
+	/* un-cached memory for register save and restore */
+	proc = dma_alloc_coherent(NULL, SZ_4K,
+				  &proc_regs_p, GFP_ATOMIC);
+	if (proc == NULL) {
+		pr_info("%s: proc regs alloc failed\n", __func__);
+		return -ENOMEM;
+	}
+	pr_info("%s: proc clock registers buffer; proc = 0x%x",
+		__func__, proc);
+	proc_regs_v = (u32) proc;
+
+	reg = (struct reg_list *) proc_regs_v;
+	for (i = 0; i < ARRAY_SIZE(proc_clk_regs); i++, reg++)
+		reg->addr = proc_clk_regs[i];
+
+	addnl = dma_alloc_coherent(NULL, SZ_4K,
+				  &addnl_regs_p, GFP_ATOMIC);
+	if (addnl == NULL) {
+		pr_info("%s: addnl regs alloc failed\n", __func__);
+		return -ENOMEM;
+	}
+	pr_info("%s: addnl registers buffer; addnl = 0x%x",
+		__func__, addnl);
+	addnl_regs_v = (u32) addnl;
+
+	reg = (struct reg_list *) addnl_regs_v;
+	for (i = 0; i < ARRAY_SIZE(addnl_regs); i++, reg++)
+		reg->addr = addnl_regs[i];
+
 	return 0;
 }
 

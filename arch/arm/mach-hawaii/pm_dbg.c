@@ -301,7 +301,8 @@ void instrument_dormant_trace(u32 trace, u32 service, u32 success)
 			= lp_trace[cpu].dormant_trace_v
 				+ *lp_trace[cpu].dorm_count;
 		*(lp_trace[cpu].curr_dorm_trace)
-			= trace + success + (service * 2);
+			= (trace | success << DORMANT_TRACE_SUCCESS_SHIFT
+				| service << DORMANT_TRACE_SERVICE_SHIFT);
 		*lp_trace[cpu].dorm_count
 			= (*lp_trace[cpu].dorm_count + 1)
 				& DORMANT_MAX_TRACE_ENTRIES;
