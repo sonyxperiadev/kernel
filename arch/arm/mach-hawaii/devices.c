@@ -752,7 +752,7 @@ static struct adj_param adj_param = {
 };
 
 static struct kona_avs_pdata avs_pdata = {
-	.flags = AVS_VDDVAR_A9_EN,
+	.flags = AVS_VDDVAR_A9_EN | AVS_IGNORE_CRC_ERR,
 	/* Mem addr where perf mon and SDSR OPP values are copied by ABI */
 	.avs_addr_row4 = 0x34051FB0,
 	/* Mem addr where ATE values is copied by ABI */

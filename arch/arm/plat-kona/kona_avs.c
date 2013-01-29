@@ -414,9 +414,19 @@ static int avs_ate_get_silicon_type(struct avs_info *avs_inf_ptr)
 	Frequency will be determined by the PLL configuration in fail case  */
 
 	if (!err && avs_inf_ptr->ate_crc != crc_val) {
-		avs_dbg(AVS_LOG_ERR, "ATE CRC Failed\n");
-		avs_inf_ptr->silicon_type = pdata->ate_lut[0].silicon_type;
-		avs_inf_ptr->freq = pdata->ate_lut[0].freq;
+		if (avs_inf_ptr->pdata->flags & AVS_IGNORE_CRC_ERR) {
+			avs_dbg(AVS_LOG_INIT, "CRC Error. Ignored\n");
+			avs_inf_ptr->silicon_type =
+				pdata->ate_lut[
+					avs_inf_ptr->avs_ate_val].silicon_type;
+			avs_inf_ptr->freq =
+				pdata->ate_lut[avs_inf_ptr->avs_ate_val].freq;
+		} else {
+			avs_dbg(AVS_LOG_ERR, "ATE CRC Failed\n");
+			avs_inf_ptr->silicon_type = pdata->ate_lut[0].
+								silicon_type;
+			avs_inf_ptr->freq = pdata->ate_lut[0].freq;
+		}
 	} else {
 		avs_inf_ptr->silicon_type =
 			 pdata->ate_lut[avs_inf_ptr->avs_ate_val].silicon_type;

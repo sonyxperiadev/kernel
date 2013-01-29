@@ -37,6 +37,7 @@ enum {
 	AVS_VDDVAR_A9_EN = 1,
 	AVS_VDDVAR_EN = 1 << 1,
 	AVS_VDDFIX_EN = 1 << 2,
+	AVS_IGNORE_CRC_ERR = 1 << 3,
 };
 
 enum {
