@@ -134,17 +134,6 @@
 #include <linux/kxtik.h>
 #endif /* CONFIG_SENSORS_KIONIX_KXTIK */
 
-#if defined(CONFIG_SENSORS_AK8963) || defined(CONFIG_SENSORS_AK8963_MODULE)
-#include <linux/akm8963.h>
-#include <linux/i2c/akm8963_i2c_settings.h>
-#endif /* CONFIG_SENSORS_AK8963 */
-
-#if defined(CONFIG_AMI306) || defined(CONFIG_AMI306_MODULE)
-#include <linux/ami306_def.h>
-#include <linux/ami_sensor.h>
-#include <mach/ami306_settings.h>
-#endif
-
 #ifdef CONFIG_BACKLIGHT_PWM
 #include <linux/pwm_backlight.h>
 #endif
@@ -760,33 +749,6 @@ static int kxtik_init_platform_hw(void)
 }
 #endif /* CONFIG_SENSORS_KIONIX_KXTIK */
 
-#if defined(CONFIG_SENSORS_AK8963) || defined(CONFIG_SENSORS_AK8963_MODULE)
-static struct akm8963_platform_data akm_platform_data_akm8963 = {
-	.gpio_DRDY = AKM8963_IRQ_GPIO,
-	.gpio_RST = AKM8963_GPIO_RESET_PIN,
-	.layout = 1,
-	.outbit = 1,
-};
-
-static struct i2c_board_info __initdata akm8963_info[] = {
-	{
-	 I2C_BOARD_INFO("akm8963", AKM8963_I2C_ADDRESS),
-	 .flags = I2C_CLIENT_WAKE,
-	 .platform_data = &akm_platform_data_akm8963,
-	 .irq = gpio_to_irq(AKM8963_IRQ_GPIO),
-	 },
-};
-
-static int akm8963_init_platform_hw(void)
-{
-	int ret;
-	pr_info("akm8963]init_platform_hw\n");
-	ret = gpio_request(AKM8963_IRQ_GPIO, "akm8963");
-	gpio_direction_input(AKM8963_IRQ_GPIO);
-	return 0;
-}
-#endif /* CONFIG_SENSORS_AK8963 */
-
 #if defined(CONFIG_MPU_SENSORS_KXTF9)
 static struct ext_slave_platform_data inv_mpu_kxtf9_data = {
 	.bus = EXT_SLAVE_BUS_SECONDARY,
@@ -1177,11 +1139,6 @@ static void __init hawaii_add_i2c_devices(void)
 				kxtik_i2c_boardinfo,
 				ARRAY_SIZE(kxtik_i2c_boardinfo));
 #endif /* CONFIG_SENSORS_KIONIX_KXTIK */
-
-#if defined(CONFIG_SENSORS_AK8963) || defined(CONFIG_SENSORS_AK8963_MODULE)
-	i2c_register_board_info(AKM8963_I2C_BUS_ID,
-				km8963_info, ARRAY_SIZE(akm8963_info));
-#endif /* CONFIG_SENSORS_AK8963 */
 
 #if defined(CONFIG_TOUCHSCREEN_BCM915500) || defined(CONFIG_TOUCHSCREEN_BCM915500_MODULE)
 	i2c_register_board_info(3, bcm915500_i2c_boardinfo,

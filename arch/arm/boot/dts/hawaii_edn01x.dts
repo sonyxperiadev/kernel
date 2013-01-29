@@ -97,7 +97,7 @@
 			gpio-intr = <0>;	/*AMI_GPIO_INT*/
 			gpio-drdy = <0>;	/*AMI_GPIO_DRDY*/
 			dir = <6>;		/*AMI_DIR*/
-			polarity = <2>;		/*AMI_POLARITY*/
+			polarity = <4>;		/*AMI_POLARITY*/
 			regulator-name = "cam2";
 		};
 
