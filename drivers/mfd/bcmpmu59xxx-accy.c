@@ -31,6 +31,8 @@
 #include <linux/mfd/bcmpmu59xxx.h>
 #include <linux/mfd/bcmpmu59xxx_reg.h>
 #include <linux/usb/bcm_hsotgctrl.h>
+#include <plat/pi_mgr.h>
+#include <mach/pm.h>
 #include <plat/kona_reset_reason.h>
 #include <linux/io.h>
 #include <mach/io_map.h>
@@ -308,22 +310,27 @@ static void usb_detect_state(struct bcmpmu_accy *paccy)
 						(&paccy->wake_lock))
 						wake_lock(&paccy->wake_lock);
 #endif
-					switch (chrgr_type) {
-					case PMU_CHRGR_TYPE_SDP:
-						usb_type = PMU_USB_TYPE_SDP;
-						break;
-					case PMU_CHRGR_TYPE_CDP:
-						usb_type = PMU_USB_TYPE_CDP;
-						break;
-					case PMU_CHRGR_TYPE_ACA:
-						usb_type = PMU_USB_TYPE_ACA;
-						break;
-					default:
-						usb_type = PMU_USB_TYPE_NONE;
-						break;
-					}
+
+#ifdef CONFIG_KONA_PI_MGR
+				pi_mgr_qos_request_update(&paccy->qos,
+							DEEP_SLEEP_LATENCY);
+#endif
+				switch (chrgr_type) {
+				case PMU_CHRGR_TYPE_SDP:
+					usb_type = PMU_USB_TYPE_SDP;
+					break;
+				case PMU_CHRGR_TYPE_CDP:
+					usb_type = PMU_USB_TYPE_CDP;
+					break;
+				case PMU_CHRGR_TYPE_ACA:
+					usb_type = PMU_USB_TYPE_ACA;
+					break;
+				default:
+					usb_type = PMU_USB_TYPE_NONE;
+					break;
 				}
-			} else {
+			}
+		} else {
 				paccy->det_state = USB_RETRY;
 			}
 		} else {
@@ -400,6 +407,10 @@ static void usb_handle_state(struct bcmpmu_accy *paccy)
 #ifdef CONFIG_HAS_WAKELOCK
 		if (wake_lock_active(&paccy->wake_lock))
 			wake_unlock(&paccy->wake_lock);
+#endif
+#ifdef CONFIG_KONA_PI_MGR
+		pi_mgr_qos_request_update(&paccy->qos,
+					PI_MGR_QOS_DEFAULT_VALUE);
 #endif
 		schedule_delayed_work(&paccy->det_work, ACCY_WORK_DELAY);
 		break;
@@ -1266,7 +1277,11 @@ static int __devinit bcmpmu_accy_probe(struct platform_device *pdev)
 #ifdef CONFIG_HAS_WAKELOCK
 	wake_lock_init(&paccy->wake_lock, WAKE_LOCK_SUSPEND, "usb_accy");
 #endif
-
+#ifdef CONFIG_KONA_PI_MGR
+	pi_mgr_qos_add_request(&paccy->qos, "usb_accy",
+				PI_MGR_PI_ID_ARM_CORE,
+				PI_MGR_QOS_DEFAULT_VALUE);
+#endif
 	bcmpmu->register_irq(bcmpmu, PMU_IRQ_USBINS,
 				bcmpmu_accy_isr, paccy);
 	bcmpmu->register_irq(bcmpmu, PMU_IRQ_USBRM,
@@ -1338,6 +1353,9 @@ static int __devexit bcmpmu_accy_remove(struct platform_device *pdev)
 	cancel_work_sync(&paccy->adp_work);
 #ifdef CONFIG_HAS_WAKELOCK
 	wake_lock_destroy(&paccy->wake_lock);
+#endif
+#ifdef CONFIG_KONA_PI_MGR
+	pi_mgr_qos_request_remove(&paccy->qos);
 #endif
 	bcmpmu_accy_dinit_eventq(paccy);
 #ifdef CONFIG_DEBUG_FS

@@ -21,6 +21,7 @@
 #include <linux/list.h>
 #include <linux/wait.h>
 #include <linux/wakelock.h>
+#include <plat/pi_mgr.h>
 #include <linux/spinlock.h>
 #include <linux/i2c.h>
 #include <linux/power_supply.h>
@@ -695,6 +696,9 @@ struct bcmpmu_accy {
 #endif	/*CONFIG_DEBUG_FS*/
 #ifdef CONFIG_HAS_WAKELOCK
 	struct wake_lock wake_lock;
+#endif
+#ifdef CONFIG_KONA_PI_MGR
+	struct pi_mgr_qos_node qos;
 #endif
 	int adp_cal_done;
 	enum bcmpmu_usb_det_state_t det_state;
