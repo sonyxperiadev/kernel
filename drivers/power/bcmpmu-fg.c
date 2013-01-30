@@ -992,6 +992,8 @@ static void bcmpmu_fg_get_coulomb_counter(struct bcmpmu_fg_data *fg)
 
 	if (fg->capacity_info.capacity > fg->capacity_info.max_design)
 		fg->capacity_info.capacity = fg->capacity_info.max_design;
+	else if (fg->capacity_info.capacity < 0)
+		fg->capacity_info.capacity = 0;
 
 	fg->capacity_info.percentage = capacity_to_percentage(fg,
 			fg->capacity_info.capacity);
