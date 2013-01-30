@@ -145,6 +145,13 @@ int __init pm_params_init(void)
 	__pm_init_errata_flg();
 	pwrmgr_init_param.cmd_buf = i2c_cmd_buf;
 	pwrmgr_init_param.cmd_buf_size = cmd_buf_sz;
+#ifdef CONFIG_PWRMGR_1P2GHZ_OPS_SET_SELECT
+	pwrmgr_init_param.def_vlt_tbl = (u8 *)
+		get_sr_vlt_table(SILICON_TYPE_SLOW, A9_FREQ_1200_MHZ, NULL);
+#else
+	pwrmgr_init_param.def_vlt_tbl = (u8 *)
+		get_sr_vlt_table(SILICON_TYPE_SLOW, A9_FREQ_1000_MHZ, NULL);
+#endif
 	return 0;
 }
 
