@@ -1416,6 +1416,12 @@ int rgltr_init(void)
 		sscanf(output[k++], "%d", &int_val);
 		rgltr_pdata.bcmpmu_rgltr[i].pc_pins_map = int_val;
 
+		sscanf(output[k++], "%d", &int_val);
+		rgltr_pdata.bcmpmu_rgltr[i].dsm_mode = int_val;
+
+		sscanf(output[k++], "%d", &int_val);
+		rgltr_pdata.bcmpmu_rgltr[i].initdata->constraints.boot_on =
+			int_val;
 	}
 	return 0;
 }
