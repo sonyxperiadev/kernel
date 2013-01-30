@@ -1463,8 +1463,7 @@ static void csl_caph_obtain_blocks
 
 		if (path->sink[sinkNo] == CSL_CAPH_DEV_DSP_throughMEM)
 			srOut = AUDIO_SAMPLING_RATE_8000; /*arm2sp 8kHz*/
-		else if (path->sink[sinkNo] == CSL_CAPH_DEV_BT_SPKR
-				|| path->sink[sinkNo] == CSL_CAPH_DEV_BT_SPKR) {
+		else if (path->sink[sinkNo] == CSL_CAPH_DEV_BT_SPKR) {
 			srOut = AUDIO_SAMPLING_RATE_8000;
 			dataFormat = CSL_CAPH_16BIT_MONO;
 		} else {
@@ -3316,7 +3315,6 @@ static void csl_caph_hwctrl_changeSwitchCHOwner(
 
 	if ((switchCH.chnl == CSL_CAPH_SWITCH_NONE) || (myPathID == 0))
 		return;
-
 	for (i = 0; i < MAX_AUDIO_PATH; i++) {
 		if (HWConfig_Table[i].pathID == myPathID)
 			continue;
@@ -3338,6 +3336,7 @@ static void csl_caph_hwctrl_changeSwitchCHOwner(
 					HWConfig_Table[i].sw[j][0].status =
 						CSL_CAPH_SWITCH_OWNER;
 				return;
+/*coverity[copy_paste_error]*/
 			} else if ((HWConfig_Table[i].sw[j][1].FIFO_srcAddr ==
 				switchCH.FIFO_srcAddr)
 				&& ((HWConfig_Table[i].sw[j][1].FIFO_dstAddr ==
@@ -3355,6 +3354,7 @@ static void csl_caph_hwctrl_changeSwitchCHOwner(
 					HWConfig_Table[i].sw[j][1].status =
 						CSL_CAPH_SWITCH_OWNER;
 					return;
+/*coverity[copy_paste_error]*/
 			} else if ((HWConfig_Table[i].sw[j][2].FIFO_srcAddr ==
 				switchCH.FIFO_srcAddr)
 				&& ((HWConfig_Table[i].sw[j][2].FIFO_dstAddr ==
@@ -5216,8 +5216,6 @@ void csl_caph_hwctrl_ConfigSSP(CSL_SSP_PORT_e port, CSL_SSP_BUS_e bus,
 			sspidI2SUse = CSL_CAPH_SSP_3;
 		else if (port == CSL_SSP_4)
 			sspidI2SUse = CSL_CAPH_SSP_4;
-		else
-			sspidI2SUse = CSL_CAPH_SSP_6;
 		fmHandleSSP = (CSL_HANDLE)csl_i2s_init(addr);
 	} else if (bus == CSL_SSP_PCM) {
 		if (pcmHandleSSP && fmHandleSSP != pcmHandleSSP)
@@ -5228,8 +5226,6 @@ void csl_caph_hwctrl_ConfigSSP(CSL_SSP_PORT_e port, CSL_SSP_BUS_e bus,
 			sspidPcmUse = CSL_CAPH_SSP_3;
 		else if (port == CSL_SSP_4)
 			sspidPcmUse = CSL_CAPH_SSP_4;
-		else
-			sspidPcmUse = CSL_CAPH_SSP_6;
 		pcmHandleSSP = (CSL_HANDLE)csl_pcm_init
 			(addr, (UInt32)caph_intc_handle);
 	} else if (bus == CSL_SSP_TDM) {

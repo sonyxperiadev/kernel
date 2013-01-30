@@ -229,7 +229,7 @@ static ssize_t Brcm_auddrv_TestSysfs_store(struct device *dev,
 		struct device_attribute *attr,
 		const char *buf, size_t count)
 {
-
+/*coverity[secure_coding]*/
 	if (5 != sscanf(buf, "%9d %9d %9d %9d %9d",
 				&sgBrcm_auddrv_TestValues[0],
 				&sgBrcm_auddrv_TestValues[1],
