@@ -196,7 +196,8 @@ static int mm_pi_enable(struct pi *pi, int enable)
 static struct pi_ops mm_pi_ops;
 #endif
 
-static char *mm_ccu[] = { MM_CCU_CLK_NAME_STR };
+static char *mm_ccu[] = { MM_CCU_CLK_NAME_STR,
+				MM2_CCU_CLK_NAME_STR};
 
 struct opp_info __mm_opp_info[] = {
 	[0] = {
@@ -219,7 +220,28 @@ struct opp_info __mm_opp_info[] = {
 #endif
 };
 
-struct opp_info *mm_opp_info[] = {__mm_opp_info};
+struct opp_info __mm2_opp_info[] = {
+	[0] = {
+		.freq_id = MM2_CCU_FREQ_ID_ECO,
+		.opp_id = PI_OPP_ECONOMY,
+	},
+	[1] = {
+		.freq_id = MM2_CCU_FREQ_ID_NRML,
+		.opp_id = PI_OPP_NORMAL,
+	},
+	[2] = {
+		.freq_id = MM2_CCU_FREQ_ID_TURBO,
+		.opp_id = PI_OPP_TURBO,
+	},
+#ifdef CONFIG_PI_MGR_MM_STURBO_ENABLE
+	[3] = {
+		.freq_id = MM2_CCU_FREQ_ID_SUPER_TURBO,
+		.opp_id = PI_OPP_SUPER_TURBO,
+	},
+#endif
+};
+
+struct opp_info *mm_opp_info[] = {__mm_opp_info, __mm2_opp_info};
 u32 mm_weightage[] = {35, 50, 0, 0};
 
 struct pi_opp mm_opp = {

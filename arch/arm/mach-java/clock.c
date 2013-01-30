@@ -31,6 +31,7 @@
 #include <mach/rdb/brcm_rdb_root_clk_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_khub_clk_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_kproc_clk_mgr_reg.h>
+#include <mach/rdb/brcm_rdb_mm2_clk_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_bmdm_clk_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_dsp_clk_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_root_rst_mgr_reg.h>
@@ -40,6 +41,7 @@
 #include <mach/rdb/brcm_rdb_kpm_rst_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_kps_rst_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_mm_rst_mgr_reg.h>
+#include <mach/rdb/brcm_rdb_mm2_rst_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_pwrmgr.h>
 #ifdef CONFIG_DEBUG_FS
 #include <mach/rdb/brcm_rdb_padctrlreg.h>
@@ -75,6 +77,7 @@ static const char *const ccu_clks[] = {
 	KPM_CCU_CLK_NAME_STR,
 	KPS_CCU_CLK_NAME_STR,
 	MM_CCU_CLK_NAME_STR,
+	MM2_CCU_CLK_NAME_STR,
 	BMDM_CCU_CLK_NAME_STR,
 	DSP_CCU_CLK_NAME_STR,
 };
@@ -1045,33 +1048,6 @@ static struct bus_clk CLK_NAME(arm_switch) = {
 		KPROC_CLK_MGR_REG_ARM_SWITCH_CLKGATE_ARM_SWITCH_STPRSTS_MASK,
 	.freq_tbl_index = -1,
 	.src_clk = NULL,
-};
-
-/*
-Bus clock name APB0
-*/
-static struct bus_clk CLK_NAME(apb0) = {
-
- .clk =	{
-				.flags = APB0_CLK_FLAGS,
-				.clk_type = CLK_TYPE_BUS,
-				.id = CLK_APB0_CLK_ID,
-				.name = APB0_CLK_NAME_STR,
-				.dep_clks = DEFINE_ARRAY_ARGS(NULL),
-				.ops = &gen_bus_clk_ops,
-		},
-	.ccu_clk = &CLK_NAME(kproc),
-	.clk_gate_offset  = KPROC_CLK_MGR_REG_APB0_CLKGATE_OFFSET,
-	.clk_en_mask = KPROC_CLK_MGR_REG_APB0_CLKGATE_APB0_CLK_EN_MASK,
-	.gating_sel_mask =
-		KPROC_CLK_MGR_REG_APB0_CLKGATE_APB0_HW_SW_GATING_SEL_MASK,
-	.hyst_val_mask = KPROC_CLK_MGR_REG_APB0_CLKGATE_APB0_HYST_VAL_MASK,
-	 .hyst_en_mask = KPROC_CLK_MGR_REG_APB0_CLKGATE_APB0_HYST_EN_MASK,
-	.stprsts_mask = KPROC_CLK_MGR_REG_APB0_CLKGATE_APB0_STPRSTS_MASK,
-	.freq_tbl_index = -1,
-	.src_clk = NULL,
-	.soft_reset_offset = KPROC_RST_MGR_REG_SOFT_RSTN_OFFSET,
-	.clk_reset_mask = KPROC_RST_MGR_REG_SOFT_RSTN_APB_SOFT_RSTN_MASK,
 };
 
 static int dig_clk_set_gating_ctrl(struct peri_clk *peri_clk,
@@ -6757,6 +6733,206 @@ static struct peri_clk CLK_NAME(dsi_pll_o_dsi_pll) = {
 				},
 };
 
+static struct reg_save mm2_reg_save[] = {
+		{MM2_CLK_MGR_REG_POLICY_FREQ_OFFSET,
+			MM2_CLK_MGR_REG_POLICY_FREQ_OFFSET}, /*count: 1*/
+		{MM2_CLK_MGR_REG_POLICY0_MASK_OFFSET,
+			MM2_CLK_MGR_REG_INTEN_OFFSET}, /*count: 5*/
+		{MM2_CLK_MGR_REG_VLT_PERI_OFFSET,
+			MM2_CLK_MGR_REG_VLT_PERI_OFFSET}, /*count: 1*/
+		{MM2_CLK_MGR_REG_VLT0_3_OFFSET,
+			MM2_CLK_MGR_REG_VLT4_7_OFFSET}, /*count: 2*/
+		{MM2_CLK_MGR_REG_AXI_DIV_OFFSET,
+			MM2_CLK_MGR_REG_AXI_DIV_OFFSET}, /*count: 1*/
+		{MM2_CLK_MGR_REG_CLKMON_OFFSET,
+			MM2_CLK_MGR_REG_CLKMON_OFFSET},/* count: 1*/
+};
+
+u32 reg_save_array2[12]; /*addition of count in all the register sets + 1 */
+static struct ccu_state_save mm2_state_save = {
+		.reg_save = mm2_reg_save,
+		.reg_set_count = ARRAY_SIZE(mm2_reg_save),
+		.save_buf = reg_save_array2,
+};
+
+
+static struct ccu_clk CLK_NAME(mm2) = {
+
+	.clk =	{
+				.flags = MM2_CCU_CLK_FLAGS,
+				.id	   = CLK_MM2_CCU_CLK_ID,
+				.name = MM2_CCU_CLK_NAME_STR,
+				.clk_type = CLK_TYPE_CCU,
+				.ops = &gen_ccu_clk_ops,
+#ifdef CONFIG_PLL1_8PHASE_OFF_ERRATUM
+				.dep_clks = DEFINE_ARRAY_ARGS(
+					CLK_PTR(8phase_en_pll1), NULL),
+#endif
+
+		},
+	.ccu_ops = &mm_ccu_ops,
+	.ccu_state_save = &mm2_state_save,
+	.pi_id = PI_MGR_PI_ID_MM,
+	.ccu_clk_mgr_base = HW_IO_PHYS_TO_VIRT(MM2_CLK_BASE_ADDR),
+	.wr_access_offset = MM2_CLK_MGR_REG_WR_ACCESS_OFFSET,
+	.policy_mask1_offset = MM2_CLK_MGR_REG_POLICY0_MASK_OFFSET,
+	.policy_mask2_offset = 0,
+	.policy_freq_offset = MM2_CLK_MGR_REG_POLICY_FREQ_OFFSET,
+	.policy_ctl_offset = MM2_CLK_MGR_REG_POLICY_CTL_OFFSET,
+	.inten_offset = MM2_CLK_MGR_REG_INTEN_OFFSET,
+	.intstat_offset = MM2_CLK_MGR_REG_INTSTAT_OFFSET,
+	.vlt_peri_offset = MM2_CLK_MGR_REG_VLT_PERI_OFFSET,
+	.lvm_en_offset = MM2_CLK_MGR_REG_LVM_EN_OFFSET,
+	.lvm0_3_offset = MM2_CLK_MGR_REG_LVM0_3_OFFSET,
+	.vlt0_3_offset = MM2_CLK_MGR_REG_VLT0_3_OFFSET,
+	.vlt4_7_offset = MM2_CLK_MGR_REG_VLT4_7_OFFSET,
+#ifdef CONFIG_DEBUG_FS
+	.policy_dbg_offset = MM2_CLK_MGR_REG_POLICY_DBG_OFFSET,
+	.policy_dbg_act_freq_shift = MM2_CLK_MGR_REG_POLICY_DBG_ACT_FREQ_SHIFT,
+	.policy_dbg_act_policy_shift =
+		MM2_CLK_MGR_REG_POLICY_DBG_ACT_POLICY_SHIFT,
+	.clk_mon_offset = MM2_CLK_MGR_REG_CLKMON_OFFSET,
+#endif
+	.freq_volt = MM2_CCU_FREQ_VOLT_TBL,
+	.freq_count = MM2_CCU_FREQ_VOLT_TBL_SZ,
+	.volt_peri = DEFINE_ARRAY_ARGS(VLT_NORMAL_PERI, VLT_HIGH_PERI),
+	.freq_policy = MM2_CCU_FREQ_POLICY_TBL,
+	.freq_tbl = DEFINE_ARRAY_ARGS(mm_clk_freq_list0, mm_clk_freq_list1,
+				mm_clk_freq_list2, mm_clk_freq_list3,
+				mm_clk_freq_list4, mm_clk_freq_list5),
+	.ccu_reset_mgr_base = HW_IO_PHYS_TO_VIRT(MM2_RST_BASE_ADDR),
+	.reset_wr_access_offset = MM2_RST_MGR_REG_WR_ACCESS_OFFSET,
+};
+
+static struct clk *mm2_switch_axi_peri_clk_src_list[] =
+		DEFINE_ARRAY_ARGS(CLK_PTR(crystal),
+		CLK_PTR(var_500m), CLK_PTR(var_312m));
+
+
+static struct peri_clk CLK_NAME(mm2_switch_axi) = {
+
+	.clk =	{
+				.flags = MM2_AXI_SWITCH_PERI_CLK_FLAGS,
+				.clk_type = CLK_TYPE_PERI,
+				.id	= CLK_MM2_AXI_SWITCH_PERI_CLK_ID,
+				.name = MM2_AXI_SWITCH_PERI_CLK_NAME_STR,
+				.dep_clks = DEFINE_ARRAY_ARGS(NULL),
+				.ops = &gen_peri_clk_ops,
+		},
+	.ccu_clk = &CLK_NAME(mm2),
+	.mask_set = 0,
+	.policy_bit_mask =
+		MM2_CLK_MGR_REG_POLICY0_MASK_MM2_SWITCH_POLICY0_MASK_MASK,
+	.policy_mask_init = DEFINE_ARRAY_ARGS(1, 1, 1, 1),
+
+	.clk_gate_offset = MM2_CLK_MGR_REG_MM2_AXI_SWITCH_CLKGATE_OFFSET,
+	.gating_sel_mask =
+MM2_CLK_MGR_REG_MM2_AXI_SWITCH_CLKGATE_MM2_SWITCH_AXI_HW_SW_GATING_SEL_MASK,
+	.hyst_val_mask =
+MM2_CLK_MGR_REG_MM2_AXI_SWITCH_CLKGATE_MM2_SWITCH_AXI_HYST_VAL_MASK,
+	.hyst_en_mask =
+MM2_CLK_MGR_REG_MM2_AXI_SWITCH_CLKGATE_MM2_SWITCH_AXI_HYST_EN_MASK,
+	.stprsts_mask =
+MM2_CLK_MGR_REG_MM2_AXI_SWITCH_CLKGATE_MM2_SWITCH_AXI_STPRSTS_MASK,
+	.volt_lvl_mask =
+MM2_CLK_MGR_REG_MM2_AXI_SWITCH_CLKGATE_MM2_SWITCH_VOLTAGE_LEVEL_MASK,
+	.clk_div = {
+		.div_offset = MM2_CLK_MGR_REG_AXI_DIV_OFFSET,
+		.div_mask = MM2_CLK_MGR_REG_AXI_DIV_MM2_SWITCH_AXI_DIV_MASK,
+		.div_shift = MM2_CLK_MGR_REG_AXI_DIV_MM2_SWITCH_AXI_DIV_SHIFT,
+		.div_trig_offset = MM2_CLK_MGR_REG_DIV_TRIG_OFFSET,
+		.div_trig_mask =
+			MM2_CLK_MGR_REG_DIV_TRIG_MM2_SWITCH_AXI_TRIGGER_MASK,
+		.diether_bits = 1,
+		.pll_select_offset = MM2_CLK_MGR_REG_AXI_DIV_OFFSET,
+		.pll_select_mask =
+			MM2_CLK_MGR_REG_AXI_DIV_MM2_SWITCH_AXI_PLL_SELECT_MASK,
+		.pll_select_shift =
+		MM2_CLK_MGR_REG_AXI_DIV_MM2_SWITCH_AXI_PLL_SELECT_SHIFT,
+	},
+	.src_clk = {
+		.count = ARRAY_SIZE(mm2_switch_axi_peri_clk_src_list),
+		.src_inx = 2,
+		.clk = mm2_switch_axi_peri_clk_src_list,
+	},
+};
+
+static struct bus_clk CLK_NAME(jpeg_axi) = {
+
+	.clk =	{
+				.flags = JPEG_AXI_BUS_CLK_FLAGS,
+				.clk_type = CLK_TYPE_BUS,
+				.id	= CLK_JPEG_AXI_BUS_CLK_ID,
+				.name = JPEG_AXI_BUS_CLK_NAME_STR,
+				.dep_clks = DEFINE_ARRAY_ARGS(NULL),
+				.ops = &gen_bus_clk_ops,
+		},
+	.ccu_clk = &CLK_NAME(mm2),
+	.clk_gate_offset  = MM2_CLK_MGR_REG_JPEG_CLKGATE_OFFSET,
+	.clk_en_mask = MM2_CLK_MGR_REG_JPEG_CLKGATE_JPEG_AXI_CLK_EN_MASK,
+	.gating_sel_mask =
+		MM2_CLK_MGR_REG_JPEG_CLKGATE_JPEG_AXI_HW_SW_GATING_SEL_MASK,
+	.hyst_val_mask = MM2_CLK_MGR_REG_JPEG_CLKGATE_JPEG_AXI_HYST_VAL_MASK,
+	.hyst_en_mask = MM2_CLK_MGR_REG_JPEG_CLKGATE_JPEG_AXI_HYST_EN_MASK,
+	.stprsts_mask = MM2_CLK_MGR_REG_JPEG_CLKGATE_JPEG_AXI_STPRSTS_MASK,
+	.freq_tbl_index = -1,
+	.src_clk = CLK_PTR(mm2_switch_axi),
+	.soft_reset_offset = MM2_RST_MGR_REG_SOFT_RSTN0_OFFSET,
+	.clk_reset_mask	= MM2_RST_MGR_REG_SOFT_RSTN0_JPEG_SOFT_RSTN_MASK,
+
+};
+
+static struct bus_clk CLK_NAME(isp2_axi) = {
+
+	.clk = {
+				.flags = ISP2_AXI_BUS_CLK_FLAGS,
+				.clk_type = CLK_TYPE_BUS,
+				.id	= CLK_ISP2_AXI_BUS_CLK_ID,
+				.name = ISP2_AXI_BUS_CLK_NAME_STR,
+				.dep_clks = DEFINE_ARRAY_ARGS(NULL),
+				.ops = &gen_bus_clk_ops,
+		},
+	.ccu_clk = &CLK_NAME(mm2),
+	.clk_gate_offset  = MM2_CLK_MGR_REG_ISP2_CLKGATE_OFFSET,
+	.clk_en_mask = MM2_CLK_MGR_REG_ISP2_CLKGATE_ISP2_AXI_CLK_EN_MASK,
+	.gating_sel_mask =
+		MM2_CLK_MGR_REG_ISP2_CLKGATE_ISP2_AXI_HW_SW_GATING_SEL_MASK,
+	.hyst_val_mask = MM2_CLK_MGR_REG_ISP2_CLKGATE_ISP2_AXI_HYST_VAL_MASK,
+	.hyst_en_mask = MM2_CLK_MGR_REG_ISP2_CLKGATE_ISP2_AXI_HYST_EN_MASK,
+	.stprsts_mask = MM2_CLK_MGR_REG_ISP2_CLKGATE_ISP2_AXI_STPRSTS_MASK,
+	.freq_tbl_index = -1,
+	.src_clk = CLK_PTR(mm2_switch_axi),
+	.soft_reset_offset	= MM2_RST_MGR_REG_SOFT_RSTN0_OFFSET,
+	.clk_reset_mask	= MM2_RST_MGR_REG_SOFT_RSTN0_ISP2_SOFT_RSTN_MASK,
+};
+
+static struct bus_clk CLK_NAME(atb_axi) = {
+
+	.clk =	{
+				.flags = ATB_AXI_BUS_CLK_FLAGS,
+				.clk_type = CLK_TYPE_BUS,
+				.id = CLK_ATB_AXI_BUS_CLK_ID,
+				.name = ATB_AXI_BUS_CLK_NAME_STR,
+				.dep_clks = DEFINE_ARRAY_ARGS(NULL),
+				.ops = &gen_bus_clk_ops,
+		},
+	.ccu_clk = &CLK_NAME(mm2),
+	.clk_gate_offset  = MM2_CLK_MGR_REG_ATB_CLKGATE_OFFSET,
+	.clk_en_mask =
+		MM2_CLK_MGR_REG_ATB_CLKGATE_ATB_AXI_CLK_EN_MASK,
+	.gating_sel_mask =
+	 MM2_CLK_MGR_REG_ATB_CLKGATE_ATB_AXI_HW_SW_GATING_SEL_MASK,
+	.hyst_val_mask =
+		 MM2_CLK_MGR_REG_ATB_CLKGATE_ATB_AXI_HYST_VAL_MASK,
+	.hyst_en_mask =
+		MM2_CLK_MGR_REG_ATB_CLKGATE_ATB_AXI_HYST_EN_MASK,
+	.stprsts_mask =
+		MM2_CLK_MGR_REG_ATB_CLKGATE_ATB_AXI_STPRSTS_MASK,
+	.freq_tbl_index = -1,
+	.src_clk = CLK_PTR(mm2_switch_axi),
+	.soft_reset_offset	= MM2_RST_MGR_REG_SOFT_RSTN0_OFFSET,
+	.clk_reset_mask	= MM2_RST_MGR_REG_SOFT_RSTN0_ATB_SOFT_RSTN_MASK
+};
 
 /*Mach specifc handlers*/
 
@@ -7180,6 +7356,7 @@ static struct __init clk_lookup hawaii_clk_tbl[] =
 	BRCM_REGISTER_CLK(KPM_CCU_CLK_NAME_STR, NULL, kpm),
 	BRCM_REGISTER_CLK(KPS_CCU_CLK_NAME_STR, NULL, kps),
 	BRCM_REGISTER_CLK(MM_CCU_CLK_NAME_STR, NULL, mm),
+	BRCM_REGISTER_CLK(MM2_CCU_CLK_NAME_STR, NULL, mm2),
 	BRCM_REGISTER_CLK(BMDM_CCU_CLK_NAME_STR, NULL, bmdm),
 	BRCM_REGISTER_CLK(DSP_CCU_CLK_NAME_STR, NULL, dsp),
 	/* CCU registration end */
@@ -7187,7 +7364,6 @@ static struct __init clk_lookup hawaii_clk_tbl[] =
 	/* Clocks registration */
 	/*Proc CCU*/
 	BRCM_REGISTER_CLK(ARM_SWITCH_CLK_NAME_STR, NULL, arm_switch),
-	BRCM_REGISTER_CLK(APB0_CLK_NAME_STR, NULL, apb0),
 	BRCM_REGISTER_CLK(A9_PLL_CLK_NAME_STR, NULL, a9_pll),
 	BRCM_REGISTER_CLK(A9_PLL_CHNL0_CLK_NAME_STR, NULL, a9_pll_chnl0),
 	BRCM_REGISTER_CLK(A9_PLL_CHNL1_CLK_NAME_STR, NULL, a9_pll_chnl1),
@@ -7424,6 +7600,14 @@ static struct __init clk_lookup hawaii_clk_tbl[] =
 				&dummy_apb_pclk),
 	/*mm_switch_axi clk should be the last clock to be auto gated in MM CCU*/
 	BRCM_REGISTER_CLK(MM_SWITCH_AXI_PERI_CLK_NAME_STR, NULL, mm_switch_axi),
+
+	/*MM2 CCU clks*/
+	BRCM_REGISTER_CLK(ATB_AXI_BUS_CLK_NAME_STR, NULL, atb_axi),
+	BRCM_REGISTER_CLK(JPEG_AXI_BUS_CLK_NAME_STR, NULL, jpeg_axi),
+	BRCM_REGISTER_CLK(ISP2_AXI_BUS_CLK_NAME_STR, NULL, isp2_axi),
+	BRCM_REGISTER_CLK(MM2_AXI_SWITCH_PERI_CLK_NAME_STR, NULL,
+			mm2_switch_axi),
+
 };
 
 int chip_reset(void)

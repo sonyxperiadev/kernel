@@ -837,12 +837,14 @@ static int __init hawaii_pwr_mgr_init(void)
 	/*init clks */
 	__clock_init();
 
+#if !defined(CONFIG_MACH_HAWAII_FPGA_E) && \
+	!defined(CONFIG_MACH_HAWAII_FPGA)
 #ifdef CONFIG_PWRMGR_1P2GHZ_OPS_SET_SELECT
 	mach_config_a9_pll(CONFIG_A9_PLL_2P4GHZ, 0);
 #else
 	mach_config_a9_pll(CONFIG_A9_PLL_2GHZ, 0);
 #endif
-
+#endif /*CONFIG_MACH_HAWAII_FPGA_E*/
 
 	return 0;
 }

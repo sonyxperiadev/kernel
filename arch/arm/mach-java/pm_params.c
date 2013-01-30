@@ -127,12 +127,20 @@ bool is_pm_erratum(u32 erratum)
 	return !!(pm_erratum_flg & erratum);
 }
 
+#if defined(CONFIG_MACH_HAWAII_FPGA_E) || \
+	defined(CONFIG_MACH_HAWAII_FPGA) || \
+	!defined(CONFIG_KONA_POWER_MGR)
 int pm_init_pmu_sr_vlt_map_table(u32 silicon_type, int *freq_id,
 		void *param)
 {
+	return 0;
+}
+#else
+int pm_init_pmu_sr_vlt_map_table(u32 silicon_type, int *freq_id,
+		void *param)
+{
+
 	struct adj_param *adj_param = (struct adj_param *)param;
-	#if !defined (CONFIG_MACH_HAWAII_FPGA)
-	#ifdef CONFIG_KONA_POWER_MGR
 	int inx;
 	u8 *vlt_table;
 
@@ -141,26 +149,19 @@ int pm_init_pmu_sr_vlt_map_table(u32 silicon_type, int *freq_id,
 	for (inx = 0; inx < SR_VLT_LUT_SIZE; inx++)
 		sr_vlt_table[inx] = vlt_table[inx];
 	return pwr_mgr_pm_i2c_var_data_write(vlt_table, SR_VLT_LUT_SIZE);
-	#endif
-	#else
-		return 0;
-	#endif
 }
+#endif
 
-#if !defined (CONFIG_MACH_HAWAII_FPGA)
 int __init pm_params_init(void)
 {
-#ifdef CONFIG_KONA_POWER_MGR
 	__pm_init_errata_flg();
+#ifdef CONFIG_KONA_POWER_MGR
 	pwrmgr_init_param.cmd_buf = i2c_cmd_buf;
 	pwrmgr_init_param.cmd_buf_size = cmd_buf_sz;
-	#ifndef CONFIG_KONA_AVS
-		pm_init_pmu_sr_vlt_map_table(0, 0, NULL);
-	#endif
 #endif
 	return 0;
 }
-#endif
+
 
 static int switch_a9_pll(int freq_id, int policy)
 {
