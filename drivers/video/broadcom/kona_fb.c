@@ -65,6 +65,8 @@
 #include "lcd/dump_end_img.h"
 #include "lcd/ap_start_dump_img.h"
 #include "lcd/cp_start_dump_img.h"
+#include "lcd/ap_ramdump_start_img.h"
+#include "lcd/cp_ramdump_start_img.h"
 #endif
 
 /*#define KONA_FB_DEBUG */
@@ -395,6 +397,28 @@ void kona_display_crash_image(enum crash_dump_image_idx image_idx)
 		}
 		img_w = dump_end_img_w;
 		img_h = dump_end_img_h;
+		break;
+	case CP_RAM_DUMP_START:
+		if (16 == g_kona_fb->fb.var.bits_per_pixel) {
+			image_buf = (void *) &cp_ramdump_start_img_565[0];
+			image_size = sizeof(cp_ramdump_start_img_565);
+		} else {
+			image_buf = (void *) &cp_ramdump_start_img_888[0];
+			image_size = sizeof(cp_ramdump_start_img_888);
+		}
+		img_w = cp_ramdump_start_img_w;
+		img_h = cp_ramdump_start_img_h;
+		break;
+	case AP_RAM_DUMP_START:
+		if (16 == g_kona_fb->fb.var.bits_per_pixel) {
+			image_buf = (void *) &ap_ramdump_start_img_565[0];
+			image_size = sizeof(ap_ramdump_start_img_565);
+		} else {
+			image_buf = (void *) &ap_ramdump_start_img_888[0];
+			image_size = sizeof(ap_ramdump_start_img_888);
+		}
+		img_w = ap_ramdump_start_img_w;
+		img_h = ap_ramdump_start_img_h;
 		break;
 	default:
 		pr_err("Invalid image index passed\n");
