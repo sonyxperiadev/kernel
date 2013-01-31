@@ -93,7 +93,28 @@ struct pwr_mode_reg rgltr_pmode_buf[BCMPMU_REGULATOR_MAX];
 
 static int force_enable;
 #endif
-static int __3bit_pmmode_frm_map(u32 pcpin_map, u32 dsm_mode,
+
+static u32 __dsm_mode_to_pmmode(u32 dsm_mode)
+{
+	u32 opmode = PMMODE_ON;
+	switch (dsm_mode) {
+
+	case BCMPMU_REGL_ON_IN_DSM:
+		opmode = PMMODE_ON;
+		break;
+
+	case BCMPMU_REGL_LPM_IN_DSM:
+		opmode = PMMODE_LPM;
+		break;
+
+	case BCMPMU_REGL_OFF_IN_DSM:
+		opmode = PMMODE_OFF;
+		break;
+	};
+	return opmode;
+}
+
+static int __3bit_pmmode_frm_map(u32 pcpin_map, u32 dsm_pmmode,
 					u8 *pmmode)
 {
 	int count = 0;
@@ -109,7 +130,7 @@ static int __3bit_pmmode_frm_map(u32 pcpin_map, u32 dsm_mode,
 				PCPIN_MAP_IS_SET1_MATCH(set1, i))
 			val = PMMODE_ON;
 		else
-			val = dsm_mode & PMMODE_3BIT_PMx_MASK;
+			val = dsm_pmmode & PMMODE_3BIT_PMx_MASK;
 
 		if (i & 1) {
 			pmmode[count] |= val << PMMODE_3BIT_PM1_SHIFT;
@@ -121,7 +142,7 @@ static int __3bit_pmmode_frm_map(u32 pcpin_map, u32 dsm_mode,
 	return count;
 }
 
-static int __2bit_pmmode_frm_map(u32 pcpin_map, u32 dsm_mode,
+static int __2bit_pmmode_frm_map(u32 pcpin_map, u32 dsm_pmmode,
 				u8 *pmmode)
 {
 	u32 shift;
@@ -137,7 +158,7 @@ static int __2bit_pmmode_frm_map(u32 pcpin_map, u32 dsm_mode,
 				PCPIN_MAP_IS_SET1_MATCH(set1, i))
 			val = PMMODE_ON;
 		else
-			val = dsm_mode & PMMODE_2BIT_PMx_MASK;
+			val = dsm_pmmode & PMMODE_2BIT_PMx_MASK;
 		switch (PMMODE_2BIT_PMx_MASK & i) {
 		case 0:
 			shift = PMMODE_2BIT_PM0_SHIFT;
@@ -279,12 +300,12 @@ static int __bcmpmureg_enable(struct bcmpmu59xxx *bcmpmu, int id)
 
 	if (rinfo[id].flags & RGLR_3BIT_PMCTRL)
 		count = __3bit_pmmode_frm_map(initdata->pc_pins_map,
-						initdata->dsm_mode,
+				__dsm_mode_to_pmmode(initdata->dsm_mode),
 						pmmode);
 	else
 		count = __2bit_pmmode_frm_map(initdata->pc_pins_map,
-						initdata->dsm_mode,
-						pmmode);
+				__dsm_mode_to_pmmode(initdata->dsm_mode),
+					pmmode);
 	for (i = 0; i < count; i++) {
 #ifdef CONFIG_DEBUG_FS
 		if (force_enable == 0) {
@@ -392,7 +413,6 @@ static int bcmpmureg_disable(struct regulator_dev *rdev)
 	bcmpmu = rdev_get_drvdata(rdev);
 	id = rdev_get_id(rdev);
 	BUG_ON(bcmpmu == NULL || id >= BCMPMU_REGULATOR_MAX);
-
 	return __bcmpmureg_disable(bcmpmu, id);
 }
 
@@ -950,8 +970,13 @@ static int bcmpmu_regulator_probe(struct platform_device *pdev)
 			if (bcmpmu_rgltrs[i].initdata->constraints.always_on ||
 				bcmpmu_rgltrs[i].initdata->constraints.boot_on)
 				__bcmpmureg_enable(bcmpmu, rgltr_id);
-			else
+			else {
+				/*As per design, dsm_mode shouldn't be set to
+				BCMPMU_REGL_OFF_IN_DSM for LDOs managed by SW*/
+				WARN_ON(bcmpmu_rgltrs[i].dsm_mode ==
+						BCMPMU_REGL_OFF_IN_DSM);
 				__bcmpmureg_disable(bcmpmu, rgltr_id);
+			}
 			regl[i] =
 				regulator_register(rgltr_info[rgltr_id].rdesc,
 						&pdev->dev,

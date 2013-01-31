@@ -845,7 +845,14 @@ struct bcmpmu59xxx_audio_pdata {
 struct bcmpmu59xxx_regulator_init_data {
 	int id; /* Regulator ID */
 	struct regulator_init_data *initdata;
-	u16 dsm_mode;
+
+	/*For always_on LDOs, dsm_mode is used to init
+	regulaor opmode in deep sleep state.
+
+	For LDOs managed by SW drivers, dsm_mode defines LDO
+	state in deep sleep when the LDO is left enabled by SW.
+	BCMPMU_REGL_OFF_IN_DSM is NOT allowed in this case*/
+	u32 dsm_mode;
 	u32 pc_pins_map;
 	char *name;
 };
