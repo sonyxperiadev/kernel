@@ -288,6 +288,11 @@ config BROADCOM_WIFI_RESERVED_MEM
 	help
 	  Enables  STATIC BUFFER Support for WLAN chips
 
+config TARGET_LOCALE_CHN
+	bool "Enable WAPI support for China"
+	help
+	  Enables WAPI support for China
+
 source "drivers/net/wireless/ath/Kconfig"
 source "drivers/net/wireless/b43/Kconfig"
 source "drivers/net/wireless/b43legacy/Kconfig"
