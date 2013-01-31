@@ -1269,6 +1269,14 @@ int akm8975_probe(struct i2c_client *client, const struct i2c_device_id *id)
 			goto err_read;
 		}
 		s_akm->layout = val;
+
+		if (of_property_read_u32(np, "gpio-irq-pin", &val)) {
+			dev_err(&client->dev,
+				"%s: get gpio-irq-pin fail, from DTS",
+				__func__);
+			val = 0;
+		}
+		s_akm->irq = val;
 	} else {
 		/* DTS data is not available.
 		   Layout information should be set by each application. */
@@ -1314,15 +1322,29 @@ int akm8975_probe(struct i2c_client *client, const struct i2c_device_id *id)
 
 
 	/***** IRQ setup *****/
-	s_akm->irq = client->irq;
-
 	if (s_akm->irq == 0) {
 		dev_dbg(&client->dev, "%s: IRQ is not set.", __func__);
 		/* Use timer to notify measurement end */
 		INIT_DELAYED_WORK(&s_akm->work, akm8975_delayed_work);
+		client->irq = -1;
 	} else {
+		err = gpio_request(s_akm->irq, "akm_irq");
+		if (err != 0) {
+			dev_err(&client->dev, "gpio request irq fail\n");
+			goto gpio_req_err;
+		}
+
+		err = gpio_direction_input(s_akm->irq);
+		if (err != 0) {
+			dev_err(&client->dev, "gpio direction input fail\n");
+			goto gpio_dir_err;
+		}
+
+		client->irq = gpio_to_irq(s_akm->irq);
+		dev_info(&client->dev, "akm8975: irq_num: %d\n", client->irq);
+
 		err = request_threaded_irq(
-				s_akm->irq,
+				client->irq,
 				NULL,
 				akm8975_irq,
 				IRQF_TRIGGER_RISING|IRQF_ONESHOT,
@@ -1361,6 +1383,10 @@ exit5:
 		free_irq(s_akm->irq, s_akm);
 exit4:
 	input_unregister_device(s_akm->input);
+
+gpio_dir_err:
+	gpio_free(s_akm->irq);
+gpio_req_err:
 exit3:
 exit2:
 err_read:
@@ -1377,8 +1403,10 @@ static int akm8975_remove(struct i2c_client *client)
 	remove_sysfs_interfaces(akm);
 	if (misc_deregister(&akm8975_dev) < 0)
 		dev_err(&client->dev, "misc deregister failed.");
-	if (akm->irq)
-		free_irq(akm->irq, akm);
+	if (akm->irq) {
+		free_irq(client->irq, akm);
+		gpio_free(akm->irq);
+	}
 	input_unregister_device(akm->input);
 	kfree(akm);
 	dev_info(&client->dev, "successfully removed.");
