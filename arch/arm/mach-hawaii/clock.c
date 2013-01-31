@@ -7667,15 +7667,16 @@ int __init __clock_init(void)
 int __clock_print_act_clks(void)
 {
 	int i;
-
+	int num_active = 0;
 	pr_info("\n*** ACTIVE CLKS DURING SUSPEND ***\n");
 	pr_info("\tCLK \t\t USE_COUNT\n");
 
 	for (i = 0; i < ARRAY_SIZE(ccu_clks); i++)
-		ccu_print_sleep_prevent_clks(clk_get(NULL, ccu_clks[i]));
+		if (ccu_print_sleep_prevent_clks(clk_get(NULL, ccu_clks[i])))
+			num_active++;
 
 	pr_info("**********************************\n");
-	return 0;
+	return num_active;
 }
 EXPORT_SYMBOL(__clock_print_act_clks);
 

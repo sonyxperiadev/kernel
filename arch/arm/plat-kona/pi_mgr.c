@@ -1702,7 +1702,7 @@ __weak u32 get_opp_from_name(char *name)
 	return -EINVAL;
 }
 
-void pi_mgr_print_active_pis(void)
+int pi_mgr_print_active_pis(void)
 {
 	u32 i;
 	struct pi *pi;
@@ -1710,9 +1710,10 @@ void pi_mgr_print_active_pis(void)
 	struct pi_mgr_qos_node *qos_node;
 	unsigned long flag;
 	int state_policy;
+	int num_active = 0;
 
 	if (unlikely(!pi_mgr.init))
-		return;
+		return -EPERM;
 
 	for (i = 0; i < PI_MGR_PI_ID_MAX; i++) {
 		pi = pi_mgr.pi_list[i];
@@ -1737,9 +1738,12 @@ void pi_mgr_print_active_pis(void)
 				pr_info("%s \t %d\n", qos_node->name,
 						qos_node->latency);
 			pr_info("---------------------\n");
+			num_active++;
 		}
 		spin_unlock_irqrestore(&pi->lock, flag);
 	}
+	pr_info("%s, Num PIs with active QOS req: %d", __func__, num_active);
+	return num_active;
 }
 EXPORT_SYMBOL(pi_mgr_print_active_pis);
 

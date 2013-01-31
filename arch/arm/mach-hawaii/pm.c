@@ -380,10 +380,18 @@ int hawaii_force_sleep(suspend_state_t state)
 	int i;
 	memset(&s, 0, sizeof(s));
 	s.state = get_force_sleep_state();
+	pr_info("%s: getting called with state: %d\n", __func__, s.state);
 
 	/* No more scheduling out */
 	local_irq_disable();
 	local_fiq_disable();
+	if (pi_mgr_print_active_pis() || __clock_print_act_clks()) {
+		pr_err("%s: Can't force sleep. There are active pis",
+				__func__);
+		local_irq_enable();
+		local_fiq_enable();
+		return -EINVAL;
+	}
 
 	force_sleep = 1;
 
@@ -427,8 +435,10 @@ int enter_idle_state(struct kona_idle_state *state, u32 ctrl_params)
 	pi_enable(pi, 0);
 
 	if (clk_dbg_dsm)
-		if (ctrl_params & CTRL_PARAMS_ENTER_SUSPEND)
+		if (ctrl_params & CTRL_PARAMS_ENTER_SUSPEND) {
 			__clock_print_act_clks();
+			pi_mgr_print_active_pis();
+		}
 	if (smp_processor_id() == 0)
 		log_pm(num_dbg_args[DBG_MSG_PM_LPM_ENTER],
 			DBG_MSG_PM_LPM_ENTER, pi->id, state->state);

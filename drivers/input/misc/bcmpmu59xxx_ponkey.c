@@ -55,6 +55,67 @@ u32 bcmpmu_get_ponkey_state(void)
 }
 EXPORT_SYMBOL(bcmpmu_get_ponkey_state);
 
+struct simulate_ponkey {
+	int dummy;
+};
+
+#define __param_check_simulate_ponkey(name, p, type) \
+	static inline struct type *__check_##name(void) { return (p); }
+
+#define param_check_simulate_ponkey(name, p) \
+	__param_check_simulate_ponkey(name, p, simulate_ponkey)
+
+static int param_set_simulate_ponkey(const char *val,
+			const struct kernel_param *kp);
+static int param_get_simulate_ponkey(char *buffer,
+			const struct kernel_param *kp);
+
+static struct kernel_param_ops param_ops_simulate_ponkey = {
+	.get = param_get_simulate_ponkey,
+	.set = param_set_simulate_ponkey,
+};
+
+static struct simulate_ponkey simulate_ponkey;
+module_param_named(simulate_ponkey, simulate_ponkey, simulate_ponkey,
+				S_IRUGO | S_IWUSR | S_IWGRP);
+
+static int param_set_simulate_ponkey(const char *val,
+		const struct kernel_param *kp)
+{
+	int trig;
+	int ret = -1;
+	if (!val)
+		return -EINVAL;
+	ret = sscanf(val, "%d", &trig);
+	pr_info("%s, trig:%d\n", __func__, trig);
+
+	if (bcmpmu_pkey) {
+		if (trig)
+			bcmpmu_pkey->ponkey_state = 1;
+		else
+			bcmpmu_pkey->ponkey_state = 0;
+		pr_info("ponkeystate:%d", bcmpmu_pkey->ponkey_state);
+		input_report_key(bcmpmu_pkey->idev,
+			KEY_POWER, bcmpmu_pkey->ponkey_state);
+		input_sync(bcmpmu_pkey->idev);
+	} else
+		pr_info("Ponkey ptr is NULL\n");
+
+	return 0;
+}
+
+static int param_get_simulate_ponkey(char *buffer,
+		const struct kernel_param *kp)
+{
+	if (!buffer)
+		return -EINVAL;
+	if (bcmpmu_pkey)
+		pr_info("Curr state: %u\n", bcmpmu_pkey->ponkey_state);
+	else
+		pr_info("Ponkey ptr is NULL\n");
+	return 0;
+}
+
 static void bcmpmu_ponkey_isr(u32 irq, void *data)
 {
 	struct bcmpmu_ponkey *ponkey = data;

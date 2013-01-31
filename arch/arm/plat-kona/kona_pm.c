@@ -178,8 +178,7 @@ __weak int kona_mach_pm_enter(suspend_state_t state)
 		&pm_prms.states[pm_prms.suspend_state];
 	BUG_ON(!suspend);
 
-	if (LOG_LEVEL_ENABLED(KONA_PM_LOG_LVL_FLOW))
-		pr_info("--%s: state = %d --\n", __func__, state);
+	pr_info("--%s: state = %d --\n", __func__, state);
 
 	switch (state) {
 	case PM_SUSPEND_STANDBY:
@@ -193,8 +192,7 @@ __weak int kona_mach_pm_enter(suspend_state_t state)
 			break;
 #endif /*CONFIG_HAS_WAKELOCK */
 		if (suspend->enter) {
-			if (LOG_LEVEL_ENABLED(KONA_PM_LOG_LVL_FLOW))
-				pr_info("--%s:suspend->enter--\n", __func__);
+			pr_info("--%s:suspend->enter--\n", __func__);
 
 #ifdef CONFIG_BCM_MODEM
 			BcmRpc_SetApSleep(1);
@@ -383,6 +381,7 @@ int __init kona_pm_init(struct pm_init_param *ip)
  */
 void kona_pm_reg_pm_enter_handler(int (*enter) (suspend_state_t state))
 {
+	pr_info("%s called\n", __func__);
 	kona_pm_ops.enter = enter;
 }
 

@@ -2186,7 +2186,7 @@ int ccu_print_sleep_prevent_clks(struct clk *clk)
 	struct clk *clk_iter;
 	int use_cnt;
 	int sleep_prevent = 0;
-
+	int num_active = 0;
 	if (!clk || (clk->clk_type != CLK_TYPE_CCU))
 		return -EINVAL;
 	ccu_clk = to_ccu_clk(clk);
@@ -2218,10 +2218,12 @@ int ccu_print_sleep_prevent_clks(struct clk *clk)
 		default:
 			break;
 		}
-		if (use_cnt && sleep_prevent)
+		if (use_cnt && sleep_prevent) {
 			pr_info("%20s %10d", clk_iter->name, clk_iter->use_cnt);
+			num_active++;
+		}
 	}
-	return 0;
+	return num_active;
 }
 EXPORT_SYMBOL(ccu_print_sleep_prevent_clks);
 
