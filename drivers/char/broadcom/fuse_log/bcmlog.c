@@ -18,7 +18,7 @@
 #include <linux/module.h>
 #include <linux/io.h>
 #include <linux/workqueue.h>
-#include <linux/brcm_console.h>
+#include <linux/console.h>
 #include <linux/cdev.h>
 #include <linux/device.h>
 #include <linux/fs.h>
@@ -35,11 +35,14 @@
 #include <linux/broadcom/bcm_major.h>
 #include <linux/time.h>
 #include <linux/rtc.h>
-#include <linux/kdebug.h>
+#include <linux/hardirq.h>
+#include <linux/vmalloc.h>
 #ifdef CONFIG_BRCM_CP_CRASH_DUMP_EMMC
 #include <linux/mmc-poll/mmc_poll_stack.h>
 #include <linux/mmc-poll/mmc_poll.h>
 #endif
+/*#include <linux/broadcom/ipc_server_ifc.h>
+*/
 #include <linux/jiffies.h>
 #ifdef CONFIG_HAS_WAKELOCK
 #include <linux/wakelock.h>
@@ -53,6 +56,7 @@
 #include <linux/broadcom/ipcinterface.h>
 #include <mach/ns_ioremap.h>
 
+#include "fifo.h"
 #include "bcmmtt.h"
 #include "bcmlog.h"
 #include "output.h"
@@ -94,6 +98,8 @@
 #define CP_DUMP_LEN			512
 #define KPANIC_CP_DUMP_OFFSET		0x100000
 
+#define BCMLOG_OUTPUT_FIFO_MAX_BYTES  (64 * 1024 * 1024)
+
 struct panic_header {
 	u32 magic;
 #define PANIC_MAGIC 0xdeadf00d
@@ -120,31 +126,25 @@ struct cpanic_data {
 	struct proc_dir_entry *apanic_threads;
 };
 
-#ifdef CONFIG_BRCM_CP_CRASH_DUMP_EMMC
-static unsigned long offs;
-#endif
-
 static void BCMLOG_klogging_crashdump(const char *buf, int size)
 {
-#ifdef CONFIG_BRCM_NETCONSOLE
 	brcm_klogging((char *)buf, size) ;
-#endif
 	mdelay(10);
 }
 
 struct vm_struct *bcmlog_cpmap_area;
+#define get_vaddr_ipc(area) (ipc_cpmap_area->addr + area)
+#define get_vaddr(area) (bcmlog_cpmap_area->addr + area)
 
-#define get_vaddr(area)	(bcmlog_cpmap_area->addr + area)
+#ifdef CONFIG_BRCM_CP_CRASH_DUMP_EMMC
+static unsigned long offs;
+#endif
 
 static unsigned int compress_memcpy(char *dest, char *src,
 				    unsigned short nbytes);
 static unsigned short Checksum16(unsigned char *data, unsigned long len);
 static void BCMLOG_OutputLinkList(unsigned long ListSize,
 				  struct BCMLOG_LogLinkList_t *LinkList);
-static int bcmlog_die_handler(struct notifier_block *self,
-			      unsigned long val, void *data);
-static void BCMLOG_LogString_AP_Crash(const char *inLogString,
-				      unsigned short inSender);
 static unsigned char *sMemDumpSignalBuf;
 mm_segment_t sCrashDumpFS;
 
@@ -228,6 +228,12 @@ struct BCMLOG_Module_t {
 	spinlock_t output_lock;
 	/* 1==dumping CP crash log, 0 otherwise */
 	int dumping_cp_crash_log;
+	/* log buffer */
+	void *buffer;
+	/* size of log buffer in bytes */
+	int buffer_size;
+	/* fifo handle */
+	BCMLOG_Fifo_t *fifo;
 };
 
 /**
@@ -253,7 +259,14 @@ static int BCMLOG_Release(struct inode *inode, struct file *filp);
 /*
  *	module status
  */
-static struct BCMLOG_Module_t g_module = { 0 };
+static struct BCMLOG_Module_t g_module = {
+	.console_msg_lvl = 0,
+	.logdrv_class = NULL,
+	.dumping_cp_crash_log = 0,
+	.buffer = NULL,
+	.buffer_size = KMALLOC_MAX_SIZE,
+	.fifo = NULL,
+};
 
 /*
  *	file ops
@@ -267,13 +280,6 @@ static const struct file_operations g_file_operations = {
 	.poll = NULL,
 	.mmap = NULL,
 	.release = BCMLOG_Release,
-};
-
-/*
- *	die notifier
- */
-static struct notifier_block bcmlog_die_notifier = {
-	.notifier_call = bcmlog_die_handler,
 };
 
 /**
@@ -303,6 +309,74 @@ unsigned long AcquireOutputLock(void)
 void ReleaseOutputLock(unsigned long irql)
 {
 	spin_unlock_irqrestore(&g_module.output_lock, irql);
+}
+
+/**
+ *	Get the current log buffer size
+ *	@return	size of buffer in bytes
+ **/
+int BCMLOG_GetBufferSize(void)
+{
+	return g_module.buffer_size;
+}
+
+/**
+ *	Get the current log buffer size.  All stored logs will be lost.
+ *	@return	size of buffer in bytes
+ **/
+void BCMLOG_SetBufferSize(int buffer_size)
+{
+	unsigned long lock;
+
+	/* check range */
+	if ((buffer_size <= 0) ||
+			(buffer_size > BCMLOG_OUTPUT_FIFO_MAX_BYTES)) {
+		BCMLOG_PRINTF(BCMLOG_CONSOLE_MSG_ERROR,
+			"BCM Log Invalid buffer size:%x\n", buffer_size);
+		return;
+	}
+	if (buffer_size == g_module.buffer_size) {
+		BCMLOG_PRINTF(BCMLOG_CONSOLE_MSG_ERROR,
+			"BCM Log no change in buffer size:%x\n", buffer_size);
+		return;
+	}
+
+	lock = AcquireOutputLock();
+	/* stop current logging and create new buffer */
+	if (g_module.buffer_size <= KMALLOC_MAX_SIZE)
+		kfree(g_module.buffer);
+	else
+		vfree(g_module.buffer);
+
+	if (buffer_size <= KMALLOC_MAX_SIZE)
+		g_module.buffer = kmalloc(buffer_size, GFP_KERNEL);
+	else
+		g_module.buffer = vmalloc(buffer_size);
+
+	/* Failed allocation will default to default size */
+	if (!g_module.buffer) {
+		BCMLOG_PRINTF(BCMLOG_CONSOLE_MSG_ERROR,
+			"BCM Log Failed to allocate new log buffer of size:%x\n",
+			buffer_size);
+		if (g_module.buffer_size > KMALLOC_MAX_SIZE) {
+			g_module.buffer = kmalloc(
+				KMALLOC_MAX_SIZE,
+				GFP_KERNEL);
+			g_module.buffer_size = KMALLOC_MAX_SIZE;
+		}
+
+		if (!g_module.buffer) {
+			BCMLOG_PRINTF(BCMLOG_CONSOLE_MSG_ERROR,
+				"BCM Log Failed to allocate default log buffer of size:%x\n",
+				KMALLOC_MAX_SIZE);
+		}
+	} else
+		g_module.buffer_size = buffer_size;
+
+	BCMLOG_FifoInit(g_module.fifo, g_module.buffer, g_module.buffer_size);
+
+	ReleaseOutputLock(lock);
+	return ;
 }
 
 /**
@@ -356,107 +430,150 @@ static int BCMLOG_Open(struct inode *inode, struct file *filp)
  **/
 static long BCMLOG_Ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
-	void __user *p = (void __user *)arg;
+	int rc;
 
 	switch (cmd) {
 		/**
 		 *	log a null-terminated string from user space
 		 **/
-	case BCMLOG_IOC_LOGSTR: {
-		struct BCMLOG_IoctlLogStr_t lcl;
-		char *kbuf_str;
+	case BCMLOG_IOC_LOGSTR:
+		{
+			struct BCMLOG_IoctlLogStr_t *lcl =
+			    (struct BCMLOG_IoctlLogStr_t *)arg;
 
-		if (CpCrashDumpInProgress())
-			return -EBUSY;
-		if (copy_from_user(&lcl, p, sizeof(lcl)))
-			return -EFAULT;
-		if (lcl.size == 0)
-			return -EINVAL;
-		if (!BCMLOG_LogIdIsEnabled(lcl.sender))
-			return -ENXIO;
+			if (!CpCrashDumpInProgress()) {
+				char *kbuf_str = 0;
 
-		kbuf_str = kmalloc(lcl.size + 1, GFP_KERNEL);
-		if (kbuf_str == NULL) {
-			BCMLOG_RecordLogError(MEMORY_FULL_ONCE);
-			BCMLOG_PRINTF(BCMLOG_CONSOLE_MSG_ERROR,
-					"allocation error\n");
-			return -ENOMEM;
-		}
+				if (!lcl || !lcl->str || !lcl->size) {
+					rc = -1;
+					break;
+				}
 
-		if (copy_from_user(kbuf_str, lcl.str, lcl.size)) {
-			BCMLOG_PRINTF(BCMLOG_CONSOLE_MSG_ERROR,
-					"bad userspace pointer\n");
-			kfree(kbuf_str);
-			return -EFAULT;
-		}
+				if (!BCMLOG_LogIdIsEnabled(lcl->sender)) {
+					rc = -1;
+					break;
+				}
 
-		/* this ensures the string is null terminated */
-		kbuf_str[lcl.size] = 0;
-		LogString_Internal(kbuf_str, lcl.sender);
-		kfree(kbuf_str);
-		return 0;
-	}
+				kbuf_str = kmalloc(lcl->size + 1, GFP_ATOMIC);
 
-	case BCMLOG_IOC_ENABLE: {
-		struct BCMLOG_IoctlEnable_t lcl;
+				if (!kbuf_str) {
+					BCMLOG_PRINTF(BCMLOG_CONSOLE_MSG_ERROR,
+						      "allocation error\n");
+					rc = -1;
+					break;
+				}
 
-		if (copy_from_user(&lcl, p, sizeof(lcl)))
-			return -EFAULT;
-		if (lcl.id >= BCMLOG_MAX_LOG_ID)
-			return -EINVAL;
-		if (lcl.set)
-			BCMLOG_EnableLogId(lcl.id, lcl.enable);
-		else
-			lcl.enable = BCMLOG_LogIdIsEnabled(lcl.id);
+				if (copy_from_user
+				    (kbuf_str, lcl->str, lcl->size)) {
+					BCMLOG_PRINTF(BCMLOG_CONSOLE_MSG_ERROR,
+						      "bad userspace pointer\n");
+					rc = -1;
+					kfree(kbuf_str);
+					break;
+				}
+				/* this ensures the string is null terminated */
+				kbuf_str[lcl->size] = 0;
 
-		if (copy_to_user(p, &lcl, sizeof(lcl)))
-			return -EFAULT;
-		return 0;
-	}
+				LogString_Internal(kbuf_str, lcl->sender);
 
-	case BCMLOG_IOC_LOGSIGNAL: {
-		/* request to log binary signal from user space */
-		struct BCMLOG_IoctlLogSignal_t lcl;
-
-		if (CpCrashDumpInProgress())
-			return -EBUSY;
-		if (copy_from_user(&lcl, p, sizeof(lcl)))
-			return -EFAULT;
-		if (!BCMLOG_LogIdIsEnabled(lcl.sender))
-			return -ENXIO;
-		if (lcl.sigBufSize > 0) {
-			void *kernelSigBuf;
-
-			/**
-			 * allocate buffer for kernel space signal
-			 **/
-			kernelSigBuf = kmalloc(lcl.sigBufSize, GFP_KERNEL);
-			if (kernelSigBuf == NULL) {
-				BCMLOG_RecordLogError(MEMORY_FULL_ONCE);
-				BCMLOG_PRINTF(BCMLOG_CONSOLE_MSG_ERROR,
-						"allocation error\n");
-				return -ENOMEM;
+				kfree(kbuf_str);
 			}
-			/**
-			 * copy the signal from user space to kernel space
-			 **/
-			if (copy_from_user(kernelSigBuf, lcl.sigPtr,
-						lcl.sigBufSize)) {
-				kfree(kernelSigBuf);
-				return -EFAULT;
-			}
-			/* internal api for signal logging */
-			LogSignal_Internal(lcl.sigCode, kernelSigBuf,
-						lcl.sigBufSize, lcl.state,
-						lcl.sender,
-						LOGSIGNAL_COMPRESS);
-			kfree(kernelSigBuf);
+
+			rc = 0;
+
+			break;
 		}
-		return 0;
-	}
+
+	case BCMLOG_IOC_ENABLE:
+		{
+			struct BCMLOG_IoctlEnable_t *lcl =
+			    (struct BCMLOG_IoctlEnable_t *)arg;
+
+			if (!lcl || lcl->id >= BCMLOG_MAX_LOG_ID) {
+				rc = -1;
+				break;
+			}
+
+			if (lcl->set)
+				BCMLOG_EnableLogId(lcl->id, lcl->enable);
+
+			else
+				lcl->enable = BCMLOG_LogIdIsEnabled(lcl->id);
+
+			rc = 0;
+			break;
+
+		}
+
+	case BCMLOG_IOC_LOGSIGNAL:
+		{
+			/* request to log binary signal from user space */
+			struct BCMLOG_IoctlLogSignal_t *lcl =
+			    (struct BCMLOG_IoctlLogSignal_t *)arg;
+
+			if (!CpCrashDumpInProgress()) {
+
+				/* sanity check... */
+				if (!lcl) {
+					rc = -1;
+					break;
+				}
+
+				if (!BCMLOG_LogIdIsEnabled(lcl->sender)) {
+					rc = -1;
+					break;
+				}
+
+				if (lcl->sigPtr && (lcl->sigBufSize > 0)) {
+					/**
+					 * allocate buffer for kernel space
+					 * signal
+					 **/
+					void *kernelSigBuf =
+					    kmalloc(lcl->sigBufSize,
+						    GFP_ATOMIC);
+
+					if (!kernelSigBuf) {
+						BCMLOG_PRINTF
+						    (BCMLOG_CONSOLE_MSG_ERROR,
+						     "allocation error\n");
+						return -1;
+					}
+					/**
+					 * copy the signal from user space to
+					 * kernel space
+					 **/
+					if (copy_from_user(kernelSigBuf,
+							   lcl->sigPtr,
+							   lcl->sigBufSize)) {
+						rc = -1;
+						kfree(kernelSigBuf);
+						break;
+					}
+
+					/* internal api for signal logging */
+					LogSignal_Internal(lcl->sigCode,
+							   kernelSigBuf,
+							   lcl->sigBufSize,
+							   lcl->state,
+							   lcl->sender,
+							   LOGSIGNAL_COMPRESS);
+
+					kfree(kernelSigBuf);
+				}
+			}
+
+			rc = 0;
+
+			break;
+		}
+
+	default:
+		rc = -1;
+		break;
 	}
 
-	return -ENOIOCTLCMD;
+	return rc;
 }
 
 /**
@@ -511,13 +628,26 @@ static int __init BCMLOG_ModuleInit(void)
 	g_module.console_msg_lvl = BCMLOG_CONSOLE_MSG_LVL;
 	g_module.logdrv_class = NULL;
 
+	if ((g_module.buffer_size <= 0) ||
+			(g_module.buffer_size > BCMLOG_OUTPUT_FIFO_MAX_BYTES))
+		g_module.buffer_size = KMALLOC_MAX_SIZE;
+
+	if (g_module.buffer_size <= KMALLOC_MAX_SIZE)
+		g_module.buffer = kmalloc(g_module.buffer_size, GFP_KERNEL);
+	else
+		g_module.buffer = vmalloc(g_module.buffer_size);
+
+	if (!g_module.buffer) {
+		BCMLOG_PRINTF(BCMLOG_CONSOLE_MSG_ERROR,
+			"BCM Log Failed to allocate buffer\n");
+		return -1;
+	}
+
 	if (bcmlog_crashsupport_init())
 		return -1;
 
-	if (0 != BCMLOG_OutputInit()) {
-		BCMLOG_PRINTF(BCMLOG_CONSOLE_MSG_ERROR, "output init error\n");
-		return -1;
-	}
+	g_module.fifo = BCMLOG_OutputInit((unsigned char *)g_module.buffer,
+		g_module.buffer_size);
 
 	spin_lock_init(&g_module.output_lock);
 
@@ -567,9 +697,6 @@ static int __init BCMLOG_ModuleInit(void)
 /* #endif */
 
 	BrcmLogString = BCMLOG_LogString;
-
-	register_die_notifier(&bcmlog_die_notifier);
-
 	return ret;
 }
 
@@ -581,25 +708,6 @@ static int __init BCMLOG_ModuleInit(void)
  **/
 static void __exit BCMLOG_ModuleExit(void)
 {
-	BCMLOG_OutputExit();
-}
-
-/**
- *	Die notification handler.
- *	Change log handler to atomic custom handler.
-**/
-static int bcmlog_die_handler(struct notifier_block *self,
-			      unsigned long val, void *data)
-{
-	switch (val) {
-	case DIE_OOPS:
-		if (BCMLOG_GetApCrashLogDevice() == BCMLOG_OUTDEV_CUSTOM)
-			BrcmLogString = BCMLOG_LogString_AP_Crash;
-		break;
-	default:
-		break;
-	}
-	return NOTIFY_OK;
 }
 
 /**
@@ -628,10 +736,10 @@ static void LogString_Internal(const char *inLogString, unsigned short inSender)
 		return;
 	}
 
-	kbuf_mtt = kmalloc(mttFrameSize, GFP_ATOMIC | __GFP_NOWARN);
+	kbuf_mtt = kmalloc(mttFrameSize, GFP_ATOMIC);
 
 	if (!kbuf_mtt) {
-		BCMLOG_RecordLogError(MEMORY_FULL_ONCE);
+		BCMLOG_PRINTF(BCMLOG_CONSOLE_MSG_ERROR, "allocation error\n");
 		return;
 	}
 
@@ -668,9 +776,8 @@ void BCMLOG_LogString(const char *inLogString, unsigned short inSender)
 	int StringLength, j = 0, k = 0;
 
 	/* Redirect the printk string if reqested by client */
-	if(inSender == BCMLOG_LOG_ULOGGING_ID && 
-			atomic_read(&redirectEnabled) == 1)
-	{
+	if (inSender == BCMLOG_LOG_ULOGGING_ID &&
+	    atomic_read(&redirectEnabled) == 1) {
 		unsigned long irql;
 		
 		irql = AcquireOutputLock();
@@ -714,217 +821,6 @@ void BCMLOG_LogString(const char *inLogString, unsigned short inSender)
 	}
 }
 
-/**
- *	Log AP crash messages.
- *
- *	@param	inLogString		(in)	null terminated string to be logged
- *	@param	inSender		(in)	ID of sending task
- *
-**/
-static void BCMLOG_LogString_AP_Crash(const char *inLogString,
-				      unsigned short inSender)
-{
-	int str_len;
-	char header[MTT_HEADER_SIZE];
-	char trailer[MTT_PAYLOAD_CS_SIZE];
-
-	str_len = BCMMTT_FrameString_nocopy(header, trailer, inLogString);
-
-	BCMLOG_CallHandler(BCMLOG_CUSTOM_AP_CRASH_LOG, header, MTT_HEADER_SIZE,
-			   BCMLOG_CUSTOM_START);
-	BCMLOG_CallHandler(BCMLOG_CUSTOM_AP_CRASH_LOG, inLogString, str_len,
-			   BCMLOG_CUSTOM_DATA);
-	BCMLOG_CallHandler(BCMLOG_CUSTOM_AP_CRASH_LOG, trailer,
-			   MTT_PAYLOAD_CS_SIZE, BCMLOG_CUSTOM_END);
-}
-
-/**
- * Handle CP crash dump data from IPC server
- * for STM without going through workqueue which
- * is freezable. While in dump, this should be avoided.
- * Since STM HW detects a packet as following -
- * 72,data,0 and CP doesn't send a complete frame, we need to
- * parse a complet packet, and should know left over packet is
- * part of header or data so that can be sent as another complete
- * packet on next visit. so the following helper functions are needed.
- *
- * Helper functions:
- * stm_trace_buffer_start() - send only start byte, 0x72.
- * stm_trace_buffer_data() - send only data part of a packet.
- * stm_trace_buffer_onchannel() - send start byte, data, and end
- * byte, 0x0.
- *
- * @param	buf		(in)	message buffer
- * @param	size	(in)	message length
- * @note	data from IPC is not alligned by MTT frame.
- **/
-#ifdef CONFIG_BCM_STM
-static void BCMLOG_HandleCpCrashDumpData_Custom_STM(const char *buf, int size)
-{
-	static int rem_data_len;
-	static int rem_header_len;
-	static char partial_header[MTT_HEADER_SIZE];
-	int i = 0, k = 0, tmp_size = 0;
-	int complete_size = 0;
-	int packet_size;
-	const char *p_buf = buf;
-	int rem_size = size;
-
-	if (rem_header_len) {
-		if (rem_header_len >= 12) {
-			packet_size =
-			    (((unsigned short)(partial_header[10])) << 8) +
-			    (unsigned short)(partial_header[11]);
-		} else if (rem_header_len == 11) {
-			packet_size =
-			    (((unsigned short)(partial_header[10])) << 8) +
-			    (unsigned short)(p_buf[0]);
-		} else {
-			packet_size =
-			    (((unsigned short)(p_buf[10 - rem_header_len])) <<
-			     8) + (unsigned short)(p_buf[11 - rem_header_len]);
-		}
-		packet_size += MTT_HEADER_SIZE + MTT_PAYLOAD_CS_SIZE;
-
-		if (BCMLOG_GetCpCrashLogDevice() == BCMLOG_OUTDEV_CUSTOM)
-			BCMLOG_CallHandler(BCMLOG_CUSTOM_CP_CRASH_LOG,
-			partial_header, rem_header_len, BCMLOG_CUSTOM_START);
-		else if (BCMLOG_GetCpCrashLogDevice() == BCMLOG_OUTDEV_STM) {
-			stm_trace_buffer_start(FUSE_LOG_CHANNEL);
-			stm_trace_buffer_data(FUSE_LOG_CHANNEL, partial_header,
-				      rem_header_len);
-		}
-
-		if (packet_size - rem_header_len <= size) {
-			if (BCMLOG_GetCpCrashLogDevice() ==
-						BCMLOG_OUTDEV_CUSTOM)
-				BCMLOG_CallHandler(BCMLOG_CUSTOM_CP_CRASH_LOG,
-				p_buf, packet_size - rem_header_len,
-				BCMLOG_CUSTOM_END);
-			else if (BCMLOG_GetCpCrashLogDevice() ==
-							BCMLOG_OUTDEV_STM) {
-				stm_trace_buffer_data(FUSE_LOG_CHANNEL, p_buf,
-					      packet_size - rem_header_len);
-				stm_trace_buffer_end(FUSE_LOG_CHANNEL);
-			}
-			p_buf += (packet_size - rem_header_len);
-			size -= (packet_size - rem_header_len);
-			rem_size -= (packet_size - rem_header_len);
-			rem_header_len = 0;
-			rem_data_len = 0;
-		} else {
-			if (BCMLOG_GetCpCrashLogDevice() ==
-						BCMLOG_OUTDEV_CUSTOM)
-				BCMLOG_CallHandler(BCMLOG_CUSTOM_CP_CRASH_LOG,
-				p_buf, size, BCMLOG_CUSTOM_DATA);
-			else if (BCMLOG_GetCpCrashLogDevice() ==
-						BCMLOG_OUTDEV_STM)
-				stm_trace_buffer_data(FUSE_LOG_CHANNEL,
-							p_buf, size);
-
-			rem_size = 0;
-			rem_header_len = 0;
-			rem_data_len = packet_size - rem_header_len - size;
-		}
-	} else if (rem_data_len) {
-		if (rem_data_len <= size) {
-			if (BCMLOG_GetCpCrashLogDevice() ==
-						BCMLOG_OUTDEV_CUSTOM)
-				BCMLOG_CallHandler(BCMLOG_CUSTOM_CP_CRASH_LOG,
-				p_buf, rem_data_len, BCMLOG_CUSTOM_END);
-			else if (BCMLOG_GetCpCrashLogDevice() ==
-						BCMLOG_OUTDEV_STM) {
-				stm_trace_buffer_data(FUSE_LOG_CHANNEL, p_buf,
-					      rem_data_len);
-				stm_trace_buffer_end(FUSE_LOG_CHANNEL);
-			}
-
-			p_buf += rem_data_len;
-			size -= rem_data_len;
-			rem_size -= rem_data_len;
-			rem_data_len = 0;
-		} else {
-			if (BCMLOG_GetCpCrashLogDevice() ==
-						BCMLOG_OUTDEV_CUSTOM)
-				BCMLOG_CallHandler(BCMLOG_CUSTOM_CP_CRASH_LOG,
-				p_buf, size, BCMLOG_CUSTOM_DATA);
-			else if (BCMLOG_GetCpCrashLogDevice() ==
-						BCMLOG_OUTDEV_STM)
-				stm_trace_buffer_data(FUSE_LOG_CHANNEL,
-				p_buf, size);
-
-			rem_size = 0;
-			rem_data_len -= size;
-
-		}
-	}
-
-	/* looks for sync bytes A5 C3, if this packet is long enough
-	 * (>12) to know packet size, increment to that size. When there
-	 * is not much CP activities CP sends 0s for "last moment" logs.
-	 * If this is the case, break here and skip all 0s.
-	 * CP will increment rd_index and send another data to AP on next
-	 * turn.
-	 */
-	while (i + 12 < size) {
-		if (p_buf[i] == MTTLOG_FrameSync0
-		    && p_buf[i + 1] == MTTLOG_FrameSync1) {
-			k = i;
-			i += (MTT_HEADER_SIZE + MTT_PAYLOAD_CS_SIZE +
-			      (((unsigned
-				 short)(p_buf[i + 10])) << 8) +
-			      (unsigned short)(p_buf[i + 11]));
-			if (i < size) {
-				complete_size = i - k;
-				tmp_size = tmp_size + complete_size;
-				if (complete_size) {
-					if (BCMLOG_GetCpCrashLogDevice() ==
-							BCMLOG_OUTDEV_CUSTOM)
-						BCMLOG_CallHandler(
-						BCMLOG_CUSTOM_CP_CRASH_LOG,
-						(p_buf + k), complete_size,
-						BCMLOG_CUSTOM_COMPLETE);
-					else if (BCMLOG_GetCpCrashLogDevice() ==
-						BCMLOG_OUTDEV_STM)
-						stm_trace_buffer_onchannel(
-						FUSE_LOG_CHANNEL,
-						(p_buf + k), complete_size);
-					rem_size -= complete_size;
-				}
-			}
-		} else {
-			while ((p_buf[i] != MTTLOG_FrameSync0
-				|| p_buf[i + 1] != MTTLOG_FrameSync1)
-			       && i < size) {
-				i++;
-				tmp_size++;
-				rem_size--;
-			}
-		}
-	}
-	/* some bytes left, take care of it on next visit either as
-	 * a partial header(< MTT_HEADER_SIZE) or partial data(
-	 * >= MTT_HEADER_SIZE */
-	if ((rem_size > 0) && (rem_size < MTT_HEADER_SIZE)) {
-		memcpy(partial_header, &p_buf[tmp_size], rem_size);
-		rem_header_len = rem_size;
-	} else if (rem_size >= MTT_HEADER_SIZE) {
-		if (BCMLOG_GetCpCrashLogDevice() == BCMLOG_OUTDEV_CUSTOM)
-			BCMLOG_CallHandler(BCMLOG_CUSTOM_CP_CRASH_LOG,
-				   &p_buf[tmp_size], rem_size,
-				   BCMLOG_CUSTOM_START);
-		else if (BCMLOG_GetCpCrashLogDevice() == BCMLOG_OUTDEV_STM) {
-			stm_trace_buffer_start(FUSE_LOG_CHANNEL);
-			stm_trace_buffer_data(FUSE_LOG_CHANNEL,
-				&p_buf[tmp_size], rem_size);
-		}
-		rem_data_len =
-		    (MTT_HEADER_SIZE + MTT_PAYLOAD_CS_SIZE +
-		     (((unsigned short)(p_buf[tmp_size + 10])) << 8) +
-		     (unsigned short)(p_buf[tmp_size + 11])) - rem_size;
-	}
-}
-#endif
 /**
 	Log a formatted list of arguments
 	@param		inSender (in) ID of the source module
@@ -1011,7 +907,6 @@ static void LogSignal_Internal(unsigned int inSigCode,
 	unsigned char *bufToSend = NULL;
 	unsigned long bufToSendSize = 0;
 	unsigned short chksum;
-	unsigned long irql = 0;
 
 	if (inSigBufSize == 0) {
 		/* signal with no data */
@@ -1071,7 +966,9 @@ static void LogSignal_Internal(unsigned int inSigCode,
 		compressedBuffer = kmalloc((inSigBufSize * 2), GFP_ATOMIC);
 
 		if (compressedBuffer == NULL) {
-			BCMLOG_RecordLogError(MEMORY_FULL_ONCE);
+#ifdef BCMLOG_DEBUG_FLAG
+			g_malloc_sig_buf++;
+#endif
 			BCMLOG_PRINTF(BCMLOG_CONSOLE_MSG_ERROR,
 				      "allocation error\n");
 			return;
@@ -1113,53 +1010,24 @@ static void LogSignal_Internal(unsigned int inSigCode,
 	}
 
 	if (CpCrashDumpInProgress()) {
-		if (BCMLOG_GetCpCrashLogDevice() == BCMLOG_OUTDEV_ACM)
-			irql = AcquireOutputLock();
-
 		/* crash log, so send directly to SDCARD/MTT */
 
-		if (BCMLOG_GetCpCrashLogDevice() == BCMLOG_OUTDEV_CUSTOM) {
-			/* write out frame header... */
-			BCMLOG_CallHandler(BCMLOG_CUSTOM_CP_CRASH_LOG,
-					   frame_head, frame_head_size,
-					   BCMLOG_CUSTOM_START);
-			/* then payload... */
-			BCMLOG_CallHandler(BCMLOG_CUSTOM_CP_CRASH_LOG,
-					   mtt_payload, mtt_payload_size,
-					   BCMLOG_CUSTOM_DATA);
-			/* then signal if applicable... */
-			if (bufToSend && (bufToSendSize > 0))
-				BCMLOG_CallHandler(BCMLOG_CUSTOM_CP_CRASH_LOG,
-						   bufToSend, bufToSendSize,
-						   BCMLOG_CUSTOM_DATA);
-			/* then frame end */
-			BCMLOG_CallHandler(BCMLOG_CUSTOM_CP_CRASH_LOG,
-					   frame_end, frame_end_size,
-					   BCMLOG_CUSTOM_END);
-		} else {
-			/* write out frame header... */
-			BCMLOG_HandleCpCrashDumpData(frame_head,
-						     frame_head_size);
-			/* then payload... */
-			BCMLOG_HandleCpCrashDumpData(mtt_payload,
-						     mtt_payload_size);
-			/* then signal if applicable... */
-			if (bufToSend && (bufToSendSize > 0))
-				BCMLOG_HandleCpCrashDumpData(bufToSend,
-						bufToSendSize);
-			/* then frame end */
-			BCMLOG_HandleCpCrashDumpData(frame_end,
-							     frame_end_size);
-		}
-		if (BCMLOG_GetCpCrashLogDevice() == BCMLOG_OUTDEV_ACM)
-			ReleaseOutputLock(irql);
+		/* write out frame header... */
+		BCMLOG_HandleCpCrashDumpData(frame_head, frame_head_size);
+		/* then payload... */
+		BCMLOG_HandleCpCrashDumpData(mtt_payload, mtt_payload_size);
+		/* then signal if applicable... */
+		if (bufToSend && (bufToSendSize > 0))
+			BCMLOG_HandleCpCrashDumpData(bufToSend, bufToSendSize);
+		/* then frame end */
+		BCMLOG_HandleCpCrashDumpData(frame_end, frame_end_size);
 	} else {
 		unsigned long totallen, availlen;
 
 		/* regular logging -- multiple blocks */
 		/* must be output contiguously */
 		/* so keep the 'output lock' until all are processedd */
-		irql = AcquireOutputLock();
+		unsigned long irql = AcquireOutputLock();
 
 		totallen =
 		    frame_head_size + mtt_payload_size + frame_end_size +
@@ -1185,9 +1053,12 @@ static void LogSignal_Internal(unsigned int inSigCode,
 			 * (located on stack; do not free when done)
 			 **/
 			BCMLOG_Output(frame_end, frame_end_size, 0);
-		} else {
-			BCMLOG_RecordLogError(SIOBUF_FULL_ONCE);
 		}
+#ifdef BCMLOG_DEBUG_FLAG
+		else
+			pr_info("Warning: want %d, have %d", totallen,
+				availlen);
+#endif
 
 		ReleaseOutputLock(irql);
 	}
@@ -1407,10 +1278,9 @@ final:
 #endif
 }
 
-#if !defined(CONFIG_BRCM_CP_CRASH_DUMP_EMMC)
+#ifdef CONFIG_BRCM_CP_CRASH_DUMP
 static void start_panic_crashlog(void)
 {
-#ifdef CONFIG_BRCM_CP_CRASH_DUMP
 	mtd = get_mtd_device_nm(CONFIG_APANIC_PLABEL);
 	if (IS_ERR(mtd)) {
 		printk(KERN_ERR "failed to get MTD handle!!\n");
@@ -1424,10 +1294,8 @@ static void start_panic_crashlog(void)
 		return;
 	}
 	memset(cp_buf, 0xff, mtd->writesize);
-#endif
 }
-#endif /* !defined(CONFIG_BRCM_CP_CRASH_DUMP_EMMC) */
-
+#endif
 
 static int start_sdcard_crashlog(struct file *inDumpFile)
 {
@@ -1477,7 +1345,7 @@ static int start_sdcard_crashlog(struct file *inDumpFile)
  *        BCMLOG_EndCpCrashDump()
  *
  **/
-void BCMLOG_StartCpCrashDump(struct file *inDumpFile)
+void BCMLOG_StartCpCrashDump(struct file *inDumpFile, int cpresetStatus)
 {
 	int dump_port;
 	/* note: don't need wakelock here as CP crash */
@@ -1485,25 +1353,8 @@ void BCMLOG_StartCpCrashDump(struct file *inDumpFile)
 	g_module.dumping_cp_crash_log = 1;
 	sDumpFile = inDumpFile;
 
-#ifdef CONFIG_CDEBUGGER
-	/* if ramdump is enabled, saving cp crash dump here
-	   is redundant, so set it to none */
-	if ((BCMLOG_OUTDEV_NONE != BCMLOG_GetCpCrashLogDevice())
-		&& ramdump_enable
-#ifdef CONFIG_BRCM_CP_CRASH_DUMP_EMMC
-	    && ap_triggered
-#endif
-	    ) {
-		dump_port = BCMLOG_OUTDEV_NONE;
-		BCMLOG_SetCpCrashLogDevice(dump_port);
-	}
-#endif
-	/* We don't support SD card crash dump when AP kernel crash is
-	 * triggered first because file operations are not allowed in
-	 * atomic context. So we switch the port to emmc and save cp dump
-	 */
 	if ((BCMLOG_OUTDEV_SDCARD == BCMLOG_GetCpCrashLogDevice())
-#ifdef CONFIG_APANIC_ON_MMC
+#ifdef CONFIG_BRCM_CP_CRASH_DUMP_EMMC
 	    && ap_triggered
 #endif
 	    ) {
@@ -1511,15 +1362,23 @@ void BCMLOG_StartCpCrashDump(struct file *inDumpFile)
 		BCMLOG_SetCpCrashLogDevice(dump_port);
 	}
 
+	pr_info("BCMLOG cp crash port %d", BCMLOG_GetCpCrashLogDevice());
+
 	switch (BCMLOG_GetCpCrashLogDevice()) {
 	case BCMLOG_OUTDEV_SDCARD:
-		if (start_sdcard_crashlog(inDumpFile)) {
-			break;
-		} else {
-			/* sdcard absent for failed, save the dume to flash */
-			BCMLOG_SetCpCrashLogDevice(BCMLOG_OUTDEV_PANIC);
-			abort();
+		if (!start_sdcard_crashlog(inDumpFile)) {
+			if (!cpresetStatus) {
+				plat_iounmap_ns(get_vaddr_ipc
+				(IPC_CP_CRASH_SUMMARY_AREA),
+				free_size_ipc
+				(IPC_CP_CRASH_SUMMARY_AREA_SZ));
+				/*sdcard not present or failed,
+				   save the dump to flash */
+				BCMLOG_SetCpCrashLogDevice(BCMLOG_OUTDEV_PANIC);
+				abort();
+			}
 		}
+		break;
 	case BCMLOG_OUTDEV_PANIC:
 #ifdef CONFIG_BRCM_CP_CRASH_DUMP_EMMC
 		start_emmc_crashlog();
@@ -1583,6 +1442,7 @@ void BCMLOG_EndCpCrashDump(void)
  **/
 void BCMLOG_HandleCpCrashDumpData(const char *buf, int size)
 {
+	unsigned long irql;
 	switch (BCMLOG_GetCpCrashLogDevice()) {
 	case BCMLOG_OUTDEV_SDCARD:
 		if (sDumpFile && sDumpFile->f_op && sDumpFile->f_op->write) {
@@ -1597,22 +1457,15 @@ void BCMLOG_HandleCpCrashDumpData(const char *buf, int size)
 		BCMLOG_WriteMTD(buf, size);
 #endif
 		break;
-#ifdef CONFIG_BCM_STM
-	case BCMLOG_OUTDEV_STM:
-		BCMLOG_HandleCpCrashDumpData_Custom_STM(buf, size);
-		break;
-#endif
 	case BCMLOG_OUTDEV_RNDIS:
 		BCMLOG_klogging_crashdump(buf, size);
 		break;
 	case BCMLOG_OUTDEV_ACM:
+	case BCMLOG_OUTDEV_STM:
+		irql = AcquireOutputLock();
 		BCMLOG_Output((unsigned char *)buf, size, 0);
+		ReleaseOutputLock(irql);
 		break;
-#ifdef CONFIG_BCM_STM
-	case BCMLOG_OUTDEV_CUSTOM:
-		BCMLOG_HandleCpCrashDumpData_Custom_STM(buf, size);
-		break;
-#endif
 	case BCMLOG_OUTDEV_NONE:
 		break;
 	}
@@ -1664,24 +1517,14 @@ void BCMLOG_LogCPCrashDumpString(const char *inLogString)
 			BCMLOG_WriteMTD(kbuf_mtt, mttFrameSize);
 #endif
 			break;
-#ifdef CONFIG_BCM_STM
-		case BCMLOG_OUTDEV_STM:
-			stm_trace_buffer_onchannel(FUSE_LOG_CHANNEL, kbuf_mtt,
-						   mttFrameSize);
-			break;
-#endif
 		case BCMLOG_OUTDEV_RNDIS:
 			BCMLOG_klogging_crashdump(kbuf_mtt, mttFrameSize);
 			break;
+		case BCMLOG_OUTDEV_STM:
 		case BCMLOG_OUTDEV_ACM:
 			irql = AcquireOutputLock();
 			BCMLOG_Output(kbuf_mtt, mttFrameSize, 0);
 			ReleaseOutputLock(irql);
-			break;
-		case BCMLOG_OUTDEV_CUSTOM:
-			BCMLOG_CallHandler(BCMLOG_CUSTOM_CP_CRASH_LOG, kbuf_mtt,
-					   mttFrameSize,
-					   BCMLOG_CUSTOM_COMPLETE);
 			break;
 		case BCMLOG_OUTDEV_NONE:
 			break;
@@ -1792,11 +1635,12 @@ void BCMLOG_HandleCpCrashMemDumpData(const char *inPhysAddr, int size)
 		*(pChksum + 1) = chksum & 0xFF;
 
 		/**
-		 * use internal api so we don't get blocked by crash dump flag
-		 **/
+		* use internal api so we don't get blocked by crash dump flag
+		**/
 		LogSignal_Internal(MEMORY_DUMP,
-				   sMemDumpSignalBuf,
-				   csz + 21, 0, 250, LOGSIGNAL_NOCOMPRESS);
+				sMemDumpSignalBuf,
+				csz + 21, 0, 250,
+				LOGSIGNAL_NOCOMPRESS);
 
 		n++;
 		if (n >= 32) {
@@ -1908,7 +1752,9 @@ void BCMLOG_LogLinkList(unsigned int sig_code,
 			compressedBuffer = kmalloc((ptr_size * 2), GFP_ATOMIC);
 
 			if (compressedBuffer == NULL) {
-				BCMLOG_RecordLogError(MEMORY_FULL_ONCE);
+#ifdef BCMLOG_DEBUG_FLAG
+				g_malloc_sig_buf++;
+#endif
 				BCMLOG_PRINTF(BCMLOG_CONSOLE_MSG_ERROR,
 					      "allocation error\n");
 				return;
@@ -1918,8 +1764,8 @@ void BCMLOG_LogLinkList(unsigned int sig_code,
 			for (i = 0; i < list_size; i++) {
 				ptr +=
 				    compress_memcpy((char *)ptr,
-						    (char *)link_list[i].
-						    byte_array,
+						    (char *)
+						    link_list[i].byte_array,
 						    link_list[i].size);
 			}
 			compress_size =
@@ -2058,9 +1904,11 @@ static void BCMLOG_OutputLinkList(unsigned long ListSize,
 					      LinkList[i].size, 0);
 			}
 		}
-	} else {
-		BCMLOG_RecordLogError(SIOBUF_FULL_ONCE);
 	}
+#ifdef BCMLOG_DEBUG_FLAG
+	else
+		pr_info("Warning: want %d, have %d", totallen, availlen);
+#endif
 
 	ReleaseOutputLock(irql);
 }
@@ -2089,3 +1937,7 @@ void BCMLOG_RegisterPrintkRedirectCbk(int enable, BrcmRedirectPrintkCbk cb)
  **/
 subsys_initcall(BCMLOG_ModuleInit);
 module_exit(BCMLOG_ModuleExit);
+
+module_param_named(mtt_log_buffer, g_module.buffer_size, int, 0444);
+MODULE_PARM_DESC(mtt_log_buffer, "Size of MTT Log Buffer in bytes");
+

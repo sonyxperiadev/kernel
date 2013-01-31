@@ -878,7 +878,7 @@ void DUMP_CP_assert_log(void)
 	 * NOTE: crash dump is put into SD by default; if SD file fails to open,
 	 * then we'll try sending it out RNDIS */
 
-	BCMLOG_StartCpCrashDump(sdDumpFile);
+	BCMLOG_StartCpCrashDump(sdDumpFile, cpReset);
 
 	/* only grab RAM dump for CP reset case */
 	if (!cpReset) {

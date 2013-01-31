@@ -103,10 +103,12 @@ static void safe_strncat(char *dst, const char *src, int len)
 /**
  *	build device status string and append to 'buf'
  **/
-static void bld_device_status_str(char *buf, int len, char *label, int device,
+#define SD_MAX 5
+static void bld_device_status_str(char *buf,
+				  int len, char *label, int device,
 				  int sd_max_size, int locked)
 {
-	char sd_max[5];
+	char sd_max[SD_MAX];
 
 	safe_strncat(buf, label, len);
 
@@ -124,7 +126,7 @@ static void bld_device_status_str(char *buf, int len, char *label, int device,
 		if (sd_max_size == 0) {
 			safe_strncat(buf, "-> SD card", len);
 		} else {
-			snprintf(sd_max, sizeof(sd_max)-1, "%d", sd_max_size);
+			snprintf(sd_max, SD_MAX, "%d", sd_max_size);
 			safe_strncat(buf, "-> SD card", len);
 			safe_strncat(buf, " (Max file size : ", len);
 			safe_strncat(buf, sd_max, len);
@@ -153,16 +155,16 @@ static void bld_device_status_str(char *buf, int len, char *label, int device,
 		safe_strncat(buf, " unlocked\n", len);
 }
 
-/**
- *	proc read handler
- **/
-static int proc_read(char *page, char **start, off_t offset, int count,
-		     int *eof, void *data)
+	/**
+	 *	proc read handler
+	 **/
+static int proc_read(char *page, char **start,
+		     off_t offset, int count, int *eof, void *data)
 {
 	*page = 0;
 	bld_device_status_str(page, count, "  BMTT logging",
-			      g_config.runlog.dev, g_config.file_max,
-			      g_config.runlog.lock);
+			      g_config.runlog.dev,
+			      g_config.file_max, g_config.runlog.lock);
 	bld_device_status_str(page, count, "  AP crash dump",
 			      g_config.ap_crashlog.dev, 0,
 			      g_config.ap_crashlog.lock);
@@ -191,9 +193,6 @@ static int proc_read(char *page, char **start, off_t offset, int count,
  *		o - CP crash dump -> STM
  *		p - CP crash dump -> ACM
  *		s -  both BMTT and CP crash dump -> STM
- *		t -  BMTT logging   -> custom
- *		u -  APP crash dump -> custom
- *		v -  CP crash dump -> custom
  **/
 static ssize_t proc_write(struct file *file, const char __user * buffer,
 			  unsigned long count, void *data)
@@ -206,7 +205,7 @@ static ssize_t proc_write(struct file *file, const char __user * buffer,
 		memset(kbuf, 0, sizeof(kbuf));
 		if (count > sizeof(kbuf) - 1)
 			count = sizeof(kbuf) - 1;
-		if (copy_from_user((void *)kbuf, buffer, count))
+		if (copy_from_user(kbuf, buffer, count))
 			return -EFAULT;
 
 		switch (*kbuf) {
@@ -229,6 +228,10 @@ static ssize_t proc_write(struct file *file, const char __user * buffer,
 		case 'e':
 			if (!g_config.ap_crashlog.lock)
 				g_config.ap_crashlog.dev = BCMLOG_OUTDEV_PANIC;
+			break;
+		case 'f':
+			if (!g_config.ap_crashlog.lock)
+				g_config.ap_crashlog.dev = BCMLOG_OUTDEV_SDCARD;
 			break;
 		case 'g':
 			if (!g_config.ap_crashlog.lock)
@@ -267,20 +270,6 @@ static ssize_t proc_write(struct file *file, const char __user * buffer,
 				g_config.runlog.dev = BCMLOG_OUTDEV_STM;
 			if (!g_config.cp_crashlog.lock)
 				g_config.cp_crashlog.dev = BCMLOG_OUTDEV_STM;
-			break;
-		case 't':
-			if (g_config.runlog.handler && !g_config.runlog.lock)
-				g_config.runlog.dev = BCMLOG_OUTDEV_CUSTOM;
-			break;
-		case 'u':
-			if (g_config.ap_crashlog.handler &&
-				!g_config.ap_crashlog.lock)
-				g_config.ap_crashlog.dev = BCMLOG_OUTDEV_CUSTOM;
-			break;
-		case 'v':
-			if (g_config.cp_crashlog.handler &&
-				!g_config.cp_crashlog.lock)
-				g_config.cp_crashlog.dev = BCMLOG_OUTDEV_CUSTOM;
 			break;
 		default:
 			rc = kstrtoint(strstrip(kbuf), 10, &val);
@@ -362,23 +351,26 @@ static ssize_t set_log_store(const char *buf, size_t size,
 static ssize_t bcmlog_log_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
-	return sprintf(buf, "%s\n", get_log_name(g_config.runlog.dev));
+	return snprintf(buf, MAX_STR_NAME + 1, "%s\n",
+			get_log_name(g_config.runlog.dev));
 }
 
 static ssize_t bcmlog_log_store(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t size)
+				struct device_attribute *attr, const char *buf,
+				size_t size)
 {
 	return set_log_store(buf, size, &g_config.runlog);
 }
 
 static ssize_t bcmlog_log_lock_show(struct device *dev,
-		struct device_attribute *attr, char *buf)
+				    struct device_attribute *attr, char *buf)
 {
-	return sprintf(buf, "%0x\n", g_config.runlog.lock);
+	return snprintf(buf, MAX_STR_NAME + 3, "%0x\n", g_config.runlog.lock);
 }
 
 static ssize_t bcmlog_log_lock_store(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t size)
+				     struct device_attribute *attr,
+				     const char *buf, size_t size)
 {
 	int res, val;
 
@@ -388,25 +380,30 @@ static ssize_t bcmlog_log_lock_store(struct device *dev,
 }
 
 static ssize_t bcmlog_cp_crash_show(struct device *dev,
-		struct device_attribute *attr, char *buf)
+				    struct device_attribute *attr, char *buf)
 {
-	return sprintf(buf, "%s\n", get_log_name(g_config.cp_crashlog.dev));
+	return snprintf(buf, MAX_STR_NAME + 1, "%s\n",
+			get_log_name(g_config.cp_crashlog.dev));
 }
 
 static ssize_t bcmlog_cp_crash_store(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t size)
+				     struct device_attribute *attr,
+				     const char *buf, size_t size)
 {
 	return set_log_store(buf, size, &g_config.cp_crashlog);
 }
 
 static ssize_t bcmlog_cp_crash_lock_show(struct device *dev,
-		struct device_attribute *attr, char *buf)
+					 struct device_attribute *attr,
+					 char *buf)
 {
-	return sprintf(buf, "%0x\n", g_config.cp_crashlog.lock);
+	return snprintf(buf, MAX_STR_NAME + 3, "%0x\n",
+			g_config.cp_crashlog.lock);
 }
 
 static ssize_t bcmlog_cp_crash_lock_store(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t size)
+					  struct device_attribute *attr,
+					  const char *buf, size_t size)
 {
 	int res, val;
 
@@ -416,25 +413,30 @@ static ssize_t bcmlog_cp_crash_lock_store(struct device *dev,
 }
 
 static ssize_t bcmlog_ap_crash_show(struct device *dev,
-		struct device_attribute *attr, char *buf)
+				    struct device_attribute *attr, char *buf)
 {
-	return sprintf(buf, "%s\n", get_log_name(g_config.ap_crashlog.dev));
+	return snprintf(buf, MAX_STR_NAME + 1, "%s\n",
+			get_log_name(g_config.ap_crashlog.dev));
 }
 
 static ssize_t bcmlog_ap_crash_store(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t size)
+				     struct device_attribute *attr,
+				     const char *buf, size_t size)
 {
 	return set_log_store(buf, size, &g_config.ap_crashlog);
 }
 
 static ssize_t bcmlog_ap_crash_lock_show(struct device *dev,
-		struct device_attribute *attr, char *buf)
+					 struct device_attribute *attr,
+					 char *buf)
 {
-	return sprintf(buf, "%0x\n", g_config.ap_crashlog.lock);
+	return snprintf(buf, MAX_STR_NAME + 3, "%0x\n",
+			g_config.ap_crashlog.lock);
 }
 
 static ssize_t bcmlog_ap_crash_lock_store(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t size)
+					  struct device_attribute *attr,
+					  const char *buf, size_t size)
 {
 	int res, val;
 
@@ -444,30 +446,33 @@ static ssize_t bcmlog_ap_crash_lock_store(struct device *dev,
 }
 
 static ssize_t bcmlog_file_base_show(struct device *dev,
-		struct device_attribute *attr, char *buf)
+				     struct device_attribute *attr, char *buf)
 {
-	return sprintf(buf, "%s\n", g_config.file_base);
+	return snprintf(buf, MAX_STR_NAME + 1, "%s\n", g_config.file_base);
 }
 
 static ssize_t bcmlog_file_base_store(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t size)
+				      struct device_attribute *attr,
+				      const char *buf, size_t size)
 {
 	if (size >= MAX_STR_NAME)
 		return -EINVAL;
 
+	/* coverity[SECURE_CODING] */
 	if (sscanf(buf, "%s", g_config.file_base) == 1)
 		return size;
 	return -EINVAL;
 }
 
 static ssize_t bcmlog_file_max_show(struct device *dev,
-		struct device_attribute *attr, char *buf)
+				    struct device_attribute *attr, char *buf)
 {
-	return sprintf(buf, "%0x\n", g_config.file_max);
+	return snprintf(buf, MAX_STR_NAME + 3, "%0x\n", g_config.file_max);
 }
 
 static ssize_t bcmlog_file_max_store(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t size)
+				     struct device_attribute *attr,
+				     const char *buf, size_t size)
 {
 	int res, val;
 
@@ -476,39 +481,59 @@ static ssize_t bcmlog_file_max_store(struct device *dev,
 	return size;
 }
 
-
 static ssize_t bcmlog_uart_dev_show(struct device *dev,
-		struct device_attribute *attr, char *buf)
+				    struct device_attribute *attr, char *buf)
 {
-	return sprintf(buf, "%s\n", g_config.uart_dev);
+	return snprintf(buf, MAX_STR_NAME + 1, "%s\n", g_config.uart_dev);
 }
 
 static ssize_t bcmlog_uart_dev_store(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t size)
+				     struct device_attribute *attr,
+				     const char *buf, size_t size)
 {
 	if (size >= MAX_STR_NAME)
 		return -EINVAL;
 
+	/* coverity[SECURE_CODING] */
 	if (sscanf(buf, "%s", g_config.uart_dev) == 1)
 		return size;
 	return -EINVAL;
 }
 
 static ssize_t bcmlog_acm_dev_show(struct device *dev,
-		struct device_attribute *attr, char *buf)
+				   struct device_attribute *attr, char *buf)
 {
-	return sprintf(buf, "%s\n", g_config.acm_dev);
+	return snprintf(buf, MAX_STR_NAME + 1, "%s\n", g_config.acm_dev);
 }
 
 static ssize_t bcmlog_acm_dev_store(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t size)
+				    struct device_attribute *attr,
+				    const char *buf, size_t size)
 {
 	if (size >= MAX_STR_NAME)
 		return -EINVAL;
 
+	/* coverity[SECURE_CODING] */
 	if (sscanf(buf, "%s", g_config.acm_dev) == 1)
 		return size;
 	return -EINVAL;
+}
+
+static ssize_t bcmlog_log_buffer_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	return snprintf(buf, MAX_STR_NAME + 1, "%0x\n", BCMLOG_GetBufferSize());
+}
+
+static ssize_t bcmlog_log_buffer_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t size)
+{
+	int res, val;
+
+	res = kstrtoint(buf, 16, &val);
+	if (res == 0)
+		BCMLOG_SetBufferSize(val);
+	return size;
 }
 
 static DEVICE_ATTR(log, S_IRUGO | S_IWUSR, bcmlog_log_show,
@@ -541,6 +566,8 @@ static DEVICE_ATTR(uart_dev, S_IRUGO | S_IWUSR, bcmlog_uart_dev_show,
 static DEVICE_ATTR(acm_dev, S_IRUGO | S_IWUSR, bcmlog_acm_dev_show,
 						 bcmlog_acm_dev_store);
 
+static DEVICE_ATTR(log_buffer, S_IRUGO | S_IWUSR, bcmlog_log_buffer_show,
+			bcmlog_log_buffer_store);
 
 char *BCMLOG_GetFileBase(void)
 {
@@ -583,51 +610,62 @@ void BCMLOG_InitConfig(void *h)
 	    create_proc_entry(BCMLOG_CONFIG_PROC_FILE,
 			      S_IRWXU | S_IRWXG | S_IRWXO, NULL);
 
-	if (g_proc_dir_entry == NULL)
+	if (g_proc_dir_entry == NULL) {
 		remove_proc_entry(BCMLOG_CONFIG_PROC_FILE, NULL);
+	}
 
 	else {
 		g_proc_dir_entry->read_proc = proc_read;
 		g_proc_dir_entry->write_proc = proc_write;
 	}
 
-	strncpy(g_config.file_base, BCMLOG_DEFAULT_FILE_BASE,
-			strlen(BCMLOG_DEFAULT_FILE_BASE));
-	strncpy(g_config.uart_dev, BCMLOG_DEFAULT_UART_DEV,
-			strlen(BCMLOG_DEFAULT_UART_DEV));
-	strncpy(g_config.acm_dev, BCMLOG_DEFAULT_ACM_DEV,
-			strlen(BCMLOG_DEFAULT_ACM_DEV));
+	strncpy(g_config.file_base, BCMLOG_DEFAULT_FILE_BASE, MAX_STR_NAME);
+	strncpy(g_config.uart_dev, BCMLOG_DEFAULT_UART_DEV, MAX_STR_NAME);
+	strncpy(g_config.acm_dev, BCMLOG_DEFAULT_ACM_DEV, MAX_STR_NAME);
 
 	value = device_create_file(dev, &dev_attr_log);
 	if (value < 0)
 		pr_err("BCMLOG Init failed to create bcmlog log attribute\n");
 	value = device_create_file(dev, &dev_attr_log_lock);
 	if (value < 0)
-		pr_err("BCMLOG Init failed to create bcmlog log_lock attribute\n");
+		pr_err
+	    ("BCMLOG Init failed to create bcmlog log_lock attribute\n");
 	value = device_create_file(dev, &dev_attr_cp_crash);
 	if (value < 0)
-		pr_err("BCMLOG Init failed to create bcmlog cp crash log attribute\n");
+		pr_err
+	    ("BCMLOG Init failed to create bcmlog cp crash log attribute\n");
 	value = device_create_file(dev, &dev_attr_cp_crash_lock);
 	if (value < 0)
-		pr_err("BCMLOG Init failed to create bcmlog cp crash log lock attribute\n");
+		pr_err
+	("BCMLOG Init failed to create bcmlog cp crash log lock attribute\n");
 	value = device_create_file(dev, &dev_attr_ap_crash);
 	if (value < 0)
-		pr_err("BCMLOG Init failed to create bcmlog ap crash log attribute\n");
+		pr_err
+	    ("BCMLOG Init failed to create bcmlog ap crash log attribute\n");
 	value = device_create_file(dev, &dev_attr_ap_crash_lock);
 	if (value < 0)
-		pr_err("BCMLOG Init failed to create bcmlog ap crash log lock attribute\n");
+		pr_err
+	("BCMLOG Init failed to create bcmlog ap crash log lock attribute\n");
 	value = device_create_file(dev, &dev_attr_file_base);
 	if (value < 0)
-		pr_err("BCMLOG Init failed to create bcmlog file_base attribute\n");
+		pr_err
+	    ("BCMLOG Init failed to create bcmlog file_base attribute\n");
 	value = device_create_file(dev, &dev_attr_file_max);
 	if (value < 0)
-		pr_err("BCMLOG Init failed to create bcmlog file max attribute\n");
+		pr_err
+	    ("BCMLOG Init failed to create bcmlog file max attribute\n");
 	value = device_create_file(dev, &dev_attr_uart_dev);
 	if (value < 0)
-		pr_err("BCMLOG Init failed to create bcmlog uart_dev attribute\n");
+		pr_err
+	    ("BCMLOG Init failed to create bcmlog uart_dev attribute\n");
 	value = device_create_file(dev, &dev_attr_acm_dev);
 	if (value < 0)
-		pr_err("BCMLOG Init failed to create bcmlog acm_dev attribute\n");
+		pr_err
+	    ("BCMLOG Init failed to create bcmlog acm_dev attribute\n");
+	value = device_create_file(dev, &dev_attr_log_buffer);
+	if (value < 0)
+		pr_err
+		("BCMLOG Init failed to create bcmlog acm_dev attribute\n");
 
 }
 
@@ -638,8 +676,7 @@ int BCMLOG_GetRunlogDevice(void)
 
 void BCMLOG_SetRunlogDevice(int run_log_dev)
 {
-	if (!g_config.runlog.lock)
-		g_config.runlog.dev = run_log_dev;
+	g_config.runlog.dev = run_log_dev;
 }
 
 int BCMLOG_GetSdFileMax(void)
@@ -650,19 +687,14 @@ int BCMLOG_GetSdFileMax(void)
 	return (int)min(size, int_max);
 }
 
-int BCMLOG_GetSdFileMin(void)
+void BCMLOG_SetCpCrashLogDevice(int port)
 {
-	return (int)max(MIN_MTT_SD_SIZE * 1024 * 1024, 0);
+	g_config.cp_crashlog.dev = port;
 }
 
 int BCMLOG_GetCpCrashLogDevice(void)
 {
 	return g_config.cp_crashlog.dev;
-}
-
-void BCMLOG_SetCpCrashLogDevice(int port)
-{
-	g_config.cp_crashlog.dev = port;
 }
 
 int BCMLOG_GetApCrashLogDevice(void)
@@ -677,61 +709,4 @@ int BCMLOG_IsUSBLog(void)
 		return 1;
 	else
 		return 0;
-}
-
-/**
- *	Register custom log handler
- **/
-int BCMLOG_RegisterHandler(char log_type,
-			   int (*handler) (const char *, unsigned int, char))
-{
-	int rc = 0;
-
-	switch (log_type) {
-	case BCMLOG_CUSTOM_RUN_LOG:
-		g_config.runlog.handler = handler;
-		break;
-	case BCMLOG_CUSTOM_AP_CRASH_LOG:
-		g_config.ap_crashlog.handler = handler;
-		break;
-	case BCMLOG_CUSTOM_CP_CRASH_LOG:
-		g_config.cp_crashlog.handler = handler;
-		break;
-	default:
-		rc = -1;
-		break;
-	}
-
-	return rc;
-}
-EXPORT_SYMBOL(BCMLOG_RegisterHandler);
-
-/**
- *	Call registered custom log handler
- **/
-int BCMLOG_CallHandler(char log_type, const char *p_src, unsigned int len,
-		       char payload_type)
-{
-	int rc = 0;
-
-	switch (log_type) {
-	case BCMLOG_CUSTOM_RUN_LOG:
-		if (g_config.runlog.handler)
-			rc = g_config.runlog.handler(p_src, len, payload_type);
-		break;
-	case BCMLOG_CUSTOM_AP_CRASH_LOG:
-		if (g_config.ap_crashlog.handler)
-			rc = g_config.ap_crashlog.handler(p_src, len,
-							  payload_type);
-		break;
-	case BCMLOG_CUSTOM_CP_CRASH_LOG:
-		if (g_config.cp_crashlog.handler)
-			rc = g_config.cp_crashlog.handler(p_src, len,
-							  payload_type);
-		break;
-	default:
-		break;
-	}
-
-	return rc;
 }

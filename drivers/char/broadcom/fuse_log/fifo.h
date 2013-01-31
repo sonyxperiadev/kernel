@@ -9,8 +9,8 @@
 *
 *   Notwithstanding the above, under no circumstances may you combine this
 *   software in any way with any other Broadcom software provided under
-*   a license other than the GPL, without Broadcom's express prior
-*   written consent.
+*   a license other than the GPL, without Broadcom's express prior written
+*   consent.
 *
 ****************************************************************************/
 
@@ -21,17 +21,15 @@
  *	FIFO structure
  **/
 typedef struct {
-	/* /< the buffer */
-	unsigned char		*buf_ptr;
-	/* /< buffer size */
-	unsigned long		 buf_sz;
-	/* /< number of available bytes */
-/*	unsigned long		 n_avail; */
-	/* /< index of first data byte */
-	unsigned long		 idx_read;
-	/* /< index of first free byte */
-	unsigned long		 idx_write;
-}	BCMLOG_Fifo_t ;
+	unsigned char *buf_ptr; /* the buffer*/
+	unsigned long buf_sz;	/* buffer size*/
+/* number of available bytes*/
+/*  unsigned long n_avail;  */
+/* index of first data byte*/
+	unsigned long idx_read;
+/* index of first free byte*/
+	unsigned long idx_write;
+} BCMLOG_Fifo_t;
 
 /**
  *	Initialize FIFO
@@ -39,8 +37,8 @@ typedef struct {
  *	@param  pFifoBuf		(in)	pointer to FIFO buffer, externally allocated
  *	@param	fifoBufSz		(in)	size of FIFO buffer in bytes
  **/
-void BCMLOG_FifoInit(BCMLOG_Fifo_t *pFifo,
-	unsigned char *pFifoBuf, unsigned long fifoBufSz) ;
+void BCMLOG_FifoInit(BCMLOG_Fifo_t *pFifo, unsigned char *pFifoBuf,
+		     unsigned long fifoBufSz);
 
 /**
  *	Get free space log
@@ -71,8 +69,8 @@ unsigned char *BCMLOG_FifoGetData(BCMLOG_Fifo_t *pFifo) ;
  *	@return	Number of bytes added
  *	@note	If srcBufSz exceeds the number of available FIFO bytes, zero bytes are copied to FIFO
  **/
-unsigned long BCMLOG_FifoAdd(BCMLOG_Fifo_t *pFifo,
-	unsigned char *pSrcBuf, unsigned long srcBufSz) ;
+unsigned long BCMLOG_FifoAdd(BCMLOG_Fifo_t *pFifo, unsigned char *pSrcBuf,
+			     unsigned long srcBufSz);
 
 /**
  *	Remove up to rmSize oldest bytes from FIFO
@@ -80,8 +78,7 @@ unsigned long BCMLOG_FifoAdd(BCMLOG_Fifo_t *pFifo,
  *	@param	maxMsgs			(in)	max number of bytes to remove
  *	@return	number of bytes removed
  **/
-unsigned long BCMLOG_FifoRemove(BCMLOG_Fifo_t *pFifo,
-	unsigned long rmSize);
+unsigned long BCMLOG_FifoRemove(BCMLOG_Fifo_t *pFifo, unsigned long rmSize);
 
 unsigned long BCMLOG_FifoGetDataSize(BCMLOG_Fifo_t *pFifo) ;
 

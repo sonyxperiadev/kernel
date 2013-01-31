@@ -68,6 +68,9 @@ int BCMLOG_LogIdIsEnabled(unsigned short inLogId);
  **/
 void BCMLOG_InitConfig(void *dev);
 
+void BCMLOG_SetCpCrashLogDevice(int port);
+
+void WriteToLogDev_ACM(void);
 /**
  *	If the runtime log is on USB
  **/

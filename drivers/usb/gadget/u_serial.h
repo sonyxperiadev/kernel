@@ -63,14 +63,16 @@ int gser_bind_config(struct usb_configuration *c, u8 port_num);
 int obex_bind_config(struct usb_configuration *c, u8 port_num);
 
 /* ACM devices */
+#ifdef CONFIG_BRCM_FUSE_LOG
 #define ACM_LOGGING_PORT	1
 
 static struct acm_logging_callbacks *acm_logging_cb;
+extern struct acm_logging_callbacks *get_acm_callback_func(void);
 struct acm_logging_callbacks {
 	/** Start function for role change */
 	int (*start) (void);
 	/** Stop Function for role change */
 	int (*stop) (void);
 };
-
+#endif
 #endif /* __U_SERIAL_H */

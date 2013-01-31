@@ -8,9 +8,9 @@
 *    at http://www.gnu.org/licenses/old-licenses/gpl-2.0.html (the "GPL").
 *
 *   Notwithstanding the above, under no circumstances may you combine this
-*   software in any way with any other Broadcom software provided under a
-*   license other than the GPL, without Broadcom's express prior written
-*   consent.
+*   software in any way with any other Broadcom software provided
+*   under a license
+*   other than the GPL, without Broadcom's express prior written consent.
 *
 ****************************************************************************/
 
@@ -44,6 +44,16 @@
 static int netconsole_start_cb(void);
 static int netconsole_stop_cb(void);
 
+#ifdef BCMLOG_DEBUG_FLAG
+unsigned int g_malloc_sig_buf;
+static int nospace;
+static int noheader;
+static int splitbuffer;
+static int writefail;
+static int n100;
+static unsigned int totalbyte;
+#endif
+
 /**
  *	local vars
  **/
@@ -54,10 +64,12 @@ static char g_netconsole_on;
 /* flow control state for ACM, set/reset by flow control callbacks */
 static char g_acm_on;
 
-#define BCMLOG_OUTPUT_FIFO_MAX_BYTES (4 * 1024 * 1024)
-static BCMLOG_Fifo_t g_fifo;	/* output fifo */
 /* 23MB reserved area for AP/CP crash dump */
 #define MTT_SD_RESERVED (23 * 1024 * 1024)
+
+/*output fifo */
+static BCMLOG_Fifo_t g_fifo;
+
 /**
  *	frame counter
  **/
@@ -108,11 +120,11 @@ struct acm_logging_callbacks *get_acm_callback_func(void)
 {
 	return &_acm_cb;
 }
+
 EXPORT_SYMBOL(get_acm_callback_func);
 
 struct WriteToLogDevParms_t {
-	struct workqueue_struct *wq;
-	struct work_struct work;
+	struct work_struct wq;
 	int outdev;
 	int prev_outdev;
 	struct file *file;
@@ -191,7 +203,7 @@ static int Get_SDCARD_Available(void)
 	int ret;
 	u64 int_max = INT_MAX;
 
-	ret = kern_path("/sdcard/", LOOKUP_DIRECTORY, &path);
+	ret = kern_path(BCMLOG_GetFileBase(), LOOKUP_DIRECTORY, &path);
 	if (ret < 0)
 		return ret;
 
@@ -221,8 +233,7 @@ static void WriteToLogDev_SDCARD(void)
 	 *      Attempt to open log file, if not already open
 	 */
 	if (!g_devWrParms.file) {
-		if ((Get_SDCARD_Available()) >
-			(MTT_SD_RESERVED + BCMLOG_GetSdFileMin())) {
+		if ((Get_SDCARD_Available()) > MTT_SD_RESERVED) {
 			GetLogFileName(fname, BCMLOG_GetFileBase(),
 				sizeof(fname));
 
@@ -257,10 +268,14 @@ static void WriteToLogDev_SDCARD(void)
 				nFifo = MAX_FS_WRITE_SIZE;
 
 			if (nFifo > 0) {
-				nWrite = g_devWrParms.file->f_op->write
-				    (g_devWrParms.file,
-				     BCMLOG_FifoGetData(&g_fifo),
-				     nFifo, &g_devWrParms.file->f_pos);
+				nWrite =
+				    g_devWrParms.file->f_op->write(g_devWrParms.
+						   file,
+						   BCMLOG_FifoGetData
+						   (&g_fifo),
+						   nFifo,
+						   &g_devWrParms.
+						   file->f_pos);
 
 				if (nWrite > 0)
 					BCMLOG_FifoRemove(&g_fifo, nWrite);
@@ -306,6 +321,9 @@ static void WriteToLogDev_STM(void)
 
 	nFifo = BCMLOG_FifoGetNumContig(&g_fifo);
 
+	if (nFifo > MAX_FS_WRITE_SIZE)
+		nFifo = MAX_FS_WRITE_SIZE;
+
 	if (nFifo > 0) {
 		if (nFifo < BCMLOG_FifoGetDataSize(&g_fifo)) {
 			stm_trace_buffer_start(FUSE_LOG_CHANNEL);
@@ -330,49 +348,51 @@ static void WriteToLogDev_STM(void)
 }
 #endif
 
-static void WriteToLogDev_CUSTOM(void)
+#ifdef BCMLOG_DEBUG_FLAG
+static unsigned int nTotalout;
+
+static void verifyRefCount(unsigned char *pBytes, unsigned long nBytes)
 {
-	u32 nFifo;
+	static u32 i;
+	static unsigned char frame_counter;
+	static unsigned char old_frame_counter;
+	static unsigned char firstsync = 1;
 
-	int nWrite;
+	unsigned char expect_counter;
 
-	nFifo = BCMLOG_FifoGetNumContig(&g_fifo);
+	while (i < nBytes) {
+		if (pBytes[i] == MTTLOG_FrameSync0 &&
+		    pBytes[i + 1] == MTTLOG_FrameSync1) {
+			if (firstsync) {
+				frame_counter = old_frame_counter =
+				    pBytes[i + 2];
+				firstsync = 0;
+			} else {
+				frame_counter = pBytes[i + 2];
+				expect_counter = old_frame_counter + 1;
+				if (frame_counter != expect_counter) {
+					pr_info
+			    ("BCMLOG: RefCount Skip!!!Time %d: %d, expect %d\n",
+					     (pBytes[i + 4] << 24) |
+					     (pBytes[i + 5] << 16) |
+					     (pBytes[i + 6] << 8) |
+					     (pBytes[i + 7]), frame_counter,
+					     expect_counter);
+				}
 
-	if (nFifo > 0) {
-		if (nFifo < BCMLOG_FifoGetDataSize(&g_fifo)) {
-			nWrite =
-			    BCMLOG_CallHandler(BCMLOG_CUSTOM_RUN_LOG,
-					       BCMLOG_FifoGetData(&g_fifo),
-					       nFifo, BCMLOG_CUSTOM_START);
-			BCMLOG_FifoRemove(&g_fifo, nWrite);
-			nFifo = BCMLOG_FifoGetNumContig(&g_fifo);
-
-			while ((nFifo < BCMLOG_FifoGetDataSize(&g_fifo))
-			       && (nWrite)) {
-				nWrite =
-				    BCMLOG_CallHandler(BCMLOG_CUSTOM_RUN_LOG,
-						       BCMLOG_FifoGetData
-						       (&g_fifo), nFifo,
-						       BCMLOG_CUSTOM_DATA);
-				BCMLOG_FifoRemove(&g_fifo, nWrite);
-				nFifo = BCMLOG_FifoGetNumContig(&g_fifo);
+				old_frame_counter = frame_counter;
 			}
 
-			nFifo = BCMLOG_FifoGetNumContig(&g_fifo);
-			nWrite =
-			    BCMLOG_CallHandler(BCMLOG_CUSTOM_RUN_LOG,
-					       BCMLOG_FifoGetData(&g_fifo),
-					       nFifo, BCMLOG_CUSTOM_END);
-			BCMLOG_FifoRemove(&g_fifo, nWrite);
-		} else {
-			nWrite =
-			    BCMLOG_CallHandler(BCMLOG_CUSTOM_RUN_LOG,
-					       BCMLOG_FifoGetData(&g_fifo),
-					       nFifo, BCMLOG_CUSTOM_COMPLETE);
-			BCMLOG_FifoRemove(&g_fifo, nWrite);
-		}
+			i += (15 + (((unsigned short)(pBytes[i + 10])) << 8) +
+			      (unsigned short)(pBytes[i + 11]));
+		} else
+			i++;
 	}
+
+	if (i >= nBytes)
+		i -= nBytes;
 }
+#endif
 
 static void WriteToLogDev_RNDIS(void)
 {
@@ -394,8 +414,13 @@ static void WriteToLogDev_RNDIS(void)
 				pData = BCMLOG_FifoGetData(&g_fifo);
 				nWrite = brcm_klogging(pData, nFifo);
 
-				if (nWrite > 0)
+				if (nWrite > 0) {
+#ifdef BCMLOG_DEBUG_FLAG
+					verifyRefCount(pData, nWrite);
+					nTotalout += nWrite;
+#endif
 					BCMLOG_FifoRemove(&g_fifo, nWrite);
+				}
 
 				if (nWrite < nFifo)
 					nFifo = 0;
@@ -417,9 +442,9 @@ static void WriteToLogDev_UART(void)
 	 */
 
 	if (!g_devWrParms.file) {
-		g_devWrParms.file =
-		    filp_open(BCMLOG_GetUartDev(), O_WRONLY |
-				O_TRUNC | O_CREAT, 0666);
+		g_devWrParms.file = filp_open(BCMLOG_GetUartDev(),
+					      O_WRONLY | O_TRUNC | O_CREAT,
+					      0666);
 
 		if (IS_ERR(g_devWrParms.file))
 			g_devWrParms.file = 0;
@@ -440,10 +465,15 @@ static void WriteToLogDev_UART(void)
 				nFifo = MAX_FS_WRITE_SIZE;
 
 			if (nFifo > 0) {
-				nWrite = g_devWrParms.file->f_op->write
-				    (g_devWrParms.file,
-				     BCMLOG_FifoGetData(&g_fifo),
-				     nFifo, &g_devWrParms.file->f_pos);
+				nWrite =
+					g_devWrParms.file->f_op->write(
+					g_devWrParms.
+					file,
+					BCMLOG_FifoGetData
+					(&g_fifo),
+					nFifo,
+					&g_devWrParms.
+					file->f_pos);
 
 				if (nWrite > 0)
 					BCMLOG_FifoRemove(&g_fifo, nWrite);
@@ -473,9 +503,9 @@ void WriteToLogDev_ACM(void)
 	if (!g_devWrParms.file) {
 		struct tty_struct *tty = NULL;
 
-		g_devWrParms.file =
-		    filp_open(BCMLOG_GetAcmDev(), O_WRONLY | O_TRUNC | O_CREAT,
-			      0666);
+		g_devWrParms.file = filp_open(BCMLOG_GetAcmDev(),
+					      O_WRONLY | O_TRUNC | O_CREAT,
+					      0666);
 
 		if (IS_ERR(g_devWrParms.file)) {
 			pr_info("WriteToLogDev_ACM can not open %s\n",
@@ -485,9 +515,8 @@ void WriteToLogDev_ACM(void)
 			return;
 		}
 
-		tty =
-		    ((struct tty_file_private *)g_devWrParms.file->
-		     private_data)->tty;
+		tty = ((struct tty_file_private *)
+		       g_devWrParms.file->private_data)->tty;
 		tty->termios->c_iflag |= IGNBRK | ISTRIP | IGNPAR;
 		tty->termios->c_oflag = 0;
 		tty->termios->c_lflag = 0;
@@ -527,8 +556,9 @@ void WriteToLogDev_ACM(void)
 								  nWrite);
 
 					if (nWrite < (int)nFifo) {
-						pr_info("ACM failed to write log error:%d\n",
-							nWrite);
+						pr_info
+				    ("ACM failed to write log error:%d\n",
+						     nWrite);
 						nFifo = 0;
 						filp_close(g_devWrParms.file,
 							   NULL);
@@ -547,8 +577,7 @@ static void WriteToLogDev(struct work_struct *work)
 	unsigned long irql;
 
 	if (g_devWrParms.prev_outdev != g_devWrParms.outdev) {
-		if (g_devWrParms.file
-		    && g_devWrParms.file != g_devWrParms.acm_file) {
+		if (g_devWrParms.file) {
 			filp_close(g_devWrParms.file, NULL);
 			g_devWrParms.file = 0;
 		}
@@ -561,10 +590,8 @@ static void WriteToLogDev(struct work_struct *work)
 
 	case BCMLOG_OUTDEV_RNDIS:
 		irql = AcquireOutputLock();
-
 		WriteToLogDev_RNDIS();
 		ReleaseOutputLock(irql);
-
 		break;
 
 	case BCMLOG_OUTDEV_UART:
@@ -582,12 +609,6 @@ static void WriteToLogDev(struct work_struct *work)
 		ReleaseOutputLock(irql);
 		break;
 #endif
-
-	case BCMLOG_OUTDEV_CUSTOM:
-		irql = AcquireOutputLock();
-		WriteToLogDev_CUSTOM();
-		ReleaseOutputLock(irql);
-		break;
 
 	default:
 		break;
@@ -611,64 +632,25 @@ void BCMLOG_Output(unsigned char *pBytes, unsigned long nBytes,
 		   unsigned int might_has_mtthead)
 {
 	unsigned int i = 0;
+
 	unsigned int wrotebyte;
 
-	/*
-	 *      If log loss happened and output buffer available,
-	 *      put the log loss message to the buffer.
-	 */
-	if ((BCMLOG_IsLogError()) && (might_has_mtthead)) {
-		unsigned int msg_size;
-		char *log_loss_buf;
-
-		msg_size = BCMMTT_GetRequiredFrameLength
-		    ((((unsigned short)(pBytes[i + 10])) << 8) +
-		     (unsigned short)(pBytes[i + 11]));
-		msg_size = (((msg_size) > (nBytes)) ? (msg_size) : (nBytes));
-
-		if (msg_size <= BCMLOG_FifoGetFreeSize(&g_fifo)) {
-			log_loss_buf =
-			    kmalloc(BCMMTT_GetRequiredFrameLength
-				    (BCMLOG_LOGLOSS_SIZE), GFP_ATOMIC);
-			if (log_loss_buf) {
-				msg_size =
-				    BCMLOG_BuildLogLossMessage(log_loss_buf);
-				if (msg_size) {
-					log_loss_buf[2] = g_frame_counter++;
-					log_loss_buf[12] = (unsigned char)
-					    MTTLOG_Checksum16(log_loss_buf, 12);
-					wrotebyte =
-					    BCMLOG_FifoAdd(&g_fifo,
-							   log_loss_buf,
-							   msg_size);
-					if (wrotebyte == msg_size)
-						BCMLOG_ClearLogError();
-				}
-				kfree(log_loss_buf);
-			}
-		}
-	}
-
-	/*
-	 *      Add to FIFO.
-	 *      If unable to add (FIFO full) then discard the message.
-	 *      Update log loss counter.
-	 */
 	if (nBytes <= BCMLOG_FifoGetFreeSize(&g_fifo) && (nBytes > 0)) {
 		if (might_has_mtthead) {
 			while (i + 12 < nBytes) {
-				if (pBytes[i] == MTTLOG_FrameSync0
-				    && pBytes[i + 1] == MTTLOG_FrameSync1) {
+				if (pBytes[i] == MTTLOG_FrameSync0 &&
+				    pBytes[i + 1] == MTTLOG_FrameSync1) {
 					pBytes[i + 2] = g_frame_counter++;
 					pBytes[i + 12] = (unsigned char)
 					    MTTLOG_Checksum16(&pBytes[i], 12);
-					i += (15 +
-					      (((unsigned
-						 short)(pBytes[i + 10])) << 8) +
-					      (unsigned short)(pBytes[i + 11]));
+					i += (15 + (((unsigned short)
+						     (pBytes[i + 10])) << 8)
+					      + (unsigned short)
+					      (pBytes[i + 11]));
 				} else {
-					BCMLOG_RecordLogError
-					    (INITLOG_CONFLICT_ONCE);
+#ifdef BCMLOG_DEBUG_FLAG
+					noheader++;
+#endif
 					break;
 				}
 			}
@@ -676,26 +658,28 @@ void BCMLOG_Output(unsigned char *pBytes, unsigned long nBytes,
 
 		wrotebyte = BCMLOG_FifoAdd(&g_fifo, pBytes, nBytes);
 
+#ifdef BCMLOG_DEBUG_FLAG
 		if (wrotebyte != nBytes)
-			BCMLOG_RecordLogError(INITLOG_CONFLICT_ONCE);
-	} else {
-		if (might_has_mtthead) {
-			while (i + 12 < nBytes) {
-				if (pBytes[i] == MTTLOG_FrameSync0
-				    && pBytes[i + 1] == MTTLOG_FrameSync1) {
-					BCMLOG_RecordLogError(SIOBUF_FULL_ONCE);
-					i += (15 +
-					      (((unsigned
-						 short)(pBytes[i + 10])) << 8) +
-					      (unsigned short)(pBytes[i + 11]));
-				} else {
-					BCMLOG_RecordLogError
-					    (INITLOG_CONFLICT_ONCE);
-					break;
-				}
-			}
-		}
+			writefail++;
+		totalbyte += wrotebyte;
+#endif
 	}
+#ifdef BCMLOG_DEBUG_FLAG
+
+	else if (g_netconsole_on)
+		nospace++;
+
+	n100++;
+	if (n100 == 100) {
+		n100 = 0;
+		pr_info("nospc %d nohdr %d splt %d wrtfl %d nosigbuf %d\n",
+			nospace, noheader, splitbuffer, writefail,
+			g_malloc_sig_buf);
+		pr_info("IN %d OUT %d dif %d inFIFO %d\n",
+			totalbyte, nTotalout, totalbyte - nTotalout,
+			BCMLOG_FifoGetDataSize(&g_fifo));
+	}
+#endif
 	/*
 	 *      If output worker thread is not busy then set up arguments and
 	 *      schedule it; otherwise we'll retry on the next output to run
@@ -705,35 +689,21 @@ void BCMLOG_Output(unsigned char *pBytes, unsigned long nBytes,
 		g_devWrParms.busy = 1;
 		g_devWrParms.prev_outdev = g_devWrParms.outdev;
 		g_devWrParms.outdev = BCMLOG_GetRunlogDevice();
-		queue_work(g_devWrParms.wq, &g_devWrParms.work);
+		schedule_work(&g_devWrParms.wq);
 	}
 }
 
 /**
  *	Initialize output module
  **/
-int BCMLOG_OutputInit(void)
+BCMLOG_Fifo_t *BCMLOG_OutputInit(unsigned char *buffer, int buffer_size)
 {
-	unsigned char *fifobuf;
-
-	fifobuf = kmalloc(BCMLOG_OUTPUT_FIFO_MAX_BYTES, GFP_KERNEL);
-
-	if (!fifobuf) {
-		pr_err("BCMLOG_OutputInit failed to allocate FIFO\n");
-		return -1;
-	}
-
-	BCMLOG_FifoInit(&g_fifo, fifobuf, BCMLOG_OUTPUT_FIFO_MAX_BYTES);
+	BCMLOG_FifoInit(&g_fifo, buffer, buffer_size);
 
 	g_devWrParms.busy = 0;
 	g_devWrParms.file = 0;
 
-	INIT_WORK(&g_devWrParms.work, WriteToLogDev);
-	g_devWrParms.wq = alloc_workqueue("fuse_log_work", WQ_FREEZABLE, 1);
-	if (!g_devWrParms.wq) {
-		printk(KERN_ERR "Failed to init fuse log workqueue\n");
-		return -ENOMEM;
-	}
+	INIT_WORK(&g_devWrParms.wq, WriteToLogDev);
 #ifdef CONFIG_BRCM_NETCONSOLE
 
 	/*
@@ -742,14 +712,6 @@ int BCMLOG_OutputInit(void)
 	g_netconsole_on = brcm_netconsole_register_callbacks(&_cb);
 
 #endif
-#ifdef CONFIG_USB_G_ANDROID
-	g_acm_on = acm_logging_register_callbacks(&_acm_cb);
-#endif
-	return 0;
+	return &g_fifo;
 
-}
-
-void BCMLOG_OutputExit(void)
-{
-	destroy_workqueue(g_devWrParms.wq);
 }

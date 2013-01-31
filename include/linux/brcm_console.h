@@ -125,6 +125,9 @@ struct brcm_console {
 	struct	 brcm_console *next;
 };
 
+char brcm_netconsole_register_callbacks(
+	struct brcm_netconsole_callbacks *_cb);
+
 extern int brcm_console_set_on_cmdline;
 
 extern int add_preferred_brcm_console(char *name, int idx, char *options);

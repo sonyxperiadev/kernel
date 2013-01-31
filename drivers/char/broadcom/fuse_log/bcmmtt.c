@@ -24,28 +24,20 @@
 /**
  *	MTT frame constants
  **/
-/* message type SDL (high bit indicates AP) */
+/* message type SDL (high bit indicates AP)*/
 static const unsigned short MTTLOG_MsgTypeSDL = 0x8001;
-/* payload is ASCII string (high bit indicates AP) */
+/* payload is ASCII string (high bit indicates AP)*/
 static const unsigned short MTTLOG_MsgTypeASCII = 0x8002;
-/* MTT version */
+/* MTT version*/
 static const unsigned char MTTLOG_MttVersion = 1;
-/* number of frame (overhead) bytes */
-static const int MTTLOG_NumFrameBytes = MTT_HEADER_SIZE + MTT_PAYLOAD_CS_SIZE;
-/* index of length byte 0 */
+/* number of frame (overhead) bytes*/
+static const int MTTLOG_NumFrameBytes = 15;
+/* index of length byte 0*/
 static const int MTTLOG_FrameLenByte0 = 10;
-/* index of length byte 1 */
+/* index of length byte 1*/
 static const int MTTLOG_FrameLenByte1 = 11;
 
 static unsigned char cp_crash_frame_counter;
-static unsigned char ap_crash_frame_counter;
-
-static struct BMCLOG_Error_t log_error;
-static unsigned char is_log_err_once;
-
-static const char logloss_format[] = {
-	"AP LOG Loss(%d-%d): %dQ %dM %dB %dS %dC %dI"
-};
 
 /**
  *	return length of null-terminated string
@@ -64,7 +56,7 @@ static int MTTLOG_StringLen(const char *c)
  *	read CPU time
  *	@return	unsigned int		CPU time in millisecond
  **/
-unsigned int MTTLOG_GetTime(void)
+static unsigned int MTTLOG_GetTime(void)
 {
 	unsigned long long t;
 
@@ -102,6 +94,7 @@ int BCMMTT_GetRequiredFrameLength(int size)
 {
 	if (size > 0)
 		return size + MTTLOG_NumFrameBytes;
+
 	return -1;
 }
 
@@ -142,7 +135,7 @@ int BCMMTT_MakeMTTSignalHeader(unsigned short inPayloadSize,
 	*pHbuf++ = i & 0xFF;
 	*pHbuf++ = inPayloadSize >> 8;
 	*pHbuf++ = inPayloadSize & 0xFF;
-	/* done at logging driver to assure sequential increase of */
+	/* done at logging driver to assure sequential increase of*/
 	if (CpCrashDumpInProgress())
 		*pHbuf++ = MTTLOG_Checksum16(outFrameHdrBuf, 12);
 	else
@@ -170,8 +163,10 @@ int BCMMTT_FrameString(char *p_dest, const char *p_src, int buflen)
 	if (slen == 0)
 		return 0;
 
+
 	if (slen > buflen - MTTLOG_NumFrameBytes)
 		return 0;
+
 
 	systime = MTTLOG_GetTime();
 
@@ -203,172 +198,15 @@ int BCMMTT_FrameString(char *p_dest, const char *p_src, int buflen)
 		pSbuf++;
 
 	while (*p_src) {
-		/* [0x20 .. 0x7E] is range of 'printable' characters */
+		/* [0x20 .. 0x7E] is range of 'printable' characters*/
 		if (*p_src < 0x20 || *p_src > 0x7E) {
 			*pSbuf++ = ' ';
 			p_src++;
-		} else {
+		} else
 			*pSbuf++ = *p_src++;
-		}
 	}
 
 	n = MTTLOG_Checksum16((unsigned char *)(pSbuf - slen), slen);
-
-	*pSbuf++ = n >> 8;
-	*pSbuf++ = n & 0xFF;
-
-	return MTTLOG_NumFrameBytes + slen;
-}
-
-/**
- *	Frame ap crash string for output to MTT.
- *
- *	@param	p_header(out)	pointer to destination header buffer
- *	@param	p_trailer(out)	pointer to destination trailer buffer
- *	@param	p_src	(in)	pointer to source buffer
- *	@return	int		string length, or 0 on error
- **/
-int BCMMTT_FrameString_nocopy(char *p_header, char *p_trailer,
-			      const char *p_src)
-{
-	int slen = MTTLOG_StringLen(p_src);
-	int n;
-	char *pSbuf;
-	unsigned long systime;
-
-	if (slen == 0)
-		return 0;
-
-	systime = MTTLOG_GetTime();
-
-	pSbuf = p_header;
-
-	*pSbuf++ = MTTLOG_FrameSync0;
-	*pSbuf++ = MTTLOG_FrameSync1;
-	*pSbuf++ = ap_crash_frame_counter++;
-	*pSbuf++ = MTTLOG_MttVersion;
-
-	*pSbuf++ = (systime >> 24);
-	*pSbuf++ = (systime >> 16) & 0xff;
-	*pSbuf++ = (systime >> 8) & 0xff;
-	*pSbuf++ = (systime) & 0xff;
-
-	*pSbuf++ = MTTLOG_MsgTypeASCII >> 8;
-	*pSbuf++ = MTTLOG_MsgTypeASCII & 0xFF;
-
-	*pSbuf++ = slen >> 8;
-	*pSbuf++ = slen & 0xFF;
-
-	n = pSbuf - p_header;
-	*pSbuf++ = MTTLOG_Checksum16((unsigned char *)p_header, n);
-
-	n = MTTLOG_Checksum16((unsigned char *)(p_src), slen);
-
-	*p_trailer++ = n >> 8;
-	*p_trailer++ = n & 0xFF;
-
-	return slen;
-}
-
-/**
- *	Function to track log loss
- *	@param	err_code (in) reason of the log loss
- **/
-void BCMLOG_RecordLogError(unsigned short err_code)
-{
-	if (!is_log_err_once)
-		log_error.logLostStartTime = MTTLOG_GetTime();
-	is_log_err_once |= err_code;
-	switch (err_code) {
-	case MEMORY_FULL_ONCE:
-		log_error.msgLostMem++;
-		break;
-	case QUEUE_FULL_ONCE:
-		log_error.msgLostQue++;
-		break;
-	case SIOBUF_FULL_ONCE:
-		log_error.logLostSioFull++;
-		break;
-	case SIOSEM_CONFLICT_ONCE:
-		log_error.logLostSioSem++;
-		break;
-	case DEREF_FAIL_ONCE:
-		log_error.copyLostMem++;
-		break;
-	case INITLOG_CONFLICT_ONCE:
-		log_error.msgLostInit++;
-		break;
-	}
-	return;
-}
-
-/**
- *	Function return log loss status
- **/
-unsigned char BCMLOG_IsLogError(void)
-{
-	return is_log_err_once;
-}
-
-/**
- *	Function clear log loss status
- **/
-void BCMLOG_ClearLogError(void)
-{
-	is_log_err_once = 0;
-}
-
-/**
- *	Function build log loss MTT message
- *	@param	ptr (in) allocated memory pointer
- **/
-unsigned int BCMLOG_BuildLogLossMessage(char *ptr)
-{
-	int slen;
-	int n;
-	char *pSbuf;
-	unsigned int systime;
-
-	systime = MTTLOG_GetTime();
-
-	snprintf(ptr + MTT_HEADER_SIZE,
-		 BCMLOG_LOGLOSS_SIZE,
-		 logloss_format,
-		 log_error.logLostStartTime,
-		 systime,
-		 log_error.msgLostQue,
-		 log_error.msgLostMem,
-		 log_error.logLostSioFull,
-		 log_error.logLostSioSem,
-		 log_error.copyLostMem, log_error.msgLostInit);
-
-	slen = strlen(ptr + MTT_HEADER_SIZE);
-	if (slen >= BCMLOG_LOGLOSS_SIZE)
-		return 0;
-
-	pSbuf = ptr;
-
-	*pSbuf++ = MTTLOG_FrameSync0;
-	*pSbuf++ = MTTLOG_FrameSync1;
-	pSbuf++;		/* reserved for frame counter */
-	*pSbuf++ = MTTLOG_MttVersion;
-
-	*pSbuf++ = (systime >> 24);
-	*pSbuf++ = (systime >> 16) & 0xff;
-	*pSbuf++ = (systime >> 8) & 0xff;
-	*pSbuf++ = (systime) & 0xff;
-
-	*pSbuf++ = MTTLOG_MsgTypeASCII >> 8;
-	*pSbuf++ = MTTLOG_MsgTypeASCII & 0xFF;
-
-	*pSbuf++ = slen >> 8;
-	*pSbuf++ = slen & 0xFF;
-
-	pSbuf++;		/* reserved for checksum */
-
-	n = MTTLOG_Checksum16((unsigned char *)(ptr + MTT_HEADER_SIZE), slen);
-
-	pSbuf += slen;
 
 	*pSbuf++ = n >> 8;
 	*pSbuf++ = n & 0xFF;

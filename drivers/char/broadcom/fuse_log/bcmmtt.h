@@ -35,34 +35,6 @@ extern "C" {
 #define MTTLOG_FrameSync1	0xC3	/* frame sync byte 1 */
 
 /**
- *	Log loss type
- **/
-#define	MEMORY_FULL_ONCE	0x01	/* malloc failure */
-#define	QUEUE_FULL_ONCE		0x02	/* Not used */
-#define	SIOBUF_FULL_ONCE	0x04	/* output FIFO buffer full */
-#define	SIOSEM_CONFLICT_ONCE	0x08	/* Not used */
-#define	DEREF_FAIL_ONCE		0x10	/* Not used */
-#define	INITLOG_CONFLICT_ONCE	0x20	/* other reason */
-
-#define BCMLOG_LOGLOSS_SIZE	128
-
-#define MTT_HEADER_SIZE         13
-#define MTT_PAYLOAD_CS_SIZE     2
-
-/**
- *  for tracking log loss
- **/
-	struct BMCLOG_Error_t {
-		unsigned int logLostStartTime;
-		unsigned int logLostSioFull;
-		unsigned int logLostSioSem;
-		unsigned int msgLostMem;
-		unsigned int msgLostQue;
-		unsigned int copyLostMem;
-		unsigned int msgLostInit;
-	};
-
-/**
  *	Return the buffer length required to frame a string of length 'size'.  Return -1
  *	on error (e.g., 'size' <= 0)
  *
@@ -94,17 +66,6 @@ extern "C" {
 	int BCMMTT_FrameString(char *p_dest, const char *p_src, int buflen);
 
 /**
- *	Frame ap crash string for output to MTT.
- *
- *	@param	p_header(out)	pointer to destination header buffer
- *	@param	p_trailer(out)	pointer to destination trailer buffer
- *	@param	p_src	(in)	pointer to source buffer
- *	@return	int		string length, or 0 on error
- **/
-	int BCMMTT_FrameString_nocopy(char *p_header, char *p_trailer,
-				      const char *p_src);
-
-/**
  *	compute 16-bit checksum of 8-bit byte array
  *	@param	(in)	pointer to byte array
  *	@param	(in)	number of bytes in array
@@ -112,34 +73,6 @@ extern "C" {
  **/
 	unsigned short MTTLOG_Checksum16(unsigned char *data,
 					 unsigned long len);
-
-/**
- *	read CPU time
- *	@return	unsigned int		CPU time in millisecond
- **/
-	unsigned int MTTLOG_GetTime(void);
-
-/**
- *	Function to track log loss
- *	@param	err_code	(in)	reason of the log loss
- **/
-	void BCMLOG_RecordLogError(unsigned short err_code);
-
-/**
- *	Function return log loss status
- **/
-	unsigned char BCMLOG_IsLogError(void);
-
-/**
- *	Function clear log loss status
- **/
-	void BCMLOG_ClearLogError(void);
-
-/**
- *	Function build log loss MTT message
- *	@param	ptr	(in)	allocated memory pointer
- **/
-	unsigned int BCMLOG_BuildLogLossMessage(char *ptr);
 
 #ifdef __cplusplus
 }

@@ -1,4 +1,4 @@
-/*******************************************************************************
+/*****************************************************************************
 *
 *     Copyright (c) 2007-2008 Broadcom Corporation
 *
@@ -9,8 +9,9 @@
 *
 *
 *  Notwithstanding the above, under no circumstances may you combine this
-*  software in any way with any other Broadcom software provided under a license
-*  other than the GPL, without Broadcom's express prior written consent.
+*  software in any way with any other Broadcom software provided under
+*  a license other than the GPL, without Broadcom's express prior
+*  written consent.
 *
 *******************************************************************************/
 
@@ -31,6 +32,30 @@
 #ifdef __cplusplus
 extern "C" {
 #endif	/* __cplusplus */
+
+#define IPC_IOREMAP_GUARD				(SZ_4K)
+#define IPC_CP_CRASH_SUMMARY_AREA_SZ	(SZ_4K)
+#define IPC_CP_ASSERT_BUF_AREA_SZ		(SZ_4K)
+#define IPC_CP_STRING_MAP_AREA_SZ		(SZ_4K)
+#define IPC_CP_RAMDUMP_BLOCK_AREA_SZ	(SZ_4K)
+#define IPC_CP_CRASH_SUMMARY_AREA		(0)
+#define IPC_CP_ASSERT_BUF_AREA			(IPC_CP_CRASH_SUMMARY_AREA + \
+			IPC_CP_CRASH_SUMMARY_AREA_SZ + IPC_IOREMAP_GUARD)
+#define IPC_CP_STRING_MAP_AREA			(IPC_CP_ASSERT_BUF_AREA + \
+			IPC_CP_ASSERT_BUF_AREA_SZ + IPC_IOREMAP_GUARD)
+#define IPC_CP_RAMDUMP_BLOCK_AREA		(IPC_CP_STRING_MAP_AREA + \
+			IPC_CP_STRING_MAP_AREA_SZ + IPC_IOREMAP_GUARD)
+
+#define IPC_CPMAP_NUM_PAGES ((IPC_CP_CRASH_SUMMARY_AREA_SZ + \
+			IPC_IOREMAP_GUARD + \
+			IPC_CP_ASSERT_BUF_AREA_SZ + \
+			IPC_IOREMAP_GUARD + \
+			IPC_CP_STRING_MAP_AREA_SZ + \
+			IPC_IOREMAP_GUARD +  \
+			IPC_CP_RAMDUMP_BLOCK_AREA_SZ + \
+			IPC_IOREMAP_GUARD) >> PAGE_SHIFT)
+
+#define free_size_ipc(size) (size + IPC_IOREMAP_GUARD)
 
 /*===========================================================*/
 /* Switch for direct IPC buffer allocate/send */

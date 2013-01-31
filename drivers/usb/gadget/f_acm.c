@@ -721,6 +721,9 @@ acm_bind(struct usb_configuration *c, struct usb_function *f)
 			gadget_is_dualspeed(c->cdev->gadget) ? "dual" : "full",
 			acm->port.in->name, acm->port.out->name,
 			acm->notify->name);
+#ifdef CONFIG_BRCM_FUSE_LOG
+	acm_logging_cb = get_acm_callback_func();
+#endif
 	return 0;
 
 fail:

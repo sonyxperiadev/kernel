@@ -8,16 +8,16 @@
 *    at http://www.gnu.org/licenses/old-licenses/gpl-2.0.html (the "GPL").
 *
 *   Notwithstanding the above, under no circumstances may you combine this
-*   software in any way with any other Broadcom software provided under a
-*   license other than the GPL, without Broadcom's express prior written
-*   consent.
+*   software in any way with any other Broadcom software provided
+*   under a license
+*   other than the GPL, without Broadcom's express prior written consent.
 *
 ****************************************************************************/
 
 #ifndef __BCMLOG_OUTPUT_H__
 #define __BCMLOG_OUTPUT_H__
 
-#include <linux/brcm_console.h>
+/*#define BCMLOG_DEBUG_FLAG 1 */
 
 /**
  *	Minimum and maximum number of bytes per RNDIS transfer.
@@ -30,12 +30,11 @@
 
 /**
  *	Output bytes to host
- *	@param  pUserBuf		(in)	pointer to user buffer
- *	@param	userBufSz		(in)	number of bytes
- *	@param  might_has_mtthead	(in)	inside the user buffer,
- *						1 if there might be one
- *						or more MTT header
- *						0 if there in no MTT header
+ *	@param  pUserBuf			(in)	pointer to user buffer
+ *	@param	userBufSz			(in)	number of bytes
+ *    @param  might_has_mtthead        (in) inside the user buffer,
+ *                1 if there might be one or more MTT header
+ *                0 if there in no MTT header
  **/
 void BCMLOG_Output(unsigned char *pUserBuf, unsigned long userBufSz,
 		   unsigned int might_has_mtthead);
@@ -44,23 +43,6 @@ void BCMLOG_Output(unsigned char *pUserBuf, unsigned long userBufSz,
  *	Initialize output module
  *	@return	int zero if success, nonzero if error
  **/
-int BCMLOG_OutputInit(void);
-void BCMLOG_OutputExit(void);
-
-void WriteToLogDev_ACM(void);
-
-#ifdef CONFIG_BRCM_NETCONSOLE
-extern char brcm_netconsole_register_callbacks(struct brcm_netconsole_callbacks
-					       *_cb);
-#endif
-#ifdef CONFIG_USB_G_ANDROID
-extern char acm_logging_register_callbacks(struct acm_logging_callbacks *_cb);
-#endif
-#ifdef CONFIG_BCM_STM
-extern void stm_trace_buffer_start(int channel);
-extern void stm_trace_buffer_end(int channel);
-extern int stm_trace_buffer_data(int channel,
-				 const void *data_ptr, size_t length);
-#endif
+BCMLOG_Fifo_t *BCMLOG_OutputInit(unsigned char *buffer, int buffer_size);
 
 #endif /* __BCMLOG_OUTPUT_H__ */
