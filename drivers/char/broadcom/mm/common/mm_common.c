@@ -223,7 +223,7 @@ void mm_common_read_job(struct work_struct *work)
 		struct dev_job_list *job =
 			list_first_entry(&(filp->read_head),\
 				 struct dev_job_list, file_list);\
-		list_del(&job->file_list);
+		list_del_init(&job->file_list);
 		*job_list = job;
 		filp->read_count--;
 		}
@@ -268,7 +268,7 @@ void mm_common_release_jobs(struct work_struct *work)
 		}
 
 	list_for_each_entry_safe(job, temp, &(filp->read_head), file_list) {
-		list_del(&job->file_list);
+		list_del_init(&job->file_list);
 		kfree(job->job.data);
 		kfree(job);
 		job = NULL;
@@ -287,8 +287,9 @@ void mm_common_interlock_completion(struct dev_job_list *job)
 	struct mm_common *common = filp->common;
 
 	BUG_ON(job->job.type != INTERLOCK_WAITING_JOB);
+	job->job.type = 0;
 
-	list_del(&job->file_list);
+	list_del_init(&job->file_list);
 
 	if (job->predecessor) {
 		BUG_ON(job->filp->interlock_count == 0);
@@ -798,7 +799,7 @@ void mm_fmwk_unregister(void *dev_name)
 	mutex_lock(&mm_fmwk_mutex);
 	list_for_each_entry_safe(common, temp, &mm_dev_list, device_list) {
 		if (common == dev_name) {
-			list_del(&common->device_list);
+			list_del_init(&common->device_list);
 			found = true;
 			break;
 			}
