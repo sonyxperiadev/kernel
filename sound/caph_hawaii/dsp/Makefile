@@ -28,7 +28,4 @@ obj-$(CONFIG_BCM_MODEM) 	+= osdw_dsp_drv.o
 obj-$(CONFIG_BCM_MODEM) 	+= csl_dsp_caph_control_api.o
 obj-$(CONFIG_BCM_MODEM) 	+= csl_dsp_cneon_api.o
 obj-$(CONFIG_BCM_MODEM) 	+= csl_dsp_common_util.o
-obj-$(CONFIG_BCM_MODEM) 	+= csl_volume.o
-obj-$(CONFIG_BCM_MODEM) 	+= csl_greek.o
-obj-$(CONFIG_BCM_MODEM) 	+= csl_cpdspaudio.o
 obj-$(CONFIG_BCM_MODEM) 	+= csl_ptt.o

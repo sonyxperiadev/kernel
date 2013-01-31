@@ -63,8 +63,6 @@ struct Dspdrv_t {
 
 static Dspdrv dsp_drv;
 
-/* temporary to open CP DSP shared memory structure on AP */
-Dsp_SharedMem_t *cp_shared_mem;
 UInt32 *ap_shared_mem;
 
 /* Local function declarations */
@@ -123,9 +121,6 @@ void DSPDRV_Init()
 
 	VPSHAREDMEM_Init(dsp_shared_mem);
 
-	/* temporary to open CP DSP shared memory structure on AP */
-	cp_shared_mem = ioremap_nocache(CP_SH_BASE, CP_SH_SIZE);
-
 	/* Create Tasklet */
 	tasklet_init(&(dsp_drv.task), dsp_thread_proc,
 		     (unsigned long)(&dsp_drv));
@@ -152,13 +147,9 @@ void DSPDRV_Init()
 
 void DSPDRV_DeInit(void)
 {
-	if (cp_shared_mem)
-		iounmap(cp_shared_mem);
-
 	if (ap_shared_mem)
 		iounmap(ap_shared_mem);
 
-	cp_shared_mem = NULL;
 	ap_shared_mem = NULL;
 }
 

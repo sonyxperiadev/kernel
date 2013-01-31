@@ -492,7 +492,6 @@ typedef enum
     NUM_MODE_SCH_ACQ
 } SCH_ACQ_Mode_t;
 
-#include "shared_cp.h"
 #include "shared_ap.h"
 
 #endif	// _INC_SHARED_H_
