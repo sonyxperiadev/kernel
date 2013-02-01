@@ -491,9 +491,6 @@ static int apanic(struct notifier_block *this, unsigned long event,
 	pr_debug("kona_mmc_poll_write: bock_read returned %d \r\n", rc);
 
 	pr_info("apanic: Panic dump successfully written to flash \r\n");
-#ifdef CONFIG_FB_BRCM_CP_CRASH_DUMP_IMAGE_SUPPORT
-	kona_display_crash_image(CP_CRASH_DUMP_END);
-#endif
 
  out:
 #ifdef CONFIG_PREEMPT

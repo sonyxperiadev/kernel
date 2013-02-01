@@ -25,6 +25,9 @@
 
 
 extern void *DISP_DRV_GetFuncTable(void);
+#ifdef CONFIG_FB_BRCM_CP_CRASH_DUMP_IMAGE_SUPPORT
+extern int crash_dump_ui_on;
+#endif
 
 struct dispdrv_name_cfg {
 	char name[DISPDRV_NAME_SZ];

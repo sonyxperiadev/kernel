@@ -176,6 +176,11 @@ extern int cpStart(int isReset);
 extern struct device *ipcs_get_drvdata(void);
 extern int ipcs_reinitialize_ipc(void);
 
+#ifdef CONFIG_FB_BRCM_CP_CRASH_DUMP_IMAGE_SUPPORT
+int crash_dump_ui_on;
+EXPORT_SYMBOL(crash_dump_ui_on);
+#endif
+
 /*********************************************************************
 *
 *   Retrieve string from physical address
@@ -638,7 +643,10 @@ void ProcessCPCrashedDump(struct work_struct *work)
 	    IPC_CP_SILENT_RESET_READY;
 
 #ifdef CONFIG_FB_BRCM_CP_CRASH_DUMP_IMAGE_SUPPORT
+if (!crash_dump_ui_on && !cpReset) {
 	kona_display_crash_image(CP_CRASH_DUMP_START);
+	crash_dump_ui_on = 1;
+	}
 #endif
 
 #ifdef CONFIG_BCM_AP_PANIC_ON_CPCRASH
@@ -980,14 +988,15 @@ void DUMP_CP_assert_log(void)
 	/* resume normal logging activities... */
 	BCMLOG_EndCpCrashDump();
 
-#ifdef CONFIG_FB_BRCM_CP_CRASH_DUMP_IMAGE_SUPPORT
-	kona_display_crash_image(CP_CRASH_DUMP_END);
-#endif
-
 	if (BCMLOG_OUTDEV_SDCARD == BCMLOG_GetCpCrashLogDevice())
 		sys_sync();
 
 	IPC_DEBUG(DBG_ERROR, "CP crash dump complete\n");
+
+#ifdef CONFIG_FB_BRCM_CP_CRASH_DUMP_IMAGE_SUPPORT
+if (!ramdump_enable && !cpReset)
+	kona_display_crash_image(GENERIC_DUMP_END);
+#endif
 
 	if ((BCMLOG_OUTDEV_RNDIS == BCMLOG_GetCpCrashLogDevice() ||
 		BCMLOG_OUTDEV_ACM == BCMLOG_GetCpCrashLogDevice()
