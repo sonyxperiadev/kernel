@@ -39,7 +39,7 @@
 #include <linux/of_platform.h>
 #include <linux/platform_device.h>
 #include <linux/slab.h>
-
+#include <mach/pinmux.h>
 #include <linux/pm.h>
 #include "8250.h"
 
@@ -121,6 +121,59 @@ static int dw8250_handle_irq(struct uart_port *port)
 	return 0;
 }
 
+void dw8250_pm(struct uart_port *port, unsigned int state,
+			      unsigned old_state)
+{
+	static struct pin_config uartb3_config[2] = {
+		{
+		.name = PN_UBRTSN,
+		.func = PF_UBRTSN,
+		.reg.b = {
+			.drv_sth = 3,
+			.input_dis = 0,
+			.slew_rate_ctrl = 0,
+			.pull_up = 1,
+			.pull_dn = 0,
+			.hys_en = 0,
+			.sel = 0,
+			},
+		},
+		{
+		.name = PN_UBRTSN,
+		.func = PF_UB3RTSN,
+		.reg.b = {
+			.drv_sth = 3,
+			.input_dis = 0,
+			.slew_rate_ctrl = 0,
+			.pull_up = 1,
+			.pull_dn = 0,
+			.hys_en = 0,
+			.sel = 3,},
+		},
+	};
+
+	pr_debug("In %s port = 0x%08X state = %d old_state = %d\n",
+	       __func__, (unsigned int)port, state, old_state);
+
+	switch (state) {
+	case 0:
+			/*Resume sequence*/
+		if (port->irq == BCM_INT_ID_UART2)
+			pinmux_set_pin_config(&uartb3_config[1]);
+		serial8250_do_pm(port, state, old_state);
+		break;
+	case 3:
+			/*Suspend sequence*/
+		if (port->irq == BCM_INT_ID_UART2)
+			pinmux_set_pin_config(&uartb3_config[0]);
+		serial8250_do_pm(port, state, old_state);
+		break;
+	default:
+		serial8250_do_pm(port, state, old_state);
+		break;
+	}
+}
+
 static int __devinit dw8250_probe(struct platform_device *pdev)
 {
 	struct uart_port port = {};
@@ -168,7 +221,7 @@ static int __devinit dw8250_probe(struct platform_device *pdev)
 			}
 
 			port.set_termios	= p->set_termios;
-			port.pm                 = p->pm;
+			port.pm                 = dw8250_pm;
 			port.dev                = &pdev->dev;
 			port.irqflags           |= irqflag;
 
@@ -216,7 +269,7 @@ static int __devinit dw8250_probe(struct platform_device *pdev)
 		port.flags = UPF_BOOT_AUTOCONF | UPF_BUG_THRE |
 			UPF_SKIP_TEST | UPF_FIXED_TYPE;
 		port.dev = &pdev->dev;
-
+		port.pm = dw8250_pm;
 		port.iotype = UPIO_MEM32;
 		port.serial_in = dw8250_serial_in;
 		port.serial_out = dw8250_serial_out;
