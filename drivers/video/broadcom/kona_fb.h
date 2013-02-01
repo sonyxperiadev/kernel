@@ -35,6 +35,7 @@ struct dispdrv_name_cfg {
 };
 
 
+#include "lcd/nt35510.h"
 #include "lcd/nt35512.h"
 #include "lcd/nt35516.h"
 #include "lcd/otm1281a.h"
@@ -42,6 +43,7 @@ struct dispdrv_name_cfg {
 
 
 static struct dispdrv_name_cfg dispdrvs[] = {
+	{"NT35510", &nt35510_cfg},
 	{"NT35512", &nt35512_cfg},
 	{"NT35516", &nt35516_cfg},
 	{"OTM1281A", &otm1281a_cfg},

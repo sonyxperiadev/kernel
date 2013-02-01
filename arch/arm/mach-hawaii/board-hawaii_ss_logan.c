@@ -153,7 +153,6 @@
 #endif
 
 #ifdef CONFIG_FB_BRCM_KONA
-#include <video/kona_fb_boot.h>
 #include <video/kona_fb.h>
 #endif
 
@@ -1405,31 +1404,27 @@ static void __init hawaii_add_devices(void)
  */
 struct kona_fb_platform_data konafb_devices[] __initdata = {
 	{
-		.dispdrv_name  = "NT35510",
-// logan compilation fix
-//		.dispdrv_entry = DISP_DRV_NT35510_GetFuncTable,
-		 .dispdrv_entry = DISP_DRV_NT35516_GetFuncTable,
-
-		.parms = {
-			.w0 = {
-				.bits = {
-					.boot_mode  = 0,
-					.bus_type   = KONA_BUS_DSI,
-					.bus_no     = KONA_BUS_0,
-					.bus_ch     = KONA_BUS_CH_0,
-					.bus_width  = 3,
-					.te_input   = KONA_TE_IN_1_DSI0,
-					.col_mode_i = KONA_CM_I_XRGB888,
-					.col_mode_o = KONA_CM_O_RGB888,
-				},
-			},
-			.w1 = {
-			.bits = {
-					.api_rev  =  KONA_LCD_BOOT_API_REV,
-					.lcd_rst0 =  22,
-				},
-			},
+		.name = "NT35510",
+		.reg_name = "cam2",
+		.rst =  {
+			.gpio = 22,
+			.setup = 5,
+			.pulse = 20,
+			.hold = 10000,
+			.active = false,
 		},
+		.vmode = false,
+		.vburst = false,
+		.cmnd_LP = false,
+		.te_ctrl = true,
+		.col_mod_i = 2,
+		.col_mod_o = 3,
+		.width = 480,
+		.height = 800,
+		.fps = 60,
+		.lanes = 2,
+		.hs_bps = 500000000,
+		.lp_bps = 5000000,
 	},
 };
 
