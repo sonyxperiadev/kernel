@@ -405,6 +405,7 @@ static int mm_file_release(struct inode *inode, struct file *filp)
 
 	/* Free all jobs posted using this file */
 	SCHEDULE_RELEASE_WORK(private);
+	kfree(private);
 	return 0;
 }
 
