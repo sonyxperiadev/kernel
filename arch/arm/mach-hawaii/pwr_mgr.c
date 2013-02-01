@@ -905,7 +905,6 @@ static int __init param_set_pm_late_init(const char *val,
 	if (pm_delayed_init == 1)
 		hawaii_pwr_mgr_delayed_init();
 
-	set_cpufreq_limit(get_cpu_freq_from_opp(PI_OPP_ECONOMY), MIN_LIMIT);
 	if (delay_arm_lpm.valid)
 		pi_mgr_qos_request_remove(&delay_arm_lpm);
 
@@ -921,8 +920,6 @@ int __init hawaii_pwr_mgr_late_init(void)
 		pr_info("%s: power off charging, complete int here\n",
 						__func__);
 		hawaii_pwr_mgr_delayed_init();
-		set_cpufreq_limit(get_cpu_freq_from_opp(PI_OPP_ECONOMY),
-				MIN_LIMIT);
 	} else {
 		ret = pi_mgr_qos_add_request(&delay_arm_lpm, "delay_arm_lpm",
 				PI_MGR_PI_ID_ARM_CORE, 0);

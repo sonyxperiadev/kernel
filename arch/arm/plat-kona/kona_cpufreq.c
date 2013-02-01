@@ -352,21 +352,27 @@ u32 get_cpu_freq_from_opp(int opp)
 	int i, ret = 0;
 	struct cpufreq_policy policy;
 	int cpu = get_cpu();
+	ret = cpufreq_get_policy(&policy, cpu);
 	put_cpu();
 
-	ret = cpufreq_get_policy(&policy, cpu);
 	if (ret) {
-		pr_debug("%s:cpufreq not initialized yet\n", __func__);
-		return 0;
-	}
-	if (opp < 0)
-		return 0;
-	for (i = 0; i < kona_cpufreq->no_of_opps; i++) {
-		if (kona_cpufreq->freq_map[i].opp == opp)
-			return kona_cpufreq->freq_map[i].cpu_freq;
+		pr_err("%s:cpufreq not initialized yet\n", __func__);
+		ret = 0;
+		goto over;
 	}
 
-	return 0;
+	if (opp < 0) {
+		pr_err("%s: Invalid OPP: %d", __func__, opp);
+		goto over;
+	}
+
+	for (i = 0; i < kona_cpufreq->no_of_opps; i++)
+		if (kona_cpufreq->freq_map[i].opp == opp) {
+			ret = kona_cpufreq->freq_map[i].cpu_freq;
+			break;
+		}
+over:
+	return ret;
 }
 
 int get_cpufreq_limit(unsigned int *val, int limit_type)
@@ -374,10 +380,11 @@ int get_cpufreq_limit(unsigned int *val, int limit_type)
 	int ret = 0;
 	struct cpufreq_policy policy;
 	int cpu	= get_cpu();
-	put_cpu();
 	ret = cpufreq_get_policy(&policy, cpu);
+	put_cpu();
+
 	if (ret)
-		return -1;
+		goto over;
 	switch (limit_type) {
 	case MAX_LIMIT:
 		*val = policy.max;
@@ -389,38 +396,41 @@ int get_cpufreq_limit(unsigned int *val, int limit_type)
 		*val = policy.cur;
 		break;
 	default:
-		return -EINVAL;
+		ret = -EINVAL;
 	}
-
+over:
 	return ret;
 }
 
 int set_cpufreq_limit(unsigned int val, int limit_type)
 {
 	struct cpufreq_policy *policy;
+	int ret;
 	int cpu = get_cpu();
-	put_cpu();
 
-	if (limit_type != MAX_LIMIT && limit_type != MIN_LIMIT)
-		return -EINVAL;
+	if (limit_type != MAX_LIMIT && limit_type != MIN_LIMIT) {
+		pr_err("%s: Invalid Limit Type", __func__);
+		ret = -EINVAL;
+		goto over;
+	}
 	policy = cpufreq_cpu_get(cpu);
 	if (!policy) {
 		pr_err("%s:cpufreq not initialized yet\n", __func__);
-		return -EINVAL;
+		ret = -EINVAL;
+		goto over;
 	}
 	kcf_dbg("%s: val:%u  limit_type: %s\n", __func__, val,
 				limit_type ? "Max" : "Min");
-	if (limit_type == MAX_LIMIT) {
-		val = (long)policy->cpuinfo.max_freq;
+	if (limit_type == MAX_LIMIT)
 		policy->user_policy.max = val;
-	} else {
-		val = (long)policy->cpuinfo.min_freq;
+	else
 		policy->user_policy.min = val;
-	}
+
 	cpufreq_cpu_put(policy);
 	cpufreq_update_policy(cpu);
-
-	return 0;
+over:
+	put_cpu();
+	return ret;
 }
 
 static int cpufreq_min_lmt_update(struct cpufreq_lmt_node *lmt_node, int action)
@@ -429,15 +439,16 @@ static int cpufreq_min_lmt_update(struct cpufreq_lmt_node *lmt_node, int action)
 	int ret = 0;
 	struct cpufreq_policy *policy;
 	int cpu = get_cpu();
+	policy = cpufreq_cpu_get(cpu);
 	put_cpu();
 
-	policy = cpufreq_cpu_get(cpu);
 	if (!policy) {
 		pr_err("%s:cpufreq not initialized yet\n", __func__);
-		return -EINVAL;
+		ret = -EINVAL;
+		goto over;
 	}
-		if (lmt_node->lmt == DEFAULT_LIMIT)
-			lmt_node->lmt = (int)policy->cpuinfo.min_freq;
+	if (lmt_node->lmt == DEFAULT_LIMIT)
+		lmt_node->lmt = (int)policy->cpuinfo.min_freq;
 	cpufreq_cpu_put(policy);
 
 	spin_lock(&kona_cpufreq->freq_lmt_lock);
@@ -450,9 +461,9 @@ static int cpufreq_min_lmt_update(struct cpufreq_lmt_node *lmt_node, int action)
 		plist_del(&lmt_node->node, &kona_cpufreq->min_lmt_list);
 		break;
 	case FREQ_LMT_NODE_UPDATE:
-			plist_del(&lmt_node->node, &kona_cpufreq->min_lmt_list);
-			plist_node_init(&lmt_node->node, lmt_node->lmt);
-			plist_add(&lmt_node->node, &kona_cpufreq->min_lmt_list);
+		plist_del(&lmt_node->node, &kona_cpufreq->min_lmt_list);
+		plist_node_init(&lmt_node->node, lmt_node->lmt);
+		plist_add(&lmt_node->node, &kona_cpufreq->min_lmt_list);
 		break;
 	default:
 		BUG();
@@ -463,8 +474,8 @@ static int cpufreq_min_lmt_update(struct cpufreq_lmt_node *lmt_node, int action)
 			if (!ret)
 				kona_cpufreq->active_min_lmt = new_val;
 	}
-
 	spin_unlock(&kona_cpufreq->freq_lmt_lock);
+over:
 	return ret;
 }
 
@@ -474,15 +485,16 @@ static int cpufreq_max_lmt_update(struct cpufreq_lmt_node *lmt_node, int action)
 	int ret = 0;
 	struct cpufreq_policy *policy;
 	int cpu = get_cpu();
+	policy = cpufreq_cpu_get(cpu);
 	put_cpu();
 
-	policy = cpufreq_cpu_get(cpu);
 	if (!policy) {
 		pr_err("%s:cpufreq not initialized yet\n", __func__);
-		return -EINVAL;
+		ret = -EINVAL;
+		goto over;
 	}
 	if (lmt_node->lmt == DEFAULT_LIMIT)
-			lmt_node->lmt = (int)policy->cpuinfo.max_freq;
+		lmt_node->lmt = (int)policy->cpuinfo.max_freq;
 	cpufreq_cpu_put(policy);
 
 	spin_lock(&kona_cpufreq->freq_lmt_lock);
@@ -508,8 +520,8 @@ static int cpufreq_max_lmt_update(struct cpufreq_lmt_node *lmt_node, int action)
 		if (!ret)
 			kona_cpufreq->active_max_lmt = new_val;
 	}
-
 	spin_unlock(&kona_cpufreq->freq_lmt_lock);
+over:
 	return ret;
 }
 
