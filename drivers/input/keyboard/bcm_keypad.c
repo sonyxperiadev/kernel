@@ -195,7 +195,10 @@ static void bcm_handle_key(struct bcm_keypad *bcm_kb,
 	struct bcm_keymap *keymap_p = bcm_kb->kpmap;
 	/* KeyId is of the form 0xCR where:  C = column number    R = row number 
 	   Use it as index into map structure */
-	unsigned char vk = keymap_p[keyId].key_code;
+	/* Some key id used by application is larger than 255.
+	So we use int here to handle the big key id. Also make
+	it compatible with the defition of key_code*/
+	int vk = keymap_p[keyId].key_code;
 	unsigned int keyreadstatus1;
 	unsigned int keyreadstatus2;
 
