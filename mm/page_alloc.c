@@ -300,7 +300,8 @@ static int verify_cma(int takelock)
 					zone->nr_cma_free[order] * (1 << order);
 
 			nr_free_cma_pages =
-				zone_page_state(zone, NR_FREE_CMA_PAGES);
+				zone_page_state_snapshot(zone,
+						NR_FREE_CMA_PAGES);
 
 			if ((zone_cmafreelist != zone_cma_nr_free) ||
 				(zone_migratecmafreelist !=
