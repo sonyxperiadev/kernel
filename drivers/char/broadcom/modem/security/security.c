@@ -70,7 +70,6 @@ the GPL, without Broadcom's express prior written consent
 
 MODULE_LICENSE("GPL");
 
-#define USE_BRCM_SIMCLOCK_SOLUTION
 
 /**
  *  module data
@@ -497,10 +496,7 @@ static long handle_get_imei_ioc(struct file *filp, unsigned int cmd,
 static long handle_set_lock_state_ioc(struct file *filp, unsigned int cmd,
 				unsigned long param)
 {
-#ifdef USE_BRCM_SIMCLOCK_SOLUTION
-	pr_err("SET_LOCK_STATE_IOC is not allowed.\n");
-	return -EFAULT;
-#else
+#ifdef CONFIG_BCM_SET_CP_LOCK_STATE_SUPPORT
 /* To support customer implement SIMLOCK on user space*/
 	sec_simlock_state_t ioc_param = { 0 };
 	SYS_SIMLOCK_STATE_t sys_lock_status = { 0 };
@@ -536,6 +532,9 @@ static long handle_set_lock_state_ioc(struct file *filp, unsigned int cmd,
 	SIMLOCKApi_SetStatusEx(ioc_param.sim_id, &sys_lock_status);
 
 	return 0;
+#else
+	pr_err("SET_LOCK_STATE_IOC is not allowed.\n");
+	return -EFAULT;
 #endif
 }
 

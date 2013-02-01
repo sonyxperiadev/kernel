@@ -325,3 +325,9 @@ config BCM_GPS_CNTIN
 	---help---
 	Say Y to enable the GPS CNTIN support.
 
+config BCM_SET_CP_LOCK_STATE_SUPPORT
+    boolean "Set CP lock state support"
+    depends on BRCM_CHAR_DRIVERS && BCM_MODEM && !BRCM_SIM_SECURE_ENABLE
+    default n
+    ---help---
+    Set CP lock status directly
