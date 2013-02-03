@@ -237,7 +237,7 @@
 		rst-pulse = <20>;	/* 20us */
 		rst-hold = <20000>;	/* 20ms */
 		/* rst-active-high */	/* Commented => Active Low */
-		/* vmode; */		/* Commented => Command mode */
+		vmode;		/* Commented => Command mode */
 		/* vburst = <0>; */	/* Non-burst mode */
 		cmnd-LP;		/* Commands in LP mode*/
 		/* te-ctrl; */		/* Tearing Effect Control disabled */
@@ -247,7 +247,7 @@
 		height = <1280>;
 		fps = <60>;
 		lanes = <4>;
-		hs-bitrate = <400000000>;	/* 400mbps */
+		hs-bitrate = <330000000>;	/* 400mbps */
 		lp-bitrate = <5000000>;	/* 5mbps */
 	};
 
