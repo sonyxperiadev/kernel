@@ -126,12 +126,18 @@ struct sg_table *ion_carveout_heap_map_dma(struct ion_heap *heap,
 		sg_set_page(table->sgl, phys_to_page(buffer->priv_phys),
 				buffer->size, 0);
 	}
+#ifdef CONFIG_ION_KONA
+	buffer->dma_addr = buffer->priv_phys;
+#endif
 	return table;
 }
 
 void ion_carveout_heap_unmap_dma(struct ion_heap *heap,
 				 struct ion_buffer *buffer)
 {
+#ifdef CONFIG_ION_KONA
+	buffer->dma_addr = ION_DMA_ADDR_FAIL;
+#endif
 	sg_free_table(buffer->sg_table);
 	kfree(buffer->sg_table);
 }

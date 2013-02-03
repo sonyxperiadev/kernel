@@ -245,6 +245,7 @@ static void ion_buffer_destroy(struct kref *kref)
 #ifdef CONFIG_ION_KONA
 	pid_t client_pid;
 	char client_name[TASK_COMM_LEN];
+	unsigned int dma_addr = buffer->dma_addr;
 #endif
 
 	if (WARN_ON(buffer->kmap_cnt > 0))
@@ -256,9 +257,10 @@ static void ion_buffer_destroy(struct kref *kref)
 	client_pid = task_pid_nr(current->group_leader);
 	get_task_comm(client_name, current->group_leader);
 	buffer->heap->used -= buffer->size;
-	pr_debug("(%16.s:%d) Free heap(%16.s) buf(%p) (%d)KB used(%d)KB\n",
-			client_name, client_pid, buffer->heap->name,
-			buffer, buffer->size>>10, buffer->heap->used>>10);
+	pr_debug("(%16.s:%d) Freed buffer(%p) da(%#x) size(%d)KB flags(%#lx) from heap(%16.s) used(%d)KB\n",
+			client_name, client_pid, buffer, dma_addr,
+			buffer->size>>10, buffer->flags, buffer->heap->name,
+			buffer->heap->used>>10);
 #endif
 	rb_erase(&buffer->node, &dev->buffers);
 	mutex_unlock(&dev->buffer_lock);
@@ -589,9 +591,9 @@ struct ion_handle *ion_alloc(struct ion_client *client, size_t len,
 		client_pid = -1;
 		strncpy(client_name, "kthread", sizeof(client_name));
 	}
-	pr_debug("(%16.s:%d) Alloc len(%d) align(%d) heap_mask(%u) flags(%x)\n",
-			client_name, client_pid, len, align, heap_id_mask,
-			flags);
+	pr_debug("(%16.s:%d) Alloc request for size(%d) heap_mask(%#x) flags(%#x) align(%d)\n",
+			client_name, client_pid, len, heap_id_mask, flags,
+			align);
 #endif
 	/*
 	 * traverse the list of heaps available in this system in priority
@@ -615,9 +617,9 @@ retry:
 			continue;
 #ifdef CONFIG_ION_KONA
 		heap_used = heap;
-		pr_debug("(%16.s:%d) Try heap(%16.s) need(%d)KB used(%d)KB\n",
-				client_name, client_pid, heap->name,
-				len>>10, heap->used>>10);
+		pr_debug("(%16.s:%d) Try size(%d)KB from heap(%16.s) used(%d)KB\n",
+				client_name, client_pid, len>>10, heap->name,
+				heap->used>>10);
 #endif /* CONFIG_ION_KONA */
 		buffer = ion_buffer_create(heap, dev, len, align, flags);
 		if (!IS_ERR_OR_NULL(buffer))
@@ -626,18 +628,23 @@ retry:
 #ifdef CONFIG_ION_KONA
 	if (buffer == ERR_PTR(-ENOMEM)) {
 		/* Alloc failed: Kill task to free memory */
-		pr_debug("(%16.s:%d) Alloc fail. Shrink mask(%x) size(%d)KB\n",
-				client_name, client_pid, heap_id_mask,
-				len>>10);
 #ifdef CONFIG_ION_OOM_KILLER
+		pr_debug("(%16.s:%d) Try shrink - Alloc fail due to no mem for size(%d)KB mask(%#x) flags(%#x)\n",
+				client_name, client_pid, len>>10,
+				heap_id_mask, flags);
 		if (ion_shrink(dev, heap_id_mask, 0, len))
 			retry_flag = 1;
+#else
+		pr_err("(%16.s:%d) Fatal Alloc fail due to no mem for size(%d)KB mask(%#x) flags(%#x)\n",
+				client_name, client_pid, len>>10,
+				heap_id_mask, flags);
 #endif /* CONFIG_ION_OOM_KILLER */
 	} else if (!IS_ERR_OR_NULL(buffer)) {
 		heap_used->used += buffer->size;
-		pr_debug("(%16.s:%d) Alloc heap(%16.s) %p (%d)KB used(%d)KB\n",
-				client_name, client_pid, heap_used->name,
-				buffer, len>>10, heap_used->used>>10);
+		pr_debug("(%16.s:%d) Allocated buffer(%p) da(%#x) size(%d)KB mask(%#x) flags(%#x) from heap(%16.s) used(%d)KB\n",
+				client_name, client_pid, buffer,
+				buffer->dma_addr, len>>10, heap_id_mask, flags,
+				heap_used->name, heap_used->used>>10);
 #ifdef CONFIG_ION_OOM_KILLER
 		if ((heap_used->ops->needs_shrink) &&
 				(heap_used->ops->needs_shrink(heap_used))) {
@@ -646,10 +653,9 @@ retry:
 			int min_free = ion_minfree_get(heap_used);
 
 			if (free_space < min_free) {
-				pr_debug("(%16.s:%d) LMK shrink heap(%16.s) "
-						"free(%d)KB min(%d)KB\n",
+				pr_debug("(%16.s:%d) size(%d)KB allocation caused LMK shrink of heap(%16.s) free(%d)KB threshold(%d)KB\n",
 						client_name, client_pid,
-						heap_used->name,
+						len>>10, heap_used->name,
 						free_space>>10, min_free>>10);
 				ion_shrink(dev, (1 << heap_used->id), min_adj,
 						0);
@@ -657,9 +663,9 @@ retry:
 		}
 #endif /* CONFIG_ION_OOM_KILLER */
 	} else {
-		pr_err("(%16.s:%d) Fatal Alloc fail. mask(%x) size(%d)KB\n",
-				client_name, client_pid, heap_id_mask,
-				len>>10);
+		pr_err("(%16.s:%d) Fatal Alloc fail for size(%d)KB mask(%#x) flags(%#x)\n",
+				client_name, client_pid, len>>10,
+				heap_id_mask, flags);
 		ion_debug_print_heap_status(dev, heap_id_mask);
 	}
 #endif /* CONFIG_ION_KONA */
@@ -676,9 +682,9 @@ retry:
 			msleep(ION_OOM_SLEEP_TIME_MS);
 			goto retry;
 		}
-		pr_err("(%16.s:%d) Fatal O Alloc fail. mask(%x) size(%d)KB\n",
-				client_name, client_pid, heap_id_mask,
-				len>>10);
+		pr_err("(%16.s:%d) Fatal Alloc fail - OOM cannot help for size(%d)KB mask(%#x) flags(%#x)\n",
+				client_name, client_pid, len>>10,
+				heap_id_mask, flags);
 		down_read(&dev->lock);
 		ion_debug_print_heap_status(dev, heap_id_mask);
 		up_read(&dev->lock);

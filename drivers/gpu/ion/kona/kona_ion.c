@@ -39,19 +39,22 @@ static struct ion_heap **heaps;
 unsigned int kona_ion_map_dma(struct ion_client *client,
 		struct ion_handle *handle)
 {
+	struct ion_buffer *buffer;
 	unsigned int dma_addr = 0;
-	struct sg_table *sg_table;
 
-	sg_table = ion_sg_table(client, handle);
-	if (IS_ERR_OR_NULL(sg_table))
-		return dma_addr;
+	buffer = ion_lock_buffer(client, handle);
+	if (!buffer) {
+		pr_err("%s could not lock the buffer\n", __func__);
+		return 0;
+	}
 
-	/* Do not have IOMMU to map multiple scatterlist entries to
-	 * contiguous dma address. With M4U disabled, this should be called
-	 * only for contiguous buffer.
-	 * TODO: Add check for contiguous buffer */
-	dma_addr = sg_phys(sg_table->sgl);
+	dma_addr = buffer->dma_addr;
+	ion_unlock_buffer(client, buffer);
 
+	if (dma_addr == ION_DMA_ADDR_FAIL) {
+		pr_err("%s No valid DMA address\n", __func__);
+		return 0;
+	}
 	return dma_addr;
 }
 EXPORT_SYMBOL(kona_ion_map_dma);

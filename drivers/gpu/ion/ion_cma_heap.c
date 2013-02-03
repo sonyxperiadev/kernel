@@ -150,12 +150,18 @@ struct sg_table *ion_cma_heap_map_dma(struct ion_heap *heap,
 {
 	struct ion_cma_buffer_info *info = buffer->priv_virt;
 
+#ifdef CONFIG_ION_KONA
+	buffer->dma_addr = info->handle;
+#endif
 	return info->table;
 }
 
 void ion_cma_heap_unmap_dma(struct ion_heap *heap,
 			       struct ion_buffer *buffer)
 {
+#ifdef CONFIG_ION_KONA
+	buffer->dma_addr = ION_DMA_ADDR_FAIL;
+#endif
 	return;
 }
 

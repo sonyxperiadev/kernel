@@ -79,6 +79,7 @@ struct ion_buffer {
 	char task_comm[TASK_COMM_LEN];
 	pid_t pid;
 #ifdef CONFIG_ION_KONA
+	unsigned int dma_addr;
 	unsigned int custom_flags;
 	int custom_update_count;
 	unsigned int align;
@@ -267,6 +268,8 @@ extern int ion_minfree_get(struct ion_heap *heap);
 
 #define pgprot_writeback(prot) \
 	__pgprot_modify(prot, L_PTE_MT_MASK, L_PTE_MT_WRITEBACK)
+
+#define ION_DMA_ADDR_FAIL (~0)
 
 #endif
 
