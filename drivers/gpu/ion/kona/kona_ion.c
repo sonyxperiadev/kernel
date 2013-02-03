@@ -395,7 +395,10 @@ static int kona_ion_probe(struct platform_device *pdev)
 	for (i = 0; i < new_num_heaps; i++) {
 		int new_id = heap_datas[i].id;
 		for (j = 0; j < num_heaps; j++) {
-			int old_id = heaps[j]->id;
+			int old_id;
+			if (!heaps[j])
+				continue;
+			old_id = heaps[j]->id;
 			if (new_id == old_id) {
 				pr_err("Probe fail: %16s duplicate id(%d)\n",
 						heap_datas[i].name, new_id);
@@ -526,7 +529,7 @@ static struct platform_driver ion_driver = {
 	.probe = kona_ion_probe,
 	.remove = __devexit_p(kona_ion_remove),
 	.driver = {
-		.name = "ion",
+		.name = "ion-kona",
 		.owner = THIS_MODULE,
 		.of_match_table = ion_of_match,
 	},

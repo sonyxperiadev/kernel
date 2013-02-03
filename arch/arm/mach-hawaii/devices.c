@@ -32,8 +32,10 @@
 #include <linux/dma-contiguous.h>
 #include <linux/dma-mapping.h>
 #include <mach/io_map.h>
+#ifdef CONFIG_OF
 #include <linux/of.h>
 #include <linux/of_fdt.h>
+#endif
 #ifdef CONFIG_ANDROID_PMEM
 #include <linux/android_pmem.h>
 #endif
@@ -88,6 +90,7 @@
 #endif
 
 #ifdef CONFIG_ION
+#include <linux/ion.h>
 #include <linux/broadcom/kona_ion.h>
 #endif /* CONFIG_ION */
 
@@ -106,6 +109,39 @@ struct platform_device android_pmem = {
 	},
 };
 #endif
+
+#ifdef CONFIG_ION
+#ifndef CONFIG_OF
+struct platform_device ion_system_device = {
+	.name = "ion-kona",
+	.id = 2,
+	.num_resources = 0,
+};
+
+struct platform_device ion_carveout_device = {
+	.name = "ion-kona",
+	.id = 0,
+	.dev = {
+		.platform_data = &ion_carveout_data,
+	},
+	.num_resources = 0,
+};
+
+#ifdef CONFIG_CMA
+static u64 ion_dmamask = DMA_BIT_MASK(32);
+struct platform_device ion_cma_device = {
+	.name = "ion-kona",
+	.id = 1,
+	.dev = {
+		.dma_mask = &ion_dmamask,
+		.coherent_dma_mask = DMA_BIT_MASK(32),
+		.platform_data = &ion_cma_data,
+	},
+	.num_resources = 0,
+};
+#endif /* CONFIG_CMA */
+#endif /* CONFIG_OF */
+#endif /* CONFIG_ION */
 
 struct platform_device hawaii_serial_device = {
 	.name = "serial8250_dw",
@@ -978,6 +1014,24 @@ static void __init pmem_reserve_memory(void)
 #endif
 
 #ifdef CONFIG_ION
+
+static phys_addr_t __init find_free_memory(phys_addr_t size, phys_addr_t base,
+		phys_addr_t limit)
+{
+	phys_addr_t addr;
+
+	addr = memblock_alloc_from_range(size, SZ_1M, base, limit);
+	if (addr)
+		memblock_free(addr, size);
+	else
+		pr_info("!!!!Failed to find free memory Size(%3dMB) Range(%08x - %08x)\n",
+				(size>>20), base, limit);
+
+	return addr;
+}
+
+#ifdef CONFIG_OF
+
 static struct kona_ion_dt_heap_data ion_dt_heaps[] __initdata = {
 	[0] = {
 		.name  = "ion-carveout",
@@ -1093,21 +1147,6 @@ int kona_ion_get_dt_heap_data(struct kona_ion_dt_heap_data **data,
 }
 EXPORT_SYMBOL(kona_ion_get_dt_heap_data);
 
-static phys_addr_t __init find_free_memory(phys_addr_t size, phys_addr_t base,
-		phys_addr_t limit)
-{
-	phys_addr_t addr;
-
-	addr = memblock_alloc_from_range(size, SZ_1M, base, limit);
-	if (addr)
-		memblock_free(addr, size);
-	else
-		pr_info("!!!!Failed to find free memory Size(%3dMB) Range(%08x - %08x)\n",
-				(size>>20), base, limit);
-
-	return addr;
-}
-
 static void __init ion_reserve_memory(void)
 {
 	struct kona_ion_dt_heap_data *heap;
@@ -1130,7 +1169,7 @@ static void __init ion_reserve_memory(void)
 			if (of_scan_flat_dt(early_init_dt_scan_ion_data, heap))
 				pr_info("ion: From DT %16s Type(%d) Size(%3dMB) Range(%08lx - %08lx)\n",
 						heap->name, heap->type,
-					       (heap->size>>20),
+						(heap->size>>20),
 						heap->base, heap->limit);
 		}
 
@@ -1168,6 +1207,114 @@ static void __init ion_reserve_memory(void)
 	}
 }
 
+#else /* CONFIG_OF */
+
+static int __init setup_ion_pages(char *str, struct ion_platform_data *pdata,
+		int idx)
+{
+	struct ion_platform_heap *heap;
+	char *endp = NULL;
+
+	if (str && (pdata->nr > idx)) {
+		heap = &(pdata->heaps[idx]);
+		heap->size = memparse((const char *)str, &endp);
+		pr_info("ion: Cmdline sets %16s heap, id(%d) size(%d)MB\n",
+				heap->name, heap->id, (heap->size)>>20);
+	}
+
+	return 0;
+}
+
+static int __init setup_ion_carveout0_pages(char *str)
+{
+	return setup_ion_pages(str, &ion_carveout_data, 0);
+}
+early_param("carveout0", setup_ion_carveout0_pages);
+
+static int __init setup_ion_carveout1_pages(char *str)
+{
+	return setup_ion_pages(str, &ion_carveout_data, 1);
+}
+early_param("carveout1", setup_ion_carveout1_pages);
+
+#ifdef CONFIG_CMA
+static int __init setup_ion_cma0_pages(char *str)
+{
+	return setup_ion_pages(str, &ion_cma_data, 0);
+}
+early_param("cma0", setup_ion_cma0_pages);
+
+static int __init setup_ion_cma1_pages(char *str)
+{
+	return setup_ion_pages(str, &ion_cma_data, 1);
+}
+early_param("cma1", setup_ion_cma1_pages);
+#endif
+
+static void __init ion_reserve_memory(void)
+{
+	struct ion_platform_heap *heap;
+	phys_addr_t base;
+	int i;
+
+	/* Carveout memory for ION */
+	for (i = 0; i < ion_carveout_data.nr; i++) {
+		heap = &ion_carveout_data.heaps[i];
+		if (heap->size) {
+			pr_info("ion: From pdata %16s Type(%d) Size(%3dMB) Range(%08lx - %08lx)\n",
+					heap->name, heap->type,
+					(heap->size>>20),
+					heap->base, heap->limit);
+			base = find_free_memory(heap->size, heap->base,
+					heap->limit);
+			if (base) {
+				memblock_remove(base, heap->size);
+				heap->base = base;
+				pr_info("ion: Reserve %16s %3dMB (%08lx - %08lx) ***\n",
+						heap->name, (heap->size>>20),
+						heap->base,
+						heap->base + heap->size);
+				continue;
+			}
+		}
+		heap->id = ION_INVALID_HEAP_ID;
+	}
+
+#ifdef CONFIG_CMA
+	/* Reserve CMA memory for ION */
+	for (i = 0; i < ion_cma_data.nr; i++) {
+		heap = &ion_cma_data.heaps[i];
+		if (heap->size) {
+			pr_info("ion: From pdata %16s Type(%d) Size(%3dMB) Range(%08lx - %08lx)\n",
+					heap->name, heap->type,
+					(heap->size>>20),
+					heap->base, heap->limit);
+			base = find_free_memory(heap->size, heap->base,
+					heap->limit);
+			if (base) {
+				if (!dma_declare_contiguous(&ion_cma_device.dev,
+							heap->size, base,
+							heap->limit)) {
+					heap->base = base;
+					pr_info("ion: Reserve %16s %3dMB (%08lx - %08lx) ***\n",
+							heap->name,
+							(heap->size>>20),
+							heap->base,
+							heap->base +
+							heap->size);
+					continue;
+				} else {
+					pr_info("ion: !!!!!Failed CMA %3dMB (%08x - %08x)\n",
+							(heap->size>>20),
+							base, base+heap->size);
+				}
+			}
+#endif /* CONFIG_CMA */
+		}
+		heap->id = ION_INVALID_HEAP_ID;
+	}
+}
+#endif /* CONFIG_OF */
 #endif /* CONFIG_ION */
 
 void __init hawaii_reserve(void)
