@@ -1261,7 +1261,17 @@ int akm8975_probe(struct i2c_client *client, const struct i2c_device_id *id)
 
 	/***** Set layout information *****/
 	s_akm->layout = 0;
-	if (client->dev.of_node) {
+	s_akm->irq = 0;
+	if (client->dev.platform_data) {
+		struct akm8975_platform_data *pdata =
+			(struct akm8975_platform_data *)
+				client->dev.platform_data;
+		s_akm->layout = pdata->layout;
+		s_akm->irq = pdata->gpio_DRDY;
+		dev_info(&client->dev,
+			"%s: initialized from platform data: layout=%d GPIO=%d",
+			__func__, s_akm->layout, s_akm->irq);
+	} else if (client->dev.of_node) {
 		np = client->dev.of_node;
 		if (of_property_read_u32(np, "layout", &val)) {
 			dev_err(&client->dev,
@@ -1277,10 +1287,13 @@ int akm8975_probe(struct i2c_client *client, const struct i2c_device_id *id)
 			val = 0;
 		}
 		s_akm->irq = val;
+		dev_info(&client->dev,
+			"%s: initialized from DTS: layout=%d GPIO=%d",
+			__func__, s_akm->layout, s_akm->irq);
 	} else {
-		/* DTS data is not available.
+		/* Nor platform data neither DTS data are available.
 		   Layout information should be set by each application. */
-		dev_warn(&client->dev, "%s: No DTS data.", __func__);
+		dev_warn(&client->dev, "%s: No preset data.", __func__);
 	}
 
 	/***** I2C initialization *****/
