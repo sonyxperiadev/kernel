@@ -299,7 +299,9 @@ static int kona_tmon_probe(struct platform_device *pdev)
 	struct kona_tmon_pdata *pdata;
 
 	kona_tmon = kzalloc(sizeof(struct kona_tmon), GFP_KERNEL);
-	if (pdev->dev.of_node) {
+	if (pdev->dev.platform_data)
+		pdata =	(struct kona_tmon_pdata *)pdev->dev.platform_data;
+	else if (pdev->dev.of_node) {
 		pdata = kzalloc(sizeof(struct kona_tmon_pdata),	GFP_KERNEL);
 		if (!pdata) {
 			rc = -ENOMEM;
@@ -418,10 +420,7 @@ static int kona_tmon_probe(struct platform_device *pdev)
 				be32_to_cpu(*thold++);
 			pdata->thold[i].flags = be32_to_cpu(*thold++);
 		}
-	} else if (pdev->dev.platform_data)
-		pdata =	(struct kona_tmon_pdata *)pdev->dev.platform_data;
-
-	else {
+	} else {
 		tmon_dbg(TMON_LOG_ERR, "no platform data found\n");
 		rc = -EINVAL;
 		goto err_free_dev_mem;

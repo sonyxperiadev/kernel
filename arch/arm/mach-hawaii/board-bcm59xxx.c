@@ -54,7 +54,7 @@ static int bcmpmu_init_platform_hw(struct bcmpmu59xxx *bcmpmu);
 static int bcmpmu_exit_platform_hw(struct bcmpmu59xxx *bcmpmu);
 
 /* Used only when no bcmpmu dts entry found */
-static struct bcmpmu59xxx_rw_data register_init_data[] = {
+static struct bcmpmu59xxx_rw_data __initdata register_init_data[] = {
 /* mask 0x00 is invalid value for mask */
 	/* pin mux selection for pc3 and simldo1
 	 * AUXONb Wakeup disabled */
@@ -1320,7 +1320,6 @@ int bcmpmu_reg_init(void)
 	int size, i;
 	uint32_t *p, *p1;
 	struct bcmpmu59xxx_rw_data *tbl;
-	unsigned long dt_root;
 	const char *model;
 
 	np = of_find_matching_node(NULL, matches);
@@ -1355,24 +1354,25 @@ int bcmpmu_reg_init(void)
 							init_data[i].addr);
 			}
 		}
+
+		prop = of_find_property(np, "model", NULL);
+		if (prop) {
+			model = prop->value;
+			if (!strcmp(model, BOARD_EDN010))
+				bcmpmu_i2c_pdata.board_id = EDN010;
+			else
+				bcmpmu_i2c_pdata.board_id = EDN01x;
+		} else
+			bcmpmu_i2c_pdata.board_id = EDN01x;
+
+		pr_info("Board id from dtb %x\n",
+				bcmpmu_i2c_pdata.board_id);
 	}
 
 	if (!reg_init) {
 		bcmpmu_i2c_pdata.init_data =  register_init_data;
 		bcmpmu_i2c_pdata.init_max = ARRAY_SIZE(register_init_data);
 	}
-
-	dt_root = of_get_flat_dt_root();
-	if (dt_root) {
-		model = of_get_flat_dt_prop(dt_root, "model", NULL);
-		if (!strcmp(model, BOARD_EDN010))
-			bcmpmu_i2c_pdata.board_id = EDN010;
-		else
-			bcmpmu_i2c_pdata.board_id = EDN01x;
-	} else
-		bcmpmu_i2c_pdata.board_id = EDN01x;
-
-	pr_info("Board id from dtb %x\n", bcmpmu_i2c_pdata.board_id);
 
 	return 0;
 }

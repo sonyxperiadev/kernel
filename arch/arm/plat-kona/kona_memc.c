@@ -417,7 +417,9 @@ static int kona_memc_probe(struct platform_device *pdev)
 	plist_head_init(&kona_memc.min_pwr_list);
 	kona_memc.active_min_pwr = 0;
 
-	if (pdev->dev.of_node) {
+	if (pdev->dev.platform_data)
+		pdata =	(struct kona_memc_pdata *)pdev->dev.platform_data;
+	else if (pdev->dev.of_node) {
 		pdata = kzalloc(sizeof(struct kona_memc_pdata),	GFP_KERNEL);
 
 		if (!pdata)
@@ -481,10 +483,7 @@ static int kona_memc_probe(struct platform_device *pdev)
 		}
 		pdata->max_pwr = val;
 
-	} else if (pdev->dev.platform_data)
-		pdata =	(struct kona_memc_pdata *)pdev->dev.platform_data;
-
-	else {
+	} else {
 		pr_info("%s: no platform data found\n", __func__);
 		return -EINVAL;
 	}

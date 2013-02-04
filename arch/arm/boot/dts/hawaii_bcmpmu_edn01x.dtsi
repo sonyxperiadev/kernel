@@ -100,6 +100,7 @@
 		 /*turn of synthesizer when no PLL request */
 		 0x1A 0xfe 0xff 0
 		>;
+		model = "BOARD_EDN01x";
 	};
 
 	bcmpmu_rgltrs {

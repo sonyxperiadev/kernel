@@ -94,6 +94,14 @@
 #include <linux/broadcom/kona_ion.h>
 #endif /* CONFIG_ION */
 
+#ifdef CONFIG_KONA_MEMC
+#include <plat/kona_memc.h>
+#endif
+
+#ifdef CONFIG_KONA_TMON
+#include <mach/kona_tmon.h>
+#endif
+
 #include "devices.h"
 
 /* dynamic ETM support */
@@ -808,6 +816,55 @@ struct platform_device kona_avs_device = {
 	.dev = {
 		.platform_data = &avs_pdata,
 	}
+};
+#endif
+
+#ifdef CONFIG_KONA_MEMC
+struct kona_memc_pdata kmemc_plat_data = {
+	.flags = KONA_MEMC_ENABLE_SELFREFRESH | KONA_MEMC_DISABLE_DDRLDO |
+		KONA_MEMC_SET_SEQ_BUSY_CRITERIA | KONA_MEMC_DDR_PLL_PWRDN_EN |
+		KONA_MEMC_HW_FREQ_CHANGE_EN,
+	.memc0_ns_base = KONA_MEMC0_NS_VA,
+	.chipreg_base = KONA_CHIPREG_VA,
+	.memc0_aphy_base = KONA_MEMC0_APHY_VA,
+	.seq_busy_val = 2,
+	.max_pwr = 3,
+};
+struct platform_device kona_memc_device = {
+	.name = "kona_memc",
+	.id = -1,
+	.dev = {
+		.platform_data = &kmemc_plat_data,
+	},
+};
+#endif
+
+#ifdef CONFIG_KONA_TMON
+struct tmon_state threshold_val[] = {
+	{.rising = 70, .falling = 65, .flags = TMON_NOTIFY,},
+	{.rising = 80, .falling = 75, .flags = TMON_NOTIFY,},
+	{.rising = 90, .falling = 85, .flags = TMON_NOTIFY,},
+	{.rising = 100, .falling = 95, .flags = TMON_SHDWN,},
+};
+struct kona_tmon_pdata tmon_plat_data = {
+	.base_addr = KONA_TMON_VA,
+	.irq = BCM_INT_ID_TEMP_MON,
+	.thold = threshold_val,
+	.thold_size = ARRAY_SIZE(threshold_val),
+	.poll_rate_ms = 30000,
+	.hysteresis = 0,
+	.flags = ENBALE_VTMON,
+	.chipreg_addr = KONA_CHIPREG_VA,
+	.interval_ms = 5,
+	.tmon_apb_clk = "tmon_apb",
+	.tmon_1m_clk = "tmon_1m_clk",
+};
+struct platform_device kona_tmon_device = {
+	.name = "kona_tmon",
+	.id = -1,
+	.dev = {
+		.platform_data = &tmon_plat_data,
+	},
 };
 #endif
 
