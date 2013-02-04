@@ -92,5 +92,6 @@ struct ami306_platform_data {
 	int gpio_drdy;
 	int dir;
 	int polarity;
+	const char *supply_name;
 };
 #endif

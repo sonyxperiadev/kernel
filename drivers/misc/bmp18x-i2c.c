@@ -23,6 +23,7 @@
 #include <linux/module.h>
 #include <linux/i2c.h>
 #include <linux/input.h>
+#include <linux/slab.h>
 #include "linux/bmp18x.h"
 
 #include <linux/of.h>
@@ -71,7 +72,7 @@ static int __devinit bmp18x_i2c_probe(struct i2c_client *client,
 				      const struct i2c_device_id *id)
 {
 	int err = 0;
-	const char *regulator_name = NULL;
+	struct bmp18x_platform_data *pdata = NULL;
 	struct bmp18x_data_bus data_bus =
 	{
 		.bops = &bmp18x_i2c_bus_ops,
@@ -85,16 +86,29 @@ static int __devinit bmp18x_i2c_probe(struct i2c_client *client,
 		BMP_ERROR("bmp18x_probe failed with status: %d\n", err);
 		return err;
 	}
-	if (client->dev.of_node) {
+	if (client->dev.platform_data)
+		pdata = client->dev.platform_data;
+
+	else if (client->dev.of_node) {
+		const char *regulator_name;
+
+		pdata = kzalloc(sizeof(struct bmp18x_platform_data),
+			GFP_KERNEL);
+		if (!pdata)
+			return -ENOMEM;
+
 		if (of_property_read_string(client->dev.of_node,
 			"regulator-name", &regulator_name)) {
 			BMP_ERROR("%s: can't get regulator name from DT!\n",
 				BMP18X_NAME);
 			goto err_read;
 		}
+
+		pdata->supply_name = (char *) regulator_name;
 	}
 #ifdef CONFIG_ARCH_KONA
-	regulator = regulator_get(&client->dev, regulator_name);
+	regulator = regulator_get(&client->dev, pdata->supply_name);
+
 	err = IS_ERR_OR_NULL(regulator);
 	if (err) {
 		regulator = NULL;
@@ -114,6 +128,8 @@ static int __devinit bmp18x_i2c_probe(struct i2c_client *client,
 	}
 	return err;
 err_read:
+	if (client->dev.of_node)
+		kfree(pdata);
 	return -EIO;
 #endif
 }

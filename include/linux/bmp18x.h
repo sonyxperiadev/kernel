@@ -33,9 +33,10 @@
  */
 struct bmp18x_platform_data
 {
-	u8	 chip_id;
-	u8	 default_oversampling;
-	u32	 temp_measurement_period;
+	u8		chip_id;
+	u8		default_oversampling;
+	u32		temp_measurement_period;
+	const char	*supply_name;
 };
 
 struct bmp18x_bus_ops

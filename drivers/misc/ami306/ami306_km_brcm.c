@@ -611,7 +611,7 @@ static int __devinit ami_probe(struct i2c_client *client,
 {
 	int res = 0;
 	struct ami306_dev_data *pdev = NULL;
-	const char *regulator_name = NULL;
+	struct ami306_platform_data *pdata = NULL;
 
 	AMI_LOG("%s %s start", AMI_DRV_NAME, __func__);
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C)) {
@@ -626,51 +626,56 @@ static int __devinit ami_probe(struct i2c_client *client,
 		return -ENOMEM;
 	}
 
-	if (client->dev.platform_data) {
-		struct ami306_platform_data *pdata =
+	if (client->dev.platform_data)
+		pdata =
 			(struct ami306_platform_data *)
 				client->dev.platform_data;
 
-		pdev->ami_dir = pdata->dir;
-		pdev->ami_polarity = pdata->polarity;
-		pdev->gpio_drdy = pdata->gpio_drdy;
-		pdev->gpio_intr = pdata->gpio_intr;
-	} else if (client->dev.of_node) {
+	else if (client->dev.of_node) {
 		struct device_node *np = client->dev.of_node;
 		const char *prop;
 		u32 val;
+		pdata = kzalloc(sizeof(struct ami306_platform_data),
+				GFP_KERNEL);
+		if (!pdata)
+			return -ENOMEM;
 
 		if (of_property_read_u32(np, "gpio-intr", &val)) {
 			res = -EIO;
 			goto err_free_pdev;
 		}
-		pdev->gpio_intr = val;
+		pdata->gpio_intr = val;
 
 		if (of_property_read_u32(np, "gpio-drdy", &val)) {
 			res = -EIO;
 			goto err_free_pdev;
 		}
-		pdev->gpio_intr = val;
+		pdata->gpio_drdy = val;
 
 		if (of_property_read_u32(np, "dir", &val)) {
 			res = -EIO;
 			goto err_free_pdev;
 		}
-		pdev->ami_dir = val;
+		pdata->dir = val;
 
 		if (of_property_read_u32(np, "polarity", &val)) {
 			res = -EIO;
 			goto err_free_pdev;
 		}
-		pdev->ami_polarity = val;
+		pdata->polarity = val;
 
 		if (of_property_read_string(np, "regulator-name", &prop)) {
 			printk(KERN_ERR "%s: can't get regulator name from DT!\n",
 				__func__);
 			goto err_free_pdev;
 		}
-		regulator_name = prop;
+		pdata->supply_name = prop;
 	}
+
+		pdev->ami_dir = pdata->dir;
+		pdev->ami_polarity = pdata->polarity;
+		pdev->gpio_drdy = pdata->gpio_drdy;
+		pdev->gpio_intr = pdata->gpio_intr;
 
 	/* Init gpio */
 	if (pdev->gpio_drdy) {
@@ -712,7 +717,8 @@ static int __devinit ami_probe(struct i2c_client *client,
 		goto err_free_pdev;
 	}
 #ifdef CONFIG_ARCH_KONA
-	pdev->regulator = regulator_get(&client->dev, regulator_name);
+	pdev->regulator = regulator_get(&client->dev, pdata->supply_name);
+
 	res = IS_ERR_OR_NULL(pdev->regulator);
 	if (res) {
 		pdev->regulator = NULL;
