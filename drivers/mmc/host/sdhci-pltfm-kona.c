@@ -1650,11 +1650,11 @@ kona_sdxc_regulator_power(struct sdio_dev *dev, int power_state)
 			}
 			pr_info("Turning ON sdxc sd\n");
 			ret = regulator_enable(dev->vdd_sdxc_regulator);
-			atomic_set(&sdxc_regulator_enable, 1);
+			atomic_inc(&sdxc_regulator_enable);
 		} else if (atomic_read(&sdxc_regulator_enable)) {
 			pr_info("Turning OFF sdxc sd\n");
 			ret = regulator_disable(dev->vdd_sdxc_regulator);
-			atomic_set(&sdxc_regulator_enable, 0);
+			atomic_dec(&sdxc_regulator_enable);
 
 			if ((hw_cfg->devtype == SDIO_DEV_TYPE_SDMMC) &&
 			(hw_cfg->configure_sdio_pullup)) {
