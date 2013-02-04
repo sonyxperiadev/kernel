@@ -644,7 +644,10 @@ void ProcessCPCrashedDump(struct work_struct *work)
 
 #ifdef CONFIG_FB_BRCM_CP_CRASH_DUMP_IMAGE_SUPPORT
 if (!crash_dump_ui_on && !cpReset) {
-	kona_display_crash_image(CP_CRASH_DUMP_START);
+	if (ramdump_enable)
+		kona_display_crash_image(CP_RAM_DUMP_START);
+	else
+		kona_display_crash_image(CP_CRASH_DUMP_START);
 	crash_dump_ui_on = 1;
 	}
 #endif

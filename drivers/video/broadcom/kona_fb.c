@@ -1337,7 +1337,10 @@ static int kona_fb_die_cb(struct notifier_block *nb, unsigned long val, void *v)
 {
 	pr_err("kona_fb: die notifier invoked\n");
 	if (!crash_dump_ui_on) {
-		kona_display_crash_image(AP_CRASH_DUMP_START);
+		if (ramdump_enable)
+			kona_display_crash_image(AP_RAM_DUMP_START);
+		else
+			kona_display_crash_image(AP_CRASH_DUMP_START);
 		crash_dump_ui_on = 1;
 	}
 	return NOTIFY_DONE;
