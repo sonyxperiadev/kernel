@@ -1277,8 +1277,19 @@ static int focaltech_ft5306_probe(
 #endif
 	ts->client = client;
 	i2c_set_clientdata(client, ts);
+	pdata = client->dev.platform_data;
+	if (pdata) {
+		ts->power = pdata->power;
+		ts_gpio_irq_pin = pdata->gpio_irq_pin;
+	#if (TP_CNTRL_PIN_TYPE == TP_CNTRL_PIN_RESET)
+		ts_gpio_reset_pin = pdata->gpio_reset_pin;
+	#else
+		ts_gpio_wakeup_pin = pdata->gpio_wakeup_pin;
+	#endif
+		ts_x_max_value = pdata->x_max_value;
+		ts_y_max_value = pdata->y_max_value;
 
-	if (client->dev.of_node != NULL) {
+	} else if (client->dev.of_node) {
 		if (!of_property_read_u32(np, "gpio-irq-pin", &val))
 			ts_gpio_irq_pin = val;
 
