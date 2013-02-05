@@ -1312,17 +1312,24 @@ int akm8963_probe(struct i2c_client *client, const struct i2c_device_id *id)
 		goto exit1;
 	}
 	pdata = client->dev.platform_data;
-
-	if (client->dev.of_node) {
-		np = client->dev.of_node;
-		if (of_property_read_u32(np, "gpio_RST", &val))
-			goto err_read;
-		s_akm->rstn = val;
-		if (of_property_read_u32(np, "layout", &val))
-			goto err_read;
-		if (of_property_read_u32(np, "outbit", &val))
-			goto err_read;
-		s_akm->outbit = val;
+	if (pdata) {
+		FUNCDBG("[akm8963]Set layout information.\n");
+		s_akm->layout = pdata->layout;
+		s_akm->outbit = pdata->outbit;
+		s_akm->rstn = pdata->gpio_RST;
+	} else {
+		if (client->dev.of_node) {
+			np = client->dev.of_node;
+			if (of_property_read_u32(np, "gpio_RST", &val))
+				goto err_read;
+			s_akm->rstn = val;
+			if (of_property_read_u32(np, "layout", &val))
+				goto err_read;
+			if (of_property_read_u32(np, "outbit", &val))
+				goto err_read;
+			s_akm->outbit = val;
+		} else
+			FUNCDBG("[akm8963]Set layout fail!!!\n");
 	}
 	/***** Set layout information *****/
 	/***** I2C initialization *****/
