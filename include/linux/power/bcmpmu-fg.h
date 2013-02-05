@@ -12,40 +12,6 @@
 *  consent.
 *
 *****************************************************************************/
-enum vfloat_level {
-	VFLOAT_LVL_3_4 = 0,
-	VFLOAT_LVL_3_6,
-	VFLOAT_LVL_3_75,
-	VFLOAT_LVL_3_80,
-	VFLOAT_LVL_3_85,
-	VFLOAT_LVL_3_90,
-	VFLOAT_LVL_4_00,
-	VFLOAT_LVL_4_05,
-	VFLOAT_LVL_4_10,
-	VFLOAT_LVL_4_125,
-	VFLOAT_LVL_4_150,
-	VFLOAT_LVL_4_175,
-	VFLOAT_LVL_4_20,
-	VFLOAT_LVL_4_225,
-	VFLOAT_LVL_4_25,
-	VFLOAT_LVL_4_275,
-	VFLOAT_LVL_4_30,
-	VFLOAT_LVL_4_325,
-	VFLOAT_LVL_4_35,
-	VFLOAT_LVL_4_375,
-	VFLOAT_LVL_4_40,
-	VFLOAT_LVL_4_425,
-	VFLOAT_LVL_4_45,
-	VFLOAT_LVL_4_475,
-	VFLOAT_LVL_4_50,
-	VFLOAT_LVL_MAX,
-};
-
-struct vfloat_lvl_volt_map {
-	enum vfloat_level vfloat;
-	int volt;
-};
-
 struct batt_volt_cap_map {
 	u32 volt;
 	u32 cap;
@@ -144,8 +110,8 @@ struct bcmpmu_batt_volt_levels {
 	int normal;
 	int high;
 	int crit_cutoff_cnt;
-	enum vfloat_level vfloat_lvl; /* float voltage in mV*/
-	enum vfloat_level vfloat_max; /* maximum float voltage for protection */
+	int vfloat_lvl; /* float voltage in mV*/
+	int vfloat_max; /* maximum float voltage for protection */
 	int vfloat_gap;
 };
 
@@ -161,8 +127,6 @@ struct bcmpmu_fg_pdata {
 	struct bcmpmu_batt_cap_levels *cap_levels;
 	struct bcmpmu_batt_volt_levels *volt_levels;
 	struct bcmpmu_batt_calibration_data *calibration_data;
-	struct vfloat_lvl_volt_map *vfloat_volt_lut;
-	u32 vfloat_volt_lut_sz;
 
 	int sns_resist;	/* FG sense resistor in Ohm */
 	int sys_impedence;
@@ -175,10 +139,9 @@ struct bcmpmu_fg_pdata {
 	int recovery_temp_hot;
 	int suspend_temp_cold;
 	int recovery_temp_cold;
-
 	int poll_rate_low_batt;
 	int poll_rate_crit_batt;
 };
 
 int bcmpmu_fg_set_sw_eoc_current(struct bcmpmu59xxx *bcmpmu, int eoc_current);
-void bcmpmu_fg_chrgr_status_cb(struct bcmpmu59xxx *bcmpmu, int status);
+void bcmpmu_fg_calibrate_battery(struct bcmpmu59xxx *bcmpmu);

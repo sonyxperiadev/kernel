@@ -958,35 +958,6 @@ static struct batt_eoc_curr_cap_map bl_84_eoc_cap_lut[] = {
 	{0, 100},
 };
 
-static struct vfloat_lvl_volt_map bcmpmu59xxx_vfloat_volt_map[] = {
-	{VFLOAT_LVL_3_4, 3400},
-	{VFLOAT_LVL_3_6, 3600},
-	{VFLOAT_LVL_3_75, 3750},
-	{VFLOAT_LVL_3_80, 3800},
-	{VFLOAT_LVL_3_85, 3850},
-	{VFLOAT_LVL_3_90, 3900},
-	{VFLOAT_LVL_4_00, 4000},
-	{VFLOAT_LVL_4_05, 4005},
-	{VFLOAT_LVL_4_10, 4010},
-	{VFLOAT_LVL_4_125, 4125},
-	{VFLOAT_LVL_4_150, 4150},
-	{VFLOAT_LVL_4_175, 4175},
-	{VFLOAT_LVL_4_20, 4200},
-	{VFLOAT_LVL_4_225, 4225},
-	{VFLOAT_LVL_4_25, 4250},
-	{VFLOAT_LVL_4_275, 4275},
-	{VFLOAT_LVL_4_30, 4300},
-	{VFLOAT_LVL_4_325, 4325},
-	{VFLOAT_LVL_4_35, 4350},
-	{VFLOAT_LVL_4_375, 4374},
-	{VFLOAT_LVL_4_40, 4400},
-	{VFLOAT_LVL_4_425, 4425},
-	{VFLOAT_LVL_4_45, 4450},
-	{VFLOAT_LVL_4_475, 4475},
-	{VFLOAT_LVL_4_50, 4500},
-	{VFLOAT_LVL_MAX, 4500},
-};
-
 static struct batt_esr_temp_lut bl_84_esr_temp_lut[] = {
 	{
 		.temp = -200,
@@ -1097,8 +1068,8 @@ static struct bcmpmu_batt_volt_levels bl_84_volt_levels = {
 	.normal = 3700,
 	.high = 4140, /* should be ~60mv less than vfloat_lvl */
 	.crit_cutoff_cnt = 3,
-	.vfloat_lvl = VFLOAT_LVL_4_20,
-	.vfloat_max = VFLOAT_LVL_4_20,
+	.vfloat_lvl = 0xC,
+	.vfloat_max = 0xC,
 	.vfloat_gap = 100, /* in mV */
 };
 
@@ -1110,8 +1081,6 @@ static struct bcmpmu_fg_pdata fg_pdata = {
 	.cap_levels = &bl_84_cap_levels,
 	.volt_levels = &bl_84_volt_levels,
 	.calibration_data = &bl_84_cal_data,
-	.vfloat_volt_lut = bcmpmu59xxx_vfloat_volt_map,
-	.vfloat_volt_lut_sz = ARRAY_SIZE(bcmpmu59xxx_vfloat_volt_map),
 	.sns_resist = 10,
 	.sys_impedence = 33,
 	.eoc_current = 85, /* End of charge current in mA */
@@ -1125,6 +1094,7 @@ static struct bcmpmu_fg_pdata fg_pdata = {
 	.recovery_temp_cold = -10,
 	.poll_rate_low_batt = 5000, /* every 5 seconds */
 	.poll_rate_crit_batt = 2000, /* every 2 Seconds */
+
 };
 
 #ifdef CONFIG_CHARGER_BCMPMU_SPA

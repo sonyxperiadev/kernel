@@ -130,11 +130,9 @@ static int bcmpmu_spa_pb_chrgr_set_property(struct power_supply *ps,
 		if (propval->intval == POWER_SUPPLY_STATUS_CHARGING) {
 			pr_pb(FLOW, "%s: enable charging\n", __func__);
 			bcmpmu_chrgr_usb_en(bcmpmu, 1);
-			bcmpmu_fg_chrgr_status_cb(bcmpmu, 1);
 		} else {
 			pr_pb(FLOW, "%s: disable charging\n", __func__);
 			bcmpmu_chrgr_usb_en(bcmpmu, 0);
-			bcmpmu_fg_chrgr_status_cb(bcmpmu, 0);
 		}
 		break;
 
@@ -155,6 +153,8 @@ static int bcmpmu_spa_pb_chrgr_set_property(struct power_supply *ps,
 
 	case POWER_SUPPLY_PROP_CAPACITY:
 		pr_pb(FLOW, "%s: POWER_SUPPLY_PROP_CAPACITY\n", __func__);
+		if (propval->intval == 1)
+			bcmpmu_fg_calibrate_battery(bcmpmu);
 		break;
 
 	default:

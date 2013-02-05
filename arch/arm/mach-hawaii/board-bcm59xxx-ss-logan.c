@@ -1095,40 +1095,10 @@ static struct batt_eoc_curr_cap_map ss_eb425161_eoc_cap_lut[] = {
 	 {0, 100},
 };
 
-
-static struct vfloat_lvl_volt_map bcmpmu59xxx_vfloat_volt_map[] = {
-	{VFLOAT_LVL_3_4, 3400},
-	{VFLOAT_LVL_3_6, 3600},
-	{VFLOAT_LVL_3_75, 3750},
-	{VFLOAT_LVL_3_80, 3800},
-	{VFLOAT_LVL_3_85, 3850},
-	{VFLOAT_LVL_3_90, 3900},
-	{VFLOAT_LVL_4_00, 4000},
-	{VFLOAT_LVL_4_05, 4005},
-	{VFLOAT_LVL_4_10, 4010},
-	{VFLOAT_LVL_4_125, 4125},
-	{VFLOAT_LVL_4_150, 4150},
-	{VFLOAT_LVL_4_175, 4175},
-	{VFLOAT_LVL_4_20, 4200},
-	{VFLOAT_LVL_4_225, 4225},
-	{VFLOAT_LVL_4_25, 4250},
-	{VFLOAT_LVL_4_275, 4275},
-	{VFLOAT_LVL_4_30, 4300},
-	{VFLOAT_LVL_4_325, 4325},
-	{VFLOAT_LVL_4_35, 4350},
-	{VFLOAT_LVL_4_375, 4374},
-	{VFLOAT_LVL_4_40, 4400},
-	{VFLOAT_LVL_4_425, 4425},
-	{VFLOAT_LVL_4_45, 4450},
-	{VFLOAT_LVL_4_475, 4475},
-	{VFLOAT_LVL_4_50, 4500},
-	{VFLOAT_LVL_MAX, 4500},
-};
-
 /* SS EB425161 profile */
 static struct batt_esr_temp_lut ss_eb425161_esr_temp_lut[] = {
 	{
-		.temp = -20,
+		.temp = -200,
 		.reset = 0, .fct = 182, .guardband = 50,
 		.esr_vl_lvl = 3805, .esr_vm_lvl = 3990, .esr_vh_lvl = 4253,
 		.esr_vl_slope = -11613, .esr_vl_offset = 46565,
@@ -1137,7 +1107,7 @@ static struct batt_esr_temp_lut ss_eb425161_esr_temp_lut[] = {
 		.esr_vf_slope = -10119, .esr_vf_offset = 45716,
 	},
 	{
-		.temp = -15,
+		.temp = -150,
 		.reset = 0, .fct = 394, .guardband = 50,
 		.esr_vl_lvl = 3695, .esr_vm_lvl = 3848, .esr_vh_lvl = 4198,
 		.esr_vl_slope = -80876, .esr_vl_offset = 300933,
@@ -1146,7 +1116,7 @@ static struct batt_esr_temp_lut ss_eb425161_esr_temp_lut[] = {
 		.esr_vf_slope = -4187, .esr_vf_offset = 19277,
 	},
 	{
-		.temp = -10,
+		.temp = -100,
 		.reset = 0, .fct = 606, .guardband = 50,
 		.esr_vl_lvl = 3695, .esr_vm_lvl = 3848, .esr_vh_lvl = 4198,
 		.esr_vl_slope = -80876, .esr_vl_offset = 300933,
@@ -1155,7 +1125,7 @@ static struct batt_esr_temp_lut ss_eb425161_esr_temp_lut[] = {
 		.esr_vf_slope = -4187, .esr_vf_offset = 19277,
 	},
 	{
-		.temp = -5,
+		.temp = -50,
 		.reset = 0, .fct = 750, .guardband = 50,
 		.esr_vl_lvl = 3690, .esr_vm_lvl = 3791, .esr_vh_lvl = 4315,
 		.esr_vl_slope = -12051, .esr_vl_offset = 46252,
@@ -1173,7 +1143,7 @@ static struct batt_esr_temp_lut ss_eb425161_esr_temp_lut[] = {
 		.esr_vf_slope = -3925, .esr_vf_offset = 17553,
 	},
 	{
-		.temp = 5,
+		.temp = 50,
 		.reset = 0, .fct = 937, .guardband = 30,
 		.esr_vl_lvl = 3686, .esr_vm_lvl = 3695, .esr_vh_lvl = 3805,
 		.esr_vl_slope = -4128, .esr_vl_offset = 16602,
@@ -1182,7 +1152,7 @@ static struct batt_esr_temp_lut ss_eb425161_esr_temp_lut[] = {
 		.esr_vf_slope = -287, .esr_vf_offset = 1554,
 	},
 	{
-		.temp = 10,
+		.temp = 100,
 		.reset = 0, .fct = 981, .guardband = 30,
 		.esr_vl_lvl = 3686, .esr_vm_lvl = 3695, .esr_vh_lvl = 3805,
 		.esr_vl_slope = -4128, .esr_vl_offset = 16602,
@@ -1191,7 +1161,7 @@ static struct batt_esr_temp_lut ss_eb425161_esr_temp_lut[] = {
 		.esr_vf_slope = -287, .esr_vf_offset = 1554,
 	},
 	{
-		.temp = 15,
+		.temp = 150,
 		.reset = 0, .fct = 990, .guardband = 30,
 		.esr_vl_lvl = 3686, .esr_vm_lvl = 3695, .esr_vh_lvl = 4096,
 		.esr_vl_slope = -2207, .esr_vl_offset = 8587,
@@ -1200,7 +1170,7 @@ static struct batt_esr_temp_lut ss_eb425161_esr_temp_lut[] = {
 		.esr_vf_slope = -382, .esr_vf_offset = 1799,
 	},
 	{
-		.temp = 20,
+		.temp = 200,
 		.reset = 0, .fct = 1000, .guardband = 30,
 		.esr_vl_lvl = 3686, .esr_vm_lvl = 3695, .esr_vh_lvl = 4096,
 		.esr_vl_slope = -2207, .esr_vl_offset = 8587,
@@ -1238,8 +1208,8 @@ static struct bcmpmu_batt_volt_levels ss_eb425161_volt_levels = {
 	.normal = 3700,
 	.high   = 4300,
 	.crit_cutoff_cnt = 3,
-	.vfloat_lvl = VFLOAT_LVL_4_35,
-	.vfloat_max = VFLOAT_LVL_4_35,
+	.vfloat_lvl = 0x14, /* 4.345 V */
+	.vfloat_max = 0x14,
 	.vfloat_gap = 150, /* in mV */
 };
 
@@ -1252,15 +1222,19 @@ static struct bcmpmu_fg_pdata fg_pdata = {
 	.cap_levels = &ss_eb425161_cap_levels,
 	.volt_levels = &ss_eb425161_volt_levels,
 	.calibration_data = &ss_eb425161_cal_data,
-	.vfloat_volt_lut = bcmpmu59xxx_vfloat_volt_map,
-	.vfloat_volt_lut_sz = ARRAY_SIZE(bcmpmu59xxx_vfloat_volt_map),
 	.sns_resist = 10,
 	.sys_impedence = 33,
 	.eoc_current = 100, /* End of charge current in mA */ /* Samsung spec TBD */
 	.hw_maintenance_charging = false, /* enable HW EOC of PMU */
 	.sleep_current_ua = 1460, /* floor during sleep from Hawaii HW workshop Dec7 2012 */
 	.sleep_sample_rate = 32000,
-	.fg_factor = 976,
+	.fg_factor = 950, /* Logan00 board : 2.76% err Jan30 2010 */
+	.suspend_temp_hot   =  800,
+	.recovery_temp_hot  =  750,
+	.suspend_temp_cold  = -200,
+	.recovery_temp_cold = -150,
+	.poll_rate_low_batt = 5000, /* every 5 seconds */
+	.poll_rate_crit_batt = 2000, /* every 2 Seconds */
 };
 
 #ifdef CONFIG_CHARGER_BCMPMU_SPA
