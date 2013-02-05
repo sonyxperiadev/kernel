@@ -2976,7 +2976,7 @@ static struct file_operations set_pmu_volt_inx_tbl_fops = {
 
 
 struct dentry *dent_pwr_root_dir = NULL;
-#ifdef CONFIG_RHEA_DELAYED_PM_INIT
+#ifdef CONFIG_DELAYED_PM_INIT
 int pwr_mgr_debug_init(u32 bmdm_pwr_base)
 #else
 int __init pwr_mgr_debug_init(u32 bmdm_pwr_base)

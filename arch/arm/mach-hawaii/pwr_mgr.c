@@ -862,7 +862,7 @@ void pwr_mgr_mach_debug_fs_init(int type, int db_mux, int mux_param,
 #endif /*CONFIG_DEBUG_FS */
 
 
-int __init hawaii_pwr_mgr_delayed_init(void)
+int hawaii_pwr_mgr_delayed_init(void)
 {
 	int i;
 	struct pi *pi;
@@ -888,7 +888,7 @@ int __init hawaii_pwr_mgr_delayed_init(void)
 }
 
 #ifdef CONFIG_DELAYED_PM_INIT
-static int __init param_set_pm_late_init(const char *val,
+static int param_set_pm_late_init(const char *val,
 			const struct kernel_param *kp)
 {
 	int ret = -1;
