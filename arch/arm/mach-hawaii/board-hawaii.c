@@ -357,6 +357,12 @@ static int hawaii_camera_power(struct device *dev, int on)
 			icl->regulators[0].supply);
 		if (IS_ERR_OR_NULL(d_gpsr_cam0_1v8))
 			printk(KERN_ERR "Failed to  get d_gpsr_cam0_1v8\n");
+		if (d_lvldo2_cam1_1v8 == NULL) {
+			d_lvldo2_cam1_1v8 = regulator_get(NULL,
+			icl->regulators[3].supply);
+			if (IS_ERR_OR_NULL(d_lvldo2_cam1_1v8))
+				printk(KERN_ERR "Fd_lvldo2_cam1_1v8 cam\n");
+		}
 	}
 
 	ret = -1;
@@ -385,6 +391,8 @@ static int hawaii_camera_power(struct device *dev, int on)
 		regulator_enable(d_1v8_mmc1_vcc);
 		usleep_range(1000, 1010);
 		regulator_enable(d_gpsr_cam0_1v8);
+		usleep_range(1000, 1010);
+		regulator_enable(d_lvldo2_cam1_1v8);
 		usleep_range(1000, 1010);
 
 		if (mm_ccu_set_pll_select(CSI0_BYTE1_PLL, 8)) {
@@ -440,6 +448,7 @@ static int hawaii_camera_power(struct device *dev, int on)
 		clk_disable(clock);
 		clk_disable(lp_clock);
 		clk_disable(axi_clk);
+		regulator_disable(d_lvldo2_cam1_1v8);
 		regulator_disable(d_3v0_mmc1_vcc);
 		regulator_disable(d_1v8_mmc1_vcc);
 		regulator_disable(d_gpsr_cam0_1v8);
@@ -506,6 +515,18 @@ static int hawaii_camera_power_front(struct device *dev, int on)
 			if (IS_ERR_OR_NULL(d_1v8_mmc1_vcc))
 				printk(KERN_ERR "Err d_1v8_mmc1_vcc\n");
 		}
+		if (d_3v0_mmc1_vcc == NULL) {
+			d_3v0_mmc1_vcc = regulator_get(NULL,
+			icl->regulators[2].supply);
+			if (IS_ERR_OR_NULL(d_3v0_mmc1_vcc))
+				printk(KERN_ERR "d_3v0_mmc1_vcc");
+		}
+		if (d_gpsr_cam0_1v8 == NULL) {
+			d_gpsr_cam0_1v8 = regulator_get(NULL,
+			icl->regulators[3].supply);
+			if (IS_ERR_OR_NULL(d_gpsr_cam0_1v8))
+				printk(KERN_ERR "Fl d_gpsr_cam0_1v8 get	fail");
+		}
 	}
 
 	ret = -1;
@@ -546,6 +567,11 @@ static int hawaii_camera_power_front(struct device *dev, int on)
 		regulator_enable(d_lvldo2_cam1_1v8);
 		usleep_range(1000, 1010);
 		regulator_enable(d_1v8_mmc1_vcc);
+		usleep_range(1000, 1010);
+		/* Secondary cam addition */
+		regulator_enable(d_gpsr_cam0_1v8);
+		usleep_range(1000, 1010);
+		regulator_enable(d_3v0_mmc1_vcc);
 		usleep_range(1000, 1010);
 
 		if (mm_ccu_set_pll_select(CSI1_BYTE1_PLL, 8)) {
@@ -617,6 +643,8 @@ static int hawaii_camera_power_front(struct device *dev, int on)
 		clk_disable(axi_clk_0);
 		regulator_disable(d_lvldo2_cam1_1v8);
 		regulator_disable(d_1v8_mmc1_vcc);
+		regulator_disable(d_gpsr_cam0_1v8);
+		regulator_disable(d_3v0_mmc1_vcc);
 		if (pi_mgr_dfs_request_update
 		    (&unicam_dfs_node, PI_MGR_DFS_MIN_VALUE)) {
 			printk("Failed to set DVFS for unicam\n");
