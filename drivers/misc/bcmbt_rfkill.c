@@ -124,10 +124,6 @@ static int bcmbt_rfkill_probe(struct platform_device *pdev)
 	gpio_direction_output(pdata->vreg_gpio, BCMBT_VREG_OFF);
 
 	/* JIRA case --> HW4334-336*/
-	gpio_set_value(pdata->vreg_gpio, BCMBT_VREG_ON);
-	msleep(REG_ON_SLEEP);
-	gpio_set_value(pdata->vreg_gpio, BCMBT_VREG_OFF);
-
 	if (BCMBT_UNUSED_GPIO != pdata->n_reset_gpio) {
 		gpio_request(pdata->n_reset_gpio, "rfkill_reset_gpio");
 		gpio_direction_output(pdata->n_reset_gpio, BCMBT_N_RESET_ON);
