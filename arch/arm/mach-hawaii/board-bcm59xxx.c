@@ -1338,7 +1338,7 @@ int bcmpmu_reg_init(void)
 			else {
 				p = (uint32_t *)prop->value;
 				p1 = (uint32_t *)tbl;
-				for (i = 0; i < size; i++)
+				for (i = 0; i < size/sizeof(p); i++)
 					*p1++ = be32_to_cpu(*p++);
 				bcmpmu_i2c_pdata.init_data = tbl;
 				bcmpmu_i2c_pdata.init_max =
