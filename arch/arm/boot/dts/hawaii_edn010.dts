@@ -347,7 +347,8 @@
 		compatible = "bcm,bcm_wifi";
 		wl-reset-gpio = <3>;
 		host-wake-gpio = <74>;
-		board-nvram-file = "/system/vendor/firmware/fw_wifi_nvram_hs10.txt";
+		board-nvram-file = "/system/vendor/firmware/fw_wifi_nvram_4334_hs10.txt";
+		module-name = "bcmdhd-4334.ko";
 	};
 
 	keypad {

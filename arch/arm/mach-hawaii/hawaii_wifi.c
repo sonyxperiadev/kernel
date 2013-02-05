@@ -226,21 +226,7 @@ static int bcm_sdiowl_init(int onoff)
 	pinmux_set_pin_config(&SdioPinCfgs);
 
 
-	SdioPinCfgs.name = PN_MMC1DAT4;
-	pinmux_get_pin_config(&SdioPinCfgs);
-	SdioPinCfgs.reg.b.pull_dn = 1;
-	SdioPinCfgs.reg.b.pull_up = 0;
-	pinmux_set_pin_config(&SdioPinCfgs);
-
-	SdioPinCfgs.name = PN_LCDTE;
-	pinmux_get_pin_config(&SdioPinCfgs);
-	SdioPinCfgs.reg.b.pull_dn = 0;
-	SdioPinCfgs.reg.b.pull_up = 0;
-	pinmux_set_pin_config(&SdioPinCfgs);
-
-
 /* ----------------------------------- */
-
 
 
 	/* check if the SDIO device is already up */
@@ -381,19 +367,6 @@ static void bcm_sdiowl_term(void)
 
 
 	SdioPinCfgs.name = PN_MMC1DAT3;
-	pinmux_get_pin_config(&SdioPinCfgs);
-	SdioPinCfgs.reg.b.pull_dn = 1;
-	SdioPinCfgs.reg.b.pull_up = 0;
-	pinmux_set_pin_config(&SdioPinCfgs);
-
-	SdioPinCfgs.name = PN_MMC1DAT4;
-	pinmux_get_pin_config(&SdioPinCfgs);
-	SdioPinCfgs.reg.b.pull_dn = 0;
-	SdioPinCfgs.reg.b.pull_up = 1;
-	pinmux_set_pin_config(&SdioPinCfgs);
-
-
-	SdioPinCfgs.name = PN_LCDTE;
 	pinmux_get_pin_config(&SdioPinCfgs);
 	SdioPinCfgs.reg.b.pull_dn = 1;
 	SdioPinCfgs.reg.b.pull_up = 0;
@@ -736,20 +709,32 @@ static struct platform_device hawaii_wifi_device = {
 	},
 };
 
-#define MAX_WIFI_NVRAM_PATH_LEN 200
+#define MAX_WIFI_NVRAM_PATH_LEN		200
+#define MAX_WIFI_DRIVER_NAME_LEN	20
 
 static char custom_fw_path[MAX_WIFI_NVRAM_PATH_LEN];
+static char custom_module_name[MAX_WIFI_DRIVER_NAME_LEN];
+
+
+static ssize_t show_module_name(struct device_driver *driver, char *buf)
+{
+	return scnprintf(buf, PAGE_SIZE, "%s\n", custom_module_name);
+}
+
+static DRIVER_ATTR(module_name, S_IRUGO, show_module_name, NULL);
+
 
 static int __devinit bcm_wifi_pltfm_probe(struct platform_device *pdev)
 {
 u32 readval;
-
 const char *prop;
 
 	printk(KERN_ERR "%s: probe called!\n", __func__);
 
 	if (!pdev->dev.of_node)
 		goto wifi_err1;
+
+	/* Read device tree properties */
 
 	if (of_property_read_u32(pdev->dev.of_node, "wl-reset-gpio", &readval))
 		goto wifi_err1;
@@ -762,13 +747,23 @@ const char *prop;
 	if (of_property_read_string(pdev->dev.of_node,
 				"board-nvram-file", &prop))
 		goto wifi_err1;
-
 	strcpy(custom_fw_path, prop);
+
+	if (of_property_read_string(pdev->dev.of_node,
+				"module-name", &prop))
+		goto wifi_err1;
+	strcpy(custom_module_name, prop);
 
 	hawaii_wifi_device.resource->start =
 		hawaii_wifi_device.resource->end =
 		gpio_to_irq(devtreeWifiParms.host_wake);
 
+
+	/* Setup attributes to read from sysfs */
+	if (driver_create_file(pdev->dev.driver, &driver_attr_module_name)) {
+		printk(KERN_ERR "Error writing to dev_attr file\n");
+		return -EINVAL;
+	}
 
 	return 0;
 

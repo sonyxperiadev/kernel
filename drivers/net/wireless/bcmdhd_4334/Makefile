@@ -90,9 +90,9 @@ ifneq ($(CONFIG_BCMDHD_4334),)
 endif
 
 ifneq ($(CONFIG_BCM4330),)
-  DHDCFLAGS += -DBCM4330_CHIP
-  DHDCFLAGS += -DMCAST_LIST_ACCUMULATION
-  DHDCFLAGS += -DCONFIG_CONTROL_PM
+#  DHDCFLAGS += -DBCM4330_CHIP
+#  DHDCFLAGS += -DMCAST_LIST_ACCUMULATION
+# DHDCFLAGS += -DCONFIG_CONTROL_PM
 endif
 
 ifneq ($(CONFIG_BCM43241),)
@@ -187,6 +187,15 @@ DHDCFLAGS += -USUPPORT_MULTIPLE_REVISION
 DHDCFLAGS += -DSET_CUSTOM_NVRAM
 endif
 
+# Local defines to allow multiple module builds
+ifneq ($(CONFIG_BCMDHD_FW_PATH_4334),)
+DHDCFLAGS += -DCONFIG_BCMDHD_FW_PATH=CONFIG_BCMDHD_FW_PATH_4334
+endif
+
+ifneq ($(CONFIG_BCMDHD_NVRAM_PATH_4334),)
+DHDCFLAGS += -DCONFIG_BCMDHD_NVRAM_PATH=CONFIG_BCMDHD_FW_PATH_4334
+endif
+
 
 #########
 # Others
@@ -205,10 +214,9 @@ DHDOFILES := bcmsdh.o bcmsdh_linux.o bcmsdh_sdmmc.o bcmsdh_sdmmc_linux.o \
 	bcmutils.o bcmwifi_channels.o hndpmu.o linux_osl.o sbutils.o siutils.o \
 	wl_android.o wl_cfg80211.o wl_cfgp2p.o wldev_common.o wl_linux_mon.o wl_roam.o
 
-obj-$(CONFIG_BCMDHD_4334) += bcmdhd.o
-obj-$(CONFIG_BCM4330) += bcmdhd.o
+obj-$(CONFIG_BCMDHD_4334) += bcmdhd-4334.o
 
-bcmdhd-objs += $(DHDOFILES)
+bcmdhd-4334-objs += $(DHDOFILES)
 
 all:
 	@echo "$(MAKE) --no-print-directory -C $(KDIR) SUBDIRS=$(CURDIR) modules"
