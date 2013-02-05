@@ -1175,10 +1175,14 @@ static int taos_probe(struct i2c_client *clientp,
 		ret = -EIO;
 		goto err_write_ctr_reg;
 	}
-	np = taos_datap->client->dev.of_node;
-	ret = of_property_read_u32(np, "gpio-irq-pin", &val);
-	if (ret)
-		goto err_read;
+	if (taos_datap->client->irq)
+		val = taos_datap->client->irq;
+	else {
+		np = taos_datap->client->dev.of_node;
+		ret = of_property_read_u32(np, "gpio-irq-pin", &val);
+		if (ret)
+			goto err_read;
+	}
 	als_ps_int = gpio_to_irq(val);
 	als_ps_gpio_inr = val;
 	ret = gpio_request(als_ps_gpio_inr, "ALS_PS_INT");

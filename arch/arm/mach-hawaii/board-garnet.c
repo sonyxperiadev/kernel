@@ -1174,7 +1174,6 @@ static void __init hawaii_add_i2c_devices(void)
 #if defined(CONFIG_BCMI2CNFC)
 	i2c_register_board_info(1, bcmi2cnfc, ARRAY_SIZE(bcmi2cnfc));
 #endif
-
 }
 
 static void hawaii_add_pdata(void)
