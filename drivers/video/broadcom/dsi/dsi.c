@@ -382,9 +382,6 @@ static void hw_reset(DISPDRV_HANDLE_T drvH, Boolean on)
 	} else {
 		DSI_INFO("Powering off the panel\n");
 		gpio_set_value_cansleep(rst->gpio, reset_active);
-		usleep_range(15, 16);
-		gpio_set_value_cansleep(rst->gpio, !reset_active);
-		usleep_range(5000, 5010);
 	}
 }
 
@@ -726,7 +723,6 @@ Int32 DSI_PowerControl(
 	Int32  res = 0;
 	DispDrv_PANEL_t *pPanel = (DispDrv_PANEL_t *)drvH;
 	DISPDRV_INFO_T *info = pPanel->disp_info;
-	struct hw_rst_info *rst = pPanel->disp_info->rst;
 
 	switch (state) {
 	case CTRL_PWR_ON:
@@ -766,11 +762,10 @@ Int32 DSI_PowerControl(
 				res = -1;
 				break;
 			}
+			hw_reset(drvH, TRUE);
 			memset(&pPanel->win_cur, 0, sizeof(DISPDRV_WIN_t));
 			pPanel->pwrState = STATE_PWR_OFF;
 			DSI_INFO("PWR DOWN\n");
-
-			gpio_set_value_cansleep(rst->gpio, 0);
 		}
 		break;
 
