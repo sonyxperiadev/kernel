@@ -83,18 +83,25 @@
 					0 1 0
 					0 0 0xFFFFFFFF>;
 		};
+		akm8975@0c {
+			compatible = "bcm,akm8975";
+			reg = <0x0c>;
+			gpio-irq-pin = <4>;
+			layout = <6>;
+		};
+
 		kxtik@0f {
                         compatible = "bcm,kxtik";
                         reg = <0x0f>;
                         gpio-irq-pin = <1>;
                         min_interval = <5>;
                         poll_interval = <200>;
-                        axis_map_x = <1>;
+                        axis_map_x = <0>;
                         axis_map_y = <1>;
                         axis_map_z = <2>;
-                        negate_x = <0>;
-                        negate_y = <1>;
-                        negate_z = <0>;
+                        negate_x = <1>;
+                        negate_y = <0>;
+                        negate_z = <1>;
                         res_12bit = <64>;
                         g_range = <0>;
                 };
