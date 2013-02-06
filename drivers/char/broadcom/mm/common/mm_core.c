@@ -144,6 +144,14 @@ static void mm_fmwk_job_scheduler(struct work_struct *work)
 					MM_FMWK_NOTIFY_JOB_STARTED, NULL);
 
 					}
+				else if (status >= MM_JOB_STATUS_SUCCESS) {
+					job_list_elem->job.status \
+					= MM_JOB_STATUS_SUCCESS;
+					mm_common_job_completion(\
+						job_list_elem, core_dev);
+					SCHEDULER_WORK(core_dev, \
+						&core_dev->job_scheduler);
+					}
 				}
 			else {
 				job_list_elem->job.status \

@@ -49,6 +49,7 @@ enum {
 
 	H264_VCE_INVALID_JOB = 0x67030000,
 	H264_VCE_LAUNCH_JOB,
+	H264_VCE_ENC_SLICE_JOB,
 	H264_VCE_LAST_JOB
 };
 #define mm_job_type_e unsigned int

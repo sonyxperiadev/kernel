@@ -1,4 +1,4 @@
-/*******************************************************************************
+/******************************************************************************
   Copyright 2010 Broadcom Corporation.  All rights reserved.
 
   Unless you and Broadcom execute a separate written software license agreement
@@ -9,7 +9,7 @@ http://www.gnu.org/copyleft/gpl.html (the "GPL").
 Notwithstanding the above, under no circumstances may you combine this software
 in any way with any other Broadcom software provided under a license other than
 the GPL, without Broadcom's express prior written consent.
- ******************************************************************************/
+******************************************************************************/
 
 #define pr_fmt(fmt) "vce: " fmt
 
@@ -24,8 +24,9 @@ the GPL, without Broadcom's express prior written consent.
 /*To Be replaced with RDB*/
 #include "vce_reg.h"
 
-#define MM_VCE_BASE_ADDR VCE_DATA_MEM_BASE
-#define VCE_HW_SIZE 0x3408bc
+#include "h264_enc.h"
+
+#define H264_HW_SIZE (7*1024*1024)
 
 /*From DEC3*/
 #define VCE_OBTAIN_SEMAPHORE_ONLY	0x40000000
@@ -43,14 +44,30 @@ struct vce_device_t {
 	void *vaddr;
 };
 
+void h264_write(void *id, u32 reg, u32 value)
+{
+	struct vce_device_t *vce = (struct vce_device_t *)id;
+	pr_debug("write reg [0x%08x] val [0x%08x]\n", reg, value);
+	return mm_write_reg(vce->vaddr, reg, value);
+}
+
+u32 h264_read(void *id, u32 reg)
+{
+	struct vce_device_t *vce = (struct vce_device_t *)id;
+	u32 val = mm_read_reg(vce->vaddr, reg);
+	pr_debug("read reg [0x%08x] val [0x%08x]\n", reg, val);
+	return val;
+}
 static void vce_write(struct vce_device_t *vce, u32 reg, u32 value)
 {
-	return mm_write_reg(vce->vaddr, reg, value);
+	return mm_write_reg(vce->vaddr,
+			reg + (VCE_BASE - VIDEOCODEC_BASE_ADDRESS), value);
 }
 
 static u32 vce_read(struct vce_device_t *vce, u32 reg)
 {
-	return mm_read_reg(vce->vaddr, reg);
+	return mm_read_reg(vce->vaddr,
+			reg + (VCE_BASE - VIDEOCODEC_BASE_ADDRESS));
 }
 
 static void print_job_struct(void *job)
@@ -199,20 +216,32 @@ mm_job_status_e vce_start_job(void *device_id, mm_job_post_t *job,
 	u32 i = 0;
 	u32 j = 0;
 
+	struct enc_info_t *enc_info = NULL;
+
 	if (jp == NULL) {
 		pr_err("vce_start_job: id or jp is null\n");
 		return MM_JOB_STATUS_ERROR;
 	}
 
-	if (job->type != H264_VCE_LAUNCH_JOB) {
-		pr_err("vce_start_job: Invalid job type\n");
+	switch (job->type) {
+	case H264_VCE_ENC_SLICE_JOB:
+		enc_info = (struct enc_info_t *)((u32 *)jp + *((u32 *)jp+2) + \
+					(sizeof(struct vce_launch_info_t)/4));
+	case H264_VCE_LAUNCH_JOB:
+		vce_info = (struct vce_launch_info_t *) \
+				((u32 *)jp + *((u32 *)jp+2));
+		break;
+	default:
+		pr_err("unknown job type\n");
 		return MM_JOB_STATUS_ERROR;
 	}
 
-	vce_info = (struct vce_launch_info_t *)((u32 *)jp + *((u32 *)jp+2));
-
 	switch (job->status) {
 	case MM_JOB_STATUS_READY:
+		switch (job->type) {
+		case H264_VCE_ENC_SLICE_JOB:
+			encodeSlice(id, enc_info);
+		case H264_VCE_LAUNCH_JOB:
 		print_regs(id);
 		print_job_struct(jp);
 		/*Reset VCE*/
@@ -228,13 +257,15 @@ mm_job_status_e vce_start_job(void *device_id, mm_job_post_t *job,
 		/*Write the registers passed*/
 		for (i = 0; i < VCE_REGISTERS_COUNT; i++) {
 			if (vce_info->vce_regpst.changed[i] == 1) {
-				vce_write(id, (VCE_REGISTERS_OFFSET+(i*4)),
+					vce_write(id, \
+					(VCE_REGISTERS_OFFSET+(i*4)), \
 					vce_info->vce_regpst.vce_regs[i]);
 			}
 		}
 
 		/*set return address to the finalising code*/
-		vce_write(id, VCE_REGISTERS_OFFSET, vce_info->finaladdr);
+			vce_write(id, VCE_REGISTERS_OFFSET, \
+					vce_info->finaladdr);
 
 		/*Copy Code*/
 		for (i = 0; i < (vce_info->codesize); i++) {
@@ -265,8 +296,8 @@ mm_job_status_e vce_start_job(void *device_id, mm_job_post_t *job,
 			transfer_ptr++;
 			transfer_data_ptr = transfer_ptr;
 			for (j = 0; j < transfer_size; j++) {
-				vce_write(id,
-				(VCE_DATA_MEM_OFFSET+vce_addr_offset+j*4),
+					vce_write(id, (VCE_DATA_MEM_OFFSET + \
+							vce_addr_offset+j*4), \
 				(u32)*((u32 *)(transfer_data_ptr+j)));
 			}
 			transfer_ptr += transfer_size;
@@ -276,11 +307,12 @@ mm_job_status_e vce_start_job(void *device_id, mm_job_post_t *job,
 
 		/*Taken from DEC3 - TODO: Verify again*/
 		if (vce_info->endcode & (~VCE_NO_SEMAPHORE)) {
-			/*Pulse the stoppage code 1->0->1 to clear internal wait
-			* VCE might be waiting on another semaphore, or bkpt*/
+				/*Pulse the stoppage code 1->0->1 to clear
+				* internal wait VCE might be waiting on another
+				* semaphore, or bkpt*/
 			vce_write(id, VCE_SEMA_CLEAR_OFFSET, 0xff);
-			vce_write(id, VCE_SEMA_SET_OFFSET, 1<<(vce_info->endcode
-						&(~VCE_NO_SEMAPHORE)) |
+				vce_write(id, VCE_SEMA_SET_OFFSET, \
+				1<<(vce_info->endcode&(~VCE_NO_SEMAPHORE)) | \
 						1<<VCE_STOP_SYM_RESET_INNER);
 		} else {
 			vce_write(id, VCE_SEMA_CLEAR_OFFSET, 0xff);
@@ -301,16 +333,25 @@ mm_job_status_e vce_start_job(void *device_id, mm_job_post_t *job,
 
 		job->status = MM_JOB_STATUS_RUNNING;
 		return MM_JOB_STATUS_RUNNING;
+		default:
+			pr_err("unknown job type\n");
+			return MM_JOB_STATUS_ERROR;
+		}
 
 	case MM_JOB_STATUS_RUNNING:
+		switch (job->type) {
+		case H264_VCE_ENC_SLICE_JOB:
+		case H264_VCE_LAUNCH_JOB:
 		/*Handle Job completion*/
 		status = vce_read(id, VCE_STATUS_OFFSET);
 
-		vce_info->stop_reason = (status >> VCE_STATUS_REASON_POS) &
+			vce_info->stop_reason =
+				(status >> VCE_STATUS_REASON_POS) & \
 				VCE_STATUS_REASON_MASK;
 
 		if (vce_read(id, VCE_BAD_ADDR_OFFSET) != 0) {
-			pr_err("vce_start_job: Bad Error\n");
+			pr_err("vce_start_job: Bad Error [0x%08x]\n", \
+				vce_read(id, VCE_BAD_ADDR_OFFSET));
 			return MM_JOB_STATUS_ERROR;
 		}
 
@@ -339,13 +380,21 @@ mm_job_status_e vce_start_job(void *device_id, mm_job_post_t *job,
 			transfer_ptr++;
 			transfer_data_ptr = transfer_ptr;
 			for (j = 0; j < transfer_size; j++) {
-				*((u32 *)(transfer_data_ptr+j)) = vce_read(id,
-				(VCE_DATA_MEM_OFFSET+vce_addr_offset+j*4));
+					*((u32 *)(transfer_data_ptr+j)) = \
+					vce_read(id, (VCE_DATA_MEM_OFFSET + \
+							vce_addr_offset+j*4));
 			}
 			transfer_ptr += transfer_size;
 		}
+
+		if (enc_info != NULL)
+			completeEncodeSlice(id, enc_info);
 		job->status = MM_JOB_STATUS_SUCCESS;
 		return MM_JOB_STATUS_SUCCESS;
+		default:
+			pr_err("unknown job type\n");
+			return MM_JOB_STATUS_ERROR;
+		}
 
 	case MM_JOB_STATUS_SUCCESS:
 	case MM_JOB_STATUS_ERROR:
@@ -381,8 +430,8 @@ int h264_vce_init(MM_CORE_HW_IFC *core_param)
 	pr_debug("h264_vce_init: -->\n");
 
 	/*Do any device specific structure initialisation required.*/
-	core_param->mm_base_addr = MM_VCE_BASE_ADDR;
-	core_param->mm_hw_size = VCE_HW_SIZE;
+	core_param->mm_base_addr = VIDEOCODEC_BASE_ADDRESS;
+	core_param->mm_hw_size = H264_HW_SIZE;
 	core_param->mm_irq = BCM_INT_ID_H264_AOB;
 
 	core_param->mm_timer = DEFAULT_MM_DEV_TIMER_MS;
