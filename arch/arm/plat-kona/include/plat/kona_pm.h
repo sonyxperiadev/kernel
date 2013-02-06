@@ -33,6 +33,7 @@ struct kona_idle_state {
 	u32 latency;		/* in uS */
 	u32 target_residency;	/* in uS */
 	int (*enter) (struct kona_idle_state *state, u32 ctrl_params);
+	int disable_cnt;
 };
 struct pm_init_param {
 	struct kona_idle_state *states;

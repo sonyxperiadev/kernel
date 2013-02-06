@@ -388,11 +388,13 @@ void kona_pm_reg_pm_enter_handler(int (*enter) (suspend_state_t state))
 int kona_pm_disable_idle_state(int state, bool disable)
 {
 	struct cpuidle_state *idle_state = NULL;
+	struct kona_idle_state *kona_idle;
 	int i;
 
 	for (i = 0; i < pm_prms.num_states; i++) {
 		if (pm_prms.states[i].state == state) {
 			idle_state = &kona_idle_driver.states[i];
+			kona_idle = &pm_prms.states[i];
 			break;
 		}
 	}
@@ -400,7 +402,17 @@ int kona_pm_disable_idle_state(int state, bool disable)
 	if (!idle_state)
 		return -EINVAL;
 
-	idle_state->disable = disable;
+	if (disable) {
+		if (!kona_idle->disable_cnt)
+			idle_state->disable = disable;
+		kona_idle->disable_cnt++;
+	} else {
+		if (!kona_idle->disable_cnt)
+			return -EINVAL;
+		kona_idle->disable_cnt--;
+		if (!kona_idle->disable_cnt)
+			idle_state->disable = disable;
+	}
 	return 0;
 }
 EXPORT_SYMBOL(kona_pm_disable_idle_state);
@@ -464,12 +476,16 @@ static int cstate_disable_get(void *data, u64 *val)
 
 static int cstate_disable_set(void *data, u64 val)
 {
+	int i;
 	struct cpuidle_state *idle_state = data;
 	BUG_ON(idle_state == NULL);
-	if (val)
-		idle_state->disable = 1;
-	else
-		idle_state->disable = 0;
+
+	for (i = 0; i < pm_prms.num_states; i++) {
+		if (!strcmp(idle_state->name,
+				kona_idle_driver.states[i].name))
+			break;
+	}
+	kona_pm_disable_idle_state(pm_prms.states[i].state, val);
 	return 0;
 }
 
