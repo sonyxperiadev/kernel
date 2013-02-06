@@ -406,6 +406,8 @@ int i2c_ts_driver_read(void)
 
 	if (g_curr_touch_data.pressure > gp_i2c_ts->max_pressure)
 		g_curr_touch_data.pressure = gp_i2c_ts->max_pressure;
+	else if (g_curr_touch_data.pressure == 0)
+		g_curr_touch_data.pressure = 1;
 
 	g_curr_touch_data.x1 = (gp_buffer[gp_i2c_ts->x1_hi_idx] << 8) |
 	    gp_buffer[gp_i2c_ts->x1_lo_idx];
