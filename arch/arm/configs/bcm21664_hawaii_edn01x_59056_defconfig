@@ -1468,10 +1468,9 @@ CONFIG_BROADCOM_WIFI_RESERVED_MEM=y
 # CONFIG_B43 is not set
 # CONFIG_B43LEGACY is not set
 CONFIG_BCMDHD_4334=y
+CONFIG_BCMDHD_FW_PATH_4334="/system/vendor/firmware/fw_wifi_4334.bin"
+CONFIG_BCMDHD_NVRAM_PATH_4334="/system/vendor/firmware/fw_wifi_nvram_4334.txt"
 # CONFIG_BCM4330 is not set
-CONFIG_BCMDHD_FW_PATH="/system/vendor/firmware/fw_wifi.bin"
-CONFIG_BCMDHD_NVRAM_PATH="/system/vendor/firmware/fw_wifi_nvram.txt"
-CONFIG_BCMDHD_IF_PREFIX="wlan%d"
 # CONFIG_BCMDHD is not set
 # CONFIG_BRCMFMAC is not set
 # CONFIG_HOSTAP is not set
@@ -2245,6 +2244,7 @@ CONFIG_SOC_CAMERA=y
 CONFIG_SOC_CAMERA_TCM9001=y
 CONFIG_SOC_CAMERA_OV5640=y
 # CONFIG_SOC_CAMERA_OV7692 is not set
+# CONFIG_SOC_CAMERA_GC0313 is not set
 # CONFIG_SOC_CAMERA_OV5640_GZ is not set
 # CONFIG_SOC_CAMERA_OV7692_GZ is not set
 # CONFIG_SOC_CAMERA_OV6650 is not set
