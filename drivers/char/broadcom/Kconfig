@@ -124,6 +124,16 @@ config BRCM_CP_CRASH_DUMP_EMMC
         --help---
           Say Y to enable the cp crash dump to eMMC support.
 
+config CP_CRASH
+	bool "cp crash without dump"
+	depends on BCM_MODEM && MACH_HAWAII_SS_COMMON
+        default y
+        --help---
+          Say Y to enable cp crash from AP panic handler
+	  without enabling dump, as this option depends
+	  on BCM_MODEM and MACH_HAWAII_SS_COMMON, make sure
+	  to set them.
+
 config BCM_MODEM_DEFER_CP_START
         bool "Release CP from reset from main image (deferred)"
         depends on BRCM_CHAR_DRIVERS && NET && BCM_MODEM

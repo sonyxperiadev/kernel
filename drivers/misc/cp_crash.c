@@ -24,6 +24,7 @@
 #include <linux/delay.h>
 #include <linux/mtd/mtd.h>
 #include <linux/proc_fs.h>
+#include <linux/interrupt.h>
 #include <linux/broadcom/ipcinterface.h>
 #include "cp_crash.h"
 
