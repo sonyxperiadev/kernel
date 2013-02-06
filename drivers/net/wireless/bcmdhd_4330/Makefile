@@ -1,4 +1,4 @@
-# bcmdhd
+# bcmdhd_4330
 #####################
 # SDIO Basic feature
 #####################
@@ -215,9 +215,9 @@ DHDOFILES := bcmsdh.o bcmsdh_linux.o bcmsdh_sdmmc.o bcmsdh_sdmmc_linux.o \
 	bcmutils.o bcmwifi_channels.o hndpmu.o linux_osl.o sbutils.o siutils.o \
 	wl_android.o wl_cfg80211.o wl_cfgp2p.o wldev_common.o wl_linux_mon.o wl_roam.o
 
-obj-$(CONFIG_BCM4330) += bcmdhd-4330.o
+obj-$(CONFIG_BCM4330) += bcmdhd_4330.o
 
-bcmdhd-4330-objs += $(DHDOFILES)
+bcmdhd_4330-objs += $(DHDOFILES)
 
 all:
 	@echo "$(MAKE) --no-print-directory -C $(KDIR) SUBDIRS=$(CURDIR) modules"

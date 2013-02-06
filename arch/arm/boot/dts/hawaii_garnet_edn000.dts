@@ -331,7 +331,7 @@
 		wl-reset-gpio = <3>;
 		host-wake-gpio = <74>;
 		board-nvram-file = "/system/vendor/firmware/fw_wifi_nvram_4330.txt";
-		module-name = "bcmdhd-4330.ko";
+		module-name = "bcmdhd_4330";
 	};
 
 	keypad {
