@@ -187,8 +187,8 @@ uint32_t dt_gpio[128];
 
 static void cpu_info_verbose(void)
 {
-	if (cpu_is_hawaii_A0())
-		pr_info("Hawaii CHIPID-A0\n");
+	if (cpu_is_java_A0())
+		pr_info("Java CHIPID-A0\n");
 }
 
 static int __init hawaii_init(void)

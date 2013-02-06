@@ -20,16 +20,16 @@
 #include <mach/rdb/brcm_rdb_chipreg.h>
 #include <plat/cpu.h>
 
-#define HAWAII_CHIP_REV_A0  0
+#define JAVA_CHIP_REV_A0  0
 
-#define HAWAII_PROD_ID		0x3
-#define HAWAII_PROD_FMLY_ID	KONA_PROD_FMLY_ID
+#define JAVA_PROD_ID		0x4
+#define JAVA_PROD_FMLY_ID	KONA_PROD_FMLY_ID
 
-#define cpu_is_hawaii_A0() \
-			(get_chip_id() == HAWAII_CHIP_ID(HAWAII_CHIP_REV_A0))
+#define cpu_is_java_A0() \
+			(get_chip_id() == JAVA_CHIP_ID(JAVA_CHIP_REV_A0))
 
-#define HAWAII_CHIP_ID(r)	KONA_CHIP_ID(HAWAII_PROD_FMLY_ID,\
-				HAWAII_PROD_ID, r)
+#define JAVA_CHIP_ID(r)		KONA_CHIP_ID(JAVA_PROD_FMLY_ID,\
+				JAVA_PROD_ID, r)
 
 
 #endif /*__HAWAII_CPU_H__*/
