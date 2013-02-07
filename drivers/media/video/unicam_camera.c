@@ -222,7 +222,7 @@ static int unicam_camera_update_buf(struct unicam_camera_dev *unicam_dev)
 						    unicam_dev->icd->
 						    current_fmt->host_fmt);
 		}
-		/* Non JPEG section of the code */    
+		/* Non JPEG section of the code */
 		/* image 0 */
 		im0.start = (UInt32) phys_addr;
 		im0.ls = (UInt32) line_stride;
@@ -272,7 +272,7 @@ static int unicam_camera_update_buf(struct unicam_camera_dev *unicam_dev)
 			/* no thumbnail supported */
 			/* don't set image0 since we are expecting data0
 			 * to contain jpeg data
-			 */ 
+			 */
 			dat0.start = (UInt32) phys_addr;
 			dat0.ls = unicam_dev->icd->user_width;
 			dat0.size = unicam_dev->icd->user_width * unicam_dev->icd->user_height * 3/2;
@@ -422,7 +422,7 @@ int unicam_videobuf_start_streaming(struct vb2_queue *q)
 	unicam_dev->if_params = if_params;
 
 	/* set camera interface parameters */
-	/* we only support serial and csi2 sensor */ 
+	/* we only support serial and csi2 sensor */
 	if ((unicam_dev->if_params.if_type == V4L2_SUBDEV_SENSOR_SERIAL)
 	    && (unicam_dev->if_params.if_mode ==
 		V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2)) {
@@ -469,7 +469,7 @@ int unicam_videobuf_start_streaming(struct vb2_queue *q)
 	} else {
 		hmode = CSI1CCP2;
 		ccp2_clock = DATA_CLOCK;
-		
+
 	}
 	unicam_dev->handle = get_mm_csi0_handle (hmode, afe, lanes );
 	if (unicam_dev->handle == NULL){
@@ -484,9 +484,10 @@ int unicam_videobuf_start_streaming(struct vb2_queue *q)
 	}
 	mm_csi0_set_afe();
 	/* Compulsary to get these values from sensor for CSI2*/
-	/* Don't care for CCP2/CSI1 can send a struct with junk values 
+	/* Don't care for CCP2/CSI1 can send a struct with junk values
 	   Will not be read */
-	timing.hs_settle_time = unicam_dev->if_params.parms.serial.hs_settle_time; 
+	timing.hs_settle_time =
+		unicam_dev->if_params.parms.serial.hs_settle_time;
 	timing.hs_term_time = unicam_dev->if_params.parms.serial.hs_term_time;
 	ret = mm_csi0_set_dig_phy(&timing);
 	if(ret){
@@ -606,7 +607,7 @@ int unicam_videobuf_start_streaming(struct vb2_queue *q)
 				printk("Error seen pl check for CCP2 errors 0x%x\n",raw_rx);
 				if(rx.ssc)
 					printk("Shifted sync code in CCP2\n");
-				if(rx.ofo || rx.ifo || rx.bfo || rx.dl)	
+				if (rx.ofo || rx.ifo || rx.bfo || rx.dl)
 					printk("FIFO errors or data lost\n");
 				if(rx.crce)
 					printk("CRC error\n");
@@ -616,7 +617,7 @@ int unicam_videobuf_start_streaming(struct vb2_queue *q)
 				printk("Error seen pl check for CSI2 errors 0x%x\n",raw_rx);
 				if(rx.sbe || rx.pbe || rx.hoe || rx.ple)
 					printk("Specific errors in CSI2\n");
-				if(rx.ofo || rx.ifo || rx.bfo || rx.dl)	
+				if (rx.ofo || rx.ifo || rx.bfo || rx.dl)
 					printk("FIFO errors or data lost\n");
 				if(rx.crce)
 					printk("CRC error\n");
@@ -853,7 +854,7 @@ static int unicam_stop()
 	return 0;
 }
 
-static int unicam_camera_s_ctrl(struct soc_camera_device *icd, 
+static int unicam_camera_s_ctrl(struct soc_camera_device *icd,
 				 struct v4l2_control *ctl)
 {
 	struct device *dev = icd->dev.parent;
@@ -947,7 +948,7 @@ static int unicam_camera_set_crop(struct soc_camera_device *icd,
 		mm_csi0_config_int(&idesc, IMAGE_BUFFER);
 	}
 
-	spin_unlock_irqrestore(&unicam_dev->lock, flags);	
+	spin_unlock_irqrestore(&unicam_dev->lock, flags);
 	 v4l2_subdev_call(sd, video, s_stream, 1);
 	return 0;
 #endif
@@ -1010,7 +1011,7 @@ static int unicam_camera_set_fmt(struct soc_camera_device *icd,
 	pix->field = mf.field;
 	pix->colorspace = mf.colorspace;
 	icd->current_fmt = xlate;
-	
+
 	/* Initialize crop window for now */
 	unicam_dev->crop.c.width = pix->width;
 	unicam_dev->crop.c.height = pix->height;
@@ -1110,8 +1111,8 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 		printk("PANIC asserted**\n");
 	}
 	if (rx.is) {
-		memset(&idesc,0x00,sizeof(struct int_desc));			    
-		mm_csi0_get_int_stat(&idesc,1);	
+		memset(&idesc, 0x00, sizeof(struct int_desc));
+		mm_csi0_get_int_stat(&idesc, 1);
 
 		if (idesc.fei || idesc.lci){
 			/* FS and FE handling */
@@ -1119,7 +1120,7 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 				printk("FS and FE ** pairing observed\n");
 				printk("Just trigger once again\n");
 				unicam_camera_capture(unicam_dev);
-				return IRQ_HANDLED;				
+				return IRQ_HANDLED;
 			}
 			struct vb2_buffer *vb = unicam_dev->active;;
 			fps++;
@@ -1146,7 +1147,7 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 				if (unicam_dev->icd->current_fmt->code ==
 				    V4L2_MBUS_FMT_JPEG_1X8) {
 				} else {
-					ret = 1; 
+					ret = 1;
 				}
 
 				vb2_buffer_done(vb, VB2_BUF_STATE_DONE);
@@ -1171,20 +1172,21 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 				unicam_dev->skip_frames--;
 			}
 			im0.start = vb2_dma_contig_plane_dma_addr(unicam_dev->active, 0);
-			im0.size = unicam_dev->icd->user_width * unicam_dev->icd->user_height * 2; 
+			im0.size = unicam_dev->icd->user_width *
+				unicam_dev->icd->user_height * 2;
 			im0.ls = unicam_dev->icd->user_width * 2;
 			if (unicam_dev->icd->current_fmt->code != V4L2_MBUS_FMT_JPEG_1X8) {
 				mm_csi0_update_one(&im0, unicam_dev->curr, IMAGE_BUFFER);
 			} else {
 				mm_csi0_update_one(&im0, unicam_dev->curr, DATA_BUFFER);
 			}
-				
+
 			unicam_camera_capture(unicam_dev);
 
 		}
 		else{
 		}
-	} 
+	}
 
 out:
 	return IRQ_HANDLED;
