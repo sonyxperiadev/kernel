@@ -859,6 +859,9 @@ static int __fill_vb2_buffer(struct vb2_buffer *vb, const struct v4l2_buffer *b,
 	vb->v4l2_buf.timestamp = b->timestamp;
 	vb->v4l2_buf.input = b->input;
 	vb->v4l2_buf.flags = b->flags & ~V4L2_BUFFER_STATE_FLAGS;
+#ifdef CONFIG_VIDEOBUF2_DMA_RESERVED
+	vb->v4l2_buf.reserved = b->reserved;
+#endif
 
 	return 0;
 }
