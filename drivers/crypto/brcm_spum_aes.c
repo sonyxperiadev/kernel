@@ -156,7 +156,6 @@ static int spum_aes_finish_req(struct spum_aes_device *dd, int err)
 
 	dd->req->base.complete(&dd->req->base, err);
 	dd->req = NULL;
-	rctx->tx_offset = 0;
 	spin_lock_irqsave(&spum_dev->lock, flags);
 	clear_bit(FLAGS_BUSY, &spum_dev->flags);
 	spin_unlock_irqrestore(&spum_dev->lock, flags);
