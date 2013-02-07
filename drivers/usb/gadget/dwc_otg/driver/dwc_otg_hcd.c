@@ -189,8 +189,11 @@ static void kill_urbs_in_qh_list(dwc_otg_hcd_t *hcd, dwc_list_link_t *qh_list)
 				hcd->fops->complete(hcd, qtd->urb->priv,
 						    qtd->urb, -DWC_E_TIMEOUT);
 				dwc_otg_hcd_qtd_remove_and_free(hcd, qtd, qh);
-				/* remove_and_free would change the first in the queue but if it is same then avoid accessing freed element */
-				if (qtd == DWC_CIRCLEQ_FIRST(&qh->qtd_list))
+				/* remove_and_free would change the first
+				    in the queue but if it is same then avoid
+				    accessing freed element */
+				if (qtd == DWC_CIRCLEQ_FIRST(&qh->qtd_list)
+					|| DWC_CIRCLEQ_EMPTY(&qh->qtd_list))
 					break;
 			}
 		}
@@ -269,6 +272,7 @@ static int32_t dwc_otg_hcd_start_cb(void *p)
 
 	return 1;
 }
+
 
 /**
  * HCD Callback function for disconnect of the HCD.
@@ -872,7 +876,10 @@ int dwc_otg_hcd_init(dwc_otg_hcd_t *hcd, dwc_otg_core_if_t *core_if)
 		goto out;
 	}
 
-	hcd->otg_port = 1;
+	/* Set OTG port number if OTG is enabled */
+	hcd->otg_port =
+		hcd->core_if->core_params->otg_supp_enable ? 1 : 0;
+
 	hcd->frame_list = NULL;
 	hcd->frame_list_dma = 0;
 out:
@@ -944,12 +951,12 @@ static void assign_and_init_hc(dwc_otg_hcd_t *hcd, dwc_otg_qh_t *qh)
 
 	hc = DWC_CIRCLEQ_FIRST(&hcd->free_hc_list);
 
-	/* Remove the host channel from the free list. */
-	DWC_CIRCLEQ_REMOVE_INIT(&hcd->free_hc_list, hc, hc_list_entry);
-
 	qtd = DWC_CIRCLEQ_FIRST(&qh->qtd_list);
 
 	urb = qtd->urb;
+	/* Remove the host channel from the free list. */
+	DWC_CIRCLEQ_REMOVE_INIT(&hcd->free_hc_list, hc, hc_list_entry);
+
 	qh->channel = hc;
 
 	qtd->in_process = 1;
@@ -1163,6 +1170,7 @@ dwc_otg_transaction_type_e dwc_otg_hcd_select_transactions(dwc_otg_hcd_t *hcd)
 	dwc_otg_qh_t *qh;
 	int num_channels;
 	dwc_otg_transaction_type_e ret_val = DWC_OTG_TRANSACTION_NONE;
+	dwc_otg_qtd_t *qtd;
 
 #ifdef DEBUG_SOF
 	DWC_DEBUGPL(DBG_HCD, "  Select Transactions\n");
@@ -1201,7 +1209,12 @@ dwc_otg_transaction_type_e dwc_otg_hcd_select_transactions(dwc_otg_hcd_t *hcd)
 	       !DWC_CIRCLEQ_EMPTY(&hcd->free_hc_list)) {
 
 		qh = DWC_LIST_ENTRY(qh_ptr, dwc_otg_qh_t, qh_list_entry);
-
+		qtd = DWC_CIRCLEQ_FIRST(&qh->qtd_list);
+		if (!qtd->urb) {
+			DWC_ERROR("USB Host: QTD with NULL urb!\n");
+			BUG();
+			return DWC_OTG_TRANSACTION_NONE;
+		}
 		assign_and_init_hc(hcd, qh);
 
 		/*
@@ -1245,6 +1258,13 @@ static int queue_transaction(dwc_otg_hcd_t *hcd,
 			     dwc_hc_t *hc, uint16_t fifo_dwords_avail)
 {
 	int retval;
+
+	if (!hcd || !hcd->core_if || !hc) {
+		DWC_ERROR
+			("USB Host %s: failed with null hcd hcd->core hc!\n",
+			__func__);
+		return -1;
+	}
 
 	if (hcd->core_if->dma_enable) {
 		if (hcd->core_if->dma_desc_enable) {
@@ -1309,6 +1329,7 @@ static void process_periodic_channels(dwc_otg_hcd_t *hcd)
 	int status;
 	int no_queue_space = 0;
 	int no_fifo_space = 0;
+	uint64_t flags;
 
 	dwc_otg_host_global_regs_t *host_regs;
 	host_regs = hcd->core_if->host_if->host_global_regs;
@@ -1363,8 +1384,11 @@ static void process_periodic_channels(dwc_otg_hcd_t *hcd)
 			 * Move the QH from the periodic assigned schedule to
 			 * the periodic queued schedule.
 			 */
+
+			DWC_SPINLOCK_IRQSAVE(hcd->lock, &flags);
 			DWC_LIST_MOVE_HEAD(&hcd->periodic_sched_queued,
 					   &qh->qh_list_entry);
+			DWC_SPINUNLOCK_IRQRESTORE(hcd->lock, flags);
 
 			/* done queuing high bandwidth */
 			hcd->core_if->queuing_high_bandwidth = 0;
@@ -1455,16 +1479,23 @@ static void process_non_periodic_channels(dwc_otg_hcd_t *hcd)
 	 */
 	do {
 		tx_status.d32 = dwc_read_reg32(&global_regs->gnptxsts);
-		if (!hcd->core_if->dma_enable && tx_status.b.nptxqspcavail == 0) {
+		if (!hcd->core_if->dma_enable &&
+			tx_status.b.nptxqspcavail == 0) {
 			no_queue_space = 1;
 			break;
 		}
 
 		qh = DWC_LIST_ENTRY(hcd->non_periodic_qh_ptr, dwc_otg_qh_t,
 				    qh_list_entry);
-		status =
+		if (qh)
+			status =
 		    queue_transaction(hcd, qh->channel,
 				      tx_status.b.nptxfspcavail);
+		else {
+			DWC_DEBUGPL(DBG_HCD,
+				"Queue non-periodic transactions NULL qh\n");
+			status = -1;
+		}
 
 		if (status > 0)
 			more_to_do = 1;
@@ -1475,7 +1506,8 @@ static void process_non_periodic_channels(dwc_otg_hcd_t *hcd)
 
 		/* Advance to next QH, skipping start-of-list entry. */
 		hcd->non_periodic_qh_ptr = hcd->non_periodic_qh_ptr->next;
-		if (hcd->non_periodic_qh_ptr == &hcd->non_periodic_sched_active) {
+		if (hcd->non_periodic_qh_ptr ==
+			&hcd->non_periodic_sched_active) {
 			hcd->non_periodic_qh_ptr =
 			    hcd->non_periodic_qh_ptr->next;
 		}
@@ -1582,6 +1614,7 @@ static dwc_otg_core_global_regs_t *global_regs;
 static dwc_otg_host_global_regs_t *hc_global_regs;
 static dwc_otg_hc_regs_t *hc_regs;
 static uint32_t *data_fifo;
+#define MAX_LOOPS 10000
 
 static void do_setup(void)
 {
@@ -1590,6 +1623,7 @@ static void do_setup(void)
 	hcchar_data_t hcchar;
 	haint_data_t haint;
 	hcint_data_t hcint;
+	int timeout = MAX_LOOPS;
 
 	/* Enable HAINTs */
 	dwc_write_reg32(&hc_global_regs->haintmsk, 0x0001);
@@ -1684,7 +1718,7 @@ static void do_setup(void)
 	/* Wait for host channel interrupt */
 	do {
 		gintsts.d32 = dwc_read_reg32(&global_regs->gintsts);
-	} while (gintsts.b.hcintr == 0);
+	} while ((gintsts.b.hcintr == 0) && (timeout-- > 0));
 
 	/* Disable HCINTs */
 	dwc_write_reg32(&hc_regs->hcintmsk, 0x0000);
@@ -2049,6 +2083,17 @@ int dwc_otg_hcd_hub_control(dwc_otg_hcd_t *dwc_otg_hcd,
 			hprt0.d32 = dwc_otg_read_hprt0(core_if);
 			hprt0.b.prtena = 1;
 			dwc_write_reg32(core_if->host_if->hprt0, hprt0.d32);
+#ifdef CONFIG_USB_OTG_UTILS
+			/* REVISIT: Looks like device went away.
+			 * Shutdown Vbus otherwise we'll be stuck in a loop
+			 * This is a temp workaround until we handle this from
+			 * stack
+			 */
+			if (core_if->xceiver->otg->set_vbus) {
+				core_if->xceiver->otg->set_vbus(
+					core_if->xceiver, false);
+			}
+#endif
 			break;
 		case UHF_PORT_SUSPEND:
 			DWC_DEBUGPL(DBG_HCD, "DWC OTG HCD HUB CONTROL - "
@@ -2457,15 +2502,27 @@ int dwc_otg_hcd_hub_control(dwc_otg_hcd_t *dwc_otg_hcd,
 						 pcgcctl.d32);
 			}
 
-			/* For HNP the bus must be suspended for at least 200ms. */
+#if 0
+			/*
+			 * REVISIT: Keep this just for reference. We should
+			 * not use mdelay here. Things can easily get
+			 * out-of-sync. This is not the right way to enforce
+			 * suspend for 200ms anyway. If we ever need to
+			 * enforce itthen a new scheme will be implemented
+			 */
+			/* For HNP the bus must be suspended for at
+			   least 200ms. */
 			if (dwc_otg_hcd->fops->get_b_hnp_enable(dwc_otg_hcd))
 				dwc_mdelay(200);
-
+#endif
 			/** sw can wait for 1 sec to check asesvld */
 			if (core_if->adp_enable) {
 				gotgctl_data_t gotgctl = {.d32 = 0 };
 				gpwrdn_data_t gpwrdn;
-				unsigned int asessvld_count = 10;	/* Following loop is using 100ms delay. Terminate if sessvld ==1 even after 10 iterations */
+				unsigned int asessvld_count = 10;
+				/* Following loop is using 100ms delay.
+				    Terminate if sessvld ==1 even
+				    after 10 iterations */
 
 				do {
 					gotgctl.d32 =
@@ -3035,7 +3092,10 @@ dwc_otg_hcd_urb_t *dwc_otg_hcd_urb_alloc(dwc_otg_hcd_t *hcd,
 	else
 		dwc_otg_urb = dwc_alloc(size);
 
-	dwc_otg_urb->packet_count = iso_desc_count;
+	if (dwc_otg_urb)
+		dwc_otg_urb->packet_count = iso_desc_count;
+	else
+		DWC_PRINTF("USB Host Failed to alloc URB!\n");
 
 	return dwc_otg_urb;
 }

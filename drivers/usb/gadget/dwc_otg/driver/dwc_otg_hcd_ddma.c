@@ -41,7 +41,7 @@
 
 static inline uint8_t frame_list_idx(uint16_t frame)
 {
-	return (frame & (MAX_FRLIST_EN_NUM - 1));
+	return frame & (MAX_FRLIST_EN_NUM - 1);
 }
 
 static inline uint16_t desclist_idx_inc(uint16_t idx, uint16_t inc,
@@ -384,7 +384,7 @@ static uint8_t frame_to_desc_idx(dwc_otg_qh_t *qh, uint16_t frame_idx)
 		 */
 		return (frame_idx & ((MAX_DMA_DESC_NUM_HS_ISOC / 8) - 1)) * 8;
 	} else {
-		return (frame_idx & (MAX_DMA_DESC_NUM_GENERIC - 1));
+		return frame_idx & (MAX_DMA_DESC_NUM_GENERIC - 1);
 	}
 }
 
@@ -1147,7 +1147,9 @@ void dwc_otg_hcd_complete_xfer_ddma(dwc_otg_hcd_t *hcd,
 		}
 
 	}
+	DWC_SPINLOCK_IRQSAVE(hcd->lock, &flags);
 	tr_type = dwc_otg_hcd_select_transactions(hcd);
+	DWC_SPINUNLOCK_IRQRESTORE(hcd->lock, flags);
 	if (tr_type != DWC_OTG_TRANSACTION_NONE || continue_isoc_xfer) {
 		if (continue_isoc_xfer) {
 			if (tr_type == DWC_OTG_TRANSACTION_NONE)

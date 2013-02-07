@@ -50,6 +50,7 @@
  * @param hcd HCD instance.
  * @param qh The QH to free.
  */
+#define ISOC_BUF_SIZE 4096
 void dwc_otg_hcd_qh_free(dwc_otg_hcd_t *hcd, dwc_otg_qh_t *qh)
 {
 	dwc_otg_qtd_t *qtd, *qtd_tmp;
@@ -68,6 +69,32 @@ void dwc_otg_hcd_qh_free(dwc_otg_hcd_t *hcd, dwc_otg_qh_t *qh)
 	} else if (qh->dw_align_buf) {
 		uint32_t buf_size;
 		if (qh->ep_type == UE_ISOCHRONOUS)
+			buf_size = ISOC_BUF_SIZE;
+		else
+			buf_size = hcd->core_if->core_params->max_transfer_size;
+
+		dwc_dma_free(buf_size, qh->dw_align_buf, qh->dw_align_buf_dma);
+	}
+
+	dwc_free(qh);
+	return;
+}
+
+void dwc_otg_hcd_qh_free_locked(dwc_otg_hcd_t *hcd, dwc_otg_qh_t *qh)
+{
+	dwc_otg_qtd_t *qtd, *qtd_tmp;
+
+	/* Free each QTD in the QTD list */
+	DWC_CIRCLEQ_FOREACH_SAFE(qtd, qtd_tmp, &qh->qtd_list, qtd_list_entry) {
+		DWC_CIRCLEQ_REMOVE(&qh->qtd_list, qtd, qtd_list_entry);
+		dwc_otg_hcd_qtd_free(qtd);
+	}
+
+	if (hcd->core_if->dma_desc_enable)
+		dwc_otg_hcd_qh_free_ddma(hcd, qh);
+	else if (qh->dw_align_buf) {
+		uint32_t buf_size;
+		if (qh->ep_type == UE_ISOCHRONOUS)
 			buf_size = 4096;
 		else
 			buf_size = hcd->core_if->core_params->max_transfer_size;
@@ -78,7 +105,7 @@ void dwc_otg_hcd_qh_free(dwc_otg_hcd_t *hcd, dwc_otg_qh_t *qh)
 	return;
 }
 
-#define BitStuffTime(bytecount)  ((8 * 7* bytecount) / 6)
+#define BitStuffTime(bytecount) ((8*7*bytecount)/6)
 #define HS_HOST_DELAY		5	/* nanoseconds */
 #define FS_LS_HOST_DELAY	1000	/* nanoseconds */
 #define HUB_LS_SETUP		333	/* nanoseconds */
@@ -151,7 +178,7 @@ static uint32_t calc_bus_time(int speed, int is_in, int is_isoc, int bytecount)
  *		to initialize the QH.
  */
 #define SCHEDULE_SLOP 10
-void qh_init(dwc_otg_hcd_t *hcd, dwc_otg_qh_t *qh, dwc_otg_hcd_urb_t *urb)
+int qh_init(dwc_otg_hcd_t *hcd, dwc_otg_qh_t *qh, dwc_otg_hcd_urb_t *urb)
 {
 	char *speed, *type;
 	int dev_speed;
@@ -274,6 +301,7 @@ void qh_init(dwc_otg_hcd_t *hcd, dwc_otg_qh_t *qh, dwc_otg_hcd_urb_t *urb)
 			    qh->interval);
 	}
 #endif
+	return 0;
 
 }
 
@@ -295,11 +323,14 @@ dwc_otg_qh_t *dwc_otg_hcd_qh_create(dwc_otg_hcd_t *hcd,
 	if (qh == NULL)
 		return NULL;
 
-	qh_init(hcd, qh, urb);
+	if (qh_init(hcd, qh, urb)) {
+		dwc_otg_hcd_qh_free_locked(hcd, qh);
+		return NULL;
+	}
 
 	if (hcd->core_if->dma_desc_enable &&
 	    (dwc_otg_hcd_qh_init_ddma(hcd, qh, atomic_alloc) < 0)) {
-		dwc_otg_hcd_qh_free(hcd, qh);
+		dwc_otg_hcd_qh_free_locked(hcd, qh);
 		return NULL;
 	}
 

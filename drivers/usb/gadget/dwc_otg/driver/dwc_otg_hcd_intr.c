@@ -179,6 +179,7 @@ int32_t dwc_otg_hcd_handle_sof_intr(dwc_otg_hcd_t *hcd)
 	dwc_otg_qh_t *qh;
 	dwc_otg_transaction_type_e tr_type;
 	gintsts_data_t gintsts = {.d32 = 0 };
+	uint64_t flags;
 
 	hfnum.d32 =
 	    dwc_read_reg32(&hcd->core_if->host_if->host_global_regs->hfnum);
@@ -210,7 +211,9 @@ int32_t dwc_otg_hcd_handle_sof_intr(dwc_otg_hcd_t *hcd)
 					   &qh->qh_list_entry);
 		}
 	}
+	DWC_SPINLOCK_IRQSAVE(hcd->lock, &flags);
 	tr_type = dwc_otg_hcd_select_transactions(hcd);
+	DWC_SPINUNLOCK_IRQRESTORE(hcd->lock, flags);
 	if (tr_type != DWC_OTG_TRANSACTION_NONE)
 		dwc_otg_hcd_queue_transactions(hcd, tr_type);
 
@@ -775,6 +778,7 @@ static void release_channel(dwc_otg_hcd_t *hcd,
 {
 	dwc_otg_transaction_type_e tr_type;
 	int free_qtd;
+	uint64_t flags;
 
 	DWC_DEBUGPL(DBG_HCDV, "  %s: channel %d, halt_status %d\n",
 		    __func__, hc->hc_num, halt_status);
@@ -842,7 +846,9 @@ default:
 	}
 
 	/* Try to queue more transfers now that there's a free channel. */
+	DWC_SPINLOCK_IRQSAVE(hcd->lock, &flags);
 	tr_type = dwc_otg_hcd_select_transactions(hcd);
+	DWC_SPINUNLOCK_IRQRESTORE(hcd->lock, flags);
 	if (tr_type != DWC_OTG_TRANSACTION_NONE)
 		dwc_otg_hcd_queue_transactions(hcd, tr_type);
 }
