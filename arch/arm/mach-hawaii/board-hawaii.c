@@ -1201,6 +1201,25 @@ static struct platform_device board_caph_device = {
 
 #endif /* CONFIG_BCM_ALSA_SOUND */
 
+
+#ifdef CONFIG_BYPASS_WIFI_DEVTREE
+static struct board_wifi_info hawaii_board_wifi_info = {
+	.wl_reset_gpio = 3,
+	.host_wake_gpio = 74,
+	.board_nvram_file
+	   = "/system/vendor/firmware/fw_wifi_nvram_4334_hs1x.txt",
+	.module_name = "bcmdhd_4334",
+};
+
+static struct platform_device hawaii_wifi_pltfm_device = {
+	.name = "bcm_wifi",
+	.id = -1,
+	.dev = {
+		.platform_data = &hawaii_board_wifi_info,
+	}
+};
+#endif
+
 static struct platform_device *hawaii_devices[] __initdata = {
 #ifdef CONFIG_KONA_HEADSET_MULTI_BUTTON
 	&hawaii_headset_device,
@@ -1225,6 +1244,11 @@ static struct platform_device *hawaii_devices[] __initdata = {
 #if defined(CONFIG_BCM_ALSA_SOUND)
 	&board_caph_device,
 #endif
+
+#ifdef CONFIG_BYPASS_WIFI_DEVTREE
+	&hawaii_wifi_pltfm_device,
+#endif
+
 
 };
 
@@ -1284,6 +1308,7 @@ static void hawaii_add_pdata(void)
 	hawaii_usb_phy_platform_device.dev.platform_data =
 		&hsotgctrl_plat_data;
 #endif
+
 }
 
 void __init hawaii_add_common_devices(void)

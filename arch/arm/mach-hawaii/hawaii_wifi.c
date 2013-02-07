@@ -247,15 +247,11 @@ static int bcm_sdiowl_init(int onoff)
 #endif
 
 #ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
-#if defined(CONFIG_MACH_HAWAII_RAY) || defined(CONFIG_MACH_HAWAII_STONE)\
-				|| defined(CONFIG_MACH_HAWAII_GARNET)
-
 	dev->wifi_gpio->reg = -1;		/* Unused */
 	dev->wifi_gpio->shutdown = -1;	/* Unused */
 	dev->wifi_gpio->reset = devtreeWifiParms.reset;
 	dev->wifi_gpio->host_wake = devtreeWifiParms.host_wake;
 
-#endif
 #endif
 
 	/* reserve GPIOs */
@@ -729,35 +725,52 @@ static int __devinit bcm_wifi_pltfm_probe(struct platform_device *pdev)
 u32 readval;
 const char *prop;
 
-	printk(KERN_ERR "%s: probe called!\n", __func__);
+	printk(KERN_INFO "%s: probe called!\n", __func__);
 
-	if (!pdev->dev.of_node)
-		goto wifi_err1;
+	if (pdev->dev.platform_data) {
+		struct board_wifi_info *wifi_dev = pdev->dev.platform_data;
 
-	/* Read device tree properties */
+		printk(KERN_INFO "%s: calling with board platform data\n",
+				__func__);
 
-	if (of_property_read_u32(pdev->dev.of_node, "wl-reset-gpio", &readval))
-		goto wifi_err1;
-	devtreeWifiParms.reset = readval;
+		devtreeWifiParms.reset = wifi_dev->wl_reset_gpio;
+		devtreeWifiParms.host_wake = wifi_dev->host_wake_gpio;
+		strcpy(custom_fw_path, wifi_dev->board_nvram_file);
+		strcpy(custom_module_name, wifi_dev->module_name);
 
-	if (of_property_read_u32(pdev->dev.of_node, "host-wake-gpio", &readval))
-		goto wifi_err1;
-	devtreeWifiParms.host_wake = readval;
+	} else {	/*Get parms from device tree */
 
-	if (of_property_read_string(pdev->dev.of_node,
-				"board-nvram-file", &prop))
-		goto wifi_err1;
-	strcpy(custom_fw_path, prop);
+		if (!pdev->dev.of_node)
+			goto wifi_err1;
 
-	if (of_property_read_string(pdev->dev.of_node,
-				"module-name", &prop))
-		goto wifi_err1;
-	strcpy(custom_module_name, prop);
+		/* Read device tree properties */
+
+		printk(KERN_INFO "%s: calling DTS node\n", __func__);
+
+		if (of_property_read_u32(pdev->dev.of_node,
+					"wl-reset-gpio", &readval))
+			goto wifi_err1;
+		devtreeWifiParms.reset = readval;
+
+		if (of_property_read_u32(pdev->dev.of_node,
+					"host-wake-gpio", &readval))
+			goto wifi_err1;
+		devtreeWifiParms.host_wake = readval;
+
+		if (of_property_read_string(pdev->dev.of_node,
+					"board-nvram-file", &prop))
+			goto wifi_err1;
+		strcpy(custom_fw_path, prop);
+
+		if (of_property_read_string(pdev->dev.of_node,
+					"module-name", &prop))
+			goto wifi_err1;
+		strcpy(custom_module_name, prop);
+	}
 
 	hawaii_wifi_device.resource->start =
 		hawaii_wifi_device.resource->end =
 		gpio_to_irq(devtreeWifiParms.host_wake);
-
 
 	/* Setup attributes to read from sysfs */
 	if (driver_create_file(pdev->dev.driver, &driver_attr_module_name)) {
@@ -780,17 +793,20 @@ static int bcm_wifi_pltfm_remove(struct platform_device *pdev)
 }
 
 
+#ifndef CONFIG_BYPASS_WIFI_DEVTREE
 static const struct of_device_id bcm_wifi_match[] = {
 	{ .compatible = "bcm,bcm_wifi"},
 	{ /* Sentinel */ }
 };
-
+#endif
 
 static struct platform_driver bcm_wifi_pltfm_driver = {
 	.driver = {
 		.name = "bcm_wifi",
 		.owner = THIS_MODULE,
+#ifndef CONFIG_BYPASS_WIFI_DEVTREE
 		.of_match_table = bcm_wifi_match,
+#endif
 		},
 	.probe = bcm_wifi_pltfm_probe,
 	.remove = __devexit_p(bcm_wifi_pltfm_remove),

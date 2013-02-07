@@ -45,3 +45,17 @@ extern int sdio_stop_clk(enum sdio_devtype devtype, int insert);
 extern int bcm_sdiowl_init(int onoff);
 extern int bcm_sdiowl_term(void);
 #endif
+
+/* Structure below is used ONLY if
+ * CONFIG_BYPASS_WIFI_DEVTREE is defined
+ * otherwise take info from device tree.
+ * === Add to defconfig or define it in this file ====
+ */
+
+struct board_wifi_info {
+	int wl_reset_gpio;
+	int host_wake_gpio;
+	const char *board_nvram_file;
+	const char *module_name;
+};
+
