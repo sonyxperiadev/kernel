@@ -111,7 +111,7 @@ __initdata struct DSI_COUNTER nt35516_timing[] = {
 	/* SPEC:  min =  50[ns] + 0[UI] */
 	/* SET:   min =  60[ns] + 0[UI]                              <= */
 	{"HS_LPX", DSI_C_TIME_HS, 0,
-		0, 60, 0, 0, 0, 75, 0, 0, 0x000001FF, 0, 0, 0},
+		0, 70, 0, 0, 0, 75, 0, 0, 0x000001FF, 0, 0, 0},
 	/* SPEC:  min = 40[ns] + 4[UI]      max= 85[ns] + 6[UI] */
 	/* SET:   min = 50[ns] + 4[UI]      max= 85[ns] + 6[UI]      <= */
 	{"HS_PRE", DSI_C_TIME_HS, DSI_C_HAS_MAX,
