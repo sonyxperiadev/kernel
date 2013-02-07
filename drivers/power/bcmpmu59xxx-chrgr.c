@@ -489,22 +489,7 @@ static int __devinit bcmpmu_chrgr_probe(struct platform_device *pdev)
 	}
 	pr_chrgr(FLOW, "****<%s>****chrgr_name %s\n",
 		__func__, chrgr_names[chrgr_type]);
-	di->chgr_detect.notifier_call = charger_event_handler;
-	ret = bcmpmu_add_notifier(BCMPMU_CHRGR_EVENT_CHGR_DETECTION,
-							&di->chgr_detect);
-	if (ret) {
-		pr_chrgr(INIT, "%s, failed on chrgr det notifier, err=%d\n",
-				__func__, ret);
-		goto free_dev_info;
-	}
-	di->chgr_curr_lmt.notifier_call = charger_event_handler;
-	ret = bcmpmu_add_notifier(BCMPMU_CHRGR_EVENT_CHRG_CURR_LMT,
-							&di->chgr_curr_lmt);
-	if (ret) {
-		pr_chrgr(INIT, "%s,failed on chrgr curr lmt notifier,err=%d\n",
-				__func__, ret);
-		goto free_dev_info;
-	}
+
 	ret = power_supply_register(&pdev->dev, &di->ac_psy);
 	if (ret)
 		goto free_dev_info;
@@ -513,9 +498,28 @@ static int __devinit bcmpmu_chrgr_probe(struct platform_device *pdev)
 	if (ret)
 		goto unregister_ac_supply;
 
+	di->chgr_detect.notifier_call = charger_event_handler;
+	ret = bcmpmu_add_notifier(BCMPMU_CHRGR_EVENT_CHGR_DETECTION,
+							&di->chgr_detect);
+	if (ret) {
+		pr_chrgr(INIT, "%s, failed on chrgr det notifier, err=%d\n",
+				__func__, ret);
+		goto unregister_usb_supply;
+	}
+	di->chgr_curr_lmt.notifier_call = charger_event_handler;
+	ret = bcmpmu_add_notifier(BCMPMU_CHRGR_EVENT_CHRG_CURR_LMT,
+							&di->chgr_curr_lmt);
+	if (ret) {
+		pr_chrgr(INIT, "%s,failed on chrgr curr lmt notifier,err=%d\n",
+				__func__, ret);
+		goto unregister_usb_supply;
+	}
+
 	dev_dbg(di->dev, "Probe success\n");
 	return 0;
 
+unregister_usb_supply:
+	power_supply_unregister(&di->usb_psy);
 unregister_ac_supply:
 	power_supply_unregister(&di->ac_psy);
 free_dev_info:
