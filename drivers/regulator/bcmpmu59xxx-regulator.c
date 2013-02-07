@@ -306,6 +306,27 @@ static int __bcmpmureg_enable(struct bcmpmu59xxx *bcmpmu, int id)
 
 	BUG_ON(!rinfo || !param || !initdata);
 
+#if defined(CONFIG_MACH_HAWAII_SS_COMMON)
+	if (initdata->reg_value && initdata->reg_value2) {
+		ret = bcmpmu->write_dev(bcmpmu,
+				rinfo[id].reg_pmctrl1, initdata->reg_value);
+
+		if (ret != 0) {
+			pr_info(KERN_ERR "%s: error writing regulator addr index1 %d\n",
+				__func__, rinfo[id].reg_pmctrl1);
+			return ret;
+		}
+		ret = bcmpmu->write_dev(bcmpmu,
+				rinfo[id].reg_pmctrl1+1, initdata->reg_value2);
+		if (ret != 0) {
+			pr_info(KERN_ERR "%s: error writing regulator addr index2 %d\n",
+				__func__, rinfo[id].reg_pmctrl1+1);
+			return ret;
+		}
+		return 0;
+	}
+#endif
+
 	if (rinfo[id].flags & RGLR_3BIT_PMCTRL)
 		count = __3bit_pmmode_frm_map(initdata->pc_pins_map,
 				__dsm_mode_to_pmmode(initdata->dsm_mode),
@@ -361,16 +382,43 @@ static int bcmpmureg_enable(struct regulator_dev *rdev)
 static int __bcmpmureg_disable(struct bcmpmu59xxx *bcmpmu, int id)
 {
 	struct bcmpmu59xxx_regulator_info *rinfo;
+#if defined(CONFIG_MACH_HAWAII_SS_COMMON)
+	struct bcmpmu59xxx_regulator_init_data *initdata;
+	struct bcmpmu59xxx_rgltr_param *param;
+#endif
 	int reg_cnt, i;
 	int ret = 0;
 	u8 val;
 
 	rinfo = bcmpmu59xxx_get_rgltr_info(bcmpmu);
-
 	pr_rgltr(FLOW, "<%s> id =  %d\n",
 		__func__, id);
-
 	BUG_ON(rinfo == NULL);
+
+#if defined(CONFIG_MACH_HAWAII_SS_COMMON)
+	param = bcmpmu->rgltr_data;
+	initdata = param->pdata->bcmpmu_rgltr + id;
+	BUG_ON(!rinfo || !param || !initdata);
+
+	if (initdata->off_value && initdata->off_value2) {
+		ret = bcmpmu->write_dev(bcmpmu,
+				rinfo[id].reg_pmctrl1, initdata->off_value);
+
+		if (ret != 0) {
+			pr_info(KERN_ERR "%s: error writing regulator addr index1 %d\n",
+				__func__, rinfo[id].reg_pmctrl1);
+			return ret;
+		}
+		ret = bcmpmu->write_dev(bcmpmu,
+				rinfo[id].reg_pmctrl1+1, initdata->off_value2);
+		if (ret != 0) {
+			pr_info(KERN_ERR "%s: error writing regulator addr index2 %d\n",
+				__func__, rinfo[id].reg_pmctrl1+1);
+			return ret;
+		}
+		return 0;
+	}
+#endif
 
 	if (rinfo[id].flags & RGLR_3BIT_PMCTRL) {
 		val = PMMODE_OFF << PMMODE_3BIT_PM0_SHIFT |

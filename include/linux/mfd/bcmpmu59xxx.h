@@ -873,14 +873,22 @@ struct bcmpmu59xxx_regulator_init_data {
 
 	/*For always_on LDOs, dsm_mode is used to init
 	regulaor opmode in deep sleep state.
-
 	For LDOs managed by SW drivers, dsm_mode defines LDO
 	state in deep sleep when the LDO is left enabled by SW.
 	BCMPMU_REGL_OFF_IN_DSM is NOT allowed in this case*/
+
 	u32 dsm_mode;
 	u32 pc_pins_map;
 	char *name;
 	u32 req_volt; /*in uV*/
+
+#if defined(CONFIG_MACH_HAWAII_SS_COMMON)
+	u32 reg_value;
+	u32 reg_value2;
+	u32 off_value;
+	u32 off_value2;
+#endif
+
 };
 
 struct bcmpmu59xxx_regulator_pdata {
