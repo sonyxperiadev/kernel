@@ -16,6 +16,8 @@
  * V4L2 Driver for unicam/rhea camera host
  */
 
+#define pr_fmt(fmt) "unicam_camera: " fmt
+
 #include <linux/init.h>
 #include <linux/module.h>
 #include <linux/vmalloc.h>
@@ -30,7 +32,15 @@
 #include <linux/videodev2.h>
 #include <media/v4l2-common.h>
 #include <media/v4l2-dev.h>
+#if defined(CONFIG_VIDEOBUF2_DMA_RESERVED)
+#include <media/videobuf2-dma-reserved.h>
+#define vb2_plane_dma_addr vb2_dma_reserved_plane_dma_addr
+#elif defined(CONFIG_VIDEOBUF2_DMA_CONTIG)
 #include <media/videobuf2-dma-contig.h>
+#define vb2_plane_dma_addr vb2_dma_contig_plane_dma_addr
+#else
+#error "Unicam driver expect DMA_CONTIG or DMA_RESERVED
+#endif
 #include <media/soc_camera.h>
 #include <media/soc_mediabus.h>
 
@@ -51,7 +61,9 @@ extern reg_dump(void);
 struct unicam_camera_dev {
 	/* soc and vb3 rleated */
 	struct soc_camera_device *icd;
+#if defined(CONFIG_VIDEOBUF2_DMA_CONTIG)
 	struct vb2_alloc_ctx *alloc_ctx;
+#endif
 	struct soc_camera_host soc_host;
 	/* generic driver related */
 	unsigned int irq;
@@ -143,7 +155,9 @@ static int unicam_videobuf_setup(struct vb2_queue *vq, const struct v4l2_format 
 	unicam_dev->sequence = 0;
 
 	sizes[0] = bytes_per_line * icd->user_height;
+#if defined(CONFIG_VIDEOBUF2_DMA_CONTIG)
 	alloc_ctxs[0] = unicam_dev->alloc_ctx;
+#endif
 
 	if (!*count)
 		*count = 2;
@@ -166,10 +180,9 @@ static int unicam_videobuf_prepare(struct vb2_buffer *vb)
 	if (bytes_per_line < 0)
 		return bytes_per_line;
 
-	pr_debug("vb=0x%p vbuf=0x%p pbuf=0x%p, size=%lu", vb,
-		vb2_plane_vaddr(vb, 0), (void *)vb2_dma_contig_plane_dma_addr(vb,
-									   0),
-		vb2_get_plane_payload(vb, 0));
+	pr_debug("vb=0x%p buf=0x%p, size=%lu", vb,
+			(void *)vb2_plane_dma_addr(vb, 0),
+			vb2_get_plane_payload(vb, 0));
 
 	size = icd->user_height * bytes_per_line;
 
@@ -203,8 +216,13 @@ static int unicam_camera_update_buf(struct unicam_camera_dev *unicam_dev)
 		return -ENOMEM;
 	}
 
-	phys_addr = vb2_dma_contig_plane_dma_addr(unicam_dev->active, 0);
+	phys_addr = vb2_plane_dma_addr(unicam_dev->active, 0);
 	pr_debug("updating buffer phys=0x%p", (void *)phys_addr);
+	if (!phys_addr) {
+		unicam_dev->active = NULL;
+		pr_err("No valid address. skip capture\n");
+		return -ENOMEM;
+	}
 	/* For crop use-cases only linestride matters that too only for non-JPEG cases */
 
 	/* stride is in bytes */
@@ -315,11 +333,10 @@ static void unicam_videobuf_queue(struct vb2_buffer *vb)
 	struct int_desc idesc;
 
 	pr_debug("-enter");
-	pr_debug("vb=0x%p vbuf=0x%p pbuf=0x%p size=%lu", vb,
-		vb2_plane_vaddr(vb, 0), (void *)vb2_dma_contig_plane_dma_addr(vb,
-									   0),
-		vb2_get_plane_payload(vb, 0));
-	//printk("Q 0x%x\n",vb2_dma_contig_plane_paddr(vb,0));
+	pr_debug("vb=0x%p pbuf=0x%p size=%lu", vb,
+			(void *)vb2_plane_dma_addr(vb, 0),
+			vb2_get_plane_payload(vb, 0));
+	/* printk("Q 0x%x\n",vb2_plane_paddr(vb,0)); */
 	spin_lock_irqsave(&unicam_dev->lock, flags);
 	list_add_tail(&buf->queue, &unicam_dev->capture);
 	if(unicam_dev->cap_mode && unicam_dev->cap_done){
@@ -366,10 +383,9 @@ static void unicam_videobuf_release(struct vb2_buffer *vb)
 
 	pr_debug("-enter");
 
-	pr_debug("vb=0x%p vbuf=0x%p pbuf=0x%p size=%lu", vb,
-		vb2_plane_vaddr(vb, 0), (void *)vb2_dma_contig_plane_dma_addr(vb,
-									   0),
-		vb2_get_plane_payload(vb, 0));
+	pr_debug("vb=0x%p pbuf=0x%p size=%lu", vb,
+			(void *)vb2_plane_dma_addr(vb, 0),
+			vb2_get_plane_payload(vb, 0));
 	spin_lock_irqsave(&unicam_dev->lock, flags);
 
 	if (buf->magic == UNICAM_BUF_MAGIC)
@@ -707,7 +723,13 @@ static int unicam_camera_init_videobuf(struct vb2_queue *q,
 	q->io_modes = VB2_MMAP | VB2_USERPTR | VB2_READ;
 	q->drv_priv = icd;
 	q->ops = &unicam_videobuf_ops;
+#if defined(CONFIG_VIDEOBUF2_DMA_RESERVED)
+	pr_info("Unicam uses vb2-dma-reserved\n");
+	q->mem_ops = &vb2_dma_reserved_memops;
+#elif defined(CONFIG_VIDEOBUF2_DMA_CONTIG)
+	pr_info("Unicam uses vb2-dma-contig\n");
 	q->mem_ops = &vb2_dma_contig_memops;
+#endif
 	q->buf_struct_size = sizeof(struct unicam_camera_buffer);
 	pr_debug("-exit");
 	return vb2_queue_init(q);
@@ -1102,6 +1124,7 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 	struct rx_stat_list rx;
 	static unsigned int t1 = 0, t2 = 0, fps = 0;
 	struct buffer_desc im0;
+	dma_addr_t dma_addr;
 
 	/* has the interrupt occured for Channel 0? */
 	memset(&rx,0x00,sizeof(struct rx_stat_list));
@@ -1171,7 +1194,13 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 			} else {
 				unicam_dev->skip_frames--;
 			}
-			im0.start = vb2_dma_contig_plane_dma_addr(unicam_dev->active, 0);
+			dma_addr = vb2_plane_dma_addr(unicam_dev->active, 0);
+			if (!dma_addr) {
+				unicam_dev->active = NULL;
+				pr_err("ISR: No valid address. skip capture\n");
+				goto out;
+			}
+			im0.start = dma_addr;
 			im0.size = unicam_dev->icd->user_width *
 				unicam_dev->icd->user_height * 2;
 			im0.ls = unicam_dev->icd->user_width * 2;
@@ -1225,11 +1254,13 @@ static int __devinit unicam_camera_probe(struct platform_device *pdev)
 	soc_host->v4l2_dev.dev = &pdev->dev;
 	soc_host->nr = pdev->id;
 
+#if defined(CONFIG_VIDEOBUF2_DMA_CONTIG)
 	unicam_dev->alloc_ctx = vb2_dma_contig_init_ctx(&pdev->dev);
 	if (IS_ERR(unicam_dev->alloc_ctx)) {
 		err = PTR_ERR(unicam_dev->alloc_ctx);
 		goto eallocctx;
 	}
+#endif
 
 	err = soc_camera_host_register(soc_host);
 	if (err)
@@ -1238,7 +1269,9 @@ static int __devinit unicam_camera_probe(struct platform_device *pdev)
 	return 0;
 
 ecamhostreg:
+#if defined(CONFIG_VIDEOBUF2_DMA_CONTIG)
 	vb2_dma_contig_cleanup_ctx(unicam_dev->alloc_ctx);
+#endif
 eallocctx:
 	vfree(unicam_dev);
 ealloc:
