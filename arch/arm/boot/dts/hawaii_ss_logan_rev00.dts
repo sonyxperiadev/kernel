@@ -110,30 +110,6 @@
 		aux1-gpio = <0xFFFFFFFF>; /* UARTB_SEL,probably not required */
 	};
 
-	ion-carveout {
-		compatible = "bcm,ion";
-		id = <3>;
-		type = <2>;
-		base  = <0x90000000>;
-		limit = <0xa0000000>;
-		size  = <0x04000000>;
-		lmk_enable = <0>;
-		lmk_min_score_adj = <411>;
-		lmk_min_free = <32>;
-	};
-
-	ion-cma {
-		compatible = "bcm,ion";
-		id = <2>;
-		type = <4>;
-		base  = <0x90000000>;
-		limit = <0xa0000000>;
-		size  = <0x0c000000>;
-		lmk_enable = <1>;
-		lmk_min_score_adj = <411>;
-		lmk_min_free = <32>;
-	};
-
 	kona-fb {
 		compatible = "bcm,kona-fb";
 		reg = <0x3c200000 0x1000>;
