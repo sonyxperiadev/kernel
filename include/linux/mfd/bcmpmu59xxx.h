@@ -688,6 +688,7 @@ struct bcmpmu_accy {
 	wait_queue_head_t wait;
 	struct work_struct adp_work;
 	struct delayed_work det_work;
+	struct delayed_work init_work;
 	spinlock_t accy_lock;
 #ifdef CONFIG_DEBUG_FS
 	struct dentry *dent_accy;

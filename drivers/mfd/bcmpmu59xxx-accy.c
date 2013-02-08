@@ -55,6 +55,8 @@ static int prev_chrgr_type;
 		} \
 	} while (0)
 
+
+
 /* TPROBE_MAX definition */
 #define TPROBE_MAX_USEC			16000
 #define TPROBE_MAX_MSB_MASK		0xC0
@@ -93,8 +95,8 @@ static int chrgr_curr_lmt[PMU_CHRGR_TYPE_MAX] = {
 	[PMU_CHRGR_TYPE_SDP] = 500,
 	[PMU_CHRGR_TYPE_CDP] = 1500,
 	[PMU_CHRGR_TYPE_DCP] = 1500,
-	[PMU_CHRGR_TYPE_TYPE1] = 1000,
-	[PMU_CHRGR_TYPE_TYPE2] = 1000,
+	[PMU_CHRGR_TYPE_TYPE1] = 500,
+	[PMU_CHRGR_TYPE_TYPE2] = 500,
 	[PMU_CHRGR_TYPE_PS2] = 0,
 	[PMU_CHRGR_TYPE_ACA] = 1000,
 };
@@ -360,7 +362,6 @@ static void usb_handle_state(struct bcmpmu_accy *paccy)
 		pr_accy(FLOW, "%s,  retry =%d\n",
 					__func__, paccy->retry_cnt);
 		if (paccy->retry_cnt < BC_MAX_RETRIES) {
-			reset_bc(paccy);
 			bcdldo_cycle_power(paccy);
 			schedule_delayed_work(&paccy->det_work,
 						ACCY_RETRY_DELAY);
@@ -752,6 +753,14 @@ static void usb_adp_work(struct work_struct *work)
 		bcmpmu_call_notifier(data->bcmpmu,
 				BCMPMU_USB_EVENT_ADP_CALIBRATION_DONE, NULL);
 	}
+}
+
+static void usb_delayed_init_work(struct work_struct *work)
+{
+	struct bcmpmu_accy *paccy =
+	       container_of(work, struct bcmpmu_accy, init_work.work);
+
+	usb_handle_state(paccy);
 }
 
 int bcmpmu_usb_otg_bost_en(struct bcmpmu59xxx *bcmpmu, bool en)
@@ -1248,6 +1257,7 @@ static int __devinit bcmpmu_accy_probe(struct platform_device *pdev)
 
 	INIT_WORK(&paccy->adp_work, usb_adp_work);
 	INIT_DELAYED_WORK(&paccy->det_work, usb_deferred_work);
+	INIT_DELAYED_WORK(&paccy->init_work, usb_delayed_init_work);
 
 	ret = bcmpmu_accy_eventq_init(paccy);
 	if (ret)
@@ -1300,7 +1310,8 @@ static int __devinit bcmpmu_accy_probe(struct platform_device *pdev)
 	bcmpmu_accy_debug_init(paccy);
 #endif
 	paccy->det_state = USB_DETECT;
-	usb_handle_state(paccy);
+	schedule_delayed_work(&paccy->init_work, ACCY_RETRY_DELAY);
+
 	return 0;
 
 err:
