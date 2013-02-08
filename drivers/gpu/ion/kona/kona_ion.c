@@ -299,10 +299,10 @@ static long kona_ion_custom_ioctl(struct ion_client *client,
 
 static u64 ion_dmamask = DMA_BIT_MASK(32);
 
-struct ion_platform_heap *kona_ion_parse_dt(struct device *dev)
+static struct ion_platform_heap *kona_ion_parse_dt(struct device *dev)
 {
 	struct device_node *node = dev->of_node;
-	struct kona_ion_dt_heap_data *heap_init_data;
+	struct kona_ion_heap_reserve_data *heap_init_data;
 	struct ion_platform_heap *heap_data = NULL;
 	const char *name;
 	u32 val;
@@ -330,7 +330,7 @@ struct ion_platform_heap *kona_ion_parse_dt(struct device *dev)
 	ION_OF_READ(id);
 	if ((heap_data->type == ION_HEAP_TYPE_CARVEOUT) ||
 			(heap_data->type == ION_HEAP_TYPE_DMA)) {
-		if (kona_ion_get_dt_heap_data(&heap_init_data,
+		if (kona_ion_get_heap_reserve_data(&heap_init_data,
 					heap_data->name)) {
 			pr_err("%16s: Memory was not reserved\n",
 					heap_data->name);
@@ -359,6 +359,37 @@ err:
 }
 #endif /* CONFIG_OF */
 
+static struct ion_platform_heap *kona_ion_parse_pdata(struct device *dev)
+{
+	struct kona_ion_heap_reserve_data *heap_init_data;
+	struct ion_platform_data *pdata = dev->platform_data;
+	struct ion_platform_heap *heap_data;
+	int i;
+
+	for (i = 0; i < pdata->nr; i++) {
+		heap_data = &pdata->heaps[i];
+
+		if ((heap_data->type == ION_HEAP_TYPE_CARVEOUT) ||
+				(heap_data->type == ION_HEAP_TYPE_DMA)) {
+			if (kona_ion_get_heap_reserve_data(&heap_init_data,
+						heap_data->name)) {
+				pr_err("%16s: Memory was not reserved\n",
+						heap_data->name);
+				heap_data->id = ION_INVALID_HEAP_ID;
+			}
+			if (heap_data->type == ION_HEAP_TYPE_DMA) {
+				struct cma *cma;
+				cma = dev_get_cma_area(
+						&heap_init_data->cma_dev);
+				dev_set_cma_area(dev, cma);
+			}
+			heap_data->base = heap_init_data->base;
+			heap_data->size = heap_init_data->size;
+		}
+	}
+	return pdata->heaps;
+}
+
 static int kona_ion_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -375,7 +406,11 @@ static int kona_ion_probe(struct platform_device *pdev)
 		struct ion_platform_data *pdata = dev->platform_data;
 		pr_info("Probe: Add (%d)heaps via platform_data\n", pdata->nr);
 		new_num_heaps = pdata->nr;
-		heap_datas = pdata->heaps;
+		heap_datas = kona_ion_parse_pdata(dev);
+		if (IS_ERR_OR_NULL(heap_datas)) {
+			pr_err("Probe Fail: pdata parsing failed\n");
+			return PTR_ERR(heap_datas);
+		}
 #ifdef CONFIG_OF
 	} else if (dev->of_node) {
 		pr_info("Probe: via DT framework\n");

@@ -98,7 +98,7 @@ struct ion_platform_heap {
 	unsigned int id;
 	const char *name;
 	ion_phys_addr_t base;
-#ifndef CONFIG_OF
+#ifdef CONFIG_ION_KONA_NO_DT
 	ion_phys_addr_t limit;
 #endif
 	size_t size;

@@ -37,13 +37,12 @@ extern struct ion_device *idev;
 extern unsigned int kona_ion_map_dma(struct ion_client *client,
 		struct ion_handle *handle);
 
-#ifdef CONFIG_OF
 /**
- * struct kona_ion_dt_heap_data - defines the set of parameters used by
+ * struct kona_ion_heap_reserve_data - defines the set of parameters used by
  * platform file to search for carveout or cma nodes in DT file.
  * This is populated by the platform file. ION platform driver reads this
  * structure to get the reserved base, size, status and dummy device to which
- * CMA was attached.
+ * CMA was attached if pdata is not provided and DT file is used.
  * @type:	type of the heap from ion_heap_type enum
  *		- to identify carveout or CMA reserve to be done.
  * @name:	tries to match with DT node-name.
@@ -54,7 +53,7 @@ extern unsigned int kona_ion_map_dma(struct ion_client *client,
  * @cma_dev:	dummy device used to attach cma.
  *
  */
-struct kona_ion_dt_heap_data {
+struct kona_ion_heap_reserve_data {
 	enum ion_heap_type type;
 	const char *name;
 	ion_phys_addr_t base;
@@ -65,15 +64,15 @@ struct kona_ion_dt_heap_data {
 };
 
 /**
- * kona_ion_get_dt_heap_data() - Get the info about carveout/cma during bootup
+ * kona_ion_get_heap_reserve_data() - Get the info about carveout/cma during
+ * bootup.
  * @data:	platform data specifying carveout/cma info
  * @name:	Name of the heap/DT node of which info is required.
  *
  * To be implemented by platform file
  */
-int kona_ion_get_dt_heap_data(struct kona_ion_dt_heap_data **data,
+int kona_ion_get_heap_reserve_data(struct kona_ion_heap_reserve_data **data,
 		const char *name);
-#endif /* CONFIG_OF */
 
 #endif
 

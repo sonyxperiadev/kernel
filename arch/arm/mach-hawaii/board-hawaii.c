@@ -40,12 +40,10 @@
 #ifdef CONFIG_ANDROID_PMEM
 #include <linux/android_pmem.h>
 #endif
-#ifdef CONFIG_ION
-#ifndef CONFIG_OF
+#ifdef CONFIG_ION_KONA_NO_DT
 #include <linux/ion.h>
 #include <linux/broadcom/kona_ion.h>
-#endif /* CONFIG_OF */
-#endif /* CONFIG_ION */
+#endif
 #include <linux/serial_8250.h>
 #include <linux/i2c.h>
 #include <linux/i2c-kona.h>
@@ -204,8 +202,7 @@ struct android_pmem_platform_data android_pmem_data = {
 };
 #endif
 
-#ifdef CONFIG_ION
-#ifndef CONFIG_OF
+#ifdef CONFIG_ION_KONA_NO_DT
 struct ion_platform_data ion_system_data = {
 	.nr = 1,
 	.heaps = {
@@ -229,7 +226,7 @@ struct ion_platform_data ion_carveout_data = {
 			.name  = "ion-carveout",
 			.base  = 0xa0000000,
 			.limit = 0xb0000000,
-			.size  = (8 * SZ_1M),
+			.size  = (64 * SZ_1M),
 #ifdef CONFIG_ION_OOM_KILLER
 			.lmk_enable = 0,
 			.lmk_min_score_adj = 411,
@@ -262,7 +259,7 @@ struct ion_platform_data ion_cma_data = {
 			.name  = "ion-cma",
 			.base  = 0xa0000000,
 			.limit = 0xb0000000,
-			.size  = (0 * SZ_1M),
+			.size  = (192 * SZ_1M),
 #ifdef CONFIG_ION_OOM_KILLER
 			.lmk_enable = 1,
 			.lmk_min_score_adj = 411,
@@ -285,8 +282,7 @@ struct ion_platform_data ion_cma_data = {
 	},
 };
 #endif /* CONFIG_CMA */
-#endif /* CONFIG_OF */
-#endif /* CONFIG_ION */
+#endif /* CONFIG_ION_KONA_NO_DT */
 
 #ifdef CONFIG_VIDEO_ADP1653
 #define ADP1653_I2C_ADDR 0x60
@@ -1326,14 +1322,12 @@ static void __init hawaii_add_devices(void)
 
 	hawaii_add_pdata();
 
-#ifdef CONFIG_ION
-#ifndef CONFIG_OF
+#ifdef CONFIG_ION_KONA_NO_DT
 	platform_device_register(&ion_carveout_device);
 #ifdef CONFIG_CMA
 	platform_device_register(&ion_cma_device);
-#endif /* CONFIG_CMA */
-#endif /* CONFIG_OF */
-#endif /* CONFIG_ION */
+#endif
+#endif
 
 	platform_add_devices(hawaii_devices, ARRAY_SIZE(hawaii_devices));
 
