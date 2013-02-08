@@ -658,6 +658,15 @@ config USB_SWITCH_FSA9480
 	  stereo and mono audio, video, microphone and UART data to use
 	  a common connector port.
 
+config USB_SWITCH_TSU6111
+	tristate "TSU6111 USB Switch"
+	depends on I2C
+	help
+	  The TSU6111 is a USB port accessory detector and switch.
+	  The TSU6111 is fully controlled using I2C and enables USB data,
+	  stereo and mono audio, video, microphone and UART data to use
+	  a common connector port.
+
 config MAX8997_MUIC
 	tristate "MAX8997 MUIC Support"
 	depends on MFD_MAX8997

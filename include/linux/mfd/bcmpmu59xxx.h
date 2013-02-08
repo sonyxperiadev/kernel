@@ -67,6 +67,7 @@
 #define PMU_CHP_TYPE_MASK	0x3
 
 #define CURR_LMT_MAX	0xFFFF
+
 /*helper macros to manage regulator PC pin map*/
 /*
 SET0 holds ORed list of PC pin - regualtor will be enabled if
@@ -84,7 +85,7 @@ the PC pins in SET1 are HIGH
 #define PCPIN_MAP_GET_SET(map, n) \
 		(((map) >> PCPIN_MAP_SET##n##_OFFSET) &  PCPIN_MAP_SET_MASK)
 
-#define PCPIN_MAP_IS_SET0_MATCH(set, val) !(!((set) & (val)))
+#define PCPIN_MAP_IS_SET0_MATCH(set, val) (!(!((set) & (val))))
 #define PCPIN_MAP_IS_SET1_MATCH(set, val) ((set) && ((set) & (val)) == (set))
 
 struct bcmpmu_rw_data_ltp {

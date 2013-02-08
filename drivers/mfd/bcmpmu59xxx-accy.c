@@ -55,8 +55,6 @@ static int prev_chrgr_type;
 		} \
 	} while (0)
 
-
-
 /* TPROBE_MAX definition */
 #define TPROBE_MAX_USEC			16000
 #define TPROBE_MAX_MSB_MASK		0xC0
