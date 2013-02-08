@@ -183,6 +183,8 @@ void w_shutdown_core(void *p)
 				usb_phy_shutdown(core_if->xceiver);
 #endif
 			}
+
+			core_if->xceiver->state = OTG_STATE_UNDEFINED;
 		}
 	}
 }
