@@ -59,5 +59,6 @@
 	.gpio_drdy = AMI_GPIO_DRDY, \
 	.dir = AMI_DIR, \
 	.polarity = AMI_POLARITY, \
+	.supply_name = "cam2", \
 }
 #endif
