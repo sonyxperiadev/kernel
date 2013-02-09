@@ -36,6 +36,8 @@
 #include "output.h"
 #include "config.h"
 
+#define BCMLOG_LATEST_LOGS
+
 #ifdef CONFIG_BRCM_NETCONSOLE
 
 /*
@@ -120,7 +122,6 @@ struct acm_logging_callbacks *get_acm_callback_func(void)
 {
 	return &_acm_cb;
 }
-
 EXPORT_SYMBOL(get_acm_callback_func);
 
 struct WriteToLogDevParms_t {
@@ -632,8 +633,19 @@ void BCMLOG_Output(unsigned char *pBytes, unsigned long nBytes,
 		   unsigned int might_has_mtthead)
 {
 	unsigned int i = 0;
-
 	unsigned int wrotebyte;
+
+#if defined(BCMLOG_LATEST_LOGS)
+	/*
+	Before adding to FIFO , check if FIFO is full,
+	remove logs from fifo ( early logs) and make space
+	for latest logs in fifo so we can keep latest logs.
+	When this option enabled, we would loose early logs
+	and would get latest logs as much as possible
+	*/
+	if (BCMLOG_FifoGetFreeSize(&g_fifo) < nBytes && (nBytes > 0))
+		BCMLOG_FifoRemove(&g_fifo, nBytes);
+#endif
 
 	if (nBytes <= BCMLOG_FifoGetFreeSize(&g_fifo) && (nBytes > 0)) {
 		if (might_has_mtthead) {
