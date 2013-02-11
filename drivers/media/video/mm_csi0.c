@@ -95,7 +95,6 @@ void reg_dump()
 	printk("MM_CLK_MGR_REG_CSI0_AXI_CLKGATE  0x%x\n",BRCM_READ_REG(base, MM_CLK_MGR_REG_CSI0_AXI_CLKGATE));
 	printk("MM_CLK_MGR_REG_DIV_TRIG  0x%x\n",BRCM_READ_REG(base, MM_CLK_MGR_REG_DIV_TRIG));
 
-
 }
 
 void * get_mm_csi0_handle (enum host_mode mode, enum afe_num afe, enum csi2_lanes lanes)
@@ -239,9 +238,6 @@ int mm_csi0_set_afe ()
 	BRCM_WRITE_REG(base, CAM_CMP0, 0x00);
 	BRCM_WRITE_REG(base, CAM_CMP1, 0x00);
 
-	BRCM_WRITE_REG_FIELD(base, CAM_CTL, CPR, 1);
-	BRCM_WRITE_REG_FIELD(base, CAM_CTL, CPR, 0);
-	
 	BRCM_WRITE_REG_FIELD(base, CAM_CLK, CLPD, 0x0);
 	BRCM_WRITE_REG_FIELD(base, CAM_DAT0, DLPDN, 0x0);
 	if(cam_state.lanes == CSI2_DUAL_LANE){
@@ -295,16 +291,19 @@ int mm_csi0_set_dig_phy (struct lane_timing *timing)
 		BRCM_WRITE_REG_FIELD(base, CAM_DLT, DLT3, 0x0);	
 
 	} else {
-		BRCM_WRITE_REG_FIELD(base, CAM_CLT, CLT1, timing->hs_term_time);		
-		BRCM_WRITE_REG_FIELD(base, CAM_CLT, CLT2,  timing->hs_settle_time);		
+		BRCM_WRITE_REG_FIELD(base, CAM_CLT, CLT1, 0xA);
+		BRCM_WRITE_REG_FIELD(base, CAM_CLT, CLT2,  0x3C);
 
-		BRCM_WRITE_REG_FIELD(base, CAM_DLT, DLT1, timing->hs_term_time);		
-		BRCM_WRITE_REG_FIELD(base, CAM_DLT, DLT2, timing->hs_settle_time);
+		BRCM_WRITE_REG_FIELD(base, CAM_DLT, DLT1, 0x8);
+		BRCM_WRITE_REG_FIELD(base, CAM_DLT, DLT2, 0x0);
 		/* DLT3 has always been zero */
-		BRCM_WRITE_REG_FIELD(base, CAM_DLT, DLT3, 0x0);		
+		BRCM_WRITE_REG_FIELD(base, CAM_DLT, DLT3, 0x0);
+		/* New value from Venky */
+		/* CLT1 0xA CLT2 0x3C*/
+		/* DLT1 0x8 DLT2 and DLT3 = 0 */
 	}
+	/* The OV5640 driver to send the correct timings */
 	BRCM_WRITE_REG_FIELD(base, CAM_CLK, CLTRE, term);
-	BRCM_WRITE_REG_FIELD(base, CAM_CLK, CLTRE, 1);
 	BRCM_WRITE_REG_FIELD(base, CAM_DAT0, DLTREN, term);
 	if(cam_state.lanes == CSI2_DUAL_LANE){
 		BRCM_WRITE_REG_FIELD(base, CAM_DAT1, DLTREN, term);
@@ -736,12 +735,20 @@ int mm_csi0_trigger_cap(void)
 
 int mm_csi0_rx_burst()
 {
-	u32 base = V_BASE;
-	BRCM_WRITE_REG_FIELD (base, CAM_PRI, BL, 0);
-	BRCM_WRITE_REG_FIELD (base, CAM_PRI, BS, 0);
-	BRCM_WRITE_REG_FIELD (base, CAM_PRI, PT, 1);
-	BRCM_WRITE_REG_FIELD (base, CAM_PRI, PP, 0xf);
-	BRCM_WRITE_REG_FIELD (base, CAM_PRI, NP, 10);
+	u32 base = MM_CFG_BASE;
+	u32 val_sw;
+	val_sw = readl((base + 0x444));
+	val_sw = val_sw | 1;
+	writel(val_sw, (base + 0x444));
+	/* For QoS enable */
+	base = V_BASE;
+	BRCM_WRITE_REG_FIELD(base, CAM_PRI, BL, 0);
+	BRCM_WRITE_REG_FIELD(base, CAM_PRI, BS, 0);
+	BRCM_WRITE_REG_FIELD(base, CAM_PRI, PT, 2);
+	BRCM_WRITE_REG_FIELD(base, CAM_PRI, PP, 0xf);
+	BRCM_WRITE_REG_FIELD(base, CAM_PRI, NP, 0);
+	/* Enabling panic enable */
+	BRCM_WRITE_REG_FIELD(base, CAM_PRI, PE, 1);
 	return 0;
 }
 
@@ -927,21 +934,4 @@ bool mm_csi0_get_panic_state()
 	} 
 	return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

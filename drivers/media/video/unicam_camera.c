@@ -645,7 +645,7 @@ int unicam_videobuf_start_streaming(struct vb2_queue *q)
 			lane_err = mm_csi0_get_trans();
 			if(lane_err){
 				printk("Lane errors seen 0x%x\n",lane_err);
-				return -EFAULT;
+				/* return -EFAULT;*/
 			}
 		}
 	}
@@ -1129,22 +1129,19 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 	/* has the interrupt occured for Channel 0? */
 	memset(&rx,0x00,sizeof(struct rx_stat_list));
 	mm_csi0_get_rx_stat(&rx,1);
-	if(mm_csi0_get_panic_state()){
-		unicam_dev->panic_count++;
-		printk("PANIC asserted**\n");
-	}
 	if (rx.is) {
 		memset(&idesc, 0x00, sizeof(struct int_desc));
 		mm_csi0_get_int_stat(&idesc, 1);
 
+		if (idesc.fsi) {
+			if (rx.ps)
+				printk(KERN_INFO "Panic at frame start\n");
+		}
+
 		if (idesc.fei || idesc.lci){
 			/* FS and FE handling */
-			if((idesc.fei) && (idesc.fsi)){
-				printk("FS and FE ** pairing observed\n");
-				printk("Just trigger once again\n");
-				unicam_camera_capture(unicam_dev);
-				return IRQ_HANDLED;
-			}
+			if (rx.ps)
+				printk(KERN_INFO "Panic at frame or lineend\n");
 			struct vb2_buffer *vb = unicam_dev->active;;
 			fps++;
 			if (t1 == 0 && t2 == 0)
