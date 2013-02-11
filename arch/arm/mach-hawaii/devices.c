@@ -99,7 +99,7 @@
 #endif
 
 #ifdef CONFIG_KONA_TMON
-#include <mach/kona_tmon.h>
+#include <linux/broadcom/kona_tmon.h>
 #endif
 
 #include "devices.h"
@@ -526,26 +526,6 @@ static struct therm_data thermal_pdata = {
 	.sensors = sensor_data,
 };
 
-static struct resource hawaii_tmon_resource[] = {
-	{
-		.start = TMON_BASE_ADDR,
-		.end = TMON_BASE_ADDR + SZ_4K - 1,
-		.flags = IORESOURCE_MEM,
-	},
-	{
-		.start = BCM_INT_ID_TEMP_MON,
-		.end = BCM_INT_ID_TEMP_MON,
-		.flags = IORESOURCE_IRQ,
-	},
-};
-
-struct platform_device hawaii_tmon_device = {
-	.name = "kona-tmon",
-	.id = -1,
-	.resource = hawaii_tmon_resource,
-	.num_resources = ARRAY_SIZE(hawaii_tmon_resource),
-};
-
 static struct resource hawaii_thermal_resource[] = {
 	{
 		.start = TMON_BASE_ADDR,
@@ -865,7 +845,7 @@ struct kona_tmon_pdata tmon_plat_data = {
 	.thold_size = ARRAY_SIZE(threshold_val),
 	.poll_rate_ms = 30000,
 	.hysteresis = 0,
-	.flags = ENBALE_VTMON,
+	.flags = VTMON,
 	.chipreg_addr = KONA_CHIPREG_VA,
 	.interval_ms = 5,
 	.tmon_apb_clk = "tmon_apb",

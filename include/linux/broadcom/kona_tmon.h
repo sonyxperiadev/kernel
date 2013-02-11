@@ -48,9 +48,14 @@ enum {
 };
 
 enum {
-	ENBALE_VTMON = 1,
+	PVTMON,
+	VTMON,
 };
 
+enum {
+	RAW_VAL,
+	CELCIUS,
+};
 struct tmon_state {
 	int rising;
 	int falling;
@@ -73,6 +78,6 @@ struct kona_tmon_pdata {
 
 int tmon_register_notifier(struct notifier_block *notifier);
 int tmon_unregister_notifier(struct notifier_block *notifier);
-long tmon_get_current_temp(void);
+long tmon_get_current_temp(bool celcius);
 
 #endif /*__KONA_TMON_H__*/

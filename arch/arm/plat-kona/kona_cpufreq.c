@@ -47,7 +47,7 @@
 #define PLL_VAL_FOR_TURBO_1G	999999
 
 #ifdef CONFIG_KONA_TMON
-#include <mach/kona_tmon.h>
+#include <linux/broadcom/kona_tmon.h>
 #define INVALID_INX 0xFFFFFFFF
 #endif
 
@@ -793,7 +793,7 @@ static int cpufreq_drv_probe(struct platform_device *pdev)
 	if (pdata->flags & KONA_CPUFREQ_TMON) {
 		kona_cpufreq->tmon_nb.notifier_call =
 			cpufreq_tmon_notify_handler;
-		curr_temp = tmon_get_current_temp();
+		curr_temp = tmon_get_current_temp(CELCIUS);
 		kona_cpufreq->r_inx = pdata->num_freqs - 1;
 		kona_cpufreq->f_inx = INVALID_INX;
 		if (cpufreq_add_lmt_req(&kona_cpufreq->tmon_node,
