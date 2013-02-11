@@ -248,12 +248,6 @@ static inline void lru_cache_add_file(struct page *page)
 	__lru_cache_add(page, LRU_INACTIVE_FILE);
 }
 
-#ifdef CONFIG_CMA
-#define ISOLATE_CMA 4		/* Isolate CMA pages */
-#else
-#define ISOLATE_CMA 0
-#endif
-
 /* linux/mm/vmscan.c */
 extern unsigned long try_to_free_pages(struct zonelist *zonelist, int order,
 					gfp_t gfp_mask, nodemask_t *mask);
