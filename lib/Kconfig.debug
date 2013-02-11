@@ -1312,6 +1312,18 @@ config SDHCI_THROUGHPUT
 		The speed dumped in bytes/sec need not be always accurate because of
 		the mismatch in resolution of timestamping and the speed of DMA access.
 
+config BRCM_DEBUG_RWSEM
+	bool "Debug RW Semaphore"
+	default n
+	help
+	  This option is added by BRCM to debug issues where the mm->mmap_sem
+	  is taken by a writer and its not released forever. This leads to
+	  deadlock in the system and we are unable to figure out who took this
+	  semaphore. This option adds a wr_owner field to the rw_semaphore
+	  structure. In all the path where write semaphore is acquired the
+	  owner is updated accordingly and on the path its release, its made
+	  NULL.
+
 source "samples/Kconfig"
 
 source "lib/Kconfig.kgdb"

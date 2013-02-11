@@ -44,6 +44,9 @@ void __init_rwsem(struct rw_semaphore *sem, const char *name,
 	lockdep_init_map(&sem->dep_map, name, key, 0);
 #endif
 	sem->activity = 0;
+#ifdef CONFIG_BRCM_DEBUG_RWSEM
+	sem->wr_owner = NULL;
+#endif
 	raw_spin_lock_init(&sem->wait_lock);
 	INIT_LIST_HEAD(&sem->wait_list);
 }
@@ -85,6 +88,9 @@ __rwsem_do_wake(struct rw_semaphore *sem, int wakewrite)
 		/* Don't touch waiter after ->task has been NULLed */
 		smp_mb();
 		waiter->task = NULL;
+#ifdef CONFIG_BRCM_DEBUG_RWSEM
+		sem->wr_owner = tsk;
+#endif
 		wake_up_process(tsk);
 		put_task_struct(tsk);
 		goto out;
@@ -131,6 +137,9 @@ __rwsem_wake_one_writer(struct rw_semaphore *sem)
 	tsk = waiter->task;
 	smp_mb();
 	waiter->task = NULL;
+#ifdef CONFIG_BRCM_DEBUG_RWSEM
+	sem->wr_owner = tsk;
+#endif
 	wake_up_process(tsk);
 	put_task_struct(tsk);
 	return sem;
@@ -217,6 +226,9 @@ void __sched __down_write_nested(struct rw_semaphore *sem, int subclass)
 	if (sem->activity == 0 && list_empty(&sem->wait_list)) {
 		/* granted */
 		sem->activity = -1;
+#ifdef CONFIG_BRCM_DEBUG_RWSEM
+		sem->wr_owner = current;
+#endif
 		raw_spin_unlock_irqrestore(&sem->wait_lock, flags);
 		goto out;
 	}
@@ -265,6 +277,9 @@ int __down_write_trylock(struct rw_semaphore *sem)
 	if (sem->activity == 0 && list_empty(&sem->wait_list)) {
 		/* granted */
 		sem->activity = -1;
+#ifdef CONFIG_BRCM_DEBUG_RWSEM
+		sem->wr_owner = current;
+#endif
 		ret = 1;
 	}
 
@@ -298,6 +313,9 @@ void __up_write(struct rw_semaphore *sem)
 	raw_spin_lock_irqsave(&sem->wait_lock, flags);
 
 	sem->activity = 0;
+#ifdef CONFIG_BRCM_DEBUG_RWSEM
+	sem->wr_owner = NULL;
+#endif
 	if (!list_empty(&sem->wait_list))
 		sem = __rwsem_do_wake(sem, 1);
 
