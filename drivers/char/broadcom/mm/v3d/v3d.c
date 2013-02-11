@@ -106,7 +106,7 @@ void __exit mm_v3d_exit(void)
 	kfree(v3d_device);
 }
 
-module_init(mm_v3d_init);
+late_initcall(mm_v3d_init);
 module_exit(mm_v3d_exit);
 
 MODULE_AUTHOR("Broadcom Corporation");

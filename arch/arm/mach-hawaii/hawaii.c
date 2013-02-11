@@ -132,11 +132,20 @@ static void __init hawaii_l2x0_init(void)
 }
 #endif
 
-static int __init hawaii_arch_init(void)
+static int __init hawaii_postcore_init(void)
 {
 	int ret = 0;
 
+	pr_info("Secure service initialized\n");
 	secure_api_call_init();
+
+	return ret;
+}
+postcore_initcall(hawaii_postcore_init);
+
+static int __init hawaii_arch_init(void)
+{
+	int ret = 0;
 
 #ifdef CONFIG_CACHE_L2X0
 	hawaii_l2x0_init();
@@ -144,7 +153,6 @@ static int __init hawaii_arch_init(void)
 
 	return ret;
 }
-
 arch_initcall(hawaii_arch_init);
 
 void __init hawaii_timer_init(void)

@@ -582,6 +582,6 @@ static void __exit ion_exit(void)
 	platform_driver_unregister(&ion_driver);
 }
 
-subsys_initcall(ion_init);
+module_init(ion_init);
 module_exit(ion_exit);
 
