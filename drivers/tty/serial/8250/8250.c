@@ -3443,7 +3443,7 @@ int serial8250_register_port(struct uart_port *port)
 		uart_remove_one_port(&serial8250_reg, &uart->port);
 #ifdef CONFIG_BRCM_UART_CHANGES
 #if defined(CONFIG_HAS_WAKELOCK)
-		wake_lock_init(&uart->uart_lock, WAKE_LOCK_IDLE, "UARTWAKE");
+		wake_lock_init(&uart->uart_lock, WAKE_LOCK_SUSPEND, "UARTWAKE");
 #endif /* CONFIG_HAS_WAKELOCK */
 		if (!port->dev) {
 			printk(KERN_ERR "port->dev is NULL\n");
