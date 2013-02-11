@@ -1052,6 +1052,7 @@ static int kona_fb_probe(struct platform_device *pdev)
 	int ret_val = -1;
 	struct kona_fb_platform_data *fb_data;
 	dma_addr_t phys_fbbase;
+	uint64_t pixclock_64;
 
 	konafb_info("start\n");
 	if (g_kona_fb && (g_kona_fb->is_display_found == 1)) {
@@ -1161,8 +1162,9 @@ static int kona_fb_probe(struct platform_device *pdev)
 	fb->fb.var.activate = FB_ACTIVATE_NOW;
 	fb->fb.var.height = fb->display_info->phys_height;
 	fb->fb.var.width = fb->display_info->phys_width;
-	fb->fb.var.pixclock = ((long long)10000000000000) /
-				 (width * height * fb->display_info->fps);
+	pixclock_64 = div_u64(1000000000000LLU,
+				width * height * fb->display_info->fps);
+	fb->fb.var.pixclock = pixclock_64;
 
 	switch (fb->display_info->in_fmt) {
 	case DISPDRV_FB_FORMAT_RGB565:
