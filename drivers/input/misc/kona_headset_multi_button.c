@@ -114,8 +114,13 @@
 /*
  * Button/Hook Filter configuration
  */
+#ifdef CONFIG_MACH_HAWAII_SS_LOGAN
 /* = 2048 / (Filter block frequency) = 2048 / 32768 => 62ms */
 #define ACC_HW_COMP1_FILTER_WIDTH   2048
+#else		/* CONFIG_MACH_HAWAII_SS_LOGAN */
+/* = 1024 / (Filter block frequencey) = 1024 / 32768 => 31ms */
+#define ACC_HW_COMP1_FILTER_WIDTH   1024
+#endif	/* CONFIG_MACH_HAWAII_SS_LOGAN */
 
 /*
  * Accessory Detecting voltage
@@ -125,7 +130,12 @@
 #define HEADPHONE_DETECT_LEVEL_MIN      0
 #define HEADPHONE_DETECT_LEVEL_MAX      40
 #define HEADPHONE_DETECT_LEVEL2_MIN     91
+
+#ifdef CONFIG_MACH_HAWAII_SS_LOGAN
 #define HEADPHONE_DETECT_LEVEL2_MAX     899
+#else		/* CONFIG_MACH_HAWAII_SS_LOGAN */
+#define HEADPHONE_DETECT_LEVEL2_MAX     599
+#endif	/* CONFIG_MACH_HAWAII_SS_LOGAN */
 
 #define OPENCABLE_DETECT_LEVEL_MIN      1900
 #define OPENCABLE_DETECT_LEVEL_MAX      5000
@@ -214,12 +224,20 @@ enum button_state {
  * Default table used if the platform does not pass one
  */
 static unsigned int button_adc_values_no_resistor[3][2] = {
+#ifdef CONFIG_MACH_HAWAII_SS_LOGAN
 	/* SEND/END Min, Max */
 	{0, 110},
 	/* Volume Up  Min, Max */
 	{111, 250},
 	/* Volue Down Min, Max */
 	{251, 500},
+#else		/* CONFIG_MACH_HAWAII_SS_LOGAN */
+	{0, 104},
+	/* Volume Up  Min, Max */
+	{139, 270},
+	/* Volue Down Min, Max */
+	{330, 680},
+#endif	/* CONFIG_MACH_HAWAII_SS_LOGAN */
 };
 static unsigned int (*button_adc_values)[2];
 
@@ -232,7 +250,11 @@ static const CHAL_ACI_filter_config_comp_t comp_values_for_button_press = {
 	CHAL_ACI_FILTER_RESET_FIRMWARE,
 	0,			/* = S */
 	0xFE,			/* = T */
+#ifdef CONFIG_MACH_HAWAII_SS_LOGAN
 	0xA00,			/* = M = 2560 / 32768 => 78ms */
+#else /* CONFIG_MACH_HAWAII_SS_LOGAN */
+	0x500,			/* = M = 1280 / 32768 => 39ms */
+#endif /* CONFIG_MACH_HAWAII_SS_LOGAN	 */
 	ACC_HW_COMP1_FILTER_WIDTH	/* = MT */
 };
 
@@ -370,8 +392,11 @@ static int config_adc_for_accessory_detection(int hst)
 		chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
 				    CHAL_ACI_BLOCK_ACTION_ADC_RANGE,
 				    CHAL_ACI_BLOCK_ADC,
+#ifdef CONFIG_MACH_HAWAII_SS_LOGAN
 				    CHAL_ACI_BLOCK_ADC_HIGH_VOLTAGE);
-
+#else /* CONFIG_MACH_HAWAII_SS_LOGAN */
+				    CHAL_ACI_BLOCK_ADC_LOW_VOLTAGE);
+#endif /* CONFIG_MACH_HAWAII_SS_LOGAN */
 		chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
 				    CHAL_ACI_BLOCK_ACTION_CONFIGURE_FILTER,
 				    CHAL_ACI_BLOCK_ADC, &aci_filter_adc_config);
@@ -515,7 +540,6 @@ static int config_adc_for_bp_detection(void)
 static int read_adc_for_accessory_detection(int hst)
 {
 	int status = -1;
-	int count = 0;
 	int mic_level;
 
 	if (mic_dev == NULL) {
@@ -2105,7 +2129,11 @@ static int __init hs_probe(struct platform_device *pdev)
 		button_adc_values =
 				button_adc_values_no_resistor;
 	}
+
+#ifdef CONFIG_MACH_HAWAII_SS_LOGAN
 	 mic_dev->low_voltage_mode = false;
+#endif /* CONFIG_MACH_HAWAII_SS_LOGAN	 */
+
 	/* COMP2 irq */
 	mic->comp2_irq = platform_get_irq(pdev, irq_resource_num);
 	if (!mic->comp2_irq) {

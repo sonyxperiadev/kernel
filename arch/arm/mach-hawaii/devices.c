@@ -303,7 +303,11 @@ struct platform_device hawaii_kp_device = {
 #endif
 
 #ifdef CONFIG_KONA_HEADSET_MULTI_BUTTON
+#ifdef CONFIG_MACH_HAWAII_SS_LOGAN
 #define HS_IRQ		gpio_to_irq(121)
+#else		/* CONFIG_MACH_HAWAII_SS_LOGAN */
+#define HS_IRQ		gpio_to_irq(92)
+#endif	/* CONFIG_MACH_HAWAII_SS_LOGAN */
 #define HSB_IRQ		BCM_INT_ID_AUXMIC_COMP2
 #define HSB_REL_IRQ	BCM_INT_ID_AUXMIC_COMP2_INV
 
