@@ -288,6 +288,16 @@ config BROADCOM_WIFI_RESERVED_MEM
 	help
 	  Enables  STATIC BUFFER Support for WLAN chips
 
+config BYPASS_WIFI_DEVTREE
+	depends on WIFI_CONTROL_FUNC
+	bool "Bypass using device tree for Wifi Platform config"
+	default n
+	help
+	  Enable this feature if Wifi platform params are explicitly
+	  configured in the board-xxx.c file instead of DTS file.
+	  If unsure, about what to enter here assume the default
+          value of disabled
+
 config TARGET_LOCALE_CHN
 	bool "Enable WAPI support for China"
 	help
