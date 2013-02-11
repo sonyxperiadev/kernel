@@ -656,13 +656,14 @@ void IPC_BufferDump(IPC_Buffer Buffer)
 	 * coverity[returned_pointer]
 	 */
 	IPC_U32 *DataPtr = IPC_BufferDataPointer(Buffer);
-	IPC_BufferPool_T *	PoolPtr	= IPC_PoolToPtr (BufferPtr->Pool);
+	IPC_BufferPool_T *PoolPtr;
 
 	if (BufferPtr == 0) {
 		IPC_TRACE(IPC_Channel_General, "IPC_BufferDump",
 			  "Invalid Buffer %08X", Buffer, 0, 0, 0);
 		return;
 	}
+	PoolPtr	= IPC_PoolToPtr (BufferPtr->Pool);
 
 	IPC_TRACE(IPC_Channel_General, "IPC_BufferDump",
 		  "Id %d, Pool %08X, Next %08X, Prev %08X", BufferPtr->BufferId,
