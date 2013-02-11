@@ -1280,6 +1280,7 @@ config VIDEO_UNICAM_CAMERA_USE_CSL
 config VIDEO_UNICAM_CAMERA_USE_MM_CSI0
 	tristate "Broadcom Unicam camera MM CSI0 driver"
 	depends on VIDEO_V4L2 && VIDEO_V4L2_SUBDEV_API && !VIDEO_UNICAM_CAMERA_USE_CSL && VIDEO_UNICAM_CAMERA
+	select VIDEOBUF2_DMA_RESERVED
 	---help---
 		This enables the camera MM_CSI0 drivers
 		to be used by UNICAM driver
