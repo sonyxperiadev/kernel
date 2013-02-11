@@ -403,6 +403,11 @@ out:
 static int set_name(struct ashmem_area *asma, void __user *name)
 {
 	int ret = 0;
+	/*
+	 * Local variable to hold the name copied from user space
+	 * This variable is approx of size 270 bytes, not huge
+	 */
+	char local_name[ASHMEM_NAME_LEN];
 
 	mutex_lock(&ashmem_mutex);
 
@@ -412,9 +417,24 @@ static int set_name(struct ashmem_area *asma, void __user *name)
 		goto out;
 	}
 
-	if (unlikely(copy_from_user(asma->name + ASHMEM_NAME_PREFIX_LEN,
-				    name, ASHMEM_NAME_LEN)))
+	/*
+	 * Holding the ashmem_mutex while doing a copy_from_user might cause
+	 * an data abourt which would try to access mmap_sem. If another
+	 * thread has invoked ashmem_mmap then it will be holding the
+	 * semaphore and will be waiting for ashmem_mutex, there by leading to
+	 * deadlock. We'll release the mutex  and take the name to a local
+	 * variable that does not need protection and later copy the local
+	 * variable to the structure member with lock held.
+	 */
+	mutex_unlock(&ashmem_mutex);
+	if (unlikely(copy_from_user(local_name, name, ASHMEM_NAME_LEN))) {
+		/* Lock is already dropped, just return */
 		ret = -EFAULT;
+		return ret;
+	}
+	mutex_lock(&ashmem_mutex);
+	memcpy(asma->name + ASHMEM_NAME_PREFIX_LEN,
+		local_name, ASHMEM_NAME_LEN);
 	asma->name[ASHMEM_FULL_NAME_LEN-1] = '\0';
 
 out:
@@ -426,26 +446,36 @@ out:
 static int get_name(struct ashmem_area *asma, void __user *name)
 {
 	int ret = 0;
+	size_t len;
+	/*
+	 * Have a local variable to which we'll copy the content
+	 * from asma with the lock held. Later we can copy this to the user
+	 * space safely without holding any locks. So even if we proceed to
+	 * wait for mmap_sem, it won't lead to deadlock.
+	 */
+	char local_name[ASHMEM_NAME_LEN];
 
 	mutex_lock(&ashmem_mutex);
 	if (asma->name[ASHMEM_NAME_PREFIX_LEN] != '\0') {
-		size_t len;
 
 		/*
 		 * Copying only `len', instead of ASHMEM_NAME_LEN, bytes
 		 * prevents us from revealing one user's stack to another.
 		 */
 		len = strlen(asma->name + ASHMEM_NAME_PREFIX_LEN) + 1;
-		if (unlikely(copy_to_user(name,
-				asma->name + ASHMEM_NAME_PREFIX_LEN, len)))
-			ret = -EFAULT;
+		memcpy(local_name, asma->name + ASHMEM_NAME_PREFIX_LEN, len);
 	} else {
-		if (unlikely(copy_to_user(name, ASHMEM_NAME_DEF,
-					  sizeof(ASHMEM_NAME_DEF))))
-			ret = -EFAULT;
+		len = sizeof(ASHMEM_NAME_DEF);
+		memcpy(local_name, ASHMEM_NAME_DEF, len);
 	}
 	mutex_unlock(&ashmem_mutex);
 
+	/*
+	 * Now we are just copying from the stack variable to userland
+	 * No lock held
+	 */
+	if (unlikely(copy_to_user(name, local_name, len)))
+		ret = -EFAULT;
 	return ret;
 }
 
