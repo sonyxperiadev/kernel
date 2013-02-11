@@ -393,8 +393,16 @@ static int dep_clk_lock(struct ccu_clk *ccu_clk, struct clk *dep_clk,
 					 dep_ccu_clk->lock_flag);
 			BUG();
 		}
-/* Acquire clk_lock, update the flag immediately with access lock*/
-		spin_lock_irqsave(&dep_ccu_clk->clk_lock, *flags);
+
+	/* Acquire clk_lock, update the flag immediately with access lock */
+
+		/*  Allow nesting of spin_locks below to get rid of lockdep
+		 warnings,because it checks for the class type and not the
+		exact objects structure	embedding clk_lock, it warns if the
+		two objects are of same class type, this is a valid case here
+		For ex: root_ccu and aon_ccu belongs to same ccu_clk class */
+
+		spin_lock_irqsave_nested(&dep_ccu_clk->clk_lock, *flags, 1);
 		ccu_access_lock(dep_ccu_clk, &access_flags);
 		dep_ccu_clk->lock_flag |= cpu_id;
 		ccu_access_unlock(dep_ccu_clk, &access_flags);
