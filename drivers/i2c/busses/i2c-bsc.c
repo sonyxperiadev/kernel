@@ -1994,15 +1994,8 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 	/* T-high in SS/FS mode varies when the clock gets stretched in the B0
 	 * Variant. The same was fixed in the B1 variant where a bit in the CRC
 	 * main register needs to be set. */
-	if (hw_cfg && !hw_cfg->is_pmu_i2c &&
-#if defined(CONFIG_ARCH_RHEA)
-		get_chip_id() >= RHEA_CHIP_ID(RHEA_CHIP_REV_B1)
-#elif defined(CONFIG_ARCH_HAWAII) || defined(CONFIG_ARCH_JAVA)
-		get_chip_id() >= HAWAII_CHIP_ID(HAWAII_CHIP_REV_A0)
-#else
-#error "unsupported platform"
-#endif
-	)
+	/* Check for RheaB1 onwards */
+	if (hw_cfg && !hw_cfg->is_pmu_i2c && get_chip_id() >= 2)
 		bsc_enable_thigh_ctrl((uint32_t)dev->virt_base, true);
 	else
 		bsc_enable_thigh_ctrl((uint32_t)dev->virt_base, false);
