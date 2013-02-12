@@ -121,7 +121,7 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 	struct platform_pwm_backlight_data *data = NULL;
 	struct backlight_device *bl;
 	struct pwm_bl_data *pb;
-	const char *pwm_request_label;
+	const char *pwm_request_label = NULL;
 	int ret;
 
 	if (pdev->dev.platform_data)
@@ -204,8 +204,11 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 	pb->lth_brightness = data->lth_brightness *
 		(data->pwm_period_ns / data->max_brightness);
 	pb->dev = &pdev->dev;
+	if (pdev->dev.of_node)
+		pb->pwm = pwm_request(data->pwm_id, pwm_request_label);
+	else
+		pb->pwm = pwm_request(data->pwm_id, "backlight");
 
-	pb->pwm = pwm_request(data->pwm_id, pwm_request_label);
 	if (IS_ERR(pb->pwm)) {
 		dev_err(&pdev->dev, "unable to request PWM for backlight\n");
 		ret = PTR_ERR(pb->pwm);
