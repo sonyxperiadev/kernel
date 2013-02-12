@@ -159,7 +159,6 @@ typedef struct {
 	void (*dma_cb) (DMA_VC4LITE_CALLBACK_STATUS);
 	Interrupt_t iHisr;
 	UInt32 interruptId;
-	spinlock_t bcm_dsi_spin_Lock;
 	DSI_CLIENT_t client[DSI_MAX_CLIENT];
 	DSI_CM_HANDLE_t chCm[DSI_CM_MAX_HANDLES];
 	struct axipv_config_t *axipvCfg;
@@ -378,14 +377,11 @@ static irqreturn_t cslDsi0Stat_LISR(int i, void *j)
 		pr_err("DSI interrupt status is NULL. Hence ignoring\n");
 		return IRQ_HANDLED;
 	}
-	mb();
 	if (int_status & (1 << 22))
 		pr_info("dsi int fifo error 0x%x\n", int_status);
 
 	chal_dsi_ena_int(dsiH->chalH, 0);
-	mb();
 	chal_dsi_clr_int(dsiH->chalH, int_status);
-	mb();
 
 	OSSEMAPHORE_Release(dsiH->semaInt);
 
@@ -744,7 +740,6 @@ static CSL_LCD_RES_T cslDsiDmaStart(DSI_UPD_REQ_MSG_T *updMsg)
 			"ERR start DMA data transfer\n ", __func__);
 		return CSL_LCD_DMA_ERR;
 	}
-	mb();
 
 	return result;
 }
@@ -1605,7 +1600,6 @@ CSL_LCD_RES_T CSL_DSI_UpdateVmVc(CSL_LCD_HANDLE vcH,
 		/* Set pix clk divider to bits per pixel for non-burst mode */
 		chal_dsi_de0_set_pix_clk_div(dsiH->chalH,
 			(dsiChH->bpp_wire << 3) / dsiH->dlCount);
-		mb();
 		res = cslDsiPixTxStart(&updMsg);
 		if (res != CSL_LCD_OK) {
 			LCD_DBG(LCD_DBG_ID, "[CSL DSI][%d] %s: "
@@ -1727,7 +1721,6 @@ CSL_LCD_RES_T CSL_DSI_UpdateCmVc(CSL_LCD_HANDLE vcH,
 
 	cslDsiClearAllFifos(dsiH);
 	chal_dsi_clr_status(dsiH->chalH, 0xffffffff);
-	mb();
 
 	txPkt.vc = dsiChH->vc;
 	txPkt.dsiCmnd = dsiChH->dsiCmnd;
@@ -1893,24 +1886,20 @@ CSL_LCD_RES_T CSL_DSI_UpdateCmVc(CSL_LCD_HANDLE vcH,
 
 		chal_dsi_tx_long(dsiH->chalH, TX_PKT_ENG_1, &txPkt);
 	}
-	mb();
 	/* EOF TX PKT ENG(s) Set-Up */
 
 	/*--- Wait for TX PKT ENG 1 DONE */
 	cslDsiEnaIntEvent(dsiH, (UInt32)CHAL_DSI_ISTAT_TXPKT1_DONE);
 
-	mb();
 	if (1 == dsiH->dispEngine) {
 		/*--- Start TX PKT Engine(s) */
 		if (txNo2_repeat != 0) {
 			chal_dsi_tx_start(dsiH->chalH, TX_PKT_ENG_2, TRUE);
-			mb();
 		}
 		chal_dsi_tx_start(dsiH->chalH, TX_PKT_ENG_1, TRUE);
 	}
 	/* send rest of the frame */
 
-	mb();
 	/*--- Start DMA */
 	res = cslDsiPixTxStart(&updMsgCm);
 	if (res != CSL_LCD_OK) {
@@ -1925,7 +1914,6 @@ CSL_LCD_RES_T CSL_DSI_UpdateCmVc(CSL_LCD_HANDLE vcH,
 		/*--- Start TX PKT Engine(s) */
 		if (txNo2_repeat != 0) {
 			chal_dsi_tx_start(dsiH->chalH, TX_PKT_ENG_2, TRUE);
-			mb();
 		}
 		chal_dsi_tx_start(dsiH->chalH, TX_PKT_ENG_1, TRUE);
 	}
@@ -2201,6 +2189,7 @@ static void csl_dsi_set_chal_api_clks(DSI_HANDLE dsiH,
 	dsiH->clkCfg.hsBitClk_MHz = dsiCfg->hsBitClk.clkIn_MHz
 	    / dsiCfg->hsBitClk.clkInDiv;
 
+#if 0 /* RDB doesn't recommend using DDR2 clock */
 	if ((dsiH->clkCfg.hsBitClk_MHz * 1000000 / 2) <= DSI_CORE_CLK_MAX_MHZ) {
 		dsiH->clkCfg.coreClkSel = CHAL_DSI_BIT_CLK_DIV_BY_2;
 		LCD_DBG(LCD_DBG_ID, "[CSL DSI][%d] %s: "
@@ -2215,6 +2204,17 @@ static void csl_dsi_set_chal_api_clks(DSI_HANDLE dsiH,
 		LCD_DBG(LCD_DBG_ID, "[CSL DSI][%d] %s: "
 			"DSI CORE CLK SET TO BIT_CLK/8\n", dsiH->bus, __func__);
 	}
+#else
+	if (dsiH->clkCfg.hsBitClk_MHz > 200) {
+		dsiH->clkCfg.coreClkSel = CHAL_DSI_BIT_CLK_DIV_BY_8;
+		LCD_DBG(LCD_DBG_ID, "%d DSI CORE CLK SET TO BIT_CLK/8\n",
+			dsiH->bus);
+	} else {
+		dsiH->clkCfg.coreClkSel = CHAL_DSI_BIT_CLK_DIV_BY_2;
+		LCD_DBG(LCD_DBG_ID, "%d DSI CORE CLK SET TO BIT_CLK/2\n",
+			dsiH->bus);
+	}
+#endif
 }
 
 /*
@@ -2332,8 +2332,6 @@ CSL_LCD_RES_T CSL_DSI_Init(const pCSL_DSI_CFG dsiCfg)
 		}
 
 		dsiH->bus = dsiCfg->bus;
-
-		spin_lock_init(&(dsiH->bcm_dsi_spin_Lock));
 
 		if (dsiH->bus == 0) {
 			dsiH->dsiCoreRegAddr = CSL_DSI0_BASE_ADDR;

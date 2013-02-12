@@ -761,6 +761,12 @@ static void kona_fb_late_resume(struct early_suspend *h)
 }
 #endif
 
+void free_platform_data(struct device *dev)
+{
+	if (dev->of_node)
+		kfree(dev->platform_data);
+}
+
 static struct kona_fb_platform_data * __init get_of_data(struct device_node *np)
 {
 	u32 val;
@@ -1000,6 +1006,7 @@ static int __init populate_dispdrv_cfg(struct kona_fb *fb,
 	}
 
 	/* Allocate memory for disp_info */
+	/* Setting memory to zero is mandatory for this struct */
 	info = kzalloc(sizeof(DISPDRV_INFO_T), GFP_KERNEL);
 	if (!info) {
 		pr_err("Failed to allocate memory fr disp_info\n");
@@ -1084,12 +1091,23 @@ err_scrn_on_seq:
 err_slp_out_seq:
 	kfree(info->slp_in_seq);
 err_slp_in_seq:
-	kfree(fb->display_info);
+	kfree(info);
 err_mem_disp_info:
 err_cfg:
 	return ret;
 }
 
+void release_dispdrv_info(DISPDRV_INFO_T *info)
+{
+	BUG_ON(ZERO_OR_NULL_PTR(info));
+	kfree(info->init_seq);
+	kfree(info->slp_in_seq);
+	kfree(info->slp_out_seq);
+	kfree(info->scrn_on_seq);
+	kfree(info->scrn_off_seq);
+	kfree(info->win_seq);
+	kfree(info);
+}
 
 static struct fb_ops kona_fb_ops = {
 	.owner = THIS_MODULE,
@@ -1453,7 +1471,9 @@ err_enable_display_failed:
 #if (KONA_FB_ENABLE_DYNAMIC_CLOCK != 1)
 	fb->display_ops->stop(&fb->dfs_node);
 #endif
+	release_dispdrv_info(fb->display_info);
 dispdrv_data_failed:
+	free_platform_data(&pdev->dev);
 fb_data_failed:
 	kfree(fb);
 	g_kona_fb = NULL;

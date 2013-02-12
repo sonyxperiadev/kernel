@@ -196,7 +196,8 @@ int brcm_enable_dsi_pll_clocks(
 		printk(KERN_ERR "Failed to enable DSI[%d] PLL CH\n", dsi_bus);
 		return -EIO;
 	}
-       
+
+#if 0 /* RDB doesn't recommend using DDR2 clock */
        	#define DSI_CORE_MAX_HZ	 125000000
 	
 	if(	(dsi_pll_ch_hz_csl >> 1) <= DSI_CORE_MAX_HZ)
@@ -205,6 +206,13 @@ int brcm_enable_dsi_pll_clocks(
 		pixel_pll_val = DSI_TXDDRCLK2;
 	else 
 		pixel_pll_val = DSI_TX0_BCLKHS;
+#else
+	#define MAX_DATARATE_FOR_DDR (200*1000*1000)
+	if (dsi_pll_ch_hz_csl > MAX_DATARATE_FOR_DDR)
+		pixel_pll_val = DSI_TX0_BCLKHS;
+	else
+		pixel_pll_val = DSI_TXDDRCLK;
+#endif
 
         if (mm_ccu_set_pll_select(dsi_bus_clk[dsi_bus].pixel_pll_sel,
         	pixel_pll_val)) {

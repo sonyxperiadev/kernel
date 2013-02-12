@@ -437,16 +437,23 @@ Int32 DSI_Init(DISPDRV_INFO_T *info, DISPDRV_HANDLE_T *handle)
 			break;
 		}
 
+#define DSI_1MHZ (1000 * 1000)
+
 		pPanel->dsi_cfg = &DispDrv_dsiCfg;
 		DispDrv_dsiCfg.dlCount = info->lanes;
 		DispDrv_dsiCfg.phy_timing = info->phy_timing;
 		DispDrv_dsiCfg.escClk.clkIn_MHz = 500;
 		DispDrv_dsiCfg.escClk.clkInDiv = 5;
-		DispDrv_dsiCfg.hsBitClk.clkIn_MHz = 1000;
+
+		DispDrv_dsiCfg.hsBitClk.clkIn_MHz = info->hs_bps / DSI_1MHZ;
+		WARN_ON(DispDrv_dsiCfg.hsBitClk.clkIn_MHz > 2400);
+		while (DispDrv_dsiCfg.hsBitClk.clkIn_MHz < 600)
+			DispDrv_dsiCfg.hsBitClk.clkIn_MHz *= 2;
 		DispDrv_dsiCfg.hsBitClk.clkInDiv =
-			(DispDrv_dsiCfg.hsBitClk.clkIn_MHz * 1000 * 1000) /
+			(DispDrv_dsiCfg.hsBitClk.clkIn_MHz * DSI_1MHZ) /
 			info->hs_bps;
-		DispDrv_dsiCfg.lpBitRate_Mbps = info->lp_bps / (1000 * 1000);
+		DispDrv_dsiCfg.lpBitRate_Mbps = info->lp_bps / DSI_1MHZ;
+
 		DispDrv_dsiCfg.dispEngine = info->vmode ? 0 : 1;
 		/* Default to AXIPV even for Command mode */
 		DispDrv_dsiCfg.pixTxporter = info->vmode ? 0 : 0;

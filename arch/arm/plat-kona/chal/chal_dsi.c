@@ -322,7 +322,6 @@ cVoid chal_dsi_phy_afe_on(CHAL_HANDLE handle, pCHAL_DSI_AFE_CFG afeCfg)
 /*    if( afeCfg->afeDs2xClkEna ) */
 /*        afeVal |= DSI_REG_FIELD_SET( DSI1_PHY_AFEC0, DDRCLK_EN, 1 ); */
 
-	rmb();
 	afeVal |= DSI_REG_FIELD_SET(DSI1_PHY_AFEC0, PD_BG, 0);
 	afeVal |= DSI_REG_FIELD_SET(DSI1_PHY_AFEC0, PD, 0);
 	/* for now, enable all clock outputs */
@@ -332,14 +331,12 @@ cVoid chal_dsi_phy_afe_on(CHAL_HANDLE handle, pCHAL_DSI_AFE_CFG afeCfg)
 	afeVal |= DSI_REG_FIELD_SET(DSI1_PHY_AFEC0, RESET, 1);
 
 	/* PWR-UP & Reset */
-	wmb();
 	DSI_REG_WRITE_MASKED(pDev->baseAddr, DSI1_PHY_AFEC0, afeMask, afeVal);
 
 	/*for ( i=0; i<100; i++ ) {} */
 	CHAL_DELAY_MS(2);
 
 	/* remove reset */
-	wmb();
 	BRCM_WRITE_REG_FIELD(pDev->baseAddr, DSI1_PHY_AFEC0, RESET, 0);
 }
 
@@ -662,11 +659,14 @@ cVoid chal_dsi_on(CHAL_HANDLE handle, pCHAL_DSI_MODE dsiMode)
 	    | DSI_REG_FIELD_SET(DSI1_CTRL, LPDT_EOT_EN, 1)
 	    | DSI_REG_FIELD_SET(DSI1_CTRL, HSDT_EOT_EN, 1)
 	    | DSI_REG_FIELD_SET(DSI1_CTRL, DSI_EN, 1)
+	    | DSI_REG_FIELD_SET(DSI1_CTRL, CAL_BYTE_EN, 1)
 	    | DSI1_CTRL_HS_CLKC_MASK;
 
 	ctrl = dsiMode->clkSel << DSI1_CTRL_HS_CLKC_SHIFT;
 
-	rmb();
+	if (dsiMode->clkSel != CHAL_DSI_BIT_CLK_DIV_BY_8)
+		ctrl |= DSI_REG_FIELD_SET(DSI1_CTRL, CAL_BYTE_EN, 1);
+
 	if (dsiMode->enaRxCrc)
 		ctrl |= DSI_REG_FIELD_SET(DSI1_CTRL, DISP_CRCC, 1);
 	if (dsiMode->enaRxEcc)
@@ -683,7 +683,6 @@ cVoid chal_dsi_on(CHAL_HANDLE handle, pCHAL_DSI_MODE dsiMode)
 
 	ctrl |= DSI_REG_FIELD_SET(DSI1_CTRL, DSI_EN, 1);
 
-	wmb();
 	DSI_REG_WRITE_MASKED(pDev->baseAddr, DSI1_CTRL, mask, ctrl);
 
 	/* PHY-C  Configure & Enable D-PHY Interface */
@@ -707,13 +706,11 @@ cVoid chal_dsi_on(CHAL_HANDLE handle, pCHAL_DSI_MODE dsiMode)
 		ctrl |= DSI_REG_FIELD_SET(DSI1_PHYC, PHY_DLANE0_EN, 1);
 	}
 
-	rmb();
 	if (dsiMode->enaContClock)
 		ctrl |= DSI_REG_FIELD_SET(DSI1_PHYC, TX_HSCLK_CONT, 1);
 
 	ctrl |= DSI_REG_FIELD_SET(DSI1_PHYC, PHY_CLANE_EN, 1);
 
-	wmb();
 	DSI_REG_WRITE_MASKED(pDev->baseAddr, DSI1_PHYC, mask, ctrl);
 }
 
@@ -1000,7 +997,6 @@ CHAL_DSI_RES_t chal_dsi_tx_long(CHAL_HANDLE handle,
 	else
 		BRCM_WRITE_REG(pDev->baseAddr, DSI1_TXPKT1_H, pkth);
 
-	mb();
 
 /*  chal_dprintf ( CDBG_ERRO, "[cHAL DSI] %s: PKTC[0x%08X] PKTH[0x%08X]\n", */
 /*      __FUNCTION__, pktc  , pktc  ); */
