@@ -417,15 +417,15 @@ static int __devinit bcm_keypad_probe(struct platform_device *pdev)
 		pdev->dev.platform_data = pdata;
 	}
 
-	keymap_p = pdata->keymap;
-	bcm_keypad_base_addr = pdata->bcm_keypad_base;
-
-	BCMKP_DBG(KERN_NOTICE "bcm_keypad_probe\n");
 	if (!pdata) {
 		pr_err("%s(%s:%u)::Failed to get platform data\n",
 		       __FUNCTION__, __FILE__, __LINE__);
 		return -ENOMEM;
 	}
+	keymap_p = pdata->keymap;
+	bcm_keypad_base_addr = pdata->bcm_keypad_base;
+
+	BCMKP_DBG(KERN_NOTICE "bcm_keypad_probe\n");
 
 	bcm_kb = kmalloc(sizeof(*bcm_kb), GFP_KERNEL);
 	if (bcm_kb == NULL) {
@@ -574,11 +574,9 @@ pdata_free:
 static int __devexit bcm_keypad_remove(struct platform_device *pdev)
 {
 	struct bcm_keypad *bcm_kb = platform_get_drvdata(pdev);
-	struct bcm_keypad_platform_info *pdata = NULL;
-	BCMKP_DBG(KERN_NOTICE "bcm_keypad_remove\n");
+	struct bcm_keypad_platform_info *pdata = pdev->dev.platform_data;
 
-	if (pdev->dev.platform_data)
-		pdata = pdev->dev.platform_data;
+	BCMKP_DBG(KERN_NOTICE "bcm_keypad_remove\n");
 
 	/* disable keypad interrupt handling */
 	tasklet_disable(&kp_tasklet);
