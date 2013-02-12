@@ -130,7 +130,13 @@ obj-$(CONFIG_SENSORS_KONA)	+= kona-tmon.o kona-thermal.o bcmpmu-thermal.o
 ifeq ($(CONFIG_MFD_BCM_PMU59056), y)
 obj-$(CONFIG_SENSORS_BCMPMU)	+= bcmpmu-hwmon-56.o
 else ifeq ($(CONFIG_MFD_BCM_PMU59xxx),y)
+
+ifeq ($(CONFIG_CHARGER_BCMPMU_SPA), y)
+obj-$(CONFIG_SENSORS_BCMPMU)    += bcmpmu59xxx-pb-hwmon.o
+else
 obj-$(CONFIG_SENSORS_BCMPMU)    += bcmpmu59xxx-hwmon.o
+endif
+
 else
 obj-$(CONFIG_SENSORS_BCMPMU)	+= bcmpmu-hwmon.o
 endif

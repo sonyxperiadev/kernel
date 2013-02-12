@@ -103,14 +103,6 @@
 #include <linux/haptic.h>
 #endif
 
-#if (defined(CONFIG_BCM_RFKILL) || defined(CONFIG_BCM_RFKILL_MODULE))
-#include <linux/broadcom/bcmbt_rfkill.h>
-#endif
-
-#ifdef CONFIG_BCM_BZHW
-#include <linux/broadcom/bcm_bzhw.h>
-#endif
-
 #ifdef CONFIG_BCM_BT_LPM
 #include <linux/broadcom/bcmbt_lpm.h>
 #endif
@@ -282,7 +274,7 @@ static struct i2c_board_info adp1653_flash[] = {
 struct android_pmem_platform_data android_pmem_data = {
 	.name = "pmem",
 	.cmasize = 0,
-	.carveout_base = 0,
+	.carveout_base = 0x9e000000,
 	.carveout_size = 0,
 };
 #endif
@@ -386,7 +378,8 @@ static int hawaii_camera_power(struct device *dev, int on)
 /*
 	if(!camdrv_ss_power(0,(bool)on))
 	{
-		printk("%s,camdrv_ss_power failed for MAIN CAM!!\n", __func__);
+		printk(KERN_WARNING"%s,camdrv_ss_power failed for MAIN CAM!!\n",
+		__func__);
 		return -1;
 	}
 */
@@ -396,7 +389,7 @@ static int hawaii_camera_power(struct device *dev, int on)
 
 static int hawaii_camera_reset(struct device *dev)
 {
-	/* reset the camera gpio */
+/* reset the camera gpio */
 	printk(KERN_INFO "%s:camera reset\n", __func__);
 	return 0;
 }
@@ -426,7 +419,7 @@ static int hawaii_camera_reset_sub(struct device *dev)
 static struct v4l2_subdev_sensor_interface_parms s5k4ecgx_if_params = {
 	.if_type = V4L2_SUBDEV_SENSOR_SERIAL,
 	.if_mode = V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2,
-/* logan compilation fix */
+/* logan compilation fix : */
 /*	.orientation = V4L2_SUBDEV_SENSOR_ORIENT_90, */
 	.orientation = V4L2_SUBDEV_SENSOR_PORTRAIT,
 	.facing = V4L2_SUBDEV_SENSOR_BACK,
@@ -457,11 +450,12 @@ static struct platform_device hawaii_camera = {
 	 },
 };
 
+
 static struct v4l2_subdev_sensor_interface_parms sr030pc50_if_params = {
 	.if_type = V4L2_SUBDEV_SENSOR_SERIAL,
 	.if_mode = V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2,
 /* logan compilation fix */
-/*	.orientation =V4L2_SUBDEV_SENSOR_ORIENT_270, */
+/*	.orientation = V4L2_SUBDEV_SENSOR_ORIENT_270, */
 	.orientation = V4L2_SUBDEV_SENSOR_PORTRAIT,
 	.facing = V4L2_SUBDEV_SENSOR_FRONT,
 	.parms.serial = {
@@ -529,7 +523,6 @@ static struct bcm_hsotgctrl_platform_data hsotgctrl_plat_data = {
 #endif
 
 struct platform_device *hawaii_common_plat_devices[] __initdata = {
-	&pmu_device,
 	&hawaii_ssp0_device,
 
 #ifdef CONFIG_SENSORS_KONA
@@ -545,6 +538,7 @@ struct platform_device *hawaii_common_plat_devices[] __initdata = {
 #endif
 
 #if defined(CONFIG_USB_DWC_OTG)
+	&hawaii_usb_phy_platform_device,
 	&hawaii_hsotgctrl_platform_device,
 	&hawaii_otg_platform_device,
 #endif
@@ -576,8 +570,11 @@ struct platform_device *hawaii_common_plat_devices[] __initdata = {
 #endif
 
 #ifdef CONFIG_SND_BCM_SOC
+	&hawaii_audio_device,
 	&caph_i2s_device,
 	&caph_pcm_device,
+	&spdif_dit_device,
+
 #endif
 };
 
@@ -815,9 +812,9 @@ static struct i2c_board_info __initdata bmm150_boardinfo[] = {
 #endif
 
 #if defined(CONFIG_SENSORS_BMM050)
-{
-	I2C_BOARD_INFO("bmm050", 0x12),
-},
+	{
+		I2C_BOARD_INFO("bmm050", 0x12),
+	},
 #endif
 
 
@@ -920,44 +917,6 @@ static struct kona_pl330_data hawaii_pl330_pdata =	{
 };
 #endif
 
-#if (defined(CONFIG_BCM_RFKILL) || defined(CONFIG_BCM_RFKILL_MODULE))
-#define BCMBT_VREG_GPIO		26
-#define BCMBT_N_RESET_GPIO	(-1)	/* Unused */
-#define BCMBT_AUX0_GPIO		(-1)   /* clk32 */
-#define BCMBT_AUX1_GPIO		(-1)   /* UARTB_SEL */
-
-static struct bcmbt_rfkill_platform_data hawaii_bcmbt_rfkill_cfg = {
-	.vreg_gpio = BCMBT_VREG_GPIO,
-	.n_reset_gpio = BCMBT_N_RESET_GPIO,
-	.aux0_gpio = BCMBT_AUX0_GPIO,  /* CLK32 */
-	.aux1_gpio = BCMBT_AUX1_GPIO,  /* UARTB_SEL, probably not required */
-};
-
-static struct platform_device hawaii_bcmbt_rfkill_device = {
-	.name = "bcmbt-rfkill",
-	.id = -1,
-	.dev =	{
-		.platform_data = &hawaii_bcmbt_rfkill_cfg,
-	},
-};
-#endif
-
-#ifdef CONFIG_BCM_BZHW
-#define GPIO_BT_WAKE	32
-#define GPIO_HOST_WAKE	72
-static struct bcm_bzhw_platform_data bcm_bzhw_data = {
-	.gpio_bt_wake = GPIO_BT_WAKE,
-	.gpio_host_wake = GPIO_HOST_WAKE,
-};
-
-static struct platform_device hawaii_bcm_bzhw_device = {
-	.name = "bcm_bzhw",
-	.id = -1,
-	.dev =	{
-		.platform_data = &bcm_bzhw_data,
-	},
-};
-#endif
 
 
 #ifdef CONFIG_BCM_BT_LPM
@@ -1075,11 +1034,11 @@ struct platform_device hawaii_backlight_device = {
 /* Remove this comment when camera data for Hawaii is updated */
 
 
-#if defined(CONFIG_TOUCHSCREEN_MMS134S)
+#if defined(CONFIG_TOUCHSCREEN_IST30XX)
 #define TSP_INT_GPIO_PIN	(73)
 static struct i2c_board_info __initdata zinitix_i2c_devices[] = {
 	  {
-		I2C_BOARD_INFO("sec_touch", 0x48),
+		I2C_BOARD_INFO("sec_touch", 0x50),
 		.irq = gpio_to_irq(TSP_INT_GPIO_PIN),
 	  },
 };
@@ -1273,17 +1232,17 @@ static struct i2c_board_info  __initdata micro_usb_i2c_devices_info[]  = {
 };
 
 static struct i2c_gpio_platform_data fsa_i2c_gpio_data = {
-		.sda_pin        = GPIO_USB_I2C_SDA,
-		.scl_pin = GPIO_USB_I2C_SCL,
-		.udelay                 = 2,
+	.sda_pin        = GPIO_USB_I2C_SDA,
+	.scl_pin = GPIO_USB_I2C_SCL,
+	.udelay                 = 2,
 	};
 
 static struct platform_device fsa_i2c_gpio_device = {
-		.name                   = "i2c-gpio",
-		.id                     = FSA9485_I2C_BUS_ID,
-		.dev                    = {
-				.platform_data  = &fsa_i2c_gpio_data,
-		},
+	.name                   = "i2c-gpio",
+	.id                     = FSA9485_I2C_BUS_ID,
+	.dev                    = {
+	.platform_data  = &fsa_i2c_gpio_data,
+	},
 };
 
 static struct platform_device *mUSB_i2c_devices[] __initdata = {
@@ -1312,14 +1271,6 @@ static struct platform_device *hawaii_devices[] __initdata = {
 	&hawaii_backlight_device,
 #endif
 
-#if (defined(CONFIG_BCM_RFKILL) || defined(CONFIG_BCM_RFKILL_MODULE))
-	&hawaii_bcmbt_rfkill_device,
-#endif
-
-#ifdef CONFIG_BCM_BZHW
-	&hawaii_bcm_bzhw_device,
-#endif
-
 #ifdef CONFIG_BCM_BT_LPM
 	&board_bcmbt_lpm_device,
 #endif
@@ -1340,7 +1291,10 @@ static void __init hawaii_add_i2c_devices(void)
 #ifdef CONFIG_VIDEO_ADP1653
 	i2c_register_board_info(0, adp1653_flash, ARRAY_SIZE(adp1653_flash));
 #endif
-#if defined(CONFIG_TOUCHSCREEN_MMS134S)
+#ifdef CONFIG_TOUCHSCREEN_TANGO
+	i2c_register_board_info(3, tango_info, ARRAY_SIZE(tango_info));
+#endif
+#if defined(CONFIG_TOUCHSCREEN_IST30XX)
 	i2c_register_board_info(3, zinitix_i2c_devices,
 		ARRAY_SIZE(zinitix_i2c_devices));
 #endif
