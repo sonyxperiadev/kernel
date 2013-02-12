@@ -154,11 +154,6 @@ enum {
 	I2C_SEQ_READ_FIFO,
 };
 
-enum {
-	PWR_MGR_I2C_MODE_IRQ,
-	PWR_MGR_I2C_MODE_POLL,
-};
-
 #endif
 static int pwr_dbg_mask;
 enum {

@@ -214,6 +214,11 @@ enum {
 	I2C_SIMULATE_BURST_MODE = (1 << 3),
 };
 
+enum {
+	PWR_MGR_I2C_MODE_IRQ,
+	PWR_MGR_I2C_MODE_POLL,
+};
+
 struct pm_policy_cfg {
 	bool ac;
 	bool atl;
