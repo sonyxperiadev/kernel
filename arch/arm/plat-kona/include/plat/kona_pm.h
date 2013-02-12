@@ -23,6 +23,8 @@
 #define DORMANT_SUSPEND_PATH_ENTRY	0xE0E0
 #define DORMANT_SUSPEND_PATH_EXIT	0xF0F0
 
+#define CSTATE_ALL 0xffffffff
+
 struct kona_idle_state {
 	char *name;
 	char *desc;

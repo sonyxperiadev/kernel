@@ -51,6 +51,7 @@ struct kona_pm_params {
 	u32 num_states;
 	u32 suspend_state;
 	int log_lvl;
+	spinlock_t cstate_lock;
 };
 
 static struct kona_pm_params pm_prms = {
@@ -319,6 +320,8 @@ int __init kona_pm_init(struct pm_init_param *ip)
 		   !pm_prms.states ||
 		   pm_prms.suspend_state >= pm_prms.num_states);
 
+	spin_lock_init(&pm_prms.cstate_lock);
+
 	for (i = 0; i < ip->num_states; i++) {
 
 		state = &kona_idle_driver.states[i];
@@ -385,22 +388,12 @@ void kona_pm_reg_pm_enter_handler(int (*enter) (suspend_state_t state))
 	kona_pm_ops.enter = enter;
 }
 
-int kona_pm_disable_idle_state(int state, bool disable)
+static int disable_idle_state(struct cpuidle_state *idle_state,
+		struct kona_idle_state *kona_idle, bool disable)
 {
-	struct cpuidle_state *idle_state = NULL;
-	struct kona_idle_state *kona_idle;
-	int i;
+	unsigned long flag;
 
-	for (i = 0; i < pm_prms.num_states; i++) {
-		if (pm_prms.states[i].state == state) {
-			idle_state = &kona_idle_driver.states[i];
-			kona_idle = &pm_prms.states[i];
-			break;
-		}
-	}
-
-	if (!idle_state)
-		return -EINVAL;
+	spin_lock_irqsave(&pm_prms.cstate_lock, flag);
 
 	if (disable) {
 		if (!kona_idle->disable_cnt)
@@ -413,7 +406,39 @@ int kona_pm_disable_idle_state(int state, bool disable)
 		if (!kona_idle->disable_cnt)
 			idle_state->disable = disable;
 	}
+	spin_unlock_irqrestore(&pm_prms.cstate_lock, flag);
 	return 0;
+}
+
+int kona_pm_disable_idle_state(int state, bool disable)
+{
+	struct cpuidle_state *idle_state = NULL;
+	struct kona_idle_state *kona_idle;
+	int i;
+
+	if (state == CSTATE_ALL) {
+		for (i = 0; i < pm_prms.num_states; i++) {
+			if (i ==  kona_idle_driver.safe_state_index)
+				continue;
+			idle_state = &kona_idle_driver.states[i];
+			kona_idle = &pm_prms.states[i];
+			disable_idle_state(idle_state, kona_idle, disable);
+		}
+		return 0;
+	}
+
+	for (i = 0; i < pm_prms.num_states; i++) {
+		if (pm_prms.states[i].state == state) {
+			idle_state = &kona_idle_driver.states[i];
+			kona_idle = &pm_prms.states[i];
+			break;
+		}
+	}
+
+	if (!idle_state)
+		return -EINVAL;
+
+	return disable_idle_state(idle_state, kona_idle, disable);
 }
 EXPORT_SYMBOL(kona_pm_disable_idle_state);
 

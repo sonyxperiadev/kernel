@@ -36,6 +36,7 @@
 #endif
 #include <mach/pm.h>
 #include <mach/memory.h>
+#include <plat/kona_pm.h>
 
 #ifndef PWRMGR_I2C_VAR_DATA_REG
 #define PWRMGR_I2C_VAR_DATA_REG 6
@@ -48,14 +49,8 @@
 #ifndef PWRMGR_HW_SEM_LOCK_WA_PI_OPP
 #define PWRMGR_HW_SEM_LOCK_WA_PI_OPP 2
 #endif
-#ifndef PWRMGR_HW_SEM_LOCK_WA_PI_LATENCY
-#define PWRMGR_HW_SEM_LOCK_WA_PI_LATENCY 0
-#endif
 #ifndef PWRMGR_HW_SEM_UNLOCK_WA_PI_OPP
 #define	PWRMGR_HW_SEM_UNLOCK_WA_PI_OPP	0
-#endif
-#ifndef PWRMGR_HW_SEM_UNLOCK_WA_PI_LATENCY
-#define PWRMGR_HW_SEM_UNLOCK_WA_PI_LATENCY     PI_MGR_QOS_DEFAULT_VALUE
 #endif
 #ifdef CONFIG_KONA_PWRMGR_SWSEQ_FAKE_TRG_ERRATUM
 #ifndef PWRMGR_SW_SEQ_PC_PIN
@@ -179,8 +174,6 @@ struct pwr_mgr_event {
 struct pwr_mgr {
 	struct pwr_mgr_info *info;
 	struct pwr_mgr_event event_cb[PWR_MGR_NUM_EVENTS];
-	struct pi_mgr_qos_node sem_qos_client;
-	struct pi_mgr_qos_node seq_qos_client;
 	bool sem_locked;
 	u32 i2c_seq_trg;
 #ifdef CONFIG_KONA_PWRMGR_SWSEQ_FAKE_TRG_ERRATUM
@@ -879,15 +872,7 @@ int pwr_mgr_pm_i2c_sem_lock()
 						cpu_freq);
 		}
 #endif
-		if (!pwr_mgr.sem_qos_client.valid)
-			ret =
-			    pi_mgr_qos_add_request(&pwr_mgr.sem_qos_client,
-					"sem_wa",
-					PWRMGR_HW_SEM_WA_PI_ID,
-					PWRMGR_HW_SEM_LOCK_WA_PI_LATENCY);
-		else
-			pi_mgr_qos_request_update(&pwr_mgr.sem_qos_client,
-					PWRMGR_HW_SEM_LOCK_WA_PI_LATENCY);
+		kona_pm_disable_idle_state(CSTATE_ALL, 1);
 	}
 	spin_lock_irqsave(&pwr_mgr_lock, flgs);
 
@@ -930,8 +915,7 @@ int pwr_mgr_pm_i2c_sem_unlock()
 		if (cpu_freq != 0)
 			cpufreq_update_lmt_req(&frq_min_lmt_node, cpu_freq);
 #endif
-		pi_mgr_qos_request_update(&pwr_mgr.sem_qos_client,
-					  PWRMGR_HW_SEM_UNLOCK_WA_PI_LATENCY);
+		kona_pm_disable_idle_state(CSTATE_ALL, 0);
 	}
 	return 0;
 }
@@ -2014,7 +1998,7 @@ int pwr_mgr_pmu_reg_read(u8 reg_addr, u8 slave_id, u8 *reg_val)
 	}
 
 	mutex_lock(&seq_mutex);
-	pi_mgr_qos_request_update(&pwr_mgr.seq_qos_client, 0);
+	kona_pm_disable_idle_state(CSTATE_ALL, 1);
 
 	if (pwr_mgr.info->i2c_rd_slv_id_off1 >= 0)
 		pwr_mgr_update_i2c_cmd_data((u32) pwr_mgr.info->
@@ -2072,8 +2056,7 @@ int pwr_mgr_pmu_reg_read(u8 reg_addr, u8 slave_id, u8 *reg_val)
 		__func__, reg_addr, slave_id, *reg_val, ret);
 	}
 out_unlock:
-	pi_mgr_qos_request_update(&pwr_mgr.seq_qos_client,
-			PI_MGR_QOS_DEFAULT_VALUE);
+	kona_pm_disable_idle_state(CSTATE_ALL, 0);
 	mutex_unlock(&seq_mutex);
 	pwr_dbg(PWR_LOG_SEQ, "%s : ret = %d\n", __func__, ret);
 	return ret;
@@ -2095,7 +2078,7 @@ int pwr_mgr_pmu_reg_write(u8 reg_addr, u8 slave_id, u8 reg_val)
 	}
 
 	mutex_lock(&seq_mutex);
-	pi_mgr_qos_request_update(&pwr_mgr.seq_qos_client, 0);
+	kona_pm_disable_idle_state(CSTATE_ALL, 1);
 
 	if (pwr_mgr.info->i2c_wr_slv_id_off >= 0)
 		pwr_mgr_update_i2c_cmd_data((u32) pwr_mgr.info->
@@ -2127,8 +2110,7 @@ int pwr_mgr_pmu_reg_write(u8 reg_addr, u8 slave_id, u8 reg_val)
 			ret = -EAGAIN;
 		}
 	}
-	pi_mgr_qos_request_update(&pwr_mgr.seq_qos_client,
-			PI_MGR_QOS_DEFAULT_VALUE);
+	kona_pm_disable_idle_state(CSTATE_ALL, 0);
 	mutex_unlock(&seq_mutex);
 	pwr_dbg(PWR_LOG_SEQ,
 		"%s reg_addr:0x%0x; slave_id:%d; reg_val:0x%0x; ret_val:%d\n",
@@ -2336,19 +2318,6 @@ void pwr_mgr_init_sequencer(struct pwr_mgr_info *info)
 			pwr_mgr_set_v0x_specific_i2c_cmd_ptr(v_set,
 					info->i2c_cmd_ptr[v_set]);
 	}
-
-	/**
-	 * Create A9 PM QoS client for SW Sequencer to forbit A9
-	 * to enter into low power state during i2c
-	 * read/write operation. This is needed to reduce the
-	 * interrupt latency for sequencer complete interrupt
-	 */
-	if (!pwr_mgr.seq_qos_client.valid)
-		pi_mgr_qos_add_request(&pwr_mgr.seq_qos_client,
-				"seq_qos",
-				PI_MGR_PI_ID_ARM_CORE,
-				PI_MGR_QOS_DEFAULT_VALUE);
-
 }
 EXPORT_SYMBOL(pwr_mgr_init_sequencer);
 
@@ -2356,7 +2325,6 @@ int pwr_mgr_init(struct pwr_mgr_info *info)
 {
 	int ret = 0;
 	pwr_mgr.info = info;
-	pwr_mgr.sem_qos_client.name = NULL;
 	pwr_mgr.sem_locked = false;
 
 	/* I2C seq is disabled by default */

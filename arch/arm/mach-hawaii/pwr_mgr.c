@@ -42,6 +42,10 @@
 #include "pm_params.h"
 #include "sequencer_ucode.h"
 #include <plat/kona_avs.h>
+#ifdef CONFIG_DELAYED_PM_INIT
+#include <mach/pm.h>
+#include <plat/kona_pm.h>
+#endif
 
 #define VLT_LUT_SIZE	16
 /*PM policy definitions */
@@ -54,8 +58,6 @@
 static int delayed_init_complete;
 
 #ifdef CONFIG_DELAYED_PM_INIT
-struct pi_mgr_qos_node delay_arm_lpm;
-
 struct pm_late_init {
 	int dummy;
 };
@@ -905,9 +907,7 @@ static int param_set_pm_late_init(const char *val,
 	if (pm_delayed_init == 1)
 		hawaii_pwr_mgr_delayed_init();
 
-	if (delay_arm_lpm.valid)
-		pi_mgr_qos_request_remove(&delay_arm_lpm);
-
+	kona_pm_disable_idle_state(CSTATE_ALL, 0);
 	return 0;
 }
 #endif
@@ -915,15 +915,12 @@ static int param_set_pm_late_init(const char *val,
 int __init hawaii_pwr_mgr_late_init(void)
 {
 #ifdef CONFIG_DELAYED_PM_INIT
-	int ret;
 	if (is_charging_state()) {
 		pr_info("%s: power off charging, complete int here\n",
 						__func__);
 		hawaii_pwr_mgr_delayed_init();
-	} else {
-		ret = pi_mgr_qos_add_request(&delay_arm_lpm, "delay_arm_lpm",
-				PI_MGR_PI_ID_ARM_CORE, 0);
-	}
+	} else
+		kona_pm_disable_idle_state(CSTATE_ALL, 1);
 #else
 	hawaii_pwr_mgr_delayed_init();
 #endif
