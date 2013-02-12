@@ -1595,20 +1595,22 @@ static int bsc_get_clk(struct bsc_i2c_dev *dev, struct bsc_adap_cfg *cfg)
 
 	if (cfg->bsc_apb_clk) {
 		dev->bsc_apb_clk = clk_get(dev->device, cfg->bsc_apb_clk);
+		if (!dev->bsc_apb_clk)
+			return -EINVAL;
+
 		/* AON domain clocks may be enabled by default, need to
 		 * disable */
 		clk_disable(dev->bsc_apb_clk);
-		if (!dev->bsc_apb_clk)
-			return -EINVAL;
 	}
 
 	if (cfg->bsc_clk) {
 		dev->bsc_clk = clk_get(dev->device, cfg->bsc_clk);
+		if (!dev->bsc_clk)
+			return -EINVAL;
+
 		/* AON domain clocks may be enabled by default, need to
 		 * disable */
 		clk_disable(dev->bsc_clk);
-		if (!dev->bsc_clk)
-			return -EINVAL;
 	}
 
 	return 0;
@@ -2327,6 +2329,11 @@ static ssize_t set_i2c_bus_speed(struct file *file,
 
 	dev = i2c_get_adapdata(adap);
 
+	if (!dev) {
+		printk(KERN_ERR "Cannot find i2c device\n");
+		return -ENODEV;
+	}
+
 	sscanf(data, "%d 0x%x", &speed, &addr);
 	if (speed == 400)
 		speed = BSC_SPD_400K;
@@ -2336,10 +2343,6 @@ static ssize_t set_i2c_bus_speed(struct file *file,
 		speed = BSC_SPD_50K;	/* Default speed */
 
 	dev->speed = speed;
-	if (!dev) {
-		printk(KERN_ERR "Cannot find i2c device\n");
-		return -ENODEV;
-	}
 
 	d = bsc_i2c_get_client(adap, addr);
 	if (d) {
