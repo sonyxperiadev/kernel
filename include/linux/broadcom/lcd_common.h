@@ -204,6 +204,7 @@ typedef struct {
 /* info for each LCD panel - some global vars moved into here */
 typedef struct lcd_dev_info_t {
 	LCD_panel_t panel;	/* hint  - when panels require different cmds */
+	char *LCD_panel_name;
 
 	int height;
 	int width;
@@ -227,7 +228,6 @@ void lcd_select_panel(LCD_panel_t panel);
 extern LCD_Intf_t LCD_Intf;
 extern LCD_Volt_t LCD_Volt;
 extern LCD_Bus_t LCD_Bus;
-extern const char *LCD_panel_name;
 extern int LCD_num_panels;
 extern LCD_dev_info_t LCD_device[];
 void lcd_init_panels(void);
