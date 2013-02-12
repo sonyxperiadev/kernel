@@ -52,6 +52,10 @@ config	MACH_HAWAII_SS_LOGAN_REV00
 	help
 	  Support for the Broadcom Hawaii SS logan board.
 
+config	MACH_HAWAII_SS_LOGAN_REV01
+	bool "Support Broadcom Hawaii SS logan board"
+	help
+	  Support for the Broadcom Hawaii SS logan board.
 
 endchoice
 
@@ -131,7 +135,12 @@ config	MACH_HAWAII_SS_LOGAN_REV00
 	bool "Support Broadcom Hawaii SS logan board"
 	help
 	  Support for the Broadcom Hawaii SS logan board.
-	
+
+config	MACH_HAWAII_SS_LOGAN_REV01
+	bool "Support Broadcom Hawaii SS logan board"
+	help
+	  Support for the Broadcom Hawaii SS logan board.
+
 endchoice
 
 

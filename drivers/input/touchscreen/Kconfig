@@ -974,4 +974,17 @@ config TOUCHSCREEN_TPS6507X
 	  To compile this driver as a module, choose M here: the
 	  module will be called tps6507x_ts.
 
+config TOUCHSCREEN_IST30XX
+        tristate "IST30XX I2C Touchscreen"
+        depends on I2C
+        help
+          Say Y here if you have the Imagis IST30XX I2C touchscreen
+          connected to your system.
+
+          If unsure, say N.
+
+          To compile this driver as a module, choose M here: the
+          module will be called ist30xx.
+
+
 endif

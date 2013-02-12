@@ -83,3 +83,4 @@ obj-$(CONFIG_TOUCHSCREEN_TMA340)	+= synaptics_i2c_rmi_tma340_tassve.o
 obj-$(CONFIG_TOUCHSCREEN_BT403_AMAZING)	+= zinitix_tsp_bt403_amazing.o
 obj-$(CONFIG_TOUCHSCREEN_BT403_ZANIN)	+= zinitix_touch.o
 obj-$(CONFIG_TOUCHSCREEN_F761)	+= silabs_f760.o bl_master.o
+obj-$(CONFIG_TOUCHSCREEN_IST30XX) += ist30xx_update.o ist30xx.o ist30xx_misc.o ist30xx_sys.o
