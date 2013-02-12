@@ -30,7 +30,9 @@
 #include <mach/io_map.h>
 #include <mach/rdb/brcm_rdb_uartb.h>
 
-#if defined ( CONFIG_MACH_HAWAII_SS_EVAL_REV00 ) || defined ( CONFIG_MACH_HAWAII_SS_LOGAN_REV00 )
+#if defined(CONFIG_MACH_HAWAII_SS_EVAL_REV00) || \
+	defined(CONFIG_MACH_HAWAII_SS_LOGAN_REV00) \
+	|| defined(CONFIG_MACH_HAWAII_SS_LOGAN_REV01)
 #define KONA_UART0_PA UARTB3_BASE_ADDR
 #else
 #define KONA_UART0_PA UARTB_BASE_ADDR
@@ -38,7 +40,8 @@
 
 static inline void putc(int c)
 {
-	/* data should be written to THR register only if THRE (LSR bit5) is set) */
+	/* data should be written to THR register only if\
+	THRE (LSR bit5) is set) */
 	while (0 ==
 	       (__raw_readl(KONA_UART0_PA + UARTB_LSR_OFFSET) &
 		UARTB_LSR_THRE_MASK)) {
