@@ -1165,6 +1165,8 @@ static int soc_camera_probe(struct device *dev)
 	}
 
 	sd = soc_camera_to_subdev(icd);
+	if (!sd)
+		goto eiufmt;
 	sd->grp_id = (long)icd;
 
 	/* At this point client .probe() should have run already */
@@ -1607,13 +1609,16 @@ static int __devinit soc_camera_pdrv_probe(struct platform_device *pdev)
 
 		i2c_camera = kzalloc(sizeof(struct i2c_board_info),
 			GFP_ATOMIC);
-		if (!i2c_camera)
+		if (!i2c_camera) {
+			kfree(icd);
 			return -ENOMEM;
+		}
 		parms = kzalloc(sizeof(struct
 			v4l2_subdev_sensor_interface_parms),
 			GFP_ATOMIC);
 		if (!parms) {
 			kfree(i2c_camera);
+			kfree(icd);
 			return -ENOMEM;
 		}
 
@@ -1673,8 +1678,10 @@ static int __devinit soc_camera_pdrv_probe(struct platform_device *pdev)
 
 		regulators = kzalloc(reg_count *
 			sizeof(struct regulator_bulk_data), GFP_KERNEL);
-		if (!regulators)
+		if (!regulators) {
+			kfree(icd);
 			return -ENOMEM;
+		}
 
 		for (count = 0; count < reg_count; count++) {
 			if (of_property_read_string_index(pdev->dev.of_node,
@@ -1718,6 +1725,7 @@ out:
 		kfree(i2c_camera);
 		kfree(parms);
 	}
+	kfree(icd);
 	return -EINVAL;
 }
 
