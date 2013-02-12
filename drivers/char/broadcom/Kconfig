@@ -68,7 +68,6 @@ config BCMPMU_RPC
 
 config BCM_AP_PANIC_ON_CPCRASH
         bool "Support for crashing AP when CP crashes"
-        depends on BRCM_CHAR_DRIVERS
         default y
         help
         If you say Y here, a CP crash will result in AP panic.

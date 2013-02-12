@@ -98,7 +98,9 @@ struct T_CRASH_SUMMARY {
 #define	SIM_AP_DEBUG_DATA	0x19000000
 #define	ASSERT_BUF_SIZE	    512
 #define MAX_RAMDUMP_BLOCKS  16
+#ifndef CONFIG_BCM_AP_PANIC_ON_CPCRASH
 static char assert_buf[ASSERT_BUF_SIZE];
+#endif
 static struct T_CRASH_SUMMARY *dumped_crash_summary_ptr = { 0 };
 
 static int crashCount;
@@ -144,9 +146,11 @@ static struct T_CP_IMGS g_cp_imgs[] = {
 	{ NULL, 0, 0 }
 };
 
+#ifndef CONFIG_BCM_AP_PANIC_ON_CPCRASH
 /* internal helper functions */
 static void DUMP_CP_assert_log(void);
 static void DUMP_CPMemoryByList(struct T_RAMDUMP_BLOCK *mem_dump);
+#endif
 static void GetStringFromPA(UInt32 inPhysAddr, char *inStrBuf,
 		UInt32 inStrBufLen);
 static void ReloadCP(void);
@@ -652,23 +656,18 @@ if (!crash_dump_ui_on && !cpReset) {
 	}
 #endif
 
-#ifdef CONFIG_BCM_AP_PANIC_ON_CPCRASH
-	if (BCMLOG_OUTDEV_SDCARD == BCMLOG_GetCpCrashLogDevice()
 #ifdef CONFIG_CDEBUGGER
-		&& ramdump_enable == 1
-#endif
+	if (ramdump_enable
 #ifdef CONFIG_APANIC_ON_MMC
 		&& ap_triggered == 0
 #endif
+		&& !cpReset
 		) {
 		/* we kill AP when CP crashes */
 		IPC_DEBUG(DBG_ERROR, "Crashing AP for Ramdump ...\n\n");
-#ifdef CONFIG_SEC_DEBUG
-		cp_abort();
-#else /* CONFIG_SEC_DEBUG */
 		abort();
-#endif /* CONFIG_SEC_DEBUG */
 	}
+#endif
 	if ((BCMLOG_OUTDEV_PANIC == BCMLOG_GetCpCrashLogDevice() ||
 		BCMLOG_OUTDEV_NONE == BCMLOG_GetCpCrashLogDevice() ||
 		BCMLOG_OUTDEV_STM == BCMLOG_GetCpCrashLogDevice()) &&
@@ -679,13 +678,8 @@ if (!crash_dump_ui_on && !cpReset) {
 		) {
 		/* we kill AP when CP crashes */
 		IPC_DEBUG(DBG_ERROR, "Crashing AP now ...\n\n");
-#ifdef CONFIG_SEC_DEBUG
-		cp_abort();
-#else /* CONFIG_SEC_DEBUG */
 		abort();
-#endif /* CONFIG_SEC_DEBUG */
 	}
-#endif
 
 	IPC_Dump();
 
@@ -778,9 +772,11 @@ if (!crash_dump_ui_on && !cpReset) {
 	    )
 		HandleCPResetStart();
 
+#ifndef CONFIG_BCM_AP_PANIC_ON_CPCRASH
 	/* done with "simple" dump, so now pull the full assert
 	 * log from CP and dump out to MTT */
 	DUMP_CP_assert_log();
+#endif
 
 cleanUp:
 
@@ -855,6 +851,7 @@ int IpcCPCrashCheck(void)
 	return 0;
 }
 
+#ifndef CONFIG_BCM_AP_PANIC_ON_CPCRASH
 /******************************************************************
 *   Utility function to retrieve full crash log from CP via simple
 *   handshake protocol.
@@ -1003,9 +1000,7 @@ if (!ramdump_enable && !cpReset)
 
 	if ((BCMLOG_OUTDEV_RNDIS == BCMLOG_GetCpCrashLogDevice() ||
 		BCMLOG_OUTDEV_ACM == BCMLOG_GetCpCrashLogDevice()
-#ifdef CONFIG_BCM_AP_PANIC_ON_CPCRASH
 		|| BCMLOG_OUTDEV_SDCARD == BCMLOG_GetCpCrashLogDevice()
-#endif
 	   ) && cp_crashed == 1 && !cpReset)
 		abort();
 
@@ -1151,6 +1146,7 @@ void DUMP_CPMemoryByList(struct T_RAMDUMP_BLOCK *mem_dump)
 		free_size_ipc(IPC_CP_RAMDUMP_BLOCK_AREA_SZ));
 
 }
+#endif
 
 int __init ipc_crashsupport_init(void)
 {
