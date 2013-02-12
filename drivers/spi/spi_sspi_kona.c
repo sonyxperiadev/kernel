@@ -42,7 +42,7 @@
 #include <mach/memory.h>
 
 #include <plat/chal/chal_types.h>
-#ifdef CONFIG_ARCH_HAWAII
+#if defined(CONFIG_ARCH_HAWAII) || defined(CONFIG_ARCH_JAVA)
 #include <plat/chal/chal_sspi_hawaii.h>
 #else
 #include <plat/chal/chal_sspi.h>
@@ -318,7 +318,7 @@ static int spi_kona_configure(struct spi_kona_data *spi_kona,
 	if (ret < 0)
 		return ret;
 
-#ifdef CONFIG_ARCH_HAWAII
+#if defined(CONFIG_ARCH_HAWAII) || defined(CONFIG_ARCH_JAVA)
 	/* Set frame data size */
 	ret = chal_sspi_set_spi_frame(chandle, &frame_mask,
 				      config->mode, config->bpw, 0);
@@ -771,7 +771,7 @@ static int spi_kona_txrxfer_bufs(struct spi_device *spi,
 	if (ret < 0)
 		return ret;
 
-#ifndef CONFIG_ARCH_HAWAII
+#if !defined(CONFIG_ARCH_HAWAII) && !defined(CONFIG_ARCH_JAVA)
 	/* Check if 8-byte unalligned address buffer was passed */
 	if (transfer->rx_buf != NULL && ((int)(transfer->rx_buf) % 8) != 0) {
 		pr_err("8-byte unalligned access seen for RX buffer\n");
@@ -783,6 +783,7 @@ static int spi_kona_txrxfer_bufs(struct spi_device *spi,
 		return -EINVAL;
 	}
 #endif
+
 	spi_kona->rx_buf = transfer->rx_buf;
 	spi_kona->tx_buf = transfer->tx_buf;
 

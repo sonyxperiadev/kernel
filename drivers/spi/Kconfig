@@ -171,14 +171,14 @@ config SPI_IMX
 
 config SPI_SSPI_KONA
 	tristate "Broadcom KONA SSPI based SPI controller"
-	depends on (ARCH_KONA && !ARCH_HAWAII)
+	depends on (ARCH_KONA && !ARCH_HAWAII && !ARCH_JAVA)
 	help
 	  This enables using the Broadcom SPI controller based on KONA
 	  SSPI module in master mode.
 
 config SPI_SSPI_HAWAII
 	tristate "Broadcom Hawaii SSPI based SPI controller"
-	depends on ARCH_HAWAII
+	depends on (ARCH_HAWAII || ARCH_JAVA)
 	help
 	  This enables using the Broadcom SPI controller based on Hawaii
 	  SSPI module in master mode.
