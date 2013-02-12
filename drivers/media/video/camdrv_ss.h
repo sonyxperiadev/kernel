@@ -5,7 +5,7 @@
 #include <linux/device.h>
 #include <asm/gpio.h>
 #include <mach/kona.h>
-#include <mach/rhea.h>
+#include <mach/hawaii.h>
 #include <asm/mach/map.h>
 #include <linux/power_supply.h>
 #include <linux/mfd/bcm590xx/core.h>
@@ -15,7 +15,7 @@
 #include <linux/clk.h>
 #include <linux/bootmem.h>
 #include <plat/pi_mgr.h>
-#include <linux/sysdev.h>
+#include <linux/device.h>
 #include <linux/delay.h>
 #include <linux/version.h>
 #include <linux/vmalloc.h>

@@ -1892,7 +1892,17 @@ static struct regulator *VCAM_CORE_1_2_V;   //ASR_SW
 #else
 #define CAM_CORE_EN	   98 //Since Nevis is using GPS_TMARK pin for VCAMC_EN
 #endif
+
 #define CAM_AF_EN     121
+
+#define VCAM_A_2_8V_REGULATOR		"mmcldo1"
+#if defined(CONFIG_MACH_HAWAII_SS_LOGAN_REV01)
+#define VCAM_IO_1_8V_REGULATOR		"lvldo1"
+#else
+#define VCAM_IO_1_8V_REGULATOR		"tcxldo"
+#endif
+#define VCAM_AF_2_8V_REGULATOR		"mmcldo2"
+#define VCAM_CORE_1_2V_REGULATOR	"vsrldo"
 
 //main cam 
 #define CAM0_RESET    33

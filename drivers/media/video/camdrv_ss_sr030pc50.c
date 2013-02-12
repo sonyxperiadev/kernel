@@ -59,6 +59,17 @@ extern inline struct camdrv_ss_state *to_state(struct v4l2_subdev *sd);
 	#define SENSOR_0_CLK_FREQ		(26000000) /* @HW, need to check how fast this meaning. */
 #endif
 
+	#define VCAM_A_2_8V_REGULATOR		"mmcldo1"
+#if defined(CONFIG_MACH_HAWAII_SS_LOGAN_REV01)
+	#define VCAM_IO_1_8V_REGULATOR		"lvldo1"
+#else
+	#define VCAM_IO_1_8V_REGULATOR		"tcxldo"
+#endif
+	#define VCAM_CORE_1_2V_REGULATOR	"vsrldo"
+
+#define CSI0_LP_FREQ			(100000000)
+#define CSI1_LP_FREQ			(100000000)
+
 #if defined(CONFIG_MACH_RHEA_SS_LUCAS)
 #define EXIF_SOFTWARE		""
 #define EXIF_MAKE		"SAMSUNG"
