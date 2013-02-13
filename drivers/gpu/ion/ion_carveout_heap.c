@@ -30,6 +30,7 @@
 #include <linux/dma-direction.h>
 #include <asm/cacheflush.h>
 #include <linux/seq_file.h>
+#include <linux/debugfs.h>
 #endif
 #include "ion_priv.h"
 
@@ -39,6 +40,15 @@ struct ion_carveout_heap {
 	struct ion_heap heap;
 	struct gen_pool *pool;
 	ion_phys_addr_t base;
+#ifdef CONFIG_ION_KONA
+	int size;
+#endif
+#ifdef CONFIG_ION_OOM_KILLER
+	int lmk_enable;
+	int lmk_min_score_adj;
+	int lmk_min_free;
+	struct dentry *lmk_debug_root;
+#endif
 };
 
 ion_phys_addr_t ion_carveout_allocate(struct ion_heap *heap,
@@ -101,31 +111,13 @@ struct sg_table *ion_carveout_heap_map_dma(struct ion_heap *heap,
 	table = kzalloc(sizeof(struct sg_table), GFP_KERNEL);
 	if (!table)
 		return ERR_PTR(-ENOMEM);
-	if (buffer->flags & ION_FLAG_CACHED) {
-		struct scatterlist *sg;
-		int ret, i;
-		int nents = PAGE_ALIGN(buffer->size) / PAGE_SIZE;
-		struct page *page = phys_to_page(buffer->priv_phys);
-
-		ret = sg_alloc_table(table, nents, GFP_KERNEL);
-		if (ret) {
-			kfree(table);
-			return ERR_PTR(ret);
-		}
-		sg = table->sgl;
-		for (i = 0; i < nents; i++) {
-			sg_set_page(sg, page + i, PAGE_SIZE, 0);
-			sg = sg_next(sg);
-		}
-	} else {
-		ret = sg_alloc_table(table, 1, GFP_KERNEL);
-		if (ret) {
-			kfree(table);
-			return ERR_PTR(ret);
-		}
-		sg_set_page(table->sgl, phys_to_page(buffer->priv_phys),
-				buffer->size, 0);
+	ret = sg_alloc_table(table, 1, GFP_KERNEL);
+	if (ret) {
+		kfree(table);
+		return ERR_PTR(ret);
 	}
+	sg_set_page(table->sgl, phys_to_page(buffer->priv_phys), buffer->size,
+		    0);
 #ifdef CONFIG_ION_KONA
 	buffer->dma_addr = buffer->priv_phys;
 #endif
@@ -188,7 +180,7 @@ int ion_carveout_heap_map_user(struct ion_heap *heap, struct ion_buffer *buffer,
 }
 
 #ifdef CONFIG_ION_KONA
-int ion_carveout_heap_flush_cache(struct ion_heap *heap,
+int ion_carveout_heap_clean_cache(struct ion_heap *heap,
 		struct ion_buffer *buffer, unsigned long offset,
 		unsigned long len)
 {
@@ -198,10 +190,10 @@ int ion_carveout_heap_flush_cache(struct ion_heap *heap,
 
 	pa = buffer->priv_phys;
 	va = __arm_ioremap(buffer->priv_phys, buffer->size, mtype);
-	pr_debug("flush: pa(%x) va(%p) off(%ld) len(%ld)\n",
+	pr_debug("clean: pa(%x) va(%p) off(%ld) len(%ld)\n",
 			pa, va, offset, len);
-	dmac_flush_range(va + offset, va + offset + len);
-	outer_flush_range(pa + offset, pa + offset + len);
+	dmac_unmap_area(va + offset, len, DMA_BIDIRECTIONAL);
+	outer_clean_range(pa + offset, pa + offset + len);
 	__arm_iounmap(va);
 
 	return 0;
@@ -220,20 +212,10 @@ int ion_carveout_heap_invalidate_cache(struct ion_heap *heap,
 	pr_debug("inv: pa(%x) va(%p) off(%ld) len(%ld)\n",
 			pa, va, offset, len);
 	outer_inv_range(pa + offset, pa + offset + len);
-	dmac_unmap_area(va + offset, len, DMA_FROM_DEVICE);
+	dmac_unmap_area(va + offset, len, DMA_BIDIRECTIONAL);
 	__arm_iounmap(va);
 
 	return 0;
-}
-#endif
-
-#ifdef CONFIG_ION_OOM_KILLER
-static int ion_carveout_heap_needs_shrink(struct ion_heap *heap)
-{
-	/* Any local checks and disabling lowmem check
-	 * can be done here
-	 **/
-	return heap->lmk_enable;
 }
 #endif
 
@@ -247,15 +229,67 @@ static struct ion_heap_ops carveout_heap_ops = {
 	.map_kernel = ion_carveout_heap_map_kernel,
 	.unmap_kernel = ion_carveout_heap_unmap_kernel,
 #ifdef CONFIG_ION_KONA
-	.flush_cache = ion_carveout_heap_flush_cache,
+	.clean_cache = ion_carveout_heap_clean_cache,
 	.invalidate_cache = ion_carveout_heap_invalidate_cache,
-#endif
-#ifdef CONFIG_ION_OOM_KILLER
-	.needs_shrink = ion_carveout_heap_needs_shrink,
 #endif
 };
 
 #ifdef CONFIG_ION_KONA
+static int ion_carveout_heap_free_size(struct ion_heap *heap)
+{
+	struct ion_carveout_heap *carveout_heap =
+		container_of(heap, struct ion_carveout_heap, heap);
+
+	return carveout_heap->size - heap->used;
+}
+
+#ifdef CONFIG_ION_OOM_KILLER
+static int ion_carveout_lmk_shrink_info(struct ion_heap *heap, int *min_adj,
+		int *min_free)
+{
+	struct ion_carveout_heap *carveout_heap =
+		container_of(heap, struct ion_carveout_heap, heap);
+	int lmk_min_free = carveout_heap->lmk_min_free;
+	int free_size = ion_carveout_heap_free_size(heap);
+
+	if (!carveout_heap->lmk_enable)
+		return 0;
+	if ((lmk_min_free < 0) || (lmk_min_free > 128)) {
+		pr_err("lmk_min_free(%d) should be in [0-128] range\n",
+				lmk_min_free);
+		return 0;
+	}
+	*min_free = ((carveout_heap->size / 128) * lmk_min_free) & PAGE_MASK;
+	*min_adj = carveout_heap->lmk_min_score_adj;
+	if (free_size >= *min_free)
+		return 0;
+
+	return 1;
+}
+
+static int ion_carveout_lmk_debugfs_add(struct ion_heap *heap,
+		struct dentry *debug_root)
+{
+	char debug_name[64];
+	struct ion_carveout_heap *carveout_heap =
+		container_of(heap, struct ion_carveout_heap, heap);
+
+	snprintf(debug_name, 64, "lmk_%s", heap->name);
+	carveout_heap->lmk_debug_root = debugfs_create_dir(debug_name,
+			debug_root);
+	debugfs_create_u32("enable", (S_IRUGO|S_IWUSR),
+			carveout_heap->lmk_debug_root,
+			(unsigned int *)&carveout_heap->lmk_enable);
+	debugfs_create_u32("oom_score_adj", (S_IRUGO|S_IWUSR),
+			carveout_heap->lmk_debug_root,
+			(unsigned int *)&carveout_heap->lmk_min_score_adj);
+	debugfs_create_u32("min_free", (S_IRUGO|S_IWUSR),
+			carveout_heap->lmk_debug_root,
+			(unsigned int *)&carveout_heap->lmk_min_free);
+	return 0;
+}
+#endif
+
 static int ion_carveout_heap_debug_show(struct ion_heap *heap,
 		struct seq_file *s, void *unused)
 {
@@ -264,24 +298,27 @@ static int ion_carveout_heap_debug_show(struct ion_heap *heap,
 
 	seq_printf(s, "%16.s: %6s(%s) %4s(%d) %6s(%u)KB %7s(%#08lx - %#08lx)\n",
 			"Carveout Heap", "Name", heap->name, "Id", heap->id,
-			"Size", (heap->size>>10), "Range",
+			"Size", (carveout_heap->size>>10), "Range",
 			carveout_heap->base,
-			(carveout_heap->base + heap->size));
+			(carveout_heap->base + carveout_heap->size));
 #ifdef CONFIG_ION_OOM_KILLER
-	if (heap->ops->needs_shrink(heap)) {
-		int min_free = ion_minfree_get(heap);
+	if (carveout_heap->lmk_enable) {
+		int min_adj, min_free, free_size;
+
+		ion_carveout_lmk_shrink_info(heap, &min_adj, &min_free);
+		free_size = ion_carveout_heap_free_size(heap);
 
 		seq_printf(s, "Lowmemkiller Info:\n");
 		seq_printf(s, "%16.s %16.s %16.s\n%13u KB %13u KB %16u\n",
 				"free mem", "threshold", "min_adj",
-				((heap->size - heap->used)>>10),
-				min_free>>10, heap->lmk_min_score_adj);
+				free_size>>10, min_free>>10, min_adj);
 	} else {
 		seq_printf(s, "  Lowmemkiller disabled.\n");
 	}
 #endif
 	return 0;
 }
+
 #endif
 
 struct ion_heap *ion_carveout_heap_create(struct ion_platform_heap *heap_data)
@@ -303,13 +340,16 @@ struct ion_heap *ion_carveout_heap_create(struct ion_platform_heap *heap_data)
 	carveout_heap->heap.ops = &carveout_heap_ops;
 	carveout_heap->heap.type = ION_HEAP_TYPE_CARVEOUT;
 #ifdef CONFIG_ION_KONA
-	carveout_heap->heap.size = heap_data->size;
+	carveout_heap->size = heap_data->size;
 	carveout_heap->heap.debug_show = ion_carveout_heap_debug_show;
+	carveout_heap->heap.free_size = ion_carveout_heap_free_size;
 #endif
 #ifdef CONFIG_ION_OOM_KILLER
-	carveout_heap->heap.lmk_enable = heap_data->lmk_enable;
-	carveout_heap->heap.lmk_min_score_adj = heap_data->lmk_min_score_adj;
-	carveout_heap->heap.lmk_min_free = heap_data->lmk_min_free;
+	carveout_heap->lmk_enable = heap_data->lmk_enable;
+	carveout_heap->lmk_min_score_adj = heap_data->lmk_min_score_adj;
+	carveout_heap->lmk_min_free = heap_data->lmk_min_free;
+	carveout_heap->heap.lmk_shrink_info = ion_carveout_lmk_shrink_info;
+	carveout_heap->heap.lmk_debugfs_add = ion_carveout_lmk_debugfs_add;
 #endif
 
 	return &carveout_heap->heap;

@@ -14,6 +14,8 @@
  *
  */
 
+#define pr_fmt(fmt) "ion-heap: " fmt
+
 #include <linux/err.h>
 #include <linux/ion.h>
 #include <linux/mm.h>
@@ -130,8 +132,7 @@ end:
 	return ret;
 }
 
-struct ion_heap *ion_heap_create_full(struct ion_platform_heap *heap_data,
-				      struct device *dev)
+struct ion_heap *ion_heap_create(struct ion_platform_heap *heap_data)
 {
 	struct ion_heap *heap = NULL;
 
@@ -150,7 +151,7 @@ struct ion_heap *ion_heap_create_full(struct ion_platform_heap *heap_data,
 		break;
 #ifdef CONFIG_CMA
 	case ION_HEAP_TYPE_DMA:
-		heap = ion_cma_heap_create(heap_data, dev);
+		heap = ion_cma_heap_create(heap_data);
 		break;
 #endif
 	default:
@@ -169,11 +170,6 @@ struct ion_heap *ion_heap_create_full(struct ion_platform_heap *heap_data,
 	heap->name = heap_data->name;
 	heap->id = heap_data->id;
 	return heap;
-}
-
-struct ion_heap *ion_heap_create(struct ion_platform_heap *heap_data)
-{
-	return ion_heap_create_full(heap_data, NULL);
 }
 
 void ion_heap_destroy(struct ion_heap *heap)

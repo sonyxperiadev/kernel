@@ -13,6 +13,9 @@
  * GNU General Public License for more details.
  *
  */
+
+#define pr_fmt(fmt) "ion-chunk: " fmt
+
 //#include <linux/spinlock.h>
 #include <linux/dma-mapping.h>
 #include <linux/err.h>
@@ -160,7 +163,7 @@ struct ion_heap *ion_chunk_heap_create(struct ion_platform_heap *heap_data)
 	gen_pool_add(chunk_heap->pool, chunk_heap->base, heap_data->size, -1);
 	chunk_heap->heap.ops = &chunk_heap_ops;
 	chunk_heap->heap.type = ION_HEAP_TYPE_CHUNK;
-	pr_info("%s: base %lu size %ld align %ld\n", __func__, chunk_heap->base,
+	pr_info("%s: base %lu size %d align %ld\n", __func__, chunk_heap->base,
 		heap_data->size, heap_data->align);
 
 	return &chunk_heap->heap;

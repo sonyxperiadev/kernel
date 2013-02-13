@@ -23,21 +23,26 @@
 #include <linux/errno.h>
 #include <linux/err.h>
 #include <linux/dma-mapping.h>
-#ifdef CONFIG_ION_KONA
 #include <linux/dma-direction.h>
 #include <asm/cacheflush.h>
 #include <linux/seq_file.h>
-#endif
+#include <linux/debugfs.h>
 
 /* for ion_heap_ops structure */
 #include "ion_priv.h"
 
-#ifdef CONFIG_ION_KONA
 struct ion_cma_heap {
 	struct ion_heap heap;
 	ion_phys_addr_t base;
-};
+	int size;
+	struct device *dev;
+#ifdef CONFIG_ION_OOM_KILLER
+	int lmk_enable;
+	int lmk_min_score_adj;
+	int lmk_min_free;
+	struct dentry *lmk_debug_root;
 #endif
+};
 
 struct ion_cma_buffer_info {
 	void *cpu_addr;
@@ -50,7 +55,9 @@ static int ion_cma_allocate(struct ion_heap *heap, struct ion_buffer *buffer,
 			    unsigned long len, unsigned long align,
 			    unsigned long flags)
 {
-	struct device *dev = heap->priv;
+	struct ion_cma_heap *cma_heap =
+		container_of(heap, struct ion_cma_heap, heap);
+	struct device *dev = cma_heap->dev;
 	struct ion_cma_buffer_info *info;
 	int n_pages, i;
 	struct scatterlist *sg;
@@ -103,7 +110,9 @@ err:
 
 static void ion_cma_free(struct ion_buffer *buffer)
 {
-	struct device *dev = buffer->heap->priv;
+	struct ion_cma_heap *cma_heap =
+		container_of(buffer->heap, struct ion_cma_heap, heap);
+	struct device *dev = cma_heap->dev;
 	struct ion_cma_buffer_info *info = buffer->priv_virt;
 
 	dev_dbg(dev, "Release buffer %p\n", buffer);
@@ -119,7 +128,9 @@ static void ion_cma_free(struct ion_buffer *buffer)
 static int ion_cma_phys(struct ion_heap *heap, struct ion_buffer *buffer,
 			ion_phys_addr_t *addr, size_t *len)
 {
-	struct device *dev = heap->priv;
+	struct ion_cma_heap *cma_heap =
+		container_of(heap, struct ion_cma_heap, heap);
+	struct device *dev = cma_heap->dev;
 	struct ion_cma_buffer_info *info = buffer->priv_virt;
 
 	dev_dbg(dev, "Return buffer %p physical address 0x%x\n", buffer,
@@ -168,10 +179,12 @@ void ion_cma_heap_unmap_dma(struct ion_heap *heap,
 static int ion_cma_mmap(struct ion_heap *mapper, struct ion_buffer *buffer,
 			struct vm_area_struct *vma)
 {
-#ifdef CONFIG_ION_KONA
-	struct device *dev = buffer->heap->priv;
+	struct ion_cma_heap *cma_heap =
+		container_of(buffer->heap, struct ion_cma_heap, heap);
+	struct device *dev = cma_heap->dev;
 	struct ion_cma_buffer_info *info = buffer->priv_virt;
 
+#ifdef CONFIG_ION_KONA
 	if (buffer->flags & ION_FLAG_WRITECOMBINE)
 		vma->vm_page_prot = pgprot_writecombine(vma->vm_page_prot);
 	else if (buffer->flags & ION_FLAG_WRITETHROUGH)
@@ -186,16 +199,13 @@ static int ion_cma_mmap(struct ion_heap *mapper, struct ion_buffer *buffer,
 			vma->vm_end - vma->vm_start,
 			vma->vm_page_prot);
 #else
-	struct device *dev = buffer->heap->priv;
-	struct ion_cma_buffer_info *info = buffer->priv_virt;
-
 	return dma_mmap_coherent(dev, vma, info->cpu_addr, info->handle,
 				 buffer->size);
 #endif
 }
 
 #ifdef CONFIG_ION_KONA
-int ion_cma_heap_flush_cache(struct ion_heap *heap,
+int ion_cma_heap_clean_cache(struct ion_heap *heap,
 		struct ion_buffer *buffer, unsigned long offset,
 		unsigned long len)
 {
@@ -205,10 +215,10 @@ int ion_cma_heap_flush_cache(struct ion_heap *heap,
 
 	pa = info->handle;
 	va = info->cpu_addr;
-	pr_debug("flush: pa(%x) va(%p) off(%ld) len(%ld)\n",
+	pr_debug("clean: pa(%x) va(%p) off(%ld) len(%ld)\n",
 			pa, va, offset, len);
-	dmac_flush_range(va + offset, va + offset + len);
-	outer_flush_range(pa + offset, pa + offset + len);
+	dmac_unmap_area(va + offset, len, DMA_BIDIRECTIONAL);
+	outer_clean_range(pa + offset, pa + offset + len);
 
 	return 0;
 }
@@ -226,19 +236,9 @@ int ion_cma_heap_invalidate_cache(struct ion_heap *heap,
 	pr_debug("inv: pa(%x) va(%p) off(%ld) len(%ld)\n",
 			pa, va, offset, len);
 	outer_inv_range(pa + offset, pa + offset + len);
-	dmac_unmap_area(va + offset, len, DMA_FROM_DEVICE);
+	dmac_unmap_area(va + offset, len, DMA_BIDIRECTIONAL);
 
 	return 0;
-}
-#endif
-
-#ifdef CONFIG_ION_OOM_KILLER
-static int ion_cma_heap_needs_shrink(struct ion_heap *heap)
-{
-	/* Any local checks and disabling lowmem check
-	 * can be done here
-	 **/
-	return heap->lmk_enable;
 }
 #endif
 
@@ -252,15 +252,68 @@ static struct ion_heap_ops ion_cma_ops = {
 	.phys = ion_cma_phys,
 	.map_user = ion_cma_mmap,
 #ifdef CONFIG_ION_KONA
-	.flush_cache = ion_cma_heap_flush_cache,
+	.clean_cache = ion_cma_heap_clean_cache,
 	.invalidate_cache = ion_cma_heap_invalidate_cache,
-#endif
-#ifdef CONFIG_ION_OOM_KILLER
-	.needs_shrink = ion_cma_heap_needs_shrink,
 #endif
 };
 
 #ifdef CONFIG_ION_KONA
+
+static int ion_cma_heap_free_size(struct ion_heap *heap)
+{
+	struct ion_cma_heap *cma_heap =
+		container_of(heap, struct ion_cma_heap, heap);
+
+	return cma_heap->size - heap->used;
+}
+
+#ifdef CONFIG_ION_OOM_KILLER
+static int ion_cma_lmk_shrink_info(struct ion_heap *heap, int *min_adj,
+		int *min_free)
+{
+	struct ion_cma_heap *cma_heap =
+		container_of(heap, struct ion_cma_heap, heap);
+	int lmk_min_free = cma_heap->lmk_min_free;
+	int free_size = ion_cma_heap_free_size(heap);
+
+	if (!cma_heap->lmk_enable)
+		return 0;
+	if ((lmk_min_free < 0) || (lmk_min_free > 128)) {
+		pr_err("lmk_min_free(%d) should be in [0-128] range\n",
+				lmk_min_free);
+		return 0;
+	}
+	*min_free = ((cma_heap->size / 128) * lmk_min_free) & PAGE_MASK;
+	*min_adj = cma_heap->lmk_min_score_adj;
+	if (free_size >= *min_free)
+		return 0;
+
+	return 1;
+}
+
+static int ion_cma_lmk_debugfs_add(struct ion_heap *heap,
+		struct dentry *debug_root)
+{
+	char debug_name[64];
+	struct ion_cma_heap *cma_heap =
+		container_of(heap, struct ion_cma_heap, heap);
+
+	snprintf(debug_name, 64, "lmk_%s", heap->name);
+	cma_heap->lmk_debug_root = debugfs_create_dir(debug_name,
+			debug_root);
+	debugfs_create_u32("enable", (S_IRUGO|S_IWUSR),
+			cma_heap->lmk_debug_root,
+			(unsigned int *)&cma_heap->lmk_enable);
+	debugfs_create_u32("oom_score_adj", (S_IRUGO|S_IWUSR),
+			cma_heap->lmk_debug_root,
+			(unsigned int *)&cma_heap->lmk_min_score_adj);
+	debugfs_create_u32("min_free", (S_IRUGO|S_IWUSR),
+			cma_heap->lmk_debug_root,
+			(unsigned int *)&cma_heap->lmk_min_free);
+	return 0;
+}
+#endif
+
 static int ion_cma_heap_debug_show(struct ion_heap *heap, struct seq_file *s,
 		void *unused)
 {
@@ -269,27 +322,30 @@ static int ion_cma_heap_debug_show(struct ion_heap *heap, struct seq_file *s,
 
 	seq_printf(s, "%16.s: %6s(%s) %4s(%d) %6s(%u)KB %7s(%#08lx - %#08lx)\n",
 			"CMA Heap", "Name", heap->name, "Id", heap->id,
-			"Size", (heap->size>>10), "Range",
-			cma_heap->base,	(cma_heap->base + heap->size));
+			"Size", (cma_heap->size>>10), "Range",
+			cma_heap->base,	(cma_heap->base + cma_heap->size));
 #ifdef CONFIG_ION_OOM_KILLER
-	if (heap->ops->needs_shrink(heap)) {
-		int min_free = ion_minfree_get(heap);
+	if (cma_heap->lmk_enable) {
+		int min_adj, min_free, free_size;
+
+		ion_cma_lmk_shrink_info(heap, &min_adj, &min_free);
+		free_size = ion_cma_heap_free_size(heap);
 
 		seq_printf(s, "Lowmemkiller Info:\n");
 		seq_printf(s, "%16.s %16.s %16.s\n%13u KB %13u KB %16u\n",
 				"free mem", "threshold", "min_adj",
-				((heap->size - heap->used)>>10),
-				min_free>>10, heap->lmk_min_score_adj);
+				free_size>>10, min_free>>10, min_adj);
 	} else {
 		seq_printf(s, "  Lowmemkiller disabled.\n");
 	}
 #endif
 	return 0;
 }
+
 #endif
 
-struct ion_heap *ion_cma_heap_create(struct ion_platform_heap *data,
-				     struct device *dev)
+
+struct ion_heap *ion_cma_heap_create(struct ion_platform_heap *data)
 {
 	struct ion_cma_heap *cma_heap;
 	struct ion_heap *heap;
@@ -302,17 +358,20 @@ struct ion_heap *ion_cma_heap_create(struct ion_platform_heap *data,
 	heap->ops = &ion_cma_ops;
 	/* set device as private heaps data, later it will be
 	 * used to make the link with reserved CMA memory */
-	heap->priv = dev;
 	heap->type = ION_HEAP_TYPE_DMA;
+	cma_heap->dev = data->priv;
 #ifdef CONFIG_ION_KONA
-	heap->size = data->size;
 	cma_heap->base = data->base;
+	cma_heap->size = data->size;
 	heap->debug_show = ion_cma_heap_debug_show;
+	heap->free_size = ion_cma_heap_free_size;
 #endif
 #ifdef CONFIG_ION_OOM_KILLER
-	heap->lmk_enable = data->lmk_enable;
-	heap->lmk_min_score_adj = data->lmk_min_score_adj;
-	heap->lmk_min_free = data->lmk_min_free;
+	cma_heap->lmk_enable = data->lmk_enable;
+	cma_heap->lmk_min_score_adj = data->lmk_min_score_adj;
+	cma_heap->lmk_min_free = data->lmk_min_free;
+	heap->lmk_shrink_info = ion_cma_lmk_shrink_info;
+	heap->lmk_debugfs_add = ion_cma_lmk_debugfs_add;
 #endif
 
 	return heap;

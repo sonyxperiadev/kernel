@@ -175,6 +175,9 @@ static struct ion_buffer *ion_buffer_create(struct ion_heap *heap,
 
 	buffer->heap = heap;
 	buffer->flags = flags;
+#ifdef CONFIG_ION_KONA
+	buffer->align = align;
+#endif
 	kref_init(&buffer->ref);
 
 	ret = heap->ops->allocate(heap, buffer, len, align, flags);
@@ -185,9 +188,6 @@ static struct ion_buffer *ion_buffer_create(struct ion_heap *heap,
 
 	buffer->dev = dev;
 	buffer->size = len;
-#ifdef CONFIG_ION_KONA
-	buffer->align = align;
-#endif
 
 	table = heap->ops->map_dma(heap, buffer);
 	if (IS_ERR_OR_NULL(table)) {
@@ -379,7 +379,7 @@ static struct ion_handle *ion_handle_lookup(struct ion_client *client,
 	return NULL;
 }
 
-bool ion_handle_validate(struct ion_client *client, struct ion_handle *handle)
+static bool ion_handle_validate(struct ion_client *client, struct ion_handle *handle)
 {
 	struct rb_node *n = client->handles.rb_node;
 
@@ -446,12 +446,10 @@ static void ion_debug_print_heap_status(struct ion_device *dev,
 	struct ion_heap *heap;
 
 	plist_for_each_entry(heap, &dev->heaps, node) {
-		if (!heap->size)
-			continue;
 		if (!((1 << heap->id) & heap_id_mask))
 			continue;
-		pr_info("Heap(%16.s) Size(%d)KB Used(%d)KB\n",
-				heap->name, heap->size>>10, heap->used>>10);
+		pr_info("Heap(%16.s) Used(%d)KB\n",
+				heap->name, heap->used>>10);
 	}
 }
 #endif
@@ -459,22 +457,6 @@ static void ion_debug_print_heap_status(struct ion_device *dev,
 #ifdef CONFIG_ION_OOM_KILLER
 static size_t ion_debug_heap_total(struct ion_client *client,
 				   unsigned int id, size_t *shared);
-
-int ion_minfree_get(struct ion_heap *heap)
-{
-	int min_free = 0;
-	int lmk_min_free = heap->lmk_min_free;
-
-	if ((lmk_min_free >= 0) && (lmk_min_free <= 128)) {
-		min_free = (heap->size / 128) * lmk_min_free;
-		min_free &= (PAGE_MASK);
-	} else {
-		pr_err("%16.s: min_free(%d) should be in [0-128] range\n",
-				heap->name, min_free);
-	}
-
-	return min_free;
-}
 
 static int ion_shrink(struct ion_device *dev, unsigned int heap_id_mask,
 		int min_oom_score_adj, int fail_size)
@@ -492,8 +474,6 @@ static int ion_shrink(struct ion_device *dev, unsigned int heap_id_mask,
 		int shared;
 
 		/* if the caller didn't specify this heap id type */
-		if (heap->type <= ION_HEAP_TYPE_SYSTEM_CONTIG)
-			continue;
 		if (!((1 << heap->id) & heap_id_mask))
 			continue;
 		for (n = rb_first(&dev->clients); n; n = rb_next(n)) {
@@ -539,7 +519,6 @@ static int ion_shrink(struct ion_device *dev, unsigned int heap_id_mask,
 		struct task_struct *p;
 		pid_t selected_pid, current_pid;
 		char current_name[TASK_COMM_LEN];
-		int free_space = selected_heap->size - selected_heap->used;
 
 		if (fail_size)
 			dev->oom_kill_count++;
@@ -549,11 +528,10 @@ static int ion_shrink(struct ion_device *dev, unsigned int heap_id_mask,
 		selected_pid = task_pid_nr(p);
 		current_pid = task_pid_nr(current->group_leader);
 		get_task_comm(current_name, current->group_leader);
-		pr_info("%s shrink (%s) invoked from (%16.s:%d) oom_cnt(%d)"
-				"Free(%u)KB, Required(%u)KB\n",
+		pr_info("%s shrink (%s) invoked from (%16.s:%d) oom_cnt(%d) Used(%u)KB, Required(%u)KB\n",
 				fail_size ? "OOM" : "LMK", selected_heap->name,
 				current_name, current_pid, dev->oom_kill_count,
-				free_space>>10,	fail_size>>10);
+				selected_heap->used>>10, fail_size>>10);
 		pr_info("Kill (%16.s:%d) Size(%u) Adj(%d) Timeout(%lu)\n",
 				task_comm, selected_pid, selected_size,
 				selected_oom, selected_client->timeout);
@@ -646,17 +624,19 @@ retry:
 				buffer->dma_addr, len>>10, heap_id_mask, flags,
 				heap_used->name, heap_used->used>>10);
 #ifdef CONFIG_ION_OOM_KILLER
-		if ((heap_used->ops->needs_shrink) &&
-				(heap_used->ops->needs_shrink(heap_used))) {
-			int free_space = heap_used->size - heap_used->used;
-			int min_adj = heap_used->lmk_min_score_adj;
-			int min_free = ion_minfree_get(heap_used);
+		if (heap_used->lmk_shrink_info)  {
+			int min_adj, min_free, lmk_needed;
 
-			if (free_space < min_free) {
+			lmk_needed = heap_used->lmk_shrink_info(heap_used,
+					&min_adj, &min_free);
+			if (lmk_needed) {
+				int free_size = -1;
+				if (heap_used->free_size)
+					free_size = heap_used->free_size(heap_used);
 				pr_debug("(%16.s:%d) size(%d)KB allocation caused LMK shrink of heap(%16.s) free(%d)KB threshold(%d)KB\n",
 						client_name, client_pid,
 						len>>10, heap_used->name,
-						free_space>>10, min_free>>10);
+						free_size>>10, min_free>>10);
 				ion_shrink(dev, (1 << heap_used->id), min_adj,
 						0);
 			}
@@ -1533,14 +1513,10 @@ static int ion_debug_heap_show(struct seq_file *s, void *unused)
 	seq_printf(s, "----------------------------------------------------\n");
 
 	seq_printf(s, "Summary:\n");
-	if (heap->size)
-		seq_printf(s, "%16.s %13u KB\n", "total reserved",
-				(heap->size>>10));
-	seq_printf(s, "%16.s %13u KB, %16.s %13u KB\n", "total used",
-			(total_size>>10), "total shared",
-			(total_shared_size>>10));
-	seq_printf(s, "%16.s %13u KB\n", "total orphaned",
-			(total_orphaned_size>>10));
+	seq_printf(s, "%16.s %16.s %16.s\n", "total used", "total shared",
+			"total orphaned");
+	seq_printf(s, "%13u KB %13u KB %13u KB\n", (total_size>>10),
+			(total_shared_size>>10), (total_orphaned_size>>10));
 	seq_printf(s, "----------------------------------------------------\n");
 	seq_printf(s, "\n\n");
 	return 0;
@@ -1560,10 +1536,6 @@ static const struct file_operations debug_heap_fops = {
 
 void ion_device_add_heap(struct ion_device *dev, struct ion_heap *heap)
 {
-#ifdef CONFIG_ION_OOM_KILLER
-	char debug_name[64];
-#endif
-
 	if (!heap->ops->allocate || !heap->ops->free || !heap->ops->map_dma ||
 	    !heap->ops->unmap_dma)
 		pr_err("%s: can not add heap with invalid ops struct.\n",
@@ -1578,17 +1550,8 @@ void ion_device_add_heap(struct ion_device *dev, struct ion_heap *heap)
 	debugfs_create_file(heap->name, 0664, dev->debug_root, heap,
 			    &debug_heap_fops);
 #ifdef CONFIG_ION_OOM_KILLER
-	snprintf(debug_name, 64, "lmk_%s", heap->name);
-	heap->lmk_debug_root = debugfs_create_dir(debug_name, dev->debug_root);
-	debugfs_create_u32("enable", (S_IRUGO|S_IWUSR),
-			heap->lmk_debug_root,
-			(unsigned int *)&heap->lmk_enable);
-	debugfs_create_u32("oom_score_adj", (S_IRUGO|S_IWUSR),
-			heap->lmk_debug_root,
-			(unsigned int *)&heap->lmk_min_score_adj);
-	debugfs_create_u32("min_free", (S_IRUGO|S_IWUSR),
-			heap->lmk_debug_root,
-			(unsigned int *)&heap->lmk_min_free);
+	if (heap->lmk_debugfs_add)
+		heap->lmk_debugfs_add(heap, dev->debug_root);
 #endif
 	up_write(&dev->lock);
 }

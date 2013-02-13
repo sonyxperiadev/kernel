@@ -205,13 +205,13 @@ struct ion_custom_region_data {
 #define ION_IOC_CUSTOM_GET_UPDATE_COUNT  (6)
 
 /**
- * DOC: ION_IOC_CUSTOM_CACHE_FLUSH - Arm Cache flush a region of memory
+ * DOC: ION_IOC_CUSTOM_CACHE_CLEAN - Arm Cache clean a region of memory
  *
  * Takes an ion_custom_region_data struct with the handle field populated
  * with a valid opaque handle.  The region within the buffer also has to be
- * populated which needs to be flushed.
+ * populated which needs to be cleaned.
  */
-#define ION_IOC_CUSTOM_CACHE_FLUSH		(7)
+#define ION_IOC_CUSTOM_CACHE_CLEAN	(7)
 
 /**
  * DOC: ION_IOC_CUSTOM_CACHE_INVALIDATE - Arm Cache invalidate a region of

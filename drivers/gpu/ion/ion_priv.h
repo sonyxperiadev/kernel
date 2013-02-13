@@ -25,7 +25,6 @@
 #include <linux/sched.h>
 #include <linux/shrinker.h>
 #include <linux/types.h>
-#include <linux/device.h>
 
 struct ion_buffer *ion_handle_buffer(struct ion_handle *handle);
 
@@ -113,14 +112,11 @@ struct ion_heap_ops {
 	int (*map_user) (struct ion_heap *mapper, struct ion_buffer *buffer,
 			 struct vm_area_struct *vma);
 #ifdef CONFIG_ION_KONA
-	int (*flush_cache) (struct ion_heap *heap, struct ion_buffer *buffer,
+	int (*clean_cache) (struct ion_heap *heap, struct ion_buffer *buffer,
 			unsigned long offset, unsigned long len);
 	int (*invalidate_cache) (struct ion_heap *heap,
 			struct ion_buffer *buffer, unsigned long offset,
 			unsigned long len);
-#endif
-#ifdef CONFIG_ION_OOM_KILLER
-	int (*needs_shrink) (struct ion_heap *heap);
 #endif
 };
 
@@ -136,8 +132,6 @@ struct ion_heap_ops {
  * @name:		used for debugging
  * @debug_show:		called when heap debug file is read to add any
  *			heap specific debug info to output
- * @priv:		private heap data
- * @size:		reserved size of carveout/cma heaps for debug_show
  *
  * Represents a pool of memory from which buffers can be made.  In some
  * systems the only heap is regular system memory allocated via vmalloc.
@@ -152,16 +146,15 @@ struct ion_heap {
 	unsigned int id;
 	const char *name;
 	int (*debug_show)(struct ion_heap *heap, struct seq_file *, void *);
-	void *priv;
 #ifdef CONFIG_ION_KONA
-	int size;
 	int used;
+	int (*free_size)(struct ion_heap *heap);
 #endif
 #ifdef CONFIG_ION_OOM_KILLER
-	int lmk_enable;
-	int lmk_min_score_adj;
-	int lmk_min_free;
-	struct dentry *lmk_debug_root;
+	int (*lmk_shrink_info) (struct ion_heap *heap, int *min_adj,
+			int *min_free);
+	int (*lmk_debugfs_add) (struct ion_heap *heap,
+			struct dentry *debug_root);
 #endif
 };
 
@@ -224,11 +217,7 @@ int ion_heap_buffer_zero(struct ion_buffer *buffer);
  */
 
 struct ion_heap *ion_heap_create(struct ion_platform_heap *);
-struct ion_heap *ion_heap_create_full(struct ion_platform_heap *,
-				      struct device *);
-
 void ion_heap_destroy(struct ion_heap *);
-
 struct ion_heap *ion_system_heap_create(struct ion_platform_heap *);
 void ion_system_heap_destroy(struct ion_heap *);
 
@@ -250,19 +239,15 @@ void ion_carveout_free(struct ion_heap *heap, ion_phys_addr_t addr,
 		       unsigned long size);
 
 #ifdef CONFIG_CMA
-struct ion_heap *ion_cma_heap_create(struct ion_platform_heap *,
-				     struct device *);
+struct ion_heap *ion_cma_heap_create(struct ion_platform_heap *);
 void ion_cma_heap_destroy(struct ion_heap *);
 #endif
 
 #ifdef CONFIG_ION_KONA
-extern bool ion_handle_validate(struct ion_client *client,
-		struct ion_handle *handle);
 extern struct ion_buffer *ion_lock_buffer(struct ion_client *client,
 		struct ion_handle *handle);
 extern void ion_unlock_buffer(struct ion_client *client,
 		struct ion_buffer *buffer);
-extern int ion_minfree_get(struct ion_heap *heap);
 
 #define pgprot_writethrough(prot) \
 	__pgprot_modify(prot, L_PTE_MT_MASK, L_PTE_MT_WRITETHROUGH)

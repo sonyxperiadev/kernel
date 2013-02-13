@@ -124,16 +124,16 @@ static int kona_is_region_ok(struct ion_buffer *buffer,
 	return 1;
 }
 
-static int kona_ion_cache_flush(struct ion_client *client,
+static int kona_ion_cache_clean(struct ion_client *client,
 		struct ion_custom_region_data *data)
 {
 	struct ion_buffer *buffer;
 	int ret = -EINVAL;
 
 	buffer = ion_lock_buffer(client, data->handle);
-	if (buffer && buffer->heap->ops->flush_cache) {
+	if (buffer && buffer->heap->ops->clean_cache) {
 		if (kona_is_region_ok(buffer, data->offset, data->len))
-			ret = buffer->heap->ops->flush_cache(buffer->heap,
+			ret = buffer->heap->ops->clean_cache(buffer->heap,
 					buffer,	data->offset, data->len);
 		ion_unlock_buffer(client, buffer);
 	}
@@ -234,16 +234,16 @@ static long kona_ion_custom_ioctl(struct ion_client *client,
 			return -EFAULT;
 		break;
 	}
-	case ION_IOC_CUSTOM_CACHE_FLUSH:
+	case ION_IOC_CUSTOM_CACHE_CLEAN:
 	{
 		struct ion_custom_region_data data;
 
 		if (copy_from_user(&data, (void __user *)arg, sizeof(data)))
 			return -EFAULT;
 
-		pr_debug("ION_IOC_CUSTOM_CACHE_FLUSH client(%p) handle(%p)\n",
+		pr_debug("ION_IOC_CUSTOM_CACHE_CLEAN client(%p) handle(%p)\n",
 				client, data.handle);
-		if (kona_ion_cache_flush(client, &data))
+		if (kona_ion_cache_clean(client, &data))
 			return -EINVAL;
 
 		if (copy_to_user((void __user *)arg, &data, sizeof(data)))
@@ -491,7 +491,9 @@ static int kona_ion_probe(struct platform_device *pdev)
 			pr_info("Base(0x%08x) Size (0x%08x)\n",
 					(unsigned int)heap_data->base,
 					heap_data->size);
-			heaps[i] = ion_heap_create_full(heap_data, dev);
+			if (heap_data->type == ION_HEAP_TYPE_DMA)
+				heap_data->priv = dev;
+			heaps[i] = ion_heap_create(heap_data);
 			if (IS_ERR_OR_NULL(heaps[i])) {
 				heaps[i] = NULL;
 				err = PTR_ERR(heaps[i]);

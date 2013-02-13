@@ -195,6 +195,12 @@ static int ion_system_heap_allocate(struct ion_heap *heap,
 		kfree(info);
 	}
 
+#ifdef CONFIG_ION_KONA
+	pr_err("%16s: map dma not supported without iommu\n",
+			heap->name);
+	buffer->dma_addr = ION_DMA_ADDR_FAIL;
+	goto err1;
+#endif
 	buffer->priv_virt = table;
 	return 0;
 err1:
@@ -224,6 +230,9 @@ void ion_system_heap_free(struct ion_buffer *buffer)
 	if (!cached)
 		ion_heap_buffer_zero(buffer);
 
+#ifdef CONFIG_ION_KONA
+	buffer->dma_addr = ION_DMA_ADDR_FAIL;
+#endif
 	for_each_sg(table->sgl, sg, table->nents, i)
 		free_buffer_page(sys_heap, buffer, sg_page(sg),
 				get_order(sg_dma_len(sg)));
@@ -234,20 +243,12 @@ void ion_system_heap_free(struct ion_buffer *buffer)
 struct sg_table *ion_system_heap_map_dma(struct ion_heap *heap,
 					 struct ion_buffer *buffer)
 {
-#ifdef CONFIG_ION_KONA
-	pr_err("%16s: map dma not supported without iommu\n",
-			heap->name);
-	buffer->dma_addr = ION_DMA_ADDR_FAIL;
-#endif
 	return buffer->priv_virt;
 }
 
 void ion_system_heap_unmap_dma(struct ion_heap *heap,
 			       struct ion_buffer *buffer)
 {
-#ifdef CONFIG_ION_KONA
-	buffer->dma_addr = ION_DMA_ADDR_FAIL;
-#endif
 	return;
 }
 

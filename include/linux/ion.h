@@ -27,7 +27,6 @@ struct ion_handle;
  * @ION_HEAP_TYPE_CARVEOUT:	 memory allocated from a prereserved
  * 				 carveout heap, allocations are physically
  * 				 contiguous
- * @ION_HEAP_TYPE_DMA:	 memory allocated via DMA API
  * @ION_NUM_HEAPS:		 helper for iterating over heaps, a bit mask
  * 				 is used to identify the heaps, so only 32
  * 				 total heap types are supported
@@ -46,7 +45,6 @@ enum ion_heap_type {
 #define ION_HEAP_SYSTEM_MASK		(1 << ION_HEAP_TYPE_SYSTEM)
 #define ION_HEAP_SYSTEM_CONTIG_MASK	(1 << ION_HEAP_TYPE_SYSTEM_CONTIG)
 #define ION_HEAP_CARVEOUT_MASK		(1 << ION_HEAP_TYPE_CARVEOUT)
-#define ION_HEAP_TYPE_DMA_MASK		(1 << ION_HEAP_TYPE_DMA)
 
 #define ION_NUM_HEAP_IDS		sizeof(unsigned int) * 8
 
@@ -98,12 +96,12 @@ struct ion_platform_heap {
 	unsigned int id;
 	const char *name;
 	ion_phys_addr_t base;
-#ifdef CONFIG_ION_KONA_NO_DT
-	ion_phys_addr_t limit;
-#endif
 	size_t size;
 	ion_phys_addr_t align;
 	void *priv;
+#ifdef CONFIG_ION_KONA_NO_DT
+	ion_phys_addr_t limit;
+#endif
 #ifdef CONFIG_ION_OOM_KILLER
 	int lmk_enable;
 	int lmk_min_score_adj;
