@@ -298,7 +298,7 @@ static int bcmpmu_i2c_pwrmgr_read_bulk(struct bcmpmu59xxx *bcmpmu,
 {
 	int err = 0;
 	int i;
-	u8 temp;
+	u8 temp = 0;
 
 	bcmpmu_i2c_lock(bcmpmu);
 	for (i = 0; i < len; i++) {

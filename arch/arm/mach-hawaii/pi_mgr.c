@@ -638,7 +638,7 @@ char *opp_names[] = {OPP_XTAL_STRING, OPP_ECONOMY_STRING,
 
 char *get_opp_name(int opp)
 {
-	if ((opp > PI_OPP_MAX) || (opp < 0))
+	if ((opp >= PI_OPP_MAX) || (opp < 0))
 		return NULL;
 	return opp_names[opp];
 }

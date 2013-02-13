@@ -148,9 +148,9 @@ module_param_cb(icc_fcc, &icc_fcc_param_ops, &icc_fcc, 0644);
 
 static int bcmpmu_get_curr_val(int curr)
 {
-	int i;
+	int i = 0;
 
-	for (i = ARRAY_SIZE(bcmpmu_pmu_curr_table); i >= 0; i--) {
+	for (i = (ARRAY_SIZE(bcmpmu_pmu_curr_table) - 1); i >= 0; i--) {
 		if (curr > bcmpmu_pmu_curr_table[i])
 			return i;
 	}
@@ -184,7 +184,7 @@ int  bcmpmu_get_icc_fc(struct bcmpmu59xxx *bcmpmu)
 	u8 reg;
 
 	ret = bcmpmu->read_dev(bcmpmu, PMU_REG_MBCCTRL10, &reg);
-	if (reg < 0 || reg > ARRAY_SIZE(bcmpmu_pmu_curr_table))
+	if (reg < 0 || reg >= ARRAY_SIZE(bcmpmu_pmu_curr_table))
 		return -EINVAL;
 	return bcmpmu_pmu_curr_table[reg];
 
@@ -485,10 +485,10 @@ static int __devinit bcmpmu_chrgr_probe(struct platform_device *pdev)
 				chrgr_names[chrgr_type];
 			di->ac_chrgr_info.curr = chrgr_curr;
 		}
+		pr_chrgr(FLOW, "****<%s>****chrgr_name %s\n",
+			__func__, chrgr_names[chrgr_type]);
 
 	}
-	pr_chrgr(FLOW, "****<%s>****chrgr_name %s\n",
-		__func__, chrgr_names[chrgr_type]);
 
 	ret = power_supply_register(&pdev->dev, &di->ac_psy);
 	if (ret)

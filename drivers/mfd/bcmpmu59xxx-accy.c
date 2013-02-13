@@ -1191,7 +1191,6 @@ static int bcmpmu_accy_eventq_init(struct bcmpmu_accy *accy)
 	return 0;
 err:
 	kfree(accy->free_list);
-	kfree(accy->free_list);
 	return -ENOMEM;
 
 }
@@ -1222,7 +1221,6 @@ static void bcmpmu_accy_dinit_eventq(struct bcmpmu_accy *accy)
 		}
 	}
 
-	kfree(accy->free_list);
 	kfree(accy->free_list);
 
 }

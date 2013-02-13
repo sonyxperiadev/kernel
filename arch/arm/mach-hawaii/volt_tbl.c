@@ -418,7 +418,7 @@ static const struct file_operations volt_tbl_rev_id_fops = {
 	.read = read_volt_tbl_rev_id,
 };
 
-static ssize_t read_volt_tbl(struct file *file, char __user *buf,
+static ssize_t read_volt_tbl(struct file *file, const char __user *buf,
 				  size_t count, loff_t *ppos)
 {
 	u32 len = 0;

@@ -52,7 +52,7 @@
 #define LOG_AT_SUSP_RES			("susp-res")
 #define LOG_PERIODIC			("periodic")
 #define LOG_AT_IDLE			("idle")
-
+#define LOG_PROFILER_MAX_LEN		10
 /**
  * profiler output options
  * where to dump the profiler log
@@ -323,14 +323,14 @@ int set_log_state_write(struct file *file, const char __user *buf, size_t len,
 		     loff_t *ppos)
 {
 	struct profiler_data *profiler_data = file->private_data;
-	size_t count;
+	ssize_t count;
 	char cmd[16];
 	char *pcmd = &cmd[0];
 	char *token;
 	int idx;
 
 	count = simple_write_to_buffer(cmd, sizeof(cmd), ppos, buf, len);
-	if (count < 0)
+	if (count <= 0)
 		return count;
 
 	/* chop of '\n' introduced by echo at the end of the input */
@@ -514,7 +514,8 @@ void profiler_idle_entry_cb(void)
 	profiler_dbg("%s\n", __func__);
 	if (profiler_data)
 		if (profiler_data->initialized &&
-				profiler_data->log_state == LOG_AT_IDLE)
+			(strnicmp(profiler_data->log_state, LOG_AT_IDLE,
+				LOG_PROFILER_MAX_LEN) == 0))
 			log_counters(profiler_data, LOG_AT_IDLE);
 }
 EXPORT_SYMBOL(profiler_idle_entry_cb);

@@ -1459,6 +1459,7 @@ EXPORT_SYMBOL(pi_mgr_dfs_request_update_ex);
 int pi_mgr_dfs_request_remove(struct pi_mgr_dfs_node *node)
 {
 	struct pi *pi = pi_mgr_get(node->pi_id);
+	BUG_ON(pi == NULL);
 	pi_dbg(node->pi_id, PI_LOG_DFS, "%s:name = %s, req = %d\n", __func__,
 	       node->name, opp_inx_to_id(pi->pi_opp, node->opp_inx));
 	BUG_ON(node->valid == 0);
@@ -1477,13 +1478,17 @@ EXPORT_SYMBOL(pi_mgr_dfs_request_remove);
 int pi_mgr_set_dfs_opp_limit(int pi_id, int min, int max)
 {
 	struct pi *pi = pi_mgr_get(pi_id);
-	struct pi_opp *pi_opp = pi->pi_opp;
+	struct pi_opp *pi_opp;
 	bool update = false;
-	int min_inx = get_opp_inx(min, pi_opp->opp_map);
-	int max_inx = get_opp_inx(max, pi_opp->opp_map);
+	int min_inx, max_inx;
+
 	BUG_ON(pi == NULL);
+	pi_opp = pi->pi_opp;
 	if (!pi_opp || ((pi->flags & DFS_LIMIT_CHECK_EN) == 0))
 		return -EINVAL;
+	min_inx = get_opp_inx(min, pi_opp->opp_map);
+	max_inx = get_opp_inx(max, pi_opp->opp_map);
+
 	if (min_inx >= 0 && (u32) min_inx != pi->opp_lmt_min) {
 		pi->opp_lmt_min = (u32) min_inx;
 		update = true;
@@ -1902,7 +1907,7 @@ static const struct file_operations pi_qos_request_list_fops = {
 };
 
 static ssize_t pi_debug_set_dfs_client_opp(struct file *file,
-					   char const __user *buf,
+					   const char __user *buf,
 					   size_t count, loff_t *offset)
 {
 	u32 len = 0;
@@ -2125,7 +2130,7 @@ static const struct file_operations pi_dfs_request_list_fops = {
 	.read = read_get_dfs_request_list,
 };
 
-static ssize_t pi_opp_set_min_lmt(struct file *file, char __user *buf,
+static ssize_t pi_opp_set_min_lmt(struct file *file, const char __user *buf,
 		size_t count, loff_t *ppos)
 {
 	struct pi *pi = (struct pi *)file->private_data;
@@ -2193,7 +2198,7 @@ static const struct file_operations pi_opp_min_lmt_fops = {
 	.write = pi_opp_set_min_lmt,
 };
 
-static ssize_t pi_opp_set_max_lmt(struct file *file, char __user *buf,
+static ssize_t pi_opp_set_max_lmt(struct file *file, const char __user *buf,
 		size_t count, loff_t *ppos)
 {
 	struct pi *pi = (struct pi *)file->private_data;

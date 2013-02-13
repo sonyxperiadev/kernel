@@ -262,7 +262,7 @@ int bcmpmu_client_hard_reset(u8 reset_reason)
 {
 	unsigned int val;
 	int ret = 0;
-	struct rtc_time tm;
+	struct rtc_time tm = {0};
 	unsigned long alarm_time;
 
 	BUG_ON(!bcmpmu_gbl);
@@ -278,7 +278,7 @@ int bcmpmu_client_hard_reset(u8 reset_reason)
 
 	/* read the RTC */
 	ret = bcmpmu_gbl->read_dev(bcmpmu_gbl, PMU_REG_RTCYR,
-				(u8 *)tm.tm_year);
+				(u8 *)&tm.tm_year);
 	if (unlikely(ret))
 		goto err;
 

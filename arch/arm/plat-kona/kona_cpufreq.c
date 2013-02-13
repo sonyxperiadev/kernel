@@ -405,7 +405,7 @@ over:
 int set_cpufreq_limit(unsigned int val, int limit_type)
 {
 	struct cpufreq_policy *policy;
-	int ret;
+	int ret = 0;
 	int cpu = get_cpu();
 
 	if (limit_type != MAX_LIMIT && limit_type != MIN_LIMIT) {
