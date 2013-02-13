@@ -26,7 +26,7 @@
 #include <linux/delay.h>
 
 #ifndef CONFIG_HAVE_ARM_TWD
-#define TICK_TIMER_NAME "aon-timer"
+#define TICK_TIMER_NAME TIMER_NAME"-timer"
 #define TICK_TIMER_OFFSET 2
 
 struct kona_td {

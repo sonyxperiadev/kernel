@@ -75,6 +75,15 @@ static struct kona_timer aon_hub_timer[NUM_OF_CHANNELS] = {
 	{.ch_num = 3, .busy = 0, .irq = BCM_INT_ID_HUB_TIMERS4},
 };
 
+#ifdef CONFIG_ARCH_JAVA
+static struct kona_timer aon_core_timer[NUM_OF_CHANNELS] = {
+	{.ch_num = 0, .busy = 0, .irq = BCM_INT_ID_CORE_TIMERS1},
+	{.ch_num = 1, .busy = 0, .irq = BCM_INT_ID_CORE_TIMERS2},
+	{.ch_num = 2, .busy = 0, .irq = BCM_INT_ID_CORE_TIMERS3},
+	{.ch_num = 3, .busy = 0, .irq = BCM_INT_ID_CORE_TIMERS4},
+};
+#endif
+
 static struct kona_timer periph_timer[NUM_OF_CHANNELS] = {
 	{.ch_num = 0, .busy = 0, .irq = BCM_INT_ID_PERIPH_TIMERS1},
 	{.ch_num = 1, .busy = 0, .irq = BCM_INT_ID_PERIPH_TIMERS2},
@@ -82,7 +91,7 @@ static struct kona_timer periph_timer[NUM_OF_CHANNELS] = {
 	{.ch_num = 3, .busy = 0, .irq = BCM_INT_ID_PERIPH_TIMERS4},
 };
 
-/* There are two instances of timer modules on Kona */
+/* There are three instances of timer modules on Kona */
 static struct kona_timer_module timer_module_list[NUM_OF_TIMER_MODULES] = {
 	{.pkt = &aon_hub_timer[0], .name = "aon-timer",
 	 .cfg_state = NOT_CONFIGURED, .rate = 0,
@@ -100,6 +109,16 @@ static struct kona_timer_module timer_module_list[NUM_OF_TIMER_MODULES] = {
 	 .max_repeat_count = 0
 #endif
 	},
+#ifdef CONFIG_ARCH_JAVA
+	{.pkt = &aon_core_timer[0], .name = "core-timer",
+	 .cfg_state = NOT_CONFIGURED, .rate = 0,
+	 .num_of_timers = NUM_OF_CHANNELS, .reg_base = IOMEM(KONA_CORETMR_VA),
+	/* .clk_name = , Assume this clk is always @ 32KHz, no gating cntrl */
+#ifdef CONFIG_KONA_TIMER_DEBUG
+	 .max_repeat_count = 0
+#endif
+	},
+#endif
 };
 
 /* Local static functions */
@@ -130,6 +149,7 @@ static struct irqaction hub_timer_irq[NUM_OF_CHANNELS] = {
 	 .dev_id = &timer_module_list[0], .handler = kona_timer_isr},
 };
 
+
 static struct irqaction periph_timer_irq[NUM_OF_CHANNELS] = {
 	{.name = "Slave-Timer-Ch0", .flags = IRQF_DISABLED | IRQF_TIMER,
 	 .dev_id = &timer_module_list[1], .handler = kona_timer_isr},
@@ -141,6 +161,18 @@ static struct irqaction periph_timer_irq[NUM_OF_CHANNELS] = {
 	 .dev_id = &timer_module_list[1], .handler = kona_timer_isr},
 };
 
+#ifdef CONFIG_ARCH_JAVA
+static struct irqaction core_timer_irq[NUM_OF_CHANNELS] = {
+	{.name = "Core-Timer-Ch0", .flags = IRQF_DISABLED | IRQF_TIMER,
+	 .dev_id = &timer_module_list[2], .handler = kona_timer_isr},
+	{.name = "Core-Timer-Ch1", .flags = IRQF_DISABLED | IRQF_TIMER,
+	 .dev_id = &timer_module_list[2], .handler = kona_timer_isr},
+	{.name = "Core-Timer-Ch2", .flags = IRQF_DISABLED | IRQF_TIMER,
+	 .dev_id = &timer_module_list[2], .handler = kona_timer_isr},
+	{.name = "Core-Timer-Ch3", .flags = IRQF_DISABLED | IRQF_TIMER,
+	 .dev_id = &timer_module_list[2], .handler = kona_timer_isr},
+};
+#endif
 static int kona_init_done;
 
 struct kona_timer *get_timer_ptr(char *name, int chan)
@@ -186,6 +218,17 @@ int __init kona_timer_modules_init(void)
 		periph_timer[i].cfg.reload = 0;
 		periph_timer[i].ktm = &timer_module_list[1];
 	}
+
+#ifdef CONFIG_ARCH_JAVA
+	for (i = 0; i < NUM_OF_CHANNELS; i++) {
+		setup_irq(aon_core_timer[i].irq, &core_timer_irq[i]);
+		aon_core_timer[i].cfg.arg = NULL;
+		aon_core_timer[i].cfg.mode = 0;
+		aon_core_timer[i].cfg.cb = NULL;
+		aon_core_timer[i].cfg.reload = 0;
+		aon_core_timer[i].ktm = &timer_module_list[2];
+	}
+#endif
 
 	kona_init_done = 1;
 	return 0;
@@ -1117,7 +1160,7 @@ static inline void __disable_channel(struct kona_timer *kt)
 
 static inline unsigned long __get_counter(struct kona_timer_module *ktm)
 {
-#ifdef CONFIG_MACH_HAWAII_FPGA_E
+#ifdef CONFIG_MACH_BCM_FPGA_E
 	if (ktm == NULL)
 		ktm = &timer_module_list[0];
 	return readl(ktm->reg_base + KONA_GPTIMER_STCLO_OFFSET);
@@ -1163,15 +1206,19 @@ static inline int irq_to_ch(int irq)
 	switch (irq) {
 	case BCM_INT_ID_HUB_TIMERS1:
 	case BCM_INT_ID_PERIPH_TIMERS1:
+	case BCM_INT_ID_CORE_TIMERS1:
 		return 0;
 	case BCM_INT_ID_HUB_TIMERS2:
 	case BCM_INT_ID_PERIPH_TIMERS2:
+	case BCM_INT_ID_CORE_TIMERS2:
 		return 1;
 	case BCM_INT_ID_HUB_TIMERS3:
 	case BCM_INT_ID_PERIPH_TIMERS3:
+	case BCM_INT_ID_CORE_TIMERS3:
 		return 2;
 	case BCM_INT_ID_HUB_TIMERS4:
 	case BCM_INT_ID_PERIPH_TIMERS4:
+	case BCM_INT_ID_CORE_TIMERS4:
 		return 3;
 	}
 	return -1;

@@ -280,6 +280,10 @@
 #define BCM_INT_ID_ESUB_DMAC_6          (198 + BCM_INT_ID_PPI_MAX)
 #define BCM_INT_ID_ESUB_DMAC_7          (199 + BCM_INT_ID_PPI_MAX)
 #define BCM_INT_ID_MAX                  (200 + BCM_INT_ID_PPI_MAX)	/* terminating ID */
+#define BCM_INT_ID_CORE_TIMERS1         (210 + BCM_INT_ID_PPI_MAX)
+#define BCM_INT_ID_CORE_TIMERS2         (211 + BCM_INT_ID_PPI_MAX)
+#define BCM_INT_ID_CORE_TIMERS3         (212 + BCM_INT_ID_PPI_MAX)
+#define BCM_INT_ID_CORE_TIMERS4         (213 + BCM_INT_ID_PPI_MAX)
 
 /* temporarily for new DMAC before new interrrupt number release */
 #define     INTP_DMAC_ABORT                                        45
