@@ -1,5 +1,5 @@
 /*
- * include/linux/broadcom/kona_ion.h
+ * include/linux/broadcom/bcm_ion.h
  *
  * Copyright (C) 2011 Broadcom, Inc.
  *
@@ -14,8 +14,8 @@
  *
  */
 
-#ifndef _LINUX_KONA_ION_H
-#define _LINUX_KONA_ION_H
+#ifndef _LINUX_BCM_ION_H
+#define _LINUX_BCM_ION_H
 
 #include <linux/types.h>
 #include <linux/ion.h>
@@ -34,11 +34,11 @@
 
 extern struct ion_device *idev;
 
-extern unsigned int kona_ion_map_dma(struct ion_client *client,
+extern unsigned int bcm_ion_map_dma(struct ion_client *client,
 		struct ion_handle *handle);
 
 /**
- * struct kona_ion_heap_reserve_data - defines the set of parameters used by
+ * struct bcm_ion_heap_reserve_data - defines the set of parameters used by
  * platform file to search for carveout or cma nodes in DT file.
  * This is populated by the platform file. ION platform driver reads this
  * structure to get the reserved base, size, status and dummy device to which
@@ -53,7 +53,7 @@ extern unsigned int kona_ion_map_dma(struct ion_client *client,
  * @cma_dev:	dummy device used to attach cma.
  *
  */
-struct kona_ion_heap_reserve_data {
+struct bcm_ion_heap_reserve_data {
 	enum ion_heap_type type;
 	const char *name;
 	ion_phys_addr_t base;
@@ -64,20 +64,20 @@ struct kona_ion_heap_reserve_data {
 };
 
 /**
- * kona_ion_get_heap_reserve_data() - Get the info about carveout/cma during
+ * bcm_ion_get_heap_reserve_data() - Get the info about carveout/cma during
  * bootup.
  * @data:	platform data specifying carveout/cma info
  * @name:	Name of the heap/DT node of which info is required.
  *
  * To be implemented by platform file
  */
-int kona_ion_get_heap_reserve_data(struct kona_ion_heap_reserve_data **data,
+int bcm_ion_get_heap_reserve_data(struct bcm_ion_heap_reserve_data **data,
 		const char *name);
 
 #endif
 
 /**
- * DOC: Kona Ion Heap Types for user space to select at alloc time
+ * DOC: Broadcom Ion Heap Types for user space to select at alloc time
  */
 #define ION_DEFAULT_HEAP	(0xFFFF)
 
@@ -90,12 +90,12 @@ int kona_ion_get_heap_reserve_data(struct kona_ion_heap_reserve_data **data,
 #define ION_BUFFER_TYPE_TILED	(0x02 << ION_BUFFER_TYPE_OFFSET)
 
 /**
- * DOC: Kona Ion Custom ioctls
+ * DOC: Broadcom Ion Custom ioctls
  */
 
 /**
  * struct ion_custom_dma_map_data - metadata passed to/from userspace for
- * 		handle/dma_addr pair
+ *         handle/dma_addr pair
  * @handle:	a handle
  * @dma_addr: dma addr for MM blocks to access buffer held by handle
  *
@@ -113,7 +113,7 @@ struct ion_custom_dma_map_data {
 
 /**
  * struct ion_custom_property - metadata passed to/from userspace for
- * 		handle/property pair
+ *         handle/property pair
  * @handle:	a handle
  * @value: value of property of the buffer held by handle
  * @mask: mask for the property being accessed
@@ -132,7 +132,7 @@ struct ion_custom_property {
 
 /**
  * struct ion_custom_update_count - metadata passed to/from userspace for
- * 		handle/update_count pair
+ *         handle/update_count pair
  * @handle:	a handle
  * @count: update counter value of the buffer held by handle
  *
@@ -167,7 +167,7 @@ struct ion_custom_region_data {
  * with a valid opaque handle.  Returns the struct with the dma_addr field
  * set to the M4U or physical address for the buffer held by the handle.
  */
-#define ION_IOC_CUSTOM_DMA_MAP  	     (1)
+#define ION_IOC_CUSTOM_DMA_MAP		(1)
 
 /**
  * DOC: ION_IOC_CUSTOM_SET_PROP - set buffer property
@@ -176,7 +176,7 @@ struct ion_custom_region_data {
  * with a valid opaque handle.  Sets the property of the buffer as set
  * by the property field.
  */
-#define ION_IOC_CUSTOM_SET_PROP  	     (3)
+#define ION_IOC_CUSTOM_SET_PROP		(3)
 
 /**
  * DOC: ION_IOC_CUSTOM_GET_PROP - get buffer property
@@ -185,7 +185,7 @@ struct ion_custom_region_data {
  * with a valid opaque handle.  Returns the property of the buffer in
  * the property field.
  */
-#define ION_IOC_CUSTOM_GET_PROP  	     (4)
+#define ION_IOC_CUSTOM_GET_PROP		(4)
 
 /**
  * DOC: ION_IOC_CUSTOM_UPDATE - Notify ION that buffer is updated
@@ -193,7 +193,7 @@ struct ion_custom_region_data {
   * Takes valid opaque handle as the argument. The internal update counter
  * would be incremented.
  */
-#define ION_IOC_CUSTOM_UPDATE            (5)
+#define ION_IOC_CUSTOM_UPDATE		(5)
 
 /**
  * DOC: ION_IOC_CUSTOM_GET_UPDATE_COUNT - Get the update count
@@ -202,7 +202,7 @@ struct ion_custom_region_data {
  * with a valid opaque handle.  Returns the struct with the count field set
  * to the buffer internal update counter.
  */
-#define ION_IOC_CUSTOM_GET_UPDATE_COUNT  (6)
+#define ION_IOC_CUSTOM_GET_UPDATE_COUNT	(6)
 
 /**
  * DOC: ION_IOC_CUSTOM_CACHE_CLEAN - Arm Cache clean a region of memory
@@ -221,7 +221,7 @@ struct ion_custom_region_data {
  * with a valid opaque handle.  The region within the buffer also has to be
  * populated which needs to be flushed.
  */
-#define ION_IOC_CUSTOM_CACHE_INVALIDATE  (8)
+#define ION_IOC_CUSTOM_CACHE_INVALIDATE	(8)
 
 
 /**
@@ -229,7 +229,7 @@ struct ion_custom_region_data {
  *
  * Pass the trace point value to be printed as argument.
  */
-#define ION_IOC_CUSTOM_TP                (20)
+#define ION_IOC_CUSTOM_TP		(20)
 
-#endif /* _LINUX_KONA_ION_H */
+#endif /* _LINUX_BCM_ION_H */
 

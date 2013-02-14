@@ -91,7 +91,7 @@
 
 #ifdef CONFIG_ION
 #include <linux/ion.h>
-#include <linux/broadcom/kona_ion.h>
+#include <linux/broadcom/bcm_ion.h>
 #endif /* CONFIG_ION */
 
 #ifdef CONFIG_KONA_MEMC
@@ -118,15 +118,15 @@ struct platform_device android_pmem = {
 };
 #endif
 
-#ifdef CONFIG_ION_KONA_NO_DT
+#ifdef CONFIG_ION_BCM_NO_DT
 struct platform_device ion_system_device = {
-	.name = "ion-kona",
+	.name = "ion-bcm",
 	.id = 2,
 	.num_resources = 0,
 };
 
 struct platform_device ion_carveout_device = {
-	.name = "ion-kona",
+	.name = "ion-bcm",
 	.id = 0,
 	.dev = {
 		.platform_data = &ion_carveout_data,
@@ -137,7 +137,7 @@ struct platform_device ion_carveout_device = {
 #ifdef CONFIG_CMA
 static u64 ion_dmamask = DMA_BIT_MASK(32);
 struct platform_device ion_cma_device = {
-	.name = "ion-kona",
+	.name = "ion-bcm",
 	.id = 1,
 	.dev = {
 		.dma_mask = &ion_dmamask,
@@ -147,7 +147,7 @@ struct platform_device ion_cma_device = {
 	.num_resources = 0,
 };
 #endif /* CONFIG_CMA */
-#endif /* CONFIG_ION_KONA_NO_DT */
+#endif /* CONFIG_ION_BCM_NO_DT */
 
 struct platform_device hawaii_serial_device = {
 	.name = "serial8250_dw",
@@ -1074,7 +1074,7 @@ static void __init pmem_reserve_memory(void)
 
 #ifdef CONFIG_ION
 
-static struct kona_ion_heap_reserve_data ion_heap_reserve_datas[] __initdata = {
+static struct bcm_ion_heap_reserve_data ion_heap_reserve_datas[] __initdata = {
 	[0] = {
 		.name  = "ion-carveout",
 	},
@@ -1093,7 +1093,7 @@ static struct kona_ion_heap_reserve_data ion_heap_reserve_datas[] __initdata = {
 
 static int __init setup_ion_pages(char *str, int idx)
 {
-	struct kona_ion_heap_reserve_data *reserve_data;
+	struct bcm_ion_heap_reserve_data *reserve_data;
 	char *endp = NULL;
 
 	if (str && (idx < ARRAY_SIZE(ion_heap_reserve_datas))) {
@@ -1133,10 +1133,10 @@ static int __init setup_ion_cma1_pages(char *str)
 early_param("cma1", setup_ion_cma1_pages);
 #endif /* CONFIG_CMA */
 
-int kona_ion_get_heap_reserve_data(struct kona_ion_heap_reserve_data **data,
+int bcm_ion_get_heap_reserve_data(struct bcm_ion_heap_reserve_data **data,
 		const char *name)
 {
-	struct kona_ion_heap_reserve_data *reserve_data;
+	struct bcm_ion_heap_reserve_data *reserve_data;
 	int i, ret = -1;
 
 	for (i = 0; i < ARRAY_SIZE(ion_heap_reserve_datas); i++) {
@@ -1151,12 +1151,12 @@ int kona_ion_get_heap_reserve_data(struct kona_ion_heap_reserve_data **data,
 	}
 	return ret;
 }
-EXPORT_SYMBOL(kona_ion_get_heap_reserve_data);
+EXPORT_SYMBOL(bcm_ion_get_heap_reserve_data);
 
-#ifdef CONFIG_ION_KONA_NO_DT
+#ifdef CONFIG_ION_BCM_NO_DT
 
 static int __init ion_scan_pdata(
-		struct kona_ion_heap_reserve_data *reserve_data)
+		struct bcm_ion_heap_reserve_data *reserve_data)
 {
 	struct ion_platform_heap *heap;
 	int i;
@@ -1204,11 +1204,11 @@ static int __init ion_scan_pdata(
 static int __init early_init_dt_scan_ion_data(unsigned long node,
 		const char *uname, int depth, void *data)
 {
-	struct kona_ion_heap_reserve_data *reserve_data;
+	struct bcm_ion_heap_reserve_data *reserve_data;
 	__be32 *prop;
 	unsigned long len;
 
-	reserve_data = (struct kona_ion_heap_reserve_data *)data;
+	reserve_data = (struct bcm_ion_heap_reserve_data *)data;
 	if (depth != 1 || !reserve_data || !reserve_data->name ||
 			(strcmp(uname, reserve_data->name) != 0))
 		return 0;
@@ -1236,7 +1236,7 @@ static int __init early_init_dt_scan_ion_data(unsigned long node,
 	return 1;
 }
 
-#endif /* CONFIG_ION_KONA_NO_DT */
+#endif /* CONFIG_ION_BCM_NO_DT */
 
 static phys_addr_t __init find_free_memory(phys_addr_t size, phys_addr_t base,
 		phys_addr_t limit)
@@ -1255,12 +1255,12 @@ static phys_addr_t __init find_free_memory(phys_addr_t size, phys_addr_t base,
 
 static void __init ion_reserve_memory(void)
 {
-	struct kona_ion_heap_reserve_data *reserve_data;
+	struct bcm_ion_heap_reserve_data *reserve_data;
 	int i;
 	for (i = 0; i < ARRAY_SIZE(ion_heap_reserve_datas); i++) {
 		reserve_data = &ion_heap_reserve_datas[i];
 
-#ifdef CONFIG_ION_KONA_NO_DT
+#ifdef CONFIG_ION_BCM_NO_DT
 		/* Get the base, size and limit - from pdata */
 		pr_debug("ion: Search %16s in pdata\n", reserve_data->name);
 		if (ion_scan_pdata(reserve_data))
@@ -1278,7 +1278,7 @@ static void __init ion_reserve_memory(void)
 					(reserve_data->size>>20),
 					reserve_data->base,
 					reserve_data->limit);
-#endif /* CONFIG_ION_KONA_NO_DT */
+#endif /* CONFIG_ION_BCM_NO_DT */
 
 		/* Try carveout/CMA */
 		reserve_data->status = -1;

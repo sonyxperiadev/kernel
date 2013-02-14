@@ -41,9 +41,9 @@
 #ifdef CONFIG_ANDROID_PMEM
 #include <linux/android_pmem.h>
 #endif
-#ifdef CONFIG_ION_KONA_NO_DT
+#ifdef CONFIG_ION_BCM_NO_DT
 #include <linux/ion.h>
-#include <linux/broadcom/kona_ion.h>
+#include <linux/broadcom/bcm_ion.h>
 #endif
 #include <linux/serial_8250.h>
 #include <linux/i2c.h>
@@ -287,7 +287,7 @@ struct android_pmem_platform_data android_pmem_data = {
 };
 #endif
 
-#ifdef CONFIG_ION_KONA_NO_DT
+#ifdef CONFIG_ION_BCM_NO_DT
 struct ion_platform_data ion_system_data = {
 	.nr = 1,
 	.heaps = {
@@ -367,7 +367,7 @@ struct ion_platform_data ion_cma_data = {
 	},
 };
 #endif /* CONFIG_CMA */
-#endif /* CONFIG_ION_KONA_NO_DT */
+#endif /* CONFIG_ION_BCM_NO_DT */
 
 static struct i2c_board_info hawaii_i2c_camera[] = {
 	{
@@ -1469,7 +1469,7 @@ static void __init hawaii_add_devices(void)
 
 	hawaii_add_pdata();
 
-#ifdef CONFIG_ION_KONA_NO_DT
+#ifdef CONFIG_ION_BCM_NO_DT
 	platform_device_register(&ion_carveout_device);
 #ifdef CONFIG_CMA
 	platform_device_register(&ion_cma_device);

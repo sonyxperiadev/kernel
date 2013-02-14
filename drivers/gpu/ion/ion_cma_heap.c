@@ -161,7 +161,7 @@ struct sg_table *ion_cma_heap_map_dma(struct ion_heap *heap,
 {
 	struct ion_cma_buffer_info *info = buffer->priv_virt;
 
-#ifdef CONFIG_ION_KONA
+#ifdef CONFIG_ION_BCM
 	buffer->dma_addr = info->handle;
 #endif
 	return info->table;
@@ -170,7 +170,7 @@ struct sg_table *ion_cma_heap_map_dma(struct ion_heap *heap,
 void ion_cma_heap_unmap_dma(struct ion_heap *heap,
 			       struct ion_buffer *buffer)
 {
-#ifdef CONFIG_ION_KONA
+#ifdef CONFIG_ION_BCM
 	buffer->dma_addr = ION_DMA_ADDR_FAIL;
 #endif
 	return;
@@ -184,7 +184,7 @@ static int ion_cma_mmap(struct ion_heap *mapper, struct ion_buffer *buffer,
 	struct device *dev = cma_heap->dev;
 	struct ion_cma_buffer_info *info = buffer->priv_virt;
 
-#ifdef CONFIG_ION_KONA
+#ifdef CONFIG_ION_BCM
 	if (buffer->flags & ION_FLAG_WRITECOMBINE)
 		vma->vm_page_prot = pgprot_writecombine(vma->vm_page_prot);
 	else if (buffer->flags & ION_FLAG_WRITETHROUGH)
@@ -204,7 +204,7 @@ static int ion_cma_mmap(struct ion_heap *mapper, struct ion_buffer *buffer,
 #endif
 }
 
-#ifdef CONFIG_ION_KONA
+#ifdef CONFIG_ION_BCM
 int ion_cma_heap_clean_cache(struct ion_heap *heap,
 		struct ion_buffer *buffer, unsigned long offset,
 		unsigned long len)
@@ -251,13 +251,13 @@ static struct ion_heap_ops ion_cma_ops = {
 	.unmap_dma = ion_cma_heap_unmap_dma,
 	.phys = ion_cma_phys,
 	.map_user = ion_cma_mmap,
-#ifdef CONFIG_ION_KONA
+#ifdef CONFIG_ION_BCM
 	.clean_cache = ion_cma_heap_clean_cache,
 	.invalidate_cache = ion_cma_heap_invalidate_cache,
 #endif
 };
 
-#ifdef CONFIG_ION_KONA
+#ifdef CONFIG_ION_BCM
 
 static int ion_cma_heap_free_size(struct ion_heap *heap)
 {
@@ -360,7 +360,7 @@ struct ion_heap *ion_cma_heap_create(struct ion_platform_heap *data)
 	 * used to make the link with reserved CMA memory */
 	heap->type = ION_HEAP_TYPE_DMA;
 	cma_heap->dev = data->priv;
-#ifdef CONFIG_ION_KONA
+#ifdef CONFIG_ION_BCM
 	cma_heap->base = data->base;
 	cma_heap->size = data->size;
 	heap->debug_show = ion_cma_heap_debug_show;

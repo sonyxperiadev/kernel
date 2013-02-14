@@ -99,7 +99,7 @@ struct ion_platform_heap {
 	size_t size;
 	ion_phys_addr_t align;
 	void *priv;
-#ifdef CONFIG_ION_KONA_NO_DT
+#ifdef CONFIG_ION_BCM_NO_DT
 	ion_phys_addr_t limit;
 #endif
 #ifdef CONFIG_ION_OOM_KILLER

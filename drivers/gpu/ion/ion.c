@@ -175,7 +175,7 @@ static struct ion_buffer *ion_buffer_create(struct ion_heap *heap,
 
 	buffer->heap = heap;
 	buffer->flags = flags;
-#ifdef CONFIG_ION_KONA
+#ifdef CONFIG_ION_BCM
 	buffer->align = align;
 #endif
 	kref_init(&buffer->ref);
@@ -242,7 +242,7 @@ static void ion_buffer_destroy(struct kref *kref)
 {
 	struct ion_buffer *buffer = container_of(kref, struct ion_buffer, ref);
 	struct ion_device *dev = buffer->dev;
-#ifdef CONFIG_ION_KONA
+#ifdef CONFIG_ION_BCM
 	pid_t client_pid;
 	char client_name[TASK_COMM_LEN];
 	unsigned int dma_addr = buffer->dma_addr;
@@ -253,7 +253,7 @@ static void ion_buffer_destroy(struct kref *kref)
 	buffer->heap->ops->unmap_dma(buffer->heap, buffer);
 	buffer->heap->ops->free(buffer);
 	mutex_lock(&dev->buffer_lock);
-#ifdef CONFIG_ION_KONA
+#ifdef CONFIG_ION_BCM
 	client_pid = task_pid_nr(current->group_leader);
 	get_task_comm(client_name, current->group_leader);
 	buffer->heap->used -= buffer->size;
@@ -439,7 +439,7 @@ static struct notifier_block ion_task_nb = {
 };
 #endif
 
-#ifdef CONFIG_ION_KONA
+#ifdef CONFIG_ION_BCM
 static void ion_debug_print_heap_status(struct ion_device *dev,
 		int heap_id_mask)
 {
@@ -552,7 +552,7 @@ struct ion_handle *ion_alloc(struct ion_client *client, size_t len,
 	struct ion_device *dev = client->dev;
 	struct ion_buffer *buffer = NULL;
 	struct ion_heap *heap;
-#ifdef CONFIG_ION_KONA
+#ifdef CONFIG_ION_BCM
 	struct ion_heap *heap_used = NULL;
 	pid_t client_pid;
 	char client_name[TASK_COMM_LEN];
@@ -561,7 +561,7 @@ struct ion_handle *ion_alloc(struct ion_client *client, size_t len,
 	int retry_flag;
 #endif
 
-#ifdef CONFIG_ION_KONA
+#ifdef CONFIG_ION_BCM
 	if (client->task) {
 		client_pid = task_pid_nr(client->task);
 		get_task_comm(client_name, client->task);
@@ -593,17 +593,17 @@ retry:
 		/* if the caller didn't specify this heap id */
 		if (!((1 << heap->id) & heap_id_mask))
 			continue;
-#ifdef CONFIG_ION_KONA
+#ifdef CONFIG_ION_BCM
 		heap_used = heap;
 		pr_debug("(%16.s:%d) Try size(%d)KB from heap(%16.s) used(%d)KB\n",
 				client_name, client_pid, len>>10, heap->name,
 				heap->used>>10);
-#endif /* CONFIG_ION_KONA */
+#endif /* CONFIG_ION_BCM */
 		buffer = ion_buffer_create(heap, dev, len, align, flags);
 		if (!IS_ERR_OR_NULL(buffer))
 			break;
 	}
-#ifdef CONFIG_ION_KONA
+#ifdef CONFIG_ION_BCM
 	if (buffer == ERR_PTR(-ENOMEM)) {
 		/* Alloc failed: Kill task to free memory */
 #ifdef CONFIG_ION_OOM_KILLER
@@ -648,7 +648,7 @@ retry:
 				heap_id_mask, flags);
 		ion_debug_print_heap_status(dev, heap_id_mask);
 	}
-#endif /* CONFIG_ION_KONA */
+#endif /* CONFIG_ION_BCM */
 	up_read(&dev->lock);
 
 #ifdef CONFIG_ION_OOM_KILLER
@@ -1648,7 +1648,7 @@ void __init ion_reserve(struct ion_platform_data *data)
 	}
 }
 
-#ifdef CONFIG_ION_KONA
+#ifdef CONFIG_ION_BCM
 struct ion_buffer *ion_lock_buffer(struct ion_client *client,
 		struct ion_handle *handle)
 {

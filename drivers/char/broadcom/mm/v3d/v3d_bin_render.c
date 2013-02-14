@@ -40,7 +40,7 @@ the GPL, without Broadcom's express prior written consent.
 #include <linux/broadcom/mm_fw_hw_ifc.h>
 #include <linux/broadcom/mm_fw_usr_ifc.h>
 #ifdef CONFIG_ION
-#include <linux/broadcom/kona_ion.h>
+#include <linux/broadcom/bcm_ion.h>
 #endif
 
 #define V3D_HW_SIZE (1024*4)
@@ -84,10 +84,11 @@ static v3d_boom_t *v3d_alloc_boom(void *device_id)
 	if (block) {
 		block->v3d_bin_oom_handle = ion_alloc(id->v3d_bin_oom_client,
 					V3D_BIN_OOM_SIZE, 0, ION_DEFAULT_HEAP, 0);
-		block->v3d_bin_oom_block = kona_ion_map_dma(id->v3d_bin_oom_client,
+		block->v3d_bin_oom_block = bcm_ion_map_dma(
+				id->v3d_bin_oom_client,
 				block->v3d_bin_oom_handle);
 		if (block->v3d_bin_oom_block == 0) {
-			pr_err("ion alloc failed for v3d oom block size[0x%x] client[%p] handle[%p] \n",
+			pr_err("ion alloc failed for v3d oom block size[0x%x] client[%p] handle[%p]\n",
 					V3D_BIN_OOM_SIZE, id->v3d_bin_oom_client, block->v3d_bin_oom_handle);
 					goto err;
 					}

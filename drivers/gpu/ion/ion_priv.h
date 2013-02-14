@@ -77,7 +77,7 @@ struct ion_buffer {
 	int handle_count;
 	char task_comm[TASK_COMM_LEN];
 	pid_t pid;
-#ifdef CONFIG_ION_KONA
+#ifdef CONFIG_ION_BCM
 	unsigned int dma_addr;
 	unsigned int custom_flags;
 	int custom_update_count;
@@ -111,7 +111,7 @@ struct ion_heap_ops {
 	void (*unmap_kernel) (struct ion_heap *heap, struct ion_buffer *buffer);
 	int (*map_user) (struct ion_heap *mapper, struct ion_buffer *buffer,
 			 struct vm_area_struct *vma);
-#ifdef CONFIG_ION_KONA
+#ifdef CONFIG_ION_BCM
 	int (*clean_cache) (struct ion_heap *heap, struct ion_buffer *buffer,
 			unsigned long offset, unsigned long len);
 	int (*invalidate_cache) (struct ion_heap *heap,
@@ -146,7 +146,7 @@ struct ion_heap {
 	unsigned int id;
 	const char *name;
 	int (*debug_show)(struct ion_heap *heap, struct seq_file *, void *);
-#ifdef CONFIG_ION_KONA
+#ifdef CONFIG_ION_BCM
 	int used;
 	int (*free_size)(struct ion_heap *heap);
 #endif
@@ -243,7 +243,7 @@ struct ion_heap *ion_cma_heap_create(struct ion_platform_heap *);
 void ion_cma_heap_destroy(struct ion_heap *);
 #endif
 
-#ifdef CONFIG_ION_KONA
+#ifdef CONFIG_ION_BCM
 extern struct ion_buffer *ion_lock_buffer(struct ion_client *client,
 		struct ion_handle *handle);
 extern void ion_unlock_buffer(struct ion_client *client,

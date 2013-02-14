@@ -38,9 +38,6 @@ the GPL, without Broadcom's express prior written consent.
 #include <mach/rdb/brcm_rdb_isp.h>
 #include <linux/broadcom/mm_fw_hw_ifc.h>
 #include <linux/broadcom/mm_fw_usr_ifc.h>
-#ifdef CONFIG_ION
-#include <linux/broadcom/kona_ion.h>
-#endif
 
 #define ISP_HW_SIZE (1024*512)
 #define IRQ_ISP         BCM_INT_ID_RESERVED153

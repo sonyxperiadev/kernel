@@ -195,7 +195,7 @@ static int ion_system_heap_allocate(struct ion_heap *heap,
 		kfree(info);
 	}
 
-#ifdef CONFIG_ION_KONA
+#ifdef CONFIG_ION_BCM
 	pr_err("%16s: map dma not supported without iommu\n",
 			heap->name);
 	buffer->dma_addr = ION_DMA_ADDR_FAIL;
@@ -230,7 +230,7 @@ void ion_system_heap_free(struct ion_buffer *buffer)
 	if (!cached)
 		ion_heap_buffer_zero(buffer);
 
-#ifdef CONFIG_ION_KONA
+#ifdef CONFIG_ION_BCM
 	buffer->dma_addr = ION_DMA_ADDR_FAIL;
 #endif
 	for_each_sg(table->sgl, sg, table->nents, i)
@@ -374,7 +374,7 @@ struct sg_table *ion_system_contig_heap_map_dma(struct ion_heap *heap,
 	}
 	sg_set_page(table->sgl, virt_to_page(buffer->priv_virt), buffer->size,
 		    0);
-#ifdef CONFIG_ION_KONA
+#ifdef CONFIG_ION_BCM
 	buffer->dma_addr = virt_to_phys(buffer->priv_virt);
 #endif
 	return table;
@@ -383,7 +383,7 @@ struct sg_table *ion_system_contig_heap_map_dma(struct ion_heap *heap,
 void ion_system_contig_heap_unmap_dma(struct ion_heap *heap,
 				      struct ion_buffer *buffer)
 {
-#ifdef CONFIG_ION_KONA
+#ifdef CONFIG_ION_BCM
 	buffer->dma_addr = ION_DMA_ADDR_FAIL;
 #endif
 	sg_free_table(buffer->sg_table);

@@ -1,5 +1,5 @@
 /*
- * drivers/gpu/kona/kona_ion.c
+ * drivers/gpu/bcm/bcm_ion.c
  *
  * Copyright (C) 2011 Broadcom, Inc.
  *
@@ -14,12 +14,12 @@
  *
  */
 
-#define pr_fmt(fmt) "ion-kona: " fmt
+#define pr_fmt(fmt) "ion-bcm: " fmt
 
 #include <linux/err.h>
 #include <linux/scatterlist.h>
 #include <linux/ion.h>
-#include <linux/broadcom/kona_ion.h>
+#include <linux/broadcom/bcm_ion.h>
 #include <linux/platform_device.h>
 #include <linux/slab.h>
 #include "../ion_priv.h"
@@ -36,7 +36,7 @@ struct ion_device *idev;
 static int num_heaps;
 static struct ion_heap **heaps;
 
-unsigned int kona_ion_map_dma(struct ion_client *client,
+unsigned int bcm_ion_map_dma(struct ion_client *client,
 		struct ion_handle *handle)
 {
 	struct ion_buffer *buffer;
@@ -57,9 +57,9 @@ unsigned int kona_ion_map_dma(struct ion_client *client,
 	}
 	return dma_addr;
 }
-EXPORT_SYMBOL(kona_ion_map_dma);
+EXPORT_SYMBOL(bcm_ion_map_dma);
 
-static int kona_ion_set_prop(struct ion_client *client,
+static int bcm_ion_set_prop(struct ion_client *client,
 		struct ion_custom_property *data)
 {
 	struct ion_buffer *buffer;
@@ -73,7 +73,7 @@ static int kona_ion_set_prop(struct ion_client *client,
 	return -EINVAL;
 }
 
-static int kona_ion_get_prop(struct ion_client *client,
+static int bcm_ion_get_prop(struct ion_client *client,
 		struct ion_custom_property *data)
 {
 	struct ion_buffer *buffer;
@@ -87,7 +87,7 @@ static int kona_ion_get_prop(struct ion_client *client,
 	return -EINVAL;
 }
 
-static int kona_ion_update_count(struct ion_client *client,
+static int bcm_ion_update_count(struct ion_client *client,
 		struct ion_handle *handle)
 {
 	struct ion_buffer *buffer;
@@ -101,7 +101,7 @@ static int kona_ion_update_count(struct ion_client *client,
 	return -EINVAL;
 }
 
-static int kona_ion_get_update_count(struct ion_client *client,
+static int bcm_ion_get_update_count(struct ion_client *client,
 		struct ion_custom_update_count *data)
 {
 	struct ion_buffer *buffer;
@@ -115,7 +115,7 @@ static int kona_ion_get_update_count(struct ion_client *client,
 	return -EINVAL;
 }
 
-static int kona_is_region_ok(struct ion_buffer *buffer,
+static int bcm_is_region_ok(struct ion_buffer *buffer,
 		unsigned long offset, unsigned long len)
 {
 	if ((offset > buffer->size) || ((offset + len) > buffer->size)
@@ -124,7 +124,7 @@ static int kona_is_region_ok(struct ion_buffer *buffer,
 	return 1;
 }
 
-static int kona_ion_cache_clean(struct ion_client *client,
+static int bcm_ion_cache_clean(struct ion_client *client,
 		struct ion_custom_region_data *data)
 {
 	struct ion_buffer *buffer;
@@ -132,7 +132,7 @@ static int kona_ion_cache_clean(struct ion_client *client,
 
 	buffer = ion_lock_buffer(client, data->handle);
 	if (buffer && buffer->heap->ops->clean_cache) {
-		if (kona_is_region_ok(buffer, data->offset, data->len))
+		if (bcm_is_region_ok(buffer, data->offset, data->len))
 			ret = buffer->heap->ops->clean_cache(buffer->heap,
 					buffer,	data->offset, data->len);
 		ion_unlock_buffer(client, buffer);
@@ -140,7 +140,7 @@ static int kona_ion_cache_clean(struct ion_client *client,
 	return ret;
 }
 
-static int kona_ion_cache_invalidate(struct ion_client *client,
+static int bcm_ion_cache_invalidate(struct ion_client *client,
 		struct ion_custom_region_data *data)
 {
 	struct ion_buffer *buffer;
@@ -148,7 +148,7 @@ static int kona_ion_cache_invalidate(struct ion_client *client,
 
 	buffer = ion_lock_buffer(client, data->handle);
 	if (buffer && buffer->heap->ops->invalidate_cache) {
-		if (kona_is_region_ok(buffer, data->offset, data->len))
+		if (bcm_is_region_ok(buffer, data->offset, data->len))
 			ret = buffer->heap->ops->invalidate_cache(buffer->heap,
 					buffer,	data->offset, data->len);
 		ion_unlock_buffer(client, buffer);
@@ -156,7 +156,7 @@ static int kona_ion_cache_invalidate(struct ion_client *client,
 	return ret;
 }
 
-static long kona_ion_custom_ioctl(struct ion_client *client,
+static long bcm_ion_custom_ioctl(struct ion_client *client,
 				      unsigned int cmd,
 				      unsigned long arg)
 {
@@ -170,7 +170,7 @@ static long kona_ion_custom_ioctl(struct ion_client *client,
 
 		pr_debug("ION_IOC_CUSTOM_DMA_MAP client(%p) handle(%p)\n",
 				client, data.handle);
-		data.dma_addr = kona_ion_map_dma(client, data.handle);
+		data.dma_addr = bcm_ion_map_dma(client, data.handle);
 
 		if (copy_to_user((void __user *)arg, &data, sizeof(data)))
 			return -EFAULT;
@@ -183,10 +183,9 @@ static long kona_ion_custom_ioctl(struct ion_client *client,
 		if (copy_from_user(&data, (void __user *)arg, sizeof(data)))
 			return -EFAULT;
 
-		pr_debug("ION_IOC_CUSTOM_SET_PROP client(%p) handle(%p)"
-			   " value(%x) mask(%x)\n", client, data.handle,
-			   data.value, data.mask);
-		if (kona_ion_set_prop(client, &data))
+		pr_debug("ION_IOC_CUSTOM_SET_PROP client(%p) handle(%p) value(%x) mask(%x)\n",
+				client, data.handle, data.value, data.mask);
+		if (bcm_ion_set_prop(client, &data))
 			return -EINVAL;
 
 		break;
@@ -200,7 +199,7 @@ static long kona_ion_custom_ioctl(struct ion_client *client,
 
 		pr_debug("ION_IOC_CUSTOM_GET_PROP client(%p) handle(%p) mask(%x)\n",
 				client, data.handle, data.mask);
-		if (kona_ion_get_prop(client, &data))
+		if (bcm_ion_get_prop(client, &data))
 			return -EINVAL;
 
 		if (copy_to_user((void __user *)arg, &data, sizeof(data)))
@@ -213,7 +212,7 @@ static long kona_ion_custom_ioctl(struct ion_client *client,
 
 		pr_debug("ION_IOC_CUSTOM_UPDATE client(%p) handle(%p)\n",
 				client, handle);
-		if (kona_ion_update_count(client, handle))
+		if (bcm_ion_update_count(client, handle))
 			return -EINVAL;
 
 		break;
@@ -227,7 +226,7 @@ static long kona_ion_custom_ioctl(struct ion_client *client,
 
 		pr_debug("ION_IOC_CUSTOM_GET_UPDATE_COUNT client(%p) handle(%p)\n",
 				client, data.handle);
-		if (kona_ion_get_update_count(client, &data))
+		if (bcm_ion_get_update_count(client, &data))
 			return -EINVAL;
 
 		if (copy_to_user((void __user *)arg, &data, sizeof(data)))
@@ -243,7 +242,7 @@ static long kona_ion_custom_ioctl(struct ion_client *client,
 
 		pr_debug("ION_IOC_CUSTOM_CACHE_CLEAN client(%p) handle(%p)\n",
 				client, data.handle);
-		if (kona_ion_cache_clean(client, &data))
+		if (bcm_ion_cache_clean(client, &data))
 			return -EINVAL;
 
 		if (copy_to_user((void __user *)arg, &data, sizeof(data)))
@@ -259,7 +258,7 @@ static long kona_ion_custom_ioctl(struct ion_client *client,
 
 		pr_debug("ION_IOC_CUSTOM_CACHE_INVALIDATE client(%p) handle(%p)\n",
 				client, data.handle);
-		if (kona_ion_cache_invalidate(client, &data))
+		if (bcm_ion_cache_invalidate(client, &data))
 			return -EINVAL;
 
 		if (copy_to_user((void __user *)arg, &data, sizeof(data)))
@@ -299,10 +298,10 @@ static long kona_ion_custom_ioctl(struct ion_client *client,
 
 static u64 ion_dmamask = DMA_BIT_MASK(32);
 
-static struct ion_platform_heap *kona_ion_parse_dt(struct device *dev)
+static struct ion_platform_heap *bcm_ion_parse_dt(struct device *dev)
 {
 	struct device_node *node = dev->of_node;
-	struct kona_ion_heap_reserve_data *heap_init_data;
+	struct bcm_ion_heap_reserve_data *heap_init_data;
 	struct ion_platform_heap *heap_data = NULL;
 	const char *name;
 	u32 val;
@@ -330,7 +329,7 @@ static struct ion_platform_heap *kona_ion_parse_dt(struct device *dev)
 	ION_OF_READ(id);
 	if ((heap_data->type == ION_HEAP_TYPE_CARVEOUT) ||
 			(heap_data->type == ION_HEAP_TYPE_DMA)) {
-		if (kona_ion_get_heap_reserve_data(&heap_init_data,
+		if (bcm_ion_get_heap_reserve_data(&heap_init_data,
 					heap_data->name)) {
 			pr_err("%16s: Memory was not reserved\n",
 					heap_data->name);
@@ -359,9 +358,9 @@ err:
 }
 #endif /* CONFIG_OF */
 
-static struct ion_platform_heap *kona_ion_parse_pdata(struct device *dev)
+static struct ion_platform_heap *bcm_ion_parse_pdata(struct device *dev)
 {
-	struct kona_ion_heap_reserve_data *heap_init_data;
+	struct bcm_ion_heap_reserve_data *heap_init_data;
 	struct ion_platform_data *pdata = dev->platform_data;
 	struct ion_platform_heap *heap_data;
 	int i;
@@ -371,7 +370,7 @@ static struct ion_platform_heap *kona_ion_parse_pdata(struct device *dev)
 
 		if ((heap_data->type == ION_HEAP_TYPE_CARVEOUT) ||
 				(heap_data->type == ION_HEAP_TYPE_DMA)) {
-			if (kona_ion_get_heap_reserve_data(&heap_init_data,
+			if (bcm_ion_get_heap_reserve_data(&heap_init_data,
 						heap_data->name)) {
 				pr_err("%16s: Memory was not reserved\n",
 						heap_data->name);
@@ -390,7 +389,7 @@ static struct ion_platform_heap *kona_ion_parse_pdata(struct device *dev)
 	return pdata->heaps;
 }
 
-static int kona_ion_probe(struct platform_device *pdev)
+static int bcm_ion_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	int err;
@@ -406,7 +405,7 @@ static int kona_ion_probe(struct platform_device *pdev)
 		struct ion_platform_data *pdata = dev->platform_data;
 		pr_info("Probe: Add (%d)heaps via platform_data\n", pdata->nr);
 		new_num_heaps = pdata->nr;
-		heap_datas = kona_ion_parse_pdata(dev);
+		heap_datas = bcm_ion_parse_pdata(dev);
 		if (IS_ERR_OR_NULL(heap_datas)) {
 			pr_err("Probe Fail: pdata parsing failed\n");
 			return PTR_ERR(heap_datas);
@@ -415,7 +414,7 @@ static int kona_ion_probe(struct platform_device *pdev)
 	} else if (dev->of_node) {
 		pr_info("Probe: via DT framework\n");
 		new_num_heaps = 1;
-		heap_datas = kona_ion_parse_dt(dev);
+		heap_datas = bcm_ion_parse_dt(dev);
 		if (IS_ERR_OR_NULL(heap_datas)) {
 			pr_err("Probe Fail: DT parsing failed\n");
 			return PTR_ERR(heap_datas);
@@ -451,7 +450,7 @@ static int kona_ion_probe(struct platform_device *pdev)
 			err = -ENOMEM;
 			goto err2;
 		}
-		idev = ion_device_create(kona_ion_custom_ioctl);
+		idev = ion_device_create(bcm_ion_custom_ioctl);
 		if (IS_ERR_OR_NULL(idev)) {
 			pr_err("Probe Fail: ION device creation failed\n");
 			kfree(heaps);
@@ -524,7 +523,7 @@ err2:
 	return err;
 }
 
-static int kona_ion_remove(struct platform_device *pdev)
+static int bcm_ion_remove(struct platform_device *pdev)
 {
 	struct ion_device *idev = platform_get_drvdata(pdev);
 	int i;
@@ -533,7 +532,7 @@ static int kona_ion_remove(struct platform_device *pdev)
 	struct ion_platform_heap *heap_data = dev->platform_data;
 #endif /* CONFIG_OF */
 
-	pr_info("Kona ION device remove\n");
+	pr_info("Broadcom ION device remove\n");
 	ion_device_destroy(idev);
 	idev = NULL;
 	for (i = 0; i < num_heaps; i++)
@@ -563,10 +562,10 @@ static const struct of_device_id ion_of_match[] = {
 #endif /* CONFIG_OF */
 
 static struct platform_driver ion_driver = {
-	.probe = kona_ion_probe,
-	.remove = __devexit_p(kona_ion_remove),
+	.probe = bcm_ion_probe,
+	.remove = __devexit_p(bcm_ion_remove),
 	.driver = {
-		.name = "ion-kona",
+		.name = "ion-bcm",
 		.owner = THIS_MODULE,
 		.of_match_table = ion_of_match,
 	},
@@ -574,13 +573,13 @@ static struct platform_driver ion_driver = {
 
 static int __init ion_init(void)
 {
-	pr_info("Kona ION driver init\n");
+	pr_info("Broadcom ION driver init\n");
 	return platform_driver_register(&ion_driver);
 }
 
 static void __exit ion_exit(void)
 {
-	pr_info("Kona ION driver exit\n");
+	pr_info("Broadcom ION driver exit\n");
 	platform_driver_unregister(&ion_driver);
 }
 

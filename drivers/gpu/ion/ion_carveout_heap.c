@@ -26,7 +26,7 @@
 #include <linux/scatterlist.h>
 #include <linux/slab.h>
 #include <linux/vmalloc.h>
-#ifdef CONFIG_ION_KONA
+#ifdef CONFIG_ION_BCM
 #include <linux/dma-direction.h>
 #include <asm/cacheflush.h>
 #include <linux/seq_file.h>
@@ -40,7 +40,7 @@ struct ion_carveout_heap {
 	struct ion_heap heap;
 	struct gen_pool *pool;
 	ion_phys_addr_t base;
-#ifdef CONFIG_ION_KONA
+#ifdef CONFIG_ION_BCM
 	int size;
 #endif
 #ifdef CONFIG_ION_OOM_KILLER
@@ -118,7 +118,7 @@ struct sg_table *ion_carveout_heap_map_dma(struct ion_heap *heap,
 	}
 	sg_set_page(table->sgl, phys_to_page(buffer->priv_phys), buffer->size,
 		    0);
-#ifdef CONFIG_ION_KONA
+#ifdef CONFIG_ION_BCM
 	buffer->dma_addr = buffer->priv_phys;
 #endif
 	return table;
@@ -127,7 +127,7 @@ struct sg_table *ion_carveout_heap_map_dma(struct ion_heap *heap,
 void ion_carveout_heap_unmap_dma(struct ion_heap *heap,
 				 struct ion_buffer *buffer)
 {
-#ifdef CONFIG_ION_KONA
+#ifdef CONFIG_ION_BCM
 	buffer->dma_addr = ION_DMA_ADDR_FAIL;
 #endif
 	sg_free_table(buffer->sg_table);
@@ -157,7 +157,7 @@ void ion_carveout_heap_unmap_kernel(struct ion_heap *heap,
 int ion_carveout_heap_map_user(struct ion_heap *heap, struct ion_buffer *buffer,
 			       struct vm_area_struct *vma)
 {
-#ifdef CONFIG_ION_KONA
+#ifdef CONFIG_ION_BCM
 	if (buffer->flags & ION_FLAG_WRITECOMBINE)
 		vma->vm_page_prot = pgprot_writecombine(vma->vm_page_prot);
 	else if (buffer->flags & ION_FLAG_WRITETHROUGH)
@@ -179,7 +179,7 @@ int ion_carveout_heap_map_user(struct ion_heap *heap, struct ion_buffer *buffer,
 #endif
 }
 
-#ifdef CONFIG_ION_KONA
+#ifdef CONFIG_ION_BCM
 int ion_carveout_heap_clean_cache(struct ion_heap *heap,
 		struct ion_buffer *buffer, unsigned long offset,
 		unsigned long len)
@@ -228,13 +228,13 @@ static struct ion_heap_ops carveout_heap_ops = {
 	.map_user = ion_carveout_heap_map_user,
 	.map_kernel = ion_carveout_heap_map_kernel,
 	.unmap_kernel = ion_carveout_heap_unmap_kernel,
-#ifdef CONFIG_ION_KONA
+#ifdef CONFIG_ION_BCM
 	.clean_cache = ion_carveout_heap_clean_cache,
 	.invalidate_cache = ion_carveout_heap_invalidate_cache,
 #endif
 };
 
-#ifdef CONFIG_ION_KONA
+#ifdef CONFIG_ION_BCM
 static int ion_carveout_heap_free_size(struct ion_heap *heap)
 {
 	struct ion_carveout_heap *carveout_heap =
@@ -339,7 +339,7 @@ struct ion_heap *ion_carveout_heap_create(struct ion_platform_heap *heap_data)
 		     -1);
 	carveout_heap->heap.ops = &carveout_heap_ops;
 	carveout_heap->heap.type = ION_HEAP_TYPE_CARVEOUT;
-#ifdef CONFIG_ION_KONA
+#ifdef CONFIG_ION_BCM
 	carveout_heap->size = heap_data->size;
 	carveout_heap->heap.debug_show = ion_carveout_heap_debug_show;
 	carveout_heap->heap.free_size = ion_carveout_heap_free_size;

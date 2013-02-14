@@ -42,7 +42,7 @@
 #endif
 #ifdef CONFIG_ION_KONA_NO_DT
 #include <linux/ion.h>
-#include <linux/broadcom/kona_ion.h>
+#include <linux/broadcom/bcm_ion.h>
 #endif
 #include <linux/serial_8250.h>
 #include <linux/i2c.h>
