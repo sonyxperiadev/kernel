@@ -217,6 +217,29 @@ static u32 bcmpmu_csr_v_table[] = {
 	900000,
 };
 
+int bcmpmu_rgltr_get_volt_id(u32 voltage)
+{
+	u8 first, last, middle, size;
+	u32 volt_uv;
+
+	size = ARRAY_SIZE(bcmpmu_csr_v_table);
+	volt_uv = voltage * 1000;
+	first = 0;
+	last = size - 1;
+	middle = (first+last)/2;
+
+	while (first <= last) {
+		if (bcmpmu_csr_v_table[middle] < volt_uv)
+			first = middle + 1;
+		else if (bcmpmu_csr_v_table[middle] == volt_uv)
+			return middle;
+		else
+			last = middle - 1;
+		middle = (first + last)/2;
+	}
+	return -EINVAL;
+}
+
 struct regulator_desc rdesc[BCMPMU_REGULATOR_MAX] = {
 	[BCMPMU_REGULATOR_RFLDO] = {
 		.name = "rfldo",

@@ -948,6 +948,8 @@ int bcmpmu_get_pmu_mfd_cell(struct mfd_cell **);
 struct bcmpmu59xxx_regulator_info *
 bcmpmu59xxx_get_rgltr_info(struct bcmpmu59xxx *bcmpmu);
 
+int bcmpmu_rgltr_get_volt_id(u32 voltage);
+
 void bcmpmu_client_power_off(void);
 
 int bcmpmu_client_hard_reset(u8 chreset_reason);

@@ -789,16 +789,25 @@ static struct kona_ate_lut_entry ate_lut[] = {
 
 static u32 irdrop_lut[] = {470, 489, 519, 550, UINT_MAX};
 
-static int vddvar_a9_adj_val[] = {0, 0, 0, 0, 0};
+static int vddvar_adj_val_1g[] = {40, 40, 30, 30, 30};
+static int vddvar_adj_val_1200m[] = {50, 50, 40, 40, 30};
 
-static struct adj_param adj_param = {
-	.vddvar_a9_adj_val = vddvar_a9_adj_val, /*0 mv */
-	.vddfix_adj_val = NULL, /*0 mv*/
-	.flags = 0,
+static int *vddvar_adj_val[] = {vddvar_adj_val_1g,
+				vddvar_adj_val_1200m};
+
+int vddfix_adj_lut[] = {
+	0, 10, 20, 30,
+	40, 50, 60, 70,
+	80, 90, 100, 110,
+	120, 130, 140, 150,
+	0, -10, -20, -30,
+	-40, -50, -60, -70,
+	-80, -90, -100, -110,
+	-120, -130, -140, -150
 };
 
 static struct kona_avs_pdata avs_pdata = {
-	.flags = AVS_VDDVAR_A9_EN | AVS_IGNORE_CRC_ERR,
+	.flags = AVS_VDDVAR_A9_EN | AVS_VDDVAR_ADJ_EN | AVS_IGNORE_CRC_ERR,
 	/* Mem addr where perf mon and SDSR OPP values are copied by ABI */
 	.avs_addr_row4 = 0x34051FB0,
 	/* Mem addr where ATE values is copied by ABI */
@@ -809,7 +818,8 @@ static struct kona_avs_pdata avs_pdata = {
 	.ate_lut = ate_lut,
 	.irdrop_lut = irdrop_lut,
 	.silicon_type_notify = avs_silicon_type_notify,
-	.adj_param = &adj_param,
+	.vddvar_adj_lut = vddvar_adj_val,
+	.vddfix_adj_lut = vddfix_adj_lut,
 };
 
 struct platform_device kona_avs_device = {

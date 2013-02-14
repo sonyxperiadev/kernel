@@ -159,13 +159,25 @@ u32 kona_avs_get_ate_freq(void)
 }
 EXPORT_SYMBOL(kona_avs_get_ate_freq);
 
-struct adj_param *kona_avs_get_vlt_adj_param(void)
+u32 kona_avs_get_vddvar_adj(u32 silicon_type, u32 freq)
 {
-	if (avs_info.pdata)
-		return avs_info.pdata->adj_param;
-	return NULL;
+	avs_dbg(AVS_LOG_INIT, "%s: silicon = %u, freq = %u",
+			__func__, silicon_type, freq);
+	if (freq < A9_FREQ_1000_MHZ || freq >= A9_FREQ_1500_MHZ)
+		return 0;
+	if (avs_info.pdata && (avs_info.pdata->flags & AVS_VDDVAR_ADJ_EN))
+		return avs_info.pdata->vddvar_adj_lut[freq - 1][silicon_type];
+	return 0;
 }
-EXPORT_SYMBOL(kona_avs_get_vlt_adj_param);
+EXPORT_SYMBOL(kona_avs_get_vddvar_adj);
+
+int kona_avs_get_vddfix_adj(void)
+{
+	if (avs_info.pdata && (avs_info.pdata->flags & AVS_VDDFIX_ADJ_EN))
+		return avs_info.pdata->vddfix_adj_lut[avs_info.vddfix_vlt_adj];
+	return 0;
+}
+EXPORT_SYMBOL(kona_avs_get_vddfix_adj);
 
 /* converts interger to string radix 2 (binary number string) */
 static void int2bin(unsigned int num, char *str)
@@ -309,9 +321,6 @@ static void avs_parse_vddvar_a9_params(struct avs_info *avs_inf_ptr)
 	avs_inf_ptr->vddvar_a9_vlt_adj_en = ((avs_inf_ptr->row5_val.val1 &
 		AVS_VDDVAR_A9_ADJ_EN_MASK) >> AVS_VDDVAR_A9_ADJ_EN_SHIFT);
 
-	if (avs_inf_ptr->vddvar_a9_vlt_adj_en)
-		avs_inf_ptr->pdata->adj_param->flags |= AVS_VDDVAR_A9_ADJ_EN;
-
 	avs_dbg(AVS_LOG_INIT, "ATE_AVS_BIN[3:0]=0x%x,CRC[3:0]=0x%x,"\
 		"IRDROP[9:0]=%d, YEAR[3:0] = %d, MONTH[3:0] = %d\n",
 		avs_inf_ptr->avs_ate_val, avs_inf_ptr->ate_crc,
@@ -350,11 +359,9 @@ static void avs_parse_vddfix_params(struct avs_info *avs_inf_ptr)
 				AVS_SDSR_OPP2_SHIFT) & AVS_OPP_MASK;
 	avs_inf_ptr->vddfix_vlt_adj = (avs_inf_ptr->row5_val.val1 >>
 			AVS_VDDFIX_VLT_ADJ_SHIFT) & AVS_VDDFIX_VLT_ADJ_MASK;
-	if (avs_inf_ptr->vddfix_vlt_adj) {
-		avs_inf_ptr->pdata->adj_param->flags |= AVS_VDDFIX_ADJ_EN;
-		avs_inf_ptr->pdata->adj_param->vddfix_adj_val =
-			&avs_inf_ptr->vddfix_vlt_adj;
-	}
+	if (avs_inf_ptr->vddfix_vlt_adj)
+		avs_inf_ptr->pdata->flags |= AVS_VDDFIX_ADJ_EN;
+
 	avs_dbg(AVS_LOG_INIT, "%s:spm = %d, vlt_adj = %x "\
 		"opp1 = %x, opp2 = %x\n", __func__,
 		avs_inf_ptr->vddfix_spm, avs_inf_ptr->vddfix_vlt_adj,

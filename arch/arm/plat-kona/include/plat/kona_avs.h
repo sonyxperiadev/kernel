@@ -38,11 +38,8 @@ enum {
 	AVS_VDDVAR_EN = 1 << 1,
 	AVS_VDDFIX_EN = 1 << 2,
 	AVS_IGNORE_CRC_ERR = 1 << 3,
-};
-
-enum {
-	AVS_VDDVAR_A9_ADJ_EN = 1,
-	AVS_VDDFIX_ADJ_EN = 1 << 1,
+	AVS_VDDVAR_ADJ_EN = 1 << 4,
+	AVS_VDDFIX_ADJ_EN = 1 << 5,
 };
 
 enum {
@@ -56,24 +53,19 @@ struct kona_ate_lut_entry {
 	int silicon_type;
 };
 
-struct adj_param {
-	int *vddvar_a9_adj_val;
-	int *vddfix_adj_val;
-	u32 flags;
-};
-
 struct kona_avs_pdata {
 	u32 flags;
 	u32 avs_addr_row4, avs_addr_row5, avs_addr_row8;
-
+	int *vddfix_adj_lut;
+	int **vddvar_adj_lut;
 	void (*silicon_type_notify) (u32 silicon_type, u32 ate_freq);
 	u32 *silicon_type_lut;
 	struct kona_ate_lut_entry *ate_lut;
 	u32 *irdrop_lut;
-	struct adj_param *adj_param;
 };
 
 u32 kona_avs_get_silicon_type(void);
 u32 kona_avs_get_ate_freq(void);
-struct adj_param *kona_avs_get_vlt_adj_param(void);
+u32 kona_avs_get_vddvar_adj(u32 silicon_type, u32 freq);
+int kona_avs_get_vddfix_adj(void);
 #endif	  /*__KONA_AVS___*/

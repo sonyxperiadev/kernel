@@ -1254,13 +1254,17 @@ void bcmpmu_set_pullup_reg(void)
 static int bcmpmu_init_platform_hw(struct bcmpmu59xxx *bcmpmu)
 {
 	u32 silicon_type;
-	u8 ret_vlt;
+	int ret_vlt;
 
 	pr_info("REG: pmu_init_platform_hw called\n");
 	BUG_ON(!bcmpmu);
 #ifdef CONFIG_KONA_AVS
 	silicon_type = kona_avs_get_silicon_type();
 	ret_vlt = get_retention_vlt_id(AVS_VDDVAR, silicon_type);
+	if (ret_vlt < 0) {
+		pr_err("%s: Wrong voltage value\n", __func__);
+		return -EINVAL;
+	}
 	bcmpmu->write_dev(bcmpmu, PMU_REG_MMSRVOUT2, ret_vlt);
 #endif
 	return 0;

@@ -129,12 +129,7 @@ int pm_init_pmu_sr_vlt_map_table(u32 silicon_type, int freq_id)
 {
 	int inx;
 	u8 *vlt_table;
-#ifdef CONFIG_KONA_AVS
-	vlt_table = (u8 *) get_sr_vlt_table(silicon_type, freq_id,
-				kona_avs_get_vlt_adj_param());
-#else
-	vlt_table = (u8 *) get_sr_vlt_table(silicon_type, freq_id, NULL);
-#endif
+	vlt_table = (u8 *) get_sr_vlt_table(silicon_type, freq_id);
 	for (inx = 0; inx < SR_VLT_LUT_SIZE; inx++)
 		sr_vlt_table[inx] = vlt_table[inx];
 	return pwr_mgr_pm_i2c_var_data_write(vlt_table, SR_VLT_LUT_SIZE);
@@ -147,10 +142,10 @@ int __init pm_params_init(void)
 	pwrmgr_init_param.cmd_buf_size = cmd_buf_sz;
 #ifdef CONFIG_PWRMGR_1P2GHZ_OPS_SET_SELECT
 	pwrmgr_init_param.def_vlt_tbl = (u8 *)
-		get_sr_vlt_table(SILICON_TYPE_SLOW, A9_FREQ_1200_MHZ, NULL);
+		get_sr_vlt_table(SILICON_TYPE_SLOW, A9_FREQ_1200_MHZ);
 #else
 	pwrmgr_init_param.def_vlt_tbl = (u8 *)
-		get_sr_vlt_table(SILICON_TYPE_SLOW, A9_FREQ_1000_MHZ, NULL);
+		get_sr_vlt_table(SILICON_TYPE_SLOW, A9_FREQ_1000_MHZ);
 #endif
 	return 0;
 }
