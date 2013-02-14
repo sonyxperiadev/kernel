@@ -792,7 +792,7 @@ struct bcmpmu59xxx_pkey_pdata pkey_pdata = {
 };
 
 struct bcmpmu59xxx_audio_pdata audio_pdata = {
-	.ihf_autoseq_dis = 100,
+	.ihf_autoseq_dis = 0,
 };
 
 struct bcmpmu59xxx_rpc_pdata rpc_pdata = {
