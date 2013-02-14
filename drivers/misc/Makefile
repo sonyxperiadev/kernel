@@ -35,7 +35,6 @@ obj-$(CONFIG_SENSORS_TSL2550)	+= tsl2550.o
 obj-$(CONFIG_SENSORS_KIONIX_KXTIK)	+= kxtik.o
 obj-$(CONFIG_SENSORS_BMA150)	+= bma150.o
 obj-$(CONFIG_SENSORS_MPU3050)	+= mpu3050.o
-obj-$(CONFIG_INV_SENSORS)	+= inv_mpu/
 obj-$(CONFIG_AMI306)		+= ami306/
 obj-$(CONFIG_BMP18X) += bmp18x-core.o
 obj-$(CONFIG_BMP18X_I2C) += bmp18x-i2c.o

@@ -503,7 +503,7 @@ int __iio_device_attr_init(struct device_attribute *dev_attr,
 	}
 
 	if (writefunc) {
-		dev_attr->attr.mode |= S_IWUGO;
+		dev_attr->attr.mode |= S_IWUSR;
 		dev_attr->store = writefunc;
 	}
 	kfree(name_format);
