@@ -644,14 +644,14 @@ static ssize_t cpufreq_table_show(struct kobject *kobj,
 	ssize_t count = 0;
 	int num, i;
 	struct kona_cpufreq_drv_pdata *pdata = kona_cpufreq->pdata;
-
+	BUG_ON(pdata == NULL);
 	num = pdata->num_freqs;
 	/*List in descending order*/
 	for (i = num - 1; i >= 0; i--) {
 		count += scnprintf(&buf[count], (PAGE_SIZE - count - 2), "%d ",
 				pdata->freq_tbl[i].cpu_freq);
 	}
-	count += sprintf(&buf[count], "\n");
+	count += snprintf(&buf[count], (PAGE_SIZE - count - 2), "\n");
 	return count;
 }
 

@@ -276,7 +276,8 @@ int set_output_write(struct file *file, const char __user *buf, size_t len,
 		pr_err("%s: copy_from_user failed\n", __func__);
 		return -EFAULT;
 	}
-
+	if (len == 0)
+		return len;
 	/* chop of '\n' introduced by echo at the end of the input */
 	if (cmd[len - 1] == '\n')
 		cmd[len - 1] = '\0';

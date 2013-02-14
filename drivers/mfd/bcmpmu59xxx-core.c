@@ -438,7 +438,7 @@ static ssize_t bcmpmu_read(struct file *file, char *data, size_t len,
 		ret = copy_from_user((void *)&reg, (void *)data,
 		     sizeof(struct bcmpmu59xxx_rw_data));
 		if (!ret) {
-			reg_enc = ENC_PMU_REG(FIFO_MODE, reg.map,
+			reg_enc = ENC_PMU_REG(FIFO_MODE, (u8)reg.map,
 					reg.addr);
 			ret = bcmpmu->read_dev(bcmpmu, reg_enc,
 					(u8 *)&reg.val);
@@ -470,7 +470,7 @@ static long bcmpmu_ioctl_ltp(struct file *file, unsigned int cmd,
 	void __user *argp = (void __user *)arg;
 	unsigned int value[16];
 	int i;
-	ssize_t ret = 0;
+	long ret = 0;
 	u32 reg_enc;
 	switch (cmd) {
 	case BCM_PMU_IOCTL_READ_REG:
@@ -478,7 +478,7 @@ static long bcmpmu_ioctl_ltp(struct file *file, unsigned int cmd,
 		     sizeof(struct bcmpmu_rw_data_ltp));
 		if (!ret) {
 			reg.mask = 0xff;
-			reg_enc = ENC_PMU_REG(FIFO_MODE, reg.map,
+			reg_enc = ENC_PMU_REG(FIFO_MODE, (u8)reg.map,
 					reg.addr);
 			ret = bcmpmu->read_dev(bcmpmu, reg_enc,
 					(u8 *)&value[0]);
@@ -514,7 +514,7 @@ static long bcmpmu_ioctl_ltp(struct file *file, unsigned int cmd,
 					reg.addr, reg.len);
 			if ((reg.map < 2) && ((reg.addr + reg.len) < 255)
 			    && (reg.len < 16)) {
-				reg_enc = ENC_PMU_REG(FIFO_MODE, reg.map,
+				reg_enc = ENC_PMU_REG(FIFO_MODE, (u8)reg.map,
 						reg.addr);
 				ret = bcmpmu->read_dev_bulk(bcmpmu, reg_enc,
 						(u8 *)&value[0], reg.len);
@@ -553,7 +553,7 @@ static long bcmpmu_ioctl_ltp(struct file *file, unsigned int cmd,
 		ret = copy_from_user((void *)&reg, argp,
 				sizeof(struct bcmpmu_rw_data_ltp));
 		if (!ret) {
-			reg_enc = ENC_PMU_REG(FIFO_MODE, reg.map, reg.addr);
+			reg_enc = ENC_PMU_REG(FIFO_MODE, (u8)reg.map, reg.addr);
 			ret = bcmpmu->write_dev(bcmpmu, reg_enc, reg.val[0]);
 			pr_pmucore(DATA, "BCMPMU register=0x%X, val=0x%X,"
 					"map=0x%X\n", reg.addr,
@@ -595,7 +595,7 @@ static ssize_t bcmpmu_write(struct file *file, const char *data, size_t len,
 		ret = copy_from_user((void *)&reg, (void *)data,
 			sizeof(struct bcmpmu59xxx_rw_data));
 		if (!ret) {
-			reg_enc = ENC_PMU_REG(FIFO_MODE, reg.map, reg.addr);
+			reg_enc = ENC_PMU_REG(FIFO_MODE, (u8)reg.map, reg.addr);
 			ret = bcmpmu->write_dev(bcmpmu, reg_enc, reg.val);
 			if (ret != 0)
 				pr_pmucore(ERROR, "%s: write_dev failed.\n",

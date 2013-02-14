@@ -844,8 +844,6 @@ int bcmpmu_usb_set(struct bcmpmu59xxx *bcmpmu,
 		ret = bcmpmu->write_dev(bcmpmu, PMU_REG_OTGCTRL1, temp);
 		break;
 
-		break;
-
 	case BCMPMU_USB_CTRL_START_STOP_ADP_SENS_PRB:
 		if (data == 0)
 			ret = bcmpmu->write_dev(bcmpmu, PMU_REG_OTGCTRL2, 0);
@@ -1016,7 +1014,7 @@ int bcmpmu_usb_set(struct bcmpmu59xxx *bcmpmu,
 				PMU_REG_MBCCTRL3, temp);
 		break;
 	case BCMPMU_USB_CTRL_TPROBE_MAX:
-		if ((data >= 0) && (data <= TPROBE_MAX_USEC)) {
+		if (data <= TPROBE_MAX_USEC) {
 			val = (data * 2 * 1000) / 31250;
 			bcmpmu->read_dev(bcmpmu,
 					PMU_REG_OTGCTRL9, &temp);

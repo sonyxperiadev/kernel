@@ -5277,6 +5277,7 @@ static ssize_t set_clk_mon_dbg(struct file *file, char const __user *buf,
 	int clk_ctl = 0;
 	char input_str[100];
 	u32 dbg_bit_sel = 0;
+	BUG_ON(clock == NULL);
 	if (count > 100)
 		len = 100;
 	else
@@ -5396,7 +5397,7 @@ static ssize_t ccu_debug_set_dbg_bus_sel(struct file *file,
 
 	BUG_ON(clk == NULL);
 	ccu_clk = to_ccu_clk(clk);
-
+	BUG_ON(ccu_clk == NULL);
 	memset(input_str, 0, ARRAY_SIZE(input_str));
 	if (count > ARRAY_SIZE(input_str))
 		len = ARRAY_SIZE(input_str);
@@ -5975,7 +5976,7 @@ static ssize_t ccu_volt_id_display(struct file *file, char __user *buf,
 	char out_str[400];
 	char *out_ptr;
 	struct clk *clk = file->private_data;
-
+	BUG_ON(clk == NULL);
 	/* This is to avoid the read getting called again and again. This is
 	 * useful only if we have large chunk of data greater than PAGE_SIZE. we
 	 * have only small chunk of data */
@@ -5994,7 +5995,8 @@ static ssize_t ccu_volt_id_display(struct file *file, char __user *buf,
 		return -EINVAL;
 
 	for (i = 0; i < 8; i++) {
-		length = sprintf(out_ptr, "volt_tbl[%d]: %x\n", i, volt_tbl[i]);
+		length = snprintf(out_ptr, sizeof(out_str) - length,
+				"volt_tbl[%d]: %x\n", i, volt_tbl[i]);
 		out_ptr += length;
 		total_len += length;
 	}
@@ -6014,9 +6016,8 @@ static ssize_t ccu_volt_id_update(struct file *file,
 	u32 len = 0;
 	char *str_ptr;
 	u32 freq_id = 0xFFFF, volt_id = 0xFFFF;
-
 	char input_str[10];
-
+	BUG_ON(clk == NULL);
 	memset(input_str, 0, 10);
 	if (count > 10)
 		len = 10;
@@ -6110,15 +6111,15 @@ int __init clock_debug_init(void)
 
 int __init clock_debug_add_ccu(struct clk *c, bool is_root_ccu)
 {
-	#define DENT_COUNT 6
+	#define DENT_COUNT 7
 	struct ccu_clk *ccu_clk;
 	int i = 0;
 	struct dentry *dentry[DENT_COUNT] = {NULL};
-
-
+	struct dentry *dent;
+	BUG_ON(c == NULL);
 	BUG_ON(!dent_clk_root_dir);
 	ccu_clk = to_ccu_clk(c);
-
+	BUG_ON(ccu_clk == NULL);
 	ccu_clk->dent_ccu_dir = debugfs_create_dir(c->name, dent_clk_root_dir);
 	if (!ccu_clk->dent_ccu_dir)
 		goto err;
@@ -6165,10 +6166,11 @@ int __init clock_debug_add_ccu(struct clk *c, bool is_root_ccu)
 
 
 	if (CLK_FLG_ENABLED(c, CCU_DBG_BUS_EN)) {
-		struct dentry *dent;
 		dent = debugfs_create_file("dbg_bus", S_IWUSR|S_IRUGO,
 					  ccu_clk->dent_ccu_dir, c,
 					  &ccu_dbg_bus_fops);
+		if (!dent)
+			goto err;
 	}
 	if (is_root_ccu) {
 		if (!debugfs_create_file("clk_idle_debug", S_IRUSR | S_IWUSR,

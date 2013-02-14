@@ -120,7 +120,7 @@ static int set_icc_fcc(const char *val, const struct kernel_param *kp)
 	int rv = 0;
 
 	di = gbl_di;
-	if (!di)
+	if (!di || !val)
 		return -1;
 	sscanf(val, "%u", &curr);
 	if (curr == CURR_LMT_MAX) {
@@ -211,8 +211,8 @@ int bcmpmu_chrgr_usb_en(struct bcmpmu59xxx *bcmpmu, int enable)
 
 	ret = bcmpmu->write_dev(bcmpmu, PMU_REG_MBCCTRL3, reg);
 	if (ret) {
-		return ret;
 		pr_chrgr(ERROR, "%s: PMU write failed\n", __func__);
+		return ret;
 	}
 
 	bcmpmu_call_notifier(bcmpmu, BCMPMU_CHRGR_EVENT_CHRG_STATUS, &enable);

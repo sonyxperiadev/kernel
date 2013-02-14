@@ -37,6 +37,8 @@
 #define DEBUGFS_PM_CLIENT_NAME		"pi_client"
 #endif /*DEBUGFS_PM_CLIENT_NAME */
 
+#define DEBUGFS_PM_CLIENT_LEN	12
+
 #ifndef PI_MGR_DEBUG_CLIENT_MAX
 #define PI_MGR_DEBUG_CLIENT_MAX		10
 #endif /*PI_MGR_DEBUG_CLIENT_MAX */
@@ -1813,8 +1815,8 @@ static int pi_debug_register_qos_client(void *data, u64 value)
 	}
 
 	qos_dir = debugfs_info[pi->id].qos_dir;
-	sprintf(debug_qos_client[val].client_name, "%s_%d",
-		DEBUGFS_PM_CLIENT_NAME, val);
+	snprintf(debug_qos_client[val].client_name, DEBUGFS_PM_CLIENT_LEN,
+		"%s_%d", DEBUGFS_PM_CLIENT_NAME, val);
 
 	dent_client =
 	    debugfs_create_file(debug_qos_client[val].client_name,
@@ -1914,12 +1916,13 @@ static ssize_t pi_debug_set_dfs_client_opp(struct file *file,
 	int opp = PI_MGR_DFS_MIN_VALUE;
 	char opp_str[15];
 	u32 weightage = PI_MGR_DFS_WIEGHTAGE_DEFAULT;
-	char input_str[100];
+	char input_str[15];
 	u32 inx = (u32) file->private_data;
 	int opp_inx;
 	struct pi *pi = debug_dfs_client[inx].pi;
-	if (count > 100)
-		len = 100;
+	BUG_ON(pi == NULL);
+	if (count > 15)
+		len = 15;
 	else
 		len = count;
 
@@ -2022,8 +2025,8 @@ static int pi_debug_register_dfs_client(void *data, u64 value)
 	}
 
 	dfs_dir = debugfs_info[pi->id].dfs_dir;
-	sprintf(debug_dfs_client[val].client_name, "%s_%d",
-		DEBUGFS_PM_CLIENT_NAME, val);
+	snprintf(debug_dfs_client[val].client_name, DEBUGFS_PM_CLIENT_LEN,
+			"%s_%d", DEBUGFS_PM_CLIENT_NAME, val);
 
 	ret =
 	    pi_mgr_dfs_add_request(&debug_dfs_client[val].debugfs_dfs_node,
@@ -2138,10 +2141,10 @@ static ssize_t pi_opp_set_min_lmt(struct file *file, const char __user *buf,
 	u32 len;
 	int max_opp;
 	char opp_str[15];
-	char input_str[100];
+	char input_str[15];
 	BUG_ON(pi == NULL);
-	if (count > 100)
-		len = 100;
+	if (count > 15)
+		len = 15;
 	else
 		len = count;
 
@@ -2205,10 +2208,10 @@ static ssize_t pi_opp_set_max_lmt(struct file *file, const char __user *buf,
 	int val, opp_inx_req;
 	u32 len;
 	char opp_str[15];
-	char input_str[100];
+	char input_str[15];
 	BUG_ON(pi == NULL);
-	if (count > 100)
-		len = 100;
+	if (count > 15)
+		len = 15;
 	else
 		len = count;
 	if (copy_from_user(input_str, buf, len))
