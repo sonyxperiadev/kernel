@@ -58,6 +58,7 @@
 
 /* Timeout(ms) for wait_for_completion */
 #define SSPI_WFC_TIME_OUT	200
+#define MAX_LOCAL_BUF_SIZE	32
 
 #ifndef CONFIG_MACH_HAWAII_FPGA
 extern void csl_caph_ControlHWClock(Boolean eanble);
@@ -977,21 +978,22 @@ static int spi_kona_cmd_transfer(struct spi_message *m, struct spi_device *spi)
 	unsigned int tx_n = 0;
 	unsigned int rx_n = 0;
 	struct spi_transfer *t = NULL;
+	u8 *local_buf = NULL;
 	struct spi_transfer *local_trans = kmalloc(sizeof(struct spi_transfer),
 					   GFP_KERNEL);
-	u8 *local_buf = kmalloc(32, GFP_KERNEL);
 	if (local_trans == NULL) {
 		status = -ENOMEM;
 		pr_info("local buffer is not allocated\n");
 		return status;
 	}
+	local_buf = kmalloc(MAX_LOCAL_BUF_SIZE, GFP_KERNEL);
 	if (local_buf == NULL) {
 		status = -ENOMEM;
 		pr_info("local buffer is not allocated\n");
 		kfree(local_trans);
 		return status;
 	}
-	memset(local_buf, 0x00, sizeof local_buf);
+	memset(local_buf, 0x00, MAX_LOCAL_BUF_SIZE);
 	local_trans->len = 0;
 	local_trans->bits_per_word = 8;
 	local_trans->tx_dma = 0;
