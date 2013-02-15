@@ -686,8 +686,12 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 
 	BUG_ON(pdev == NULL);
 
-	if (pdev->dev.platform_data)
-		hw_cfg = (struct sdio_platform_cfg *)pdev->dev.platform_data;
+	hw_cfg = (struct sdio_platform_cfg *)pdev->dev.platform_data;
+	if (!hw_cfg) {
+			dev_err(&pdev->dev, "hw_cfg is NULL\n");
+			ret = -ENOMEM;
+			goto err;
+	}
 
 	if (pdev->dev.of_node) {
 		const char *prop;
