@@ -1074,7 +1074,7 @@ static void __init pmem_reserve_memory(void)
 
 #ifdef CONFIG_ION
 
-static struct bcm_ion_heap_reserve_data ion_heap_reserve_datas[] __initdata = {
+static struct bcm_ion_heap_reserve_data ion_heap_reserve_datas[] = {
 	[0] = {
 		.name  = "ion-carveout",
 	},

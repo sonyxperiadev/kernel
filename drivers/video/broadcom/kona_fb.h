@@ -43,7 +43,7 @@ struct dispdrv_name_cfg {
 #include "lcd/otm8018b.h"
 
 
-static struct dispdrv_name_cfg dispdrvs[] = {
+static struct dispdrv_name_cfg dispdrvs[] __initdata = {
 	{"NT35510", &nt35510_cfg},
 	{"NT35512", &nt35512_cfg},
 	{"NT35516", &nt35516_cfg},
@@ -51,7 +51,7 @@ static struct dispdrv_name_cfg dispdrvs[] = {
 	{"OTM8018B", &otm8018b_cfg},
 };
 
-static struct lcd_config *get_dispdrv_cfg(const char *name)
+static struct lcd_config * __init get_dispdrv_cfg(const char *name)
 {
 	int i;
 	void *ret = NULL;

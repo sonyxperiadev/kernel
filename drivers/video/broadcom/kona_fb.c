@@ -753,7 +753,7 @@ static void kona_fb_late_resume(struct early_suspend *h)
 }
 #endif
 
-static struct kona_fb_platform_data *get_of_data(struct device_node *np)
+static struct kona_fb_platform_data * __init get_of_data(struct device_node *np)
 {
 	u32 val;
 	const char *str;
@@ -908,7 +908,7 @@ seq_done:
 	return buff;
 }
 
-static int populate_dispdrv_cfg(struct kona_fb *fb,
+static int __init populate_dispdrv_cfg(struct kona_fb *fb,
 	struct kona_fb_platform_data *pd)
 {
 	struct lcd_config *cfg;
@@ -1043,7 +1043,7 @@ static struct fb_ops kona_fb_ops = {
 	.fb_ioctl = kona_fb_ioctl,
 };
 
-static int kona_fb_probe(struct platform_device *pdev)
+static int __ref kona_fb_probe(struct platform_device *pdev)
 {
 	int ret = -ENXIO;
 	struct kona_fb *fb;
