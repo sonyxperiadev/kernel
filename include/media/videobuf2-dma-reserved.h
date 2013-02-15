@@ -26,12 +26,12 @@ vb2_dma_reserved_plane_dma_addr(struct vb2_buffer *vb, unsigned int plane_no)
 	if (plane_no != 0) {
 		pr_err("ERROR: Plane number(%d) >0 not supported in vb2-dma-reserved\n",
 				plane_no);
-		return NULL;
+		return 0;
 	}
 
 	if ((vb->v4l2_buf.flags & V4L2_BUF_FLAG_DMA_RESERVED) == 0) {
 		pr_err("ERROR: Driver uses dma-reserved. v4l2_buffer flags mismatch\n");
-		return NULL;
+		return 0;
 	}
 
 	return vb->v4l2_buf.reserved;

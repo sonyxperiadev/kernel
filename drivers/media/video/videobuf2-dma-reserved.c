@@ -56,7 +56,7 @@ static void *vb2_dma_reserved_get_userptr(void *alloc_ctx, unsigned long vaddr,
 					unsigned long size, int write)
 {
 	pr_debug("%s\n", __func__);
-	return DUMMY_ADDRESS;
+	return (void *)DUMMY_ADDRESS;
 }
 
 static void vb2_dma_reserved_put_userptr(void *mem_priv)

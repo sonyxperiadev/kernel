@@ -22,6 +22,7 @@
 #include <linux/interrupt.h>
 #include <linux/broadcom/mobcom_types.h>
 #include <linux/broadcom/msconsts.h>
+#include <linux/module.h>
 #include <plat/osabstract/ostypes.h>
 #include <plat/osabstract/ostask.h>
 #include <plat/osabstract/ossemaphore.h>

@@ -26,7 +26,7 @@
 #include <linux/gpio.h>
 
 #include "ov7692.h"
- 
+
 /* OV7692 has only one fixed colorspace per pixelcode */
 struct ov7692_datafmt {
 	enum v4l2_mbus_pixelcode code;
@@ -64,7 +64,7 @@ static const struct ov7692_datafmt ov7692_fmts[] = {
 };
 
 enum ov7692_size {
-	OV7692_SIZE_QVGA,	/*  320 x 240 */ 
+	OV7692_SIZE_QVGA,	/*  320 x 240 */
 	OV7692_SIZE_VGA,	/*  640 x 480 */
 	OV7692_SIZE_LAST,
 	OV7692_SIZE_MAX
@@ -302,7 +302,7 @@ static int ov7692_write_smbus(struct i2c_client *client, unsigned char reg,
     {
 		printk(KERN_ERR "ov7692_write_smbus: Error on write reg=0x%x, value=0x%x, ret=%d\n",reg,value,ret);
     }
-    
+
 	return ret;
 }
 
@@ -386,7 +386,7 @@ static const struct v4l2_queryctrl ov7692_controls[] = {
             ov7692_write_smbus(client, reglist[index].reg,
                      reglist[index].val);
      }
-     
+
      printk(KERN_INFO "%s: index=%d err=%d\n", __func__,index, err);
      return err;
 }
@@ -609,7 +609,7 @@ static int ov7692_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	int ret = 0;
 
 	dev_dbg(&client->dev, "ov7692_s_ctrl\n");
-    
+
 	switch (ctrl->id) {
 	case V4L2_CID_CAMERA_BRIGHTNESS:
 
@@ -804,7 +804,7 @@ static int ov7692_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			return -EINVAL;
 
 		if ((ov7692->i_size < OV7692_SIZE_QVGA) ||
-				(ov7692->i_size > OV7692_SIZE_VGA)) 
+				(ov7692->i_size > OV7692_SIZE_VGA))
 		{
 			if (ctrl->value == FRAME_RATE_30 ||
 					ctrl->value == FRAME_RATE_AUTO)
@@ -946,9 +946,9 @@ static int ov7692_init(struct i2c_client *client)
 {
 	struct ov7692 *ov7692 = to_ov7692(client);
 	int ret = 0;
-	
+
 	printk(KERN_INFO "%s: Sensor initialized!\n", __func__);
-	
+
 	ret = ov7692_write_smbuss(client, configscript_common1);
 	if (ret)
 	{
@@ -977,10 +977,7 @@ out:
 static int ov7692_video_probe(struct soc_camera_device *icd,
 			      struct i2c_client *client)
 {
-	unsigned long flags;
 	int ret = 0;
-	u8 revision = 0;
-
     u8 value = 0;
 
 	/*
@@ -1023,9 +1020,7 @@ static int ov7692_video_probe(struct soc_camera_device *icd,
         return -ENODEV;
 
 
-	/* TODO: Do something like ov7692_init */
-
-out:
+    /* TODO: Do something like ov7692_init */
 	return ret;
 }
 
@@ -1248,7 +1243,7 @@ static int ov7692_probe(struct i2c_client *client,
     }
 
     msleep(10);
-    
+
 	/* init the sensor here */
 	ret = ov7692_init(client);
 	if (ret) {

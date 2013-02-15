@@ -220,93 +220,96 @@ struct packet_capture {
 /* Output engine  */
 
 
-void * get_mm_csi0_handle (enum host_mode mode, enum afe_num afe, enum csi2_lanes lanes);
+void *get_mm_csi0_handle(enum host_mode mode, enum afe_num afe,
+		enum csi2_lanes lanes);
 
 /* Power manager set up over here */
-int mm_csi0_init (void);
+int mm_csi0_init(void);
 
 /* Power manager turn-off */
-int mm_csi0_teardown (void);
+int mm_csi0_teardown(void);
 
 /* Mostly AFE selection and clocks */
-int mm_csi0_set_afe ();
+int mm_csi0_set_afe(void);
 
-/* Currently void as values are fixed 
-   Requires clock and data lane timers 
-   Requires data lane sync matching 
-   Packet framer timeout mapped to lane speed  
+/* Currently void as values are fixed
+   Requires clock and data lane timers
+   Requires data lane sync matching
+   Packet framer timeout mapped to lane speed
    For CSI2, there are no PHY transitions and
    all lane terminations are manual and forced */
-int mm_csi0_set_dig_phy (struct lane_timing *timing);
+int mm_csi0_set_dig_phy(struct lane_timing *timing);
 
-/* int mm_csi0_power_iface (void); */
+/* int mm_csi0_power_iface(void); */
 /* Input CCP2 clocking scheme */
 
-int mm_csi0_set_mode (enum csi1ccp2_clock_mode clk_mode);
+int mm_csi0_set_mode(enum csi1ccp2_clock_mode clk_mode);
 
-/* APIs below are protocol agnostic 
+/* APIs below are protocol agnostic
    Used to configure the pixel pack and unpack modes
    Used to configure DPCM compression decompression modes */
 
-int mm_csi0_enc_blk_length (int len);
-int mm_csi0_cfg_pipeline_dpcm_enc (enum dpcm_encode_mode enc);
-int mm_csi0_cfg_pipeline_dpcm_dec (enum dpcm_decode_mode dec);
-int mm_csi0_cfg_pipeline_pack (enum pix_pack_mode pack);
-int mm_csi0_cfg_pipeline_unpack (enum pix_unpack_mode unpack);
+int mm_csi0_enc_blk_length(int len);
+int mm_csi0_cfg_pipeline_dpcm_enc(enum dpcm_encode_mode enc);
+int mm_csi0_cfg_pipeline_dpcm_dec(enum dpcm_decode_mode dec);
+int mm_csi0_cfg_pipeline_pack(enum pix_pack_mode pack);
+int mm_csi0_cfg_pipeline_unpack(enum pix_unpack_mode unpack);
 
 /* Set Horizontal and Vertical windowing */
-int mm_csi0_set_windowing_horizontal (int h_pix_start, int h_pix_end);
-int mm_csi0_set_windowing_vertical (int v_line_start, int v_line_end);
+int mm_csi0_set_windowing_horizontal(int h_pix_start, int h_pix_end);
+int mm_csi0_set_windowing_vertical(int v_line_start, int v_line_end);
 
-int mm_csi0_enable_fsp_ccp2 (void);
+int mm_csi0_enable_fsp_ccp2(void);
 
-/* vc applies only to CSI2, ignored for CCP2 handles 
-   Id is the data type for CSI2 and logical channel for CCP2 
+/* vc applies only to CSI2, ignored for CCP2 handles
+   Id is the data type for CSI2 and logical channel for CCP2
    Processing depends on CSI2 or CCP2 */
 
-int mm_csi0_cfg_image_id (int vc, int id);
+int mm_csi0_cfg_image_id(int vc, int id);
 
-/* Output engine setup 
-   Single/double buffer or trigger 
-   Address programming 
-   Packtimer based on lane speed 
-   Burst length and spacing 
+/* Output engine setup
+   Single/double buffer or trigger
+   Address programming
+   Packtimer based on lane speed
+   Burst length and spacing
    Panic priority*/
 
 
-/* For now hard-coded values, to be seen later 
+/* For now hard-coded values, to be seen later
    Set burst length, spacing and panic priorities */
-int mm_csi0_rx_burst (void);
+int mm_csi0_rx_burst(void);
 
-int mm_csi0_buffering_mode (enum buffer_mode bmode);
-int mm_csi0_update_addr (struct buffer_desc *im0, struct buffer_desc *im1, struct buffer_desc *dat0, struct buffer_desc *dat1);
-int mm_csi0_update_one(struct buffer_desc *im, int buf_num, enum buffer_type type);
+int mm_csi0_buffering_mode(enum buffer_mode bmode);
+int mm_csi0_update_addr(struct buffer_desc *im0, struct buffer_desc *im1,
+		struct buffer_desc *dat0, struct buffer_desc *dat1);
+int mm_csi0_update_one(struct buffer_desc *im, int buf_num,
+		enum buffer_type type);
 
 int mm_csi0_trigger_cap(void);
 
 /* Final level APIs to start and stop RX */
-int mm_csi0_start_rx (void);
-int mm_csi0_stop_rx (void);
+int mm_csi0_start_rx(void);
+int mm_csi0_stop_rx(void);
 
 /* Reset API */
-int mm_csi0_reset (enum reset_type type);
+int mm_csi0_reset(enum reset_type type);
 
-/* Status and Interrupt APIs 
-   _ack will also acknowledge and the other will only report 
+/* Status and Interrupt APIs
+   _ack will also acknowledge and the other will only report
    These APIs return the raw values and the interpretation would
-   be in the structure passed. To quickly determine an error, AND 
+   be in the structure passed. To quickly determine an error, AND
    the raw return with the ERROR_MASK in appropriate mode */
-u32 mm_csi0_get_rx_stat (struct rx_stat_list *list, int ack);
+u32 mm_csi0_get_rx_stat(struct rx_stat_list *list, int ack);
 
 /* ISTA register ... only FS, FE and LCI are allowed */
-int mm_csi0_get_int_stat (struct int_desc *desc, int ack);
+int mm_csi0_get_int_stat(struct int_desc *desc, int ack);
 
-int mm_csi0_get_data_stat (struct int_desc *desc, int ack);
+int mm_csi0_get_data_stat(struct int_desc *desc, int ack);
 
 /* Configure interrupts */
-int mm_csi0_config_int (struct int_desc *desc, enum buffer_type type);
+int mm_csi0_config_int(struct int_desc *desc, enum buffer_type type);
 
-void mm_csi0_ibwp();
+void mm_csi0_ibwp(void);
 
 /* Packet compare and capture */
 
@@ -315,17 +318,16 @@ void mm_csi0_ibwp();
    matching credentials. Used to debug and recieve if sensor/ISP
    sends generic short packets */
 
-enum packet_comp_cap mm_csi0_enable_packet_compare(struct packet_compare *compare);
-enum packet_comp_cap mm_csi0_get_captured_packet ( enum packet_comp_cap num, struct packet_capture *cap);
+enum packet_comp_cap mm_csi0_enable_packet_compare(
+		struct packet_compare *compare);
+enum packet_comp_cap mm_csi0_get_captured_packet(enum packet_comp_cap num,
+		struct packet_capture *cap);
 
 /* Get lane trans states */
 int mm_csi0_get_trans(void);
 
 /* STA register bit PS will be high to denote a panic was signalled */
-bool mm_csi0_get_panic_state();
+bool mm_csi0_get_panic_state(void);
 
-
-
-
-
+extern void reg_dump(void);
 

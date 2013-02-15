@@ -41,7 +41,6 @@ static int adp1653_reg_read(struct i2c_client *client, u16 reg, u8 * val)
 	int ret;
 	u8 reg8 = (u8) reg;
 	u8 data[1];
-	data[0] = reg8;
 	struct i2c_msg msg[2] = {
 		{
 		 client->addr,
@@ -54,6 +53,7 @@ static int adp1653_reg_read(struct i2c_client *client, u16 reg, u8 * val)
 		 1,
 		 val}
 	};
+	data[0] = reg8;
 	ret = i2c_transfer(client->adapter, msg, 2);
 	return 0;
 }
@@ -110,9 +110,9 @@ int adp1653_set_torch_flash(int hpled)
 	adp1653_reg_read(client1, 0x00, &val);
 	if(hpled <= 11)
 		printk("Torch mode seq\n");
-	else	
+	else
 		printk("Flash mode seq\n");
-	
+
 	val = val & 0x7;
 	val = val | (hpled << 3);
 	adp1653_reg_write(client1, 0x00, val);
@@ -127,7 +127,7 @@ int adp1653_sw_strobe(int on)
 		adp1653_reg_write(client1, 0x02, 1);
 	else
 		adp1653_reg_write(client1, 0x02, 0);
-	return 0;	
+	return 0;
 }
 
 int adp1653_gpio_strobe(int on)
@@ -142,12 +142,12 @@ int adp1653_set_timer(int timer_on, int timer_val)
 {
 	u8 val;
 	if (timer_on) {
-		val = 0x10 | (timer_val); 
+		val = 0x10 | (timer_val);
 		adp1653_reg_write(client1, 0x01, val);
 	} else {
 		adp1653_reg_write(client1, 0x01, 0x00);
 	}
-	return 0;	
+	return 0;
 }
 
 int adp1653_gpio_toggle(bool en)
@@ -171,7 +171,7 @@ int adp1653_clear_all()
 static int adp1653_probe(struct i2c_client *client,
 			 const struct i2c_device_id *did)
 {
-	client1 = client; 
+	client1 = client;
 	printk("***********#########$$$$$$$$$$ ADP1653 probe\n");
 	return 0;
 }
