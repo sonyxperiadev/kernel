@@ -646,6 +646,7 @@ static void __devinit sdhci_pltfm_runtime_pm_init(struct device *device)
 	if (!sdhci_pltfm_rpm_enabled(dev))
 		return;
 
+	pm_runtime_irq_safe(device);
 	pm_runtime_enable(device);
 	pm_runtime_set_autosuspend_delay(device, KONA_MMC_AUTOSUSPEND_DELAY);
 	pm_runtime_use_autosuspend(device);
