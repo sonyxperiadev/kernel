@@ -810,10 +810,12 @@ int bcmpmu_usb_set(struct bcmpmu59xxx *bcmpmu,
 
 	switch (ctrl) {
 	case BCMPMU_USB_CTRL_CHRG_CURR_LMT:
-		paccy->usb_accy_data.max_curr_chrgr = (int)data;
-		bcmpmu_call_notifier(paccy->bcmpmu,
+		if (!is_charging_state()) {
+			paccy->usb_accy_data.max_curr_chrgr = (int)data;
+			bcmpmu_call_notifier(paccy->bcmpmu,
 				BCMPMU_CHRGR_EVENT_CHRG_CURR_LMT,
 				&paccy->usb_accy_data.max_curr_chrgr);
+		}
 		break;
 	case BCMPMU_USB_CTRL_VBUS_ON_OFF:
 		ret = bcmpmu_usb_otg_bost_en(bcmpmu, !!data);
