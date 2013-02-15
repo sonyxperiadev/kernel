@@ -67,8 +67,8 @@ struct kona_tmon_pdata {
 	u32 chipreg_addr;
 	u32 interval_ms;
 	int flags;
-	char *tmon_apb_clk;
-	char *tmon_1m_clk;
+	char const *tmon_apb_clk;
+	char const *tmon_1m_clk;
 };
 
 int tmon_register_notifier(struct notifier_block *notifier);

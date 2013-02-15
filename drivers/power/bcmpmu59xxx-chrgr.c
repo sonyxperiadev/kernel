@@ -109,7 +109,7 @@ static u32 bcmpmu_pmu_curr_table[] = {
 	935,	/* 0x1000 */
 };
 
-const char *supplies_to[] = {
+char *supplies_to[] = {
 	"battery",
 };
 static int set_icc_fcc(const char *val, const struct kernel_param *kp)

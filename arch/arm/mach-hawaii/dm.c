@@ -1007,7 +1007,7 @@ static int __init dormant_init(void)
 		return -ENOMEM;
 	}
 	pr_info("%s: proc clock registers buffer; proc = 0x%x",
-		__func__, proc);
+		__func__, (unsigned int)proc);
 	proc_regs_v = (u32) proc;
 
 	reg = (struct reg_list *) proc_regs_v;
@@ -1021,7 +1021,7 @@ static int __init dormant_init(void)
 		return -ENOMEM;
 	}
 	pr_info("%s: addnl registers buffer; addnl = 0x%x",
-		__func__, addnl);
+		__func__, (unsigned int)addnl);
 	addnl_regs_v = (u32) addnl;
 
 	reg = (struct reg_list *) addnl_regs_v;

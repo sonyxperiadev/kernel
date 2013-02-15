@@ -637,6 +637,7 @@ static int bcmpmu_fg_eoc_curr_to_capacity(struct bcmpmu_fg_data *fg, int curr)
 	return lut[idx].capacity;
 }
 
+#if 0
 static int bcmpmu_fg_get_batt_esr(struct bcmpmu_fg_data *fg, int volt, int temp)
 {
 	struct batt_esr_temp_lut *lut = fg->pdata->batt_prop->esr_temp_lut;
@@ -674,6 +675,7 @@ static int bcmpmu_fg_get_batt_esr(struct bcmpmu_fg_data *fg, int volt, int temp)
 
 	return esr;
 }
+#endif
 
 static int bcmpmu_fg_get_esr_to_ocv(int volt, int curr, int offset,
 		int slope)
@@ -1130,6 +1132,7 @@ static int bcmpmu_fg_set_eoc_thrd(struct bcmpmu_fg_data *fg, int curr)
 	return ret;
 }
 
+#if 0
 static int bcmpmu_fg_set_sw_eoc_condition(struct bcmpmu_fg_data *fg)
 {
 	int ret;
@@ -1143,6 +1146,7 @@ static int bcmpmu_fg_set_sw_eoc_condition(struct bcmpmu_fg_data *fg)
 	ret = fg->bcmpmu->write_dev(fg->bcmpmu, PMU_REG_MBCCTRL9, reg);
 	return ret;
 }
+#endif
 
 static int bcmpmu_fg_set_maintenance_chrgr_mode(struct bcmpmu_fg_data *fg,
 		enum maintenance_chrgr_mode mode)
@@ -1892,6 +1896,7 @@ static int bcmpmu_fg_get_properties(struct power_supply *psy,
 
 	return ret;
 }
+#if 0
 static int bcmpmu_fg_power_supply_class_data(struct device *dev, void *data)
 {
 	struct power_supply *psy, *ext_psy;
@@ -1984,6 +1989,7 @@ static void bcmpmu_fg_external_power_changed(struct power_supply *psy)
 	class_for_each_device(power_supply_class, NULL, &fg->psy,
 			bcmpmu_fg_power_supply_class_data);
 }
+#endif
 
 static int bcmpmu_fg_register_notifiers(struct bcmpmu_fg_data *fg)
 {

@@ -78,7 +78,7 @@ static DEFINE_SPINLOCK(pm_idle_lock);
 
 
 static int enter_idle_state(struct kona_idle_state *state, u32 ctrl_params);
-static int enter_suspend_state(struct kona_idle_state *state);
+static int enter_suspend_state(struct kona_idle_state *state, u32 ctrl_params);
 static int enter_dormant_state(u32 ctrl_params);
 
 static struct kona_idle_state idle_states[] = {
@@ -245,7 +245,7 @@ static void config_wakeup_interrupts(void)
 		KONA_CHIPREG_VA+CHIPREG_ENABLE_SET6_OFFSET);
 }
 
-int enter_suspend_state(struct kona_idle_state *state)
+int enter_suspend_state(struct kona_idle_state *state, u32 ctrl_params)
 {
 	if (WFI_TRACE_ENABLE)
 		instrument_wfi(TRACE_ENTRY);

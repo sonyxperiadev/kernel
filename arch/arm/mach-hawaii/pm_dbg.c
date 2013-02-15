@@ -84,6 +84,7 @@ void clear_ns_gpio(void)
 		dbg_gpio_clr(ns_gpio);
 }
 
+/*
 static void dormant_profile_entry(void)
 {
 	if (dormant_profile_on) {
@@ -101,6 +102,7 @@ static void dormant_profile_exit(void)
 		dbg_gpio_clr(ref_gpio);
 	}
 }
+*/
 
 static void dormant_profile_config(u32 on, u32 ns, u32 sec, u32 ref)
 {
@@ -124,14 +126,6 @@ static void dormant_profile_config(u32 on, u32 ns, u32 sec, u32 ref)
 }
 #else /* !DORMANT_PROFILE && !CONFIG_A9_DORMANT_MODE */
 void clear_ns_gpio(void)
-{
-}
-
-static void dormant_profile_entry(void)
-{
-}
-
-static void dormant_profile_exit(void)
 {
 }
 

@@ -78,9 +78,10 @@ static unsigned long celcius_to_raw(long celcius)
 long tmon_get_current_temp(void)
 {
 	unsigned long raw_curr;
+	struct kona_tmon_pdata *pdata;
 	BUG_ON(kona_tmon == NULL);
 
-	struct kona_tmon_pdata *pdata = kona_tmon->pdata;
+	pdata = kona_tmon->pdata;
 
 	raw_curr = readl(pdata->base_addr + TMON_TEMP_VAL_OFFSET) &
 		TMON_TEMP_VAL_TEMP_VAL_MASK;
@@ -90,8 +91,7 @@ EXPORT_SYMBOL_GPL(tmon_get_current_temp);
 
 static void tmon_poll_work(struct work_struct *ws)
 {
-	struct kona_tmon *tmon = container_of(ws, struct kona_tmon,
-			poll_work);
+	struct kona_tmon *tmon = kona_tmon;
 	struct kona_tmon_pdata *pdata = tmon->pdata;
 	long curr_temp;
 	int poll_inx;
@@ -102,7 +102,7 @@ static void tmon_poll_work(struct work_struct *ws)
 	poll_inx = tmon->poll_inx;
 	if (curr_temp <= (pdata->thold[poll_inx].falling +
 			pdata->hysteresis)) {
-		pr_info("%s: reached the polling temp %ld\n", __func__,
+		pr_info("%s: reached the polling temp %d\n", __func__,
 				pdata->thold[poll_inx].falling);
 		/* updating threshold value and indexes*/
 		writel(celcius_to_raw(pdata->thold[poll_inx].rising),
@@ -144,7 +144,8 @@ static irqreturn_t tmon_isr(int irq, void *drvdata)
 
 	BUG_ON(tmon->thresh_inx == INVALID_INX);
 	curr_temp = tmon_get_current_temp();
-	pr_info(KERN_ALERT "SoC temperature threshold of %ld exceeded. Current temperature is %ld\n",
+	pr_info(KERN_ALERT "SoC temperature threshold of %d exceeded."\
+			"Current temperature is %ld\n",
 			pdata->thold[tmon->thresh_inx].rising, curr_temp);
 
 	tmon->poll_inx = tmon->thresh_inx;
@@ -187,8 +188,9 @@ static int tmon_dbg_get_threshold(void *data, u64 *val)
 	u32 reg;
 	unsigned long raw;
 	struct kona_tmon *tmon = (struct kona_tmon *)data;
+	struct kona_tmon_pdata *pdata;
 	BUG_ON(tmon == NULL);
-	struct kona_tmon_pdata *pdata = tmon->pdata;
+	pdata = tmon->pdata;
 
 	reg = readl(pdata->base_addr + TMON_CFG_INT_THRESH_OFFSET);
 	raw = reg & TMON_CFG_INT_THRESH_INT_THRESH_MASK;
@@ -199,11 +201,11 @@ static int tmon_dbg_get_threshold(void *data, u64 *val)
 
 static int tmon_dbg_set_threshold(void *data, u64 val)
 {
-	u32 reg;
 	unsigned long raw;
 	struct kona_tmon *tmon = (struct kona_tmon *)data;
+	struct kona_tmon_pdata *pdata;
 	BUG_ON(tmon == NULL);
-	struct kona_tmon_pdata *pdata = tmon->pdata;
+	pdata = tmon->pdata;
 
 	raw = celcius_to_raw(val);
 	writel(raw, pdata->base_addr + TMON_CFG_INT_THRESH_OFFSET);
@@ -218,8 +220,9 @@ static int tmon_dbg_get_interval(void *data, u64 *val)
 	u32 reg;
 	unsigned long ticks;
 	struct kona_tmon *tmon = (struct kona_tmon *)data;
+	struct kona_tmon_pdata *pdata;
 	BUG_ON(tmon == NULL);
-	struct kona_tmon_pdata *pdata = tmon->pdata;
+	pdata = tmon->pdata;
 
 	reg = readl(pdata->base_addr + TMON_CFG_INTERVAL_VAL_OFFSET);
 	ticks = reg & TMON_CFG_INTERVAL_VAL_INTERVAL_VAL_MASK;
@@ -231,8 +234,9 @@ static int tmon_dbg_get_interval(void *data, u64 *val)
 static int tmon_dbg_set_interval(void *data, u64 val)
 {
 	struct kona_tmon *tmon = (struct kona_tmon *)data;
+	struct kona_tmon_pdata *pdata;
 	BUG_ON(tmon == NULL);
-	struct kona_tmon_pdata *pdata = tmon->pdata;
+	pdata = tmon->pdata;
 
 	writel(32 * val, pdata->base_addr + TMON_CFG_INTERVAL_VAL_OFFSET);
 	return 0;
@@ -267,7 +271,7 @@ static int kona_tmon_debugfs_init(struct kona_tmon *tmon)
 }
 #endif
 
-static int kona_tmon_suspend(struct platform_device *pdev)
+static int kona_tmon_suspend(struct platform_device *pdev, pm_message_t state)
 {
 	if (kona_tmon->poll_inx != INVALID_INX) {
 		flush_delayed_work_sync(&kona_tmon->poll_work);
@@ -290,14 +294,15 @@ static int kona_tmon_resume(struct platform_device *pdev)
 static int kona_tmon_probe(struct platform_device *pdev)
 {
 	u32 reg, val, *addr;
-	char *clk_name;
+	const char *clk_name;
 	int size, i, irq;
 	int rc = 0;
 	int rst_inx = INVALID_INX;
 	struct resource *iomem;
 	long rising, falling;
 	struct kona_tmon_pdata *pdata;
-
+	int ret;
+	int *thold;
 	kona_tmon = kzalloc(sizeof(struct kona_tmon), GFP_KERNEL);
 	if (pdev->dev.platform_data)
 		pdata =	(struct kona_tmon_pdata *)pdev->dev.platform_data;
@@ -316,7 +321,8 @@ static int kona_tmon_probe(struct platform_device *pdev)
 			kfree(pdata);
 			goto err_free_dev_mem;
 		}
-		pdata->base_addr = ioremap(iomem->start, resource_size(iomem));
+		pdata->base_addr = (u32)ioremap(iomem->start,
+					resource_size(iomem));
 		if (!pdata->base_addr) {
 			tmon_dbg(TMON_LOG_ERR, "unable to map in registers\n");
 			kfree(pdata);
@@ -342,10 +348,9 @@ static int kona_tmon_probe(struct platform_device *pdev)
 			goto err_free_dev_mem;
 		}
 		val = *(addr + 1);
-		pdata->chipreg_addr = ioremap(be32_to_cpu(*addr),
+		pdata->chipreg_addr = (u32)ioremap(be32_to_cpu(*addr),
 				be32_to_cpu(val));
 
-		int ret;
 		ret = of_property_read_u32(pdev->dev.of_node,
 				"thold_size", &val);
 		if (ret != 0) {
@@ -402,7 +407,6 @@ static int kona_tmon_probe(struct platform_device *pdev)
 		}
 		pdata->tmon_1m_clk = clk_name;
 
-		int *thold;
 		thold = (int *)of_get_property(pdev->dev.of_node,
 				"thold", &size);
 		if (!thold) {
@@ -439,7 +443,7 @@ static int kona_tmon_probe(struct platform_device *pdev)
 		}
 		if (pdata->thold[i].flags & TMON_SHDWN) {
 			rst_inx = i;
-			pr_info("%s: reset temperature is %ld\n",
+			pr_info("%s: reset temperature is %d\n",
 					__func__, pdata->thold[rst_inx].rising);
 		}
 	}

@@ -100,7 +100,7 @@ static struct cpufreq_lmt_node usr_max_lmt_node = {
 
 #ifdef CONFIG_KONA_TMON
 static int cpufreq_tmon_notify_handler(struct notifier_block *nb,
-		long curr_temp, void *dev)
+		unsigned long curr_temp, void *dev)
 {
 	int i;
 	struct kona_cpufreq *kona_cpufreq = container_of(nb,

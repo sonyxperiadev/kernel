@@ -185,9 +185,6 @@ struct pwr_mgr {
 };
 
 static struct pwr_mgr pwr_mgr;
-#ifdef CONFIG_KONA_CPU_FREQ_DRV
-static struct cpufreq_lmt_node frq_min_lmt_node;
-#endif
 
 int pwr_mgr_event_trg_enable(int event_id, int event_trg_type)
 {
@@ -843,6 +840,10 @@ int pwr_mgr_pi_counter_read(int pi_id, bool *over_flow)
 EXPORT_SYMBOL(pwr_mgr_pi_counter_read);
 
 #ifdef CONFIG_KONA_PWRMGR_ENABLE_HW_SEM_WORKAROUND
+
+#ifdef CONFIG_KONA_CPU_FREQ_DRV
+static struct cpufreq_lmt_node frq_min_lmt_node;
+#endif
 
 int pwr_mgr_pm_i2c_sem_lock()
 {
