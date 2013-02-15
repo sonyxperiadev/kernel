@@ -1288,6 +1288,15 @@ static void csl_caph_obtain_blocks
 				aTrace(LOG_AUDIO_CSL,
 				"caph dsp sec buf@ %p\r\n", path->pBuf);
 #endif
+		} else if (path->source == CSL_CAPH_ECHO_REF_MIC) {
+			dmaCH = CSL_CAPH_DMA_CH16;
+#if defined(ENABLE_DMA_VOICE)
+			path->pBuf = (void *)
+				csl_dsp_caph_control_get_aadmac_buf_base_addr
+				(DSP_AADMAC_ECHO_REF_EN);
+				aTrace(LOG_AUDIO_CSL,
+				"caph dsp echo ref buf@ %p\r\n", path->pBuf);
+#endif
 		} else {
 			dmaCH = CSL_CAPH_DMA_CH13;
 #if defined(ENABLE_DMA_VOICE)
@@ -1372,6 +1381,11 @@ static void csl_caph_obtain_blocks
 					(CSL_CAPH_DMA_CH14);
 				aTrace(LOG_AUDIO_CSL,
 					"caph dsp sec cfifo# 0x%x\r\n", fifo);
+			} else if (path->source == CSL_CAPH_ECHO_REF_MIC) {
+				fifo = csl_caph_cfifo_get_fifo_by_dma
+					(CSL_CAPH_DMA_CH16);
+				aTrace(LOG_AUDIO_CSL,
+				"caph dsp echo_ref_mic cfifo# 0x%x\r\n", fifo);
 			} else {
 				fifo = csl_caph_cfifo_get_fifo_by_dma
 					(CSL_CAPH_DMA_CH13);
@@ -1418,7 +1432,8 @@ static void csl_caph_obtain_blocks
 		/*SW13/15 are for primary mic, SW14/16 for secondary.
 		  Must use adjacent SW channels for MICs and SRCs.
 		*/
-		if (path->sink[0] == CSL_CAPH_DEV_DSP) {
+		if (path->sink[0] == CSL_CAPH_DEV_DSP
+			&& path->source != CSL_CAPH_ECHO_REF_MIC) {
 			if (path->source == dualmic_NoiseRefMic) {
 				if (blockIdx == 0)
 					sw = CSL_CAPH_SWITCH_CH14;
@@ -1470,19 +1485,22 @@ static void csl_caph_obtain_blocks
 			srOut = (path->snk_sampleRate == 0) ?
 				AUDIO_SAMPLING_RATE_8000 : path->snk_sampleRate;
 		}
+		if (path->source == CSL_CAPH_ECHO_REF_MIC &&
+			path->sink[sinkNo] == CSL_CAPH_DEV_DSP)
+			dataFormat = CSL_CAPH_24BIT_MONO;
 #if defined(ENABLE_DMA_VOICE)
 		/* unconditionally assign fixed src channel to dsp*/
 		if (path->source == CSL_CAPH_DEV_DSP) {
 			srcmIn = CSL_CAPH_SRCM_MONO_CH1;
 			csl_caph_srcmixer_set_inchnl_status(srcmIn);
 		} else if (path->sink[sinkNo] == CSL_CAPH_DEV_DSP) {
-			if (path->source == dualmic_NoiseRefMic) {
+			if (path->source == dualmic_NoiseRefMic)
 				srcmIn = CSL_CAPH_SRCM_MONO_CH2;
-				csl_caph_srcmixer_set_inchnl_status(srcmIn);
-			} else {
+			else if (path->source == CSL_CAPH_ECHO_REF_MIC)
+				srcmIn = CSL_CAPH_SRCM_MONO_CH4;
+			else
 				srcmIn = CSL_CAPH_SRCM_MONO_CH3;
 				csl_caph_srcmixer_set_inchnl_status(srcmIn);
-			}
 		} else
 #else
 		if (path->sink[sinkNo] == CSL_CAPH_DEV_DSP) {
@@ -2027,7 +2045,7 @@ static void csl_caph_config_dma(CSL_CAPH_PathID
 #if !defined(ENABLE_DMA_LOOPBACK)
 	/*Unless it is for test purpose, DMA 12 - 14 belong to DSP*/
 	if ((dmaCfg.dma_ch >= CSL_CAPH_DMA_CH12) &&
-			(dmaCfg.dma_ch <= CSL_CAPH_DMA_CH14)) {
+			(dmaCfg.dma_ch <= CSL_CAPH_DMA_CH16)) {
 		if ((path->source == CSL_CAPH_DEV_DSP_throughMEM)
 		 || (path->source == CSL_CAPH_DEV_DSP)
 		 || (path->sink[sinkNo] == CSL_CAPH_DEV_DSP_throughMEM)
@@ -2125,8 +2143,14 @@ static void csl_caph_config_sw
 
 	if (!swCfg->FIFO_srcAddr) {
 		/*blockPathIdx == 0, sw is the first*/
-		swCfg->trigger = csl_caph_get_dev_trigger(path->source);
-		if (path->audiohPath[0]) {
+		if (path->source != CSL_CAPH_ECHO_REF_MIC)
+			swCfg->trigger = csl_caph_get_dev_trigger(path->source);
+		if (path->source == CSL_CAPH_ECHO_REF_MIC) {
+			/*only consider ihf output for now*/
+			swCfg->FIFO_srcAddr = csl_caph_srcmixer_get_fifo_addr
+				(CAPH_MIXER2_OUTFIFO1);
+			swCfg->trigger = CAPH_IHF_THR_MET;
+		} else if (path->audiohPath[0]) {
 			/*and audioh is source*/
 			audiohBufAddr = csl_caph_audioh_get_fifo_addr
 				(path->audiohPath[0]);
@@ -2205,7 +2229,9 @@ static void csl_caph_config_sw
 	}
 
 	/*For mic paths, the 2rd sw (after SRC) uses internal trigger*/
-	if (path->sink[0] == CSL_CAPH_DEV_DSP && path->audiohPath[0]
+	if (path->sink[0] == CSL_CAPH_DEV_DSP
+		&& (path->audiohPath[0]
+		    || path->source == CSL_CAPH_ECHO_REF_MIC)
 		&& blockIdx) {
 		swCfg->trigger = CAPH_8KHZ;
 		if (path->snk_sampleRate == AUDIO_SAMPLING_RATE_16000)
@@ -2300,10 +2326,16 @@ static void csl_caph_config_sw
 		if (swCfg->status)
 			csl_caph_hwctrl_PrintAllPaths();
 	} else if (is_broadcast) {
-		csl_caph_switch_add_dst(swCfg->chnl, swCfg->FIFO_dstAddr);
-		aTrace(LOG_AUDIO_CSL, "broadcast sw %d 0x%x --> 0x%x\n",
+		int dst_path;
+		dst_path = csl_caph_hwctrl_readHWResource(swCfg->FIFO_dstAddr,
+			pathID);
+		if (dst_path == 0)
+			csl_caph_switch_add_dst(swCfg->chnl,
+			swCfg->FIFO_dstAddr);
+		aTrace(LOG_AUDIO_CSL,
+			"broadcast sw %d 0x%x --> 0x%x (also in path %d)\n",
 			swCfg->chnl, (u32)swCfg->FIFO_srcAddr,
-			(u32)swCfg->FIFO_dstAddr);
+			(u32)swCfg->FIFO_dstAddr, dst_path);
 	}
 
 	csl_caph_hwctrl_addHWResource(swCfg->FIFO_srcAddr, pathID);
@@ -2707,7 +2739,7 @@ static void csl_caph_start_blocks
 				break;
 #if defined(ENABLE_DMA_VOICE) && !defined(ENABLE_DMA_LOOPBACK)
 			if ((dma < CSL_CAPH_DMA_CH12) ||
-				(dma > CSL_CAPH_DMA_CH14)) {
+				(dma > CSL_CAPH_DMA_CH16)) {
 #else
 			if (1) {
 #endif
@@ -3255,7 +3287,7 @@ static void csl_caph_hwctrl_closeDMA(CSL_CAPH_DMA_CHNL_e dmaCH,
 	path = &HWConfig_Table[pathID-1];
 
 #if !defined(ENABLE_DMA_LOOPBACK)
-	if (dmaCH >= CSL_CAPH_DMA_CH12 && dmaCH <= CSL_CAPH_DMA_CH14) {
+	if (dmaCH >= CSL_CAPH_DMA_CH12 && dmaCH <= CSL_CAPH_DMA_CH16) {
 		if ((path->source == CSL_CAPH_DEV_DSP_throughMEM)
 			|| (path->source == CSL_CAPH_DEV_DSP)
 			|| (path->sink[0] == CSL_CAPH_DEV_DSP_throughMEM)
@@ -3947,6 +3979,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_SetupPath(CSL_CAPH_HWCTRL_CONFIG_t config,
 		|| (path->source == CSL_CAPH_DEV_DIGI_MIC_L)
 		|| (path->source == CSL_CAPH_DEV_DIGI_MIC_R)
 		|| (path->source == CSL_CAPH_DEV_EANC_DIGI_MIC_L)
+		|| (path->source == CSL_CAPH_ECHO_REF_MIC)
 		|| (path->source == CSL_CAPH_DEV_EANC_DIGI_MIC_R))
 		&& (path->sink[sinkNo] == CSL_CAPH_DEV_DSP)) {
 		aTrace(LOG_AUDIO_CSL,

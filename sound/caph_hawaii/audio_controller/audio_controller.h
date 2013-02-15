@@ -69,6 +69,7 @@ enum __AUDCTRL_HW_ACCESS_TYPE_en_t {
 	AUDCTRL_HW_CFG_ARM2SP,
 	AUDCTRL_HW_CFG_HUB,
 	AUDCTRL_HW_CFG_IHFDL,
+	AUDCTRL_HW_CFG_ECHO_REF_MIC = 15,/*to be compatible with capri*/
 	/* below are for internal purposes */
 	AUDCTRL_HW_READ_GAIN = 20,
 	AUDCTRL_HW_WRITE_GAIN,

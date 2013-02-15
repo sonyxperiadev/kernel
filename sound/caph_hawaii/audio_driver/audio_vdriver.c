@@ -132,6 +132,7 @@ static audio_handleCPReset_handler_t cpReset_handler;
 static Int32 curCallMode = CALL_MODE_NONE;
 static UInt32 curCallSampleRate = AUDIO_SAMPLING_RATE_8000;
 static int isIHFDL48k = 1; /*set to enable 48k IHF call DL*/
+static int echo_ref_mic;
 
 struct completion audioEnableDone;
 struct completion arm2spHqDLInitDone;
@@ -685,6 +686,7 @@ void AUDDRV_Telephony_Deinit(void)
 			(UInt16) (DSP_AADMAC_48KHZ_SPKR_EN) |
 			(UInt16) (DSP_AADMAC_SPKR_EN) |
 			(UInt16) (DSP_AADMAC_SEC_MIC_EN) |
+			(UInt16) (DSP_AADMAC_ECHO_REF_EN) |
 			(UInt16) (DSP_AADMAC_PACKED_16BIT_IN_OUT_EN);
 		csl_dsp_caph_control_aadmac_disable_path(dma_mic_spk);
 #endif
@@ -814,6 +816,9 @@ void AUDDRV_DisableDSPOutput(void)
 void AUDDRV_EnableDSPInput(AUDIO_SOURCE_Enum_t source,
 			   AUDIO_SAMPLING_RATE_t sample_rate)
 {
+	UInt16 dma_mic_spk;
+	UInt32 flag16k = 0;
+
 	aTrace(LOG_AUDIO_DRIVER,  "%s source %d voiceRecOn %d, ulPath %d\n",
 		__func__, source, voiceRecOn, telephonyPathID.ulPathID);
 
@@ -824,63 +829,25 @@ void AUDDRV_EnableDSPInput(AUDIO_SOURCE_Enum_t source,
 	if (telephonyPathID.ulPathID)
 		return;
 
-	if (sample_rate == AUDIO_SAMPLING_RATE_8000) {
+	csl_dsp_caph_control_aadmac_set_samp_rate(sample_rate);
+	if (sample_rate == AUDIO_SAMPLING_RATE_16000)
+		flag16k = 1;
 #if defined(ENABLE_DMA_VOICE)
-		csl_dsp_caph_control_aadmac_set_samp_rate
-		    (AUDIO_SAMPLING_RATE_8000);
+	dma_mic_spk =
+	    (UInt16) (DSP_AADMAC_PRI_MIC_EN) |
+	    (UInt16) (DSP_AADMAC_RETIRE_DS_CMD);
+	if (echo_ref_mic)
+		dma_mic_spk |= (UInt16) (DSP_AADMAC_ECHO_REF_EN);
 	if (source == AUDIO_SOURCE_BTM)
-				csl_dsp_caph_control_aadmac_enable_path((UInt16)
-					(DSP_AADMAC_PRI_MIC_EN) |
-					(UInt16)
-					(DSP_AADMAC_RETIRE_DS_CMD) |
-					(UInt16)
-					(DSP_AADMAC_PACKED_16BIT_IN_OUT_EN));
-	else {
-		if (currVoiceSpkr != AUDIO_SINK_BTM)	/* check spkr */
-				csl_dsp_caph_control_aadmac_enable_path((UInt16)
-					(DSP_AADMAC_PRI_MIC_EN) |
-					(UInt16) (DSP_AADMAC_RETIRE_DS_CMD));
-	}
+		dma_mic_spk |= (UInt16) (DSP_AADMAC_PACKED_16BIT_IN_OUT_EN);
+	csl_dsp_caph_control_aadmac_enable_path(dma_mic_spk);
+#endif
 
-		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_ENABLE,
-				  1, 0, 0, 0, 0);
-		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_CONNECT_UL, 1, 0, 0,
-				  0, 0);
 /* DSPCMD_TYPE_AUDIO_CONNECT should be called after DSPCMD_TYPE_AUDIO_ENABLE */
-#else
-		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_ENABLE, 1, 0, 0, 0,
-				  0);
-		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_CONNECT_UL, 1, 0, 0,
-				  0, 0);
-#endif
-	} else {
-#if defined(ENABLE_DMA_VOICE)
-		csl_dsp_caph_control_aadmac_set_samp_rate
-		    (AUDIO_SAMPLING_RATE_16000);
-		if (source == AUDIO_SOURCE_BTM)
-				csl_dsp_caph_control_aadmac_enable_path((UInt16)
-					(DSP_AADMAC_PRI_MIC_EN) |
-					(UInt16)
-					(DSP_AADMAC_RETIRE_DS_CMD) |
-					(UInt16)
-					(DSP_AADMAC_PACKED_16BIT_IN_OUT_EN));
-		else {
-			if (currVoiceSpkr != AUDIO_SINK_BTM)	/* check spkr */
-		csl_dsp_caph_control_aadmac_enable_path((UInt16)
-					(DSP_AADMAC_PRI_MIC_EN) |
-					(UInt16) (DSP_AADMAC_RETIRE_DS_CMD));
-		}
-		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_ENABLE,
-				  1, 1, 0, 0, 0);
-		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_CONNECT_UL, 1, 1, 0,
-				  0, 0);
-#else
-		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_ENABLE, 1, 1, 0, 0,
-				  0);
-		audio_control_dsp(AUDDRV_DSPCMD_AUDIO_CONNECT_UL, 1, 1, 0,
-				  0, 0);
-#endif
-	}
+	audio_control_dsp(AUDDRV_DSPCMD_AUDIO_ENABLE, 1, flag16k, 0, 0, 0);
+	audio_control_dsp(AUDDRV_DSPCMD_AUDIO_CONNECT_UL, 1, flag16k, 0, 0, 0);
+	if (echo_ref_mic)
+		audio_control_dsp(AUDDRV_DSPCMD_EC_NS_ON, TRUE, TRUE, 0, 0, 0);
 
 /*
 When voice call ends, DSPCMD_TYPE_MUTE_DSP_UL is being sent to DSP and
@@ -904,6 +871,8 @@ For now, when voice record is started, UMUTE UL command will be sent */
 */
 void AUDDRV_DisableDSPInput(int stop)
 {
+	UInt16 dma_mic_spk;
+
 	aTrace(LOG_AUDIO_DRIVER,  "%s stop %d, voiceRecOn %d, ulPath %d\n",
 		__func__, stop, voiceRecOn, telephonyPathID.ulPathID);
 
@@ -912,12 +881,16 @@ void AUDDRV_DisableDSPInput(int stop)
 	/*only in non-call mode, tell DSP to stop UL*/
 	if (telephonyPathID.ulPathID)
 		return;
-
+	audio_control_dsp(AUDDRV_DSPCMD_EC_NS_ON, FALSE, FALSE, 0, 0, 0);
 	audio_control_dsp(AUDDRV_DSPCMD_AUDIO_CONNECT_UL, FALSE, 0, 0, 0, 0);
+	audio_control_dsp(AUDDRV_DSPCMD_DUAL_MIC_ON, FALSE, 0, 0, 0, 0);
+	dma_mic_spk =
+		(UInt16) (DSP_AADMAC_PRI_MIC_EN) |
+		(UInt16) (DSP_AADMAC_SEC_MIC_EN) |
+		(UInt16) (DSP_AADMAC_ECHO_REF_EN) |
+		(UInt16) (DSP_AADMAC_PACKED_16BIT_IN_OUT_EN);
 #if defined(ENABLE_DMA_VOICE)
-	csl_dsp_caph_control_aadmac_disable_path((UInt16)
-		(DSP_AADMAC_PRI_MIC_EN) |
-		(UInt16) (DSP_AADMAC_PACKED_16BIT_IN_OUT_EN));
+	csl_dsp_caph_control_aadmac_disable_path(dma_mic_spk);
 #endif
 	audio_control_dsp(AUDDRV_DSPCMD_MUTE_DSP_UL, 0, 0, 0, 0, 0);
 	audio_control_dsp(AUDDRV_DSPCMD_AUDIO_ENABLE, FALSE, 0, 0, 0, 0);
@@ -2196,4 +2169,37 @@ int AUDDRV_Get_TrEqParm(void *param, unsigned int size, AudioApp_t app)
 
 		return 0;
 #endif
+}
+
+/*==========================================================================
+//
+// Function Name: AUDDRV_SetEchoRefMic
+//
+// Description: Set the dsp echo ref mic
+//
+// =========================================================================
+*/
+void AUDDRV_SetEchoRefMic(int arg1)
+{
+	if (arg1 < 0 || arg1 > 1)
+		return;
+	aTrace(LOG_AUDIO_DRIVER,
+		"%s::old ref_mic =%d, "
+		"new ref_mic=%d\n", __func__, echo_ref_mic, arg1);
+	echo_ref_mic = arg1;
+}
+
+/*==========================================================================
+//
+// Function Name: AUDDRV_GetEchoRefMic
+//
+// Description: Get the dsp echo ref mic
+//
+// =========================================================================
+*/
+int AUDDRV_GetEchoRefMic(void)
+{
+	aTrace(LOG_AUDIO_DRIVER,
+		"%s::echo_ref_mic=%d\n", __func__, echo_ref_mic);
+	return echo_ref_mic;
 }

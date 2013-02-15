@@ -174,6 +174,7 @@ enum CSL_CAPH_DEVICE_e {
 	CSL_CAPH_DEV_FM_RADIO,	/*FM Radio playback */
 	CSL_CAPH_DEV_MEMORY,	/*DDR memory */
 	CSL_CAPH_DEV_DSP_throughMEM,	/*DSP connection through shared mem */
+	CSL_CAPH_ECHO_REF_MIC, /* echo path mic in caph to dsp */
 	CSL_CAPH_DEV_MAXNUM,
 };
 

@@ -923,6 +923,8 @@ AudioApp_t AUDCTRL_GetAudioApp(void)
 		currAudioApp = AUDIO_APP_RECORDING_LQ;
 	else if (sAudioAppStates[AUDIO_APP_RECORDING_GVS_HQ])
 		currAudioApp = AUDIO_APP_RECORDING_GVS_HQ;
+	else if (sAudioAppStates[AUDIO_APP_RECORDING_BARGEIN])
+		currAudioApp = AUDIO_APP_RECORDING_BARGEIN;
 	else if (sAudioAppStates[AUDIO_APP_FM_RADIO])
 		currAudioApp = AUDIO_APP_FM_RADIO;
 	else if (sAudioAppStates[AUDIO_APP_TONE])
@@ -1451,7 +1453,6 @@ void AUDCTRL_EnablePlay(AUDIO_SOURCE_Enum_t source,
 	if ((source == AUDIO_SOURCE_DSP || sink == AUDIO_SINK_DSP)
 		&& cpReset == TRUE)
 		return;
-
 
 	pathID = 0;
 	memset(&config, 0, sizeof(CSL_CAPH_HWCTRL_CONFIG_t));
@@ -2509,8 +2510,32 @@ static void AUDCTRL_EnableRecordMono(AUDIO_SOURCE_Enum_t source,
 #endif
 			config.bitPerSample = 24;
 	}
+
+	if ((config.sink == CSL_CAPH_DEV_DSP) && !AUDCTRL_InVoiceCall()
+		&& AUDDRV_GetEchoRefMic()) {
+		int temp_source = config.source;
+		int temp_bitspersample = config.bitPerSample;
+		config.bitPerSample = 16; /*music output is 16bit*/
+		/* reuse all the settings except the source */
+		config.source = CSL_CAPH_ECHO_REF_MIC;
+		if (csl_caph_FindPathID(config.sink, config.source, 0))
+			aTrace(LOG_AUDIO_CNTLR,
+				"%s find echo ref pathID=0x%x\r\n",
+				__func__, config.pathID);
+		else {
+			csl_caph_hwctrl_EnablePath(config);
+			aTrace(LOG_AUDIO_CNTLR,
+				"%s path configuration, source = %d, sink = %d,"
+				"pathID %d.\r\n",
+				__func__, config.source, config.sink, pathID);
+		}
+		config.source = temp_source;
+		config.bitPerSample = temp_bitspersample;
+	}
+
 	pathID = csl_caph_hwctrl_EnablePath(config);
 	*pPathID = pathID;
+
 	/*Load the mic gains from sysparm.
 	   Can not call the following API here.
 	   Because Capture driver really enables the path.
@@ -2529,6 +2554,7 @@ static void AUDCTRL_EnableRecordMono(AUDIO_SOURCE_Enum_t source,
 			"%s path configuration, source = %d, sink = %d,"
 			"pathID %d.\r\n",
 			__func__, config.source, config.sink, pathID);
+
 
 #if 0
 	/* in case it was muted from last record */
@@ -2688,11 +2714,6 @@ void AUDCTRL_DisableRecord(AUDIO_SOURCE_Enum_t source,
 				pathID);
 		(void)csl_caph_hwctrl_DisablePath(config);
 
-		if (pathID == 0) {
-			audio_xassert(0, pathID);
-			return;
-		}
-
 		config.pathID = pathID;
 
 		aTrace(LOG_AUDIO_CNTLR, "AUDCTRL_DisableRecord: pathID %d.\r\n",
@@ -2733,6 +2754,23 @@ void AUDCTRL_DisableRecord(AUDIO_SOURCE_Enum_t source,
 
 		(void) csl_caph_hwctrl_DisablePath(config);
 	}
+
+	/* order to be confirmed with dsp team: disable the echo ref mic path */
+	if ((sink == AUDIO_SINK_DSP) && AUDDRV_GetEchoRefMic()) {
+		config.source = CSL_CAPH_ECHO_REF_MIC;
+		config.sink = CSL_CAPH_DEV_DSP;
+		config.pathID =
+			csl_caph_FindPathID(config.sink, config.source, pathID);
+
+		if (config.pathID == 0) {
+			/*audio_xassert(0, config.pathID);*/
+			return;
+		}
+		aTrace(LOG_AUDIO_CNTLR, "%s disable echo ref pathID=0x%x\r\n",
+			__func__, config.pathID);
+		csl_caph_hwctrl_DisablePath(config);
+	}
+
 	if (audioPathResetPending && csl_caph_hwctrl_allPathsDisabled()) {
 		AUDDRV_CPResetCleanup();
 		csl_caph_hwctrl_init();
@@ -2971,7 +3009,8 @@ static void AUDCTRL_RemoveRecApp(AudioApp_t app)
 		app == AUDIO_APP_RECORDING_GVS_WB ||
 		app == AUDIO_APP_RECORDING_HQ ||
 		app == AUDIO_APP_RECORDING_LQ ||
-		app == AUDIO_APP_RECORDING_GVS_HQ) {
+		app == AUDIO_APP_RECORDING_GVS_HQ ||
+		app == AUDIO_APP_RECORDING_BARGEIN) {
 		sAudioAppStates[AUDIO_APP_RECORDING] = FALSE;
 		sAudioAppStates[AUDIO_APP_RECORDING_GVS] = FALSE;
 		sAudioAppStates[AUDIO_APP_RECORDING_WB] = FALSE;
@@ -2979,6 +3018,7 @@ static void AUDCTRL_RemoveRecApp(AudioApp_t app)
 		sAudioAppStates[AUDIO_APP_RECORDING_HQ] = FALSE;
 		sAudioAppStates[AUDIO_APP_RECORDING_LQ] = FALSE;
 		sAudioAppStates[AUDIO_APP_RECORDING_GVS_HQ] = FALSE;
+		sAudioAppStates[AUDIO_APP_RECORDING_BARGEIN] = FALSE;
 	}
 }
 
@@ -2999,7 +3039,8 @@ static Boolean AUDCTRL_IsRecApp(AudioApp_t app)
 		app == AUDIO_APP_RECORDING_GVS_WB ||
 		app == AUDIO_APP_RECORDING_HQ ||
 		app == AUDIO_APP_RECORDING_LQ ||
-		app == AUDIO_APP_RECORDING_GVS_HQ)
+		app == AUDIO_APP_RECORDING_GVS_HQ ||
+		app == AUDIO_APP_RECORDING_BARGEIN)
 		result = TRUE;
 	return result;
 }
@@ -3615,6 +3656,9 @@ int AUDCTRL_HardwareControl(AUDCTRL_HW_ACCESS_TYPE_en_t access_type,
 	case AUDCTRL_HW_CFG_DUALMIC_REFMIC:
 		csl_caph_hwctrl_SetDualMic_NoiseRefMic(
 			getDeviceFromSrc(arg1));
+		break;
+	case AUDCTRL_HW_CFG_ECHO_REF_MIC:
+		AUDDRV_SetEchoRefMic(arg1);
 		break;
 	case AUDCTRL_HW_CFG_DAC_LPBK:
 		csl_caph_audio_loopback_control(
