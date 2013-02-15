@@ -1051,7 +1051,7 @@ static int kona_fb_probe(struct platform_device *pdev)
 	uint32_t width, height;
 	int ret_val = -1;
 	struct kona_fb_platform_data *fb_data;
-	dma_addr_t phys_fbbase;
+	dma_addr_t phys_fbbase, dma_addr;
 	uint64_t pixclock_64;
 
 	konafb_info("start\n");
@@ -1124,6 +1124,7 @@ static int kona_fb_probe(struct platform_device *pdev)
 
 	framesize = fb->display_info->width * fb->display_info->height *
 	    fb->display_info->Bpp * 2;
+	framesize = PAGE_ALIGN(framesize);
 
 	fb->fb.screen_base = dma_alloc_writecombine(&pdev->dev,
 						    framesize, &phys_fbbase,
@@ -1133,13 +1134,14 @@ static int kona_fb_probe(struct platform_device *pdev)
 		konafb_error("Unable to allocate fb memory\n");
 		goto err_fbmem_alloc_failed;
 	}
+	dma_addr = phys_fbbase;
 
 	/* Now we should get correct width and height for this display .. */
 	width = fb->display_info->width;
 	height = fb->display_info->height;
-	fb->buff0 = (void *)phys_fbbase;
+	fb->buff0 = (void *)dma_addr;
 	fb->buff1 =
-	    (void *)phys_fbbase + width * height * fb->display_info->Bpp;
+	    (void *)dma_addr + width * height * fb->display_info->Bpp;
 
 	fb->fb.fbops = &kona_fb_ops;
 	fb->fb.flags = FBINFO_FLAG_DEFAULT;
@@ -1206,12 +1208,13 @@ static int kona_fb_probe(struct platform_device *pdev)
 		break;
 	}
 
-	fb->fb.fix.smem_start = phys_fbbase;
+	fb->fb.fix.smem_start = dma_addr;
 	fb->fb.fix.smem_len = framesize;
 
-	konafb_debug
-	    ("Framebuffer starts at phys[0x%08x], and virt[0x%08x] with frame size[0x%08x]\n",
-	     phys_fbbase, (uint32_t) fb->fb.screen_base, framesize);
+	konafb_debug(
+		"Framebuffer starts at phys[0x%08x], da[0x%08x] and virt[0x%08x] with frame size[0x%08x]\n",
+		 phys_fbbase, dma_addr, (uint32_t) fb->fb.screen_base,
+		 framesize);
 
 	ret = fb_set_var(&fb->fb, &fb->fb.var);
 	if (ret) {
@@ -1294,8 +1297,8 @@ static int kona_fb_probe(struct platform_device *pdev)
 
 err_fb_register_failed:
 err_set_var_failed:
-	dma_free_writecombine(&pdev->dev, fb->fb.fix.smem_len,
-			      fb->fb.screen_base, fb->fb.fix.smem_start);
+	dma_free_writecombine(&pdev->dev, framesize, fb->fb.screen_base,
+			phys_fbbase);
 
 	kona_clock_start(fb);
 	disable_display(fb);
