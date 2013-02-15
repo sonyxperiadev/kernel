@@ -42,10 +42,11 @@
 #define PERIPHERAL_TO_HOST_DELAY_MS 100
 #define USBLDO_RAMP_UP_DELAY_IN_MS 2
 
+struct bcmpmu_otg_xceiv_data *tranceiver_data;
+
 static int bcmpmu_otg_xceiv_set_vbus(struct usb_otg *otg, bool enabled)
 {
-	struct bcmpmu_otg_xceiv_data *xceiv_data =
-		dev_get_drvdata(otg->phy->dev);
+	struct bcmpmu_otg_xceiv_data *xceiv_data = tranceiver_data;
 	int stat;
 
 	/* The order of these operations has temporarily been
@@ -925,6 +926,7 @@ static int __devinit bcmpmu_otg_xceiv_probe(struct platform_device *pdev)
 	usb_set_transceiver(&xceiv_data->otg_xceiver.phy);
 
 	platform_set_drvdata(pdev, xceiv_data);
+	tranceiver_data = xceiv_data;
 
 	error = device_create_file(&pdev->dev, &dev_attr_host);
 	if (error) {

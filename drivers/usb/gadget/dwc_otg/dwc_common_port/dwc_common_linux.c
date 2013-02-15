@@ -1134,20 +1134,19 @@ void DWC_TIMER_FREE(dwc_timer_t *timer)
 }
 
 EXPORT_SYMBOL(DWC_TIMER_FREE);
-
 void DWC_TIMER_SCHEDULE(dwc_timer_t *timer, uint32_t time)
 {
-	if (!get_scheduled(timer)) {
-		set_scheduled(timer, 1);
-		DWC_DEBUG("Scheduling timer %s to expire in +%d msec",
-			  timer->name, time);
+	uint64_t flags;
+	DWC_SPINLOCK_IRQSAVE(timer->lock, &flags);
+	if (!timer->scheduled) {
 		timer->t->expires = jiffies + msecs_to_jiffies(time);
-		add_timer(timer->t);
-	} else {
-		DWC_DEBUG("Modifying timer %s to expire in +%d msec",
-			  timer->name, time);
-		mod_timer(timer->t, jiffies + msecs_to_jiffies(time));
+		timer->scheduled = 1;
 	}
+	DWC_SPINUNLOCK_IRQRESTORE(timer->lock, flags);
+
+	DWC_DEBUG("Scheduling timer %s to expire in +%d msec",
+		timer->name, time);
+	mod_timer(timer->t, jiffies + msecs_to_jiffies(time));
 }
 
 EXPORT_SYMBOL(DWC_TIMER_SCHEDULE);

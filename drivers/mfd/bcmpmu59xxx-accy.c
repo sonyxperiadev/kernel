@@ -456,6 +456,7 @@ static void bcmpmu_accy_isr(enum bcmpmu59xxx_irq irq, void *data)
 	struct bcmpmu_accy *paccy = data;
 	struct bcmpmu59xxx *bcmpmu = paccy->bcmpmu;
 	int board_id = bcmpmu->pdata->board_id;
+	int ret, id_status;
 
 	pr_accy(INIT, "#### %s interrupt = %d  det state %d\n",
 		__func__, irq, paccy->det_state);
@@ -526,9 +527,21 @@ static void bcmpmu_accy_isr(enum bcmpmu59xxx_irq irq, void *data)
 	case PMU_IRQ_VBUS_VALID_R:
 		pr_accy(INIT, "### ISR  PMU_IRQ_VBUS_VALID_R: %x\n",
 			PMU_IRQ_VBUS_VALID_R);
+		ret = bcmpmu_usb_get(bcmpmu,
+					 BCMPMU_USB_CTRL_GET_ID_VALUE,
+					 &id_status);
 		bcmpmu_paccy_latch_event(paccy,
 				BCMPMU_USB_EVENT_VBUS_VALID, NULL);
-		schedule_delayed_work(&paccy->det_work, ACCY_WORK_DELAY);
+
+		if (id_status != PMU_USB_ID_GROUND) {
+				paccy->det_state = USB_IDLE;
+				schedule_delayed_work(
+					&paccy->det_work, ACCY_WORK_DELAY);
+			}
+		else
+			pr_accy(FLOW, "%s, USB Host mode skipping BC detect\n",
+				__func__);
+
 		break;
 
 	case PMU_IRQ_VBUS_VALID_F:

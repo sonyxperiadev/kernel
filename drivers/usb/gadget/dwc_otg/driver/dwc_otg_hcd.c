@@ -467,6 +467,10 @@ void dwc_otg_hcd_stop(dwc_otg_hcd_t *hcd)
 
 	/* Turn off all host-specific interrupts. */
 	dwc_otg_disable_host_interrupts(hcd->core_if);
+	/* Cancel the connection timer since we are
+	 * turning off the Vbus now
+	 */
+	DWC_TIMER_CANCEL(hcd->conn_timer);
 
 	/* Turn off the vbus power */
 	DWC_PRINTF("PortPower off\n");
@@ -1329,7 +1333,6 @@ static void process_periodic_channels(dwc_otg_hcd_t *hcd)
 	int status;
 	int no_queue_space = 0;
 	int no_fifo_space = 0;
-	uint64_t flags;
 
 	dwc_otg_host_global_regs_t *host_regs;
 	host_regs = hcd->core_if->host_if->host_global_regs;
@@ -1384,11 +1387,8 @@ static void process_periodic_channels(dwc_otg_hcd_t *hcd)
 			 * Move the QH from the periodic assigned schedule to
 			 * the periodic queued schedule.
 			 */
-
-			DWC_SPINLOCK_IRQSAVE(hcd->lock, &flags);
 			DWC_LIST_MOVE_HEAD(&hcd->periodic_sched_queued,
 					   &qh->qh_list_entry);
-			DWC_SPINUNLOCK_IRQRESTORE(hcd->lock, flags);
 
 			/* done queuing high bandwidth */
 			hcd->core_if->queuing_high_bandwidth = 0;
