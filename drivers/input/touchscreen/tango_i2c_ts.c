@@ -840,9 +840,8 @@ static int i2c_ts_driver_probe(struct i2c_client *p_i2c_client,
 	int rc = 0;
 
 	struct TANGO_I2C_TS_t *dt_i2c_ts = NULL;
-	struct device_node *np = p_i2c_client->dev.of_node;
+	struct device_node *np = NULL;
 	u32 val;
-
 	if (p_i2c_client == NULL) {
 		TS_ERR("%s i2c_ts_driver_probe() p_i2c_client == NULL\n",
 		       I2C_TS_DRIVER_NAME);
@@ -850,12 +849,12 @@ static int i2c_ts_driver_probe(struct i2c_client *p_i2c_client,
 		goto ERROR1;
 	}
 
+	np = p_i2c_client->dev.of_node;
 	dt_i2c_ts = kzalloc(sizeof(struct TANGO_I2C_TS_t), GFP_KERNEL);
 	if (!dt_i2c_ts) {
-		printk(KERN_ERR"Unable to allocate memory for ***** dt_i2c_ts ***** \n");
+		printk(KERN_ERR "Unable to allocate memory for *dt_i2c_ts *\n");
 		return -ENOMEM;
 	}
-
 	if (p_i2c_client->dev.of_node != NULL) {
 		if (!of_property_read_u32(np, "gpio-irq-pin", &val))
 			dt_i2c_ts->gpio_irq_pin = val;
