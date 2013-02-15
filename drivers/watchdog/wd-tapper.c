@@ -284,11 +284,6 @@ static int __devinit wd_tapper_pltfm_probe(struct platform_device *pdev)
 			goto out;
 		}
 
-		if (pltfm_data->name == NULL) {
-			dev_err(&pdev->dev, "Timer name passed is NULL.\n");
-			goto out;
-		}
-
 		/* Request the timer context */
 		wd_tapper_data->kt = kona_timer_request(pltfm_data->name, ch_num);
 		if (wd_tapper_data->kt == NULL) {
