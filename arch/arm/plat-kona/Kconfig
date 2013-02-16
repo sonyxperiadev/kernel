@@ -316,7 +316,7 @@ config DW_UART_WA_JIRA_1744
 
 config DW_BT_UART_CHANGES
 	bool "BT related changes for Designware Uart"
-	depends on BRCM_UART_CHANGES && BT_RFCOMM_TTY
+	depends on BRCM_UART_CHANGES
 	default y
 	help
 	  Handling BT UART ISR changes.

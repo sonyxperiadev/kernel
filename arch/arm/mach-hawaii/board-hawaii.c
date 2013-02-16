@@ -925,9 +925,10 @@ static struct kona_pl330_data hawaii_pl330_pdata = {
 #define GPIO_BT_WAKE	32
 #define GPIO_HOST_WAKE	72
 
-static struct bcm_bt_lpm_platform_data brcm_bt_lpm_data = {
-	.gpio_bt_wake = GPIO_BT_WAKE,
-	.gpio_host_wake = GPIO_HOST_WAKE,
+static struct bcmbt_platform_data brcm_bt_lpm_data = {
+	.bt_wake_gpio = GPIO_BT_WAKE,
+	.host_wake_gpio = GPIO_HOST_WAKE,
+	.bt_uart_port = 1,
 };
 
 static struct platform_device board_bcmbt_lpm_device = {
