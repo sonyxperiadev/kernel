@@ -2091,7 +2091,7 @@ int dwc_otg_hcd_hub_control(dwc_otg_hcd_t *dwc_otg_hcd,
 			 */
 			if (core_if->xceiver->otg->set_vbus) {
 				core_if->xceiver->otg->set_vbus(
-					core_if->xceiver, false);
+					core_if->xceiver->otg, false);
 			}
 #endif
 			break;
