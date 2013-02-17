@@ -26,15 +26,22 @@
 #include <linux/uaccess.h>
 #include <linux/mutex.h>
 #include <linux/module.h>
+#include <linux/list.h>
+#include <linux/of_platform.h>
 #ifdef CONFIG_OF
 #include <linux/of.h>
 #include <asm/dma-contiguous.h>
 #include <linux/dma-mapping.h>
 #endif /* CONFIG_OF */
 
+struct bcm_ion_heap {
+	struct ion_heap *heap;
+	struct platform_device *pdev;
+	struct list_head node;
+};
+
+static LIST_HEAD(bcm_heap_list);
 struct ion_device *idev;
-static int num_heaps;
-static struct ion_heap **heaps;
 
 unsigned int bcm_ion_map_dma(struct ion_client *client,
 		struct ion_handle *handle)
@@ -298,6 +305,18 @@ static long bcm_ion_custom_ioctl(struct ion_client *client,
 
 static u64 ion_dmamask = DMA_BIT_MASK(32);
 
+static void bcm_ion_free_data(struct device *dev)
+{
+	if (dev->of_node) {
+		struct ion_platform_heap *heap_data = dev->platform_data;
+		if (heap_data) {
+			kfree(heap_data->name);
+			kfree(heap_data);
+			dev->platform_data = NULL;
+		}
+	}
+}
+
 static struct ion_platform_heap *bcm_ion_parse_dt(struct device *dev)
 {
 	struct device_node *node = dev->of_node;
@@ -341,6 +360,7 @@ static struct ion_platform_heap *bcm_ion_parse_dt(struct device *dev)
 			dev->coherent_dma_mask = DMA_BIT_MASK(32);
 			cma = dev_get_cma_area(&heap_init_data->cma_dev);
 			dev_set_cma_area(dev, cma);
+			heap_data->priv = dev;
 		}
 		heap_data->base = heap_init_data->base;
 		heap_data->size = heap_init_data->size;
@@ -356,6 +376,10 @@ err:
 	kfree(heap_data);
 	return ERR_PTR(ret);
 }
+#else
+
+static void bcm_ion_free_data(struct device *dev) { }
+
 #endif /* CONFIG_OF */
 
 static struct ion_platform_heap *bcm_ion_parse_pdata(struct device *dev)
@@ -365,6 +389,8 @@ static struct ion_platform_heap *bcm_ion_parse_pdata(struct device *dev)
 	struct ion_platform_heap *heap_data;
 	int i;
 
+	if (pdata->nr <= 0)
+		return NULL;
 	for (i = 0; i < pdata->nr; i++) {
 		heap_data = &pdata->heaps[i];
 
@@ -375,12 +401,14 @@ static struct ion_platform_heap *bcm_ion_parse_pdata(struct device *dev)
 				pr_err("%16s: Memory was not reserved\n",
 						heap_data->name);
 				heap_data->id = ION_INVALID_HEAP_ID;
+				continue;
 			}
 			if (heap_data->type == ION_HEAP_TYPE_DMA) {
 				struct cma *cma;
 				cma = dev_get_cma_area(
 						&heap_init_data->cma_dev);
 				dev_set_cma_area(dev, cma);
+				heap_data->priv = dev;
 			}
 			heap_data->base = heap_init_data->base;
 			heap_data->size = heap_init_data->size;
@@ -392,19 +420,28 @@ static struct ion_platform_heap *bcm_ion_parse_pdata(struct device *dev)
 static int bcm_ion_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
-	int err;
-	int i, j, prev_num_heaps = 0, new_num_heaps;
 	struct ion_platform_heap *heap_datas;
+	int i, num_heaps;
 
 	if (!pdev) {
 		pr_err("Unable to probe\n");
 		return -ENODEV;
 	}
 
+	/* Create ion misc device */
+	if (!idev) {
+		idev = ion_device_create(bcm_ion_custom_ioctl);
+		if (IS_ERR_OR_NULL(idev)) {
+			pr_err("Probe Fail: ION device creation failed\n");
+			return PTR_ERR(idev);
+		}
+	}
+
+	/* Parse dtb or pdata to get number of heaps and their properies */
 	if (dev_get_platdata(dev)) {
 		struct ion_platform_data *pdata = dev->platform_data;
 		pr_info("Probe: Add (%d)heaps via platform_data\n", pdata->nr);
-		new_num_heaps = pdata->nr;
+		num_heaps = pdata->nr;
 		heap_datas = bcm_ion_parse_pdata(dev);
 		if (IS_ERR_OR_NULL(heap_datas)) {
 			pr_err("Probe Fail: pdata parsing failed\n");
@@ -413,7 +450,7 @@ static int bcm_ion_probe(struct platform_device *pdev)
 #ifdef CONFIG_OF
 	} else if (dev->of_node) {
 		pr_info("Probe: via DT framework\n");
-		new_num_heaps = 1;
+		num_heaps = 1;
 		heap_datas = bcm_ion_parse_dt(dev);
 		if (IS_ERR_OR_NULL(heap_datas)) {
 			pr_err("Probe Fail: DT parsing failed\n");
@@ -425,130 +462,77 @@ static int bcm_ion_probe(struct platform_device *pdev)
 		return -EINVAL;
 	}
 
-	/* Check for duplicate heap->ids. ION cannot handle it. */
-	for (i = 0; i < new_num_heaps; i++) {
-		int new_id = heap_datas[i].id;
-		for (j = 0; j < num_heaps; j++) {
-			int old_id;
-			if (!heaps[j])
-				continue;
-			old_id = heaps[j]->id;
-			if (new_id == old_id) {
-				pr_err("Probe fail: %16s duplicate id(%d)\n",
-						heap_datas[i].name, new_id);
-				err = -EINVAL;
-				goto err2;
+	for (i = 0; i < num_heaps; i++) {
+		struct ion_platform_heap *heap_data = &heap_datas[i];
+		struct ion_heap *heap;
+		struct bcm_ion_heap *bcm_heap;
+
+		pr_info("Heap(%10s) Type(%d) Id(%d)\n",
+				heap_data->name, heap_data->type,
+				heap_data->id);
+		/* Ignore heaps with duplicate heap ids. */
+		list_for_each_entry(bcm_heap, &bcm_heap_list, node) {
+			if (heap_data->id == bcm_heap->heap->id) {
+				heap_data->id = ION_INVALID_HEAP_ID;
+				break;
 			}
 		}
-	}
-
-	if (num_heaps == 0) {
-		num_heaps = new_num_heaps;
-		heaps = kzalloc(sizeof(struct ion_heap *) * new_num_heaps,
-				GFP_KERNEL);
-		if (!heaps) {
-			err = -ENOMEM;
-			goto err2;
+		/* Ignore heaps with invalid heap ids. */
+		if (heap_data->id >= ION_INVALID_HEAP_ID) {
+			bcm_ion_free_data(dev);
+			continue;
 		}
-		idev = ion_device_create(bcm_ion_custom_ioctl);
-		if (IS_ERR_OR_NULL(idev)) {
-			pr_err("Probe Fail: ION device creation failed\n");
-			kfree(heaps);
-			err = PTR_ERR(idev);
-			goto err2;
+		/* Create and add the heap. */
+		heap = ion_heap_create(heap_data);
+		if (IS_ERR_OR_NULL(heap)) {
+			bcm_ion_free_data(dev);
+			continue;
 		}
-	} else {
-		struct ion_heap **tmp_heaps;
+		ion_device_add_heap(idev, heap);
 
-		prev_num_heaps = num_heaps;
-		num_heaps += new_num_heaps;
-		/* Reallocate ion_heap array */
-		tmp_heaps = kzalloc(sizeof(struct ion_heap *) * num_heaps,
-				GFP_KERNEL);
-		if (!tmp_heaps) {
-			err = -ENOMEM;
-			goto err2;
+		/* Add to heap list */
+		bcm_heap = kzalloc(sizeof(struct bcm_ion_heap), GFP_KERNEL);
+		if (!bcm_heap) {
+			pr_err("Allocation of bcm_heap failed\n");
+			bcm_ion_free_data(dev);
+			ion_heap_destroy(heap);
+			continue;
 		}
-		/* Copy old heap array into reallocated buffer and
-		 * free old one */
-		for (i = 0; i < prev_num_heaps; i++)
-			tmp_heaps[i] = heaps[i];
-		kfree(heaps);
-		/* Set the reallocated buffer as new heap array */
-		heaps = tmp_heaps;
-	}
-
-	/* create the heaps as specified in the board file */
-	for (i = prev_num_heaps; i < num_heaps; i++) {
-		struct ion_platform_heap *heap_data =
-			&heap_datas[i - prev_num_heaps];
-
-		if (heap_data->id != ION_INVALID_HEAP_ID) {
-			pr_info("Heap[%d]: Name(%10s) Type(%d) Id(%d)",
-					i, heap_data->name, heap_data->type,
-					heap_data->id);
-			pr_info("Base(0x%08x) Size (0x%08x)\n",
-					(unsigned int)heap_data->base,
-					heap_data->size);
-			if (heap_data->type == ION_HEAP_TYPE_DMA)
-				heap_data->priv = dev;
-			heaps[i] = ion_heap_create(heap_data);
-			if (IS_ERR_OR_NULL(heaps[i])) {
-				heaps[i] = NULL;
-				err = PTR_ERR(heaps[i]);
-				goto err;
-			}
-			ion_device_add_heap(idev, heaps[i]);
-		}
+		bcm_heap->pdev = pdev;
+		bcm_heap->heap = heap;
+		list_add_tail(&bcm_heap->node, &bcm_heap_list);
+		pr_info("Added Heap(%10s) Type(%d) Id(%d) Base(0x%08x) Size (0x%08x)\n",
+				heap_data->name, heap_data->type,
+				heap_data->id, (u32)heap_data->base,
+				heap_data->size);
 	}
 	platform_set_drvdata(pdev, idev);
 	return 0;
-err:
-	for (i = 0; i < num_heaps; i++) {
-		if (heaps[i])
-			ion_heap_destroy(heaps[i]);
-	}
-	kfree(heaps);
-err2:
-#ifdef CONFIG_OF
-	if (dev->of_node) {
-		struct ion_platform_heap *heap_data = dev->platform_data;
-		if (heap_data) {
-			kfree(heap_data->name);
-			kfree(heap_data);
-			dev->platform_data = NULL;
-		}
-	}
-#endif /* CONFIG_OF */
-	return err;
 }
 
 static int bcm_ion_remove(struct platform_device *pdev)
 {
 	struct ion_device *idev = platform_get_drvdata(pdev);
-	int i;
-#ifdef CONFIG_OF
+	struct bcm_ion_heap *bcm_heap, *tmp_heap;
 	struct device *dev = &pdev->dev;
-	struct ion_platform_heap *heap_data = dev->platform_data;
-#endif /* CONFIG_OF */
 
 	pr_info("Broadcom ION device remove\n");
-	ion_device_destroy(idev);
-	idev = NULL;
-	for (i = 0; i < num_heaps; i++)
-		if (heaps[i])
-			ion_heap_destroy(heaps[i]);
-	kfree(heaps);
-#ifdef CONFIG_OF
-	if (dev->of_node)
-		if (heap_data) {
-			kfree(heap_data->name);
-			kfree(heap_data);
-			dev->platform_data = NULL;
+
+	/* Ignore heaps with duplicate heap ids. */
+	list_for_each_entry_safe(bcm_heap, tmp_heap, &bcm_heap_list, node) {
+		if (pdev == bcm_heap->pdev) {
+			pr_info("Remove heap id(%d)\n", bcm_heap->heap->id);
+			bcm_ion_free_data(dev);
+			ion_heap_destroy(bcm_heap->heap);
+			list_del(&bcm_heap->node);
+			kfree(bcm_heap);
 		}
-#endif /* CONFIG_OF */
-	heaps = NULL;
-	num_heaps = 0;
+	}
+	if (list_empty(&bcm_heap_list)) {
+		pr_info("Destroy ion device\n");
+		ion_device_destroy(idev);
+		idev = NULL;
+	}
 	return 0;
 }
 
