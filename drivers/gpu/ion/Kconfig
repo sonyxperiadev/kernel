@@ -21,7 +21,7 @@ config ION_BCM
 	  are present. The debugfs output is modified to print more details.
 
 config ION_OOM_KILLER
-	tristate "Ion lowmem/oom killer"
+	bool "Ion lowmem/oom killer"
 	depends on ION_BCM
 	help
 	  This config enables lowmemkiller options which can be set on per heap
@@ -32,7 +32,7 @@ config ION_OOM_KILLER
 	  in ion.
 
 config ION_BCM_NO_DT
-	tristate "Ion heap info without DTB file"
+	bool "Ion heap info without DTB file"
 	depends on ION_BCM
 	help
 	Choose this option if you wish to use ION without DTB file.
