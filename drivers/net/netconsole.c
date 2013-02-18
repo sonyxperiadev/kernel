@@ -351,7 +351,7 @@ static ssize_t store_dev_name(struct netconsole_target *nt,
 
 	/* Get rid of possible trailing newline from echo(1) */
 	len = strnlen(nt->np.dev_name, IFNAMSIZ);
-	if (nt->np.dev_name[len - 1] == '\n')
+	if ((len > 0) && (nt->np.dev_name[len - 1] == '\n'))
 		nt->np.dev_name[len - 1] = '\0';
 
 	return strnlen(buf, count);
