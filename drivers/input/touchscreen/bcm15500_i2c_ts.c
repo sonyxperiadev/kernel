@@ -387,18 +387,15 @@ int bcmtch_init(struct i2c_client *p_i2c_client_spm, struct i2c_client *p_i2c_cl
       printk("INFO: Napa Touch block version number  %08X", tch_version);)
 
    /* Un-remap */
-   bcmtch_com_read_mem_reg32(COMMON_ARM_REMAP_ADDR, &remap);
-   if (remap < 0)
-   {
-      printk(KERN_ERR "ERROR: Napa common blob query failure.\n");
-      return(NAPA_INIT_ERROR);
-   }
+	if (bcmtch_com_read_mem_reg32(COMMON_ARM_REMAP_ADDR, &remap) < 0) {
+		printk(KERN_ERR "ERROR: Napa common blob query failure.\n");
+		return NAPA_INIT_ERROR;
+	}
    remap &= ~2U; // Turn off ARM RAM1 remap bit.
-   if (bcmtch_com_write_mem_reg32(COMMON_ARM_REMAP_ADDR, remap) < 0)
-   {
-      printk(KERN_ERR "ERROR: Napa common blob update failure.\n");
-      return(NAPA_INIT_ERROR);
-   }
+	if (bcmtch_com_write_mem_reg32(COMMON_ARM_REMAP_ADDR, remap) < 0) {
+		printk(KERN_ERR "ERROR: Napa common blob update failure.\n");
+		return NAPA_INIT_ERROR;
+	}
 
    /* load firmware */
    firmware_ok = 0;
@@ -675,6 +672,8 @@ int bcmtch_chan_init(tofe_channel_instance_cfg_t *channel_cfg, napa_channel_t **
 
 	/* copy config */
         ptr = *channel;
+	if (!ptr)
+		return -EIO;
 	ptr->cfg = *channel_cfg;
 
 #if 1
