@@ -590,7 +590,7 @@ static void bcmpmu_accy_isr(enum bcmpmu59xxx_irq irq, void *data)
 		break;
 
 	case PMU_IRQ_VB_SESS_END_R:
-		pr_accy(INIT, "### ISR  PMU_IRQ_VB_SESS_END_R: %x\n",
+		pr_accy(FLOW, "### ISR  PMU_IRQ_VB_SESS_END_R: %x\n",
 			PMU_IRQ_VB_SESS_END_R);
 		bcmpmu_paccy_latch_event(paccy,
 				BCMPMU_USB_EVENT_SESSION_END_VALID, NULL);
@@ -603,13 +603,24 @@ static void bcmpmu_accy_isr(enum bcmpmu59xxx_irq irq, void *data)
 		break;
 #endif
 	case PMU_IRQ_RESUME_VBUS:
-		pr_accy(INIT, "### ISR  PMU_IRQ_RESUME_VBUS: %x\n",
+		pr_accy(FLOW, "### ISR  PMU_IRQ_RESUME_VBUS: %x\n",
 			PMU_IRQ_RESUME_VBUS);
 		bcmpmu_paccy_latch_event(paccy,
 				BCMPMU_CHRGR_EVENT_CHRG_RESUME_VBUS, NULL);
 		schedule_delayed_work(&paccy->det_work, ACCY_WORK_DELAY);
 		break;
-
+	case PMU_IRQ_USBOV:
+		pr_accy(FLOW, "### ISR PMU_IRQ_USBOV: %x\n",
+			PMU_IRQ_USBOV);
+		break;
+	case PMU_IRQ_USBOV_DIS:
+		pr_accy(FLOW, "### ISR PMU_IRQ_USBOV_DIS: %x\n",
+			PMU_IRQ_USBOV_DIS);
+		if (paccy->det_state == USB_CONNECTED) {
+			if (bcmpmu_is_usb_host_enabled(bcmpmu))
+				bcmpmu_chrgr_usb_en(bcmpmu, 1);
+		}
+		break;
 	default:
 		break;
 	}
@@ -1313,6 +1324,10 @@ static int __devinit bcmpmu_accy_probe(struct platform_device *pdev)
 				bcmpmu_accy_isr, paccy);
 	bcmpmu->register_irq(bcmpmu, PMU_IRQ_RESUME_VBUS,
 				bcmpmu_accy_isr, paccy);
+	bcmpmu->register_irq(bcmpmu, PMU_IRQ_USBOV,
+				bcmpmu_accy_isr, paccy);
+	bcmpmu->register_irq(bcmpmu, PMU_IRQ_USBOV_DIS,
+				bcmpmu_accy_isr, paccy);
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_USBINS);
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_USBRM);
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_CHGDET_LATCH);
@@ -1323,6 +1338,8 @@ static int __devinit bcmpmu_accy_probe(struct platform_device *pdev)
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_VBUS_VALID_F);
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_IDCHG);
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_RESUME_VBUS);
+	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_USBOV);
+	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_USBOV_DIS);
 
 	/*
 	 * For  BB's BC detection we need to select BCDAVDD33 pin
@@ -1360,6 +1377,8 @@ static int __devexit bcmpmu_accy_remove(struct platform_device *pdev)
 	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_VBUS_VALID_F);
 	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_IDCHG);
 	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_RESUME_VBUS);
+	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_USBOV);
+	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_USBOV_DIS);
 	cancel_delayed_work_sync(&paccy->det_work);
 	cancel_work_sync(&paccy->adp_work);
 #ifdef CONFIG_HAS_WAKELOCK
