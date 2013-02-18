@@ -647,7 +647,7 @@ static int kona_mmc_core_init(struct mmc *mmc)
 
 	kona_mmc_reset(host);
 
-	host->version = (ioread32(&host->reg_p2->hcversirq) |
+	host->version = (ioread32(&host->reg_p2->hcversirq) &
 			  EMMCSDXC_HCVERSIRQ_VENDVER_MASK)
 			  >> EMMCSDXC_HCVERSIRQ_VENDVER_SHIFT;
 
