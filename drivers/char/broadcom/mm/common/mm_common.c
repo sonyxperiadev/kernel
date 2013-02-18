@@ -67,7 +67,9 @@ static struct dev_job_list *mm_common_alloc_job(\
 			struct file_private_data *private)
 {
 	struct dev_job_list *job = kmalloc(sizeof(struct dev_job_list),\
-						GFP_KERNEL); \
+						GFP_KERNEL);
+	if (!job)
+		return NULL;
 
 	job->filp = private;
 	job->job.size = 0;
@@ -441,21 +443,25 @@ static int mm_file_write(struct file *filp, const char __user *buf,
 	struct file_private_data *private = filp->private_data;
 	struct mm_common *common = private->common;
 	struct dev_job_list *mm_job_node = mm_common_alloc_job(private);
+
+	if (!mm_job_node)
+		return -ENOMEM;
+
 	mm_job_node->job.size = size - 8;
 	if (size < 8)
-		return 0;
+		goto out;
 
 	if (copy_from_user(&(mm_job_node->job.type), buf, \
 				sizeof(mm_job_node->job.type))) {
 		pr_err("copy_from_user failed for type");
-		return 0;
+		goto out;
 		}
 	size -= sizeof(mm_job_node->job.type);
 	buf += sizeof(mm_job_node->job.type);
 	if (copy_from_user(&(mm_job_node->job.id), buf , \
 				sizeof(mm_job_node->job.id))) {
 		pr_err("copy_from_user failed for type");
-		return 0;
+		goto out;
 		}
 	size -= sizeof(mm_job_node->job.id);
 	buf += sizeof(mm_job_node->job.id);
@@ -467,7 +473,8 @@ static int mm_file_write(struct file *filp, const char __user *buf,
 		ptr = (uint32_t *)job_post;
 		if (copy_from_user(job_post, buf, size)) {
 			pr_err("MM_IOCTL_POST_JOB data copy_from_user failed");
-			return 0;
+			kfree(job_post);
+			goto out;
 			}
 
 		pr_debug("mm_file_write %x %x %x %x %x %x %x", \
@@ -482,11 +489,13 @@ static int mm_file_write(struct file *filp, const char __user *buf,
 		SCHEDULE_ADD_WORK(mm_job_node);
 		}
 	else {
-		kfree(mm_job_node);
 		pr_err("zero size write");
-		return 0;
+		goto out;
 		}
 
+	return 0;
+out:
+	kfree(mm_job_node);
 	return 0;
 }
 
@@ -614,7 +623,7 @@ static long mm_file_ioctl(struct file *filp, \
 		{
 		struct dev_job_list *mm_job_node = mm_common_alloc_job(private);
 
-		if (copy_from_user(&(mm_job_node->job), arg, \
+		if (copy_from_user(&(mm_job_node->job), (void *)arg, \
 					sizeof(mm_job_node->job))) {
 			pr_err("copy_from_user failed for type");
 			ret = -EINVAL;
@@ -716,6 +725,8 @@ void *mm_fmwk_register(const char *name, const char *clk_name,
 		return NULL;
 
 	common = kmalloc(sizeof(struct mm_common), GFP_KERNEL);
+	if (!common)
+		return NULL;
 	memset(common, 0, sizeof(struct mm_common));
 
 	INIT_LIST_HEAD(&common->device_list);
@@ -732,7 +743,7 @@ void *mm_fmwk_register(const char *name, const char *clk_name,
 		}
 
 	common->mm_name = kmalloc(strlen(name)+1, GFP_KERNEL);
-	strcpy(common->mm_name, name);
+	strncpy(common->mm_name, name, strlen(name) + 1);
 
 	common->mdev.minor = MISC_DYNAMIC_MINOR;
 	common->mdev.name = common->mm_name;
