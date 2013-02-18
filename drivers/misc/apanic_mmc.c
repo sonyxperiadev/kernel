@@ -574,7 +574,7 @@ static int apanic_trigger_check(struct file *file, const char __user *devpath,
 		copy_devpath = ctx->dev_path;
 	else {
 		copy_devpath = (char *)user_dev_path;
-		strncpy(ctx->dev_path, copy_devpath, sizeof(ctx->dev_path));
+		strncpy(ctx->dev_path, copy_devpath, sizeof(ctx->dev_path) - 1);
 	}
 
 	bdev = blkdev_get_by_path(copy_devpath,
