@@ -30,6 +30,7 @@ struct kona_idle_state {
 	char *desc;
 	u32 flags;
 	const u32 params;
+	u32 num_cpu_in_state;
 	u32 state;
 	int	power_usage;
 	u32 latency;		/* in uS */

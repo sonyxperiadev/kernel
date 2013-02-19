@@ -48,12 +48,6 @@
 #endif
 
 #define VLT_LUT_SIZE	16
-/*PM policy definitions */
-#define PM_OFF		0
-#define PM_RET		1
-#define	PM_ECO		4
-#define	PM_DFS		5
-#define	PM_WKP		7
 
 static int delayed_init_complete;
 
