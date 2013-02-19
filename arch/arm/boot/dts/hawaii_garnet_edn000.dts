@@ -152,10 +152,11 @@
 		hs-ref-frequency = <26000000>;
 	};
 
-	bluetooth-bzhw {
-		compatible = "bcm,bzhw";
+	bluetooth-btlpm {
+		compatible = "bcm,btlpm";
 		bt-wake-gpio = <32>;
 		host-wake-gpio = <72>;
+		bt-uart-port = <1>;
 	};
 
 	bcmbt-rfkill {
