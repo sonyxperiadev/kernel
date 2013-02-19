@@ -980,13 +980,13 @@ static int __devinit axitrace_probe(struct amba_device *dev,
 				const struct amba_id *id)
 {
 	struct axitrace_platform_data *trace_data = dev->dev.platform_data;
-	struct axitrace_source *sources = trace_data->sources;
+	struct axitrace_source *sources;
 	struct complete_trace_src_info *t = &tracer;
 	int i = 0, retval, j, k;
 
 	if (!trace_data)
 		return -EINVAL;
-
+	sources = trace_data->sources;
 	t->dev = &dev->dev;
 	amba_set_drvdata(dev, t);
 
@@ -1041,7 +1041,7 @@ static int __devinit axitrace_probe(struct amba_device *dev,
 				0666, control_show, control_store);
 
 		t->per_trace[i].attr_group.attrs =
-			kmalloc(sizeof(struct attribute)*TRACE_END_ATTR,
+			kmalloc(sizeof(struct attribute *) * TRACE_END_ATTR,
 				GFP_KERNEL);
 		if (NULL == t->per_trace[i].attr_group.attrs) {
 			dev_err(t->dev,
@@ -1100,13 +1100,14 @@ static int __devinit axitrace_probe(struct amba_device *dev,
 
 			/* Allocate memory for attribute array */
 			t->per_trace[i].filter_group[j].attrs =
-				kmalloc(sizeof(struct attribute)*FIL_END_ATTR,
-					GFP_KERNEL);
+				kmalloc(sizeof(struct attribute *) *
+				FIL_END_ATTR, GFP_KERNEL);
 			if (NULL ==  t->per_trace[i].filter_group[j].attrs) {
 				dev_err(t->dev, "Error allocating memory\n");
 				retval = -ENOMEM;
 				goto out2;
 			}
+
 			FILL_ATTR(t->per_trace[i].filter_attrs[FIL_AXI_ID_ATTR],
 					"axi_id", 0666 , filter_axi_id_show,
 					filter_axi_id_store);
