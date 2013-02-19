@@ -148,10 +148,6 @@ static void BCMLOG_OutputLinkList(unsigned long ListSize,
 static unsigned char *sMemDumpSignalBuf;
 mm_segment_t sCrashDumpFS;
 
-#ifdef CONFIG_BRCM_CP_CRASH_DUMP
-static struct mtd_info *mtd;
-static int tot_size;
-#endif
 static unsigned char *cp_buf;
 
 /**
@@ -618,10 +614,7 @@ static int __init BCMLOG_ModuleInit(void)
 {
 	struct device *drvdata;
 	int ret = 0;
-#ifdef CONFIG_BRCM_CP_CRASH_DUMP
-	mtd = NULL;
-	tot_size = 0;
-#endif
+
 	cp_buf = NULL;
 	sMemDumpSignalBuf = NULL;
 	sDumpFile = NULL;
@@ -1181,122 +1174,6 @@ static void start_emmc_crashlog(void)
 }
 #endif
 
-void BCMLOG_WriteMTD(const char *buf, int size)
-{
-#ifdef CONFIG_BRCM_CP_CRASH_DUMP
-	int ret = 0;
-	static int offs = KPANIC_CP_DUMP_OFFSET;
-	size_t wlen = 0;
-	int num_pages, written, fill_size;
-	int er_sz, wr_sz;
-
-	if (!cp_buf) {
-		printk(KERN_CRIT "%s: No memory allocated for cp_buf\n",
-		       __func__);
-		return;
-	}
-
-	er_sz = mtd->erasesize;
-	wr_sz = mtd->writesize;
-	written = wlen = fill_size = 0;
-
-	/* final write? */
-	if (buf == NULL)
-		goto final;
-
-	/* we accumulate anything less than page size */
-	if ((tot_size + size) < wr_sz) {
-		memcpy(cp_buf + tot_size, buf, size);
-		tot_size += size;
-		return;
-	}
-
-	fill_size = wr_sz - tot_size;
-	memcpy(cp_buf + tot_size, buf, fill_size);
-
-final:
-	/* write locally stored data first */
-
-	/* skip bad blocks */
-	if (IS_ALIGNED(offs, er_sz))
-		while (mtd->block_isbad(mtd, offs)) {
-			printk(KERN_CRIT "%s - Bad block at %x\n", __func__,
-			       offs);
-			offs += er_sz;
-		}
-
-	ret = mtd->panic_write(mtd, offs, wr_sz, &wlen, cp_buf);
-	if (ret) {
-		printk(KERN_CRIT
-		       "%s: Error writing data to flash at line %d, offs:%x ret:%d!!\n",
-		       __func__, __LINE__, offs, ret);
-		offs += wr_sz;
-		return;
-	}
-
-	if (buf == NULL)
-		return;
-
-	memset(cp_buf, 0xff, wr_sz);
-	offs += wr_sz;
-	buf += fill_size;
-	written += fill_size;
-
-	/* write the passed data now */
-	num_pages = (size - fill_size) / wr_sz;
-	while (num_pages) {
-
-		if (IS_ALIGNED(offs, er_sz))
-			while (mtd->block_isbad(mtd, offs)) {
-				printk(KERN_CRIT
-				       "%s - while, Bad block at %x\n",
-				       __func__, offs);
-				offs += er_sz;
-			}
-
-		ret = mtd->panic_write(mtd, offs, wr_sz, &wlen, buf);
-		if (ret) {
-			printk(KERN_CRIT
-			       "%s: Error writing data line:%d, offs:%x ret:%d!!\n",
-			       __func__, __LINE__, offs, ret);
-			offs += wr_sz;
-			return;
-		}
-
-		buf += wr_sz;
-		offs += wr_sz;
-		written += wr_sz;
-		num_pages--;
-	}
-
-	if (size - written) {
-		memcpy(cp_buf, buf, (size - written));
-		tot_size = size - written;
-	} else {
-		tot_size = 0;
-	}
-#endif
-}
-
-#ifdef CONFIG_BRCM_CP_CRASH_DUMP
-static void start_panic_crashlog(void)
-{
-	mtd = get_mtd_device_nm(CONFIG_APANIC_PLABEL);
-	if (IS_ERR(mtd)) {
-		printk(KERN_ERR "failed to get MTD handle!!\n");
-		mtd = NULL;
-		return;
-	}
-
-	cp_buf = kmalloc(mtd->writesize, GFP_ATOMIC);
-	if (!cp_buf) {
-		printk(KERN_ERR "%s: kmalloc failed!!\n", __func__);
-		return;
-	}
-	memset(cp_buf, 0xff, mtd->writesize);
-}
-#endif
-
 static int start_sdcard_crashlog(struct file *inDumpFile)
 {
 	int ret_status;
@@ -1382,8 +1259,6 @@ void BCMLOG_StartCpCrashDump(struct file *inDumpFile, int cpresetStatus)
 	case BCMLOG_OUTDEV_PANIC:
 #ifdef CONFIG_BRCM_CP_CRASH_DUMP_EMMC
 		start_emmc_crashlog();
-#else
-		start_panic_crashlog();
 #endif
 		break;
 	case BCMLOG_OUTDEV_NONE:
@@ -1422,8 +1297,6 @@ void BCMLOG_EndCpCrashDump(void)
 	case BCMLOG_OUTDEV_PANIC:
 #ifdef CONFIG_BRCM_CP_CRASH_DUMP_EMMC
 		BCMLOG_WriteEMMC(NULL, 0);
-#else
-		BCMLOG_WriteMTD(NULL, 0);
 #endif
 		kfree(cp_buf);
 		break;
@@ -1453,8 +1326,6 @@ void BCMLOG_HandleCpCrashDumpData(const char *buf, int size)
 	case BCMLOG_OUTDEV_PANIC:
 #ifdef CONFIG_BRCM_CP_CRASH_DUMP_EMMC
 		BCMLOG_WriteEMMC(buf, size);
-#else
-		BCMLOG_WriteMTD(buf, size);
 #endif
 		break;
 	case BCMLOG_OUTDEV_RNDIS:
@@ -1513,8 +1384,6 @@ void BCMLOG_LogCPCrashDumpString(const char *inLogString)
 		case BCMLOG_OUTDEV_PANIC:
 #ifdef CONFIG_BRCM_CP_CRASH_DUMP_EMMC
 			BCMLOG_WriteEMMC(kbuf_mtt, mttFrameSize);
-#else
-			BCMLOG_WriteMTD(kbuf_mtt, mttFrameSize);
 #endif
 			break;
 		case BCMLOG_OUTDEV_RNDIS:

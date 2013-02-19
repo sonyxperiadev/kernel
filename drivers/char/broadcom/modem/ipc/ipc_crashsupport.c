@@ -685,8 +685,7 @@ if (!crash_dump_ui_on && !cpReset) {
 
 	RpcDbgDumpHistoryLogging(0, 0);
 
-#if defined(CONFIG_BRCM_CP_CRASH_DUMP) \
-	|| defined(CONFIG_BRCM_CP_CRASH_DUMP_EMMC) \
+#if defined(CONFIG_BRCM_CP_CRASH_DUMP_EMMC) \
 	|| defined(CONFIG_BCM_AP_PANIC_ON_CPCRASH)
 	while (SmLocalControl.SmControl->CrashDump == NULL)
 		; /* No op */
