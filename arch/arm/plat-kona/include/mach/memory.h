@@ -129,7 +129,7 @@
 			IO_XLATE((n), IO_G7_VIRT, IO_G7_PHYS) :	\
 		0)
 
-#define HW_IO_VIRT_TO_PHYS(va) (IO_VIRT_TO_PHYS(IOMEM(va)))
+#define HW_IO_VIRT_TO_PHYS(va) (IO_VIRT_TO_PHYS((va)))
 
 #define CONSISTENT_DMA_SIZE SZ_4M
 

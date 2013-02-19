@@ -333,9 +333,11 @@ static int spum_aes_dma_xfer(struct spum_aes_device *dd)
 	    PERIPHERAL_FLUSHP_END | DMA_PERI_REQ_ALWAYS_BURST;
 
 	rx_fifo =
-	    (u32)HW_IO_VIRT_TO_PHYS(dd->io_axi_base) + SPUM_AXI_FIFO_IN_OFFSET;
+		(u32)HW_IO_VIRT_TO_PHYS((u32)dd->io_axi_base) +
+		SPUM_AXI_FIFO_IN_OFFSET;
 	tx_fifo =
-	    (u32)HW_IO_VIRT_TO_PHYS(dd->io_axi_base) + SPUM_AXI_FIFO_OUT_OFFSET;
+		(u32)HW_IO_VIRT_TO_PHYS((u32)dd->io_axi_base) +
+		SPUM_AXI_FIFO_OUT_OFFSET;
 
 	INIT_LIST_HEAD(&head_in);
 	INIT_LIST_HEAD(&head_out);
