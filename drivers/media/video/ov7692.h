@@ -52,7 +52,11 @@ static const struct ov7692_reg configscript_common1[] = {
     {0xb4, 0xc0}, // MIPI Enable, 8-bit
     {0xb5, 0x40}, // wake up MIPI, wake up MIPI low power transmitter.
     {0xff, 0x00}, // select DVP register bank
-    {0x0c, 0x10}, // Tri-state PCLK, Href, Vsync and data when power down // 0x00 --- YU/YV swap
+#ifdef CONFIG_MACH_HAWAII_GARNET_EDN010
+{0x0c, 0xd0},
+#else
+{0x0c, 0x10},
+#endif
     {0x62, 0x10}, // Always do BLC
     {0x12, 0x00}, // YUV output
     {0x17, 0x65}, // Hstart
