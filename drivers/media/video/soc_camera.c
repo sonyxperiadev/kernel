@@ -1628,7 +1628,12 @@ static int __devinit soc_camera_pdrv_probe(struct platform_device *pdev)
 		if (of_property_read_string(pdev->dev.of_node,
 			"i2c-type", &prop))
 			goto out;
-		strcpy(i2c_camera->type, prop);
+		if (strlen(prop) < I2C_NAME_SIZE)
+			strcpy(i2c_camera->type, prop);
+		else {
+			pr_debug("i2c_camera->type lenght overflow\n");
+			goto out;
+		}
 		if (of_property_read_u32(pdev->dev.of_node, "i2c-addr", &val))
 			goto out;
 		i2c_camera->addr = val;
@@ -1737,10 +1742,13 @@ out:
 static int __devexit soc_camera_pdrv_remove(struct platform_device *pdev)
 {
 	struct soc_camera_device *icd = platform_get_drvdata(pdev);
-	struct soc_camera_link *icl = to_soc_camera_link(icd);
+	struct soc_camera_link *icl;
 	if (!icd)
 		return -EINVAL;
 
+	icl = to_soc_camera_link(icd);
+	if (!icl)
+		return -EINVAL;
 	soc_camera_device_unregister(icd);
 	kfree(icd);
 	if (pdev->dev.of_node)	 {
