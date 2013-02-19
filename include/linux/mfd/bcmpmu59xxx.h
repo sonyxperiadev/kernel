@@ -365,6 +365,8 @@ struct bcmpmu_adc_pdata {
 	int adc_offset; /* +/- offset/gain */
 	struct bcmpmu_adc_lut *lut;
 	unsigned int lut_len;
+	char *name;
+	u32 reg;
 };
 
 

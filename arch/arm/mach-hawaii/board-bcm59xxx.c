@@ -872,6 +872,8 @@ struct bcmpmu_adc_pdata adc_pdata[PMU_ADC_CHANN_MAX] = {
 					.adc_offset = 0,
 					.lut = NULL,
 					.lut_len = 0,
+					.name = "vmbatt",
+					.reg = PMU_REG_ADCCTRL3,
 	},
 	[PMU_ADC_CHANN_VBBATT] = {
 					.flag = 0,
@@ -879,6 +881,8 @@ struct bcmpmu_adc_pdata adc_pdata[PMU_ADC_CHANN_MAX] = {
 					.adc_offset = 0,
 					.lut = NULL,
 					.lut_len = 0,
+					.name = "vbbatt",
+					.reg = PMU_REG_ADCCTRL5,
 	},
 	[PMU_ADC_CHANN_VBUS] = {
 					.flag = 0,
@@ -886,6 +890,8 @@ struct bcmpmu_adc_pdata adc_pdata[PMU_ADC_CHANN_MAX] = {
 					.adc_offset = 0,
 					.lut = NULL,
 					.lut_len = 0,
+					.name = "vbus",
+					.reg = PMU_REG_ADCCTRL9,
 	},
 	[PMU_ADC_CHANN_IDIN] = {
 					.flag = 0,
@@ -893,6 +899,8 @@ struct bcmpmu_adc_pdata adc_pdata[PMU_ADC_CHANN_MAX] = {
 					.adc_offset = 0,
 					.lut = NULL,
 					.lut_len = 0,
+					.name = "idin",
+					.reg = PMU_REG_ADCCTRL11,
 	},
 	[PMU_ADC_CHANN_NTC] = {
 					.flag = 0,
@@ -900,6 +908,8 @@ struct bcmpmu_adc_pdata adc_pdata[PMU_ADC_CHANN_MAX] = {
 					.adc_offset = 0,
 					.lut = batt_temp_map,
 					.lut_len = ARRAY_SIZE(batt_temp_map),
+					.name = "ntc",
+					.reg = PMU_REG_ADCCTRL13,
 	},
 	[PMU_ADC_CHANN_BSI] = {
 					.flag = 0,
@@ -907,6 +917,8 @@ struct bcmpmu_adc_pdata adc_pdata[PMU_ADC_CHANN_MAX] = {
 					.adc_offset = 0,
 					.lut = NULL,
 					.lut_len = 0,
+					.name = "bsi",
+					.reg = PMU_REG_ADCCTRL15,
 	},
 	[PMU_ADC_CHANN_BOM] = {
 					.flag = 0,
@@ -914,6 +926,8 @@ struct bcmpmu_adc_pdata adc_pdata[PMU_ADC_CHANN_MAX] = {
 					.adc_offset = 0,
 					.lut = NULL,
 					.lut_len = 0,
+					.name = "bom",
+					.reg = PMU_REG_ADCCTRL17,
 	},
 	[PMU_ADC_CHANN_32KTEMP] = {
 					.flag = 0,
@@ -921,6 +935,8 @@ struct bcmpmu_adc_pdata adc_pdata[PMU_ADC_CHANN_MAX] = {
 					.adc_offset = 0,
 					.lut = batt_temp_map,
 					.lut_len = ARRAY_SIZE(batt_temp_map),
+					.name = "32ktemp",
+					.reg = PMU_REG_ADCCTRL19,
 	},
 	[PMU_ADC_CHANN_PATEMP] = {
 					.flag = 0,
@@ -928,6 +944,8 @@ struct bcmpmu_adc_pdata adc_pdata[PMU_ADC_CHANN_MAX] = {
 					.adc_offset = 0,
 					.lut = batt_temp_map,
 					.lut_len = ARRAY_SIZE(batt_temp_map),
+					.name = "patemp",
+					.reg = PMU_REG_ADCCTRL21,
 	},
 	[PMU_ADC_CHANN_ALS] = {
 					.flag = 0,
@@ -935,6 +953,8 @@ struct bcmpmu_adc_pdata adc_pdata[PMU_ADC_CHANN_MAX] = {
 					.adc_offset = 0,
 					.lut = NULL,
 					.lut_len = 0,
+					.name = "als",
+					.reg = PMU_REG_ADCCTRL23,
 	},
 };
 
@@ -1341,6 +1361,11 @@ static const struct of_device_id bcmpmu_regulator_dt_ids[] __initconst = {
 	{ },
 };
 
+static const struct of_device_id bcmpmu_adc_dt_ids[] __initconst = {
+	{ .compatible = "Broadcom,adc" },
+	{ },
+};
+
 int __init bcmpmu_reg_init(void)
 {
 	struct device_node *np;
@@ -1458,6 +1483,44 @@ int __init rgltr_init(void)
 	return 0;
 }
 
+int adc_init(void)
+{
+	int i, j;
+	struct device_node *np;
+	struct property *prop;
+	char *output[5], *val;
+	char buf[10];
+	u32 addr_offset;
+	size_t total = 0, len = 0;
+	np = of_find_matching_node(NULL, bcmpmu_adc_dt_ids);
+	if (!np) {
+		pr_err("device tree support for adc not found\n");
+		return 0;
+	}
+
+	for (i = 0; i < PMU_ADC_CHANN_MAX; i++) {
+		sprintf(buf, "channel%d", i);
+		prop = of_find_property(np, buf, NULL);
+		if (prop) {
+			val = prop->value;
+			for (j = 0, total = 0, len = 0; total < prop->length;
+			len = strlen(val) + 1, total += len, val += len, j++)
+				output[j] = val;
+		}
+
+		if (strlen(output[0]) == 1)
+			continue;
+		adc_pdata[i].name = output[0];
+
+		sscanf(output[1], "%d", &adc_pdata[i].flag);
+		sscanf(output[2], "%d", &adc_pdata[i].volt_range);
+		sscanf(output[3], "%d", &adc_pdata[i].adc_offset);
+		sscanf(output[4], "%x", &addr_offset);
+		adc_pdata[i].reg = PMU_REG_ADCCTRL1 + addr_offset;
+	}
+	return 0;
+}
+
 int __init board_bcm59xx_init(void)
 {
 	int             ret = 0;
@@ -1466,7 +1529,7 @@ int __init board_bcm59xx_init(void)
 	bcmpmu_reg_init();
 
 	rgltr_init();
-
+	adc_init();
 	bcmpmu_set_pullup_reg();
 	ret = gpio_request(PMU_DEVICE_INT_GPIO, "bcmpmu59xxx-irq");
 	if (ret < 0) {

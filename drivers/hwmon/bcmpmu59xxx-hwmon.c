@@ -233,78 +233,78 @@ int read_sar_adc(struct bcmpmu59xxx *bcmpmu, enum bcmpmu_adc_channel channel,
 	switch (channel) {
 	case PMU_ADC_CHANN_VMBATT:
 		mutex_lock(&adc->chann_mutex[PMU_ADC_CHANN_VMBATT]);
-		ret = bcmpmu->read_dev_bulk(bcmpmu, PMU_REG_ADCCTRL3,
-				val, ADC_READ_LEN);
+		ret = bcmpmu->read_dev_bulk(bcmpmu,
+		adc->pdata[PMU_ADC_CHANN_VMBATT].reg, val, ADC_READ_LEN);
 		mutex_unlock(&adc->chann_mutex[PMU_ADC_CHANN_VMBATT]);
 		break;
 
 	case PMU_ADC_CHANN_VBBATT:
 		mutex_lock(&adc->chann_mutex[PMU_ADC_CHANN_VBBATT]);
-		ret = bcmpmu->read_dev_bulk(bcmpmu, PMU_REG_ADCCTRL5,
-						val, ADC_READ_LEN);
+		ret = bcmpmu->read_dev_bulk(bcmpmu,
+		adc->pdata[PMU_ADC_CHANN_VBBATT].reg, val, ADC_READ_LEN);
 		mutex_unlock(&adc->chann_mutex[PMU_ADC_CHANN_VBBATT]);
 		break;
 
 	case PMU_ADC_CHANN_VBUS:
 		mutex_lock(&adc->chann_mutex[PMU_ADC_CHANN_VBUS]);
-		ret = bcmpmu->read_dev_bulk(bcmpmu, PMU_REG_ADCCTRL9,
-						val, ADC_READ_LEN);
+		ret = bcmpmu->read_dev_bulk(bcmpmu,
+		adc->pdata[PMU_ADC_CHANN_VBUS].reg, val, ADC_READ_LEN);
 		mutex_unlock(&adc->chann_mutex[PMU_ADC_CHANN_VBUS]);
 		break;
 
 	case PMU_ADC_CHANN_IDIN:
 		mutex_lock(&adc->chann_mutex[PMU_ADC_CHANN_IDIN]);
-		ret = bcmpmu->read_dev_bulk(bcmpmu, PMU_REG_ADCCTRL11,
-						val, ADC_READ_LEN);
+		ret = bcmpmu->read_dev_bulk(bcmpmu,
+		adc->pdata[PMU_ADC_CHANN_IDIN].reg, val, ADC_READ_LEN);
 		mutex_unlock(&adc->chann_mutex[PMU_ADC_CHANN_IDIN]);
 		break;
 
 	case PMU_ADC_CHANN_NTC:
 		mutex_lock(&adc->chann_mutex[PMU_ADC_CHANN_NTC]);
-		ret = bcmpmu->read_dev_bulk(bcmpmu, PMU_REG_ADCCTRL13,
-						val, ADC_READ_LEN);
+		ret = bcmpmu->read_dev_bulk(bcmpmu,
+		adc->pdata[PMU_ADC_CHANN_NTC].reg, val, ADC_READ_LEN);
 		mutex_unlock(&adc->chann_mutex[PMU_ADC_CHANN_NTC]);
 		break;
 
 	case PMU_ADC_CHANN_BSI:
 		mutex_lock(&adc->chann_mutex[PMU_ADC_CHANN_BSI]);
-		ret = bcmpmu->read_dev_bulk(bcmpmu, PMU_REG_ADCCTRL15,
-						val, ADC_READ_LEN);
+		ret = bcmpmu->read_dev_bulk(bcmpmu,
+		adc->pdata[PMU_ADC_CHANN_BSI].reg, val, ADC_READ_LEN);
 		mutex_unlock(&adc->chann_mutex[PMU_ADC_CHANN_BSI]);
 		break;
 
 	case PMU_ADC_CHANN_BOM:
 		mutex_lock(&adc->chann_mutex[PMU_ADC_CHANN_BOM]);
-		ret = bcmpmu->read_dev_bulk(bcmpmu, PMU_REG_ADCCTRL17,
-						val, ADC_READ_LEN);
+		ret = bcmpmu->read_dev_bulk(bcmpmu,
+		adc->pdata[PMU_ADC_CHANN_BOM].reg, val, ADC_READ_LEN);
 		mutex_unlock(&adc->chann_mutex[PMU_ADC_CHANN_BOM]);
 		break;
 
 	case PMU_ADC_CHANN_32KTEMP:
 		mutex_lock(&adc->chann_mutex[PMU_ADC_CHANN_32KTEMP]);
-		ret = bcmpmu->read_dev_bulk(bcmpmu, PMU_REG_ADCCTRL19,
-						val, ADC_READ_LEN);
+		ret = bcmpmu->read_dev_bulk(bcmpmu,
+		adc->pdata[PMU_ADC_CHANN_32KTEMP].reg, val, ADC_READ_LEN);
 		mutex_unlock(&adc->chann_mutex[PMU_ADC_CHANN_32KTEMP]);
 		break;
 
 	case PMU_ADC_CHANN_PATEMP:
 		mutex_lock(&adc->chann_mutex[PMU_ADC_CHANN_PATEMP]);
-		ret = bcmpmu->read_dev_bulk(bcmpmu, PMU_REG_ADCCTRL21,
-						val, ADC_READ_LEN);
+		ret = bcmpmu->read_dev_bulk(bcmpmu,
+		adc->pdata[PMU_ADC_CHANN_PATEMP].reg, val, ADC_READ_LEN);
 		mutex_unlock(&adc->chann_mutex[PMU_ADC_CHANN_PATEMP]);
 		break;
 
 	case PMU_ADC_CHANN_ALS:
 		mutex_lock(&adc->chann_mutex[PMU_ADC_CHANN_ALS]);
-		ret = bcmpmu->read_dev_bulk(bcmpmu, PMU_REG_ADCCTRL23,
-						val, ADC_READ_LEN);
+		ret = bcmpmu->read_dev_bulk(bcmpmu,
+		adc->pdata[PMU_ADC_CHANN_ALS].reg, val, ADC_READ_LEN);
 		mutex_unlock(&adc->chann_mutex[PMU_ADC_CHANN_ALS]);
 		break;
 
 	case PMU_ADC_CHANN_DIE_TEMP:
 		mutex_lock(&adc->chann_mutex[PMU_ADC_CHANN_DIE_TEMP]);
-		ret = bcmpmu->read_dev_bulk(bcmpmu, PMU_REG_ADCCTRL25,
-						val, ADC_READ_LEN);
+		ret = bcmpmu->read_dev_bulk(bcmpmu,
+		adc->pdata[PMU_ADC_CHANN_DIE_TEMP].reg, val, ADC_READ_LEN);
 		mutex_unlock(&adc->chann_mutex[PMU_ADC_CHANN_DIE_TEMP]);
 		break;
 

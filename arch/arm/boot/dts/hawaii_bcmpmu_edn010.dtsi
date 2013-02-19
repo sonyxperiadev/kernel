@@ -164,4 +164,25 @@
 		/*pc_map = 0, dsm_mode = BCMPMU_REGL_ON_IN_DSM*/
 		iosr2 = "1", "iosr2_uc", "0", "0", "0", "0", "0";
 	};
+
+	bcmpmu_adc {
+		compatible = "Broadcom,adc";
+		/*name flag volt_range adc_offset addr_offset*/
+		channel0 = "vmbatt", "0", "4800", "0", "0x2";
+		channel1 = "vbbatt", "0", "4800", "0", "0x4";
+		channel2 = "0";
+		channel3 = "vbus", "0", "14400", "0", "0x8";
+		channel4 = "idin", "0", "1200", "0", "0xa";
+		channel5 = "ntc", "0", "1200", "0", "0xc";
+		channel6 = "bsi", "0", "1200", "0", "0xe";
+		channel7 = "bom", "0", "1200", "0", "0x10";
+		channel8 = "32ktemp", "0", "1200", "0","0x12";
+		channel9 = "patemp", "0", "1200", "0", "0x14";
+		channel10 = "als", "0", "1200", "0", "0x16";
+		channel11 = "0";
+		channel12 = "0";
+		channel13 = "0";
+		channel14 = "0";
+		channel15 = "0";
+	};
 };
