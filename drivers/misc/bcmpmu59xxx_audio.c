@@ -714,8 +714,6 @@ EXPORT_SYMBOL(bcmpmu_hi_gain_mode_en);
 
 BCMPMU_Audio_HS_Param bcmpmu_get_hs_param_from_audio_driver(void)
 {
-	if (!pmu_audio)
-		return;
 	return headset_param_set_from_audio_driver;
 }
 EXPORT_SYMBOL(bcmpmu_get_hs_param_from_audio_driver);
