@@ -403,8 +403,10 @@ static int disable_idle_state(struct cpuidle_state *idle_state,
 			idle_state->disable = disable;
 		kona_idle->disable_cnt++;
 	} else {
-		if (!kona_idle->disable_cnt)
+		if (!kona_idle->disable_cnt) {
+			spin_unlock_irqrestore(&pm_prms.cstate_lock, flag);
 			return -EINVAL;
+		}
 		kona_idle->disable_cnt--;
 		if (!kona_idle->disable_cnt)
 			idle_state->disable = disable;
