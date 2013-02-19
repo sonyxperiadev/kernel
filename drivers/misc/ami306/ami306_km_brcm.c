@@ -637,8 +637,10 @@ static int __devinit ami_probe(struct i2c_client *client,
 		u32 val;
 		pdata = kzalloc(sizeof(struct ami306_platform_data),
 				GFP_KERNEL);
-		if (!pdata)
+		if (!pdata) {
+			kfree(pdev);
 			return -ENOMEM;
+		}
 
 		if (of_property_read_u32(np, "gpio-intr", &val)) {
 			res = -EIO;
@@ -670,6 +672,10 @@ static int __devinit ami_probe(struct i2c_client *client,
 			goto err_free_pdev;
 		}
 		pdata->supply_name = prop;
+		client->dev.platform_data = pdata;
+	} else {
+		kfree(pdev);
+		return -EINVAL;
 	}
 
 		pdev->ami_dir = pdata->dir;
@@ -821,6 +827,8 @@ err_misc_deregister:
 	misc_deregister(&pdev->dev);
 err_free_pdev:
 	kfree(pdev);
+	if (client->dev.of_node)
+		kfree(pdata);
 	i2c_set_clientdata(client, NULL);
 	return res;
 }
