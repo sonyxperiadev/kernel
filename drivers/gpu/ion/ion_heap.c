@@ -72,6 +72,16 @@ int ion_heap_map_user(struct ion_heap *heap, struct ion_buffer *buffer,
 	struct scatterlist *sg;
 	int i;
 
+#ifdef CONFIG_ION_BCM
+	if (buffer->flags & ION_FLAG_WRITECOMBINE)
+		vma->vm_page_prot = pgprot_writecombine(vma->vm_page_prot);
+	else if (buffer->flags & ION_FLAG_WRITETHROUGH)
+		vma->vm_page_prot = pgprot_writethrough(vma->vm_page_prot);
+	else if (buffer->flags & ION_FLAG_WRITEBACK)
+		vma->vm_page_prot = pgprot_writeback(vma->vm_page_prot);
+	else
+		vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
+#endif
 	for_each_sg(table->sgl, sg, table->nents, i) {
 		struct page *page = sg_page(sg);
 		unsigned long remainder = vma->vm_end - addr;

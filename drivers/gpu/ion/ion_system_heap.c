@@ -275,6 +275,64 @@ void ion_system_heap_unmap_dma(struct ion_heap *heap,
 	return;
 }
 
+#ifdef CONFIG_ION_BCM
+int ion_system_heap_clean_cache(struct ion_heap *heap,
+		struct ion_buffer *buffer, unsigned long offset,
+		unsigned long len)
+{
+	struct scatterlist *sg;
+	struct sg_table *table = buffer->sg_table;
+	int i;
+	unsigned long end, curr_offset = 0;
+
+	end = offset + len;
+	for_each_sg(table->sgl, sg, table->nents, i) {
+		struct page *page = sg_page(sg);
+		unsigned long sglen = sg_dma_len(sg);
+		unsigned long curr_end = curr_offset + sglen;
+
+		if ((curr_offset <= end) && (curr_end <= offset)) {
+			unsigned long l_off = max(offset, curr_offset);
+			unsigned long l_len = min(end, curr_end) - l_off;
+			__dma_page_cpu_to_dev(page, l_off, l_len,
+					DMA_BIDIRECTIONAL);
+		}
+		curr_offset = curr_end;
+	}
+	pr_debug("clean: off(%ld) len(%ld)\n", offset, len);
+
+	return 0;
+}
+
+int ion_system_heap_invalidate_cache(struct ion_heap *heap,
+		struct ion_buffer *buffer, unsigned long offset,
+		unsigned long len)
+{
+	struct scatterlist *sg;
+	struct sg_table *table = buffer->sg_table;
+	int i;
+	unsigned long end, curr_offset = 0;
+
+	end = offset + len;
+	for_each_sg(table->sgl, sg, table->nents, i) {
+		struct page *page = sg_page(sg);
+		unsigned long sglen = sg_dma_len(sg);
+		unsigned long curr_end = curr_offset + sglen;
+
+		if ((curr_offset <= end) && (curr_end <= offset)) {
+			unsigned long l_off = max(offset, curr_offset);
+			unsigned long l_len = min(end, curr_end) - l_off;
+			__dma_page_cpu_to_dev(page, l_off, l_len,
+					DMA_BIDIRECTIONAL);
+		}
+		curr_offset = curr_end;
+	}
+	pr_debug("inv: off(%ld) len(%ld)\n", offset, len);
+
+	return 0;
+}
+#endif
+
 static struct ion_heap_ops system_heap_ops = {
 	.allocate = ion_system_heap_allocate,
 	.free = ion_system_heap_free,
@@ -283,6 +341,10 @@ static struct ion_heap_ops system_heap_ops = {
 	.map_kernel = ion_heap_map_kernel,
 	.unmap_kernel = ion_heap_unmap_kernel,
 	.map_user = ion_heap_map_user,
+#ifdef CONFIG_ION_BCM
+	.clean_cache = ion_system_heap_clean_cache,
+	.invalidate_cache = ion_system_heap_invalidate_cache,
+#endif
 };
 
 static int ion_system_heap_debug_show(struct ion_heap *heap, struct seq_file *s,
