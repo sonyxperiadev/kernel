@@ -4190,7 +4190,11 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 		|| config.source == CSL_CAPH_DEV_DIGI_MIC_R
 		|| config.source == CSL_CAPH_DEV_EANC_DIGI_MIC
 		|| config.source == CSL_CAPH_DEV_EANC_DIGI_MIC_L
-		|| config.source == CSL_CAPH_DEV_EANC_DIGI_MIC_R)
+		|| config.source == CSL_CAPH_DEV_EANC_DIGI_MIC_R
+#if defined(CONFIG_MACH_HAWAII_GARNET)
+		|| config.source == CSL_CAPH_DEV_ANALOG_MIC
+#endif
+		)
 		csl_ControlHWClock_2p4m(TRUE);
 
 	/* for this case, need to turn on 156m clk */
@@ -4318,7 +4322,11 @@ Result_t csl_caph_hwctrl_AddPath(CSL_CAPH_PathID pathID,
 		|| config.source == CSL_CAPH_DEV_DIGI_MIC_R
 		|| config.source == CSL_CAPH_DEV_EANC_DIGI_MIC
 		|| config.source == CSL_CAPH_DEV_EANC_DIGI_MIC_L
-		|| config.source == CSL_CAPH_DEV_EANC_DIGI_MIC_R)
+		|| config.source == CSL_CAPH_DEV_EANC_DIGI_MIC_R
+#if defined(CONFIG_MACH_HAWAII_GARNET)
+		|| config.source == CSL_CAPH_DEV_ANALOG_MIC
+#endif
+		)
 		csl_ControlHWClock_2p4m(TRUE);
 
 	/* for this case, need to turn on 156m clk */
