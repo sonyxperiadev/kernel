@@ -41,6 +41,12 @@ struct kona_fb_platform_data {
 	uint8_t lanes;
 	uint32_t hs_bps;
 	uint32_t lp_bps;
+#ifdef CONFIG_IOMMU_API
+	struct platform_device *pdev_iommu;
+#endif
+#ifdef CONFIG_BCM_IOVMM
+	struct platform_device *pdev_iovmm;
+#endif
 };
 
 #endif /* KONA_FB_H_ */

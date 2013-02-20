@@ -68,6 +68,12 @@
 #include "lcd/ap_ramdump_start_img.h"
 #include "lcd/cp_ramdump_start_img.h"
 #endif
+#ifdef CONFIG_IOMMU_API
+#include <linux/iommu.h>
+#endif
+#ifdef CONFIG_BCM_IOVMM
+#include <plat/bcm_iommu.h>
+#endif
 
 /*#define KONA_FB_DEBUG */
 /*#define PARTIAL_UPDATE_SUPPORT */
@@ -758,6 +764,9 @@ static struct kona_fb_platform_data * __init get_of_data(struct device_node *np)
 	u32 val;
 	const char *str;
 	struct kona_fb_platform_data *fb_data;
+#ifdef CONFIG_IOMMU_API
+	struct device_node *tmp_node;
+#endif
 
 	fb_data = kzalloc(sizeof(struct kona_fb_platform_data),
 		GFP_KERNEL);
@@ -831,6 +840,35 @@ static struct kona_fb_platform_data * __init get_of_data(struct device_node *np)
 	if (of_property_read_u32(np, "lp-bitrate", &val))
 		goto of_fail;
 	fb_data->lp_bps = val;
+
+#ifdef CONFIG_IOMMU_API
+	/* Get the iommu device and link fb dev to iommu dev */
+	tmp_node = of_parse_phandle(np, "iommu", 0);
+	if (tmp_node  == NULL) {
+		pr_err("%s get node(iommu) failed\n", __func__);
+		goto of_fail;
+	}
+	fb_data->pdev_iommu = of_find_device_by_node(tmp_node);
+	if (fb_data->pdev_iommu == NULL) {
+		pr_err("%s get iommu device failed\n", __func__);
+		goto of_fail;
+	}
+#endif /* CONFIG_IOMMU_API */
+
+#ifdef CONFIG_BCM_IOVMM
+	/* Get the iommu mapping and attach fb dev to mapping */
+	tmp_node = of_parse_phandle(np,	"iovmm", 0);
+	if (tmp_node  == NULL) {
+		pr_err("%s get node(iovmm) failed\n", __func__);
+		goto of_fail;
+	}
+	fb_data->pdev_iovmm = of_find_device_by_node(tmp_node);
+	if (fb_data->pdev_iovmm == NULL) {
+		pr_err("%s get iovmm device failed\n", __func__);
+		goto of_fail;
+	}
+#endif /* CONFIG_BCM_IOVMM */
+
 
 	return fb_data;
 
@@ -1053,6 +1091,13 @@ static int __ref kona_fb_probe(struct platform_device *pdev)
 	struct kona_fb_platform_data *fb_data;
 	dma_addr_t phys_fbbase, dma_addr;
 	uint64_t pixclock_64;
+#ifdef CONFIG_IOMMU_API
+#ifdef CONFIG_BCM_IOVMM
+	struct dma_iommu_mapping *mapping;
+#else
+	struct iommu_domain *domain;
+#endif /* CONFIG_BCM_IOVMM */
+#endif /* CONFIG_IOMMU_API */
 
 	konafb_info("start\n");
 	if (g_kona_fb && (g_kona_fb->is_display_found == 1)) {
@@ -1135,6 +1180,80 @@ static int __ref kona_fb_probe(struct platform_device *pdev)
 		goto err_fbmem_alloc_failed;
 	}
 	dma_addr = phys_fbbase;
+
+#ifdef CONFIG_IOMMU_API
+	pdev->dev.archdata.iommu = &fb_data->pdev_iommu->dev;
+	pr_info("%s iommu-device(%p)\n", "framebuffer",
+			pdev->dev.archdata.iommu);
+#ifdef CONFIG_BCM_IOVMM
+	{
+		int n_pages, i;
+		struct scatterlist *sg;
+		struct sg_table *table;
+
+		if (!fb_data->pdev_iovmm) {
+			ret = -EINVAL;
+			pr_err("%s: iovmm device not set\n", "framebuffer");
+			goto err_set_var_failed;
+		}
+		mapping = platform_get_drvdata(fb_data->pdev_iovmm);
+		arm_iommu_attach_device(&pdev->dev, mapping);
+		pr_info("%s iommu-mapping(%p)\n", "framebuffer", mapping);
+
+		table = kmalloc(sizeof(struct sg_table), GFP_KERNEL);
+		if (!table) {
+			ret = -ENOMEM;
+			pr_err("Unable to allocate fb sgtable\n");
+			goto err_set_var_failed;
+		}
+		n_pages = framesize >> PAGE_SHIFT;
+
+		i = sg_alloc_table(table, 1, GFP_KERNEL);
+		if (i) {
+			ret = -ENOMEM;
+			pr_err("sg_alloc_table failed\n");
+			kfree(table);
+			goto err_set_var_failed;
+		}
+		for_each_sg(table->sgl, sg, table->nents, i) {
+			struct page *page =
+				phys_to_page(phys_fbbase);
+			sg_set_page(sg, page, PAGE_SIZE * n_pages, 0);
+		}
+		dma_addr = arm_iommu_map_sgt(&pdev->dev, table, 0);
+		if (dma_addr == DMA_ERROR_CODE) {
+			ret = -EINVAL;
+			pr_err("%16s: Failed iommu map da(%#x) pa(%#x) size(%#x)\n",
+					"framebuffer", dma_addr, phys_fbbase,
+					framesize);
+			sg_free_table(table);
+			kfree(table);
+			goto err_set_var_failed;
+		}
+	}
+#else
+	{
+		/* 1-to-1 mapping */
+		domain = iommu_domain_alloc(&platform_bus_type);
+		if (iommu_attach_device(domain, &pdev->dev)) {
+			ret = -EINVAL;
+			pr_err("%s Attaching dev(%p) to iommu dev(%p) failed\n",
+					"framebuffer", &pdev->dev,
+					&fb_data->pdev_iommu->dev);
+			goto err_set_var_failed;
+		}
+		if (iommu_map(domain, dma_addr, phys_fbbase, framesize, 0)) {
+			ret = -EINVAL;
+			pr_err("%s iommu mapping domain(%p) da(%#x) to pa(%#x) size(%#08x) failed\n",
+					"framebuffer", domain, dma_addr,
+					phys_fbbase, framesize);
+			goto err_set_var_failed;
+		}
+	}
+#endif /* CONFIG_BCM_IOVMM */
+	pr_info("%16s: iommu map da(%#x) pa(%#x) size(%#x)\n",
+			"framebuffer", dma_addr, phys_fbbase, framesize);
+#endif /* CONFIG_IOMMU_API */
 
 	/* Now we should get correct width and height for this display .. */
 	width = fb->display_info->width;
