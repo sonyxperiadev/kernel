@@ -687,12 +687,6 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 	BUG_ON(pdev == NULL);
 
 	hw_cfg = (struct sdio_platform_cfg *)pdev->dev.platform_data;
-	if (!hw_cfg) {
-			dev_err(&pdev->dev, "hw_cfg is NULL\n");
-			ret = -ENOMEM;
-			goto err;
-	}
-
 	if (pdev->dev.of_node) {
 		const char *prop;
 		u32 val;
@@ -790,6 +784,12 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 
 		pdev->dev.platform_data = hw_cfg;
 	}
+	if (!hw_cfg) {
+			dev_err(&pdev->dev, "hw_cfg is NULL\n");
+			ret = -ENOMEM;
+			goto err;
+	}
+
 	if (hw_cfg->devtype >= SDIO_DEV_TYPE_MAX) {
 		dev_err(&pdev->dev, "unknown device type\n");
 		ret = -EFAULT;
