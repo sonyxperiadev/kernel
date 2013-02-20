@@ -46,43 +46,43 @@ __initdata struct DSI_COUNTER nt35510_timing[] = {
 	/* SPEC:  min = 0[ns] +  8[UI] */
 	/* SET:   min = 0[ns] + 12[UI]                               <= */
 	{"HS_CLK_PRE", DSI_C_TIME_HS, 0,
-		0, 0, 12, 0, 0, 0, 0, 0, 0x000001FF, 0, 0, 0},
+		0, 10, 8, 0, 0, 0, 0, 0, 0x000001FF, 0, 0, 0},
 	/* SPEC:  min = 38[ns] + 0[UI]   max= 95[ns] + 0[UI] */
-	/* SET:   min = 48[ns] + 0[UI]   max= 95[ns] + 0[UI]         <= */
+	/* SET:   min = 68[ns] + 0[UI]   max= 95[ns] + 0[UI]         <= */
 	{"HS_CLK_PREPARE", DSI_C_TIME_HS, DSI_C_HAS_MAX,
-		0, 48, 0, 0, 0, 95, 0, 0, 0x000001FF, 0, 0, 0},
+		0, 75, 0, 0, 0, 95, 0, 0, 0x000001FF, 0, 0, 0},
 	/* SPEC:  min = 262[ns] + 0[UI] */
-	/* SET:   min = 262[ns] + 0[UI]                              <= */
+	/* SET:   min = 314[ns] + 0[UI]                              <= */
 	{"HS_CLK_ZERO", DSI_C_TIME_HS, 0,
-		0, 262, 0, 0, 0, 0, 0, 0, 0x000001FF, 0, 0, 0},
+		0, 300, 0, 0, 0, 0, 0, 0, 0x000001FF, 0, 0, 0},
 	/* SPEC:  min =  60[ns] + 52[UI] */
-	/* SET:   min =  70[ns] + 52[UI]                             <= */
+	/* SET:   min =  72[ns] + 52[UI]                             <= */
 	{"HS_CLK_POST", DSI_C_TIME_HS, 0,
-		0, 70, 52, 0, 0, 0, 0, 0, 0x000001FF, 0, 0, 0},
+		0, 70, 128, 0, 0, 0, 0, 0, 0x000001FF, 0, 0, 0},
 	/* SPEC:  min =  60[ns] + 0[UI] */
-	/* SET:   min =  70[ns] + 0[UI]                              <= */
+	/* SET:   min =  72[ns] + 0[UI]                              <= */
 	{"HS_CLK_TRAIL", DSI_C_TIME_HS, 0,
-		0, 70, 0, 0, 0, 0, 0, 0, 0x000001FF, 0, 0, 0},
+		0, 300, 0, 0, 0, 0, 0, 0, 0x000001FF, 0, 0, 0},
 	/* SPEC:  min =  50[ns] + 0[UI] */
 	/* SET:   min =  60[ns] + 0[UI]                              <= */
 	{"HS_LPX", DSI_C_TIME_HS, 0,
-		0, 60, 0, 0, 0, 75, 0, 0, 0x000001FF, 0, 0, 0},
+		0, 70, 0, 0, 0, 75, 0, 0, 0x000001FF, 0, 0, 0},
 	/* SPEC:  min = 40[ns] + 4[UI]      max= 85[ns] + 6[UI] */
-	/* SET:   min = 50[ns] + 4[UI]      max= 85[ns] + 6[UI]      <= */
+	/* SET:   min = 60[ns] + 4[UI]      max= 85[ns] + 6[UI]      <= */
 	{"HS_PRE", DSI_C_TIME_HS, DSI_C_HAS_MAX,
-		0, 50, 4, 0, 0, 85, 6, 0, 0x000001FF, 0, 0, 0},
+		0, 30, 4, 0, 0, 85, 6, 0, 0x000001FF, 0, 0, 0},
 	/* SPEC:  min = 105[ns] + 6[UI] */
-	/* SET:   min = 105[ns] + 6[UI]                              <= */
+	/* SET:   min = 125[ns] + 6[UI]                              <= */
 	{"HS_ZERO", DSI_C_TIME_HS, 0,
-		0, 105, 6, 0, 0, 0, 0, 0, 0x000001FF, 0, 0, 0},
+		0, 280, 6, 0, 0, 0, 0, 0, 0x000001FF, 0, 0, 0},
 	/* SPEC:  min = max(0[ns]+32[UI],60[ns]+16[UI])  n=4 */
 	/* SET:   min = max(0[ns]+32[UI],60[ns]+16[UI])  n=4 */
 	{"HS_TRAIL", DSI_C_TIME_HS, DSI_C_MIN_MAX_OF_2,
-		0, 0, 32, 60, 16, 0, 0, 0, 0x000001FF, 0, 0, 0},
+		0, 60, 32, 100, 16, 0, 0, 0, 0x000001FF, 0, 0, 0},
 	/* SPEC:  min = 100[ns] + 0[UI] */
-	/* SET:   min = 110[ns] + 0[UI]                              <= */
+	/* SET:   min = 120[ns] + 0[UI]                              <= */
 	{"HS_EXIT", DSI_C_TIME_HS, 0,
-		0, 110, 0, 0, 0, 0, 0, 0, 0x000001FF, 0, 0, 0},
+		0, 300, 0, 0, 0, 0, 0, 0, 0x000001FF, 0, 0, 0},
 	/* min = 50[ns] + 0[UI] */
 	/* LP esc counters are speced in LP LPX units.
 	   LP_LPX is calculated by chal_dsi_set_timing
