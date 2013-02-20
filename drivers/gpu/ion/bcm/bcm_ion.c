@@ -336,13 +336,13 @@ static struct ion_platform_heap *bcm_ion_parse_dt(struct device *dev)
 		pr_err("ERROR: Property \"name\" not found\n");
 		goto err;
 	}
-	heap_data->name = kzalloc(strlen(name), GFP_KERNEL);
+	heap_data->name = kzalloc((strlen(name) + 1), GFP_KERNEL);
 	if (!heap_data->name) {
 		pr_err("ERROR: Couldn't allocate memory for ion name\n");
 		ret = -ENOMEM;
 		goto err;
 	}
-	strcpy((char *)heap_data->name, name);
+	strncpy((char *)heap_data->name, name, strlen(name) + 1);
 
 	ION_OF_READ(type);
 	ION_OF_READ(id);
