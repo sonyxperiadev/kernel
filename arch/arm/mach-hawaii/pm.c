@@ -285,13 +285,12 @@ int enter_suspend_state(struct kona_idle_state *state, u32 ctrl_params)
 #ifdef CONFIG_26MHZ_WFI
 	if (state->state == CSTATE_26MHZ_WFI) {
 		struct opp_info opp_info;
-
+		spin_lock(&pm_info.lock);
 		opp_info.ctrl_prms = CCU_POLICY_FREQ_REG_INIT;
 		opp_info.freq_id = PROC_CCU_FREQ_ID_XTAL;
-
-		spin_lock(&pm_info.lock);
 		state->num_cpu_in_state++;
 		BUG_ON(state->num_cpu_in_state > CONFIG_NR_CPUS);
+
 		if (state->num_cpu_in_state == CONFIG_NR_CPUS) {
 			pm_info.wfi_26mhz_cnt++;
 			freq_id = ccu_get_freq_policy(pm_info.proc_ccu,
@@ -309,13 +308,13 @@ int enter_suspend_state(struct kona_idle_state *state, u32 ctrl_params)
 #ifdef CONFIG_26MHZ_WFI
 	if (state->state == CSTATE_26MHZ_WFI) {
 		struct opp_info opp_info;
-		opp_info.ctrl_prms = CCU_POLICY_FREQ_REG_INIT;
-		opp_info.freq_id = freq_id;
-
 		spin_lock(&pm_info.lock);
+		opp_info.ctrl_prms = CCU_POLICY_FREQ_REG_INIT;
 		BUG_ON(state->num_cpu_in_state == 0);
+
 		if (state->num_cpu_in_state == CONFIG_NR_CPUS) {
 			BUG_ON(freq_id == 0xFFFF);
+			opp_info.freq_id = freq_id;
 			ccu_set_freq_policy(pm_info.proc_ccu,
 				CCU_POLICY(PM_DFS), &opp_info);
 			freq_id = 0xFFFF;
