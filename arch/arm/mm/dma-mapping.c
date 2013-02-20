@@ -169,7 +169,7 @@ static int __init consistent_init(void)
 	if (cpu_architecture() >= CPU_ARCH_ARMv6)
 		return 0;
 
-	consistent_pte = kmalloc(num_ptes * sizeof(pte_t), GFP_KERNEL);
+	consistent_pte = kmalloc(num_ptes * sizeof(pte_t *), GFP_KERNEL);
 	if (!consistent_pte) {
 		pr_err("%s: no memory\n", __func__);
 		return -ENOMEM;
