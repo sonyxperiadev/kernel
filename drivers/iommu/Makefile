@@ -10,3 +10,5 @@ obj-$(CONFIG_OMAP_IOVMM) += omap-iovmm.o
 obj-$(CONFIG_OMAP_IOMMU_DEBUG) += omap-iommu-debug.o
 obj-$(CONFIG_TEGRA_IOMMU_GART) += tegra-gart.o
 obj-$(CONFIG_TEGRA_IOMMU_SMMU) += tegra-smmu.o
+obj-$(CONFIG_BCM_IOMMU_M4U) += bcm_iommu_m4u.o
+obj-$(CONFIG_BCM_IOVMM) += bcm_iovmm.o
