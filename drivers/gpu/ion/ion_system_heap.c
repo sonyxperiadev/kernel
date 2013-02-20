@@ -25,6 +25,9 @@
 #include <linux/slab.h>
 #include <linux/vmalloc.h>
 #include "ion_priv.h"
+#ifdef CONFIG_BCM_IOVMM
+#include <plat/bcm_iommu.h>
+#endif
 
 static unsigned int high_order_gfp_flags = (GFP_HIGHUSER | __GFP_ZERO |
 					    __GFP_NOWARN | __GFP_NORETRY |
@@ -196,11 +199,23 @@ static int ion_system_heap_allocate(struct ion_heap *heap,
 	}
 
 #ifdef CONFIG_ION_BCM
+	buffer->dma_addr = ION_DMA_ADDR_FAIL;
+#ifdef CONFIG_BCM_IOVMM
+	buffer->dma_addr = arm_iommu_map_sgt(heap->device, table, align);
+	if (buffer->dma_addr == DMA_ERROR_CODE) {
+		pr_err("%16s: Failed iommu buffer(%p) map da(%#x)  size(%#x)\n",
+				heap->name, buffer, buffer->dma_addr,
+				buffer->size);
+		goto err1;
+	}
+	pr_debug("%16s: iommu map buffer(%p) da(%#x) size(%#x)\n",
+			heap->name, buffer, buffer->dma_addr, buffer->size);
+#else
 	pr_err("%16s: map dma not supported without iommu\n",
 			heap->name);
-	buffer->dma_addr = ION_DMA_ADDR_FAIL;
 	goto err1;
-#endif
+#endif /* CONFIG_BCM_IOVMM */
+#endif /* CONFIG_ION_BCM */
 	buffer->priv_virt = table;
 	return 0;
 err1:
@@ -231,8 +246,16 @@ void ion_system_heap_free(struct ion_buffer *buffer)
 		ion_heap_buffer_zero(buffer);
 
 #ifdef CONFIG_ION_BCM
+#ifdef CONFIG_BCM_IOVMM
+	arm_iommu_unmap(heap->device, buffer->dma_addr, buffer->size);
+	pr_debug("%16s: iommu unmap buffer(%p) da(%#x) size(%#x)\n",
+			heap->name, buffer, buffer->dma_addr, buffer->size);
+#else
+	pr_err("%16s: Unmap not supported in contig mode\n",
+			heap->name);
+#endif /* CONFIG_BCM_IOVMM */
 	buffer->dma_addr = ION_DMA_ADDR_FAIL;
-#endif
+#endif /* CONFIG_ION_BCM */
 	for_each_sg(table->sgl, sg, table->nents, i)
 		free_buffer_page(sys_heap, buffer, sg_page(sg),
 				get_order(sg_dma_len(sg)));

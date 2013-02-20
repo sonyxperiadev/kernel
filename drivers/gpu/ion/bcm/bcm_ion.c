@@ -33,6 +33,12 @@
 #include <asm/dma-contiguous.h>
 #include <linux/dma-mapping.h>
 #endif /* CONFIG_OF */
+#ifdef CONFIG_IOMMU_API
+#include <linux/iommu.h>
+#endif
+#ifdef CONFIG_BCM_IOVMM
+#include <plat/bcm_iommu.h>
+#endif
 
 struct bcm_ion_heap {
 	struct ion_heap *heap;
@@ -322,6 +328,14 @@ static struct ion_platform_heap *bcm_ion_parse_dt(struct device *dev)
 	struct device_node *node = dev->of_node;
 	struct bcm_ion_heap_reserve_data *heap_init_data;
 	struct ion_platform_heap *heap_data = NULL;
+#ifdef CONFIG_IOMMU_API
+	struct device_node *tmp_node;
+	struct platform_device *pdev_iommu;
+#endif
+#ifdef CONFIG_BCM_IOVMM
+	struct platform_device *pdev_iovmm;
+	struct dma_iommu_mapping *mapping;
+#endif /* CONFIG_BCM_IOVMM */
 	const char *name;
 	u32 val;
 	int ret = -EINVAL;
@@ -368,6 +382,46 @@ static struct ion_platform_heap *bcm_ion_parse_dt(struct device *dev)
 		ION_OF_READ_OPT(lmk_min_score_adj);
 		ION_OF_READ_OPT(lmk_min_free);
 	}
+#ifdef CONFIG_IOMMU_API
+	/* Get the iommu device and link ion dev to iommu dev */
+	tmp_node = of_parse_phandle(dev->of_node, "iommu", 0);
+	if (tmp_node  == NULL) {
+		pr_err("%16s: Get iommu node failed\n", heap_data->name);
+		goto of_err;
+	}
+	pdev_iommu = of_find_device_by_node(tmp_node);
+	if (pdev_iommu == NULL) {
+		pr_err("%16s: Get iommu device failed\n", heap_data->name);
+		goto of_err;
+	}
+	dev->archdata.iommu = &pdev_iommu->dev;
+	heap_data->device = dev;
+#endif /* CONFIG_IOMMU_API */
+
+#ifdef CONFIG_BCM_IOVMM
+	/* Get the iommu mapping and attach ion dev to mapping */
+	tmp_node = of_parse_phandle(dev->of_node, "iovmm", 0);
+	if (tmp_node  == NULL) {
+		pr_err("%16s: Get iovmm node failed\n",
+				heap_data->name);
+		goto of_err;
+	}
+	pdev_iovmm = of_find_device_by_node(tmp_node);
+	if (pdev_iovmm == NULL) {
+		pr_err("%16s: Get iovmm device failed\n",
+				heap_data->name);
+		goto of_err;
+	}
+	mapping = platform_get_drvdata(pdev_iovmm);
+	if (arm_iommu_attach_device(dev, mapping)) {
+		pr_err("%s Attaching dev(%p) to mapping(%p) failed\n",
+				heap_data->name, dev, mapping);
+		goto of_err;
+	}
+	pr_info("%16s: Linked to iommu-mapping(%p)\n", heap_data->name,
+			mapping);
+#endif /* CONFIG_BCM_IOVMM */
+
 	dev->platform_data = heap_data;
 	return heap_data;
 of_err:
@@ -388,6 +442,13 @@ static struct ion_platform_heap *bcm_ion_parse_pdata(struct device *dev)
 	struct ion_platform_data *pdata = dev->platform_data;
 	struct ion_platform_heap *heap_data;
 	int i;
+#ifdef CONFIG_IOMMU_API
+	struct platform_device *pdev_iommu;
+#endif
+#ifdef CONFIG_BCM_IOVMM
+	struct platform_device *pdev_iovmm;
+	struct dma_iommu_mapping *mapping;
+#endif
 
 	if (pdata->nr <= 0)
 		return NULL;
@@ -413,7 +474,48 @@ static struct ion_platform_heap *bcm_ion_parse_pdata(struct device *dev)
 			heap_data->base = heap_init_data->base;
 			heap_data->size = heap_init_data->size;
 		}
+#ifdef CONFIG_IOMMU_API
+		heap_data->device = dev;
+#endif
+#ifndef CONFIG_BCM_IOVMM
+		if (heap_data->type == ION_HEAP_TYPE_SYSTEM) {
+			pr_err("%16s: Not supported without iovmm\n",
+					heap_data->name);
+			heap_data->id = ION_INVALID_HEAP_ID;
+		}
+#endif
 	}
+#ifdef CONFIG_IOMMU_API
+	heap_data = &pdata->heaps[0];
+	pdev_iommu = pdata->pdev_iommu;
+	/* Get the iommu device and link ion dev to iommu dev */
+	if (pdev_iommu == NULL) {
+		pr_err("%16s: Get iommu device failed\n",
+				heap_data->name);
+		return ERR_PTR(-EINVAL);
+	}
+	dev->archdata.iommu = &pdev_iommu->dev;
+	heap_data->device = dev;
+#endif /* CONFIG_IOMMU_API */
+
+#ifdef CONFIG_BCM_IOVMM
+	/* Get the iommu mapping and attach ion dev to mapping */
+	pdev_iovmm = pdata->pdev_iovmm;
+	if (pdev_iovmm == NULL) {
+		pr_err("%16s: Get iovmm device failed\n",
+				heap_data->name);
+		return ERR_PTR(-EINVAL);
+	}
+	mapping = platform_get_drvdata(pdev_iovmm);
+	if (arm_iommu_attach_device(dev, mapping)) {
+		pr_err("%s Attaching dev(%p) to mapping(%p) failed\n",
+				heap_data->name, dev, mapping);
+		return ERR_PTR(-EINVAL);
+	}
+	pr_info("%16s: Linked to iommu-mapping(%p)\n", heap_data->name,
+			mapping);
+#endif /* CONFIG_BCM_IOVMM */
+
 	return pdata->heaps;
 }
 
@@ -489,6 +591,18 @@ static int bcm_ion_probe(struct platform_device *pdev)
 			continue;
 		}
 		ion_device_add_heap(idev, heap);
+#ifdef CONFIG_IOMMU_API
+#ifndef CONFIG_BCM_IOVMM
+		heap->domain = iommu_domain_alloc(&platform_bus_type);
+		if (iommu_attach_device(heap->domain, dev)) {
+			pr_err("%s Attaching dev(%p) to iommu failed\n",
+					heap_data->name, dev);
+			bcm_ion_free_data(dev);
+			ion_heap_destroy(heap);
+			continue;
+		}
+#endif /* CONFIG_BCM_IOVMM */
+#endif /* CONFIG_IOMMU_API */
 
 		/* Add to heap list */
 		bcm_heap = kzalloc(sizeof(struct bcm_ion_heap), GFP_KERNEL);

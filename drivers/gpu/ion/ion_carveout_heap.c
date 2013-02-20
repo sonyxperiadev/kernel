@@ -33,6 +33,12 @@
 #include <linux/debugfs.h>
 #endif
 #include "ion_priv.h"
+#ifdef CONFIG_IOMMU_API
+#include <linux/iommu.h>
+#endif
+#ifdef CONFIG_BCM_IOVMM
+#include <plat/bcm_iommu.h>
+#endif
 
 #include <asm/mach/map.h>
 
@@ -120,7 +126,30 @@ struct sg_table *ion_carveout_heap_map_dma(struct ion_heap *heap,
 		    0);
 #ifdef CONFIG_ION_BCM
 	buffer->dma_addr = buffer->priv_phys;
-#endif
+#ifdef CONFIG_IOMMU_API
+#ifdef CONFIG_BCM_IOVMM
+	buffer->dma_addr = arm_iommu_map_sgt(heap->device, table,
+			buffer->align);
+	if (buffer->dma_addr == DMA_ERROR_CODE) {
+		pr_err("%16s: Failed iommu map buffer(%p) da(%#x) pa(%#lx) size(%#x)\n",
+				heap->name, buffer, buffer->dma_addr,
+				buffer->priv_phys, buffer->size);
+		return ERR_PTR(-ENOMEM);
+	}
+#else
+	if (iommu_map(heap->domain, buffer->dma_addr, buffer->priv_phys,
+				buffer->size, 0)) {
+		pr_err("%16s: Failed iommu map buffer(%p) da(%#x) pa(%#lx) size(%#x)\n",
+				heap->name, buffer, buffer->dma_addr,
+				buffer->priv_phys, buffer->size);
+		return ERR_PTR(-ENOMEM);
+	}
+#endif /* CONFIG_BCM_IOVMM */
+	pr_debug("%16s: iommu map buffer(%p) da(%#x) pa(%#lx) size(%#x)\n",
+			heap->name, buffer, buffer->dma_addr, buffer->priv_phys,
+			buffer->size);
+#endif /* CONFIG_IOMMU_API */
+#endif /* CONFIG_ION_BCM */
 	return table;
 }
 
@@ -128,8 +157,18 @@ void ion_carveout_heap_unmap_dma(struct ion_heap *heap,
 				 struct ion_buffer *buffer)
 {
 #ifdef CONFIG_ION_BCM
+#ifdef CONFIG_IOMMU_API
+#ifdef CONFIG_BCM_IOVMM
+	arm_iommu_unmap(heap->device, buffer->dma_addr, buffer->size);
+#else
+	iommu_unmap(heap->domain, buffer->dma_addr, buffer->size);
+#endif /* CONFIG_BCM_IOVMM */
+	pr_debug("%16s: iommu unmap buffer(%p) da(%#x) pa(%#lx) size(%#x)\n",
+			heap->name, buffer, buffer->dma_addr, buffer->priv_phys,
+			buffer->size);
+#endif /* CONFIG_IOMMU_API */
 	buffer->dma_addr = ION_DMA_ADDR_FAIL;
-#endif
+#endif /* CONFIG_ION_BCM */
 	sg_free_table(buffer->sg_table);
 	kfree(buffer->sg_table);
 }

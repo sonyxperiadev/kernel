@@ -156,6 +156,12 @@ struct ion_heap {
 	int (*lmk_debugfs_add) (struct ion_heap *heap,
 			struct dentry *debug_root);
 #endif
+#ifdef CONFIG_IOMMU_API
+	struct device *device;
+#ifndef CONFIG_BCM_IOVMM
+	struct iommu_domain *domain;
+#endif
+#endif /* CONFIG_IOMMU_API */
 };
 
 /**

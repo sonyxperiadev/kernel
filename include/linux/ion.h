@@ -107,6 +107,9 @@ struct ion_platform_heap {
 	int lmk_min_score_adj;
 	int lmk_min_free;
 #endif
+#ifdef CONFIG_IOMMU_API
+	struct device *device;
+#endif
 };
 
 /**
@@ -118,6 +121,12 @@ struct ion_platform_heap {
  */
 struct ion_platform_data {
 	int nr;
+#ifdef CONFIG_IOMMU_API
+	struct platform_device *pdev_iommu;
+#endif
+#ifdef CONFIG_BCM_IOVMM
+	struct platform_device *pdev_iovmm;
+#endif
 	struct ion_platform_heap heaps[];
 };
 
