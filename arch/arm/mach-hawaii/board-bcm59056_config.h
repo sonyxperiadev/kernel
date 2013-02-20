@@ -131,6 +131,11 @@ static struct bcmpmu_rw_data register_init_data[] = {
 	{.map = 0, .addr = 0x75, .val = 0xAA, .mask = 0xff},
 
 /**/
+
+        {.map = 1, .addr = 0x11D, .val = 0x01, .mask = 0xff},
+        {.map = 1, .addr = 0x15D, .val = 0x11, .mask = 0xff},
+        {.map = 1, .addr = 0X15E, .val = 0x9C, .mask = 0xff},
+
 	{.map = 1, .addr = 0xBF, .val = 0x64, .mask = 0xFF},
 	/* PMU_RTC_RTC_C2C1_XOTRIM */
 	{.map = 1, .addr = 0xEF, .val = 0x44, .mask = 0xFF},
@@ -721,5 +726,9 @@ struct bcmpmu_regulator_init_data bcm59056_regulators[BCMPMU_REGULATOR_MAX] = {
 	},
 	[BCMPMU_REGULATOR_GPLDO6] = {
 		BCMPMU_REGULATOR_GPLDO6, &bcm59056_gpldo6_data, 0x00, 0
+	},
+
+	[BCMPMU_REGULATOR_TCXLDO] = {
+                BCMPMU_REGULATOR_TCXLDO, &bcm59xxx_tcxldo_data, 0x00, 0
 	},
 };
