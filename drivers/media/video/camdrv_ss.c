@@ -22,6 +22,7 @@
 #include "camdrv_ss.h"
 #include <linux/kthread.h>
 #include <asm/atomic.h>
+#include <linux/module.h>
 
 /* #define CONFIG_LOAD_FILE */
 
@@ -3491,10 +3492,10 @@ static void camdrv_ss_init_parameters(struct v4l2_subdev *sd)
 	state->currentWB = WHITE_BALANCE_AUTO;
 	state->check_dataline = CHK_DATALINE_OFF;
 	state->bTouchFocus = false;
-	state->touch_area.leftTopX = 0;
-	state->touch_area.leftTopY = 0;
-	state->touch_area.rightBottomX = 0;
-	state->touch_area.rightBottomY = 0;
+	state->touch_area.x = 0;
+	state->touch_area.y = 0;
+	state->touch_area.w = 0;
+	state->touch_area.h = 0;
 	state->touch_area.weight = 0;
 
 }
@@ -4311,14 +4312,14 @@ static int camdrv_ss_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 
 		ret = copy_from_user(&touch_area, (v4l2_touch_area *)ctrl->value, sizeof(v4l2_touch_area));
 
-		state->touch_area.leftTopX = touch_area.leftTopX;
-		state->touch_area.leftTopY = touch_area.leftTopY;
-		state->touch_area.rightBottomX = touch_area.rightBottomX;
-		state->touch_area.rightBottomY = touch_area.rightBottomY;
+		state->touch_area.x = touch_area.x;
+		state->touch_area.y = touch_area.y;
+		state->touch_area.w = touch_area.w;
+		state->touch_area.h = touch_area.h;
 		state->touch_area.weight = touch_area.weight;
 
-		if (touch_area.leftTopX == 0 && touch_area.leftTopY == 0 && touch_area.rightBottomX == 1 &&
-			touch_area.rightBottomY == 1 && touch_area.weight == 1)
+		if (touch_area.x == 0 && touch_area.y == 0 && touch_area.w == 1 &&
+			touch_area.h == 1 && touch_area.weight == 1)
 			state->bTouchFocus = false;
 		else {
 			if (sensor.set_touch_focus_area == NULL) {
@@ -4336,10 +4337,10 @@ static int camdrv_ss_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			"%s : V4L2_CID_CAMERA_TOUCH_AF_AREA  IsTouchFocusAreaValid =%d "
 			"x =%d, y =%d ,w = %d, h =%d, weight=%d\n",
 			__func__, state->bTouchFocus,
-			state->touch_area.leftTopX,
-			state->touch_area.leftTopY,
-			state->touch_area.rightBottomX,
-			state->touch_area.rightBottomY,
+			state->touch_area.x,
+			state->touch_area.y,
+			state->touch_area.w,
+			state->touch_area.h,
 			state->touch_area.weight);
 		break;
 	}
