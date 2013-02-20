@@ -298,7 +298,7 @@ int mpu_memory_write(struct inv_mpu_iio_s *st, u8 mpu_addr, u16 mem_addr,
 		char *write = 0;
 		pr_debug("%s WM%02X%02X%02X%s%s - %d\n", st->hw->name,
 			 mpu_addr, bank[1], addr[1],
-			 wr_pr_debug_begin(data, len, write),
+			 (write = wr_pr_debug_begin(data, len, write)),
 			 wr_pr_debug_end(write),
 			 len);
 	}
@@ -370,7 +370,7 @@ int mpu_memory_read(struct inv_mpu_iio_s *st, u8 mpu_addr, u16 mem_addr,
 		char *read = 0;
 		pr_debug("%s RM%02X%02X%02X%02X - %s%s\n", st->hw->name,
 			 mpu_addr, bank[1], addr[1], len,
-			 wr_pr_debug_begin(data, len, read),
+			 (read = wr_pr_debug_begin(data, len, read)),
 			 wr_pr_debug_end(read));
 	}
 #endif
