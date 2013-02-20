@@ -140,7 +140,7 @@ int inv_i2c_read_base(struct inv_mpu_iio_s *st, u16 i2c_addr,
 		char *read = 0;
 		pr_debug("%s RD%02X%02X%02X -> %s%s\n", st->hw->name,
 			 i2c_addr, reg, length,
-			 wr_pr_debug_begin(data, length, read),
+			 (read = wr_pr_debug_begin(data, length, read)),
 			 wr_pr_debug_end(read));
 	}
 #endif
