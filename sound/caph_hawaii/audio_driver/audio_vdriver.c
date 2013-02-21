@@ -846,9 +846,10 @@ void AUDDRV_EnableDSPInput(AUDIO_SOURCE_Enum_t source,
 /* DSPCMD_TYPE_AUDIO_CONNECT should be called after DSPCMD_TYPE_AUDIO_ENABLE */
 	audio_control_dsp(AUDDRV_DSPCMD_AUDIO_ENABLE, 1, flag16k, 0, 0, 0);
 	audio_control_dsp(AUDDRV_DSPCMD_AUDIO_CONNECT_UL, 1, flag16k, 0, 0, 0);
-	if (echo_ref_mic)
-		audio_control_dsp(AUDDRV_DSPCMD_EC_NS_ON, TRUE, TRUE, 0, 0, 0);
-
+	audio_control_dsp(AUDDRV_DSPCMD_EC_NS_ON, TRUE, TRUE, 0, 0, 0);
+	audio_control_dsp(AUDDRV_DSPCMD_DUAL_MIC_ON, TRUE, 0, 0, 0, 0);
+	audio_control_dsp(AUDDRV_DSPCMD_AUDIO_TURN_UL_COMPANDEROnOff, TRUE, 0,
+			0, 0, 0);
 /*
 When voice call ends, DSPCMD_TYPE_MUTE_DSP_UL is being sent to DSP and
 this command mutes UL record gain
@@ -884,6 +885,8 @@ void AUDDRV_DisableDSPInput(int stop)
 	audio_control_dsp(AUDDRV_DSPCMD_EC_NS_ON, FALSE, FALSE, 0, 0, 0);
 	audio_control_dsp(AUDDRV_DSPCMD_AUDIO_CONNECT_UL, FALSE, 0, 0, 0, 0);
 	audio_control_dsp(AUDDRV_DSPCMD_DUAL_MIC_ON, FALSE, 0, 0, 0, 0);
+	audio_control_dsp(AUDDRV_DSPCMD_AUDIO_TURN_UL_COMPANDEROnOff,
+				  FALSE, 0, 0, 0, 0);
 	dma_mic_spk =
 		(UInt16) (DSP_AADMAC_PRI_MIC_EN) |
 		(UInt16) (DSP_AADMAC_SEC_MIC_EN) |
