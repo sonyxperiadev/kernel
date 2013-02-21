@@ -782,7 +782,8 @@ void *mm_fmwk_register(const char *name, const char *clk_name,
 	mutex_lock(&mm_fmwk_mutex);
 	if (single_wq == NULL) {
 		init_waitqueue_head(&mm_queue);
-		single_wq = create_workqueue(single_wq_name);
+		single_wq = alloc_workqueue(single_wq_name,
+				WQ_NON_REENTRANT, 1);
 		if (single_wq == NULL) {
 			mutex_unlock(&mm_fmwk_mutex);
 			goto err_register;
