@@ -70,7 +70,11 @@ static int USB_MDIO[6] = {
 	0x0018,			/* MDIO Register 0 initial value 0x0000 */
 	0x0080,			/* MDIO Register 1 initial value 0x0000 */
 	0x0000,			/* MDIO Register 2 initial value 0x0000 */
+#if defined(CONFIG_MACH_HAWAII_GARNET)
+	0x0400,			/* MDIO Register 3 initial value 0x0400 */
+#else
 	0x0000,			/* MDIO Register 3 initial value 0x0000 */
+#endif
 	0x0000,			/* MDIO Register 4 initial value 0x0000 */
 	0x0000			/* MDIO Register 5 initial value 0x0000 */
 };
