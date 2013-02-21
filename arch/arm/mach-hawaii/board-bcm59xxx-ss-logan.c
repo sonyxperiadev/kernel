@@ -39,7 +39,7 @@
 #include <linux/of.h>
 #include <linux/of_fdt.h>
 #ifdef CONFIG_KONA_AVS
-#include <plat/kona_avs.h>
+#include <mach/avs.h>
 #endif
 #include "pm_params.h"
 
@@ -47,6 +47,8 @@
 #define PMU_DEVICE_I2C_ADDR1	0x0c
 #define PMU_DEVICE_INT_GPIO	29
 #define PMU_DEVICE_I2C_BUSNO 4
+
+#define PMU_SR_VOLTAGE_MASK	0x3F
 
 static int bcmpmu_init_platform_hw(struct bcmpmu59xxx *bcmpmu);
 static int bcmpmu_exit_platform_hw(struct bcmpmu59xxx *bcmpmu);
@@ -1355,19 +1357,45 @@ void bcmpmu_set_pullup_reg(void)
 
 static int bcmpmu_init_platform_hw(struct bcmpmu59xxx *bcmpmu)
 {
-	u32 silicon_type;
-	int ret_vlt;
+#ifdef CONFIG_KONA_AVS
+	int msr_ret_vlt;
+	u8 sdsr_vlt = 0;
+	int adj_vlt;
+	u8 sdsr_ret_reg = 0;
+	int sdsr_vret;
 
 	pr_info("REG: pmu_init_platform_hw called\n");
 	BUG_ON(!bcmpmu);
-#ifdef CONFIG_KONA_AVS
-	silicon_type = kona_avs_get_silicon_type();
-	ret_vlt = get_retention_vlt_id(AVS_VDDVAR, silicon_type);
-	if (ret_vlt < 0) {
-		pr_err("%s: Wrong voltage value\n", __func__);
+	/* ADJUST MSR RETN VOLTAGE */
+	msr_ret_vlt = get_msr_retn_vlt_id();
+	if (msr_ret_vlt < 0) {
+		pr_err("%s: Wrong retn voltage value\n", __func__);
 		return -EINVAL;
 	}
-	bcmpmu->write_dev(bcmpmu, PMU_REG_MMSRVOUT2, ret_vlt);
+	pr_info("MSR Retn Voltage: 0x%x", msr_ret_vlt);
+	bcmpmu->write_dev(bcmpmu, PMU_REG_MMSRVOUT2, (u8)msr_ret_vlt);
+	/* ADJUST SDSR1 ACTIVE VOLTAGE */
+	bcmpmu->read_dev(bcmpmu, PMU_REG_SDSR1VOUT1, &sdsr_vlt);
+	adj_vlt = adjust_sdsr_voltage(sdsr_vlt & PMU_SR_VOLTAGE_MASK);
+	if (adj_vlt < 0) {
+		pr_err("%s: Wrong Voltage val for SDSR active\n", __func__);
+		return -EINVAL;
+	}
+	sdsr_vlt &= ~PMU_SR_VOLTAGE_MASK;
+	sdsr_vlt |= adj_vlt;
+	pr_info("SDSR1 Active Voltage: 0x%x", sdsr_vlt);
+	bcmpmu->write_dev(bcmpmu, PMU_REG_SDSR1VOUT1, sdsr_vlt);
+	/* ADJUST SDSR1 RETN VOLTAGE */
+	bcmpmu->read_dev(bcmpmu, PMU_REG_SDSR1VOUT2, &sdsr_ret_reg);
+	sdsr_vret = get_sdsr_retn_vlt_id(sdsr_ret_reg & PMU_SR_VOLTAGE_MASK);
+	if (sdsr_vret < 0) {
+		pr_err("%s: Wrong Voltage val for SDSR retn\n", __func__);
+		return -EINVAL;
+	}
+	sdsr_ret_reg &= ~PMU_SR_VOLTAGE_MASK;
+	sdsr_ret_reg |= sdsr_vret;
+	pr_info("SDSR1 Retn voltage: 0x%x", sdsr_ret_reg);
+	bcmpmu->write_dev(bcmpmu, PMU_REG_SDSR1VOUT2, sdsr_ret_reg);
 #endif
 	return 0;
 }

@@ -255,6 +255,13 @@ config	PI_MGR_DISABLE_POLICY_CHANGE
 	  Debug flag to diable PI policy change by default. All PI
 	  policy will be set to wakeup policy 7
 
+config KONA_AVS
+       bool "Enable AVS driver"
+       help
+	Say Y if you want to enable AVS driver
+	AVS driver helps pick the correct voltage table
+	by identifying the silicon type thereby saving
+	power by giving only reqd voltage & not excess.
 
 config	CDEBUGGER
 	depends on ARCH_HAWAII

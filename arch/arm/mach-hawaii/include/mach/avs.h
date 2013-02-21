@@ -1,7 +1,7 @@
 /*******************************************************************************
 * Copyright 2010,2011 Broadcom Corporation.  All rights reserved.
 *
-*	@file	kona_avs.h
+*	@file	avs.h
 *
 * Unless you and Broadcom execute a separate written software license agreement
 * governing use of this software, this software is licensed to you under the
@@ -13,8 +13,8 @@
 * other than the GPL, without Broadcom's express prior written consent.
 *******************************************************************************/
 
-#ifndef __KONA_AVS___
-#define __KONA_AVS___
+#ifndef ___AVS___
+#define ___AVS___
 
 enum {
 	SILICON_TYPE_SLOW,
@@ -42,31 +42,33 @@ enum {
 	AVS_VDDFIX_ADJ_EN = 1 << 5,
 };
 
-enum {
-	AVS_VDDVAR_A9 = 1,
-	AVS_VDDVAR = 1 << 1,
-	AVS_VDDFIX = 1 << 2,
-};
-
-struct kona_ate_lut_entry {
+struct avs_ate_lut_entry {
 	int freq;
 	int silicon_type;
 };
 
-struct kona_avs_pdata {
+struct avs_pdata {
 	u32 flags;
-	u32 avs_addr_row4, avs_addr_row5, avs_addr_row8;
+	u32 avs_addr_row3, avs_addr_row5;
 	int *vddfix_adj_lut;
-	int **vddvar_adj_lut;
+	u32 **vddvar_adj_lut;
 	void (*silicon_type_notify) (u32 silicon_type, u32 ate_freq);
-	u32 *silicon_type_lut;
-	struct kona_ate_lut_entry *ate_lut;
+	struct avs_ate_lut_entry *ate_lut;
 	u32 *irdrop_lut;
 	u32 irdrop_vreq;
+	u32 *vddvar_vret_lut;
+	u32 *vddfix_vret_lut;
+	u32 *vddvar_vmin_lut;
+	u32 *vddvar_a9_vmin_lut;
 };
 
-u32 kona_avs_get_silicon_type(void);
-u32 kona_avs_get_ate_freq(void);
-u32 kona_avs_get_vddvar_adj(u32 silicon_type, u32 freq);
-int kona_avs_get_vddfix_adj(void);
+u32 avs_get_vddvar_ret_voltage(void);
+u32 avs_get_vddfix_ret_voltage(void);
+u32 avs_get_vddvar_min_voltage(void);
+u32 avs_get_vddvar_a9_min_voltage(void);
+
+u32 avs_get_silicon_type(void);
+u32 avs_get_ate_freq(void);
+u32 avs_get_vddvar_adj(u32 silicon_type, u32 freq);
+int avs_get_vddfix_adj(void);
 #endif	  /*__KONA_AVS___*/

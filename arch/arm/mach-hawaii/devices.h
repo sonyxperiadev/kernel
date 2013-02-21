@@ -4,14 +4,6 @@
 void __init hawaii_add_common_devices(void);
 void __init hawaii_reserve(void);
 
-#ifdef CONFIG_KONA_AVS
-extern u32 svt_pmos_bin[3 + 1];
-extern u32 svt_nmos_bin[3 + 1];
-extern u32 lvt_pmos_bin[3 + 1];
-extern u32 lvt_nmos_bin[3 + 1];
-extern u32 svt_silicon_type_lut[3 * 3];
-extern u32 lvt_silicon_type_lut[3 * 3];
-#endif
 extern struct platform_device hawaii_serial_device;
 extern struct platform_device hawaii_i2c_adap_devices[];
 extern struct platform_device pmu_device;
@@ -40,7 +32,7 @@ extern struct platform_device hawaii_otg_platform_device;
 extern struct platform_device hawaii_usb_phy_platform_device;
 #endif
 #ifdef CONFIG_KONA_AVS
-extern struct platform_device kona_avs_device;
+extern struct platform_device avs_device;
 #endif
 #ifdef CONFIG_KONA_MEMC
 extern struct platform_device kona_memc_device;

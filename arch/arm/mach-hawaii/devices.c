@@ -52,7 +52,7 @@
 #include <mach/rdb/brcm_rdb_uartb.h>
 #include <plat/chal/chal_trace.h>
 #ifdef CONFIG_KONA_AVS
-#include <plat/kona_avs.h>
+#include <mach/avs.h>
 #endif
 #include "pm_params.h"
 #include <trace/stm.h>
@@ -778,13 +778,46 @@ void avs_silicon_type_notify(u32 silicon_type, u32 ate_freq)
 	pm_init_pmu_sr_vlt_map_table(silicon_type, freq_id);
 }
 
-u32 silicon_type_lut[] = {
-	SILICON_TYPE_SLOW, SILICON_TYPE_TYP_SLOW,
-	SILICON_TYPE_TYPICAL, SILICON_TYPE_TYP_FAST,
-	SILICON_TYPE_FAST,
+u32 vddvar_vret_lut[] = {
+	800, 810, 820, 830,
+	840, 850, 860, 870,
+	880, 890, 900, 910,
+	920, 930, 940, 950,
 };
 
-static struct kona_ate_lut_entry ate_lut[] = {
+u32 vddfix_vret_lut[] = {
+	860, 870, 880, 890,
+	900, 910, 920, 930,
+	940, 950, 960, 970,
+	980, 990, 1000, 1010,
+};
+
+u32 vddvar_vmin_lut[] = {
+	860, 870, 880, 890,
+	900, 910, 920, 930,
+	940, 950, 960, 970,
+	980, 990, 1000, 1010,
+};
+
+u32 vddvar_a9_vmin_lut[] = {
+	860, 870, 880, 890,
+	900, 910, 920, 930,
+	940, 950, 960, 970,
+	980, 990, 1000, 1010,
+};
+
+int vddfix_vlt_adj_lut[] = {
+	0, 10, 20, 30,
+	40, 50, 60, 70,
+	80, 90, 100, 110,
+	120, 130, 140, 150,
+	0, -10, -20, -30,
+	-40, -50, -60, -70,
+	-80, -90, -100, -110,
+	-120, -130, -140, -150
+};
+
+static struct avs_ate_lut_entry ate_lut[] = {
 	{A9_FREQ_UNKNOWN, SILICON_TYPE_SLOW}, /* 0 - Default*/
 	{A9_FREQ_1000_MHZ, SILICON_TYPE_FAST},   /* 1 */
 	{A9_FREQ_1000_MHZ, SILICON_TYPE_TYP_FAST},/* 2 */
@@ -805,11 +838,10 @@ static struct kona_ate_lut_entry ate_lut[] = {
 
 static u32 irdrop_lut[] = {470, 489, 519, 550, UINT_MAX};
 
-static int vddvar_adj_val_1g[] = {40, 40, 30, 30, 30};
-static int vddvar_adj_val_1200m[] = {50, 50, 40, 40, 30};
+static u32 vddvar_adj_val_1g[] = {40, 40, 30, 30, 30};
+static u32 vddvar_adj_val_1200m[] = {50, 50, 40, 40, 30};
 
-static int *vddvar_adj_val[] = {vddvar_adj_val_1g,
-				vddvar_adj_val_1200m};
+static u32 *vddvar_adj_lut[] = {vddvar_adj_val_1g, vddvar_adj_val_1200m};
 
 int vddfix_adj_lut[] = {
 	0, 10, 20, 30,
@@ -822,25 +854,28 @@ int vddfix_adj_lut[] = {
 	-120, -130, -140, -150
 };
 
-static struct kona_avs_pdata avs_pdata = {
-	.flags = AVS_VDDVAR_A9_EN | AVS_VDDVAR_ADJ_EN | AVS_IGNORE_CRC_ERR,
+static struct avs_pdata avs_pdata = {
+	.flags = AVS_VDDVAR_A9_EN | AVS_VDDVAR_ADJ_EN | AVS_IGNORE_CRC_ERR |
+		AVS_VDDFIX_EN | AVS_VDDVAR_EN | AVS_VDDFIX_ADJ_EN,
 	/* Mem addr where perf mon and SDSR OPP values are copied by ABI */
-	.avs_addr_row4 = 0x34051FB0,
+	.avs_addr_row3 = 0x34051FB0,
 	/* Mem addr where ATE values is copied by ABI */
 	.avs_addr_row5 = 0x34051FA0,
 	/* Mem addr where MSR OPP values are copied by ABI */
-	.avs_addr_row8 = 0x34051FA8,
-	.silicon_type_lut = silicon_type_lut,
 	.ate_lut = ate_lut,
 	.irdrop_lut = irdrop_lut,
 	.irdrop_vreq = 1200000,
+	.vddvar_vret_lut = vddvar_vret_lut,
+	.vddfix_vret_lut = vddfix_vret_lut,
+	.vddvar_vmin_lut = vddvar_vmin_lut,
+	.vddvar_a9_vmin_lut = vddvar_a9_vmin_lut,
 	.silicon_type_notify = avs_silicon_type_notify,
-	.vddvar_adj_lut = vddvar_adj_val,
+	.vddvar_adj_lut = vddvar_adj_lut,
 	.vddfix_adj_lut = vddfix_adj_lut,
 };
 
-struct platform_device kona_avs_device = {
-	.name = "kona-avs",
+struct platform_device avs_device = {
+	.name = "avs",
 	.id = -1,
 	.dev = {
 		.platform_data = &avs_pdata,

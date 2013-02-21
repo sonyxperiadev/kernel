@@ -32,7 +32,7 @@
 #include <linux/module.h>
 #include "pm_params.h"
 #include "sequencer_ucode.h"
-#include <plat/kona_avs.h>
+#include <mach/avs.h>
 
 /*sysfs interface to read PMU vlt table*/
 static u32 sr_vlt_table[SR_VLT_LUT_SIZE];
@@ -210,8 +210,8 @@ int mach_config_a9_pll(int turbo_val, int update_volt_tbl)
 	if (update_volt_tbl) {
 #ifdef CONFIG_KONA_AVS
 		u32 ate_freq;
-		silicon_type = kona_avs_get_silicon_type();
-		ate_freq = kona_avs_get_ate_freq();
+		silicon_type = avs_get_silicon_type();
+		ate_freq = avs_get_ate_freq();
 		if (ate_freq == A9_FREQ_UNKNOWN ||
 				ate_freq >= freq_id)
 			pm_init_pmu_sr_vlt_map_table(silicon_type,

@@ -217,7 +217,9 @@ extern const u8 *get_sr_vlt_table(u32 silicon_type, int freq_id);
 extern bool is_pm_erratum(u32 erratum);
 extern int __init pm_params_init(void);
 extern int pm_init_pmu_sr_vlt_map_table(u32 silicon_type, int freq_id);
-extern int get_retention_vlt_id(u32 vlt_domain, u32 silicon_type);
+extern int get_msr_retn_vlt_id(void);
+extern int get_sdsr_retn_vlt_id(u32 reg_val);
+extern int adjust_sdsr_voltage(u32 sdsr_volt);
 
 #define CONFIG_A9_PLL_2GHZ	1
 #define CONFIG_A9_PLL_2P4GHZ	2

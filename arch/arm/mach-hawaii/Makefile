@@ -31,6 +31,8 @@ obj-$(CONFIG_HAWAII_PTM) += coresight.o
 obj-$(CONFIG_KONA_PROFILER) += profiler.o
 obj-$(CONFIG_KONA_AXITRACE) += hawaii_axitrace.o
 
+obj-$(CONFIG_KONA_AVS) += avs.o
+
 CFLAGS_sec_api.o :=$(call as-instr,.arch_extension sec,-DREQUIRES_SEC=1)
 
 obj-$(CONFIG_ARCH_HAWAII) += hawaii_bmdm_wd_monitor.o

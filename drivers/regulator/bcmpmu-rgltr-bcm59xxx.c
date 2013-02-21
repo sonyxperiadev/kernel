@@ -375,6 +375,14 @@ int bcmpmu_rgltr_get_volt_id(u32 voltage)
 	return -EINVAL;
 }
 
+int bcmpmu_rgltr_get_volt_val(u32 id)
+{
+	if (id >= ARRAY_SIZE(bcmpmu_csr_v_table))
+		return -EINVAL;
+	return bcmpmu_csr_v_table[id];
+}
+
+
 struct regulator_desc rdesc[BCMPMU_REGULATOR_MAX] = {
 	[BCMPMU_REGULATOR_RFLDO] = {
 		.name = "rfldo",

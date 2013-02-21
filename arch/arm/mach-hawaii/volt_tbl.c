@@ -16,7 +16,7 @@
  *****************************************************************************/
 
 #include <linux/module.h>
-#include <plat/kona_avs.h>
+#include <mach/avs.h>
 #include "pm_params.h"
 #include <linux/mfd/bcmpmu59xxx.h>
 
@@ -26,8 +26,7 @@
 #include <linux/seq_file.h>
 #endif
 
-
-#define REV_ID	"1.0"
+#define REV_ID	"1.2"
 
 #define ARRAY_LIST(...) {__VA_ARGS__}
 
@@ -39,117 +38,117 @@ u8 vlt_id_table[SR_VLT_LUT_SIZE];
 
 #define MSR_RETN_VAL			800
 
-#define CSR_XTAL_1G_SS			900
-#define CSR_ECO_1G_SS			920
-#define CSR_NM_1G_SS			950
-#define CSR_TURBO_1G_SS			1020
-#define CSR_SUPER_TURBO_1G_SS	1190
+#define CSR_XTAL_1G_SS			930
+#define CSR_ECO_1G_SS			950
+#define CSR_NM_1G_SS			980
+#define CSR_TURBO_1G_SS			1050
+#define CSR_SUPER_TURBO_1G_SS		1220
 
-#define CSR_XTAL_1G_TS			890
-#define CSR_ECO_1G_TS			910
-#define CSR_NM_1G_TS			940
-#define CSR_TURBO_1G_TS			1000
-#define CSR_SUPER_TURBO_1G_TS	1170
+#define CSR_XTAL_1G_TS			920
+#define CSR_ECO_1G_TS			940
+#define CSR_NM_1G_TS			970
+#define CSR_TURBO_1G_TS			1030
+#define CSR_SUPER_TURBO_1G_TS		1190
 
-#define CSR_XTAL_1G_TT			880
-#define CSR_ECO_1G_TT			900
-#define CSR_NM_1G_TT			920
-#define CSR_TURBO_1G_TT			980
-#define CSR_SUPER_TURBO_1G_TT	1140
+#define CSR_XTAL_1G_TT			900
+#define CSR_ECO_1G_TT			920
+#define CSR_NM_1G_TT			940
+#define CSR_TURBO_1G_TT			990
+#define CSR_SUPER_TURBO_1G_TT		1150
 
-#define CSR_XTAL_1G_TF			870
-#define CSR_ECO_1G_TF			890
-#define CSR_NM_1G_TF			910
-#define CSR_TURBO_1G_TF			960
-#define CSR_SUPER_TURBO_1G_TF	1120
+#define CSR_XTAL_1G_TF			890
+#define CSR_ECO_1G_TF			910
+#define CSR_NM_1G_TF			930
+#define CSR_TURBO_1G_TF			980
+#define CSR_SUPER_TURBO_1G_TF		1130
 
-#define CSR_XTAL_1G_FF			860
-#define CSR_ECO_1G_FF			880
-#define CSR_NM_1G_FF			900
-#define CSR_TURBO_1G_FF			940
-#define CSR_SUPER_TURBO_1G_FF	1080
+#define CSR_XTAL_1G_FF			890
+#define CSR_ECO_1G_FF			910
+#define CSR_NM_1G_FF			930
+#define CSR_TURBO_1G_FF			970
+#define CSR_SUPER_TURBO_1G_FF		1110
 
-#define CSR_XTAL_1200M_SS			900
-#define CSR_ECO_1200M_SS			920
-#define CSR_NM_1200M_SS				1000
-#define CSR_TURBO_1200M_SS			1100
+#define CSR_XTAL_1200M_SS		930
+#define CSR_ECO_1200M_SS		950
+#define CSR_NM_1200M_SS			1030
+#define CSR_TURBO_1200M_SS		1130
 #define CSR_SUPER_TURBO_1200M_SS	1310
 
-#define CSR_XTAL_1200M_TS			890
-#define CSR_ECO_1200M_TS			910
-#define CSR_NM_1200M_TS				980
-#define CSR_TURBO_1200M_TS			1080
-#define CSR_SUPER_TURBO_1200M_TS	1290
+#define CSR_XTAL_1200M_TS		920
+#define CSR_ECO_1200M_TS		940
+#define CSR_NM_1200M_TS			1010
+#define CSR_TURBO_1200M_TS		1100
+#define CSR_SUPER_TURBO_1200M_TS	1280
 
-#define CSR_XTAL_1200M_TT			880
-#define CSR_ECO_1200M_TT			900
-#define CSR_NM_1200M_TT				960
-#define CSR_TURBO_1200M_TT			1050
-#define CSR_SUPER_TURBO_1200M_TT	1250
+#define CSR_XTAL_1200M_TT		900
+#define CSR_ECO_1200M_TT		920
+#define CSR_NM_1200M_TT			970
+#define CSR_TURBO_1200M_TT		1060
+#define CSR_SUPER_TURBO_1200M_TT	1240
 
-#define CSR_XTAL_1200M_TF			870
-#define CSR_ECO_1200M_TF			890
-#define CSR_NM_1200M_TF				940
-#define CSR_TURBO_1200M_TF			1030
+#define CSR_XTAL_1200M_TF		890
+#define CSR_ECO_1200M_TF		910
+#define CSR_NM_1200M_TF			960
+#define CSR_TURBO_1200M_TF		1040
 #define CSR_SUPER_TURBO_1200M_TF	1220
 
-#define CSR_XTAL_1200M_FF			860
-#define CSR_ECO_1200M_FF			880
-#define CSR_NM_1200M_FF				920
-#define CSR_TURBO_1200M_FF			990
-#define CSR_SUPER_TURBO_1200M_FF	1180
+#define CSR_XTAL_1200M_FF		890
+#define CSR_ECO_1200M_FF		910
+#define CSR_NM_1200M_FF			950
+#define CSR_TURBO_1200M_FF		1020
+#define CSR_SUPER_TURBO_1200M_FF	1200
 
 /* MSR_SUPER_TURBO for 1 GHZ is defined only for testing purposes */
 
-#define MSR_ECO_1G_SS				920
-#define MSR_NM_1G_SS				1050
-#define MSR_TURBO_1G_SS				1190
+#define MSR_ECO_1G_SS			950
+#define MSR_NM_1G_SS			1090
+#define MSR_TURBO_1G_SS			1220
 #define MSR_SUPER_TURBO_1G_SS		1310
 
-#define MSR_ECO_1G_TS				910
-#define MSR_NM_1G_TS				1030
-#define MSR_TURBO_1G_TS				1170
-#define MSR_SUPER_TURBO_1G_TS		1290
+#define MSR_ECO_1G_TS			940
+#define MSR_NM_1G_TS			1070
+#define MSR_TURBO_1G_TS			1190
+#define MSR_SUPER_TURBO_1G_TS		1280
 
-#define MSR_ECO_1G_TT				900
-#define MSR_NM_1G_TT				1010
-#define MSR_TURBO_1G_TT				1140
-#define MSR_SUPER_TURBO_1G_TT		1250
+#define MSR_ECO_1G_TT			920
+#define MSR_NM_1G_TT			1030
+#define MSR_TURBO_1G_TT			1150
+#define MSR_SUPER_TURBO_1G_TT		1240
 
-#define MSR_ECO_1G_TF				890
-#define MSR_NM_1G_TF				990
-#define MSR_TURBO_1G_TF				1120
+#define MSR_ECO_1G_TF			910
+#define MSR_NM_1G_TF			1020
+#define MSR_TURBO_1G_TF			1130
 #define MSR_SUPER_TURBO_1G_TF		1220
 
-#define MSR_ECO_1G_FF				880
-#define MSR_NM_1G_FF				970
-#define MSR_TURBO_1G_FF				1080
-#define MSR_SUPER_TURBO_1G_FF		1180
+#define MSR_ECO_1G_FF			910
+#define MSR_NM_1G_FF			1010
+#define MSR_TURBO_1G_FF			1110
+#define MSR_SUPER_TURBO_1G_FF		1200
 
-#define MSR_ECO_1200M_SS			920
-#define MSR_NM_1200M_SS				1050
-#define MSR_TURBO_1200M_SS			1190
+#define MSR_ECO_1200M_SS		950
+#define MSR_NM_1200M_SS			1090
+#define MSR_TURBO_1200M_SS		1220
 #define MSR_SUPER_TURBO_1200M_SS	1310
 
-#define MSR_ECO_1200M_TS			910
-#define MSR_NM_1200M_TS				1030
-#define MSR_TURBO_1200M_TS			1170
-#define MSR_SUPER_TURBO_1200M_TS	1290
+#define MSR_ECO_1200M_TS		940
+#define MSR_NM_1200M_TS			1070
+#define MSR_TURBO_1200M_TS		1190
+#define MSR_SUPER_TURBO_1200M_TS	1280
 
-#define MSR_ECO_1200M_TT			900
-#define MSR_NM_1200M_TT				1010
-#define MSR_TURBO_1200M_TT			1140
-#define MSR_SUPER_TURBO_1200M_TT	1250
+#define MSR_ECO_1200M_TT		920
+#define MSR_NM_1200M_TT			1030
+#define MSR_TURBO_1200M_TT		1150
+#define MSR_SUPER_TURBO_1200M_TT	1240
 
-#define MSR_ECO_1200M_TF			890
-#define MSR_NM_1200M_TF				990
-#define MSR_TURBO_1200M_TF			1120
+#define MSR_ECO_1200M_TF		910
+#define MSR_NM_1200M_TF			1020
+#define MSR_TURBO_1200M_TF		1130
 #define MSR_SUPER_TURBO_1200M_TF	1220
 
-#define MSR_ECO_1200M_FF			880
-#define MSR_NM_1200M_FF				970
-#define MSR_TURBO_1200M_FF			1080
-#define MSR_SUPER_TURBO_1200M_FF	1180
+#define MSR_ECO_1200M_FF		910
+#define MSR_NM_1200M_FF			1010
+#define MSR_TURBO_1200M_FF		1110
+#define MSR_SUPER_TURBO_1200M_FF	1200
 
 
 #define PMU_VLT_TBL_1G_SS ARRAY_LIST(\
@@ -252,11 +251,21 @@ u32 pmu_vlt_table_1200m[SILICON_TYPE_MAX][SR_VLT_LUT_SIZE] = {
 	PMU_VLT_TBL_1200M_TF, PMU_VLT_TBL_1200M_FF,
 };
 
+#ifdef CONFIG_KONA_AVS
 const u8 *get_sr_vlt_table(u32 silicon_type, int freq_id)
 {
 	u32 *vlt_table;
 	int i;
 	u32 vddvar_adj = 0;
+	u32 max;
+	u32 vddvar_a9_min = avs_get_vddvar_a9_min_voltage();
+	u32 vddvar_min = avs_get_vddvar_min_voltage();
+	u32 min_vlt_table[] = {MSR_RETN_VAL, MSR_RETN_VAL, MSR_RETN_VAL,
+		MSR_RETN_VAL, MSR_RETN_VAL, MSR_RETN_VAL, MSR_RETN_VAL,
+		vddvar_a9_min, vddvar_a9_min, vddvar_min, vddvar_a9_min,
+		vddvar_min, vddvar_a9_min, vddvar_min, vddvar_a9_min,
+		vddvar_min};
+
 	pr_info("%s silicon_type = %d, freq_id = %d\n", __func__,
 		silicon_type, freq_id);
 	if (silicon_type > SILICON_TYPE_MAX || freq_id > A9_FREQ_MAX)
@@ -273,50 +282,107 @@ const u8 *get_sr_vlt_table(u32 silicon_type, int freq_id)
 			BUG();
 	}
 
-#ifdef CONFIG_KONA_AVS
-	vddvar_adj = kona_avs_get_vddvar_adj(silicon_type, freq_id);
-#endif
-	for (i = 0; i < ACTIVE_VOLTAGE_OFFSET; i++)
-		vlt_id_table[i] = bcmpmu_rgltr_get_volt_id(vlt_table[i]);
-	for (i = ACTIVE_VOLTAGE_OFFSET; i < SR_VLT_LUT_SIZE; i++)
-		vlt_id_table[i] = bcmpmu_rgltr_get_volt_id(vlt_table[i]
-					+ vddvar_adj);
+	vddvar_adj = avs_get_vddvar_adj(silicon_type, freq_id);
+	for (i = 0; i < ACTIVE_VOLTAGE_OFFSET; i++) {
+		max = (vlt_table[i] > min_vlt_table[i]) ? vlt_table[i] :
+			min_vlt_table[i];
+		vlt_id_table[i] = bcmpmu_rgltr_get_volt_id(max);
+	}
+	for (i = ACTIVE_VOLTAGE_OFFSET; i < SR_VLT_LUT_SIZE; i++) {
+		max = ((vlt_table[i] + vddvar_adj) > min_vlt_table[i])
+			? (vlt_table[i] + vddvar_adj) : min_vlt_table[i];
+		vlt_id_table[i] = bcmpmu_rgltr_get_volt_id(max);
+	}
 
 	return vlt_id_table;
 }
-
-int get_retention_vlt_id(u32 vlt_domain, u32 silicon_type)
+#else
+const u8 *get_sr_vlt_table(u32 silicon_type, int freq_id)
 {
-	u32 ret_vlt;
+	u32 *vlt_table;
+	int i;
+	pr_info("%s silicon_type = %d, freq_id = %d\n", __func__,
+		silicon_type, freq_id);
+	if (silicon_type > SILICON_TYPE_MAX || freq_id > A9_FREQ_MAX)
+		BUG();
+	switch (freq_id) {
+	case A9_FREQ_1000_MHZ:
+			vlt_table = pmu_vlt_table_1g[silicon_type];
+			break;
+	case A9_FREQ_1200_MHZ:
+			vlt_table = pmu_vlt_table_1200m[silicon_type];
+			break;
+	case A9_FREQ_1500_MHZ:
+	default:
+			BUG();
+	}
+	for (i = 0; i < SR_VLT_LUT_SIZE; i++)
+		vlt_id_table[i] = bcmpmu_rgltr_get_volt_id(vlt_table[i]);
+	return vlt_id_table;
+}
+#endif
+
+
+int get_msr_retn_vlt_id(void)
+{
+	u32 ret_vlt = MSR_RETN_VAL;
 /*	Right now the retn value is same for all the silicon types
 	In case tomorrow if it changes, we will modify the retn value
 	returned accordingly
 */
 #ifdef CONFIG_KONA_AVS
-	if (vlt_domain == AVS_VDDVAR_A9 || vlt_domain == AVS_VDDFIX)
-		BUG();
+	u32 min = avs_get_vddvar_ret_voltage();
+	u32 silicon_type = avs_get_silicon_type();
 	switch (silicon_type) {
 	case SILICON_TYPE_SLOW:
-		ret_vlt = MSR_RETN_VAL;
+		ret_vlt = (MSR_RETN_VAL > min) ? MSR_RETN_VAL : min;
 		break;
 	case SILICON_TYPE_TYP_SLOW:
-		ret_vlt = MSR_RETN_VAL;
+		ret_vlt = (MSR_RETN_VAL > min) ? MSR_RETN_VAL : min;
 		break;
 	case SILICON_TYPE_TYPICAL:
-		ret_vlt = MSR_RETN_VAL;
+		ret_vlt = (MSR_RETN_VAL > min) ? MSR_RETN_VAL : min;
 		break;
 	case SILICON_TYPE_TYP_FAST:
-		ret_vlt = MSR_RETN_VAL;
+		ret_vlt = (MSR_RETN_VAL > min) ? MSR_RETN_VAL : min;
 		break;
 	case SILICON_TYPE_FAST:
-		ret_vlt = MSR_RETN_VAL;
+		ret_vlt = (MSR_RETN_VAL > min) ? MSR_RETN_VAL : min;
 		break;
 	default:
 		BUG();
 	}
-	return bcmpmu_rgltr_get_volt_id(ret_vlt);
 #endif
-	return bcmpmu_rgltr_get_volt_id(MSR_RETN_VAL);
+	pr_info("MSR retention_voltage: %umV\n", ret_vlt);
+	return bcmpmu_rgltr_get_volt_id(ret_vlt);
+}
+
+int adjust_sdsr_voltage(u32 sdsr_volt)
+{
+	int voltage = bcmpmu_rgltr_get_volt_val(sdsr_volt);
+	/* Convert uV to mV */
+	voltage = voltage/1000;
+#ifdef CONFIG_KONA_AVS
+	voltage += avs_get_vddfix_adj();
+#endif
+	pr_info("SDSR1 active voltage: %dmV\n", voltage);
+	return bcmpmu_rgltr_get_volt_id(voltage);
+}
+
+int get_sdsr_retn_vlt_id(u32 reg_val)
+{
+#ifdef CONFIG_KONA_AVS
+	u32 sdsr_vret = avs_get_vddfix_ret_voltage();
+	int sdsr_vid = bcmpmu_rgltr_get_volt_id(sdsr_vret);
+	pr_info("SDSR1(AVS) min retn voltage: %dmV, curr val: %umV",
+		bcmpmu_rgltr_get_volt_val(sdsr_vid)/1000,
+		bcmpmu_rgltr_get_volt_val(reg_val)/1000);
+	if (sdsr_vid < 0)
+		return -EINVAL;
+	if (sdsr_vid > reg_val)
+		return sdsr_vid;
+#endif
+	return reg_val;
 }
 
 #ifdef CONFIG_DEBUG_FS
@@ -392,7 +458,7 @@ static int volt_tbl_init(void)
 		return -ENOMEM;
 
 	if (!debugfs_create_file
-	    ("volt_tbl_rev_id", S_IRUGO, dent_vlt_root_dir, NULL,
+	    ("rev_id", S_IRUGO, dent_vlt_root_dir, NULL,
 	     &volt_tbl_rev_id_fops))
 		return -ENOMEM;
 

@@ -964,6 +964,7 @@ struct bcmpmu59xxx_regulator_info *
 bcmpmu59xxx_get_rgltr_info(struct bcmpmu59xxx *bcmpmu);
 
 int bcmpmu_rgltr_get_volt_id(u32 voltage);
+int bcmpmu_rgltr_get_volt_val(u32 id);
 
 void bcmpmu_client_power_off(void);
 

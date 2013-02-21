@@ -41,7 +41,7 @@
 #endif
 #include "pm_params.h"
 #include "sequencer_ucode.h"
-#include <plat/kona_avs.h>
+#include <mach/avs.h>
 #ifdef CONFIG_DELAYED_PM_INIT
 #include <mach/pm.h>
 #include <plat/kona_pm.h>
