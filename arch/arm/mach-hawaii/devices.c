@@ -119,6 +119,40 @@ struct platform_device android_pmem = {
 #endif
 
 #ifdef CONFIG_ION_BCM_NO_DT
+#ifdef CONFIG_IOMMU_API
+static struct resource iommu_mm_resources[] = {
+	[0] = {
+	       .start = MMMMU_OPEN_BASE_ADDR,
+	       .end = MMMMU_OPEN_BASE_ADDR + SZ_4K - 1,
+	       .flags = IORESOURCE_MEM,
+	},
+	[1] = {
+	       .start = BCM_INT_ID_RESERVED181,
+	       .end = BCM_INT_ID_RESERVED181,
+	       .flags = IORESOURCE_IRQ,
+	}
+};
+
+struct platform_device iommu_mm_device = {
+	.name = "iommu-m4u-bcm",
+	.id = 0,
+	.resource = iommu_mm_resources,
+	.num_resources = ARRAY_SIZE(iommu_mm_resources),
+};
+#endif
+
+#ifdef CONFIG_BCM_IOVMM
+struct platform_device iovmm_mm_device = {
+	.name = "iovmm-bcm",
+	.id = 0,
+};
+
+struct platform_device iovmm_mm_256mb_device = {
+	.name = "iovmm-bcm",
+	.id = 1,
+};
+#endif
+
 struct platform_device ion_system_device = {
 	.name = "ion-bcm",
 	.id = 2,
