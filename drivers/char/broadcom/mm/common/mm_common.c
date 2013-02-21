@@ -419,6 +419,10 @@ static loff_t mm_file_lseek(struct file *filp, loff_t offset, int ignore)
 	struct mm_common *common = private->common;
 
 	struct file *input = fget(offset);
+
+	if (input == NULL) {
+		return -EINVAL;
+	}
 	if (is_validate_file(input)) {
 		struct file_private_data *in_private = input->private_data;
 		struct interlock il;

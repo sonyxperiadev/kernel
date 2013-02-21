@@ -573,6 +573,7 @@ static struct isp_device_t *isp_device;
 static int mm_isp_update_virt_addr(void *vaddr)
 {
 	isp_device->vaddr = vaddr;
+	return 0;
 }
 
 int __init mm_isp_init(void)
