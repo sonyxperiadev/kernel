@@ -862,10 +862,17 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file,
 			aError("treq_sysparm_t mem alloc failed");
 			return -ENOMEM;
 		}
+
 		/* get the sysparm from driver
 		 SW EQ is only for music playback for now*/
+		if (copy_from_user(eq, (int __user *)arg,
+			sizeof(struct treq_sysparm_t)))
+			return -EFAULT;
+
 		ret = AUDDRV_Get_TrEqParm((void *)eq,
-			sizeof(*eq), AUDIO_APP_MUSIC);
+			sizeof(*eq), AUDIO_APP_MUSIC,
+			(eq->data)[TREQ_DATA_SIZE-1]);
+
 		if (!ret) {
 			if (copy_to_user((void __user *)arg, eq,
 			sizeof(*eq))) {

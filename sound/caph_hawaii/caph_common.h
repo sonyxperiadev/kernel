@@ -85,7 +85,8 @@ struct __userCtrl_data {
 };
 #define	UserCtrl_data_t	struct __userCtrl_data
 
-#define TREQ_DATA_SIZE 148
+/* TREQ_DATA_SIZE defined by TRANSEQ_TrEqConfig_t in user space */
+#define TREQ_DATA_SIZE 149
 struct treq_sysparm_t {
 	unsigned int data[TREQ_DATA_SIZE];
 };

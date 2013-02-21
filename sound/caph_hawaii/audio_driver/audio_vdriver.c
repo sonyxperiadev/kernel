@@ -2141,7 +2141,8 @@ void AUDDRV_SetIHFDLSampleRate(int mode)
 	isIHFDL48k = mode;
 }
 
-int AUDDRV_Get_TrEqParm(void *param, unsigned int size, AudioApp_t app)
+int AUDDRV_Get_TrEqParm(void *param, unsigned int size, AudioApp_t app,
+	unsigned int sample_rate)
 {
 #ifndef CONFIG_BCM_MODEM
 		return -EINVAL;
@@ -2151,7 +2152,8 @@ int AUDDRV_Get_TrEqParm(void *param, unsigned int size, AudioApp_t app)
 		if (app != AUDIO_APP_MUSIC)
 			return -EINVAL;
 
-		if (size != sizeof(*p)) {
+		/* Sample rate added to input param */
+		if (size > (sizeof(*p) + sizeof(unsigned int))) {
 			aError("SysIndMultimediaAudioParm_t changed %s",
 				__func__);
 			BUG();
@@ -2163,9 +2165,15 @@ int AUDDRV_Get_TrEqParm(void *param, unsigned int size, AudioApp_t app)
 			return -EINVAL;
 		}
 
-		/* get current audio mode.
-		hardcode to SPEAKER for now*/
-		memcpy(param, p+AUDIO_MODE_SPEAKERPHONE, size);
+		/* 44.1 uses IHF mode, 48 uses AUDIO_MODE_RESERVE */
+		if ((AUDIO_SAMPLING_RATE_t)sample_rate
+			== AUDIO_SAMPLING_RATE_44100)
+			memcpy(param, p+AUDIO_MODE_SPEAKERPHONE,
+				(size - sizeof(unsigned int)));
+		else if ((AUDIO_SAMPLING_RATE_t)sample_rate
+			== AUDIO_SAMPLING_RATE_48000)
+			memcpy(param, p+AUDIO_MODE_RESERVE,
+				(size - sizeof(unsigned int)));
 
 		return 0;
 #endif
