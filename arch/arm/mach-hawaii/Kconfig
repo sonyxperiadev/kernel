@@ -295,6 +295,15 @@ config A9_DORMANT_MODE
          mode results in A9 domain voltage being shutoff, resulting in better
          power savings during idle.
 
+config  DSM_IN_SUSPEND_ONLY
+	bool "Allow system deep sleep only in suspend"
+	default n
+	help
+	 Option to enable deep sleep only in linux suspend case and do
+	 not allow system deep sleep in cpu idle case. This means as
+	 long as system is not in suspended, device will not enter
+	 deep sleep
+
 config KONA_SECURE_MONITOR_CALL
 	bool "Execute in non-secure mode using Kona secure monitor"
 	default y

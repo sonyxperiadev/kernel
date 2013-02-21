@@ -145,6 +145,9 @@ static struct kona_idle_state idle_states[] = {
 	{
 		.name = "C5",
 		.desc = "ds-drmnt", /* deepsleep-dormant(XTAL OFF) */
+#ifdef CONFIG_DSM_IN_SUSPEND_ONLY
+		.params = CTRL_PARAMS_CSTATE_DISABLED,
+#endif
 		.flags = CPUIDLE_FLAG_TIME_VALID,
 		.latency = EXIT_LAT_DS_DRMT,
 		.target_residency = TRGT_RESI_DS_DRMT,

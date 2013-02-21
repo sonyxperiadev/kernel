@@ -337,8 +337,10 @@ int __init kona_pm_init(struct pm_init_param *ip)
 		state->name[CPUIDLE_NAME_LEN - 1] = 0;
 		strncpy(state->desc, ip->states[i].desc, CPUIDLE_DESC_LEN - 1);
 		state->desc[CPUIDLE_DESC_LEN - 1] = 0;
-		if (ip->states[i].params & CTRL_PARAMS_CSTATE_DISABLED)
+		if (ip->states[i].params & CTRL_PARAMS_CSTATE_DISABLED) {
 			state->disable = 1;
+			ip->states[i].disable_cnt++;
+		}
 	}
 	kona_idle_driver.state_count = ip->num_states;
 	kona_idle_driver.safe_state_index = 0;
