@@ -701,74 +701,106 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 			ret = -ENOMEM;
 			goto err;
 		}
-		if (of_property_read_u32(pdev->dev.of_node, "id", &val))
+		if (of_property_read_u32(pdev->dev.of_node, "id", &val)) {
+			dev_err(&pdev->dev, "id read failed in %s\n", __func__);
 			goto err_free_priv_data_mem;
+		}
 
 		hw_cfg->id = val;
 		pdev->id = val;
 
 		if (of_property_read_u32(pdev->dev.of_node, "data-pullup",
-			&val))
+			&val)) {
+			dev_err(&pdev->dev, "data-pullup read failed in %s\n",
+			__func__);
 			goto err_free_priv_data_mem;
+		}
 
 		hw_cfg->data_pullup = val;
 
-		if (of_property_read_u32(pdev->dev.of_node, "devtype", &val))
+		if (of_property_read_u32(pdev->dev.of_node, "devtype", &val)) {
+			dev_err(&pdev->dev, "devtype read failed in %s\n",
+			__func__);
 			goto err_free_priv_data_mem;
+		}
 
 		hw_cfg->devtype = val;
 
-		if (of_property_read_u32(pdev->dev.of_node, "flags", &val))
+		if (of_property_read_u32(pdev->dev.of_node, "flags", &val)) {
+			dev_err(&pdev->dev, "flags read failed in %s\n",
+			__func__);
 			goto err_free_priv_data_mem;
+		}
 
 		hw_cfg->flags = val;
 
 		of_property_read_string(pdev->dev.of_node, "peri-clk-name",
 			&prop);
-		if (prop == NULL)
+		if (prop == NULL) {
+			dev_err(&pdev->dev, "peri-clk-name read failed in %s\n",
+			__func__);
 			goto err_free_priv_data_mem;
+		}
 
 		hw_cfg->peri_clk_name = (char *)prop;
 
 		of_property_read_string(pdev->dev.of_node, "ahb-clk-name",
 			&prop);
-		if (prop == NULL)
+		if (prop == NULL) {
+			dev_err(&pdev->dev, "ahb-clk-name read failed in %s\n",
+			__func__);
 			goto err_free_priv_data_mem;
+		}
 
 		hw_cfg->ahb_clk_name = (char *)prop;
 
 		of_property_read_string(pdev->dev.of_node, "sleep-clk-name",
 			&prop);
-		if (prop == NULL)
+		if (prop == NULL) {
+			dev_err(&pdev->dev, "sleep-clk-name read failed in %s\n",
+			__func__);
 			goto err_free_priv_data_mem;
+		}
 
 		hw_cfg->sleep_clk_name = (char *)prop;
 
 		if (of_property_read_u32(pdev->dev.of_node, "peri-clk-rate",
-			&val))
+			&val)) {
+			dev_err(&pdev->dev, "peri-clk-rate read failed in %s\n",
+			__func__);
 			goto err_free_priv_data_mem;
+		}
 
 		hw_cfg->peri_clk_rate = val;
 
 		if (hw_cfg->devtype == SDIO_DEV_TYPE_SDMMC) {
 			of_property_read_string(pdev->dev.of_node,
 				"vddo-regulator-name", &prop);
-			if (prop == NULL)
+			if (prop == NULL) {
+				dev_err(&pdev->dev, "vddo-regulator-name read "\
+				"failed in %s\n", __func__);
 				goto err_free_priv_data_mem;
+			}
 
 			hw_cfg->vddo_regulator_name = (char *)prop;
 
 			of_property_read_string(pdev->dev.of_node,
 				"vddsdxc-regulator-name", &prop);
-			if (prop == NULL)
+			if (prop == NULL) {
+				dev_err(&pdev->dev, "vddsdxc-regulator-name"\
+				"read failed in %s\n", __func__);
 				goto err_free_priv_data_mem;
+			}
 
 			hw_cfg->vddsdxc_regulator_name = (char *)prop;
 
 
 			if (of_property_read_u32(pdev->dev.of_node,
-				"cd-gpio", &val))
+				"cd-gpio", &val)) {
+				dev_err(&pdev->dev, "cd-gpio read failed in %s\n",
+				__func__);
 				goto err_free_priv_data_mem;
+			}
 
 			hw_cfg->cd_gpio = val;
 		}
@@ -776,8 +808,11 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 		else if (hw_cfg->devtype == SDIO_DEV_TYPE_EMMC) {
 
 			if (of_property_read_u32(pdev->dev.of_node,
-				"is-8bit", &val))
+				"is-8bit", &val)) {
+				dev_err(&pdev->dev, "is-8bit read failed in %s\n",
+				__func__);
 				goto err_free_priv_data_mem;
+			}
 
 			hw_cfg->is_8bit = val;
 		}
