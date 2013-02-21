@@ -263,8 +263,10 @@ static CSL_LCD_RES_T cslDsiAxipvStart(DSI_UPD_REQ_MSG_T *updMsg)
 	struct axipv_config_t *axipvCfg = updMsg->dsiH->axipvCfg;
 	struct pv_config_t *pvCfg = updMsg->dsiH->pvCfg;
 
-	if (!axipvCfg)
+	if (!axipvCfg) {
 		pr_err("axipvCfg is NULL\n");
+		return CSL_LCD_BAD_HANDLE;
+	}
 	axipvCfg->width = (updMsg->updReq.lineLenP +
 				updMsg->updReq.xStrideB) * 4;
 	axipvCfg->height = updMsg->updReq.lineCount;
@@ -275,8 +277,10 @@ static CSL_LCD_RES_T cslDsiAxipvStart(DSI_UPD_REQ_MSG_T *updMsg)
 
 	axipv_change_state(AXIPV_CONFIG, axipvCfg);
 	if (!updMsg->dsiH->dispEngine) {
-		if (!pvCfg)
+		if (!pvCfg) {
 			pr_err("pvCfg is NULL\n");
+			return CSL_LCD_BAD_HANDLE;
+		}
 		pvCfg->hact = updMsg->updReq.lineLenP;
 		pvCfg->vact = updMsg->updReq.lineCount;
 		pv_change_state(PV_VID_CONFIG, pvCfg);
@@ -1579,10 +1583,14 @@ CSL_LCD_RES_T CSL_DSI_UpdateVmVc(CSL_LCD_HANDLE vcH,
 	axipvCfg = dsiH->axipvCfg;
 	pvCfg = dsiH->pvCfg;
 
-	if (!axipvCfg)
+	if (!axipvCfg) {
 		pr_err("axipvCfg is NULL\n");
-	if (!pvCfg)
+		return CSL_LCD_BAD_STATE;
+	}
+	if (!pvCfg) {
 		pr_err("pvCfg is NULL\n");
+		return CSL_LCD_BAD_STATE;
+	}
 	if (dsiH->ulps) {
 		pr_err("dsi is in ulps!!\n");
 		return CSL_LCD_BAD_STATE;

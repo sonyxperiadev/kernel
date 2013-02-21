@@ -1027,6 +1027,7 @@ static CSL_LCD_RES_T cslSmiSpiDmaStart(pSMI_SPI_HANDLE smiSpiH,
 		dmaData.dstAddr = chal_spivc4l_get_dma_addr(smiSpiH->chalH);
 
 	dmaData.xferLength = dmaReq->xLenBytes * dmaReq->yLen;
+	dmaData.burstWriteEnable32 = 0;
 
 	if (csl_dma_vc4lite_add_data(*pDmaCh, &dmaData)
 	    != DMA_VC4LITE_STATUS_SUCCESS) {
@@ -1118,6 +1119,7 @@ static CSL_LCD_RES_T cslSmiSpiDmaStart_2D(pSMI_SPI_HANDLE smiSpiH,
 
 	dmaData.xXferLength = dmaReq->xLenBytes;
 	dmaData.yXferLength = dmaReq->yLen - 1;
+	dmaData.burstWriteEnable32 = 0;
 
 	if (csl_dma_vc4lite_add_data_ex(*pDmaCh, &dmaData)
 	    != DMA_VC4LITE_STATUS_SUCCESS) {

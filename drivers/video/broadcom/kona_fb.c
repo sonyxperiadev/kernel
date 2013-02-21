@@ -777,8 +777,13 @@ static struct kona_fb_platform_data * __init get_of_data(struct device_node *np)
 
 	if (of_property_read_string(np,	"module-name", &str))
 		goto of_fail;
+
+	if (unlikely(strlen(str) > DISPDRV_NAME_SZ))
+		goto of_fail;
 	strcpy(fb_data->name, str);
 	if (of_property_read_string(np, "reg-name", &str))
+		goto of_fail;
+	if (unlikely(strlen(str) > DISPDRV_NAME_SZ))
 		goto of_fail;
 	strcpy(fb_data->reg_name, str);
 
@@ -951,7 +956,7 @@ static int __init populate_dispdrv_cfg(struct kona_fb *fb,
 {
 	struct lcd_config *cfg;
 	DISPDRV_INFO_T *info;
-	int ret = 0;
+	int ret = -1;
 
 	cfg = get_dispdrv_cfg(pd->name);
 	if (!cfg) {
