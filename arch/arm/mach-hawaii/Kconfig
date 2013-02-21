@@ -80,6 +80,11 @@ choice
 	help
 	  Support for Garnet edn010
 
+	config MACH_HAWAII_GARNET_C_A18
+	bool "GARNET A18"
+	help
+	  Support for Garnet A18
+
 endchoice
 choice
 	prompt "Hawaii FPGA type"
