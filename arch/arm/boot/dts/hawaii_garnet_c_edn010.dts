@@ -276,6 +276,7 @@
 		module-name = "NT35512";
 		reg-name = "cam2";
 		rst-gpio = <8>;
+		detect-gpio = <10>;
 		rst-setup = <700>;	/* 700us */
 		rst-pulse = <20>;	/* 10us */
 		rst-hold = <10000>;	/* 2ms */

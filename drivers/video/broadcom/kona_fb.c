@@ -804,6 +804,15 @@ static struct kona_fb_platform_data * __init get_of_data(struct device_node *np)
 		fb_data->rst.active = true;
 	else
 		fb_data->rst.active = false;
+
+#ifdef CONFIG_MACH_HAWAII_GARNET
+	if (of_property_read_u32(np, "detect-gpio", &val))
+		goto of_fail;
+	fb_data->detect.gpio = val;
+	fb_data->detect.active = gpio_get_value(fb_data->detect.gpio);
+	if (fb_data->detect.active)
+		strcpy(fb_data->name, "OTM8018B");
+#endif
 	if (of_property_read_bool(np, "vmode"))
 		fb_data->vmode = true;
 	else

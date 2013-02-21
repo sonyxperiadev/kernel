@@ -25,10 +25,16 @@ struct hw_rst_info {
 	bool active;/* low or high */
 };
 
+struct hw_detect_info {
+	uint32_t gpio;	/* gpio number */
+	bool active;/* low or high */
+};
+
 struct kona_fb_platform_data {
 	char name[DISPDRV_NAME_SZ];
 	char reg_name[REG_NAME_SZ];
 	struct hw_rst_info rst;
+	struct hw_detect_info detect;
 	bool vmode;
 	bool vburst;
 	bool cmnd_LP;
