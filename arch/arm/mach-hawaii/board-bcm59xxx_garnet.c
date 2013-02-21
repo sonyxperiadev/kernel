@@ -54,7 +54,7 @@ static int bcmpmu_init_platform_hw(struct bcmpmu59xxx *bcmpmu);
 static int bcmpmu_exit_platform_hw(struct bcmpmu59xxx *bcmpmu);
 
 /* Used only when no bcmpmu dts entry found */
-static struct bcmpmu59xxx_rw_data register_init_data[] = {
+static struct bcmpmu59xxx_rw_data __initdata register_init_data[] = {
 /* mask 0x00 is invalid value for mask */
 	/* pin mux selection for pc3 and simldo1
 	 * AUXONb Wakeup disabled */
@@ -592,9 +592,9 @@ struct bcmpmu59xxx_regulator_init_data
 		[BCMPMU_REGULATOR_RFLDO] = {
 			.id = BCMPMU_REGULATOR_RFLDO,
 			.initdata = &bcm59xxx_rfldo_data,
-			.dsm_mode = BCMPMU_REGL_LPM_IN_DSM,
+			.dsm_mode = BCMPMU_REGL_OFF_IN_DSM,
 			.pc_pins_map =
-				PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
+				PCPIN_MAP_ENC(0, PMU_PC2),
 			.name = "rf",
 		},
 		[BCMPMU_REGULATOR_CAMLDO1] = {
@@ -792,7 +792,7 @@ struct bcmpmu59xxx_pkey_pdata pkey_pdata = {
 };
 
 struct bcmpmu59xxx_audio_pdata audio_pdata = {
-	.ihf_autoseq_dis = 100,
+	.ihf_autoseq_dis = 0,
 };
 
 struct bcmpmu59xxx_rpc_pdata rpc_pdata = {
@@ -1086,7 +1086,7 @@ static struct bcmpmu_fg_pdata fg_pdata = {
 	.sleep_current_ua = 2000, /* floor during sleep */
 	.sleep_sample_rate = 32000,
 	.fg_factor = 976,
-	.suspend_temp_hot = 500,
+	.suspend_temp_hot = 600,
 	.recovery_temp_hot = 450,
 	.suspend_temp_cold = -60,
 	.recovery_temp_cold = -10,
@@ -1251,13 +1251,17 @@ void bcmpmu_set_pullup_reg(void)
 static int bcmpmu_init_platform_hw(struct bcmpmu59xxx *bcmpmu)
 {
 	u32 silicon_type;
-	u8 ret_vlt;
+	int ret_vlt;
 
 	pr_info("REG: pmu_init_platform_hw called\n");
 	BUG_ON(!bcmpmu);
 #ifdef CONFIG_KONA_AVS
 	silicon_type = kona_avs_get_silicon_type();
 	ret_vlt = get_retention_vlt_id(AVS_VDDVAR, silicon_type);
+	if (ret_vlt < 0) {
+		pr_err("%s: Wrong voltage value\n", __func__);
+		return -EINVAL;
+	}
 	bcmpmu->write_dev(bcmpmu, PMU_REG_MMSRVOUT2, ret_vlt);
 #endif
 	return 0;
@@ -1287,7 +1291,6 @@ int bcmpmu_reg_init(void)
 	int size, i;
 	uint32_t *p, *p1;
 	struct bcmpmu59xxx_rw_data *tbl;
-	unsigned long dt_root;
 	const char *model;
 
 	np = of_find_matching_node(NULL, matches);
@@ -1305,7 +1308,7 @@ int bcmpmu_reg_init(void)
 			else {
 				p = (uint32_t *)prop->value;
 				p1 = (uint32_t *)tbl;
-				for (i = 0; i < size / sizeof(uint32_t); i++)
+				for (i = 0; i < size/sizeof(p); i++)
 					*p1++ = be32_to_cpu(*p++);
 				bcmpmu_i2c_pdata.init_data = tbl;
 				bcmpmu_i2c_pdata.init_max =
@@ -1322,24 +1325,25 @@ int bcmpmu_reg_init(void)
 							init_data[i].addr);
 			}
 		}
+
+		prop = of_find_property(np, "model", NULL);
+		if (prop) {
+			model = prop->value;
+			if (!strcmp(model, BOARD_EDN010))
+				bcmpmu_i2c_pdata.board_id = EDN010;
+			else
+				bcmpmu_i2c_pdata.board_id = EDN01x;
+		} else
+			bcmpmu_i2c_pdata.board_id = EDN01x;
+
+		pr_info("Board id from dtb %x\n",
+				bcmpmu_i2c_pdata.board_id);
 	}
 
 	if (!reg_init) {
 		bcmpmu_i2c_pdata.init_data =  register_init_data;
 		bcmpmu_i2c_pdata.init_max = ARRAY_SIZE(register_init_data);
 	}
-
-	dt_root = of_get_flat_dt_root();
-	if (dt_root) {
-		model = of_get_flat_dt_prop(dt_root, "model", NULL);
-		if (!strcmp(model, BOARD_EDN010))
-			bcmpmu_i2c_pdata.board_id = EDN010;
-		else
-			bcmpmu_i2c_pdata.board_id = EDN01x;
-	} else
-		bcmpmu_i2c_pdata.board_id = EDN01x;
-
-	pr_info("Board id from dtb %x\n", bcmpmu_i2c_pdata.board_id);
 
 	return 0;
 }
