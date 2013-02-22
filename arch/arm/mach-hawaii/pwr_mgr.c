@@ -876,11 +876,7 @@ int hawaii_pwr_mgr_delayed_init(void)
 	pwr_mgr_ignore_mdm_dap_powerup_req(true);
 #endif
 	delayed_init_complete = 1;
-#ifdef CONFIG_DEBUG_FS
-	return pwr_mgr_debug_init(KONA_BMDM_PWRMGR_VA);
-#else
 	return 0;
-#endif
 }
 
 #ifdef CONFIG_DELAYED_PM_INIT
@@ -917,6 +913,9 @@ int __init hawaii_pwr_mgr_late_init(void)
 		kona_pm_disable_idle_state(CSTATE_ALL, 1);
 #else
 	hawaii_pwr_mgr_delayed_init();
+#endif
+#ifdef CONFIG_DEBUG_FS
+	return pwr_mgr_debug_init(KONA_BMDM_PWRMGR_VA);
 #endif
 	return 0;
 }
