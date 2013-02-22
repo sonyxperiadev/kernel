@@ -39,7 +39,7 @@ static u32 cabac_read(struct cabac_device_t *cabac, u32 reg)
 	return mm_read_reg(cabac->vaddr, (reg-0));
 }
 
-static void print_job_struct(struct cabac_job_t *job)
+/*static void print_job_struct(struct cabac_job_t *job)
 {
 	pr_debug("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
 	pr_debug("cfg:highest_ctxt_used: 0x%x\n", (u32)job->highest_ctxt_used);
@@ -52,7 +52,7 @@ static void print_job_struct(struct cabac_job_t *job)
 	pr_debug("cfg:num_cmds: 0x%x\n", (u32)job->num_cmds);
 	pr_debug("cfg:end_conf: 0x%x\n", (u32)job->end_conf);
 	pr_debug("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
-}
+}*/
 
 static void print_regs(struct cabac_device_t *cabac)
 {

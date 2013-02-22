@@ -200,7 +200,7 @@ void mm_common_wait_job(struct work_struct *work)
 	list_add_tail(&(to->file_list), &(to_filp->write_head));
 
 	if ((from == NULL) && list_is_singular(&to_filp->write_head)) {
-		/*pr_err("completing job %x %x",to,status);*/
+		pr_err("completing job %p %p", to, status);
 		mm_common_interlock_completion(to);
 		}
 	else if (from != NULL) {
@@ -248,7 +248,7 @@ void mm_common_release_jobs(struct work_struct *work)
 
 
 	list_for_each_entry_safe(job, temp, &(filp->write_head), file_list) {
-		pr_err("this  = %x[%x] next = %x, prev= %x", &job->file_list,\
+		pr_err("this  = %p[%x] next = %p, prev= %p", &job->file_list,\
 			 filp->prio, job->file_list.next, job->file_list.prev);
 		}
 
@@ -276,7 +276,7 @@ void mm_common_release_jobs(struct work_struct *work)
 		job = NULL;
 		}
 	filp->read_count = -1;
-	pr_debug(" %x %d", filp, filp->read_count);
+	pr_debug(" %p %d", filp, filp->read_count);
 	wake_up_all(&filp->queue);
 }
 
@@ -393,7 +393,7 @@ static int mm_file_open(struct inode *inode, struct file *filp)
 
 	INIT_LIST_HEAD(&private->read_head);
 	INIT_LIST_HEAD(&private->write_head);
-	pr_debug(" %x ", private);
+	pr_debug(" %p ", private);
 
 	filp->private_data = private;
 
@@ -561,7 +561,7 @@ static unsigned int mm_file_poll(struct file *filp, \
 	poll_wait(filp, &private->queue, wait);
 
 	if (private->read_count != 0) {
-		pr_debug(" %x %d", private, private->read_count);
+		pr_debug(" %p %d", private, private->read_count);
 		return POLLIN | POLLRDNORM;
 		}
 

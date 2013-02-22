@@ -70,10 +70,7 @@ mm_job_status_e interlock_start_job(void *device_id, mm_job_post_t *job,
 }
 static struct interlock_device_t *interlock_device;
 
-static int interlock_virt_addr_update(void *vaddr)
-{
-	return 0;
-}
+static void interlock_virt_addr_update(void *vaddr) {}
 
 int __init interlock_init(void)
 {

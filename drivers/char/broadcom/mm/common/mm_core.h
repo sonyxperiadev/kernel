@@ -86,7 +86,8 @@ static inline void mm_core_abort_job(\
 	if ((job->job.status > MM_JOB_STATUS_READY) &&
 		(job->job.status < MM_JOB_STATUS_SUCCESS)) {
 		/* reset once in release */
-		pr_err("aborting hw in release\n");
+		pr_err("aborting hw in release for common %s\n",\
+				common->mm_name);
 		hw_ifc->mm_abort(hw_ifc->mm_device_id, &job->job);
 		core_dev->current_job = NULL;
 		SCHEDULER_WORK(core_dev, &core_dev->job_scheduler);

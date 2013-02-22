@@ -138,7 +138,7 @@ void mm_prof_update_handler(struct work_struct *work)
 						work);
 	 struct _mm_prof *mm_prof = update->mm_prof;
 	 unsigned int param = update->param;
-	 unsigned int max = 0, min = 0;
+	 unsigned int max = 0;
 
 	 if (!update->is_read) {
 		switch (update->type) {

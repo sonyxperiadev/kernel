@@ -16,7 +16,7 @@ the GPL, without Broadcom's express prior written consent.
 #define H264_SUBDEV_COUNT 4
 
 /*CME*/
-void	cme_update_virt(void *virt);
+void cme_update_virt(void *virt);
 int	cme_init(MM_CORE_HW_IFC *core_param);
 void	cme_deinit(void);
 

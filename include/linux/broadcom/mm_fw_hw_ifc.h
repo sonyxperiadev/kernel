@@ -117,7 +117,7 @@ struct mm_core_hw_ifc {
 	bool (*mm_get_status)(void *device_id);
 	int (*mm_start_job)(void *device_id, mm_job_post_t *job,
 					unsigned int profmask);
-	int (*mm_update_virt_addr)(void *vaddr);
+	void (*mm_update_virt_addr)(void *vaddr);
 	int (*mm_process_irq)(void *device_id);
 	int (*mm_reset)(void *device_id);
 	int (*mm_version_init)(void *device_id, void *vaddr,

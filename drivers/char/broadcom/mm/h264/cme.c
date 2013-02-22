@@ -40,7 +40,7 @@ static inline u32 cme_read(struct cme_device_t *cme, u32 reg)
 	return mm_read_reg(cme->vaddr, (reg-H264_CME_CURY_OFFSET));
 }
 
-static void print_job_struct(struct cme_job_t *job)
+/*static void print_job_struct(struct cme_job_t *job)
 {
 	pr_debug("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
 	pr_debug("img_type: 0x%x\n", (u32)job->img_type);
@@ -61,7 +61,7 @@ static void print_job_struct(struct cme_job_t *job)
 	pr_debug("auto_hrext: 0x%x\n", (uint8_t)job->auto_hrext);
 	pr_debug("auto_ignorec: 0x%x\n", (uint8_t)job->auto_ignorec);
 	pr_debug("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
-}
+}*/
 
 static void print_regs(struct cme_device_t *cme)
 {
@@ -178,7 +178,9 @@ bool get_cme_status(void *device_id)
 	return false;
 }
 
-mm_job_status_e cme_start_job(void *device_id, mm_job_post_t *job, u32 profmask)
+mm_job_status_e cme_start_job(void *device_id,\
+			mm_job_post_t *job,\
+			unsigned int profmask)
 {
 	struct cme_device_t *id = (struct cme_device_t *)device_id;
 	struct cme_job_t *jp = (struct cme_job_t *)job->data;

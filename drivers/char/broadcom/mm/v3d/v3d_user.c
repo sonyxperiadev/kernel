@@ -34,15 +34,15 @@ typedef struct {
 
 static inline void v3d_write(v3d_user_device_t *v3d, unsigned int reg, unsigned int value)
 {
-	return mm_write_reg(v3d->vaddr, reg, value);
+	return mm_write_reg((void *)v3d->vaddr, reg, value);
 }
 
 static inline unsigned int v3d_read(v3d_user_device_t *v3d, unsigned int reg)
 {
-	return mm_read_reg(v3d->vaddr, reg);
+	return mm_read_reg((void *)v3d->vaddr, reg);
 }
 
-static void v3d_user_reset(void *device_id)
+static int v3d_user_reset(void *device_id)
 {
 	v3d_user_device_t *id = (v3d_user_device_t *)device_id;
 	pr_debug("v3d_user_reset:\n");
@@ -52,6 +52,8 @@ static void v3d_user_reset(void *device_id)
 	v3d_write(id, V3D_DBQITC_OFFSET, 0xffff);
 	v3d_write(id, V3D_DBQITE_OFFSET, 0xffff);
 	v3d_write(id, V3D_VPMBASE_OFFSET , 0);
+
+	return 0;
 }
 
 static int v3d_user_abort(void *device_id)
@@ -60,6 +62,13 @@ static int v3d_user_abort(void *device_id)
 	pr_debug("v3d_user_abort:\n");
 	v3d_user_reset(id);
 	return 0;
+}
+
+static int v3d_u_abort(void *id, mm_job_post_t *job)
+{
+	int ret;
+	ret = v3d_user_abort(id);
+	return ret;
 }
 
 static mm_isr_type_e process_v3d_user_irq(void *device_id)
@@ -146,7 +155,7 @@ bool get_v3d_user_status(void *device_id)
 	return false;
 }
 
-void v3d_user_deinit()
+void v3d_user_deinit(void)
 {
 	kfree(v3d_user_device);
 }
@@ -171,7 +180,7 @@ int v3d_user_init(MM_CORE_HW_IFC *core_param)
 	core_param->mm_process_irq = process_v3d_user_irq;
 	core_param->mm_init = v3d_user_reset;
 	core_param->mm_deinit = v3d_user_reset;
-	core_param->mm_abort = v3d_user_abort;
+	core_param->mm_abort = v3d_u_abort;
 	core_param->mm_version_init = NULL;
 	core_param->mm_update_virt_addr = v3d_user_update_virt;
 	core_param->mm_get_regs = NULL;

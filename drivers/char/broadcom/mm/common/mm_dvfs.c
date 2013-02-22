@@ -95,7 +95,7 @@ static void dvfs_work(struct work_struct *work)
 {
 	struct timespec diff;
 	int percnt = 0;
-	int temp = 0, temp2 = 0;
+	int temp = 0;
 	struct _mm_dvfs *mm_dvfs = container_of(work, \
 					struct _mm_dvfs, \
 					dvfs_work);
@@ -366,7 +366,7 @@ void *mm_dvfs_init(struct mm_common *mm_common, \
 	CREATE_DEBUGFS_FILE(mm_dvfs, T2, mm_dvfs->dvfs_dir);
 	CREATE_DEBUGFS_FILE(mm_dvfs, P2, mm_dvfs->dvfs_dir);
 
-	ret = pi_mgr_dfs_add_request(&(mm_dvfs->dev_dfs_node), dev_name,
+	ret = pi_mgr_dfs_add_request(&(mm_dvfs->dev_dfs_node), (char *)dev_name,
 					PI_MGR_PI_ID_MM, PI_MGR_DFS_MIN_VALUE);
 	if (ret) {
 		pr_err("failed to register PI DFS request for %s", dev_name);

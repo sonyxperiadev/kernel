@@ -64,7 +64,7 @@ enum {
 	MM_JOB_STATUS_SKIP,
 	MM_JOB_STATUS_LAST
 };
-#define mm_job_status_e unsigned int
+#define mm_job_status_e int
 
 struct MM_JOB_POST_T {
 	mm_job_status_e status;

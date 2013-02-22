@@ -69,12 +69,12 @@ typedef struct {
 
 static inline void v3d_write(v3d_bin_render_device_t *v3d, unsigned int reg, unsigned int value)
 {
-	return mm_write_reg(v3d->vaddr, reg, value);
+	return mm_write_reg((void *)v3d->vaddr, reg, value);
 }
 
 static inline unsigned int v3d_read(v3d_bin_render_device_t *v3d, unsigned int reg)
 {
-	return mm_read_reg(v3d->vaddr, reg);
+	return mm_read_reg((void *)v3d->vaddr, reg);
 }
 
 static v3d_boom_t *v3d_alloc_boom(void *device_id)
@@ -307,7 +307,7 @@ void v3d_bin_render_update_virt(void *virt)
 	v3d_device->vaddr = virt;
 }
 
-void v3d_bin_render_deinit()
+void v3d_bin_render_deinit(void)
 {
 	pr_debug("V3D bin_render driver Module Exit");
 	#ifdef CONFIG_ION
@@ -330,12 +330,12 @@ int v3d_bin_render_version_init(void *device_id, void *vaddr,
 			mm_version_info_t *version_info)
 {
 	uint32_t V3D_IDENT1, V3D_IDENT2;
+	struct v3d_version_info_t *vinfo;
 	v3d_bin_render_device_t *id = (v3d_bin_render_device_t *)device_id;
 	version_info->size = sizeof(struct v3d_version_info_t);
 	version_info->version_info_ptr =
 			kzalloc(sizeof(struct v3d_version_info_t), GFP_KERNEL);
-	struct v3d_version_info_t *vinfo =
-		(struct v3d_version_info_t *)version_info->version_info_ptr;
+	vinfo = (struct v3d_version_info_t *)version_info->version_info_ptr;
 	vinfo->v3d_technology_version =
 			mm_read_reg(vaddr, V3D_IDENT0_OFFSET) >> 24;
 	V3D_IDENT1 = mm_read_reg(vaddr, V3D_IDENT1_OFFSET);
@@ -405,7 +405,7 @@ int v3d_bin_render_init(MM_CORE_HW_IFC *core_param)
 	core_param->mm_version_init = v3d_bin_render_version_init;
 	core_param->mm_update_virt_addr = v3d_bin_render_update_virt;
 	job_va = (unsigned int *)dma_alloc_coherent(NULL, 32, &job_pa, GFP_DMA);
-	pr_err("v3d_init job va = %x job pa = %x", job_va, job_pa);
+	pr_err("v3d_init job va = %p job pa = %x", job_va, job_pa);
 	return ret;
 
 err:

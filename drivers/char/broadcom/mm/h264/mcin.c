@@ -40,7 +40,7 @@ static u32 mcin_read(struct mcin_device_t *mcin, u32 reg)
 	return mm_read_reg(mcin->vaddr, (reg-H264_MCODEIN_CONTROL_OFFSET));
 }
 
-static void print_job_struct(struct mcin_job_t *job)
+/*static void print_job_struct(struct mcin_job_t *job)
 {
 	int i = 0;
 	pr_debug("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
@@ -64,7 +64,7 @@ static void print_job_struct(struct mcin_job_t *job)
 			(u32)job->out_params.remaining_len);
 	pr_debug("out_p:user_data: 0x%x\n", (u32)job->out_params.user_data);
 	pr_debug("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
-}
+}*/
 
 static void print_regs(struct mcin_device_t *mcin)
 {
@@ -183,7 +183,7 @@ static mm_isr_type_e process_mcin_irq(void *device_id)
 {
 	u32 flags;
 	mm_isr_type_e irq_retval = MM_ISR_UNKNOWN;
-	struct mcin_device_ti *id = (struct mcin_device_t *)device_id;
+	struct mcin_device_t *id = (struct mcin_device_t *)device_id;
 
 	/* Read the interrupt status registers */
 	flags = mcin_read(id, H264_MCODEIN_STATUS_OFFSET);

@@ -378,7 +378,6 @@ int isp_write_hresize(struct isp_device_t *isp,
 	return 0;
 }
 
-
 static int isp_reset(void *id)
 {
 	struct isp_device_t *isp = (struct isp_device_t *)id;
@@ -420,6 +419,14 @@ static int isp_reset(void *id)
 	ispCtrl |= ISP_CTRL_FLUSH_MASK;
 	isp_write(ISP_CTRL_OFFSET, ispCtrl);
 	ispCtrl = isp_read(ISP_CTRL_OFFSET);
+	return ret;
+}
+
+static int isp_abort(void *id, mm_job_post_t *job)
+{
+	int ret;
+	ret = isp_reset(id);
+	pr_err("isp_abort");
 	return ret;
 }
 
@@ -570,10 +577,9 @@ static mm_job_status_e isp_start_job(void *id , mm_job_post_t *job,
 
 static struct isp_device_t *isp_device;
 
-static int mm_isp_update_virt_addr(void *vaddr)
+static void mm_isp_update_virt_addr(void *vaddr)
 {
 	isp_device->vaddr = vaddr;
-	return 0;
 }
 
 int __init mm_isp_init(void)
@@ -598,7 +604,7 @@ int __init mm_isp_init(void)
 	core_param.mm_process_irq = process_isp_irq;
 	core_param.mm_init = isp_reset;
 	core_param.mm_deinit = isp_reset;
-	core_param.mm_abort = isp_reset;
+	core_param.mm_abort = isp_abort;
 	core_param.mm_get_regs = NULL;
 	core_param.mm_update_virt_addr = mm_isp_update_virt_addr;
 	core_param.mm_version_init = NULL;
