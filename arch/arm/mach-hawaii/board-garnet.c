@@ -826,7 +826,11 @@ static struct kona_headset_pd hawaii_headset_data = {
 	 * HS remove
 	 */
 
+#if defined(CONFIG_MACH_HAWAII_GARNET_C_A18)
+	.hs_default_state = 1,
+#else
 	.hs_default_state = 0,
+#endif
 	/*
 	 * Because of the presence of the resistor in the MIC_IN line.
 	 * The actual ground may not be 0, but a small offset is added to it.
