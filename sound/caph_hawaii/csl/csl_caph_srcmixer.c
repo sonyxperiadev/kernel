@@ -906,7 +906,7 @@ static UInt8 csl_caph_srcmixer_get_chaloutchnl(CSL_CAPH_MIXER_e
 					       outChnl)
 {
 	UInt8 chalOutChnl = CAPH_M_NONE;
-	switch (outChnl) {
+	switch ((int)outChnl) {
 	case CSL_CAPH_SRCM_STEREO_CH1_L:
 		chalOutChnl = CAPH_M0_Left;
 		break;
