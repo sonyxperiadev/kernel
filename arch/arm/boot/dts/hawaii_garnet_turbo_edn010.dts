@@ -416,5 +416,6 @@
 		polarity = <1>;		/* Inverted polarity */
 		pwm-period-ns = <100000>;
 		pwm-request-label = "backlight";
+		bl-on-delay = <6000>;
 	};
 };

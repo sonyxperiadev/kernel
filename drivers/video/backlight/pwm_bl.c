@@ -37,6 +37,7 @@ struct pwm_bl_data {
 #ifdef CONFIG_HAS_EARLYSUSPEND
 	struct early_suspend bd_early_suspend;
 #endif
+	struct delayed_work bl_delay_on_work;
 };
 
 static int pwm_backlight_update_status(struct backlight_device *bl)
@@ -83,6 +84,18 @@ static int pwm_backlight_check_fb(struct backlight_device *bl,
 	return !pb->check_fb || pb->check_fb(pb->dev, info);
 }
 
+static void bl_delay_on_func(struct work_struct *work)
+{
+	struct pwm_bl_data *pb =
+		container_of(work, struct pwm_bl_data, bl_delay_on_work.work);
+	struct platform_device *pdev =
+		container_of(pb->dev, struct platform_device, dev);
+	struct backlight_device *bl = dev_get_drvdata(&pdev->dev);
+
+	pr_info("bl_delay_on_func update brightness\r\n");
+	backlight_update_status(bl);
+}
+
 static const struct backlight_ops pwm_backlight_ops = {
 	.update_status	= pwm_backlight_update_status,
 	.get_brightness	= pwm_backlight_get_brightness,
@@ -123,6 +136,7 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 	struct pwm_bl_data *pb;
 	const char *pwm_request_label = NULL;
 	int ret;
+	int bl_delay_on = 0;
 
 	if (pdev->dev.platform_data)
 		data = pdev->dev.platform_data;
@@ -174,6 +188,12 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 			ret = -EINVAL;
 			goto err_read;
 		}
+
+		if (of_property_read_u32(pdev->dev.of_node,
+				"bl-on-delay", &val)) {
+			bl_delay_on = 0;
+		} else
+			bl_delay_on = val;
 
 		pdev->dev.platform_data = data;
 
@@ -229,7 +249,15 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 
 	bl->props.brightness = data->dft_brightness;
 	pwm_set_polarity(pb->pwm, data->polarity);
-	backlight_update_status(bl);
+
+	pr_info("pwm_backlight_probe bl-delay-on %d\r\n", bl_delay_on);
+	if (bl_delay_on == 0)
+		backlight_update_status(bl);
+	else {
+		INIT_DELAYED_WORK(&(pb->bl_delay_on_work), bl_delay_on_func);
+		schedule_delayed_work(&(pb->bl_delay_on_work),
+			msecs_to_jiffies(bl_delay_on));
+	}
 
 	platform_set_drvdata(pdev, bl);
 #ifdef CONFIG_HAS_EARLYSUSPEND
