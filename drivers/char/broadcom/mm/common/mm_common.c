@@ -175,7 +175,6 @@ void mm_common_wait_job(struct work_struct *work)
 	struct dev_job_list *to = maint_job->u.il.to;
 	struct dev_status_list *status = maint_job->u.il.status;
 	struct file_private_data *to_filp = to->filp;
-	struct mm_common *common = to_filp->common;
 
 	if (status) {
 		if (status->status.status == MM_JOB_STATUS_INVALID) {
@@ -200,7 +199,6 @@ void mm_common_wait_job(struct work_struct *work)
 	list_add_tail(&(to->file_list), &(to_filp->write_head));
 
 	if ((from == NULL) && list_is_singular(&to_filp->write_head)) {
-		pr_err("completing job %p %p", to, status);
 		mm_common_interlock_completion(to);
 		}
 	else if (from != NULL) {
