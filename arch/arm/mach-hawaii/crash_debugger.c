@@ -34,6 +34,9 @@
 #include <mach/sram_config.h>
 #include <linux/fs.h>
 
+#include <mach/rdb/brcm_rdb_a9cpu.h>
+#include <mach/rdb/brcm_rdb_gicdist.h>
+
 enum cdebugger_upload_cause_t {
 	UPLOAD_CAUSE_INIT = 0xCAFEBABE,
 	UPLOAD_CAUSE_KERNEL_PANIC = 0x000000C8,
@@ -60,6 +63,34 @@ struct cdebugger_mmu_reg_t {
 	int URWTPID;
 	int UROTPID;
 	int POTPIDR;
+};
+
+struct cdebugger_gic_core {
+	/* gic dist interrupt status registers */
+	unsigned int pending_set0;
+	unsigned int pending_set1;
+	unsigned int pending_set2;
+	unsigned int pending_set3;
+	unsigned int pending_set4;
+	unsigned int pending_set5;
+	unsigned int pending_set6;
+	unsigned int pending_set7;
+	unsigned int pending_clr0;
+	unsigned int pending_clr1;
+	unsigned int pending_clr2;
+	unsigned int pending_clr3;
+	unsigned int pending_clr4;
+	unsigned int pending_clr5;
+	unsigned int pending_clr6;
+	unsigned int pending_clr7;
+	unsigned int active_status0;
+	unsigned int active_status1;
+	unsigned int active_status2;
+	unsigned int active_status3;
+	unsigned int active_status4;
+	unsigned int active_status5;
+	unsigned int active_status6;
+	unsigned int active_status7;
 };
 
 /* ARM CORE regs mapping structure */
@@ -117,6 +148,22 @@ struct cdebugger_core_t {
 	unsigned int r14_und;
 	unsigned int spsr_und;
 
+	/* DFSR, IFSR, ADFSR, AIFSR, DFAR, IFAR.  */
+	unsigned int dfsr;
+	unsigned int ifsr;
+	unsigned int adfsr;
+	unsigned int aifsr;
+	unsigned int dfar;
+	unsigned int ifar;
+
+	/* c12, Interrupt status.  */
+	unsigned int isr;
+
+	/* sampled PC cpu0 and cpu1 */
+	unsigned int pcsr0;
+	unsigned int pcsr1;
+
+	struct cdebugger_gic_core gic_dist;
 };
 
 struct cdebugger_fault_status_t {
@@ -339,6 +386,22 @@ early_param("crash_ramdump", setup_crash_ramdump);
 /* core reg dump function*/
 static void cdebugger_save_core_reg(struct cdebugger_core_t *core_reg)
 {
+	unsigned int i, offset = 0;
+	unsigned int *gic_dist = &core_reg->gic_dist.pending_set0;
+	unsigned int size = sizeof(struct cdebugger_gic_core) /
+				sizeof(unsigned int);
+#define A9CPU1_OFFSET 0x2000
+	for (i = 0; i < size; i++, offset += 4) {
+		*gic_dist = readl(KONA_GICDIST_VA +
+				GICDIST_PENDING_SET0_OFFSET +
+				offset);
+		gic_dist++;
+	}
+
+	core_reg->pcsr0 = readl(KONA_A9CPU0_VA + A9CPU_PCSR_OFFSET);
+	core_reg->pcsr1 = readl(KONA_A9CPU0_VA +
+				A9CPU1_OFFSET +
+				A9CPU_PCSR_OFFSET);
 
 	/* we will be in SVC mode when we enter this function. Collect
 	   SVC registers along with cmn registers. */
@@ -366,6 +429,21 @@ static void cdebugger_save_core_reg(struct cdebugger_core_t *core_reg)
 	    "str r1, [r0,#64]\n\t"
 	    "mrs r1, cpsr\n\t"		/* CPSR */
 	    "str r1, [r0,#68]\n\t"
+
+	    /* DFSR, IFSR, ADFSR, AIFSR, DFAR, IFAR. */
+	    "mrc p15, 0, r1, c5, c0, 0\n\t"
+	    "str r1, [r0,#148]\n\t"	/* DFSR */
+	    "mrc p15, 0, r1, c5, c0, 1\n\t"
+	    "str r1, [r0,#152]\n\t"	/* IFSR */
+	    "mrc p15, 0, r1, c5, c1, 0\n\t"
+	    "str r1, [r0,#156]\n\t"	/* ADFSR */
+	    "mrc p15, 0, r1, c5, c1, 1\n\t"
+	    "str r1, [r0,#160]\n\t"	/* AIFSR */
+	    "mrc p15, 0, r1, c6, c0, 0\n\t"
+	    "str r1, [r0,#164]\n\t"	/* DFSR */
+	    "mrc p15, 0, r1, c6, c0, 2\n\t"
+	    "str r1, [r0,#168]\n\t"	/* AIFSR */
+
 	    /* SYS/USR */
 	    "mrs r1, cpsr\n\t"		/* switch to SYS mode */
 	    "and r1, r1, #0xFFFFFFE0\n\t"
@@ -401,19 +479,19 @@ static void cdebugger_save_core_reg(struct cdebugger_core_t *core_reg)
 	    "and r1, r1, #0xFFFFFFE0\n\t"
 	    "orr r1, r1, #0x17\n\t"
 	    "msr cpsr,r1\n\t"
-	    "str r13, [r0,#136]\n\t"	/* R13_ABT */
-	    "str r14, [r0,#140]\n\t"	/* R14_ABT */
+	    "str r13, [r0,#124]\n\t"	/* R13_ABT */
+	    "str r14, [r0,#128]\n\t"	/* R14_ABT */
 	    "mrs r1, spsr\n\t"		/* SPSR_ABT */
-	    "str r1, [r0,#144]\n\t"
+	    "str r1, [r0,#132]\n\t"
 	    /* UND */
 	    "mrs r1, cpsr\n\t"		/* switch to undef mode */
 	    "and r1, r1, #0xFFFFFFE0\n\t"
 	    "orr r1, r1, #0x1B\n\t"
 	    "msr cpsr,r1\n\t"
-	    "str r13, [r0,#148]\n\t"	/* R13_UND */
-	    "str r14, [r0,#152]\n\t"	/* R14_UND */
+	    "str r13, [r0,#136]\n\t"	/* R13_UND */
+	    "str r14, [r0,#140]\n\t"	/* R14_UND */
 	    "mrs r1, spsr\n\t"		/* SPSR_UND */
-	    "str r1, [r0,#156]\n\t"
+	    "str r1, [r0,#144]\n\t"
 	    /* restore to SVC mode */
 	    "mrs r1, cpsr\n\t"		/* switch to SVC mode */
 	    "and r1, r1, #0xFFFFFFE0\n\t"
