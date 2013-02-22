@@ -264,10 +264,12 @@ static int kona_fb_set_par(struct fb_info *info)
 
 	konafb_debug("kona %s\n", __func__);
 
+#if 0
 	if (fb->rotation != fb->fb.var.rotate) {
 		konafb_warning("Rotation is not supported yet !\n");
 		return -EINVAL;
 	}
+#endif
 
 	return 0;
 }
@@ -805,13 +807,19 @@ static struct kona_fb_platform_data * __init get_of_data(struct device_node *np)
 	else
 		fb_data->rst.active = false;
 
+	if (of_property_read_u32(np, "rotation", &val))
+		goto of_fail;
+	fb_data->rotation = val;
+
 #ifdef CONFIG_MACH_HAWAII_GARNET
 	if (of_property_read_u32(np, "detect-gpio", &val))
 		goto of_fail;
 	fb_data->detect.gpio = val;
 	fb_data->detect.active = gpio_get_value(fb_data->detect.gpio);
-	if (fb_data->detect.active)
+	if (fb_data->detect.active) {
 		strcpy(fb_data->name, "OTM8018B");
+		fb_data->rotation = 180;
+	}
 #endif
 	if (of_property_read_bool(np, "vmode"))
 		fb_data->vmode = true;
@@ -1300,6 +1308,7 @@ static int __ref kona_fb_probe(struct platform_device *pdev)
 	pixclock_64 = div_u64(1000000000000LLU,
 				width * height * fb->display_info->fps);
 	fb->fb.var.pixclock = pixclock_64;
+	fb->fb.var.rotate = fb_data->rotation;
 
 	switch (fb->display_info->in_fmt) {
 	case DISPDRV_FB_FORMAT_RGB565:
