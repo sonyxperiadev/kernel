@@ -955,7 +955,7 @@ Int32 DSI_Update(
 	req.lineCount	= p_win->h;
 	req.xStrideB	= pPanel->disp_info->width - p_win->w;
 	req.buffBpp	= pPanel->disp_info->Bpp;
-	req.timeOut_ms = pPanel->disp_info->vmode ? MAX_SCHEDULE_TIMEOUT : 100;
+	req.timeOut_ms = pPanel->disp_info->vmode ? MAX_SCHEDULE_TIMEOUT : 3000;
 	req.cslLcdCbRec.cslH		= pPanel->clientH;
 	req.cslLcdCbRec.dispDrvApiCbRev	= DISP_DRV_CB_API_REV_1_0;
 	req.cslLcdCbRec.dispDrvApiCb	= (void	*) apiCb;
