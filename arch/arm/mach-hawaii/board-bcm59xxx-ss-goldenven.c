@@ -90,7 +90,7 @@ static struct bcmpmu59xxx_rw_data __initdata register_init_data[] = {
 	{.addr = PMU_REG_MBCCTRL3, .val = 0x04, .mask = 0x04},
 
 	/*  ICCMAX to 1500mA*/
-	{.addr = PMU_REG_MBCCTRL8, .val = 0x09, .mask = 0xFF},
+	{.addr = PMU_REG_MBCCTRL8, .val = 0x0B, .mask = 0xFF},
 
 	/* NTC Hot Temperature Comparator*/
 	{.addr = PMU_REG_CMPCTRL5, .val = 0x01, .mask = 0xFF},
@@ -173,6 +173,11 @@ static struct bcmpmu59xxx_rw_data __initdata register_init_data[] = {
 	{.addr = PMU_REG_CMPCTRL16 , .val = 0x12, .mask = 0xFF},
 	{.addr = PMU_REG_CMPCTRL17 , .val = 0x00, .mask = 0xFF},
 	{.addr = PMU_REG_PLLPMCTRL , .val = 0x00, .mask = 0xFF},
+
+	/*RFLDO and AUDLDO pulldown disable MobC00290043*/
+	{.addr = PMU_REG_RFLDOCTRL , .val = 0x40, .mask = 0x40},
+	{.addr = PMU_REG_AUDLDOCTRL , .val = 0x40, .mask = 0x40},
+
 
 #if defined(CONFIG_MACH_HAWAII_SS_LOGAN_REV00)
 	/* enable PASR mode */
@@ -1189,11 +1194,15 @@ static struct bcmpmu_fg_pdata fg_pdata = {
 	.fg_factor = 950, /* Logan00 board : 2.76% err Jan30 2010 */
 	.poll_rate_low_batt = 5000, /* every 5 seconds */
 	.poll_rate_crit_batt = 2000, /* every 2 Seconds */
-
 	.acld_vbus_margin = 200,	/*mV*/
-	.i_sat = 3000,			/* saturation current in mA
+
+	/* CIG22H2R2MNE, rated current 1.6A  */
+	.i_sat = 1600,		/* saturation current in mA
 						for chrgr while using ACLD */
 	.i_def_dcp = 700,
+	.acld_cc_lmt = 1800,
+	.otp_cc_trim = 0x1F,
+
 };
 
 #ifdef CONFIG_CHARGER_BCMPMU_SPA

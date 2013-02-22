@@ -90,7 +90,7 @@ static struct bcmpmu59xxx_rw_data __initdata register_init_data[] = {
 	{.addr = PMU_REG_MBCCTRL3, .val = 0x04, .mask = 0x04},
 
 	/*  ICCMAX to 1500mA*/
-	{.addr = PMU_REG_MBCCTRL8, .val = 0x09, .mask = 0xFF},
+	{.addr = PMU_REG_MBCCTRL8, .val = 0x0B, .mask = 0xFF},
 
 	/* NTC Hot Temperature Comparator*/
 	{.addr = PMU_REG_CMPCTRL5, .val = 0x01, .mask = 0xFF},
@@ -142,9 +142,13 @@ static struct bcmpmu59xxx_rw_data __initdata register_init_data[] = {
 	{.addr =  PMU_REG_CMPCTRL17, .val = 0x01, .mask = 0xFF},
 	/* Mask RTM conversion */
 	{.addr =  PMU_REG_ADCCTRL1, .val = 0x08, .mask = 0x08},
-	/* EN_SESS_VALID  disable ID detection */
+#ifdef CONFIG_MACH_HAWAII_SS_COMMON
+	/* EN_SESS_VALID disable ID detection */
 	{.addr = PMU_REG_OTGCTRL1 , .val = 0x10, .mask = 0xFF},
-
+#else
+	/* EN_SESS_VALID  enable ID detection */
+	{.addr = PMU_REG_OTGCTRL1 , .val = 0x18, .mask = 0xFF},
+#endif
 
 	/* MMSR LPM voltage - 0.88V */
 	{.addr = PMU_REG_MMSRVOUT2 , .val = 0x4, .mask = 0x3F},
@@ -174,6 +178,9 @@ static struct bcmpmu59xxx_rw_data __initdata register_init_data[] = {
 	{.addr = PMU_REG_CMPCTRL17 , .val = 0x00, .mask = 0xFF},
 	{.addr = PMU_REG_PLLPMCTRL , .val = 0x00, .mask = 0xFF},
 
+	/*RFLDO and AUDLDO pulldown disable MobC00290043*/
+	{.addr = PMU_REG_RFLDOCTRL , .val = 0x40, .mask = 0x40},
+	{.addr = PMU_REG_AUDLDOCTRL , .val = 0x40, .mask = 0x40},
 #if defined(CONFIG_MACH_HAWAII_SS_LOGAN_REV00)
 	/* enable PASR mode */
 	{.addr = PMU_REG_GPIOCTRL3 , .val = 0x02, .mask = 0xFF},
@@ -480,9 +487,10 @@ __weak struct regulator_consumer_supply lvldo1_supply[] = {
 };
 static struct regulator_init_data bcm59xxx_lvldo1_data = {
 	.constraints = {
+			/* CAM0_1v8 */
 			.name = "lvldo1",
 			.min_uV = 1000000,
-			.max_uV = 1786000,
+			.max_uV = 1800000,
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE|
 			REGULATOR_CHANGE_MODE,
@@ -1227,11 +1235,14 @@ static struct bcmpmu_fg_pdata fg_pdata = {
 	.fg_factor = 950, /* Logan00 board : 2.76% err Jan30 2010 */
 	.poll_rate_low_batt = 5000, /* every 5 seconds */
 	.poll_rate_crit_batt = 2000, /* every 2 Seconds */
-
 	.acld_vbus_margin = 200,	/*mV*/
-	.i_sat = 3000,			/* saturation current in mA
+
+	/* CIG22H2R2MNE, rated current 1.6A  */
+	.i_sat = 1600,		/* saturation current in mA
 						for chrgr while using ACLD */
 	.i_def_dcp = 700,
+	.acld_cc_lmt = 1800,
+	.otp_cc_trim = 0x1F,
 };
 
 #ifdef CONFIG_CHARGER_BCMPMU_SPA
