@@ -516,7 +516,7 @@ int mm_csi0_get_data_stat (struct int_desc *desc, int ack)
 		pr_info("Null descriptor data\n");
 		return -EINVAL;
 	}
-	if (BRCM_READ_REG_FIELD(base, CAM_DCS, DI) & CAM_DCS_DI_MASK) {
+	if ((BRCM_READ_REG_FIELD(base, CAM_DCS, DI)) & (CAM_DCS_DI_MASK)) {
 		if (ack)
 			BRCM_WRITE_REG_FIELD(base, CAM_DCS, DI, 0x1);
 		desc->die = 1;

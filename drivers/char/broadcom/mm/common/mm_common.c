@@ -623,59 +623,6 @@ static long mm_file_ioctl(struct file *filp, \
 	}
 
 	switch (cmd) {
-	case MM_IOCTL_POST_JOB:
-		{
-		struct dev_job_list *mm_job_node = mm_common_alloc_job(private);
-
-		if (copy_from_user(&(mm_job_node->job), (void *)arg, \
-					sizeof(mm_job_node->job))) {
-			pr_err("copy_from_user failed for type");
-			ret = -EINVAL;
-			}
-		if (mm_job_node->job.size > 0) {
-			void *job_post = NULL;
-			job_post = kmalloc(mm_job_node->job.size, GFP_KERNEL);
-			if (copy_from_user(job_post, mm_job_node->job.data, \
-						mm_job_node->job.size)) {
-				pr_err("MM_IOCTL_POST_JOB data copy_from_user failed");
-				ret = -EINVAL;
-				}
-			mm_job_node->job.data = job_post;
-			BUG_ON(((mm_job_node->job.type&0xFF0000)>>16) \
-						>= MAX_ASYMMETRIC_PROC);
-			BUG_ON(common->mm_core\
-				[(mm_job_node->job.type&0xFF0000)>>16] == NULL);
-			SCHEDULE_ADD_WORK(mm_job_node);
-			}
-		else {
-			kfree(mm_job_node);
-			pr_err("zero size write");
-			}
-		}
-		break;
-	case MM_IOCTL_WAIT_JOB:
-		{
-		struct interlock il;
-		struct dev_status_list job_status;
-
-		INIT_LIST_HEAD(&job_status.wait_list);
-		job_status.filp = private;
-		job_status.status.status = MM_JOB_STATUS_INVALID;
-		job_status.status.id = 0;
-		il.status = &job_status;
-		il.from = NULL;
-		il.to = mm_common_alloc_job(private);
-		SCHEDULE_INTERLOCK_WORK(il);
-
-		if (wait_event_interruptible(mm_queue, \
-			job_status.status.status != MM_JOB_STATUS_INVALID)) {
-			/*Task interrupted... \
-				Ensure to remove from the waitlist*/
-			pr_err("Task interrupted");
-			SCHEDULE_INTERLOCK_WORK(il);
-			}
-		}
-		break;
 	case MM_IOCTL_VERSION_REQ:
 		if (common->version_info.version_info_ptr != NULL) {
 			mm_version_info_t *user_virsion_info =
@@ -801,8 +748,7 @@ void *mm_fmwk_register(const char *name, const char *clk_name,
 
 err_register:
 	pr_err("Error in dev_init for %s", name);
-	if (common)
-		mm_fmwk_unregister(common);
+	mm_fmwk_unregister(common);
 	return NULL;
 }
 

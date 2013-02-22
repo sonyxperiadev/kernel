@@ -245,17 +245,18 @@ static int unicam_camera_update_buf(struct unicam_camera_dev *unicam_dev)
 		im0.ls = (UInt32) line_stride;
 		im0.size = line_stride * unicam_dev->icd->user_height;
 
-		if(unicam_dev->b_mode == BUFFER_DOUBLE && phys_addr1){
+		/* Coverity Fix: Dead Code */
+		/* if(unicam_dev->b_mode == BUFFER_DOUBLE && phys_addr1){ */
 			/* image 1 */
-			im1.start = phys_addr1;
+		/*	im1.start = phys_addr1;
 			im1.ls = im0.ls;
 			im1.size = im0.size;
 			mm_csi0_update_addr(&im0, &im1, NULL, NULL);
-		} else {
-			mm_csi0_update_addr(&im0, NULL, NULL, NULL);
-			pr_debug("Adr 0x%x ls 0x%x size 0x%x\n", im0.start,
-					im0.ls, im0.size);
-		}
+		} else { */
+		mm_csi0_update_addr(&im0, NULL, NULL, NULL);
+		pr_debug("Adr 0x%x ls 0x%x size 0x%x\n", im0.start,
+				im0.ls, im0.size);
+		/* } */
 	} else {
 		/* JPEG section always in DAT0 */
 		/* check whether sensor supports thumbnail */
