@@ -51,7 +51,7 @@ static bool first_af_status = false;
 #define EXIF_MAKE		"SAMSUNG"
 #define EXIF_MODEL		"GT-B7810"
 static DEFINE_MUTEX(af_cancel_op);
-//extern inline struct camdrv_ss_state *to_state(struct v4l2_subdev *sd);
+extern inline struct camdrv_ss_state *to_state(struct v4l2_subdev *sd);
 
 
 extern  int camdrv_ss_i2c_set_config_register(struct i2c_client *client, 
@@ -62,7 +62,7 @@ extern  int camdrv_ss_i2c_set_config_register(struct i2c_client *client,
 extern int camdrv_ss_set_preview_size(struct v4l2_subdev *sd);
 extern int camdrv_ss_set_capture_size(struct v4l2_subdev *sd);
 extern int camdrv_ss_set_dataline_onoff(struct v4l2_subdev *sd, int onoff);
-extern struct camdrv_ss_state *to_state(struct v4l2_subdev *sd);
+extern inline struct camdrv_ss_state *to_state(struct v4l2_subdev *sd);
 int wb_auto=1,iso_auto=1;
 //#define __JPEG_CAPTURE__ 1        
 
@@ -1596,25 +1596,25 @@ static int camdrv_ss_s5k4ecgx_set_touch_focus_area(struct v4l2_subdev *sd, enum 
             return -EIO;
         }
 
-        SecondWinStartX = touch_area->x - ( (AF_INNER_WINDOW_WIDTH - touch_area->w) / 2 );
+        SecondWinStartX = touch_area->leftTopX - ( (AF_INNER_WINDOW_WIDTH - touch_area->rightBottomX) / 2 );
         if (SecondWinStartX < 0)
             SecondWinStartX = 0;
         if (SecondWinStartX+AF_INNER_WINDOW_WIDTH > preview_width)
             SecondWinStartX = preview_width-AF_INNER_WINDOW_WIDTH-1;
 
-        SecondWinStartY = touch_area->y - ( (AF_INNER_WINDOW_HEIGHT- touch_area->h) / 2 );
+        SecondWinStartY = touch_area->leftTopY - ( (AF_INNER_WINDOW_HEIGHT- touch_area->rightBottomY) / 2 );
         if (SecondWinStartY < 0)
             SecondWinStartY = 0;
         if (SecondWinStartY+AF_INNER_WINDOW_HEIGHT > preview_height)
             SecondWinStartY = preview_height-AF_INNER_WINDOW_HEIGHT-1;
 
-        FirstWinStartX = touch_area->x - ( (AF_OUTER_WINDOW_WIDTH - touch_area->w) / 2 );
+        FirstWinStartX = touch_area->leftTopX - ( (AF_OUTER_WINDOW_WIDTH - touch_area->rightBottomX) / 2 );
         if (FirstWinStartX < 0)
 			FirstWinStartX = 0;
         if (FirstWinStartX+AF_OUTER_WINDOW_WIDTH > preview_width)
             FirstWinStartX = preview_width-AF_OUTER_WINDOW_WIDTH-1;
         
-        FirstWinStartY = touch_area->y - ( (AF_OUTER_WINDOW_HEIGHT- touch_area->h) / 2 );
+        FirstWinStartY = touch_area->leftTopY - ( (AF_OUTER_WINDOW_HEIGHT- touch_area->rightBottomY) / 2 );
         if (FirstWinStartY < 0)
 			FirstWinStartY = 0;
         if (FirstWinStartY+AF_OUTER_WINDOW_HEIGHT > preview_height)
@@ -1622,7 +1622,7 @@ static int camdrv_ss_s5k4ecgx_set_touch_focus_area(struct v4l2_subdev *sd, enum 
 
 
 		CAM_INFO_PRINTK("[%s:%d]leftTopX %d, leftTopY %d, rightBottomX %d, rightBottomY %d\n",__func__, __LINE__,  
-                touch_area->x,touch_area->y, touch_area->w, touch_area->h);
+                touch_area->leftTopX,touch_area->leftTopY, touch_area->rightBottomX, touch_area->rightBottomY);
 		CAM_INFO_PRINTK("[%s:%d]SecondWinStartX %d, SecondWinStartY %d\n",__func__, __LINE__,  SecondWinStartX, SecondWinStartY);
 		CAM_INFO_PRINTK("[%s:%d]FirstWinStartX %d, FirstWinStartY %d\n",__func__, __LINE__,  FirstWinStartX, FirstWinStartY);
             
