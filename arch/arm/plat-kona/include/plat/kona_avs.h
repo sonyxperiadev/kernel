@@ -62,6 +62,7 @@ struct kona_avs_pdata {
 	u32 *silicon_type_lut;
 	struct kona_ate_lut_entry *ate_lut;
 	u32 *irdrop_lut;
+	u32 irdrop_vreq;
 };
 
 u32 kona_avs_get_silicon_type(void);

@@ -194,6 +194,16 @@ static inline int opp_inx_to_id(struct pi_opp *pi_opp, u32 inx)
 	return pi_opp->opp_info[0][inx].opp_id;
 }
 
+u32 pi_get_dfs_lmt(u32 pi_id, bool max)
+{
+	struct pi *pi = pi_mgr_get(pi_id);
+	BUG_ON(pi == NULL);
+	BUG_ON(pi->pi_opp == NULL);
+	if (max)
+		return opp_inx_to_id(pi->pi_opp, pi->opp_lmt_max);
+	else
+		return opp_inx_to_id(pi->pi_opp, pi->opp_lmt_min);
+}
 
 int __pi_enable(struct pi *pi)
 {

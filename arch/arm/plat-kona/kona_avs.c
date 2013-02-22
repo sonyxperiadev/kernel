@@ -22,6 +22,13 @@
 #include <linux/platform_device.h>
 #include <linux/io.h>
 #include <linux/module.h>
+#include <mach/rdb_A0/brcm_rdb_pwrwdog.h>
+#include <mach/rdb_A0/brcm_rdb_sysmap.h>
+#include <mach/memory.h>
+#include <linux/delay.h>
+#include <plat/pi_mgr.h>
+#include <linux/regulator/consumer.h>
+#include <plat/kona_pm.h>
 
 #define AVS_ATE_MONTH_MASK	(0xF)
 #define AVS_ATE_YEAR_MASK	(0xF0)
@@ -143,6 +150,123 @@ static struct kernel_param_ops param_ops_trigger_avs = {
 
 static struct trigger_avs trigger_avs;
 module_param_named(trigger_avs, trigger_avs, trigger_avs,
+				S_IWUSR | S_IWGRP);
+
+static void kona_avs_irdrop_count_en(bool enable)
+{
+	u32 reg_val;
+	u32 irdrop_ctrl_addr = HW_IO_PHYS_TO_VIRT(PWRWDOG_BASE_ADDR) +
+		PWRWDOG_IRDROP_CTRL_OFFSET;
+	reg_val = readl(irdrop_ctrl_addr);
+	if (enable) {
+		reg_val |= (PWRWDOG_IRDROP_CTRL_IRDROP_EN_MASK <<
+			PWRWDOG_IRDROP_CTRL_IRDROP_EN_SHIFT);
+		reg_val |= (PWRWDOG_IRDROP_CTRL_OSC_OUT_EN_MASK <<
+			PWRWDOG_IRDROP_CTRL_OSC_OUT_EN_SHIFT);
+	} else {
+		reg_val &= ~(PWRWDOG_IRDROP_CTRL_IRDROP_EN_MASK <<
+			PWRWDOG_IRDROP_CTRL_IRDROP_EN_SHIFT);
+		reg_val &= ~(PWRWDOG_IRDROP_CTRL_OSC_OUT_EN_MASK <<
+			PWRWDOG_IRDROP_CTRL_OSC_OUT_EN_SHIFT);
+	}
+
+	writel(reg_val, irdrop_ctrl_addr);
+}
+
+static u32 kona_avs_get_irdrop_silicon_type(int from_otp)
+{
+	u32 irdrop_count;
+	int i;
+	int silicon_type = -1;
+	u32 irdrop_cnt_addr = HW_IO_PHYS_TO_VIRT(PWRWDOG_BASE_ADDR) +
+			PWRWDOG_IRDROP_CNT_OFFSET;
+	if (!from_otp) {
+		irdrop_count = readl(irdrop_cnt_addr);
+		avs_dbg(AVS_LOG_INIT, "Reading IRDROP from Register:%u",
+				irdrop_count);
+	} else {
+		irdrop_count = avs_info.irdrop;
+		avs_dbg(AVS_LOG_INIT, "Reading IRDROP from OTP:%u",
+				irdrop_count);
+	}
+	for (i = 0; i < SILICON_TYPE_MAX; i++)
+		if (irdrop_count > avs_info.pdata->irdrop_lut[i] &&
+			irdrop_count < avs_info.pdata->irdrop_lut[i+1]) {
+				silicon_type = (i + 1);
+				break;
+		}
+	if (silicon_type == -1)
+		silicon_type = SILICON_TYPE_SLOW;
+	return silicon_type;
+}
+
+struct trigger_irdrop {
+	int dummy;
+};
+
+struct trigger_irdrop trigger_irdrop;
+
+#define __param_check_trigger_irdrop(name, p, type) \
+	static inline struct type *__check_##name(void) { return (p); }
+#define param_check_trigger_irdrop(name, p) \
+	__param_check_trigger_irdrop(name, p, trigger_irdrop)
+
+static int param_set_trigger_irdrop(const char *val,
+			const struct kernel_param *kp)
+{
+	int trig;
+	int ret = -1;
+	struct pi *pi;
+	struct regulator *regulator;
+	u32 min, max;
+	avs_dbg(AVS_LOG_FLOW, "%s\n", __func__);
+	if (!val)
+		return -EINVAL;
+	if (!avs_info.pdata) {
+		avs_dbg(AVS_LOG_ERR, "%s: invalid paltform data\n",
+				__func__);
+		return -EPERM;
+	}
+	ret = sscanf(val, "%d", &trig);
+	avs_dbg(AVS_LOG_INFO, "%s,trig:%d\n", __func__, trig);
+	if (trig == 1) {
+		kona_pm_disable_idle_state(CSTATE_ALL, 1);
+		pi = pi_mgr_get(PI_MGR_PI_ID_ARM_CORE);
+		min = pi_get_dfs_lmt(pi->id, 0);
+		max = pi_get_dfs_lmt(pi->id, 1);
+		pi_mgr_set_dfs_opp_limit(pi->id, PI_OPP_ECONOMY,
+				PI_OPP_ECONOMY);
+		regulator = regulator_get(NULL, "csr_uc");
+		if (!regulator) {
+			pr_err("Unable to get regulator\n");
+			ret = -ENODEV;
+			goto err;
+		}
+		ret = regulator_set_voltage(regulator,
+			avs_info.pdata->irdrop_vreq,
+			avs_info.pdata->irdrop_vreq);
+		if (ret) {
+			pr_err("Unable to set voltage to 1.2V\n");
+			goto err;
+		}
+		kona_avs_irdrop_count_en(true);
+		mdelay(5);
+		pr_info("IRDROP Silicon type: %d\n",
+			kona_avs_get_irdrop_silicon_type(0));
+err:
+		kona_avs_irdrop_count_en(false);
+		pi_mgr_set_dfs_opp_limit(pi->id, min, max);
+		regulator_put(regulator);
+		kona_pm_disable_idle_state(CSTATE_ALL, 0);
+	}
+	return ret;
+}
+
+static struct kernel_param_ops param_ops_trigger_irdrop = {
+	.set = param_set_trigger_irdrop,
+};
+
+module_param_named(trigger_irdrop, trigger_irdrop, trigger_irdrop,
 				S_IWUSR | S_IWGRP);
 
 u32 kona_avs_get_silicon_type(void)

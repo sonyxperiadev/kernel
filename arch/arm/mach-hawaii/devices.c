@@ -831,6 +831,7 @@ static struct kona_avs_pdata avs_pdata = {
 	.silicon_type_lut = silicon_type_lut,
 	.ate_lut = ate_lut,
 	.irdrop_lut = irdrop_lut,
+	.irdrop_vreq = 1200000,
 	.silicon_type_notify = avs_silicon_type_notify,
 	.vddvar_adj_lut = vddvar_adj_val,
 	.vddfix_adj_lut = vddfix_adj_lut,
