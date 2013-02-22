@@ -54,6 +54,7 @@ struct bcmpmu_batt_property {
 	int min_volt; /* min volt in mV */
 	int max_volt; /* max volt in mV */
 	int full_cap; /* full capacity in milli amp seconds */
+	int one_c_rate;
 
 	/* lookup tables */
 	struct batt_volt_cap_map *volt_cap_lut;
@@ -141,6 +142,9 @@ struct bcmpmu_fg_pdata {
 	int recovery_temp_cold;
 	int poll_rate_low_batt;
 	int poll_rate_crit_batt;
+	int acld_vbus_margin;
+	int i_sat;
+	int i_def_dcp; /* Default DCP current */
 };
 
 int bcmpmu_fg_set_sw_eoc_current(struct bcmpmu59xxx *bcmpmu, int eoc_current);

@@ -69,6 +69,16 @@
 
 #define CURR_LMT_MAX	0xFFFF
 
+/* PMU ID and Revision */
+#define BCMPMU_59054_ID		0x54
+#define BCMPMU_59054A0_DIG_REV	1
+#define BCMPMU_59054A1_ANA_REV	2
+
+#define PMU_USB_FC_CC_OTP	500
+#define PMU_USB_CC_TRIM_OTP	0
+#define PMU_DCP_DEF_CURR_LMT	700
+#define PMU_TYP_SAT_CURR	1600 /*mA*/
+
 /*helper macros to manage regulator PC pin map*/
 /*
 SET0 holds ORed list of PC pin - regualtor will be enabled if
@@ -599,6 +609,7 @@ enum bcmpmu_usb_ctrl_t {
 	BCMPMU_USB_CTRL_GET_ADP_PRB_RISE_TIMES,
 	BCMPMU_USB_CTRL_GET_VBUS_STATUS,
 	BCMPMU_USB_CTRL_GET_SESSION_STATUS,
+	BCMPMU_USB_CTRL_GET_USB_VALID,
 	BCMPMU_USB_CTRL_GET_SESSION_END_STATUS,
 	BCMPMU_USB_CTRL_GET_ID_VALUE,
 	BCMPMU_USB_CTRL_GET_CHRGR_TYPE,
@@ -879,7 +890,8 @@ struct bcmpmu59xxx_spa_pb_pdata {
 
 /*BCMPMU generic control flags*/
 enum {
-	BCMPMU_SPA_EN = 1,
+	BCMPMU_SPA_EN = 1 << 0,
+	BCMPMU_ACLD_EN = 1 << 1,
 };
 /* Board id enum */
 enum {
@@ -966,11 +978,21 @@ int bcmpmu_usb_get(struct bcmpmu59xxx *bcmpmu,
 
 int bcmpmu_usb_set(struct bcmpmu59xxx *bcmpmu,
 			int ctrl, unsigned long data);
+
 u32 bcmpmu_get_chrgr_curr_lmt(u32 chrgr_type);
 int bcmpmu_chrgr_usb_en(struct bcmpmu59xxx *bcmpmu, int enable);
 int bcmpmu_is_usb_host_enabled(struct bcmpmu59xxx *bcmpmu);
 int bcmpmu_set_icc_fc(struct bcmpmu59xxx *bcmpmu, int curr);
-int  bcmpmu_get_icc_fc(struct bcmpmu59xxx *bcmpmu);
+int bcmpmu_icc_fc_step_down(struct bcmpmu59xxx *bcmpmu);
+int bcmpmu_icc_fc_step_up(struct bcmpmu59xxx *bcmpmu);
+int bcmpmu_get_icc_fc(struct bcmpmu59xxx *bcmpmu);
+int bcmpmu_set_cc_trim(struct bcmpmu59xxx *bcmpmu, int cc_trim);
+int bcmpmu_cc_trim_up(struct bcmpmu59xxx *bcmpmu);
+int bcmpmu_cc_trim_down(struct bcmpmu59xxx *bcmpmu);
+inline void bcmpmu_save_cc_trim_otp(struct bcmpmu59xxx *bcmpmu);
+inline void bcmpmu_restore_cc_trim_otp(struct bcmpmu59xxx *bcmpmu);
+
+/* ADC */
 int bcmpmu_adc_read(struct bcmpmu59xxx *bcmpmu, enum bcmpmu_adc_channel channel,
 		enum bcmpmu_adc_req req, struct bcmpmu_adc_result *result);
 #ifdef CONFIG_CHARGER_BCMPMU_SPA

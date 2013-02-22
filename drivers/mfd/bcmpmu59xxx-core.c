@@ -53,6 +53,7 @@ static int debug_mask = BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT;
 
 #ifdef CONFIG_DEBUG_FS
 
+
 int bcmpmu_debugfs_open(struct inode *inode, struct file *file)
 {
 	file->private_data = inode->i_private;
@@ -671,6 +672,15 @@ static int __devinit bcmpmu59xxx_probe(struct platform_device *pdev)
 #endif
 	/*Copy flags from pdata*/
 	bcmpmu->flags = bcmpmu->pdata->flags;
+
+	/* Enable ACLD for A1 PMU */
+	if ((bcmpmu->rev_info.prj_id == BCMPMU_59054_ID) &&
+			(bcmpmu->rev_info.ana_rev >= BCMPMU_59054A1_ANA_REV)) {
+
+		bcmpmu->flags |= BCMPMU_ACLD_EN;
+		pr_pmucore(INIT, "bcmpmu->flags = 0x%x\n", bcmpmu->flags);
+
+	}
 	bcmpmu_gbl = bcmpmu;
 	mfd_add_devices(bcmpmu->dev, -1, irq_devs,
 				ARRAY_SIZE(irq_devs), NULL, 0);

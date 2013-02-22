@@ -29,6 +29,16 @@
 #include <linux/mfd/bcmpmu59xxx_reg.h>
 
 #define BATT_VOLT_TO_CAP(volt)		(((volt - 2800) * 100) / (4200 - 2800))
+
+#define PMU_USB_FC_CC_84mA	0
+#define PMU_USB_FC_CC_400mA	2
+
+#define PMU_USB_FC_CC_MIN	0
+#define PMU_USB_FC_CC_MAX	(ARRAY_SIZE(bcmpmu_pmu_curr_table) - 1)
+
+#define PMU_USB_CC_TRIM_MIN	0
+#define PMU_USB_CC_TRIM_MAX	0xF
+
 char *get_supply_type_str(int chrgr_type);
 static int debug_mask = (BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT);
 module_param_named(dbgmsk, debug_mask, int, S_IRUGO | S_IWUSR | S_IWGRP);
@@ -61,6 +71,7 @@ struct bcmpmu_chrgr_data {
 	struct delayed_work chrgr_work;
 	struct notifier_block chgr_detect;
 	struct notifier_block chgr_curr_lmt;
+	u8 usb_cc_trim_otp;
 };
 
 struct bcmpmu_chrgr_data *gbl_di;
@@ -178,6 +189,38 @@ int bcmpmu_set_icc_fc(struct bcmpmu59xxx *bcmpmu, int curr)
 }
 EXPORT_SYMBOL(bcmpmu_set_icc_fc);
 
+int bcmpmu_icc_fc_step_down(struct bcmpmu59xxx *bcmpmu)
+{
+	int ret = 0;
+	u8 reg;
+
+	ret = bcmpmu->read_dev(bcmpmu, PMU_REG_MBCCTRL10, &reg);
+	if (reg <= PMU_USB_FC_CC_MIN) {
+		pr_chrgr(INIT, "Already at min CC\n");
+		return -ENOSPC;
+	} else
+		reg--;
+
+	ret = bcmpmu->write_dev(bcmpmu, PMU_REG_MBCCTRL10, reg);
+	return ret;
+}
+
+int bcmpmu_icc_fc_step_up(struct bcmpmu59xxx *bcmpmu)
+{
+	int ret = 0;
+	u8 reg;
+
+	ret = bcmpmu->read_dev(bcmpmu, PMU_REG_MBCCTRL10, &reg);
+	reg++;
+	if (reg > PMU_USB_FC_CC_MAX) {
+		pr_chrgr(INIT, "Already at max CC\n");
+		return -ENOSPC;
+	}
+
+	ret = bcmpmu->write_dev(bcmpmu, PMU_REG_MBCCTRL10, reg);
+	return ret;
+}
+
 int  bcmpmu_get_icc_fc(struct bcmpmu59xxx *bcmpmu)
 {
 	int ret = 0;
@@ -189,8 +232,76 @@ int  bcmpmu_get_icc_fc(struct bcmpmu59xxx *bcmpmu)
 	return bcmpmu_pmu_curr_table[reg];
 
 }
-EXPORT_SYMBOL(bcmpmu_get_icc_fc);
 
+int bcmpmu_set_cc_trim(struct bcmpmu59xxx *bcmpmu, int cc_trim)
+{
+	int ret = 0;
+	u8 reg = 0;
+
+	if ((cc_trim < PMU_USB_CC_TRIM_MIN) ||
+			(cc_trim > PMU_USB_CC_TRIM_MAX)) {
+		pr_chrgr(INIT, "cc_trim beyond limit\n");
+		BUG_ON(1);
+	}
+
+	reg = cc_trim;
+	ret = bcmpmu->write_dev(bcmpmu, PMU_REG_MBCCTRL18, reg);
+	return ret;
+}
+
+int bcmpmu_cc_trim_up(struct bcmpmu59xxx *bcmpmu)
+{
+	int ret = 0;
+	u8 reg;
+
+	ret = bcmpmu->read_dev(bcmpmu, PMU_REG_MBCCTRL18, &reg);
+	reg++;
+	if (reg > PMU_USB_CC_TRIM_MAX) {
+		pr_chrgr(INIT, "Already at max trim code\n");
+		return -ENOSPC;
+	}
+	ret = bcmpmu->write_dev(bcmpmu, PMU_REG_MBCCTRL18, reg);
+	return ret;
+
+}
+
+int bcmpmu_cc_trim_down(struct bcmpmu59xxx *bcmpmu)
+{
+	int ret = 0;
+	u8 reg;
+
+	ret = bcmpmu->read_dev(bcmpmu, PMU_REG_MBCCTRL18, &reg);
+	if (reg <= PMU_USB_CC_TRIM_MIN) {
+		pr_chrgr(INIT, "Already at min trim code\n");
+		return -ENOSPC;
+	} else
+		reg--;
+	ret = bcmpmu->write_dev(bcmpmu, PMU_REG_MBCCTRL18, reg);
+	return ret;
+
+}
+
+inline void bcmpmu_save_cc_trim_otp(struct bcmpmu59xxx *bcmpmu)
+{
+	int ret = 0;
+	u8 reg;
+
+	ret = bcmpmu->read_dev(bcmpmu, PMU_REG_MBCCTRL18, &reg);
+	gbl_di->usb_cc_trim_otp = reg;
+
+}
+
+inline void bcmpmu_restore_cc_trim_otp(struct bcmpmu59xxx *bcmpmu)
+{
+	int ret = 0;
+	u8 reg;
+
+	reg = gbl_di->usb_cc_trim_otp;
+	ret = bcmpmu->write_dev(bcmpmu, PMU_REG_MBCCTRL18, reg);
+	if (ret)
+		BUG_ON(1);
+
+}
 int bcmpmu_chrgr_usb_en(struct bcmpmu59xxx *bcmpmu, int enable)
 {
 	int ret = 0;

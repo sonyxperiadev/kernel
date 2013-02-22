@@ -44,12 +44,17 @@
 
 #define FG_CAP_DELTA_THRLD		10
 #define ADC_VBAT_AVG_SAMPLES		8
+#define ADC_VBUS_AVG_SAMPLES		8
 #define FG_INIT_CAPACITY_AVG_SAMPLES	8
 #define FG_INIT_CAPACITY_SAMPLE_DELAY	100
+#define ACLD_DELAY_500			500
+#define ACLD_RETRIES			5
+#define ACLD_VBUS_MARGIN		200 /* 200mV */
 #define ADC_READ_TRIES			5
 #define AVG_SAMPLES			5
 
 #define FG_WORK_POLL_TIME_MS		(5000)
+#define ACLD_WORK_POLL_TIME		(3000)
 #define CHARG_ALGO_POLL_TIME_MS		(5000)
 #define DISCHARGE_ALGO_POLL_TIME_MS	(60000)
 #define LOW_BATT_POLL_TIME_MS		(5000)
@@ -75,13 +80,16 @@
 #define BATT_LI_ION_MIN_VOLT		2100
 #define BATT_LI_ION_MAX_VOLT		4200
 #define BATT_VFLOAT_DEFAULT		0xC
-
+#define BATT_ONE_C_RATE_DEF		1500
 /**
  * FG should go to synchronous mode (modulator turned off)
  * during system deep sleep condition i.e. PC1, PC2 & PC3
  * = 0, 0, 0
  */
 #define FG_OPMOD_CTRL_SETTING		0x1
+
+#define ACLD_ERR_CNT_THRLD	3
+#define CHRGR_EFFICIENCY 85
 
 /**
  * Helper macros
@@ -110,6 +118,7 @@
 	fg->lock_cnt--;\
 	mutex_unlock(&fg->mutex);\
 }
+
 
 enum bcmpmu_fg_cal_state {
 	CAL_STATE_IDLE,
@@ -215,6 +224,7 @@ struct bcmpmu_fg_status_flags {
 	bool reschedule_work;
 	bool eoc_chargr_en;
 	bool calibration;
+	bool acld_en;
 };
 
 #define BATTERY_STATUS_UNKNOWN(flag)	\
@@ -255,6 +265,7 @@ struct bcmpmu_fg_data {
 	/* works and workQ */
 	struct workqueue_struct *fg_wq;
 	struct delayed_work fg_periodic_work;
+	struct delayed_work fg_acld_work;
 
 	/* Notifier blocks */
 	struct notifier_block accy_nb;
@@ -266,8 +277,10 @@ struct bcmpmu_fg_data {
 	struct bcmpmu_fg_status_flags flags;
 	struct avg_sample_buff avg_samples;
 	struct batt_adc_data adc_data;
+
 	struct wd_tapper_node wd_tap_node;
 	ktime_t last_sample_tm;
+	ktime_t last_curr_sample_tm;
 
 	enum bcmpmu_fg_cal_state cal_state;
 	enum bcmpmu_fg_cal_mode cal_mode;
@@ -275,9 +288,11 @@ struct bcmpmu_fg_data {
 	enum bcmpmu_batt_discharging_state discharge_state;
 	enum bcmpmu_fg_sample_rate sample_rate;
 
+	enum bcmpmu_chrgr_type_t chrgr_type;
 	int cap_adj_fct;
 	int crit_cutoff_cnt;
 	int eoc_cnt;
+	int acld_err_cnt;
 	int accumulator;
 
 	/* for debugging only */
@@ -792,6 +807,51 @@ static int bcmpmu_fg_get_avg_volt(struct bcmpmu_fg_data *fg)
 	return interquartile_mean(volt_samples, ADC_VBAT_AVG_SAMPLES);
 }
 
+static inline int bcmpmu_fg_get_vbus(struct bcmpmu_fg_data *fg)
+{
+	struct bcmpmu_adc_result result;
+	int ret;
+	int retries = ADC_READ_TRIES;
+
+	while (retries--) {
+		ret = bcmpmu_adc_read(fg->bcmpmu, PMU_ADC_CHANN_VBUS,
+				PMU_ADC_REQ_SAR_MODE, &result);
+		if (!ret)
+			break;
+	}
+	BUG_ON(retries <= 0);
+	return result.conv;
+}
+static int bcmpmu_fg_get_avg_vbus(struct bcmpmu_fg_data *fg)
+{
+	int i = 0;
+	int vbus_samples[ADC_VBUS_AVG_SAMPLES];
+
+	do {
+		vbus_samples[i] = bcmpmu_fg_get_vbus(fg);
+		i++;
+		msleep(25);
+	} while (i < ADC_VBUS_AVG_SAMPLES);
+
+	return interquartile_mean(vbus_samples, ADC_VBUS_AVG_SAMPLES);
+}
+static int bcmpmu_get_inductor_current(struct bcmpmu_fg_data *fg)
+{
+	int i_ind;
+	int vbus;
+	int vbat;
+	int usb_fc_cc;
+
+	vbus = bcmpmu_fg_get_vbus(fg);
+	vbat = bcmpmu_fg_get_batt_volt(fg);
+	usb_fc_cc = bcmpmu_get_icc_fc(fg->bcmpmu);
+
+	pr_fg(VERBOSE, "vbus = %d vbat = %d usb_fc_cc = %d\n",
+			vbus, vbat, usb_fc_cc);
+	i_ind = (usb_fc_cc * vbus * CHRGR_EFFICIENCY) / (vbat * 100);
+
+	return i_ind;
+}
 static inline int bcmpmu_fg_get_batt_temp(struct bcmpmu_fg_data *fg)
 {
 	struct bcmpmu_adc_result result;
@@ -808,6 +868,24 @@ static inline int bcmpmu_fg_get_batt_temp(struct bcmpmu_fg_data *fg)
 	return result.conv;
 }
 
+static int bcmpmu_acld_enable(struct bcmpmu_fg_data *fg, bool enable)
+{
+	int ret;
+	u8 reg;
+
+	ret = fg->bcmpmu->read_dev(fg->bcmpmu, PMU_REG_OTG_BOOSTCTRL3, &reg);
+	if (!ret) {
+		if (enable)
+			reg |= ACLD_ENABLE_MASK;
+		else
+			reg &= ~ACLD_ENABLE_MASK;
+		ret = fg->bcmpmu->write_dev(fg->bcmpmu,
+						PMU_REG_OTG_BOOSTCTRL3, reg);
+	} else
+		BUG_ON(1);
+
+	return ret;
+}
 static int bcmpmu_fg_get_curr_inst(struct bcmpmu_fg_data *fg)
 {
 	int ret = 0;
@@ -1198,7 +1276,6 @@ static int bcmpmu_fg_event_handler(struct notifier_block *nb,
 		unsigned long event, void *data)
 {
 	struct bcmpmu_fg_data *fg;
-	int chrgr_type;
 	int enable;
 	int chrgr_curr;
 	switch (event) {
@@ -1217,21 +1294,32 @@ static int bcmpmu_fg_event_handler(struct notifier_block *nb,
 		break;
 	case BCMPMU_CHRGR_EVENT_CHGR_DETECTION:
 		fg = to_bcmpmu_fg_data(nb, usb_det_nb);
-		chrgr_type =  *(enum bcmpmu_chrgr_type_t *)data;
+		fg->chrgr_type = *(enum bcmpmu_chrgr_type_t *)data;
+
 		pr_fg(VERBOSE, "BCMPMU_CHRGR_EVENT_CHGR_DETECTION\n");
+		pr_fg(VERBOSE, "chrgr type = %d\n", fg->chrgr_type);
 		FG_LOCK(fg);
-		if (chrgr_type == PMU_USB_TYPE_NONE) {
+		if (fg->chrgr_type == PMU_CHRGR_TYPE_NONE) {
 			pr_fg(FLOW, "charger disconnected!!\n");
 			fg->flags.prev_batt_status = fg->flags.batt_status;
 			fg->flags.batt_status = POWER_SUPPLY_STATUS_DISCHARGING;
 			fg->flags.fg_eoc = false;
 			fg->flags.chrgr_connected = false;
 			bcmpmu_fg_calibrate_offset(fg, FG_HW_CAL_MODE_FAST);
-		} else {
+			if (fg->bcmpmu->flags & BCMPMU_ACLD_EN)
+				cancel_delayed_work_sync(&fg->fg_acld_work);
+		} else if (fg->chrgr_type > PMU_CHRGR_TYPE_NONE &&
+				fg->chrgr_type < PMU_CHRGR_TYPE_MAX) {
 			pr_fg(FLOW, "charger connected!!\n");
 			fg->flags.chrgr_connected = true;
 			bcmpmu_fg_calibrate_offset(fg, FG_HW_CAL_MODE_FAST);
-		}
+			if ((fg->bcmpmu->flags & BCMPMU_ACLD_EN) &&
+					(fg->chrgr_type == PMU_CHRGR_TYPE_DCP))
+				queue_delayed_work(fg->fg_wq, &fg->fg_acld_work,
+					msecs_to_jiffies(ACLD_WORK_POLL_TIME));
+		} else
+			BUG_ON(1);
+
 		FG_UNLOCK(fg);
 		break;
 	case BCMPMU_CHRGR_EVENT_CHRG_STATUS:
@@ -1553,11 +1641,66 @@ static void bcmpmu_fg_batt_cal_algo(struct bcmpmu_fg_data *fg)
 	}
 }
 
+static void bcmpmu_check_battery_current_limit(struct bcmpmu_fg_data *fg)
+{
+	ktime_t t_now;
+	ktime_t t_diff;
+	u64 t_ms;
+	int i_inst;/* Instantaneous current */
+	int i_ind; /* inductor current */
+
+	if (fg->chrgr_type != PMU_CHRGR_TYPE_DCP)
+		return;
+	/**
+	 * Avoid reading accumulator register earlier than
+	 * next sample available
+	 */
+	t_now = ktime_get();
+	t_diff = ktime_sub(t_now, fg->last_curr_sample_tm);
+	t_ms = ktime_to_ms(t_diff);
+
+	if (t_ms < bcmpmu_fg_sample_rate_to_time(fg->sample_rate))
+		return;
+
+	fg->last_curr_sample_tm = t_now;
+
+
+	i_inst = bcmpmu_fg_get_curr_inst(fg);
+	i_ind = bcmpmu_get_inductor_current(fg);
+
+	pr_fg(VERBOSE, "i_inst = %d, i_ind = %d\n", i_inst, i_ind);
+
+	/* check if the battery current is above 1C limit or
+	 * inductor current  is above iSat
+	 * */
+	if (((i_inst > fg->pdata->batt_prop->one_c_rate) ||
+			(i_ind > fg->pdata->i_sat)) &&
+			(fg->acld_err_cnt++ > ACLD_ERR_CNT_THRLD)) {
+		bcmpmu_acld_enable(fg, false);
+		fg->flags.acld_en = false;
+		bcmpmu_set_icc_fc(fg->bcmpmu, fg->pdata->i_def_dcp);
+		pr_fg(ERROR, "ACLD disabled: i_inst = %d, i_ind = %d\n",
+				i_inst, i_ind);
+
+	} else if (((i_inst < fg->pdata->batt_prop->one_c_rate) ||
+			(i_ind < fg->pdata->i_sat)) &&
+			(fg->flags.acld_en) &&
+			(fg->acld_err_cnt > 0)) {
+		fg->acld_err_cnt = 0;
+		pr_fg(ERROR, "ACLD Error Count restarted\n");
+	}
+}
+
+
 static void bcmpmu_fg_charging_algo(struct bcmpmu_fg_data *fg)
 {
 	int poll_time = CHARG_ALGO_POLL_TIME_MS;
 
 	pr_fg(VERBOSE, "%s\n", __func__);
+
+	if ((fg->bcmpmu->flags & BCMPMU_ACLD_EN) &&
+			(fg->chrgr_type == PMU_CHRGR_TYPE_DCP))
+		bcmpmu_check_battery_current_limit(fg);
 
 	if (fg->discharge_state != DISCHARG_STATE_HIGH_BATT) {
 		wd_tapper_update_timeout_req(&fg->wd_tap_node,
@@ -1714,6 +1857,175 @@ static void bcmpmu_fg_discharging_algo(struct bcmpmu_fg_data *fg)
 	FG_UNLOCK(fg);
 }
 
+static int bcmpmu_get_vbus_resistance(struct bcmpmu_fg_data *fg,
+					int vbus_chrg_off, int vbus_chrg_on)
+{
+	int vbus_res;
+	int icc_fc = bcmpmu_get_icc_fc(fg->bcmpmu);
+
+	pr_fg(INIT, "icc_fc = %d\n", icc_fc);
+
+	vbus_res = ((vbus_chrg_off - vbus_chrg_on) * 1000) / icc_fc;
+
+	if (vbus_res < 0) {
+		pr_fg(INIT, "vbus_off = %d vbus_chrg_on = %d vbus_res = %d\n",
+				vbus_chrg_off, vbus_chrg_on, vbus_res);
+		vbus_res = 0;
+		WARN_ON(1);
+	}
+
+	return vbus_res;
+}
+
+static int bcmpmu_get_vbus_load(struct bcmpmu_fg_data *fg, int vbus_chrg_off,
+		int vbus_res)
+{
+	int icc_fc = bcmpmu_get_icc_fc(fg->bcmpmu);
+	int vbus_load;
+
+	pr_fg(INIT, "icc_fc = %d\n", icc_fc);
+
+	vbus_load = (vbus_chrg_off - ((icc_fc * vbus_res) / 1000))
+						- fg->pdata->acld_vbus_margin;
+	if (vbus_load < 0) {
+		pr_fg(INIT, "vbus_off = %d vbus_res = %d\n",
+				vbus_chrg_off, vbus_res);
+		vbus_load = vbus_chrg_off - fg->pdata->acld_vbus_margin;
+		WARN_ON(1);
+	}
+
+	return vbus_load;
+}
+
+static void bcmpmu_fg_acld_algo(struct work_struct *work)
+{
+
+	struct bcmpmu_fg_data *fg = to_bcmpmu_fg_data(work, fg_acld_work.work);
+	struct bcmpmu_fg_status_flags *flags = &fg->flags;
+	int vbus_chrg_off;
+	int vbus_chrg_on;
+	int vbus_res;
+	int vbus_load;
+	int ret;
+	int usb_fc_cc_prev;
+	int usb_fc_cc_next;
+
+	pr_fg(INIT, "%s\n", __func__);
+
+	if (flags->fg_eoc)
+		goto exit;
+
+	bcmpmu_chrgr_usb_en(fg->bcmpmu, 0);
+	msleep(ACLD_DELAY_500);
+	vbus_chrg_off = bcmpmu_fg_get_avg_vbus(fg);
+	pr_fg(INIT, "vbus_chrg_off = %d\n", vbus_chrg_off);
+
+	bcmpmu_acld_enable(fg, true);
+	bcmpmu_chrgr_usb_en(fg->bcmpmu, 1);
+
+	/* set USB_FC_CC and USB_CC_TRIM at OTP*/
+	bcmpmu_set_icc_fc(fg->bcmpmu, PMU_USB_FC_CC_OTP);
+	bcmpmu_save_cc_trim_otp(fg->bcmpmu);
+	bcmpmu_set_cc_trim(fg->bcmpmu, PMU_USB_CC_TRIM_OTP);
+
+	msleep(ACLD_DELAY_500);
+	vbus_chrg_on = bcmpmu_fg_get_avg_vbus(fg);
+	vbus_res = bcmpmu_get_vbus_resistance(fg, vbus_chrg_off, vbus_chrg_on);
+	pr_fg(INIT, "vbus_res(uohm) = %d\n", vbus_res);
+	vbus_load = bcmpmu_get_vbus_load(fg, vbus_chrg_off, vbus_res);
+
+	pr_fg(INIT, "Tuning USB_FC_CC\n");
+	do {
+		pr_fg(INIT, "vbus_chrg_on = %d vbus_res = %d vbus_load = %d\n",
+				vbus_chrg_on, vbus_res, vbus_load);
+
+		usb_fc_cc_prev = bcmpmu_get_icc_fc(fg->bcmpmu);
+
+		if (vbus_chrg_on < vbus_load) {
+			pr_fg(INIT, "vbus_chrg_on < vbus_load\n");
+			break;
+		} else {
+			/* Increase CC  */
+			pr_fg(INIT, "Icreasing CC by one step\n");
+			ret = bcmpmu_icc_fc_step_up(fg->bcmpmu);
+			if (ret) {
+				pr_fg(INIT, "Reached Maximum CC\n");
+				break;
+			}
+
+			if (bcmpmu_get_icc_fc(fg->bcmpmu) >
+					fg->pdata->i_def_dcp) {
+				pr_fg(INIT, "Recommended DCP CC lmt hit\n");
+				bcmpmu_icc_fc_step_down(fg->bcmpmu);
+				goto chrgr_pre_chk;
+			}
+
+		}
+		msleep(ACLD_DELAY_500);
+
+		/*If the current is limited at input and if ACLD tries to
+		 * draw more, USB_FC_CC is automatically decreased by PMU
+		 * though we increase USB_FC_CC
+		 * */
+		usb_fc_cc_next = bcmpmu_get_icc_fc(fg->bcmpmu);
+		if (usb_fc_cc_next <= usb_fc_cc_prev) {
+			pr_fg(INIT, "PMU CC lmt hit: prev = %d next = %d\n",
+					usb_fc_cc_prev, usb_fc_cc_next);
+			break;
+		}
+
+		vbus_chrg_on = bcmpmu_fg_get_avg_vbus(fg);
+		vbus_load = bcmpmu_get_vbus_load(fg, vbus_chrg_off,
+				vbus_res);
+
+	} while (true);
+
+	bcmpmu_icc_fc_step_down(fg->bcmpmu);
+
+	pr_fg(INIT, "Tuning USB_CC_TRIM\n");
+	bcmpmu_cc_trim_up(fg->bcmpmu);
+	msleep(ACLD_DELAY_500);
+	vbus_chrg_on = bcmpmu_fg_get_avg_vbus(fg);
+	vbus_load = bcmpmu_get_vbus_load(fg, vbus_chrg_off, vbus_res);
+
+	do {
+		pr_fg(INIT, "vbus_chrg_on = %d vbus_load = %d\n",
+				vbus_chrg_on, vbus_load);
+		if (vbus_chrg_on < vbus_load) {
+			pr_fg(INIT, "vbus_chrg_on < vbus_load\n");
+			break;
+		} else {
+			/* Increase Trim code */
+			pr_fg(INIT, "Icreasing Trim code by one step\n");
+			ret = bcmpmu_cc_trim_up(fg->bcmpmu);
+			if (ret) {
+				pr_fg(INIT, "Reached Maximum Trim code\n");
+				break;
+			}
+		}
+		msleep(ACLD_DELAY_500);
+		vbus_chrg_on = bcmpmu_fg_get_avg_vbus(fg);
+		vbus_load = bcmpmu_get_vbus_load(fg, vbus_chrg_off,
+				vbus_res);
+	} while (true);
+
+	bcmpmu_cc_trim_down(fg->bcmpmu);
+
+chrgr_pre_chk:
+	/* charger presence check */
+	bcmpmu_usb_get(fg->bcmpmu, BCMPMU_USB_CTRL_GET_USB_VALID, &ret);
+	if (ret != 1) {
+		pr_fg(INIT, "Charger is not present, restoring cc trim\n");
+		bcmpmu_restore_cc_trim_otp(fg->bcmpmu);
+		return;
+	}
+
+	flags->acld_en = true;
+
+exit:
+	return;
+
+}
 static void bcmpmu_fg_periodic_work(struct work_struct *work)
 {
 	struct bcmpmu_fg_data *fg = to_bcmpmu_fg_data(work,
@@ -2085,6 +2397,15 @@ static int bcmpmu_fg_set_platform_data(struct bcmpmu_fg_data *fg,
 	else
 		bcmpmu_fg_set_vfloat_level(fg, BATT_VFLOAT_DEFAULT);
 
+	if (!fg->pdata->batt_prop->one_c_rate)
+		fg->pdata->batt_prop->one_c_rate = BATT_ONE_C_RATE_DEF;
+	if (!fg->pdata->i_def_dcp)
+		fg->pdata->i_def_dcp = PMU_DCP_DEF_CURR_LMT;
+	if (!fg->pdata->i_sat)
+		fg->pdata->i_sat = PMU_TYP_SAT_CURR;
+	if (!fg->pdata->acld_vbus_margin)
+			fg->pdata->acld_vbus_margin = ACLD_VBUS_MARGIN;
+
 	return 0;
 }
 
@@ -2396,6 +2717,7 @@ static int __devinit bcmpmu_fg_probe(struct platform_device *pdev)
 	 * Dont want to keep CPU busy with this work when CPU is idle
 	 */
 	INIT_DELAYED_WORK(&fg->fg_periodic_work, bcmpmu_fg_periodic_work);
+	INIT_DELAYED_WORK(&fg->fg_acld_work, bcmpmu_fg_acld_algo);
 
 	mutex_init(&fg->mutex);
 	ret = bcmpmu_fg_register_notifiers(fg);

@@ -1045,6 +1045,7 @@ static struct bcmpmu_batt_property bl_84_props = {
 	.min_volt = 3000,
 	.max_volt = 4200,
 	.full_cap = 1500 * 3600,
+	.one_c_rate = 1700,
 	.volt_cap_lut = bl_84_volt_cap_lut,
 	.volt_cap_lut_sz = ARRAY_SIZE(bl_84_volt_cap_lut),
 	.esr_temp_lut = bl_84_esr_temp_lut,
@@ -1092,6 +1093,10 @@ static struct bcmpmu_fg_pdata fg_pdata = {
 	.recovery_temp_cold = -10,
 	.poll_rate_low_batt = 5000,	/* every 5 seconds */
 	.poll_rate_crit_batt = 2000,	/* every 2 Seconds */
+	.acld_vbus_margin = 200,	/*mV*/
+	.i_sat = 3000,			/* saturation current in mA
+						for chrgr while using ACLD */
+	.i_def_dcp = 700,
 };
 
 #ifdef CONFIG_CHARGER_BCMPMU_SPA

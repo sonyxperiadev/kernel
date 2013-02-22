@@ -1143,6 +1143,13 @@ int bcmpmu_usb_get(struct bcmpmu59xxx *bcmpmu,
 		val &= ENV2_P_UBPD_CHG;
 		val =  val >> ENV2_P_UBPD_CHG_SHIFT;
 		break;
+	case BCMPMU_USB_CTRL_GET_USB_VALID:
+		ret = bcmpmu->read_dev(bcmpmu,
+				PMU_REG_ENV2,
+				&val);
+		val &= ENV2_USB_VALID;
+		val =  (val >> ENV2_USB_VALID_SHIFT);
+		break;
 	case BCMPMU_USB_CTRL_GET_SESSION_END_STATUS:
 		ret = bcmpmu->read_dev(bcmpmu,
 				PMU_REG_ENV7,
