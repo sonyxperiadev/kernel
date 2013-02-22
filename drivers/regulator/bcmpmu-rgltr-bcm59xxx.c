@@ -23,7 +23,6 @@
 #define SRCTRL_VSEL_MASK		(0x3F << SRCTRL_VSEL_SHIFT)
 #define SRCTRL_VSEL_SHIFT	0
 
-
 #define GEN_LDO_INFO_INIT(__n, __vn) \
 	.rdesc = &rdesc[BCMPMU_REGULATOR_##__n], \
 	.flags = 0,	\
@@ -42,6 +41,7 @@
 	.reg_vout = PMU_REG_##__n##VOUT1, \
 	.vout_mask = SRCTRL_VSEL_MASK, \
 	.vout_shift = SRCTRL_VSEL_SHIFT, \
+	.vout_trim = PMU_REG_##__n##VOTRIM,\
 	.v_table = __v, \
 	.num_voltages = \
 		ARRAY_SIZE(__v)
@@ -150,6 +150,74 @@ static u32 bcmpmu_sr_v_table[] = {
 	900000,
 };
 
+/*voltage table for BCM59054A1,presently only for vsr*/
+static u32 bcmpmu_a1_vsr_table[] = {
+	0000000,	/* 0x000 */
+	0000000,	/* 0x001 */
+	860000,
+	870000,
+	880000,
+	890000,
+	900000,
+	910000,
+	920000,
+	930000,
+	940000,
+	950000,
+	960000,
+	970000,
+	980000,
+	990000,
+	1000000,
+	1010000,
+	1020000,
+	1030000,
+	1040000,
+	1050000,
+	1060000,
+	1070000,
+	1080000,
+	1090000,
+	1100000,
+	1110000,
+	1120000,
+	1130000,
+	1140000,
+	1150000,
+	1160000,
+	1170000,
+	1180000,
+	1190000,
+	1200000,
+	1210000,
+	1220000,
+	1230000,
+	1240000,
+	1250000,
+	1260000,
+	1270000,
+	1280000,
+	1290000,
+	1300000,
+	1310000,
+	1320000,
+	1330000,
+	1340000,
+	1350000,
+	1360000,
+	1370000,
+	1380000,
+	1390000,
+	1400000,
+	1410000,
+	1420000,
+	1430000,
+	1700000,
+	1500000,
+	1800000,
+	1600000,
+};
+
 static u32 bcmpmu_csr_v_table[] = {
 	700000,		/* 0x0000 */
 	800000,		/* 0x0001 */
@@ -215,6 +283,73 @@ static u32 bcmpmu_csr_v_table[] = {
 	900000,
 	900000,
 	900000,
+};
+
+int bcmpmu59xxx_trim_table[] = {
+	0,
+	14,
+	28,
+	42,
+	56,
+	70,
+	84,
+	98,
+	112,
+	127,
+	141,
+	155,
+	169,
+	184,
+	198,
+	213,
+	227,
+	242,
+	256,
+	271,
+	286,
+	300,
+	315,
+	330,
+	345,
+	360,
+	375,
+	390,
+	405,
+	420,
+	435,
+	450,
+	-426,
+	-413,
+	-400,
+	-387,
+	-374,
+	-361,
+	-349,
+	-336,
+	-323,
+	-310,
+	-296,
+	-283,
+	-270,
+	-257,
+	-244,
+	-231,
+	-217,
+	-204,
+	-191,
+	-177,
+	-164,
+	-150,
+	-137,
+	-123,
+	-120,
+	-96,
+	-83,
+	-69,
+	-55,
+	-41,
+	-28,
+	-14
 };
 
 int bcmpmu_rgltr_get_volt_id(u32 voltage)
@@ -580,3 +715,20 @@ struct bcmpmu59xxx_regulator_info *bcmpmu59xxx_get_rgltr_info(struct bcmpmu59xxx
 {
 	return bcmpmu59xxx_rglr_info;
 }
+
+int *bcmpmu59xxx_get_trim_table(struct bcmpmu59xxx *bcmpmu)
+{
+	return bcmpmu59xxx_trim_table;
+}
+
+int bcmpmu59xxx_rgltr_info_init(struct bcmpmu59xxx *bcmpmu)
+{
+	BUG_ON(!bcmpmu);
+
+	if (bcmpmu->rev_info.ana_rev == BCM59054_A1_ANA_REV)
+		bcmpmu59xxx_rglr_info[BCMPMU_REGULATOR_VSR].v_table =
+			bcmpmu_a1_vsr_table;
+
+	return 0;
+}
+

@@ -596,6 +596,7 @@ struct bcmpmu59xxx_regulator_init_data
 			.pc_pins_map =
 				PCPIN_MAP_ENC(0, PMU_PC2),
 			.name = "rf",
+			.req_volt = 0,
 		},
 		[BCMPMU_REGULATOR_CAMLDO1] = {
 			.id = BCMPMU_REGULATOR_CAMLDO1,
@@ -603,6 +604,7 @@ struct bcmpmu59xxx_regulator_init_data
 			.dsm_mode = BCMPMU_REGL_LPM_IN_DSM,
 			.pc_pins_map = PCPIN_MAP_ENC(0, PMU_PC2|PMU_PC3),
 			.name = "cam1",
+			.req_volt = 0,
 		},
 		[BCMPMU_REGULATOR_CAMLDO2] = {
 			.id = BCMPMU_REGULATOR_CAMLDO2,
@@ -610,6 +612,7 @@ struct bcmpmu59xxx_regulator_init_data
 			.dsm_mode = BCMPMU_REGL_LPM_IN_DSM,
 			.pc_pins_map = PCPIN_MAP_ENC(0, PMU_PC2|PMU_PC3),
 			.name = "cam2",
+			.req_volt = 0,
 		},
 		[BCMPMU_REGULATOR_SIMLDO1] = {
 			.id = BCMPMU_REGULATOR_SIMLDO1,
@@ -617,6 +620,7 @@ struct bcmpmu59xxx_regulator_init_data
 			.dsm_mode = BCMPMU_REGL_LPM_IN_DSM,
 			.pc_pins_map = PCPIN_MAP_ENC(0, PMU_PC2),
 			.name = "sim1",
+			.req_volt = 0,
 		},
 		[BCMPMU_REGULATOR_SIMLDO2] = {
 			.id = BCMPMU_REGULATOR_SIMLDO2,
@@ -625,6 +629,7 @@ struct bcmpmu59xxx_regulator_init_data
 			.pc_pins_map =
 				PCPIN_MAP_ENC(0, PMU_PC2),
 			.name = "sim2",
+			.req_volt = 0,
 		},
 		[BCMPMU_REGULATOR_SDLDO] = {
 			.id = BCMPMU_REGULATOR_SDLDO,
@@ -632,6 +637,7 @@ struct bcmpmu59xxx_regulator_init_data
 			.pc_pins_map =
 				PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
 			.name = "sd",
+			.req_volt = 0,
 		},
 		[BCMPMU_REGULATOR_SDXLDO] = {
 			.id = BCMPMU_REGULATOR_SDXLDO,
@@ -639,13 +645,15 @@ struct bcmpmu59xxx_regulator_init_data
 			.pc_pins_map =
 				 PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
 			.name = "sdx",
+			.req_volt = 0,
 		},
 		[BCMPMU_REGULATOR_MMCLDO1] = {
 			.id = BCMPMU_REGULATOR_MMCLDO1,
 			.initdata = &bcm59xxx_mmcldo1_data,
 			.pc_pins_map =
 				PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
-			.name = "mmc1"
+			.name = "mmc1",
+			.req_volt = 0,
 		},
 		[BCMPMU_REGULATOR_MMCLDO2] = {
 			.id = BCMPMU_REGULATOR_MMCLDO2,
@@ -653,6 +661,7 @@ struct bcmpmu59xxx_regulator_init_data
 			.pc_pins_map =
 				PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
 			.name = "mmc2",
+			.req_volt = 0,
 		},
 
 		[BCMPMU_REGULATOR_AUDLDO] = {
@@ -661,6 +670,7 @@ struct bcmpmu59xxx_regulator_init_data
 			.dsm_mode = BCMPMU_REGL_OFF_IN_DSM,
 			.pc_pins_map = PCPIN_MAP_ENC(0, PMU_PC2|PMU_PC3),
 			.name = "aud",
+			.req_volt = 0,
 		},
 
 		[BCMPMU_REGULATOR_MICLDO] = {
@@ -669,6 +679,7 @@ struct bcmpmu59xxx_regulator_init_data
 			.pc_pins_map =
 				PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
 			.name = "mic",
+			.req_volt = 0,
 		},
 		[BCMPMU_REGULATOR_USBLDO] = {
 			.id = BCMPMU_REGULATOR_USBLDO,
@@ -676,6 +687,7 @@ struct bcmpmu59xxx_regulator_init_data
 			.pc_pins_map =
 				PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
 			.name = "usb",
+			.req_volt = 0,
 		},
 		[BCMPMU_REGULATOR_VIBLDO] = {
 			.id = BCMPMU_REGULATOR_VIBLDO,
@@ -683,36 +695,42 @@ struct bcmpmu59xxx_regulator_init_data
 			.pc_pins_map =
 				PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
 			.name = "vib",
+			.req_volt = 0,
 		},
 		[BCMPMU_REGULATOR_GPLDO1] = {
 			.id = BCMPMU_REGULATOR_GPLDO1,
 			.initdata = &bcm59xxx_gpldo1_data,
 			.pc_pins_map = PCPIN_MAP_ENC(0, 0), /*Not used*/
 			.name = "gp1",
+			.req_volt = 0,
 		},
 		[BCMPMU_REGULATOR_GPLDO2] = {
 			.id = BCMPMU_REGULATOR_GPLDO2,
 			.initdata = &bcm59xxx_gpldo2_data,
 			.pc_pins_map = PCPIN_MAP_ENC(0, 0), /*Not used*/
 			.name = "gp2",
+			.req_volt = 0,
 		},
 		[BCMPMU_REGULATOR_GPLDO3] = {
 			.id = BCMPMU_REGULATOR_GPLDO3,
 			.initdata = &bcm59xxx_gpldo3_data,
 			.pc_pins_map = PCPIN_MAP_ENC(0, PMU_PC2),
 			.name = "gp3",
+			.req_volt = 0,
 		},
 		[BCMPMU_REGULATOR_TCXLDO] = {
 			.id = BCMPMU_REGULATOR_TCXLDO,
 			.initdata = &bcm59xxx_tcxldo_data,
 			.pc_pins_map = PCPIN_MAP_ENC(0, 0),
 			.name = "tcx",
+			.req_volt = 0,
 		},
 		[BCMPMU_REGULATOR_LVLDO1] = {
 			.id = BCMPMU_REGULATOR_LVLDO1,
 			.initdata = &bcm59xxx_lvldo1_data,
 			.pc_pins_map = PCPIN_MAP_ENC(0, 0), /*Not used*/
 			.name = "lv1",
+			.req_volt = 0,
 		},
 		[BCMPMU_REGULATOR_LVLDO2] = {
 			.id = BCMPMU_REGULATOR_LVLDO2,
@@ -720,6 +738,7 @@ struct bcmpmu59xxx_regulator_init_data
 			.pc_pins_map =
 				PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
 			.name = "lv2",
+			.req_volt = 0,
 		},
 		[BCMPMU_REGULATOR_VSR] = {
 			.id = BCMPMU_REGULATOR_VSR,
@@ -727,6 +746,7 @@ struct bcmpmu59xxx_regulator_init_data
 			.pc_pins_map =
 				PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
 			.name = "vsr",
+			.req_volt = 0,
 		},
 		[BCMPMU_REGULATOR_CSR] = {
 			.id = BCMPMU_REGULATOR_CSR,
@@ -734,6 +754,7 @@ struct bcmpmu59xxx_regulator_init_data
 			.dsm_mode = BCMPMU_REGL_OFF_IN_DSM,
 			.pc_pins_map = PCPIN_MAP_ENC(0, PMU_PC3),
 			.name = "csr",
+			.req_volt = 0,
 		},
 		[BCMPMU_REGULATOR_MMSR] = {
 			.id = BCMPMU_REGULATOR_MMSR,
@@ -742,6 +763,7 @@ struct bcmpmu59xxx_regulator_init_data
 			.pc_pins_map =
 				PCPIN_MAP_ENC(0, PMU_PC2),
 			.name = "mmsr",
+			.req_volt = 0,
 		},
 		[BCMPMU_REGULATOR_SDSR1] = {
 			.id = BCMPMU_REGULATOR_SDSR1,
@@ -750,6 +772,7 @@ struct bcmpmu59xxx_regulator_init_data
 			.pc_pins_map =
 				PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
 			.name = "sdsr1",
+			.req_volt = 0,
 		},
 		[BCMPMU_REGULATOR_SDSR2] = {
 			.id = BCMPMU_REGULATOR_SDSR2,
@@ -757,6 +780,7 @@ struct bcmpmu59xxx_regulator_init_data
 			.dsm_mode = BCMPMU_REGL_LPM_IN_DSM,
 			.pc_pins_map = PCPIN_MAP_ENC(0, PMU_PC2|PMU_PC3),
 			.name = "sdsr2",
+			.req_volt = 0,
 		},
 		[BCMPMU_REGULATOR_IOSR1] = {
 			.id = BCMPMU_REGULATOR_IOSR1,
@@ -765,12 +789,14 @@ struct bcmpmu59xxx_regulator_init_data
 			.pc_pins_map =
 				PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
 			.name = "iosr1",
+			.req_volt = 0,
 		},
 		[BCMPMU_REGULATOR_IOSR2] = {
 			.id = BCMPMU_REGULATOR_IOSR2,
 			.initdata = &bcm59xxx_iosr2_data,
 			.pc_pins_map = PCPIN_MAP_ENC(0, 0), /*not used*/
 			.name = "iosr2",
+			.req_volt = 0,
 		},
 
 	};
@@ -1358,7 +1384,7 @@ int rgltr_init(void)
 	int i, j, k, int_val;
 	struct device_node *np;
 	struct property *prop;
-	const char *output[10], *val;
+	const char *output[15], *val;
 	size_t total = 0, len = 0;
 	np = of_find_matching_node(NULL, bcmpmu_regulator_dt_ids);
 	if (!np) {
@@ -1398,6 +1424,10 @@ int rgltr_init(void)
 		sscanf(output[k++], "%d", &int_val);
 		rgltr_pdata.bcmpmu_rgltr[i].initdata->constraints.boot_on =
 			int_val;
+
+		sscanf(output[k++], "%d", &int_val);
+		rgltr_pdata.bcmpmu_rgltr[i].req_volt = int_val;
+
 	}
 	return 0;
 }

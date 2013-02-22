@@ -123,6 +123,7 @@ unsigned int len;
 			_IOW(BCM_PMU_MAGIC, BCM_PMU_CMD_WRITE_REG,\
 					struct bcmpmu_rw_data_ltp)
 
+#define BCM59054_A1_ANA_REV 2
 struct bcmpmu59xxx;
 extern struct regulator_ops bcmpmu59xxx_ldo_ops;
 
@@ -667,6 +668,7 @@ struct bcmpmu59xxx_regulator_info {
 	u32 reg_vout;
 	u32 vout_mask;
 	u32 vout_shift;
+	u32 vout_trim;
 	/* Map for converting register voltage to register value */
 	u32 *v_table;
 	/* Size of register map */
@@ -872,6 +874,7 @@ struct bcmpmu59xxx_regulator_init_data {
 	u32 dsm_mode;
 	u32 pc_pins_map;
 	char *name;
+	u32 req_volt; /*in uV*/
 };
 
 struct bcmpmu59xxx_regulator_pdata {
@@ -995,6 +998,8 @@ inline void bcmpmu_restore_cc_trim_otp(struct bcmpmu59xxx *bcmpmu);
 /* ADC */
 int bcmpmu_adc_read(struct bcmpmu59xxx *bcmpmu, enum bcmpmu_adc_channel channel,
 		enum bcmpmu_adc_req req, struct bcmpmu_adc_result *result);
+int *bcmpmu59xxx_get_trim_table(struct bcmpmu59xxx *bcmpmu);
+int bcmpmu59xxx_rgltr_info_init(struct bcmpmu59xxx *bcmpmu);
 #ifdef CONFIG_CHARGER_BCMPMU_SPA
 int bcmpmu_post_spa_event_to_queue(struct bcmpmu59xxx *bcmpmu,
 	u32 event, u32 param);
