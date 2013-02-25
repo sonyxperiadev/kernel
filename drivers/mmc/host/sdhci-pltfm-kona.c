@@ -1044,6 +1044,14 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 	/* Should be done only after sdhci_add_host */
 	sdhci_pltfm_runtime_pm_init(dev->dev);
 
+	if (dev->devtype == SDIO_DEV_TYPE_SDMMC) {
+		/* Let the card regulator be handled by the host driver.
+		 * We dont touch it here, except doing a regulator get.
+		 */
+		if (dev->vddo_sd_regulator)
+			host->vmmc = dev->vddo_sd_regulator;
+	}
+
 	/* if device is eMMC, emulate card insert right here */
 	if (dev->devtype == SDIO_DEV_TYPE_EMMC) {
 		ret = bcm_kona_sd_card_emulate(dev, 1);
@@ -1067,11 +1075,6 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 		wake_lock_init(&dev->cd_int_wake_lock, WAKE_LOCK_SUSPEND,
 				dev->cd_int_wake_lock_name);
 
-		/* Let the card regulator be handled by the host driver.
-		 * We dont touch it here, except doing a regulator get.
-		 */
-		if (dev->vddo_sd_regulator)
-			host->vmmc = dev->vddo_sd_regulator;
 
 		ret = gpio_request(dev->cd_gpio, "sdio cd");
 
