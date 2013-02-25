@@ -382,6 +382,13 @@ static struct ion_platform_heap *bcm_ion_parse_dt(struct device *dev)
 		ION_OF_READ_OPT(lmk_min_score_adj);
 		ION_OF_READ_OPT(lmk_min_free);
 	}
+#ifndef CONFIG_BCM_IOVMM
+	if (heap_data->type == ION_HEAP_TYPE_SYSTEM) {
+		pr_err("%16s: Not supported without iovmm\n",
+				heap_data->name);
+		goto of_err;
+	}
+#endif
 #ifdef CONFIG_IOMMU_API
 	/* Get the iommu device and link ion dev to iommu dev */
 	tmp_node = of_parse_phandle(dev->of_node, "iommu", 0);
