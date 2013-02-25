@@ -155,6 +155,7 @@ int als_ps_int;
 int als_ps_gpio_inr;
 
 /* forward declarations */
+static void set_threshold(void);
 static int taos_probe(struct i2c_client *clientp,
 		      const struct i2c_device_id *idp);
 static int taos_remove(struct i2c_client *client);
@@ -373,6 +374,7 @@ static int taos_get_data(void)
 		return -ERESTARTSYS;
 	}
 	if ((status & 0x20) == 0x20) {
+		set_threshold();
 		ret = taos_prox_threshold_set();
 		if (ret >= 0)
 			ReadEnable = 1;
@@ -546,6 +548,12 @@ static int taos_prox_threshold_set(void)
 	}
 	prox_tmp_on = 0;
 	return ret;
+}
+
+static void set_threshold(void)
+{
+	taos_cfgp->prox_threshold_hi = prox_threshold_hi_param;
+	taos_cfgp->prox_threshold_lo = prox_threshold_lo_param;
 }
 
 static int __init taos_init(void)
