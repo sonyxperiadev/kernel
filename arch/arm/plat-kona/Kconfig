@@ -322,5 +322,14 @@ config KONA_AXITRACE
         help
           Say Y here to enable axitrace sources on hawaii.
 
+config MOBICORE_OS
+	bool "Enable MOBICORE Secure OS"
+	depends on KONA_SECURE_MONITOR_CALL
+	default n
+	help
+		Choose this option if you wish to enable mobicore secure OS.
+		By default this option is not set. If this flag is enabled
+		memory will be reserved based on the info either from platform
+		data or DT.
 endmenu
 

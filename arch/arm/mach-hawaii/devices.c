@@ -106,6 +106,23 @@
 
 static int board_version = -1;
 
+#ifdef CONFIG_MOBICORE_OS
+#include <linux/broadcom/mobicore.h>
+#endif
+
+#if defined(CONFIG_MOBICORE_OS) && defined(CONFIG_OF)
+struct mobicore_data mobicore_init_data = {
+	.name = "mobicore",
+};
+#endif
+
+#ifdef CONFIG_MOBICORE_OS
+struct platform_device mobicore_device = {
+	.name = "mobicore",
+	.id = 0,
+};
+#endif
+
 /* dynamic ETM support */
 unsigned int etm_on;
 EXPORT_SYMBOL(etm_on);
@@ -1292,6 +1309,42 @@ static int __init early_init_dt_scan_ion_data(unsigned long node,
 
 #endif /* CONFIG_ION_BCM_NO_DT */
 
+#if defined(CONFIG_MOBICORE_OS) && defined(CONFIG_OF)
+static int __init early_init_dt_scan_mobicore_data(unsigned long node,
+		const char *uname, int depth, void *data)
+{
+	struct mobicore_data *mobi_data;
+	__be32 *prop;
+	unsigned long len;
+
+	mobi_data = (struct mobicore_data *)data;
+	if (depth != 1 || !mobi_data || !mobi_data->name ||
+			(strcmp(uname, mobi_data->name) != 0))
+		return 0;
+
+	prop = of_get_flat_dt_prop(node, "mobicore-base", &len);
+	if ((prop != NULL) && (len > 0)) {
+		mobi_data->mobicore_base = of_read_ulong(prop, len/4);
+		pr_info("Mobicore: DT: mobicore-base: 0x%08x\n",
+				mobi_data->mobicore_base);
+	} else {
+		pr_err("Mobicore: Cannot read mobicore-base from DT\n");
+		return -1;
+	}
+
+	prop = of_get_flat_dt_prop(node, "mobicore-size", &len);
+	if ((prop != NULL) && (len > 0)) {
+		mobi_data->mobicore_size = of_read_ulong(prop, len/4);
+		pr_info("Mobicore: DT: mobicore-size: 0x%08lx\n",
+				mobi_data->mobicore_size);
+	} else {
+		pr_err("Mobicore: Cannot read mobicore-size from DT\n");
+		return -1;
+	}
+	return 1;
+}
+#endif
+
 static phys_addr_t __init find_free_memory(phys_addr_t size, phys_addr_t base,
 		phys_addr_t limit)
 {
@@ -1376,6 +1429,76 @@ static void __init ion_reserve_memory(void)
 }
 #endif /* CONFIG_ION */
 
+#ifdef CONFIG_MOBICORE_OS
+static void mobicore_mem_alloc_reserve(phys_addr_t mobicore_base,
+			unsigned long mobicore_size)
+{
+	phys_addr_t mobi_base;
+	int ret = 0;
+	mobi_base = memblock_alloc_from_range(mobicore_size,
+			SZ_2M, mobicore_base, mobicore_base +
+			mobicore_size);
+
+	if (!mobi_base) {
+		pr_err("MOBICORE: Unable to reserve memory at 0x%x\n",
+			mobicore_base);
+		return;
+	}
+	if (mobi_base != mobicore_base) {
+		pr_err("MOBICORE: Requested memory block at 0x%x ",
+			mobicore_base);
+		pr_err("but got at 0x%x\n", mobicore_base);
+		pr_err("MOBICORE: Failed to reserve MOBICORE MEMORY\n");
+		return;
+	}
+	memblock_free(mobi_base, mobicore_size);
+	ret = memblock_remove(mobi_base, mobicore_size);
+	if (ret)
+		pr_err("MOBICORE: Failed to reserve MOBICORE MEMORY\n");
+	else
+		pr_info("MOBICORE: Successfully reserved MOBICORE MEMORY!!\n");
+}
+static void mobicore_reserve_memory(void)
+{
+	struct mobicore_data *reserve_data;
+#ifdef CONFIG_OF/*Get data from DT*/
+	int ret = 0;
+	reserve_data = &mobicore_init_data;
+
+	if (initial_boot_params) {
+		ret = of_scan_flat_dt(early_init_dt_scan_mobicore_data,
+			reserve_data);
+		if ((ret <= 0) || !reserve_data)
+			pr_err("MOBICORE: Failed to get DT values\n");
+		else {
+			pr_info("MOBICORE: From DT mobicore-base: 0x%08x\n",
+				reserve_data->mobicore_base);
+			pr_info("MOBICORE: From DT mobicore-size: 0x%08lx\n",
+				reserve_data->mobicore_size);
+
+			mobicore_mem_alloc_reserve(reserve_data->mobicore_base,
+					reserve_data->mobicore_size);
+			return;
+		}
+	} else
+		pr_info("DT is not present\n");
+#endif
+	if (!mobicore_device.dev.platform_data) {
+		pr_err("MOBICORE: ERROR! Platform data is NULL\n");
+		pr_err("MOBICORE: Memory reserve failed\n");
+		return;
+	}
+	reserve_data =
+		(struct mobicore_data *)mobicore_device.dev.platform_data;
+	pr_info("MOBICORE: from platform data mobicore_base: 0x%08x\n",
+		reserve_data->mobicore_base);
+	pr_info("MOBICORE: from platform data mobicore_size 0x%08lx\n",
+		reserve_data->mobicore_size);
+	mobicore_mem_alloc_reserve(reserve_data->mobicore_base,
+		reserve_data->mobicore_size);
+}
+#endif
+
 void __init hawaii_reserve(void)
 {
 
@@ -1385,6 +1508,10 @@ void __init hawaii_reserve(void)
 
 #ifdef CONFIG_ANDROID_PMEM
 	pmem_reserve_memory();
+#endif
+
+#ifdef CONFIG_MOBICORE_OS
+	mobicore_reserve_memory();
 #endif
 
 }

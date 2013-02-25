@@ -82,4 +82,8 @@ extern struct platform_device ion_cma_device;
 #endif /* CONFIG_CMA */
 #endif /* CONFIG_ION_BCM_NO_DT */
 
+#if defined(CONFIG_MOBICORE_OS)
+extern struct mobicore_data mobicore_plat_data;
+extern struct platform_device mobicore_device;
+#endif
 #endif /* __MACH_HAWAII_DEVICE_H */
