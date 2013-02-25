@@ -621,15 +621,19 @@ AUDIO_Ctrl_Trigger_Wait:
 		if (is_atomic) {
 			aError("ERROR Audio KFIFO FULL throw atomic "
 			       "action %d\n", action_code);
+			if (block & 1)
+				mutex_unlock(&mutexBlock);
 			return RESULT_ERROR;
 		} else if (is_cb) {
 			aError("Audio KFIFO FULL reschedule cb action %d\n",
 			       action_code);
+			if (block & 1)
+				mutex_unlock(&mutexBlock);
 			return RESULT_ERROR;
 		} else {
 			unsigned long ret;
 			ret =
-			    wait_for_completion_interruptible_timeout
+			    wait_for_completion_timeout
 			    (&complete_kfifo,
 			     msecs_to_jiffies(KFIFO_TIMEOUT_MS));
 			if (!ret) {
@@ -638,6 +642,8 @@ AUDIO_Ctrl_Trigger_Wait:
 				       "last_action %d, action %d\n",
 				       fifo_avail, n_msg_in, n_msg_out,
 				       last_action, action_code);
+				if (block & 1)
+					mutex_unlock(&mutexBlock);
 				return RESULT_ERROR;
 			}
 		}
@@ -688,6 +694,7 @@ AUDIO_Ctrl_Trigger_Wait:
 		if (osStatus != OSSTATUS_SUCCESS) {
 			aWarn("AUDIO_Ctrl_Trigger Timeout=%d\r\n", osStatus);
 			status = RESULT_ERROR;
+			mutex_unlock(&mutexBlock);
 			return status;
 		}
 
