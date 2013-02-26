@@ -380,7 +380,7 @@ static const struct ov7692_reg ov7692_wb_tungsten[] = {
         {0xff, 0xff},  
 };
 
-static const struct ov7692_reg ov7692_fps_5[] = {
+/*static const struct ov7692_reg ov7692_fps_5[] = {
         {0xff, 0xff},  
 };
 
@@ -398,7 +398,7 @@ static const struct ov7692_reg ov7692_fps_20[] = {
 };
 static const struct ov7692_reg ov7692_fps_25[] = {
         {0xff, 0xff},  
-};
+};*/
 
 static const struct ov7692_reg ov7692_fps_30[] = {
         {0xff, 0xff},  
