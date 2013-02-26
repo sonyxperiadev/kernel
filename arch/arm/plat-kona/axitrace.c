@@ -1051,9 +1051,11 @@ static int __devinit axitrace_probe(struct amba_device *dev,
 		}
 
 		/* Assign attributes to group */
-		for (j = CAP_ATTR ; j < TRACE_END_ATTR ; j++)
+		for (j = CAP_ATTR ; j < TRACE_END_ATTR ; j++) {
 			t->per_trace[i].attr_group.attrs[j] =
 				&t->per_trace[i].trace_attrs[j].attr;
+			sysfs_attr_init(&t->per_trace[i].trace_attrs[j].attr);
+		}
 
 		t->per_trace[i].attr_group.attrs[TRACE_END_ATTR] = NULL;
 
@@ -1134,9 +1136,12 @@ static int __devinit axitrace_probe(struct amba_device *dev,
 					filter_write_store);
 
 			/* Assign attributes to group */
-			for (k = FIL_AXI_ID_ATTR ; k < FIL_END_ATTR ; k++)
+			for (k = FIL_AXI_ID_ATTR ; k < FIL_END_ATTR ; k++) {
 				t->per_trace[i].filter_group[j].attrs[k] =
 					&t->per_trace[i].filter_attrs[k].attr;
+				sysfs_attr_init
+				(&t->per_trace[i].filter_attrs[k].attr);
+			}
 
 			/* NULL terminate the group */
 			t->per_trace[i].filter_group[j].attrs[FIL_END_ATTR] =

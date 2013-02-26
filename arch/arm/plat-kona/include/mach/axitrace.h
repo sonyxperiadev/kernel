@@ -136,7 +136,6 @@ struct per_trace_info {
 	struct axitrace_source	*p_source_info;
 	struct trace_state	state;
 	void __iomem		*trace_regs;
-	struct device_attribute attr;
 	char			*name;
 	struct kobject		*dir_kobj;
 	struct kobject		**filterdir_kobj;
