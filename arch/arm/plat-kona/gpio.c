@@ -477,8 +477,7 @@ int __init kona_gpio_init(int num_bank)
 	struct kona_gpio_bank *bank;
 	int i;
 #ifdef CONFIG_KONA_ATAG_DT
-	uint32_t gpio, mask, j, val;
-	void __iomem *reg_base = kona_gpio.reg_base;
+	uint32_t gpio, mask, j;
 #endif
 
 	kona_gpio_reset(num_bank);

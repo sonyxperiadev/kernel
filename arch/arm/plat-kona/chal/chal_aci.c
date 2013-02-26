@@ -1124,8 +1124,6 @@ cInt32 chal_aci_block_read(CHAL_HANDLE handle, CHAL_ACI_block_id_t id,
 			    (KONA_ACI_VA, ACI_INT,
 			     COMP1INT_STS) ? CHAL_ACI_BLOCK_COMP_LINE_HIGH :
 			    CHAL_ACI_BLOCK_COMP_LINE_LOW;
-		case 100:
-			break;	/* to avoid compiler warning */
 		default:
 			CHAL_ASSERT(0);
 		}
@@ -1152,8 +1150,6 @@ cInt32 chal_aci_block_read(CHAL_HANDLE handle, CHAL_ACI_block_id_t id,
 			    (KONA_ACI_VA, ACI_INT,
 			     COMP2INT_STS) ? CHAL_ACI_BLOCK_COMP_LINE_HIGH :
 			    CHAL_ACI_BLOCK_COMP_LINE_LOW;
-		case 100:
-			break;	/* to avoid compiler warning */
 		default:
 			CHAL_ASSERT(0);
 		}

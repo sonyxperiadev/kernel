@@ -1129,9 +1129,6 @@ static int __devexit al3006_remove(struct i2c_client *client)
 
 static void al3006_shutdown(struct i2c_client *client)
 {
-	struct al3006_data *data = i2c_get_clientdata(client);
-	int ret = 0;
-
 #ifdef CONFIG_ARCH_KONA
 	struct al3006_platform_data *pdata = client->dev.platform_data;
 #endif
@@ -1155,7 +1152,6 @@ MODULE_DEVICE_TABLE(i2c, al3006_id);
 static int al3006_suspend(struct device *dev)
 {
 	struct i2c_client *client = to_i2c_client(dev);
-	struct al3006_data *data = i2c_get_clientdata(client);
 	int ret = 0;
 
 	AL_DEBUG("called\n");

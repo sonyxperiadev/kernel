@@ -214,7 +214,6 @@ static int debug_shrinker_show(struct seq_file *s, void *unused)
 
 	down_read(&shrinker_rwsem);
 	list_for_each_entry(shrinker, &shrinker_list, list) {
-		char name[64];
 		int num_objs;
 
 		num_objs = shrinker->shrink(shrinker, &sc);
@@ -1510,7 +1509,7 @@ update_isolated_counts(struct mem_cgroup_zone *mz,
 			      -count[LRU_ACTIVE_ANON]);
 	__mod_zone_page_state(zone, NR_INACTIVE_ANON,
 			      -count[LRU_INACTIVE_ANON]);
-	if (NR_LRU_LISTS_CMA != NR_LRU_LISTS) {
+	if ((int) NR_LRU_LISTS_CMA != (int) NR_LRU_LISTS) {
 		__mod_zone_page_state(zone, NR_CMA_ACTIVE_FILE,
 			      -count[LRU_CMA_ACTIVE_FILE]);
 		__mod_zone_page_state(zone, NR_CMA_INACTIVE_FILE,
@@ -2022,7 +2021,7 @@ static int inactive_file_is_low(struct mem_cgroup_zone *mz, struct scan_control 
 		if (!(sc->gfp_mask & __GFP_MOVABLE))
 			low = inactive_unmovable_file_is_low_global(mz->zone);
 		else
-			inactive_file_is_low_global(mz->zone);
+			low = inactive_file_is_low_global(mz->zone);
 	} else {
 		low =  mem_cgroup_inactive_file_is_low(mz->mem_cgroup,
 				mz->zone);
