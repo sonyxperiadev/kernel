@@ -1,21 +1,41 @@
-/****************************************************************************
+/*****************************************************************************
+* Copyright (c) 2011 Broadcom Corporation.  All rights reserved.
 *
-*	Copyright (c) 1999-2008 Broadcom Corporation
+* This program is the proprietary software of Broadcom Corporation and/or
+* its licensors, and may only be used, duplicated, modified or distributed
+* pursuant to the terms and conditions of a separate, written license
+* agreement executed between you and Broadcom (an "Authorized License").
+* Except as set forth in an Authorized License, Broadcom grants no license
+* (express or implied), right to use, or waiver of any kind with respect to
+* the Software, and Broadcom expressly reserves all rights in and to the
+* Software and all intellectual property rights therein.  IF YOU HAVE NO
+* AUTHORIZED LICENSE, THEN YOU HAVE NO RIGHT TO USE THIS SOFTWARE IN ANY
+* WAY, AND SHOULD IMMEDIATELY NOTIFY BROADCOM AND DISCONTINUE ALL USE OF
+* THE SOFTWARE.
 *
-*  This program is free software; you can redistribute it and/or modify
-*  it under the terms of the GNU General Public License, version 2, as
-*  published by the Free Software Foundation (the "GPL").
-*
-*  This program is distributed in the hope that it will be useful,
-*  but WITHOUT ANY WARRANTY; without even the implied warranty of
-*  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*  GNU General Public License for more details.
-*
-*  A copy of the GPL is available at http://www.broadcom.com/licenses/GPLv2.php
-*  or by writing to the Free Software Foundation, Inc., 59 Temple Place - Suite
-*  330, Boston, MA  02111-1307, USA.
-*
-****************************************************************************/
+* Except as expressly set forth in the Authorized License,
+* 1. This program, including its structure, sequence and organization,
+*    constitutes the valuable trade secrets of Broadcom, and you shall use
+*    all reasonable efforts to protect the confidentiality thereof, and to
+*    use this information only in connection with your use of Broadcom
+*    integrated circuit products.
+* 2. TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE SOFTWARE IS PROVIDED "AS IS"
+*    AND WITH ALL FAULTS AND BROADCOM MAKES NO PROMISES, REPRESENTATIONS OR
+*    WARRANTIES, EITHER EXPRESS, IMPLIED, STATUTORY, OR OTHERWISE, WITH
+*    RESPECT TO THE SOFTWARE.  BROADCOM SPECIFICALLY DISCLAIMS ANY AND ALL
+*    IMPLIED WARRANTIES OF TITLE, MERCHANTABILITY, NONINFRINGEMENT, FITNESS
+*    FOR A PARTICULAR PURPOSE, LACK OF VIRUSES, ACCURACY OR COMPLETENESS,
+*    QUIET ENJOYMENT, QUIET POSSESSION OR CORRESPONDENCE TO DESCRIPTION. YOU
+*    ASSUME THE ENTIRE RISK ARISING OUT OF USE OR PERFORMANCE OF THE SOFTWARE.
+* 3. TO THE MAXIMUM EXTENT PERMITTED BY LAW, IN NO EVENT SHALL BROADCOM OR ITS
+*    LICENSORS BE LIABLE FOR (i) CONSEQUENTIAL, INCIDENTAL, SPECIAL, INDIRECT,
+*    OR EXEMPLARY DAMAGES WHATSOEVER ARISING OUT OF OR IN ANY WAY RELATING TO
+*    YOUR USE OF OR INABILITY TO USE THE SOFTWARE EVEN IF BROADCOM HAS BEEN
+*    ADVISED OF THE POSSIBILITY OF SUCH DAMAGES; OR (ii) ANY AMOUNT IN EXCESS
+*    OF THE AMOUNT ACTUALLY PAID FOR THE SOFTWARE ITSELF OR U.S. $1, WHICHEVER
+*    IS GREATER. THESE LIMITATIONS SHALL APPLY NOTWITHSTANDING ANY FAILURE OF
+*    ESSENTIAL PURPOSE OF ANY LIMITED REMEDY.
+*****************************************************************************/
 
 #include <linux/module.h>
 #include <linux/init.h>
@@ -31,10 +51,9 @@
 #include <linux/gpio.h>
 #include <linux/device.h>
 #include <linux/cdev.h>
-#include <asm/io.h>
-#include <asm/gpio.h>
-#include <asm/system.h>
-#include <asm/uaccess.h>
+#include <linux/io.h>
+#include <linux/gpio.h>
+#include <linux/uaccess.h>
 #include <linux/poll.h>
 #include <linux/kfifo.h>
 #include <linux/version.h>
@@ -42,3143 +61,5678 @@
 #include <linux/irq.h>
 #include <linux/firmware.h>
 #include <linux/input/mt.h>
-
 #include <linux/time.h>
+#include <linux/timer.h>
+
+#ifdef CONFIG_HAS_EARLYSUSPEND
+#include <linux/earlysuspend.h>
+#endif
 
 #include <linux/i2c/bcm15500_i2c_ts.h>
-#include <linux/i2c/bcm15500_tofe.h>
 
-/* ----------- */
-/* - Defines - */
-/* ----------- */
+/* -------------------------------------- */
+/* - BCM Touch Controller Driver Macros - */
+/* -------------------------------------- */
 
-#define BRING_UP_WORKAROUND                             1
-#define BOOT_FROM_RAM                                   1
-#define TOFE_CHAN_PROCESSING                            1
-#define NAPA_GPIO_PROCESSING                            1
-#define TOUCHCON_MTC_FULL_FIRMWARE                      1
-#define ADD_INTERRUPT_HANDLING                          1
-#define THROTTLE_MOVE_FRAMES                            0
-#define MOVE_THROTTLE_FACTOR                            4
-#define NAPA_GPIO_RESET_SUPPORT                         1
+/* -- driver version -- */
+#define	BCMTCH_DRIVER_VERSION	"1.3.0.00_RC1"
 
-#define	NAPA_INT_WHILE									0
-#define NAPA_SINGLE_READ                                1
-#define NAPA_DELAY                                      0
-#define NAPA_MIMIC_MT                                   1
+/* -- SPM addresses -- */
+#define BCMTCH_SPM_REG_REVISIONID   0x40
+#define BCMTCH_SPM_REG_CHIPID0      0x41
+#define BCMTCH_SPM_REG_CHIPID1      0x42
+#define BCMTCH_SPM_REG_CHIPID2      0x43
 
-#define NAPA_USE_TOUCH                                  1
-#define NAPA_USE_MTC                                    0
-#define DEBUG_INTERFACE_TUNING                          0
+#define BCMTCH_SPM_REG_SPI_I2C_SEL  0x44
+#define BCMTCH_SPM_REG_I2CS_CHIPID  0x45
 
-#define NAPA_MERGE_WRITEBACK_REGS                       0
-#define NAPA_DONT_USE_12C_TRANSFER                      0
+#define BCMTCH_SPM_REG_PSR          0x48
 
-#define MOD_DEBUG_I2C_DOWNLOAD                     0x0001
-#define MOD_DEBUG_TIMES                            0x0002
-#define MOD_DEBUG_DOWN                             0x0040
-#define MOD_DEBUG_MOVE                             0x0080
-#define MOD_DEBUG_UP                               0x0100
-#define MOD_DEBUG_FRAME                            0x0200
-#define MOD_DEBUG_EVENT                            0x0400
-#define MOD_DEBUG_THROTTLE                         0x0800
-#define MOD_DEBUG_CHANNEL                          0x1000
-#define MOD_DEBUG_NAPA_RESET                       0x2000
-#define MOD_DEBUG_IGNORE_ERR                       0x4000
-#define MOD_DEBUG_LOOP                             0x8000
+#if (BCMTCH_HW_CHIP_VERSION == BCMTCH_HW_BCM15200A0||BCMTCH_HW_BCM15200A1)
 
-#define DEBUG(x) x
+#define BCMTCH_SPM_REG_MSG_FROM_HOST    0x49
+#define BCMTCH_SPM_REG_MSG_FROM_HOST_1  0x4a
+#define BCMTCH_SPM_REG_MSG_FROM_HOST_2  0x4b
+#define BCMTCH_SPM_REG_MSG_FROM_HOST_3  0x4c
+#define BCMTCH_SPM_REG_RQST_FROM_HOST   0x4d
+#define BCMTCH_SPM_REG_MSG_TO_HOST      0x4e
 
-/* ---- Public Variables ------------------------------------------------- */
+#elif (BCMTCH_HW_CHIP_VERSION == BCMTCH_HW_BCM15500A0)
 
-static int mod_debug  = 0;
+#define BCMTCH_SPM_REG_RQST_FROM_HOST   0x4c
+#define BCMTCH_SPM_REG_MSG_TO_HOST      0x4d
+#define BCMTCH_SPM_REG_MSG_FROM_HOST    0x4e
 
-module_param(mod_debug, int, 0644);
-
-#if DEBUG_INTERFACE_TUNING
-static unsigned long d_i_t_fc = 0;
-static unsigned long d_i_t_i_i = 0;
 #endif
 
-struct napa_i2c
-{
-   struct mutex       i2c_mutex;
-   struct i2c_client *p_i2c_client;
-   struct i2c_client *p_i2c_client1;
-   int pagesize;
+#define BCMTCH_SPM_REG_SOFT_RESETS  0x59
+#define BCMTCH_SPM_REG_FLL_STATUS   0x5c
 
-   int gpio_int;
-   struct workqueue_struct *p_ktouch_wq;
-   struct work_struct       work;
-   struct mutex             mutex_wq;
+#define BCMTCH_SPM_REG_ALFO_CTRL    0x60
+#define BCMTCH_SPM_REG_LPLFO_CTRL   0x61
 
-   struct timer_list        poll_timer;
+#define BCMTCH_SPM_REG_DMA_ADDR     0x80
+#define BCMTCH_SPM_REG_DMA_STATUS   0x89
+#define BCMTCH_SPM_REG_DMA_WFIFO    0x92
+#define BCMTCH_SPM_REG_DMA_RFIFO    0xa2
 
-   struct bcm915500_platform_data platform_data;
+/* -- SYS addresses -- */
+#define BCMTCH_ADDR_BASE                    0x30000000
+
+#define BCMTCH_ADDR_SPM_BASE                (BCMTCH_ADDR_BASE + 0x00100000)
+#define BCMTCH_ADDR_SPM_PWR_CTRL            (BCMTCH_ADDR_SPM_BASE + 0x1c)
+#define BCMTCH_ADDR_SPM_LPLFO_CTRL_RO       (BCMTCH_ADDR_SPM_BASE + 0xa0)
+#if (BCMTCH_HW_CHIP_VERSION == BCMTCH_HW_BCM15200A0||BCMTCH_HW_BCM15200A1)
+#define BCMTCH_ADDR_SPM_REMAP                (BCMTCH_ADDR_SPM_BASE + 0x100)
+#endif
+#define BCMTCH_ADDR_SPM_STICKY_BITS         (BCMTCH_ADDR_SPM_BASE + 0x144)
+
+#define BCMTCH_ADDR_COMMON_BASE             (BCMTCH_ADDR_BASE + 0x00110000)
+#define BCMTCH_ADDR_COMMON_ARM_REMAP        (BCMTCH_ADDR_COMMON_BASE + 0x00)
+#define BCMTCH_ADDR_COMMON_SYS_HCLK_CTRL    (BCMTCH_ADDR_COMMON_BASE + 0x20)
+#define BCMTCH_ADDR_COMMON_CLOCK_ENABLE     (BCMTCH_ADDR_COMMON_BASE + 0x48)
+#define BCMTCH_ADDR_COMMON_FLL_CTRL0        (BCMTCH_ADDR_COMMON_BASE + 0x104)
+#define BCMTCH_ADDR_COMMON_FLL_LPF_CTRL2    (BCMTCH_ADDR_COMMON_BASE + 0x114)
+#define BCMTCH_ADDR_COMMON_FLL_TEST_CTRL1   (BCMTCH_ADDR_COMMON_BASE + 0x144)
+
+#define BCMTCH_ADDR_TCH_BASE                (BCMTCH_ADDR_BASE + 0x00300000)
+#define BCMTCH_ADDR_TCH_VER                 (BCMTCH_ADDR_TCH_BASE + 0x00)
+
+/* -- SYS MEM addresses -- */
+#define BCMTCH_ADDR_VECTORS     0x00000000
+#define BCMTCH_ADDR_CODE        0x10000000
+#define BCMTCH_ADDR_DATA        0x10009000
+#define BCMTCH_ADDR_TOC_BASE    0x0020c000
+
+/* -- guards -- */
+#define	BCMTCH_ROM_CHANNEL			1
+#define	BCMTCH_POST_BOOT			1
+
+/* -- constants -- */
+#define BCMTCH_SUCCESS      0
+
+#define BCMTCH_MAX_TOUCH    10
+
+#define BCMTCH_MAX_X        4096
+#define BCMTCH_MAX_Y        4096
+
+/* hypot of (23*15) in x16 units == 439 */
+#define BCMTCH_MAX_TOUCH_MAJOR	439
+#define BCMTCH_MAX_TOUCH_MINOR	439
+#define BCMTCH_MAX_WIDTH_MAJOR	439
+#define BCMTCH_MAX_WIDTH_MINOR	439
+
+#define BCMTCH_MAX_PRESSURE		500
+#define BCMTCH_MIN_ORIENTATION	-512
+#define BCMTCH_MAX_ORIENTATION	511
+
+#define BCMTCH_DMA_MODE_READ    1
+#define BCMTCH_DMA_MODE_WRITE   3
+
+#define BCMTCH_IF_I2C_SEL       0
+#define BCMTCH_IF_SPI_SEL       1
+
+#define BCMTCH_IF_I2C_COMMON_CLOCK  0x387B
+#define BCMTCH_IF_SPI_COMMON_CLOCK  0x387F
+
+#define BCMTCH_COMMON_CLOCK_USE_FLL (0x1 << 18)
+
+#define BCMTCH_POWER_STATE_SLEEP        0
+#define BCMTCH_POWER_STATE_RETENTION    1
+#define BCMTCH_POWER_STATE_IDLE         3
+#define BCMTCH_POWER_STATE_ACTIVE       4
+
+#define BCMTCH_POWER_MODE_SLEEP     0x01
+#define BCMTCH_POWER_MODE_WAKE      0x02
+#define BCMTCH_POWER_MODE_NOWAKE    0x00
+
+#define BCMTCH_RESET_MODE_SOFT_CLEAR    0x00
+#define BCMTCH_RESET_MODE_SOFT_CHIP     0x01
+#define BCMTCH_RESET_MODE_SOFT_ARM      0x02
+#define BCMTCH_RESET_MODE_HARD          0x04
+
+#if (BCMTCH_HW_CHIP_VERSION == BCMTCH_HW_BCM15200A0||BCMTCH_HW_BCM15200A1)
+#define BCMTCH_MEM_REMAP_ADDR		BCMTCH_ADDR_SPM_REMAP
+#elif (BCMTCH_HW_CHIP_VERSION == BCMTCH_HW_BCM15500A0)
+#define BCMTCH_MEM_REMAP_ADDR		BCMTCH_ADDR_COMMON_ARM_REMAP
+#endif
+
+#define BCMTCH_MEM_ROM_BOOT 0x00
+#define BCMTCH_MEM_RAM_BOOT 0x01
+#define BCMTCH_MEM_MAP_1000 0x00
+#define BCMTCH_MEM_MAP_3000 0x02
+
+#define BCMTCH_SPM_STICKY_BITS_PIN_RESET    0x02
+
+/* operations */
+#define BCMTCH_USE_FAST_I2C     1
+#define BCMTCH_USE_BUS_LOCK     0
+#define BCMTCH_USE_WORK_LOCK    1
+#define BCMTCH_USE_PROTOCOL_B   1
+#define BCMTCH_USE_DMA_STATUS	0
+
+/* development and test */
+#define PROGRESS() (printk(KERN_INFO "%s : %d\n", __func__, __LINE__))
+
+
+/* -------------------------------------- */
+/* - Touch Firmware Environment (ToFE)  - */
+/* -------------------------------------- */
+#define TOFE_BUILD_ID_SIZE          8
+#define TOFE_SIGNATURE_MAGIC_SIZE   4
+
+#define TOFE_MESSAGE_SOC_REBOOT_PENDING				0x16
+#define TOFE_MESSAGE_FW_READY						0x80
+#define TOFE_MESSAGE_FW_READY_INTERRUPT				0x81
+#define TOFE_MESSAGE_FW_READY_OVERRIDE				0x82
+#define TOFE_MESSAGE_FW_READY_INTERRUPT_OVERRIDE	0x83
+
+enum tofe_command_e_ {
+	TOFE_COMMAND_NO_COMMAND = 0,
+	TOFE_COMMAND_INTERRUPT_ACK,
+	TOFE_COMMAND_SCAN_START,
+	TOFE_COMMAND_SCAN_STOP,
+	TOFE_COMMAND_SCAN_SET_RATE,
+	TOFE_COMMAND_SET_MODE,
+	TOFE_COMMAND_CALIBRATE,
+	TOFE_COMMAND_AFEREGREAD,
+	TOFE_COMMAND_AFEREGWRITE,
+	TOFE_COMMAND_RUN_SEM,
+	TOFE_COMMAND_SET_LOG_MASK,
+	TOFE_COMMAND_SET_LOG_MASK_FWID_ALL,
+	TOFE_COMMAND_GET_LOG_MASK,
+	TOFE_COMMAND_INIT_POST_BOOT_PATCHES,
+	TOFE_COMMAND_SET_POWER_MODE,
+	TOFE_COMMAND_POWER_MODE_SUSPEND,
+	TOFE_COMMAND_POWER_MODE_RESUME,
+	TOFE_COMMAND_HOST_OVERRIDE_REQ,
+	TOFE_COMMAND_HOST_OVERRIDE_REL,
+	TOFE_COMMAND_REBOOT_APPROVED,
+
+	TOFE_COMMAND_LAST,
+	TOFE_COMMAND_MAX = 0xff
 };
+#define tofe_command_e	enum tofe_command_e_
 
-static struct napa_i2c *gp_napa_i2c = NULL;
-/*
-struct i2c_board_info
-{
-   char            type[I2C_NAME_SIZE];
-   unsigned short  flags;
-   unsigned short  addr;
-   void            *platform_data;
-   struct dev_archdata     *archdata;
-   struct device_node *of_node;
-   int             irq;
+enum bcmtch_status_e_ {
+	BCMTCH_STATUS_SUCCESS	= 0,	/* Success */
+	BCMTCH_STATUS_ERR_FAIL,			/* Generic failure */
+	BCMTCH_STATUS_ERR_NOMEM,		/* Memory error */
+	BCMTCH_STATUS_ERR_NOARG,		/* No proper arguments */
+	BCMTCH_STATUS_ERR_BADARG,		/* Bad argument */
+	BCMTCH_STATUS_ERR_TOUT,			/* Timeout */
+	BCMTCH_STATUS_ERR_IO,			/* I/O error */
+	BCMTCH_STATUS_ERR_NOCFG,		/* No configuration */
+	BCMTCH_STATUS_ERR_NOCHN,		/* No required channel */
 };
+#define	bcmtch_status_e	enum bcmtch_status_e_
+
+/**
+	@ struct tofe_command_response_t_
+	@ brief Entry structure for command channel.
 */
-
-static struct i2c_board_info bcm915500_i2c_boardinfo =
-{
-   .type = BCM915500_TSC_NAME,
-   .addr = HW_BCM915500_SLAVE_AHB,
-   .platform_data = NULL,
+struct tofe_command_response_t_ {
+	uint8_t		flags;
+	uint8_t		command;
+	uint16_t	result;
+	uint32_t	data;
 };
+#define tofe_command_response_t struct tofe_command_response_t_
 
-/* -------------------- */
-/* - Local Variables. - */
-/* -------------------- */
-
-#if TOFE_CHAN_PROCESSING
-tofe_tool_t          tofe_tool;
-ctofe_channel_t      touch_channel;
-#endif
-
-#if NAPA_GPIO_PROCESSING
-int host_int_gpio_pin_addr;
-int host_int_asserted;
-#endif
-
-static int napa_touch_status[NAPA_MAX_TOUCH];
-static int napa_touch_x[NAPA_MAX_TOUCH];
-static int napa_touch_y[NAPA_MAX_TOUCH];
-static int napa_touch_event[NAPA_MAX_TOUCH];
-
-#if THROTTLE_MOVE_FRAMES
-static int g_num_move_frames = 0;
-#endif
-
-static struct input_dev *pInputDev = NULL;
-
-static unsigned char I2Cheader[8] = {I2C_REG_DMA_ADDR, /*addr*/ 0x00, 0x00, 0x00, 0x00, /*len*/ 0x00, 0x00, MahbWrite};
-
-static unsigned char *gp_code;
-static unsigned char *gp_vector;
-static unsigned char *gp_data;
-int g_dowload_fw_count = 0;
-int g_code_size;
-int g_vector_size;
-int g_data_size;
-
-static bcmtch_data_t  bcmtch_data;
-static bcmtch_data_t *p_bcmtch_data = NULL;
-
-static struct i2c_client *gp_i2c_client_spm = NULL;
-static struct i2c_client *gp_i2c_client_ahb = NULL;
-
-/* ---------------------------------- */
-/* - bcmtch dev function prototypes - */
-/* ---------------------------------- */
-
-int bcmtch_init(struct i2c_client *p_i2c_client_spm, struct i2c_client *p_i2c_client_ahb);
-int bcmtch_download(void);
-int bcmtch_wait_for_fw_ready(void);
-void bcmtch_init_ram_contents(void);
-tofe_channel_instance_cfg_t *bcmtch_get_channel_config(tofe_channel_id_t channel_id);
-int bcmtch_touch_chan_init(void);
-int bcmtch_touch_chan_free(void);
-int bcmtch_chan_init(tofe_channel_instance_cfg_t *channel_cfg, napa_channel_t **channel);
-
-void bcmtch_init_int_handler(void);
-int bcmtch_check_wakeup(int count);
-void bcmtch_request_wakeup(int cause);
-void bcmtch_release_wakeup(int cause);
-int bcmtch_request_sleep(void);
-unsigned char bcmtch_int_asserted(void);
-void bcmtch_int_deassert(void);
-int bcmtch_interrupt(void);
-
-void bcmtch_channel_read_data(napa_channel_t *channel);
-uint32_t bcmtch_channel_read_header(napa_channel_t *channel);
-uint32_t bcmtch_channel_read(napa_channel_t *channel);
-void bcmtch_channel_write_header_pointer(napa_channel_t *channel, napa_channel_write_header_e which, uint32_t pointer_data);
-unsigned bcmtch_channel_num_queued(tofe_channel_header_t *channel);
-void bcmtch_channel_write_header_pointer_flags(napa_channel_t *channel, napa_channel_write_header_e which, uint32_t pointer_data, uint8_t flags);
-void bcmtch_process_touch_events(napa_channel_t *channel);
-
-void bcmtch_event_touch_down(int tag, unsigned short x, unsigned short y);
-void bcmtch_event_touch_up(int tag, unsigned short x, unsigned short y);
-void bcmtch_event_touch_move(int tag, unsigned short x, unsigned short y);
-
-int  bcmtch_throttle_move_frame(void);
-int bcmtch_get_soc_version(unsigned char *chipId, int chipIdBuffLen);
-unsigned char bcmtch_get_power_mode(void);
-
-/* ---------------------------------- */
-/* - bcmtch com function prototypes - */
-/* ---------------------------------- */
-
-int bcmtch_com_set_interface(bcmtch_com_e com_interface);
-int bcmtch_com_read(int slave_addr, int len, unsigned char *buffer);
-int bcmtch_com_write(int slave_addr, int len, unsigned char *buffer);
-unsigned char bcmtch_com_read_reg(int slave_addr, int reg);
-int bcmtch_com_write_reg(int slave_addr, int reg, unsigned char data);
-int bcmtch_com_write_mem( int mem_addr, int len, void *data);
-int bcmtch_com_read_mem(int mem_addr, int len, void *data);
-int bcmtch_com_write_mem_reg32(int mem_addr, int data);
-int bcmtch_com_read_mem_reg32( int mem_addr, void *data);
-
-/* --------------------------------- */
-/* - bcmtch os function prototypes - */
-/* --------------------------------- */
-
-int bcmtch_mutex_lock(int mutex);
-int bcmtch_mutex_release(int mutex);
-void bcmtch_sleep_ms(int ms);
-void bcmtch_poll(struct napa_i2c *p_napa_i2c);
-int bcmtch_setup_poll_timer(struct napa_i2c *p_napa_i2c, int delay);
-
-int bcmtch_i2c_read(int slave_addr, int len, unsigned char *buffer);
-int bcmtch_i2c_write(int slave_addr, int len, unsigned char *buffer);
-
-unsigned char bcmtch_i2c_read_reg(int slave_addr, int reg);
-int bcmtch_i2c_write_reg(int slave_addr, int reg, unsigned char data);
-
-int bcmtch_i2c_write_mem( int ahb_addr, int len, void *data);
-int bcmtch_i2c_read_mem(int ahb_addr, int len, void *data);
-
-int bcmtch_i2c_write_mem_reg32(int ahb_addr, int data);
-int bcmtch_i2c_read_mem_reg32( int ahb_addr, void *data);
-
-static ssize_t bcmtch_cli_fcn(struct device *dev, struct device_attribute *attr, const char *buf, size_t count);
-
-static DEVICE_ATTR(bcmtch_cli, S_IWUGO, NULL, bcmtch_cli_fcn);
-
-static struct attribute *bcmtch_attributes[] = {
-    &dev_attr_bcmtch_cli.attr,
-    NULL,
-};
-
-static struct attribute_group bcmtch_attr_group = {
-
-    .attrs = bcmtch_attributes
-};
-
-/* ------------------------ */
-/* - bcmtch dev functions - */
-/* ------------------------ */
-
-int bcmtch_init(struct i2c_client *p_i2c_client_spm, struct i2c_client *p_i2c_client_ahb)
-{
-   unsigned char chipId[4];
-   unsigned char regVal;
-   unsigned char alfo_ctrl;
-   int           ret = 0;
-
-   unsigned int  reg;
-   unsigned int  tch_version = 0xdeadbeef;
-   unsigned int  remap;
-   unsigned int  firmware_ok;
-
-   gp_i2c_client_spm = p_i2c_client_spm;
-   gp_i2c_client_ahb = p_i2c_client_ahb;
-
-   /* 0. Set proper communication interface - SPI or I2C mode */
-   bcmtch_com_write_reg(NAPA_I2C_SLAVE_ADDR, TCC_REG_SPM_SPI_I2C_MODE, TCC_HOST_IF_I2C_MODE);
-   bcmtch_sleep_ms(2);   // FIXME : REMOVE / REDUCE ?
-   bcmtch_com_write_reg(NAPA_I2C_SLAVE_ADDR, SPI_HOST_I2CS_CHIPID, HW_BCM915500_SLAVE_AHB);
-   bcmtch_sleep_ms(2);   // FIXME : REMOVE / REDUCE ?
-
-   DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
-      printk("%s() line %d ret: %d\n", __func__, __LINE__, ret);)
-
-   /** 1. Read ChipId & VersionID --> Verify */
-   DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
-      printk("%s() line %d 1. Read ChipId & VersionID --> Verify\n", __func__, __LINE__);)
-   bcmtch_get_soc_version(chipId, 4);
-
-   /** 2. Read Power Mode Status Register */
-   DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
-      printk("%s() line %d 2. Read Power Mode Status Register\n", __func__, __LINE__);)
-   regVal = bcmtch_get_power_mode();
-
-   DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
-      printk("%s() line %d regVal = %d\n", __func__, __LINE__, regVal);)
-
-   if(regVal != SPM_POWER_STATE_SLEEP)
-   {
-      bcmtch_request_sleep();
-   }
-
-   /** 3. Write WAKEUP */
-   bcmtch_request_wakeup(TOFE_COMMAND_NO_COMMAND); // Napa request wakeup
-   if (!bcmtch_check_wakeup(2))                    // Napa check wakeup
-   {
-      printk(KERN_ERR "ERROR: Napa chip wake up failed.");
-      return NAPA_INIT_ERROR;
-   }
-   else
-   {
-      DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
-         printk("Napa chip wake up succeeded/n");)
-   }
-
-   /* OTP is not programmed, so override with SW setting */
-   alfo_ctrl = 0x16;
-   if (alfo_ctrl)
-   {
-      bcmtch_com_write_mem_reg32(COMMON_FLL_CTRL0, 0xe0000002);
-   }
-
-   bcmtch_com_write_mem_reg32(COMMON_FLL_LPF_CTRL2, 0x01001007);
-
-#if BRING_UP_WORKAROUND
-   if (alfo_ctrl)
-   {
-      /* If SW ALFO trimming, enable FLL from SW else SPM will power it up */
-      bcmtch_com_write_mem_reg32(COMMON_FLL_CTRL0, 0x00000001);
-   }
-#endif
-
-   /* Set the clock dividers and clock values (as per SOC team's request) */
-   bcmtch_com_write_mem_reg32(COMMON_SYS_HCLK_CTRL, 0xF01);
-
-   /* Turn off clocks that are not needed, and enable needed clocks */
-   /* For FBGA parts */
-   bcmtch_com_write_mem_reg32(COMMON_CLOCK_ENABLE, 0x4387F);
-
-#if BRING_UP_WORKAROUND
-   if (alfo_ctrl)
-   {
-      // SW over-ride for ALFO.
-      bcmtch_com_write_reg(NAPA_I2C_SLAVE_ADDR, TCC_REG_SPM_ALFO_CTRL, alfo_ctrl);
-
-      bcmtch_sleep_ms(2);   // FIXME : REMOVE / REDUCE ?
-
-   }else
-   {
-      // FLL powered up by SPM and ALFO trimming bits used from OTP
-   }
-#endif
-
-   // Napa wait for flllock
-
-   // Wait for FLL to lock before doing further operation.
-   bcmtch_com_read_mem_reg32(COMMON_CLOCK_ENABLE, &reg);
-
-   reg &= (1 << 18);
-   if (reg == 0)
-   {
-      do
-      {
-         bcmtch_com_read_mem_reg32(COMMON_FLL_TEST_CTRL1, &reg);
-         reg &= (1 << 28);
-      } while (reg == 0);
-
-      bcmtch_com_read_mem_reg32(COMMON_CLOCK_ENABLE, &reg);
-      bcmtch_com_write_mem_reg32(COMMON_CLOCK_ENABLE, reg | (0x01 << 18));
-   }
-
-   bcmtch_com_read_mem_reg32(TCH_VERSION_REGISTER, &tch_version);
-   DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
-      printk("INFO: Napa Touch block version number  %08X", tch_version);)
-
-   /* Un-remap */
-	if (bcmtch_com_read_mem_reg32(COMMON_ARM_REMAP_ADDR, &remap) < 0) {
-		printk(KERN_ERR "ERROR: Napa common blob query failure.\n");
-		return NAPA_INIT_ERROR;
-	}
-   remap &= ~2U; // Turn off ARM RAM1 remap bit.
-	if (bcmtch_com_write_mem_reg32(COMMON_ARM_REMAP_ADDR, remap) < 0) {
-		printk(KERN_ERR "ERROR: Napa common blob update failure.\n");
-		return NAPA_INIT_ERROR;
-	}
-
-   /* load firmware */
-   firmware_ok = 0;
-   if (bcmtch_download() == NAPA_INIT_SUCCESS)
-   {
-      printk(KERN_INFO "Napa downloaded and booted.\n");
-      firmware_ok = 1;
-   }
-   else
-   {
-      printk(KERN_ERR "ERROR: Napa downloaded and boot failed.\n");
-   }
-
-   /** 4. Release WAKE up request so chip can go into power save mode */
-   bcmtch_release_wakeup(TOFE_COMMAND_NO_COMMAND);
-
-   printk("%s() Napa initialization succeeded%d\n", __func__, __LINE__);
-
-   return NAPA_INIT_SUCCESS;
-}
-
-int bcmtch_download(void)
-{
-   unsigned int remap = 0;
-   int ret;
-
-   /* Hold ARM in RESET before we reload firmware */
-   ret = bcmtch_com_write_reg(NAPA_I2C_SLAVE_ADDR, TCC_REG_SPM_SOFT_RESETS, 0x02);
-
-   bcmtch_sleep_ms(2);   // FIXME : REMOVE / REDUCE ?
-
-   DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
-      printk("%s() line %d ret: %d\n", __func__, __LINE__, ret);)
-
-#if BOOT_FROM_RAM
-   if (bcmtch_com_read_mem_reg32(COMMON_ARM_REMAP_ADDR, &remap) < 0)
-   {
-      printk(KERN_ERR "ERROR: Common blob query failure.\n");
-      return NAPA_INIT_ERROR;
-   }
-   remap |= 1; // Turn on boot from RAM remap bit.
-   if (bcmtch_com_write_mem_reg32(COMMON_ARM_REMAP_ADDR, remap) < 0)
-   {
-      printk(KERN_ERR "ERROR: Common blob update failure.\n");
-      return NAPA_INIT_ERROR;
-   }
-
-   /* Load vectors image */
-   ret = bcmtch_com_write_mem(VECTORS_OFFSET, g_vector_size, gp_vector);
-   DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
-      printk("%s() bcmtch_com_write_mem() wrote vector, ret = %d\n", __func__, ret);)
-
-   /* Load ROM code image */
-   /* ROM_OFFSET is 0 for FPGA ROM load and ARM RAM0 (0x10000000) for RAM load */
-   ret = bcmtch_com_write_mem(ROM_OFFSET, g_code_size, gp_code);
-   DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
-      printk("%s() bcmtch_com_write_mem() wrote firwmare, ret = %d\n", __func__, ret);)
-#endif
-
-   /* load ram image from binary file */
-   if(1)
-   {
-
-#if TOFE_CHAN_PROCESSING
-      /* Tofe Touch Channel Setup. */
-      bcmtch_touch_chan_init();
-#endif
-
-#if NAPA_GPIO_PROCESSING
-      bcmtch_init_int_handler();
-#endif
-
-      ret = bcmtch_com_write_mem(DATA_OFFSET, g_data_size, gp_data);
-      DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
-         printk("%s() bcmtch_com_write_mem() wrote data, ret = %d\n", __func__, ret);)
-
-      /* Write ARM_SW_RESET bit to 0 in SPM_SOFT_RESETS register to get ARM out of reset
-       * Clear PIN_RESET in SPM_STICKY_BITS register so microcode jumps to ARM reset vector
-       */
-      ret = bcmtch_com_write_reg(NAPA_I2C_SLAVE_ADDR,TCC_REG_SPM_SOFT_RESETS, 0x00);
-
-      bcmtch_sleep_ms(2);   // FIXME : REMOVE / REDUCE ?
-
-      DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
-         printk("%s() line %d ret: %d\n", __func__, __LINE__, ret);)
-
-      ret = bcmtch_com_write_mem_reg32(SPM_STICKY_BITS, 0x02);
-      DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
-         printk("%s() line %d ret: %d\n", __func__, __LINE__, ret);)
-
-      /* We need to wait until firmware is running so we can proceed to send a command
-       * We will sleep fro couple of seconds for now. In future we need to wait for
-       * message form firmware to inform that the boot is complete
-       */
-      return (bcmtch_wait_for_fw_ready());
-
-   }
-   else
-   {
-
-#ifdef LOAD_N_RUN
-      bcmtch_com_write_reg(NAPA_I2C_SLAVE_ADDR,TCC_REG_SPM_SOFT_RESETS, 0x00);
-
-      bcmtch_sleep_ms(2);   // FIXME : REMOVE / REDUCE ?
-
-      bcmtch_com_write_mem_reg32(SPM_STICKY_BITS, 0x02)
-      return (NAPA_INIT_SUCCESS);
-#else
-      printk(KERN_ERR "ERROR: Napa images not loaded.\n");
-      return(NAPA_INIT_ERROR);
-#endif
-   }
-
-   return -1;
-
-}
-
-int bcmtch_wait_for_fw_ready(void)
-{
-   int count = 5000;
-   unsigned char ready;
-
-   /*
-    * IMPORTANT
-    * This function looks for specific message from FW.  If FW writes any other
-    * message to host, this will fail.  Hence FW must only report error messages
-    * after FW READY has been set.
-    */
-
-   ready = bcmtch_com_read_reg(NAPA_I2C_SLAVE_ADDR,TCC_REG_SPM_MSG_TO_HOST);
-   DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
-      printk(KERN_INFO "INFO: Downloading firmware and waiting for firmware ready\n");)
-   while ((ready != TOFE_MESSAGE_FW_READY) && count--)
-   {
-      printk(KERN_INFO "INFO: Waiting for -firmware ready- 0x%0x\n", ready);
-      ready = bcmtch_com_read_reg(NAPA_I2C_SLAVE_ADDR,TCC_REG_SPM_MSG_TO_HOST);
-      DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
-         printk("%s() line %d ready = %d\n", __func__, __LINE__, ready);)
-   }
-
-   if (count <= 0)
-   {
-      printk(KERN_ERR "ERROR: Failed to communicate with Napa FW. Error: 0x%x", ready);
-      return NAPA_INIT_ERROR;
-   }
-
-   DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
-      printk("%s() returning SUCCESS!\n", __func__);)
-   return(NAPA_INIT_SUCCESS);
-}
-
-#if TOFE_CHAN_PROCESSING
-/**
- * Init Ram Contents
- */
-void bcmtch_init_ram_contents(void)
-{
-
-#ifdef _X64
-    long long *llPtr;
-    uint32_t   jj;
-#endif
-    uint32_t index;
-
-	/* get pointer to tofe firmware signature */
-	tofe_tool.m_p_sig = (tofe_signature_t *)tofe_tool.m_p_image;
-
-	/* get pointer to tofe firmware table of contents */
-	tofe_tool.m_p_toc = (tofe_toc_t *)((char *)((uint32_t)tofe_tool.m_p_image + (uint32_t)TOFE_SIGNATURE_SIZE));
-
-        DEBUG(if (mod_debug & MOD_DEBUG_CHANNEL)
-            printk("m_p_toc  = %08x\n",(unsigned int)tofe_tool.m_p_toc);)
-
-    /* setup cfg array */
-#ifdef _X64
-        jj = 0;
-        llPtr = (long long *)&tofe_tool.m_p_toc->cfg[0];
-        for (index = 0 ; index < TOFE_TOC_INDEX_MAX ; index+=2) {
-
-		    tofe_tool.cfg[index+1] = *llPtr >> 32;
-		    tofe_tool.cfg[index  ] = *llPtr & 0xffffffff;
-            ++llPtr;
-
-            DEBUG(if (mod_debug & MOD_DEBUG_CHANNEL) {
-                printk("tofe_tool.cfg[%d]=0x%08x (x64)\n",index,  tofe_tool.cfg[index]);
-                printk("tofe_tool.cfg[%d]=0x%08x (x64)\n",index+1,tofe_tool.cfg[index+1]);
-            })
-
-            ++jj;
-        }
-#else
-        for (index = 0 ; index < TOFE_TOC_INDEX_MAX ; ++index) {
-		    tofe_tool.cfg[index] = tofe_tool.m_p_toc->cfg[index];
-
-            DEBUG(if (mod_debug & MOD_DEBUG_CHANNEL)
-                printk("tofe_tool.cfg[%d]=0x%08x\n",index,  (unsigned int)tofe_tool.cfg[index]);)
-
-        }
-#endif
-
-	tofe_tool.m_p_channel_configs =
-		(tofe_channel_cfg_t *)
-		( (uint32_t)tofe_tool.m_p_image
-  		+ (uint32_t)tofe_tool.cfg[TOFE_TOC_INDEX_CHANNEL]
-		- RAM_OFFSET );
-}
+#define	TOFE_COMMAND_FLAG_COMMAND_PROCESSED	(1 << 0)
+#define	TOFE_COMMAND_FLAG_REQUEST_RESULT	(1 << 7)
 
 /**
- *
- * Get channel specific configuration
- *
- * @param [in] channel_id Channel Id
- *
- * @retval channel_cfg     Channel Configuration
- *
- */
-tofe_channel_instance_cfg_t *bcmtch_get_channel_config(tofe_channel_id_t channel_id)
-{
-    if(NULL == tofe_tool.m_p_sig)
-        bcmtch_init_ram_contents();
+    @struct tofe_signature_t
+    @brief Firmware ROM image signature structure.
+*/
+struct  tofe_signature_t_ {
+	const char magic[TOFE_SIGNATURE_MAGIC_SIZE];
+	const char build_release[4];
+	const char build_version[TOFE_BUILD_ID_SIZE];
+	const char build_date[TOFE_BUILD_ID_SIZE];
+	const char build_time[TOFE_BUILD_ID_SIZE];
+};
+#define tofe_signature_t struct tofe_signature_t_
 
-    return(&(tofe_tool.m_p_channel_configs->channel_cfg[channel_id]));
+/* ToFE Signature */
+#define TOFE_SIGNATURE_SIZE sizeof(tofe_signature_t)
+
+#define iterator_t uint8_t
+
+/* -------------------------- */
+/* -	Dual Channel Mode	- */
+/* -------------------------- */
+#if BCMTCH_ROM_CHANNEL
+
+#define iterator_rom_t uint16_t
+
+enum bcmtch_rom_event_type_e_ {
+	BCMTCH_EVENT_TYPE_INVALID,	/* Don't use zero. */
+
+	/* Core events. */
+	BCMTCH_EVENT_TYPE_FRAME,
+
+	BCMTCH_EVENT_TYPE_DOWN,
+	BCMTCH_EVENT_TYPE_MOVE,
+	BCMTCH_EVENT_TYPE_UP,
+
+	/* Auxillary events. */
+	BCMTCH_EVENT_TYPE_TIMESTAMP,
+};
+#define bcmtch_rom_event_type_e enum bcmtch_rom_event_type_e_
+
+struct tofe_rom_channel_header_t_ {
+	uint32_t	write;
+
+	 /* Number of entries.  Limited to 255 entries. */
+	uint8_t		entry_num;
+	/* Entry size in bytes.  Limited to 255 bytes. */
+	uint8_t		entry_size;
+	/* Number of entries in channel to trigger notification */
+	uint8_t		trig_level;
+	/* Bit definitions shared with configuration. */
+	uint8_t		flags;
+
+	uint32_t	read;
+	int32_t		data_offset; /* Offset to data. May be negative. */
+	iterator_rom_t	read_iterator;
+	iterator_rom_t	write_iterator;
+};
+#define tofe_rom_channel_header_t struct tofe_rom_channel_header_t_
+
+struct tofe_rom_channel_instance_cfg_t_ {
+	uint8_t entry_num;	/* Must be > 0. */
+	uint8_t entry_size;	/* Range [1..255]. */
+	uint8_t trig_level;	/* 0 - entry_num */
+	uint8_t flags;
+	tofe_rom_channel_header_t *channel_header;
+	void *channel_data;
+};
+#define tofe_rom_channel_instance_cfg_t struct tofe_rom_channel_instance_cfg_t_
+
+struct bcmtch_rom_event_t_ {
+	uint32_t	type:4;
+	uint32_t	_pad:28; /* embedded pad in bitfield */
+
+	uint32_t	_pad32;
+};
+#define bcmtch_rom_event_t struct bcmtch_rom_event_t_
+
+struct  bcmtch_rom_event_frame_t_ {
+	uint16_t	type:4;
+	uint16_t	_pad:12; /* embedded pad in bitfield */
+	uint16_t	frame_id;
+
+	uint32_t	hash;
+};
+#define bcmtch_rom_event_frame_t struct  bcmtch_rom_event_frame_t_
+
+struct bcmtch_rom_event_touch_t_ {
+	uint16_t	type:4;
+	uint16_t	track_tag:5;
+	uint16_t	flags:4;
+	uint16_t	tch_class:3;
+	/*  Touch class. C++ does not like class.
+			Use BCMTCH_EVENT_CLASS_TOUCH. */
+
+	uint16_t	width:8;	/* x direction length of bounding box */
+	uint16_t	height:8;	/* y direction length of bounding box */
+
+	uint32_t	z:8;	/* pressure for contact, distance for hover */
+	uint32_t	x:12;
+	uint32_t	y:12;
+};
+#define bcmtch_rom_event_touch_t struct bcmtch_rom_event_touch_t_
+
+#endif
+/* ---------------------------------- */
+/* -	End of Dual Channel Data	- */
+/* ---------------------------------- */
+
+/**
+    @enum tofe_channel_flag_t
+    @brief Channel flag field bit assignment.
+*/
+enum tofe_channel_flag_t_ {
+	TOFE_CHANNEL_FLAG_STATUS_OVERFLOW      = 1 << 0,
+	TOFE_CHANNEL_FLAG_STATUS_LEVEL_TRIGGER = 1 << 1,
+	TOFE_CHANNEL_FLAG_FWDMA_BUFFER         = 1 << 3,
+	TOFE_CHANNEL_FLAG_FWDMA_ENABLE         = 1 << 4,
+	TOFE_CHANNEL_FLAG_INTERRUPT_ENABLE     = 1 << 5,
+	TOFE_CHANNEL_FLAG_OVERFLOW_STALL       = 1 << 6,
+	TOFE_CHANNEL_FLAG_INBOUND              = 1 << 7,
+};
+#define tofe_channel_flag_t enum tofe_channel_flag_t_
+
+enum tofe_toc_index_ {
+	TOFE_TOC_INDEX_CHANNEL = 2,
+};
+#define tofe_toc_index_e enum tofe_toc_index_
+
+enum tofe_channel_id_t_ {
+	TOFE_CHANNEL_ID_TOUCH,
+	TOFE_CHANNEL_ID_COMMAND,
+	TOFE_CHANNEL_ID_RESPONSE,
+	TOFE_CHANNEL_ID_LOG,
+};
+#define tofe_channel_id_t enum tofe_channel_id_t_	/* Used as index. */
+
+struct tofe_dmac_header_t_ {
+	uint16_t			min_size;
+	uint16_t			size;
+};
+#define tofe_dmac_header_t struct tofe_dmac_header_t_
+
+struct tofe_channel_buffer_header_t_ {
+	tofe_dmac_header_t	dmac;
+	uint8_t				channel_id:4;
+	uint8_t				flags:4;
+	uint8_t				seq_number;
+	uint8_t				entry_size;
+	uint8_t				entry_count;
+};
+#define tofe_channel_buffer_header_t struct tofe_channel_buffer_header_t_
+
+struct tofe_channel_buffer_t_ {
+	tofe_channel_buffer_header_t	header;
+	uint32_t						data[256];
+};
+#define tofe_channel_buffer_t struct tofe_channel_buffer_t_
+
+struct tofe_channel_header_t_ {
+	/* Channel ID */
+	uint8_t		channel_id;
+	/* Number of entries.  Limited to 255 entries. */
+	uint8_t		entry_num;
+	/* Entry size in bytes.  Limited to 255 bytes. */
+	uint8_t		entry_size;
+	/* Number of entries in channel to trigger notification */
+	uint8_t		trig_level;
+	/* Bit definitions shared with configuration. */
+	uint8_t		flags;
+	/* Number of datat buffers for this channel */
+	uint8_t		buffer_num;
+	/* Select the buffer to write [0 .. buffer_num-1]. */
+	uint8_t		buffer_idx;
+	/* Count the number of buffer swapped for debug. */
+	uint8_t		seq_count;
+	tofe_channel_buffer_t	*buffer[2];
+};
+#define tofe_channel_header_t struct tofe_channel_header_t_
+
+struct tofe_channel_instance_cfg_t_ {
+	uint8_t entry_num;	/* Must be > 0. */
+	uint8_t entry_size;	/* Range [1..255]. */
+	uint8_t trig_level;	/* 0 - entry_num */
+	uint8_t flags;
+	uint8_t buffer_num; /* Number of buffers for this channel */
+	uint8_t _pad8;
+	uint16_t offset;
+	tofe_channel_header_t *channel_header;
+	void *channel_data;
+};
+#define tofe_channel_instance_cfg_t struct tofe_channel_instance_cfg_t_
+
+struct tofe_log_msg_t_ {
+	uint16_t	log_code;
+	uint16_t	param_0;
+	uint32_t	params[2];
+	uint32_t	timestamp;
+};
+#define tofe_log_msg_t struct tofe_log_msg_t_
+
+struct combi_entry_t_ {
+	uint32_t offset;
+	uint32_t addr;
+	uint32_t length;
+	uint32_t flags;
+};
+#define bcmtch_combi_entry_t struct combi_entry_t_
+/* ------------------------------------- */
+/* - BCM Touch Controller Driver Enums - */
+/* ------------------------------------- */
+
+enum bcmtch_channel_e_ {
+	/* NOTE : see above tofe_channel_id_t */
+	BCMTCH_CHANNEL_TOUCH,
+	BCMTCH_CHANNEL_COMMAND,
+	BCMTCH_CHANNEL_RESPONSE,
+	BCMTCH_CHANNEL_LOG,
+
+	/* last */
+	BCMTCH_CHANNEL_MAX
+};
+#define bcmtch_channel_e enum bcmtch_channel_e_
+
+enum bcmtch_mutex_e_ {
+	BCMTCH_MUTEX_BUS,
+	BCMTCH_MUTEX_WORK,
+
+	/* last */
+	BCMTCH_MUTEX_MAX,
+};
+#define bcmtch_mutex_e enum bcmtch_mutex_e_
+
+/* event kinds from BCM Touch Controller */
+enum bcmtch_event_kind_e_ {
+	BCMTCH_EVENT_KIND_RESERVED, /* Avoiding zero, but you may use it. */
+
+	BCMTCH_EVENT_KIND_FRAME,
+	BCMTCH_EVENT_KIND_TOUCH,
+	BCMTCH_EVENT_KIND_TOUCH_END,
+	BCMTCH_EVENT_KIND_BUTTON,
+	BCMTCH_EVENT_KIND_GESTURE,
+
+	BCMTCH_EVENT_KIND_EXTENSION = 7,
+	BCMTCH_EVENT_KIND_MAX = BCMTCH_EVENT_KIND_EXTENSION,
+};
+#define bcmtch_event_kind_e enum bcmtch_event_kind_e_
+
+enum _bcmtch_touch_status_ {
+	BCMTCH_TOUCH_STATUS_INACTIVE,
+	BCMTCH_TOUCH_STATUS_UP,
+	BCMTCH_TOUCH_STATUS_MOVE,
+	BCMTCH_TOUCH_STATUS_MOVING,
+};
+#define bcmtch_touch_status_e enum _bcmtch_touch_status_
+
+/* -------------------------------------- */
+/* - BCM Touch Controller Device Tables - */
+/* -------------------------------------- */
+
+static const uint32_t const BCMTCH_CHIP_IDS[] = {
+	0x15200,
+	0x15300,
+	0x15500,
+
+	0			/* last entry must be 0 */
+};
+
+/* ------------------------------------------ */
+/* - BCM Touch Controller Driver Parameters - */
+/* ------------------------------------------ */
+#define BCMTCH_BOOT_FLAG_HARD_RESET_ON_LOAD 0x00000001
+#define BCMTCH_BOOT_FLAG_SOFT_RESET_ON_LOAD 0x00000002
+#define BCMTCH_BOOT_FLAG_RAM_BOOT           0x00000004
+#define BCMTCH_BOOT_FLAG_DISABLE_POST_BOOT  0x00000008
+#define BCMTCH_BOOT_FLAG_CHECK_INTERRUPT    0x00000010
+#define BCMTCH_BOOT_FLAG_SUSPEND_COLD_BOOT  0x00000020
+
+#define BCMTCH_BOOT_FLAG_RESET_ON_LOAD_MASK \
+			(BCMTCH_BOOT_FLAG_HARD_RESET_ON_LOAD \
+			| BCMTCH_BOOT_FLAG_SOFT_RESET_ON_LOAD)
+
+static int bcmtch_boot_flag = (BCMTCH_BOOT_FLAG_SOFT_RESET_ON_LOAD);
+
+module_param_named(boot_flag, bcmtch_boot_flag, int, S_IRUGO);
+MODULE_PARM_DESC(boot_flag, "Boot bit-fields [RAM|RESET]");
+
+/*-*/
+
+#define BCMTCH_CHANNEL_FLAG_USE_TOUCH       0x00000001
+#define BCMTCH_CHANNEL_FLAG_USE_CMD_RESP    0x00000002
+#define BCMTCH_CHANNEL_FLAG_USE_LOG         0x00000004
+
+static int bcmtch_channel_flag = BCMTCH_CHANNEL_FLAG_USE_TOUCH
+			| BCMTCH_CHANNEL_FLAG_USE_CMD_RESP;
+
+module_param_named(channel_flag, bcmtch_channel_flag, int, S_IRUGO);
+MODULE_PARM_DESC(channel_flag, "Channels allowed bit-fields [L|C/R|T]");
+
+/*-*/
+
+#define BCMTCH_DEBUG_FLAG_FRAME             0x00000001
+#define BCMTCH_DEBUG_FLAG_FRAMES            0x00000002
+#define BCMTCH_DEBUG_FLAG_MOVE              0x00000004
+#define BCMTCH_DEBUG_FLAG_UP                0x00000008
+#define BCMTCH_DEBUG_FLAG_BUTTON            0x00000010
+#define BCMTCH_DEBUG_FLAG_FRAME_EXT         0x00000020
+#define BCMTCH_DEBUG_FLAG_TOUCH_EXT         0x00000040
+#define BCMTCH_DEBUG_FLAG_PM                0x00000080
+#define BCMTCH_DEBUG_FLAG_CHANNELS          0x00000100
+#define BCMTCH_DEBUG_FLAG_POST_BOOT         0x00000200
+#define BCMTCH_DEBUG_FLAG_WATCH_DOG         0x00000400
+#define BCMTCH_DEBUG_FLAG_IRQ				0x00000800
+
+static int bcmtch_debug_flag = BCMTCH_DEBUG_FLAG_FRAME;
+
+module_param_named(debug_flag, bcmtch_debug_flag, int, S_IRUGO | S_IWUSR);
+MODULE_PARM_DESC(debug_flag, "Debug bit-fields [UP|MV|DN|FR]");
+
+/*-*/
+
+#define BCMTCH_EVENT_FLAG_TOUCH_SIZE		0x00000001
+#define BCMTCH_EVENT_FLAG_TOOL_SIZE			0x00000002
+#define BCMTCH_EVENT_FLAG_PRESSURE			0x00000004
+#define BCMTCH_EVENT_FLAG_ORIENTATION		0x00000008
+
+static int bcmtch_event_flag = BCMTCH_EVENT_FLAG_TOUCH_SIZE
+		| BCMTCH_EVENT_FLAG_ORIENTATION;
+
+module_param_named(event_flag, bcmtch_event_flag, int, S_IRUGO);
+MODULE_PARM_DESC(event_flag, "Extension events bit-fields [ORIEN|PRESSURE|TOOL_SIZE|TOUCH_SIZE]");
+
+/*- firmware -*/
+
+#define BCMTCH_FIRMWARE_FLAGS_CODE					0x0
+#define BCMTCH_FIRMWARE_FLAGS_CONFIGS				0x01
+#define BCMTCH_FIRMWARE_FLAGS_POST_BOOT				0x02
+#define BCMTCH_FIRMWARE_FLAGS_POST_BOOT_CODE		0x02
+#define BCMTCH_FIRMWARE_FLAGS_POST_BOOT_CONFIGS		0x03
+#define BCMTCH_FIRMWARE_FLAGS_MASK					0x03
+
+#define BCMTCH_FIRMWARE_FLAGS_COMBI     0x10
+
+static int bcmtch_firmware_flag = BCMTCH_FIRMWARE_FLAGS_COMBI;
+
+module_param_named(firmware_flag, bcmtch_firmware_flag, int, S_IRUGO);
+MODULE_PARM_DESC(firmware_flag, "Firmware flag bit-fields (combi = 0x10  config = 0x01");
+
+static char *bcmtch_firmware = NULL;
+
+module_param_named(firmware, bcmtch_firmware, charp, S_IRUGO);
+MODULE_PARM_DESC(firmware, "Filename of firmware to load");
+
+static int bcmtch_firmware_addr = 0x0;
+
+module_param_named(firmware_addr, bcmtch_firmware_addr, int, S_IRUGO);
+MODULE_PARM_DESC(firmware_addr, "Address to load firmware");
+
+/*- post boot -*/
+
+#define	BCMTCH_POST_BOOT_RATE_HIGH	160
+#define	BCMTCH_POST_BOOT_RATE_LOW	80
+
+static int bcmtch_post_boot_rate_high = BCMTCH_POST_BOOT_RATE_HIGH;
+
+module_param_named(
+			pbr_high,
+			bcmtch_post_boot_rate_high,
+			int,
+			S_IRUGO | S_IWUSR);
+MODULE_PARM_DESC(pbr_high, "Post Boot Download Rate - High");
+
+static int bcmtch_post_boot_rate_low = BCMTCH_POST_BOOT_RATE_LOW;
+
+module_param_named(pbr_low, bcmtch_post_boot_rate_low, int, S_IRUGO | S_IWUSR);
+MODULE_PARM_DESC(pbr_low, "Post Boot Download Rate - Low");
+
+/*- watch dog duration -*/
+
+/* x milliseconds in jiffies */
+#define MS_TO_JIFFIES(x)			(((x)*HZ)/1000)
+#define	BCMTCH_WATCHDOG_NORMAL		5000
+#define	BCMTCH_WATCHDOG_POST_BOOT	500
+
+static uint32_t bcmtch_watchdog_normal = BCMTCH_WATCHDOG_NORMAL;
+
+module_param_named(
+		wdg_normal,
+		bcmtch_watchdog_normal,
+		uint,
+		S_IRUGO | S_IWUSR);
+MODULE_PARM_DESC(wdg_normal, "Watch dog rate in normal operation (ms)");
+
+static uint32_t bcmtch_watchdog_post_boot = BCMTCH_WATCHDOG_POST_BOOT;
+
+module_param_named(
+		wdg_post_boot,
+		bcmtch_watchdog_post_boot,
+		uint,
+		S_IRUGO | S_IWUSR);
+MODULE_PARM_DESC(wdg_post_boot, "Watch dog rate at post boot download (ms)");
+
+/* ------------------------------------------ */
+/* - BCM Touch Controller Driver Structures - */
+/* ------------------------------------------ */
+
+struct bcmtch_channel_t_ {
+	tofe_channel_instance_cfg_t	cfg;
+	tofe_channel_header_t		hdr;
+	uint16_t					queued;
+	uint8_t						active;
+	/* intentional pad - may use for i2c tranactions */
+	uint8_t						_pad8;
+	uint32_t data;
+};
+#define bcmtch_channel_t struct bcmtch_channel_t_
+
+#if BCMTCH_ROM_CHANNEL
+struct bcmtch_rom_channel_t_ {
+	tofe_rom_channel_instance_cfg_t	rom_cfg;
+	tofe_rom_channel_header_t		rom_hdr;
+	uint16_t				queued;
+	uint16_t				_pad16;
+	uint32_t data;
+};
+#define bcmtch_rom_channel_t struct bcmtch_rom_channel_t_
+#endif
+
+/**
+	@ struct bcmtch_response_wait_t_
+	@ brief storage of the results from response channel.
+*/
+struct bcmtch_response_wait_t_ {
+	bool		wait;
+	uint32_t	resp_data;
+};
+#define bcmtch_response_wait_t struct bcmtch_response_wait_t_
+
+struct bcmtch_event_t_ {
+	uint32_t           event_kind:3;
+	uint32_t           _pad:29;
+};
+#define bcmtch_event_t struct bcmtch_event_t_
+
+enum bcmtch_event_frame_extension_kind_t_ {
+	BCMTCH_EVENT_FRAME_EXTENSION_KIND_TIMESTAMP,
+	BCMTCH_EVENT_FRAME_EXTENSION_KIND_CHECKSUM,
+	BCMTCH_EVENT_FRAME_EXTENSION_KIND_HEARTBEAT,
+
+	BCMTCH_EVENT_FRAME_EXTENSION_KIND_MAX = 7  /* 3 bits */
+};
+#define bcmtch_event_frame_extension_kind_t \
+		enum bcmtch_event_frame_extension_kind_t_
+
+struct bcmtch_event_frame_t_ {
+	uint32_t           event_kind:3;
+	uint32_t           _pad:1;
+	uint32_t           frame_id:12;
+	uint32_t           timestamp:16;
+};
+#define bcmtch_event_frame_t struct bcmtch_event_frame_t_
+
+struct bcmtch_event_frame_extension_t_ {
+	uint32_t           event_kind:3;
+	uint32_t           frame_kind:3;
+	uint32_t           _pad:26;
+};
+#define bcmtch_event_frame_extension_t \
+		struct bcmtch_event_frame_extension_t_
+
+struct bcmtch_event_frame_extension_timestamp_t_ {
+	uint32_t           event_kind:3;
+	uint32_t           frame_kind:3;
+	uint32_t           _pad:2;
+	uint32_t           scan_end:8;
+	uint32_t           mtc_start:8;
+	uint32_t           mtc_end:8;
+};
+#define bcmtch_event_frame_extension_timestamp_t \
+		struct bcmtch_event_frame_extension_timestamp_t_
+
+struct bcmtch_event_frame_extension_checksum_t_ {
+	uint32_t           event_kind:3;
+	uint32_t           frame_kind:3;
+	uint32_t           _pad:10;
+	uint32_t           hash:16;
+};
+#define bcmtch_event_frame_extension_checksum_t \
+		struct bcmtch_event_frame_extension_checksum_t_
+
+struct bcmtch_event_frame_extension_heartbeat_t_ {
+	uint32_t           event_kind:3;
+	uint32_t           frame_kind:3;
+	uint32_t           _pad:2;
+	uint32_t           timestamp:24; /* 100 us units, free running */
+};
+#define bcmtch_event_frame_extension_heartbeat_t \
+		struct bcmtch_event_frame_extension_heartbeat_t_
+
+enum bcmtch_event_touch_extension_kind_t_ {
+	BCMTCH_EVENT_TOUCH_EXTENSION_KIND_DETAIL,
+	BCMTCH_EVENT_TOUCH_EXTENSION_KIND_BLOB,
+	BCMTCH_EVENT_TOUCH_EXTENSION_KIND_SIZE,
+	BCMTCH_EVENT_TOUCH_EXTENSION_KIND_HOVER,
+	BCMTCH_EVENT_TOUCH_EXTENSION_KIND_TOOL,
+
+	BCMTCH_EVENT_TOUCH_EXTENSION_KIND_MAX = 7  /* 3 bits */
+};
+#define bcmtch_event_touch_extension_kind_t \
+		enum bcmtch_event_touch_extension_kind_t_
+
+enum bcmtch_event_touch_tool_t_ {
+	BCMTCH_EVENT_TOUCH_TOOL_FINGER,
+	BCMTCH_EVENT_TOUCH_TOOL_STYLUS,
+};
+#define bcmtch_event_touch_tool_t enum bcmtch_event_touch_tool_t
+
+struct bcmtch_event_touch_t_ {
+	uint32_t           event_kind:3;
+	uint32_t           track_tag:5;
+	uint32_t           x:12;
+	uint32_t           y:12;
+};
+#define bcmtch_event_touch_t struct bcmtch_event_touch_t_
+
+struct bcmtch_event_touch_end_t_ {
+	uint32_t           event_kind:3;
+	uint32_t           track_tag:5;
+	uint32_t           _pad:24;
+};
+#define bcmtch_event_touch_end_t struct bcmtch_event_touch_end_t_
+
+struct bcmtch_event_touch_extension_t_ {
+	uint32_t           event_kind:3;
+	uint32_t           touch_kind:3;
+	uint32_t           _pad:26;
+};
+#define bcmtch_event_touch_extension_t struct bcmtch_event_touch_extension_t_
+
+struct bcmtch_event_touch_extension_detail_t_ {
+	uint32_t           event_kind:3;
+	uint32_t           touch_kind:3;
+	uint32_t           confident:1;
+	uint32_t           suppressed:1;
+	uint32_t           hover:1;
+	uint32_t           tool:1;
+	uint32_t           large_touch:1;
+	uint32_t           _pad:1;
+	uint32_t           pressure:8;
+	uint32_t           orientation:12;
+};
+#define bcmtch_event_touch_extension_detail_t \
+		struct bcmtch_event_touch_extension_detail_t_
+
+struct bcmtch_event_touch_extension_blob_t_ {
+	uint32_t           event_kind:3;
+	uint32_t           touch_kind:3;
+	uint32_t           area:8;
+	uint32_t           total_cap:18;
+};
+#define bcmtch_event_touch_extension_blob_t \
+		struct bcmtch_event_touch_extension_blob_t_
+
+#define BCMTCH_EVENT_TOUCH_EXTENSION_AREA_MAX 255
+
+struct bcmtch_event_touch_extension_size_t_ {
+	uint32_t           event_kind:3;
+	uint32_t           touch_kind:3;
+	uint32_t           _pad:6;
+	uint32_t           major_axis:10;
+	uint32_t           minor_axis:10;
+};
+#define bcmtch_event_touch_extension_size_t \
+		struct bcmtch_event_touch_extension_size_t_
+
+struct bcmtch_event_touch_extension_hover_t_ {
+	uint32_t           event_kind:3;
+	uint32_t           touch_kind:3;
+	uint32_t           _pad:16;
+	uint32_t           height:10;
+};
+#define bcmtch_event_touch_extension_hover_t \
+		struct bcmtch_event_touch_extension_hover_t_
+
+struct bcmtch_event_touch_extension_tool_t_ {
+	uint32_t           event_kind:3;
+	uint32_t           touch_kind:3;
+	uint32_t           _pad:6;
+	uint32_t           width_major:10;
+	uint32_t           width_minor:10;
+};
+#define	bcmtch_event_touch_extension_tool_t \
+		struct bcmtch_event_touch_extension_tool_t_
+
+enum bcmtch_event_button_kind_t_ {
+	BCMTCH_EVENT_BUTTON_KIND_CONTACT,
+	BCMTCH_EVENT_BUTTON_KIND_HOVER,
+
+	BCMTCH_EVENT_BUTTON_KIND_MAX = 1
+};
+#define bcmtch_event_button_kind_t enum bcmtch_event_button_kind_t_
+
+struct bcmtch_event_button_t_ {
+	uint32_t           event_kind:3;
+	uint32_t           button_kind:1;
+	uint32_t           _pad:12;
+	uint32_t           status:16;
+};
+#define bcmtch_event_button_t struct bcmtch_event_button_t_
+
+
+/* driver structure for a single touch point */
+struct bcmtch_touch_t_ {
+	uint16_t	x;		/* X Coordinate */
+	uint16_t	y;		/* Y Coordinate */
+	uint16_t	major_axis;
+	uint16_t	minor_axis;
+	uint16_t	width_major;
+	uint16_t	width_minor;
+	uint8_t		pressure;
+	int16_t		orientation;
+
+	/* Touch status: Down, Move, Up (Inactive) */
+	bcmtch_touch_status_e	status;
+
+	bcmtch_event_kind_e		event;	/* Touch Event Kind */
+#if BCMTCH_ROM_CHANNEL
+	bcmtch_rom_event_type_e	rom_event;
+#endif
+};
+#define bcmtch_touch_t struct bcmtch_touch_t_
+
+typedef uint16_t (*actual_x_coordinate_t)
+	(uint16_t orig_x);
+typedef uint16_t (*actual_y_coordinate_t)
+	(uint16_t orig_y);
+typedef void (*actual_x_y_axis_t)
+	(uint16_t orig_x, uint16_t orig_y, bcmtch_touch_t *p_touch);
+
+struct bcmtch_data_t_ {
+	/* core 0S elements */
+	/* Work queue structure for defining work queue handler */
+	struct work_struct work;
+	/* Work queue structure for transaction handling */
+	struct workqueue_struct *p_workqueue;
+
+	/* Critical Section : Mutexes : */
+	struct mutex cs_mutex[BCMTCH_MUTEX_MAX];
+	/*  (1) serial bus - I2C / SPI */
+	/*  (2) deferred work */
+
+	/* Pointer to allocated memory for input device */
+	struct input_dev *p_inputDevice;
+
+	/* I2C 0S elements */
+
+	/* SPM I2C Client structure pointer */
+	struct i2c_client *p_i2c_client_spm;
+
+	/* SYS I2C Client structure pointer */
+	struct i2c_client *p_i2c_client_sys;
+
+	/* Local copy of platform data structure */
+	bcmtch_platform_data_t platform_data;
+
+	/* BCM Touch elements */
+	bcmtch_channel_t *p_channels[BCMTCH_CHANNEL_MAX];
+#if BCMTCH_ROM_CHANNEL
+	bcmtch_rom_channel_t *p_rom_channels[BCMTCH_CHANNEL_MAX];
+#endif
+	bcmtch_touch_t touch[BCMTCH_MAX_TOUCH];	/* BCMTCH touch structure */
+	uint32_t touch_count;
+
+	/* Response storage */
+	bcmtch_response_wait_t bcmtch_cmd_response[TOFE_COMMAND_LAST];
+
+	/* BCM Button elements */
+	uint16_t button_status;
+
+	/* DMA transfer mode */
+	bool has_dma_channel;
+	bool host_override;
+	uint32_t fwDMABufferSize;
+	void *fwDMABuffer;
+
+	/* Interrupts */
+	bool irq_pending;
+	bool irq_enabled;
+
+	/* Watchdog Timer */
+	uint32_t watchdog_expires;
+	struct timer_list watchdog;
+
+#if BCMTCH_ROM_CHANNEL
+	/* Dual channel mode */
+	bool rom_channel;
+#endif
+
+	/* Post Boot Downloads */
+	uint8_t *post_boot_buffer;
+	uint8_t *post_boot_data;
+	uint32_t post_boot_addr;
+	uint16_t post_boot_left;
+	uint16_t post_boot_sections;
+	uint16_t post_boot_section;
+	uint32_t postboot_cfg_addr;
+	uint32_t postboot_cfg_length;
+
+	/* Axis orientation function pointers */
+	actual_x_coordinate_t actual_x;
+	actual_y_coordinate_t actual_y;
+	actual_x_y_axis_t actual_x_y_axis;
+};
+#define bcmtch_data_t struct bcmtch_data_t_
+
+/* Pointer to BCMTCH Data Structure */
+static bcmtch_data_t *bcmtch_data_p = NULL;
+
+/* -------------------------------------------- */
+/* - BCM Touch Controller Function Prototypes - */
+/* -------------------------------------------- */
+
+/*  DEV Prototypes */
+static void	   bcmtch_dev_process(void);
+static int32_t bcmtch_dev_reset(uint8_t);
+static int32_t bcmtch_dev_suspend(void);
+static int32_t bcmtch_dev_resume(void);
+static int32_t bcmtch_dev_request_power_mode(uint8_t, tofe_command_e);
+static int32_t bcmtch_dev_send_command(tofe_command_e, uint32_t, uint8_t);
+static inline bool bcmtch_dev_verify_buffer_header(
+		tofe_channel_buffer_header_t*);
+static int32_t bcmtch_dev_post_boot_download(int16_t data_rate);
+static int32_t bcmtch_dev_post_boot_get_section(void);
+static void    bcmtch_dev_watchdog_work(unsigned long int data);
+static int32_t bcmtch_dev_watchdog_start(void);
+static int32_t bcmtch_dev_watchdog_reset(void);
+static int32_t bcmtch_dev_watchdog_stop(void);
+static int32_t bcmtch_dev_watchdog_restart(uint32_t expires);
+
+/*  COM Prototypes */
+static int32_t  bcmtch_com_init(void);
+static int32_t  bcmtch_com_read_spm(uint8_t, uint8_t*);
+static int32_t  bcmtch_com_write_spm(uint8_t, uint8_t);
+static int32_t  bcmtch_com_read_sys(uint32_t, uint16_t, uint8_t*);
+static int32_t  bcmtch_com_write_sys(uint32_t, uint16_t, uint8_t*);
+/* COM Helper */
+static inline int32_t   bcmtch_com_fast_write_spm(uint8_t, uint8_t*, uint8_t*);
+static inline int32_t   bcmtch_com_write_sys32(uint32_t, uint32_t);
+
+/*  OS Prototypes */
+static void		*bcmtch_os_mem_alloc(uint32_t);
+static void     bcmtch_os_mem_free(void *);
+static void     bcmtch_os_reset(void);
+static void     bcmtch_os_lock_critical_section(uint8_t);
+static void     bcmtch_os_release_critical_section(uint8_t);
+static int32_t  bcmtch_os_interrupt_enable(void);
+static void     bcmtch_os_interrupt_disable(void);
+static void		bcmtch_os_deferred_worker(struct work_struct *work);
+static void     bcmtch_os_clear_deferred_worker(void);
+
+#ifdef CONFIG_PM
+#ifndef CONFIG_HAS_EARLYSUSPEND
+static int      bcmtch_os_suspend(
+					struct i2c_client *p_client,
+					pm_message_t mesg);
+static int      bcmtch_os_resume(struct i2c_client *p_client);
+#endif
+#endif
+
+/*  OS I2C Prototypes */
+static int32_t  bcmtch_os_i2c_probe(
+					struct i2c_client*,
+					const struct i2c_device_id *);
+static int32_t  bcmtch_os_i2c_remove(struct i2c_client *);
+static int32_t  bcmtch_os_i2c_read_spm(struct i2c_client*, uint8_t, uint8_t*);
+static int32_t  bcmtch_os_i2c_write_spm(struct i2c_client*, uint8_t, uint8_t);
+static int32_t  bcmtch_os_i2c_fast_write_spm(
+					struct i2c_client*,
+					uint8_t,
+					uint8_t*,
+					uint8_t*);
+static int32_t  bcmtch_os_i2c_read_sys(
+					struct i2c_client*,
+					uint32_t,
+					uint16_t,
+					uint8_t*);
+static int32_t  bcmtch_os_i2c_write_sys(
+					struct i2c_client*,
+					uint32_t,
+					uint16_t,
+					uint8_t*);
+static int32_t  bcmtch_os_i2c_init_clients(struct i2c_client *);
+static void     bcmtch_os_i2c_free_clients(void);
+static void     bcmtch_os_sleep_ms(uint32_t);
+
+#if BCMTCH_ROM_CHANNEL
+static inline void bcmtch_inline_rom_channel_write_begin(
+		tofe_rom_channel_header_t *);
+static inline void bcmtch_inline_rom_channel_write_end(
+		tofe_rom_channel_header_t *);
+static inline uint32_t bcmtch_inline_rom_channel_write(
+		tofe_rom_channel_header_t *, void *);
+static int32_t bcmtch_dev_read_rom_channel(bcmtch_rom_channel_t *);
+static inline void *bcmtch_inline_rom_channel_read(tofe_rom_channel_header_t *);
+static inline uint32_t bcmtch_inline_rom_channel_read_end(
+		tofe_rom_channel_header_t *);
+static int32_t bcmtch_dev_write_rom_command(
+		tofe_command_e, uint32_t, uint16_t, uint8_t);
+static int32_t bcmtch_dev_init_rom_channel(
+		bcmtch_channel_e, tofe_rom_channel_instance_cfg_t *);
+static int32_t bcmtch_dev_init_rom_channels(uint32_t, uint8_t *);
+static int32_t bcmtch_dev_write_rom_channel(bcmtch_rom_channel_t *);
+static int32_t bcmtch_dev_read_rom_channel(bcmtch_rom_channel_t *);
+static int32_t bcmtch_dev_process_rom_event_frame(bcmtch_rom_event_frame_t *);
+static int32_t bcmtch_dev_process_rom_event_touch(bcmtch_rom_event_touch_t *);
+static int32_t bcmtch_dev_process_rom_channel_touch(bcmtch_rom_channel_t *);
+#endif
+
+static inline uint16_t bcmtch_get_coordinate(uint16_t value)
+{
+	return value;
 }
 
-int bcmtch_touch_chan_init(void)
+static inline uint16_t bcmtch_reverse_x_coordinate(uint16_t x)
 {
-
-    tofe_channel_instance_cfg_t *channel_cfg;
-
-    // Init Touch Channel
-    channel_cfg = bcmtch_get_channel_config(TOFE_CHANNEL_ID_TOUCH);
-    bcmtch_chan_init(channel_cfg, &touch_channel.channel);
-
-    DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
-        printk("%s() line %d ok! \n", __func__, __LINE__);)
-    return (NAPA_INIT_SUCCESS);
+	return BCMTCH_MAX_X - x;
 }
 
-int bcmtch_touch_chan_free(void)
+static inline uint16_t bcmtch_reverse_y_coordinate(uint16_t y)
 {
-    // TODO: free allocated memory
-    return (NAPA_INIT_SUCCESS);
+	return BCMTCH_MAX_Y - y;
 }
 
-int bcmtch_chan_init(tofe_channel_instance_cfg_t *channel_cfg, napa_channel_t **channel)
+static inline void bcmtch_swap_x_y_axis(
+	uint16_t orig_x,
+	uint16_t orig_y,
+	bcmtch_touch_t *p_touch)
 {
-	/* locals */
-	int	        host_channel_size;
-        napa_channel_t *ptr;
+	p_touch->x = orig_y;
+	p_touch->y = orig_x;
+}
 
-	/* validate params */
-	*channel = NULL;
-	if(!channel_cfg) {
-            DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
-                printk("%s() line %d ERROR! !channel_cfg \n", __func__, __LINE__);)
-	    return NAPA_INIT_ERROR;
-        }
-	/* TODO: Check if buffer is contiguous or scattered and then do singel read
-	 * or multipel reads. For now do single read assuming contiguous buffer.
-	 *
-	 * The channel_buf_size need to be calculated for all available channels so we can read
-	 * all channel's header and data in one SPI / I2C operation. */
-	host_channel_size = channel_cfg->entry_num * channel_cfg->entry_size;
-	host_channel_size += sizeof(tofe_channel_header_t);
-	host_channel_size += sizeof(tofe_channel_instance_cfg_t);
+static inline void bcmtch_set_x_y_axis(
+	uint16_t orig_x,
+	uint16_t orig_y,
+	bcmtch_touch_t *p_touch)
+{
+	p_touch->x = orig_x;
+	p_touch->y = orig_y;
+}
 
-	/* alloc memory for the channel */
-        *channel = kzalloc(host_channel_size, GFP_KERNEL);
-	if (*channel == NULL)
-	{
-            DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
-                printk(KERN_ERR "%s: failed to alloc BCM915500 channel mem.\n", __func__);)
+
+/* ------------------------------------------- */
+/* - BCM Touch Controller CLI Implementation - */
+/* ------------------------------------------- */
+
+static void bcmtch_os_cli_logmask_get(
+					uint32_t in_logmask)
+{
+	bcmtch_response_wait_t *p_resp;
+	uint32_t logmask;
+	uint32_t ret_val;
+
+	printk(KERN_INFO "BCMTCH: get logmask module_id=0x%04x\n",
+			in_logmask);
+
+	logmask = (uint32_t)(in_logmask << 16);
+	p_resp = (bcmtch_response_wait_t *)
+		&(bcmtch_data_p->bcmtch_cmd_response
+				[TOFE_COMMAND_GET_LOG_MASK]);
+	p_resp->wait = 1;
+
+#if !BCMTCH_USE_BUS_LOCK
+#if BCMTCH_USE_WORK_LOCK
+	bcmtch_os_lock_critical_section(BCMTCH_MUTEX_WORK);
+#else
+#error "To use CLI, either BUS_LOCK or WORK_LOCK must be enabled"
+#endif
+#endif
+
+	ret_val = bcmtch_dev_send_command(
+			TOFE_COMMAND_GET_LOG_MASK,
+			logmask,
+			TOFE_COMMAND_FLAG_REQUEST_RESULT);
+	if (ret_val != BCMTCH_SUCCESS) {
+		printk(KERN_ERR "BCMTCH: send_command error [%d] cmd=%x\n",
+				ret_val,
+				TOFE_COMMAND_GET_LOG_MASK);
 	}
 
-	/* copy config */
-        ptr = *channel;
-	if (!ptr)
+#if !BCMTCH_USE_BUS_LOCK
+#if BCMTCH_USE_WORK_LOCK
+	bcmtch_os_release_critical_section(BCMTCH_MUTEX_WORK);
+#endif
+#endif
+}
+
+static void bcmtch_os_cli_logmask_set(
+					uint32_t in_logmask)
+{
+	bcmtch_response_wait_t *p_resp;
+
+	printk(KERN_INFO "BCMTCH: set logmask mask=0x%08x . . .\n",
+			in_logmask);
+
+	p_resp = (bcmtch_response_wait_t *)
+		&(bcmtch_data_p->bcmtch_cmd_response
+				[TOFE_COMMAND_SET_LOG_MASK]);
+	p_resp->wait = 1;
+
+#if !BCMTCH_USE_BUS_LOCK
+#if BCMTCH_USE_WORK_LOCK
+	bcmtch_os_lock_critical_section(BCMTCH_MUTEX_WORK);
+#else
+#error "To use CLI, either BUS_LOCK or WORK_LOCK must be enabled"
+#endif
+#endif
+
+	bcmtch_dev_send_command(
+			TOFE_COMMAND_SET_LOG_MASK,
+			in_logmask,
+			TOFE_COMMAND_FLAG_REQUEST_RESULT);
+
+#if !BCMTCH_USE_BUS_LOCK
+#if BCMTCH_USE_WORK_LOCK
+	bcmtch_os_release_critical_section(BCMTCH_MUTEX_WORK);
+#endif
+#endif
+}
+
+static void bcmtch_os_cli_spm_poke(
+					uint8_t in_addr,
+					uint8_t in_data)
+{
+#if !BCMTCH_USE_BUS_LOCK
+#if BCMTCH_USE_WORK_LOCK
+	bcmtch_os_lock_critical_section(BCMTCH_MUTEX_WORK);
+#else
+#error "To use CLI, either BUS_LOCK or WORK_LOCK must be enabled"
+#endif
+#endif
+
+	bcmtch_com_write_spm(in_addr, in_data);
+
+#if !BCMTCH_USE_BUS_LOCK
+#if BCMTCH_USE_WORK_LOCK
+	bcmtch_os_release_critical_section(BCMTCH_MUTEX_WORK);
+#endif
+#endif
+
+	printk(KERN_INFO "BCMTCH: poke spm Reg=%08x data=%08x\n",
+		in_addr, in_data);
+}
+
+static void bcmtch_os_cli_spm_peek(
+					uint8_t in_addr)
+{
+	uint8_t r8;
+
+#if !BCMTCH_USE_BUS_LOCK
+#if BCMTCH_USE_WORK_LOCK
+	bcmtch_os_lock_critical_section(BCMTCH_MUTEX_WORK);
+#else
+#error "To use CLI, either BUS_LOCK or WORK_LOCK must be enabled"
+#endif
+#endif
+
+	bcmtch_com_read_spm(in_addr, &r8);
+
+#if !BCMTCH_USE_BUS_LOCK
+#if BCMTCH_USE_WORK_LOCK
+	bcmtch_os_release_critical_section(BCMTCH_MUTEX_WORK);
+#endif
+#endif
+
+	printk(KERN_INFO "BCMTCH: peek spm reg=0x%02x data=0x%02x\n",
+		in_addr, r8);
+}
+
+static void bcmtch_os_cli_sys_poke(
+					uint32_t in_addr,
+					uint32_t in_data)
+{
+#if !BCMTCH_USE_BUS_LOCK
+#if BCMTCH_USE_WORK_LOCK
+	bcmtch_os_lock_critical_section(BCMTCH_MUTEX_WORK);
+#else
+#error "To use CLI, either BUS_LOCK or WORK_LOCK must be enabled"
+#endif
+#endif
+
+	bcmtch_com_write_sys32(in_addr, in_data);
+
+#if !BCMTCH_USE_BUS_LOCK
+#if BCMTCH_USE_WORK_LOCK
+	bcmtch_os_release_critical_section(BCMTCH_MUTEX_WORK);
+#endif
+#endif
+
+	printk(KERN_INFO "BCMTCH: poke sys addr=0x%08x data=0x%08x\n",
+			in_addr, in_data);
+}
+
+static void bcmtch_os_cli_sys_peek(
+					uint32_t in_addr,
+					uint32_t in_count)
+{
+	uint32_t rBuf[8];
+	uint32_t addr = in_addr;
+	uint32_t count = in_count;
+
+	memset(rBuf, 0, 8 * sizeof(uint32_t));
+
+	printk(KERN_INFO "BCMTCH: peek sys addr=0x%08x len=0x%08x\n",
+		in_addr, in_count);
+
+#if !BCMTCH_USE_BUS_LOCK
+#if BCMTCH_USE_WORK_LOCK
+	bcmtch_os_lock_critical_section(BCMTCH_MUTEX_WORK);
+#else
+#error "To use CLI, either BUS_LOCK or WORK_LOCK must be enabled"
+#endif
+#endif
+
+	while (count) {
+		bcmtch_com_read_sys(addr, 8 * sizeof(uint32_t),
+				    (uint8_t *)rBuf);
+
+		printk(KERN_INFO
+			"BCMTCH:0x%08x: 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x\n",
+			addr,
+			rBuf[0], rBuf[1], rBuf[2], rBuf[3],
+			rBuf[4], rBuf[5], rBuf[6], rBuf[7]);
+
+		count =
+		    (count > (8 * sizeof(uint32_t))) ?
+			(count - (8 * sizeof(uint32_t))) :
+			0;
+		addr += (8 * sizeof(uint32_t));
+	}
+
+#if !BCMTCH_USE_BUS_LOCK
+#if BCMTCH_USE_WORK_LOCK
+	bcmtch_os_release_critical_section(BCMTCH_MUTEX_WORK);
+#endif
+#endif
+
+}
+
+static ssize_t bcmtch_os_cli(
+					struct device *dev,
+					struct device_attribute *devattr,
+					const char *buf,
+					size_t count)
+{
+	uint32_t in_addr = 0;
+	uint32_t in_value_count = 0;
+
+	if (sscanf(buf, "poke sys %x %x", &in_addr, &in_value_count)) {
+		bcmtch_os_cli_sys_poke(in_addr, in_value_count);
+	} else if (sscanf(buf, "peek sys %x %x", &in_addr, &in_value_count)) {
+		bcmtch_os_cli_sys_peek(in_addr, in_value_count);
+	} else if (sscanf(buf, "poke spm %x %x", &in_addr, &in_value_count)) {
+		bcmtch_os_cli_spm_poke(in_addr & 0xff, in_value_count & 0xff);
+	} else if (sscanf(buf, "peek spm %x", &in_addr)) {
+		bcmtch_os_cli_spm_peek(in_addr & 0xff);
+	} else if (sscanf(buf, "debug_flag %x", &in_value_count)) {
+		bcmtch_debug_flag = in_value_count;
+		printk(KERN_INFO "BCMTCH: bcmtch_debug_flag=0x%08x\n",
+			bcmtch_debug_flag);
+	} else if (sscanf(buf, "set logmask %x", &in_value_count)) {
+		bcmtch_os_cli_logmask_set(in_value_count);
+	} else if (sscanf(buf, "get logmask %x", &in_value_count)) {
+		bcmtch_os_cli_logmask_get(in_value_count);
+	}
+#if defined(CONFIG_PM)
+	else if (sscanf(buf, "suspend %x", &in_value_count)) {
+		printk(KERN_INFO
+				"BCMTCH: cli --> suspend(%d)\n",
+				in_value_count);
+		bcmtch_dev_suspend();
+	} else if (sscanf(buf, "resume %x", &in_value_count)) {
+		printk(KERN_INFO
+				"BCMTCH: cli --> resume(%d)\n",
+				in_value_count);
+		bcmtch_dev_resume();
+	}
+#endif
+	else {
+		printk(KERN_INFO "Usage:");
+		printk(KERN_INFO "poke sys 0x<addr> 0x<data>");
+		printk(KERN_INFO "peek sys 0x<addr> 0x<len>");
+		printk(KERN_INFO "poke spm 0x<reg> 0x<data>");
+		printk(KERN_INFO "peek spm 0x<reg>");
+		printk(KERN_INFO "debug_flag 0x<flags - bitmap>");
+		printk(KERN_INFO "set logmask 0x<module>");
+		printk(KERN_INFO "get logmask 0x<mask - bitmap>");
+		printk(KERN_INFO "record 0x<scale> 0x<count>");
+		printk(KERN_INFO "suspend 0x1");
+		printk(KERN_INFO "resume 0x1");
+	}
+
+	return count;
+}
+
+static struct device_attribute bcmtch_cli_attr =
+		__ATTR(cli, 0664, NULL, bcmtch_os_cli);
+
+/* ------------------------------------------- */
+/* - BCM Touch Controller Internal Functions - */
+/* ------------------------------------------- */
+
+unsigned bcmtch_channel_num_queued(
+		tofe_channel_header_t *channel)
+{
+	return (unsigned)channel->
+		buffer[0]->header.entry_count;
+}
+
+
+/*
+    Note: Internal use only function.
+*/
+static inline char *
+_bcmtch_inline_channel_entry(
+			tofe_channel_header_t *channel,
+			uint32_t byte_index)
+{
+	return (char *)channel->buffer[0]->data
+			+ byte_index;
+}
+
+/*
+    Note: Internal use only function.
+*/
+static inline size_t
+_bcmtch_inline_channel_byte_index(
+		tofe_channel_header_t *channel,
+		iterator_t entry_index)
+{
+	return entry_index * channel->entry_size;
+}
+
+/**
+    Check if a channel is empty.
+
+    Events are not considered read or writen until the transaction is
+    complete.  Therefore, a channel is empty even when in the middle of a
+    set of writes.
+
+    @param
+	[in] channel Pointer to channel object.
+
+    @retval
+	bool True if channel is empty.
+
+*/
+static inline bool
+bcmtch_inline_channel_is_empty(tofe_channel_header_t *channel)
+{
+	return (channel->buffer[0]->header.entry_count == 0);
+}
+
+/**
+    Read a single entry from a channel.  This function must be called during
+    a read transaction.
+
+    The pointer returned by this function points into the channel object itself.
+    Callers should not modify or reuse this memory.  Callers may not free the
+    memory.
+
+
+    @param
+	[in] channel Pointer to channel object.
+
+    @retval
+	void * Pointer to returned entry.
+
+*/
+static inline void *bcmtch_inline_channel_read(
+			tofe_channel_header_t *channel,
+			uint16_t index)
+{
+	size_t byte_index;
+	tofe_channel_buffer_t *buff = channel->buffer[0];
+
+	/* Validate that channel has entries. */
+	if (buff->header.entry_count == 0)
+		return NULL;
+
+	/* Check if buffer data corrupted */
+	if (buff->header.entry_size != channel->entry_size)
+		return NULL;
+
+	/* Check if read end. */
+	if (index >= buff->header.entry_count)
+		return NULL;
+
+	/* Find entry in the channel. */
+	byte_index = _bcmtch_inline_channel_byte_index(channel, index);
+	return (void *)((char *)channel->buffer[0]->data
+			+ byte_index);
+}
+
+static inline void
+tofe_channel_write_begin(tofe_channel_header_t *channel)
+{
+	tofe_channel_buffer_header_t *buff =
+		&channel->buffer[0]->header;
+	if (channel->flags & TOFE_CHANNEL_FLAG_INBOUND)
+		buff->entry_count = 0;
+}
+
+static inline uint32_t
+tofe_channel_write(tofe_channel_header_t *channel, void *entry)
+{
+	tofe_channel_buffer_header_t *buff =
+		&channel->buffer[0]->header;
+	size_t byte_index =
+		channel->entry_size * buff->entry_count;
+	char *p_data = _bcmtch_inline_channel_entry(
+						channel,
+						byte_index);
+
+	if ((channel->flags & TOFE_CHANNEL_FLAG_INBOUND) == 0)
+		return -EINVAL;
+
+	if (buff->entry_count >= channel->entry_num)
+		return -ENOMEM;
+
+	memcpy(p_data, entry, channel->entry_size);
+	buff->entry_count++;
+
+	return BCMTCH_SUCCESS;
+}
+
+
+/* ------------------------------------------- */
+/* - BCM Touch Controller DEV Functions - */
+/* ------------------------------------------- */
+
+static int32_t bcmtch_dev_alloc(void)
+{
+	int32_t ret_val = BCMTCH_SUCCESS;
+
+	bcmtch_data_p = bcmtch_os_mem_alloc(sizeof(bcmtch_data_t));
+	if (bcmtch_data_p == NULL) {
+		printk(KERN_ERR "%s: failed to alloc mem.\n", __func__);
+		ret_val = -ENOMEM;
+	}
+	return ret_val;
+}
+
+static void bcmtch_dev_free(void)
+{
+	bcmtch_os_mem_free(bcmtch_data_p);
+}
+
+static int32_t bcmtch_dev_init_clocks(void)
+{
+	int32_t ret_val = -EAGAIN;
+	uint32_t val32;
+	uint8_t locked;
+	uint8_t waitFLL = 5;
+
+	/* setup LPLFO - read OTP and set from value */
+	bcmtch_com_read_sys(
+			BCMTCH_ADDR_SPM_LPLFO_CTRL_RO,
+			4,
+			(uint8_t *)&val32);
+	val32 &= 0xF0000000;
+	val32 >>= 28;
+	bcmtch_com_write_spm(BCMTCH_SPM_REG_LPLFO_CTRL, (uint8_t)val32 | 0x10);
+
+    /* setup FLL */
+	bcmtch_com_write_sys32(BCMTCH_ADDR_COMMON_FLL_CTRL0, 0xe0000002);
+	bcmtch_com_write_sys32(BCMTCH_ADDR_COMMON_FLL_LPF_CTRL2, 0x01001007);
+	bcmtch_com_write_sys32(BCMTCH_ADDR_COMMON_FLL_CTRL0, 0x00000001);
+	bcmtch_os_sleep_ms(1);
+	bcmtch_com_write_sys32(BCMTCH_ADDR_COMMON_FLL_CTRL0, 0x00000002);
+
+    /* Set the clock dividers for SYS bus speeds*/
+	bcmtch_com_write_sys32(BCMTCH_ADDR_COMMON_SYS_HCLK_CTRL, 0xF01);
+
+    /* Enable clocks */
+	bcmtch_com_write_sys32(
+		BCMTCH_ADDR_COMMON_CLOCK_ENABLE,
+		BCMTCH_IF_I2C_COMMON_CLOCK);
+
+	/* wait for FLL to lock */
+	do {
+		bcmtch_com_read_spm(BCMTCH_SPM_REG_FLL_STATUS, &locked);
+		if (locked) {
+			/* switch to FLL */
+			bcmtch_com_write_sys32(
+				BCMTCH_ADDR_COMMON_CLOCK_ENABLE,
+				(BCMTCH_IF_I2C_COMMON_CLOCK |
+				 BCMTCH_COMMON_CLOCK_USE_FLL));
+
+			ret_val = BCMTCH_SUCCESS;
+			break;
+		}
+	} while (waitFLL--);
+
+	return ret_val;
+}
+
+static int32_t bcmtch_dev_init_memory(void)
+{
+	int32_t ret_val = BCMTCH_SUCCESS;
+	uint32_t memMap;
+
+	memMap = (bcmtch_boot_flag & BCMTCH_BOOT_FLAG_RAM_BOOT) ?
+	    BCMTCH_MEM_RAM_BOOT : BCMTCH_MEM_ROM_BOOT;
+
+#if BCMTCH_ROM_CHANNEL
+	bcmtch_data_p->rom_channel =
+		(bcmtch_boot_flag & BCMTCH_BOOT_FLAG_RAM_BOOT) ? false : true;
+#endif
+	ret_val = bcmtch_com_write_sys32(BCMTCH_MEM_REMAP_ADDR, memMap);
+
+	return ret_val;
+}
+
+static inline void
+tofe_channel_header_init(
+		bcmtch_channel_t *p_channel,
+		tofe_channel_instance_cfg_t *p_chan_cfg)
+{
+	tofe_channel_header_t *hdr = &p_channel->hdr;
+	tofe_channel_buffer_header_t *buff;
+	hdr->entry_num = p_chan_cfg->entry_num;
+	hdr->entry_size = p_chan_cfg->entry_size;
+	hdr->trig_level = p_chan_cfg->trig_level;
+	hdr->flags = p_chan_cfg->flags;
+	hdr->buffer_num = p_chan_cfg->buffer_num;
+	hdr->buffer_idx = 0;
+	hdr->seq_count = 0;
+	hdr->buffer[0] = (tofe_channel_buffer_t *)&p_channel->data;
+	hdr->buffer[1] = (tofe_channel_buffer_t *)&p_channel->data;
+	if (hdr->flags & TOFE_CHANNEL_FLAG_FWDMA_ENABLE) {
+		bcmtch_data_p->has_dma_channel = true;
+		buff = &hdr->buffer[1]->header;
+		buff->channel_id = hdr->channel_id;
+		buff->entry_count = 0;
+		buff->entry_size = hdr->entry_size;
+		bcmtch_data_p->fwDMABufferSize +=
+			sizeof(tofe_channel_buffer_header_t)
+			+ (hdr->entry_num * hdr->entry_size);
+	}
+}
+
+static int32_t bcmtch_dev_init_channel(
+		bcmtch_channel_e chan_id,
+		tofe_channel_instance_cfg_t *p_chan_cfg,
+		uint8_t active)
+{
+	int32_t ret_val = BCMTCH_SUCCESS;
+	uint32_t channel_size;
+	bcmtch_channel_t *p_channel;
+
+	if (active) {
+		channel_size =
+				/* channel data size   */
+				sizeof(tofe_channel_buffer_header_t)
+				+ (p_chan_cfg->flags &
+					TOFE_CHANNEL_FLAG_FWDMA_ENABLE ? 0 :
+					p_chan_cfg->entry_num
+					* p_chan_cfg->entry_size)
+				/* channel header size */
+				+ sizeof(tofe_channel_header_t)
+				/* channel config size */
+				+ sizeof(tofe_channel_instance_cfg_t)
+				/* sizes for added elements: queued, pad */
+				+ (sizeof(uint16_t) * 2);
+	} else {
+		channel_size =
+				/* channel header size */
+				sizeof(tofe_channel_header_t)
+				/* channel config size */
+				+ sizeof(tofe_channel_instance_cfg_t)
+				/* sizes for added elements: queued, pad */
+				+ (sizeof(uint16_t) * 2);
+	}
+
+	p_channel =
+		(bcmtch_channel_t *)bcmtch_os_mem_alloc(channel_size);
+
+	if (p_channel) {
+		p_channel->cfg = *p_chan_cfg;
+
+		/* Initialize Header */
+		p_channel->hdr.channel_id = (uint8_t)chan_id;
+		p_channel->active = active;
+		tofe_channel_header_init(p_channel, p_chan_cfg);
+
+		bcmtch_data_p->p_channels[chan_id] = p_channel;
+	} else
+		ret_val = -ENOMEM;
+
+	return ret_val;
+}
+
+static void bcmtch_dev_free_channels(void)
+{
+	uint32_t chan = 0;
+	if (bcmtch_data_p->fwDMABuffer)
+		bcmtch_os_mem_free(bcmtch_data_p->fwDMABuffer);
+	while (chan < BCMTCH_CHANNEL_MAX)
+		bcmtch_os_mem_free(bcmtch_data_p->p_channels[chan++]);
+}
+
+static int32_t bcmtch_dev_init_channels(uint32_t mem_addr, uint8_t *mem_data)
+{
+	int32_t ret_val = BCMTCH_SUCCESS;
+	void *p_buffer = NULL;
+	uint32_t *p_cfg = NULL;
+	tofe_channel_instance_cfg_t *p_chan_cfg = NULL;
+
+	/* find channel configs */
+	p_cfg = (uint32_t *)(mem_data + TOFE_SIGNATURE_SIZE);
+	p_chan_cfg =
+		(tofe_channel_instance_cfg_t *)
+		((uint32_t)mem_data + p_cfg[TOFE_TOC_INDEX_CHANNEL] - mem_addr);
+
+	/* check if processing channel(s) - add */
+	ret_val = bcmtch_dev_init_channel(
+			BCMTCH_CHANNEL_TOUCH,
+			&p_chan_cfg[TOFE_CHANNEL_ID_TOUCH],
+			bcmtch_channel_flag & BCMTCH_CHANNEL_FLAG_USE_TOUCH);
+	if (ret_val) {
+		printk(KERN_ERR
+		       "%s: [%d] Touch Event Channel not initialized!\n",
+		       __func__, ret_val);
+	}
+
+	/* Command & response channels */
+	if (!ret_val) {
+		ret_val = bcmtch_dev_init_channel(
+				BCMTCH_CHANNEL_COMMAND,
+				&p_chan_cfg[TOFE_CHANNEL_ID_COMMAND],
+				bcmtch_channel_flag &
+				BCMTCH_CHANNEL_FLAG_USE_CMD_RESP);
+		ret_val |= bcmtch_dev_init_channel(
+				BCMTCH_CHANNEL_RESPONSE,
+				&p_chan_cfg[TOFE_CHANNEL_ID_RESPONSE],
+				bcmtch_channel_flag &
+				BCMTCH_CHANNEL_FLAG_USE_CMD_RESP);
+	}
+
+	/* Log channel */
+	if (!ret_val) {
+		ret_val = bcmtch_dev_init_channel(
+				BCMTCH_CHANNEL_LOG,
+				&p_chan_cfg[TOFE_CHANNEL_ID_LOG],
+				bcmtch_channel_flag &
+				BCMTCH_CHANNEL_FLAG_USE_LOG);
+		if (ret_val)
+			printk(KERN_ERR
+					"%s: [%d] Log Channel initialization failed!\n",
+					__func__, ret_val);
+	}
+
+	/* Initialize DMA buffer if there is any DMA mode channel */
+	if (!ret_val &&
+			bcmtch_data_p->has_dma_channel) {
+		if (bcmtch_debug_flag & BCMTCH_DEBUG_FLAG_CHANNELS)
+			printk(KERN_INFO
+				"BCMTOUCH: %s() dma buffer size=%d\n",
+				__func__,
+				bcmtch_data_p->fwDMABufferSize);
+		p_buffer = bcmtch_os_mem_alloc(bcmtch_data_p->fwDMABufferSize);
+		if (p_buffer) {
+			bcmtch_data_p->fwDMABuffer = p_buffer;
+		} else {
+			printk(KERN_ERR
+				"%s: [%d] DMA buffer allocation failed!\n",
+				__func__, ret_val);
+			bcmtch_data_p->fwDMABuffer = NULL;
+			ret_val = -ENOMEM;
+		}
+	}
+
+	return ret_val;
+}
+
+static int32_t bcmtch_dev_write_channel(bcmtch_channel_t *chan)
+{
+	int32_t ret_val = BCMTCH_SUCCESS;
+	int16_t writeSize;
+	uint32_t sys_addr;
+
+	/* read channel header and data all-at-once : need combined size */
+	writeSize = sizeof(tofe_channel_buffer_header_t)
+			+ (chan->cfg.entry_num * chan->cfg.entry_size);
+
+	sys_addr = (uint32_t)chan->cfg.channel_data;
+
+	/* write channel header & channel data buffer */
+	ret_val = bcmtch_com_write_sys(
+				sys_addr,
+				writeSize,
+				(uint8_t *)chan->hdr.buffer[0]);
+	if (ret_val) {
+		printk(KERN_ERR
+				"BCMTOUCH: %s() write_sys err addr=0x%08x, rv=%d\n",
+				__func__,
+				sys_addr,
+				ret_val);
+	}
+	return ret_val;
+}
+
+static int32_t bcmtch_dev_sync_channel(bcmtch_channel_t *chan)
+{
+	int32_t ret_val = BCMTCH_SUCCESS;
+	uint16_t readSize;
+	uint32_t sys_addr;
+	tofe_channel_header_t sync_hdr;
+
+	/* Read channel header from firmware */
+	readSize = sizeof(tofe_channel_header_t);
+	sys_addr = (uint32_t)chan->cfg.channel_header;
+	ret_val = bcmtch_com_read_sys(
+				(uint32_t)chan->cfg.channel_header,
+				readSize,
+				(uint8_t *)&sync_hdr);
+	if (ret_val) {
+		printk(KERN_ERR
+				"BCMTOUCH: %s() read hdr err addr=0x%08x, rv=%d\n",
+				__func__,
+				sys_addr,
+				ret_val);
+		return ret_val;
+	}
+
+
+	/* Read channel */
+	readSize = sizeof(tofe_channel_buffer_header_t)
+			+ (chan->cfg.entry_num * chan->cfg.entry_size);
+	sys_addr = (uint32_t)(sync_hdr.buffer_idx > 0 ?
+				(char *)chan->cfg.channel_data :
+				(char *)chan->cfg.channel_data
+					+ chan->cfg.offset);
+	ret_val = bcmtch_com_read_sys(
+				sys_addr,
+				readSize,
+				(uint8_t *)chan->hdr.buffer[0]);
+	if (ret_val) {
+		printk(KERN_ERR
+				"BCMTOUCH: %s() read buffer err addr=0x%08x, rv=%d\n",
+				__func__,
+				sys_addr,
+				ret_val);
+		return ret_val;
+	}
+	chan->queued = bcmtch_channel_num_queued(&chan->hdr);
+
+	/* Sync the channel header */
+	chan->hdr.buffer_idx = sync_hdr.buffer_idx;
+	chan->hdr.seq_count = sync_hdr.seq_count + 1;
+
+	return ret_val;
+}
+
+static int32_t bcmtch_dev_read_channel(
+					bcmtch_channel_t *chan)
+{
+	int32_t ret_val = BCMTCH_SUCCESS;
+	uint8_t buffer_idx = chan->hdr.buffer_idx;
+	uint8_t seq_count = chan->hdr.seq_count;
+	tofe_channel_buffer_header_t *buff =
+				&chan->hdr.buffer[1]->header;
+	uint16_t readSize;
+	uint32_t sys_addr;
+
+	/* channel buffer size: buffer header + entries */
+	readSize = sizeof(tofe_channel_buffer_header_t)
+			+ (chan->cfg.entry_num * chan->cfg.entry_size);
+
+	sys_addr = (uint32_t)(buffer_idx == 0 ?
+				(char *)chan->cfg.channel_data :
+				(char *)chan->cfg.channel_data
+					+ chan->cfg.offset);
+
+	/* read channel header & channel data buffer */
+	ret_val = bcmtch_com_read_sys(
+				sys_addr,
+				readSize,
+				(uint8_t *)chan->hdr.buffer[1]);
+	if (ret_val) {
+		printk(KERN_ERR
+				"BCMTOUCH: %s() read_sys err addr=0x%08x, rv=%d\n",
+				__func__,
+				sys_addr,
+				ret_val);
+		return ret_val;
+	}
+
+	/* check if data corrupted */
+	if (!bcmtch_dev_verify_buffer_header(buff)) {
+		if (bcmtch_debug_flag & BCMTCH_DEBUG_FLAG_CHANNELS)
+			printk(KERN_ERR
+					"BCMTCH: %s() ch=%d buffer data corrupted!\n",
+					__func__,
+					chan->hdr.channel_id);
 		return -EIO;
-	ptr->cfg = *channel_cfg;
+	}
 
-#if 1
-        // DEBUG....
-        DEBUG(if (mod_debug & MOD_DEBUG_CHANNEL)
-            printk(KERN_INFO "%s: %08x %08x %08x %08x %08x %08x \n", __func__,
-            ptr->cfg.entry_num,
-            ptr->cfg.entry_size,
-            ptr->cfg.trig_level,
-            ptr->cfg.flags,
-	    (unsigned int)ptr->cfg.channel_header,
-	    (unsigned int)ptr->cfg.channel_data);)
-#endif
+	if (buff->flags & TOFE_CHANNEL_FLAG_STATUS_OVERFLOW) {
+		if (bcmtch_debug_flag & BCMTCH_DEBUG_FLAG_CHANNELS)
+			printk(KERN_ERR
+					"BCMTCH: %s() ch=%d channel overflow\n",
+					__func__,
+					chan->hdr.channel_id);
+	}
 
-        return (NAPA_INIT_SUCCESS);
-}
-#endif  // TOFE_CHAN_PROCESSING
+	if (buff->seq_number != seq_count) {
+		if (bcmtch_debug_flag & BCMTCH_DEBUG_FLAG_CHANNELS)
+			printk(KERN_ERR
+				"BCMTOUCH: %s() host ch=%d seq=%d, fw seq=%d NOT Matched!!\n",
+				__func__,
+				buff->channel_id,
+				seq_count,
+				buff->seq_number);
 
-#if NAPA_GPIO_PROCESSING
-void bcmtch_init_int_handler(void)
-{
+		/* sync channel */
+		ret_val = bcmtch_dev_sync_channel(chan);
 
-    /* Read the GPIO config and find out which GPIO pin is used for
-     * interrupting host. Stire this pin so we can poll it for data ready
-     */
+		return ret_val;
+	}
 
-    // pin_num      = 0;
-    // function     = 1;  // TOFE_GPIO_PIN_HOST_INT
-    // direction    = 1;  // TOFE_GPIO_DIR_OUT
-    // active_level = 1;
-    // enabled      = 1;
+	/* Update channel header */
+	chan->hdr.seq_count++;
+	chan->hdr.buffer_idx = (buffer_idx > 0 ? 0 : 1);
 
-    host_int_gpio_pin_addr   = 0x30180004;     // (0x30180000 + (4 << pin_num)
-    host_int_asserted        = 1;              // Active Level
+	/* get count */
+	chan->queued = bcmtch_channel_num_queued(&chan->hdr);
 
+	return ret_val;
 }
 
-int bcmtch_check_wakeup(int count)
+static uint32_t bcmtch_dev_read_dma_buffer(void)
 {
-    while((bcmtch_com_read_reg(NAPA_I2C_SLAVE_ADDR,TCC_REG_SPM_PSR) != SPM_POWER_STATE_ACTIVE) && count--);
-    return(bcmtch_com_read_reg(NAPA_I2C_SLAVE_ADDR,TCC_REG_SPM_PSR) == SPM_POWER_STATE_ACTIVE);
+	uint32_t read_size = 0;
+	uint32_t dma_buff_size = bcmtch_data_p->fwDMABufferSize;
+	uint8_t dmaReg = BCMTCH_SPM_REG_DMA_RFIFO;
+	uint8_t *dma_buff = (uint8_t *)bcmtch_data_p->fwDMABuffer;
+	struct i2c_client *p_i2c = bcmtch_data_p->p_i2c_client_sys;
+	tofe_dmac_header_t *p_dmac;
+
+	/* setup I2C messages for DMA read request transaction */
+	struct i2c_msg dma_request[2] = {
+		/* write the RFIFO address */
+		{.addr = p_i2c->addr, .flags = 0, .len = 1, .buf = &dmaReg},
+		/* read RFIFO data */
+		{.addr = p_i2c->addr, .flags = I2C_M_RD,
+				.len = (uint32_t)sizeof(tofe_dmac_header_t),
+				.buf = dma_buff}
+	};
+
+	/* Set I2C master to read from RFIFO */
+	if (dma_buff_size && dma_buff) {
+		/* 1st I2C read dmac header */
+		if (i2c_transfer(p_i2c->adapter, dma_request, 2) != 2) {
+			printk(KERN_ERR
+					"%s: I2C transfer error.\n",
+					__func__);
+			return 0;
+		} else {
+			p_dmac = (tofe_dmac_header_t *)dma_buff;
+			read_size = (uint32_t)p_dmac->size;
+			if (bcmtch_debug_flag &
+					BCMTCH_DEBUG_FLAG_CHANNELS) {
+				printk(KERN_INFO
+						"%s: DMA buffer read size=%d min_size=%d.\n",
+						__func__,
+						read_size,
+						p_dmac->min_size);
+			}
+
+			if (read_size > dma_buff_size) {
+				printk(KERN_ERR
+						"%s: DMA read overflow buffer [%d].\n",
+						__func__,
+						dma_buff_size);
+				return 0;
+			} else if (read_size <
+					sizeof(tofe_dmac_header_t))
+				return 0;
+
+			/* 2nd I2C read entire DMA buffer */
+			dma_request[1].len = read_size
+						- sizeof(tofe_dmac_header_t);
+			dma_request[1].buf = (uint8_t *)dma_buff
+						+ sizeof(tofe_dmac_header_t);
+			if (i2c_transfer(p_i2c->adapter, dma_request, 2) != 2) {
+				printk(KERN_ERR
+						"%s: I2C transfer error.\n",
+						__func__);
+				return 0;
+			}
+			bcmtch_os_sleep_ms(2);
+		}
+	} else {
+		printk(KERN_ERR
+				"%s: DMA buffer/size is NULL.\n",
+				__func__);
+	}
+	return read_size;
 }
 
-void bcmtch_request_wakeup(int cause)
+static inline bool bcmtch_dev_verify_buffer_header(
+		tofe_channel_buffer_header_t *buff)
 {
+	uint8_t channel;
+	bcmtch_channel_t *p_chan;
+	bool ret_val = true;
 
-    bcmtch_mutex_lock(NAPA_MUTEX);
-    bcmtch_com_write_reg(NAPA_I2C_SLAVE_ADDR, TCC_REG_SPM_MSG_FROM_HOST, cause);
+	p_chan = NULL;
+	channel = (uint8_t)buff->channel_id;
+	if (channel >= BCMTCH_CHANNEL_MAX)
+		ret_val = false;
+	else {
+		p_chan = bcmtch_data_p->p_channels[channel];
+		if (!p_chan ||
+			(buff->entry_size != p_chan->cfg.entry_size))
+			ret_val = false;
+	}
 
-    bcmtch_sleep_ms(2);   // FIXME : REMOVE / REDUCE ?
+	if ((bcmtch_debug_flag &
+		BCMTCH_DEBUG_FLAG_CHANNELS) &&
+		(ret_val == false)) {
+		printk(KERN_INFO
+				"%s: ERROR : id=%d entry_size=%d [%d]\n",
+				__func__,
+				buff->channel_id,
+				buff->entry_size,
+				(p_chan) ? p_chan->cfg.entry_size : -1);
+	}
 
-    bcmtch_com_write_reg(NAPA_I2C_SLAVE_ADDR, TCC_REG_SPM_Request_from_Host, TCC_SPM_REQUEST_FROM_HOST_WAKE_REQUEST);
-
-    bcmtch_sleep_ms(2);   // FIXME : REMOVE / REDUCE ?
-
-    bcmtch_mutex_release(NAPA_MUTEX);
-
+	return true;
 }
 
-void bcmtch_release_wakeup(int cause)
+static int32_t bcmtch_dev_read_dma_channels(void)
 {
-    struct i2c_msg       xfer[2];
-    unsigned char        buffer[2];
-    unsigned char        buffer2[2];
-    struct i2c_client    *p_i2c_client;
-
-    bcmtch_mutex_lock(NAPA_MUTEX);
-#if NAPA_DONT_USE_12C_TRANSFER
-    bcmtch_com_write_reg(NAPA_I2C_SLAVE_ADDR, TCC_REG_SPM_MSG_FROM_HOST, cause);
-
-    bcmtch_com_write_reg(NAPA_I2C_SLAVE_ADDR, TCC_REG_SPM_Request_from_Host, TCC_SPM_REQUEST_FROM_HOST_RELEASE_WAKE_REQUEST);
-#else
-
-   DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
-   {
-      printk("%s() reg = %d data = %d\n", __func__, TCC_REG_SPM_MSG_FROM_HOST, cause);
-   })
-
-   // Write register and data
-   buffer[0] = (unsigned char)TCC_REG_SPM_MSG_FROM_HOST;
-   buffer[1] = cause;
-
-   /* Write register */
-   xfer[0].addr = NAPA_I2C_SLAVE_ADDR;
-   xfer[0].len = 2;
-   xfer[0].flags = 0;
-   xfer[0].buf = buffer;
-
-   // Write register and data
-   buffer2[0] = (unsigned char)TCC_REG_SPM_Request_from_Host;
-   buffer2[1] = TCC_SPM_REQUEST_FROM_HOST_RELEASE_WAKE_REQUEST;
-
-   /* Write register */
-   xfer[1].addr = NAPA_I2C_SLAVE_ADDR;
-   xfer[1].len = 2;
-   xfer[1].flags = 0;
-   xfer[1].buf = buffer2;
-
-   if (xfer[0].addr == gp_i2c_client_spm->addr)
-   {
-      p_i2c_client = gp_i2c_client_spm;
-   }
-   else if (xfer[0].addr == gp_i2c_client_ahb->addr)
-   {
-      p_i2c_client = gp_i2c_client_ahb;
-   }
-   else
-   {
-      printk(KERN_ERR "%s() Invalid slave address 0x%x\n",
-             __func__, xfer[0].addr);
-      return ;
-   }
-
-   if (i2c_transfer(p_i2c_client->adapter, xfer, 2) != 2) {
-       dev_err(&p_i2c_client->dev, "%s: i2c transfer failed\n", __func__);
-       return ;
-   }
-#endif
-    bcmtch_mutex_release(NAPA_MUTEX);
-
-}
-
-int bcmtch_request_sleep(void)
-{
-
-    int ret_code = BCMTCH_SUCCESS;
-    int           data;
-    int           spmReadError;
-
-    // Napa sleep request.
-    bcmtch_mutex_lock(NAPA_MUTEX);
-    bcmtch_com_write_reg(NAPA_I2C_SLAVE_ADDR, TCC_REG_SPM_MSG_FROM_HOST, TOFE_COMMAND_NO_COMMAND);
-
-    data = 0;
-    bcmtch_com_write_mem_reg32(SPM_PWR_CTRL, data);
-    bcmtch_mutex_release(NAPA_MUTEX);
-
-    spmReadError = 0;
-    while ((++spmReadError<SPM_READ_ERROR_MAX)&&
-        (bcmtch_com_read_reg(NAPA_I2C_SLAVE_ADDR, TCC_REG_SPM_PSR) != SPM_POWER_STATE_SLEEP));
-
-    if (spmReadError == SPM_READ_ERROR_MAX)
-    {
-        // Force chip RESET
-        bcmtch_com_write_reg(NAPA_I2C_SLAVE_ADDR, TCC_REG_SPM_SOFT_RESETS, 1);
-        bcmtch_com_write_reg(NAPA_I2C_SLAVE_ADDR, TCC_REG_SPM_SOFT_RESETS, 2);
-
-        // Comm interface will be lost at reset
-        bcmtch_com_write(NAPA_I2C_SLAVE_ADDR, TCC_REG_SPM_SPI_I2C_MODE, TCC_HOST_IF_I2C_MODE);
-        bcmtch_sleep_ms(2);   // FIXME : REMOVE / REDUCE ?
-        bcmtch_com_write_reg(NAPA_I2C_SLAVE_ADDR, SPI_HOST_I2CS_CHIPID, HW_BCM915500_SLAVE_AHB);
-        bcmtch_sleep_ms(2);   // FIXME : REMOVE / REDUCE ?
-
-        if (bcmtch_com_read_reg(NAPA_I2C_SLAVE_ADDR, TCC_REG_SPM_PSR) != SPM_POWER_STATE_SLEEP)
-        {
-            printk(KERN_ERR "ERROR: Napa sleep request failure.\n");
-            ret_code = BCMTCH_ERROR;
-        }
-
-    }
-
-    return ret_code;
-}
-
-unsigned char bcmtch_int_asserted(void)
-{
-    unsigned int host_int = 0;
-
-    if (host_int_gpio_pin_addr)
-    {
-        // If FW has asserted GPIO, then it chip is in ACTIVE state
-        if (!bcmtch_check_wakeup(1))
-        {
-	    return false;
-        }
-
-        bcmtch_com_read_mem_reg32(host_int_gpio_pin_addr, &host_int);
-
-        if (host_int == host_int_asserted)
-	{
-	    return true;
-        }
-    }
-    return false;
-}
-
-void bcmtch_int_deassert(void)
-{
-    if (host_int_gpio_pin_addr)
-    {
-        bcmtch_release_wakeup(TOFE_COMMAND_INTERRUPT_ACK);
-    }
-}
-
-int bcmtch_interrupt(void)
-{
-
-    uint32_t num_touch_events = 0;
-    uint32_t retVal = 0;
-
-//    bcmtch_int_deassert();
-
-    DEBUG(if (mod_debug & MOD_DEBUG_CHANNEL)
-            printk("%s() line %d \n", __func__, __LINE__);)
-
-    /*
-     ** Read Touch Event Channel
-     */
-
-
-    num_touch_events = bcmtch_channel_read(touch_channel.channel);
-
-    if(num_touch_events)
-    {
-        /*
-	** Update channel read pointer = write pointer since we read all the data.
-	** - write the value of the 'write pointer' into the 'read pointer' of the header
-	**
-	** NOTE: cannot reset the local copy 'read pointer'
-	**       since it is needed below by mtr_process_events()
-	*/
-        bcmtch_channel_write_header_pointer_flags(
-            touch_channel.channel,
-            NAPA_CHANNEL_WRITE_HEADER_READER,
-            touch_channel.channel->header.write,
-            touch_channel.channel->header.flags & ~TOFE_CHANNEL_FLAG_STATUS_LEVEL_TRIGGER);
-    }
-
-
-    if(num_touch_events)
-    {
-        /*
-        ** Write 'Read Complete' Message to Mailbox
-        */
-#if !NAPA_MERGE_WRITEBACK_REGS
-        bcmtch_release_wakeup(TOFE_COMMAND_NO_COMMAND);
-#endif
-    }
-
-    retVal = (num_touch_events);
-
-    if(num_touch_events)
-    {
-        /*
-	** Process Events
-	*/
-        bcmtch_process_touch_events(touch_channel.channel);
-    }
-
-    return(retVal);
-}
-
-void bcmtch_channel_read_data(napa_channel_t *channel)
-{
-
-    /* locals */
-    uint32_t channel_size_data;
-
-    /* validate params */
-    if(channel == NULL)
-    {
-        DEBUG(if (mod_debug & MOD_DEBUG_CHANNEL)
-            printk("%s() line %d channel==NULL\n", __func__, __LINE__);)
-	return;
-    }
-
-    /*
-    ** Calculate sizes
-    ** - channel_size_data = size of channel data buffer
-    */
-	channel_size_data =
-		(channel->cfg.entry_num * channel->cfg.entry_size);
-
-    /*
-    ** read channel data buffer
-    */
-
-    bcmtch_com_read_mem((int)channel->cfg.channel_data, channel_size_data, (void*)&channel->data);
-}
-
-uint32_t bcmtch_channel_read_header(napa_channel_t *channel)
-{
-
-    /* validate params */
-    if(channel == NULL)
-    {
-        DEBUG(if (mod_debug & MOD_DEBUG_CHANNEL)
-            printk("%s() line %d channel==NULL\n", __func__, __LINE__);)
-	return(0);
-    }
-
-    /*
-     ** read channel header
-     */
-
-    bcmtch_com_read_mem((int)channel->cfg.channel_header, sizeof(channel->header), (void*)&channel->header);
-
-    DEBUG(if (mod_debug & MOD_DEBUG_CHANNEL)
-        printk("%s() line %d channel_header %08x sizeof %08x\n", __func__, __LINE__, (unsigned int)channel->cfg.channel_header, sizeof(channel->header));)
-    DEBUG(if (mod_debug & MOD_DEBUG_CHANNEL)
-        printk("%s() line %d write %08x entry_num %08x entry size %08x trig_level %08x flags %08x read %08x data_offset %08x read_iterator %08x write_iterator %08x\n",__func__, __LINE__,
-
-     channel->header.write,
-     channel->header.entry_num,
-     channel->header.entry_size,
-     channel->header.trig_level,
-     channel->header.flags,
-     channel->header.read,
-     channel->header.data_offset,
-     channel->header.read_iterator,
-     channel->header.write_iterator
-
-    );)
-
-    /* return count of elements in channel to read */
-    return(bcmtch_channel_num_queued(&channel->header));
-}
-
-#if NAPA_SINGLE_READ
-uint32_t bcmtch_channel_read(napa_channel_t *channel)
-{
-
-    /* local */
-    int32_t num_elements = 0;
-    uint32_t channel_size_data;
-    uint32_t complete_read_size;
-
-    /* validate params */
-    if(channel == NULL)
-    {
-        DEBUG(if (mod_debug & MOD_DEBUG_CHANNEL)
-            printk("%s() line %d channel==NULL\n", __func__, __LINE__);)
-        return(num_elements);
-    }
-
-    /*
-    ** Calculate sizes
-    ** - channel_size_data = size of channel data buffer
-    */
-    channel_size_data =
-        (channel->cfg.entry_num * channel->cfg.entry_size);
-
-    complete_read_size = channel_size_data + sizeof(channel->header);
-
-    /* read channel header & channel data buffer */
-    bcmtch_com_read_mem((int)channel->cfg.channel_header, complete_read_size, (void*)&channel->header);
-
-    /* get count */
-    num_elements = bcmtch_channel_num_queued(&channel->header);
-
-    DEBUG(if (mod_debug & MOD_DEBUG_CHANNEL)
-        printk("%s() line %d channel_header %08x sizeof %08x\n", __func__, __LINE__, (unsigned int)channel->cfg.channel_header, sizeof(channel->header));)
-    DEBUG(if (mod_debug & MOD_DEBUG_CHANNEL)
-        printk("%s() line %d write %08x entry_num %08x entry size %08x trig_level %08x flags %08x read %08x data_offset %08x read_iterator %08x write_iterator %08x\n",__func__, __LINE__,
-
-     channel->header.write,
-     channel->header.entry_num,
-     channel->header.entry_size,
-     channel->header.trig_level,
-     channel->header.flags,
-     channel->header.read,
-     channel->header.data_offset,
-     channel->header.read_iterator,
-     channel->header.write_iterator
-
-    );)
-
-    DEBUG(if (mod_debug & MOD_DEBUG_CHANNEL)
-        printk("%s() line %d num_elements %08x \n", __func__, __LINE__, num_elements); )
-
-    /* return count of elements in channel to read */
-    return(num_elements);
-}
-#else
-uint32_t bcmtch_channel_read(napa_channel_t *channel)
-{
-
-    /* local */
-    int32_t num_elements = 0;
-
-    /* validate params */
-    if(channel == NULL)
-    {
-        DEBUG(if (mod_debug & MOD_DEBUG_CHANNEL)
-            printk("%s() line %d channel==NULL\n", __func__, __LINE__);)
-        return(num_elements);
-    }
-
-    /* read channel header */
-    num_elements = bcmtch_channel_read_header(channel);
-
-    if(num_elements)
-    {
-        /* read channel data buffer */
-	bcmtch_channel_read_data(channel);
-    }
-
-    DEBUG(if (mod_debug & MOD_DEBUG_CHANNEL)
-        printk("%s() line %d num_elements %08x \n", __func__, __LINE__, num_elements); )
-
-    /* return count of elements in channel to read */
-    return(num_elements);
-}
-#endif
-
-void bcmtch_channel_write_header_pointer(napa_channel_t *channel, napa_channel_write_header_e which, uint32_t pointer_data)
-{
-#if 1
-    /* validate params */
-    if(channel == NULL)
-    {
-        DEBUG(if (mod_debug & MOD_DEBUG_CHANNEL)
-            printk("%s() line %d channel==NULL\n", __func__, __LINE__);)
-        return;
-    }
-
-    if(which == NAPA_CHANNEL_WRITE_HEADER_READER)
-    {
-
-        bcmtch_com_write_mem((int)channel->cfg.channel_header + offsetof(tofe_channel_header_t, read),
-        sizeof(channel->header.read),
-        &pointer_data);
-
-     }else{
-
-        bcmtch_com_write_mem((int)channel->cfg.channel_header + offsetof(tofe_channel_header_t, write),
-        sizeof(channel->header.write),
-        &pointer_data);
-
-     }
-#else
-
-    /*
-     * init variables for mem write
-     */
-
-    int ahb_addr = (int)channel->cfg.channel_header + offsetof(tofe_channel_header_t, read);
-    int len = sizeof(channel->header.read);
-    void *data = &pointer_data;
-
-    /*
-     * mem write
-     */
-
-    int count;
-    int length = 8;
-    unsigned char *I2CWritePkt;
-
-    //allocate buffer for the num_bytes
-    //ATT: we need one byte more for the offset
-    I2CWritePkt = kzalloc(len + 1, GFP_KERNEL);
-
-    //set the address
-    I2Cheader[1] = (unsigned char)(ahb_addr & 0xFF);
-    I2Cheader[2] = (unsigned char)((ahb_addr & 0xFF00) >> 8);
-    I2Cheader[3] = (unsigned char)((ahb_addr & 0xFF0000) >> 16);
-    I2Cheader[4] = (unsigned char)((ahb_addr & 0xFF000000) >> 24);
-    //set the length
-    I2Cheader[5] = (unsigned char)(len & 0xFF);
-    I2Cheader[6] = (unsigned char)((len & 0xFF00) >> 8);
-    //set the command
-    I2Cheader[7] = (unsigned char)MahbWrite;
-
-    count = (int)sizeof(I2Cheader);
-
-    struct i2c_msg       xfer[4];
-    struct i2c_client    *p_i2c_client;
-
-    DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
-       printk("%s() ahb_addr %d len %d before count = %d\n", __func__, ahb_addr, len, count);)
-
-    /* Write DMA header */
-    xfer[0].addr = NAPA_I2C_AHB_SLAVE_ADDR;
-    xfer[0].len = length;
-    xfer[0].flags = 0;
-    xfer[0].buf = I2Cheader;
-
-    I2CWritePkt[0] = I2C_REG_WFIFO_DATA;    //select the write FiFo
-    /* Prepare the dat packet, select the write FiFo. */
-    memcpy(I2CWritePkt + 1, data, len);
-
-    /* Write DMA data */
-    xfer[1].addr = NAPA_I2C_AHB_SLAVE_ADDR;
-    xfer[1].len = (int)len+1;
-    xfer[1].flags = 0;
-    xfer[1].buf = I2CWritePkt;
-
-    count = (int)len+1;
-
-    /*
-     * reg writes
-     */
-
-   unsigned char        buffer[2];
-   unsigned char        buffer2[2];
-
-   DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
-   {
-      printk("%s() reg = %d data = %d\n", __func__, TCC_REG_SPM_MSG_FROM_HOST, cause);
-   })
-
-   // Write register and data
-   buffer[0] = (unsigned char)TCC_REG_SPM_MSG_FROM_HOST;
-   buffer[1] = cause;
-
-   /* Write register */
-   xfer[2].addr = NAPA_I2C_SLAVE_ADDR;
-   xfer[2].len = 2;
-   xfer[2].flags = 0;
-   xfer[2].buf = buffer;
-
-   // Write register and data
-   buffer2[0] = (unsigned char)TCC_REG_SPM_Request_from_Host;
-   buffer2[1] = TCC_SPM_REQUEST_FROM_HOST_RELEASE_WAKE_REQUEST;
-
-   /* Write register */
-   xfer[3].addr = NAPA_I2C_SLAVE_ADDR;
-   xfer[3].len = 2;
-   xfer[3].flags = 0;
-   xfer[3].buf = buffer2;
-
-   if (xfer[0].addr == gp_i2c_client_spm->addr)
-   {
-      p_i2c_client = gp_i2c_client_spm;
-   }
-   else if (xfer[0].addr == gp_i2c_client_ahb->addr)
-   {
-      p_i2c_client = gp_i2c_client_ahb;
-   }
-   else
-   {
-      printk(KERN_ERR "%s() Invalid slave address 0x%x\n",
-             __func__, xfer[0].addr);
-      return -1;
-   }
-
-   if (i2c_transfer(p_i2c_client->adapter, xfer, 2) != 2) {
-       dev_err(&p_i2c_client->dev, "%s: i2c transfer failed\n", __func__);
-       return -EIO;
-   }
-#endif
-}
-
-unsigned bcmtch_channel_num_queued(tofe_channel_header_t *channel)
-{
-
-    if (channel->write >= channel->read)
-        return channel->write - channel->read;
-    else
-        return channel->entry_num - (channel->read - channel->write);
-
-}
-
-void bcmtch_channel_write_header_pointer_flags(napa_channel_t *channel,
-                                               napa_channel_write_header_e which,
-	                                       uint32_t pointer_data,
-	                                       uint8_t flags)
-{
-
-    tofe_channel_header_t target_header;
-
-    /* validate params */
-    if(channel == NULL)
-    {
-        DEBUG(if (mod_debug & MOD_DEBUG_CHANNEL)
-            printk("%s() line %d channel==NULL\n", __func__, __LINE__);)
-        return;
-    }
-
-    /* set target */
-    target_header = channel->header;
-    target_header.flags = flags;
-#if !NAPA_MERGE_WRITEBACK_REGS
-    if(which == NAPA_CHANNEL_WRITE_HEADER_READER)
-    {
-
-        target_header.read = pointer_data;
-
-        bcmtch_com_write_mem((int)channel->cfg.channel_header + offsetof(tofe_channel_header_t, entry_num),
-	                   (offsetof(tofe_channel_header_t, data_offset) - offsetof(tofe_channel_header_t, entry_num)),
-	                   &target_header.entry_num);
-
-    }else{
-
-	target_header.write = pointer_data;
-
-  	bcmtch_com_write_mem((int)channel->cfg.channel_header + offsetof(tofe_channel_header_t, write),
-  	                   (offsetof(tofe_channel_header_t, read) - offsetof(tofe_channel_header_t, write)),
-  	                   &target_header.write );
-
-    }
-#else
-
-    /*
-     * init variables for mem write
-     */
-    if(which == NAPA_CHANNEL_WRITE_HEADER_READER)
-    {
-        target_header.read = pointer_data;
-    }
-    else
-    {
-        target_header.write = pointer_data;
-    }
-
-    int ahb_addr = ((int)channel->cfg.channel_header + offsetof(tofe_channel_header_t, entry_num));
-    int len = (offsetof(tofe_channel_header_t, data_offset) - offsetof(tofe_channel_header_t, entry_num));
-    void *data = &target_header.entry_num;
-
-    /*
-     * mem write
-     */
-
-    int count;
-    int length = 8;
-    unsigned char *I2CWritePkt;
-
-    //allocate buffer for the num_bytes
-    //ATT: we need one byte more for the offset
-    I2CWritePkt = kzalloc(len + 1, GFP_KERNEL);
-
-    //set the address
-    I2Cheader[1] = (unsigned char)(ahb_addr & 0xFF);
-    I2Cheader[2] = (unsigned char)((ahb_addr & 0xFF00) >> 8);
-    I2Cheader[3] = (unsigned char)((ahb_addr & 0xFF0000) >> 16);
-    I2Cheader[4] = (unsigned char)((ahb_addr & 0xFF000000) >> 24);
-    //set the length
-    I2Cheader[5] = (unsigned char)(len & 0xFF);
-    I2Cheader[6] = (unsigned char)((len & 0xFF00) >> 8);
-    //set the command
-    I2Cheader[7] = (unsigned char)MahbWrite;
-
-    count = (int)sizeof(I2Cheader);
-
-    struct i2c_msg       xfer[4];
-    struct i2c_client    *p_i2c_client;
-
-    DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
-       printk("%s() ahb_addr %d len %d before count = %d\n", __func__, ahb_addr, len, count);)
-
-    /* Write DMA header */
-    xfer[0].addr = NAPA_I2C_AHB_SLAVE_ADDR;
-    xfer[0].len = length;
-    xfer[0].flags = 0;
-    xfer[0].buf = I2Cheader;
-
-    I2CWritePkt[0] = I2C_REG_WFIFO_DATA;    //select the write FiFo
-    /* Prepare the dat packet, select the write FiFo. */
-    memcpy(I2CWritePkt + 1, data, len);
-
-    /* Write DMA data */
-    xfer[1].addr = NAPA_I2C_AHB_SLAVE_ADDR;
-    xfer[1].len = (int)len+1;
-    xfer[1].flags = 0;
-    xfer[1].buf = I2CWritePkt;
-
-    count = (int)len+1;
-
-    /*
-     * reg writes
-     */
-
-   unsigned char        buffer[2];
-   unsigned char        buffer2[2];
-
-   DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
-   {
-      printk("%s() reg = %d data = %d\n", __func__, TCC_REG_SPM_MSG_FROM_HOST, TOFE_COMMAND_NO_COMMAND);
-   })
-
-   // Write register and data
-   buffer[0] = (unsigned char)TCC_REG_SPM_MSG_FROM_HOST;
-   buffer[1] = TOFE_COMMAND_NO_COMMAND;
-
-   /* Write register */
-   xfer[2].addr = NAPA_I2C_SLAVE_ADDR;
-   xfer[2].len = 2;
-   xfer[2].flags = 0;
-   xfer[2].buf = buffer;
-
-   // Write register and data
-   buffer2[0] = (unsigned char)TCC_REG_SPM_Request_from_Host;
-   buffer2[1] = TCC_SPM_REQUEST_FROM_HOST_RELEASE_WAKE_REQUEST;
-
-   /* Write register */
-   xfer[3].addr = NAPA_I2C_SLAVE_ADDR;
-   xfer[3].len = 2;
-   xfer[3].flags = 0;
-   xfer[3].buf = buffer2;
-
-   if (xfer[0].addr == gp_i2c_client_spm->addr)
-   {
-      p_i2c_client = gp_i2c_client_spm;
-   }
-   else if (xfer[0].addr == gp_i2c_client_ahb->addr)
-   {
-      p_i2c_client = gp_i2c_client_ahb;
-   }
-   else
-   {
-      printk(KERN_ERR "%s() Invalid slave address 0x%x\n",
-             __func__, xfer[0].addr);
-      return -1;
-   }
-
-   if (i2c_transfer(p_i2c_client->adapter, xfer, 4) != 4) {
-       dev_err(&p_i2c_client->dev, "%s: i2c transfer failed\n", __func__);
-       return -EIO;
-   }
-#endif
-
-}
-
-void bcmtch_process_touch_events(napa_channel_t *touch_channel)
-{
-
-    /*
-    ** Process MTC touch events from the touch event channel
-    */
-
-    int index;
-    bcmtch_event_t           *pmtc_event;
-    int touch_num = 0;
-//  static bool have_timestamps = false;
-
-    tofe_channel_read_begin(&touch_channel->header);
-
-    while ( (pmtc_event = (bcmtch_event_t *)tofe_channel_read(&touch_channel->header)) )
-    {
-#if TOUCHCON_MTC_FULL_FIRMWARE
-        bcmtch_event_touch_t     *ptch_event;
-//      bcmtch_event_timestamp_t *ptimestamp_event;
-	switch(pmtc_event->type)
-	{
-	    case BCMTCH_EVENT_TYPE_DOWN:
-   	    case BCMTCH_EVENT_TYPE_UP:
-	    case BCMTCH_EVENT_TYPE_MOVE:
-	        ptch_event = (bcmtch_event_touch_t *)pmtc_event;
-
-#if HW_BCM915500_AXIS_SWAP_Y
-	        ptch_event->y = NAPA_MAX_Y - ptch_event->y;
-#endif
-
-#if HW_BCM915500_AXIS_SWAP_X
-	        ptch_event->x = NAPA_MAX_X - ptch_event->x;
-#endif
-
-	        if (ptch_event->type == BCMTCH_EVENT_TYPE_DOWN)
-	        {
-                DEBUG(if (mod_debug & MOD_DEBUG_DOWN)
-                  printk("%s() rxd BCMTCH_EVENT_TYPE_DOWN\n", __func__);)
-
-                    bcmtch_event_touch_down(ptch_event->track_tag, ptch_event->x, ptch_event->y);
-                    DEBUG(if ((mod_debug & MOD_DEBUG_CHANNEL) || (mod_debug & MOD_DEBUG_DOWN))
-                        printk("%s() line %d BCMTCH_EVENT_TYPE_DOWN: T%d: (%d , %d)\n", __func__, __LINE__,
-                                                                                    ptch_event->track_tag,
-                                                                                    ptch_event->x,
-                                                                                    ptch_event->y );)
-	        }
-
-	        if (ptch_event->type == BCMTCH_EVENT_TYPE_MOVE)
-	        {
-                DEBUG(if (mod_debug & MOD_DEBUG_MOVE)
-                  printk("%s() rxd BCMTCH_EVENT_TYPE_MOVE\n", __func__);)
-
-                    bcmtch_event_touch_move(ptch_event->track_tag, ptch_event->x, ptch_event->y);
-
-		    /*
-		     * Note: The move event is renamed to "position" for log display.
-		     * This change motivated by discussion of appropriateness of labeling
-		     * a move with not change in position as a "move".
-		    */
-                    DEBUG(if ((mod_debug & MOD_DEBUG_CHANNEL) || (mod_debug & MOD_DEBUG_MOVE))
-                        printk("%s() line %d BCMTCH_EVENT_TYPE_MOVE: T%d: (%d , %d)\n", __func__, __LINE__,
-                                                                                    ptch_event->track_tag,
-                                                                                    ptch_event->x,
-                                                                                    ptch_event->y );)
+	int32_t ret_val = BCMTCH_SUCCESS;
+
+	uint32_t read_size;
+	uint32_t read_head;
+	uint32_t offset;
+	uint32_t channel;
+
+	uint8_t *p_dma = (uint8_t *)bcmtch_data_p->fwDMABuffer;
+	tofe_channel_buffer_header_t *buff;
+	tofe_channel_header_t *hdr;
+
+	/* Read DMA buffer via I2C */
+	read_size = bcmtch_dev_read_dma_buffer();
+	if (bcmtch_debug_flag &
+		BCMTCH_DEBUG_FLAG_CHANNELS) {
+		printk(KERN_INFO
+				"%s: read DMA buffer %d bytes.\n",
+				__func__,
+				read_size);
+	}
+
+	if (read_size != bcmtch_data_p->fwDMABufferSize) {
+		printk(KERN_ERR
+				"%s: Invalid DMA data read size %d.\n",
+				__func__,
+				read_size);
+		return -EIO;
+	}
+
+	/* Parse DMA buffer for channels */
+	read_head = 0;
+	while (read_head < read_size) {
+		buff = (tofe_channel_buffer_header_t *)p_dma;
+		if (!bcmtch_dev_verify_buffer_header(buff)) {
+			printk(KERN_ERR
+					"%s: corrupted buffer header in DMA channel!\n",
+					__func__);
+			return -EIO;
 		}
 
-		if (ptch_event->type == BCMTCH_EVENT_TYPE_UP)
+		channel = buff->channel_id;
+		if (bcmtch_debug_flag & BCMTCH_DEBUG_FLAG_CHANNELS) {
+			printk(KERN_INFO
+					"%s: parsing channel [%d] min_size=%d\n",
+					__func__,
+					channel,
+					buff->dmac.min_size);
+		}
+
+		hdr = &bcmtch_data_p->p_channels[channel]->hdr;
+		if (hdr->flags & TOFE_CHANNEL_FLAG_FWDMA_ENABLE)
+			hdr->buffer[0] = (tofe_channel_buffer_t *)p_dma;
+
+		offset = (uint32_t)(buff->dmac.min_size ? buff->dmac.min_size :
+				(buff->entry_size * buff->entry_count)
+				+ sizeof(tofe_channel_buffer_header_t));
+		read_head += offset;
+		p_dma += offset;
+	}
+
+	return ret_val;
+}
+
+static int32_t bcmtch_dev_read_channels(void)
+{
+	int32_t ret_val = BCMTCH_SUCCESS;
+	uint32_t channel = 0;
+	uint32_t channels_read = 0;
+
+	while (channel < BCMTCH_CHANNEL_MAX) {
+#if BCMTCH_ROM_CHANNEL
+		if (bcmtch_data_p->rom_channel) {
+			if (bcmtch_data_p->p_rom_channels[channel] &&
+				!(bcmtch_data_p->
+					p_rom_channels[channel]->rom_cfg.flags
+					& TOFE_CHANNEL_FLAG_INBOUND)) {
+
+				ret_val = bcmtch_dev_read_rom_channel(
+						bcmtch_data_p->
+						p_rom_channels[channel]);
+				channels_read++;
+			}
+		} else {
+#endif
+			if (bcmtch_data_p->p_channels[channel]->active &&
+				!(bcmtch_data_p->
+					p_channels[channel]->cfg.flags &
+					(TOFE_CHANNEL_FLAG_INBOUND
+					 | TOFE_CHANNEL_FLAG_FWDMA_ENABLE))) {
+				ret_val = bcmtch_dev_read_channel(
+					bcmtch_data_p->p_channels[channel]);
+				channels_read++;
+			}
+#if BCMTCH_ROM_CHANNEL
+		}
+#endif
+		channel++;
+	}
+
+	return ret_val;
+}
+
+static int32_t bcmtch_dev_process_event_frame(
+					bcmtch_event_frame_t *p_frame_event)
+{
+	int32_t ret_val = BCMTCH_SUCCESS;
+
+	if (bcmtch_debug_flag & BCMTCH_DEBUG_FLAG_FRAME)
+		printk(KERN_INFO
+			"BCMTCH: FR: T=%d ID=%d TS=%d\n",
+			bcmtch_data_p->touch_count,
+			p_frame_event->frame_id,
+			p_frame_event->timestamp);
+
+	return ret_val;
+}
+
+static int32_t bcmtch_dev_process_event_frame_extension(
+			bcmtch_event_frame_extension_t *p_frame_event_extension)
+{
+	int32_t ret_val = BCMTCH_SUCCESS;
+	bcmtch_event_frame_extension_timestamp_t *timestamp;
+	bcmtch_event_frame_extension_checksum_t  *checksum;
+
+	switch (p_frame_event_extension->frame_kind) {
+	case BCMTCH_EVENT_FRAME_EXTENSION_KIND_TIMESTAMP:
 		{
-                DEBUG(if (mod_debug & MOD_DEBUG_UP)
-                  printk("%s() rxd BCMTCH_EVENT_TYPE_UP\n", __func__);)
+			timestamp = (bcmtch_event_frame_extension_timestamp_t *)
+				p_frame_event_extension;
 
-                    bcmtch_event_touch_up(ptch_event->track_tag, ptch_event->x, ptch_event->y);
-                    DEBUG(if ((mod_debug & MOD_DEBUG_CHANNEL) || (mod_debug & MOD_DEBUG_UP))
-                        printk("%s() line %d BCMTCH_EVENT_TYPE_UP: T%d: (%d , %d)\n", __func__, __LINE__,
-                                                                                    ptch_event->track_tag,
-                                                                                    ptch_event->x,
-                                                                                    ptch_event->y );)
-                }
+			if (bcmtch_debug_flag & BCMTCH_DEBUG_FLAG_FRAME_EXT)
+				printk(KERN_INFO "Time offsets. %d %d %d",
+					timestamp->scan_end,
+					timestamp->mtc_start,
+					timestamp->mtc_end);
+		}
+		break;
+	case BCMTCH_EVENT_FRAME_EXTENSION_KIND_CHECKSUM:
+		{
+			checksum = (bcmtch_event_frame_extension_checksum_t *)
+				p_frame_event_extension;
 
+			if (bcmtch_debug_flag & BCMTCH_DEBUG_FLAG_FRAME_EXT)
+				printk(KERN_INFO "ERROR: Checksum not supported.  %#x",
+					checksum->hash);
+		}
+		break;
+	case BCMTCH_EVENT_FRAME_EXTENSION_KIND_HEARTBEAT:
+		{
+			if (bcmtch_debug_flag & BCMTCH_DEBUG_FLAG_FRAME_EXT)
+				printk(KERN_INFO "ERROR: Heartbeat not supported.");
+		}
+		break;
+	default:
+		if (bcmtch_debug_flag & BCMTCH_DEBUG_FLAG_FRAME_EXT)
+			printk(KERN_INFO "Invalid frame extension. %d",
+				p_frame_event_extension->frame_kind);
+		break;
+	}
+
+	return ret_val;
+}
+
+
+static int32_t bcmtch_dev_sync_event_frame(void)
+{
+	int32_t ret_val = BCMTCH_SUCCESS;
+
+	struct input_dev *pInputDevice = bcmtch_data_p->p_inputDevice;
+	bcmtch_touch_t *pTouch;
+	uint32_t numTouches = 0;
+	uint32_t touchIndex = 0;
+
+	for (touchIndex = 0; touchIndex < BCMTCH_MAX_TOUCH; touchIndex++) {
+		pTouch = (bcmtch_touch_t *) &bcmtch_data_p->touch[touchIndex];
+
+#if BCMTCH_USE_PROTOCOL_B
+		input_mt_slot(pInputDevice, touchIndex);
+		input_mt_report_slot_state(
+			pInputDevice,
+			MT_TOOL_FINGER,
+			(pTouch->status > BCMTCH_TOUCH_STATUS_UP));
+#endif
+		if (pTouch->status > BCMTCH_TOUCH_STATUS_UP) {
+			/* Count both of STATUS_MOVE and STATUS_MOVING */
+			numTouches++;
+
+			if (pTouch->status > BCMTCH_TOUCH_STATUS_MOVE) {
+
+				input_report_abs(
+						pInputDevice,
+						ABS_MT_POSITION_X,
+						pTouch->x);
+
+				input_report_abs(
+						pInputDevice,
+						ABS_MT_POSITION_Y,
+						pTouch->y);
+
+				if (bcmtch_event_flag &
+						BCMTCH_EVENT_FLAG_PRESSURE) {
+					input_report_abs(
+							pInputDevice,
+							ABS_MT_PRESSURE,
+							pTouch->pressure);
+				}
+
+				if (bcmtch_event_flag &
+						BCMTCH_EVENT_FLAG_TOUCH_SIZE) {
+					input_report_abs(
+							pInputDevice,
+							ABS_MT_TOUCH_MAJOR,
+							pTouch->major_axis);
+
+					input_report_abs(
+							pInputDevice,
+							ABS_MT_TOUCH_MINOR,
+							pTouch->minor_axis);
+				}
+
+				if (bcmtch_event_flag &
+						BCMTCH_EVENT_FLAG_ORIENTATION) {
+					input_report_abs(
+							pInputDevice,
+							ABS_MT_ORIENTATION,
+							pTouch->orientation);
+				}
+
+				if (bcmtch_event_flag &
+						BCMTCH_EVENT_FLAG_TOOL_SIZE) {
+					input_report_abs(
+							pInputDevice,
+							ABS_MT_WIDTH_MAJOR,
+							pTouch->width_major);
+
+					input_report_abs(
+							pInputDevice,
+							ABS_MT_WIDTH_MINOR,
+							pTouch->width_minor);
+				}
+#if !BCMTCH_USE_PROTOCOL_B
+				input_report_abs(
+						pInputDevice,
+						ABS_MT_TRACKING_ID,
+						touchIndex);
+
+				input_mt_sync(pInputDevice);
+#endif
+				/* reset the status from MOVING to MOVE. */
+				pTouch->status = BCMTCH_TOUCH_STATUS_MOVE;
+			}
+		}
+	}
+
+	input_report_key(pInputDevice, BTN_TOUCH, (numTouches > 0));
+	input_sync(pInputDevice);
+
+	/* remember */
+	bcmtch_data_p->touch_count = numTouches;
+
+	return ret_val;
+}
+
+static void
+bcmtch_dev_process_event_touch_extension(
+		bcmtch_event_touch_extension_t *extension,
+		uint8_t track_id)
+{
+	char *tool_str;
+	bcmtch_event_touch_extension_detail_t *detail;
+	bcmtch_event_touch_extension_blob_t *blob;
+	bcmtch_event_touch_extension_size_t *size;
+	bcmtch_event_touch_extension_tool_t *tool;
+	bcmtch_touch_t *pTouch = (bcmtch_touch_t *)
+						&bcmtch_data_p->touch[track_id];
+
+	switch (extension->touch_kind) {
+	case BCMTCH_EVENT_TOUCH_EXTENSION_KIND_DETAIL:
+		detail =
+			(bcmtch_event_touch_extension_detail_t *)
+			extension;
+
+		if (detail->tool == BCMTCH_EVENT_TOUCH_TOOL_FINGER)
+			tool_str = "finger";
+		else
+			tool_str = "stylus";
+
+		if (bcmtch_debug_flag & BCMTCH_DEBUG_FLAG_TOUCH_EXT)
+			printk(KERN_INFO "C%d:S%d:H%d %s Pres=%d Ornt=%#x",
+				detail->confident,
+				detail->suppressed,
+				detail->hover,
+				tool_str,
+				detail->pressure,
+				detail->orientation);
+		/**
+		 * ABS_MT_TOOL_TYPE
+		 * - MT_TOOL_FINGER
+		 * - MT_TOOL_PEN
+		 **/
+		pTouch->pressure = detail->pressure;
+
+		/* get orientation
+		 * - handle int12 to int16 conversion
+		 */
+		pTouch->orientation = detail->orientation;
+		if (pTouch->orientation & (1<<11))
+			pTouch->orientation -= 1<<12;
 		break;
 
+	case BCMTCH_EVENT_TOUCH_EXTENSION_KIND_BLOB:
+		blob =
+			(bcmtch_event_touch_extension_blob_t *)
+			extension;
+		if (bcmtch_debug_flag & BCMTCH_DEBUG_FLAG_TOUCH_EXT)
+			printk(KERN_INFO "\tArea=%d TCap=%d",
+				blob->area, blob->total_cap);
+		/**
+		 * ABS_MT_BLOB_ID
+		 */
+		break;
+
+	case BCMTCH_EVENT_TOUCH_EXTENSION_KIND_SIZE:
+		size =
+			(bcmtch_event_touch_extension_size_t *)
+			extension;
+		if (bcmtch_debug_flag & BCMTCH_DEBUG_FLAG_TOUCH_EXT)
+			printk(KERN_INFO "Track %d:\tMajor=%d Minor=%d",
+					track_id,
+					size->major_axis,
+					size->minor_axis);
+		/**
+		 * ABS_MT_MAJOR/MINOR_AXIS
+		 */
+		pTouch->major_axis = size->major_axis;
+		pTouch->minor_axis = size->minor_axis;
+		break;
+
+	case BCMTCH_EVENT_TOUCH_EXTENSION_KIND_HOVER:
+		if (bcmtch_debug_flag & BCMTCH_DEBUG_FLAG_TOUCH_EXT)
+			printk(KERN_INFO "ERROR: Hover not supported.");
+		break;
+
+	case BCMTCH_EVENT_TOUCH_EXTENSION_KIND_TOOL:
+		tool =
+			(bcmtch_event_touch_extension_tool_t *)
+			extension;
+		if (bcmtch_debug_flag & BCMTCH_DEBUG_FLAG_TOUCH_EXT)
+			printk(KERN_INFO "Track %d:\tMajor=%d Minor=%d",
+					track_id,
+					tool->width_major,
+					tool->width_minor);
+		/**
+		 * ABS_MT_MAJOR/MINOR_AXIS
+		 */
+		pTouch->width_major = tool->width_major;
+		pTouch->width_minor = tool->width_minor;
+		break;
+	default:
+		if (bcmtch_debug_flag & BCMTCH_DEBUG_FLAG_TOUCH_EXT)
+			printk(KERN_INFO "Invalid touch extension. %d",
+					extension->touch_kind);
+		break;
+	}
+}
+
+
+static int32_t bcmtch_dev_process_event_touch(
+					bcmtch_event_touch_t *p_touch_event)
+{
+	int32_t ret_val = BCMTCH_SUCCESS;
+	bcmtch_touch_t *p_touch;
+	bcmtch_event_kind_e kind;
+
+	if (p_touch_event->track_tag < BCMTCH_MAX_TOUCH) {
+		p_touch =
+		    (bcmtch_touch_t *)
+			&bcmtch_data_p->touch[p_touch_event->track_tag];
+
+		p_touch_event->x =
+			bcmtch_data_p->actual_x(p_touch_event->x);
+
+		p_touch_event->y =
+			bcmtch_data_p->actual_y(p_touch_event->y);
+
+		bcmtch_data_p->actual_x_y_axis(p_touch_event->x,
+			p_touch_event->y, p_touch);
+
+		kind = (bcmtch_event_kind_e)p_touch_event->event_kind;
+
+		switch (kind) {
+		case BCMTCH_EVENT_KIND_TOUCH:
+			p_touch->event = kind;
+			p_touch->status = BCMTCH_TOUCH_STATUS_MOVING;
+
+			if (bcmtch_debug_flag & BCMTCH_DEBUG_FLAG_MOVE)
+				printk(KERN_INFO
+					"BCMTCH: MV: T%d: (%04x , %04x)\n",
+					p_touch_event->track_tag,
+					p_touch->x,
+					p_touch->y);
+			break;
+		case BCMTCH_EVENT_KIND_TOUCH_END:
+			p_touch->event = kind;
+			p_touch->status = BCMTCH_TOUCH_STATUS_UP;
+
+			if (bcmtch_debug_flag & BCMTCH_DEBUG_FLAG_UP)
+				printk(KERN_INFO
+					"BCMTCH: UP: T%d: (%04x , %04x)\n",
+					p_touch_event->track_tag,
+					p_touch->x,
+					p_touch->y);
+			break;
+		default:
+			printk(KERN_ERR "%s: Invalid touch event", __func__);
+			break;
+		}
+	} else {
+
+	}
+	return ret_val;
+}
+
+static int32_t bcmtch_dev_process_event_button(
+					bcmtch_event_button_t *p_button_event)
+{
+	int32_t ret_val = BCMTCH_SUCCESS;
+	uint16_t evt_status = p_button_event->status;
+	uint16_t btn_status = bcmtch_data_p->button_status;
+	struct input_dev *pInputDevice = bcmtch_data_p->p_inputDevice;
+	bcmtch_event_kind_e kind = p_button_event->button_kind;
+	uint32_t button_index = 0;
+	uint16_t button_check;
+
+	if (btn_status != evt_status) {
+		switch (kind) {
+		case BCMTCH_EVENT_BUTTON_KIND_CONTACT:
+			while (button_index < bcmtch_data_p->
+				  platform_data.ext_button_count) {
+				button_check = (0x1 << button_index);
+				if ((btn_status & button_check) !=
+						(evt_status & button_check)) {
+					input_report_key(
+						pInputDevice,
+						bcmtch_data_p->platform_data.
+						  ext_button_map[button_index],
+						(evt_status & button_check));
+				}
+				button_index++;
+			}
+
+			if (bcmtch_debug_flag &
+					BCMTCH_DEBUG_FLAG_BUTTON)
+				printk(KERN_INFO
+					"BCMTCH: Button: %s %#04x\n",
+					"press",
+					evt_status);
+			break;
+		case BCMTCH_EVENT_BUTTON_KIND_HOVER:
+			if (bcmtch_debug_flag &
+					BCMTCH_DEBUG_FLAG_BUTTON)
+				printk(KERN_INFO
+					"BCMTCH: Button: %s %#04x\n",
+					"hover",
+					evt_status);
+			break;
+		default:
+			printk(KERN_ERR "%s: Invalid button kind %d\n",
+				__func__,
+				kind);
+			break;
+		}
+
+		/* Report SYNC */
+		input_sync(pInputDevice);
+
+		/* Update status */
+		bcmtch_data_p->button_status = evt_status;
+	} else {
+		if (bcmtch_debug_flag & BCMTCH_DEBUG_FLAG_BUTTON)
+			printk(KERN_INFO
+				"BCMTCH: button status unchanged. status=0x%04x\n",
+				btn_status);
+	}
+	return ret_val;
+}
+
+/**
+ * To process whole frames of data this variable should
+ * be made global because one frame can be split across
+ * two invocations of the function process_channel_touch().
+ */
+static	bcmtch_event_kind_e top_level_kind = BCMTCH_EVENT_KIND_EXTENSION;
+static	uint8_t touch_event_track_id = 0;
+
+static int32_t bcmtch_dev_process_channel_touch(bcmtch_channel_t *chan)
+{
+	int32_t ret_val = BCMTCH_SUCCESS;
+	bool syn_report_pending = false;
+	tofe_channel_header_t *chan_hdr = (tofe_channel_header_t *)&chan->hdr;
+	uint16_t read_idx;
+	bcmtch_event_t *ptch_event;
+	bcmtch_event_kind_e kind;
+
+	uint32_t frames_in = 0;
+
+	read_idx = 0;
+	while ((ptch_event = (bcmtch_event_t *)
+				bcmtch_inline_channel_read(chan_hdr,
+				read_idx++))) {
+		kind = (bcmtch_event_kind_e)ptch_event->event_kind;
+
+		if (kind != BCMTCH_EVENT_KIND_EXTENSION) {
+			top_level_kind = kind;
+
+			if (syn_report_pending) {
+				/**
+				 * The end of frame extension events.
+				 * Send the SYN_REPORT for the frame.
+				 */
+				bcmtch_dev_sync_event_frame();
+				syn_report_pending = false;
+
+				if (frames_in)
+					usleep_range(1000, 1500);
+			}
+		}
+
+		switch (kind) {
+		case BCMTCH_EVENT_KIND_FRAME:
+			/**
+			 * Only set the flag to wait for the following frame extension events
+			 * rather than directly send SYN_REPORT message.
+			 */
+			frames_in++;
+			syn_report_pending = true;
+		    bcmtch_dev_process_event_frame(
+					(bcmtch_event_frame_t *) ptch_event);
+			break;
+		case BCMTCH_EVENT_KIND_TOUCH:
+		case BCMTCH_EVENT_KIND_TOUCH_END:
+			touch_event_track_id =
+				((bcmtch_event_touch_t *)ptch_event)->track_tag;
+		    bcmtch_dev_process_event_touch(
+					(bcmtch_event_touch_t *)ptch_event);
+			break;
+		case BCMTCH_EVENT_KIND_BUTTON:
+			bcmtch_dev_process_event_button(
+					(bcmtch_event_button_t *)ptch_event);
+			break;
+		case BCMTCH_EVENT_KIND_GESTURE:
+		    printk(KERN_INFO "ERROR: Gesture: NOT SUPPORTED");
+			break;
+		case BCMTCH_EVENT_KIND_EXTENSION:
+			switch (top_level_kind) {
+			case BCMTCH_EVENT_KIND_FRAME:
+				bcmtch_dev_process_event_frame_extension(
+					(bcmtch_event_frame_extension_t *)
+					ptch_event);
+				break;
+			case BCMTCH_EVENT_KIND_TOUCH:
+				bcmtch_dev_process_event_touch_extension(
+					(bcmtch_event_touch_extension_t *)
+					ptch_event,
+					touch_event_track_id);
+				break;
+			default:
+				printk(KERN_INFO
+						"ERROR: Improper event extension for: tlk=%d k=%d",
+							top_level_kind, kind);
+				break;
+			}
+			break;
+		default:
+			printk(KERN_INFO
+				"ERROR: Invalid event kind: %d.", kind);
+		}
+	}
+
+    /**
+     * The last event in the channel is a frame (extension) event.
+     * Send the SYN_REPORT for the frame.
+     */
+	if (syn_report_pending) {
+		bcmtch_dev_sync_event_frame();
+		syn_report_pending = false;
+	}
+
+	if (bcmtch_debug_flag & BCMTCH_DEBUG_FLAG_FRAMES) {
+		uint32_t stalled =
+				(chan_hdr->flags &
+					TOFE_CHANNEL_FLAG_STATUS_OVERFLOW);
+
+		printk(KERN_INFO
+				"frames: %d - %d",
+				frames_in,
+				stalled);
+	}
+	return ret_val;
+}
+
+static int32_t bcmtch_dev_process_channel_response(bcmtch_channel_t *chan)
+{
+	int32_t ret_val = BCMTCH_SUCCESS;
+	uint16_t read_idx;
+	bcmtch_response_wait_t *p_resp;
+	tofe_channel_header_t *chan_hdr = (tofe_channel_header_t *)&chan->hdr;
+	tofe_command_response_t *resp_event;
+
+	if (bcmtch_debug_flag &
+			BCMTCH_DEBUG_FLAG_CHANNELS) {
+		printk(KERN_INFO
+			"BCMTCH: %s() - swap count=%d response evt count=%d.\n",
+			__func__,
+			chan_hdr->seq_count,
+			chan->queued);
+	}
+
+	read_idx = 0;
+	/* Process response events */
+	while ((resp_event =
+				(tofe_command_response_t *)
+				bcmtch_inline_channel_read(chan_hdr,
+				read_idx++))) {
+
+		if (resp_event->flags &
+				TOFE_COMMAND_FLAG_COMMAND_PROCESSED) {
+			if (resp_event->command > TOFE_COMMAND_LAST)
+				continue;
+
+			/* Save the response result */
+			p_resp = (bcmtch_response_wait_t *)
+				&(bcmtch_data_p->bcmtch_cmd_response
+						[resp_event->command]);
+			p_resp->wait = 0;
+			p_resp->resp_data = resp_event->data;
+		}
+
+		if (bcmtch_debug_flag &
+				BCMTCH_DEBUG_FLAG_CHANNELS) {
+			printk(KERN_INFO
+				"BCMTCH: Response - command=0x%02x result=0x%04x data=0x%08x.\n",
+				resp_event->command,
+				resp_event->result,
+				resp_event->data);
+		}
+
+	}
+	return ret_val;
+}
+
+/**
+    Log routine for printing log message in TOFE
+
+    @param
+		[in] code 16-bit log code
+		[in] param_0 16-bit parameter
+		[in] param_1 32-bit parameter
+		[in] param_2 32-bit parameter
+
+    @retval
+		none
+*/
+static void bcmtch_log_str_print(uint16_t code, uint16_t param0,
+					uint32_t param1,
+					uint32_t param2,
+					uint32_t timestamp)
+{
+		printk(KERN_INFO
+			"BCMTCH: code:0x%04x para0:0x%04x para1:0x%08x para2:0x%08x ts:0x%08x\n",
+			code,
+			param0,
+			param1,
+			param2,
+			timestamp);
+}
+
+static int32_t bcmtch_dev_process_channel_log(bcmtch_channel_t *chan)
+{
+	int32_t ret_val = BCMTCH_SUCCESS;
+	uint16_t read_idx;
+	tofe_channel_header_t *chan_hdr = (tofe_channel_header_t *)&chan->hdr;
+	tofe_log_msg_t *log_msg;
+
+	read_idx = 0;
+	while ((log_msg =
+				(tofe_log_msg_t *)
+				bcmtch_inline_channel_read(chan_hdr,
+				read_idx++))) {
+		bcmtch_log_str_print(log_msg->log_code,
+			log_msg->param_0,
+			log_msg->params[0],
+			log_msg->params[1],
+			log_msg->timestamp);
+	}
+	return ret_val;
+}
+
+static int32_t bcmtch_dev_process_channels(void)
+{
+	int32_t ret_val = BCMTCH_SUCCESS;
+	uint32_t channel = 0;
+	bcmtch_channel_t *p_chan = NULL;
+#if BCMTCH_ROM_CHANNEL
+	bcmtch_rom_channel_t *p_rom_chan = NULL;
+#endif
+
+	while (channel < BCMTCH_CHANNEL_MAX) {
+#if BCMTCH_ROM_CHANNEL
+		if (bcmtch_data_p->rom_channel) {
+			p_rom_chan = bcmtch_data_p->p_rom_channels[channel];
+			switch (channel) {
+			case BCMTCH_CHANNEL_TOUCH:
+				if (p_rom_chan)
+					bcmtch_dev_process_rom_channel_touch(
+							p_rom_chan);
+				break;
+
+			case BCMTCH_CHANNEL_COMMAND:
+			case BCMTCH_CHANNEL_RESPONSE:
+			case BCMTCH_CHANNEL_LOG:
+			default:
+				break;
+
+			}
+		} else {
+#endif
+			p_chan = bcmtch_data_p->p_channels[channel];
+			if (!p_chan->active) {
+				channel++;
+				continue;
+			}
+
+			switch (channel) {
+			case BCMTCH_CHANNEL_TOUCH:
+				bcmtch_dev_process_channel_touch(p_chan);
+				break;
+
+			case BCMTCH_CHANNEL_COMMAND:
+				break;
+			case BCMTCH_CHANNEL_RESPONSE:
+				bcmtch_dev_process_channel_response(p_chan);
+				break;
+			case BCMTCH_CHANNEL_LOG:
+				bcmtch_dev_process_channel_log(p_chan);
+				break;
+			default:
+				break;
+
+			}
+
+			if (p_chan->cfg.flags & TOFE_CHANNEL_FLAG_FWDMA_ENABLE)
+				p_chan->hdr.buffer[0] = p_chan->hdr.buffer[1];
+#if BCMTCH_ROM_CHANNEL
+		}
+#endif
+		channel++;
+	}
+
+	return ret_val;
+}
+
+
+/* -------------------------- */
+/* -	Dual Channel Mode	- */
+/* -------------------------- */
+#if BCMTCH_ROM_CHANNEL
+
+unsigned bcmtch_rom_channel_num_queued(tofe_rom_channel_header_t *channel)
+{
+	if (channel->write >= channel->read)
+		return channel->write - channel->read;
+	else
+		return channel->entry_num - (channel->read - channel->write);
+}
+
+static inline iterator_rom_t
+_bcmtch_inline_rom_channel_next_index(
+			tofe_rom_channel_header_t *channel,
+			iterator_rom_t iterator)
+{
+	return (iterator == channel->entry_num - 1) ? 0 : iterator + 1;
+}
+
+static inline char *
+_bcmtch_inline_rom_channel_entry(
+			tofe_rom_channel_header_t *channel,
+			uint32_t byte_index)
+{
+	char *data_bytes = (char *)channel + channel->data_offset;
+	return &data_bytes[byte_index];
+}
+
+static inline size_t
+_bcmtch_inline_rom_channel_byte_index(
+		tofe_rom_channel_header_t *channel,
+		iterator_rom_t entry_index)
+{
+	return entry_index * channel->entry_size;
+}
+
+static inline bool
+bcmtch_inline_rom_channel_is_empty(tofe_rom_channel_header_t *channel)
+{
+	return (channel->read == channel->write);
+}
+
+static inline void
+bcmtch_inline_rom_channel_read_begin(tofe_rom_channel_header_t *channel)
+{
+	channel->read_iterator = channel->read;
+}
+
+static inline void *bcmtch_inline_rom_channel_read(
+		tofe_rom_channel_header_t *channel)
+{
+	char *entry;
+	size_t byte_index;
+
+	/* Validate that channel has entries. */
+	if (bcmtch_inline_rom_channel_is_empty(channel))
+		return NULL;
+
+	/* Find entry in the channel. */
+	byte_index =
+	    _bcmtch_inline_rom_channel_byte_index(
+				channel,
+				channel->read_iterator);
+	entry = (char *)_bcmtch_inline_rom_channel_entry(channel, byte_index);
+
+	/* Update the read iterator. */
+	channel->read_iterator =
+	    _bcmtch_inline_rom_channel_next_index(
+				channel,
+				channel->read_iterator);
+
+	return (void *)entry;
+}
+
+static inline uint32_t
+bcmtch_inline_rom_channel_read_end(tofe_rom_channel_header_t *channel)
+{
+	uint32_t count = (channel->read_iterator >= channel->read) ?
+	    (channel->read_iterator - channel->read) :
+	    (channel->entry_num - (channel->read - channel->read_iterator));
+
+	channel->read = channel->read_iterator;
+	return count;
+}
+
+static int32_t bcmtch_dev_init_rom_channel(
+		bcmtch_channel_e chan_id,
+		tofe_rom_channel_instance_cfg_t *p_chan_cfg)
+{
+	int32_t ret_val = BCMTCH_SUCCESS;
+	uint32_t channel_size;
+	tofe_rom_channel_header_t *hdr;
+
+	channel_size =
+			/* channel data size   */
+			(p_chan_cfg->entry_num * p_chan_cfg->entry_size)
+			/* channel header size */
+			+ sizeof(tofe_rom_channel_header_t)
+			/* channel config size */
+			+ sizeof(tofe_rom_channel_instance_cfg_t)
+			/* sizes for added elements: queued, pad */
+			+ (sizeof(uint16_t) * 2);
+
+	bcmtch_data_p->p_rom_channels[chan_id] =
+		(bcmtch_rom_channel_t *)bcmtch_os_mem_alloc(channel_size);
+
+	if (bcmtch_data_p->p_rom_channels[chan_id])
+		bcmtch_data_p->p_rom_channels[chan_id]->rom_cfg = *p_chan_cfg;
+	else
+		ret_val = -ENOMEM;
+
+	if (p_chan_cfg->flags & TOFE_CHANNEL_FLAG_INBOUND) {
+		/* Initialize command channel header */
+		hdr = &bcmtch_data_p->p_rom_channels[chan_id]->rom_hdr;
+		hdr->data_offset =
+			(char *)&bcmtch_data_p->p_rom_channels[chan_id]->data
+			- (char *)hdr;
+		hdr->entry_num = p_chan_cfg->entry_num;
+		hdr->entry_size = p_chan_cfg->entry_size;
+		hdr->trig_level = p_chan_cfg->trig_level;
+		hdr->flags = p_chan_cfg->flags;
+		hdr->read = 0;
+		hdr->write = 0;
+		hdr->read_iterator = 0;
+		hdr->write_iterator = 0;
+	}
+
+	return ret_val;
+}
+
+static void bcmtch_dev_free_rom_channels(void)
+{
+	uint32_t chan = 0;
+	while (chan < BCMTCH_CHANNEL_MAX)
+		bcmtch_os_mem_free(bcmtch_data_p->p_rom_channels[chan++]);
+}
+
+static int32_t bcmtch_dev_init_rom_channels(
+		uint32_t mem_addr,
+		uint8_t *mem_data)
+{
+	int32_t ret_val = BCMTCH_SUCCESS;
+
+	uint32_t *p_cfg = NULL;
+	tofe_rom_channel_instance_cfg_t *p_chan_cfg = NULL;
+
+	/* find channel configs */
+	p_cfg = (uint32_t *)(mem_data + TOFE_SIGNATURE_SIZE);
+	p_chan_cfg =
+		(tofe_rom_channel_instance_cfg_t *)
+		((uint32_t)mem_data + p_cfg[TOFE_TOC_INDEX_CHANNEL] - mem_addr);
+
+	/* check if processing channel(s) - add */
+	if (bcmtch_channel_flag & BCMTCH_CHANNEL_FLAG_USE_TOUCH) {
+		ret_val =
+		    bcmtch_dev_init_rom_channel(
+				BCMTCH_CHANNEL_TOUCH,
+				&p_chan_cfg[TOFE_CHANNEL_ID_TOUCH]);
+	}
+
+	if (ret_val || !(bcmtch_channel_flag & BCMTCH_CHANNEL_FLAG_USE_TOUCH)) {
+		printk(KERN_ERR
+		       "%s: [%d] Touch Event Channel not initialized!\n",
+		       __func__, ret_val);
+	}
+
+	if (!ret_val &&
+		(bcmtch_channel_flag & BCMTCH_CHANNEL_FLAG_USE_CMD_RESP)) {
+		ret_val =
+		    bcmtch_dev_init_rom_channel(
+						BCMTCH_CHANNEL_COMMAND,
+					    &p_chan_cfg
+					    [TOFE_CHANNEL_ID_COMMAND]);
+		ret_val |=
+		    bcmtch_dev_init_rom_channel(
+						BCMTCH_CHANNEL_RESPONSE,
+					    &p_chan_cfg
+					    [TOFE_CHANNEL_ID_RESPONSE]);
+	}
+
+	if (!ret_val && (bcmtch_channel_flag & BCMTCH_CHANNEL_FLAG_USE_LOG)) {
+		ret_val =
+		    bcmtch_dev_init_rom_channel(
+						BCMTCH_CHANNEL_LOG,
+					    &p_chan_cfg[TOFE_CHANNEL_ID_LOG]);
+	}
+
+	return ret_val;
+}
+
+static inline void
+bcmtch_inline_rom_channel_write_begin(tofe_rom_channel_header_t *channel)
+{
+	channel->write_iterator = (iterator_rom_t) channel->write;
+}
+
+static inline void
+bcmtch_inline_rom_channel_write_end(tofe_rom_channel_header_t *channel)
+{
+	channel->write = (uint32_t) channel->write_iterator;
+}
+
+static inline iterator_t
+bcmtch_inline_rom_channel_next_index(
+		tofe_rom_channel_header_t *channel,
+		iterator_t iterator)
+{
+	return (iterator == channel->entry_num-1) ? 0 : iterator+1;
+}
+
+static inline size_t
+bcmtch_inline_rom_channel_byte_index(
+		tofe_rom_channel_header_t *channel,
+		iterator_t entry_index)
+{
+	return entry_index * channel->entry_size;
+}
+
+static inline char *
+bcmtch_inline_rom_channel_entry(
+		tofe_rom_channel_header_t *channel,
+		uint32_t byte_index)
+{
+	char * data_bytes = (char *)channel + channel->data_offset;
+	return &data_bytes[byte_index];
+}
+
+static inline uint32_t
+bcmtch_inline_rom_channel_write(
+		tofe_rom_channel_header_t *channel,
+		void *entry)
+{
+	size_t byte_index;
+
+	/* If channel is full. */
+	if (channel->read ==
+			 bcmtch_inline_rom_channel_next_index(
+				 channel,
+				 channel->write_iterator))
+		return -ENOMEM;
+
+	/* Copy entry to the channel. */
+	byte_index = bcmtch_inline_rom_channel_byte_index(
+			channel,
+			channel->write_iterator);
+
+	memcpy(bcmtch_inline_rom_channel_entry(
+				channel,
+				byte_index),
+			entry, channel->entry_size);
+
+	/* Update the write iterator. */
+	channel->write_iterator =
+		bcmtch_inline_rom_channel_next_index(
+				channel,
+				channel->write_iterator);
+
+	return BCMTCH_SUCCESS;
+}
+
+static int32_t bcmtch_dev_write_rom_channel(bcmtch_rom_channel_t *chan)
+{
+	int32_t ret_val = BCMTCH_SUCCESS;
+	int16_t writeSize;
+	uint32_t sys_addr;
+
+	/* read channel header and data all-at-once : need combined size */
+	writeSize = sizeof(chan->rom_hdr)
+			+ (chan->rom_cfg.entry_num * chan->rom_cfg.entry_size);
+
+	sys_addr = (uint32_t)chan->rom_cfg.channel_header;
+
+	/* write channel header & channel data buffer */
+	ret_val = bcmtch_com_write_sys(
+				sys_addr,
+				writeSize,
+				(uint8_t *)&chan->rom_hdr);
+	if (ret_val) {
+		printk(KERN_ERR
+				"BCMTOUCH: %s() write_sys err addr=0x%08x, rv=%d\n",
+				__func__,
+				sys_addr,
+				ret_val);
+	}
+	return ret_val;
+}
+
+static int32_t bcmtch_dev_read_rom_channel(bcmtch_rom_channel_t *chan)
+{
+	int32_t ret_val = BCMTCH_SUCCESS;
+	int16_t readSize;
+	uint32_t wbAddr;
+
+	/* read channel header and data all-at-once : need combined size */
+	readSize =
+	    sizeof(chan->rom_hdr) +
+		(chan->rom_cfg.entry_num * chan->rom_cfg.entry_size);
+
+	/* read channel header & channel data buffer */
+	ret_val = bcmtch_com_read_sys(
+				(uint32_t)chan->rom_cfg.channel_header,
+				readSize,
+				(uint8_t *)&chan->rom_hdr);
+
+	/* get count */
+	chan->queued = bcmtch_rom_channel_num_queued(&chan->rom_hdr);
+
+	/* write back to update channel */
+	if (chan->queued) {
+		wbAddr =
+		    (uint32_t)chan->rom_cfg.channel_header +
+		    offsetof(tofe_rom_channel_header_t, read);
+		ret_val = bcmtch_com_write_sys32(wbAddr, chan->rom_hdr.write);
+	}
+
+	return ret_val;
+}
+
+static int32_t bcmtch_dev_process_rom_event_frame(
+					bcmtch_rom_event_frame_t *p_frame_event)
+{
+	int32_t ret_val = BCMTCH_SUCCESS;
+
+	struct input_dev *pInputDevice = bcmtch_data_p->p_inputDevice;
+	bcmtch_touch_t *pTouch;
+	uint32_t numTouches = 0;
+	uint32_t touchIndex = 0;
+
+	for (touchIndex = 0; touchIndex < BCMTCH_MAX_TOUCH; touchIndex++) {
+		pTouch = (bcmtch_touch_t *) &bcmtch_data_p->touch[touchIndex];
+
+#if BCMTCH_USE_PROTOCOL_B
+		input_mt_slot(pInputDevice, touchIndex);
+		input_mt_report_slot_state(
+			pInputDevice,
+			MT_TOOL_FINGER,
+			(pTouch->status > BCMTCH_TOUCH_STATUS_UP));
+#endif
+		if (pTouch->status > BCMTCH_TOUCH_STATUS_UP) {
+			numTouches++;
+
+			input_report_abs(
+					pInputDevice,
+					ABS_MT_POSITION_X,
+					pTouch->x);
+
+			input_report_abs(
+					pInputDevice,
+					ABS_MT_POSITION_Y,
+					pTouch->y);
+
+#if !BCMTCH_USE_PROTOCOL_B
+			input_report_abs(
+					pInputDevice,
+					ABS_MT_TRACKING_ID,
+					touchIndex);
+
+			input_mt_sync(pInputDevice);
+#endif
+		}
+	}
+
+	input_report_key(pInputDevice, BTN_TOUCH, (numTouches > 0));
+	input_sync(pInputDevice);
+
+	/* remember */
+	bcmtch_data_p->touch_count = numTouches;
+
+	if (bcmtch_debug_flag & BCMTCH_DEBUG_FLAG_FRAME)
+		printk(KERN_INFO
+			"BCMTCH: FR: T=%d ID=%d\n",
+			numTouches,
+			p_frame_event->frame_id);
+
+	return ret_val;
+}
+
+static int32_t bcmtch_dev_process_rom_event_touch(
+					bcmtch_rom_event_touch_t *p_touch_event)
+{
+	int32_t ret_val = BCMTCH_SUCCESS;
+	bcmtch_touch_t *p_touch;
+
+	if (p_touch_event->track_tag < BCMTCH_MAX_TOUCH) {
+		p_touch =
+		    (bcmtch_touch_t *)
+			&bcmtch_data_p->touch[p_touch_event->track_tag];
+
+		p_touch_event->x =
+			bcmtch_data_p->actual_x(p_touch_event->x);
+
+		p_touch_event->y =
+			bcmtch_data_p->actual_y(p_touch_event->y);
+
+		bcmtch_data_p->actual_x_y_axis(p_touch_event->x,
+			p_touch_event->y, p_touch);
+
+		switch (p_touch_event->type) {
+		case BCMTCH_EVENT_TYPE_DOWN:
+			p_touch->rom_event = p_touch_event->type;
+			p_touch->status = BCMTCH_TOUCH_STATUS_MOVE;
+
+			if (bcmtch_debug_flag & BCMTCH_DEBUG_FLAG_MOVE)
+				printk(KERN_INFO
+					"BCMTCH: DN: T%d: (%04x , %04x)\n",
+					p_touch_event->track_tag,
+					p_touch->x,
+					p_touch->y);
+			break;
+
+		case BCMTCH_EVENT_TYPE_UP:
+			p_touch->rom_event = p_touch_event->type;
+			p_touch->status = BCMTCH_TOUCH_STATUS_UP;
+
+			if (bcmtch_debug_flag & BCMTCH_DEBUG_FLAG_UP)
+				printk(KERN_INFO
+					"BCMTCH: UP: T%d: (%04x , %04x)\n",
+					p_touch_event->track_tag,
+					p_touch->x,
+					p_touch->y);
+			break;
+
+		case BCMTCH_EVENT_TYPE_MOVE:
+			p_touch->rom_event = p_touch_event->type;
+			p_touch->status = BCMTCH_TOUCH_STATUS_MOVING;
+
+			if (bcmtch_debug_flag & BCMTCH_DEBUG_FLAG_MOVE)
+				printk(KERN_INFO
+					"BCMTCH: MV: T%d: (%04x , %04x)\n",
+					p_touch_event->track_tag,
+					p_touch->x,
+					p_touch->y);
+			break;
+		}
+	} else {
+
+	}
+	return ret_val;
+}
+
+static int32_t bcmtch_dev_process_rom_channel_touch(bcmtch_rom_channel_t *chan)
+{
+	int32_t ret_val = BCMTCH_SUCCESS;
+
+	bcmtch_rom_event_t *ptch_event;
+	tofe_rom_channel_header_t *chan_hdr =
+		(tofe_rom_channel_header_t *)&chan->rom_hdr;
+
+	bcmtch_inline_rom_channel_read_begin(chan_hdr);
+
+	while ((ptch_event = (bcmtch_rom_event_t *)
+				bcmtch_inline_rom_channel_read(chan_hdr))) {
+		switch (ptch_event->type) {
+		case BCMTCH_EVENT_TYPE_DOWN:
+		case BCMTCH_EVENT_TYPE_UP:
+		case BCMTCH_EVENT_TYPE_MOVE:
+			bcmtch_dev_process_rom_event_touch(
+				(bcmtch_rom_event_touch_t *)ptch_event);
+			break;
+
 		case BCMTCH_EVENT_TYPE_FRAME:
-#if DEBUG_INTERFACE_TUNING
-		        ++d_i_t_fc;
-#endif
-                DEBUG(if (mod_debug & MOD_DEBUG_FRAME)
-                  printk("%s() rxd BCMTCH_EVENT_TYPE_FRAME\n", __func__);)
-#if THROTTLE_MOVE_FRAMES
-              if  (bcmtch_throttle_move_frame() == 0)
-#endif
-              {
-                    DEBUG(if ((mod_debug & MOD_DEBUG_CHANNEL) || (mod_debug & MOD_DEBUG_FRAME))
-                        printk("%s() line %d BCMTCH_EVENT_TYPE_FRAME   \n", __func__, __LINE__);)
-
-#if NAPA_USE_MTC
-                    touch_num = 0;
-                    for (index = 0 ; index < NAPA_MAX_TOUCH ; ++index) {
-                        input_mt_slot(pInputDev, index);
-                        input_mt_report_slot_state(pInputDev, MT_TOOL_FINGER, (napa_touch_status[index]));
-
-                        if (napa_touch_status[index]) {
-                            touch_num++;
-#if HW_BCM915500_AXIS_SWAP_X_Y
-                            input_report_abs(pInputDev, ABS_MT_POSITION_X, napa_touch_y[index]);
-                            input_report_abs(pInputDev, ABS_MT_POSITION_Y, napa_touch_x[index]);
-#else
-                            input_report_abs(pInputDev, ABS_MT_POSITION_X, napa_touch_x[index]);
-                            input_report_abs(pInputDev, ABS_MT_POSITION_Y, napa_touch_y[index]);
-#endif
-#if NAPA_MIMIC_MT
-                            input_mt_sync(pInputDev);
-#endif
-                        }
-                    }
-                    input_report_key(pInputDev, BTN_TOUCH, touch_num > 0);
-                    input_sync(pInputDev);
-#else
-#if NAPA_USE_TOUCH
-                    touch_num = 0;
-#endif
-                    for (index = 0 ; index < NAPA_MAX_TOUCH ; ++index) {
-                        if (napa_touch_status[index]) {
-#if NAPA_USE_TOUCH
-                            touch_num++;
-#endif
-
-#if NAPA_MIMIC_MT
-#if NAPA_USE_TOUCH
-#else
-                            input_report_abs(pInputDev, ABS_MT_TOUCH_MAJOR, 64);
-#endif
-#else
-                            input_report_abs(pInputDev, ABS_MT_TRACKING_ID, index);
-                            input_report_abs(pInputDev, ABS_MT_TOUCH_MAJOR, 1);
-                            input_report_abs(pInputDev, ABS_MT_WIDTH_MAJOR, 0);
-#endif
-#if HW_BCM915500_AXIS_SWAP_X_Y
-                            input_report_abs(pInputDev, ABS_MT_POSITION_X, napa_touch_y[index]);
-                            input_report_abs(pInputDev, ABS_MT_POSITION_Y, napa_touch_x[index]);
-#else
-                            input_report_abs(pInputDev, ABS_MT_POSITION_X, napa_touch_x[index]);
-                            input_report_abs(pInputDev, ABS_MT_POSITION_Y, napa_touch_y[index]);
-#endif
-#if NAPA_MIMIC_MT
-                            input_mt_sync(pInputDev);
-                        }
-#else
-                        }
-                        input_mt_sync(pInputDev);
-#endif
-                    }
-#if NAPA_USE_TOUCH
-                    input_report_key(pInputDev, BTN_TOUCH, touch_num > 0);
-#endif
-                    input_sync(pInputDev);
-#endif
-               }
-		    break;
+			bcmtch_dev_process_rom_event_frame(
+				(bcmtch_rom_event_frame_t *)ptch_event);
+			break;
 
 		case BCMTCH_EVENT_TYPE_TIMESTAMP:
-#if 0
-		    ptimestamp_event = (bcmtch_event_timestamp_t *) pmtc_event;
-		    {
-		        double milliseconds = ((DWORD)ptimestamp_event->timestamp)/100.0;
+			break;
 
-			if (ptimestamp_event->timestamp_type == BCMTCH_EVENT_TIMESTAMP_TYPE_SCAN_BEGIN)
-			{
-			    remoteLog.Msg(LOG_LEVEL_DETAIL,"BCMTCH_EVENT_TIMESTAMP: SCAN_BEGIN = %#.2f msec", milliseconds);
-		        }
-			if (ptimestamp_event->timestamp_type == BCMTCH_EVENT_TIMESTAMP_TYPE_SCAN_END)
-			{
-			    remoteLog.Msg(LOG_LEVEL_ALL,"BCMTCH_EVENT_TIMESTAMP: SCAN_END = %#.2f msec", milliseconds);
-			}
-			if (ptimestamp_event->timestamp_type == BCMTCH_EVENT_TIMESTAMP_TYPE_MTC_BEGIN)
-			{
-			    remoteLog.Msg(LOG_LEVEL_ALL,"BCMTCH_EVENT_TIMESTAMP: MTC_BEGIN = %#.2f msec", milliseconds);
-			}
-			if (ptimestamp_event->timestamp_type == BCMTCH_EVENT_TIMESTAMP_TYPE_MTC_END)
-			{
-			    remoteLog.Msg(LOG_LEVEL_ALL,"BCMTCH_EVENT_TIMESTAMP: MTC_END = %#.2f msec", milliseconds);
-			}
-                    }
+		default:
+			break;
+		}
 
-	            have_timestamps = true;
-//	            remoteLog.Msg(LOG_LEVEL_DETAIL,"timestamp = %f msec\n",
-//                    ((DWORD)ptimestamp_event->timestamp)/100.0);
-#else
+		/* Finished processing event, so update read pointer. */
+		bcmtch_inline_rom_channel_read_end(chan_hdr);
+	}
 
-                    DEBUG(if (mod_debug & MOD_DEBUG_CHANNEL)
-                        printk("%s() line %d BCMTCH_EVENT_TYPE_TIMESTAMP   \n", __func__, __LINE__);)
+	return ret_val;
+}
+
+static int32_t bcmtch_dev_write_rom_command(
+	tofe_command_e command,
+	uint32_t data,
+	uint16_t data16,
+	uint8_t flags)
+{
+	int32_t ret_val = BCMTCH_SUCCESS;
+	tofe_command_response_t cmd;
+	bcmtch_rom_channel_t *chan;
+
+	chan = bcmtch_data_p->p_rom_channels[TOFE_CHANNEL_ID_COMMAND];
+	if (chan == NULL) {
+		printk(KERN_ERR
+				"%s: command channel has not initialized!\n",
+				__func__);
+		return -ENXIO;
+	}
+
+	/* Send host to firmware message. */
+	ret_val = bcmtch_dev_request_power_mode(
+					BCMTCH_POWER_MODE_WAKE,
+					command);
+
+	/* Setup the command entry */
+	memset((void *)(&cmd), 0, sizeof(tofe_command_response_t));
+	cmd.flags	= flags;
+	cmd.command	= command;
+	cmd.data	= data;
+	cmd.result = data16;
+
+	/* Write sys to command channel */
+	bcmtch_inline_rom_channel_write_begin(&chan->rom_hdr);
+	ret_val = bcmtch_inline_rom_channel_write(&chan->rom_hdr, &cmd);
+	if (ret_val) {
+		printk(KERN_ERR
+				"%s: [%d] cmd channel write failed.\n",
+				__func__,
+				ret_val);
+		return ret_val;
+	}
+	bcmtch_inline_rom_channel_write_end(&chan->rom_hdr);
+
+	ret_val = bcmtch_dev_write_rom_channel(chan);
+	if (ret_val) {
+		printk(KERN_ERR
+				"%s: [%d] cmd channel write back FW failed.\n",
+				__func__,
+				ret_val);
+	}
+
+    /* release channel */
+	bcmtch_dev_request_power_mode(
+		BCMTCH_POWER_MODE_NOWAKE,
+		command);
+
+	return ret_val;
+}
+
 #endif
-		    break;
-
-                default:
-                    DEBUG(if (mod_debug & MOD_DEBUG_CHANNEL)
-                        printk("%s() line %d BCMTCH_EVENT_TYPE_... default \n", __func__, __LINE__);)
-		    break;
-            }
-#endif // TOUCHCON_MTC_FULL_FIRMWARE
-
-            // Finished processing event, so update read pointer.
-	    tofe_channel_read_end(&touch_channel->header);
-    }
-}
-
-
-void bcmtch_event_touch_down(int tag, unsigned short x, unsigned short y)
-{
-    DEBUG(if (mod_debug & MOD_DEBUG_CHANNEL)
-        printk("%s() line %d %08x\n", __func__, __LINE__,(unsigned int)pInputDev);)
-
-    if (tag < NAPA_MAX_TOUCH)
-    {
-        napa_touch_status[tag] = 2; // Down
-        napa_touch_x[tag]=x;
-        napa_touch_y[tag]=y;
-        napa_touch_event[tag] = BCMTCH_EVENT_TYPE_DOWN;
-    }
-}
-
-void bcmtch_event_touch_up(int tag, unsigned short x, unsigned short y)
-{
-    DEBUG(if (mod_debug & MOD_DEBUG_CHANNEL)
-        printk("%s() line %d %08x\n", __func__, __LINE__, (unsigned int)pInputDev);)
-
-    if (tag < NAPA_MAX_TOUCH)
-    {
-        napa_touch_status[tag] = 0;  // Up
-        napa_touch_x[tag]=0;
-        napa_touch_y[tag]=0;
-        napa_touch_event[tag] = BCMTCH_EVENT_TYPE_UP;
-    }
-}
-
-void bcmtch_event_touch_move(int tag, unsigned short x, unsigned short y)
-{
-    DEBUG(if (mod_debug & MOD_DEBUG_CHANNEL)
-        printk("%s() line %d %08x\n", __func__, __LINE__, (unsigned int)pInputDev);)
-
-    if (tag < NAPA_MAX_TOUCH)
-    {
-        napa_touch_status[tag] = 1; // Move
-        napa_touch_x[tag]=x;
-        napa_touch_y[tag]=y;
-        napa_touch_event[tag] = BCMTCH_EVENT_TYPE_MOVE;
-    }
-}
-
-#if THROTTLE_MOVE_FRAMES
-int bcmtch_throttle_move_frame(void)
-{
-   int i;
-   int num_ups_downs = 0;
-
-   for (i = 0; i < NAPA_MAX_TOUCH; i++)
-   {
-      DEBUG(if (mod_debug & MOD_DEBUG_THROTTLE)
-         printk("%s() event type %d\n", __func__, napa_touch_event[i]);)
-
-      if (napa_touch_event[i] == BCMTCH_EVENT_TYPE_DOWN ||
-          napa_touch_event[i] == BCMTCH_EVENT_TYPE_UP)
-      {
-         num_ups_downs++;
-      }
-
-      napa_touch_event[i] = BCMTCH_EVENT_TYPE_INVALID;
-   }
-
-   if (num_ups_downs > 0)
-   {
-      return 0;
-   }
-
-   g_num_move_frames++;
-
-   if (g_num_move_frames%MOVE_THROTTLE_FACTOR == 0)
-      return 0;
-
-   return 1;
-}
-#endif /* THROTTLE_MOVE_FRAMES */
-#endif /* NAPA_GPIO_PROCESSING */
-
-
-int bcmtch_get_soc_version(unsigned char *chipId, int chipIdBuffLen)
-{
-    if (chipIdBuffLen != 4)
-        return BCMTCH_ERROR;
-
-    *chipId = bcmtch_com_read_reg(NAPA_I2C_SLAVE_ADDR, TCC_REG_SPM_ChipID0);
-    ++chipId;
-
-    *chipId = bcmtch_com_read_reg(NAPA_I2C_SLAVE_ADDR, TCC_REG_SPM_ChipID1);
-    ++chipId;
-
-    *chipId = bcmtch_com_read_reg(NAPA_I2C_SLAVE_ADDR, TCC_REG_SPM_ChipID2);
-    ++chipId;
-
-    *chipId = bcmtch_com_read_reg(NAPA_I2C_SLAVE_ADDR, TCC_REG_SPM_RevisionID);
-    ++chipId;
-
-    return BCMTCH_SUCCESS;
-}
-
-unsigned char bcmtch_get_power_mode(void)
-{
-
-    unsigned char regVal;
-
-    regVal = bcmtch_com_read_reg(NAPA_I2C_SLAVE_ADDR, TCC_REG_SPM_PSR);
-
-    return regVal;
-}
-
-
-/* ------------------------ */
-/* - bcmtch com functions - */
-/* ------------------------ */
-
-int bcmtch_com_set_interface(bcmtch_com_e com_interface)
-{
-    int ret_code;
-
-    if (p_bcmtch_data == NULL) {
-        p_bcmtch_data = &bcmtch_data;
-    }
-
-    switch(com_interface) {
-
-        case BCMTCH_COM_I2C_INTERFACE:
-            p_bcmtch_data->com_interface = com_interface;
-            ret_code = BCMTCH_SUCCESS;
-            break;
-
-        case BCMTCH_COM_SPI_INTERFACE:
-            printk(KERN_ERR "ERROR: bcmtch spi interface not supported.\n");
-            ret_code = BCMTCH_ERROR;
-            break;
-
-        default:
-            printk(KERN_ERR "ERROR: bcmtch unknown com interface (%d) not supported.\n", com_interface);
-            ret_code = BCMTCH_ERROR;
-            break;
-    }
-
-    return ret_code;
-}
-
-int bcmtch_com_read(int slave_addr, int len, unsigned char *buffer)
-{
-    int ret_code;
-
-    switch(p_bcmtch_data->com_interface) {
-
-        case BCMTCH_COM_I2C_INTERFACE:
-            ret_code = bcmtch_i2c_read(slave_addr, len, buffer);
-            break;
-
-        default:
-            ret_code = BCMTCH_ERROR;
-            break;
-
-    }
-
-    return ret_code;
-}
-
-int bcmtch_com_write(int slave_addr, int len, unsigned char *buffer)
-{
-
-    int ret_code;
-
-    switch(p_bcmtch_data->com_interface) {
-
-        case BCMTCH_COM_I2C_INTERFACE:
-            ret_code = bcmtch_i2c_write(slave_addr, len, buffer);
-            break;
-
-        default:
-            ret_code = BCMTCH_ERROR;
-            break;
-
-    }
-
-    return ret_code;
-
-}
-
-unsigned char bcmtch_com_read_reg(int slave_addr, int reg)
-{
-
-    int ret_code;
-
-    switch(p_bcmtch_data->com_interface) {
-
-        case BCMTCH_COM_I2C_INTERFACE:
-            ret_code = bcmtch_i2c_read_reg(slave_addr, reg);
-            break;
-
-        default:
-            ret_code = BCMTCH_ERROR;
-            break;
-
-    }
-
-    return ret_code;
-
-}
-
-int bcmtch_com_write_reg(int slave_addr, int reg, unsigned char data)
-{
-
-    int ret_code;
-
-    switch(p_bcmtch_data->com_interface) {
-
-        case BCMTCH_COM_I2C_INTERFACE:
-            ret_code = bcmtch_i2c_write_reg(slave_addr, reg, data);
-            break;
-
-        default:
-            ret_code = BCMTCH_ERROR;
-            break;
-
-    }
-
-    return ret_code;
-
-}
-
-int bcmtch_com_write_mem( int mem_addr, int len, void *data)
-{
-
-    int ret_code;
-
-    switch(p_bcmtch_data->com_interface) {
-
-        case BCMTCH_COM_I2C_INTERFACE:
-            ret_code = bcmtch_i2c_write_mem(mem_addr, len, data);
-            break;
-
-        default:
-            ret_code = BCMTCH_ERROR;
-            break;
-
-    }
-
-    return ret_code;
-
-
-}
-
-int bcmtch_com_read_mem(int mem_addr, int len, void *data)
-{
-
-    int ret_code;
-
-    switch(p_bcmtch_data->com_interface) {
-
-        case BCMTCH_COM_I2C_INTERFACE:
-            ret_code = bcmtch_i2c_read_mem(mem_addr, len, data);
-            break;
-
-        default:
-            ret_code = BCMTCH_ERROR;
-            break;
-
-    }
-
-    return ret_code;
-
-}
-
-int bcmtch_com_write_mem_reg32(int mem_addr, int data)
-{
-
-    int ret_code;
-
-    switch(p_bcmtch_data->com_interface) {
-
-        case BCMTCH_COM_I2C_INTERFACE:
-            ret_code = bcmtch_i2c_write_mem_reg32(mem_addr, data);
-            break;
-
-        default:
-            ret_code = BCMTCH_ERROR;
-            break;
-
-    }
-
-    return ret_code;
-}
-
-int bcmtch_com_read_mem_reg32( int mem_addr, void *data)
-{
-
-    int ret_code;
-
-    switch(p_bcmtch_data->com_interface) {
-
-        case BCMTCH_COM_I2C_INTERFACE:
-            ret_code = bcmtch_i2c_read_mem_reg32(mem_addr, data);
-            break;
-
-        default:
-            ret_code = BCMTCH_ERROR;
-            break;
-
-    }
-
-    return ret_code;
-}
-
-/* ------------------------ */
-/* - bcmtch os functions - */
-/* ------------------------ */
-
-int bcmtch_i2c_read(int slave_addr, int len, unsigned char *buffer)
-{
-    int count=0;
-
-   struct i2c_client *p_i2c_client;
-
-   if (slave_addr == gp_i2c_client_spm->addr)
-      p_i2c_client = gp_i2c_client_spm;
-   else if (slave_addr == gp_i2c_client_ahb->addr)
-      p_i2c_client = gp_i2c_client_ahb;
-   else
-   {
-      printk(KERN_ERR "%s() Invalid slave address 0x%x\n",
-             __func__, slave_addr);
-      return -1;
-   }
-
-   count = i2c_master_recv(p_i2c_client, buffer, len);
-
-   if (count != len)
-   {
-      printk(KERN_ERR "%s() Unable to send i2c slave 0x%x count %d\n",
-             __func__, p_i2c_client->addr, count);
-   }
-
-    return count; // Number of bytes read
-}
-
-int bcmtch_i2c_write(int slave_addr, int length, unsigned char *buffer)
-{
-    int count=0;
-
-   struct i2c_client *p_i2c_client;
-
-   if (slave_addr == gp_i2c_client_spm->addr)
-   {
-      p_i2c_client = gp_i2c_client_spm;
-   }
-   else if (slave_addr == gp_i2c_client_ahb->addr)
-   {
-      p_i2c_client = gp_i2c_client_ahb;
-   }
-   else
-   {
-      printk(KERN_ERR "%s() Invalid slave address 0x%x\n",
-             __func__, slave_addr);
-      return -1;
-   }
-   DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
-      printk("%s() sending to slave 0x%x\n", __func__, p_i2c_client->addr);)
-
-   count = i2c_master_send(p_i2c_client, buffer, length);
-
-   DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
-      printk("%s() i2c_master_send() returned %d\n", __func__, count);)
-
-   if (count != length)
-   {
-      printk(KERN_ERR "%s() Unable to send i2c slave 0x%x count %d\n",
-             __func__, p_i2c_client->addr, count);
-   }
-
-   return count;  // Number of bytes written
-}
-
-unsigned char bcmtch_i2c_read_reg(int slave_addr, int reg)
-{
-   struct i2c_msg       xfer[2];
-   unsigned char        rbuffer;
-   unsigned char        wbuffer;
-
-    DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
-       printk("%s() reading register %d\n", __func__, reg);)
-
-#if NAPA_DONT_USE_12C_TRANSFER
-    int count=0;
-    unsigned char buffer[2];
-
-   // Write register that we want to read
-   buffer[0] = reg;
-   count = bcmtch_i2c_write(slave_addr, 1, buffer);
-
-   // Read register
-   count = bcmtch_i2c_read(slave_addr, 1, buffer);
-
-#else
-
-   // Write register that we want to read
-   wbuffer = reg;
-
-   /* Write register */
-   xfer[0].addr = slave_addr;
-   xfer[0].len = 1;
-   xfer[0].flags = 0;
-   xfer[0].buf = &wbuffer;
-
-   /* Read data */
-   xfer[1].addr = slave_addr;
-   xfer[1].flags = I2C_M_RD;
-   xfer[1].len = 1;
-   xfer[1].buf = &rbuffer;
-
-   if (i2c_transfer(gp_i2c_client_spm->adapter, xfer, 2) != 2) {
-       dev_err(&gp_i2c_client_spm->dev, "%s: i2c transfer failed\n", __func__);
-       return(-EIO);
-   }
-
-   return(rbuffer);
-#endif
-}
-
-int bcmtch_i2c_write_reg(int slave_addr, int reg, unsigned char data)
-{
-    struct i2c_msg       xfer[1];
-    unsigned char        buffer[2];
-
-    DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
-       printk("%s() reg = %d data = %d\n", __func__, reg, data);)
-
-#if NAPA_DONT_USE_12C_TRANSFER
-   int count=0;
-   unsigned char buffer[2];
-
-   buffer[0] = (unsigned char)reg;
-   buffer[1] = data;
-
-   count = bcmtch_i2c_write(slave_addr, 2, buffer);
-
-   DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
-   {
-      printk("%s() count = %d\n", __func__, count);
-   })
-
-   return count;  // Number of bytes written
-#else
-
-   // Write register and data
-   buffer[0] = (unsigned char)reg;
-   buffer[1] = data;
-
-   /* Write register */
-   xfer[0].addr = slave_addr;
-   xfer[0].len = 2;
-   xfer[0].flags = 0;
-   xfer[0].buf = buffer;
-
-   if (i2c_transfer(gp_i2c_client_spm->adapter, xfer, 1) != 1) {
-       dev_err(&gp_i2c_client_spm->dev, "%s: i2c transfer failed\n", __func__);
-       return(-EIO);
-   }
-
-   return(2);  // Number of bytes written
-#endif
-}
-
-int bcmtch_i2c_write_mem( int ahb_addr, int len, void *data)     // port note, WriteAHBI2C ahb_addr was DWORD
-{
-   int count;
-   int length = 8;
-   unsigned char *I2CWritePkt;
-   struct i2c_msg       xfer[2];
-   struct i2c_client    *p_i2c_client;
-
-   //allocate buffer for the num_bytes
-   //ATT: we need one byte more for the offset
-   I2CWritePkt = kzalloc(len + 1, GFP_KERNEL);
-
-   //set the address
-   I2Cheader[1] = (unsigned char)(ahb_addr & 0xFF);
-   I2Cheader[2] = (unsigned char)((ahb_addr & 0xFF00) >> 8);
-   I2Cheader[3] = (unsigned char)((ahb_addr & 0xFF0000) >> 16);
-   I2Cheader[4] = (unsigned char)((ahb_addr & 0xFF000000) >> 24);
-   //set the length
-   I2Cheader[5] = (unsigned char)(len & 0xFF);
-   I2Cheader[6] = (unsigned char)((len & 0xFF00) >> 8);
-   //set the command
-   I2Cheader[7] = (unsigned char)MahbWrite;
-
-   count = (int)sizeof(I2Cheader);
-
-#if NAPA_DONT_USE_12C_TRANSFER
-   DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
-      printk("%s() ahb_addr %d len %d before count = %d\n", __func__, ahb_addr, len, count);)
-
-   count = bcmtch_i2c_write(NAPA_I2C_AHB_SLAVE_ADDR, length, (unsigned char *)I2Cheader);
-   DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
-      printk("%s() after count = %d\n", __func__, count);)
-
-   if (count < 0)
-   {
-      printk(KERN_ERR "%s() error,  bcmtch_i2c_write failed, count = %d\n", __func__, count);
-      return count;
-   }
-
-   /* Should we wait here also a bit? */
-
-   I2CWritePkt[0] = I2C_REG_WFIFO_DATA;    //select the write FiFo
-   /* Prepare the dat packet, select the write FiFo. */
-   memcpy(I2CWritePkt + 1, data, len);
-
-   /* Send the data (payload). */
-   count = bcmtch_i2c_write(NAPA_I2C_AHB_SLAVE_ADDR, (int)len+1, (unsigned char *)I2CWritePkt);
-
-#else
-
-   DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
-      printk("%s() ahb_addr 0x%x len %d before count = %d\n", __func__, ahb_addr, len, count);)
-
-   /* Write DMA header */
-   xfer[0].addr = NAPA_I2C_AHB_SLAVE_ADDR;
-   xfer[0].len = length;
-   xfer[0].flags = 0;
-   xfer[0].buf = I2Cheader;
-
-   I2CWritePkt[0] = I2C_REG_WFIFO_DATA;    //select the write FiFo
-   /* Prepare the dat packet, select the write FiFo. */
-   memcpy(I2CWritePkt + 1, data, len);
-
-   /* Write DMA data */
-   xfer[1].addr = NAPA_I2C_AHB_SLAVE_ADDR;
-   xfer[1].len = (int)len+1;
-   xfer[1].flags = 0;
-   xfer[1].buf = I2CWritePkt;
-
-   if (xfer[0].addr == gp_i2c_client_spm->addr)
-   {
-      p_i2c_client = gp_i2c_client_spm;
-   }
-   else if (xfer[0].addr == gp_i2c_client_ahb->addr)
-   {
-      p_i2c_client = gp_i2c_client_ahb;
-   }
-   else
-   {
-      printk(KERN_ERR "%s() Invalid slave address 0x%x\n",
-             __func__, xfer[0].addr);
-      return -1;
-   }
-
-   if (i2c_transfer(p_i2c_client->adapter, xfer, 2) != 2) {
-       dev_err(&p_i2c_client->dev, "%s: i2c transfer failed\n", __func__);
-       return -EIO;
-   }
-
-   count = (int)len+1;
-#endif
-
-   if (count < 0)
-   {
-      printk(KERN_ERR "ERROR: Napa AHB write failed, count = %d\n", count);
-   }
-   else if (count == 0)
-   {
-      printk(KERN_ERR "ERROR: Napa AHB write failed - no bytes written, do you have right slave address\n");
-   }
-   else if (count != (len + 1))
-   {
-      printk(KERN_ERR "ERROR: Napa AHB write failed - only a partial number of bytes written, (%d)instead of (%d)\n",
-      count,len+1);
-   }
-   else
-   {
-      DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
-         printk("%s() line %d ok!\n", __func__, __LINE__);)
-   }
-
-   kfree(I2CWritePkt);
-
-   return count;
-}
-
-int bcmtch_i2c_read_mem(int ahb_addr, int len, void *data)     /* port note, ReadAHBI2C ahb_addr was DWORD */
-{
-   unsigned char I2CreadPkt;
-   int timeOut = 0;
-   unsigned char status;
-   int read_counter = 0;
-   struct i2c_msg       xfer[3];
-   unsigned char        buffer[2];
-   struct i2c_client    *p_i2c_client;
-
-   //set the address
-   I2Cheader[1] = (unsigned char)(ahb_addr & 0xFF);
-   I2Cheader[2] = (unsigned char)((ahb_addr & 0xFF00) >> 8);
-   I2Cheader[3] = (unsigned char)((ahb_addr & 0xFF0000) >> 16);
-   I2Cheader[4] = (unsigned char)((ahb_addr & 0xFF000000) >> 24);
-   //set the length
-   I2Cheader[5] = (unsigned char)(len & 0xFF);
-   I2Cheader[6] = (unsigned char)((len & 0xFF00) >> 8);
-   //set the command
-   I2Cheader[7] = (unsigned char)MahbRead;
-
-#if NAPA_DONT_USE_12C_TRANSFER
-   count = bcmtch_i2c_write(NAPA_I2C_AHB_SLAVE_ADDR, (int)sizeof(I2Cheader), (unsigned char *)I2Cheader);
-#else
-
-   /* Write register */
-   xfer[0].addr = NAPA_I2C_AHB_SLAVE_ADDR;
-   xfer[0].len = (int)sizeof(I2Cheader);
-   xfer[0].flags = 0;
-   xfer[0].buf = I2Cheader;
-
-   // Write register that we want to read
-   buffer[0] = I2C_REG_STATUS;
-
-   /* Write register */
-   xfer[1].addr = NAPA_I2C_AHB_SLAVE_ADDR;
-   xfer[1].len = 1;
-   xfer[1].flags = 0;
-   xfer[1].buf = buffer;
-
-   /* Read data */
-   xfer[2].addr = NAPA_I2C_AHB_SLAVE_ADDR;
-   xfer[2].flags = I2C_M_RD;
-   xfer[2].len = 1;
-   xfer[2].buf = buffer;
-
-   if (xfer[0].addr == gp_i2c_client_spm->addr)
-   {
-      p_i2c_client = gp_i2c_client_spm;
-   }
-   else if (xfer[0].addr == gp_i2c_client_ahb->addr)
-   {
-      p_i2c_client = gp_i2c_client_ahb;
-   }
-   else
-   {
-      printk(KERN_ERR "%s() Invalid slave address 0x%x\n",
-             __func__, xfer[0].addr);
-      return -1;
-   }
-
-   if (i2c_transfer(p_i2c_client->adapter, xfer, 3) != 3) {
-       dev_err(&p_i2c_client->dev, "%s: i2c transfer failed\n", __func__);
-       return -EIO;
-   }
-
-   status = buffer[0];
-#endif
-
-   /* Check the FiFo if result is available and we can start reading. */
-
-   while (status != 1)
-   {
-      //bcmtch_sleep_ms(1);
-      timeOut++;
-      if (timeOut > 1000)
-      {
-         printk(KERN_ERR "ERROR: Napa i2c ahb read timeout\n");
-         return 0;
-      }
-      read_counter++;
-
-      if (read_counter > 3)
-         break;
-
-      status = bcmtch_i2c_read_reg(NAPA_I2C_AHB_SLAVE_ADDR, I2C_REG_STATUS);
-      DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
-         printk("%s() line %d status %d\n", __func__, __LINE__, status);)
-
-      /* PPTEST CLEAN UP NEEDED HERE! */
-      if (status == 1)
-         break;
-   }                 //I2C complete ?
-
-   DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
-      printk("%s() line %d leaving while() loop\n", __func__, __LINE__);)
-
-
-   I2CreadPkt = I2C_REG_RFIFO_DATA;
-#if NAPA_DONT_USE_12C_TRANSFER
-   count = bcmtch_i2c_write(NAPA_I2C_AHB_SLAVE_ADDR,
-                          (int)sizeof(I2CreadPkt),
-                          (unsigned char *)&I2CreadPkt);
-
-   count = bcmtch_i2c_read(NAPA_I2C_AHB_SLAVE_ADDR, len, (unsigned char *)data);
-#else
-
-   /* Write register */
-   xfer[0].addr = NAPA_I2C_AHB_SLAVE_ADDR;
-   xfer[0].len = (int)sizeof(I2CreadPkt);
-   xfer[0].flags = 0;
-   xfer[0].buf = (unsigned char *)&I2CreadPkt;
-
-   /* Read data */
-   xfer[1].addr = NAPA_I2C_AHB_SLAVE_ADDR;
-   xfer[1].flags = I2C_M_RD;
-   xfer[1].len = len;
-   xfer[1].buf = data;
-
-   if (i2c_transfer(p_i2c_client->adapter, xfer, 2) != 2) {
-       dev_err(&p_i2c_client->dev, "%s: i2c transfer failed\n", __func__);
-       return -EIO;
-   }
-#endif
-
-   DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
-      printk("%s() line %d count %d data %d\n", __func__, __LINE__, len, (int)data);)
-   return len;
-}
-
-int bcmtch_i2c_write_mem_reg32(int ahb_addr, int data)
-{
-   int len;
-   int count;
-
-   len = sizeof(int);
-
-   count = bcmtch_i2c_write_mem(ahb_addr, len, (unsigned char *)&data);
-
-   return count;
-}
-
-int bcmtch_i2c_read_mem_reg32( int ahb_addr, void *data)
-{
-   int len;
-   int count;
-
-   len = sizeof(int);
-
-   count = bcmtch_i2c_read_mem(ahb_addr, len, (unsigned char *)data);
-   DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
-      printk("%s() returning %d read: %d\n", __func__, count, (int)data);)
-
-   return count;
-}
-
-int bcmtch_mutex_lock(int mutex)
-{
-    mutex_lock(&gp_napa_i2c->i2c_mutex);
-    return 0;
-}
-
-int bcmtch_mutex_release(int mutex)
-{
-    mutex_unlock(&gp_napa_i2c->i2c_mutex);
-    return 0;
-}
-
-void bcmtch_sleep_ms(int ms)
-{
-    msleep(ms);
-}
-
-//#ifdef ADD_POLLING
-#if ADD_INTERRUPT_HANDLING == 0
-
-void bcmtch_poll(struct napa_i2c *p_napa_i2c)
-{
-   //g_debug_poll_count++;
-
-   //bcmtch_setup_poll_timer(p_napa_i2c, 2);
-   if (mod_debug == MOD_DEBUG_I2C_DOWNLOAD)
-      msleep(500);
-   else
-      usleep_range(2000, 2500);
-
-   queue_work(p_napa_i2c->p_ktouch_wq, &p_napa_i2c->work);
-}
-
-/*
-   init_timer(&stats_timer);
-   stats_timer.expires = jiffies+IDT77105_STATS_TIMER_PERIOD;
-   stats_timer.function = idt77105_stats_timer_func;
-   add_timer(&stats_timer);
-*/
-
-int bcmtch_setup_poll_timer(struct napa_i2c *p_napa_i2c, int delay)
-{
-   init_timer(&p_napa_i2c->poll_timer);
-   p_napa_i2c->poll_timer.expires   = jiffies + delay*HZ;
-   p_napa_i2c->poll_timer.function = bcmtch_poll;
-   p_napa_i2c->poll_timer.data     = (void *)p_napa_i2c;
-   DEBUG(if (mod_debug == MOD_DEBUG_I2C_DOWNLOAD)
-      printk("%s() adding timer\n", __func__);)
-   add_timer(&p_napa_i2c->poll_timer);
-}
-#endif
-
-static
-int32_t
-bcmtch_firmware_download(struct napa_i2c *p_device, uint16_t len, const uint8_t *p_data, uint32_t addr)
-{
-   printk(KERN_INFO "Downloading %d bytes from 0x%x to address 0x%x\n", len, (unsigned int)p_data, addr);
-
-   if (addr == VECTORS_OFFSET)
-   {
-      g_vector_size = len;
-      memcpy(gp_vector, p_data, len);
-   }
-
-   if (addr == ROM_OFFSET)
-   {
-      g_code_size = len;
-      memcpy(gp_code, p_data, len);
-   }
-
-   if (addr == DATA_OFFSET)
-   {
-      g_data_size = len;
-      memcpy(gp_data, p_data, len);
-#if TOFE_CHAN_PROCESSING
-      tofe_tool.m_p_image      = gp_data;
-      tofe_tool.m_image_size   = len;
-      tofe_tool.m_image_loaded = 1; // true
-#endif
-   }
-   return 0;
-}
-
-static
-int32_t
-bcmtch_i2c_firmware_load(struct napa_i2c *p_napa_i2c, const char *p_name, int addr)
-{
-   const struct firmware *fw;
-   int32_t err;
-
-   printk(KERN_INFO "%s calling request_firmware for %s\n", __func__, p_name);
-
-   /** call kernel to start firmware load **/
-   /* request_firmware(const struct firmware **fw,
-    *                  const char *name,
-    *                  struct device *device);
-    */
-   err = request_firmware(&fw, p_name, &p_napa_i2c->p_i2c_client1->dev);
-   if (err)
-   {
-      printk(KERN_ERR "%s: Firmware request failed (%d)\n", __func__, err);
-      return(err);
-   }
-
-   /** download to chip **/
-   err = bcmtch_firmware_download(p_napa_i2c, fw->size, fw->data, addr);
-
-   /** free kernel structure */
-   release_firmware(fw);
-
-   return(err);
-}
-
-int bcmtch_write_regs(struct napa_i2c *p_napa_i2c,
-                      int slave_addr,
-                      u8 *p_reg,
-                      u8 *p_val,
-                      int length)
-{
-   u8  buf[10];
-   int i;
-   int ret = 0;
-   struct i2c_client *p_i2c_client;
-
-   if (slave_addr == p_napa_i2c->p_i2c_client->addr)
-      p_i2c_client = p_napa_i2c->p_i2c_client;
-   else if (slave_addr == p_napa_i2c->p_i2c_client1->addr)
-      p_i2c_client = p_napa_i2c->p_i2c_client1;
-   else
-   {
-      printk(KERN_ERR "%s() Invalid slave address 0x%x\n",
-             __func__, slave_addr);
-      return -1;
-   }
-
-   for (i = 0; i < length; i++)
-   {
-      buf[0] = p_reg[i];
-      /* Sending to the slave is an I2C write operation. */
-      ret = i2c_master_send(p_i2c_client, buf, 1);
-
-      if (ret != 1)
-      {
-         printk(KERN_ERR "%s() Unable to send i2c slave 0x%x reg 0x%x, ret %d\n",
-                __func__, p_i2c_client->addr, p_reg[i], ret);
-         return -1;
-      }
-
-   }
-   return 0;
-}
-
-
-
-int bcmtch_read_regs(struct napa_i2c *p_napa_i2c,
-                     int slave_addr,
-                     u8 *p_reg,
-                     u8 *p_val,
-                     int length)
-{
-   u8  buf[10];
-   int i;
-   int ret = 0;
-   struct i2c_client *p_i2c_client;
-
-   if (slave_addr == p_napa_i2c->p_i2c_client->addr)
-      p_i2c_client = p_napa_i2c->p_i2c_client;
-   else if (slave_addr == p_napa_i2c->p_i2c_client1->addr)
-      p_i2c_client = p_napa_i2c->p_i2c_client1;
-   else
-   {
-      printk(KERN_ERR "%s() Invalid slave address 0x%x\n",
-             __func__, slave_addr);
-      return -1;
-   }
-
-   for (i = 0; i < length; i++)
-   {
-      buf[0] = p_reg[i];
-      /* Sending to the slave is an I2C write operation. */
-      ret = i2c_master_send(p_i2c_client, buf, 1);
-
-      if (ret != 1)
-      {
-         printk(KERN_ERR "%s() Unable to send i2c slave 0x%x reg 0x%x, ret %d\n",
-                __func__, p_i2c_client->addr, p_reg[i], ret);
-         return -1;
-      }
-
-      /* Receiving from the slave still requires the sending of a I2C message
-         but is an I2C read operation.                                         */
-      ret = i2c_master_recv(p_i2c_client, buf, 1);
-      if (ret != 1)
-      {
-         printk(KERN_ERR "%s() Unable to recv i2c slave 0x%x reg 0x%x, ret %d\n",
-                __func__, p_i2c_client->addr, p_reg[i], ret);
-         return -2;
-      }
-      else
-      {
-         DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
-            printk("%s() slave 0x%x Reg 0x%x val %02x\n",
-                   __func__, p_i2c_client->addr, p_reg[i], buf[0]);)
-      }
-
-      p_val[i] = buf[0];
-   }
-   return 0;
-}
-
-#if 0
-int bcmtch_get_chip_info(struct napa_i2c *p_napa_i2c)
-{
-   int ret    = 0;
-   int length = 4;
-   u8 chip_regs[4] =
-   {
-      BCM_TSC_CHIP_ID0,
-      BCM_TSC_CHIP_ID1,
-      BCM_TSC_CHIP_ID2,
-      BCM_TSC_CHIP_REV,
-   };
-   u8 chip_vals[4];
-
-   ret = bcmtch_read_regs(p_napa_i2c,
-                          BCM_TSC_SPM_SLAVE,
-                          chip_regs,
-                          chip_vals,
-                          length);
-   if (ret < 0)
-   {
-      printk("%s() failed to retrieve chip info\n", __func__);
-   }
-   else
-   {
-      DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
-         printk("%s() bcm915500 chip info: %2x%2x%2x revision: %d\n",
-                __func__, chip_vals[0], chip_vals[3], chip_vals[2], chip_vals[1]);)
-   }
-
-   length = 1;
-   ret = bcmtch_write_regs(p_napa_i2c,
-                           BCM_TSC_AHB_SLAVE,
-                           chip_regs,
-                           chip_vals,
-                           length);
-
-   return ret;
-}
-#endif
-
-static struct input_dev *bcmtch_allocate_input_dev(void)
-{
-   int index;
-   int ret;
-   struct input_dev *pInputDev = NULL;
-
-   DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
-       printk("%s() line %d %08x  BEGIN....\n", __func__, __LINE__,(unsigned int)pInputDev);)
-
-   for (index = 0 ; index < NAPA_MAX_TOUCH ; ++index) {
-       napa_touch_status[index]=0;
-       napa_touch_event[index] = BCMTCH_EVENT_TYPE_INVALID;
-   }
-
-   pInputDev = input_allocate_device();
-   if (pInputDev == NULL)
-   {
-      printk("%s() Failed to allocate input device\n", __func__);
-      return NULL;
-   }
-
-   pInputDev->name = "BCM915500 Touch Screen";
-   pInputDev->phys = "I2C";
-   pInputDev->id.bustype = BUS_I2C;
-   pInputDev->id.vendor = 0x0EEF;
-   pInputDev->id.product = 0x0020;
-   pInputDev->id.version = 0x0000;
-
-#if NAPA_USE_MTC
-   set_bit(EV_ABS, pInputDev->evbit);
-   set_bit(EV_KEY, pInputDev->evbit);
-   set_bit(BTN_TOUCH, pInputDev->keybit);
-#if NAPA_MIMIC_MT
-   __set_bit(INPUT_PROP_DIRECT, pInputDev->propbit);
-#else
-   set_bit(BTN_TOOL_FINGER, pInputDev->keybit);
-#endif
-
-   input_mt_init_slots(pInputDev, NAPA_MAX_TOUCH);
-
-   input_set_abs_params(pInputDev, ABS_MT_POSITION_X, 0, NAPA_MAX_X, 0, 0);
-   input_set_abs_params(pInputDev, ABS_MT_POSITION_Y, 0, NAPA_MAX_Y, 0, 0);
-#else
-   set_bit(EV_SYN, pInputDev->evbit);
-   set_bit(EV_ABS, pInputDev->evbit);
-
-#if NAPA_USE_TOUCH
-   set_bit(EV_KEY, pInputDev->evbit);
-   set_bit(BTN_TOUCH, pInputDev->keybit);
-#else
-   input_set_abs_params(pInputDev, ABS_MT_TOUCH_MAJOR, 0, 64, 0, 0);
-#endif
-
-   input_set_abs_params(pInputDev, ABS_MT_POSITION_X, 0, NAPA_MAX_X, 0, 0);
-   input_set_abs_params(pInputDev, ABS_MT_POSITION_Y, 0, NAPA_MAX_Y, 0, 0);
-#if NAPA_MIMIC_MT
-   __set_bit(INPUT_PROP_DIRECT, pInputDev->propbit);
-#else
-   input_set_abs_params(pInputDev, ABS_MT_WIDTH_MAJOR, 0, 255, 0, 0);
-   input_set_abs_params(pInputDev, ABS_MT_TRACKING_ID, 0, NAPA_MAX_TOUCH-1, 0, 0);
-#endif
-#endif
-
-   input_set_events_per_packet(pInputDev, 10 * NAPA_MAX_TOUCH);
-   ret = input_register_device(pInputDev);
-   if (ret)
-   {
-      printk("%s() Unable to register input device\n", __func__);
-      input_free_device(pInputDev);
-      pInputDev = NULL;
-      return NULL;
-   }
-
-   DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
-       printk("%s() line %d %08x  END....\n", __func__, __LINE__, (unsigned int)pInputDev);)
-
-   return pInputDev;
-}
-
-/*
-struct napa_i2c
-{
-   struct mutex i2c_mutex;
-   struct i2c_client *p_i2c_client;
-   struct i2c_client *p_i2c_client1;
-   int pagesize;
-
-   int gpio_int;
-   struct workqueue_struct *p_ktouch_wq;
-   struct work_struct work;
-
-   struct bcm915500_platform_data platform_data;
+/* -------------------------------------- */
+/* -	End of Dual Channel Functions	- */
+/* -------------------------------------- */
+
+
+struct firmware_load_info_t_ {
+	uint8_t *filename;
+	uint32_t addr;
+	uint32_t flags;
 };
-*/
-static void bcmtch_i2c_wq(struct work_struct *work)
-{
-   struct napa_i2c *p_napa_i2c;
-   struct i2c_client *p_i2c_client;
-   int gpio;
+#define bcmtch_firmware_load_info_t struct firmware_load_info_t_
 
-#if DEBUG_INTERFACE_TUNING
-   unsigned long d_i_t_liq = 0;
-   unsigned long d_i_t_ji = jiffies;
-   unsigned long d_i_t_jo = 0;
-
-   d_i_t_fc = 0;
-#endif
-   struct timespec begin, end;
-
-   DEBUG(if (mod_debug & MOD_DEBUG_TIMES)
-       {getrawmonotonic(&begin);})
-
-   if (work == NULL)
-   {
-      printk(KERN_ERR "%s() work == NULL\n", __func__);
-      return;
-   }
-
-   p_napa_i2c = container_of(work, struct napa_i2c, work);
-
-   if (p_napa_i2c == NULL)
-   {
-      printk(KERN_ERR "%s() p_napa_i2c == NULL\n", __func__);
-      return;
-   }
-
-   p_i2c_client = p_napa_i2c->p_i2c_client;
-
-   if (p_i2c_client == NULL)
-   {
-      printk(KERN_ERR "%s() p_i2c_client == NULL\n", __func__);
-      return;
-   }
-
-   gpio = irq_to_gpio(p_i2c_client->irq);
-
-   mutex_lock(&p_napa_i2c->mutex_wq);
-
-#if ADD_INTERRUPT_HANDLING
-   /* continue recv data while GPIO is pulled low */
-#if NAPA_INT_WHILE
-   while (!gpio_get_value(gpio))
-#else
-   if (!gpio_get_value(gpio))
-#endif
-   {
-      /* Interrupt handler code here. */
-#if DEBUG_INTERFACE_TUNING
-      d_i_t_liq++;
-#endif
-      bcmtch_interrupt();
-#if NAPA_INT_WHILE
-      schedule();
-   }
-#else
-   }
-#endif
-
-#else
-   bcmtch_interrupt();
-
-   bcmtch_poll(p_napa_i2c);
-#endif
-
-#if DEBUG_INTERFACE_TUNING
-   d_i_t_jo = jiffies;
-   printk(KERN_ERR "l[%d] f[%d] %x %x %x\n", d_i_t_liq, d_i_t_fc, d_i_t_i_i, d_i_t_ji, d_i_t_jo);
-   d_i_t_i_i = 0;
-#endif
-
-   DEBUG(if (mod_debug & MOD_DEBUG_TIMES)
-        {getrawmonotonic(&end);
-        printk("%s() : b=%d:%d  e=%d:%d\n", __func__, (int)begin.tv_sec, (int)begin.tv_nsec, (int)end.tv_sec, (int)end.tv_nsec);})
-
-   mutex_unlock(&p_napa_i2c->mutex_wq);
-}
-
-static irqreturn_t bcmtch_i2c_interrupt_handler(int irq, void *dev_id)
-{
-   struct napa_i2c *p_napa_i2c = (struct napa_i2c *)dev_id;
-
-#if DEBUG_INTERFACE_TUNING
-   if(d_i_t_i_i == 0)
-       d_i_t_i_i = jiffies;
-#endif
-
-
-   DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
-      printk("%s() with irq:%d\n", __func__, irq);)
-
-   if (p_napa_i2c == NULL)
-   {
-      printk(KERN_ERR "%s() p_napa_i2c == NULL\n", __func__);
-      return IRQ_HANDLED;
-   }
-
-   if (p_napa_i2c->p_ktouch_wq == NULL)
-   {
-      printk(KERN_ERR "%s() p_napa_i2c->p_ktouch_wq == NULL\n", __func__);
-      return IRQ_HANDLED;
-   }
-
-   /* postpone I2C transactions to the workqueue as it may block */
-   queue_work(p_napa_i2c->p_ktouch_wq, &p_napa_i2c->work);
-
-   return IRQ_HANDLED;
-}
-
-int bcmtch_init_hw(struct napa_i2c *p_napa_i2c)
-{
-   int ret;
-
-   ret = bcmtch_init(p_napa_i2c->p_i2c_client,
-                   p_napa_i2c->p_i2c_client1);
-   if (ret != 0)
-   {
-      printk(KERN_ERR "bcm915500_i2c_ts.c %s(): bcmtch_init() failed, ret %d\n",
-             __func__, ret);
-      return -1;
-   }
-   else
-   {
-      DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
-         printk("%s() succeeded\n", __func__);)
-   }
-   return 0;
-}
-
-
-static struct platform_device napa_core_device =
-{
-   .name              = BCM915500_TSC_NAME,
-   .id                = -1,
-   .dev.platform_data = NULL,
+static const bcmtch_firmware_load_info_t bcmtch_binaries[] = {
+	{"bcmtchfw_bin", 0, BCMTCH_FIRMWARE_FLAGS_COMBI},
+	{0, 0, 0}
 };
 
-static int bcmtch_i2c_probe(struct i2c_client *p_i2c_client,
-                          const struct i2c_device_id *id)
+static int32_t bcmtch_dev_wait_for_firmware_ready(int32_t count)
 {
-   int ret = 0;
-   struct bcm915500_platform_data *p_plat_data;
-   struct i2c_client  *p_new_i2c_client;
-   struct i2c_adapter *p_i2c_adapter;
-   DEBUG(unsigned char reg_value;)
+	int32_t ret_val = BCMTCH_SUCCESS;
+	uint8_t ready;
 
-   printk(KERN_INFO "\n%s %s %s \n", __func__, __DATE__, __TIME__);
+	do {
+		ret_val =
+		    bcmtch_com_read_spm(BCMTCH_SPM_REG_MSG_TO_HOST, &ready);
+	} while ((!ret_val) && (ready != TOFE_MESSAGE_FW_READY) && (count--));
 
-   if (gp_napa_i2c != NULL)
-   {
-      printk(KERN_INFO "PPTEST %s already called\n", __func__);
-      return 0;
-   }
+	if (count <= 0) {
+		printk(KERN_ERR
+		       "ERROR: Failed to communicate with Napa FW. Error: 0x%x\n",
+		       ready);
+		ret_val = -1;
+	}
 
-   printk(KERN_INFO "%s called, p_i2c_client->name %s\n", __func__, p_i2c_client->name);
+	return ret_val;
+}
 
-   /* Setup bcmtch com api functions. */
-   bcmtch_com_set_interface(BCMTCH_COM_I2C_INTERFACE);
+static int32_t bcmtch_dev_run_firmware(void)
+{
+	int32_t ret_val = BCMTCH_SUCCESS;
 
-   p_plat_data = (struct bcm915500_platform_data *)p_i2c_client->dev.platform_data;
+	ret_val = bcmtch_dev_reset(BCMTCH_RESET_MODE_SOFT_CLEAR);
+	ret_val |=
+		bcmtch_com_write_sys32(
+			BCMTCH_ADDR_SPM_STICKY_BITS,
+			BCMTCH_SPM_STICKY_BITS_PIN_RESET);
 
-   if (p_plat_data == NULL)
-   {
-      printk(KERN_ERR "%s() error, platform data == NULL\n", __func__);
-      ret = -ENODATA;
-      goto err_no_mem;
-   }
+	if (bcmtch_dev_wait_for_firmware_ready(1000)) {
+		uint8_t xaddr = 0x40;
+		uint8_t xdata;
+		while (xaddr <= 0x61) {
+			bcmtch_com_read_spm(xaddr, &xdata);
+			printk(KERN_ERR
+				"%s: addr = 0x%02x  data = 0x%02x\n",
+				__func__,
+				xaddr++,
+				xdata);
+		}
+	}
 
-   gp_napa_i2c = kzalloc(sizeof(struct napa_i2c), GFP_KERNEL);
-   if (gp_napa_i2c == NULL)
-   {
-      printk(KERN_ERR "%s: failed to alloc mem.\n", __func__);
-      ret = -ENOMEM;
-      goto err_no_mem;
-   }
+	return ret_val;
+}
 
-   /* Save the platform data passed in. */
-//   gp_napa_i2c->p_platform_data = p_plat_data;
-   memcpy(&gp_napa_i2c->platform_data, p_plat_data, sizeof(struct bcm915500_platform_data));
+static int32_t bcmtch_dev_download_firmware(
+					uint8_t *fw_name,
+					uint32_t fw_addr,
+					uint32_t fw_flags)
+{
+	const struct firmware *p_fw;
+	int32_t ret_val = BCMTCH_SUCCESS;
 
-   if ((gp_code = kzalloc(40000, GFP_KERNEL)) == NULL)
-   {
-      printk(KERN_ERR "%s() Cannot alloc memory for code\n", __func__);
-      kfree(gp_napa_i2c);
-      ret = -ENOMEM;
-      goto err_no_mem;
-   }
+	uint32_t entryId = 1;
+	bcmtch_combi_entry_t *p_entry = NULL;
+	bcmtch_combi_entry_t default_entry[] = {
+		{.addr = fw_addr, .flags = fw_flags,},
+		{0, 0, 0, 0},
+	};
 
-   if ((gp_vector = kzalloc(1000, GFP_KERNEL)) == NULL)
-   {
-      printk(KERN_ERR "%s() cannot alloc memory for vector\n", __func__);
-      kfree(gp_napa_i2c);
-      kfree(gp_code);
-      ret = -ENOMEM;
-      goto err_no_mem;
-   }
+	/* request firmware binary from OS */
+	ret_val = request_firmware(
+				&p_fw, fw_name,
+				&bcmtch_data_p->p_i2c_client_spm->dev);
 
-   if ((gp_data = kzalloc(10000, GFP_KERNEL)) == NULL)
-   {
-      printk(KERN_ERR "%s() cannot alloc memory for data\n", __func__);
-      kfree(gp_napa_i2c);
-      kfree(gp_code);
-      kfree(gp_vector);
-      ret = -ENOMEM;
-      goto err_no_mem;
-   }
+	if (ret_val) {
+		printk(KERN_ERR
+			"%s: Firmware request failed (%d) for %s\n",
+			__func__,
+			ret_val,
+			fw_name);
+	} else {
+		printk(KERN_INFO "BCMTCH: FIRMWARE: %s\n", fw_name);
+#if BCMTCH_POST_BOOT
+		if (bcmtch_debug_flag & BCMTCH_DEBUG_FLAG_POST_BOOT) {
+			printk(KERN_INFO "BCMTCH: firmware size= 0x%x\n",
+					p_fw->size);
+		}
 
-   //i2c_set_clientdata(p_i2c_client, bcmpmu);
-   //bcmpmu->dev = &p_i2c_client->dev;
-   gp_napa_i2c->p_i2c_client = p_i2c_client;
 
-   /* Configure the second I2C slave address. */
-   p_i2c_adapter = i2c_get_adapter(p_plat_data->i2c_adapter_id);
+		/* Allocate firmware buffer memory */
+		bcmtch_data_p->post_boot_buffer =
+			(uint8_t *)bcmtch_os_mem_alloc(p_fw->size);
+		if (bcmtch_data_p->post_boot_buffer == NULL) {
+			printk(KERN_ERR
+					"%s: failed to alloc firmware buffer.\n",
+					__func__);
+			ret_val = -ENOMEM;
+			goto download_error;
+		}
 
-   if (p_i2c_adapter == NULL)
-   {
-      printk(KERN_ERR "%s() p_i2c_adapter == NULL, adapter_id: 0x%x\n",
-             __func__, p_plat_data->i2c_adapter_id);
-      ret = -ENODEV;
-      goto err_no_device;
-   }
-   else
-   {
-      DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
-         printk("%s() p_i2c_adapter != NULL, adapter_id: 0x%x\n",
-               __func__, p_plat_data->i2c_adapter_id);)
-   }
-
-   /*
-    * i2c_new_device(struct i2c_adapter *adap,
-    *                struct i2c_board_info const *info);
-    */
-   p_new_i2c_client = i2c_new_device(p_i2c_adapter,
-                                     &bcm915500_i2c_boardinfo);
-
-   if (p_new_i2c_client == NULL)
-   {
-      printk(KERN_ERR "%s() p_new_i2c_client == NULL, slave address: 0x%x\n",
-             __func__, bcm915500_i2c_boardinfo.addr);
-      ret = -ENODEV;
-      goto err_no_device;
-   }
-   else
-   {
-      DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
-         printk("%s() p_new_i2c_client != NULL, slave address: 0x%x\n",
-               __func__, bcm915500_i2c_boardinfo.addr);)
-   }
-
-#if NAPA_GPIO_RESET_SUPPORT
-    if (p_plat_data->gpio_reset >= 0)
-    {
-        ret = gpio_request(p_plat_data->gpio_reset, "napa i2c ts reset");
-        if (ret < 0)
-        {
-            printk("ERROR: %s() line %d - Unable to request GPIO pin %d\n", __func__, __LINE__, p_plat_data->gpio_reset);
-            goto err_free_dev;
-        }
-        gpio_direction_output(p_plat_data->gpio_reset, 1);
-        gpio_set_value(p_plat_data->gpio_reset, 1);
-        msleep(250);
-        gpio_set_value(p_plat_data->gpio_reset, 0);
-        msleep(250);
-        gpio_set_value(p_plat_data->gpio_reset, 1);
-     }
-
-     msleep(1000);
+		memcpy(bcmtch_data_p->post_boot_buffer,
+				(void *) p_fw->data,
+				p_fw->size);
 #endif
-   gp_napa_i2c->p_i2c_client1 = p_new_i2c_client;
-   mutex_init(&gp_napa_i2c->i2c_mutex);
-   mutex_init(&gp_napa_i2c->mutex_wq);
+
+		/* pre-process binary according to flags */
+		if (fw_flags & BCMTCH_FIRMWARE_FLAGS_COMBI) {
+			p_entry = (bcmtch_combi_entry_t *) p_fw->data;
+		} else {
+			p_entry = default_entry;
+			p_entry[entryId].length = p_fw->size;
+		}
+
+		while (p_entry[entryId].length) {
+			switch (p_entry[entryId].flags &
+					BCMTCH_FIRMWARE_FLAGS_MASK) {
+#if BCMTCH_POST_BOOT
+			case BCMTCH_FIRMWARE_FLAGS_POST_BOOT_CONFIGS:
+				if (bcmtch_debug_flag &
+						BCMTCH_DEBUG_FLAG_POST_BOOT)
+					printk(KERN_INFO "BCMTCH: entryId=%d PB CONFIG\n",
+							entryId);
+				if (bcmtch_debug_flag &
+						BCMTCH_DEBUG_FLAG_POST_BOOT)
+					printk(KERN_INFO "BCMTCH: pb chans init addr=0x%08x\n",
+							p_entry[entryId].addr);
+
+				bcmtch_data_p->postboot_cfg_addr =
+					p_entry[entryId].addr;
+				bcmtch_data_p->postboot_cfg_length =
+					p_entry[entryId].length;
+
+				bcmtch_dev_init_channels(
+					BCMTCH_ADDR_TOC_BASE,
+					(uint8_t *)((uint32_t)p_fw->data +
+					p_entry[entryId].offset));
+
+			case BCMTCH_FIRMWARE_FLAGS_POST_BOOT_CODE:
+				bcmtch_data_p->post_boot_sections++;
+				if (bcmtch_debug_flag &
+						BCMTCH_DEBUG_FLAG_POST_BOOT)
+					printk(KERN_INFO "BCMTCH: entryId=%d PB pb_sec=%d\n",
+						entryId,
+						bcmtch_data_p->
+						post_boot_sections);
+				break;
+#endif /* POST_BOOT */
+			case BCMTCH_FIRMWARE_FLAGS_CONFIGS:
+				/* Initialize channels */
+				if (bcmtch_debug_flag &
+						BCMTCH_DEBUG_FLAG_POST_BOOT)
+					printk(KERN_INFO "BCMTCH: entryId=%d CONFIG\n",
+							entryId);
+#if BCMTCH_ROM_CHANNEL
+				if (bcmtch_data_p->rom_channel) {
+					if (bcmtch_debug_flag &
+						BCMTCH_DEBUG_FLAG_POST_BOOT)
+						printk(KERN_INFO "BCMTCH: rom chan init addr=0x%08x\n",
+							p_entry[entryId].addr);
+					bcmtch_dev_init_rom_channels(
+						p_entry[entryId].addr,
+						(uint8_t *)((uint32_t)p_fw->data
+						+ p_entry[entryId].offset));
+				} else {
+#endif
+					if (bcmtch_debug_flag &
+						BCMTCH_DEBUG_FLAG_POST_BOOT)
+						printk(KERN_INFO "BCMTCH: ram chan init addr=0x%08x\n",
+							p_entry[entryId].addr);
+					bcmtch_dev_init_channels(
+						p_entry[entryId].addr,
+						(uint8_t *)((uint32_t)p_fw->data
+						+ p_entry[entryId].offset));
+#if BCMTCH_ROM_CHANNEL
+				}
+#endif
+			default:
+				if (bcmtch_debug_flag &
+						BCMTCH_DEBUG_FLAG_POST_BOOT)
+					printk(KERN_INFO "BCMTCH: entryId=%d PREBOOT\n",
+							entryId);
+				/** download to chip **/
+				ret_val = bcmtch_com_write_sys(
+					p_entry[entryId].addr,
+					p_entry[entryId].length,
+					(uint8_t *)((uint32_t)p_fw->data +
+					p_entry[entryId].offset));
+			}
+
+			/* next */
+			entryId++;
+		}
+	}
+
+	if (bcmtch_boot_flag &
+			BCMTCH_BOOT_FLAG_DISABLE_POST_BOOT)
+		bcmtch_data_p->post_boot_sections = 0;
+
+	if (bcmtch_data_p->post_boot_sections) {
+		/* setup first section for download */
+		if (!bcmtch_dev_post_boot_get_section())
+			bcmtch_data_p->post_boot_sections = 0;
+	}
+
+download_error:
+	/* free kernel structures */
+	release_firmware(p_fw);
+	return ret_val;
+}
+
+static int32_t bcmtch_dev_init_firmware(void)
+{
+	int32_t ret_val = BCMTCH_SUCCESS;
+	uint8_t binFile = 0;
+
+	if (bcmtch_firmware) {
+		ret_val =
+			bcmtch_dev_download_firmware(
+				bcmtch_firmware,
+				bcmtch_firmware_addr,
+				bcmtch_firmware_flag);
+	} else {
+		while (bcmtch_binaries[binFile].filename) {
+			ret_val =
+				bcmtch_dev_download_firmware(
+					bcmtch_binaries[binFile].filename,
+					bcmtch_binaries[binFile].addr,
+					bcmtch_binaries[binFile].flags);
+			binFile++;
+		}
+	}
+
+	if (!ret_val)
+		ret_val = bcmtch_dev_run_firmware();
+
+	if (!ret_val)
+		ret_val = bcmtch_dev_watchdog_start();
+
+	if (!ret_val)
+		ret_val = bcmtch_os_interrupt_enable();
+
+	return ret_val;
+}
+
+static int32_t bcmtch_dev_init_platform(struct device *p_device)
+{
+	int32_t ret_val = BCMTCH_SUCCESS;
+	struct bcmtch_platform_data *p_platform_data;
 
 
-   platform_device_register(&napa_core_device);
+	if (p_device && bcmtch_data_p) {
+		p_platform_data =
+			(struct bcmtch_platform_data *)p_device->platform_data;
 
-   ret = bcmtch_i2c_firmware_load(gp_napa_i2c, BCM915500_TSC_FW_VECT, VECTORS_OFFSET); /* Vectors */
-   DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
-      printk("%s() bcmtch_i2c_firmware_load() returned %d\n", __func__, ret);)
+	    bcmtch_data_p->platform_data.i2c_bus_id =
+		    p_platform_data->i2c_bus_id;
+		bcmtch_data_p->platform_data.i2c_addr_sys =
+		    p_platform_data->i2c_addr_sys;
 
-   if (ret != 0)
-   {
-      printk("%s() Vector download failed\n", __func__);
-      ret = ENOENT;
-      goto err_fw_failed;
-   }
+		bcmtch_data_p->platform_data.i2c_addr_spm =
+		    p_platform_data->i2c_addr_spm;
 
-   ret = bcmtch_i2c_firmware_load(gp_napa_i2c, BCM915500_TSC_FW_DATA, DATA_OFFSET); /* Data */
-   if (ret != 0)
-   {
-      printk("%s() Data download failed\n", __func__);
-      ret = ENOENT;
-      goto err_fw_failed;
-   }
+		bcmtch_data_p->platform_data.gpio_reset_pin =
+		    p_platform_data->gpio_reset_pin;
+		bcmtch_data_p->platform_data.gpio_reset_polarity =
+		    p_platform_data->gpio_reset_polarity;
+		bcmtch_data_p->platform_data.gpio_reset_time_ms =
+		    p_platform_data->gpio_reset_time_ms;
 
-   ret = bcmtch_i2c_firmware_load(gp_napa_i2c, BCM915500_TSC_FW_CODE, ROM_OFFSET); /* Firmware */
-   if (ret != 0)
-   {
-      printk("%s() Code download failed\n", __func__);
-      ret = ENOENT;
-      goto err_fw_failed;
-   }
+		bcmtch_data_p->platform_data.gpio_interrupt_pin =
+		    p_platform_data->gpio_interrupt_pin;
+		bcmtch_data_p->platform_data.gpio_interrupt_trigger =
+		    p_platform_data->gpio_interrupt_trigger;
 
-   DEBUG(if (mod_debug & MOD_DEBUG_I2C_DOWNLOAD)
-      printk("%s() downloads successful, vector size: %d, data size: %d firmware size: %d\n",
-             __func__, g_vector_size, g_data_size, g_code_size);)
+		bcmtch_data_p->platform_data.ext_button_count =
+			p_platform_data->ext_button_count;
 
-   if ((ret = bcmtch_init_hw(gp_napa_i2c)) != 0)
-   {
-      printk(KERN_ERR "%s() bcmtch_init_hw() failed, rc = %d\n", __func__, ret);
-      ret = ENODEV;
-      DEBUG(if (!(mod_debug & MOD_DEBUG_IGNORE_ERR)))
-      goto err_init_failed;
-   }
+		bcmtch_data_p->platform_data.ext_button_map =
+			p_platform_data->ext_button_map;
+		bcmtch_data_p->platform_data.axis_orientation_flag =
+			p_platform_data->axis_orientation_flag;
 
-#if ADD_INTERRUPT_HANDLING
-   /* Reserve GPIO for touchscreen event interrupt. */
-   ret = gpio_request(p_plat_data->gpio_interrupt, "napa i2c ts event");
-   if (ret < 0)
-   {
-      printk(KERN_ERR "WARNING: Unable to request gpio=%d\n", p_plat_data->gpio_interrupt);
-      DEBUG(if (!(mod_debug & MOD_DEBUG_IGNORE_ERR)))
-      goto err_no_device;
-   }
+		/* setup function pointers for axis coordinates */
+		bcmtch_data_p->actual_x =
+			(bcmtch_data_p->platform_data.axis_orientation_flag &
+				BCMTCH_AXIS_FLAG_X_REVERSED_MASK) ?
+				bcmtch_reverse_x_coordinate :
+				bcmtch_get_coordinate;
 
-   gpio_direction_input(p_plat_data->gpio_interrupt);
+		bcmtch_data_p->actual_y =
+			(bcmtch_data_p->platform_data.axis_orientation_flag &
+				BCMTCH_AXIS_FLAG_Y_REVERSED_MASK) ?
+				bcmtch_reverse_y_coordinate :
+				bcmtch_get_coordinate;
 
-   /* Reserve the irq line. */
-   ret = request_irq(p_i2c_client->irq,
-                     bcmtch_i2c_interrupt_handler,
-                     IRQF_TRIGGER_FALLING,
-                     p_i2c_client->name,
-                     gp_napa_i2c);
-   if (ret)
-   {
-      printk(KERN_ERR "%s() WARNING request_irq(%d) failed\n", __func__, p_i2c_client->irq);
-      ret = -EBUSY;
-      DEBUG(if (!(mod_debug & MOD_DEBUG_IGNORE_ERR)))
-      goto err_free_dev;
-   }
+		bcmtch_data_p->actual_x_y_axis =
+			(bcmtch_data_p->platform_data.axis_orientation_flag &
+				BCMTCH_AXIS_FLAG_X_Y_SWAPPED_MASK) ?
+				bcmtch_swap_x_y_axis :
+				bcmtch_set_x_y_axis;
+
+		bcmtch_data_p->platform_data.bcmtch_on =
+			p_platform_data->bcmtch_on;
+
+		if (NULL == p_platform_data->bcmtch_on) {
+			printk(KERN_ERR
+				"%s. BCMTCH Power on function undefined\n",
+				__func__);
+		}
+	} else {
+		printk(KERN_ERR
+			"%s() error, platform data == NULL\n",
+			__func__);
+		ret_val = -ENODATA;
+	}
+
+	return ret_val;
+}
+
+static int32_t bcmtch_dev_request_power_mode(
+					uint8_t mode,
+					tofe_command_e command)
+{
+	int32_t ret_val = BCMTCH_SUCCESS;
+
+#if BCMTCH_USE_FAST_I2C
+	uint8_t regs[5];
+	uint8_t data[5];
+#endif
+
+	switch (mode) {
+	case BCMTCH_POWER_MODE_SLEEP:
+		ret_val =
+		    bcmtch_com_write_spm(BCMTCH_SPM_REG_MSG_FROM_HOST, command);
+		ret_val |=
+		    bcmtch_com_write_spm(
+				BCMTCH_SPM_REG_RQST_FROM_HOST,
+				BCMTCH_POWER_MODE_SLEEP);
+		break;
+
+	case BCMTCH_POWER_MODE_WAKE:
+		ret_val =
+		    bcmtch_com_write_spm(BCMTCH_SPM_REG_MSG_FROM_HOST, command);
+		ret_val |=
+		    bcmtch_com_write_spm(
+				BCMTCH_SPM_REG_RQST_FROM_HOST,
+				BCMTCH_POWER_MODE_WAKE);
+		break;
+
+	case BCMTCH_POWER_MODE_NOWAKE:
+#if BCMTCH_USE_FAST_I2C
+		regs[0] = BCMTCH_SPM_REG_MSG_FROM_HOST;
+		data[0] = command;
+		regs[1] = BCMTCH_SPM_REG_RQST_FROM_HOST;
+		data[1] = BCMTCH_POWER_MODE_NOWAKE;
+		ret_val = bcmtch_com_fast_write_spm(2, regs, data);
 #else
-   bcmtch_setup_poll_timer(gp_napa_i2c, 2);
+		ret_val =
+		    bcmtch_com_write_spm(BCMTCH_SPM_REG_MSG_FROM_HOST, command);
+		ret_val |=
+		    bcmtch_com_write_spm(
+				BCMTCH_SPM_REG_RQST_FROM_HOST,
+				BCMTCH_POWER_MODE_NOWAKE);
+#endif
+		break;
+
+	default:
+		PROGRESS();
+		break;
+	}
+
+	return ret_val;
+}
+
+static int32_t bcmtch_dev_get_power_state(void)
+{
+	int32_t ret_val = BCMTCH_SUCCESS;
+	uint8_t power_state;
+
+	ret_val = bcmtch_com_read_spm(BCMTCH_SPM_REG_PSR, &power_state);
+
+	return (ret_val) ? (ret_val) : ((uint32_t)power_state);
+}
+
+static int32_t bcmtch_dev_set_power_state(uint8_t power_state)
+{
+	int32_t ret_val = BCMTCH_SUCCESS;
+	int32_t state = power_state;
+
+	switch (power_state) {
+	case BCMTCH_POWER_STATE_SLEEP:
+		ret_val =
+		    bcmtch_dev_request_power_mode(
+				BCMTCH_POWER_MODE_SLEEP,
+				TOFE_COMMAND_NO_COMMAND);
+
+		ret_val |=
+		    bcmtch_com_write_sys(
+				BCMTCH_ADDR_SPM_PWR_CTRL,
+				sizeof(int32_t),
+				(uint8_t *)&state);
+		break;
+
+	case BCMTCH_POWER_STATE_RETENTION:
+		PROGRESS();
+		break;
+
+	case BCMTCH_POWER_STATE_IDLE:
+		PROGRESS();
+		break;
+
+	case BCMTCH_POWER_STATE_ACTIVE:
+		PROGRESS();
+		break;
+
+	default:
+		PROGRESS();
+		break;
+	}
+
+	return ret_val;
+}
+
+static int32_t bcmtch_dev_check_power_state(
+					uint8_t power_state,
+					uint8_t wait_count)
+{
+	int32_t ret_val = -EAGAIN;
+	int32_t read_state;
+
+	do {
+		read_state = bcmtch_dev_get_power_state();
+		if (read_state == power_state) {
+			ret_val = BCMTCH_SUCCESS;
+			break;
+		}
+		bcmtch_os_sleep_ms(1);
+	} while (wait_count--);
+
+	return ret_val;
+}
+
+static bcmtch_status_e bcmtch_dev_request_host_override(tofe_command_e command)
+{
+	bcmtch_status_e ret_val = BCMTCH_STATUS_ERR_FAIL;
+	int32_t count = 250;
+	uint8_t m2h;
+
+	/* Request channel & wakeup the firmware */
+	ret_val = bcmtch_dev_request_power_mode(
+					BCMTCH_POWER_MODE_WAKE,
+					command);
+
+	if (!ret_val)
+		ret_val = bcmtch_dev_check_power_state(
+					BCMTCH_POWER_STATE_ACTIVE,
+					25);
+
+	if (ret_val) {
+		printk(KERN_ERR
+				"%s: [%d] wake firmware failed.\n",
+				__func__,
+				ret_val);
+
+	} else {
+
+		/* Wait till FW OVERRIDE is ready */
+		do {
+			ret_val = bcmtch_com_read_spm(
+					BCMTCH_SPM_REG_MSG_TO_HOST,
+					&m2h);
+
+			switch (m2h) {
+			case TOFE_MESSAGE_FW_READY_OVERRIDE:
+			case TOFE_MESSAGE_FW_READY_INTERRUPT_OVERRIDE:
+				bcmtch_data_p->host_override = true;
+				printk(KERN_ERR
+						"Request -host override- m=0x%0x  ho=%d",
+						m2h,
+						bcmtch_data_p->host_override);
+				break;
+
+			case TOFE_MESSAGE_FW_READY_INTERRUPT:
+				printk(KERN_ERR
+					"Request -host override- m=0x%0x  ho=%d -> interrupt",
+					m2h,
+					bcmtch_data_p->host_override);
+				bcmtch_dev_process();
+			case TOFE_MESSAGE_FW_READY:
+			default:
+				printk(KERN_ERR
+						"Request -host override- m=0x%0x  ho=%d",
+						m2h,
+						bcmtch_data_p->host_override);
+				break;
+			}
+		} while (!bcmtch_data_p->host_override && count--);
+
+		if (bcmtch_data_p->host_override)
+			ret_val = BCMTCH_STATUS_SUCCESS;
+	}
+
+	return ret_val;
+}
+
+static bcmtch_status_e bcmtch_dev_release_host_override(tofe_command_e command)
+{
+	bcmtch_status_e ret_val = BCMTCH_STATUS_ERR_FAIL;
+	int32_t count = 250;
+	uint8_t m2h;
+
+    /* this should release hostOverride - do we need to check */
+	/* Release channel */
+	ret_val = bcmtch_dev_request_power_mode(
+				BCMTCH_POWER_MODE_NOWAKE,
+				command);
+
+	/* Wait till FW is ready */
+	do {
+		ret_val = bcmtch_com_read_spm(BCMTCH_SPM_REG_MSG_TO_HOST, &m2h);
+		switch (m2h) {
+		case TOFE_MESSAGE_FW_READY_INTERRUPT_OVERRIDE:
+			printk(KERN_ERR
+					"Release -host override- m=0x%0x  ho=%d -> interrupt",
+					m2h,
+					bcmtch_data_p->host_override);
+			bcmtch_dev_process();
+		case TOFE_MESSAGE_FW_READY_OVERRIDE:
+		default:
+			printk(KERN_ERR
+				"Release -host override- m=0x%0x  ho=%d",
+				m2h,
+				bcmtch_data_p->host_override);
+			break;
+
+		case TOFE_MESSAGE_FW_READY_INTERRUPT:
+		case TOFE_MESSAGE_FW_READY:
+			bcmtch_data_p->host_override = false;
+			printk(KERN_ERR
+					"Release -host override- m=0x%0x  ho=%d",
+					m2h,
+					bcmtch_data_p->host_override);
+			break;
+		}
+	} while (bcmtch_data_p->host_override && count--);
+
+	if (!bcmtch_data_p->host_override)
+		ret_val = BCMTCH_STATUS_SUCCESS;
+
+	return ret_val;
+}
+
+static int32_t bcmtch_dev_send_command(
+	tofe_command_e command,
+	uint32_t data,
+	uint8_t flags)
+{
+	int32_t ret_val = BCMTCH_SUCCESS;
+	tofe_command_response_t cmd;
+	bcmtch_channel_t *chan;
+
+	if (command == TOFE_COMMAND_NO_COMMAND) {
+		printk(KERN_ERR
+				"%s: no_command.\n",
+				__func__);
+		return -EINVAL;
+	}
+
+	chan = bcmtch_data_p->p_channels[TOFE_CHANNEL_ID_COMMAND];
+	if (chan == NULL) {
+		printk(KERN_ERR
+				"%s: command channel has not initialized!\n",
+				__func__);
+		return -ENXIO;
+	}
+
+
+	if (bcmtch_dev_request_host_override(command) ==
+			BCMTCH_STATUS_SUCCESS) {
+
+		/* Setup the command entry */
+		memset((void *)(&cmd), 0, sizeof(tofe_command_response_t));
+		cmd.flags	= flags;
+		cmd.command	= command;
+		cmd.data	= data;
+
+		/* Write sys to command channel */
+		tofe_channel_write_begin(&chan->hdr);
+		ret_val = tofe_channel_write(&chan->hdr, &cmd);
+		if (ret_val) {
+			printk(KERN_ERR
+					"%s: [%d] cmd channel write failed.\n",
+					__func__,
+					ret_val);
+			goto send_command_exit;
+		}
+
+		ret_val = bcmtch_dev_write_channel(chan);
+		if (ret_val) {
+			printk(KERN_ERR
+					"%s: [%d] cmd channel write back FW failed.\n",
+					__func__,
+					ret_val);
+			goto send_command_exit;
+		}
+	}
+
+	bcmtch_dev_release_host_override(command);
+
+send_command_exit:
+	return ret_val;
+}
+
+static int32_t bcmtch_dev_reset(uint8_t mode)
+{
+	int32_t ret_val = BCMTCH_SUCCESS;
+
+	switch (mode) {
+	case BCMTCH_RESET_MODE_HARD:
+		bcmtch_os_reset();
+		break;
+
+	case BCMTCH_RESET_MODE_SOFT_CHIP:
+		bcmtch_com_write_spm(
+			BCMTCH_SPM_REG_SOFT_RESETS,
+			BCMTCH_RESET_MODE_SOFT_CHIP);
+		break;
+
+	case BCMTCH_RESET_MODE_SOFT_ARM:
+		bcmtch_com_write_spm(
+			BCMTCH_SPM_REG_SOFT_RESETS,
+			BCMTCH_RESET_MODE_SOFT_ARM);
+		break;
+
+	case (BCMTCH_RESET_MODE_SOFT_CHIP | BCMTCH_RESET_MODE_SOFT_ARM):
+		bcmtch_com_write_spm(
+			BCMTCH_SPM_REG_SOFT_RESETS,
+			BCMTCH_RESET_MODE_SOFT_CHIP);
+		bcmtch_com_write_spm(
+			BCMTCH_SPM_REG_SOFT_RESETS,
+			BCMTCH_RESET_MODE_SOFT_ARM);
+		break;
+
+	case BCMTCH_RESET_MODE_SOFT_CLEAR:
+		ret_val = bcmtch_com_write_spm(
+					BCMTCH_SPM_REG_SOFT_RESETS,
+					BCMTCH_RESET_MODE_SOFT_CLEAR);
+		break;
+
+	default:
+		break;
+	}
+
+	return ret_val;
+}
+
+static int32_t bcmtch_dev_verify_chip_id(void)
+{
+	int32_t ret_val = -ENXIO;
+	uint32_t chipID;
+	uint8_t revID;
+	uint8_t id[3];
+	uint32_t *pChips = (uint32_t *)BCMTCH_CHIP_IDS;
+
+	ret_val = bcmtch_com_read_spm(BCMTCH_SPM_REG_REVISIONID, &revID);
+	ret_val |= bcmtch_com_read_spm(BCMTCH_SPM_REG_CHIPID0, &id[0]);
+	ret_val |= bcmtch_com_read_spm(BCMTCH_SPM_REG_CHIPID1, &id[1]);
+	ret_val |= bcmtch_com_read_spm(BCMTCH_SPM_REG_CHIPID2, &id[2]);
+
+	chipID = ((((uint32_t)id[2]) << 16)
+			| (((uint32_t)id[1]) << 8)
+			| (uint32_t)id[0]);
+
+	while (*pChips && (*pChips != chipID))
+		pChips++;
+
+	if (*pChips) {
+		/* Found a match in above search */
+		ret_val = BCMTCH_SUCCESS;
+	} else
+		ret_val = -ENXIO;
+
+	printk(KERN_INFO
+			"BCMTCH: ChipId = 0x%06X  Rev = 0x%2X : %s\n",
+			chipID,
+			revID,
+			((ret_val) ? "Error - Unknown device" : "Verified"));
+
+	return ret_val;
+}
+
+static int32_t bcmtch_dev_verify_chip_version(void)
+{
+	int32_t ret_val = BCMTCH_SUCCESS;
+	uint32_t version;
+
+	ret_val = bcmtch_com_read_sys(
+				BCMTCH_ADDR_TCH_VER,
+				4,
+				(uint8_t *)&version);
+
+	printk(KERN_INFO "BCMTCH: Chip Version = 0x%08X\n", version);
+
+	return ret_val;
+}
+
+static int32_t bcmtch_dev_init(void)
+{
+	int32_t ret_val = BCMTCH_SUCCESS;
+
+	/* verify chip id */
+	ret_val = bcmtch_dev_verify_chip_id();
+
+    /* verify initial / powerup reset */
+	if (!ret_val &&
+		(BCMTCH_POWER_STATE_SLEEP != bcmtch_dev_get_power_state())) {
+		if (BCMTCH_POWER_STATE_SLEEP != bcmtch_dev_get_power_state())
+			bcmtch_dev_reset(
+				BCMTCH_RESET_MODE_SOFT_CHIP |
+				BCMTCH_RESET_MODE_SOFT_ARM);
+
+		ret_val = bcmtch_dev_check_power_state(
+					BCMTCH_POWER_STATE_SLEEP,
+					25);
+	}
+
+    /* init com */
+	if (!ret_val)
+		ret_val = bcmtch_com_init();
+
+    /* wakeup */
+	if (!ret_val)
+		ret_val = bcmtch_dev_request_power_mode(
+					BCMTCH_POWER_MODE_WAKE,
+					TOFE_COMMAND_NO_COMMAND);
+
+	if (!ret_val)
+		ret_val = bcmtch_dev_check_power_state(
+					BCMTCH_POWER_STATE_ACTIVE,
+					25);
+
+	/* init clocks */
+	if (!ret_val)
+		ret_val = bcmtch_dev_init_clocks();
+
+	/* init memory */
+	if (!ret_val)
+		ret_val = bcmtch_dev_init_memory();
+
+	if (!ret_val)
+		ret_val = bcmtch_dev_verify_chip_version();
+
+    /* download and run */
+	if (!ret_val)
+		ret_val = bcmtch_dev_init_firmware();
+
+	return ret_val;
+}
+
+static void bcmtch_dev_process(void)
+{
+	int32_t ret_val = BCMTCH_SUCCESS;
+	uint8_t m2h;
+
+	if (bcmtch_boot_flag & BCMTCH_BOOT_FLAG_CHECK_INTERRUPT) {
+		/* Check msg2host */
+		bcmtch_com_read_spm(BCMTCH_SPM_REG_MSG_TO_HOST, &m2h);
+		if (m2h != 0x81) {
+			printk(KERN_INFO
+					"False interrupt.\n");
+			return;
+		}
+	}
+
+	/* read DMA buffer */
+	if (bcmtch_data_p->has_dma_channel && !bcmtch_data_p->host_override)
+		ret_val = bcmtch_dev_read_dma_channels();
+
+	/* read channels */
+	ret_val = bcmtch_dev_read_channels();
+
+    /* release memory */
+	bcmtch_dev_request_power_mode(
+		BCMTCH_POWER_MODE_NOWAKE,
+		TOFE_COMMAND_NO_COMMAND);
+
+	/* process channels */
+	ret_val = bcmtch_dev_process_channels();
+}
+
+static void bcmtch_dev_reset_events(void)
+{
+#if BCMTCH_USE_PROTOCOL_B
+	uint32_t touch = 0;
 #endif
 
-   gp_napa_i2c->p_ktouch_wq = create_workqueue("napa_touch_wq");
+	/* clear active touch structure */
+	memset(
+		&bcmtch_data_p->touch[0],
+		0,
+		sizeof(bcmtch_touch_t) * BCMTCH_MAX_TOUCH);
 
-   if (gp_napa_i2c->p_ktouch_wq == NULL)
-   {
-      printk(KERN_ERR "%s() Unable to create workqueue\n", __func__);
-      ret = -ENOMEM;
-      DEBUG(if (!(mod_debug & MOD_DEBUG_IGNORE_ERR)))
-      goto err_free_dev;
-   }
+	/* clear system touches */
+	if (bcmtch_data_p->touch_count) {
+#if BCMTCH_USE_PROTOCOL_B
+		for (touch = 0; touch < BCMTCH_MAX_TOUCH; touch++) {
+			input_mt_slot(
+				bcmtch_data_p->p_inputDevice,
+				touch);
+			input_mt_report_slot_state(
+				bcmtch_data_p->p_inputDevice,
+				MT_TOOL_FINGER,
+				false);
+		}
+#endif
 
-   INIT_WORK(&gp_napa_i2c->work, bcmtch_i2c_wq);
+		input_report_key(
+			bcmtch_data_p->p_inputDevice,
+			BTN_TOUCH,
+			false);
 
-   /* Store the gp_napa_i2c structure so it can be retrieved. */
-   i2c_set_clientdata(p_i2c_client, gp_napa_i2c);
-
-   ret = sysfs_create_group(&p_i2c_client->dev.kobj, &bcmtch_attr_group);
-   if (ret)
-   {
-      printk(KERN_ERR "%s() Unable to create group\n", __func__);
-      DEBUG(if (!(mod_debug & MOD_DEBUG_IGNORE_ERR)))
-      goto err_free_dev;
-   }
-
-   printk(KERN_INFO "%s() exiting, SUCCESS!\n", __func__);
-
-   DEBUG(
-   if (mod_debug & MOD_DEBUG_LOOP) {
-       while(1) {
-           reg_value = bcmtch_i2c_read_reg(NAPA_I2C_SLAVE_ADDR, 0x40);
-           printk("%s() Slave Addr: %02x Reg: %02x Value: %02x \n", __func__, NAPA_I2C_SLAVE_ADDR, 0x40, reg_value);
-       }
-   })
-
-   /* Free the memory used to store the firmware files. */
-   kfree(gp_code);
-   kfree(gp_vector);
-   kfree(gp_data);
-   return ret;
-
-err_free_dev:
-err_init_failed:
-
-err_fw_failed:
-
-err_no_device:
-   kfree(gp_napa_i2c);
-   kfree(gp_code);
-   kfree(gp_vector);
-   kfree(gp_data);
-
-err_no_mem:
-   return ret;
+		input_sync(bcmtch_data_p->p_inputDevice);
+	}
+	bcmtch_data_p->touch_count = 0;
 }
 
-static int bcmtch_i2c_remove(struct i2c_client *p_i2c_client)
+
+#if BCMTCH_POST_BOOT
+static void bcmtch_dev_post_boot_reset(void)
 {
-   //struct bcmpmu *bcmpmu = i2c_get_clientdata(p_i2c_client);
+	bcmtch_data_p->post_boot_section = 0;
+	bcmtch_data_p->post_boot_sections = 0;
 
-   platform_device_unregister(&napa_core_device);
-   //kfree(bcmpmu->accinfo);
-   //kfree(bcmpmu);
+	/* free communication channels */
+	bcmtch_dev_free_channels();
+	bcmtch_dev_free_rom_channels();
+}
+#endif
 
-   return 0;
+static int32_t bcmtch_dev_suspend(void)
+{
+	int32_t ret_val = BCMTCH_SUCCESS;
+
+    /* disable interrupts */
+	bcmtch_os_interrupt_disable();
+
+	/* free watchdog timer */
+	bcmtch_dev_watchdog_stop();
+
+	/* clear worker */
+	bcmtch_os_clear_deferred_worker();
+
+	/* lock */
+#if !BCMTCH_USE_BUS_LOCK
+#if BCMTCH_USE_WORK_LOCK
+	bcmtch_os_lock_critical_section(BCMTCH_MUTEX_WORK);
+#endif
+#endif
+
+	if (bcmtch_boot_flag & BCMTCH_BOOT_FLAG_SUSPEND_COLD_BOOT) {
+		/* post boot reset */
+		bcmtch_dev_post_boot_reset();
+
+		ret_val = bcmtch_dev_set_power_state(BCMTCH_POWER_STATE_SLEEP);
+
+		if (bcmtch_data_p->platform_data.bcmtch_on)
+			bcmtch_data_p->platform_data.bcmtch_on(false);
+	} else {
+		/* suspend */
+		ret_val = bcmtch_dev_request_power_mode(
+					BCMTCH_POWER_MODE_NOWAKE,
+					TOFE_COMMAND_POWER_MODE_SUSPEND);
+	}
+
+	/* clear events */
+	bcmtch_dev_reset_events();
+
+    /* unlock */
+#if !BCMTCH_USE_BUS_LOCK
+#if BCMTCH_USE_WORK_LOCK
+	bcmtch_os_release_critical_section(BCMTCH_MUTEX_WORK);
+#endif
+#endif
+
+	if (bcmtch_debug_flag & BCMTCH_DEBUG_FLAG_PM) {
+		printk(KERN_INFO
+			"BCMTOUCH: %s() - complete : result = 0x%x\n",
+			__func__,
+			ret_val);
+	}
+
+	return ret_val;
 }
 
-static const struct i2c_device_id napa_i2c_id[] = {
-       { BCM915500_TSC_NAME, 0 },
-       { }
-};
-MODULE_DEVICE_TABLE(i2c, napa_i2c_id);
+static int32_t bcmtch_dev_resume(void)
+{
+	int32_t ret_val = BCMTCH_SUCCESS;
 
+    /* lock */
+#if !BCMTCH_USE_BUS_LOCK
+#if BCMTCH_USE_WORK_LOCK
+	bcmtch_os_lock_critical_section(BCMTCH_MUTEX_WORK);
+#endif
+#endif
+
+	if (bcmtch_boot_flag & BCMTCH_BOOT_FLAG_SUSPEND_COLD_BOOT) {
+		if (bcmtch_data_p->platform_data.bcmtch_on)
+			bcmtch_data_p->platform_data.bcmtch_on(true);
+
+		ret_val = bcmtch_dev_init();
+	} else {
+		if (!ret_val)
+			ret_val = bcmtch_dev_request_power_mode(
+						BCMTCH_POWER_MODE_WAKE,
+						TOFE_COMMAND_NO_COMMAND);
+
+		if (!ret_val)
+			ret_val = bcmtch_dev_check_power_state(
+						BCMTCH_POWER_STATE_ACTIVE,
+						25);
+
+		if (!ret_val)
+			ret_val = bcmtch_dev_wait_for_firmware_ready(1000);
+
+		if (!ret_val)
+			ret_val = bcmtch_os_interrupt_enable();
+	}
+
+	if (ret_val)
+		printk(KERN_ERR
+				"BCMTOUCH: %s() error rv=%d\n",
+				__func__,
+				ret_val);
+
+    /* unlock */
+#if !BCMTCH_USE_BUS_LOCK
+#if BCMTCH_USE_WORK_LOCK
+	bcmtch_os_release_critical_section(BCMTCH_MUTEX_WORK);
+#endif
+#endif
+
+	if (bcmtch_debug_flag & BCMTCH_DEBUG_FLAG_PM) {
+		printk(KERN_INFO
+			"BCMTOUCH: %s() - complete : result = 0x%x\n",
+			__func__,
+			ret_val);
+	}
+
+	return ret_val;
+}
+
+void bcmtch_dev_watchdog_work(unsigned long int data)
+{
+	if (bcmtch_debug_flag & BCMTCH_DEBUG_FLAG_WATCH_DOG)
+		printk(KERN_INFO
+			"BCMTOUCH: WDOG\n");
+
+	/* queue the interrupt handler */
+	queue_work(
+		bcmtch_data_p->p_workqueue,
+		(struct work_struct *)&bcmtch_data_p->work);
+
+	bcmtch_dev_watchdog_reset();
+}
+
+static int32_t bcmtch_dev_watchdog_start(void)
+{
+	int32_t ret_val = BCMTCH_SUCCESS;
+
+	init_timer(&bcmtch_data_p->watchdog);
+
+	bcmtch_data_p->watchdog_expires =
+			(bcmtch_data_p->post_boot_sections) ?
+			MS_TO_JIFFIES(bcmtch_watchdog_post_boot) :
+			MS_TO_JIFFIES(bcmtch_watchdog_normal);
+
+	bcmtch_data_p->watchdog.function = bcmtch_dev_watchdog_work;
+	bcmtch_data_p->watchdog.expires =
+			jiffies + bcmtch_data_p->watchdog_expires;
+
+	add_timer(&bcmtch_data_p->watchdog);
+
+	return ret_val;
+}
+
+static int32_t bcmtch_dev_watchdog_restart(uint32_t expires)
+{
+	int32_t ret_val = BCMTCH_SUCCESS;
+
+	bcmtch_data_p->watchdog_expires = expires;
+
+	mod_timer(
+			&bcmtch_data_p->watchdog,
+			(jiffies + bcmtch_data_p->watchdog_expires));
+
+	return ret_val;
+}
+
+static int32_t bcmtch_dev_watchdog_reset(void)
+{
+	int32_t ret_val = BCMTCH_SUCCESS;
+
+	mod_timer(
+			&bcmtch_data_p->watchdog,
+			(jiffies + bcmtch_data_p->watchdog_expires));
+
+	return ret_val;
+}
+
+static int32_t bcmtch_dev_watchdog_stop(void)
+{
+	int32_t ret_val = BCMTCH_SUCCESS;
+
+	if (bcmtch_data_p) {
+		del_timer_sync(&bcmtch_data_p->watchdog);
+		bcmtch_data_p->watchdog_expires = 0;
+	}
+
+	return ret_val;
+}
+
+/* -------------------------------------------------- */
+/* - BCM Touch Controller Com(munication) Functions - */
+/* -------------------------------------------------- */
+
+static int32_t bcmtch_com_init(void)
+{
+	int32_t ret_val = BCMTCH_SUCCESS;
+
+	ret_val = bcmtch_com_write_spm(
+				BCMTCH_SPM_REG_SPI_I2C_SEL,
+				BCMTCH_IF_I2C_SEL);
+
+	ret_val |= bcmtch_com_write_spm(
+				BCMTCH_SPM_REG_I2CS_CHIPID,
+				bcmtch_data_p->platform_data.i2c_addr_sys);
+
+	return ret_val;
+}
+
+static int32_t bcmtch_com_read_spm(uint8_t reg, uint8_t *data)
+{
+	int32_t ret_val = BCMTCH_SUCCESS;
+
+	if (bcmtch_data_p) {
+#if BCMTCH_USE_BUS_LOCK
+		bcmtch_os_lock_critical_section(BCMTCH_MUTEX_BUS);
+#endif
+		ret_val = bcmtch_os_i2c_read_spm(
+					bcmtch_data_p->p_i2c_client_spm,
+					reg,
+					data);
+
+#if BCMTCH_USE_BUS_LOCK
+		bcmtch_os_release_critical_section(BCMTCH_MUTEX_BUS);
+#endif
+	} else {
+		printk(KERN_ERR
+				"%s() error, bcmtch_data_p == NULL\n",
+		       __func__);
+
+		ret_val = -ENODATA;
+	}
+
+	return ret_val;
+}
+
+static int32_t bcmtch_com_write_spm(uint8_t reg, uint8_t data)
+{
+	int32_t ret_val = BCMTCH_SUCCESS;
+
+	if (bcmtch_data_p) {
+#if BCMTCH_USE_BUS_LOCK
+		bcmtch_os_lock_critical_section(BCMTCH_MUTEX_BUS);
+#endif
+		ret_val = bcmtch_os_i2c_write_spm(
+					bcmtch_data_p->p_i2c_client_spm,
+					reg,
+					data);
+
+#if BCMTCH_USE_BUS_LOCK
+		bcmtch_os_release_critical_section(BCMTCH_MUTEX_BUS);
+#endif
+	} else {
+		printk(KERN_ERR
+				"%s() error, bcmtch_data_p == NULL\n",
+		       __func__);
+		ret_val = -ENODATA;
+	}
+
+	return ret_val;
+}
+
+static inline int32_t bcmtch_com_fast_write_spm(
+							uint8_t count,
+							uint8_t *regs,
+							uint8_t *data)
+{
+	int32_t ret_val = BCMTCH_SUCCESS;
+
+#if BCMTCH_USE_BUS_LOCK
+	bcmtch_os_lock_critical_section(BCMTCH_MUTEX_BUS);
+#endif
+	ret_val = bcmtch_os_i2c_fast_write_spm(
+				bcmtch_data_p->p_i2c_client_spm,
+				count,
+				regs,
+				data);
+
+#if BCMTCH_USE_BUS_LOCK
+	bcmtch_os_release_critical_section(BCMTCH_MUTEX_BUS);
+#endif
+
+	return ret_val;
+}
+
+static int32_t bcmtch_com_read_sys(
+						uint32_t sys_addr,
+						uint16_t read_len,
+						uint8_t *read_data)
+{
+	int32_t ret_val = BCMTCH_SUCCESS;
+
+	if (bcmtch_data_p) {
+#if BCMTCH_USE_BUS_LOCK
+		bcmtch_os_lock_critical_section(BCMTCH_MUTEX_BUS);
+#endif
+		ret_val = bcmtch_os_i2c_read_sys(
+					bcmtch_data_p->p_i2c_client_sys,
+					sys_addr,
+					read_len,
+					read_data);
+
+#if BCMTCH_USE_BUS_LOCK
+		bcmtch_os_release_critical_section(BCMTCH_MUTEX_BUS);
+#endif
+	} else {
+		printk(KERN_ERR
+				"%s() error, bcmtch_data_p == NULL\n",
+		       __func__);
+
+		ret_val = -ENODATA;
+	}
+
+	return ret_val;
+}
+
+static inline int32_t bcmtch_com_write_sys32(
+						uint32_t sys_addr,
+						uint32_t write_data)
+{
+	return bcmtch_com_write_sys(sys_addr, 4, (uint8_t *)&write_data);
+}
+
+static int32_t bcmtch_com_write_sys(
+				uint32_t sys_addr,
+				uint16_t write_len,
+				uint8_t *write_data)
+{
+	int32_t ret_val = BCMTCH_SUCCESS;
+
+	if (bcmtch_data_p) {
+#if BCMTCH_USE_BUS_LOCK
+		bcmtch_os_lock_critical_section(BCMTCH_MUTEX_BUS);
+#endif
+		ret_val = bcmtch_os_i2c_write_sys(
+					bcmtch_data_p->p_i2c_client_sys,
+					sys_addr,
+					write_len,
+					write_data);
+#if BCMTCH_USE_BUS_LOCK
+		bcmtch_os_release_critical_section(BCMTCH_MUTEX_BUS);
+#endif
+	} else {
+		printk(KERN_ERR
+				"%s() error, bcmtch_data_p == NULL\n",
+		       __func__);
+
+		ret_val = -ENODATA;
+	}
+
+	return ret_val;
+}
+
+/* ------------------------------------- */
+/* - BCM Touch Controller OS Functions - */
+/* ------------------------------------- */
+static void bcmtch_os_sleep_ms(uint32_t ms)
+{
+	msleep(ms);
+}
+
+static irqreturn_t bcmtch_os_interrupt_handler(int32_t irq, void *dev_id)
+{
+	if (bcmtch_data_p->p_i2c_client_spm->irq == irq) {
+
+		/* track interrupts */
+		bcmtch_data_p->irq_pending = true;
+
+		if (bcmtch_debug_flag & BCMTCH_DEBUG_FLAG_IRQ)
+			printk(KERN_INFO
+				"%s p=%d\n",
+				__func__,
+				bcmtch_data_p->irq_pending);
+
+		/* queue the interrupt handler */
+		queue_work(
+			bcmtch_data_p->p_workqueue,
+			(struct work_struct *)&bcmtch_data_p->work);
+
+		/* reset watchdog */
+		bcmtch_dev_watchdog_reset();
+
+	} else {
+		printk(KERN_ERR
+				"%s : Error - IRQ Mismatch ? int=%d client_int=%d\n",
+				__func__,
+				irq,
+				(bcmtch_data_p) ?
+				bcmtch_data_p->p_i2c_client_spm->irq :
+				0);
+	}
+
+	return IRQ_HANDLED;
+}
+
+static int32_t bcmtch_os_interrupt_enable(void)
+{
+	int32_t ret_val = BCMTCH_SUCCESS;
+	uint32_t irq;
+	bcmtch_platform_data_t *p_data;
+
+	p_data = &bcmtch_data_p->platform_data;
+
+	if (gpio_is_valid(p_data->gpio_interrupt_pin)) {
+		/* Reserve the irq line. */
+		irq = gpio_to_irq(p_data->gpio_interrupt_pin);
+		ret_val = request_irq(
+					irq,
+					bcmtch_os_interrupt_handler,
+					p_data->gpio_interrupt_trigger,
+					BCM15500_TSC_NAME,
+					bcmtch_data_p);
+
+		if (ret_val) {
+			printk(KERN_ERR
+					"ERROR: %s() - Unable to request interrupt irq %d\n",
+					__func__,
+					irq);
+
+			/* note :
+			* - polling is not enabled in this release
+			* - it is an error if an irq is requested
+			*	and not granted
+			*/
+		} else
+			bcmtch_data_p->irq_enabled = true;
+	}
+	return ret_val;
+}
+
+static void bcmtch_os_interrupt_disable(void)
+{
+	int32_t pin;
+	if (bcmtch_data_p && bcmtch_data_p->irq_enabled) {
+		pin = bcmtch_data_p->platform_data.gpio_interrupt_pin;
+
+		if (gpio_is_valid(pin)) {
+			free_irq(gpio_to_irq(pin), bcmtch_data_p);
+			bcmtch_data_p->irq_enabled = false;
+		}
+	}
+}
+
+static void *bcmtch_os_mem_alloc(uint32_t mem_size_req)
+{
+	return kzalloc(mem_size_req, GFP_KERNEL);
+}
+
+static void bcmtch_os_mem_free(void *mem_p)
+{
+	kfree(mem_p);
+	mem_p = NULL;
+}
+
+static int32_t bcmtch_os_init_input_device(void)
+{
+	int32_t ret_val = BCMTCH_SUCCESS;
+	int32_t button_init = 0;
+
+	if (bcmtch_data_p) {
+		bcmtch_data_p->p_inputDevice = input_allocate_device();
+		if (bcmtch_data_p->p_inputDevice) {
+
+			bcmtch_data_p->p_inputDevice->name =
+				"BCM15500 Touch Screen";
+
+			bcmtch_data_p->p_inputDevice->phys = "I2C";
+			bcmtch_data_p->p_inputDevice->id.bustype = BUS_I2C;
+			bcmtch_data_p->p_inputDevice->id.vendor = 0x0A5C;
+			bcmtch_data_p->p_inputDevice->id.product = 0x0020;
+			bcmtch_data_p->p_inputDevice->id.version = 0x0000;
+
+			set_bit(EV_SYN, bcmtch_data_p->p_inputDevice->evbit);
+			set_bit(EV_ABS, bcmtch_data_p->p_inputDevice->evbit);
+			__set_bit(
+				INPUT_PROP_DIRECT,
+				bcmtch_data_p->p_inputDevice->propbit);
+
+			set_bit(EV_KEY, bcmtch_data_p->p_inputDevice->evbit);
+			set_bit(
+				BTN_TOUCH,
+				bcmtch_data_p->p_inputDevice->keybit);
+
+			while (button_init < bcmtch_data_p->
+				  platform_data.ext_button_count) {
+				set_bit(
+					bcmtch_data_p->platform_data.
+					  ext_button_map[button_init],
+					bcmtch_data_p->p_inputDevice->keybit);
+				button_init++;
+			}
+
+			input_set_abs_params(
+				bcmtch_data_p->p_inputDevice,
+				ABS_MT_POSITION_X,
+				0,
+				BCMTCH_MAX_X,
+				0,
+				0);
+
+			input_set_abs_params(
+				bcmtch_data_p->p_inputDevice,
+				ABS_MT_POSITION_Y,
+				0,
+				BCMTCH_MAX_Y,
+				0,
+				0);
+
+			if (bcmtch_event_flag &
+					BCMTCH_EVENT_FLAG_TOUCH_SIZE) {
+				input_set_abs_params(
+					bcmtch_data_p->p_inputDevice,
+					ABS_MT_TOUCH_MAJOR,
+					0,
+					BCMTCH_MAX_TOUCH_MAJOR,
+					0,
+					0);
+
+				input_set_abs_params(
+					bcmtch_data_p->p_inputDevice,
+					ABS_MT_TOUCH_MINOR,
+					0,
+					BCMTCH_MAX_TOUCH_MINOR,
+					0,
+					0);
+			}
+
+			if (bcmtch_event_flag &
+					BCMTCH_EVENT_FLAG_TOOL_SIZE) {
+				input_set_abs_params(
+					bcmtch_data_p->p_inputDevice,
+					ABS_MT_WIDTH_MAJOR,
+					0,
+					BCMTCH_MAX_WIDTH_MAJOR,
+					0,
+					0);
+
+				input_set_abs_params(
+					bcmtch_data_p->p_inputDevice,
+					ABS_MT_WIDTH_MINOR,
+					0,
+					BCMTCH_MAX_WIDTH_MINOR,
+					0,
+					0);
+			}
+
+			if (bcmtch_event_flag &
+					BCMTCH_EVENT_FLAG_PRESSURE) {
+				input_set_abs_params(
+					bcmtch_data_p->p_inputDevice,
+					ABS_MT_PRESSURE,
+					0,
+					BCMTCH_MAX_PRESSURE,
+					0,
+					0);
+			}
+
+			if (bcmtch_event_flag &
+					BCMTCH_EVENT_FLAG_ORIENTATION) {
+				input_set_abs_params(
+					bcmtch_data_p->p_inputDevice,
+					ABS_MT_ORIENTATION,
+					BCMTCH_MIN_ORIENTATION,
+					BCMTCH_MAX_ORIENTATION,
+					0,
+					0);
+			}
+
+#if BCMTCH_USE_PROTOCOL_B
+			set_bit(
+				BTN_TOOL_FINGER,
+				bcmtch_data_p->p_inputDevice->keybit);
+
+			input_mt_init_slots(
+				bcmtch_data_p->p_inputDevice,
+				BCMTCH_MAX_TOUCH);
+#else
+			input_set_abs_params(
+				bcmtch_data_p->p_inputDevice,
+				ABS_MT_TRACKING_ID,
+				0,
+				BCMTCH_MAX_TOUCH,
+				0,
+				0);
+#endif
+
+			/* request new os input queue size for this device */
+			input_set_events_per_packet(
+				bcmtch_data_p->p_inputDevice,
+				50 * BCMTCH_MAX_TOUCH);
+
+			/* register device */
+			ret_val = input_register_device(
+						bcmtch_data_p->p_inputDevice);
+
+			if (ret_val) {
+				printk(KERN_INFO
+					"%s() Unable to register input device\n",
+					__func__);
+
+				input_free_device(bcmtch_data_p->p_inputDevice);
+				bcmtch_data_p->p_inputDevice = NULL;
+			}
+		} else {
+			printk(KERN_ERR
+					"%s() Unable to create device\n",
+			       __func__);
+
+			ret_val = -ENODEV;
+		}
+	} else {
+		printk(KERN_ERR
+				"%s() error, driver data structure == NULL\n",
+				__func__);
+
+		ret_val = -ENODATA;
+	}
+
+	return ret_val;
+}
+
+static void bcmtch_os_free_input_device(void)
+{
+	if (bcmtch_data_p && bcmtch_data_p->p_inputDevice) {
+		input_unregister_device(bcmtch_data_p->p_inputDevice);
+		bcmtch_data_p->p_inputDevice = NULL;
+	}
+}
+
+static int32_t bcmtch_os_init_critical_sections(void)
+{
+	int32_t ret_val = BCMTCH_SUCCESS;
+
+	if (!bcmtch_data_p) {
+		printk(KERN_ERR
+				"%s() error, driver data structure == NULL\n",
+				__func__);
+
+		ret_val = -ENODATA;
+		return ret_val;
+	}
+
+	mutex_init(&bcmtch_data_p->cs_mutex[BCMTCH_MUTEX_BUS]);
+	mutex_init(&bcmtch_data_p->cs_mutex[BCMTCH_MUTEX_WORK]);
+
+	return ret_val;
+}
+
+static void bcmtch_os_lock_critical_section(uint8_t lock_mutex)
+{
+	mutex_lock(&bcmtch_data_p->cs_mutex[lock_mutex]);
+}
+
+static void bcmtch_os_release_critical_section(uint8_t lock_mutex)
+{
+	mutex_unlock(&bcmtch_data_p->cs_mutex[lock_mutex]);
+}
+
+static bool bcmtch_os_post_boot_download(
+		bool irq_serviced)
+{
+	int32_t still_downloading;
+
+	if (irq_serviced) {
+		/* download shorter packet */
+		still_downloading =
+				bcmtch_dev_post_boot_download(
+					bcmtch_post_boot_rate_low);
+	} else {
+		/* download larger packet */
+		still_downloading =
+				bcmtch_dev_post_boot_download(
+					bcmtch_post_boot_rate_high);
+	}
+
+	if (!still_downloading) {
+			if (bcmtch_debug_flag & BCMTCH_DEBUG_FLAG_POST_BOOT)
+				printk(KERN_ERR
+						"%s() DOWNLOAD COMPLETE\n",
+						__func__);
+
+			/* don't want any stray interrupts */
+			bcmtch_os_interrupt_disable();
+
+			/* Send post boot init command */
+			bcmtch_dev_write_rom_command(
+					TOFE_COMMAND_INIT_POST_BOOT_PATCHES,
+					bcmtch_data_p->postboot_cfg_addr,
+					(uint16_t)
+					bcmtch_data_p->postboot_cfg_length,
+					0x0);
+
+			/* Switch channel mode. */
+			bcmtch_data_p->rom_channel = false;
+			bcmtch_dev_reset_events();
+
+			/* Wait for firmware reboot ready. */
+			if (bcmtch_dev_wait_for_firmware_ready(1000)) {
+				uint8_t xaddr = 0x40;
+				uint8_t xdata;
+				while (xaddr <= 0x61) {
+					bcmtch_com_read_spm(xaddr, &xdata);
+					printk(KERN_ERR
+						"%s: addr = 0x%02x  data = 0x%02x\n",
+						__func__,
+						xaddr++,
+						xdata);
+				}
+			}
+
+			bcmtch_os_interrupt_enable();
+
+			bcmtch_dev_watchdog_restart(
+					MS_TO_JIFFIES(bcmtch_watchdog_normal));
+
+			return true;
+	}
+
+	return false;
+}
+
+static void bcmtch_os_deferred_worker(struct work_struct *work)
+{
+	bool irq_serviced = false;
+#if BCMTCH_USE_WORK_LOCK
+	bcmtch_os_lock_critical_section(BCMTCH_MUTEX_WORK);
+#endif
+
+	if (bcmtch_data_p->irq_pending) {
+		bcmtch_data_p->irq_pending = false;
+
+		/* Process channels */
+		bcmtch_dev_process();
+
+		irq_serviced = true;
+	}
+
+	/* Amortized post boot download */
+	if (bcmtch_data_p->post_boot_sections)
+		bcmtch_os_post_boot_download(irq_serviced);
+
+#if BCMTCH_USE_WORK_LOCK
+	bcmtch_os_release_critical_section(BCMTCH_MUTEX_WORK);
+#endif
+}
+
+static int32_t bcmtch_dev_post_boot_get_section(void)
+{
+	bcmtch_combi_entry_t *pb_entry = NULL;
+
+	if (bcmtch_data_p->post_boot_sections &&
+			bcmtch_data_p->post_boot_buffer) {
+		pb_entry = (bcmtch_combi_entry_t *)
+			bcmtch_data_p->post_boot_buffer;
+
+		while (pb_entry[bcmtch_data_p->post_boot_section].length) {
+			if (pb_entry[bcmtch_data_p->post_boot_section].flags &
+					BCMTCH_FIRMWARE_FLAGS_POST_BOOT) {
+				bcmtch_data_p->post_boot_data =
+					bcmtch_data_p->post_boot_buffer
+					+ pb_entry[bcmtch_data_p->
+					post_boot_section].offset;
+
+				bcmtch_data_p->post_boot_addr =
+					pb_entry[bcmtch_data_p->
+					post_boot_section].addr;
+
+				bcmtch_data_p->post_boot_left =
+					pb_entry[bcmtch_data_p->
+					post_boot_section].length;
+
+				break;
+			} else {
+				bcmtch_data_p->post_boot_section++;
+			}
+		}
+	}
+
+	return pb_entry[bcmtch_data_p->post_boot_section].length;
+}
+
+static int32_t bcmtch_dev_post_boot_download(int16_t data_rate)
+{
+	int32_t ret_val;
+	int16_t write_length;
+
+	bcmtch_combi_entry_t *pb_entry = NULL;
+
+	if (bcmtch_data_p->post_boot_left)	{
+		write_length = data_rate;
+
+		if (bcmtch_data_p->post_boot_left < write_length)
+			write_length = bcmtch_data_p->post_boot_left;
+
+		ret_val = bcmtch_com_write_sys(
+					bcmtch_data_p->post_boot_addr,
+					write_length,
+					bcmtch_data_p->post_boot_data);
+
+		if (ret_val) {
+			printk(KERN_ERR
+					"%s() Error - did not download\n",
+					__func__);
+		} else {
+			bcmtch_data_p->post_boot_addr += write_length;
+			bcmtch_data_p->post_boot_left -= write_length;
+			bcmtch_data_p->post_boot_data += write_length;
+		}
+	} else {
+		printk(KERN_ERR
+				"%s() Error - no bytes to download\n",
+				__func__);
+	}
+
+	if (!bcmtch_data_p->post_boot_left) {
+
+		pb_entry = (bcmtch_combi_entry_t *)
+			bcmtch_data_p->post_boot_buffer;
+
+		if (bcmtch_debug_flag & BCMTCH_DEBUG_FLAG_POST_BOOT)
+			printk(KERN_INFO
+					"%s() Section %d  Addr 0x%08x  Len %d\n",
+					__func__,
+					bcmtch_data_p->post_boot_section,
+					pb_entry[bcmtch_data_p->
+					post_boot_section].addr,
+					pb_entry[bcmtch_data_p->
+					post_boot_section].length);
+
+		if (--bcmtch_data_p->post_boot_sections) {
+			bcmtch_data_p->post_boot_section++;
+			bcmtch_dev_post_boot_get_section();
+		}
+	}
+
+	return bcmtch_data_p->post_boot_sections;
+}
+
+static int32_t bcmtch_os_init_deferred_worker(void)
+{
+	int32_t ret_val = BCMTCH_SUCCESS;
+
+	if (bcmtch_data_p) {
+		bcmtch_data_p->p_workqueue = create_workqueue("bcmtch_wq");
+
+		if (bcmtch_data_p->p_workqueue) {
+
+			INIT_WORK(
+				&bcmtch_data_p->work,
+				bcmtch_os_deferred_worker);
+
+		} else {
+			printk(KERN_ERR
+					"%s() Unable to create workqueue\n",
+					__func__);
+
+			ret_val = -ENOMEM;
+		}
+	} else {
+		printk(KERN_ERR "%s() error, driver data structure == NULL\n",
+		       __func__);
+		ret_val = -ENODATA;
+	}
+
+	return ret_val;
+}
+
+static void bcmtch_os_clear_deferred_worker(void)
+{
+	if (bcmtch_data_p && bcmtch_data_p->p_workqueue)
+		flush_workqueue(bcmtch_data_p->p_workqueue);
+}
+
+static void bcmtch_os_free_deferred_worker(void)
+{
+	if (bcmtch_data_p && bcmtch_data_p->p_workqueue) {
+		cancel_work_sync(&bcmtch_data_p->work);
+		destroy_workqueue(bcmtch_data_p->p_workqueue);
+
+		bcmtch_data_p->p_workqueue = NULL;
+	}
+}
+
+static void bcmtch_os_reset(void)
+{
+	if (bcmtch_data_p &&
+		gpio_is_valid(bcmtch_data_p->platform_data.gpio_reset_pin)) {
+		bcmtch_os_sleep_ms(
+			bcmtch_data_p->platform_data.gpio_reset_time_ms);
+
+		gpio_set_value(
+			bcmtch_data_p->platform_data.gpio_reset_pin,
+			bcmtch_data_p->platform_data.gpio_reset_polarity);
+
+		bcmtch_os_sleep_ms(
+			bcmtch_data_p->platform_data.gpio_reset_time_ms);
+
+		gpio_set_value(
+			bcmtch_data_p->platform_data.gpio_reset_pin,
+			!bcmtch_data_p->platform_data.gpio_reset_polarity);
+
+		bcmtch_os_sleep_ms(
+			bcmtch_data_p->platform_data.gpio_reset_time_ms);
+	}
+}
+
+static int32_t bcmtch_os_init_gpio(void)
+{
+	struct bcmtch_platform_data *p_platform_data;
+	int32_t ret_val = BCMTCH_SUCCESS;
+
+	if (!bcmtch_data_p) {
+		printk(KERN_ERR
+				"%s() error, driver data structure == NULL\n",
+				__func__);
+
+		ret_val = -ENODATA;
+		return ret_val;
+	}
+
+	p_platform_data =
+		(struct bcmtch_platform_data *)&bcmtch_data_p->platform_data;
+
+    /*
+     * setup a gpio pin for BCM Touch Controller reset function
+     */
+	if (gpio_is_valid(p_platform_data->gpio_reset_pin)) {
+		ret_val = gpio_request(
+					p_platform_data->gpio_reset_pin,
+					"BCMTCH reset");
+
+		if (ret_val < 0) {
+			printk(KERN_ERR
+					"ERROR: %s() - Unable to request reset pin %d\n",
+					__func__,
+					p_platform_data->gpio_reset_pin);
+
+			/* note :
+			* it is an error if a reset pin is requested
+			* and not granted --> return
+			*/
+			return ret_val;
+		}
+
+		/*
+		* setup reset pin as output
+		* - invert reset polarity --> don't want to hold in reset
+		*/
+		ret_val = gpio_direction_output(
+					p_platform_data->gpio_reset_pin,
+					!p_platform_data->gpio_reset_polarity);
+
+		if (ret_val < 0) {
+			printk(KERN_ERR
+					"ERROR: %s() - Unable to set reset pin %d\n",
+					__func__,
+					p_platform_data->gpio_reset_pin);
+
+			/* note :
+			* it is an error if a reset pin is requested
+			* and not set --> return
+			*/
+			return ret_val;
+		}
+	} else {
+		printk(KERN_INFO
+				"%s() : no reset pin configured\n",
+				__func__);
+	}
+
+	/*
+	* setup a gpio pin for BCM Touch Controller interrupt function
+	*/
+	if (gpio_is_valid(p_platform_data->gpio_interrupt_pin)) {
+		ret_val = gpio_request(
+					p_platform_data->gpio_interrupt_pin,
+					"BCMTCH Interrupt");
+
+		if (ret_val < 0) {
+			printk(KERN_ERR
+					"ERROR: %s() - Unable to request interrupt pin %d\n",
+					__func__,
+					p_platform_data->gpio_interrupt_pin);
+
+			/* note :
+			* it is an error if an interrupt pin is requested
+			* and not granted --> return
+			*/
+			return ret_val;
+		}
+
+		/* setup interrupt pin as input */
+		ret_val = gpio_direction_input(
+					p_platform_data->gpio_interrupt_pin);
+		if (ret_val < 0) {
+			printk(KERN_ERR
+					"ERROR: %s() - Unable to set interrupt pin %d\n",
+					__func__,
+					p_platform_data->gpio_interrupt_pin);
+
+			/* note :
+			 * it is an error if a interrupt pin is requested
+			 * and not set --> return
+			 */
+			return ret_val;
+		}
+	} else {
+		printk(KERN_INFO
+				"%s() : no interrupt pin configured\n",
+				__func__);
+	}
+
+	return ret_val;
+}
+
+static void bcmtch_os_free_gpio(void)
+{
+	struct bcmtch_platform_data *p_platform_data;
+
+	if (bcmtch_data_p) {
+
+		p_platform_data =
+			(struct bcmtch_platform_data *)
+				&bcmtch_data_p->platform_data;
+
+		if (gpio_is_valid(p_platform_data->gpio_reset_pin))
+			gpio_free(p_platform_data->gpio_reset_pin);
+
+
+		if (gpio_is_valid(p_platform_data->gpio_interrupt_pin))
+			gpio_free(p_platform_data->gpio_interrupt_pin);
+
+	}
+}
+
+static int32_t bcmtch_os_init_cli(struct device *p_device)
+{
+	int32_t ret_val = BCMTCH_SUCCESS;
+
+	ret_val = device_create_file(p_device, &bcmtch_cli_attr);
+
+	return ret_val;
+}
+
+static void bcmtch_os_free_cli(struct device *p_device)
+{
+	device_remove_file(p_device, &bcmtch_cli_attr);
+}
+
+#ifdef CONFIG_PM
+#ifndef CONFIG_HAS_EARLYSUSPEND
+static int bcmtch_os_suspend(struct i2c_client *p_client, pm_message_t mesg)
+{
+	if (mesg.event == PM_EVENT_SUSPEND)
+		bcmtch_dev_suspend();
+
+	return 0;
+}
+
+static int bcmtch_os_resume(struct i2c_client *p_client)
+{
+	int rc = 0;
+
+	bcmtch_dev_resume();
+
+	return rc;
+}
+#endif
+#endif
+
+#ifdef CONFIG_HAS_EARLYSUSPEND
+static void bcmtch_os_early_suspend(struct early_suspend *h)
+{
+	bcmtch_dev_suspend();
+}
+
+static void bcmtch_os_late_resume(struct early_suspend *h)
+{
+	bcmtch_dev_resume();
+}
+
+static struct early_suspend bcmtch_os_early_suspend_desc = {
+	.level      = EARLY_SUSPEND_LEVEL_BLANK_SCREEN,
+	.suspend    = bcmtch_os_early_suspend,
+	.resume     = bcmtch_os_late_resume,
+};
+#endif
+
+/* ----------------------------------------- */
+/* - BCM Touch Controller OS I2C Functions - */
+/* ----------------------------------------- */
+static int32_t bcmtch_os_i2c_read_spm(
+					struct i2c_client *p_i2c,
+					uint8_t reg,
+					uint8_t *data)
+{
+	int32_t ret_val = BCMTCH_SUCCESS;
+
+	/* setup I2C messages for single byte read transaction */
+	struct i2c_msg msg[2] = {
+		/* first write register to spm */
+		{.addr = p_i2c->addr, .flags = 0, .len = 1, .buf = &reg},
+		/* Second read data from spm reg */
+		{.addr = p_i2c->addr, .flags = I2C_M_RD, .len = 1, .buf = data}
+	};
+
+	if (i2c_transfer(p_i2c->adapter, msg, 2) != 2)
+		ret_val = -EIO;
+
+	return ret_val;
+}
+
+static int32_t bcmtch_os_i2c_write_spm(
+					struct i2c_client *p_i2c,
+					uint8_t reg,
+					uint8_t data)
+{
+	int32_t ret_val = BCMTCH_SUCCESS;
+
+	/* setup buffer with reg address and data */
+	uint8_t buffer[2] = { reg, data };
+
+	/* setup I2C message for single byte write transaction */
+	struct i2c_msg msg[1] = {
+		/* first write message to spm */
+		{.addr = p_i2c->addr, .flags = 0, .len = 2, .buf = buffer}
+	};
+
+	if (i2c_transfer(p_i2c->adapter, msg, 1) != 1)
+		ret_val = -EIO;
+
+	return ret_val;
+}
+
+static int32_t bcmtch_os_i2c_fast_write_spm(
+						struct i2c_client *p_i2c,
+						uint8_t count,
+						uint8_t *regs,
+						uint8_t *data)
+{
+	int32_t ret_val = BCMTCH_SUCCESS;
+
+	/*
+	 * support hard-coded for a max of 5 spm write messages
+	 *
+	 * - 1 i2c message uses 2 uint8_t buffers
+	 *
+	 */
+	uint8_t buffer[10];	/* buffers for reg address and data */
+	struct i2c_msg msg[5];
+	uint32_t nMsg = 0;
+	uint8_t *pBuf = buffer;
+
+	/* setup I2C message for single byte write transaction */
+	while (nMsg < count) {
+		msg[nMsg].addr = p_i2c->addr;
+		msg[nMsg].flags = 0;
+		msg[nMsg].len = 2;
+		msg[nMsg].buf = pBuf;
+
+		*pBuf++ = regs[nMsg];
+		*pBuf++ = data[nMsg];
+		nMsg++;
+	}
+
+	if (i2c_transfer(p_i2c->adapter, msg, nMsg) != nMsg)
+		ret_val = -EIO;
+
+	return ret_val;
+}
+
+static int32_t bcmtch_os_i2c_read_sys(
+						struct i2c_client *p_i2c,
+						uint32_t sys_addr,
+						uint16_t read_len,
+						uint8_t *read_data)
+{
+	int32_t ret_val = BCMTCH_SUCCESS;
+	uint8_t dmaReg = BCMTCH_SPM_REG_DMA_RFIFO;
+#if BCMTCH_USE_DMA_STATUS
+	uint8_t statusReg = BCMTCH_SPM_REG_DMA_STATUS;
+	uint8_t dmaStatus;
+#endif
+
+	/* setup the DMA header for this read transaction */
+	uint8_t dmaHeader[8] = {
+		/* set dma controller addr */
+		BCMTCH_SPM_REG_DMA_ADDR,
+		/* setup dma address */
+		(sys_addr & 0xFF),
+		((sys_addr & 0xFF00) >> 8),
+		((sys_addr & 0xFF0000) >> 16),
+		((sys_addr & 0xFF000000) >> 24),
+		/* setup dma length */
+		(read_len & 0xFF),
+		((read_len & 0xFF00) >> 8),
+		/* setup dma mode */
+		BCMTCH_DMA_MODE_READ
+	};
+
+
+#if BCMTCH_USE_DMA_STATUS
+	/* setup I2C messages for DMA read request transaction */
+	struct i2c_msg dma_request[3] = {
+		/* write DMA request header */
+		{.addr = p_i2c->addr, .flags = 0, .len = 8, .buf = dmaHeader},
+
+		/* write messages to read the DMA request status */
+		{.addr = p_i2c->addr, .flags = 0, .len = 1, .buf = &statusReg},
+		{.addr = p_i2c->addr, .flags = I2C_M_RD,
+				.len = 1, .buf = &dmaStatus}
+	};
+
+	/* setup I2C messages for DMA read transaction */
+	struct i2c_msg dma_read[2] = {
+		/* next write messages to read the DMA request status */
+		{.addr = p_i2c->addr, .flags = 0, .len = 1, .buf = &dmaReg},
+		{.addr = p_i2c->addr, .flags = I2C_M_RD,
+				.len = read_len, .buf = read_data}
+	};
+
+	/* send DMA request */
+	if (i2c_transfer(p_i2c->adapter, dma_request, 3) != 3) {
+		ret_val = -EIO;
+	} else {
+		while (dmaStatus != 1) {
+			/* read status */
+			if (i2c_transfer(p_i2c->adapter, &dma_request[1], 2)
+					!= 2) {
+
+				ret_val = -EIO;
+				break;
+			}
+		}
+	}
+
+	if (dmaStatus) {
+		/* read status */
+		if (i2c_transfer(p_i2c->adapter, dma_read, 2) != 2)
+			ret_val = -EIO;
+	}
+#else
+	/* setup I2C messages for DMA read request transaction */
+	struct i2c_msg dma_request[3] = {
+		/* write DMA request header */
+		{.addr = p_i2c->addr, .flags = 0, .len = 8, .buf = dmaHeader},
+
+		/* next write messages to read the DMA request */
+		{.addr = p_i2c->addr, .flags = 0, .len = 1, .buf = &dmaReg},
+		{.addr = p_i2c->addr, .flags = I2C_M_RD,
+				.len = read_len, .buf = read_data}
+	};
+
+	/* send complete DMA request */
+	if (i2c_transfer(p_i2c->adapter, dma_request, 3) != 3)
+		ret_val = -EIO;
+#endif
+	return ret_val;
+}
+
+static int32_t bcmtch_os_i2c_write_sys(
+					struct i2c_client *p_i2c,
+					uint32_t sys_addr,
+					uint16_t write_len,
+					uint8_t *write_data)
+{
+	int32_t ret_val = BCMTCH_SUCCESS;
+
+	uint16_t dmaLen = write_len + 1;
+	uint8_t *dmaData = bcmtch_os_mem_alloc(dmaLen);
+
+	/* setup the DMA header for this read transaction */
+	uint8_t dmaHeader[8] = {
+		/* set dma controller addr */
+		BCMTCH_SPM_REG_DMA_ADDR,
+		/* setup dma address */
+		(sys_addr & 0xFF),
+		((sys_addr & 0xFF00) >> 8),
+		((sys_addr & 0xFF0000) >> 16),
+		((sys_addr & 0xFF000000) >> 24),
+		/* setup dma length */
+		(write_len & 0xFF),
+		((write_len & 0xFF00) >> 8),
+		/* setup dma mode */
+		BCMTCH_DMA_MODE_WRITE
+	};
+
+	/* setup I2C messages for DMA read request transaction */
+	struct i2c_msg dma_request[2] = {
+		/* write DMA request header */
+		{.addr = p_i2c->addr, .flags = 0, .len = 8, .buf = dmaHeader},
+		{.addr = p_i2c->addr, .flags = 0, .len = dmaLen, .buf = dmaData}
+	};
+
+	if (dmaData) {
+		/* setup dma data buffer */
+		dmaData[0] = BCMTCH_SPM_REG_DMA_WFIFO;
+		memcpy(&dmaData[1], write_data, write_len);
+
+		if (i2c_transfer(p_i2c->adapter, dma_request, 2) != 2)
+			ret_val = -EIO;
+
+		/* free dma buffer */
+		bcmtch_os_mem_free(dmaData);
+	} else {
+		ret_val = -ENOMEM;
+	}
+
+	return ret_val;
+}
+
+static int32_t bcmtch_os_i2c_init_clients(struct i2c_client *p_i2c_client_spm)
+{
+	int32_t ret_val = BCMTCH_SUCCESS;
+	struct i2c_client *p_i2c_client_sys;
+
+	if (p_i2c_client_spm->adapter) {
+		/* Configure the second I2C slave address. */
+		p_i2c_client_sys =
+			i2c_new_dummy(
+				p_i2c_client_spm->adapter,
+				bcmtch_data_p->platform_data.i2c_addr_sys);
+
+		if (p_i2c_client_sys) {
+			/* assign */
+			bcmtch_data_p->p_i2c_client_spm = p_i2c_client_spm;
+			bcmtch_data_p->p_i2c_client_sys = p_i2c_client_sys;
+		} else {
+			printk(KERN_ERR
+				"%s() i2c_new_dummy == NULL, slave address: 0x%x\n",
+				__func__,
+				bcmtch_data_p->platform_data.i2c_addr_sys);
+
+			ret_val = -ENODEV;
+		}
+	} else {
+		printk(KERN_ERR
+				"%s() p_i2c_adapter == NULL, adapter_id: 0x%x\n",
+				__func__,
+				bcmtch_data_p->platform_data.i2c_bus_id);
+
+		ret_val = -ENODEV;
+	}
+
+	return ret_val;
+}
+
+static void bcmtch_os_i2c_free_clients(void)
+{
+	if (bcmtch_data_p && (bcmtch_data_p->p_i2c_client_sys)) {
+		i2c_unregister_device(bcmtch_data_p->p_i2c_client_sys);
+		bcmtch_data_p->p_i2c_client_sys = NULL;
+	}
+}
+
+/* ------------------------------------------------- */
+/* - BCM Touch Controller OS I2C Driver Structures - */
+/* ------------------------------------------------- */
+static const struct i2c_device_id bcmtch_i2c_id[] = {
+	{BCM15500_TSC_NAME, 0},
+	{}
+};
+
+MODULE_DEVICE_TABLE(i2c, bcmtch_i2c_id);
 
 static struct i2c_driver bcmtch_i2c_driver = {
-   .driver = {
-         .name = BCM915500_TSC_NAME,
-         .owner = THIS_MODULE,
-   },
-   .probe = bcmtch_i2c_probe,
-   .remove = bcmtch_i2c_remove,
-   .id_table = napa_i2c_id,
+	.driver = {
+		   .name = BCM15500_TSC_NAME,
+		   .owner = THIS_MODULE,
+		   },
+	.probe = bcmtch_os_i2c_probe,
+	.remove = bcmtch_os_i2c_remove,
+	.id_table = bcmtch_i2c_id,
+
+#ifdef CONFIG_PM
+#ifndef CONFIG_HAS_EARLYSUSPEND
+	.suspend = bcmtch_os_suspend,
+	.resume = bcmtch_os_resume,
+#endif
+#endif
 };
 
-static int __init bcmtch_i2c_init(void)
+/* ------------------------------------------------ */
+/* - BCM Touch Controller OS I2C Driver Functions - */
+/* ------------------------------------------------ */
+static int32_t bcmtch_os_i2c_probe(
+					struct i2c_client *p_i2c_client,
+					const struct i2c_device_id *id)
 {
+	int32_t ret_val = BCMTCH_SUCCESS;
 
-   pInputDev = bcmtch_allocate_input_dev();
+	printk(KERN_INFO
+		"BCMTCH: Driver: %s : %s : %s\n",
+			BCMTCH_DRIVER_VERSION,
+			__DATE__,
+			__TIME__);
 
-   return i2c_add_driver(&bcmtch_i2c_driver);
+	/* print driver probe header */
+	if (p_i2c_client)
+		printk(KERN_INFO
+				"BCMTCH: dev=%s addr=0x%x irq=%d\n",
+				p_i2c_client->name,
+				p_i2c_client->addr,
+				p_i2c_client->irq);
+
+	if (id)
+		printk(KERN_INFO
+				"BCMTCH: match id=%s\n",
+				id->name);
+
+	/* allocate global BCM Touch Controller driver structure */
+	ret_val = bcmtch_dev_alloc();
+	if (ret_val)
+		goto probe_error;
+
+	/* setup local platform data from client device structure */
+	ret_val = bcmtch_dev_init_platform(&p_i2c_client->dev);
+	if (ret_val)
+		goto probe_error;
+
+	/* setup the critical sections for concurrency */
+	ret_val = bcmtch_os_init_critical_sections();
+	if (ret_val)
+		goto probe_error;
+
+#if !BCMTCH_USE_BUS_LOCK
+#if BCMTCH_USE_WORK_LOCK
+	bcmtch_os_lock_critical_section(BCMTCH_MUTEX_WORK);
+#endif
+#endif
+
+	/* initialize deferred worker (workqueue/tasklet/etc */
+	ret_val = bcmtch_os_init_deferred_worker();
+	if (ret_val)
+		goto probe_error;
+
+
+	if (bcmtch_data_p->platform_data.bcmtch_on)
+		bcmtch_data_p->platform_data.bcmtch_on(true);
+
+	/* setup the gpio pins
+	 * - 1 gpio used for reset control signal to BCM Touch Controller
+	 * - 1 gpio used as interrupt signal from BCM Touch Controller
+	 */
+	ret_val = bcmtch_os_init_gpio();
+	if (ret_val)
+		goto probe_error;
+
+
+	/* setup the os input device*/
+	ret_val = bcmtch_os_init_input_device();
+	if (ret_val)
+		goto probe_error;
+
+	/* setup the os cli */
+	ret_val = bcmtch_os_init_cli(&p_i2c_client->dev);
+	if (ret_val)
+		goto probe_error;
+
+	/*
+	* setup the i2c clients and bind (store pointers in global structure)
+	* 1. SPM I2C client
+	* 2. SYS I2C client
+	*/
+	ret_val = bcmtch_os_i2c_init_clients(p_i2c_client);
+	if (ret_val)
+		goto probe_error;
+
+    /* reset the chip on driver load ? */
+	if (bcmtch_boot_flag & BCMTCH_BOOT_FLAG_RESET_ON_LOAD_MASK) {
+		if (bcmtch_boot_flag & BCMTCH_BOOT_FLAG_HARD_RESET_ON_LOAD)
+			bcmtch_dev_reset(BCMTCH_RESET_MODE_HARD);
+		else if (bcmtch_boot_flag & BCMTCH_BOOT_FLAG_SOFT_RESET_ON_LOAD)
+			bcmtch_dev_reset(
+				BCMTCH_RESET_MODE_SOFT_CHIP |
+				BCMTCH_RESET_MODE_SOFT_ARM);
+	}
+
+	/* perform BCM Touch Controller initialization */
+	ret_val = bcmtch_dev_init();
+	if (ret_val)
+		goto probe_error;
+
+#ifdef CONFIG_HAS_EARLYSUSPEND
+	register_early_suspend(&bcmtch_os_early_suspend_desc);
+#endif /* CONFIG_HAS_EARLYSUSPEND */
+	printk("BCMTCH: PROBE: success\n");
+
+#if !BCMTCH_USE_BUS_LOCK
+#if BCMTCH_USE_WORK_LOCK
+	bcmtch_os_release_critical_section(BCMTCH_MUTEX_WORK);
+#endif
+#endif
+
+	return BCMTCH_SUCCESS;
+
+probe_error:
+	printk(KERN_ERR "BCMTCH: PROBE: failure\n");
+
+	bcmtch_os_i2c_remove(p_i2c_client);
+	return ret_val;
+}
+
+static int32_t bcmtch_os_i2c_remove(struct i2c_client *p_i2c_client)
+{
+    /* disable interrupts */
+	bcmtch_os_interrupt_disable();
+
+	/* free watchdog timer */
+	bcmtch_dev_watchdog_stop();
+
+    /* free deferred worker (queue) */
+	bcmtch_os_free_deferred_worker();
+
+#if !BCMTCH_USE_BUS_LOCK
+#if BCMTCH_USE_WORK_LOCK
+	bcmtch_os_lock_critical_section(BCMTCH_MUTEX_WORK);
+#endif
+#endif
+
+#ifdef CONFIG_HAS_EARLYSUSPEND
+	unregister_early_suspend(&bcmtch_os_early_suspend_desc);
+#endif /* CONFIG_HAS_EARLYSUSPEND */
+
+    /* force chip to sleep before exiting */
+	if (BCMTCH_POWER_STATE_SLEEP != bcmtch_dev_get_power_state())
+		bcmtch_dev_set_power_state(BCMTCH_POWER_STATE_SLEEP);
+
+	/* free communication channels */
+	bcmtch_dev_free_channels();
+
+	/* free i2c device clients */
+	bcmtch_os_i2c_free_clients();
+
+	/* remove the os cli */
+	bcmtch_os_free_cli(&p_i2c_client->dev);
+
+	/* free input device */
+	bcmtch_os_free_input_device();
+
+	/* free used gpio pins */
+	bcmtch_os_free_gpio();
+
+	/* free this mem last */
+	bcmtch_dev_free();
+
+	return BCMTCH_SUCCESS;
+}
+
+static int32_t __init bcmtch_os_i2c_init(void)
+{
+	return i2c_add_driver(&bcmtch_i2c_driver);
 }
 /* init early so consumer devices can complete system boot */
-subsys_initcall(bcmtch_i2c_init);
+subsys_initcall(bcmtch_os_i2c_init);
 
-static void __exit bcmtch_i2c_exit(void)
+static void __exit bcmtch_os_i2c_exit(void)
 {
-   i2c_del_driver(&bcmtch_i2c_driver);
-}
-module_exit(bcmtch_i2c_exit);
-
-
-static ssize_t bcmtch_cli_fcn(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
-{
-
-    uint32_t      in_reg;
-    uint32_t      in_addr;
-    uint32_t      in_value;
-    uint32_t      in_count;
-    uint32_t      len;
-    uint32_t      index;
-    unsigned char uch;
-
-    printk("%s() line %d buf=%s count=%d\n", __func__, __LINE__, buf, count);
-
-    if (sscanf(buf, "poke ahb %x %x", &in_addr, &in_value)) {
-
-        //int bcmtch_com_write_mem( int ahb_addr, int len, void *data)     // port note, WriteAHBI2C ahb_addr was DWORD
-
-        len=4;
-        bcmtch_com_write_mem(in_addr, len, &in_value);
-        printk("%s() line %d Poke AHB Addr=%08x Data=%08x\n", __func__, __LINE__, in_addr, in_value);
-
-
-    }else if (sscanf(buf, "peek ahb %x %x", &in_addr, &in_count)) {
-
-        //int bcmtch_com_read_mem(int ahb_addr, int len, void *data)     /* port note, ReadAHBI2C ahb_addr was DWORD */
-
-        for (index = 0 ; index < in_count ; ++index) {
-            len=4;
-            bcmtch_com_read_mem(in_addr, len, &in_value);
-            printk("%s() line %d Peek AHB Addr=%08x Data=%08x\n", __func__, __LINE__, in_addr, in_value);
-            in_addr += 4;
-        }
-
-    }else if (sscanf(buf, "poke spm %x %x", &in_reg, &in_value)) {
-
-        uch = (unsigned char)in_value;
-        bcmtch_com_write_reg(BCM_TSC_SPM_SLAVE, in_reg, uch);
-        printk("%s() line %d Poke SPM Reg=%08x Data=%08x\n", __func__, __LINE__, in_reg, in_value);
-
-    }else if (sscanf(buf, "peek spm %x %x", &in_reg, &in_count)) {
-
-        for (index = 0 ; index < in_count ; ++index) {
-            uch = bcmtch_com_read_reg(BCM_TSC_SPM_SLAVE, in_reg);
-            in_value = (uint32_t)uch;
-            printk("%s() line %d Peek SPM Reg=%08x Data=%08x\n", __func__, __LINE__, in_reg, in_value);
-            in_reg += 1;
-        }
-
-    }else if (sscanf(buf, "debug %x", &in_value)) {
-        mod_debug = in_value;
-        printk("%s() line %d debug %08x\n", __func__, __LINE__, mod_debug );
-    }
-
-    return count;
+	i2c_del_driver(&bcmtch_i2c_driver);
 }
 
-MODULE_DESCRIPTION("I2C support for BCM915500 Touchscreen");
+module_exit(bcmtch_os_i2c_exit);
+
+MODULE_DESCRIPTION("I2C support for BCM15500 Touchscreen");
 MODULE_LICENSE("GPL");
-
+MODULE_VERSION(BCMTCH_DRIVER_VERSION);

@@ -1,5 +1,5 @@
 /*****************************************************************************
-* Copyright (c) 2011 Broadcom Corporation.  All rights reserved.
+* Copyright (c) 2013 Broadcom Corporation.  All rights reserved.
 *
 * This program is the proprietary software of Broadcom Corporation and/or
 * its licensors, and may only be used, duplicated, modified or distributed
@@ -37,49 +37,80 @@
 *    ESSENTIAL PURPOSE OF ANY LIMITED REMEDY.
 *****************************************************************************/
 
-#ifndef BCM915500_I2C_TS_H
-#define BCM915500_I2C_TS_H
-
-#define BCM15500_TSC_NAME "bcm15500"
-
-/* --------------------------------- */
-/* - Touch Controller Chip Version - */
-/* --------------------------------- */
+#ifndef BCM15500_SETTINGS_H
+#define BCM15500_SETTINGS_H
 
 /* chip constants */
 #define	BCMTCH_HW_BCM15200A0		0x015200a0
 #define	BCMTCH_HW_BCM15500A0		0x015500a0
 #define	BCMTCH_HW_BCM15200A1		0x015200a1
 
+
 //#define	BCMTCH_HW_CHIP_VERSION		BCMTCH_HW_BCM15200A0 /* set to one of the chip constants above */
 #define	BCMTCH_HW_CHIP_VERSION		BCMTCH_HW_BCM15200A1 /* set to one of the chip constants above */
 
-#define BCMTCH_AXIS_FLAG_X_BIT_POS			0
-#define BCMTCH_AXIS_FLAG_Y_BIT_POS			1
-#define BCMTCH_AXIS_FLAG_X_Y_BIT_POS		2
 
-#define BCMTCH_AXIS_FLAG_X_REVERSED_MASK	0x01
-#define BCMTCH_AXIS_FLAG_Y_REVERSED_MASK	0x02
-#define BCMTCH_AXIS_FLAG_X_Y_SWAPPED_MASK	0x04
+/* ---------------------------------------------------------- */
+/* - (Host) Platform Specific Definitions and Platform Data - */
+/* ---------------------------------------------------------- */
 
-typedef int (*bcmtch_power_on_t)(bool);
+/*
+ * host I2C bus/adapter id that the BCM Touch Controller is on
+ * - MUST BE SET
+ */
+#define BCMTCH_HW_I2C_BUS_ID            3
 
-/* structure for BCM Touch Controller platform hardware configuration */
-struct bcmtch_platform_data {
-	int i2c_bus_id;
-	int i2c_addr_sys;
-	int i2c_addr_spm;
-	int gpio_reset_pin;
-	int gpio_interrupt_pin;
-	int gpio_interrupt_trigger;
-	int gpio_reset_polarity;
-	int gpio_reset_time_ms;
-	int ext_button_count;
-	const int* ext_button_map;
-	bcmtch_power_on_t bcmtch_on;
-	unsigned char axis_orientation_flag;
-};
-#define bcmtch_platform_data_t struct bcmtch_platform_data
+/*
+ * host gpio pin used to reset the BCM Touch Controller
+ * - MUST be set to -1 if not used
+ */
+#define BCMTCH_HW_GPIO_RESET_PIN        0x46
 
+#define BCMTCH_HW_POLARITY_ACTIVE_HIGH  1
+#define BCMTCH_HW_POLARITY_ACTIVE_LOW   0
 
+#define BCMTCH_HW_GPIO_RESET_POLARITY   BCMTCH_HW_POLARITY_ACTIVE_LOW
+#define BCMTCH_HW_GPIO_RESET_TIME_MS    100
+
+/*
+ * host gpio pin used to receive interrupts from the BCM Touch Controller
+ * - MUST be set to -1 if not used
+ */
+#define BCMTCH_HW_GPIO_INTERRUPT_PIN        0x49
+
+#define BCMTCH_HW_GPIO_INTERRUPT_TRIGGER    IRQF_TRIGGER_FALLING
+
+/* I2C addresses of the BCM Touch Controller */
+#if (BCMTCH_HW_CHIP_VERSION == BCMTCH_HW_BCM15200A0||BCMTCH_HW_BCM15200A1)
+#define BCMTCH_HW_I2C_ADDR_SPM      0x67 /* SPM address on I2C bus */
+#elif (BCMTCH_HW_CHIP_VERSION == BCMTCH_HW_BCM15500A0)
+#define BCMTCH_HW_I2C_ADDR_SPM      0x66 /* SPM address on I2C bus */
+#else
+#error BCMTCH_HW_CHIP_VERSION is not set, cannot build driver
 #endif
+
+#define BCMTCH_HW_I2C_ADDR_SYS       0x68 /* SYS/AHB address on I2C bus */
+
+/* Orientation of the LCD/touch panel to the BCM Touch Controller */
+#define BCMTCH_HW_AXIS_SWAP_X_Y		0	/* swap x <-> y axes */
+#define BCMTCH_HW_AXIS_REVERSE_Y	0	/* reverse x-axis */
+#define BCMTCH_HW_AXIS_REVERSE_X	0	/* reverse y-axis */
+
+/*
+ * Support for extended TouchScreen/Panel buttons/keys
+ *
+ * If the device has buttons which are extensions of the touch panel,
+ * set the values below:
+ *   a) define BCMTCH_HW_BUTTON_COUNT equal to the number of buttons
+ *   b) set the entries in the bcmtch_hw_button_map array to the correct
+ *      key/button codes
+ *
+ */
+#define	BCMTCH_HW_BUTTON_COUNT		0
+
+static const int32_t bcmtch_hw_button_map[] = {
+		KEY_MENU,
+		KEY_BACK
+		};
+
+#endif /* BCM15500_SETTINGS_H */

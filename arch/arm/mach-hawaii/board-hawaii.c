@@ -158,10 +158,6 @@
 #include <linux/broadcom/wd-tapper.h>
 #endif
 
-#if defined(CONFIG_TOUCHSCREEN_BCM915500) || defined(CONFIG_TOUCHSCREEN_BCM915500_MODULE)
-#include <linux/i2c/bcm15500_i2c_ts.h>
-#endif
-
 #ifdef CONFIG_USB_DWC_OTG
 #include <linux/usb/bcm_hsotgctrl.h>
 #include <linux/usb/otg.h>
@@ -1117,24 +1113,6 @@ static struct i2c_board_info __initdata ft5306_info[] = {
 };
 #endif
 
-#if defined(CONFIG_TOUCHSCREEN_BCM915500) || defined(CONFIG_TOUCHSCREEN_BCM915500_MODULE)
-static struct bcm915500_platform_data bcm915500_i2c_param = {
-	.id = 3,
-	.i2c_adapter_id = 3,
-	.gpio_reset = TSC_GPIO_RESET_PIN,
-	.gpio_interrupt = TSC_GPIO_IRQ_PIN,
-};
-
-static struct i2c_board_info bcm915500_i2c_boardinfo[] = {
-	{
-	 .type = BCM915500_TSC_NAME,
-	 .addr = HW_BCM915500_SLAVE_SPM,
-	 .platform_data = &bcm915500_i2c_param,
-	 .irq = gpio_to_irq(TSC_GPIO_IRQ_PIN),
-	 },
-};
-#endif
-
 #if defined(CONFIG_BCM_ALSA_SOUND)
 static struct caph_platform_cfg board_caph_platform_cfg =
 #ifdef HW_CFG_CAPH
@@ -1239,12 +1217,6 @@ static void __init hawaii_add_i2c_devices(void)
 				kxtik_i2c_boardinfo,
 				ARRAY_SIZE(kxtik_i2c_boardinfo));
 #endif /* CONFIG_SENSORS_KIONIX_KXTIK */
-
-#if defined(CONFIG_TOUCHSCREEN_BCM915500) || defined(CONFIG_TOUCHSCREEN_BCM915500_MODULE)
-	i2c_register_board_info(3, bcm915500_i2c_boardinfo,
-				ARRAY_SIZE(bcm915500_i2c_boardinfo));
-#endif
-
 
 }
 
