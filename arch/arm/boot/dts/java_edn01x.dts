@@ -9,12 +9,12 @@
 	compatible = "bcm,java";
 
 	chosen {
-		bootargs = "console=ttyS0,115200n8 gpt mem=96M pmem=0 carveout=0 ap_only_boot root=/dev/ram0 rw rootfstype=rootfs initrd=0x84000000,4M init=/linuxrc"; /*lpj=10461184*/
+		bootargs = "console=ttyS0,115200n8 gpt mem=736M pmem=0 carveout=0 ap_only_boot"; /*lpj=10461184*/
 	};
 
 	memory@82000000 {
 		device_type = "memory";
-		reg = <0x82000000 0x6000000>; /* 96 MB */
+		reg = <0x82000000 0x2e000000>; /* 736 MB */
 	};
 
 	wd-tapper {
