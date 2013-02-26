@@ -1473,7 +1473,7 @@ static void sdhci_do_set_ios(struct sdhci_host *host, struct mmc_ios *ios)
 		    (ios->timing == MMC_TIMING_UHS_SDR25))
 			ctrl |= SDHCI_CTRL_HISPD;
 
-#ifdef CONFIG_MACH_HAWAII_FPGA
+#ifdef CONFIG_MACH_BCM_FPGA
 		if (host->quirks2 & SDHCI_QUIRK2_HOST_MASK_HS_BIT)
 		       ctrl &= ~SDHCI_CTRL_HISPD;
 #endif

@@ -27,7 +27,11 @@
 
 #ifndef CONFIG_HAVE_ARM_TWD
 #define TICK_TIMER_NAME TIMER_NAME"-timer"
+#if defined (CONFIG_ARCH_HAWAII)
 #define TICK_TIMER_OFFSET 2
+#elif defined (CONFIG_ARCH_JAVA)
+#define TICK_TIMER_OFFSET 0
+#endif
 
 struct kona_td {
 	struct kona_timer *kona_timer;

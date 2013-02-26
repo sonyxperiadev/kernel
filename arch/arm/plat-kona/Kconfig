@@ -31,9 +31,10 @@ config ARCH_HAWAII
 	  Support for the Broadcom Hawaii Soc platform.
 
 config ARCH_JAVA
-	bool "Broadcom Hawaii Soc"
+	bool "Broadcom Java Soc"
 	select HAVE_SMP
 	select HAVE_PWM
+	select MIGHT_HAVE_CACHE_L2X0
 	help
 	  Support for the Broadcom Java Soc platform.
 endchoice

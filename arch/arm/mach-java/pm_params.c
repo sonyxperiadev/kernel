@@ -127,8 +127,8 @@ bool is_pm_erratum(u32 erratum)
 	return !!(pm_erratum_flg & erratum);
 }
 
-#if defined(CONFIG_MACH_HAWAII_FPGA_E) || \
-	defined(CONFIG_MACH_HAWAII_FPGA) || \
+#if defined(CONFIG_MACH_BCM_FPGA_E) || \
+	defined(CONFIG_MACH_BCM_FPGA) || \
 	!defined(CONFIG_KONA_POWER_MGR)
 int pm_init_pmu_sr_vlt_map_table(u32 silicon_type, int *freq_id,
 		void *param)

@@ -110,7 +110,11 @@ struct kona_timer_module {
 #endif
 };
 
+#ifdef CONFIG_ARCH_JAVA
 #define NUM_OF_TIMER_MODULES	(3)
+#else
+#define NUM_OF_TIMER_MODULES	(2)
+#endif
 #define NUM_OF_CHANNELS		(4)
 
 /* Timer Module related APIs */

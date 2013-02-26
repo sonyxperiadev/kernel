@@ -15,16 +15,16 @@ choice
 	default y
 
 config	MACH_HAWAII_FPGA
-		tristate "Support Broadcom Hawaii FPGA"
+		tristate "MACH_HAWAII_FPGA"
 	select MACH_BCM_FPGA
-    help
-		This config option will
-		enable support
-		for FPGA platform
-		like Chip-it where CCU is absent.
+        help
+	  "This config
+	  option will enable support
+	  for FPGA platform like
+	  Chip-it where CCU is absent."
 
 config	MACH_HAWAII_FPGA_E
-		tristate "Support Broadcom Hawaii Eve FPGA"
+		tristate "MACH_HAWAII_FPGA_E"
 	select MACH_BCM_FPGA_E
 	help
 		This config option will
@@ -33,7 +33,7 @@ config	MACH_HAWAII_FPGA_E
 		Eve where CCU is present.
 
 config	MACH_HAWAII_RAY
-		bool  "Support Broadcom Hawaii Ray board"
+		tristate  "MACH_HAWAII_RAY"
 	help
 		Support for
 		the Broadcom
@@ -41,20 +41,22 @@ config	MACH_HAWAII_RAY
 		board.
 
 config	MACH_HAWAII_STONE
-		bool "Support Broadcom Hawaii Stone board"
-		help
-		Support for
-		the
-		Broadcom Hawaii Stone
-		board.
+		tristate "MACH_HAWAII_STONE"
+	select MACH_BCM_STONE
+	help
+	  Support for
+	  the Broadcom
+	  Hawaii Stone
+	  board.
 
 config	MACH_HAWAII_GARNET
-		bool "Support Broadcom Hawaii garnet board"
-		help
-		Support for
-		Broadcom Hawaii
-		garnet
-		board
+		tristate "MACH_HAWAII_GARNET"
+	select MACH_BCM_GARNET
+	help
+	  Support for
+	  Broadcom Hawaii
+	  garnet
+	  board.
 
 config	MACH_HAWAII_SS_EVAL_REV00
 		bool "Support Broadcom Hawaii SS eval board"

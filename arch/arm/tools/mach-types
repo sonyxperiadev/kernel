@@ -1181,3 +1181,4 @@ island_tablet_cp        MACH_ISLAND_TABLET_CP   ISLAND_TABLET_CP        2701
 rhea_berri              MACH_RHEA_BERRI         RHEA_BERRI              2701
 rhea_stone              MACH_RHEA_STONE         RHEA_STONE              2701
 hawaii			ARCH_HAWAII		HAWAII			2701
+java			ARCH_JAVA		JAVA			2701

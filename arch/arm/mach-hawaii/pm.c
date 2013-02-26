@@ -35,6 +35,7 @@
 #include <mach/rdb/brcm_rdb_root_clk_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_gicdist.h>
 #include <mach/rdb/brcm_rdb_pwrmgr.h>
+#include <mach/rdb/brcm_rdb_scu.h>
 #include <mach/pwr_mgr.h>
 #include <mach/rdb/brcm_rdb_kona_gptimer.h>
 #include <mach/pm.h>

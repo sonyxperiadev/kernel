@@ -339,7 +339,7 @@ ifeq ($(CONFIG_ARCH_HAWAII),y)
 endif
 
 ifeq ($(CONFIG_ARCH_JAVA),y)
-	$(Q)echo "Removing rdb link for Hawaii"; \
+	$(Q)echo "Removing rdb link for Java"; \
 	if test -e $(srctree)/arch/arm/mach-java/include/mach/rdb; then \
 		rm $(srctree)/arch/arm/mach-java/include/mach/rdb; \
 	fi;

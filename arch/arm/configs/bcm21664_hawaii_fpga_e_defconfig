@@ -353,6 +353,7 @@ CONFIG_BRD_NAME="hawaii"
 # CONFIG_ARCH_ISLAND is not set
 # CONFIG_ARCH_RHEA is not set
 CONFIG_ARCH_HAWAII=y
+# CONFIG_ARCH_JAVA is not set
 
 #
 # Brcm FPGA board config

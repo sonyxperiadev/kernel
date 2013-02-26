@@ -79,7 +79,7 @@
 #include <linux/of.h>
 #include <linux/of_platform.h>
 
-#ifdef CONFIG_MACH_HAWAII_FPGA
+#ifdef CONFIG_MACH_BCM_FPGA
 #define UART_CLK_HZ 13000000
 #else
 #define UART_CLK_HZ 26000000

@@ -663,7 +663,7 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 	char devname[MAX_DEV_NAME_SIZE];
 	int ret = 0;
 	char *emmc_regulator = NULL;
-#ifdef CONFIG_MACH_HAWAII_FPGA
+#ifdef CONFIG_MACH_BCM_FPGA
 	u32 of_quirks = 0;
 	u32 of_quirks2 = 0;
 #endif
@@ -753,7 +753,7 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 			goto err_free_priv_data_mem;
 		}
 
-#ifdef CONFIG_MACH_HAWAII_FPGA
+#ifdef CONFIG_MACH_BCM_FPGA
 		if (of_property_read_u32(pdev->dev.of_node, "quirks", &of_quirks)) {
 			pr_info("quirks = 0x%08x foud for the configuration\n", of_quirks);
 		}
@@ -855,7 +855,7 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 #ifdef CONFIG_MACH_RHEA_DALTON2_EB30
         host->quirks |= SDHCI_QUIRK_NO_MULTIBLOCK;
 #endif
-#ifdef CONFIG_MACH_HAWAII_FPGA
+#ifdef CONFIG_MACH_BCM_FPGA
 	host->quirks |= of_quirks;
 	host->quirks2 |= of_quirks2;
 #endif

@@ -22,7 +22,9 @@
 
 #include <asm/cacheflush.h>
 #include <asm/hardware/gic.h>
+#ifdef CONFIG_ARCH_HAWAII
 #include <asm/smp_scu.h>
+#endif
 #include <asm/io.h>
 #include <mach/smp.h>
 #include <mach/io_map.h>
@@ -34,8 +36,10 @@
  */
 volatile int pen_release = -1;
 
+#ifdef CONFIG_ARCH_HAWAII
 /* SCU base address */
 static void __iomem *scu_base = (void __iomem *)(KONA_SCU_VA);
+#endif
 
 /*
  * Initialise the CPU possible map early - this describes the CPUs
@@ -43,8 +47,13 @@ static void __iomem *scu_base = (void __iomem *)(KONA_SCU_VA);
  */
 void __init smp_init_cpus(void)
 {
-	unsigned int i, ncores = scu_get_core_count(scu_base);
-	
+	unsigned int i;
+#if defined(CONFIG_ARCH_HAWAII)
+	unsigned int ncores = scu_get_core_count(scu_base);
+#elif defined(CONFIG_ARCH_JAVA)
+	unsigned int ncores = NR_CPUS;
+#endif
+
 	for (i = 0; i < ncores; i++)
 		set_cpu_possible(i, true);
 
@@ -76,12 +85,34 @@ void __cpuinit platform_secondary_init(unsigned int cpu)
 	spin_unlock(&boot_lock);
 }
 
+static void __init wakeup_secondary(void)
+{
+
+	void __iomem *chipRegBase;
+
+	chipRegBase = IOMEM(KONA_CHIPREG_VA);
+
+	writel(virt_to_phys(kona_secondary_startup),
+			chipRegBase + CHIPREG_BOOT_2ND_ADDR_OFFSET);
+
+	smp_wmb();
+
+	/*
+	 * Send a 'sev' to wake the secondary core from WFE.
+	 * Drain the outstanding writes to memory
+	 */
+	dsb_sev();
+
+	mb();
+}
+
 int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
 {
 #ifdef CONFIG_A9_DORMANT_MODE
 	u32 boot_2nd_addr;
 #endif
 	unsigned long timeout;
+
 	/*
 
 	 * Set synchronisation state between this boot processor
@@ -104,14 +135,12 @@ int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
 	outer_flush_all();
 #endif
 
-#ifdef CONFIG_A9_DORMANT_MODE
 	/* Let go of the secondary core */
 	boot_2nd_addr =
 		readl_relaxed(KONA_CHIPREG_VA+CHIPREG_BOOT_2ND_ADDR_OFFSET);
-	boot_2nd_addr |= 1;
+	boot_2nd_addr |= cpu;
 	writel_relaxed(boot_2nd_addr,
 			KONA_CHIPREG_VA+CHIPREG_BOOT_2ND_ADDR_OFFSET);
-#endif
 
 	/*
 	 * Send the secondary CPU a soft interrupt. This will
@@ -128,8 +157,9 @@ int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
 	timeout = jiffies + (1 * HZ);
 	while (time_before(jiffies, timeout)) {
 		smp_rmb();
-		if (pen_release == -1)
+		if (pen_release == -1) {
 			break;
+		}
 
 		udelay(10);
 	}
@@ -143,38 +173,12 @@ int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
 	return pen_release != -1 ? -ENOSYS : 0;
 }
 
-static void __init wakeup_secondary(void)
-{
-#if defined(CHIPREG_BOOT_2ND_ADDR_OFFSET)
-	void __iomem *chipRegBase;
-
-	chipRegBase = IOMEM(KONA_CHIPREG_VA);
-
-	/* Chip-it FPGA has problems writing to this address hence
-	 * workaround */
-#ifdef CONFIG_MACH_HAWAII_FPGA
-	writel((virt_to_phys(kona_secondary_startup) & (~0x3))|0x1, chipRegBase + 0x1C4);
-#else
-	writel((virt_to_phys(kona_secondary_startup) & (~0x3))|0x1, chipRegBase + CHIPREG_BOOT_2ND_ADDR_OFFSET);
-#endif
-
-	smp_wmb();
-
-	/*
-	 * Send a 'sev' to wake the secondary core from WFE.
-	 * Drain the outstanding writes to memory
-	 */
-	dsb_sev();
-	
-	mb();
-#endif
-}
 
 
 void __init platform_smp_prepare_cpus(unsigned int max_cpus)
 {
 	int i;
-	
+
 	/*
 	 * Initialise the present map, which describes the set of CPUs
 	 * actually populated at the present time.
@@ -186,6 +190,9 @@ void __init platform_smp_prepare_cpus(unsigned int max_cpus)
 	 * Initialise the SCU and wake up the secondary core using
 	 * wakeup_secondary().
 	 */
-	scu_enable(scu_base);
+
+#ifdef CONFIG_ARCH_HAWAII
 	wakeup_secondary();
+	scu_enable(scu_base);
+#endif
 }

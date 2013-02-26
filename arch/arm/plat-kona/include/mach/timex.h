@@ -33,9 +33,9 @@
 #ifdef CONFIG_MACH_SAMOA_FPGA
 #define CLOCK_TICK_RATE     (32000)
 #else
-#ifdef CONFIG_MACH_HAWAII_FPGA_E
+#ifdef CONFIG_MACH_BCM_FPGA_E
 //#define CLOCK_TICK_RATE     (1*1048576)
-#define CLOCK_TICK_RATE     (32767)
+#define CLOCK_TICK_RATE     (32768)
 #else
 #define CLOCK_TICK_RATE     (32768)
 #endif

@@ -5,97 +5,89 @@ menu	"Java SoC based Machine types"
 
 choice
 	prompt "Choose Java SOC Silicon Version"
-	default ARCH_JAVA_A0
 
 config	ARCH_JAVA_A0
-	bool "Hawaii SOC Version - A0"
+	bool "Java SOC Version - A0"
 
 endchoice
 
 choice
-	prompt "Hawaii SoC based board type"
-	default MACH_HAWAII_RAY
+	prompt "Java SoC based board type"
 
-config	MACH_HAWAII_FPGA
-        bool "Hawaii SOC Version - FPGA"
-        help
+config	MACH_JAVA_FPGA
+	tristate "MACH_JAVA_FPGA"
+        select MACH_BCM_FPGA
+	help
 	  "This config option will enable support
 	  for FPGA platform like Chip-it where CCU is absent."
 
-config	MACH_HAWAII_FPGA_E
-	bool "Hawaii SOC Version - FPGA Eve"
+config	MACH_JAVA_FPGA_E
+	tristate "MACH_JAVA_FPGA_E"
+        select MACH_BCM_FPGA_E
 	help
 	  "This config option will enable support for
 	  FPGA platform like Eve where CCU is present."
 
-config	MACH_HAWAII_RAY
-	bool "Support Broadcom Hawaii Ray board"
+config	MACH_JAVA_RAY
+	tristate "MACH_JAVA_RAY"
+	select MACH_BCM_RAY
 	help
 	  Support for the Broadcom Hawaii Ray board.
 
-config	MACH_HAWAII_STONE
-	bool "Support Broadcom Hawaii Stone board"
+config	MACH_JAVA_STONE
+		tristate "MACH_JAVA_STONE"
+	select MACH_BCM_STONE
 	help
 	  Support for the Broadcom Hawaii Stone board.
 
-config	MACH_HAWAII_GARNET
-	bool "Support Broadcom Hawaii garnet board"
+config	MACH_JAVA_GARNET
+		tristate "MACH_JAVA_GARNET"
+	select MACH_BCM_GARNET
 	help
 	  Support for Broadcom Hawaii garnet board.
 
 endchoice
 
 choice
-	prompt "Hawaii GARNET type"
-	depends on MACH_HAWAII_GARNET
-	default MACH_HAWAII_GARNET_EDN000
+	prompt "Java GARNET type"
+	depends on MACH_JAVA_GARNET
+	default MACH_JAVA_GARNET_EDN000
 
-	config MACH_HAWAII_GARNET_EDN000
+	config MACH_JAVA_GARNET_EDN000
 	bool "GARNET EDN000"
 	help
 	  Support for Garnet edn000
 
 endchoice
 choice
-	prompt "Hawaii FPGA type"
-	depends on MACH_HAWAII_FPGA || MACH_HAWAII_FPGA_E
-	default MACH_HAWAII_FPGA_PERI_V1
+	prompt "Java FPGA type"
+	depends on MACH_BCM_FPGA || MACH_BCM_FPGA_E
 
-config	MACH_HAWAII_FPGA_PERI_V1
-	bool "Support Hawaii BSP FPGA Image with dual A9"
+config	MACH_JAVA_FPGA_PERI_V1
+	bool "MACH_JAVA_FPGA_PERI_V1"
+	select MACH_BCM_FPGA_PERI_V1
 	help
 	  "Support Following BSP FPGA Images :
 	  HAWAII_Peri_v1.0.0
 	  HAWAII_Peri_v1.0.1
 	  Hawaii_PERI_FREEZE_1p52_16APR2012_v2.0.0"
 
-config	MACH_HAWAII_FPGA_MM_V1
-	bool "Support Hawaii MM FPGA Image without M4U & AXI-PV"
+config	MACH_JAVA_FPGA_MM_V1
+	bool "MACH_JAVA_FPGA_MM_V1"
+	select MACH_BCM_FPGA_MM_V1
 	help
 	  "Support Following MM FPGA Images :
           HAWAII_MM_v1.0.0
           HAWAII_MM_v2.0.0
           HAWAII_MM_v2.0.0_fix"
 
-config	MACH_HAWAII_FPGA_USB_V1
-	bool "Support Hawaii USB FPGA Image with dual A9"
+config	MACH_JAVA_FPGA_USB_V1
+	bool "MACH_JAVA_FPGA_USB_V1"
+	select MACH_BCM_FPGA_USB_V1
 	help
 	  "Support Following USB FPGA Images :
 	  HAWAII_USB_v2.0.0
 endchoice
-
-
-choice
-	prompt "Hawaii SS based board type"
-	default MACH_HAWAII_SS_EVAL
-
-config	MACH_HAWAII_SS_EVAL
-	bool "Support Broadcom Hawaii Samsung Evaluate board"
-	help
-	  Support for the Broadcom Hawaii Samsung Evaluate board.
-
-endchoice
-
 
 config	IGNORE_DAP_POWERUP_REQ
 	bool "Ignore Powerup request from DAP"
