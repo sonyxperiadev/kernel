@@ -1313,7 +1313,7 @@ static const struct of_device_id bcmpmu_regulator_dt_ids[] __initconst = {
 	{ },
 };
 
-int bcmpmu_reg_init(void)
+int __init bcmpmu_reg_init(void)
 {
 	struct device_node *np;
 	int reg_init = 0;
@@ -1378,7 +1378,7 @@ int bcmpmu_reg_init(void)
 	return 0;
 }
 
-int rgltr_init(void)
+int __init rgltr_init(void)
 {
 	int i, j, k, int_val;
 	struct device_node *np;
@@ -1434,8 +1434,11 @@ int __init board_bcm59xx_init(void)
 {
 	int             ret = 0;
 	int             irq;
+
 	bcmpmu_reg_init();
+
 	rgltr_init();
+
 	bcmpmu_set_pullup_reg();
 	ret = gpio_request(PMU_DEVICE_INT_GPIO, "bcmpmu59xxx-irq");
 	if (ret < 0) {
