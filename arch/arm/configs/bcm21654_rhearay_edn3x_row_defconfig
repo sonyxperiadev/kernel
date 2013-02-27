@@ -1226,8 +1226,6 @@ CONFIG_STM_NUMBER_OF_CHANNEL=256
 # Altera FPGA firmware download module
 #
 # CONFIG_ALTERA_STAPL is not set
-# CONFIG_MPU_SENSORS_TIMERIRQ is not set
-# CONFIG_INV_SENSORS is not set
 # CONFIG_BTPORT is not set
 CONFIG_BRCM_EMMC_RPMB=y
 CONFIG_BRCM_EMMC_RPMB_SUPPORT=y
@@ -2694,6 +2692,7 @@ CONFIG_IOMMU_SUPPORT=y
 #
 # CONFIG_VIRT_DRIVERS is not set
 # CONFIG_PM_DEVFREQ is not set
+# CONFIG_MOBICORE_DRIVER is not set
 
 #
 # File systems
@@ -2957,6 +2956,7 @@ CONFIG_DEBUG_USER=y
 # CONFIG_DEBUG_RODATA is not set
 # CONFIG_DEBUG_LL is not set
 # CONFIG_OC_ETM is not set
+# CONFIG_PID_IN_CONTEXTIDR is not set
 
 #
 # Security options

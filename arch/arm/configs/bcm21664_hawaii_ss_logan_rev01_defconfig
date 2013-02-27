@@ -2908,6 +2908,7 @@ CONFIG_IOMMU_SUPPORT=y
 #
 # CONFIG_VIRT_DRIVERS is not set
 # CONFIG_PM_DEVFREQ is not set
+# CONFIG_MOBICORE_DRIVER is not set
 
 #
 # File systems
