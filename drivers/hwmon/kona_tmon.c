@@ -56,6 +56,7 @@ struct kona_tmon {
 	int poll_inx;
 	int vtmon_sel;
 	int init;
+	atomic_t suspend;
 };
 
 static struct kona_tmon *kona_tmon;
@@ -214,6 +215,7 @@ static int tmon_init_set_thold(struct kona_tmon *tmon)
 
 	/*setting the threshold value */
 	curr = tmon_get_current_temp(CELCIUS);
+	pr_info("%s: current temperature is %ld\n", __func__, curr);
 	for (i = pdata->thold_size - 1; i > 0; i--) {
 		if (curr >= pdata->thold[i].rising) {
 			tmon->poll_inx = i - 1;
@@ -264,7 +266,7 @@ static void tmon_poll_work(struct work_struct *ws)
 			enable_irq(tmon->irq);
 	}
 
-	if (tmon->poll_inx != INVALID_INX)
+	if (tmon->poll_inx != INVALID_INX && !atomic_read(&tmon->suspend))
 		queue_delayed_work(tmon->wqueue, &tmon->poll_work,
 				msecs_to_jiffies(pdata->poll_rate_ms));
 }
@@ -541,6 +543,7 @@ SENSOR_ATTR(tmon_dbg_mask, S_IWUSR | S_IRUGO, tmon_get_dbg_mask,
 
 static int kona_tmon_suspend(struct platform_device *pdev, pm_message_t state)
 {
+	atomic_set(&kona_tmon->suspend, 1);
 	if (kona_tmon->poll_inx != INVALID_INX) {
 		flush_delayed_work_sync(&kona_tmon->poll_work);
 		tmon_dbg(TMON_LOG_DBG, "%s: cancelling work queue\n", __func__);
@@ -550,6 +553,7 @@ static int kona_tmon_suspend(struct platform_device *pdev, pm_message_t state)
 
 static int kona_tmon_resume(struct platform_device *pdev)
 {
+	atomic_set(&kona_tmon->suspend, 0);
 	if (kona_tmon->poll_inx != INVALID_INX) {
 		queue_delayed_work(kona_tmon->wqueue, &kona_tmon->poll_work,
 				msecs_to_jiffies(0));
