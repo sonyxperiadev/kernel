@@ -333,18 +333,44 @@ static int bcmpmu_otg_xceiv_chg_detection_notif_handler(struct notifier_block
 	struct bcmpmu_otg_xceiv_data *xceiv_data =
 	    container_of(nb, struct bcmpmu_otg_xceiv_data,
 			 bcm_otg_chg_detection_notifier);
-	bool usb_charger_type = false;
+	u32 usb_charger_type;
+	static u8 pmu_xceiv_start;
 
 	if (!xceiv_data || !data)
 		return -EINVAL;
 
-	usb_charger_type = *(unsigned int *)data ? true : false;
+	usb_charger_type = *(u32 *)data;
+	dev_info(xceiv_data->dev, "data %x\n", usb_charger_type);
+	switch (usb_charger_type) {
+	case PMU_BC_DETECTION_START:
+		if (xceiv_data->otg_xceiver.phy.state ==
+			OTG_STATE_UNDEFINED) {
+			bcmpmu_otg_xceiv_start
+				(&xceiv_data->otg_xceiver.phy);
+			pmu_xceiv_start = 1;
+		} else
+			pmu_xceiv_start = 0;
 
-	if (usb_charger_type)
+		break;
+	case PMU_BC_DETECTION_END:
+		if (pmu_xceiv_start &&
+			(xceiv_data->otg_xceiver.phy.state !=
+				OTG_STATE_UNDEFINED)) {
+			bcmpmu_otg_xceiv_shutdown
+				(&xceiv_data->otg_xceiver.phy);
+			pmu_xceiv_start = 0;
+		}
+		break;
+	case PMU_USB_TYPE_SDP:
 		queue_work(xceiv_data->bcm_otg_work_queue,
 			   &xceiv_data->bcm_otg_chg_detect_work);
+		break;
+	default:
+		break;
+	}
 
 	return 0;
+
 }
 
 static int bcmpmu_otg_xceiv_id_chg_notif_handler(struct notifier_block *nb,
@@ -409,7 +435,9 @@ static int bcmpmu_otg_xceiv_set_peripheral(struct usb_otg *otg,
 		/* Come up connected  */
 		bcm_hsotgctrl_phy_set_non_driving(false);
 	}
-
+	/* Notify BC Detection is allowed now */
+	bcmpmu_usb_set(xceiv_data->bcmpmu,
+			BCMPMU_USB_CTRL_ALLOW_BC_DETECT, 1);
 	return status;
 }
 

@@ -130,6 +130,7 @@ static int set_icc_fcc(const char *val, const struct kernel_param *kp)
 	struct bcmpmu_accy *paccy;
 	u32 curr;
 	int rv = 0;
+	int chrgr_type;
 
 	di = gbl_di;
 	if (!di || !val)
@@ -138,8 +139,9 @@ static int set_icc_fcc(const char *val, const struct kernel_param *kp)
 	if (curr == CURR_LMT_MAX) {
 		paccy = di->bcmpmu->accyinfo;
 		BUG_ON(!paccy);
-		curr =
-		bcmpmu_get_chrgr_curr_lmt(paccy->usb_accy_data.chrgr_type);
+		bcmpmu_usb_get(di->bcmpmu,
+			BCMPMU_USB_CTRL_GET_CHRGR_TYPE, &chrgr_type);
+		curr = bcmpmu_get_chrgr_curr_lmt(chrgr_type);
 	}
 	bcmpmu_set_icc_fc(di->bcmpmu, curr);
 
@@ -518,7 +520,8 @@ static int charger_event_handler(struct notifier_block *nb,
 		bcmpmu = di->bcmpmu;
 		paccy = bcmpmu->accyinfo;
 		chrgr_curr = *(int *)para;
-		chrgr_type = paccy->usb_accy_data.chrgr_type;
+		bcmpmu_usb_get(bcmpmu,
+			BCMPMU_USB_CTRL_GET_CHRGR_TYPE, &chrgr_type);
 		bcmpmu_set_icc_fc(bcmpmu, chrgr_curr);
 		if ((chrgr_type < PMU_CHRGR_TYPE_MAX) &&
 				(chrgr_type >  PMU_CHRGR_TYPE_NONE)) {
@@ -590,7 +593,8 @@ static int __devinit bcmpmu_chrgr_probe(struct platform_device *pdev)
 	di->usb_psy.num_supplicants = ARRAY_SIZE(supplies_to);
 
 	usb_type = paccy->usb_accy_data.usb_type;
-	chrgr_type = paccy->usb_accy_data.chrgr_type;
+	bcmpmu_usb_get(bcmpmu,
+			BCMPMU_USB_CTRL_GET_CHRGR_TYPE, &chrgr_type);
 	pr_chrgr(FLOW, "<%s> usb_type %d chrgr_type %d\n",
 		__func__, usb_type, chrgr_type);
 

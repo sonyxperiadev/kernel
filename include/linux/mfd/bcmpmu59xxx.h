@@ -489,7 +489,8 @@ enum bcmpmu_chrgr_type_t {
 	PMU_CHRGR_TYPE_ACA,
 	PMU_CHRGR_TYPE_MAX,
 };
-
+#define PMU_BC_DETECTION_START 0x10
+#define PMU_BC_DETECTION_END 0x11
 enum bcmpmu_usb_type_t {
 	PMU_USB_TYPE_NONE,
 	PMU_USB_TYPE_SDP,
@@ -513,6 +514,7 @@ enum bcmpmu_usb_id_lvl_t {
 	PMU_USB_ID_RID_C,		/* 101 */
 	PMU_USB_ID_RESERVED2,	/* 110 */
 	PMU_USB_ID_FLOAT,		/* 111 */
+	PMU_USB_ID_LVL_MAX,
 };
 
 enum {
@@ -617,6 +619,7 @@ enum bcmpmu_usb_ctrl_t {
 	BCMPMU_USB_CTRL_GET_USB_TYPE,
 	BCMPMU_USB_CTRL_SW_UP,
 	BCMPMU_USB_CTRL_TPROBE_MAX,
+	BCMPMU_USB_CTRL_ALLOW_BC_DETECT,
 };
 
 enum bcmpmu_usb_det_state_t {
@@ -724,6 +727,7 @@ struct bcmpmu_accy {
 	bool clock_en;
 	enum bcmpmu_bc_t bc;
 	int piggyback_chrg;
+	atomic_t usb_allow_bc_detect;
 	/* usb accy */
 	struct bcmpmu_usb_accy_data usb_accy_data;
 	int (*usb_set) (struct bcmpmu59xxx *pmu, int ctrl,
@@ -995,6 +999,7 @@ int bcmpmu_cc_trim_up(struct bcmpmu59xxx *bcmpmu);
 int bcmpmu_cc_trim_down(struct bcmpmu59xxx *bcmpmu);
 inline void bcmpmu_save_cc_trim_otp(struct bcmpmu59xxx *bcmpmu);
 inline void bcmpmu_restore_cc_trim_otp(struct bcmpmu59xxx *bcmpmu);
+int bcmpmu_get_chrgr_type(struct bcmpmu_accy *paccy);
 
 /* ADC */
 int bcmpmu_adc_read(struct bcmpmu59xxx *bcmpmu, enum bcmpmu_adc_channel channel,
