@@ -949,8 +949,6 @@ CONFIG_STM_NUMBER_OF_CHANNEL=256
 # Altera FPGA firmware download module
 #
 # CONFIG_ALTERA_STAPL is not set
-# CONFIG_MPU_SENSORS_TIMERIRQ is not set
-# CONFIG_INV_SENSORS is not set
 # CONFIG_BTPORT is not set
 # CONFIG_BRCM_EMMC_RPMB is not set
 
@@ -2183,6 +2181,7 @@ CONFIG_DEBUG_LL_UART_NONE=y
 # CONFIG_DEBUG_SEMIHOSTING is not set
 # CONFIG_EARLY_PRINTK is not set
 # CONFIG_OC_ETM is not set
+# CONFIG_PID_IN_CONTEXTIDR is not set
 
 #
 # Security options
