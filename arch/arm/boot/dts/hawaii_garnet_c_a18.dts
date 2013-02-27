@@ -363,11 +363,11 @@
 	pwm-backlight {
 		compatible = "bcm,pwm-backlight";
 		reg = <0x0 0x0>;
-		pwm-id = <2>;
+		backlight-gpio = <24>;
 		max-brightness = <32>;	/* Android calibrates to 32 levels */
-		dft-brightness = <32>;
-		polarity = <1>;		/* Inverted polarity */
-		pwm-period-ns = <100000>;
-		pwm-request-label = "backlight";
+		dft-brightness = <32>;	/* unit us */
+		shutdown-time = <3500>;	/* unit us */
+		ready-time = <150>;		/* unit us */
+		interval-time = <550>;	/* unit ns */
 	};
 };

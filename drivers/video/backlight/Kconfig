@@ -368,6 +368,13 @@ config BACKLIGHT_PANDORA
 	  If you have a Pandora console, say Y to enable the
 	  backlight driver.
 
+config BACKLIGHT_SGM3727
+	tristate "Backlight driver for SGM3727"
+	depends on BACKLIGHT_CLASS_DEVICE
+	help
+	  If your backlight control device is SGM3727, say Y to enable the
+	  backlight driver.
+
 endif # BACKLIGHT_CLASS_DEVICE
 
 endif # BACKLIGHT_LCD_SUPPORT
