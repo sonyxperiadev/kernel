@@ -36,6 +36,7 @@ struct kona_td {
 
 static DEFINE_PER_CPU(struct kona_td, percpu_kona_td);
 
+struct kona_timer *get_timer_ptr(char *name, int chan);
 static int kona_tick_set_next_event(unsigned long cycles,
 				    struct clock_event_device *evt)
 {
@@ -99,12 +100,23 @@ int __cpuinit local_timer_setup(struct clock_event_device *evt)
 				       TICK_TIMER_OFFSET + cpu);
 		if (kona_td.kona_timer) {
 			kona_td.allocated = true;
-		} else {
-			pr_err("%s: Failed to allocate %s channel %d as"
-			       "CPU %d local tick device\n", __func__,
-			       TICK_TIMER_NAME,
-			       TICK_TIMER_OFFSET + cpu, cpu);
-			return -ENXIO;
+		} else { /* kona_td.kona_timer is already allocated, hence
+			    we get the pointer and reuse the same. This is
+			    done to ensure we don't use an extra channel for
+			    timer event before local timer comes up
+			    */
+			kona_td.kona_timer = get_timer_ptr(TICK_TIMER_NAME,
+					TICK_TIMER_OFFSET + cpu);
+			if (!kona_td.kona_timer) {
+				pr_err("%s: Failed to allocate %s channel %d",
+					"as CPU %d local tick device\n",
+					__func__,
+				       TICK_TIMER_NAME,
+				       TICK_TIMER_OFFSET + cpu, cpu);
+				return -ENXIO;
+			} else {
+				kona_td.allocated = true;
+			}
 		}
 	}
 

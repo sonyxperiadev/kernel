@@ -177,7 +177,7 @@ void __init hawaii_timer_init(void)
 	 * #define BCM2165x_CLK_HUB_TIMER_FLAGS  (TYPE_PERI_CLK | SW_GATE | DISABLE_ON_INIT)
 	 */
 	gpt_setup.name = "aon-timer";
-	gpt_setup.ch_num = 0;
+	gpt_setup.ch_num = 3;
 	gpt_setup.rate = CLOCK_TICK_RATE;
 
 	/* Call the init function of timer module */

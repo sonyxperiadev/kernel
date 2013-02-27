@@ -142,6 +142,14 @@ static struct irqaction periph_timer_irq[NUM_OF_CHANNELS] = {
 
 static int kona_init_done;
 
+struct kona_timer *get_timer_ptr(char *name, int chan)
+{
+	struct kona_timer_module *ktm = NULL;
+
+	ktm = __get_timer_module(name);
+	return ktm->pkt + chan;
+}
+
 /*
  *  kona_timer_modules_init - Initialize the data structures
  *  that depicts the Kona timer modules
