@@ -765,7 +765,7 @@ static int __devinit kxtik_probe(struct i2c_client *client,
 	}
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
-	tik->early_suspend.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN + 1;
+	tik->early_suspend.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN;
 	tik->early_suspend.suspend = kxtik_earlysuspend_suspend;
 	tik->early_suspend.resume = kxtik_earlysuspend_resume;
 	register_early_suspend(&tik->early_suspend);
