@@ -74,7 +74,7 @@ typedef struct {
 	RPC_FlowCtrlEvent_t event;
 	RPC_PACKET_DataIndCallBackFunc_t *dataIndFunc;
 	RPC_FlowControlCallbackFunc_t *flowIndFunc;
-	RPC_PACKET_CPResetCallbackFunc_t *cpResetFunc;
+	RPC_PACKET_NotificationFunc_t *rpcNotificationFunc;
 } rpc_pkt_rx_buf_t;
 
 typedef struct {
@@ -82,7 +82,7 @@ typedef struct {
 	PACKET_InterfaceType_t interfaceType;
 	RPC_PACKET_DataIndCallBackFunc_t *dataIndFunc;
 	RPC_FlowControlCallbackFunc_t    *flowIndFunc;
-	RPC_PACKET_CPResetCallbackFunc_t *cpResetFunc;
+	RPC_PACKET_NotificationFunc_t *rpcNotificationFunc;
 } rpc_pkt_reg_ind_t;
 
 typedef struct {
@@ -188,11 +188,11 @@ typedef struct {
 	UInt32 offset;
 	RpcCbkType_t type;
 	RPC_FlowCtrlEvent_t event;
-	RPC_CPResetEvent_t cpResetEvent;
+	struct RpcNotificationEvent_t rpcNotificationEvent;
 	RPC_PACKET_DataIndCallBackFuncEx_t *dataIndFuncEx;
 	RPC_PACKET_DataIndCallBackFunc_t   *dataIndFunc;
 	RPC_FlowControlCallbackFunc_t      *flowIndFunc;
-	RPC_PACKET_CPResetCallbackFunc_t   *cpResetFunc;
+	RPC_PACKET_NotificationFunc_t   *rpcNotificationFunc;
 } rpc_pkt_rx_buf_ex_t;
 
 typedef struct {
@@ -200,7 +200,7 @@ typedef struct {
 	PACKET_InterfaceType_t interfaceType;
 	RPC_PACKET_DataIndCallBackFuncEx_t *dataIndFuncEx;
 	RPC_FlowControlCallbackFunc_t	   *flowIndFunc;
-	RPC_PACKET_CPResetCallbackFunc_t   *cpResetFunc;
+	RPC_PACKET_NotificationFunc_t   *rpcNotificationFunc;
 } rpc_pkt_reg_ind_ex_t;
 
 typedef struct {

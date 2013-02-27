@@ -90,8 +90,8 @@ typedef struct {
 	/* Flow control callback */
 	RPC_FlowControlCallbackFunc_t *flowControlCb;
 
-	/* Callback for CP reset process */
-	RPC_PACKET_CPResetCallbackFunc_t *cpResetCb;
+	/* Callback for RPC Notification */
+	RPC_PACKET_NotificationFunc_t *rpcNotificationFunc;
 
 	/* is client ready for CP reset? */
 	Boolean readyForCPReset;
@@ -99,8 +99,8 @@ typedef struct {
 	/* Callback for	interface buffer delivery */
 	RPC_PACKET_DataIndCallBackFunc_t *filterPktIndCb;
 
-	/* Callback for CP reset process */
-	RPC_PACKET_CPResetCallbackFunc_t *cpFilterResetCb;
+	/* Callback for RPC Notification */
+	RPC_PACKET_NotificationFunc_t *rpcFilterNotificationFunc;
 
 	/* is client ready for CP reset? */
 	Boolean filterReadyForCPReset;
@@ -135,6 +135,8 @@ static void RPC_BufferDelivery(IPC_Buffer bufHandle);
 Boolean RPC_SetProperty(RPC_PropType_t type, UInt32 value);
 static void RPC_IPC_APEndPointInit(void);
 static void RPC_FreeBufferPools(PACKET_InterfaceType_t interfaceType);
+static void RPC_PACKET_HandleNotification(
+	struct RpcNotificationEvent_t inEvent);
 
 #ifdef FUSE_COMMS_PROCESSOR
 #define RPC_PROP_VER		RPC_PROP_CP_VERSION
@@ -166,8 +168,8 @@ RPC_Result_t RPC_PACKET_RegisterDataInd(UInt8 rpcClientID,
 					dataIndFunc,
 					RPC_FlowControlCallbackFunc_t
 					flowControlCb,
-					RPC_PACKET_CPResetCallbackFunc_t
-					cpResetCb)
+					RPC_PACKET_NotificationFunc_t
+					rpcNtfFn)
 {
 	if (rpcClientID) {
 		/* Do nothing */
@@ -181,7 +183,7 @@ RPC_Result_t RPC_PACKET_RegisterDataInd(UInt8 rpcClientID,
 		ipcInfoList[interfaceType].isInit = TRUE;
 		ipcInfoList[interfaceType].flowControlCb = flowControlCb;
 		ipcInfoList[interfaceType].pktIndCb = dataIndFunc;
-		ipcInfoList[interfaceType].cpResetCb = cpResetCb;
+		ipcInfoList[interfaceType].rpcNotificationFunc = rpcNtfFn;
 		RPC_UNLOCK;
 		return RPC_RESULT_OK;
 	}
@@ -192,7 +194,8 @@ RPC_Result_t RPC_PACKET_RegisterFilterCbk(UInt8 rpcClientID,
 			PACKET_InterfaceType_t interfaceType,
 			RPC_PACKET_DataIndCallBackFunc_t
 			dataIndFunc,
-			RPC_PACKET_CPResetCallbackFunc_t cpResetCb)
+			RPC_PACKET_NotificationFunc_t
+			rpcNtfFn)
 {
 	if (rpcClientID) {
 		/* Do nothing */
@@ -203,7 +206,7 @@ RPC_Result_t RPC_PACKET_RegisterFilterCbk(UInt8 rpcClientID,
 		RPC_LOCK;
 		ipcInfoList[interfaceType].isInit = TRUE;
 		ipcInfoList[interfaceType].filterPktIndCb = dataIndFunc;
-		ipcInfoList[interfaceType].cpFilterResetCb = cpResetCb;
+		ipcInfoList[interfaceType].rpcFilterNotificationFunc = rpcNtfFn;
 		RPC_UNLOCK;
 		return RPC_RESULT_OK;
 	}
@@ -674,12 +677,12 @@ void CheckReadyForCPReset(void)
 }
 
 /* callback from IPC to indicate status of CP reset process */
-void RPC_PACKET_CPResetHandler(IPC_CPResetEvent_t inEvent)
+void RPC_PACKET_RPCNotificationHandler(IPC_CPResetEvent_t inEvent)
 {
-	RPC_CPResetEvent_t rpcEvent;
+	struct RpcNotificationEvent_t rpcEvent;
 	PACKET_InterfaceType_t currIF;
 
-	_DBG_(RPC_TRACE("RPC_PACKET_CPResetHandler\n"));
+	_DBG_(RPC_TRACE("RPC_PACKET_RPCNotificationHandler\n"));
 
 	sCPResetting = (inEvent == IPC_CPRESET_START);
 
@@ -705,39 +708,47 @@ void RPC_PACKET_CPResetHandler(IPC_CPResetEvent_t inEvent)
 
 	sIsNotifyingCPReset = TRUE;
 
-	rpcEvent = (inEvent == IPC_CPRESET_START) ?
+	rpcEvent.event = RPC_CPRESET_EVT;
+	rpcEvent.param = (inEvent == IPC_CPRESET_START) ?
 			RPC_CPRESET_START :
 			RPC_CPRESET_COMPLETE;
-	RPC_PACKET_HandleNotifyCPReset(rpcEvent);
+	RPC_PACKET_HandleNotification(rpcEvent);
 
 	sIsNotifyingCPReset = FALSE;
 
 	if (inEvent == IPC_CPRESET_START)
 		CheckReadyForCPReset();
 
-	_DBG_(RPC_TRACE("exit RPC_PACKET_CPResetHandler\n"));
+	_DBG_(RPC_TRACE("exit RPC_PACKET_RPCNotificationHandler\n"));
 }
 
 /* called to initiate notification of clients of start of CP reset */
-void RPC_PACKET_HandleNotifyCPReset(RPC_CPResetEvent_t inEvent)
+static void RPC_PACKET_HandleNotification(
+	struct RpcNotificationEvent_t inEvent)
 {
+	struct RpcNotificationEvent_t rpcNtfEvt;
 	PACKET_InterfaceType_t currIF;
 
+	rpcNtfEvt.event = inEvent.event;
+	rpcNtfEvt.param = inEvent.param;
 	for (currIF = INTERFACE_START; currIF < INTERFACE_TOTAL; currIF++)
 		if (ipcInfoList[currIF].isInit) {
-			if (ipcInfoList[currIF].cpResetCb) {
+			if (ipcInfoList[currIF].rpcNotificationFunc) {
 				_DBG_(RPC_TRACE
-				 ("RPC_PACKET_HandleNotifyCPReset\n"));
+				 ("RPC_PACKET_HandleNotification\n"));
 				_DBG_(RPC_TRACE("  notify IF %d\n", currIF));
-				ipcInfoList[currIF].cpResetCb(inEvent, currIF);
+				rpcNtfEvt.ifType = currIF;
+			ipcInfoList[currIF].rpcNotificationFunc(
+				rpcNtfEvt);
 			}
-			if (ipcInfoList[currIF].cpFilterResetCb) {
+			if (ipcInfoList[currIF].rpcFilterNotificationFunc) {
 				_DBG_(RPC_TRACE
-					("RPC_PACKET_HandleNotifyCPReset\n"));
+					("RPC_PACKET_HandleNotification\n"));
 				_DBG_(RPC_TRACE("  notify fltr IF %d\n",
 								 currIF));
-				ipcInfoList[currIF].cpFilterResetCb(inEvent,
-								    currIF);
+				rpcNtfEvt.ifType = currIF;
+			ipcInfoList[currIF].rpcFilterNotificationFunc(
+					rpcNtfEvt);
 			}
 		}
 }
@@ -745,7 +756,7 @@ void RPC_PACKET_HandleNotifyCPReset(RPC_CPResetEvent_t inEvent)
 /*
  * called when client of interfaceType is ready for silent CP reset;
  * expected to be called at some point after client's registered
- * RPC_PACKET_CPResetCallbackFunc_t is called.
+ * RPC_PACKET_NotificationFunc_t is called.
  */
 void RPC_PACKET_AckReadyForCPReset(UInt8 rpcClientID,
 				PACKET_InterfaceType_t interfaceType)
@@ -1285,7 +1296,7 @@ for (itype = INTERFACE_START; itype < INTERFACE_TOTAL; itype++) {
 	sIsNotifyingCPReset = FALSE;
 	/* register notification handler for silent CP reset */
 	sIPCResetClientId = IPCAP_RegisterCPResetHandler(
-				RPC_PACKET_CPResetHandler);
+				RPC_PACKET_RPCNotificationHandler);
 
 	rpc_wake_lock_init();
 	recvRpcPkts = 0;

@@ -319,21 +319,24 @@ static RPC_Result_t bcm_fuse_net_bd_cb(PACKET_InterfaceType_t interfaceType,
 }
 
 /* callback for CP silent reset events */
-void bcm_fuse_net_cp_reset_cb(RPC_CPResetEvent_t event,
-			PACKET_InterfaceType_t interface)
+void bcm_fuse_net_cp_reset_cb(
+	struct RpcNotificationEvent_t event)
 {
 	int i;
 	struct net_device *dev_ptr = NULL;
+	PACKET_InterfaceType_t interface = event.ifType;
 
-	BNET_DEBUG(DBG_INFO, "event %s interface %d\n",
-		RPC_CPRESET_START == event ?
+	switch (event.event) {
+	case RPC_CPRESET_EVT:
+		BNET_DEBUG(DBG_INFO, "event %s interface %d\n",
+		RPC_CPRESET_START == event.param ?
 		"RPC_CPRESET_START" : "RPC_CPRESET_COMPLETE",
 		interface);
 
 	/* should just need to stop outgoing packet flow here
 	   until we get RPC_CPRESET_COMPLETE
 	*/
-	if (event == RPC_CPRESET_START) {
+	if (event.param == RPC_CPRESET_START) {
 		for (i = 0; i < BCM_NET_MAX_PDP_CNTXS; i++)
 			if (g_net_dev_tbl[i].entry_stat == EInUse) {
 				dev_ptr = g_net_dev_tbl[i].dev_ptr;
@@ -344,7 +347,7 @@ void bcm_fuse_net_cp_reset_cb(RPC_CPResetEvent_t event,
 
 		/* for now, just ack... */
 		RPC_PACKET_AckReadyForCPReset(0, INTERFACE_PACKET);
-	} else if (event == RPC_CPRESET_COMPLETE) {
+	} else if (event.param == RPC_CPRESET_COMPLETE) {
 		for (i = 0; i < BCM_NET_MAX_PDP_CNTXS; i++)
 			if (g_net_dev_tbl[i].entry_stat == EInUse) {
 				dev_ptr = g_net_dev_tbl[i].dev_ptr;
@@ -355,13 +358,22 @@ void bcm_fuse_net_cp_reset_cb(RPC_CPResetEvent_t event,
 				}
 			}
 	} else
-		BNET_DEBUG(DBG_INFO, "unexpected event %d\n", (int)event);
+		BNET_DEBUG(DBG_INFO,
+			"unexpected event param %d\n", (int)event.param);
 
 	/* **FIXME** MAG - net interfaces should be brought down as
 	   part of CP reset (for Android, RIL or DUN will do this). Are
 	   there other situations where somebody else will need to bring
 	   down the interface?
 	*/
+
+		break;
+	default:
+		BNET_DEBUG(DBG_INFO,
+			"unexpected event %d\n", (int)event.event);
+		break;
+	}
+
 	return;
 }
 

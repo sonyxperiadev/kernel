@@ -154,7 +154,7 @@ typedef struct {
 	UInt8 channel;
 	PACKET_BufHandle_t dataBufHandle;
 	RPC_FlowCtrlEvent_t event;
-	RPC_CPResetEvent_t cpResetEvent;
+	struct RpcNotificationEvent_t rpcNotificationEvent;
 } RpcCbkElement_t;
 
 typedef struct {
@@ -225,8 +225,8 @@ struct page *rpcipc_vma_nopage(struct vm_area_struct *vma,
 			       unsigned long address, int *type);
 
 /*****************************************************************/
-static void RPC_ServerCPResetCallback(RPC_CPResetEvent_t event,
-				PACKET_InterfaceType_t interfaceType);
+static void RPC_ServerNotification(
+	struct RpcNotificationEvent_t event);
 RPC_Result_t RPC_ServerRxCbk(PACKET_InterfaceType_t interfaceType,
 			     UInt8 channel, PACKET_BufHandle_t dataBufHandle);
 static long handle_pkt_rx_buffer_ioc(struct file *filp, unsigned int cmd,
@@ -548,9 +548,10 @@ static long rpcipc_ioctl(struct file *filp, unsigned int cmd, UInt32 arg)
 	return retVal;
 }
 
-RPC_Result_t RPC_ServerDispatchCPResetMsg(PACKET_InterfaceType_t interfaceType,
-					UInt8 clientId,
-					RPC_CPResetEvent_t eventType)
+RPC_Result_t RPC_ServerDispatchNotificationMsg(
+	PACKET_InterfaceType_t interfaceType,
+	UInt8 clientId,
+	struct RpcNotificationEvent_t eventType)
 {
 	RpcCbkElement_t *elem;
 	RpcClientInfo_t *cInfo;
@@ -558,14 +559,15 @@ RPC_Result_t RPC_ServerDispatchCPResetMsg(PACKET_InterfaceType_t interfaceType,
 	cInfo = gRpcClientList[clientId];
 
 	if (!cInfo) {
-		_DBG(RPC_TRACE
-		     ("k:RPC_ServerDispatchCPResetMsg invalid clientID = %d\n",
+		_DBG(RPC_TRACE(
+"k:RPC_ServerDispatchNotificationMsg invalid clientID = %d\n",
 		      clientId));
 		return RPC_RESULT_ERROR;
 	}
 
 	if (clientId == 0) {
-		_DBG(RPC_TRACE("k:RPC_ServerDispatchCPResetMsg Error !!!\n"));
+		_DBG(RPC_TRACE(
+"k:RPC_ServerDispatchNotificationMsg Error !!!\n"));
 		return RPC_RESULT_ERROR;
 	}
 
@@ -573,7 +575,7 @@ RPC_Result_t RPC_ServerDispatchCPResetMsg(PACKET_InterfaceType_t interfaceType,
 			GFP_ATOMIC : GFP_KERNEL);
 	if (!elem) {
 		_DBG(RPC_TRACE(
-			"k:RPC_ServerDispatchCPResetMsg Allocation error\n"));
+"k:RPC_ServerDispatchNotificationMsg Allocation error\n"));
 		return RPC_RESULT_ERROR;
 	}
 	memset(elem, 0, sizeof(RpcCbkElement_t));
@@ -582,10 +584,10 @@ RPC_Result_t RPC_ServerDispatchCPResetMsg(PACKET_InterfaceType_t interfaceType,
 	elem->channel = 0;
 	elem->dataBufHandle = 0;
 	elem->event = 0;
-	elem->cpResetEvent = eventType;
+	elem->rpcNotificationEvent = eventType;
 
-	_DBG(RPC_TRACE
-		("RPC_ServerDispatchCPResetMsg: add to queue for client %d\n",
+	_DBG(RPC_TRACE(
+"RPC_ServerDispatchNotificationMsg: add to queue for client %d\n",
 		clientId));
 
 	/* add to queue */
@@ -595,8 +597,8 @@ RPC_Result_t RPC_ServerDispatchCPResetMsg(PACKET_InterfaceType_t interfaceType,
 
 	cInfo->availData = 1;
 	wake_up_interruptible(&cInfo->mWaitQ);
-	_DBG(RPC_TRACE
-		("RPC_ServerDispatchCPResetMsg: done if:%d client:%d\n",
+	_DBG(RPC_TRACE(
+"RPC_ServerDispatchNotificationMsg: done if:%d client:%d\n",
 		interfaceType, clientId));
 
 	return RPC_RESULT_OK;
@@ -860,40 +862,50 @@ RPC_Result_t RPC_ServerRxCbk(PACKET_InterfaceType_t interfaceType,
 }
 
 /* handle notifcations of CP reset from rpc_ipc layer */
-void RPC_ServerCPResetCallback(RPC_CPResetEvent_t event,
-				PACKET_InterfaceType_t interfaceType)
+void RPC_ServerNotification(struct RpcNotificationEvent_t event)
 {
 	int k;
+	PACKET_InterfaceType_t interfaceType = event.ifType;
 
-	_DBG(RPC_TRACE("RPC_ServerCPResetCallback: event %d interface %d\n",
-		  event, interfaceType));
+	switch (event.event) {
+	case RPC_CPRESET_EVT:
+		_DBG(RPC_TRACE(
+	"RPC_ServerNotification: event %d interface %d\n",
+		       (int) event.event, interfaceType));
 
 	/* if we're already in process of resetting, just return */
-	if ((gCPResetting && (event == RPC_CPRESET_START)) ||
-		(!gCPResetting && (event == RPC_CPRESET_COMPLETE))) {
+	if ((gCPResetting && (event.param == RPC_CPRESET_START)) ||
+	    (!gCPResetting && (event.param == RPC_CPRESET_COMPLETE))) {
 		_DBG(RPC_TRACE
-		  ("RPC_ServerCPResetCallback already handling event\n"));
+			("RPC_ServerNotification already handling event\n"));
 		return;
 	}
 
 	RPC_READ_LOCK;
 
 	/* start of CP reset process; notify all user space clients */
-	gCPResetting = (event == RPC_CPRESET_START);
+	gCPResetting = (event.param == RPC_CPRESET_START);
 
 	for (k = 0; k < 0xFF; k++)
 		if (gRpcClientList[k]) {
 			_DBG(RPC_TRACE
-			 ("RPC_ServerCPResetCallback: client %d\n", k));
-			if (event == RPC_CPRESET_START)
+			 ("RPC_ServerNotification: client %d\n", k));
+			if (event.param == RPC_CPRESET_START)
 				gRpcClientList[k]->ackdCPReset = 0;
-			RPC_ServerDispatchCPResetMsg(
+			RPC_ServerDispatchNotificationMsg(
 			      gRpcClientList[k]->info.interfaceType,
 				k, event);
 		}
 
-	_DBG(RPC_TRACE("RPC_ServerCPResetCallback: done\n"));
+	_DBG(RPC_TRACE("RPC_ServerNotification: done\n"));
 	RPC_READ_UNLOCK;
+		break;
+	default:
+		_DBG(RPC_TRACE(
+		"RPC_ServerNotification: Unsupported event %d\n",
+		(int) event.event));
+		break;
+	}
 }
 
 static unsigned int rpcipc_poll(struct file *filp, poll_table * wait)
@@ -1565,7 +1577,7 @@ static long handle_pkt_register_data_ind_ioc(struct file *filp,
 	cInfo->infoEx.interfaceType = cInfo->info.interfaceType;
 	cInfo->infoEx.dataIndFuncEx = NULL;
 	cInfo->infoEx.flowIndFunc = cInfo->info.flowIndFunc;
-	cInfo->infoEx.cpResetFunc = cInfo->info.cpResetFunc;
+	cInfo->infoEx.rpcNotificationFunc = cInfo->info.rpcNotificationFunc;
 
 	cInfo->clientId = clientId;
 	cInfo->filep = filp;
@@ -1588,7 +1600,7 @@ static long handle_pkt_register_data_ind_ioc(struct file *filp,
 	RPC_PACKET_RegisterFilterCbk(ioc_param.rpcClientID,
 				ioc_param.interfaceType,
 				RPC_ServerRxCbk,
-				RPC_ServerCPResetCallback);
+				RPC_ServerNotification);
 
 	return 0;
 }
@@ -1700,7 +1712,7 @@ static long handle_pkt_register_data_ind_ex_ioc(struct file *filp,
 	cInfo->info.interfaceType = cInfo->infoEx.interfaceType;
 	cInfo->info.dataIndFunc = NULL;
 	cInfo->info.flowIndFunc = cInfo->infoEx.flowIndFunc;
-	cInfo->info.cpResetFunc = cInfo->infoEx.cpResetFunc;
+	cInfo->info.rpcNotificationFunc = cInfo->infoEx.rpcNotificationFunc;
 
 	cInfo->clientId = clientId;
 	cInfo->filep = filp;
@@ -1722,7 +1734,7 @@ static long handle_pkt_register_data_ind_ex_ioc(struct file *filp,
 	RPC_PACKET_RegisterFilterCbk(ioc_param_ex.rpcClientID,
 				ioc_param_ex.interfaceType,
 				RPC_ServerRxCbk,
-				RPC_ServerCPResetCallback);
+				RPC_ServerNotification);
 
 	return 0;
 }
@@ -1812,15 +1824,16 @@ static long handle_pkt_poll_ex_ioc(struct file *filp, unsigned int cmd,
 		ioc_param.isEmpty = 0;
 		ioc_param.type = Item->type;
 		ioc_param.event = Item->event;
-		ioc_param.cpResetEvent = Item->cpResetEvent;
+		ioc_param.rpcNotificationEvent = Item->rpcNotificationEvent;
 		ioc_param.dataIndFuncEx = cInfo->infoEx.dataIndFuncEx;
 		ioc_param.dataIndFunc = cInfo->info.dataIndFunc;
 		ioc_param.flowIndFunc = (cInfo->infoEx.flowIndFunc) ?
 			cInfo->infoEx.flowIndFunc :
 			cInfo->info.flowIndFunc;
-		ioc_param.cpResetFunc = (cInfo->infoEx.cpResetFunc) ?
-			cInfo->infoEx.cpResetFunc :
-			cInfo->info.cpResetFunc;
+		ioc_param.rpcNotificationFunc =
+			(cInfo->infoEx.rpcNotificationFunc) ?
+			cInfo->infoEx.rpcNotificationFunc :
+			cInfo->info.rpcNotificationFunc;
 		ioc_param.bufInfo.interfaceType = Item->interfaceType;
 		ioc_param.bufInfo.channel = Item->channel;
 		ioc_param.bufInfo.dataBufHandle = Item->dataBufHandle;
@@ -2086,7 +2099,7 @@ static long handle_pkt_ack_cp_reset_ioc(struct file *filp, unsigned int cmd,
 			cInfo = gRpcClientList[k];
 			if (cInfo &&
 			  (cInfo->info.interfaceType == INTERFACE_CAPI2) &&
-			  cInfo->info.cpResetFunc &&
+			  cInfo->info.rpcNotificationFunc &&
 			  !cInfo->ackdCPReset) {
 				_DBG(RPC_TRACE
 				("k:handle_pkt_ack_cp_reset_ioc not ackd %d\n",

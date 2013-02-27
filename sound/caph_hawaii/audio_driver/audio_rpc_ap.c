@@ -223,26 +223,36 @@ void HandleAudioEventReqCb(RPC_Msg_t *pMsg,
 #endif
 }
 #if 1 // Kishore change when Capri CP is ported
-static void HandleAudioCPResetCb(RPC_CPResetEvent_t event, UInt8 clientID)
+static void HandleAudioRpcNotification(
+	struct RpcNotificationEvent_t event, UInt8 clientID)
 {
-	pr_info("HandleAudioCPResetCb: event %s client ID %d\n",
-		RPC_CPRESET_START == event ?
-		"RPC_CPRESET_START" : "RPC_CPRESET_COMPLETE",
+	pr_info("HandleAudioRpcNotification: event %d param %d client ID %d\n",
+		(int) event.event, (int) event.param,
 		clientID);
 
 	if (audioClientId != clientID)
-		pr_err("HandleAudioCPResetCb wrong cid expected %d got %d\n",
+		pr_err(
+		"HandleAudioRpcNotification wrong cid expected %d got %d\n",
 			audioClientId, clientID);
 
-	/* for now, just ack that we're ready for reset */
-	if (RPC_CPRESET_START == event) {
-		inCpReset = TRUE;
-		AUDDRV_HandleCPReset(TRUE);
-		RPC_AckCPReset(audioClientId);
-	} else if (RPC_CPRESET_COMPLETE == event) {
-		AUDDRV_HandleCPReset(FALSE);
-		inCpReset = FALSE;
-		RPC_AckCPReset(audioClientId);
+	switch (event.event) {
+	case RPC_CPRESET_EVT:
+		/* for now, just ack that we're ready for reset */
+		if (RPC_CPRESET_START == event.param) {
+			inCpReset = TRUE;
+			AUDDRV_HandleCPReset(TRUE);
+			RPC_AckCPReset(audioClientId);
+		} else if (RPC_CPRESET_COMPLETE == event.param) {
+			AUDDRV_HandleCPReset(FALSE);
+			inCpReset = FALSE;
+			RPC_AckCPReset(audioClientId);
+		}
+		break;
+	default:
+		pr_info(
+		"HandleAudioRpcNotification: Unsupported event %d\n",
+		(int) event.event);
+		break;
 	}
 }
 #endif
@@ -274,7 +284,7 @@ void Audio_InitRpc(void)
 		params.xdrtbl = AUDIO_Prim_dscrm;
 		params.respCb = HandleAudioEventrespCb;
 		params.reqCb = HandleAudioEventReqCb;
-		params.cpResetCb = HandleAudioCPResetCb;  // Kishore change when Capri CP is ported
+		params.rpcNtfFn = HandleAudioRpcNotification;
 		syncParams.copyCb = AudioCopyPayload;
 
 		handle = RPC_SyncRegisterClient(&params, &syncParams);

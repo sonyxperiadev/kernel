@@ -223,7 +223,7 @@ typedef void (RPC_EventCallbackFunc_t) (void *eventHandle);
 			for RPC commands
 
 **/
-typedef void (RPC_CPResetCallbackFunc_t) (RPC_CPResetEvent_t event,
+typedef void (RPC_NotificationFunc_t) (struct RpcNotificationEvent_t event,
 					  UInt8 clientID);
 
 /**
@@ -242,8 +242,8 @@ typedef struct {
 	/* Flow control event callback */
 	RPC_FlowControlCallbackFunc_t *flowCb;
 
-	/* CP reset control callback */
-	RPC_CPResetCallbackFunc_t *cpResetCb;
+	/* RPC Notification Fn */
+	RPC_NotificationFunc_t *rpcNtfFn;
 
 	/* Interface type */
 	RPC_InterfaceType_t iType;

@@ -177,8 +177,8 @@ void RPC_SyncHandleResponse(RPC_Msg_t *pMsg,
 
 void RPC_SyncHandleAck(UInt32 tid, UInt8 clientID, RPC_ACK_Result_t ackResult,
 		       UInt32 ackData);
-static void RPC_SyncCPResetCb(RPC_CPResetEvent_t event,
-								UInt8 clientID);
+static void RPC_SyncNotification(
+	struct RpcNotificationEvent_t event, UInt8 clientID);
 
 extern UInt32 RPC_GetUserData(UInt8 clientIndex);
 
@@ -236,7 +236,7 @@ RPC_Handle_t RPC_SyncRegisterClient(RPC_InitParams_t *initParams,
 	internalParam->SyncRpcParams.respCb = RPC_SyncHandleResponse;
 	internalParam->SyncRpcParams.ackCb = RPC_SyncHandleAck;
 	internalParam->SyncRpcParams.userData = (UInt32) internalParam;
-	internalParam->SyncRpcParams.cpResetCb = RPC_SyncCPResetCb;
+	internalParam->SyncRpcParams.rpcNtfFn = RPC_SyncNotification;
 
 	internalParam->syncInitParams = *syncInitParams;
 
@@ -887,50 +887,51 @@ void RPC_SyncDeleteCbkFromTid(UInt32 tid)
 }
 
 /* cp silent reset callback for sync rpc layer */
-static void RPC_SyncCPResetCb(RPC_CPResetEvent_t event,
-							UInt8 clientID)
+static void RPC_SyncNotification(
+	struct RpcNotificationEvent_t event, UInt8 clientID)
 {
 	TaskRequestMap_t *taskMap = (TaskRequestMap_t *) NULL;
 	UInt8 i;
 	RPC_SyncParams_t *internalParam;
 	UInt8 clientIndex;
 
-	_DBG_(RPC_TRACE("RPC_SyncCPResetCb event %s",
-					event == RPC_CPRESET_START ?
-					"RPC_CPRESET_START" :
-					"RPC_CPRESET_COMPLETE"));
-	for (i = 0; i < MAX_TASKS_NUM; i++) {
-		taskMap = (sTaskRequestMap + i);
+	_DBG_(RPC_TRACE("RPC_SyncNotification event %d param %d",
+			(int) event.event, (int) event.param));
 
-		if (taskMap != NULL &&
-			taskMap->task != NULL) {
-			_DBG_(RPC_TRACE(
-				"RPC_SyncCPResetCb i=%d tid=%d msg=%d ack=%d\r\n",
+	switch (event.event) {
+	case RPC_CPRESET_EVT:
+		for (i = 0; i < MAX_TASKS_NUM; i++) {
+			taskMap = (sTaskRequestMap + i);
+
+			if (taskMap != NULL &&
+				taskMap->task != NULL) {
+				_DBG_(RPC_TRACE(
+	      "RPC_SyncNotification i=%d tid=%d msg=%d ack=%d\r\n",
 				i, (int)taskMap->tid, (int)taskMap->msgType,
 				taskMap->ack));
-			_DBG_(RPC_TRACE(
-				"RPC_SyncCPResetCb pend=%d sz=%d rs=%d task=0x%p\r\n",
+				_DBG_(RPC_TRACE(
+	      "RPC_SyncNotification pend=%d sz=%d rs=%d task=0x%p\r\n",
 				taskMap->isResultPending,
 				(int)taskMap->rspSize,
 				(int)taskMap->result,
 				(void *)taskMap->task));
 
-			if (event == RPC_CPRESET_START) {
+			if (event.param == RPC_CPRESET_START) {
 				switch (taskMap->state) {
 				case RPC_SYNC_STATE_WAITING_FOR_ACK:
-					_DBG_(RPC_TRACE
-						("RPC_SyncCPResetCb waiting for ack\n"));
+					_DBG_(RPC_TRACE(
+		"RPC_SyncNotification waiting for ack\n"));
 					taskMap->ack = ACK_CRITICAL_ERROR;
 					taskMap->state = RPC_SYNC_STATE_DONE;
 					if (taskMap->ackSema)
 						OSSEMAPHORE_Release(
 							taskMap->ackSema);
 					_DBG_(RPC_TRACE(
-						"RPC_SyncCPResetCb after sema rel\n"));
+		"RPC_SyncNotification after sema rel\n"));
 					break;
 				case RPC_SYNC_STATE_WAITING_FOR_RSP:
-					_DBG_(RPC_TRACE
-						("RPC_SyncCPResetCb waiting for rsp\n"));
+					_DBG_(RPC_TRACE(
+		"RPC_SyncNotification waiting for rsp\n"));
 					taskMap->result = RESULT_ERROR;
 					taskMap->tid = 0;
 					taskMap->state = RPC_SYNC_STATE_DONE;
@@ -938,20 +939,27 @@ static void RPC_SyncCPResetCb(RPC_CPResetEvent_t event,
 					break;
 				default:
 					_DBG_(RPC_TRACE(
-						"RPC_SyncCPResetCb state=%d\n",
+		"RPC_SyncNotification state=%d\n",
 						taskMap->state));
 					break;
 				}
 			} else {
 			}
 		}
-	}
+		}
 
-	clientIndex = RPC_SYS_GetClientHandle(clientID);
-	internalParam = (RPC_SyncParams_t *)
+		clientIndex = RPC_SYS_GetClientHandle(clientID);
+		internalParam = (RPC_SyncParams_t *)
 		RPC_GetUserData(clientIndex);
-	if (internalParam &&
-		internalParam->clientParams.cpResetCb) {
-		internalParam->clientParams.cpResetCb(event, clientID);
+		if (internalParam &&
+			internalParam->clientParams.rpcNtfFn)
+			internalParam->clientParams.rpcNtfFn(event, clientID);
+		break;
+	default:
+		_DBG_(RPC_TRACE(
+			"RPC_SyncNotification: Unsupported event %d\n",
+			(int) event.event));
+		break;
+
 	}
 }

@@ -77,22 +77,32 @@ static void HandleSysEventRspCb(RPC_Msg_t *pMsg,
 	RPC_SYSFreeResultDataBuffer(dataBufHandle);
 }
 
-static void HandleSysCPResetCb(RPC_CPResetEvent_t event, UInt8 clientID)
+static void HandleSysRPCNotification(
+	struct RpcNotificationEvent_t event, UInt8 clientID)
 {
-	pr_info("HandleSysCPResetCb: event %s client %d\n",
-		RPC_CPRESET_START == event ?
-		"RPC_CPRESET_START" : "RPC_CPRESET_COMPLETE",
-		clientID);
+	switch (event.event) {
+	case RPC_CPRESET_EVT:
+		pr_info("HandleSysRPCNotification: event %s client %d\n",
+			RPC_CPRESET_START == event.param ?
+			"RPC_CPRESET_START" :
+			"RPC_CPRESET_COMPLETE", clientID);
 
-	if (RPC_SYS_GetClientID(sRPCHandle) != clientID) {
-		pr_err("HandleSysCPResetCb:\n");
-		pr_err("   wrong cid expected %d got %d\n",
-			RPC_SYS_GetClientID(sRPCHandle), clientID);
-	}
+		if (RPC_SYS_GetClientID(sRPCHandle) != clientID) {
+			pr_err("HandleSysRPCNotification:\n");
+			pr_err("   wrong cid expected %d got %d\n",
+				RPC_SYS_GetClientID(sRPCHandle), clientID);
+		}
 
 	/* for now, just ack that we're ready for CP reset... */
-	if (RPC_CPRESET_START == event)
-		RPC_AckCPReset(clientID);
+		if (RPC_CPRESET_START == event.param)
+			RPC_AckCPReset(clientID);
+		break;
+	default:
+		pr_err(
+		"HandleSysRPCNotification: Unsupported event %d\n",
+		(int) event.event);
+		break;
+	}
 }
 
 static void SYS_GetPayloadInfo(SYS_ReqRep_t *reqRep,
@@ -148,7 +158,7 @@ void SYS_InitRpc(void)
 		params.iType = INTERFACE_RPC_DEFAULT;
 		params.respCb = HandleSysEventRspCb;
 		params.reqCb = HandleSysReqMsg;
-		params.cpResetCb = HandleSysCPResetCb;
+		params.rpcNtfFn = HandleSysRPCNotification;
 		params.mainProc = (xdrproc_t) xdr_SYS_ReqRep_t;
 		sysGetXdrStruct(&(params.xdrtbl), &(params.table_size));
 		params.maxDataBufSize = sizeof(SYS_ReqRep_t);
