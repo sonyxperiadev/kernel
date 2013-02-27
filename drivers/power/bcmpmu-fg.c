@@ -91,6 +91,7 @@
 #define ACLD_ERR_CNT_THRLD	3
 #define CHRGR_EFFICIENCY 85
 
+#define NTC_ROOM_TEMP			250 /* 25C */
 /**
  * Helper macros
  */
@@ -217,6 +218,7 @@ struct bcmpmu_fg_status_flags {
 	bool charging_enabled;
 	bool temp_hot_state;
 	bool temp_cold_state;
+	bool ntc_disabled;
 	bool batt_present;
 	bool chrgr_pause;
 	bool init_capacity;
@@ -857,6 +859,9 @@ static inline int bcmpmu_fg_get_batt_temp(struct bcmpmu_fg_data *fg)
 	struct bcmpmu_adc_result result;
 	int ret = 0;
 	int retries = ADC_READ_TRIES;
+
+	if (fg->flags.ntc_disabled)
+		return NTC_ROOM_TEMP;
 
 	while (retries--) {
 		ret = bcmpmu_adc_read(fg->bcmpmu, PMU_ADC_CHANN_NTC,
@@ -2544,6 +2549,27 @@ static int debugfs_fg_cal_battery(void *data, u64 cal)
 DEFINE_SIMPLE_ATTRIBUTE(fg_cal_fops,
 		NULL, debugfs_fg_cal_battery, "%llu\n");
 
+static int debugfs_get_fg_ntc_disable(void *data, u64 *disabled)
+{
+	struct bcmpmu_fg_data *fg = data;
+	*disabled = fg->flags.ntc_disabled;
+	return 0;
+}
+
+static int debugfs_set_fg_ntc_disable(void *data, u64 disable)
+{
+	struct bcmpmu_fg_data *fg = data;
+	if (disable == 1)
+		fg->flags.ntc_disabled = true;
+	else
+		fg->flags.ntc_disabled = false;
+	return 0;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(fg_ntc_disable_fops,
+	debugfs_get_fg_ntc_disable, debugfs_set_fg_ntc_disable,
+	"%llu\n");
+
 static void bcmpmu_fg_debugfs_init(struct bcmpmu_fg_data *fg)
 {
 	struct dentry *dentry_fg_dir;
@@ -2606,6 +2632,12 @@ static void bcmpmu_fg_debugfs_init(struct bcmpmu_fg_data *fg)
 	dentry_fg_file = debugfs_create_file("calibration",
 			DEBUG_FS_PERMISSIONS, dentry_fg_dir, fg,
 			&fg_cal_fops);
+
+	if (IS_ERR_OR_NULL(dentry_fg_file))
+		goto debugfs_clean;
+	dentry_fg_file = debugfs_create_file("disable_ntc",
+			DEBUG_FS_PERMISSIONS, dentry_fg_dir, fg,
+			&fg_ntc_disable_fops);
 	if (IS_ERR_OR_NULL(dentry_fg_file))
 		goto debugfs_clean;
 
