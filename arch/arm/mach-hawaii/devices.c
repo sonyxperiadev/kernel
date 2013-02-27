@@ -104,6 +104,8 @@
 
 #include "devices.h"
 
+static int board_version = -1;
+
 /* dynamic ETM support */
 unsigned int etm_on;
 EXPORT_SYMBOL(etm_on);
@@ -1005,7 +1007,6 @@ static int __init setup_etm(char *p)
 }
 early_param("etm_on", setup_etm);
 
-
 #ifdef CONFIG_ANDROID_PMEM
 static int __init setup_pmem_pages(char *str)
 {
@@ -1359,3 +1360,51 @@ void __init hawaii_reserve(void)
 #endif
 
 }
+
+static int __init setup_board_version(char *p)
+{
+	if (get_option(&p, &board_version) == 1)
+		return 0;
+	else
+		return -1;
+}
+early_param("brd_ver", setup_board_version);
+
+/* API to get the Board version.
+ * Based on the BOM detection, bootloader updates the command line with the
+ * HW board version.
+ * Basically Boot loader reads the ADC value and finds the board version.
+ * The following is the ADC range and the corresponding board version:
+ *
+ * ADC MIN	MAX	Board_ver
+ *	0	23	00
+ *	23	46	01
+ *	46	70	02
+ *	70	96	03
+ *	96	124	04
+ *	124	154	05
+ *	154	187	06
+ *	187	220	07 Hawaii Garnet EDN 01x
+ *	220	254	08
+ *	254	293	09
+ *	293	332	0A
+ *	332	373	0B
+ *	373	416	0C Hawaiistone EDN 01x
+ *	416	458	0D
+ *	458	501	0E
+ *	501	544	0F
+ *	544	589	10 Hawaiistone EDN 010
+ *	589	637	11
+ *	637	682	12
+ *	682	726	13
+ *	726	771	14
+ *	771	816	15
+ *	816	858	16
+ *	858	889	17
+ *			-1 Unknow Board version
+ */
+int get_board_ver(void)
+{
+	return board_version;
+}
+EXPORT_SYMBOL(get_board_ver);
