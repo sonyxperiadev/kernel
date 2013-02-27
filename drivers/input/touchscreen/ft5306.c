@@ -732,7 +732,7 @@ static void Ft5306_Exit_Sleep(void)
 	gpio_set_value(ts_gpio_wakeup_pin, 0);
 	mdelay(5);
 	gpio_set_value(ts_gpio_wakeup_pin, 1);
-	mdelay(200);
+	mdelay(20);
 	gpio_free(ts_gpio_wakeup_pin);
 #endif
 }
@@ -743,12 +743,12 @@ void Ft5306_Hw_Reset(void)
 	gpio_request(ts_gpio_reset_pin, "tp_reset");
 	gpio_direction_output(ts_gpio_reset_pin, 1);
 	gpio_set_value(ts_gpio_reset_pin, 1);
-	mdelay(10);
+	mdelay(5);
 	gpio_set_value(ts_gpio_reset_pin, 0);
-	mdelay(10);
+	mdelay(5);
 	gpio_set_value(ts_gpio_reset_pin, 1);
 	gpio_free(ts_gpio_reset_pin);
-	mdelay(10);
+	mdelay(5);
 }
 #endif
 
@@ -1469,13 +1469,13 @@ static int focaltech_ft5306_resume(struct i2c_client *client)
 	struct synaptics_rmi4 *ts = i2c_get_clientdata(client);
 
 	Ft5306_Exit_Sleep();
-	mdelay(20);
+	mdelay(2);
 	if (ts->power)
 		ts->power(TS_ON);
 #if (TP_CNTRL_PIN_TYPE == TP_CNTRL_PIN_RESET)
 	Ft5306_Hw_Reset();
 #endif
-	mdelay(50);
+	mdelay(5);
 	focaltech_ft5306_enable(ts);
 
 	return 0;
