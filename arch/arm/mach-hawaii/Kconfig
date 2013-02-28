@@ -47,15 +47,10 @@ config	MACH_HAWAII_SS_EVAL_REV00
 	help
 	  Support for the Broadcom Hawaii SS eval board.
 
-config	MACH_HAWAII_SS_LOGAN_REV00
-	bool "Support Broadcom Hawaii SS logan board"
+config	MACH_HAWAII_SS_LOGAN
+	bool "Support Broadcom Hawaii Samsung Logan board"
 	help
-	  Support for the Broadcom Hawaii SS logan board.
-
-config	MACH_HAWAII_SS_LOGAN_REV01
-	bool "Support Broadcom Hawaii SS logan board"
-	help
-	  Support for the Broadcom Hawaii SS logan board.
+	  Support for the Broadcom Hawaii Samsung Logan board.
 
 endchoice
 
@@ -126,10 +121,6 @@ config	MACH_HAWAII_SS_EVAL
 
 endchoice
 
-config	MACH_HAWAII_SS_LOGAN
-	bool "Support Broadcom Hawaii Samsung Logan board"
-	help
-	  Support for the Broadcom Hawaii Samsung Logan board.
 
 choice
 	prompt "Hawaii SS based board type"
