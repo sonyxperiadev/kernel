@@ -147,6 +147,7 @@ int __init pm_params_init(void)
 	pwrmgr_init_param.def_vlt_tbl = (u8 *)
 		get_sr_vlt_table(SILICON_TYPE_SLOW, A9_FREQ_1000_MHZ);
 #endif
+	pwrmgr_init_param.vlt_tbl_size = SR_VLT_LUT_SIZE;
 	return 0;
 }
 
