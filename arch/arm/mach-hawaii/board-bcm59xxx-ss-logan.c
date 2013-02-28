@@ -762,7 +762,8 @@ struct bcmpmu59xxx_regulator_init_data
 				PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
 			.name = "tcx",
 		},
-	#if defined(CONFIG_MACH_HAWAII_SS_LOGAN_REV01)
+	#if defined(CONFIG_MACH_HAWAII_SS_LOGAN_REV01)	\
+			|| defined(CONFIG_MACH_HAWAII_SS_LOGAN_REV02)
 		[BCMPMU_REGULATOR_LVLDO1] = {
 			.id = BCMPMU_REGULATOR_LVLDO1,
 			.initdata = &bcm59xxx_lvldo1_data,

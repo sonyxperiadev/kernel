@@ -81,13 +81,13 @@ const regs_t sr030pc50_init_regs[]={
 
 0x900c, //BLC_TIME_TH_ON
 0x910c, //BLC_TIME_TH_OFF 
-0x92a8, //BLC_AG_TH_ON
-0x93a0, //BLC_AG_TH_OFF
+0x9298, //BLC_AG_TH_ON
+0x9390, //BLC_AG_TH_OFF
 
 0x9838, //don't touch
 0x9940, //Out BLC
 0xa040, //Dark BLC
-0xa842, //Normal BLC 44
+0xa844, //Normal BLC 44
 
 //Page2 Last Update 12_01_20
 0x0302,
@@ -192,8 +192,8 @@ const regs_t sr030pc50_init_regs[]={
 
 0x6001, //7f //7c
 0x6100, //Use default
-0x6280, //SATB_B  (1.4x)
-0x6380, //SATR_R  (1.2x)
+0x627e, //80 SATB_B  (1.4x)
+0x637c, //80 SATR_R  (1.2x)
 0x6448, //AGSAT
 0x6690, //wht_th2
 0x6736, //wht_gain  Dark (0.4x), Normal (0.75x)
@@ -288,15 +288,15 @@ const regs_t sr030pc50_init_regs[]={
 0x0314,
 0x1001,
 
-0x2254,
-0x2341,
-0x2440, //30
+0x2244,  //54,
+0x2334,  //41,
+0x2432,  //40, //30
 
-0x2794, //RXCEN
+0x2758, //60 RXCEN
 0x2880, //RYCEN
-0x2994, //GXCEN
+0x2958, //60 GXCEN
 0x2a80, //GYCEN
-0x2b94, //BXCEN
+0x2b58, //60 BXCEN
 0x2c80, //BYCEN
 
 //15page//////////////////////////
@@ -331,20 +331,20 @@ const regs_t sr030pc50_init_regs[]={
 0x0316,
 0x1001,
 0x3000,
-0x310c,
-0x3220,
-0x3335,
-0x3458,
-0x3575,
-0x368e,
-0x37a3,
-0x38b4,
-0x39c3,
-0x3acf,
-0x3be2,
-0x3cf0,
-0x3df9,
-0x3eff,
+0x310d,
+0x321b,
+0x332b,  //2d,
+0x3452,  //4e,
+0x3576,  //6f,
+0x368e,  //86,
+0x37a3,  //9d,
+0x38b7,  //af,
+0x39c7,  //c0,
+0x3ad5,  //cf,
+0x3be7,  //e2,
+0x3cf3,  //f0,    
+0x3df9,    
+0x3eff,    
 
 //Page 17 AE 
 0x0317,
@@ -374,24 +374,24 @@ const regs_t sr030pc50_init_regs[]={
 0x3b22, //23->22 _10_04_06 hhzin
 0x3cde,
 
-0x6071, //70
+0x6070, //70
 0x6100, //11 //22
 
-0x6271,
+0x6270,
 0x6300, //11 //22
 
-0x6830,// x no Flip 34
-0x696a,// x no Flip 66
+0x682c,// x no Flip 34
+0x696e,// x no Flip 66
 0x6A27,
 0x6Bbb,
 
-0x7038,//Y Targe 32
+0x7034,//Y Targe 32
 
-0x7621, //Unlock bnd1
-0x7771, //Unlock bnd2 02->a2 _10_04_06 hhzin
+0x7611, //Unlock bnd1
+0x7772, //Unlock bnd2 02->a2 _10_04_06 hhzin
 
-0x7822, //Yth 1
-0x7921, //Yth 2 //1f
+0x7812, //Yth 1
+0x7926, //Yth 2 26->27 _10_04_06 hhzin
 0x7a23, //Yth 3
 
 0x7c17, //1c->1d _10_04_06 hhzin
@@ -423,14 +423,14 @@ const regs_t sr030pc50_init_regs[]={
 0x988C,
 0x9923,
 
-0x9c04, //EXP Limit 1354.17 fps                                     
-0x9db0,                                                             
+0x9c07, //EXP Limit 902.78 fps 
+0x9d08,
 0x9e00, //EXP Unit 
 0x9fc8,                                                             
 
 0xb01d,
 0xb114,
-0xb2b0, //80
+0xb2a0, //80
 0xb317, //AGLVL //17
 0xb417,
 0xb53e,
@@ -451,53 +451,55 @@ const regs_t sr030pc50_init_regs[]={
 0x0322,
 0x10e2,
 0x112e, //2e
-0x2041, //01 //69
-0x2140,
+0x2075, //01 //69
+0x2180,
 0x24fe,
 
 0x3080, //Cb
 0x3180, //Cr
-0x3812, //Lock Boundary //13
+0x3811, //Lock Boundary //13
 0x3933,
-0x40f3, //f0
-0x4132, //32-->33
-0x4222, //22
+0x40e3, //f0
+0x4143,
+0x4233,
 0x43f3,
-0x4443, //88
-0x4533, //
-0x4608, //02
+0x4444,
+0x4566,
+0x4608,
+0x4763,
 
 0x803d, //3a //3c
 0x8120,
 0x8240,
 
-0x835a, //RMAX
-0x8422, //(0216_kjh20>>23) RMIN
-0x8557, //(0216_kjh5c>>5a) BMAX //51
-0x8624, //BMIN //20
+0x835a, //RMAX 5a
+0x8420, //22 RMIN 23
+0x8556, //BMAX 5a
+0x8624, //BMIN 
 
-0x873f,
-0x8833, //3a
-0x893e, //3e //40
-0x8a34, //32
+0x8748, //42
+0x883a,
+0x893e,
+0x8a34,
 
-0x8b03, //OUT TH
-0x8d22, //21 //22
-0x8e21, //41
+0x8b00, //OUT TH
+0x8d24, //21 //22
+0x8e41, //41
 
-0x8f58,
-0x9056,
-0x9153,
-0x924e,
-0x9347,
-0x9441,
+0x8f63,
+0x9062,
+0x915e,
+0x925a,
+0x9350,
+0x9442,
 0x953b,
-0x9633,
-0x972f,
+0x9634,
+0x972d,
 0x982b,
 0x9929,
 0x9a27,
-0x9b06,
+0x9b0b,
+0xb47f,
                   
 ///////////////////////////// Page 48
 0x0348,
@@ -542,6 +544,7 @@ const regs_t sr030pc50_init_regs[]={
 0x109c,
 
 0x0170,
+0xff0f, //15ms
 
 };
 
@@ -590,36 +593,53 @@ const regs_t sr030pc50_effect_normal_regs[] =
 {
 0x0310,
 0x1103,
-0x1240,
-0x4480,
-0x4580,
+0x1230,
+0x4080,
+0x0313,
+0x103b,
+0x2002,
 };
 const regs_t sr030pc50_effect_negative_regs[] =
 {
 0x0310,
 0x1103,
-0x1248,
-0x4480,
-0x4580,
+0x1238,
+0x0313,
+0x103b,
+0x2002,
 };
 const regs_t sr030pc50_effect_sepia_regs[] =
 {
 0x0310,
 0x1103,
-0x1243,
+0x1233,
 0x4470,
 0x4598,
+0x0313,
+0x103b,
+0x2002,	
 };
 const regs_t sr030pc50_effect_mono_regs[] =
 {
 0x0310,
 0x1103,
-0x1243,
+0x1233,
 0x4480,
 0x4580,
+0x0313,
+0x103b,
+0x2002,	
 };
 const regs_t sr030pc50_effect_aqua_regs[] =
 {
+0x0310,
+0x1103,
+0x1233,
+0x44b0,
+0x4540,
+0x0313,
+0x103b,
+0x2002,	
 };
 const regs_t sr030pc50_effect_sharpen_regs[] =
 {
@@ -647,7 +667,7 @@ const regs_t sr030pc50_wb_auto_regs[] =
 0x10e2,
 0x112e,
 0x803d, //3a //3c
-0x8120, 
+0x8120,
 0x8240,
 0x835a, //RMAX
 0x8422, //(0216_kjh20>>23) RMIN
@@ -658,46 +678,45 @@ const regs_t sr030pc50_wb_auto_regs[] =
 
 const regs_t sr030pc50_wb_daylight_regs[] =
 {
-0x0322,
+0x0322, //MWB Sunny
 0x107b,
 0x1126,
-0x8050,
-0x8120, 
-0x822d,
-0x8354,
-0x844c,
-0x8532, 
-0x8628,
+0x803f, //52 R Gain
+0x8120, //G Gain
+0x8230, //B Gain
+0x833a, //R Max //41
+0x843a, //R Min
+0x8538, //B Max
+0x862a, //B Min //2f
 0x10fb,
 };
 
 const regs_t sr030pc50_wb_cloudy_regs[] =
 {
-0x0322,
+0x0322, //MWB Cloudy
 0x107b,
 0x1126,
-0x806d,
-0x8120,
-0x8221,
-0x836e,
-0x846b,
-0x8522,
-0x8620,
+0x804f, //R Gain
+0x8120, //G Gain
+0x8225, //B Gain
+0x8353, //R Max
+0x8448, //R Min
+0x8535, //B Max
+0x862b, //B Min
 0x10fb,
-
 };
 const regs_t sr030pc50_wb_incandescent_regs[] =
 {
 0x0322,
 0x107b,
 0x1126,
-0x8023, 
+0x8020, 
 0x8120, 
-0x8252, 
-0x8326,
-0x8421,
+0x8257, 
+0x8321,
+0x841d,
 0x8559, 
-0x8655,
+0x8656,
 0x10fb,
 };
 
@@ -706,13 +725,13 @@ const regs_t sr030pc50_wb_fluorescent_regs[] =
 0x0322,
 0x107b,
 0x1126,
-0x803a,
+0x8042,
 0x8120,
-0x8248,
-0x833d,
-0x8433,
-0x854c,
-0x8642,
+0x8251,
+0x834a,
+0x843a,
+0x8555,
+0x8645,
 0x10fb,
 };
 
@@ -738,10 +757,11 @@ const regs_t sr030pc50_metering_matrix_regs[] =
 const regs_t sr030pc50_metering_center_regs[] =
 {
 0x0320,
-0x6071, //70
-0x6100, //11 //22
-0x6271,
-0x6300, //11 //22
+0x6070, //70
+0x6110, //11 //22
+
+0x6270,
+0x6310, //11 //22
 };
 
 const regs_t sr030pc50_metering_spot_regs[] =
@@ -764,19 +784,19 @@ const regs_t sr030pc50_metering_spot_regs[] =
 const regs_t sr030pc50_ev_minus_4_regs[] =
 {
  0x0310,
- 0x40c8,	
+ 0x40D0,	
 };
 
 const regs_t sr030pc50_ev_minus_3_regs[] =
 {
  0x0310,
- 0x40b0,
+ 0x40B0,
 };
 
 const regs_t sr030pc50_ev_minus_2_regs[] =
 {
  0x0310,
- 0x40a0,
+ 0x40A0,
 };
 
 const regs_t sr030pc50_ev_minus_1_regs[] =
@@ -1096,8 +1116,8 @@ const regs_t sr030pc50_fps_5_regs[] =
 
 0x9014, //BLC_TIME_TH_ON
 0x9114, //BLC_TIME_TH_OFF 
-0x92a8, //BLC_AG_TH_ON
-0x93a0, //BLC_AG_TH_OFF
+0x9298, //BLC_AG_TH_ON
+0x9390, //BLC_AG_TH_OFF
 
 0x0320, //Page 20
 0x101c,
@@ -1110,9 +1130,10 @@ const regs_t sr030pc50_fps_5_regs[] =
 0x84bd, 
 0x85d8, 
 
-0xa003, //EXP Max 7.14 fps 
-0xa175, 
-0xa2f0,
+0xa002, //EXP Max(100Hz) 8.33 fps 
+0xa1f7, 
+0xa260, 
+
 
 0x9104, //EXP Fix 5.00 fps
 0x92f5, 
@@ -1135,8 +1156,8 @@ const regs_t sr030pc50_fps_7_regs[] =
 
 0x900e, //BLC_TIME_TH_ON
 0x910e, //BLC_TIME_TH_OFF 
-0x92a8, //BLC_AG_TH_ON
-0x93a0, //BLC_AG_TH_OFF
+0x9298, //BLC_AG_TH_ON
+0x9390, //BLC_AG_TH_OFF
 
 0x0320, //Page 20
 0x101c,
@@ -1149,9 +1170,10 @@ const regs_t sr030pc50_fps_7_regs[] =
 0x84bd, 
 0x85d8, 
 
-0xa003, //EXP Max 7.14 fps 
-0xa175, 
-0xa2f0,
+0xa002, //EXP Max(100Hz) 8.33 fps 
+0xa1f7, 
+0xa260, 
+
 
 0x9103, //EXP Fix 7.00 fps
 0x928a, 
@@ -1178,8 +1200,8 @@ const regs_t sr030pc50_fps_10_regs[] =
 
 0x900a, //BLC_TIME_TH_ON
 0x910a, //BLC_TIME_TH_OFF 
-0x92a8, //BLC_AG_TH_ON
-0x93a0, //BLC_AG_TH_OFF
+0x9298, //BLC_AG_TH_ON
+0x9390, //BLC_AG_TH_OFF
 
 0x0320, //Page 20
 0x101c,
@@ -1192,9 +1214,9 @@ const regs_t sr030pc50_fps_10_regs[] =
 0x84bd, 
 0x85d8, 
 
-0xa002, //EXP Max 10.00 fps 
-0xa178, 
-0xa2d0,
+0xa001, //EXP Max(100Hz) 12.50 fps 
+0xa1fa, 
+0xa240, 
 
 0x9102, //EXP Fix 10.00 fps
 0x927a, 
@@ -1218,8 +1240,8 @@ const regs_t sr030pc50_fps_15_regs[] =
 
 0x9006, //BLC_TIME_TH_ON
 0x9106, //BLC_TIME_TH_OFF 
-0x92a8, //BLC_AG_TH_ON
-0x93a0, //BLC_AG_TH_OFF
+0x9298, //BLC_AG_TH_ON
+0x9390, //BLC_AG_TH_OFF
 
 0x0320, //Page 20
 0x101c,
@@ -1258,8 +1280,8 @@ const regs_t sr030pc50_fps_20_regs[] =
 
 0x9005, //BLC_TIME_TH_ON
 0x9105, //BLC_TIME_TH_OFF 
-0x92a8, //BLC_AG_TH_ON
-0x93a0, //BLC_AG_TH_OFF
+0x9298, //BLC_AG_TH_ON
+0x9390, //BLC_AG_TH_OFF
 
 
 0x0320, //Page 20
@@ -1273,9 +1295,10 @@ const regs_t sr030pc50_fps_20_regs[] =
 0x84bd, 
 0x85d8, 
 
-0xa001, //EXP Max 20 fps 
-0xa13c, 
-0xa268,
+0xa000, //EXP Max(100Hz) 25.00 fps 
+0xa1fd, 
+0xa220, 
+
 
 0x9101, //EXP Fix 20.00 fps
 0x923d, 
@@ -1298,8 +1321,8 @@ const regs_t sr030pc50_fps_25_regs[] =
 
 0x9004, //BLC_TIME_TH_ON
 0x9104, //BLC_TIME_TH_OFF 
-0x92a8, //BLC_AG_TH_ON
-0x93a0, //BLC_AG_TH_OFF
+0x9298, //BLC_AG_TH_ON
+0x9390, //BLC_AG_TH_OFF
 
 0x0320, //Page 20
 0x101c,
@@ -1312,9 +1335,10 @@ const regs_t sr030pc50_fps_25_regs[] =
 0x84bd, 
 0x85d8, 
 
-0xa003, //EXP Max 25.00 fps 
-0xa1fd, 
-0xa220,
+0xa000, //EXP Max(100Hz) 33.33 fps 
+0xa1bd, 
+0xa2d8, 
+
 
 0x9100, //EXP Fix 25.00 fps
 0x92fd, 
@@ -1333,13 +1357,13 @@ const regs_t sr030pc50_fps_30_regs[] =
 0x1190,
 0x4000, //Hblank 144
 0x4190, 
-0x4200, //Vblank 20
-0x4314,
+0x4200, //Vblank 2
+0x4302,
 
 0x9003, //BLC_TIME_TH_ON
 0x9103, //BLC_TIME_TH_OFF 
-0x92a8, //BLC_AG_TH_ON
-0x93a0, //BLC_AG_TH_OFF
+0x9298, //BLC_AG_TH_ON
+0x9390, //BLC_AG_TH_OFF
 
 0x0320, //Page 20
 0x101c,
@@ -1525,13 +1549,13 @@ const regs_t sr030pc50_pattern_on_regs[] =
 0x0310,
 0x1200,
 0x0311,
-0x1020,
+0x1098,
 0x0312,
-0x40e8,
-0x701e,
+0x4022,
+0x701c,
 0x0313,
-0x1000,
-0x8002,
+0x103a,
+0x800c,
 0x0314,
 0x1000,
 0x0315,
@@ -1539,7 +1563,7 @@ const regs_t sr030pc50_pattern_on_regs[] =
 0x0316,
 0x1000,
 0x0320,
-0x101c,
+0x100c,
 0x0322,
 0x107b,
 };
@@ -1551,13 +1575,13 @@ const regs_t sr030pc50_pattern_off_regs[] =
 0x0310,
 0x1230,
 0x0311,
-0x1008,
+0x1099,
 0x0312,
-0x4025,
-0x70eb,
+0x4023,
+0x701d,
 0x0313,
-0x1001,
-0x8003,
+0x103b,
+0x800d,
 0x0314,
 0x1001,
 0x0315,
@@ -1565,7 +1589,7 @@ const regs_t sr030pc50_pattern_off_regs[] =
 0x0316,
 0x1001,
 0x0320,
-0x109c,
+0x108c,
 0x0322,
 0x10fb,
 };
@@ -1746,9 +1770,9 @@ const regs_t sr030pc50_vt_mode_regs[] =
 0x0300,                                     
 
 0x080f, //Parallel NO Output_PAD Out
-0x1000,	// VDOCTL1
-0x1190,	// VDOCTL2 , 90 : FFR off, 94 : FFR on
-0x1200,	// CLK_CTL
+0x1000,
+0x1194,
+0x1200,
 0x1488,
                                              
 0x0baa,                                                  
@@ -1790,8 +1814,8 @@ const regs_t sr030pc50_vt_mode_regs[] =
 
 0x900a, //BLC_TIME_TH_ON
 0x910a, //BLC_TIME_TH_OFF 
-0x92f0, //BLC_AG_TH_ON
-0x93e8, //BLC_AG_TH_OFF
+0x9298, //BLC_AG_TH_ON
+0x9390, //BLC_AG_TH_OFF
 
 0x9838, //don't touch
 0x9940, //Out BLC
@@ -1895,9 +1919,9 @@ const regs_t sr030pc50_vt_mode_regs[] =
 0x1143,
 0x1230, //Y offet, dy offseet enable
 0x4080,
-0x4128, //00 DYOFS  00->10  _100318
-0x4885, //Contrast  88->84  _100318
-0x50f3, //AGBRT
+0x4102, //00 DYOFS  00->10  _100318
+0x4880, //Contrast  88->84  _100318
+0x5048, //AGBRT
 
 0x6001, //7f //7c
 0x6100, //Use default
@@ -2001,11 +2025,11 @@ const regs_t sr030pc50_vt_mode_regs[] =
 0x2341,
 0x2440, //30
 
-0x2794, //RXCEN
+0x2760, //RXCEN
 0x2880,      //RYCEN
-0x2994, //GXCEN
+0x2960, //GXCEN
 0x2a80,      //GYCEN
-0x2b94, //BXCEN
+0x2b60, //BXCEN
 0x2c80,       //BYCEN
 
 //15page//////////////////////////
@@ -2083,11 +2107,11 @@ const regs_t sr030pc50_vt_mode_regs[] =
 0x3b22, //23->22 _10_04_06 hhzin
 0x3cde,
 
-0x6071, //70
-0x6100, //11 //22
+0x6070, //70
+0x6110, //11 //22
 
-0x6271,
-0x6300, //11 //22
+0x6270,
+0x6310, //11 //22
 
 0x6830,// x no Flip 34
 0x696a,// x no Flip 66
@@ -2111,12 +2135,13 @@ const regs_t sr030pc50_vt_mode_regs[] =
 0x84bd, 
 0x85d8, 
 
-0x8600, //EXPMin 7500.00 fps
+0x8600, //EXPMin 8125.00 fps
 0x87c8, 
 
-0xa002, //EXP Max(100Hz) 10.00 fps 
-0xa178, 
-0xa2d0, 
+0xa001, //EXP Max(100Hz) 12.50 fps 
+0xa1fa, 
+0xa240, 
+
 
 0x8B3f, //EXP100 
 0x8C48, 
@@ -2167,12 +2192,13 @@ const regs_t sr030pc50_vt_mode_regs[] =
 0x3812, //Lock Boundary //13
 0x3933,
 0x40f3, //f0
-0x4132, //32-->33
-0x4222, //22
+0x4143, //32-->33
+0x4233, //22
 0x43f3,
-0x4443, //88
-0x4533, //
+0x4444, //88
+0x4566, //
 0x4608, //02
+0x4763,
 
 0x803d, //3a //3c
 0x8120,
@@ -2184,7 +2210,7 @@ const regs_t sr030pc50_vt_mode_regs[] =
 0x8557, //(0216_kjh5c>>5a) BMAX //51
 0x8624, //BMIN //20
 
-0x873f,
+0x8741,
 0x8833, //3a
 0x893e, //3e //40
 0x8a34, //32
@@ -2261,43 +2287,43 @@ const regs_t sr030pc50_init_regs_smart_stay[] = {
 0x0171,
 
 
-// PLL Setting 
+//  PLL Setting 
 0x0300,                                     
-
+   
 0x080f, //Parallel NO Output_PAD Out
 0x1000,
 0x1190,
 0x1200,
 0x1488,
-
+ 
 0x0baa,                                                             
 0x0caa,                                                             
 0x0daa,                                                             
-                                                                    
+                                                                 
 0xc095,                                     
 0xc118,                                     
 0xc291,                                     
 0xc300,                                     
 0xc401,   
-
+    
 0x0320, //page 20                                                   
-0x100c, //ae off                                                    
+0x101c, //ae off                                                    
 0x0322, //page 22                                                   
 0x107b, //awb off                                                   
-                                                                    
+                                                                 
 0x0300,
 0x1200,
 0x2000,
 0x2104,
 0x2200,
 0x2304,
-
+    
 0x4000, //Hblank 144                                                
 0x4190,                                                             
 0x4200, //Vblank 154
 0x439a, 
-
-//BLC
+        
+// BLC  
 0x802e, //don't touch
 0x817e, //don't touch
 0x8290, //don't touch
@@ -2306,19 +2332,18 @@ const regs_t sr030pc50_init_regs_smart_stay[] = {
 0x854b, //don't touch
 0x8601, //don't touch
 0x8847, //don't touch
-//0x8948,//BLC hold
-
+        
 0x900c, //BLC_TIME_TH_ON
 0x910c, //BLC_TIME_TH_OFF 
 0x92a8, //BLC_AG_TH_ON
 0x93a0, //BLC_AG_TH_OFF
-
+       
 0x9838, //don't touch
 0x9940, //Out BLC
 0xa040, //Dark BLC
 0xa842, //Normal BLC 44
-
-//Page2 Last Update 12_01_20
+   
+// Page2 Last Update 12_01_20
 0x0302,
 0x1000,
 0x1100,
@@ -2343,8 +2368,8 @@ const regs_t sr030pc50_init_regs_smart_stay[] = {
 0x343c,
 0x350d,
 0x3b60, //80
-
-//timing control 1 // //don't touch
+   
+// timing control 1 // //don't touch
 0x5021,
 0x511c,
 0x52aa,
@@ -2354,8 +2379,8 @@ const regs_t sr030pc50_init_regs_smart_stay[] = {
 0x560c,
 0x5800,
 0x590f,
-
-//timing control 2 // //don't touch
+   
+// timing control 2 // //don't touch
 0x6034,
 0x613a,
 0x6234,
@@ -2408,29 +2433,29 @@ const regs_t sr030pc50_init_regs_smart_stay[] = {
 0xcf3d,
 0xd033,
 0xd13f,
-
-//Page 10
+   
+// Page 10
 0x0310,
-0x1001, //03, //ISPCTL1, YUV ORDER(FIX)
+0x1001, //03 $f //ISPCTL1 $f YUV ORDER(FIX)
 0x1143,
-0x1230, //Y offet, dy offseet enable
+0x1230, //Y offet $f dy offseet enable
 0x4080,
 0x4102, //00 DYOFS  00->10  _100318
 0x4885, //Contrast  88->84  _100318
 0x5048, //AGBRT
-
+    
 0x6001, //7f //7c
 0x6100, //Use default
 0x6280, //SATB_B  (1.4x)
 0x6380, //SATR_R  (1.2x)
 0x6448, //AGSAT
 0x6690, //wht_th2
-0x6736, //wht_gain  Dark (0.4x), Normal (0.75x)
-
+0x6736, //wht_gain  Dark (0.4x) Normal (0.75x)
+    
 0x8000,
-
-//Page 11
-//LPF
+   
+// Page 11
+// LPF
 0x0311,
 0x1025,
 0x1107,
@@ -2446,9 +2471,9 @@ const regs_t sr030pc50_init_regs_smart_stay[] = {
 0x6770,
 0x6824,
 0x6904,
-
-//Page 12
-//2D
+   
+// Page 12
+// 2D
 0x0312,
 0x40d3,
 0x4109,
@@ -2464,8 +2489,8 @@ const regs_t sr030pc50_init_regs_smart_stay[] = {
 0x7780,
 0x7888,
 0x7918,
-
-///////////////////////
+   
+// /////////////////////
 0x903d,
 0x9134,
 0x9928,
@@ -2480,9 +2505,9 @@ const regs_t sr030pc50_init_regs_smart_stay[] = {
 0xb752,
 0xb844,
 0xb915,
-///////////////////////
-
-//Edge
+// /////////////////////
+   
+// Edge
 0x0313,
 0x1001,
 0x1189,
@@ -2513,7 +2538,7 @@ const regs_t sr030pc50_init_regs_smart_stay[] = {
 0x9330,
 0x9430,
 0x9510,
-
+   
 0x0314,
 0x1001,
 
@@ -2528,251 +2553,240 @@ const regs_t sr030pc50_init_regs_smart_stay[] = {
 0x2b94, //BXCEN
 0x2c80, //BYCEN
 
-//15page//////////////////////////
-0x0315,
-0x1003,
+0x0315, 
+0x1003, 
 
-0x1452,
-0x163a,
-0x172f,
+0x1452, 
+0x163a, 
+0x172f, 
 
-//CMC
-0x30f1,
-0x3171,
-0x3200,
-0x331f,
-0x34e1,
-0x3542,
-0x3601,
-0x3731,
+0x30f1, 
+0x3171, 
+0x3200, 
+0x331f, 
+0x34e1, 
+0x3542, 
+0x3601, 
+0x3731, 
 0x3872,
-//CMC OFS
-0x4090,
-0x4182,
-0x4212,
-0x4386,
-0x4492,
-0x4518,
-0x4684,
-0x4702,
-0x4802,
+0x4090, 
+0x4182, 
+0x4212, 
+0x4386, 
+0x4492, 
+0x4518, 
+0x4684, 
+0x4702, 
+0x4802, 
 
-0x0316,
-0x1001,
-0x3000,
-0x310e,
-0x3226,
-0x333f,
-0x3465,
-0x3580,
-0x3697,
-0x37a8,
-0x38b9,
-0x39c5,
-0x3ad1,
-0x3be3,
-0x3cf0,
-0x3df9,
-0x3eff,
+0x0316, 
+0x1001, 
+0x3000, 
+0x310e, 
+0x3226, 
+0x333f, 
+0x3465, 
+0x3580, 
+0x3697, 
+0x37a8, 
+0x38b9, 
+0x39c5, 
+0x3ad1, 
+0x3be3, 
+0x3cf0, 
+0x3df9, 
+0x3eff, 
 
-//Page 17 AE 
-0x0317,
-0xc43c,
-0xc532,
 
-//Page 20 AE 
-0x0320,
-0x100c,
-0x1104,
+0x0317, 
+0xc43c, 
+0xc532, 
 
-0x2001,
-0x2827,
-0x29a1,
 
-0x2af0,
-0x2b04,
+0x0320, 
+0x101c, 
+0x1104, 
+
+0x2001, 
+0x2827, 
+0x29a1, 
+
+0x2af0, 
+0x2b04, 
 0x2c2b, 
-0x2e23,
+0x2e23, 
 
-0x30f8,
+0x30f8, 
 
-0x3b22,
-0x3cde,
+0x3b22, 
+0x3cde, 
 
-0x3922,
-0x3ade,
-0x3b22, //23->22 _10_04_06 hhzin
-0x3cde,
+0x3922, 
+0x3ade, 
+0x3b22, 
+0x3cde, 
 
-0x6040, //70
-0x6131, //11 //22
+0x6040, 
+0x6131, 
 
-0x6240,
-0x6331, //11 //22
+0x6240, 
+0x6331, 
 
-0x6826,// x no Flip 34
-0x6976,// x no Flip 66
-0x6A3c,
-0x6Bb4,
+0x6826, 
+0x6976, 
+0x6A3c, 
+0x6Bb4, 
 
-0x7048,//Y Targe 32
+0x7048, 
 
-0x7621, //Unlock bnd1
-0x7791, //Unlock bnd2 02->a2 _10_04_06 hhzin
+0x7621, 
+0x7791, 
 
-0x7822, //Yth 1
-0x792b, //Yth 2 //1f
-0x7a23, //Yth 3
+0x7822, 
+0x792b, 
+0x7a23, 
 
-0x7c24, //1c->1d _10_04_06 hhzin
-0x7d22,
+0x7c24, 
+0x7d22, 
 
-//50Hz
-0x8300, //EXP Normal 33.33 fps 
-0x8469,                                                             
-0x8578,                                                             
 
-0x8600, //EXPMin 8125.00 fps                                        
-0x87c8,                                                             
+0x8300, 
+0x845e, //50Hz 66.66fps
+0x85ec, 
 
-//60Hz_8fps
-0x8801, //EXP Max 8.00 fps 
-0x898b, 
-0x8a82, 
+0x8600, 
+0x87c8, 
 
-//50Hz_8fps
-0xa001, //EXP Max(100Hz) 8.33 fps 
-0xa17b,                                                             
-0xa2b0,                                                             
+0xa001, 
+0xa17b, 
+0xa2b0, 
 
-0x8B7e, //EXP100                                                    
-0x8C90,                                                             
-0x8D69, //EXP120                                                    
-0x8E78,                                                             
+0x8B7e, 
+0x8C90, 
+0x8D69, 
+0x8E78, 
 
-0x988C,
-0x9923,
+0x988C, 
+0x9923, 
 
-0x9c04, //EXP Limit 1354.17 fps                                     
-0x9db0,                                                             
-0x9e00, //EXP Unit 
-0x9fc8,                                                             
+0x9c04, 
+0x9db0, 
+0x9e00, 
+0x9fc8, 
 
-0xb038,
-0xb138,
-0xb2ff, //80
-0xb340, //AGLVL //17
-0xb440,
-0xb570,
-0xb62b,
-0xb724,
-0xb821,
-0xb91f,
-0xba1e,
-0xbb1d,
-0xbc1c,
-0xbd1b,
+0xb038, 
+0xb138, 
+0xb2ff, 
+0xb340, 
+0xb440, 
+0xb570, 
+0xb62b, 
+0xb724, 
+0xb821, 
+0xb91f, 
+0xba1e, 
+0xbb1d, 
+0xbc1c, 
+0xbd1b, 
 
-0xc01a,
-0xc348,
-0xc448,
+0xc01a, 
+0xc348, 
+0xc448, 
 
-//Page 22 AWB
-0x0322,
-0x10e2,
-0x112e, //2e
-0x2041, //01 //69
-0x2140,
-0x24fe,
+0x0322, 
+0x10e2, 
+0x112e, 
+0x2041, 
+0x2140, 
+0x24fe, 
 
-0x3080, //Cb
-0x3180, //Cr
-0x3812, //Lock Boundary //13
-0x3933,
-0x40f3, //f0
-0x4132, //32-->33
-0x4222, //22
-0x43f3,
-0x4443, //88
-0x4533, //
-0x4608, //02
+0x3080, 
+0x3180, 
+0x3812, 
+0x3933, 
+0x40f3, 
+0x4132, 
+0x4222, 
+0x43f3, 
+0x4443, 
+0x4533, 
+0x4608, 
 
-0x803d, //3a //3c
-0x8120,
-0x8240,
+0x803d, 
+0x8120, 
+0x8240, 
 
-0x835a, //RMAX
-0x8422, //(0216_kjh20>>23) RMIN
-0x8557, //(0216_kjh5c>>5a) BMAX //51
-0x8624, //BMIN //20
+0x835a, 
+0x8422, 
+0x8557, 
+0x8624, 
 
-0x873f,
-0x8833, //3a
-0x893e, //3e //40
-0x8a34, //32
+0x873f, 
+0x8833, 
+0x893e, 
+0x8a34, 
 
-0x8b03, //OUT TH
-0x8d22, //21 //22
-0x8e21, //41
+0x8b03, 
+0x8d22, 
+0x8e21, 
 
-0x8f58,
-0x9056,
-0x9153,
-0x924e,
-0x9347,
-0x9441,
-0x953b,
-0x9633,
-0x972f,
-0x982b,
-0x9929,
-0x9a27,
-0x9b06,
-                  
-///////////////////////////// Page 48
-0x0348,
+0x8f58, 
+0x9056, 
+0x9153, 
+0x924e, 
+0x9347, 
+0x9441, 
+0x953b, 
+0x9633, 
+0x972f, 
+0x982b, 
+0x9929, 
+0x9a27, 
+0x9b06, 
 
-0x1005,
-0x1100, //async_fifo off
-0x1200,
+0x0348, 
 
-0x16c4,
-0x1700,
-0x1900,
-0x1a00,
-0x1c02,
-0x1d04,
-0x1e07,
-0x1f06,
-0x2000,
-0x21b8,
-0x2200,
-0x2301,
+0x1005, 
+0x1100, 
+0x1200, 
 
-0x3005,
-0x3100,
-0x3402,
-0x3206,
-0x3503,
-0x3601,
-0x3703,
-0x3800,
+0x16c4, 
+0x1700, 
+0x1900, 
+0x1a00, 
+0x1c02, 
+0x1d04, 
+0x1e07, 
+0x1f06, 
+0x2000, 
+0x21b8, 
+0x2200, 
+0x2301, 
+
+0x3005, 
+0x3100, 
+0x3402, 
+0x3206, 
+0x3503, 
+0x3601, 
+0x3703, 
+0x3800, 
 0x394a, 
-0x3c00,
-0x3dfa,
-0x3f10,
-0x4000,
-0x4120,
-0x4200,
+0x3c00, 
+0x3dfa, 
+0x3f10, 
+0x4000, 
+0x4120, 
+0x4200, 
 
-0x0322,
-0x10fb,
+0x0322, 
+0x10fb, 
 
-0x0320,
-0x108c,
+0x0320, 
+0x109c, 
 
-0x0170,
-0xff96,
+0x0170, 
+0xff0f, //15ms
 };
 
 #endif /* __CAMDRV_SS_sr030pc50_H__ */

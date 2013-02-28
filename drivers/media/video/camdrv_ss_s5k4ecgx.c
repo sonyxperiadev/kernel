@@ -23,6 +23,7 @@
 #include <media/v4l2-chip-ident.h>
 #include <media/soc_camera.h>
 #include <linux/videodev2_brcm.h>
+#include <mach/clock.h>
 #include <camdrv_ss.h>
 #include <camdrv_ss_s5k4ecgx.h>           
 
@@ -42,16 +43,23 @@
 #define FORMAT_FLAGS_COMPRESSED 0x3
 #define DEFUALT_MCLK		26000000
 #define S5K4ECGX_REGISTER_SIZE 4
-
+static bool camdrv_ss_s5k4ecgx_check_flash_needed(struct v4l2_subdev *sd);
+static int camdrv_ss_s5k4ecgx_AAT_flash_control(struct v4l2_subdev *sd, int control_mode);
+static  camdrv_ss_s5k4ecgx_set_ae_stable_status(struct v4l2_subdev *sd, unsigned short value);//Nikhil
+static int camdrv_ss_s5k4ecgx_get_ae_stable_status_value(struct v4l2_subdev *sd);//Nikihl
+int camdrv_ss_s5k4ecgx_set_preflash_sequence(struct v4l2_subdev *sd, struct v4l2_control *ctrl);
 #define S5K4ECGX_DELAY_DURATION 0xFFFF
 static bool first_af_status = false;
-
+#define GPIO_CAM_FLASH_SET	11
+#define GPIO_CAM_FLASH_EN	34
 
 #define EXIF_SOFTWARE		""
 #define EXIF_MAKE		"SAMSUNG"
 #define EXIF_MODEL		"GT-B7810"
+#define AE_STABLE          1 //nikhil
+#define AE_UNSTABLE    0  //nikhil
 static DEFINE_MUTEX(af_cancel_op);
-extern inline struct camdrv_ss_state *to_state(struct v4l2_subdev *sd);
+//extern inline struct camdrv_ss_state *to_state(struct v4l2_subdev *sd);
 
 
 extern  int camdrv_ss_i2c_set_config_register(struct i2c_client *client, 
@@ -62,7 +70,7 @@ extern  int camdrv_ss_i2c_set_config_register(struct i2c_client *client,
 extern int camdrv_ss_set_preview_size(struct v4l2_subdev *sd);
 extern int camdrv_ss_set_capture_size(struct v4l2_subdev *sd);
 extern int camdrv_ss_set_dataline_onoff(struct v4l2_subdev *sd, int onoff);
-extern inline struct camdrv_ss_state *to_state(struct v4l2_subdev *sd);
+extern struct camdrv_ss_state *to_state(struct v4l2_subdev *sd);
 int wb_auto=1,iso_auto=1;
 //#define __JPEG_CAPTURE__ 1        
 
@@ -113,13 +121,26 @@ const static struct v4l2_fmtdesc s5k4ecgx_fmts[] =
 
 static const struct v4l2_queryctrl s5k4ecgx_controls[] = {
 	{
+		.id		= V4L2_CID_CAMERA_FLASH_MODE,
+		.type		= V4L2_CTRL_TYPE_INTEGER,
+		.name		= "Flash",
+		.minimum	= FLASH_MODE_OFF,
+		.maximum	= (1 << FLASH_MODE_OFF | 1 << FLASH_MODE_AUTO | 1 << FLASH_MODE_ON
+					| 1 << FLASH_MODE_TORCH_ON),
+		.step		= 1,
+		.default_value	= FLASH_MODE_OFF,
+
+
+
+
+		/*
 		.id			= V4L2_CID_CAMERA_FLASH_MODE,
 		.type		= V4L2_CTRL_TYPE_INTEGER,
 		.name		= "Flash",
 		.minimum	= FLASH_MODE_OFF,
 		.maximum	= (1 << FLASH_MODE_OFF),
 		.step		= 1,
-		.default_value	= FLASH_MODE_OFF,
+		.default_value	= FLASH_MODE_OFF,*/
 	},
 
 	{
@@ -531,6 +552,9 @@ int camdrv_ss_s5k4ecgx_set_preview_start(struct v4l2_subdev *sd)
 
 	    CAM_INFO_PRINTK("%s , ae unlock\n ",__func__);
             err = camdrv_ss_i2c_set_config_register(client,s5k4ecgx_ae_unlock_regs, ARRAY_SIZE(s5k4ecgx_ae_unlock_regs), "ae_unlock_regs");
+	    //CAM_INFO_PRINTK("%s , awb unlock\n ",__func__);
+            //err = camdrv_ss_i2c_set_config_register(client,s5k4ecgx_awb_unlock_regs, ARRAY_SIZE(s5k4ecgx_awb_unlock_regs), "awb_unlock_regs");
+
 		if (err < 0) {
 			CAM_ERROR_PRINTK( "%s :s5k4ecgx_ae_unlock_regs IS FAILED\n",__func__);
 			return -EIO;
@@ -543,7 +567,7 @@ int camdrv_ss_s5k4ecgx_set_preview_start(struct v4l2_subdev *sd)
 		}
 
 		if (state->currentScene == SCENE_MODE_NIGHTSHOT) 
-			msleep(200);
+			msleep(400);
 		else if (state->currentScene == SCENE_MODE_FIREWORKS)
 			msleep(800);
 		
@@ -601,6 +625,50 @@ static int camdrv_ss_s5k4ecgx_set_capture_start(struct v4l2_subdev *sd, struct v
 		CAM_ERROR_PRINTK( "%s: camdrv_ss_set_capture_size not supported !!!\n", __func__);
 		return -EIO;
 	}
+
+
+{
+  if (state->camera_af_flash_checked == 0) {
+  // state->camera_flash_fire = 0;
+     CAM_ERROR_PRINTK( " for auto flash af flash checked: %d\n",state->camera_af_flash_checked);
+	CAM_ERROR_PRINTK( " for auto flash current_flash_mode: %d\n",state->current_flash_mode);
+
+   if (state->current_flash_mode == FLASH_MODE_ON) {
+    state->camera_flash_fire = 1;
+	     CAM_ERROR_PRINTK( " for auto flash current_flash_mode: %d\n",state->current_flash_mode);
+   } else if (state->current_flash_mode == FLASH_MODE_AUTO) {
+    bool bflash_needed = false;
+	     CAM_ERROR_PRINTK( " for auto flash flash mode is auto: %d\n",state->current_flash_mode);
+    if (camdrv_ss_s5k4ecgx_check_flash_needed(sd)){
+     bflash_needed = camdrv_ss_s5k4ecgx_check_flash_needed(sd);
+CAM_ERROR_PRINTK( " for auto flash : flash mode is auto  blashneeded: %d\n",bflash_needed);	
+}
+    else{
+     CAM_ERROR_PRINTK( "%s : check_flash_needed is NULL !!!\n", __func__);
+    	}
+
+    if (bflash_needed) {
+     state->camera_flash_fire = 1;
+    }
+   }
+  }
+
+  if (state->camera_flash_fire) {
+     //Nikhil
+    /* Set Flash registers */
+     err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_Main_Flash_Start_EVT1, ARRAY_SIZE(s5k4ecgx_Main_Flash_Start_EVT1),
+         "Main_Flash_Start_EVT1");
+   if (err < 0) {
+       CAM_ERROR_PRINTK( "[%s : %d] ERROR! Couldn't Set s5k4ecgx_Main_Flash_Start_EVT1\n", __FILE__, __LINE__);
+   }
+      //Nikihl    
+     camdrv_ss_s5k4ecgx_AAT_flash_control(sd, FLASH_CONTROL_MAX_LEVEL);
+  }
+
+ 
+
+
+ }
 
 	/* Set Snapshot registers */
 
@@ -919,13 +987,15 @@ static int camdrv_ss_s5k4ecgx_set_scene_mode(struct v4l2_subdev *sd, struct v4l2
 	}
 #endif	
 
+    	err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_scene_none_regs, ARRAY_SIZE(s5k4ecgx_scene_none_regs), "scene_none_regs");
 	switch (ctrl->value) {
+        /*
     	case SCENE_MODE_NONE:
     	{
     		err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_scene_none_regs, ARRAY_SIZE(s5k4ecgx_scene_none_regs), "scene_none_regs");
     		break;
     	}
-
+        */
     	case SCENE_MODE_PORTRAIT:
     	{
     		/* Metering-Center, EV0, WB-Auto, Sharp-1, Sat0, AF-Auto will be set in HAL layer */
@@ -1125,18 +1195,18 @@ static int camdrv_ss_s5k4ecgx_i2c_set_data_burst(struct i2c_client *client,
 }
 
 
-#if 0
+//lucky#if 0
 #define AAT_PULS_HI_TIME    1
 #define AAT_PULS_LO_TIME    1
 #define AAT_LATCH_TIME      500
 
 // AAT1271 flash control driver.
 static void camdrv_ss_AAT_flash_write_data(unsigned char count)
-{
+{CAM_INFO_PRINTK( "%s %d :camdrv_ss_s5k4ecgx_AAT_flash_write_data  E\n", __func__, count);
     unsigned long flags;
 
     local_irq_save(flags);
-
+/*
     if(HWREV >= 0x03)
     {
         if(count)
@@ -1153,7 +1223,7 @@ static void camdrv_ss_AAT_flash_write_data(unsigned char count)
             udelay(AAT_LATCH_TIME);
         }
     }
-    else
+    else*/
     {
         if(count)
         {
@@ -1172,7 +1242,7 @@ static void camdrv_ss_AAT_flash_write_data(unsigned char count)
     
     local_irq_restore(flags);
 }
-#endif
+//lucky#endif
 
 static float camdrv_ss_s5k4ecgx_get_exposureTime(struct v4l2_subdev *sd)
 {
@@ -1267,7 +1337,49 @@ static int camdrv_ss_s5k4ecgx_get_iso_speed_rate(struct v4l2_subdev *sd)
 
 	return isospeedrating;
 }
+/*NIKHIL*/
+static  camdrv_ss_s5k4ecgx_set_ae_stable_status(struct v4l2_subdev *sd, unsigned short value)
+{ 
+ struct i2c_client *client = v4l2_get_subdevdata(sd);
+    int err = 0;
+	CAM_INFO_PRINTK("camdrv_ss_s5k4ecgx_get_ae_stable_status E \n");
 
+    //Check AE stable
+    err = camdrv_ss_i2c_write_4_bytes(client, 0xFCFC, 0xD000);
+    err += camdrv_ss_i2c_write_4_bytes(client, 0x0028, 0x7000);
+    err += camdrv_ss_i2c_write_4_bytes(client, 0x002A, 0x0588);
+    err += camdrv_ss_i2c_write_2_bytes(client, 0x0F12, value);
+    
+    if(err < 0)
+    {
+        CAM_ERROR_PRINTK("[%s: %d] ERROR! AE stable check\n", __FILE__, __LINE__);
+    }
+   
+}
+
+/*NIKHIL*/
+#if 0
+static int camdrv_ss_s5k4ecgx_get_ae_stable_status_value(struct v4l2_subdev *sd)
+{
+ struct i2c_client *client = v4l2_get_subdevdata(sd);
+    int err = 0;
+    unsigned short AE_stable = 0x0000;
+    int rows_num_=0;
+
+    //Check AE stable
+    err = camdrv_ss_i2c_write_4_bytes(client, 0xFCFC, 0xD000);
+    err += camdrv_ss_i2c_write_4_bytes(client, 0x0028, 0x7000);
+    err += camdrv_ss_i2c_write_4_bytes(client, 0x002A, 0x2c74);
+    err += camdrv_ss_i2c_read_2_bytes(client, 0x0F12, &AE_stable);
+
+    if(err < 0)
+    {
+        CAM_ERROR_PRINTK("[%s: %d] ERROR! AE stable check\n", __FILE__, __LINE__);
+    }
+
+   return AE_stable;  
+}
+#endif
 static int camdrv_ss_s5k4ecgx_get_ae_stable_status(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 {   
 #if 0
@@ -1296,6 +1408,30 @@ static int camdrv_ss_s5k4ecgx_get_ae_stable_status(struct v4l2_subdev *sd, struc
         ctrl->value = AE_UNSTABLE;
     }
 #endif
+   struct i2c_client *client = v4l2_get_subdevdata(sd);
+    int err = 0;
+    unsigned short AE_stable = 0x0000;
+    int rows_num_=0;
+  CAM_INFO_PRINTK("camdrv_ss_s5k4ecgx_get_ae_stable_status E \n");
+    //Check AE stable
+    err = camdrv_ss_i2c_write_4_bytes(client, 0xFCFC, 0xD000);
+    err += camdrv_ss_i2c_write_4_bytes(client, 0x0028, 0x7000);
+    err += camdrv_ss_i2c_write_4_bytes(client, 0x002A, 0x2c74);
+    err += camdrv_ss_i2c_read_2_bytes(client, 0x0F12, &AE_stable);
+
+     if(err < 0)
+    {
+        CAM_ERROR_PRINTK("[%s: %d] ERROR! AE stable check\n", __FILE__, __LINE__);
+    }
+
+    if(AE_stable == 0x0001)
+    {
+        ctrl->value = AE_STABLE;
+    }
+    else
+    {
+        ctrl->value = AE_UNSTABLE;
+    }
 
     return 0;
 }        
@@ -1314,14 +1450,14 @@ static int camdrv_ss_s5k4ecgx_get_auto_focus_status(struct v4l2_subdev *sd, stru
     {
         err = camdrv_ss_i2c_set_config_register(client,s5k4ecgx_get_1st_af_search_status,ARRAY_SIZE(s5k4ecgx_get_1st_af_search_status),"get_1st_af_search_status");
         if(err < 0)
-        {
+        {camdrv_ss_s5k4ecgx_AAT_flash_control(sd, FLASH_CONTROL_OFF);//lucky_preflash
             CAM_ERROR_PRINTK("%s: I2C failed during s5k4ecgx_get_1st_af_search_status \n", __func__);
             ctrl->value = CAMERA_AF_STATUS_FAILED;
 			return -EFAULT;
         }
         err = camdrv_ss_i2c_read_2_bytes(client, 0x0F12,&usReadData);
         if(err < 0)
-        {
+        {camdrv_ss_s5k4ecgx_AAT_flash_control(sd, FLASH_CONTROL_OFF);//lucky_preflash
             CAM_ERROR_PRINTK("%s: I2C failed during AF \n", __func__);
             ctrl->value = CAMERA_AF_STATUS_FAILED;
 			return -EFAULT;
@@ -1343,6 +1479,17 @@ static int camdrv_ss_s5k4ecgx_get_auto_focus_status(struct v4l2_subdev *sd, stru
             default:                    
                 CAM_ERROR_PRINTK("1st CAM_AF_FAIL.\n ");
                 ctrl->value = CAMERA_AF_STATUS_FAILED;
+	        
+		err = camdrv_ss_i2c_set_config_register(client,s5k4ecgx_ae_unlock_regs, ARRAY_SIZE(s5k4ecgx_ae_unlock_regs), "ae_unlock_regs");
+                 if (state->camera_flash_fire == 1)
+	        {
+            camdrv_ss_s5k4ecgx_set_ae_stable_status(sd,0x0002); 
+           err = camdrv_ss_i2c_set_config_register(client,  s5k4ecgx_Pre_Flash_End_EVT1, ARRAY_SIZE(s5k4ecgx_Pre_Flash_End_EVT1),
+                                                   "Pre_Flash_End_EVT1");
+				camdrv_ss_s5k4ecgx_AAT_flash_control(sd, FLASH_CONTROL_OFF);//lucky_preflash
+		//   state->camera_flash_fire = 0 ;
+		//CAM_INFO_PRINTK("%d, camera af flash check",  state->camera_flash_fire);
+	        }
 //        	CAM_INFO_PRINTK("%s , ae unlock\n ",__func__);  //to maintain AE lock in case of af fail
 //        	err = camdrv_ss_i2c_set_config_register(client,s5k4ecgx_ae_unlock_regs, ARRAY_SIZE(s5k4ecgx_ae_unlock_regs), "ae_unlock_regs");
 				return 0;
@@ -1353,7 +1500,7 @@ static int camdrv_ss_s5k4ecgx_get_auto_focus_status(struct v4l2_subdev *sd, stru
     {
         err = camdrv_ss_i2c_set_config_register(client,s5k4ecgx_get_2nd_af_search_status,ARRAY_SIZE(s5k4ecgx_get_2nd_af_search_status),"get_2nd_af_search_status");
 		if(err < 0)
-        {
+        {camdrv_ss_s5k4ecgx_AAT_flash_control(sd, FLASH_CONTROL_OFF);//lucky_preflash
             CAM_ERROR_PRINTK("%s: I2C failed during s5k4ecgx_get_2nd_af_search_status \n", __func__);
             ctrl->value = CAMERA_AF_STATUS_FAILED;
 			first_af_status = false;
@@ -1361,7 +1508,7 @@ static int camdrv_ss_s5k4ecgx_get_auto_focus_status(struct v4l2_subdev *sd, stru
         }
         err = camdrv_ss_i2c_read_2_bytes(client, 0x0F12, &usReadData);
         if(err < 0)
-        {
+        {camdrv_ss_s5k4ecgx_AAT_flash_control(sd, FLASH_CONTROL_OFF);//lucky_preflash
             CAM_ERROR_PRINTK("%s: I2C failed during AF \n", __func__);
             ctrl->value = CAMERA_AF_STATUS_FAILED;
 			first_af_status = false;
@@ -1375,7 +1522,24 @@ static int camdrv_ss_s5k4ecgx_get_auto_focus_status(struct v4l2_subdev *sd, stru
             CAM_INFO_PRINTK("2nd CAM_AF_SUCCESS, \n ");
             ctrl->value = CAMERA_AF_STATUS_FOCUSED;
 			first_af_status = false;
-	
+         //NIKHIL
+         err = camdrv_ss_i2c_set_config_register(client,s5k4ecgx_ae_unlock_regs, ARRAY_SIZE(s5k4ecgx_ae_unlock_regs), "ae_unlock_regs");
+          if (state->camera_flash_fire == 1)
+	  {
+            camdrv_ss_s5k4ecgx_set_ae_stable_status(sd,0x0002); 
+            if ( s5k4ecgx_Pre_Flash_End_EVT1 == 0) {
+                   CAM_ERROR_PRINTK( " %s : pre flash start not supported!!!\n",  __func__);
+            }
+           err = camdrv_ss_i2c_set_config_register(client,  s5k4ecgx_Pre_Flash_End_EVT1, ARRAY_SIZE(s5k4ecgx_Pre_Flash_End_EVT1),
+                                                   "Pre_Flash_End_EVT1");
+	  //  state->camera_flash_fire = 0;
+           if (err < 0) {
+               CAM_ERROR_PRINTK( "[%s : %d] ERROR! Couldn't Set Pre Flash start \n", __FILE__, __LINE__);
+            }
+           //Nikhil
+	camdrv_ss_s5k4ecgx_AAT_flash_control(sd, FLASH_CONTROL_OFF);//lucky_preflash
+          }
+         
 	if (state->currentScene == SCENE_MODE_NIGHTSHOT) {
 		msleep(200);
 	}
@@ -1389,7 +1553,7 @@ static int camdrv_ss_s5k4ecgx_get_auto_focus_status(struct v4l2_subdev *sd, stru
 
     }
     	
-    	
+//    camdrv_ss_s5k4ecgx_AAT_flash_control(sd, FLASH_CONTROL_OFF);	//lucky_preflash
     return 0;
 }
 
@@ -1399,6 +1563,7 @@ static int camdrv_ss_s5k4ecgx_get_touch_focus_status(struct v4l2_subdev *sd, str
 
 
     struct i2c_client *client = v4l2_get_subdevdata(sd);
+	struct camdrv_ss_state *state = to_state(sd);
     int err = 0;
     unsigned short usReadData =0 ;
 
@@ -1436,6 +1601,15 @@ static int camdrv_ss_s5k4ecgx_get_touch_focus_status(struct v4l2_subdev *sd, str
             default:                    
                 CAM_ERROR_PRINTK("1st CAM_AF_FAIL.\n ");
                 ctrl->value = CAMERA_AF_STATUS_FAILED;
+			
+                 if (state->camera_flash_fire == 1)
+	        {
+                    camdrv_ss_s5k4ecgx_set_ae_stable_status(sd,0x0002); 
+                    err = camdrv_ss_i2c_set_config_register(client,  s5k4ecgx_Pre_Flash_End_EVT1, ARRAY_SIZE(s5k4ecgx_Pre_Flash_End_EVT1),
+                                                                                                   "Pre_Flash_End_EVT1");
+				camdrv_ss_s5k4ecgx_AAT_flash_control(sd, FLASH_CONTROL_OFF);//lucky_preflash
+		
+	        }
 				return 0;
     	}
     }
@@ -1466,7 +1640,14 @@ static int camdrv_ss_s5k4ecgx_get_touch_focus_status(struct v4l2_subdev *sd, str
             CAM_INFO_PRINTK("2nd CAM_AF_SUCCESS, \n ");
             ctrl->value = CAMERA_AF_STATUS_FOCUSED;
 			first_af_status = false;
+			 if (state->camera_flash_fire == 1)
+	        {
+                    camdrv_ss_s5k4ecgx_set_ae_stable_status(sd,0x0002); 
+                    err = camdrv_ss_i2c_set_config_register(client,  s5k4ecgx_Pre_Flash_End_EVT1, ARRAY_SIZE(s5k4ecgx_Pre_Flash_End_EVT1),
+                                                                                                   "Pre_Flash_End_EVT1");
+			camdrv_ss_s5k4ecgx_AAT_flash_control(sd, FLASH_CONTROL_OFF);//lucky_preflash
 	
+	        }	
             return 0;
         }
 		else
@@ -1487,6 +1668,7 @@ static int camdrv_ss_s5k4ecgx_set_auto_focus(struct v4l2_subdev *sd, struct v4l2
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct camdrv_ss_state *state = to_state(sd);
 	int err = 0;
+         int n=0;//Nikhil
 
 	mutex_lock(&af_cancel_op);
 	CAM_INFO_PRINTK("camdrv_ss_s5k4ecgx_set_auto_focus E \n");
@@ -1497,10 +1679,94 @@ static int camdrv_ss_s5k4ecgx_set_auto_focus(struct v4l2_subdev *sd, struct v4l2
 	state->bStartFineSearch = false;
 
 	if(ctrl->value == AUTO_FOCUS_ON) 	{
+
+
+
+CAM_INFO_PRINTK("camdrv_ss_s5k4ecgx_set_auto_focus E  %d\n", state->camera_af_flash_checked);
+//Nikhil
+
+    //camdrv_ss_s5k4ecgx_set_ae_stable_status(sd,0x0000); 	
+
+
+//lucky_preflash
+//  if (state->camera_af_flash_checked == 0) 
+  //{
+//state->camera_flash_fire = 0;
+
+   if (state->current_flash_mode == FLASH_MODE_ON) {
+    state->camera_flash_fire = 1;
+   } else if (state->current_flash_mode == FLASH_MODE_AUTO) {
+    bool bflash_needed = false;
+    if (camdrv_ss_s5k4ecgx_check_flash_needed(sd))
+     bflash_needed = camdrv_ss_s5k4ecgx_check_flash_needed(sd);
+    else
+     CAM_ERROR_PRINTK( "%s : check_flash_needed is NULL !!!\n", __func__);
+
+    if (bflash_needed) {
+     state->camera_flash_fire = 1;
+    }
+   }
+  //}
+
+#if 0
+  if (state->camera_flash_fire) {
+   /* Set Snapshot registers */
+    //Nikhil
+   if ( s5k4ecgx_Pre_Flash_Start_EVT1 == 0) {
+    CAM_ERROR_PRINTK( " %s : pre flash start not supported!!!\n",  __func__);
+   }
+   err = camdrv_ss_i2c_set_config_register(client,  s5k4ecgx_Pre_Flash_Start_EVT1, ARRAY_SIZE( s5k4ecgx_Pre_Flash_Start_EVT1),
+       "Pre_Flash_Start_EVT1");
+   if (err < 0) {
+    CAM_ERROR_PRINTK( "[%s : %d] ERROR! Couldn't Set Pre Flash start \n", __FILE__, __LINE__);
+   }
+   //Nikhil 
+    camdrv_ss_s5k4ecgx_AAT_flash_control(sd, FLASH_CONTROL_MIDDLE_LEVEL);
+  }
+  #endif
+          #if 0
+           msleep(200); 
+         // while(1)
+           {
+            // if(camdrv_ss_s5k4ecgx_get_ae_stable_status_value(sd))  
+             while(!(camdrv_ss_s5k4ecgx_get_ae_stable_status_value(sd)))
+             msleep(200);
+             //n++;
+           };
+		  #endif
+           //Nikhil
+// }//lucky_preflash
+
+
+
+
+
+
+
+  //NIKHIL 
+           /*
+           msleep(200); 
+           while(n<2)
+           {
+             if(camdrv_ss_s5k4ecgx_get_ae_stable_status_value(sd))  
+             break;
+
+             msleep(200);
+             n++;
+           };*/
+           //Nikhil
+
+
+
+
+		
 		CAM_INFO_PRINTK("%s, AUTFOCUS ON\n", __func__ );
+
 
 		CAM_INFO_PRINTK("%s , ae lock\n ",__func__);
 		err = camdrv_ss_i2c_set_config_register(client,s5k4ecgx_ae_lock_regs, ARRAY_SIZE(s5k4ecgx_ae_lock_regs), "ae_lock_regs");
+		//CAM_INFO_PRINTK("%s , awb lock\n ",__func__);
+		//err = camdrv_ss_i2c_set_config_register(client,s5k4ecgx_awb_lock_regs, ARRAY_SIZE(s5k4ecgx_awb_lock_regs), "awb_lock_regs");
 		CAM_INFO_PRINTK("%s , AF start\n ",__func__);
 		err = camdrv_ss_i2c_set_config_register(client,s5k4ecgx_single_af_start_regs, ARRAY_SIZE(s5k4ecgx_single_af_start_regs),"single_af_start_regs");
 
@@ -1512,12 +1778,17 @@ static int camdrv_ss_s5k4ecgx_set_auto_focus(struct v4l2_subdev *sd, struct v4l2
 		}
 	} else if(ctrl->value == AUTO_FOCUS_OFF) {
 		CAM_INFO_PRINTK("%s :  AUTFOCUS OFF , af_mode : %d\n", __func__, state->af_mode);
-        
+        /*
+               if (state->camera_flash_fire) 
+               {
+                        camdrv_ss_s5k4ecgx_AAT_flash_control(sd, FLASH_CONTROL_OFF);
 		state->camera_flash_fire = 0;
+	       }
 		state->camera_af_flash_checked = 0;
-		
+		*/
 		if (state->af_mode == FOCUS_MODE_AUTO) {
-			err = camdrv_ss_i2c_set_config_register(client,s5k4ecgx_single_af_stop_regs,ARRAY_SIZE(s5k4ecgx_single_af_stop_regs),"single_af_stop_regs");
+			//err = camdrv_ss_i2c_set_config_register(client,s5k4ecgx_focus_mode_auto_regs,ARRAY_SIZE(s5k4ecgx_focus_mode_auto_regs),"focus_mode_auto_regs");
+			err = camdrv_ss_i2c_set_config_register(client,s5k4ecgx_focus_mode_auto_regs_cancel3,ARRAY_SIZE(s5k4ecgx_focus_mode_auto_regs_cancel3),"focus_mode_auto_regs_cancel3");
 			if(err < 0)
 			{
 				CAM_ERROR_PRINTK( "%s : i2c failed in OFF !!! \n", __func__);
@@ -1525,7 +1796,8 @@ static int camdrv_ss_s5k4ecgx_set_auto_focus(struct v4l2_subdev *sd, struct v4l2
 				return -EIO;
 			}
 		} else if (state->af_mode == FOCUS_MODE_MACRO) {
-			err = camdrv_ss_i2c_set_config_register(client,s5k4ecgx_macro_af_stop_regs,ARRAY_SIZE(s5k4ecgx_macro_af_stop_regs),"macro_af_stop_regs");
+			//err = camdrv_ss_i2c_set_config_register(client,s5k4ecgx_focus_mode_macro_regs,ARRAY_SIZE(s5k4ecgx_focus_mode_macro_regs),"focus_mode_macro_regs");
+                        err = camdrv_ss_i2c_set_config_register(client,s5k4ecgx_focus_mode_macro_regs_cancel3,ARRAY_SIZE(s5k4ecgx_focus_mode_macro_regs_cancel3),"focus_mode_macro_regs_cancel3");
 			if(err < 0)
 			{
 				CAM_ERROR_PRINTK( "%s : i2c failed in OFF !!! \n", __func__);
@@ -1536,10 +1808,65 @@ static int camdrv_ss_s5k4ecgx_set_auto_focus(struct v4l2_subdev *sd, struct v4l2
 
 		CAM_INFO_PRINTK("%s , ae unlock\n ",__func__);
 		err = camdrv_ss_i2c_set_config_register(client,s5k4ecgx_ae_unlock_regs, ARRAY_SIZE(s5k4ecgx_ae_unlock_regs), "ae_unlock_regs");
+//		CAM_INFO_PRINTK("%s , awb unlock\n ",__func__);
+//		err = camdrv_ss_i2c_set_config_register(client,s5k4ecgx_awb_unlock_regs, ARRAY_SIZE(s5k4ecgx_awb_unlock_regs), "awb_unlock_regs");
+		 if (state->camera_flash_fire) 
+               {
+                             camdrv_ss_s5k4ecgx_set_ae_stable_status(sd,0x0002); 
+                             err = camdrv_ss_i2c_set_config_register(client,  s5k4ecgx_Pre_Flash_End_EVT1, ARRAY_SIZE(s5k4ecgx_Pre_Flash_End_EVT1),
+                                                                                                           "Pre_Flash_End_EVT1");
+			     camdrv_ss_s5k4ecgx_AAT_flash_control(sd, FLASH_CONTROL_OFF);
+		             state->camera_flash_fire = 0;
+	       }	 
+	//	msleep(50);  // need to add more delay in case of night or fireworks mode : 300ms
+	}
+	else if(ctrl->value == AUTO_FOCUS_1ST_CANCEL)
+	{
+	             if (state->af_mode == FOCUS_MODE_AUTO) {
+			
+			err = camdrv_ss_i2c_set_config_register(client,s5k4ecgx_focus_mode_auto_regs_cancel1, ARRAY_SIZE(s5k4ecgx_focus_mode_auto_regs_cancel1),"focus_mode_auto_regs_cancel1");
+			if(err < 0)
+			{
+				CAM_ERROR_PRINTK( "%s : i2c failed in OFF !!! \n", __func__);
+				mutex_unlock(&af_cancel_op);
+				return -EIO;
+			}
+		} else if (state->af_mode == FOCUS_MODE_MACRO) {
+			
+                        err = camdrv_ss_i2c_set_config_register(client,s5k4ecgx_focus_mode_macro_regs_cancel1,ARRAY_SIZE(s5k4ecgx_focus_mode_macro_regs_cancel1),"focus_mode_macro_regs_cancel1");
+			if(err < 0)
+			{
+				CAM_ERROR_PRINTK( "%s : i2c failed in OFF !!! \n", __func__);
+				mutex_unlock(&af_cancel_op);
+				return -EIO;
+			}
+		}
+
 		 
-		msleep(150);  // need to add more delay in case of night or fireworks mode : 300ms
+	 }
+	    else if(ctrl->value == AUTO_FOCUS_2ND_CANCEL )
+	   {
+                        if (state->af_mode == FOCUS_MODE_AUTO) {
+			
+			err = camdrv_ss_i2c_set_config_register(client,s5k4ecgx_focus_mode_auto_regs_cancel2, ARRAY_SIZE(s5k4ecgx_focus_mode_auto_regs_cancel2),"focus_mode_auto_regs_cancel2");
+			if(err < 0)
+			{
+				CAM_ERROR_PRINTK( "%s : i2c failed in OFF !!! \n", __func__);
+				mutex_unlock(&af_cancel_op);
+				return -EIO;
+			}
+		} else if (state->af_mode == FOCUS_MODE_MACRO) {
+			
+                        err = camdrv_ss_i2c_set_config_register(client,s5k4ecgx_focus_mode_macro_regs_cancel2, ARRAY_SIZE(s5k4ecgx_focus_mode_macro_regs_cancel2),"focus_mode_macro_regs_cancel2");
+			if(err < 0)
+			{
+				CAM_ERROR_PRINTK( "%s : i2c failed in OFF !!! \n", __func__);
+				mutex_unlock(&af_cancel_op);
+				return -EIO;
+			}
 	}
 
+	 }
 	mutex_unlock(&af_cancel_op);
 
 	return 0;
@@ -1669,8 +1996,8 @@ static int camdrv_ss_s5k4ecgx_set_touch_focus(struct v4l2_subdev *sd, enum v4l2_
 
 	if(touch_af == TOUCH_AF_START) {
 		CAM_INFO_PRINTK("%s, AUTFOCUS ON\n", __func__ );
-
-		CAM_INFO_PRINTK("%s , AF start\n ",__func__);
+	//	CAM_INFO_PRINTK("%s , ae lock\n ",__func__);
+	//	err = camdrv_ss_i2c_set_config_register(client,s5k4ecgx_ae_lock_regs, ARRAY_SIZE(s5k4ecgx_ae_lock_regs), "ae_lock_regs");
 		err = camdrv_ss_i2c_set_config_register(client,s5k4ecgx_single_af_start_regs, ARRAY_SIZE(s5k4ecgx_single_af_start_regs),"single_af_start_regs");
 
 		if(err < 0)
@@ -1682,11 +2009,11 @@ static int camdrv_ss_s5k4ecgx_set_touch_focus(struct v4l2_subdev *sd, enum v4l2_
 	} else if(touch_af == TOUCH_AF_STOP) {
 		CAM_INFO_PRINTK("%s :  AUTFOCUS OFF , af_mode : %d\n", __func__, state->af_mode);
         
-		state->camera_flash_fire = 0;
-		state->camera_af_flash_checked = 0;
+	//	state->camera_flash_fire = 0;
+	//	state->camera_af_flash_checked = 0;
 		
 		if (state->af_mode == FOCUS_MODE_AUTO) {
-			err = camdrv_ss_i2c_set_config_register(client,s5k4ecgx_single_af_stop_regs,ARRAY_SIZE(s5k4ecgx_single_af_stop_regs),"single_af_stop_regs");
+			err = camdrv_ss_i2c_set_config_register(client,s5k4ecgx_focus_mode_auto_regs_cancel3,ARRAY_SIZE(s5k4ecgx_focus_mode_auto_regs_cancel3),"focus_mode_auto_regs_cancel3");
 			if(err < 0)
 			{
 				CAM_ERROR_PRINTK( "%s : i2c failed in OFF !!! \n", __func__);
@@ -1694,7 +2021,43 @@ static int camdrv_ss_s5k4ecgx_set_touch_focus(struct v4l2_subdev *sd, enum v4l2_
 				return -EIO;
 			}
 		} else if (state->af_mode == FOCUS_MODE_MACRO) {
-			err = camdrv_ss_i2c_set_config_register(client,s5k4ecgx_macro_af_stop_regs,ARRAY_SIZE(s5k4ecgx_macro_af_stop_regs),"macro_af_stop_regs");
+			err = camdrv_ss_i2c_set_config_register(client,s5k4ecgx_focus_mode_macro_regs_cancel3,ARRAY_SIZE(s5k4ecgx_focus_mode_macro_regs_cancel3),"focus_mode_macro_regs_cancel3s");
+			if(err < 0)
+			{
+				CAM_ERROR_PRINTK( "%s : i2c failed in OFF !!! \n", __func__);
+				mutex_unlock(&af_cancel_op);
+				return -EIO;
+			}
+		}
+ 		if (state->camera_flash_fire) 
+              {
+               	camdrv_ss_s5k4ecgx_set_ae_stable_status(sd,0x0002); 
+               	err = camdrv_ss_i2c_set_config_register(client,  s5k4ecgx_Pre_Flash_End_EVT1, ARRAY_SIZE(s5k4ecgx_Pre_Flash_End_EVT1),
+                                                                                                           "Pre_Flash_End_EVT1");
+		 	camdrv_ss_s5k4ecgx_AAT_flash_control(sd, FLASH_CONTROL_OFF);
+		state->camera_flash_fire = 0;
+	        }	
+		CAM_INFO_PRINTK("%s , ae unlock\n ",__func__);
+		err = camdrv_ss_i2c_set_config_register(client,s5k4ecgx_ae_unlock_regs, ARRAY_SIZE(s5k4ecgx_ae_unlock_regs), "ae_unlock_regs");
+//		CAM_INFO_PRINTK("%s , awb unlock\n ",__func__);
+//		err = camdrv_ss_i2c_set_config_register(client,s5k4ecgx_awb_unlock_regs, ARRAY_SIZE(s5k4ecgx_awb_unlock_regs), "awb_unlock_regs");
+		
+		//msleep(150);  // need to add more delay in case of night or fireworks mode : 300ms
+	}
+	else if(touch_af == AUTO_FOCUS_1ST_CANCEL)
+	{
+		if (state->af_mode == FOCUS_MODE_AUTO) {
+			
+			err = camdrv_ss_i2c_set_config_register(client,s5k4ecgx_focus_mode_auto_regs_cancel1, ARRAY_SIZE(s5k4ecgx_focus_mode_auto_regs_cancel1),"focus_mode_auto_regs_cancel1");
+			if(err < 0)
+			{
+				CAM_ERROR_PRINTK( "%s : i2c failed in OFF !!! \n", __func__);
+				mutex_unlock(&af_cancel_op);
+				return -EIO;
+			}
+		} else if (state->af_mode == FOCUS_MODE_MACRO) {
+			
+                        err = camdrv_ss_i2c_set_config_register(client,s5k4ecgx_focus_mode_macro_regs_cancel1,ARRAY_SIZE(s5k4ecgx_focus_mode_macro_regs_cancel1),"focus_mode_macro_regs_cancel1");
 			if(err < 0)
 			{
 				CAM_ERROR_PRINTK( "%s : i2c failed in OFF !!! \n", __func__);
@@ -1703,17 +2066,37 @@ static int camdrv_ss_s5k4ecgx_set_touch_focus(struct v4l2_subdev *sd, enum v4l2_
 			}
 		}
 
-		CAM_INFO_PRINTK("%s , ae unlock\n ",__func__);
-		err = camdrv_ss_i2c_set_config_register(client,s5k4ecgx_ae_unlock_regs, ARRAY_SIZE(s5k4ecgx_ae_unlock_regs), "ae_unlock_regs");
 		
-		// The delay below is moved to camera HAL So it is not needed.
-		// msleep(150);  // need to add more delay in case of night or fireworks mode : 300ms
+	 }
+	    else if(touch_af == AUTO_FOCUS_2ND_CANCEL )
+	   {
+                        if (state->af_mode == FOCUS_MODE_AUTO) {
+			
+			err = camdrv_ss_i2c_set_config_register(client,s5k4ecgx_focus_mode_auto_regs_cancel2, ARRAY_SIZE(s5k4ecgx_focus_mode_auto_regs_cancel2),"focus_mode_auto_regs_cancel2");
+			if(err < 0)
+			{
+				CAM_ERROR_PRINTK( "%s : i2c failed in OFF !!! \n", __func__);
+				mutex_unlock(&af_cancel_op);
+				return -EIO;
+			}
+		} else if (state->af_mode == FOCUS_MODE_MACRO) {
+			
+                        err = camdrv_ss_i2c_set_config_register(client,s5k4ecgx_focus_mode_macro_regs_cancel2, ARRAY_SIZE(s5k4ecgx_focus_mode_macro_regs_cancel2),"focus_mode_macro_regs_cancel2");
+			if(err < 0)
+			{
+				CAM_ERROR_PRINTK( "%s : i2c failed in OFF !!! \n", __func__);
+				mutex_unlock(&af_cancel_op);
+				return -EIO;
+			}
+		}
+
 	}
 
 	mutex_unlock(&af_cancel_op);	
 
 	return err;
 }
+
 
 
 #if 0
@@ -1755,18 +2138,23 @@ static int camdrv_ss_s5k4ecgx_get_light_condition(struct v4l2_subdev *sd, int *R
 
 static bool camdrv_ss_s5k4ecgx_check_flash_needed(struct v4l2_subdev *sd)
 {
-#if 0
+// lucky #if 0
     struct i2c_client *client = v4l2_get_subdevdata(sd);	
     unsigned short read_value1 = 0;
+    unsigned short read_value2 = 0;
 
     camdrv_ss_i2c_write_4_bytes(client, 0xFCFC, 0xD000);
     camdrv_ss_i2c_write_4_bytes(client, 0x002C, 0x7000);
-    camdrv_ss_i2c_write_4_bytes(client, 0x002E, 0x29F0);
-    camdrv_ss_i2c_read_2_bytes(client, 0x0F12, &read_value1);
+    camdrv_ss_i2c_write_4_bytes(client, 0x002E, 0x2C18);
+    camdrv_ss_i2c_read_2_bytes(client, 0x0F12, &read_value1);	 //<7000.2C18h>
+    camdrv_ss_i2c_read_2_bytes(client, 0x0F12, &read_value2);	 //<7000.2C1Ah>
 
-    CAM_INFO_PRINTK( "%s [Read Value : %X]\n", __func__, read_value1);
+/*    camdrv_ss_i2c_write_4_bytes(client, 0x002E, 0x29F0);
+    camdrv_ss_i2c_read_2_bytes(client, 0x0F12, &read_value1);*/
+
+    CAM_INFO_PRINTK( "%s [Read Value 1: %X]  [Read Value 2: %X]\n", __func__, read_value1,read_value2);
     
-    if(read_value1 >= 0x0708)
+    if(read_value1 <= 0x003A && read_value2 == 0x0000 )
     {   
         return true;
     }
@@ -1774,26 +2162,27 @@ static bool camdrv_ss_s5k4ecgx_check_flash_needed(struct v4l2_subdev *sd)
     {
         return false;
     }
-#endif
+//lucky#endif
 
+// return false;
 
-	return false;
 }
 
 
-#if 0
+//lucky#if 0
 static int camdrv_ss_s5k4ecgx_AAT_flash_control(struct v4l2_subdev *sd, int control_mode)
 {
+CAM_INFO_PRINTK( "%s %d :camdrv_ss_s5k4ecgx_AAT_flash_control  E\n",  __func__, control_mode);
     switch(control_mode)
     {
         // USE FLASH MODE
         case FLASH_CONTROL_MAX_LEVEL:
-        {
+        {/*
             if(HWREV >= 0x03)
             {                    
                 gpio_set_value(GPIO_CAM_FLASH_SET_NEW, 0);
             }
-            else
+            else */
             {
                 gpio_set_value(GPIO_CAM_FLASH_SET, 0);
             }
@@ -1806,12 +2195,12 @@ static int camdrv_ss_s5k4ecgx_AAT_flash_control(struct v4l2_subdev *sd, int cont
     
         // USE FLASH MODE
         case FLASH_CONTROL_HIGH_LEVEL:
-        {
+        {/*
             if(HWREV >= 0x03)
             {                    
                 gpio_set_value(GPIO_CAM_FLASH_SET_NEW, 0);
             }
-            else
+            else*/
             {
                 gpio_set_value(GPIO_CAM_FLASH_SET, 0);
             }
@@ -1827,12 +2216,12 @@ static int camdrv_ss_s5k4ecgx_AAT_flash_control(struct v4l2_subdev *sd, int cont
 
         // USE MOVIE MODE : AF Pre-Flash Mode(Torch Mode)
         case FLASH_CONTROL_MIDDLE_LEVEL:
-        {
+        {/*
             if(HWREV >= 0x03)
             {                    
                 gpio_set_value(GPIO_CAM_FLASH_SET_NEW, 0);
             }
-            else
+            else*/
             {
                 gpio_set_value(GPIO_CAM_FLASH_SET, 0);
             }
@@ -1845,12 +2234,12 @@ static int camdrv_ss_s5k4ecgx_AAT_flash_control(struct v4l2_subdev *sd, int cont
 
         // USE MOVIE MODE : Movie Mode(Torch Mode)
         case FLASH_CONTROL_LOW_LEVEL:
-        {
+        {/*
             if(HWREV >= 0x03)
             {                    
                 gpio_set_value(GPIO_CAM_FLASH_SET_NEW, 0);
             }
-            else
+            else */
             {
                 gpio_set_value(GPIO_CAM_FLASH_SET, 0);
             }
@@ -1864,11 +2253,11 @@ static int camdrv_ss_s5k4ecgx_AAT_flash_control(struct v4l2_subdev *sd, int cont
         case FLASH_CONTROL_OFF:
         default:
         {
-            if(HWREV >= 0x03)
+            /*if(HWREV >= 0x03)
             {                    
                 gpio_set_value(GPIO_CAM_FLASH_SET_NEW, 0);
             }
-            else
+            else*/
             {
                 gpio_set_value(GPIO_CAM_FLASH_SET, 0);
             }
@@ -1879,24 +2268,23 @@ static int camdrv_ss_s5k4ecgx_AAT_flash_control(struct v4l2_subdev *sd, int cont
 
     return 0;
 }
-#endif // CONFIG_FLASH_ENABLE
+//lucky#endif // CONFIG_FLASH_ENABLE
 
 
 //@HW
 //Power (common)
-static struct regulator *VCAM_IO_1_8_V;  //LDO_HV9
-static struct regulator *VCAM_A_2_8_V;   //LDO_CAM12/12/2011
+static struct regulator *VCAM_IO_1_8_V;
+static struct regulator *VCAM_A_2_8_V; 
+static struct regulator *VCAM_AF_2_8V;
 
 #ifdef CONFIG_SOC_CAMERA_POWER_USE_ASR   //for hw rev 0.3
-static struct regulator *VCAM_CORE_1_2_V;   //ASR_SW
+static struct regulator *VCAM_CORE_1_2_V;   //SDSR2L   : CAM0_DOVDD
 #else
-#define CAM_CORE_EN	   98 //Since Nevis is using GPS_TMARK pin for VCAMC_EN
+#define CAM_CORE_EN	36 //Since Nevis is using GPS_TMARK pin for VCAMC_EN
 #endif
 
-#define CAM_AF_EN     121
-
 #define VCAM_A_2_8V_REGULATOR		"mmcldo1"
-#if defined(CONFIG_MACH_HAWAII_SS_LOGAN_REV01)
+#if defined(CONFIG_MACH_HAWAII_SS_LOGAN_REV01) || defined(CONFIG_MACH_HAWAII_SS_LOGAN_REV02)
 #define VCAM_IO_1_8V_REGULATOR		"lvldo1"
 #else
 #define VCAM_IO_1_8V_REGULATOR		"tcxldo"
@@ -1905,16 +2293,18 @@ static struct regulator *VCAM_CORE_1_2_V;   //ASR_SW
 #define VCAM_CORE_1_2V_REGULATOR	"vsrldo"
 
 //main cam 
-#define CAM0_RESET    33
-#define CAM0_STNBY    111
+#define CAM0_RESET	111
+#define CAM0_STNBY	002
 
 //sub cam
-#define CAM1_RESET    23
-#define CAM1_STNBY    34
+#define CAM1_RESET	004
+#define CAM1_STNBY	005
 
 #define SENSOR_0_CLK			"dig_ch0_clk"    //(common)
 #define SENSOR_0_CLK_FREQ		(26000000) //@HW, need to check how fast this meaning.
 
+#define CSI0_LP_FREQ			(100000000)
+#define CSI1_LP_FREQ			(100000000)
 
 
 static int camdrv_ss_s5k4ecgx_sensor_power(int on)
@@ -1922,47 +2312,54 @@ static int camdrv_ss_s5k4ecgx_sensor_power(int on)
 	unsigned int value;
 	int ret = -1;
 	struct clk *clock;
+	struct clk *lp_clock;
 	struct clk *axi_clk;
-	static struct pi_mgr_dfs_node unicam_dfs_node;
+
 	CAM_INFO_PRINTK("%s:camera power %s\n", __func__, (on ? "on" : "off"));
 
-	if (!unicam_dfs_node.valid) {
-		ret =
-		    pi_mgr_dfs_add_request(&unicam_dfs_node,"unicam", PI_MGR_PI_ID_MM,
-                                           PI_MGR_DFS_MIN_VALUE);
-		if (ret) {
-			CAM_ERROR_PRINTK("%s: failed to register PI DFS request\n",__func__);
-			return -1;
-		}
+	ret = -1;
+	lp_clock = clk_get(NULL, CSI0_LP_PERI_CLK_NAME_STR);
+	if (IS_ERR_OR_NULL(lp_clock)) {
+		printk(KERN_ERR "Unable to get %s clock\n",
+		CSI0_LP_PERI_CLK_NAME_STR);
+		goto e_clk_get;
 	}
 
 	clock = clk_get(NULL, SENSOR_0_CLK);
-	if (!clock) {
+	if (IS_ERR_OR_NULL(clock)) {
 		CAM_ERROR_PRINTK("%s: unable to get clock %s\n", __func__, SENSOR_0_CLK);
-		return -1;
-	}
-	axi_clk = clk_get(NULL, "csi0_axi_clk");
-	if (!axi_clk) {
-		CAM_ERROR_PRINTK("%s:unable to get clock csi0_axi_clk\n", __func__);
-		return -1;
+		goto e_clk_get;
 	}
 
-	VCAM_A_2_8_V = regulator_get(NULL,"cam");
+	axi_clk = clk_get(NULL, "csi0_axi_clk");
+	if (IS_ERR_OR_NULL(axi_clk)) {
+		CAM_ERROR_PRINTK("%s:unable to get clock csi0_axi_clk\n", __func__);
+		goto e_clk_get;
+	}
+
+	VCAM_A_2_8_V= regulator_get(NULL, VCAM_A_2_8V_REGULATOR);
 	if(IS_ERR(VCAM_A_2_8_V))
 	{
 		CAM_ERROR_PRINTK("can not get VCAM_A_2_8_V.8V\n");
 		return -1;
 	}
 
-	VCAM_IO_1_8_V = regulator_get(NULL,"hv9");
+        VCAM_IO_1_8_V = regulator_get(NULL, VCAM_IO_1_8V_REGULATOR);
 	if(IS_ERR(VCAM_IO_1_8_V))
 	{
 		CAM_ERROR_PRINTK("can not get VCAM_IO_1.8V\n");
 		return -1;
 	}	
 	
+	VCAM_AF_2_8V = regulator_get(NULL, VCAM_AF_2_8V_REGULATOR);
+	if(IS_ERR(VCAM_AF_2_8V))
+	{
+		CAM_ERROR_PRINTK("can not get VCAM_AF_2_8V\n");
+		return -1;
+	}
+
 #ifdef CONFIG_SOC_CAMERA_POWER_USE_ASR   //for hw rev 0.3
-	VCAM_CORE_1_2_V = regulator_get(NULL,"asr_nm_uc");
+	VCAM_CORE_1_2_V = regulator_get(NULL, VCAM_CORE_1_2V_REGULATOR);
 	if(IS_ERR(VCAM_CORE_1_2_V))
 	{
 		CAM_ERROR_PRINTK("can not get VCAM_CORE_1_2_V\n");
@@ -1973,8 +2370,8 @@ static int camdrv_ss_s5k4ecgx_sensor_power(int on)
 	gpio_direction_output(CAM_CORE_EN,0); 
 #endif
 
-	gpio_request(CAM_AF_EN, "cam_af_2_8v");
-	gpio_direction_output(CAM_AF_EN,0); 
+//	gpio_request(CAM_AF_EN, "cam_af_2_8v");
+//	gpio_direction_output(CAM_AF_EN,0); 
 	
 	CAM_INFO_PRINTK("set cam_rst cam_stnby  to low\n");
 	gpio_request(CAM0_RESET, "cam0_rst");
@@ -1996,107 +2393,176 @@ static int camdrv_ss_s5k4ecgx_sensor_power(int on)
 	if(on)
 	{
 		CAM_INFO_PRINTK("power on the sensor \n"); //@HW
-		if (pi_mgr_dfs_request_update(&unicam_dfs_node, PI_OPP_TURBO)) {
-			CAM_ERROR_PRINTK("%s:failed to update dfs request for unicam\n",__func__);
-			return -1;
+
+		value = regulator_set_voltage(VCAM_A_2_8_V, 2800000, 2800000);
+		if (value)
+			CAM_ERROR_PRINTK("%s:regulator_set_voltage VCAM_A_2_8_V failed \n", __func__);
+
+		value = regulator_set_voltage(VCAM_IO_1_8_V, 1800000, 1800000);
+		if (value)
+			CAM_ERROR_PRINTK("%s:regulator_set_voltage VCAM_IO_1_8_V failed \n", __func__);
+
+		value = regulator_set_voltage(VCAM_AF_2_8V, 2800000, 2800000);
+		if (value)
+			CAM_ERROR_PRINTK("%s:regulator_set_voltage VCAM_AF_2_8V failed \n", __func__);
+
+#ifdef CONFIG_SOC_CAMERA_POWER_USE_ASR   //for hw rev 0.3
+		value = regulator_set_voltage(VCAM_CORE_1_2_V, 1200000, 1200000);
+		if (value)
+			CAM_ERROR_PRINTK("%s:regulator_set_voltage VCAM_CORE_1_2_V failed \n", __func__);
+#endif
+
+		if (mm_ccu_set_pll_select(CSI0_BYTE1_PLL, 8)) {
+			pr_err("failed to set BYTE1\n");
+			goto e_clk_pll;
+		}
+		if (mm_ccu_set_pll_select(CSI0_BYTE0_PLL, 8)) {
+			pr_err("failed to set BYTE0\n");
+			goto e_clk_pll;
+		}
+		if (mm_ccu_set_pll_select(CSI0_CAMPIX_PLL, 8)) {
+			pr_err("failed to set PIXPLL\n");
+			goto e_clk_pll;
 		}
 
-		regulator_set_voltage(VCAM_A_2_8_V,2800000,2800000);
-		regulator_set_voltage(VCAM_IO_1_8_V,1800000,1800000);
-#ifdef CONFIG_SOC_CAMERA_POWER_USE_ASR   //for hw rev 0.3
-		regulator_set_voltage(VCAM_CORE_1_2_V,1200000,1200000);
-#endif	
 		value = clk_enable(axi_clk);
 		if (value) {
-			CAM_ERROR_PRINTK("%s:failed to enable csi2 axi clock\n", __func__);
+			pr_err(KERN_ERR "Failed to enable axi clock\n");
+			goto e_clk_axi;
+		}
+
+		value = clk_enable(lp_clock);
+		if (value) {
+			pr_err(KERN_ERR "Failed to enable lp clock\n");
+			goto e_clk_lp;
+		}
+
+		value = clk_set_rate(lp_clock, CSI0_LP_FREQ);
+		if (value) {
+			pr_err("Failed to set lp clock\n");
+			goto e_clk_set_lp;
+		}
+
+/*
+		value = clk_enable(clock);
+		if (value) {
+			pr_err("Failed to enable sensor 0 clock\n");
+			goto e_clk_sensor;
+		}
+
+		value = clk_set_rate(clock, SENSOR_0_CLK_FREQ);
+		if (value) {
+			pr_err("Failed to set sensor0 clock\n");
+			goto e_clk_set_sensor;
+		}
+*/
+
+		value = regulator_enable(VCAM_A_2_8_V);
+		if (value) {
+			CAM_ERROR_PRINTK("%s:failed to enable VCAM_A_2_8_V\n", __func__);
 			return -1;
 		}
 
-		regulator_enable(VCAM_A_2_8_V);
 
-		regulator_enable(VCAM_IO_1_8_V);
-	
-		gpio_set_value(CAM_AF_EN,1); 
+		value = regulator_enable(VCAM_IO_1_8_V);
+		if (value) {
+			CAM_ERROR_PRINTK("%s:failed to enable VCAM_IO_1_8_V\n", __func__);
+			return -1;
+		}
 
-		msleep(1);	
+		value = regulator_enable(VCAM_AF_2_8V);
+		if (value) {
+			CAM_ERROR_PRINTK("%s:failed to enable VCAM_AF_2_8V \n", __func__);
+			return -1;
+		}
+//		gpio_set_value(CAM_AF_EN,1); 
 
-        gpio_set_value(CAM1_STNBY,1);
+		msleep(1);
+
+               gpio_set_value(CAM1_STNBY,1);
 		msleep(1);
 	
 		value = clk_enable(clock);
 		if (value) {
-			CAM_ERROR_PRINTK("%s: failed to enable clock %s\n", __func__,SENSOR_0_CLK);
-			return -1;
-		}
-		value = clk_set_rate(clock, SENSOR_0_CLK_FREQ);
-		if (value) {
-			CAM_ERROR_PRINTK("%s: failed to set the clock %s to freq %d\n",__func__, SENSOR_0_CLK, SENSOR_0_CLK_FREQ);
-			return -1;
+			pr_err("Failed to enable sensor 0 clock\n");
+			goto e_clk_sensor;
 		}
 
+		value = clk_set_rate(clock, SENSOR_0_CLK_FREQ);
+		if (value) {
+			pr_err("Failed to set sensor0 clock\n");
+			goto e_clk_set_sensor;
+		}
 
 		msleep(4);
 
 		gpio_set_value(CAM1_RESET,1);
- 		msleep(1);
+		msleep(1);
 
 		gpio_set_value(CAM1_STNBY,0);
 		
 #ifdef CONFIG_SOC_CAMERA_POWER_USE_ASR   //for hw rev 0.3		
-		regulator_enable(VCAM_CORE_1_2_V);
+		value = regulator_enable(VCAM_CORE_1_2_V);
+		if (value) {
+			CAM_ERROR_PRINTK("%s:failed to enable VCAM_CORE_1_2_V \n", __func__);
+			return -1;
+		} else
+			CAM_ERROR_PRINTK("%s: enabled VCAM_CORE_1_2V \n", __func__);
 #else
 		gpio_set_value(CAM_CORE_EN,1); 
 #endif				
 		msleep(1);
-				
+
 		gpio_set_value(CAM0_STNBY,1);
 		msleep(1);
 
 		gpio_set_value(CAM0_RESET,1);
 	
 		msleep(2);
-
-		
-#ifdef CONFIG_FLASH_ENABLE
+/* Backporting Rhea to Hawaii start:*/
+// Flag is enabled and will be used if camera has flash enabled.		
+//#ifdef CONFIG_FLASH_ENABLE
+#if 0
 				CAM_INFO_PRINTK( "5MP camera S5K4ECGX loaded. HWREV is 0x%x\n", HWREV);
-			
-				// FLASH
-				if(HWREV >= 0x03)
-				{					 
-					ret = gpio_request(GPIO_CAM_FLASH_SET_NEW, "GPJ0[5]");
-					if(ret)
-					{
-						CAM_ERROR_PRINTK( "gpio_request(GPJ0[5]) failed!! \n");
+
+		/*	// FLASH
+		if(HWREV >= 0x03)
+		{
+			ret = gpio_request(GPIO_CAM_FLASH_SET_NEW, "GPJ0[5]");
+			if(ret)
+			{
+				CAM_ERROR_PRINTK( "gpio_request(GPJ0[5]) failed!! \n");
+				return 0;
+			}
+		}
+		else*/
+		{
+			ret = gpio_request(GPIO_CAM_FLASH_SET, "GPJ0[2]");
+			if(ret)
+			{
+				CAM_ERROR_PRINTK( "gpio_request(GPJ0[2]) failed!! \n");
 						return 0;
-					}
-				}
-				else
-				{
-					ret = gpio_request(GPIO_CAM_FLASH_SET, "GPJ0[2]");
-					if(ret)
-					{
-						CAM_ERROR_PRINTK( "gpio_request(GPJ0[2]) failed!! \n");
-						return 0;
-					}
-				}
-				
-				ret = gpio_request(GPIO_CAM_FLASH_EN, "GPJ0[7]");
-				if(ret)
-				{
-					CAM_ERROR_PRINTK( "gpio_request(GPJ0[7]) failed!! \n");
+			}
+		}
+
+		ret = gpio_request(GPIO_CAM_FLASH_EN, "GPJ0[7]");
+		if(ret)
+		{
+			CAM_ERROR_PRINTK( "gpio_request(GPJ0[7]) failed!! \n");
 					return 0;
-				}
-			
-				if(HWREV >= 0x03)
-				{					 
-					gpio_direction_output(GPIO_CAM_FLASH_SET_NEW, 0);
-				}
-				else
-				{
-					gpio_direction_output(GPIO_CAM_FLASH_SET, 0);
-				}
-				gpio_direction_output(GPIO_CAM_FLASH_EN, 0);
+		}
+
+		/*if(HWREV >= 0x03)
+		{
+			gpio_direction_output(GPIO_CAM_FLASH_SET_NEW, 0);
+		}
+		else*/
+		{
+			gpio_direction_output(GPIO_CAM_FLASH_SET, 0);
+		}
+		gpio_direction_output(GPIO_CAM_FLASH_EN, 0);
 #endif // CONFIG_FLASH_ENABLE
+/* Backporting Rhea to Hawaii: end */
 
 	}
 	else
@@ -2108,6 +2574,7 @@ static int camdrv_ss_s5k4ecgx_sensor_power(int on)
 		msleep(1);
 		
 		clk_disable(clock);
+		clk_disable(lp_clock);
 		clk_disable(axi_clk);
 
 		gpio_set_value(CAM0_STNBY,0);
@@ -2118,7 +2585,8 @@ static int camdrv_ss_s5k4ecgx_sensor_power(int on)
 		
 		/* enable power down gpio */
 
-		gpio_set_value(CAM_AF_EN,0); 
+//		gpio_set_value(CAM_AF_EN,0); 
+		regulator_disable(VCAM_AF_2_8V);
 		msleep(1);
 
 		regulator_disable(VCAM_IO_1_8_V);
@@ -2129,43 +2597,75 @@ static int camdrv_ss_s5k4ecgx_sensor_power(int on)
 		gpio_set_value(CAM_CORE_EN, 0);
 #endif		
 		
-#ifdef CONFIG_FLASH_ENABLE
+//#ifdef CONFIG_FLASH_ENABLE
+/* Backporting Rhea to Hawaii start:*/
+// Flag is enabled and will be used if camera has flash enabled.		
+#if 0
 			// FLASH
 			// ?? need to do below?
 			//camdrv_ss_AAT_flash_control(sd, FLASH_CONTROL_OFF);
-			
+			/*
 			if(HWREV >= 0x03)
 			{					 
 				gpio_free(GPIO_CAM_FLASH_SET_NEW);
 			}
-			else
+			else*/
 			{
 				gpio_free(GPIO_CAM_FLASH_SET);
 			}
 			gpio_free(GPIO_CAM_FLASH_EN);
 #endif // CONFIG_FLASH_ENABLE
+/* Backporting Rhea to Hawaii: end */
 
-
-		if (pi_mgr_dfs_request_update(&unicam_dfs_node,
-					      PI_MGR_DFS_MIN_VALUE)) {
-			CAM_ERROR_PRINTK("%s: failed to update dfs request for unicam\n",
-				 __func__);
-		}
 		CAM_INFO_PRINTK("rhea_camera_power off success \n");
 	}
 
 	return 0;
+
+e_clk_set_sensor:
+	clk_disable(clock);
+e_clk_sensor:
+e_clk_set_lp:
+	clk_disable(lp_clock);
+e_clk_lp:
+	clk_disable(axi_clk);
+e_clk_axi:
+e_clk_pll:
+e_clk_get:
+	return ret;
 }
 
 
 int camdrv_ss_s5k4ecgx_get_sensor_param_for_exif(
 	struct v4l2_subdev *sd,
 	struct v4l2_exif_sensor_info *exif_param)
-{
-	char str[20];
+{	char str[20],str1[20];
 	int num = -1;
 	int ret = -1;
 	float exposureTime = 0.0f;
+	struct camdrv_ss_state *state = to_state(sd);
+	
+	switch(state->current_flash_mode)
+	{
+		case FLASH_MODE_ON:
+		snprintf(str1, 19, "%d", 9);
+		break;
+		
+		case FLASH_MODE_OFF:
+		snprintf(str1, 19, "%d", 0);//strcpy(str1,"OFF");
+		break;
+
+		case FLASH_MODE_AUTO:
+		if(state->camera_flash_fire)
+			
+		snprintf(str1, 19, "%d", 25);//strcpy(str1,"AUTO");
+		else 
+		snprintf(str1, 19, "%d", 24);	
+		break;
+		
+		default:
+		strcpy(str1,"");
+	}
 
 	strcpy(exif_param->strSoftware,		EXIF_SOFTWARE);
 	strcpy(exif_param->strMake,		EXIF_MAKE);
@@ -2201,19 +2701,20 @@ int camdrv_ss_s5k4ecgx_get_sensor_param_for_exif(
 	strcpy(exif_param->saturation,		"");
 	strcpy(exif_param->sharpness,		"");
 
-	strcpy(exif_param->FNumber,		(char *)"26/10");
+	strcpy(exif_param->FNumber,		(char *)"27/10");
 	strcpy(exif_param->exposureProgram,	"");
 	strcpy(exif_param->shutterSpeed,	"");
 	strcpy(exif_param->aperture,		"");
 	strcpy(exif_param->brightness,		"");
 	strcpy(exif_param->exposureBias,	"");
 	strcpy(exif_param->maxLensAperture,	"");
-	strcpy(exif_param->flash,		"");
-	strcpy(exif_param->lensFocalLength,	(char *)"354/100");
+	strcpy(exif_param->flash,		str1);
+	strcpy(exif_param->lensFocalLength,	(char *)"343/100");
 	strcpy(exif_param->userComments,	"");
 	ret = 0;
 
 	return ret;
+
 }
 
 bool camdrv_ss_s5k4ecgx_get_esd_status(struct v4l2_subdev *sd)
@@ -2276,6 +2777,53 @@ int camdrv_ss_s5k4ecgx_get_mode_change(struct v4l2_subdev *sd)
 
 	return ret;
 }
+//New code
+int camdrv_ss_s5k4ecgx_set_preflash_sequence(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
+{
+struct i2c_client *client = v4l2_get_subdevdata(sd);
+	struct camdrv_ss_state *state = to_state(sd);
+	int err = 0;
+         int n=0;//Nikhil
+        CAM_INFO_PRINTK("camdrv_ss_s5k4ecgx_set_preflash_sequence E \n");
+         camdrv_ss_s5k4ecgx_set_ae_stable_status(sd,0x0000); 	
+
+     //if (state->camera_af_flash_checked == 0) 
+    //{
+       state->camera_flash_fire = 0;
+       if (state->current_flash_mode == FLASH_MODE_ON) {
+            state->camera_flash_fire = 1;
+       }
+       else if (state->current_flash_mode == FLASH_MODE_AUTO) 
+       {
+          bool bflash_needed = false;
+          if (camdrv_ss_s5k4ecgx_check_flash_needed(sd)){
+            bflash_needed = camdrv_ss_s5k4ecgx_check_flash_needed(sd);
+
+	} else {
+            CAM_ERROR_PRINTK( "%s : check_flash_needed is NULL !!!\n", __func__);
+          	}
+		  
+          if (bflash_needed)
+          {
+            state->camera_flash_fire = 1;
+          }
+	}
+    //}
+
+    if (state->camera_flash_fire) 
+    {
+       err = camdrv_ss_i2c_set_config_register(client,  s5k4ecgx_Pre_Flash_Start_EVT1, ARRAY_SIZE( s5k4ecgx_Pre_Flash_Start_EVT1),
+                "Pre_Flash_Start_EVT1");
+       if (err < 0) 
+      {
+                CAM_ERROR_PRINTK( "[%s : %d] ERROR! Couldn't Set Pre Flash start \n", __FILE__, __LINE__);
+       } 
+       camdrv_ss_s5k4ecgx_AAT_flash_control(sd, FLASH_CONTROL_MIDDLE_LEVEL);
+   }
+ //state->camera_flash_fire = 0;
+}
+
+//END code
 bool camdrv_ss_sensor_init_main(bool bOn, struct camdrv_ss_sensor_cap *sensor)
 {
 
@@ -2296,7 +2844,7 @@ bool camdrv_ss_sensor_init_main(bool bOn, struct camdrv_ss_sensor_cap *sensor)
 	sensor->default_pix_fmt 				   = S5K4ECGX_DEFAULT_PIX_FMT;
 	sensor->default_mbus_pix_fmt			   = S5K4ECGX_DEFAULT_MBUS_PIX_FMT;
 	sensor->register_size 		  			 = S5K4ECGX_REGISTER_SIZE;
-	sensor->skip_frames						 = 0;
+	sensor->skip_frames						 = 1;
 
 	sensor->delay_duration				= S5K4ECGX_DELAY_DURATION;
 
@@ -2321,7 +2869,7 @@ bool camdrv_ss_sensor_init_main(bool bOn, struct camdrv_ss_sensor_cap *sensor)
 	sensor->set_touch_focus		 	  =  camdrv_ss_s5k4ecgx_set_touch_focus;
 	sensor->get_touch_focus_status     = camdrv_ss_s5k4ecgx_get_touch_focus_status;
 
-//	sensor->AAT_flash_control    	   = camdrv_ss_s5k4ecgx_AAT_flash_control;
+	sensor->AAT_flash_control    	   = camdrv_ss_s5k4ecgx_AAT_flash_control;
 	sensor->i2c_set_data_burst   	   = camdrv_ss_s5k4ecgx_i2c_set_data_burst;
 	sensor->check_flash_needed   	   = camdrv_ss_s5k4ecgx_check_flash_needed;
 //	sensor->get_light_condition   = camdrv_ss_s5k4ecgx_get_light_condition;
@@ -2330,9 +2878,11 @@ bool camdrv_ss_sensor_init_main(bool bOn, struct camdrv_ss_sensor_cap *sensor)
 
 	sensor->get_exif_sensor_info       = camdrv_ss_s5k4ecgx_get_sensor_param_for_exif;
 	sensor->getEsdStatus 			   = camdrv_ss_s5k4ecgx_get_esd_status;
-	sensor->get_mode_change_reg	= camdrv_ss_s5k4ecgx_get_mode_change;
+	/* use 150ms delay or frame skip instead of register read */
+	/* sensor->get_mode_change_reg	= camdrv_ss_s5k4ecgx_get_mode_change; */
 
 	sensor->set_scene_mode 			   = camdrv_ss_s5k4ecgx_set_scene_mode;   //denis
+        sensor->get_prefalsh_on                      =  camdrv_ss_s5k4ecgx_set_preflash_sequence; //Nikhil
 
 
 	/*REGS and their sizes*/
@@ -2827,6 +3377,8 @@ bool camdrv_ss_sensor_init_main(bool bOn, struct camdrv_ss_sensor_cap *sensor)
 
 	sensor->vt_mode_regs = s5k4ecgx_vt_mode_regs;
 	sensor->rows_num_vt_mode_regs     = ARRAY_SIZE(s5k4ecgx_vt_mode_regs);
+        sensor->main_flash_off_regs    =       s5k4ecgx_Main_Flash_End_EVT1;
+        sensor->rows_num_main_flash_off_regs  = ARRAY_SIZE(s5k4ecgx_Main_Flash_End_EVT1);
 
 	return true;
 };

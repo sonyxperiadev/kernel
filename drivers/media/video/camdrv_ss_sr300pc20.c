@@ -66,6 +66,8 @@ extern inline struct camdrv_ss_state *to_state(struct v4l2_subdev *sd);
 
 //#define __JPEG_CAPTURE__ 1        //denis_temp ; yuv capture
 
+extern int camera_antibanding_get(); //add anti-banding code
+
 static const struct camdrv_ss_framesize sr300pc20_supported_preview_framesize_list[] = {
 	{ PREVIEW_SIZE_VGA,	640,  480 },
 //	{ PREVIEW_SIZE_QCIF,	176,  144 },
@@ -240,11 +242,10 @@ static const struct v4l2_queryctrl sr300pc20_controls[] = {
 		.id			= V4L2_CID_CAMERA_FOCUS_MODE,
 		.type		= V4L2_CTRL_TYPE_INTEGER,
 		.name		= "Focus",
-		.minimum	= FOCUS_MODE_AUTO,
-		.maximum	= (1 << FOCUS_MODE_AUTO | 1 << FOCUS_MODE_MACRO
-					   | 1 << FOCUS_MODE_INFINITY), /* querymenu ?*/
+		.minimum	      = FOCUS_MODE_INFINITY,
+		.maximum	=  (1 << FOCUS_MODE_INFINITY),
 		.step		= 1,
-		.default_value	= FOCUS_MODE_AUTO,
+		.default_value	= FOCUS_MODE_INFINITY,
 	},
 
 	{
@@ -282,8 +283,7 @@ static const struct v4l2_queryctrl sr300pc20_controls[] = {
 		.step		= 1,
 		.default_value	= AUTO_FOCUS_OFF,
 	},
-
-/* Ivory camera not support touch focus
+         /*
 	{
 		.id 		= V4L2_CID_CAMERA_TOUCH_AF_AREA,
 		.type		= V4L2_CTRL_TYPE_INTEGER,
@@ -300,8 +300,8 @@ static const struct v4l2_queryctrl sr300pc20_controls[] = {
 		.type		= V4L2_CTRL_TYPE_INTEGER,
 		.name		= "Framerate control",
 		.minimum	= FRAME_RATE_AUTO,
-		.maximum	= (1 << FRAME_RATE_AUTO | 1 << FRAME_RATE_5 | 1 << FRAME_RATE_7 | 1 << FRAME_RATE_10  | 1 << FRAME_RATE_15
-						| 1 << FRAME_RATE_20 | 1 << FRAME_RATE_25 | 1 << FRAME_RATE_30),
+		.maximum	= (1 << FRAME_RATE_AUTO | /* 1 << FRAME_RATE_5 | 1 << FRAME_RATE_7 | 1 << FRAME_RATE_10  |*/ 1 << FRAME_RATE_15
+						| /*1 << FRAME_RATE_20 |*/ 1 << FRAME_RATE_25 | 1 << FRAME_RATE_30),
 		.step		= 1,
 		.default_value	= FRAME_RATE_30,
 	},
@@ -493,6 +493,22 @@ static long camdrv_ss_sr300pc20_ss_ioctl(struct v4l2_subdev *sd, unsigned int cm
 #endif
 			 break;
 		}
+                 case VIDIOC_SENSOR_G_OPTICAL_INFO:
+                {
+
+                         struct v4l2_sensor_optical_info *p= arg;
+                           p->hor_angle.numerator = 541;
+                           p->hor_angle.denominator = 10;
+                           p->ver_angle.numerator = 429;
+                           p->ver_angle.denominator = 10;
+                           p->focus_distance[0] = 60;
+                           p->focus_distance[1] = 120;
+                           p->focus_distance[2] = -1;
+                           p->focal_length.numerator = 279;
+                           p->focal_length.denominator = 100;
+                         break;
+                }
+
 
 		default:
 			ret = -ENOIOCTLCMD;
@@ -1798,6 +1814,71 @@ static struct regulator *VCAM_CORE_1_2_V;   //ASR_SW
 #define SENSOR_0_CLK_FREQ		(26000000) //@HW, need to check how fast this meaning.
 
 
+static int camdrv_ss_sr300pc20_copy_files_for_60hz(void)
+{
+
+#define COPY_FROM_60HZ_TABLE(TABLE_NAME, ANTI_BANDING_SETTING) \
+	memcpy (TABLE_NAME, TABLE_NAME##_##ANTI_BANDING_SETTING, \
+	sizeof(TABLE_NAME))
+	
+	CAM_INFO_PRINTK("%s: Enter \n",__func__);
+
+	//[ltn_to_do] should be rearranged !!!!! just for Testing
+	COPY_FROM_60HZ_TABLE (sr300pc20_init_regs, 60hz);
+	COPY_FROM_60HZ_TABLE (sr300pc20_preview_camera_regs, 60hz);
+	COPY_FROM_60HZ_TABLE (sr300pc20_snapshot_normal_regs, 60hz);
+	COPY_FROM_60HZ_TABLE (sr300pc20_snapshot_nightmode_regs, 60hz);
+	COPY_FROM_60HZ_TABLE (sr300pc20_snapshot_fireworks_regs, 60hz);
+	COPY_FROM_60HZ_TABLE (sr300pc20_scene_none_regs, 60hz);
+	COPY_FROM_60HZ_TABLE (sr300pc20_scene_nightshot_regs, 60hz);
+	COPY_FROM_60HZ_TABLE (sr300pc20_scene_backlight_regs, 60hz);
+	COPY_FROM_60HZ_TABLE (sr300pc20_scene_landscape_regs, 60hz);
+	COPY_FROM_60HZ_TABLE (sr300pc20_scene_sports_regs, 60hz);
+	COPY_FROM_60HZ_TABLE (sr300pc20_scene_party_indoor_regs, 60hz);
+	COPY_FROM_60HZ_TABLE (sr300pc20_scene_beach_snow_regs, 60hz);
+	COPY_FROM_60HZ_TABLE (sr300pc20_scene_sunset_regs, 60hz);
+	COPY_FROM_60HZ_TABLE (sr300pc20_scene_duskdawn_regs, 60hz);
+	COPY_FROM_60HZ_TABLE (sr300pc20_scene_fall_color_regs, 60hz);
+	COPY_FROM_60HZ_TABLE (sr300pc20_scene_fireworks_regs, 60hz);
+	COPY_FROM_60HZ_TABLE (sr300pc20_scene_candle_light_regs, 60hz);
+	COPY_FROM_60HZ_TABLE (sr300pc20_fps_15_regs, 60hz);
+	COPY_FROM_60HZ_TABLE (sr300pc20_fps_25_regs, 60hz);
+	COPY_FROM_60HZ_TABLE (sr300pc20_fps_30_regs, 60hz);
+
+	CAM_INFO_PRINTK("%s: copy done!\n", __func__);
+
+}
+static int camdrv_ss_sr300pc20_check_table_size_for_60hz(void)
+{
+#define IS_SAME_NUM_OF_ROWS(TABLE_NAME) \
+	(sizeof(TABLE_NAME) == sizeof(TABLE_NAME##_60hz))
+
+	if ( !IS_SAME_NUM_OF_ROWS(sr300pc20_init_regs) ) return (-1);
+	if ( !IS_SAME_NUM_OF_ROWS(sr300pc20_preview_camera_regs) ) return (-2);
+	if ( !IS_SAME_NUM_OF_ROWS(sr300pc20_snapshot_normal_regs) ) return (-3);
+	if ( !IS_SAME_NUM_OF_ROWS(sr300pc20_snapshot_nightmode_regs) ) return (-4);
+	if ( !IS_SAME_NUM_OF_ROWS(sr300pc20_snapshot_fireworks_regs) ) return (-5);
+	if ( !IS_SAME_NUM_OF_ROWS(sr300pc20_scene_none_regs) ) return (-6);
+	if ( !IS_SAME_NUM_OF_ROWS(sr300pc20_scene_nightshot_regs) ) return (-7);
+	if ( !IS_SAME_NUM_OF_ROWS(sr300pc20_scene_backlight_regs) ) return (-8);
+	if ( !IS_SAME_NUM_OF_ROWS(sr300pc20_scene_landscape_regs) ) return (-9);
+	if ( !IS_SAME_NUM_OF_ROWS(sr300pc20_scene_sports_regs) ) return (-10);
+	if ( !IS_SAME_NUM_OF_ROWS(sr300pc20_scene_party_indoor_regs) ) return (-11);
+	if ( !IS_SAME_NUM_OF_ROWS(sr300pc20_scene_beach_snow_regs) ) return (-12);
+	if ( !IS_SAME_NUM_OF_ROWS(sr300pc20_scene_sunset_regs) ) return (-13);
+	if ( !IS_SAME_NUM_OF_ROWS(sr300pc20_scene_duskdawn_regs) ) return (-14);
+	if ( !IS_SAME_NUM_OF_ROWS(sr300pc20_scene_fall_color_regs) ) return (-15);
+	if ( !IS_SAME_NUM_OF_ROWS(sr300pc20_scene_fireworks_regs) ) return (-16);
+	if ( !IS_SAME_NUM_OF_ROWS(sr300pc20_scene_candle_light_regs) ) return (-17);
+	if ( !IS_SAME_NUM_OF_ROWS(sr300pc20_fps_15_regs) ) return (-18);
+	if ( !IS_SAME_NUM_OF_ROWS(sr300pc20_fps_25_regs) ) return (-19);
+	if ( !IS_SAME_NUM_OF_ROWS(sr300pc20_fps_30_regs) ) return (-20);
+
+	CAM_INFO_PRINTK("%s: Success !\n", __func__);
+	return 0;
+}	
+
+
 
 static int camdrv_ss_sr300pc20_sensor_power(int on)
 {
@@ -1883,12 +1964,6 @@ static int camdrv_ss_sr300pc20_sensor_power(int on)
 	if(on)
 {
 		printk("power on the sensor \n"); //@HW
-		if (pi_mgr_dfs_request_update(&unicam_dfs_node, PI_OPP_TURBO)) {
-			printk(KERN_ERR
-			       "%s:failed to update dfs request for unicam\n",
-			       __func__);
-			return -1;
-		}
 
 		regulator_set_voltage(VCAM_IO_1_8_V,1800000,1800000);	
 		regulator_set_voltage(VCAM_A_2_8_V,2800000,2800000);		
@@ -1963,13 +2038,16 @@ static int camdrv_ss_sr300pc20_sensor_power(int on)
 		regulator_disable(VCAM_A_2_8_V);
 		regulator_disable(VCAM_IO_1_8_V);
 
-
-		if (pi_mgr_dfs_request_update(&unicam_dfs_node,
-					      PI_MGR_DFS_MIN_VALUE)) {
-			printk(KERN_ERR "%s: failed to update dfs request for unicam\n",
-				 __func__);
-		}
 		printk("rhea_camera_power off success \n");
+	}
+
+	if (ANTI_BANDING_60HZ == camera_antibanding_get()) {
+		ret = camdrv_ss_sr300pc20_check_table_size_for_60hz();
+		if(ret != 0) {
+			printk("%s: Fail - the table num is %d \n", __func__, ret);
+			return -1;
+		}
+		camdrv_ss_sr300pc20_copy_files_for_60hz();
 	}
 	return 0;
 }

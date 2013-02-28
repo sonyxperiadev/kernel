@@ -170,6 +170,7 @@
 #endif
 #ifdef CONFIG_VIDEO_UNICAM_CAMERA
 #include <media/soc_camera.h>
+#include "../../../drivers/media/video/camdrv_ss.h"
 #endif
 
 #ifdef CONFIG_VIDEO_KONA
@@ -363,7 +364,6 @@ struct ion_platform_data ion_cma_data = {
 #endif /* CONFIG_ION_BCM_NO_DT */
 
 #ifdef CONFIG_VIDEO_UNICAM_CAMERA
-extern bool camdrv_ss_power(int cam_id,int bOn);
 
 #define S5K4ECGX_I2C_ADDRESS (0xAC>>1)
 #define SR030PC50_I2C_ADDRESS (0x60>>1)
@@ -371,10 +371,10 @@ extern bool camdrv_ss_power(int cam_id,int bOn);
 
 #define SENSOR_0_GPIO_PWRDN             (002)
 #define SENSOR_0_GPIO_RST               (111)
-#define SENSOR_0_CLK                    "dig_ch0_clk" // DCLK1 ??
+#define SENSOR_0_CLK                    "dig_ch0_clk" /* DCLK1 */
 #define SENSOR_0_CLK_FREQ               (13000000)
 
-#define SENSOR_1_CLK                    "dig_ch0_clk" // DCLK1 ??
+#define SENSOR_1_CLK                    "dig_ch0_clk" /* DCLK1 ?? */
 #define SENSOR_1_CLK_FREQ               (26000000)
 
 #define SENSOR_1_GPIO_PWRDN             (005)
@@ -393,41 +393,44 @@ static int hawaii_camera_power(struct device *dev, int on)
 	static struct pi_mgr_dfs_node unicam_dfs_node;
 	int ret;
 
-	printk(KERN_INFO "%s:camera power %s, %d\n", __func__, (on ? "on" : "off"), unicam_dfs_node.valid);
+	printk(KERN_INFO "%s:camera power %s, %d\n",
+			__func__, (on ? "on" : "off"), unicam_dfs_node.valid);
 
 	if (!unicam_dfs_node.valid) {
 		ret = pi_mgr_dfs_add_request(&unicam_dfs_node, "unicam",
 						PI_MGR_PI_ID_MM,
 						PI_MGR_DFS_MIN_VALUE);
 		if (ret) {
-			printk(KERN_ERR "%s: failed to register PI DFS request\n", __func__);
+			printk(KERN_ERR "%s: failed to register PI DFS request\n",
+					__func__);
 			return -1;
 		}
 	}
 
 	if (on) {
 		if (pi_mgr_dfs_request_update(&unicam_dfs_node, PI_OPP_TURBO)) {
-			printk(KERN_ERR "%s:failed to update dfs request for unicam\n", __func__);
+			printk(KERN_ERR "%s:failed to update dfs request for unicam\n",
+							__func__);
 			return -1;
 		}
 	}
 
 	if (!camdrv_ss_power(0, (bool)on)) {
-		printk(KERN_ERR "%s,camdrv_ss_power failed for MAIN CAM!!\n", __func__);
+		printk(KERN_ERR "%s,camdrv_ss_power failed for MAIN CAM!!\n",
+						__func__);
 		return -1;
 	}
 
 	if (!on) {
 		if (pi_mgr_dfs_request_update(&unicam_dfs_node,
 						PI_MGR_DFS_MIN_VALUE)) {
-			printk(KERN_ERR "%s: failed to update dfs request for unicam\n", __func__);
+			printk(KERN_ERR "%s: failed to update dfs request for unicam\n",
+							__func__);
 		}
 	}
 
 	return 0;
-
 }
-
 static int hawaii_camera_reset(struct device *dev)
 {
 	/* reset the camera gpio */
@@ -440,38 +443,46 @@ static int hawaii_camera_power_sub(struct device *dev, int on)
 	static struct pi_mgr_dfs_node unicam_dfs_node;
 	int ret;
 
-	printk(KERN_INFO "%s:camera power %s, %d\n", __func__, (on ? "on" : "off"), unicam_dfs_node.valid);
+	printk(KERN_INFO "%s:camera power %s, %d\n", __func__,
+					(on ? "on" : "off"),
+					unicam_dfs_node.valid);
 
 	if (!unicam_dfs_node.valid) {
 		ret = pi_mgr_dfs_add_request(&unicam_dfs_node, "unicam",
 						PI_MGR_PI_ID_MM,
 						PI_MGR_DFS_MIN_VALUE);
 		if (ret) {
-			printk(KERN_ERR "%s: failed to register PI DFS request\n", __func__);
+			printk(KERN_ERR "%s: failed to register PI DFS request\n",
+							__func__);
 			return -1;
 		}
 	}
 
 	if (on) {
 		if (pi_mgr_dfs_request_update(&unicam_dfs_node, PI_OPP_TURBO)) {
-			printk(KERN_ERR "%s:failed to update dfs request for unicam\n", __func__);
+			printk(KERN_ERR "%s:failed to update dfs request for unicam\n",
+							__func__);
 			return -1;
 		}
 	}
 
 	if (!camdrv_ss_power(1, (bool)on)) {
-		printk(KERN_ERR "%s, camdrv_ss_power failed for SUB CAM!!\n", __func__);
+		printk(KERN_ERR "%s, camdrv_ss_power failed for SUB CAM!!\n",
+						__func__);
 		return -1;
 	}
 
 	if (!on) {
 		if (pi_mgr_dfs_request_update(&unicam_dfs_node,
 						PI_MGR_DFS_MIN_VALUE)) {
-			printk(KERN_ERR "%s: failed to update dfs request for unicam\n", __func__);
+			printk(KERN_ERR "%s: failed to update dfs request for unicam\n",
+							__func__);
 		}
 	}
+
 	return 0;
 }
+
 
 static int hawaii_camera_reset_sub(struct device *dev)
 {
@@ -484,9 +495,7 @@ static int hawaii_camera_reset_sub(struct device *dev)
 static struct v4l2_subdev_sensor_interface_parms s5k4ecgx_if_params = {
 	.if_type = V4L2_SUBDEV_SENSOR_SERIAL,
 	.if_mode = V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2,
-/* logan compilation fix : */
-/*	.orientation = V4L2_SUBDEV_SENSOR_ORIENT_90, */
-	.orientation = V4L2_SUBDEV_SENSOR_PORTRAIT,
+	.orientation = V4L2_SUBDEV_SENSOR_ORIENT_90,
 	.facing = V4L2_SUBDEV_SENSOR_BACK,
 	.parms.serial = {
 		 .lanes = 2,
@@ -515,13 +524,10 @@ static struct platform_device hawaii_camera = {
 	 },
 };
 
-
 static struct v4l2_subdev_sensor_interface_parms sr030pc50_if_params = {
 	.if_type = V4L2_SUBDEV_SENSOR_SERIAL,
 	.if_mode = V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2,
-/* logan compilation fix */
-/*	.orientation = V4L2_SUBDEV_SENSOR_ORIENT_270, */
-	.orientation = V4L2_SUBDEV_SENSOR_PORTRAIT,
+	.orientation = V4L2_SUBDEV_SENSOR_ORIENT_270,
 	.facing = V4L2_SUBDEV_SENSOR_FRONT,
 	.parms.serial = {
 		.lanes = 1,

@@ -490,12 +490,12 @@ int unicam_videobuf_start_streaming(struct vb2_queue *q, unsigned int count)
 	}
 	unicam_dev->handle = get_mm_csi0_handle (hmode, afe, lanes );
 	if (unicam_dev->handle == NULL){
-		pr_info("Unable to get unicam handle\n");
+		pr_err("Unable to get unicam handle\n");
 		return -EBUSY;
 	}
 	ret = mm_csi0_init();
 	if(ret){
-		pr_info("Unable to get unicam handle\n");
+		pr_err("Unable to get unicam handle\n");
 		mm_csi0_teardown ();
 		return -EINVAL;
 	}
@@ -508,7 +508,7 @@ int unicam_videobuf_start_streaming(struct vb2_queue *q, unsigned int count)
 	timing.hs_term_time = unicam_dev->if_params.parms.serial.hs_term_time;
 	ret = mm_csi0_set_dig_phy(&timing);
 	if(ret){
-		pr_info("Wrong digital timing\n");
+		pr_err("Wrong digital timing\n");
 		mm_csi0_teardown ();
 		return -EINVAL;
 	}
@@ -549,7 +549,7 @@ int unicam_videobuf_start_streaming(struct vb2_queue *q, unsigned int count)
 	}
 	ret = mm_csi0_cfg_image_id(vc, id);
 	if(ret){
-		pr_info("Wrong Image IDs set for a given mode\n");
+		pr_err("Wrong Image IDs set for a given mode\n");
 		mm_csi0_teardown ();
 		return -EINVAL;
 	}
@@ -579,7 +579,7 @@ int unicam_videobuf_start_streaming(struct vb2_queue *q, unsigned int count)
 	ret |= mm_csi0_enable_fsp_ccp2();
 
 	if(ret){
-		pr_info("Something wrong with pipeline config .. pl go check\n");
+		pr_err("Something wrong with pipeline config .. pl go check\n");
 		mm_csi0_teardown ();
 		return -EINVAL;
 	}
@@ -650,7 +650,7 @@ int unicam_videobuf_start_streaming(struct vb2_queue *q, unsigned int count)
 			V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2){
 			lane_err = mm_csi0_get_trans();
 			if(lane_err){
-				pr_info("Lane errors seen 0x%x\n", lane_err);
+				pr_err("Lane errors seen 0x%x\n", lane_err);
 				/* return -EFAULT;*/
 			}
 		}
@@ -1121,6 +1121,7 @@ static struct soc_camera_host_ops unicam_soc_camera_host_ops = {
 static irqreturn_t unicam_camera_isr(int irq, void *arg)
 {
 	struct unicam_camera_dev *unicam_dev = (struct unicam_camera_dev *)arg;
+	struct v4l2_subdev *sd = soc_camera_to_subdev(unicam_dev->icd);
 	int ret;
 	struct int_desc idesc;
 	struct rx_stat_list rx;
@@ -1162,6 +1163,18 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 				goto out;
 			/* mark  the buffer done */
 			/* queue another buffer and trigger capture */
+			if (unicam_dev->skip_frames <= 0) {
+				struct v4l2_control ctrl;
+				ctrl.id = V4L2_CID_CAMERA_READ_MODE_CHANGE_REG;
+				v4l2_subdev_call(sd, core, g_ctrl, &ctrl);
+
+				if (ctrl.value == 0) {
+					/* capture mode is not ready yet */
+					unicam_dev->skip_frames = 1;
+					pr_info("%s, need_skip_frame=%d", __func__, ctrl.value);
+				}
+			}
+
 			if (likely(unicam_dev->skip_frames <= 0)) {
 				list_del_init(&to_unicam_camera_vb(vb)->queue);
 				do_gettimeofday(&vb->v4l2_buf.timestamp);

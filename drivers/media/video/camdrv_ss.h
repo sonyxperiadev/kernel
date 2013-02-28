@@ -6,7 +6,6 @@
 #include <asm/gpio.h>
 #include <mach/kona.h>
 #include <mach/hawaii.h>
-#include <asm/mach/map.h>
 #include <linux/power_supply.h>
 #include <linux/mfd/bcm590xx/core.h>
 #include <linux/mfd/bcm590xx/pmic.h>
@@ -36,6 +35,10 @@
 #define CAM_INFO_PRINTK(format, arg...)    printk(format, ## arg)
 #else
 #define CAM_INFO_PRINTK(format, arg...)
+#endif
+
+#ifdef CONFIG_VIDEO_UNICAM_CAMERA
+extern bool camdrv_ss_power(int cam_id , int bOn);
 #endif
 
 
@@ -221,6 +224,7 @@ struct camdrv_ss_sensor_cap {
 	int (*get_mode_change_reg)(struct v4l2_subdev *sd);
 	int (*set_scene_mode)(struct v4l2_subdev *sd, struct v4l2_control *ctrl);  /* denis */
 	void (*smartStayChangeInitSetting)(struct camdrv_ss_sensor_cap *sensor);
+        int(* get_prefalsh_on) (struct v4l2_subdev *sd, struct v4l2_control *ctrl); //Backporting Rhea to Hawaii: added to call sensor Specific preflash rotuine
 
 /************************/
 /* REGISTER TABLE SETTINGS */
@@ -452,6 +456,7 @@ struct camdrv_ss_sensor_cap {
 	/* af return & focus mode */
 	const regs_t *af_return_inf_pos;
 	const regs_t *af_return_macro_pos;
+        const  regs_t *main_flash_off_regs; //Add for nevis
 	/* NO OF ROWS OF EACH REGISTER SETTING */
 	int  rows_num_init_regs;
 	int  rows_num_vt_mode_regs;
@@ -679,6 +684,7 @@ struct camdrv_ss_sensor_cap {
 	/* af return & focus mode */
 	int rows_num_af_return_inf_pos;
 	int rows_num_af_return_macro_pos;
+        int  rows_num_main_flash_off_regs; //Add for nevis
 };
 
 /************************/

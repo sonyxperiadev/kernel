@@ -1983,10 +1983,8 @@ bool camdrv_ss_sensor_init_main(bool bOn, struct camdrv_ss_sensor_cap *sensor)
 
 
 
-		
 	sensor->ae_unlock_regs			  = s5k5ccgx_ae_unlock_regs;
 	sensor->rows_num_ae_unlock_regs	  = ARRAY_SIZE(s5k5ccgx_ae_unlock_regs);
-
 
 
 
@@ -1997,14 +1995,12 @@ bool camdrv_ss_sensor_init_main(bool bOn, struct camdrv_ss_sensor_cap *sensor)
 
 
 
-		
 	sensor->awb_unlock_regs			  = s5k5ccgx_awb_unlock_regs;
 	sensor->rows_num_awb_unlock_regs	  = ARRAY_SIZE(s5k5ccgx_awb_unlock_regs);
 
 
 
 	
-
 
 };
 

@@ -22,6 +22,18 @@
 #include "camdrv_ss.h"
 #include <linux/kthread.h>
 #include <asm/atomic.h>
+#include <linux/videodev2.h>
+#include <linux/slab.h>
+#include <linux/i2c.h>
+#include <linux/log2.h>
+#include <linux/delay.h>
+#include <linux/module.h>
+
+#include <media/v4l2-subdev.h>
+#include <media/v4l2-chip-ident.h>
+#include <media/soc_camera.h>
+#include <linux/videodev2_brcm.h>
+
 
 /* #define CONFIG_LOAD_FILE */
 
@@ -57,7 +69,6 @@ static int camdrv_ss_s_stream(struct v4l2_subdev *sd, int enable);
 static int camdrv_ss_init_thread_func(void *data);
 static int camdrv_ss_init(struct v4l2_subdev *sd, u32 val);
 
-
 bool camdrv_ss_power(int cam_id, int bOn);
 
 #define CAMDRV_SS_CAM_ID_MAIN 0
@@ -84,6 +95,9 @@ EXPORT_SYMBOL(sec_main_cam_dev);
 struct device *sec_sub_cam_dev = NULL; /* /sys/class/camera/rear/rear_type */
 EXPORT_SYMBOL(sec_sub_cam_dev);
 
+struct device *rear_flash_dev;     /*sys/class/camera/rear*/
+static dev_t rear_flash_devnum;
+
 static bool cam_class_init = false;
 ssize_t maincamtype_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
@@ -101,10 +115,10 @@ ssize_t maincamtype_store(struct device *dev, struct device_attribute *attr, con
 
 ssize_t maincamfw_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
-	char *sensorfw = "none";
+	char *sensorfw = sensor.name;
 	CAM_INFO_PRINTK("%s  Enter\n", __func__);
 
-	return sprintf(buf, "%s\n", sensorfw);
+	return sprintf(buf, "%s %s\n", sensorfw, sensorfw);
 }
 
 ssize_t maincamfw_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t size)
@@ -130,10 +144,10 @@ ssize_t subcamtype_store(struct device *dev, struct device_attribute *attr, cons
 
 ssize_t subcamfw_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
-	char *sensorfw = "none";
+	char *sensorfw = sensor.name;
 	CAM_INFO_PRINTK("%s	Enter\n", __func__);
 
-	return sprintf(buf, "%s\n", sensorfw);
+	return sprintf(buf, "%s %s\n", sensorfw, sensorfw);
 }
 
 ssize_t subcamfw_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t size)
@@ -184,8 +198,65 @@ static struct device_attribute camera_antibanding_attr = {
 	.show = camera_antibanding_show,
 	.store = camera_antibanding_store
 };
-#endif
+// AT command flash implementation
+/*Backporting Rhea to Hawaii start: */
+ssize_t rear_flash_show(struct device *dev,
+	struct device_attribute *attr, const char *buf,
+	size_t count)
+{
+        struct v4l2_subdev *sd;
+	if (buf[0] == '0')
+	{
+		if (sensor.AAT_flash_control != NULL)
+			sensor.AAT_flash_control(sd, FLASH_CONTROL_OFF);
+		printk(KERN_ERR "[%s]: off!\n", __func__);
+	}
+	else
+	{
+	
+		if (sensor.AAT_flash_control != NULL)
+			sensor.AAT_flash_control(sd, FLASH_CONTROL_LOW_LEVEL);
+		printk(KERN_ERR "[%s]: on!\n", __func__);
+	}
 
+	return count;
+}
+
+ssize_t rear_flash_store(struct device *dev,
+	struct device_attribute *attr, const char *buf,
+	size_t count)
+{
+        struct v4l2_subdev *sd;
+		camdrv_ss_sensor_init_main(0, &sensor);
+	if (buf[0] == '0')
+	{
+		if (sensor.AAT_flash_control != NULL)
+			sensor.AAT_flash_control(sd, FLASH_CONTROL_OFF);
+		CAM_INFO_PRINTK(KERN_ERR "[%s]: off!\n", __func__);
+	}
+	else
+	{
+                		//gpio_direction_output(CAM_FLASH_EN_GPIO,1);
+		if (sensor.AAT_flash_control != NULL)
+			sensor.AAT_flash_control(sd, FLASH_CONTROL_LOW_LEVEL);		
+           //sensor.AAT_flash_control(sd, FLASH_CONTROL_LOW_LEVEL);
+		CAM_INFO_PRINTK(KERN_ERR "mrad6[%s]: on!\n", __func__);
+	}
+
+	return count;
+}
+
+
+static struct device_attribute dev_attr_rear_flash = {
+	.attr = {
+		.name = "rear_flash",
+		.mode =(S_IRUSR|S_IRGRP | S_IWUSR|S_IWGRP)},     //( S_IWUSR|S_IWGRP|S_IROTH)},
+		.show = rear_flash_show,
+		.store = rear_flash_store
+		
+}; 
+#endif
+/*Backporting Rhea to Hawaii End*/ 
 
 /**************************************************************************
 * EXTERN VARIABLES
@@ -1165,11 +1236,13 @@ static int camdrv_ss_set_flash_mode(struct v4l2_subdev *sd, struct v4l2_control 
 
 	case FLASH_MODE_TORCH_OFF:
 	{
+		if (state->camera_flash_fire)
+			{
 		if (sensor.AAT_flash_control != NULL)
 			sensor.AAT_flash_control(sd, FLASH_CONTROL_OFF);
 		else
 			CAM_ERROR_PRINTK("%s %s :AAT_flash_control is NULL!!!s\n", sensor.name, __func__);
-
+			}
 		break;
 	}
 
@@ -1855,6 +1928,8 @@ int camdrv_ss_set_capture_size(struct v4l2_subdev *sd)
 		} else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.capture_size_640x480_regs, sensor.rows_num_capture_size_640x480_regs, "capture_size_640x480_regs");
 
+		state->postview_info.width = 640;
+		state->postview_info.height = 480;
 		break;
 	}
 
@@ -1866,6 +1941,8 @@ int camdrv_ss_set_capture_size(struct v4l2_subdev *sd)
 		} else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.capture_size_800x480_regs, sensor.rows_num_capture_size_800x480_regs, "capture_size_800x480_regs");
 
+		state->postview_info.width = 800;
+		state->postview_info.height = 480;
 		break;
 	}
 
@@ -1877,6 +1954,8 @@ int camdrv_ss_set_capture_size(struct v4l2_subdev *sd)
 		} else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.capture_size_800x600_regs, sensor.rows_num_capture_size_800x600_regs, "capture_size_800x600_regs");
 
+		state->postview_info.width = 800;
+		state->postview_info.height = 600;
 		break;
 	}
 
@@ -1888,6 +1967,8 @@ int camdrv_ss_set_capture_size(struct v4l2_subdev *sd)
 		} else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.capture_size_720x480_regs, sensor.rows_num_capture_size_720x480_regs, "capture_size_720x480_regs");
 
+		state->postview_info.width = 720;
+		state->postview_info.height = 480;
 		break;
 	}
 
@@ -1899,6 +1980,8 @@ int camdrv_ss_set_capture_size(struct v4l2_subdev *sd)
 		} else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.capture_size_1024x600_regs, sensor.rows_num_capture_size_1024x600_regs, "capture_size_1024x600_regs");
 
+		state->postview_info.width = 1024;
+		state->postview_info.height = 600;
 		break;
 	}
 
@@ -1910,6 +1993,8 @@ int camdrv_ss_set_capture_size(struct v4l2_subdev *sd)
 		} else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.capture_size_1024x768_regs, sensor.rows_num_capture_size_1024x768_regs, "capture_size_1024x768_regs");
 
+		state->postview_info.width = 1024;
+		state->postview_info.height = 768;
 		break;
 	}
 
@@ -1920,6 +2005,9 @@ int camdrv_ss_set_capture_size(struct v4l2_subdev *sd)
 			err = -EIO;
 		} else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.capture_size_1280x960_regs, sensor.rows_num_capture_size_1280x960_regs, "capture_size_1280x960_regs");
+
+		state->postview_info.width = 1024;
+		state->postview_info.height = 960;
 		break;
 	}
 
@@ -1931,6 +2019,8 @@ int camdrv_ss_set_capture_size(struct v4l2_subdev *sd)
 		} else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.capture_size_1600x960_regs, sensor.rows_num_capture_size_1600x960_regs, "capture_size_1600x960_regs");
 
+		state->postview_info.width = 1600;
+		state->postview_info.height = 960;
 		break;
 	}
 
@@ -1942,6 +2032,8 @@ int camdrv_ss_set_capture_size(struct v4l2_subdev *sd)
 		} else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.capture_size_1600x1200_regs, sensor.rows_num_capture_size_1600x1200_regs, "capture_size_1600x1200_regs");
 
+		state->postview_info.width = 1600;
+		state->postview_info.height = 1200;
 		break;
 	}
 
@@ -1953,6 +2045,9 @@ int camdrv_ss_set_capture_size(struct v4l2_subdev *sd)
 		} else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.capture_size_2048x1232_regs, sensor.rows_num_capture_size_2048x1232_regs, "capture_size_2048x1232_regs");
 
+		state->postview_info.width = 2048;
+		/* state->postview_info.height = 1232; */ /* aska modify to  match UI */
+		state->postview_info.height = 1152;
 		break;
 	}
 
@@ -1964,6 +2059,8 @@ int camdrv_ss_set_capture_size(struct v4l2_subdev *sd)
 		} else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.capture_size_2048x1536_regs, sensor.rows_num_capture_size_2048x1536_regs, "capture_size_2048x1536_regs");
 
+		state->postview_info.width = 2048;
+		state->postview_info.height = 1536;
 		break;
 	}
 
@@ -1975,6 +2072,8 @@ int camdrv_ss_set_capture_size(struct v4l2_subdev *sd)
 		} else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.capture_size_2560x1920_regs, sensor.rows_num_capture_size_2560x1920_regs, "capture_size_2560x1920_regs");
 
+		state->postview_info.width = 2560;
+		state->postview_info.height = 1920;
 		break;
 	}
 
@@ -2147,7 +2246,7 @@ static int camdrv_ss_set_capture_done(struct v4l2_subdev *sd, struct v4l2_contro
 	int err = 0;
 
 	CAM_INFO_PRINTK("%s\n", __func__);
-
+     /*Backporting Rhea to Hawaii start:Check if preflash was fired then only apply  settings*/
 	if (state->camera_af_flash_fire) {
 		if (sensor.snapshot_af_preflash_off_regs == 0) {
 			CAM_ERROR_PRINTK("%s %s : snapshot_af_preflash_off_regs not supported !!!\n", sensor.name, __func__);
@@ -2159,9 +2258,24 @@ static int camdrv_ss_set_capture_done(struct v4l2_subdev *sd, struct v4l2_contro
 		}
 	}
 
+       if (state->camera_flash_fire) /* Backporting Rhea to Hawaii:Check if flash is on then only apply main flash off settings*/
+       {
 	if (sensor.AAT_flash_control != NULL)
-		sensor.AAT_flash_control(sd, FLASH_CONTROL_OFF);
+        {
+		sensor.AAT_flash_control(sd, FLASH_CONTROL_OFF); /*Backporting Rhea to Hawaii:Turn off the main flash after capture done*/
+               //Add main flash off setting for Nevis
+               if(sensor.main_flash_off_regs != 0) 
+               {
+		     err = camdrv_ss_i2c_set_config_register(client, sensor.main_flash_off_regs, sensor.rows_num_main_flash_off_regs, "Main_Flash_End_EVT1");
+		     if (err < 0) {
+			CAM_ERROR_PRINTK("[%s: %d] ERROR! Setting main_flash_off_regs\n", __FILE__, __LINE__);
+		    }
+               }
+        }
+         //   state->camera_flash_fire = 0;
 
+	   }
+/*Backporting Rhea to Hawaii End*/
 /*
 	if(state->fps == FRAME_RATE_AUTO) {
 		CAM_ERROR_PRINTK("%s : Rollback to FRAME_RATE_AUTO again as capture is done !!\n",__func__);
@@ -2176,7 +2290,6 @@ static int camdrv_ss_set_capture_done(struct v4l2_subdev *sd, struct v4l2_contro
 	}
 */
 	atomic_set(&gCapModeState, CAMDRV_SS_CAPTURE_MODE_NOT_SUPPORT);
-
 	return 0;
 }
 
@@ -3481,6 +3594,9 @@ static void camdrv_ss_init_parameters(struct v4l2_subdev *sd)
 	state->jpeg_param.thumb_size = 0;
 	state->jpeg_param.postview_offset = 0;
 
+	state->postview_info.width = 320;
+	state->postview_info.height = 240;
+
 	state->current_flash_mode = FLASH_MODE_OFF;
 	state->camera_flash_fire = 0;
 	state->camera_af_flash_fire = 0;
@@ -3798,7 +3914,6 @@ static int camdrv_ss_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			ctrl->value = 1;
 		break;
 	}
-
 	case V4L2_CID_EXPOSURE:
 	{
 		ctrl->value = userset.exposure_bias;
@@ -4384,12 +4499,25 @@ static int camdrv_ss_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 					sensor.name, __func__);
 				break;
 			}
-
 			if (ctrl->value == AUTO_FOCUS_ON) {
 				err = sensor.set_touch_focus(sd, TOUCH_AF_START, NULL);
-			} else {
+			}
+            /*Backporting Rhea to Hawaii Start: To avoid frame drop in AF cancel, splited currently applied register into three part 
+			and pass them one by one
+			AUTO_FOCUS_1ST_CANCEL -> pass 1st part of register
+			AUTO_FOCUS_2ND_CANCEL -> pass 2nd part of register
+			AUTO_FOCUS_OFF -> pass last part
+			*/			
+			else if(ctrl->value == AUTO_FOCUS_OFF) {
 				err = sensor.set_touch_focus(sd, TOUCH_AF_STOP, NULL);
 				state->bTouchFocus = false;
+			}else if (ctrl->value ==AUTO_FOCUS_1ST_CANCEL)
+				{
+                                err = sensor.set_touch_focus(sd, AUTO_FOCUS_1ST_CANCEL, NULL);
+				}
+			       else if (ctrl->value ==AUTO_FOCUS_2ND_CANCEL)
+			       	{
+                                      err = sensor.set_touch_focus(sd, AUTO_FOCUS_2ND_CANCEL, NULL);
 			}
 		} else {
 			if (sensor.set_auto_focus == NULL) {
@@ -4406,7 +4534,16 @@ static int camdrv_ss_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 
 	case V4L2_CID_CAMERA_SET_AF_PREFLASH:
 	{
+		//err = camdrv_ss_set_af_preflash(sd, ctrl);
+		//Backporting Rhea to Hawaii: For Nevis added sensor specific preflash on rotuine
+              if(sensor.get_prefalsh_on !=NULL){
+                err = sensor.get_prefalsh_on(sd, ctrl);
+	      }
+	       else{
 		err = camdrv_ss_set_af_preflash(sd, ctrl);
+	       	}
+     
+	
 		break;
 	}
 
@@ -4542,15 +4679,9 @@ static int camdrv_ss_init(struct v4l2_subdev *sd, u32 val)
 	if (sensor.init_regs == NULL)
 		CAM_ERROR_PRINTK("%s %s : init_regs is NULL, please check if it is needed !!!\n", sensor.name, __func__);
 	else {
-#ifdef CONFIG_LOAD_FILE
-		if (sensor.smartStayChangeInitSetting != NULL) {
-			err = camdrv_ss_i2c_set_config_register(client, sensor.init_regs, sensor.rows_num_init_regs, "init_regs_smart_stay");
-		} else {
+
 			err = camdrv_ss_i2c_set_config_register(client, sensor.init_regs, sensor.rows_num_init_regs, "init_regs");
-		}
-#else
-		err = camdrv_ss_i2c_set_config_register(client, sensor.init_regs, sensor.rows_num_init_regs, "init_regs");
-#endif
+
 		}
 	if (err < 0) {
 		CAM_ERROR_PRINTK("%s %s :i2c failed !!\n", sensor.name, __func__);
@@ -4626,8 +4757,6 @@ static int camdrv_ss_cap_mode_change_monitor_thread_func(void *data)
 	/* CAM_INFO_PRINTK("%s %s, gCapModeState=%d, timeout=%d\n", sensor.name, __func__, atomic_read(&gCapModeState), timeout); */
 	return ret;
 }
-
-
 /**************************************************************************
  * DRIVER REGISTRATION FACTORS
  ***************************************************************************/
@@ -4762,9 +4891,29 @@ static int camdrv_ss_enum_input(struct soc_camera_device *icd, struct v4l2_input
 	if (icl && icl->priv) {
 		plat_parms = icl->priv;
 		inp->status = 0;
+/*Backporting Rhea to Hawaii: Patch from Broadcom for rotation issues CSP:576850*/
+		/* Samsung project not use PORTRAIT and LANDSCAPE */
+		if (plat_parms->orientation == V4L2_SUBDEV_SENSOR_PORTRAIT) {
+			CAM_INFO_PRINTK("%s %s : V4L2_SUBDEV_SENSOR_PORTRAIT and V4L2_SUBDEV_SENSOR_ORIENT_0 are same !\n", __func__, sensor.name);
+			plat_parms->orientation = V4L2_SUBDEV_SENSOR_ORIENT_0;
+		}
+		if (plat_parms->orientation == V4L2_SUBDEV_SENSOR_LANDSCAPE) {
+			CAM_INFO_PRINTK("%s %s : V4L2_SUBDEV_SENSOR_LANDSCAPE and V4L2_SUBDEV_SENSOR_ORIENT_90 are same !\n", __func__, sensor.name);
+			plat_parms->orientation = V4L2_SUBDEV_SENSOR_ORIENT_90;
+		}
 
-		if (plat_parms->orientation == V4L2_SUBDEV_SENSOR_PORTRAIT)
+		if (plat_parms->orientation ==
+			V4L2_SUBDEV_SENSOR_ORIENT_0)
+			inp->status &= ~(V4L2_IN_ST_HFLIP | V4L2_IN_ST_VFLIP);
+		else if (plat_parms->orientation ==
+			V4L2_SUBDEV_SENSOR_ORIENT_90)
 			inp->status |= V4L2_IN_ST_HFLIP;
+		else if (plat_parms->orientation ==
+			V4L2_SUBDEV_SENSOR_ORIENT_180)
+			inp->status |= V4L2_IN_ST_VFLIP;
+		else if (plat_parms->orientation ==
+			V4L2_SUBDEV_SENSOR_ORIENT_270)
+			inp->status |= (V4L2_IN_ST_HFLIP | V4L2_IN_ST_VFLIP);
 
 		if (plat_parms->facing == V4L2_SUBDEV_SENSOR_BACK)
 			inp->status |= V4L2_IN_ST_BACK;
@@ -4916,11 +5065,15 @@ bool camdrv_ss_power(int cam_id, int bOn)
 		}
 
 		if (atomic_read(&sensor_state) == CAMDRV_SS_INITIALIZING) {
-			CAM_ERROR_PRINTK("%s %s : Need to wait for the previous camera initialize finishes !\n", sensor.name, __func__);
-			if (0 == wait_event_interruptible_timeout(gCamdrvReadyQ, (atomic_read(&sensor_state) == CAMDRV_SS_INITIALIZE_DONE), msecs_to_jiffies(6000))) {
-				CAM_ERROR_PRINTK("%s %s : Serious problem ,TIMEOUT 6 sec, waited for event CAMDRV_SS_INITIALIZE_DONE: state =%d !\n", sensor.name, __func__, atomic_read(&sensor_state));
-				return -EFAULT;
+			CAM_ERROR_PRINTK("%s %s : Waiting for the camera initialize to finish and then we will power off camera !\n", sensor.name, __func__);
+			if (0 == wait_event_interruptible_timeout(gCamdrvReadyQ, ((atomic_read(&sensor_state) == CAMDRV_SS_INITIALIZE_DONE) || (atomic_read(&sensor_state) == CAMDRV_SS_INITIALIZE_FAILED)), msecs_to_jiffies(6000))) {
+				CAM_ERROR_PRINTK("%s %s : Serious problem ,TIMEOUT 6 sec, waited for event INITIALIZE or FAILED: state =%d !\n", sensor.name, __func__, atomic_read(&sensor_state));
 			}
+			if (atomic_read(&sensor_state) == CAMDRV_SS_INITIALIZE_FAILED)
+				CAM_ERROR_PRINTK("%s %s :  waiting finished.  CAMDRV_SS_INITIALIZE_FAILED,Now power off the camera !\n", sensor.name, __func__);
+			if (atomic_read(&sensor_state) == CAMDRV_SS_INITIALIZE_DONE)
+				CAM_ERROR_PRINTK("%s %s :  waiting finished.  CAMDRV_SS_INITIALIZE_DONE, Now power off the camera !\n", sensor.name, __func__);
+
 		}
 
 		GPIOSetup.name = PN_BSC1CLK;
@@ -4965,7 +5118,7 @@ static int camdrv_ss_probe(struct i2c_client *client, const struct i2c_device_id
 	struct v4l2_subdev *sd;
 	struct soc_camera_device *icd = client->dev.platform_data;
 	struct soc_camera_link *icl = NULL;
-
+	int ret;
 	CAM_INFO_PRINTK("%s %s :\n", __func__, sensor.name);
 
 	if (!icd) {
@@ -5040,7 +5193,15 @@ static int camdrv_ss_probe(struct i2c_client *client, const struct i2c_device_id
 				CAM_ERROR_PRINTK("Failed to create anti-banding device file,  %s\n",
 				camera_antibanding_attr.attr.name);
 			}
-
+                 /* AT command flash implementation */
+                  /*Backporting Rhea to Hawaii start:*/
+	          #ifdef CONFIG_FLASH_ENABLE
+			if (device_create_file(sec_main_cam_dev, &dev_attr_rear_flash) < 0) {
+			CAM_INFO_PRINTK( "[%s]: failed to create device file, %s\n", __func__,dev_attr_rear_flash.attr.name);
+			return 0;
+			}
+                  #endif
+                  /*Backporting Rhea to Hawaii End */
 			} else {
 				CAM_ERROR_PRINTK("Creat Sub cam device !\n");
 

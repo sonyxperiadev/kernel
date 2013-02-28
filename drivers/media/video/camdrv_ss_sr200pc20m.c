@@ -1535,6 +1535,8 @@ static struct regulator *VCAM_CORE_1_8_V;   //ASR_SW
 //main cam 
 #if defined(CONFIG_MACH_RHEA_SS_CORIPLUS)
 #define CAM_RST    92
+#elif defined(CONFIG_MACH_RHEA_SS_CORSICA)
+#define CAM_RST    33
 #else
 #define CAM_RST    13
 #endif

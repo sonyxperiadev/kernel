@@ -13,6 +13,7 @@
 #include <media/v4l2-chip-ident.h>
 #include <media/soc_camera.h>
 #include <linux/videodev2_brcm.h>
+#include <mach/clock.h>
 #include <camdrv_ss.h>
 #include <camdrv_ss_sr030pc50.h>
 
@@ -28,39 +29,34 @@ extern inline struct camdrv_ss_state *to_state(struct v4l2_subdev *sd);
 /*  GPIO numbers  needed for power on sequence.
   * If the same sensor is used for different variants/targets. please define those numbers here
   */
-#if defined(CONFIG_MACH_RHEA_SS_LUCAS) || defined(CONFIG_MACH_RHEA_IVORY)  || defined(CONFIG_MACH_RHEA_IVORYSS)
-	static struct regulator *VCAM_IO_1_8_V;  /* LDO_HV9 */
-	static struct regulator *VCAM_A_2_8_V;   /* LDO_CAM12/12/2011 */
-#ifdef CONFIG_SOC_CAMERA_POWER_USE_ASR   //for hw rev 0.3
-    static struct regulator *VCAM_CORE_1_2_V;   //ASR_SW
-#else
-	#define CAM_CORE_EN	   42
-#endif
-	#define CAM0_RESET    33
-	#define CAM0_STNBY    111
-	#define CAM1_RESET    23
-	#define CAM1_STNBY    34
-	#define SENSOR_0_CLK			"dig_ch0_clk"    //(common)
-	#define SENSOR_0_CLK_FREQ		(26000000) //@HW, need to check how fast this meaning.
-#else  //ZANIN and others
 	static struct regulator *VCAM_IO_1_8_V;  //LDO_HV9
 	static struct regulator *VCAM_A_2_8_V;   //LDO_CAM12/12/2011
 #ifdef CONFIG_SOC_CAMERA_POWER_USE_ASR   //for hw rev 0.3
-    static struct regulator *VCAM_CORE_1_2_V;   //ASR_SW
+	static struct regulator *VCAM_CORE_1_2_V;   //ASR_SW
 #else
-	#define CAM_CORE_EN	   42
-#endif
-	#define CAM_AF_EN     121
-	#define CAM0_RESET    33
-	#define CAM0_STNBY    111
-	#define CAM1_RESET    23
-	#define CAM1_STNBY    34
-	#define SENSOR_0_CLK			"dig_ch0_clk"    /* (common) */
-	#define SENSOR_0_CLK_FREQ		(26000000) /* @HW, need to check how fast this meaning. */
+	#define CAM_CORE_EN	   36
 #endif
 
+	#define CAM0_RESET			111
+	#define CAM0_STNBY			002
+	#define CAM1_RESET			004
+	#define CAM1_STNBY			005
+	#define SENSOR_0_CLK			"dig_ch0_clk"    /* (common) */
+	#define SENSOR_0_CLK_FREQ		(26000000) /* @HW, need to check how fast this meaning. */
+
 	#define VCAM_A_2_8V_REGULATOR		"mmcldo1"
-#if defined(CONFIG_MACH_HAWAII_SS_LOGAN_REV01)
+#if defined(CONFIG_MACH_HAWAII_SS_LOGAN_REV01) || defined(CONFIG_MACH_HAWAII_SS_LOGAN_REV02)
+	#define VCAM_IO_1_8V_REGULATOR		"lvldo1"
+#else
+	#define VCAM_IO_1_8V_REGULATOR		"tcxldo"
+#endif
+	#define VCAM_CORE_1_2V_REGULATOR	"vsrldo"
+
+#define CSI0_LP_FREQ			(100000000)
+#define CSI1_LP_FREQ			(100000000)
+
+	#define VCAM_A_2_8V_REGULATOR		"mmcldo1"
+#if defined(CONFIG_MACH_HAWAII_SS_LOGAN_REV01) || defined(CONFIG_MACH_HAWAII_SS_LOGAN_REV02)
 	#define VCAM_IO_1_8V_REGULATOR		"lvldo1"
 #else
 	#define VCAM_IO_1_8V_REGULATOR		"tcxldo"
@@ -515,40 +511,56 @@ static int camdrv_ss_sr030pc50_get_iso_speed_rate(struct v4l2_subdev *sd)
 
 static int camdrv_ss_sr030pc50_sensor_power(int on)
 {
-unsigned int value;
+	unsigned int value;
 	int ret = -1;
 	struct clk *clock;
 	struct clk *axi_clk;
-	static struct pi_mgr_dfs_node unicam_dfs_node; 
+	struct clk *axi_clk_0;
+	struct clk *lp_clock_0;
+	struct clk *lp_clock_1;
 
 	CAM_INFO_PRINTK("%s:camera power %s\n", __func__, (on ? "on" : "off"));
 
-	if (!unicam_dfs_node.valid) {
-		ret = pi_mgr_dfs_add_request(&unicam_dfs_node, "unicam", PI_MGR_PI_ID_MM,
-					   PI_MGR_DFS_MIN_VALUE);
-		if (ret) {
-			CAM_ERROR_PRINTK("%s: failed to register PI DFS request\n",__func__);
-			return -1;
-		}
-     }
+	ret = -1;
+	lp_clock_0 = clk_get(NULL, CSI0_LP_PERI_CLK_NAME_STR);
+	if (IS_ERR_OR_NULL(lp_clock_0)) {
+		printk(KERN_ERR "Unable to get %s clock\n",
+		CSI0_LP_PERI_CLK_NAME_STR);
+		goto e_clk_get;
+	}
+
+	lp_clock_1 = clk_get(NULL, CSI1_LP_PERI_CLK_NAME_STR);
+	if (IS_ERR_OR_NULL(lp_clock_1)) {
+		printk(KERN_ERR "Unable to get %s clock\n",
+		CSI1_LP_PERI_CLK_NAME_STR);
+		goto e_clk_get;
+	}
+
 	clock = clk_get(NULL, SENSOR_0_CLK);
-	if (!clock) {
-		CAM_ERROR_PRINTK("%s: unable to get clock %s\n", __func__, SENSOR_0_CLK);
-		return -1;
+	if (IS_ERR_OR_NULL(clock)) {
+		printk(KERN_ERR "Unable to get SENSOR_1 clock\n");
+		goto e_clk_get;
 	}
-	axi_clk = clk_get(NULL, "csi0_axi_clk");
-	if (!axi_clk) {
-		CAM_ERROR_PRINTK("%s:unable to get clock csi0_axi_clk\n", __func__);
-		return -1;
+
+	axi_clk_0 = clk_get(NULL, "csi0_axi_clk");
+	if (IS_ERR_OR_NULL(axi_clk_0)) {
+		printk(KERN_ERR "Unable to get AXI clock 0\n");
+		goto e_clk_get;
 	}
-	VCAM_A_2_8_V = regulator_get(NULL,"cam");
+
+	axi_clk = clk_get(NULL, "csi1_axi_clk");
+	if (IS_ERR_OR_NULL(axi_clk)) {
+		printk(KERN_ERR "Unable to get AXI clock 1\n");
+		goto e_clk_get;
+	}
+
+	VCAM_A_2_8_V  = regulator_get(NULL, VCAM_A_2_8V_REGULATOR);
 	if(IS_ERR(VCAM_A_2_8_V))
 	{
 		CAM_ERROR_PRINTK("can not get VCAM_A_2_8_V.8V\n");
 		return -1;
 	}
-
-	VCAM_IO_1_8_V = regulator_get(NULL,"hv9");
+	VCAM_IO_1_8_V  = regulator_get(NULL, VCAM_IO_1_8V_REGULATOR);
 	if(IS_ERR(VCAM_IO_1_8_V))
 	{
 		CAM_ERROR_PRINTK("can not get VCAM_IO_1.8V\n");
@@ -556,7 +568,7 @@ unsigned int value;
 	}	
 	
 #ifdef CONFIG_SOC_CAMERA_POWER_USE_ASR   //for hw rev 0.3
-	VCAM_CORE_1_2_V = regulator_get(NULL,"asr_nm_uc");
+	VCAM_CORE_1_2_V = regulator_get(NULL, VCAM_CORE_1_2V_REGULATOR);
 	if(IS_ERR(VCAM_CORE_1_2_V))
 	{
 		CAM_ERROR_PRINTK("can not get VCAM_CORE_1_2_V\n");
@@ -564,53 +576,106 @@ unsigned int value;
 	}	
 #else		
 	gpio_request(CAM_CORE_EN, "cam_1_2v");
-	gpio_direction_output(CAM_CORE_EN,0); 
+	gpio_direction_output(CAM_CORE_EN, 0);
 #endif
 	
 	CAM_INFO_PRINTK("set cam_rst cam_stnby  to low\n");
 	gpio_request(CAM0_RESET, "cam0_rst");
-	gpio_direction_output(CAM0_RESET,0);
+	gpio_direction_output(CAM0_RESET, 0);
 	
 	gpio_request(CAM0_STNBY, "cam0_stnby");
-	gpio_direction_output(CAM0_STNBY,0);
+	gpio_direction_output(CAM0_STNBY, 0);
 		
 	gpio_request(CAM1_RESET, "cam1_rst");
-	gpio_direction_output(CAM1_RESET,0);
+	gpio_direction_output(CAM1_RESET, 0);
 
 	gpio_request(CAM1_STNBY, "cam1_stnby");
-	gpio_direction_output(CAM1_STNBY,0);
+	gpio_direction_output(CAM1_STNBY, 0);
 
 
 	if(on)
 	{
 		CAM_INFO_PRINTK("power on the sensor \n"); //@HW
-		if (pi_mgr_dfs_request_update(&unicam_dfs_node, PI_OPP_TURBO)) {
-			CAM_ERROR_PRINTK("%s:failed to update dfs request for unicam\n",__func__);
-			return -1;
-		}
 
         regulator_set_voltage(VCAM_A_2_8_V,2800000,2800000);
         regulator_set_voltage(VCAM_IO_1_8_V,1800000,1800000);   
 #ifdef CONFIG_SOC_CAMERA_POWER_USE_ASR   //for hw rev 0.3
 		regulator_set_voltage(VCAM_CORE_1_2_V,1200000,1200000);
-#endif	
+#endif
+
+		if (mm_ccu_set_pll_select(CSI1_BYTE1_PLL, 8)) {
+			pr_err("failed to set BYTE1\n");
+			goto e_clk_pll;
+		}
+		if (mm_ccu_set_pll_select(CSI1_BYTE0_PLL, 8)) {
+			pr_err("failed to set BYTE0\n");
+			goto e_clk_pll;
+		}
+		if (mm_ccu_set_pll_select(CSI1_CAMPIX_PLL, 8)) {
+			pr_err("failed to set PIXPLL\n");
+			goto e_clk_pll;
+		}
+
+		value = clk_enable(lp_clock_0);
+		if (value) {
+			printk(KERN_ERR "Failed to enable lp clock 0\n");
+			goto e_clk_lp0;
+		}
+
+		value = clk_set_rate(lp_clock_0, CSI0_LP_FREQ);
+		if (value) {
+			pr_err("Failed to set lp clock 0\n");
+			goto e_clk_set_lp0;
+		}
+
+		value = clk_enable(lp_clock_1);
+		if (value) {
+			pr_err(KERN_ERR "Failed to enable lp clock 1\n");
+			goto e_clk_lp1;
+		}
+
+		value = clk_set_rate(lp_clock_1, CSI1_LP_FREQ);
+		if (value) {
+			pr_err("Failed to set lp clock 1\n");
+			goto e_clk_set_lp1;
+		}
+
+		value = clk_enable(axi_clk_0);
+		if (value) {
+			printk(KERN_ERR "Failed to enable axi clock 0\n");
+			goto e_clk_axi_clk_0;
+		}
 
 		value = clk_enable(axi_clk);
 		if (value) {
-			CAM_ERROR_PRINTK("%s:failed to enable csi2 axi clock\n", __func__);
-			return -1;
+			printk(KERN_ERR "Failed to enable axi clock 1\n");
+			goto e_clk_axi;
 		}
+
+/*
+		value = clk_enable(clock);
+		if (value) {
+			printk("Failed to enable sensor 1 clock\n");
+			goto e_clk_clock;
+		}
+
+		value = clk_set_rate(clock, SENSOR_0_CLK_FREQ);
+		if (value) {
+			printk("Failed to set sensor 1 clock\n");
+			goto e_clk_set_clock;
+		}
+*/
 
 		msleep(100);
 		CAM_INFO_PRINTK("power on the sensor's power supply\n"); //@HW
 
 		
 		regulator_enable(VCAM_A_2_8_V);
-		msleep(1);
+		
 
 		regulator_enable(VCAM_IO_1_8_V);
 	
-		msleep(5);	
+		//msleep(5);	
 	
 #ifdef CONFIG_SOC_CAMERA_POWER_USE_ASR   //for hw rev 0.3		
 		regulator_enable(VCAM_CORE_1_2_V);
@@ -625,19 +690,19 @@ unsigned int value;
 		gpio_set_value(CAM_CORE_EN,0); 
 #endif
 		msleep(12); //changed by aska for delay MCLK on time
-	
+
 		value = clk_enable(clock);
 		if (value) {
-			CAM_ERROR_PRINTK("%s: failed to enable clock %s\n", __func__,SENSOR_0_CLK);
-			return -1;
+			pr_err("Failed to enable sensor 0 clock\n");
+			goto e_clk_clock;
 		}
-		CAM_INFO_PRINTK("enable camera clock\n");
+
 		value = clk_set_rate(clock, SENSOR_0_CLK_FREQ);
 		if (value) {
-			CAM_ERROR_PRINTK("%s: failed to set the clock %s to freq %d\n",__func__, SENSOR_0_CLK, SENSOR_0_CLK_FREQ);
-			return -1;
+			pr_err("Failed to set sensor0 clock\n");
+			goto e_clk_set_clock;
 		}
-		CAM_INFO_PRINTK("set rate\n");
+
 		msleep(5);
 
 		gpio_set_value(CAM1_STNBY,1);
@@ -648,6 +713,8 @@ unsigned int value;
 	}
 	else
 	{
+		printk("power off the sensor \n"); //@HW
+
 		/* enable reset gpio */
 		gpio_set_value(CAM1_RESET,0);
 		msleep(1);
@@ -655,26 +722,40 @@ unsigned int value;
 		gpio_set_value(CAM1_STNBY,0);
 		msleep(1);
 
+		clk_disable(lp_clock_0);
+		clk_disable(lp_clock_1);
 		clk_disable(clock);
 		clk_disable(axi_clk);
+		clk_disable(axi_clk_0);
 		msleep(1);
 
 		/* enable power down gpio */
 
 		regulator_disable(VCAM_IO_1_8_V);
 		regulator_disable(VCAM_A_2_8_V);
-
-		if (pi_mgr_dfs_request_update(&unicam_dfs_node,
-					      PI_MGR_DFS_MIN_VALUE)) {
-			CAM_ERROR_PRINTK("%s: failed to update dfs request for unicam\n",__func__);
-		  }
-
 	}	
 	
 	return 0;
+
+e_clk_set_clock:
+	clk_disable(clock);
+e_clk_clock:
+	clk_disable(axi_clk);
+e_clk_axi:
+	clk_disable(axi_clk_0);
+e_clk_axi_clk_0:
+e_clk_set_lp1:
+	clk_disable(lp_clock_1);
+e_clk_lp1:
+e_clk_set_lp0:
+	clk_disable(lp_clock_0);
+e_clk_lp0:
+e_clk_pll:
+e_clk_get:
+	return ret;
 }
 
- 
+
 int camdrv_ss_sr030pc50_get_sensor_param_for_exif(
 	struct v4l2_subdev *sd,
 	struct v4l2_exif_sensor_info *exif_param)
