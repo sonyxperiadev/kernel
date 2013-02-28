@@ -48,7 +48,7 @@ the GPL, without Broadcom's express prior written consent.
 #include "vtqinit_priv.h"
 #include "vceprivate.h"
 
-#define DRIVER_VERSION 10134
+#define DRIVER_VERSION 10136
 #define VCE_DEV_MAJOR	0
 
 #define RHEA_VCE_BASE_PERIPHERAL_ADDRESS      VCE_BASE_ADDR
@@ -945,12 +945,16 @@ static long vce_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
 	case VTQ_IOCTL_CONFIGURE:
 		{
-			struct vtq_configure_ioctldata *d;
+			struct vtq_configure_ioctldata _d, *d = &_d;
 			uint32_t *fw;
 			unsigned int c;
 			int s;
 
-			d = (struct vtq_configure_ioctldata *)arg;
+			c = copy_from_user(d, (const void *)arg, sizeof(*d));
+			if (c > 0) {
+				err_print("bad arg from user\n");
+				return -EINVAL;
+			}
 
 			/* This kmalloc never gets freed */
 			fw = kmalloc(d->loader_textsz, GFP_KERNEL);
@@ -997,11 +1001,15 @@ static long vce_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
 	case VTQ_IOCTL_REGISTER_IMAGE_BLOB:
 		{
-			struct vtq_registerimage_blob_ioctldata *d;
+			struct vtq_registerimage_blob_ioctldata _d, *d = &_d;
 			uint32_t *scratch; /* TODO: fix this! */
 			unsigned int c;
 
-			d = (struct vtq_registerimage_blob_ioctldata *)arg;
+			c = copy_from_user(d, (const void *)arg, sizeof(*d));
+			if (c > 0) {
+				err_print("bad arg from user\n");
+				return -EINVAL;
+			}
 			if (d->blobid != VTQ_BLOB_ID_IMAGECONV) {
 				/* This ioctl may be repurposed in
 				 * future, so this is just a check
@@ -1029,17 +1037,26 @@ static long vce_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 					d->blob, d->blobsz);
 
 			kfree(scratch);
+			c = copy_to_user((void *)(arg +
+					offsetof(typeof(*d), result)),
+					&d->result, sizeof(d->result));
+			if (c > 0)
+				err_print("bad arg from user (ignoring)\n");
 		}
 		break;
 
 	case VTQ_IOCTL_REGISTER_IMAGE:
 		{
-			struct vtq_registerimage_ioctldata *d;
+			struct vtq_registerimage_ioctldata _d, *d = &_d;
 			uint32_t *scratch; /* TODO: fix this! */
 			unsigned int c;
 			vtq_proxy_image_id_t image_id;
 
-			d = (struct vtq_registerimage_ioctldata *)arg;
+			c = copy_from_user(d, (const void *)arg, sizeof(*d));
+			if (c > 0) {
+				err_print("bad arg from user\n");
+				return -EINVAL;
+			}
 			scratch = kmalloc(0x6000, GFP_KERNEL);
 			if (scratch == NULL) {
 				err_print("kmalloc failed\n");
@@ -1070,14 +1087,25 @@ static long vce_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 				d->image_id = image_id;
 
 			kfree(scratch);
+
+			c = copy_to_user((void *)(arg +
+					offsetof(typeof(*d), image_id)),
+					&d->image_id, sizeof(d->image_id));
+			if (c > 0)
+				err_print("bad arg from user (ignoring)\n");
 		}
 		break;
 
 	case VTQ_IOCTL_DEREGISTER_IMAGE:
 		{
-			struct vtq_deregisterimage_ioctldata *d;
+			struct vtq_deregisterimage_ioctldata _d, *d = &_d;
+			unsigned int c;
 
-			d = (struct vtq_deregisterimage_ioctldata *)arg;
+			c = copy_from_user(d, (const void *)arg, sizeof(*d));
+			if (c > 0) {
+				err_print("bad arg from user\n");
+				return -EINVAL;
+			}
 
 			vtqb_unregister_image(dev->vtq_ctx, d->image_id);
 			/* TODO: we should have a way to ensure the
@@ -1089,24 +1117,39 @@ static long vce_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	case VTQ_IOCTL_CREATE_TASK:
 	case VTQ_IOCTL_CREATE_TASK_NOFLAGS:
 		{
-			struct vtq_createtask_ioctldata_noflags *d;
+			struct vtq_createtask_ioctldata_noflags _d, *d = &_d;
+			unsigned int c;
 			vtq_task_id_t task_id;
 
-			d = (struct vtq_createtask_ioctldata_noflags *)arg;
+			c = copy_from_user(d, (const void *)arg, sizeof(*d));
+			if (c > 0) {
+				err_print("bad arg from user\n");
+				return -EINVAL;
+			}
 			task_id = vtqb_create_task(dev->vtq_ctx,
 					d->image_id, d->entrypoint);
 			if (task_id < 0)
 				ret = -EINVAL;
 			else
 				d->task_id = task_id;
+			c = copy_to_user((void *)(arg +
+					offsetof(typeof(*d), task_id)),
+					&d->task_id, sizeof(d->task_id));
+			if (c > 0)
+				err_print("bad arg from user (ignoring)\n");
 		}
 		break;
 
 	case VTQ_IOCTL_DESTROY_TASK:
 		{
-			struct vtq_destroytask_ioctldata *d;
+			struct vtq_destroytask_ioctldata _d, *d = &_d;
+			unsigned int c;
 
-			d = (struct vtq_destroytask_ioctldata *)arg;
+			c = copy_from_user(d, (const void *)arg, sizeof(*d));
+			if (c > 0) {
+				err_print("bad arg from user\n");
+				return -EINVAL;
+			}
 			vtqb_destroy_task(dev->vtq_ctx, d->task_id);
 		}
 		break;
@@ -1114,30 +1157,50 @@ static long vce_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	case VTQ_IOCTL_QUEUE_JOB:
 	case VTQ_IOCTL_QUEUE_JOB_NOFLAGS:
 		{
-			struct vtq_queuejob_ioctldata_noflags *d;
+			struct vtq_queuejob_ioctldata_noflags _d, *d = &_d;
+			unsigned int c;
 
-			d = (struct vtq_queuejob_ioctldata_noflags *)arg;
+			c = copy_from_user(d, (const void *)arg, sizeof(*d));
+			if (c > 0) {
+				err_print("bad arg from user\n");
+				return -EINVAL;
+			}
 			ret = vtqb_queue_job(dev->vtq_ctx,
 				d->task_id, d->arg0, d->arg1, d->arg2,
 				d->arg3, d->arg4, d->arg5, 0, &d->job_id);
+			c = copy_to_user((void *)(arg +
+					offsetof(typeof(*d), job_id)),
+					&d->job_id, sizeof(d->job_id));
+			if (c > 0)
+				err_print("bad arg from user (ignoring)\n");
 		}
 		break;
 
 	case VTQ_IOCTL_AWAIT_JOB:
 		{
-			struct vtq_awaitjob_ioctldata *d;
+			struct vtq_awaitjob_ioctldata _d, *d = &_d;
+			unsigned int c;
 
-			d = (struct vtq_awaitjob_ioctldata *)arg;
+			c = copy_from_user(d, (const void *)arg, sizeof(*d));
+			if (c > 0) {
+				err_print("bad arg from user\n");
+				return -EINVAL;
+			}
 			ret = vtqb_await_job(dev->vtq_ctx, d->job_id);
 		}
 		break;
 
 	case VTQ_IOCTL_ONLOADHOOK:
 		{
-			struct vtq_onloadhook_ioctldata *d;
+			struct vtq_onloadhook_ioctldata _d, *d = &_d;
+			unsigned int c;
 			int s;
 
-			d = (struct vtq_onloadhook_ioctldata *)arg;
+			c = copy_from_user(d, (const void *)arg, sizeof(*d));
+			if (c > 0) {
+				err_print("bad arg from user\n");
+				return -EINVAL;
+			}
 
 			s = vtq_onloadhook(vce_state.vtq_vce,
 					d->pc,
@@ -1179,9 +1242,14 @@ static long vce_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
 	case VTQ_IOCTL_MULTIPURPOSE_LOCK:
 		{
-			struct vtq_multipurposelock_ioctldata *d;
+			struct vtq_multipurposelock_ioctldata _d, *d = &_d;
+			unsigned int c;
 
-			d = (struct vtq_multipurposelock_ioctldata *)arg;
+			c = copy_from_user(d, (const void *)arg, sizeof(*d));
+			if (c > 0) {
+				err_print("bad arg from user\n");
+				return -EINVAL;
+			}
 
 			(void)d->flags;
 			vtqb_unlock_multi(dev->vtq_ctx,
@@ -1194,23 +1262,32 @@ static long vce_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 /* Image Conv linkage: */
 	case VTQ_IMAGECONV_IOCTL_READY:
 		{
-			struct vtq_imageconv_ready_ioctldata *d;
-
-			d = (struct vtq_imageconv_ready_ioctldata *)arg;
+			struct vtq_imageconv_ready_ioctldata _d, *d = &_d;
+			unsigned int c;
 
 			d->isready =
 				vtq_imageconv_ready(vce_state.vtq_imageconv);
 			ret = 0;
+			c = copy_to_user((void *)(arg +
+					offsetof(typeof(*d), isready)),
+					&d->isready, sizeof(d->isready));
+			if (c > 0)
+				err_print("bad arg from user (ignoring)\n");
 		}
 		break;
 
 	case VTQ_IMAGECONV_IOCTL_ENQUEUE_DIRECT:
 		{
-			struct vtq_imageconv_enqueue_direct_ioctldata *d;
+			struct vtq_imageconv_enqueue_direct_ioctldata _d,
+					*d = &_d;
+			unsigned int c;
 			vtq_job_id_t job_id;
 
-			d = (struct vtq_imageconv_enqueue_direct_ioctldata *)arg
-				;
+			c = copy_from_user(d, (const void *)arg, sizeof(*d));
+			if (c > 0) {
+				err_print("bad arg from user\n");
+				return -EINVAL;
+			}
 
 			ret = _imageconv_enqueue_direct(
 				dev,
@@ -1225,14 +1302,24 @@ static long vce_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 				&job_id);
 			if (ret == 0)
 				d->job_id = job_id;
+			c = copy_to_user((void *)(arg +
+					offsetof(typeof(*d), job_id)),
+					&d->job_id, sizeof(d->job_id));
+			if (c > 0)
+				err_print("bad arg from user (ignoring)\n");
 		}
 		break;
 
 	case VTQ_IMAGECONV_IOCTL_AWAIT:
 		{
-			struct vtq_imageconv_await_ioctldata *d;
+			struct vtq_imageconv_await_ioctldata _d, *d = &_d;
+			unsigned int c;
 
-			d = (struct vtq_imageconv_await_ioctldata *)arg;
+			c = copy_from_user(d, (const void *)arg, sizeof(*d));
+			if (c > 0) {
+				err_print("bad arg from user\n");
+				return -EINVAL;
+			}
 
 			ret = _imageconv_await(
 				dev,
