@@ -887,11 +887,13 @@ void AUDDRV_DisableDSPInput(int stop)
 	audio_control_dsp(AUDDRV_DSPCMD_DUAL_MIC_ON, FALSE, 0, 0, 0, 0);
 	audio_control_dsp(AUDDRV_DSPCMD_AUDIO_TURN_UL_COMPANDEROnOff,
 				  FALSE, 0, 0, 0, 0);
+#ifdef CONFIG_BCM_MODEM
 	dma_mic_spk =
 		(UInt16) (DSP_AADMAC_PRI_MIC_EN) |
 		(UInt16) (DSP_AADMAC_SEC_MIC_EN) |
 		(UInt16) (DSP_AADMAC_ECHO_REF_EN) |
 		(UInt16) (DSP_AADMAC_PACKED_16BIT_IN_OUT_EN);
+#endif
 #if defined(ENABLE_DMA_VOICE)
 	csl_dsp_caph_control_aadmac_disable_path(dma_mic_spk);
 #endif

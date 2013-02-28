@@ -36,7 +36,7 @@
 #include <linux/interrupt.h>
 #include <linux/slab.h>
 
-#if defined(CONFIG_HAVE_CLK) && !defined(CONFIG_MACH_HAWAII_FPGA)
+#if defined(CONFIG_HAVE_CLK) && !defined(CONFIG_MACH_BCM_FPGA)
 #define PV_HAS_CLK
 #endif
 

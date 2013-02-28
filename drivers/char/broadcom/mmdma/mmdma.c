@@ -74,7 +74,7 @@ int __init mmdma_init(void)
 	int ret;
 
 	pr_debug("init \n");
-#if defined (CONFIG_MACH_HAWAII_FPGA_E) || defined (CONFIG_MACH_HAWAII_FPGA)
+#if defined (CONFIG_MACH_BCM_FPGA_E) || defined (CONFIG_MACH_BCM_FPGA)
 	mmdmamajor = 208;
 	ret = register_chrdev(mmdmamajor, MMDMA_DEV_NAME, &mmdma_fops);
 	if (ret != 0)

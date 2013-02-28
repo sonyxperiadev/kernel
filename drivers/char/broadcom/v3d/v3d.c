@@ -233,7 +233,7 @@ typedef struct {
 	Imported stuff
 ********************************************************/
 /* Job Error Handling variables */
-#if defined (CONFIG_MACH_HAWAII_FPGA_E) || defined (CONFIG_MACH_HAWAII_FPGA)
+#if defined (CONFIG_MACH_BCM_FPGA_E) || defined (CONFIG_MACH_BCM_FPGA)
 #define V3D_ISR_TIMEOUT_IN_MS	(1000000)
 #else
 #define V3D_ISR_TIMEOUT_IN_MS	(1500)
@@ -1118,7 +1118,7 @@ static int enable_v3d_clock(void)
 {
 	int rc = 0;
 
-#ifndef CONFIG_MACH_HAWAII_FPGA
+#ifndef CONFIG_MACH_BCM_FPGA
 	if (pi_mgr_dfs_request_update(&v3d_state.dfs_node, PI_OPP_TURBO)) {
 		printk(KERN_ERR "Failed to update dfs request for DSI LCD\n");
 		return -EIO;
@@ -1144,7 +1144,7 @@ static int disable_v3d_clock(void)
 {
 	int rc = 0;
 
-#ifndef CONFIG_MACH_HAWAII_FPGA
+#ifndef CONFIG_MACH_BCM_FPGA
 	v3d_clk = clk_get(NULL, "v3d_axi_clk");
 	if (IS_ERR_OR_NULL(v3d_clk)) {
 		KLOG_E("%s: error get clock\n", __func__);
@@ -1933,7 +1933,7 @@ int __init v3d_init(void)
 		goto err2;
 	}
 
-#if defined (CONFIG_MACH_HAWAII_FPGA_E) || defined (CONFIG_MACH_HAWAII_FPGA)
+#if defined (CONFIG_MACH_BCM_FPGA_E) || defined (CONFIG_MACH_BCM_FPGA)
 	v3d_major = 206;
 #endif
 	ret = register_chrdev(v3d_major, V3D_DEV_NAME, &v3d_fops);
@@ -1941,7 +1941,7 @@ int __init v3d_init(void)
 		ret = -EINVAL;
 		goto err2;
 	}
-#if !defined (CONFIG_MACH_HAWAII_FPGA_E) && !defined (CONFIG_MACH_HAWAII_FPGA)
+#if !defined (CONFIG_MACH_BCM_FPGA_E) && !defined (CONFIG_MACH_BCM_FPGA)
 	else
 		v3d_major = ret;
 #endif

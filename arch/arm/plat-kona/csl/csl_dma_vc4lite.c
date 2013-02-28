@@ -34,7 +34,7 @@
 #include "linux/dma-mapping.h"
 #include <mach/memory.h>
 
-#if defined(CONFIG_HAVE_CLK) && !defined(CONFIG_MACH_HAWAII_FPGA) \
+#if defined(CONFIG_HAVE_CLK) && !defined(CONFIG_MACH_BCM_FPGA) \
 	&& defined(UNDER_LINUX)
 #include <mach/clock.h>
 #include <linux/clk.h>
@@ -43,7 +43,7 @@
 
 #include <linux/time.h>
 
-#if defined(CONFIG_MACH_HAWAII_FPGA) || defined(CONFIG_MACH_HAWAII_FPGA_E)
+#if defined(CONFIG_MACH_BCM_FPGA) || defined(CONFIG_MACH_BCM_FPGA_E)
 static struct timeval tv1, tv2;
 #endif
 
@@ -95,7 +95,7 @@ struct CslDmaVc4lite {
 
 static struct CslDmaVc4lite dmac;
 
-#if defined(CONFIG_MACH_HAWAII_FPGA_E) || defined(CONFIG_MACH_HAWAII_FPGA)
+#if defined(CONFIG_MACH_BCM_FPGA_E) || defined(CONFIG_MACH_BCM_FPGA)
 int gBurstEnable = 1;
 #endif
 
@@ -563,7 +563,7 @@ DMA_VC4LITE_STATUS csl_dma_vc4lite_start_transfer(DMA_VC4LITE_CHANNEL_t chanID)
 		return DMA_VC4LITE_STATUS_FAILURE;
 	}
 
-#if defined(CONFIG_MACH_HAWAII_FPGA) || defined(CONFIG_MACH_HAWAII_FPGA_E)
+#if defined(CONFIG_MACH_BCM_FPGA) || defined(CONFIG_MACH_BCM_FPGA_E)
 	do_gettimeofday(&tv1);
 #endif
 	if (chal_dma_vc4lite_enable_channel(pdma->handle, chanID) !=
@@ -653,7 +653,7 @@ DMA_VC4LITE_STATUS csl_dma_vc4lite_add_data(DMA_VC4LITE_CHANNEL_t chanID,
 #endif
 	/* set the ctrl block information */
 #ifdef CONFIG_ARCH_HAWAII
-#if defined(CONFIG_MACH_HAWAII_FPGA_E) || defined(CONFIG_MACH_HAWAII_FPGA)
+#if defined(CONFIG_MACH_BCM_FPGA_E) || defined(CONFIG_MACH_BCM_FPGA)
 	dmaCtrlBlkInfo.burstWriteEnable32 = gBurstEnable;
 #else
 	dmaCtrlBlkInfo.burstWriteEnable32 = pData->burstWriteEnable32;
@@ -786,7 +786,7 @@ DMA_VC4LITE_STATUS csl_dma_vc4lite_add_data_ex(DMA_VC4LITE_CHANNEL_t chanID,
 #endif
 	/* set the ctrl block information */
 #ifdef CONFIG_ARCH_HAWAII
-#if defined(CONFIG_MACH_HAWAII_FPGA_E) || defined(CONFIG_MACH_HAWAII_FPGA)
+#if defined(CONFIG_MACH_BCM_FPGA_E) || defined(CONFIG_MACH_BCM_FPGA)
 	dmaCtrlBlkInfo.burstWriteEnable32 = gBurstEnable;
 #else
 	dmaCtrlBlkInfo.burstWriteEnable32 = pData->burstWriteEnable32;
@@ -903,7 +903,7 @@ static irqreturn_t bcm_vc4l_dma_interrupt(int irq, void *dev_id)
 		return IRQ_HANDLED;
 #endif
 	}
-#if defined(CONFIG_MACH_HAWAII_FPGA) || defined(CONFIG_MACH_HAWAII_FPGA_E)
+#if defined(CONFIG_MACH_BCM_FPGA) || defined(CONFIG_MACH_BCM_FPGA_E)
 	do_gettimeofday(&tv2);
 	printk("dma tx time(us)=%d\n", (tv2.tv_sec-tv1.tv_sec)*1000000 +
 	tv2.tv_usec - tv1.tv_usec);

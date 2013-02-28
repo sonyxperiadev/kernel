@@ -85,7 +85,6 @@
 #define KONA_UART2_PA   UARTB3_BASE_ADDR
 
 #ifdef CONFIG_FB_BRCM_KONA
-#include <video/kona_fb_boot.h>
 #include <video/kona_fb.h>
 #endif
 

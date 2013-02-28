@@ -52,7 +52,7 @@ the GPL, without Broadcom's express prior written consent.
 
 #define MAX_ASYMMETRIC_PROC (8)
 #define DEFAULT_MM_DEV_TIMER_MS (100)
-#if defined(CONFIG_MACH_HAWAII_FPGA_E) || defined(CONFIG_MACH_HAWAII_FPGA)
+#if defined(CONFIG_MACH_BCM_FPGA_E) || defined(CONFIG_MACH_BCM_FPGA)
 #define DEFAULT_MM_DEV_TIMEOUT_MS (80000)
 #else
 #define DEFAULT_MM_DEV_TIMEOUT_MS (1000)

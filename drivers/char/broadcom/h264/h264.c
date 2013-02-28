@@ -98,7 +98,7 @@ static void disable_h264_clock(void);
 static struct clk *h264_clk;
 #endif
 
-#if defined(CONFIG_MACH_HAWAII_FPGA_E) || defined(CONFIG_MACH_HAWAII_FPGA)
+#if defined(CONFIG_MACH_BCM_FPGA_E) || defined(CONFIG_MACH_BCM_FPGA)
 #define H264_TIMEOUT (1000 * 100)
 #else
 #define H264_TIMEOUT (500 * 4)
@@ -536,8 +536,8 @@ int __init h264_init(void)
 
 	dbg_print("H264 Driver Init\n");
 
-#if defined(CONFIG_MACH_HAWAII_FPGA_E) || \
-	defined(CONFIG_MACH_HAWAII_FPGA) || \
+#if defined(CONFIG_MACH_BCM_FPGA_E) || \
+	defined(CONFIG_MACH_BCM_FPGA) || \
 	defined(CONFIG_ARCH_HAWAII)
 	h264_major = 209;
 	ret = register_chrdev(h264_major, H264_DEV_NAME, &h264_fops);

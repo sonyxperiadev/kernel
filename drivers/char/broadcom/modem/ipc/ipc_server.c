@@ -574,7 +574,7 @@ int cpStart(int isReset)
 }
 
 
-#ifndef CONFIG_MACH_HAWAII_FPGA
+#ifndef CONFIG_MACH_BCM_FPGA
 static int __init Comms_Start(void)
 {
 	return cpStart(0);   /* Normal Comms_Start */
