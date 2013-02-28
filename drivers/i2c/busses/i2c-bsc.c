@@ -2313,7 +2313,7 @@ static ssize_t set_i2c_bus_speed(struct file *file,
 	struct device *d;
 	struct i2c_adapter *adap;
 	struct bsc_adap_cfg *hw_cfg = NULL;
-	int speed = 0, buf_size, bus;
+	int speed = 0, buf_size;
 	unsigned int addr;
 	char data[64];
 

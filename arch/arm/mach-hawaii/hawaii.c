@@ -126,9 +126,6 @@ static void __init hawaii_l2x0_init(void)
 	 */
 	l2x0_init(l2cache_base, 0x00050000, 0xfff0ffff);
 
-#ifdef CONFIG_HAWAII_L2X0_PREFETCH
-	hawaii_l2x0_prefetch(1);
-#endif
 }
 #endif
 
