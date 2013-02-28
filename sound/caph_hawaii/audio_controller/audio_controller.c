@@ -336,6 +336,9 @@ void AUDCTRL_EnableTelephony(AUDIO_SOURCE_Enum_t source, AUDIO_SINK_Enum_t sink)
 	}
 
 	mode = GetAudioModeBySink(sink);
+	if ((sink == AUDIO_SINK_HEADSET) &&
+		(source == AUDIO_SOURCE_ANALOG_MAIN))
+		mode = AUDIO_MODE_USB;
 	if (mode == AUDIO_MODE_TTY) {
 		/* src could be main (VCO) or aux mic (FULL) */
 		sink = AUDIO_SINK_HEADSET;
@@ -657,7 +660,12 @@ void AUDCTRL_SetTelephonyMicSpkr(AUDIO_SOURCE_Enum_t source,
 		return;
 
 	mode = GetAudioModeBySink(sink);
-
+	/* if the sink is headset and source is main mic
+	* then it is head phone use case use AUDIO_MODE_USB mode for
+	* headphone */
+	if ((sink == AUDIO_SINK_HEADSET) &&
+		(source == AUDIO_SOURCE_ANALOG_MAIN))
+		mode = AUDIO_MODE_USB;
 	if (mode == AUDIO_MODE_TTY) {
 		/* src could be main (VCO) or aux mic (FULL) */
 		sink = AUDIO_SINK_HEADSET;
@@ -2619,7 +2627,14 @@ void AUDCTRL_EnableRecord(AUDIO_SOURCE_Enum_t source,
     record could mean its a concurrency case and shud
     retain the audiomode set by the higher priority app */
 	if (AUDCTRL_IsRecApp(AUDCTRL_GetAudioApp())) {
-		mode = GetAudioModeFromSource(source);
+		/* if source is passed as USB, then it is
+		 * headphone. use the usb mode for headphone
+		 */
+		if (source == AUDIO_SOURCE_USB) {
+			source = AUDIO_SOURCE_ANALOG_MAIN;
+			mode = AUDIO_MODE_USB;
+		} else
+			mode = GetAudioModeFromSource(source);
 		AUDCTRL_SaveAudioMode(mode); /* recording case */
 	}
 
