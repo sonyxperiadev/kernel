@@ -555,7 +555,8 @@ static long bcmpmu_ioctl_ltp(struct file *file, unsigned int cmd,
 				sizeof(struct bcmpmu_rw_data_ltp));
 		if (!ret) {
 			reg_enc = ENC_PMU_REG(FIFO_MODE, (u8)reg.map, reg.addr);
-			ret = bcmpmu->write_dev(bcmpmu, reg_enc, reg.val[0]);
+			ret = bcmpmu->write_dev(bcmpmu, reg_enc, (reg.val[0] &
+					0xff));
 			pr_pmucore(DATA, "BCMPMU register=0x%X, val=0x%X,"
 					"map=0x%X\n", reg.addr,
 					reg.val[0], reg.map);
@@ -597,7 +598,7 @@ static ssize_t bcmpmu_write(struct file *file, const char *data, size_t len,
 			sizeof(struct bcmpmu59xxx_rw_data));
 		if (!ret) {
 			reg_enc = ENC_PMU_REG(FIFO_MODE, (u8)reg.map, reg.addr);
-			ret = bcmpmu->write_dev(bcmpmu, reg_enc, reg.val);
+			ret = bcmpmu->write_dev(bcmpmu, reg_enc, (u8)reg.val);
 			if (ret != 0)
 				pr_pmucore(ERROR, "%s: write_dev failed.\n",
 				       __func__);

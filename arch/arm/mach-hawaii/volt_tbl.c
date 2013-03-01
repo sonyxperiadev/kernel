@@ -278,7 +278,7 @@ const u8 *get_sr_vlt_table(u32 silicon_type, int freq_id)
 
 	pr_info("%s silicon_type = %d, freq_id = %d\n", __func__,
 		silicon_type, freq_id);
-	if (silicon_type > SILICON_TYPE_MAX || freq_id > A9_FREQ_MAX)
+	if (silicon_type >= SILICON_TYPE_MAX || freq_id >= A9_FREQ_MAX)
 		BUG();
 	switch (freq_id) {
 	case A9_FREQ_1000_MHZ:
@@ -427,8 +427,8 @@ static ssize_t read_volt_tbl(struct file *file, const char __user *buf,
 				  size_t count, loff_t *ppos)
 {
 	u32 len = 0;
-	int freq_id = A9_FREQ_1000_MHZ;
-	int silicon_type = SILICON_TYPE_SLOW;
+	u32 freq_id = A9_FREQ_1000_MHZ;
+	u32 silicon_type = SILICON_TYPE_SLOW;
 	char input_str[10];
 	u8 *volt_table;
 	int i;
@@ -440,11 +440,11 @@ static ssize_t read_volt_tbl(struct file *file, const char __user *buf,
 	if (copy_from_user(input_str, buf, len))
 		return -EFAULT;
 	sscanf(input_str, "%d%d", &silicon_type, &freq_id);
-	if ((silicon_type >= SILICON_TYPE_MAX) || (silicon_type < 0)) {
+	if (silicon_type >= SILICON_TYPE_MAX) {
 		pr_err("%s: Invalid silicon type\n", __func__);
 		return count;
 	}
-	if (freq_id < 0 || freq_id >= A9_FREQ_MAX) {
+	if (freq_id >= A9_FREQ_1200_MHZ) {
 		pr_err("%s: Invalid freq id\n", __func__);
 		return count;
 	}

@@ -7965,14 +7965,15 @@ DEFINE_SIMPLE_ATTRIBUTE(misc_clock_status_fops, clk_debug_misc_status,
 static int clk_debug_misc_enable(void *data, u64 val)
 {
 	struct clk *clock = data;
+	int ret = 0;
 	if (val == 1)
-		clk_enable(clock);
+		ret = clk_enable(clock);
 	else if (val == 0)
 		clk_disable(clock);
 	else
 		clk_dbg("Invalid value\n");
 
-	return 0;
+	return ret;
 }
 DEFINE_SIMPLE_ATTRIBUTE(misc_clock_enable_fops, NULL, clk_debug_misc_enable,
 					"%llu\n");

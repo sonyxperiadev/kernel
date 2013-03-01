@@ -71,9 +71,11 @@ static void hawaii_poweroff(void)
 void hawaii_restart(char mode, const char *cmd)
 {
 #if defined(CONFIG_MFD_BCMPMU) || defined(CONFIG_MFD_BCM_PMU59xxx)
-	if (hard_reset_reason)
-		bcmpmu_client_hard_reset(hard_reset_reason);
-	else {
+	int ret = 0;
+	if (hard_reset_reason) {
+		ret = bcmpmu_client_hard_reset(hard_reset_reason);
+		BUG_ON(ret);
+	} else {
 		switch (mode) {
 		case 's':
 			/* Jump into X address. Unused.

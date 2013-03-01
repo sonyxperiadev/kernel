@@ -446,7 +446,10 @@ static int enter_retention_state(struct kona_idle_state *state)
 
 int hawaii_force_sleep(suspend_state_t state)
 {
-	struct kona_idle_state s;
+	struct kona_idle_state s = {
+		.params = 0,
+	};
+	/* Initializing const param to zero, to avoid coverity error */
 	int i;
 	memset(&s, 0, sizeof(s));
 	s.state = get_force_sleep_state();

@@ -589,9 +589,10 @@ int log_pm(int num, ...)
 
 	va_start(args, num);
 	byte = va_arg(args, int);
-	if (byte < 0 || byte >= DBG_MSG_MAX || !dbg_en[byte])
+	if (byte < 0 || byte >= DBG_MSG_MAX || !dbg_en[byte]) {
+		va_end(args);
 		return bytes;
-
+	}
 	this_cpu = smp_processor_id();
 	spin_lock_irqsave(&pm_logbuf_lock, flags);
 	if (timestamp_en) {

@@ -593,7 +593,7 @@ err:
 static int param_get_irdrop_si_type(char *buffer, const struct kernel_param *kp)
 {
 	u32 si_type = avs_compute_type_from_irdrop(&avs_info, true);
-	return sprintf(buffer, "%u\n", si_type);
+	return snprintf(buffer, 10, "%u\n", si_type);
 }
 
 static void avs_pack_n_cpy(char **ptr, u32 val, u32 num_bits)

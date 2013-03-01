@@ -576,11 +576,8 @@ static int bcmpmu_fg_reset(struct bcmpmu_fg_data *fg)
 	pr_fg(INIT, "Reset Fuel Gauge HW\n");
 	ret = fg->bcmpmu->read_dev(fg->bcmpmu, PMU_REG_FGCTRL2, &reg);
 	if(!ret) {
-		if (ret) {
-			reg |= FGCTRL2_FGRESET_MASK;
-			ret = fg->bcmpmu->write_dev(fg->bcmpmu, PMU_REG_FGCTRL2,
-					reg);
-		}
+		reg |= FGCTRL2_FGRESET_MASK;
+		ret = fg->bcmpmu->write_dev(fg->bcmpmu, PMU_REG_FGCTRL2, reg);
 	}
 	return ret;
 }
@@ -699,8 +696,8 @@ static int bcmpmu_fg_get_esr_to_ocv(int volt, int curr, int offset,
 {
 	int ocv = 0;
 	s64 temp, temp1;
-	temp = 1000 + (slope * curr / 1000);
-	temp1 = 1000 * volt - offset * curr;
+	temp = 1000 + ((s64)(slope * curr) / 1000);
+	temp1 = (s64)(1000 * volt) - (s64)(offset * curr);
 
 	if (temp != 0)
 		ocv = div64_s64(temp1, temp);
@@ -2588,7 +2585,7 @@ static void bcmpmu_fg_debugfs_init(struct bcmpmu_fg_data *fg)
 	dentry_fg_file = debugfs_create_u32("capacity", DEBUG_FS_PERMISSIONS,
 				dentry_fg_dir,
 				&fg->capacity_info.prev_percentage);
-	if (IS_ERR_OR_NULL(dentry_fg_dir))
+	if (IS_ERR_OR_NULL(dentry_fg_file))
 		goto debugfs_clean;
 
 	dentry_fg_file = debugfs_create_u32("eoc_curr", DEBUG_FS_PERMISSIONS,

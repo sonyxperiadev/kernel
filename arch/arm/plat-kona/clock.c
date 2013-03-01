@@ -5304,8 +5304,9 @@ static int clk_debug_get_rate(void *data, u64 *val)
 static int clk_debug_set_rate(void *data, u64 val)
 {
 	struct clk *clock = data;
-	clk_set_rate(clock, val);
-	return 0;
+	int ret;
+	ret = clk_set_rate(clock, val);
+	return ret;
 }
 
 DEFINE_SIMPLE_ATTRIBUTE(clock_rate_fops, clk_debug_get_rate,

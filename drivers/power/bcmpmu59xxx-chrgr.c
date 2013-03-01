@@ -241,7 +241,7 @@ int  bcmpmu_get_icc_fc(struct bcmpmu59xxx *bcmpmu)
 	u8 reg;
 
 	ret = bcmpmu->read_dev(bcmpmu, PMU_REG_MBCCTRL10, &reg);
-	if (reg < 0 || reg >= ARRAY_SIZE(bcmpmu_pmu_curr_table))
+	if (reg >= ARRAY_SIZE(bcmpmu_pmu_curr_table))
 		return -EINVAL;
 	return bcmpmu_pmu_curr_table[reg];
 
