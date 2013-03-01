@@ -889,10 +889,12 @@ static struct kona_headset_pd hawaii_headset_data = {
 	 */
 	.gpio_for_accessory_detection = 1,
 
+    /* Low voltage mode for test purposes only.
+     * Leave disabled for normal usage*/
 	/*
 	 * Pass the board specific button detection range
 	 */
-	.button_adc_values_low = hawaii_button_adc_values,
+	.button_adc_values_low = 0,
 
 	/*
 	 * Pass the board specific button detection range
