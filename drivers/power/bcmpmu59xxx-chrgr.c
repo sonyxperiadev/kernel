@@ -72,6 +72,7 @@ struct bcmpmu_chrgr_data {
 	struct notifier_block chgr_detect;
 	struct notifier_block chgr_curr_lmt;
 	u8 usb_cc_trim_otp;
+	bool icc_host_ctrl;
 };
 
 struct bcmpmu_chrgr_data *gbl_di;
@@ -173,17 +174,28 @@ int bcmpmu_set_icc_fc(struct bcmpmu59xxx *bcmpmu, int curr)
 	int ret = 0;
 	int val ;
 	struct bcmpmu_accy *accy = bcmpmu->accyinfo;
+
 	if (curr < 0)
 		return -EINVAL;
-	if (curr == 0) {
-		ret = bcmpmu_chrgr_usb_en(bcmpmu, 0);
-		return ret;
-	}
+
 	val = bcmpmu_get_curr_val(curr);
-	pr_chrgr(INIT , "%s: curr set to val %x\n", __func__, (val & 0xF));
 	ret = bcmpmu->write_dev(bcmpmu, PMU_REG_MBCCTRL10, (val & 0xF));
 	if (!ret)
 		accy->usb_accy_data.max_curr_chrgr = val;
+	pr_chrgr(INIT , "%s: curr = %d set to val %x\n",
+			__func__, curr, (val & 0xF));
+
+	/* If the curr passed is less than the minimum supported curr,
+	 * disbale charging
+	 * */
+	if (curr < bcmpmu_pmu_curr_table[0]) {
+		ret = bcmpmu_chrgr_usb_en(bcmpmu, 0);
+		gbl_di->icc_host_ctrl = false;
+	} else if ((!gbl_di->icc_host_ctrl) &&
+			(curr > bcmpmu_pmu_curr_table[0])) {
+		ret = bcmpmu_chrgr_usb_en(bcmpmu, 1);
+		gbl_di->icc_host_ctrl = true;
+	}
 
 	return ret;
 }
@@ -551,6 +563,8 @@ static int __devinit bcmpmu_chrgr_probe(struct platform_device *pdev)
 	di->bcmpmu = bcmpmu;
 	paccy = bcmpmu->accyinfo;
 	gbl_di = di;
+
+	di->icc_host_ctrl = true;
 
 	platform_set_drvdata(pdev, di);
 	/*do not register psy if SPA is enabled*/
