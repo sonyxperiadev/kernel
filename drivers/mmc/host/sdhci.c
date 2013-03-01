@@ -1185,9 +1185,13 @@ static void sdhci_set_clock(struct sdhci_host *host, unsigned int clock)
 		div >>= 1;
 	}
 
+#if defined(CONFIG_MACH_BCM_FPGA_E)
+	/* Set div = 0 for Java Eve */
+	div = 0;
+#endif
+
 	if (real_div)
 		host->mmc->actual_clock = (host->max_clk * clk_mul) / real_div;
-
 	clk |= (div & SDHCI_DIV_MASK) << SDHCI_DIVIDER_SHIFT;
 	clk |= ((div & SDHCI_DIV_HI_MASK) >> SDHCI_DIV_MASK_LEN)
 		<< SDHCI_DIVIDER_HI_SHIFT;
@@ -3226,7 +3230,8 @@ int sdhci_add_host(struct sdhci_host *host)
 	 */
 	mmc->ops = &sdhci_ops;
 	mmc->f_max = host->max_clk;
-#if defined(CONFIG_MACH_BCM2850_FPGA) || defined(CONFIG_MACH_BCM_FPGA)
+#if defined(CONFIG_MACH_BCM2850_FPGA) || defined(CONFIG_MACH_BCM_FPGA) || \
+	defined(CONFIG_MACH_BCM_FPGA_E)
 	/* frequency divisor does not work on FPGA image */
 	mmc->f_min = host->max_clk;
 #else
@@ -3241,7 +3246,6 @@ int sdhci_add_host(struct sdhci_host *host)
 	} else
 		mmc->f_min = host->max_clk / SDHCI_MAX_DIV_SPEC_200;
 #endif
-
 	host->timeout_clk =
 		(caps[0] & SDHCI_TIMEOUT_CLK_MASK) >> SDHCI_TIMEOUT_CLK_SHIFT;
 	if (host->timeout_clk == 0) {

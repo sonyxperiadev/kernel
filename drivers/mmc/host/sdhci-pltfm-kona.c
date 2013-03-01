@@ -912,7 +912,7 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 		dev->clk_hz = gClock[dev->devtype];
 	}
 #elif defined(CONFIG_MACH_BCM_FPGA)
-	dev->clk_hz =  hw_cfg->peri_clk_rate;
+	dev->clk_hz = hw_cfg->peri_clk_rate;
 #else
 	/* peripheral clock */
 	dev->peri_clk = clk_get(&pdev->dev, hw_cfg->peri_clk_name);
@@ -1012,9 +1012,11 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 		    MMC_PM_KEEP_POWER | MMC_PM_IGNORE_PM_NOTIFY;
 	}
 
+#if !defined(CONFIG_MACH_BCM_FPGA_E)
 	/* Enable 1.8V DDR operation for e.MMC */
 	if (dev->devtype == SDIO_DEV_TYPE_EMMC)
 		host->mmc->caps |= MMC_CAP_1_8V_DDR;
+#endif
 
 	/* Don't issue SLEEP command to e.MMC device */
 	if (dev->devtype == SDIO_DEV_TYPE_EMMC)

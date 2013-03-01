@@ -260,6 +260,17 @@ static void __init hawaii_ray_add_devices(void)
 				ARRAY_SIZE(spi_slave_board_info));
 }
 
+static const struct of_dev_auxdata hawaii_auxdata_lookup[] __initconst = {
+
+	OF_DEV_AUXDATA("bcm,sdhci", 0x3F190000,
+		"sdhci.1", NULL),
+
+	OF_DEV_AUXDATA("bcm,sdhci", 0x3F180000,
+		"sdhci.0", NULL),
+
+	{},
+};
+
 static struct of_device_id hawaii_dt_match_table[] __initdata = {
 	{ .compatible = "simple-bus", },
 	{}
@@ -269,7 +280,8 @@ void __init board_init(void)
 {
 	hawaii_ray_add_devices();
 	hawaii_add_common_devices();
-	of_platform_populate(NULL, hawaii_dt_match_table, NULL, NULL);
+	of_platform_populate(NULL, hawaii_dt_match_table,
+			hawaii_auxdata_lookup, &platform_bus);
 	return;
 }
 

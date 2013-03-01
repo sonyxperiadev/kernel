@@ -942,6 +942,13 @@ static int mmc_init_card(struct mmc_host *host, u32 ocr,
 	}
 
 	if (!oldcard) {
+#if defined(CONFIG_MACH_BCM_FPGA_E)
+		err = mmc_switch(card, EXT_CSD_CMD_SET_NORMAL,
+					 EXT_CSD_BUS_WIDTH, 1, 0);
+		if (!err) {
+			mmc_set_bus_width(card->host, 2);
+		}
+#endif
 		/*
 		 * Fetch and process extended CSD.
 		 */
