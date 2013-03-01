@@ -226,7 +226,7 @@
 		channel = <1>;
 		phy-rate = <0>;
 		pix-clk = <0>;
-		regulators = "lvldo2_uc", "mmc1_vcc";
+		regulators = "lvldo1_uc", "mmc1_vcc";
 	};
 
 	kona-fb {
