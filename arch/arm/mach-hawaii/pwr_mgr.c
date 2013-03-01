@@ -46,6 +46,8 @@
 #include <mach/pm.h>
 #include <plat/kona_pm.h>
 #endif
+#include <mach/rdb/brcm_rdb_root_clk_mgr_reg.h>
+
 
 #define VLT_LUT_SIZE	16
 
@@ -719,6 +721,8 @@ static int __init hawaii_pwr_mgr_init(void)
 	int update_vlt_tbl = 1;
 #endif
 	int i;
+	u32 reg_val;
+	int insurance = 1000;
 	struct pi *pi;
 	struct v0x_spec_i2c_cmd_ptr dummy_seq_v0_ptr = {
 		.other_ptr = DUMMY_SEQ_VO0_HW_SEQ_START_OFF,
@@ -764,6 +768,31 @@ static int __init hawaii_pwr_mgr_init(void)
 	Recommended workaround is to set the POWER_OK_MASK bit to 0 */
 	if (is_pm_erratum(ERRATUM_MM_POWER_OK))
 		pwr_mgr_ignore_power_ok_signal(false);
+#endif
+
+#if defined(CONFIG_PLL1_8PHASE_OFF_ERRATUM) ||\
+		defined(CONFIG_MM_FREEZE_VAR500M_ERRATUM)
+	writel(0x00A5A501, KONA_ROOT_CLK_VA +
+			ROOT_CLK_MGR_REG_WR_ACCESS_OFFSET);
+	if (is_pm_erratum(ERRATUM_PLL1_8PHASE_OFF)) {
+		reg_val = readl(KONA_ROOT_CLK_VA
+				+ ROOT_CLK_MGR_REG_PLL1CTRL0_OFFSET);
+		reg_val |= ROOT_CLK_MGR_REG_PLL1CTRL0_PLL1_8PHASE_EN_MASK;
+		/*Enable 8ph bit in pll 1*/
+		do {
+			writel(reg_val, KONA_ROOT_CLK_VA
+				+ ROOT_CLK_MGR_REG_PLL1CTRL0_OFFSET);
+			insurance--;
+		} while (!(readl(KONA_ROOT_CLK_VA +
+			ROOT_CLK_MGR_REG_PLL1CTRL0_OFFSET) &
+			ROOT_CLK_MGR_REG_PLL1CTRL0_PLL1_8PHASE_EN_MASK) &&
+			insurance);
+		BUG_ON(insurance == 0);
+	}
+	if (is_pm_erratum(ERRATUM_MM_FREEZE_VAR500M))
+		var500m_clk_en_override(true);
+
+	writel(0, KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_WR_ACCESS_OFFSET);
 #endif
 
 	/*MM override is not set by default */
