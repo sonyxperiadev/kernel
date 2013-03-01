@@ -47,7 +47,7 @@ typedef u32 axipv_async_buf_t;
  * from display drivers, we can change this accordingly*/
 #define AXIPV_MAX_DISP_BUFF_SUPP 2
 
-#if defined(CONFIG_HAVE_CLK) && !defined(CONFIG_MACH_HAWAII_FPGA)
+#if defined(CONFIG_HAVE_CLK) && !defined(CONFIG_MACH_BCM_FPGA)
 #define AXIPV_HAS_CLK
 #endif
 

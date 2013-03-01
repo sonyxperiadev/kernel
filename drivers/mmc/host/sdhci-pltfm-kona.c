@@ -79,7 +79,7 @@
 #define SD_DETECT_GPIO_DEBOUNCE_128MS	128
 
 #define KONA_SDMMC_DISABLE_DELAY	(100)
-#ifdef CONFIG_MACH_HAWAII_FPGA
+#ifdef CONFIG_MACH_BCM_FPGA
 #define KONA_SDMMC_OFF_TIMEOUT		(800000)
 #else
 #define KONA_SDMMC_OFF_TIMEOUT		(8000)
@@ -501,7 +501,7 @@ static irqreturn_t sdhci_pltfm_cd_interrupt(int irq, void *dev_id)
 
 static int sdhci_pltfm_clk_enable(struct sdio_dev *dev, int enable)
 {
-#if defined(CONFIG_ARCH_SAMOA) || defined(CONFIG_MACH_HAWAII_FPGA)
+#if defined(CONFIG_ARCH_SAMOA) || defined(CONFIG_MACH_BCM_FPGA)
 	return 0;
 #else
 	int ret = 0;
@@ -879,7 +879,6 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 #ifdef CONFIG_MACH_RHEA_DALTON2_EB30
         host->quirks |= SDHCI_QUIRK_NO_MULTIBLOCK;
 #endif
-       
         pr_debug("%s: GET IRQ\n", __func__);
 
 	if (hw_cfg->flags & KONA_SDIO_FLAGS_DEVICE_NON_REMOVABLE)
@@ -927,7 +926,7 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 	} else {
 		dev->clk_hz = gClock[dev->devtype];
 	}
-#elif defined(CONFIG_MACH_HAWAII_FPGA)
+#elif defined(CONFIG_MACH_BCM_FPGA)
 	dev->clk_hz =  hw_cfg->peri_clk_rate;
 #else
 	/* peripheral clock */
@@ -1199,7 +1198,7 @@ err_reset:
 err_term_clk:
 	sdhci_pltfm_clk_enable(dev, 0);
 
-#if !defined(CONFIG_MACH_BCM2850_FPGA) && !defined(CONFIG_MACH_HAWAII_FPGA)
+#if !defined(CONFIG_MACH_BCM2850_FPGA) && !defined(CONFIG_MACH_BCM_FPGA)
 err_sleep_clk_disable:
 	clk_disable(dev->sleep_clk);
 
@@ -1282,7 +1281,7 @@ static int __devexit sdhci_pltfm_remove(struct platform_device *pdev)
 				"disable clock during pltfm remove failed\n");
 	}
 
-#if !defined(CONFIG_MACH_BCM2850_FPGA) && !defined(CONFIG_MACH_HAWAII_FPGA)
+#if !defined(CONFIG_MACH_BCM2850_FPGA) && !defined(CONFIG_MACH_BCM_FPGA)
 	clk_disable(dev->sleep_clk);
 	clk_put(dev->sleep_clk);
 	clk_put(dev->peri_clk);

@@ -1,0 +1,36 @@
+#
+# Broadcom board specific definition
+# This is a common place of defining all the board specific defines
+#
+
+menu "Brcm FPGA board config"
+
+config MACH_BCM_FPGA
+	bool "Hawaii/Java SoC version - FPGA"
+	help
+	"This is a common place
+	of defining all the
+	FPGA specific
+	defines"
+
+config MACH_BCM_FPGA_E
+	bool "Hawaii/Java SoC version - FPGA Eve"
+	help
+	"This is a common place
+	of defining all the
+	FPGA_E specific
+	defines"
+
+config MACH_BCM_FPGA_PERI_V1
+	bool
+	depends on MACH_BCM_FPGA_E
+
+config MACH_BCM_FPGA_MM_V1
+	bool
+	depends on MACH_BCM_FPGA
+
+config MACH_BCM_FPGA_USB_V1
+	bool
+	depends on MACH_BCM_FPGA
+
+endmenu

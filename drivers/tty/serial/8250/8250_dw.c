@@ -227,7 +227,7 @@ static int __devinit dw8250_probe(struct platform_device *pdev)
 
 			pdev->dev.platform_data = p;
 
-#ifndef CONFIG_MACH_HAWAII_FPGA
+#ifndef CONFIG_MACH_BCM_FPGA
 			data->clk = clk_get(port.dev, p->clk_name);
 			if (IS_ERR(data->clk))
 				return PTR_ERR(data->clk);

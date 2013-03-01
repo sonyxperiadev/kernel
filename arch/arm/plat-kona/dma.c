@@ -1380,7 +1380,7 @@ int dma_start_transfer(unsigned int chan)
 	}
 #endif
 
-#ifndef CONFIG_MACH_HAWAII_FPGA
+#ifndef CONFIG_MACH_BCM_FPGA
 	/* Enable the clock before the transfer */
 	ret = clk_enable(dmac->clk);
 	if (ret)
@@ -1411,7 +1411,7 @@ int dma_start_transfer(unsigned int chan)
 	return 0;
       err2:
 	dmux_sema_unprotect();
-#ifndef CONFIG_MACH_HAWAII_FPGA
+#ifndef CONFIG_MACH_BCM_FPGA
 	clk_disable(dmac->clk);
 #endif
       err1:
@@ -1449,7 +1449,7 @@ int dma_stop_transfer(unsigned int chan)
 	/* free memory allocated for this request */
 	_cleanup_req(&c->req);
 
-#ifndef CONFIG_MACH_HAWAII_FPGA
+#ifndef CONFIG_MACH_BCM_FPGA
 	/* Disable clock after transfer */
 	clk_disable(dmac->clk);
 #endif
@@ -1599,7 +1599,7 @@ static int pl330_probe(struct platform_device *pdev)
 		goto probe_err3;
 	}
 
-#ifndef CONFIG_MACH_HAWAII_FPGA
+#ifndef CONFIG_MACH_BCM_FPGA
 	/* Get the clock struct */
 	pd->clk = clk_get(NULL, DMAC_MUX_APB_BUS_CLK_NAME_STR);
 	if (IS_ERR_OR_NULL(pd->clk)) {

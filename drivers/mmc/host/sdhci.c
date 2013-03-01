@@ -669,7 +669,7 @@ static u8 sdhci_calc_timeout(struct sdhci_host *host, struct mmc_command *cmd)
 	 * timeout value.
 	 */
 	if (host->quirks & SDHCI_QUIRK_BROKEN_TIMEOUT_VAL) {
-#ifdef CONFIG_MACH_HAWAII_FPGA
+#ifdef CONFIG_MACH_BCM_FPGA
 		return 0x8;
 #else
 		return 0xE;
@@ -3201,7 +3201,7 @@ int sdhci_add_host(struct sdhci_host *host)
 	 */
 	mmc->ops = &sdhci_ops;
 	mmc->f_max = host->max_clk;
-#if defined(CONFIG_MACH_BCM2850_FPGA) || defined(CONFIG_MACH_HAWAII_FPGA)
+#if defined(CONFIG_MACH_BCM2850_FPGA) || defined(CONFIG_MACH_BCM_FPGA)
 	/* frequency divisor does not work on FPGA image */
 	mmc->f_min = host->max_clk;
 #else
@@ -3265,7 +3265,7 @@ int sdhci_add_host(struct sdhci_host *host)
 		mmc->caps |= MMC_CAP_4_BIT_DATA;
 
 /* FPGA not fast enough for high speed */
-#if !defined(CONFIG_MACH_BCM2850_FPGA) && !defined(CONFIG_MACH_HAWAII_FPGA)
+#if !defined(CONFIG_MACH_BCM2850_FPGA) && !defined(CONFIG_MACH_BCM_FPGA)
 	if (caps[0] & SDHCI_CAN_DO_HISPD)
 #ifdef CONFIG_MMC_BCM_SD
 		mmc->caps |= MMC_CAP_SD_HIGHSPEED | MMC_CAP_MMC_HIGHSPEED;
@@ -3278,7 +3278,8 @@ int sdhci_add_host(struct sdhci_host *host)
 	    mmc_card_is_removable(mmc))
 		mmc->caps |= MMC_CAP_NEEDS_POLL;
 
-#if !defined(CONFIG_ARCH_ISLAND) && !defined(CONFIG_ARCH_CAPRI) && !defined(CONFIG_MACH_HAWAII_FPGA)
+#if !defined(CONFIG_ARCH_ISLAND) && !defined(CONFIG_ARCH_CAPRI)\
+	&& !defined(CONFIG_MACH_BCM_FPGA)
 	/* Any UHS-I mode in caps implies SDR12 and SDR25 support. */
 	if (caps[1] & (SDHCI_SUPPORT_SDR104 | SDHCI_SUPPORT_SDR50 |
 		       SDHCI_SUPPORT_DDR50))

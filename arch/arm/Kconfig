@@ -1025,14 +1025,8 @@ config ARCH_KONA
         select GENERIC_CLOCKEVENTS
         select ARCH_HAS_CPUFREQ
         select HAVE_SCHED_CLOCK
-        select ARM_ERRATA_751472 if SMP
-        select ARM_ERRATA_754322
-        select ARM_ERRATA_764369 if SMP
-	select ARM_ERRATA_782773
-        select KONA_WFI_WORKAROUND if SMP
-	select MIGHT_HAVE_CACHE_L2X0
-	select TICK_ONESHOT
-	select ARM_AMBA
+		select TICK_ONESHOT
+		select ARM_AMBA
         help
           This enables support for system based on Broadcom KONA architecture
 
@@ -1079,7 +1073,6 @@ source "arch/arm/mach-ixp23xx/Kconfig"
 
 source "arch/arm/mach-kirkwood/Kconfig"
 
-source "arch/arm/mach-hawaii/Kconfig"
 
 source "arch/arm/mach-ks8695/Kconfig"
 
@@ -1104,6 +1097,7 @@ source "arch/arm/mach-omap1/Kconfig"
 
 source "arch/arm/mach-omap2/Kconfig"
 
+source "arch/arm/mach-hawaii/Kconfig"
 source "arch/arm/plat-kona/Kconfig"
 source "arch/arm/mach-rhea/Kconfig"
 

@@ -21,10 +21,18 @@ config ARCH_HAWAII
 	bool "Broadcom Hawaii Soc"
 	select HAVE_SMP
 	select HAVE_PWM
+    select ARM_ERRATA_751472 if SMP
+    select ARM_ERRATA_754322
+    select ARM_ERRATA_764369 if SMP
+	select ARM_ERRATA_782773
+    select KONA_WFI_WORKAROUND if SMP
+	select MIGHT_HAVE_CACHE_L2X0
 	help
 	  Support for the Broadcom Hawaii Soc platform.
 
 endchoice
+
+source "arch/arm/plat-kona/Kconfig.common"
 
 config GP_TIMER_CLOCK_OFF_FIX
 	bool "Enable the fix for general purpose timer clock off issue."

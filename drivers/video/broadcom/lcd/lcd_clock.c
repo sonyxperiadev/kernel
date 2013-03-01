@@ -56,7 +56,7 @@ struct
 
 int brcm_enable_smi_lcd_clocks(struct pi_mgr_dfs_node *dfs_node)
 {
-#ifndef CONFIG_MACH_HAWAII_FPGA
+#ifndef CONFIG_MACH_BCM_FPGA
 	struct clk *smi_axi;
 	struct clk *smi;
 
@@ -90,7 +90,7 @@ int brcm_enable_smi_lcd_clocks(struct pi_mgr_dfs_node *dfs_node)
 
 int brcm_disable_smi_lcd_clocks(struct pi_mgr_dfs_node* dfs_node)
 {
-#ifndef CONFIG_MACH_HAWAII_FPGA
+#ifndef CONFIG_MACH_BCM_FPGA
 	struct clk *smi_axi;
 	struct clk *smi;
 
@@ -119,7 +119,7 @@ int brcm_enable_dsi_lcd_clocks(
         unsigned int dsi_pll_ch_div, 
         unsigned int esc_clk_hz )
 {
-#ifndef CONFIG_MACH_HAWAII_FPGA
+#ifndef CONFIG_MACH_BCM_FPGA
 	struct	clk *dsi_axi;
 	struct	clk *dsi_esc;
 	
@@ -160,7 +160,7 @@ int brcm_enable_dsi_pll_clocks(
         unsigned int dsi_pll_ch_div, 
         unsigned int esc_clk_hz )
 {
-#ifndef CONFIG_MACH_HAWAII_FPGA
+#ifndef CONFIG_MACH_BCM_FPGA
 	struct	clk *dsi_pll;
 	struct	clk *dsi_pll_ch;
 	u32	pixel_pll_val;
@@ -230,7 +230,7 @@ int brcm_enable_dsi_pll_clocks(
 
 int brcm_disable_dsi_lcd_clocks(struct pi_mgr_dfs_node* dfs_node, u32 dsi_bus)
 {
-#ifndef CONFIG_MACH_HAWAII_FPGA
+#ifndef CONFIG_MACH_BCM_FPGA
 	struct clk *dsi_axi;
 	struct clk *dsi_esc;
 
@@ -254,7 +254,7 @@ int brcm_disable_dsi_lcd_clocks(struct pi_mgr_dfs_node* dfs_node, u32 dsi_bus)
 
 int brcm_disable_dsi_pll_clocks(u32 dsi_bus)
 {
-#ifndef CONFIG_MACH_HAWAII_FPGA
+#ifndef CONFIG_MACH_BCM_FPGA
 	struct clk *dsi_pll;
 	struct clk *dsi_pll_ch;
 
@@ -280,7 +280,7 @@ int brcm_enable_dsi_lcd_clocks(
         unsigned int esc_clk_hz )
 {
 
-#ifndef CONFIG_MACH_HAWAII_FPGA
+#ifndef CONFIG_MACH_BCM_FPGA
 	if (pi_mgr_dfs_request_update(dfs_node, PI_OPP_TURBO))
 	{
 	    printk(KERN_ERR "Failed to update dfs request for DSI LCD\n");
@@ -293,7 +293,7 @@ int brcm_enable_dsi_lcd_clocks(
 
 int brcm_disable_dsi_lcd_clocks(struct pi_mgr_dfs_node* dfs_node, u32 dsi_bus)
 {
-#ifndef CONFIG_MACH_HAWAII_FPGA
+#ifndef CONFIG_MACH_BCM_FPGA
 
 	if (pi_mgr_dfs_request_update(dfs_node, PI_MGR_DFS_MIN_VALUE));
 	{

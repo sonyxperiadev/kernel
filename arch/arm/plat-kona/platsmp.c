@@ -45,7 +45,6 @@ void __init smp_init_cpus(void)
 {
 	unsigned int i, ncores = scu_get_core_count(scu_base);
 	
-
 	for (i = 0; i < ncores; i++)
 		set_cpu_possible(i, true);
 

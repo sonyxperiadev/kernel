@@ -74,7 +74,7 @@
 #include <mach/clock.h>
 #include <linux/usb/bcm_hsotgctrl.h>
 
-#ifdef CONFIG_MACH_HAWAII_FPGA
+#ifdef CONFIG_MACH_BCM_FPGA
 #define UART_CLK_HZ 13000000
 #else
 #define UART_CLK_HZ 26000000
@@ -329,10 +329,10 @@ static struct platform_device board_sdio2_device = {
 
 /* Common devices among all the boards */
 static struct platform_device *board_sdio_plat_devices[] __initdata = {
-#ifndef CONFIG_MACH_HAWAII_FPGA_USB_V1
+#ifndef CONFIG_MACH_BCM_FPGA_USB_V1
 	&board_sdio1_device,
 #endif
-#ifndef CONFIG_MACH_HAWAII_FPGA_MM_V1
+#ifndef CONFIG_MACH_BCM_FPGA_MM_V1
 	&board_sdio2_device,
 #endif
 };

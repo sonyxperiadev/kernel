@@ -12,42 +12,57 @@ endchoice
 
 choice
 	prompt "Hawaii SoC based board type"
-	default MACH_HAWAII_RAY
+	default y
 
 config	MACH_HAWAII_FPGA
-        bool "Hawaii SOC Version - FPGA"
-        help
-	  "This config option will enable support
-	  for FPGA platform like Chip-it where CCU is absent."
+		tristate "Support Broadcom Hawaii FPGA"
+	select MACH_BCM_FPGA
+    help
+		This config option will
+		enable support
+		for FPGA platform
+		like Chip-it where CCU is absent.
 
 config	MACH_HAWAII_FPGA_E
-	bool "Hawaii SOC Version - FPGA Eve"
+		tristate "Support Broadcom Hawaii Eve FPGA"
+	select MACH_BCM_FPGA_E
 	help
-	  "This config option will enable support for
-	  FPGA platform like Eve where CCU is present."
+		This config option will
+		enable support for
+		FPGA platform like
+		Eve where CCU is present.
 
 config	MACH_HAWAII_RAY
-	bool "Support Broadcom Hawaii Ray board"
+		bool  "Support Broadcom Hawaii Ray board"
 	help
-	  Support for the Broadcom Hawaii Ray board.
+		Support for
+		the Broadcom
+		Hawaii Ray
+		board.
 
 config	MACH_HAWAII_STONE
-	bool "Support Broadcom Hawaii Stone board"
-	help
-	  Support for the Broadcom Hawaii Stone board.
+		bool "Support Broadcom Hawaii Stone board"
+		help
+		Support for
+		the
+		Broadcom Hawaii Stone
+		board.
 
 config	MACH_HAWAII_GARNET
-	bool "Support Broadcom Hawaii garnet board"
-	help
-	  Support for Broadcom Hawaii garnet board.
+		bool "Support Broadcom Hawaii garnet board"
+		help
+		Support for
+		Broadcom Hawaii
+		garnet
+		board
 
 config	MACH_HAWAII_SS_EVAL_REV00
-	bool "Support Broadcom Hawaii SS Evaluation board"
-	help
-	  Support for the Broadcom Hawaii SS Evaluation board.
-	  This board was used during the joint h/w and s/w camps
-	  and was the basis for the initial engagement with SS..
-	  Assumes that MACH_HAWAII_SS_EVAL is also set.
+		bool "Support Broadcom Hawaii SS eval board"
+		help
+		Support for
+		Broadcom Hawaii
+		SS eval
+		board
 
 config	MACH_HAWAII_SS_LOGAN_REV00
 	bool "Support Broadcom Hawaii SS logan board"
@@ -83,12 +98,18 @@ choice
 	config MACH_HAWAII_GARNET_EDN000
 	bool "GARNET EDN000"
 	help
-	  Support for Garnet edn000
+	  Support for
+		Hawaii based
+		Garnet
+		edn000
 
 	config MACH_HAWAII_GARNET_EDN010
 	bool "GARNET EDN010"
 	help
-	  Support for Garnet edn010
+	  Support for
+		Hawaii based
+		Garnet
+		edn010
 
 	config MACH_HAWAII_GARNET_C_A18
 	bool "GARNET A18"
@@ -102,11 +123,12 @@ choice
 endchoice
 choice
 	prompt "Hawaii FPGA type"
-	depends on MACH_HAWAII_FPGA || MACH_HAWAII_FPGA_E
-	default MACH_HAWAII_FPGA_PERI_V1
+	depends on MACH_BCM_FPGA || MACH_BCM_FPGA_E
 
 config	MACH_HAWAII_FPGA_PERI_V1
 	bool "Support Hawaii BSP FPGA Image with dual A9"
+	select MACH_BCM_FPGA_PERI_V1
+	depends on MACH_BCM_FPGA_E
 	help
 	  "Support Following BSP FPGA Images :
 	  HAWAII_Peri_v1.0.0
@@ -115,6 +137,8 @@ config	MACH_HAWAII_FPGA_PERI_V1
 
 config	MACH_HAWAII_FPGA_MM_V1
 	bool "Support Hawaii MM FPGA Image without M4U & AXI-PV"
+	select MACH_BCM_FPGA_MM_V1
+	depends on MACH_BCM_FPGA
 	help
 	  "Support Following MM FPGA Images :
           HAWAII_MM_v1.0.0
@@ -123,11 +147,11 @@ config	MACH_HAWAII_FPGA_MM_V1
 
 config	MACH_HAWAII_FPGA_USB_V1
 	bool "Support Hawaii USB FPGA Image with dual A9"
+	select MACH_BCM_FPGA_USB_V1
 	help
 	  "Support Following USB FPGA Images :
 	  HAWAII_USB_v2.0.0
 endchoice
-
 
 
 config	MACH_HAWAII_SS_COMMON

@@ -37,7 +37,7 @@
 #endif
 
 #include <linux/time.h>
-#if defined(CONFIG_MACH_HAWAII_FPGA) || defined(CONFIG_MACH_HAWAII_FPGA_E)
+#if defined(CONFIG_MACH_BCM_FPGA) || defined(CONFIG_MACH_BCM_FPGA_E)
 static struct timeval prof_tv1, prof_tv2;
 #endif
 
@@ -495,7 +495,7 @@ static irqreturn_t axipv_isr(int err, void *dev_id)
 		disable_axipv = true;
 		/* Client needs to be informed of the disabled state */
 		/* irq_stat = irq_stat & ~AXIPV_DISABLED_INT; */
-#if defined(CONFIG_MACH_HAWAII_FPGA) || defined(CONFIG_MACH_HAWAII_FPGA_E)
+#if defined(CONFIG_MACH_BCM_FPGA) || defined(CONFIG_MACH_BCM_FPGA_E)
 		do_gettimeofday(&prof_tv2);
 		axipv_info("axipv tx time(us)=%d\n",
 			(prof_tv2.tv_sec - prof_tv1.tv_sec) * 1000000 +
@@ -712,7 +712,7 @@ int axipv_change_state(u32 event, struct axipv_config_t *config)
 			unsigned long flags, intr_en;
 
 			axipv_clk_enable(dev);
-#if defined(CONFIG_MACH_HAWAII_FPGA) || defined(CONFIG_MACH_HAWAII_FPGA_E)
+#if defined(CONFIG_MACH_BCM_FPGA) || defined(CONFIG_MACH_BCM_FPGA_E)
 			do_gettimeofday(&prof_tv1);
 #endif
 			spin_lock_irqsave(&lock, flags);

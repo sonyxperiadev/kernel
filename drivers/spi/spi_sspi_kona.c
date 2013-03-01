@@ -60,7 +60,7 @@
 #define SSPI_WFC_TIME_OUT	200
 #define MAX_LOCAL_BUF_SIZE	32
 
-#ifndef CONFIG_MACH_HAWAII_FPGA
+#ifndef CONFIG_MACH_BCM_FPGA
 extern void csl_caph_ControlHWClock(Boolean eanble);
 #endif
 static uint8_t clk_name[3][32] = { "ssp0_clk", "ssp4_clk", "ssp3_clk" };
@@ -242,7 +242,7 @@ static irqreturn_t spi_kona_isr(int irq, void *dev_id)
 static int spi_kona_config_clk(struct spi_kona_data *spi_kona,
 			       uint32_t clk_rate)
 {
-#ifndef CONFIG_MACH_HAWAII_FPGA
+#ifndef CONFIG_MACH_BCM_FPGA
 	CHAL_HANDLE chandle = spi_kona->chandle;
 	uint32_t clk_src = 1000000, clk_pdiv = 0;
 
@@ -310,7 +310,7 @@ static int spi_kona_configure(struct spi_kona_data *spi_kona,
 	spi_kona_fifo_config(spi_kona, spi_kona->enable_dma);
 
 	/* Configure the clock speed */
-#ifdef CONFIG_MACH_HAWAII_FPGA
+#ifdef CONFIG_MACH_BCM_FPGA
 	ret = spi_kona_config_clk(spi_kona, 13 * 1000 * 1000);
 #else
 	ret = spi_kona_config_clk(spi_kona, config->speed_hz);
@@ -1066,12 +1066,12 @@ static void spi_kona_work(struct work_struct *work)
 		if (spi->mode == SPI_LOOP)
 			spi_kona->spi_mode &= SPI_MODE_1;
 		if (master->bus_num != 0) {
-#if !defined(CONFIG_MACH_HAWAII_FPGA) && defined(CONFIG_BCM_ALSA_SOUND)
+#if !defined(CONFIG_MACH_BCM_FPGA) && defined(CONFIG_BCM_ALSA_SOUND)
 			/*turn on caph clock for ssp1 and ssp2 */
 			csl_caph_ControlHWClock(TRUE);
 #endif
 		}
-#ifndef CONFIG_MACH_HAWAII_FPGA
+#ifndef CONFIG_MACH_BCM_FPGA
 		clk_enable(spi_kona->ssp_clk);
 #endif
 
@@ -1115,11 +1115,11 @@ static void spi_kona_work(struct work_struct *work)
 		if (!(status == 0 && spi_kona->cs_change))
 			spi_kona_chipselect(spi, CS_INACTIVE);
 
-#ifndef CONFIG_MACH_HAWAII_FPGA
+#ifndef CONFIG_MACH_BCM_FPGA
 		clk_disable(spi_kona->ssp_clk);
 #endif
 		if (master->bus_num != 0) {
-#if !defined(CONFIG_MACH_HAWAII_FPGA) && defined(CONFIG_BCM_ALSA_SOUND)
+#if !defined(CONFIG_MACH_BCM_FPGA) && defined(CONFIG_BCM_ALSA_SOUND)
 			/*turn on caph clock for ssp1 and ssp2 */
 			csl_caph_ControlHWClock(FALSE);
 #endif
@@ -1330,7 +1330,7 @@ static int spi_kona_probe(struct platform_device *pdev)
 		       __func__, status, spi_kona->irq);
 		goto out_iounmap;
 	}
-#ifndef CONFIG_MACH_HAWAII_FPGA
+#ifndef CONFIG_MACH_BCM_FPGA
 	spi_kona->ssp_clk = clk_get(NULL, clk_name[master->bus_num]);
 	if (IS_ERR_OR_NULL(spi_kona->ssp_clk)) {
 		dev_err(&pdev->dev, "unable to get %s clock\n",
@@ -1374,14 +1374,14 @@ static int spi_kona_probe(struct platform_device *pdev)
 		pr_err("%s: Failed to setup DMA, using PIO\n", __func__);
 		spi_kona->enable_dma = 0;
 	}
-#ifndef CONFIG_MACH_HAWAII_FPGA
+#ifndef CONFIG_MACH_BCM_FPGA
 	clk_disable(spi_kona->ssp_clk);
 #endif
 	pr_info("%s: SSP %d setup done\n", __func__, master->bus_num);
 	return status;
 
 out_clk_put:
-#ifndef CONFIG_MACH_HAWAII_FPGA
+#ifndef CONFIG_MACH_BCM_FPGA
 	clk_disable(spi_kona->ssp_clk);
 	clk_put(spi_kona->ssp_clk);
 #endif
@@ -1416,7 +1416,7 @@ static int spi_kona_remove(struct platform_device *pdev)
 	if (status != CHAL_SSPI_STATUS_SUCCESS)
 		status = -EBUSY;
 
-#ifndef CONFIG_MACH_HAWAII_FPGA
+#ifndef CONFIG_MACH_BCM_FPGA
 	clk_disable(spi_kona->ssp_clk);
 	clk_put(spi_kona->ssp_clk);
 #endif

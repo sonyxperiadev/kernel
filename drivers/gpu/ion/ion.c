@@ -1568,7 +1568,7 @@ struct ion_device *ion_device_create(long (*custom_ioctl)
 	if (!idev)
 		return ERR_PTR(-ENOMEM);
 
-#if defined (CONFIG_MACH_HAWAII_FPGA_E) || defined (CONFIG_MACH_HAWAII_FPGA)
+#if defined(CONFIG_MACH_BCM_FPGA_E) || defined(CONFIG_MACH_BCM_FPGA)
 	idev->dev.minor = 4;
 #else
 	idev->dev.minor = MISC_DYNAMIC_MINOR;

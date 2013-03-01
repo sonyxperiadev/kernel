@@ -630,7 +630,7 @@ static inline int mmc_blk_part_switch(struct mmc_card *card,
 	 * we comment switching to them for now and will continue to
 	 * debug the issue.
 	 */
-#ifdef CONFIG_MACH_HAWAII_FPGA
+#ifdef CONFIG_MACH_BCM_FPGA
 	if ((md->part_type == 1) || (md->part_type == 2))
 		return -1;
 #endif
