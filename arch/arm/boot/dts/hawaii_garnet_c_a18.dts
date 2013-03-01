@@ -334,12 +334,12 @@
 	};
 
 	keypad {
-		row-num = <2>;
+		row-num = <1>;
 		col-num = <3>;
 		row-col-count = <8>;
 		key-name = "Vol Down Key", "Vol Up Key", "unused", "unused",
-			"unused", "unused", "unused", "unused", "Camera Focus Key",
-			"Camera Key", "unused", "unused", "unused", "unused",
+			"unused", "unused", "unused", "unused", "unused",
+			"unused", "unused", "unused", "unused", "unused",
 			"unused", "unused", "unused", "unused", "unused",
 			"unused", "unused", "unused", "unused", "unused",
 			"unused", "unused", "unused", "unused", "unused",
@@ -351,7 +351,7 @@
 			"unused", "unused", "unused", "unused", "unused",
 			"unused", "unused", "unused", "unused", "unused";
 		key-code = <114 115 0 0 0 0 0 0
-			528 212 0 0 0 0 0 0
+			0 0 0 0 0 0 0 0
 			0 0 0 0 0 0 0 0
 			0 0 0 0 0 0 0 0
 			0 0 0 0 0 0 0 0
