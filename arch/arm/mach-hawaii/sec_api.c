@@ -85,9 +85,27 @@ static u32 smc(struct sec_api_data *data)
 	return r0;
 }
 
+#ifdef CONFIG_MOBICORE_DRIVER
+uint32_t mobicore_smc(uint32_t cmd, uint32_t arg1, uint32_t arg2, uint32_t arg3)
+{
+	register u32 reg0 __asm__("r0") = cmd;
+	register u32 reg1 __asm__("r1") = arg1;
+	register u32 reg2 __asm__("r2") = arg2;
+	register u32 reg3 __asm__("r3") = arg3;
+	__asm__ volatile (
+#ifdef REQUIRES_SEC
+				 ".arch_extension sec\n"
+#endif
+				 "smc    0\n":"+r" (reg0), "+r"(reg1),
+				 "+r"(reg2), "+r"(reg3));
+	return reg0;
+}
+#endif
 /* Map in the bounce area */
 void secure_api_call_init(void)
 {
+#ifdef CONFIG_MOBICORE_DRIVER
+#else
 	struct resource *res;
 
 	res = request_mem_region(SEC_BUFFER_ADDR, SEC_BUFFER_SIZE,
@@ -99,13 +117,16 @@ void secure_api_call_init(void)
 	BUG_ON(!bridge_data.bounce);
 
 	bridge_data.initialized = 1;
+#endif
 }
 
 /* This function exclusively runs on Core 0 with preemption disabled */
 static void secure_api_call_shim(void *info)
 {
 	struct sec_api_data *data = (struct sec_api_data *)info;
+#ifdef CONFIG_MOBICORE_DRIVER
 
+#else
 	/* Check map in the bounce area */
 	BUG_ON(!bridge_data.initialized);
 
@@ -114,16 +135,19 @@ static void secure_api_call_shim(void *info)
 	bridge_data.bounce[1] = data->arg1;
 	bridge_data.bounce[2] = data->arg2;
 	bridge_data.bounce[3] = data->arg3;
+#endif
 
 	/* Flush caches for input data passed to Secure Monitor */
 	flush_cache_all();
 
 	/*printk(KERN_NOTICE "About to trap into Secure Monitor on CPU %d\n",
 		raw_smp_processor_id());*/
-
+#ifdef CONFIG_MOBICORE_DRIVER
+	mobicore_smc(data->service_id, data->arg0, data->arg1, data->arg2);
+#else
 	/* Trap into Secure Monitor */
 	smc(data);
-
+#endif
 }
 
 unsigned secure_api_call(unsigned service_id, unsigned arg0, unsigned arg1,

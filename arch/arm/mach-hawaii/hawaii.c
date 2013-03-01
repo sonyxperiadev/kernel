@@ -113,6 +113,8 @@ static void __init hawaii_l2x0_init(void)
 {
 	void __iomem *l2cache_base = (void __iomem *)(KONA_L2C_VA);
 	u32 val;
+	u32 aux_val = 0x00050000;
+	u32 aux_mask = 0xfff0ffff;
 
 	/*
 	 * Enable L2 if it is not already enabled by the ROM code.
@@ -120,11 +122,21 @@ static void __init hawaii_l2x0_init(void)
 	val = readl(l2cache_base + L2X0_CTRL);
 	val = val & 0x1;
 	if (val == 0)
-		secure_api_call(SSAPI_ENABLE_L2_CACHE, 0, 0, 0, 0);
+  {
+      /* TURN ON THE L2 CACHE */
+#ifdef CONFIG_MOBICORE_DRIVER
+      secure_api_call(SMC_CMD_L2X0SETUP2, 0, aux_val, aux_mask, 0);
+      secure_api_call(SMC_CMD_L2X0INVALL, 0, 0, 0, 0);
+      secure_api_call(SMC_CMD_L2X0CTRL, 1, 0, 0, 0);
+#else
+      //secure_api_call_init();
+      secure_api_call(SSAPI_ENABLE_L2_CACHE, 0, 0, 0, 0);
+#endif
+   }
 	/*
 	 * 32KB way size, 16-way associativity
 	 */
-	l2x0_init(l2cache_base, 0x00050000, 0xfff0ffff);
+	l2x0_init(l2cache_base, aux_val, aux_mask);
 
 }
 #endif

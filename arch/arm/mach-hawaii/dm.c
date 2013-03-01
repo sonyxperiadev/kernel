@@ -39,6 +39,8 @@
 #include <mach/pm.h>
 #include <mach/sram_config.h>
 #include <plat/clock.h>
+#include <mach/sec_api.h>
+
 /* variable to store proc_ccu pointer. This is
  * used to enable/disable access to proc_ccu using
  * clock module API.
@@ -486,9 +488,18 @@ static void restore_proc_clk_regs(void)
  * function is being called from core-0, we can use that
  */
 
+extern void secure_api_call_shim(void *info);
+
 static void local_secure_api(unsigned service_id,
 			     unsigned arg0, unsigned arg1, unsigned arg2)
 {
+
+
+#ifdef CONFIG_MOBICORE_DRIVER
+
+	mobicore_smc(service_id,arg0,arg1,arg2);
+
+#else
 	/* Set Up Registers to pass data to Secure Monitor */
 	register u32 r4 asm("r4");
 	register u32 r5 asm("r5");
@@ -519,6 +530,8 @@ static void local_secure_api(unsigned service_id,
 				:
 				: "r0", "r1", "r2", "r3", "r7", "r8", "r14");
 	} while (r12 != SEC_EXIT_NORMAL);
+#endif
+
 }
 
 /******************* Public Functions ***************/
@@ -636,7 +649,11 @@ void dormant_enter(u32 service)
 
 	instrument_dormant_trace(DORMANT_ENTRY_REGS_SAVE, service, 0);
 	if ((service == DORMANT_CLUSTER_DOWN) && turn_off_l2_memory)
-			local_secure_api(SSAPI_DISABLE_L2_CACHE, 0, 0, 0);
+#ifdef CONFIG_MOBICORE_DRIVER
+		local_secure_api(SMC_CMD_L2X0CTRL, 0, 0, 0);
+#else
+		local_secure_api(SSAPI_DISABLE_L2_CACHE, 0, 0, 0);
+#endif
 	instrument_dormant_trace(DORMANT_ENTRY_L2_OFF, service, 0);
 
 	spin_lock_irqsave(&dormant_entry_lock, flgs);
@@ -701,7 +718,11 @@ void dormant_enter(u32 service)
 
 	instrument_dormant_trace(DORMANT_EXIT_WAKE_UP, service, dormant_return);
 	if ((service == DORMANT_CLUSTER_DOWN) && turn_off_l2_memory)
-			local_secure_api(SSAPI_ENABLE_L2_CACHE, 0, 0, 0);
+#ifdef CONFIG_MOBICORE_DRIVER
+		local_secure_api(SMC_CMD_L2X0CTRL, 1, 0, 0);
+#else
+		local_secure_api(SSAPI_ENABLE_L2_CACHE, 0, 0, 0);
+#endif
 	instrument_dormant_trace(DORMANT_EXIT_L2_ON, service, dormant_return);
 
 	/* if we failed to enter dormant, restore
@@ -911,6 +932,22 @@ static int dormant_enter_continue(unsigned long data)
 			wfi();
 		} else {
 			if (is_l2_disabled() || fake_dormant) {
+#ifdef CONFIG_MOBICORE_DRIVER
+				instrument_dormant_trace(DORMANT_ENTRY_LINUX,
+									1, 0);
+				local_secure_api(SMC_CMD_SLEEP,
+						 (u32)SEC_BUFFER_ADDR,
+						 (u32)SEC_BUFFER_ADDR +
+						 MAX_SECURE_BUFFER_SIZE, 3);
+			} else {
+				instrument_dormant_trace(DORMANT_ENTRY_LINUX,
+									0, 0);
+				local_secure_api(SMC_CMD_SLEEP,
+						 (u32)SEC_BUFFER_ADDR,
+						 (u32)SEC_BUFFER_ADDR +
+						 MAX_SECURE_BUFFER_SIZE, 2);
+			}
+#else
 				instrument_dormant_trace(DORMANT_ENTRY_LINUX,
 									1, 0);
 				local_secure_api(SSAPI_DORMANT_ENTRY_SERV,
@@ -925,6 +962,8 @@ static int dormant_enter_continue(unsigned long data)
 						 (u32)SEC_BUFFER_ADDR +
 						 MAX_SECURE_BUFFER_SIZE, 2);
 			}
+#endif
+
 		}
 
 
