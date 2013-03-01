@@ -374,7 +374,7 @@ struct ion_platform_data ion_cma_data = {
 #define SENSOR_0_CLK                    "dig_ch0_clk" /* DCLK1 */
 #define SENSOR_0_CLK_FREQ               (13000000)
 
-#define SENSOR_1_CLK                    "dig_ch0_clk" /* DCLK1 ?? */
+#define SENSOR_1_CLK                    "dig_ch0_clk" /* DCLK1 */
 #define SENSOR_1_CLK_FREQ               (26000000)
 
 #define SENSOR_1_GPIO_PWRDN             (005)
@@ -393,39 +393,46 @@ static int hawaii_camera_power(struct device *dev, int on)
 	static struct pi_mgr_dfs_node unicam_dfs_node;
 	int ret;
 
-	printk(KERN_INFO "%s:camera power %s, %d\n",
-			__func__, (on ? "on" : "off"), unicam_dfs_node.valid);
+	printk(KERN_INFO "%s:camera power %s, %d\n", __func__,
+		(on ? "on" : "off"), unicam_dfs_node.valid);
 
 	if (!unicam_dfs_node.valid) {
 		ret = pi_mgr_dfs_add_request(&unicam_dfs_node, "unicam",
 						PI_MGR_PI_ID_MM,
 						PI_MGR_DFS_MIN_VALUE);
 		if (ret) {
-			printk(KERN_ERR "%s: failed to register PI DFS request\n",
-					__func__);
+			printk(
+			KERN_ERR "%s: failed to register PI DFS request\n",
+			__func__
+			);
 			return -1;
 		}
 	}
 
 	if (on) {
 		if (pi_mgr_dfs_request_update(&unicam_dfs_node, PI_OPP_TURBO)) {
-			printk(KERN_ERR "%s:failed to update dfs request for unicam\n",
-							__func__);
+			printk(
+			KERN_ERR "%s:failed to update dfs request for unicam\n",
+			__func__
+			);
 			return -1;
 		}
 	}
 
 	if (!camdrv_ss_power(0, (bool)on)) {
-		printk(KERN_ERR "%s,camdrv_ss_power failed for MAIN CAM!!\n",
-						__func__);
+		printk(
+		KERN_ERR "%s,camdrv_ss_power failed for MAIN CAM!!\n",
+		__func__
+		);
 		return -1;
 	}
 
 	if (!on) {
 		if (pi_mgr_dfs_request_update(&unicam_dfs_node,
 						PI_MGR_DFS_MIN_VALUE)) {
-			printk(KERN_ERR "%s: failed to update dfs request for unicam\n",
-							__func__);
+			printk(
+			KERN_ERR"%s: failed to update dfs request for unicam\n",
+			__func__);
 		}
 	}
 
@@ -444,39 +451,43 @@ static int hawaii_camera_power_sub(struct device *dev, int on)
 	int ret;
 
 	printk(KERN_INFO "%s:camera power %s, %d\n", __func__,
-					(on ? "on" : "off"),
-					unicam_dfs_node.valid);
+		(on ? "on" : "off"), unicam_dfs_node.valid);
 
 	if (!unicam_dfs_node.valid) {
 		ret = pi_mgr_dfs_add_request(&unicam_dfs_node, "unicam",
 						PI_MGR_PI_ID_MM,
 						PI_MGR_DFS_MIN_VALUE);
 		if (ret) {
-			printk(KERN_ERR "%s: failed to register PI DFS request\n",
-							__func__);
+			printk(
+			KERN_ERR "%s: failed to register PI DFS request\n",
+			__func__
+			);
 			return -1;
 		}
 	}
 
 	if (on) {
 		if (pi_mgr_dfs_request_update(&unicam_dfs_node, PI_OPP_TURBO)) {
-			printk(KERN_ERR "%s:failed to update dfs request for unicam\n",
-							__func__);
+			printk(
+			KERN_ERR "%s:failed to update dfs request for unicam\n",
+			 __func__
+			);
 			return -1;
 		}
 	}
 
 	if (!camdrv_ss_power(1, (bool)on)) {
 		printk(KERN_ERR "%s, camdrv_ss_power failed for SUB CAM!!\n",
-						__func__);
+		__func__);
 		return -1;
 	}
 
 	if (!on) {
 		if (pi_mgr_dfs_request_update(&unicam_dfs_node,
 						PI_MGR_DFS_MIN_VALUE)) {
-			printk(KERN_ERR "%s: failed to update dfs request for unicam\n",
-							__func__);
+			printk(
+			KERN_ERR"%s: failed to update dfs request for unicam\n",
+			__func__);
 		}
 	}
 
@@ -1191,61 +1202,61 @@ struct platform_device haptic_pwm_device = {
 #endif /* CONFIG_HAPTIC_SAMSUNG_PWM */
 
 static struct sdio_platform_cfg hawaii_sdio_param[] = {
-        {
-                .id = 0,
-                .data_pullup = 0,
-                .cd_gpio = SD_CARDDET_GPIO_PIN,
-                .devtype = SDIO_DEV_TYPE_SDMMC,
-                .flags = KONA_SDIO_FLAGS_DEVICE_REMOVABLE,
-                .peri_clk_name = "sdio1_clk",
-                .ahb_clk_name = "sdio1_ahb_clk",
-                .sleep_clk_name = "sdio1_sleep_clk",
-                .peri_clk_rate = 48000000,
-                /*The SD card regulator*/
-                .vddo_regulator_name = "vdd_sdio",
-                /*The SD controller regulator*/
-                .vddsdxc_regulator_name = "vdd_sdxc",
-        },
-        {
-                .id = 1,
-                .data_pullup = 0,
-                .is_8bit = 1,
-                .devtype = SDIO_DEV_TYPE_EMMC,
-                .flags = KONA_SDIO_FLAGS_DEVICE_NON_REMOVABLE ,
-                .peri_clk_name = "sdio2_clk",
-                .ahb_clk_name = "sdio2_ahb_clk",
-                .sleep_clk_name = "sdio2_sleep_clk",
-                .peri_clk_rate = 52000000,
-        },
+	{
+		.id = 0,
+		.data_pullup = 0,
+		.cd_gpio = SD_CARDDET_GPIO_PIN,
+		.devtype = SDIO_DEV_TYPE_SDMMC,
+		.flags = KONA_SDIO_FLAGS_DEVICE_REMOVABLE,
+		.peri_clk_name = "sdio1_clk",
+		.ahb_clk_name = "sdio1_ahb_clk",
+		.sleep_clk_name = "sdio1_sleep_clk",
+		.peri_clk_rate = 48000000,
+		/*The SD card regulator*/
+		.vddo_regulator_name = "vdd_sdio",
+		/*The SD controller regulator*/
+		.vddsdxc_regulator_name = "vdd_sdxc",
+	},
+	{
+		.id = 1,
+		.data_pullup = 0,
+		.is_8bit = 1,
+		.devtype = SDIO_DEV_TYPE_EMMC,
+		.flags = KONA_SDIO_FLAGS_DEVICE_NON_REMOVABLE ,
+		.peri_clk_name = "sdio2_clk",
+		.ahb_clk_name = "sdio2_ahb_clk",
+		.sleep_clk_name = "sdio2_sleep_clk",
+		.peri_clk_rate = 52000000,
+		},
 #ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
-        {
-                .id = 2,
-                .data_pullup = 0,
-                .devtype = SDIO_DEV_TYPE_WIFI,
-                .flags = KONA_SDIO_FLAGS_DEVICE_REMOVABLE,
-                .peri_clk_name = "sdio3_clk",
-                .ahb_clk_name = "sdio3_ahb_clk",
-                .sleep_clk_name = "sdio3_sleep_clk",
-                .peri_clk_rate = 48000000,
-                .register_status_notify = hawaii_wifi_status_register,
-        },
+	{
+		.id = 2,
+		.data_pullup = 0,
+		.devtype = SDIO_DEV_TYPE_WIFI,
+		.flags = KONA_SDIO_FLAGS_DEVICE_REMOVABLE,
+		.peri_clk_name = "sdio3_clk",
+		.ahb_clk_name = "sdio3_ahb_clk",
+		.sleep_clk_name = "sdio3_sleep_clk",
+		.peri_clk_rate = 48000000,
+		.register_status_notify = hawaii_wifi_status_register,
+	},
 #else
-        {
-                .id = 2,
-                .data_pullup = 0,
-                .devtype = SDIO_DEV_TYPE_WIFI,
-                .wifi_gpio = {
-                        .reset          = 3,
-                        .reg            = -1,
-                        .host_wake      = 74,
-                        .shutdown       = -1,
-                },
-                .flags = KONA_SDIO_FLAGS_DEVICE_REMOVABLE,
-                .peri_clk_name = "sdio3_clk",
-                        .ahb_clk_name = "sdio3_ahb_clk",
-                        .sleep_clk_name = "sdio3_sleep_clk",
-                        .peri_clk_rate = 48000000,
-                },
+	{
+		.id = 2,
+		.data_pullup = 0,
+		.devtype = SDIO_DEV_TYPE_WIFI,
+		.wifi_gpio = {
+			.reset          = 3,
+			.reg            = -1,
+			.host_wake      = 74,
+			.shutdown       = -1,
+		},
+		.flags = KONA_SDIO_FLAGS_DEVICE_REMOVABLE,
+		.peri_clk_name = "sdio3_clk",
+		.ahb_clk_name = "sdio3_ahb_clk",
+		.sleep_clk_name = "sdio3_sleep_clk",
+		.peri_clk_rate = 48000000,
+	},
 #endif
 
 };
@@ -1303,13 +1314,13 @@ static struct platform_device wd_tapper = {
 };
 #endif
 
-#if defined (CONFIG_TOUCHSCREEN_IST30XX)
-#define TSP_INT_GPIO_PIN   	(73)
+#if defined(CONFIG_TOUCHSCREEN_IST30XX)
+#define TSP_INT_GPIO_PIN	(73)
 static struct i2c_board_info __initdata zinitix_i2c_devices[] = {
-	  {
+	{
 		I2C_BOARD_INFO("sec_touch", 0x50),
 		.irq = gpio_to_irq(TSP_INT_GPIO_PIN),
-	  },
+	},
 };
 #endif
 
@@ -1567,9 +1578,9 @@ static struct platform_device *hawaii_devices[] __initdata = {
 };
 
 struct platform_device *hawaii_sdio_devices[] __initdata = {
-        &hawaii_sdio2_device,
-        &hawaii_sdio3_device,
-        &hawaii_sdio1_device,
+	&hawaii_sdio2_device,
+	&hawaii_sdio3_device,
+	&hawaii_sdio1_device,
 };
 
 static void __init hawaii_add_i2c_devices(void)
@@ -1744,8 +1755,8 @@ static void __init hawaii_add_devices(void)
 
 static void __init hawaii_add_sdio_devices(void)
 {
-        platform_add_devices(hawaii_sdio_devices,
-                                ARRAY_SIZE(hawaii_sdio_devices));
+	platform_add_devices(hawaii_sdio_devices,
+		ARRAY_SIZE(hawaii_sdio_devices));
 }
 
 #ifdef CONFIG_FB_BRCM_KONA
@@ -1794,7 +1805,7 @@ static void __init hawaii_init(void)
 
 static int __init hawaii_add_lateinit_devices(void)
 {
-        hawaii_add_sdio_devices();
+	hawaii_add_sdio_devices();
 
 #ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
 	hawaii_wlan_init();

@@ -391,7 +391,8 @@ static struct regulator_init_data bcm59xxx_vibldo_data = {
 		Vibldo was short with VBRAMPLP400P by mistake.
 		So, we need to disable vibldo output all the time
 	*/
-			.valid_ops_mask = REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
+			.valid_ops_mask =
+			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
 			.always_on = 0,
 	#else
 			.valid_ops_mask =
