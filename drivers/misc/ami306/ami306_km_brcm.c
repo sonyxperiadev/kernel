@@ -347,6 +347,7 @@ static int ami_cmd(unsigned int cmd, unsigned long arg, struct ami306_dev_data *
 			return -EFAULT;
 		if (copy_to_user(argp, k_si, sizeof k_si))
 			return -EFAULT;
+		break;
 	case AMI_IOCTL_SET_DIR:
 		AMI_DLOG("Set Direction");
 		if (copy_from_user(k_dir, argp, sizeof(k_dir)))
