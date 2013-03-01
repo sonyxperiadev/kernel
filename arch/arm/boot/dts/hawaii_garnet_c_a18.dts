@@ -232,7 +232,7 @@
 	kona-fb {
 		module-name = "NT35512";
 		reg-name = "cam2";
-		rst-gpio = <8>;
+		rst-gpio = <22>;
 		rst-setup = <700>;	/* 700us */
 		rst-pulse = <20>;	/* 10us */
 		rst-hold = <10000>;	/* 2ms */
