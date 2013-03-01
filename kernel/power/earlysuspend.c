@@ -38,6 +38,8 @@ static void late_resume(struct work_struct *work);
 static DECLARE_WORK(early_suspend_work, early_suspend);
 static DECLARE_WORK(late_resume_work, late_resume);
 static DEFINE_SPINLOCK(state_lock);
+static DECLARE_COMPLETION(early_suspend_complete);
+static DECLARE_COMPLETION(late_resume_complete);
 enum {
 	SUSPEND_REQUESTED = 0x1,
 	SUSPENDED = 0x2,
@@ -112,6 +114,7 @@ abort:
 	if (state == SUSPEND_REQUESTED_AND_SUSPENDED)
 		wake_unlock(&main_wake_lock);
 	spin_unlock_irqrestore(&state_lock, irqflags);
+	complete(&early_suspend_complete);
 }
 
 static void late_resume(struct work_struct *work)
@@ -147,13 +150,14 @@ static void late_resume(struct work_struct *work)
 		pr_info("late_resume: done\n");
 abort:
 	mutex_unlock(&early_suspend_lock);
+	complete(&late_resume_complete);
 }
 
 void request_suspend_state(suspend_state_t new_state)
 {
 	unsigned long irqflags;
 	int old_sleep;
-
+	int suspend = 0, resume = 0;
 	spin_lock_irqsave(&state_lock, irqflags);
 	old_sleep = state & SUSPEND_REQUESTED;
 	if (debug_mask & DEBUG_USER_STATE) {
@@ -172,13 +176,19 @@ void request_suspend_state(suspend_state_t new_state)
 	if (!old_sleep && new_state != PM_SUSPEND_ON) {
 		state |= SUSPEND_REQUESTED;
 		queue_work(suspend_work_queue, &early_suspend_work);
+		suspend = 1;
 	} else if (old_sleep && new_state == PM_SUSPEND_ON) {
 		state &= ~SUSPEND_REQUESTED;
 		wake_lock(&main_wake_lock);
 		queue_work(suspend_work_queue, &late_resume_work);
+		resume = 1;
 	}
 	requested_suspend_state = new_state;
 	spin_unlock_irqrestore(&state_lock, irqflags);
+	if (suspend)
+		wait_for_completion(&early_suspend_complete);
+	if (resume)
+		wait_for_completion(&late_resume_complete);
 }
 
 suspend_state_t get_suspend_state(void)
