@@ -863,7 +863,13 @@ static int __bsc_i2c_get_client(struct device *dev, void *addrp)
 
 static struct device *bsc_i2c_get_client(struct i2c_adapter *adapter, int addr)
 {
-	return device_find_child(&adapter->dev, &addr, __bsc_i2c_get_client);
+	struct device *child;
+
+	child = device_find_child(&adapter->dev, &addr, __bsc_i2c_get_client);
+	/*Decrement back the kref count*/
+	if (child)
+		put_device(child);
+	return child;
 }
 
 static int start_high_speed_mode(struct i2c_adapter *adapter)
