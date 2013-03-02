@@ -19,6 +19,7 @@
 #include <linux/err.h>
 #include <linux/fs.h>
 #include <linux/uaccess.h>
+#include <linux/delay.h>
 #include <linux/debugfs.h>
 #include <linux/platform_device.h>
 #include <linux/power_supply.h>
@@ -120,6 +121,8 @@ static int bcmpmu_spa_pb_chrgr_set_property(struct power_supply *ps,
 	int ret = 0;
 	struct bcmpmu_spa_pb *bcmpmu_spa_pb;
 	struct bcmpmu59xxx *bcmpmu;
+	int retry = 3;
+
 	bcmpmu_spa_pb = container_of(ps,
 			struct bcmpmu_spa_pb, chrgr);
 	bcmpmu = bcmpmu_spa_pb->bcmpmu;
@@ -153,8 +156,16 @@ static int bcmpmu_spa_pb_chrgr_set_property(struct power_supply *ps,
 
 	case POWER_SUPPLY_PROP_CAPACITY:
 		pr_pb(FLOW, "%s: POWER_SUPPLY_PROP_CAPACITY\n", __func__);
-		if (propval->intval == 1)
-			bcmpmu_fg_calibrate_battery(bcmpmu);
+		if (propval->intval == 1) {
+			do {
+				ret = bcmpmu_fg_calibrate_battery(bcmpmu);
+				if (!ret)
+					break;
+				msleep(500);
+			} while (retry--);
+			if (retry <= 0)
+				ret = -ENODATA;
+		}
 		break;
 
 	default:

@@ -1006,6 +1006,13 @@ static struct batt_eoc_curr_cap_map bl_84_eoc_cap_lut[] = {
 	{0, 100},
 };
 
+static struct batt_cutoff_cap_map bl_84_cutoff_cap_lut[] = {
+	{3480, 2},
+	{3440, 1},
+	{3400, 0},
+};
+
+
 static struct batt_esr_temp_lut bl_84_esr_temp_lut[] = {
 	{
 		.temp = -200,
@@ -1102,6 +1109,9 @@ static struct bcmpmu_batt_property bl_84_props = {
 	.esr_temp_lut_sz = ARRAY_SIZE(bl_84_esr_temp_lut),
 	.eoc_cap_lut = bl_84_eoc_cap_lut,
 	.eoc_cap_lut_sz = ARRAY_SIZE(bl_84_eoc_cap_lut),
+	.cutoff_cap_lut = bl_84_cutoff_cap_lut,
+	.cutoff_cap_lut_sz = ARRAY_SIZE(bl_84_cutoff_cap_lut),
+
 };
 
 static struct bcmpmu_batt_cap_levels bl_84_cap_levels = {
@@ -1122,14 +1132,15 @@ static struct bcmpmu_batt_volt_levels bl_84_volt_levels = {
 	.vfloat_gap = 100, /* in mV */
 };
 
-static struct bcmpmu_batt_calibration_data bl_84_cal_data = {
+static struct bcmpmu_batt_cal_data bl_84_cal_data = {
 	.volt_low = 3550,
+	.cap_low = 30,
 };
 static struct bcmpmu_fg_pdata fg_pdata = {
 	.batt_prop = &bl_84_props,
 	.cap_levels = &bl_84_cap_levels,
 	.volt_levels = &bl_84_volt_levels,
-	.calibration_data = &bl_84_cal_data,
+	.cal_data = &bl_84_cal_data,
 	.sns_resist = 10,
 	.sys_impedence = 33,
 	.eoc_current = 85, /* End of charge current in mA */

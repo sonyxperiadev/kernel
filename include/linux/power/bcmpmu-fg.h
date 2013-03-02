@@ -27,6 +27,11 @@ struct batt_eoc_curr_cap_map {
 	int capacity;
 };
 
+struct batt_cutoff_cap_map {
+	int volt;
+	int cap;
+};
+
 struct batt_esr_temp_lut {
 	int temp;
 	int reset;
@@ -65,6 +70,8 @@ struct bcmpmu_batt_property {
 	u32 esr_temp_lut_sz;
 	struct batt_eoc_curr_cap_map *eoc_cap_lut;
 	u32 eoc_cap_lut_sz;
+	struct batt_cutoff_cap_map *cutoff_cap_lut;
+	u32 cutoff_cap_lut_sz;
 };
 
 /**
@@ -116,8 +123,20 @@ struct bcmpmu_batt_volt_levels {
 	int vfloat_gap;
 };
 
-struct bcmpmu_batt_calibration_data {
+/**
+ * Battery calibration data
+ * @volt_low : low battery calibration voltage: when battery
+ *	voltage is lower than @volt_low and capacity
+ *	of battery is greater than cap_low, low battery
+ *	calibration will be triggered by FG SW
+ * @cap_low: low battery calibration minimum capacity:
+ *	Battery capacity should be greater than @cap_low
+ *	to trigger calibration. Recommended value is 30
+ *	(~30% capacity = ~3.75V)
+ */
+struct bcmpmu_batt_cal_data {
 	int volt_low;
+	int cap_low;
 	int volt_high;
 };
 
@@ -127,7 +146,7 @@ struct bcmpmu_fg_pdata {
 	/* Threasholds */
 	struct bcmpmu_batt_cap_levels *cap_levels;
 	struct bcmpmu_batt_volt_levels *volt_levels;
-	struct bcmpmu_batt_calibration_data *calibration_data;
+	struct bcmpmu_batt_cal_data *cal_data;
 
 	int sns_resist;	/* FG sense resistor in Ohm */
 	int sys_impedence;
@@ -148,4 +167,4 @@ struct bcmpmu_fg_pdata {
 };
 
 int bcmpmu_fg_set_sw_eoc_current(struct bcmpmu59xxx *bcmpmu, int eoc_current);
-void bcmpmu_fg_calibrate_battery(struct bcmpmu59xxx *bcmpmu);
+int bcmpmu_fg_calibrate_battery(struct bcmpmu59xxx *bcmpmu);
