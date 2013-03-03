@@ -839,10 +839,8 @@ static struct kona_fb_platform_data * __init get_of_data(struct device_node *np)
 		goto of_fail;
 	fb_data->detect.gpio = val;
 	fb_data->detect.active = gpio_get_value(fb_data->detect.gpio);
-	if (fb_data->detect.active) {
+	if (fb_data->detect.active)
 		strcpy(fb_data->name, "OTM8018B");
-		fb_data->rotation = 180;
-	}
 #endif
 	if (of_property_read_bool(np, "vmode"))
 		fb_data->vmode = true;
