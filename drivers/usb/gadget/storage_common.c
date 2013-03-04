@@ -637,6 +637,17 @@ static int fsg_lun_open(struct fsg_lun *curlun, const char *filename)
 	loff_t				num_sectors;
 	loff_t				min_sectors;
 
+
+	if (filename) {
+		int len = strlen(filename);
+		if ((len > 3) &&
+			(!strcmp(filename + (len - 3), "ISO") ||
+			!strcmp(filename + (len - 3), "iso")))
+			curlun->cdrom = 1;
+		else
+			curlun->cdrom = 0;
+	}
+
 	/* R/W if we can, R/O if we must */
 	ro = curlun->initially_ro;
 	if (!ro) {
