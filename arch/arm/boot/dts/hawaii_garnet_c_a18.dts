@@ -333,7 +333,7 @@
 		interrupts = <0 77 0x04>;
 		id = <0>;
 		data-pullup = <0>;
-		cd-gpio = <91>;		/*SD_CARDDET_GPIO_PIN*/
+		cd-gpio = <0xFFFFFFFF>;		/*SD_CARDDET_GPIO_PIN*/
 		devtype = <0>;		/*SDIO_DEV_TYPE_SDMMC*/
 		flags = <0>;		/*KONA_SDIO_FLAGS_DEVICE_REMOVABLE*/
 		peri-clk-name = "sdio1_clk";
