@@ -1,5 +1,6 @@
 #ifndef _TAOS_COMMON_H___
-#define _TAOS_COMMON_H___
+#define _TAOS_COMMON_H__
+#include <linux/i2c-kona.h>
 #define TAOS_IOCTL_MAGIC 0XCF
 #define TAOS_IOCTL_ALS_ON _IO(TAOS_IOCTL_MAGIC, 1)
 #define TAOS_IOCTL_ALS_OFF _IO(TAOS_IOCTL_MAGIC, 2)
@@ -42,6 +43,7 @@ struct taos_cfg {
 	u8 prox_config;
 	u8 prox_pulse_cnt;
 	u8 prox_gain;
+	u32 prox_win_sw;
 };
 
 struct taos_prox_info {
@@ -50,4 +52,8 @@ struct taos_prox_info {
 	int prox_event;
 };
 
+struct tmd2771_platform_data {
+	struct i2c_slave_platform_data i2c_pdata;
+	struct taos_cfg *cfg_data;
+};
 #endif

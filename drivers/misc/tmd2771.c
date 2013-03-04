@@ -155,7 +155,6 @@ int als_ps_int;
 int als_ps_gpio_inr;
 
 /* forward declarations */
-static void set_threshold(void);
 static int taos_probe(struct i2c_client *clientp,
 		      const struct i2c_device_id *idp);
 static int taos_remove(struct i2c_client *client);
@@ -268,47 +267,9 @@ static const struct file_operations taos_fops = {
 /* device configuration */
 struct taos_cfg *taos_cfgp;
 
-#ifdef CONFIG_MACH_CAPRI_M500
-static u32 calibrate_target_param = 300000;
-static u16 als_time_param = 200;
-static u16 scale_factor_param = 1;
-static u16 gain_trim_param = 512;
-static u8 filter_history_param = 3;
-static u8 filter_count_param = 1;
-static u8 gain_param = 1;
-static u16 prox_threshold_hi_param = 700;
-static u16 prox_threshold_lo_param = 600;
-static u16 als_threshold_hi_param = 1;
-static u16 als_threshold_lo_param;
-static u8 prox_int_time_param = 0xEE;
-static u8 prox_adc_time_param = 0xFF;
-static u8 prox_wait_time_param = 0xEE;
-static u8 prox_intr_filter_param = 0x13;
-static u8 prox_config_param = 0x00;
-static u8 prox_pulse_cnt_param = 0x02;
-static u8 prox_gain_param = 0x20;
-#else
-static u32 calibrate_target_param = 300000;
-static u16 als_time_param = 50;
-static u16 scale_factor_param = 4;
-static u16 gain_trim_param = 512;
-static u8 filter_history_param = 3;
-static u8 filter_count_param = 1;
-static u8 gain_param = 2;
-static u16 prox_threshold_hi_param = 646;
-static u16 prox_threshold_lo_param = 638;
-static u16 als_threshold_hi_param = 3000;
-static u16 als_threshold_lo_param = 10;
-static u8 prox_int_time_param = 0xEE;
-static u8 prox_adc_time_param = 0xFF;
-static u8 prox_wait_time_param = 0xEE;
-static u8 prox_intr_filter_param = 0x11;
-static u8 prox_config_param = 0x00;
-static u8 prox_pulse_cnt_param = 0x60;
-static u8 prox_gain_param = 0x22;
-#endif
+
 /*prox info*/
-struct taos_prox_info prox_cal_info[20];
+struct taos_prox_info prox_cal_info[32];
 struct taos_prox_info prox_cur_info;
 struct taos_prox_info *prox_cur_infop = &prox_cur_info;
 static u8 prox_history_hi = 0x0;
@@ -374,7 +335,7 @@ static int taos_get_data(void)
 		return -ERESTARTSYS;
 	}
 	if ((status & 0x20) == 0x20) {
-		set_threshold();
+		/*set_threshold();*/
 		ret = taos_prox_threshold_set();
 		if (ret >= 0)
 			ReadEnable = 1;
@@ -460,6 +421,8 @@ static int taos_als_threshold_set(void)
 	int i, ret = 0;
 	u8 chdata[2];
 	u16 ch0;
+	u16 als_threshold_lo;
+	u16 als_threshold_hi;
 
 	for (i = 0; i < 2; i++) {
 		chdata[i] = (i2c_smbus_read_byte_data(taos_datap->client,
@@ -470,14 +433,14 @@ static int taos_als_threshold_set(void)
 	}
 
 	ch0 = chdata[0] + chdata[1] * 256;
-	als_threshold_hi_param = (12 * ch0) / 10;
-	if (als_threshold_hi_param >= 65535)
-		als_threshold_hi_param = 65535;
-	als_threshold_lo_param = (8 * ch0) / 10;
-	als_buf[0] = als_threshold_lo_param & 0x0ff;
-	als_buf[1] = als_threshold_lo_param >> 8;
-	als_buf[2] = als_threshold_hi_param & 0x0ff;
-	als_buf[3] = als_threshold_hi_param >> 8;
+	als_threshold_hi = (12 * ch0) / 10;
+	if (als_threshold_hi >= 65535)
+		als_threshold_hi = 65535;
+	als_threshold_lo = (8 * ch0) / 10;
+	als_buf[0] = als_threshold_lo & 0x0ff;
+	als_buf[1] = als_threshold_lo >> 8;
+	als_buf[2] = als_threshold_hi & 0x0ff;
+	als_buf[3] = als_threshold_hi >> 8;
 
 	pr_taos(DEBUG, "trace : taos_als_threshold_set\n");
 	for (mcount = 0; mcount < 4; mcount++) {
@@ -512,8 +475,10 @@ static int taos_prox_threshold_set(void)
 	cleardata = chdata[0] + chdata[1] * 256;
 	proxdata = chdata[4] + chdata[5] * 256;
 
-	pr_taos(DEBUG, "trace: taos_prox_threshold_set\n");
-	if (prox_tmp_on || proxdata < taos_cfgp->prox_threshold_lo) {
+	pr_taos(DEBUG, "trace: taos_prox_threshold_set %d\n", proxdata);
+	if (prox_tmp_on
+		|| proxdata
+		< (taos_cfgp->prox_threshold_lo - taos_cfgp->prox_win_sw)) {
 		pro_buf[0] = 0x0;
 		pro_buf[1] = 0x0;
 		pro_buf[2] = taos_cfgp->prox_threshold_hi & 0x0ff;
@@ -523,7 +488,8 @@ static int taos_prox_threshold_set(void)
 				 data);
 		input_sync(taos_datap->input_dev_prox);
 		pr_taos(INFO, " proximity: no object detected\n");
-	} else if (proxdata > taos_cfgp->prox_threshold_hi) {
+	} else if (proxdata
+		> (taos_cfgp->prox_threshold_hi + taos_cfgp->prox_win_sw)) {
 		pr_taos(DEBUG, "====cleardata = %d sat_als = %d\n",
 			cleardata, sat_als);
 		if (cleardata > ((sat_als * 80) / 100))
@@ -548,12 +514,6 @@ static int taos_prox_threshold_set(void)
 	}
 	prox_tmp_on = 0;
 	return ret;
-}
-
-static void set_threshold(void)
-{
-	taos_cfgp->prox_threshold_hi = prox_threshold_hi_param;
-	taos_cfgp->prox_threshold_lo = prox_threshold_lo_param;
 }
 
 static int __init taos_init(void)
@@ -792,7 +752,7 @@ static int prox_calibrate(void)
 	}
 	prox_sum = 0;
 	prox_max = 0;
-	for (i = 0; i < 20; i++) {
+	for (i = 0; i < 32; i++) {
 		ret = taos_prox_poll(&prox_cal_info[i]);
 		if (ret < 0) {
 			pr_taos(ERROR,
@@ -804,7 +764,7 @@ static int prox_calibrate(void)
 			prox_max = prox_cal_info[i].prox_data;
 		msleep(100);
 	}
-	prox_mean = prox_sum / 20;
+	prox_mean = prox_sum >> 5;
 	taos_cfgp->prox_threshold_hi =
 	    ((((prox_max - prox_mean) * 200) + 50) / 100) + prox_mean;
 	taos_cfgp->prox_threshold_lo =
@@ -1041,6 +1001,7 @@ static int taos_probe(struct i2c_client *clientp,
 	int chip_id;
 	unsigned char buf[TAOS_MAX_DEVICE_REGS];
 	char *device_name;
+	struct tmd2771_platform_data *pdata = NULL;
 	struct device_node *np;
 	u32 val = 0;
 	if (!i2c_check_functionality(clientp->adapter,
@@ -1155,27 +1116,6 @@ static int taos_probe(struct i2c_client *clientp,
 		ret = -ENOMEM;
 		goto err_kzalloc_taos_cfgp;
 	}
-
-	taos_cfgp->calibrate_target = calibrate_target_param;
-	taos_cfgp->als_time = als_time_param;
-	taos_cfgp->scale_factor = scale_factor_param;
-	taos_cfgp->gain_trim = gain_trim_param;
-	taos_cfgp->filter_history = filter_history_param;
-	taos_cfgp->filter_count = filter_count_param;
-	taos_cfgp->gain = gain_param;
-	taos_cfgp->als_threshold_hi = als_threshold_hi_param;
-	taos_cfgp->als_threshold_lo = als_threshold_lo_param;
-	taos_cfgp->prox_threshold_hi = prox_threshold_hi_param;
-	taos_cfgp->prox_threshold_lo = prox_threshold_lo_param;
-	taos_cfgp->prox_int_time = prox_int_time_param;
-	taos_cfgp->prox_adc_time = prox_adc_time_param;
-	taos_cfgp->prox_wait_time = prox_wait_time_param;
-	taos_cfgp->prox_intr_filter = prox_intr_filter_param;
-	taos_cfgp->prox_config = prox_config_param;
-	taos_cfgp->prox_pulse_cnt = prox_pulse_cnt_param;
-	taos_cfgp->prox_gain = prox_gain_param;
-	sat_als = (256 - taos_cfgp->prox_int_time) << 10;
-	sat_prox = (256 - taos_cfgp->prox_adc_time) << 10;
 	ret = i2c_smbus_write_byte_data(taos_datap->client,
 					TAOS_TRITON_CMD_REG | 0x00, 0x00);
 	if (ret < 0) {
@@ -1183,16 +1123,118 @@ static int taos_probe(struct i2c_client *clientp,
 		ret = -EIO;
 		goto err_write_ctr_reg;
 	}
-	if (taos_datap->client->irq)
-		val = taos_datap->client->irq;
+	if (clientp->dev.platform_data)
+		pdata = clientp->dev.platform_data;
 	else {
-		np = taos_datap->client->dev.of_node;
-		ret = of_property_read_u32(np, "gpio-irq-pin", &val);
-		if (ret)
-			goto err_read;
+		if (taos_datap->client->irq)
+			val = taos_datap->client->irq;
+		else {
+			np = taos_datap->client->dev.of_node;
+			ret = of_property_read_u32(np,
+				"calibrate_target_param", &val);
+			if (ret)
+				goto err_read;
+			taos_cfgp->calibrate_target = val;
+			ret = of_property_read_u32(np,
+				"als_time_param", &val);
+			if (ret)
+				goto err_read;
+			taos_cfgp->als_time = val;
+			ret = of_property_read_u32(np,
+				"scale_factor_param", &val);
+			if (ret)
+				goto err_read;
+			taos_cfgp->scale_factor = val;
+			ret = of_property_read_u32(np,
+				"gain_trim_param", &val);
+			if (ret)
+				goto err_read;
+			taos_cfgp->gain_trim = val;
+			ret = of_property_read_u32(np,
+				"filter_history_param", &val);
+			if (ret)
+				goto err_read;
+			taos_cfgp->filter_history = val;
+			ret = of_property_read_u32(np,
+				"filter_count_param", &val);
+			if (ret)
+				goto err_read;
+			taos_cfgp->filter_count = val;
+			ret = of_property_read_u32(np,
+				"gain_param", &val);
+			if (ret)
+				goto err_read;
+			taos_cfgp->gain = val;
+			ret = of_property_read_u32(np,
+				"prox_threshold_hi_param", &val);
+			if (ret)
+				goto err_read;
+			taos_cfgp->prox_threshold_hi = val;
+			ret = of_property_read_u32(np,
+				"prox_threshold_lo_param", &val);
+			if (ret)
+				goto err_read;
+			taos_cfgp->prox_threshold_lo = val;
+			ret = of_property_read_u32(np,
+				"als_threshold_hi_param", &val);
+			if (ret)
+				goto err_read;
+			taos_cfgp->als_threshold_hi = val;
+			ret = of_property_read_u32(np,
+				"als_threshold_lo_param", &val);
+			if (ret)
+				goto err_read;
+			taos_cfgp->als_threshold_lo = val;
+			ret = of_property_read_u32(np,
+				"prox_int_time_param", &val);
+			if (ret)
+				goto err_read;
+			taos_cfgp->prox_int_time = val;
+			ret = of_property_read_u32(np,
+				"prox_adc_time_param", &val);
+			if (ret)
+				goto err_read;
+			taos_cfgp->prox_adc_time = val;
+			ret = of_property_read_u32(np,
+				"prox_wait_time_param", &val);
+			if (ret)
+				goto err_read;
+			taos_cfgp->prox_wait_time = val;
+			ret = of_property_read_u32(np,
+				"prox_intr_filter_param", &val);
+			if (ret)
+				goto err_read;
+			taos_cfgp->prox_intr_filter = val;
+			ret = of_property_read_u32(np,
+				"prox_config_param", &val);
+			if (ret)
+				goto err_read;
+			taos_cfgp->prox_config = val;
+			ret = of_property_read_u32(np,
+				"prox_pulse_cnt_param", &val);
+			if (ret)
+				goto err_read;
+			taos_cfgp->prox_pulse_cnt = val;
+			ret = of_property_read_u32(np,
+				"prox_gain_param", &val);
+			if (ret)
+				goto err_read;
+			taos_cfgp->prox_gain = val;
+			ret = of_property_read_u32(np,
+				"prox_win_sw", &val);
+			if (ret)
+				goto err_read;
+			taos_cfgp->prox_win_sw = val;
+			ret = of_property_read_u32(np,
+				"gpio-irq-pin", &val);
+			if (ret)
+				goto err_read;
+		}
+		als_ps_int = gpio_to_irq(val);
+		als_ps_gpio_inr = val;
 	}
-	als_ps_int = gpio_to_irq(val);
-	als_ps_gpio_inr = val;
+	sat_als = (256 - taos_cfgp->prox_int_time) << 10;
+	sat_prox = (256 - taos_cfgp->prox_adc_time) << 10;
 	ret = gpio_request(als_ps_gpio_inr, "ALS_PS_INT");
 	if (ret < 0) {
 		pr_taos(ERROR, "failed to request GPIO:%d,ERRNO:%d\n",
@@ -1894,7 +1936,7 @@ static long taos_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 			return ret;
 		prox_sum = 0;
 		prox_max = 0;
-		for (i = 0; i < 20; i++) {
+		for (i = 0; i < 32; i++) {
 			ret = taos_prox_poll(&prox_cal_info[i]);
 			if (ret < 0)
 				return ret;
@@ -1903,7 +1945,7 @@ static long taos_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 				prox_max = prox_cal_info[i].prox_data;
 			mdelay(100);
 		}
-		prox_mean = prox_sum / 20;
+		prox_mean = prox_sum >> 5;
 		taos_cfgp->prox_threshold_hi =
 		    ((((prox_max - prox_mean) * 200) + 50) / 100) + prox_mean;
 		taos_cfgp->prox_threshold_lo =

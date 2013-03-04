@@ -110,6 +110,25 @@
 			compatible = "bcm,tmd2771";
 			reg = <0x39>;
 			gpio-irq-pin = <89>;
+			calibrate_target_param = <300000>;
+			als_time_param = <200>;
+			scale_factor_param = <1>;
+			gain_trim_param = <512>;
+			filter_history_param = <3>;
+			filter_count_param = <1>;
+			gain_param = <2>;
+			prox_threshold_hi_param = <646>;
+			prox_threshold_lo_param = <638>;
+			als_threshold_hi_param = <1>;
+			als_threshold_lo_param = <0>;
+			prox_int_time_param = <238>;
+			prox_adc_time_param = <255>;
+			prox_wait_time_param = <238>;
+			prox_intr_filter_param = <17>;
+			prox_config_param = <0>;
+			prox_pulse_cnt_param = <32>;
+			prox_gain_param = <32>;
+			prox_win_sw = <100>;
 		};
 
 		bmp18x@77 {
