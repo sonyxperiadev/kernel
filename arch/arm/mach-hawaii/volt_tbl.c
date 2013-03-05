@@ -15,6 +15,7 @@
   * consent.
  *****************************************************************************/
 
+ #include <linux/kernel.h>
 #include <linux/module.h>
 #include <mach/avs.h>
 #include "pm_params.h"
@@ -26,7 +27,7 @@
 #include <linux/seq_file.h>
 #endif
 
-#define REV_ID	"1.2"
+#define REV_ID	"0.17"
 
 #define ARRAY_LIST(...) {__VA_ARGS__}
 
@@ -37,6 +38,10 @@ static struct dentry *dent_vlt_root_dir;
 u8 vlt_id_table[SR_VLT_LUT_SIZE];
 
 #define MSR_RETN_VAL			800
+#define SDSR1_RETN_VAL			900
+
+#define DEFAULT_AGING_MARGIN_1G	40
+#define DEFAULT_AGING_MARGIN_1200M	50
 
 #define CSR_XTAL_1G_SS			930
 #define CSR_ECO_1G_SS			950
@@ -256,15 +261,20 @@ const u8 *get_sr_vlt_table(u32 silicon_type, int freq_id)
 {
 	u32 *vlt_table;
 	int i;
-	u32 vddvar_adj = 0;
-	u32 max;
-	u32 vddvar_a9_min = avs_get_vddvar_a9_min_voltage();
-	u32 vddvar_min = avs_get_vddvar_min_voltage();
-	u32 min_vlt_table[] = {MSR_RETN_VAL, MSR_RETN_VAL, MSR_RETN_VAL,
-		MSR_RETN_VAL, MSR_RETN_VAL, MSR_RETN_VAL, MSR_RETN_VAL,
-		vddvar_a9_min, vddvar_a9_min, vddvar_min, vddvar_a9_min,
-		vddvar_min, vddvar_a9_min, vddvar_min, vddvar_a9_min,
-		vddvar_min};
+	int ret;
+	u32 vddvar_adj;
+	u32 vlt;
+	u32 vddvar_a9_min = avs_get_vddvar_a9_vlt_min();
+	u32 vddvar_min = avs_get_vddvar_vlt_min();
+	u32 min_vlt_table[] = {
+		INIT_A9_VLT_TABLE(vddvar_a9_min,
+			vddvar_a9_min, vddvar_a9_min,
+			vddvar_a9_min, vddvar_a9_min),
+		INIT_OTHER_VLT_TABLE(vddvar_min, vddvar_min,
+			vddvar_min, vddvar_min),
+		INIT_LPM_VLT_IDS(MSR_RETN_VAL, MSR_RETN_VAL, MSR_RETN_VAL),
+		INIT_UNUSED_VLT_IDS(MSR_RETN_VAL)
+	};
 
 	pr_info("%s silicon_type = %d, freq_id = %d\n", __func__,
 		silicon_type, freq_id);
@@ -273,25 +283,28 @@ const u8 *get_sr_vlt_table(u32 silicon_type, int freq_id)
 	switch (freq_id) {
 	case A9_FREQ_1000_MHZ:
 			vlt_table = pmu_vlt_table_1g[silicon_type];
+			vddvar_adj = DEFAULT_AGING_MARGIN_1G;
 			break;
 	case A9_FREQ_1200_MHZ:
 			vlt_table = pmu_vlt_table_1200m[silicon_type];
+			vddvar_adj = DEFAULT_AGING_MARGIN_1200M;
 			break;
 	case A9_FREQ_1500_MHZ:
 	default:
 			BUG();
 	}
 
-	vddvar_adj = avs_get_vddvar_adj(silicon_type, freq_id);
-	for (i = 0; i < ACTIVE_VOLTAGE_OFFSET; i++) {
-		max = (vlt_table[i] > min_vlt_table[i]) ? vlt_table[i] :
-			min_vlt_table[i];
-		vlt_id_table[i] = bcmpmu_rgltr_get_volt_id(max);
-	}
+	ret = avs_get_vddvar_aging_margin(silicon_type, freq_id);
+	if (ret >= 0)
+		vddvar_adj = (u32)ret;
+
+	for (i = 0; i < ACTIVE_VOLTAGE_OFFSET; i++)
+		vlt_id_table[i] = bcmpmu_rgltr_get_volt_id(vlt_table[i]);
+
 	for (i = ACTIVE_VOLTAGE_OFFSET; i < SR_VLT_LUT_SIZE; i++) {
-		max = ((vlt_table[i] + vddvar_adj) > min_vlt_table[i])
-			? (vlt_table[i] + vddvar_adj) : min_vlt_table[i];
-		vlt_id_table[i] = bcmpmu_rgltr_get_volt_id(max);
+		vlt = vlt_table[i] + vddvar_adj;
+		vlt_id_table[i] = bcmpmu_rgltr_get_volt_id(max(vlt,
+							min_vlt_table[i]));
 	}
 
 	return vlt_id_table;
@@ -323,7 +336,7 @@ const u8 *get_sr_vlt_table(u32 silicon_type, int freq_id)
 #endif
 
 
-int get_msr_retn_vlt_id(void)
+int get_vddvar_retn_vlt_id(void)
 {
 	u32 ret_vlt = MSR_RETN_VAL;
 /*	Right now the retn value is same for all the silicon types
@@ -331,23 +344,23 @@ int get_msr_retn_vlt_id(void)
 	returned accordingly
 */
 #ifdef CONFIG_KONA_AVS
-	u32 min = avs_get_vddvar_ret_voltage();
+	u32 min = avs_get_vddvar_ret_vlt_min();
 	u32 silicon_type = avs_get_silicon_type();
 	switch (silicon_type) {
 	case SILICON_TYPE_SLOW:
-		ret_vlt = (MSR_RETN_VAL > min) ? MSR_RETN_VAL : min;
+		ret_vlt = max(ret_vlt, min);
 		break;
 	case SILICON_TYPE_TYP_SLOW:
-		ret_vlt = (MSR_RETN_VAL > min) ? MSR_RETN_VAL : min;
+		ret_vlt = max(ret_vlt, min);
 		break;
 	case SILICON_TYPE_TYPICAL:
-		ret_vlt = (MSR_RETN_VAL > min) ? MSR_RETN_VAL : min;
+		ret_vlt = max(ret_vlt, min);
 		break;
 	case SILICON_TYPE_TYP_FAST:
-		ret_vlt = (MSR_RETN_VAL > min) ? MSR_RETN_VAL : min;
+		ret_vlt = max(ret_vlt, min);
 		break;
 	case SILICON_TYPE_FAST:
-		ret_vlt = (MSR_RETN_VAL > min) ? MSR_RETN_VAL : min;
+		ret_vlt = max(ret_vlt, min);
 		break;
 	default:
 		BUG();
@@ -357,9 +370,9 @@ int get_msr_retn_vlt_id(void)
 	return bcmpmu_rgltr_get_volt_id(ret_vlt);
 }
 
-int adjust_sdsr_voltage(u32 sdsr_volt)
+int get_vddfix_vlt_adj(u32 vddfix_vlt)
 {
-	int voltage = bcmpmu_rgltr_get_volt_val(sdsr_volt);
+	int voltage = bcmpmu_rgltr_get_volt_val(vddfix_vlt);
 	/* Convert uV to mV */
 	voltage = voltage/1000;
 #ifdef CONFIG_KONA_AVS
@@ -369,20 +382,20 @@ int adjust_sdsr_voltage(u32 sdsr_volt)
 	return bcmpmu_rgltr_get_volt_id(voltage);
 }
 
-int get_sdsr_retn_vlt_id(u32 reg_val)
+int get_vddfix_retn_vlt_id(u32 reg_val)
 {
+	u32 vddfix_ret = reg_val;
 #ifdef CONFIG_KONA_AVS
-	u32 sdsr_vret = avs_get_vddfix_ret_voltage();
-	int sdsr_vid = bcmpmu_rgltr_get_volt_id(sdsr_vret);
-	pr_info("SDSR1(AVS) min retn voltage: %dmV, curr val: %umV",
-		bcmpmu_rgltr_get_volt_val(sdsr_vid)/1000,
+	u32 vlt = SDSR1_RETN_VAL;
+	u32 vddfix_min = avs_get_vddfix_ret_vlt_min();
+	vlt = max(vlt, vddfix_min);
+	vddfix_ret = bcmpmu_rgltr_get_volt_id(vlt);
+	pr_info("SDSR1(AVS) min retn voltage: %dmV, curr val: %umV\n",
+		vlt,
 		bcmpmu_rgltr_get_volt_val(reg_val)/1000);
-	if (sdsr_vid < 0)
-		return -EINVAL;
-	if (sdsr_vid > reg_val)
-		return sdsr_vid;
+	BUG_ON(vddfix_ret < 0);
 #endif
-	return reg_val;
+	return vddfix_ret;
 }
 
 #ifdef CONFIG_DEBUG_FS

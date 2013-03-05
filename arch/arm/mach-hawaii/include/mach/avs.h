@@ -34,12 +34,12 @@ enum {
 };
 
 enum {
-	AVS_VDDVAR_A9_EN = 1,
-	AVS_VDDVAR_EN = 1 << 1,
-	AVS_VDDFIX_EN = 1 << 2,
-	AVS_IGNORE_CRC_ERR = 1 << 3,
-	AVS_VDDVAR_ADJ_EN = 1 << 4,
-	AVS_VDDFIX_ADJ_EN = 1 << 5,
+	AVS_VDDVAR_A9_MIN_EN = 1,
+	AVS_VDDVAR_MIN_EN = 1 << 1,
+	AVS_VDDFIX_MIN_EN = 1 << 2,
+	AVS_VDDFIX_ADJ_EN = 1 << 3,
+	AVS_IGNORE_CRC_ERR = 1 << 4,
+	AVS_USE_IRDROP_IF_NO_OTP = 1 << 5,
 };
 
 struct avs_ate_lut_entry {
@@ -49,7 +49,9 @@ struct avs_ate_lut_entry {
 
 struct avs_pdata {
 	u32 flags;
-	u32 avs_addr_row3, avs_addr_row5;
+	u32 avs_addr_row3;
+	u32 avs_addr_row5;
+	u32 avs_addr_row8;
 	int *vddfix_adj_lut;
 	u32 **vddvar_adj_lut;
 	void (*silicon_type_notify) (u32 silicon_type, u32 ate_freq);
@@ -60,15 +62,17 @@ struct avs_pdata {
 	u32 *vddfix_vret_lut;
 	u32 *vddvar_vmin_lut;
 	u32 *vddvar_a9_vmin_lut;
+	char *a9_regl_id;
+	u32 pwrwdog_base;
 };
 
-u32 avs_get_vddvar_ret_voltage(void);
-u32 avs_get_vddfix_ret_voltage(void);
-u32 avs_get_vddvar_min_voltage(void);
-u32 avs_get_vddvar_a9_min_voltage(void);
+u32 avs_get_vddvar_ret_vlt_min(void);
+u32 avs_get_vddfix_ret_vlt_min(void);
+u32 avs_get_vddvar_vlt_min(void);
+u32 avs_get_vddvar_a9_vlt_min(void);
 
 u32 avs_get_silicon_type(void);
 u32 avs_get_ate_freq(void);
-u32 avs_get_vddvar_adj(u32 silicon_type, u32 freq);
+int avs_get_vddvar_aging_margin(u32 silicon_type, u32 freq);
 int avs_get_vddfix_adj(void);
 #endif	  /*__KONA_AVS___*/

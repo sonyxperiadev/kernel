@@ -806,16 +806,6 @@ u32 vddvar_a9_vmin_lut[] = {
 	980, 990, 1000, 1010,
 };
 
-int vddfix_vlt_adj_lut[] = {
-	0, 10, 20, 30,
-	40, 50, 60, 70,
-	80, 90, 100, 110,
-	120, 130, 140, 150,
-	0, -10, -20, -30,
-	-40, -50, -60, -70,
-	-80, -90, -100, -110,
-	-120, -130, -140, -150
-};
 
 static struct avs_ate_lut_entry ate_lut[] = {
 	{A9_FREQ_UNKNOWN, SILICON_TYPE_SLOW}, /* 0 - Default*/
@@ -836,7 +826,7 @@ static struct avs_ate_lut_entry ate_lut[] = {
 	{A9_FREQ_1500_MHZ, SILICON_TYPE_SLOW},/* 15 */
 };
 
-static u32 irdrop_lut[] = {470, 489, 519, 550, UINT_MAX};
+static u32 irdrop_lut[] = {459, 477, 506, 525, UINT_MAX};
 
 static u32 vddvar_adj_val_1g[] = {40, 40, 30, 30, 30};
 static u32 vddvar_adj_val_1200m[] = {50, 50, 40, 40, 30};
@@ -855,13 +845,14 @@ int vddfix_adj_lut[] = {
 };
 
 static struct avs_pdata avs_pdata = {
-	.flags = AVS_VDDVAR_A9_EN | AVS_VDDVAR_ADJ_EN | AVS_IGNORE_CRC_ERR |
-		AVS_VDDFIX_EN | AVS_VDDVAR_EN | AVS_VDDFIX_ADJ_EN,
-	/* Mem addr where perf mon and SDSR OPP values are copied by ABI */
+	.flags = AVS_VDDVAR_A9_MIN_EN | AVS_VDDVAR_MIN_EN | AVS_VDDFIX_MIN_EN |
+	AVS_VDDFIX_ADJ_EN | AVS_IGNORE_CRC_ERR | AVS_USE_IRDROP_IF_NO_OTP,
+	/* Mem addr where OTP row 3 is copied by ABI*/
 	.avs_addr_row3 = 0x34051FB0,
-	/* Mem addr where ATE values is copied by ABI */
+	/* Mem addr where OTP row 5 is copied by ABI*/
 	.avs_addr_row5 = 0x34051FA0,
-	/* Mem addr where MSR OPP values are copied by ABI */
+	/* Mem addr where OTP row 8 is copied by ABI*/
+	.avs_addr_row8 = 0x34051FA8,
 	.ate_lut = ate_lut,
 	.irdrop_lut = irdrop_lut,
 	.irdrop_vreq = 1200000,
@@ -872,6 +863,8 @@ static struct avs_pdata avs_pdata = {
 	.silicon_type_notify = avs_silicon_type_notify,
 	.vddvar_adj_lut = vddvar_adj_lut,
 	.vddfix_adj_lut = vddfix_adj_lut,
+	.a9_regl_id = "csr_uc",
+	.pwrwdog_base = KONA_PWRWDOG_VA,
 };
 
 struct platform_device avs_device = {
