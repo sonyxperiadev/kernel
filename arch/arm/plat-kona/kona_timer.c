@@ -476,16 +476,7 @@ int kona_timer_set_match_start(struct kona_timer *kt, unsigned long load)
 	}
 #endif
 
-#ifdef CONFIG_GP_TIMER_COMPARATOR_LOAD_DELAY
-	/* hrtimer updates running timer a lot to reprogram new timer, and
-	 * consistent disabling channel causes additional delay and performance
-	 * issue by disable/enable sync time. Update compare loading
-	 * value without disabling channel.
-	 */
-	enabled = __wait_for_timer_sync(kt);
-#else
 	__disable_channel(kt);
-#endif
 
 	/*
 	 * Remember the reload value in case of periodic timers.
@@ -506,6 +497,7 @@ int kona_timer_set_match_start(struct kona_timer *kt, unsigned long load)
 		if (time_before(now, kt->expire))
 			delta = kt->expire - now;
 	}
+
 	kt->expire = adj_load + now;
 	writel(kt->expire,
 	       ktm->reg_base + KONA_GPTIMER_STCM0_OFFSET + (kt->ch_num * 4));
@@ -516,9 +508,9 @@ int kona_timer_set_match_start(struct kona_timer *kt, unsigned long load)
 	 * the timer match bit up on next. Only takes care of possible
 	 * cases in enabled state.
 	 */
-	if (enabled && delta < MAX_COMPARE_LOAD_UPDATE_WAIT_CYCLE)
-		__wait_for_timer_sync(kt);
+	__wait_for_timer_sync(kt);
 #endif
+
 	/*
 	 * Enable timer compare register. Clean up the Match field (3..0),
 	 * writing 1 to this bit would clean the interrupt for the respective
@@ -526,7 +518,6 @@ int kona_timer_set_match_start(struct kona_timer *kt, unsigned long load)
 	 */
 	reg = readl(ktm->reg_base + KONA_GPTIMER_STCS_OFFSET);
 	reg &= ~KONA_GPTIMER_STCS_TIMER_MATCH_MASK;
-	reg |= 1 << (kt->ch_num + KONA_GPTIMER_STCS_TIMER_MATCH_SHIFT);
 	reg |= (1 << (kt->ch_num + KONA_GPTIMER_STCS_COMPARE_ENABLE_SHIFT));
 	writel(reg, ktm->reg_base + KONA_GPTIMER_STCS_OFFSET);
 
