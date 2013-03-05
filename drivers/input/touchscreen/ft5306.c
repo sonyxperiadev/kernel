@@ -579,7 +579,7 @@ unsigned char fts_ctpm_get_upg_ver(void)
 
 unsigned char fts_ctpm_get_vendor_id(void)
 {
-	u8 vendor_id;
+	u8 vendor_id = 0;
 	ft520x_read_reg(0xA8, &vendor_id);
 	printk("tp vendor id: %x", vendor_id);
 	return vendor_id;
@@ -1244,6 +1244,7 @@ static int focaltech_ft5306_probe(
 {
 	int ret = 0;
 	u32 val;
+	unsigned char vendor_id = 0;
 	struct synaptics_rmi4 *ts;
 	struct Synaptics_ts_platform_data *pdata;
 	struct device_node *np = client->dev.of_node;
@@ -1255,28 +1256,16 @@ static int focaltech_ft5306_probe(
 	    printk(KERN_ERR "ft5306 client null.\n");
 	    goto err_i2c_client_check;
 	}
-	properties_kobj = kobject_create_and_add("board_properties", NULL);
-	if (properties_kobj)
-		ret = sysfs_create_group(properties_kobj,
-					&ft5306_properties_attr_group);
-	if (!properties_kobj || ret) {
-		pr_err("failed to create board_properties\n");
-	}
-
+	ft5306_i2c_client = client;
+	ts = kzalloc(sizeof(struct synaptics_rmi4), GFP_KERNEL);
+	ts->client = client;
+	i2c_set_clientdata(client, ts);
 	printk(KERN_ERR "probing for Synaptics RMI4 device %s at $%02X...\n", client->name, client->addr);
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C)) {
 		printk(KERN_ERR "%s: need I2C_FUNC_I2C\n", __func__);
 		ret = -ENODEV;
 		goto err_check_functionality_failed;
 	}
-	ts = (struct synaptics_rmi4 *)kzalloc(sizeof(struct synaptics_rmi4), GFP_KERNEL);
-
-	INIT_WORK(&ts->work, focaltech_ft5306_work_func);
-#if ENABLE_TP_DIAG
-	INIT_WORK(&ts->diag_work, focaltech_ft5306_diag_work_func);
-#endif
-	ts->client = client;
-	i2c_set_clientdata(client, ts);
 	pdata = client->dev.platform_data;
 	if (pdata) {
 		ts->power = pdata->power;
@@ -1312,6 +1301,46 @@ static int focaltech_ft5306_probe(
 			ts->power = ts_power;
 	}
 
+	ft5306_focaltech_init_platform_hw();
+
+#if (TP_CNTRL_PIN_TYPE == TP_CNTRL_PIN_WAKEUP)
+		gpio_request(ts_gpio_wakeup_pin, "tp_wakeup");
+		gpio_direction_output(ts_gpio_wakeup_pin, 1);
+		gpio_set_value(ts_gpio_wakeup_pin, 0);
+		mdelay(5);
+		gpio_set_value(ts_gpio_wakeup_pin, 1);
+		gpio_free(ts_gpio_wakeup_pin);
+		mdelay(200);
+#endif
+		if (ts->power) {
+			printk(KERN_ERR "Repower Tp Now...\n");
+			ts->power(TS_ON);
+			mdelay(10);
+		}
+		/*read chip ID to detect if the chip exists*/
+		vendor_id = fts_ctpm_get_vendor_id();
+		if (vendor_id != 0x87) {
+			kfree(ts);
+			ret = -ENODEV;
+			printk(KERN_ERR "FT5306 not exist!\r\n");
+			goto  err_chip_not_exist ;
+		}
+
+#if (TP_CNTRL_PIN_TYPE == TP_CNTRL_PIN_RESET)
+		Ft5306_Hw_Reset();
+#endif
+		INIT_WORK(&ts->work, focaltech_ft5306_work_func);
+#if ENABLE_TP_DIAG
+		INIT_WORK(&ts->diag_work, focaltech_ft5306_diag_work_func);
+#endif
+
+	properties_kobj = kobject_create_and_add("board_properties", NULL);
+	if (properties_kobj)
+		ret = sysfs_create_group(properties_kobj,
+					&ft5306_properties_attr_group);
+	if (!properties_kobj || ret)
+		pr_err("failed to create board_properties\n");
+
 	ts->input_dev = input_allocate_device();
 	if (!ts->input_dev) {
 		printk(KERN_ERR "failed to allocate input device.\n");
@@ -1326,30 +1355,7 @@ static int focaltech_ft5306_probe(
 		mdelay(500);
 	}
 #endif
-
-	ft5306_focaltech_init_platform_hw();
 	
-#if (TP_CNTRL_PIN_TYPE == TP_CNTRL_PIN_WAKEUP)
-	gpio_request(ts_gpio_wakeup_pin, "tp_wakeup");
-	gpio_direction_output(ts_gpio_wakeup_pin, 1);
-	gpio_set_value(ts_gpio_wakeup_pin, 0);
-	mdelay(5);
-	gpio_set_value(ts_gpio_wakeup_pin, 1);
-	gpio_free(ts_gpio_wakeup_pin);
-	mdelay(200);
-#endif
-
-	if (ts->power) {
-		printk(KERN_ERR "Repower Tp Now...\n");
-		ts->power(TS_ON);
-		mdelay(10);
-	}
-	
-#if (TP_CNTRL_PIN_TYPE == TP_CNTRL_PIN_RESET)
-	Ft5306_Hw_Reset();
-#endif
-	
-	ft5306_i2c_client = client;
 	ft5306_touch_info.pst_point_info = &ft5306_touch_point;
 
 	ts->input_dev->name = "FocalTech-Ft5306";
@@ -1429,6 +1435,7 @@ static int focaltech_ft5306_probe(
 err_input_register_device_failed:
 	input_free_device(ts->input_dev);
 
+err_chip_not_exist:
 err_alloc_dev_failed:
 err_pdt_read_failed:
 err_check_functionality_failed:
