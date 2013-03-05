@@ -132,6 +132,7 @@ void VPSHAREDMEM_Init(UInt32 *dsp_shared_mem)
 	spin_lock_init(&VoIPStatusLock);
 	spin_lock_init(&AudioLogStatusLock);
 	spin_lock_init(&AudioEnableDoneLock);
+	spin_lock_init(&ARM2SP_HQ_DL_InitDoneLock);
 	spin_lock_init(&PTTStatusLock);
 	spin_lock_init(&ExtModemCallDoneLock);
 }
