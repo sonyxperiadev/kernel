@@ -179,9 +179,9 @@ static int __devinit DriverProbe(struct platform_device *pdev)
 		goto err;
 	}
 
-	strcpy(card->driver, "Broadcom");
-	strcpy(card->shortname, "Broadcom ALSA");
-	sprintf(card->longname, "Broadcom ALSA PCM %i", 0);
+	strncpy(card->driver, "Broadcom", 9);
+	strncpy(card->shortname, "Broadcom ALSA", 14);
+	snprintf(card->longname, 20, "Broadcom ALSA PCM %i", 0);
 
 	err = snd_card_register(card);
 	if (err == 0) {

@@ -1244,7 +1244,7 @@ int __devinit PcmDeviceNew(struct snd_card *card)
 		return err;
 
 	pcm->private_data = card->private_data;
-	strcpy(pcm->name, "Broadcom CAPH PCM");
+	strncpy(pcm->name, "Broadcom CAPH PCM", 18);
 
 	snd_pcm_set_ops(pcm, SNDRV_PCM_STREAM_PLAYBACK,
 			&brcm_alsa_omx_pcm_playback_ops);

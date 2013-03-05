@@ -866,8 +866,13 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file,
 		/* get the sysparm from driver
 		 SW EQ is only for music playback for now*/
 		if (copy_from_user(eq, (int __user *)arg,
-			sizeof(struct treq_sysparm_t)))
+			sizeof(struct treq_sysparm_t))) {
+			if (eq != NULL) {
+				kfree(eq);
+				eq = NULL;
+			}
 			return -EFAULT;
+		}
 
 		ret = AUDDRV_Get_TrEqParm((void *)eq,
 			sizeof(*eq), AUDIO_APP_MUSIC,

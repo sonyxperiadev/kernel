@@ -2208,7 +2208,7 @@ int __devinit ControlDeviceNew(struct snd_card *card)
 	brcm_alsa_chip_t *pChip = (brcm_alsa_chip_t *) card->private_data;
 	int nIndex = 0;
 
-	strcpy(card->mixername, "Broadcom CAPH Mixer");
+	strncpy(card->mixername, "Broadcom CAPH Mixer", 20);
 	memcpy(pChip->streamCtl, &sgCaphStreamCtls, sizeof(sgCaphStreamCtls));
 
 	/*
@@ -2224,13 +2224,11 @@ int __devinit ControlDeviceNew(struct snd_card *card)
 		struct snd_kcontrol_new devSelect =
 		    BRCM_MIXER_CTRL_SELECTION(0, 0, 0, 0, 0);
 
-		sprintf(gStrCtlNames[nIndex], "%s-SEL",
+		snprintf(gStrCtlNames[nIndex], 7, "%s-SEL",
 			sgCaphStreamCtls[idx].strStreamName);
 		devSelect.name = gStrCtlNames[nIndex++];
 		devSelect.private_value = CAPH_CTL_PRIVATE(idx + 1, 0, 0);
 
-		if (idx >= CTL_STREAM_PANEL_MISC)
-			continue;
 		CAPH_ASSERT(strlen(devSelect.name) < MAX_CTL_NAME_LENGTH);
 		err = snd_ctl_add(card, snd_ctl_new1(&devSelect, pChip));
 		if (err < 0) {
@@ -2253,14 +2251,14 @@ int __devinit ControlDeviceNew(struct snd_card *card)
 			if (sgCaphStreamCtls[idx].
 			    iFlags & MIXER_STREAM_FLAGS_CAPTURE) {
 
-				sprintf(gStrCtlNames[nIndex], "%s-%s-GAN",
+				snprintf(gStrCtlNames[nIndex], 11, "%s-%s-GAN",
 					sgCaphStreamCtls[idx].strStreamName,
 					sgCaphStreamCtls[idx].ctlLine[j].
 					strName);
 				kctlVolume.name = gStrCtlNames[nIndex++];
 
 			} else {
-				sprintf(gStrCtlNames[nIndex], "%s-%s-VOL",
+				snprintf(gStrCtlNames[nIndex], 11, "%s-%s-VOL",
 					sgCaphStreamCtls[idx].strStreamName,
 					sgCaphStreamCtls[idx].ctlLine[j].
 					strName);
@@ -2289,7 +2287,7 @@ int __devinit ControlDeviceNew(struct snd_card *card)
 				 * Not for voice call, voice call use only
 				 * one MIC mute
 				 */
-				sprintf(gStrCtlNames[nIndex], "%s-%s-MUT",
+				snprintf(gStrCtlNames[nIndex], 11, "%s-%s-MUT",
 					sgCaphStreamCtls[idx].strStreamName,
 					sgCaphStreamCtls[idx].ctlLine[j].
 					strName);
