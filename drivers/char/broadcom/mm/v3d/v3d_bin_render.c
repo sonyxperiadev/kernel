@@ -81,19 +81,24 @@ static v3d_boom_t *v3d_alloc_boom(void *device_id)
 {
 	v3d_bin_render_device_t *id = (v3d_bin_render_device_t *)device_id;
 	v3d_boom_t *block = (v3d_boom_t *) kzalloc(sizeof(v3d_boom_t), GFP_KERNEL);
-	if (block) {
-		block->v3d_bin_oom_handle = ion_alloc(id->v3d_bin_oom_client,
-					V3D_BIN_OOM_SIZE, 0, ION_DEFAULT_HEAP, 0);
-		block->v3d_bin_oom_block = bcm_ion_map_dma(
-				id->v3d_bin_oom_client,
-				block->v3d_bin_oom_handle);
-		if (block->v3d_bin_oom_block == 0) {
-			pr_err("ion alloc failed for v3d oom block size[0x%x] client[%p] handle[%p]\n",
-					V3D_BIN_OOM_SIZE, id->v3d_bin_oom_client, block->v3d_bin_oom_handle);
-					goto err;
-					}
-		block->v3d_bin_oom_size = V3D_BIN_OOM_SIZE ;
-		}
+
+	if (!block)
+		return NULL;
+
+	block->v3d_bin_oom_handle = ion_alloc(id->v3d_bin_oom_client,
+				V3D_BIN_OOM_SIZE, 0, ION_DEFAULT_HEAP, 0);
+	block->v3d_bin_oom_block = bcm_ion_map_dma(
+			id->v3d_bin_oom_client,
+			block->v3d_bin_oom_handle);
+	if (block->v3d_bin_oom_block == 0) {
+		pr_err("ion alloc failed for v3d oom block size[0x%x] client[%p] handle[%p]\n",
+			V3D_BIN_OOM_SIZE,
+			id->v3d_bin_oom_client,
+			block->v3d_bin_oom_handle);
+			goto err;
+			}
+	block->v3d_bin_oom_size = V3D_BIN_OOM_SIZE ;
+
 	INIT_LIST_HEAD(&block->node);
 	list_add_tail(&block->node, &id->mem_head);
 
