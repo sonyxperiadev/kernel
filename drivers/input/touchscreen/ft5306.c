@@ -1239,6 +1239,8 @@ static int ts_power(ts_power_status vreg_en)
 	return 0;
 }
 
+static int i2c_probe_failed;
+
 static int focaltech_ft5306_probe(
 	struct i2c_client *client, const struct i2c_device_id *id)
 {
@@ -1322,6 +1324,7 @@ static int focaltech_ft5306_probe(
 		if (vendor_id != 0x87) {
 			kfree(ts);
 			ret = -ENODEV;
+			i2c_probe_failed = 1;
 			printk(KERN_ERR "FT5306 not exist!\r\n");
 			goto  err_chip_not_exist ;
 		}
@@ -1521,6 +1524,8 @@ static struct i2c_driver focaltech_ft5306_driver = {
 
 static int __devinit focaltech_ft5306_init(void)
 {
+	int retval;
+
 	printk(KERN_INFO "Synaptics I2C RMI4 driver init");
 
 	synaptics_wq = create_singlethread_workqueue("synaptics_wq");
@@ -1529,7 +1534,11 @@ static int __devinit focaltech_ft5306_init(void)
 		return -ENOMEM;
 	}
 
-	return i2c_add_driver(&focaltech_ft5306_driver);
+	retval =  i2c_add_driver(&focaltech_ft5306_driver);
+	if (i2c_probe_failed)
+		i2c_unregister_device(ft5306_i2c_client);
+
+	return retval;
 }
 
 static void __exit focaltech_ft5306_exit(void)
