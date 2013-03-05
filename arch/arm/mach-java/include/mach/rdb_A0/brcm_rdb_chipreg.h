@@ -21,7 +21,7 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 1/15/2013 14:34:1                                             */
+/*     Date     : Generated on 3/4/2013 11:52:5                                             */
 /*     RDB file : //JAVA/                                                                   */
 /************************************************************************************************/
 
@@ -171,8 +171,20 @@
 #define CHIPREG_PERIPH_SPARE_CONTROL1_OFFSET                              0x00000034
 #define CHIPREG_PERIPH_SPARE_CONTROL1_TYPE                                UInt32
 #define CHIPREG_PERIPH_SPARE_CONTROL1_RESERVED_MASK                       0x00008100
-#define    CHIPREG_PERIPH_SPARE_CONTROL1_SPARE_CONTROL_SHIFT              20
-#define    CHIPREG_PERIPH_SPARE_CONTROL1_SPARE_CONTROL_MASK               0xFFF00000
+#define    CHIPREG_PERIPH_SPARE_CONTROL1_PLL0_CH5_BYPCLK_EN_SHIFT         31
+#define    CHIPREG_PERIPH_SPARE_CONTROL1_PLL0_CH5_BYPCLK_EN_MASK          0x80000000
+#define    CHIPREG_PERIPH_SPARE_CONTROL1_PLL0_CH5_ENB_CLKOUT_SW_OVRRIDE_SHIFT 30
+#define    CHIPREG_PERIPH_SPARE_CONTROL1_PLL0_CH5_ENB_CLKOUT_SW_OVRRIDE_MASK 0x40000000
+#define    CHIPREG_PERIPH_SPARE_CONTROL1_SPARE_CONTROL_SHIFT              26
+#define    CHIPREG_PERIPH_SPARE_CONTROL1_SPARE_CONTROL_MASK               0x3C000000
+#define    CHIPREG_PERIPH_SPARE_CONTROL1_MM2HUB_WR_DISABLE_SHIFT          25
+#define    CHIPREG_PERIPH_SPARE_CONTROL1_MM2HUB_WR_DISABLE_MASK           0x02000000
+#define    CHIPREG_PERIPH_SPARE_CONTROL1_MM2HUB_RD_DISABLE_SHIFT          24
+#define    CHIPREG_PERIPH_SPARE_CONTROL1_MM2HUB_RD_DISABLE_MASK           0x01000000
+#define    CHIPREG_PERIPH_SPARE_CONTROL1_MM2MEMC_AWCACHE_SHIFT            22
+#define    CHIPREG_PERIPH_SPARE_CONTROL1_MM2MEMC_AWCACHE_MASK             0x00C00000
+#define    CHIPREG_PERIPH_SPARE_CONTROL1_MM2MEMC_ARCACHE_SHIFT            20
+#define    CHIPREG_PERIPH_SPARE_CONTROL1_MM2MEMC_ARCACHE_MASK             0x00300000
 #define    CHIPREG_PERIPH_SPARE_CONTROL1_ISP2_WR_VALID_FIX_BYPASS_SHIFT   19
 #define    CHIPREG_PERIPH_SPARE_CONTROL1_ISP2_WR_VALID_FIX_BYPASS_MASK    0x00080000
 #define    CHIPREG_PERIPH_SPARE_CONTROL1_ISP2_RAW_ENABLE_RAR_SHIFT        18

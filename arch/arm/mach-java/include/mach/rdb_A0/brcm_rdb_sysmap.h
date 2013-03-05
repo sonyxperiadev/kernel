@@ -22,7 +22,7 @@
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
 /*                                                                                              */
-/*     Date     : Generated on 01/15/2013 14:34:01                                   */
+/*     Date     : Generated on 03/04/2013 11:52:05                                   */
 /*     RDB file : //JAVA/                                                                    */
 /************************************************************************************************/
 
@@ -295,7 +295,7 @@
 #define SECTRAP8_BASE_ADDR        0x3FE02000 /* brcm_rdb_sectrap.h */
 #define AXITRACE1_BASE_ADDR       0x3FE03000 /* brcm_rdb_axitp_one.h */
 #define AXITRACE4_BASE_ADDR       0x3FE04000 /* brcm_rdb_axitp_one.h */
-#define GICTR_BASE_ADDR           0x3FE05000 /* brcm_rdb_gictr.h */
+#define GICTR_BASE_ADDR           0x3FE05000 /* brcm_rdb_gictr4.h */
 #define FUNNEL_BASE_ADDR          0x3FE06000 /* brcm_rdb_cstf.h */
 #define AXITRACE16_BASE_ADDR      0x3FE07000 /* brcm_rdb_axitp_one.h */
 #define AXICTI_BASE_ADDR          0x3FE08000 /* brcm_rdb_cti.h */

@@ -21,7 +21,7 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 1/15/2013 14:34:1                                             */
+/*     Date     : Generated on 3/4/2013 11:52:5                                             */
 /*     RDB file : //JAVA/                                                                   */
 /************************************************************************************************/
 
@@ -78,7 +78,9 @@
 
 #define CDC_CONFIG_OFFSET                                                 0x00000020
 #define CDC_CONFIG_TYPE                                                   UInt32
-#define CDC_CONFIG_RESERVED_MASK                                          0xFFFFFF00
+#define CDC_CONFIG_RESERVED_MASK                                          0x0000FF00
+#define    CDC_CONFIG_DEBUG_BUS_STATUS_SHIFT                              16
+#define    CDC_CONFIG_DEBUG_BUS_STATUS_MASK                               0xFFFF0000
 #define    CDC_CONFIG_OVERRIDE_POWER_SWITCH_SHIFT                         4
 #define    CDC_CONFIG_OVERRIDE_POWER_SWITCH_MASK                          0x000000F0
 #define    CDC_CONFIG_DEBUG_BUS_SELECTION_SHIFT                           0
@@ -144,7 +146,15 @@
 
 #define CDC_IS_IDLE_OVERRIDE_OFFSET                                       0x00000048
 #define CDC_IS_IDLE_OVERRIDE_TYPE                                         UInt32
-#define CDC_IS_IDLE_OVERRIDE_RESERVED_MASK                                0xFF000000
+#define CDC_IS_IDLE_OVERRIDE_RESERVED_MASK                                0x00000000
+#define    CDC_IS_IDLE_OVERRIDE_WAIT_IDLE_TIMEOUT_SHIFT                   27
+#define    CDC_IS_IDLE_OVERRIDE_WAIT_IDLE_TIMEOUT_MASK                    0xF8000000
+#define    CDC_IS_IDLE_OVERRIDE_WAIT_IDLE_TIMEOUT_STATUS_SHIFT            26
+#define    CDC_IS_IDLE_OVERRIDE_WAIT_IDLE_TIMEOUT_STATUS_MASK             0x04000000
+#define    CDC_IS_IDLE_OVERRIDE_STBYWFIL2_STATUS_SHIFT                    25
+#define    CDC_IS_IDLE_OVERRIDE_STBYWFIL2_STATUS_MASK                     0x02000000
+#define    CDC_IS_IDLE_OVERRIDE_STBYWFIL2_OVERRIDE_SHIFT                  24
+#define    CDC_IS_IDLE_OVERRIDE_STBYWFIL2_OVERRIDE_MASK                   0x01000000
 #define    CDC_IS_IDLE_OVERRIDE_ARMSYSIDLE_TIMER_SHIFT                    16
 #define    CDC_IS_IDLE_OVERRIDE_ARMSYSIDLE_TIMER_MASK                     0x00FF0000
 #define    CDC_IS_IDLE_OVERRIDE_IS_IDLE_OVERRIDE_SHIFT                    0
@@ -160,13 +170,17 @@
 
 #define CDC_A7_DEBUG_BUS_SELECT_OFFSET                                    0x00000050
 #define CDC_A7_DEBUG_BUS_SELECT_TYPE                                      UInt32
-#define CDC_A7_DEBUG_BUS_SELECT_RESERVED_MASK                             0xFFFF0000
+#define CDC_A7_DEBUG_BUS_SELECT_RESERVED_MASK                             0xFFFE0000
+#define    CDC_A7_DEBUG_BUS_SELECT_ENABLE_DORMANT_ARBITRATION_SHIFT       16
+#define    CDC_A7_DEBUG_BUS_SELECT_ENABLE_DORMANT_ARBITRATION_MASK        0x00010000
 #define    CDC_A7_DEBUG_BUS_SELECT_A7_DEBUG_BUS_SELECT_SHIFT              0
 #define    CDC_A7_DEBUG_BUS_SELECT_A7_DEBUG_BUS_SELECT_MASK               0x0000FFFF
 
 #define CDC_FSM_CONTROL_OFFSET                                            0x00000054
 #define CDC_FSM_CONTROL_TYPE                                              UInt32
-#define CDC_FSM_CONTROL_RESERVED_MASK                                     0xFFFFFFF8
+#define CDC_FSM_CONTROL_RESERVED_MASK                                     0xFFFFFFF0
+#define    CDC_FSM_CONTROL_CLR_WAIT_IDLE_TIMEOUT_SHIFT                    3
+#define    CDC_FSM_CONTROL_CLR_WAIT_IDLE_TIMEOUT_MASK                     0x00000008
 #define    CDC_FSM_CONTROL_CLR_FIRST_TO_POLL_SHIFT                        2
 #define    CDC_FSM_CONTROL_CLR_FIRST_TO_POLL_MASK                         0x00000004
 #define    CDC_FSM_CONTROL_CLR_L2_IS_ON_SHIFT                             1

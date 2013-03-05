@@ -21,7 +21,7 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 1/15/2013 14:34:1                                             */
+/*     Date     : Generated on 3/4/2013 11:52:5                                             */
 /*     RDB file : //JAVA/                                                                   */
 /************************************************************************************************/
 
@@ -284,7 +284,7 @@
 
 #define MM_CFG_DSI0_PRBS_CTRL_OFFSET                                      0x00000020
 #define MM_CFG_DSI0_PRBS_CTRL_TYPE                                        UInt32
-#define MM_CFG_DSI0_PRBS_CTRL_RESERVED_MASK                               0x0000C000
+#define MM_CFG_DSI0_PRBS_CTRL_RESERVED_MASK                               0x00004000
 #define    MM_CFG_DSI0_PRBS_CTRL_ISP_ECO_BYPASS_SHIFT                     31
 #define    MM_CFG_DSI0_PRBS_CTRL_ISP_ECO_BYPASS_MASK                      0x80000000
 #define    MM_CFG_DSI0_PRBS_CTRL_SMI_ECO_BYPASS_SHIFT                     30
@@ -303,6 +303,8 @@
 #define    MM_CFG_DSI0_PRBS_CTRL_DSI_CONST_REG_EN_MASK                    0x01000000
 #define    MM_CFG_DSI0_PRBS_CTRL_DSI_CONSTANT_REG_SHIFT                   16
 #define    MM_CFG_DSI0_PRBS_CTRL_DSI_CONSTANT_REG_MASK                    0x00FF0000
+#define    MM_CFG_DSI0_PRBS_CTRL_PKT_ECO_BYPASS_SHIFT                     15
+#define    MM_CFG_DSI0_PRBS_CTRL_PKT_ECO_BYPASS_MASK                      0x00008000
 #define    MM_CFG_DSI0_PRBS_CTRL_DSI0_DIRECT_REGCTRL_EN_SHIFT             13
 #define    MM_CFG_DSI0_PRBS_CTRL_DSI0_DIRECT_REGCTRL_EN_MASK              0x00002000
 #define    MM_CFG_DSI0_PRBS_CTRL_PHY_SELECT_SHIFT                         12

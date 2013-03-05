@@ -21,7 +21,7 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 1/15/2013 14:34:1                                             */
+/*     Date     : Generated on 3/4/2013 11:52:5                                             */
 /*     RDB file : //JAVA/                                                                   */
 /************************************************************************************************/
 
@@ -30,9 +30,55 @@
 
 #define CORTEXA7_ETM_CR_OFFSET                                            0x00000000
 #define CORTEXA7_ETM_CR_TYPE                                              UInt32
-#define CORTEXA7_ETM_CR_RESERVED_MASK                                     0x00000000
-#define    CORTEXA7_ETM_CR_CR_SHIFT                                       0
-#define    CORTEXA7_ETM_CR_CR_MASK                                        0xFFFFFFFF
+#define CORTEXA7_ETM_CR_RESERVED_MASK                                     0x80000000
+#define    CORTEXA7_ETM_CR_VMID_TRACE_EN_SHIFT                            30
+#define    CORTEXA7_ETM_CR_VMID_TRACE_EN_MASK                             0x40000000
+#define    CORTEXA7_ETM_CR_RETURN_STACK_EN_SHIFT                          29
+#define    CORTEXA7_ETM_CR_RETURN_STACK_EN_MASK                           0x20000000
+#define    CORTEXA7_ETM_CR_TIMESTAMP_EN_SHIFT                             28
+#define    CORTEXA7_ETM_CR_TIMESTAMP_EN_MASK                              0x10000000
+#define    CORTEXA7_ETM_CR_PROCESSOR_SEL_SHIFT                            25
+#define    CORTEXA7_ETM_CR_PROCESSOR_SEL_MASK                             0x0E000000
+#define    CORTEXA7_ETM_CR_INSTR_RES_ACC_SHIFT                            24
+#define    CORTEXA7_ETM_CR_INSTR_RES_ACC_MASK                             0x01000000
+#define    CORTEXA7_ETM_CR_DIS_SOFT_WR_SHIFT                              23
+#define    CORTEXA7_ETM_CR_DIS_SOFT_WR_MASK                               0x00800000
+#define    CORTEXA7_ETM_CR_DIS_REG_WR_SHIFT                               22
+#define    CORTEXA7_ETM_CR_DIS_REG_WR_MASK                                0x00400000
+#define    CORTEXA7_ETM_CR_PORT_SIZE_3_SHIFT                              21
+#define    CORTEXA7_ETM_CR_PORT_SIZE_3_MASK                               0x00200000
+#define    CORTEXA7_ETM_CR_DATA_ONLY_SHIFT                                20
+#define    CORTEXA7_ETM_CR_DATA_ONLY_MASK                                 0x00100000
+#define    CORTEXA7_ETM_CR_FIL_CPRT_SHIFT                                 19
+#define    CORTEXA7_ETM_CR_FIL_CPRT_MASK                                  0x00080000
+#define    CORTEXA7_ETM_CR_SUP_DATA_SHIFT                                 18
+#define    CORTEXA7_ETM_CR_SUP_DATA_MASK                                  0x00040000
+#define    CORTEXA7_ETM_CR_PORT_MOD_1_0_SHIFT                             16
+#define    CORTEXA7_ETM_CR_PORT_MOD_1_0_MASK                              0x00030000
+#define    CORTEXA7_ETM_CR_CONTEXTID_SIZE_SHIFT                           14
+#define    CORTEXA7_ETM_CR_CONTEXTID_SIZE_MASK                            0x0000C000
+#define    CORTEXA7_ETM_CR_PORT_MOD_2_SHIFT                               13
+#define    CORTEXA7_ETM_CR_PORT_MOD_2_MASK                                0x00002000
+#define    CORTEXA7_ETM_CR_CYCLE_ACC_EN_SHIFT                             12
+#define    CORTEXA7_ETM_CR_CYCLE_ACC_EN_MASK                              0x00001000
+#define    CORTEXA7_ETM_CR_PORT_SEL_SHIFT                                 11
+#define    CORTEXA7_ETM_CR_PORT_SEL_MASK                                  0x00000800
+#define    CORTEXA7_ETM_CR_PROG_BIT_SHIFT                                 10
+#define    CORTEXA7_ETM_CR_PROG_BIT_MASK                                  0x00000400
+#define    CORTEXA7_ETM_CR_DEBUG_REQ_CTRL_SHIFT                           9
+#define    CORTEXA7_ETM_CR_DEBUG_REQ_CTRL_MASK                            0x00000200
+#define    CORTEXA7_ETM_CR_BRANCH_OUT_SHIFT                               8
+#define    CORTEXA7_ETM_CR_BRANCH_OUT_MASK                                0x00000100
+#define    CORTEXA7_ETM_CR_STALL_PROC_SHIFT                               7
+#define    CORTEXA7_ETM_CR_STALL_PROC_MASK                                0x00000080
+#define    CORTEXA7_ETM_CR_PORT_SIZE_2_0_SHIFT                            4
+#define    CORTEXA7_ETM_CR_PORT_SIZE_2_0_MASK                             0x00000070
+#define    CORTEXA7_ETM_CR_DATA_ACC_SHIFT                                 2
+#define    CORTEXA7_ETM_CR_DATA_ACC_MASK                                  0x0000000C
+#define    CORTEXA7_ETM_CR_MON_CPRT_SHIFT                                 1
+#define    CORTEXA7_ETM_CR_MON_CPRT_MASK                                  0x00000002
+#define    CORTEXA7_ETM_CR_POWER_DOWN_SHIFT                               0
+#define    CORTEXA7_ETM_CR_POWER_DOWN_MASK                                0x00000001
 
 #define CORTEXA7_ETM_CCR_OFFSET                                           0x00000004
 #define CORTEXA7_ETM_CCR_TYPE                                             UInt32
@@ -54,9 +100,15 @@
 
 #define CORTEXA7_ETM_SR_OFFSET                                            0x00000010
 #define CORTEXA7_ETM_SR_TYPE                                              UInt32
-#define CORTEXA7_ETM_SR_RESERVED_MASK                                     0x00000000
-#define    CORTEXA7_ETM_SR_SR_SHIFT                                       0
-#define    CORTEXA7_ETM_SR_SR_MASK                                        0xFFFFFFFF
+#define CORTEXA7_ETM_SR_RESERVED_MASK                                     0xFFFFFFF0
+#define    CORTEXA7_ETM_SR_TRIG_BIT_S_SHIFT                               3
+#define    CORTEXA7_ETM_SR_TRIG_BIT_S_MASK                                0x00000008
+#define    CORTEXA7_ETM_SR_TRACE_RES_S_SHIFT                              2
+#define    CORTEXA7_ETM_SR_TRACE_RES_S_MASK                               0x00000004
+#define    CORTEXA7_ETM_SR_PROG_BIT_S_SHIFT                               1
+#define    CORTEXA7_ETM_SR_PROG_BIT_S_MASK                                0x00000002
+#define    CORTEXA7_ETM_SR_UNTR_OVERFLOW_S_SHIFT                          0
+#define    CORTEXA7_ETM_SR_UNTR_OVERFLOW_S_MASK                           0x00000001
 
 #define CORTEXA7_ETM_SCR_OFFSET                                           0x00000014
 #define CORTEXA7_ETM_SCR_TYPE                                             UInt32

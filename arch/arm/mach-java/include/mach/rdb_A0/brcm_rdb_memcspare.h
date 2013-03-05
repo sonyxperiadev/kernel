@@ -21,7 +21,7 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 1/15/2013 14:34:1                                             */
+/*     Date     : Generated on 3/4/2013 11:52:5                                             */
 /*     RDB file : //JAVA/                                                                   */
 /************************************************************************************************/
 
@@ -30,7 +30,7 @@
 
 #define MEMCSPARE_MEMCSPARE_CTRL_OFFSET                                   0x00000000
 #define MEMCSPARE_MEMCSPARE_CTRL_TYPE                                     UInt32
-#define MEMCSPARE_MEMCSPARE_CTRL_RESERVED_MASK                            0x01FFFFFC
+#define MEMCSPARE_MEMCSPARE_CTRL_RESERVED_MASK                            0x00FFFFFC
 #define    MEMCSPARE_MEMCSPARE_CTRL_CFG_DBG_SEL_SHIFT                     29
 #define    MEMCSPARE_MEMCSPARE_CTRL_CFG_DBG_SEL_MASK                      0xE0000000
 #define    MEMCSPARE_MEMCSPARE_CTRL_CFG_MODE_SHIFT                        27
@@ -39,6 +39,8 @@
 #define    MEMCSPARE_MEMCSPARE_CTRL_MEMC_DEBUG_BUS_SEL_MASK               0x04000000
 #define    MEMCSPARE_MEMCSPARE_CTRL_SWITCH_DEBUG_BUS_SEL_SHIFT            25
 #define    MEMCSPARE_MEMCSPARE_CTRL_SWITCH_DEBUG_BUS_SEL_MASK             0x02000000
+#define    MEMCSPARE_MEMCSPARE_CTRL_ENABLE_APB_SWITCH_SHIFT               24
+#define    MEMCSPARE_MEMCSPARE_CTRL_ENABLE_APB_SWITCH_MASK                0x01000000
 #define    MEMCSPARE_MEMCSPARE_CTRL_TIMER_WIDTH_SHIFT                     1
 #define    MEMCSPARE_MEMCSPARE_CTRL_TIMER_WIDTH_MASK                      0x00000002
 #define    MEMCSPARE_MEMCSPARE_CTRL_FORCE_DISABLE_UPDATE_SHIFT            0
