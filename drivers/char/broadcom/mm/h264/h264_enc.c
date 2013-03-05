@@ -28,7 +28,10 @@ the GPL, without Broadcom's express prior written consent.
 static void update_sg_regs(void *id, struct enc_info_t *enc_info)
 {
 	enc_info->h264_enc_regs.out_reg_cnt = 0;
-	memset(enc_info->h264_enc_regs.out_regs, 0, sizeof(struct VENC_REGS_T));
+	memset(enc_info->h264_enc_regs.out_regs, 0, \
+		(sizeof(struct reg_info_t) * MAX_OUT_REGS));
+	enc_info->h264_enc_regs.inp_reg_cnt = 0;
+	enc_info->h264_enc_regs.fme_reg_cnt = 0;
 	enc_info->h264_enc_regs.out_regs[enc_info->h264_enc_regs.out_reg_cnt].\
 					reg = ENC_SG_BUF_ADDR;
 	enc_info->h264_enc_regs.out_regs[enc_info->h264_enc_regs.out_reg_cnt].\
@@ -101,7 +104,7 @@ void encodeSlice(void *id, struct enc_info_t *enc_info)
 		} else if (enc_info->h264_enc_regs.inp_regs[i].reg == \
 				H264_DECSD_REGSDPARAM_OFFSET) {
 			h264_write(id, H264_DECSD_REGSDPARAM_OFFSET, \
-				(h264_read(id, H264_DECSD_REGSDPARAM_OFFSET) | \
+				(h264_read(id, H264_DECSD_REGSDPARAM_OFFSET) |\
 					0x10000000));
 		} else if (enc_info->h264_enc_regs.inp_regs[i].reg == \
 					VC_CACHE_CTL) {
