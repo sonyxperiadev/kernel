@@ -431,7 +431,7 @@
 		max-brightness = <32>;	/* Android calibrates to 32 levels */
 		dft-brightness = <32>;
 		polarity = <1>;		/* Inverted polarity */
-		pwm-period-ns = <1000000>;
+		pwm-period-ns = <99900>; /* ~10010 Hz */
 		pwm-request-label = "backlight";
 	};
 };
