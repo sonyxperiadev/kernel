@@ -41,6 +41,7 @@ typedef u32 axipv_async_buf_t;
 #define PV_START_THRESH_INT (1<<7)
 #define AXIPV_DISABLED_INT (1<<6)
 #define WATER_LVL2_INT	(1<<1)
+#define TE_INT	(1<<0)
 
 /* Once we change the Userspace Framebuffer.cpp to request for buffers
  * from display drivers, we can change this accordingly*/

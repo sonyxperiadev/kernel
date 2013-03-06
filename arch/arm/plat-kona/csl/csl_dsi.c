@@ -172,6 +172,7 @@ typedef struct {
 					:Corresponds to the module which
 					fetches pixels and feeds DSI*/
 	UInt32 dlCount;		/* No. of data lanes*/
+	void (*vsync_cb)(void);	/* Function pointer for vsync events */
 } DSI_HANDLE_t, *DSI_HANDLE;
 
 typedef struct {
@@ -337,11 +338,13 @@ static void axipv_irq_cb(int stat)
 	static uint32_t w_lvl_2_cnt;
 	DSI_HANDLE dsiH = &dsiBus[0];
 	if (dsiH->vmode && (stat & AXIPV_DISABLED_INT))
-			OSSEMAPHORE_Release(dsiH->semaAxipv);
+		OSSEMAPHORE_Release(dsiH->semaAxipv);
 	else if (stat & WATER_LVL2_INT)
 		pr_err("AXIPV hit W_LVL_2 threshold %d times\n", ++w_lvl_2_cnt);
 	if (stat & PV_START_THRESH_INT)
 		OSSEMAPHORE_Release(dsiH->semaAxipv);
+	if (stat & TE_INT)
+		dsiH->vsync_cb();
 }
 
 static void axipv_release_cb(u32 free_buf)
@@ -2276,6 +2279,7 @@ CSL_LCD_RES_T CSL_DSI_Init(const pCSL_DSI_CFG dsiCfg)
 
 		memset(dsiH, 0, sizeof(DSI_HANDLE_t));
 
+		dsiH->vsync_cb = dsiCfg->vsync_cb;
 		dsiH->dlCount = dsiCfg->dlCount;
 		dsiH->dispEngine = dsiCfg->dispEngine;
 		dsiH->pixTxporter = dsiCfg->pixTxporter;

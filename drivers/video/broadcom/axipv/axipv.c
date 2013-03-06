@@ -353,7 +353,7 @@ static inline int axipv_config(struct axipv_config_t *config)
 
 	writel_relaxed(config->width, axipv_base + REG_LINE_STRIDE);
 	writel_relaxed(AXIPV_BURST_LEN, axipv_base + REG_BURST_LEN);
-	writel_relaxed(AXIPV_TE_LINE, axipv_base + REG_TE_LINE);
+	writel_relaxed(config->height - 1, axipv_base + REG_TE_LINE);
 	writel_relaxed(0, axipv_base + REG_INTR_EN);
 	writel_relaxed(UINT_MAX, axipv_base + REG_INTR_CLR);
 	dev->prev_irq_handled = 1;
@@ -716,7 +716,7 @@ int axipv_change_state(u32 event, struct axipv_config_t *config)
 			do_gettimeofday(&prof_tv1);
 #endif
 			spin_lock_irqsave(&lock, flags);
-			intr_en = UINT_MAX & ~TE_INT;
+			intr_en = UINT_MAX;
 			if (config->cmd) {
 				writel_relaxed(readl(axipv_base + REG_CTRL) |
 				AXIPV_SINGLE_SHOT, axipv_base + REG_CTRL);

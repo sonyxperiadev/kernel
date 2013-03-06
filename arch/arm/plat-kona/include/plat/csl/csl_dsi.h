@@ -86,6 +86,7 @@ extern "C" {
 		UInt32 pixTxporter;	/* Pixel Transporter- 0=AXIPV / 1=MMDMA
 						:Corresponds to the module which
 						fetches pixels and feeds DSI*/
+		void (*vsync_cb)(void);	/* Function pointer for vsync events */
 	} CSL_DSI_CFG_t, *pCSL_DSI_CFG;
 
 /**

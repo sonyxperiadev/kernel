@@ -91,11 +91,13 @@ struct kona_fb {
 	spinlock_t lock;
 	struct mutex update_sem;
 	struct completion prev_buf_done_sem;
+	struct completion vsync_event;
 	atomic_t buff_idx;
 	atomic_t is_fb_registered;
 	atomic_t is_graphics_started;
 	int rotation;
 	int is_display_found;
+	bool waiting_for_vsync;
 #ifdef CONFIG_FRAMEBUFFER_FPS
 	struct fb_fps_info *fps_info;
 #endif
@@ -260,11 +262,11 @@ static int kona_fb_check_var(struct fb_var_screeninfo *var,
 
 static int kona_fb_set_par(struct fb_info *info)
 {
+#if 0
 	struct kona_fb *fb = container_of(info, struct kona_fb, fb);
 
 	konafb_debug("kona %s\n", __func__);
 
-#if 0
 	if (fb->rotation != fb->fb.var.rotate) {
 		konafb_warning("Rotation is not supported yet !\n");
 		return -EINVAL;
@@ -607,8 +609,17 @@ static int kona_fb_ioctl(struct fb_info *info, unsigned int cmd,
 	konafb_debug("kona ioctl called! Cmd %x, Arg %lx\n", cmd, arg);
 	switch (cmd) {
 
-	case KONA_IOCTL_SET_BUFFER_AND_UPDATE:
+	case FBIO_WAITFORVSYNC:
+		fb->waiting_for_vsync = 1;
+		if (wait_for_completion_killable_timeout(
+			&fb->vsync_event, msecs_to_jiffies(100)) < 1) {
+			konafb_info("Failed to get a vsync event\n");
+			ret = -ETIMEDOUT;
+		}
+		fb->waiting_for_vsync = 0;
+		break;
 
+	case KONA_IOCTL_SET_BUFFER_AND_UPDATE:
 		if (mutex_lock_killable(&fb->update_sem))
 			return -EINTR;
 		ptr = (void *)arg;
@@ -636,6 +647,12 @@ static int kona_fb_ioctl(struct fb_info *info, unsigned int cmd,
 	}
 
 	return ret;
+}
+
+static void konafb_vsync_cb(void)
+{
+	if (g_kona_fb->waiting_for_vsync)
+		complete(&g_kona_fb->vsync_event);
 }
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
@@ -1077,6 +1094,7 @@ static int __init populate_dispdrv_cfg(struct kona_fb *fb,
 	info->lp_bps = (pd->lp_bps > cfg->max_lp_bps) ?
 				 cfg->max_lp_bps : pd->lp_bps;
 
+	info->vsync_cb = konafb_vsync_cb;
 	fb->display_info = info;
 	return 0;
 
