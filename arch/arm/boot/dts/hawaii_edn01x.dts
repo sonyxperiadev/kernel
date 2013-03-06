@@ -302,8 +302,8 @@
 		/* vburst = <0>; */	/* Non-burst mode */
 		/* cmnd-LP; */		/* Commands in HS mode*/
 		te-ctrl;		/* Tearing Effect Control enabled */
-		col-mod-i = <2>;	/* KONA_CM_I_XBGR888 */
-		col-mod-o = <3>;	/* KONA_CM_O_RGB888 */
+		col-mod-i = <3>;
+		col-mod-o = <2>;
 		width = <540>;
 		height = <960>;
 		fps = <60>;

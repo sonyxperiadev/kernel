@@ -1045,8 +1045,8 @@ static int __init populate_dispdrv_cfg(struct kona_fb *fb,
 	info->lanes = (pd->lanes > cfg->max_lanes) ? cfg->max_lanes : pd->lanes;
 
 	/* Hardcode for now */
-	info->in_fmt = DISPDRV_FB_FORMAT_xBGR8888;
-	info->out_fmt = DISPDRV_FB_FORMAT_xRGB8888;
+	info->in_fmt = pd->col_mod_i;
+	info->out_fmt = pd->col_mod_o;
 	info->Bpp = 4;
 
 	info->phys_width = cfg->phys_width;

@@ -236,8 +236,8 @@
 		rst-setup = <700>;	/* 700us */
 		rst-pulse = <20>;	/* 10us */
 		rst-hold = <10000>;	/* 2ms */
-		col-mod-i = <2>;
-		col-mod-o = <3>;
+		col-mod-i = <3>;
+		col-mod-o = <2>;
 		width = <480>;
 		height = <854>;
 		/* rst-active-high */	/* Commented => Active Low */
