@@ -87,6 +87,7 @@ GTAGS
 
 arch/arm/mach-rhea/include/mach/rdb
 arch/arm/mach-hawaii/include/mach/rdb
+arch/arm/mach-java/include/mach/rdb
 
 #----- Start of generated portion
 #
