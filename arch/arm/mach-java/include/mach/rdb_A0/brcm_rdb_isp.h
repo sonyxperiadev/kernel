@@ -328,6 +328,18 @@
 #define    ISPYG_Y_COEFF0_SHIFT                                           0
 #define    ISPYG_Y_COEFF0_MASK                                            0x0000FFFF
 
+#define ISPYG_OFFSET1_OFFSET                                              0x000000C8
+#define ISPYG_OFFSET1_TYPE                                                UInt32
+#define ISPYG_OFFSET1_RESERVED_MASK                                       0xFFFFC000
+#define    ISPYG_OFFSET1_OFFSE_SHIFT                                      0
+#define    ISPYG_OFFSET1_OFFSE_MASK                                       0x00003FFF
+
+#define ISPYG_OFFSET2_OFFSET                                              0x000000CC
+#define ISPYG_OFFSET2_TYPE                                                UInt32
+#define ISPYG_OFFSET2_RESERVED_MASK                                       0xFFFFC000
+#define    ISPYG_OFFSET2_OFFSE_SHIFT                                      0
+#define    ISPYG_OFFSET2_OFFSE_MASK                                       0x00003FFF
+
 #define ISPYG_SCALE_OFFSET                                                0x000000D4
 #define ISPYG_SCALE_TYPE                                                  UInt32
 #define ISPYG_SCALE_RESERVED_MASK                                         0x00000000
@@ -682,6 +694,83 @@
 #define    ISPDM_CTRL_V_COSITED_MASK                                      0x00000002
 #define    ISPDM_CTRL_H_COSITED_SHIFT                                     0
 #define    ISPDM_CTRL_H_COSITED_MASK                                      0x00000001
+
+#define ISPYI_CTRL_OFFSET                                                 0x00000700
+#define ISPYI_CTRL_TYPE                                                   UInt32
+#define ISPYI_CTRL_RESERVED_MASK                                          0xFCFFEC08
+#define    ISPYI_CTRL_COL_WIDTH_SHIFT                                     24
+#define    ISPYI_CTRL_COL_WIDTH_MASK                                      0x03000000
+#define    ISPYI_CTRL_COL_MODE_SHIFT                                      12
+#define    ISPYI_CTRL_COL_MODE_MASK                                       0x00001000
+#define    ISPYI_CTRL_CC_ORDER_SHIFT                                      7
+#define    ISPYI_CTRL_CC_ORDER_MASK                                       0x00000380
+#define    ISPYI_CTRL_DATA_FORMAT_SHIFT                                   4
+#define    ISPYI_CTRL_DATA_FORMAT_MASK                                    0x00000070
+#define    ISPYI_CTRL_BYTES_SAMPLE_SHIFT                                  2
+#define    ISPYI_CTRL_BYTES_SAMPLE_MASK                                   0x00000004
+#define    ISPYI_CTRL_CS_FORMAT_SHIFT                                     0
+#define    ISPYI_CTRL_CS_FORMAT_MASK                                     0X00000003
+
+#define ISPYI_RY_ADDR_OFFSET                                              0X00000704
+#define ISPYI_RY_ADDR_TYPE                                                UInt32
+#define ISPYI_RY_ADDR_RESERVED_MASK                                       0x0000001F
+#define    ISPYI_RY_ADDR_ADDRESS_SHIFT                                    5
+#define    ISPYI_RY_ADDR_ADDRESS_MASK                                     0xFFFFFFE0
+
+#define ISPYI_GU_ADDR_OFFSET                                              0X00000708
+#define ISPYI_GU_ADDR_TYPE                                                UInt32
+#define ISPYI_GU_ADDR_RESERVED_MASK                                       0x0000001F
+#define    ISPYI_GU_ADDR_ADDRESS_SHIFT                                    5
+#define    ISPYI_GU_ADDR_ADDRESS_MASK                                     0xFFFFFFE0
+
+#define ISPYI_BV_ADDR_OFFSET                                              0X0000070C
+#define ISPYI_BV_ADDR_TYPE                                                UInt32
+#define ISPYI_BV_ADDR_RESERVED_MASK                                       0x0000001F
+#define    ISPYI_BV_ADDR_ADDRESS_SHIFT                                    5
+#define    ISPYI_BV_ADDR_ADDRESS_MASK                                     0xFFFFFFE0
+
+#define ISPYI_STRIDE1_OFFSET                                              0X00000710
+#define ISPYI_STRIDE1_TYPE                                                UInt32
+#define ISPYI_STRIDE1_RESERVED_MASK                                       0xFFF0001F
+#define    ISPYI_STRIDE1_Y_STRIDE_SHIFT                                   5
+#define    ISPYI_STRIDE1_Y_STRIDE_MASK                                    0x000FFFE0
+
+#define ISPYI_STRIDE2_OFFSET                                              0X00000714
+#define ISPYI_STRIDE2_TYPE                                                UInt32
+#define ISPYI_STRIDE2_RESERVED_MASK                                       0xFFF0000F
+#define    ISPYI_STRIDE2_UV_STRIDE_SHIFT                                  4
+#define    ISPYI_STRIDE2_UV_STRIDE_MASK                                   0x000FFFF0
+
+#define ISPYI_COL_STRIDE1_OFFSET                                          0X00000718
+#define ISPYI_COL_STRIDE1_TYPE                                            UInt32
+#define ISPYI_COL_STRIDE1_RESERVED_MASK                                   0xFE0001FF
+#define    ISPYI_COL_STRIDE1_STRIDE_SHIFT                                 9
+#define    ISPYI_COL_STRIDE1_STRIDE_MASK                                  0x01FFFE00
+
+#define ISPYI_COL_STRIDE2_OFFSET                                          0X0000071C
+#define ISPYI_COL_STRIDE2_TYPE                                            UInt32
+#define ISPYI_COL_STRIDE2_RESERVED_MASK                                   0xFE0001FF
+#define    ISPYI_COL_STRIDE2_STRIDE_SHIFT                                 9
+#define    ISPYI_COL_STRIDE2_STRIDE_MASK                                  0x01FFFE00
+
+#define ISPYI_RY_EADDR_OFFSET                                             0X00000720
+#define ISPYI_RY_EADDR_TYPE                                               UInt32
+#define ISPYI_RY_EADDR_RESERVED_MASK                                      0x0000001F
+#define    ISPYI_RY_EADDR_ENDADDR_SHIFT                                   5
+#define    ISPYI_RY_EADDR_ENDADDR_MASK                                    0xFFFFFFE0
+
+#define ISPYI_GU_EADDR_OFFSET                                             0X00000724
+#define ISPYI_GU_EADDR_TYPE                                               UInt32
+#define ISPYI_GU_EADDR_RESERVED_MASK                                      0x0000001F
+#define    ISPYI_GU_EADDR_ENDADDR_SHIFT                                   5
+#define    ISPYI_GU_EADDR_ENDADDR_MASK                                    0xFFFFFFE0
+
+#define ISPYI_BV_EADDR_OFFSET                                             0X00000728
+#define ISPYI_BV_EADDR_TYPE                                               UInt32
+#define ISPYI_BV_EADDR_RESERVED_MASK                                      0x0000001F
+#define    ISPYI_BV_EADDR_ENDADDR_SHIFT                                   5
+#define    ISPYI_BV_EADDR_ENDADDR_MASK                                    0xFFFFFFE0
+
 
 #define ISPYC_MATRIX_OFFSET                                               0x00000750
 #define ISPYC_MATRIX_TYPE                                                 UInt32
@@ -1137,5 +1226,4 @@
 #define    ISPLO_STRIDE2_STRIDE_MASK                                      0x001FFFF0 
 
 #endif /* __BRCM_RDB_ISP_H__ */
-
 
