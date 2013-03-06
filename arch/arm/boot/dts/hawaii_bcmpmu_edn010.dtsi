@@ -150,7 +150,7 @@
 		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, dsm_mode = BCMPMU_REGL_ON_IN_DSM*/
 		lv2  = "1", "lvldo2_uc", "0", "7", "0", "0", "0";
 		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, dsm_mode = BCMPMU_REGL_ON_IN_DSM*/
-		vsr  = "1", "vsr_uc", "1", "7", "0", "0", "0";
+		vsr  = "1", "vsr_uc", "0", "7", "0", "0", "0";
 		/*pc_map = PMU_PC3, dsm_mode = BCMPMU_REGL_OFF_IN_DSM*/
 		csr  = "1", "csr_uc", "1", "4", "2", "0", "0";
 		/*pc_map = PMU_PC2, dsm_mode = BCMPMU_REGL_LPM_IN_DSM*/
