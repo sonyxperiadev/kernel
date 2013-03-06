@@ -1310,7 +1310,7 @@ int bcmpmu_init_sr_volt()
 	u8 sdsr_ret_reg = 0;
 	int sdsr_vret;
 
-	pr_info("REG: pmu_init_platform_hw called\n");
+	pr_info("%s called\n", __func__);
 	BUG_ON(!pmu);
 	/* ADJUST MSR RETN VOLTAGE */
 	msr_ret_vlt = get_vddvar_retn_vlt_id();

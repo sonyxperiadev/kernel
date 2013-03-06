@@ -67,11 +67,11 @@ u8 vlt_id_table[SR_VLT_LUT_SIZE];
 #define CSR_TURBO_1G_TF			980
 #define CSR_SUPER_TURBO_1G_TF		1130
 
-#define CSR_XTAL_1G_FF			890
-#define CSR_ECO_1G_FF			910
-#define CSR_NM_1G_FF			930
-#define CSR_TURBO_1G_FF			970
-#define CSR_SUPER_TURBO_1G_FF		1110
+#define CSR_XTAL_1G_FF			880
+#define CSR_ECO_1G_FF			900
+#define CSR_NM_1G_FF			920
+#define CSR_TURBO_1G_FF			960
+#define CSR_SUPER_TURBO_1G_FF		1100
 
 #define CSR_XTAL_1200M_SS		930
 #define CSR_ECO_1200M_SS		950
@@ -97,11 +97,11 @@ u8 vlt_id_table[SR_VLT_LUT_SIZE];
 #define CSR_TURBO_1200M_TF		1040
 #define CSR_SUPER_TURBO_1200M_TF	1220
 
-#define CSR_XTAL_1200M_FF		890
-#define CSR_ECO_1200M_FF		910
-#define CSR_NM_1200M_FF			950
-#define CSR_TURBO_1200M_FF		1020
-#define CSR_SUPER_TURBO_1200M_FF	1200
+#define CSR_XTAL_1200M_FF		880
+#define CSR_ECO_1200M_FF		900
+#define CSR_NM_1200M_FF			940
+#define CSR_TURBO_1200M_FF		1010
+#define CSR_SUPER_TURBO_1200M_FF	1190
 
 /* MSR_SUPER_TURBO for 1 GHZ is defined only for testing purposes */
 
@@ -125,10 +125,10 @@ u8 vlt_id_table[SR_VLT_LUT_SIZE];
 #define MSR_TURBO_1G_TF			1130
 #define MSR_SUPER_TURBO_1G_TF		1220
 
-#define MSR_ECO_1G_FF			910
-#define MSR_NM_1G_FF			1010
-#define MSR_TURBO_1G_FF			1110
-#define MSR_SUPER_TURBO_1G_FF		1200
+#define MSR_ECO_1G_FF			900
+#define MSR_NM_1G_FF			1000
+#define MSR_TURBO_1G_FF			1100
+#define MSR_SUPER_TURBO_1G_FF		1190
 
 #define MSR_ECO_1200M_SS		950
 #define MSR_NM_1200M_SS			1090
@@ -150,10 +150,10 @@ u8 vlt_id_table[SR_VLT_LUT_SIZE];
 #define MSR_TURBO_1200M_TF		1130
 #define MSR_SUPER_TURBO_1200M_TF	1220
 
-#define MSR_ECO_1200M_FF		910
-#define MSR_NM_1200M_FF			1010
-#define MSR_TURBO_1200M_FF		1110
-#define MSR_SUPER_TURBO_1200M_FF	1200
+#define MSR_ECO_1200M_FF		900
+#define MSR_NM_1200M_FF			1000
+#define MSR_TURBO_1200M_FF		1100
+#define MSR_SUPER_TURBO_1200M_FF	1190
 
 
 #define PMU_VLT_TBL_1G_SS ARRAY_LIST(\
@@ -290,6 +290,7 @@ const u8 *get_sr_vlt_table(u32 silicon_type, int freq_id)
 			vddvar_adj = DEFAULT_AGING_MARGIN_1200M;
 			break;
 	case A9_FREQ_1500_MHZ:
+	/* Right now 1.5Ghz table hasn't been defined */
 	default:
 			BUG();
 	}
@@ -297,7 +298,6 @@ const u8 *get_sr_vlt_table(u32 silicon_type, int freq_id)
 	ret = avs_get_vddvar_aging_margin(silicon_type, freq_id);
 	if (ret >= 0)
 		vddvar_adj = (u32)ret;
-
 	for (i = 0; i < ACTIVE_VOLTAGE_OFFSET; i++)
 		vlt_id_table[i] = bcmpmu_rgltr_get_volt_id(vlt_table[i]);
 
@@ -444,7 +444,8 @@ static ssize_t read_volt_tbl(struct file *file, const char __user *buf,
 		pr_err("%s: Invalid silicon type\n", __func__);
 		return count;
 	}
-	if (freq_id >= A9_FREQ_1200_MHZ) {
+	/* Right now, 1.5Ghz voltage table hasn't been defined */
+	if (freq_id >= A9_FREQ_1500_MHZ) {
 		pr_err("%s: Invalid freq id\n", __func__);
 		return count;
 	}
