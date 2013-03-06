@@ -67,6 +67,16 @@
 #define AVS_FAB_SRC_MASK	(0x3)
 #define AVS_FAB_SRC_SHIFT	(0)
 
+#define AVS_FAB_SRC_NB	2
+#define AVS_MONTH_NB	4
+#define AVS_YEAR_NB	4
+#define AVS_ATE_VAL_NB	4
+#define AVS_CRC_NB	4
+#define AVS_IRDROP_NB	10
+#define AVS_SPM_NB	8
+#define AVS_VOLT_NB	4
+#define AVS_VLT_ADJ_NB	5
+#define AVS_RESERVED_NB	8
 
 #define avs_dbg(level, args...) \
 	do { \
@@ -622,28 +632,28 @@ static long avs_compute_crc(struct avs_info *avs_inf_ptr)
 	CSR_ATE_AVS_BIN[3:0], Year[3:0]:Month[3:0], RSVD_FIELD4[7:0],
 	RSVD_FIELD3[7:0], RSVD_FIELD2[7:0], RSVD_FIELD1[7:0} */
 
-	avs_pack_n_cpy(&ptr, avs_inf_ptr->fab_src, 2);
+	avs_pack_n_cpy(&ptr, avs_inf_ptr->fab_src, AVS_FAB_SRC_NB);
 
-	avs_pack_n_cpy(&ptr, avs_inf_ptr->vddvar_min, 4);
-	avs_pack_n_cpy(&ptr, avs_inf_ptr->vddvar_a9_min, 4);
-	avs_pack_n_cpy(&ptr, avs_inf_ptr->vddvar_ret_min, 4);
-	avs_pack_n_cpy(&ptr, avs_inf_ptr->vddfix_ret_min, 4);
+	avs_pack_n_cpy(&ptr, avs_inf_ptr->vddvar_min, AVS_VOLT_NB);
+	avs_pack_n_cpy(&ptr, avs_inf_ptr->vddvar_a9_min, AVS_VOLT_NB);
+	avs_pack_n_cpy(&ptr, avs_inf_ptr->vddvar_ret_min, AVS_VOLT_NB);
+	avs_pack_n_cpy(&ptr, avs_inf_ptr->vddfix_ret_min, AVS_VOLT_NB);
 
-	avs_pack_n_cpy(&ptr, avs_inf_ptr->vddvar_spm, 8);
-	avs_pack_n_cpy(&ptr, avs_inf_ptr->vddfix_spm, 8);
+	avs_pack_n_cpy(&ptr, avs_inf_ptr->vddvar_spm, AVS_SPM_NB);
+	avs_pack_n_cpy(&ptr, avs_inf_ptr->vddfix_spm, AVS_SPM_NB);
 
-	avs_pack_n_cpy(&ptr, avs_inf_ptr->vddfix_vlt_adj, 5);
-	avs_pack_n_cpy(&ptr, avs_inf_ptr->irdrop, 10);
+	avs_pack_n_cpy(&ptr, avs_inf_ptr->vddfix_vlt_adj, AVS_VLT_ADJ_NB);
+	avs_pack_n_cpy(&ptr, avs_inf_ptr->irdrop, AVS_IRDROP_NB);
 
-	avs_pack_n_cpy(&ptr, avs_inf_ptr->avs_ate_val, 4);
-	avs_pack_n_cpy(&ptr, avs_inf_ptr->year, 4);
-	avs_pack_n_cpy(&ptr, avs_inf_ptr->month, 4);
+	avs_pack_n_cpy(&ptr, avs_inf_ptr->avs_ate_val, AVS_ATE_VAL_NB);
+	avs_pack_n_cpy(&ptr, avs_inf_ptr->year, AVS_YEAR_NB);
+	avs_pack_n_cpy(&ptr, avs_inf_ptr->month, AVS_MONTH_NB);
 
 	/*pack reserved bits*/
-	avs_pack_n_cpy(&ptr, 0, 8);
-	avs_pack_n_cpy(&ptr, 0, 8);
-	avs_pack_n_cpy(&ptr, 0, 8);
-	avs_pack_n_cpy(&ptr, 0, 8);
+	avs_pack_n_cpy(&ptr, 0, AVS_RESERVED_NB);
+	avs_pack_n_cpy(&ptr, 0, AVS_RESERVED_NB);
+	avs_pack_n_cpy(&ptr, 0, AVS_RESERVED_NB);
+	avs_pack_n_cpy(&ptr, 0, AVS_RESERVED_NB);
 	ptr++;
 	*ptr = 0; /*add null*/
 	avs_dbg(AVS_LOG_FLOW, "bit pack -> %s\n", pack);
