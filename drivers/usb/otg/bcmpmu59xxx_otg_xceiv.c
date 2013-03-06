@@ -362,6 +362,8 @@ static int bcmpmu_otg_xceiv_chg_detection_notif_handler(struct notifier_block
 		}
 		break;
 	case PMU_USB_TYPE_SDP:
+	case PMU_USB_TYPE_CDP:
+	case PMU_USB_TYPE_ACA:
 		queue_work(xceiv_data->bcm_otg_work_queue,
 			   &xceiv_data->bcm_otg_chg_detect_work);
 		break;
