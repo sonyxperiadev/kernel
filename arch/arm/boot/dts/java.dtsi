@@ -143,4 +143,16 @@
 		cell-index = <4>;
 		interrupts = <0 14 0x04>;
 	};
+
+	kona-fb {
+		compatible = "bcm,kona-fb";
+		reg = <0x3c200000 0x1000>;
+	};
+
+	iommu-mm {
+		compatible = "bcm,iommu-m4u";
+		interrupts = <0 181 0>;
+		reg = <0x3500a000 0x1000>;
+	};
+
 };

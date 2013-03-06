@@ -42,7 +42,7 @@ config ISP
 
 config H264
 	tristate "H264 Driver"
-	depends on BRCM_CHAR_DRIVERS && (ARCH_HAWAII)
+	depends on BRCM_CHAR_DRIVERS && (ARCH_HAWAII || ARCH_JAVA)
 	default n
 
 config UNICAM
@@ -82,7 +82,7 @@ config BCM_MDMGPIO
 
 config HAWAII_MM
 	tristate "Hawaii MM Driver Framework"
-	depends on BRCM_CHAR_DRIVERS && (ARCH_RHEA || ARCH_HAWAII)
+	depends on BRCM_CHAR_DRIVERS && (ARCH_RHEA || ARCH_HAWAII || ARCH_JAVA)
 	default n
 
 config HAWAII_MM_H264

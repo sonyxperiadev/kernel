@@ -98,9 +98,7 @@ extern "C" {
 * DMA control block informaiton
 ******************************************************************************/
 	typedef struct {
-#ifdef CONFIG_ARCH_HAWAII
 		cUInt32 burstWriteEnable32;	///< support writes burst upto 8
-#endif
 		cUInt32 noWideBurst;	///< no wide writes as a 2 beat burst (0/1)
 		cUInt32 waitCycles;	///< add wait cycles after each DMA read/write
 		cUInt32 srcDreqID;	///< src DREQ ID

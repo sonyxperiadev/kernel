@@ -9,7 +9,7 @@
 	compatible = "bcm,java";
 
 	chosen {
-		bootargs = "console=ttyS0,115200n8 gpt mem=736M pmem=0 carveout=0 ap_only_boot"; /*lpj=10461184*/
+		bootargs = "console=ttyS0,115200n8 gpt mem=736M ap_only_boot root=/dev/ram0 rw rootfstype=rootfs initrd=0x83000000,4M init=/linuxrc"; /*lpj=10461184*/
 	};
 
 	memory@82000000 {
@@ -25,7 +25,7 @@
 	};
 
 	uart@3e000000 {
-		clock-frequency = <26000000>;
+		clock-frequency = <13000000>;
 		port-name = "console";
 		clk-name = "uartb_clk";
 	};
@@ -34,12 +34,14 @@
 		clock-frequency = <48000000>;
 		port-name = "bluetooth";
 		clk-name = "uartb2_clk";
+		status = "disabled";
 	};
 
 	uart@3e002000 {
 		clock-frequency = <26000000>;
 		port-name = "gps";
 		clk-name = "uartb3_clk";
+		status = "disabled";
 	};
 
 	i2c0: i2c@3e016000 {
@@ -134,4 +136,85 @@
 		hs-ref-frequency = <26000000>;
 		status = "disabled";
 	};
+
+	iommu_mm: iommu-mm {
+		compatible = "bcm,iommu-m4u";
+		iova_begin  = <0x80000000>;
+		iova_size   = <0x80000000>;
+		errbuf_size = <0x00001000>;
+	};
+
+	iovmm_mm: iovmm-mm {
+		compatible = "bcm,iovmm";
+		base = <0xc0000000>;
+		size = <0x20000000>;
+		order = <0>;
+	};
+
+	iovmm_mm_256mb: iovmm-mm-256mb {
+		compatible = "bcm,iovmm";
+		base = <0xe0000000>;
+		size = <0x10000000>;
+		order = <0>;
+	};
+
+	ion-system {
+		compatible = "bcm,ion";
+		id = <0>;
+		type = <0>;
+		iommu = <&iommu_mm>;
+		iovmm = <&iovmm_mm_256mb>;
+	};
+
+	ion-carveout {
+		compatible = "bcm,ion";
+		id = <3>;
+		type = <2>;
+		base  = <0xa0000000>;
+		limit = <0xb0000000>;
+		size  = <0x04000000>;
+		lmk_enable = <0>;
+		lmk_min_score_adj = <411>;
+		lmk_min_free = <32>;
+		iommu = <&iommu_mm>;
+		iovmm = <&iovmm_mm_256mb>;
+	};
+
+	ion-cma {
+		compatible = "bcm,ion";
+		id = <2>;
+		type = <4>;
+		base  = <0xa0000000>;
+		limit = <0xb0000000>;
+		size  = <0x0c000000>;
+		lmk_enable = <1>;
+		lmk_min_score_adj = <411>;
+		lmk_min_free = <32>;
+		iommu = <&iommu_mm>;
+		iovmm = <&iovmm_mm_256mb>;
+	};
+
+	kona-fb {
+		module-name = "SIMULATOR";
+		reg-name = "cam2";
+		rst-gpio = <22>;
+		rst-setup = <5>;	/* 5us */
+		rst-pulse = <15>;	/* 15us */
+		rst-hold = <10000>;	/* 10ms */
+		/* rst-active-high */	/* Commented => Active Low */
+		/* vburst = <0>; */	/* Non-burst mode */
+		/* cmnd-LP; */		/* Commands in HS mode*/
+		col-mod-i = <2>;	/* KONA_CM_I_XBGR888 */
+		col-mod-o = <3>;	/* KONA_CM_O_RGB888 */
+		width = <540>;
+		height = <960>;
+		fps = <60>;
+		lanes = <3>;
+		hs-bitrate = <1000000000>;	/* 330mbps */
+		lp-bitrate = <5000000>;	/* 5mbps */
+		iommu = <&iommu_mm>;
+		iovmm = <&iovmm_mm>;
+		rotation = <0>;
+	};
+
 };

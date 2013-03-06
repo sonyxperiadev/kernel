@@ -230,7 +230,7 @@ cVoid chal_dsi_phy_state(CHAL_HANDLE handle, CHAL_DSI_PHY_STATE_t state)
 	    | DSI_REG_FIELD_SET(DSI1_PHYC, TXULPSCLK, 1)
 	    | DSI_REG_FIELD_SET(DSI1_PHYC, TX_HSCLK_CONT, 1);
 
-#if !defined(CONFIG_MACH_BCM_FPGA_E) || !defined(CONFIG_MACH_BCM_FPGA)
+#if !defined(CONFIG_MACH_BCM_FPGA_E) && !defined(CONFIG_MACH_BCM_FPGA)
 	switch (pDev->dlCount) {
 	case 4:
 		regMask |= DSI_REG_FIELD_SET(DSI1_PHYC, TXULPSESC_3, 1);

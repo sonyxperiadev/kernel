@@ -130,9 +130,7 @@ extern "C" {
 *
 *****************************************************************************/
 	typedef struct {
-#ifdef CONFIG_ARCH_HAWAII
 		UInt32 burstWriteEnable32;	///< support writes burst upto 8
-#endif
 		UInt32 srcAddr;	///< source address
 		UInt32 dstAddr;	///< destination address
 		UInt32 xferLength;	///< transfer length    
@@ -144,9 +142,7 @@ extern "C" {
 *
 *****************************************************************************/
 	typedef struct {
-#ifdef CONFIG_ARCH_HAWAII
 		UInt32 burstWriteEnable32;	///< support writes burst upto 8
-#endif
 		UInt32 srcAddr;	///< source address
 		UInt32 dstAddr;	///< destination address
 		UInt16 xXferLength;	///< X transfer length 

@@ -14,6 +14,7 @@
 obj-y += chal_keypad.o
 obj-$(CONFIG_ARCH_RHEA) += chal_aci.o
 obj-$(CONFIG_ARCH_HAWAII) += chal_aci.o
+obj-$(CONFIG_ARCH_JAVA) += chal_aci.o
 obj-$(CONFIG_KONA_DSI) += chal_dsi.o
 obj-$(CONFIG_KONA_SMI) += chal_smi.o
 obj-$(CONFIG_KONA_VC4LITE) += chal_dma_vc4lite.o \

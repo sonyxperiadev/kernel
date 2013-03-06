@@ -32,10 +32,6 @@
 #ifdef CONFIG_ANDROID_PMEM
 #include <linux/android_pmem.h>
 #endif
-#ifdef CONFIG_ION
-#include <linux/ion.h>
-#include <linux/broadcom/kona_ion.h>
-#endif
 #include <linux/kernel_stat.h>
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
@@ -89,9 +85,9 @@
 #define KONA_UART1_PA   UARTB2_BASE_ADDR
 #define KONA_UART2_PA   UARTB3_BASE_ADDR
 
-#ifdef CONFIG_FB_BRCM_KONA
-#include <video/kona_fb_boot.h>
-#include <video/kona_fb.h>
+#if defined(CONFIG_BCM_ALSA_SOUND)
+#include <mach/caph_platform.h>
+#include <mach/caph_settings.h>
 #endif
 
 #define KONA_8250PORT_FPGA(name, clk, freq, uart_name)		\
@@ -119,46 +115,6 @@ struct android_pmem_platform_data android_pmem_data = {
 	.carveout_size = 0,
 };
 #endif
-
-#ifdef CONFIG_ION
-struct ion_platform_data ion_carveout_data = {
-	.nr = 1,
-	.heaps = {
-		[0] = {
-			.id    = 0,
-			.type  = ION_HEAP_TYPE_CARVEOUT,
-			.name  = "ion-carveout-0",
-			.base  = 0,
-			.limit = 0,
-			.size  = (48 * SZ_1M),
-		},
-		[1] = {
-			.id    = 2,
-			.type  = ION_HEAP_TYPE_CARVEOUT,
-			.name  = "ion-carveout-1",
-			.base  = 0,
-			.limit = 0,
-			.size  = (0 * SZ_1M),
-		},
-	},
-};
-
-#ifdef CONFIG_CMA
-struct ion_platform_data ion_cma_data = {
-	.nr = 1,
-	.heaps = {
-		[0] = {
-			.id = 1,
-			.type  = ION_HEAP_TYPE_DMA,
-			.name  = "ion-cma-0",
-			.base  = 0,
-			.limit = 0,
-			.size  = (0 * SZ_1M),
-		},
-	},
-};
-#endif	/* CONFIG_CMA */
-#endif	/* CONFIG_ION */
 
 static struct spi_kona_platform_data sspi_spi0_info = {
 #ifdef CONFIG_DMAC_PL330
@@ -296,13 +252,6 @@ static void __init hawaii_ray_add_devices(void)
 {
 	hawaii_ray_add_pdata();
 
-#ifdef CONFIG_ION
-	platform_device_register(&ion_carveout_device);
-#ifdef CONFIG_CMA
-	platform_device_register(&ion_cma_device);
-#endif	/* CONFIG_CMA */
-#endif	/* CONFIG_ION */
-
 	platform_add_devices(hawaii_ray_plat_devices,
 			     ARRAY_SIZE(hawaii_ray_plat_devices));
 
@@ -310,41 +259,6 @@ static void __init hawaii_ray_add_devices(void)
 	spi_register_board_info(spi_slave_board_info,
 				ARRAY_SIZE(spi_slave_board_info));
 }
-
-
-#ifdef CONFIG_FB_BRCM_KONA
-/*
- * KONA FRAME BUFFER DISPLAY DRIVER PLATFORM CONFIG
- */
-struct kona_fb_platform_data konafb_devices[] __initdata = {
-	{
-		.dispdrv_name  = "NT35516",
-		.dispdrv_entry = DISP_DRV_NT35516_GetFuncTable,
-		.parms = {
-			.w0 = {
-				.bits = {
-					.boot_mode  = 0,
-					.bus_type   = KONA_BUS_DSI,
-					.bus_no     = KONA_BUS_0,
-					.bus_ch     = KONA_BUS_CH_0,
-					.bus_width  = 3,
-					.te_input   = KONA_TE_IN_1_DSI0,
-					.col_mode_i = KONA_CM_I_XRGB888,
-					.col_mode_o = KONA_CM_O_RGB888,
-				},
-			},
-			.w1 = {
-			.bits = {
-					.api_rev  =  KONA_LCD_BOOT_API_REV,
-					.lcd_rst0 =  22,
-				},
-			},
-		},
-	},
-};
-
-#include "kona_fb_init.c"
-#endif /* #ifdef CONFIG_FB_BRCM_KONA */
 
 static struct of_device_id hawaii_dt_match_table[] __initdata = {
 	{ .compatible = "simple-bus", },
@@ -355,10 +269,6 @@ void __init board_init(void)
 {
 	hawaii_ray_add_devices();
 	hawaii_add_common_devices();
-#ifdef CONFIG_FB_BRCM_KONA
-	/* kona_fb_init.c */
-	konafb_init();
-#endif
 	of_platform_populate(NULL, hawaii_dt_match_table, NULL, NULL);
 	return;
 }
@@ -373,7 +283,7 @@ void __init board_map_io(void)
 late_initcall(hawaii_ray_add_lateInit_devices);
 
 static const char *hawaii_dt_compat[] = { "bcm,java", NULL, };
-DT_MACHINE_START(HAWAII, "javaFPGA")
+DT_MACHINE_START(HAWAII, "java")
     .map_io = board_map_io,
     .init_irq = kona_init_irq,
     .handle_irq = gic_handle_irq,
