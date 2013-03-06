@@ -104,8 +104,8 @@
 	bcmpmu_rgltrs {
 		compatible = "Broadcom,rgltr";
 		/*num_of_consumer_supp, consumer_supply, always_on, pc_map, dsm_mode, boot_on, req_voltage(in uV)*/
-		/*pc_map = PMU_PC2, dsm_mode = BCMPMU_REGL_OFF_IN_DSM*/
-		rf   = "1", "rf", "1", "2", "2", "0", "0";
+		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, dsm_mode = BCMPMU_REGL_ON_IN_DSM*/
+		rf   = "1", "rf", "0", "7", "0", "1", "0";
 		/*pc_map = PMU_PC2|PMU_PC3, dsm_mode = BCMPMU_REGL_LPM_IN_DSM*/
 		cam1 = "1", "cam1", "1", "6", "1", "0", "0";
 		/*pc_map = PMU_PC2|PMU_PC3, dsm_mode = BCMPMU_REGL_LPM_IN_DSM*/
