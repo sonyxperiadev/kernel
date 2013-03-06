@@ -276,7 +276,7 @@ extern int hawaii_wifi_status_register(
 struct android_pmem_platform_data android_pmem_data = {
 	.name = "pmem",
 	.cmasize = 0,
-	.carveout_base = 0x9e000000,
+	.carveout_base = 0,
 	.carveout_size = 0,
 };
 #endif
@@ -782,10 +782,17 @@ struct regulator_consumer_supply sdx_supply[] = {
 
 #ifdef CONFIG_KEYBOARD_BCM
 static struct bcm_keymap hawaii_keymap[] = {
+#ifdef CONFIG_HAWAII_SS_LOGAN_REV01
 	{BCM_KEY_ROW_0, BCM_KEY_COL_0, "Vol Up Key", KEY_VOLUMEUP},
 	{BCM_KEY_ROW_0, BCM_KEY_COL_1, "Vol Down Key", KEY_VOLUMEDOWN},
 	{BCM_KEY_ROW_0, BCM_KEY_COL_2, "unused", 0},
 	{BCM_KEY_ROW_0, BCM_KEY_COL_3, "unused", 0},
+#else
+	{BCM_KEY_ROW_0, BCM_KEY_COL_0, "unused", 0},
+	{BCM_KEY_ROW_0, BCM_KEY_COL_1, "Vol Down Key", KEY_VOLUMEDOWN},
+	{BCM_KEY_ROW_0, BCM_KEY_COL_2, "unused", 0},
+	{BCM_KEY_ROW_0, BCM_KEY_COL_3, "Vol Up Key", KEY_VOLUMEUP},
+#endif
 	{BCM_KEY_ROW_0, BCM_KEY_COL_4, "unused", 0},
 	{BCM_KEY_ROW_0, BCM_KEY_COL_5, "unused", 0},
 	{BCM_KEY_ROW_0, BCM_KEY_COL_6, "unused", 0},
@@ -850,7 +857,7 @@ static struct bcm_keymap hawaii_keymap[] = {
 
 static struct bcm_keypad_platform_info hawaii_keypad_data = {
 	.row_num = 1,
-	.col_num = 2,
+	.col_num = 4,
 	.keymap = hawaii_keymap,
 	.bcm_keypad_base = (void *)__iomem HW_IO_PHYS_TO_VIRT(KEYPAD_BASE_ADDR),
 };
@@ -1160,6 +1167,24 @@ static struct platform_device board_bcmbt_lpm_device = {
 };
 #endif
 
+
+
+#ifdef CONFIG_BYPASS_WIFI_DEVTREE
+static struct board_wifi_info brcm_wifi_data = {
+	.wl_reset_gpio = 3,
+	.host_wake_gpio = 74,
+	.board_nvram_file = "/system/vendor/firmware/fw_wifi_nvram_4330.txt",
+	.module_name = "bcm-wifi",
+};
+static struct platform_device board_wifi_driver_device = {
+
+	.name = "bcm_wifi",
+	.id = -1,
+	.dev = {
+		.platform_data = &brcm_wifi_data,
+	},
+};
+#endif
 /*
  * SPI board info for the slaves
  */
@@ -1563,6 +1588,10 @@ static struct platform_device *hawaii_devices[] __initdata = {
 	&board_bcmbt_lpm_device,
 #endif
 
+#ifdef CONFIG_BYPASS_WIFI_DEVTREE
+	&board_wifi_driver_device,
+#endif
+
 #ifdef CONFIG_VIDEO_KONA
 	&hawaii_unicam_device,
 #endif
@@ -1786,6 +1815,12 @@ struct kona_fb_platform_data konafb_devices[] __initdata = {
 		.lanes = 2,
 		.hs_bps = 500000000,
 		.lp_bps = 5000000,
+#ifdef CONFIG_IOMMU_API
+		.pdev_iommu = &iovmm_mm_device,
+#endif
+#ifdef CONFIG_BCM_IOVMM
+		.pdev_iovmm = &iovmm_mm_256mb_device,
+#endif
 	},
 };
 

@@ -49,6 +49,7 @@
 #define PMU_DEVICE_I2C_BUSNO 4
 
 #define PMU_SR_VOLTAGE_MASK	0x3F
+#define PMU_SR_VOLTAGE_SHIFT 0
 
 static int bcmpmu_init_platform_hw(struct bcmpmu59xxx *bcmpmu);
 static int bcmpmu_exit_platform_hw(struct bcmpmu59xxx *bcmpmu);
@@ -169,8 +170,7 @@ static struct bcmpmu59xxx_rw_data __initdata register_init_data[] = {
 	{.addr = PMU_REG_CMPCTRL17 , .val = 0x00, .mask = 0xFF},
 	{.addr = PMU_REG_PLLPMCTRL , .val = 0x00, .mask = 0xFF},
 
-#if defined(CONFIG_MACH_HAWAII_SS_LOGAN_REV00) \
-	|| defined(CONFIG_MACH_HAWAII_SS_LOGAN_REV01)
+#if defined(CONFIG_MACH_HAWAII_SS_COMMON)
 	/* enable PASR mode */
 	{.addr = PMU_REG_GPIOCTRL3 , .val = 0x02, .mask = 0xFF},
 	{.addr = PMU_REG_PASRCTRL1 , .val = 0x19, .mask = 0xFF},
@@ -188,7 +188,7 @@ static struct regulator_init_data bcm59xxx_rfldo_data = {
 			.max_uV = 3300000,
 			.valid_ops_mask = REGULATOR_CHANGE_STATUS |
 			REGULATOR_CHANGE_VOLTAGE,
-			.always_on = 1,
+			.always_on = 0,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(rf_supply),
 	.consumer_supplies = rf_supply,
@@ -386,19 +386,10 @@ static struct regulator_init_data bcm59xxx_vibldo_data = {
 			.name = "vibldo",
 			.min_uV = 1300000,
 			.max_uV = 3300000,
-	#if defined(CONFIG_MACH_HAWAII_SS_LOGAN_REV01)
-	/*
-		Vibldo was short with VBRAMPLP400P by mistake.
-		So, we need to disable vibldo output all the time
-	*/
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
 			.always_on = 0,
-	#else
-			.valid_ops_mask =
-			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
-			.always_on = 1,
-	#endif
+
 			},
 	.num_consumer_supplies = ARRAY_SIZE(vib_supply),
 	.consumer_supplies = vib_supply,
@@ -624,9 +615,11 @@ struct bcmpmu59xxx_regulator_init_data
 		[BCMPMU_REGULATOR_RFLDO] = {
 			.id = BCMPMU_REGULATOR_RFLDO,
 			.initdata = &bcm59xxx_rfldo_data,
-			.dsm_mode = BCMPMU_REGL_LPM_IN_DSM,
+			.dsm_mode = BCMPMU_REGL_OFF_IN_DSM,
 			.pc_pins_map =
-				PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
+				PCPIN_MAP_ENC(0, PMU_PC2),
+			.name = "rf",
+			.req_volt = 0,
 		},
 		[BCMPMU_REGULATOR_CAMLDO1] = {
 			.id = BCMPMU_REGULATOR_CAMLDO1,
@@ -634,6 +627,7 @@ struct bcmpmu59xxx_regulator_init_data
 			.dsm_mode = BCMPMU_REGL_LPM_IN_DSM,
 			.pc_pins_map = PCPIN_MAP_ENC(0, PMU_PC2|PMU_PC3),
 			.name = "cam1",
+			.req_volt = 0,
 		},
 		[BCMPMU_REGULATOR_CAMLDO2] = {
 			.id = BCMPMU_REGULATOR_CAMLDO2,
@@ -642,6 +636,7 @@ struct bcmpmu59xxx_regulator_init_data
 			.pc_pins_map =
 				PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
 			.name = "cam2",
+			.req_volt = 0,
 		},
 		[BCMPMU_REGULATOR_SIMLDO1] = {
 			.id = BCMPMU_REGULATOR_SIMLDO1,
@@ -649,6 +644,7 @@ struct bcmpmu59xxx_regulator_init_data
 			.dsm_mode = BCMPMU_REGL_LPM_IN_DSM,
 			.pc_pins_map = PCPIN_MAP_ENC(0, PMU_PC1),
 			.name = "sim1",
+			.req_volt = 0,
 		},
 		[BCMPMU_REGULATOR_SIMLDO2] = {
 			.id = BCMPMU_REGULATOR_SIMLDO2,
@@ -657,14 +653,15 @@ struct bcmpmu59xxx_regulator_init_data
 			.pc_pins_map =
 				PCPIN_MAP_ENC(0, PMU_PC1),
 			.name = "sim2",
+			.req_volt = 0,
 		},
 		[BCMPMU_REGULATOR_SDLDO] = {
 			.id = BCMPMU_REGULATOR_SDLDO,
 			.initdata = &bcm59xxx_sdldo_data,
-			.dsm_mode = BCMPMU_REGL_LPM_IN_DSM,
 			.pc_pins_map =
 				PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
 			.name = "sd",
+			.req_volt = 0,
 		},
 		[BCMPMU_REGULATOR_SDXLDO] = {
 			.id = BCMPMU_REGULATOR_SDXLDO,
@@ -673,6 +670,7 @@ struct bcmpmu59xxx_regulator_init_data
 			.pc_pins_map =
 				 PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
 			.name = "sdx",
+			.req_volt = 0,
 		},
 		[BCMPMU_REGULATOR_MMCLDO1] = {
 			.id = BCMPMU_REGULATOR_MMCLDO1,
@@ -681,6 +679,7 @@ struct bcmpmu59xxx_regulator_init_data
 			.pc_pins_map =
 				PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
 			.name = "mmc1",
+			.req_volt = 0,
 		},
 		[BCMPMU_REGULATOR_MMCLDO2] = {
 			.id = BCMPMU_REGULATOR_MMCLDO2,
@@ -689,6 +688,7 @@ struct bcmpmu59xxx_regulator_init_data
 			.pc_pins_map =
 				PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
 			.name = "mmc2",
+			.req_volt = 0,
 		},
 
 		[BCMPMU_REGULATOR_AUDLDO] = {
@@ -697,6 +697,7 @@ struct bcmpmu59xxx_regulator_init_data
 			.dsm_mode = BCMPMU_REGL_OFF_IN_DSM,
 			.pc_pins_map = PCPIN_MAP_ENC(0, PMU_PC2|PMU_PC3),
 			.name = "aud",
+			.req_volt = 0,
 		},
 
 		[BCMPMU_REGULATOR_MICLDO] = {
@@ -706,6 +707,7 @@ struct bcmpmu59xxx_regulator_init_data
 			.pc_pins_map =
 				PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
 			.name = "mic",
+			.req_volt = 0,
 		},
 		[BCMPMU_REGULATOR_USBLDO] = {
 			.id = BCMPMU_REGULATOR_USBLDO,
@@ -714,6 +716,7 @@ struct bcmpmu59xxx_regulator_init_data
 			.pc_pins_map =
 				PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
 			.name = "usb",
+			.req_volt = 0,
 		},
 		[BCMPMU_REGULATOR_VIBLDO] = {
 			.id = BCMPMU_REGULATOR_VIBLDO,
@@ -729,8 +732,9 @@ struct bcmpmu59xxx_regulator_init_data
 #else
 			.pc_pins_map =
 				PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
-			.name = "vib",
 #endif
+			.name = "vib",
+			.req_volt = 0,
 		},
 		[BCMPMU_REGULATOR_GPLDO1] = {
 			.id = BCMPMU_REGULATOR_GPLDO1,
@@ -738,6 +742,7 @@ struct bcmpmu59xxx_regulator_init_data
 			.dsm_mode = BCMPMU_REGL_OFF_IN_DSM,
 			.pc_pins_map = PCPIN_MAP_ENC(0, 0), /*Not used*/
 			.name = "gp1",
+			.req_volt = 0,
 		},
 		[BCMPMU_REGULATOR_GPLDO2] = {
 			.id = BCMPMU_REGULATOR_GPLDO2,
@@ -746,6 +751,7 @@ struct bcmpmu59xxx_regulator_init_data
 			.pc_pins_map =
 				PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
 			.name = "gp2",
+			.req_volt = 0,
 		},
 		[BCMPMU_REGULATOR_GPLDO3] = {
 			.id = BCMPMU_REGULATOR_GPLDO3,
@@ -754,6 +760,7 @@ struct bcmpmu59xxx_regulator_init_data
 			.pc_pins_map =
 				PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
 			.name = "gp3",
+			.req_volt = 0,
 		},
 		[BCMPMU_REGULATOR_TCXLDO] = {
 			.id = BCMPMU_REGULATOR_TCXLDO,
@@ -762,6 +769,7 @@ struct bcmpmu59xxx_regulator_init_data
 			.pc_pins_map =
 				PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
 			.name = "tcx",
+			.req_volt = 0,
 		},
 	#if defined(CONFIG_MACH_HAWAII_SS_LOGAN_REV01)	\
 			|| defined(CONFIG_MACH_HAWAII_SS_LOGAN_REV02)
@@ -779,6 +787,7 @@ struct bcmpmu59xxx_regulator_init_data
 			.dsm_mode = BCMPMU_REGL_OFF_IN_DSM,
 			.pc_pins_map = PCPIN_MAP_ENC(0, 0), /*Not used*/
 			.name = "lv1",
+			.req_volt = 0,
 		},
 	#endif
 		[BCMPMU_REGULATOR_LVLDO2] = {
@@ -788,6 +797,7 @@ struct bcmpmu59xxx_regulator_init_data
 			.pc_pins_map =
 				PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
 			.name = "lv2",
+			.req_volt = 0,
 		},
 		[BCMPMU_REGULATOR_VSR] = {
 			.id = BCMPMU_REGULATOR_VSR,
@@ -796,6 +806,7 @@ struct bcmpmu59xxx_regulator_init_data
 			.pc_pins_map =
 				PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
 			.name = "vsr",
+			.req_volt = 0,
 		},
 		[BCMPMU_REGULATOR_CSR] = {
 			.id = BCMPMU_REGULATOR_CSR,
@@ -803,6 +814,7 @@ struct bcmpmu59xxx_regulator_init_data
 			.dsm_mode = BCMPMU_REGL_OFF_IN_DSM,
 			.pc_pins_map = PCPIN_MAP_ENC(0, PMU_PC3),
 			.name = "csr",
+			.req_volt = 0,
 		},
 		[BCMPMU_REGULATOR_MMSR] = {
 			.id = BCMPMU_REGULATOR_MMSR,
@@ -811,6 +823,7 @@ struct bcmpmu59xxx_regulator_init_data
 			.pc_pins_map =
 				PCPIN_MAP_ENC(0, PMU_PC2),
 			.name = "mmsr",
+			.req_volt = 0,
 		},
 		[BCMPMU_REGULATOR_SDSR1] = {
 			.id = BCMPMU_REGULATOR_SDSR1,
@@ -819,6 +832,7 @@ struct bcmpmu59xxx_regulator_init_data
 			.pc_pins_map =
 				PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
 			.name = "sdsr1",
+			.req_volt = 0,
 		},
 		[BCMPMU_REGULATOR_SDSR2] = {
 			.id = BCMPMU_REGULATOR_SDSR2,
@@ -826,6 +840,7 @@ struct bcmpmu59xxx_regulator_init_data
 			.dsm_mode = BCMPMU_REGL_LPM_IN_DSM,
 			.pc_pins_map = PCPIN_MAP_ENC(0, PMU_PC2|PMU_PC3),
 			.name = "sdsr2",
+			.req_volt = 0,
 		},
 		[BCMPMU_REGULATOR_IOSR1] = {
 			.id = BCMPMU_REGULATOR_IOSR1,
@@ -834,6 +849,7 @@ struct bcmpmu59xxx_regulator_init_data
 			.pc_pins_map =
 				PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
 			.name = "iosr1",
+			.req_volt = 0,
 		},
 		[BCMPMU_REGULATOR_IOSR2] = {
 			.id = BCMPMU_REGULATOR_IOSR2,
@@ -841,6 +857,7 @@ struct bcmpmu59xxx_regulator_init_data
 			.dsm_mode = BCMPMU_REGL_OFF_IN_DSM,
 			.pc_pins_map = PCPIN_MAP_ENC(0, 0), /*not used*/
 			.name = "iosr2",
+			.req_volt = 0,
 		},
 
 	};
@@ -1365,9 +1382,9 @@ void bcmpmu_set_pullup_reg(void)
 	writel(val1, KONA_CHIPREG_VA + CHIPREG_SPARE_CONTROL0_OFFSET);
 	/*      writel(val2, KONA_PMU_BSC_VA + I2C_MM_HS_PADCTL_OFFSET); */
 }
+static struct bcmpmu59xxx *pmu;
 
-
-static int bcmpmu_init_platform_hw(struct bcmpmu59xxx *bcmpmu)
+int bcmpmu_init_sr_volt()
 {
 #ifdef CONFIG_KONA_AVS
 	int msr_ret_vlt;
@@ -1377,38 +1394,45 @@ static int bcmpmu_init_platform_hw(struct bcmpmu59xxx *bcmpmu)
 	int sdsr_vret;
 
 	pr_info("REG: pmu_init_platform_hw called\n");
-	BUG_ON(!bcmpmu);
+	BUG_ON(!pmu);
 	/* ADJUST MSR RETN VOLTAGE */
-	msr_ret_vlt = get_msr_retn_vlt_id();
+	msr_ret_vlt = get_vddvar_retn_vlt_id();
 	if (msr_ret_vlt < 0) {
 		pr_err("%s: Wrong retn voltage value\n", __func__);
 		return -EINVAL;
 	}
-	pr_info("MSR Retn Voltage: 0x%x", msr_ret_vlt);
-	bcmpmu->write_dev(bcmpmu, PMU_REG_MMSRVOUT2, (u8)msr_ret_vlt);
+	pr_info("MSR Retn Voltage ID: 0x%x", msr_ret_vlt);
+	pmu->write_dev(pmu, PMU_REG_MMSRVOUT2, (u8)msr_ret_vlt);
 	/* ADJUST SDSR1 ACTIVE VOLTAGE */
-	bcmpmu->read_dev(bcmpmu, PMU_REG_SDSR1VOUT1, &sdsr_vlt);
-	adj_vlt = adjust_sdsr_voltage(sdsr_vlt & PMU_SR_VOLTAGE_MASK);
+	pmu->read_dev(pmu, PMU_REG_SDSR1VOUT1, &sdsr_vlt);
+	adj_vlt = get_vddfix_vlt_adj(sdsr_vlt & PMU_SR_VOLTAGE_MASK);
 	if (adj_vlt < 0) {
 		pr_err("%s: Wrong Voltage val for SDSR active\n", __func__);
 		return -EINVAL;
 	}
 	sdsr_vlt &= ~PMU_SR_VOLTAGE_MASK;
-	sdsr_vlt |= adj_vlt;
-	pr_info("SDSR1 Active Voltage: 0x%x", sdsr_vlt);
-	bcmpmu->write_dev(bcmpmu, PMU_REG_SDSR1VOUT1, sdsr_vlt);
+	sdsr_vlt |= adj_vlt << PMU_SR_VOLTAGE_SHIFT;
+	pr_info("SDSR1 Active Voltage ID: 0x%x", sdsr_vlt);
+	pmu->write_dev(pmu, PMU_REG_SDSR1VOUT1, sdsr_vlt);
 	/* ADJUST SDSR1 RETN VOLTAGE */
-	bcmpmu->read_dev(bcmpmu, PMU_REG_SDSR1VOUT2, &sdsr_ret_reg);
-	sdsr_vret = get_sdsr_retn_vlt_id(sdsr_ret_reg & PMU_SR_VOLTAGE_MASK);
+	pmu->read_dev(pmu, PMU_REG_SDSR1VOUT2, &sdsr_ret_reg);
+	sdsr_vret = get_vddfix_retn_vlt_id(sdsr_ret_reg & PMU_SR_VOLTAGE_MASK);
 	if (sdsr_vret < 0) {
 		pr_err("%s: Wrong Voltage val for SDSR retn\n", __func__);
 		return -EINVAL;
 	}
 	sdsr_ret_reg &= ~PMU_SR_VOLTAGE_MASK;
-	sdsr_ret_reg |= sdsr_vret;
-	pr_info("SDSR1 Retn voltage: 0x%x", sdsr_ret_reg);
-	bcmpmu->write_dev(bcmpmu, PMU_REG_SDSR1VOUT2, sdsr_ret_reg);
+	sdsr_ret_reg |= sdsr_vret << PMU_SR_VOLTAGE_SHIFT;
+	pr_info("SDSR1 Retn voltage ID: 0x%x\n", sdsr_ret_reg);
+	pmu->write_dev(pmu, PMU_REG_SDSR1VOUT2, sdsr_ret_reg);
 #endif
+	return 0;
+}
+
+
+static int bcmpmu_init_platform_hw(struct bcmpmu59xxx *bcmpmu)
+{
+	pmu = bcmpmu;
 	return 0;
 }
 
