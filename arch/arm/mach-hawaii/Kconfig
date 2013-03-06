@@ -41,24 +41,39 @@ config	MACH_HAWAII_GARNET
 	help
 	  Support for Broadcom Hawaii garnet board.
 
-
 config	MACH_HAWAII_SS_EVAL_REV00
-	bool "Support Broadcom Hawaii SS eval board"
+	bool "Support Broadcom Hawaii SS Evaluation board"
 	help
-	  Support for the Broadcom Hawaii SS eval board.
+	  Support for the Broadcom Hawaii SS Evaluation board.
+	  This board was used during the joint h/w and s/w camps
+	  and was the basis for the initial engagement with SS..
+	  Assumes that MACH_HAWAII_SS_EVAL is also set.
 
-config	MACH_HAWAII_SS_LOGAN
-	bool "Support Broadcom Hawaii Samsung Logan board"
+config	MACH_HAWAII_SS_LOGAN_REV00
+	bool "Support Broadcom Hawaii SS logan board"
 	help
-	  Support for the Broadcom Hawaii Samsung Logan board.
+	  Support for the Broadcom Hawaii SS logan board.
+	  This the first real FFB for the joint Hawaii program.
+	  Relative to SS Eval, swaps two GPIOs.
+	  Assumes that MACH_HAWAII_SS_LOGAN is also set.
+
+config	MACH_HAWAII_SS_LOGAN_REV01
+	bool "Support Broadcom Hawaii SS logan board"
+	help
+	  Support for the Broadcom Hawaii SS logan board.
+	  Relative to Logan R0.0, has a voltage change to drive
+	  sensors.
+	  Assumes that MACH_HAWAII_SS_LOGAN is also set.
+
+config	MACH_HAWAII_SS_LOGAN_REV02
+	bool "Support Broadcom Hawaii SS logan board"
+	help
+	  Support for the Broadcom Hawaii SS logan board.
+	  Relative to Logan R0.1, has several GPIO changes for
+	  keyboard, flash, and band selects.
+	  Assumes that MACH_HAWAII_SS_LOGAN is also set.
 
 endchoice
-
-config	MACH_HAWAII_SS_COMMON
-	bool "Support Broadcom Hawaii SS Common Features"
-	default n
-	help
-	  Support for the Broadcom Hawaii SS Common Features.
 
 choice
 	prompt "Hawaii GARNET type"
@@ -110,36 +125,24 @@ config	MACH_HAWAII_FPGA_USB_V1
 endchoice
 
 
-choice
-	prompt "Hawaii SS based board type"
-	default MACH_HAWAII_SS_EVAL
 
-config	MACH_HAWAII_SS_EVAL
-	bool "Support Broadcom Hawaii Samsung Evaluate board"
+config	MACH_HAWAII_SS_COMMON
+	bool "Support Broadcom Hawaii SS Common Features"
+	default n
 	help
-	  Support for the Broadcom Hawaii Samsung Evaluate board.
+	  Support for the Broadcom Hawaii SS Common Features.
+	  Use of this configuration option has been depricated
+	  and will be removed in the next release.  Prior to removal
+	  need to veriy that the customer is no longer using it.
 
-endchoice
-
-
-choice
-	prompt "Hawaii SS based board type"
-	depends on MACH_HAWAII_SS_LOGAN
-	default MACH_HAWAII_SS_LOGAN_REV00
-
-config	MACH_HAWAII_SS_LOGAN_REV00
-	bool "Support Broadcom Hawaii SS logan board"
+config	MACH_HAWAII_SS_LOGAN
+	bool "Support Broadcom Hawaii Samsung Logan board"
+	default n
 	help
-	  Support for the Broadcom Hawaii SS logan board.
-
-config	MACH_HAWAII_SS_LOGAN_REV01
-	bool "Support Broadcom Hawaii SS logan board"
-	help
-	  Support for the Broadcom Hawaii SS logan board.
-
-endchoice
-
-
+	  Support for the Broadcom Hawaii Samsung Logan board.
+	  This option is used to enable features that apply to all
+	  existing and future revisions of Hawaii-Logan form-factor
+	  boards.
 
 config	IGNORE_DAP_POWERUP_REQ
 	bool "Ignore Powerup request from DAP"

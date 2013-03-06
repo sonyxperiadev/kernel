@@ -20,6 +20,7 @@ obj-$(CONFIG_MACH_HAWAII_GARNET) += hawaii.o board-garnet.o hawaii_wifi.o
 obj-$(CONFIG_MACH_HAWAII_SS_EVAL_REV00) += hawaii.o board-hawaii_ss_eval.o hawaii_ss_eval_wifi.o board-bcm59xxx-ss-eval.o
 obj-$(CONFIG_MACH_HAWAII_SS_LOGAN_REV00) += hawaii.o board-hawaii_ss_logan.o hawaii_ss_logan_wifi.o board-bcm59xxx-ss-logan.o
 obj-$(CONFIG_MACH_HAWAII_SS_LOGAN_REV01) += hawaii.o board-hawaii_ss_logan.o hawaii_ss_logan_wifi.o board-bcm59xxx-ss-logan.o
+obj-$(CONFIG_MACH_HAWAII_SS_LOGAN_REV02) += hawaii.o board-hawaii_ss_logan.o hawaii_ss_logan_wifi.o board-bcm59xxx-ss-logan.o
 obj-$(CONFIG_MACH_HAWAII_FPGA) += hawaii_fpga.o
 obj-$(CONFIG_MACH_HAWAII_FPGA_E) += hawaii_fpga.o
 obj-$(CONFIG_CDEBUGGER) += crash_debugger.o
