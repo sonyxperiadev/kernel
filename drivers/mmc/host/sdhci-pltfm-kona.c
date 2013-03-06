@@ -87,6 +87,7 @@
 #define KONA_SD_CONTRLR_REG_LPCNT	(50)
 
 #define KONA_MMC_AUTOSUSPEND_DELAY	(200)
+#define KONA_MMC_WIFI_AUTOSUSPEND_DELAY	(250)
 
 /* Enable this quirk if regulators are always ON
  * but the regulator framework is not funtional.
@@ -561,13 +562,6 @@ static void kona_sdio_status_notify_cb(int card_present, void *dev_id)
 	 * TODO: The required implementtion to check the status of the card
 	 * etc
 	 */
-
-	/* Call the core function to rescan on the given host controller */
-	pr_debug("%s: MMC_DETECT_CHANGE\n", __func__);
-
-	mmc_detect_change(host->mmc, 100);
-
-	pr_debug("%s: MMC_DETECT_CHANGE DONE\n", __func__);
 }
 #endif
 
@@ -635,7 +629,13 @@ static int sdhci_pltfm_runtime_resume(struct device *device)
 
 static int sdhci_pltfm_runtime_idle(struct device *device)
 {
-	return 0;
+	/*
+	 * Return a non-zero value
+	 * to avoid runtime suspend
+	 * getting called as a fallback.
+	 * See pm_generic_runtime_idle.
+	 */
+	return 1;
 }
 
 static void __devinit sdhci_pltfm_runtime_pm_init(struct device *device)
@@ -648,7 +648,14 @@ static void __devinit sdhci_pltfm_runtime_pm_init(struct device *device)
 
 	pm_runtime_irq_safe(device);
 	pm_runtime_enable(device);
-	pm_runtime_set_autosuspend_delay(device, KONA_MMC_AUTOSUSPEND_DELAY);
+
+	if (dev->devtype == SDIO_DEV_TYPE_WIFI)
+		pm_runtime_set_autosuspend_delay(device,
+				KONA_MMC_WIFI_AUTOSUSPEND_DELAY);
+	else
+		pm_runtime_set_autosuspend_delay(device,
+				KONA_MMC_AUTOSUSPEND_DELAY);
+
 	pm_runtime_use_autosuspend(device);
 }
 
@@ -944,6 +951,7 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 			devname);
 		goto err_sleep_clk_disable;
 	}
+
 	dev->clk_hz = clk_get_rate(dev->peri_clk);
 #endif
 
@@ -1030,8 +1038,8 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 	 * will work well, as we have clocks enabled till the
 	 * probe ends.
 	 */
-	if (dev->devtype != SDIO_DEV_TYPE_WIFI)
-		dev->runtime_pm_enabled = 1;
+
+	dev->runtime_pm_enabled = 1;
 
 	ret = sdhci_add_host(host);
 	if (ret)
@@ -1518,45 +1526,6 @@ int sdio_card_emulate(enum sdio_devtype devtype, int insert)
 	return bcm_kona_sd_card_emulate(dev, insert);
 }
 EXPORT_SYMBOL(sdio_card_emulate);
-
-int sdio_stop_clk(enum sdio_devtype devtype, int insert)
-{
-	int rc;
-	int ret = 0;
-	struct sdio_dev *dev;
-	struct sdhci_host *host;
-
-	rc = sdio_dev_is_initialized(devtype);
-	if (rc <= 0)
-		return -EFAULT;
-
-#ifndef CONFIG_ARCH_ISLAND
-	dev = gDevs[devtype];
-	host = dev->host;
-
-	if (insert) {
-		if (sdhci_pltfm_rpm_enabled(dev)) {
-			pm_runtime_get_sync(dev->dev);
-		} else {
-			ret = sdhci_pltfm_clk_enable(dev, 1);
-			if (ret)
-				dev_err(dev->dev,
-					"stop_clk:clk enable failed\n");
-		}
-	} else {
-		if (sdhci_pltfm_rpm_enabled(dev)) {
-			pm_runtime_put_sync_suspend(dev->dev);
-		} else {
-			ret = sdhci_pltfm_clk_enable(dev, 0);
-			if (ret)
-				dev_err(dev->dev,
-					"stop_clk:clk disable failed\n");
-		}
-	}
-#endif
-	return 0;
-}
-EXPORT_SYMBOL(sdio_stop_clk);
 
 static int sdhci_pltfm_regulator_sdxc_init(struct sdio_dev *dev, char *reg_name)
 {

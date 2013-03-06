@@ -370,8 +370,6 @@ void bcm_sdiowl_term(void)
 #endif
 
 #ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
-	sdio_stop_clk(SDIO_DEV_TYPE_WIFI, 0);
-
 	__wifi_reset(dev->wifi_gpio->reset, 0);
 #endif
 

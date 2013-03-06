@@ -39,7 +39,6 @@ int hawaii_wlan_init(void);
 
 extern int sdio_dev_is_initialized(enum sdio_devtype devtype);
 extern struct sdio_wifi_gpio_cfg *sdio_get_wifi_gpio(enum sdio_devtype devtype);
-extern int sdio_stop_clk(enum sdio_devtype devtype, int insert);
 
 #ifdef CONFIG_MMC_KONA_SDIO_WIFI
 extern int bcm_sdiowl_init(int onoff);
