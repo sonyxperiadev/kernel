@@ -20,8 +20,8 @@
 #include <linux/err.h>
 #include <linux/module.h>
 #include <asm/mach-types.h>
-#include <asm/gpio.h>
-#include <asm/io.h>
+#include <linux/gpio.h>
+#include <linux/io.h>
 #include <asm/setup.h>
 #include <linux/if.h>
 #include <linux/skbuff.h>
@@ -192,10 +192,19 @@ static int bcm_sdiowl_init(int onoff)
 
 /* Set the Pull of Sdio Lines first */
 
+	SdioPinCfgs.name = PN_MMC1CK;
+	pinmux_get_pin_config(&SdioPinCfgs);
+	SdioPinCfgs.reg.b.input_dis = 0;
+	SdioPinCfgs.reg.b.pull_dn = 0;
+	SdioPinCfgs.reg.b.pull_up = 0;
+	SdioPinCfgs.reg.b.drv_sth = 3;
+	pinmux_set_pin_config(&SdioPinCfgs);
+
 	SdioPinCfgs.name = PN_MMC1CMD;
 	pinmux_get_pin_config(&SdioPinCfgs);
 	SdioPinCfgs.reg.b.pull_dn = 0;
 	SdioPinCfgs.reg.b.pull_up = 1;
+	SdioPinCfgs.reg.b.drv_sth = 3;
 	pinmux_set_pin_config(&SdioPinCfgs);
 
 
@@ -203,12 +212,14 @@ static int bcm_sdiowl_init(int onoff)
 	pinmux_get_pin_config(&SdioPinCfgs);
 	SdioPinCfgs.reg.b.pull_dn = 0;
 	SdioPinCfgs.reg.b.pull_up = 1;
+	SdioPinCfgs.reg.b.drv_sth = 3;
 	pinmux_set_pin_config(&SdioPinCfgs);
 
 	SdioPinCfgs.name = PN_MMC1DAT1;
 	pinmux_get_pin_config(&SdioPinCfgs);
 	SdioPinCfgs.reg.b.pull_dn = 0;
 	SdioPinCfgs.reg.b.pull_up = 1;
+	SdioPinCfgs.reg.b.drv_sth = 3;
 	pinmux_set_pin_config(&SdioPinCfgs);
 
 
@@ -216,6 +227,7 @@ static int bcm_sdiowl_init(int onoff)
 	pinmux_get_pin_config(&SdioPinCfgs);
 	SdioPinCfgs.reg.b.pull_dn = 0;
 	SdioPinCfgs.reg.b.pull_up = 1;
+	SdioPinCfgs.reg.b.drv_sth = 3;
 	pinmux_set_pin_config(&SdioPinCfgs);
 
 
@@ -223,6 +235,7 @@ static int bcm_sdiowl_init(int onoff)
 	pinmux_get_pin_config(&SdioPinCfgs);
 	SdioPinCfgs.reg.b.pull_dn = 0;
 	SdioPinCfgs.reg.b.pull_up = 1;
+	SdioPinCfgs.reg.b.drv_sth = 3;
 	pinmux_set_pin_config(&SdioPinCfgs);
 
 
@@ -230,12 +243,7 @@ static int bcm_sdiowl_init(int onoff)
 	pinmux_get_pin_config(&SdioPinCfgs);
 	SdioPinCfgs.reg.b.pull_dn = 1;
 	SdioPinCfgs.reg.b.pull_up = 0;
-	pinmux_set_pin_config(&SdioPinCfgs);
-
-	SdioPinCfgs.name = PN_LCDTE;
-	pinmux_get_pin_config(&SdioPinCfgs);
-	SdioPinCfgs.reg.b.pull_dn = 0;
-	SdioPinCfgs.reg.b.pull_up = 0;
+	SdioPinCfgs.reg.b.drv_sth = 3;
 	pinmux_set_pin_config(&SdioPinCfgs);
 
 
@@ -261,15 +269,11 @@ static int bcm_sdiowl_init(int onoff)
 #endif
 
 #ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
-#if defined(CONFIG_MACH_HAWAII_RAY) || defined(CONFIG_MACH_HAWAII_STONE)\
-				|| defined(CONFIG_MACH_HAWAII_GARNET)
-
 	dev->wifi_gpio->reg = -1;		/* Unused */
 	dev->wifi_gpio->shutdown = -1;	/* Unused */
 	dev->wifi_gpio->reset = devtreeWifiParms.reset;
 	dev->wifi_gpio->host_wake = devtreeWifiParms.host_wake;
 
-#endif
 #endif
 
 	/* reserve GPIOs */
@@ -351,10 +355,19 @@ static void bcm_sdiowl_term(void)
  * 4334 bug requires us to Pull down on sdio lines on reset
  */
 
+	SdioPinCfgs.name = PN_MMC1CK;
+	pinmux_get_pin_config(&SdioPinCfgs);
+	SdioPinCfgs.reg.b.input_dis = 1;
+	SdioPinCfgs.reg.b.pull_dn = 0;
+	SdioPinCfgs.reg.b.pull_up = 0;
+	SdioPinCfgs.reg.b.drv_sth = 3;
+	pinmux_set_pin_config(&SdioPinCfgs);
+
 	SdioPinCfgs.name = PN_MMC1CMD;
 	pinmux_get_pin_config(&SdioPinCfgs);
 	SdioPinCfgs.reg.b.pull_dn = 1;
 	SdioPinCfgs.reg.b.pull_up = 0;
+	SdioPinCfgs.reg.b.drv_sth = 3;
 	pinmux_set_pin_config(&SdioPinCfgs);
 
 
@@ -362,12 +375,14 @@ static void bcm_sdiowl_term(void)
 	pinmux_get_pin_config(&SdioPinCfgs);
 	SdioPinCfgs.reg.b.pull_dn = 1;
 	SdioPinCfgs.reg.b.pull_up = 0;
+	SdioPinCfgs.reg.b.drv_sth = 3;
 	pinmux_set_pin_config(&SdioPinCfgs);
 
 	SdioPinCfgs.name = PN_MMC1DAT1;
 	pinmux_get_pin_config(&SdioPinCfgs);
 	SdioPinCfgs.reg.b.pull_dn = 1;
 	SdioPinCfgs.reg.b.pull_up = 0;
+	SdioPinCfgs.reg.b.drv_sth = 3;
 	pinmux_set_pin_config(&SdioPinCfgs);
 
 
@@ -375,6 +390,7 @@ static void bcm_sdiowl_term(void)
 	pinmux_get_pin_config(&SdioPinCfgs);
 	SdioPinCfgs.reg.b.pull_dn = 1;
 	SdioPinCfgs.reg.b.pull_up = 0;
+	SdioPinCfgs.reg.b.drv_sth = 3;
 	pinmux_set_pin_config(&SdioPinCfgs);
 
 
@@ -382,20 +398,24 @@ static void bcm_sdiowl_term(void)
 	pinmux_get_pin_config(&SdioPinCfgs);
 	SdioPinCfgs.reg.b.pull_dn = 1;
 	SdioPinCfgs.reg.b.pull_up = 0;
+	SdioPinCfgs.reg.b.drv_sth = 3;
 	pinmux_set_pin_config(&SdioPinCfgs);
 
 	SdioPinCfgs.name = PN_MMC1DAT4;
 	pinmux_get_pin_config(&SdioPinCfgs);
 	SdioPinCfgs.reg.b.pull_dn = 0;
 	SdioPinCfgs.reg.b.pull_up = 1;
+	SdioPinCfgs.reg.b.drv_sth = 3;
 	pinmux_set_pin_config(&SdioPinCfgs);
 
-
+/*
 	SdioPinCfgs.name = PN_LCDTE;
 	pinmux_get_pin_config(&SdioPinCfgs);
 	SdioPinCfgs.reg.b.pull_dn = 1;
 	SdioPinCfgs.reg.b.pull_up = 0;
+	SdioPinCfgs.reg.b.drv_sth = 3;
 	pinmux_set_pin_config(&SdioPinCfgs);
+*/
 
 
 /*----------------------------------- */
@@ -705,8 +725,8 @@ static void *hawaii_wifi_get_country_code(char *ccode)
 static struct resource hawaii_wifi_resources[] = {
 	[0] = {
 		.name		= "bcmdhd_wlan_irq",
-		.start		= -1,
-		.end		= -1,
+		.start		= gpio_to_irq(74),	/*GPIO74*/
+		.end		= gpio_to_irq(74),	/*GPIO74*/
 		.flags          = IORESOURCE_IRQ | IORESOURCE_IRQ_LOWEDGE
 				| IORESOURCE_IRQ_SHAREABLE | IRQF_NO_SUSPEND,
 	},
