@@ -68,6 +68,7 @@ static struct camdrv_ss_sensor_cap	sensor;
 static int camdrv_ss_s_stream(struct v4l2_subdev *sd, int enable);
 static int camdrv_ss_init_thread_func(void *data);
 static int camdrv_ss_init(struct v4l2_subdev *sd, u32 val);
+static int camdrv_ss_actual_sensor_power_up();
 
 bool camdrv_ss_power(int cam_id, int bOn);
 
@@ -3803,9 +3804,9 @@ static int camdrv_ss_try_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *
 	return ret;
 }
 
-void camdrv_ss_init_func(struct v4l2_subdev *sd)
+static int camdrv_ss_actual_sensor_power_up()
 {
-	int err;
+	int err = 0;
 	GPIOSetup.name = PN_BSC1CLK;
 	pinmux_get_pin_config(&GPIOSetup);
 	GPIOSetup.func = PF_BSC1CLK;
@@ -3824,7 +3825,17 @@ void camdrv_ss_init_func(struct v4l2_subdev *sd)
 	if (err < 0) {
 		atomic_set(&sensor_state, CAMDRV_SS_INITIALIZE_FAILED);
 		CAM_ERROR_PRINTK("%s: sensor_power failed ! CAMDRV_SS_INITIALIZE_FAILED !!\n", __func__);
-	} else {
+		return err;
+	}
+
+	return 0;
+
+}
+
+
+void camdrv_ss_init_func(struct v4l2_subdev *sd)
+{
+	int err;
 		err = camdrv_ss_init(sd, 1);
 		if (err < 0) {
 			atomic_set(&sensor_state, CAMDRV_SS_INITIALIZE_FAILED);
@@ -3834,8 +3845,6 @@ void camdrv_ss_init_func(struct v4l2_subdev *sd)
 			CAM_INFO_PRINTK("%s: CAMDRV_SS_INITIALIZE_DONE\n", __func__);
 		}
 	}
-
-}
 static int camdrv_ss_init_thread_func(void *data)
 {
 	struct v4l2_subdev *sd = (struct v4l2_subdev *)data;
@@ -4156,6 +4165,18 @@ static int camdrv_ss_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		struct task_struct *camdrv_ss_init_thread;
 		if (atomic_read(&sensor_state) == CAMDRV_SS_NOT_INITIALIZED) {
 			atomic_set(&sensor_state, CAMDRV_SS_INITIALIZING);
+
+			/* Sensor power up is sequential
+			function After it is successful
+			create seperate thread for init */
+
+			if (0 != camdrv_ss_actual_sensor_power_up()) {
+				CAM_ERROR_PRINTK("%s %s :"
+				 "camdrv_ss_actual_sensor_power_up"
+				  "FAILED. Return ERR !!!!.\n",
+				  sensor.name, __func__);
+				return -1;
+			}
 			CAM_INFO_PRINTK("%s %s :creating camera intialize thread...\n", sensor.name, __func__);
 			state->current_mode = INIT_MODE;
 			state->mode_switch = INIT_DONE_TO_CAMERA_PREVIEW;
@@ -4776,6 +4797,13 @@ static int camdrv_ss_s_stream(struct v4l2_subdev *sd, int enable)
 	if (enable && (tmp_sensor_state != CAMDRV_SS_STREAMING)) {
 		if (tmp_sensor_state == CAMDRV_SS_NOT_INITIALIZED) {
 			CAM_ERROR_PRINTK("%s %s : CAMDRV_SS_NOT_INITIALIZED! Initialize again! Normally this case will not happen! !\n", sensor.name, __func__);
+			if (0 != camdrv_ss_actual_sensor_power_up()) {
+				CAM_ERROR_PRINTK("%s %s :"
+					"camdrv_ss_actual_sensor_power_up"
+					"FAILED. Return ERR !!!!\n",
+					sensor.name, __func__);
+				return -1;
+			}
 			camdrv_ss_init_func(sd);
 			tmp_sensor_state = atomic_read(&sensor_state);
 		}
