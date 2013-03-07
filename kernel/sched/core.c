@@ -6234,6 +6234,7 @@ static void sched_rq_cpu_starting(unsigned int cpu)
 	raw_spin_unlock_irqrestore(&rq->lock, flags);
 
 	rq->calc_load_update = calc_load_update;
+	rq->next_balance = jiffies;
 	update_max_interval();
 }
 
