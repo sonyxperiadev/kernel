@@ -430,10 +430,6 @@ int kona_timer_set_match_start(struct kona_timer *kt, unsigned long load)
 	struct kona_timer_module *ktm;
 	unsigned long flags;
 	unsigned long reg, adj_load, now;
-#ifdef CONFIG_GP_TIMER_COMPARATOR_LOAD_DELAY
-	unsigned long delta = 0;
-	int enabled;
-#endif
 
 	if (NULL == kt)
 		return -1;
@@ -493,11 +489,6 @@ int kona_timer_set_match_start(struct kona_timer *kt, unsigned long load)
 
 	/* Load the match register */
 	now = __get_counter(ktm);
-	if (enabled) {
-		if (time_before(now, kt->expire))
-			delta = kt->expire - now;
-	}
-
 	kt->expire = adj_load + now;
 	writel(kt->expire,
 	       ktm->reg_base + KONA_GPTIMER_STCM0_OFFSET + (kt->ch_num * 4));
