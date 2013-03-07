@@ -30,12 +30,6 @@ extern int crash_dump_ui_on;
 extern unsigned ramdump_enable;
 #endif
 
-struct dispdrv_name_cfg {
-	char name[DISPDRV_NAME_SZ];
-	struct lcd_config *cfg;
-};
-
-
 #include "lcd/nt35510.h"
 #include "lcd/nt35512.h"
 #include "lcd/nt35516.h"
@@ -43,23 +37,23 @@ struct dispdrv_name_cfg {
 #include "lcd/otm8018b.h"
 
 
-static struct dispdrv_name_cfg dispdrvs[] __initdata = {
-	{"NT35510", &nt35510_cfg},
-	{"NT35512", &nt35512_cfg},
-	{"NT35516", &nt35516_cfg},
-	{"OTM1281A", &otm1281a_cfg},
-	{"OTM8018B", &otm8018b_cfg},
+static struct lcd_config *cfgs[] __initdata = {
+	&nt35510_cfg,
+	&nt35512_cfg,
+	&nt35516_cfg,
+	&otm1281a_cfg,
+	&otm8018b_cfg,
 };
 
 static struct lcd_config * __init get_dispdrv_cfg(const char *name)
 {
 	int i;
 	void *ret = NULL;
-	i = sizeof(dispdrvs) / sizeof(struct dispdrv_name_cfg);
+	i = sizeof(cfgs) / sizeof(struct lcd_config *);
 	while (i--) {
-		if (!strcmp(name, dispdrvs[i].name)) {
-			ret = dispdrvs[i].cfg;
-			pr_err("Found a match for %s\n", dispdrvs[i].name);
+		if (!strcmp(name, cfgs[i]->name)) {
+			ret = cfgs[i];
+			pr_err("Found a match for %s\n", cfgs[i]->name);
 			break;
 		}
 	}

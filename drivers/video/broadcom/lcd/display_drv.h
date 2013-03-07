@@ -124,6 +124,7 @@ extern "C" {
 		char *slp_out_seq;
 		char *scrn_on_seq;
 		char *scrn_off_seq;
+		char *id_seq;
 		char *win_seq;
 		void (*updt_win_fn)(char *buff, DISPDRV_WIN_t *p_win);
 		uint8_t updt_win_seq_len;

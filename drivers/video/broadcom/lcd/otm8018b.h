@@ -23,6 +23,9 @@
 #define OTM8018B_CMD_SLPOUT 0x11
 #define OTM8018B_CMD_DISPOFF 0x28
 #define OTM8018B_CMD_DISPON 0x29
+#define OTM8018B_CMD_RDID1     0xDA
+#define OTM8018B_CMD_RDID2     0xDB
+#define OTM8018B_CMD_RDID3     0xDC
 
 #define OTM8018B_UPDT_WIN_SEQ_LEN 13 /* (6 + 6 + 1) */
 
@@ -107,6 +110,16 @@ __initdata DISPCTRL_REC_T otm8018b_scrn_on[] = {
 
 __initdata DISPCTRL_REC_T otm8018b_scrn_off[] = {
 	{DISPCTRL_WR_CMND, OTM8018B_CMD_DISPOFF},
+	{DISPCTRL_LIST_END, 0}
+};
+
+__initdata DISPCTRL_REC_T otm8018b_id[] = {
+	{DISPCTRL_WR_CMND, OTM8018B_CMD_RDID1},
+	{DISPCTRL_WR_DATA, 0x40},
+	{DISPCTRL_WR_CMND, OTM8018B_CMD_RDID2},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_CMND, OTM8018B_CMD_RDID3},
+	{DISPCTRL_WR_DATA, 0x00},
 	{DISPCTRL_LIST_END, 0}
 };
 
@@ -417,6 +430,8 @@ __initdata struct lcd_config otm8018b_cfg = {
 	.slp_out_seq = &otm8018b_slp_out[0],
 	.scrn_on_seq = &otm8018b_scrn_on[0],
 	.scrn_off_seq = &otm8018b_scrn_off[0],
+	.id_seq = &otm8018b_id[0],
+	.verify_id = false,
 	.updt_win_fn = otm8018b_winset,
 	.updt_win_seq_len = 0,
 	.vid_cmnds = false,

@@ -155,6 +155,16 @@ __initdata DISPCTRL_REC_T nt35516_scrn_off[] = {
 	{DISPCTRL_LIST_END, 0}
 };
 
+__initdata DISPCTRL_REC_T nt35516_id[] = {
+	{DISPCTRL_WR_CMND, NT35516_CMD_RDID1},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_CMND, NT35516_CMD_RDID2},
+	{DISPCTRL_WR_DATA, 0x80},
+	{DISPCTRL_WR_CMND, NT35516_CMD_RDID3},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_LIST_END, 0}
+};
+
 __initdata DISPCTRL_REC_T nt35516_slp_in[] = {
 	{DISPCTRL_WR_CMND, NT35516_CMD_DISPOFF},
 	{DISPCTRL_WR_CMND, NT35516_CMD_SLPIN},
@@ -246,6 +256,8 @@ __initdata struct lcd_config nt35516_cfg = {
 	.slp_out_seq = &nt35516_slp_out[0],
 	.scrn_on_seq = &nt35516_scrn_on[0],
 	.scrn_off_seq = &nt35516_scrn_off[0],
+	.id_seq = &nt35516_id[0],
+	.verify_id = true,
 	.updt_win_fn = nt35516_winset,
 	.updt_win_seq_len = NT35516_UPDT_WIN_SEQ_LEN,
 	.vid_cmnds = true,

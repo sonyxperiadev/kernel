@@ -24,6 +24,9 @@
 #define NT35512_CMD_DISPOFF	0x28
 #define NT35512_CMD_DISPON	0x29
 #define NT35512_CMD_DSTBON	0x4F
+#define NT35512_CMD_RDID1      0xDA
+#define NT35512_CMD_RDID2      0xDB
+#define NT35512_CMD_RDID3      0xDC
 
 
 __initdata struct DSI_COUNTER nt35512_timing[] = {
@@ -106,6 +109,16 @@ __initdata DISPCTRL_REC_T nt35512_scrn_on[] = {
 
 __initdata DISPCTRL_REC_T nt35512_scrn_off[] = {
 	{DISPCTRL_WR_CMND, NT35512_CMD_DISPOFF},
+	{DISPCTRL_LIST_END, 0}
+};
+
+__initdata DISPCTRL_REC_T nt35512_id[] = {
+	{DISPCTRL_WR_CMND, NT35512_CMD_RDID1},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_CMND, NT35512_CMD_RDID2},
+	{DISPCTRL_WR_DATA, 0x80},
+	{DISPCTRL_WR_CMND, NT35512_CMD_RDID3},
+	{DISPCTRL_WR_DATA, 0x00},
 	{DISPCTRL_LIST_END, 0}
 };
 
@@ -584,6 +597,8 @@ __initdata struct lcd_config nt35512_cfg = {
 	.slp_out_seq = &nt35512_slp_out[0],
 	.scrn_on_seq = &nt35512_scrn_on[0],
 	.scrn_off_seq = &nt35512_scrn_off[0],
+	.id_seq = &nt35512_id[0],
+	.verify_id = false,
 	.updt_win_fn = nt35512_winset,
 	.updt_win_seq_len = 0,
 	.vid_cmnds = true,

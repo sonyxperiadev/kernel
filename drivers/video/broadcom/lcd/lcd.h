@@ -56,6 +56,8 @@ struct lcd_config {
 	DISPCTRL_REC_T *slp_out_seq;
 	DISPCTRL_REC_T *scrn_on_seq;
 	DISPCTRL_REC_T *scrn_off_seq;
+	DISPCTRL_REC_T *id_seq;
+	bool verify_id;
 	void (*updt_win_fn)(char *buff, DISPDRV_WIN_t *p_win);
 	uint32_t updt_win_seq_len;
 	bool vid_cmnds; /* TURN_ON SHUT_DOWN*/

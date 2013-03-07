@@ -23,6 +23,9 @@
 #define OTM1281A_CMD_DISPON 0x29
 #define OTM1281A_CMD_SLPIN 0x10
 #define OTM1281A_CMD_SLPOUT 0x11
+#define OTM1281A_CMD_RDID1     0xDA
+#define OTM1281A_CMD_RDID2     0xDB
+#define OTM1281A_CMD_RDID3     0xDC
 
 
 #define OTM1281A_UPDT_WIN_SEQ_LEN 13 /* (6 + 6 + 1) */
@@ -107,6 +110,16 @@ __initdata DISPCTRL_REC_T otm1281a_scrn_on[] = {
 
 __initdata DISPCTRL_REC_T otm1281a_scrn_off[] = {
 	{DISPCTRL_WR_CMND, OTM1281A_CMD_DISPOFF},
+	{DISPCTRL_LIST_END, 0}
+};
+
+__initdata DISPCTRL_REC_T otm1281a_id[] = {
+	{DISPCTRL_WR_CMND, OTM1281A_CMD_RDID1},
+	{DISPCTRL_WR_DATA, 0x40},
+	{DISPCTRL_WR_CMND, OTM1281A_CMD_RDID2},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_CMND, OTM1281A_CMD_RDID3},
+	{DISPCTRL_WR_DATA, 0x00},
 	{DISPCTRL_LIST_END, 0}
 };
 
@@ -258,6 +271,8 @@ __initdata struct lcd_config otm1281a_cfg = {
 	.slp_out_seq = &otm1281a_slp_out[0],
 	.scrn_on_seq = &otm1281a_scrn_on[0],
 	.scrn_off_seq = &otm1281a_scrn_off[0],
+	.id_seq = &otm1281a_id[0],
+	.verify_id = false,
 	.updt_win_fn = otm1281a_winset,
 	.updt_win_seq_len = OTM1281A_UPDT_WIN_SEQ_LEN,
 	.vid_cmnds = false,

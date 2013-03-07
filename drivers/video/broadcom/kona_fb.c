@@ -1003,10 +1003,6 @@ static int __init populate_dispdrv_cfg(struct kona_fb *fb,
 		goto err_cfg;
 	}
 
-	/* Check if the cfg can be used */
-	if (strcmp(pd->name, cfg->name))
-		goto err_cfg;
-
 	if (cfg->mode_supp != LCD_CMD_VID_BOTH) {
 		if (pd->vmode && (cfg->mode_supp != LCD_VID_ONLY)) {
 			pr_err("No vid mode support\n");
@@ -1063,6 +1059,11 @@ static int __init populate_dispdrv_cfg(struct kona_fb *fb,
 	info->scrn_off_seq = get_seq(cfg->scrn_off_seq);
 	if (!info->scrn_off_seq)
 		goto err_scrn_off_seq;
+	if (cfg->verify_id) {
+		info->id_seq = get_seq(cfg->id_seq);
+		if (!info->id_seq)
+			goto err_id_seq;
+	}
 	memcpy(info->phy_timing, cfg->phy_timing, sizeof(info->phy_timing));
 	if (info->vmode) {
 		info->init_seq = get_seq(cfg->init_vid_seq);
@@ -1099,6 +1100,9 @@ static int __init populate_dispdrv_cfg(struct kona_fb *fb,
 err_win_seq:
 	kfree(info->init_seq);
 err_init_seq:
+	if (cfg->verify_id)
+		kfree(info->id_seq);
+err_id_seq:
 	kfree(info->scrn_off_seq);
 err_scrn_off_seq:
 	kfree(info->scrn_on_seq);

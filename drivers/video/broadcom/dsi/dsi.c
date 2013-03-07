@@ -105,11 +105,9 @@ static Int32 DSI_Update(
 
 static Int32 DSI_WinReset(DISPDRV_HANDLE_T drvH);
 
-#if 0
 static int DSI_ReadReg(DISPDRV_HANDLE_T drvH, UInt8 reg, UInt8 *rxBuff);
 
 static int DSI_ReadPanelID(DispDrv_PANEL_t *pPanel);
-#endif
 
 static DISPDRV_T disp_drv_dsi = {
 	.init = &DSI_Init,
@@ -189,36 +187,42 @@ static int DSI_panel_turn_on(DispDrv_PANEL_t *pPanel)
 	return res;
 }
 
-#if 0
-struct panel_id {
-	UInt8 reg;
-	UInt8 val;
-};
-
 static int DSI_ReadPanelID(DispDrv_PANEL_t *pPanel)
 {
-	int ret = 0, count;
-	UInt8 buff[2];
-	struct panel_id DispDrv_ID[] = {
-		{DispDrv_CMD_RDID1, 0x00},
-		{DispDrv_CMD_RDID2, 0x80},
-		{DispDrv_CMD_RDID3, 0x00},
-	};
+	int ret = 0;
+	char *buff_seq;
+	UInt8 rd_buff[2];
 
-	count = sizeof(DispDrv_ID) / sizeof(struct panel_id);
-	while (count--) {
-		ret = DSI_ReadReg(pPanel, DispDrv_ID[count].reg, buff);
+	buff_seq = pPanel->disp_info->id_seq;
+	if (!buff_seq)
+		goto done;
+
+	/* Currently we are reading 1 byte, multi-byte support is to be added */
+	while (*buff_seq) {
+		uint8_t len = *buff_seq++;
+		if (len != 2) {
+			DSI_ERR("Reading multiple bytes not supported, len=%d\n"
+				, len);
+			ret = -1;
+			break;
+		}
+
+		ret = DSI_ReadReg(pPanel, *buff_seq++, rd_buff);
 		/*
 		DSI_ERR("Reg=0x%x ret size=%d buff[0]=0x%x, buff[1]=0x%x\n",
 			DispDrv_ID[count].reg, ret, buff[0], buff[1]);
 		*/
-		if ((ret < 0) || (DispDrv_ID[count].val != buff[0]))
+		if (ret < 0)
 			break;
+		if ((ret == 0) || (*buff_seq++ != rd_buff[0])) {
+			DSI_ERR("ret=%d rd_buff[0]=0x%x\n", ret, rd_buff[0]);
+			ret = -1;
+			break;
+		}
 	}
-
+done:
 	return ret;
 }
-#endif
 
 /*
  *
@@ -260,7 +264,6 @@ static int DSI_TeOff(DispDrv_PANEL_t *pPanel)
 }
 
 
-#if 0
 /*
  *
  *   Function Name: DSI_ReadReg
@@ -270,7 +273,7 @@ static int DSI_TeOff(DispDrv_PANEL_t *pPanel)
  */
 static int DSI_ReadReg(DISPDRV_HANDLE_T drvH, UInt8 reg, UInt8 *rxBuff)
 {
-	DispDrv_PANEL_t         *pPanel = (DispDrv_PANEL_t *)drvH;
+	DispDrv_PANEL_t	 *pPanel = (DispDrv_PANEL_t *)drvH;
 	CSL_DSI_CMND_t msg;
 	CSL_DSI_REPLY_t rxMsg;      /* DSI RX message */
 	UInt8 txData[1];  /* DCS Rd Command */
@@ -278,15 +281,15 @@ static int DSI_ReadReg(DISPDRV_HANDLE_T drvH, UInt8 reg, UInt8 *rxBuff)
 	CSL_LCD_RES_T cslRes;
 
 	msg.dsiCmnd    = DSI_DT_SH_DCS_RD_P0;
-	msg.msg        = &txData[0];
+	msg.msg	= &txData[0];
 	msg.msgLen     = 1;
-	msg.vc         = pPanel->cmnd_mode->vc;
+	msg.vc	 = pPanel->cmnd_mode->vc;
 	msg.isLP       = FALSE;
 	msg.isLong     = FALSE;
 	msg.endWithBta = TRUE;
 
 	rxMsg.pReadReply = (UInt8 *)rxBuff;
-	msg.reply        = (CSL_DSI_REPLY_t *)&rxMsg;
+	msg.reply	= (CSL_DSI_REPLY_t *)&rxMsg;
 
 	txData[0] = reg;
 	cslRes = CSL_DSI_SendPacket(pPanel->clientH, &msg, FALSE);
@@ -304,7 +307,6 @@ static int DSI_ReadReg(DISPDRV_HANDLE_T drvH, UInt8 reg, UInt8 *rxBuff)
 	}
 	return res;
 }
-#endif
 
 
 /*
@@ -584,6 +586,11 @@ Int32 DSI_Open(DISPDRV_HANDLE_T drvH)
 
 	hw_reset(drvH, FALSE);
 
+	if (DSI_ReadPanelID(pPanel) < 0) {
+		DSI_ERR("ID read failed\n");
+		goto err_id_read;
+	}
+
 	pPanel->win_dim.l = 0;
 	pPanel->win_dim.r = pPanel->disp_info->width-1;
 	pPanel->win_dim.t = 0;
@@ -597,8 +604,9 @@ Int32 DSI_Open(DISPDRV_HANDLE_T drvH)
 
 	return res;
 
-err_gpio_request:
+err_id_read:
 	gpio_free(pPanel->disp_info->rst->gpio);
+err_gpio_request:
 err_reg_init:
 err_dma_init:
 	CSL_DSI_CloseCmVc(pPanel->dsiCmVcHandle);
@@ -958,7 +966,7 @@ Int32 DSI_Update(
 	offset += (p_win->t * pPanel->disp_info->width + p_win->l)
 			* pPanel->disp_info->Bpp;
 
-	req.buff        = (uint32_t *)offset;
+	req.buff	= (uint32_t *)offset;
 	req.lineLenP	= p_win->w;
 	req.lineCount	= p_win->h;
 	req.xStrideB	= pPanel->disp_info->width - p_win->w;
