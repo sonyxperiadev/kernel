@@ -49,9 +49,10 @@
 #define FG_INIT_CAPACITY_AVG_SAMPLES	8
 #define FG_INIT_CAPACITY_SAMPLE_DELAY	100
 #define ACLD_DELAY_500			500
-#define ACLD_RETRIES			5
+#define ACLD_RETRIES			10
 #define ACLD_VBUS_MARGIN		200 /* 200mV */
-#define ADC_READ_TRIES			5
+#define ADC_READ_TRIES			10
+#define ADC_RETRY_DELAY		20 /* 20ms */
 #define AVG_SAMPLES			5
 
 #define FG_WORK_POLL_TIME_MS		(5000)
@@ -848,6 +849,7 @@ static inline int bcmpmu_fg_get_batt_volt(struct bcmpmu_fg_data *fg)
 				PMU_ADC_REQ_SAR_MODE, &result);
 		if (!ret)
 			break;
+		msleep(ADC_RETRY_DELAY);
 	}
 	BUG_ON(retries <= 0);
 	return result.conv;
@@ -887,6 +889,7 @@ static inline int bcmpmu_fg_get_vbus(struct bcmpmu_fg_data *fg)
 				PMU_ADC_REQ_SAR_MODE, &result);
 		if (!ret)
 			break;
+		msleep(ADC_RETRY_DELAY);
 	}
 	BUG_ON(retries <= 0);
 	return result.conv;
@@ -935,6 +938,7 @@ static inline int bcmpmu_fg_get_batt_temp(struct bcmpmu_fg_data *fg)
 				PMU_ADC_REQ_SAR_MODE, &result);
 		if (!ret)
 			break;
+		msleep(ADC_RETRY_DELAY);
 	}
 	BUG_ON(retries <= 0);
 	return result.conv;
