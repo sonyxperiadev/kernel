@@ -49,6 +49,7 @@
 #ifdef CONFIG_KONA_TMON
 #include <linux/broadcom/kona_tmon.h>
 #define INVALID_INX 0xFFFFFFFF
+#define INIT_WORK_DELAY 20
 #endif
 
 static int kcf_debug = 0;
@@ -86,6 +87,7 @@ struct kona_cpufreq {
 	int r_inx;
 	int f_inx;
 	struct cpufreq_lmt_node tmon_node;
+	struct delayed_work init_work;
 #endif
 };
 static struct kona_cpufreq *kona_cpufreq;
@@ -99,6 +101,57 @@ static struct cpufreq_lmt_node usr_max_lmt_node = {
 };
 
 #ifdef CONFIG_KONA_TMON
+static void cpufreq_tmon_init_work(struct work_struct *ws)
+{
+	int i, j;
+	long max_temp, curr_temp;
+	struct kona_cpufreq_drv_pdata *pdata;
+	struct kona_cpufreq *kona_cpufreq;
+
+	kona_cpufreq = container_of((struct delayed_work *)ws,
+			struct kona_cpufreq, init_work);
+	pdata = kona_cpufreq->pdata;
+
+	if (cpufreq_add_lmt_req(&kona_cpufreq->tmon_node,
+			"tmon", DEFAULT_LIMIT, MAX_LIMIT)) {
+		printk(KERN_ALERT "TMON REGN CPUFREQ FAILED\n");
+		goto out;
+	}
+	curr_temp = tmon_get_current_temp(CELCIUS, true);
+
+	for (i = pdata->num_freqs - 1; i > 0; i--) {
+		if (pdata->freq_tbl[i].max_temp != TEMP_DONT_CARE) {
+			kona_cpufreq->r_inx = i;
+			break;
+		}
+	}
+
+	kona_cpufreq->f_inx = INVALID_INX;
+	for (i = 0; i < pdata->num_freqs; i++) {
+		max_temp = pdata->freq_tbl[i].max_temp;
+		if (curr_temp >= max_temp &&
+				TEMP_DONT_CARE != max_temp) {
+			BUG_ON(i == 0);
+			cpufreq_update_lmt_req(&kona_cpufreq->tmon_node,
+				pdata->freq_tbl[i-1].cpu_freq);
+			for (j = i - 1; j > 0; j--) {
+				max_temp = pdata->freq_tbl[j].max_temp;
+				if (max_temp != TEMP_DONT_CARE) {
+					kona_cpufreq->r_inx = j;
+					break;
+				}
+			}
+			if (!j)
+				kona_cpufreq->r_inx = INVALID_INX;
+			kona_cpufreq->f_inx = i;
+			break;
+		}
+	}
+	tmon_register_notifier(&kona_cpufreq->tmon_nb);
+out:
+	kona_cpufreq = NULL;
+}
+
 static int cpufreq_tmon_notify_handler(struct notifier_block *nb,
 		unsigned long curr_temp, void *dev)
 {
@@ -111,7 +164,6 @@ static int cpufreq_tmon_notify_handler(struct notifier_block *nb,
 
 	if ((f_inx != INVALID_INX) &&
 		curr_temp < pdata->freq_tbl[f_inx].max_temp) {
-
 		cpufreq_update_lmt_req(&kona_cpufreq->tmon_node,
 				pdata->freq_tbl[f_inx].cpu_freq);
 		kona_cpufreq->r_inx = f_inx;
@@ -710,10 +762,7 @@ static struct cpufreq_driver kona_cpufreq_driver = {
 static int cpufreq_drv_probe(struct platform_device *pdev)
 {
 	struct kona_cpufreq_drv_pdata *pdata = pdev->dev.platform_data;
-	int i, j;
-	long max_temp;
-	long curr_temp;
-	int ret = -1;
+	int i, ret = -1;
 
 	kcf_dbg("%s\n", __func__);
 	BUG_ON(pdata == NULL);
@@ -791,37 +840,12 @@ static int cpufreq_drv_probe(struct platform_device *pdev)
 
 #ifdef CONFIG_KONA_TMON
 	if (pdata->flags & KONA_CPUFREQ_TMON) {
+		INIT_DELAYED_WORK(&kona_cpufreq->init_work,
+				cpufreq_tmon_init_work);
 		kona_cpufreq->tmon_nb.notifier_call =
 			cpufreq_tmon_notify_handler;
-		curr_temp = tmon_get_current_temp(CELCIUS);
-		kona_cpufreq->r_inx = pdata->num_freqs - 1;
-		kona_cpufreq->f_inx = INVALID_INX;
-		if (cpufreq_add_lmt_req(&kona_cpufreq->tmon_node,
-				"tmon", DEFAULT_LIMIT, MAX_LIMIT)) {
-			printk(KERN_ALERT "TMON REGN CPUFREQ FAILED\n");
-			return -EINVAL;
-		}
-		for (i = 0; i < pdata->num_freqs; i++) {
-			max_temp = pdata->freq_tbl[i].max_temp;
-			if (curr_temp >= max_temp &&
-					TEMP_DONT_CARE != max_temp) {
-				BUG_ON(i == 0);
-				cpufreq_update_lmt_req(&kona_cpufreq->tmon_node,
-					pdata->freq_tbl[i-1].cpu_freq);
-				for (j = i - 1; j > 0; j--) {
-					max_temp = pdata->freq_tbl[j].max_temp;
-					if (max_temp != TEMP_DONT_CARE) {
-						kona_cpufreq->r_inx = j;
-						break;
-					}
-				}
-				if (!j)
-					kona_cpufreq->r_inx = INVALID_INX;
-				kona_cpufreq->f_inx = i;
-				break;
-			}
-		}
-		tmon_register_notifier(&kona_cpufreq->tmon_nb);
+		schedule_delayed_work(&kona_cpufreq->init_work,
+				msecs_to_jiffies(INIT_WORK_DELAY));
 	}
 #endif
 	return ret;

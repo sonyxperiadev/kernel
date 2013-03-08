@@ -717,8 +717,8 @@ struct platform_device hawaii_otg_platform_device = {
 struct kona_freq_tbl kona_freq_tbl[] = {
 	FTBL_INIT(312000, PI_OPP_ECONOMY, TEMP_DONT_CARE),
 	FTBL_INIT(499999, PI_OPP_NORMAL, 100),
-	FTBL_INIT(666667, PI_OPP_TURBO, 90),
-	FTBL_INIT(1000000, PI_OPP_SUPER_TURBO, 80),
+	FTBL_INIT(666667, PI_OPP_TURBO, TEMP_DONT_CARE),
+	FTBL_INIT(1000000, PI_OPP_SUPER_TURBO, 85),
 };
 
 void hawaii_cpufreq_init(void)
@@ -923,9 +923,9 @@ struct platform_device kona_memc_device = {
 #ifdef CONFIG_KONA_TMON
 struct tmon_state threshold_val[] = {
 	{.rising = 70, .falling = 65, .flags = TMON_NOTIFY,},
-	{.rising = 80, .falling = 75, .flags = TMON_NOTIFY,},
-	{.rising = 90, .falling = 85, .flags = TMON_NOTIFY,},
-	{.rising = 100, .falling = 95, .flags = TMON_SHDWN,},
+	{.rising = 85, .falling = 75, .flags = TMON_NOTIFY,},
+	{.rising = 100, .falling = 90, .flags = TMON_NOTIFY,},
+	{.rising = 115, .falling = 112, .flags = TMON_SHDWN,},
 };
 struct kona_tmon_pdata tmon_plat_data = {
 	.base_addr = KONA_TMON_VA,

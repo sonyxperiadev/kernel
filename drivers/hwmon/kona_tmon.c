@@ -34,14 +34,17 @@
 #include <linux/of.h>
 #include <linux/of_irq.h>
 #include <linux/of_platform.h>
+#include <linux/sort.h>
 #include <mach/rdb/brcm_rdb_tmon.h>
 #include <mach/rdb/brcm_rdb_chipreg.h>
 
 #define CLR_INT 1
 #define INVALID_INX	0xFFFFFFFF
 #define THOLD_VAL_MAX 0xD
-#define INIT_WORK_DELAY 5
-
+#define INIT_WORK_DELAY 20
+#define TEMP_SAMPLES 8
+#define MIN_SAMPLE_DLY_US 5000
+#define MAX_SAMPLE_DLY_US 6000
 struct kona_tmon {
 	int irq;
 	struct work_struct tmon_work;
@@ -78,7 +81,7 @@ enum {
 	CRIT_THRESH_CELCIUS,
 };
 
-static long raw_to_celcius(unsigned long raw)
+static long raw_to_celcius(long raw)
 {
 	return (407000 - (538 * raw)) / 1000;
 }
@@ -88,15 +91,57 @@ static unsigned long celcius_to_raw(long celcius)
 	return (407000 - celcius * 1000) / 538;
 }
 
-long tmon_get_current_temp(bool celcius)
+static int cmp(const void *a, const void *b)
 {
-	unsigned long raw_temp;
+	if (*((unsigned long *)a) < *((unsigned long *)b))
+		return -1;
+	if (*((unsigned long *)a) > *((unsigned long *)b))
+		return 1;
+	return 0;
+}
+
+static int interquartile_mean(unsigned long *data, int num)
+{
+	int i, j;
+	unsigned avg = 0;
+
+	BUG_ON((!data) || ((num % 4) != 0));
+
+	sort(data, num, sizeof(int), cmp, NULL);
+
+	i = num / 4;
+	j = num - i;
+
+	for ( ; i < j; i++)
+		avg += data[i];
+
+	avg = avg / (j - (num / 4));
+
+	return avg;
+}
+
+long tmon_get_current_temp(bool celcius, bool avg)
+{
+	unsigned long raw_temp, temp_data[TEMP_SAMPLES];
+	int i;
 	struct kona_tmon_pdata *pdata;
 	BUG_ON(kona_tmon == NULL);
 
 	pdata = kona_tmon->pdata;
 	raw_temp = readl(pdata->base_addr + TMON_TEMP_VAL_OFFSET) &
 		TMON_TEMP_VAL_TEMP_VAL_MASK;
+
+	if (avg) {
+		temp_data[i] = raw_temp;
+		for (i = 1; i < TEMP_SAMPLES; i++) {
+			usleep_range(MIN_SAMPLE_DLY_US, MAX_SAMPLE_DLY_US);
+			raw_temp = readl(pdata->base_addr +
+			TMON_TEMP_VAL_OFFSET) & TMON_TEMP_VAL_TEMP_VAL_MASK;
+			temp_data[i] = raw_temp;
+		}
+		raw_temp = interquartile_mean(temp_data, TEMP_SAMPLES);
+	}
+
 	if (celcius)
 		return raw_to_celcius(raw_temp);
 	else
@@ -214,7 +259,7 @@ static int tmon_init_set_thold(struct kona_tmon *tmon)
 	struct kona_tmon_pdata *pdata = tmon->pdata;
 
 	/*setting the threshold value */
-	curr = tmon_get_current_temp(CELCIUS);
+	curr = tmon_get_current_temp(CELCIUS, true);
 	pr_info("%s: current temperature is %ld\n", __func__, curr);
 	for (i = pdata->thold_size - 1; i > 0; i--) {
 		if (curr >= pdata->thold[i].rising) {
@@ -225,12 +270,13 @@ static int tmon_init_set_thold(struct kona_tmon *tmon)
 	tmon->thresh_inx = i;
 
 	writel(CLR_INT, pdata->base_addr + TMON_CFG_CLR_INT_OFFSET);
-	if (pdata->thold[kona_tmon->thresh_inx].flags & TMON_SHDWN) {
+	if (pdata->thold[tmon->thresh_inx].flags & TMON_SHDWN) {
 		tmon_set_int_thold(tmon, THOLD_VAL_MAX, RAW_VAL);
+		disable_irq_nosync(tmon->irq);
 		tmon->thresh_inx = INVALID_INX;
 	} else
 		tmon_set_int_thold(tmon,
-		pdata->thold[kona_tmon->thresh_inx].rising, CELCIUS);
+		pdata->thold[tmon->thresh_inx].rising, CELCIUS);
 
 	return 0;
 }
@@ -245,7 +291,7 @@ static void tmon_poll_work(struct work_struct *ws)
 	struct kona_tmon_pdata *pdata = tmon->pdata;
 
 	BUG_ON(tmon->poll_inx == INVALID_INX);
-	curr_temp = tmon_get_current_temp(CELCIUS);
+	curr_temp = tmon_get_current_temp(CELCIUS, true);
 	poll_inx = tmon->poll_inx;
 	if (curr_temp <= (pdata->thold[poll_inx].falling +
 			pdata->hysteresis)) {
@@ -297,7 +343,7 @@ static irqreturn_t tmon_isr(int irq, void *drvdata)
 	long curr_temp;
 
 	BUG_ON(tmon->thresh_inx == INVALID_INX);
-	curr_temp = tmon_get_current_temp(CELCIUS);
+	curr_temp = tmon_get_current_temp(CELCIUS, false);
 	pr_info(KERN_ALERT "SoC temperature threshold of %d exceeded."\
 			"Current temperature is %ld\n",
 	pdata->thold[tmon->thresh_inx].rising, curr_temp);
@@ -401,10 +447,10 @@ struct device_attribute *devattr, char *buf)
 
 	switch (attr->index) {
 	case TEMP_RAW:
-		raw = tmon_get_current_temp(RAW_VAL);
+		raw = tmon_get_current_temp(RAW_VAL, true);
 		return snprintf(buf, 10, "%x\n", raw);
 	case TEMP_CELCIUS:
-		celcius = tmon_get_current_temp(CELCIUS);
+		celcius = tmon_get_current_temp(CELCIUS, true);
 		return snprintf(buf, 10, "%d\n", celcius);
 	case INT_THRESH_RAW:
 		raw = tmon_get_int_thold(kona_tmon, RAW_VAL);
@@ -755,6 +801,16 @@ static int kona_tmon_probe(struct platform_device *pdev)
 	INIT_DELAYED_WORK(&kona_tmon->poll_work, tmon_poll_work);
 	INIT_DELAYED_WORK(&kona_tmon->init_work, tmon_init_work);
 
+	/* Register interrupt handler */
+	kona_tmon->irq = pdata->irq;
+	if (0 != request_irq(kona_tmon->irq, tmon_isr,
+				IRQ_LEVEL | IRQF_NO_SUSPEND | IRQF_DISABLED,
+				pdev->name, kona_tmon)) {
+		tmon_dbg(TMON_LOG_ERR, "unable to register isr\n");
+		rc = -1;
+		goto err_unregister_device;
+	}
+
 	kona_tmon->init = 1;
 	kona_tmon->poll_inx = INVALID_INX;
 	tmon_init(kona_tmon, kona_tmon->vtmon_sel);
@@ -765,16 +821,6 @@ static int kona_tmon_probe(struct platform_device *pdev)
 		tmon_dbg(TMON_LOG_ERR, "hwmon device register failed\n");
 		rc = -ENODEV;
 		goto err_free_dev_mem;
-	}
-
-	/* Register interrupt handler */
-	kona_tmon->irq = pdata->irq;
-	if (0 != request_irq(kona_tmon->irq, tmon_isr,
-				IRQ_LEVEL | IRQF_NO_SUSPEND | IRQF_DISABLED,
-				pdev->name, kona_tmon)) {
-		tmon_dbg(TMON_LOG_ERR, "unable to register isr\n");
-		rc = -1;
-		goto err_unregister_device;
 	}
 
 	ATOMIC_INIT_NOTIFIER_HEAD(&kona_tmon->notifiers);
