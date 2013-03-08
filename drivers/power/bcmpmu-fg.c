@@ -35,7 +35,9 @@
 #include <linux/mfd/bcmpmu59xxx.h>
 #include <linux/mfd/bcmpmu59xxx_reg.h>
 #include <linux/power/bcmpmu-fg.h>
+#ifdef CONFIG_WD_TAPPER
 #include <linux/broadcom/wd-tapper.h>
+#endif
 
 #define FG_CAPACITY_SAVE_REG		(PMU_REG_FGGNRL1)
 #define FG_CAP_FULL_CHARGE_REG		(PMU_REG_FGGNRL2)
@@ -291,7 +293,9 @@ struct bcmpmu_fg_data {
 	struct bcmpmu_fg_status_flags flags;
 	struct batt_adc_data adc_data;
 
+#ifdef CONFIG_WD_TAPPER
 	struct wd_tapper_node wd_tap_node;
+#endif
 	ktime_t last_sample_tm;
 	ktime_t last_curr_sample_tm;
 
@@ -2042,8 +2046,10 @@ static void bcmpmu_fg_charging_algo(struct bcmpmu_fg_data *fg)
 		bcmpmu_check_battery_current_limit(fg);
 
 	if (fg->discharge_state != DISCHARG_STATE_HIGH_BATT) {
+#ifdef CONFIG_WD_TAPPER
 		wd_tapper_update_timeout_req(&fg->wd_tap_node,
 				TAPPER_DEFAULT_TIMEOUT);
+#endif
 		fg->discharge_state = DISCHARG_STATE_HIGH_BATT;
 	}
 
@@ -2168,6 +2174,7 @@ static void bcmpmu_fg_discharging_algo(struct bcmpmu_fg_data *fg)
 		BUG();
 	}
 
+#ifdef CONFIG_WD_TAPPER
 	/**
 	 * reconfigure wakeup time in case of low battery
 	 * or critical battery
@@ -2179,6 +2186,7 @@ static void bcmpmu_fg_discharging_algo(struct bcmpmu_fg_data *fg)
 				(poll_time / 1000));
 		BUG_ON(ret);
 	}
+#endif
 
 	bcmpmu_fg_update_psy(fg, force_update_psy);
 
@@ -3089,14 +3097,14 @@ static int __devinit bcmpmu_fg_probe(struct platform_device *pdev)
 	ret = bcmpmu_fg_register_notifiers(fg);
 	if (ret)
 		goto destroy_workq;
-
+#ifdef CONFIG_WD_TAPPER
 	ret = wd_tapper_add_timeout_req(&fg->wd_tap_node, "fg",
 			TAPPER_DEFAULT_TIMEOUT);
 	if (ret) {
 		pr_fg(ERROR, "failed to register with wd-tapper\n");
 		goto destroy_workq;
 	}
-
+#endif
 	fg->flags.batt_status = POWER_SUPPLY_STATUS_UNKNOWN;
 	fg->flags.prev_batt_status = POWER_SUPPLY_STATUS_UNKNOWN;
 	fg->discharge_state = DISCHARG_STATE_HIGH_BATT;
