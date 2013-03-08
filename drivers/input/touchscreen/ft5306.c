@@ -1425,7 +1425,7 @@ static int focaltech_ft5306_probe(
 		printk("failed to create sysfs file for input device\n");
 	
 	#ifdef CONFIG_HAS_EARLYSUSPEND
-	ts->early_suspend.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN + 1;
+	ts->early_suspend.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN;
 	ts->early_suspend.suspend = focaltech_ft5306_early_suspend;
 	ts->early_suspend.resume = focaltech_ft5306_late_resume;
 	register_early_suspend(&ts->early_suspend);
