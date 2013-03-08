@@ -117,7 +117,9 @@ static struct bcmpmu59xxx_rw_data __initdata register_init_data[] = {
 /* Regulator configuration */
 /* TODO regulator */
 	{.addr = PMU_REG_FG_EOC_TH, .val = 0x64, .mask = 0xFF},
-	{.addr = PMU_REG_RTC_C2C1_XOTRIM, .val = 0x44, .mask = 0xFF},
+
+	/* Logan rev02 Xtal RTC = 13pF shows 32767.93Hz */
+	{.addr = PMU_REG_RTC_C2C1_XOTRIM, .val = 0x22, .mask = 0xFF},
 	{.addr = PMU_REG_FGOCICCTRL, .val = 0x02, .mask = 0xFF},
 	 /* FG power down */
 	{.addr = PMU_REG_FGCTRL1, .val = 0x00, .mask = 0xFF},
