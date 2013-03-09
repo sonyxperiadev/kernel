@@ -62,6 +62,7 @@ struct lcd_config {
 	uint32_t updt_win_seq_len;
 	bool vid_cmnds; /* TURN_ON SHUT_DOWN*/
 	bool vburst;
+	bool cont_clk;
 	uint8_t hs, hbp, hfp;
 	uint8_t vs, vbp, vfp;
 };

@@ -603,6 +603,7 @@ __initdata struct lcd_config nt35512_cfg = {
 	.updt_win_seq_len = 0,
 	.vid_cmnds = true,
 	.vburst = true,
+	.cont_clk = false,
 	.hs = 10,
 	.hbp = 20,
 	.hfp = 20,

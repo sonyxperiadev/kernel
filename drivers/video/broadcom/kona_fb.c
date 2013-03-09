@@ -1094,6 +1094,7 @@ static int __init populate_dispdrv_cfg(struct kona_fb *fb,
 				 cfg->max_lp_bps : pd->lp_bps;
 
 	info->vsync_cb = konafb_vsync_cb;
+	info->cont_clk = cfg->cont_clk;
 	fb->display_info = info;
 	return 0;
 

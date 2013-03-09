@@ -136,6 +136,7 @@ extern "C" {
 		uint32_t hs_bps;
 		uint32_t lp_bps;
 		void (*vsync_cb)(void);
+		bool cont_clk;
 	} DISPDRV_INFO_T;
 
 

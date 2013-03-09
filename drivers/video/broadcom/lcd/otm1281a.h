@@ -277,6 +277,7 @@ __initdata struct lcd_config otm1281a_cfg = {
 	.updt_win_seq_len = OTM1281A_UPDT_WIN_SEQ_LEN,
 	.vid_cmnds = false,
 	.vburst = true,
+	.cont_clk = false,
 	.hs = 46,
 	.hbp = 46,
 	.hfp = 46,

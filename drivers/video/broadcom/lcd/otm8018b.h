@@ -436,6 +436,7 @@ __initdata struct lcd_config otm8018b_cfg = {
 	.updt_win_seq_len = 0,
 	.vid_cmnds = false,
 	.vburst = false,
+	.cont_clk = false,
 	.hs = 10,
 	.hbp = 20,
 	.hfp = 20,

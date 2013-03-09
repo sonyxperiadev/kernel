@@ -134,7 +134,6 @@ CSL_DSI_CM_VC_t DispDrv_VCCmCfg = {
 /* DSI BUS CONFIGURATION */
 CSL_DSI_CFG_t DispDrv_dsiCfg = {
 	.bus = 0,
-	.enaContClock = FALSE,
 	.enaRxCrc = TRUE,
 	.enaRxEcc = TRUE,
 	.enaHsTxEotPkt = TRUE,
@@ -467,6 +466,7 @@ Int32 DSI_Init(DISPDRV_INFO_T *info, DISPDRV_HANDLE_T *handle)
 		DispDrv_dsiCfg.hbp = info->hbp;
 		DispDrv_dsiCfg.hfp = info->hfp;
 		DispDrv_dsiCfg.vsync_cb = info->vsync_cb;
+		DispDrv_dsiCfg.enaContClock = info->cont_clk;
 
 		pPanel->disp_info = info;
 		pPanel->isTE = info->vmode ? false : info->te_ctrl;

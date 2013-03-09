@@ -262,6 +262,7 @@ __initdata struct lcd_config nt35516_cfg = {
 	.updt_win_seq_len = NT35516_UPDT_WIN_SEQ_LEN,
 	.vid_cmnds = true,
 	.vburst = true,
+	.cont_clk = false,
 	.hs = 46,
 	.hbp = 46,
 	.hfp = 46,
