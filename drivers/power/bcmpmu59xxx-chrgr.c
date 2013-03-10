@@ -18,6 +18,8 @@
 #include <linux/bug.h>
 #include <linux/device.h>
 #include <linux/delay.h>
+#include <linux/list.h>
+#include <linux/spinlock.h>
 #include <linux/workqueue.h>
 #include <linux/fs.h>
 #include <linux/power_supply.h>
@@ -38,6 +40,7 @@
 
 #define PMU_USB_CC_TRIM_MIN	0
 #define PMU_USB_CC_TRIM_MAX	0xF
+#define MAX_EVENTS		20
 
 char *get_supply_type_str(int chrgr_type);
 static int debug_mask = (BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT);
@@ -61,6 +64,12 @@ struct bcmpmu_chrgr_info {
 	char *model_name;
 };
 
+struct bcmpmu_chrgr_event {
+	int event;
+	struct list_head node;
+	int data;
+};
+
 struct bcmpmu_chrgr_data {
 	struct device *dev;
 	struct bcmpmu59xxx *bcmpmu;
@@ -71,6 +80,10 @@ struct bcmpmu_chrgr_data {
 	struct delayed_work chrgr_work;
 	struct notifier_block chgr_detect;
 	struct notifier_block chgr_curr_lmt;
+	struct list_head event_pending_list;
+	struct list_head event_free_list;
+	struct bcmpmu_chrgr_event event_pool[MAX_EVENTS];
+	spinlock_t chrgr_lock;
 	u8 usb_cc_trim_otp;
 	bool icc_host_ctrl;
 };
@@ -124,6 +137,76 @@ static u32 bcmpmu_pmu_curr_table[] = {
 char *supplies_to[] = {
 	"battery",
 };
+
+static int bcmpmu_chrgr_event_queue_init(struct bcmpmu_chrgr_data *di)
+{
+	int idx;
+
+	BUG_ON(!di);
+	INIT_LIST_HEAD(&di->event_free_list);
+	INIT_LIST_HEAD(&di->event_pending_list);
+
+	for (idx = 0; idx < MAX_EVENTS; idx++)
+		list_add_tail(&di->event_pool[idx].node, &di->event_free_list);
+
+	return 0;
+}
+
+static int bcmpmu_chrgr_queue_event(struct bcmpmu_chrgr_data *di, int event,
+		int data)
+{
+	struct bcmpmu_chrgr_event *event_node;
+	unsigned long flags;
+
+	BUG_ON(!di);
+
+	spin_lock_irqsave(&di->chrgr_lock, flags);
+
+	if (list_empty(&di->event_free_list)) {
+		pr_chrgr(ERROR, "charger event Q full!!\n");
+		spin_unlock_irqrestore(&di->chrgr_lock, flags);
+		return -ENOMEM;
+	} else {
+		event_node = list_first_entry(&di->event_free_list,
+				struct bcmpmu_chrgr_event, node);
+		event_node->event = event;
+		event_node->data = data;
+		list_del(&event_node->node);
+		list_add_tail(&event_node->node, &di->event_pending_list);
+	}
+
+	spin_unlock_irqrestore(&di->chrgr_lock, flags);
+	schedule_delayed_work(&di->chrgr_work, 0);
+	return 0;
+}
+
+static void bcmpmu_chrgr_work(struct work_struct *work)
+{
+	struct bcmpmu_chrgr_data *di = container_of(work,
+			struct bcmpmu_chrgr_data, chrgr_work.work);
+	struct bcmpmu_chrgr_event *event_node;
+	unsigned long flags;
+	int event;
+	int data;
+
+	pr_chrgr(ERROR, "%s\n", __func__);
+	for (; ;) {
+		spin_lock_irqsave(&di->chrgr_lock, flags);
+		if (list_empty(&di->event_pending_list)) {
+			spin_unlock_irqrestore(&di->chrgr_lock, flags);
+			break;
+		}
+		event_node = list_first_entry(&di->event_pending_list,
+				struct bcmpmu_chrgr_event, node);
+		event = event_node->event;
+		data = event_node->data;
+		list_del(&event_node->node);
+		list_add_tail(&event_node->node, &di->event_free_list);
+		spin_unlock_irqrestore(&di->chrgr_lock, flags);
+		bcmpmu_call_notifier(di->bcmpmu, event, &data);
+	}
+}
+
 static int set_icc_fcc(const char *val, const struct kernel_param *kp)
 {
 	struct bcmpmu_chrgr_data *di;
@@ -341,26 +424,25 @@ int bcmpmu_chrgr_usb_en(struct bcmpmu59xxx *bcmpmu, int enable)
 		return ret;
 	}
 
-	bcmpmu_call_notifier(bcmpmu, BCMPMU_CHRGR_EVENT_CHRG_STATUS, &enable);
-
+	bcmpmu_chrgr_queue_event(gbl_di, BCMPMU_CHRGR_EVENT_CHRG_STATUS,
+			enable);
 	return ret;
 }
 EXPORT_SYMBOL(bcmpmu_chrgr_usb_en);
 
-int bcmpmu_is_usb_host_enabled(struct bcmpmu59xxx *bcmpmu)
+bool bcmpmu_is_usb_host_enabled(struct bcmpmu59xxx *bcmpmu)
 {
 	int ret = 0;
 	u8 reg;
 
 	ret = bcmpmu->read_dev(bcmpmu, PMU_REG_MBCCTRL3, &reg);
 	if (ret)
-		return ret;
+		return false;
 
 	if (reg & MBCCTRL3_USB_HOSTEN_MASK)
-		return 0;
+		return true;
 
-	return -EINVAL;
-
+	return false;
 }
 EXPORT_SYMBOL(bcmpmu_is_usb_host_enabled);
 
@@ -571,6 +653,12 @@ static int __devinit bcmpmu_chrgr_probe(struct platform_device *pdev)
 	di->icc_host_ctrl = true;
 
 	platform_set_drvdata(pdev, di);
+	spin_lock_init(&di->chrgr_lock);
+	INIT_DELAYED_WORK(&di->chrgr_work, bcmpmu_chrgr_work);
+	ret = bcmpmu_chrgr_event_queue_init(di);
+	if (ret)
+		return -ENOMEM;
+
 	/*do not register psy if SPA is enabled*/
 	if (bcmpmu->flags & BCMPMU_SPA_EN)
 		return 0;

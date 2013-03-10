@@ -868,10 +868,13 @@ static int bcmpmu_fg_get_avg_volt(struct bcmpmu_fg_data *fg)
 
 		/**
 		 * voltage too high?? may be wrong ADC
-		 * sample. Ignore it !!
+		 * sample or connected to power supply > 4.2V
 		 */
-		if (volt_samples[i] > fg->pdata->batt_prop->max_volt)
-			continue;
+		if (volt_samples[i] > fg->pdata->batt_prop->max_volt) {
+			pr_fg(ERROR, "VBAT > MAX_VOLT");
+			volt_samples[i] = fg->pdata->batt_prop->max_volt;
+		}
+
 		volt_sum += volt_samples[i];
 		i++;
 		msleep(25);
@@ -1514,6 +1517,8 @@ static int bcmpmu_fg_event_handler(struct notifier_block *nb,
 	struct bcmpmu_fg_data *fg;
 	int enable;
 	int chrgr_curr;
+	bool cancel_n_resch_work = false;
+
 	switch (event) {
 	case BCMPMU_CHRGR_EVENT_CHRG_RESUME_VBUS:
 		fg = to_bcmpmu_fg_data(nb, accy_nb);
@@ -1575,15 +1580,18 @@ static int bcmpmu_fg_event_handler(struct notifier_block *nb,
 			fg->flags.prev_batt_status = fg->flags.batt_status;
 			fg->flags.batt_status = POWER_SUPPLY_STATUS_CHARGING;
 			pr_fg(FLOW, "charging enabled\n");
-		} else if (!fg->flags.fg_eoc &&
-				!fg->flags.temp_hot_state &&
-				!fg->flags.temp_cold_state) {
+			cancel_n_resch_work = true;
+		} else if (!fg->flags.fg_eoc) {
 			fg->flags.charging_enabled = false;
 			fg->flags.prev_batt_status = fg->flags.batt_status;
 			fg->flags.batt_status = POWER_SUPPLY_STATUS_DISCHARGING;
 			pr_fg(FLOW, "charging disabled\n");
 		}
 		FG_UNLOCK(fg);
+		if (cancel_n_resch_work) {
+			cancel_delayed_work_sync(&fg->fg_periodic_work);
+			queue_delayed_work(fg->fg_wq, &fg->fg_periodic_work, 0);
+		}
 		break;
 	case BCMPMU_CHRGR_EVENT_CHRG_CURR_LMT:
 		fg = to_bcmpmu_fg_data(nb, chrgr_current_nb);
@@ -1841,23 +1849,25 @@ exit:
 static void bcmpmu_fg_moniter_battery_temp(struct bcmpmu_fg_data *fg)
 {
 
-	if (unlikely((fg->adc_data.temp > fg->pdata->suspend_temp_hot) &&
-				!fg->flags.temp_hot_state)) {
-		fg->flags.temp_hot_state = true;
-		pr_fg(FLOW, "suspend temp hot\n");
-		bcmpmu_chrgr_usb_en(fg->bcmpmu, 0);
+	if (unlikely(fg->adc_data.temp > fg->pdata->suspend_temp_hot)) {
+		if (bcmpmu_is_usb_host_enabled(fg->bcmpmu)) {
+			bcmpmu_chrgr_usb_en(fg->bcmpmu, 0);
+			fg->flags.temp_hot_state = true;
+			pr_fg(FLOW, "suspend temp hot\n");
+		}
 	} else if (unlikely(fg->flags.temp_hot_state &&
 				(fg->adc_data.temp <
 				 fg->pdata->recovery_temp_hot))) {
 		fg->flags.temp_hot_state = false;
 		pr_fg(FLOW, "recovery temp hot\n");
 		bcmpmu_chrgr_usb_en(fg->bcmpmu, 1);
-	} else if (unlikely((fg->adc_data.temp <
-					fg->pdata->suspend_temp_cold) &&
-				!fg->flags.temp_cold_state)) {
-		fg->flags.temp_cold_state = true;
-		pr_fg(FLOW, "suspend temp cold\n");
-		bcmpmu_chrgr_usb_en(fg->bcmpmu, 0);
+	} else if (unlikely(fg->adc_data.temp <
+				fg->pdata->suspend_temp_cold)) {
+		if (bcmpmu_is_usb_host_enabled(fg->bcmpmu)) {
+			bcmpmu_chrgr_usb_en(fg->bcmpmu, 0);
+			fg->flags.temp_cold_state = true;
+			pr_fg(FLOW, "suspend temp cold\n");
+		}
 	} else if (unlikely(fg->flags.temp_cold_state &&
 				(fg->adc_data.temp >
 				 fg->pdata->recovery_temp_cold))) {
@@ -1865,7 +1875,6 @@ static void bcmpmu_fg_moniter_battery_temp(struct bcmpmu_fg_data *fg)
 		pr_fg(FLOW, "recovery temp cold\n");
 		bcmpmu_chrgr_usb_en(fg->bcmpmu, 1);
 	}
-
 }
 
 static void bcmpmu_fg_cal_force_algo(struct bcmpmu_fg_data *fg)
@@ -2053,10 +2062,10 @@ static void bcmpmu_fg_charging_algo(struct bcmpmu_fg_data *fg)
 		fg->discharge_state = DISCHARG_STATE_HIGH_BATT;
 	}
 
-	bcmpmu_fg_get_coulomb_counter(fg);
-
 	if (!(fg->bcmpmu->flags & BCMPMU_SPA_EN))
 		bcmpmu_fg_moniter_battery_temp(fg);
+
+	bcmpmu_fg_get_coulomb_counter(fg);
 
 	if (!fg->pdata->hw_maintenance_charging)
 		bcmpmu_fg_sw_maint_charging_algo(fg);

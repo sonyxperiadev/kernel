@@ -738,7 +738,7 @@ static void bcmpmu_accy_isr(enum bcmpmu59xxx_irq irq, void *data)
 		pr_accy(FLOW, "### ISR PMU_IRQ_USBOV_DIS: %x\n",
 			PMU_IRQ_USBOV_DIS);
 		if (paccy->det_state == USB_CONNECTED) {
-			if (bcmpmu_is_usb_host_enabled(bcmpmu))
+			if (!bcmpmu_is_usb_host_enabled(bcmpmu))
 				bcmpmu_chrgr_usb_en(bcmpmu, 1);
 		}
 		break;
