@@ -852,7 +852,7 @@ static int get_counter_read(struct file *file, char __user *buf, size_t len,
 			history = 1;
 	}
 	if (status) {
-		count = sprintf(buffer,	"Profile: %s\t Status: Running" \
+		count = snprintf(buffer, 100, "Profile: %s\t Status: Running"\
 				"\tDuration = %lums\t cnt_raw = %lu\t" \
 				"cnt = %lums %s\n", get_prof_name(type),
 				duration, cnt, COUNTER_TO_MS(cnt),
@@ -860,7 +860,7 @@ static int get_counter_read(struct file *file, char __user *buf, size_t len,
 				? ((duration < 330000) ? " " : "*") :
 				(duration < 330000) ? " " : "*")));
 	} else if (ccu_profiler->profiler.stop_time) {
-		count = sprintf(buffer, "Profile: %s\t Status: Stopped" \
+		count = snprintf(buffer, 100, "Profile: %s\t Status: Stopped"\
 				"\tDuration = %lums\t cnt_raw = %lu\t" \
 				"cnt = %lums %s\n", get_prof_name(type),
 				duration, cnt, COUNTER_TO_MS(cnt),
@@ -868,7 +868,7 @@ static int get_counter_read(struct file *file, char __user *buf, size_t len,
 				? ((duration < 330000) ? " " : "*") :
 				(duration < 330000) ? " " : "*")));
 	} else
-		count = sprintf(buffer, "Status: Yet to begin\n");
+		count = snprintf(buffer, 30, "Status: Yet to begin\n");
 	/* If overflow bit isn't set, then value is proper. If it is
 	set, it is compared with history and till 165 sec, the value
 	is guaranteed to be correct */

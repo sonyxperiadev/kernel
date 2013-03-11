@@ -1470,6 +1470,7 @@ int __init rgltr_init(void)
 			len = strlen(val) + 1, total += len, val += len, j++)
 				output[j] = val;
 		}
+		/* coverity[secure_coding] */
 		sscanf(output[0], "%d", &int_val);
 		rgltr_pdata.bcmpmu_rgltr[i].initdata->num_consumer_supplies =
 			int_val;
@@ -1480,20 +1481,25 @@ int __init rgltr_init(void)
 			rgltr_pdata.bcmpmu_rgltr[i].initdata->
 				consumer_supplies[j].supply = output[k];
 
+		/* coverity[secure_coding] */
 		sscanf(output[k++], "%d", &int_val);
 		rgltr_pdata.bcmpmu_rgltr[i].initdata->constraints.always_on =
 			int_val;
 
+		/* coverity[secure_coding] */
 		sscanf(output[k++], "%d", &int_val);
 		rgltr_pdata.bcmpmu_rgltr[i].pc_pins_map = int_val;
 
+		/* coverity[secure_coding] */
 		sscanf(output[k++], "%d", &int_val);
 		rgltr_pdata.bcmpmu_rgltr[i].dsm_mode = int_val;
 
+		/* coverity[secure_coding] */
 		sscanf(output[k++], "%d", &int_val);
 		rgltr_pdata.bcmpmu_rgltr[i].initdata->constraints.boot_on =
 			int_val;
 
+		/* coverity[secure_coding] */
 		sscanf(output[k++], "%d", &int_val);
 		rgltr_pdata.bcmpmu_rgltr[i].req_volt = int_val;
 	}
@@ -1506,7 +1512,7 @@ int adc_init(void)
 	struct device_node *np;
 	struct property *prop;
 	char *output[5], *val;
-	char buf[10];
+	char buf[20];
 	u32 addr_offset;
 	size_t total = 0, len = 0;
 	np = of_find_matching_node(NULL, bcmpmu_adc_dt_ids);
@@ -1516,7 +1522,7 @@ int adc_init(void)
 	}
 
 	for (i = 0; i < PMU_ADC_CHANN_MAX; i++) {
-		sprintf(buf, "channel%d", i);
+		snprintf(buf, 15, "channel%d", i);
 		prop = of_find_property(np, buf, NULL);
 		if (prop) {
 			val = prop->value;
@@ -1529,9 +1535,13 @@ int adc_init(void)
 			continue;
 		adc_pdata[i].name = output[0];
 
+		/* coverity[secure_coding] */
 		sscanf(output[1], "%d", &adc_pdata[i].flag);
+		/* coverity[secure_coding] */
 		sscanf(output[2], "%d", &adc_pdata[i].volt_range);
+		/* coverity[secure_coding] */
 		sscanf(output[3], "%d", &adc_pdata[i].adc_offset);
+		/* coverity[secure_coding] */
 		sscanf(output[4], "%x", &addr_offset);
 		adc_pdata[i].reg = PMU_REG_ADCCTRL1 + addr_offset;
 	}

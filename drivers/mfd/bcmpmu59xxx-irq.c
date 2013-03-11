@@ -82,6 +82,7 @@ static ssize_t bcmpmu_irq_mask(struct file *file,
 
 	if (copy_from_user(input_str, buf, len))
 		return -EFAULT;
+	/* coverity[secure_coding] */
 	sscanf(input_str, "%x", &irq_no);
 
 	if (irq_no >= PMU_IRQ_MAX) {
@@ -119,6 +120,7 @@ static ssize_t bcmpmu_irq_unmask(struct file *file,
 
 	if (copy_from_user(input_str, buf, len))
 		return -EFAULT;
+	/* coverity[secure_coding] */
 	sscanf(input_str, "%x", &irq_no);
 
 	if (irq_no >= PMU_IRQ_MAX) {

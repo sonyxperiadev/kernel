@@ -636,7 +636,7 @@ static int bcmpmu_fg_volt_to_cap(struct bcmpmu_fg_data *fg, int volt)
 {
 	struct batt_volt_cap_map *lut;
 	u32 lut_sz;
-	int cap_percentage;
+	int cap_percentage = 0;
 	int idx;
 
 	lut = fg->pdata->batt_prop->volt_cap_lut;
@@ -657,8 +657,6 @@ static int bcmpmu_fg_volt_to_cap(struct bcmpmu_fg_data *fg, int volt)
 	}
 	else if (idx == 0)
 		cap_percentage = 100; /* full capacity */
-	else
-		cap_percentage = 0;
 
 	return cap_percentage;
 }

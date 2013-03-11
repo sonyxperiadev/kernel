@@ -1019,6 +1019,7 @@ static ssize_t cpufreq_set_ops_set(struct file *file,
 	if (copy_from_user(input_str, buf, len))
 		return -EFAULT;
 
+	/* coverity[secure_coding] */
 	sscanf(&input_str[0], "%d", &pll_val);
 	if (cpufreq_unregister_driver(&kona_cpufreq_driver) != 0) {
 		kcf_dbg("%s: cpufreq unregister failed\n", __func__);

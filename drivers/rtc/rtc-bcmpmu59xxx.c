@@ -39,7 +39,7 @@ static ssize_t
 bcmpmu_rtc_show_dbgmsk(struct device *dev, struct device_attribute *attr,
 		char *buf)
 {
-	return sprintf(buf, "%X\n", dbg_mask);
+	return snprintf(buf, 5, "%x\n", dbg_mask);
 }
 static ssize_t
 bcmpmu_rtc_set_dbsmsk(struct device *dev, struct device_attribute *attr,

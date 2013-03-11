@@ -401,7 +401,7 @@ static ssize_t adc_read(struct device *dev,
 	int ret = 0;
 	int len = 0;
 
-	len += sprintf(buf + len, "SAR READ OF channel = %d", attr->index);
+	len += snprintf(buf + len, 30, "SAR READ OF channel=%d", attr->index);
 	ret = bcmpmu_adc_read(bcmpmu, attr->index,
 						PMU_ADC_REQ_SAR_MODE, &result);
 	if (ret < 0)
@@ -416,10 +416,10 @@ static ssize_t adc_read(struct device *dev,
 			(attr->index == PMU_ADC_CHANN_PATEMP))
 		result.conv = result.conv / 10;
 
-	len += sprintf(buf + len, " raw = 0x%x conv = %d\n",
+	len += snprintf(buf + len, 30, " raw = 0x%x conv = %d\n",
 						result.raw, result.conv);
 
-	len += sprintf(buf + len, "RTM READ OF channel = %d", attr->index);
+	len += snprintf(buf + len, 30, "RTM READ OF channel = %d", attr->index);
 	ret = bcmpmu_adc_read(bcmpmu, attr->index,
 						PMU_ADC_REQ_RTM_MODE, &result);
 	if (ret < 0)
@@ -433,7 +433,7 @@ static ssize_t adc_read(struct device *dev,
 			(attr->index == PMU_ADC_CHANN_32KTEMP) ||
 			(attr->index == PMU_ADC_CHANN_PATEMP))
 		result.conv = result.conv / 10;
-	len += sprintf(buf + len, " raw = 0x%x conv = %d\n",
+	len += snprintf(buf + len, 30, " raw = 0x%x conv = %d\n",
 						result.raw, result.conv);
 
 	return len;

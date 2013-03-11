@@ -135,6 +135,7 @@ static int set_icc_fcc(const char *val, const struct kernel_param *kp)
 	di = gbl_di;
 	if (!di || !val)
 		return -1;
+	/* coverity[secure_coding] */
 	sscanf(val, "%u", &curr);
 	if (curr == CURR_LMT_MAX) {
 		paccy = di->bcmpmu->accyinfo;

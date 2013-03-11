@@ -1935,9 +1935,10 @@ static ssize_t pi_debug_set_dfs_client_opp(struct file *file,
 		len = 15;
 	else
 		len = count;
-
+	/* coverity[secure_coding] */
 	if (copy_from_user(input_str, buf, len))
 		return -EFAULT;
+	/* coverity[secure_coding] */
 	sscanf(input_str, "%s%u", opp_str, &weightage);
 	if (isdigit(opp_str[0]))
 		opp = (opp_str[0] - toascii('0'));
@@ -2157,9 +2158,10 @@ static ssize_t pi_opp_set_min_lmt(struct file *file, const char __user *buf,
 		len = 15;
 	else
 		len = count;
-
+	/* coverity[secure_coding] */
 	if (copy_from_user(input_str, buf, len))
 		return -EFAULT;
+	/* coverity[secure_coding] */
 	sscanf(input_str, "%s", opp_str);
 	if (isdigit(opp_str[0]))
 		val = (opp_str[0] - toascii('0'));
@@ -2224,8 +2226,10 @@ static ssize_t pi_opp_set_max_lmt(struct file *file, const char __user *buf,
 		len = 15;
 	else
 		len = count;
+	/* coverity[secure_coding] */
 	if (copy_from_user(input_str, buf, len))
 		return -EFAULT;
+	/* coverity[secure_coding] */
 	sscanf(input_str, "%s", opp_str);
 	if (isdigit(opp_str[0]))
 		val = (opp_str[0] - toascii('0'));

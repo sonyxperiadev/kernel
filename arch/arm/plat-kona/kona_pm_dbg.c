@@ -131,9 +131,11 @@ static void handle_snapshot_list(const char *p)
 		p++;
 
 	if (cmd == 'a') {
+		/* coverity[secure_coding] */
 		sscanf(p, "%x %x %x", &reg, &mask, &good);
 		snapshot_add_reg(reg, mask, good);
 	} else if (cmd == 'r') {
+		/* coverity[secure_coding] */
 		sscanf(p, "%x", &reg);
 		snapshot_del_reg(reg);
 	} else {
@@ -599,7 +601,7 @@ int log_pm(int num, ...)
 		/* Add the current time stamp */
 		t = cpu_clock(this_cpu);
 		nanosec_rem = do_div(t, 1000000000);
-		tlen = sprintf(tbuf, "[%5lu.%06lu]", (unsigned long) t,
+		tlen = snprintf(tbuf, 20, "[%5lu.%06lu]", (unsigned long) t,
 			nanosec_rem / 1000);
 		for (tp = tbuf; tp < tbuf + tlen; tp++)
 			emit_pm_char(*tp);

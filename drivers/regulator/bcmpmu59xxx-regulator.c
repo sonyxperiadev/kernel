@@ -845,6 +845,7 @@ static ssize_t bcmpmu_dbg_rgltr_enable(struct file *file,
 		len = count;
 	if (copy_from_user(input_str, buf, len))
 		return -EFAULT;
+	/* coverity[secure_coding] */
 	sscanf(input_str, "%s", consumer);
 	regl = regulator_get(NULL, consumer);
 	if (unlikely(IS_ERR_OR_NULL(regl))) {
@@ -874,6 +875,7 @@ static ssize_t bcmpmu_dbg_rgltr_disable(struct file *file,
 		len = count;
 	if (copy_from_user(input_str, buf, len))
 		return -EFAULT;
+	/* coverity[secure_coding] */
 	sscanf(input_str, "%s", consumer);
 	regl = regulator_get(NULL, consumer);
 	if (unlikely(IS_ERR_OR_NULL(regl))) {
@@ -905,6 +907,7 @@ static ssize_t bcmpmu_dbg_rgltr_set_vlt(struct file *file,
 		len = count;
 	if (copy_from_user(input_str, buf, len))
 		return -EFAULT;
+	/* coverity[secure_coding] */
 	sscanf(input_str, "%s%u%u", consumer, &min_v, &max_v);
 	if (consumer[0] == 0 || min_v == 0xFFFFFFFF ||
 			max_v == 0xFFFFFFFF) {
@@ -941,6 +944,7 @@ static ssize_t bcmpmu_dbg_rgltr_get_vlt(struct file *file,
 		len = count;
 	if (copy_from_user(input_str, buf, len))
 		return -EFAULT;
+	/* coverity[secure_coding] */
 	sscanf(input_str, "%s", consumer);
 	if (consumer[0] == 0) {
 		pr_info("invalid param !!\n");
@@ -975,6 +979,7 @@ static ssize_t bcmpmu_dbg_is_rgltr_enable(struct file *file,
 		len = count;
 	if (copy_from_user(input_str, buf, len))
 		return -EFAULT;
+	/* coverity[secure_coding] */
 	sscanf(input_str, "%s", consumer);
 	regl = regulator_get(NULL, consumer);
 	if (unlikely(IS_ERR_OR_NULL(regl))) {

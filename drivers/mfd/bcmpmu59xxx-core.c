@@ -82,6 +82,7 @@ static ssize_t bcmpmu_debugfs_regread(struct file *file,
 
 	if (copy_from_user(input_str, buf, len))
 		return -EFAULT;
+	/* coverity[secure_coding] */
 	sscanf(input_str, "%x%x%x", &map, &reg, &num_reg);
 
 	if (map == 0xFF || reg == 0xFF) {
@@ -131,6 +132,7 @@ static ssize_t bcmpmu_debugfs_regwrite(struct file *file,
 
 	if (copy_from_user(input_str, buf, len))
 		return -EFAULT;
+	/* coverity[secure_coding] */
 	sscanf(input_str, "%x%x%x", &map, &reg, &value);
 
 	pr_info("%x %x %x\n", map, reg, value);

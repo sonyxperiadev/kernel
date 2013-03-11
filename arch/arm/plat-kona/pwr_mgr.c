@@ -74,7 +74,7 @@
 static char *pwr_mgr_event2str(int event)
 {
 	static char str[10];
-	sprintf(str, "event_%d", event);
+	snprintf(str, 10, "event_%d", event);
 	return str;
 }
 
@@ -2526,6 +2526,7 @@ static ssize_t set_pm_mgr_dbg_bus(struct file *file, char const __user *buf,
 
 	if (copy_from_user(input_str, buf, len))
 		return -EFAULT;
+	/* coverity[secure_coding] */
 	sscanf(input_str, "%x%x%x%x", &val, &db_sel, &param, &dbg_bit_sel);
 
 	pwr_mgr_mach_debug_fs_init(0, db_sel, param, dbg_bit_sel);
@@ -2589,6 +2590,7 @@ static ssize_t set_bmdm_mgr_dbg_bus(struct file *file, char const __user *buf,
 
 	if (copy_from_user(input_str, buf, len))
 		return -EFAULT;
+	/* coverity[secure_coding] */
 	sscanf(input_str, "%x%x%x%x", &val, &db_sel, &param, &dbg_bit_sel);
 
 	pwr_dbg(PWR_LOG_DBGFS, "%s: val: %d\n", __func__, val);
@@ -2804,6 +2806,7 @@ static ssize_t pwr_mgr_i2c_req(struct file *file, char const __user *buf,
 
 	if (copy_from_user(input_str, buf, len))
 		return -EFAULT;
+	/* coverity[secure_coding] */
 	sscanf(input_str, "%x%x%x", &slv_addr, &reg_addr, &reg_val);
 	if (reg_addr == 0xFFFF || slv_addr == 0xFFFF) {
 		pwr_dbg(PWR_LOG_ERR, "invalid param\n");
@@ -2858,7 +2861,7 @@ static ssize_t pwr_mgr_pmu_volt_inx_tbl_display(struct file *file, char __user *
 
     count = pwr_mgr_pm_i2c_var_data_read(volt_tbl);
     for (i=0;i<count;i++) {
-	length = sprintf(out_ptr, "volt_id[%d]: %x\n", i, volt_tbl[i]);
+	length = snprintf(out_ptr, 20, "volt_id[%d]: %x\n", i, volt_tbl[i]);
 	out_ptr += length;
 	total_len += length;
     }
@@ -2891,6 +2894,7 @@ static ssize_t pwr_mgr_pmu_volt_inx_tbl_update(struct file *file, char const __u
 
 	str_ptr = &input_str[0];
 	while (*str_ptr && *str_ptr != 0xA) { /*not null && not LF character*/
+		/* coverity[secure_coding] */
 		sscanf(str_ptr, "%x%n", &val, &len);
 		if (val == 0xFFFF)
 			break;

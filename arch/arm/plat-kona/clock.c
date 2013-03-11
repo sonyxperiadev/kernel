@@ -5257,6 +5257,7 @@ static ssize_t set_clk_idle_debug(struct file *file, char const __user *buf,
 
 	if (copy_from_user(input_str, buf, len))
 		return -EFAULT;
+	/* coverity[secure_coding] */
 	sscanf(input_str, "%x%d%x", &clk_idle, &db_sel, &dbg_bit_sel);
 	set_clk_idle_debug_mon(clk_idle, db_sel, dbg_bit_sel);
 	return count;
@@ -5284,6 +5285,7 @@ static ssize_t set_clk_mon_dbg(struct file *file, char const __user *buf,
 		len = count;
 	if (copy_from_user(input_str, buf, len))
 		return -EFAULT;
+	/* coverity[secure_coding] */
 	sscanf(input_str, "%d%x%d%x", &path, &clk_sel, &clk_ctl, &dbg_bit_sel);
 	clk_mon_dbg(clock, path, clk_sel, clk_ctl, dbg_bit_sel);
 	return count;
@@ -5408,6 +5410,7 @@ static ssize_t ccu_debug_set_dbg_bus_sel(struct file *file,
 	if (copy_from_user(input_str, buf, len))
 		return -EFAULT;
 
+	/* coverity[secure_coding] */
 	sscanf(&input_str[0], "%x%x%x%x", &sel, &mux, &mux_parm, &dbg_bit_sel);
 	set_ccu_dbg_bus_mux(ccu_clk, mux, mux_parm, dbg_bit_sel);
 	CCU_ACCESS_EN(ccu_clk, 1);
@@ -6029,6 +6032,7 @@ static ssize_t ccu_volt_id_update(struct file *file,
 		return -EFAULT;
 
 	str_ptr = &input_str[0];
+	/* coverity[secure_coding] */
 	sscanf(str_ptr, "%x%x", &freq_id, &volt_id);
 	if (freq_id == 0xFFFF || volt_id == 0xFFFF) {
 		printk("invalid input\n");
@@ -6081,6 +6085,7 @@ static ssize_t misc_dbg_bus_sel(struct file *file,
 	if (copy_from_user(input_str, buf, len))
 		return -EFAULT;
 
+	/* coverity[secure_coding] */
 	sscanf(&input_str[0], "%x%x", &sel, &dbg_bit_sel);
 	set_misc_dbg_bus(sel, dbg_bit_sel);
 

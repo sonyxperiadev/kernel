@@ -746,6 +746,7 @@ static int param_set_trigger_avs(const char *val, const struct kernel_param *kp)
 				"%s : invalid paltform data !!\n", __func__);
 		return -EPERM;
 	}
+	/* coverity[secure_coding] */
 	sscanf(val, "%d", &trig);
 	avs_dbg(AVS_LOG_INFO, "%s, trig:%d\n", __func__, trig);
 	if (trig == 1)

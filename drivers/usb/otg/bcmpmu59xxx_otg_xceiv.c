@@ -386,8 +386,7 @@ static int bcmpmu_otg_xceiv_id_chg_notif_handler(struct notifier_block *nb,
 	if (xceiv_data) {
 		queue_work(xceiv_data->bcm_otg_work_queue,
 			   &xceiv_data->bcm_otg_id_status_change_work);
-	} else
-		return -EINVAL;
+	}
 
 	return 0;
 }
@@ -493,6 +492,7 @@ static ssize_t bcmpmu_otg_xceiv_wake_store(struct device *dev,
 
 	gadget = xceiv_data->otg_xceiver.phy.otg->gadget;
 
+	/* coverity[secure_coding] */
 	result = sscanf(buf, "%u\n", &val);
 	if (result != 1) {
 		result = -EINVAL;
@@ -516,7 +516,7 @@ static ssize_t bcmpmu_otg_xceiv_vbus_show(struct device *dev,
 {
 	struct bcmpmu_otg_xceiv_data *xceiv_data = dev_get_drvdata(dev);
 
-	return sprintf(buf, "%s\n", xceiv_data->vbus_enabled ? "1" : "0");
+	return snprintf(buf, 5, "%s\n", xceiv_data->vbus_enabled ? "1" : "0");
 }
 
 static ssize_t bcmpmu_otg_xceiv_vbus_store(struct device *dev,
@@ -530,7 +530,7 @@ static ssize_t bcmpmu_otg_xceiv_vbus_store(struct device *dev,
 	int error;
 
 	hcd = bus_to_hcd(xceiv_data->otg_xceiver.phy.otg->host);
-
+	/* coverity[secure_coding] */
 	result = sscanf(buf, "%u\n", &val);
 	if (result != 1) {
 		result = -EINVAL;
@@ -564,7 +564,7 @@ static ssize_t bcmpmu_otg_xceiv_host_show(struct device *dev,
 {
 	struct bcmpmu_otg_xceiv_data *xceiv_data = dev_get_drvdata(dev);
 
-	return sprintf(buf, "%s\n", xceiv_data->host ? "1" : "0");
+	return snprintf(buf, 5, "%s\n", xceiv_data->host ? "1" : "0");
 }
 
 static ssize_t bcmpmu_otg_xceiv_host_store(struct device *dev,
@@ -574,7 +574,7 @@ static ssize_t bcmpmu_otg_xceiv_host_store(struct device *dev,
 	ssize_t result = 0;
 	unsigned int val;
 	struct bcmpmu_otg_xceiv_data *xceiv_data = dev_get_drvdata(dev);
-
+	/* coverity[secure_coding] */
 	result = sscanf(buf, "%u\n", &val);
 	if (result != 1)
 		result = -EINVAL;

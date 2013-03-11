@@ -200,19 +200,19 @@ static int get_counter_read(struct file *file, char __user *buf, size_t len,
 	}
 
 	if (status) {
-		count = sprintf(buffer, "Status: Running" \
+		count = snprintf(buffer, 100, "Status: Running" \
 				"\t Duration = %lums \t cnt_raw = %lu" \
 				"\t cnt = %lu%sms\n",
 				duration, cnt, COUNTER_TO_MS(cnt),
 				(overflow) ? "* " : " ");
 	} else if (pi_profiler->profiler.stop_time) {
-		count = sprintf(buffer, "Status: Stopped" \
+		count = snprintf(buffer, 100, "Status: Stopped" \
 				"\t Duration = %lums \t cnt_raw = %lu" \
 				"\t cnt = %lu%sms\n",
 				duration, cnt, COUNTER_TO_MS(cnt),
 				(overflow) ? "* " : " ");
 	} else
-		count = sprintf(buffer,	"Status: Yet to begin\n");
+		count = snprintf(buffer, 30, "Status: Yet to begin\n");
 	count = simple_read_from_buffer(buf, len, ppos, buffer, count);
 	return count;
 }

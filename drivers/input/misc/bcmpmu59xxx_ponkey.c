@@ -86,6 +86,7 @@ static int param_set_simulate_ponkey(const char *val,
 	int ret = -1;
 	if (!val)
 		return -EINVAL;
+	/* coverity[secure_coding] */
 	ret = sscanf(val, "%d", &trig);
 	pr_info("%s, trig:%d\n", __func__, trig);
 

@@ -921,6 +921,7 @@ static int param_set_pm_late_init(const char *val,
 	if (!val)
 		return -EINVAL;
 
+	/* coverity[secure_coding] */
 	ret = sscanf(val, "%d", &pm_delayed_init);
 	pr_info("%s, pm_delayed_init:%d\n", __func__, pm_delayed_init);
 	if (pm_delayed_init == 1)

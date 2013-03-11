@@ -204,6 +204,7 @@ int get_force_sleep_state(void)
 
 static void cmd_force_sleep(const char *p)
 {
+	/* coverity[secure_coding] */
 	sscanf(p, "%d", &force_sleep_state);
 	if (force_sleep_state < 0 || force_sleep_state > 4) {
 		pr_err("Invalid state: %d\n", force_sleep_state);
@@ -223,6 +224,7 @@ static void cmd_dormant_profile(const char *p)
 {
 	u32 on, ns, sec, ref;
 
+	/* coverity[secure_coding] */
 	sscanf(p, "%08x %08x %08x %08x", &on, &ns, &sec, &ref);
 	dormant_profile_config(on, ns, sec, ref);
 }

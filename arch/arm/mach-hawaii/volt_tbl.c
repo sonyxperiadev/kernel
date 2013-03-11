@@ -384,7 +384,7 @@ int get_vddfix_vlt_adj(u32 vddfix_vlt)
 
 int get_vddfix_retn_vlt_id(u32 reg_val)
 {
-	u32 vddfix_ret = reg_val;
+	int vddfix_ret = reg_val;
 #ifdef CONFIG_KONA_AVS
 	u32 vlt = SDSR1_RETN_VAL;
 	u32 vddfix_min = avs_get_vddfix_ret_vlt_min();
@@ -439,6 +439,7 @@ static ssize_t read_volt_tbl(struct file *file, const char __user *buf,
 
 	if (copy_from_user(input_str, buf, len))
 		return -EFAULT;
+	/* coverity[secure_coding] */
 	sscanf(input_str, "%d%d", &silicon_type, &freq_id);
 	if (silicon_type >= SILICON_TYPE_MAX) {
 		pr_err("%s: Invalid silicon type\n", __func__);

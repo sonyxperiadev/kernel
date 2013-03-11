@@ -390,7 +390,7 @@ EXPORT_SYMBOL_GPL(tmon_unregister_notifier);
 static ssize_t tmon_get_name(struct device *dev,
 struct device_attribute *devattr, char *buf)
 {
-	return sprintf(buf, "soctemp\n");
+	return snprintf(buf, 10, "soctemp\n");
 }
 
 static ssize_t tmon_get_val(struct device *dev,
@@ -402,22 +402,22 @@ struct device_attribute *devattr, char *buf)
 	switch (attr->index) {
 	case TEMP_RAW:
 		raw = tmon_get_current_temp(RAW_VAL);
-		return sprintf(buf, "%x\n", raw);
+		return snprintf(buf, 10, "%x\n", raw);
 	case TEMP_CELCIUS:
 		celcius = tmon_get_current_temp(CELCIUS);
-		return sprintf(buf, "%d\n", celcius);
+		return snprintf(buf, 10, "%d\n", celcius);
 	case INT_THRESH_RAW:
 		raw = tmon_get_int_thold(kona_tmon, RAW_VAL);
-		return sprintf(buf, "%x\n", raw);
+		return snprintf(buf, 10, "%x\n", raw);
 	case INT_THRESH_CELCIUS:
 		celcius = tmon_get_int_thold(kona_tmon, CELCIUS);
-		return sprintf(buf, "%d\n", celcius);
+		return snprintf(buf, 10, "%d\n", celcius);
 	case CRIT_THRESH_RAW:
 		raw = tmon_get_critical_thold(kona_tmon, RAW_VAL);
-		return sprintf(buf, "%x\n", raw);
+		return snprintf(buf, 10, "%x\n", raw);
 	case CRIT_THRESH_CELCIUS:
 		celcius = tmon_get_critical_thold(kona_tmon, CELCIUS);
-		return sprintf(buf, "%d\n", celcius);
+		return snprintf(buf, 10, "%d\n", celcius);
 	default:
 		return -EINVAL;
 	}
@@ -429,6 +429,7 @@ static ssize_t tmon_set_raw_val(struct device *dev,
 	int raw;
 	struct sensor_device_attribute *attr = to_sensor_dev_attr(devattr);
 
+	/* coverity[secure_coding] */
 	sscanf(buf, "%x", &raw);
 
 	switch (attr->index) {
@@ -449,7 +450,7 @@ static ssize_t tmon_set_celcius_val(struct device *dev,
 {
 	long celcius;
 	struct sensor_device_attribute *attr = to_sensor_dev_attr(devattr);
-
+	/* coverity[secure_coding] */
 	sscanf(buf, "%ld", &celcius);
 
 	switch (attr->index) {
@@ -469,6 +470,7 @@ static ssize_t kona_tmon_set_interval(struct device *dev,
 {
 	long msecs;
 
+	/* coverity[secure_coding] */
 	sscanf(buf, "%ld", &msecs);
 	tmon_set_interval(kona_tmon, msecs);
 	return count;
@@ -480,14 +482,14 @@ static ssize_t kona_tmon_get_interval(struct device *dev,
 	unsigned long ticks;
 
 	ticks = tmon_get_interval(kona_tmon);
-	return sprintf(buf, "%lu\n", ticks);
+	return snprintf(buf, 10, "%lu\n", ticks);
 }
 
 static ssize_t tmon_vtmon_sel(struct device *dev,
 	struct device_attribute *devattr, const char *buf, size_t count)
 {
 	int vtmon;
-
+	/* coverity[secure_coding] */
 	sscanf(buf, "%d", &vtmon);
 
 	if (vtmon == kona_tmon->vtmon_sel)
@@ -501,14 +503,14 @@ static ssize_t tmon_vtmon_sel(struct device *dev,
 static ssize_t tmon_get_vtmon(struct device *dev,
 		struct device_attribute *devattr, char *buf)
 {
-	return sprintf(buf, "%d\n", kona_tmon->vtmon_sel);
+	return snprintf(buf, 10, "%d\n", kona_tmon->vtmon_sel);
 }
 
 static ssize_t tmon_set_dbg_mask(struct device *dev,
 		struct device_attribute *devattr, const char *buf, size_t count)
 {
 	int val;
-
+	/* coverity[secure_coding] */
 	sscanf(buf, "%d", &val);
 	tmon_dbg_mask = val;
 	return count;
@@ -517,7 +519,7 @@ static ssize_t tmon_set_dbg_mask(struct device *dev,
 static ssize_t tmon_get_dbg_mask(struct device *dev,
 		struct device_attribute *devattr, char *buf)
 {
-	return sprintf(buf, "%d\n", tmon_dbg_mask);
+	return snprintf(buf, 10, "%d\n", tmon_dbg_mask);
 }
 
 static struct sensor_device_attribute kona_attrs[] = {
@@ -687,6 +689,12 @@ static int kona_tmon_probe(struct platform_device *pdev)
 		pdata->thold =
 		kzalloc(sizeof(struct tmon_state)*pdata->thold_size,
 				GFP_KERNEL);
+		if (!pdata->thold) {
+			rc = -EINVAL;
+			kfree(pdata);
+			goto err_free_dev_mem;
+		}
+
 		for (i = 0; i < pdata->thold_size; i++) {
 			pdata->thold[i].rising =
 				be32_to_cpu(*thold++);
