@@ -48,7 +48,7 @@
 #define FG_CAP_DELTA_THRLD		10
 #define ADC_VBAT_AVG_SAMPLES		8
 #define ADC_VBUS_AVG_SAMPLES		8
-#define FG_INIT_CAPACITY_AVG_SAMPLES	8
+#define FG_INIT_CAPACITY_AVG_SAMPLES	4
 #define FG_INIT_CAPACITY_SAMPLE_DELAY	100
 #define ACLD_DELAY_500			500
 #define ACLD_RETRIES			10
@@ -388,8 +388,6 @@ static int interquartile_mean(int *data, int num)
 {
 	int i, j;
 	int avg = 0;
-
-	BUG_ON((!data) || ((num % 4) != 0));
 
 	sort(data, num, sizeof(int), cmp, NULL);
 

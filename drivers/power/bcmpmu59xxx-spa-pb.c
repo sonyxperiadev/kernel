@@ -670,7 +670,7 @@ static int __init bcmpmu_spa_pb_init(void)
 {
 	return platform_driver_register(&bcmpmu_spa_pb_drv);
 }
-module_init(bcmpmu_spa_pb_init);
+subsys_initcall_sync(bcmpmu_spa_pb_init);
 
 static void __exit bcmpmu_spa_pb_exit(void)
 {
