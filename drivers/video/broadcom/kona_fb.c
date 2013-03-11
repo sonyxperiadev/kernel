@@ -91,13 +91,11 @@ struct kona_fb {
 	spinlock_t lock;
 	struct mutex update_sem;
 	struct completion prev_buf_done_sem;
-	struct completion vsync_event;
 	atomic_t buff_idx;
 	atomic_t is_fb_registered;
 	atomic_t is_graphics_started;
 	int rotation;
 	int is_display_found;
-	bool waiting_for_vsync;
 #ifdef CONFIG_FRAMEBUFFER_FPS
 	struct fb_fps_info *fps_info;
 #endif
@@ -123,6 +121,7 @@ struct kona_fb {
 #endif
 };
 
+static struct completion vsync_event;
 static struct kona_fb *g_kona_fb;
 
 #ifdef CONFIG_FB_BRCM_CP_CRASH_DUMP_IMAGE_SUPPORT
@@ -529,7 +528,6 @@ static int kona_fb_pan_display(struct fb_var_screeninfo *var,
 		if (!fb->display_info->vmode)
 			wait_for_completion_interruptible_timeout(
 				&fb->prev_buf_done_sem,	msecs_to_jiffies(100));
-
 		kona_clock_start(fb);
 		ret =
 		    fb->display_ops->update(fb->display_hdl,
@@ -610,13 +608,10 @@ static int kona_fb_ioctl(struct fb_info *info, unsigned int cmd,
 	switch (cmd) {
 
 	case FBIO_WAITFORVSYNC:
-		fb->waiting_for_vsync = 1;
-		if (wait_for_completion_killable_timeout(
-			&fb->vsync_event, msecs_to_jiffies(100)) < 1) {
+		if (wait_for_completion_killable(&vsync_event) < 0) {
 			konafb_info("Failed to get a vsync event\n");
 			ret = -ETIMEDOUT;
 		}
-		fb->waiting_for_vsync = 0;
 		break;
 
 	case KONA_IOCTL_SET_BUFFER_AND_UPDATE:
@@ -649,10 +644,15 @@ static int kona_fb_ioctl(struct fb_info *info, unsigned int cmd,
 	return ret;
 }
 
+static int kona_fb_sync(struct fb_info *info)
+{
+	if (wait_for_completion_killable(&vsync_event) < 0)
+		konafb_info("Failed to get a vsync event\n");
+	return 0;
+}
 static void konafb_vsync_cb(void)
 {
-	if (g_kona_fb->waiting_for_vsync)
-		complete(&g_kona_fb->vsync_event);
+		complete(&vsync_event);
 }
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
@@ -1140,6 +1140,7 @@ static struct fb_ops kona_fb_ops = {
 	.fb_copyarea = cfb_copyarea,
 	.fb_imageblit = cfb_imageblit,
 	.fb_ioctl = kona_fb_ioctl,
+	.fb_sync = kona_fb_sync,
 };
 
 static int __ref kona_fb_probe(struct platform_device *pdev)
@@ -1213,6 +1214,7 @@ static int __ref kona_fb_probe(struct platform_device *pdev)
 	atomic_set(&fb->is_fb_registered, 0);
 	atomic_set(&fb->force_update, 0);
 	init_completion(&fb->prev_buf_done_sem);
+	init_completion(&vsync_event);
 	complete(&fb->prev_buf_done_sem);
 	atomic_set(&fb->is_graphics_started, 0);
 
