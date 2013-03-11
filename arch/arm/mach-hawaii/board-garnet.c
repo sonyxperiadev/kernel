@@ -768,19 +768,32 @@ struct platform_device *hawaii_common_plat_devices[] __initdata = {
 #if defined(CONFIG_LEDS_GPIO) || defined(CONFIG_LEDS_GPIO_MODULE)
 #define BLUE_LED_GPIO		22
 #define GREEN_LED_GPIO		9
+#ifdef CONFIG_MACH_HAWAII_GARNET_C_A18
+#define BUTTON_LED_GPIO     88
+#endif
 static struct gpio_led gpio_leds[] = {
+#ifndef CONFIG_MACH_HAWAII_GARNET_C_A18
 	{
 		.name	= "blue",
 		.default_trigger = "timer",
 		.gpio	= BLUE_LED_GPIO ,
 		.active_low = 0,
 	},
+#endif
 	{
 		.name	= "green",
 		.default_trigger = "timer",
 		.gpio	= GREEN_LED_GPIO ,
 		.active_low = 0,
 	},
+#ifdef CONFIG_MACH_HAWAII_GARNET_C_A18
+	{
+		.name	= "button-backlight",
+		.default_trigger = "backlight",
+		.gpio	= BUTTON_LED_GPIO ,
+		.active_low = 0,
+	},
+#endif
 };
 
 static struct gpio_led_platform_data gpio_led_info = {
