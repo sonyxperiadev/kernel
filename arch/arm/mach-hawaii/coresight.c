@@ -165,8 +165,8 @@ static ssize_t sysfs_ddr_phys_addr_show(struct device *dev,
 	return sprintf(buf, "%08x\n", ddr_dma_addr);
 }
 
-static DEVICE_ATTR(ddr_phys_addr, 0666, sysfs_ddr_phys_addr_show, NULL);
-static DEVICE_ATTR(send_to_ddr, 0666, NULL, sysfs_send_to_ddr_store);
+static DEVICE_ATTR(ddr_phys_addr, 0644, sysfs_ddr_phys_addr_show, NULL);
+static DEVICE_ATTR(send_to_ddr, 0644, NULL, sysfs_send_to_ddr_store);
 static struct attribute *etb_attrs[] = {
 	&dev_attr_send_to_ddr.attr,
 	&dev_attr_ddr_phys_addr.attr,

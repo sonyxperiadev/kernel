@@ -1026,19 +1026,19 @@ static int __devinit axitrace_probe(struct amba_device *dev,
 		t->per_trace[i].p_source_info = &sources[i];
 
 		FILL_ATTR(t->per_trace[i].trace_attrs[CAP_ATTR], "capabilities",
-				0666, cap_show, cap_store);
+				0644, cap_show, cap_store);
 		FILL_ATTR(t->per_trace[i].trace_attrs[CUR_CONFIG_ATTR],
 				"current_configuration",
-				0666, cur_config_show, NULL);
+				0644, cur_config_show, NULL);
 		FILL_ATTR(t->per_trace[i].trace_attrs[COUNTER_ATTR], "counters",
-				0666, counter_show, NULL);
+				0644, counter_show, NULL);
 		FILL_ATTR(t->per_trace[i].trace_attrs[MASTER_ATTR], "masters",
-				0666, master_show, NULL);
+				0644, master_show, NULL);
 		FILL_ATTR(t->per_trace[i].trace_attrs[SLAVE_ATTR], "slaves",
-				0666, slave_show, NULL);
+				0644, slave_show, NULL);
 		FILL_ATTR(t->per_trace[i].trace_attrs[CONTROL_ATTR],
 				"trace_control",
-				0666, control_show, control_store);
+				0644, control_show, control_store);
 
 		t->per_trace[i].attr_group.attrs =
 			kmalloc(sizeof(struct attribute *) * TRACE_END_ATTR,
@@ -1111,28 +1111,28 @@ static int __devinit axitrace_probe(struct amba_device *dev,
 			}
 
 			FILL_ATTR(t->per_trace[i].filter_attrs[FIL_AXI_ID_ATTR],
-					"axi_id", 0666 , filter_axi_id_show,
+					"axi_id", 0644 , filter_axi_id_show,
 					filter_axi_id_store);
 			FILL_ATTR(t->per_trace[i].filter_attrs[FIL_ID_MASK_ATTR]
-					, "id_mask", 00666, filter_id_mask_show,
+					, "id_mask", 0644, filter_id_mask_show,
 					filter_id_mask_store);
 			FILL_ATTR(t->per_trace[i].filter_attrs[FIL_MASTER_ATTR],
-					"master", 0666, filter_master_show,
+					"master", 0644, filter_master_show,
 					filter_master_store);
 			FILL_ATTR(t->per_trace[i].filter_attrs[FIL_SLAVE_ATTR],
-					"slave", 0666, filter_slave_show,
+					"slave", 0644, filter_slave_show,
 					filter_slave_store);
 			FILL_ATTR(t->per_trace[i].filter_attrs[FIL_OPEN_ATTR],
-					"open", 0666, filter_open_show,
+					"open", 0644, filter_open_show,
 					filter_open_store);
 			FILL_ATTR(t->per_trace[i].filter_attrs[FIL_SECURE_ATTR],
-					"secure", 0666, filter_secure_show,
+					"secure", 0644, filter_secure_show,
 					filter_secure_store);
 			FILL_ATTR(t->per_trace[i].filter_attrs[FIL_READ_ATTR],
-					"read", 0666, filter_read_show,
+					"read", 0644, filter_read_show,
 					filter_read_store);
 			FILL_ATTR(t->per_trace[i].filter_attrs[FIL_WRITE_ATTR],
-					"write", 0666, filter_write_show,
+					"write", 0644, filter_write_show,
 					filter_write_store);
 
 			/* Assign attributes to group */
