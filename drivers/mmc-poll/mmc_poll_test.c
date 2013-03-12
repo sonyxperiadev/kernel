@@ -209,9 +209,9 @@ kona_mmc_poll_write(struct device *dev, struct device_attribute *attr,
 	return n;
 }
 
-static DEVICE_ATTR(mmc_poll_init, 0666, NULL, kona_mmc_poll_init);
-static DEVICE_ATTR(mmc_poll_read, 0666, NULL, kona_mmc_poll_read);
-static DEVICE_ATTR(mmc_poll_write, 0666, NULL, kona_mmc_poll_write);
+static DEVICE_ATTR(mmc_poll_init, 0644, NULL, kona_mmc_poll_init);
+static DEVICE_ATTR(mmc_poll_read, 0644, NULL, kona_mmc_poll_read);
+static DEVICE_ATTR(mmc_poll_write, 0644, NULL, kona_mmc_poll_write);
 
 static struct attribute *mmc_test_attrs[] = {
 	&dev_attr_mmc_poll_init.attr,
