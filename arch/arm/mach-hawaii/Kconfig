@@ -95,6 +95,10 @@ choice
 	help
 	  Support for Garnet A18
 
+	config MACH_HAWAII_GARNET_C_M530
+	bool "GARNET M530"
+	help
+	  Support for Garnet M530
 endchoice
 choice
 	prompt "Hawaii FPGA type"
