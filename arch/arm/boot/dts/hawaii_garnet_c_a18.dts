@@ -187,6 +187,35 @@
 		aux1-gpio = <0xFFFFFFFF>; /* UARTB_SEL,probably not required */
 	};
 
+	iommu_mm: iommu-mm {
+		compatible = "bcm,iommu-m4u";
+		iova_begin  = <0x80000000>;
+		iova_size   = <0x80000000>;
+		errbuf_size = <0x00001000>;
+	};
+
+	iovmm_mm: iovmm-mm {
+		compatible = "bcm,iovmm";
+		base = <0xc0000000>;
+		size = <0x20000000>;
+		order = <0>;
+	};
+
+	iovmm_mm_256mb: iovmm-mm-256mb {
+		compatible = "bcm,iovmm";
+		base = <0xe0000000>;
+		size = <0x10000000>;
+		order = <0>;
+	};
+
+	ion-system {
+		compatible = "bcm,ion";
+		id = <0>;
+		type = <0>;
+		iommu = <&iommu_mm>;
+		iovmm = <&iovmm_mm_256mb>;
+	};
+
 	ion-carveout {
 		compatible = "bcm,ion";
 		id = <3>;
@@ -197,6 +226,8 @@
 		lmk_enable = <0>;
 		lmk_min_score_adj = <411>;
 		lmk_min_free = <32>;
+		iommu = <&iommu_mm>;
+		iovmm = <&iovmm_mm_256mb>;
 	};
 
 	ion-cma {
@@ -209,6 +240,8 @@
 		lmk_enable = <1>;
 		lmk_min_score_adj = <411>;
 		lmk_min_free = <32>;
+		iommu = <&iommu_mm>;
+		iovmm = <&iovmm_mm_256mb>;
 	};
 
 	soc-back-camera {
@@ -269,6 +302,9 @@
 		cmnd-LP;		/* Commands in LP mode*/
 		hs-bitrate = <330000000>;
 		lp-bitrate = <5000000>;	/* 5mbps */
+		iommu = <&iommu_mm>;
+		iovmm = <&iovmm_mm>;
+		rotation = <180>;
 	};
 
 	tmon@0x34008000 {
@@ -389,5 +425,6 @@
 		shutdown-time = <3500>;	/* unit us */
 		ready-time = <150>;		/* unit us */
 		interval-time = <550>;	/* unit ns */
+		bl-on-delay = <6000>;
 	};
 };
