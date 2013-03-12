@@ -2256,6 +2256,8 @@ static void sdhci_timeout_timer(unsigned long data)
 
 	spin_lock_irqsave(&host->lock, flags);
 
+	host->ops->sdhci_debug(host);
+
 	if (host->mrq) {
 		pr_err("%s: Timeout waiting for hardware "
 			"interrupt.\n", mmc_hostname(host->mmc));

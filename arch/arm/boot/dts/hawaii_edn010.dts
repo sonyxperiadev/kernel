@@ -358,6 +358,7 @@
 		ahb-clk-name = "sdio2_ahb_clk";
 		sleep-clk-name = "sdio2_sleep_clk";
 		peri-clk-rate = <52000000>;
+		vddsdmmc-regulator-name = "cam1";
 	};
 
 	sdio2 {

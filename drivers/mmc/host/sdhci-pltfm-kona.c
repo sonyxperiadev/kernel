@@ -41,6 +41,7 @@
 #include <linux/of_irq.h>
 #include <linux/of_platform.h>
 
+#include <plat/clock.h>
 
 #ifdef CONFIG_APANIC_ON_MMC
 #include <linux/mmc-poll/mmc_poll_stack.h>
@@ -146,6 +147,7 @@ static void sdhci_pltfm_init_74_clocks(struct sdhci_host *host,
 static int sdhci_pltfm_rpm_enabled(struct sdio_dev *dev);
 static int sdhci_rpm_enabled(struct sdhci_host *host);
 static int sdhci_clk_enable(struct sdhci_host *host, int enable);
+static void sdhci_print_critical(struct sdhci_host *host);
 /*
  * Get the base clock. Use central clock source for now. Not sure if different
  * clock speed to each dev is allowed
@@ -175,6 +177,7 @@ static struct sdhci_ops sdhci_pltfm_ops = {
 	.rpm_enabled = sdhci_rpm_enabled,
 	.set_signalling = sdhci_pltfm_set_signalling,
 	.platform_send_init_74_clocks = sdhci_pltfm_init_74_clocks,
+	.sdhci_debug = sdhci_print_critical,
 };
 
 static int bcm_kona_sd_reset(struct sdio_dev *dev)
@@ -688,6 +691,7 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 	struct sdio_platform_cfg *hw_cfg = NULL;
 	char devname[MAX_DEV_NAME_SIZE];
 	int ret = 0;
+	char *emmc_regulator = NULL;
 
 	pr_debug("%s: ENTRY\n", __func__);
 
@@ -695,9 +699,8 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 
 	hw_cfg = (struct sdio_platform_cfg *)pdev->dev.platform_data;
 	if (pdev->dev.of_node) {
-		const char *prop;
 		u32 val;
-
+		const char *prop;
 		if (!pdev->dev.platform_data)
 			hw_cfg = kzalloc(sizeof(struct sdio_platform_cfg),
 				GFP_KERNEL);
@@ -822,6 +825,10 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 			}
 
 			hw_cfg->is_8bit = val;
+
+			of_property_read_string(pdev->dev.of_node,
+					"vddsdmmc-regulator-name", &prop);
+			emmc_regulator = (char *)prop;
 		}
 
 		pdev->dev.platform_data = hw_cfg;
@@ -902,6 +909,8 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 	host->mmc->parent = dev->dev;
 	if (dev->devtype == SDIO_DEV_TYPE_WIFI)
 		dev->wifi_gpio = &hw_cfg->wifi_gpio;
+	if (dev->devtype == SDIO_DEV_TYPE_EMMC && emmc_regulator)
+		dev->vdd_sdxc_regulator = regulator_get(NULL, emmc_regulator);
 
 	pr_debug("%s: DEV TYPE %x\n", __func__, dev->devtype);
 
@@ -967,7 +976,8 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 #endif
 	}
 
-	if (hw_cfg->vddsdxc_regulator_name) {
+	if (hw_cfg->vddsdxc_regulator_name &&
+			dev->devtype == SDIO_DEV_TYPE_SDMMC) {
 		ret =
 		    sdhci_pltfm_regulator_sdxc_init(dev,
 					       hw_cfg->vddsdxc_regulator_name);
@@ -1238,7 +1248,7 @@ static int __devexit sdhci_pltfm_remove(struct platform_device *pdev)
 		gpio_free(dev->cd_gpio);
 	}
 
-	if (dev->vdd_sdxc_regulator) {
+	if (dev->vdd_sdxc_regulator && dev->devtype == SDIO_DEV_TYPE_SDMMC) {
 		/* Playing safe- if regulator is enabled, disable it first */
 		if (regulator_is_enabled(dev->vdd_sdxc_regulator) > 0)
 			regulator_disable(dev->vdd_sdxc_regulator);
@@ -1602,7 +1612,8 @@ static int sdhci_pltfm_set_3v3_signalling(struct sdhci_host *host)
 	struct sdio_dev *dev = sdhci_priv(host);
 	int ret = 0;
 
-	if (dev->vdd_sdxc_regulator) {
+	if (dev->vdd_sdxc_regulator &&
+			dev->devtype == SDIO_DEV_TYPE_SDMMC) {
 		ret =
 		    regulator_set_voltage(dev->vdd_sdxc_regulator, 3000000,
 					  3000000);
@@ -1619,7 +1630,8 @@ static int sdhci_pltfm_set_1v8_signalling(struct sdhci_host *host)
 	struct sdio_dev *dev = sdhci_priv(host);
 	int ret = 0;
 
-	if (dev->vdd_sdxc_regulator) {
+	if (dev->vdd_sdxc_regulator &&
+			dev->devtype == SDIO_DEV_TYPE_SDMMC) {
 		ret =
 		    regulator_set_voltage(dev->vdd_sdxc_regulator, 1800000,
 					  1800000);
@@ -1651,7 +1663,8 @@ kona_sdxc_regulator_power(struct sdio_dev *dev, int power_state)
 	 * regulator need not be switched OFF then from the board file do not
 	 * populate the regulator names.
 	 */
-	if (dev->vdd_sdxc_regulator) {
+	if (dev->vdd_sdxc_regulator &&
+			dev->devtype == SDIO_DEV_TYPE_SDMMC) {
 		if (power_state) {
 			if ((hw_cfg->devtype == SDIO_DEV_TYPE_SDMMC) &&
 				(hw_cfg->configure_sdio_pullup))	{
@@ -1726,4 +1739,28 @@ static void sdhci_pltfm_init_74_clocks(struct sdhci_host *host, u8 power_mode)
 		return;
 	else
 		mdelay(10);
+}
+
+static void sdhci_print_critical(struct sdhci_host *host)
+{
+	struct sdio_dev *dev = sdhci_priv(host);
+	int ret = 0;
+
+	if (dev->vdd_sdxc_regulator) {
+		ret = regulator_is_enabled(dev->vdd_sdxc_regulator);
+		printk(KERN_ALERT "regulator enable:%d\n", ret);
+		ret = regulator_get_voltage(dev->vdd_sdxc_regulator);
+		printk(KERN_ALERT "regulator voltage:%d\n", ret);
+	}
+	if (dev->vddo_sd_regulator) {
+		ret = regulator_is_enabled(dev->vddo_sd_regulator);
+		printk(KERN_ALERT "sd regulator enable:%d\n", ret);
+		ret = regulator_get_voltage(dev->vddo_sd_regulator);
+		printk(KERN_ALERT "sd regulator voltage:%d\n", ret);
+	}
+	ret = clk_get_usage(dev->peri_clk);
+	printk(KERN_ALERT "clk use_cnt:%d\n", ret);
+	printk(KERN_ALERT "runtime_suspended:%d\n", host->runtime_suspended);
+	ret = atomic_read(&dev->dev->power.usage_count);
+	printk(KERN_ALERT "runtime usage count:%d\n", ret);
 }
