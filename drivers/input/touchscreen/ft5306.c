@@ -39,6 +39,8 @@ static int ts_gpio_wakeup_pin=0;
 static int ts_x_max_value=0;
 static int ts_y_max_value=0;
 static const char *tp_power;
+static const char *vkey_scope;
+static bool have_vkey = false;
 
 /*******************************/
 typedef unsigned char	FTS_BYTE;
@@ -1164,20 +1166,12 @@ static struct kobj_attribute ft5306_vendor_attr = {
 	.store = NULL,
 };
 
-
 static ssize_t ft5306_virtual_keys_show(struct kobject *kobj,
 				   struct kobj_attribute *attr, char *buf)
 {
-	return sprintf(buf, __stringify(EV_KEY) ":"
-		__stringify(KEY_MENU)  ":60:850:90:90"
-			":" __stringify(EV_KEY) ":"
-		__stringify(KEY_HOME)   ":180:850:90:90"
-			":" __stringify(EV_KEY) ":"
-		__stringify(KEY_BACK)   ":300:850:90:90"
-			":" __stringify(EV_KEY) ":"
-		__stringify(KEY_SEARCH)   ":420:850:90:90"
-			"\n");
-} 
+	return sprintf(buf, vkey_scope);
+}
+
 static struct kobj_attribute ft5306_virtual_keys_attr = {
 	.attr = {
 		.name = "virtualkeys.FocalTech-Ft5306",//"virtualkeys.Synaptics-RMI4",
@@ -1298,6 +1292,12 @@ static int focaltech_ft5306_probe(
 		if (!of_property_read_u32(np, "use-irq", &val))
 			client->irq = val;
 		of_property_read_string(np, "power", &tp_power);
+		if (of_property_read_string(np, "vkey_scope", &vkey_scope)) {
+			have_vkey = false;
+			vkey_scope = "\n";
+		}
+		else
+			have_vkey = true;
 
 		if (tp_power)
 			ts->power = ts_power;
@@ -1321,7 +1321,7 @@ static int focaltech_ft5306_probe(
 		}
 		/*read chip ID to detect if the chip exists*/
 		vendor_id = fts_ctpm_get_vendor_id();
-		if (vendor_id != 0x87) {
+		if ((vendor_id != 0x87) && (vendor_id != 0x79)) {
 			kfree(ts);
 			ret = -ENODEV;
 			i2c_probe_failed = 1;
@@ -1363,14 +1363,21 @@ static int focaltech_ft5306_probe(
 
 	ts->input_dev->name = "FocalTech-Ft5306";
 	ts->input_dev->phys = client->name;
+	if (have_vkey) {
+		ts->input_dev->id.bustype = BUS_I2C;
+		ts->input_dev->id.vendor = 0x8888;
+		ts->input_dev->id.product = 0x6666;
+		ts->input_dev->id.version = 1000;
+	}
 	set_bit(EV_ABS, ts->input_dev->evbit);
 	set_bit(EV_SYN, ts->input_dev->evbit);
 	set_bit(BTN_TOUCH, ts->input_dev->keybit);
-
-	set_bit(KEY_MENU, ts->input_dev->keybit);
-	set_bit(KEY_HOME, ts->input_dev->keybit);
-	set_bit(KEY_BACK, ts->input_dev->keybit);
-	set_bit(KEY_SEARCH, ts->input_dev->keybit);
+	if (have_vkey) {
+		set_bit(KEY_MENU, ts->input_dev->keybit);
+		set_bit(KEY_HOME, ts->input_dev->keybit);
+		set_bit(KEY_BACK, ts->input_dev->keybit);
+		set_bit(KEY_SEARCH, ts->input_dev->keybit);
+	}
 
     set_bit(INPUT_PROP_DIRECT, ts->input_dev->propbit);
 
