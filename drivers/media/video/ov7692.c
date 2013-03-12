@@ -519,8 +519,8 @@ static int ov7692_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 	ret = ov7692_try_fmt(sd, mf);
 	if (ret < 0)
 		return ret;
-
-	ret = ov7692_write_smbuss(client, configscript_common1);
+	/*To avoide reentry init sensor when captrue, remove from here  */
+	/*ret = ov7692_write_smbuss(client, configscript_common1);*/
 
 	ov7692->i_size = ov7692_find_framesize(mf->width, mf->height);
 	ov7692->i_fmt = ov7692_find_datafmt(mf->code);
@@ -597,6 +597,14 @@ static int ov7692_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	}
 
 	return 0;
+}
+
+static int ov7692_preview_start(struct i2c_client *client)
+{
+	int ret = 0;
+	printk(KERN_INFO "ov7692_preview_start!");
+	ret = ov7692_write_smbuss(client, configscript_common1);
+	return ret;
 }
 
 static int ov7692_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
@@ -848,6 +856,15 @@ static int ov7692_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		if (ret)
 			return ret;
 		break;
+
+	case V4L2_CID_CAM_PREVIEW_ONOFF:
+	{
+		if (ctrl->value)
+			ov7692_preview_start(client);
+
+		break;
+	}
+
 	}
 
 	return ret;
