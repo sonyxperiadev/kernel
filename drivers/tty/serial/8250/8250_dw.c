@@ -41,6 +41,7 @@
 #include <linux/slab.h>
 #include <mach/pinmux.h>
 #include <linux/pm.h>
+#include <linux/gpio.h>
 #include "8250.h"
 
 #ifdef CONFIG_DW_BT_UART_CHANGES
@@ -51,6 +52,9 @@ struct dw8250_data {
 	struct clk	*clk;
 	int	last_lcr;
 	int	line;
+	/*If power-save-enable is set Change UBRTSN
+	* to save floor current during deep sleep*/
+	bool power_save_enable;
 };
 
 static void dw8250_serial_out(struct uart_port *p, int offset, int value)
@@ -127,7 +131,7 @@ void dw8250_pm(struct uart_port *port, unsigned int state,
 	static struct pin_config uartb3_config[2] = {
 		{
 		.name = PN_UBRTSN,
-		.func = PF_UBRTSN,
+		.func = PF_GPIO47,
 		.reg.b = {
 			.drv_sth = 3,
 			.input_dis = 0,
@@ -135,7 +139,6 @@ void dw8250_pm(struct uart_port *port, unsigned int state,
 			.pull_up = 0,
 			.pull_dn = 0,
 			.hys_en = 0,
-			.sel = 0,
 			},
 		},
 		{
@@ -148,24 +151,68 @@ void dw8250_pm(struct uart_port *port, unsigned int state,
 			.pull_up = 1,
 			.pull_dn = 0,
 			.hys_en = 0,
-			.sel = 3,},
+			},
 		},
 	};
 
+	static struct pin_config uartb2_config[2] = {
+		{
+		.name = PN_GPIO20,
+		.func = PF_GPIO20,
+		.reg.b = {
+			.drv_sth = 3,
+			.input_dis = 0,
+			.slew_rate_ctrl = 0,
+			.pull_up = 0,
+			.pull_dn = 0,
+			.hys_en = 0,
+			},
+		},
+		{
+		.name = PN_GPIO20,
+		.func = PF_UB2RTSN,
+		.reg.b = {
+			.drv_sth = 3,
+			.input_dis = 0,
+			.slew_rate_ctrl = 0,
+			.pull_up = 1,
+			.pull_dn = 0,
+			.hys_en = 0,
+			},
+		},
+	};
+
+	int ret = 0;
+	struct dw8250_data *private_data = port->private_data;
 	pr_debug("In %s port = 0x%08X state = %d old_state = %d\n",
 	       __func__, (unsigned int)port, state, old_state);
 
 	switch (state) {
 	case 0:
 			/*Resume sequence*/
-		if (port->irq == BCM_INT_ID_UART2)
+		if ((private_data->power_save_enable) &&
+			(port->irq == BCM_INT_ID_UART2))
 			pinmux_set_pin_config(&uartb3_config[1]);
+		else if ((private_data->power_save_enable) &&
+			(port->irq == BCM_INT_ID_UART1))
+			pinmux_set_pin_config(&uartb2_config[1]);
 		serial8250_do_pm(port, state, old_state);
 		break;
 	case 3:
 			/*Suspend sequence*/
-		if (port->irq == BCM_INT_ID_UART2)
+		if ((private_data->power_save_enable) &&
+				(port->irq == BCM_INT_ID_UART2)) {
 			pinmux_set_pin_config(&uartb3_config[0]);
+			ret = gpio_direction_input(47);
+			if (ret)
+				pr_err("UART: GPIO: direction_input failed\n");
+		} else if ((private_data->power_save_enable) &&
+				(port->irq == BCM_INT_ID_UART1)) {
+			pinmux_set_pin_config(&uartb2_config[0]);
+			ret = gpio_direction_input(20);
+			if (ret)
+				pr_err("UART: GPIO: direction_input failed\n");
+		}
 		serial8250_do_pm(port, state, old_state);
 		break;
 	default:
@@ -193,6 +240,9 @@ static int __devinit dw8250_probe(struct platform_device *pdev)
 				GFP_KERNEL);
 			if (!data)
 				return -ENOMEM;
+			if (p->private_data)
+				data->power_save_enable = 1;
+
 			port.private_data = data;
 
 			port.iobase             = p->iobase;
@@ -297,6 +347,12 @@ static int __devinit dw8250_probe(struct platform_device *pdev)
 			return -EINVAL;
 		}
 		port.uartclk = val;
+
+		/*If power-save-enable is set Change UBRTSN
+		* to save floor current during deep sleep
+		*/
+		data->power_save_enable = of_property_read_bool(np,
+						"power-save-enable");
 
 #ifdef CONFIG_BRCM_UART_CHANGES
 		val = of_property_read_string(np, "port-name", &prop);

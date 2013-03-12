@@ -259,7 +259,7 @@ extern int hawaii_wifi_status_register(
 #define KONA_UART1_PA   UARTB2_BASE_ADDR
 #define KONA_UART2_PA   UARTB3_BASE_ADDR
 
-#define HAWAII_8250PORT(name, clk, freq, uart_name)		\
+#define HAWAII_8250PORT(name, clk, freq, uart_name, power_save_en)\
 {								\
 	.membase    = (void __iomem *)(KONA_##name##_VA),	\
 	.mapbase    = (resource_size_t)(KONA_##name##_PA),	\
@@ -270,12 +270,14 @@ extern int hawaii_wifi_status_register(
 	.type       = PORT_16550A,				\
 	.flags      = UPF_BOOT_AUTOCONF | UPF_BUG_THRE |	\
 			UPF_FIXED_TYPE | UPF_SKIP_TEST,		\
-	.private_data = (void __iomem *)((KONA_##name##_VA) +	\
-					UARTB_USR_OFFSET),	\
+	.private_data = power_save_en,				\
 	.clk_name = clk,					\
 	.port_name = uart_name,					\
 }
 
+/*This flag is added for saving power for UART GPS. If you want to save power
+ * pass the address of this flag as a parameter to power_save_en*/
+static bool power_save_enable = 1;
 
 #ifdef CONFIG_ANDROID_PMEM
 struct android_pmem_platform_data android_pmem_data = {
@@ -583,9 +585,12 @@ static struct platform_device hawaii_camera_sub = {
 
 
 static struct plat_serial8250_port hawaii_uart_platform_data[] = {
-	HAWAII_8250PORT(UART0, UARTB_PERI_CLK_NAME_STR, 48000000, "bluetooth"),
-	HAWAII_8250PORT(UART1, UARTB2_PERI_CLK_NAME_STR, 26000000, "gps"),
-	HAWAII_8250PORT(UART2, UARTB3_PERI_CLK_NAME_STR, 26000000, "console"),
+	HAWAII_8250PORT(UART0, UARTB_PERI_CLK_NAME_STR, 48000000,
+					"bluetooth", NULL),
+	HAWAII_8250PORT(UART1, UARTB2_PERI_CLK_NAME_STR, 26000000,
+				"gps", &power_save_enable),
+	HAWAII_8250PORT(UART2, UARTB3_PERI_CLK_NAME_STR, 26000000,
+				"console", NULL),
 	{
 		.flags = 0,
 	},

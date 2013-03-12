@@ -40,6 +40,10 @@
 		clock-frequency = <26000000>;
 		port-name = "gps";
 		clk-name = "uartb3_clk";
+		/*If power-save-enable is set Change
+		* PADCTRL_UBRTSN from UART3_RTSN to
+		* UBRTSN (Debug UART) when GPS is inactive.*/
+		power-save-enable = <1>;
 	};
 
 	i2c0: i2c@3e016000 {
