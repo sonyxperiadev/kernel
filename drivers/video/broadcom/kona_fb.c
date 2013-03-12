@@ -646,8 +646,7 @@ static int kona_fb_ioctl(struct fb_info *info, unsigned int cmd,
 
 static int kona_fb_sync(struct fb_info *info)
 {
-	if (wait_for_completion_killable(&vsync_event) < 0)
-		konafb_info("Failed to get a vsync event\n");
+	wait_for_completion_interruptible(&vsync_event);
 	return 0;
 }
 static void konafb_vsync_cb(void)
