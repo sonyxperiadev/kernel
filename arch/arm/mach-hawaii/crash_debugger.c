@@ -556,7 +556,8 @@ void cdebugger_save_pte(void *pte, int task_addr)
 
 	cpuid = get_cpu();
 
-	memcpy(&cdebugger_fault_status[cpuid], pte, sizeof(cdebugger_fault_status));
+	memcpy(&cdebugger_fault_status[cpuid], pte,
+			sizeof(struct cdebugger_fault_status_t));
 	cdebugger_fault_status[cpuid].cur_process_magic = task_addr;
 
 	put_cpu();
