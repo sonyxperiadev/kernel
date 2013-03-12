@@ -487,7 +487,7 @@ static u32 avs_get_type_frm_osc_count(struct avs_info *avs_info_ptr, u32 count)
 	struct avs_pdata *pdata = avs_info_ptr->pdata;
 	u32 silicon_type = SILICON_TYPE_SLOW;
 	for (i = 0; i < SILICON_TYPE_MAX; i++)
-		if (count > pdata->irdrop_lut[i] &&
+		if (count >= pdata->irdrop_lut[i] &&
 			count < pdata->irdrop_lut[i+1]) {
 				silicon_type = (i + 1);
 				break;
