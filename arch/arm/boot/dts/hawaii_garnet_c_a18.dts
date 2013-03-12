@@ -234,10 +234,10 @@
 		compatible = "bcm,soc-camera";
 		reg = <0x3e 0x0>;
 		bus-id = <0>;
-		i2c-type = "ov7692";	/* i2c_board_info type */
+		i2c-type = "sp0a28";	/* i2c_board_info type */
 		i2c-addr = <0x3e>;	/* i2c_board_info addr */
 		i2c-adapter-id = <0>;
-		module-name = "ov7692";
+		module-name = "sp0a28";
 		if-type = <1>;		/* V4L2_SUBDEV_SENSOR_SERIAL */
 		if-mode = <3>;		/* V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2 */
 		orientation = <1>;	/* V4L2_SUBDEV_SENSOR_LANDSCAPE */

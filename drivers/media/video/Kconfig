@@ -1111,6 +1111,15 @@ config SOC_CAMERA_OV7692
 	help
 	  This is a ov7692 camera driver
 
+config SOC_CAMERA_SP0A28
+	tristate "SP0A28 camera support"
+	depends on SOC_CAMERA && I2C
+	help
+	  This is a V4L2 SoC driver for
+	  the Superpix sp0a28 sensor
+	  The camera supports VGA/QVGA at 30fps
+	  over a MIPI interface
+
 config SOC_CAMERA_GC0313
 	tristate "gc0313 camera support"
 	depends on SOC_CAMERA && I2C
