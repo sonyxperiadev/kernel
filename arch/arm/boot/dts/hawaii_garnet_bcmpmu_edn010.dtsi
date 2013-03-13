@@ -125,8 +125,8 @@
 		mmc1 = "1", "mmc1_vcc","0","7", "0", "0", "0";
 		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, dsm_mode = BCMPMU_REGL_ON_IN_DSM*/
 		mmc2 = "1", "mmc2_vcc", "0", "7", "0", "0", "0";
-		/*pc_map = PMU_PC2|PMU_PC3, dsm_mode = BCMPMU_REGL_OFF_IN_DSM*/
-		aud  = "1", "audldo_uc", "1", "6", "2", "0", "0";
+		/*pc_map = PMU_PC2|PMU_PC3, dsm_mode = BCMPMU_REGL_LPM_IN_DSM*/
+		aud  = "1", "audldo_uc", "1", "6", "1", "0", "0";
 		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, dsm_mode = BCMPMU_REGL_ON_IN_DSM*/
 		usb  = "1", "usb_vcc", "0", "7", "0", "0", "0";
 		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, dsm_mode = BCMPMU_REGL_ON_IN_DSM*/

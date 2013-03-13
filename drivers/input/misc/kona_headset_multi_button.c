@@ -2105,8 +2105,8 @@ static int __init hs_probe(struct platform_device *pdev)
 	}
 
 	/*
-	 * Assume that mic bias is ON, so that while initialization we can
-	 * turn this OFF and put it in known state.
+	 * Assume that mic bias is OFF, so that while initialization we can
+	 * put it in known state.
 	 */
 	mic->mic_bias_status = 0;
 
