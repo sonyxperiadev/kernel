@@ -1312,9 +1312,6 @@ static int sdhci_pltfm_suspend(struct device *device)
 	struct sdhci_host *host = dev->host;
 	int ret = 0;
 
-	if (dev->devtype == SDIO_DEV_TYPE_WIFI)
-		goto ret_path;
-
 	if (!sdhci_pltfm_rpm_enabled(dev)) {
 		ret = sdhci_pltfm_clk_enable(dev, 1);
 		if (ret) {
@@ -1323,6 +1320,9 @@ static int sdhci_pltfm_suspend(struct device *device)
 			return -EAGAIN;
 		}
 	}
+
+	if (dev->devtype == SDIO_DEV_TYPE_WIFI)
+		host->mmc->pm_flags |= host->mmc->pm_caps;
 
 	ret = sdhci_suspend_host(host);
 	if (ret) {
@@ -1348,7 +1348,6 @@ static int sdhci_pltfm_suspend(struct device *device)
 
 	kona_sdxc_regulator_power(dev, 0);
 
-ret_path:
 	dev->suspended = 1;
 	return 0;
 }
@@ -1359,9 +1358,6 @@ static int sdhci_pltfm_resume(struct device *device)
 		platform_get_drvdata(to_platform_device(device));
 	struct sdhci_host *host = dev->host;
 	int ret = 0;
-
-	if (dev->devtype == SDIO_DEV_TYPE_WIFI)
-		goto ret_path;
 
 	if (sdhci_pltfm_rpm_enabled(dev)) {
 		/*
@@ -1395,7 +1391,6 @@ static int sdhci_pltfm_resume(struct device *device)
 		}
 	}
 
-ret_path:
 	dev->suspended = 0;
 	return 0;
 }
