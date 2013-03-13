@@ -137,9 +137,18 @@ static long alarm_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 
 	switch (ANDROID_ALARM_BASE_CMD(cmd)) {
 	case ANDROID_ALARM_CLEAR(0):
+#ifdef CONFIG_BCM_RTC_ALARM_BOOT
+		if (alarm_type == ANDROID_ALARM_RTC_POWERON)
+			alarm_poweron_cancel();
+#endif
 		spin_lock_irqsave(&alarm_slock, flags);
 		pr_alarm(IO, "alarm %d clear\n", alarm_type);
+#ifdef CONFIG_BCM_RTC_ALARM_BOOT
+		if (alarm_type != ANDROID_ALARM_RTC_POWERON)
+			devalarm_try_to_cancel(&alarms[alarm_type]);
+#else
 		devalarm_try_to_cancel(&alarms[alarm_type]);
+#endif /*CONFIG_BCM_RTC_ALARM_BOOT*/
 		if (alarm_pending) {
 			alarm_pending &= ~alarm_type_mask;
 			if (!alarm_pending && !wait_pending)
@@ -170,9 +179,19 @@ from_old_alarm_set:
 		pr_alarm(IO, "alarm %d set %ld.%09ld\n", alarm_type,
 			new_alarm_time.tv_sec, new_alarm_time.tv_nsec);
 		alarm_enabled |= alarm_type_mask;
+#ifdef CONFIG_BCM_RTC_ALARM_BOOT
+		if (alarm_type != ANDROID_ALARM_RTC_POWERON)
+			devalarm_start(&alarms[alarm_type],
+				timespec_to_ktime(new_alarm_time));
+#else
 		devalarm_start(&alarms[alarm_type],
 			timespec_to_ktime(new_alarm_time));
+#endif /*CONFIG_BCM_RTC_ALARM_BOOT*/
 		spin_unlock_irqrestore(&alarm_slock, flags);
+#ifdef CONFIG_BCM_RTC_ALARM_BOOT
+		if (alarm_type == ANDROID_ALARM_RTC_POWERON)
+			alarm_poweron_set_alarm(new_alarm_time);
+#endif
 		if (ANDROID_ALARM_BASE_CMD(cmd) != ANDROID_ALARM_SET_AND_WAIT(0)
 		    && cmd != ANDROID_ALARM_SET_AND_WAIT_OLD)
 			break;
@@ -216,6 +235,9 @@ from_old_alarm_set:
 		break;
 	case ANDROID_ALARM_GET_TIME(0):
 		switch (alarm_type) {
+#ifdef CONFIG_BCM_RTC_ALARM_BOOT
+		case ANDROID_ALARM_RTC_POWERON:
+#endif
 		case ANDROID_ALARM_RTC_WAKEUP:
 		case ANDROID_ALARM_RTC:
 			getnstimeofday(&tmp_time);

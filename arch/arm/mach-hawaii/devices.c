@@ -426,6 +426,13 @@ struct platform_device hawaii_backlight_device = {
 };
 #endif
 
+#ifdef CONFIG_RTC_DRV_KONA
+struct platform_device kona_rtc_device = {
+	.name = "rtc_kona",
+	.id = -1,
+};
+#endif
+
 static struct resource hawaii_pmu_resource = {
 	.start = BCM_INT_ID_PMU_IRQ0,
 	.end = BCM_INT_ID_PMU_IRQ0,

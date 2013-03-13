@@ -37,6 +37,14 @@
 #include <linux/power/bcmpmu-fg.h>
 #ifdef CONFIG_WD_TAPPER
 #include <linux/broadcom/wd-tapper.h>
+#else
+#include <linux/alarmtimer.h>
+#endif
+
+
+#ifndef CONFIG_WD_TAPPER
+/* 300 seconds are based on wd_tapper count which is configured in dts file */
+#define ALARM_DEFAULT_TIMEOUT		300
 #endif
 
 #define FG_CAPACITY_SAVE_REG		(PMU_REG_FGGNRL1)
@@ -295,7 +303,10 @@ struct bcmpmu_fg_data {
 
 #ifdef CONFIG_WD_TAPPER
 	struct wd_tapper_node wd_tap_node;
-#endif
+#else
+	struct alarm alarm;
+	int alarm_timeout;
+#endif /*CONFIG_WD_TAPPER*/
 	ktime_t last_sample_tm;
 	ktime_t last_curr_sample_tm;
 
@@ -401,6 +412,32 @@ static int interquartile_mean(int *data, int num)
 
 	return avg;
 }
+
+#ifndef CONFIG_WD_TAPPER
+static void bcmpmu_fg_program_alarm(struct bcmpmu_fg_data *fg,
+		long seconds)
+{
+	ktime_t interval = ktime_set(seconds, 0);
+	ktime_t next;
+
+	pr_fg(VERBOSE, "set timeout %d s.\n", seconds);
+	next = ktime_add(ktime_get_real(), interval);
+
+	alarm_start(&fg->alarm, next);
+}
+
+static enum alarmtimer_restart bcmpmu_fg_alarm_callback(
+		struct alarm *alarm, ktime_t now)
+{
+	struct bcmpmu_fg_data *fg =
+		container_of(alarm, struct bcmpmu_fg_data, alarm);
+	/*wanna do something here?*/
+	pr_fg(VERBOSE, "FG wakeup!\n");
+
+	return ALARMTIMER_NORESTART;
+}
+#endif
+
 
 /**
  * bcmpmu_fgsmpl_to_curr - Converts current sample to current
@@ -2099,7 +2136,9 @@ static void bcmpmu_fg_discharging_algo(struct bcmpmu_fg_data *fg)
 	int cap_per;
 	int cap_cutoff;
 	int poll_time = DISCHARGE_ALGO_POLL_TIME_MS;
+#ifdef CONFIG_WD_TAPPER
 	int ret = 0;
+#endif
 	bool force_update_psy = false;
 	bool config_tapper = false;
 
@@ -2193,7 +2232,16 @@ static void bcmpmu_fg_discharging_algo(struct bcmpmu_fg_data *fg)
 				(poll_time / 1000));
 		BUG_ON(ret);
 	}
-#endif
+#else
+	if (config_tapper)
+		fg->alarm_timeout = poll_time / 1000;
+	else
+		fg->alarm_timeout = ALARM_DEFAULT_TIMEOUT;
+	pr_fg(VERBOSE, "set poll(wakeup) timeout to %d\n",
+				fg->alarm_timeout);
+
+	bcmpmu_fg_program_alarm(fg, fg->alarm_timeout);
+#endif /*CONFIG_WD_TAPPER*/
 
 	bcmpmu_fg_update_psy(fg, force_update_psy);
 
@@ -3111,7 +3159,11 @@ static int __devinit bcmpmu_fg_probe(struct platform_device *pdev)
 		pr_fg(ERROR, "failed to register with wd-tapper\n");
 		goto destroy_workq;
 	}
-#endif
+#else
+	alarm_init(&fg->alarm, ALARM_REALTIME, bcmpmu_fg_alarm_callback);
+	fg->alarm_timeout = ALARM_DEFAULT_TIMEOUT;
+#endif /*CONFIG_WD_TAPPER*/
+
 	fg->flags.batt_status = POWER_SUPPLY_STATUS_UNKNOWN;
 	fg->flags.prev_batt_status = POWER_SUPPLY_STATUS_UNKNOWN;
 	fg->discharge_state = DISCHARG_STATE_HIGH_BATT;

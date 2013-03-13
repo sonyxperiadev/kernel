@@ -853,6 +853,16 @@ config RTC_DRV_ISLAND
 	  Driver for the internal RTC (Realtime Clock) on Atmel AVR32
 	  AT32AP700x family processors.
 
+config RTC_DRV_KONA
+	tristate "KONA RTC"
+	depends on ARCH_KONA
+	default n
+	help
+	  Driver for the internal RTC (Realtime Clock) on Hawaii chipset
+	  It's a fake RTC based on KONA TIMER, actually, this RTC only
+	  works as an alarm device for android, the real time is
+	  not stored here.
+
 config RTC_DRV_AT91RM9200
 	tristate "AT91RM9200 or some AT91SAM9 RTC"
 	depends on ARCH_AT91RM9200 || ARCH_AT91SAM9RL || ARCH_AT91SAM9G45
