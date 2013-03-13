@@ -522,6 +522,27 @@ config SENSORS_BMA150
 		support Bosch Sensortec BMA150 accelerometer.
 		If unsure, say N.
 
+config BOSCH_BMA2XX
+        tristate "bma2xx acceleration sensor support"
+        depends on I2C
+        help
+          If you say yes here you get support for Bosch Sensortec's
+          acceleration sensors BMA2xx.
+
+config BOSCH_BMA2XX_ENABLE_INT1
+        tristate "bma2xx acceleration sensor interrupt INT1 support"
+        depends on BOSCH_BMA2XX && I2C
+        help
+          If you say yes here you get INT1 support for Bosch Sensortec's
+          acceleration sensors BMA2xx.
+
+config BOSCH_BMA2XX_ENABLE_INT2
+        tristate "bma2xx acceleration sensor interrupt INT2 support"
+        depends on BOSCH_BMA2XX && I2C
+        help
+          If you say yes here you get INT2 support for Bosch Sensortec's
+          acceleration sensors BMA2XX.
+
 config SENSORS_MPU3050
 	tristate "MPU3050 gyro sensor"
 	depends on I2C && BRCM_VIRTUAL_SENSOR

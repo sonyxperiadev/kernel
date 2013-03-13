@@ -97,3 +97,6 @@ obj-$(CONFIG_BCM_USERFAULT_HANDLER) += bcm_userfault_handler.o
 obj-$(CONFIG_BRCM_BTPORT_DRV)   += btport/
 obj-$(CONFIG_BRCM_EMMC_RPMB)	+= emmc_rpmb/
 obj-$(CONFIG_SENSORS_BMA222)    += bma222.o
+obj-$(CONFIG_BOSCH_BMA2XX)	+= bma2xx.o
+ccflags-$(CONFIG_BOSCH_BMA2XX_ENABLE_INT1)   += -DBMA2XX_ENABLE_INT1
+ccflags-$(CONFIG_BOSCH_BMA2XX_ENABLE_INT2)   += -DBMA2XX_ENABLE_INT2

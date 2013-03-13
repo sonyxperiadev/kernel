@@ -137,8 +137,8 @@
 			prox_wait_time_param = <238>;
 			prox_intr_filter_param = <17>;
 			prox_config_param = <0>;
-			prox_pulse_cnt_param = <32>;
-			prox_gain_param = <32>;
+			prox_pulse_cnt_param = <96>;
+			prox_gain_param = <34>;
 			prox_win_sw = <100>;
 		};
 

@@ -73,37 +73,11 @@
 		is-pmu-i2c = <0>;
 		fs-ref-frequency = <13000000>;
 		hs-ref-frequency = <104000000>;
-		mpu3050@68 {
-			compatible = "bcm,mpu3050";
-			reg = <0x68>;
-			gpio-irq-pin = <33>;
-			int-config = <0x10>;
-			level-shifter = <0>;
-			orientation = <0xFFFFFFFF 0 0
-					0 1 0
-					0 0 0xFFFFFFFF>;
-		};
-		akm8975@0c {
-			compatible = "bcm,akm8975";
-			reg = <0x0c>;
-			gpio-irq-pin = <4>;
-			layout = <6>;
-		};
 
-		kxtik@0f {
-                        compatible = "bcm,kxtik";
-                        reg = <0x0f>;
+		bma2xx@18 {
+                        compatible = "bcm,bma2xx";
+                        reg = <0x18>;
                         gpio-irq-pin = <1>;
-                        min_interval = <5>;
-                        poll_interval = <200>;
-                        axis_map_x = <0>;
-                        axis_map_y = <1>;
-                        axis_map_z = <2>;
-                        negate_x = <1>;
-                        negate_y = <0>;
-                        negate_z = <1>;
-                        res_12bit = <64>;
-                        g_range = <0>;
                 };
 
 		tmd2771@39 {
@@ -131,10 +105,6 @@
 			prox_win_sw = <100>;
 		};
 
-		bmp18x@77 {
-                         compatible = "bcm,bmp18x";
-                         reg = <0x77>;
-		};
 	};
 
 	i2c3: i2c@3e01c000 {

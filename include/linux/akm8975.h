@@ -87,4 +87,3 @@ struct akm8975_platform_data {
 };
 
 #endif
-
