@@ -164,6 +164,9 @@ static struct bcmpmu59xxx_rw_data __initdata register_init_data[] = {
 	{.addr = PMU_REG_PASRCTRL6 , .val = 0x00, .mask = 0xF0},
 	{.addr = PMU_REG_PASRCTRL7 , .val = 0x00, .mask = 0x3F},
 
+	/*RFLDO and AUDLDO pulldown disable MobC00290043*/
+	{.addr = PMU_REG_RFLDOCTRL , .val = 0xD8, .mask = 0xFF},
+	{.addr = PMU_REG_AUDLDOCTRL , .val = 0xE8, .mask = 0xFF},
 };
 
 __weak struct regulator_consumer_supply rf_supply[] = {
