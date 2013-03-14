@@ -148,6 +148,7 @@ static ssize_t bcmpmu_debugfs_regwrite(struct file *file,
 	return count;
 }
 
+
 static const struct file_operations debug_pmu_read_fops = {
 	.write = bcmpmu_debugfs_regread,
 	.open = bcmpmu_debugfs_open,

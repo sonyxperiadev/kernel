@@ -164,6 +164,8 @@ struct bcmpmu_fg_pdata {
 	int acld_vbus_margin;
 	int i_sat;
 	int i_def_dcp; /* Default DCP current */
+	int acld_cc_lmt;
+	int otp_cc_trim;
 };
 
 int bcmpmu_fg_set_sw_eoc_current(struct bcmpmu59xxx *bcmpmu, int eoc_current);

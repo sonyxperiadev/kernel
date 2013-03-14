@@ -74,9 +74,10 @@
 #define BCMPMU_59054A0_DIG_REV	1
 #define BCMPMU_59054A1_ANA_REV	2
 
-#define PMU_USB_FC_CC_OTP	500
-#define PMU_USB_CC_TRIM_OTP	0
+#define PMU_USB_FC_CC_OTP	400
+#define PMU_USB_CC_ZERO_TRIM	0
 #define PMU_DCP_DEF_CURR_LMT	700
+#define PMU_OTP_CC_TRIM		0x1F
 #define PMU_TYP_SAT_CURR	1600 /*mA*/
 
 /*helper macros to manage regulator PC pin map*/
@@ -1007,8 +1008,6 @@ int bcmpmu_get_icc_fc(struct bcmpmu59xxx *bcmpmu);
 int bcmpmu_set_cc_trim(struct bcmpmu59xxx *bcmpmu, int cc_trim);
 int bcmpmu_cc_trim_up(struct bcmpmu59xxx *bcmpmu);
 int bcmpmu_cc_trim_down(struct bcmpmu59xxx *bcmpmu);
-inline void bcmpmu_save_cc_trim_otp(struct bcmpmu59xxx *bcmpmu);
-inline void bcmpmu_restore_cc_trim_otp(struct bcmpmu59xxx *bcmpmu);
 int bcmpmu_get_chrgr_type(struct bcmpmu_accy *paccy);
 
 /* ADC */
