@@ -2178,7 +2178,8 @@ static void bcmpmu_fg_discharging_algo(struct bcmpmu_fg_data *fg)
 		pr_fg(FLOW, "crit_cutoff_cap: %d crit_cutoff_delta: %d\n",
 				fg->crit_cutoff_cap,
 				fg->crit_cutoff_delta);
-		if (fg->crit_cutoff_delta > 0) {
+		if ((fg->crit_cutoff_delta > 0) &&
+				(cap_info->percentage > 0)) {
 			cap_info->prev_percentage =
 				cap_info->percentage--;
 			cap_info->capacity = percentage_to_capacity(fg,
