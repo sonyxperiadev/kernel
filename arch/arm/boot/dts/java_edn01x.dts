@@ -206,8 +206,8 @@
 		/* cmnd-LP; */		/* Commands in HS mode*/
 		col-mod-i = <2>;	/* KONA_CM_I_XBGR888 */
 		col-mod-o = <3>;	/* KONA_CM_O_RGB888 */
-		width = <540>;
-		height = <960>;
+		width = <480>;
+		height = <800>;
 		fps = <60>;
 		lanes = <3>;
 		hs-bitrate = <1000000000>;	/* 330mbps */
@@ -266,5 +266,14 @@
 		peri-clk-rate = <48000000>;
 		status = "disabled";
 	};
-
+	pwm-backlight {
+		compatible = "bcm,pwm-backlight";
+		reg = <0x0 0x0>;
+		pwm-id = <2>;
+		max-brightness = <32>;	/* Android calibrates to 32 levels */
+		dft-brightness = <32>;
+		polarity = <1>;		/* Inverted polarity */
+		pwm-period-ns = <1000000>;
+		pwm-request-label = "backlight";
+	};
 };
