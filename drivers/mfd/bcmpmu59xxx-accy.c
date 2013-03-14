@@ -595,11 +595,22 @@ static void bcmpmu_accy_isr(enum bcmpmu59xxx_irq irq, void *data)
 	case PMU_IRQ_USBINS:
 		pr_accy(INIT, "### ISR  PMU_IRQ_USBINS: %x\n",
 			PMU_IRQ_USBINS);
-			/*
-		bcmpmu_paccy_latch_event(paccy,
-				BCMPMU_USB_EVENT_IN, NULL);
-		schedule_delayed_work(&paccy->det_work, ACCY_WORK_DELAY);
-		*/
+#ifdef CONFIG_USB_SWITCH_TSU6111
+		/* In customer platform(CONFIG_USB_SWITCH_TSU6111),
+		CHGDET_LATCH and CHGDET_TO are both disabled by BC_ENABLE
+		because the BC status will be read from TSU. So we need to
+		move the detection code from CHGDET_LATCH to USBINS. Even
+		though this problem is found for customer platform, but I
+		think this move should be good for other platform too, (no
+		longer need the workaround). */
+		if (paccy->det_state != USB_CONNECTED) {
+			bcmpmu_paccy_latch_event(paccy,
+				BCMPMU_USB_EVENT_CHGDET_LATCH,
+				NULL);
+			paccy->det_state = USB_DETECT;
+			usb_handle_state(paccy);
+		}
+#endif
 		break;
 
 	case PMU_IRQ_USBRM:
@@ -623,6 +634,7 @@ static void bcmpmu_accy_isr(enum bcmpmu59xxx_irq irq, void *data)
 			*/
 		pr_accy(INIT, "### ISR  PMU_IRQ_CHGDET_LATCH: %x\n",
 			PMU_IRQ_CHGDET_LATCH);
+#ifndef CONFIG_USB_SWITCH_TSU6111
 		if ((paccy->det_state != USB_CONNECTED) &&
 			 (paccy->det_state != USB_RETRY)) {
 			bcmpmu_paccy_latch_event(paccy,
@@ -630,6 +642,7 @@ static void bcmpmu_accy_isr(enum bcmpmu59xxx_irq irq, void *data)
 			paccy->det_state = USB_DETECT;
 			usb_handle_state(paccy);
 		}
+#endif
 		break;
 
 	case PMU_IRQ_OTG_SESS_VALID_F:
