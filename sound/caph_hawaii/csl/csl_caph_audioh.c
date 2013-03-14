@@ -882,6 +882,7 @@ void csl_caph_audioh_start(int path_id)
 		chal_audio_earpath_set_dac_pwr(handle, CHAL_AUDIO_ENABLE);
 
 		chal_audio_earpath_set_gain(handle, 0);
+		chal_audio_hspath_set_gain(handle, 0);
 		/* Powerup the Ear Piece Driver */
 		chal_audio_earpath_set_drv_pwr(handle, CHAL_AUDIO_ENABLE);
 
