@@ -325,7 +325,7 @@ static struct axitrace_source trace_sources[] = {
 		.resource	= &axitrace19_resource,
 		.map		= trace19_funnel,
 	},
-	{ 0 }, /* NULL Termination */
+	{ NULL }, /* NULL Termination */
 };
 
 static struct axitrace_platform_data axitrace_pdata = {

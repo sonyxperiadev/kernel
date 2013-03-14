@@ -1265,7 +1265,7 @@ static int spi_kona_probe(struct platform_device *pdev)
 	struct spi_kona_platform_data *platform_info;
 	struct resource *res;
 	struct spi_master *master;
-	struct spi_kona_data *spi_kona = 0;
+	struct spi_kona_data *spi_kona = NULL;
 	/*uint8_t clk_name[32]; */
 	int status = 0;
 

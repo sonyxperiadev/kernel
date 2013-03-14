@@ -224,7 +224,7 @@ static void wd_tapper_debugfs_init(struct wd_tapper_data *di)
 	struct dentry *dir;
 	struct dentry *file;
 
-	dir = debugfs_create_dir("wd_tapper", 0);
+	dir = debugfs_create_dir("wd_tapper", NULL);
 
 	if (dir) {
 		file = debugfs_create_file("timeout", S_IRUSR, dir, di,
