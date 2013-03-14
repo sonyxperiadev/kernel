@@ -55,7 +55,7 @@ static const struct ov7692_reg configscript_common1[] = {
 #ifdef CONFIG_MACH_HAWAII_GARNET_EDN010
 {0x0c, 0x10},
 #else
-{0x0c, 0x10},
+{0x0c, 0xd0},
 #endif
     {0x62, 0x10}, // Always do BLC
     {0x12, 0x00}, // YUV output
