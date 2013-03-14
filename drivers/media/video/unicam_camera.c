@@ -1121,7 +1121,9 @@ static struct soc_camera_host_ops unicam_soc_camera_host_ops = {
 static irqreturn_t unicam_camera_isr(int irq, void *arg)
 {
 	struct unicam_camera_dev *unicam_dev = (struct unicam_camera_dev *)arg;
+#if 0
 	struct v4l2_subdev *sd = soc_camera_to_subdev(unicam_dev->icd);
+#endif
 	int ret;
 	struct int_desc idesc;
 	struct rx_stat_list rx;
@@ -1161,6 +1163,7 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 			pr_debug("frame received");
 			if (!vb)
 				goto out;
+#if 0 /*Commenting out  - this is buggy @ head*/
 			/* mark  the buffer done */
 			/* queue another buffer and trigger capture */
 			if (unicam_dev->skip_frames <= 0) {
@@ -1174,7 +1177,7 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 					pr_info("%s, need_skip_frame=%d", __func__, ctrl.value);
 				}
 			}
-
+#endif
 			if (likely(unicam_dev->skip_frames <= 0)) {
 				list_del_init(&to_unicam_camera_vb(vb)->queue);
 				do_gettimeofday(&vb->v4l2_buf.timestamp);
