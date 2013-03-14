@@ -645,7 +645,8 @@ static void bcmpmu_register_init(struct bcmpmu59xxx *pmu)
 					pdata->init_data[i].addr,
 					&temp);
 			temp &= ~(pdata->init_data[i].mask);
-			temp |= pdata->init_data[i].val;
+			temp |= (pdata->init_data[i].val &
+				pdata->init_data[i].mask);
 			pmu->write_dev(pmu, pdata->init_data[i].addr, temp);
 		}
 	}
