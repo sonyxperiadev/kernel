@@ -413,7 +413,7 @@ static int __devinit bcm_keypad_probe(struct platform_device *pdev)
 		pdata->keymap = keymap;
 
 		pdata->bcm_keypad_base =
-			(void *)__iomem HW_IO_PHYS_TO_VIRT(regs->start);
+			(void __iomem *) HW_IO_PHYS_TO_VIRT(regs->start);
 		pdev->dev.platform_data = pdata;
 	}
 
