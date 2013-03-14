@@ -227,6 +227,11 @@ static struct rtc_class_ops rtc_kona_ops = {
 	.alarm_irq_enable	= rtc_kona_alarm_irq_enable,
 };
 
+#ifdef CONFIG_LOCKDEP
+static struct lock_class_key rtc_ops_mutex_key;
+#endif
+
+
 static int __devinit rtc_kona_probe(struct platform_device *pdev)
 {
 	int ret = 0;
@@ -270,6 +275,11 @@ static int __devinit rtc_kona_probe(struct platform_device *pdev)
 		pr_rtc(ERROR, "register rtc device failed, %d\n", ret);
 		goto __error;
 	}
+
+
+#ifdef CONFIG_LOCKDEP
+	lockdep_set_class(&rtc_info->rtc->ops_lock, &rtc_ops_mutex_key);
+#endif
 
 	pr_rtc(INIT, "rtc-kona initialized.\n");
 
