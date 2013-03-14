@@ -288,15 +288,15 @@ CHAL_DMA_VC4LITE_STATUS_t chal_dma_vc4lite_prepare_transfer(CHAL_HANDLE handle,
 	mb();
 
 	/* clean up the interrupt status */
+#ifndef UNDER_LINUX
 	BRCM_WRITE_REG_IDX(pDmaDev->baseAddr,
 			   DMA_CONBLK_AD, (channel * DMA_CHANNEL_ADDR_OFFSET),
-#ifndef UNDER_LINUX
-			   (cUInt32) (ctrlBlkList)
+			   (cUInt32) (ctrlBlkList));
 #else
-			   (cUInt32) (ctrlBlkListPHYS)
+	BRCM_WRITE_REG_IDX(pDmaDev->baseAddr,
+			   DMA_CONBLK_AD, (channel * DMA_CHANNEL_ADDR_OFFSET),
+			   (cUInt32) (ctrlBlkListPHYS));
 #endif
-	    );
-
 	return CHAL_DMA_VC4LITE_STATUS_SUCCESS;
 }
 
