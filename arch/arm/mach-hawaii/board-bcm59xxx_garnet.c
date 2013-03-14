@@ -1508,7 +1508,7 @@ int __init rgltr_init(void)
 	return 0;
 }
 
-int adc_init(void)
+int __init adc_init(void)
 {
 	int i, j;
 	struct device_node *np;
