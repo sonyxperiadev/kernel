@@ -140,7 +140,7 @@ void mm_fmwk_unregister(void *handle);
 
 static inline void mm_write_reg(void *base_addr, u32 reg, u32 value)
 {
-	return writel(value, base_addr + reg);
+	writel(value, base_addr + reg);
 }
 
 static inline u32 mm_read_reg(void *base_addr, u32 reg)

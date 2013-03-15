@@ -32,7 +32,7 @@ struct cme_device_t {
 
 static inline void cme_write(struct cme_device_t *cme, u32 reg, u32 value)
 {
-	return mm_write_reg(cme->vaddr, (reg-H264_CME_CURY_OFFSET), value);
+	mm_write_reg(cme->vaddr, (reg-H264_CME_CURY_OFFSET), value);
 }
 
 static inline u32 cme_read(struct cme_device_t *cme, u32 reg)

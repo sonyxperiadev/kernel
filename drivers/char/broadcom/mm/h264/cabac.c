@@ -31,7 +31,7 @@ struct cabac_device_t {
 
 static void cabac_write(struct cabac_device_t *cabac, u32 reg, u32 value)
 {
-	return mm_write_reg(cabac->vaddr, (reg-0), value);
+	mm_write_reg(cabac->vaddr, (reg-0), value);
 }
 
 static u32 cabac_read(struct cabac_device_t *cabac, u32 reg)

@@ -34,7 +34,7 @@ typedef struct {
 
 static inline void v3d_write(v3d_user_device_t *v3d, unsigned int reg, unsigned int value)
 {
-	return mm_write_reg((void *)v3d->vaddr, reg, value);
+	mm_write_reg((void *)v3d->vaddr, reg, value);
 }
 
 static inline unsigned int v3d_read(v3d_user_device_t *v3d, unsigned int reg)

@@ -31,7 +31,7 @@ struct mcin_device_t {
 
 static void mcin_write(struct mcin_device_t *mcin, u32 reg, u32 value)
 {
-	return mm_write_reg(mcin->vaddr, (reg-H264_MCODEIN_CONTROL_OFFSET),
+	mm_write_reg(mcin->vaddr, (reg-H264_MCODEIN_CONTROL_OFFSET),
 					value);
 }
 

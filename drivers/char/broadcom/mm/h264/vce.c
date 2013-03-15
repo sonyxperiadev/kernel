@@ -48,7 +48,7 @@ void h264_write(void *id, u32 reg, u32 value)
 {
 	struct vce_device_t *vce = (struct vce_device_t *)id;
 	pr_debug("write reg [0x%08x] val [0x%08x]\n", reg, value);
-	return mm_write_reg(vce->vaddr, reg, value);
+	mm_write_reg(vce->vaddr, reg, value);
 }
 
 u32 h264_read(void *id, u32 reg)
@@ -60,8 +60,8 @@ u32 h264_read(void *id, u32 reg)
 }
 static void vce_write(struct vce_device_t *vce, u32 reg, u32 value)
 {
-	return mm_write_reg(vce->vaddr,
-			reg + (VCE_BASE - VIDEOCODEC_BASE_ADDRESS), value);
+	mm_write_reg(vce->vaddr,
+		reg + (VCE_BASE - VIDEOCODEC_BASE_ADDRESS), value);
 }
 
 static u32 vce_read(struct vce_device_t *vce, u32 reg)
