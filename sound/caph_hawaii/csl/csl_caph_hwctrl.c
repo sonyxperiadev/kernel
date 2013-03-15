@@ -461,7 +461,7 @@ static void csl_caph_config_arm2sp(CSL_CAPH_PathID pathID)
 	p_arm2sp->dmaBytes = csl_dsp_arm2sp_get_size(AUDIO_SAMPLING_RATE_8000);
 	p_arm2sp->srOut = path->src_sampleRate;
 	p_arm2sp->chNumOut = path->chnlNum;
-	p_arm2sp->dl_proc = CSL_ARM2SP_DL_BEFORE_AUDIO_PROC;
+	p_arm2sp->dl_proc = CSL_ARM2SP_DL_AFTER_AUDIO_PROC;
 	/*AFTER_AUDIO_PROC gives saturation for some music, disable it now*/
 	/*if (path->src_sampleRate == AUDIO_SAMPLING_RATE_48000
 		|| path->src_sampleRate == AUDIO_SAMPLING_RATE_44100)
