@@ -779,14 +779,12 @@ static struct gpio_led gpio_leds[] = {
 #ifndef CONFIG_MACH_HAWAII_GARNET_C_A18
 	{
 		.name	= "blue",
-		.default_trigger = "timer",
 		.gpio	= BLUE_LED_GPIO ,
 		.active_low = 0,
 	},
 #endif
 	{
 		.name	= "green",
-		.default_trigger = "timer",
 		.gpio	= GREEN_LED_GPIO ,
 		.active_low = 0,
 	},
