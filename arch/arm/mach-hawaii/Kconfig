@@ -116,6 +116,14 @@ choice
 	help
 	  Support for Garnet A18
 
+        config MACH_HAWAII_GARNET_C_W68
+        bool "GARNET W68"
+        help
+	  Support for
+                Garnet_c_w68 based
+                Garnet
+                c_edn010
+
 	config MACH_HAWAII_GARNET_C_M530
 	bool "GARNET M530"
 	help
