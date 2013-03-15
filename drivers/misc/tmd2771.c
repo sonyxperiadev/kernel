@@ -1,6 +1,4 @@
-/******************************************************************************
-* Copyright (c) 2011, TAOS Corporation.
-*
+/*
 * This program is free software; you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
 * the Free Software Foundation; either version 2 of the License, or
@@ -177,6 +175,7 @@ static int taos_prox_threshold_set(void);
 static int taos_als_get_data(void);
 static int taos_interrupts_clear(void);
 static int prox_calibrate(void);
+static int taos_sensors_als_on(void);
 
 DECLARE_WAIT_QUEUE_HEAD(waitqueue_read);
 
@@ -809,27 +808,41 @@ static int __taos_late_resume(struct i2c_client *client)
 
 	pr_taos(DEBUG, "taos late resume\n");
 
+	ret = i2c_smbus_write_byte(taos_datap->client,
+					TAOS_TRITON_CMD_REG |
+					TAOS_TRITON_CNTRL);
+	if (ret < 0) {
+		pr_taos(ERROR,
+		"TAOS: i2c_smbus_write_byte failed in ioctl als_calibrate\n");
+		return ret;
+	}
+
+	reg_val = i2c_smbus_read_byte(taos_datap->client);
+	if ((reg_val & TAOS_TRITON_CNTL_PROX_DET_ENBL) == 0x0)
+		taos_sensors_als_on();
+
+	ALS_ON = 1;
+
 	if (PROX_ON == 1)
 		reg_val = 0x3f;
 	else
 		reg_val = 0x13;
 
 	ret = i2c_smbus_write_byte(taos_datap->client, TAOS_TRITON_CMD_REG
-				   | TAOS_TRITON_CNTRL);
+					| TAOS_TRITON_CNTRL);
 	if (ret < 0) {
 		pr_taos(ERROR,
-			"TAOS: i2c_smbus_write_byte failed in taos_resume\n");
-
+		"TAOS: i2c_smbus_write_byte failed in taos_resume\n");
 		return ret;
 	}
 
 	ret = i2c_smbus_write_byte_data(taos_datap->client,
-					TAOS_TRITON_CMD_REG | TAOS_TRITON_CNTRL,
-					reg_val);
+				TAOS_TRITON_CMD_REG | TAOS_TRITON_CNTRL,
+				reg_val);
+
 	if (ret < 0) {
 		pr_taos(ERROR,
-			"TAOS: i2c_smbus_write_byte_data failed in ioctl als_off\n");
-
+		"TAOS: i2c_smbus_write_byte_data failed in ioctl als_off\n");
 		return ret;
 	}
 
