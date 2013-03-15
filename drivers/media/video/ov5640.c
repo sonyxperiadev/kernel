@@ -2465,10 +2465,13 @@ static int ov5640_enum_frameintervals(struct v4l2_subdev *sd,
 		interval->discrete.numerator = 1;
 		interval->discrete.denominator = 15;
 		break;
+	case OV5640_SIZE_720P:
+		interval->discrete.numerator = 1;
+		interval->discrete.denominator = 0;
+		break;
 	case OV5640_SIZE_VGA:
 	case OV5640_SIZE_QVGA:
 	case OV5640_SIZE_1280x960:
-	case OV5640_SIZE_720P:
 	default:
 		interval->discrete.numerator = 1;
 		interval->discrete.denominator = 24;
