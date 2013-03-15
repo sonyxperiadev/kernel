@@ -41,6 +41,8 @@
 #define HOST_TO_PERIPHERAL_DELAY_MS 1000
 #define PERIPHERAL_TO_HOST_DELAY_MS 100
 #define USBLDO_RAMP_UP_DELAY_IN_MS 2
+#define USB_OTG_SUSPEND_CURRENT 2
+static u32 g_usb_charger_type;
 
 static int bcmpmu_otg_xceiv_set_vbus(struct usb_otg *otg, bool enabled)
 {
@@ -142,6 +144,9 @@ static void bcmpmu_otg_xceiv_shutdown(struct usb_phy *phy)
 			}
 		}
 	}
+
+	g_usb_charger_type = PMU_USB_TYPE_NONE;
+
 }
 
 static void bcmpmu_otg_xceiv_set_def_state(
@@ -340,6 +345,7 @@ static int bcmpmu_otg_xceiv_chg_detection_notif_handler(struct notifier_block
 		return -EINVAL;
 
 	usb_charger_type = *(u32 *)data;
+
 	dev_info(xceiv_data->dev, "data %x\n", usb_charger_type);
 	switch (usb_charger_type) {
 	case PMU_BC_DETECTION_START:
@@ -364,6 +370,7 @@ static int bcmpmu_otg_xceiv_chg_detection_notif_handler(struct notifier_block
 	case PMU_USB_TYPE_SDP:
 	case PMU_USB_TYPE_CDP:
 	case PMU_USB_TYPE_ACA:
+		g_usb_charger_type = usb_charger_type;
 		queue_work(xceiv_data->bcm_otg_work_queue,
 			   &xceiv_data->bcm_otg_chg_detect_work);
 		break;
@@ -447,8 +454,11 @@ static int bcmpmu_otg_xceiv_set_vbus_power(struct usb_phy *phy,
 {
 	struct bcmpmu_otg_xceiv_data *xceiv_data = dev_get_drvdata(phy->dev);
 
-	return bcmpmu_usb_set(xceiv_data->bcmpmu,
-			       BCMPMU_USB_CTRL_CHRG_CURR_LMT, ma);
+	if ((g_usb_charger_type == PMU_USB_TYPE_SDP) ||
+		(g_usb_charger_type == PMU_USB_TYPE_CDP) ||
+		(g_usb_charger_type == PMU_USB_TYPE_ACA))
+		return bcmpmu_usb_set(xceiv_data->bcmpmu,
+			   BCMPMU_USB_CTRL_CHRG_CURR_LMT, ma);
 }
 
 static int bcmpmu_otg_xceiv_set_host(struct usb_otg *otg,
@@ -984,6 +994,7 @@ static int __devinit bcmpmu_otg_xceiv_probe(struct platform_device *pdev)
 
 	pm_runtime_set_active(&pdev->dev);
 	pm_runtime_enable(&pdev->dev);
+	g_usb_charger_type = PMU_USB_TYPE_NONE;
 
 	dev_info(&pdev->dev, "Probing successful\n");
 
@@ -1033,6 +1044,8 @@ static int __exit bcmpmu_otg_xceiv_remove(struct platform_device *pdev)
 	bcmpmu_otg_free_regulator(xceiv_data);
 	kfree(xceiv_data);
 	bcm_hsotgctrl_phy_deinit();
+
+	g_usb_charger_type = PMU_USB_TYPE_NONE;
 
 	return 0;
 }
