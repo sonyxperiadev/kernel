@@ -383,7 +383,7 @@ int bcmpmu_hs_set_input_mode(int HSgain, int HSInputmode)
 }
 EXPORT_SYMBOL(bcmpmu_hs_set_input_mode);
 
-void bcmpmu_hs_set_gain(bcmpmu_hs_path_t path, u32 gain)
+void bcmpmu_hs_set_gain(bcmpmu_hs_path_t path, bcmpmu_hs_gain_t gain)
 {
 	struct gain_ramp ramp = {
 		.table = hs_gain_steps,
