@@ -338,13 +338,18 @@ typedef enum
 	This reports whether the power-saving feature has been invoked on a VM for dual-sim build. 
 	This message is not sent in non-dual-sim build. The payload is a Boolean value. If the value
 	is TRUE it indicates the VM has been powered down for power saving purpose and FALSE otherwise 
-	**/ 
+	**/
 	MSG_VCC_VM_PWR_SAVING_IND       = MSG_GRP_NET+0x17, 
 
 	/**
 	This reports the RAT/Band change request has been completed.
 	**/
 	MSG_MS_SET_RAT_BAND_IND = MSG_GRP_NET + 0x18, /**< Payload type {::MSNetworkInfo_t} */
+	/**
+	This reports the MS class change request has been completed.
+	**/
+	/* Payload type {::MSClass_t} */
+	MSG_PDP_SETMSCLASS_CNF    = MSG_GRP_NET+0x19,
 
 	// End of MSG_GRP_NET (0x0200)
 
@@ -1713,6 +1718,8 @@ typedef enum
 	MSG_SMS_CMD_PARM_CHECK_RSP	= MSG_GRP_INT_SMS_SS+0x0C,
 	MSG_SMS_SUBMIT_VCC_TIMEOUT_IND = MSG_GRP_INT_SMS_SS+0x0D,
 	MSG_SMS_SMMA_RETRY_REQ		= MSG_GRP_INT_SMS_SS+0x0E,
+	/* <Payload type {::SmsConcatMsgStored_t} */
+	MSG_SMS_SUBMIT_CONCAT_RETRY_REQ	= MSG_GRP_INT_SMS_SS+0x0F,
 
 	MSG_SMS_CNMA_TIMER_IND		= MSG_GRP_INT_SMS_SS+0x20,	///<Payload type {::TimerID_t}
 	MSG_ATC_TIMEOUT_IND			= MSG_GRP_INT_SMS_SS+0x21,
@@ -2178,7 +2185,13 @@ typedef enum
 	MSG_AT_REMOVE_TERMINAL_REQ			= MSG_GRP_INT_ATC+0x64,	///<Payload type {::SerialDeviceID_t}
 	MSG_AT_POWER_RESET_REQ			= MSG_GRP_INT_ATC+0x65,	///<Payload type {::UInt8}
 	MSG_AT_LOW_POWER_MODE_REQ		= MSG_GRP_INT_ATC+0x66,	///<Payload type {::void}
-/*TASKMSGS_INCLUDE taskmsgs_usb.i*/
+	/* <Payload type {::UInt8} */
+	MSG_AT_START_CALD_REQ		= MSG_GRP_INT_ATC+0x67,
+	/* <Payload type {::UInt8} */
+	MSG_AT_END_CALD_REQ		= MSG_GRP_INT_ATC+0x68,
+	/* <Payload type {::AtCallConnInfo_t} */
+	MSG_AT_CALL_CONN_REQ		= MSG_GRP_INT_ATC+0x69,
+	/*TASKMSGS_INCLUDE taskmsgs_usb.i*/
 	//---------------------------------------------------------------
 	// MSG_GRP_DEV, MESSAGE GROUP FOR DEVICES (0x0700)
 	//---------------------------------------------------------------
@@ -3276,13 +3289,24 @@ typedef enum
 	**/
 	MSG_MS_AUTO_SEARCH_RSP  = MSG_GRP_CAPI2_GEN_0 + 0x41,
 	 /** 
-	api is CAPI2_NetRegApi_GetPLMNNameByCode 
+	api is CAPI2_NetRegApi_GetPLMNNameByCode
 	**/
 	MSG_MS_PLMN_NAME_REQ  = MSG_GRP_CAPI2_GEN_0 + 0x42,	///<Payload type {CAPI2_NetRegApi_GetPLMNNameByCode_Req_t}
+	 /**
+	payload is ::Boolean
+	**/
+	/* <Payload type {::Boolean} */
+	MSG_MS_PLMN_NAME_RSP  = MSG_GRP_CAPI2_GEN_0 + 0x43,
+	 /**
+	api is CAPI2_NetRegApi_GetPLMNNameByCodeEx
+	**/
+	/* <Payload type {CAPI2_NetRegApi_GetPLMNNameByCodeEx_Req_t} */
+	MSG_MS_PLMN_NAME_ADD_INFO_REQ  = MSG_GRP_CAPI2_GEN_0 + 0x70A,
 	 /** 
 	payload is ::Boolean 
 	**/
-	MSG_MS_PLMN_NAME_RSP  = MSG_GRP_CAPI2_GEN_0 + 0x43,	///<Payload type {::Boolean}
+	/* <Payload type {::Boolean} */
+	MSG_MS_PLMN_NAME_ADD_INFO_RSP  = MSG_GRP_CAPI2_GEN_0 + 0x70B,
 	 /** 
 	api is CAPI2_PhoneCtrlApi_GetSystemState 
 	**/
@@ -7232,6 +7256,44 @@ typedef enum
 	payload is ::default_proc 
 	**/
 	MSG_SYS_SOFT_RESET_SYSTEM_RSP  = 0x4B43,
+	 /**
+	api is CAPI2_FLASH_SaveData
+	**/
+	/* <Payload type {::CAPI2_FLASH_SaveData_Req_t} */
+	MSG_FLASH_SAVEDATA_REQ  = 0x4B44,
+	 /**
+	payload is ::SpmlData_rsp_t
+	**/
+	/* <Payload type {::SpmlData_rsp_t} */
+	MSG_FLASH_SAVEDATA_RSP  = 0x4B45,
+	 /**
+	api is SYS_CPSystemCmd
+	**/
+	/* <Payload type {::SYS_CPSystemCmd_Req_t} */
+	MSG_CP_SYS_CMD_REQ  = 0x4B46,
+	 /**
+	payload is ::default_proc
+	**/
+	MSG_CP_SYS_CMD_RSP  = 0x4B47,
+	 /**
+	api is SYS_SimApi_ColdResetEvt
+	**/
+	/* <Payload type {::SYS_SimApi_ColdResetEvt_Req_t} */
+	MSG_SYS_SIM_COLD_RESET_EVT_REQ  = 0x4B48,
+	 /**
+	payload is ::default_proc
+	**/
+	MSG_SYS_SIM_COLD_RESET_EVT_RSP  = 0x4B49,
+	 /**
+	api is CAPI2_FLASH_ReadImage
+	**/
+	/* <Payload type {::CAPI2_FLASH_ReadImage_Req_t} */
+	MSG_FLASH_READIMAGE_REQ  = 0x4B4A,
+	 /**
+	payload is ::Boolean
+	**/
+	/* <Payload type {::Boolean} */
+	MSG_FLASH_READIMAGE_RSP  = 0x4B4B,
 
 	//MSG_GEN_REQ_END = 0x4BFF
 
