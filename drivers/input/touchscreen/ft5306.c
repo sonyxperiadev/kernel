@@ -1322,6 +1322,11 @@ static int focaltech_ft5306_probe(
 		/*read chip ID to detect if the chip exists*/
 		vendor_id = fts_ctpm_get_vendor_id();
 		if ((vendor_id != 0x87) && (vendor_id != 0x79)) {
+			if (ts->power) {
+				ts->power(TS_OFF);
+				mdelay(10);
+			}
+
 			kfree(ts);
 			ret = -ENODEV;
 			i2c_probe_failed = 1;
@@ -1542,9 +1547,11 @@ static int __devinit focaltech_ft5306_init(void)
 	}
 
 	retval =  i2c_add_driver(&focaltech_ft5306_driver);
-	if (i2c_probe_failed)
-		i2c_unregister_device(ft5306_i2c_client);
-
+	if (i2c_probe_failed) {
+		i2c_del_driver(&focaltech_ft5306_driver);
+		if (synaptics_wq)
+			destroy_workqueue(synaptics_wq);
+	}
 	return retval;
 }
 
