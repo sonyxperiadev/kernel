@@ -1741,20 +1741,16 @@ static void sdhci_print_critical(struct sdhci_host *host)
 	int ret = 0;
 
 	if (dev->vdd_sdxc_regulator) {
-		ret = regulator_is_enabled(dev->vdd_sdxc_regulator);
+		ret = irqsafe_is_regulator_enable(dev->vdd_sdxc_regulator);
 		printk(KERN_ALERT "regulator enable:%d\n", ret);
-		ret = regulator_get_voltage(dev->vdd_sdxc_regulator);
-		printk(KERN_ALERT "regulator voltage:%d\n", ret);
 	}
 	if (dev->vddo_sd_regulator) {
-		ret = regulator_is_enabled(dev->vddo_sd_regulator);
+		ret = irqsafe_is_regulator_enable(dev->vddo_sd_regulator);
 		printk(KERN_ALERT "sd regulator enable:%d\n", ret);
-		ret = regulator_get_voltage(dev->vddo_sd_regulator);
-		printk(KERN_ALERT "sd regulator voltage:%d\n", ret);
 	}
 	ret = clk_get_usage(dev->peri_clk);
 	printk(KERN_ALERT "clk use_cnt:%d\n", ret);
 	printk(KERN_ALERT "runtime_suspended:%d\n", host->runtime_suspended);
 	ret = atomic_read(&dev->dev->power.usage_count);
-	printk(KERN_ALERT "runtime usage count:%d\n", ret);
+	printk(KERN_ALERT "pm runtime usage count:%d\n", ret);
 }

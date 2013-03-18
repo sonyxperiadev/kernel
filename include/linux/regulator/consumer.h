@@ -187,6 +187,8 @@ int regulator_unregister_notifier(struct regulator *regulator,
 void *regulator_get_drvdata(struct regulator *regulator);
 void regulator_set_drvdata(struct regulator *regulator, void *data);
 
+int irqsafe_is_regulator_enable(struct regulator *regulator);
+
 #else
 
 /*
@@ -342,6 +344,11 @@ static inline void *regulator_get_drvdata(struct regulator *regulator)
 static inline void regulator_set_drvdata(struct regulator *regulator,
 	void *data)
 {
+}
+
+static inline int irqsafe_is_regulator_enable(struct regulator *regulator)
+{
+	return 0;
 }
 
 #endif
