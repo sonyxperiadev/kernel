@@ -24,6 +24,17 @@ config LEDS_CLASS
 
 comment "LED drivers"
 
+config LEDS_BCM_PMU59xxx
+	tristate "LED Support for BCM PMIC"
+	depends on LEDS_CLASS
+	depends on MFD_BCM_PMU59xxx
+	help
+	  This option enables support for LED drivers
+	  found on BCM PMIC, this LED will be controled
+	  by software if you say Y, and if you want this
+	  LED controled by hardware, say N.
+
+
 config LEDS_88PM860X
 	tristate "LED Support for Marvell 88PM860x PMIC"
 	depends on LEDS_CLASS

@@ -1165,6 +1165,12 @@ static struct bcmpmu_fg_pdata fg_pdata = {
 	.otp_cc_trim = 0x1F,
 };
 
+#if defined(CONFIG_LEDS_BCM_PMU59xxx)
+static struct bcmpmu59xxx_led_pdata led_pdata = {
+	.led_name = "red",
+};
+#endif
+
 #ifdef CONFIG_CHARGER_BCMPMU_SPA
 struct bcmpmu59xxx_spa_pb_pdata spa_pb_pdata = {
 	.chrgr_name = "bcmpmu_charger",
@@ -1260,6 +1266,14 @@ static struct mfd_cell pmu59xxx_devs[] = {
 		.platform_data = &fg_pdata,
 		.pdata_size = sizeof(fg_pdata),
 	},
+#if defined(CONFIG_LEDS_BCM_PMU59xxx)
+	{
+		.name = "bcmpmu59xxx-led",
+		.id = -1,
+		.platform_data = &led_pdata,
+		.pdata_size = sizeof(led_pdata),
+	},
+#endif
 };
 
 static struct i2c_board_info pmu_i2c_companion_info[] = {

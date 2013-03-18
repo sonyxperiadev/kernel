@@ -905,6 +905,11 @@ struct bcmpmu59xxx_spa_pb_pdata {
 	char *chrgr_name;
 };
 
+#if defined(CONFIG_LEDS_BCM_PMU59xxx)
+struct bcmpmu59xxx_led_pdata {
+	char *led_name;
+};
+#endif
 
 /*BCMPMU generic control flags*/
 enum {
