@@ -442,7 +442,7 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file,
 		/* ret = put_user(BrcmAACEncVersion, (int __user *)arg); */
 		break;
 	case VoIP_Ioctl_Start:
-		get_user(data, __user(int *)arg);
+		get_user(data, (int __user *)arg);
 		aTrace(LOG_ALSA_INTERFACE, "VoIP_Ioctl_Start type=%d (2==UL)"
 			"voipInstCnt=%u\n", data, voipInstCnt);
 		if (voipInstCnt == 0) {	/* start VoIP only once */
@@ -581,7 +581,7 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file,
 
 		break;
 	case VoIP_Ioctl_Stop:
-		get_user(data, __user(int *)arg);
+		get_user(data, (int __user *)arg);
 		aTrace(LOG_ALSA_INTERFACE, "VoIP_Ioctl_Stop type=%d (2==UL) "
 			"voipInstCnt=%u\n", data, voipInstCnt);
 
@@ -632,7 +632,7 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file,
 		break;
 
 	case VoIP_Ioctl_SetCodecType:
-		get_user(data, __user(int *)arg);
+		get_user(data, (int __user *)arg);
 		pChip->voip_data.codec_type = (u32) data;
 		aTrace(LOG_ALSA_INTERFACE,
 				" VoIP_Ioctl_SetCodecType codec_type %ld,\n",
@@ -672,7 +672,7 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file,
 		}
 		break;
 	case VoIP_Ioctl_SetBitrate:
-		get_user(data, __user(int *)arg);
+		get_user(data, (int __user *)arg);
 		pChip->voip_data.bitrate_index = (u32) data;
 		aTrace(LOG_ALSA_INTERFACE,
 				" VoIP_Ioctl_SetBitrate bitrate_index %ld,\n",
@@ -704,7 +704,7 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file,
 		pSel = pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL - 1]
 			.iLineSelect;
 		data = (int)pSel[0];
-		put_user(data, __user(int *)arg);
+		put_user(data, (int __user *)arg);
 		}
 		break;
 	case VoIP_Ioctl_GetSink:
@@ -713,21 +713,21 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file,
 		pSel = pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL - 1]
 			.iLineSelect;
 		data = (int)pSel[1];
-		put_user(data, __user(int *)arg);
+		put_user(data, (int __user *)arg);
 		}
 		break;
 	case VoIP_Ioctl_GetCodecType:
 		data = (int)pChip->voip_data.codec_type;
-		put_user(data, __user(int *)arg);
+		put_user(data, (int __user *)arg);
 		break;
 	case VoIP_Ioctl_GetBitrate:
 		data = (int)pChip->voip_data.bitrate_index;
-		put_user(data, __user(int *)arg);
+		put_user(data, (int __user *)arg);
 		break;
 	case VoIP_Ioctl_GetMode:
 		{
 			AudioMode_t mode = AUDCTRL_GetAudioMode();
-			put_user((int)mode, __user(int *)arg);
+			put_user((int)mode, (int __user *)arg);
 			aTrace(LOG_ALSA_INTERFACE,
 					" VoIP_Ioctl_GetMode mode %d,\n",
 					mode);
@@ -740,7 +740,7 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file,
 				"use mixer control VC-SEL instead\n");
 		break;
 	case VoIP_Ioctl_SetVoLTEDTX:
-		get_user(data, __user(int *)arg);
+		get_user(data, (int __user *)arg);
 		pChip->voip_data.isDTXEnabled = (u8) data;
 		aTrace(LOG_ALSA_INTERFACE, " VoIP_Ioctl_SetVoLTEDTX %d,\n",
 				pChip->voip_data.isDTXEnabled);
@@ -759,7 +759,7 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file,
 		break;
 	
 	case VoIP_Ioctl_SetVoLTEFlag:
-		get_user(data, __user(int *)arg);
+		get_user(data, (int __user *)arg);
 		pChip->voip_data.isVoLTE = (u8) data;
 		aTrace(LOG_ALSA_INTERFACE, " VoIP_Ioctl_SetFlag isVoLTE %d,\n",
 				pChip->voip_data.isVoLTE);
@@ -767,7 +767,7 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file,
 		break;
 	case VoIP_Ioctl_GetVoLTEFlag:
 		data = (int)pChip->voip_data.isVoLTE;
-		put_user(data, __user(int *)arg);
+		put_user(data, (int __user *)arg);
 		break;
 	case DSPCtrl_Ioctl_SPCtrl:
 		if (dataptr == NULL)
