@@ -362,7 +362,7 @@
 
 	keypad {
 		row-num = <1>;
-		col-num = <3>;
+		col-num = <2>;
 		row-col-count = <8>;
 		key-name = "Vol Down Key", "Vol Up Key", "unused", "unused",
 			"unused", "unused", "unused", "unused", "unused",
