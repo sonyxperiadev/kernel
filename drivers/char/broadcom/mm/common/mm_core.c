@@ -14,7 +14,7 @@ the GPL, without Broadcom's express prior written consent.
 #define pr_fmt(fmt) "<%s> " fmt "\n", core_dev->mm_common->mm_name
 
 #include "mm_core.h"
-
+extern struct mutex mm_common_mutex;
 void dev_timer_callback(unsigned long data)
 {
 	struct mm_core *core_dev = (struct mm_core *)data;
@@ -105,6 +105,7 @@ static void mm_fmwk_job_scheduler(struct work_struct *work)
 					job_scheduler);
 	MM_CORE_HW_IFC *hw_ifc = &core_dev->mm_device;
 
+	mutex_lock(&mm_common_mutex);
 	if (mm_core_enable_clock(core_dev))
 		goto mm_fmwk_job_scheduler_done;
 
@@ -182,11 +183,13 @@ static void mm_fmwk_job_scheduler(struct work_struct *work)
 		pr_debug("mod_timer  %lx %lx", \
 				jiffies, \
 				msecs_to_jiffies(hw_ifc->mm_timer));
+		mutex_unlock(&mm_common_mutex);
 		return;
 		}
 
 mm_fmwk_job_scheduler_done:
 	mm_core_disable_clock(core_dev);
+	mutex_unlock(&mm_common_mutex);
 }
 
 
