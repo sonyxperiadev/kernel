@@ -440,6 +440,70 @@ static struct notifier_block ion_task_nb = {
 #endif
 
 #ifdef CONFIG_ION_BCM
+static size_t ion_debug_heap_total(struct ion_client *client,
+				   unsigned int id, size_t *shared);
+
+static void ion_debug_print_per_heap(struct ion_heap *heap)
+{
+	struct ion_device *dev = heap->dev;
+	struct rb_node *n;
+	size_t total_orphaned_size = 0;
+	int free_heap = 1;
+
+	pr_info("%16.s %16.s %16.s %16.s %16.s\n",
+			"client", "pid", "size", "shared", "oom_score_adj");
+	pr_info("----------------------------------------------------\n");
+
+	for (n = rb_first(&dev->clients); n; n = rb_next(n)) {
+		size_t shared;
+		struct ion_client *client = rb_entry(n, struct ion_client,
+						     node);
+		size_t size = ion_debug_heap_total(client, heap->id, &shared);
+		if (!size)
+			continue;
+		free_heap = 0;
+		if (client->task) {
+			char task_comm[TASK_COMM_LEN];
+
+			get_task_comm(task_comm, client->task);
+			pr_info("%16.s %16u %13u KB %13u KB %16d\n",
+					task_comm, client->pid, (size>>10),
+					(shared>>10),
+					client->task->signal->oom_score_adj);
+		} else {
+			pr_info("%16.s %16u %13u KB %13u KB\n",
+					client->name, client->pid, (size>>10),
+					(shared>>10));
+		}
+	}
+	if (free_heap)
+		pr_info("  No allocations present.\n");
+	pr_info("----------------------------------------------------\n");
+	pr_info("orphaned allocations (info is from last known client):\n");
+	mutex_lock(&dev->buffer_lock);
+	for (n = rb_first(&dev->buffers); n; n = rb_next(n)) {
+		struct ion_buffer *buffer = rb_entry(n, struct ion_buffer,
+						     node);
+		if (buffer->heap->id != heap->id)
+			continue;
+		if (buffer->handle_count)
+			continue;
+		mutex_lock(&buffer->lock);
+		if (!buffer->handle_count) {
+			pr_info("%16.s %16u %13u KB ref(%d)\n",
+					buffer->task_comm, buffer->pid,
+					(buffer->size >> 10),
+					atomic_read(&buffer->ref.refcount));
+			total_orphaned_size += buffer->size;
+		}
+		mutex_unlock(&buffer->lock);
+	}
+	mutex_unlock(&dev->buffer_lock);
+	if (!total_orphaned_size)
+		pr_info("  No memory leak.\n");
+	pr_info("----------------------------------------------------\n");
+}
+
 static void ion_debug_print_heap_status(struct ion_device *dev,
 		int heap_id_mask)
 {
@@ -450,6 +514,7 @@ static void ion_debug_print_heap_status(struct ion_device *dev,
 			continue;
 		pr_info("Heap(%16.s) Used(%d)KB\n",
 				heap->name, heap->used>>10);
+		ion_debug_print_per_heap(heap);
 	}
 }
 #endif
@@ -616,6 +681,7 @@ retry:
 		pr_err("(%16.s:%d) Fatal Alloc fail due to no mem for size(%d)KB mask(%#x) flags(%#x)\n",
 				client_name, client_pid, len>>10,
 				heap_id_mask, flags);
+		ion_debug_print_heap_status(dev, heap_id_mask);
 #endif /* CONFIG_ION_OOM_KILLER */
 	} else if (!IS_ERR_OR_NULL(buffer)) {
 		heap_used->used += buffer->size;
