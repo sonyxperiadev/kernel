@@ -107,17 +107,17 @@
 
 static int board_version = -1;
 
-#ifdef CONFIG_MOBICORE_OS
+#ifdef CONFIG_MOBICORE_DRIVER
 #include <linux/broadcom/mobicore.h>
 #endif
 
-#if defined(CONFIG_MOBICORE_OS) && defined(CONFIG_OF)
+#if defined(CONFIG_MOBICORE_DRIVER) && defined(CONFIG_OF)
 struct mobicore_data mobicore_init_data = {
 	.name = "mobicore",
 };
 #endif
 
-#ifdef CONFIG_MOBICORE_OS
+#ifdef CONFIG_MOBICORE_DRIVER
 struct platform_device mobicore_device = {
 	.name = "mobicore",
 	.id = 0,
@@ -1310,7 +1310,7 @@ static int __init early_init_dt_scan_ion_data(unsigned long node,
 
 #endif /* CONFIG_ION_BCM_NO_DT */
 
-#if defined(CONFIG_MOBICORE_OS) && defined(CONFIG_OF)
+#if defined(CONFIG_MOBICORE_DRIVER) && defined(CONFIG_OF)
 static int __init early_init_dt_scan_mobicore_data(unsigned long node,
 		const char *uname, int depth, void *data)
 {
@@ -1430,7 +1430,7 @@ static void __init ion_reserve_memory(void)
 }
 #endif /* CONFIG_ION */
 
-#ifdef CONFIG_MOBICORE_OS
+#ifdef CONFIG_MOBICORE_DRIVER
 static void mobicore_mem_alloc_reserve(phys_addr_t mobicore_base,
 			unsigned long mobicore_size)
 {
@@ -1511,7 +1511,7 @@ void __init hawaii_reserve(void)
 	pmem_reserve_memory();
 #endif
 
-#ifdef CONFIG_MOBICORE_OS
+#ifdef CONFIG_MOBICORE_DRIVER
 	mobicore_reserve_memory();
 #endif
 

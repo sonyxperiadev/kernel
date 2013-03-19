@@ -203,7 +203,7 @@
 #include <linux/usb/otg.h>
 #endif
 
-#ifdef CONFIG_MOBICORE_OS
+#ifdef CONFIG_MOBICORE_DRIVER
 #include <linux/broadcom/mobicore.h>
 #endif
 
@@ -368,7 +368,7 @@ struct ion_platform_data ion_cma_data = {
 #endif /* CONFIG_CMA */
 #endif /* CONFIG_ION_BCM_NO_DT */
 
-#ifdef CONFIG_MOBICORE_OS
+#ifdef CONFIG_MOBICORE_DRIVER
 struct mobicore_data mobicore_plat_data = {
 	.name = "mobicore",
 	.mobicore_base = 0x9fe00000,
@@ -1796,7 +1796,7 @@ static void __init hawaii_add_devices(void)
 				ARRAY_SIZE(spi_slave_board_info));
 }
 
-#ifdef CONFIG_MOBICORE_OS
+#ifdef CONFIG_MOBICORE_DRIVER
 static void hawaii_mem_reserve(void)
 {
 	mobicore_device.dev.platform_data = &mobicore_plat_data;
@@ -1879,7 +1879,7 @@ MACHINE_START(HAWAII, "hawaii_ss_logan")
 	.handle_irq = gic_handle_irq,
 	.timer = &kona_timer,
 	.init_machine = hawaii_init,
-#ifdef CONFIG_MOBICORE_OS
+#ifdef CONFIG_MOBICORE_DRIVER
 	.reserve = hawaii_mem_reserve,
 #else
 	.reserve = hawaii_reserve,
