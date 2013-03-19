@@ -1354,20 +1354,16 @@ static irqreturn_t kona_timer_isr(int irq, void *dev_id)
 #endif
 
 	if (kt->cfg.mode == MODE_PERIODIC) {
+		/*
+		 * We need to re-program the timer with ktm->cfg.reload
+		 * Since the sequence to program the next delta is
+		 * very sensitive and is already done in
+		 * kona_timer_set_match_start, just call it from here.
+		 */
 		__disable_channel(kt);
-
-		/* Now re-program the match register */
-		match_reg =
-		    ktm->reg_base + KONA_GPTIMER_STCM0_OFFSET +
-		    (kt->ch_num * 4);
-		writel(readl(match_reg) + kt->cfg.reload, match_reg);
-
-		/* Re-enable the interrupt */
-		reg = readl(ktm->reg_base + KONA_GPTIMER_STCS_OFFSET);
-		reg |=
-		    (1 <<
-		     (kt->ch_num + KONA_GPTIMER_STCS_COMPARE_ENABLE_SHIFT));
-		writel(reg, ktm->reg_base + KONA_GPTIMER_STCS_OFFSET);
+		spin_unlock_irqrestore(&ktm->lock, flags);
+		kona_timer_set_match_start(kt, kt->cfg.reload);
+		goto cb_ret;
 	} else {
 		/* Disable timer w/o waiting for sync to remove the delay */
 #ifdef CONFIG_GP_TIMER_COMPARATOR_LOAD_DELAY
@@ -1383,6 +1379,7 @@ static irqreturn_t kona_timer_isr(int irq, void *dev_id)
 
 	spin_unlock_irqrestore(&ktm->lock, flags);
 
+cb_ret:
 	/* Invoke the call back, if any */
 	if (kt->cfg.cb != NULL)
 		(*kt->cfg.cb) (kt->cfg.arg);
