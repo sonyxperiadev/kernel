@@ -398,7 +398,7 @@ static int kxtik_enable(struct kxtik_data *tik)
 {
 	int err;
 	FUNCDBG("kxtik_enable\n");
-	mdelay(1000);
+
 	err = kxtik_operate(tik);
 	if (err < 0)
 		FUNCDBG("operate mode failed\n");
