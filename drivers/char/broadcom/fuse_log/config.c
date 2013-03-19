@@ -200,12 +200,15 @@ static ssize_t proc_write(struct file *file, const char __user * buffer,
 	int rc;
 	int val;
 	unsigned char kbuf[MAX_PROC_BUF_SIZE];
+	unsigned long ret;
 
 	if (count > 0) {
 		memset(kbuf, 0, sizeof(kbuf));
 		if (count > sizeof(kbuf) - 1)
 			count = sizeof(kbuf) - 1;
-		if (copy_from_user(kbuf, buffer, count))
+		ret = copy_from_user(kbuf, buffer, count);
+		kbuf[count] = '\0';
+		if (ret)
 			return -EFAULT;
 
 		switch (*kbuf) {
