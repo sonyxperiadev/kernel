@@ -1114,7 +1114,28 @@ cUInt32 chal_caph_dma_autogate_status(CHAL_HANDLE handle)
 	return st;
 }
 
-#if defined( __KERNEL__ )
+/****************************************************************************
+*
+*  Function Name: void chal_caph_dma_set_autogate(CHAL_HANDLE handle,
+*													bool value)
+*
+*  Description: value = TRUE/FALSE Set/Reset CAPH DMA aadmac autogating
+*               Autogating can be set only in Java
+****************************************************************************/
+void chal_caph_dma_set_autogate(CHAL_HANDLE handle, bool value)
+{
+	cUInt32     base = ((chal_caph_dma_cb_t *)handle)->base;
+	cUInt32     st = 0;
+	/* read the aadmac auto gate status */
+	st = BRCM_READ_REG(base, CPH_AADMAC_AADMAC_GCR_1);
+	if (value)
+		st |= CPH_AADMAC_AADMAC_GCR_1_AADMAC_ENABLE_AUTO_GATE_MASK;
+	else
+		st &= ~(CPH_AADMAC_AADMAC_GCR_1_AADMAC_ENABLE_AUTO_GATE_MASK);
+	BRCM_WRITE_REG(base, CPH_AADMAC_AADMAC_GCR_1, st);
+}
+
+#if defined(__KERNEL__)
 
 #include <linux/module.h>
 EXPORT_SYMBOL(chal_caph_dma_en_hibuffer);
@@ -1142,6 +1163,7 @@ EXPORT_SYMBOL(chal_caph_dma_read_ddrfifo_status);
 EXPORT_SYMBOL(chal_caph_dma_read_reqcount);
 EXPORT_SYMBOL(chal_caph_dma_read_currmempointer);
 EXPORT_SYMBOL(chal_caph_dma_read_timestamp);
+EXPORT_SYMBOL(chal_caph_dma_set_autogate);
 
 #endif
 

@@ -365,5 +365,15 @@ cVoid chal_caph_dma_en_hibuffer(CHAL_HANDLE handle, CAPH_DMA_CHANNEL_e channel);
 *
 ****************************************************************************/
 cUInt32 chal_caph_dma_autogate_status(CHAL_HANDLE handle);
+
+/****************************************************************************
+*
+*  Function Name: void chal_caph_dma_set_autogate(CHAL_HANDLE handle,
+*							boolvalue)
+*  Description: value = TRUE/FALSE Set/Reset CAPH DMA aadmac autogating
+*               Autogating can be set only in Java
+****************************************************************************/
+void chal_caph_dma_set_autogate(CHAL_HANDLE handle, bool value);
+
 #endif /* _CHAL_CAPH_DMA_ */
 

@@ -44,6 +44,7 @@
 #include "csl_caph_audioh.h"
 #include "irqs.h"
 #include "audio_trace.h"
+#include <mach/cpu.h>
 /****************************************************************************/
 /*                        G L O B A L   S E C T I O N                       */
 /****************************************************************************/
@@ -662,6 +663,9 @@ void csl_caph_dma_init(UInt32 baseAddressDma, UInt32 caphIntcHandle)
 				__func__, rc);
 		return;
 	}
+	/*Enable AADMAC Autogating ONLY on Java*/
+	if (get_chip_id() >= 4)
+		chal_caph_dma_set_autogate(handle, TRUE);
 #if 0
 #ifdef CONFIG_SMP
 	{
@@ -1433,13 +1437,11 @@ void csl_caph_dma_sil_frm_cnt_incr(CSL_CAPH_DMA_CHNL_e chnl, UInt16 lr_ch)
 {
 	unsigned long flags;
 	spin_lock_irqsave(&dmaCH_ctrl[chnl].dma_ch_lock, flags);
-
 	if (lr_ch & CSL_AUDIO_CHANNEL_LEFT)
 		dmaCH_ctrl[chnl].sil_frm_count_left++;
 
 	if (lr_ch & CSL_AUDIO_CHANNEL_RIGHT)
 		dmaCH_ctrl[chnl].sil_frm_count_right++;
-
 	spin_unlock_irqrestore(&dmaCH_ctrl[chnl].dma_ch_lock, flags);
 }
 
@@ -1460,7 +1462,7 @@ void csl_caph_dma_sil_frm_cnt_reset(CSL_CAPH_DMA_CHNL_e chnl, UInt16 lr_ch)
 		dmaCH_ctrl[chnl].sil_frm_count_right = 0;
 	spin_unlock_irqrestore(&dmaCH_ctrl[chnl].dma_ch_lock, flags);
 }
-//	spin_unlock_irqrestore(&dmaCH_ctrl[chnl].dma_ch_lock, flags);
+
 /****************************************************************************
 *
 *  Function Name:int csl_caph_dma_autogate_status()

@@ -59,6 +59,7 @@
 #include <mach/io_map.h>
 #include "clock.h"
 #include "clk.h"
+#include <mach/cpu.h>
 #if defined(ENABLE_DMA_VOICE)
 #include "csl_dsp_caph_control_api.h"
 #endif
@@ -3004,9 +3005,15 @@ void csl_caph_ControlHWClock(Boolean enable)
 			if (clkIDCAPH[CLK_SRCMIXER]->use_cnt)
 				clk_disable(clkIDCAPH[CLK_SRCMIXER]);
 #endif
+			/*For Java A0 SRC has to be run at 78Mhz to use the
+			dual SRC engine,from compansated PLL clk source*/
 			/* For >= CAPRI  A0 CAPH, 26MHz clock is sufficient
 			to support all SRC channels in DUAL_SRC_MODE */
+			if (get_chip_id() >= 4) /*Java*/
+				clk_set_rate(clkIDCAPH[CLK_SRCMIXER], 78000000);
+			else
 				clk_set_rate(clkIDCAPH[CLK_SRCMIXER], 26000000);
+
 			clk_enable(clkIDCAPH[CLK_SRCMIXER]);
 			/* control the audioh_apb will turn on audioh_26m,
 			by clock manager, but not the other way. */
