@@ -439,4 +439,18 @@
 		pwm-request-label = "backlight";
 		bl-on-delay = <7000>;
 	};
+
+	gpio-leds {
+		compatible = "gpio-leds";
+
+		blue {
+			label = "blue";
+			gpios = <&gpio 22 0>;
+		};
+
+		green {
+			label = "green";
+			gpios = <&gpio 9 0>;
+		};
+	};
 };

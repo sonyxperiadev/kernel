@@ -398,4 +398,14 @@
 		interval-time = <550>;	/* unit ns */
 		bl-on-delay = <7000>;
 	};
+
+	gpio-leds {
+		compatible = "gpio-leds";
+
+		button-backlight {
+			label = "button-backlight";
+			gpios = <&gpio 88 0>;
+			linux,default-trigger = "backlight";
+		};
+	};
 };

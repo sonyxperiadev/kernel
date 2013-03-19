@@ -482,6 +482,18 @@ int __init kona_gpio_init(int num_bank)
 	uint32_t gpio, mask, j;
 #endif
 
+#ifdef CONFIG_OF_GPIO
+	struct device_node *np = NULL;
+
+	/*
+	 * This isn't ideal, but it gets things hooked up until this
+	 * driver is converted into a platform_device
+	 */
+	np = of_find_compatible_node(NULL, NULL, "bcm,kona-gpio");
+	kona_gpio_chip.of_node = np;
+#endif
+
+
 	kona_gpio_reset(num_bank);
 
 	kona_gpio.num_bank = num_bank;

@@ -318,6 +318,7 @@
 		ahb-clk-name = "sdio2_ahb_clk";
 		sleep-clk-name = "sdio2_sleep_clk";
 		peri-clk-rate = <52000000>;
+		vddsdmmc-regulator-name = "cam1";
 	};
 
 	sdio2 {
@@ -396,5 +397,15 @@
 		ready-time = <150>;		/* unit us */
 		interval-time = <550>;	/* unit ns */
 		bl-on-delay = <6000>;
+	};
+
+	gpio-leds {
+		compatible = "gpio-leds";
+
+		button-backlight {
+			label = "button-backlight";
+			gpios = <&gpio 88 0>;
+			linux,default-trigger = "backlight";
+		};
 	};
 };

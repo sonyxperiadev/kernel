@@ -426,5 +426,18 @@
                 mobicore-size = <0x200000>;
         };
 
+	gpio-leds {
+		compatible = "gpio-leds";
+
+		blue {
+			label = "blue";
+			gpios = <&gpio 22 0>;
+		};
+
+		green {
+			label = "green";
+			gpios = <&gpio 9 0>;
+		};
+	};
 
 };

@@ -109,4 +109,10 @@
 		reg = <0x3500a000 0x1000>;
 	};
 
+	gpio: gpio@35003000 {
+		compatible = "bcm,kona-gpio";
+		reg = <0x35003000 0x800>;
+		#gpio-cells = <2>;
+		gpio-controller;
+	};
 };

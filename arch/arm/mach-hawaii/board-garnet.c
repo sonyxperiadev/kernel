@@ -87,10 +87,6 @@
 #include <mach/bcm_keypad.h>
 #endif
 
-#if defined(CONFIG_LEDS_GPIO) || defined(CONFIG_LEDS_GPIO_MODULE)
-#include <linux/leds.h>
-#endif
-
 #ifdef CONFIG_DMAC_PL330
 #include <mach/irqs.h>
 #include <plat/pl330-pdata.h>
@@ -769,49 +765,6 @@ struct platform_device *hawaii_common_plat_devices[] __initdata = {
 #endif
 };
 
-#if defined(CONFIG_LEDS_GPIO) || defined(CONFIG_LEDS_GPIO_MODULE)
-#define BLUE_LED_GPIO		22
-#define GREEN_LED_GPIO		9
-#ifdef CONFIG_MACH_HAWAII_GARNET_C_A18
-#define BUTTON_LED_GPIO     88
-#endif
-static struct gpio_led gpio_leds[] = {
-#ifndef CONFIG_MACH_HAWAII_GARNET_C_A18
-	{
-		.name	= "blue",
-		.gpio	= BLUE_LED_GPIO ,
-		.active_low = 0,
-	},
-#endif
-	{
-		.name	= "green",
-		.gpio	= GREEN_LED_GPIO ,
-		.active_low = 0,
-	},
-#ifdef CONFIG_MACH_HAWAII_GARNET_C_A18
-	{
-		.name	= "button-backlight",
-		.default_trigger = "backlight",
-		.gpio	= BUTTON_LED_GPIO ,
-		.active_low = 0,
-	},
-#endif
-};
-
-static struct gpio_led_platform_data gpio_led_info = {
-	.leds		= gpio_leds,
-	.num_leds	= ARRAY_SIZE(gpio_leds),
-};
-
-static struct platform_device leds_gpio = {
-	.name	= "leds-gpio",
-	.id	= -1,
-	.dev	= {
-		.platform_data	= &gpio_led_info,
-	},
-};
-#endif
-
 #if defined(CONFIG_SENSORS_BMA222)
 static struct bma222_accl_platform_data bma_pdata = {
 	.orientation = BMA_ROT_90,
@@ -1124,9 +1077,6 @@ static struct platform_device board_caph_device = {
 #endif /* CONFIG_BCM_ALSA_SOUND */
 
 static struct platform_device *hawaii_devices[] __initdata = {
-#if defined(CONFIG_LEDS_GPIO) || defined(CONFIG_LEDS_GPIO_MODULE)
-	&leds_gpio,
-#endif
 #ifdef CONFIG_KONA_HEADSET_MULTI_BUTTON
 	&hawaii_headset_device,
 #endif
