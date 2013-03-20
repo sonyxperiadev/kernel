@@ -63,6 +63,10 @@ typedef signed int		FTS_BOOL;
 #define DEVICE_PM_MONITOR	0x01
 #define DEVICE_PM_HIBERNATE	0x03
 
+#define HAWAII_GARNET_FT5X06_VENDOR_ID 0x87
+#define G5_A18_FT5X06_VENDOR_ID 0x79
+#define KTOUCH_W68_FT6X06_VENDOR_ID 0x5a
+
 #define PROTOCOL_LEN 33
 
 #define POINTER_CHECK(p)	if((p)==FTS_NULL){return FTS_FALSE;}
@@ -119,6 +123,7 @@ typedef struct
 	FTS_BYTE	bt_tp_property;
 	/*the strength of the press*/
 	FTS_WORD	w_tp_strenth;
+	FTS_WORD	w_tp_area;
 }ST_TOUCH_POINT, *PST_TOUCH_POINT;
 
 typedef enum
@@ -403,7 +408,7 @@ FTS_BOOL byte_read(FTS_BYTE* pbt_buf, FTS_BYTE bt_len)
 
 static unsigned char CTPM_FW[]=
 {
-	#include "Olive_V0c_20111111_app.i"
+	#include "45HD_FT5306_U82_LCID0x87_ver0x10_20130320_app.i"
 };
 
 
@@ -590,8 +595,8 @@ unsigned char fts_ctpm_get_vendor_id(void)
 
 int fts_upgrade_firmware(void)
 {
-	if (fts_ctpm_get_vendor_id() == 0x53) {
-		printk("Detected Mutto Optronics Touch Pannel\n");
+	if (fts_ctpm_get_vendor_id() == HAWAII_GARNET_FT5X06_VENDOR_ID) {
+		printk(KERN_INFO "Detected hawaii garnet ft5x06 Touch Pannel\n");
 		if (ft520x_read_fw_ver() < fts_ctpm_get_upg_ver()) {
 			unsigned char ver = 0;
 			ver = ft520x_read_fw_ver();
@@ -600,12 +605,12 @@ int fts_upgrade_firmware(void)
 			ver = ft520x_read_fw_ver();
 			printk(KERN_INFO "ft5306 upgrading fw... after upgrd ver: %x\n", ver);
 		} else {
-			printk("Mutto Noneed upgrade firmware\n");
+			printk(KERN_INFO "No need upgrade firmware\n");
 		}
 	} else if (fts_ctpm_get_vendor_id() == 0x5D) {
-		printk("Detected BAOMING Optronics Touch Pannel\n");
+		printk(KERN_INFO "Detected BAOMING Optronics Touch Pannel\n");
 	} else {
-		printk("UNKNOWN TP or TP absence\n");
+		printk(KERN_INFO "UNKNOWN TP or TP absence\n");
 	}
 }
 
@@ -659,6 +664,8 @@ FTS_BYTE bt_parser_std(FTS_BYTE* pbt_buf, FTS_BYTE bt_len, ST_TOUCH_INFO* pst_to
 		high_byte &= 0x0f00;
 		low_byte = pbt_buf[3+6*i+3];
 		pst_touch_info->pst_point_info[i].w_tp_y = high_byte |low_byte;
+		pst_touch_info->pst_point_info[i].w_tp_strenth=pbt_buf[7+6*i];
+		pst_touch_info->pst_point_info[i].w_tp_area=pbt_buf[8+6*i];
 		
 		pst_touch_info->bt_tp_num++;
 	}
@@ -779,6 +786,8 @@ static void focaltech_ft5306_late_resume(struct early_suspend *h);
 struct Pointer{
 	uint8_t state;
 	int x,y;
+	int pressure;
+	int area;
 } ;
 
 struct FingersQueue{
@@ -854,6 +863,8 @@ void UpdateFingerQueue(ST_TOUCH_INFO *touch_info)
 		}
 		pFinger->points[touch_info->pst_point_info[i].bt_tp_id].x = touch_info->pst_point_info[i].w_tp_x;
 		pFinger->points[touch_info->pst_point_info[i].bt_tp_id].y = touch_info->pst_point_info[i].w_tp_y;
+		pFinger->points[touch_info->pst_point_info[i].bt_tp_id].pressure = touch_info->pst_point_info[i].w_tp_strenth;
+		pFinger->points[touch_info->pst_point_info[i].bt_tp_id].area = touch_info->pst_point_info[i].w_tp_area;
 	}
 }
 
@@ -874,7 +885,8 @@ void ReportFingers(struct synaptics_rmi4 *ts, ST_TOUCH_INFO *touch_info)
 		if (cur_info->points[i].state < FINGER_STALE) {
 			input_report_abs(ts->input_dev, ABS_MT_POSITION_X, cur_info->points[i].x);
 			input_report_abs(ts->input_dev, ABS_MT_POSITION_Y, cur_info->points[i].y);
-			input_report_abs(ts->input_dev, ABS_MT_TOUCH_MAJOR, 8);
+			input_report_abs(ts->input_dev, ABS_MT_TOUCH_MAJOR, cur_info->points[i].area);
+			input_report_abs(ts->input_dev, ABS_MT_PRESSURE, cur_info->points[i].pressure);
 			input_report_key(ts->input_dev, BTN_TOUCH, 1);
 			//input_report_abs(ts->input_dev, ABS_MT_WIDTH_MAJOR, 1);
 			input_mt_sync(ts->input_dev);
@@ -958,6 +970,11 @@ static void focaltech_ft5306_work_func(struct work_struct *work)
 		ReportFingers(ts, &ft5306_touch_info);
 	}
 	//ReportFingers(ts, &ft5306_touch_info);
+}
+
+static void focaltech_ft5306_firmware_update_func(void)
+{
+	fts_upgrade_firmware();
 }
 
 
@@ -1321,7 +1338,9 @@ static int focaltech_ft5306_probe(
 		}
 		/*read chip ID to detect if the chip exists*/
 		vendor_id = fts_ctpm_get_vendor_id();
-		if ((vendor_id != 0x87) && (vendor_id != 0x79)) {
+		if ((vendor_id != HAWAII_GARNET_FT5X06_VENDOR_ID)
+			&& (vendor_id != G5_A18_FT5X06_VENDOR_ID)
+			&& (vendor_id != KTOUCH_W68_FT6X06_VENDOR_ID)) {
 			if (ts->power) {
 				ts->power(TS_OFF);
 				mdelay(10);
@@ -1338,6 +1357,9 @@ static int focaltech_ft5306_probe(
 		Ft5306_Hw_Reset();
 #endif
 		INIT_WORK(&ts->work, focaltech_ft5306_work_func);
+		INIT_WORK(&ts->firmware_update_work, focaltech_ft5306_firmware_update_func);
+		queue_work(synaptics_wq, &ts->firmware_update_work);
+
 #if ENABLE_TP_DIAG
 		INIT_WORK(&ts->diag_work, focaltech_ft5306_diag_work_func);
 #endif
@@ -1389,6 +1411,7 @@ static int focaltech_ft5306_probe(
 	input_set_abs_params(ts->input_dev, ABS_MT_POSITION_X, 0, ts_x_max_value, 0, 0);
 	input_set_abs_params(ts->input_dev, ABS_MT_POSITION_Y, 0, ts_y_max_value, 0, 0);
 	input_set_abs_params(ts->input_dev, ABS_MT_TOUCH_MAJOR, 0, 8, 0, 0);
+	input_set_abs_params(ts->input_dev, ABS_MT_PRESSURE, 0, 255, 0, 0);
 
 	InitFingersQueue();
 	if (client->irq) {

@@ -39,6 +39,7 @@ struct synaptics_rmi4 {
 	int use_irq;
 	struct hrtimer timer;
 	struct work_struct  work;
+	struct work_struct firmware_update_work;
 #if ENABLE_TP_DIAG
 	struct hrtimer diag_timer;
 	struct work_struct diag_work;
