@@ -1254,6 +1254,7 @@ static struct sdio_platform_cfg hawaii_sdio_param[] = {
 		.vddo_regulator_name = "vdd_sdio",
 		/*The SD controller regulator*/
 		.vddsdxc_regulator_name = "vdd_sdxc",
+		.configure_sdio_pullup = configure_sdio_pullup,
 	},
 	{
 		.id = 1,

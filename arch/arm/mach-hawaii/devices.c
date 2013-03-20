@@ -48,6 +48,7 @@
 #include <asm/mach-types.h>
 #include <mach/hardware.h>
 #include <mach/kona.h>
+#include <mach/pinmux.h>
 #include <mach/hawaii.h>
 #include <mach/rdb/brcm_rdb_uartb.h>
 #include <plat/chal/chal_trace.h>
@@ -1531,6 +1532,67 @@ static int __init setup_board_version(char *p)
 		return -1;
 }
 early_param("brd_ver", setup_board_version);
+
+int configure_sdio_pullup(bool pull_up)
+{
+	int ret = 0;
+	char i;
+	struct pin_config new_pin_config;
+
+	if (pull_up)
+		pr_info("%s, Pull-up enable for SD card pins!\n", __func__);
+	else
+		pr_info("%s, Pull-down enable for SD card pins!\n", __func__);
+
+	new_pin_config.name = PN_SDCMD;
+
+	ret = pinmux_get_pin_config(&new_pin_config);
+	if (ret) {
+		pr_err("%s, Error pinmux_get_pin_config!%d\n", __func__, ret);
+		return ret;
+	}
+
+	if (pull_up) {
+		new_pin_config.reg.b.pull_up = PULL_UP_ON;
+		new_pin_config.reg.b.pull_dn = PULL_DN_OFF;
+	} else {
+		new_pin_config.reg.b.pull_up = PULL_UP_OFF;
+		new_pin_config.reg.b.pull_dn = PULL_DN_ON;
+	}
+
+	ret = pinmux_set_pin_config(&new_pin_config);
+	if (ret) {
+		pr_err("%s Failed to configure SDCMD:%d\n", __func__, ret);
+		return ret;
+	}
+
+	for (i = PN_SDDAT0; i <= PN_SDDAT3; i++) {
+		new_pin_config.name = i;
+		ret = pinmux_get_pin_config(&new_pin_config);
+		if (ret) {
+			pr_info("%s, Error pinmux_get_pin_config():%d\n",
+				__func__, ret);
+			return ret;
+		}
+
+		if (pull_up) {
+			new_pin_config.reg.b.pull_up = PULL_UP_ON;
+			new_pin_config.reg.b.pull_dn = PULL_DN_OFF;
+		} else {
+			new_pin_config.reg.b.pull_up = PULL_UP_OFF;
+			new_pin_config.reg.b.pull_dn = PULL_DN_ON;
+		}
+
+		ret = pinmux_set_pin_config(&new_pin_config);
+		if (ret) {
+			pr_err("%s: Failed to configure SDDAT%d:%d\n",
+				__func__, i, ret);
+			return ret;
+		}
+	}
+
+	return ret;
+}
 
 /* API to get the Board version.
  * Based on the BOM detection, bootloader updates the command line with the

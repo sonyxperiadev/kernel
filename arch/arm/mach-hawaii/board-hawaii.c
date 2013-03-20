@@ -987,6 +987,10 @@ static struct sdio_platform_cfg hawaii_sdio_param = {
 
 };
 
+static struct sdio_platform_cfg hawaii_sdio0_param = {
+	.configure_sdio_pullup = configure_sdio_pullup,
+};
+
 static const struct of_dev_auxdata hawaii_auxdata_lookup[] __initconst = {
 
 	OF_DEV_AUXDATA("bcm,pwm-backlight", 0x0,
@@ -999,7 +1003,7 @@ static const struct of_dev_auxdata hawaii_auxdata_lookup[] __initconst = {
 		"sdhci.2", &hawaii_sdio_param),
 
 	OF_DEV_AUXDATA("bcm,sdhci", 0x3F180000,
-		"sdhci.0", NULL),
+		"sdhci.0", &hawaii_sdio0_param),
 
 	OF_DEV_AUXDATA("bcm,soc-camera", 0x3c,
 		"soc-back-camera", &iclink_ov5640),
