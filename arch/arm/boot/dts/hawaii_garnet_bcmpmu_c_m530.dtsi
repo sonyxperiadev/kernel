@@ -97,6 +97,12 @@
 		 0x40 0x0 0x4 1
 		 /*turn of synthesizer when no PLL request */
 		 0x1A 0xfe 0xff 0
+		/*RFLDO pulldown disable MobC00290043*/
+		 0x96 0x40 0x40 0
+		 /*AUDLDO pulldown disable*/
+		 0x9f 0x40 0x40 0
+		 /*LVLDO1 voltage - 1.786V */
+		 0x1E 0xb8 0xff 1
 		>;
 	};
 
@@ -121,8 +127,8 @@
 		mmc1 = "1", "mmc1_vcc","0","7", "0", "0", "0";
 		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, dsm_mode = BCMPMU_REGL_ON_IN_DSM*/
 		mmc2 = "1", "mmc2_vcc", "0", "7", "0", "0", "0";
-		/*pc_map = PMU_PC2|PMU_PC3, dsm_mode = BCMPMU_REGL_OFF_IN_DSM*/
-		aud  = "1", "audldo_uc", "1", "6", "2", "0", "0";
+		/*pc_map = PMU_PC2|PMU_PC3, dsm_mode = BCMPMU_REGL_LPM_IN_DSM*/
+		aud  = "1", "audldo_uc", "1", "6", "1", "0", "0";
 		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, dsm_mode = BCMPMU_REGL_ON_IN_DSM*/
 		usb  = "1", "usb_vcc", "0", "7", "0", "0", "0";
 		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, dsm_mode = BCMPMU_REGL_ON_IN_DSM*/
@@ -155,5 +161,26 @@
 		iosr1 = "1", "iosr1_uc", "1", "7", "1", "0", "0";
 		/*pc_map = 0, dsm_mode = BCMPMU_REGL_ON_IN_DSM*/
 		iosr2 = "1", "iosr2_uc", "0", "0", "0", "0", "0";
+	};
+
+	bcmpmu_adc {
+		compatible = "Broadcom,adc";
+		/*name flag volt_range adc_offset addr_offset*/
+		channel0 = "vmbatt", "0", "4800", "0", "0x2";
+		channel1 = "vbbatt", "0", "4800", "0", "0x4";
+		channel2 = "0";
+		channel3 = "vbus", "0", "14400", "0", "0x8";
+		channel4 = "idin", "0", "1200", "0", "0xa";
+		channel5 = "ntc", "0", "1200", "0", "0xc";
+		channel6 = "bsi", "0", "1200", "0", "0xe";
+		channel7 = "bom", "0", "1200", "0", "0x10";
+		channel8 = "32ktemp", "0", "1200", "0","0x12";
+		channel9 = "patemp", "0", "1200", "0", "0x14";
+		channel10 = "als", "0", "1200", "0", "0x16";
+		channel11 = "0";
+		channel12 = "0";
+		channel13 = "0";
+		channel14 = "0";
+		channel15 = "0";
 	};
 };
