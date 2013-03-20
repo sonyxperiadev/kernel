@@ -687,7 +687,8 @@ static void eth_work(struct work_struct *work)
 	if (dev->todo)
 		DBG(dev, "work done, flags = 0x%lx\n", dev->todo);
 	return;
-#endif /* CONFIG_USB_ETH_SKB_ALLOC_OPTIMIZATION */
+
+#else /* CONFIG_USB_ETH_SKB_ALLOC_OPTIMIZATION */
 
 	if (test_and_clear_bit(WORK_RX_MEMORY, &dev->todo)) {
 		if (netif_running(dev->net))
@@ -707,6 +708,9 @@ static void eth_work(struct work_struct *work)
 
 	if (dev->todo)
 		DBG(dev, "work done, flags = 0x%lx\n", dev->todo);
+
+#endif /* CONFIG_USB_ETH_SKB_ALLOC_OPTIMIZATION */
+
 }
 
 
@@ -1014,7 +1018,7 @@ static int get_ether_addr(const char *str, u8 *dev_addr)
 				str++;
 			num = hex_to_bin(*str++) << 4;
 			num |= hex_to_bin(*str++);
-			dev_addr [i] = num;
+			dev_addr[i] = num;
 		}
 		if (is_valid_ether_addr(dev_addr))
 			return 0;
@@ -1031,7 +1035,7 @@ static const struct net_device_ops eth_netdev_ops = {
 	.ndo_stop		= eth_stop,
 	.ndo_start_xmit		= eth_start_xmit,
 	.ndo_change_mtu		= ueth_change_mtu,
-	.ndo_set_mac_address 	= eth_mac_addr,
+	.ndo_set_mac_address	= eth_mac_addr,
 	.ndo_validate_addr	= eth_validate_addr,
 #ifdef CONFIG_NET_POLL_CONTROLLER
 	.ndo_poll_controller = eth_poll_controller,
