@@ -110,8 +110,11 @@ struct gs_port {
 	int read_allocated;
 	struct list_head	read_queue;
 	unsigned		n_read;
+#ifndef CONFIG_USE_WORKQ_PUSH
 	struct tasklet_struct	push;
-
+#else
+	struct work_struct      push;
+#endif
 	struct list_head	write_pool;
 	int write_started;
 	int write_allocated;
@@ -478,13 +481,25 @@ __acquires(&port->port_lock)
  * So QUEUE_SIZE packets plus however many the FIFO holds (usually two)
  * can be buffered before the TTY layer's buffers (currently 64 KB).
  */
+#ifndef CONFIG_USE_WORKQ_PUSH
 static void gs_rx_push(unsigned long _port)
 {
-	struct gs_port		*port = (void *)_port;
-	struct tty_struct	*tty;
+	struct gs_port	*port = (void *)_port;
 	struct list_head	*queue = &port->read_queue;
+#else
+static void gs_rx_push(struct work_struct *work)
+{
+	struct gs_port	*port;
+	struct list_head	*queue;
+#endif
+	struct tty_struct	*tty;
 	bool			disconnect = false;
 	bool			do_push = false;
+
+#ifdef CONFIG_USE_WORKQ_PUSH
+	port = container_of(work, struct gs_port, push);
+	queue = &port->read_queue;
+#endif
 
 	/* hand any queued data to the tty */
 	spin_lock_irq(&port->port_lock);
@@ -568,7 +583,11 @@ recycle:
 	if (!list_empty(queue) && tty) {
 		if (!test_bit(TTY_THROTTLED, &tty->flags)) {
 			if (do_push)
+#ifndef CONFIG_USE_WORKQ_PUSH
 				tasklet_schedule(&port->push);
+#else
+				schedule_work(&port->push);
+#endif
 			else
 				pr_warning(PREFIX "%d: RX not scheduled?\n",
 					port->port_num);
@@ -589,7 +608,11 @@ static void gs_read_complete(struct usb_ep *ep, struct usb_request *req)
 	/* Queue all received data until the tty layer is ready for it. */
 	spin_lock(&port->port_lock);
 	list_add_tail(&req->list, &port->read_queue);
+#ifndef CONFIG_USE_WORKQ_PUSH
 	tasklet_schedule(&port->push);
+#else
+	schedule_work(&port->push);
+#endif
 	spin_unlock(&port->port_lock);
 }
 
@@ -991,7 +1014,11 @@ static void gs_unthrottle(struct tty_struct *tty)
 		 * rts/cts, or other handshaking with the host, but if the
 		 * read queue backs up enough we'll be NAKing OUT packets.
 		 */
+#ifndef CONFIG_USE_WORKQ_PUSH
 		tasklet_schedule(&port->push);
+#else
+		schedule_work(&port->push);
+#endif
 		pr_vdebug(PREFIX "%d: unthrottle\n", port->port_num);
 	}
 	spin_unlock_irqrestore(&port->port_lock, flags);
@@ -1003,7 +1030,7 @@ static int gs_break_ctl(struct tty_struct *tty, int duration)
 	int		status = 0;
 	struct gserial	*gser;
 
-	pr_vdebug("gs_break_ctl: ttyGS%d, send break (%d) \n",
+	pr_vdebug("gs_break_ctl: ttyGS%d, send break (%d)\n",
 			port->port_num, duration);
 
 	spin_lock_irq(&port->port_lock);
@@ -1043,9 +1070,12 @@ gs_port_alloc(unsigned port_num, struct usb_cdc_line_coding *coding)
 	spin_lock_init(&port->port_lock);
 	init_waitqueue_head(&port->close_wait);
 	init_waitqueue_head(&port->drain_wait);
-
+#ifndef CONFIG_USE_WORKQ_PUSH
 	tasklet_init(&port->push, gs_rx_push, (unsigned long) port);
-
+#else
+	pr_info("use workqueue push\n");
+	INIT_WORK(&port->push, gs_rx_push);
+#endif
 	INIT_LIST_HEAD(&port->read_pool);
 	INIT_LIST_HEAD(&port->read_queue);
 	INIT_LIST_HEAD(&port->write_pool);
@@ -1196,9 +1226,11 @@ void gserial_cleanup(void)
 		port = ports[i].port;
 		ports[i].port = NULL;
 		mutex_unlock(&ports[i].lock);
-
+#ifndef CONFIG_USE_WORKQ_PUSH
 		tasklet_kill(&port->push);
-
+#else
+		flush_work_sync(&port->push);
+#endif
 		/* wait for old opens to finish */
 		wait_event(port->close_wait, gs_closed(port));
 

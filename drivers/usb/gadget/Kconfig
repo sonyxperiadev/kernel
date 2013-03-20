@@ -918,6 +918,13 @@ config USB_G_ANDROID
 	  Each function can be configured and enabled/disabled
 	  dynamically from userspace through a sysfs interface.
 
+config USE_WORKQ_PUSH
+	boolean "Use workqueue push"
+	depends on USB_G_ANDROID
+	help
+	 Provides workqueue option for push in USB serial driver.
+	 The default is using tasklet.
+
 config USB_ETH_SKB_ALLOC_OPTIMIZATION
 	bool "USB_ETH_SKB_ALLOC_OPTIMIZATION support"
 	depends on USB_G_ANDROID
