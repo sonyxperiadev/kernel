@@ -633,12 +633,15 @@ static int sdhci_pltfm_runtime_resume(struct device *device)
 static int sdhci_pltfm_runtime_idle(struct device *device)
 {
 	/*
-	 * Return a non-zero value
-	 * to avoid runtime suspend
-	 * getting called as a fallback.
-	 * See pm_generic_runtime_idle.
+	 * Make sure we return 0 here.
+	 * When the device resume returns
+	 * the pm_runtime_put_sync is called instead
+	 * of pm_runtime_put_sync suspend, which means
+	 * first the idle will be called (this function).
+	 * If idle returns zero, the runtime suspend
+	 * will be initiated, otherwise not.
 	 */
-	return 1;
+	return 0;
 }
 
 static void __devinit sdhci_pltfm_runtime_pm_init(struct device *device)
