@@ -827,9 +827,9 @@ static int rgltr_cal_trim_inx(struct regulator *rglr, int rgltr_id, u32 vreq)
 		param->curr_inx++;
 		if (param->curr_inx == param->start_inx)
 			return -1;
-		if (param->curr_inx == rinfo[rgltr_id].num_voltages - 1)
+		if (param->curr_inx >= rinfo[rgltr_id].num_voltages)
 			param->curr_inx = SR_VOLT_START_INX;
-		rgltr_cal_trim_inx(rglr, rgltr_id, vreq);
+		trim_inx = rgltr_cal_trim_inx(rglr, rgltr_id, vreq);
 	}
 	return trim_inx;
 }
