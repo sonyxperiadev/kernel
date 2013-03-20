@@ -106,62 +106,57 @@ static void mm_fmwk_job_scheduler(struct work_struct *work)
 	MM_CORE_HW_IFC *hw_ifc = &core_dev->mm_device;
 
 	mutex_lock(&mm_common_mutex);
+
+	if (plist_head_empty(&core_dev->job_list)) {
+		mutex_unlock(&mm_common_mutex);
+		return;
+		}
+
+	struct dev_job_list *job_list_elem = plist_first_entry(\
+			&(core_dev->job_list), \
+			struct dev_job_list, core_list);
+
 	if (mm_core_enable_clock(core_dev))
 		goto mm_fmwk_job_scheduler_done;
 
 	is_hw_busy = hw_ifc->mm_get_status(hw_ifc->mm_device_id);
 	if (!is_hw_busy) {
-		struct dev_job_list *job_list_elem = core_dev->current_job;
-		core_dev->current_job = NULL;
-		if (job_list_elem) {
-			status  = hw_ifc->mm_start_job(hw_ifc->mm_device_id, \
-							&job_list_elem->job, 0);
-			if (status == MM_JOB_STATUS_ERROR)
-				pr_err("error in job completion, removing the job");
-			mm_common_job_completion(job_list_elem, core_dev);
-			job_list_elem = NULL;
-			hw_ifc->mm_init(hw_ifc->mm_device_id);
-			}
-		if (plist_head_empty(&core_dev->job_list) == 0) {
-			job_list_elem = plist_first_entry(\
-					&(core_dev->job_list), \
-					struct dev_job_list, core_list);
-			if (job_list_elem->job.size) {
-				status	= hw_ifc->mm_start_job(\
-						hw_ifc->mm_device_id, \
-						&job_list_elem->job, 0);
-				if (status == MM_JOB_STATUS_RUNNING) {
-					core_dev->current_job = job_list_elem ;
-					getnstimeofday(&core_dev->sched_time);
-					timespec_add_ns(\
-					&core_dev->sched_time, \
-					hw_ifc->mm_timeout * NSEC_PER_MSEC);
+		if (job_list_elem->job.size) {
+			status	= hw_ifc->mm_start_job(\
+					hw_ifc->mm_device_id, \
+					&job_list_elem->job, 0);
+			if (status < MM_JOB_STATUS_SUCCESS) {
+				getnstimeofday(&core_dev->sched_time);
+				timespec_add_ns(\
+				&core_dev->sched_time, \
+				hw_ifc->mm_timeout * NSEC_PER_MSEC);
+				core_dev->mm_core_idle = false;
 
-					is_hw_busy = true;
-					pr_debug("job posted ");
+				is_hw_busy = true;
+				pr_debug("job posted ");
 
-					atomic_notifier_call_chain(\
-					&core_dev->mm_common->notifier_head, \
-					MM_FMWK_NOTIFY_JOB_STARTED, NULL);
+				atomic_notifier_call_chain(\
+				&core_dev->mm_common->notifier_head, \
+				MM_FMWK_NOTIFY_JOB_STARTED, NULL);
 
-					}
-				else if (status >= MM_JOB_STATUS_SUCCESS) {
-					job_list_elem->job.status \
-					= MM_JOB_STATUS_SUCCESS;
-					mm_common_job_completion(\
-						job_list_elem, core_dev);
-					SCHEDULER_WORK(core_dev, \
-						&core_dev->job_scheduler);
-					}
 				}
 			else {
+				core_dev->mm_core_idle = true;
 				job_list_elem->job.status \
-					= MM_JOB_STATUS_SUCCESS;
+				= MM_JOB_STATUS_SUCCESS;
 				mm_common_job_completion(\
 					job_list_elem, core_dev);
 				SCHEDULER_WORK(core_dev, \
 					&core_dev->job_scheduler);
 				}
+			}
+		else {
+			job_list_elem->job.status \
+				= MM_JOB_STATUS_SUCCESS;
+			mm_common_job_completion(\
+				job_list_elem, core_dev);
+			SCHEDULER_WORK(core_dev, \
+				&core_dev->job_scheduler);
 			}
 		}
 	else {
@@ -169,9 +164,9 @@ static void mm_fmwk_job_scheduler(struct work_struct *work)
 		getnstimeofday(&cur_time);
 		if (timespec_compare(&cur_time, &core_dev->sched_time) > 0) {
 			pr_err("abort hw ");
-			if (core_dev->current_job)
 				hw_ifc->mm_abort(hw_ifc->mm_device_id, \
-					&core_dev->current_job->job);
+				&job_list_elem->job);
+			core_dev->mm_core_idle = true;
 			is_hw_busy = false;
 			SCHEDULER_WORK(core_dev, &core_dev->job_scheduler);
 			}
@@ -214,8 +209,8 @@ void *mm_core_init(struct mm_common *mm_common, \
 	INIT_WORK(&(core_dev->job_scheduler), mm_fmwk_job_scheduler);
 	plist_head_init(&(core_dev->job_list));
 	core_dev->device_job_id = 1;
+	core_dev->mm_core_idle = true;
 	core_dev->mm_core_is_on = false;
-	core_dev->current_job = NULL;
 
 	core_dev->mm_common = mm_common;
 

@@ -25,10 +25,9 @@ struct mm_core {
 	struct work_struct job_scheduler;
 	void __iomem *dev_base;
 	MM_CORE_HW_IFC mm_device;
+	bool mm_core_idle;
 
 	bool mm_core_is_on;
-	struct dev_job_list *current_job;
-
 
 	/* job list. will be Unique for SMP*/
 	struct timer_list dev_timer;
@@ -50,7 +49,7 @@ static inline void mm_core_add_job(\
 		job->core_list.prev);*/
 	plist_add(&(job->core_list), &(core_dev->job_list));
 	job->added2core = true;
-	if (core_dev->current_job == NULL)
+	if (core_dev->mm_core_idle)
 		SCHEDULER_WORK(core_dev, &core_dev->job_scheduler);
 }
 
@@ -89,7 +88,7 @@ static inline void mm_core_abort_job(\
 		pr_err("aborting hw in release for common %s\n",\
 				common->mm_name);
 		hw_ifc->mm_abort(hw_ifc->mm_device_id, &job->job);
-		core_dev->current_job = NULL;
+		core_dev->mm_core_idle = true;
 		SCHEDULER_WORK(core_dev, &core_dev->job_scheduler);
 		}
 }

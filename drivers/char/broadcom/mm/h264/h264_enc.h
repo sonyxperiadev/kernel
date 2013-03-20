@@ -12,7 +12,6 @@ the GPL, without Broadcom's express prior written consent.
 ******************************************************************************/
 #ifndef _H264_SYMGEN_H_
 #define _H264_SYMGEN_H_
-#include <linux/ioctl.h>
 
 #define MAX_NUM_REGS 100
 #define MAX_OUT_REGS 4

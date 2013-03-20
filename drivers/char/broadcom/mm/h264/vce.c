@@ -20,10 +20,12 @@ the GPL, without Broadcom's express prior written consent.
 #include <mach/rdb/brcm_rdb_h264.h>
 #include <linux/broadcom/mm_fw_hw_ifc.h>
 #include <linux/broadcom/mm_fw_usr_ifc.h>
+#include <asm/mach/map.h>
 #include "vce.h"
 /*To Be replaced with RDB*/
 #include "vce_reg.h"
-
+#include "vce_prerun_obj.h"
+#include "vce_postrun_obj.h"
 #include "h264_enc.h"
 
 #define H264_HW_SIZE (7*1024*1024)
@@ -73,20 +75,16 @@ static u32 vce_read(struct vce_device_t *vce, u32 reg)
 static void print_job_struct(void *job)
 {
 	struct vce_launch_info_t *vce_info;
-	vce_info = (struct vce_launch_info_t *) ((u32 *)job + *((u32 *)job+2));
+	vce_info = (struct vce_launch_info_t *) ((u32 *)job);
 	pr_debug("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
 	pr_debug("datasize: 0x%x\n", vce_info->datasize);
-	pr_debug("data_offset: 0x%x\n", vce_info->data_offset);
+	pr_debug("data_addr_phys: 0x%x\n", vce_info->data_addr_phys);
 	pr_debug("codesize: 0x%x\n", vce_info->codesize);
-	pr_debug("code_offset: 0x%x\n", vce_info->code_offset);
+	pr_debug("code_addr_phys: 0x%x\n", vce_info->code_addr_phys);
 	pr_debug("startaddr: 0x%x\n", vce_info->startaddr);
 	pr_debug("finaladdr: 0x%x\n", vce_info->finaladdr);
-	pr_debug("numdownloads: 0x%x\n", vce_info->numdownloads);
-	pr_debug("numuploads: 0x%x\n", vce_info->numuploads);
-	pr_debug("download_start_offset: 0x%x\n",
-				vce_info->download_start_offset);
-	pr_debug("upload_start_offset: 0x%x\n", vce_info->upload_start_offset);
 	pr_debug("endcode: 0x%x\n", vce_info->endcode);
+	pr_debug("stop_reason: 0x%x\n", vce_info->stop_reason);
 	pr_debug("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
 }
 
@@ -153,8 +151,12 @@ static int vce_abort(void *device_id, mm_job_post_t *job)
 static mm_isr_type_e process_vce_irq(void *device_id)
 {
 	u32 flags;
+
 	mm_isr_type_e irq_retval = MM_ISR_UNKNOWN;
 	struct vce_device_t *id = (struct vce_device_t *)device_id;
+
+	/* Clear RUN*/
+	vce_write(id, VCE_CONTROL_OFFSET, VCE_CONTROL_CLEAR_RUN);
 
 	/* Read the interrupt status registers */
 	flags = vce_read(id, VCE_STATUS_OFFSET);
@@ -165,7 +167,6 @@ static mm_isr_type_e process_vce_irq(void *device_id)
 	/*Clear interrupt bit*/
 	vce_write(id, VCE_SEMA_CLEAR_OFFSET, 1<<31);
 
-	/*TODO: Implement other reason Handling if required*/
 	irq_retval = MM_ISR_SUCCESS;
 
 	return irq_retval;
@@ -189,11 +190,10 @@ bool get_vce_status(void *device_id)
 				|| reason == 0) {
 			pr_debug("get_vce_status : reason VCE_REASON_END\n");
 			return false;
-		} else {
+		}
 			pr_debug("get_vce_status : returns true\n");
 			return true;
 		}
-	}
 
 	pr_debug("get_vce_status : returns false\n");
 	return false;
@@ -203,18 +203,12 @@ mm_job_status_e vce_start_job(void *device_id, mm_job_post_t *job,
 						u32 prfmask)
 {
 	struct vce_device_t *id = (struct vce_device_t *)device_id;
-	u32 *jp = (u32 *)job->data;
+	unsigned char *jp = (unsigned char *)job->data;
 	struct vce_launch_info_t *vce_info;
-	/*Variables for Download-Upload*/
-	u32 *transfer_ptr = NULL;
-	enum vce_transfer_type_t transfer_dir;
-	u32 vce_addr_offset;
-	u32 transfer_size;
-	u32 *transfer_data_ptr = NULL;
 
 	u32 status = 0;
 	u32 i = 0;
-	u32 j = 0;
+	int ft_csize, lt_csize;
 
 	struct enc_info_t *enc_info = NULL;
 
@@ -225,11 +219,11 @@ mm_job_status_e vce_start_job(void *device_id, mm_job_post_t *job,
 
 	switch (job->type) {
 	case H264_VCE_ENC_SLICE_JOB:
-		enc_info = (struct enc_info_t *)((u32 *)jp + *((u32 *)jp+2) + \
-					(sizeof(struct vce_launch_info_t)/4));
+		enc_info = (struct enc_info_t *)(jp + \
+					(sizeof(struct vce_launch_info_t)));
 	case H264_VCE_LAUNCH_JOB:
 		vce_info = (struct vce_launch_info_t *) \
-				((u32 *)jp + *((u32 *)jp+2));
+				(jp);
 		break;
 	default:
 		pr_err("unknown job type\n");
@@ -242,68 +236,51 @@ mm_job_status_e vce_start_job(void *device_id, mm_job_post_t *job,
 		case H264_VCE_ENC_SLICE_JOB:
 			encodeSlice(id, enc_info);
 		case H264_VCE_LAUNCH_JOB:
+			pr_debug("MM_JOB_STATUS_READY\n");
 		print_regs(id);
 		print_job_struct(jp);
 		/*Reset VCE*/
 		vce_reset(id);
 		/*Bound checks*/
 		/*vce_info->codesize is in words*/
-		if (vce_info->codesize > 4096) {
+			if (vce_info->codesize > VCE_PROGRAM_MEM_SIZE) {
 			pr_err("vce_start_job: Error in CodeSize\n");
 			return MM_JOB_STATUS_ERROR;
 		}
-		/*Program VCE*/
 
-		/*Write the registers passed*/
-		for (i = 0; i < VCE_REGISTERS_COUNT; i++) {
-			if (vce_info->vce_regpst.changed[i] == 1) {
-					vce_write(id, \
-					(VCE_REGISTERS_OFFSET+(i*4)), \
-					vce_info->vce_regpst.vce_regs[i]);
-			}
+		/*Program VCE*/
+		/*Program the arguments for prerun*/
+		lt_csize = vce_info->codesize - VCE_DMA_LIMIT;
+
+		if (lt_csize > 0) {
+			ft_csize = VCE_DMA_LIMIT;
+		} else {
+			ft_csize = vce_info->codesize;
 		}
+
+		vce_write(id, (VCE_REGISTERS_OFFSET+(1*4)), \
+			vce_info->code_addr_phys);
+		vce_write(id, (VCE_REGISTERS_OFFSET+(2*4)), \
+			ft_csize);
+		vce_write(id, (VCE_REGISTERS_OFFSET+(3*4)), \
+			vce_info->data_addr_phys);
+		vce_write(id, (VCE_REGISTERS_OFFSET+(4*4)), \
+			vce_info->datasize);
 
 		/*set return address to the finalising code*/
-			vce_write(id, VCE_REGISTERS_OFFSET, \
-					vce_info->finaladdr);
+		vce_write(id, VCE_REGISTERS_OFFSET, \
+				0x0);
 
 		/*Copy Code*/
-		for (i = 0; i < (vce_info->codesize); i++) {
-			vce_write(id, (VCE_PROGRAM_MEM_OFFSET+(i*4)),
-				(u32)*((u32 *)(jp + vce_info->code_offset)+i));
+		for (i = 0; i < (vce_launch_vce_prerun[3]/4); i++) {
+			vce_write(id, (VCE_PROGRAM_MEM_OFFSET + \
+				(vce_info->codesize)+(i*4)), (u32)* \
+				((u32 *)((u32 *) \
+				vce_launch_vce_prerun[2]) + i));
 		}
-		/*Copy DATA*/
-		for (i = 0; i < (vce_info->datasize); i++) {
-			vce_write(id, (VCE_DATA_MEM_OFFSET+(i*4)),
-				(u32)*((u32 *)(jp + vce_info->data_offset)+i));
-		}
-		/*Handling Download Variables*/
-		transfer_ptr = (u32 *)((u32 *) jp +
-					vce_info->download_start_offset);
-		for (i = 0; i < (vce_info->numdownloads); i++) {
-			transfer_dir = *transfer_ptr;
-			if (transfer_dir != VCE_DATA_DOWNLOAD) {
-				pr_err("Upload Data in Download loop\n");
-				break;
-			}
-			/*Pointing to toaddr*/
-			transfer_ptr++;
-			vce_addr_offset = *transfer_ptr;
-			/*Pointing to size*/
-			transfer_ptr++;
-			transfer_size = *transfer_ptr;
-			/*Pointing to data*/
-			transfer_ptr++;
-			transfer_data_ptr = transfer_ptr;
-			for (j = 0; j < transfer_size; j++) {
-					vce_write(id, (VCE_DATA_MEM_OFFSET + \
-							vce_addr_offset+j*4), \
-				(u32)*((u32 *)(transfer_data_ptr+j)));
-			}
-			transfer_ptr += transfer_size;
-		}
+
 		/*Write Start address*/
-		vce_write(id, VCE_PC_PF0_OFFSET, vce_info->startaddr);
+		vce_write(id, VCE_PC_PF0_OFFSET, vce_info->codesize);
 
 		/*Taken from DEC3 - TODO: Verify again*/
 		if (vce_info->endcode & (~VCE_NO_SEMAPHORE)) {
@@ -312,7 +289,8 @@ mm_job_status_e vce_start_job(void *device_id, mm_job_post_t *job,
 				* semaphore, or bkpt*/
 			vce_write(id, VCE_SEMA_CLEAR_OFFSET, 0xff);
 				vce_write(id, VCE_SEMA_SET_OFFSET, \
-				1<<(vce_info->endcode&(~VCE_NO_SEMAPHORE)) | \
+					1<<(vce_info->endcode & \
+					(~VCE_NO_SEMAPHORE)) | \
 						1<<VCE_STOP_SYM_RESET_INNER);
 		} else {
 			vce_write(id, VCE_SEMA_CLEAR_OFFSET, 0xff);
@@ -328,6 +306,24 @@ mm_job_status_e vce_start_job(void *device_id, mm_job_post_t *job,
 						VCE_CONTROL_SINGLE_STEP);
 		}
 #endif
+
+		if (lt_csize > 0) {
+			char *va;
+			va = (char *)(jp + (sizeof(struct vce_launch_info_t)));
+
+			if (enc_info != NULL)
+				va = va + (sizeof(struct enc_info_t));
+
+			lt_csize /= 4;
+			/*Copy Extra code(After VCE_DMA_LIMIT)*/
+			for (i = 0; i < lt_csize; i++) {
+				vce_write(id, (VCE_PROGRAM_MEM_OFFSET + \
+					ft_csize + (i*4)), (u32)* \
+					((u32 *)((u32 *) \
+					va + i)));
+			}
+		}
+
 		/*Set RUN Bit*/
 		vce_write(id, VCE_CONTROL_OFFSET, VCE_CONTROL_SET_RUN);
 
@@ -339,18 +335,57 @@ mm_job_status_e vce_start_job(void *device_id, mm_job_post_t *job,
 		}
 
 	case MM_JOB_STATUS_RUNNING:
-		switch (job->type) {
-		case H264_VCE_ENC_SLICE_JOB:
-		case H264_VCE_LAUNCH_JOB:
+		pr_debug("MM_JOB_STATUS_RUNNING");
+		/*Program VCE*/
+		/*Write the registers passed*/
+		vce_reset(id);
+		for (i = 0; i < VCE_REGISTERS_COUNT; i++) {
+			if (((vce_info->vce_regpst.changed_mask) >> i) & 0x1) {
+				vce_write(id, \
+					(VCE_REGISTERS_OFFSET+(i*4)), \
+					vce_info->vce_regpst.vce_regs[i]);
+			}
+		}
+		/*set return address to the finalising code*/
+		vce_write(id, VCE_REGISTERS_OFFSET, \
+				vce_info->finaladdr);
+
+		/*Write Start address*/
+		vce_write(id, VCE_PC_PF0_OFFSET, vce_info->startaddr);
+
+		/*Taken from DEC3 - TODO: Verify again*/
+		if (vce_info->endcode & (~VCE_NO_SEMAPHORE)) {
+			/*Pulse the stoppage code 1->0->1 to clear
+			* internal wait VCE might be waiting on another
+			* semaphore, or bkpt*/
+			vce_write(id, VCE_SEMA_CLEAR_OFFSET, 0xff);
+			vce_write(id, VCE_SEMA_SET_OFFSET, \
+				1<<(vce_info->endcode&(~VCE_NO_SEMAPHORE)) | \
+						1<<VCE_STOP_SYM_RESET_INNER);
+		} else {
+			vce_write(id, VCE_SEMA_CLEAR_OFFSET, 0xff);
+		}
+
+		/*Enable Interrupt*/
+		vce_write(id, 0x3408b8, 1<<26);
+
+		/*Set RUN Bit*/
+		vce_write(id, VCE_CONTROL_OFFSET, VCE_CONTROL_SET_RUN);
+		job->status = MM_JOB_STATUS_RUNNING1;
+
+		return MM_JOB_STATUS_RUNNING;
+
+	case MM_JOB_STATUS_RUNNING1:
+		pr_debug("MM_JOB_STATUS_RUNNING1");
 		/*Handle Job completion*/
 		status = vce_read(id, VCE_STATUS_OFFSET);
 
-			vce_info->stop_reason =
-				(status >> VCE_STATUS_REASON_POS) & \
-				VCE_STATUS_REASON_MASK;
+		vce_info->stop_reason =
+			(status >> VCE_STATUS_REASON_POS) & \
+			VCE_STATUS_REASON_MASK;
 
 		if (vce_read(id, VCE_BAD_ADDR_OFFSET) != 0) {
-			pr_err("vce_start_job: Bad Error [0x%08x]\n", \
+			pr_err("vce_start_job: Bad_Addr Err [0x%08x]\n", \
 				vce_read(id, VCE_BAD_ADDR_OFFSET));
 			return MM_JOB_STATUS_ERROR;
 		}
@@ -361,31 +396,57 @@ mm_job_status_e vce_start_job(void *device_id, mm_job_post_t *job,
 				vce_read(id, (VCE_REGISTERS_OFFSET+(i*4)));
 		}
 
-		/* Handle Upload*/
-		transfer_ptr = (u32 *)((u32 *) jp +
-					vce_info->upload_start_offset);
-		for (i = 0; i < (vce_info->numuploads); i++) {
-			transfer_dir = *transfer_ptr;
-			if (transfer_dir != VCE_DATA_UPLOAD) {
-				pr_err("Upload Data in Download loop\n");
-				break;
+		vce_reset(id);
+
+		/*Write the registers passed*/
+		vce_write(id, (VCE_REGISTERS_OFFSET+(1*4)), \
+			vce_info->data_addr_phys);
+		vce_write(id, (VCE_REGISTERS_OFFSET+(2*4)), \
+			vce_info->datasize);
+
+
+		/*set return address to the finalising code*/
+		vce_write(id, VCE_REGISTERS_OFFSET, \
+					0x0);
+
+		/*Copy Code*/
+		for (i = 0; i < (vce_launch_vce_postrun[3])/4; i++) {
+			vce_write(id, (VCE_PROGRAM_MEM_OFFSET + \
+				(i*4)), (u32)*((u32 *)((u32 *) \
+				vce_launch_vce_postrun[2])+i));
 			}
-			/*Pointing to toaddr*/
-			transfer_ptr++;
-			vce_addr_offset = *transfer_ptr;
-			/*Pointing to size*/
-			transfer_ptr++;
-			transfer_size = *transfer_ptr;
-			/*Pointing to data*/
-			transfer_ptr++;
-			transfer_data_ptr = transfer_ptr;
-			for (j = 0; j < transfer_size; j++) {
-					*((u32 *)(transfer_data_ptr+j)) = \
-					vce_read(id, (VCE_DATA_MEM_OFFSET + \
-							vce_addr_offset+j*4));
-			}
-			transfer_ptr += transfer_size;
+
+		/*Write Start address*/
+		vce_write(id, VCE_PC_PF0_OFFSET, 0x0);
+
+		/*Taken from DEC3 - TODO: Verify again*/
+		if (vce_info->endcode & (~VCE_NO_SEMAPHORE)) {
+			/*Pulse the stoppage code 1->0->1 to clear
+			* internal wait VCE might be waiting on another
+			* semaphore, or bkpt*/
+			vce_write(id, VCE_SEMA_CLEAR_OFFSET, 0xff);
+			vce_write(id, VCE_SEMA_SET_OFFSET, \
+				1<<(vce_info->endcode&(~VCE_NO_SEMAPHORE)) | \
+						1<<VCE_STOP_SYM_RESET_INNER);
+		} else {
+			vce_write(id, VCE_SEMA_CLEAR_OFFSET, 0xff);
 		}
+
+		/*Enable Interrupt*/
+		vce_write(id, 0x3408b8, 1<<26);
+
+		/*Set RUN Bit*/
+		vce_write(id, VCE_CONTROL_OFFSET, VCE_CONTROL_SET_RUN);
+		job->status = MM_JOB_STATUS_RUNNING2;
+
+		return MM_JOB_STATUS_RUNNING;
+
+	case MM_JOB_STATUS_RUNNING2:
+		pr_debug("MM_JOB_STATUS_RUNNING2");
+
+		switch (job->type) {
+		case H264_VCE_ENC_SLICE_JOB:
+		case H264_VCE_LAUNCH_JOB:
 
 		if (enc_info != NULL)
 			completeEncodeSlice(id, enc_info);
