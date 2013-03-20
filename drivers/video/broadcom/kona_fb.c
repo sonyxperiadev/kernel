@@ -39,6 +39,7 @@
 #include <linux/gpio.h>
 #include <video/kona_fb.h>
 #include <mach/io.h>
+#include <linux/delay.h>
 #ifdef CONFIG_FRAMEBUFFER_FPS
 #include <linux/fb_fps.h>
 #endif
@@ -119,6 +120,8 @@ struct kona_fb {
 #ifdef CONFIG_FB_BRCM_CP_CRASH_DUMP_IMAGE_SUPPORT
 	struct notifier_block die_nb;
 #endif
+	struct work_struct vsync_smart;
+	struct workqueue_struct *fb_wq;
 };
 
 static struct completion vsync_event;
@@ -548,6 +551,27 @@ skip_drawing:
 	return ret;
 }
 
+static int kona_fb_sync(struct fb_info *info)
+{
+	wait_for_completion_interruptible(&vsync_event);
+	return 0;
+}
+static void konafb_vsync_cb(void)
+{
+	if(g_kona_fb && g_kona_fb->display_info->vmode)
+		complete(&vsync_event);
+}
+
+static void vsync_work_smart(struct work_struct* work)
+{
+	struct kona_fb *fb = container_of(work, \
+					struct kona_fb,\
+					 vsync_smart);
+	msleep(10);
+	complete(&vsync_event);
+	queue_work(fb->fb_wq,work);
+}
+
 static int enable_display(struct kona_fb *fb)
 {
 	int ret = 0;
@@ -571,6 +595,9 @@ static int enable_display(struct kona_fb *fb)
 		konafb_error("Failed to power on this display device!\n");
 		goto fail_to_power_control;
 	}
+	INIT_WORK(&fb->vsync_smart,vsync_work_smart);
+	if(!fb->display_info->vmode)
+		queue_work(fb->fb_wq,&fb->vsync_smart);
 
 	kona_clock_stop(fb);
 	konafb_debug("kona display is enabled successfully\n");
@@ -589,6 +616,8 @@ fail_to_init:
 static int disable_display(struct kona_fb *fb)
 {
 	int ret = 0;
+
+	cancel_work_sync(&fb->vsync_smart);
 
 	fb->display_ops->power_control(fb->display_hdl, CTRL_PWR_OFF);
 	fb->display_ops->close(fb->display_hdl);
@@ -642,16 +671,6 @@ static int kona_fb_ioctl(struct fb_info *info, unsigned int cmd,
 	}
 
 	return ret;
-}
-
-static int kona_fb_sync(struct fb_info *info)
-{
-	wait_for_completion_interruptible(&vsync_event);
-	return 0;
-}
-static void konafb_vsync_cb(void)
-{
-		complete(&vsync_event);
 }
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
@@ -1216,6 +1235,8 @@ static int __ref kona_fb_probe(struct platform_device *pdev)
 	init_completion(&vsync_event);
 	complete(&fb->prev_buf_done_sem);
 	atomic_set(&fb->is_graphics_started, 0);
+	fb->fb_wq = alloc_workqueue("FB WQ",
+			WQ_NON_REENTRANT, 1);
 
 #if (KONA_FB_ENABLE_DYNAMIC_CLOCK != 1)
 	fb->display_ops->start(&fb->dfs_node);
