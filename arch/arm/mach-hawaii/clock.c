@@ -4452,24 +4452,6 @@ static struct ccu_clk CLK_NAME(kps) = {
 /*
 Peri clock name CAPH_SRCMIXER
 */
-/*DFS def for CAPH */
-#ifdef CONFIG_KONA_PI_MGR
-static struct dfs_rate_thold caph_rate_thold[2] =
-			{
-				{FREQ_MHZ(26), PI_OPP_ECONOMY},
-				{-1, PI_OPP_NORMAL},
-			};
-static struct clk_dfs caph_clk_dfs =
-	{
-		.dfs_policy = CLK_DFS_POLICY_RATE,
-		. policy_param = (u32)&caph_rate_thold,
-		.opp_weightage = {
-							[PI_OPP_ECONOMY] = 25,
-							[PI_OPP_NORMAL] = 0,
-						},
-
-	};
-#endif
 
 /*peri clk src list*/
 static struct clk* caph_srcmixer_peri_clk_src_list[] = DEFINE_ARRAY_ARGS(CLK_PTR(crystal),CLK_PTR(ref_312m));
@@ -4484,9 +4466,6 @@ static struct peri_clk CLK_NAME(caph_srcmixer) = {
 				.ops = &gen_peri_clk_ops,
 		},
 	.ccu_clk = &CLK_NAME(khub),
-#ifdef CONFIG_KONA_PI_MGR
-	.clk_dfs = &caph_clk_dfs,
-#endif
 	.mask_set = 1,
 	.policy_bit_mask = KHUB_CLK_MGR_REG_POLICY0_MASK1_CAPH_POLICY0_MASK_MASK,
 	.policy_mask_init = DEFINE_ARRAY_ARGS(1,1,1,1),
