@@ -763,7 +763,7 @@ const char *prop;
 		if (of_property_read_string(pdev->dev.of_node,
 					"module-name", &prop))
 			goto wifi_err1;
-		strcpy(custom_module_name, prop);
+		strncpy(custom_module_name, prop, MAX_WIFI_DRIVER_NAME_LEN-1);
 	}
 
 	hawaii_wifi_device.resource->start =
