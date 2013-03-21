@@ -221,6 +221,12 @@ static int PcmHwFree(struct snd_pcm_substream *substream)
 	int substream_number = substream->number;
 	struct completion *compl_ptr;
 
+	if (is_dsp_timeout()) {
+		aError("Returning because of dsp timeout\n");
+		res = snd_pcm_lib_free_pages(substream);
+		return res;
+	}
+
 	if (substream->stream == SNDRV_PCM_STREAM_CAPTURE)
 		substream_number += CTL_STREAM_PANEL_PCMIN - 1;
 

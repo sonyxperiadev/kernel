@@ -331,4 +331,6 @@ int AUDDRV_Get_TrEqParm(void *param, unsigned int size, AudioApp_t app,
 	unsigned int sample_rate);
 void AUDDRV_SetEchoRefMic(int arg1);
 int AUDDRV_GetEchoRefMic(void);
+void set_flag_dsp_timeout(int flag_val);
+int is_dsp_timeout(void);
 #endif				/* __AUDIO_VDRIVER_H__ */

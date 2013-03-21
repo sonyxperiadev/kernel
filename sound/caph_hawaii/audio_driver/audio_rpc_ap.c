@@ -75,6 +75,7 @@ struct AudioTuningParamInd_st {
 	Int16 param[256];
 };
 
+static int dsp_cmd_failed;
 
 /* FRAMEWORK CODE */
 #if defined(CONFIG_BCM_MODEM)	/* for AP only without MODEM (CP, DSP) */
@@ -222,7 +223,7 @@ void HandleAudioEventReqCb(RPC_Msg_t *pMsg,
 	RPC_SYSFreeResultDataBuffer(dataBufHandle);
 #endif
 }
-#if 1 // Kishore change when Capri CP is ported
+#if 1 /* Kishore change when Capri CP is ported*/
 static void HandleAudioRpcNotification(
 	struct RpcNotificationEvent_t event, UInt8 clientID)
 {
@@ -616,6 +617,7 @@ UInt32 audio_control_dsp(UInt32 param1, UInt32 param2, UInt32 param3,
 			if (!jiff_in) {
 				aError("!!!Timeout on COMMAND_AUDIO_ENABLE %d"
 					" resp!!!\n", (int)param2);
+				set_flag_dsp_timeout(1);
 				/**
 				IPCCP_SetCPCrashedStatus(IPC_AP_ASSERT);
 				BUG_ON(1);
@@ -637,6 +639,15 @@ UInt32 audio_control_dsp(UInt32 param1, UInt32 param2, UInt32 param3,
 
 	return val;
 
+}
+void set_flag_dsp_timeout(int flag_val)
+{
+	dsp_cmd_failed = flag_val;
+}
+
+int is_dsp_timeout(void)
+{
+	return dsp_cmd_failed;
 }
 
 UInt32 audio_cmf_filter(AudioCompfilter_t *cf)

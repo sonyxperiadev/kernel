@@ -243,6 +243,9 @@ static void AudioCtrlWorkThread(struct work_struct *work)
 		n_msg_in++;
 		last_action = msgAudioCtrl.action_code;
 
+		if (is_dsp_timeout())
+			return;
+
 		/* process the operation */
 		AUDIO_Ctrl_Process(msgAudioCtrl.action_code,
 				   &msgAudioCtrl.param,
@@ -288,6 +291,7 @@ void caph_audio_init(void)
 	AUDDRV_RegisterRateChangeCallback(AudioCodecIdHander);
 	AUDDRV_RegisterHandleCPResetCB(CPResetHandler);
 	init_completion(&complete_kfifo);
+	set_flag_dsp_timeout(0);
 #ifdef CONFIG_AUDIO_S2
 	spin_lock_init(&vibra_drv_lock);
 #endif
@@ -512,6 +516,8 @@ Result_t AUDIO_Ctrl_Trigger(BRCM_AUDIO_ACTION_en_t action_code,
 	int is_atomic;
 	int is_cb = 0;
 
+	if (is_dsp_timeout())
+		return RESULT_OK;
 
 
 	/** BEGIN: not support 48KHz recording during voice call */
