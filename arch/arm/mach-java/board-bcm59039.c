@@ -29,7 +29,7 @@
 #include <linux/mfd/bcmpmu.h>
 #include <linux/broadcom/bcmpmu-ponkey.h>
 #ifdef CONFIG_KONA_AVS
-#include <plat/kona_avs.h>
+#include <mach/avs.h>
 #endif
 #include "pm_params.h"
 

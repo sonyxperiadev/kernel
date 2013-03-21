@@ -39,7 +39,7 @@
 #include <linux/of.h>
 #include <linux/of_fdt.h>
 #ifdef CONFIG_KONA_AVS
-#include <plat/kona_avs.h>
+#include <mach/avs.h>
 #endif
 #include "pm_params.h"
 #define BOARD_EDN010 "Hawaiistone EDN010"

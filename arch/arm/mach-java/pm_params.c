@@ -33,7 +33,7 @@
 #include "pm_params.h"
 #include "sequencer_ucode.h"
 #ifdef CONFIG_KONA_AVS
-#include <plat/kona_avs.h>
+#include <mach/avs.h>
 #endif
 
 /*sysfs interface to read PMU vlt table*/

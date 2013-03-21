@@ -48,7 +48,7 @@
 #include <mach/rdb/brcm_rdb_uartb.h>
 #include <plat/chal/chal_trace.h>
 #ifdef CONFIG_KONA_AVS
-#include <plat/kona_avs.h>
+#include <mach/avs.h>
 #include "pm_params.h"
 #endif
 #include <trace/stm.h>

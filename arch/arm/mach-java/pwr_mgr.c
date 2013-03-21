@@ -41,7 +41,7 @@
 #endif
 #include "pm_params.h"
 #include "sequencer_ucode.h"
-#include <plat/kona_avs.h>
+#include <mach/avs.h>
 
 #define VLT_LUT_SIZE	16
 /*PM policy definitions */
