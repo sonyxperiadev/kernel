@@ -2388,7 +2388,10 @@ static void serial8250_shutdown(struct uart_port *port)
 	} else
 		port->mctrl &= ~TIOCM_OUT2;
 
+#ifndef CONFIG_ARCH_KONA
 	serial8250_set_mctrl(port, port->mctrl);
+#endif
+
 #if defined(CONFIG_BRCM_UART_CHANGES) && defined(CONFIG_DW_BT_UART_CHANGES)
 	if (up->mcr & UART_MCR_AFE) {
 		mcr = serial_port_in(port, UART_MCR);

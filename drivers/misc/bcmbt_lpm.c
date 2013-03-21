@@ -540,7 +540,6 @@ static int bcmbt_lpm_suspend(struct platform_device *pdev, pm_message_t state)
 	if (priv_g->plpm->uport != NULL) {
 		pr_debug("%s BLUETOOTH:Calling togglerts with value 0" \
 			" = enable successfully\n", __func__);
-		serial8250_togglerts_afe(priv_g->plpm->uport, 0);
 	}
 	return 0;
 }
@@ -553,7 +552,6 @@ static int bcmbt_lpm_resume(struct platform_device *pdev)
 	if (priv_g->plpm->uport != NULL) {
 		pr_debug("%s BLUETOOTH:Calling togglerts with value 1" \
 			" = enable successfully\n", __func__);
-		serial8250_togglerts_afe(priv_g->plpm->uport, 1);
 	}
 	return 0;
 }
