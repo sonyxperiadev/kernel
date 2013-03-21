@@ -34,7 +34,6 @@ enum {
 	PI_OPP_MAX
 };
 
-void pi_mgr_update_arm_opp_info(u32 vco_rate);
 void hawaii_pi_mgr_init(void);
 
 #endif /*__HAWAII_PI_MNGR_H__*/

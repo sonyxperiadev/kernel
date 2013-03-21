@@ -170,7 +170,7 @@ static int switch_a9_pll(int freq_id, int policy)
 	ccu_clk = to_ccu_clk(clk);
 
 	opp_info.freq_id = freq_id;
-
+	opp_info.ctrl_prms = CCU_POLICY_FREQ_REG_INIT;
 	ret = ccu_set_freq_policy(ccu_clk, CCU_POLICY(policy),
 				&opp_info);
 out:
@@ -234,6 +234,5 @@ int mach_config_a9_pll(int turbo_val, int update_volt_tbl)
 		pr_err("%s: Unable to set a9_pll rate\n", __func__);
 		return ret;
 	}
-	pi_mgr_update_arm_opp_info(vco_rate);
 	return switch_a9_pll(PROC_CCU_FREQ_ID_SUPER_TURBO, PM_WKP);
 }
