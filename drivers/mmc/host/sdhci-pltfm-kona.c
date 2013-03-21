@@ -1667,11 +1667,12 @@ kona_sdxc_regulator_power(struct sdio_dev *dev, int power_state)
 				dev_info(dev->dev, "Pull Up CMD/DAT Line\n");
 				/* Pull-up SDCMD, SDDAT[0:3] */
 				hw_cfg->configure_sdio_pullup(1);
-				mdelay(1); /* wait before power-on */
+				mdelay(2); /* wait before power-on */
 			}
 			pr_info("Turning ON sdxc sd\n");
 			ret = regulator_enable(dev->vdd_sdxc_regulator);
 			atomic_inc(&sdxc_regulator_enable);
+			mdelay(2);
 		} else if (atomic_read(&sdxc_regulator_enable)) {
 			pr_info("Turning OFF sdxc sd\n");
 			ret = regulator_disable(dev->vdd_sdxc_regulator);

@@ -1184,7 +1184,7 @@ static void mmc_power_up(struct mmc_host *host)
 	 * This delay should be sufficient to allow the power supply
 	 * to reach the minimum voltage.
 	 */
-	mmc_delay(10);
+	mmc_delay(15);
 
 	host->ios.clock = host->f_init;
 
@@ -1195,7 +1195,7 @@ static void mmc_power_up(struct mmc_host *host)
 	 * This delay must be at least 74 clock sizes, or 1 ms, or the
 	 * time required to reach a stable voltage.
 	 */
-	mmc_delay(10);
+	mmc_delay(15);
 
 	mmc_host_clk_release(host);
 }
@@ -2055,7 +2055,20 @@ EXPORT_SYMBOL(mmc_detect_card_removed);
 
 void mmc_rescan(struct work_struct *work)
 {
+#ifdef CONFIG_MMC_BCM_SD
+	/*
+	 * Some UHS-1 cards fails to switch to 1.8V signalling at 100KHz.
+	 * The SD spec defines 100KHz - 400KHz range for UHS-1 switch
+	 * sequence. When programmmed 100KHz, the clock variations below
+	 * 100KHz would cause a spec violation, and some UHS-1 cards
+	 * fails during voltage switch (CMD6).
+	 * Increasing the lowest freq to 128KHz to avoid clock variations
+	 * below <100KHz.
+	 */
+	static const unsigned freqs[] = { 400000, 300000, 200000, 128000 };
+#else
 	static const unsigned freqs[] = { 400000, 300000, 200000, 100000 };
+#endif
 	struct mmc_host *host =
 		container_of(work, struct mmc_host, detect.work);
 	int i;
