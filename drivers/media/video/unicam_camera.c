@@ -896,10 +896,14 @@ static int unicam_camera_s_ctrl(struct soc_camera_device *icd,
 		pr_info("V4L2_CID_CAM_CAPTURE\n");
 			unicam_dev->cap_mode = 1;
 			unicam_dev->cap_done = 0;
+			/*for camera driver also invoke s_ctrl */
+			ret = -ENOIOCTLCMD;
 		break;
 		case V4L2_CID_CAM_CAPTURE_DONE:
 		pr_info("V4L2_CID_CAM_CAPTURE_DONE\n");
 			unicam_dev->cap_mode = 0;
+			/*for camera driver also invoke s_ctrl */
+			ret = -ENOIOCTLCMD;
 		break;
 		default:
 			ret = -ENOIOCTLCMD;

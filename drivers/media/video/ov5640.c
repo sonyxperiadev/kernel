@@ -90,6 +90,15 @@ enum ov5640_size {
 	OV5640_SIZE_MAX
 };
 
+enum  cam_running_mode {
+	CAM_RUNNING_MODE_NOTREADY,
+	CAM_RUNNING_MODE_PREVIEW,
+	CAM_RUNNING_MODE_CAPTURE,
+	CAM_RUNNING_MODE_CAPTURE_DONE,
+	CAM_RUNNING_MODE_RECORDING,
+};
+enum  cam_running_mode runmode;
+
 static const struct v4l2_frmsize_discrete ov5640_frmsizes[OV5640_SIZE_LAST] = {
 	{320, 240},
 	{640, 480},
@@ -1507,6 +1516,8 @@ static int ov5640_config_timing(struct i2c_client *client)
 	if (ret)
 		return ret;
 
+	msleep(50);
+
 	return ret;
 }
 
@@ -1525,6 +1536,8 @@ static int ov5640_s_stream(struct v4l2_subdev *sd, int enable)
 		if ((ov5640->flashmode == FLASH_MODE_ON)
 			|| (ov5640->flashmode == FLASH_MODE_AUTO))
 			flash_gpio_strobe(0);
+		msleep(50);
+
 	} else {
 		/* Stop Streaming, Power Down*/
 		ret = ov5640_reg_writes(client, ov5640_power_down);
@@ -1624,7 +1637,8 @@ static int ov5640_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 	ov5640->i_size = ov5640_find_framesize(mf->width, mf->height);
 	ov5640->i_fmt = ov5640_find_datafmt(mf->code);
 
-	ret =  ov5640_reg_writes(client,configscript_common1);
+	/*To avoide reentry init sensor, remove from here	*/
+	/*ret =  ov5640_reg_writes(client,configscript_common1);*/
 	if(ret){
 		printk(KERN_ERR "Error configuring configscript_common1\n");
 		return ret;
@@ -1764,6 +1778,14 @@ static int ov5640_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	}
 
 	return 0;
+}
+
+static int ov5640_preview_start(struct i2c_client *client)
+{
+	int ret = 0;
+	printk(KERN_INFO "ov5640_preview_start!");
+	ret = ov5640_reg_writes(client, configscript_common1);
+	return ret;
 }
 
 static int ov5640_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
@@ -2127,6 +2149,29 @@ static int ov5640_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	case V4L2_CID_CAMERA_FLASH_MODE:
 		set_flash_mode(ctrl->value, ov5640);
 		break;
+
+	case V4L2_CID_CAM_PREVIEW_ONOFF:
+	{
+		if (ctrl->value) {
+			printk(KERN_INFO "ov5640 runmode = %d", runmode);
+			if (runmode == CAM_RUNNING_MODE_NOTREADY)
+				ov5640_preview_start(client);
+
+			runmode = CAM_RUNNING_MODE_PREVIEW;
+		} else
+			runmode = CAM_RUNNING_MODE_NOTREADY;
+
+		break;
+	}
+
+	case V4L2_CID_CAM_CAPTURE:
+		runmode = CAM_RUNNING_MODE_CAPTURE;
+		break;
+
+	case V4L2_CID_CAM_CAPTURE_DONE:
+		runmode = CAM_RUNNING_MODE_CAPTURE_DONE;
+		break;
+
 	}
 
 	return ret;
