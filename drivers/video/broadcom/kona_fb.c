@@ -554,11 +554,19 @@ skip_drawing:
 	return ret;
 }
 
+#if defined(CONFIG_MACH_BCM_FPGA_E) || defined(CONFIG_MACH_BCM_FPGA)
+static int kona_fb_sync(struct fb_info *info)
+{
+	pr_info("[KONA_FB]: HW Composer not enabled on Java Eve, return\n");
+	return 0;
+}
+#else
 static int kona_fb_sync(struct fb_info *info)
 {
 	wait_for_completion_interruptible(&vsync_event);
 	return 0;
 }
+#endif
 static void konafb_vsync_cb(void)
 {
 	if(g_kona_fb && g_kona_fb->display_info->vmode)
