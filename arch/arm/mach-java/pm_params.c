@@ -188,9 +188,10 @@ int mach_config_a9_pll(int turbo_val, int update_volt_tbl)
 {
 	int ret = 0;
 	struct clk *clk;
+#ifdef CONFIG_KONA_AVS
 	u32 silicon_type, freq_id;
 	struct adj_param *adj_param = NULL;
-	
+#endif
 	return 0;
 	clk = clk_get(NULL, A9_PLL_CLK_NAME_STR);
 	if (IS_ERR_OR_NULL(clk))

@@ -63,7 +63,7 @@
 				[0x7] =		init_val
 
 #define PROC_CCU_FREQ_ID_ECO		4
-#define PROC_CCU_FREQ_ID_NRML		6
+#define PROC_CCU_FREQ_ID_NRML		5
 #define PROC_CCU_FREQ_ID_TURBO		6
 #define PROC_CCU_FREQ_ID_SUPER_TURBO	7
 

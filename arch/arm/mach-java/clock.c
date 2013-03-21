@@ -818,8 +818,6 @@ static struct ref_clk CLK_NAME(ref_32k) = {
     .ccu_clk = &CLK_NAME(root),
 };
 
-static struct ccu_clk_ops proc_ccu_ops;
-
 /*
 CCU clock name PROC_CCU
 */
@@ -832,7 +830,7 @@ static struct ccu_clk CLK_NAME(kproc) = {
 			.clk_type = CLK_TYPE_CCU,
 			.ops = &gen_ccu_clk_ops,
 		},
-	.ccu_ops = &proc_ccu_ops,
+	.ccu_ops = &gen_ccu_ops,
 	.pi_id = PI_MGR_PI_ID_ARM_CORE,
 	.ccu_clk_mgr_base = HW_IO_PHYS_TO_VIRT(PROC_CLK_BASE_ADDR),
 	.wr_access_offset = KPROC_CLK_MGR_REG_WR_ACCESS_OFFSET,
@@ -7696,94 +7694,6 @@ static int bmdm_ccu_clk_get_dbg_bus_sel(struct ccu_clk *ccu_clk)
 	return (int)((reg & BMDM_CCU_DBG_BUS_SEL_MASK) >>
 					BMDM_CCU_DBG_BUS_SEL_SHIFT);
 }
-static int proc_ccu_get_freq_policy(struct ccu_clk *ccu_clk, int policy_id)
-{
-	u32 shift, reg_val;
-
-	switch (policy_id) {
-	case CCU_POLICY0:
-		shift = CCU_FREQ_POLICY0_SHIFT;
-		break;
-	case CCU_POLICY1:
-		shift = CCU_FREQ_POLICY1_SHIFT;
-		break;
-	case CCU_POLICY2:
-		shift = CCU_FREQ_POLICY2_SHIFT;
-		break;
-	case CCU_POLICY3:
-		shift = CCU_FREQ_POLICY3_SHIFT;
-		break;
-	default:
-		return CCU_FREQ_INVALID;
-
-	}
-	reg_val = readl(CCU_POLICY_FREQ_REG(ccu_clk));
-	clk_dbg("%s: reg_val:%08x shift:%d\n", __func__, reg_val, shift);
-
-	return (reg_val >> shift) & CCU_FREQ_POLICY_MASK;
-}
-
-static int proc_ccu_set_freq_policy(struct ccu_clk *ccu_clk, int policy_id,
-				   struct opp_info *opp_info)
-{
-	u32 reg_val = 0;
-	u32 shift;
-	u32 target_volt;
-	int curr_opp;
-	struct clk *src_clk = &CLK_NAME(a9_pll_chnl0).clk;
-	return 0;
-	clk_dbg("%s:freq_id = %d policy_id = %d\n", __func__,
-		opp_info->freq_id, policy_id);
-
-	if (opp_info->freq_id >= ccu_clk->freq_count)
-		return -EINVAL;
-	switch (policy_id) {
-	case CCU_POLICY0:
-		shift = CCU_FREQ_POLICY0_SHIFT;
-		break;
-	case CCU_POLICY1:
-		shift = CCU_FREQ_POLICY1_SHIFT;
-		break;
-	case CCU_POLICY2:
-		shift = CCU_FREQ_POLICY2_SHIFT;
-		break;
-	case CCU_POLICY3:
-		shift = CCU_FREQ_POLICY3_SHIFT;
-		break;
-	default:
-		return -EINVAL;
-	}
-	ccu_write_access_enable(ccu_clk, true);
-	ccu_policy_engine_stop(ccu_clk);
-	if (opp_info->ctrl_prms != CCU_POLICY_FREQ_REG_INIT &&
-			(opp_info->opp_id == PI_OPP_NORMAL ||
-			opp_info->opp_id == PI_OPP_TURBO)) {
-
-		target_volt = (opp_info->opp_id == PI_OPP_NORMAL) ?
-				VLT_ID_A9_NORMAL : VLT_ID_A9_TURBO;
-		//curr_opp = pi_get_active_opp(ccu_clk->pi_id);
-		if (opp_info->opp_id > curr_opp)
-			ccu_set_voltage(ccu_clk,
-				opp_info->freq_id, target_volt);
-		clk_set_rate(src_clk, opp_info->ctrl_prms);
-		if (opp_info->opp_id < curr_opp)
-			ccu_set_voltage(ccu_clk, opp_info->freq_id,
-				target_volt);
-	}
-
-	reg_val = readl(CCU_POLICY_FREQ_REG(ccu_clk));
-	reg_val &= ~(CCU_FREQ_POLICY_MASK << shift);
-	reg_val |= opp_info->freq_id << shift;
-
-	writel(reg_val, CCU_POLICY_FREQ_REG(ccu_clk));
-
-	ccu_policy_engine_resume(ccu_clk, ccu_clk->clk.flags &
-		CCU_TARGET_LOAD ? CCU_LOAD_TARGET : CCU_LOAD_ACTIVE);
-
-	ccu_write_access_enable(ccu_clk, false);
-	clk_dbg("%s:%s ccu OK\n", __func__, ccu_clk->clk.name);
-	return 0;
-}
 
 int __init __clock_init(void)
 {
@@ -7810,10 +7720,6 @@ int __init __clock_init(void)
 	bmdm_ccu_ops = gen_ccu_ops;
 	bmdm_ccu_ops.set_dbg_bus_sel = bmdm_ccu_clk_set_dbg_bus_sel;
 	bmdm_ccu_ops.get_dbg_bus_sel = bmdm_ccu_clk_get_dbg_bus_sel;
-
-	proc_ccu_ops = gen_ccu_ops;
-	proc_ccu_ops.set_freq_policy = proc_ccu_set_freq_policy;
-	proc_ccu_ops.get_freq_policy = proc_ccu_get_freq_policy;
 
 	dig_ch_peri_clk_ops = gen_peri_clk_ops;
 	dig_ch_peri_clk_ops.init = dig_clk_init;
