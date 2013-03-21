@@ -828,10 +828,9 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 			}
 
 			hw_cfg->is_8bit = val;
-
-			of_property_read_string(pdev->dev.of_node,
-					"vddsdmmc-regulator-name", &prop);
-			emmc_regulator = (char *)prop;
+			if (!(of_property_read_string(pdev->dev.of_node,
+					"vddsdmmc-regulator-name", &prop)))
+				emmc_regulator = (char *)prop;
 		}
 
 		pdev->dev.platform_data = hw_cfg;
