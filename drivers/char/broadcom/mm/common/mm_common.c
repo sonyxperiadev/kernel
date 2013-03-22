@@ -340,8 +340,8 @@ void mm_common_interlock_completion(struct dev_job_list *job)
 						job, \
 						wait_list, \
 						job->job.status);*/
-			wait_list->status.status = job->job.status;
 			list_del_init(&wait_list->wait_list);
+			wait_list->status.status = job->job.status;
 			}
 		wake_up_all(&mm_queue);
 		}
