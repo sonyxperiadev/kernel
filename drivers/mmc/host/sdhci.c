@@ -1365,8 +1365,12 @@ static void sdhci_do_set_ios(struct sdhci_host *host, struct mmc_ios *ios)
 
 	if (host->flags & SDHCI_DEVICE_DEAD) {
 		spin_unlock_irqrestore(&host->lock, flags);
-		if (host->vmmc && ios->power_mode == MMC_POWER_OFF)
+		if (host->vmmc && ios->power_mode == MMC_POWER_OFF) {
 			mmc_regulator_set_ocr(host->mmc, host->vmmc, 0);
+			pr_info("sdhci_do_set_ios SDHCI_DEVICE_DEAD\n");
+			if (host->ops->set_regulator)
+				host->ops->set_regulator(host, 0);
+		}
 		return;
 	}
 
@@ -1379,8 +1383,6 @@ static void sdhci_do_set_ios(struct sdhci_host *host, struct mmc_ios *ios)
 		sdhci_reinit(host);
 	}
 
-	sdhci_set_clock(host, ios->clock);
-
 	if (ios->power_mode == MMC_POWER_OFF)
 		vdd_bit = sdhci_set_power(host, -1);
 	else
@@ -1388,9 +1390,19 @@ static void sdhci_do_set_ios(struct sdhci_host *host, struct mmc_ios *ios)
 
 	if (host->vmmc && vdd_bit != -1) {
 		spin_unlock_irqrestore(&host->lock, flags);
+
 		mmc_regulator_set_ocr(host->mmc, host->vmmc, vdd_bit);
+		if (host->ops->set_regulator) {
+			if (vdd_bit)
+				host->ops->set_regulator(host, 1);
+			else
+				host->ops->set_regulator(host, 0);
+		}
+
 		spin_lock_irqsave(&host->lock, flags);
 	}
+
+	sdhci_set_clock(host, ios->clock);
 
 	if (host->ops->platform_send_init_74_clocks)
 		host->ops->platform_send_init_74_clocks(host, ios->power_mode);

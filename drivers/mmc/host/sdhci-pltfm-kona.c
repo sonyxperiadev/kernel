@@ -136,6 +136,8 @@ static struct sdio_dev *gDevs[SDIO_DEV_TYPE_MAX];
 static int sdhci_pltfm_regulator_init(struct sdio_dev *dev, char *reg_name);
 static int sdhci_pltfm_regulator_sdxc_init(struct sdio_dev *dev,
 					   char *reg_name);
+static int
+sdhci_set_regulator_power(struct sdhci_host *host, int power_state);
 static int kona_sdxc_regulator_power(struct sdio_dev *dev,
 		int power_state);
 static int sdhci_pltfm_clk_enable(struct sdio_dev *dev, int enable);
@@ -173,6 +175,7 @@ static unsigned int sdhci_get_timeout_clock(struct sdhci_host *host)
 static struct sdhci_ops sdhci_pltfm_ops = {
 	.get_max_clock = sdhci_get_max_clk,
 	.get_timeout_clock = sdhci_get_timeout_clock,
+	.set_regulator = sdhci_set_regulator_power,
 	.clk_enable = sdhci_clk_enable,
 	.rpm_enabled = sdhci_rpm_enabled,
 	.set_signalling = sdhci_pltfm_set_signalling,
@@ -458,41 +461,6 @@ static irqreturn_t sdhci_pltfm_cd_interrupt(int irq, void *dev_id)
 		 */
 		host->flags |= SDHCI_DEVICE_DEAD;
 		bcm_kona_sd_card_emulate(dev, 0);
-
-		/* As soon as the card emulate is
-		 * done, the interrupt will be received
-		 * and card will be removed. Here we sleep
-		 * and wait, so that set_ios would have
-		 * completed turning off the card
-		 * regulator. Then it is safe to turn off
-		 * the controller regulator.
-		 */
-		do {
-			while (regulator_is_enabled(host->vmmc)) {
-				if (++count > KONA_SD_CONTRLR_REG_LPCNT) {
-					pr_err("ERR: Unable to swoff reg\n");
-					break;
-				}
-				/* How these values were arrived at.
-				 * The waiting time here was measured to be
-				 * ranging from 300ms to 900ms, with less
-				 * load on the system. So with the numbers
-				 * below, the loop was exiting for a count
-				 * of 2. This means we dont choke the system
-				 * as we sleep most of the time.
-				 */
-				usleep_range(100000, 200000);
-			}
-
-			/* For some reason card regulator is not
-			 * off. Lets us not turn off the controller
-			 * regulator, giving a chance for the driver
-			 * to recover from the error it has encountered.
-			 */
-			if (count > KONA_SD_CONTRLR_REG_LPCNT)
-				break;
-			kona_sdxc_regulator_power(dev, 0);
-		} while (0);
 	}
 
 	wake_unlock(&dev->cd_int_wake_lock);
@@ -1343,8 +1311,6 @@ static int sdhci_pltfm_suspend(struct device *device)
 		}
 	}
 
-	kona_sdxc_regulator_power(dev, 0);
-
 	dev->suspended = 1;
 	return 0;
 }
@@ -1371,7 +1337,6 @@ static int sdhci_pltfm_resume(struct device *device)
 		}
 	}
 
-	kona_sdxc_regulator_power(dev, 1);
 	ret = sdhci_resume_host(host);
 	if (ret) {
 		dev_err(dev->dev,
@@ -1635,6 +1600,14 @@ static int sdhci_pltfm_set_1v8_signalling(struct sdhci_host *host)
 }
 
 static int
+sdhci_set_regulator_power(struct sdhci_host *host, int power_state)
+{
+	struct sdio_dev *dev = sdhci_priv(host);
+
+	return kona_sdxc_regulator_power(dev, power_state);
+}
+
+static int
 kona_sdxc_regulator_power(struct sdio_dev *dev, int power_state)
 {
 	int ret = 0;
@@ -1656,7 +1629,8 @@ kona_sdxc_regulator_power(struct sdio_dev *dev, int power_state)
 	 */
 	if (dev->vdd_sdxc_regulator &&
 			dev->devtype == SDIO_DEV_TYPE_SDMMC) {
-		if (power_state) {
+		if (power_state &&
+				!atomic_read(&sdxc_regulator_enable)) {
 			if ((hw_cfg->devtype == SDIO_DEV_TYPE_SDMMC) &&
 				(hw_cfg->configure_sdio_pullup))	{
 				dev_info(dev->dev, "Pull Up CMD/DAT Line\n");
@@ -1668,7 +1642,8 @@ kona_sdxc_regulator_power(struct sdio_dev *dev, int power_state)
 			ret = regulator_enable(dev->vdd_sdxc_regulator);
 			atomic_inc(&sdxc_regulator_enable);
 			mdelay(2);
-		} else if (atomic_read(&sdxc_regulator_enable)) {
+		} else if (!power_state &&
+				atomic_read(&sdxc_regulator_enable)) {
 			pr_info("Turning OFF sdxc sd\n");
 			ret = regulator_disable(dev->vdd_sdxc_regulator);
 			atomic_dec(&sdxc_regulator_enable);

@@ -267,6 +267,8 @@ struct sdhci_ops {
         int (*set_signalling)(struct sdhci_host *host, int sig_vol);
 	int (*clk_enable)(struct sdhci_host *host, int enable);
 	int (*rpm_enabled)(struct sdhci_host *host);
+	int (*set_regulator)(struct sdhci_host *host,
+				int power_state);
 #endif			
 
 	int		(*enable_dma)(struct sdhci_host *host);
