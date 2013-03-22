@@ -279,8 +279,8 @@
 		rst-gpio = <8>;
 		detect-gpio = <10>;
 		rst-setup = <700>;	/* 700us */
-		rst-pulse = <20>;	/* 10us */
-		rst-hold = <10000>;	/* 2ms */
+		rst-pulse = <1000>;	/* 1ms */
+		rst-hold = <100000>;	/* 100ms */
 		col-mod-i = <3>;
 		col-mod-o = <2>;
 		width = <480>;
@@ -293,7 +293,7 @@
 		lanes = <2>;
 		cmnd-LP;		/* Commands in LP mode*/
 		hs-bitrate = <330000000>;
-		lp-bitrate = <5000000>;	/* 5mbps */
+		lp-bitrate = <7000000>;	/* 7mbps */
 		iommu = <&iommu_mm>;
 		iovmm = <&iovmm_mm>;
 		rotation = <180>;
@@ -418,7 +418,7 @@
 		polarity = <1>;		/* Inverted polarity */
 		pwm-period-ns = <100000>;
 		pwm-request-label = "backlight";
-		bl-on-delay = <6000>;
+		bl-on-delay = <7000>;
 	};
 
 	mobicore {
