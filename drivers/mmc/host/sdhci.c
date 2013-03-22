@@ -2146,7 +2146,13 @@ static void sdhci_tasklet_card(unsigned long param)
 	 * the clock may be turned ON forever if the disable is
 	 * delayed.
 	 */
+#ifdef CONFIG_LOCKDEP
+	lockdep_off();
+#endif
 	pm_runtime_put_sync_suspend(host->mmc->parent);
+#ifdef CONFIG_LOCKDEP
+	lockdep_on();
+#endif
 
 	/*
 	 * We do this here for reasons stated in the comment
