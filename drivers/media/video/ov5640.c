@@ -34,11 +34,10 @@
 #include "as3643.h"
 #endif
 
-
 /* #define OV5640_DEBUG */
 
 #define iprintk(format, arg...)	\
-	printk(KERN_INFO"[%s]: "format"\n", __func__, ##arg)
+ printk(KERN_INFO"[%s]: "format"\n", __func__, ##arg)
 
 /* OV5640 has only one fixed colorspace per pixelcode */
 struct ov5640_datafmt {
@@ -74,9 +73,16 @@ static const struct ov5640_datafmt ov5640_fmts[] = {
 	 */
 	{V4L2_MBUS_FMT_UYVY8_2X8, V4L2_COLORSPACE_JPEG},
 	{V4L2_MBUS_FMT_YUYV8_2X8, V4L2_COLORSPACE_JPEG},
-/*	{V4L2_MBUS_FMT_JPEG_1X8, V4L2_COLORSPACE_JPEG}, */
-
+	/*  {V4L2_MBUS_FMT_JPEG_1X8, V4L2_COLORSPACE_JPEG}, */
 };
+
+typedef enum cam_running_mode_e {
+	CAM_RUNNING_MODE_NOTREADY,
+	CAM_RUNNING_MODE_PREVIEW,
+	CAM_RUNNING_MODE_CAPTURE,
+	CAM_RUNNING_MODE_CAPTURE_DONE,
+	CAM_RUNNING_MODE_RECORDING,
+} cam_running_mode_t;
 
 enum ov5640_size {
 	OV5640_SIZE_QVGA,	/*  320 x 240 */
@@ -89,15 +95,6 @@ enum ov5640_size {
 	OV5640_SIZE_LAST,
 	OV5640_SIZE_MAX
 };
-
-enum  cam_running_mode {
-	CAM_RUNNING_MODE_NOTREADY,
-	CAM_RUNNING_MODE_PREVIEW,
-	CAM_RUNNING_MODE_CAPTURE,
-	CAM_RUNNING_MODE_CAPTURE_DONE,
-	CAM_RUNNING_MODE_RECORDING,
-};
-enum  cam_running_mode runmode;
 
 static const struct v4l2_frmsize_discrete ov5640_frmsizes[OV5640_SIZE_LAST] = {
 	{320, 240},
@@ -176,10 +173,11 @@ struct ov5640 {
 
 	/*
 	 * touch_focus holds number of valid touch focus areas. 0 = none
-	*/
+	 */
 	int touch_focus;
 	v4l2_touch_area touch_area[OV5640_MAX_FOCUS_AREAS];
 	int flashmode;
+	cam_running_mode_t runmode;
 };
 
 static int set_flash_mode(int, struct ov5640 *);
@@ -190,142 +188,141 @@ static struct ov5640 *to_ov5640(const struct i2c_client *client)
 	return container_of(i2c_get_clientdata(client), struct ov5640, subdev);
 }
 
-
 static const struct ov5640_timing_cfg timing_cfg_yuv[OV5640_SIZE_LAST] = {
 	[OV5640_SIZE_QVGA] = {
-			/*  Timing control  2624 x 1952 --> 2592 x 1944 */
+			      /*  Timing control  2624 x 1952 --> 2592 x 1944 */
 			      .x_addr_start = 16,
 			      .y_addr_start = 4,
 			      .x_addr_end = 2607,
 			      .y_addr_end = 1947,
-			/*  Output image size */
+			      /*  Output image size */
 			      .h_output_size = 320,
 			      .v_output_size = 240,
-			/*  ISP Windowing size 1296 x 972 --> 1280 x 960 */
+			      /*  ISP Windowing size 1296 x 972 --> 1280 x 960 */
 			      .isp_h_offset = 8,
 			      .isp_v_offset = 6,
-			/*  Total size (+blanking) */
+			      /*  Total size (+blanking) */
 			      .h_total_size = 2200,
 			      .v_total_size = 1280,
-			/*  Sensor Read Binning Enabled */
+			      /*  Sensor Read Binning Enabled */
 			      .h_odd_ss_inc = 3,
 			      .h_even_ss_inc = 1,
 			      .v_odd_ss_inc = 3,
 			      .v_even_ss_inc = 1,
 #ifdef CONFIG_MACH_HAWAII_GARNET
-				  .out_mode_sel = 0x01,
+			      .out_mode_sel = 0x01,
 #else
 			      .out_mode_sel = 0x07,
 #endif
 			      .sclk_dividers = 0x01,
 			      .sys_mipi_clk = 0x11,
-			       },
+			      },
 	[OV5640_SIZE_VGA] = {
-			/*  Timing control  2624 x 1952 --> 2592 x 1944 */
-			      .x_addr_start = 16,
-			      .y_addr_start = 4,
-			      .x_addr_end = 2607,
-			      .y_addr_end = 1947,
-			/*  Output image size */
-			      .h_output_size = 640,
-			      .v_output_size = 480,
-			/*  ISP Windowing size  1296 x 972 --> 1280 x 960 */
-			      .isp_h_offset = 8,
-			      .isp_v_offset = 6,
-			/*  Total size (+blanking) */
-			      .h_total_size = 2200,
-			      .v_total_size = 1280,
-			/*  Sensor Read Binning Enabled */
-			      .h_odd_ss_inc = 3,
-			      .h_even_ss_inc = 1,
-			      .v_odd_ss_inc = 3,
-			      .v_even_ss_inc = 1,
+			     /*  Timing control  2624 x 1952 --> 2592 x 1944 */
+			     .x_addr_start = 16,
+			     .y_addr_start = 4,
+			     .x_addr_end = 2607,
+			     .y_addr_end = 1947,
+			     /*  Output image size */
+			     .h_output_size = 640,
+			     .v_output_size = 480,
+			     /*  ISP Windowing size  1296 x 972 --> 1280 x 960 */
+			     .isp_h_offset = 8,
+			     .isp_v_offset = 6,
+			     /*  Total size (+blanking) */
+			     .h_total_size = 2200,
+			     .v_total_size = 1280,
+			     /*  Sensor Read Binning Enabled */
+			     .h_odd_ss_inc = 3,
+			     .h_even_ss_inc = 1,
+			     .v_odd_ss_inc = 3,
+			     .v_even_ss_inc = 1,
 #ifdef CONFIG_MACH_HAWAII_GARNET
-				  .out_mode_sel = 0x01,
+			     .out_mode_sel = 0x01,
 #else
-			      .out_mode_sel = 0x07,
+			     .out_mode_sel = 0x07,
 #endif
-			      .sclk_dividers = 0x01,
-			      .sys_mipi_clk = 0x11,
-			       },
+			     .sclk_dividers = 0x01,
+			     .sys_mipi_clk = 0x11,
+			     },
 	[OV5640_SIZE_720P] = {
-			/*  Timing control  2624 x 1952 --> 2592 x 1944 */
+			      /*  Timing control  2624 x 1952 --> 2592 x 1944 */
 			      .x_addr_start = 16,
 			      .y_addr_start = 4,
 			      .x_addr_end = 2607,
 			      .y_addr_end = 1947,
-			/*  Output image size */
+			      /*  Output image size */
 			      .h_output_size = 1280,
 			      .v_output_size = 720,
-			/*  ISP Windowing size  1296 x 972 --> 1280 x 960 */
+			      /*  ISP Windowing size  1296 x 972 --> 1280 x 960 */
 			      .isp_h_offset = 8,
 			      .isp_v_offset = 6,
-			/*  Total size (+blanking) */
+			      /*  Total size (+blanking) */
 			      .h_total_size = 2200,
 			      .v_total_size = 1280,
-			/*  Sensor Read Binning Enabled */
+			      /*  Sensor Read Binning Enabled */
 			      .h_odd_ss_inc = 3,
 			      .h_even_ss_inc = 1,
 			      .v_odd_ss_inc = 3,
 			      .v_even_ss_inc = 1,
 #ifdef CONFIG_MACH_HAWAII_GARNET
-				  .out_mode_sel = 0x01,
+			      .out_mode_sel = 0x01,
 #else
-				  .out_mode_sel = 0x07,
+			      .out_mode_sel = 0x07,
 #endif
 			      .sclk_dividers = 0x01,
 			      .sys_mipi_clk = 0x11,
 			      },
 	[OV5640_SIZE_1280x960] = {
-			/*  Timing control  2624 x 1952 --> 2592 x 1944 */
-			      .x_addr_start = 16,
-			      .y_addr_start = 4,
-			      .x_addr_end = 2607,
-			      .y_addr_end = 1947,
-			/*  Output image size */
-			      .h_output_size = 1280,
-			      .v_output_size = 960,
-			/*  ISP Windowing size  1296 x 972 --> 1280 x 960 */
-			      .isp_h_offset = 8,
-			      .isp_v_offset = 6,
-			/*  Total size (+blanking) */
-			      .h_total_size = 2200,
-			      .v_total_size = 1280,
-			/*  Sensor Read Binning Enabled */
-			      .h_odd_ss_inc = 3,
-			      .h_even_ss_inc = 1,
-			      .v_odd_ss_inc = 3,
-			      .v_even_ss_inc = 1,
+				  /*  Timing control  2624 x 1952 --> 2592 x 1944 */
+				  .x_addr_start = 16,
+				  .y_addr_start = 4,
+				  .x_addr_end = 2607,
+				  .y_addr_end = 1947,
+				  /*  Output image size */
+				  .h_output_size = 1280,
+				  .v_output_size = 960,
+				  /*  ISP Windowing size  1296 x 972 --> 1280 x 960 */
+				  .isp_h_offset = 8,
+				  .isp_v_offset = 6,
+				  /*  Total size (+blanking) */
+				  .h_total_size = 2200,
+				  .v_total_size = 1280,
+				  /*  Sensor Read Binning Enabled */
+				  .h_odd_ss_inc = 3,
+				  .h_even_ss_inc = 1,
+				  .v_odd_ss_inc = 3,
+				  .v_even_ss_inc = 1,
 #ifdef CONFIG_MACH_HAWAII_GARNET
 				  .out_mode_sel = 0x01,
 #else
-			      .out_mode_sel = 0x07,
+				  .out_mode_sel = 0x07,
 #endif
-			      .sclk_dividers = 0x01,
-			      .sys_mipi_clk = 0x11,
-			      },
+				  .sclk_dividers = 0x01,
+				  .sys_mipi_clk = 0x11,
+				  },
 	[OV5640_SIZE_UXGA] = {
-			/*  Timing control  2624 x 1952 --> 2592 x 1944 */
+			      /*  Timing control  2624 x 1952 --> 2592 x 1944 */
 			      .x_addr_start = 16,
 			      .y_addr_start = 4,
 			      .x_addr_end = 2607,
 			      .y_addr_end = 1947,
-			/*  Output image size */
+			      /*  Output image size */
 			      .h_output_size = 1600,
 			      .v_output_size = 1200,
-			/*  ISP Windowing size	2592 x 1944 --> 2560 x 1920 */
+			      /*  ISP Windowing size  2592 x 1944 --> 2560 x 1920 */
 			      .isp_h_offset = 16,
 			      .isp_v_offset = 12,
-			/*  Total size (+blanking) */
+			      /*  Total size (+blanking) */
 			      .h_total_size = 2844,
 			      .v_total_size = 1968,
-			/*  Sensor Read Binning Disabled */
+			      /*  Sensor Read Binning Disabled */
 			      .h_odd_ss_inc = 1,
 			      .h_even_ss_inc = 1,
 			      .v_odd_ss_inc = 1,
 			      .v_even_ss_inc = 1,
 #ifdef CONFIG_MACH_HAWAII_GARNET
-				  .out_mode_sel = 0x00,
+			      .out_mode_sel = 0x00,
 #else
 			      .out_mode_sel = 0x06,
 #endif
@@ -333,152 +330,80 @@ static const struct ov5640_timing_cfg timing_cfg_yuv[OV5640_SIZE_LAST] = {
 			      .sys_mipi_clk = 0x12,
 			      },
 	[OV5640_SIZE_QXGA] = {
-			/*  Timing control  2624 x 1952 --> 2592 x 1944 */
+			      /*  Timing control  2624 x 1952 --> 2592 x 1944 */
 			      .x_addr_start = 16,
 			      .y_addr_start = 4,
 			      .x_addr_end = 2607,
 			      .y_addr_end = 1947,
-			/*  Output image size */
+			      /*  Output image size */
 			      .h_output_size = 2048,
 			      .v_output_size = 1536,
-			/*  ISP Windowing size	2592 x 1944 --> 2560 x 1920 */
+			      /*  ISP Windowing size  2592 x 1944 --> 2560 x 1920 */
 			      .isp_h_offset = 16,
 			      .isp_v_offset = 12,
-			/*  Total size (+blanking) */
+			      /*  Total size (+blanking) */
 			      .h_total_size = 2844,
 			      .v_total_size = 1968,
-			/*  Sensor Read Binning Enabled */
+			      /*  Sensor Read Binning Enabled */
 			      .h_odd_ss_inc = 1,
 			      .h_even_ss_inc = 1,
 			      .v_odd_ss_inc = 1,
 			      .v_even_ss_inc = 1,
 #ifdef CONFIG_MACH_HAWAII_GARNET
-				  .out_mode_sel = 0x00,
+			      .out_mode_sel = 0x00,
 #else
-				  .out_mode_sel = 0x06,
+			      .out_mode_sel = 0x06,
 #endif
 			      .sclk_dividers = 0x02,
 			      .sys_mipi_clk = 0x12,
 			      },
 	[OV5640_SIZE_5MP] = {
-			/*  Timing control  2624 x 1952 --> 2592 x 1944 */
-			      .x_addr_start = 16,
-			      .y_addr_start = 4,
-			      .x_addr_end = 2607,
-			      .y_addr_end = 1947,
-			/*  Output image size */
-			      .h_output_size = 2560,
-			      .v_output_size = 1920,
-			/*  ISP Windowing size	2592 x 1944 --> 2560 x 1920 */
-			      .isp_h_offset = 16,
-			      .isp_v_offset = 12,
-			/*  Total size (+blanking) */
-			      .h_total_size = 2844,
-			      .v_total_size = 1968,
-			/*  Sensor Read Binning Enabled */
-			      .h_odd_ss_inc = 1,
-			      .h_even_ss_inc = 1,
-			      .v_odd_ss_inc = 1,
-			      .v_even_ss_inc = 1,
+			     /*  Timing control  2624 x 1952 --> 2592 x 1944 */
+			     .x_addr_start = 16,
+			     .y_addr_start = 4,
+			     .x_addr_end = 2607,
+			     .y_addr_end = 1947,
+			     /*  Output image size */
+			     .h_output_size = 2560,
+			     .v_output_size = 1920,
+			     /*  ISP Windowing size  2592 x 1944 --> 2560 x 1920 */
+			     .isp_h_offset = 16,
+			     .isp_v_offset = 12,
+			     /*  Total size (+blanking) */
+			     .h_total_size = 2844,
+			     .v_total_size = 1968,
+			     /*  Sensor Read Binning Enabled */
+			     .h_odd_ss_inc = 1,
+			     .h_even_ss_inc = 1,
+			     .v_odd_ss_inc = 1,
+			     .v_even_ss_inc = 1,
 #ifdef CONFIG_MACH_HAWAII_GARNET
-				  .out_mode_sel = 0x00,
+			     .out_mode_sel = 0x00,
 #else
-				  .out_mode_sel = 0x06,
+			     .out_mode_sel = 0x06,
 #endif
-			      .sclk_dividers = 0x02,
-			      .sys_mipi_clk = 0x12,
-			      },
+			     .sclk_dividers = 0x02,
+			     .sys_mipi_clk = 0x12,
+			     },
 };
 
 static const struct ov5640_timing_cfg timing_cfg_jpeg[OV5640_SIZE_LAST] = {
 	[OV5640_SIZE_QVGA] = {
-			/*  Timing control  2624 x 1952 --> 2592 x 1944 */
+			      /*  Timing control  2624 x 1952 --> 2592 x 1944 */
 			      .x_addr_start = 16,
 			      .y_addr_start = 4,
 			      .x_addr_end = 2607,
 			      .y_addr_end = 1947,
-			/*  Output image size */
+			      /*  Output image size */
 			      .h_output_size = 320,
 			      .v_output_size = 240,
-			/*  ISP Windowing size	2592 x 1944 --> 2560 x 1920 */
+			      /*  ISP Windowing size  2592 x 1944 --> 2560 x 1920 */
 			      .isp_h_offset = 16,
 			      .isp_v_offset = 12,
-			/*  Total size (+blanking) */
+			      /*  Total size (+blanking) */
 			      .h_total_size = 2844,
 			      .v_total_size = 1968,
-			/*  Sensor Read Binning Disabled */
-			      .h_odd_ss_inc = 1,
-			      .h_even_ss_inc = 1,
-			      .v_odd_ss_inc = 1,
-			      .v_even_ss_inc = 1,
-			      .out_mode_sel = 0x26,
-			      .sclk_dividers = 0x01,
-			      .sys_mipi_clk = 0x12,
-			       },
-	[OV5640_SIZE_VGA] = {
-			/*  Timing control  2624 x 1952 --> 2592 x 1944 */
-			      .x_addr_start = 16,
-			      .y_addr_start = 4,
-			      .x_addr_end = 2607,
-			      .y_addr_end = 1947,
-			/*  Output image size */
-			      .h_output_size = 640,
-			      .v_output_size = 480,
-			/*  ISP Windowing size	2592 x 1944 --> 2560 x 1920 */
-			      .isp_h_offset = 16,
-			      .isp_v_offset = 12,
-			/*  Total size (+blanking) */
-			      .h_total_size = 2844,
-			      .v_total_size = 1968,
-			/*  Sensor Read Binning Disabled */
-			      .h_odd_ss_inc = 1,
-			      .h_even_ss_inc = 1,
-			      .v_odd_ss_inc = 1,
-			      .v_even_ss_inc = 1,
-			      .out_mode_sel = 0x26,
-			      .sclk_dividers = 0x01,
-			      .sys_mipi_clk = 0x12,
-			       },
-	[OV5640_SIZE_720P] = {
-			/*  Timing control  2624 x 1952 --> 2592 x 1944 */
-			      .x_addr_start = 16,
-			      .y_addr_start = 4,
-			      .x_addr_end = 2607,
-			      .y_addr_end = 1947,
-			/*  Output image size */
-			      .h_output_size = 1280,
-			      .v_output_size = 720,
-			/*  ISP Windowing size	2592 x 1944 --> 2560 x 1920 */
-			      .isp_h_offset = 16,
-			      .isp_v_offset = 12,
-			/*  Total size (+blanking) */
-			      .h_total_size = 2844,
-			      .v_total_size = 1968,
-			/*  Sensor Read Binning Disabled */
-			      .h_odd_ss_inc = 1,
-			      .h_even_ss_inc = 1,
-			      .v_odd_ss_inc = 1,
-			      .v_even_ss_inc = 1,
-			      .out_mode_sel = 0x26,
-			      .sclk_dividers = 0x01,
-			      .sys_mipi_clk = 0x12,
-			       },
-	[OV5640_SIZE_1280x960] = {
-			/*  Timing control  2624 x 1952 --> 2592 x 1944 */
-			      .x_addr_start = 16,
-			      .y_addr_start = 4,
-			      .x_addr_end = 2607,
-			      .y_addr_end = 1947,
-			/*  Output image size */
-			      .h_output_size = 1280,
-			      .v_output_size = 960,
-			/*  ISP Windowing size	2592 x 1944 --> 2560 x 1920 */
-			      .isp_h_offset = 16,
-			      .isp_v_offset = 12,
-			/*  Total size (+blanking) */
-			      .h_total_size = 2844,
-			      .v_total_size = 1968,
-			/*  Sensor Read Binning Disabled */
+			      /*  Sensor Read Binning Disabled */
 			      .h_odd_ss_inc = 1,
 			      .h_even_ss_inc = 1,
 			      .v_odd_ss_inc = 1,
@@ -487,22 +412,94 @@ static const struct ov5640_timing_cfg timing_cfg_jpeg[OV5640_SIZE_LAST] = {
 			      .sclk_dividers = 0x01,
 			      .sys_mipi_clk = 0x12,
 			      },
-	[OV5640_SIZE_UXGA] = {
-			/*  Timing control  2624 x 1952 --> 2592 x 1944 */
+	[OV5640_SIZE_VGA] = {
+			     /*  Timing control  2624 x 1952 --> 2592 x 1944 */
+			     .x_addr_start = 16,
+			     .y_addr_start = 4,
+			     .x_addr_end = 2607,
+			     .y_addr_end = 1947,
+			     /*  Output image size */
+			     .h_output_size = 640,
+			     .v_output_size = 480,
+			     /*  ISP Windowing size  2592 x 1944 --> 2560 x 1920 */
+			     .isp_h_offset = 16,
+			     .isp_v_offset = 12,
+			     /*  Total size (+blanking) */
+			     .h_total_size = 2844,
+			     .v_total_size = 1968,
+			     /*  Sensor Read Binning Disabled */
+			     .h_odd_ss_inc = 1,
+			     .h_even_ss_inc = 1,
+			     .v_odd_ss_inc = 1,
+			     .v_even_ss_inc = 1,
+			     .out_mode_sel = 0x26,
+			     .sclk_dividers = 0x01,
+			     .sys_mipi_clk = 0x12,
+			     },
+	[OV5640_SIZE_720P] = {
+			      /*  Timing control  2624 x 1952 --> 2592 x 1944 */
 			      .x_addr_start = 16,
 			      .y_addr_start = 4,
 			      .x_addr_end = 2607,
 			      .y_addr_end = 1947,
-			/*  Output image size */
+			      /*  Output image size */
+			      .h_output_size = 1280,
+			      .v_output_size = 720,
+			      /*  ISP Windowing size  2592 x 1944 --> 2560 x 1920 */
+			      .isp_h_offset = 16,
+			      .isp_v_offset = 12,
+			      /*  Total size (+blanking) */
+			      .h_total_size = 2844,
+			      .v_total_size = 1968,
+			      /*  Sensor Read Binning Disabled */
+			      .h_odd_ss_inc = 1,
+			      .h_even_ss_inc = 1,
+			      .v_odd_ss_inc = 1,
+			      .v_even_ss_inc = 1,
+			      .out_mode_sel = 0x26,
+			      .sclk_dividers = 0x01,
+			      .sys_mipi_clk = 0x12,
+			      },
+	[OV5640_SIZE_1280x960] = {
+				  /*  Timing control  2624 x 1952 --> 2592 x 1944 */
+				  .x_addr_start = 16,
+				  .y_addr_start = 4,
+				  .x_addr_end = 2607,
+				  .y_addr_end = 1947,
+				  /*  Output image size */
+				  .h_output_size = 1280,
+				  .v_output_size = 960,
+				  /*  ISP Windowing size  2592 x 1944 --> 2560 x 1920 */
+				  .isp_h_offset = 16,
+				  .isp_v_offset = 12,
+				  /*  Total size (+blanking) */
+				  .h_total_size = 2844,
+				  .v_total_size = 1968,
+				  /*  Sensor Read Binning Disabled */
+				  .h_odd_ss_inc = 1,
+				  .h_even_ss_inc = 1,
+				  .v_odd_ss_inc = 1,
+				  .v_even_ss_inc = 1,
+				  .out_mode_sel = 0x26,
+				  .sclk_dividers = 0x01,
+				  .sys_mipi_clk = 0x12,
+				  },
+	[OV5640_SIZE_UXGA] = {
+			      /*  Timing control  2624 x 1952 --> 2592 x 1944 */
+			      .x_addr_start = 16,
+			      .y_addr_start = 4,
+			      .x_addr_end = 2607,
+			      .y_addr_end = 1947,
+			      /*  Output image size */
 			      .h_output_size = 1600,
 			      .v_output_size = 1200,
-			/*  ISP Windowing size	2592 x 1944 --> 2560 x 1920 */
+			      /*  ISP Windowing size  2592 x 1944 --> 2560 x 1920 */
 			      .isp_h_offset = 16,
 			      .isp_v_offset = 12,
-			/*  Total size (+blanking) */
+			      /*  Total size (+blanking) */
 			      .h_total_size = 2844,
 			      .v_total_size = 1968,
-			/*  Sensor Read Binning Disabled */
+			      /*  Sensor Read Binning Disabled */
 			      .h_odd_ss_inc = 1,
 			      .h_even_ss_inc = 1,
 			      .v_odd_ss_inc = 1,
@@ -510,23 +507,23 @@ static const struct ov5640_timing_cfg timing_cfg_jpeg[OV5640_SIZE_LAST] = {
 			      .out_mode_sel = 0x26,
 			      .sclk_dividers = 0x01,
 			      .sys_mipi_clk = 0x12,
-			       },
+			      },
 	[OV5640_SIZE_QXGA] = {
-			/*  Timing control  2624 x 1952 --> 2592 x 1944 */
+			      /*  Timing control  2624 x 1952 --> 2592 x 1944 */
 			      .x_addr_start = 16,
 			      .y_addr_start = 4,
 			      .x_addr_end = 2607,
 			      .y_addr_end = 1947,
-			/*  Output image size */
+			      /*  Output image size */
 			      .h_output_size = 2048,
 			      .v_output_size = 1536,
-			/*  ISP Windowing size	2592 x 1944 --> 2560 x 1920 */
+			      /*  ISP Windowing size  2592 x 1944 --> 2560 x 1920 */
 			      .isp_h_offset = 16,
 			      .isp_v_offset = 12,
-			/*  Total size (+blanking) */
+			      /*  Total size (+blanking) */
 			      .h_total_size = 2844,
 			      .v_total_size = 1968,
-			/*  Sensor Read Binning Disabled */
+			      /*  Sensor Read Binning Disabled */
 			      .h_odd_ss_inc = 1,
 			      .h_even_ss_inc = 1,
 			      .v_odd_ss_inc = 1,
@@ -534,31 +531,31 @@ static const struct ov5640_timing_cfg timing_cfg_jpeg[OV5640_SIZE_LAST] = {
 			      .out_mode_sel = 0x26,
 			      .sclk_dividers = 0x01,
 			      .sys_mipi_clk = 0x12,
-			       },
+			      },
 	[OV5640_SIZE_5MP] = {
-			/*  Timing control  2624 x 1952 --> 2592 x 1944 */
-			      .x_addr_start = 16,
-			      .y_addr_start = 4,
-			      .x_addr_end = 2607,
-			      .y_addr_end = 1947,
-			/* Output image size */
-			      .h_output_size = 2560,
-			      .v_output_size = 1920,
-			/*  ISP Windowing size	2592 x 1944 --> 2560 x 1920 */
-			      .isp_h_offset = 16,
-			      .isp_v_offset = 12,
-			/* Total size (+blanking) */
-			      .h_total_size = 2844,
-			      .v_total_size = 1968,
-			/* Sensor Read Binning Disabled */
-			      .h_odd_ss_inc = 1,
-			      .h_even_ss_inc = 1,
-			      .v_odd_ss_inc = 1,
-			      .v_even_ss_inc = 1,
-			      .out_mode_sel = 0x26,
-			      .sclk_dividers = 0x01,
-			      .sys_mipi_clk = 0x12,
-			       },
+			     /*  Timing control  2624 x 1952 --> 2592 x 1944 */
+			     .x_addr_start = 16,
+			     .y_addr_start = 4,
+			     .x_addr_end = 2607,
+			     .y_addr_end = 1947,
+			     /* Output image size */
+			     .h_output_size = 2560,
+			     .v_output_size = 1920,
+			     /*  ISP Windowing size  2592 x 1944 --> 2560 x 1920 */
+			     .isp_h_offset = 16,
+			     .isp_v_offset = 12,
+			     /* Total size (+blanking) */
+			     .h_total_size = 2844,
+			     .v_total_size = 1968,
+			     /* Sensor Read Binning Disabled */
+			     .h_odd_ss_inc = 1,
+			     .h_even_ss_inc = 1,
+			     .v_odd_ss_inc = 1,
+			     .v_even_ss_inc = 1,
+			     .out_mode_sel = 0x26,
+			     .sclk_dividers = 0x01,
+			     .sys_mipi_clk = 0x12,
+			     },
 };
 
 #if 0
@@ -594,11 +591,11 @@ static struct v4l2_subdev_sensor_serial_parms mipi_cfgs[OV5640_SIZE_LAST] = {
 			      .pix_clk = 21,	/* Revisit */
 			      },
 	[OV5640_SIZE_1280x960] = {
-			      .lanes = 1,
-			      .channel = 0,
-			      .phy_rate = (336 * 2 * 1000000),
-			      .pix_clk = 21,	/* Revisit */
-			      },
+				  .lanes = 1,
+				  .channel = 0,
+				  .phy_rate = (336 * 2 * 1000000),
+				  .pix_clk = 21,	/* Revisit */
+				  },
 	[OV5640_SIZE_720P] = {
 			      .lanes = 1,
 			      .channel = 0,
@@ -630,7 +627,7 @@ static struct v4l2_subdev_sensor_serial_parms mipi_cfgs[OV5640_SIZE_LAST] = {
  * The value is returned in 'val'.
  * Returns zero if successful, or non-zero otherwise.
  */
-static int ov5640_reg_read(struct i2c_client *client, u16 reg, u8 *val)
+static int ov5640_reg_read(struct i2c_client *client, u16 reg, u8 * val)
 {
 	int ret;
 	u8 data[2] = { 0 };
@@ -718,9 +715,8 @@ static const struct v4l2_queryctrl ov5640_controls[] = {
 #endif
 	 .minimum = FLASH_MODE_OFF,
 	 .maximum = (1 << FLASH_MODE_OFF) |
-				(1 << FLASH_MODE_ON) |
-				(1 << FLASH_MODE_TORCH_OFF) |
-	 		(1 << FLASH_MODE_TORCH_ON),
+	 (1 << FLASH_MODE_ON) |
+	 (1 << FLASH_MODE_TORCH_OFF) | (1 << FLASH_MODE_TORCH_ON),
 	 .step = 1,
 	 .default_value = FLASH_MODE_OFF,
 	 },
@@ -730,7 +726,7 @@ static const struct v4l2_queryctrl ov5640_controls[] = {
 	 .name = "Color Effects",
 	 .minimum = IMAGE_EFFECT_NONE,
 	 .maximum = (1 << IMAGE_EFFECT_NONE | 1 << IMAGE_EFFECT_SEPIA |
-			 1 << IMAGE_EFFECT_BNW | 1 << IMAGE_EFFECT_NEGATIVE),
+		     1 << IMAGE_EFFECT_BNW | 1 << IMAGE_EFFECT_NEGATIVE),
 	 .step = 1,
 	 .default_value = IMAGE_EFFECT_NONE,
 	 },
@@ -743,7 +739,7 @@ static const struct v4l2_queryctrl ov5640_controls[] = {
 	 .step = 1,
 	 .default_value = ANTI_BANDING_AUTO,
 	 },
-	 {
+	{
 	 .id = V4L2_CID_CAMERA_WHITE_BALANCE,
 	 .type = V4L2_CTRL_TYPE_INTEGER,
 	 .name = "White Balance",
@@ -752,14 +748,14 @@ static const struct v4l2_queryctrl ov5640_controls[] = {
 	 .step = 1,
 	 .default_value = WHITE_BALANCE_AUTO,
 	 },
-	 {
+	{
 	 .id = V4L2_CID_CAMERA_FRAME_RATE,
 	 .type = V4L2_CTRL_TYPE_INTEGER,
 	 .name = "Framerate control",
 	 .minimum = FRAME_RATE_AUTO,
 	 .maximum = (1 << FRAME_RATE_AUTO | 1 << FRAME_RATE_5 |
-			 1 << FRAME_RATE_10 | 1 << FRAME_RATE_15 |
-			 1 << FRAME_RATE_25 | 1 << FRAME_RATE_30),
+		     1 << FRAME_RATE_10 | 1 << FRAME_RATE_15 |
+		     1 << FRAME_RATE_25 | 1 << FRAME_RATE_30),
 	 .step = 1,
 	 .default_value = FRAME_RATE_AUTO,
 	 },
@@ -769,7 +765,7 @@ static const struct v4l2_queryctrl ov5640_controls[] = {
 	 .name = "Focus Modes",
 	 .minimum = FOCUS_MODE_AUTO,
 	 .maximum = (1 << FOCUS_MODE_AUTO | 1 << FOCUS_MODE_MACRO
-			 | 1 << FOCUS_MODE_INFINITY),
+		     | 1 << FOCUS_MODE_INFINITY),
 	 .step = 1,
 	 .default_value = FOCUS_MODE_AUTO,
 	 },
@@ -790,7 +786,7 @@ static const struct v4l2_queryctrl ov5640_controls[] = {
 	 .maximum = OV5640_MAX_FOCUS_AREAS,
 	 .step = 1,
 	 .default_value = 1,
-	},
+	 },
 
 };
 
@@ -802,18 +798,17 @@ static const struct v4l2_queryctrl ov5640_controls[] = {
  * Returns zero if successful, or non-zero otherwise.
  */
 static int ov5640_reg_writes(struct i2c_client *client,
-			const struct ov5640_reg reglist[])
+			     const struct ov5640_reg reglist[])
 {
 	int err = 0, index;
 
-	for (index = 0; ((reglist[index].reg != 0xFFFF) && (err == 0));
-								index++) {
+	for (index = 0; ((reglist[index].reg != 0xFFFF) && (err == 0)); index++) {
 		err |=
-			ov5640_reg_write(client, reglist[index].reg,
+		    ov5640_reg_write(client, reglist[index].reg,
 				     reglist[index].val);
 		/*  Check for Pause condition */
 		if ((reglist[index + 1].reg == 0xFFFF)
-			&& (reglist[index + 1].val != 0)) {
+		    && (reglist[index + 1].val != 0)) {
 			msleep(reglist[index + 1].val);
 			index += 1;
 		}
@@ -823,23 +818,20 @@ static int ov5640_reg_writes(struct i2c_client *client,
 
 #ifdef OV5640_DEBUG
 static int ov5640_reglist_compare(struct i2c_client *client,
-			const struct ov5640_reg reglist[])
+				  const struct ov5640_reg reglist[])
 {
 	int err = 0, index;
 	u8 reg;
 
-	for (index = 0; ((reglist[index].reg != 0xFFFF) && (err == 0));
-								index++) {
-		err |=
-			ov5640_reg_read(client, reglist[index].reg,
-				&reg);
+	for (index = 0; ((reglist[index].reg != 0xFFFF) && (err == 0)); index++) {
+		err |= ov5640_reg_read(client, reglist[index].reg, &reg);
 		if (reglist[index].val != reg) {
 			iprintk("reg err:reg=0x%x val=0x%x rd=0x%x",
 				reglist[index].reg, reglist[index].val, reg);
 		}
 		/*  Check for Pause condition */
 		if ((reglist[index + 1].reg == 0xFFFF)
-			&& (reglist[index + 1].val != 0)) {
+		    && (reglist[index + 1].val != 0)) {
 			msleep(reglist[index + 1].val);
 			index += 1;
 		}
@@ -857,14 +849,14 @@ static int ov5640_reglist_compare(struct i2c_client *client,
  * Returns zero if successful, or non-zero otherwise.
  */
 static int ov5640_array_write(struct i2c_client *client,
-					const u8 *data, u16 size)
+			      const u8 * data, u16 size)
 {
 	int ret;
 	struct i2c_msg msg = {
 		.addr = client->addr,
 		.flags = 0,
 		.len = size,
-		.buf = (u8 *)data,
+		.buf = (u8 *) data,
 	};
 
 	ret = i2c_transfer(client->adapter, &msg, 1);
@@ -915,8 +907,8 @@ static int ov5640_af_enable(struct i2c_client *client)
 		return ret;
 
 	ret = ov5640_array_write(client, ov5640_afinit_data,
-		sizeof(ov5640_afinit_data)
-		/sizeof(ov5640_afinit_data[0]));
+				 sizeof(ov5640_afinit_data)
+				 / sizeof(ov5640_afinit_data[0]));
 	if (ret)
 		return ret;
 
@@ -1047,11 +1039,11 @@ static int ov5640_af_touch(struct i2c_client *client)
 
 		/* touch zone config */
 		ret = ov5640_reg_write(client, 0x3024,
-					(u8)ov5640->touch_area[0].leftTopX);
+				       (u8) ov5640->touch_area[0].leftTopX);
 		if (ret)
 			return ret;
 		ret = ov5640_reg_write(client, 0x3025,
-					(u8)ov5640->touch_area[0].leftTopY);
+				       (u8) ov5640->touch_area[0].leftTopY);
 		if (ret)
 			return ret;
 		ret = ov5640_reg_write(client, OV5640_CMD_ACK, 0x01);
@@ -1082,7 +1074,7 @@ static int ov5640_af_area(struct i2c_client *client)
 
 	/* verify # zones correct */
 	if ((ov5640->touch_focus) &&
-			(ov5640->touch_focus <= OV5640_MAX_FOCUS_AREAS)) {
+	    (ov5640->touch_focus <= OV5640_MAX_FOCUS_AREAS)) {
 
 		/* enable zone config */
 		ret = ov5640_reg_write(client, OV5640_CMD_ACK, 0x01);
@@ -1105,28 +1097,34 @@ static int ov5640_af_area(struct i2c_client *client)
 		for (i = 0; i < ov5640->touch_focus; i++) {
 
 			ret = ov5640_reg_write(client, 0x3024,
-						(u8)ov5640->touch_area[i].leftTopX);
+					       (u8) ov5640->touch_area[i].
+					       leftTopX);
 			if (ret)
 				return ret;
 			ret = ov5640_reg_write(client, 0x3025,
-						(u8)ov5640->touch_area[i].leftTopY);
+					       (u8) ov5640->touch_area[i].
+					       leftTopY);
 			if (ret)
 				return ret;
 			ret = ov5640_reg_write(client, 0x3026,
-						(u8)(ov5640->touch_area[i].leftTopX
-						+ ov5640->touch_area[i].rightBottomX));
+					       (u8) (ov5640->touch_area[i].
+						     leftTopX +
+						     ov5640->touch_area[i].
+						     rightBottomX));
 			if (ret)
 				return ret;
 			ret = ov5640_reg_write(client, 0x3027,
-						(u8)(ov5640->touch_area[i].leftTopY
-						+ ov5640->touch_area[i].rightBottomY));
+					       (u8) (ov5640->touch_area[i].
+						     leftTopY +
+						     ov5640->touch_area[i].
+						     rightBottomY));
 			if (ret)
 				return ret;
 			ret = ov5640_reg_write(client, OV5640_CMD_ACK, 0x01);
 			if (ret)
 				return ret;
 			ret = ov5640_reg_write(client, OV5640_CMD_MAIN,
-						(0x90+i));
+					       (0x90 + i));
 			if (ret)
 				return ret;
 			ret = ov5640_af_ack(client, 50);
@@ -1134,7 +1132,7 @@ static int ov5640_af_area(struct i2c_client *client)
 				dev_dbg(&client->dev, "zone update failed\n");
 				return ret;
 			}
-			weight[i] = (u8)ov5640->touch_area[i].weight;
+			weight[i] = (u8) ov5640->touch_area[i].weight;
 		}
 
 		/* enable zone with weight */
@@ -1179,15 +1177,12 @@ static int ov5640_af_area(struct i2c_client *client)
 		}
 	}
 
-
 	return ret;
 }
 
-
 /* Convert touch area from sensor resolution coords to ov5640 VVF zone */
 static int ov5640_af_zone_conv(struct i2c_client *client,
-					v4l2_touch_area *zone_area,
-					int zone)
+			       v4l2_touch_area * zone_area, int zone)
 {
 	int ret = 0;
 	u32 x0, y0, x1, y1, weight;
@@ -1202,17 +1197,15 @@ static int ov5640_af_zone_conv(struct i2c_client *client,
 
 	/* x y w h are in current sensor resolution dimensions */
 	if (((u32) zone_area->leftTopX + (u32) zone_area->rightBottomX)
-				> ov5640_frmsizes[ov5640->i_size].width) {
+	    > ov5640_frmsizes[ov5640->i_size].width) {
 		iprintk("zone width error: x=0x%x w=0x%x",
-					zone_area->leftTopX,
-					zone_area->rightBottomX);
+			zone_area->leftTopX, zone_area->rightBottomX);
 		ret = -EINVAL;
 		goto out;
-	} else if (((u32) zone_area->leftTopY+ (u32) zone_area->rightBottomY)
-				> ov5640_frmsizes[ov5640->i_size].height) {
+	} else if (((u32) zone_area->leftTopY + (u32) zone_area->rightBottomY)
+		   > ov5640_frmsizes[ov5640->i_size].height) {
 		iprintk("zone height error: y=0x%x h=0x%x",
-					zone_area->leftTopY,
-					zone_area->rightBottomY);
+			zone_area->leftTopY, zone_area->rightBottomY);
 		ret = -EINVAL;
 		goto out;
 	} else if ((u32) zone_area->weight > 1000) {
@@ -1223,18 +1216,18 @@ static int ov5640_af_zone_conv(struct i2c_client *client,
 	}
 
 	/* conv area to sensor VVF zone */
-	x0 = (u32)zone_area->leftTopX/ af_zone_scale[ov5640->i_size].x_scale;
+	x0 = (u32) zone_area->leftTopX / af_zone_scale[ov5640->i_size].x_scale;
 	if (x0 > (OV5640_AF_NORMALIZED_W - 8))
 		x0 = (OV5640_AF_NORMALIZED_W - 8);
-	x1 = ((u32)zone_area->leftTopX+ (unsigned int)zone_area->rightBottomX)
-		/ af_zone_scale[ov5640->i_size].x_scale;
+	x1 = ((u32) zone_area->leftTopX + (unsigned int)zone_area->rightBottomX)
+	    / af_zone_scale[ov5640->i_size].x_scale;
 	if (x1 > OV5640_AF_NORMALIZED_W)
 		x1 = OV5640_AF_NORMALIZED_W;
-	y0 = (u32)zone_area->leftTopY/ af_zone_scale[ov5640->i_size].y_scale;
+	y0 = (u32) zone_area->leftTopY / af_zone_scale[ov5640->i_size].y_scale;
 	if (y0 > (OV5640_AF_NORMALIZED_H - 8))
 		y0 = (OV5640_AF_NORMALIZED_H - 8);
-	y1 = ((u32)zone_area->leftTopY+ (unsigned int)zone_area->rightBottomY)
-		/ af_zone_scale[ov5640->i_size].y_scale;
+	y1 = ((u32) zone_area->leftTopY + (unsigned int)zone_area->rightBottomY)
+	    / af_zone_scale[ov5640->i_size].y_scale;
 	if (y1 > OV5640_AF_NORMALIZED_H)
 		y1 = OV5640_AF_NORMALIZED_H;
 
@@ -1261,16 +1254,16 @@ static int ov5640_af_zone_conv(struct i2c_client *client,
 	/* Minimum zone size */
 	if (((x1 - x0) >= 8) && ((y1 - y0) >= 8)) {
 
-		ov5640->touch_area[zone].leftTopX = (int) x0;
-		ov5640->touch_area[zone].leftTopY = (int) y0;
-		ov5640->touch_area[zone].rightBottomX = (int) (x1 - x0);
-		ov5640->touch_area[zone].rightBottomY = (int) (y1 - y0);
-		ov5640->touch_area[zone].weight = (int) weight;
+		ov5640->touch_area[zone].leftTopX = (int)x0;
+		ov5640->touch_area[zone].leftTopY = (int)y0;
+		ov5640->touch_area[zone].rightBottomX = (int)(x1 - x0);
+		ov5640->touch_area[zone].rightBottomY = (int)(y1 - y0);
+		ov5640->touch_area[zone].weight = (int)weight;
 
 	} else {
 		dev_dbg(&client->dev,
 			"zone %d size failed: x0=%d x1=%d y0=%d y1=%d w=%d\n",
-				zone, x0, x1, y0, y1, weight);
+			zone, x0, x1, y0, y1, weight);
 		ret = -EINVAL;
 		goto out;
 	}
@@ -1321,7 +1314,7 @@ static int ov5640_af_status(struct i2c_client *client, int num_trys)
 		ov5640_reg_read(client, 0x3027, &af_zone3);
 		ov5640_reg_read(client, 0x3028, &af_zone4);
 		if ((af_zone0 != 0) && (af_zone1 != 0) && (af_zone2 != 0)
-				&& (af_zone3 != 0) && (af_zone4 != 0)) {
+		    && (af_zone3 != 0) && (af_zone4 != 0)) {
 			dev_dbg(&client->dev, "zones failed\n");
 			ret = OV5640_AF_FAIL;
 			iprintk("zones failed");
@@ -1375,148 +1368,149 @@ static int ov5640_config_timing(struct i2c_client *client)
 	int ret, i = ov5640->i_size;
 	const struct ov5640_timing_cfg *timing_cfg;
 
-	if (ov5640_fmts[ov5640->i_fmt].code == V4L2_MBUS_FMT_JPEG_1X8)
+	printk("%s Enter\n", __FUNCTION__);
+	if (ov5640_fmts[ov5640->i_fmt].code == V4L2_MBUS_FMT_JPEG_1X8) {
+		printk
+		    ("ov5640_config_timing V4L2_MBUS_FMT_JPEG_1X8 capture \n ");
 		timing_cfg = &timing_cfg_jpeg[i];
-	else
+	} else
 		timing_cfg = &timing_cfg_yuv[i];
 
-	ret = ov5640_reg_write(client,
-				0x3800,
-				(timing_cfg->x_addr_start & 0xFF00) >> 8);
+	printk("ov5640_config_timing  %d -----\n", i);
+
+	/*ret = ov5640_reg_write(client,
+	   0x3406,  0x01 & 0xFF);//shut down: 0x01,  0x00: open awb
+	   if (ret){
+	   printk("write 0x3406  return  %d -----\n",ret );
+	   return ret;
+	   } */
+
+	ret = ov5640_reg_write(client, OV5640_TIMING_HS_HIGH,
+			       (timing_cfg->x_addr_start & 0xFF00) >> 8);
 	if (ret)
 		return ret;
 
-	ret = ov5640_reg_write(client,
-				0x3801, timing_cfg->x_addr_start & 0xFF);
+	ret = ov5640_reg_write(client, OV5640_TIMING_HS_LOW,
+			       timing_cfg->x_addr_start & 0xFF);
 	if (ret)
 		return ret;
 
-	ret = ov5640_reg_write(client,
-				0x3802,
-				(timing_cfg->y_addr_start & 0xFF00) >> 8);
+	ret = ov5640_reg_write(client, OV5640_TIMING_VS_HIGH,
+			       (timing_cfg->y_addr_start & 0xFF00) >> 8);
 	if (ret)
 		return ret;
 
-	ret = ov5640_reg_write(client,
-				0x3803, timing_cfg->y_addr_start & 0xFF);
+	ret = ov5640_reg_write(client, OV5640_TIMING_VS_LOW,
+			       timing_cfg->y_addr_start & 0xFF);
 	if (ret)
 		return ret;
 
-	ret = ov5640_reg_write(client,
-				0x3804,
-				(timing_cfg->x_addr_end & 0xFF00) >> 8);
+	ret = ov5640_reg_write(client, OV5640_TIMING_HW_HIGH,
+			       (timing_cfg->x_addr_end & 0xFF00) >> 8);
 	if (ret)
 		return ret;
 
-	ret = ov5640_reg_write(client, 0x3805, timing_cfg->x_addr_end & 0xFF);
+	ret = ov5640_reg_write(client, OV5640_TIMING_HW_LOW,
+			       timing_cfg->x_addr_end & 0xFF);
 	if (ret)
 		return ret;
 
-	ret = ov5640_reg_write(client,
-				0x3806,
-				(timing_cfg->y_addr_end & 0xFF00) >> 8);
+	ret = ov5640_reg_write(client, OV5640_TIMING_VH_HIGH,
+			       (timing_cfg->y_addr_end & 0xFF00) >> 8);
 	if (ret)
 		return ret;
 
-	ret = ov5640_reg_write(client, 0x3807, timing_cfg->y_addr_end & 0xFF);
+	ret = ov5640_reg_write(client, OV5640_TIMING_VH_LOW,
+			       timing_cfg->y_addr_end & 0xFF);
 	if (ret)
 		return ret;
 
-	ret = ov5640_reg_write(client,
-				0x3808,
-				(timing_cfg->h_output_size & 0xFF00) >> 8);
+	ret = ov5640_reg_write(client, OV5640_TIMING_DVPHO_HIGH,
+			       (timing_cfg->h_output_size & 0xFF00) >> 8);
 	if (ret)
 		return ret;
 
-	ret = ov5640_reg_write(client,
-				0x3809, timing_cfg->h_output_size & 0xFF);
+	ret = ov5640_reg_write(client, OV5640_TIMING_DVPHO_LOW,
+			       timing_cfg->h_output_size & 0xFF);
 	if (ret)
 		return ret;
 
-	ret = ov5640_reg_write(client,
-				0x380A,
-				(timing_cfg->v_output_size & 0xFF00) >> 8);
+	ret = ov5640_reg_write(client, OV5640_TIMING_DVPVO_HIGH,
+			       (timing_cfg->v_output_size & 0xFF00) >> 8);
 	if (ret)
 		return ret;
 
-	ret = ov5640_reg_write(client,
-				0x380B, timing_cfg->v_output_size & 0xFF);
+	ret = ov5640_reg_write(client, OV5640_TIMING_DVPVO_LOW,
+			       timing_cfg->v_output_size & 0xFF);
 	if (ret)
 		return ret;
 
-	ret = ov5640_reg_write(client,
-				0x380C,
-				(timing_cfg->h_total_size & 0xFF00) >> 8);
+	ret = ov5640_reg_write(client, OV5640_TIMING_HTS_HIGH,
+			       (timing_cfg->h_total_size & 0xFF00) >> 8);
 	if (ret)
 		return ret;
 
-	ret = ov5640_reg_write(client,
-				0x380D, timing_cfg->h_total_size & 0xFF);
+	ret = ov5640_reg_write(client, OV5640_TIMING_HTS_LOW,
+			       timing_cfg->h_total_size & 0xFF);
 	if (ret)
 		return ret;
 
-	ret = ov5640_reg_write(client,
-				0x380E,
-				(timing_cfg->v_total_size & 0xFF00) >> 8);
+	ret = ov5640_reg_write(client, OV5640_TIMING_VTS_HIGH,
+			       (timing_cfg->v_total_size & 0xFF00) >> 8);
 	if (ret)
 		return ret;
 
-	ret = ov5640_reg_write(client,
-				0x380F, timing_cfg->v_total_size & 0xFF);
+	ret = ov5640_reg_write(client, OV5640_TIMING_VTS_LOW,
+			       timing_cfg->v_total_size & 0xFF);
 	if (ret)
 		return ret;
 
-	ret = ov5640_reg_write(client,
-				0x3810,
-				(timing_cfg->isp_h_offset & 0xFF00) >> 8);
+	ret = ov5640_reg_write(client, OV5640_TIMING_HOFFSET_HIGH,
+			       (timing_cfg->isp_h_offset & 0xFF00) >> 8);
 	if (ret)
 		return ret;
 
-	ret = ov5640_reg_write(client,
-				0x3811, timing_cfg->isp_h_offset & 0xFF);
+	ret = ov5640_reg_write(client, OV5640_TIMING_HOFFSET_LOW,
+			       timing_cfg->isp_h_offset & 0xFF);
 	if (ret)
 		return ret;
 
-	ret = ov5640_reg_write(client,
-				0x3812,
-				(timing_cfg->isp_v_offset & 0xFF00) >> 8);
+	ret = ov5640_reg_write(client, OV5640_TIMING_VOFFSET_HIGH,
+			       (timing_cfg->isp_v_offset & 0xFF00) >> 8);
 	if (ret)
 		return ret;
 
-	ret = ov5640_reg_write(client,
-			       0x3813, timing_cfg->isp_v_offset & 0xFF);
+	ret = ov5640_reg_write(client, OV5640_TIMING_VOFFSET_LOW,
+			       timing_cfg->isp_v_offset & 0xFF);
 	if (ret)
 		return ret;
 
-	ret = ov5640_reg_write(client,
-				0x3814,
-				((timing_cfg->h_odd_ss_inc & 0xF) << 4) |
-				(timing_cfg->h_even_ss_inc & 0xF));
+	ret = ov5640_reg_write(client, OV5640_TIMING_X_INC,
+			       ((timing_cfg->h_odd_ss_inc & 0xF) << 4) |
+			       (timing_cfg->h_even_ss_inc & 0xF));
 	if (ret)
 		return ret;
 
-	ret = ov5640_reg_write(client,
-				0x3815,
-				((timing_cfg->v_odd_ss_inc & 0xF) << 4) |
-				(timing_cfg->v_even_ss_inc & 0xF));
+	ret = ov5640_reg_write(client, OV5640_TIMING_Y_INC,
+			       ((timing_cfg->v_odd_ss_inc & 0xF) << 4) |
+			       (timing_cfg->v_even_ss_inc & 0xF));
 	if (ret)
 		return ret;
 
-	ret = ov5640_reg_write(client,
-				0x3821, timing_cfg->out_mode_sel & 0xFF);
+	ret = ov5640_reg_write(client, OV5640_TIMING_MIRROR,
+			       timing_cfg->out_mode_sel & 0xFF);
 	if (ret)
 		return ret;
 
-	ret = ov5640_reg_write(client,
-				0x3108, timing_cfg->sclk_dividers & 0xFF);
+	ret = ov5640_reg_write(client, OV5640_SYSTEM_ROOT_DIVIDER,
+			       timing_cfg->sclk_dividers & 0xFF);
 	if (ret)
 		return ret;
 
-	ret = ov5640_reg_write(client, 0x3035, timing_cfg->sys_mipi_clk & 0xFF);
-	if (ret)
-		return ret;
+	ret = ov5640_reg_write(client, OV5640_SC_PLL_CTRL1,
+			       timing_cfg->sys_mipi_clk & 0xFF);
 
-	msleep(50);
+	printk("%s Exit\n", __FUNCTION__);
 
 	return ret;
 }
@@ -1529,17 +1523,15 @@ static int ov5640_s_stream(struct v4l2_subdev *sd, int enable)
 
 	if (enable) {
 		if ((ov5640->flashmode == FLASH_MODE_ON)
-			|| (ov5640->flashmode == FLASH_MODE_AUTO))
+		    || (ov5640->flashmode == FLASH_MODE_AUTO))
 			flash_gpio_strobe(1);
 		/* Power Up, Start Streaming */
 		ret = ov5640_reg_writes(client, ov5640_stream);
 		if ((ov5640->flashmode == FLASH_MODE_ON)
-			|| (ov5640->flashmode == FLASH_MODE_AUTO))
+		    || (ov5640->flashmode == FLASH_MODE_AUTO))
 			flash_gpio_strobe(0);
-		msleep(50);
-
 	} else {
-		/* Stop Streaming, Power Down*/
+		/* Stop Streaming, Power Down */
 		ret = ov5640_reg_writes(client, ov5640_power_down);
 	}
 
@@ -1556,8 +1548,8 @@ static int ov5640_set_bus_param(struct soc_camera_device *icd,
 static unsigned long ov5640_query_bus_param(struct soc_camera_device *icd)
 {
 	unsigned long flags = SOCAM_PCLK_SAMPLE_FALLING |
-		SOCAM_HSYNC_ACTIVE_HIGH | SOCAM_VSYNC_ACTIVE_HIGH |
-		SOCAM_DATA_ACTIVE_HIGH | SOCAM_MASTER;
+	    SOCAM_HSYNC_ACTIVE_HIGH | SOCAM_VSYNC_ACTIVE_HIGH |
+	    SOCAM_DATA_ACTIVE_HIGH | SOCAM_MASTER;
 
 	/* TODO: Do the right thing here, and validate bus params */
 
@@ -1629,6 +1621,7 @@ static int ov5640_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct ov5640 *ov5640 = to_ov5640(client);
 	int ret = 0;
+	unsigned char val = 0;
 
 	ret = ov5640_try_fmt(sd, mf);
 	if (ret < 0)
@@ -1637,18 +1630,27 @@ static int ov5640_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 	ov5640->i_size = ov5640_find_framesize(mf->width, mf->height);
 	ov5640->i_fmt = ov5640_find_datafmt(mf->code);
 
-	/*To avoide reentry init sensor, remove from here	*/
-	/*ret =  ov5640_reg_writes(client,configscript_common1);*/
-	if(ret){
-		printk(KERN_ERR "Error configuring configscript_common1\n");
+	printk("%s: Mode:[%d]  %dX%d i_size  %d i_fmt %d\n", __FUNCTION__,
+	       ov5640->runmode, mf->width, mf->height, ov5640->i_size, ov5640->i_fmt);
+
+	ret = ov5640_reg_writes(client, configscript_common1);
+	if (ret) {
+		printk("Error configuring configscript_common1\n");
 		return ret;
 	}
+	// manual 50 banding
+	ov5640_reg_write(client, 0x3c00, 0x04);
+	ov5640_reg_write(client, 0x3c01, 0x80);
+	ov5640_reg_read(client, 0x3a00, &val);
+	val |= 0x20;
+	ov5640_reg_write(client, 0x3a00, val);
+
 	switch ((u32) ov5640_fmts[ov5640->i_fmt].code) {
 	case V4L2_MBUS_FMT_UYVY8_2X8:
 		ret = ov5640_reg_writes(client, yuv422_init_common);
 		if (ret)
 			return ret;
-		ret = ov5640_reg_write(client, 0x4300, 0x32);
+		ret = ov5640_reg_write(client, OV5640_FORMAT_CTRL, 0x32);
 		if (ret)
 			return ret;
 		break;
@@ -1656,11 +1658,13 @@ static int ov5640_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 		ret = ov5640_reg_writes(client, yuv422_init_common);
 		if (ret)
 			return ret;
-		ret = ov5640_reg_write(client, 0x4300, 0x30);
+		ret = ov5640_reg_write(client, OV5640_FORMAT_CTRL, 0x30);
 		if (ret)
 			return ret;
 		break;
 	case V4L2_MBUS_FMT_JPEG_1X8:
+
+		printk("youle:ov5640_s_fmt V4L2_MBUS_FMT_JPEG_1X8 ");
 		ret = ov5640_reg_writes(client, jpeg_init_common);
 		if (ret)
 			return ret;
@@ -1707,7 +1711,7 @@ static int ov5640_get_af_status(struct i2c_client *client, int num_trys)
 	struct ov5640 *ov5640 = to_ov5640(client);
 
 	if (atomic_read(&ov5640->focus_status)
-			== OV5640_FOCUSING) {
+	    == OV5640_FOCUSING) {
 		ret = ov5640_af_status(client, num_trys);
 		if (ret == 0) {
 			ret = 1;
@@ -1715,7 +1719,7 @@ static int ov5640_get_af_status(struct i2c_client *client, int num_trys)
 		}
 	}
 	if (atomic_read(&ov5640->focus_status)
-			== OV5640_NOT_FOCUSING) {
+	    == OV5640_NOT_FOCUSING) {
 		ret = 2;
 		goto out;
 	}
@@ -1807,15 +1811,15 @@ static int ov5640_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		switch (ov5640->brightness) {
 		case EV_MINUS_1:
 			ret = ov5640_reg_writes(client,
-					ov5640_brightness_lv4_tbl);
+						ov5640_brightness_lv4_tbl);
 			break;
 		case EV_PLUS_1:
 			ret = ov5640_reg_writes(client,
-					ov5640_brightness_lv0_tbl);
+						ov5640_brightness_lv0_tbl);
 			break;
 		default:
 			ret = ov5640_reg_writes(client,
-					ov5640_brightness_lv2_default_tbl);
+						ov5640_brightness_lv2_default_tbl);
 			break;
 		}
 		if (ret)
@@ -1830,15 +1834,15 @@ static int ov5640_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		switch (ov5640->contrast) {
 		case CONTRAST_MINUS_1:
 			ret = ov5640_reg_writes(client,
-					ov5640_contrast_lv5_tbl);
+						ov5640_contrast_lv5_tbl);
 			break;
 		case CONTRAST_PLUS_1:
 			ret = ov5640_reg_writes(client,
-					ov5640_contrast_lv0_tbl);
+						ov5640_contrast_lv0_tbl);
 			break;
 		default:
 			ret = ov5640_reg_writes(client,
-					ov5640_contrast_default_lv3_tbl);
+						ov5640_contrast_default_lv3_tbl);
 			break;
 		}
 		if (ret)
@@ -1853,20 +1857,19 @@ static int ov5640_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 
 		switch (ov5640->colorlevel) {
 		case IMAGE_EFFECT_BNW:
-			ret = ov5640_reg_writes(client,
-					ov5640_effect_bw_tbl);
+			ret = ov5640_reg_writes(client, ov5640_effect_bw_tbl);
 			break;
 		case IMAGE_EFFECT_SEPIA:
 			ret = ov5640_reg_writes(client,
-					ov5640_effect_sepia_tbl);
+						ov5640_effect_sepia_tbl);
 			break;
 		case IMAGE_EFFECT_NEGATIVE:
 			ret = ov5640_reg_writes(client,
-					ov5640_effect_negative_tbl);
+						ov5640_effect_negative_tbl);
 			break;
 		default:
 			ret = ov5640_reg_writes(client,
-					ov5640_effect_normal_tbl);
+						ov5640_effect_normal_tbl);
 			break;
 		}
 		if (ret)
@@ -1881,15 +1884,15 @@ static int ov5640_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		switch (ov5640->saturation) {
 		case OV5640_SATURATION_MIN:
 			ret = ov5640_reg_writes(client,
-					ov5640_saturation_lv0_tbl);
+						ov5640_saturation_lv0_tbl);
 			break;
 		case OV5640_SATURATION_MAX:
 			ret = ov5640_reg_writes(client,
-					ov5640_saturation_lv5_tbl);
+						ov5640_saturation_lv5_tbl);
 			break;
 		default:
 			ret = ov5640_reg_writes(client,
-					ov5640_saturation_default_lv3_tbl);
+						ov5640_saturation_default_lv3_tbl);
 			break;
 		}
 		if (ret)
@@ -1904,15 +1907,15 @@ static int ov5640_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		switch (ov5640->sharpness) {
 		case OV5640_SHARPNESS_MIN:
 			ret = ov5640_reg_writes(client,
-					ov5640_sharpness_lv0_tbl);
+						ov5640_sharpness_lv0_tbl);
 			break;
 		case OV5640_SHARPNESS_MAX:
 			ret = ov5640_reg_writes(client,
-					ov5640_sharpness_lv3_tbl);
+						ov5640_sharpness_lv3_tbl);
 			break;
 		default:
 			ret = ov5640_reg_writes(client,
-					ov5640_sharpness_default_lv2_tbl);
+						ov5640_sharpness_default_lv2_tbl);
 			break;
 		}
 		if (ret)
@@ -1929,15 +1932,15 @@ static int ov5640_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		switch (ov5640->antibanding) {
 		case ANTI_BANDING_50HZ:
 			ret = ov5640_reg_writes(client,
-					ov5640_antibanding_50z_tbl);
+						ov5640_antibanding_50z_tbl);
 			break;
 		case ANTI_BANDING_60HZ:
 			ret = ov5640_reg_writes(client,
-					ov5640_antibanding_60z_tbl);
+						ov5640_antibanding_60z_tbl);
 			break;
 		default:
 			ret = ov5640_reg_writes(client,
-					ov5640_antibanding_auto_tbl);
+						ov5640_antibanding_auto_tbl);
 			break;
 		}
 		if (ret)
@@ -1958,38 +1961,28 @@ static int ov5640_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		switch (ov5640->whitebalance) {
 		case WHITE_BALANCE_FLUORESCENT:
 			ov_reg |= 0x01;
-			ret = ov5640_reg_write(client,
-					0x3406, ov_reg);
-			ret = ov5640_reg_writes(client,
-					ov5640_wb_fluorescent);
+			ret = ov5640_reg_write(client, 0x3406, ov_reg);
+			ret = ov5640_reg_writes(client, ov5640_wb_fluorescent);
 			break;
 		case WHITE_BALANCE_SUNNY:
 			ov_reg |= 0x01;
-			ret = ov5640_reg_write(client,
-					0x3406, ov_reg);
-			ret = ov5640_reg_writes(client,
-					ov5640_wb_daylight);
+			ret = ov5640_reg_write(client, 0x3406, ov_reg);
+			ret = ov5640_reg_writes(client, ov5640_wb_daylight);
 			break;
 		case WHITE_BALANCE_CLOUDY:
 			ov_reg |= 0x01;
-			ret = ov5640_reg_write(client,
-					0x3406, ov_reg);
-			ret = ov5640_reg_writes(client,
-				ov5640_wb_cloudy);
+			ret = ov5640_reg_write(client, 0x3406, ov_reg);
+			ret = ov5640_reg_writes(client, ov5640_wb_cloudy);
 			break;
 		case WHITE_BALANCE_TUNGSTEN:
 			ov_reg |= 0x01;
-			ret = ov5640_reg_write(client,
-					0x3406, ov_reg);
-			ret = ov5640_reg_writes(client,
-					ov5640_wb_tungsten);
+			ret = ov5640_reg_write(client, 0x3406, ov_reg);
+			ret = ov5640_reg_writes(client, ov5640_wb_tungsten);
 			break;
 		default:
 			ov_reg &= ~(0x01);
-			ret = ov5640_reg_write(client,
-					0x3406, ov_reg);
-			ret = ov5640_reg_writes(client,
-						ov5640_wb_def);
+			ret = ov5640_reg_write(client, 0x3406, ov_reg);
+			ret = ov5640_reg_writes(client, ov5640_wb_def);
 			break;
 		}
 		if (ret) {
@@ -2004,9 +1997,9 @@ static int ov5640_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			return -EINVAL;
 
 		if ((ov5640->i_size < OV5640_SIZE_QVGA) ||
-				(ov5640->i_size > OV5640_SIZE_1280x960)) {
+		    (ov5640->i_size > OV5640_SIZE_1280x960)) {
 			if (ctrl->value == FRAME_RATE_30 ||
-					ctrl->value == FRAME_RATE_AUTO)
+			    ctrl->value == FRAME_RATE_AUTO)
 				return 0;
 			else
 				return -EINVAL;
@@ -2016,34 +2009,27 @@ static int ov5640_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 
 		switch (ov5640->framerate) {
 		case FRAME_RATE_5:
-			ret = ov5640_reg_writes(client,
-					ov5640_fps_5);
+			ret = ov5640_reg_writes(client, ov5640_fps_5);
 			break;
 		case FRAME_RATE_7:
-			ret = ov5640_reg_writes(client,
-					ov5640_fps_7);
+			ret = ov5640_reg_writes(client, ov5640_fps_7);
 			break;
 		case FRAME_RATE_10:
-			ret = ov5640_reg_writes(client,
-					ov5640_fps_10);
+			ret = ov5640_reg_writes(client, ov5640_fps_10);
 			break;
 		case FRAME_RATE_15:
-			ret = ov5640_reg_writes(client,
-					ov5640_fps_15);
+			ret = ov5640_reg_writes(client, ov5640_fps_15);
 			break;
 		case FRAME_RATE_20:
-			ret = ov5640_reg_writes(client,
-					ov5640_fps_20);
+			ret = ov5640_reg_writes(client, ov5640_fps_20);
 			break;
 		case FRAME_RATE_25:
-			ret = ov5640_reg_writes(client,
-					ov5640_fps_25);
+			ret = ov5640_reg_writes(client, ov5640_fps_25);
 			break;
 		case FRAME_RATE_30:
 		case FRAME_RATE_AUTO:
 		default:
-			ret = ov5640_reg_writes(client,
-					ov5640_fps_30);
+			ret = ov5640_reg_writes(client, ov5640_fps_30);
 			break;
 		}
 		if (ret)
@@ -2092,18 +2078,17 @@ static int ov5640_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		if (ov5640->touch_focus < OV5640_MAX_FOCUS_AREAS) {
 			v4l2_touch_area touch_area;
 			if (copy_from_user(&touch_area,
-					(v4l2_touch_area *)ctrl->value,
-					sizeof(v4l2_touch_area)))
+					   (v4l2_touch_area *) ctrl->value,
+					   sizeof(v4l2_touch_area)))
 				return -EINVAL;
 
 			iprintk("z=%d x=0x%x y=0x%x w=0x%x h=0x%x weight=0x%x",
 				ov5640->touch_focus, touch_area.leftTopX,
 				touch_area.leftTopY, touch_area.rightBottomX,
-				touch_area.rightBottomY,
-				touch_area.weight);
+				touch_area.rightBottomY, touch_area.weight);
 
 			ret = ov5640_af_zone_conv(client, &touch_area,
-							ov5640->touch_focus);
+						  ov5640->touch_focus);
 			if (ret == 0)
 				ov5640->touch_focus++;
 			ret = 0;
@@ -2125,10 +2110,10 @@ static int ov5640_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		case AUTO_FOCUS_OFF:
 
 			if (atomic_read(&ov5640->focus_status)
-					== OV5640_FOCUSING) {
+			    == OV5640_FOCUSING) {
 				ret = ov5640_af_release(client);
 				atomic_set(&ov5640->focus_status,
-						OV5640_NOT_FOCUSING);
+					   OV5640_NOT_FOCUSING);
 			}
 			ov5640->touch_focus = 0;
 			break;
@@ -2149,29 +2134,25 @@ static int ov5640_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	case V4L2_CID_CAMERA_FLASH_MODE:
 		set_flash_mode(ctrl->value, ov5640);
 		break;
-
 	case V4L2_CID_CAM_PREVIEW_ONOFF:
-	{
-		if (ctrl->value) {
-			printk(KERN_INFO "ov5640 runmode = %d", runmode);
-			if (runmode == CAM_RUNNING_MODE_NOTREADY)
-				ov5640_preview_start(client);
-
-			runmode = CAM_RUNNING_MODE_PREVIEW;
-		} else
-			runmode = CAM_RUNNING_MODE_NOTREADY;
-
-		break;
-	}
-
+		{
+			if (ctrl->value) {
+				if (ov5640->runmode == CAM_RUNNING_MODE_NOTREADY)
+					ov5640_preview_start(client);
+				ov5640->runmode = CAM_RUNNING_MODE_PREVIEW;
+				printk("ov5640 runmode = preview");
+			} else
+				ov5640->runmode = CAM_RUNNING_MODE_NOTREADY;
+			break;
+		}
 	case V4L2_CID_CAM_CAPTURE:
-		runmode = CAM_RUNNING_MODE_CAPTURE;
+		printk("ov5640 runmode = capture");
+		ov5640->runmode = CAM_RUNNING_MODE_CAPTURE;
 		break;
-
 	case V4L2_CID_CAM_CAPTURE_DONE:
-		runmode = CAM_RUNNING_MODE_CAPTURE_DONE;
+		printk("ov5640 runmode = capture_done");
+		ov5640->runmode = CAM_RUNNING_MODE_CAPTURE_DONE;
 		break;
-
 	}
 
 	return ret;
@@ -2191,7 +2172,7 @@ int set_flash_mode(int mode, struct ov5640 *ov5640)
 		}
 	} else if (mode == FLASH_MODE_TORCH_ON) {
 		if ((ov5640->flashmode == FLASH_MODE_ON)
-			|| (ov5640->flashmode == FLASH_MODE_AUTO))
+		    || (ov5640->flashmode == FLASH_MODE_AUTO))
 			set_flash_mode(FLASH_MODE_OFF, ov5640);
 		adp1653_gpio_toggle(1);
 		adp1653_gpio_strobe(0);
@@ -2203,7 +2184,7 @@ int set_flash_mode(int mode, struct ov5640 *ov5640)
 		adp1653_sw_strobe(1);
 	} else if (mode == FLASH_MODE_ON) {
 		if ((ov5640->flashmode == FLASH_MODE_TORCH_ON)
-			|| (ov5640->flashmode == FLASH_MODE_AUTO))
+		    || (ov5640->flashmode == FLASH_MODE_AUTO))
 			set_flash_mode(FLASH_MODE_OFF, ov5640);
 		adp1653_gpio_strobe(0);
 		adp1653_gpio_toggle(1);
@@ -2215,7 +2196,7 @@ int set_flash_mode(int mode, struct ov5640 *ov5640)
 		/* Strobing should hapen later */
 	} else if (mode == FLASH_MODE_AUTO) {
 		if ((ov5640->flashmode == FLASH_MODE_TORCH_ON)
-			|| (ov5640->flashmode == FLASH_MODE_ON))
+		    || (ov5640->flashmode == FLASH_MODE_ON))
 			set_flash_mode(FLASH_MODE_OFF, ov5640);
 		adp1653_gpio_strobe(0);
 		adp1653_gpio_toggle(1);
@@ -2279,7 +2260,7 @@ static long ov5640_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 	case VIDIOC_JPEG_G_PACKET_INFO:
 		{
 			struct v4l2_jpeg_packet_info *p =
-				(struct v4l2_jpeg_packet_info *)arg;
+			    (struct v4l2_jpeg_packet_info *)arg;
 			p->padded = 0;
 			p->packet_size = 0x400;
 			break;
@@ -2288,15 +2269,15 @@ static long ov5640_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 	case VIDIOC_SENSOR_G_OPTICAL_INFO:
 		{
 			struct v4l2_sensor_optical_info *p =
-				(struct v4l2_sensor_optical_info *)arg;
+			    (struct v4l2_sensor_optical_info *)arg;
 			/* assuming 67.5 degree diagonal viewing angle */
 			p->hor_angle.numerator = 5401;
 			p->hor_angle.denominator = 100;
 			p->ver_angle.numerator = 3608;
 			p->ver_angle.denominator = 100;
-			p->focus_distance[0] = 10; /* near focus in cm */
-			p->focus_distance[1] = 100; /* optimal focus in cm */
-			p->focus_distance[2] = -1; /* infinity */
+			p->focus_distance[0] = 10;	/* near focus in cm */
+			p->focus_distance[1] = 100;	/* optimal focus in cm */
+			p->focus_distance[2] = -1;	/* infinity */
 			p->focal_length.numerator = 342;
 			p->focal_length.denominator = 100;
 			break;
@@ -2374,19 +2355,19 @@ static int ov5640_init(struct i2c_client *client)
 		goto out;
 #endif
 
-	/* Power Up, Start Streaming for AF Init*/
+	/* Power Up, Start Streaming for AF Init */
 	ret = ov5640_reg_writes(client, ov5640_stream);
 	if (ret)
 		goto out;
-	/* Delay for sensor streaming*/
+	/* Delay for sensor streaming */
 	msleep(20);
 
-	/* AF Init*/
+	/* AF Init */
 	ret = ov5640_af_enable(client);
 	if (ret)
 		goto out;
 
-	/* Stop Streaming, Power Down*/
+	/* Stop Streaming, Power Down */
 	ret = ov5640_reg_writes(client, ov5640_power_down);
 
 	/* default brightness and contrast */
@@ -2416,7 +2397,7 @@ static int ov5640_video_probe(struct soc_camera_device *icd,
 {
 	unsigned long flags;
 	int ret = 0;
-	u8 revision = 0;
+	u8 id_high, id_low, revision = 0;
 
 	/*
 	 * We must have a parent by now. And it cannot be a wrong one.
@@ -2426,7 +2407,9 @@ static int ov5640_video_probe(struct soc_camera_device *icd,
 	    to_soc_camera_host(icd->dev.parent)->nr != icd->iface)
 		return -ENODEV;
 
-	ret = ov5640_reg_read(client, 0x302A, &revision);
+	ret = ov5640_reg_read(client, OV5640_CHIP_ID_HIGH, &id_high);
+	ret += ov5640_reg_read(client, OV5640_CHIP_ID_LOW, &id_low);
+	ret += ov5640_reg_read(client, OV5640_CHIP_REVISION, &revision);
 	if (ret) {
 		dev_err(&client->dev, "Failure to detect OV5640 chip\n");
 		goto out;
@@ -2510,23 +2493,29 @@ static int ov5640_enum_frameintervals(struct v4l2_subdev *sd,
 		interval->discrete.numerator = 1;
 		interval->discrete.denominator = 15;
 		break;
-	case OV5640_SIZE_720P:
-		interval->discrete.numerator = 1;
-		interval->discrete.denominator = 0;
-		break;
 	case OV5640_SIZE_VGA:
-	case OV5640_SIZE_QVGA:
-	case OV5640_SIZE_1280x960:
-	default:
 		interval->discrete.numerator = 1;
 		interval->discrete.denominator = 24;
 		break;
+
+	case OV5640_SIZE_1280x960:
+		interval->discrete.numerator = 1;
+		interval->discrete.denominator = 0;
+		break;
+
+	case OV5640_SIZE_QVGA:
+		//case OV5640_SIZE_1280x960:
+	case OV5640_SIZE_720P:
+	default:
+		interval->discrete.numerator = 1;
+		interval->discrete.denominator = 0;
+		break;
 	}
-/*	printk(KERN_ERR"%s: width=%d height=%d fi=%d/%d\n", __func__,
-			interval->width,
-			interval->height, interval->discrete.numerator,
-			interval->discrete.denominator);
-			*/
+	/*  printk(KERN_ERR"%s: width=%d height=%d fi=%d/%d\n", __func__,
+	   interval->width,
+	   interval->height, interval->discrete.numerator,
+	   interval->discrete.denominator);
+	 */
 	return 0;
 }
 
@@ -2568,6 +2557,7 @@ static int ov5640_g_parm(struct v4l2_subdev *sd, struct v4l2_streamparm *param)
 
 	return 0;
 }
+
 static int ov5640_s_parm(struct v4l2_subdev *sd, struct v4l2_streamparm *param)
 {
 	/*
@@ -2589,17 +2579,17 @@ static struct v4l2_subdev_video_ops ov5640_subdev_video_ops = {
 	.g_parm = ov5640_g_parm,
 	.s_parm = ov5640_s_parm,
 };
-static int ov5640_g_skip_frames(struct v4l2_subdev *sd, u32 *frames)
+
+static int ov5640_g_skip_frames(struct v4l2_subdev *sd, u32 * frames)
 {
 	/* Quantity of initial bad frames to skip. Revisit. */
-	/*Waitting for AWB stability,  avoid green color issue*/
+	/*Waitting for AWB stability,  avoid green color issue */
 	*frames = 5;
 
 	return 0;
 }
 
-static int ov5640_g_interface_parms(struct v4l2_subdev *sd,
-				    struct v4l2_subdev_sensor_interface_parms
+static int ov5640_g_interface_parms(struct v4l2_subdev *sd, struct v4l2_subdev_sensor_interface_parms
 				    *parms)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
@@ -2615,7 +2605,7 @@ static int ov5640_g_interface_parms(struct v4l2_subdev *sd,
 
 	/* set the hs term time */
 	if (ov5640_fmts[ov5640->i_fmt].code == V4L2_MBUS_FMT_JPEG_1X8)
-		sclk_dividers  = timing_cfg_jpeg[ov5640->i_size].sclk_dividers;
+		sclk_dividers = timing_cfg_jpeg[ov5640->i_size].sclk_dividers;
 	else
 		sclk_dividers = timing_cfg_yuv[ov5640->i_size].sclk_dividers;
 
@@ -2643,8 +2633,6 @@ static int ov5640_g_interface_parms(struct v4l2_subdev *sd,
 
 	return 0;
 }
-
-
 
 static struct v4l2_subdev_sensor_ops ov5640_subdev_sensor_ops = {
 	.g_skip_frames = ov5640_g_skip_frames,
