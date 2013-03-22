@@ -450,7 +450,7 @@ static long BCMLOG_Ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 					break;
 				}
 
-				kbuf_str = kmalloc(lcl->size + 1, GFP_ATOMIC);
+				kbuf_str = kmalloc(lcl->size + 1, GFP_KERNEL);
 
 				if (!kbuf_str) {
 					BCMLOG_PRINTF(BCMLOG_CONSOLE_MSG_ERROR,
@@ -527,7 +527,7 @@ static long BCMLOG_Ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 					 **/
 					void *kernelSigBuf =
 					    kmalloc(lcl->sigBufSize,
-						    GFP_ATOMIC);
+						    GFP_KERNEL);
 
 					if (!kernelSigBuf) {
 						BCMLOG_PRINTF
