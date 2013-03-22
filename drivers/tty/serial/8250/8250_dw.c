@@ -300,7 +300,7 @@ static int __devinit dw8250_probe(struct platform_device *pdev)
 
 #ifdef CONFIG_BRCM_UART_CHANGES
 		val = of_property_read_string(np, "port-name", &prop);
-		if (prop != NULL) {
+		if (val == 0) {
 #ifdef CONFIG_DW_BT_UART_CHANGES
 			if (!strcmp(prop, "bluetooth"))
 				port.handle_irq = bt_dw8250_handle_irq;
@@ -308,9 +308,8 @@ static int __devinit dw8250_probe(struct platform_device *pdev)
 		}
 
 #ifndef CONFIG_MACH_HAWAII_FPGA
-		of_property_read_string(np, "clk-name", &prop);
-		if (prop == NULL) {
-			dev_err(&pdev->dev,"clk-name Not found in dt-blob \n");
+		if (of_property_read_string(np, "clk-name", &prop)) {
+			dev_err(&pdev->dev, "clk-name Not found in dt-blob\n");
 			return -1;
 		}
 

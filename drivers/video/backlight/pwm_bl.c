@@ -189,9 +189,8 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 		}
 		data->pwm_period_ns = val;
 
-		of_property_read_string(pdev->dev.of_node,
-			"pwm-request-label", &pwm_request_label);
-		if (pwm_request_label == NULL) {
+		if (of_property_read_string(pdev->dev.of_node,
+			"pwm-request-label", &pwm_request_label)) {
 			ret = -EINVAL;
 			goto err_read;
 		}

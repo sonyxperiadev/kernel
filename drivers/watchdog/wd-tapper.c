@@ -315,7 +315,7 @@ static int __devinit wd_tapper_pltfm_probe(struct platform_device *pdev)
 
 		val = of_property_read_string(np, "timer-name",
 				(const char **)&prop);
-		if (prop == NULL)
+		if (val != 0)
 			goto out;
 
 		wd_tapper_data->kt = kona_timer_request(prop, ch_num);

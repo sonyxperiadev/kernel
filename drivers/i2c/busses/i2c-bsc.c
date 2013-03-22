@@ -1839,15 +1839,14 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 
 		dev->dynamic_speed = hw_cfg->dynamic_speed = val;
 
-		of_property_read_string(pdev->dev.of_node, "bsc-clk", &prop);
-		if (prop == NULL)
+		if (of_property_read_string(pdev->dev.of_node,
+			"bsc-clk", &prop))
 			goto err_free_priv_data_mem;
 
 		hw_cfg->bsc_clk = (char *)prop;
 
-		of_property_read_string(pdev->dev.of_node, "bsc-apb-clk",
-			&prop);
-		if (prop == NULL)
+		if (of_property_read_string(pdev->dev.of_node, "bsc-apb-clk",
+			&prop))
 			goto err_free_priv_data_mem;
 
 		hw_cfg->retries = val;

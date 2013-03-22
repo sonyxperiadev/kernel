@@ -747,9 +747,8 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 
 		hw_cfg->flags = val;
 
-		of_property_read_string(pdev->dev.of_node, "peri-clk-name",
-			&prop);
-		if (prop == NULL) {
+		if (of_property_read_string(pdev->dev.of_node, "peri-clk-name",
+			&prop)) {
 			dev_err(&pdev->dev, "peri-clk-name read failed in %s\n",
 			__func__);
 			goto err_free_priv_data_mem;
@@ -757,9 +756,8 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 
 		hw_cfg->peri_clk_name = (char *)prop;
 
-		of_property_read_string(pdev->dev.of_node, "ahb-clk-name",
-			&prop);
-		if (prop == NULL) {
+		if (of_property_read_string(pdev->dev.of_node, "ahb-clk-name",
+			&prop)) {
 			dev_err(&pdev->dev, "ahb-clk-name read failed in %s\n",
 			__func__);
 			goto err_free_priv_data_mem;
@@ -767,9 +765,8 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 
 		hw_cfg->ahb_clk_name = (char *)prop;
 
-		of_property_read_string(pdev->dev.of_node, "sleep-clk-name",
-			&prop);
-		if (prop == NULL) {
+		if (of_property_read_string(pdev->dev.of_node, "sleep-clk-name",
+			&prop)) {
 			dev_err(&pdev->dev, "sleep-clk-name read failed in %s\n",
 			__func__);
 			goto err_free_priv_data_mem;
@@ -787,9 +784,8 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 		hw_cfg->peri_clk_rate = val;
 
 		if (hw_cfg->devtype == SDIO_DEV_TYPE_SDMMC) {
-			of_property_read_string(pdev->dev.of_node,
-				"vddo-regulator-name", &prop);
-			if (prop == NULL) {
+			if (of_property_read_string(pdev->dev.of_node,
+				"vddo-regulator-name", &prop)) {
 				dev_err(&pdev->dev, "vddo-regulator-name read "\
 				"failed in %s\n", __func__);
 				goto err_free_priv_data_mem;
@@ -797,9 +793,8 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 
 			hw_cfg->vddo_regulator_name = (char *)prop;
 
-			of_property_read_string(pdev->dev.of_node,
-				"vddsdxc-regulator-name", &prop);
-			if (prop == NULL) {
+			if (of_property_read_string(pdev->dev.of_node,
+				"vddsdxc-regulator-name", &prop)) {
 				dev_err(&pdev->dev, "vddsdxc-regulator-name"\
 				"read failed in %s\n", __func__);
 				goto err_free_priv_data_mem;
