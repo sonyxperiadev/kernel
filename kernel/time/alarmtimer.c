@@ -103,15 +103,14 @@ static int alarmtimer_rtc_add_device(struct device *dev,
 
 #ifdef CONFIG_BCM_RTC_ALARM_BOOT
 	if (rtcdev) {
+		if (poweron_rtcdev)
+			return -EBUSY;
 		spin_lock_irqsave(&rtcdev_lock, flags);
-		if (!poweron_rtcdev) {
-			poweron_rtcdev = rtc;
-			get_device(dev);
-			pr_alarm(INFO,
-				"alarmtimer: add %s as poweron alarm\n",
-				rtc->name);
-		}
+		poweron_rtcdev = rtc;
+		get_device(dev);
 		spin_unlock_irqrestore(&rtcdev_lock, flags);
+		pr_alarm(INFO,
+			"alarmtimer: add %s as poweron alarm\n", rtc->name);
 		return 0;
 	}
 #else

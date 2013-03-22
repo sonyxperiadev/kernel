@@ -32,6 +32,8 @@
 #include <linux/workqueue.h>
 #include <linux/fs.h>
 #include <linux/slab.h>
+#include <linux/of.h>
+#include <linux/of_platform.h>
 #include <mach/kona_timer.h>
 #include <mach/timex.h>
 #include "rtc-core.h"
@@ -52,9 +54,6 @@ module_param_named(dbg_mask, dbg_mask, int, S_IRUGO | S_IWUSR | S_IWGRP);
 				pr_info(args); \
 			} \
 		} while (0)
-
-#define KONA_TIMER_NAME		"aon-timer"
-#define KONA_TIMER_CHAN		1
 
 /* Seconds to ticks conversion */
 #define sec_to_ticks(x) ((x)*CLOCK_TICK_RATE)
@@ -237,8 +236,27 @@ static int __devinit rtc_kona_probe(struct platform_device *pdev)
 	int ret = 0;
 	struct rtc_kona *rtc_info;
 	struct timer_ch_cfg cfg;
+	struct device_node *np = pdev->dev.of_node;
+	unsigned int ch_num = 0xffff; /* Invalid channel num */
+	u32 val;
+	char *timer_name;
 
 	pr_rtc(INIT, "rtc_kona_probe!\n");
+
+	if (!of_property_read_u32(np, "ch-num", &val))
+		ch_num = val;
+
+	if (ch_num > 3) {
+		pr_rtc(ERROR, "wrong channel num %d!\n", ch_num);
+		return -EINVAL;
+	}
+
+	val = of_property_read_string(np, "timer-name",
+		(const char **)&timer_name);
+	if (val || timer_name == NULL) {
+		pr_rtc(ERROR, "no timer-name found in dts!\n");
+		return -EINVAL;
+	}
 
 	rtc_info = kzalloc(sizeof(struct rtc_kona), GFP_KERNEL);
 	if (!rtc_info) {
@@ -246,11 +264,10 @@ static int __devinit rtc_kona_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
-	rtc_info->kt = kona_timer_request(KONA_TIMER_NAME,
-		KONA_TIMER_CHAN);
+	rtc_info->kt = kona_timer_request(timer_name, ch_num);
 	if (!rtc_info->kt) {
 		pr_rtc(ERROR, "no kona timer channel avaliable %d\n",
-			KONA_TIMER_CHAN);
+			ch_num);
 		ret = -ENODEV;
 		goto __error;
 	}
@@ -307,9 +324,17 @@ static int __devexit rtc_kona_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static const struct of_device_id rtc_kona_match[] = {
+	{ .compatible = "bcm,rtc-kona" },
+	{ /* Sentinel */ }
+};
+MODULE_DEVICE_TABLE(of, rtc_kona_match);
+
 static struct platform_driver rtc_kona_driver = {
 	.driver = {
 		.name = "rtc_kona",
+		.owner = THIS_MODULE,
+		.of_match_table = rtc_kona_match,
 	},
 	.probe = rtc_kona_probe,
 	.remove = __devexit_p(rtc_kona_remove),

@@ -722,10 +722,6 @@ struct platform_device *hawaii_common_plat_devices[] __initdata = {
 	&rng_device,
 #endif
 
-#ifdef CONFIG_RTC_DRV_KONA
-	&kona_rtc_device,
-#endif
-
 #if defined(CONFIG_USB_DWC_OTG)
 	&hawaii_usb_phy_platform_device,
 	&hawaii_hsotgctrl_platform_device,
