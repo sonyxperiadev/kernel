@@ -36,6 +36,7 @@ extern int IpcCPCrashCheck(void);
 extern void ipcs_get_ipc_state(int *state);
 extern int cp_crashed;
 extern int BCMLOG_GetCpCrashLogDevice(void);
+extern unsigned ramdump_enable;
 
 #ifdef __cplusplus
 }
