@@ -16,7 +16,7 @@
  *****************************************************************************/
 
 #include <linux/module.h>
-#include <plat/kona_avs.h>
+#include <mach/avs.h>
 #include "pm_params.h"
 
 #define ARRAY_LIST(...) {__VA_ARGS__}
