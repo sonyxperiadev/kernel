@@ -134,6 +134,12 @@ struct bsc_i2c_dev {
 	/* lock for the I2C device */
 	struct mutex dev_lock;
 
+#ifdef CONFIG_LOCKDEP
+	/* As lock names are same, we have to declare lock_class
+	 * for each i2c_dev */
+	struct lock_class_key bsc_dev_lock_class;
+#endif
+
 	/* to signal the command completion */
 	struct completion ses_done;
 
@@ -1913,6 +1919,12 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 
 	/* Initialize the mutex */
 	mutex_init(&dev->dev_lock);
+
+#ifdef CONFIG_LOCKDEP
+	/* As lock names are same, we have to declare lock_class
+	 * for each i2c_dev */
+	lockdep_set_class(&dev->dev_lock, &dev->bsc_dev_lock_class);
+#endif
 
 	/* Initialize the completion flags */
 	init_completion(&dev->ses_done);
