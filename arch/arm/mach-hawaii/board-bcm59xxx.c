@@ -175,7 +175,7 @@ static struct regulator_init_data bcm59xxx_rfldo_data = {
 			.min_uV = 1300000,
 			.max_uV = 3300000,
 			.valid_ops_mask = REGULATOR_CHANGE_STATUS |
-			REGULATOR_CHANGE_VOLTAGE,
+					REGULATOR_CHANGE_VOLTAGE,
 			.always_on = 1,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(rf_supply),
@@ -190,9 +190,8 @@ static struct regulator_init_data bcm59xxx_camldo1_data = {
 			.name = "camldo",
 			.min_uV = 1300000,
 			.max_uV = 3300000,
-			.valid_ops_mask =
-			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_MODE |
-			REGULATOR_CHANGE_VOLTAGE,
+			.valid_ops_mask = REGULATOR_CHANGE_STATUS |
+					REGULATOR_CHANGE_VOLTAGE,
 			.always_on = 1,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(cam1_supply),
@@ -207,9 +206,8 @@ static struct regulator_init_data bcm59xxx_camldo2_data = {
 			.name = "camldo2",
 			.min_uV = 1300000,
 			.max_uV = 3300000,
-			.valid_ops_mask =
-			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_MODE |
-			REGULATOR_CHANGE_VOLTAGE,
+			.valid_ops_mask = REGULATOR_CHANGE_STATUS |
+					REGULATOR_CHANGE_VOLTAGE,
 			.always_on = 1,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(cam2_supply),
@@ -324,8 +322,12 @@ static struct regulator_init_data bcm59xxx_audldo_data = {
 			.name = "audldo",
 			.min_uV = 1300000,
 			.max_uV = 3300000,
-			.valid_ops_mask =
-			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
+			.valid_ops_mask = REGULATOR_CHANGE_STATUS |
+					REGULATOR_CHANGE_VOLTAGE |
+					REGULATOR_CHANGE_MODE,
+			.valid_modes_mask = REGULATOR_MODE_NORMAL |
+						REGULATOR_MODE_IDLE |
+						REGULATOR_MODE_STANDBY,
 			.always_on = 1,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(aud_supply),
@@ -671,7 +673,7 @@ struct bcmpmu59xxx_regulator_init_data
 		[BCMPMU_REGULATOR_AUDLDO] = {
 			.id = BCMPMU_REGULATOR_AUDLDO,
 			.initdata = &bcm59xxx_audldo_data,
-			.dsm_mode = BCMPMU_REGL_LPM_IN_DSM,
+			.dsm_mode = BCMPMU_REGL_OFF_IN_DSM,
 			.pc_pins_map = PCPIN_MAP_ENC(0, PMU_PC2|PMU_PC3),
 			.name = "aud",
 			.req_volt = 0,

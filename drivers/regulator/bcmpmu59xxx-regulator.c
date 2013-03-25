@@ -59,6 +59,8 @@ static int bcmpmureg_get_status(struct regulator_dev *rdev);
 static int bcmpmureg_disable(struct regulator_dev *rdev);
 static int bcmpmureg_enable(struct regulator_dev *rdev);
 static int bcmpmureg_is_enabled(struct regulator_dev *rdev);
+static int bcmpmuldo_set_mode(struct regulator_dev *rdev, u32 mode);
+static u32 bcmpmuldo_get_mode(struct regulator_dev *rdev);
 static struct regulator_dev *regl[BCMPMU_REGULATOR_MAX];
 
 struct bcmpmu59xxx_rgltr_param {
@@ -81,6 +83,8 @@ struct regulator_ops bcmpmu59xxx_ldo_ops = {
 	.get_status = bcmpmureg_get_status,
 	.set_voltage = bcmpmuldo_set_voltage,
 	.get_voltage = bcmpmuldo_get_voltage,
+	.set_mode = bcmpmuldo_set_mode,
+	.get_mode = bcmpmuldo_get_mode,
 };
 
 static int debug_mask =  BCMPMU_PRINT_INIT | BCMPMU_PRINT_ERROR;
@@ -101,6 +105,58 @@ struct pwr_mode_reg rgltr_pmode_buf[BCMPMU_REGULATOR_MAX];
 
 static int force_enable;
 #endif
+
+static u32 __rgltr_to_pmmode(u32 rmode)
+{
+	u32 pmmode = PMMODE_ON;
+	switch (rmode) {
+	case REGULATOR_MODE_FAST:
+	case REGULATOR_MODE_NORMAL:
+		pmmode = PMMODE_ON;
+		break;
+	case REGULATOR_MODE_IDLE:
+		pmmode = PMMODE_OFF;
+		break;
+	case REGULATOR_MODE_STANDBY:
+		pmmode = PMMODE_LPM;
+		break;
+	}
+	return pmmode;
+}
+
+static u32 __dsm_mode_to_rgltr(u32 dsmmode)
+{
+	u32 mode = REGULATOR_MODE_NORMAL;
+	switch (dsmmode) {
+	case BCMPMU_REGL_ON_IN_DSM:
+		mode = REGULATOR_MODE_NORMAL;
+		break;
+	case BCMPMU_REGL_LPM_IN_DSM:
+		mode = REGULATOR_MODE_STANDBY;
+		break;
+	case BCMPMU_REGL_OFF_IN_DSM:
+		mode = REGULATOR_MODE_IDLE;
+		break;
+	}
+	return mode;
+}
+
+static u32 __pmmode_to_dsm_mode(u32 pmumode)
+{
+	u32 dsmmode = BCMPMU_REGL_ON_IN_DSM;
+	switch (pmumode) {
+	case PMMODE_ON:
+		dsmmode = BCMPMU_REGL_ON_IN_DSM;
+		break;
+	case PMMODE_LPM:
+		dsmmode = BCMPMU_REGL_LPM_IN_DSM;
+		break;
+	case PMMODE_OFF:
+		dsmmode = BCMPMU_REGL_OFF_IN_DSM;
+		break;
+	};
+	return dsmmode;
+}
 
 static u32 __dsm_mode_to_pmmode(u32 dsm_mode)
 {
@@ -306,27 +362,6 @@ static int __bcmpmureg_enable(struct bcmpmu59xxx *bcmpmu, int id)
 
 	BUG_ON(!rinfo || !param || !initdata);
 
-#if defined(CONFIG_MACH_HAWAII_SS_COMMON)
-	if (initdata->reg_value && initdata->reg_value2) {
-		ret = bcmpmu->write_dev(bcmpmu,
-				rinfo[id].reg_pmctrl1, initdata->reg_value);
-
-		if (ret != 0) {
-			pr_info(KERN_ERR "%s: error writing regulator addr index1 %d\n",
-				__func__, rinfo[id].reg_pmctrl1);
-			return ret;
-		}
-		ret = bcmpmu->write_dev(bcmpmu,
-				rinfo[id].reg_pmctrl1+1, initdata->reg_value2);
-		if (ret != 0) {
-			pr_info(KERN_ERR "%s: error writing regulator addr index2 %d\n",
-				__func__, rinfo[id].reg_pmctrl1+1);
-			return ret;
-		}
-		return 0;
-	}
-#endif
-
 	if (rinfo[id].flags & RGLR_3BIT_PMCTRL)
 		count = __3bit_pmmode_frm_map(initdata->pc_pins_map,
 				__dsm_mode_to_pmmode(initdata->dsm_mode),
@@ -382,10 +417,6 @@ static int bcmpmureg_enable(struct regulator_dev *rdev)
 static int __bcmpmureg_disable(struct bcmpmu59xxx *bcmpmu, int id)
 {
 	struct bcmpmu59xxx_regulator_info *rinfo;
-#if defined(CONFIG_MACH_HAWAII_SS_COMMON)
-	struct bcmpmu59xxx_regulator_init_data *initdata;
-	struct bcmpmu59xxx_rgltr_param *param;
-#endif
 	int reg_cnt, i;
 	int ret = 0;
 	u8 val;
@@ -394,31 +425,6 @@ static int __bcmpmureg_disable(struct bcmpmu59xxx *bcmpmu, int id)
 	pr_rgltr(FLOW, "<%s> id =  %d\n",
 		__func__, id);
 	BUG_ON(rinfo == NULL);
-
-#if defined(CONFIG_MACH_HAWAII_SS_COMMON)
-	param = bcmpmu->rgltr_data;
-	initdata = param->pdata->bcmpmu_rgltr + id;
-	BUG_ON(!rinfo || !param || !initdata);
-
-	if (initdata->off_value && initdata->off_value2) {
-		ret = bcmpmu->write_dev(bcmpmu,
-				rinfo[id].reg_pmctrl1, initdata->off_value);
-
-		if (ret != 0) {
-			pr_info(KERN_ERR "%s: error writing regulator addr index1 %d\n",
-				__func__, rinfo[id].reg_pmctrl1);
-			return ret;
-		}
-		ret = bcmpmu->write_dev(bcmpmu,
-				rinfo[id].reg_pmctrl1+1, initdata->off_value2);
-		if (ret != 0) {
-			pr_info(KERN_ERR "%s: error writing regulator addr index2 %d\n",
-				__func__, rinfo[id].reg_pmctrl1+1);
-			return ret;
-		}
-		return 0;
-	}
-#endif
 
 	if (rinfo[id].flags & RGLR_3BIT_PMCTRL) {
 		val = PMMODE_OFF << PMMODE_3BIT_PM0_SHIFT |
@@ -635,6 +641,91 @@ static int bcmpmuldo_get_voltage(struct regulator_dev *rdev)
 	return rinfo[id].v_table[val];
 }
 
+static u32 bcmpmuldo_get_mode(struct regulator_dev *rdev)
+{
+	struct bcmpmu59xxx *bcmpmu;
+	struct bcmpmu59xxx_regulator_init_data *rgltr_pdata;
+	struct bcmpmu59xxx_rgltr_param *param;
+	int id;
+
+	bcmpmu = rdev_get_drvdata(rdev);
+	id = rdev_get_id(rdev);
+
+	BUG_ON(id >= BCMPMU_REGULATOR_MAX);
+
+	param = bcmpmu->rgltr_data;
+	rgltr_pdata = param->pdata->bcmpmu_rgltr + id;
+	BUG_ON(!param || !rgltr_pdata);
+
+	return __dsm_mode_to_rgltr(rgltr_pdata->dsm_mode);
+}
+
+static int bcmpmuldo_set_mode(struct regulator_dev *rdev, u32 mode)
+{
+	struct bcmpmu59xxx *bcmpmu;
+	struct bcmpmu59xxx_regulator_info *rinfo;
+	struct bcmpmu59xxx_regulator_init_data *rgltr_pdata;
+	struct bcmpmu59xxx_rgltr_param *param;
+	u32 pmu_mode;
+	u8 pmmode[REGL_PMMODE_REG_MAX] = {0};
+	int id, count, i;
+	int ret = 0;
+
+	if ((!rdev || !rdev->desc))
+		return -1;
+	bcmpmu = rdev_get_drvdata(rdev);
+	id = rdev_get_id(rdev);
+	rinfo = bcmpmu59xxx_get_rgltr_info(bcmpmu);
+
+	BUG_ON(id >= BCMPMU_REGULATOR_MAX ||
+			rinfo == NULL);
+	pr_rgltr(FLOW, "<%s> id =  %d\n",
+		__func__, id);
+
+	param = bcmpmu->rgltr_data;
+	rgltr_pdata = param->pdata->bcmpmu_rgltr + id;
+
+	BUG_ON(!param || !rgltr_pdata);
+
+	if (!rgltr_pdata->initdata->constraints.always_on) {
+		pr_rgltr(ERROR,
+			"set_mode only supported for alway on rglt\n");
+		return -EINVAL;
+	}
+
+	pmu_mode = __rgltr_to_pmmode(mode);
+	if (rinfo[id].flags & RGLR_3BIT_PMCTRL)
+		count = __3bit_pmmode_frm_map(rgltr_pdata->pc_pins_map,
+						pmu_mode, pmmode);
+	else
+		count = __2bit_pmmode_frm_map(rgltr_pdata->pc_pins_map,
+						pmu_mode, pmmode);
+	for (i = 0; i < count; i++) {
+#ifdef CONFIG_DEBUG_FS
+		if (force_enable == 0) {
+#endif
+			ret = bcmpmu->write_dev(bcmpmu,
+					rinfo[id].reg_pmctrl1 + i,
+					pmmode[i]);
+			if (ret)
+				break;
+			pr_rgltr(FLOW, "<%s> wrtite : reg[%x] =  %x\n",
+					__func__, rinfo[id].reg_pmctrl1 + i,
+					pmmode[i]);
+#ifdef CONFIG_DEBUG_FS
+		} else {
+			rgltr_pmode_buf[id].pwr_mode[i] = pmmode[i];
+		}
+#endif
+	}
+	if (ret) {
+		pr_rgltr(ERROR, "regltr set mode error <%s>\n", __func__);
+		return ret;
+	}
+
+	rgltr_pdata->dsm_mode = __pmmode_to_dsm_mode(pmu_mode);
+	return ret;
+}
 static u32 rgltr_get_eff_volt(struct regulator *rglr, int rgltr_id)
 {
 	int vcurr, trim, vtrim, *trim_tbl;
@@ -1040,6 +1131,87 @@ static ssize_t bcmpmu_dbg_is_rgltr_enable(struct file *file,
 	return count;
 }
 
+static ssize_t bcmpmu_dbg_rgltr_set_mode(struct file *file,
+		char const __user *buf,
+		size_t count, loff_t *offset)
+{
+	int ret;
+	u32 len;
+	char input_str[100] = {0};
+	char consumer[20] = {0};
+	u32 mode = 0xFFFFFFFF;
+	struct regulator *regl;
+	struct bcmpmu59xxx *bcmpmu = file->private_data;
+
+	BUG_ON(!bcmpmu);
+	if (count > 100)
+		len = 100;
+	else
+		len = count;
+	if (copy_from_user(input_str, buf, len))
+		return -EFAULT;
+	/* coverity[secure_coding] */
+	sscanf(input_str, "%s%u", consumer, &mode);
+	if (consumer[0] == 0 || mode == 0xFFFFFFFF) {
+		pr_info("invalid param !!\n");
+		return -EFAULT;
+	}
+	pr_info("%s, %u\n", consumer, mode);
+	regl = regulator_get(NULL, consumer);
+	if (unlikely(IS_ERR_OR_NULL(regl))) {
+		pr_info("regulator_get for %s failed\n", consumer);
+		return count;
+	}
+	ret = regulator_set_mode(regl, mode);
+	pr_info("%s regulator_set_mode : ret- %d\n", consumer, ret);
+	regulator_put(regl);
+	return count;
+}
+
+static ssize_t bcmpmu_dbg_rgltr_get_mode(struct file *file,
+		char const __user *buf,
+		size_t count, loff_t *offset)
+{
+	u32 len;
+	char input_str[100] = {0};
+	char consumer[20] = {0};
+	u32 mode;
+	struct regulator *regl;
+	struct bcmpmu59xxx *bcmpmu = file->private_data;
+	BUG_ON(!bcmpmu);
+	if (count > 100)
+		len = 100;
+	else
+		len = count;
+	if (copy_from_user(input_str, buf, len))
+		return -EFAULT;
+	/* coverity[secure_coding] */
+	sscanf(input_str, "%s", consumer);
+	if (consumer[0] == 0) {
+		pr_info("invalid param !!\n");
+		return -EFAULT;
+	}
+
+	pr_info("%s\n", consumer);
+	regl = regulator_get(NULL, consumer);
+	if (unlikely(IS_ERR_OR_NULL(regl))) {
+		pr_info("regulator_get for %s failed\n", consumer);
+		return count;
+	}
+	mode = regulator_get_mode(regl);
+	pr_info("%s regulator_get_mode : mode = %d\n", consumer, mode);
+	regulator_put(regl);
+	if (mode == REGULATOR_MODE_NORMAL)
+		pr_info("NORMAL/ON MODE\n");
+	else if (mode == REGULATOR_MODE_STANDBY)
+		pr_info("STANDYBY/LPM MODE\n");
+	else if (mode == REGULATOR_MODE_IDLE)
+		pr_info("IDLE/OFF MODE\n");
+
+	return count;
+}
+
+
 static const struct file_operations debug_rgltr_en_fops = {
 	.open = bcmpmu_debugfs_open,
 	.write = bcmpmu_dbg_rgltr_enable,
@@ -1063,6 +1235,16 @@ static const struct file_operations debug_rgltr_set_vlt_fops = {
 static const struct file_operations debug_rgltr_get_vlt_fops = {
 	.open = bcmpmu_debugfs_open,
 	.write = bcmpmu_dbg_rgltr_get_vlt,
+};
+
+static const struct file_operations debug_rgltr_set_mode_fops = {
+	.open = bcmpmu_debugfs_open,
+	.write = bcmpmu_dbg_rgltr_set_mode,
+};
+
+static const struct file_operations debug_rgltr_get_mode_fops = {
+	.open = bcmpmu_debugfs_open,
+	.write = bcmpmu_dbg_rgltr_get_mode,
 };
 
 static int dbg_enable_all_regulators(struct bcmpmu59xxx *bcmpmu)
@@ -1211,10 +1393,21 @@ static void bcmpmu59xxx_debug_init(struct bcmpmu59xxx_rgltr_param *param)
 	if (!debugfs_create_u32("dbg_mask", S_IWUSR | S_IRUSR,
 				param->rgltr_dbgfs, &debug_mask))
 		goto err ;
+
 	if (!debugfs_create_file("force_enable_all", S_IWUSR | S_IRUSR,
 				param->rgltr_dbgfs, bcmpmu,
 				&debug_rgltr_enable_all_fops))
-		goto err;
+			goto err ;
+
+	if (!debugfs_create_file("set_mode", S_IWUSR | S_IRUSR,
+				param->rgltr_dbgfs, bcmpmu,
+				&debug_rgltr_set_mode_fops))
+			goto err ;
+
+	if (!debugfs_create_file("get_mode", S_IWUSR | S_IRUSR,
+				param->rgltr_dbgfs, bcmpmu,
+				&debug_rgltr_get_mode_fops))
+			goto err;
 	return;
 err:
 	debugfs_remove(param->rgltr_dbgfs);
