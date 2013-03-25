@@ -128,6 +128,7 @@ static void usb_handle_state(struct bcmpmu_accy *paccy);
 static void bcmpmu_notify_charger_state(struct bcmpmu_accy *paccy);
 /* static void bcmpmu_accy_chrgr_detect_state
  * (struct bcmpmu59xxx *bcmpmu, int val); */
+static void bcmpmu_accy_check_BC12_EN(struct bcmpmu59xxx *bcmpmu);
 static void bcmpmu_paccy_latch_event(struct bcmpmu_accy *accy,
 		u32 event, void *para);
 /* static void bcmpmu_update_pmu_chrgr_type(struct bcmpmu_accy *paccy);*/
@@ -330,7 +331,7 @@ u32 bcmpmu_get_chrgr_curr_lmt(u32 chrgr_type)
 }
 EXPORT_SYMBOL_GPL(bcmpmu_get_chrgr_curr_lmt);
 
-void paccy_set_ldo_bit(struct bcmpmu_accy *paccy, int val)
+static void paccy_set_ldo_bit(struct bcmpmu_accy *paccy, int val)
 {
 	u8 status;
 	paccy->bcmpmu->read_dev(paccy->bcmpmu,
@@ -522,8 +523,12 @@ static void usb_handle_state(struct bcmpmu_accy *paccy)
 		paccy->usb_accy_data.usb_type = PMU_USB_TYPE_NONE;
 		bcmpmu_set_chrgr_type(paccy, PMU_CHRGR_TYPE_NONE);
 		bcmpmu_notify_charger_state(paccy);
-		bcdldo_cycle_power(paccy);
-		reset_bc(paccy);
+		/* Disable BC12 for cust platform */
+		if (paccy->bc != BC_EXT_DETECT) {
+			bcdldo_cycle_power(paccy);
+			reset_bc(paccy);
+		}
+
 #ifdef CONFIG_HAS_WAKELOCK
 		if (wake_lock_active(&paccy->wake_lock))
 			wake_unlock(&paccy->wake_lock);
@@ -580,6 +585,9 @@ static void bcmpmu_accy_isr(enum bcmpmu59xxx_irq irq, void *data)
 
 	pr_accy(INIT, "#### %s interrupt = %d  det state %d\n",
 		__func__, irq, paccy->det_state);
+	if (paccy->bc == BC_EXT_DETECT) {
+		bcmpmu_accy_check_BC12_EN(bcmpmu);
+	}
 
 	switch (irq) {
 	case PMU_IRQ_VA_SESS_VALID_R:
@@ -832,6 +840,20 @@ static void bcmpmu_accy_chrgr_detect_state(struct bcmpmu59xxx *bcmpmu, int val)
 	pr_accy(FLOW, "###<%s> MBCCTRL5 %x\n", __func__, reg);
 }
 */
+
+static void bcmpmu_accy_check_BC12_EN(struct bcmpmu59xxx *bcmpmu)
+{
+	u8 reg;
+	bcmpmu->read_dev(bcmpmu, PMU_REG_MBCCTRL5, &reg);
+	pr_accy(FLOW, "###<%s> MBCCTRL5 %x\n", __func__, reg);
+	if (reg & MBCCTRL5_BC12_EN_MASK) {
+		pr_accy(FLOW, "BC12 is enabled\n", __func__);
+	}
+	else {
+		pr_accy(FLOW, "BC12 is disabled\n", __func__);
+	}
+}
+
 static void bcdldo_cycle_power(struct bcmpmu_accy *paccy)
 {
 	paccy_set_ldo_bit(paccy, 0);
@@ -1517,6 +1539,12 @@ static int __devinit bcmpmu_accy_probe(struct platform_device *pdev)
 		reset_bc(paccy);
 	} else
 		bcm_hsotgctrl_set_bc_iso(true);
+
+	/* Disable BC12 for cust platform */
+	if (paccy->bc == BC_EXT_DETECT) {
+		bcmpmu_accy_check_BC12_EN(paccy->bcmpmu);
+		paccy_set_ldo_bit(paccy, 0);
+	}
 
 #ifdef CONFIG_DEBUG_FS
 	bcmpmu_accy_debug_init(paccy);
