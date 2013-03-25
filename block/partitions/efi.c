@@ -599,6 +599,7 @@ static int find_valid_gpt(struct parsed_partitions *state, gpt_header **gpt,
 
 #ifdef CONFIG_APANIC_ON_MMC
 static unsigned long apanic_partition_start;
+static unsigned long apanic_partition_size;
 #endif
 
 /**
@@ -664,7 +665,11 @@ int efi_partition(struct parsed_partitions *state)
 #ifdef CONFIG_APANIC_ON_MMC
 		if(strncmp(partition_name,CONFIG_APANIC_PLABEL,partition_name_len) == 0) {
 			apanic_partition_start = start * ssz;
-			pr_debug("apanic partition found starts at %lu \r\n", apanic_partition_start);
+			apanic_partition_size = size * ssz;
+			pr_debug("apanic partition found starts at %lu \r\n",
+				apanic_partition_start);
+			pr_debug("apanic partition size = %lu\n",
+				apanic_partition_size);
 		}
 #endif
 		put_partition(state, i+1, start * ssz, size * ssz);
@@ -714,4 +719,10 @@ unsigned long get_apanic_start_address(void)
 	return apanic_partition_start;
 }
 EXPORT_SYMBOL(get_apanic_start_address);
+
+unsigned long get_apanic_end_address(void)
+{
+	return apanic_partition_start + apanic_partition_size;
+}
+EXPORT_SYMBOL(get_apanic_end_address);
 #endif

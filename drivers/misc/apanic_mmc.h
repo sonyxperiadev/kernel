@@ -34,6 +34,7 @@ extern int log_buf_copy(char *dest, int idx, int len);
 extern void log_buf_clear(void);
 extern void ram_console_enable_console(int);
 extern unsigned long get_apanic_start_address(void);
+extern unsigned long get_apanic_end_address(void);
 extern int mmc_poll_stack_init(void **mmc, int dev_num, int *mmc_poll_dev_num);
 
 #ifdef __cplusplus

@@ -320,6 +320,7 @@ static int apanic_write_console_mmc(unsigned long off)
 	unsigned int last_chunk = 0;
 	unsigned long num = 0;
 	unsigned long start;
+	unsigned long partition_end = get_apanic_end_address();
 
 	start = off;
 	while (!last_chunk) {
@@ -344,6 +345,13 @@ static int apanic_write_console_mmc(unsigned long off)
 		if (rc != ctx->mmc->write_bl_len)
 			memset(ctx->bounce + rc, 0,
 			       ctx->mmc->write_bl_len - rc);
+
+		if (off >= partition_end) {
+			pr_err("ERROR %s: Write across the partition boundary\n"
+				, __func__);
+			pr_err("off = %lu end = %lu\n", off, partition_end);
+			return -ENOSPC;
+		}
 
 		/* Write the bounce buffer to eMMC */
 		rc2 = ctx->mmc->block_dev.block_write(ctx->mmc_poll_dev_num,
@@ -390,6 +398,7 @@ static int apanic(struct notifier_block *this, unsigned long event,
 #endif
 	int rc;
 	unsigned long blk;
+	unsigned long partition_end = get_apanic_end_address();
 
 	ap_triggered = 1;
 
@@ -480,6 +489,12 @@ static int apanic(struct notifier_block *this, unsigned long event,
 	hdr->threads_length = (threads_len)*ctx->mmc->write_bl_len;
 #endif
 	pr_debug("apanic: writing the header at block %ld\n", blk);
+
+	if (blk >= partition_end) {
+		pr_err("ERROR %s: Write across the partition boundary\n",
+			__func__);
+		return -ENOSPC;
+	}
 
 	rc = ctx->mmc->block_dev.block_write(ctx->mmc_poll_dev_num,
 					     blk, 1, ctx->bounce);

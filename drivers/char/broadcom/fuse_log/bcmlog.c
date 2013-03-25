@@ -1088,6 +1088,7 @@ void BCMLOG_WriteEMMC(const char *buf, int size)
 	size_t wlen = 0;
 	int num_pages, written, fill_size;
 	int wr_sz;
+	unsigned long partition_end = get_apanic_end_address();
 
 	wr_sz = ctx->mmc->write_bl_len;
 	written = wlen = fill_size = 0;
@@ -1107,6 +1108,11 @@ void BCMLOG_WriteEMMC(const char *buf, int size)
 	memcpy(cp_buf + tot_size, buf, fill_size);
 
 final:
+	if (offs >= partition_end) {
+		pr_err("ERROR %s: Write across the partition boundary\n",
+			__func__);
+		return;
+	}
 	/* write locally stored data first */
 	ret =
 	    ctx->mmc->block_dev.block_write(ctx->mmc_poll_dev_num, offs, 1,
@@ -1130,6 +1136,13 @@ final:
 	num_pages = (size - fill_size) / wr_sz;
 	while (num_pages) {
 		memcpy(cp_buf, buf, wr_sz);
+
+		if (offs >= partition_end) {
+			pr_err("ERROR %s: Write across the partition boundary\n"
+			, __func__);
+			return;
+		}
+
 		ret =
 		    ctx->mmc->block_dev.block_write(ctx->mmc_poll_dev_num, offs,
 						    1, cp_buf);

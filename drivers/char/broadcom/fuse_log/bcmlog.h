@@ -276,6 +276,7 @@ extern "C" {
 	extern struct apanic_data drv_ctx;
 #ifdef CONFIG_BRCM_CP_CRASH_DUMP_EMMC
 	extern unsigned long get_apanic_start_address(void);
+	extern unsigned long get_apanic_end_address(void);
 #endif
 
 /* help functions for STM crash dump */
