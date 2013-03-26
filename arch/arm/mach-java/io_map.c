@@ -64,6 +64,8 @@ static struct map_desc hawaii_io_desc[] __initdata = {
 	IO_DESC(IO_G5_VIRT, IO_G5_PHYS, IO_G5_SIZE),
 	IO_DESC(IO_G6_VIRT, IO_G6_PHYS, IO_G6_SIZE),
 	IO_DESC(IO_G7_VIRT, IO_G7_PHYS, IO_G7_SIZE),
+	IO_DESC(IO_G8_VIRT, IO_G8_PHYS, IO_G8_SIZE),
+	IO_DESC(IO_G9_VIRT, IO_G9_PHYS, IO_G9_SIZE),
 };
 
 void __init hawaii_map_io(void)
