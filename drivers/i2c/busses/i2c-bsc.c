@@ -45,7 +45,7 @@
 /*  #include <linux/broadcom/timer.h> */
 
 #include <linux/timer.h>
-#include <mach/cpu.h>
+#include <plat/cpu.h>
 #include "i2c-bsc.h"
 
 #define DEFAULT_I2C_BUS_SPEED    BSC_BUS_SPEED_50K
@@ -1995,7 +1995,8 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 	 * Variant. The same was fixed in the B1 variant where a bit in the CRC
 	 * main register needs to be set. */
 	/* Check for RheaB1 onwards */
-	if (hw_cfg && !hw_cfg->is_pmu_i2c && get_chip_id() >= 2)
+	if (hw_cfg && !hw_cfg->is_pmu_i2c && 
+		(get_chip_id() >= KONA_CHIP_ID_RHEA_B1))
 		bsc_enable_thigh_ctrl((uint32_t)dev->virt_base, true);
 	else
 		bsc_enable_thigh_ctrl((uint32_t)dev->virt_base, false);

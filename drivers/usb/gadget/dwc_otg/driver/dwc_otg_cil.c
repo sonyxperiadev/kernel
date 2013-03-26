@@ -1663,7 +1663,8 @@ void dwc_otg_core_init(dwc_otg_core_if_t *core_if)
 	case DWC_INT_DMA_ARCH:
 		DWC_DEBUGPL(DBG_CIL, "Internal DMA Mode\n");
 
-		if (get_chip_id() >= 2) /* Products after and including
+		if (get_chip_id() >= KONA_CHIP_ID_RHEA_B1)
+				/* Products after and including
 					   Rhea-B1 needs to be enabled */
 			ahbcfg.b.hburstlen = DWC_GAHBCFG_INT_DMA_BURST_INCR8;
 		else {

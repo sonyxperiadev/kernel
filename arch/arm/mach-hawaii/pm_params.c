@@ -97,22 +97,22 @@ static void __init __pm_init_errata_flg(void)
 	u32 chip_id = get_chip_id();
 
 #ifdef CONFIG_MM_V3D_TIMEOUT_ERRATUM
-	if (chip_id <= HAWAII_CHIP_ID(HAWAII_CHIP_REV_A0))
+	if (chip_id <= KONA_CHIP_ID_HAWAII_A0)
 		pm_erratum_flg |= ERRATUM_MM_V3D_TIMEOUT;
 #endif
 
 #ifdef CONFIG_PLL1_8PHASE_OFF_ERRATUM
-	if (chip_id <= HAWAII_CHIP_ID(HAWAII_CHIP_REV_A0))
+	if (chip_id <= KONA_CHIP_ID_HAWAII_A0)
 		pm_erratum_flg |= ERRATUM_PLL1_8PHASE_OFF;
 #endif
 
 #ifdef CONFIG_MM_POWER_OK_ERRATUM
-	if (chip_id <= HAWAII_CHIP_ID(HAWAII_CHIP_REV_A0))
+	if (chip_id <= KONA_CHIP_ID_HAWAII_A0)
 		pm_erratum_flg |= ERRATUM_MM_POWER_OK;
 #endif
 
 #ifdef CONFIG_MM_FREEZE_VAR500M_ERRATUM
-	if (chip_id <= HAWAII_CHIP_ID(HAWAII_CHIP_REV_A0))
+	if (chip_id <= KONA_CHIP_ID_HAWAII_A0)
 		pm_erratum_flg |= ERRATUM_MM_FREEZE_VAR500M;
 #endif
 

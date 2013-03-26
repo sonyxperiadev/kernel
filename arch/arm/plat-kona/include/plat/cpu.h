@@ -15,9 +15,29 @@
 #ifndef __CPU_H__
 #define __CPU_H__
 
+#include <mach/io_map.h>
+#include <mach/memory.h>
+#include <mach/rdb/brcm_rdb_chipreg.h>
+
 /*Product family id*/
 #define KONA_PROD_FMLY_ID	0x3
 
+#define KONA_CHIP_REV_A0 0
+#define KONA_CHIP_REV_B0 1
+#define KONA_CHIP_REV_B1 2
+
+#define KONA_PROD_ID_RHEA		0x1
+#define KONA_PROD_ID_HAWAII		0x3
+#define KONA_PROD_ID_JAVA		0x4
+
+#define KONA_CHIP_ID_RHEA_B1 KONA_CHIP_ID(KONA_PROD_FMLY_ID, \
+				KONA_PROD_ID_RHEA, KONA_CHIP_REV_B1)
+
+#define KONA_CHIP_ID_HAWAII_A0 KONA_CHIP_ID(KONA_PROD_FMLY_ID,\
+				KONA_PROD_ID_HAWAII, KONA_CHIP_REV_A0)
+
+#define KONA_CHIP_ID_JAVA_A0 KONA_CHIP_ID(KONA_PROD_FMLY_ID,\
+				KONA_PROD_ID_JAVA, KONA_CHIP_REV_A0)
 
 #define KONA_CHIP_ID(f, p, r) \
 		((((f) << CHIPREG_CHIPID_REVID_PRODUCT_FAMILY_ID_SHIFT) &\
@@ -32,6 +52,5 @@ static inline u32 get_chip_id(void)
 	return readl(KONA_CHIPREG_VA + CHIPREG_CHIPID_REVID_OFFSET) &
 		(~CHIPREG_CHIPID_REVID_RESERVED_MASK);
 }
-
 
 #endif /* __CPU_H__ */

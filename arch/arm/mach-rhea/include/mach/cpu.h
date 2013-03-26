@@ -15,25 +15,10 @@
 #ifndef __RHEA_CPU_H__
 #define __RHEA_CPU_H__
 
-#include <mach/io_map.h>
-#include <mach/rdb/brcm_rdb_chipreg.h>
 #include <plat/cpu.h>
 
-#define RHEA_CHIP_REV_B0       0x1
-#define RHEA_CHIP_REV_B1       0x2
-#define RHEA_CHIP_REV_B2       0x3
-
-#define cpu_is_rhea_B0()    (get_chip_id() == RHEA_CHIP_ID(RHEA_CHIP_REV_B0))
-#define cpu_is_rhea_B1()    (get_chip_id() == RHEA_CHIP_ID(RHEA_CHIP_REV_B1))
-#define cpu_is_rhea_B2()    (get_chip_id() == RHEA_CHIP_ID(RHEA_CHIP_REV_B2))
-
-
-#define RHEA_PROD_ID		0x1
-#define RHEA_PROD_FMLY_ID	KONA_PROD_FMLY_ID
-
-
-#define RHEA_CHIP_ID(r)	KONA_CHIP_ID(RHEA_PROD_FMLY_ID,\
-					RHEA_PROD_ID, r)
-
+#define cpu_is_rhea_B0()    (get_chip_id() == KONA_CHIP_ID_RHEA_B1)
+#define cpu_is_rhea_B1()    (get_chip_id() == KONA_CHIP_ID_RHEA_B1)
+#define cpu_is_rhea_B2()    (get_chip_id() == KONA_CHIP_ID_RHEA_B1)
 
 #endif /*__RHEA_CPU_H__*/
