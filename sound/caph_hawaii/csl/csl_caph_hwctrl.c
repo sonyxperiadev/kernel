@@ -3014,7 +3014,7 @@ void csl_caph_ControlHWClock(Boolean enable)
 			clkIDCAPH[CLK_APB] = clk_get(NULL, "audioh_apb_clk");
 			clk_enable(clkIDCAPH[CLK_APB]);
 		}
-
+#if 0 /* Not required to call the Audio LDO API from Audio Driver */
 		/*Get and turn on the regulator AUDLDO, if its not on*/
 		if (!gAUD_regulator) {
 			gAUD_regulator = regulator_get(NULL, "audldo_uc");
@@ -3034,6 +3034,7 @@ void csl_caph_ControlHWClock(Boolean enable)
 						" = %d\n", ret);
 			}
 		}
+#endif
 	} else if (enable == FALSE && sClkCurEnabled == TRUE && dsp_path == 0) {
 		sClkCurEnabled = FALSE;
 		/*disable only CAPH clocks*/
@@ -3043,18 +3044,22 @@ void csl_caph_ControlHWClock(Boolean enable)
 		clk_disable(clkIDCAPH[CLK_APB]);
 		clkIDCAPH[CLK_APB] = NULL;
 
+#if 0
 		/* Turn off the regulator AUDLDO*/
 		if (gAUD_regulator) {
 			ret = regulator_disable(gAUD_regulator);
 			regulator_put(gAUD_regulator);
 			gAUD_regulator = NULL;
-			aTrace(LOG_AUDIO_CSL, "Disable regulator(AUDLDO)"
+			aTrace(
+				LOG_AUDIO_CSL, "Disable regulator(AUDLDO)"
 				"returned %d\n", ret);
 		}
+#endif
 	}
 
 	if (enable == FALSE && sClkCurEnabled == TRUE && dsp_path != 0) {
-		aError("%s: CAPH clock remains ON due to DSP response does not "
+		aError(
+		"%s: CAPH clock remains ON due to DSP response does not "
 		"come. dsp_path 0x%x\n", __func__, dsp_path);
 	}
 
