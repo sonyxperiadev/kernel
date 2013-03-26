@@ -85,6 +85,14 @@ static const struct file_operations default_file_operations = {
 };
 #endif /*CONFIG_DEBUG_FS*/
 
+#ifdef CONFIG_LOCKDEP
+#define MAX_BSC_INTF_LOCKCLASS		8
+/* As lock names(dev_lock) are same, we have to declare lock_class
+ * for each i2c_dev to avoid lock_dep warnings */
+static struct lock_class_key
+		bsc_dev_lock_class[MAX_BSC_INTF_LOCKCLASS];
+#endif
+
 struct procfs {
 	char name[MAX_PROC_NAME_SIZE];
 	struct proc_dir_entry *parent;
@@ -133,12 +141,6 @@ struct bsc_i2c_dev {
 
 	/* lock for the I2C device */
 	struct mutex dev_lock;
-
-#ifdef CONFIG_LOCKDEP
-	/* As lock names are same, we have to declare lock_class
-	 * for each i2c_dev */
-	struct lock_class_key bsc_dev_lock_class;
-#endif
 
 	/* to signal the command completion */
 	struct completion ses_done;
@@ -1920,12 +1922,6 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 	/* Initialize the mutex */
 	mutex_init(&dev->dev_lock);
 
-#ifdef CONFIG_LOCKDEP
-	/* As lock names are same, we have to declare lock_class
-	 * for each i2c_dev */
-	lockdep_set_class(&dev->dev_lock, &dev->bsc_dev_lock_class);
-#endif
-
 	/* Initialize the completion flags */
 	init_completion(&dev->ses_done);
 	init_completion(&dev->rx_ready);
@@ -2039,6 +2035,14 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 	adap->nr = pdev->id;
 	adap->dev.of_node = pdev->dev.of_node;
 	adap->retries = hw_cfg ? hw_cfg->retries : 0;
+
+#ifdef CONFIG_LOCKDEP
+	/* As lock names(dev_lock) are same, we have to declare lock_class
+	 * for each i2c_dev to avoid lock_dep warnings */
+	if (adap->nr < MAX_BSC_INTF_LOCKCLASS)
+		lockdep_set_class(&dev->dev_lock,
+			&bsc_dev_lock_class[adap->nr]);
+#endif
 
 	/* Initialize the proc entry */
 	rc = proc_init(pdev);
