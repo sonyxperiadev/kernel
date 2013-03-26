@@ -161,7 +161,7 @@ void __init hawaii_timer_init(void)
 	 * #define BCM2165x_CLK_TIMERS_FLAGS     (TYPE_PERI_CLK | SW_GATE)
 	 * #define BCM2165x_CLK_HUB_TIMER_FLAGS  (TYPE_PERI_CLK | SW_GATE | DISABLE_ON_INIT)
 	 */
-	gpt_setup.name = "aon-timer";
+	gpt_setup.name = "core-timer";
 #ifdef CONFIG_SMP
 	gpt_setup.ch_num = 3;
 #else
