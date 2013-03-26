@@ -225,15 +225,44 @@ int ion_carveout_heap_clean_cache(struct ion_heap *heap,
 {
 	int mtype = MT_MEMORY;
 	phys_addr_t pa;
-	void *va;
 
 	pa = buffer->priv_phys;
-	va = __arm_ioremap(buffer->priv_phys, buffer->size, mtype);
-	pr_debug("clean: pa(%x) va(%p) off(%ld) len(%ld)\n",
-			pa, va, offset, len);
-	dmac_unmap_area(va + offset, len, DMA_BIDIRECTIONAL);
-	outer_clean_range(pa + offset, pa + offset + len);
-	__arm_iounmap(va);
+	pr_debug("clean: pa(%x) off(%ld) len(%ld)\n",
+			pa, offset, len);
+
+	if (buffer->flags & ION_FLAG_WRITEBACK) {
+		/* Arm v7 arch onwards treats WT as uncached */
+		unsigned long curr_off, end_off;
+
+		end_off = offset + len;
+		for (curr_off = offset & ~(PAGE_SIZE - 1); curr_off < end_off;
+				curr_off += PAGE_SIZE) {
+			void *va, *va_start;
+			unsigned long curr_len = PAGE_SIZE;
+
+			va = va_start = __arm_ioremap(
+					(buffer->priv_phys + curr_off),
+					PAGE_SIZE, mtype);
+			if (va == NULL) {
+				pr_err("clean: __arm_ioremap failed phys(%lx)\n",
+						buffer->priv_phys + curr_off);
+				return -ENOMEM;
+			}
+			if (offset > curr_off) {
+				va_start += offset - curr_off;
+				curr_len = (curr_off + PAGE_SIZE) - offset;
+			}
+			if ((curr_off + PAGE_SIZE) > end_off)
+				curr_len = end_off - curr_off;
+			pr_debug("clean: va_start(%p) curr_off(%lx) curr_len(%lx)\n",
+					va_start, curr_off, curr_len);
+			dmac_map_area(va_start, curr_len, DMA_BIDIRECTIONAL);
+			__arm_iounmap(va);
+		}
+	}
+
+	if (buffer->flags & (ION_FLAG_WRITETHROUGH | ION_FLAG_WRITEBACK))
+		outer_clean_range(pa + offset, pa + offset + len);
 
 	return 0;
 }
@@ -244,15 +273,44 @@ int ion_carveout_heap_invalidate_cache(struct ion_heap *heap,
 {
 	int mtype = MT_MEMORY;
 	phys_addr_t pa;
-	void *va;
 
 	pa = buffer->priv_phys;
-	va = __arm_ioremap(buffer->priv_phys, buffer->size, mtype);
-	pr_debug("inv: pa(%x) va(%p) off(%ld) len(%ld)\n",
-			pa, va, offset, len);
-	outer_inv_range(pa + offset, pa + offset + len);
-	dmac_unmap_area(va + offset, len, DMA_BIDIRECTIONAL);
-	__arm_iounmap(va);
+	pr_debug("inv: pa(%x) off(%lx) len(%lx)\n",
+			pa, offset, len);
+
+	if (buffer->flags & (ION_FLAG_WRITETHROUGH | ION_FLAG_WRITEBACK))
+		outer_inv_range(pa + offset, pa + offset + len);
+
+	if (buffer->flags & ION_FLAG_WRITEBACK) {
+		/* Arm v7 arch onwards treats WT as uncached */
+		unsigned long curr_off, end_off;
+		end_off = offset + len;
+
+		for (curr_off = offset & ~(PAGE_SIZE - 1); curr_off < end_off;
+				curr_off += PAGE_SIZE) {
+			void *va, *va_start;
+			unsigned long curr_len = PAGE_SIZE;
+
+			va = va_start = __arm_ioremap(
+					(buffer->priv_phys + curr_off),
+					PAGE_SIZE, mtype);
+			if (va == NULL) {
+				pr_err("inv: __arm_ioremap failed phys(%lx)\n",
+						buffer->priv_phys + curr_off);
+				return -ENOMEM;
+			}
+			if (offset > curr_off) {
+				va_start += offset - curr_off;
+				curr_len = (curr_off + PAGE_SIZE) - offset;
+			}
+			if ((curr_off + PAGE_SIZE) > end_off)
+				curr_len = end_off - curr_off;
+			pr_debug("va_start(%p) curr_off(%lx) curr_len(%lx)\n",
+					va_start, curr_off, curr_len);
+			dmac_unmap_area(va_start, curr_len, DMA_BIDIRECTIONAL);
+			__arm_iounmap(va);
+		}
+	}
 
 	return 0;
 }

@@ -257,7 +257,7 @@ int ion_cma_heap_clean_cache(struct ion_heap *heap,
 	va = info->cpu_addr;
 	pr_debug("clean: pa(%x) va(%p) off(%ld) len(%ld)\n",
 			pa, va, offset, len);
-	dmac_unmap_area(va + offset, len, DMA_BIDIRECTIONAL);
+	dmac_map_area(va + offset, len, DMA_BIDIRECTIONAL);
 	outer_clean_range(pa + offset, pa + offset + len);
 
 	return 0;
