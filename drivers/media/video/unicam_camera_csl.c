@@ -43,6 +43,7 @@
 
 /* CSL_CAM_CAPTURE_MODE_TRIGGER (Stills) CSL_CAM_CAPTURE_MODE_NORMAL (Video) */
 #define UNICAM_CAPTURE_MODE		CSL_CAM_CAPTURE_MODE_TRIGGER
+#define UNPACK_RAW10_TO_16BITS
 #define iprintk(format, arg...)	\
 	printk(KERN_INFO"[%s]: "format"\n", __func__, ##arg)
 
@@ -91,6 +92,9 @@ struct unicam_camera_buffer {
 	unsigned int magic;
 };
 
+/* frame timing display variables */
+static unsigned int fps_t1, fps_t2, fps, update_fps, curr_fps;
+
 static irqreturn_t unicam_camera_isr(int irq, void *arg);
 
 #ifdef UNICAM_DEBUG
@@ -134,11 +138,7 @@ static int unicam_videobuf_setup(struct vb2_queue *vq, const struct v4l2_format 
 	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
 	struct unicam_camera_dev *unicam_dev =
 	    (struct unicam_camera_dev *)ici->priv;
-	int bytes_per_line = soc_mbus_bytes_per_line(icd->user_width,
-						     icd->
-						     current_fmt->host_fmt);
-
-	dprintk("-enter");
+	int bytes_per_line = icd->bytesperline;
 
 	if (bytes_per_line < 0)
 		return bytes_per_line;
@@ -153,7 +153,8 @@ static int unicam_videobuf_setup(struct vb2_queue *vq, const struct v4l2_format 
 	if (!*count)
 		*count = 2;
 
-	iprintk("no_of_buf=%d size=%u", *count, sizes[0]);
+	iprintk("no_of_buf=%d size=%u bytesperline=%d",
+			*count, sizes[0], bytes_per_line);
 	dprintk("-exit");
 	return 0;
 }
@@ -161,9 +162,7 @@ static int unicam_videobuf_setup(struct vb2_queue *vq, const struct v4l2_format 
 static int unicam_videobuf_prepare(struct vb2_buffer *vb)
 {
 	struct soc_camera_device *icd = soc_camera_from_vb2q(vb->vb2_queue);
-	int bytes_per_line = soc_mbus_bytes_per_line(icd->user_width,
-						     icd->
-						     current_fmt->host_fmt);
+	int bytes_per_line = icd->bytesperline;
 	unsigned long size;
 
 	dprintk("-enter");
@@ -217,10 +216,8 @@ static int unicam_camera_update_buf(struct unicam_camera_dev *unicam_dev)
 
 	/* stride is in bytes */
 	if (unicam_dev->icd->current_fmt->code != V4L2_MBUS_FMT_JPEG_1X8) {
-		line_stride =
-		    soc_mbus_bytes_per_line(unicam_dev->icd->user_width,
-					    unicam_dev->icd->
-					    current_fmt->host_fmt);
+		line_stride = unicam_dev->icd->bytesperline;
+
 		/* image 0 */
 		cslCamBuffer0.start_addr = (UInt32) phys_addr;
 		cslCamBuffer0.line_stride = (UInt32) line_stride;
@@ -399,6 +396,10 @@ static void unicam_videobuf_queue(struct vb2_buffer *vb)
 				unicam_camera_capture(unicam_dev);
 		}
 	}
+	if (update_fps != curr_fps) {
+		update_fps = curr_fps;
+		iprintk("sensor fps = %d\n", update_fps);
+	}
 	spin_unlock_irqrestore(&unicam_dev->lock, flags);
 	dprintk("-exit");
 }
@@ -428,6 +429,7 @@ static void unicam_videobuf_release(struct vb2_buffer *vb)
 
 static int unicam_videobuf_init(struct vb2_buffer *vb)
 {
+	dprintk("-enter");
 	struct unicam_camera_buffer *buf = to_unicam_camera_vb(vb);
 	INIT_LIST_HEAD(&buf->queue);
 	buf->magic = UNICAM_BUF_MAGIC;
@@ -439,7 +441,6 @@ int unicam_videobuf_start_streaming(struct vb2_queue *q, unsigned int count)
 	struct soc_camera_device *icd = soc_camera_from_vb2q(q);
 	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
 	struct unicam_camera_dev *unicam_dev = ici->priv;
-	struct v4l2_subdev_sensor_interface_parms if_params;
 	struct v4l2_subdev *sd = soc_camera_to_subdev(icd);
 	int ret;
 	int thumb;
@@ -458,6 +459,8 @@ int unicam_videobuf_start_streaming(struct vb2_queue *q, unsigned int count)
 	spin_lock_irqsave(&unicam_dev->lock, flags);
 	unicam_dev->stopping = false;
 	spin_unlock_irqrestore(&unicam_dev->lock, flags);
+	fps_t1 = fps_t2 = fps = update_fps = curr_fps = 0;
+
 	if (csl_cam_init()) {
 		dev_err(unicam_dev->dev, "error initializing csl camera\n");
 		return -1;
@@ -472,14 +475,13 @@ int unicam_videobuf_start_streaming(struct vb2_queue *q, unsigned int count)
 	*/
 
 	/* get the sensor interface information */
-	ret = v4l2_subdev_call(sd, sensor, g_interface_parms, &if_params);
+	ret = v4l2_subdev_call(sd, sensor, g_interface_parms,
+			&unicam_dev->if_params);
 	if (ret < 0) {
 		dev_err(unicam_dev->dev, "error on g_inferface_params(%d)\n",
 			ret);
 		return ret;
 	}
-
-	unicam_dev->if_params = if_params;
 
 	/* set camera interface parameters */
 	memset(&csl_cam_intf_cfg_st, 0, sizeof(CSL_CAM_INTF_CFG_st_t));
@@ -576,6 +578,15 @@ int unicam_videobuf_start_streaming(struct vb2_queue *q, unsigned int count)
 	cslCamPipeline.decode = CSL_CAM_DEC_NONE;
 	cslCamPipeline.unpack = CSL_CAM_PIXEL_NONE;
 	cslCamPipeline.pack = CSL_CAM_PIXEL_NONE;
+#ifdef UNPACK_RAW10_TO_16BITS
+	if ((icd->current_fmt->code == V4L2_MBUS_FMT_SBGGR10_1X10)
+		  || (icd->current_fmt->code == V4L2_MBUS_FMT_SGBRG10_1X10)
+		  || (icd->current_fmt->code == V4L2_MBUS_FMT_SGRBG10_1X10)
+		  || (icd->current_fmt->code == V4L2_MBUS_FMT_SRGGB10_1X10)) {
+		cslCamPipeline.unpack = CSL_CAM_PIXEL_10BIT;
+		cslCamPipeline.pack = CSL_CAM_PIXEL_16BIT;
+	}
+#endif
 	cslCamPipeline.dec_adv_predictor = FALSE;
 
 	cslCamPipeline.encode = CSL_CAM_ENC_NONE;
@@ -613,6 +624,19 @@ int unicam_videobuf_start_streaming(struct vb2_queue *q, unsigned int count)
 	    && (thumb == 0))
 		cslCamImageCtrl.image_data_id0 = 0x0;
 		/* thumbnail not supported */
+	/* RAW10 */
+	else if ((icd->current_fmt->code == V4L2_MBUS_FMT_SBGGR10_1X10)
+		  || (icd->current_fmt->code == V4L2_MBUS_FMT_SGBRG10_1X10)
+		  || (icd->current_fmt->code == V4L2_MBUS_FMT_SGRBG10_1X10)
+		  || (icd->current_fmt->code == V4L2_MBUS_FMT_SRGGB10_1X10))
+		cslCamImageCtrl.image_data_id0 = 0x2B;
+	/* RAW8 */
+	else if ((icd->current_fmt->code == V4L2_MBUS_FMT_SBGGR8_1X8)
+		  || (icd->current_fmt->code == V4L2_MBUS_FMT_SGBRG8_1X8)
+		  || (icd->current_fmt->code == V4L2_MBUS_FMT_SGRBG8_1X8)
+		  || (icd->current_fmt->code == V4L2_MBUS_FMT_SRGGB8_1X8))
+		cslCamImageCtrl.image_data_id0 = 0x2A;
+	/*YUV422 */
 	else
 		cslCamImageCtrl.image_data_id0 = 0x1E;
 
@@ -677,7 +701,6 @@ int unicam_videobuf_start_streaming(struct vb2_queue *q, unsigned int count)
 			"csl_cam_set_frame_control(): FAILED\n");
 			return -1;
 		}
-
 	}
 	/* Configure HW if buffer is queued ahead of streamon */
 	if(unicam_dev->active){
@@ -922,11 +945,29 @@ static int unicam_camera_try_fmt(struct soc_camera_device *icd,
 	case V4L2_MBUS_FMT_UYVY8_2X8:
 		/* Above formats are supported */
 		break;
+	case V4L2_MBUS_FMT_SBGGR10_1X10:
+	case V4L2_MBUS_FMT_SGBRG10_1X10:
+	case V4L2_MBUS_FMT_SGRBG10_1X10:
+	case V4L2_MBUS_FMT_SRGGB10_1X10:
+		/* ISP needs 32 byte input boundary on line stride */
+		pix->bytesperline = ((((pix->width * 10) >> 3) + 31) & ~(31));
+#ifdef UNPACK_RAW10_TO_16BITS
+		pix->bytesperline = ((pix->width * 2) + 31) & ~(31);
+#endif
+		break;
+		/* ISP needs 32 byte input boundary on line stride */
+	case V4L2_MBUS_FMT_SBGGR8_1X8:
+	case V4L2_MBUS_FMT_SGBRG8_1X8:
+	case V4L2_MBUS_FMT_SGRBG8_1X8:
+	case V4L2_MBUS_FMT_SRGGB8_1X8:
+		pix->bytesperline = ((pix->width + 31) & ~(31));
+		break;
 	default:
 		dev_err(icd->dev.parent, "Sensor format code %d unsupported.\n",
 			mf.code);
 		return -EINVAL;
 	}
+	pix->sizeimage = pix->height * pix->bytesperline;
 	iprintk("trying format=%c%c%c%c res=%dx%d success=%d",
 		pixfmtstr(pixfmt), mf.width, mf.height, ret);
 	dprintk("-exit");
@@ -987,8 +1028,9 @@ static int unicam_camera_set_fmt(struct soc_camera_device *icd,
 	pix->field = mf.field;
 	pix->colorspace = mf.colorspace;
 	icd->current_fmt = xlate;
-	iprintk("format set to %c%c%c%c res=%dx%d success=%d",
-		pixfmtstr(pix->pixelformat), pix->width, pix->height, ret);
+	iprintk("format set to %c%c%c%c res=%dx%d bytesperline=%d success=%d",
+		pixfmtstr(pix->pixelformat), pix->width, pix->height,
+		pix->bytesperline, ret);
 	dprintk("-exit");
 	return ret;
 }
@@ -997,6 +1039,7 @@ static int unicam_camera_add_device(struct soc_camera_device *icd)
 {
 	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
 	struct unicam_camera_dev *unicam_dev = ici->priv;
+	struct v4l2_subdev *sd;
 	int err = 0;
 
 	if (unicam_dev->icd) {
@@ -1005,6 +1048,8 @@ static int unicam_camera_add_device(struct soc_camera_device *icd)
 		err = -EBUSY;
 		goto eicd;
 	}
+
+	sd = soc_camera_to_subdev(icd);
 
 	/* register irq */
 	err =
@@ -1018,10 +1063,19 @@ static int unicam_camera_add_device(struct soc_camera_device *icd)
 		goto eirq;
 	}
 
+	err = v4l2_subdev_call(sd, core, s_power, 1);
+	if (err < 0 && err != -ENOIOCTLCMD && err != -ENODEV) {
+		dev_err(icd->dev.parent, "cound not power up subdevice\n");
+		return err;
+	} else {
+		err = 0;
+	}
+
 	unicam_dev->icd = icd;
 
 	dev_info(icd->dev.parent,
 		 "Unicam Camera driver attached to camera %d\n", icd->devnum);
+
 eirq:
 eicd:
 	return err;
@@ -1031,6 +1085,7 @@ static void unicam_camera_remove_device(struct soc_camera_device *icd)
 {
 	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
 	struct unicam_camera_dev *unicam_dev = ici->priv;
+	struct v4l2_subdev *sd = soc_camera_to_subdev(icd);
 
 	BUG_ON(icd != unicam_dev->icd);
 
@@ -1039,6 +1094,8 @@ static void unicam_camera_remove_device(struct soc_camera_device *icd)
 		/* we should call streamoff from queue operations */
 		unicam_videobuf_stop_streaming(&icd->vb2_vidq);
 	}
+
+	v4l2_subdev_call(sd, core, s_power, 0);
 
 	free_irq(unicam_dev->irq, unicam_dev);
 
@@ -1069,7 +1126,6 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 	CSL_CAM_BUFFER_STATUS_st_t bufStatus;
 	unsigned int bytes_used;
 	unsigned long flags;
-	static unsigned int t1 = 0, t2 = 0, fps = 0;
 
 	spin_lock_irqsave(&unicam_dev->lock, flags);
 	if (!unicam_dev->streaming) {
@@ -1106,14 +1162,14 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 			fps++;
 			if (reg_status & 0x2000)
 				pr_err("Camera: Urgent request was signalled at FE!!!!\n");
-			if (t1 == 0 && t2 == 0)
-				t1 = t2 = jiffies_to_msecs(jiffies);
+			if (fps_t1 == 0 && fps_t2 == 0)
+				fps_t1 = fps_t2 = jiffies_to_msecs(jiffies);
 
-			t2 = jiffies_to_msecs(jiffies);
-			if (t2 - t1 > 1000) {
-				printk(" sensor fps = %d \n", fps);
+			fps_t2 = jiffies_to_msecs(jiffies);
+			if (fps_t2 - fps_t1 > 1000) {
+				curr_fps = fps;
 				fps = 0;
-				t1 = t2;
+				fps_t1 = fps_t2;
 			}
 			dprintk("frame received");
 			/* csl_cam_register_display(unicam_dev->cslCamHandle);*/

@@ -153,7 +153,6 @@ static CHAL_CAM_CHAN_t cslCamChalPortChan(CSL_CAM_PORT_CHAN_T csl_val);
 static Int32 cslCamClock(UInt32 clk_select, UInt32 freq, Boolean enable);
 static void cslCamReset(void);
 
-
 /******************************************************************************
  Static  Functions
  *****************************************************************************/
@@ -522,7 +521,6 @@ static CHAL_CAM_PIXEL_SIZE_t cslCamChalPixelSize(CSL_CAM_PIXEL_SIZE_T csl_val)
 	return chal_val;
 }
 
-
 /*****************************************************************************
  * NAME:    cslCamReset
  *
@@ -540,7 +538,6 @@ static void cslCamReset(void)
 	/* Should clear and set CSI0_SOFT_RSTN_MASK */
 	clk_reset(unicam_clk);
 }
-
 
 /*****************************************************************************
  * NAME:    cslCamClock

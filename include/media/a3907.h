@@ -1,5 +1,5 @@
 /*
- * as3643 flash driver
+ * adp1653 flash driver
  *
  * Copyright (C) 2011 Texas Instruments Incorporated - http://www.ti.com/
  *
@@ -13,11 +13,9 @@
  * GNU General Public License for more details.
  */
 
-extern int as3643_set_flash(const u8 intensity, const u32 duration_us);
-extern int as3643_set_ind_led(int iled, const u32 duration_us);
-extern int as3643_set_torch_flash(int hpled);
-extern int as3643_sw_strobe(int on);
-extern int as3643_set_timer(int timer_val);
-extern int as3643_gpio_toggle(bool en);
-extern int as3643_clear_all(void);
-extern int as3643_gpio_strobe(int on);
+
+extern int a3907_lens_set_position(int target_position);
+extern int a3907_lens_get_position(int *current_position,
+		int *time_to_destination);
+extern int a3907_enable(bool enable);
+

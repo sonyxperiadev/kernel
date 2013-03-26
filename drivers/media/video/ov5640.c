@@ -2813,7 +2813,7 @@ int set_flash_mode(int mode, struct ov5640 *ov5640)
 	} else if (mode == FLASH_MODE_ON) {
 		as3643_gpio_toggle(1);
 		usleep_range(25, 30);
-		as3643_set_ind_led(0x80);
+		as3643_set_ind_led(0x80, 900000);
 	} else if (mode == FLASH_MODE_AUTO) {
 		u8 average;
 		struct i2c_client *client =
@@ -2822,7 +2822,7 @@ int set_flash_mode(int mode, struct ov5640 *ov5640)
 		if ((average&0xFF) < 32) {
 			as3643_gpio_toggle(1);
 			usleep_range(25, 30);
-			as3643_set_ind_led(0x80);
+			as3643_set_ind_led(0x80, 900000);
 		}
 	} else {
 		return -EINVAL;

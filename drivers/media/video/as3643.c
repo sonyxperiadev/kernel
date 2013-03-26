@@ -29,7 +29,7 @@
 #include <asm/gpio.h>
 #include "as3643.h"
 
-// Different modes of operation for the "Torch"
+/* Different modes of operation for the "Torch" */
 typedef enum {
 	FLASHLAMP_MODE_MIN,
 	FLASHLAMP_MODE_TORCH,
@@ -119,7 +119,7 @@ static int as3643_reg_write(struct i2c_client *client, u8 reg, u8 val)
 
 static u8 flash_curr_set(int ma)
 {
-	u8 reg = 0x9C;		// default
+	u8 reg = 0x9C;		/* default */
 	if (ma < 0)
 		ma = 0;
 	if (ma > LED_CURR_MAX_MA)
@@ -131,7 +131,7 @@ static u8 flash_curr_set(int ma)
 
 static u8 torch_curr_set(int ma)
 {
-	u8 reg = 0x9C;		// default
+	u8 reg = 0x9C;		/* default */
 	if (ma < 0)
 		ma = 0;
 	if (ma > LED_CURR_MAX_MA)
@@ -142,7 +142,7 @@ static u8 torch_curr_set(int ma)
 
 static u8 flash_timer_set(int ms)
 {
-	u8 reg = 0x23;		// default
+	u8 reg = 0x23;		/* default */
 	if (ms < FLASH_TIMER_MIN_MS)
 		ms = FLASH_TIMER_MIN_MS;
 	if (ms > FLASH_TIMER_MAX_MS)
@@ -163,8 +163,9 @@ static int as3643_enable(FLASHLAMP_MODE_T mode, const u8 intensity,
 	    flash_curr_set(intensity * LED_CURR_MAX_MA / 0xFF);
 	switch (mode) {
 	case FLASHLAMP_MODE_FLASH:
+		/* FLASH_TIMER_MAX_MS, AS3643_MAX_STROBE_MS */
 		if (duration_ms == 0)
-			duration_ms = FLASH_TIMER_MAX_MS;	// FLASH_TIMER_MAX_MS, AS3643_MAX_STROBE_MS
+			duration_ms = FLASH_TIMER_MAX_MS;
 		ret +=
 		    as3643_reg_write(client1, REG_CURRENT_1, program_intensity);
 		ret +=
@@ -172,11 +173,13 @@ static int as3643_enable(FLASHLAMP_MODE_T mode, const u8 intensity,
 		ret +=
 		    as3643_reg_write(client1, REG_FLASH_TIMER,
 				     flash_timer_set(duration_ms));
-		ret += as3643_reg_write(client1, REG_STROBE_SIG, 0xC);	//Strobe on, level
-		ret += as3643_reg_write(client1, REG_CONTROL, 0xB);	//out on, flash mode
+		/* Strobe on, level */
+		ret += as3643_reg_write(client1, REG_STROBE_SIG, 0xC0);
+		/* Out on, flash mode */
+		ret += as3643_reg_write(client1, REG_CONTROL, 0xB);
 		break;
 	case FLASHLAMP_MODE_INDICATOR:
-		//Set the indicator intensity
+		/*Set the indicator intensity */
 		ret +=
 		    as3643_reg_write(client1, REG_CURRENT_1, program_intensity);
 		ret +=
@@ -184,8 +187,10 @@ static int as3643_enable(FLASHLAMP_MODE_T mode, const u8 intensity,
 		ret +=
 		    as3643_reg_write(client1, REG_FLASH_TIMER,
 				     flash_timer_set(duration_ms));
-		ret += as3643_reg_write(client1, REG_STROBE_SIG, 0x4);	//Strobe off, level
-		ret += as3643_reg_write(client1, REG_CONTROL, 0xB);	//out on, flash mode
+		/* Strobe off, level */
+		ret += as3643_reg_write(client1, REG_STROBE_SIG, 0x40);
+		/* Out on, flash mode */
+		ret += as3643_reg_write(client1, REG_CONTROL, 0xB);
 		break;
 	case FLASHLAMP_MODE_TORCH:
 		program_intensity = torch_curr_set(AS3643_MAX_TORCH_CURR);
@@ -193,7 +198,8 @@ static int as3643_enable(FLASHLAMP_MODE_T mode, const u8 intensity,
 		    as3643_reg_write(client1, REG_CURRENT_1, program_intensity);
 		ret +=
 		    as3643_reg_write(client1, REG_CURRENT_2, program_intensity);
-		ret += as3643_reg_write(client1, REG_TX_MASK, 0x62);	//external torch mode
+		/* External torch mode */
+		ret += as3643_reg_write(client1, REG_TX_MASK, 0x62);
 		as3643_gpio_toggle(1);
 		break;
 	default:
@@ -205,20 +211,26 @@ static int as3643_enable(FLASHLAMP_MODE_T mode, const u8 intensity,
 static int as3643_disable(void)
 {
 	int ret = 0;
-	ret += as3643_reg_write(client1, REG_CONTROL, 0x00);	//out off
-	ret += as3643_reg_write(client1, REG_TX_MASK, 0x00);	//torch off
+	ret += as3643_reg_write(client1, REG_CONTROL, 0x00);	/*out off */
+	ret += as3643_reg_write(client1, REG_TX_MASK, 0x00);	/*torch off */
 	return ret;
 }
 
-int as3643_set_ind_led(int iled)
+int as3643_set_ind_led(int iled, const u32 duration_us)
 {
-	as3643_enable(FLASHLAMP_MODE_INDICATOR, iled, 900000);
+	as3643_enable(FLASHLAMP_MODE_INDICATOR, iled, duration_us);
+	return 0;
+}
+
+int as3643_set_flash(const u8 intensity, const u32 duration_us)
+{
+	as3643_enable(FLASHLAMP_MODE_FLASH, intensity, duration_us);
 	return 0;
 }
 
 int as3643_set_torch_flash(int hpled)
 {
-	as3643_enable(FLASHLAMP_MODE_TORCH, hpled, 900000);
+	as3643_enable(FLASHLAMP_MODE_TORCH, hpled, 0);
 	return 0;
 }
 
@@ -228,9 +240,9 @@ int as3643_sw_strobe(int on)
 	val = 0;
 	as3643_reg_read(client1, REG_STROBE_SIG, &val);
 #if 1
-	val = val | 0x60;	//as3643 set level sensitive
+	val = val | 0x60;	/* as3643 set level sensitive */
 #else
-	val = val & 0xbf;	//as3643 set edge sensitive
+	val = val & 0xbf;	/* as3643 set edge sensitive */
 #endif
 	if (on) {
 		printk("as3643 turn on SW strobe\n");

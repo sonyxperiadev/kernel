@@ -576,6 +576,15 @@ config VIDEO_AS3643
     ---help---
       This is a driver for the AS3643 flash controller.
 
+config VIDEO_A3907
+    tristate "A3907 flash support"
+    depends on I2C && VIDEO_V4L2
+    ---help---
+      This is a driver for the A3907 controller.
+      The Allegro A3907 is a coil motor driver for linear
+      control of small form factor voice coil motors.
+      It is used with the OV5648 as a camera focus motor.
+
 config VIDEO_AS3645A
 	tristate "AS3645A flash driver support"
 	depends on I2C && VIDEO_V4L2 && MEDIA_CONTROLLER
@@ -1104,6 +1113,18 @@ config SOC_CAMERA_OV5640
 	depends on SOC_CAMERA && I2C
 	help
 	  This is a ov5640 camera driver
+
+config SOC_CAMERA_OV5648
+	tristate "ov5648 camera support"
+	depends on SOC_CAMERA && I2C
+	help
+	  Omnivision OV5648 camera driver.
+          The OV5648 is a 5Mpix image sensor
+          with a small, restricted set of SOC
+          camera features such as black level
+          correction and defective pixel
+          canceling. The OV5648 only supports
+          raw Bayer output formats.
 
 config SOC_CAMERA_OV7692
 	tristate "ov7692 camera support"

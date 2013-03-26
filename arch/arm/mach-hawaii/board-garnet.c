@@ -145,7 +145,6 @@
 #include <mach/caph_platform.h>
 #include <mach/caph_settings.h>
 #endif
-
 #ifdef CONFIG_VIDEO_UNICAM_CAMERA
 #include <media/soc_camera.h>
 #endif
@@ -154,7 +153,16 @@
 #include <media/v4l2-device.h>
 #include <media/v4l2-subdev.h>
 #include <media/kona-unicam.h>
-#include <media/ov5640.h>
+#ifdef CONFIG_SOC_CAMERA_OV5648
+	#include <media/ov5648.h>
+#endif
+#ifdef CONFIG_SOC_CAMERA_OV5640
+	#include <media/ov5640.h>
+#endif
+#endif
+
+#ifdef CONFIG_VIDEO_A3907
+#include <media/a3907.h>
 #endif
 
 #ifdef CONFIG_WD_TAPPER
@@ -319,6 +327,7 @@ static struct i2c_board_info as3643_flash[] = {
 #endif
 #ifdef CONFIG_VIDEO_UNICAM_CAMERA
 
+
 static struct regulator *d_gpsr_cam0_1v8;
 static struct regulator *d_lvldo2_cam1_1v8;
 static struct regulator *d_1v8_mmc1_vcc;
@@ -329,8 +338,12 @@ static struct regulator *d_3v0_mmc1_vcc;
 #define SENSOR_0_CLK                    "dig_ch0_clk"	/*DCLK1 */
 #if defined(CONFIG_SOC_CAMERA_OV2675) || defined(CONFIG_SOC_CAMERA_GC2035)
 #define SENSOR_0_CLK_FREQ               (26000000)
-#else
+#elif defined(CONFIG_SOC_CAMERA_OV5648)
+#define SENSOR_0_CLK_FREQ               (24000000)
+#elif defined(CONFIG_SOC_CAMERA_OV5640)
 #define SENSOR_0_CLK_FREQ               (13000000)
+#else
+#error "SENSOR_0_CLK_FREQ not defined"
 #endif
 #define CSI0_LP_FREQ			(100000000)
 #define CSI1_LP_FREQ			(100000000)
@@ -339,7 +352,6 @@ static struct regulator *d_3v0_mmc1_vcc;
 #define SENSOR_1_CLK_FREQ               (26000000)
 
 #define SENSOR_1_GPIO_PWRDN             (005)
-
 
 static int hawaii_camera_power(struct device *dev, int on)
 {
@@ -360,8 +372,9 @@ static int hawaii_camera_power(struct device *dev, int on)
 		if (ret) {
 			return -1;
 		}
+	#ifdef CONFIG_SOC_CAMERA_OV5648
 		if (gpio_request_one(SENSOR_0_GPIO_RST, GPIOF_DIR_OUT |
-				     GPIOF_INIT_LOW, "Cam0Rst")) {
+				     GPIOF_INIT_HIGH, "Cam0Rst")) {
 			printk(KERN_ERR "Unable to get cam0 RST GPIO\n");
 			return -1;
 		}
@@ -370,6 +383,20 @@ static int hawaii_camera_power(struct device *dev, int on)
 			printk(KERN_ERR "Unable to get cam0 PWDN GPIO\n");
 			return -1;
 		}
+	#endif
+	#ifdef CONFIG_SOC_CAMERA_OV5640
+		if (gpio_request_one(SENSOR_0_GPIO_RST, GPIOF_DIR_OUT |
+				     GPIOF_INIT_LOW, "Cam0Rst")) {
+			printk(KERN_ERR "Unable to get cam0 RST GPIO\n");
+			return -1;
+		}
+		if (gpio_request_one(SENSOR_0_GPIO_PWRDN, GPIOF_DIR_OUT |
+				     GPIOF_INIT_HIGH, "CamPWDN")) {
+			printk(KERN_ERR "Unable to get cam0 PWDN GPIO\n");
+			return -1;
+		}
+	#endif
+
 		/*MMC1 VCC */
 		d_1v8_mmc1_vcc = regulator_get(NULL, icl->regulators[1].supply);
 		if (IS_ERR_OR_NULL(d_1v8_mmc1_vcc))
@@ -459,16 +486,35 @@ static int hawaii_camera_power(struct device *dev, int on)
 			goto e_clk_set_sensor;
 		}
 		usleep_range(10000, 10100);
+#ifdef CONFIG_SOC_CAMERA_OV5640
 		gpio_set_value(SENSOR_0_GPIO_RST, 0);
 		usleep_range(10000, 10100);
 		gpio_set_value(SENSOR_0_GPIO_PWRDN, 0);
 		usleep_range(5000, 5100);
 		gpio_set_value(SENSOR_0_GPIO_RST, 1);
+#endif
+#ifdef CONFIG_SOC_CAMERA_OV5648
+		gpio_set_value(SENSOR_0_GPIO_PWRDN, 1);
+		usleep_range(5000, 5100);
+		gpio_set_value(SENSOR_0_GPIO_RST, 1);
+#endif
+
+#ifdef CONFIG_VIDEO_A3907
+		a3907_enable(1);
+#endif
 		msleep(30);
 	} else {
+#ifdef CONFIG_VIDEO_A3907
+		a3907_enable(0);
+#endif
+#ifdef CONFIG_SOC_CAMERA_OV5640
 		gpio_set_value(SENSOR_0_GPIO_RST, 0);
 		usleep_range(1000, 1100);
 		gpio_set_value(SENSOR_0_GPIO_PWRDN, 1);
+#endif
+#ifdef CONFIG_SOC_CAMERA_OV5648
+		gpio_set_value(SENSOR_0_GPIO_PWRDN, 0);
+#endif
 		clk_disable(clock);
 		clk_disable(lp_clock);
 		clk_disable(axi_clk);
@@ -702,16 +748,22 @@ static int hawaii_camera_reset_front(struct device *dev)
 	return 0;
 }
 
+#ifdef CONFIG_SOC_CAMERA_OV5640
 static struct soc_camera_link iclink_ov5640 = {
 	.power = &hawaii_camera_power,
 	.reset = &hawaii_camera_reset,
 };
-
+#endif
+#ifdef CONFIG_SOC_CAMERA_OV5648
+static struct soc_camera_link iclink_ov5648 = {
+	.power = &hawaii_camera_power,
+	.reset = &hawaii_camera_reset,
+};
+#endif
 static struct soc_camera_link iclink_ov7692 = {
 	.power = &hawaii_camera_power_front,
 	.reset = &hawaii_camera_reset_front,
 };
-
 #endif /* CONFIG_VIDEO_UNICAM_CAMERA */
 
 static struct spi_kona_platform_data hawaii_ssp0_info = {
@@ -788,11 +840,9 @@ struct platform_device *hawaii_common_plat_devices[] __initdata = {
 #ifdef CONFIG_CRYPTO_DEV_BRCM_SPUM_AES
 	&hawaii_spum_aes_device,
 #endif
-
 #ifdef CONFIG_UNICAM
 	&hawaii_unicam_device,
 #endif
-
 #ifdef CONFIG_VIDEO_UNICAM_CAMERA
 	&hawaii_camera_device,
 #endif
@@ -978,16 +1028,22 @@ static const struct of_dev_auxdata hawaii_auxdata_lookup[] __initconst = {
 	OF_DEV_AUXDATA("bcm,sdhci", 0x3F180000,
 		"sdhci.0", &hawaii_sdio0_param),
 
+#ifdef CONFIG_SOC_CAMERA_OV5640
 	OF_DEV_AUXDATA("bcm,soc-camera", 0x3c,
 		"soc-back-camera", &iclink_ov5640),
-
+#endif
+#ifdef CONFIG_SOC_CAMERA_OV5648
+	OF_DEV_AUXDATA("bcm,soc-camera", 0x36,
+		"soc-back-camera", &iclink_ov5648),
+#endif
 	OF_DEV_AUXDATA("bcm,soc-camera", 0x3e,
 		"soc-front-camera", &iclink_ov7692),
 	{},
 };
 
 #ifdef CONFIG_VIDEO_KONA
-static struct ov5640_platform_data ov5640_cam1_pdata = {
+#ifdef CONFIG_SOC_CAMERA_OV5640
+static struct ov5648_platform_data ov5640_cam1_pdata = {
 	.s_power = hawaii_ov_cam1_power,
 };
 
@@ -1012,6 +1068,34 @@ static struct unicam_v4l2_subdevs_groups hawaii_unicam_subdevs[] = {
 		 },
 	 },
 };
+#endif
+#ifdef CONFIG_SOC_CAMERA_OV5648
+static struct ov5648_platform_data ov5648_cam1_pdata = {
+	.s_power = hawaii_ov_cam1_power,
+};
+
+struct unicam_subdev_i2c_board_info ov5648_cam1_i2c_device = {
+	.board_info = {
+		       I2C_BOARD_INFO("ov5648-mc", OV5648_I2C_ADDRESS),
+		       .platform_data = &ov5648_cam1_pdata,
+		       },
+	.i2c_adapter_id = 0,
+};
+
+static struct unicam_v4l2_subdevs_groups hawaii_unicam_subdevs[] = {
+	{
+	 /* ov5648 */
+	 .i2c_info = &ov5648_cam1_i2c_device,
+	 .interface = UNICAM_INTERFACE_CSI2_PHY1,
+	 .bus = {
+		 .csi2 = {
+			  .lanes = CSI2_DUAL_LANE_SENSOR,
+			  .port = UNICAM_PORT_AFE_0,
+			  },
+		 },
+	 },
+};
+#endif
 
 static struct unicam_platform_data hawaii_unicam_pdata = {
 	.subdevs = hawaii_unicam_subdevs,
