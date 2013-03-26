@@ -7088,7 +7088,7 @@ int root_ccu_clk_init(struct clk* clk)
     writel(reg_val, KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET);
 
 	/*Reset 8-phase enable de-glitch enable bit for B1 and later chips*/
-	if (get_chip_id() >= JAVA_CHIP_ID(JAVA_CHIP_REV_A0)) {
+		if (get_chip_id() >= KONA_CHIP_ID_JAVA_A0){
 		reg_val = readl(KONA_ROOT_CLK_VA +
 					ROOT_CLK_MGR_REG_PLL1CTRL3_OFFSET);
 		reg_val &=
