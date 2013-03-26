@@ -362,6 +362,7 @@ core_param(ntc_disable, ntc_disable, bool, 0644);
  */
 static void bcmpmu_fg_batt_cal_algo(struct bcmpmu_fg_data *fg);
 static void bcmpmu_fg_clear_adj_factors(struct bcmpmu_fg_data *fg);
+static void bcmpmu_fg_update_psy(struct bcmpmu_fg_data *fg, bool force_update);
 /**
  * inline function
  */
@@ -1622,6 +1623,8 @@ static int bcmpmu_fg_event_handler(struct notifier_block *nb,
 			fg->crit_cutoff_delta = 0;
 			bcmpmu_fg_clear_adj_factors(fg);
 			bcmpmu_fg_calibrate_offset(fg, FG_HW_CAL_MODE_FAST);
+			fg->flags.prev_batt_status = fg->flags.batt_status;
+			fg->flags.batt_status = POWER_SUPPLY_STATUS_CHARGING;
 			if ((fg->bcmpmu->flags & BCMPMU_ACLD_EN) &&
 					(fg->chrgr_type == PMU_CHRGR_TYPE_DCP))
 				queue_delayed_work(fg->fg_wq, &fg->fg_acld_work,
@@ -1630,6 +1633,7 @@ static int bcmpmu_fg_event_handler(struct notifier_block *nb,
 			BUG_ON(1);
 
 		FG_UNLOCK(fg);
+		bcmpmu_fg_update_psy(fg, true);
 		break;
 	case BCMPMU_CHRGR_EVENT_CHRG_STATUS:
 		fg = to_bcmpmu_fg_data(nb, chrgr_status_nb);
@@ -2327,12 +2331,35 @@ static int bcmpmu_get_vbus_load(struct bcmpmu_fg_data *fg, int vbus_chrg_off,
 	return vbus_load;
 }
 
+static bool bcmpmu_get_ubpd_int(struct bcmpmu_fg_data *fg)
+{
+	int ret;
+
+	bcmpmu_usb_get(fg->bcmpmu, BCMPMU_USB_CTRL_GET_UBPD_INT, &ret);
+	if (ret != 1)
+		return false;
+
+	return true;
+
+}
+static bool bcmpmu_is_usb_valid(struct bcmpmu_fg_data *fg)
+{
+	int ret;
+
+	bcmpmu_usb_get(fg->bcmpmu, BCMPMU_USB_CTRL_GET_USB_VALID, &ret);
+	if (ret != 1)
+		return false;
+
+	return true;
+
+}
 static void bcmpmu_fg_acld_algo(struct work_struct *work)
 {
 
 	struct bcmpmu_fg_data *fg = to_bcmpmu_fg_data(work, fg_acld_work.work);
 	struct bcmpmu_fg_status_flags *flags = &fg->flags;
 	bool cc_lmt_hit = false;
+	bool chrgr_fault = false;
 	int vbus_chrg_off;
 	int vbus_chrg_on;
 	int vbus_res;
@@ -2353,7 +2380,22 @@ static void bcmpmu_fg_acld_algo(struct work_struct *work)
 		goto exit;
 	}
 	fg->acld_rtry_cnt = 0;
+
+	/* Return from ACLD if,
+	 * DCP is quickly removed after insertion.
+	 * */
+	if (!bcmpmu_get_ubpd_int(fg)) {
+		chrgr_fault = true;
+		goto chrgr_pre_chk;
+	}
+
 	msleep(ACLD_DELAY_1000);
+
+	if (!bcmpmu_get_ubpd_int(fg)) {
+		chrgr_fault = true;
+		goto chrgr_pre_chk;
+	}
+
 	vbus_chrg_off = bcmpmu_fg_get_avg_vbus(fg);
 	pr_fg(INIT, "vbus_chrg_off = %d\n", vbus_chrg_off);
 
@@ -2372,6 +2414,10 @@ static void bcmpmu_fg_acld_algo(struct work_struct *work)
 
 	pr_fg(INIT, "Tuning USB_FC_CC\n");
 	do {
+		if (!bcmpmu_get_ubpd_int(fg)) {
+			chrgr_fault = true;
+			goto chrgr_pre_chk;
+		}
 		pr_fg(INIT, "vbus_chrg_on = %d vbus_res = %d vbus_load = %d\n",
 				vbus_chrg_on, vbus_res, vbus_load);
 
@@ -2441,6 +2487,10 @@ static void bcmpmu_fg_acld_algo(struct work_struct *work)
 	vbus_load = bcmpmu_get_vbus_load(fg, vbus_chrg_off, vbus_res);
 
 	do {
+		if (!bcmpmu_get_ubpd_int(fg)) {
+			chrgr_fault = true;
+			goto chrgr_pre_chk;
+		}
 		pr_fg(INIT, "vbus_chrg_on = %d vbus_load = %d\n",
 				vbus_chrg_on, vbus_load);
 		if ((vbus_chrg_on < vbus_load) ||
@@ -2472,14 +2522,11 @@ static void bcmpmu_fg_acld_algo(struct work_struct *work)
 	bcmpmu_set_icc_fc(fg->bcmpmu, usb_fc_cc_reached);
 chrgr_pre_chk:
 	/* charger presence check */
-	msleep(ACLD_DELAY_500);
-	bcmpmu_usb_get(fg->bcmpmu, BCMPMU_USB_CTRL_GET_USB_VALID, &ret);
-	if (ret != 1) {
-		pr_fg(INIT, "Charger is not present, restoring cc trim\n");
+	if ((!bcmpmu_is_usb_valid(fg)) || chrgr_fault) {
+		pr_fg(INIT, "Charger Error, restoring cc trim\n");
 		bcmpmu_restore_cc_trim_otp(fg);
 		return;
 	}
-
 	flags->acld_en = true;
 	return;
 exit:

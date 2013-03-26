@@ -1189,6 +1189,7 @@
 #define ENV2_P_UBPD_ENV         0x01
 #define ENV2_USBPD_USBDET	0x02
 #define ENV2_P_UBPD_INT         0x04
+#define ENV2_P_UBPD_INT_SHIFT	2
 #define ENV2_P_UBPD_CHG         0x08
 #define ENV2_P_UBPD_CHG_SHIFT   3
 #define ENV2_USB_PORT_DISABLE	0x10
