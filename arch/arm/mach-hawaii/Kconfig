@@ -110,7 +110,15 @@ choice
 		Hawaii based
 		Garnet
 		edn010
-
+	
+	config MACH_HAWAII_GARNET_EDN020
+	bool "GARNET EDN020"
+	help
+	  Support for
+		Hawaii based
+		Garnet
+		edn020
+		
 	config MACH_HAWAII_GARNET_C_A18
 	bool "GARNET A18"
 	help
