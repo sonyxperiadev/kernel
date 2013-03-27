@@ -212,13 +212,13 @@ static int as3643_disable(void)
 
 int as3643_set_ind_led(int iled)
 {
-	as3643_enable(FLASHLAMP_MODE_INDICATOR, iled, 300000);
+	as3643_enable(FLASHLAMP_MODE_INDICATOR, iled, 900000);
 	return 0;
 }
 
 int as3643_set_torch_flash(int hpled)
 {
-	as3643_enable(FLASHLAMP_MODE_TORCH, hpled, 300000);
+	as3643_enable(FLASHLAMP_MODE_TORCH, hpled, 900000);
 	return 0;
 }
 
