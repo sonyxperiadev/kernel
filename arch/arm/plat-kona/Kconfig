@@ -218,6 +218,16 @@ config KONA_PMU_BSC_USE_PMGR_HW_SEM
 	  bus while SW driver can still generate the same. To sync
 	  between the two use HW semaphore.
 
+config KONA_I2C_SEQUENCER_LOG
+	bool "enable pwrmgr i2c sequencer logging"
+	depends on ARCH_HAWAII && KONA_POWER_MGR
+	default n
+	help
+	 Say Y to enable sequencer logging. All the pwrmgr i2c
+	 sequencer state machine and data will be logged to an
+	 buffer which can be useful in debugging sequencer related
+	 issues
+
 config PM_LOG_TO_UNCACHED_MEM
        bool "Enable power manager event logging to uncached memory"
        default y

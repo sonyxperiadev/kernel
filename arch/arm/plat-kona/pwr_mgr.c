@@ -10,6 +10,7 @@
 *****************************************************************************/
 
 #include <linux/sched.h>
+#include <linux/dma-mapping.h>
 #include <linux/pm.h>
 #include <linux/interrupt.h>
 #include <linux/module.h>
@@ -37,6 +38,8 @@
 #include <mach/pm.h>
 #include <mach/memory.h>
 #include <plat/kona_pm.h>
+#include <mach/io_map.h>
+#include <mach/rdb/brcm_rdb_a9cpu.h>
 
 #ifndef PWRMGR_I2C_VAR_DATA_REG
 #define PWRMGR_I2C_VAR_DATA_REG 6
@@ -142,11 +145,41 @@ static char *pwr_mgr_event2str(int event)
 #define PWR_MGR_SEQ_RETRIES			(10)
 #define PWR_MGR_SEQ_INTR_POLL_TIMEOUT_US	(200)
 
+/**
+ * SW SEQUENCER logging related
+ */
+#define SEQ_LOG_BUFF_SIZE			(SZ_1K)
+#define SEQ_LOG_BUFF_OFFSET			(0)
+#define SEQ_LOG_PACK_U24(d2, d1, d0) \
+	((d2 << 16) | (d1 << 8) | (d0))
+#define SEQ_LOG_HDR_MASK	(0xFF)
+#define SEQ_LOG_HDR_SHIFT	24
+#define SEQ_LOG_DATA_MASK	(0x00FFFFFF)
+#define SEQ_LOG_DATA_SHIFT	0
+
 /* I2C SW seq operations*/
 enum {
 	I2C_SEQ_READ,
 	I2C_SEQ_WRITE,
 	I2C_SEQ_READ_FIFO,
+};
+
+enum {
+	SEQ_LOG_READ_BYTE = 1,
+	SEQ_LOG_WRITE_BYTE,
+	SEQ_LOG_NACK,
+	SEQ_LOG_SEQ_START,
+	SEQ_LOG_SEQ_TRIG,
+	SEQ_LOG_CLR_TRIG_OFF,
+	SEQ_LOG_WAIT_INTR,
+	SEQ_LOG_WAIT_TIMEOUT,
+	SEQ_LOG_INTR,
+	SEQ_LOG_FAKE_INTR,
+	SEQ_LOG_INTR_HANDLED,
+	SEQ_LOG_PC_UNALTRD,
+	SEQ_LOG_POLL_INTR,
+	SEQ_LOG_POLL_RETRY,
+	SEQ_LOG_SET_MODE,
 };
 
 #endif
@@ -184,7 +217,15 @@ struct pwr_mgr {
 	struct work_struct pwrmgr_work;
 };
 
+#ifdef CONFIG_KONA_I2C_SEQUENCER_LOG
+static u32 *seq_log_buf_v;
+static u32 *seq_log_buf_p;
+static atomic_t seq_log_buf_init;
+#endif
+
 static struct pwr_mgr pwr_mgr;
+
+static void pwr_mgr_dump_i2c_cmd_regs(void);
 
 int pwr_mgr_event_trg_enable(int event_id, int event_trg_type)
 {
@@ -1574,6 +1615,65 @@ int pwr_mgr_process_events(u32 event_start, u32 event_end, int clear_event)
 
 EXPORT_SYMBOL(pwr_mgr_process_events);
 
+void pwr_mgr_seq_log_buf_init(void)
+{
+#ifdef CONFIG_KONA_I2C_SEQUENCER_LOG
+	void *virt;
+	dma_addr_t phy_addr;
+
+	virt = dma_zalloc_coherent(NULL, SEQ_LOG_BUFF_SIZE, &phy_addr,
+			GFP_ATOMIC);
+	if (virt == NULL) {
+		pwr_dbg(PWR_LOG_ERR, "%s: dma_zalloc_coherent failed!!\n",
+				__func__);
+		return;
+	}
+	seq_log_buf_v = (u32 *)virt;
+	seq_log_buf_p = (u32 *)phy_addr;
+	pwr_dbg(PWR_LOG_ERR, "sequencer log buffer: phy: %p virt: %p\n",
+			seq_log_buf_p, seq_log_buf_v);
+	*seq_log_buf_v = 1;
+	atomic_set(&seq_log_buf_init, 1);
+#endif
+}
+
+static void pwr_mgr_seq_log_buf_put(int hdr, int data)
+{
+#ifdef CONFIG_KONA_I2C_SEQUENCER_LOG
+	int next_off;
+
+	if (atomic_read(&seq_log_buf_init) == 0)
+		return;
+
+	next_off = *seq_log_buf_v;
+	if (next_off == ((SEQ_LOG_BUFF_SIZE / SZ_4) - 1))
+		next_off = 1;
+
+	*(seq_log_buf_v + next_off) =
+		(((hdr & SEQ_LOG_HDR_MASK) << SEQ_LOG_HDR_SHIFT) |
+		 ((data & SEQ_LOG_DATA_MASK)));
+	*seq_log_buf_v = ++next_off;
+#endif
+}
+
+static void pwr_mgr_seq_log_buf_dump(void)
+{
+#ifdef CONFIG_KONA_I2C_SEQUENCER_LOG
+	int i;
+
+	if (atomic_read(&seq_log_buf_init) == 0)
+		return;
+
+	pwr_dbg(PWR_LOG_ERR, " +++ I2C SEQUNCER LOG BUFF +++\n");
+	pwr_dbg(PWR_LOG_ERR, "offset : %d\n", *seq_log_buf_v);
+
+	for (i = 0; i < (SEQ_LOG_BUFF_SIZE / SZ_4); i++)
+		pwr_dbg(PWR_LOG_ERR, "[%d]: %x", i, *(seq_log_buf_v + i));
+
+	pwr_dbg(PWR_LOG_ERR, " --- I2C SEQUNCER LOG BUFF ---\n");
+#endif
+}
+
 static void pwr_mgr_work_handler(struct work_struct *work)
 {
 	pwr_mgr_process_events(EVENT_ID_ALL, EVENT_ID_ALL, false);
@@ -1583,6 +1683,8 @@ static irqreturn_t pwr_mgr_irq_handler(int irq, void *dev_id)
 {
 	u32 status, mask;
 	u32 reg;
+
+	pwr_mgr_seq_log_buf_put(SEQ_LOG_INTR, 0);
 
 	pwr_dbg(PWR_LOG_DBG, "%s\n", __func__);
 
@@ -1604,9 +1706,12 @@ static irqreturn_t pwr_mgr_irq_handler(int irq, void *dev_id)
 		 * executing the sequencer. This is a fake interrupt
 		 * we will just clear the interrupt pending here
 		 */
-		if (reg & PWRMGR_I2C_REQ_BUSY_MASK)
+		if (reg & PWRMGR_I2C_REQ_BUSY_MASK) {
+			pwr_mgr_seq_log_buf_put(SEQ_LOG_FAKE_INTR, 0);
 			return IRQ_HANDLED;
+		}
 #endif
+		pwr_mgr_seq_log_buf_put(SEQ_LOG_INTR_HANDLED, 0);
 		complete(&pwr_mgr.i2c_seq_done);
 	}
 	if (pwr_mgr.info->flags & PROCESS_EVENTS_ON_INTR) {
@@ -1718,6 +1823,7 @@ static void pwr_mgr_seq_set_pc_pin_cmd(u32 offset, int pc_pin, int set)
 
 	pwr_mgr_update_i2c_cmd_data(offset, cmd);
 }
+
 static int pwr_mgr_sw_i2c_seq_start(u32 action)
 {
 	u32 reg_val;
@@ -1732,6 +1838,7 @@ static int pwr_mgr_sw_i2c_seq_start(u32 action)
 	int pc_status;
 	int i;
 
+	pwr_mgr_seq_log_buf_put(SEQ_LOG_SEQ_START, action);
 	pwr_mgr_clr_intr_status(PWRMGR_INTR_I2C_SW_SEQ);
 	switch (action) {
 	case I2C_SEQ_READ:
@@ -1789,6 +1896,9 @@ static int pwr_mgr_sw_i2c_seq_start(u32 action)
 			 * clear the the interrupt status register
 			 * (Fake intr trigger errta - 2706)
 			 */
+			pwr_mgr_seq_log_buf_put(SEQ_LOG_SEQ_TRIG,
+					pwr_mgr.i2c_seq_trg);
+
 			writel(reg_val, PWR_MGR_REG_ADDR(
 						PWRMGR_I2C_SW_CMD_CTRL_OFFSET));
 			reg = readl(PWR_MGR_REG_ADDR(
@@ -1819,6 +1929,7 @@ static int pwr_mgr_sw_i2c_seq_start(u32 action)
 				writel(reg, PWR_MGR_REG_ADDR(
 							PWRMGR_INTR_MASK_OFFSET)
 						);
+			pwr_mgr_seq_log_buf_put(SEQ_LOG_CLR_TRIG_OFF, 0);
 		} else {
 			if (pwr_mgr_get_i2c_mode() != PWR_MGR_I2C_MODE_POLL)
 				pwr_mgr_mask_intr(PWRMGR_INTR_I2C_SW_SEQ,
@@ -1827,14 +1938,25 @@ static int pwr_mgr_sw_i2c_seq_start(u32 action)
 						PWRMGR_I2C_SW_CMD_CTRL_OFFSET));
 		}
 		if (pwr_mgr_get_i2c_mode() != PWR_MGR_I2C_MODE_POLL) {
+			pwr_mgr_seq_log_buf_put(SEQ_LOG_WAIT_INTR,
+					PWR_MGR_REG_ADDR(
+						PWRMGR_INTR_MASK_OFFSET));
 			timeout = wait_for_completion_timeout(
 					&pwr_mgr.i2c_seq_done,
 					msecs_to_jiffies(
 						pwr_mgr.info->i2c_seq_timeout));
 
 			if (!timeout) {
+				pwr_mgr_seq_log_buf_put(SEQ_LOG_WAIT_TIMEOUT,
+					PWR_MGR_REG_ADDR(
+						PWRMGR_INTR_MASK_OFFSET));
 				pwr_dbg(PWR_LOG_ERR, "%s seq timedout !!\n",
 						__func__);
+				pr_info("PCSR_CPU0: %x PCSR_CPU1: %x\n",
+						readl(KONA_A9CPU0_VA +
+							A9CPU_PCSR_OFFSET),
+						readl(KONA_A9CPU1_VA +
+							A9CPU_PCSR_OFFSET));
 				continue;
 			} else {
 				if (action != I2C_SEQ_READ_FIFO) {
@@ -1844,19 +1966,28 @@ static int pwr_mgr_sw_i2c_seq_start(u32 action)
 							(!pwr_mgr.pc_status &&
 							 pc_status))
 						break;
-					else
+					else {
+						pwr_mgr_seq_log_buf_put(
+							SEQ_LOG_PC_UNALTRD,
+							0);
 						pwr_dbg(PWR_LOG_SEQ,
 								"%s: PC pin"
 								"unaltered\n",
 								__func__);
+					}
 				} else
 					break;
 			}
 		} else {
 			while (poll_timeout) {
 				if (!pwr_mgr_get_intr_status(
-							PWRMGR_INTR_I2C_SW_SEQ))
+						PWRMGR_INTR_I2C_SW_SEQ)) {
+					pwr_mgr_seq_log_buf_put(
+							SEQ_LOG_POLL_INTR, 0);
+					udelay(5);
+					poll_timeout -= 5;
 					continue;
+				}
 				pwr_mgr_clr_intr_status(PWRMGR_INTR_I2C_SW_SEQ);
 				if (action != I2C_SEQ_READ_FIFO) {
 					pc_status = pm_get_pc_value(
@@ -1867,9 +1998,9 @@ static int pwr_mgr_sw_i2c_seq_start(u32 action)
 						goto exit;
 				} else
 					goto exit;
-
 				udelay(poll_delay);
 				poll_timeout -= poll_delay;
+				pwr_mgr_seq_log_buf_put(SEQ_LOG_POLL_RETRY, 0);
 			}
 		}
 		/**
@@ -1888,6 +2019,9 @@ static int pwr_mgr_sw_i2c_seq_start(u32 action)
 exit:
 	if (i == retry) {
 		pwr_dbg(PWR_LOG_ERR, "%s: max tries\n", __func__);
+		pwr_mgr_seq_log_buf_dump();
+		pwr_mgr_dump_i2c_cmd_regs();
+		panic("SEQ MAX TRIES");
 		ret = -EAGAIN;
 	}
 	pwr_mgr_mask_intr(PWRMGR_INTR_I2C_SW_SEQ, true);
@@ -2000,7 +2134,8 @@ int pwr_mgr_pmu_reg_read(u8 reg_addr, u8 slave_id, u8 *reg_val)
 
 	mutex_lock(&seq_mutex);
 	kona_pm_disable_idle_state(CSTATE_ALL, 1);
-
+	pwr_mgr_seq_log_buf_put(SEQ_LOG_READ_BYTE,
+			SEQ_LOG_PACK_U24(0 , slave_id, reg_addr));
 	if (pwr_mgr.info->i2c_rd_slv_id_off1 >= 0)
 		pwr_mgr_update_i2c_cmd_data((u32) pwr_mgr.info->
 					    i2c_rd_slv_id_off1,
@@ -2044,6 +2179,7 @@ int pwr_mgr_pmu_reg_read(u8 reg_addr, u8 slave_id, u8 *reg_val)
 		bsc_isr = readl(PWR_MGR_REG_ADDR(PWRMGR_I2C_APB_READ_OFFSET)) &
 			PWRMGR_I2C_APB_READ_DATA_MASK;
 		if (bsc_isr & 0x1) {
+			pwr_mgr_seq_log_buf_put(SEQ_LOG_NACK, 0);
 			pwr_dbg(PWR_LOG_SEQ, "PWRMGR: I2C READ NACK\n");
 			ret = -EAGAIN;
 			goto out_unlock;
@@ -2057,6 +2193,8 @@ int pwr_mgr_pmu_reg_read(u8 reg_addr, u8 slave_id, u8 *reg_val)
 		__func__, reg_addr, slave_id, *reg_val, ret);
 	}
 out_unlock:
+	pwr_mgr_seq_log_buf_put(SEQ_LOG_READ_BYTE,
+			SEQ_LOG_PACK_U24(slave_id, reg_addr, *reg_val));
 	kona_pm_disable_idle_state(CSTATE_ALL, 0);
 	mutex_unlock(&seq_mutex);
 	pwr_dbg(PWR_LOG_SEQ, "%s : ret = %d\n", __func__, ret);
@@ -2080,6 +2218,9 @@ int pwr_mgr_pmu_reg_write(u8 reg_addr, u8 slave_id, u8 reg_val)
 
 	mutex_lock(&seq_mutex);
 	kona_pm_disable_idle_state(CSTATE_ALL, 1);
+
+	pwr_mgr_seq_log_buf_put(SEQ_LOG_WRITE_BYTE,
+			SEQ_LOG_PACK_U24(slave_id, reg_addr, reg_val));
 
 	if (pwr_mgr.info->i2c_wr_slv_id_off >= 0)
 		pwr_mgr_update_i2c_cmd_data((u32) pwr_mgr.info->
@@ -2106,11 +2247,14 @@ int pwr_mgr_pmu_reg_write(u8 reg_addr, u8 slave_id, u8 reg_val)
 		i2c_data = reg & PWRMGR_I2C_APB_READ_DATA_MASK;
 #endif
 		if (i2c_data & 0x1) {
+			pwr_mgr_seq_log_buf_put(SEQ_LOG_NACK, 0);
 			pwr_dbg(PWR_LOG_SEQ,
 				"PWRMGR: I2C WRITE NACK from PMU\n");
 			ret = -EAGAIN;
 		}
 	}
+	pwr_mgr_seq_log_buf_put(SEQ_LOG_WRITE_BYTE,
+			SEQ_LOG_PACK_U24(slave_id, reg_addr, reg_val));
 	kona_pm_disable_idle_state(CSTATE_ALL, 0);
 	mutex_unlock(&seq_mutex);
 	pwr_dbg(PWR_LOG_SEQ,
@@ -2262,9 +2406,9 @@ EXPORT_SYMBOL(pwr_mgr_clr_intr_status);
  * Added for debugging purpose but not called
  */
 
-#if 0
 void pwr_mgr_dump_i2c_cmd_regs(void)
 {
+#ifdef CONFIG_KONA_I2C_SEQUENCER_LOG
 	int idx;
 	u32 reg_val;
 	int cmd0, cmd1, data0, data1;
@@ -2297,9 +2441,10 @@ void pwr_mgr_dump_i2c_cmd_regs(void)
 				((idx + 32) * 2) + 1, cmd1, data1);
 	}
 #endif
+#endif
 }
 EXPORT_SYMBOL(pwr_mgr_dump_i2c_cmd_regs);
-#endif
+
 void pwr_mgr_init_sequencer(struct pwr_mgr_info *info)
 {
 	u32 v_set;
@@ -2341,10 +2486,8 @@ int pwr_mgr_init(struct pwr_mgr_info *info)
 	ret = request_irq(info->pwrmgr_intr, pwr_mgr_irq_handler,
 			  IRQF_TRIGGER_RISING | IRQF_NO_SUSPEND,
 			  "pwr_mgr", NULL);
-
 	return ret;
 }
-
 EXPORT_SYMBOL(pwr_mgr_init);
 
 static int pwr_mgr_pm_i2c_var_data_modify(u8 index, u8 val)
@@ -2962,6 +3105,8 @@ int __init pwr_mgr_debug_init(u32 bmdm_pwr_base)
 				__func__);
 		return -EPERM;
 	}
+
+	pwr_mgr_seq_log_buf_init();
 
 	dent_pwr_root_dir = debugfs_create_dir("power_mgr", 0);
 	if (!dent_pwr_root_dir)
