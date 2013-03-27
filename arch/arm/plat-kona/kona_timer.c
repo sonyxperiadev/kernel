@@ -35,6 +35,7 @@
 #include <mach/io_map.h>
 #include <mach/irqs.h>
 #include <mach/clock.h>
+#include <mach/rdb/brcm_rdb_khubaon_rst_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_kona_gptimer.h>
 #include <mach/rdb/brcm_rdb_khubaon_clk_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_chipreg.h>
@@ -1061,7 +1062,7 @@ static int __config_aon_hub_timer_clock(unsigned int rt)
 	 * so all are ON
 	 */
 	void __iomem *reg_base = IOMEM(KONA_AON_CLK_VA);
-	unsigned long val, reg_val, old_enable;
+	unsigned long val = -1, reg_val, old_enable;
 
 	/* AON timer only supports 32KHz, 1MHz and 19.5 MHz */
 	switch (rt) {
@@ -1099,6 +1100,22 @@ static int __config_aon_hub_timer_clock(unsigned int rt)
 	reg_val &= 0x80000000;
 	reg_val |= 0xA5A500 | 0x1;
 	writel(reg_val, reg_base + KHUBAON_CLK_MGR_REG_WR_ACCESS_OFFSET);
+
+		reg_val =
+			readl(KONA_AON_RST_VA +
+			KHUBAON_RST_MGR_REG_SOFT_RSTN0_OFFSET);
+		reg_val =
+		(reg_val) & ~(1 <<
+		KHUBAON_RST_MGR_REG_SOFT_RSTN0_HUB_TIMER_SOFT_RSTN_SHIFT);
+		writel(reg_val,
+		KONA_AON_RST_VA + KHUBAON_RST_MGR_REG_SOFT_RSTN0_OFFSET);
+		reg_val =
+		readl(KONA_AON_RST_VA + KHUBAON_RST_MGR_REG_SOFT_RSTN0_OFFSET);
+		reg_val =
+		(reg_val) | (1 <<
+		KHUBAON_RST_MGR_REG_SOFT_RSTN0_HUB_TIMER_SOFT_RSTN_SHIFT);
+		writel(reg_val,
+		KONA_AON_RST_VA + KHUBAON_RST_MGR_REG_SOFT_RSTN0_OFFSET);
 
 	/*
 	 * Assumed that the timer rate enum has
@@ -1160,14 +1177,14 @@ static inline void __disable_channel(struct kona_timer *kt)
 
 static inline unsigned long __get_counter(struct kona_timer_module *ktm)
 {
+	signed long lsw;
+	int i = 0;
 #ifdef CONFIG_MACH_BCM_FPGA_E
 	if (ktm == NULL)
 		ktm = &timer_module_list[0];
 	return readl(ktm->reg_base + KONA_GPTIMER_STCLO_OFFSET);
 #endif
 #define KONA_MAX_REPEAT_TIMES	100
-	unsigned long lsw;
-	int i = 0;
 
 	for (i = 0; i < KONA_MAX_REPEAT_TIMES; i++) {
 		lsw = readl(ktm->reg_base +
