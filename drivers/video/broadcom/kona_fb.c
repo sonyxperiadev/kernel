@@ -1529,6 +1529,15 @@ static int kona_fb_reboot_cb(struct notifier_block *nb,
 	unsigned long val, void *v)
 {
 	struct kona_fb *fb = container_of(nb, struct kona_fb, reboot_nb);
+	struct fb_event event;
+	int blank = FB_BLANK_POWERDOWN;
+
+	/*shut down the backlight before disable the display*/
+	pr_info("Turning off backlight\r\n");
+	event.info = &fb->fb;
+	event.data = &blank;
+	fb_notifier_call_chain(FB_EVENT_BLANK, &event);
+
 	pr_err("Turning off display\n");
 	if (fb->g_stop_drawing) {
 		pr_err("Display is already suspended, nothing to do\n");
