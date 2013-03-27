@@ -35,6 +35,7 @@ extern unsigned ramdump_enable;
 #include "lcd/nt35516.h"
 #include "lcd/otm1281a.h"
 #include "lcd/otm8018b.h"
+#include "lcd/otm8009a.h"
 
 
 static struct lcd_config *cfgs[] __initdata = {
@@ -43,6 +44,7 @@ static struct lcd_config *cfgs[] __initdata = {
 	&nt35516_cfg,
 	&otm1281a_cfg,
 	&otm8018b_cfg,
+	&otm8009a_cfg,
 };
 
 static struct lcd_config * __init get_dispdrv_cfg(const char *name)
