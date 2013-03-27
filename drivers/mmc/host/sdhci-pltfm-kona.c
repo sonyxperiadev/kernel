@@ -873,8 +873,12 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 	host->mmc->parent = dev->dev;
 	if (dev->devtype == SDIO_DEV_TYPE_WIFI)
 		dev->wifi_gpio = &hw_cfg->wifi_gpio;
-	if (dev->devtype == SDIO_DEV_TYPE_EMMC && emmc_regulator)
+	if (dev->devtype == SDIO_DEV_TYPE_EMMC && emmc_regulator) {
 		dev->vdd_sdxc_regulator = regulator_get(NULL, emmc_regulator);
+		if (IS_ERR(dev->vdd_sdxc_regulator)) {
+			dev->vdd_sdxc_regulator = NULL;
+		}
+	}
 
 	pr_debug("%s: DEV TYPE %x\n", __func__, dev->devtype);
 
