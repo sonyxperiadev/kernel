@@ -1762,6 +1762,13 @@ static void bcmpmu_fg_update_psy(struct bcmpmu_fg_data *fg,
 {
 	bool update_psy = false;
 
+	if (ntc_disable) {
+		if (fg->capacity_info.percentage == 0) {
+			fg->capacity_info.percentage = 1;
+			pr_fg(FLOW, "change to percentage=1 for test\n");
+		}
+	}
+
 	if (fg->capacity_info.prev_percentage != fg->capacity_info.percentage) {
 		pr_fg(VERBOSE, "Change in capacity.. Update power supply\n");
 		fg->capacity_info.prev_percentage =
