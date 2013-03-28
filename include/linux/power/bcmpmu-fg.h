@@ -155,10 +155,6 @@ struct bcmpmu_fg_pdata {
 	int sleep_sample_rate; /* sampling rate during sleep mode */
 	int fg_factor;
 	bool hw_maintenance_charging;
-	int suspend_temp_hot;
-	int recovery_temp_hot;
-	int suspend_temp_cold;
-	int recovery_temp_cold;
 	int poll_rate_low_batt;
 	int poll_rate_crit_batt;
 	int acld_vbus_margin;

@@ -1147,10 +1147,6 @@ static struct bcmpmu_fg_pdata fg_pdata = {
 	.sleep_current_ua = 2000, /* floor during sleep */
 	.sleep_sample_rate = 32000,
 	.fg_factor = 976,
-	.suspend_temp_hot = 500,
-	.recovery_temp_hot = 450,
-	.suspend_temp_cold = -60,
-	.recovery_temp_cold = -10,
 	.poll_rate_low_batt = 5000, /* every 5 seconds */
 	.poll_rate_crit_batt = 2000, /* every 2 Seconds */
 

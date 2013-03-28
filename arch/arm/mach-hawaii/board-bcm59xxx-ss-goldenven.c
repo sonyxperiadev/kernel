@@ -1186,10 +1186,6 @@ static struct bcmpmu_fg_pdata fg_pdata = {
 	.sleep_current_ua = 1460,
 	.sleep_sample_rate = 32000,
 	.fg_factor = 950, /* Logan00 board : 2.76% err Jan30 2010 */
-	.suspend_temp_hot   =  800,
-	.recovery_temp_hot  =  750,
-	.suspend_temp_cold  = -200,
-	.recovery_temp_cold = -150,
 	.poll_rate_low_batt = 5000, /* every 5 seconds */
 	.poll_rate_crit_batt = 2000, /* every 2 Seconds */
 

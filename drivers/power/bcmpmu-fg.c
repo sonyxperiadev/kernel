@@ -236,8 +236,6 @@ struct bcmpmu_fg_status_flags {
 	int prev_batt_status;
 	bool chrgr_connected;
 	bool charging_enabled;
-	bool temp_hot_state;
-	bool temp_cold_state;
 	bool batt_present;
 	bool chrgr_pause;
 	bool init_capacity;
@@ -1922,37 +1920,6 @@ exit:
 	return 0;
 }
 
-static void bcmpmu_fg_moniter_battery_temp(struct bcmpmu_fg_data *fg)
-{
-
-	if (unlikely(fg->adc_data.temp > fg->pdata->suspend_temp_hot)) {
-		if (bcmpmu_is_usb_host_enabled(fg->bcmpmu)) {
-			bcmpmu_chrgr_usb_en(fg->bcmpmu, 0);
-			fg->flags.temp_hot_state = true;
-			pr_fg(FLOW, "suspend temp hot\n");
-		}
-	} else if (unlikely(fg->flags.temp_hot_state &&
-				(fg->adc_data.temp <
-				 fg->pdata->recovery_temp_hot))) {
-		fg->flags.temp_hot_state = false;
-		pr_fg(FLOW, "recovery temp hot\n");
-		bcmpmu_chrgr_usb_en(fg->bcmpmu, 1);
-	} else if (unlikely(fg->adc_data.temp <
-				fg->pdata->suspend_temp_cold)) {
-		if (bcmpmu_is_usb_host_enabled(fg->bcmpmu)) {
-			bcmpmu_chrgr_usb_en(fg->bcmpmu, 0);
-			fg->flags.temp_cold_state = true;
-			pr_fg(FLOW, "suspend temp cold\n");
-		}
-	} else if (unlikely(fg->flags.temp_cold_state &&
-				(fg->adc_data.temp >
-				 fg->pdata->recovery_temp_cold))) {
-		fg->flags.temp_cold_state = false;
-		pr_fg(FLOW, "recovery temp cold\n");
-		bcmpmu_chrgr_usb_en(fg->bcmpmu, 1);
-	}
-}
-
 static void bcmpmu_fg_cal_force_algo(struct bcmpmu_fg_data *fg)
 {
 	int cap_percentage;
@@ -2137,9 +2104,6 @@ static void bcmpmu_fg_charging_algo(struct bcmpmu_fg_data *fg)
 #endif
 		fg->discharge_state = DISCHARG_STATE_HIGH_BATT;
 	}
-
-	if (!(fg->bcmpmu->flags & BCMPMU_SPA_EN))
-		bcmpmu_fg_moniter_battery_temp(fg);
 
 	bcmpmu_fg_get_coulomb_counter(fg);
 
@@ -2628,13 +2592,11 @@ static void bcmpmu_fg_periodic_work(struct work_struct *work)
 	if (fg->flags.calibration)
 		bcmpmu_fg_batt_cal_algo(fg);
 
-	pr_fg(VERBOSE, "flags: %d %d %d %d %d %d %d %d %d %d %d %d\n",
+	pr_fg(VERBOSE, "flags: %d %d %d %d %d %d %d %d %d %d\n",
 			flags.batt_status,
 			flags.prev_batt_status,
 			flags.chrgr_connected,
 			flags.charging_enabled,
-			flags.temp_hot_state,
-			flags.temp_cold_state,
 			flags.chrgr_pause,
 			flags.init_capacity,
 			flags.fg_eoc,
