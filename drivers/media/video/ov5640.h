@@ -153,7 +153,11 @@ static const struct ov5640_reg configscript_common1[] = {
 	/* Sensor Read */
 
 #ifdef CONFIG_MACH_HAWAII_GARNET
+#ifdef CONFIG_MACH_HAWAII_GARNET_C_A18
+	{0x3820, 0x40},
+#else
 	{0x3820, 0x46},		/*vflip */
+#endif
 #else
 	{0x3820, 0x40},		/*vflip */
 #endif

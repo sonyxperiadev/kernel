@@ -211,7 +211,11 @@ static const struct ov5640_timing_cfg timing_cfg_yuv[OV5640_SIZE_LAST] = {
 			      .v_odd_ss_inc = 3,
 			      .v_even_ss_inc = 1,
 #ifdef CONFIG_MACH_HAWAII_GARNET
-			      .out_mode_sel = 0x01,
+#ifdef CONFIG_MACH_HAWAII_GARNET_C_A18
+				.out_mode_sel = 0x07,
+#else
+				.out_mode_sel = 0x01,
+#endif
 #else
 			      .out_mode_sel = 0x07,
 #endif
@@ -239,7 +243,11 @@ static const struct ov5640_timing_cfg timing_cfg_yuv[OV5640_SIZE_LAST] = {
 			     .v_odd_ss_inc = 3,
 			     .v_even_ss_inc = 1,
 #ifdef CONFIG_MACH_HAWAII_GARNET
-			     .out_mode_sel = 0x01,
+#ifdef CONFIG_MACH_HAWAII_GARNET_C_A18
+				.out_mode_sel = 0x07,
+#else
+				.out_mode_sel = 0x01,
+#endif
 #else
 			     .out_mode_sel = 0x07,
 #endif
@@ -267,7 +275,11 @@ static const struct ov5640_timing_cfg timing_cfg_yuv[OV5640_SIZE_LAST] = {
 			      .v_odd_ss_inc = 3,
 			      .v_even_ss_inc = 1,
 #ifdef CONFIG_MACH_HAWAII_GARNET
-			      .out_mode_sel = 0x01,
+#ifdef CONFIG_MACH_HAWAII_GARNET_C_A18
+				.out_mode_sel = 0x07,
+#else
+				.out_mode_sel = 0x01,
+#endif
 #else
 			      .out_mode_sel = 0x07,
 #endif
@@ -295,7 +307,11 @@ static const struct ov5640_timing_cfg timing_cfg_yuv[OV5640_SIZE_LAST] = {
 				  .v_odd_ss_inc = 3,
 				  .v_even_ss_inc = 1,
 #ifdef CONFIG_MACH_HAWAII_GARNET
-				  .out_mode_sel = 0x01,
+#ifdef CONFIG_MACH_HAWAII_GARNET_C_A18
+				.out_mode_sel = 0x07,
+#else
+				.out_mode_sel = 0x01,
+#endif
 #else
 				  .out_mode_sel = 0x07,
 #endif
@@ -323,7 +339,11 @@ static const struct ov5640_timing_cfg timing_cfg_yuv[OV5640_SIZE_LAST] = {
 			      .v_odd_ss_inc = 1,
 			      .v_even_ss_inc = 1,
 #ifdef CONFIG_MACH_HAWAII_GARNET
-			      .out_mode_sel = 0x00,
+#ifdef CONFIG_MACH_HAWAII_GARNET_C_A18
+				.out_mode_sel = 0x06,
+#else
+				.out_mode_sel = 0x00,
+#endif
 #else
 			      .out_mode_sel = 0x06,
 #endif
@@ -351,7 +371,11 @@ static const struct ov5640_timing_cfg timing_cfg_yuv[OV5640_SIZE_LAST] = {
 			      .v_odd_ss_inc = 1,
 			      .v_even_ss_inc = 1,
 #ifdef CONFIG_MACH_HAWAII_GARNET
-			      .out_mode_sel = 0x00,
+#ifdef CONFIG_MACH_HAWAII_GARNET_C_A18
+				.out_mode_sel = 0x06,
+#else
+				.out_mode_sel = 0x00,
+#endif
 #else
 			      .out_mode_sel = 0x06,
 #endif
@@ -379,7 +403,11 @@ static const struct ov5640_timing_cfg timing_cfg_yuv[OV5640_SIZE_LAST] = {
 			     .v_odd_ss_inc = 1,
 			     .v_even_ss_inc = 1,
 #ifdef CONFIG_MACH_HAWAII_GARNET
-			     .out_mode_sel = 0x00,
+#ifdef CONFIG_MACH_HAWAII_GARNET_C_A18
+				.out_mode_sel = 0x06,
+#else
+				.out_mode_sel = 0x00,
+#endif
 #else
 			     .out_mode_sel = 0x06,
 #endif
