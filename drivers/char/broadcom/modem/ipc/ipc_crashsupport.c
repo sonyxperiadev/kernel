@@ -978,12 +978,14 @@ void DUMP_CP_assert_log(void)
 
 	RpcDbgDumpHistoryLogging(2, 1);
 
-	IPC_DEBUG(DBG_ERROR, "Starting CP RAM dump - do not power down...\n");
+	if (!ramdump_enable) {
+		IPC_DEBUG(DBG_ERROR, "Starting CP RAM dump - do not power down...\n");
 
-	/* dump all CP memory to log */
-	DUMP_CPMemoryByList(dumped_crash_summary_ptr->mem_dump);
+		/* dump all CP memory to log */
+		DUMP_CPMemoryByList(dumped_crash_summary_ptr->mem_dump);
 
-	IPC_DEBUG(DBG_ERROR, "CP RAM dump complete\n");
+		IPC_DEBUG(DBG_ERROR, "CP RAM dump complete\n");
+	}
 	/* resume normal logging activities... */
 	BCMLOG_EndCpCrashDump();
 

@@ -68,8 +68,7 @@ static int do_cp_crash(struct notifier_block *this, unsigned long event,
 	/* Trigger CP crash and wait for CP to process */
 	mdelay(3000);
 #else
-	if (!ramdump_enable)
-		ProcessCPCrashedDump(NULL);
+	ProcessCPCrashedDump(NULL);
 #endif
 
 out:
