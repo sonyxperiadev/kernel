@@ -49,7 +49,11 @@ endif
 ifeq ($(CONFIG_MFD_BCM_PMU59xxx), y)
 ifeq ($(CONFIG_MACH_HAWAII_SS_COMMON),)
 ifeq ($(CONFIG_MACH_HAWAII_GARNET), y)
+ifeq ($(CONFIG_MACH_HAWAII_GARNET_C_A18), y)
+obj-y += board-bcm59xxx_garnet_c_a18.o
+else
 obj-y += board-bcm59xxx_garnet.o
+endif
 else
 obj-y += board-bcm59xxx.o
 endif
