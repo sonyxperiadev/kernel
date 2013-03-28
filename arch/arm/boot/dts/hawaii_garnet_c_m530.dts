@@ -131,7 +131,7 @@
 
 		FocalTech-Ft5306@46 {
 			compatible = "bcm,FocalTech-Ft5306";
-			reg = <0x38>;
+			reg = <0x3e>;
 			gpio-irq-pin = <73>;
 			gpio-reset-pin = <70>;
 			gpio-wakeup-pin = <70>;
