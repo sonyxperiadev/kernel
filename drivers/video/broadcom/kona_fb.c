@@ -320,15 +320,26 @@ static void kona_fb_unpack_888rle(void *dst, void *src, uint32_t image_size,
 	unsigned long x_margin, y_margin;
 	u32 *lcd_buf;
 	u16 *image_buf;
+	int dir;
+
+	struct fb_info *fb = &g_kona_fb->fb;
 
 	image_buf = (u16 *)src;
 	lcd_buf = (u32 *)dst;
-	x_margin = (g_kona_fb->fb.var.xres - img_w) / 2;
-	y_margin = (g_kona_fb->fb.var.yres - img_h) / 2;
+	x_margin = (fb->var.xres - img_w) / 2;
+	y_margin = (fb->var.yres - img_h) / 2;
 
+	/*If rotation is enabled, move to the end of buffer*/
+	if (fb->var.rotate) {
+		pos = (fb->var.xres * fb->var.yres - 1);
+		dir = -1;
+	} else {
+		pos = 0;
+		dir = 1;
+	}
 	pix_left_curr_line = img_w;
-	pos = y_margin * g_kona_fb->fb.var.xres;
-	pos += x_margin;
+	pos += y_margin * fb->var.xres * dir;
+	pos += x_margin * dir;
 	for (count = 0; count < image_size; count += 8) {
 		len = *image_buf++;
 		len |= (*image_buf++) << 16;
@@ -336,16 +347,17 @@ static void kona_fb_unpack_888rle(void *dst, void *src, uint32_t image_size,
 		data |= (*image_buf++ << 16);
 		while (len) {
 			while (pix_left_curr_line) {
-				lcd_buf[pos++] = data;
+				lcd_buf[pos] = data;
+				pos += dir;
 				--len;
 				--pix_left_curr_line;
-				if (pos > g_kona_fb->fb.fix.smem_len / 8)
+				if (pos > fb->fix.smem_len / 8)
 					printk(KERN_ERR "Wrong image size!");
 				if (!len)
 					break;
 			}
 			if (!pix_left_curr_line) {
-				pos += (x_margin * 2);
+				pos += x_margin * 2 * dir;
 				pix_left_curr_line = img_w;
 			}
 		}
@@ -1178,6 +1190,9 @@ static int __ref kona_fb_probe(struct platform_device *pdev)
 	struct iommu_domain *domain;
 #endif /* CONFIG_BCM_IOVMM */
 #endif /* CONFIG_IOMMU_API */
+#ifdef CONFIG_LOGO
+	int logo_rotate;
+#endif
 
 	konafb_info("start\n");
 	if (g_kona_fb && (g_kona_fb->is_display_found == 1)) {
@@ -1453,9 +1468,9 @@ static int __ref kona_fb_probe(struct platform_device *pdev)
 	konafb_info("kona Framebuffer probe successfull\n");
 
 #ifdef CONFIG_LOGO
-	fb_prepare_logo(&fb->fb, 0);
-	fb_show_logo(&fb->fb, 0);
-
+	logo_rotate = fb->fb.var.rotate ? FB_ROTATE_UD : FB_ROTATE_UR;
+	fb_prepare_logo(&fb->fb, logo_rotate);
+	fb_show_logo(&fb->fb, logo_rotate);
 	mutex_lock(&fb->update_sem);
 	kona_clock_start(fb);
 	fb->display_ops->update(fb->display_hdl, fb->buff0, NULL, NULL);

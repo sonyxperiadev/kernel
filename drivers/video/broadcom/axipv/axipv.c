@@ -435,15 +435,23 @@ static irqreturn_t axipv_isr(int err, void *dev_id)
 	struct axipv_dev *dev = dev_id;
 	int irq_stat;
 	u32 axipv_base;
-	bool disable_axipv = false;
+	bool disable_axipv = false, disable_clk = false;
 	u32 curr_reg_val;
 
 	axipv_base = dev->base_addr;
 	irq_stat = readl(axipv_base + REG_INTR_STAT);
 
 	axipv_debug("irq_stat=0x%x\n", irq_stat);
-	if (!irq_stat)
-		axipv_err("irq_stat is NULL => clk might have been released\n");
+	if (!irq_stat) {
+		/* If clock is disabled due to wrong state transitions */
+		axipv_clk_enable(dev);
+		irq_stat = readl(axipv_base + REG_INTR_STAT);
+		axipv_err("irq stat=0x%x, stat=0x%x, curr=0x%x ctrl=0x%x\n",
+		irq_stat, readl(axipv_base + REG_AXIPV_STATUS),
+		readl(axipv_base + REG_CUR_FRAME),
+		readl(axipv_base + REG_CTRL));
+		disable_clk = true;
+	}
 	if (irq_stat & WATER_LVL2_INT) {
 		if ((AXIPV_STOPPED == dev->state)
 			|| ((AXIPV_STOPPING == dev->state) &&
@@ -493,6 +501,7 @@ static irqreturn_t axipv_isr(int err, void *dev_id)
 			g_nxt = 0;
 		}
 		disable_axipv = true;
+		disable_clk = true;
 		/* Client needs to be informed of the disabled state */
 		/* irq_stat = irq_stat & ~AXIPV_DISABLED_INT; */
 #if defined(CONFIG_MACH_BCM_FPGA) || defined(CONFIG_MACH_BCM_FPGA_E)
@@ -516,8 +525,9 @@ static irqreturn_t axipv_isr(int err, void *dev_id)
 	if (disable_axipv) {
 		dev->state = AXIPV_STOPPED;
 		writel(AXIPV_DISABLED_INT, axipv_base + REG_INTR_CLR);
-		axipv_clk_disable(dev);
 	}
+	if (disable_clk)
+		axipv_clk_disable(dev);
 
 	return IRQ_HANDLED;
 }
@@ -537,9 +547,7 @@ static inline int post_async(struct axipv_config_t *config)
 	/* Handle the unusal case by bypassing the hardware since the hardware
 	 * is transferring the same buffer */
 	if (config->buff.async == g_curr) {
-		axipv_err("AXIPV has received the same buffer which is used\n");
-		axipv_err("It is likely that we see display tearing\n");
-		axipv_err("Preventing a potential lock-up by signalling\n");
+		axipv_err("Likely tearing on screen\n");
 		dev->release_cb(config->buff.async);
 		return 0;
 	}
