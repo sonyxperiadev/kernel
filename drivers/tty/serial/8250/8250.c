@@ -1533,6 +1533,19 @@ ignore_char:
 }
 EXPORT_SYMBOL_GPL(serial8250_rx_chars);
 
+static inline int xmit_fifo_available(struct uart_8250_port *up)
+{
+	int avail_txsz = up->tx_loadsz;
+#ifdef CONFIG_ARCH_KONA
+#define UART_KONA_TFL 0x20
+#define UART_KONA_USR 0x1F
+	int tx_entries = serial_in(up, UART_KONA_TFL) & 0xFF;
+	avail_txsz = (up->tx_loadsz < tx_entries) ? up->tx_loadsz :
+		(up->tx_loadsz-tx_entries);
+#endif
+	return avail_txsz;
+}
+
 void serial8250_tx_chars(struct uart_8250_port *up)
 {
 	struct uart_port *port = &up->port;
@@ -1577,14 +1590,16 @@ void serial8250_tx_chars(struct uart_8250_port *up)
 		return;
 	}
 
-	count = up->tx_loadsz;
-	do {
-		serial_out(up, UART_TX, xmit->buf[xmit->tail]);
-		xmit->tail = (xmit->tail + 1) & (UART_XMIT_SIZE - 1);
-		port->icount.tx++;
-		if (uart_circ_empty(xmit))
-			break;
-	} while (--count > 0);
+	count = xmit_fifo_available(up);
+	if (count > 0) {
+		do {
+			serial_out(up, UART_TX, xmit->buf[xmit->tail]);
+			xmit->tail = (xmit->tail + 1) & (UART_XMIT_SIZE - 1);
+			port->icount.tx++;
+			if (uart_circ_empty(xmit))
+				break;
+		}  while (--count > 0);
+	}
 
 	if (uart_circ_chars_pending(xmit) < WAKEUP_CHARS)
 		uart_write_wakeup(port);

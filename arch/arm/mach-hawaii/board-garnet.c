@@ -1114,7 +1114,7 @@ static struct platform_device *hawaii_devices[] __initdata = {
 	&haptic_pwm_device,
 #endif
 
-#ifdef CONFIG_BCM_BT_LPM
+#ifndef CONFIG_BCM_BT_LPM
 	&board_bcmbt_lpm_device,
 #endif
 
