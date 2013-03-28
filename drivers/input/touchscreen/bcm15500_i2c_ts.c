@@ -75,7 +75,7 @@
 /* -------------------------------------- */
 
 /* -- driver version -- */
-#define	BCMTCH_DRIVER_VERSION	"1.3.0.00_RC1"
+#define	BCMTCH_DRIVER_VERSION	"1.3.0.01_RC1"
 
 /* -- SPM addresses -- */
 #define BCMTCH_SPM_REG_REVISIONID   0x40
@@ -4265,6 +4265,9 @@ static int32_t bcmtch_dev_resume(void)
 
 		if (!ret_val)
 			ret_val = bcmtch_os_interrupt_enable();
+
+		if (!ret_val)
+			ret_val = bcmtch_dev_watchdog_start();
 	}
 
 	if (ret_val)
