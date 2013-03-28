@@ -124,6 +124,11 @@ choice
 	help
 	  Support for Garnet A18
 
+	config MACH_HAWAII_GARNET_C_UP823
+	bool "GARNET UP823"
+	help
+	  Support for Garnet UP823
+	  
         config MACH_HAWAII_GARNET_C_W68
         bool "GARNET W68"
         help
