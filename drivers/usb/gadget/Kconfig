@@ -918,6 +918,26 @@ config USB_G_ANDROID
 	  Each function can be configured and enabled/disabled
 	  dynamically from userspace through a sysfs interface.
 
+config USB_MULTI_DISK_SUPPORT
+	boolean "Multiple disk support for android mass storage gadget"
+	depends on USB_G_ANDROID
+	default n
+	help
+	  The multi disk support is based on mass storage gadget,
+	  If you say "y" here, it provides a basic structure for functions
+	  like multiple u-disks, cdroms etc.
+	  If unsure, say "n".
+
+config USB_MASS_STORAGE_LUN_NUM
+	int "Number of LUNs"
+	depends on USB_MULTI_DISK_SUPPORT
+	default 2
+	help
+	  You must specify how many LUNs you want if you select
+	  USB_MULTI_DISK_SUPPORT, 2 is the default value, however,
+	  the number of LUNs should be less than 8 which is defined
+	  in driver code.
+
 config USE_WORKQ_PUSH
 	boolean "Use workqueue push"
 	depends on USB_G_ANDROID

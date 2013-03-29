@@ -829,21 +829,50 @@ static int mass_storage_function_init(struct android_usb_function *f,
 	struct mass_storage_function_config *config;
 	struct fsg_common *common;
 	int err;
-
+#ifdef CONFIG_USB_MULTI_DISK_SUPPORT
+	int i, clear;
+#endif
 	config = kzalloc(sizeof(struct mass_storage_function_config),
 								GFP_KERNEL);
 	if (!config)
 		return -ENOMEM;
-
+#ifdef CONFIG_USB_MULTI_DISK_SUPPORT
+	config->fsg.nluns = CONFIG_USB_MASS_STORAGE_LUN_NUM;
+	for (i = 0; i < config->fsg.nluns; i++)
+		config->fsg.luns[i].removable = 1;
+#else
 	config->fsg.nluns = 1;
 	config->fsg.luns[0].removable = 1;
-
+#endif
 	common = fsg_common_init(NULL, cdev, &config->fsg);
 	if (IS_ERR(common)) {
 		kfree(config);
 		return PTR_ERR(common);
 	}
 
+#ifdef CONFIG_USB_MULTI_DISK_SUPPORT
+	for (i = 0; i < config->fsg.nluns; i++) {
+		char lun_name[8];
+		sprintf(lun_name, "lun%d", i);
+		err = sysfs_create_link(&f->dev->kobj,
+				&common->luns[i].dev.kobj,
+				lun_name);
+		if (err) {
+			pr_err("create lun %d failed!\n", i);
+			break;
+		}
+	}
+
+	if (err) {
+		for (clear = i-1; clear >= 0; clear--) {
+			char lun_name[8];
+			sprintf(lun_name, "lun%d", clear);
+			sysfs_remove_link(&f->dev->kobj, lun_name);
+		}
+		kfree(config);
+		return err;
+	}
+#else
 	err = sysfs_create_link(&f->dev->kobj,
 				&common->luns[0].dev.kobj,
 				"lun");
@@ -851,7 +880,7 @@ static int mass_storage_function_init(struct android_usb_function *f,
 		kfree(config);
 		return err;
 	}
-
+#endif
 	config->common = common;
 	f->config = config;
 	return 0;
