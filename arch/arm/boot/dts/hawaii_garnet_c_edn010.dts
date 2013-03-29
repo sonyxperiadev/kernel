@@ -168,6 +168,7 @@
 			y-max-value = <1280>;
 			use-irq = <1>;
 			power = "camldo2";
+			pressure_support = <1>;
 		};
 	};
 

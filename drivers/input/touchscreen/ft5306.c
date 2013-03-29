@@ -145,7 +145,7 @@ typedef struct
 }ST_TOUCH_INFO, *PST_TOUCH_INFO;
 
 #define TP_MIN_GAP 3
-
+static int pressure_support;
 static struct workqueue_struct *synaptics_wq;
 static struct i2c_client *ft5306_i2c_client;
 static ST_TOUCH_INFO ft5306_touch_info;
@@ -664,8 +664,10 @@ FTS_BYTE bt_parser_std(FTS_BYTE* pbt_buf, FTS_BYTE bt_len, ST_TOUCH_INFO* pst_to
 		high_byte &= 0x0f00;
 		low_byte = pbt_buf[3+6*i+3];
 		pst_touch_info->pst_point_info[i].w_tp_y = high_byte |low_byte;
-		pst_touch_info->pst_point_info[i].w_tp_strenth=pbt_buf[7+6*i];
-		pst_touch_info->pst_point_info[i].w_tp_area=pbt_buf[8+6*i];
+		if (pressure_support) {
+			pst_touch_info->pst_point_info[i].w_tp_strenth=pbt_buf[7+6*i];
+			pst_touch_info->pst_point_info[i].w_tp_area=pbt_buf[8+6*i];
+		}
 		
 		pst_touch_info->bt_tp_num++;
 	}
@@ -863,8 +865,10 @@ void UpdateFingerQueue(ST_TOUCH_INFO *touch_info)
 		}
 		pFinger->points[touch_info->pst_point_info[i].bt_tp_id].x = touch_info->pst_point_info[i].w_tp_x;
 		pFinger->points[touch_info->pst_point_info[i].bt_tp_id].y = touch_info->pst_point_info[i].w_tp_y;
-		pFinger->points[touch_info->pst_point_info[i].bt_tp_id].pressure = touch_info->pst_point_info[i].w_tp_strenth;
-		pFinger->points[touch_info->pst_point_info[i].bt_tp_id].area = touch_info->pst_point_info[i].w_tp_area;
+		if (pressure_support) {
+			pFinger->points[touch_info->pst_point_info[i].bt_tp_id].pressure = touch_info->pst_point_info[i].w_tp_strenth;
+			pFinger->points[touch_info->pst_point_info[i].bt_tp_id].area = touch_info->pst_point_info[i].w_tp_area;
+		}
 	}
 }
 
@@ -885,8 +889,11 @@ void ReportFingers(struct synaptics_rmi4 *ts, ST_TOUCH_INFO *touch_info)
 		if (cur_info->points[i].state < FINGER_STALE) {
 			input_report_abs(ts->input_dev, ABS_MT_POSITION_X, cur_info->points[i].x);
 			input_report_abs(ts->input_dev, ABS_MT_POSITION_Y, cur_info->points[i].y);
-			input_report_abs(ts->input_dev, ABS_MT_TOUCH_MAJOR, cur_info->points[i].area);
-			input_report_abs(ts->input_dev, ABS_MT_PRESSURE, cur_info->points[i].pressure);
+			if (pressure_support) {
+				input_report_abs(ts->input_dev, ABS_MT_TOUCH_MAJOR, cur_info->points[i].area);
+				input_report_abs(ts->input_dev, ABS_MT_PRESSURE, cur_info->points[i].pressure);
+			}else
+				input_report_abs(ts->input_dev, ABS_MT_TOUCH_MAJOR, 8);
 			input_report_key(ts->input_dev, BTN_TOUCH, 1);
 			//input_report_abs(ts->input_dev, ABS_MT_WIDTH_MAJOR, 1);
 			input_mt_sync(ts->input_dev);
@@ -1308,6 +1315,8 @@ static int focaltech_ft5306_probe(
 			ts_y_max_value = val;
 		if (!of_property_read_u32(np, "use-irq", &val))
 			client->irq = val;
+		if (!of_property_read_u32(np, "pressure_support", &val))
+			pressure_support = val;
 		of_property_read_string(np, "power", &tp_power);
 		if (of_property_read_string(np, "vkey_scope", &vkey_scope)) {
 			have_vkey = false;
@@ -1357,8 +1366,12 @@ static int focaltech_ft5306_probe(
 		Ft5306_Hw_Reset();
 #endif
 		INIT_WORK(&ts->work, focaltech_ft5306_work_func);
-		INIT_WORK(&ts->firmware_update_work, focaltech_ft5306_firmware_update_func);
-		queue_work(synaptics_wq, &ts->firmware_update_work);
+		#if 0
+		{
+			INIT_WORK(&ts->firmware_update_work, focaltech_ft5306_firmware_update_func);
+			queue_work(synaptics_wq, &ts->firmware_update_work);
+		}
+		#endif
 
 #if ENABLE_TP_DIAG
 		INIT_WORK(&ts->diag_work, focaltech_ft5306_diag_work_func);
@@ -1411,7 +1424,8 @@ static int focaltech_ft5306_probe(
 	input_set_abs_params(ts->input_dev, ABS_MT_POSITION_X, 0, ts_x_max_value, 0, 0);
 	input_set_abs_params(ts->input_dev, ABS_MT_POSITION_Y, 0, ts_y_max_value, 0, 0);
 	input_set_abs_params(ts->input_dev, ABS_MT_TOUCH_MAJOR, 0, 8, 0, 0);
-	input_set_abs_params(ts->input_dev, ABS_MT_PRESSURE, 0, 255, 0, 0);
+	if (pressure_support)
+		input_set_abs_params(ts->input_dev, ABS_MT_PRESSURE, 0, 255, 0, 0);
 
 	InitFingersQueue();
 	if (client->irq) {
