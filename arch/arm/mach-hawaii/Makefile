@@ -51,6 +51,8 @@ ifeq ($(CONFIG_MACH_HAWAII_SS_COMMON),)
 ifeq ($(CONFIG_MACH_HAWAII_GARNET), y)
 ifeq ($(CONFIG_MACH_HAWAII_GARNET_C_A18), y)
 obj-y += board-bcm59xxx_garnet_c_a18.o
+else ifeq ($(CONFIG_MACH_HAWAII_GARNET_C_W68), y)
+obj-y += board-bcm59xxx_garnet_c_w68.o
 else
 obj-y += board-bcm59xxx_garnet.o
 endif
