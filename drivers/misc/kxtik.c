@@ -120,6 +120,8 @@ struct kxtik_data {
 #endif				/* CONFIG_HAS_EARLYSUSPEND */
 };
 
+static int kxtik_offset[3];
+
 static int kxtik_i2c_read(struct kxtik_data *tik, u8 addr, u8 * data, int len)
 {
 	struct i2c_msg msgs[] = {
@@ -180,14 +182,17 @@ static void kxtik_report_acceleration_data(struct kxtik_data *tik)
 
 				if (atomic_read(&tik->acc_input_event) > 0) {
 					input_report_abs(tik->input_dev, ABS_X,
-							 tik->pdata.
-							 negate_x ? -x : x);
+							(tik->pdata.negate_x ?
+							(-x) : x) -
+							kxtik_offset[0]);
 					input_report_abs(tik->input_dev, ABS_Y,
-							 tik->pdata.
-							 negate_y ? -y : y);
+							(tik->pdata.negate_y ?
+							(-y) : y) -
+							kxtik_offset[1]);
 					input_report_abs(tik->input_dev, ABS_Z,
-							 tik->pdata.
-							 negate_z ? -z : z);
+							(tik->pdata.negate_z ?
+							(-z) : z) -
+							kxtik_offset[2]);
 					input_sync(tik->input_dev);
 				}
 			}
@@ -563,12 +568,47 @@ static ssize_t kxtik_set_enable(struct device *dev, struct device_attribute
 	return count;
 }
 
+static ssize_t kxtik_get_offset(struct device *dev,
+				struct device_attribute *attr,
+				char *buf)
+{
+	return sprintf(buf, "%d, %d, %d\n", kxtik_offset[0],
+				kxtik_offset[1], kxtik_offset[2]);
+}
+
+static ssize_t kxtik_set_offset(struct device *dev,
+				struct device_attribute *attr,
+				const char *buf, size_t count)
+{
+	int x, y, z;
+	int err = -EINVAL;
+	struct i2c_client *client = to_i2c_client(dev);
+	struct kxtik_data *tik = i2c_get_clientdata(client);
+	struct input_dev *input_dev = tik->input_dev;
+
+	err = sscanf(buf, "%d %d %d", &x, &y, &z);
+	if (err != 3) {
+		FUNCDBG("invalid parameter number: %d\n", err);
+		return err;
+	}
+
+	mutex_lock(&input_dev->mutex);
+	kxtik_offset[0] = x;
+	kxtik_offset[1] = y;
+	kxtik_offset[2] = z;
+	mutex_unlock(&input_dev->mutex);
+
+	return count;
+}
+
 static DEVICE_ATTR(poll, 00777, kxtik_get_poll, kxtik_set_poll);
 static DEVICE_ATTR(enable, 00777, NULL, kxtik_set_enable);
+static DEVICE_ATTR(offset, 00664, kxtik_get_offset, kxtik_set_offset);
 
 static struct attribute *kxtik_attributes[] = {
 	&dev_attr_poll.attr,
 	&dev_attr_enable.attr,
+	&dev_attr_offset.attr,
 	NULL
 };
 
@@ -716,6 +756,9 @@ static int __devinit kxtik_probe(struct i2c_client *client,
 	tik->ctrl_reg1 = tik->pdata.res_12bit | tik->pdata.g_range;
 	tik->poll_interval = tik->pdata.poll_interval;
 	tik->poll_delay = msecs_to_jiffies(tik->poll_interval);
+	kxtik_offset[0] = 0;
+	kxtik_offset[1] = 0;
+	kxtik_offset[2] = 0;
 
 	kxtik_update_odr(tik, tik->poll_interval);
 
