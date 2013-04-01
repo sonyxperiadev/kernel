@@ -384,10 +384,20 @@ static int config_adc_for_accessory_detection(int hst)
 				    CHAL_ACI_BLOCK_ACTION_ENABLE,
 				    CHAL_ACI_BLOCK_DIGITAL);
 
-		/* Power up the ADC */
+		/*
+		 * Power up the ADC - Follow the seqeuence Power down the ADC,
+		 * wait and turn it ON again. This is to ensure that if ADC
+		 * was in some improper state, this sequence would reset it.
+		 * The delay is based on recommendation from ASIC team.
+		 */
+		chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
+				    CHAL_ACI_BLOCK_ACTION_DISABLE,
+				    CHAL_ACI_BLOCK_ADC);
+		usleep_range(1000, 1200);
 		chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
 				    CHAL_ACI_BLOCK_ACTION_ENABLE,
 				    CHAL_ACI_BLOCK_ADC);
+		usleep_range(1000, 1200);
 
 		chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
 				    CHAL_ACI_BLOCK_ACTION_ADC_RANGE,
@@ -412,8 +422,13 @@ static int config_adc_for_accessory_detection(int hst)
 
 		/* Powerup ADC */
 		chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
+				    CHAL_ACI_BLOCK_ACTION_DISABLE,
+				    CHAL_ACI_BLOCK_ADC);
+		usleep_range(1000, 1200);
+		chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
 				    CHAL_ACI_BLOCK_ACTION_ENABLE,
 				    CHAL_ACI_BLOCK_ADC);
+		usleep_range(1000, 1200);
 
 		chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
 				    CHAL_ACI_BLOCK_ACTION_ADC_RANGE,
@@ -518,8 +533,14 @@ static int config_adc_for_bp_detection(void)
 			    CHAL_ACI_BLOCK_DIGITAL);
 
 	/* Power up the ADC */
-	chal_aci_block_ctrl(mic_dev->aci_chal_hdl, CHAL_ACI_BLOCK_ACTION_ENABLE,
-			    CHAL_ACI_BLOCK_ADC);
+	chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
+		CHAL_ACI_BLOCK_ACTION_DISABLE,
+		CHAL_ACI_BLOCK_ADC);
+	usleep_range(1000, 1200);
+	chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
+		CHAL_ACI_BLOCK_ACTION_ENABLE,
+		CHAL_ACI_BLOCK_ADC);
+	usleep_range(1000, 1200);
 
 	chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
 			    CHAL_ACI_BLOCK_ACTION_ADC_RANGE, CHAL_ACI_BLOCK_ADC,
@@ -1965,8 +1986,14 @@ int switch_bias_voltage(int mic_status)
 			    CHAL_ACI_BLOCK_DIGITAL);
 
 	/* Power up the ADC */
-	chal_aci_block_ctrl(mic_dev->aci_chal_hdl, CHAL_ACI_BLOCK_ACTION_ENABLE,
-			    CHAL_ACI_BLOCK_ADC);
+	chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
+		CHAL_ACI_BLOCK_ACTION_DISABLE,
+		CHAL_ACI_BLOCK_ADC);
+	usleep_range(1000, 1200);
+	chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
+		CHAL_ACI_BLOCK_ACTION_ENABLE,
+		CHAL_ACI_BLOCK_ADC);
+	usleep_range(1000, 1200);
 
 	chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
 			    CHAL_ACI_BLOCK_ACTION_ADC_RANGE, CHAL_ACI_BLOCK_ADC,
