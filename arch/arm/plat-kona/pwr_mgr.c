@@ -39,7 +39,9 @@
 #include <mach/memory.h>
 #include <plat/kona_pm.h>
 #include <mach/io_map.h>
+#if defined (CONFIG_ARCH_HAWAII)
 #include <mach/rdb/brcm_rdb_a9cpu.h>
+#endif
 #include <mach/rdb/brcm_rdb_gicdist.h>
 
 #ifndef PWRMGR_I2C_VAR_DATA_REG
@@ -2026,11 +2028,13 @@ static int pwr_mgr_sw_i2c_seq_start(u32 action)
 
 				pwr_dbg(PWR_LOG_ERR, "%s seq timedout !!\n",
 						__func__);
+#if defined (CONFIG_ARCH_HAWAII)
 				pr_info("PCSR_CPU0: %x PCSR_CPU1: %x\n",
 						readl(KONA_A9CPU0_VA +
 							A9CPU_PCSR_OFFSET),
 						readl(KONA_A9CPU1_VA +
 							A9CPU_PCSR_OFFSET));
+#endif
 				continue;
 			} else {
 				if (action != I2C_SEQ_READ_FIFO) {
@@ -2337,7 +2341,9 @@ int pwr_mgr_pmu_reg_write(u8 reg_addr, u8 slave_id, u8 reg_val)
 	}
 	pwr_mgr_seq_log_buf_put(SEQ_LOG_WRITE_BYTE,
 			SEQ_LOG_PACK_U24(slave_id, reg_addr, reg_val));
+#if defined(CONFIG_KONA_CPU_PM_HANDLER)
 	kona_pm_disable_idle_state(CSTATE_ALL, 0);
+#endif
 	mutex_unlock(&seq_mutex);
 	pwr_dbg(PWR_LOG_SEQ,
 		"%s reg_addr:0x%0x; slave_id:%d; reg_val:0x%0x; ret_val:%d\n",
