@@ -2331,6 +2331,7 @@ static void bcmpmu_fg_acld_algo(struct work_struct *work)
 	struct bcmpmu_fg_status_flags *flags = &fg->flags;
 	bool cc_lmt_hit = false;
 	bool chrgr_fault = false;
+	bool mbc_in_cv = false;
 	int vbus_chrg_off;
 	int vbus_chrg_on;
 	int vbus_res;
@@ -2378,6 +2379,14 @@ static void bcmpmu_fg_acld_algo(struct work_struct *work)
 
 	msleep(ACLD_DELAY_500);
 
+	if (bcmpmu_get_mbc_cv_status(fg)) {
+		pr_fg(INIT, "MBC in CV. Regulate charging on Output\n");
+		bcmpmu_acld_enable(fg, false);
+		bcmpmu_restore_cc_trim_otp(fg);
+		bcmpmu_set_icc_fc(fg->bcmpmu, fg->pdata->i_def_dcp);
+		return;
+	}
+
 	vbus_chrg_on = bcmpmu_fg_get_avg_vbus(fg);
 	vbus_res = bcmpmu_get_vbus_resistance(fg, vbus_chrg_off, vbus_chrg_on);
 	pr_fg(INIT, "vbus_res(uohm) = %d\n", vbus_res);
@@ -2385,12 +2394,18 @@ static void bcmpmu_fg_acld_algo(struct work_struct *work)
 
 	pr_fg(INIT, "Tuning USB_FC_CC\n");
 	do {
+		pr_fg(INIT, "vbus_chrg_on = %d vbus_res = %d vbus_load = %d\n",
+				vbus_chrg_on, vbus_res, vbus_load);
+
+		/* Check for Charger Errors and battery CV mode */
 		if (!bcmpmu_get_ubpd_int(fg)) {
 			chrgr_fault = true;
 			goto chrgr_pre_chk;
 		}
-		pr_fg(INIT, "vbus_chrg_on = %d vbus_res = %d vbus_load = %d\n",
-				vbus_chrg_on, vbus_res, vbus_load);
+		if (bcmpmu_get_mbc_cv_status(fg)) {
+			mbc_in_cv = true;
+			break;
+		}
 
 		usb_fc_cc_prev = bcmpmu_get_icc_fc(fg->bcmpmu);
 
@@ -2440,12 +2455,8 @@ static void bcmpmu_fg_acld_algo(struct work_struct *work)
 	bcmpmu_icc_fc_step_down(fg->bcmpmu);
 	usb_fc_cc_reached = bcmpmu_get_icc_fc(fg->bcmpmu);
 
-	if (bcmpmu_get_mbc_cv_status(fg)) {
-		pr_fg(INIT, "MBC in CV. Regulate charging on Output\n");
-		bcmpmu_acld_enable(fg, false);
-		bcmpmu_restore_cc_trim_otp(fg);
-		bcmpmu_set_icc_fc(fg->bcmpmu, fg->pdata->i_def_dcp);
-		bcmpmu_chrgr_usb_en(fg->bcmpmu, 1);
+	if (mbc_in_cv) {
+		pr_fg(INIT, "MBC in CV Mode\n");
 		goto chrgr_pre_chk;
 	}
 	if (cc_lmt_hit)
@@ -2458,12 +2469,18 @@ static void bcmpmu_fg_acld_algo(struct work_struct *work)
 	vbus_load = bcmpmu_get_vbus_load(fg, vbus_chrg_off, vbus_res);
 
 	do {
+		pr_fg(INIT, "vbus_chrg_on = %d vbus_res = %d vbus_load = %d\n",
+				vbus_chrg_on, vbus_res, vbus_load);
+
 		if (!bcmpmu_get_ubpd_int(fg)) {
 			chrgr_fault = true;
 			goto chrgr_pre_chk;
 		}
-		pr_fg(INIT, "vbus_chrg_on = %d vbus_load = %d\n",
-				vbus_chrg_on, vbus_load);
+		if (bcmpmu_get_mbc_cv_status(fg)) {
+			pr_fg(INIT, "Exiting Trim Tuning, MBC in CV\n");
+			break;
+		}
+
 		if ((vbus_chrg_on < vbus_load) ||
 				(vbus_chrg_on < ACLD_VBUS_ON_LOW_THRLD)) {
 			if (vbus_chrg_on < vbus_load)
