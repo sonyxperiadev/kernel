@@ -213,8 +213,11 @@ struct pwr_mgr {
 	int pc_status;
 #endif
 	int i2c_mode;
+	u32 seq_qos_cnt;
 	struct completion i2c_seq_done;
 	struct work_struct pwrmgr_work;
+	struct pi_mgr_qos_node seq_qos_client;
+	struct pi_mgr_dfs_node seq_dfs_client;
 };
 
 #ifdef CONFIG_KONA_I2C_SEQUENCER_LOG
@@ -1837,7 +1840,9 @@ static int pwr_mgr_sw_i2c_seq_start(u32 action)
 	int retry = PWR_MGR_SEQ_RETRIES;
 	int pc_status;
 	int i;
-
+#ifdef CONFIG_KONA_PWRMGR_SWSEQ_RETRY_WORKAROUND
+	bool qos_req_act = false;
+#endif
 	pwr_mgr_seq_log_buf_put(SEQ_LOG_SEQ_START, action);
 	pwr_mgr_clr_intr_status(PWRMGR_INTR_I2C_SW_SEQ);
 	switch (action) {
@@ -1862,6 +1867,34 @@ static int pwr_mgr_sw_i2c_seq_start(u32 action)
 	}
 
 	for (i = 0; i < retry; i++) {
+#ifdef CONFIG_KONA_PWRMGR_SWSEQ_RETRY_WORKAROUND
+		if ((i == retry - 1) && (!qos_req_act)) {
+			/**
+			 * sequencer operation could not succeed for 9 attempts
+			 * This could be because HW sequencer is hogging i2c bus
+			 * last chance of success is to disable DVS change, so
+			 * that HW sequencer does not run and trigger sw
+			 * sequencer again
+			 */
+			pwr_dbg(PWR_LOG_ERR,
+					"SEQ attempting with MM turbo\n");
+			if (pwr_mgr.seq_qos_client.valid &&
+					pwr_mgr.seq_dfs_client.valid) {
+				ret = pi_mgr_qos_request_update(
+						&pwr_mgr.seq_qos_client,
+						0);
+				ret = pi_mgr_dfs_request_update(
+						&pwr_mgr.seq_dfs_client,
+						pi_get_dfs_lmt(
+							PI_MGR_PI_ID_MM,
+							true));
+				BUG_ON(ret);
+				qos_req_act = true;
+				pwr_mgr.seq_qos_cnt++;
+				i = 0;
+			}
+		}
+#endif
 		if (pwr_mgr_get_i2c_mode() != PWR_MGR_I2C_MODE_POLL)
 			INIT_COMPLETION(pwr_mgr.i2c_seq_done);
 		reg_val = readl(PWR_MGR_REG_ADDR(
@@ -2017,6 +2050,15 @@ static int pwr_mgr_sw_i2c_seq_start(u32 action)
 		usleep_range(60, 120);
 	}
 exit:
+#ifdef CONFIG_KONA_PWRMGR_SWSEQ_RETRY_WORKAROUND
+	if (qos_req_act) {
+		ret = pi_mgr_dfs_request_update(&pwr_mgr.seq_dfs_client,
+				PI_MGR_DFS_MIN_VALUE);
+		ret = pi_mgr_qos_request_update(&pwr_mgr.seq_qos_client,
+				PI_MGR_QOS_DEFAULT_VALUE);
+		BUG_ON(ret);
+	}
+#endif
 	if (i == retry) {
 		pwr_dbg(PWR_LOG_ERR, "%s: max tries\n", __func__);
 		pwr_mgr_seq_log_buf_dump();
@@ -2448,6 +2490,30 @@ EXPORT_SYMBOL(pwr_mgr_dump_i2c_cmd_regs);
 void pwr_mgr_init_sequencer(struct pwr_mgr_info *info)
 {
 	u32 v_set;
+
+#ifdef CONFIG_KONA_PWRMGR_SWSEQ_RETRY_WORKAROUND
+	int ret = 0;
+	if (!pwr_mgr.seq_qos_client.valid) {
+		ret = pi_mgr_qos_add_request(&pwr_mgr.seq_qos_client,
+				"sequencer",
+				PI_MGR_PI_ID_MM,
+				PI_MGR_QOS_DEFAULT_VALUE);
+		if (ret)
+			pwr_dbg(PWR_LOG_SEQ, "%s: qos_add_request failed\n",
+					__func__);
+	}
+
+	if (!pwr_mgr.seq_dfs_client.valid) {
+		ret = pi_mgr_dfs_add_request(&pwr_mgr.seq_dfs_client,
+				"sequencer",
+				PI_MGR_PI_ID_MM,
+				PI_MGR_DFS_MIN_VALUE);
+		if (ret)
+			pwr_dbg(PWR_LOG_SEQ, "%s: dfs_add_request failed\n",
+					__func__);
+	}
+#endif
+
 	/*init I2C seq, var data & cmd ptr if valid data available */
 	/*Disable seq. before updating seq. params */
 	pwr_mgr_pm_i2c_enable(false);
@@ -3123,6 +3189,10 @@ int __init pwr_mgr_debug_init(u32 bmdm_pwr_base)
 	if (!debugfs_create_u32
 	    ("flags", S_IWUSR | S_IRUSR, dent_pwr_root_dir,
 	     (int *)&pwr_mgr.info->flags))
+		return -ENOMEM;
+	if (!debugfs_create_u32
+	     ("seq_qos_cnt", S_IWUSR | S_IRUSR, dent_pwr_root_dir,
+	       (int *)&pwr_mgr.seq_qos_cnt))
 		return -ENOMEM;
 	/* Debug Bus control via Debugfs */
 	if (!debugfs_create_file

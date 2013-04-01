@@ -203,6 +203,15 @@ config KONA_PWRMGR_SWSEQ_FAKE_INTR_ERRATUM
 	 fake interrupt erratum. Refer Jira DB (HWRHEA-2706) for more
 	 info.
 
+config KONA_PWRMGR_SWSEQ_RETRY_WORKAROUND
+	bool "Enable workaround for sw sequencer retry mechanism"
+	depends on KONA_POWER_MGR
+	default y
+	help
+	 Say y if want to enable workaround for kona sw sequencer
+	 retry meachanism erratum. Refer JIRA DB (HWHAWAII-1054)
+	 for more info
+
 config KONA_PWRMGR_REV2
        bool "Enable Kona PWRMGR Revision-2 support"
        depends on KONA_POWER_MGR && ARCH_RHEA=n
