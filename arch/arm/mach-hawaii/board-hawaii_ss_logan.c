@@ -371,8 +371,8 @@ struct ion_platform_data ion_cma_data = {
 #ifdef CONFIG_MOBICORE_DRIVER
 struct mobicore_data mobicore_plat_data = {
 	.name = "mobicore",
-	.mobicore_base = 0x9fe00000,
-	.mobicore_size = SZ_2M,
+	.mobicore_base = 0x9fd00000,
+	.mobicore_size = 0x00300000,
 };
 #endif
 

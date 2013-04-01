@@ -1437,7 +1437,7 @@ static void mobicore_mem_alloc_reserve(phys_addr_t mobicore_base,
 	phys_addr_t mobi_base;
 	int ret = 0;
 	mobi_base = memblock_alloc_from_range(mobicore_size,
-			SZ_2M, mobicore_base, mobicore_base +
+			SZ_1M, mobicore_base, mobicore_base +
 			mobicore_size);
 
 	if (!mobi_base) {
