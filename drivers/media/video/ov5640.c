@@ -212,9 +212,9 @@ static const struct ov5640_timing_cfg timing_cfg_yuv[OV5640_SIZE_LAST] = {
 			      .v_even_ss_inc = 1,
 #ifdef CONFIG_MACH_HAWAII_GARNET
 #ifdef CONFIG_MACH_HAWAII_GARNET_C_A18
-				.out_mode_sel = 0x07,
+			      .out_mode_sel = 0x07,
 #else
-				.out_mode_sel = 0x01,
+			      .out_mode_sel = 0x01,
 #endif
 #else
 			      .out_mode_sel = 0x07,
@@ -244,9 +244,9 @@ static const struct ov5640_timing_cfg timing_cfg_yuv[OV5640_SIZE_LAST] = {
 			     .v_even_ss_inc = 1,
 #ifdef CONFIG_MACH_HAWAII_GARNET
 #ifdef CONFIG_MACH_HAWAII_GARNET_C_A18
-				.out_mode_sel = 0x07,
+			     .out_mode_sel = 0x07,
 #else
-				.out_mode_sel = 0x01,
+			     .out_mode_sel = 0x01,
 #endif
 #else
 			     .out_mode_sel = 0x07,
@@ -276,9 +276,9 @@ static const struct ov5640_timing_cfg timing_cfg_yuv[OV5640_SIZE_LAST] = {
 			      .v_even_ss_inc = 1,
 #ifdef CONFIG_MACH_HAWAII_GARNET
 #ifdef CONFIG_MACH_HAWAII_GARNET_C_A18
-				.out_mode_sel = 0x07,
+			      .out_mode_sel = 0x07,
 #else
-				.out_mode_sel = 0x01,
+			      .out_mode_sel = 0x01,
 #endif
 #else
 			      .out_mode_sel = 0x07,
@@ -308,9 +308,9 @@ static const struct ov5640_timing_cfg timing_cfg_yuv[OV5640_SIZE_LAST] = {
 				  .v_even_ss_inc = 1,
 #ifdef CONFIG_MACH_HAWAII_GARNET
 #ifdef CONFIG_MACH_HAWAII_GARNET_C_A18
-				.out_mode_sel = 0x07,
+				  .out_mode_sel = 0x07,
 #else
-				.out_mode_sel = 0x01,
+				  .out_mode_sel = 0x01,
 #endif
 #else
 				  .out_mode_sel = 0x07,
@@ -340,9 +340,9 @@ static const struct ov5640_timing_cfg timing_cfg_yuv[OV5640_SIZE_LAST] = {
 			      .v_even_ss_inc = 1,
 #ifdef CONFIG_MACH_HAWAII_GARNET
 #ifdef CONFIG_MACH_HAWAII_GARNET_C_A18
-				.out_mode_sel = 0x06,
+			      .out_mode_sel = 0x06,
 #else
-				.out_mode_sel = 0x00,
+			      .out_mode_sel = 0x00,
 #endif
 #else
 			      .out_mode_sel = 0x06,
@@ -372,9 +372,9 @@ static const struct ov5640_timing_cfg timing_cfg_yuv[OV5640_SIZE_LAST] = {
 			      .v_even_ss_inc = 1,
 #ifdef CONFIG_MACH_HAWAII_GARNET
 #ifdef CONFIG_MACH_HAWAII_GARNET_C_A18
-				.out_mode_sel = 0x06,
+			      .out_mode_sel = 0x06,
 #else
-				.out_mode_sel = 0x00,
+			      .out_mode_sel = 0x00,
 #endif
 #else
 			      .out_mode_sel = 0x06,
@@ -404,9 +404,9 @@ static const struct ov5640_timing_cfg timing_cfg_yuv[OV5640_SIZE_LAST] = {
 			     .v_even_ss_inc = 1,
 #ifdef CONFIG_MACH_HAWAII_GARNET
 #ifdef CONFIG_MACH_HAWAII_GARNET_C_A18
-				.out_mode_sel = 0x06,
+			     .out_mode_sel = 0x06,
 #else
-				.out_mode_sel = 0x00,
+			     .out_mode_sel = 0x00,
 #endif
 #else
 			     .out_mode_sel = 0x06,
@@ -1128,27 +1128,29 @@ static int ov5640_af_area(struct i2c_client *client)
 		for (i = 0; i < ov5640->touch_focus; i++) {
 
 			ret = ov5640_reg_write(client, 0x3024,
-					       (u8) ov5640->touch_area[i].
-					       leftTopX);
+					       (u8) ov5640->
+					       touch_area[i].leftTopX);
 			if (ret)
 				return ret;
 			ret = ov5640_reg_write(client, 0x3025,
-					       (u8) ov5640->touch_area[i].
-					       leftTopY);
+					       (u8) ov5640->
+					       touch_area[i].leftTopY);
 			if (ret)
 				return ret;
 			ret = ov5640_reg_write(client, 0x3026,
-					       (u8) (ov5640->touch_area[i].
-						     leftTopX +
-						     ov5640->touch_area[i].
-						     rightBottomX));
+					       (u8) (ov5640->
+						     touch_area[i].leftTopX +
+						     ov5640->
+						     touch_area
+						     [i].rightBottomX));
 			if (ret)
 				return ret;
 			ret = ov5640_reg_write(client, 0x3027,
-					       (u8) (ov5640->touch_area[i].
-						     leftTopY +
-						     ov5640->touch_area[i].
-						     rightBottomY));
+					       (u8) (ov5640->
+						     touch_area[i].leftTopY +
+						     ov5640->
+						     touch_area
+						     [i].rightBottomY));
 			if (ret)
 				return ret;
 			ret = ov5640_reg_write(client, OV5640_CMD_ACK, 0x01);
@@ -1360,7 +1362,7 @@ out:
 
 // For capture routines
 #define XVCLK 1300
-#define AE_Target 32
+static int AE_Target = 32;
 static int AE_low, AE_high;
 static int preview_sysclk, preview_HTS;
 
@@ -1892,9 +1894,6 @@ static int ov5640_config_capture(struct v4l2_subdev *sd)
 		ov5640_set_VTS(sd, capture_VTS);
 	}
 	ov5640_set_shutter(sd, capture_shutter);
-	msleep(300);
-	//ov5640_reg_read(client, 0x56a1, &average);
-	//printk("%s average=0x%x\n", __FUNCTION__,average);
 
 	return ret;
 }
@@ -2077,28 +2076,24 @@ static int ov5640_config_timing(struct i2c_client *client)
 	if (ret)
 		return ret;
 
-	msleep(50);
+	//msleep(50);
 
 	return ret;
 }
 
+static int stream_mode = -1;
 static int ov5640_s_stream(struct v4l2_subdev *sd, int enable)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct ov5640 *ov5640 = to_ov5640(client);
 	int ret = 0;
-	printk(KERN_INFO "%s: enable:%d runmode:%d\n", __FUNCTION__, enable,
-	       runmode);
+	printk(KERN_INFO "%s: enable:%d runmode:%d  stream_mode:%d\n",
+	       __FUNCTION__, enable, runmode, stream_mode);
 
+	if (enable == stream_mode) {
+		return ret;
+	}
 	if (enable) {
-		if (runmode == CAM_RUNNING_MODE_PREVIEW) {
-			// preview
-			ov5640_config_preview(sd);
-		} else if (runmode == CAM_RUNNING_MODE_CAPTURE) {
-			// capture
-			ov5640_config_capture(sd);
-		}
-
 		if ((ov5640->flashmode == FLASH_MODE_ON)
 		    || (ov5640->flashmode == FLASH_MODE_AUTO))
 			flash_gpio_strobe(1);
@@ -2107,13 +2102,12 @@ static int ov5640_s_stream(struct v4l2_subdev *sd, int enable)
 		if ((ov5640->flashmode == FLASH_MODE_ON)
 		    || (ov5640->flashmode == FLASH_MODE_AUTO))
 			flash_gpio_strobe(0);
-
 		msleep(50);
 	} else {
 		/* Stop Streaming, Power Down */
 		ret = ov5640_reg_writes(client, ov5640_power_down);
-		runmode = CAM_RUNNING_MODE_NOTREADY;
 	}
+	stream_mode = enable;
 
 	return ret;
 }
@@ -2160,6 +2154,7 @@ static int ov5640_enum_input(struct soc_camera_device *icd,
 			inp->status |= V4L2_IN_ST_BACK;
 
 	}
+	stream_mode = -1;
 
 	return 0;
 }
@@ -2245,6 +2240,10 @@ static int ov5640_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 		/* This shouldn't happen */
 		ret = -EINVAL;
 		return ret;
+	}
+
+	if (CAM_RUNNING_MODE_PREVIEW == runmode) {
+		ov5640_config_preview(sd);
 	}
 
 	return ret;
@@ -2712,6 +2711,7 @@ static int ov5640_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	case V4L2_CID_CAM_CAPTURE:
 		printk(KERN_INFO "ov5640 runmode = capture\n");
 		runmode = CAM_RUNNING_MODE_CAPTURE;
+		ov5640_config_capture(sd);
 		break;
 
 	case V4L2_CID_CAM_CAPTURE_DONE:
