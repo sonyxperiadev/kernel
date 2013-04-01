@@ -173,7 +173,7 @@ static int mcin_abort(void *device_id, mm_job_post_t *job)
 {
 	struct mcin_device_t *id = (struct mcin_device_t *)device_id;
 
-	pr_debug("mcin_abort:\n");
+	pr_info("mcin_abort:\n");
 	mcin_reset(id);
 
 	return 0;

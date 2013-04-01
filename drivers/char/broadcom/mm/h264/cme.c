@@ -137,7 +137,7 @@ static int cme_reset(void *device_id)
 static int cme_abort(void *device_id, mm_job_post_t *job)
 {
 	struct cme_device_t *id = (struct cme_device_t *)device_id;
-	pr_debug("cme_abort:\n");
+	pr_info("cme_abort:\n");
 
 	/*Aborting current operation*/
 	cme_write(id, H264_CME_AUTOCTRL_OFFSET, 0x4);

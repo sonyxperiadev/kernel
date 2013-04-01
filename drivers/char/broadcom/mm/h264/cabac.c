@@ -108,7 +108,7 @@ static int cabac_get_regs(void *device_id, MM_REG_VALUE *ptr, int count)
 static int cabac_abort(void *device_id, mm_job_post_t *job)
 {
 	struct cabac_device_t *id = (struct cabac_device_t *)device_id;
-	pr_debug("cabac_abort:\n");
+	pr_info("cabac_abort:\n");
 
 	/*Clear all pending commands*/
 	cabac_write(id, H264_REGC2_REGCABAC2BINSCOMMANDBUFFERCOUNT_OFFSET, 0x2);

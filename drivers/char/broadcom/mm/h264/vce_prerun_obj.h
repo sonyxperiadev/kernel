@@ -12,7 +12,7 @@ the GPL, without Broadcom's express prior written consent.
 *******************************************************************************/
 #ifndef _VCE_PRERUN_OBJ_
 #define _VCE_PRERUN_OBJ_
-unsigned int g_vce_prerun_code[] = {
+static const unsigned int g_vce_prerun_code[] = {
  0xe81bf008,
  0x8fc6000,
  0xe81bf009,
@@ -55,9 +55,9 @@ unsigned int g_vce_prerun_code[] = {
  0x70fc0000,
  0xe8fbf000,
 };
-unsigned char g_vce_prerun_data[] = {
+static const unsigned char g_vce_prerun_data[] = {
 };
-unsigned int vce_launch_vce_prerun[] = {
+static const unsigned int vce_launch_vce_prerun[] = {
  (unsigned int) g_vce_prerun_data,
  0,
  (unsigned int) g_vce_prerun_code,

@@ -109,11 +109,15 @@ static void vce_reg_init(void *device_id)
 	/* Initialise VCE Control register*/
 	vce_write(id, VCE_CONTROL_OFFSET, VCE_CONTROL_CLEAR_RUN);
 
-	/*Clear SEM_CLEAR*/
+	/*Clear interrupt bit if set*/
 	vce_write(id, VCE_SEMA_CLEAR_OFFSET, 1<<31);
 
-	/*Clear interrupt bit if set*/
+	/*Clear SEM_CLEAR*/
 	vce_write(id, VCE_SEMA_CLEAR_OFFSET, 0xff);
+	vce_write(id, VCE_SEMA_CLEAR_OFFSET, 1<<25);
+
+	/*Clear VCE_BAD_ADDR_OFFSET*/
+	vce_write(id, VCE_BAD_ADDR_OFFSET, 0x0);
 }
 
 static int vce_get_regs(void *device_id, MM_REG_VALUE *ptr, int count)
@@ -142,7 +146,7 @@ static int vce_abort(void *device_id, mm_job_post_t *job)
 {
 	struct vce_device_t *id = (struct vce_device_t *)device_id;
 
-	pr_debug("vce_abort:\n");
+	pr_info("vce_abort:\n");
 	vce_reset(id);
 
 	return 0;
@@ -269,18 +273,18 @@ mm_job_status_e vce_start_job(void *device_id, mm_job_post_t *job,
 
 		/*set return address to the finalising code*/
 		vce_write(id, VCE_REGISTERS_OFFSET, \
-				0x0);
+				VCE_DMA_LIMIT);
 
-		/*Copy Code*/
+		/*Copy Prerun Code*/
 		for (i = 0; i < (vce_launch_vce_prerun[3]/4); i++) {
 			vce_write(id, (VCE_PROGRAM_MEM_OFFSET + \
-				(vce_info->codesize)+(i*4)), (u32)* \
+				(VCE_DMA_LIMIT)+(i*4)), (u32)* \
 				((u32 *)((u32 *) \
 				vce_launch_vce_prerun[2]) + i));
 		}
 
 		/*Write Start address*/
-		vce_write(id, VCE_PC_PF0_OFFSET, vce_info->codesize);
+		vce_write(id, VCE_PC_PF0_OFFSET, VCE_DMA_LIMIT);
 
 		/*Taken from DEC3 - TODO: Verify again*/
 		if (vce_info->endcode & (~VCE_NO_SEMAPHORE)) {
@@ -307,6 +311,29 @@ mm_job_status_e vce_start_job(void *device_id, mm_job_post_t *job,
 		}
 #endif
 
+		/*Set RUN Bit*/
+		vce_write(id, VCE_CONTROL_OFFSET, VCE_CONTROL_SET_RUN);
+
+		job->status = MM_JOB_STATUS_RUNNING;
+		return MM_JOB_STATUS_RUNNING;
+		default:
+			pr_err("unknown job type\n");
+			return MM_JOB_STATUS_ERROR;
+		}
+
+	case MM_JOB_STATUS_RUNNING:
+		pr_debug("MM_JOB_STATUS_RUNNING");
+		/*Program VCE*/
+
+		/*Copy extra code*/
+		lt_csize = vce_info->codesize - VCE_DMA_LIMIT;
+
+		if (lt_csize > 0) {
+			ft_csize = VCE_DMA_LIMIT;
+		} else {
+			ft_csize = vce_info->codesize;
+		}
+
 		if (lt_csize > 0) {
 			char *va;
 			va = (char *)(jp + (sizeof(struct vce_launch_info_t)));
@@ -324,19 +351,6 @@ mm_job_status_e vce_start_job(void *device_id, mm_job_post_t *job,
 			}
 		}
 
-		/*Set RUN Bit*/
-		vce_write(id, VCE_CONTROL_OFFSET, VCE_CONTROL_SET_RUN);
-
-		job->status = MM_JOB_STATUS_RUNNING;
-		return MM_JOB_STATUS_RUNNING;
-		default:
-			pr_err("unknown job type\n");
-			return MM_JOB_STATUS_ERROR;
-		}
-
-	case MM_JOB_STATUS_RUNNING:
-		pr_debug("MM_JOB_STATUS_RUNNING");
-		/*Program VCE*/
 		/*Write the registers passed*/
 		vce_reset(id);
 		for (i = 0; i < VCE_REGISTERS_COUNT; i++) {
@@ -387,6 +401,7 @@ mm_job_status_e vce_start_job(void *device_id, mm_job_post_t *job,
 		if (vce_read(id, VCE_BAD_ADDR_OFFSET) != 0) {
 			pr_err("vce_start_job: Bad_Addr Err [0x%08x]\n", \
 				vce_read(id, VCE_BAD_ADDR_OFFSET));
+			vce_write(id, VCE_BAD_ADDR_OFFSET, 0x0);
 			return MM_JOB_STATUS_ERROR;
 		}
 
@@ -409,7 +424,7 @@ mm_job_status_e vce_start_job(void *device_id, mm_job_post_t *job,
 		vce_write(id, VCE_REGISTERS_OFFSET, \
 					0x0);
 
-		/*Copy Code*/
+		/*Copy Postrun Code*/
 		for (i = 0; i < (vce_launch_vce_postrun[3])/4; i++) {
 			vce_write(id, (VCE_PROGRAM_MEM_OFFSET + \
 				(i*4)), (u32)*((u32 *)((u32 *) \
