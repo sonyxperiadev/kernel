@@ -121,12 +121,11 @@ static struct bcmpmu_accy *bcmpmu_accy;
 static void bcmpmu_accy_isr(enum bcmpmu59xxx_irq irq, void *data);
 static void usb_handle_state(struct bcmpmu_accy *paccy);
 static void bcmpmu_notify_charger_state(struct bcmpmu_accy *paccy);
-/* static void bcmpmu_accy_chrgr_detect_state
- * (struct bcmpmu59xxx *bcmpmu, int val); */
+static void bcmpmu_accy_set_pmu_BC12
+	(struct bcmpmu59xxx *bcmpmu, int val);
 static void bcmpmu_accy_check_BC12_EN(struct bcmpmu59xxx *bcmpmu);
 static void bcmpmu_paccy_latch_event(struct bcmpmu_accy *accy,
 		u32 event, void *para);
-/* static void bcmpmu_update_pmu_chrgr_type(struct bcmpmu_accy *paccy);*/
 static void bcdldo_cycle_power(struct bcmpmu_accy *paccy);
 
 const int *bcmpmu_get_usb_id_map(struct bcmpmu59xxx *bcmpmu, int *len)
@@ -332,15 +331,26 @@ static void paccy_set_ldo_bit(struct bcmpmu_accy *paccy, int val)
 	paccy->bcmpmu->read_dev(paccy->bcmpmu,
 			PMU_REG_MBCCTRL5, &status);
 	if (val)
-		status |= (USB_DET_LDO_EN_MASK |
-			MBCCTRL5_BC12_EN_MASK);
+		status |= USB_DET_LDO_EN_MASK;
 	else
-		status &= ~(USB_DET_LDO_EN_MASK |
-				MBCCTRL5_BC12_EN_MASK);
+		status &= ~USB_DET_LDO_EN_MASK;
 	paccy->bcmpmu->write_dev(paccy->bcmpmu,
 			PMU_REG_MBCCTRL5, status);
 	pr_accy(FLOW, "###<%s> MBCCTRL5 %x\n", __func__, status);
 }
+
+static int paccy_get_ldo_bit(struct bcmpmu_accy *paccy)
+{
+	u8 reg = 0;
+	paccy->bcmpmu->read_dev(paccy->bcmpmu,
+			PMU_REG_MBCCTRL5, &reg);
+
+	pr_accy(FLOW, "###<%s> MBCCTRL5 %x\n",
+			__func__, reg);
+
+	return (reg & USB_DET_LDO_EN_MASK) ? 1 : 0;
+}
+
 
 static void usb_detect_state(struct bcmpmu_accy *paccy)
 {
@@ -500,8 +510,9 @@ static void usb_handle_state(struct bcmpmu_accy *paccy)
 		}
 		if (paccy->clock_en)
 			enable_bc_clock(paccy, 0);
+		if (paccy->bc != BC_EXT_DETECT)
+			bcmpmu_accy_set_pmu_BC12(paccy->bcmpmu, 0);
 		bcmpmu_notify_charger_state(paccy);
-		paccy_set_ldo_bit(paccy, 0);
 		schedule_delayed_work(&paccy->det_work, ACCY_WORK_DELAY);
 		break;
 
@@ -522,6 +533,7 @@ static void usb_handle_state(struct bcmpmu_accy *paccy)
 		if (paccy->bc != BC_EXT_DETECT) {
 			bcdldo_cycle_power(paccy);
 			reset_bc(paccy);
+			bcmpmu_accy_set_pmu_BC12(paccy->bcmpmu, 1);
 		}
 
 #ifdef CONFIG_HAS_WAKELOCK
@@ -821,8 +833,8 @@ static void bcmpmu_notify_charger_state(struct bcmpmu_accy *paccy)
 				BCMPMU_CHRGR_EVENT_CHRG_CURR_LMT,
 				&chrgr_curr_lmt[chrgr_type]);
 }
-/*
-static void bcmpmu_accy_chrgr_detect_state(struct bcmpmu59xxx *bcmpmu, int val)
+
+static void bcmpmu_accy_set_pmu_BC12(struct bcmpmu59xxx *bcmpmu, int val)
 {
 	u8 reg;
 	bcmpmu->read_dev(bcmpmu, PMU_REG_MBCCTRL5, &reg);
@@ -834,7 +846,6 @@ static void bcmpmu_accy_chrgr_detect_state(struct bcmpmu59xxx *bcmpmu, int val)
 	bcmpmu->write_dev(bcmpmu, PMU_REG_MBCCTRL5, reg);
 	pr_accy(FLOW, "###<%s> MBCCTRL5 %x\n", __func__, reg);
 }
-*/
 
 static void bcmpmu_accy_check_BC12_EN(struct bcmpmu59xxx *bcmpmu)
 {
@@ -842,10 +853,10 @@ static void bcmpmu_accy_check_BC12_EN(struct bcmpmu59xxx *bcmpmu)
 	bcmpmu->read_dev(bcmpmu, PMU_REG_MBCCTRL5, &reg);
 	pr_accy(FLOW, "###<%s> MBCCTRL5 %x\n", __func__, reg);
 	if (reg & MBCCTRL5_BC12_EN_MASK) {
-		pr_accy(FLOW, "BC12 is enabled\n", __func__);
+		pr_accy(FLOW, "<%s> BC12 is enabled\n", __func__);
 	}
 	else {
-		pr_accy(FLOW, "BC12 is disabled\n", __func__);
+		pr_accy(FLOW, "<%s> BC12 is disabled\n", __func__);
 	}
 }
 
@@ -1232,6 +1243,13 @@ int bcmpmu_usb_set(struct bcmpmu59xxx *bcmpmu,
 		} else
 			atomic_set(&paccy->usb_allow_bc_detect, 0);
 		break;
+	case BCMPMU_USB_CTRL_BCDLDO:
+		if (data == 1)
+			paccy_set_ldo_bit(paccy, 1);
+		else
+			paccy_set_ldo_bit(paccy, 0);
+
+		break;
 
 	default:
 		ret = -EINVAL;
@@ -1369,6 +1387,9 @@ int bcmpmu_usb_get(struct bcmpmu59xxx *bcmpmu,
 	case BCMPMU_USB_CTRL_GET_USB_TYPE:
 		ret = 0;
 		val = paccy->usb_accy_data.usb_type;
+		break;
+	case BCMPMU_USB_CTRL_BCDLDO:
+		val = paccy_get_ldo_bit(paccy);
 		break;
 	default:
 		ret = -EINVAL;
@@ -1538,6 +1559,7 @@ static int __devinit bcmpmu_accy_probe(struct platform_device *pdev)
 	if (paccy->bc == BCMPMU_BC_BB_BC12) {
 		bcm_hsotgctrl_set_bc_iso(false);
 		paccy_set_ldo_bit(paccy, 1);
+		bcmpmu_accy_set_pmu_BC12(paccy->bcmpmu, 1);
 		reset_bc(paccy);
 	} else
 		bcm_hsotgctrl_set_bc_iso(true);
@@ -1545,6 +1567,7 @@ static int __devinit bcmpmu_accy_probe(struct platform_device *pdev)
 	/* Disable BC12 for cust platform */
 	if (paccy->bc == BC_EXT_DETECT) {
 		bcmpmu_accy_check_BC12_EN(paccy->bcmpmu);
+		bcmpmu_accy_set_pmu_BC12(paccy->bcmpmu, 0);
 		paccy_set_ldo_bit(paccy, 0);
 	}
 

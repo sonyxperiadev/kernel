@@ -624,6 +624,7 @@ enum bcmpmu_usb_ctrl_t {
 	BCMPMU_USB_CTRL_SW_UP,
 	BCMPMU_USB_CTRL_TPROBE_MAX,
 	BCMPMU_USB_CTRL_ALLOW_BC_DETECT,
+	BCMPMU_USB_CTRL_BCDLDO,
 };
 
 enum bcmpmu_usb_det_state_t {
