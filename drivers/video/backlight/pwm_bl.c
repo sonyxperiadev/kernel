@@ -169,13 +169,6 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 		data->dft_brightness = val;
 
 		if (of_property_read_u32(pdev->dev.of_node,
-				"lth-brightness", &val)) {
-			val = 0;
-		}
-		data->lth_brightness = val;
-
-
-		if (of_property_read_u32(pdev->dev.of_node,
 				"polarity", &val)) {
 			ret = -EINVAL;
 			goto err_read;

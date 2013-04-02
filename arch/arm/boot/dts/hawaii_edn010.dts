@@ -440,7 +440,6 @@
 		dft-brightness = <32>;
 		polarity = <1>;		/* Inverted polarity */
 		pwm-period-ns = <99900>; /* ~10010 Hz */
-		lth-brightness = <1>;
 		pwm-request-label = "backlight";
 	};
 };
