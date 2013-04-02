@@ -53,6 +53,8 @@
 #include <mach/sec_api.h>
 #include <mach/cdebugger.h>
 
+extern int reset_pwm_padcntrl(void);
+
 static void hawaii_poweroff(void)
 {
 #ifdef CONFIG_MFD_BCM_PMU590XX
@@ -87,6 +89,11 @@ void hawaii_restart(char mode, const char *cmd)
 		/* Clear the magic key when reboot is required */
 			if (cmd == NULL)
 				cdebugger_set_upload_magic(0x00);
+			ret = reset_pwm_padcntrl();
+			if (ret)
+				pr_err("%s Failed to reset PADCNTRL"\
+				"pin for PWM2 to GPIO24:%d\n",\
+				__func__, ret);
 			kona_reset(mode, cmd);
 			break;
 		}

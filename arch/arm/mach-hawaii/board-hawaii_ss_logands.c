@@ -37,6 +37,7 @@
 #include <linux/of_platform.h>
 #include <linux/of.h>
 #include <linux/of_fdt.h>
+#include <mach/pinmux.h>
 
 #ifdef CONFIG_ANDROID_PMEM
 #include <linux/android_pmem.h>
@@ -260,6 +261,16 @@ extern int hawaii_wifi_status_register(
 					UARTB_USR_OFFSET),	\
 	.clk_name = clk,					\
 	.port_name = uart_name,					\
+}
+
+int reset_pwm_padcntrl(void)
+{
+	struct pin_config new_pin_config;
+	int ret;
+	new_pin_config.name = PN_GPIO24;
+	new_pin_config.func = PF_GPIO24;
+	ret = pinmux_set_pin_config(&new_pin_config);
+	return ret;
 }
 
 #ifdef CONFIG_ANDROID_PMEM

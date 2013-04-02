@@ -36,6 +36,7 @@
 #include <linux/of_platform.h>
 #include <linux/of.h>
 #include <linux/of_fdt.h>
+#include <mach/pinmux.h>
 
 #ifdef CONFIG_ANDROID_PMEM
 #include <linux/android_pmem.h>
@@ -180,6 +181,16 @@ hawaii_wifi_status_register(void (*callback) (int card_present, void *dev_id),
 #define TSC_GPIO_RESET_PIN			70
 #define TANGO_I2C_TS_DRIVER_NUM_BYTES_TO_READ	14
 
+int reset_pwm_padcntrl(void)
+{
+	struct pin_config new_pin_config;
+	int ret;
+	new_pin_config.name = PN_GPIO24;
+	new_pin_config.func = PF_GPIO24;
+	ret = pinmux_set_pin_config(&new_pin_config);
+	return ret;
+}
+
 #ifdef CONFIG_ANDROID_PMEM
 struct android_pmem_platform_data android_pmem_data = {
 	.name = "pmem",
@@ -188,6 +199,7 @@ struct android_pmem_platform_data android_pmem_data = {
 	.carveout_size = 0,
 };
 #endif
+
 
 #ifdef CONFIG_ION_BCM_NO_DT
 struct ion_platform_data ion_system_data = {
