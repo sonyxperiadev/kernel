@@ -416,6 +416,8 @@ static const struct event_table __event_table[] = {
 		.policy_mm	= PM_OFF,
 	},
 
+#ifndef CONFIG_MACH_HAWAII_SS_COMMON
+	/* battery removal event for SIM protection */
 	{
 		.event_id	= BATRM_EVENT,
 		.trig_type	= PM_TRIG_NEG_EDGE,
@@ -426,6 +428,8 @@ static const struct event_table __event_table[] = {
 		.policy_hub	= PM_DFS,
 		.policy_mm	= PM_OFF,
 	},
+#endif /* CONFIG_MACH_HAWAII_SS_COMMON */
+
 	{
 		.event_id	= GPIO29_A_EVENT,
 		.trig_type	= PM_TRIG_BOTH_EDGE,
