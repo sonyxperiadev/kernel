@@ -568,7 +568,7 @@ static int sp0a28_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	u8 ov_reg;
 	int ret = 0;
 
-	dev_dbg(&client->dev, "sp0a28_s_ctrl");
+	//printk(KERN_ERR "sp0a28_s_ctrl id %d  value %d \n",ctrl->id ,ctrl->value );
 
 	switch (ctrl->id) {
 	case V4L2_CID_CAMERA_BRIGHTNESS:
@@ -580,18 +580,18 @@ static int sp0a28_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		switch (sp0a28->brightness) {
 		case EV_MINUS_1:
 			ret = sp0a28_write_smbuss(client,
-					sp0a28_brightness_lv4_tbl,
-					ARRAY_SIZE(sp0a28_brightness_lv4_tbl));
+					sp0a28_ev_minus_2_regs,
+					ARRAY_SIZE(sp0a28_ev_minus_2_regs));
 			break;
 		case EV_PLUS_1:
 			ret = sp0a28_write_smbuss(client,
-					sp0a28_brightness_lv0_tbl,
-					ARRAY_SIZE(sp0a28_brightness_lv0_tbl));
+					sp0a28_ev_plus_2_regs,
+					ARRAY_SIZE(sp0a28_ev_plus_2_regs));
 			break;
 		default:
 			ret = sp0a28_write_smbuss(client,
-					sp0a28_brightness_lv2_default_tbl,
-				ARRAY_SIZE(sp0a28_brightness_lv2_default_tbl));
+					sp0a28_ev_default_regs,
+				ARRAY_SIZE(sp0a28_ev_default_regs));
 			break;
 		}
 		if (ret)
