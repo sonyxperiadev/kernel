@@ -1304,8 +1304,12 @@ static void serial8250_stop_tx(struct uart_port *port)
 	 * should be send out. */
 	udelay(70);
 	pi_mgr_qos_request_update(&up->qos_tx_node, PI_MGR_QOS_DEFAULT_VALUE);
-	if (up->bugs & UART_BUG_THRE)
-		del_timer_sync(&up->timer);
+	/* Commenting the del_timer_sync(). This piece of code can lead
+	 * to deadlock scenario. Now the serial8250_backup_timeo() will run
+	 * atleast once.
+	 * if (up->bugs & UART_BUG_THRE)
+	 * del_timer_sync(&up->timer);
+	 * */
 #endif /* CONFIG_BRCM_UART_CHANGES */
 }
 
