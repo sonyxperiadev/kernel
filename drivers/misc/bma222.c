@@ -31,9 +31,14 @@
 #include <linux/delay.h>
 #include <linux/slab.h>
 #include <linux/brvsens_driver.h>
+#include <linux/module.h>
 #ifdef CONFIG_HAS_EARLYSUSPEND
 #include <linux/earlysuspend.h>
 #endif
+
+#include <linux/of.h>
+#include <linux/of_fdt.h>
+#include <linux/of_platform.h>
 
 /* uncomment to enable interrupt based event generation */
 /* #define BMA222_ACCL_IRQ_MODE */
@@ -46,7 +51,14 @@
 #define HIGH_G_DUR			1
 #define ANY_MOTION_THRES		1
 #define ANY_MOTION_CT			1
+#define BMA222_INPUT_DEVICE		1
 
+static const struct of_device_id bma222_accl_of_match[] = {
+	{.compatible = "bcm,bma222_accl",},
+	{},
+}
+
+MODULE_DEVICE_TABLE(of, bma222_accl_of_match);
 
 struct drv_data {
 #ifdef BMA222_INPUT_DEVICE
@@ -64,11 +76,11 @@ struct drv_data {
 #endif
 };
 
-typedef struct {
-    short x,     /**< holds x-axis acceleration data sign extended. Range -128 to 128. */
-          y,          /**< holds y-axis acceleration data sign extended. Range -128 to 128. */
-          z;          /**< holds z-axis acceleration data sign extended. Range -128 to 128. */
-} bma_acc_t;
+struct bma_acc_t {
+	short x;
+	short y;
+	short z;
+};
 
 static struct mutex bma222_accl_dd_lock;
 static struct mutex bma222_accl_wrk_lock;
@@ -78,10 +90,12 @@ static struct timer_list bma_wakeup_timer;
 #endif
 static atomic_t bma_on;
 static atomic_t a_flag;
-static bma_acc_t newacc;
+static struct bma_acc_t newacc;
 
 static struct i2c_client *bma222_accl_client;
-
+#ifdef BMA222_CALIBRATION
+static bool fastcali_ret;
+#endif
 enum bma222_accl_modes {
 	SENSOR_DELAY_FASTEST = 0,
 	SENSOR_DELAY_GAME = 20,
@@ -89,10 +103,12 @@ enum bma222_accl_modes {
 	SENSOR_DELAY_NORMAL = 200
 };
 
-/*add for lock i2c read/write when camera power up/down*/
-#ifdef CONFIG_BMA222_WORKAROUND
-extern void sensor_power_switch_lock(void);
-extern void sensor_power_switch_unlock(void);
+#ifdef BMA222_CALIBRATION
+static int bma222_fast_compensate(const unsigned char target[3]);
+static int bma222_inline_calibrate(void);
+static int bma222_offset_fast_cali(unsigned char target_x,
+				   unsigned char target_y,
+				   unsigned char target_z);
 #endif
 
 static inline void bma222_accl_i2c_delay(unsigned int msec)
@@ -105,12 +121,8 @@ static inline char bma222_accl_i2c_write(unsigned char reg_addr,
 					 unsigned char *data, unsigned char len)
 {
 	s32 dummy;
-	if (bma222_accl_client == NULL)	/*      No global client pointer?       */
+	if (bma222_accl_client == NULL)
 		return -1;
-
-	#ifdef CONFIG_BMA222_WORKAROUND
-	sensor_power_switch_lock();
-	#endif
 
 	while (len--) {
 		dummy =
@@ -119,16 +131,8 @@ static inline char bma222_accl_i2c_write(unsigned char reg_addr,
 		reg_addr++;
 		data++;
 		if (dummy < 0)
-		{
-			#ifdef CONFIG_BMA222_WORKAROUND
-			sensor_power_switch_unlock();
-			#endif
 			return -1;
-		}
 	}
-	#ifdef CONFIG_BMA222_WORKAROUND
-	sensor_power_switch_unlock();
-	#endif
 	return 0;
 }
 
@@ -137,30 +141,17 @@ static inline char bma222_accl_i2c_read(unsigned char reg_addr,
 					unsigned char *data, unsigned char len)
 {
 	s32 dummy;
-	if (bma222_accl_client == NULL)	/*      No global client pointer?       */
+	if (bma222_accl_client == NULL)
 		return -1;
-
-
-	#ifdef CONFIG_BMA222_WORKAROUND
-	sensor_power_switch_lock();
-	#endif
 
 	while (len--) {
 		dummy = i2c_smbus_read_byte_data(bma222_accl_client, reg_addr);
 		if (dummy < 0)
-		{
-			#ifdef CONFIG_BMA222_WORKAROUND
-			sensor_power_switch_unlock();
-			#endif
 			return -1;
-		}
 		*data = dummy & 0x000000ff;
 		reg_addr++;
 		data++;
 	}
-	#ifdef CONFIG_BMA222_WORKAROUND
-	sensor_power_switch_unlock();
-	#endif	
 	return 0;
 }
 
@@ -169,7 +160,6 @@ static int bma222_accl_power_down(struct drv_data *dd)
 	u8 data;
 	int rc;
 
-	/* For sleep mode set bit 7 of control register (0x11) to 1 */
 	data = 0x80;
 	rc = i2c_smbus_write_byte_data(dd->i2c, 0x11, data);
 	if (rc < 0)
@@ -185,7 +175,6 @@ static int bma222_accl_power_up(struct drv_data *dd)
 	u8 data;
 	int rc;
 
-	/* To exit sleep mode set bit 8 of control register (0x11) to 0 */
 	data = 0x00;
 	rc = i2c_smbus_write_byte_data(dd->i2c, 0x11, data);
 	if (rc < 0)
@@ -242,7 +231,7 @@ static void bma222_accl_early_suspend(struct early_suspend *desc)
 	struct drv_data *dd = container_of(desc, struct drv_data, suspend_desc);
 	pm_message_t mesg = {
 		.event = PM_EVENT_SUSPEND,
-		};
+	};
 	bma222_accl_suspend(dd->i2c, mesg);
 }
 
@@ -273,11 +262,9 @@ void bma_wakeup_timer_func(unsigned long data)
 {
 	struct drv_data *dd;
 	long delay = 0;
-
 	dd = (struct drv_data *)data;
 
 	delay = dd->bma222_accl_mode * HZ / 1000;
-	/* Set delay >= 2 jiffies to avoid cpu hogging */
 	if (delay < 2)
 		delay = 2;
 	schedule_delayed_work(&dd->work_data, HZ / 1000);
@@ -317,21 +304,22 @@ static void bma222_accl_release(struct input_dev *dev)
 }
 
 static int bma222_smbus_read_byte_block(struct i2c_client *client,
-        unsigned char reg_addr, unsigned char *data, unsigned char len)
+					unsigned char reg_addr,
+					unsigned char *data, unsigned char len)
 {
-    s32 dummy;
-    dummy = i2c_smbus_read_i2c_block_data(client, reg_addr, len, data);
-    if (dummy < 0)
-        return -1;
-    return 0;
+	s32 dummy;
+	dummy = i2c_smbus_read_i2c_block_data(client, reg_addr, len, data);
+	if (dummy < 0)
+		return -1;
+	return 0;
 }
 
 static int bma222_accl_configuration(void)
 {
-    u8 data;
+	u8 data;
 	int rc;
 
-	/* set register 0x10 '01011b' bandwidth 62.5HZ*/
+	/* set register 0x10 '01011b' bandwidth 62.5HZ */
 	data = 0x0b;
 	rc = i2c_smbus_write_byte_data(bma222_accl_client, 0x10, data);
 	if (rc < 0)
@@ -342,26 +330,27 @@ static int bma222_accl_configuration(void)
 	if (rc < 0)
 		pr_err("G-Sensor set band width fail\n");
 
-    return rc;
+	return rc;
 
 }
 
-
-static int bma222_read_accel_xyz(bma_acc_t *acc)
+static int bma222_read_accel_xyz(struct bma_acc_t *acc)
 {
-    int comres;
-    unsigned char data[6];
+	int comres;
+	unsigned char data[6];
 
-    comres = bma222_smbus_read_byte_block(bma222_accl_client, BMA222_X_AXIS_REG, data, 6);
-    acc->x = (signed char)data[0];
-    acc->y = (signed char)data[2];
-    acc->z = (signed char)data[4];
-    return comres;
+	comres =
+	    bma222_smbus_read_byte_block(bma222_accl_client, BMA222_X_AXIS_REG,
+					 data, 6);
+	acc->x = (signed char)data[0];
+	acc->y = (signed char)data[2];
+	acc->z = (signed char)data[4];
+	return comres;
 }
 
 static void bma222_accl_getdata(struct drv_data *dd)
 {
-	bma_acc_t acc;
+	struct bma_acc_t acc;
 	int X, Y, Z;
 	struct bma222_accl_platform_data *pdata = pdata =
 	    bma222_accl_client->dev.platform_data;
@@ -390,8 +379,8 @@ static void bma222_accl_getdata(struct drv_data *dd)
 		break;
 	case BMA_ROT_270:
 		X = acc.y;
-		Y = -acc.x;
-		Z = acc.z;
+		Y = acc.x;
+		Z = -acc.z;
 		break;
 	default:
 		pr_err("bma222_accl: invalid orientation specified\n");
@@ -405,9 +394,7 @@ static void bma222_accl_getdata(struct drv_data *dd)
 		X = -X;
 		Z = -Z;
 	}
-
-#ifdef BMA222_INPUT_DEVICE 
-//    printk("send to user[%d][%d][%d] \n",X, Y, Z);
+#ifdef BMA222_INPUT_DEVICE
 	input_report_rel(dd->ip_dev, REL_X, X);
 	input_report_rel(dd->ip_dev, REL_Y, Y);
 	input_report_rel(dd->ip_dev, REL_Z, Z);
@@ -420,9 +407,9 @@ static void bma222_accl_getdata(struct drv_data *dd)
 
 #ifndef BMA222_ACCL_IRQ_MODE
 	if (dd->bma222_accl_mode >= SENSOR_DELAY_UI)
-		bma222_accl_power_down(dd);
+		/*bma222_accl_power_down(dd); */
 #endif
-	mutex_unlock(&bma222_accl_wrk_lock);
+		mutex_unlock(&bma222_accl_wrk_lock);
 
 	return;
 
@@ -450,11 +437,16 @@ static int bma222_accl_misc_open(struct inode *inode, struct file *file)
 	return 0;
 }
 
-static int bma222_accl_misc_ioctl(struct file *file,unsigned int cmd, unsigned long arg)
+static int bma222_accl_misc_ioctl(struct file *file, unsigned int cmd,
+				  unsigned long arg)
 {
 	void __user *argp = (void __user *)arg;
 	int delay;
 	struct drv_data *dd;
+#ifdef BMA222_CALIBRATION
+	void __user *data;
+	struct bma_acc_t sensor_data;
+#endif
 	dd = i2c_get_clientdata(bma222_accl_client);
 
 	switch (cmd) {
@@ -489,22 +481,27 @@ static int bma222_accl_misc_ioctl(struct file *file,unsigned int cmd, unsigned l
 		if (copy_to_user(argp, &newacc, sizeof(newacc)))
 			return -EFAULT;
 		break;
+#ifdef BMA222_CALIBRATION
+	case BMA222_ACCL_IOCTL_CALI:
+
+		break;
+#endif
 	}
 
 	return 0;
 }
 
-int bma222_read_data(struct drv_data *data, u16* value)
+int bma222_read_data(struct drv_data *data, u16 * value)
 {
 	struct drv_data *dd;
 	dd = i2c_get_clientdata(bma222_accl_client);
-	
-	if (!atomic_read(&a_flag))
-			bma222_accl_getdata(dd);
 
-	*(value+0) = newacc.x;
-	*(value+1) = newacc.y;
-	*(value+2) = newacc.z;
+	if (!atomic_read(&a_flag))
+		bma222_accl_getdata(dd);
+
+	*(value + 0) = newacc.x;
+	*(value + 1) = newacc.y;
+	*(value + 2) = newacc.z;
 	return 0;
 }
 
@@ -518,18 +515,341 @@ static struct miscdevice bma222_accl_misc_device = {
 	.minor = MISC_DYNAMIC_MINOR,
 	.name = "bma222_accl",
 	.fops = &bma222_accl_misc_fops,
-    .mode = 0644,
+	.mode = 0644,
 };
+
+#ifdef BMA222_CALIBRATION
+/*calibrate start...................*/
+static ssize_t store_fastcali_value(struct device *dev,
+				    struct device_attribute *attr,
+				    const char *buf, size_t count)
+{
+	unsigned char target[3];
+	fastcali_ret = false;
+#if 0
+	if (sscanf(buf, "%d %d %d", &(target[0]), &(target[1]), &(target[2])) ==
+	    3)
+		bma222_offset_fast_cali(target[0], target[1], target[2]);
+	else
+		printk(KERN_ERR "BMA222:invalid format\n");
+#endif
+	bma222_offset_fast_cali(0, 0, 1);
+}
+
+static ssize_t show_fastcali_value(struct device *dev,
+				   struct device_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d\n", fastcali_ret);
+}
+
+/*
+  offset fast calibration
+  target:
+  0 => 0g; 1 => +1g; 2 => -1g; 3 => 0g
+*/
+static int bma222_offset_fast_cali(unsigned char target_x,
+				   unsigned char target_y,
+				   unsigned char target_z)
+{
+	unsigned char target[3];
+	fastcali_ret = false;
+	/* check arguments */
+	if ((target_x > 3) || (target_y > 3) || (target_z > 3)) {
+		pr_err("bma222_offset_fast_cali para err\n");
+		return -1;
+	}
+
+	/* trigger offset calibration secondly */
+	target[0] = target_x;
+	target[1] = target_y;
+	target[2] = target_z;
+	if (bma222_fast_compensate(target) != 0)
+		return -2;
+
+	/* save calibration result to EEPROM finally */
+	if (bma222_inline_calibrate() != 0)
+		return -3;
+	fastcali_ret = true;
+	return 0;
+}
+
+#define BMA222_REG_POWER_CTL 0x11
+
+static int bma222_set_power_mode(void)
+{
+	u8 data;
+	int rc;
+	struct drv_data *dd;
+	dd = i2c_get_clientdata(bma222_accl_client);
+
+	data = 0x00;
+	rc = i2c_smbus_write_byte_data(dd->i2c, BMA222_REG_POWER_CTL, data);
+	if (rc < 0)
+		pr_err("bma222 set power mode failed\n");
+	else
+		atomic_set(&bma_on, 1);
+
+	return rc;
+}
+
+static int bma222_set_range(void)
+{
+	u8 data;
+	int rc;
+
+	/* set register 0x10 '01011b' bandwidth 62.5HZ */
+	data = 0x03;
+	rc = i2c_smbus_write_byte_data(bma222_accl_client, 0xf, data);
+	if (rc < 0)
+		pr_err("bma222 set range fail\n");
+
+	return rc;
+
+}
+
+static u8 bma222_set_bandwidth(void)
+{
+	u8 data = 0x0b;
+	int rc;
+
+	rc = i2c_smbus_write_byte_data(bma222_accl_client, 0x10, data);
+	if (rc < 0)
+		pr_err("bma222 set band width fail\n");
+
+	return rc;
+
+}
+
+/*
+  offset fast compensation
+  target:
+  0 => 0g; 1 => +1g; 2 => -1g; 3 => 0g
+*/
+
+static int bma222_fast_compensate(const unsigned char target[3])
+{
+	static const int CALI_TIMEOUT = 100;
+	int res = 0, timeout = 0;
+	unsigned char databuf;
+	fastcali_ret = false;
+	/*** set normal mode, make sure that lowpower_en bit is '0' ***/
+	res = bma222_set_power_mode();
+	if (res != 0) {
+		pr_err("bma222: set pw mode fail in calibrate\n");
+		return res;
+	}
+
+	/*** set +/-2g range ***/
+	res = bma222_set_range();
+	if (res != 0) {
+		pr_err("bma222: set range fail in calibrate\n");
+		return res;
+	}
+
+	/*** set 1000 Hz bandwidth ***/
+	res = bma222_set_bandwidth();
+	if (res != 0) {
+		pr_err("bma222: set pw mode fail in calibrate\n");
+		return res;
+	}
+
+	/*** set offset target (x/y/z) ***/
+	res = bma222_accl_i2c_read(BMA2XX_OFFSET_PARAMS_REG, &databuf, 1);
+	if (res != 0) {
+		pr_err("bma222: read params fail in calibrate\n");
+		return res;
+	}
+	/* combine three target value */
+	databuf &= 0x81;	/*clean old value */
+	databuf |=
+	    (((target[0] & 0x03) << 1) | ((target[1] & 0x03) << 3) |
+	     ((target[2] & 0x03) << 5));
+	res = bma222_accl_i2c_write(BMA2XX_OFFSET_PARAMS_REG, &databuf, 1);
+	if (res != 0) {
+		pr_err("bma222: write params fail in calibrate\n");
+		return res;
+	}
+
+	/*** trigger x-axis offset compensation ***/
+	res = bma222_accl_i2c_read(BMA2XX_OFFSET_CTRL_REG, &databuf, 1);
+	if (res != 0) {
+		pr_err("bma222: read x-offset fail in calibrate\n");
+		return res;
+	}
+
+	databuf &= 0x9F;	/*clean old value */
+	databuf |= 0x01 << 5;
+	res = bma222_accl_i2c_write(BMA2XX_OFFSET_CTRL_REG, &databuf, 1);
+	if (res != 0) {
+		pr_err("bma222: write x-offset fail in calibrate\n");
+		return res;
+	}
+
+	/*** checking status and waiting x-axis offset compensation done ***/
+	timeout = 0;
+	do {
+		mdelay(2);
+		bma222_accl_i2c_read(BMA2XX_OFFSET_CTRL_REG, &databuf, 1);
+		databuf = (databuf >> 4) & 0x01;	/*get cal_rdy bit */
+		if (++timeout == CALI_TIMEOUT) {
+			pr_err("bma222:check x cal_rdy time out\n");
+			return -ETIMEDOUT;
+		}
+	} while (databuf == 0);
+
+	/*** trigger y-axis offset compensation ***/
+	res = bma222_accl_i2c_read(BMA2XX_OFFSET_CTRL_REG, &databuf, 1);
+	if (res != 0) {
+		pr_err("bma222: read y-offset fail in calibrate\n");
+		return res;
+	}
+
+	databuf &= 0x9F;	/*clean old value */
+	databuf |= 0x02 << 5;
+	res = bma222_accl_i2c_write(BMA2XX_OFFSET_CTRL_REG, &databuf, 1);
+	if (res != 0) {
+		pr_err("bma222: write y-offset fail in calibrate\n");
+		return res;
+	}
+
+	/*** checking status and waiting y-axis offset compensation done ***/
+	timeout = 0;
+	do {
+		mdelay(2);
+		bma222_accl_i2c_read(BMA2XX_OFFSET_CTRL_REG, &databuf, 1);
+		databuf = (databuf >> 4) & 0x01;	/*get cal_rdy bit */
+		if (++timeout == CALI_TIMEOUT) {
+			pr_err("bma222:check y cal_rdy time out\n");
+			return -ETIMEDOUT;
+		}
+	} while (databuf == 0);
+
+	/*** trigger z-axis offset compensation ***/
+	res = bma222_accl_i2c_read(BMA2XX_OFFSET_CTRL_REG, &databuf, 1);
+	if (res != 0) {
+		pr_err("bma222: read z-offset fail in calibrate\n");
+		return res;
+	}
+
+	databuf &= 0x9F;	/*clean old value */
+	databuf |= 0x03 << 5;
+	res = bma222_accl_i2c_write(BMA2XX_OFFSET_CTRL_REG, &databuf, 1);
+	if (res != 0) {
+		pr_err("bma222: write z-offset fail in calibrate\n");
+		return res;
+	}
+
+	/*** checking status and waiting z-axis offset compensation done ***/
+	timeout = 0;
+	do {
+		mdelay(2);
+		bma222_accl_i2c_read(BMA2XX_OFFSET_CTRL_REG, &databuf, 1);
+		databuf = (databuf >> 4) & 0x01;	/*get cal_rdy bit */
+		if (++timeout == CALI_TIMEOUT) {
+			pr_err("bma222:check zcal_rdy time out\n");
+			return -ETIMEDOUT;
+		}
+	} while (databuf == 0);
+
+	return 0;
+}
+
+  /*---------------------------------------------*/
+static int bma222_inline_calibrate(void)
+{
+	static const int PROG_TIMEOUT = 50;
+	int res = 0, timeout = 0;
+	unsigned char databuf;
+
+	/*** unlock EEPROM: write '1' to bit (0x33) nvm_prog_mode ***/
+	res = bma222_accl_i2c_read(BMA2XX_EEPROM_CTRL_REG, &databuf, 1);
+	if (res != 0) {
+		pr_err("bma222: unlock eeprom read fail in calibrate\n");
+		return res;
+	}
+
+	databuf |= 0x01;
+	res = bma222_accl_i2c_write(BMA2XX_EEPROM_CTRL_REG, &databuf, 1);
+	if (res != 0) {
+		pr_err("bma222: unlock eeprom write fail in calibrate\n");
+		return res;
+	}
+
+	/*** need to delay ??? ***/
+
+	/*** trigger the write process: write '1' to bit (0x33) nvm_prog_trigge
+	and keep '1' in bit (0x33) nvm_prog_mode ***/
+	res = bma222_accl_i2c_read(BMA2XX_EEPROM_CTRL_REG, &databuf, 1);
+	if (res != 0) {
+		pr_err("bma222: trigger the wr process[r] fail\n");
+		goto __lock_eeprom__;
+	}
+	databuf |= 0x02;
+	res = bma222_accl_i2c_write(BMA2XX_EEPROM_CTRL_REG, &databuf, 1);
+	if (res != 0) {
+		pr_err("bma222: trigger the wr process[w] fail\n");
+		goto __lock_eeprom__;
+	}
+	/*check the write status by reading bit (0x33) nvm_rdy
+	   while nvm_rdy = '0', the write process is still enduring;
+	   if nvm_rdy = '1', then writing is completed */
+	do {
+		mdelay(2);
+		bma222_accl_i2c_read(BMA2XX_EEPROM_CTRL_REG, &databuf, 1);
+		databuf = (databuf >> 2) & 0x01;	/*get nvm_rdy bit */
+		if (++timeout == PROG_TIMEOUT) {
+			res = -ETIMEDOUT;
+			pr_err("bma222: check nvm_rdy timeout\n");
+			goto __lock_eeprom__;
+		}
+	} while (databuf == 0);
+
+	/*** lock EEPROM: write '0' to nvm_prog_mode ***/
+__lock_eeprom__:
+	res = bma222_accl_i2c_read(BMA2XX_EEPROM_CTRL_REG, &databuf, 1);
+	if (res != 0) {
+		pr_err("bma222: read nvm_prog_mode fail in calibrate\n");
+		return res;
+	}
+	databuf &= 0xFE;
+	res = bma222_accl_i2c_write(BMA2XX_EEPROM_CTRL_REG, &databuf, 1);
+	if (res != 0) {
+		pr_err("bma222: write nvm_prog_mode fail in calibrate\n");
+		return res;
+
+	}
+	return res;
+}
+
+static DRIVER_ATTR(fastcali, S_IWUSR | S_IRUGO, show_fastcali_value,
+		   store_fastcali_value);
+
+/*----------------------------------------------------------------------------*/
+static struct attribute *bma222_attr_list[] = {
+	&driver_attr_fastcali,
+	NULL,
+};
+
+static struct attribute_group bma222_attr_grp = {
+	.attrs = bma222_attr_list,
+};
+
+/*----------------------------------------------------------------------------*/
+/*calibrate end*/
+#endif
 
 static int __devinit bma222_accl_probe(struct i2c_client *client,
 				       const struct i2c_device_id *id)
 {
 	struct drv_data *dd;
 	int rc = 0;
-    unsigned char tempvalue;
-
-	struct bma222_accl_platform_data *pdata = pdata =
-	    client->dev.platform_data;
+	unsigned char tempvalue;
+	struct device_node *np;
+	u32 val = 0;
+#ifdef BMA222_CALIBRATION
+	fastcali_ret = false;
+#endif
+	struct bma222_accl_platform_data *pdata;
 
 	printk(KERN_INFO "+ %s\n", __func__);
 
@@ -550,27 +870,42 @@ static int __devinit bma222_accl_probe(struct i2c_client *client,
 	INIT_DELAYED_WORK(&dd->work_data, bma222_accl_work_f);
 	dd->i2c = client;
 
-	if (pdata && pdata->init) {
-		rc = pdata->init(&client->dev);
-		if (rc)
-			goto probe_err_cfg;
+	if (client->dev.platform_data)
+		pdata = client->dev.platform_data;
+
+	else if (client->dev.of_node) {
+
+		pdata = kzalloc(sizeof(struct bma222_accl_platform_data),
+				GFP_KERNEL);
+		if (!pdata)
+			return -ENOMEM;
+		bma222_accl_client->dev.platform_data = pdata;
+		np = client->dev.of_node;
+		rc = of_property_read_u32(np, "gpio-irq-pin", &val);
+		if (rc) {
+			printk(KERN_ERR
+			       "BMA222: gpio-irq-pin doesnot exisit\n");
+			goto err_read;
+		}
+		client->irq = val;
+		rc = of_property_read_u32(np, "orientation", &val);
+		if (rc) {
+			printk(KERN_ERR "BMA222: orientation doesnot exisit\n");
+			goto err_read;
+		}
+		pdata->orientation = val;
+		rc = of_property_read_u32(np, "invert", &val);
+		if (rc) {
+			printk(KERN_ERR "BMA222: invert doesnot exisit\n");
+			goto err_read;
+		}
+		pdata->invert = val;
 	}
 
-	pdata->orientation = BMA_ROT_90;
-	pdata->invert = 0;
+	if (tempvalue == BMA222_CHIP_ID)
+		printk(KERN_INFO "Bosch Sensortec Device detected!\n"
+		       "BMA222 registered I2C driver!\n");
 
-    /* check chip id */
-    tempvalue = i2c_smbus_read_byte_data(client, BMA222_CHIP_ID_REG);
-
-    if (tempvalue == BMA222_CHIP_ID) {
-        printk(KERN_INFO "Bosch Sensortec Device detected!\n"
-                "BMA222 registered I2C driver!\n");
-    } else{
-        printk(KERN_INFO "Bosch Sensortec Device not found"
-                "i2c error %d \n", tempvalue);
-        goto probe_err_cfg;
-    }
-	
 #ifdef BMA222_INPUT_DEVICE
 	dd->ip_dev = input_allocate_device();
 	if (!dd->ip_dev) {
@@ -586,13 +921,23 @@ static int __devinit bma222_accl_probe(struct i2c_client *client,
 	dd->ip_dev->id.vendor = ACCL_VENDORID;
 	dd->ip_dev->id.product = 1;
 	dd->ip_dev->id.version = 1;
+
 	set_bit(EV_REL, dd->ip_dev->evbit);
-	set_bit(REL_X, dd->ip_dev->relbit);
-	set_bit(REL_Y, dd->ip_dev->relbit);
-	set_bit(REL_Z, dd->ip_dev->relbit);
+	/* 32768 == 1g, range -4g ~ +4g */
+	/* acceleration x-axis */
+	input_set_capability(dd->ip_dev, EV_REL, REL_X);
+	input_set_abs_params(dd->ip_dev, REL_X, -256, 256, 0, 0);
+	/* acceleration y-axis */
+	input_set_capability(dd->ip_dev, EV_REL, REL_Y);
+	input_set_abs_params(dd->ip_dev, REL_Y, -256, 256, 0, 0);
+	/* acceleration z-axis */
+	input_set_capability(dd->ip_dev, EV_REL, REL_Z);
+	input_set_abs_params(dd->ip_dev, REL_Z, -256, 256, 0, 0);
+
 	rc = input_register_device(dd->ip_dev);
 	if (rc) {
-		printk(KERN_ERR "bma222_accl_probe: input_register_device rc=%d\n", rc);
+		printk(KERN_ERR
+		       "bma222_accl_probe: input_register_device rc=%d\n", rc);
 		goto probe_err_reg_dev;
 	}
 #endif
@@ -603,7 +948,9 @@ static int __devinit bma222_accl_probe(struct i2c_client *client,
 	}
 	/* bma222 sensor initial */
 	if (rc < 0) {
-		printk(KERN_ERR "bma222_accl_probe: Error configuring device rc=%d\n", rc);
+		printk(KERN_ERR
+		       "bma222_accl_probe: Error configuring device rc=%d\n",
+		       rc);
 		goto probe_err_smbcfg;
 	}
 
@@ -612,49 +959,56 @@ static int __devinit bma222_accl_probe(struct i2c_client *client,
 
 	rc = bma222_accl_configuration();
 	if (rc < 0) {
-		printk(KERN_ERR "bma222_accl_probe: Error configuring device rc=%d\n", rc);
+		printk(KERN_ERR
+		       "bma222_accl_probe: Error configuring device rc=%d\n",
+		       rc);
 		goto probe_err_setmode;
 	}
 
 	setup_timer(&bma_wakeup_timer, bma_wakeup_timer_func, (long)dd);
+	mod_timer(&bma_wakeup_timer, jiffies + HZ / 1000);
 
 #ifdef CONFIG_BRCM_VIRTUAL_SENSOR
-	rc = brvsens_register(
-			SENSOR_HANDLE_ACCELEROMETER,
-			"BMA222",
-			(void*)NULL,
-			(PFNACTIVATE)NULL,
-			(PFNREAD)bma222_read_data);
+	rc = brvsens_register(SENSOR_HANDLE_ACCELEROMETER,
+			      "BMA222",
+			      (void *)NULL,
+			      (PFNACTIVATE) NULL, (PFNREAD) bma222_read_data);
 	printk(KERN_INFO "BMA222: brvsens_register rc=%d\n", rc);
 #endif
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
 	dd->suspend_desc.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN,
-	dd->suspend_desc.suspend = bma222_accl_early_suspend,
-	dd->suspend_desc.resume = bma222_accl_late_resume,
-	register_early_suspend(&dd->suspend_desc);
+	    dd->suspend_desc.suspend = bma222_accl_early_suspend,
+	    dd->suspend_desc.resume = bma222_accl_late_resume,
+	    register_early_suspend(&dd->suspend_desc);
 #endif
-
+#ifdef BMA222_CALIBRATION
+	rc = sysfs_create_group(&client->dev.kobj, &bma222_attr_grp);
+	if (rc != 0)
+		goto probe_err_setmode;
+#endif
 	printk(KERN_INFO "- %s\n", __func__);
 
 	return rc;
 
 probe_err_setmode:
+#ifdef BMA222_CALIBRATION
+	sysfs_remove_group(&bma222_accl_client->dev.kobj, &bma222_attr_grp);
+#endif
 probe_err_smbcfg:
 	misc_deregister(&bma222_accl_misc_device);
 probe_err_reg_misc:
-	
+
 #ifdef BMA222_INPUT_DEVICE
 	input_unregister_device(dd->ip_dev);
 probe_err_reg_dev:
 	input_free_device(dd->ip_dev);
 	dd->ip_dev = NULL;
 #endif
-
-probe_err_reg:
-	if (pdata && pdata->exit)
-		pdata->exit(&client->dev);
+err_read:
+	pr_info("bma dts error read\n");
 probe_err_cfg:
+probe_err_reg:
 	mutex_lock(&bma222_accl_dd_lock);
 	list_del(&dd->next_dd);
 	mutex_unlock(&bma222_accl_dd_lock);
@@ -666,22 +1020,23 @@ probe_exit:
 static int __devexit bma222_accl_remove(struct i2c_client *client)
 {
 	struct drv_data *dd;
-	struct bma222_accl_platform_data *pdata = pdata =
-	    client->dev.platform_data;
 	int rc;
 
 	dd = i2c_get_clientdata(client);
 
 	rc = bma222_accl_power_down(dd);
-	if (rc){
-		printk(KERN_ERR "%s: power down failed with error %d\n", __func__, rc);
-	}
-
+	if (rc)
+		printk(KERN_ERR "%s: power down failed with error %d\n",
+		       __func__, rc);
 #ifdef BMA222_ACCL_IRQ_MODE
 	free_irq(dd->irq, &dd->i2c->dev);
 #else
 	del_timer(&bma_wakeup_timer);
 #endif
+#ifdef BMA222_CALIBRATION
+	sysfs_remove_group(&bma222_accl_client->dev.kobj, &bma222_attr_grp);
+#endif
+
 	misc_deregister(&bma222_accl_misc_device);
 
 #ifdef BMA222_INPUT_DEVICE
@@ -689,8 +1044,6 @@ static int __devexit bma222_accl_remove(struct i2c_client *client)
 #endif
 
 	i2c_set_clientdata(client, NULL);
-	if (pdata && pdata->exit)
-		pdata->exit(&client->dev);
 	mutex_lock(&bma222_accl_dd_lock);
 	list_del(&dd->next_dd);
 	mutex_unlock(&bma222_accl_dd_lock);
@@ -710,6 +1063,7 @@ static struct i2c_driver bma222_accl_driver = {
 	.driver = {
 		   .name = ACCL_NAME,
 		   .owner = THIS_MODULE,
+		   .of_match_table = bma222_accl_of_match,
 		   },
 	.id_table = bma222_accl_idtable,
 	.probe = bma222_accl_probe,

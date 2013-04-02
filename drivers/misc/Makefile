@@ -40,6 +40,7 @@ obj-$(CONFIG_BMP18X) += bmp18x-core.o
 obj-$(CONFIG_BMP18X_I2C) += bmp18x-i2c.o
 obj-$(CONFIG_BMP18X_SPI) += bmp18x-spi.o
 obj-$(CONFIG_AL3006) += al3006.o
+obj-$(CONFIG_ISL290XX) += isl290xx.o
 obj-$(CONFIG_TMD2771) += tmd2771.o
 obj-$(CONFIG_EP93XX_PWM)	+= ep93xx_pwm.o
 obj-$(CONFIG_DS1682)		+= ds1682.o

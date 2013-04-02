@@ -114,9 +114,8 @@
 #include <linux/broadcom/bcmbt_lpm.h>
 #endif
 
-#if defined(CONFIG_SENSORS_BMA222)
-#include <linux/bma222.h>
-#endif
+
+
 
 #if defined(CONFIG_BMP18X) || defined(CONFIG_BMP18X_I2C) || defined(CONFIG_BMP18X_I2C_MODULE)
 #include <linux/bmp18x.h>
@@ -805,12 +804,6 @@ struct platform_device *hawaii_common_plat_devices[] __initdata = {
 #endif
 };
 
-#if defined(CONFIG_SENSORS_BMA222)
-static struct bma222_accl_platform_data bma_pdata = {
-	.orientation = BMA_ROT_90,
-	.invert = false,
-};
-#endif
 
 
 #ifdef CONFIG_KONA_HEADSET_MULTI_BUTTON
@@ -1042,15 +1035,7 @@ late_initcall(hawaii_camera_init);
 #endif
 /* Remove this comment when camera data for Hawaii is updated */
 
-#if defined(CONFIG_SENSORS_BMA222)
-static struct i2c_board_info __initdata bma222_accl_info[] = {
-	{
-	 I2C_BOARD_INFO("bma222_accl", 0x08),
-	 .irq = -1,
-	 .platform_data = &bma_pdata,
-	 },
-};
-#endif
+
 
 #if defined(CONFIG_TOUCHSCREEN_BCM15500) ||\
 defined(CONFIG_TOUCHSCREEN_BCM15500_MODULE)
@@ -1153,10 +1138,7 @@ static void __init hawaii_add_i2c_devices(void)
 	i2c_register_board_info(0, as3643_flash, ARRAY_SIZE(as3643_flash));
 #endif
 
-#ifdef CONFIG_SENSORS_BMA222
-	i2c_register_board_info(2, bma222_accl_info,
-				ARRAY_SIZE(bma222_accl_info));
-#endif
+
 
 #if defined(CONFIG_TOUCHSCREEN_BCM15500) ||\
 defined(CONFIG_TOUCHSCREEN_BCM15500_MODULE)

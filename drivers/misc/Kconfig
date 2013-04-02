@@ -364,6 +364,16 @@ config ISL29020
 	  This driver can also be built as a module.  If so, the module
 	  will be called isl29020.
 
+config ISL290XX
+        tristate "Intersil ISL290xx ambient light sensor"
+        depends on I2C
+        help
+          If you say yes here you get support for the Intersil ISL290XX
+          ambient light sensor.
+
+          This driver can also be built as a module.  If so, the module
+          will be called isl290xx.
+
 config SENSORS_TSL2550
 	tristate "Taos TSL2550 ambient light sensor"
 	depends on I2C && SYSFS
