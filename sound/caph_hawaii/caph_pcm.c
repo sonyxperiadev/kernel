@@ -220,13 +220,13 @@ static int PcmHwFree(struct snd_pcm_substream *substream)
 	brcm_alsa_chip_t *chip = snd_pcm_substream_chip(substream);
 	int substream_number = substream->number;
 	struct completion *compl_ptr;
-
+#if defined(CONFIG_BCM_MODEM)
 	if (is_dsp_timeout()) {
 		aError("Returning because of dsp timeout\n");
 		res = snd_pcm_lib_free_pages(substream);
 		return res;
 	}
-
+#endif
 	if (substream->stream == SNDRV_PCM_STREAM_CAPTURE)
 		substream_number += CTL_STREAM_PANEL_PCMIN - 1;
 
