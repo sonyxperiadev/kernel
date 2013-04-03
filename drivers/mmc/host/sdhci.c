@@ -3253,11 +3253,7 @@ int sdhci_add_host(struct sdhci_host *host)
 	if (host->quirks & SDHCI_QUIRK_DATA_TIMEOUT_USES_SDCLK)
 		host->timeout_clk = mmc->f_max / 1000;
 
-	/* max_discard_to is set to zero to speed up the secure erase operation
-	* during factory reset. Work sdhci_work_wait_erase was already added
-	* to wait for the ERASE operation to finish.
-	*/
-	mmc->max_discard_to = 0;
+	mmc->max_discard_to = (1 << 27) / host->timeout_clk;
 
 	mmc->caps |= MMC_CAP_SDIO_IRQ | MMC_CAP_ERASE | MMC_CAP_CMD23;
 
