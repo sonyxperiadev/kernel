@@ -40,6 +40,7 @@
 #include <plat/kona_pm.h>
 #include <mach/io_map.h>
 #include <mach/rdb/brcm_rdb_a9cpu.h>
+#include <mach/rdb/brcm_rdb_gicdist.h>
 
 #ifndef PWRMGR_I2C_VAR_DATA_REG
 #define PWRMGR_I2C_VAR_DATA_REG 6
@@ -142,7 +143,7 @@ static char *pwr_mgr_event2str(int event)
 #endif
 
 #define PWR_MGR_INTR_MASK(x)			(1 << (x))
-#define PWR_MGR_SEQ_RETRIES			(10)
+#define PWR_MGR_SEQ_RETRIES			(50)
 #define PWR_MGR_SEQ_INTR_POLL_TIMEOUT_US	(200)
 
 /**
@@ -229,6 +230,43 @@ static atomic_t seq_log_buf_init;
 static struct pwr_mgr pwr_mgr;
 
 static void pwr_mgr_dump_i2c_cmd_regs(void);
+
+static void dump_jig_registers(void)
+{
+#ifdef CONFIG_KONA_I2C_SEQUENCER_LOG
+	pr_info("pwr_mgr intr mask: %x intr status: %x\n",
+			readl(KONA_PWRMGR_VA + PWRMGR_POWER_MANAGER_INTERRUPT_MASK_OFFSET),
+			readl(KONA_PWRMGR_VA + PWRMGR_POWER_MANAGER_INTERRUPT_STATUS_OFFSET));
+
+	pr_info("GIC enable set:\n");
+	pr_info("%x %x %x %x %x %x %x\n",
+			readl(KONA_GICDIST_VA + GICDIST_ENABLE_SET1_OFFSET),
+			readl(KONA_GICDIST_VA + GICDIST_ENABLE_SET2_OFFSET),
+			readl(KONA_GICDIST_VA + GICDIST_ENABLE_SET3_OFFSET),
+			readl(KONA_GICDIST_VA + GICDIST_ENABLE_SET4_OFFSET),
+			readl(KONA_GICDIST_VA + GICDIST_ENABLE_SET5_OFFSET),
+			readl(KONA_GICDIST_VA + GICDIST_ENABLE_SET6_OFFSET),
+			readl(KONA_GICDIST_VA + GICDIST_ENABLE_SET7_OFFSET));
+	pr_info("GIC active status:\n");
+	pr_info("%x %x %x %x %x %x %x\n",
+			readl(KONA_GICDIST_VA + GICDIST_ACTIVE_STATUS1_OFFSET),
+			readl(KONA_GICDIST_VA + GICDIST_ACTIVE_STATUS2_OFFSET),
+			readl(KONA_GICDIST_VA + GICDIST_ACTIVE_STATUS3_OFFSET),
+			readl(KONA_GICDIST_VA + GICDIST_ACTIVE_STATUS4_OFFSET),
+			readl(KONA_GICDIST_VA + GICDIST_ACTIVE_STATUS5_OFFSET),
+			readl(KONA_GICDIST_VA + GICDIST_ACTIVE_STATUS6_OFFSET),
+			readl(KONA_GICDIST_VA + GICDIST_ACTIVE_STATUS7_OFFSET));
+	pr_info("GIC pending status:\n");
+	pr_info("%x %x %x %x %x %x %x\n",
+			readl(KONA_GICDIST_VA + GICDIST_PENDING_SET1_OFFSET),
+			readl(KONA_GICDIST_VA + GICDIST_PENDING_SET2_OFFSET),
+			readl(KONA_GICDIST_VA + GICDIST_PENDING_SET3_OFFSET),
+			readl(KONA_GICDIST_VA + GICDIST_PENDING_SET4_OFFSET),
+			readl(KONA_GICDIST_VA + GICDIST_PENDING_SET5_OFFSET),
+			readl(KONA_GICDIST_VA + GICDIST_PENDING_SET6_OFFSET),
+			readl(KONA_GICDIST_VA + GICDIST_PENDING_SET7_OFFSET));
+#endif
+}
 
 int pwr_mgr_event_trg_enable(int event_id, int event_trg_type)
 {
@@ -1770,13 +1808,12 @@ static void pwr_mgr_update_i2c_cmd_data(u32 cmd_offset, u8 cmd_data)
 
 int pwr_mgr_set_i2c_mode(int poll)
 {
-	unsigned long flag;
-	spin_lock_irqsave(&pwr_mgr_lock, flag);
+	mutex_lock(&seq_mutex);
 	if (poll)
 		pwr_mgr.i2c_mode = PWR_MGR_I2C_MODE_POLL;
 	else
 		pwr_mgr.i2c_mode = PWR_MGR_I2C_MODE_IRQ;
-	spin_unlock_irqrestore(&pwr_mgr_lock, flag);
+	mutex_unlock(&seq_mutex);
 	return 0;
 }
 EXPORT_SYMBOL(pwr_mgr_set_i2c_mode);
@@ -1972,8 +2009,8 @@ static int pwr_mgr_sw_i2c_seq_start(u32 action)
 		}
 		if (pwr_mgr_get_i2c_mode() != PWR_MGR_I2C_MODE_POLL) {
 			pwr_mgr_seq_log_buf_put(SEQ_LOG_WAIT_INTR,
-					PWR_MGR_REG_ADDR(
-						PWRMGR_INTR_MASK_OFFSET));
+					readl(PWR_MGR_REG_ADDR(
+						PWRMGR_INTR_MASK_OFFSET)));
 			timeout = wait_for_completion_timeout(
 					&pwr_mgr.i2c_seq_done,
 					msecs_to_jiffies(
@@ -1981,8 +2018,12 @@ static int pwr_mgr_sw_i2c_seq_start(u32 action)
 
 			if (!timeout) {
 				pwr_mgr_seq_log_buf_put(SEQ_LOG_WAIT_TIMEOUT,
-					PWR_MGR_REG_ADDR(
-						PWRMGR_INTR_MASK_OFFSET));
+					readl(PWR_MGR_REG_ADDR(
+						PWRMGR_INTR_MASK_OFFSET)));
+				pwr_mgr_seq_log_buf_put(SEQ_LOG_WAIT_TIMEOUT,
+					readl(PWR_MGR_REG_ADDR(
+						PWRMGR_INTR_STATUS_OFFSET)));
+
 				pwr_dbg(PWR_LOG_ERR, "%s seq timedout !!\n",
 						__func__);
 				pr_info("PCSR_CPU0: %x PCSR_CPU1: %x\n",
@@ -2061,9 +2102,8 @@ exit:
 #endif
 	if (i == retry) {
 		pwr_dbg(PWR_LOG_ERR, "%s: max tries\n", __func__);
+		dump_jig_registers();
 		pwr_mgr_seq_log_buf_dump();
-		pwr_mgr_dump_i2c_cmd_regs();
-		panic("SEQ MAX TRIES");
 		ret = -EAGAIN;
 	}
 	pwr_mgr_mask_intr(PWRMGR_INTR_I2C_SW_SEQ, true);
