@@ -96,6 +96,7 @@ struct unicam_camera_dev {
 	struct timer_list unicam_timer;
 	struct workqueue_struct *single_wq;
 	struct work_struct retry_work;
+	struct v4l2_format active_fmt;
 };
 
 struct unicam_camera_buffer {
@@ -422,7 +423,6 @@ static int unicam_videobuf_start_streaming_int(struct unicam_camera_dev \
 						*unicam_dev, unsigned int count)
 {
 	struct soc_camera_device *icd = unicam_dev->icd;
-	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
 	struct v4l2_subdev_sensor_interface_parms if_params;
 	struct v4l2_subdev *sd = soc_camera_to_subdev(icd);
 	struct rx_stat_list rx;
@@ -704,7 +704,6 @@ static int unicam_videobuf_stop_streaming_int(struct unicam_camera_dev \
 				*unicam_dev)
 {
 	struct soc_camera_device *icd = unicam_dev->icd;
-	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
 	struct v4l2_subdev *sd = soc_camera_to_subdev(icd);
 	int ret = 0;
 	unsigned long flags;
@@ -1039,14 +1038,13 @@ static int unicam_camera_set_crop(struct soc_camera_device *icd,
 	return 0;
 #endif
 }
-static int unicam_camera_set_fmt(struct soc_camera_device *icd,
-				 struct v4l2_format *f)
+static int unicam_camera_set_fmt_int(struct unicam_camera_dev *unicam_dev)
 {
+	struct soc_camera_device *icd = unicam_dev->icd;
 	struct device *dev = icd->dev.parent;
 	struct v4l2_subdev *sd = soc_camera_to_subdev(icd);
-	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
-	struct unicam_camera_dev *unicam_dev = ici->priv;
 	const struct soc_camera_format_xlate *xlate = NULL;
+	struct v4l2_format *f = &(unicam_dev->active_fmt);
 	struct v4l2_pix_format *pix = &f->fmt.pix;
 	struct v4l2_mbus_framefmt mf;
 	int ret;
@@ -1109,6 +1107,17 @@ static int unicam_camera_set_fmt(struct soc_camera_device *icd,
 	return ret;
 }
 
+static int unicam_camera_set_fmt(struct soc_camera_device *icd,
+				 struct v4l2_format *f)
+{
+	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
+	struct unicam_camera_dev *unicam_dev = ici->priv;
+	int ret;
+	unicam_dev->active_fmt = *f;
+
+	ret = unicam_camera_set_fmt_int(unicam_dev);
+	return ret;
+}
 static void unicam_reset_retry(struct unicam_camera_dev *unicam_dev)
 {
 	struct vb2_buffer *active_bkup = unicam_dev->active;
@@ -1118,6 +1127,9 @@ static void unicam_reset_retry(struct unicam_camera_dev *unicam_dev)
 	ret = unicam_videobuf_stop_streaming_int(unicam_dev);
 	if (ret != 0)
 		pr_err("unicam_reset_retry: stop failed\n");
+
+	/*Reconfigure*/
+	unicam_camera_set_fmt_int(unicam_dev);
 
 	unicam_dev->active = active_bkup;
 	pr_info("unicam_reset_retry: start\n");
