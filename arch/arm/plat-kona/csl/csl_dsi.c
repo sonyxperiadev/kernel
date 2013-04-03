@@ -1206,6 +1206,7 @@ CSL_LCD_RES_T CSL_DSI_SendPacket(CSL_LCD_HANDLE client,
 			chal_dsi_de1_set_cm(dsiH->chalH, DE1_CM_BE);
 			chal_dsi_de1_enable(dsiH->chalH, TRUE);
 
+			axipv_release_pixdfifo_ownership(dsiH->axipvCfg);
 			chalRes = chal_dsi_wr_pfifo_be(dsiH->chalH,
 						       txPkt.msg +
 						       txPkt.msgLenCFifo,

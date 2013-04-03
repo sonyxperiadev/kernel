@@ -492,6 +492,7 @@ static irqreturn_t axipv_isr(int err, void *dev_id)
 			irq_stat = irq_stat & ~FRAME_END_INT;
 	}
 	if (irq_stat & AXIPV_DISABLED_INT) {
+		uint32_t ctrl;
 		if (g_curr) {
 			axipv_release_buff(g_curr);
 			g_curr = 0;
@@ -510,6 +511,12 @@ static irqreturn_t axipv_isr(int err, void *dev_id)
 			(prof_tv2.tv_sec - prof_tv1.tv_sec) * 1000000 +
 			prof_tv2.tv_usec - prof_tv1.tv_usec);
 #endif
+		/* DSI's PIXD FIFO can be accessed either by AXIPV or by any of
+		 * CPU and MMDMA. Bits 8 and 29 are the MUX select */
+		ctrl = readl(axipv_base+REG_CTRL);
+		ctrl = ctrl & ~(1 << 8);
+		ctrl = ctrl & ~(1 << 29);
+		writel(ctrl, axipv_base + REG_CTRL);
 	}
 
 	if (irq_stat) {
@@ -683,7 +690,49 @@ void dump_debug_info(struct axipv_dev *dev)
 	axipv_clk_disable(dev);
 }
 
+void axipv_release_pixdfifo_ownership(struct axipv_config_t *config)
+{
+	u32 axipv_base;
+	struct axipv_dev *dev;
+	int cnt = 10;
+	uint32_t ctrl;
 
+	if (!config) {
+		axipv_err("config NULL\n");
+		goto done;
+	}
+
+	dev = container_of(config, struct axipv_dev, config);
+	axipv_base = dev->base_addr;
+
+	if (!config->cmd || !dev->bypassPV) {
+		axipv_debug("No explicit access required\n");
+		goto done;
+	}
+
+	axipv_clk_enable(dev);
+	while ((AXIPV_STOPPED != dev->state) && cnt--) {
+		axipv_err("PIXD Fifo busy, wait\n");
+		udelay(1000);
+	}
+	if (!cnt) {
+		ctrl = readl(axipv_base + REG_CTRL);
+		if (ctrl & AXIPV_ACTIVE) {
+			axipv_err("failed to get access\n");
+			goto err_active;
+		}
+	}
+
+	ctrl = readl(axipv_base + REG_CTRL);
+	ctrl = ctrl & ~(1 << 8);
+	ctrl = ctrl & ~(1 << 29);
+	writel(ctrl, axipv_base + REG_CTRL);
+
+err_active:
+	axipv_clk_disable(dev);
+done:
+	return;
+}
 
 int axipv_change_state(u32 event, struct axipv_config_t *config)
 {
@@ -838,3 +887,35 @@ int axipv_get_state(struct axipv_config_t *config)
 
 	return dev->state;
 }
+
+/***************************** DEBUG API **************************************/
+/* These APIs are to be used to enable/disable the clock while debugging ONLY */
+void enable_axipv_clk_debug(struct axipv_config_t *config)
+{
+	u32 axipv_base;
+	struct axipv_dev *dev;
+
+	if (!config)
+		axipv_err("config NULL\n");
+
+	dev = container_of(config, struct axipv_dev, config);
+	axipv_base = dev->base_addr;
+
+	axipv_clk_enable(dev);
+}
+
+void disable_axipv_clk_debug(struct axipv_config_t *config)
+{
+	u32 axipv_base;
+	struct axipv_dev *dev;
+
+	if (!config)
+		axipv_err("config NULL\n");
+
+	dev = container_of(config, struct axipv_dev, config);
+	axipv_base = dev->base_addr;
+
+	axipv_clk_disable(dev);
+}
+/***************************** DEBUG API **************************************/
+

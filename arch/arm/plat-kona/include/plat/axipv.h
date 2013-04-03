@@ -126,4 +126,12 @@ int axipv_get_state(struct axipv_config_t *config);
 
 int axipv_post(struct axipv_config_t *config);
 
+void axipv_release_pixdfifo_ownership(struct axipv_config_t *config);
+
+/***************************** DEBUG API **************************************/
+/* These APIs are to be used to enable/disable the clock while debugging ONLY */
+void enable_axipv_clk_debug(struct axipv_config_t *config);
+void disable_axipv_clk_debug(struct axipv_config_t *config);
+/***************************** DEBUG API **************************************/
+
 #endif /* __AXIPV_H__ */
