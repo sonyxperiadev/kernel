@@ -31,6 +31,7 @@
 #include <linux/mfd/pm8xxx/core.h>
 #include <linux/regulator/consumer.h>
 #include <linux/mfd/pm8xxx/pm8xxx-adc.h>
+#include <mach/msm_xo.h>
 
 /* User Bank register set */
 #define PM8XXX_ADC_ARB_USRP_CNTRL1			0x197
@@ -141,6 +142,7 @@ struct pm8xxx_adc {
 	struct work_struct			cool_work;
 	uint32_t				mpp_base;
 	struct device				*hwmon;
+	struct msm_xo_voter			*adc_voter;
 	int					msm_suspend_check;
 	struct pm8xxx_adc_amux_properties	*conv;
 	struct pm8xxx_adc_arb_btm_param		batt;
@@ -164,6 +166,7 @@ static const struct pm8xxx_adc_scaling_ratio pm8xxx_amux_scaling_ratio[] = {
 
 static struct pm8xxx_adc *pmic_adc;
 static struct regulator *pa_therm;
+static struct regulator *apq_therm;
 
 static struct pm8xxx_adc_scale_fn adc_scale_fn[] = {
 	[ADC_SCALE_DEFAULT] = {pm8xxx_adc_scale_default},
@@ -171,6 +174,8 @@ static struct pm8xxx_adc_scale_fn adc_scale_fn[] = {
 	[ADC_SCALE_PA_THERM] = {pm8xxx_adc_scale_pa_therm},
 	[ADC_SCALE_PMIC_THERM] = {pm8xxx_adc_scale_pmic_therm},
 	[ADC_SCALE_XOTHERM] = {pm8xxx_adc_tdkntcg_therm},
+	[ADC_SCALE_PBA_THERM] = {pm8xxx_adc_scale_pba_therm},
+	[ADC_SCALE_BL_THERM] = {pm8xxx_adc_scale_bl_therm},
 };
 
 /* On PM8921 ADC the MPP needs to first be configured
@@ -290,14 +295,73 @@ static int32_t pm8xxx_adc_patherm_power(bool on)
 	return rc;
 }
 
+static int32_t pm8xxx_adc_apqtherm_power(bool on)
+{
+	int rc = 0;
+
+	if (!apq_therm) {
+		pr_err("pm8xxx adc apq_therm not valid\n");
+		return -EINVAL;
+	}
+
+	if (on) {
+		int already_enabled = regulator_is_enabled(apq_therm);
+		rc = regulator_enable(apq_therm);
+		/* Make sure it's enabled, VREG_XO warm-up time is about 150us */
+		if (already_enabled < 1)
+			usleep_range(150, 200);
+		if (rc < 0) {
+			pr_err("failed to enable apq_therm vreg with error %d\n",
+				rc);
+			return rc;
+		}
+	} else {
+		rc = regulator_disable(apq_therm);
+		if (rc < 0) {
+			pr_err("failed to disable apq_therm vreg with error %d\n",
+				rc);
+			return rc;
+		}
+	}
+
+	return rc;
+}
+
+static int32_t pm8xxx_adc_xo_vote(bool on)
+{
+	struct pm8xxx_adc *adc_pmic = pmic_adc;
+
+	if (on)
+		msm_xo_mode_vote(adc_pmic->adc_voter, MSM_XO_MODE_ON);
+	else{
+		usleep_range(4000, 4100);
+		msm_xo_mode_vote(adc_pmic->adc_voter, MSM_XO_MODE_OFF);
+	}
+
+	return 0;
+}
+
 static int32_t pm8xxx_adc_channel_power_enable(uint32_t channel,
 							bool power_cntrl)
 {
 	int rc = 0;
 
-	switch (channel)
+	switch (channel) {
 	case ADC_MPP_1_AMUX8:
 		rc = pm8xxx_adc_patherm_power(power_cntrl);
+		break;
+	case CHANNEL_DIE_TEMP:
+	case CHANNEL_MUXOFF:
+		rc = pm8xxx_adc_xo_vote(power_cntrl);
+		break;
+	case ADC_MPP_1_AMUX3:
+		/* Need to enable VREG_XO when reading apq_therm on Fusion3
+		 * because VREG_XO is connected to this thermistor */
+		rc = pm8xxx_adc_apqtherm_power(power_cntrl);
+		break;
+	default:
+		break;
+	}
 
 	return rc;
 }
@@ -1147,11 +1211,16 @@ static int __devexit pm8xxx_adc_teardown(struct platform_device *pdev)
 	struct pm8xxx_adc *adc_pmic = pmic_adc;
 	int i;
 
+	msm_xo_put(adc_pmic->adc_voter);
 	platform_set_drvdata(pdev, NULL);
 	pmic_adc = NULL;
 	if (!pa_therm) {
 		regulator_put(pa_therm);
 		pa_therm = NULL;
+	}
+	if (!apq_therm) {
+		regulator_put(apq_therm);
+		apq_therm = NULL;
 	}
 	for (i = 0; i < adc_pmic->adc_num_board_channel; i++)
 		device_remove_file(adc_pmic->dev,
@@ -1265,11 +1334,25 @@ static int __devinit pm8xxx_adc_probe(struct platform_device *pdev)
 	}
 	adc_pmic->hwmon = hwmon_device_register(adc_pmic->dev);
 
+	if (adc_pmic->adc_voter == NULL) {
+		adc_pmic->adc_voter = msm_xo_get(MSM_XO_TCXO_D0, "pmic_xoadc");
+		if (IS_ERR(adc_pmic->adc_voter)) {
+			dev_err(&pdev->dev, "Failed to get XO vote\n");
+			return PTR_ERR(adc_pmic->adc_voter);
+		}
+	}
+
 	pa_therm = regulator_get(adc_pmic->dev, "pa_therm");
 	if (IS_ERR(pa_therm)) {
 		rc = PTR_ERR(pa_therm);
 		pr_err("failed to request pa_therm vreg with error %d\n", rc);
 		pa_therm = NULL;
+	}
+	apq_therm = regulator_get(adc_pmic->dev, "apq_therm");
+	if (IS_ERR(apq_therm)) {
+		rc = PTR_ERR(apq_therm);
+		pr_err("failed to request apq_therm vreg with error %d\n", rc);
+		apq_therm = NULL;
 	}
 	return 0;
 }

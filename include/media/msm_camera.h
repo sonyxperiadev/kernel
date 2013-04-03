@@ -1,4 +1,5 @@
 /* Copyright (c) 2009-2012, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -1016,7 +1017,13 @@ struct msm_snapshot_pp_status {
 #define CFG_GPIO_OP                   54
 #define CFG_SET_VISION_MODE           55
 #define CFG_SET_VISION_AE             56
-#define CFG_MAX                       57
+/* extension begin */
+#define CFG_SET_GPIO_CTRL             57
+#define CFG_SET_WRITE_CMD             58
+#define CFG_SET_READ_CMD              59
+#define CFG_GET_ROM                   60
+/* extension end */
+#define CFG_MAX                       61
 
 
 #define MOVE_NEAR	0
@@ -1558,6 +1565,39 @@ struct ispif_cfg_data {
 	} cfg;
 };
 
+/* extension begin */
+enum sensor_gpio_ctrl_type {
+	SENSOR_GPIO_CTRL_RESET,
+	SENSOR_GPIO_CTRL_STANBY,
+};
+
+struct sensor_gpio_ctrl {
+	enum sensor_gpio_ctrl_type gpio;
+	int value;
+};
+
+enum sensor_i2c_addr_type {
+	SENSOR_I2C_ADDR_0BYTE = 0,
+	SENSOR_I2C_ADDR_1BYTE = 1,
+	SENSOR_I2C_ADDR_2BYTE = 2,
+	SENSOR_I2C_ADDR_4BYTE = 4,
+};
+
+struct sensor_i2c_io {
+	uint8_t slave_addr;
+	uint32_t address;
+	enum sensor_i2c_addr_type address_type;
+	uint8_t length;
+	uint8_t __user *data;
+};
+
+struct sensor_rom_in {
+	uint16_t address;
+	uint16_t length;
+	uint8_t __user *data;
+};
+/* extension end */
+
 enum msm_camera_i2c_reg_addr_type {
 	MSM_CAMERA_I2C_BYTE_ADDR = 1,
 	MSM_CAMERA_I2C_WORD_ADDR,
@@ -1676,6 +1716,11 @@ struct sensor_cfg_data {
 		void *setting;
 		int32_t vision_mode_enable;
 		int32_t vision_ae;
+		/* extension begin */
+		struct sensor_gpio_ctrl gpio_ctrl;
+		struct sensor_i2c_io i2c_io;
+		struct sensor_rom_in rom_in;
+		/* extension end */
 	} cfg;
 };
 

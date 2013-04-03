@@ -52,6 +52,13 @@ test-kprobes-objs		+= kprobes-test-thumb.o
 else
 test-kprobes-objs		+= kprobes-test-arm.o
 endif
+obj-$(CONFIG_CRASH_NOTES)	+= crash_notes.o
+
+CFLAGS_crash_notes.o		:= \
+	-D"INFO_PRODUCT=\"$(if $(TARGET_PRODUCT),$(TARGET_PRODUCT),unknown)\"" \
+	-D"INFO_VARIANT=\"$(if $(TARGET_BUILD_VARIANT),$(TARGET_BUILD_VARIANT),unknown)\"" \
+	-D"INFO_BUILDID=\"$(if $(BUILD_ID),$(BUILD_ID),unknown)\""
+
 obj-$(CONFIG_ATAGS_PROC)	+= atags.o
 obj-$(CONFIG_OABI_COMPAT)	+= sys_oabi-compat.o
 obj-$(CONFIG_ARM_THUMBEE)	+= thumbee.o
@@ -63,6 +70,7 @@ obj-$(CONFIG_CRASH_DUMP)	+= crash_dump.o
 obj-$(CONFIG_SWP_EMULATE)	+= swp_emulate.o
 CFLAGS_swp_emulate.o		:= -Wa,-march=armv7-a
 obj-$(CONFIG_HAVE_HW_BREAKPOINT)	+= hw_breakpoint.o
+obj-$(CONFIG_GENERIC_TIME_VSYSCALL)	+= update_vsyscall_arm.o
 
 obj-$(CONFIG_CPU_XSCALE)	+= xscale-cp0.o
 obj-$(CONFIG_CPU_XSC3)		+= xscale-cp0.o
@@ -73,6 +81,7 @@ obj-$(CONFIG_CPU_HAS_PMU)	+= pmu.o
 obj-$(CONFIG_HW_PERF_EVENTS)	+= perf_event.o
 AFLAGS_iwmmxt.o			:= -Wa,-mcpu=iwmmxt
 obj-$(CONFIG_ARM_CPU_TOPOLOGY)  += topology.o
+obj-$(CONFIG_ARM_USE_USER_ACCESSIBLE_TIMERS)	+= user_accessible_timer.o
 
 ifneq ($(CONFIG_ARCH_EBSA110),y)
   obj-y		+= io.o

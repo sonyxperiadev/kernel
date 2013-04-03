@@ -1,4 +1,5 @@
 /* Copyright (c) 2010-2012, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2012 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -18,6 +19,7 @@
 
 /* #define DEBUG */
 #define DEV_DBG_PREFIX "EXT_COMMON: "
+#define EDID_DUMP
 
 /* The start of the data block collection within the CEA Extension Version 3 */
 #define DBC_START_OFFSET 4
@@ -83,17 +85,15 @@ const char edid_blk1[0x100] = {
 #define DMA_E_BASE 0xB0000
 void mdp_vid_quant_set(void)
 {
-	if ((external_common_state->video_resolution == \
-		HDMI_VFRMT_720x480p60_4_3) || \
-		(external_common_state->video_resolution == \
-		HDMI_VFRMT_720x480p60_16_9)) {
-		MDP_OUTP(MDP_BASE + DMA_E_BASE + 0x70, 0x00EB0010);
-		MDP_OUTP(MDP_BASE + DMA_E_BASE + 0x74, 0x00EB0010);
-		MDP_OUTP(MDP_BASE + DMA_E_BASE + 0x78, 0x00EB0010);
-	} else {
+	if (external_common_state->video_resolution == \
+		HDMI_VFRMT_640x480p60_4_3) {
 		MDP_OUTP(MDP_BASE + DMA_E_BASE + 0x70, 0x00FF0000);
 		MDP_OUTP(MDP_BASE + DMA_E_BASE + 0x74, 0x00FF0000);
 		MDP_OUTP(MDP_BASE + DMA_E_BASE + 0x78, 0x00FF0000);
+	} else {
+		MDP_OUTP(MDP_BASE + DMA_E_BASE + 0x70, 0x00EB0010);
+		MDP_OUTP(MDP_BASE + DMA_E_BASE + 0x74, 0x00EB0010);
+		MDP_OUTP(MDP_BASE + DMA_E_BASE + 0x78, 0x00EB0010);
 	}
 }
 
@@ -1947,6 +1947,26 @@ static void hdmi_edid_get_display_mode(const uint8 *data_buf,
 			HDMI_VFRMT_640x480p60_4_3);
 }
 
+#ifdef EDID_DUMP
+static void hdmi_common_edid_block_dump(int block, uint8 *buf)
+{
+	int ndx;
+
+	DEV_INFO("EDID BLK=%d\n", block);
+	for (ndx = 0; ndx < 0x80; ndx += 16) {
+		DEV_INFO("%02X | %02X %02X %02X %02X %02X %02X %02X %02X "
+			 "%02X %02X %02X %02X %02X %02X %02X %02X\n",
+			ndx,
+			buf[ndx], buf[ndx+1], buf[ndx+2], buf[ndx+3],
+			buf[ndx+4], buf[ndx+5], buf[ndx+6], buf[ndx+7],
+			buf[ndx+8], buf[ndx+9], buf[ndx+10], buf[ndx+11],
+			buf[ndx+12], buf[ndx+13], buf[ndx+14], buf[ndx+15]);
+	}
+}
+#else
+static inline void hdmi_common_edid_block_dump(int block, uint8 *buf) {}
+#endif
+
 static int hdmi_common_read_edid_block(int block, uint8 *edid_buf)
 {
 	uint32 ndx, check_sum, print_len;
@@ -1956,6 +1976,8 @@ static int hdmi_common_read_edid_block(int block, uint8 *edid_buf)
 	int status = external_common_state->read_edid_block(block, edid_buf);
 	if (status)
 		goto error;
+
+	hdmi_common_edid_block_dump(block, edid_buf);
 
 	/* Calculate checksum */
 	check_sum = 0;

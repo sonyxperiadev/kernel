@@ -151,6 +151,7 @@ struct msm_fb_data_type {
 	__u32 bl_level;
 
 	struct platform_device *pdev;
+	struct platform_device *panel_pdev;
 
 	__u32 var_xres;
 	__u32 var_yres;
@@ -212,6 +213,9 @@ struct msm_fb_data_type {
 	int vsync_sysfs_created;
 	void *copy_splash_buf;
 	unsigned char *copy_splash_phys;
+#ifdef CONFIG_DEBUG_FS
+	struct mutex power_lock;
+#endif
 };
 struct msm_fb_backup_type {
 	struct fb_info info;
@@ -245,10 +249,5 @@ void msm_fb_config_backlight(struct msm_fb_data_type *mfd);
 void fill_black_screen(bool on, uint8 pipe_num, uint8 mixer_num);
 int msm_fb_check_frame_rate(struct msm_fb_data_type *mfd,
 				struct fb_info *info);
-
-#ifdef CONFIG_FB_MSM_LOGO
-#define INIT_IMAGE_FILE "/initlogo.rle"
-int load_565rle_image(char *filename, bool bf_supported);
-#endif
 
 #endif /* MSM_FB_H */

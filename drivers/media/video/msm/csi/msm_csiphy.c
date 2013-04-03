@@ -1,4 +1,5 @@
 /* Copyright (c) 2011-2012, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2013 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -96,7 +97,9 @@ int msm_csiphy_lane_config(struct csiphy_device *csiphy_dev,
 		j++;
 		lane_mask >>= 1;
 	}
+#if !defined(CONFIG_SONY_CAM_V4L2)
 	msleep(20);
+#endif
 	return rc;
 }
 
@@ -223,7 +226,11 @@ static int msm_csiphy_release(struct csiphy_device *csiphy_dev, void *arg)
 	csi_lane_mask = csi_lane_params->csi_lane_mask;
 
 	if (!csiphy_dev || !csiphy_dev->ref_count) {
+#if defined(CONFIG_SONY_CAM_V4L2)
+		CDBG("%s csiphy dev NULL / ref_count ZERO\n", __func__);
+#else
 		pr_err("%s csiphy dev NULL / ref_count ZERO\n", __func__);
+#endif
 		return 0;
 	}
 

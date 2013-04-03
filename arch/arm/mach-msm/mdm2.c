@@ -37,13 +37,19 @@
 #include <mach/subsystem_notif.h>
 #include <mach/subsystem_restart.h>
 #include <linux/msm_charm.h>
+#include <mach/msm_smsm.h>
 #include "msm_watchdog.h"
 #include "devices.h"
 #include "clock.h"
 #include "mdm_private.h"
 #define MDM_PBLRDY_CNT		20
 
+/* Boot reason values described in Documentation/arm/msm/boot.txt */
+#define BOOT_REASON_CHG_USB	(0x20)
+#define BOOT_REASON_CHG_WALL	(0x40)
+
 static int mdm_debug_mask;
+static int mdm_is_charge_only;
 
 static void mdm_peripheral_connect(struct mdm_modem_drv *mdm_drv)
 {
@@ -132,15 +138,23 @@ static void mdm_power_down_common(struct mdm_modem_drv *mdm_drv)
 		*/
 		msleep(4000);
 	}
+	if (gpio_get_value(mdm_drv->ap2mdm_soft_reset_gpio) !=
+	    soft_reset_direction) {
+		gpio_direction_output(mdm_drv->ap2mdm_soft_reset_gpio,
+					soft_reset_direction);
+		msleep(4000);
+	}
 }
 
 static void mdm_do_first_power_on(struct mdm_modem_drv *mdm_drv)
 {
 	int i;
 	int pblrdy;
-	if (mdm_drv->power_on_count != 1) {
-		pr_err("%s:id %d: Calling fn when power_on_count != 1\n",
-			   __func__, mdm_drv->device_id);
+
+	if ((!mdm_is_charge_only && mdm_drv->power_on_count != 1) ||
+			(mdm_is_charge_only && mdm_drv->power_on_count != 2)) {
+		pr_err("%s called for non-first power on.\n", __func__);
+
 		return;
 	}
 
@@ -222,19 +236,20 @@ static void mdm_power_on_common(struct mdm_modem_drv *mdm_drv)
 	if (GPIO_IS_VALID(mdm_drv->ap2mdm_wakeup_gpio))
 		gpio_direction_output(mdm_drv->ap2mdm_wakeup_gpio, 0);
 
-	/*
-	 * If we did an "early power on" then ignore the very next
-	 * power-on request because it would the be first request from
-	 * user space but we're already powered on. Ignore it.
-	 */
-	if (mdm_drv->pdata->early_power_on &&
-			(mdm_drv->power_on_count == 2))
-		return;
-
-	if (mdm_drv->power_on_count == 1)
-		mdm_do_first_power_on(mdm_drv);
-	else
+	if (mdm_drv->power_on_count == 1) {
+		if (mdm_is_charge_only)
+			pr_info("%s: Skip first power on in charge-only mode.\n"
+				, __func__);
+		else
+			mdm_do_first_power_on(mdm_drv);
+	} else if (mdm_drv->power_on_count == 2) {
+		if (mdm_is_charge_only)
+			mdm_do_first_power_on(mdm_drv);
+		else if (!mdm_drv->pdata->early_power_on)
+			mdm_do_soft_power_on(mdm_drv);
+	} else {
 		mdm_do_soft_power_on(mdm_drv);
+	}
 }
 
 static void debug_state_changed(int value)
@@ -300,8 +315,14 @@ static struct mdm_ops mdm_cb = {
 
 int mdm_get_ops(struct mdm_ops **mdm_ops)
 {
+	unsigned *br;
+	unsigned sz;
+	br = (unsigned *) smem_get_entry(SMEM_POWER_ON_STATUS_INFO, &sz);
+	if (br != NULL && sz != 0)
+		mdm_is_charge_only = *br & BOOT_REASON_CHG_USB ||
+					*br & BOOT_REASON_CHG_WALL;
+	else
+		pr_err("%s: Unable to read boot reason.\n", __func__);
 	*mdm_ops = &mdm_cb;
 	return 0;
 }
-
-

@@ -1,4 +1,5 @@
 /* Copyright (c) 2011-2012, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2013 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -249,8 +250,8 @@ static struct pm8xxx_keypad_platform_data keypad_data_liquid = {
 static const unsigned int keymap[] = {
 	KEY(0, 0, KEY_VOLUMEUP),
 	KEY(0, 1, KEY_VOLUMEDOWN),
-	KEY(0, 2, KEY_CAMERA_SNAPSHOT),
-	KEY(0, 3, KEY_CAMERA_FOCUS),
+	KEY(0, 2, KEY_CAMERA_FOCUS),
+	KEY(0, 3, KEY_CAMERA_SNAPSHOT),
 };
 
 static struct matrix_keymap_data keymap_data = {
@@ -406,7 +407,7 @@ static struct pm8921_charger_platform_data pm8921_chg_pdata __devinitdata = {
 	.resume_charge_percent	= 99,
 	.term_current		= CHG_TERM_MA,
 	.cool_temp		= 10,
-	.warm_temp		= 45,
+	.warm_temp		= 40,
 	.temp_check_period	= 1,
 	.max_bat_chg_current	= 1100,
 	.cool_bat_chg_current	= 350,
@@ -615,6 +616,6 @@ void __init msm8960_init_pmic(void)
 		pm8921_bms_pdata.rconn_mohm = 20;
 
 	if (!machine_is_msm8960_fluid() && !machine_is_msm8960_liquid()
-			&& !machine_is_msm8960_mtp())
+			&& !machine_is_msm8960_fluid())
 		pm8921_chg_pdata.battery_less_hardware = 1;
 }

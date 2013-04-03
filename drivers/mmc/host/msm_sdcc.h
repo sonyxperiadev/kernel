@@ -216,8 +216,8 @@
 #define MSM_MMC_DEFAULT_IDLE_TIMEOUT	5000 /* msecs */
 #define MSM_MMC_CLK_GATE_DELAY	200 /* msecs */
 
-/* Set the request timeout to 10secs */
-#define MSM_MMC_REQ_TIMEOUT	10000 /* msecs */
+/* Set the request timeout to 30 secs */
+#define MSM_MMC_REQ_TIMEOUT	30000 /* msecs */
 
 /*
  * Controller HW limitations

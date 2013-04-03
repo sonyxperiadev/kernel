@@ -102,4 +102,8 @@
 		NR_PM8821_IRQS + NR_TABLA_IRQS + NR_GPIO_EXPANDER_IRQS + (n))
 #endif
 
+#if defined(CONFIG_MSM_WATCHDOG)
+#define ARCH_HAS_NMI_WATCHDOG
+#endif
+
 #endif

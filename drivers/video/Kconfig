@@ -2408,6 +2408,24 @@ config FB_PUV3_UNIGFX
 	  Choose this option if you want to use the Unigfx device as a
 	  framebuffer device. Without the support of PCI & AGP.
 
+config MHL
+	bool "Support for MHL Transmitter drivers"
+	default y
+	help
+		This driver implements abstruct MHL control.
+
+config MHL_RAP
+	bool "Support for MHL RAP"
+	default y
+	help
+		This driver implements support MHL RAP control.
+
+config MHL_OSD_NAME
+	bool "Support for MHL OSD NAME"
+	default y
+	help
+		This driver implements support MHL OSD name control.
+
 source "drivers/video/msm/Kconfig"
 
 source "drivers/video/omap/Kconfig"

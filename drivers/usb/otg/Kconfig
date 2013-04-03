@@ -154,6 +154,18 @@ config USB_MSM_STANDARD_ACA
 	  are only possible with Standard ACA.  Select this feature if the
 	  board is intended to support only Standard ACA.
 
+config USB_MSM_ACA_FORCE_DETECT_B_AS_A
+	bool "Forcibly recognize RID as ID_A, if detected ID_B"
+	depends on USB_MSM_ACA
+	default n
+	help
+	  The USB PHY may misrecognize RID, due to the limitation
+	  of the Qualcomm MSM chipset and the specification of the ACA.
+	  The threshold to recognize the RID has a problem and may recognize
+	  RID to not ID_A but ID_B depending on a charge current level.
+	  The case of using ID_B is rare and the main function of the ACA
+	  is ID_A, so forcibly recognize RID as ID_A, if detected ID_B.
+
 config AB8500_USB
 	tristate "AB8500 USB Transceiver Driver"
 	depends on AB8500_CORE

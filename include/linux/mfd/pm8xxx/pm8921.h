@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2011-2012, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2013 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -29,12 +30,24 @@
 #include <linux/input/pmic8xxx-pwrkey.h>
 #include <linux/input/pmic8xxx-keypad.h>
 #include <linux/regulator/pm8xxx-regulator.h>
+#ifndef CONFIG_PM8921_SONY_BMS_CHARGER
 #include <linux/mfd/pm8xxx/pm8921-charger.h>
+#else
+#include <linux/mfd/pm8xxx/pm8921-charger-sony.h>
+#endif
 #include <linux/mfd/pm8xxx/pm8xxx-adc.h>
+#ifndef CONFIG_PM8921_SONY_BMS_CHARGER
 #include <linux/mfd/pm8xxx/pm8921-bms.h>
+#else
+#include <linux/mfd/pm8xxx/pm8921-bms-sony.h>
+#endif
 #include <linux/leds-pm8xxx.h>
 #include <linux/mfd/pm8xxx/vibrator.h>
+#ifndef CONFIG_PM8921_SONY_BMS_CHARGER
 #include <linux/mfd/pm8xxx/ccadc.h>
+#else
+#include <linux/mfd/pm8xxx/ccadc-sony.h>
+#endif
 
 #define PM8921_NR_IRQS		256
 

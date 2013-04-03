@@ -33,6 +33,9 @@
 #include "smd_private.h"
 #include "modem_notifier.h"
 #include "ramdump.h"
+#ifdef CONFIG_RAMDUMP_TAGS
+#include <linux/rdtags.h>
+#endif
 
 static struct gss_8064_data {
 	struct miscdevice gss_dev;
@@ -66,6 +69,9 @@ static void log_gss_sfr(void)
 	memcpy(reason, smem_reason, size);
 	reason[size] = '\0';
 	pr_err("GSS subsystem failure reason: %s.\n", reason);
+#ifdef CONFIG_RAMDUMP_TAGS
+	rdtags_add_tag("ssr_reason", reason, strnlen(reason, MAX_SSR_REASON_LEN - 1) + 1);
+#endif
 
 	smem_reason[0] = '\0';
 	wmb();

@@ -37,6 +37,9 @@
 
 #include "smd_private.h"
 
+#ifdef CONFIG_RAMDUMP_TAGS
+#include <linux/rdtags.h>
+#endif
 struct subsys_soc_restart_order {
 	const char * const *subsystem_list;
 	int count;
@@ -128,6 +131,23 @@ int get_restart_level()
 	return restart_level;
 }
 EXPORT_SYMBOL(get_restart_level);
+
+#ifdef CONFIG_RAMDUMP_TAGS
+static void report_subsystem_restart_to_rdtags(const char *name)
+{
+	int result = 0;
+
+	pr_info("Reporting rdtag ssr_crash with %s\n", name);
+	result = rdtags_add_tag("ssr_crash", name, strlen(name));
+	if (result < 0) {
+		pr_err("Reporting rdtag ssr_crash with %s FAILED with %d\n",
+			name, result);
+	}
+}
+#else
+#define report_subsystem_restart_to_rdtags(name)  \
+	pr_warn("Not rdtags present. Ignoring report for %s\n", (name))
+#endif
 
 static int restart_level_set(const char *val, struct kernel_param *kp)
 {
@@ -243,6 +263,7 @@ static void do_epoch_check(struct subsys_device *dev)
 	if (time_first && n >= max_restarts_check) {
 		if ((curr_time->tv_sec - time_first->tv_sec) <
 				max_history_time_check) {
+			report_subsystem_restart_to_rdtags(dev->desc->name);
 			panic("Subsystems have crashed %d times in less than "\
 				"%ld seconds!", max_restarts_check,
 				max_history_time_check);
@@ -283,6 +304,7 @@ static void subsystem_shutdown(struct subsys_device *dev, void *data)
 
 	pr_info("[%p]: Shutting down %s\n", current, name);
 	if (dev->desc->shutdown(dev->desc) < 0) {
+		report_subsystem_restart_to_rdtags(name);
 		panic("subsys-restart: [%p]: Failed to shutdown %s!",
 			current, name);
 	}
@@ -303,6 +325,7 @@ static void subsystem_powerup(struct subsys_device *dev, void *data)
 
 	pr_info("[%p]: Powering up %s\n", current, name);
 	if (dev->desc->powerup(dev->desc) < 0) {
+		report_subsystem_restart_to_rdtags(name);
 		panic("[%p]: Failed to powerup %s!", current, name);
 	}
 }
@@ -357,6 +380,7 @@ static void subsystem_restart_wq_func(struct work_struct *work)
 	 * out, since a subsystem died in its powerup sequence.
 	 */
 	if (!mutex_trylock(powerup_lock)) {
+		report_subsystem_restart_to_rdtags(dev->desc->name);
 		panic("%s[%p]: Subsystem died during powerup!",
 						__func__, current);
 	}
@@ -455,6 +479,7 @@ int subsystem_restart_dev(struct subsys_device *dev)
 		__subsystem_restart_dev(dev);
 		break;
 	case RESET_SOC:
+		report_subsystem_restart_to_rdtags(name);
 		panic("subsys-restart: Resetting the SoC - %s crashed.", name);
 		break;
 	default:

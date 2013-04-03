@@ -3,7 +3,6 @@ obj-y += mdss/
 else
 obj-y := msm_fb.o
 
-obj-$(CONFIG_FB_MSM_LOGO) += logo.o
 obj-$(CONFIG_FB_BACKLIGHT) += msm_fb_bl.o
 
 ifeq ($(CONFIG_FB_MSM_MDP_HW),y)
@@ -83,6 +82,19 @@ obj-$(CONFIG_FB_MSM_MIPI_DSI_TRULY) += mipi_truly.o
 obj-$(CONFIG_FB_MSM_MIPI_DSI_NT35510) += mipi_NT35510.o
 obj-$(CONFIG_FB_MSM_MIPI_DSI_NT35516) += mipi_truly_tft540960_1_e.o
 obj-$(CONFIG_FB_MSM_MIPI_DSI_SIMULATOR) += mipi_simulator.o
+obj-$(CONFIG_FB_MSM_MIPI_DSI) += mipi_dsi_panel_driver.o
+ifeq ($(CONFIG_DEBUG_FS),y)
+obj-$(CONFIG_FB_MSM_MIPI_DSI) += mipi_dsi_panel_debugfs.o
+endif
+obj-$(CONFIG_FB_MSM_MIPI_R63306_SHARP_LS043K3SX04) += mipi_dsi_panel_r63306_sharp_ls043k3sx04.o
+obj-$(CONFIG_FB_MSM_MIPI_R63306_SHARP_LS046K3SX01) += mipi_dsi_panel_r63306_sharp_ls046k3sx01.o
+obj-$(CONFIG_FB_MSM_MIPI_R63311_SHARP_LS050T3SX02) += mipi_dsi_panel_r63311_sharp_ls050t3sx02.o
+obj-$(CONFIG_FB_MSM_MIPI_R63306_TMD_MDW30) += mipi_dsi_panel_r63306_tmd_mdw30.o
+obj-$(CONFIG_FB_MSM_MIPI_R63311_JDC_MDY70) += mipi_dsi_panel_r63311_jdc_mdy70.o
+obj-$(CONFIG_FB_MSM_MIPI_R63311_JDC_MDY80) += mipi_dsi_panel_r63311_jdc_mdy80.o
+obj-$(CONFIG_FB_MSM_MIPI_R63311_SHARP_LS050T3SX01) += mipi_dsi_panel_r63311_sharp_ls050t3sx01.o
+obj-$(CONFIG_FB_MSM_MIPI_NT71391_PANASONIC_VVX10F008B00) += mipi_dsi_panel_nt71391_panasonic_vvx10f008b00.o
+obj-$(CONFIG_FB_MSM_MIPI_R63306_JDC_MDZ50) += mipi_dsi_panel_r63306_jdc_mdz50.o
 
 # MIPI Bridge
 obj-$(CONFIG_FB_MSM_MIPI_DSI_TC358764_DSI2LVDS) += mipi_tc358764_dsi2lvds.o
@@ -123,6 +135,7 @@ obj-y += mipi_toshiba_video_wvga_pt.o mipi_toshiba_video_wsvga_pt.o mipi_toshiba
 obj-y += mipi_novatek_video_qhd_pt.o mipi_novatek_cmd_qhd_pt.o
 obj-y += mipi_orise_video_720p_pt.o mipi_orise_cmd_720p_pt.o
 obj-y += mipi_renesas_video_fwvga_pt.o mipi_renesas_cmd_fwvga_pt.o
+obj-y += mipi_renesas_video_sharp_ls043k3sx04_1a_pt.o
 obj-y += mipi_NT35510_video_wvga_pt.o mipi_NT35510_cmd_wvga_pt.o
 obj-y += mipi_truly_tft540960_1_e_video_qhd_pt.o mipi_truly_tft540960_1_e_cmd_qhd_pt.o
 obj-y += mipi_chimei_wxga_pt.o
@@ -138,7 +151,6 @@ obj-$(CONFIG_FB_MSM_MIPI_ORISE_CMD_720P_PT) += mipi_orise_cmd_720p_pt.o
 obj-$(CONFIG_FB_MSM_MIPI_NOVATEK_CMD_QHD_PT) += mipi_novatek_cmd_qhd_pt.o
 obj-$(CONFIG_FB_MSM_MIPI_RENESAS_VIDEO_FWVGA_PT) += mipi_renesas_video_fwvga_pt.o
 obj-$(CONFIG_FB_MSM_MIPI_RENESAS_CMD_FWVGA_PT) += mipi_renesas_cmd_fwvga_pt.o
-obj-$(CONFIG_FB_MSM_MIPI_RENESAS_VIDEO_FWVGA_PT) += mipi_renesas_video_fwvga_pt.o
 obj-$(CONFIG_FB_MSM_MIPI_TRULY_VIDEO_WVGA_PT) += mipi_truly_video_wvga_pt.o
 obj-$(CONFIG_FB_MSM_MIPI_NT35510_CMD_WVGA_PT) += mipi_NT35510_cmd_wvga_pt.o
 obj-$(CONFIG_FB_MSM_MIPI_NT35510_VIDEO_WVGA_PT) += mipi_NT35510_video_wvga_pt.o
@@ -165,9 +177,10 @@ obj-$(CONFIG_FB_MSM_LCDC_AUO_WVGA) += lcdc_auo_wvga.o
 obj-$(CONFIG_FB_MSM_LCDC_SAMSUNG_OLED_PT) += lcdc_samsung_oled_pt.o
 obj-$(CONFIG_FB_MSM_HDMI_ADV7520_PANEL) += adv7520.o
 obj-$(CONFIG_FB_MSM_LCDC_ST15_WXGA) += lcdc_st15.o
-obj-$(CONFIG_FB_MSM_LVDS_CHIMEI_WXGA) += lvds_chimei_wxga.o
 obj-$(CONFIG_FB_MSM_LVDS_FRC_FHD) += lvds_frc_fhd.o
+obj-$(CONFIG_FB_MSM_LOGO) += logo.o
 obj-$(CONFIG_FB_MSM_HDMI_MSM_PANEL) += hdmi_msm.o
+obj-$(CONFIG_FB_MSM_MHL_SII8334) += mhl_sii8334.o
 obj-$(CONFIG_FB_MSM_EXT_INTERFACE_COMMON) += external_common.o
 obj-$(CONFIG_FB_MSM_LCDC_TRULY_HVGA_IPS3P2335) += lcdc_truly_ips3p2335.o
 

@@ -1,4 +1,5 @@
 /* Copyright (c) 2011-2012, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2013, Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -10,6 +11,7 @@
  * GNU General Public License for more details.
  */
 
+#include <linux/apq8064.h>
 #include <linux/clk.h>
 #include <linux/delay.h>
 #include <linux/gpio.h>
@@ -51,6 +53,11 @@
 #define TOP_SPK_AMP_POS		0x4
 #define TOP_SPK_AMP_NEG		0x8
 #define TOP_SPK_AMP		0x10
+#define RIGHT_SPK_AMP_POS		0x100
+#define RIGHT_SPK_AMP_NEG		0x200
+#define LEFT_SPK_AMP_POS		0x400
+#define LEFT_SPK_AMP_NEG		0x800
+#define RIGHT_SPK_AMP		0x1000
 
 
 #define GPIO_AUX_PCM_DOUT 43
@@ -60,10 +67,10 @@
 
 #define TABLA_EXT_CLK_RATE 12288000
 
-#define TABLA_MBHC_DEF_BUTTONS 8
+#define TABLA_MBHC_DEF_BUTTONS 4
 #define TABLA_MBHC_DEF_RLOADS 5
 
-#define JACK_DETECT_GPIO 38
+#define JACK_DETECT_GPIO 77
 
 /* Shared channel numbers for Slimbus ports that connect APQ to MDM. */
 enum {
@@ -83,11 +90,14 @@ enum {
 	INCALL_REC_STEREO,
 };
 
-static u32 top_spk_pamp_gpio  = PM8921_GPIO_PM_TO_SYS(18);
-static u32 bottom_spk_pamp_gpio = PM8921_GPIO_PM_TO_SYS(19);
+static u32 top_spk_pamp_gpio; /* Not used */
+static u32 bottom_spk_pamp_gpio; /* Not used */
+static u32 lagan_spk_pamp_gpio = PM8921_GPIO_PM_TO_SYS(19);
 static int msm_spk_control;
 static int msm_ext_bottom_spk_pamp;
 static int msm_ext_top_spk_pamp;
+static int msm_ext_lagan_spk_pamp;
+static bool is_lagan_spk_pamp_on;
 static int msm_slim_0_rx_ch = 1;
 static int msm_slim_0_tx_ch = 1;
 static int msm_slim_3_rx_ch = 1;
@@ -106,7 +116,7 @@ static struct snd_soc_jack hs_jack;
 static struct snd_soc_jack button_jack;
 static atomic_t auxpcm_rsc_ref;
 
-static int apq8064_hs_detect_use_gpio = -1;
+static int apq8064_hs_detect_use_gpio = 1;
 module_param(apq8064_hs_detect_use_gpio, int, 0444);
 MODULE_PARM_DESC(apq8064_hs_detect_use_gpio, "Use GPIO for headset detection");
 
@@ -130,8 +140,8 @@ static struct tabla_mbhc_config mbhc_cfg = {
 	.micbias = TABLA_MICBIAS2,
 	.mclk_cb_fn = msm_enable_codec_ext_clk,
 	.mclk_rate = TABLA_EXT_CLK_RATE,
-	.gpio = 0,
-	.gpio_irq = 0,
+	.gpio = 0,  /* set in msm_audrx_init */
+	.gpio_irq = 0, /* set in msm_audrx_init */
 	.gpio_level_insert = 1,
 	.detect_extn_cable = false,
 };
@@ -186,6 +196,22 @@ static void msm_enable_ext_spk_amp_gpio(u32 spk_amp_gpio)
 			pr_debug("%s: enable Top spkr amp gpio\n", __func__);
 			gpio_direction_output(top_spk_pamp_gpio, 1);
 		}
+	} else if (spk_amp_gpio == lagan_spk_pamp_gpio) {
+
+		ret = gpio_request(lagan_spk_pamp_gpio, "LAGAN_SPK_AMP");
+		if (ret) {
+			pr_err("%s: Error requesting GPIO %d\n", __func__,
+				lagan_spk_pamp_gpio);
+			return;
+		}
+		ret = pm8xxx_gpio_config(lagan_spk_pamp_gpio, &param);
+		if (ret)
+			pr_err("%s: Failed to configure Lagan Spk Ampl"
+				" gpio %u\n", __func__, lagan_spk_pamp_gpio);
+		else {
+			pr_debug("%s: enable Lagan spkr amp gpio\n", __func__);
+			gpio_direction_output(lagan_spk_pamp_gpio, 1);
+		}
 	} else {
 		pr_err("%s: ERROR : Invalid External Speaker Ampl GPIO."
 			" gpio = %u\n", __func__, spk_amp_gpio);
@@ -210,6 +236,9 @@ static void msm_ext_spk_power_amp_on(u32 spk)
 		if ((msm_ext_bottom_spk_pamp & BOTTOM_SPK_AMP_POS) &&
 			(msm_ext_bottom_spk_pamp & BOTTOM_SPK_AMP_NEG)) {
 
+			pr_debug("%s: wait 50 ms before turning on external Bottom Speaker Ampl\n",
+					__func__);
+			msleep(50);
 			msm_enable_ext_spk_amp_gpio(bottom_spk_pamp_gpio);
 			pr_debug("%s: slepping 4 ms after turning on external "
 				" Bottom Speaker Ampl\n", __func__);
@@ -239,11 +268,47 @@ static void msm_ext_spk_power_amp_on(u32 spk)
 #ifdef CONFIG_SND_SOC_TPA2028D
 			set_amp_gain(SPK_ON);
 #else
+			pr_debug("%s: wait 50 ms before turning on external Top Speaker Ampl\n",
+					__func__);
+			msleep(50);
 			msm_enable_ext_spk_amp_gpio(top_spk_pamp_gpio);
 			pr_debug("%s: sleeping 4 ms after turning on "
 				" external Top Speaker Ampl\n", __func__);
 			usleep_range(4000, 4000);
 #endif
+		}
+	} else if (spk & (RIGHT_SPK_AMP_POS | RIGHT_SPK_AMP_NEG |
+			LEFT_SPK_AMP_POS | LEFT_SPK_AMP_NEG |
+			RIGHT_SPK_AMP)) {
+
+		if (((msm_ext_lagan_spk_pamp & RIGHT_SPK_AMP_POS) &&
+			(msm_ext_lagan_spk_pamp & RIGHT_SPK_AMP_NEG) &&
+			(msm_ext_lagan_spk_pamp & LEFT_SPK_AMP_POS) &&
+			(msm_ext_lagan_spk_pamp & LEFT_SPK_AMP_NEG)) ||
+				(msm_ext_lagan_spk_pamp & RIGHT_SPK_AMP)) {
+
+			pr_debug("%s() External Lagan Speaker Ampl already "
+				"turned on. spk = 0x%08x\n", __func__, spk);
+			return;
+		}
+
+		msm_ext_lagan_spk_pamp |= spk;
+
+		if ((((msm_ext_lagan_spk_pamp & RIGHT_SPK_AMP_POS) &&
+				(msm_ext_lagan_spk_pamp & RIGHT_SPK_AMP_NEG)) ||
+			((msm_ext_lagan_spk_pamp & LEFT_SPK_AMP_POS) &&
+				(msm_ext_lagan_spk_pamp & LEFT_SPK_AMP_NEG)) ||
+			(msm_ext_lagan_spk_pamp & RIGHT_SPK_AMP)) &&
+			(!is_lagan_spk_pamp_on)) {
+
+			pr_debug("%s: wait 50 ms before turning on external Right/Left Speaker Ampl\n",
+					__func__);
+			msleep(50);
+			msm_enable_ext_spk_amp_gpio(lagan_spk_pamp_gpio);
+			is_lagan_spk_pamp_on = true;
+			pr_debug("%s: slepping 4 ms after turning on external "
+				" Lagan Speaker Ampl\n", __func__);
+			usleep_range(4000, 4000);
 		}
 	} else  {
 
@@ -301,6 +366,39 @@ static void msm_ext_spk_power_amp_off(u32 spk)
 
 		usleep_range(4000, 4000);
 #endif
+	} else if (spk & (RIGHT_SPK_AMP_POS | RIGHT_SPK_AMP_NEG |
+			LEFT_SPK_AMP_POS | LEFT_SPK_AMP_NEG |
+			RIGHT_SPK_AMP)) {
+
+		pr_debug("%s: lagan_spk_amp_state = 0x%x spk_event = 0x%x\n",
+				__func__, msm_ext_lagan_spk_pamp, spk);
+
+		if (!msm_ext_lagan_spk_pamp)
+			return;
+
+		if ((spk & RIGHT_SPK_AMP_POS) || (spk & RIGHT_SPK_AMP_NEG)) {
+
+			msm_ext_lagan_spk_pamp &= (~(RIGHT_SPK_AMP_POS |
+							RIGHT_SPK_AMP_NEG));
+		} else if ((spk & LEFT_SPK_AMP_POS) || (spk & LEFT_SPK_AMP_NEG)) {
+
+			msm_ext_lagan_spk_pamp &= (~(LEFT_SPK_AMP_POS |
+							LEFT_SPK_AMP_NEG));
+		} else if (spk & RIGHT_SPK_AMP) {
+			msm_ext_lagan_spk_pamp &=  ~RIGHT_SPK_AMP;
+		}
+
+		if (msm_ext_lagan_spk_pamp)
+			return;
+
+		gpio_direction_output(lagan_spk_pamp_gpio, 0);
+		gpio_free(lagan_spk_pamp_gpio);
+		is_lagan_spk_pamp_on = false;
+
+		pr_debug("%s: sleeping 4 ms after turning off external Lagan"
+			" Speaker Ampl\n", __func__);
+
+		usleep_range(4000, 4000);
 	} else  {
 
 		pr_err("%s: ERROR : Invalid Ext Spk Ampl. spk = 0x%08x\n",
@@ -314,23 +412,27 @@ static void msm_ext_control(struct snd_soc_codec *codec)
 	struct snd_soc_dapm_context *dapm = &codec->dapm;
 
 	pr_debug("%s: msm_spk_control = %d", __func__, msm_spk_control);
+#ifdef CONFIG_SND_SOC_DIFFERENTIAL_SPEAKER
 	if (msm_spk_control == MSM8064_SPK_ON) {
-		snd_soc_dapm_enable_pin(dapm, "Ext Spk Bottom Pos");
-		snd_soc_dapm_enable_pin(dapm, "Ext Spk Bottom Neg");
-		snd_soc_dapm_enable_pin(dapm, "Ext Spk Top Pos");
-		snd_soc_dapm_enable_pin(dapm, "Ext Spk Top Neg");
-#ifdef CONFIG_SND_SOC_TPA2028D
-		snd_soc_dapm_enable_pin(dapm, "Ext Spk Top");
-#endif
+		snd_soc_dapm_enable_pin(dapm, "Ext Spk Right Pos");
+		snd_soc_dapm_enable_pin(dapm, "Ext Spk Right Neg");
+		snd_soc_dapm_enable_pin(dapm, "Ext Spk Left Pos");
+		snd_soc_dapm_enable_pin(dapm, "Ext Spk Left Neg");
 	} else {
-		snd_soc_dapm_disable_pin(dapm, "Ext Spk Bottom Pos");
-		snd_soc_dapm_disable_pin(dapm, "Ext Spk Bottom Neg");
-		snd_soc_dapm_disable_pin(dapm, "Ext Spk Top Pos");
-		snd_soc_dapm_disable_pin(dapm, "Ext Spk Top Neg");
-#ifdef CONFIG_SND_SOC_TPA2028D
-		snd_soc_dapm_disable_pin(dapm, "Ext Spk Top");
-#endif
+		snd_soc_dapm_disable_pin(dapm, "Ext Spk Right Pos");
+		snd_soc_dapm_disable_pin(dapm, "Ext Spk Right Neg");
+		snd_soc_dapm_disable_pin(dapm, "Ext Spk Left Pos");
+		snd_soc_dapm_disable_pin(dapm, "Ext Spk Left Neg");
 	}
+#else
+	if (msm_spk_control == MSM8064_SPK_ON) {
+		/* We only have one single ended speaker */
+		snd_soc_dapm_enable_pin(dapm, "Ext Spk Right");
+	} else {
+		/* We only have one single ended speaker */
+		snd_soc_dapm_disable_pin(dapm, "Ext Spk Right");
+	}
+#endif
 
 	snd_soc_dapm_sync(dapm);
 }
@@ -371,6 +473,16 @@ static int msm_spkramp_event(struct snd_soc_dapm_widget *w,
 			msm_ext_spk_power_amp_on(TOP_SPK_AMP_NEG);
 		else if  (!strncmp(w->name, "Ext Spk Top", 12))
 			msm_ext_spk_power_amp_on(TOP_SPK_AMP);
+		else if (!strncmp(w->name, "Ext Spk Right Pos", 17))
+			msm_ext_spk_power_amp_on(RIGHT_SPK_AMP_POS);
+		else if (!strncmp(w->name, "Ext Spk Right Neg", 17))
+			msm_ext_spk_power_amp_on(RIGHT_SPK_AMP_NEG);
+		else if (!strncmp(w->name, "Ext Spk Left Pos", 16))
+			msm_ext_spk_power_amp_on(LEFT_SPK_AMP_POS);
+		else if (!strncmp(w->name, "Ext Spk Left Neg", 16))
+			msm_ext_spk_power_amp_on(LEFT_SPK_AMP_NEG);
+		else if (!strncmp(w->name, "Ext Spk Right", 13))
+			msm_ext_spk_power_amp_on(RIGHT_SPK_AMP);
 		else {
 			pr_err("%s() Invalid Speaker Widget = %s\n",
 					__func__, w->name);
@@ -388,6 +500,16 @@ static int msm_spkramp_event(struct snd_soc_dapm_widget *w,
 			msm_ext_spk_power_amp_off(TOP_SPK_AMP_NEG);
 		else if  (!strncmp(w->name, "Ext Spk Top", 12))
 			msm_ext_spk_power_amp_off(TOP_SPK_AMP);
+		else if (!strncmp(w->name, "Ext Spk Right Pos", 17))
+			msm_ext_spk_power_amp_off(RIGHT_SPK_AMP_POS);
+		else if (!strncmp(w->name, "Ext Spk Right Neg", 17))
+			msm_ext_spk_power_amp_off(RIGHT_SPK_AMP_NEG);
+		else if (!strncmp(w->name, "Ext Spk Left Pos", 16))
+			msm_ext_spk_power_amp_off(LEFT_SPK_AMP_POS);
+		else if (!strncmp(w->name, "Ext Spk Left Neg", 16))
+			msm_ext_spk_power_amp_off(LEFT_SPK_AMP_NEG);
+		else if (!strncmp(w->name, "Ext Spk Right", 13))
+			msm_ext_spk_power_amp_off(RIGHT_SPK_AMP);
 		else {
 			pr_err("%s() Invalid Speaker Widget = %s\n",
 					__func__, w->name);
@@ -489,12 +611,13 @@ static const struct snd_soc_dapm_widget apq8064_dapm_widgets[] = {
 	SND_SOC_DAPM_SUPPLY("MCLK",  SND_SOC_NOPM, 0, 0,
 	msm_mclk_event, SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
 
-	SND_SOC_DAPM_SPK("Ext Spk Bottom Pos", msm_spkramp_event),
-	SND_SOC_DAPM_SPK("Ext Spk Bottom Neg", msm_spkramp_event),
+	SND_SOC_DAPM_SPK("Ext Spk Right Pos", msm_spkramp_event),
+	SND_SOC_DAPM_SPK("Ext Spk Right Neg", msm_spkramp_event),
 
-	SND_SOC_DAPM_SPK("Ext Spk Top Pos", msm_spkramp_event),
-	SND_SOC_DAPM_SPK("Ext Spk Top Neg", msm_spkramp_event),
-	SND_SOC_DAPM_SPK("Ext Spk Top", msm_spkramp_event),
+	SND_SOC_DAPM_SPK("Ext Spk Left Pos", msm_spkramp_event),
+	SND_SOC_DAPM_SPK("Ext Spk Left Neg", msm_spkramp_event),
+
+	SND_SOC_DAPM_SPK("Ext Spk Right", msm_spkramp_event),
 
 	/************ Analog MICs ************/
 	/**
@@ -507,10 +630,8 @@ static const struct snd_soc_dapm_widget apq8064_dapm_widgets[] = {
 	SND_SOC_DAPM_MIC("ANCRight Headset Mic", NULL),
 	SND_SOC_DAPM_MIC("ANCLeft Headset Mic", NULL),
 
-#ifdef CONFIG_SND_SOC_DUAL_AMIC
-	SND_SOC_DAPM_MIC("Handset Mic", NULL),
-	SND_SOC_DAPM_MIC("Handset SubMic", NULL),
-#endif
+	SND_SOC_DAPM_MIC("Primary Mic", NULL),
+	SND_SOC_DAPM_MIC("Secondary Mic", NULL),
 
 	/*********** Digital Mics ***************/
 	SND_SOC_DAPM_MIC("Digital Mic1", NULL),
@@ -528,38 +649,18 @@ static const struct snd_soc_dapm_route apq8064_common_audio_map[] = {
 
 	{"HEADPHONE", NULL, "LDO_H"},
 
-	/* Speaker path */
-#ifdef CONFIG_SND_SOC_TPA2028D
-	{"Ext Spk Top", NULL, "LINEOUT1"},
-#else
-	{"Ext Spk Bottom Pos", NULL, "LINEOUT1"},
-	{"Ext Spk Bottom Neg", NULL, "LINEOUT3"},
-
-	{"Ext Spk Top Pos", NULL, "LINEOUT2"},
-	{"Ext Spk Top Neg", NULL, "LINEOUT4"},
-	{"Ext Spk Top", NULL, "LINEOUT5"},
-#endif
 	/************   Analog MIC Paths  ************/
-#ifdef CONFIG_SND_SOC_DUAL_AMIC
-	/* Handset Mic */
+	/* Primary Mic */
 	{"AMIC1", NULL, "MIC BIAS1 External"},
-	{"MIC BIAS1 External", NULL, "Handset Mic"},
+	{"MIC BIAS1 External", NULL, "Primary Mic"},
 
-	{"AMIC3", NULL, "MIC BIAS3 External"},
-	{"MIC BIAS3 External", NULL, "Handset SubMic"},
-#endif
+	/* Secondary Mic */
+	{"AMIC3", NULL, "MIC BIAS1 External"},
+	{"MIC BIAS1 External", NULL, "Secondary Mic"},
+
 	/* Headset Mic */
 	{"AMIC2", NULL, "MIC BIAS2 External"},
 	{"MIC BIAS2 External", NULL, "Headset Mic"},
-
-#ifndef CONFIG_SND_SOC_DUAL_AMIC
-	/* Headset ANC microphones */
-	{"AMIC3", NULL, "MIC BIAS3 Internal1"},
-	{"MIC BIAS3 Internal1", NULL, "ANCRight Headset Mic"},
-
-	{"AMIC4", NULL, "MIC BIAS1 Internal2"},
-	{"MIC BIAS1 Internal2", NULL, "ANCLeft Headset Mic"},
-#endif
 };
 
 static const struct snd_soc_dapm_route apq8064_mtp_audio_map[] = {
@@ -673,6 +774,23 @@ static const struct snd_soc_dapm_route apq8064_liquid_cdp_audio_map[] = {
 	 */
 	{"DMIC1", NULL, "MIC BIAS1 External"},
 	{"MIC BIAS1 External", NULL, "Digital Mic6"},
+};
+
+static const struct snd_soc_dapm_route apq8064_lagan_audio_map[] = {
+
+	/* Speaker path */
+	/* We only have one single ended speaker */
+	{"Ext Spk Right", NULL, "LINEOUT1"},
+};
+
+static const struct snd_soc_dapm_route apq8064_lagan_differential_audio_map[] = {
+
+	/* Speaker path */
+		{"Ext Spk Right Pos", NULL, "LINEOUT1"},
+		{"Ext Spk Right Neg", NULL, "LINEOUT3"},
+
+		{"Ext Spk Left Pos", NULL, "LINEOUT2"},
+		{"Ext Spk Left Neg", NULL, "LINEOUT4"},
 };
 
 static const char *spk_function[] = {"Off", "On"};
@@ -881,8 +999,8 @@ static void *def_tabla_mbhc_cal(void)
 	S(t_ins_retry, 200);
 #undef S
 #define S(X, Y) ((TABLA_MBHC_CAL_PLUG_TYPE_PTR(tabla_cal)->X) = (Y))
-	S(v_no_mic, 30);
-	S(v_hs_max, 2400);
+	S(v_no_mic, 73);
+	S(v_hs_max, apq8064_data.v_hs_max);
 #undef S
 #define S(X, Y) ((TABLA_MBHC_CAL_BTN_DET_PTR(tabla_cal)->X) = (Y))
 	S(c[0], 62);
@@ -899,22 +1017,14 @@ static void *def_tabla_mbhc_cal(void)
 	btn_cfg = TABLA_MBHC_CAL_BTN_DET_PTR(tabla_cal);
 	btn_low = tabla_mbhc_cal_btn_det_mp(btn_cfg, TABLA_BTN_DET_V_BTN_LOW);
 	btn_high = tabla_mbhc_cal_btn_det_mp(btn_cfg, TABLA_BTN_DET_V_BTN_HIGH);
-	btn_low[0] = -50;
-	btn_high[0] = 10;
-	btn_low[1] = 11;
-	btn_high[1] = 52;
-	btn_low[2] = 53;
-	btn_high[2] = 94;
-	btn_low[3] = 95;
-	btn_high[3] = 133;
-	btn_low[4] = 134;
-	btn_high[4] = 171;
-	btn_low[5] = 172;
-	btn_high[5] = 208;
-	btn_low[6] = 209;
-	btn_high[6] = 244;
-	btn_low[7] = 245;
-	btn_high[7] = 330;
+	btn_low[0] = -30;
+	btn_high[0] = 73;
+	btn_low[1] = 74;
+	btn_high[1] = 326;
+	btn_low[2] = 327;
+	btn_high[2] = 663;
+	btn_low[3] = 664;
+	btn_high[3] = 1202;
 	n_ready = tabla_mbhc_cal_btn_det_mp(btn_cfg, TABLA_BTN_DET_N_READY);
 	n_ready[0] = 80;
 	n_ready[1] = 68;
@@ -1227,18 +1337,22 @@ static int msm_audrx_init(struct snd_soc_pcm_runtime *rtd)
 	if (machine_is_apq8064_mtp() || machine_is_apq8064_mako()) {
 		snd_soc_dapm_add_routes(dapm, apq8064_mtp_audio_map,
 			ARRAY_SIZE(apq8064_mtp_audio_map));
-	} else  {
-		snd_soc_dapm_add_routes(dapm, apq8064_liquid_cdp_audio_map,
-			ARRAY_SIZE(apq8064_liquid_cdp_audio_map));
 	}
 
-#ifdef CONFIG_SND_SOC_TPA2028D
-	snd_soc_dapm_enable_pin(dapm, "Ext Spk Top");
+#ifdef CONFIG_SND_SOC_DIFFERENTIAL_SPEAKER
+	snd_soc_dapm_add_routes(dapm, apq8064_lagan_differential_audio_map,
+		ARRAY_SIZE(apq8064_lagan_differential_audio_map));
+
+	snd_soc_dapm_enable_pin(dapm, "Ext Spk Right Pos");
+	snd_soc_dapm_enable_pin(dapm, "Ext Spk Right Neg");
+	snd_soc_dapm_enable_pin(dapm, "Ext Spk Left Pos");
+	snd_soc_dapm_enable_pin(dapm, "Ext Spk Left Neg");
 #else
-	snd_soc_dapm_enable_pin(dapm, "Ext Spk Bottom Pos");
-	snd_soc_dapm_enable_pin(dapm, "Ext Spk Bottom Neg");
-	snd_soc_dapm_enable_pin(dapm, "Ext Spk Top Pos");
-	snd_soc_dapm_enable_pin(dapm, "Ext Spk Top Neg");
+	snd_soc_dapm_add_routes(dapm, apq8064_lagan_audio_map,
+		ARRAY_SIZE(apq8064_lagan_audio_map));
+
+	/* We only have one single ended speaker */
+	snd_soc_dapm_enable_pin(dapm, "Ext Spk Right");
 #endif
 
 	snd_soc_dapm_sync(dapm);
@@ -1300,6 +1414,7 @@ static int msm_audrx_init(struct snd_soc_pcm_runtime *rtd)
 			return err;
 		}
 		gpio_direction_input(JACK_DETECT_GPIO);
+		mbhc_cfg.detect_extn_cable = apq8064_data.hs_detect_extn_cable;
 		if (apq8064_hs_detect_extn_cable)
 			mbhc_cfg.detect_extn_cable = true;
 	} else

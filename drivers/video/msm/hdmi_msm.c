@@ -1,4 +1,6 @@
-/* Copyright (c) 2010-2013, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2010-2012, Code Aurora Forum. All rights reserved.
+ * Copyright (C) 2012 Sony Mobile Communications AB.
+ * Copyright (c) 2010-2013, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -27,6 +29,10 @@
 #include <mach/clk.h>
 #include <mach/msm_iomap.h>
 #include <mach/socinfo.h>
+
+#ifdef CONFIG_MHL
+#include <linux/mhl.h>
+#endif
 
 #include "msm_fb.h"
 #include "hdmi_msm.h"
@@ -1284,7 +1290,7 @@ static void msm_hdmi_init_ddc(void)
 		* 0x3: 3/4 of total samples */
 	/* Configure the Pre-Scale multiplier
 	 * Configure the Threshold */
-	HDMI_OUTP_ND(0x0220, (10 << 16) | (2 << 0));
+	HDMI_OUTP_ND(0x0220, (5 << 16) | (2 << 0));
 
 	/*
 	 * 0x0224 HDMI_DDC_SETUP
@@ -1300,8 +1306,8 @@ static void msm_hdmi_init_ddc(void)
 	   [15:0] REFTIMER	Value to set the register in order to generate
 		DDC strobe. This register counts on HDCP application clock */
 	/* Enable reference timer
-	 * 27 micro-seconds */
-	HDMI_OUTP_ND(0x027C, (1 << 16) | (27 << 0));
+	 * 68 micro-seconds */
+	HDMI_OUTP_ND(0x027C, (1 << 16) | (68 << 0));
 }
 
 static int hdmi_msm_ddc_clear_irq(const char *what)
@@ -2516,6 +2522,8 @@ static int hdcp_authentication_part1(void)
 		DEV_DBG("HDCP: Link0-AKSV=%02x%08x\n",
 			link0_aksv_1 & 0xFF, link0_aksv_0);
 
+		msleep(50);
+
 		/* Read Bksv 5 bytes at 0x00 in HDCP port */
 		ret = hdmi_msm_ddc_read(0x74, 0x00, bksv, 5, 5, "Bksv", TRUE);
 		if (ret) {
@@ -3627,9 +3635,9 @@ static uint8 hdmi_msm_avi_iframe_lut[][17] = {
 	{0x10,	0x10,	0x10,	0x10,	0x10,	 0x10,	0x10,	0x10,	0x10,
 	 0x10,	0x10,	0x10,	0x10,	0x10, 0x10, 0x10, 0x10}, /*00*/
 	{0x18,	0x18,	0x28,	0x28,	0x28,	 0x28,	0x28,	0x28,	0x28,
-	 0x28,	0x28,	0x28,	0x28,	0x18, 0x28, 0x18, 0x08}, /*01*/
-	{0x00,	0x04,	0x04,	0x04,	0x04,	 0x04,	0x04,	0x04,	0x04,
-	 0x04,	0x04,	0x04,	0x04,	0x88, 0x00, 0x04, 0x04}, /*02*/
+	 0x28,	0x28,	0x28,	0x28,	0x18, 0x28, 0x18}, /*01*/
+	{0x00,	0x00,	0x00,	0x00,	0x00,	 0x00,	0x00,	0x00,	0x00,
+	 0x00,	0x00,	0x00,	0x00,	0x00, 0x00, 0x00, 0x00}, /*02*/
 	{0x02,	0x06,	0x11,	0x15,	0x04,	 0x13,	0x10,	0x05,	0x1F,
 	 0x14,	0x20,	0x22,	0x21,	0x01, 0x03, 0x11, 0x00}, /*03*/
 	{0x00,	0x01,	0x00,	0x01,	0x00,	 0x00,	0x00,	0x00,	0x00,
@@ -4147,8 +4155,10 @@ static void hdmi_msm_turn_on(void)
 	hdmi_msm_spd_infoframe_packetsetup();
 
 	if (hdmi_msm_state->hdcp_enable && hdmi_msm_state->reauth) {
-		hdmi_msm_hdcp_enable();
 		hdmi_msm_state->reauth = FALSE ;
+		cancel_work_sync(&hdmi_msm_state->hdcp_reauth_work);
+		del_timer_sync(&hdmi_msm_state->hdcp_timer);
+		queue_work(hdmi_work_queue, &hdmi_msm_state->hdcp_work);
 	}
 
 #ifdef CONFIG_FB_MSM_HDMI_MSM_PANEL_CEC_SUPPORT
@@ -4374,7 +4384,10 @@ static int hdmi_msm_power_on(struct platform_device *pdev)
 
 	/* Only start transmission with supported resolution */
 	changed = hdmi_common_get_video_format_from_drv_data(mfd);
-	if (changed || external_common_state->default_res_supported) {
+	/* SoMC: intentionally hardcoded to always pass, since
+	 * for our case 'supported format' logic doesn't work
+	 */
+	if (1 || changed || external_common_state->default_res_supported) {
 		mutex_lock(&external_common_state_hpd_mutex);
 		if (external_common_state->hpd_state &&
 				hdmi_msm_is_power_on()) {
@@ -4786,6 +4799,13 @@ static int hdmi_msm_hpd_feature(int on)
 	DEV_INFO("%s: %d\n", __func__, on);
 	if (on) {
 		rc = hdmi_msm_hpd_on();
+#ifdef CONFIG_MHL
+		/* MHL full operation start */
+		if (hdmi_msm_state->pd->coupled_mhl_device)
+			mhl_full_operation(
+				hdmi_msm_state->pd->coupled_mhl_device,
+				TRUE);
+#endif
 	} else {
 		if (external_common_state->hpd_state) {
 			external_common_state->hpd_state = 0;
@@ -4805,6 +4825,13 @@ static int hdmi_msm_hpd_feature(int on)
 		switch_set_state(&external_common_state->sdev, 0);
 		DEV_INFO("%s: hdmi state switched to %d\n", __func__,
 				external_common_state->sdev.state);
+#ifdef CONFIG_MHL
+		/* MHL full operation stop */
+		if (hdmi_msm_state->pd->coupled_mhl_device)
+			mhl_full_operation(
+				hdmi_msm_state->pd->coupled_mhl_device,
+				FALSE);
+#endif
 	}
 
 	return rc;
@@ -4941,6 +4968,8 @@ static void __exit hdmi_msm_exit(void)
 	platform_driver_unregister(&this_driver);
 }
 
+/* SoMC: disabled for production due to security reasons */
+#if 0
 static int set_hdcp_feature_on(const char *val, const struct kernel_param *kp)
 {
 	int rv = param_set_bool(val, kp);
@@ -4970,6 +4999,7 @@ static struct kernel_param_ops hdcp_feature_on_param_ops = {
 module_param_cb(hdcp, &hdcp_feature_on_param_ops, &hdcp_feature_on,
 			S_IRUGO | S_IWUSR);
 MODULE_PARM_DESC(hdcp, "Enable or Disable HDCP");
+#endif
 
 module_init(hdmi_msm_init);
 module_exit(hdmi_msm_exit);

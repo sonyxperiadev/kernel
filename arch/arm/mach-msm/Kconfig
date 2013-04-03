@@ -178,6 +178,11 @@ config ARCH_MSM8960
 	select MSM_KRAIT_WFE_FIXUP
 	select MSM_IOMMU_GPU_SYNC
 	select MSM_CPU_PWRCTL
+	select HAVE_NMI_WATCHDOG if MSM_WATCHDOG || MSM_WATCHDOG_V2
+	select GENERIC_TIME_VSYSCALL
+	select USE_USER_ACCESSIBLE_TIMERS
+	select ARM_USE_USER_ACCESSIBLE_TIMERS
+	select MSM_USE_USER_ACCESSIBLE_TIMERS
 
 config ARCH_MSM8930
 	bool "MSM8930"
@@ -212,6 +217,10 @@ config ARCH_MSM8930
 	select MSM_KRAIT_WFE_FIXUP
 	select MSM_IOMMU_GPU_SYNC
 	select MSM_CPU_PWRCTL
+	select GENERIC_TIME_VSYSCALL
+	select USE_USER_ACCESSIBLE_TIMERS
+	select ARM_USE_USER_ACCESSIBLE_TIMERS
+	select MSM_USE_USER_ACCESSIBLE_TIMERS
 
 config ARCH_APQ8064
 	bool "APQ8064"
@@ -241,6 +250,11 @@ config ARCH_APQ8064
 	select MSM_KRAIT_WFE_FIXUP
 	select MSM_IOMMU_GPU_SYNC
 	select MSM_CPU_PWRCTL
+	select HAVE_NMI_WATCHDOG if MSM_WATCHDOG || MSM_WATCHDOG_V2
+	select GENERIC_TIME_VSYSCALL
+	select USE_USER_ACCESSIBLE_TIMERS
+	select ARM_USE_USER_ACCESSIBLE_TIMERS
+	select MSM_USE_USER_ACCESSIBLE_TIMERS
 
 config ARCH_MSM8974
 	bool "MSM8974"
@@ -898,6 +912,18 @@ config MACH_MPQ8064_DTV
 	help
 	  Support for the Qualcomm MPQ8064 DTV device.
 
+config MACH_SONY_FUSION3
+	depends on ARCH_APQ8064
+	bool "Sony Mobile CDB"
+	help
+	  Support for the Sony Mobile Fusion3 devices.
+
+config MACH_SONY_YUGA
+	depends on MACH_SONY_FUSION3
+	bool "Sony Mobile Yuga"
+	help
+	  Support for the Sony Mobile Yuga device.
+
 config MACH_FSM9XXX_SURF
 	depends on ARCH_FSM9XXX
 	depends on !MSM_STACKED_MEMORY
@@ -1047,14 +1073,6 @@ choice
 		help
 		  Say Y here if you want the debug print routines to direct
 		  their output to the serial port on MSM 8960 devices.
-
-	config DEBUG_MSM8930_UART
-		bool "Kernel low-level debugging messages via MSM 8930 UART"
-		depends on ARCH_MSM8930 && DEBUG_LL
-		select MSM_HAS_DEBUG_UART_HS
-		help
-		Say Y here if you want the debug print routines to direct
-		their output to the serial port on MSM 8930 devices.
 
 	config DEBUG_APQ8064_UART
 		bool "Kernel low-level debugging messages via APQ 8064 UART"
@@ -2223,6 +2241,12 @@ config MSM_STANDALONE_POWER_COLLAPSE
        bool "Enable standalone power collapse"
        default n
 
+config MSM_GSBI7_UART
+	bool "Enable GSBI7 UART device"
+	default n
+	help
+	  This enables GSBI7 configured into UART.
+
 config MSM_GSBI9_UART
 	bool "Enable GSBI9 UART device"
 	default n
@@ -2551,6 +2575,12 @@ config MSM_DCVS
 	  algorithm and the algorithm returns a frequency for the core which is
 	  passed to the frequency change driver.
 
+config RTC_SEMC_ETS
+	bool "SEMC ETS RTC flag"
+	default n
+	help
+	  This enables RTC write function with SEMC ETS
+
 config MSM_CPR
 	tristate "Use MSM CPR in S/W mode"
 	help
@@ -2583,6 +2613,15 @@ config MSM_CACHE_DUMP_ON_PANIC
 	  want to dump the L1 and L2 caches on panic before any flush occurs.
 	  If unsure, say N
 
+config SONY_SSM
+	bool "Support Super Stamina Mode"
+	default n
+	help
+	  This enables support for power mode notifications, required by Super
+	  Stamina Mode. The driver will let a user space application register
+	  for notifications when the device is ready to switch into a new
+	  power mode.
+
 config MSM_HSIC_SYSMON
 	tristate "MSM HSIC system monitor driver"
 	depends on USB
@@ -2606,5 +2645,204 @@ config MSM_CPU_PWRCTL
 	  Droop detector mechanism can adversely affect krait plls during
 	  stand alone power collapse operation. Selecting this option
 	  ensures that they are always off.
+
+menu "PMIC special settings"
+depends on MFD_PM8XXX
+
+config HARD_RESET_SETTING
+	bool "Configure hard reset timer value"
+	default y
+	help
+	  Enable configuration of debounce and delay timer value of hard reset
+	  on pmic.
+
+choice
+	prompt "delay time [ms]"
+	default HARD_RESET_DELAY_MS_50
+	depends on HARD_RESET_SETTING
+
+	config HARD_RESET_DELAY_MS_0
+	  bool
+	    prompt "0 ms"
+
+	config HARD_RESET_DELAY_MS_10
+	  bool
+	    prompt "10 ms"
+
+	config HARD_RESET_DELAY_MS_50
+	  bool
+	    prompt "50 ms"
+
+	config HARD_RESET_DELAY_MS_100
+	  bool
+	    prompt "100 ms"
+
+	config HARD_RESET_DELAY_MS_250
+	  bool
+	    prompt "250 ms"
+
+	config HARD_RESET_DELAY_MS_500
+	  bool
+	    prompt "500 ms"
+
+	config HARD_RESET_DELAY_MS_1000
+	  bool
+	    prompt "1000 ms"
+
+	config HARD_RESET_DELAY_MS_2000
+	  bool
+	    prompt "2000 ms"
+endchoice
+
+config HARD_RESET_DELAY_MS
+	int
+	depends on HARD_RESET_SETTING
+	default 0 if HARD_RESET_DELAY_MS_0
+	default 1 if HARD_RESET_DELAY_MS_10
+	default 2 if HARD_RESET_DELAY_MS_50
+	default 3 if HARD_RESET_DELAY_MS_100
+	default 4 if HARD_RESET_DELAY_MS_250
+	default 5 if HARD_RESET_DELAY_MS_500
+	default 6 if HARD_RESET_DELAY_MS_1000
+	default 7 if HARD_RESET_DELAY_MS_2000
+
+choice
+	prompt "debounce time [ms]"
+	default HARD_RESET_DEBOUNCE_MS_3072
+	depends on HARD_RESET_SETTING
+
+	config HARD_RESET_DEBOUNCE_MS_0
+	  bool
+	    prompt "0 ms"
+
+	config HARD_RESET_DEBOUNCE_MS_32
+	  bool
+	    prompt "32 ms"
+
+	config HARD_RESET_DEBOUNCE_MS_56
+	  bool
+	    prompt "56 ms"
+
+	config HARD_RESET_DEBOUNCE_MS_80
+	  bool
+	    prompt "80 ms"
+
+	config HARD_RESET_DEBOUNCE_MS_128
+	  bool
+	    prompt "128 ms"
+
+	config HARD_RESET_DEBOUNCE_MS_184
+	  bool
+	    prompt "184 ms"
+
+	config HARD_RESET_DEBOUNCE_MS_272
+	  bool
+	    prompt "272 ms"
+
+	config HARD_RESET_DEBOUNCE_MS_408
+	  bool
+	    prompt "408 ms"
+
+	config HARD_RESET_DEBOUNCE_MS_608
+	  bool
+	    prompt "608 ms"
+
+	config HARD_RESET_DEBOUNCE_MS_904
+	  bool
+	    prompt "904 ms"
+
+	config HARD_RESET_DEBOUNCE_MS_1352
+	  bool
+	    prompt "1352 ms"
+
+	config HARD_RESET_DEBOUNCE_MS_2048
+	  bool
+	    prompt "2048 ms"
+
+	config HARD_RESET_DEBOUNCE_MS_3072
+	  bool
+	    prompt "3072 ms"
+
+	config HARD_RESET_DEBOUNCE_MS_4480
+	  bool
+	    prompt "4480 ms"
+
+	config HARD_RESET_DEBOUNCE_MS_6720
+	  bool
+	    prompt "6720 ms"
+
+	config HARD_RESET_DEBOUNCE_MS_10256
+	  bool
+	    prompt "10256 ms"
+endchoice
+
+config HARD_RESET_DEBOUNCE_MS
+	int
+	depends on HARD_RESET_SETTING
+	default 0 if HARD_RESET_DEBOUNCE_MS_0
+	default 1 if HARD_RESET_DEBOUNCE_MS_32
+	default 2 if HARD_RESET_DEBOUNCE_MS_56
+	default 3 if HARD_RESET_DEBOUNCE_MS_80
+	default 4 if HARD_RESET_DEBOUNCE_MS_128
+	default 5 if HARD_RESET_DEBOUNCE_MS_184
+	default 6 if HARD_RESET_DEBOUNCE_MS_272
+	default 7 if HARD_RESET_DEBOUNCE_MS_408
+	default 8 if HARD_RESET_DEBOUNCE_MS_608
+	default 9 if HARD_RESET_DEBOUNCE_MS_904
+	default 10 if HARD_RESET_DEBOUNCE_MS_1352
+	default 11 if HARD_RESET_DEBOUNCE_MS_2048
+	default 12 if HARD_RESET_DEBOUNCE_MS_3072
+	default 13 if HARD_RESET_DEBOUNCE_MS_4480
+	default 14 if HARD_RESET_DEBOUNCE_MS_6720
+	default 15 if HARD_RESET_DEBOUNCE_MS_10256
+
+config DISABLE_SMPL
+	bool "disable SMPL detection"
+	default n
+
+choice
+	prompt "smpl delay time [s]"
+	default SMPL_DELAY_1P0
+	depends on !DISABLE_SMPL
+
+	config SMPL_DELAY_0P5
+	  bool
+	    prompt "0.5 sec"
+
+	config SMPL_DELAY_1P0
+	  bool
+	    prompt "1.0 sec"
+
+	config SMPL_DELAY_1P5
+	  bool
+	    prompt "1.5 sec"
+
+	config SMPL_DELAY_2P0
+	  bool
+	    prompt "2.0 sec"
+endchoice
+
+config SMPL_DELAY
+	int
+	default 0 if SMPL_DELAY_0P5
+	default 1 if SMPL_DELAY_1P0
+	default 2 if SMPL_DELAY_1P5
+	default 3 if SMPL_DELAY_2P0
+endmenu
+
+config MSM_USE_USER_ACCESSIBLE_TIMERS
+	bool "Enables mapping an MSM timer counter page to user space."
+	depends on ARM_USE_USER_ACCESSIBLE_TIMERS
+	help
+	  Enables MSM-specific user accessible timers via a shared
+	  memory page containing the cycle counter.
+
+config MSM_MODEM_SUBSYSTEM_RESTART_MONITOR
+	bool "MSM Modem Subsystem Restart Monitor"
+	default n
+	depends on MSM_SUBSYSTEM_RESTART
+	help
+	  This option enables a module which can notify user-space
+	  applications of modem subsystem power up/down event via uevent.
 
 endif

@@ -425,6 +425,13 @@ static ssize_t mmc_wr_pack_stats_read(struct file *filp, char __user *ubuf,
 			pack_stats->pack_stop_reason[REL_WRITE]);
 		strlcat(ubuf, temp_buf, cnt);
 	}
+	if (pack_stats->pack_stop_reason[NON_SEQ_WRITE]) {
+		snprintf(temp_buf, TEMP_BUF_SIZE,
+			 "%s: %d times: non sequential write\n",
+			mmc_hostname(card->host),
+			pack_stats->pack_stop_reason[NON_SEQ_WRITE]);
+		strlcat(ubuf, temp_buf, cnt);
+	}
 	if (pack_stats->pack_stop_reason[THRESHOLD]) {
 		snprintf(temp_buf, TEMP_BUF_SIZE,
 			 "%s: %d times: Threshold\n",

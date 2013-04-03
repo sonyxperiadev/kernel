@@ -657,6 +657,37 @@ config QFP_FUSE
 	  to the fuse block. Currently this is supported only
 	  on FSM targets.
 
+config NFC_PN544
+	tristate "NFC driver for PN544"
+	default n
+	depends on I2C
+	help
+	  This option enables support for PN544.
+
+config AS3649_FLASHLED
+	tristate "FLASHLED driver for AS3649"
+	default n
+	depends on I2C
+	help
+	  This option enables support for AS3649
+	  flashled controller with AS3649 driver.
+
+config LM3560
+        tristate "LED driver for LM3560"
+        default n
+        depends on I2C
+        help
+          This option enables support for LM3560
+          led controller.
+
+config LM3561
+        tristate "LED driver for LM3561"
+        default n
+        depends on I2C
+        help
+          This option enables support for LM3561
+          led controller.
+
 config USB_HSIC_SMSC_HUB
 	tristate "Support for HSIC based MSM on-chip SMSC3503 HUB"
 	depends on USB_EHCI_MSM_HSIC
@@ -681,6 +712,19 @@ config BU52031NVX_POUCHDETECT
 	help
 	  depends on BU52031NVX
 
+config RAMDUMP_TAGS
+	bool "Ramdump tags to communicate between kernel and ramdump"
+	default n
+	depends on !RAMDUMP_CRASH_LOGS
+	help
+	  This option enables a driver which can be interacted with to
+	  supply the ramdumper with more information about the current
+	  state of the crashing kernel such as build info, HWWD registers,
+	  additional CPU registers not stored in crash_notes, crashing
+	  application info etc. A small amount of memory will be set
+	  aside to hold the information which will later be used by
+	  the ramdump application.
+
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"
 source "drivers/misc/cb710/Kconfig"
@@ -691,4 +735,6 @@ source "drivers/misc/carma/Kconfig"
 source "drivers/misc/altera-stapl/Kconfig"
 source "drivers/misc/slimport_anx7808/Kconfig"
 
+source "drivers/misc/mpu6050/Kconfig"
+source "drivers/misc/mpu3050/Kconfig"
 endmenu

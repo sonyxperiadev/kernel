@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2011-2012, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2012 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -46,6 +47,10 @@
 #define PON_CTRL_4_RESET_EN_MASK		0x01
 #define PON_CTRL_4_SHUTDOWN_ON_RESET		0x0
 #define PON_CTRL_4_RESTART_ON_RESET		0x1
+#define PON_CTRL_4_DELAY_MASK			0x0E
+#define PON_CTRL_4_DELAY_SHIFT			1
+#define PON_CTRL_4_DEBOUNCE_MASK		0xF0
+#define PON_CTRL_4_DEBOUNCE_SHIFT		4
 #define PON_CTRL_5_HARD_RESET_EN_MASK		0x08
 #define PON_CTRL_5_HARD_RESET_EN		0x08
 #define PON_CTRL_5_HARD_RESET_DIS		0x00
@@ -856,6 +861,46 @@ __pm8xxx_hard_reset_config(struct pm8xxx_misc_chip *chip,
 	return rc;
 }
 
+static int
+__pm8xxx_hard_reset_delay_config(struct pm8xxx_misc_chip *chip,
+		enum pm8xxx_pon_delay_config config, u16 pon4_addr)
+{
+	int rc = 0;
+
+	if ((config < PM8XXX_HARD_RESET_DELAY_MS_MIN) ||
+		(config >= PM8XXX_HARD_RESET_DELAY_MS_MAX)) {
+		rc = -EINVAL;
+		goto error;
+	}
+
+	rc = pm8xxx_misc_masked_write(chip, pon4_addr,
+				PON_CTRL_4_DELAY_MASK,
+				(config << PON_CTRL_4_DELAY_SHIFT));
+
+error:
+	return rc;
+}
+
+static int
+__pm8xxx_hard_reset_debounce_config(struct pm8xxx_misc_chip *chip,
+		enum pm8xxx_pon_debounce_config config, u16 pon4_addr)
+{
+	int rc = 0;
+
+	if ((config < PM8XXX_HARD_RESET_DEBOUNCE_MS_MIN) ||
+		(config >= PM8XXX_HARD_RESET_DEBOUNCE_MS_MAX)) {
+		rc = -EINVAL;
+		goto error;
+	}
+
+	rc = pm8xxx_misc_masked_write(chip, pon4_addr,
+				PON_CTRL_4_DEBOUNCE_MASK,
+				(config << PON_CTRL_4_DEBOUNCE_SHIFT));
+
+error:
+	return rc;
+}
+
 /**
  * pm8xxx_hard_reset_config - Allows different reset configurations
  *
@@ -908,6 +953,64 @@ int pm8xxx_hard_reset_config(enum pm8xxx_pon_config config)
 	return rc;
 }
 EXPORT_SYMBOL(pm8xxx_hard_reset_config);
+
+int pm8xxx_hard_reset_delay_config(enum pm8xxx_pon_delay_config config)
+{
+	struct pm8xxx_misc_chip *chip;
+	unsigned long flags;
+	int rc = 0;
+
+	spin_lock_irqsave(&pm8xxx_misc_chips_lock, flags);
+
+	/* Loop over all attached PMICs and call specific functions for them. */
+	list_for_each_entry(chip, &pm8xxx_misc_chips, link) {
+		switch (chip->version) {
+		case PM8XXX_VERSION_8921:
+			rc = __pm8xxx_hard_reset_delay_config(chip, config,
+						REG_PM8921_PON_CNTL_4);
+			break;
+		case PM8XXX_VERSION_8018:
+		case PM8XXX_VERSION_8058:
+		case PM8XXX_VERSION_8901:
+		default:
+			break;
+		}
+	}
+
+	spin_unlock_irqrestore(&pm8xxx_misc_chips_lock, flags);
+
+	return rc;
+}
+EXPORT_SYMBOL(pm8xxx_hard_reset_delay_config);
+
+int pm8xxx_hard_reset_debounce_config(enum pm8xxx_pon_debounce_config config)
+{
+	struct pm8xxx_misc_chip *chip;
+	unsigned long flags;
+	int rc = 0;
+
+	spin_lock_irqsave(&pm8xxx_misc_chips_lock, flags);
+
+	/* Loop over all attached PMICs and call specific functions for them. */
+	list_for_each_entry(chip, &pm8xxx_misc_chips, link) {
+		switch (chip->version) {
+		case PM8XXX_VERSION_8921:
+			rc = __pm8xxx_hard_reset_debounce_config(chip, config,
+						REG_PM8921_PON_CNTL_4);
+			break;
+		case PM8XXX_VERSION_8018:
+		case PM8XXX_VERSION_8058:
+		case PM8XXX_VERSION_8901:
+		default:
+			break;
+		}
+	}
+
+	spin_unlock_irqrestore(&pm8xxx_misc_chips_lock, flags);
+
+	return rc;
+}
+EXPORT_SYMBOL(pm8xxx_hard_reset_debounce_config);
 
 /* Handle the OSC_HALT interrupt: 32 kHz XTAL oscillator has stopped. */
 static irqreturn_t pm8xxx_osc_halt_isr(int irq, void *data)

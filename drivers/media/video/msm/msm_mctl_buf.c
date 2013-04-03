@@ -1,4 +1,5 @@
 /* Copyright (c) 2011-2013, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2013 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -691,7 +692,11 @@ int msm_mctl_reserve_free_buf(
 		}
 	}
 	if (!pcam_inst || !pcam_inst->streamon) {
+#if defined(CONFIG_SONY_CAM_V4L2)
+		D("%s: stream is turned off\n", __func__);
+#else
 		pr_err("%s: stream is turned off\n", __func__);
+#endif
 		return rc;
 	}
 	spin_lock_irqsave(&pcam_inst->vq_irqlock, flags);

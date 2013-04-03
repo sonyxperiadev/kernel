@@ -2,6 +2,7 @@
  *
  * Copyright (C) 2008 Google, Inc.
  * Copyright (c) 2009-2012, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2012 Sony Mobile Communications AB.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -54,6 +55,9 @@ extern struct platform_device msm_device_uart_dm12;
 extern struct platform_device *msm_device_uart_gsbi9;
 extern struct platform_device msm_device_uart_dm6;
 extern struct platform_device msm_device_uart_dm8;
+#ifdef CONFIG_MSM_GSBI7_UART
+extern struct platform_device apq8064_device_uart_gsbi7;
+#endif
 extern struct platform_device msm_device_uart_dm9;
 
 extern struct platform_device msm8960_device_uart_gsbi2;
@@ -83,13 +87,14 @@ extern struct platform_device msm8960_device_ebi1_ch0_erp;
 extern struct platform_device msm8960_device_ebi1_ch1_erp;
 
 extern struct platform_device apq8064_device_uart_gsbi1;
+extern struct platform_device apq8064_device_uart_gsbi2;
 extern struct platform_device apq8064_device_uart_gsbi3;
 extern struct platform_device apq8064_device_uart_gsbi4;
-extern struct platform_device apq8064_device_uart_gsbi7;
+extern struct platform_device apq8064_device_uart_gsbi5;
 extern struct platform_device apq8064_device_qup_i2c_gsbi1;
+extern struct platform_device apq8064_device_qup_i2c_gsbi2;
 extern struct platform_device apq8064_device_qup_i2c_gsbi3;
 extern struct platform_device apq8064_device_qup_i2c_gsbi4;
-extern struct platform_device apq8064_device_qup_spi_gsbi5;
 extern struct platform_device apq8064_slim_ctrl;
 extern struct platform_device apq8064_device_ssbi_pmic1;
 extern struct platform_device apq8064_device_ssbi_pmic2;

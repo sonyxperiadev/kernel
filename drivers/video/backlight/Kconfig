@@ -371,6 +371,14 @@ config BACKLIGHT_LM3533
 	help
 	  Say Y to enable the backlight driver for TI LM3533.
 
+config BACKLIGHT_LP855X
+	tristate "Backlight driver for Texas Instrumrnts LP855X"
+	depends on BACKLIGHT_CLASS_DEVICE && I2C
+	default n
+	help
+	   This suppors TI LP8550, LP8551, LP8552 and LP8556 backlight
+	   driver ICs
+
 endif # BACKLIGHT_CLASS_DEVICE
 
 endif # BACKLIGHT_LCD_SUPPORT

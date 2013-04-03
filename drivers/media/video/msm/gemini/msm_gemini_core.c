@@ -1,4 +1,5 @@
 /* Copyright (c) 2010-2012, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2013 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -142,8 +143,13 @@ void *msm_gemini_core_framedone_irq(int gemini_irq_status, void *context)
 	buf_p = msm_gemini_hw_pingpong_active_buffer(&we_pingpong_buf);
 	if (buf_p) {
 		buf_p->framedone_len = msm_gemini_hw_encode_output_size();
+#if defined(CONFIG_SONY_CAM_V4L2)
+		GMN_DBG("%s:%d] framedone_len %d\n", __func__, __LINE__,
+			buf_p->framedone_len);
+#else
 		pr_err("%s:%d] framedone_len %d\n", __func__, __LINE__,
 			buf_p->framedone_len);
+#endif
 	}
 
 	return buf_p;

@@ -88,7 +88,7 @@ static int sysmon_send_hsic(struct sysmon_subsys *ss, const char *tx_buf,
 			    size_t len)
 {
 	int ret;
-	size_t actual_len;
+	size_t actual_len = 0;
 
 	pr_debug("Sending HSIC message: %s\n", tx_buf);
 	ret = hsic_sysmon_write(ss->hsic_id, tx_buf, len, TIMEOUT_MS);
@@ -96,6 +96,10 @@ static int sysmon_send_hsic(struct sysmon_subsys *ss, const char *tx_buf,
 		return ret;
 	ret = hsic_sysmon_read(ss->hsic_id, ss->rx_buf,
 			       ARRAY_SIZE(ss->rx_buf), &actual_len, TIMEOUT_MS);
+
+	if (ARRAY_SIZE(ss->rx_buf) > actual_len)
+		ss->rx_buf[actual_len] = 0;
+
 	return ret;
 }
 

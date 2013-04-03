@@ -509,6 +509,15 @@ config LEDS_OT200
 	  This option enables support for the LEDs on the Bachmann OT200.
 	  Say Y to enable LEDs on the Bachmann OT200.
 
+config LEDS_LM3533
+        tristate "LED Support for LM3533 LMU IC"
+        depends on I2C
+        default n
+        help
+          If you say 'Y' here you get support for the National Semiconductor
+          LM3533 light management unit IC for backlight, keypad and indicator
+          LEDs. If unsure, say N.
+
 config LEDS_TRIGGERS
 	bool "LED Trigger support"
 	depends on LEDS_CLASS

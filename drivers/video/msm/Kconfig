@@ -25,7 +25,7 @@ config FB_MSM_LOGO
 	bool "MSM Frame Buffer Logo"
 	default n
 	---help---
-	  Show /initlogo.rle during boot.
+	  Show /logo.rle during boot.
 
 config FB_MSM_LCDC_HW
 	bool
@@ -357,6 +357,11 @@ config FB_MSM_MIPI_RENESAS_VIDEO_FWVGA_PT
 	select FB_MSM_MIPI_DSI_RENESAS
 	default n
 
+config FB_MSM_MIPI_RENESAS_VIDEO_SHARP_PT
+	bool
+	select FB_MSM_MIPI_DSI_RENESAS
+	default n
+
 config FB_MSM_MIPI_RENESAS_CMD_FWVGA_PT
 	bool
 	select FB_MSM_MIPI_DSI_RENESAS
@@ -439,6 +444,7 @@ config FB_MSM_WRITEBACK_MSM_PANEL
 	  Support for MDP4 OVERLAY write back mode
 choice
 	prompt "LCD Panel"
+	optional
 	default FB_MSM_MDDI_AUTO_DETECT
 
 config FB_MSM_LCDC_PRISM_WVGA_PANEL
@@ -549,6 +555,7 @@ config FB_MSM_MIPI_PANEL_DETECT
 	select FB_MSM_MIPI_TOSHIBA_VIDEO_WSVGA_PT
 	select FB_MSM_MIPI_TOSHIBA_VIDEO_WUXGA
 	select FB_MSM_MIPI_RENESAS_VIDEO_FWVGA_PT
+	select FB_MSM_MIPI_RENESAS_VIDEO_SHARP_PT
 	select FB_MSM_MIPI_RENESAS_CMD_FWVGA_PT
 	select FB_MSM_MIPI_TRULY_VIDEO_WVGA_PT
 	select FB_MSM_MIPI_NOVATEK_VIDEO_QHD_PT
@@ -592,6 +599,7 @@ config FB_MSM_LCDC_MIPI_PANEL_AUTO_DETECT
 	select FB_MSM_MIPI_TOSHIBA_VIDEO_WVGA_PT
 	select FB_MSM_MIPI_TOSHIBA_VIDEO_WSVGA_PT
 	select FB_MSM_MIPI_RENESAS_VIDEO_FWVGA_PT
+	select FB_MSM_MIPI_RENESAS_VIDEO_SHARP_PT
 	select FB_MSM_MIPI_RENESAS_CMD_FWVGA_PT
 	select FB_MSM_MIPI_NOVATEK_VIDEO_QHD_PT
 	select FB_MSM_MIPI_NOVATEK_CMD_QHD_PT
@@ -611,6 +619,7 @@ config FB_MSM_LVDS_MIPI_PANEL_DETECT
 	select FB_MSM_MIPI_TOSHIBA_VIDEO_WSVGA_PT
 	select FB_MSM_MIPI_TOSHIBA_VIDEO_WUXGA
 	select FB_MSM_MIPI_RENESAS_VIDEO_FWVGA_PT
+	select FB_MSM_MIPI_RENESAS_VIDEO_SHARP_PT
 	select FB_MSM_MIPI_RENESAS_CMD_FWVGA_PT
 	select FB_MSM_MIPI_TRULY_VIDEO_WVGA_PT
 	select FB_MSM_MIPI_NOVATEK_VIDEO_QHD_PT
@@ -691,6 +700,10 @@ config FB_MSM_MIPI_RENESAS_VIDEO_FWVGA_PT_PANEL
 	bool "MIPI Renesas Video FWVGA PT Panel"
 	select FB_MSM_MIPI_RENESAS_VIDEO_FWVGA_PT
 
+config FB_MSM_MIPI_RENESAS_VIDEO_SHARP_PT_LS043K3SX04_PANEL
+	bool "SHARP LS043K3SX04 Panel"
+	select FB_MSM_MIPI_RENESAS_VIDEO_SHARP_PT
+
 config FB_MSM_MIPI_RENESAS_CMD_FWVGA_PT_PANEL
 	bool "MIPI Renesas Command FWVGA PT Panel"
 	select FB_MSM_MIPI_RENESAS_CMD_FWVGA_PT
@@ -752,6 +765,51 @@ config LGIT_VIDEO_WXGA_CABC
 	help
 	  Enable CABC(Content Apaptive Backlight Control) on LGIT Panel
 	  to reduce power consumption
+
+config FB_MSM_MIPI_R63306_SHARP_LS043K3SX04
+	bool "SHARP LS043K3SX04 Panel"
+	select FB_MSM_MIPI_DSI
+	default n
+
+config FB_MSM_MIPI_R63306_SHARP_LS046K3SX01
+	bool "SHARP LS046K3SX01 Panel"
+	select FB_MSM_MIPI_DSI
+	default n
+
+config FB_MSM_MIPI_R63311_SHARP_LS050T3SX02
+	bool "SHARP LS050T3SX02 Panel"
+	select FB_MSM_MIPI_DSI
+	default n
+
+config FB_MSM_MIPI_R63306_TMD_MDW30
+	bool "TMD MDW30 Panel"
+	select FB_MSM_MIPI_DSI
+	default n
+
+config FB_MSM_MIPI_R63311_JDC_MDY70
+	bool "JDC MDY70 Panel"
+	select FB_MSM_MIPI_DSI
+	default n
+
+config FB_MSM_MIPI_R63311_JDC_MDY80
+	bool "JDC MDY80 Panel"
+	select FB_MSM_MIPI_DSI
+	default n
+
+config FB_MSM_MIPI_R63311_SHARP_LS050T3SX01
+	bool "SHARP LS050T3SX01 Panel"
+	select FB_MSM_MIPI_DSI
+	default n
+
+config FB_MSM_MIPI_NT71391_PANASONIC_VVX10F008B00
+	bool "PANASONIC VVX10F008B00 Panel"
+	select FB_MSM_MIPI_DSI
+	default n
+
+config FB_MSM_MIPI_R63306_JDC_MDZ50
+	bool "JDC MDZ50 Panel"
+	select FB_MSM_MIPI_DSI
+	default n
 
 choice
 	prompt "Secondary LCD Panel"
@@ -825,7 +883,7 @@ config FB_MSM_HDMI_MSM_PANEL
 	select FB_MSM_DTV
         select FB_MSM_EXT_INTERFACE_COMMON
 	select FB_MSM_HDMI_COMMON
-	select FB_MSM_HDMI_3D
+	select FB_MSM_HDMI_3D if !FB_MSM_MHL_SII8334
 	default n
 	---help---
 	  Support for 480p/720p/1080i/1080p output through MSM HDMI
@@ -862,6 +920,13 @@ config FB_MSM_HDMI_MHL_8334
 	  Support the HDMI to MHL conversion.
 	  MHL (Mobile High-Definition Link) technology
 	  uses USB connector to output HDMI content
+
+config FB_MSM_MHL_SII8334
+	depends on MHL && FB_MSM_HDMI_MSM_PANEL
+	bool "SiI8334 MHL Transmitter"
+	default y
+	---help---
+	  Support for SiI8334 MHL Transmitter
 
 choice
 	depends on  (FB_MSM_MDP22 || FB_MSM_MDP31 || FB_MSM_MDP40)

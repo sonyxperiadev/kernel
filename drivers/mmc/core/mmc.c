@@ -479,6 +479,15 @@ static int mmc_read_ext_csd(struct mmc_card *card, u8 *ext_csd)
 				else
 					card->ext_csd.bkops_en = 1;
 			}
+			/* As a workaround for freezes caused by a buggy Samsung
+			 * controller/eMMC, bkops is disabled while keeping the option
+			 * switched on.
+			 */
+			if (card->cid.manfid == 0x15) {
+				card->ext_csd.bkops_en = 0;
+				card->ext_csd.raw_bkops_status = 0;
+			}
+
 			if (!card->ext_csd.bkops_en)
 				pr_info("%s: BKOPS_EN bit is not set\n",
 					mmc_hostname(card->host));
@@ -542,6 +551,15 @@ static int mmc_read_ext_csd(struct mmc_card *card, u8 *ext_csd)
 			ext_csd[EXT_CSD_MAX_PACKED_WRITES];
 		card->ext_csd.max_packed_reads =
 			ext_csd[EXT_CSD_MAX_PACKED_READS];
+
+		/*
+		 * Toshiba eMMC has problem on write packed command
+		 * and limit the number of max write packed command
+		 * to 2 recommended by Toshiba.
+		 */
+		if(card->cid.manfid == 0x11) {
+			card->ext_csd.max_packed_writes = 2;
+		}
 	}
 
 out:
@@ -632,6 +650,7 @@ MMC_DEV_ATTR(serial, "0x%08x\n", card->cid.serial);
 MMC_DEV_ATTR(enhanced_area_offset, "%llu\n",
 		card->ext_csd.enhanced_area_offset);
 MMC_DEV_ATTR(enhanced_area_size, "%u\n", card->ext_csd.enhanced_area_size);
+MMC_DEV_ATTR(ext_csd_rev, "%d\n", card->ext_csd.rev);
 
 static struct attribute *mmc_std_attrs[] = {
 	&dev_attr_cid.attr,
@@ -647,6 +666,7 @@ static struct attribute *mmc_std_attrs[] = {
 	&dev_attr_serial.attr,
 	&dev_attr_enhanced_area_offset.attr,
 	&dev_attr_enhanced_area_size.attr,
+	&dev_attr_ext_csd_rev.attr,
 	NULL,
 };
 
@@ -1434,6 +1454,31 @@ static void mmc_detect(struct mmc_host *host)
 }
 
 /*
+ * Save ios settings
+ */
+static void mmc_save_ios(struct mmc_host *host)
+{
+	BUG_ON(!host);
+
+	mmc_host_clk_hold(host);
+
+	memcpy(&host->saved_ios, &host->ios, sizeof(struct mmc_ios));
+
+	mmc_host_clk_release(host);
+}
+
+/*
+ * Restore ios setting
+ */
+static void mmc_restore_ios(struct mmc_host *host)
+{
+	BUG_ON(!host);
+
+	memcpy(&host->ios, &host->saved_ios, sizeof(struct mmc_ios));
+	mmc_set_ios(host);
+}
+
+/*
  * Suspend callback from host.
  */
 static int mmc_suspend(struct mmc_host *host)
@@ -1445,14 +1490,25 @@ static int mmc_suspend(struct mmc_host *host)
 
 	mmc_claim_host(host);
 
+	mmc_save_ios(host);
+
 	err = mmc_cache_ctrl(host, 0);
 	if (err)
 		goto out;
 
+	/*
+	 * Prefer CMD5 sleep/awake over PON to get faster response after sleep.
+	 * Some cards are known to have problems waking after sleep in HS200
+	 * mode, so we use PON in this case if available.
+	 */
 	if (mmc_can_poweroff_notify(host->card))
 		err = mmc_poweroff_notify(host->card, EXT_CSD_POWER_OFF_SHORT);
-	else if (mmc_card_can_sleep(host))
+	if (mmc_card_can_sleep(host) && !mmc_card_hs200(host->card)) {
 		err = mmc_card_sleep(host);
+		if (!err)
+			mmc_card_set_sleep(host->card);
+	} else if (mmc_can_poweroff_notify(host->card))
+		err = mmc_poweroff_notify(host->card, EXT_CSD_POWER_OFF_SHORT);
 	else if (!mmc_host_is_spi(host))
 		mmc_deselect_cards(host);
 	host->card->state &= ~(MMC_STATE_HIGHSPEED | MMC_STATE_HIGHSPEED_200);
@@ -1476,7 +1532,11 @@ static int mmc_resume(struct mmc_host *host)
 	BUG_ON(!host->card);
 
 	mmc_claim_host(host);
-	err = mmc_init_card(host, host->ocr, host->card);
+	if (mmc_card_is_sleep(host->card)) {
+		mmc_restore_ios(host);
+		err = mmc_card_awake(host);
+	} else
+		err = mmc_init_card(host, host->ocr, host->card);
 	mmc_release_host(host);
 
 	return err;
@@ -1487,6 +1547,7 @@ static int mmc_power_restore(struct mmc_host *host)
 	int ret;
 
 	host->card->state &= ~(MMC_STATE_HIGHSPEED | MMC_STATE_HIGHSPEED_200);
+	mmc_card_clr_sleep(host->card);
 	mmc_claim_host(host);
 	ret = mmc_init_card(host, host->ocr, host->card);
 	mmc_release_host(host);

@@ -1,0 +1,38 @@
+config MPU_SENSORS_TIMERIRQ
+	tristate "MPU Timer IRQ"
+	help
+	  If you say yes here you get access to the timerirq device handle which
+	  can be used to select on. This can be used instead of IRQ's, sleeping,
+	  or timer threads.  Reading from this device returns the same type of
+	  information as reading from the MPU and slave IRQ's.
+
+config SENSORS_MPU6050
+	bool "MPU6050 Motion Processing Unit"
+	depends on I2C
+	default n
+	help
+	  If you say yes here you get support for the MPU6050 Gyroscope driver
+	  This driver can also be built as a module.  If so, the module
+	  will be called mpu6050.
+
+config MPU_SENSORS_AK8972
+	bool "AKM ak8972"
+	depends on SENSORS_MPU6050
+	default n
+	help
+	  This enables support for the AKM ak8972 compass
+	  This support is for integration with the MPU3050 or MPU6050 gyroscope
+	  device driver.  Only one compass can be registered at a time.
+	  Specifying more that one compass in the board file will result
+	  in runtime errors.
+
+config MPU_SENSORS_AK8963
+	bool "AKM ak8963"
+	depends on SENSORS_MPU6050
+	default n
+	help
+	  This enables support for the AKM ak8963 compass
+	  This support is for integration with the MPU3050 or MPU6050 gyroscope
+	  device driver.  Only one compass can be registered at a time.
+	  Specifying more that one compass in the board file will result
+	  in runtime errors.

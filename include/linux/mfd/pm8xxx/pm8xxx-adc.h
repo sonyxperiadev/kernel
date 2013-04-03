@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2011-2012, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2012 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -208,6 +209,8 @@ enum pm8xxx_adc_premux_mpp_scale_type {
  * %ADC_SCALE_PMIC_THERM: Returns result in milli degree's Centigrade
  * %ADC_SCALE_XTERN_CHGR_CUR: Returns current across 0.1 ohm resistor
  * %ADC_SCALE_XOTHERM: Returns XO thermistor voltage in degree's Centigrade
+ * %ADC_SCALE_PBA_THERM: Returns result in degree's Centigrade
+ * %ADC_SCALE_BL_THERM: Returns result in degree's Centigrade
  * %ADC_SCALE_NONE: Do not use this scaling type
  */
 enum pm8xxx_adc_scale_fn_type {
@@ -216,6 +219,8 @@ enum pm8xxx_adc_scale_fn_type {
 	ADC_SCALE_PA_THERM,
 	ADC_SCALE_PMIC_THERM,
 	ADC_SCALE_XOTHERM,
+	ADC_SCALE_PBA_THERM,
+	ADC_SCALE_BL_THERM,
 	ADC_SCALE_NONE,
 };
 
@@ -396,6 +401,37 @@ int32_t pm8xxx_adc_scale_pmic_therm(int32_t adc_code,
  * @chan_rslt:	physical result to be stored.
  */
 int32_t pm8xxx_adc_scale_batt_id(int32_t adc_code,
+			const struct pm8xxx_adc_properties *adc_prop,
+			const struct pm8xxx_adc_chan_properties *chan_prop,
+			struct pm8xxx_adc_chan_result *chan_rslt);
+/**
+ * pm8xxx_adc_scale_pba_therm() - Scales the pre-calibrated digital output
+ *		of an ADC to the ADC reference and compensates for the
+ *		gain and offset. Returns the temperature of the pba therm
+ *		in degC.
+ * @adc_code:	pre-calibrated digital ouput of the ADC.
+ * @adc_prop:	adc properties of the pm8xxx adc such as bit resolution,
+ *		reference voltage.
+ * @chan_prop:	individual channel properties to compensate the i/p scaling,
+ *		slope and offset.
+ * @chan_rslt:	physical result to be stored.
+ */
+int32_t pm8xxx_adc_scale_pba_therm(int32_t adc_code,
+			const struct pm8xxx_adc_properties *adc_prop,
+			const struct pm8xxx_adc_chan_properties *chan_prop,
+			struct pm8xxx_adc_chan_result *chan_rslt);
+/**
+ * pm8xxx_adc_scale_bl_therm() - Scales the pre-calibrated digital output
+ *		of an ADC to the ADC reference and compensates for the
+ *		gain and offset. Returns the temperature in degC.
+ * @adc_code:	pre-calibrated digital ouput of the ADC.
+ * @adc_prop:	adc properties of the pm8xxx adc such as bit resolution,
+ *		reference voltage.
+ * @chan_prop:	individual channel properties to compensate the i/p scaling,
+ *		slope and offset.
+ * @chan_rslt:	physical result to be stored.
+ */
+int32_t pm8xxx_adc_scale_bl_therm(int32_t adc_code,
 			const struct pm8xxx_adc_properties *adc_prop,
 			const struct pm8xxx_adc_chan_properties *chan_prop,
 			struct pm8xxx_adc_chan_result *chan_rslt);

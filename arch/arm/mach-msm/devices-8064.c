@@ -1,4 +1,5 @@
 /* Copyright (c) 2011-2013, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2012 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -37,6 +38,7 @@
 #include <mach/msm_smd.h>
 #include <mach/msm_dcvs.h>
 #include <mach/msm_rtb.h>
+#include <mach/msm_tsif.h>
 #include <linux/msm_ion.h>
 #include "clock.h"
 #include "devices.h"
@@ -50,7 +52,7 @@
 
 /* Address of GSBI blocks */
 #define MSM_GSBI1_PHYS		0x12440000
-#define MSM_GSBI2_PHYS		0x13440000
+#define MSM_GSBI2_PHYS		0x12480000
 #define MSM_GSBI3_PHYS		0x16200000
 #define MSM_GSBI4_PHYS		0x16300000
 #define MSM_GSBI5_PHYS		0x1A200000
@@ -59,8 +61,10 @@
 
 /* GSBI UART devices */
 #define MSM_UART1DM_PHYS	(MSM_GSBI1_PHYS + 0x10000)
+#define MSM_UART2DM_PHYS	(MSM_GSBI2_PHYS + 0x10000)
 #define MSM_UART3DM_PHYS	(MSM_GSBI3_PHYS + 0x40000)
 #define MSM_UART4DM_PHYS	(MSM_GSBI4_PHYS + 0x40000)
+#define MSM_UART5DM_PHYS	(MSM_GSBI5_PHYS + 0x40000)
 #define MSM_UART6DM_PHYS	(MSM_GSBI6_PHYS + 0x40000)
 #define MSM_UART7DM_PHYS	(MSM_GSBI7_PHYS + 0x40000)
 
@@ -201,6 +205,34 @@ struct platform_device apq8064_device_uart_gsbi1 = {
 	.resource	= resources_uart_gsbi1,
 };
 
+static struct resource resources_uart_gsbi2[] = {
+	{
+		.start	= APQ8064_GSBI2_UARTDM_IRQ,
+		.end	= APQ8064_GSBI2_UARTDM_IRQ,
+		.flags	= IORESOURCE_IRQ,
+	},
+	{
+		.start	= MSM_UART2DM_PHYS,
+		.end	= MSM_UART2DM_PHYS + PAGE_SIZE - 1,
+		.name	= "uartdm_resource",
+		.flags	= IORESOURCE_MEM,
+	},
+	{
+		.start	= MSM_GSBI2_PHYS,
+		.end	= MSM_GSBI2_PHYS + PAGE_SIZE - 1,
+		.name	= "gsbi_resource",
+		.flags	= IORESOURCE_MEM,
+	},
+};
+
+struct platform_device apq8064_device_uart_gsbi2 = {
+	.name	= "msm_serial_hsl",
+	.id	= 2,
+	.num_resources	= ARRAY_SIZE(resources_uart_gsbi2),
+	.resource	= resources_uart_gsbi2,
+};
+
+
 static struct resource resources_uart_gsbi3[] = {
 	{
 		.start	= GSBI3_UARTDM_IRQ,
@@ -294,6 +326,40 @@ static struct resource resources_qup_i2c_gsbi1[] = {
 	},
 };
 
+static struct resource resources_qup_i2c_gsbi2[] = {
+	{
+		.name	= "gsbi_qup_i2c_addr",
+		.start	= MSM_GSBI2_PHYS,
+		.end	= MSM_GSBI2_PHYS + 4 - 1,
+		.flags	= IORESOURCE_MEM,
+	},
+	{
+		.name	= "qup_phys_addr",
+		.start	= MSM_GSBI2_QUP_PHYS,
+		.end	= MSM_GSBI2_QUP_PHYS + MSM_QUP_SIZE - 1,
+		.flags	= IORESOURCE_MEM,
+	},
+	{
+		.name	= "qup_err_intr",
+		.start	= APQ8064_GSBI2_QUP_IRQ,
+		.end	= APQ8064_GSBI2_QUP_IRQ,
+		.flags	= IORESOURCE_IRQ,
+	},
+	{
+		.name	= "i2c_clk",
+		.start	= 25,
+		.end	= 25,
+		.flags	= IORESOURCE_IO,
+	},
+	{
+		.name	= "i2c_sda",
+		.start	= 24,
+		.end	= 24,
+		.flags	= IORESOURCE_IO,
+	},
+};
+
+
 struct platform_device apq8064_device_qup_i2c_gsbi1 = {
 	.name		= "qup_i2c",
 	.id		= 0,
@@ -375,32 +441,11 @@ struct platform_device apq8064_device_qup_i2c_gsbi4 = {
 	.resource	= resources_qup_i2c_gsbi4,
 };
 
-static struct resource resources_qup_spi_gsbi5[] = {
-	{
-		.name   = "spi_base",
-		.start  = MSM_GSBI5_QUP_PHYS,
-		.end    = MSM_GSBI5_QUP_PHYS + SZ_4K - 1,
-		.flags  = IORESOURCE_MEM,
-	},
-	{
-		.name   = "gsbi_base",
-		.start  = MSM_GSBI5_PHYS,
-		.end    = MSM_GSBI5_PHYS + 4 - 1,
-		.flags  = IORESOURCE_MEM,
-	},
-	{
-		.name   = "spi_irq_in",
-		.start  = GSBI5_QUP_IRQ,
-		.end    = GSBI5_QUP_IRQ,
-		.flags  = IORESOURCE_IRQ,
-	},
-};
-
-struct platform_device apq8064_device_qup_spi_gsbi5 = {
-	.name		= "spi_qsd",
-	.id		= 0,
-	.num_resources	= ARRAY_SIZE(resources_qup_spi_gsbi5),
-	.resource	= resources_qup_spi_gsbi5,
+struct platform_device apq8064_device_qup_i2c_gsbi2 = {
+	.name		= "qup_i2c",
+	.id		= 2,
+	.num_resources	= ARRAY_SIZE(resources_qup_i2c_gsbi2),
+	.resource	= resources_qup_i2c_gsbi2,
 };
 
 static struct resource resources_qup_i2c_gsbi5[] = {
@@ -443,31 +488,58 @@ struct platform_device mpq8064_device_qup_i2c_gsbi5 = {
 	.resource	= resources_qup_i2c_gsbi5,
 };
 
-static struct resource resources_uart_gsbi7[] = {
+static struct resource resources_uart_gsbi5[] = {
 	{
-		.start	= GSBI7_UARTDM_IRQ,
-		.end	= GSBI7_UARTDM_IRQ,
+		.start	= GSBI5_UARTDM_IRQ,
+		.end	= GSBI5_UARTDM_IRQ,
 		.flags	= IORESOURCE_IRQ,
 	},
 	{
-		.start	= MSM_UART7DM_PHYS,
-		.end	= MSM_UART7DM_PHYS + PAGE_SIZE - 1,
+		.start	= MSM_UART5DM_PHYS,
+		.end	= MSM_UART5DM_PHYS + PAGE_SIZE - 1,
 		.name	= "uartdm_resource",
 		.flags	= IORESOURCE_MEM,
 	},
 	{
-		.start	= MSM_GSBI7_PHYS,
-		.end	= MSM_GSBI7_PHYS + PAGE_SIZE - 1,
+		.start	= MSM_GSBI5_PHYS,
+		.end	= MSM_GSBI5_PHYS + PAGE_SIZE - 1,
 		.name	= "gsbi_resource",
 		.flags	= IORESOURCE_MEM,
 	},
 };
 
-struct platform_device apq8064_device_uart_gsbi7 = {
+struct platform_device apq8064_device_uart_gsbi5 = {
 	.name	= "msm_serial_hsl",
 	.id	= 0,
-	.num_resources	= ARRAY_SIZE(resources_uart_gsbi7),
-	.resource	= resources_uart_gsbi7,
+	.num_resources	= ARRAY_SIZE(resources_uart_gsbi5),
+	.resource	= resources_uart_gsbi5,
+};
+
+static struct resource resources_uart_gsbi7[] = {
+	{
+		.start  = GSBI7_UARTDM_IRQ,
+		.end    = GSBI7_UARTDM_IRQ,
+		.flags  = IORESOURCE_IRQ,
+	},
+	{
+		.start  = MSM_UART7DM_PHYS,
+		.end    = MSM_UART7DM_PHYS + PAGE_SIZE - 1,
+		.name   = "uartdm_resource",
+		.flags  = IORESOURCE_MEM,
+	},
+	{
+		.start  = MSM_GSBI7_PHYS,
+		.end    = MSM_GSBI7_PHYS + PAGE_SIZE - 1,
+		.name   = "gsbi_resource",
+		.flags  = IORESOURCE_MEM,
+	},
+};
+
+struct platform_device apq8064_device_uart_gsbi7 = {
+	.name   = "msm_serial_hsl",
+	.id     = 3,
+	.num_resources  = ARRAY_SIZE(resources_uart_gsbi7),
+	.resource       = resources_uart_gsbi7,
 };
 
 struct platform_device apq_pcm = {
@@ -533,27 +605,26 @@ struct platform_device apq_cpudai_slim_4_tx = {
 #define MSM_TSIF_SIZE        (0x200)
 
 #define TSIF_0_CLK       GPIO_CFG(55, 1, GPIO_CFG_INPUT, \
-	GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA)
+	GPIO_CFG_NO_PULL, GPIO_CFG_2MA)
 #define TSIF_0_EN        GPIO_CFG(56, 1, GPIO_CFG_INPUT, \
-	GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA)
+	GPIO_CFG_NO_PULL, GPIO_CFG_2MA)
 #define TSIF_0_DATA      GPIO_CFG(57, 1, GPIO_CFG_INPUT, \
-	GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA)
+	GPIO_CFG_NO_PULL, GPIO_CFG_2MA)
 #define TSIF_0_SYNC      GPIO_CFG(62, 1, GPIO_CFG_INPUT, \
 	GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA)
-#define TSIF_1_CLK       GPIO_CFG(59, 1, GPIO_CFG_INPUT, \
+#define TSIF_1_CLK       GPIO_CFG(79, 1, GPIO_CFG_INPUT, \
 	GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA)
-#define TSIF_1_EN        GPIO_CFG(60, 1, GPIO_CFG_INPUT, \
+#define TSIF_1_EN        GPIO_CFG(80, 1, GPIO_CFG_INPUT, \
 	GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA)
-#define TSIF_1_DATA      GPIO_CFG(61, 1, GPIO_CFG_INPUT, \
+#define TSIF_1_DATA      GPIO_CFG(81, 1, GPIO_CFG_INPUT, \
 	GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA)
-#define TSIF_1_SYNC      GPIO_CFG(58, 1, GPIO_CFG_INPUT, \
+#define TSIF_1_SYNC      GPIO_CFG(78, 1, GPIO_CFG_INPUT, \
 	GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA)
 
 static const struct msm_gpio tsif0_gpios[] = {
 	{ .gpio_cfg = TSIF_0_CLK,  .label =  "tsif_clk", },
 	{ .gpio_cfg = TSIF_0_EN,   .label =  "tsif_en", },
 	{ .gpio_cfg = TSIF_0_DATA, .label =  "tsif_data", },
-	{ .gpio_cfg = TSIF_0_SYNC, .label =  "tsif_sync", },
 };
 
 static const struct msm_gpio tsif1_gpios[] = {
@@ -566,8 +637,8 @@ static const struct msm_gpio tsif1_gpios[] = {
 struct msm_tsif_platform_data tsif1_8064_platform_data = {
 	.num_gpios = ARRAY_SIZE(tsif1_gpios),
 	.gpios = tsif1_gpios,
-	.tsif_pclk = "iface_clk",
-	.tsif_ref_clk = "ref_clk",
+	.tsif_pclk = "tsif_pclk",
+	.tsif_ref_clk = "tsif_ref_clk",
 };
 
 struct resource tsif1_8064_resources[] = {
@@ -583,16 +654,16 @@ struct resource tsif1_8064_resources[] = {
 	},
 	[2] = {
 		.flags = IORESOURCE_DMA,
-		.start = DMOV8064_TSIF_CHAN,
-		.end   = DMOV8064_TSIF_CRCI,
+		.start = DMOV_TSIF_CHAN,
+		.end   = DMOV_TSIF_CRCI,
 	},
 };
 
 struct msm_tsif_platform_data tsif0_8064_platform_data = {
 	.num_gpios = ARRAY_SIZE(tsif0_gpios),
 	.gpios = tsif0_gpios,
-	.tsif_pclk = "iface_clk",
-	.tsif_ref_clk = "ref_clk",
+	.tsif_pclk = "tsif_pclk",
+	.tsif_ref_clk = "tsif_ref_clk",
 };
 
 struct resource tsif0_8064_resources[] = {
@@ -1015,6 +1086,10 @@ static struct resource resources_hsusb_host[] = {
 	},
 };
 
+#define MDM2AP_PBLRDY	    46
+#define AP2MDM_WAKEUP	    35
+#define MDM2AP_ERRFATAL	    19
+
 static struct resource resources_hsic_host[] = {
 	{
 		.start	= 0x12510000,
@@ -1036,6 +1111,24 @@ static struct resource resources_hsic_host[] = {
 		.start	= 47,
 		.end	= 47,
 		.name	= "wakeup",
+		.flags	= IORESOURCE_IO,
+	},
+	{
+		.start	= AP2MDM_WAKEUP,
+		.end	= AP2MDM_WAKEUP,
+		.name	= "AP2MDM_HSICRDY",
+		.flags	= IORESOURCE_IO,
+	},
+	{
+		.start	= MDM2AP_ERRFATAL,
+		.end	= MDM2AP_ERRFATAL,
+		.name	= "MDM2AP_ERRFATAL",
+		.flags	= IORESOURCE_IO,
+	},
+	{
+		.start	= MDM2AP_PBLRDY,
+		.end	= MDM2AP_PBLRDY,
+		.name	= "MDM2AP_PBLRDY",
 		.flags	= IORESOURCE_IO,
 	},
 };
@@ -1980,23 +2073,6 @@ static struct fs_driver_data ijpeg_fs_data = {
 	.bus_port0 = MSM_BUS_MASTER_JPEG_ENC,
 };
 
-static struct fs_driver_data mdp_fs_data = {
-	.clks = (struct fs_clk_data[]){
-		{ .name = "core_clk" },
-		{ .name = "iface_clk" },
-		{ .name = "bus_clk" },
-		{ .name = "vsync_clk" },
-		{ .name = "lut_clk" },
-		{ .name = "tv_src_clk" },
-		{ .name = "tv_clk" },
-		{ .name = "reset1_clk" },
-		{ .name = "reset2_clk" },
-		{ 0 }
-	},
-	.bus_port0 = MSM_BUS_MASTER_MDP_PORT0,
-	.bus_port1 = MSM_BUS_MASTER_MDP_PORT1,
-};
-
 static struct fs_driver_data rot_fs_data = {
 	.clks = (struct fs_clk_data[]){
 		{ .name = "core_clk" },
@@ -2049,7 +2125,6 @@ static struct fs_driver_data vcap_fs_data = {
 };
 
 struct platform_device *apq8064_footswitch[] __initdata = {
-	FS_8X60(FS_MDP,    "vdd",       "mdp.0",        &mdp_fs_data),
 	FS_8X60(FS_ROT,    "vdd",	"msm_rotator.0", &rot_fs_data),
 	FS_8X60(FS_IJPEG,  "vdd",	"msm_gemini.0",	&ijpeg_fs_data),
 	FS_8X60(FS_VFE,    "vdd",	"msm_vfe.0",	&vfe_fs_data),

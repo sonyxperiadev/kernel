@@ -1,4 +1,5 @@
 /* Copyright (c) 2009-2013, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2012-2013 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -4806,6 +4807,9 @@ static DEFINE_CLK_VOTER(dfab_sdc2_clk, &dfab_clk.c, 0);
 static DEFINE_CLK_VOTER(dfab_sdc3_clk, &dfab_clk.c, 0);
 static DEFINE_CLK_VOTER(dfab_sdc4_clk, &dfab_clk.c, 0);
 static DEFINE_CLK_VOTER(dfab_sdc5_clk, &dfab_clk.c, 0);
+#if defined(CONFIG_SONY_CAM_V4L2)
+static DEFINE_CLK_VOTER(dfab_vfe_clk, &dfab_clk.c, 0);
+#endif
 static DEFINE_CLK_VOTER(dfab_sps_clk, &dfab_clk.c, 0);
 static DEFINE_CLK_VOTER(dfab_bam_dmux_clk, &dfab_clk.c, 0);
 static DEFINE_CLK_VOTER(dfab_scm_clk, &dfab_clk.c, 0);
@@ -5300,22 +5304,26 @@ static struct clk_lookup msm_clocks_8064[] = {
 #else
 	CLK_LOOKUP("core_clk",		gsbi1_uart_clk.c, "msm_serial_hsl.1"),
 #endif
-	CLK_LOOKUP("core_clk",		gsbi2_uart_clk.c,	""),
+	CLK_LOOKUP("core_clk",		gsbi2_uart_clk.c,	"msm_serial_hsl.2"),
 	CLK_LOOKUP("core_clk",		gsbi3_uart_clk.c,	""),
 #ifdef CONFIG_MACH_LGE
 	CLK_LOOKUP("core_clk",		gsbi4_uart_clk.c,	"msm_serial_hsl.0"),
 #else
 	CLK_LOOKUP("core_clk",		gsbi4_uart_clk.c,	""),
 #endif
-	CLK_LOOKUP("core_clk",		gsbi5_uart_clk.c,	""),
+	CLK_LOOKUP("core_clk",		gsbi5_uart_clk.c,	"msm_serial_hsl.0"),
 	CLK_LOOKUP("core_clk",		gsbi6_uart_clk.c,	""),
 #ifdef CONFIG_MACH_LGE
 	CLK_LOOKUP("core_clk",		gsbi7_uart_clk.c,	""),
 #else
-	CLK_LOOKUP("core_clk",		gsbi7_uart_clk.c, "msm_serial_hsl.0"),
+# ifdef CONFIG_MSM_GSBI7_UART
+	CLK_LOOKUP("core_clk",          gsbi7_uart_clk.c, "msm_serial_hsl.3"),
+# else
+	CLK_LOOKUP("core_clk",          gsbi7_uart_clk.c,       ""),
+# endif
 #endif
 	CLK_LOOKUP("core_clk",		gsbi1_qup_clk.c,	"qup_i2c.0"),
-	CLK_LOOKUP("core_clk",		gsbi2_qup_clk.c,	""),
+	CLK_LOOKUP("core_clk",		gsbi2_qup_clk.c,	"qup_i2c.2"),
 	CLK_LOOKUP("core_clk",		gsbi3_qup_clk.c,	"qup_i2c.3"),
 	CLK_LOOKUP("core_clk",		gsbi4_qup_clk.c,	"qup_i2c.4"),
 	CLK_LOOKUP("core_clk",		gsbi5_qup_clk.c,	"spi_qsd.0"),
@@ -5323,6 +5331,8 @@ static struct clk_lookup msm_clocks_8064[] = {
 	CLK_LOOKUP("core_clk",		gsbi6_qup_clk.c,	""),
 	CLK_LOOKUP("core_clk",		gsbi7_qup_clk.c,	""),
 	CLK_LOOKUP("core_clk",		pdm_clk.c,		""),
+	CLK_LOOKUP("tsif_pclk",		tsif_p_clk.c,		NULL),
+	CLK_LOOKUP("tsif_ref_clk",	tsif_ref_clk.c,		NULL),
 	CLK_LOOKUP("mem_clk",		pmem_clk.c,		"msm_sps"),
 	CLK_LOOKUP("core_clk",          prng_clk.c,		"msm_rng.0"),
 	CLK_LOOKUP("core_clk",		sdc1_clk.c,		"msm_sdcc.1"),
@@ -5361,19 +5371,21 @@ static struct clk_lookup msm_clocks_8064[] = {
 	CLK_LOOKUP("iface_clk",		gsbi1_p_clk.c,	"msm_serial_hsl.1"),
 #endif
 	CLK_LOOKUP("iface_clk",		gsbi1_p_clk.c,	"qup_i2c.0"),
-	CLK_LOOKUP("iface_clk",		gsbi2_p_clk.c,		""),
+	CLK_LOOKUP("iface_clk",		gsbi2_p_clk.c,	"msm_serial_hsl.2"),
+	CLK_LOOKUP("iface_clk",		gsbi2_p_clk.c,		"qup_i2c.2"),
 	CLK_LOOKUP("iface_clk",		gsbi3_p_clk.c,		"qup_i2c.3"),
 #ifdef CONFIG_MACH_LGE
 	CLK_LOOKUP("iface_clk",		gsbi4_p_clk.c,		"msm_serial_hsl.0"),
 #endif
 	CLK_LOOKUP("iface_clk",		gsbi4_p_clk.c,		"qup_i2c.4"),
+	CLK_LOOKUP("iface_clk",		gsbi5_p_clk.c,		"msm_serial_hsl.0"),
 	CLK_LOOKUP("iface_clk",		gsbi5_p_clk.c,		"spi_qsd.0"),
 	CLK_LOOKUP("iface_clk",		gsbi5_p_clk.c,		"qup_i2c.5"),
 	CLK_LOOKUP("iface_clk",		gsbi6_p_clk.c,		""),
 #ifdef CONFIG_MACH_LGE
 	CLK_LOOKUP("iface_clk",		gsbi7_p_clk.c,		""),
 #else
-	CLK_LOOKUP("iface_clk",		gsbi7_p_clk.c,	"msm_serial_hsl.0"),
+	CLK_LOOKUP("iface_clk",		gsbi7_p_clk.c,	"msm_serial_hsl.3"),
 #endif
 	CLK_LOOKUP("ref_clk",	tsif_ref_clk.c,	"msm_tspp.0"),
 	CLK_LOOKUP("iface_clk",		tsif_p_clk.c,		"msm_tspp.0"),
@@ -5396,11 +5408,17 @@ static struct clk_lookup msm_clocks_8064[] = {
 	CLK_LOOKUP("iface_clk",		pmic_arb1_p_clk.c,	""),
 	CLK_LOOKUP("core_clk",		pmic_ssbi2_clk.c,	""),
 	CLK_LOOKUP("mem_clk",		rpm_msg_ram_p_clk.c,	""),
+#if !defined(CONFIG_SONY_CAM_V4L2)
 	CLK_LOOKUP("cam_clk",		cam0_clk.c,	"4-001a"),
 	CLK_LOOKUP("cam_clk",		cam0_clk.c,	"4-0034"),
 	CLK_LOOKUP("cam_clk",		cam0_clk.c,	"4-0020"),
 	CLK_LOOKUP("cam_clk",		cam1_clk.c,	"4-0048"),
 	CLK_LOOKUP("cam_clk",		cam1_clk.c,	"4-006c"),
+#else
+	CLK_LOOKUP("cam_clk",		cam0_clk.c,	"4-0010"),
+	CLK_LOOKUP("cam_clk",		cam1_clk.c,	"4-0036"),
+	CLK_LOOKUP("cam_clk",		cam1_clk.c,	"4-003d"),
+#endif
 	CLK_LOOKUP("csi_src_clk",	csi0_src_clk.c,		"msm_csid.0"),
 	CLK_LOOKUP("csi_src_clk",	csi1_src_clk.c,		"msm_csid.1"),
 	CLK_LOOKUP("csi_src_clk",	csi2_src_clk.c,		"msm_csid.2"),
@@ -5466,11 +5484,18 @@ static struct clk_lookup msm_clocks_8064[] = {
 	CLK_LOOKUP("tv_clk",		mdp_tv_clk.c,	"footswitch-8x60.4"),
 	CLK_LOOKUP("hdmi_clk",		hdmi_tv_clk.c,		"dtv.0"),
 	CLK_LOOKUP("core_clk",		hdmi_app_clk.c,		"hdmi_msm.1"),
+#if defined(CONFIG_SONY_VPE)
+	CLK_LOOKUP("vpe_clk",		vpe_clk.c,		"sony_vpe.0"),
+#else
 	CLK_LOOKUP("vpe_clk",		vpe_clk.c,		"msm_vpe.0"),
+#endif
 	CLK_LOOKUP("core_clk",		vpe_clk.c,	"footswitch-8x60.9"),
 	CLK_LOOKUP("vfe_clk",		vfe_clk.c,		"msm_vfe.0"),
 	CLK_LOOKUP("core_clk",		vfe_clk.c,	"footswitch-8x60.8"),
 	CLK_LOOKUP("csi_vfe_clk",	csi_vfe_clk.c,		"msm_vfe.0"),
+#if defined(CONFIG_SONY_CAM_V4L2)
+	CLK_LOOKUP("dfab_clk",		dfab_vfe_clk.c,		"msm_vfe.0"),
+#endif
 	CLK_LOOKUP("bus_clk",		vfe_axi_clk.c,	"footswitch-8x60.8"),
 	CLK_LOOKUP("bus_clk",		mdp_axi_clk.c,	"footswitch-8x60.4"),
 	CLK_LOOKUP("bus_clk",		rot_axi_clk.c,	"footswitch-8x60.6"),
@@ -5504,7 +5529,11 @@ static struct clk_lookup msm_clocks_8064[] = {
 	CLK_LOOKUP("iface_clk",		vcodec_p_clk.c,	"footswitch-8x60.7"),
 	CLK_LOOKUP("vfe_pclk",		vfe_p_clk.c,		"msm_vfe.0"),
 	CLK_LOOKUP("iface_clk",		vfe_p_clk.c,	"footswitch-8x60.8"),
+#if defined(CONFIG_SONY_VPE)
+	CLK_LOOKUP("vpe_pclk",		vpe_p_clk.c,		"sony_vpe.0"),
+#else
 	CLK_LOOKUP("vpe_pclk",		vpe_p_clk.c,		"msm_vpe.0"),
+#endif
 	CLK_LOOKUP("iface_clk",		vpe_p_clk.c,	"footswitch-8x60.9"),
 
 	CLK_LOOKUP("bit_clk",		mi2s_bit_clk.c,

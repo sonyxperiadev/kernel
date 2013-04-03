@@ -3,6 +3,8 @@
 
 /*
  *  Copyright (c) 2007 Jiri Kosina
+ *  Copyright 2011,2012 Sony Corporation
+ *  Copyright (c) 2012 Sony Mobile Communications AB.
  */
 
 /*
@@ -38,6 +40,18 @@ struct hidraw_devinfo {
 /* The first byte of SFEATURE and GFEATURE is the report number */
 #define HIDIOCSFEATURE(len)    _IOC(_IOC_WRITE|_IOC_READ, 'H', 0x06, len)
 #define HIDIOCGFEATURE(len)    _IOC(_IOC_WRITE|_IOC_READ, 'H', 0x07, len)
+
+#ifdef CONFIG_HID_SONY_PS3_CTRL_BT
+/* ioctl: HID Get feature with data size */
+#define HIDIOCGF_WDATASIZE(len) \
+		_IOC(_IOC_WRITE|_IOC_READ, 'H', 0x08, len)
+/* ioctl: HID Set feature skip report id */
+#define HIDIOCSF_SKIPREPID(len) \
+		_IOC(_IOC_WRITE|_IOC_READ, 'H', 0x09, len)
+/* ioctl: HID Output skip report id */
+#define HIDIOCSO_SKIPREPID(len) \
+		_IOC(_IOC_WRITE|_IOC_READ, 'H', 0x0A, len)
+#endif
 
 #define HIDRAW_FIRST_MINOR 0
 #define HIDRAW_MAX_DEVICES 64

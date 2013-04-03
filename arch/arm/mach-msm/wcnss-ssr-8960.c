@@ -1,4 +1,5 @@
 /* Copyright (c) 2011-2012, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2012 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -27,6 +28,9 @@
 #include <mach/peripheral-loader.h>
 #include "smd_private.h"
 #include "ramdump.h"
+#ifdef CONFIG_RAMDUMP_TAGS
+#include <linux/rdtags.h>
+#endif
 
 #define MODULE_NAME			"wcnss_8960"
 #define MAX_BUF_SIZE			0x51
@@ -78,6 +82,9 @@ static void smsm_state_cb_hdlr(void *data, uint32_t old_state,
 		buffer[size] = '\0';
 		pr_err("%s: wcnss subsystem failure reason: %s\n",
 				__func__, buffer);
+#ifdef CONFIG_RAMDUMP_TAGS
+		rdtags_add_tag("ssr_reason", buffer, strnlen(buffer, MAX_BUF_SIZE - 1) + 1);
+#endif
 		memset(smem_reset_reason, 0, smem_reset_size);
 		wmb();
 	}

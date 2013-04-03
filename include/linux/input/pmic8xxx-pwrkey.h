@@ -13,6 +13,10 @@
 #ifndef __PMIC8XXX_PWRKEY_H__
 #define __PMIC8XXX_PWRKEY_H__
 
+#ifdef CONFIG_PMIC8XXX_FORCECRASH
+#include <linux/platform_device.h>
+#endif
+
 #define PM8XXX_PWRKEY_DEV_NAME "pm8xxx-pwrkey"
 
 /**
@@ -34,5 +38,11 @@ struct pm8xxx_pwrkey_platform_data  {
 	u32  kpd_trigger_delay_us;
 	u32  wakeup;
 };
+
+#ifdef CONFIG_PMIC8XXX_FORCECRASH
+extern int pmic8xxx_forcecrash_init(struct platform_device *);
+extern void pmic8xxx_forcecrash_exit(struct platform_device *);
+extern void pmic8xxx_forcecrash_timer_setup(bool);
+#endif
 
 #endif /* __PMIC8XXX_PWRKEY_H__ */

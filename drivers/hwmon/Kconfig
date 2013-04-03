@@ -860,6 +860,14 @@ config SENSORS_PM8XXX_ADC
 	  The driver supports reading the HKADC, XOADC and support to set and receive
 	  temperature threshold notifications using the Battery temperature module.
 
+config SENSORS_PM8XXX_PULLUP_100K_BLTHERM
+        bool "Switch 100k pull-up thermister temperature table"
+	depends on SENSORS_PM8XXX_ADC
+	default n
+	help
+	  This option switches bl_therm temperature table for 100k pull-up
+	  thermister which is NCP15WF104F03RC or NTCG104EF104FT1X.
+
 config SENSORS_EPM_ADC
 	tristate "EPM ADC Driver for power measurement"
 	depends on I2C && SPI_MASTER

@@ -1,4 +1,5 @@
 /* Copyright (c) 2011-2012, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2013 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -1016,7 +1017,11 @@ struct axi_ctrl_t {
 	struct resource	*vfemem;
 	struct resource *vfeio;
 	struct regulator *fs_vfe;
+#if defined(CONFIG_SONY_CAM_V4L2)
+	struct clk *vfe_clk[4];
+#else
 	struct clk *vfe_clk[3];
+#endif
 	struct tasklet_struct vfe32_tasklet;
 	struct vfe_share_ctrl_t *share_ctrl;
 	struct device *iommu_ctx_imgwr;

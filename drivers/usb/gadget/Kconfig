@@ -915,6 +915,14 @@ config USB_G_ANDROID
 	  Each function can be configured and enabled/disabled
 	  dynamically from userspace through a sysfs interface.
 
+config USB_ANDROID_DTF
+	boolean "ic-transfer driver"
+	depends on USB_G_ANDROID
+	default n
+	help
+	  Enabling this option adds ic-transfer driver support to the
+	  android gadget.
+
 config USB_CDC_COMPOSITE
 	tristate "CDC Composite Device (Ethernet and ACM)"
 	depends on NET
@@ -1138,5 +1146,27 @@ config USB_ANDROID_CDC_ECM
 	default n
 	help
 	  Android Gadget USB support CDC ECM instead of RNDIS
+
+config USB_ANDROID_NCM
+       boolean "Gadget driver for NCM, Network Control Model"
+       depends on USB_G_ANDROID
+       default n
+       help
+         Enabling this option adds packet transfer driver
+         support to the android gadget.
+
+config USB_ANDROID_MBIM
+       boolean "Gadget driver for MIBM, Mobile Broadband Interface Model"
+       depends on USB_G_ANDROID && !USB_ANDROID_NCM
+       default n
+       help
+         Provides MIBM ethernet function for android gadget driver.
+         MIBM is the one of communication device class.
+
+config USB_MIRRORLINK
+       boolean "Handle MirrorLink USB command"
+       default n
+       help
+         Enabling this option adds support for MirrorLink USB command.
 
 endif # USB_GADGET

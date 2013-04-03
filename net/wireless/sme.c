@@ -3,6 +3,7 @@
  *
  * Copyright 2009	Johannes Berg <johannes@sipsolutions.net>
  * Copyright (C) 2009   Intel Corporation. All rights reserved.
+ * Copyright (C) 2012   Sony Mobile Communications AB.
  */
 
 #include <linux/etherdevice.h>
@@ -415,7 +416,6 @@ void __cfg80211_connect_result(struct net_device *dev, const u8 *bssid,
 			       struct cfg80211_bss *bss)
 {
 	struct wireless_dev *wdev = dev->ieee80211_ptr;
-	u8 *country_ie;
 #ifdef CONFIG_CFG80211_WEXT
 	union iwreq_data wrqu;
 #endif
@@ -498,21 +498,6 @@ void __cfg80211_connect_result(struct net_device *dev, const u8 *bssid,
 
 	wdev->sme_state = CFG80211_SME_CONNECTED;
 	cfg80211_upload_connect_keys(wdev);
-
-	country_ie = (u8 *) ieee80211_bss_get_ie(bss, WLAN_EID_COUNTRY);
-
-	if (!country_ie)
-		return;
-
-	/*
-	 * ieee80211_bss_get_ie() ensures we can access:
-	 * - country_ie + 2, the start of the country ie data, and
-	 * - and country_ie[1] which is the IE length
-	 */
-	regulatory_hint_11d(wdev->wiphy,
-			    bss->channel->band,
-			    country_ie + 2,
-			    country_ie[1]);
 }
 
 void cfg80211_connect_result(struct net_device *dev, const u8 *bssid,

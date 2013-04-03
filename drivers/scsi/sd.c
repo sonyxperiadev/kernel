@@ -1,6 +1,7 @@
 /*
  *      sd.c Copyright (C) 1992 Drew Eckhardt
  *           Copyright (C) 1993, 1994, 1995, 1999 Eric Youngdale
+ *           Copyright (C) 2012 Sony Mobile Communications AB.
  *
  *      Linux scsi disk driver
  *              Initial versions: Drew Eckhardt
@@ -2448,9 +2449,13 @@ static int sd_try_extended_inquiry(struct scsi_device *sdp)
 static int sd_revalidate_disk(struct gendisk *disk)
 {
 	struct scsi_disk *sdkp = scsi_disk(disk);
-	struct scsi_device *sdp = sdkp->device;
+	struct scsi_device *sdp;
 	unsigned char *buffer;
 	unsigned flush = 0;
+
+	if (!sdkp)
+		return -ENODEV;
+	sdp = sdkp->device;
 
 	SCSI_LOG_HLQUEUE(3, sd_printk(KERN_INFO, sdkp,
 				      "sd_revalidate_disk\n"));
