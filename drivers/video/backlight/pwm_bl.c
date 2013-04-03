@@ -121,10 +121,13 @@ static void backlight_driver_late_resume(struct early_suspend *h)
 	struct backlight_device *bl = dev_get_drvdata(&pdev->dev);
 	int brightness = bl->props.brightness;
 
-	brightness = pb->lth_brightness +
-		(brightness * (pb->period - pb->lth_brightness) / bl->props.max_brightness);
-	pwm_config(pb->pwm, brightness, pb->period);
-	pwm_enable(pb->pwm);
+	if (brightness) {
+		brightness = pb->lth_brightness +
+			(brightness * (pb->period - pb->lth_brightness) /
+			bl->props.max_brightness);
+		pwm_config(pb->pwm, brightness, pb->period);
+		pwm_enable(pb->pwm);
+	}
 }
 #endif
 
