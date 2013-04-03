@@ -34,7 +34,7 @@
 		 /* Enable BC12_EN */
 		0x44 0x01 0x01 0
 		  /*  ICCMAX to 1500mA*/
-		0x47 0x09 0xFF 0
+		0x47 0x0B 0xFF 0
 		  /* NTC Hot Temperature Comparator rising = 60C*/
 		0xCC 0x40 0xFF 1
 		  /* NTC Hot Temperature Comparator falling = 45C*/
@@ -74,8 +74,8 @@
 		 0x40 0x18 0xFF 1
 		 /* MMSR LPM voltage - 0.88V */
 		 0xCA 0x04 0x3F 0
-		 /* SDSR1 NM1 voltage - 1.2V*/
-		 0xCC 0x24 0x3F 0
+		 /* SDSR1 NM1 voltage - 1.24V*/
+		 0xCC 0x28 0x3F 0
 		 /* SDSR1 LPM voltage - 0.9V*/
 		 0xCD 0x06 0x3F 0
 		 /* SDSR2 NM1 voltage - 1.24*/
@@ -99,6 +99,10 @@
 		 0x40 0x0 0x4 1
 		 /*turn of synthesizer when no PLL request */
 		 0x1A 0xfe 0xff 0
+		/*RFLDO pulldown disable MobC00290043*/
+		 0x96 0x40 0x40 0
+		 /*AUDLDO pulldown disable*/
+		 0x9f 0x40 0x40 0
 		 /*LVLDO1 voltage - 1.786V */
 		 0x1E 0xb8 0xff 1
 		 /*SIMLDO2 enable pulldown MobC00298660*/
@@ -163,4 +167,24 @@
 		iosr2 = "1", "iosr2_uc", "0", "0", "0", "0", "0";
 	};
 
+	bcmpmu_adc {
+		compatible = "Broadcom,adc";
+		/*name flag volt_range adc_offset addr_offset*/
+		channel0 = "vmbatt", "0", "4800", "0", "0x2";
+		channel1 = "vbbatt", "0", "4800", "0", "0x4";
+		channel2 = "0";
+		channel3 = "vbus", "0", "14400", "0", "0x8";
+		channel4 = "idin", "0", "1200", "0", "0xa";
+		channel5 = "ntc", "0", "1200", "0", "0xc";
+		channel6 = "bsi", "0", "1200", "0", "0xe";
+		channel7 = "bom", "0", "1200", "0", "0x10";
+		channel8 = "32ktemp", "0", "1200", "0","0x12";
+		channel9 = "patemp", "0", "1200", "0", "0x14";
+		channel10 = "als", "0", "1200", "0", "0x16";
+		channel11 = "0";
+		channel12 = "0";
+		channel13 = "0";
+		channel14 = "0";
+		channel15 = "0";
+	};
 };

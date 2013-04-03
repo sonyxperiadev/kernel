@@ -34,17 +34,19 @@
 		 /* Enable BC12_EN */
 		0x44 0x01 0x01 0
 		  /*  ICCMAX to 1500mA*/
-		0x47 0x09 0xFF 0
-		  /* NTC Hot Temperature Comparator*/
-		0xCC 0x43 0xFF 1
-		  /* NTC Hot Temperature Comparator*/
-		0xCD 0x7F 0xFF 1
-		  /* NTC Cold Temperature Comparator*/
-		0xCE 0x3B 0xFF 1
-		  /* NTC Cold Temperature Comparator*/
-		0xCF 0xF8 0xFF 1
+		0x47 0x0B 0xFF 0
+		  /* NTC Hot Temperature Comparator rising = 60C*/
+		0xCC 0x40 0xFF 1
+		  /* NTC Hot Temperature Comparator falling = 45C*/
+		0xCD 0x70 0xFF 1
+		  /* NTC Cold Temperature Comparator rising = -10C*/
+		0xCE 0x7C 0xFF 1
+		  /* NTC Cold Temperature Comparator falling = 0C*/
+		0xCF 0xF4 0xFF 1
 		  /* NTC Hot Temperature Comparator bit 9,8 */
 		0xD0 0x09 0xFF 1
+		 /*MBCCTRL11*/
+		0x4A 0x0F 0xff 0
 		 /* ID detection ,current source Trimming */
 		0x47 0xD2 0xFF 1
 		0x48 0x98 0xFF 1
@@ -72,8 +74,8 @@
 		 0x40 0x18 0xFF 1
 		 /* MMSR LPM voltage - 0.88V */
 		 0xCA 0x04 0x3F 0
-		 /* SDSR1 NM1 voltage - 1.2V*/
-		 0xCC 0x24 0x3F 0
+		 /* SDSR1 NM1 voltage - 1.24V*/
+		 0xCC 0x28 0x3F 0
 		 /* SDSR1 LPM voltage - 0.9V*/
 		 0xCD 0x06 0x3F 0
 		 /* SDSR2 NM1 voltage - 1.24*/
@@ -97,8 +99,14 @@
 		 0x40 0x0 0x4 1
 		 /*turn of synthesizer when no PLL request */
 		 0x1A 0xfe 0xff 0
+		/*RFLDO pulldown disable MobC00290043*/
+		 0x96 0x40 0x40 0
+		 /*AUDLDO pulldown disable*/
+		 0x9f 0x40 0x40 0
 		 /*LVLDO1 voltage - 1.786V */
 		 0x1E 0xb8 0xff 1
+		 /*SIMLDO2 enable pulldown MobC00298660*/
+		 0x9a 0x00 0x40 0
 		>;
 	};
 
@@ -123,8 +131,8 @@
 		mmc1 = "1", "mmc1_vcc","0","7", "0", "0", "0";
 		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, dsm_mode = BCMPMU_REGL_ON_IN_DSM*/
 		mmc2 = "1", "mmc2_vcc", "0", "7", "0", "0", "0";
-		/*pc_map = PMU_PC2|PMU_PC3, dsm_mode = BCMPMU_REGL_LPM_IN_DSM*/
-		aud  = "1", "audldo_uc", "1", "6", "1", "0", "0";
+		/*pc_map = PMU_PC2|PMU_PC3, dsm_mode = BCMPMU_REGL_OFF_IN_DSM*/
+		aud  = "1", "audldo_uc", "1", "6", "2", "0", "0";
 		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, dsm_mode = BCMPMU_REGL_ON_IN_DSM*/
 		usb  = "1", "usb_vcc", "0", "7", "0", "0", "0";
 		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, dsm_mode = BCMPMU_REGL_ON_IN_DSM*/
@@ -159,4 +167,24 @@
 		iosr2 = "1", "iosr2_uc", "0", "0", "0", "0", "0";
 	};
 
+	bcmpmu_adc {
+		compatible = "Broadcom,adc";
+		/*name flag volt_range adc_offset addr_offset*/
+		channel0 = "vmbatt", "0", "4800", "0", "0x2";
+		channel1 = "vbbatt", "0", "4800", "0", "0x4";
+		channel2 = "0";
+		channel3 = "vbus", "0", "14400", "0", "0x8";
+		channel4 = "idin", "0", "1200", "0", "0xa";
+		channel5 = "ntc", "0", "1200", "0", "0xc";
+		channel6 = "bsi", "0", "1200", "0", "0xe";
+		channel7 = "bom", "0", "1200", "0", "0x10";
+		channel8 = "32ktemp", "0", "1200", "0","0x12";
+		channel9 = "patemp", "0", "1200", "0", "0x14";
+		channel10 = "als", "0", "1200", "0", "0x16";
+		channel11 = "0";
+		channel12 = "0";
+		channel13 = "0";
+		channel14 = "0";
+		channel15 = "0";
+	};
 };

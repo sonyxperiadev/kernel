@@ -34,7 +34,7 @@
 		 /* Enable BC12_EN */
 		0x44 0x01 0x01 0
 		  /*  ICCMAX to 1500mA*/
-		0x47 0x09 0xFF 0
+		0x47 0x0B 0xFF 0
 		  /* NTC Hot Temperature Comparator rising = 60C*/
 		0xCC 0x40 0xFF 1
 		  /* NTC Hot Temperature Comparator falling = 45C*/
@@ -107,6 +107,8 @@
 		 0x1E 0xb8 0xff 1
 		 /*SIMLDO2 enable pulldown MobC00298660*/
 		 0x9a 0x00 0x40 0
+                 0x09 0xC0 0xff 0
+                 0x0A 0xC0 0xff 0
 		>;
 	};
 
@@ -149,8 +151,8 @@
 		tcx  = "1", "tcxldo_uc", "0", "0", "0", "0", "0";
 		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, dsm_mode = BCMPMU_REGL_ON_IN_DSM*/
 		lv1  = "1", "lvldo1_uc", "0", "7", "0", "0", "0";
-		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, dsm_mode = BCMPMU_REGL_ON_IN_DSM*/
-		lv2  = "1", "lvldo2_uc", "0", "7", "0", "0", "0";
+		/*pc_map = 0, dsm_mode = BCMPMU_REGL_OFF_IN_DSM*/
+		lv2  = "1", "lvldo2_uc", "0", "0", "2", "0", "0";
 		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, dsm_mode = BCMPMU_REGL_OFF_IN_DSM*/
 		vsr  = "1", "vsr_uc", "1", "7", "2", "0", "1630000";
 		/*pc_map = PMU_PC3, dsm_mode = BCMPMU_REGL_OFF_IN_DSM*/
