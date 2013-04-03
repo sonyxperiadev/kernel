@@ -745,6 +745,13 @@ int dwc_otg_hcd_qtd_add(dwc_otg_qtd_t *qtd,
 
 	retval = dwc_otg_hcd_qh_add(hcd, *qh);
 	if (retval == 0) {
+
+		/* Store the QH handle in QTD before QTD submit */
+		/* Bugfix: Slab corruption was happening because
+		of modifiying the QTD when it is already freed from complete dma ISR*/
+
+		qtd->qh = *qh;
+
 		DWC_CIRCLEQ_INSERT_TAIL(&((*qh)->qtd_list), qtd,
 					qtd_list_entry);
 	}

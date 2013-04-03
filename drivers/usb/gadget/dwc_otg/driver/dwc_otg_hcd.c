@@ -507,8 +507,6 @@ int dwc_otg_hcd_urb_enqueue(dwc_otg_hcd_t *hcd,
 		DWC_ERROR("DWC OTG HCD URB Enqueue failed adding QTD. "
 			  "Error status %d\n", retval);
 		dwc_otg_hcd_qtd_free(qtd);
-	} else {
-		qtd->qh = *ep_handle;
 	}
 
 	if (hcd->core_if->dma_desc_enable && retval == 0) {
