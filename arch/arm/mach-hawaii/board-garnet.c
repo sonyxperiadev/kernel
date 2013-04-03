@@ -833,7 +833,8 @@ static struct kona_headset_pd hawaii_headset_data = {
 	 * HS remove
 	 */
 
-#if defined(CONFIG_MACH_HAWAII_GARNET_C_A18) || defined(CONFIG_MACH_HAWAII_GARNET_C_W68)
+#if defined(CONFIG_MACH_HAWAII_GARNET_C_A18) || defined(CONFIG_MACH_HAWAII_GARNET_C_W68)	\
+	|| defined(CONFIG_MACH_HAWAII_GARNET_C_M530)
 	.hs_default_state = 1,
 #else
 	.hs_default_state = 0,
