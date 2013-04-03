@@ -730,10 +730,12 @@ static ssize_t inv_power_state_store(struct device *dev,
 	int result;
 	u32 power_state;
 	struct inv_mpu_iio_s *st = iio_priv(dev_get_drvdata(dev));
+
 	if (kstrtouint(buf, 10, &power_state))
 		return -EINVAL;
 	if ((!power_state) == st->chip_config.is_asleep)
 		return count;
+
 	result = st->set_power_state(st, power_state);
 
 	return count;
@@ -1884,7 +1886,12 @@ static int inv_mpu_probe(struct i2c_client *client,
 			"Could not initialize device.\n");
 		goto out_free;
 	}
+
 	result = st->set_power_state(st, false);
+	/* controls the suspend-resume and has the previous state
+	 * of the chip
+	 */
+	st->chip_config.is_suspended = 0;
 	if (result) {
 		dev_err(&client->adapter->dev,
 			"%s could not be turned off.\n", st->hw->name);
@@ -2012,8 +2019,20 @@ static int inv_mpu_resume(struct device *dev)
 {
 	struct inv_mpu_iio_s *st =
 			iio_priv(i2c_get_clientdata(to_i2c_client(dev)));
+	int ret = 0;
+
 	pr_debug("%s inv_mpu_resume\n", st->hw->name);
-	return st->set_power_state(st, true);
+
+	/* resume is not supposed to know about the previous state
+	 * what ll it needs to know is chip was actually suspended
+	 * by mpu_suspend, it doesnt turn it on if it was not already
+	 * in use.
+	 */
+
+	if (st->chip_config.is_suspended)
+		ret = st->set_power_state(st, true);
+	st->chip_config.is_suspended = 0;
+	return ret;
 }
 
 static int inv_mpu_suspend(struct device *dev)
@@ -2021,7 +2040,18 @@ static int inv_mpu_suspend(struct device *dev)
 	struct inv_mpu_iio_s *st =
 			iio_priv(i2c_get_clientdata(to_i2c_client(dev)));
 	pr_debug("%s inv_mpu_suspend\n", st->hw->name);
-	return st->set_power_state(st, false);
+
+	/* by default gyro is off, and suspend could possibly
+	 * keep gyro into low power state irrespective of its
+	 * previous state, so we check to see if it was already
+	 * asleep
+	 */
+	if (!(st->chip_config.is_asleep)) {
+		st->chip_config.is_suspended = 1;
+		return st->set_power_state(st, false);
+	}
+
+	return 0;
 }
 static const struct dev_pm_ops inv_mpu_pmops = {
 	SET_SYSTEM_SLEEP_PM_OPS(inv_mpu_suspend, inv_mpu_resume)

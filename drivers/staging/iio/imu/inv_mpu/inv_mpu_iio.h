@@ -144,6 +144,7 @@ struct inv_hw_s {
  *  @quaternion_on:	send quaternion data on/off.
  *  @display_orient_on:	display orientation on/off.
  *  @normal_compass_measure: discard first compass data after reset.
+ *  @is_suspended:	preserves the previous state of the mpu3050.
  *  @lpa_freq:		low power frequency
  *  @prog_start_addr:	firmware program start address.
  *  @dmp_output_rate:   dmp output rate.
@@ -174,6 +175,7 @@ struct inv_chip_config_s {
 	u32 quaternion_on:1;
 	u32 display_orient_on:1;
 	u32 normal_compass_measure:1;
+	u32 is_suspended:1;
 	u16 lpa_freq;
 	u16  prog_start_addr;
 	u16 fifo_rate;
