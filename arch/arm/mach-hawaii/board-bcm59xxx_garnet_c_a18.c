@@ -1013,7 +1013,7 @@ static struct batt_cutoff_cap_map ys_05_cutoff_cap_lut[] = {
 static struct batt_esr_temp_lut ys_05_esr_temp_lut[] = {
 	{
 	 .temp = -200,
-	 .reset = 0,.fct = 268,.guardband = 50,
+	 .reset = 0,.fct = 254,.guardband = 50,
 	 .esr_vl_lvl = 3781,.esr_vm_lvl = 3805,.esr_vh_lvl = 4141,
 	 .esr_vl_slope = -16793,.esr_vl_offset = 65207,
 	 .esr_vm_slope = -6920,.esr_vm_offset = 27882,
@@ -1022,7 +1022,7 @@ static struct batt_esr_temp_lut ys_05_esr_temp_lut[] = {
 	 },
 	{
 	 .temp = -150,
-	 .reset = 0,.fct = 482,.guardband = 50,
+	 .reset = 0,.fct = 456.5,.guardband = 50,
 	 .esr_vl_lvl = 3708,.esr_vm_lvl = 3805,.esr_vh_lvl = 3998,
 	 .esr_vl_slope = -19711,.esr_vl_offset = 74373,
 	 .esr_vm_slope = -3819,.esr_vm_offset = 15439,
@@ -1031,7 +1031,7 @@ static struct batt_esr_temp_lut ys_05_esr_temp_lut[] = {
 	 },
 	{
 	 .temp = -100,
-	 .reset = 0,.fct = 696,.guardband = 50,
+	 .reset = 0,.fct = 659,.guardband = 50,
 	 .esr_vl_lvl = 3708,.esr_vm_lvl = 3805,.esr_vh_lvl = 3998,
 	 .esr_vl_slope = -19711,.esr_vl_offset = 74373,
 	 .esr_vm_slope = -3819,.esr_vm_offset = 15439,
@@ -1040,7 +1040,7 @@ static struct batt_esr_temp_lut ys_05_esr_temp_lut[] = {
 	 },
 	{
 	 .temp = -50,
-	 .reset = 0,.fct = 815.5,.guardband = 50,
+	 .reset = 0,.fct = 772.5,.guardband = 50,
 	 .esr_vl_lvl = 3708,.esr_vm_lvl = 3825,.esr_vh_lvl = 3998,
 	 .esr_vl_slope = -6386,.esr_vl_offset = 24399,
 	 .esr_vm_slope = -1475,.esr_vm_offset = 6188,
@@ -1049,7 +1049,7 @@ static struct batt_esr_temp_lut ys_05_esr_temp_lut[] = {
 	 },
 	{
 	 .temp = 0,
-	 .reset = 0,.fct = 935,.guardband = 30,
+	 .reset = 0,.fct = 886,.guardband = 30,
 	 .esr_vl_lvl = 3708,.esr_vm_lvl = 3825,.esr_vh_lvl = 3998,
 	 .esr_vl_slope = -6386,.esr_vl_offset = 24399,
 	 .esr_vm_slope = -1475,.esr_vm_offset = 6188,
@@ -1058,7 +1058,7 @@ static struct batt_esr_temp_lut ys_05_esr_temp_lut[] = {
 	 },
 	{
 	 .temp = 50,
-	 .reset = 0,.fct = 960,.guardband = 30,
+	 .reset = 0,.fct = 923.5,.guardband = 30,
 	 .esr_vl_lvl = 3708,.esr_vm_lvl = 3825,.esr_vh_lvl = 3928,
 	 .esr_vl_slope = -3170,.esr_vl_offset = 12161,
 	 .esr_vm_slope = -506,.esr_vm_offset = 2282,
@@ -1067,7 +1067,7 @@ static struct batt_esr_temp_lut ys_05_esr_temp_lut[] = {
 	 },
 	{
 	 .temp = 100,
-	 .reset = 0,.fct = 985,.guardband = 30,
+	 .reset = 0,.fct = 961,.guardband = 30,
 	 .esr_vl_lvl = 3708,.esr_vm_lvl = 3825,.esr_vh_lvl = 3928,
 	 .esr_vl_slope = -3170,.esr_vl_offset = 12161,
 	 .esr_vm_slope = -506,.esr_vm_offset = 2282,
@@ -1076,7 +1076,7 @@ static struct batt_esr_temp_lut ys_05_esr_temp_lut[] = {
 	 },
 	{
 	 .temp = 150,
-	 .reset = 0,.fct = 992.5,.guardband = 30,
+	 .reset = 0,.fct = 980.5,.guardband = 30,
 	 .esr_vl_lvl = 3500,.esr_vm_lvl = 3708,.esr_vh_lvl = 3928,
 	 .esr_vl_slope = -4327,.esr_vl_offset = 15680,
 	 .esr_vm_slope = -1432,.esr_vm_offset = 5547,
