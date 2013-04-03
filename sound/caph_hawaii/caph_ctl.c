@@ -1294,6 +1294,7 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 		11 - VoIP ON */
 		pChip->iEnablePhoneCall =
 			ucontrol->value.integer.value[0];
+
 		/* Right now, we don't need to differentiate
 		VoIP OFF/Voice call OFF.To keep the logic
 		simple, set the same value as Voice call
@@ -1350,8 +1351,9 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 		}
 		break;
 	case CTL_FUNCTION_PHONE_CALL_MIC_MUTE:
-		if (pChip->iMutePhoneCall[0] !=
-		    ucontrol->value.integer.value[0]) {
+		/*if (pChip->iMutePhoneCall[0] !=
+		    ucontrol->value.integer.value[0]) */
+		{
 			pChip->iMutePhoneCall[0] =
 			    ucontrol->value.integer.value[0];
 
