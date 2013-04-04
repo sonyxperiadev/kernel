@@ -875,6 +875,23 @@ static const struct i2c_device_id kxtik_id[] = {
 	{},
 };
 
+
+static void kxtik_shutdown(struct i2c_client *client)
+{
+	int err;
+
+	struct kxtik_data *tik = i2c_get_clientdata(client);
+
+	err = i2c_smbus_write_byte_data(tik->client, CTRL_REG1, 0);
+	if (err < 0)
+		printk(KERN_ALERT "kxtik failed to shudown\n");
+
+	/* we do not check return value here, as the chip would not be
+	 * able to send ack.
+	 */
+	i2c_smbus_write_byte_data(tik->client, CTRL_REG3, 0xFF);
+}
+
 MODULE_DEVICE_TABLE(i2c, kxtik_id);
 
 static struct i2c_driver kxtik_driver = {
@@ -886,6 +903,7 @@ static struct i2c_driver kxtik_driver = {
 	.probe = kxtik_probe,
 	.remove = __devexit_p(kxtik_remove),
 	.id_table = kxtik_id,
+	.shutdown = kxtik_shutdown,
 };
 
 static int __init kxtik_init(void)
