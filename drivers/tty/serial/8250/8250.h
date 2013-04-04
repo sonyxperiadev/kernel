@@ -70,7 +70,7 @@ struct uart_8250_port {
 #ifdef CONFIG_BRCM_UART_CHANGES
 #if defined(CONFIG_HAS_WAKELOCK)
 	struct wake_lock uart_lock;
-#define WAKELOCK_TIMEOUT_VAL 5000
+#define WAKELOCK_TIMEOUT_VAL CONFIG_BRCM_UART_WAKELOCK_TIMEOUT
 #endif
 	/*
 	 * Kona PM - QOS service

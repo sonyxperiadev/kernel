@@ -327,6 +327,13 @@ config BRCM_UART_CHANGES
 	help
 	  Say Y if you want to enable BRCM UART changes in 8250.c file
 
+config BRCM_UART_WAKELOCK_TIMEOUT
+	int "UART SUSPEND wakelock timeout value in milliseconds"
+	depends on BRCM_UART_CHANGES
+	default 5000
+	help
+	  Set this to number of milliseconds to hold the Suspend Wakelock
+
 config DW_UART_WA_JIRA_1744
 	bool "DesignWare UART Jira-1744 Software workaround"
 	depends on BRCM_UART_CHANGES
