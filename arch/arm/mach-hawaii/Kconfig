@@ -376,4 +376,7 @@ config HAWAII_PTM
 	help
 	  Say Y here to enable PTM hardware on hawaii.
 
+config BRD_NAME
+	string "customer board name"
+	default "hawaii"
 endmenu

@@ -331,6 +331,7 @@ CONFIG_MM_FREEZE_VAR500M_ERRATUM=y
 # CONFIG_DSM_IN_SUSPEND_ONLY is not set
 # CONFIG_KONA_SECURE_MONITOR_CALL is not set
 # CONFIG_HAWAII_PTM is not set
+CONFIG_BRD_NAME="hawaii"
 
 #
 # Broadcom KONA architecture based implementations

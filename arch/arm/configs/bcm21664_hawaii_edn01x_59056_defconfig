@@ -345,6 +345,7 @@ CONFIG_MACH_HAWAII_SS_EMMC_EXTLDO=y
 # CONFIG_DSM_IN_SUSPEND_ONLY is not set
 CONFIG_KONA_SECURE_MONITOR_CALL=y
 # CONFIG_HAWAII_PTM is not set
+CONFIG_BRD_NAME="hawaii"
 
 #
 # Broadcom KONA architecture based implementations

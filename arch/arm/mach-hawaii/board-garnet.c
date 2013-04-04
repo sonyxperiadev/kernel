@@ -187,7 +187,9 @@ hawaii_wifi_status_register(void (*callback) (int card_present, void *dev_id),
 /* SD */
 #define SD_CARDDET_GPIO_PIN	91
 
-
+#ifndef CONFIG_BRD_NAME
+#define CONFIG_BRD_NAME "hawaii"
+#endif
 
 /* Touch */
 #define TSC_GPIO_IRQ_PIN			73
@@ -1224,7 +1226,7 @@ static int __init hawaii_add_lateinit_devices(void)
 late_initcall(hawaii_add_lateinit_devices);
 
 static const char *hawaii_dt_compat[] = { "bcm,hawaii", NULL, };
-DT_MACHINE_START(HAWAII, "hawaii")
+DT_MACHINE_START(HAWAII, CONFIG_BRD_NAME)
 	.map_io = hawaii_map_io,
 	.init_irq = kona_init_irq,
 	.handle_irq = gic_handle_irq,

@@ -353,6 +353,7 @@ CONFIG_A9_DORMANT_MODE=y
 # CONFIG_DSM_IN_SUSPEND_ONLY is not set
 CONFIG_KONA_SECURE_MONITOR_CALL=y
 CONFIG_HAWAII_PTM=y
+CONFIG_BRD_NAME="w68_mb_p1"
 
 #
 # Broadcom KONA architecture based implementations
