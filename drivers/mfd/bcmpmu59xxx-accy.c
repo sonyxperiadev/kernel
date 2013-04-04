@@ -46,12 +46,7 @@
 #define TYPE2_RETRY 1
 
 #define ACCY_WORK_DELAY  msecs_to_jiffies(5)
-
-#ifdef CONFIG_USB_SWITCH_TSU6111
-#define ACCY_RETRY_DELAY msecs_to_jiffies(15000)
-#else
 #define ACCY_RETRY_DELAY msecs_to_jiffies(500)
-#endif
 
 static int debug_mask = BCMPMU_PRINT_ERROR |
 	BCMPMU_PRINT_INIT |  BCMPMU_PRINT_FLOW;
