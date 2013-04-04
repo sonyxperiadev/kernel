@@ -137,8 +137,8 @@ static struct bcmpmu59xxx_rw_data __initdata register_init_data[] = {
 	/* BSI Bias Host Control, Synchronous Mode Enable */
 
 	{.addr =  PMU_REG_CMPCTRL16, .val = 0x13, .mask = 0xFF},
-	/* BSI_EN_PM0 disable */
-	{.addr =  PMU_REG_CMPCTRL17, .val = 0x01, .mask = 0xFF},
+	/* MBUV host enable control */
+	{.addr =  PMU_REG_CMPCTRL17, .val = 0x40, .mask = 0x7F},
 	/* Mask RTM conversion */
 	{.addr =  PMU_REG_ADCCTRL1, .val = 0x08, .mask = 0x08},
 	/* EN_SESS_VALID  enable ID detection */
