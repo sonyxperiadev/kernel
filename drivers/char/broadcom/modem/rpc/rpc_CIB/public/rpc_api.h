@@ -342,6 +342,17 @@ Result_t RPC_SerializeReq(RPC_Msg_t *rpcMsg);
 
 /*****************************************************************************/
 /**
+    Function to serialize RPC request message and send the packed message via IPC
+        @param  rpcMsg (in) RPC message to be serialized
+	@param waitTime time to wait before sending RPC message
+        @return         \n RESULT_OK for success,
+                        \n RESULT_ERROR for failure
+        @note
+**/
+Result_t RPC_SerializeReqEx2(RPC_Msg_t *rpcMsg, UInt32 waitTime);
+
+/*****************************************************************************/
+/**
     Function to serialize RPC response message and send the packed message via IPC
 	@param	rpcMsg (in) RPC message to be serialized
 	@return		\n RESULT_OK for success,
@@ -349,6 +360,28 @@ Result_t RPC_SerializeReq(RPC_Msg_t *rpcMsg);
 	@note
 **/
 Result_t RPC_SerializeRsp(RPC_Msg_t *rpcMsg);
+
+/*****************************************************************************/
+/**
+    Function to serialize RPC response message and send the packed message via IPC
+        @param  rpcMsg (in) RPC message to be serialized
+        @param  maxlen RPC message packet size
+        @return         \n RESULT_OK for success,
+                        \n RESULT_ERROR for failure
+        @note
+**/
+Result_t RPC_SerializeRspEx(RPC_Msg_t *rpcMsg, UInt32 maxlen);
+
+/*****************************************************************************/
+/**
+    Function to serialize RPC response message and send the packed message via IPC
+        @param  rpcMsg (in) RPC message to be serialized
+	@param  waitTime time to wait before sending RPC message
+        @return         \n RESULT_OK for success,
+                        \n RESULT_ERROR for failure
+        @note
+**/
+Result_t RPC_SerializeRspEx2(RPC_Msg_t *rpcMsg, UInt32 waitTime);
 
 /*****************************************************************************/
 /**
