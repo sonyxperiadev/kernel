@@ -932,6 +932,7 @@ static CSL_LCD_RES_T cslDsiWaitForInt(DSI_HANDLE dsiH, UInt32 tout_msec)
 	return res;
 }
 
+#if 0
 /*
  *
  * Function Name:  cslDsiBtaRecover
@@ -954,6 +955,7 @@ static CSL_LCD_RES_T cslDsiBtaRecover(DSI_HANDLE dsiH)
 	chal_dsi_phy_state(dsiH->chalH, PHY_CORE);
 	return res;
 }
+#endif
 
 /*
  *
@@ -1238,12 +1240,37 @@ CSL_LCD_RES_T CSL_DSI_SendPacket(CSL_LCD_HANDLE client,
 
 	if (txPkt.endWithBta) {
 		if (res != CSL_LCD_OK) {
+			int tries = 3;
 			LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI][%d] %s: "
 				"WARNING, VC[%d] Probable BTA TimeOut, "
 				"Recovering ...\n",
 				dsiH->bus, __func__, txPkt.vc);
-			cslDsiBtaRecover(dsiH);
+			/* This clears the FIFO and puts the Controller in STOP
+			 * state! */
+			/* cslDsiBtaRecover(dsiH); */
+			while ((res == CSL_LCD_OS_TOUT) && --tries) {
+				pr_err("Trying once more\n");
+				if (!clientH->hasLock)
+					cslDsiEnaIntEvent(dsiH, event);
+				chal_dsi_tx_start(dsiH->chalH, TX_PKT_ENG_1,
+						FALSE);
+				chal_dsi_tx_start(dsiH->chalH, TX_PKT_ENG_1,
+						TRUE);
+				if (!clientH->hasLock) {
+					cslDsiEnaIntEvent(dsiH, event);
+					res = cslDsiWaitForInt(dsiH, 100);
+					stat = chal_dsi_get_status(dsiH->chalH);
+				} else {
+					res = cslDsiWaitForStatAny_Poll(dsiH,
+						event, &stat, 100);
+				}
+			}
+			if (!tries)
+				pr_err("Couldn't recover!\n");
+			else
+				goto read_reply;
 		} else {
+read_reply:
 			chalRes = chal_dsi_read_reply(dsiH->chalH, stat,
 						      (pCHAL_DSI_REPLY)
 						      command->reply);
