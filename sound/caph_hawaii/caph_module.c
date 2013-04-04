@@ -435,6 +435,13 @@ static int BCMAudLOG_release(struct inode *inode, struct file *file)
 		/* kthread_stop(audio_log_thread); */
 		audio_log_cbinfo[0].capture_ready = 1;
 		wake_up_interruptible(&audio_log_queue);
+		aTrace(LOG_ALSA_INTERFACE,
+			"\n BCMLOG_release : waiting for kthread to stop %d\n",
+			dev_use_count);
+		kthread_stop(audio_log_thread);
+		aTrace(LOG_ALSA_INTERFACE,
+			"\n BCMLOG_release : kthread stopped %d\n",
+			dev_use_count);
 		audio_log_thread = 0;
 		audio_log_cbinfo[0].capture_ready = 0;
 		audio_data_arrived = 0;
@@ -802,7 +809,14 @@ int process_logmsg(void *data)
 		/* DEBUG("\n Capture thread running now\n"); */
 
 		if (dev_use_count == 0) {
-			aError("\n Stop process_logmsg thread\n");
+			aTrace(LOG_ALSA_INTERFACE,
+				"\n Stop process_logmsg thread\n");
+			if (kthread_should_stop())
+				aTrace(LOG_ALSA_INTERFACE,
+					"\n kthread_should_stop returns TRUE\n");
+			else
+				aTrace(LOG_ALSA_INTERFACE,
+					"\n kthread_should_stop returns FALSE\n");
 			audio_log_writecb.pPrivate = NULL;
 			break;
 		}
