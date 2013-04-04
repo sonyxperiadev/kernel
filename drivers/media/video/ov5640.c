@@ -2132,6 +2132,7 @@ static unsigned long ov5640_query_bus_param(struct soc_camera_device *icd)
 	return flags;
 }
 
+static int afFWLoaded = -1;
 static int ov5640_enum_input(struct soc_camera_device *icd,
 			     struct v4l2_input *inp)
 {
@@ -2155,6 +2156,7 @@ static int ov5640_enum_input(struct soc_camera_device *icd,
 
 	}
 	stream_mode = -1;
+	afFWLoaded = -1;
 
 	return 0;
 }
@@ -2678,9 +2680,12 @@ static int ov5640_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			break;
 
 		case AUTO_FOCUS_ON:
-			ret = ov5640_af_enable(client);
-			if (ret)
-				return ret;
+			if (1 != afFWLoaded) {
+				ret = ov5640_af_enable(client);
+				if (ret)
+					return ret;
+				afFWLoaded = 1;
+			}
 			ret = ov5640_af_start(client);
 			atomic_set(&ov5640->focus_status, OV5640_FOCUSING);
 			break;
