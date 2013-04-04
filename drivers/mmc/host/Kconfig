@@ -506,6 +506,17 @@ config MMC_BCM_SD
 
 	  If unsure, say N.
 
+config MMC_BCM_NON_SECURE_ERASE
+	bool "Enable non secure erase for factory reset"
+	depends on MMC_BCM_SD
+	default n
+	help
+	  Enable this option if factory reset is taking too long. This option
+	  enables the non secure erase of full data and cache partitions
+	  during factory reset.
+
+	  If unsure say N.
+
 config MMC_CB710
 	tristate "ENE CB710 MMC/SD Interface support"
 	depends on PCI
