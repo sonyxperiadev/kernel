@@ -44,6 +44,7 @@ struct kona_headset_pd {
 	 * GPIO number to ground the mic line.
 	 */
 	int gpio_mic_gnd;
+	char *ldo_id;
 
 };
 /* This API is used by Audio code to switch

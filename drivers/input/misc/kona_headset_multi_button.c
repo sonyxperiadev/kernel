@@ -60,6 +60,7 @@
 #include <linux/io.h>
 #include <linux/platform_device.h>
 #include <linux/clk.h>
+#include <linux/regulator/consumer.h>
 #ifdef CONFIG_HAS_WAKELOCK
 #include <linux/wakelock.h>
 #endif
@@ -193,6 +194,7 @@ struct mic_t {
 	 */
 	struct wake_lock accessory_wklock;
 #endif
+	struct regulator *ldo;
 };
 
 static struct mic_t *mic_dev;
@@ -1547,6 +1549,19 @@ static int __headset_hw_init_micbias_off(struct mic_t *p)
 		p->mic_bias_status = 0;
 	}
 
+	/*
+	 * Put ldo to OFF in dsm as it is not needed.
+	 * Either the accessory is being removed, or
+	 * it is a headphone
+	 */
+
+	if (p->ldo) {
+		pr_debug("Turning regulator off\n");
+		regulator_set_mode(p->ldo, REGULATOR_MODE_IDLE);
+		regulator_put(p->ldo);
+		p->ldo = NULL;
+	}
+
 	return 0;
 }
 
@@ -1554,6 +1569,37 @@ static int __headset_hw_init_micbias_on(struct mic_t *p)
 {
 	if (p == NULL)
 		return -1;
+
+	/*
+	 * During deep sleep, AUDLDO is turned off due to which
+	 * Comp1 output is detecting a valid button press, thus
+	 * phone cannot go into deep sleep as it is waiting for
+	 * a button release to detect (while infinitely scheduing
+	 * a work). {Refer function button_work_func}
+	 * Now, when putting audldo to LPM during dsm, increases
+	 * the floor current. Thus solution is to control the dsm
+	 * mode in driver by regulator set/get APIs
+	 *
+	 */
+
+	if (!p->headset_pd->ldo_id) {
+		pr_err("%s: No LDO id passed in pdata\n", __func__);
+		pr_warning("WARNING: With Headset inserted, deep "
+			   "sleep might break\n");
+	} else {
+		p->ldo = regulator_get(NULL, p->headset_pd->ldo_id);
+		if (IS_ERR_OR_NULL(p->ldo)) {
+			pr_err("%s: ERR/NULL getting MICBIAS LDO\n", __func__);
+			pr_warning("WARNING: With Headset inserted, deep "
+				   "sleep might break\n");
+			/* Setting to null */
+			p->ldo = NULL;
+			return -ENOENT;
+		}
+		pr_debug("Setting regulator mode to standby\n");
+		regulator_set_mode(p->ldo, REGULATOR_MODE_STANDBY);
+	}
+
 /*
  * IMPORTANT
  *---------
@@ -2136,6 +2182,7 @@ static int __init hs_probe(struct platform_device *pdev)
 	 * put it in known state.
 	 */
 	mic->mic_bias_status = 0;
+	mic->ldo = NULL;
 
 	pr_info("%s() GPIO used for accessory insertion %d (1 - yes, 0 - no)",
 		__func__, mic->headset_pd->gpio_for_accessory_detection);

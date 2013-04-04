@@ -871,6 +871,9 @@ static struct kona_headset_pd hawaii_headset_data = {
 	 */
 	.button_adc_values_high = hawaii_button_adc_values_2_1,
 
+	/* AUDLDO supply id for changing regulator mode*/
+	.ldo_id = "audldo_uc",
+
 };
 #endif /* CONFIG_KONA_HEADSET_MULTI_BUTTON */
 
