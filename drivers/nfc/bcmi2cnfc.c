@@ -191,13 +191,12 @@ static irqreturn_t bcmi2cnfc_dev_irq_handler(int irq, void *dev_id)
 		      "irq go high %llu\n", get_jiffies_64()));
 
 	spin_lock_irqsave(&bcmi2cnfc_dev->irq_enabled_lock, flags);
+
 	bcmi2cnfc_dev->count_irq++;
-	spin_unlock_irqrestore(&bcmi2cnfc_dev->irq_enabled_lock, flags);
+
 	wake_up(&bcmi2cnfc_dev->read_wq);
 
-#ifdef CONFIG_HAS_WAKELOCK
-	wake_lock(&nfc_wake_lock);
-#endif
+	spin_unlock_irqrestore(&bcmi2cnfc_dev->irq_enabled_lock, flags);
 
 	return IRQ_HANDLED;
 }
@@ -212,6 +211,7 @@ static unsigned int bcmi2cnfc_dev_poll(struct file *filp, poll_table *wait)
 
 	spin_lock_irqsave(&bcmi2cnfc_dev->irq_enabled_lock, flags);
 	if (bcmi2cnfc_dev->count_irq > 0) {
+		bcmi2cnfc_dev->count_irq--;
 		mask |= POLLIN | POLLRDNORM;
 	}
 	spin_unlock_irqrestore(&bcmi2cnfc_dev->irq_enabled_lock, flags);
@@ -230,14 +230,12 @@ static ssize_t bcmi2cnfc_dev_read(struct file *filp, char __user *buf,
 
 	DBG2(dev_info(&bcmi2cnfc_dev->client->dev,
 		      "bcmi2cnfc_dev_read %llu\n", get_jiffies_64()));
+#ifdef CONFIG_HAS_WAKELOCK
+	wake_lock(&nfc_wake_lock);
+#endif
 
 	total = 0;
 	len = 0;
-
-
-	if (bcmi2cnfc_dev->count_irq > 0) {
-		bcmi2cnfc_dev->count_irq--;
-	}
 
 	bcmi2cnfc_dev->count_read++;
 	if (count > MAX_BUFFER_SIZE)
@@ -292,7 +290,6 @@ static ssize_t bcmi2cnfc_dev_read(struct file *filp, char __user *buf,
 		bcmi2cnfc_dev->error_read++;
 	}
 #ifdef CONFIG_HAS_WAKELOCK
-	if (bcmi2cnfc_dev->count_irq == 0)
 	wake_unlock(&nfc_wake_lock);
 #endif
 
@@ -325,6 +322,9 @@ static ssize_t bcmi2cnfc_dev_write(struct file *filp, const char __user *buf,
 			"failed to copy from user space\n");
 		return -EFAULT;
 	}
+#ifdef CONFIG_HAS_WAKELOCK
+	wake_lock(&nfc_wake_lock);
+#endif
 
 	mutex_lock(&bcmi2cnfc_dev->read_mutex);
 	/* Write data */
@@ -346,6 +346,10 @@ static ssize_t bcmi2cnfc_dev_write(struct file *filp, const char __user *buf,
 		}
 	}
 	mutex_unlock(&bcmi2cnfc_dev->read_mutex);
+#ifdef CONFIG_HAS_WAKELOCK
+	wake_unlock(&nfc_wake_lock);
+#endif
+
 	DBG2(dev_info(&bcmi2cnfc_dev->client->dev,
 		      "bcmi2cnfc_dev_write leave %llu\n", get_jiffies_64()));
 
@@ -402,8 +406,6 @@ static long bcmi2cnfc_dev_unlocked_ioctl(struct file *filp,
 				bcmi2cnfc_dev->irq_enabled = FALSE;
 				disable_irq_nosync(bcmi2cnfc_dev->client->irq);
 			}
-			if (bcmi2cnfc_dev->count_irq > 0)
-					wake_unlock(&nfc_wake_lock);
 			gpio_set_value(bcmi2cnfc_dev->en_gpio, 0);
 			set_client_addr(bcmi2cnfc_dev,
 					bcmi2cnfc_dev->original_address);
