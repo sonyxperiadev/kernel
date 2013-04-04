@@ -134,4 +134,6 @@ void enable_axipv_clk_debug(struct axipv_config_t *config);
 void disable_axipv_clk_debug(struct axipv_config_t *config);
 /***************************** DEBUG API **************************************/
 
+extern int g_display_enabled;
+
 #endif /* __AXIPV_H__ */

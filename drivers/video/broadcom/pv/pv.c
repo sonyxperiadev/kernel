@@ -188,6 +188,10 @@ int pv_init(struct pv_init_t *init, struct pv_config_t **config)
 	INIT_WORK(&dev->err_work, err_cb);
 	INIT_WORK(&dev->eof_work, eof_cb);
 	dev->state = PV_INIT_DONE;
+	if (!g_display_enabled)
+		dev->state = PV_INIT_DONE;
+	else
+		dev->state = PV_ENABLED;
 	g_pv_init[init->id] = true;
 	*config = &dev->vid_config;
 	ret = 0;

@@ -69,6 +69,12 @@ static void DispDrv_WrCmndP0(
 	UInt32 reg);
 #endif
 
+#ifdef CONFIG_BL_SPLASH_SCREEN
+int g_display_enabled = 1;
+#else
+int g_display_enabled;
+#endif
+
 /* DRV INTERFACE FUNCTIONs */
 static Int32 DSI_Init(DISPDRV_INFO_T *, DISPDRV_HANDLE_T *);
 
@@ -412,6 +418,9 @@ Int32 DSI_Init(DISPDRV_INFO_T *info, DISPDRV_HANDLE_T *handle)
 
 	pPanel = &panel[0];
 
+	if (g_display_enabled)
+		DSI_ERR("Skipping hardware initialisation\n");
+
 	if (pPanel->drvState ==	DRV_STATE_OFF)	{
 		pPanel->cmnd_mode = &DispDrv_VCCmCfg;
 		/* Pixel transfer is always in HS mode*/
@@ -476,7 +485,10 @@ Int32 DSI_Init(DISPDRV_INFO_T *info, DISPDRV_HANDLE_T *handle)
 		pPanel->teOut =	TE_VC4L_OUT_DSI0_TE0;
 
 		pPanel->drvState = DRV_STATE_INIT;
-		pPanel->pwrState = STATE_PWR_OFF;
+		if (!g_display_enabled)
+			pPanel->pwrState = STATE_PWR_OFF;
+		else
+			pPanel->pwrState = STATE_SCREEN_ON;
 
 		*handle	= (DISPDRV_HANDLE_T)pPanel;
 
@@ -584,7 +596,8 @@ Int32 DSI_Open(DISPDRV_HANDLE_T drvH)
 		goto err_gpio_request;
 	}
 
-	hw_reset(drvH, FALSE);
+	if (!g_display_enabled)
+		hw_reset(drvH, FALSE);
 
 	if (DSI_ReadPanelID(pPanel) < 0) {
 		DSI_ERR("ID read failed\n");
@@ -663,6 +676,7 @@ Int32 DSI_Close(DISPDRV_HANDLE_T drvH)
 
 	pPanel->pwrState = STATE_PWR_OFF;
 	pPanel->drvState = DRV_STATE_INIT;
+	g_display_enabled = 0;
 	DSI_INFO("OK\n");
 
 	return res;

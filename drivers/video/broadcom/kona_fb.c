@@ -78,7 +78,6 @@
 
 /*#define KONA_FB_DEBUG */
 /*#define PARTIAL_UPDATE_SUPPORT */
-#define KONA_FB_ENABLE_DYNAMIC_CLOCK	1
 
 #define KONA_IOCTL_SET_BUFFER_AND_UPDATE	_IO('F', 0x80)
 
@@ -280,16 +279,12 @@ static int kona_fb_set_par(struct fb_info *info)
 
 static inline void kona_clock_start(struct kona_fb *fb)
 {
-#if (KONA_FB_ENABLE_DYNAMIC_CLOCK == 1)
 	fb->display_ops->start(fb->display_hdl, &fb->dfs_node);
-#endif
 }
 
 static inline void kona_clock_stop(struct kona_fb *fb)
 {
-#if (KONA_FB_ENABLE_DYNAMIC_CLOCK == 1)
 	fb->display_ops->stop(fb->display_hdl, &fb->dfs_node);
-#endif
 }
 
 
@@ -474,7 +469,6 @@ err_idx:
 static void kona_display_done_cb(int status)
 {
 	(void)status;
-	kona_clock_stop(g_kona_fb);
 	konafb_debug("kona_fb release called\n");
 	complete(&g_kona_fb->prev_buf_done_sem);
 }
@@ -513,12 +507,10 @@ static int kona_fb_pan_display(struct fb_var_screeninfo *var,
 #endif
 
 	if (!atomic_read(&fb->is_fb_registered)) {
-		kona_clock_start(fb);
 		ret =
 		    fb->display_ops->update(fb->display_hdl,
 					    buff_idx ? fb->buff1 : fb->buff0,
 					    NULL, NULL);
-		kona_clock_stop(fb);
 	} else {
 		atomic_set(&fb->is_graphics_started, 1);
 		if (var->reserved[0] == 0x54445055) {
@@ -543,7 +535,6 @@ static int kona_fb_pan_display(struct fb_var_screeninfo *var,
 		if (!fb->display_info->vmode)
 			wait_for_completion_interruptible_timeout(
 				&fb->prev_buf_done_sem,	msecs_to_jiffies(100));
-		kona_clock_start(fb);
 		ret =
 		    fb->display_ops->update(fb->display_hdl,
 					buff_idx ? fb->buff1 : fb->buff0,
@@ -611,7 +602,6 @@ static int enable_display(struct kona_fb *fb)
 	if(!fb->display_info->vmode)
 		queue_work(fb->fb_wq,&fb->vsync_smart);
 
-	kona_clock_stop(fb);
 	konafb_debug("kona display is enabled successfully\n");
 	return 0;
 
@@ -668,9 +658,7 @@ static int kona_fb_ioctl(struct fb_info *info, unsigned int cmd,
 		if (!fb->display_info->vmode)
 			wait_for_completion_interruptible_timeout(
 				&fb->prev_buf_done_sem,	msecs_to_jiffies(100));
-		kona_clock_start(fb);
 		ret = fb->display_ops->update(fb->display_hdl, ptr, NULL, NULL);
-		kona_clock_stop(fb);
 		if (!fb->display_info->vmode)
 			complete(&g_kona_fb->prev_buf_done_sem);
 		mutex_unlock(&fb->update_sem);
@@ -703,11 +691,9 @@ static void kona_fb_early_suspend(struct early_suspend *h)
 		if (!fb->display_info->vmode)
 			wait_for_completion_interruptible_timeout(
 				&fb->prev_buf_done_sem,	msecs_to_jiffies(100));
-		kona_clock_start(fb);
 		if (fb->display_ops->power_control(fb->display_hdl,
 					       CTRL_SCREEN_OFF))
 			konafb_error("Failed to blank this display device!\n");
-		kona_clock_stop(fb);
 		if (!fb->display_info->vmode)
 			complete(&g_kona_fb->prev_buf_done_sem);
 		mutex_unlock(&fb->update_sem);
@@ -730,7 +716,6 @@ static void kona_fb_early_suspend(struct early_suspend *h)
 		fb = container_of(h, struct kona_fb, early_suspend_level3);
 		/* screen goes to sleep mode */
 		mutex_lock(&fb->update_sem);
-		kona_clock_start(fb);
 		disable_display(fb);
 		kona_clock_stop(fb);
 		mutex_unlock(&fb->update_sem);
@@ -757,12 +742,10 @@ static void kona_fb_late_resume(struct early_suspend *h)
 	case EARLY_SUSPEND_LEVEL_BLANK_SCREEN:
 		/* Turn on the backlight */
 		fb = container_of(h, struct kona_fb, early_suspend_level1);
-		kona_clock_start(fb);
 		if (fb->display_ops->
 		    power_control(fb->display_hdl, CTRL_SCREEN_ON))
 			konafb_error
 			    ("Failed to unblank this display device!\n");
-		kona_clock_stop(fb);
 #ifdef CONFIG_FB_BRCM_CP_CRASH_DUMP_IMAGE_SUPPORT
 		if (atomic_read(&g_kona_fb->force_update))
 			kona_display_crash_image(CP_CRASH_DUMP_START);
@@ -780,6 +763,7 @@ static void kona_fb_late_resume(struct early_suspend *h)
 		fb = container_of(h, struct kona_fb, early_suspend_level3);
 		/* Ok for MM going to retention but not shutdown state */
 		pi_mgr_qos_request_update(&g_mm_qos_node, 10);
+		kona_clock_start(fb);
 		/* screen comes out of sleep */
 		if (enable_display(fb))
 			konafb_error("Failed to enable this display device\n");
@@ -790,7 +774,6 @@ static void kona_fb_late_resume(struct early_suspend *h)
 		if (!fb->display_info->vmode)
 			wait_for_completion_interruptible_timeout(
 				&fb->prev_buf_done_sem,	msecs_to_jiffies(100));
-		kona_clock_start(fb);
 		fb->display_ops->update(fb->display_hdl,
 				fb->fb.var.yoffset ? fb->buff1 : fb->buff0,
 				NULL,
@@ -1211,7 +1194,8 @@ static int __ref kona_fb_probe(struct platform_device *pdev)
 	g_kona_fb = fb;
 	ret_val =
 	    pi_mgr_dfs_add_request(&g_kona_fb->dfs_node, "lcd", PI_MGR_PI_ID_MM,
-				   PI_MGR_DFS_MIN_VALUE);
+				   PI_OPP_TURBO);
+
 	if (ret_val) {
 		printk(KERN_ERR "Failed to add dfs request for LCD\n");
 		ret = -EIO;
@@ -1253,10 +1237,6 @@ static int __ref kona_fb_probe(struct platform_device *pdev)
 	fb->fb_wq = alloc_workqueue("FB WQ",
 			WQ_NON_REENTRANT, 1);
 
-#if (KONA_FB_ENABLE_DYNAMIC_CLOCK != 1)
-	fb->display_ops->start(&fb->dfs_node);
-#endif
-	/* Enable_display will start/stop clocks on its own if dynamic */
 	ret = enable_display(fb);
 	if (ret) {
 		konafb_error("Failed to enable this display device\n");
@@ -1440,18 +1420,14 @@ static int __ref kona_fb_probe(struct platform_device *pdev)
 		goto err_set_var_failed;
 	}
 	/* Paint it black (assuming default fb contents are all zero) */
-	kona_clock_start(fb);
 	ret = fb->display_ops->update(fb->display_hdl, fb->buff1, NULL, NULL);
-	kona_clock_stop(fb);
 	if (ret) {
 		konafb_error("Can not enable the LCD!\n");
 		goto err_fb_register_failed;
 	}
 
 	/* Display on after painted blank */
-	kona_clock_start(fb);
 	fb->display_ops->power_control(fb->display_hdl, CTRL_SCREEN_ON);
-	kona_clock_stop(fb);
 
 	ret = register_framebuffer(&fb->fb);
 	if (ret) {
@@ -1472,9 +1448,7 @@ static int __ref kona_fb_probe(struct platform_device *pdev)
 	fb_prepare_logo(&fb->fb, logo_rotate);
 	fb_show_logo(&fb->fb, logo_rotate);
 	mutex_lock(&fb->update_sem);
-	kona_clock_start(fb);
 	fb->display_ops->update(fb->display_hdl, fb->buff0, NULL, NULL);
-	kona_clock_stop(fb);
 	mutex_unlock(&fb->update_sem);
 #endif
 
@@ -1518,17 +1492,13 @@ err_set_var_failed:
 	dma_free_writecombine(&pdev->dev, framesize, fb->fb.screen_base,
 			phys_fbbase);
 
-	kona_clock_start(fb);
 	disable_display(fb);
-	kona_clock_stop(fb);
 
 err_fbmem_alloc_failed:
 	if (pi_mgr_dfs_request_remove(&fb->dfs_node))
 		printk(KERN_ERR "Failed to remove dfs request for LCD\n");
 err_enable_display_failed:
-#if (KONA_FB_ENABLE_DYNAMIC_CLOCK != 1)
-	fb->display_ops->stop(&fb->dfs_node);
-#endif
+	kona_clock_stop(fb);
 	release_dispdrv_info(fb->display_info);
 dispdrv_data_failed:
 	free_platform_data(&pdev->dev);

@@ -188,6 +188,7 @@ typedef enum {
 	DSI_LDO_OFF,
 } DSI_LDO_STATE_t;
 
+
 static DSI_HANDLE_t dsiBus[DSI_INST_COUNT];
 static int videoEnabled;
 static void cslDsiEnaIntEvent(DSI_HANDLE dsiH, UInt32 intEventMask);
@@ -257,6 +258,7 @@ void cslDsiPixTxPollInt(DSI_UPD_REQ_MSG_T *updMsg)
 	else
 		cslDsiAxipvPollInt(updMsg);
 }
+
 
 static CSL_LCD_RES_T cslDsiAxipvStart(DSI_UPD_REQ_MSG_T *updMsg)
 {
@@ -2376,7 +2378,9 @@ CSL_LCD_RES_T CSL_DSI_Init(const pCSL_DSI_CFG dsiCfg)
 	chalAfeCfg.afeDlIdr = 6;	/* 0 - 7  DEF 6 */
 
 	csl_dsi_set_chal_api_clks(dsiH, dsiCfg);
-	cslDsiAfeLdoSetState(dsiH, DSI_LDO_HP);
+	videoEnabled = g_display_enabled;
+	if (!g_display_enabled)
+		cslDsiAfeLdoSetState(dsiH, DSI_LDO_HP);
 
 	dsiH->chalH = chal_dsi_init(dsiH->dsiCoreRegAddr, &chalInit);
 
@@ -2385,29 +2389,30 @@ CSL_LCD_RES_T CSL_DSI_Init(const pCSL_DSI_CFG dsiCfg)
 				"cHal Init!\n", dsiCfg->bus, __func__);
 		res = CSL_LCD_ERR;
 	} else {
-		chal_dsi_phy_afe_on(dsiH->chalH, &chalAfeCfg);
 		/* as per rdb clksel must be set before ANY timing
 		   is set, 0=byte clock 1=bitclk2 2=bitclk */
 		chalMode.clkSel = dsiH->clkCfg.coreClkSel;
-		chal_dsi_on(dsiH->chalH, &chalMode);
+		if (!g_display_enabled) {
+			chal_dsi_phy_afe_on(dsiH->chalH, &chalAfeCfg);
+			chal_dsi_on(dsiH->chalH, &chalMode);
 
-		if (!chal_dsi_set_timing(dsiH->chalH,
-				dsiCfg->phy_timing,
-				dsiH->clkCfg.coreClkSel,
-				dsiH->clkCfg.escClk_MHz,
-				dsiH->clkCfg.hsBitClk_MHz,
-				dsiCfg->lpBitRate_Mbps)) {
-			LCD_DBG(LCD_DBG_ERR_ID,
-					"[CSL DSI][%d] %s: ERROR In Timing "
-					"Calculation!\n",
-					dsiCfg->bus, __func__);
-			res = CSL_LCD_ERR;
-		} else {
-			chal_dsi_de1_set_dma_thresh(dsiH->chalH,
-					DE1_DEF_THRESHOLD_W);
-			cslDsiClearAllFifos(dsiH);
-			/* wait for STOP state */
-			OSTASK_Sleep(TICKS_IN_MILLISECONDS(1));
+			if (!chal_dsi_set_timing(dsiH->chalH,
+					dsiCfg->phy_timing,
+					dsiH->clkCfg.coreClkSel,
+					dsiH->clkCfg.escClk_MHz,
+					dsiH->clkCfg.hsBitClk_MHz,
+					dsiCfg->lpBitRate_Mbps)) {
+				LCD_DBG(LCD_DBG_ERR_ID,
+						"[%d]%s: ERROR In Timing Calc\n"
+						, dsiCfg->bus);
+				res = CSL_LCD_ERR;
+			} else {
+				chal_dsi_de1_set_dma_thresh(dsiH->chalH,
+						DE1_DEF_THRESHOLD_W);
+				cslDsiClearAllFifos(dsiH);
+				/* wait for STOP state */
+				OSTASK_Sleep(TICKS_IN_MILLISECONDS(1));
+			}
 		}
 	}
 

@@ -66,6 +66,7 @@ static struct timeval isr_tv1, isr_tv2;
 		buff[idx].status = AXIPV_BUFF_SCHEDULED;\
 		} while (0)
 
+
 static irqreturn_t axipv_isr(int err, void *dev_id);
 
 /*Todo: Use atomic read and write on this variable*/
@@ -275,24 +276,27 @@ int axipv_init(struct axipv_init_t *init, struct axipv_config_t **config)
 		goto fail_clk;
 	}
 #endif
-	axipv_clk_enable(dev);
+	if (!g_display_enabled) {
+		axipv_clk_enable(dev);
 
-	ctrl &= SFT_RSTN_MASK;
-	/* Do an immediate soft reset and wait for completion */
-	writel(ctrl, init->base_addr + REG_CTRL);
-	tries = 10;
-	while (tries && !(readl(init->base_addr + REG_CTRL) & SFT_RSTN_DONE)) {
-		axipv_debug("waiting for reset to complete\n");
-		udelay(5);
-		--tries;
-	}
-	if (!tries) {
-		axipv_err("AXIPV couldn't be reset! Aborting\n");
-		ret = -ENODEV;
-		goto fail_reset;
-	}
+		ctrl &= SFT_RSTN_MASK;
+		/* Do an immediate soft reset and wait for completion */
+		writel(ctrl, init->base_addr + REG_CTRL);
+		tries = 10;
+		while (tries && !(readl(init->base_addr + REG_CTRL)
+			& SFT_RSTN_DONE)) {
+			axipv_debug("waiting for reset to complete\n");
+			udelay(5);
+			--tries;
+		}
+		if (!tries) {
+			axipv_err("AXIPV couldn't be reset! Aborting\n");
+			ret = -ENODEV;
+			goto fail_reset;
+		}
 
-	axipv_clk_disable(dev);
+		axipv_clk_disable(dev);
+	}
 	dev->base_addr = init->base_addr;
 	dev->irq_cb = init->irq_cb;
 	dev->bypassPV = init->bypassPV;
@@ -301,7 +305,15 @@ int axipv_init(struct axipv_init_t *init, struct axipv_config_t **config)
 	INIT_WORK(&dev->release_work, process_release);
 	for (i = 0; i < AXIPV_MAX_DISP_BUFF_SUPP; i++)
 		dev->buff[i].status = AXIPV_BUFF_AVAILABLE;
-	dev->state = AXIPV_INIT_DONE;
+	if (!g_display_enabled) {
+		dev->state = AXIPV_INIT_DONE;
+	} else {
+		dev->prev_irq_handled = 1;
+		dev->irq_stat = 0;
+		dev->state = AXIPV_ENABLED;
+		writel_relaxed(UINT_MAX, dev->base_addr + REG_INTR_CLR);
+		writel_relaxed(UINT_MAX, dev->base_addr + REG_INTR_EN);
+	}
 	g_axipv_init = true;
 	*config = &dev->config;
 #ifdef DEBUG_FPS

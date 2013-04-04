@@ -118,4 +118,6 @@ int pv_change_state(int event, struct pv_config_t *config);
  */
 int pv_get_state(struct pv_config_t *config);
 
+extern int g_display_enabled;
+
 #endif /* __PV_H__ */
