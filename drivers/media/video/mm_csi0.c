@@ -57,7 +57,6 @@ struct mm_csi0_generic {
    available via platform driver */
 #define V_BASE HW_IO_PHYS_TO_VIRT(MM_CSI0_BASE)
 #define MM_CFG_BASE HW_IO_PHYS_TO_VIRT(0x3C004000)
-#define MM_CLK_BASE HW_IO_PHYS_TO_VIRT(0x3C000000)
 
 struct mm_csi0_generic cam_state = {
 	0,
@@ -89,20 +88,6 @@ void reg_dump(void)
 
 	pr_info("MM CFG dump 0x%x*********\n",
 			BRCM_READ_REG(MM_CFG_BASE, MM_CFG_CSI0_LDO_CTL));
-
-	pr_info("MM CLK dump ************\n");
-	base = MM_CLK_BASE;
-	pr_info("   MM_CLK_MGR_REG_CSI0_PHY_DIV 0x%x\n",
-			BRCM_READ_REG(base, MM_CLK_MGR_REG_CSI0_PHY_DIV));
-	pr_info(" MM_CLK_MGR_REG_CSI0_DIV 0x%x\n",
-			BRCM_READ_REG(base, MM_CLK_MGR_REG_CSI0_DIV));
-	pr_info("  MM_CLK_MGR_REG_CSI0_LP_CLKGATE 0x%x\n",
-			BRCM_READ_REG(base, MM_CLK_MGR_REG_CSI0_LP_CLKGATE));
-	pr_info("MM_CLK_MGR_REG_CSI0_AXI_CLKGATE  0x%x\n",
-			BRCM_READ_REG(base, MM_CLK_MGR_REG_CSI0_AXI_CLKGATE));
-	pr_info("MM_CLK_MGR_REG_DIV_TRIG  0x%x\n",
-			BRCM_READ_REG(base, MM_CLK_MGR_REG_DIV_TRIG));
-
 }
 
 void * get_mm_csi0_handle (enum host_mode mode, enum afe_num afe, enum csi2_lanes lanes)
@@ -174,11 +159,7 @@ int mm_csi0_teardown ()
 		BRCM_WRITE_REG(base, MM_CFG_CSI1_LDO_CTL, 0x0);
 	else
 		pr_info("Wrong AFE specified in Teardown\n");
-	/* enable access */
-	BRCM_WRITE_REG(MM_CLK_BASE, MM_CLK_MGR_REG_WR_ACCESS, 0xA5A501);
-	/* default value */
-	BRCM_WRITE_REG(MM_CLK_BASE, MM_CLK_MGR_REG_CSI0_LP_CLKGATE, 0x00000302);
-	BRCM_WRITE_REG(MM_CLK_BASE, MM_CLK_MGR_REG_CSI0_AXI_CLKGATE, 0x0000302);
+
 	memset(&cam_state, 0x0, sizeof(struct mm_csi0_generic));
 	cam_state.devbusy = 0;
 	cam_state.mode = INVALID;
@@ -192,28 +173,13 @@ int mm_csi0_teardown ()
 /* Mostly AFE selection and clocks */
 int mm_csi0_set_afe ()
 {
-	u32 base = MM_CLK_BASE;
+	u32 base;
 	int term = 1;
 	/* Enable access ... need to check how or why ?? */
-	BRCM_WRITE_REG(base, MM_CLK_MGR_REG_WR_ACCESS, 0xA5A501);
 	if (cam_state.afe == AFE0) {
 		BRCM_WRITE_REG(MM_CFG_BASE, MM_CFG_CSI0_LDO_CTL, 0x5A00000F);
-		BRCM_WRITE_REG(base, MM_CLK_MGR_REG_CSI0_PHY_DIV, 0x00000888);
-		BRCM_WRITE_REG(base, MM_CLK_MGR_REG_CSI0_DIV, 0x00000040);
-		BRCM_WRITE_REG(base, MM_CLK_MGR_REG_CSI0_LP_CLKGATE, 0x00000303);
-		BRCM_WRITE_REG(base, MM_CLK_MGR_REG_CSI0_AXI_CLKGATE, 0x00000303);
-		BRCM_WRITE_REG(base, MM_CLK_MGR_REG_DIV_TRIG, (1 << MM_CLK_MGR_REG_DIV_TRIG_CSI0_LP_TRIGGER_SHIFT));
 	} else {
 		BRCM_WRITE_REG(MM_CFG_BASE, MM_CFG_CSI1_LDO_CTL, 0x5A00000F);
-		BRCM_WRITE_REG(base, MM_CLK_MGR_REG_CSI1_PHY_DIV, 0x00000888);
-		BRCM_WRITE_REG(base, MM_CLK_MGR_REG_CSI1_DIV, 0x00000040);
-		BRCM_WRITE_REG(base, MM_CLK_MGR_REG_CSI1_LP_CLKGATE, 0x00000303);
-		BRCM_WRITE_REG(base, MM_CLK_MGR_REG_CSI1_AXI_CLKGATE, 0x00000303);
-		BRCM_WRITE_REG(base, MM_CLK_MGR_REG_DIV_TRIG, (1 << MM_CLK_MGR_REG_DIV_TRIG_CSI1_LP_TRIGGER_SHIFT));
-		BRCM_WRITE_REG(base, MM_CLK_MGR_REG_CSI0_DIV, 0x00000040);
-		BRCM_WRITE_REG(base, MM_CLK_MGR_REG_CSI0_LP_CLKGATE, 0x00000303);
-		BRCM_WRITE_REG(base, MM_CLK_MGR_REG_CSI0_AXI_CLKGATE, 0x00000303);
-		BRCM_WRITE_REG(base, MM_CLK_MGR_REG_DIV_TRIG, (1 << MM_CLK_MGR_REG_DIV_TRIG_CSI0_LP_TRIGGER_SHIFT));
 	}
 	/* CSI1 uses CSI0 clocks and dividers */
 
