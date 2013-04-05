@@ -119,11 +119,6 @@
 #define to_bcmpmu_fg_data(ptr, mem)	container_of((ptr), \
 		struct bcmpmu_fg_data, mem)
 
-#define clear_avg_sample_buff(fg)	 { \
-	memset(&fg->avg_samples, 0, sizeof(fg->avg_samples)); \
-	fg->avg_samples.idx = 0;\
-}
-
 #define percentage_to_capacity(fg, percentage)	\
 	((fg->capacity_info.full_charge * percentage) / 100)
 
@@ -246,6 +241,7 @@ struct bcmpmu_fg_status_flags {
 	bool low_bat_cal;
 	bool high_bat_cal;
 	bool fully_charged;
+	bool coulb_dis;
 	bool acld_en;
 };
 
@@ -275,6 +271,7 @@ struct avg_sample_buff {
 	int curr[AVG_SAMPLES];
 	int volt[AVG_SAMPLES];
 	int idx;
+	bool dirty;
 };
 
 /**
@@ -300,7 +297,7 @@ struct bcmpmu_fg_data {
 	struct bcmpmu_batt_cap_info capacity_info;
 	struct bcmpmu_fg_status_flags flags;
 	struct batt_adc_data adc_data;
-
+	struct avg_sample_buff avg_sample;
 #ifdef CONFIG_WD_TAPPER
 	struct wd_tapper_node wd_tap_node;
 #else
@@ -322,7 +319,7 @@ struct bcmpmu_fg_data {
 	int high_cal_adj_fct;
 	int low_volt_cnt;
 	int cutoff_cap_cnt;
-	int crit_cutoff_cap_cnt;
+	int crit_cutoff_cap_prev;
 	int crit_cutoff_cap;
 	int crit_cutoff_delta;
 	int cal_low_bat_cnt;
@@ -359,8 +356,11 @@ core_param(ntc_disable, ntc_disable, bool, 0644);
  * internal function prototypes
  */
 static void bcmpmu_fg_batt_cal_algo(struct bcmpmu_fg_data *fg);
-static void bcmpmu_fg_clear_adj_factors(struct bcmpmu_fg_data *fg);
+static void bcmpmu_fg_reset_adj_factors(struct bcmpmu_fg_data *fg);
 static void bcmpmu_fg_update_psy(struct bcmpmu_fg_data *fg, bool force_update);
+static int bcmpmu_fg_get_batt_volt(struct bcmpmu_fg_data *fg);
+static int bcmpmu_fg_get_curr_inst(struct bcmpmu_fg_data *fg);
+
 /**
  * inline function
  */
@@ -416,6 +416,38 @@ static int interquartile_mean(int *data, int num)
 	avg = avg / (j - (num / 4));
 
 	return avg;
+}
+
+static inline void fill_avg_sample_buff(struct bcmpmu_fg_data *fg)
+{
+	int i;
+	fg->avg_sample.idx = 0;
+
+	for (i = 0; i < AVG_SAMPLES; i++) {
+		fg->avg_sample.volt[i] = bcmpmu_fg_get_batt_volt(fg);
+		fg->avg_sample.curr[i] = bcmpmu_fg_get_curr_inst(fg);
+		fg->avg_sample.idx++;
+	}
+}
+
+static inline void update_avg_sample_buff(struct bcmpmu_fg_data *fg)
+{
+	if (fg->avg_sample.dirty) {
+		fill_avg_sample_buff(fg);
+		fg->avg_sample.dirty = false;
+	}
+
+	if (fg->avg_sample.idx == AVG_SAMPLES)
+		fg->avg_sample.idx = 0;
+	fg->avg_sample.volt[fg->avg_sample.idx] = fg->adc_data.volt;
+	fg->avg_sample.curr[fg->avg_sample.idx] = fg->adc_data.curr_inst;
+	fg->avg_sample.idx++;
+}
+
+static inline void clear_avg_sample_buff(struct bcmpmu_fg_data *fg)
+{
+	fg->avg_sample.idx = 0;
+	fg->avg_sample.dirty = true;
 }
 
 #ifndef CONFIG_WD_TAPPER
@@ -652,6 +684,21 @@ static int bcmpmu_fg_reset(struct bcmpmu_fg_data *fg)
 	return ret;
 }
 
+static int bcmpmu_fg_enable_coulb_counter(struct bcmpmu_fg_data *fg,
+		bool enable)
+{
+	bcmpmu_fg_reset(fg);
+	if (enable) {
+		bcmpmu_fg_enable(fg, true);
+		fg->flags.coulb_dis = false;
+	} else {
+		bcmpmu_fg_enable(fg, false);
+		fg->flags.coulb_dis = true;
+	}
+
+	return 0;
+}
+
 /**
  * bcmpmu_fg_freeze_read - Freeze FG coulomb counter for read
  *
@@ -742,7 +789,7 @@ static int bcmpmu_fg_get_cutoff_capacity(struct bcmpmu_fg_data *fg, int volt)
 	}
 
 	cutoff_cap = lut[idx].cap;
-	pr_fg(FLOW, "cutoff cap: %d\n", cutoff_cap);
+	pr_fg(VERBOSE, "volt: %d cutoff cap: %d\n", volt, cutoff_cap);
 	return cutoff_cap;
 }
 
@@ -878,7 +925,7 @@ exit:
 	return ocv;
 }
 
-static inline int bcmpmu_fg_get_batt_volt(struct bcmpmu_fg_data *fg)
+static int bcmpmu_fg_get_batt_volt(struct bcmpmu_fg_data *fg)
 {
 	struct bcmpmu_adc_result result;
 	int ret;
@@ -1092,6 +1139,8 @@ static int bcmpmu_fg_get_load_comp_capacity(struct bcmpmu_fg_data *fg,
 	pr_fg(FLOW, "vbat: %d, vbat_comp: %d ocv_cap: %d\n",
 		fg->adc_data.volt, vbat_oc, capacity_percentage);
 
+	update_avg_sample_buff(fg);
+
 	BUG_ON(capacity_percentage > 100);
 
 	return capacity_percentage;
@@ -1136,7 +1185,7 @@ static int bcmpmu_fg_get_adj_factor(struct bcmpmu_fg_data *fg)
 	return adj_factor;
 }
 
-static void bcmpmu_fg_clear_adj_factors(struct bcmpmu_fg_data *fg)
+static void bcmpmu_fg_reset_adj_factors(struct bcmpmu_fg_data *fg)
 {
 	fg->flags.high_bat_cal = false;
 	fg->flags.low_bat_cal = false;
@@ -1147,6 +1196,14 @@ static void bcmpmu_fg_clear_adj_factors(struct bcmpmu_fg_data *fg)
 	fg->high_cal_adj_fct = 0;
 	fg->cal_high_clr_cnt = 0;
 	fg->cal_low_clr_cnt = 0;
+}
+
+static void bcmpmu_fg_reset_cutoff_cnts(struct bcmpmu_fg_data *fg)
+{
+	fg->crit_cutoff_cap = -1;
+	fg->crit_cutoff_cap_prev = fg->crit_cutoff_cap;
+	fg->crit_cutoff_delta = 0;
+	fg->cutoff_cap_cnt = 0;
 }
 
 static void bcmpmu_fg_update_adj_factor(struct bcmpmu_fg_data *fg)
@@ -1290,6 +1347,12 @@ static void bcmpmu_fg_get_coulomb_counter(struct bcmpmu_fg_data *fg)
 		return;
 
 	fg->last_sample_tm = t_now;
+
+	/**
+	 * if coulomb couting is disabled, just return
+	 */
+	if (fg->flags.coulb_dis)
+		return;
 
 	adj_factor = bcmpmu_fg_get_adj_factor(fg);
 
@@ -1617,9 +1680,10 @@ static int bcmpmu_fg_event_handler(struct notifier_block *nb,
 				fg->chrgr_type < PMU_CHRGR_TYPE_MAX) {
 			pr_fg(FLOW, "charger connected!!\n");
 			fg->flags.chrgr_connected = true;
-			fg->crit_cutoff_cap = -1;
-			fg->crit_cutoff_delta = 0;
-			bcmpmu_fg_clear_adj_factors(fg);
+			bcmpmu_fg_reset_adj_factors(fg);
+			bcmpmu_fg_reset_cutoff_cnts(fg);
+			bcmpmu_fg_enable_coulb_counter(fg, true);
+			clear_avg_sample_buff(fg);
 			bcmpmu_fg_calibrate_offset(fg, FG_HW_CAL_MODE_FAST);
 			fg->flags.prev_batt_status = fg->flags.batt_status;
 			fg->flags.batt_status = POWER_SUPPLY_STATUS_CHARGING;
@@ -1940,7 +2004,7 @@ static void bcmpmu_fg_cal_force_algo(struct bcmpmu_fg_data *fg)
 	/**
 	 * clear all other calibration factors
 	 */
-	bcmpmu_fg_clear_adj_factors(fg);
+	bcmpmu_fg_reset_adj_factors(fg);
 	bcmpmu_fg_update_psy(fg, true);
 }
 
@@ -2136,6 +2200,7 @@ static void bcmpmu_fg_discharging_algo(struct bcmpmu_fg_data *fg)
 	struct bcmpmu_batt_volt_levels *volt_levels;
 	struct bcmpmu_batt_cap_levels *cap_levels;
 	struct bcmpmu_batt_cap_info *cap_info;
+	struct batt_cutoff_cap_map *cutoff_lut;
 	int volt;
 	int volt_avg;
 	int cap_per;
@@ -2153,36 +2218,47 @@ static void bcmpmu_fg_discharging_algo(struct bcmpmu_fg_data *fg)
 	volt_levels = fg->pdata->volt_levels;
 	cap_levels = fg->pdata->cap_levels;
 	cap_info = &fg->capacity_info;
+	cutoff_lut = fg->pdata->batt_prop->cutoff_cap_lut;
 
 	bcmpmu_fg_get_coulomb_counter(fg);
 
 	volt = fg->adc_data.volt;
 	cap_per = cap_info->percentage;
 
+	volt_avg = interquartile_mean(fg->avg_sample.volt, AVG_SAMPLES);
+	pr_fg(FLOW, "vbat_avg: %d\n", volt_avg);
+
 	switch (fg->discharge_state) {
 	case DISCHARG_STATE_HIGH_BATT:
-		if (volt <= volt_levels->low) {
-			volt_avg = bcmpmu_fg_get_avg_volt(fg);
-			if (volt_avg <= volt_levels->low) /** fall throught */
+		if ((volt_avg <= volt_levels->low) ||
+				(cap_per <= cap_levels->low))
 				fg->discharge_state = DISCHARG_STATE_LOW_BATT;
-		} else
+		else
 			break;
 	case DISCHARG_STATE_LOW_BATT:
-		cap_cutoff = bcmpmu_fg_get_cutoff_capacity(fg, volt);
+		cap_cutoff = bcmpmu_fg_get_cutoff_capacity(fg, volt_avg);
 		if (cap_cutoff >= 0) {
+			/**
+			 * disable coulomb counter. Now we will rely on
+			 * cutoff voltage table for capacity
+			 */
+			bcmpmu_fg_enable_coulb_counter(fg, false);
 			fg->discharge_state = DISCHARG_STATE_CRIT_BATT;
 			poll_time = fg->pdata->poll_rate_crit_batt;
 			config_tapper = true;
-		} else if (volt <= volt_levels->low) {
+		} else if (volt_avg <= volt_levels->low) {
 			poll_time = fg->pdata->poll_rate_low_batt;
 			config_tapper = true;
 		}
 		break;
 	case DISCHARG_STATE_CRIT_BATT:
-		cap_cutoff = bcmpmu_fg_get_cutoff_capacity(fg, volt);
-		pr_fg(FLOW, "crit_cutoff_cap: %d crit_cutoff_delta: %d\n",
+		cap_cutoff = bcmpmu_fg_get_cutoff_capacity(fg, volt_avg);
+		pr_fg(FLOW, "cutoff_cap: %d cutoff_delta: %d cutoff_prev: %d\n",
 				fg->crit_cutoff_cap,
-				fg->crit_cutoff_delta);
+				fg->crit_cutoff_delta,
+				fg->crit_cutoff_cap_prev);
+		pr_fg(FLOW, "cutoff_cap_cnt: %d\n", fg->cutoff_cap_cnt);
+
 		if ((fg->crit_cutoff_delta > 0) &&
 				(cap_info->percentage > 0)) {
 			cap_info->prev_percentage =
@@ -2202,16 +2278,23 @@ static void bcmpmu_fg_discharging_algo(struct bcmpmu_fg_data *fg)
 				(cap_cutoff == fg->crit_cutoff_cap) &&
 				(fg->cutoff_cap_cnt++ >
 				 CRIT_CUTOFF_CNT_THRD)) {
-			fg->crit_cutoff_delta =
-				cap_info->percentage - cap_cutoff;
+			if ((fg->crit_cutoff_cap_prev < 0) ||
+					(fg->crit_cutoff_cap <
+					 fg->crit_cutoff_cap_prev)) {
+				pr_fg(FLOW, "crit_cutoff threshold: %d\n",
+						fg->crit_cutoff_cap);
+				fg->crit_cutoff_cap_prev = fg->crit_cutoff_cap;
+				fg->crit_cutoff_delta =
+					cap_info->percentage - cap_cutoff;
+				fg->cutoff_cap_cnt = 0;
+			}
 			if (fg->crit_cutoff_delta <= 0) {
 				fg->crit_cutoff_delta = 0;
-				cap_info->percentage = fg->crit_cutoff_cap;
-				cap_info->capacity = percentage_to_capacity(fg,
-						cap_info->percentage);
+				fg->crit_cutoff_cap = -1;
+				fg->cutoff_cap_cnt = 0;
 			}
 		} else if (((cap_cutoff < 0) &&
-				(fg->cutoff_cap_cnt > 0)) ||
+					(fg->cutoff_cap_cnt > 0)) ||
 				((cap_cutoff != fg->crit_cutoff_cap) &&
 				 (fg->cutoff_cap_cnt > 0))) {
 			pr_fg(FLOW, "clear cutoff_cap_cnt\n");
@@ -3283,6 +3366,7 @@ static int __devinit bcmpmu_fg_probe(struct platform_device *pdev)
 
 	fg->flags.init_capacity = true;
 	fg->crit_cutoff_cap = -1;
+	fg->crit_cutoff_cap_prev = -1;
 	fg->crit_cutoff_delta = 0;
 
 	if (bcmpmu_fg_is_batt_present(fg)) {
@@ -3311,6 +3395,7 @@ static int __devinit bcmpmu_fg_probe(struct platform_device *pdev)
 		pr_fg(INIT, "Using SW maintenance charging mode\n");
 		ret = bcmpmu_fg_sw_maint_charging_init(fg);
 	}
+	clear_avg_sample_buff(fg);
 
 	/**
 	 * Run FG algorithm now

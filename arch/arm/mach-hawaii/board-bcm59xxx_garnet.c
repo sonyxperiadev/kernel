@@ -1008,7 +1008,7 @@ static struct batt_eoc_curr_cap_map ys_05_eoc_cap_lut[] = {
 static struct batt_cutoff_cap_map ys_05_cutoff_cap_lut[] = {
 	{3460, 2},
 	{3430, 1},
-	{3400, 0},
+	{3350, 0},
 };
 
 
