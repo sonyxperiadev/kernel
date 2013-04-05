@@ -679,13 +679,6 @@ static int __devinit kxtik_probe(struct i2c_client *client,
 		FUNCDBG("client is not i2c capable\n");
 		return -ENXIO;
 	}
-	if (!pdata) {
-		FUNCDBG("platform data is NULL\n");
-		pdata = kzalloc(sizeof(struct kxtik_platform_data), GFP_KERNEL);
-		if (!pdata)
-			return -ENOMEM;
-	}
-
 	tik = kzalloc(sizeof(*tik), GFP_KERNEL);
 	if (!tik) {
 		FUNCDBG("failed to allocate memory for module data\n");
@@ -693,7 +686,12 @@ static int __devinit kxtik_probe(struct i2c_client *client,
 	}
 
 	tik->client = client;
-	tik->pdata = *pdata;
+
+
+	if(pdata != NULL)
+		tik->pdata = *pdata;
+	else
+		memset(&tik->pdata, '\0', sizeof(tik->pdata));
 	if (tik->client->dev.of_node) {
 		np = tik->client->dev.of_node;
 		if (of_property_read_u32(np, "gpio-irq-pin", &val))
@@ -734,7 +732,7 @@ static int __devinit kxtik_probe(struct i2c_client *client,
 	if (err < 0)
 		goto err_free_mem;
 
-	if (pdata->init) {
+	if (pdata && pdata->init) {
 		FUNCDBG("pdata->init\n");
 		err = pdata->init();
 		if (err < 0)
@@ -829,7 +827,7 @@ err_destroy_input:
 err_pdata_exit:
 	FUNCDBG("error :err_pdata_exit\n");
 
-	if (pdata->exit)
+	if (pdata && pdata->exit)
 		pdata->exit();
 err_pdata_power_off:
 	FUNCDBG("error :err_pdata_power_off\n");
