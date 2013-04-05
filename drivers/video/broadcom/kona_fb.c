@@ -763,7 +763,6 @@ static void kona_fb_late_resume(struct early_suspend *h)
 		fb = container_of(h, struct kona_fb, early_suspend_level3);
 		/* Ok for MM going to retention but not shutdown state */
 		pi_mgr_qos_request_update(&g_mm_qos_node, 10);
-		kona_clock_start(fb);
 		/* screen comes out of sleep */
 		if (enable_display(fb))
 			konafb_error("Failed to enable this display device\n");
