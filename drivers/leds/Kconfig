@@ -474,6 +474,16 @@ config LEDS_TRIGGER_HEARTBEAT
 	  load average.
 	  If unsure, say Y.
 
+config LEDS_TRIGGER_KPBL
+	tristate "LED kpbl Trigger"
+	depends on LEDS_TRIGGERS
+	default n
+	help
+	  This allows LEDs to be controlled by a keypad backlight.
+	  The duration of the time kpbl working can be controlled
+	  through sysfs.
+	  If unsure, say N.
+
 config LEDS_TRIGGER_BACKLIGHT
 	tristate "LED backlight Trigger"
 	depends on LEDS_TRIGGERS

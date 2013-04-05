@@ -409,7 +409,7 @@
 		button-backlight {
 			label = "button-backlight";
 			gpios = <&gpio 88 0>;
-			linux,default-trigger = "backlight";
+			linux,default-trigger = "kpbl";
 		};
 	};
 };

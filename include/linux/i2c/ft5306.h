@@ -18,6 +18,8 @@
 #include <linux/earlysuspend.h>
 #include <linux/semaphore.h>
 #include <linux/mutex.h>
+#include <linux/i2c.h>
+#include <linux/notifier.h>
 
 #undef	I2C_TS_DRIVER_NAME
 #define I2C_TS_DRIVER_NAME			"FocalTech-Ft5306"
@@ -70,5 +72,8 @@ struct Synaptics_ts_platform_data {
 	int y_max_value;
 	int(*power)(ts_power_status vreg_en);
 };
+
+int register_touch_key_notifier(struct notifier_block *n);
+int unregister_touch_key_notifier(struct notifier_block *n);
 
 #endif /* _FT5306_H_ */

@@ -30,6 +30,8 @@
 #include <linux/slab.h>
 #include <linux/regulator/consumer.h>
 #include <linux/regulator/driver.h>
+#include <linux/notifier.h>
+
 
 #define GPIO_TO_IRQ gpio_to_irq
 
@@ -146,6 +148,7 @@ typedef struct
 
 #define TP_MIN_GAP 3
 static int pressure_support;
+static BLOCKING_NOTIFIER_HEAD(touch_key_notifier);
 static struct workqueue_struct *synaptics_wq;
 static struct i2c_client *ft5306_i2c_client;
 static ST_TOUCH_INFO ft5306_touch_info;
@@ -202,6 +205,16 @@ enum ft520x_ts_regs {
 #define PMODE_MONITOR       0x01
 #define PMODE_STANDBY       0x02
 #define PMODE_HIBERNATE     0x03
+
+int register_touch_key_notifier(struct notifier_block *n)
+{
+	return blocking_notifier_chain_register(&touch_key_notifier, n);
+}
+
+int unregister_touch_key_notifier(struct notifier_block *n)
+{
+	return blocking_notifier_chain_unregister(&touch_key_notifier, n);
+}
 
 static int ft520x_i2c_rxdata(char *rxdata, int length)
 {
@@ -887,6 +900,10 @@ void ReportFingers(struct synaptics_rmi4 *ts, ST_TOUCH_INFO *touch_info)
 	last_info = &g_CurFingers[Finger_Last_Slot()];
 	for (i = 0; i < FTS_MAX_FINGER; i++) {
 		if (cur_info->points[i].state < FINGER_STALE) {
+			if (cur_info->points[i].y > ts_y_max_value)
+				blocking_notifier_call_chain(
+						&touch_key_notifier, 0, NULL);
+
 			input_report_abs(ts->input_dev, ABS_MT_POSITION_X, cur_info->points[i].x);
 			input_report_abs(ts->input_dev, ABS_MT_POSITION_Y, cur_info->points[i].y);
 			if (pressure_support) {
