@@ -33,6 +33,7 @@
 #include "pm_params.h"
 #include "sequencer_ucode.h"
 #include <mach/avs.h>
+#include "volt_tbl.h"
 
 /*sysfs interface to read PMU vlt table*/
 static u32 sr_vlt_table[SR_VLT_LUT_SIZE];
@@ -136,6 +137,7 @@ int pm_init_pmu_sr_vlt_map_table(u32 silicon_type, int freq_id)
 	/*Init SR voltages that are not set by HW seq*/
 	ret = bcmpmu_init_sr_volt();
 	WARN_ON(ret);
+	populate_pmu_voltage_log();
 	return pwr_mgr_pm_i2c_var_data_write(vlt_table, SR_VLT_LUT_SIZE);
 }
 

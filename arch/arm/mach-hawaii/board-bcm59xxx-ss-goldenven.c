@@ -42,6 +42,7 @@
 #include <mach/avs.h>
 #endif
 #include "pm_params.h"
+#include "volt_tbl.h"
 
 #define PMU_DEVICE_I2C_ADDR	0x08
 #define PMU_DEVICE_I2C_ADDR1	0x0c
@@ -1416,6 +1417,15 @@ int bcmpmu_init_sr_volt()
 	return 0;
 }
 
+void bcmpmu_populate_volt_dbg_log(struct pmu_volt_dbg *dbg_log)
+{
+	pmu->read_dev(pmu, PMU_REG_MMSRVOUT2, &dbg_log->msr_retn);
+	pmu->read_dev(pmu, PMU_REG_SDSR1VOUT1, &dbg_log->sdsr1[0]);
+	pmu->read_dev(pmu, PMU_REG_SDSR1VOUT2, &dbg_log->sdsr1[1]);
+	pmu->read_dev(pmu, PMU_REG_SDSR2VOUT1, &dbg_log->sdsr2[0]);
+	pmu->read_dev(pmu, PMU_REG_SDSR2VOUT2, &dbg_log->sdsr2[1]);
+	pr_info("Populated voltage settings for debug");
+}
 
 static int bcmpmu_init_platform_hw(struct bcmpmu59xxx *bcmpmu)
 {

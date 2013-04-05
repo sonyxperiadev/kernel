@@ -18,8 +18,8 @@
  #include <linux/kernel.h>
 #include <linux/module.h>
 #include <mach/avs.h>
-#include "pm_params.h"
 #include <linux/mfd/bcmpmu59xxx.h>
+#include "volt_tbl.h"
 
 #ifdef CONFIG_DEBUG_FS
 #include <linux/debugfs.h>
@@ -36,6 +36,8 @@ static struct dentry *dent_vlt_root_dir;
 #endif
 
 u8 vlt_id_table[SR_VLT_LUT_SIZE];
+static struct pmu_volt_dbg volt_dbg_log;
+
 
 #define MSR_RETN_VAL			800
 #define SDSR1_RETN_VAL			900
@@ -257,7 +259,7 @@ u32 pmu_vlt_table_1200m[SILICON_TYPE_MAX][SR_VLT_LUT_SIZE] = {
 };
 
 #ifdef CONFIG_KONA_AVS
-const u8 *get_sr_vlt_table(u32 silicon_type, int freq_id)
+u8 *get_sr_vlt_table(u32 silicon_type, int freq_id)
 {
 	u32 *vlt_table;
 	int i;
@@ -298,19 +300,22 @@ const u8 *get_sr_vlt_table(u32 silicon_type, int freq_id)
 	ret = avs_get_vddvar_aging_margin(silicon_type, freq_id);
 	if (ret >= 0)
 		vddvar_adj = (u32)ret;
-	for (i = 0; i < ACTIVE_VOLTAGE_OFFSET; i++)
+	for (i = 0; i < ACTIVE_VOLTAGE_OFFSET; i++) {
 		vlt_id_table[i] = bcmpmu_rgltr_get_volt_id(vlt_table[i]);
+		volt_dbg_log.pwr_mgr_volt_tbl[i] = vlt_id_table[i];
+	}
 
 	for (i = ACTIVE_VOLTAGE_OFFSET; i < SR_VLT_LUT_SIZE; i++) {
 		vlt = vlt_table[i] + vddvar_adj;
 		vlt_id_table[i] = bcmpmu_rgltr_get_volt_id(max(vlt,
 							min_vlt_table[i]));
+		volt_dbg_log.pwr_mgr_volt_tbl[i] = vlt_id_table[i];
 	}
-
+	volt_dbg_log.si_type = silicon_type;
 	return vlt_id_table;
 }
 #else
-const u8 *get_sr_vlt_table(u32 silicon_type, int freq_id)
+u8 *get_sr_vlt_table(u32 silicon_type, int freq_id)
 {
 	u32 *vlt_table;
 	int i;
@@ -329,8 +334,11 @@ const u8 *get_sr_vlt_table(u32 silicon_type, int freq_id)
 	default:
 			BUG();
 	}
-	for (i = 0; i < SR_VLT_LUT_SIZE; i++)
+	for (i = 0; i < SR_VLT_LUT_SIZE; i++) {
 		vlt_id_table[i] = bcmpmu_rgltr_get_volt_id(vlt_table[i]);
+		volt_dbg_log.pwr_mgr_volt_tbl[i] = vlt_id_table[i];
+	}
+	volt_dbg_log.si_type = silicon_type;
 	return vlt_id_table;
 }
 #endif
@@ -391,12 +399,76 @@ int get_vddfix_retn_vlt_id(u32 reg_val)
 	vlt = max(vlt, vddfix_min);
 	vddfix_ret = bcmpmu_rgltr_get_volt_id(vlt);
 	pr_info("SDSR1(AVS) min retn voltage: %dmV, curr val: %umV\n",
-		vlt,
-		bcmpmu_rgltr_get_volt_val(reg_val)/1000);
+		vlt, bcmpmu_rgltr_get_volt_val(reg_val)/1000);
 	BUG_ON(vddfix_ret < 0);
 #endif
 	return vddfix_ret;
 }
+
+void populate_pmu_voltage_log(void)
+{
+	bcmpmu_populate_volt_dbg_log(&volt_dbg_log);
+}
+
+
+static int panic_event(struct notifier_block *this, unsigned long event,
+		void *ptr)
+{
+
+	struct pmu_volt_dbg *volt_ptr = &volt_dbg_log;
+	static int has_panicked;
+	int i;
+	if (has_panicked)
+		return 0;
+
+	pr_err("Reading the voltage table and sr voltages\n");
+	pr_err("Silicon Type: %u\n", volt_ptr->si_type);
+	for (i = 0; i < SR_VLT_LUT_SIZE; i++)
+		pr_err("Tbl[%u] = 0x%x Val: %umV\n", i, volt_ptr->
+			pwr_mgr_volt_tbl[i], bcmpmu_rgltr_get_volt_val(
+			volt_ptr->pwr_mgr_volt_tbl[i])/1000);
+
+	pr_err("MSR retn voltage ID: 0x%x Val: %umV\n",
+			volt_ptr->msr_retn & PMU_SR_VOLTAGE_MASK,
+			bcmpmu_rgltr_get_volt_val(volt_ptr->msr_retn
+			& PMU_SR_VOLTAGE_MASK)/1000);
+	pr_err("SDSR1 Active voltage ID: 0x%x Val: %umV\n",
+			volt_ptr->sdsr1[0] & PMU_SR_VOLTAGE_MASK,
+			bcmpmu_rgltr_get_volt_val(volt_ptr->sdsr1[0]
+			& PMU_SR_VOLTAGE_MASK)/1000);
+	pr_err("SDSR1 retn voltage ID: 0x%x Val: %umV\n",
+			volt_ptr->sdsr1[1] & PMU_SR_VOLTAGE_MASK,
+			bcmpmu_rgltr_get_volt_val(volt_ptr->sdsr1[1]
+			& PMU_SR_VOLTAGE_MASK)/1000);
+	pr_err("SDSR2 Active voltage ID: 0x%x Val: %umV\n",
+			volt_ptr->sdsr2[0] & PMU_SR_VOLTAGE_MASK,
+			bcmpmu_rgltr_get_volt_val(volt_ptr->sdsr2[0]
+			& PMU_SR_VOLTAGE_MASK)/1000);
+	pr_err("SDSR2 retn voltage ID: 0x%x Val: %umV\n",
+			volt_ptr->sdsr2[1] & PMU_SR_VOLTAGE_MASK,
+			bcmpmu_rgltr_get_volt_val(volt_ptr->sdsr2[1]
+			& PMU_SR_VOLTAGE_MASK)/1000);
+	has_panicked = 1;
+	return 0;
+}
+
+static struct notifier_block panic_block = {
+	.notifier_call	= panic_event,
+	.next		= NULL,
+	.priority	= 200	/* priority: INT_MAX >= x >= 0 */
+};
+
+
+static int voltage_table_probe(void)
+{
+	pr_info("Voltage Table Probe\n");
+	volt_dbg_log.sig_start = 0x01234567;
+	volt_dbg_log.sig_end = 0x89ABCDEF;
+	atomic_notifier_chain_register(&panic_notifier_list, &panic_block);
+	return 0;
+}
+
+module_init(voltage_table_probe);
 
 #ifdef CONFIG_DEBUG_FS
 static int volt_tbl_open(struct inode *inode, struct file *file)
@@ -452,22 +524,73 @@ static ssize_t read_volt_tbl(struct file *file, const char __user *buf,
 	}
 	volt_table = (u8 *) get_sr_vlt_table(silicon_type, freq_id);
 	pr_info("Silicon Type: %d, Freq Id: %d", silicon_type, freq_id);
-	for (i = 0; i < 0x10; i++)
+	for (i = 0; i < SR_VLT_LUT_SIZE; i++)
 		pr_info("[%x] = %x ", i, volt_table[i]);
 
 	return count;
 }
 
+static ssize_t read_pmu_voltage_log(struct file *file, char __user
+		*user_buf, size_t count, loff_t *ppos)
+{
+	int i;
+	char debug_fs_buf[1000];
+	u32 len = 0;
+
+	struct pmu_volt_dbg *ptr = &volt_dbg_log;
+
+	len += snprintf(debug_fs_buf + len, sizeof(debug_fs_buf) - len,
+		"Reading the voltage table and sr voltages\n");
+	len += snprintf(debug_fs_buf + len, sizeof(debug_fs_buf) - len,
+			"Silicon Type: %u\n", ptr->si_type);
+	for (i = 0; i < SR_VLT_LUT_SIZE; i++)
+		len += snprintf(debug_fs_buf + len, sizeof(debug_fs_buf) - len,
+			"Tbl[%u] = 0x%x Val: %umV\n", i,
+			ptr->pwr_mgr_volt_tbl[i], bcmpmu_rgltr_get_volt_val(
+				ptr->pwr_mgr_volt_tbl[i])/1000);
+
+	len += snprintf(debug_fs_buf + len, sizeof(debug_fs_buf) - len,
+			"MSR retn voltage ID: 0x%x Val: %umV\n",
+			ptr->msr_retn & PMU_SR_VOLTAGE_MASK,
+			bcmpmu_rgltr_get_volt_val(ptr->msr_retn &
+				PMU_SR_VOLTAGE_MASK)/1000);
+	len += snprintf(debug_fs_buf + len, sizeof(debug_fs_buf) - len,
+			"SDSR1 Active voltage ID: 0x%x Val: %umV\n",
+			ptr->sdsr1[0] & PMU_SR_VOLTAGE_MASK,
+			bcmpmu_rgltr_get_volt_val(ptr->sdsr1[0] &
+				PMU_SR_VOLTAGE_MASK)/1000);
+	len += snprintf(debug_fs_buf + len, sizeof(debug_fs_buf) - len,
+			"SDSR1 retn voltage ID: 0x%x Val: %umV\n",
+			ptr->sdsr1[1] & PMU_SR_VOLTAGE_MASK,
+			bcmpmu_rgltr_get_volt_val(ptr->sdsr1[1] &
+				PMU_SR_VOLTAGE_MASK)/1000);
+	len += snprintf(debug_fs_buf + len, sizeof(debug_fs_buf) - len,
+			"SDSR2 Active voltage ID: 0x%x Val: %umV\n",
+			ptr->sdsr2[0] & PMU_SR_VOLTAGE_MASK,
+			bcmpmu_rgltr_get_volt_val(ptr->sdsr2[0] &
+				PMU_SR_VOLTAGE_MASK)/1000);
+	len += snprintf(debug_fs_buf + len, sizeof(debug_fs_buf) - len,
+			"SDSR2 retn voltage ID: 0x%x Val: %umV\n",
+			ptr->sdsr2[1] & PMU_SR_VOLTAGE_MASK,
+			bcmpmu_rgltr_get_volt_val(ptr->sdsr2[1] &
+				PMU_SR_VOLTAGE_MASK)/1000);
+
+	return simple_read_from_buffer(user_buf, count, ppos, debug_fs_buf,
+				       len);
+}
+
+static const struct file_operations pmu_volt_log_fops = {
+	.open = volt_tbl_open,
+	.read = read_pmu_voltage_log,
+};
+
 static const struct file_operations volt_tbl_fops = {
 	.open = volt_tbl_open,
 	.write = read_volt_tbl,
 };
-#endif
 
 static int volt_tbl_init(void)
 {
-	pr_info("Voltage Table Init\n");
-#ifdef CONFIG_DEBUG_FS
 	dent_vlt_root_dir = debugfs_create_dir("voltage_table", 0);
 	if (!dent_vlt_root_dir)
 		return -ENOMEM;
@@ -478,11 +601,16 @@ static int volt_tbl_init(void)
 		return -ENOMEM;
 
 	if (!debugfs_create_file
-	    ("volt_tbl", S_IWUSR, dent_vlt_root_dir, NULL,
+	    ("volt_tbl", S_IRUGO, dent_vlt_root_dir, NULL,
 	     &volt_tbl_fops))
 		return -ENOMEM;
-#endif
+
+	if (!debugfs_create_file("pmu_voltage_log", S_IRUGO,
+			dent_vlt_root_dir, NULL, &pmu_volt_log_fops))
+		return -ENOMEM;
+	pr_info("Voltage Table Debug Init Successs\n");
 	return 0;
 }
 
 late_initcall(volt_tbl_init);
+#endif
