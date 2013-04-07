@@ -1362,7 +1362,7 @@ out:
 
 // For capture routines
 #define XVCLK 1300
-static int AE_Target = 32;
+static int AE_Target = 44;
 static int AE_low, AE_high;
 static int preview_sysclk, preview_HTS;
 
@@ -1753,6 +1753,7 @@ static int ov5640_config_preview(struct v4l2_subdev *sd)
 	ov5640_reg_write(client, 0x3503, 0x00);
 	ret = ov5640_config_timing(client);
 	ov5640_set_banding(sd);
+	ov5640_set_night_mode(sd, 0);
 	ov5640_set_AE_target(sd, AE_Target);
 
 	return ret;
@@ -1802,7 +1803,7 @@ static int ov5640_config_capture(struct v4l2_subdev *sd)
 	ov5640_set_night_mode(sd, 0);
 
 	// Write capture setting
-	//ov5640_reg_writes(client, jpeg_init_common);
+	ov5640_reg_writes(client, hawaii_capture_init);
 	ov5640_config_timing(client);
 
 	// read capture VTS
@@ -1823,7 +1824,7 @@ static int ov5640_config_capture(struct v4l2_subdev *sd)
 		capture_bandingfilter = capture_sysclk * 100 / capture_HTS;
 	}
 	capture_max_band = (int)((capture_VTS - 4) / capture_bandingfilter);
-	preview_shutter = preview_shutter * 5 / 4;
+	//preview_shutter = preview_shutter * 5 / 4;
 
 	// calculate capture shutter/gain16
 	capture_gain16_shutter =
@@ -1877,16 +1878,18 @@ static int ov5640_config_capture(struct v4l2_subdev *sd)
 	}
 
 	// write capture gain
+	#if 0
 	red_gain16 = red_gain16 * 94 / 100;
 	green_gain16 = green_gain16 * 100 / 100;
 	blue_gain16 = blue_gain16 * 96 / 100;
 	ov5640_set_red_gain16(sd, red_gain16);
 	ov5640_set_green_gain16(sd, green_gain16);
 	ov5640_set_blue_gain16(sd, blue_gain16);
+	#endif
 	ov5640_set_gain16(sd, capture_gain16);
 
 	// write capture shutter
-	capture_shutter = capture_shutter * 122 / 100;
+	//capture_shutter = capture_shutter * 122 / 100;
 	printk(KERN_INFO "%s shutter=0x%x, capture_VTS=0x%x\n", __FUNCTION__,
 	       capture_shutter, capture_VTS);
 	if (capture_shutter > (capture_VTS - 4)) {
@@ -2208,8 +2211,9 @@ static int ov5640_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 	ov5640->i_fmt = ov5640_find_datafmt(mf->code);
 
 	/*To avoide reentry init sensor, remove from here       */
-	if (runmode == CAM_RUNNING_MODE_PREVIEW)
-		ret = ov5640_reg_writes(client, configscript_common1);
+	if (runmode == CAM_RUNNING_MODE_PREVIEW) {
+		ret = ov5640_reg_writes(client, hawaii_common_init);
+	}
 	if (ret) {
 		printk(KERN_ERR "Error configuring configscript_common1\n");
 		return ret;
@@ -2218,7 +2222,7 @@ static int ov5640_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 	       ov5640_fmts[ov5640->i_fmt].code, ov5640->i_size);
 	switch ((u32) ov5640_fmts[ov5640->i_fmt].code) {
 	case V4L2_MBUS_FMT_UYVY8_2X8:
-		ret = ov5640_reg_writes(client, yuv422_init_common);
+		ret = ov5640_reg_writes(client, hawaii_preview_init);
 		if (ret)
 			return ret;
 		ret = ov5640_reg_write(client, 0x4300, 0x32);
@@ -2226,7 +2230,7 @@ static int ov5640_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 			return ret;
 		break;
 	case V4L2_MBUS_FMT_YUYV8_2X8:
-		ret = ov5640_reg_writes(client, yuv422_init_common);
+		ret = ov5640_reg_writes(client, hawaii_preview_init);
 		if (ret)
 			return ret;
 		ret = ov5640_reg_write(client, 0x4300, 0x30);
