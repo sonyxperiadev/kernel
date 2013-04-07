@@ -3,7 +3,7 @@
 /dts-v1/;
 
 /include/ "bcm_21664.dtsi"
-/include/ "hawaii_garnet_bcmpmu_c_a18.dtsi"
+/include/ "hawaii_garnet_bcmpmu_c_w68.dtsi"
 
 / {
 	model = "Hawaiigarnet EDN01x";
@@ -40,6 +40,10 @@
 		clock-frequency = <26000000>;
 		port-name = "gps";
 		clk-name = "uartb3_clk";
+		/*If power-save-enable is set Change
+		* PADCTRL_UBRTSN from UART3_RTSN to
+		* UBRTSN (Debug UART) when GPS is inactive.*/
+		power-save-enable = <1>;
 	};
 
 	i2c0: i2c@3e016000 {
@@ -389,7 +393,7 @@
 		button-backlight {
 			label = "button-backlight";
 			gpios = <&gpio 88 0>;
-			linux,default-trigger = "backlight";
+			linux,default-trigger = "kpbl";
 		};
 	};
 };
