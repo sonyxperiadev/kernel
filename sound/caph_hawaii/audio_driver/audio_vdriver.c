@@ -1317,14 +1317,13 @@ void AUDDRV_SetAudioMode_Speaker(SetAudioMode_Sp_t param)
 		found = 0;
 		for (i = 0; i < MAX_SINK_NUM; i++)
 			for (j = 0; j < MAX_BLOCK_NUM; j++)
-				if (path->srcmRoute[i][j].outChnl ==
-				outChnl) {
+				if (path->srcmRoute[i][j].outChnl !=
+				CSL_CAPH_SRCM_CH_NONE) {
 					/*and supposedly
 					path->srcmRoute[i][j].sink
 					matches this speaker*/
 
-					/*outChnl =
-						path->srcmRoute[i][j].outChnl;*/
+					outChnl = path->srcmRoute[i][j].outChnl;
 
 					aTrace(LOG_AUDIO_DRIVER,
 						"%s pathID %d found outChnl 0x%x inChnl 0x%x\n",
