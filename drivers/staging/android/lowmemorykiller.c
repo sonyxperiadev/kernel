@@ -79,21 +79,27 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 	int other_free = global_page_state(NR_FREE_PAGES) - totalreserve_pages;
 	int other_file = global_page_state(NR_FILE_PAGES) -
 						global_page_state(NR_SHMEM);
-
+#ifdef CONFIG_CMA
+	int migrate_type = allocflags_to_migratetype(sc->gfp_mask);
+	int cma_free = INT_MIN, cma_file = INT_MIN;
+#endif
 	/*
-	 * If CMA is enabled, then do not count free pages
+	 * If CMA is enabled and the migrate type is not
+	 * MIGRATE_MOVABLE, then do not count free pages
 	 * from CMA region and also ignore CMA pages that are
 	 * allocated for files.
 	 */
 #ifdef CONFIG_CMA
-	int cma_free, cma_file;
+#define CMA_LMK_RAM_LIMIT	131072 /* 512 MB */
+	if ((migrate_type != MIGRATE_MOVABLE) ||
+			(totalram_pages < CMA_LMK_RAM_LIMIT)) {
+		cma_free = global_page_state(NR_FREE_CMA_PAGES);
+		cma_file = global_page_state(NR_CMA_INACTIVE_FILE)
+				+ global_page_state(NR_CMA_ACTIVE_FILE);
 
-	cma_free = global_page_state(NR_FREE_CMA_PAGES);
-	cma_file = global_page_state(NR_CMA_INACTIVE_FILE)
-			+ global_page_state(NR_CMA_ACTIVE_FILE);
-
-	other_free -= cma_free;
-	other_file -= cma_file;
+		other_free -= cma_free;
+		other_file -= cma_file;
+	}
 #endif
 	if (lowmem_adj_size < array_size)
 		array_size = lowmem_adj_size;
