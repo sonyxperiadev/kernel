@@ -282,8 +282,6 @@ int enter_suspend_state(struct kona_idle_state *state, u32 ctrl_params)
 #ifdef CONFIG_26MHZ_WFI
 	static u32 freq_id = 0xFFFF;
 #endif
-	if (WFI_TRACE_ENABLE)
-		instrument_wfi(TRACE_ENTRY);
 
 #ifdef CONFIG_26MHZ_WFI
 	if (state->state == CSTATE_26MHZ_WFI) {
@@ -293,6 +291,8 @@ int enter_suspend_state(struct kona_idle_state *state, u32 ctrl_params)
 		opp_info.freq_id = PROC_CCU_FREQ_ID_XTAL;
 		state->num_cpu_in_state++;
 		BUG_ON(state->num_cpu_in_state > CONFIG_NR_CPUS);
+		instrument_lpm(LPM_TRACE_ENTER_26MWFI,
+				(u16)state->num_cpu_in_state);
 
 		if (state->num_cpu_in_state == CONFIG_NR_CPUS) {
 			pm_info.wfi_26mhz_cnt++;
@@ -300,9 +300,14 @@ int enter_suspend_state(struct kona_idle_state *state, u32 ctrl_params)
 				CCU_POLICY(PM_DFS));
 			ccu_set_freq_policy(pm_info.proc_ccu,
 				CCU_POLICY(PM_DFS), &opp_info);
+			instrument_lpm(LPM_TRACE_26MWFI_SET_FREQ,
+				(u16)freq_id);
+
 
 		}
 		spin_unlock(&pm_info.lock);
+	} else {
+		instrument_lpm(LPM_TRACE_ENTER_WFI, 0);
 	}
 #endif /*CONFIG_26MHZ_WFI*/
 
@@ -314,21 +319,26 @@ int enter_suspend_state(struct kona_idle_state *state, u32 ctrl_params)
 		spin_lock(&pm_info.lock);
 		opp_info.ctrl_prms = CCU_POLICY_FREQ_REG_INIT;
 		BUG_ON(state->num_cpu_in_state == 0);
+		instrument_lpm(LPM_TRACE_EXIT_26MWFI,
+				(u16)state->num_cpu_in_state);
 
 		if (state->num_cpu_in_state == CONFIG_NR_CPUS) {
 			BUG_ON(freq_id == 0xFFFF);
 			opp_info.freq_id = freq_id;
 			ccu_set_freq_policy(pm_info.proc_ccu,
 				CCU_POLICY(PM_DFS), &opp_info);
+			instrument_lpm(LPM_TRACE_26MWFI_RES_FREQ,
+				(u16)freq_id);
+
 			freq_id = 0xFFFF;
 		}
 		state->num_cpu_in_state--;
 		spin_unlock(&pm_info.lock);
+	} else {
+		instrument_lpm(LPM_TRACE_EXIT_WFI, 0);
 	}
-#endif /*CONFIG_26MHZ_WFI*/
 
-	if (WFI_TRACE_ENABLE)
-		instrument_wfi(TRACE_EXIT);
+#endif /*CONFIG_26MHZ_WFI*/
 
 	return -1;
 }
