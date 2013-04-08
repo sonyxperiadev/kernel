@@ -183,6 +183,7 @@ static struct regulator *vibra_reg;
 /*wait in us, to avoid hs/ihf pop noise*/
 static int wait_bb_on;
 static int wait_hspmu_on = 30*1000;
+static int wait_fmhspmu_on = 70*1000;
 static int wait_ihfpmu_on = 50*1000;
 static int wait_pmu_off = 2*1000;
 
@@ -4016,6 +4017,7 @@ static void powerOnExternalAmp(AUDIO_SINK_Enum_t speaker,
 	static Boolean HS_IsOn = FALSE;
 	static Boolean ampControl = TRUE;
 
+
 	aTrace(LOG_AUDIO_CNTLR, "%s speaker %d, usage_flag %d, use %d,"
 			" force %d\n",
 			__func__, speaker, usage_flag, use, force);
@@ -4129,8 +4131,15 @@ static void powerOnExternalAmp(AUDIO_SINK_Enum_t speaker,
 				"powerOnExternalAmp power on HS");
 			audioh_start_hs();
 			extern_hs_on();
-			audctl_usleep_range(wait_hspmu_on,
-				wait_hspmu_on+2000);
+			if (AUDIO_APP_FM_RADIO == AUDCTRL_GetAudioApp()) {
+				aTrace(LOG_AUDIO_CNTLR, "FM uses wait_fmhspmu_on");
+				audctl_usleep_range(wait_fmhspmu_on,
+					wait_fmhspmu_on+2000);
+				}
+			else {
+				audctl_usleep_range(wait_hspmu_on,
+					wait_hspmu_on+2000);
+				}
 		}
 
 			setExternAudioGain(GetAudioModeBySink(speaker),
