@@ -97,6 +97,11 @@
 #ifdef CONFIG_KONA_MEMC
 #include <plat/kona_memc.h>
 #endif
+
+#ifdef CONFIG_KONA_TMON
+#include <linux/broadcom/kona_tmon.h>
+#endif
+
 #include "devices.h"
 
 /* dynamic ETM support */
@@ -865,6 +870,36 @@ struct platform_device kona_memc_device = {
 	},
 };
 #endif
+
+#ifdef CONFIG_KONA_TMON
+struct tmon_state threshold_val[] = {
+	{.rising = 70, .falling = 65, .flags = TMON_NOTIFY,},
+	{.rising = 85, .falling = 75, .flags = TMON_NOTIFY,},
+	{.rising = 100, .falling = 90, .flags = TMON_NOTIFY,},
+	{.rising = 115, .falling = 112, .flags = TMON_SHDWN,},
+};
+struct kona_tmon_pdata tmon_plat_data = {
+	.base_addr = KONA_TMON_VA,
+	.irq = BCM_INT_ID_TEMP_MON,
+	.thold = threshold_val,
+	.thold_size = ARRAY_SIZE(threshold_val),
+	.poll_rate_ms = 30000,
+	.hysteresis = 0,
+	.flags = VTMON,
+	.chipreg_addr = KONA_CHIPREG_VA,
+	.interval_ms = 5,
+	.tmon_apb_clk = "tmon_apb",
+	.tmon_1m_clk = "tmon_1m_clk",
+};
+struct platform_device kona_tmon_device = {
+	.name = "kona_tmon",
+	.id = -1,
+	.dev = {
+		.platform_data = &tmon_plat_data,
+	},
+};
+#endif
+
 #ifdef CONFIG_UNICAM
 /* Remove this comment once the unicam data is updated for Hawaii*/
 static struct kona_unicam_platform_data unicam_pdata = {
