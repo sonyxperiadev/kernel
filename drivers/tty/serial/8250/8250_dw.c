@@ -44,6 +44,11 @@
 #include <linux/gpio.h>
 #include "8250.h"
 
+#define GPIO_PIN47 47
+#define GPIO_PIN20 20
+#define UART_RESUME 0
+#define UART_SUSPEND 3
+
 #ifdef CONFIG_DW_BT_UART_CHANGES
 extern int bt_dw8250_handle_irq(struct uart_port *p);
 #endif
@@ -188,7 +193,7 @@ void dw8250_pm(struct uart_port *port, unsigned int state,
 	       __func__, (unsigned int)port, state, old_state);
 
 	switch (state) {
-	case 0:
+	case UART_RESUME:
 			/*Resume sequence*/
 		if ((private_data->power_save_enable) &&
 			(port->irq == BCM_INT_ID_UART2))
@@ -198,18 +203,18 @@ void dw8250_pm(struct uart_port *port, unsigned int state,
 			pinmux_set_pin_config(&uartb2_config[1]);
 		serial8250_do_pm(port, state, old_state);
 		break;
-	case 3:
+	case UART_SUSPEND:
 			/*Suspend sequence*/
 		if ((private_data->power_save_enable) &&
 				(port->irq == BCM_INT_ID_UART2)) {
 			pinmux_set_pin_config(&uartb3_config[0]);
-			ret = gpio_direction_input(47);
+			ret = gpio_direction_input(GPIO_PIN47);
 			if (ret)
 				pr_err("UART: GPIO: direction_input failed\n");
 		} else if ((private_data->power_save_enable) &&
 				(port->irq == BCM_INT_ID_UART1)) {
 			pinmux_set_pin_config(&uartb2_config[0]);
-			ret = gpio_direction_input(20);
+			ret = gpio_direction_input(GPIO_PIN20);
 			if (ret)
 				pr_err("UART: GPIO: direction_input failed\n");
 		}
@@ -224,8 +229,9 @@ void dw8250_pm(struct uart_port *port, unsigned int state,
 static int __devinit dw8250_probe(struct platform_device *pdev)
 {
 	struct uart_port port = {};
+
 #ifdef CONFIG_BRCM_UART_CHANGES
-	int i, irqflag = 0;
+	int i, irqflag = 0, ret = 0;
 	struct dw8250_data *data;
 	struct plat_serial8250_port *p = pdev->dev.platform_data;
 	struct resource *regs = platform_get_resource(pdev, IORESOURCE_MEM, 0);
@@ -240,8 +246,28 @@ static int __devinit dw8250_probe(struct platform_device *pdev)
 				GFP_KERNEL);
 			if (!data)
 				return -ENOMEM;
-			if (p->private_data)
+			if (p->private_data) {
 				data->power_save_enable = 1;
+				if (p->irq == BCM_INT_ID_UART2) {
+					ret = gpio_request(GPIO_PIN47,
+						"serial_pin_47");
+					if (ret) {
+						pr_err("UART: GPIO %d",
+							GPIO_PIN47);
+						pr_err("gpio_request ");
+						pr_err("failed\n");
+					}
+				} else if (p->irq == BCM_INT_ID_UART1) {
+					ret = gpio_request(GPIO_PIN20,
+						"serial_pin_20");
+					if (ret) {
+						pr_err("UART: GPIO %d",
+							GPIO_PIN20);
+						pr_err("gpio_request ");
+						pr_err("failed\n");
+					}
+				}
+			}
 
 			port.private_data = data;
 
@@ -351,8 +377,29 @@ static int __devinit dw8250_probe(struct platform_device *pdev)
 		/*If power-save-enable is set Change UBRTSN
 		* to save floor current during deep sleep
 		*/
-		data->power_save_enable = of_property_read_bool(np,
-						"power-save-enable");
+		if (!of_property_read_u32(np, "power-save-enable", &val)) {
+			data->power_save_enable = (bool) val;
+
+			if (data->power_save_enable &&
+				(port.irq == BCM_INT_ID_UART2)) {
+				ret = gpio_request(GPIO_PIN47,
+					"serial_pin_47");
+				if (ret) {
+					pr_err("UART: GPIO %d",
+						GPIO_PIN47);
+					pr_err("gpio_request fails\n");
+				}
+			} else if (data->power_save_enable &&
+				port.irq == BCM_INT_ID_UART1) {
+				ret = gpio_request(GPIO_PIN20,
+					"serial_pin_20");
+				if (ret) {
+					pr_err("UART: GPIO %d",
+						GPIO_PIN20);
+					pr_err("gpio_request fails\n");
+				}
+			}
+		}
 
 #ifdef CONFIG_BRCM_UART_CHANGES
 		val = of_property_read_string(np, "port-name", &prop);
