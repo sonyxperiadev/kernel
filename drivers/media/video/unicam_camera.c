@@ -52,7 +52,7 @@
 #define UNICAM_CAM_DRV_NAME		"unicam-camera"
 
 #define UNICAM_CAPTURE_MODE		BUFFER_TRIGGER
-#define UC_TIMEOUT_MS			300
+#define UC_TIMEOUT_MS			500
 #define UC_RETRY_CNT			3
 
 
@@ -672,7 +672,7 @@ static int unicam_videobuf_start_streaming_int(struct unicam_camera_dev \
 		}
 	}
 
-	reg_dump();
+	unicam_reg_dump();
 	atomic_set(&unicam_dev->streaming, 1);
 	if (unicam_dev->active)
 		if (unicam_dev->if_params.if_mode == \
@@ -1124,6 +1124,9 @@ static void unicam_reset_retry(struct unicam_camera_dev *unicam_dev)
 	int ret = 0;
 	pr_info("unicam_reset_retry: stop\n");
 
+	if (atomic_read(&unicam_dev->streaming) == 0)
+		return;
+
 	ret = unicam_videobuf_stop_streaming_int(unicam_dev);
 	if (ret != 0)
 		pr_err("unicam_reset_retry: stop failed\n");
@@ -1147,13 +1150,14 @@ static void unicam_retry_work(struct work_struct *work)
 					struct unicam_camera_dev, \
 					retry_work);
 	del_timer_sync(&(unicam_dev->unicam_timer));
-	pr_info("unicam_retry_work: got Scheduled\n");
+	pr_debug("unicam_retry_work: got Scheduled\n");
 	if (atomic_read(&unicam_dev->retry_count) > UC_RETRY_CNT) {
-		pr_err("unicam_retry_work: No more retry ..\n");
+		pr_debug("unicam_retry_work: No more retry ..\n");
 		atomic_set(&unicam_dev->retry_count, 0);
 		return;
 	}
-	unicam_reset_retry(unicam_dev);
+	unicam_reg_dump_dbg();
+	/*unicam_reset_retry(unicam_dev);*/
 }
 
 static void unicam_timer_callback(unsigned long data)

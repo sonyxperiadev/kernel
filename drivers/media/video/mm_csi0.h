@@ -329,5 +329,7 @@ int mm_csi0_get_trans(void);
 /* STA register bit PS will be high to denote a panic was signalled */
 bool mm_csi0_get_panic_state(void);
 
-extern void reg_dump(void);
+extern void unicam_reg_dump(void);
+
+extern void unicam_reg_dump_dbg(void);
 

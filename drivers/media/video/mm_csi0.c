@@ -64,7 +64,7 @@ struct mm_csi0_generic cam_state = {
 };
 
 static spinlock_t lock;
-void reg_dump(void)
+void unicam_reg_dump(void)
 {
 	u32 base = V_BASE;
 	pr_info("  CAM_CTL 0x%x\n", BRCM_READ_REG(base, CAM_CTL));
@@ -84,6 +84,61 @@ void reg_dump(void)
 	pr_info("  CAM_IBEA 0x%x\n", BRCM_READ_REG(base, CAM_IBEA));
 	pr_info("  CAM_IBLS 0x%x\n", BRCM_READ_REG(base, CAM_IBLS));
 	pr_info("  CAM_DCS 0x%x\n", BRCM_READ_REG(base, CAM_DCS));
+	pr_info("  CAM_MISC 0x%x\n", BRCM_READ_REG(base, CAM_MISC));
+
+	pr_info("MM CFG dump 0x%x*********\n",
+			BRCM_READ_REG(MM_CFG_BASE, MM_CFG_CSI0_LDO_CTL));
+}
+
+void unicam_reg_dump_dbg(void)
+{
+	u32 base = V_BASE;
+	pr_info("  CAM_CTL 0x%x\n", BRCM_READ_REG(base, CAM_CTL));
+	pr_info("  CAM_STA 0x%x\n", BRCM_READ_REG(base, CAM_STA));
+	pr_info("  CAM_ANA 0x%x\n", BRCM_READ_REG(base, CAM_ANA));
+	pr_info("  CAM_PRI 0x%x\n", BRCM_READ_REG(base, CAM_PRI));
+	pr_info("  CAM_CLK 0x%x\n", BRCM_READ_REG(base, CAM_CLK));
+	pr_info("  CAM_CLT 0x%x\n", BRCM_READ_REG(base, CAM_CLT));
+	pr_info("  CAM_DAT0 0x%x\n", BRCM_READ_REG(base, CAM_DAT0));
+	pr_info("  CAM_DAT1 0x%x\n", BRCM_READ_REG(base, CAM_DAT1));
+	pr_info("  CAM_DLT 0x%x\n", BRCM_READ_REG(base, CAM_DLT));
+	pr_info("  CAM_CMP0 0x%x\n", BRCM_READ_REG(base, CAM_CMP0));
+	pr_info("  CAM_CMP1 0x%x\n", BRCM_READ_REG(base, CAM_CMP1));
+	pr_info("  CAM_CAP0 0x%x\n", BRCM_READ_REG(base, CAM_CAP0));
+	pr_info("  CAM_CAP1 0x%x\n", BRCM_READ_REG(base, CAM_CAP1));
+	pr_info("  CAM_DBG0 0x%x\n", BRCM_READ_REG(base, CAM_DBG0));
+	pr_info("  CAM_DBG1 0x%x\n", BRCM_READ_REG(base, CAM_DBG1));
+	pr_info("  CAM_DBG2 0x%x\n", BRCM_READ_REG(base, CAM_DBG2));
+	pr_info("  CAM_DBG3 0x%x\n", BRCM_READ_REG(base, CAM_DBG3));
+	pr_info("  CAM_ICTL 0x%x\n", BRCM_READ_REG(base, CAM_ICTL));
+	pr_info("  CAM_ISTA 0x%x\n", BRCM_READ_REG(base, CAM_ISTA));
+	pr_info("  CAM_IDI 0x%x\n", BRCM_READ_REG(base, CAM_IDI));
+	pr_info("  CAM_IPIPE 0x%x\n", BRCM_READ_REG(base, CAM_IPIPE));
+	pr_info("  CAM_IBSA 0x%x\n", BRCM_READ_REG(base, CAM_IBSA));
+	pr_info("  CAM_IBEA 0x%x\n", BRCM_READ_REG(base, CAM_IBEA));
+	pr_info("  CAM_IBLS 0x%x\n", BRCM_READ_REG(base, CAM_IBLS));
+	pr_info("  CAM_IBWP 0x%x\n", BRCM_READ_REG(base, CAM_IBWP));
+	pr_info("  CAM_IHWIN 0x%x\n", BRCM_READ_REG(base, CAM_IHWIN));
+	pr_info("  CAM_IHSTA 0x%x\n", BRCM_READ_REG(base, CAM_IHSTA));
+	pr_info("  CAM_IVWIN 0x%x\n", BRCM_READ_REG(base, CAM_IVWIN));
+	pr_info("  CAM_IVSTA 0x%x\n", BRCM_READ_REG(base, CAM_IVSTA));
+	pr_info("  CAM_ICC 0x%x\n", BRCM_READ_REG(base, CAM_ICC));
+	pr_info("  CAM_ICS 0x%x\n", BRCM_READ_REG(base, CAM_ICS));
+	pr_info("  CAM_IDC 0x%x\n", BRCM_READ_REG(base, CAM_IDC));
+	pr_info("  CAM_IDPO 0x%x\n", BRCM_READ_REG(base, CAM_IDPO));
+	pr_info("  CAM_IDCA 0x%x\n", BRCM_READ_REG(base, CAM_IDCA));
+	pr_info("  CAM_IDCD 0x%x\n", BRCM_READ_REG(base, CAM_IDCD));
+	pr_info("  CAM_IDS 0x%x\n", BRCM_READ_REG(base, CAM_IDS));
+	pr_info("  CAM_DCS 0x%x\n", BRCM_READ_REG(base, CAM_DCS));
+	pr_info("  CAM_DBSA 0x%x\n", BRCM_READ_REG(base, CAM_DBSA));
+	pr_info("  CAM_DBEA 0x%x\n", BRCM_READ_REG(base, CAM_DBEA));
+	pr_info("  CAM_DBWP 0x%x\n", BRCM_READ_REG(base, CAM_DBWP));
+	pr_info("  CAM_DBCTL 0x%x\n", BRCM_READ_REG(base, CAM_DBCTL));
+	pr_info("  CAM_IBSA1 0x%x\n", BRCM_READ_REG(base, CAM_IBSA1));
+	pr_info("  CAM_IBEA1 0x%x\n", BRCM_READ_REG(base, CAM_IBEA1));
+	pr_info("  CAM_IDI1 0x%x\n", BRCM_READ_REG(base, CAM_IDI1));
+	pr_info("  CAM_DBSA1 0x%x\n", BRCM_READ_REG(base, CAM_DBSA1));
+	pr_info("  CAM_DBEA1 0x%x\n", BRCM_READ_REG(base, CAM_DBEA1));
 	pr_info("  CAM_MISC 0x%x\n", BRCM_READ_REG(base, CAM_MISC));
 
 	pr_info("MM CFG dump 0x%x*********\n",
