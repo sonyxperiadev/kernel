@@ -94,6 +94,9 @@
 #include <linux/broadcom/bcm_ion.h>
 #endif /* CONFIG_ION */
 
+#ifdef CONFIG_KONA_MEMC
+#include <plat/kona_memc.h>
+#endif
 #include "devices.h"
 
 /* dynamic ETM support */
@@ -843,6 +846,25 @@ struct platform_device kona_avs_device = {
 };
 #endif
 
+#ifdef CONFIG_KONA_MEMC
+struct kona_memc_pdata kmemc_plat_data = {
+	.flags = KONA_MEMC_ENABLE_SELFREFRESH | KONA_MEMC_DISABLE_DDRLDO |
+		KONA_MEMC_SET_SEQ_BUSY_CRITERIA | KONA_MEMC_DDR_PLL_PWRDN_EN |
+		KONA_MEMC_HW_FREQ_CHANGE_EN,
+	.memc0_ns_base = KONA_MEMC0_NS_VA,
+	.chipreg_base = KONA_CHIPREG_VA,
+	.memc0_aphy_base = KONA_MEMC0_APHY_VA,
+	.seq_busy_val = 2,
+	.max_pwr = 3,
+};
+struct platform_device kona_memc_device = {
+	.name = "kona_memc",
+	.id = -1,
+	.dev = {
+		.platform_data = &kmemc_plat_data,
+	},
+};
+#endif
 #ifdef CONFIG_UNICAM
 /* Remove this comment once the unicam data is updated for Hawaii*/
 static struct kona_unicam_platform_data unicam_pdata = {

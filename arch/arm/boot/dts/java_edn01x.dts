@@ -217,6 +217,17 @@
 		rotation = <0>;
 	};
 
+	memc@35008000 {
+		compatible = "bcm,memc";
+		reg = <0x35008000 0x1000>;
+		flags = <0x3B>;
+		chipreg_base = <0x35004000 0x1000>;
+		memc0_aphy_base = <0x35008400 0x1000>;
+		seq_busy_val = <2>;
+		max_pwr = <3>;
+		statuc = "disabled";
+	};
+
 	sdio0 {
 		compatible = "bcm,sdhci";
 		reg = <0x3F180000 10000>;
