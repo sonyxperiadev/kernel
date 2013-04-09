@@ -26,6 +26,7 @@
 #include <linux/regulator/machine.h>
 #include <linux/mfd/bcmpmu59xxx.h>
 #include <linux/mfd/bcmpmu59xxx_reg.h>
+#include <plat/kona_reset_reason.h>
 
 #define REGL_PMMODE_REG_MAX 4
 #define REGL_PMMODE_VAL_MAX 7
@@ -69,9 +70,8 @@ struct bcmpmu59xxx_rgltr_param {
 #ifdef CONFIG_DEBUG_FS
 	struct dentry *rgltr_dbgfs;
 #endif
-	int start_inx;
+	int def_trim;
 	int curr_inx;
-	int trim_inx;
 };
 
 /** voltage regulator details.  */
@@ -726,24 +726,6 @@ static int bcmpmuldo_set_mode(struct regulator_dev *rdev, u32 mode)
 	rgltr_pdata->dsm_mode = __pmmode_to_dsm_mode(pmu_mode);
 	return ret;
 }
-static u32 rgltr_get_eff_volt(struct regulator *rglr, int rgltr_id)
-{
-	int vcurr, trim, vtrim, *trim_tbl;
-	struct bcmpmu59xxx *bcmpmu;
-	struct bcmpmu59xxx_regulator_info *rinfo;
-	struct bcmpmu59xxx_rgltr_param *param;
-
-	bcmpmu = regulator_get_drvdata(rglr);
-	rinfo = bcmpmu59xxx_get_rgltr_info(bcmpmu);
-	param = bcmpmu->rgltr_data;
-	trim_tbl = bcmpmu59xxx_get_trim_table(bcmpmu);
-
-	vcurr = rinfo[rgltr_id].v_table[param->curr_inx];
-	trim = trim_tbl[param->trim_inx];
-	vtrim = (trim * vcurr) / (100 * 100);
-
-	return vcurr + vtrim;
-}
 
 static int rgltr_set_trim_volt(struct regulator *rglr, int rgltr_id, int vindex)
 {
@@ -758,10 +740,11 @@ static int rgltr_set_trim_volt(struct regulator *rglr, int rgltr_id, int vindex)
 	return ret;
 }
 
-static int rgltr_get_volt_inx(struct regulator *rglr, int rgltr_id, int vreq)
+static int rgltr_get_volt_inx(struct regulator *rglr, int rgltr_id,
+		int vreq, int level)
 {
 	int i, match = SR_VOLT_START_INX;
-	u32 next, prev;
+	u32 voltage;
 	struct bcmpmu59xxx *bcmpmu;
 	struct bcmpmu59xxx_regulator_info *rinfo;
 	struct bcmpmu59xxx_rgltr_param *param;
@@ -771,16 +754,22 @@ static int rgltr_get_volt_inx(struct regulator *rglr, int rgltr_id, int vreq)
 	param = bcmpmu->rgltr_data;
 
 	for (i = SR_VOLT_START_INX; i <= rinfo[rgltr_id].num_voltages; i++) {
-		prev = (vreq > rinfo[rgltr_id].v_table[match]) ?
-			(vreq - rinfo[rgltr_id].v_table[match]) :
-			(rinfo[rgltr_id].v_table[match] - vreq);
-		next = (vreq > rinfo[rgltr_id].v_table[i]) ?
-			(vreq - rinfo[rgltr_id].v_table[i]) :
-			(rinfo[rgltr_id].v_table[i] - vreq);
-		if (next < prev) {
-			match = i;
-			if (next == vreq)
-				return i;
+		voltage = rinfo[rgltr_id].v_table[i];
+		if (level) {
+			/*upper bound*/
+			if (voltage >= vreq &&
+				(voltage <= rinfo[rgltr_id].v_table[match]
+				 || match == SR_VOLT_START_INX))
+				match = i;
+		}
+
+		/*lower bound*/
+		else {
+			voltage = rinfo[rgltr_id].v_table[i];
+			if (voltage <= vreq &&
+				(voltage >= rinfo[rgltr_id].v_table[match]
+				 || match == SR_VOLT_START_INX))
+				match = i;
 		}
 	}
 	return match;
@@ -793,6 +782,7 @@ static int rgltr_cal_trimup_inx(struct regulator *rglr, int vdiff)
 
 	bcmpmu = regulator_get_drvdata(rglr);
 	trim_tbl = bcmpmu59xxx_get_trim_table(bcmpmu);
+
 	match = TRIM_UP_MIN_INX;
 	if (vdiff > trim_tbl[TRIM_UP_MAX_INX] ||
 		vdiff < trim_tbl[TRIM_UP_MIN_INX])
@@ -836,11 +826,10 @@ static int rgltr_cal_trimdwn_inx(struct regulator *rglr, int vdiff)
 
 }
 
-/*checks if uptrim is valid and returns uptrim percentage value*/
-static int rgltr_cal_up_trim(struct regulator *rglr, int rgltr_id, int vreq)
+static int rgltr_cal_trim(struct regulator *rglr, int rgltr_id, long vreq)
 {
-	u32 veff;
-	int vcurr, vdiff, *trim_tbl;
+	long vcurr, trim;
+	int *trim_tbl;
 	struct bcmpmu59xxx *bcmpmu;
 	struct bcmpmu59xxx_regulator_info *rinfo;
 	struct bcmpmu59xxx_rgltr_param *param;
@@ -850,53 +839,26 @@ static int rgltr_cal_up_trim(struct regulator *rglr, int rgltr_id, int vreq)
 	param = bcmpmu->rgltr_data;
 	trim_tbl = bcmpmu59xxx_get_trim_table(bcmpmu);
 
-	veff = rgltr_get_eff_volt(rglr, rgltr_id);
+	vcurr = rinfo[rgltr_id].v_table[param->curr_inx];
+	trim = (((vreq - vcurr) * (100 * 100)) / vcurr) +
+		(trim_tbl[param->def_trim]);
+	pr_rgltr(FLOW, "%s: vcurr = %ld, trim = %ld\n", __func__, vcurr, trim);
 
-	if (veff > vreq)
+	if (!(trim >= trim_tbl[TRIM_DOWN_MIN_INX] &&
+				trim <= trim_tbl[TRIM_UP_MAX_INX]))
 		return -1;
 
-	vcurr = rinfo[rgltr_id].v_table[param->curr_inx];
-	vdiff = (((vreq - vcurr) * (100 * 100)) / vcurr) +
-		(trim_tbl[param->trim_inx]);
-
-	if (vdiff >= 0 && vdiff <= trim_tbl[TRIM_UP_MAX_INX])
-		return vdiff;
-
-	return -1;
-}
-
-/*checks if downtrim is valid and returns downtrim percentage value*/
-static int rgltr_cal_dwn_trim(struct regulator *rglr, int rgltr_id, int vreq)
-{
-	u32 veff;
-	int vdiff, vcurr, *trim_tbl;
-	struct bcmpmu59xxx *bcmpmu;
-	struct bcmpmu59xxx_regulator_info *rinfo;
-	struct bcmpmu59xxx_rgltr_param *param;
-
-	bcmpmu = regulator_get_drvdata(rglr);
-	rinfo = bcmpmu59xxx_get_rgltr_info(bcmpmu);
-	param = bcmpmu->rgltr_data;
-	trim_tbl = bcmpmu59xxx_get_trim_table(bcmpmu);
-
-	veff = rgltr_get_eff_volt(rglr, rgltr_id);
-
-	if (veff < vreq)
-		return -1;
-
-	vcurr = rinfo[rgltr_id].v_table[param->curr_inx];
-	vdiff = (((vreq - vcurr) * (100 * 100)) / vcurr) +
-		(trim_tbl[param->trim_inx]);
-
-	if (vdiff <= 0 && vdiff >= trim_tbl[TRIM_DOWN_MIN_INX])
-		return vdiff;
+	if (trim >= 0)
+		return rgltr_cal_trimup_inx(rglr, trim);
+	else
+		return rgltr_cal_trimdwn_inx(rglr, trim);
 
 	return -1;
 }
 
 static int rgltr_cal_trim_inx(struct regulator *rglr, int rgltr_id, u32 vreq)
 {
-	int uptrim, dwntrim, trim_inx = -1;
+	int trim_inx = -1;
 	struct bcmpmu59xxx *bcmpmu;
 	struct bcmpmu59xxx_regulator_info *rinfo;
 	struct bcmpmu59xxx_rgltr_param *param;
@@ -905,24 +867,23 @@ static int rgltr_cal_trim_inx(struct regulator *rglr, int rgltr_id, u32 vreq)
 	rinfo = bcmpmu59xxx_get_rgltr_info(bcmpmu);
 	param = bcmpmu->rgltr_data;
 
-	uptrim = rgltr_cal_up_trim(rglr, rgltr_id, vreq);
-	dwntrim = rgltr_cal_dwn_trim(rglr, rgltr_id, vreq);
+	/*lower volatge*/
+		param->curr_inx = rgltr_get_volt_inx(rglr, rgltr_id, vreq, 0);
+		pr_rgltr(FLOW, "lower volatge value is %d\n",
+				rinfo[rgltr_id].v_table[param->curr_inx]);
+		trim_inx = rgltr_cal_trim(rglr, rgltr_id, vreq);
+		if (trim_inx != -1)
+			return trim_inx;
 
-	if (uptrim != -1) {
-		trim_inx = rgltr_cal_trimup_inx(rglr, uptrim);
-		return trim_inx;
-	} else if (dwntrim != -1) {
-		trim_inx = rgltr_cal_trimdwn_inx(rglr, dwntrim);
-		return trim_inx;
-	} else {
-		param->curr_inx++;
-		if (param->curr_inx == param->start_inx)
-			return -1;
-		if (param->curr_inx >= rinfo[rgltr_id].num_voltages)
-			param->curr_inx = SR_VOLT_START_INX;
-		trim_inx = rgltr_cal_trim_inx(rglr, rgltr_id, vreq);
-	}
-	return trim_inx;
+	/*higher volatge*/
+		param->curr_inx = rgltr_get_volt_inx(rglr, rgltr_id, vreq, 1);
+		pr_rgltr(FLOW, "higher volatge value is %d\n",
+				rinfo[rgltr_id].v_table[param->curr_inx]);
+		trim_inx = rgltr_cal_trim(rglr, rgltr_id, vreq);
+		if (trim_inx != -1)
+			return trim_inx;
+
+	return -1;
 }
 
 static int rgltr_set_trim_vlt(const char *consumer, u32 vreq, int rgltr_id)
@@ -944,16 +905,15 @@ static int rgltr_set_trim_vlt(const char *consumer, u32 vreq, int rgltr_id)
 	rinfo = bcmpmu59xxx_get_rgltr_info(bcmpmu);
 	param = bcmpmu->rgltr_data;
 
-	param->start_inx = rgltr_get_volt_inx(rglr, rgltr_id, vreq);
-	param->curr_inx = param->start_inx;
-
 	/*default trim value*/
 	bcmpmu->read_dev(bcmpmu, rinfo[rgltr_id].vout_trim, &val);
-	param->trim_inx = val;
+	param->def_trim = val;
+	pr_rgltr(FLOW, "%s: default trim value is %d\n", __func__,
+			param->def_trim);
 
 	trim_inx = rgltr_cal_trim_inx(rglr, rgltr_id, vreq);
-	pr_info("%s: trim_inx is %d for vreq = %d curr_inx is %d\n",
-			__func__, trim_inx, vreq, param->curr_inx);
+	pr_info("%s:trim_inx is %d for vreq = %d\n",
+			__func__, trim_inx, vreq);
 	if (trim_inx != -1) {
 		rgltr_set_trim_volt(rglr, rgltr_id, trim_inx);
 		regulator_set_voltage(rglr,
@@ -1483,7 +1443,7 @@ static int bcmpmu_regulator_probe(struct platform_device *pdev)
 				goto register_fail;
 			}
 
-			if (bcmpmu_rgltrs[i].req_volt)
+			if (bcmpmu_rgltrs[i].req_volt && !is_soft_reset())
 				rgltr_set_trim_vlt(bcmpmu_rgltrs[i].initdata->
 				consumer_supplies[0].supply,
 				bcmpmu_rgltrs[i].req_volt, i);

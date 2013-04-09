@@ -28,6 +28,8 @@
 #include <linux/mfd/bcmpmu.h>
 #include <linux/module.h>
 #include <plat/kona_reset_reason.h>
+#include <mach/io_map.h>
+#include <mach/rdb_A0/brcm_rdb_root_rst_mgr_reg.h>
 
 #ifdef CONFIG_KONA_TIMER_UNIT_TESTS
 #include <mach/kona_timer.h>
@@ -52,6 +54,19 @@ static char *str_reset_reason[] = {
 
 unsigned int hard_reset_reason;
 EXPORT_SYMBOL(hard_reset_reason);
+
+int is_soft_reset(void)
+{
+	u32 reg;
+	int soft_rst;
+
+	reg = readl(KONA_ROOT_RST_VA + ROOT_RST_MGR_REG_RSTSTS_OFFSET);
+	soft_rst = (reg & ROOT_RST_MGR_REG_RSTSTS_CHIPSFTRST_DET_MASK)
+		>> ROOT_RST_MGR_REG_RSTSTS_CHIPSFTRST_DET_SHIFT;
+
+	return soft_rst;
+}
+EXPORT_SYMBOL(is_soft_reset);
 
 static void set_emu_reset_reason(unsigned int const emu, int val)
 {

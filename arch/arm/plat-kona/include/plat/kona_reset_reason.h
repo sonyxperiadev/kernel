@@ -27,4 +27,5 @@ void do_clear_ap_only_boot(void);
 unsigned int is_ap_only_boot(void);
 extern unsigned int hard_reset_reason;
 unsigned int is_charging_state(void);
+int is_soft_reset(void);
 #endif
