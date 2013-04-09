@@ -1,0 +1,54 @@
+menu "CPUQuiet Framework"
+
+config CPU_QUIET
+	bool "CPUQuiet Framework"
+	help
+	 Cpuquiet implements pluggable policies for forcing cpu cores into a
+	 quiescent state. Appropriate policies will save power without hurting
+	 performance.
+
+if CPU_QUIET
+
+config CPU_QUIET_GOVERNOR_USERSPACE
+	bool "'userspace' governor"
+	default y
+	help
+	 Manual control of the number of CPUs online.
+	 This governor allows userspace to control the number of online CPUs.
+	 That means this governor allow user to implement the real governor
+	 in user space.
+
+	 If in doubt say Y.
+
+config CPU_QUIET_GOVERNOR_RUNNABLE
+	bool "'runnable threads' governor"
+	default y
+	help
+	 Scale the number of CPUs online depending on the number of runnable
+	 threads.  This governor will scale the number of CPUs online depending
+	 on the number of runnable threads.
+
+	 If in doubt say Y.
+
+choice
+	prompt "Default CPUQuiet governor"
+	default CPU_QUIET_DEFAULT_GOV_USERSPACE
+	help
+	 This option sets which CPUQuiet governor shall be loaded at
+	 startup. If in doubt, select 'userspace'.
+
+config CPU_QUIET_DEFAULT_GOV_USERSPACE
+	bool "userspace"
+	select CPU_QUIET_GOVERNOR_USERSPACE
+	help
+	 Use the CPUQuiet governor 'userspace' as default.
+
+config CPU_QUIET_DEFAULT_GOV_RUNNABLE
+	bool "runnable threads"
+	select CPU_QUIET_GOVERNOR_RUNNABLE
+	help
+	 Use the CPUQuiet governor 'runnable threads' as default.
+endchoice
+
+endif
+endmenu
