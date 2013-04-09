@@ -4264,10 +4264,10 @@ static int32_t bcmtch_dev_resume(void)
 			ret_val = bcmtch_dev_wait_for_firmware_ready(1000);
 
 		if (!ret_val)
-			ret_val = bcmtch_os_interrupt_enable();
+			ret_val = bcmtch_dev_watchdog_start();
 
 		if (!ret_val)
-			ret_val = bcmtch_dev_watchdog_start();
+			ret_val = bcmtch_os_interrupt_enable();
 	}
 
 	if (ret_val)
