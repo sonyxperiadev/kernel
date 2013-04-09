@@ -87,6 +87,10 @@ extern Boolean RPC_GetProperty(UInt32 type, UInt32 *value);
 #define RPC_TRACE(str) {}
 #endif
 
+#define CAL_RPC_CLIENTID 2
+#define CAL_RPC_DEVID	 9	/* SERIAL_DEVICE_RPC_0 -
+		Same as dft ATC RPC ch */
+
 #ifdef USE_RPC_MUTEX
 
 struct mutex gRpcLock;
@@ -792,16 +796,24 @@ RPC_Result_t RPC_ServerRxCbk(PACKET_InterfaceType_t interfaceType,
 	/*For non-telephony clients, match by interface type */
 	else {
 		clientId = 0;
-
-		for (k = 0; k < 0xFF; k++) {
-			RpcClientInfo_t *cInfo;
-			cInfo = gRpcClientList[k];
-			if (cInfo
-			    && (cInfo->info.interfaceType == interfaceType)) {
-				clientId = k;
-				bFound = 1;
-				break;
-			}
+		/* Check for CALD client */
+		if ((channel == CAL_RPC_DEVID) &&
+		    (interfaceType == INTERFACE_SERIAL) &&
+		    gRpcClientList[CAL_RPC_CLIENTID]) {
+			clientId = CAL_RPC_CLIENTID;
+			bFound = 1;
+		} else {
+			for (k = 0; k < 0xFF; k++) {
+				RpcClientInfo_t *cInfo;
+				cInfo = gRpcClientList[k];
+				if (cInfo
+				    && (cInfo->info.interfaceType ==
+					interfaceType)) {
+					clientId = k;
+					bFound = 1;
+					break;
+				}
+		}
 		}
 	}
 
@@ -893,8 +905,9 @@ void RPC_ServerNotification(struct RpcNotificationEvent_t event)
 			 ("RPC_ServerNotification: client %d\n", k));
 			if (event.param == RPC_CPRESET_START)
 				gRpcClientList[k]->ackdCPReset = 0;
+			event.ifType = gRpcClientList[k]->info.interfaceType;
 			RPC_ServerDispatchNotificationMsg(
-			      gRpcClientList[k]->info.interfaceType,
+				event.ifType,
 				k, event);
 		}
 

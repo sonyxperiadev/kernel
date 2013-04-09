@@ -468,17 +468,22 @@ void CSD_FlowCtrlCB(RPC_FlowCtrlEvent_t event, UInt8 channel)
 	return;
 }
 
-/* callback for CP silent reset events */
-void CSD_CPResetCB(RPC_CPResetEvent_t event,
-			PACKET_InterfaceType_t interface)
+/* callback for RPC Ntf events */
+void CSD_RpcNotificationCb(struct RpcNotificationEvent_t event)
 {
-	/* **FIXME** what needs to be done here */
-	VSP_DEBUG(DBG_INFO, "CP Reset event %d interface %d\n",
-				(int)event, (int)interface);
+	VSP_DEBUG(DBG_INFO, "CSD RPC Ntf event %d param %d interface %d\n",
+		  (int)event.event, (int)event.param, (int)event.ifType);
 
-	/* for now, just ack... */
-	if (RPC_CPRESET_START == event)
-		RPC_PACKET_AckReadyForCPReset(0, INTERFACE_CSD);
+	switch (event.event) {
+	case RPC_CPRESET_EVT:
+		/* for now, just ack as ready for reset... */
+		if (RPC_CPRESET_START == event.param)
+			RPC_PACKET_AckReadyForCPReset(0, INTERFACE_CSD);
+		break;
+	default:
+		/* Unhandled event */
+		break;
+	}
 }
 
 /*******************************************************************************
@@ -496,11 +501,10 @@ static int vsp_open(struct inode *inode, struct file *filp)
 
 	if (0 == g_first_init) {
 		g_CsdClientId = SYS_GenClientID();
-		if (RPC_RESULT_OK != RPC_PACKET_RegisterDataInd(g_CsdClientId
-				, INTERFACE_CSD
-				, CSD_DataIndCB
-				, CSD_FlowCtrlCB
-				, CSD_CPResetCB)) {
+		if (RPC_RESULT_OK !=
+		    RPC_PACKET_RegisterDataInd(g_CsdClientId, INTERFACE_CSD,
+					       CSD_DataIndCB, CSD_FlowCtrlCB,
+					       CSD_RpcNotificationCb)) {
 			VSP_DEBUG(DBG_ERROR, "vsp: RPC Register failed!!!\n");
 			return 1;
 		}
