@@ -106,6 +106,18 @@ CHAL_CAM_STATUS_CODES chal_cam_register_display(CHAL_HANDLE handle, CHAL_CAM_PAR
     cUInt32 dbctl, dbsa1, dbea1;
     cUInt32 misc;
 
+	if (pCamDevice == NULL) {
+		printk(KERN_ERR "%s: pCamDevice = NULL. Serious error.\n",
+						__func__);
+		return CHAL_OP_FAILED;
+	}
+
+	if (pCamDevice->baseAddr == NULL) {
+		printk(KERN_ERR "%s: pCamDevice->baseAddr = NULL. Serious error.\n",
+						__func__);
+		return CHAL_OP_FAILED;
+	}
+
 // Register Output
     // control
         ctl = BRCM_READ_REG ( pCamDevice->baseAddr, CAM_CTL );
@@ -166,28 +178,22 @@ CHAL_CAM_STATUS_CODES chal_cam_register_display(CHAL_HANDLE handle, CHAL_CAM_PAR
         dbctl = BRCM_READ_REG ( pCamDevice->baseAddr, CAM_DBCTL );
         misc = BRCM_READ_REG ( pCamDevice->baseAddr, CAM_MISC );
 
-	chal_dprintf(CDBG_INFO2,
-		"CTL=0x%x STA=0x%x ANA=0x%x PRI=0x%x "
+	printk(KERN_INFO "CTL=0x%x STA=0x%x ANA=0x%x PRI=0x%x "
 		"CLK=0x%x CLT=0x%x DAT0=0x%x DAT1=0x%x DLT=0x%x\r\n",
 		ctl, sta, ana, pri, clk, clt, dat0, dat1, dlt);
-	chal_dprintf(CDBG_INFO2,
-		"CMP0=0x%x CMP1=0x%x CAP0=0x%x CAP1=0x%x "
+	printk(KERN_INFO "CMP0=0x%x CMP1=0x%x CAP0=0x%x CAP1=0x%x "
 		"DBG0=0x%x DBG1=0x%x DBG2=0x%x DBG3=0x%x\r\n",
 		cmp0, cmp1, cap0, cap1, dbg0, dbg1, dbg2, dbg3);
-	chal_dprintf(CDBG_INFO2,
-		"ICTL=0x%x ISTA=0x%x IDI=0x%x IPIPE=0x%x "
+	printk(KERN_INFO "ICTL=0x%x ISTA=0x%x IDI=0x%x IPIPE=0x%x "
 		"IBSA=0x%x IBEA=0x%x IBLS=0x%x\r\n",
 		ictl, ista, idi, ipipe, ibsa, ibea, ibls);
-	chal_dprintf(CDBG_INFO2,
-		"IBSA1=0x%x IBEA1=0x%x IDI1=0x%x "
+	printk(KERN_INFO "IBSA1=0x%x IBEA1=0x%x IDI1=0x%x "
 		"IBWP=0x%x IHWIN=0x%x IHSTA=0x%x IVWIN=0x%x IVSTA=0x%x\r\n",
 		ibsa1, ibea1, idi1, ibwp, ihwin, ihsta, ivwin, ivsta);
-	chal_dprintf(CDBG_INFO2,
-		"DCS=0x%x DBSA=0x%x DBEA=0x%x DBWP=0x%x "
+	printk(KERN_INFO "DCS=0x%x DBSA=0x%x DBEA=0x%x DBWP=0x%x "
 		"DBSA1=0x%x DBEA1=0x%x DBCTL=0x%x\r\n",
 		dcs, dbsa, dbea, dbwp, dbsa1, dbea1, dbctl);
-	chal_dprintf(CDBG_INFO2,
-		"ICC=0x%x ICS=0x%x IDC=0x%x IDPO=0x%x IDCA=0x%x "
+	printk(KERN_INFO "ICC=0x%x ICS=0x%x IDC=0x%x IDPO=0x%x IDCA=0x%x "
 		"IDCD=0x%x IDS=0x%x MISC=0x%x\r\n\r\n",
 		icc, ics, idc, idpo, idca, idcd, ids, misc);
 
@@ -1477,7 +1483,8 @@ CHAL_CAM_STATUS_CODES chal_cam_set_lane_cntrl(CHAL_HANDLE handle, CHAL_CAM_LANE_
             }
             if (cfg->lane & CHAL_CAM_CLK_LANE)
             {
-		BRCM_WRITE_REG_FIELD(pCamDevice->baseAddr, CAM_CLT, CLT2, 0x3c);
+				BRCM_WRITE_REG_FIELD(pCamDevice->baseAddr,
+						CAM_CLT, CLT2, cfg->param);
             }
         }
     // High Speed Settle Delay Time
@@ -1486,11 +1493,13 @@ CHAL_CAM_STATUS_CODES chal_cam_set_lane_cntrl(CHAL_HANDLE handle, CHAL_CAM_LANE_
         // Lane 0/1 HS Termination
             if ( (cfg->lane & CHAL_CAM_DATA_LANE_0) || (cfg->lane & CHAL_CAM_DATA_LANE_1) )
             {
-		BRCM_WRITE_REG_FIELD(pCamDevice->baseAddr, CAM_DLT, DLT1, 0x8);
+				BRCM_WRITE_REG_FIELD(pCamDevice->baseAddr,
+						CAM_DLT, DLT1, cfg->param);
             }
             if (cfg->lane & CHAL_CAM_CLK_LANE)
             {
-		BRCM_WRITE_REG_FIELD(pCamDevice->baseAddr, CAM_CLT, CLT1, 0xA);
+				BRCM_WRITE_REG_FIELD(pCamDevice->baseAddr,
+						CAM_CLT, CLT1, cfg->param);
             }
         }
 
@@ -1543,7 +1552,7 @@ CHAL_CAM_STATUS_CODES chal_cam_set_intf(CHAL_HANDLE handle, CHAL_CAM_CFG_INTF_st
             BRCM_WRITE_REG_FIELD(pCamDevice->baseAddr,CAM_CTL,PFT,5);
         // Lane Timing
 		BRCM_WRITE_REG(pCamDevice->baseAddr, CAM_CLT,
-		((0xA<<CAM_CLT_CLT1_SHIFT)|(0x3c<<CAM_CLT_CLT2_SHIFT)));
+		((0x0<<CAM_CLT_CLT1_SHIFT)|(0x05<<CAM_CLT_CLT2_SHIFT)));
 		BRCM_WRITE_REG(pCamDevice->baseAddr, CAM_DLT,
 		((0x8<<CAM_DLT_DLT1_SHIFT)|(0<<CAM_DLT_DLT2_SHIFT)
 		|(0<<CAM_DLT_DLT3_SHIFT)));

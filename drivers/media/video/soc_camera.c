@@ -299,17 +299,28 @@ static int soc_camera_reqbufs(struct file *file, void *priv,
 
 	WARN_ON(priv != file->private_data);
 
-	if (icd->streamer && icd->streamer != file)
+	if (icd->streamer && icd->streamer != file) {
+		dev_err(&icd->dev,
+			"icd->streamer is not a file, returning error\n");
 		return -EBUSY;
+	}
 
 	if (ici->ops->init_videobuf) {
 		ret = videobuf_reqbufs(&icd->vb_vidq, p);
-		if (ret < 0)
+		if (ret < 0) {
+			dev_err(&icd->dev,
+				"videobuf_reqbufs failed, returning error\n");
 			return ret;
+		}
 
 		ret = ici->ops->reqbufs(icd, p);
 	} else {
 		ret = vb2_reqbufs(&icd->vb2_vidq, p);
+		if (ret < 0) {
+			dev_err(&icd->dev,
+				"vb2_reqbufs failed, returning error\n");
+			return ret;
+		}
 	}
 
 	if (!ret && !icd->streamer)

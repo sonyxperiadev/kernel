@@ -151,6 +151,7 @@ static CHAL_CAM_PORT_AFE_t cslCamChalPortAFE(CSL_CAM_PORT_AFE_T csl_val);
 static CHAL_CAM_CHAN_t cslCamChalPortChan(CSL_CAM_PORT_CHAN_T csl_val);
 
 static Int32 cslCamClock(UInt32 clk_select, UInt32 freq, Boolean enable);
+static void cslCamReset(void);
 
 
 /******************************************************************************
@@ -522,6 +523,24 @@ static CHAL_CAM_PIXEL_SIZE_t cslCamChalPixelSize(CSL_CAM_PIXEL_SIZE_T csl_val)
 }
 
 
+/*****************************************************************************
+ * NAME:    cslCamReset
+ *
+ * Description: this function Reset Unicam Block
+ *
+ ******************************************************************************/
+static void cslCamReset(void)
+{
+	struct clk *unicam_clk;
+
+	/* Reset UNICAM interface */
+	unicam_clk = clk_get(NULL, "csi0_axi_clk");
+	if (!unicam_clk)
+		return;
+	/* Should clear and set CSI0_SOFT_RSTN_MASK */
+	clk_reset(unicam_clk);
+}
+
 
 /*****************************************************************************
  * NAME:    cslCamClock
@@ -771,6 +790,9 @@ Int32 csl_cam_open(pCSL_CAM_INTF_CFG_st intfCfg, CSL_CAM_HANDLE *cslCamH)
 				 cslCamDrv.intf_cfg.input_mode,
 				 cslCamDrv.intf_cfg.frame_time_out));
 
+			/* Reset Unicam Interface */
+			cslCamReset();
+
 			// Set Interface
 			chal_cam_intf_st.intf =
 			    cslCamChalIntf(cslCamDrv.intf_cfg.intf);
@@ -993,6 +1015,9 @@ Int32 csl_cam_close(CSL_CAM_HANDLE cslCamH)
 				"CHAL_CAM_ANALOG: FAILED\n"));
 			success |= CSL_CAM_ERR;
 		}
+
+		/* Reset Unicam Interface */
+		cslCamReset();
 	}
 // close handle
 	camH->open = 0;

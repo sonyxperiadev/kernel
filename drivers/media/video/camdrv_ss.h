@@ -215,7 +215,7 @@ struct camdrv_ss_sensor_cap {
 	int  (*set_touch_focus_area)(struct v4l2_subdev *sd, enum v4l2_touch_af touch_af, v4l2_touch_area *touch_area);
 	int  (*set_touch_focus)(struct v4l2_subdev *sd, enum v4l2_touch_af touch_af, v4l2_touch_area *touch_area);
 	int  (*get_touch_focus_status)(struct v4l2_subdev *sd, struct v4l2_control *ctrl);
-	int (*AAT_flash_control)(struct v4l2_subdev *sd, int control_mode);
+	int (*flash_control)(struct v4l2_subdev *sd, int control_mode);
 	int (*i2c_set_data_burst)(struct i2c_client *client, regs_t reg_buffer[], int num_of_regs, char *name);
 	bool (*check_flash_needed)(struct v4l2_subdev *sd);
 	int (*get_light_condition)(struct v4l2_subdev *sd, int *Result);
@@ -691,8 +691,12 @@ struct camdrv_ss_sensor_cap {
 /* EXTERN */
 /************************/
 extern bool camdrv_ss_sensor_init_main(bool bOn, struct camdrv_ss_sensor_cap *sensor);
-#ifdef CONFIG_SOC_SUB_CAMERA
+#if defined(CONFIG_SOC_SUB_CAMERA)
 extern bool camdrv_ss_sensor_init_sub(bool bOn, struct camdrv_ss_sensor_cap *sensor);
+extern void camdrv_ss_sensor_sub_name(struct camdrv_ss_sensor_cap *sensror);
+#endif
+#if defined(CONFIG_SOC_CAMERA)
+extern void camdrv_ss_sensor_main_name(struct camdrv_ss_sensor_cap *sensror);
 #endif
 
 extern unsigned int HWREV;

@@ -21,13 +21,13 @@
 
 #include <media/videobuf2-core.h>
 
-static int debug;
+static int debug = 2;
 module_param(debug, int, 0644);
 
 #define dprintk(level, fmt, arg...)					\
 	do {								\
 		if (debug >= level)					\
-			printk(KERN_DEBUG "vb2: " fmt, ## arg);		\
+			printk(KERN_ERR "vb2: " fmt, ## arg);		\
 	} while (0)
 
 #define call_memop(q, op, args...)					\
@@ -547,8 +547,11 @@ int vb2_reqbufs(struct vb2_queue *q, struct v4l2_requestbuffers *req)
 	 */
 	ret = call_qop(q, queue_setup, q, NULL, &num_buffers, &num_planes,
 		       q->plane_sizes, q->alloc_ctx);
-	if (ret)
+	if (ret) {
+		dprintk(1, "reqbufs: queue_setup error. num_buffers =%d\n",
+							num_buffers);
 		return ret;
+	}
 
 	/* Finally, allocate buffers and video memory */
 	ret = __vb2_queue_alloc(q, req->memory, num_buffers, num_planes);
@@ -568,8 +571,10 @@ int vb2_reqbufs(struct vb2_queue *q, struct v4l2_requestbuffers *req)
 		ret = call_qop(q, queue_setup, q, NULL, &num_buffers,
 			       &num_planes, q->plane_sizes, q->alloc_ctx);
 
-		if (!ret && allocated_buffers < num_buffers)
+		if (!ret && allocated_buffers < num_buffers) {
+			dprintk(1, "reqbufs. queue_setup failed\n");
 			ret = -ENOMEM;
+		}
 
 		/*
 		 * Either the driver has accepted a smaller number of buffers,
@@ -581,6 +586,7 @@ int vb2_reqbufs(struct vb2_queue *q, struct v4l2_requestbuffers *req)
 
 	if (ret < 0) {
 		__vb2_queue_free(q, allocated_buffers);
+		dprintk(1, "reqbufs: returning error\n");
 		return ret;
 	}
 
@@ -1168,7 +1174,7 @@ int vb2_qbuf(struct vb2_queue *q, struct v4l2_buffer *b)
 	/* Fill buffer information for the userspace */
 	__fill_v4l2_buffer(vb, b);
 
-	dprintk(1, "qbuf of buffer %d succeeded\n", vb->v4l2_buf.index);
+	dprintk(4, "qbuf of buffer %d succeeded\n", vb->v4l2_buf.index);
 unlock:
 	if (mmap_sem)
 		up_read(mmap_sem);
@@ -1355,7 +1361,7 @@ int vb2_dqbuf(struct vb2_queue *q, struct v4l2_buffer *b, bool nonblocking)
 	/* Remove from videobuf queue */
 	list_del(&vb->queued_entry);
 
-	dprintk(1, "dqbuf of buffer %d, with state %d\n",
+	dprintk(4, "dqbuf of buffer %d, with state %d\n",
 			vb->v4l2_buf.index, vb->state);
 
 	vb->state = VB2_BUF_STATE_DEQUEUED;

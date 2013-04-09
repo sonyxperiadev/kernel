@@ -3466,8 +3466,8 @@ const regs_t s5k4ecgx_init_regs[]
 //==================================================================================
 //Preview config[0] 640x480  7.5~15fps	
 0x002A02A6,	
-0x0F120400,	//REG_0TC_PCFG_usWidth  //Hsize   : 640		
-0x0F120300,	//REG_0TC_PCFG_usHeight//Vsize   : 480  
+0x0F120500,	//REG_0TC_PCFG_usWidth  //Hsize   : 1280
+0x0F1203C0,	//REG_0TC_PCFG_usHeight//Vsize   : 960
 0x0F120005,	//REG_0TC_PCFG_Format	  05 : yuv 07: raw 09 : jpeg             
 0x0F1236B0,	//REG_0TC_PCFG_usMaxOut4KHzRate     	
 0x0F12280A,	//REG_0TC_PCFG_usMinOut4KHzRate     	
@@ -3587,7 +3587,7 @@ const regs_t s5k4ecgx_snapshot_normal_regs[] =
 0x002A0244,
 0x0F120001,
 
-//0xFFFF0096,   //150ms
+//0xFFFF0096,		/* 150ms */
 };
 
 const regs_t s5k4ecgx_snapshot_lowlight_regs[] =

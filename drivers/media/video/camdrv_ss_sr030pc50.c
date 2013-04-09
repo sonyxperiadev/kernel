@@ -26,16 +26,7 @@
 
 extern inline struct camdrv_ss_state *to_state(struct v4l2_subdev *sd);
 
-/*  GPIO numbers  needed for power on sequence.
-  * If the same sensor is used for different variants/targets. please define those numbers here
-  */
-	static struct regulator *VCAM_IO_1_8_V;  //LDO_HV9
-	static struct regulator *VCAM_A_2_8_V;   //LDO_CAM12/12/2011
-#ifdef CONFIG_SOC_CAMERA_POWER_USE_ASR   //for hw rev 0.3
-	static struct regulator *VCAM_CORE_1_2_V;   //ASR_SW
-#else
-	#define CAM_CORE_EN	   36
-#endif
+
 
 	#define CAM0_RESET			111
 	#define CAM0_STNBY			002
@@ -45,36 +36,77 @@ extern inline struct camdrv_ss_state *to_state(struct v4l2_subdev *sd);
 	#define SENSOR_0_CLK_FREQ		(26000000) /* @HW, need to check how fast this meaning. */
 
 	#define VCAM_A_2_8V_REGULATOR		"mmcldo1"
-#if defined(CONFIG_MACH_HAWAII_SS_LOGAN_REV01) || defined(CONFIG_MACH_HAWAII_SS_LOGAN_REV02)
-	#define VCAM_IO_1_8V_REGULATOR		"lvldo1"
+#if defined(CONFIG_MACH_HAWAII_SS_LOGAN_REV01) || defined(CONFIG_MACH_HAWAII_SS_LOGAN_REV02) || defined(CONFIG_MACH_HAWAII_SS_LOGANDS_REV00) || defined(CONFIG_MACH_HAWAII_SS_GOLDENVE_REV01) || defined(CONFIG_MACH_HAWAII_SS_LOGAN_COMBINED) \
+		|| defined(CONFIG_MACH_HAWAII_SS_GOLDENVEN_REV01) || defined(CONFIG_MACH_HAWAII_SS_LOGANDS_REV01)
+	#define VCAM_IO_1_8V_REGULATOR		"lvldo2"
 #else
 	#define VCAM_IO_1_8V_REGULATOR		"tcxldo"
 #endif
-	#define VCAM_CORE_1_2V_REGULATOR	"vsrldo"
+	/* not used */
+	/* #define VCAM_CORE_1_2V_REGULATOR	"vsrldo" */
+
 
 #define CSI0_LP_FREQ			(100000000)
 #define CSI1_LP_FREQ			(100000000)
 
-	#define VCAM_A_2_8V_REGULATOR		"mmcldo1"
-#if defined(CONFIG_MACH_HAWAII_SS_LOGAN_REV01) || defined(CONFIG_MACH_HAWAII_SS_LOGAN_REV02)
-	#define VCAM_IO_1_8V_REGULATOR		"lvldo1"
-#else
-	#define VCAM_IO_1_8V_REGULATOR		"tcxldo"
-#endif
-	#define VCAM_CORE_1_2V_REGULATOR	"vsrldo"
+#define EXIF_SOFTWARE			""
+#define EXIF_MAKE			"SAMSUNG"
 
-#define CSI0_LP_FREQ			(100000000)
-#define CSI1_LP_FREQ			(100000000)
+static struct regulator *VCAM_A_2_8_V;
+static struct regulator *VCAM_IO_1_8_V;
+static struct regulator *VCAM_CORE_1_2_V;
+static struct regulator *VCAM_AF_2_8V;
 
-#if defined(CONFIG_MACH_RHEA_SS_LUCAS)
-#define EXIF_SOFTWARE		""
-#define EXIF_MAKE		"SAMSUNG"
-#define EXIF_MODEL		"GT-B7810"
-#else
-	#define EXIF_SOFTWARE		""
-	#define EXIF_MAKE		"Samsung"
-	#define EXIF_MODEL		"GT-1234"
+/* individual configuration */
+#if defined(CONFIG_MACH_HAWAII_SS_LOGAN_REV01) \
+	|| defined(CONFIG_MACH_HAWAII_SS_LOGAN_REV02) \
+	|| defined(CONFIG_MACH_HAWAII_SS_LOGANDS_REV00) \
+	|| defined(CONFIG_MACH_HAWAII_SS_LOGANDS_REV01)
+#define VCAM_A_2_8V_REGULATOR		"mmcldo1"
+#define VCAM_IO_1_8V_REGULATOR		"lvldo2"
+
+#define VCAM_A_2_8V_REGULATOR_uV	2800000
+#define VCAM_IO_1_8V_REGULATOR_uV	1786000
+
+#define CAM0_RESET			111
+#define CAM0_STNBY			2
+
+#define CAM1_RESET			4
+#define CAM1_STNBY			5
+
+#define EXIF_MODEL			"GT-B7810"
+#elif defined(CONFIG_MACH_HAWAII_SS_LOGAN_REV00)
+#define VCAM_A_2_8V_REGULATOR		"mmcldo1"
+#define VCAM_IO_1_8V_REGULATOR		"tcxldo1"
+
+#define VCAM_A_2_8V_REGULATOR_uV	2800000
+#define VCAM_IO_1_8V_REGULATOR_uV	1800000
+
+#define CAM0_RESET			111
+#define CAM0_STNBY			2
+
+#define CAM1_RESET			4
+#define CAM1_STNBY			5
+
+#define EXIF_MODEL			"GT-B7810"
+#else /* NEED TO REDEFINE FOR NEW VARIANT */
+#define VCAM_A_2_8V_REGULATOR		"mmcldo1"
+#define VCAM_IO_1_8V_REGULATOR		"lvldo2"
+
+#define VCAM_A_2_8V_REGULATOR_uV	2800000
+#define VCAM_IO_1_8V_REGULATOR_uV	1786000
+
+#define CAM0_RESET			111
+#define CAM0_STNBY			2
+
+#define CAM1_RESET			4
+#define CAM1_STNBY			5
+
+#define EXIF_MODEL			"GT-B7810"
 #endif
+/***********************************************************/
+/* H/W configuration - End                                 */
+/***********************************************************/
 
 
 static const struct camdrv_ss_framesize sr030pc50_supported_preview_framesize_list[] = {
@@ -255,8 +287,8 @@ static const struct v4l2_queryctrl sr030pc50_controls[] = {
 		.id			= V4L2_CID_CAMERA_VT_MODE,
 		.type		= V4L2_CTRL_TYPE_INTEGER,
 		.name		= "Vtmode",
-		.minimum	      = CAM_VT_MODE_NONE,
-		.maximum	= CAM_VT_MODE_VOIP,
+		.minimum	      = CAM_VT_MODE_3G,
+		.maximum	= CAM_VT_MODE_SMART_STAY,
 		.step		= 1,
 		.default_value	= CAM_VT_MODE_3G,
 	},
@@ -566,7 +598,8 @@ static int camdrv_ss_sr030pc50_sensor_power(int on)
 		CAM_ERROR_PRINTK("can not get VCAM_IO_1.8V\n");
 		return -1;
 	}	
-	
+
+#if 0 /* not used */
 #ifdef CONFIG_SOC_CAMERA_POWER_USE_ASR   //for hw rev 0.3
 	VCAM_CORE_1_2_V = regulator_get(NULL, VCAM_CORE_1_2V_REGULATOR);
 	if(IS_ERR(VCAM_CORE_1_2_V))
@@ -578,6 +611,7 @@ static int camdrv_ss_sr030pc50_sensor_power(int on)
 	gpio_request(CAM_CORE_EN, "cam_1_2v");
 	gpio_direction_output(CAM_CORE_EN, 0);
 #endif
+#endif /* #if 0 */
 	
 	CAM_INFO_PRINTK("set cam_rst cam_stnby  to low\n");
 	gpio_request(CAM0_RESET, "cam0_rst");
@@ -597,10 +631,12 @@ static int camdrv_ss_sr030pc50_sensor_power(int on)
 	{
 		CAM_INFO_PRINTK("power on the sensor \n"); //@HW
 
-        regulator_set_voltage(VCAM_A_2_8_V,2800000,2800000);
-        regulator_set_voltage(VCAM_IO_1_8_V,1800000,1800000);   
+		regulator_set_voltage(VCAM_A_2_8_V, VCAM_A_2_8V_REGULATOR_uV, VCAM_A_2_8V_REGULATOR_uV);
+		regulator_set_voltage(VCAM_IO_1_8_V, VCAM_IO_1_8V_REGULATOR_uV, VCAM_IO_1_8V_REGULATOR_uV);
+#if 0 /* not used */
 #ifdef CONFIG_SOC_CAMERA_POWER_USE_ASR   //for hw rev 0.3
-		regulator_set_voltage(VCAM_CORE_1_2_V,1200000,1200000);
+	regulator_set_voltage(VCAM_CORE_1_2_V,1200000,1200000);
+#endif
 #endif
 
 		if (mm_ccu_set_pll_select(CSI1_BYTE1_PLL, 8)) {
@@ -652,31 +688,14 @@ static int camdrv_ss_sr030pc50_sensor_power(int on)
 			goto e_clk_axi;
 		}
 
-/*
-		value = clk_enable(clock);
-		if (value) {
-			printk("Failed to enable sensor 1 clock\n");
-			goto e_clk_clock;
-		}
-
-		value = clk_set_rate(clock, SENSOR_0_CLK_FREQ);
-		if (value) {
-			printk("Failed to set sensor 1 clock\n");
-			goto e_clk_set_clock;
-		}
-*/
-
 		msleep(100);
 		CAM_INFO_PRINTK("power on the sensor's power supply\n"); //@HW
-
 		
 		regulator_enable(VCAM_A_2_8_V);
-		
-
 		regulator_enable(VCAM_IO_1_8_V);
-	
 		//msleep(5);	
-	
+
+#if 0 /* not used */
 #ifdef CONFIG_SOC_CAMERA_POWER_USE_ASR   //for hw rev 0.3		
 		regulator_enable(VCAM_CORE_1_2_V);
 #else		
@@ -689,6 +708,8 @@ static int camdrv_ss_sr030pc50_sensor_power(int on)
 #else		
 		gpio_set_value(CAM_CORE_EN,0); 
 #endif
+#endif /* #if 0 */
+
 		msleep(12); //changed by aska for delay MCLK on time
 
 		value = clk_enable(clock);
@@ -831,6 +852,12 @@ void camdrv_ss_sr030pc50_smartStayChangeInitSetting(struct camdrv_ss_sensor_cap 
 	CAM_INFO_PRINTK("%s : skip_frames  =  %d \n",__func__,sensor->skip_frames);
 	
 }
+
+void camdrv_ss_sensor_sub_name(struct camdrv_ss_sensor_cap *sensor)
+{
+	strcpy(sensor->name, SR030PC50_NAME);
+}
+
 bool camdrv_ss_sensor_init_sub(bool bOn, struct camdrv_ss_sensor_cap *sensor)
 {
 	strcpy(sensor->name, SR030PC50_NAME);

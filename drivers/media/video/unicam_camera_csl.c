@@ -82,6 +82,7 @@ struct unicam_camera_dev {
 	struct v4l2_subdev_sensor_interface_parms if_params;
 	struct semaphore stop_sem;
 	bool stopping;
+	struct semaphore stop_processing_sem;
 };
 
 struct unicam_camera_buffer {
@@ -686,6 +687,7 @@ int unicam_videobuf_start_streaming(struct vb2_queue *q, unsigned int count)
 			unicam_camera_capture(unicam_dev);
 	}
 	unicam_dev->streaming = 1;
+	csl_cam_register_display(unicam_dev->cslCamHandle);
 	dprintk("-exit");
 	return 0;
 }
@@ -700,6 +702,11 @@ int unicam_videobuf_stop_streaming(struct vb2_queue *q)
 	int ret = 0;
 	unsigned long flags;
 
+	if (down_interruptible(&unicam_dev->stop_processing_sem) == 0) {
+		if (unicam_dev->streaming)
+			csl_cam_register_display(unicam_dev->cslCamHandle);
+	} else
+		dev_err(unicam_dev->dev, "Unable to dump regs because stop_processing_sem acquire failed\n");
 
 	/* grab the lock */
 	spin_lock_irqsave(&unicam_dev->lock, flags);
@@ -759,6 +766,7 @@ int unicam_videobuf_stop_streaming(struct vb2_queue *q)
 out:
 	dprintk("-exit");
 	spin_unlock_irqrestore(&unicam_dev->lock, flags);
+	up(&unicam_dev->stop_processing_sem);
 
 	/* Stopping stream after stopping unicam */
 	ret = v4l2_subdev_call(sd, video, s_stream, 0);
@@ -1233,6 +1241,7 @@ static int __devinit unicam_camera_probe(struct platform_device *pdev)
 	INIT_LIST_HEAD(&unicam_dev->capture);
 	spin_lock_init(&unicam_dev->lock);
 	sema_init(&unicam_dev->stop_sem, 0);
+	sema_init(&unicam_dev->stop_processing_sem, 1);
 	unicam_dev->stopping = false;
 
 	unicam_dev->dev = &pdev->dev;
