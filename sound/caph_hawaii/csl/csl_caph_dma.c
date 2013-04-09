@@ -664,7 +664,7 @@ void csl_caph_dma_init(UInt32 baseAddressDma, UInt32 caphIntcHandle)
 		return;
 	}
 	/*Enable AADMAC Autogating ONLY on Java*/
-	if (get_chip_id() >= 4)
+	if (get_chip_id() >= KONA_CHIP_ID_JAVA_A0)
 		chal_caph_dma_set_autogate(handle, TRUE);
 #if 0
 #ifdef CONFIG_SMP

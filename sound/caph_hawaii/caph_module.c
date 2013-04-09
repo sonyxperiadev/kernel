@@ -85,7 +85,7 @@ MODULE_LICENSE("GPL");
 #define LOG_BUF_SIZE (128*1024)
 
 /* turn off audio debug traces by default */
-int gAudioDebugLevel = 15;
+int gAudioDebugLevel;
 module_param(gAudioDebugLevel, int, 0);
 
 static brcm_alsa_chip_t *sgpCaph_chip;

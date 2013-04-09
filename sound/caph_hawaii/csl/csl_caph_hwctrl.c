@@ -3009,7 +3009,7 @@ void csl_caph_ControlHWClock(Boolean enable)
 			dual SRC engine,from compansated PLL clk source*/
 			/* For >= CAPRI  A0 CAPH, 26MHz clock is sufficient
 			to support all SRC channels in DUAL_SRC_MODE */
-			if (get_chip_id() >= 4) /*Java*/
+			if (get_chip_id() >= KONA_CHIP_ID_JAVA_A0) /*Java*/
 				clk_set_rate(clkIDCAPH[CLK_SRCMIXER], 78000000);
 			else
 				clk_set_rate(clkIDCAPH[CLK_SRCMIXER], 26000000);

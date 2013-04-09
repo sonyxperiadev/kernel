@@ -39,6 +39,7 @@ the GPL, without Broadcom's express prior written consent.
 #include <linux/completion.h>
 #include <linux/dma-mapping.h>
 #include <linux/irq.h>
+#include <mach/cpu.h>
 
 #include "mobcom_types.h"
 #include "resultcode.h"
@@ -746,11 +747,13 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 	unsigned int path;
 
 #ifdef CHECK_AADMAC_AUTOGATE_STATUS
-	if (AUDCTRL_AadmacAutoGateStatus())
-		/* this should never happen */
-		aError("\n %lx:AUDIO_Ctrl_Process-"
+	if (get_chip_id() < KONA_CHIP_ID_JAVA_A0) {
+		if (AUDCTRL_AadmacAutoGateStatus())
+			/* this should never happen */
+			aError("\n %lx:AUDIO_Ctrl_Process-"
 			"!!! AADMAC_ENABLE_AUTO_GATE was set !!!\n",
 			jiffies);
+	}
 #endif
 	switch (action_code) {
 	case ACTION_AUD_OpenPlay:
