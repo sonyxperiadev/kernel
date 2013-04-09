@@ -412,6 +412,7 @@ static int ov7692_s_stream(struct v4l2_subdev *sd, int enable)
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	int ret = 0;
 
+#if 0
 	if (enable) {
     	ret =ov7692_write_smbus(client,0x0e, 0x02); 
         if (ret)
@@ -422,6 +423,7 @@ static int ov7692_s_stream(struct v4l2_subdev *sd, int enable)
             goto out;
 
 	}
+#endif
 
 out:
 	return ret;
@@ -447,6 +449,7 @@ static unsigned long ov7692_query_bus_param(struct soc_camera_device *icd)
 	return flags;
 }
 
+static int initNeeded = -1;
 static int ov7692_enum_input(struct soc_camera_device *icd,
 			     struct v4l2_input *inp)
 {
@@ -469,6 +472,7 @@ static int ov7692_enum_input(struct soc_camera_device *icd,
 			inp->status |= V4L2_IN_ST_BACK;
 
 	}
+	initNeeded = 1;
 	return 0;
 }
 
@@ -521,6 +525,10 @@ static int ov7692_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 		return ret;
 	/*To avoide reentry init sensor when captrue, remove from here  */
 	/*ret = ov7692_write_smbuss(client, configscript_common1);*/
+	if (initNeeded > 0) {
+		ret = ov7692_write_smbuss(client, hawaii_init_common);
+		initNeeded = 0;
+	}
 
 	ov7692->i_size = ov7692_find_framesize(mf->width, mf->height);
 	ov7692->i_fmt = ov7692_find_datafmt(mf->code);
@@ -856,15 +864,6 @@ static int ov7692_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		if (ret)
 			return ret;
 		break;
-
-	case V4L2_CID_CAM_PREVIEW_ONOFF:
-	{
-		if (ctrl->value)
-			ov7692_preview_start(client);
-
-		break;
-	}
-
 	}
 
 	return ret;

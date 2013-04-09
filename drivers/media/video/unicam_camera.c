@@ -1284,7 +1284,7 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 
 			t2 = jiffies_to_msecs(jiffies);
 			if (t2 - t1 > 1000) {
-				pr_info(" sensor fps = %d panic count %d\n",
+				pr_debug(" sensor fps = %d panic count %d\n",
 						fps, unicam_dev->panic_count);
 				fps = 0;
 				t1 = t2;
