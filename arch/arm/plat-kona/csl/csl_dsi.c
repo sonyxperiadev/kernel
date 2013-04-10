@@ -345,7 +345,7 @@ static void axipv_irq_cb(int stat)
 		pr_err("AXIPV hit W_LVL_2 threshold %d times\n", ++w_lvl_2_cnt);
 	if (stat & PV_START_THRESH_INT)
 		OSSEMAPHORE_Release(dsiH->semaAxipv);
-	if (stat & TE_INT)
+	if ((dsiH->vsync_cb != NULL) && (stat & TE_INT))
 		dsiH->vsync_cb();
 }
 
