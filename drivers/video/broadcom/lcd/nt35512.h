@@ -587,6 +587,8 @@ __initdata DISPCTRL_REC_T nt35512_init_panel_vid[] = {
 
 	{DISPCTRL_WR_CMND, 0x11},
 	{DISPCTRL_SLEEP_MS, 120},
+	{DISPCTRL_WR_CMND, 0x29},
+	{DISPCTRL_SLEEP_MS, 30},
 	{DISPCTRL_LIST_END, 0}
 };
 #else
@@ -813,6 +815,8 @@ __initdata DISPCTRL_REC_T nt35512_init_panel_vid[] = {
 
 	{DISPCTRL_WR_CMND, 0x11},
 	{DISPCTRL_SLEEP_MS, 120},
+	{DISPCTRL_WR_CMND, 0x29},
+	{DISPCTRL_SLEEP_MS, 30},
 	{DISPCTRL_LIST_END, 0}
 };
 #endif
