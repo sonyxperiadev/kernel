@@ -29,3 +29,11 @@ config LCD_NT35512_SUPPORT
         default N
         help
 	  WVGA LCD panel (NT35512 controller)
+
+config BL_SPLASH_SCREEN
+        tristate "splash screen support"
+        default N
+        help
+	  This is used for LCD to show logo before entering kernel.
+	  If you do not know about this config, please just say 'N' here.
+
