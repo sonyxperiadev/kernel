@@ -41,6 +41,9 @@
 #define PMU_USB_CC_TRIM_MIN	0
 #define PMU_USB_CC_TRIM_MAX	0xF
 #define MAX_EVENTS		20
+#define USB_CURR_LMT		500
+#define USB_TRIM_INX		7 /*trim up by 19.98%*/
+#define USB_DEF_TRIM_INX	1
 
 char *get_supply_type_str(int chrgr_type);
 static int debug_mask = (BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT);
@@ -304,7 +307,7 @@ static int bcmpmu_get_curr_val(int curr)
 int bcmpmu_set_icc_fc(struct bcmpmu59xxx *bcmpmu, int curr)
 {
 	int ret = 0;
-	int val ;
+	int val, chrgr_type;
 	struct bcmpmu_accy *accy = bcmpmu->accyinfo;
 
 	if (!atomic_read(&drv_init_done))
@@ -318,6 +321,11 @@ int bcmpmu_set_icc_fc(struct bcmpmu59xxx *bcmpmu, int curr)
 		accy->usb_accy_data.max_curr_chrgr = val;
 	pr_chrgr(INIT , "%s: curr = %d set to val %x\n",
 			__func__, curr, (val & 0xF));
+
+	bcmpmu_usb_get(bcmpmu,
+			BCMPMU_USB_CTRL_GET_CHRGR_TYPE, &chrgr_type);
+	if (chrgr_type == PMU_CHRGR_TYPE_SDP && curr == USB_CURR_LMT)
+		bcmpmu->write_dev(bcmpmu, PMU_REG_MBCCTRL20, USB_TRIM_INX);
 
 	/* If the curr passed is less than the minimum supported curr,
 	 * disbale charging
@@ -642,6 +650,8 @@ static int charger_event_handler(struct notifier_block *nb,
 			} else {
 				di->usb_chrgr_info.online = 0 ;
 				power_supply_changed(&di->usb_psy);
+				bcmpmu->write_dev(bcmpmu, PMU_REG_MBCCTRL20,
+						USB_DEF_TRIM_INX);
 			}
 
 		}
