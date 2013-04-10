@@ -2947,8 +2947,6 @@ static int sdhci_debugfs_get_thrput(void *data, u64 *val)
 	u8 dir;
 
 	mmc_thpt = &mmc_throughput[host->mmc->index];
-	if (!mmc_thpt)
-		return -ENOMEM;
 
 	if (mmc_thpt->dir & (MMC_DATA_READ|MMC_DATA_WRITE)) {
 		dir = !(mmc_thpt->dir & MMC_DATA_READ);
@@ -2977,10 +2975,7 @@ static int sdhci_debugfs_set_thrput(void *data, u64 val)
 	struct sdhci_host *host = data;
 	struct sdhci_throughput *mmc_thpt;
 
-
 	mmc_thpt = &mmc_throughput[host->mmc->index];
-	if (!mmc_thpt)
-		return -ENOMEM;
 
 	mmc_thpt->dir = 0;
 	pr_debug("%s=%llu\n", __func__, val);
@@ -3015,8 +3010,6 @@ static void sdhci_debugfs_throughput_remove(struct sdhci_host *host)
 	struct sdhci_throughput *mmc_thpt;
 
 	mmc_thpt = &mmc_throughput[host->mmc->index];
-	if (!mmc_thpt)
-		return;
 
 	debugfs_remove(mmc_thpt->dentry[0]);
 	debugfs_remove(mmc_thpt->dentry[1]);
@@ -3074,7 +3067,6 @@ static int sdhci_debugfs_throughput_init(
 		} else {
 		printk(KERN_ERR "sdhci-throughput: creating root dir failed\n");
 	}
-
 	return 0;
 err:
 	printk(KERN_ERR "Error in creating sdhci throughput debugfs inerface %s\n",
@@ -3610,7 +3602,8 @@ void sdhci_remove_host(struct sdhci_host *host, int dead)
 	sdhci_disable_card_detection(host);
 
 #ifdef CONFIG_SDHCI_THROUGHPUT
-	sdhci_debugfs_throughput_remove(host);
+	if (mmc_throughput)
+		sdhci_debugfs_throughput_remove(host);
 #endif
 
 	mmc_remove_host(host->mmc);
