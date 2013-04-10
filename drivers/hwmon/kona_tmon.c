@@ -123,7 +123,7 @@ static int interquartile_mean(unsigned long *data, int num)
 long tmon_get_current_temp(bool celcius, bool avg)
 {
 	unsigned long raw_temp, temp_data[TEMP_SAMPLES];
-	int i;
+	int i = 0;
 	struct kona_tmon_pdata *pdata;
 	BUG_ON(kona_tmon == NULL);
 

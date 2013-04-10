@@ -1172,12 +1172,10 @@ EXPORT_SYMBOL(pi_get_use_count);
 
 u32 pi_get_active_qos(int pi_id)
 {
-	struct pi_mgr_qos_object *qos = &pi_mgr.qos[pi_id];
-	if (qos)
-		return pi_mgr_qos_get_value(qos);
-	else
-		pi_dbg(pi_id, PI_LOG_ERR, "%s:invalid param\n", __func__);
-	return 0;
+	struct pi_mgr_qos_object *qos;
+	BUG_ON(pi_id >= PI_MGR_PI_ID_MAX);
+	qos = &pi_mgr.qos[pi_id];
+	return pi_mgr_qos_get_value(qos);
 }
 EXPORT_SYMBOL(pi_get_active_qos);
 
@@ -1942,10 +1940,13 @@ static ssize_t pi_debug_set_dfs_client_opp(struct file *file,
 	else
 		len = count;
 	/* coverity[secure_coding] */
+	/* coverity[tainted_data_argument] */
 	if (copy_from_user(input_str, buf, len))
 		return -EFAULT;
 	/* coverity[secure_coding] */
+	/* coverity[tainted_data_argument] */
 	sscanf(input_str, "%s%u", opp_str, &weightage);
+	/* coverity[secure_coding] */
 	if (isdigit(opp_str[0]))
 		opp = (opp_str[0] - toascii('0'));
 	else
@@ -2165,10 +2166,13 @@ static ssize_t pi_opp_set_min_lmt(struct file *file, const char __user *buf,
 	else
 		len = count;
 	/* coverity[secure_coding] */
+	/* coverity[tainted_data_argument] */
 	if (copy_from_user(input_str, buf, len))
 		return -EFAULT;
 	/* coverity[secure_coding] */
+	/* coverity[tainted_data_argument] */
 	sscanf(input_str, "%s", opp_str);
+	/* coverity[secure_coding] */
 	if (isdigit(opp_str[0]))
 		val = (opp_str[0] - toascii('0'));
 	else
@@ -2233,10 +2237,13 @@ static ssize_t pi_opp_set_max_lmt(struct file *file, const char __user *buf,
 	else
 		len = count;
 	/* coverity[secure_coding] */
+	/* coverity[tainted_data_argument] */
 	if (copy_from_user(input_str, buf, len))
 		return -EFAULT;
 	/* coverity[secure_coding] */
+	/* coverity[tainted_data_argument] */
 	sscanf(input_str, "%s", opp_str);
+	/* coverity[secure_coding] */
 	if (isdigit(opp_str[0]))
 		val = (opp_str[0] - toascii('0'));
 	else

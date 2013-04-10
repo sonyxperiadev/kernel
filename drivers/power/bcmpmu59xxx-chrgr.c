@@ -234,7 +234,7 @@ static int set_icc_fcc(const char *val, const struct kernel_param *kp)
 	struct bcmpmu_accy *paccy;
 	u32 curr;
 	int rv = 0;
-	int chrgr_type;
+	int chrgr_type = PMU_CHRGR_TYPE_NONE;
 
 	if (!atomic_read(&drv_init_done))
 		return -EAGAIN;

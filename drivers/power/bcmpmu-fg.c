@@ -2041,7 +2041,7 @@ static void bcmpmu_fg_cal_low_batt_algo(struct bcmpmu_fg_data *fg)
 	 */
 	if (fg->flags.fully_charged) {
 		cap_full_charge = (fg->capacity_info.max_design *
-				(100 + cap_delta));
+				(100 + (u64)cap_delta));
 		cap_full_charge = div_s64(cap_full_charge, 100);
 		fg->capacity_info.full_charge = cap_full_charge;
 		bcmpmu_fg_save_full_charge_cap(fg, (100 + cap_delta));

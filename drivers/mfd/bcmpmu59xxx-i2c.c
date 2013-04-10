@@ -143,7 +143,7 @@ static int bcmpmu_i2c_try_write(struct bcmpmu59xxx *bcmpmu, u32 reg, u8 value)
 {
 	int err = 0;
 	int tries = PWRMGR_I2C_RDWR_MAX_TRIES;
-	u8 temp;
+	u8 temp = 0;
 	u8 check_fifo = DEC_REG_FLAG(reg) & 1;
 	if (DEC_REG_ADD(reg) >= PMU_REG_MAX)
 		return -ENODEV;
@@ -202,7 +202,7 @@ static int bcmpmu_i2c_try_read(struct bcmpmu59xxx *bcmpmu, u32 reg, u8 * value)
 {
 	int err = 0;
 	int tries = PWRMGR_I2C_RDWR_MAX_TRIES;
-	u8 temp;
+	u8 temp = 0;
 	u8 check_fifo = DEC_REG_FLAG(reg) & 1;
 
 	if (DEC_REG_ADD(reg) >= PMU_REG_MAX)

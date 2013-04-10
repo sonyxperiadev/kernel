@@ -2221,7 +2221,8 @@ int pwr_mgr_pmu_reg_read(u8 reg_addr, u8 slave_id, u8 *reg_val)
 			__func__);
 		return -EPERM;
 	}
-
+	if (!reg_val)
+		return -EINVAL;
 	mutex_lock(&seq_mutex);
 #if defined(CONFIG_KONA_CPU_PM_HANDLER)
 	kona_pm_disable_idle_state(CSTATE_ALL, 1);
@@ -2240,7 +2241,7 @@ int pwr_mgr_pmu_reg_read(u8 reg_addr, u8 slave_id, u8 *reg_val)
 					    i2c_rd_slv_id_off2,
 					    I2C_READ_ADDR(slave_id));
 	ret = pwr_mgr_sw_i2c_seq_start(I2C_SEQ_READ);
-	if (!ret && reg_val) {
+	if (!ret) {
 		reg = readl(PWR_MGR_REG_ADDR(PWRMGR_I2C_SW_CMD_CTRL_OFFSET));
 #if !defined(CONFIG_KONA_PWRMGR_REV2)
 		reg = ((reg & PWRMGR_I2C_READ_DATA_MASK) >>
