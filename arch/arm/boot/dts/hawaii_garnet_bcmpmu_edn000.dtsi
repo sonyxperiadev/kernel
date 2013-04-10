@@ -37,14 +37,14 @@
 		0x47 0x09 0xFF 0
 		  /* NTC Hot Temperature Comparator rising = 60C*/
 		0xCC 0x40 0xFF 1
-		  /* NTC Hot Temperature Comparator falling = 45C*/
-		0xCD 0x70 0xFF 1
-		  /* NTC Cold Temperature Comparator rising = -10C*/
-		0xCE 0x7C 0xFF 1
-		  /* NTC Cold Temperature Comparator falling = 0C*/
-		0xCF 0xF4 0xFF 1
+		  /* NTC Hot Temperature Comparator falling = 50C*/
+		0xCD 0x5C 0xFF 1
+		  /* NTC Cold Temperature Comparator rising = 0C*/
+		0xCE 0xF4 0xFF 1
+		  /* NTC Cold Temperature Comparator falling = 5C*/
+		0xCF 0xB8 0xFF 1
 		  /* NTC Hot Temperature Comparator bit 9,8 */
-		0xD0 0x09 0xFF 1
+		0xD0 0x05 0xFF 1
 		 /*MBCCTRL11*/
 		0x4A 0x0F 0xff 0
 		 /* ID detection ,current source Trimming */
