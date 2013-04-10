@@ -1016,8 +1016,8 @@ static u32 pi_mgr_dfs_update(struct pi_mgr_dfs_node *node,
 #endif
 			pi_change_notify(pi->id, PI_NOTIFY_DFS_CHANGE,
 					 old_opp, new_opp, PI_POSTCHANGE);
-			pi->opp_inx_act = new_inx;
 		}
+		pi->opp_inx_act = new_inx;
 	}
 	spin_unlock_irqrestore(&pi->lock, flgs);
 
