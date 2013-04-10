@@ -43,6 +43,7 @@
 #include <linux/isl290xx_common.h>
 #include <linux/input.h>
 #include <linux/miscdevice.h>
+#include <linux/wakelock.h>
 #include <linux/of.h>
 #include <linux/of_fdt.h>
 #include <linux/of_platform.h>
@@ -63,6 +64,7 @@ MODULE_PARM_DESC(debug,
 		pr_info("%s|%d: "fmt, KBUILD_BASENAME, __LINE__, ##args);\
 } while (0)
 
+#define ISL290XX_POLL_MODE 1
 #define ISL290XX_INT_GPIO 89
 #define ISL290XX_TAG        "[ISL290XX]"
 
@@ -135,6 +137,10 @@ static int isl290xx_read(struct file *file, char *buf, size_t count,
 static int isl290xx_write(struct file *file, const char *buf, size_t count,
 			  loff_t *ppos);
 static loff_t isl290xx_llseek(struct file *file, loff_t offset, int orig);
+#ifdef ISL290XX_POLL_MODE
+static struct timer_list prox_poll_timer;
+#endif
+
 static int prv_isl290xx_get_lux(void);
 static int prv_isl290xx_device_name(unsigned char *bufp, char **device_name);
 static int prv_isl290xx_prox_poll(struct isl290xx_prox_info_s *prxp);
@@ -193,6 +199,10 @@ struct isl290xx_data_t {
 	char isl290xx_id;
 	char isl290xx_name[ISL290XX_ID_NAME_SIZE];
 	struct mutex update_lock;
+	struct wake_lock isl290xx_wake_lock;
+#ifdef ISL290XX_POLL_MODE
+	struct delayed_work prox_poll_work;
+#endif
 	char valid;
 	unsigned long last_updated;
 	struct isl290xx_intr_data_t *pdata;
@@ -222,8 +232,8 @@ static u8 gain_param = 1;
 
 static u16 gain_trim_param = 25;
 
-static u16 prox_threshold_hi_param = 100;
-static u16 prox_threshold_lo_param = 55;
+static u16 prox_threshold_hi_param = 75;
+static u16 prox_threshold_lo_param = 40;
 static u8 prox_int_time_param = 0xF6;
 static u8 prox_adc_time_param = 0xFF;
 static u8 prox_wait_time_param = 0xFF;
@@ -243,6 +253,11 @@ struct isl290xx_prox_info_s *isl290xx_prox_cur_infop = &isl290xx_prox_cur_info;
 static int device_released;
 static u16 sat_als;
 static u16 sat_prox;
+int isPsensorLocked;
+
+#ifdef ISL290XX_POLL_MODE
+static int prox_poll_count = 1;
+#endif
 
 struct time_scale_factor {
 	u16 numerator;
@@ -302,7 +317,6 @@ static void prv_isl290xx_work_func(struct work_struct *w)
 		ret = prv_isl290xx_prox_poll(isl290xx_prox_cur_infop);
 		if (ret < 0)
 			pr_isl(ERROR, "get prox poll failed\n");
-
 		if (isl290xx_prox_cur_infop->prox_data >
 		    isl290xx_cfgp->prox_threshold_hi) {
 			ret = i2c_smbus_write_byte_data(
@@ -311,6 +325,7 @@ static void prv_isl290xx_work_func(struct work_struct *w)
 			if (ret < 0)
 				pr_isl(ERROR, "i2c_smbus_write_byte fail\n");
 			isl290xx_prox_cur_infop->prox_event = 1;
+#ifndef ISL290XX_POLL_MODE
 		} else if (isl290xx_prox_cur_infop->prox_data <
 			   isl290xx_cfgp->prox_threshold_lo) {
 			ret = i2c_smbus_write_byte_data(
@@ -321,6 +336,10 @@ static void prv_isl290xx_work_func(struct work_struct *w)
 				       "i2c_smbus_write_byte()\n");
 
 			isl290xx_prox_cur_infop->prox_event = 0;
+#else
+			prox_poll_count = 1;
+			mod_timer(&prox_poll_timer, jiffies + HZ / 1000);
+#endif
 		}
 		prv_isl290xx_report_value(1);
 	}
@@ -466,6 +485,11 @@ static ssize_t prox_enable_store(struct device *dev,
 		ret = prv_isl290xx_ctrl_lp(0x01);
 		if (ret >= 0) {
 			prox_on = 1;
+			if (isPsensorLocked == 0) {
+				wake_lock\
+				(&isl290xx_data_tp->isl290xx_wake_lock);
+				isPsensorLocked = 1;
+			}
 			pr_isl(INFO, "ISL290XX_IOCTL_PROX_ON\n");
 		}
 	} else {
@@ -476,6 +500,11 @@ static ssize_t prox_enable_store(struct device *dev,
 
 		if (ret >= 0) {
 			prox_on = 0;
+			if (isPsensorLocked == 1) {
+				wake_unlock
+				(&isl290xx_data_tp->isl290xx_wake_lock);
+				isPsensorLocked = 0;
+			}
 			pr_isl(INFO, "ISL290XX_IOCTL_PROX_OFF\n");
 		}
 	}
@@ -494,6 +523,45 @@ static struct attribute_group isl290xx_ctrl_attr_grp = {
 	.attrs = isl290xx_ctrl_attr,
 };
 
+
+#ifdef ISL290XX_POLL_MODE
+void isl290xx_poll_timer_func(unsigned long data)
+{
+	struct isl290xx_data_t *dd;
+	long delay = 2;
+	dd = (struct isl290xx_data_t *)data;
+	schedule_delayed_work(&dd->prox_poll_work, HZ / 1000);
+	mod_timer(&prox_poll_timer, jiffies + delay);
+	prox_poll_count++;
+}
+
+static void isl290xx_prox_poll_work_f(struct work_struct *work)
+{
+	int ret = 0;
+	struct delayed_work *dwork = container_of(work,
+					struct delayed_work, work);
+	struct isl290xx_data_t *dd = container_of(dwork,
+			struct isl290xx_data_t, prox_poll_work);
+	ret = prv_isl290xx_prox_poll(isl290xx_prox_cur_infop);
+	if (ret < 0)
+		pr_isl(ERROR, "get prox poll failed\n");
+	if (isl290xx_prox_cur_infop->prox_data >
+		isl290xx_cfgp->prox_threshold_hi) {
+		ret = i2c_smbus_write_byte_data(isl290xx_data_tp->client,
+			ISL290XX_PROX_TH_H, 0x01);
+		if (ret < 0)
+			pr_isl(ERROR, "i2c_smbus_write_byte fail\n");
+		isl290xx_prox_cur_infop->prox_event = 1;
+	} else if (isl290xx_prox_cur_infop->prox_data <
+			isl290xx_cfgp->prox_threshold_lo) {
+		isl290xx_prox_cur_infop->prox_event = 0;
+		if (prox_poll_count == 10)
+			del_timer(&prox_poll_timer);
+	}
+	prv_isl290xx_report_value(1);
+}
+#endif
+
 static int isl290xx_probe(struct i2c_client *clientp,
 			  const struct i2c_device_id *idp)
 {
@@ -505,6 +573,7 @@ static int isl290xx_probe(struct i2c_client *clientp,
 	u32 val = 0;
         light_on = 0;
         prox_on = 0;
+	isPsensorLocked = 0;
         als_intr_threshold_hi_param = 0;
         als_intr_threshold_lo_param = 0;
         g_isl290xx_lux = 0;
@@ -546,6 +615,9 @@ static int isl290xx_probe(struct i2c_client *clientp,
 		pr_isl(ERROR,
 		       "%s that was read matches expected id\n",
 		       device_name);
+	wake_lock_init(&isl290xx_data_tp->isl290xx_wake_lock,
+			WAKE_LOCK_SUSPEND, "isl290xx-wake-lock");
+
 	device_create(isl290xx_class, NULL,
 			MKDEV(MAJOR(isl290xx_device_number), 0),
 			&isl290xx_driver,
@@ -689,6 +761,12 @@ static int isl290xx_probe(struct i2c_client *clientp,
 		       proximity->input_dev->name);
 		goto exit_input_register_device_failed;
 	}
+#ifdef ISL290XX_POLL_MODE
+	INIT_DELAYED_WORK(&isl290xx_data_tp->prox_poll_work,
+				isl290xx_prox_poll_work_f);
+	setup_timer(&prox_poll_timer, isl290xx_poll_timer_func,
+				(long)isl290xx_data_tp);
+#endif
 	ret = sysfs_create_group(&clientp->dev.kobj, &isl290xx_ctrl_attr_grp);
 	if (0 != ret) {
 		goto exit_input_register_device_failed;
@@ -714,6 +792,9 @@ static int __devexit isl290xx_remove(struct i2c_client *client)
 {
 	int ret = 0;
 	sysfs_remove_group(&client->dev.kobj, &isl290xx_ctrl_attr_grp);
+#ifdef ISL290XX_POLL_MODE
+	del_timer(&prox_poll_timer);
+#endif
 	return ret;
 }
 
