@@ -1098,6 +1098,7 @@ static void spi_kona_work(struct work_struct *work)
 			}
 		}
 		m->status = status;
+		no_of_trans = 0;
 		m->complete(m->context);
 
 		/* restore speed and wordsize if it was overridden */
