@@ -1127,7 +1127,7 @@ static struct bcmpmu_batt_volt_levels ys_05_volt_levels = {
 	.crit_cutoff_cnt = 3,
 	.vfloat_lvl = 0xE,
 	.vfloat_max = 0xE,
-	.vfloat_gap = 100, /* in mV */
+	.vfloat_gap = 25, /* in mV */
 };
 
 static struct bcmpmu_batt_cal_data ys_05_cal_data = {
