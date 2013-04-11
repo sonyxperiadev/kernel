@@ -92,11 +92,28 @@ struct bcmi2cnfc_dev {
 	bool enable_txfifo;
 	bool enable_rxfifo;
 	unsigned int speed;
-};
+	unsigned int sim_reset;
+} *_bcmi2cnfc_dev = NULL;
 
 #ifdef CONFIG_HAS_WAKELOCK
 struct wake_lock nfc_wake_lock;
 #endif
+
+static char core_reset_rsp[] = {0x10, 0x60, 0x00, 0x03, 0x00, 0xFF, 0x00};
+int bcm_nfc_sim_ctrl(int cmd)
+{
+	if (_bcmi2cnfc_dev == NULL)
+		return -1;
+	if (cmd == 0)
+		gpio_set_value(_bcmi2cnfc_dev->en_gpio, cmd);
+
+	else {
+		_bcmi2cnfc_dev->sim_reset = 2;
+		wake_up(&_bcmi2cnfc_dev->read_wq);
+	}
+	return 0;
+}
+EXPORT_SYMBOL(bcm_nfc_sim_ctrl);
 
 static void bcmi2cnfc_init_stat(struct bcmi2cnfc_dev *bcmi2cnfc_dev)
 {
@@ -210,6 +227,10 @@ static unsigned int bcmi2cnfc_dev_poll(struct file *filp, poll_table *wait)
 	unsigned int mask = 0;
 	unsigned long flags;
 
+	if (bcmi2cnfc_dev->sim_reset > 0) {
+		bcmi2cnfc_dev->sim_reset--;
+		return POLLIN | POLLRDNORM;
+	}
 	poll_wait(filp, &bcmi2cnfc_dev->read_wq, wait);
 
 	spin_lock_irqsave(&bcmi2cnfc_dev->irq_enabled_lock, flags);
@@ -235,6 +256,17 @@ static ssize_t bcmi2cnfc_dev_read(struct file *filp, char __user *buf,
 
 	total = 0;
 	len = 0;
+
+	if (bcmi2cnfc_dev->sim_reset > 0) {
+		/*Notify stack SIM is cold reset*/
+		ret = sizeof(core_reset_rsp);
+		if (copy_to_user(buf, &core_reset_rsp, ret)) {
+			dev_err(&bcmi2cnfc_dev->client->dev,
+			"failed to copy, rx_cnt = %d\n", ret);
+			ret = -EIO;
+		}
+		return ret;
+	}
 
 	if (bcmi2cnfc_dev->count_irq > 0)
 		bcmi2cnfc_dev->count_irq--;
@@ -552,6 +584,9 @@ static int bcmi2cnfc_probe(struct i2c_client *client,
 	bcmi2cnfc_dev->original_address = client->addr;
 
 	i2c_set_clientdata(client, bcmi2cnfc_dev);
+	_bcmi2cnfc_dev = bcmi2cnfc_dev;
+	bcmi2cnfc_dev->sim_reset = 0;
+
 	DBG(dev_info(&client->dev,
 		     "%s, probing bcmi2cnfc driver exited successfully\n",
 		     __func__));
