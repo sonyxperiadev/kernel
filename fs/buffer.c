@@ -1258,44 +1258,51 @@ static void bh_lru_install(struct buffer_head *bh)
 		__brelse(evictee);
 }
 
-static int bh_lru_evict(struct buffer_head *bh)
+static void bh_lru_evict(void *arg)
 {
+	struct buffer_head *bh = arg;
+	struct bh_lru *b = &get_cpu_var(bh_lrus);
 	struct buffer_head *bhs[BH_LRU_SIZE];
-	struct buffer_head *bh2, *evictee = NULL;
+	struct buffer_head *evictee = NULL;
 	int in, out = 0;
 
-	check_irqs_on();
-	bh_lru_lock();
-
+	/* This is either called from an interrupt
+	 * context (IPI) or runs with preemption
+	 * alone disabled (get_cpu_var above), so
+	 * there is no need to take the bh lru lock.
+	 * If we take and release  bh lru lock it can
+	 * result in unconditional enabling of interrupts
+	 * when executing in IPI.
+	 */
 	get_bh(bh);
 
 	for (in = 0; in < BH_LRU_SIZE; in++) {
-		bh2 = __this_cpu_read(bh_lrus.bhs[in]);
-		if (bh2 == bh) {
+		if (b->bhs[in] == bh) {
 			BUG_ON(evictee != NULL);
-			evictee = bh2;
+			evictee = b->bhs[in];
 		} else {
-			bhs[out++] = bh2;
+			bhs[out++] = b->bhs[in];
 		}
 	}
 
-	while (out < BH_LRU_SIZE)
-		bhs[out++] = NULL;
+	if (evictee) {
+		while (out < BH_LRU_SIZE)
+			bhs[out++] = NULL;
+		memcpy(b->bhs, bhs, sizeof(bhs));
+	}
 
-	memcpy(__this_cpu_ptr(&bh_lrus.bhs), bhs, sizeof(bhs));
+	put_cpu_var(bh_lrus);
 
 	__brelse(bh);
 
-	bh_lru_unlock();
-
-	if (evictee) {
+	if (evictee)
 		__brelse(evictee);
-		return 1;
-	}
-
-	return 0;
 }
 
+static void evict_bh_lrus(struct buffer_head *bh)
+{
+	on_each_cpu(bh_lru_evict, bh, 1);
+}
 /*
  * Look up the bh in this cpu's LRU.  If it's there, move it to the head.
  */
@@ -3093,12 +3100,9 @@ drop_buffers(struct page *page, struct buffer_head **buffers_to_free)
 		if (buffer_write_io_error(bh) && page->mapping)
 			set_bit(AS_EIO, &page->mapping->flags);
 		if (buffer_busy(bh)) {
-			if (bh_lru_evict(bh)) {
-		if (buffer_busy(bh))
-			goto failed;
-			} else {
+			evict_bh_lrus(bh);
+			if (buffer_busy(bh))
 				goto failed;
-			}
 		}
 		bh = bh->b_this_page;
 	} while (bh != head);
