@@ -256,6 +256,9 @@ static int ihf_gain = -400; /* mB */
 static struct extern_audio_platform_cfg ext_aud_plat_cfg = {
 	.ihf_ext_amp_gpio = -1,
 	.dock_aud_route_gpio = -1,
+#if defined(CONFIG_GPIO_2IN1_SPK)
+	.spk_2in1_gpio = -1,
+#endif
 };
 
 /******************************************************************************
@@ -405,6 +408,16 @@ void extern_hs_off(void)
 ****************************************************************************/
 void extern_ihf_on(void)
 {
+#if defined(CONFIG_GPIO_2IN1_SPK)
+	if (ext_aud_plat_cfg.spk_2in1_gpio > 0) {
+		aTrace(LOG_AUDIO_CNTLR,
+			" caph_hawaii CONFIG_GPIO_2IN1_SPK %d\n",
+			ext_aud_plat_cfg.spk_2in1_gpio);
+		audio_gpio_output("IHF_EXT_AMP",
+			ext_aud_plat_cfg.spk_2in1_gpio, 0);
+	}
+#endif
+
 #if defined(CONFIG_IHF_EXT_AMPLIFIER)
 	if (ext_aud_plat_cfg.ihf_ext_amp_gpio > 0)
 		audio_gpio_output("IHF_EXT_AMP",
@@ -448,6 +461,16 @@ void extern_ihf_off(void)
 		}
 
 #endif
+#if defined(CONFIG_GPIO_2IN1_SPK)
+	if (ext_aud_plat_cfg.spk_2in1_gpio > 0) {
+		aTrace(LOG_AUDIO_CNTLR,
+			" extern_ihf_off CONFIG_GPIO_2IN1_SPK %d\n",
+			ext_aud_plat_cfg.spk_2in1_gpio);
+		audio_gpio_output("IHF_EXT_AMP",
+			ext_aud_plat_cfg.spk_2in1_gpio, 1);
+	}
+#endif
+
 }
 
 /********************************************************************

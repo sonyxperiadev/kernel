@@ -57,6 +57,12 @@ config IHF_EXT_AMPLIFIER
         default n
         help
           Say Y here to enable the external amp for IHF
+config GPIO_2IN1_SPK
+        boolean "Define if use 2in1 speaker"
+        depends on BCM_ALSA_SOUND
+        default n
+        help
+          Say Y here to use 2in1 speaker
 config AUDIO_S2
         boolean "Define if S2 featuers are enabled"
         depends on BCM_ALSA_SOUND

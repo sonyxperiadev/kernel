@@ -18,6 +18,9 @@
 struct extern_audio_platform_cfg {
 	int ihf_ext_amp_gpio;
 	int dock_aud_route_gpio;
+#if defined(CONFIG_GPIO_2IN1_SPK)
+	int spk_2in1_gpio;
+#endif
 };
 
 struct audio_controller_platform_cfg {

@@ -1085,6 +1085,18 @@ static struct i2c_board_info __initdata bcm15500_i2c_boardinfo[] = {
 
 #if defined(CONFIG_BCM_ALSA_SOUND)
 static struct caph_platform_cfg board_caph_platform_cfg =
+#if defined(CONFIG_MACH_HAWAII_GARNET_C_M530)
+{
+	.aud_ctrl_plat_cfg = {
+			      .ext_aud_plat_cfg = {
+						   .ihf_ext_amp_gpio = -1,
+#if defined(CONFIG_GPIO_2IN1_SPK)
+						   .spk_2in1_gpio = 11,
+#endif
+						   }
+			      }
+};
+#else
 #ifdef HW_CFG_CAPH
 	HW_CFG_CAPH;
 #else
@@ -1092,9 +1104,13 @@ static struct caph_platform_cfg board_caph_platform_cfg =
 	.aud_ctrl_plat_cfg = {
 			      .ext_aud_plat_cfg = {
 						   .ihf_ext_amp_gpio = -1,
+#if defined(CONFIG_GPIO_2IN1_SPK)
+						   .spk_2in1_gpio = -1,
+#endif
 						   }
 			      }
 };
+#endif
 #endif
 
 static struct platform_device board_caph_device = {
