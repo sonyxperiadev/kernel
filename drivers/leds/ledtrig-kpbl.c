@@ -29,7 +29,7 @@
 #include <linux/i2c/ft5306.h>
 #include "leds.h"
 
-#define DEFAULT_DURATION 1000	/*ms*/
+#define DEFAULT_DURATION 3000	/*ms*/
 
 struct kpbl_trig_data {
 	struct delayed_work del_work;
@@ -110,10 +110,10 @@ static void kpbl_trig_deactivate(struct led_classdev *led_cdev)
 		mutex_lock(&kpbl_lock);
 		list_del(&data->list);
 		led_cdev->trigger_data = NULL;
-		cancel_delayed_work_sync(&data->del_work);
 #ifdef CONFIG_HAS_EARLYSUSPEND
 		unregister_early_suspend(&data->suspend);
 #endif
+		cancel_delayed_work_sync(&data->del_work);
 		device_remove_file(led_cdev->dev, &dev_attr_duration);
 		kfree(data);
 		mutex_unlock(&kpbl_lock);
@@ -165,7 +165,12 @@ static void kpbl_trig_early_suspend(struct early_suspend *h)
 
 static void kpbl_trig_late_resume(struct early_suspend *h)
 {
+	struct kpbl_trig_data *data;
 
+	data = container_of(h, struct kpbl_trig_data, suspend);
+	led_set_brightness(data->led_cdev, LED_FULL);
+	schedule_delayed_work(&data->del_work,
+				msecs_to_jiffies(data->duration));
 }
 #endif
 
