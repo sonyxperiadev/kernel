@@ -62,6 +62,7 @@ typedef struct {
 #ifdef CONFIG_ION
 	struct ion_client *v3d_bin_oom_client;
 	v3d_boom_t *mem_block;
+	v3d_boom_t *client_block;
 	struct list_head mem_head;
 #endif
 	volatile void *vaddr;
@@ -315,9 +316,11 @@ void v3d_bin_render_update_virt(void *virt)
 void v3d_bin_render_deinit(void)
 {
 	pr_debug("V3D bin_render driver Module Exit");
-	#ifdef CONFIG_ION
+#ifdef CONFIG_ION
 	if (v3d_device->mem_block)
 		v3d_free_boom(v3d_device, v3d_device->mem_block);
+	if (v3d_device->client_block)
+		v3d_free_boom(v3d_device, v3d_device->client_block);
 	if (v3d_device->v3d_bin_oom_client)
 		ion_client_destroy(v3d_device->v3d_bin_oom_client);
 #endif
@@ -355,7 +358,7 @@ int v3d_bin_render_version_init(void *device_id, void *vaddr,
 	vinfo->tlbdb = extract(V3D_IDENT2, 11, 8);
 	vinfo->tlbsz = TLB_QUARTER_BUFFER_SIZE + extract(V3D_IDENT2, 7, 4);
 	vinfo->vrisz = VRI_HALF_SIZE + extract(V3D_IDENT2, 3, 0);
-	vinfo->bin_mem_addr = id->mem_block->v3d_bin_oom_block;
+	vinfo->bin_mem_addr = id->client_block->v3d_bin_oom_block;
 	vinfo->bin_mem_size = V3D_BIN_OOM_SIZE;
 	return 0;
 }
@@ -386,6 +389,9 @@ int v3d_bin_render_init(MM_CORE_HW_IFC *core_param)
 
 	v3d_device->mem_block = v3d_alloc_boom(v3d_device);
 	list_del_init(&v3d_device->mem_block->node);
+
+	v3d_device->client_block = v3d_alloc_boom(v3d_device);
+	list_del_init(&v3d_device->client_block->node);
 
 #else
 #error "V3D Driver Cannot work without ION"
