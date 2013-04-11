@@ -81,6 +81,9 @@ module_param_named(log_lvl, pm_prms.log_lvl,
 module_param_named(suspend_state, pm_prms.suspend_state, int,
 					S_IRUGO | S_IWUSR | S_IWGRP);
 
+__weak void instrument_dormant_trace(u32 trace, u32 service, u32 success)
+{
+}
 
 #ifdef CONFIG_CPU_IDLE
 
@@ -113,8 +116,12 @@ static int __kona_pm_enter_idle(struct cpuidle_device *dev,
 		instrument_idle_entry();
 
 		if (kona_state->enter) {
+			instrument_dormant_trace(DORMANT_IDLE_PATH_ENTRY,
+						kona_state->state, 0);
 			mach_ret = kona_state->enter(kona_state,
 					kona_state->params);
+			instrument_dormant_trace(DORMANT_IDLE_PATH_EXIT,
+						kona_state->state, 0);
 		} else
 			cpu_do_idle();
 		instrument_idle_exit();
@@ -199,8 +206,12 @@ __weak int kona_mach_pm_enter(suspend_state_t state)
 						((void *)&param));
 
 			time1 = kona_hubtimer_get_counter();
+			instrument_dormant_trace(DORMANT_SUSPEND_PATH_ENTRY,
+					0, 0);
 			suspend->enter(suspend,
 				suspend->params | CTRL_PARAMS_ENTER_SUSPEND);
+			instrument_dormant_trace(DORMANT_SUSPEND_PATH_EXIT,
+					0, 0);
 			time2 = kona_hubtimer_get_counter();
 			if (!err && deepsleep_profiling) {
 				time_awake = stop_profiler("ccu_root");
@@ -247,7 +258,11 @@ int kona_pm_cpu_lowpower(void)
 	 * to DORMANT_CORE_DOWN.
 	 */
 	if (suspend->enter) {
+		instrument_dormant_trace(DORMANT_SUSPEND_PATH_ENTRY,
+					0, 0);
 		suspend->enter(suspend, suspend->params);
+		instrument_dormant_trace(DORMANT_SUSPEND_PATH_EXIT,
+					0, 0);
 	}
 	return 0;
 }

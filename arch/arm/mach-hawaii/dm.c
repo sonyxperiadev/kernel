@@ -377,12 +377,16 @@ static void restore_proc_clk_regs(void)
 		       PROC_CLK_REG_ADDR(LVM_EN));
 
 	/* Disable policy engine before beginning to restore */
+	instrument_dormant_trace(DORMANT_EXIT_BEFORE_DISABLE,
+				serv, 0);
 	while ((readl_relaxed(PROC_CLK_REG_ADDR(LVM_EN)) &
 	       KPROC_CLK_MGR_REG_LVM_EN_POLICY_CONFIG_EN_MASK) && insurance) {
 		udelay(1);
 		insurance--;
 		}
 	WARN_ON(insurance == 0);
+	instrument_dormant_trace(DORMANT_EXIT_AFTER_DISABLE,
+				serv, 0);
 
 #if defined(CONFIG_BCM_HWCAPRI_1605) || defined(CONFIG_BCM_HWCAPRI_1605_A2)
 	/* If the issue is not fixed, first step to 312 MHZ before restoring
@@ -414,6 +418,8 @@ static void restore_proc_clk_regs(void)
 
 		/* If register is PLLARM OFFSET - do not restore now */
 		if ((reg->addr == PROC_CLK_REG_ADDR(PLLARM_OFFSET))) {
+			instrument_dormant_trace(DORMANT_EXIT_PLLARM_SAVE,
+					serv, 0);
 			pllarm_offset_reg = reg;
 			continue;
 		}
@@ -448,12 +454,14 @@ static void restore_proc_clk_regs(void)
 	}
 
 	/* Write the GO bit to initiate freq change */
+	instrument_dormant_trace(DORMANT_EXIT_POLICY_GO, serv, 0);
 	writel_relaxed(KPROC_CLK_MGR_REG_POLICY_CTL_GO_ATL_MASK |
 			KPROC_CLK_MGR_REG_POLICY_CTL_GO_MASK,
 			PROC_CLK_REG_ADDR(POLICY_CTL));
 
 	/* Wait until the new frequency takes effect */
 	insurance = 10000;
+	instrument_dormant_trace(DORMANT_EXIT_BEFORE_FREQ, serv, 0);
 	do {
 		udelay(1);
 		insurance--;
@@ -462,6 +470,7 @@ static void restore_proc_clk_regs(void)
 		val2 =  readl(PROC_CLK_REG_ADDR(POLICY_CTL)) &
 			KPROC_CLK_MGR_REG_POLICY_CTL_GO_MASK;
 	} while ((val1 | val2) && insurance);
+	instrument_dormant_trace(DORMANT_EXIT_AFTER_FREQ, serv, 0);
 	WARN_ON(insurance == 0);
 
 	/* Restore PLLARM OFFSET register */
@@ -549,7 +558,34 @@ void dormant_enter(u32 service)
 #endif
 	u32 dormant_return;
 	u32 reg_val;
+#if defined(CONFIG_CAPRI_DORMANT_MODE)
+	serv = service;
+	spin_lock_irqsave(&dormant_entry_lock, flgs);
+	if (dormant_disable || fake_dormant ||
+			(force_retention_in_idle &&
+			 (service == DORMANT_CORE_DOWN))) {
+		/* Dis-allow entering dormant */
+		reg_val = readl_relaxed(KONA_PWRMGR_VA +
+					PWRMGR_PI_DEFAULT_POWER_STATE_OFFSET);
 
+		reg_val |=
+		    PWRMGR_PI_DEFAULT_POWER_STATE_ARM_CORE_DORMANT_DISABLE_MASK;
+
+		writel_relaxed(reg_val, KONA_PWRMGR_VA +
+			       PWRMGR_PI_DEFAULT_POWER_STATE_OFFSET);
+	} else {
+		/* Allow entering dormant */
+		reg_val = readl_relaxed(KONA_PWRMGR_VA +
+					PWRMGR_PI_DEFAULT_POWER_STATE_OFFSET);
+
+		reg_val &=
+		~PWRMGR_PI_DEFAULT_POWER_STATE_ARM_CORE_DORMANT_DISABLE_MASK;
+
+		writel_relaxed(reg_val, KONA_PWRMGR_VA +
+				PWRMGR_PI_DEFAULT_POWER_STATE_OFFSET);
+	}
+	spin_unlock_irqrestore(&dormant_entry_lock, flgs);
+#endif
 	if (dormant_disable) {
 
 		/* This is retention case, so just execute WFI.
@@ -578,8 +614,9 @@ void dormant_enter(u32 service)
 		return;
 	}
 
-	instrument_lpm(LPM_TRACE_ENTER_DRMNT,
-				(u16)service);
+	instrument_dormant_trace(DORMANT_ENTRY, service, 0);
+
+	/* Save CCU registers TBD */
 
 	/* Save all the local data for this CPU for either service */
 
@@ -611,37 +648,30 @@ void dormant_enter(u32 service)
 
 	save_mmu((void *)__get_cpu_var(mmu_data));
 
-	instrument_lpm(LPM_TRACE_DRMNT_SAVE_REG, 0);
-
-	if ((service == DORMANT_CLUSTER_DOWN) && turn_off_l2_memory) {
+	instrument_dormant_trace(DORMANT_ENTRY_REGS_SAVE, service, 0);
+	if ((service == DORMANT_CLUSTER_DOWN) && turn_off_l2_memory)
 #ifdef CONFIG_MOBICORE_DRIVER
 		local_secure_api(SMC_CMD_L2X0CTRL, 0, 0, 0);
 #else
 		local_secure_api(SSAPI_DISABLE_L2_CACHE, 0, 0, 0);
 #endif
-		instrument_lpm(LPM_TRACE_DRMNT_L2_OFF, 0);
-	}
+	instrument_dormant_trace(DORMANT_ENTRY_L2_OFF, service, 0);
 
 	spin_lock_irqsave(&dormant_entry_lock, flgs);
 	num_cores_in_dormant++;
-	instrument_lpm(LPM_TRACE_DRMNT_CORE_CNT,
-		(u16)num_cores_in_dormant);
 	if (num_cores_in_dormant == num_cpus()) {
 		/* This is the last core going down */
 		cnt_attempts++;
-		instrument_lpm(LPM_TRACE_DRMNT_ATMPT_CNT,
-			(u16)cnt_attempts);
 
 		print_dbg_counters();
 
 		save_gic_distributor_shared((void *)gic_dist_shared_data,
 					    (u32)KONA_GICDIST_VA, false);
-		instrument_lpm(LPM_TRACE_DRMNT_SAVE_SHRD, 0);
+
 		/* save all proc registers except arm_sys_idle_dly */
 		save_proc_clk_regs();
-		instrument_lpm(LPM_TRACE_DRMNT_SAVE_PROC, 0);
 		save_addnl_regs();
-		instrument_lpm(LPM_TRACE_DRMNT_SAVE_ADDNL, 0);
+
 		/* Write to spare register and enable pwr_mgr dormant only in case of actual dormant entry */
 		if(!fake_dormant && !(force_retention_in_idle && (service==DORMANT_CORE_DOWN))) {
 			reg_val = readl_relaxed(KONA_CHIPREG_VA +
@@ -675,12 +705,9 @@ void dormant_enter(u32 service)
 	}
 	spin_unlock_irqrestore(&dormant_entry_lock, flgs);
 
-	instrument_lpm(LPM_TRACE_DRMNT_CPU_SUSPEND, 0);
-
+	instrument_dormant_trace(DORMANT_ENTRY_SWITCHES_OFF, service, 0);
 	dormant_return = cpu_suspend(0, dormant_enter_continue);
 
-	instrument_lpm(LPM_TRACE_DRMNT_WAKEUP,
-		(u16)dormant_return);
 	/* We are here after either a failed dormant or a successful
 	 * dormant
 	 */
@@ -690,14 +717,14 @@ void dormant_enter(u32 service)
 		       KONA_SCU_VA + SCU_POWER_STATUS_OFFSET +
 		       smp_processor_id());
 
-	if ((service == DORMANT_CLUSTER_DOWN) && turn_off_l2_memory) {
+	instrument_dormant_trace(DORMANT_EXIT_WAKE_UP, service, dormant_return);
+	if ((service == DORMANT_CLUSTER_DOWN) && turn_off_l2_memory)
 #ifdef CONFIG_MOBICORE_DRIVER
 		local_secure_api(SMC_CMD_L2X0CTRL, 1, 0, 0);
 #else
 		local_secure_api(SSAPI_ENABLE_L2_CACHE, 0, 0, 0);
 #endif
-		instrument_lpm(LPM_TRACE_DRMNT_L2_ON, 0);
-	}
+	instrument_dormant_trace(DORMANT_EXIT_L2_ON, service, dormant_return);
 
 	/* if we failed to enter dormant, restore
 	 * only what might have changed when dormant fails
@@ -718,21 +745,17 @@ void dormant_enter(u32 service)
 		restore_performance_monitors((void *)__get_cpu_var(pmu_data));
 	}
 
+	instrument_dormant_trace(DORMANT_EXIT_BASIC_RESTORE,
+				service, dormant_return);
 	spin_lock_irqsave(&dormant_entry_lock, flgs);
-	instrument_lpm(LPM_TRACE_DRMNT_RS1,
-		(u16)num_cores_in_dormant);
+
 	if (num_cores_in_dormant == num_cpus()) {
 		/* This is the first core trying to come out of dormant */
 		/* Did we enter retention or dormant */
-		if (!pwr_mgr_is_event_active(SOFTWARE_2_EVENT)) {
+		if (!pwr_mgr_is_event_active(SOFTWARE_2_EVENT))
 			cnt_success++;
-			instrument_lpm(LPM_TRACE_DRMNT_SUCSS_CNT,
-				(u16)cnt_success);
-		} else {
+		else
 			cnt_failure++;
-			instrument_lpm(LPM_TRACE_DRMNT_FAIL_CNT,
-				(u16)cnt_failure);
-		}
 
 		reg_val = readl_relaxed(KONA_CHIPREG_VA +
 				CHIPREG_PERIPH_SPARE_CONTROL2_OFFSET);
@@ -749,7 +772,8 @@ void dormant_enter(u32 service)
 		num_cores_in_dormant--;
 
 	spin_unlock_irqrestore(&dormant_entry_lock, flgs);
-	instrument_lpm(LPM_TRACE_DRMNT_RS2, 0);
+	instrument_dormant_trace(DORMANT_EXIT_SWITCHES_ON,
+				service, dormant_return);
 
 	/* If dormant exit is successful, restore context */
 	if (dormant_return == DORMANT_ENTRY_SUCCESS) {
@@ -758,12 +782,12 @@ void dormant_enter(u32 service)
 			 * True dormant exit and we are core-0.  Let
 			 * us first restore the proc registers
 			 */
-			instrument_lpm(LPM_TRACE_DRMNT_RS_PROC, 0);
+			instrument_dormant_trace(DORMANT_EXIT_PROC_RESTORE,
+				service, dormant_return);
 			restore_proc_clk_regs();
-			instrument_lpm(LPM_TRACE_DRMNT_RS_ADDNL, 0);
 			restore_addnl_regs();
 		}
-		instrument_lpm(LPM_TRACE_DRMNT_RS3, 0);
+
 		/* restore everything that is specific to this core */
 		restore_mmu((void *)__get_cpu_var(mmu_data));
 
@@ -789,7 +813,6 @@ void dormant_enter(u32 service)
 			gic_distributor_set_enabled(true, (u32)KONA_GICDIST_VA);
 
 		}
-
 
 		/* continue restoring cpu specific content */
 		restore_gic_distributor_private((void *)
@@ -821,7 +844,8 @@ void dormant_enter(u32 service)
 		invalidate_tlb_btac();
 		flush_cache_all();
 
-		instrument_lpm(LPM_TRACE_DRMNT_RS4, 0);
+		instrument_dormant_trace(DORMANT_EXIT_REGS_RESTORE,
+					service, dormant_return);
 #if defined(CONFIG_SMP)
 		if (smp_processor_id() == MASTER_CORE) {
 			/*
@@ -840,27 +864,25 @@ void dormant_enter(u32 service)
 					       CHIPREG_BOOT_2ND_ADDR_OFFSET);
 				dsb_sev();
 				/* Wait for core-0 to acknowledge the wake-up */
-				instrument_lpm(LPM_TRACE_DRMNT_CPU_WAIT1, 0);
 				do {
 					boot_2nd_addr =
 					    readl_relaxed(KONA_CHIPREG_VA +
 						CHIPREG_BOOT_2ND_ADDR_OFFSET);
 				} while (boot_2nd_addr & 1);
+			instrument_dormant_trace(DORMANT_EXIT_CPU1_WAKEUP,
+						service, dormant_return);
 
 			/* Wait for core-1 to reach non-secure side.
 			 * Workaround added to avoid mm_stuct count mismatch
 			 * in idle path
 			 */
-			instrument_lpm(LPM_TRACE_DRMNT_CPU_WAIT2, 0);
 			while (num_cores_in_dormant)
 				udelay(1);
 			} /* core down */
 		} /* Master core */
 #endif
-
 	} /* Success dormant return */
-	instrument_lpm(LPM_TRACE_EXIT_DRMNT,
-		((u16)service));
+instrument_dormant_trace(DORMANT_EXIT, service, dormant_return);
 }
 
 /*
@@ -870,14 +892,19 @@ void dormant_enter(u32 service)
 static int dormant_enter_continue(unsigned long data)
 {
 	u32 processor_id;
-	int ret = 0;
 	processor_id = smp_processor_id();
 
-	instrument_lpm(LPM_TRACE_DRMNT_CNTNUE, 0);
-
+#if defined(CONFIG_CAPRI_DORMANT_MODE)
+	/*
+	 * Clear the L2 area where the sleep saved_sp would
+	 * be saved.
+	 */
+	outer_clean_range((phys_addr_t)(cpu_resume+PHYS_OFFSET-PAGE_OFFSET),
+			(phys_addr_t)
+			(cpu_resume+SZ_1K+PHYS_OFFSET-PAGE_OFFSET));
+#endif
 	disable_clean_inv_dcache_v7_l1();
 	write_actlr(read_actlr() & ~(0x40));
-	instrument_lpm(LPM_TRACE_DRMNT_DIS_SMP, 0);
 
 	/* Let us always indicate the dormant mode to the SCU
 	 * the external power-controller sees what is in the bypass
@@ -905,38 +932,53 @@ static int dormant_enter_continue(unsigned long data)
 			/* We want to enter retention in idle path */
 			wfi();
 		} else {
-#ifdef CONFIG_MOBICORE_DRIVER
-			u32 smc_cmd = SMC_CMD_SLEEP;
-#else
-			u32 smc_cmd = SSAPI_DORMANT_ENTRY_SERV;
-#endif
 			if (is_l2_disabled() || fake_dormant) {
-				instrument_lpm(LPM_TRACE_DRMNT_SMC, 3);
-				local_secure_api(smc_cmd,
+#ifdef CONFIG_MOBICORE_DRIVER
+				instrument_dormant_trace(DORMANT_ENTRY_LINUX,
+									1, 0);
+				local_secure_api(SMC_CMD_SLEEP,
 						 (u32)SEC_BUFFER_ADDR,
 						 (u32)SEC_BUFFER_ADDR +
 						 MAX_SECURE_BUFFER_SIZE, 3);
 			} else {
-				instrument_lpm(LPM_TRACE_DRMNT_SMC, 2);
-				local_secure_api(smc_cmd,
+				instrument_dormant_trace(DORMANT_ENTRY_LINUX,
+									0, 0);
+				local_secure_api(SMC_CMD_SLEEP,
 						 (u32)SEC_BUFFER_ADDR,
 						 (u32)SEC_BUFFER_ADDR +
 						 MAX_SECURE_BUFFER_SIZE, 2);
 			}
+#else
+				instrument_dormant_trace(DORMANT_ENTRY_LINUX,
+									1, 0);
+				local_secure_api(SSAPI_DORMANT_ENTRY_SERV,
+						 (u32)SEC_BUFFER_ADDR,
+						 (u32)SEC_BUFFER_ADDR +
+						 MAX_SECURE_BUFFER_SIZE, 3);
+			} else {
+				instrument_dormant_trace(DORMANT_ENTRY_LINUX,
+									0, 0);
+				local_secure_api(SSAPI_DORMANT_ENTRY_SERV,
+						 (u32)SEC_BUFFER_ADDR,
+						 (u32)SEC_BUFFER_ADDR +
+						 MAX_SECURE_BUFFER_SIZE, 2);
+			}
+#endif
 
 		}
+
+
 	} else {
 		/* Write the address where we want core-1 to boot */
 		writel_relaxed(virt_to_phys(cpu_resume),
 			       KONA_CHIPREG_VA + CHIPREG_BOOT_2ND_ADDR_OFFSET);
 
-		instrument_lpm(LPM_TRACE_DRMNT_WFI, 0);
+		instrument_dormant_trace(DORMANT_ENTRY_LINUX, 0, 0);
 		/* Directly execute WFI for non core-0 cores */
 		wfi();
-		ret = 1;
-		instrument_lpm(LPM_TRACE_DRMNT_WFI_EXIT, 0);
+
 	}
-	return ret;
+	return 0;
 }
 
 /* Initialization function for dormant module */
@@ -980,6 +1022,23 @@ static int __init dormant_init(void)
 	secure_params->log_index = 0;
 	secure_params->dram_log_buffer = drmt_buf_phy;
 
+#if defined(CONFIG_CAPRI_DORMANT_MODE)
+	if (chipregHw_getChipIdRev() > 0xA1) {
+		/* Indicate that core-1 is always willing to enter dormnt
+		 * so the final decision is actually done by core-0's
+		 * pwrctrl value can change each core writing as needed
+		 * in independent path.
+		 */
+		core1_pwrctrl_reg =
+			readl_relaxed(KONA_CHIPREG_VA +
+			CHIPREG_PERIPH_MISC_REG2_OFFSET);
+
+		core1_pwrctrl_reg |= PWRCTRL_DORMANT_L2_OFF_CORE_1;
+
+		writel_relaxed(core1_pwrctrl_reg, KONA_CHIPREG_VA +
+			       CHIPREG_PERIPH_MISC_REG2_OFFSET);
+	}
+#endif
 	/* un-cached memory for register save and restore */
 	proc = dma_alloc_coherent(NULL, SZ_4K,
 				  &proc_regs_p, GFP_ATOMIC);
