@@ -852,8 +852,8 @@ __initdata struct lcd_config nt35512_cfg = {
 	.hbp = 20,
 	.hfp = 20,
 	.vs = 2,
-	.vbp = 8,
-	.vfp = 8,
+	.vbp = 160,
+	.vfp = 160,
 };
 
 #endif
