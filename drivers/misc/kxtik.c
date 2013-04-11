@@ -403,7 +403,7 @@ static int kxtik_enable(struct kxtik_data *tik)
 {
 	int err;
 	FUNCDBG("kxtik_enable\n");
-
+	mdelay(20);
 	err = kxtik_operate(tik);
 	if (err < 0)
 		FUNCDBG("operate mode failed\n");
@@ -531,7 +531,6 @@ static ssize_t kxtik_set_poll(struct device *dev, struct device_attribute *attr,
 	tik->poll_delay = msecs_to_jiffies(tik->poll_interval);
 
 	kxtik_update_odr(tik, tik->poll_interval);
-
 	enable_irq(client->irq);
 	kxtik_irq_clear(tik);
 
@@ -619,9 +618,14 @@ static struct attribute_group kxtik_attribute_group = {
 static int __devinit kxtik_verify(struct kxtik_data *tik)
 {
 	int retval;
+	int i;
 	FUNCDBG("kxtik_verify\n");
-
-	retval = i2c_smbus_read_byte_data(tik->client, WHO_AM_I);
+	for (i = 0; i < 5; i++) {
+		mdelay(10);
+		retval = i2c_smbus_read_byte_data(tik->client, WHO_AM_I);
+		if (retval >= 0)
+			break;
+	}
 	if (retval < 0)
 		FUNCDBG("error reading WHO_AM_I register!\n");
 	else {
