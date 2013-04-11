@@ -21,7 +21,7 @@
 
 /* /proc file to accept configuration changes */
 #define BCMLOG_CONFIG_PROC_FILE		"brcm_logcfg"
-#define BCMLOG_DEFAULT_FILE_BASE "/storage/sdcard0/bcmlog/"
+#define BCMLOG_DEFAULT_FILE_BASE "/storage/sdcard0/"
 #define BCMLOG_DEFAULT_UART_DEV "/dev/ttyS0"
 #define BCMLOG_DEFAULT_ACM_DEV "/dev/ttyGS1"
 #define MAX_STR_NAME 40
