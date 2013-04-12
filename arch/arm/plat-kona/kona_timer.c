@@ -1370,8 +1370,9 @@ static irqreturn_t kona_timer_isr(int irq, void *dev_id)
 		writel(reg, ktm->reg_base + KONA_GPTIMER_STCS_OFFSET);
 	} else {
 		/* Disable timer w/o waiting for sync to remove the delay */
+#ifdef CONFIG_GP_TIMER_COMPARATOR_LOAD_DELAY
 		__wait_for_timer_sync(kt);
-
+#endif
 		reg = readl(ktm->reg_base + KONA_GPTIMER_STCS_OFFSET);
 		reg &= ~KONA_GPTIMER_STCS_TIMER_MATCH_MASK;
 		reg |= 1 << (kt->ch_num + KONA_GPTIMER_STCS_TIMER_MATCH_SHIFT);

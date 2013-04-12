@@ -108,9 +108,7 @@ static void __init wakeup_secondary(void)
 
 int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
 {
-#ifdef CONFIG_A9_DORMANT_MODE
 	u32 boot_2nd_addr;
-#endif
 	unsigned long timeout;
 
 	/*
@@ -191,8 +189,8 @@ void __init platform_smp_prepare_cpus(unsigned int max_cpus)
 	 * wakeup_secondary().
 	 */
 
-#ifdef CONFIG_ARCH_HAWAII
 	wakeup_secondary();
+#ifdef CONFIG_ARCH_HAWAII
 	scu_enable(scu_base);
 #endif
 }

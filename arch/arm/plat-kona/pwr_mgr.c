@@ -41,8 +41,8 @@
 #include <mach/io_map.h>
 #if defined (CONFIG_ARCH_HAWAII)
 #include <mach/rdb/brcm_rdb_a9cpu.h>
-#endif
 #include <mach/rdb/brcm_rdb_gicdist.h>
+#endif
 
 #ifndef PWRMGR_I2C_VAR_DATA_REG
 #define PWRMGR_I2C_VAR_DATA_REG 6
@@ -957,7 +957,9 @@ int pwr_mgr_pm_i2c_sem_lock()
 						cpu_freq);
 		}
 #endif
+#if defined(CONFIG_KONA_CPU_PM_HANDLER)
 		kona_pm_disable_idle_state(CSTATE_ALL, 1);
+#endif
 	}
 	spin_lock_irqsave(&pwr_mgr_lock, flgs);
 
@@ -1000,7 +1002,9 @@ int pwr_mgr_pm_i2c_sem_unlock()
 		if (cpu_freq != 0)
 			cpufreq_update_lmt_req(&frq_min_lmt_node, cpu_freq);
 #endif
+#if defined(CONFIG_KONA_CPU_PM_HANDLER)
 		kona_pm_disable_idle_state(CSTATE_ALL, 0);
+#endif
 	}
 	return 0;
 }
@@ -2219,7 +2223,9 @@ int pwr_mgr_pmu_reg_read(u8 reg_addr, u8 slave_id, u8 *reg_val)
 	}
 
 	mutex_lock(&seq_mutex);
+#if defined(CONFIG_KONA_CPU_PM_HANDLER)
 	kona_pm_disable_idle_state(CSTATE_ALL, 1);
+#endif
 	pwr_mgr_seq_log_buf_put(SEQ_LOG_READ_BYTE,
 			SEQ_LOG_PACK_U24(0 , slave_id, reg_addr));
 	if (pwr_mgr.info->i2c_rd_slv_id_off1 >= 0)
@@ -2281,7 +2287,9 @@ int pwr_mgr_pmu_reg_read(u8 reg_addr, u8 slave_id, u8 *reg_val)
 out_unlock:
 	pwr_mgr_seq_log_buf_put(SEQ_LOG_READ_BYTE,
 			SEQ_LOG_PACK_U24(slave_id, reg_addr, *reg_val));
+#if defined(CONFIG_KONA_CPU_PM_HANDLER)
 	kona_pm_disable_idle_state(CSTATE_ALL, 0);
+#endif
 	mutex_unlock(&seq_mutex);
 	pwr_dbg(PWR_LOG_SEQ, "%s : ret = %d\n", __func__, ret);
 	return ret;
@@ -2303,7 +2311,9 @@ int pwr_mgr_pmu_reg_write(u8 reg_addr, u8 slave_id, u8 reg_val)
 	}
 
 	mutex_lock(&seq_mutex);
+#if defined(CONFIG_KONA_CPU_PM_HANDLER)
 	kona_pm_disable_idle_state(CSTATE_ALL, 1);
+#endif
 
 	pwr_mgr_seq_log_buf_put(SEQ_LOG_WRITE_BYTE,
 			SEQ_LOG_PACK_U24(slave_id, reg_addr, reg_val));
