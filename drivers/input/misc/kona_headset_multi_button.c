@@ -404,11 +404,7 @@ static int config_adc_for_accessory_detection(int hst)
 		chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
 				    CHAL_ACI_BLOCK_ACTION_ADC_RANGE,
 				    CHAL_ACI_BLOCK_ADC,
-#ifdef CONFIG_MACH_HAWAII_SS_LOGAN
 				    CHAL_ACI_BLOCK_ADC_HIGH_VOLTAGE);
-#else /* CONFIG_MACH_HAWAII_SS_LOGAN */
-				    CHAL_ACI_BLOCK_ADC_LOW_VOLTAGE);
-#endif /* CONFIG_MACH_HAWAII_SS_LOGAN */
 		chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
 				    CHAL_ACI_BLOCK_ACTION_CONFIGURE_FILTER,
 				    CHAL_ACI_BLOCK_ADC, &aci_filter_adc_config);
