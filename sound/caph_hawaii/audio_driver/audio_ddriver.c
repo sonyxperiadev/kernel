@@ -436,7 +436,9 @@ AUDIO_DRIVER_HANDLE_t AUDIO_DRIVER_Open(AUDIO_DRIVER_TYPE_t drv_type)
 		spin_lock_irqsave(&audio_ptt_driver.audio_lock, flags);
 		audio_ptt_driver.aud_drv_p = aud_drv;
 		spin_unlock_irqrestore(&audio_ptt_driver.audio_lock, flags);
+#ifdef CONFIG_BCM_MODEM
 		CSL_RegisterPTTStatusHandler(Ptt_FillDL_CB);
+#endif
 		break;
 
 	default:
@@ -489,7 +491,9 @@ void AUDIO_DRIVER_Close(AUDIO_DRIVER_HANDLE_t drv_handle)
 		break;
 	case AUDIO_DRIVER_PTT:
 		{
+#ifdef CONFIG_BCM_MODEM
 			CSL_RegisterPTTStatusHandler(NULL);
+#endif
 			spin_lock_irqsave(&audio_ptt_driver.audio_lock, flags);
 			audio_ptt_driver.aud_drv_p = NULL;
 			spin_unlock_irqrestore(
@@ -1267,14 +1271,18 @@ static Result_t AUDIO_DRIVER_ProcessPttCmd(AUDIO_DDRIVER_t *aud_drv,
 	case AUDIO_DRIVER_START:
 	{
 		/* start the PTT */
+#ifdef CONFIG_BCM_MODEM
 		VPRIPCMDQ_PTTEnable(1);
+#endif
 		result_code = RESULT_OK;
 	}
 	break;
 	case AUDIO_DRIVER_STOP:
 	{
 		/* Stop the PTT */
+#ifdef CONFIG_BCM_MODEM
 		VPRIPCMDQ_PTTEnable(0);
+#endif
 		result_code = RESULT_OK;
 	}
 	break;
@@ -1307,7 +1315,9 @@ static Result_t AUDIO_DRIVER_ProcessPttCmd(AUDIO_DDRIVER_t *aud_drv,
 		}
 		/* get the buffer pointer */
 		buf_index = *((UInt32 *)pCtrlStruct);
+#ifdef CONFIG_BCM_MODEM
 		buf_ptr = CSL_GetULPTTBuffer(buf_index);
+#endif
 		*((UInt32 *)pCtrlStruct) = (UInt32) buf_ptr;
 		result_code = RESULT_OK;
 	}
@@ -1354,7 +1364,7 @@ static Result_t AUDIO_DRIVER_ProcessVoIPCmd(AUDIO_DDRIVER_t *aud_drv,
 			isDTXEnabled =
 			    ((voip_data_t *) pCtrlStruct)->
 			    isDTXEnabled;
-	
+
 		}
 
 		if (codec_type == 0)
@@ -1524,8 +1534,10 @@ static Result_t AUDIO_DRIVER_ProcessVoIPCmd(AUDIO_DDRIVER_t *aud_drv,
 			prev_amr_mode = encode_amr_mode;
 			aTrace(LOG_AUDIO_DRIVER,
 				"SET_AMR codec=0x%x\n", encode_amr_mode);
+#ifdef CONFIG_BCM_MODEM
 			VPRIPCMDQ_DSP_AMR_RUN((UInt16) encode_amr_mode,
 					telephony_amr_if2, FALSE);
+#endif
 		}
 	}
 	break;
@@ -1538,12 +1550,11 @@ static Result_t AUDIO_DRIVER_ProcessVoIPCmd(AUDIO_DDRIVER_t *aud_drv,
 				    ((voip_data_t *) pCtrlStruct)->isDTXEnabled;
 			}
 
-			aTrace(LOG_AUDIO_DRIVER,
-					"AUDDRV_VOIP_SET_DTX: %d\r\n", (int)isDTXEnabled);
+			aTrace(LOG_AUDIO_DRIVER, "AUDDRV_VOIP_SET_DTX: %d\r\n"
+			, (int)isDTXEnabled);
 			result_code = RESULT_OK;
 		}
 		break;
-	
 
 	default:
 		aWarn(
@@ -2218,7 +2229,7 @@ static void AUDIO_DRIVER_CaptureDmaCallback(UInt32 stream_id, UInt32 buffer_idx)
 #ifdef CONFIG_MAP_VOIP
 		if (audio_capture_driver.
 			aud_drv_p->drv_type == AUDIO_DRIVER_CAPT_EPT) {
-			AUDIO_DRIVER_Stats_t* p = (AUDIO_DRIVER_Stats_t *)
+			AUDIO_DRIVER_Stats_t *p = (AUDIO_DRIVER_Stats_t *)
 				(audio_capture_driver.aud_drv_p->pCBPrivate);
 			/* for debug only, remove from final code */
 			p->dmach = audio_capture_driver.aud_drv_p->stream_id;
@@ -2567,7 +2578,7 @@ static Boolean VOIP_FillDL_CB(UInt32 nFrames)
 		else
 			dtx_mode = FALSE;
 #endif
-	
+
 #if defined(CONFIG_BCM_MODEM)
 	VoIP_StartMainAMRDecodeEncode((CSL_VP_Mode_AMR_t) aud_drv->voip_config.
 				      codec_type, (UInt8 *) aud_drv->tmp_buffer,
@@ -2685,7 +2696,9 @@ static void Ptt_FillDL_CB(UInt32 buf_index, UInt32 ptt_flag, UInt32 int_rate)
 		return;
 	}
 	aTrace(LOG_AUDIO_DRIVER, "Int rate-%ld\n", int_rate);
+#ifdef CONFIG_BCM_MODEM
 	buf_ptr = CSL_GetULPTTBuffer(buf_index);
+#endif
 	audio_ptt_driver.aud_drv_p->ptt_config.pPttDLCallback(
 		audio_ptt_driver.aud_drv_p->ptt_config.pPttCBPrivate , buf_ptr,
 		PTT_FRAME_SIZE);

@@ -169,7 +169,7 @@ static void AudDrv_VOIP_FillDL_CB
 static UInt32 delay_count;	/* 20ms each count */
 
 /* callback for buffer ready of pull mode */
-static void AudDrv_VOIP_DumpUL_CB(void *pPrivate, u8 * pSrc, u32 nSize)
+static void AudDrv_VOIP_DumpUL_CB(void *pPrivate, u8 *pSrc, u32 nSize)
 {
 	UInt32 copied = 0;
 
@@ -452,7 +452,7 @@ static int HandleControlCommand()
 
 		aTrace(LOG_AUDIO_DRIVER, " Enable telephony\n");
 		AUDCTRL_SetTelephonyMicSpkr(AUDIO_SOURCE_ANALOG_MAIN,
-				AUDIO_SINK_HANDSET,false);
+				AUDIO_SINK_HANDSET, false);
 		AUDCTRL_EnableTelephony(AUDIO_SOURCE_ANALOG_MAIN,
 				AUDIO_SINK_HANDSET);
 #if 0
@@ -994,13 +994,12 @@ static int HandleControlCommand()
 			en_lpbk = 2;
 			if (sgBrcm_auddrv_TestValues[3] == 1)
 				AUDCTRL_SetBTMode(BT_MODE_NB);
-		}
-		else
+		} else
 			return 0;
 
 		AUDCTRL_ConfigSSP(ssp_port, ssp_bus, en_lpbk);
 
-		/* Pad Ctl Settings SSP external loopback 
+		/* Pad Ctl Settings SSP external loopback
 		 * FM SSP4 */
 		if (sgBrcm_auddrv_TestValues[2] == 4) {
 
@@ -1009,7 +1008,7 @@ static int HandleControlCommand()
 			WR_REG(0x35004824, 0x00000203); /* DCLK4*/
 			WR_REG(0x3500482C, 0x00000203); /* DCLKREQ4*/
 
-		} else if (sgBrcm_auddrv_TestValues[2] == 3 ) { /* BT SSP3 */
+		} else if (sgBrcm_auddrv_TestValues[2] == 3) { /* BT SSP3 */
 		}
 
 			WR_REG(0x35004874, 0x00000243); /* GPIO14*/
@@ -1045,7 +1044,7 @@ static int HandlePlayCommand()
 	char *src;
 	char *dest;
 	AUDIO_DRIVER_CallBackParams_t cbParams;
-	unsigned int testint = 0;
+	static unsigned int testint;
 	static int src_used;
 
 	switch (sgBrcm_auddrv_TestValues[1]) {
@@ -1316,7 +1315,7 @@ static int HandleCaptCommand()
 	static dma_addr_t dma_addr;
 	static AUDIO_SOURCE_Enum_t mic = AUDIO_SOURCE_ANALOG_MAIN;
 	AUDIO_DRIVER_CallBackParams_t cbParams;
-	unsigned int path;
+	static unsigned int path;
 
 	static AUDIO_DRIVER_TYPE_t drv_type = AUDIO_DRIVER_CAPT_HQ;
 
@@ -1457,7 +1456,7 @@ static int HandleCaptCommand()
 		AUDIO_DRIVER_Ctrl(cdrv_handle,
 				AUDIO_DRIVER_STOP, NULL);
 
-		AUDCTRL_DisableRecord(mic, AUDIO_SOURCE_MEM, 0);
+		AUDCTRL_DisableRecord(mic, AUDIO_SOURCE_MEM, path);
 
 		aTrace(LOG_AUDIO_DRIVER, "capture stopped\n");
 		break;

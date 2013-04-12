@@ -224,10 +224,10 @@ int AtMaudMode(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 		    iLineSelect[0] = mic;
 		pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL - 1].
 		    iLineSelect[1] = spk;
-
+#ifdef CONFIG_BCM_MODEM
 		RPC_SetProperty(RPC_PROP_AUDIO_MODE,
 			(UInt32)(app * AUDIO_MODE_NUMBER + mode));
-
+#endif
 		AUDCTRL_SaveAudioApp(app);	/* for PCG to set new app */
 		if (app == AUDIO_APP_VOICE_CALL
 		    || app == AUDIO_APP_VOICE_CALL_WB

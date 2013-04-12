@@ -230,6 +230,8 @@ enum _AUDIO_NUM_OF_CHANNEL_t {
 
 #define AUDIO_BITS_PER_SAMPLE_t unsigned char
 
+/*#define JAVA_ZEBU_TEST*/
+
 #endif /* __KERNEL__ */
 #endif /* _AUDIO_CONSTS_H_ */
 

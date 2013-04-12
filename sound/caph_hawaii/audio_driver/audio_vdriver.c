@@ -731,7 +731,7 @@ void AUDDRV_EnableDSPOutput(AUDIO_SINK_Enum_t sink,
 		csl_dsp_caph_control_aadmac_set_samp_rate
 		    (AUDIO_SAMPLING_RATE_8000);
 		if (sink == AUDIO_SINK_BTM)
-		csl_dsp_caph_control_aadmac_enable_path((UInt16)
+			csl_dsp_caph_control_aadmac_enable_path((UInt16)
 				(DSP_AADMAC_SPKR_EN) |
 				(UInt16) (DSP_AADMAC_PACKED_16BIT_IN_OUT_EN) |
 				(UInt16) (DSP_AADMAC_RETIRE_DS_CMD));
@@ -755,7 +755,7 @@ void AUDDRV_EnableDSPOutput(AUDIO_SINK_Enum_t sink,
 		csl_dsp_caph_control_aadmac_set_samp_rate
 		    (AUDIO_SAMPLING_RATE_16000);
 		if (sink == AUDIO_SINK_BTM)
-		csl_dsp_caph_control_aadmac_enable_path((UInt16)
+			csl_dsp_caph_control_aadmac_enable_path((UInt16)
 				(DSP_AADMAC_SPKR_EN) |
 				(UInt16) (DSP_AADMAC_PACKED_16BIT_IN_OUT_EN) |
 				(UInt16) (DSP_AADMAC_RETIRE_DS_CMD));
@@ -921,11 +921,11 @@ void AUDDRV_SetAudioMode(AudioMode_t audio_mode, AudioApp_t audio_app,
 	aTrace(LOG_AUDIO_DRIVER,
 			"%s mode==%d, app=%d\n\r", __func__,
 			audio_mode, audio_app);
-
+#ifdef CONFIG_BCM_MODEM
 	RPC_SetProperty(RPC_PROP_AUDIO_MODE,
 		(UInt32) (audio_mode +
 		audio_app * AUDIO_MODE_NUMBER));
-
+#endif
 	audio_control_generic(AUDDRV_CPCMD_PassAudioMode,
 			      (UInt32) audio_mode, (UInt32) audio_app, 0, 0, 0);
 	audio_control_generic(AUDDRV_CPCMD_SetAudioMode,
@@ -1269,36 +1269,69 @@ void AUDDRV_SetAudioMode_Speaker(SetAudioMode_Sp_t param)
 	if (param.mixInGain_mB == GAIN_SYSPARM &&
 		param.mixInGainR_mB == GAIN_SYSPARM) {
 		/*GAIN_SYSPARM means use sysparm*/
+#ifdef JAVA_ZEBU_TEST
+		if (param.app >= AUDIO_APP_NUMBER)
+			mixInGain = 0;
+#else
 		if (param.app >= AUDIO_APP_NUMBER)
 			mixInGain
 		= (short)p1->srcmixer_input_gain_l; /* Q13p2 dB */
+#endif
 		else
+#ifdef JAVA_ZEBU_TEST
+			mixInGain = 0;
+#else
 			mixInGain
 		= (short)p->srcmixer_input_gain_l; /* Q13p2 dB */
+#endif
 		mixInGain = mixInGain * 25;	/* into mB */
 		if (param.app >= AUDIO_APP_NUMBER)
+#ifdef JAVA_ZEBU_TEST
+			mixInGainR = 0;
+#else
 			mixInGainR
 		= (short)p1->srcmixer_input_gain_r; /* Q13p2 dB */
+#endif
 		else
+#ifdef JAVA_ZEBU_TEST
+			mixInGainR = 0;
+#else
 			mixInGainR
 		= (short)p->srcmixer_input_gain_r; /* Q13p2 dB */
+#endif
 		mixInGainR = mixInGainR * 25;	/* into mB */
 	} else if (param.mixInGain_mB == GAIN_SYSPARM) {
 		if (param.app >= AUDIO_APP_NUMBER)
+#ifdef JAVA_ZEBU_TEST
+			mixInGain = 0;
+#else
 			mixInGain
 		= (short)p1->srcmixer_input_gain_l; /* Q13p2 dB */
+#endif
 		else
+#ifdef JAVA_ZEBU_TEST
+			mixInGain = 0;
+#else
 			mixInGain
 		= (short)p->srcmixer_input_gain_l; /* Q13p2 dB */
+#endif
 		mixInGain = mixInGain * 25;	/* into mB */
 		mixInGainR = param.mixInGainR_mB;
 	} else if (param.mixInGainR_mB == GAIN_SYSPARM) {
 		if (param.app >= AUDIO_APP_NUMBER)
+#ifdef JAVA_ZEBU_TEST
+			mixInGainR = 0;
+#else
 			mixInGainR
 		= (short)p1->srcmixer_input_gain_r; /* Q13p2 dB */
+#endif
 		else
+#ifdef JAVA_ZEBU_TEST
+			mixInGainR = 0;
+#else
 			mixInGainR
 		= (short)p->srcmixer_input_gain_r; /* Q13p2 dB */
+#endif
 		mixInGainR = mixInGainR * 25;	/* into mB */
 		mixInGain = param.mixInGain_mB;
 	} else {
@@ -1335,6 +1368,7 @@ void AUDDRV_SetAudioMode_Speaker(SetAudioMode_Sp_t param)
 					aTrace(LOG_AUDIO_DRIVER,
 						"mixInGain 0x%x, mixInGainR 0x%x\n",
 						mixInGain, mixInGainR);
+
 					csl_srcmixer_setMixInGain(
 						  path->srcmRoute[i][j].inChnl,
 						  path->srcmRoute[i][j].outChnl,
@@ -1360,35 +1394,67 @@ void AUDDRV_SetAudioMode_Speaker(SetAudioMode_Sp_t param)
 			param.mixOutGainR_mB == GAIN_SYSPARM) {
 			/* Q13p2 dB */
 			if (param.app >= AUDIO_APP_NUMBER)
+#ifdef JAVA_ZEBU_TEST
+				mixOutGain = 0;
+#else
 				mixOutGain
 			= (short)p1->srcmixer_output_fine_gain_l;
+#endif
 			else
+#ifdef JAVA_ZEBU_TEST
+				mixOutGain = 0;
+#else
 				mixOutGain
 					= (short)p->srcmixer_output_fine_gain_l;
+#endif
 			mixOutGain = mixOutGain * 25;	/*into mB */
 			if (param.app >= AUDIO_APP_NUMBER)
+#ifdef JAVA_ZEBU_TEST
+				mixOutGainR = 0;
+#else
 				mixOutGainR
 			= (short)p1->srcmixer_output_fine_gain_r;
+#endif
 			else
+#ifdef JAVA_ZEBU_TEST
+				mixOutGainR = 0;
+#else
 				mixOutGainR
 					= (short)p->srcmixer_output_fine_gain_r;
+#endif
 			mixOutGainR = mixOutGainR * 25;	/*into mB */
 		} else if (param.mixOutGain_mB == GAIN_SYSPARM) {
 			if (param.app >= AUDIO_APP_NUMBER)
+#ifdef JAVA_ZEBU_TEST
+				mixOutGain = 0;
+#else
 				mixOutGain
 			= (short)p1->srcmixer_output_fine_gain_l;
+#endif
 			else
+#ifdef JAVA_ZEBU_TEST
+				mixOutGain = 0;
+#else
 				mixOutGain
 					= (short)p->srcmixer_output_fine_gain_l;
+#endif
 			mixOutGain = mixOutGain * 25;	/*into mB */
 			mixOutGainR = param.mixOutGainR_mB;
 		} else if (param.mixOutGainR_mB == GAIN_SYSPARM) {
 			if (param.app >= AUDIO_APP_NUMBER)
+#ifdef JAVA_ZEBU_TEST
+				mixOutGainR = 0;
+#else
 				mixOutGainR
 			= (short)p1->srcmixer_output_fine_gain_r;
+#endif
 			else
+#ifdef JAVA_ZEBU_TEST
+				mixOutGainR = 0;
+#else
 				mixOutGainR
 					= (short)p->srcmixer_output_fine_gain_r;
+#endif
 			mixOutGainR = mixOutGainR * 25;	/*into mB */
 			mixOutGain = param.mixOutGain_mB;
 		} else {
@@ -1398,15 +1464,31 @@ void AUDDRV_SetAudioMode_Speaker(SetAudioMode_Sp_t param)
 
 		/* Q13p2 dB */
 		if (param.app >= AUDIO_APP_NUMBER)
+#ifdef JAVA_ZEBU_TEST
+			mixBitSel = 96;
+#else
 			mixBitSel = (short)p1->srcmixer_output_coarse_gain_l;
+#endif
 		else
+#ifdef JAVA_ZEBU_TEST
+			mixBitSel = 96;
+#else
 			mixBitSel = (short)p->srcmixer_output_coarse_gain_l;
+#endif
 		mixBitSel = mixBitSel / 24;
 		/* bit_shift */
 		if (param.app >= AUDIO_APP_NUMBER)
+#ifdef JAVA_ZEBU_TEST
+			mixBitSelR = 96;
+#else
 			mixBitSelR = (short)p1->srcmixer_output_coarse_gain_r;
+#endif
 		else
+#ifdef JAVA_ZEBU_TEST
+			mixBitSelR = 96;
+#else
 			mixBitSelR = (short)p->srcmixer_output_coarse_gain_r;
+#endif
 		mixBitSelR = mixBitSelR / 24;
 		/* bit_shift */
 
@@ -1527,16 +1609,33 @@ void AUDDRV_SetAudioMode_Mic(AudioMode_t audio_mode,
 	}
 	***/
 	if (app >= AUDIO_APP_NUMBER)
+#ifdef JAVA_ZEBU_TEST
+		gainTemp1 = 72;
+#else
 		gainTemp1 = p1->mic_pga; /* Q13p2 */
+#endif
 	else
+#ifdef JAVA_ZEBU_TEST
+		gainTemp1 = 72;
+#else
 		gainTemp1 = p->mic_pga; /* Q13p2 */
-
+#endif
 	csl_caph_audioh_setMicPga_by_mB(gainTemp1 * 25);
 
 	aTrace(LOG_AUDIO_DRIVER,
 			"%s mode=%d, app=%d mic_gain %d", __func__, audio_mode,
 		app, gainTemp1*25);
 	if (app >= AUDIO_APP_NUMBER) {
+#ifdef JAVA_ZEBU_TEST
+		gainTemp1 = 0;
+		gainTemp2 = 0;
+		gainTemp1 = 0;
+		/* dmic1_dga_coarse_gain is the same
+		 * register as amic_dga_coarse_gain */
+		gainTemp2 = 0;
+		gainTemp3 = 0;
+		gainTemp4 = 0;
+#else
 		gainTemp1 = p1->amic_dga_coarse_gain;	/* Q13p2 dB */
 		gainTemp2 = p1->amic_dga_fine_gain;	/* Q13p2 dB */
 		gainTemp1 = p1->dmic1_dga_coarse_gain;
@@ -1545,7 +1644,18 @@ void AUDDRV_SetAudioMode_Mic(AudioMode_t audio_mode,
 		gainTemp2 = p1->dmic1_dga_fine_gain;
 		gainTemp3 = p1->dmic2_dga_coarse_gain;
 		gainTemp4 = p1->dmic2_dga_fine_gain;
+#endif
 	} else {
+#ifdef JAVA_ZEBU_TEST
+		gainTemp1 = 0;
+		gainTemp2 = 0;
+		gainTemp1 = 0;
+		/* dmic1_dga_coarse_gain is the same
+		 * register as amic_dga_coarse_gain */
+		gainTemp2 = 0;
+		gainTemp3 = 0;
+		gainTemp4 = 0;
+#else
 		gainTemp1 = p->amic_dga_coarse_gain;	/* Q13p2 dB */
 		gainTemp2 = p->amic_dga_fine_gain;	/* Q13p2 dB */
 		gainTemp1 = p->dmic1_dga_coarse_gain;
@@ -1554,6 +1664,7 @@ void AUDDRV_SetAudioMode_Mic(AudioMode_t audio_mode,
 		gainTemp2 = p->dmic1_dga_fine_gain;
 		gainTemp3 = p->dmic2_dga_coarse_gain;
 		gainTemp4 = p->dmic2_dga_fine_gain;
+#endif
 	}
 
 	csl_caph_audioh_vin_set_cic_scale_by_mB(((int)gainTemp1) * 25,
@@ -1561,15 +1672,30 @@ void AUDDRV_SetAudioMode_Mic(AudioMode_t audio_mode,
 						((int)gainTemp3) * 25,
 						((int)gainTemp4) * 25);
 	if (app >= AUDIO_APP_NUMBER) {
+#ifdef JAVA_ZEBU_TEST
+		gainTemp1 = 0;
+		gainTemp2 = 0;
+		gainTemp3 = 0;
+		gainTemp4 = 0;
+#else
 		gainTemp1 = p1->dmic3_dga_coarse_gain;
 		gainTemp2 = p1->dmic3_dga_fine_gain;
 		gainTemp3 = p1->dmic4_dga_coarse_gain;
 		gainTemp4 = p1->dmic4_dga_fine_gain;
+#endif
 	} else {
+#ifdef JAVA_ZEBU_TEST
+		gainTemp1 = 0;
+		gainTemp2 = 0;
+		gainTemp3 = 0;
+		gainTemp4 = 0;
+#else
 		gainTemp1 = p->dmic3_dga_coarse_gain;
 		gainTemp2 = p->dmic3_dga_fine_gain;
 		gainTemp3 = p->dmic4_dga_coarse_gain;
 		gainTemp4 = p->dmic4_dga_fine_gain;
+#endif
+
 	}
 
 	csl_caph_audioh_nvin_set_cic_scale_by_mB(((int)gainTemp1) * 25,
@@ -2110,7 +2236,7 @@ void AUDDRV_ConnectDL(void)
 	audio_control_dsp(AUDDRV_DSPCMD_AUDIO_CONNECT_DL, TRUE, 0, 0, 0, 0);
 #else
 	audio_control_dsp(AUDDRV_DSPCMD_AUDIO_CONNECT_DL, TRUE,
-			  AUDCTRL_Telephony_HW_16K(mode), 0, 0, 0);
+		  AUDCTRL_Telephony_HW_16K(AUDCTRL_GetAudioMode()), 0, 0, 0);
 #endif
 }
 

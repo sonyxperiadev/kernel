@@ -57,10 +57,19 @@ subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./arch/arm/plat-kona/include/plat/
 subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./arch/arm/plat-kona/include/mach
 subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./drivers/char/broadcom/
 
+#ifdef CONFIG_ARCH_HAWAII
 subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./arch/arm/mach-hawaii/include/mach/rdb_A0/
 subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./arch/arm/mach-hawaii/
 subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./arch/arm/mach-hawaii/include/
 subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./arch/arm/mach-hawaii/include/mach/
+#endif
+
+#ifdef CONFIG_ARCH_JAVA
+subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./arch/arm/mach-java/include/mach/rdb_A0/
+subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./arch/arm/mach-java/
+subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./arch/arm/mach-java/include/
+subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./arch/arm/mach-java/include/mach/
+#endif
 
 subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./arch/arm/plat-kona/include/plat/chal/
 subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./arch/arm/plat-kona/include/plat/csl/

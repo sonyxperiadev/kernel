@@ -90,6 +90,12 @@
 #include <mach/caph_settings.h>
 #endif
 
+#if defined(CONFIG_BCM_ALSA_SOUND)
+#include <mach/caph_platform.h>
+#include <mach/caph_settings.h>
+#endif
+
+
 #define KONA_8250PORT_FPGA(name, clk, freq, uart_name)		\
 {								\
 	.membase    = (void __iomem *)(KONA_##name##_VA),	\
@@ -186,6 +192,33 @@ static struct bcm_hsotgctrl_platform_data hsotgctrl_plat_data = {
 };
 #endif
 
+#if defined(CONFIG_BCM_ALSA_SOUND)
+
+static struct caph_platform_cfg board_caph_platform_cfg =
+#ifdef HW_CFG_CAPH
+HW_CFG_CAPH;
+#else
+{
+	.aud_ctrl_plat_cfg = {
+		.ext_aud_plat_cfg = {
+			.ihf_ext_amp_gpio = -1,
+		}
+	}
+};
+#endif
+static struct platform_device board_caph_device = {
+	.name = "brcm_caph_device",
+	.id = -1, /*Indicates only one device */
+	.dev = {
+		.platform_data = &board_caph_platform_cfg,
+	},
+};
+
+#endif /* CONFIG_BCM_ALSA_SOUND */
+
+
+
+
 /* Hawaii Ray specific platform devices */
 static struct platform_device *hawaii_ray_plat_devices[] __initdata = {
 #ifdef CONFIG_DMAC_PL330
@@ -199,6 +232,11 @@ static struct platform_device *hawaii_ray_plat_devices[] __initdata = {
 #ifdef CONFIG_CRYPTO_DEV_BRCM_SPUM_AES
 	&hawaii_spum_aes_device,
 #endif
+
+#if defined(CONFIG_BCM_ALSA_SOUND)
+	&board_caph_device,
+#endif
+
 #if 0
 	&kona_sspi_spi2_device,
 #ifdef CONFIG_STM_TRACE

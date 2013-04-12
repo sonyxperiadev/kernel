@@ -16,7 +16,7 @@ config BCM_ALSA_SOUND
 	select SND_PCM
 	select SND_HWDEP
 	depends on SND
-	depends on (ARCH_HAWAII)
+	depends on (ARCH_JAVA || ARCH_HAWAII)
         default y
         help
           Say Y here to activate an ALSA driver frontend to the BRCM endpoint
@@ -29,7 +29,7 @@ config MAP_VOIP
 
 config CAPH_STEREO_IHF
 	boolean "Broadcom CAPH stereo IHF support"
-	depends on (ARCH_HAWAII && BCM_ALSA_SOUND)
+	depends on ((ARCH_JAVA || ARCH_HAWAII) && BCM_ALSA_SOUND)
 	default n
 	help
 	 Say Y here to activate stereo IHF feature on CAPRI RAY platform

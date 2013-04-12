@@ -65,8 +65,10 @@ the GPL, without Broadcom's express prior written consent.
 #include "bcm_audio.h"
 #include "audio_trace.h"
 #include "bcmlog.h"
-#include "csl_log.h"
 
+#ifdef CONFIG_BCM_MODEM
+#include "csl_log.h"
+#endif
 
 /*  Module declarations. */
 MODULE_AUTHOR("Broadcom MPS-Audio");
@@ -83,7 +85,7 @@ MODULE_LICENSE("GPL");
 #define LOG_BUF_SIZE (128*1024)
 
 /* turn off audio debug traces by default */
-int gAudioDebugLevel;
+int gAudioDebugLevel = 15;
 module_param(gAudioDebugLevel, int, 0);
 
 static brcm_alsa_chip_t *sgpCaph_chip;
@@ -134,8 +136,7 @@ static int __devinit DriverProbe(struct platform_device *pdev)
 
 	aTrace(LOG_ALSA_INTERFACE, "\n %lx:DriverProbe\n", jiffies);
 
-	
-	if (pdev->dev.platform_data != NULL ) {
+	if (pdev->dev.platform_data != NULL) {
 		/* Copy over platform specific data */
 		memcpy(&sgCaphPlatInfo, pdev->dev.platform_data,
 				sizeof(sgCaphPlatInfo));
@@ -143,9 +144,8 @@ static int __devinit DriverProbe(struct platform_device *pdev)
 		/* Set the platform configuration data */
 		AUDCTRL_PlatCfgSet(&sgCaphPlatInfo.aud_ctrl_plat_cfg);
 	}
-	
-	err = -ENODEV;
 
+	err = -ENODEV;
 	err = -ENOMEM;
 	err = snd_card_create(SNDRV_DEFAULT_IDX1, SNDRV_DEFAULT_STR1,
 			      THIS_MODULE, sizeof(brcm_alsa_chip_t), &card);
@@ -280,7 +280,7 @@ static int BCMAudLOG_open(struct inode *inode, struct file *file)
 }
 
 static int
-BCMAudLOG_read(struct file *file, char __user * buf, size_t count,
+BCMAudLOG_read(struct file *file, char __user *buf, size_t count,
 	       loff_t *ppos)
 {
 	int ret;
@@ -301,9 +301,9 @@ BCMAudLOG_read(struct file *file, char __user * buf, size_t count,
 			if (log_buffer_count >= count) {
 
 				if (log_buffer_end - log_read_ptr >= count) {
-				ret = copy_to_user(buf,
-						 log_read_ptr,
-						 count);
+					ret = copy_to_user(buf,
+							log_read_ptr,
+							count);
 					log_read_ptr += count;
 				} else {
 					unsigned char *pbuffer;
@@ -410,8 +410,9 @@ BCMAudLOG_write(struct file *file, const char __user *buf,
 		__func__, count - number);
 
 	count--;
+#ifdef CONFIG_BCM_MODEM
 	CSL_LOG_Write(buffer[0], logpoint_buffer_idx, &buffer[1], count);
-
+#endif
 	return count;
 }
 
@@ -721,7 +722,7 @@ int logmsg_ready(struct snd_pcm_substream *substream, int log_point)
 
 					if ((AUD_LOG_PCMIN == log_point) ||
 						(AUD_LOG_PCMOUT == log_point)) {
-					p_read =
+						p_read =
 					    (void *)audio_log_cbinfo[i].
 					    p_LogRead;
 						p_read =
@@ -981,11 +982,13 @@ static int __devinit ALSAModuleInit(void)
 	int err = 0;
 
 	aTrace(LOG_ALSA_INTERFACE, "ALSA Module init called:\n");
+#ifndef JAVA_ZEBU_TEST
 	if (is_ap_only_boot()) {
 		/* don't register audio driver for AP only boot mode */
 		aTrace(LOG_ALSA_INTERFACE, "AP Only Boot\n");
 		return 0;
 	}
+#endif
 
 	sgPlatformDriver.probe = DriverProbe;
 	err = platform_driver_register(&sgPlatformDriver);
@@ -1022,12 +1025,13 @@ static void __devexit ALSAModuleExit(void)
 {
 
 	aTrace(LOG_ALSA_INTERFACE, "\n %lx:ModuleExit\n", jiffies);
+#ifndef JAVA_ZEBU_TEST
 	if (is_ap_only_boot()) {
 		/* AP only boot mode - no need to de-register */
 		aTrace(LOG_ALSA_INTERFACE, "AP Only Boot\n");
 		return;
 	}
-
+#endif
 	snd_card_free(sgpCaph_chip->card);
 
 	platform_driver_unregister(&sgPlatformDriver);

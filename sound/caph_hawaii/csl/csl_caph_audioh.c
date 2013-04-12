@@ -959,7 +959,9 @@ void csl_caph_audioh_start(int path_id)
 		break;
 
 	case AUDDRV_PATH_HEADSET_INPUT:
+#ifndef JAVA_ZEBU_TEST
 		switch_bias_voltage(TRUE);
+#endif
 		chal_audio_hs_mic_pwrctrl(handle, TRUE);
 		chal_audio_vinpath_select_primary_mic(handle,
 						      CHAL_AUDIO_ENABLE);
@@ -1121,7 +1123,9 @@ static void csl_caph_audioh_stop_keep_config(int path_id)
 		break;
 
 	case AUDDRV_PATH_HEADSET_INPUT:
+#ifndef JAVA_ZEBU_TEST
 		switch_bias_voltage(FALSE);
+#endif
 		chal_audio_vinpath_select_primary_mic(handle, 0);
 		chal_audio_hs_mic_pwrctrl(handle, 0);
 		break;

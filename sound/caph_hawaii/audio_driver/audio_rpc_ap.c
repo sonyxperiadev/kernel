@@ -231,7 +231,7 @@ void HandleAudioEventReqCb(RPC_Msg_t *pMsg,
 	RPC_SYSFreeResultDataBuffer(dataBufHandle);
 #endif
 }
-#if 1 /* Kishore change when Capri CP is ported*/
+#if defined(CONFIG_BCM_MODEM)
 static void HandleAudioRpcNotification(
 	struct RpcNotificationEvent_t event, UInt8 clientID)
 {

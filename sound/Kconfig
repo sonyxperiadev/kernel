@@ -94,9 +94,9 @@ source "sound/mips/Kconfig"
 source "sound/sh/Kconfig"
 if (ARCH_RHEA || ARCH_ISLAND)
 source "sound/caph/Kconfig"
-endif 
+endif
 
-if ARCH_HAWAII
+if (ARCH_HAWAII || ARCH_JAVA)
 source "sound/caph_hawaii/Kconfig"
 endif
 
