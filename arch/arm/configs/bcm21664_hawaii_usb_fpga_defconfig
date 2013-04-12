@@ -342,6 +342,7 @@ CONFIG_BRD_NAME="hawaii"
 # CONFIG_ARCH_ISLAND is not set
 # CONFIG_ARCH_RHEA is not set
 CONFIG_ARCH_HAWAII=y
+# CONFIG_ARCH_JAVA is not set
 
 #
 # Brcm FPGA board config
@@ -1167,6 +1168,7 @@ CONFIG_FB=y
 # CONFIG_FB_BRCM_KONA is not set
 # CONFIG_LCD_NT35510_SUPPORT is not set
 # CONFIG_LCD_NT35512_SUPPORT is not set
+# CONFIG_BL_SPLASH_SCREEN is not set
 # CONFIG_SOUND is not set
 # CONFIG_HID_SUPPORT is not set
 # CONFIG_USB_ARCH_HAS_OHCI is not set
@@ -1256,6 +1258,7 @@ CONFIG_MMC_SDHCI_PLTFM_KONA=y
 # CONFIG_MMC_SDHCI_PXAV2 is not set
 # CONFIG_MMC_SPI is not set
 CONFIG_MMC_BCM_SD=y
+# CONFIG_MMC_BCM_NON_SECURE_ERASE is not set
 # CONFIG_MMC_DW is not set
 # CONFIG_BCM_SDIOWL is not set
 CONFIG_MMCPOLL=y
@@ -1333,6 +1336,7 @@ CONFIG_RTC_INTF_DEV=y
 CONFIG_STAGING=y
 # CONFIG_ECHO is not set
 # CONFIG_IIO is not set
+# CONFIG_ZSMALLOC is not set
 # CONFIG_FB_SM7XX is not set
 # CONFIG_FT1000 is not set
 

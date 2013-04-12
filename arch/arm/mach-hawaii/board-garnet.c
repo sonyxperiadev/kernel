@@ -327,7 +327,7 @@ static struct regulator *d_3v0_mmc1_vcc;
 #define SENSOR_0_GPIO_PWRDN             (002)
 #define SENSOR_0_GPIO_RST               (111)
 #define SENSOR_0_CLK                    "dig_ch0_clk"	/*DCLK1 */
-#ifdef CONFIG_SOC_CAMERA_OV2675
+#if defined(CONFIG_SOC_CAMERA_OV2675) || defined(CONFIG_SOC_CAMERA_GC2035)
 #define SENSOR_0_CLK_FREQ               (26000000)
 #else
 #define SENSOR_0_CLK_FREQ               (13000000)

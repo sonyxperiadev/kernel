@@ -1129,6 +1129,15 @@ config SOC_CAMERA_OV2675
 	  The camera supports VGA/UXGA
 	  over a MIPI interface
 
+config SOC_CAMERA_GC2035
+	tristate "gc2035 camera support"
+	depends on SOC_CAMERA && I2C
+	help
+	  This is a V4L2 SoC driver for
+	  the Galaxycore gc2035 sensor
+	  The camera supports VGA/UXGA
+	  over a MIPI interface
+
 config SOC_CAMERA_GC0313
 	tristate "gc0313 camera support"
 	depends on SOC_CAMERA && I2C

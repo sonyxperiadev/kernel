@@ -110,6 +110,7 @@ obj-$(CONFIG_SOC_CAMERA_SR300PC20)	+= camdrv_ss.o  camdrv_ss_sr300pc20.o
 obj-$(CONFIG_SOC_CAMERA_SR030PC50)	+= camdrv_ss_sr030pc50.o
 obj-$(CONFIG_SOC_CAMERA_TCM9001)        += tcm9001.o
 obj-$(CONFIG_SOC_CAMERA_GC0313)		+= gc0313.o
+obj-$(CONFIG_SOC_CAMERA_GC2035)		+= gc2035.o
 # And now the v4l2 drivers:
 
 obj-$(CONFIG_VIDEO_BT848) += bt8xx/
