@@ -31,7 +31,7 @@
 #include <linux/regulator/consumer.h>
 #include <linux/regulator/driver.h>
 #include <linux/notifier.h>
-
+#include <linux/i2c/ft6x06_ex_fun.h>
 
 #define GPIO_TO_IRQ gpio_to_irq
 
@@ -56,7 +56,7 @@ typedef signed int		FTS_BOOL;
 #define FTS_TRUE	0x01
 #define FTS_FALSE	0x0
 
-#define DEVIDE_MODE_REG 	0x00
+#define DEVIDE_MODE_REG		0x00
 #define READ_ROW_ADDR		0x01  //rawdata row
 #define RAWDATA_BEGIN_ADDR	0x10 //rawdata addr
 
@@ -73,7 +73,7 @@ typedef signed int		FTS_BOOL;
 
 #define POINTER_CHECK(p)	if((p)==FTS_NULL){return FTS_FALSE;}
 
- /* 
+ /*
  Error status codes:
  */
 #define CTPM_NOERROR			(0x01 << 0)
@@ -143,7 +143,7 @@ typedef struct
 	/*touch gesture*/
 	E_GESTURE_TYPE		bt_gesture;
 	/*point to a list which stored 1 to 5 touch points information*/
-	ST_TOUCH_POINT* 	pst_point_info;
+	ST_TOUCH_POINT		*pst_point_info;
 }ST_TOUCH_INFO, *PST_TOUCH_INFO;
 
 #define TP_MIN_GAP 3
@@ -160,7 +160,7 @@ enum ft520x_ts_regs {
 	FT520X_REG_THCAL						= 0x82,
 	FT520X_REG_THWATER					= 0x83,
 	FT520X_REG_THTEMP					= 0x84,
-	FT520X_REG_THDIFF						= 0x85,				
+	FT520X_REG_THDIFF						= 0x85,
 	FT520X_REG_CTRL						= 0x86,
 	FT520X_REG_TIMEENTERMONITOR			= 0x87,
 	FT520X_REG_PERIODACTIVE				= 0x88,
@@ -179,20 +179,20 @@ enum ft520x_ts_regs {
 	FT520X_REG_DISTANCE_UP_DOWN		= 0x95,
 	FT520X_REG_ZOOM_DIS_SQR				= 0x96,
 	FT520X_REG_RADIAN_VALUE				=0x97,
-	FT520X_REG_MAX_X_HIGH                       	= 0x98,
-	FT5X0X_REG_MAX_X_LOW             			= 0x99,
-	FT520X_REG_MAX_Y_HIGH            			= 0x9a,
-	FT520X_REG_MAX_Y_LOW             			= 0x9b,
-	FT520X_REG_K_X_HIGH            			= 0x9c,
-	FT520X_REG_K_X_LOW             			= 0x9d,
-	FT520X_REG_K_Y_HIGH            			= 0x9e,
-	FT520X_REG_K_Y_LOW             			= 0x9f,
+	FT520X_REG_MAX_X_HIGH				= 0x98,
+	FT5X0X_REG_MAX_X_LOW					= 0x99,
+	FT520X_REG_MAX_Y_HIGH					= 0x9a,
+	FT520X_REG_MAX_Y_LOW					= 0x9b,
+	FT520X_REG_K_X_HIGH				= 0x9c,
+	FT520X_REG_K_X_LOW				= 0x9d,
+	FT520X_REG_K_Y_HIGH				= 0x9e,
+	FT520X_REG_K_Y_LOW				= 0x9f,
 	FT520X_REG_AUTO_CLB_MODE			= 0xa0,
-	FT520X_REG_LIB_VERSION_H 				= 0xa1,
-	FT520X_REG_LIB_VERSION_L 				= 0xa2,		
+	FT520X_REG_LIB_VERSION_H				= 0xa1,
+	FT520X_REG_LIB_VERSION_L				= 0xa2,
 	FT520X_REG_CIPHER						= 0xa3,
 	FT520X_REG_MODE						= 0xa4,
-	FT520X_REG_PMODE						= 0xa5,	/* Power Consume Mode		*/	
+	FT520X_REG_PMODE	= 0xa5,	/* Power Consume Mode		*/
 	FT520X_REG_FIRMID						= 0xa6,
 	FT520X_REG_STATE						= 0xa7,
 	FT520X_REG_FT5201ID					= 0xa8,
@@ -238,7 +238,7 @@ static int ft520x_i2c_rxdata(char *rxdata, int length)
 	ret = i2c_transfer(ft5306_i2c_client->adapter, msgs, 2);
 	if (ret < 0)
 		printk(KERN_ERR "msg %s i2c read error: %d\n", __func__, ret);
-	
+
 	return ret;
 }
 
@@ -269,7 +269,7 @@ static int ft520x_read_reg(u8 addr, u8 *pdata)
 
 	*pdata = buf[0];
 	return ret;
-  
+
 }
 
 static int ft520x_i2c_txdata(char *txdata, int length)
@@ -294,25 +294,25 @@ static int ft520x_i2c_txdata(char *txdata, int length)
 
 static int ft520x_write_reg(u8 addr, u8 para)
 {
-    u8 buf[2];
-    int ret = -1;
+	u8 buf[2];
+	int ret = -1;
 
-    buf[0] = addr;
-    buf[1] = para;
-    ret = ft520x_i2c_txdata(buf, 2);
-    if (ret < 0) {
-        printk(KERN_ERR "[ft5306] write reg failed! %#x ret: %d", buf[0], ret);
-        return -1;
-    }
-    
-    return 0;
+	buf[0] = addr;
+	buf[1] = para;
+	ret = ft520x_i2c_txdata(buf, 2);
+	if (ret < 0) {
+		printk(KERN_ERR "write reg failed! %#x ret:%d", buf[0], ret);
+		return -1;
+	}
+
+	return 0;
 }
 
 static unsigned char ft520x_read_fw_ver(void)
 {
 	unsigned char ver=0xff;
 	ft520x_read_reg(FT520X_REG_FIRMID, &ver);
-	return(ver);
+	return ver;
 }
 
 static int ft520x_shutdown()
@@ -481,7 +481,7 @@ E_UPGRADE_ERR_TYPE  fts_ctpm_fw_upgrade(FTS_BYTE* pbt_buf, FTS_DWRD dw_lenth)
 	ft520x_write_reg(0xfc, 0x55);
 	printk("[FT520X] Step 1: Reset CTPM test\n");
 
-	delay_qt_ms(30);   
+	delay_qt_ms(30);
 
 	auc_i2c_write_buf[0] = 0x55;
 	auc_i2c_write_buf[1] = 0xaa;
@@ -535,7 +535,7 @@ E_UPGRADE_ERR_TYPE  fts_ctpm_fw_upgrade(FTS_BYTE* pbt_buf, FTS_DWRD dw_lenth)
 		packet_buf[5] = (FTS_BYTE)temp;
 
 		for (i = 0; i < temp; i++) {
-			packet_buf[6+i] = pbt_buf[ packet_number*FTS_PACKET_LENGTH + i]; 
+			packet_buf[6+i] = pbt_buf[packet_number*FTS_PACKET_LENGTH + i];
 			bt_ecc ^= packet_buf[6+i];
 		}
 		byte_write(&packet_buf[0], temp+6);
@@ -549,10 +549,10 @@ E_UPGRADE_ERR_TYPE  fts_ctpm_fw_upgrade(FTS_BYTE* pbt_buf, FTS_DWRD dw_lenth)
 		temp =1;
 		packet_buf[4] = (FTS_BYTE)(temp>>8);
 		packet_buf[5] = (FTS_BYTE)temp;
-		packet_buf[6] = pbt_buf[ dw_lenth + i]; 
+		packet_buf[6] = pbt_buf[dw_lenth + i];
 		bt_ecc ^= packet_buf[6];
 
-		byte_write(&packet_buf[0],7);  
+		byte_write(&packet_buf[0], 7);
 		delay_qt_ms(20);
 	}
 	/*send the opration head*/
@@ -642,21 +642,21 @@ FTS_BYTE bt_parser_std(FTS_BYTE* pbt_buf, FTS_BYTE bt_len, ST_TOUCH_INFO* pst_to
 		return CTPM_ERR_PARAMETER;
 	}
 	pst_touch_info->bt_tp_num= 0;
-	
+
 	/* Device Mode[2:0] == 0 :Normal operating Mode*/
 	if(pbt_buf[0] & 0x70 != 0) {
 		printk(KERN_ERR "[tp] mode: %x", pbt_buf[0]);
 		return CTPM_ERR_PROTOCOL;
 	}
-	
+
 	/*get the Gesture ID*/
-	pst_touch_info->bt_gesture = pbt_buf[1];	
-	
+	pst_touch_info->bt_gesture = pbt_buf[1];
+
 	/*get the number of the touch points*/
 	point_num = pbt_buf[2] & 0x0f;
 	if(point_num == 0 || point_num > CTPM_STD_POINTS_MAX) {
 		return CTPM_ERR_PROTOCOL;
-	}			
+	}
 
 	/*remove the touch point information into pst_touch_info.*/
 	for(i = 0; i < point_num; i++) {
@@ -668,7 +668,7 @@ FTS_BYTE bt_parser_std(FTS_BYTE* pbt_buf, FTS_BYTE bt_len, ST_TOUCH_INFO* pst_to
 		high_byte &= 0x0f00;
 		low_byte = pbt_buf[3+6*i + 1];
 		pst_touch_info->pst_point_info[i].w_tp_x = high_byte |low_byte;
-		
+
 		/*get the Y coordinate, 2 bytes*/
 		pst_touch_info->pst_point_info[i].bt_tp_id = pbt_buf[3+6*i+2] >> 4;
 
@@ -681,7 +681,7 @@ FTS_BYTE bt_parser_std(FTS_BYTE* pbt_buf, FTS_BYTE bt_len, ST_TOUCH_INFO* pst_to
 			pst_touch_info->pst_point_info[i].w_tp_strenth=pbt_buf[7+6*i];
 			pst_touch_info->pst_point_info[i].w_tp_area=pbt_buf[8+6*i];
 		}
-		
+
 		pst_touch_info->bt_tp_num++;
 	}
 
@@ -689,10 +689,10 @@ FTS_BYTE bt_parser_std(FTS_BYTE* pbt_buf, FTS_BYTE bt_len, ST_TOUCH_INFO* pst_to
 }
 
 /*
-[function]: 
+[function]:
 	get all the information of one touch.
 [parameters]:
-	pst_touch_info[out] :stored all the information of one touch;	
+	pst_touch_info[out] :stored all the information of one touch;
 [return]:
 	CTPM_NOERROR		:success;
 	CTPM_ERR_I2C		:io fail;
@@ -702,7 +702,7 @@ FTS_BYTE bt_parser_std(FTS_BYTE* pbt_buf, FTS_BYTE bt_len, ST_TOUCH_INFO* pst_to
 void DumpFtsRegContext(FTS_BYTE *buf, int size)
 {
 	int i;
-	
+
 	for (i = 0; i < size; i += 3)
 		printk(KERN_INFO "Addr: %x: %x, %x, %x\n", i, *(buf+i),
 						*(buf+i+1), *(buf+i+2));
@@ -710,17 +710,17 @@ void DumpFtsRegContext(FTS_BYTE *buf, int size)
 
 FTS_BYTE fts_ctpm_get_touch_info(struct synaptics_rmi4 *ts, ST_TOUCH_INFO* pst_touch_info)
 {
-	FTS_BYTE* p_data_buf= FTS_NULL;
-	FTS_BYTE data_buf[33]= {0}; 
-	
+	FTS_BYTE *p_data_buf = FTS_NULL;
+	FTS_BYTE data_buf[33] = {0};
+
 	POINTER_CHECK(pst_touch_info);
 	POINTER_CHECK(pst_touch_info->pst_point_info);
-	
+
 	p_data_buf = &data_buf;
 
 	/*Sent device to active*/
 	ft5306_i2c_client = ts->client;
-	
+
 	memset(data_buf, 0x00, PROTOCOL_LEN);
 	pst_touch_info->bt_tp_num = 0;
 
@@ -819,7 +819,7 @@ static int g_CurFingerInfoSlotId = 0;
 void InitFingersQueue(void)
 {
 	int i,j;
-	
+
 	for (i = 0; i < FTS_MAX_FINGER; i++) {
 		for (j = 0; j < POINT_HISTORY_DEPTH; j++) {
 			g_CurFingers[j].points_num = 0;
@@ -889,12 +889,12 @@ void ReportFingers(struct synaptics_rmi4 *ts, ST_TOUCH_INFO *touch_info)
 {
 	struct FingersQueue * cur_info, *last_info;
 	int i, j, reported=0, active_finers = 0;
-	
+
 	if (!touch_info) {
 		printk(KERN_INFO "[tp err]: input touch data null");
 		return;
 	}
-	
+
 	UpdateFingerQueue(touch_info);
 	cur_info = &g_CurFingers[Finger_Cur_Slot()];
 	last_info = &g_CurFingers[Finger_Last_Slot()];
@@ -964,7 +964,7 @@ void ReportFingers(struct synaptics_rmi4 *ts, ST_TOUCH_INFO *touch_info)
 static void DebugTpStatus(void)
 {
 	int i;
-	
+
 	printk(KERN_INFO "point Num: %d, gesture: %d", ft5306_touch_info.bt_tp_num, ft5306_touch_info.bt_gesture);
 	for (i = 0; i < ft5306_touch_info.bt_tp_num; i++) {
 		printk(KERN_INFO "P[%d] property: %d, x: %d, y:%d", ft5306_touch_info.pst_point_info[i].bt_tp_id,
@@ -1016,7 +1016,7 @@ static void focaltech_ft5306_enable(struct synaptics_rmi4 *ts)
 
 	if (ts->use_irq)
 		enable_irq(ts->client->irq);
-	
+
 	ts->enable = 1;
 }
 
@@ -1035,30 +1035,30 @@ static int focaltech_ft5306_turnOff(struct i2c_client *client)
 	struct synaptics_rmi4 *ts;
 
 	if (!client) return -1;
-	
+
 	ts = i2c_get_clientdata(client);
 	focaltech_ft5306_disable(ts);
 	Ft5306_Enter_Sleep();
 	mdelay(10);
 	if (ts->power) {
 		 ts->power(TS_OFF);
-	}	
+	}
 	return 0;
 }
 
 static int focaltech_ft5306_turnOn(struct i2c_client *client)
 {
 	struct synaptics_rmi4 *ts;
-	
+
 	if (!client) return -1;
-	
+
 	ts = i2c_get_clientdata(client);
 
 	Ft5306_Exit_Sleep();
 	mdelay(20);
 	if (ts->power) {
 		 ts->power(TS_ON);
-	}	
+	}
 #if (TP_CNTRL_PIN_TYPE == TP_CNTRL_PIN_RESET)
 	Ft5306_Hw_Reset();
 #endif
@@ -1107,7 +1107,7 @@ static ssize_t ft5306_min_gap_show(struct kobject *kobj,
 				   struct kobj_attribute *attr, char *buf)
 {
 	return sprintf(buf, "min_gap: %d\n", min_gap);
-} 
+}
 
 ssize_t ft5306_min_gap_store(struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t count)
 {
@@ -1132,20 +1132,20 @@ static ssize_t ft5306_sensitivity_show(struct kobject *kobj,
 	uint8_t sensitivity = 0;
 	ft520x_read_reg(0x88, &sensitivity);
 	return sprintf(buf, "sensitivity: %d\n", sensitivity);
-} 
+}
 
 ssize_t ft5306_sensitivity_store(struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t count)
 {
 	uint8_t sensitivity = 8;
 	long set = 0;
-	
+
 	strict_strtol(buf, 0, &set);
 	if ( (set >= 4) && (set <= 8) ) {
 		sensitivity = set ;
 	}
 	printk(KERN_INFO "ft5306 change sensitivity to: %d", sensitivity);
 	ft520x_write_reg(0x88, sensitivity);
-	
+
 	return count;
 }
 
@@ -1165,7 +1165,7 @@ static ssize_t ft5306_upgrade_fw_show(struct kobject *kobj,
 	ver = ft520x_read_fw_ver();
 	printk(KERN_INFO "ft5306 fw ver show: %x\n", ver);
 	return sprintf(buf, "fw version: %x\n", ver);
-} 
+}
 
 ssize_t ft5306_upgrade_fw_store(struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t count)
 {
@@ -1187,16 +1187,374 @@ static struct kobj_attribute ft5306_upgrade_fw_attr = {
 	.store = &ft5306_upgrade_fw_store,
 };
 
+int ft6x06_i2c_Read(struct i2c_client *client, char *writebuf,
+		    int writelen, char *readbuf, int readlen)
+{
+	int ret;
+	client = ft5306_i2c_client;
+
+	if (writelen > 0) {
+		struct i2c_msg msgs[] = {
+			{
+			 .addr = client->addr,
+			 .flags = 0,
+			 .len = writelen,
+			 .buf = writebuf,
+			 },
+			{
+			 .addr = client->addr,
+			 .flags = I2C_M_RD,
+			 .len = readlen,
+			 .buf = readbuf,
+			 },
+		};
+		ret = i2c_transfer(client->adapter, msgs, 2);
+		if (ret < 0)
+			dev_err(&client->dev, "f%s: i2c read error.\n",
+				__func__);
+	} else {
+		struct i2c_msg msgs[] = {
+			{
+			 .addr = client->addr,
+			 .flags = I2C_M_RD,
+			 .len = readlen,
+			 .buf = readbuf,
+			 },
+		};
+		ret = i2c_transfer(client->adapter, msgs, 1);
+		if (ret < 0)
+			dev_err(&client->dev, "%s:i2c read error.\n", __func__);
+	}
+	return ret;
+}
+/*write data by i2c*/
+int ft6x06_i2c_Write(struct i2c_client *client, char *writebuf, int writelen)
+{
+	int  ret;
+	ret = ft520x_i2c_txdata(writebuf, writelen);
+	return ret;
+}
+
+/*
+*get firmware size
+
+@firmware_name:firmware name
+*note:the firmware default path is sdcard.
+	if you want to change the dir, please modify by yourself.
+*/
+static int ft6x06_GetFirmwareSize(char *firmware_name)
+{
+	struct file *pfile = NULL;
+	struct inode *inode;
+	unsigned long magic;
+	off_t fsize = 0;
+	char filepath[128];
+	memset(filepath, 0, sizeof(filepath));
+
+	sprintf(filepath, "/sdcard/%s", firmware_name);
+
+	if (NULL == pfile)
+		pfile = filp_open(filepath, O_RDONLY, 0);
+
+	if (IS_ERR(pfile)) {
+		pr_err("error occured while opening file %s.\n", filepath);
+		return -EIO;
+	}
+
+	inode = pfile->f_dentry->d_inode;
+	magic = inode->i_sb->s_magic;
+	fsize = inode->i_size;
+	filp_close(pfile, NULL);
+	return fsize;
+}
+
+
+
+/*
+*read firmware buf for .bin file.
+
+@firmware_name: fireware name
+@firmware_buf: data buf of fireware
+
+note:the firmware default path is sdcard.
+	if you want to change the dir, please modify by yourself.
+*/
+static int ft6x06_ReadFirmware(char *firmware_name,
+			       unsigned char *firmware_buf)
+{
+	struct file *pfile = NULL;
+	struct inode *inode;
+	unsigned long magic;
+	off_t fsize;
+	char filepath[128];
+	loff_t pos;
+	mm_segment_t old_fs;
+
+	memset(filepath, 0, sizeof(filepath));
+	sprintf(filepath, "/sdcard/%s", firmware_name);
+	if (NULL == pfile)
+		pfile = filp_open(filepath, O_RDONLY, 0);
+	if (IS_ERR(pfile)) {
+		pr_err("error occured while opening file %s.\n", filepath);
+		return -EIO;
+	}
+
+	inode = pfile->f_dentry->d_inode;
+	magic = inode->i_sb->s_magic;
+	fsize = inode->i_size;
+	old_fs = get_fs();
+	set_fs(KERNEL_DS);
+	pos = 0;
+	vfs_read(pfile, firmware_buf, fsize, &pos);
+	filp_close(pfile, NULL);
+	set_fs(old_fs);
+
+	return 0;
+}
+
+static int ft6x06_ctpm_fw_upgrade(struct i2c_client *client, u8 *pbt_buf,
+			  u32 dw_lenth)
+{
+	u8 reg_val[2] = {0};
+	u32 i = 0;
+	u32 packet_number;
+	u32 j;
+	u32 temp;
+	u32 lenght;
+	u8 packet_buf[FTS_PACKET_LENGTH + 6];
+	u8 auc_i2c_write_buf[10];
+	u8 bt_ecc;
+	int i_ret;
+
+	for (i = 0; i < FTS_UPGRADE_LOOP; i++) {
+		/*********Step 1:Reset  CTPM *****/
+		/*write 0xaa to register 0xbc */
+		ft520x_write_reg(0xbc, FT_UPGRADE_AA);
+		msleep(FT6X06_UPGRADE_AA_DELAY);
+
+		/*write 0x55 to register 0xbc */
+		ft520x_write_reg(0xbc, FT_UPGRADE_55);
+
+		msleep(FT6X06_UPGRADE_55_DELAY);
+
+		/*********Step 2:Enter upgrade mode *****/
+		auc_i2c_write_buf[0] = FT_UPGRADE_55;
+		auc_i2c_write_buf[1] = FT_UPGRADE_AA;
+		do {
+			i++;
+			auc_i2c_write_buf[0] = FT_UPGRADE_55;
+			i_ret = ft6x06_i2c_Write(client, auc_i2c_write_buf, 1);
+			msleep(5);
+			auc_i2c_write_buf[0] = FT_UPGRADE_AA;
+			i_ret = ft6x06_i2c_Write(client, auc_i2c_write_buf, 1);
+			msleep(5);
+		} while (i_ret <= 0 && i < 5);
+
+
+		/*********Step 3:check READ-ID***********************/
+		msleep(FT6X06_UPGRADE_READID_DELAY);
+		auc_i2c_write_buf[0] = 0x90;
+		auc_i2c_write_buf[1] = 0x00;
+		auc_i2c_write_buf[2] = 0x00;
+		auc_i2c_write_buf[3] = 0x00;
+		ft6x06_i2c_Read(client, auc_i2c_write_buf, 4, reg_val, 2);
+
+
+		if (reg_val[0] == FT6X06_UPGRADE_ID_1
+			&& reg_val[1] == FT6X06_UPGRADE_ID_2) {
+			DBG("[FTS] Step 3: CTPM ID,ID1 = 0x%x,ID2 = 0x%x\n",
+				reg_val[0], reg_val[1]);
+			break;
+		} else {
+			dev_err(&client->dev, "[FTS] Step 3: CTPM ID,ID1 = 0x%x,ID2 = 0x%x\n",
+				reg_val[0], reg_val[1]);
+		}
+	}
+	if (i > FTS_UPGRADE_LOOP)
+		return -EIO;
+	auc_i2c_write_buf[0] = 0xcd;
+
+	ft6x06_i2c_Read(client, auc_i2c_write_buf, 1, reg_val, 1);
+
+
+	/*Step 4:erase app and panel paramenter area*/
+	DBG("Step 4:erase app and panel paramenter area\n");
+	auc_i2c_write_buf[0] = 0x61;
+	ft6x06_i2c_Write(client, auc_i2c_write_buf, 1);	/*erase app area */
+	msleep(FT6X06_UPGRADE_EARSE_DELAY);
+	/*erase panel parameter area */
+	auc_i2c_write_buf[0] = 0x63;
+	ft6x06_i2c_Write(client, auc_i2c_write_buf, 1);
+	msleep(100);
+
+	/*********Step 5:write firmware(FW) to ctpm flash*********/
+	bt_ecc = 0;
+	DBG("Step 5:write firmware(FW) to ctpm flash\n");
+
+	dw_lenth = dw_lenth - 8;
+	packet_number = (dw_lenth) / FTS_PACKET_LENGTH;
+	packet_buf[0] = 0xbf;
+	packet_buf[1] = 0x00;
+
+	for (j = 0; j < packet_number; j++) {
+		temp = j * FTS_PACKET_LENGTH;
+		packet_buf[2] = (u8) (temp >> 8);
+		packet_buf[3] = (u8) temp;
+		lenght = FTS_PACKET_LENGTH;
+		packet_buf[4] = (u8) (lenght >> 8);
+		packet_buf[5] = (u8) lenght;
+
+		for (i = 0; i < FTS_PACKET_LENGTH; i++) {
+			packet_buf[6 + i] = pbt_buf[j *	FTS_PACKET_LENGTH + i];
+			bt_ecc ^= packet_buf[6 + i];
+		}
+		ft6x06_i2c_Write(client, packet_buf, FTS_PACKET_LENGTH + 6);
+		msleep(FTS_PACKET_LENGTH / 6 + 1);
+	}
+
+	if ((dw_lenth) % FTS_PACKET_LENGTH > 0) {
+		temp = packet_number * FTS_PACKET_LENGTH;
+		packet_buf[2] = (u8) (temp >> 8);
+		packet_buf[3] = (u8) temp;
+		temp = (dw_lenth) % FTS_PACKET_LENGTH;
+		packet_buf[4] = (u8) (temp >> 8);
+		packet_buf[5] = (u8) temp;
+
+		for (i = 0; i < temp; i++) {
+			packet_buf[6 + i] = pbt_buf[packet_number * FTS_PACKET_LENGTH + i];
+			bt_ecc ^= packet_buf[6 + i];
+		}
+
+		ft6x06_i2c_Write(client, packet_buf, temp + 6);
+		msleep(20);
+	}
+
+
+	/*send the last six byte */
+	for (i = 0; i < 6; i++) {
+		temp = 0x6ffa + i;
+		packet_buf[2] = (u8) (temp >> 8);
+		packet_buf[3] = (u8) temp;
+		temp = 1;
+		packet_buf[4] = (u8) (temp >> 8);
+		packet_buf[5] = (u8) temp;
+		packet_buf[6] = pbt_buf[dw_lenth + i];
+		bt_ecc ^= packet_buf[6];
+		ft6x06_i2c_Write(client, packet_buf, 7);
+		msleep(20);
+	}
+
+
+	/*********Step 6: read out checksum***********************/
+	/*send the opration head */
+	DBG("Step 6: read out checksum\n");
+	auc_i2c_write_buf[0] = 0xcc;
+	ft6x06_i2c_Read(client, auc_i2c_write_buf, 1, reg_val, 1);
+	if (reg_val[0] != bt_ecc) {
+		dev_err(&client->dev, "[FTS]--ecc error! FW=%02x bt_ecc=%02x\n",
+					reg_val[0],
+					bt_ecc);
+		return -EIO;
+	}
+
+	/*********Step 7: reset the new FW***********************/
+	DBG("Step 7: reset the new FW\n");
+	auc_i2c_write_buf[0] = 0x07;
+	ft6x06_i2c_Write(client, auc_i2c_write_buf, 1);
+	msleep(300);	/*make sure CTP startup normally */
+
+	return 0;
+}
+
+
+/*
+upgrade with *.bin file
+*/
+
+int fts_ctpm_fw_upgrade_with_app_file(struct i2c_client *client,
+				       char *firmware_name)
+{
+	u8 *pbt_buf = NULL;
+	int i_ret;
+	int fwsize = ft6x06_GetFirmwareSize(firmware_name);
+
+	if (fwsize <= 0) {
+		dev_err(&client->dev, "%s ERROR:Get firmware size failed\n",
+					__func__);
+		return -EIO;
+	}
+
+	if (fwsize < 8 || fwsize > 32 * 1024) {
+		dev_dbg(&client->dev, "%s:FW length error\n", __func__);
+		return -EIO;
+	}
+
+	/*=========FW upgrade========================*/
+	pbt_buf = kmalloc(fwsize + 1, GFP_ATOMIC);
+	if (ft6x06_ReadFirmware(firmware_name, pbt_buf)) {
+		dev_err(&client->dev, "%s() - ERROR: request_firmware failed\n",
+					__func__);
+		kfree(pbt_buf);
+		return -EIO;
+	}
+	/*call the upgrade function */
+	i_ret = ft6x06_ctpm_fw_upgrade(client, pbt_buf, fwsize);
+
+	if (i_ret != 0)
+		dev_err(&client->dev, "%s() - ERROR:[FTS] upgrade failed..\n",
+					__func__);
+	else
+		fts_ctpm_auto_clb();
+	kfree(pbt_buf);
+
+	return i_ret;
+}
+
+static ssize_t ft6x06_fwupgradeapp_show(struct kobject *kobj,
+				   struct kobj_attribute *attr, char *buf)
+{
+	unsigned char ver = 0;
+	ver = ft520x_read_fw_ver();
+	printk(KERN_INFO "ft6x06 fw ver show: %x\n", ver);
+	return sprintf(buf, "fw version: %x\n", ver);
+}
+
+
+/*upgrade from app.bin*/
+ssize_t ft6x06_fwupgradeapp_store(struct kobject *kobj,
+		struct kobj_attribute *attr, const char *buf, size_t count)
+{
+	char fwname[128];
+
+	struct i2c_client *client = ft5306_i2c_client;
+	memset(fwname, 0, sizeof(fwname));
+	sprintf(fwname, "%s", buf);
+	fwname[count - 1] = '\0';
+	disable_irq(client->irq);
+	fts_ctpm_fw_upgrade_with_app_file(client, fwname);
+	enable_irq(client->irq);
+	return count;
+}
+
+static struct kobj_attribute ft6x06_upgrade_app_attr = {
+	.attr = {
+		.name = "upgradeapp",
+		.mode = 0644,
+	},
+	.show = &ft6x06_fwupgradeapp_show,
+	.store = &ft6x06_fwupgradeapp_store,
+};
+
 static ssize_t ft5306_vendor_show(struct kobject *kobj,
 				   struct kobj_attribute *attr, char *buf)
 {
 	unsigned char vendor_id = 0;
 	vendor_id = fts_ctpm_get_vendor_id();
 	printk(KERN_INFO "ft5306 vendor_id is: %x\n", vendor_id);
-	return sprintf( buf, "%s\n", (vendor_id == 0x53) ? ("Mutto Optronics Corporation") : 
-		                            ( (vendor_id == 0x53) ? ("SHENZHEN BAOMING OPTRONICS CO,.LTD") : 
-										  ("UNKNOWN") ) );
-} 
+	return sprintf(buf, "%s\n", (vendor_id == 0x53) ? ("Mutto Optronics") :
+			((vendor_id == 0x53) ? ("BAOMING OPTRONICS CO,.LTD") :
+				("UNKNOWN")));
+}
 
 static struct kobj_attribute ft5306_vendor_attr = {
 	.attr = {
@@ -1220,16 +1578,17 @@ static struct kobj_attribute ft5306_virtual_keys_attr = {
 	},
 	.show = &ft5306_virtual_keys_show,
 };
- 
+
 static struct attribute *ft5306_properties_attrs[] = {
 	&ft5306_virtual_keys_attr.attr,
 	&ft5306_sensitivity_attr.attr,
 	&ft5306_min_gap_attr.attr,
 	&ft5306_upgrade_fw_attr.attr,
 	&ft5306_vendor_attr.attr,
+	&ft6x06_upgrade_app_attr.attr,
 	NULL
 };
- 
+
 static struct attribute_group ft5306_properties_attr_group = {
 	.attrs = ft5306_properties_attrs,
 };
@@ -1407,7 +1766,7 @@ static int focaltech_ft5306_probe(
 		ret = -EBUSY;
 		goto err_alloc_dev_failed;
 	}
-	
+
 #if (TP_CNTRL_PIN_TYPE == TP_CNTRL_PIN_RESET)
 	if (ts->power) {
 		ts->power(TS_ON);
@@ -1415,7 +1774,7 @@ static int focaltech_ft5306_probe(
 		mdelay(500);
 	}
 #endif
-	
+
 	ft5306_touch_info.pst_point_info = &ft5306_touch_point;
 
 	ts->input_dev->name = "FocalTech-Ft5306";
@@ -1449,7 +1808,7 @@ static int focaltech_ft5306_probe(
 		printk("%s IRQ %d", __func__, client->irq);
 		ret = gpio_request(ts_gpio_irq_pin, client->name);
 		printk(KERN_INFO "%s: request tp int ret: %d\n", __func__, ret);
-		
+
 		gpio_direction_input(ts_gpio_irq_pin);
 		printk("Requesting IRQ...\n");
 
@@ -1489,16 +1848,16 @@ static int focaltech_ft5306_probe(
 
 	if (sysfs_create_file(&ts->input_dev->dev.kobj, &dev_attr_enable.attr) < 0)
 		printk("failed to create sysfs file for input device\n");
-	
+
 	#ifdef CONFIG_HAS_EARLYSUSPEND
 	ts->early_suspend.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN;
 	ts->early_suspend.suspend = focaltech_ft5306_early_suspend;
 	ts->early_suspend.resume = focaltech_ft5306_late_resume;
 	register_early_suspend(&ts->early_suspend);
 	#endif
-	
+
 	printk("Tp Probe Done!!!");
-	
+
 	return 0;
 
 err_input_register_device_failed:
@@ -1520,7 +1879,7 @@ struct synaptics_rmi4 *ts = i2c_get_clientdata(client);
 	unregister_early_suspend(&ts->early_suspend);
 	if (ts->use_irq)
 		free_irq(client->irq, ts);
-	
+
 	input_unregister_device(ts->input_dev);
 	kfree(ts);
 	return 0;
@@ -1536,7 +1895,7 @@ static int focaltech_ft5306_suspend(struct i2c_client *client, pm_message_t mesg
 	mdelay(10);
 	if (ts->power) {
 		 ts->power(TS_OFF);
-	}	
+	}
 	return 0;
 }
 
