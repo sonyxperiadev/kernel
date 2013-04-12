@@ -358,6 +358,15 @@ static const struct v4l2_queryctrl ov2675_controls[] = {
 	 .step = 1,
 	 .default_value = EV_DEFAULT,
 	 },
+	{
+	 .id = V4L2_CID_CAMERA_CONTRAST,
+	 .type = V4L2_CTRL_TYPE_INTEGER,
+	 .name = "Contrast",
+	 .minimum = CONTRAST_MINUS_1,
+	 .maximum = CONTRAST_PLUS_1,
+	 .step = 1,
+	 .default_value = CONTRAST_DEFAULT,
+	 },
 
 	{
 	 .id = V4L2_CID_CAMERA_EFFECT,
@@ -1170,20 +1179,36 @@ static int ov2675_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			return -EINVAL;
 
 		ov2675->brightness = ctrl->value;
+		ret = ov2675_reg_read(client, 0x3391, &ov_reg);
+
 		switch (ov2675->brightness) {
 		case EV_MINUS_1:
-			ret = ov2675_reg_writes(client,
-					ov2675_brightness_lv4_tbl);
+			ov2675_reg_write(client, 0x308c, 0x88);
+			ov2675_reg_write(client, 0x3391, ov_reg|0x04);
+			ov2675_reg_write(client, 0x3390, 0x49);
+			ov2675_reg_write(client, 0x339a, 0x20);
+			ov2675_reg_write(client, 0x30ff, 0xff);
+
 			break;
 		case EV_PLUS_1:
-			ret = ov2675_reg_writes(client,
-					ov2675_brightness_lv0_tbl);
+			ov2675_reg_write(client, 0x308c, 0x88);
+			ov2675_reg_write(client, 0x3391, ov_reg|0x04);
+			ov2675_reg_write(client, 0x3390, 0x41);
+			ov2675_reg_write(client, 0x339a, 0x20);
+			ov2675_reg_write(client, 0x30ff, 0xff);
+
 			break;
 		default:
-			ret = ov2675_reg_writes(client,
-					ov2675_brightness_lv2_default_tbl);
+			ov2675_reg_write(client, 0x308c, 0x88);
+			ov2675_reg_write(client, 0x3391, ov_reg|0x04);
+			ov2675_reg_write(client, 0x3390, 0x41);
+			ov2675_reg_write(client, 0x339a, 0x00);
+			ov2675_reg_write(client, 0x30ff, 0xff);
+
 			break;
 		}
+
+
 		if (ret)
 			return ret;
 		break;
@@ -1193,18 +1218,35 @@ static int ov2675_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			return -EINVAL;
 
 		ov2675->contrast = ctrl->value;
+		ret = ov2675_reg_read(client, 0x3391, &ov_reg);
+
 		switch (ov2675->contrast) {
 		case CONTRAST_MINUS_1:
-			ret = ov2675_reg_writes(client,
-					ov2675_contrast_lv5_tbl);
+			ov2675_reg_write(client, 0x308c, 0x88);
+			ov2675_reg_write(client, 0x3391, ov_reg|0x04);
+			ov2675_reg_write(client, 0x3390, 0x45);
+			ov2675_reg_write(client, 0x3398, 0x24);
+			ov2675_reg_write(client, 0x3399, 0x24);
+			ov2675_reg_write(client, 0x30ff, 0xff);
+
 			break;
 		case CONTRAST_PLUS_1:
-			ret = ov2675_reg_writes(client,
-					ov2675_contrast_lv0_tbl);
+			ov2675_reg_write(client, 0x308c, 0x88);
+			ov2675_reg_write(client, 0x3391, ov_reg|0x04);
+			ov2675_reg_write(client, 0x3390, 0x45);
+			ov2675_reg_write(client, 0x3398, 0x18);
+			ov2675_reg_write(client, 0x3399, 0x18);
+			ov2675_reg_write(client, 0x30ff, 0xff);
+
 			break;
 		default:
-			ret = ov2675_reg_writes(client,
-					ov2675_contrast_default_lv3_tbl);
+			ov2675_reg_write(client, 0x308c, 0x88);
+			ov2675_reg_write(client, 0x3391, ov_reg|0x04);
+			ov2675_reg_write(client, 0x3390, 0x45);
+			ov2675_reg_write(client, 0x3398, 0x20);
+			ov2675_reg_write(client, 0x3399, 0x20);
+			ov2675_reg_write(client, 0x30ff, 0xff);
+
 			break;
 		}
 		if (ret)
@@ -1219,20 +1261,31 @@ static int ov2675_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 
 		switch (ov2675->colorlevel) {
 		case IMAGE_EFFECT_BNW:
-			ret = ov2675_reg_writes(client,
-					ov2675_effect_bw_tbl);
+			ov2675_reg_write(client, 0x308c, 0x88);
+			ov2675_reg_write(client, 0x3391, 0x24);
+			ov2675_reg_write(client, 0x30ff, 0xff);
+
 			break;
 		case IMAGE_EFFECT_SEPIA:
-			ret = ov2675_reg_writes(client,
-					ov2675_effect_sepia_tbl);
+			ov2675_reg_write(client, 0x308c, 0x88);
+			ov2675_reg_write(client, 0x3391, 0x1e);
+			ov2675_reg_write(client, 0x3396, 0x40);
+			ov2675_reg_write(client, 0x3397, 0xa6);
+			ov2675_reg_write(client, 0x30ff, 0xff);
+
 			break;
 		case IMAGE_EFFECT_NEGATIVE:
-			ret = ov2675_reg_writes(client,
-					ov2675_effect_negative_tbl);
+			ov2675_reg_write(client, 0x308c, 0x88);
+			ov2675_reg_write(client, 0x3391, 0x44);
+			ov2675_reg_write(client, 0x30ff, 0xff);
+
 			break;
 		default:
-			ret = ov2675_reg_writes(client,
-					ov2675_effect_normal_tbl);
+			ov2675_reg_write(client, 0x308c, 0x88);
+			ov2675_reg_write(client, 0x3391, 0x06);
+			ov2675_reg_write(client, 0x3390, 0x41);
+			ov2675_reg_write(client, 0x30ff, 0xff);
+
 			break;
 		}
 		if (ret)
@@ -1316,6 +1369,57 @@ static int ov2675_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			return -EINVAL;
 
 		ov2675->whitebalance = ctrl->value;
+		ret = ov2675_reg_read(client, 0x3306, &ov_reg);
+
+		switch (ov2675->whitebalance) {
+		case WHITE_BALANCE_FLUORESCENT:
+			ov2675_reg_write(client, 0x308c, 0x88);
+			ov2675_reg_write(client, 0x3306, ov_reg|0x02);
+			ov2675_reg_write(client, 0x3337, 0x5e);
+			ov2675_reg_write(client, 0x3338, 0x40);
+			ov2675_reg_write(client, 0x3339, 0x58);
+			ov2675_reg_write(client, 0x30ff, 0xff);
+
+			break;
+		case WHITE_BALANCE_SUNNY:
+			ov2675_reg_write(client, 0x308c, 0x88);
+			ov2675_reg_write(client, 0x3306, ov_reg|0x02);
+			ov2675_reg_write(client, 0x3337, 0x5e);
+			ov2675_reg_write(client, 0x3338, 0x40);
+			ov2675_reg_write(client, 0x3339, 0x46);
+			ov2675_reg_write(client, 0x30ff, 0xff);
+
+			break;
+		case WHITE_BALANCE_CLOUDY:
+			ov2675_reg_write(client, 0x308c, 0x88);
+			ov2675_reg_write(client, 0x3306, ov_reg|0x02);
+			ov2675_reg_write(client, 0x3337, 0x68);
+			ov2675_reg_write(client, 0x3338, 0x40);
+			ov2675_reg_write(client, 0x3339, 0x4e);
+			ov2675_reg_write(client, 0x30ff, 0xff);
+
+			break;
+		case WHITE_BALANCE_TUNGSTEN:
+			ov2675_reg_write(client, 0x308c, 0x88);
+			ov2675_reg_write(client, 0x3306, ov_reg|0x02);
+			ov2675_reg_write(client, 0x3337, 0x54);
+			ov2675_reg_write(client, 0x3338, 0x40);
+			ov2675_reg_write(client, 0x3339, 0x70);
+			ov2675_reg_write(client, 0x30ff, 0xff);
+
+			break;
+		default:
+			ov2675_reg_write(client, 0x308c, 0x88);
+			ov2675_reg_write(client, 0x3306, ov_reg&(~(0x02)));
+			ov2675_reg_write(client, 0x30ff, 0xff);
+
+			break;
+		}
+		if (ret) {
+			printk(KERN_ERR "Some error in AWB\n");
+			return ret;
+		}
+
 		break;
 
 	case V4L2_CID_CAMERA_FRAME_RATE:
