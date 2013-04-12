@@ -446,7 +446,9 @@ static void cpu_keepawake_dec(void)
 	if (vce_state.arm_keepawake_count == 0) {
 		pi_mgr_qos_request_update(&vce_state.cpu_qos_node,
 					  PI_MGR_QOS_DEFAULT_VALUE);
+#ifndef CONFIG_ARCH_JAVA
 		scu_standby(1);
+#endif
 	}
 	mutex_unlock(&vce_state.armctl_sem);
 }
@@ -456,7 +458,9 @@ static void cpu_keepawake_inc(void)
 	mutex_lock(&vce_state.armctl_sem);
 	if (vce_state.arm_keepawake_count == 0) {
 		pi_mgr_qos_request_update(&vce_state.cpu_qos_node, 0);
+#ifndef CONFIG_ARCH_JAVA
 		scu_standby(0);
+#endif
 		mb();
 	}
 	vce_state.arm_keepawake_count += 1;

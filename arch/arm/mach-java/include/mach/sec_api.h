@@ -55,6 +55,7 @@
 
 #define SSAPI_ROW_AES			0x0E000006
 #define SSAPI_BRCM_START_VC_CORE	0x0E000008
+#define SSAPI_BRCM_SET_M4U		0x0E000012
 
 #ifdef CONFIG_KONA_SECURE_MONITOR_CALL
 extern void secure_api_call_init(void);

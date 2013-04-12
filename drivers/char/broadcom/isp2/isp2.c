@@ -30,26 +30,26 @@ the GPL, without Broadcom's express prior written consent.
 #include <linux/bootmem.h>
 #include <linux/spinlock_types.h>
 
-#include <linux/broadcom/isp.h>
+#include <linux/broadcom/isp2.h>
 #include <mach/rdb/brcm_rdb_sysmap.h>
 #include <mach/rdb/brcm_rdb_pwrmgr.h>
 #include <mach/rdb/brcm_rdb_mm_rst_mgr_reg.h>
-#include <mach/rdb/brcm_rdb_isp.h>
+#include <mach/rdb/brcm_rdb_isp2.h>
 #include <plat/clock.h>
 #include <plat/pi_mgr.h>
 #include <plat/scu.h>
 #include <linux/delay.h>
 
 /* TODO - define the major device ID */
-#define ISP_DEV_MAJOR    0
+#define ISP2_DEV_MAJOR    0
 
-#define RHEA_ISP_BASE_PERIPHERAL_ADDRESS    ISP_BASE_ADDR
-#define RHEA_MM_CLK_BASE_ADDRESS            MM_CLK_BASE_ADDR
+#define JAVA_ISP2_BASE_PERIPHERAL_ADDRESS    ISP2_BASE_ADDR
+#define JAVA_MM_CLK_BASE_ADDRESS            MM2_CLK_BASE_ADDR
 
-#define IRQ_ISP         (153+32)
+#define IRQ_ISP2         (217+32)
 
-/* #define ISP_DEBUG */
-#ifdef ISP_DEBUG
+/* #define ISP2_DEBUG */
+#ifdef ISP2_DEBUG
 #define dbg_print(fmt, arg...) \
 	printk(KERN_ALERT "%s():" fmt, __func__, ##arg)
 #else
@@ -59,65 +59,65 @@ the GPL, without Broadcom's express prior written consent.
 #define err_print(fmt, arg...) \
 	printk(KERN_ERR "%s():" fmt, __func__, ##arg)
 
-static int isp_major = ISP_DEV_MAJOR;
-static struct class *isp_class;
-static void __iomem *isp_base;
-static void __iomem *mmclk_base;
-static struct clk *isp_clk;
+static int isp2_major = ISP2_DEV_MAJOR;
+static struct class *isp2_class;
+static void __iomem *isp2_base;
+static void __iomem *mm2clk_base;
+static struct clk *isp2_clk;
 static int interrupt_irq;
-static struct pi_mgr_dfs_node isp_dfs_node;
-static struct pi_mgr_qos_node isp_qos_node;
+static struct pi_mgr_dfs_node isp2_dfs_node;
+static struct pi_mgr_qos_node isp2_qos_node;
 
-struct isp_status_t {
+struct isp2_status_t {
 	unsigned int status;
 };
 
-struct isp_t {
+struct isp2_t {
 	struct completion irq_sem;
 	spinlock_t lock;
-	struct isp_status_t isp_status;
+	struct isp2_status_t isp2_status;
 };
 
-static int enable_isp_clock(void);
-static void disable_isp_clock(void);
+static int enable_isp2_clock(void);
+static void disable_isp2_clock(void);
 static inline unsigned int reg_read(void __iomem *, unsigned int reg);
 static inline void reg_write(void __iomem *, unsigned int reg,
 			     unsigned int value);
 
-static irqreturn_t isp_isr(int irq, void *dev_id)
+static irqreturn_t isp2_isr(int irq, void *dev_id)
 {
-	struct isp_t *dev;
+	struct isp2_t *dev;
 	unsigned long flags;
 
-	dev = (struct isp_t *) dev_id;
+	dev = (struct isp2_t *) dev_id;
 
 	spin_lock_irqsave(&dev->lock, flags);
-	dev->isp_status.status = reg_read(isp_base, ISP_STATUS_OFFSET);
+	dev->isp2_status.status = reg_read(isp2_base, ISP2_STATUS_OFFSET);
 	spin_unlock_irqrestore(&dev->lock, flags);
 
-	reg_write(isp_base, ISP_STATUS_OFFSET, dev->isp_status.status);
+	reg_write(isp2_base, ISP2_STATUS_OFFSET, dev->isp2_status.status);
 
 	complete(&dev->irq_sem);
 
 	return IRQ_RETVAL(1);
 }
 
-static int isp_open(struct inode *inode, struct file *filp)
+static int isp2_open(struct inode *inode, struct file *filp)
 {
 	int ret = 0;
 
-	struct isp_t *dev = kmalloc(sizeof(struct isp_t), GFP_KERNEL);
+	struct isp2_t *dev = kmalloc(sizeof(struct isp2_t), GFP_KERNEL);
 	if (!dev)
 		return -ENOMEM;
 
 	filp->private_data = dev;
 	spin_lock_init(&dev->lock);
-	dev->isp_status.status = 0;
+	dev->isp2_status.status = 0;
 
 	init_completion(&dev->irq_sem);
 
 	ret =
-	    pi_mgr_dfs_add_request(&isp_dfs_node, "isp", PI_MGR_PI_ID_MM,
+	    pi_mgr_dfs_add_request(&isp2_dfs_node, "isp2", PI_MGR_PI_ID_MM,
 				   PI_MGR_DFS_MIN_VALUE);
 
 	if (ret) {
@@ -126,7 +126,7 @@ static int isp_open(struct inode *inode, struct file *filp)
 		goto err;
 	}
 
-	ret = pi_mgr_qos_add_request(&isp_qos_node, "isp",
+	ret = pi_mgr_qos_add_request(&isp2_qos_node, "isp2",
 					PI_MGR_PI_ID_ARM_CORE,
 					PI_MGR_QOS_DEFAULT_VALUE);
 	if (ret) {
@@ -136,61 +136,58 @@ static int isp_open(struct inode *inode, struct file *filp)
 		goto qos_request_fail;
 	}
 
-	enable_isp_clock();
-	pi_mgr_qos_request_update(&isp_qos_node, 0);
+	enable_isp2_clock();
+	pi_mgr_qos_request_update(&isp2_qos_node, 0);
 
-#ifndef CONFIG_ARCH_JAVA
-	scu_standby(0);
-#endif
 	ret =
-	    request_irq(IRQ_ISP, isp_isr, IRQF_DISABLED | IRQF_SHARED,
-			ISP_DEV_NAME, dev);
+	    request_irq(IRQ_ISP2, isp2_isr, IRQF_DISABLED | IRQF_SHARED,
+			ISP2_DEV_NAME, dev);
 	if (ret) {
 		err_print("request_irq failed ret = %d\n", ret);
 		goto err;
 	}
 	/* Ensure that only one CORE handles interrupt for the MM block. */
-	irq_set_affinity(IRQ_ISP, cpumask_of(0));
-	disable_irq(IRQ_ISP);
+	irq_set_affinity(IRQ_ISP2, cpumask_of(0));
+	disable_irq(IRQ_ISP2);
 	return 0;
 
 
 qos_request_fail:
-	pi_mgr_dfs_request_remove(&isp_dfs_node);
+	pi_mgr_dfs_request_remove(&isp2_dfs_node);
 err:
 	kfree(dev);
 	return ret;
 }
 
-static int isp_release(struct inode *inode, struct file *filp)
+static int isp2_release(struct inode *inode, struct file *filp)
 {
-	struct isp_t *dev = (struct isp_t *) filp->private_data;
+	struct isp2_t *dev = (struct isp2_t *) filp->private_data;
 
-	pi_mgr_qos_request_update(&isp_qos_node, PI_MGR_QOS_DEFAULT_VALUE);
-#ifndef CONFIG_ARCH_JAVA
-	scu_standby(1);
-#endif
-	disable_isp_clock();
-	if (pi_mgr_dfs_request_update(&isp_dfs_node, PI_MGR_DFS_MIN_VALUE)) {
-		printk(KERN_ERR "%s: failed to update dfs request for isp\n",
+	pi_mgr_qos_request_update(&isp2_qos_node, PI_MGR_QOS_DEFAULT_VALUE);
+	disable_isp2_clock();
+	if (pi_mgr_dfs_request_update(&isp2_dfs_node, PI_MGR_DFS_MIN_VALUE)) {
+		printk(KERN_ERR "%s: failed to update dfs request for isp2\n",
 		       __func__);
 	}
 
-	pi_mgr_dfs_request_remove(&isp_dfs_node);
-	isp_dfs_node.name = NULL;
+	pi_mgr_dfs_request_remove(&isp2_dfs_node);
+	isp2_dfs_node.name = NULL;
 
-	pi_mgr_qos_request_remove(&isp_qos_node);
-	isp_qos_node.name = NULL;
+	pi_mgr_qos_request_remove(&isp2_qos_node);
+	isp2_qos_node.name = NULL;
 
-	free_irq(IRQ_ISP, dev);
+	free_irq(IRQ_ISP2, dev);
 	kfree(dev);
 
 	return 0;
 }
 
-static int isp_mmap(struct file *filp, struct vm_area_struct *vma)
+static int isp2_mmap(struct file *filp, struct vm_area_struct *vma)
 {
 	unsigned long vma_size = vma->vm_end - vma->vm_start;
+
+	printk(KERN_ERR "%s : mmap 0x%x", __func__,
+		JAVA_ISP2_BASE_PERIPHERAL_ADDRESS);
 
 	if (vma_size & (~PAGE_MASK)) {
 		pr_err(KERN_ERR
@@ -200,7 +197,7 @@ static int isp_mmap(struct file *filp, struct vm_area_struct *vma)
 	}
 
 	if (!vma->vm_pgoff)
-		vma->vm_pgoff = RHEA_ISP_BASE_PERIPHERAL_ADDRESS >> PAGE_SHIFT;
+		vma->vm_pgoff = JAVA_ISP2_BASE_PERIPHERAL_ADDRESS >> PAGE_SHIFT;
 	else
 		return -EINVAL;
 
@@ -217,15 +214,15 @@ static int isp_mmap(struct file *filp, struct vm_area_struct *vma)
 	return 0;
 }
 
-static long isp_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
+static long isp2_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
-	struct isp_t *dev;
+	struct isp2_t *dev;
 	int ret = 0;
 
-	if (_IOC_TYPE(cmd) != BCM_ISP_MAGIC)
+	if (_IOC_TYPE(cmd) != BCM_ISP2_MAGIC)
 		return -ENOTTY;
 
-	if (_IOC_NR(cmd) > ISP_CMD_LAST)
+	if (_IOC_NR(cmd) > ISP2_CMD_LAST)
 		return -ENOTTY;
 
 	if (_IOC_DIR(cmd) & _IOC_READ)
@@ -237,35 +234,35 @@ static long isp_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	if (ret)
 		return -EFAULT;
 
-	dev = (struct isp_t *) (filp->private_data);
+	dev = (struct isp2_t *) (filp->private_data);
 
 	switch (cmd) {
-	case ISP_IOCTL_WAIT_IRQ:
+	case ISP2_IOCTL_WAIT_IRQ:
 		{
 			interrupt_irq = 0;
-			enable_irq(IRQ_ISP);
+			enable_irq(IRQ_ISP2);
 			dbg_print("Waiting for interrupt\n");
 			if (wait_for_completion_interruptible(&dev->irq_sem)) {
-				disable_irq(IRQ_ISP);
+				disable_irq(IRQ_ISP2);
 				return -ERESTARTSYS;
 			}
 
 			if (copy_to_user
-			    ((u32 *) arg, &dev->isp_status,
-			     sizeof(dev->isp_status))) {
-				err_print("ISP_IOCTL_WAIT_IRQ " \
+			    ((u32 *) arg, &dev->isp2_status,
+			     sizeof(dev->isp2_status))) {
+				err_print("ISP2_IOCTL_WAIT_IRQ " \
 						"copy_to_user failed\n");
 				ret = -EFAULT;
 			}
 
-			dbg_print("Disabling ISP interrupt\n");
-			disable_irq(IRQ_ISP);
+			dbg_print("Disabling ISP2 interrupt\n");
+			disable_irq(IRQ_ISP2);
 			if (interrupt_irq)
 				return -EIO;
 		}
 		break;
 
-	case ISP_IOCTL_RELEASE_IRQ:
+	case ISP2_IOCTL_RELEASE_IRQ:
 		{
 			interrupt_irq = 1;
 			dbg_print("Interrupting irq ioctl\n");
@@ -273,12 +270,12 @@ static long isp_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		}
 		break;
 
-	case ISP_IOCTL_CLK_RESET:
+	case ISP2_IOCTL_CLK_RESET:
 		{
 			struct clk *clk;
-			clk = clk_get(NULL, "isp_axi_clk");
+			clk = clk_get(NULL, "isp2_axi_clk");
 			if (!IS_ERR_OR_NULL(clk)) {
-				dbg_print("reset ISP clock\n");
+				dbg_print("reset ISP2 clock\n");
 				clk_reset(clk);
 				/*  sleep for 1ms */
 				usleep_range(1000, 2000);
@@ -294,31 +291,31 @@ static long isp_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	return ret;
 }
 
-static const struct file_operations isp_fops = {
-	.open = isp_open,
-	.release = isp_release,
-	.mmap = isp_mmap,
-	.unlocked_ioctl = isp_ioctl
+static const struct file_operations isp2_fops = {
+	.open = isp2_open,
+	.release = isp2_release,
+	.mmap = isp2_mmap,
+	.unlocked_ioctl = isp2_ioctl
 };
 
-static int enable_isp_clock(void)
+static int enable_isp2_clock(void)
 {
 	unsigned long rate;
 	int ret;
 
-	isp_clk = clk_get(NULL, "isp_axi_clk");
-	if (IS_ERR_OR_NULL(isp_clk)) {
+	isp2_clk = clk_get(NULL, "isp2_axi_clk");
+	if (IS_ERR_OR_NULL(isp2_clk)) {
 		err_print("%s: error get clock\n", __func__);
 		return -EIO;
 	}
 
-	if (pi_mgr_dfs_request_update(&isp_dfs_node, PI_OPP_TURBO)) {
+	if (pi_mgr_dfs_request_update(&isp2_dfs_node, PI_OPP_TURBO)) {
 		printk(KERN_ERR "%s:failed to update dfs request for isp\n",
 		       __func__);
 		return -1;
 	}
 
-	ret = clk_enable(isp_clk);
+	ret = clk_enable(isp2_clk);
 	if (ret) {
 		err_print("%s: error enable ISP clock\n", __func__);
 		return -EIO;
@@ -330,26 +327,26 @@ static int enable_isp_clock(void)
 		return -EIO;
 	}
 */
-	rate = clk_get_rate(isp_clk);
+	rate = clk_get_rate(isp2_clk);
 	dbg_print("isp_clk_clk rate %lu\n", rate);
 
 	dbg_print("mmclk policy status 08:%08x 0c:%08x 10:%08x 14:%08x " \
 		"18:%08x 1c:%08x ec0:%08x\n",
-	     reg_read(mmclk_base, 0x08), reg_read(mmclk_base, 0x0c),
-	     reg_read(mmclk_base, 0x10), reg_read(mmclk_base, 0x14),
-	     reg_read(mmclk_base, 0x18), reg_read(mmclk_base, 0x1c),
-	     reg_read(mmclk_base, 0xec0));
+	     reg_read(mm2clk_base, 0x08), reg_read(mm2clk_base, 0x0c),
+	     reg_read(mm2clk_base, 0x10), reg_read(mm2clk_base, 0x14),
+	     reg_read(mm2clk_base, 0x18), reg_read(mm2clk_base, 0x1c),
+	     reg_read(mm2clk_base, 0xec0));
 
 	return ret;
 }
 
-static void disable_isp_clock(void)
+static void disable_isp2_clock(void)
 {
-	isp_clk = clk_get(NULL, "isp_axi_clk");
-	if (IS_ERR_OR_NULL(isp_clk))
+	isp2_clk = clk_get(NULL, "isp2_axi_clk");
+	if (IS_ERR_OR_NULL(isp2_clk))
 		return;
 
-	clk_disable(isp_clk);
+	clk_disable(isp2_clk);
 
 }
 
@@ -367,76 +364,76 @@ static inline void reg_write(void __iomem *base_addr, unsigned int reg,
 	iowrite32(value, base_addr + reg);
 }
 
-int __init isp_init(void)
+int __init isp2_init(void)
 {
 	int ret;
-	struct device *isp_dev;
+	struct device *isp2_dev;
 
-	dbg_print("ISP driver Init\n");
+	dbg_print("ISP2 driver Init\n");
 
-	ret = register_chrdev(0, ISP_DEV_NAME, &isp_fops);
+	ret = register_chrdev(0, ISP2_DEV_NAME, &isp2_fops);
 	if (ret < 0)
 		return -EINVAL;
 	else
-		isp_major = ret;
+		isp2_major = ret;
 
-	isp_class = class_create(THIS_MODULE, ISP_DEV_NAME);
-	if (IS_ERR(isp_class)) {
+	isp2_class = class_create(THIS_MODULE, ISP2_DEV_NAME);
+	if (IS_ERR(isp2_class)) {
 		err_print("Failed to create ISP class\n");
-		unregister_chrdev(isp_major, ISP_DEV_NAME);
-		return PTR_ERR(isp_class);
+		unregister_chrdev(isp2_major, ISP2_DEV_NAME);
+		return PTR_ERR(isp2_class);
 	}
 
-	isp_dev = device_create(isp_class, NULL, MKDEV(isp_major, 0),
-			NULL, ISP_DEV_NAME);
-	if (IS_ERR(isp_dev)) {
+	isp2_dev = device_create(isp2_class, NULL, MKDEV(isp2_major, 0),
+			NULL, ISP2_DEV_NAME);
+	if (IS_ERR(isp2_dev)) {
 		err_print("Failed to create ISP device\n");
 		goto err;
 	}
 
 	/* Map the ISP registers */
-	isp_base =
-	    (void __iomem *)ioremap_nocache(RHEA_ISP_BASE_PERIPHERAL_ADDRESS,
+	isp2_base =
+	    (void __iomem *)ioremap_nocache(JAVA_ISP2_BASE_PERIPHERAL_ADDRESS,
 					    SZ_512K);
-	if (isp_base == NULL)
+	if (isp2_base == NULL)
 		goto err2;
 
 	/* Map the MM CLK registers */
-	mmclk_base =
-	    (void __iomem *)ioremap_nocache(RHEA_MM_CLK_BASE_ADDRESS, SZ_4K);
-	if (mmclk_base == NULL)
+	mm2clk_base =
+	    (void __iomem *)ioremap_nocache(JAVA_MM_CLK_BASE_ADDRESS, SZ_4K);
+	if (mm2clk_base == NULL)
 		goto err3;
 
 	return 0;
 
 err3:
-	iounmap(isp_base);
+	iounmap(isp2_base);
 err2:
-	err_print("Failed to MAP the ISP IO space\n");
-	device_destroy(isp_class, MKDEV(isp_major, 0));
+	err_print("Failed to MAP the ISP2 IO space\n");
+	device_destroy(isp2_class, MKDEV(isp2_major, 0));
 err:
-	class_destroy(isp_class);
-	unregister_chrdev(isp_major, ISP_DEV_NAME);
+	class_destroy(isp2_class);
+	unregister_chrdev(isp2_major, ISP2_DEV_NAME);
 	return ret;
 }
 
-void __exit isp_exit(void)
+void __exit isp2_exit(void)
 {
-	dbg_print("ISP driver Exit\n");
-	if (isp_base)
-		iounmap(isp_base);
+	dbg_print("ISP2 driver Exit\n");
+	if (isp2_base)
+		iounmap(isp2_base);
 
-	if (mmclk_base)
-		iounmap(mmclk_base);
+	if (mm2clk_base)
+		iounmap(mm2clk_base);
 
-	device_destroy(isp_class, MKDEV(isp_major, 0));
-	class_destroy(isp_class);
-	unregister_chrdev(isp_major, ISP_DEV_NAME);
+	device_destroy(isp2_class, MKDEV(isp2_major, 0));
+	class_destroy(isp2_class);
+	unregister_chrdev(isp2_major, ISP2_DEV_NAME);
 }
 
-module_init(isp_init);
-module_exit(isp_exit);
+module_init(isp2_init);
+module_exit(isp2_exit);
 
 MODULE_AUTHOR("Broadcom Corporation");
-MODULE_DESCRIPTION("ISP device driver");
+MODULE_DESCRIPTION("ISP2 device driver");
 MODULE_LICENSE("GPL");

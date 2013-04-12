@@ -10,13 +10,23 @@ menuconfig BRCM_CHAR_DRIVERS
 
 config V3D
 	tristate "V3D Driver"
-	depends on BRCM_CHAR_DRIVERS && (ARCH_RHEA || ARCH_HAWAII)
+	depends on BRCM_CHAR_DRIVERS && (ARCH_RHEA || ARCH_HAWAII || ARCH_JAVA)
 	default n
+	help
+	 This config enables v3d driver. This driver
+	 accelerates graphics composition and hence
+	 improves the system performance. It is suggested
+	 to keep it enabled.
 
 config VCE
 	tristate "VCE Driver"
-	depends on BRCM_CHAR_DRIVERS && (ARCH_RHEA || ARCH_HAWAII)
+	depends on BRCM_CHAR_DRIVERS && (ARCH_RHEA || ARCH_HAWAII || ARCH_JAVA)
 	default n
+	help
+	 This config enables the VCE driver. This driver
+	 accelerates video codec engine and hence improves
+	 the system performance. It is suggested
+	 to keep it enabled.
 
 config BCM_MMUTIL
 	tristate "BCM MM Util Driver"
@@ -37,8 +47,33 @@ config STM_DEFAULT
 
 config ISP
 	tristate "ISP Driver"
-	depends on BRCM_CHAR_DRIVERS && (ARCH_RHEA || ARCH_HAWAII)
+	depends on BRCM_CHAR_DRIVERS && (ARCH_RHEA || ARCH_HAWAII || ARCH_JAVA)
 	default n
+	help
+	 This config enables the ISP driver. This driver
+	 accelerates ISP related operations and hence
+	 improves the system performance. It is suggested
+	 to keep it enabled.
+
+config ISP2
+	tristate "ISP2 Driver"
+	depends on BRCM_CHAR_DRIVERS && (ARCH_JAVA)
+	default n
+	help
+	 This config enables the ISP2 driver. This driver
+	 accelerates ISP2 related operations and hence
+	 improves the system performance. It is suggested
+	 to keep it enabled.
+
+config JPEGENC
+	tristate "JPEGENC Driver"
+	depends on BRCM_CHAR_DRIVERS && (ARCH_JAVA)
+	default n
+	help
+	 This config enables the JPEGENC driver. This driver
+	 accelerates JPEG encoding process and hence
+	 improves the system performance. It is suggested
+	 to keep it enabled.
 
 config H264
 	tristate "H264 Driver"
@@ -52,7 +87,7 @@ config UNICAM
 
 config MMDMA
 	tristate "MMDMA Driver"
-	depends on BRCM_CHAR_DRIVERS && (ARCH_RHEA || ARCH_HAWAII)
+	depends on BRCM_CHAR_DRIVERS && (ARCH_RHEA || ARCH_HAWAII || ARCH_JAVA)
 	select KONA_VC4LITE
 	default n
 

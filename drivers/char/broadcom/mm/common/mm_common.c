@@ -18,6 +18,7 @@ the GPL, without Broadcom's express prior written consent.
 #include "mm_core.h"
 #include "mm_dvfs.h"
 #include "mm_prof.h"
+#include <mach/memory.h>
 
 
 /* The following varliables in this block shall
@@ -37,6 +38,24 @@ void mm_common_enable_clock(struct mm_common *common)
 	if (common->mm_hw_is_on == 0) {
 		if (common->common_clk) {
 			clk_enable(common->common_clk);
+#ifdef CONFIG_ARCH_JAVA
+		if (strncmp(common->mm_name, "mm_h264", 7) == 0) {
+			printk(KERN_ERR "%s, %s\n", common->mm_name, __func__);
+			/* Access to root reset manager register block. */
+			writel(0xa5a501, HW_IO_PHYS_TO_VIRT(0x35001f00));
+			usleep_range(10, 20);
+			/* Enable multimedia power domain. */
+			/* Test 0x3d should be sufficient for MM. */
+			writel(0xfd, HW_IO_PHYS_TO_VIRT(0x35001f08));
+			usleep_range(10, 20);
+			/* Enable H264 Slave interface control register. */
+			writel(0x00, HW_IO_PHYS_TO_VIRT(0x3C00F004));
+			usleep_range(10, 20);
+			/* Enable H264 Master interface control register. */
+			writel(0x00, HW_IO_PHYS_TO_VIRT(0x3C00F008));
+			usleep_range(10, 20);
+		}
+#endif
 			if (strncmp(common->mm_name, "mm_h264", 7))
 				clk_reset(common->common_clk);
 			}

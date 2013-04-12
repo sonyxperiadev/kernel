@@ -1168,7 +1168,7 @@ module_exit(iommu_m4u_exit);
 
 static int __init iommu_m4u_ops_init(void)
 {
-	unsigned int m4u_mode = 3;
+	unsigned int m4u_mode = 1;
 	pr_info("Configure M4U in (%d)mode via secure service\n", m4u_mode);
 	secure_api_call(SSAPI_BRCM_SET_M4U, m4u_mode, 0, 0, 0);
 	pr_info("Attach m4u ops to platform bus\n");

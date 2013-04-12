@@ -164,7 +164,7 @@ config TEGRA_IOMMU_SMMU
 
 config BCM_IOMMU_M4U
 	bool "Broadcom M4U IOMMU Support"
-	depends on ARCH_HAWAII
+	depends on (ARCH_HAWAII || ARCH_JAVA)
 	select IOMMU_API
 	help
 	  Support for the M4U IOMMU. This enables H/W multimedia

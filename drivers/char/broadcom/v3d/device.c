@@ -237,7 +237,9 @@ static void power_on(v3d_device_t *instance)
 	printk(KERN_ERR "On\n");
 #endif
 	enable_clock(instance);
+#ifndef CONFIG_ARCH_JAVA
 	scu_standby(0);
+#endif
 	mb();
 	instance->on = 1;
 	initialise_registers(instance);
@@ -252,7 +254,9 @@ static void power_off(v3d_device_t *instance)
 #endif
 	instance->on = 0;
 	disable_clock(instance);
+#ifndef CONFIG_ARCH_JAVA
 	scu_standby(1);
+#endif
 }
 
 
