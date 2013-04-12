@@ -359,7 +359,6 @@ err:
 
 int alarm_poweron_cancel(void)
 {
-	struct rtc_wkalrm alarm;
 	int ret;
 
 	if (!poweron_rtcdev) {
@@ -369,8 +368,7 @@ int alarm_poweron_cancel(void)
 		goto err;
 	}
 
-	alarm.enabled = 0;
-	ret = rtc_set_alarm(poweron_rtcdev, &alarm);
+	ret = rtc_alarm_irq_enable(poweron_rtcdev, 0);
 	if (ret < 0)
 		pr_alarm(ERROR,
 			"failed to cancel poweron-alarm\n");
