@@ -2991,7 +2991,7 @@ int peri_clk_set_pll_select(struct peri_clk *peri_clk, int source)
 	u32 reg_val;
 	if (!peri_clk->clk_div.pll_select_offset ||
 	    !peri_clk->clk_div.pll_select_mask
-	    || source >= peri_clk->src_clk.count)
+	    || source >= peri_clk->src.count)
 		return -EINVAL;
 
 	reg_val =
@@ -3208,7 +3208,7 @@ static u32 peri_clk_calculate_div(struct peri_clk *peri_clk, u32 rate, u32 *div,
 	u32 max_diether = 0;
 	u32 max_pre_div = 0;
 	struct clk_div *clk_div = &peri_clk->clk_div;
-	struct src_clk *src_clk = &peri_clk->src_clk;
+	struct src_clk *src_clk = &peri_clk->src;
 
 	if (clk_div->div_offset && clk_div->div_mask)
 		max_div = clk_div->div_mask >> clk_div->div_shift;
@@ -3223,9 +3223,11 @@ static u32 peri_clk_calculate_div(struct peri_clk *peri_clk, u32 rate, u32 *div,
 		d_d = 0;
 		pd = 0;
 
-		BUG_ON(src_clk->clk[s]->ops == NULL ||
-		       src_clk->clk[s]->ops->get_rate == NULL);
-		src_clk_rate = src_clk->clk[s]->ops->get_rate(src_clk->clk[s]);
+		BUG_ON(src_clk->list[s].clk->ops == NULL ||
+		       src_clk->list[s].clk->ops->get_rate == NULL);
+		src_clk_rate =
+			src_clk->list[s].clk->ops->get_rate(
+				src_clk->list[s].clk);
 
 		if (rate > src_clk_rate)
 			continue;
@@ -3387,8 +3389,8 @@ static int peri_clk_set_rate(struct clk *clk, u32 rate)
 	}
 	clk_dbg
 	    ("%s clock name %s, src_rate %u sel %d div %u pre_div %u new_rate %u\n",
-	     __func__, clk->name, peri_clk->src_clk.clk[src]->rate, src, div,
-	     pre_div, new_rate);
+	     __func__, clk->name, peri_clk->src.list[src].clk->
+		rate, src, div, pre_div, new_rate);
 
 	/* enable write access */
 	ccu_write_access_enable(peri_clk->ccu_clk, true);
@@ -3416,7 +3418,8 @@ static int peri_clk_set_rate(struct clk *clk, u32 rate)
 				    clk_div->pre_div_offset));
 	}
 	/*set the source clock selected */
-	peri_clk_set_pll_select(peri_clk, src);
+	peri_clk_set_pll_select(peri_clk, peri_clk->
+				src.list[src].val);
 
 	clk_dbg("Before trigger clock\n");
 	if (clk_div->div_trig_offset && clk_div->div_trig_mask) {
@@ -3528,19 +3531,20 @@ static int peri_clk_init(struct clk *clk)
 	       && peri_clk->clk_div.pll_select_offset);
 
 	if (PERI_SRC_CLK_VALID(peri_clk)) {
-		src_clks = &peri_clk->src_clk;
+		src_clks = &peri_clk->src;
 		for (inx = 0; inx < src_clks->count; inx++) {
 			clk_dbg("%s src clock %s init\n", __func__,
-				src_clks->clk[inx]->name);
-			dep_clk_lock(peri_clk->ccu_clk, src_clks->clk[inx],
-				&flgs);
-			__clk_init(src_clks->clk[inx]);
-			dep_clk_unlock(peri_clk->ccu_clk, src_clks->clk[inx],
-				&flgs);
+				src_clks->list[inx].clk->name);
+			dep_clk_lock(peri_clk->ccu_clk,
+				src_clks->list[inx].clk, &flgs);
+			__clk_init(src_clks->list[inx].clk);
+			dep_clk_unlock(peri_clk->ccu_clk,
+				src_clks->list[inx].clk, &flgs);
 		}
 		/*set the default src clock */
-		BUG_ON(peri_clk->src_clk.src_inx >= peri_clk->src_clk.count);
-		peri_clk_set_pll_select(peri_clk, peri_clk->src_clk.src_inx);
+		BUG_ON(peri_clk->src.src_inx >= peri_clk->src.count);
+		peri_clk_set_pll_select(peri_clk,
+			src_clks->list[src_clks->src_inx].val);
 	}
 
 	peri_clk_set_voltage_lvl(peri_clk, VLT_NORMAL);
@@ -3671,10 +3675,10 @@ static unsigned long peri_clk_get_rate(struct clk *clk)
 		clk_dbg("pll_sel : %u\n", sel);
 	}
 
-	BUG_ON(sel >= peri_clk->src_clk.count);
+	BUG_ON(sel >= peri_clk->src.count);
 	/*For clocks which doesnt have PLL select value, sel will be -1 */
 	if (sel >= 0)
-		peri_clk->src_clk.src_inx = sel;
+		peri_clk->src.src_inx = sel;
 	src_clk = GET_PERI_SRC_CLK(peri_clk);
 	BUG_ON(!src_clk || !src_clk->ops || !src_clk->ops->get_rate);
 	parent_rate = src_clk->ops->get_rate(src_clk);
@@ -3685,8 +3689,8 @@ static unsigned long peri_clk_get_rate(struct clk *clk)
 
 	clk_dbg
 	    ("%s clock name %s, src_rate %u sel %d div %u pre_div %u dither %u rate %u\n",
-	     __func__, clk->name, peri_clk->src_clk.clk[sel]->rate, sel, div,
-	     pre_div, dither, clk->rate);
+	     __func__, clk->name, peri_clk->src.list[sel].clk->
+		rate, sel, div, pre_div, dither, clk->rate);
 	return clk->rate;
 }
 
@@ -5751,11 +5755,11 @@ static int clk_parent_show(struct seq_file *seq, void *p)
 	case CLK_TYPE_PERI:
 		peri_clk = to_peri_clk(clock);
 		seq_printf(seq, "name   -- %s\n", clock->name);
-		if ((peri_clk->src_clk.count > 0)
-		    && (peri_clk->src_clk.src_inx < peri_clk->src_clk.count))
+		if ((peri_clk->src.count > 0)
+		    && (peri_clk->src.src_inx < peri_clk->src.count))
 			seq_printf(seq, "parent -- %s\n",
-				   peri_clk->src_clk.clk[peri_clk->src_clk.
-							 src_inx]->name);
+				   peri_clk->src.list[peri_clk->src.
+							 src_inx].clk->name);
 		else
 			seq_printf(seq, "parent -- NULL\n");
 		break;
@@ -5774,8 +5778,8 @@ static int clk_parent_show(struct seq_file *seq, void *p)
 		if ((ref_clk->src_clk.count > 0)
 		    && (ref_clk->src_clk.src_inx < ref_clk->src_clk.count))
 			seq_printf(seq, "parent -- %s\n",
-				   ref_clk->src_clk.clk[ref_clk->src_clk.
-							src_inx]->name);
+				   ref_clk->src_clk.list[ref_clk->src_clk.
+							src_inx].clk->name);
 		else
 			seq_printf(seq, "Derived from %s ccu\n",
 				   ref_clk->ccu_clk->clk.name);
@@ -5824,12 +5828,12 @@ static int clk_source_show(struct seq_file *seq, void *p)
 	switch (clock->clk_type) {
 	case CLK_TYPE_PERI:
 		peri_clk = to_peri_clk(clock);
-		if (peri_clk->src_clk.count > 0) {
+		if (peri_clk->src.count > 0) {
 			int i;
 			seq_printf(seq, "clock source for %s\n", clock->name);
-			for (i = 0; i < peri_clk->src_clk.count; i++) {
+			for (i = 0; i < peri_clk->src.count; i++) {
 				seq_printf(seq, "%d   %s\n", i,
-					   peri_clk->src_clk.clk[i]->name);
+					peri_clk->src.list[i].clk->name);
 			}
 		} else
 			seq_printf(seq, "no source for %s\n", clock->name);
@@ -5848,8 +5852,8 @@ static int clk_source_show(struct seq_file *seq, void *p)
 		if ((ref_clk->src_clk.count > 0)
 		    && (ref_clk->src_clk.src_inx < ref_clk->src_clk.count))
 			seq_printf(seq, "parent -- %s\n",
-				   ref_clk->src_clk.clk[ref_clk->src_clk.
-							src_inx]->name);
+				   ref_clk->src_clk.list[ref_clk->src_clk.
+							src_inx].clk->name);
 		else
 			seq_printf(seq, "%s derived from %s CCU\n", clock->name,
 				   ref_clk->ccu_clk->clk.name);

@@ -40,10 +40,11 @@ extern unsigned read_mpidr(void);
 #define GET_BITS_FROM_REGBITS(reg_bits,reg_val)	 (((reg_val) &  \
 		(reg_bits).reg_bit_mask) >> (reg_bits).reg_bit_pos)
 
-#define GET_PERI_SRC_CLK(clock)		((clock)->src_clk.clk[(clock)->src_clk.src_inx])
-#define PERI_SRC_CLK_INX(clock)		((clock)->src_clk.src_inx)
-#define PERI_SRC_CLK_COUNT(clock)	((clock)->src_clk.count)
-#define PERI_SRC_CLK_VALID(clock)	((clock)->src_clk.count)
+#define GET_PERI_SRC_CLK(clock) (\
+		(clock)->src.list[(clock)->src.src_inx].clk)
+#define PERI_SRC_CLK_INX(clock)		((clock)->src.src_inx)
+#define PERI_SRC_CLK_COUNT(clock)	((clock)->src.count)
+#define PERI_SRC_CLK_VALID(clock)	((clock)->src.count)
 
 #define	CLOCK_1K		1000
 #define	CLOCK_1M		(CLOCK_1K * 1000)
@@ -177,6 +178,12 @@ extern unsigned read_mpidr(void);
 #endif
 
 #define PLL_VCO_RATE_MAX	0xFFFFFFFF
+
+#define INIT_SRC_CLK(c, sel) {\
+		.clk = CLK_PTR(c),\
+		.val = sel,\
+}
+
 
 /* CCU Policy ids*/
 enum {
@@ -418,10 +425,15 @@ struct ccu_state_save {
  * @clk: array of source clocks
  */
 
+struct clock_source {
+	struct clk *clk;
+	u32 val;
+};
+
 struct src_clk {
 	u8 count;
 	u8 src_inx;
-	struct clk **clk;
+	struct clock_source *list;
 };
 
 #ifdef CONFIG_KONA_PI_MGR
@@ -533,7 +545,7 @@ struct peri_clk {
 	struct peri_clk_ops *peri_ops;
 
 	struct clk_div clk_div;
-	struct src_clk src_clk;
+	struct src_clk src;
 	/*Reset offset and bit fields */
 	u32 soft_reset_offset;
 	u32 clk_reset_mask;
