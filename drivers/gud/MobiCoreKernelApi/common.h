@@ -23,10 +23,11 @@ unsigned int mcapi_unique_id(void);
 /* dummy function helper macro */
 #define DUMMY_FUNCTION()		do {} while (0)
 
-#define MCDRV_ERROR(txt, ...) \
-	printk(KERN_ERR "mcKernelApi %s() ### ERROR: " txt, \
-		__func__, \
-		##__VA_ARGS__)
+/* Found in main.c */
+extern struct device *mc_kapi;
+
+#define MCDRV_ERROR(dev, txt, ...) \
+	dev_err(dev, "%s() ### ERROR: " txt, __func__, ##__VA_ARGS__)
 
 #if defined(DEBUG)
 
@@ -37,21 +38,14 @@ unsigned int mcapi_unique_id(void);
 #define MCDRV_DBG_VERBOSE(...)		DUMMY_FUNCTION()
 #endif
 
-#define MCDRV_DBG(txt, ...) \
-	printk(KERN_INFO "mcKernelApi %s(): " txt, \
-		__func__, \
-		##__VA_ARGS__)
+#define MCDRV_DBG(dev, txt, ...) \
+	dev_info(dev, "%s(): " txt, __func__, ##__VA_ARGS__)
 
-#define MCDRV_DBG_WARN(txt, ...) \
-	printk(KERN_WARNING "mcKernelApi %s() WARNING: " txt, \
-		__func__, \
-		##__VA_ARGS__)
+#define MCDRV_DBG_WARN(dev, txt, ...) \
+	dev_warn(dev, "%s() WARNING: " txt, __func__, ##__VA_ARGS__)
 
-#define MCDRV_DBG_ERROR(txt, ...) \
-	printk(KERN_ERR "mcKernelApi %s() ### ERROR: " txt, \
-		__func__, \
-		##__VA_ARGS__)
-
+#define MCDRV_DBG_ERROR(dev, txt, ...) \
+	dev_err(dev, "%s() ### ERROR: " txt, __func__, ##__VA_ARGS__)
 
 #define MCDRV_ASSERT(cond) \
 	do { \

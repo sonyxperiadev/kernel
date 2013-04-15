@@ -11,6 +11,7 @@
  * which has to be created by the fd = open(/dev/mobicore) command.
  *
  * <-- Copyright Giesecke & Devrient GmbH 2009-2012 -->
+ * <-- Copyright Trustonic Limited 2013 -->
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -24,6 +25,7 @@
 #include <linux/slab.h>
 #include <linux/kthread.h>
 #include <linux/pagemap.h>
+#include <linux/device.h>
 
 
 /* MobiCore memory context data */
@@ -74,7 +76,7 @@ static int lock_pages(struct task_struct *task, void *virt_start_page_addr,
 
 	/* check if we could lock all pages. */
 	if (locked_pages != pages_no) {
-		MCDRV_DBG_ERROR("get_user_pages() failed, locked_pages=%d",
+		MCDRV_DBG_ERROR(mcd, "get_user_pages() failed, locked_pages=%d",
 				locked_pages);
 		if (locked_pages > 0) {
 			/* release all locked pages. */
@@ -182,7 +184,7 @@ static int alloc_table_store(void)
 		l2table  = kmalloc(sizeof(*l2table), GFP_KERNEL | __GFP_ZERO);
 		if (l2table == NULL) {
 			ret = -ENOMEM;
-			MCDRV_DBG_ERROR("out of memory\n");
+			MCDRV_DBG_ERROR(mcd, "out of memory\n");
 			/* Free the full temp list and the store in this case */
 			goto free_temp_list;
 		}
@@ -218,7 +220,7 @@ free_store:
 
 }
 /*
- * Get a l2 table from the free tables list or alocate a new one and
+ * Get a l2 table from the free tables list or allocate a new one and
  * initialize it. Assumes the table_lock is already taken.
  */
 static struct mc_l2_table *alloc_l2_table(struct mc_instance *instance)
@@ -229,12 +231,13 @@ static struct mc_l2_table *alloc_l2_table(struct mc_instance *instance)
 	if (list_empty(&mem_ctx.free_l2_tables)) {
 		ret = alloc_table_store();
 		if (ret) {
-			MCDRV_DBG_ERROR("Failed to allocate new store!");
+			MCDRV_DBG_ERROR(mcd, "Failed to allocate new store!");
 			return ERR_PTR(-ENOMEM);
 		}
 		/* if it's still empty something wrong has happened */
 		if (list_empty(&mem_ctx.free_l2_tables)) {
-			MCDRV_DBG_ERROR("Free list not updated correctly!");
+			MCDRV_DBG_ERROR(mcd,
+					"Free list not updated correctly!");
 			return ERR_PTR(-EFAULT);
 		}
 	}
@@ -243,7 +246,7 @@ static struct mc_l2_table *alloc_l2_table(struct mc_instance *instance)
 	table  = list_first_entry(&mem_ctx.free_l2_tables,
 		struct mc_l2_table, list);
 	if (table == NULL) {
-		MCDRV_DBG_ERROR("out of memory\n");
+		MCDRV_DBG_ERROR(mcd, "out of memory\n");
 		return ERR_PTR(-ENOMEM);
 	}
 	/* Move it to the used l2 tables list */
@@ -255,7 +258,8 @@ static struct mc_l2_table *alloc_l2_table(struct mc_instance *instance)
 	atomic_inc(&table->set->used_tables);
 	atomic_inc(&table->usage);
 
-	MCDRV_DBG_VERBOSE("chunkPhys=%p,idx=%d", table->set->phys, table->idx);
+	MCDRV_DBG_VERBOSE(mcd,
+			  "chunkPhys=%p,idx=%d", table->set->phys, table->idx);
 
 	return table;
 }
@@ -345,23 +349,25 @@ static int map_buffer(struct task_struct *task, void *wsm_buffer,
 
 	/* no size > 1Mib supported */
 	if (wsm_len > SZ_1M) {
-		MCDRV_DBG_ERROR("size > 1 MiB\n");
+		MCDRV_DBG_ERROR(mcd, "size > 1 MiB\n");
 		return -EINVAL;
 	}
 
-	MCDRV_DBG_VERBOSE("WSM addr=0x%p, len=0x%08x\n", wsm_buffer, wsm_len);
+	MCDRV_DBG_VERBOSE(mcd, "WSM addr=0x%p, len=0x%08x\n", wsm_buffer,
+			  wsm_len);
+
 
 	/* calculate page usage */
 	virt_addr_page = (void *)(((unsigned long)(wsm_buffer)) & PAGE_MASK);
 	offset = (unsigned int)	(((unsigned long)(wsm_buffer)) & (~PAGE_MASK));
 	nr_of_pages  = PAGE_ALIGN(offset + wsm_len) / PAGE_SIZE;
 
-	MCDRV_DBG_VERBOSE("virt addr page start=0x%p, pages=%d\n",
+	MCDRV_DBG_VERBOSE(mcd, "virt addr page start=0x%p, pages=%d\n",
 			  virt_addr_page, nr_of_pages);
 
 	/* L2 table can hold max 1MiB in 256 pages. */
 	if ((nr_of_pages * PAGE_SIZE) > SZ_1M) {
-		MCDRV_DBG_ERROR("WSM paged exceed 1 MiB\n");
+		MCDRV_DBG_ERROR(mcd, "WSM paged exceed 1 MiB\n");
 		return -EINVAL;
 	}
 
@@ -388,7 +394,7 @@ static int map_buffer(struct task_struct *task, void *wsm_buffer,
 		ret = lock_pages(task, virt_addr_page, nr_of_pages,
 				 l2table_as_array_of_pointers_to_page);
 		if (ret != 0) {
-			MCDRV_DBG_ERROR("lock_user_pages() failed\n");
+			MCDRV_DBG_ERROR(mcd, "lock_user_pages() failed\n");
 			return ret;
 		}
 	}
@@ -398,7 +404,7 @@ static int map_buffer(struct task_struct *task, void *wsm_buffer,
 		for (i = 0; i < nr_of_pages; i++) {
 			page = virt_to_page(uaddr);
 			if (!page) {
-				MCDRV_DBG_ERROR("failed to map address");
+				MCDRV_DBG_ERROR(mcd, "failed to map address");
 				return -EINVAL;
 			}
 			get_page(page);
@@ -412,7 +418,7 @@ static int map_buffer(struct task_struct *task, void *wsm_buffer,
 		for (i = 0; i < nr_of_pages; i++) {
 			page = vmalloc_to_page(uaddr);
 			if (!page) {
-				MCDRV_DBG_ERROR("failed to map address");
+				MCDRV_DBG_ERROR(mcd, "failed to map address");
 				return -EINVAL;
 			}
 			get_page(page);
@@ -461,7 +467,7 @@ static int map_buffer(struct task_struct *task, void *wsm_buffer,
 #endif
 
 		l2table->table_entries[i] = pte;
-		MCDRV_DBG_VERBOSE("L2 entry %d:  0x%08x\n", i,
+		MCDRV_DBG_VERBOSE(mcd, "L2 entry %d:  0x%08x\n", i,
 				  (unsigned int)(pte));
 	}
 
@@ -486,8 +492,8 @@ static void unmap_buffers(struct mc_l2_table *table)
 		return;
 
 	/* found the table, now release the resources. */
-	MCDRV_DBG_VERBOSE("clear L2 table, phys_base=%lx, nr_of_pages=%d\n",
-			  table->phys, table->pages);
+	MCDRV_DBG_VERBOSE(mcd, "clear L2 table, phys_base=%p, nr_of_pages=%d\n",
+			  (void *)table->phys, table->pages);
 
 	l2table = table->virt;
 
@@ -527,12 +533,12 @@ int mc_free_l2_table(struct mc_instance *instance, uint32_t handle)
 	table = find_l2_table(handle);
 
 	if (table == NULL) {
-		MCDRV_DBG_VERBOSE("entry not found");
+		MCDRV_DBG_VERBOSE(mcd, "entry not found");
 		ret = -EINVAL;
 		goto err_unlock;
 	}
 	if (instance != table->owner && !is_daemon(instance)) {
-		MCDRV_DBG_ERROR("instance does no own it");
+		MCDRV_DBG_ERROR(mcd, "instance does no own it");
 		ret = -EPERM;
 		goto err_unlock;
 	}
@@ -556,12 +562,12 @@ int mc_lock_l2_table(struct mc_instance *instance, uint32_t handle)
 	table = find_l2_table(handle);
 
 	if (table == NULL) {
-		MCDRV_DBG_VERBOSE("entry not found %u\n", handle);
+		MCDRV_DBG_VERBOSE(mcd, "entry not found %u\n", handle);
 		ret = -EINVAL;
 		goto table_err;
 	}
 	if (instance != table->owner && !is_daemon(instance)) {
-		MCDRV_DBG_ERROR("instance does no own it\n");
+		MCDRV_DBG_ERROR(mcd, "instance does no own it\n");
 		ret = -EPERM;
 		goto table_err;
 	}
@@ -589,7 +595,7 @@ struct mc_l2_table *mc_alloc_l2_table(struct mc_instance *instance,
 	mutex_lock(&mem_ctx.table_lock);
 	table = alloc_l2_table(instance);
 	if (IS_ERR(table)) {
-		MCDRV_DBG_ERROR("allocate_used_l2_table() failed\n");
+		MCDRV_DBG_ERROR(mcd, "allocate_used_l2_table() failed\n");
 		ret = -ENOMEM;
 		goto err_no_mem;
 	}
@@ -598,12 +604,12 @@ struct mc_l2_table *mc_alloc_l2_table(struct mc_instance *instance,
 	ret = map_buffer(task, wsm_buffer, wsm_len, table);
 
 	if (ret != 0) {
-		MCDRV_DBG_ERROR("map_buffer_into_used_l2_table() failed\n");
+		MCDRV_DBG_ERROR(mcd, "map_buffer() failed\n");
 		unmap_l2_table(table);
 		goto err_no_mem;
 	}
-	MCDRV_DBG("mapped buffer %p to table with handle %d @ %lx", wsm_buffer,
-		  table->handle, table->phys);
+	MCDRV_DBG(mcd, "mapped buffer %p to table with handle %d @ %lx",
+		  wsm_buffer, table->handle, table->phys);
 
 	mutex_unlock(&mem_ctx.table_lock);
 	return table;
@@ -612,19 +618,24 @@ err_no_mem:
 	return ERR_PTR(ret);
 }
 
-uint32_t mc_find_l2_table(struct mc_instance *instance, uint32_t handle)
+uint32_t mc_find_l2_table(uint32_t handle, int32_t fd)
 {
 	uint32_t ret = 0;
 	struct mc_l2_table *table = NULL;
-
-	if (WARN(!instance, "No instance data available"))
-		return 0;
 
 	mutex_lock(&mem_ctx.table_lock);
 	table = find_l2_table(handle);
 
 	if (table == NULL) {
-		MCDRV_DBG_ERROR("entry not found %u\n", handle);
+		MCDRV_DBG_ERROR(mcd, "entry not found %u\n", handle);
+		ret = 0;
+		goto table_err;
+	}
+
+	/* It's safe here not to lock the instance since the owner of
+	 * the table will be cleared only with the table lock taken */
+	if (!mc_check_owner_fd(table->owner, fd)) {
+		MCDRV_DBG_ERROR(mcd, "not valid owner%u\n", handle);
 		ret = 0;
 		goto table_err;
 	}
@@ -643,7 +654,8 @@ void mc_clean_l2_tables(void)
 	/* Check if some WSM is orphaned. */
 	list_for_each_entry_safe(table, tmp, &mem_ctx.l2_tables, list) {
 		if (table->owner == NULL) {
-			MCDRV_DBG("clearing orphaned WSM L2: p=%lx pages=%d\n",
+			MCDRV_DBG(mcd,
+				  "clearing orphaned WSM L2: p=%lx pages=%d\n",
 				  table->phys, table->pages);
 			unmap_l2_table(table);
 		}
@@ -659,7 +671,7 @@ void mc_clear_l2_tables(struct mc_instance *instance)
 	/* Check if some WSM is still in use. */
 	list_for_each_entry_safe(table, tmp, &mem_ctx.l2_tables, list) {
 		if (table->owner == instance) {
-			MCDRV_DBG("release WSM L2: p=%lx pages=%d\n",
+			MCDRV_DBG(mcd, "release WSM L2: p=%lx pages=%d\n",
 				  table->phys, table->pages);
 			/* unlock app usage and free or mark it as orphan */
 			table->owner = NULL;

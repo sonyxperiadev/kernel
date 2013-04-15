@@ -4,14 +4,15 @@
  * Internal structures of the McDrvModule
  *
  * <-- Copyright Giesecke & Devrient GmbH 2009-2012 -->
+ * <-- Copyright Trustonic Limited 2013 -->
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
  */
 
-#ifndef _MC_DRV_KMOD_H_
-#define _MC_DRV_KMOD_H_
+#ifndef _MC_MAIN_H_
+#define _MC_MAIN_H_
 
 #include <asm/pgtable.h>
 #include <linux/semaphore.h>
@@ -75,7 +76,7 @@ struct mc_context {
 	struct mc_instance	*daemon_inst;
 	/* pointer to instance of daemon */
 	struct task_struct	*daemon;
-	/* General list of contigous buffers allocated by the kernel */
+	/* General list of contiguous buffers allocated by the kernel */
 	struct list_head	cont_bufs;
 	/* Lock for the list of contiguous buffers */
 	struct mutex		bufs_lock;
@@ -137,10 +138,13 @@ int mc_register_wsm_l2(struct mc_instance *instance,
 /* Unregister the buffer mapped above */
 int mc_unregister_wsm_l2(struct mc_instance *instance, uint32_t handle);
 
-/* Allocate one mc_buffer of contigous space */
+/* Allocate one mc_buffer of contiguous space */
 int mc_get_buffer(struct mc_instance *instance,
 	struct mc_buffer **buffer, unsigned long len);
 /* Free the buffer allocated above */
 int mc_free_buffer(struct mc_instance *instance, uint32_t handle);
 
-#endif /* _MC_DRV_KMOD_H_ */
+/* Check if the other end of the fd owns instance */
+bool mc_check_owner_fd(struct mc_instance *instance, int32_t fd);
+
+#endif /* _MC_MAIN_H_ */

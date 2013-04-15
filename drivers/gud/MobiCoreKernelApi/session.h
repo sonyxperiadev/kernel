@@ -63,7 +63,7 @@ struct session {
 	/* Descriptors of additional bulk buffer of a session */
 	struct list_head		bulk_buffer_descriptors;
 
-	/* Informations about session */
+	/* Information about session */
 	struct session_information	session_info;
 
 	uint32_t			session_id;
@@ -93,7 +93,7 @@ void session_cleanup(struct session *session);
  * address already exist, NULL is returned.
  *
  * On success the actual Bulk buffer descriptor with all address information
- * is retured, NULL if an error occurs.
+ * is returned, NULL if an error occurs.
  */
 struct bulk_buffer_descriptor *session_add_bulk_buf(
 	struct session *session, void *buf, uint32_t len);
@@ -117,14 +117,14 @@ bool session_remove_bulk_buf(struct session *session, void *buf);
  * @session:		Session information structure
  * @buf:		The virtual address of bulk buffer.
  *
- * On success the actual Bulk buffer handle is retured, 0
+ * On success the actual Bulk buffer handle is returned, 0
  * if an error occurs.
  */
 uint32_t session_find_bulk_buf(struct session *session, void *virt_addr);
 
 /*
  * session_set_error_info() -	Set additional error information of the last
- *				error that occured.
+ *				error that occurred.
  * @session:		Session information structure
  * @err:		The actual error
  */
@@ -132,7 +132,7 @@ void session_set_error_info(struct session *session, int32_t err);
 
 /*
  * session_get_last_err() -	Get additional error information of the last
- *				error that occured.
+ *				error that occurred.
  * @session:		Session information structure
  *
  * After request the information is set to SESSION_ERR_NO.

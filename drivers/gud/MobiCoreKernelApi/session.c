@@ -7,6 +7,7 @@
  */
 #include <linux/types.h>
 #include <linux/slab.h>
+#include <linux/device.h>
 #include "mc_kernel_api.h"
 #include "public/mobicore_driver_api.h"
 
@@ -56,7 +57,8 @@ void session_cleanup(struct session *session)
 		phys_addr_wsm_l2 =
 			(unsigned int)bulk_buf_descr->phys_addr_wsm_l2;
 
-		MCDRV_DBG_VERBOSE("Phys Addr of L2 Table = 0x%X, handle= %d",
+		MCDRV_DBG_VERBOSE(mc_kapi,
+				  "Phys Addr of L2 Table = 0x%X, handle= %d",
 				  phys_addr_wsm_l2,
 				  bulk_buf_descr->handle);
 
@@ -64,7 +66,8 @@ void session_cleanup(struct session *session)
 		int ret = mobicore_unmap_vmem(session->instance,
 					      bulk_buf_descr->handle);
 		if (ret != 0)
-			MCDRV_DBG_ERROR("mobicore_unmap_vmem failed: %d", ret);
+			MCDRV_DBG_ERROR(mc_kapi,
+					"mobicore_unmap_vmem failed: %d", ret);
 
 		list_del(pos);
 		kfree(bulk_buf_descr);
@@ -114,12 +117,14 @@ struct bulk_buffer_descriptor *session_add_bulk_buf(struct session *session,
 					    &handle, &l2_table_phys);
 
 		if (ret != 0) {
-			MCDRV_DBG_ERROR("mobicore_map_vmem failed, ret=%d",
+			MCDRV_DBG_ERROR(mc_kapi,
+					"mobicore_map_vmem failed, ret=%d",
 					ret);
 			break;
 		}
 
-		MCDRV_DBG_VERBOSE("Phys Addr of L2 Table = 0x%X, handle=%d",
+		MCDRV_DBG_VERBOSE(mc_kapi,
+				  "Phys Addr of L2 Table = 0x%X, handle=%d",
 				  (unsigned int)l2_table_phys, handle);
 
 		/* Create new descriptor */
@@ -143,7 +148,8 @@ bool session_remove_bulk_buf(struct session *session, void *virt_addr)
 	struct bulk_buffer_descriptor *tmp;
 	struct list_head *pos, *q;
 
-	MCDRV_DBG_VERBOSE("Virtual Address = 0x%X", (unsigned int) virt_addr);
+	MCDRV_DBG_VERBOSE(mc_kapi, "Virtual Address = 0x%X",
+			  (unsigned int) virt_addr);
 
 	/* Search and remove bulk buffer descriptor */
 	list_for_each_safe(pos, q, &session->bulk_buffer_descriptors) {
@@ -156,10 +162,10 @@ bool session_remove_bulk_buf(struct session *session, void *virt_addr)
 	}
 
 	if (bulk_buf == NULL) {
-		MCDRV_DBG_ERROR("Virtual Address not found");
+		MCDRV_DBG_ERROR(mc_kapi, "Virtual Address not found");
 		ret = false;
 	} else {
-		MCDRV_DBG_VERBOSE("WsmL2 phys=0x%X, handle=%d",
+		MCDRV_DBG_VERBOSE(mc_kapi, "WsmL2 phys=0x%X, handle=%d",
 				  (unsigned int)bulk_buf->phys_addr_wsm_l2,
 				  bulk_buf->handle);
 
@@ -167,7 +173,8 @@ bool session_remove_bulk_buf(struct session *session, void *virt_addr)
 		int ret = mobicore_unmap_vmem(session->instance,
 					      bulk_buf->handle);
 		if (ret != 0)
-			MCDRV_DBG_ERROR("mobicore_unmap_vmem failed: %d", ret);
+			MCDRV_DBG_ERROR(mc_kapi,
+					"mobicore_unmap_vmem failed: %d", ret);
 
 		kfree(bulk_buf);
 	}
@@ -180,7 +187,8 @@ uint32_t session_find_bulk_buf(struct session *session, void *virt_addr)
 	struct bulk_buffer_descriptor *tmp;
 	struct list_head *pos, *q;
 
-	MCDRV_DBG_VERBOSE("Virtual Address = 0x%X", (unsigned int) virt_addr);
+	MCDRV_DBG_VERBOSE(mc_kapi, "Virtual Address = 0x%X",
+			  (unsigned int) virt_addr);
 
 	/* Search and return buffer descriptor handle */
 	list_for_each_safe(pos, q, &session->bulk_buffer_descriptors) {

@@ -16,6 +16,14 @@ ifdef MCDRV_SYMBOLS_FILE
     KBUILD_EXTRA_SYMBOLS=$(MCDRV_SYMBOLS_FILE)
 endif
 
+ifeq ($(PLATFORM), ARM_VE_A9X4_QEMU)
+	ccflags-y += -DMC_NETLINK_COMPAT
+endif
+
+ifeq ($(PLATFORM), MSM8974_SURF_STD)
+	ccflags-y += -DMC_NETLINK_COMPAT_V37
+endif
+
 #EXTRA_CFLAGS += -DDEBUG -DDEBUG_VERBOSE
 #EXTRA_CFLAGS += -Wno-declaration-after-statement
 ccflags-y += -Wno-declaration-after-statement

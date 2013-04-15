@@ -2,7 +2,7 @@
  * The MobiCore Driver Kernel Module is a Linux device driver, which represents
  * the command proxy on the lowest layer to the secure world (Swd). Additional
  * services like memory allocation via mmap and generation of a L2 tables for
- * given virtual memory are also supported. IRQ functionallity receives
+ * given virtual memory are also supported. IRQ functionality receives
  * information from the SWd in the non secure world (NWd).
  * As customary the driver is handled as linux device driver with "open",
  * "close" and "ioctl" commands. Access to the driver is possible after the
@@ -11,6 +11,7 @@
  * "insmod mcDrvModule.ko".
  *
  * <-- Copyright Giesecke & Devrient GmbH 2010-2012 -->
+ * <-- Copyright Trustonic Limited 2013 -->
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -126,6 +127,20 @@ struct mc_ioctl_resolv_cont_wsm {
 	uint32_t phys;
 	/* length memory */
 	uint32_t length;
+	/* fd to owner of the buffer */
+	int32_t fd;
+};
+
+/*
+ * Data exchange structure of the MC_IO_RESOLVE_WSM ioctl command.
+ */
+struct mc_ioctl_resolv_wsm {
+	/* driver handle for buffer */
+	uint32_t handle;
+	/* fd to owner of the buffer */
+	int32_t fd;
+	/* base address of memory */
+	uint32_t phys;
 };
 
 
@@ -156,7 +171,7 @@ struct mc_ioctl_resolv_cont_wsm {
  * The internal instance data regarding to this address are deleted as
  * well as each according memory page and its appropriated reserved bit
  * is cleared (ClearPageReserved).
- * Usage: ioctl(fd, MC_DRV_MODULE_FREE, &address) with address beeing of
+ * Usage: ioctl(fd, MC_DRV_MODULE_FREE, &address) with address being of
  * type long address
  */
 #define MC_IO_FREE		_IO(MC_IOC_MAGIC, 5)
@@ -188,9 +203,9 @@ struct mc_ioctl_resolv_cont_wsm {
  * Clean orphaned WSM buffers. Only available to the daemon and should
  * only be carried out if the TLC crashes or otherwise calls exit() in
  * an unexpected manner.
- * The clean is needed toghether with the lock/unlock mechanism so the daemon
- * has clear control of the mapped buffers so it can close a truslet before
- * release all the WSM buffers, otherwise the trustlet would be able to write
+ * The clean is needed together with the lock/unlock mechanism so the daemon
+ * has clear control of the mapped buffers so it can close a Trustlet before
+ * release all the WSM buffers, otherwise the Trustlet would be able to write
  * to possibly kernel memory areas
  */
 #define MC_IO_CLEAN_WSM		_IO(MC_IOC_MAGIC, 14)
@@ -199,11 +214,18 @@ struct mc_ioctl_resolv_cont_wsm {
  * Get L2 phys address of a buffer handle allocated to the user.
  * Only available to the daemon.
  */
-#define MC_IO_RESOLVE_WSM	_IOWR(MC_IOC_MAGIC, 15, uint32_t)
+#define MC_IO_RESOLVE_WSM	_IOWR(MC_IOC_MAGIC, 15, \
+					struct mc_ioctl_resolv_wsm)
 
 /*
- * Get the phys address & len of a allocated contiguous buffer.
+ * Get the phys address & length of a allocated contiguous buffer.
  * Only available to the daemon */
-#define MC_IO_RESOLVE_CONT_WSM	_IOWR(MC_IOC_MAGIC, 16, struct mc_ioctl_execute)
+#define MC_IO_RESOLVE_CONT_WSM	_IOWR(MC_IOC_MAGIC, 16, \
+					struct mc_ioctl_resolv_cont_wsm)
+
+/*
+ * Setup the mem traces when called.
+ * Only available to the daemon */
+#define MC_IO_LOG_SETUP		_IO(MC_IOC_MAGIC, 17)
 
 #endif /* _MC_LINUX_H_ */
