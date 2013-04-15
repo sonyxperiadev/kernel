@@ -2101,14 +2101,17 @@ static int ov5640_s_stream(struct v4l2_subdev *sd, int enable)
 		    || (ov5640->flashmode == FLASH_MODE_AUTO))
 			flash_gpio_strobe(1);
 		/* Power Up, Start Streaming */
-		ret = ov5640_reg_writes(client, ov5640_stream);
+		/* ret = ov5640_reg_writes(client, ov5640_stream); */
+		/* use MIPI on/off as OVT suggested on AppNote */
+		ov5640_reg_write(client, 0x4202, 0x00);
 		if ((ov5640->flashmode == FLASH_MODE_ON)
 		    || (ov5640->flashmode == FLASH_MODE_AUTO))
 			flash_gpio_strobe(0);
 		msleep(50);
 	} else {
 		/* Stop Streaming, Power Down */
-		ret = ov5640_reg_writes(client, ov5640_power_down);
+		/* ret = ov5640_reg_writes(client, ov5640_power_down); */
+		ov5640_reg_write(client, 0x4202, 0x0f);
 	}
 	stream_mode = enable;
 
@@ -2136,6 +2139,7 @@ static unsigned long ov5640_query_bus_param(struct soc_camera_device *icd)
 }
 
 static int afFWLoaded = -1;
+static int initNeeded = -1;
 static int ov5640_enum_input(struct soc_camera_device *icd,
 			     struct v4l2_input *inp)
 {
@@ -2160,6 +2164,7 @@ static int ov5640_enum_input(struct soc_camera_device *icd,
 	}
 	stream_mode = -1;
 	afFWLoaded = -1;
+	initNeeded = 1;
 
 	return 0;
 }
@@ -2211,8 +2216,9 @@ static int ov5640_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 	ov5640->i_fmt = ov5640_find_datafmt(mf->code);
 
 	/*To avoide reentry init sensor, remove from here       */
-	if (runmode == CAM_RUNNING_MODE_PREVIEW) {
+	if (initNeeded > 0) {
 		ret = ov5640_reg_writes(client, hawaii_common_init);
+		initNeeded = 0;
 	}
 	if (ret) {
 		printk(KERN_ERR "Error configuring configscript_common1\n");
