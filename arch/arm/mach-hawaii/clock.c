@@ -1188,13 +1188,53 @@ static int dig_clk_init(struct clk *clk)
 }
 
 struct gen_clk_ops dig_ch_peri_clk_ops;
-/*
-Peri clock name DIG_CH0
-*/
-/*Source list of digital channels. Common for CH0, CH1, CH2, CH3 */
-static struct clock_source dig_ch_peri_clk_src_list[] = {
+struct gen_clk_ops dig_prediv_peri_clk_ops;
+
+static struct clock_source dig_prediv_peri_clk_src_list[] = {
 	INIT_SRC_CLK(crystal, 0), INIT_SRC_CLK(pll0, 1), INIT_SRC_CLK(pll1, 2),
 };
+
+/* Dig_prediv clock: no physical clock as such, user has to make sure that
+   he has enabled one of the channel clocks before set_rate for this clk.
+   This is done to accomodate changing of chnl_clk freq independently */
+
+static struct peri_clk CLK_NAME(dig_prediv) = {
+	.clk =	{
+		.flags = DIG_PREDIV_PERI_CLK_FLAGS,
+		.clk_type = CLK_TYPE_PERI,
+		.id = CLK_DIG_PREDIV_PERI_CLK_ID,
+		.name = DIG_PREDIV_PERI_CLK_NAME_STR,
+		.dep_clks = DEFINE_ARRAY_ARGS(NULL),
+		.ops = &dig_prediv_peri_clk_ops,
+	},
+	.ccu_clk = &CLK_NAME(root),
+	.clk_div = {
+		.div_offset = ROOT_CLK_MGR_REG_DIG_PRE_DIV_OFFSET,
+		.div_mask =
+		ROOT_CLK_MGR_REG_DIG_PRE_DIV_DIGITAL_PRE_DIV_MASK,
+		.div_shift =
+			ROOT_CLK_MGR_REG_DIG_PRE_DIV_DIGITAL_PRE_DIV_SHIFT,
+		.div_trig_offset = ROOT_CLK_MGR_REG_DIG_TRG_OFFSET,
+		.div_trig_mask =
+			ROOT_CLK_MGR_REG_DIG_TRG_DIGITAL_PRE_TRIGGER_MASK,
+		.pll_select_offset = ROOT_CLK_MGR_REG_DIG_PRE_DIV_OFFSET,
+		.pll_select_mask =
+		ROOT_CLK_MGR_REG_DIG_PRE_DIV_DIGITAL_PRE_PLL_SELECT_MASK,
+		.pll_select_shift =
+		ROOT_CLK_MGR_REG_DIG_PRE_DIV_DIGITAL_PRE_PLL_SELECT_SHIFT,
+	},
+	.src = {
+	    .count = ARRAY_SIZE(dig_prediv_peri_clk_src_list),
+	    .src_inx = 0,
+	    .list = dig_prediv_peri_clk_src_list,
+	},
+};
+
+static struct clock_source dig_chnl_clk_src_list[] = {
+	INIT_SRC_CLK(dig_prediv, 0),
+};
+
+/* Peri clock name DIG_CH0 */
 
 static struct peri_clk CLK_NAME(dig_ch0) = {
 	.clk =	{
@@ -1210,26 +1250,20 @@ static struct peri_clk CLK_NAME(dig_ch0) = {
 	.clk_en_mask = ROOT_CLK_MGR_REG_DIG_CLKGATE_DIGITAL_CH0_CLK_EN_MASK,
 	.stprsts_mask = ROOT_CLK_MGR_REG_DIG_CLKGATE_DIGITAL_CH0_STPRSTS_MASK,
 	.clk_div = {
-	.div_offset = ROOT_CLK_MGR_REG_DIG0_DIV_OFFSET,
-	.div_mask = ROOT_CLK_MGR_REG_DIG0_DIV_DIGITAL_CH0_DIV_MASK,
-	.div_shift = ROOT_CLK_MGR_REG_DIG0_DIV_DIGITAL_CH0_DIV_SHIFT,
-	.pre_div_offset = ROOT_CLK_MGR_REG_DIG_PRE_DIV_OFFSET,
-	.pre_div_mask = ROOT_CLK_MGR_REG_DIG_PRE_DIV_DIGITAL_PRE_DIV_MASK,
-	.pre_div_shift = ROOT_CLK_MGR_REG_DIG_PRE_DIV_DIGITAL_PRE_DIV_SHIFT,
-	.div_trig_offset = ROOT_CLK_MGR_REG_DIG_TRG_OFFSET,
-	.div_trig_mask = ROOT_CLK_MGR_REG_DIG_TRG_DIGITAL_CH0_TRIGGER_MASK,
-	.prediv_trig_offset = ROOT_CLK_MGR_REG_DIG_TRG_OFFSET,
-	.prediv_trig_mask = ROOT_CLK_MGR_REG_DIG_TRG_DIGITAL_PRE_TRIGGER_MASK,
-	.pll_select_offset = ROOT_CLK_MGR_REG_DIG_PRE_DIV_OFFSET,
-	.pll_select_mask =
-		ROOT_CLK_MGR_REG_DIG_PRE_DIV_DIGITAL_PRE_PLL_SELECT_MASK,
-	.pll_select_shift =
-		ROOT_CLK_MGR_REG_DIG_PRE_DIV_DIGITAL_PRE_PLL_SELECT_SHIFT,
+		.div_offset = ROOT_CLK_MGR_REG_DIG0_DIV_OFFSET,
+		.div_mask = ROOT_CLK_MGR_REG_DIG0_DIV_DIGITAL_CH0_DIV_MASK,
+		.div_shift = ROOT_CLK_MGR_REG_DIG0_DIV_DIGITAL_CH0_DIV_SHIFT,
+		.div_trig_offset = ROOT_CLK_MGR_REG_DIG_TRG_OFFSET,
+		.div_trig_mask =
+			ROOT_CLK_MGR_REG_DIG_TRG_DIGITAL_CH0_TRIGGER_MASK,
+		.prediv_trig_offset = ROOT_CLK_MGR_REG_DIG_TRG_OFFSET,
+		.prediv_trig_mask =
+			ROOT_CLK_MGR_REG_DIG_TRG_DIGITAL_PRE_TRIGGER_MASK,
 	},
 	.src = {
-	    .count = ARRAY_SIZE(dig_ch_peri_clk_src_list),
+	    .count = ARRAY_SIZE(dig_chnl_clk_src_list),
 	    .src_inx = 0,
-	    .list = dig_ch_peri_clk_src_list,
+	    .list = dig_chnl_clk_src_list,
 	},
 };
 
@@ -1252,26 +1286,20 @@ static struct peri_clk CLK_NAME(dig_ch1) = {
 		ROOT_CLK_MGR_REG_DIG_CLKGATE_DIGITAL_CH1_HW_SW_GATING_SEL_MASK,
 	.stprsts_mask = ROOT_CLK_MGR_REG_DIG_CLKGATE_DIGITAL_CH1_STPRSTS_MASK,
 	.clk_div = {
-	.div_offset = ROOT_CLK_MGR_REG_DIG1_DIV_OFFSET,
-	.div_mask = ROOT_CLK_MGR_REG_DIG1_DIV_DIGITAL_CH1_DIV_MASK,
-	.div_shift = ROOT_CLK_MGR_REG_DIG1_DIV_DIGITAL_CH1_DIV_SHIFT,
-	.pre_div_offset = ROOT_CLK_MGR_REG_DIG_PRE_DIV_OFFSET,
-	.pre_div_mask = ROOT_CLK_MGR_REG_DIG_PRE_DIV_DIGITAL_PRE_DIV_MASK,
-	.pre_div_shift = ROOT_CLK_MGR_REG_DIG_PRE_DIV_DIGITAL_PRE_DIV_SHIFT,
-	.div_trig_offset = ROOT_CLK_MGR_REG_DIG_TRG_OFFSET,
-	.div_trig_mask = ROOT_CLK_MGR_REG_DIG_TRG_DIGITAL_CH1_TRIGGER_MASK,
-	.prediv_trig_offset = ROOT_CLK_MGR_REG_DIG_TRG_OFFSET,
-	.prediv_trig_mask = ROOT_CLK_MGR_REG_DIG_TRG_DIGITAL_PRE_TRIGGER_MASK,
-	.pll_select_offset = ROOT_CLK_MGR_REG_DIG_PRE_DIV_OFFSET,
-	.pll_select_mask =
-		ROOT_CLK_MGR_REG_DIG_PRE_DIV_DIGITAL_PRE_PLL_SELECT_MASK,
-	.pll_select_shift =
-		ROOT_CLK_MGR_REG_DIG_PRE_DIV_DIGITAL_PRE_PLL_SELECT_SHIFT,
+		.div_offset = ROOT_CLK_MGR_REG_DIG1_DIV_OFFSET,
+		.div_mask = ROOT_CLK_MGR_REG_DIG1_DIV_DIGITAL_CH1_DIV_MASK,
+		.div_shift = ROOT_CLK_MGR_REG_DIG1_DIV_DIGITAL_CH1_DIV_SHIFT,
+		.div_trig_offset = ROOT_CLK_MGR_REG_DIG_TRG_OFFSET,
+		.div_trig_mask =
+			ROOT_CLK_MGR_REG_DIG_TRG_DIGITAL_CH1_TRIGGER_MASK,
+		.prediv_trig_offset = ROOT_CLK_MGR_REG_DIG_TRG_OFFSET,
+		.prediv_trig_mask =
+			ROOT_CLK_MGR_REG_DIG_TRG_DIGITAL_PRE_TRIGGER_MASK,
 	},
 	.src = {
-	    .count = ARRAY_SIZE(dig_ch_peri_clk_src_list),
+	    .count = ARRAY_SIZE(dig_chnl_clk_src_list),
 	    .src_inx = 0,
-	    .list = dig_ch_peri_clk_src_list,
+	    .list = dig_chnl_clk_src_list,
 	},
 };
 
@@ -1294,26 +1322,20 @@ static struct peri_clk CLK_NAME(dig_ch2) = {
 		ROOT_CLK_MGR_REG_DIG_CLKGATE_DIGITAL_CH2_HW_SW_GATING_SEL_MASK,
 	.stprsts_mask = ROOT_CLK_MGR_REG_DIG_CLKGATE_DIGITAL_CH2_STPRSTS_MASK,
 	.clk_div = {
-	.div_offset = ROOT_CLK_MGR_REG_DIG2_DIV_OFFSET,
-	.div_mask = ROOT_CLK_MGR_REG_DIG2_DIV_DIGITAL_CH2_DIV_MASK,
-	.div_shift = ROOT_CLK_MGR_REG_DIG2_DIV_DIGITAL_CH2_DIV_SHIFT,
-	.pre_div_offset = ROOT_CLK_MGR_REG_DIG_PRE_DIV_OFFSET,
-	.pre_div_mask = ROOT_CLK_MGR_REG_DIG_PRE_DIV_DIGITAL_PRE_DIV_MASK,
-	.pre_div_shift = ROOT_CLK_MGR_REG_DIG_PRE_DIV_DIGITAL_PRE_DIV_SHIFT,
-	.div_trig_offset = ROOT_CLK_MGR_REG_DIG_TRG_OFFSET,
-	.div_trig_mask = ROOT_CLK_MGR_REG_DIG_TRG_DIGITAL_CH2_TRIGGER_MASK,
-	.prediv_trig_offset = ROOT_CLK_MGR_REG_DIG_TRG_OFFSET,
-	.prediv_trig_mask = ROOT_CLK_MGR_REG_DIG_TRG_DIGITAL_PRE_TRIGGER_MASK,
-	.pll_select_offset = ROOT_CLK_MGR_REG_DIG_PRE_DIV_OFFSET,
-	.pll_select_mask =
-		ROOT_CLK_MGR_REG_DIG_PRE_DIV_DIGITAL_PRE_PLL_SELECT_MASK,
-	.pll_select_shift =
-		ROOT_CLK_MGR_REG_DIG_PRE_DIV_DIGITAL_PRE_PLL_SELECT_SHIFT,
+		.div_offset = ROOT_CLK_MGR_REG_DIG2_DIV_OFFSET,
+		.div_mask = ROOT_CLK_MGR_REG_DIG2_DIV_DIGITAL_CH2_DIV_MASK,
+		.div_shift = ROOT_CLK_MGR_REG_DIG2_DIV_DIGITAL_CH2_DIV_SHIFT,
+		.div_trig_offset = ROOT_CLK_MGR_REG_DIG_TRG_OFFSET,
+		.div_trig_mask =
+			ROOT_CLK_MGR_REG_DIG_TRG_DIGITAL_CH2_TRIGGER_MASK,
+		.prediv_trig_offset = ROOT_CLK_MGR_REG_DIG_TRG_OFFSET,
+		.prediv_trig_mask =
+			ROOT_CLK_MGR_REG_DIG_TRG_DIGITAL_PRE_TRIGGER_MASK,
 	},
 	.src = {
-	    .count = ARRAY_SIZE(dig_ch_peri_clk_src_list),
+	    .count = ARRAY_SIZE(dig_chnl_clk_src_list),
 	    .src_inx = 0,
-	    .list = dig_ch_peri_clk_src_list,
+	    .list = dig_chnl_clk_src_list,
 	},
 };
 
@@ -1337,21 +1359,15 @@ static struct peri_clk CLK_NAME(dig_ch3) = {
 		.div_offset = ROOT_CLK_MGR_REG_DIG3_DIV_OFFSET,
 		.div_mask = ROOT_CLK_MGR_REG_DIG3_DIV_DIGITAL_CH3_DIV_MASK,
 		.div_shift = ROOT_CLK_MGR_REG_DIG3_DIV_DIGITAL_CH3_DIV_SHIFT,
-		.pre_div_offset = ROOT_CLK_MGR_REG_DIG_PRE_DIV_OFFSET,
-		.pre_div_mask = ROOT_CLK_MGR_REG_DIG_PRE_DIV_DIGITAL_PRE_DIV_MASK,
-		.pre_div_shift = ROOT_CLK_MGR_REG_DIG_PRE_DIV_DIGITAL_PRE_DIV_SHIFT,
 		.div_trig_offset= ROOT_CLK_MGR_REG_DIG_TRG_OFFSET,
 		.div_trig_mask= ROOT_CLK_MGR_REG_DIG_TRG_DIGITAL_CH3_TRIGGER_MASK,
 		.prediv_trig_offset = ROOT_CLK_MGR_REG_DIG_TRG_OFFSET,
 		.prediv_trig_mask = ROOT_CLK_MGR_REG_DIG_TRG_DIGITAL_PRE_TRIGGER_MASK,
-		.pll_select_offset= ROOT_CLK_MGR_REG_DIG_PRE_DIV_OFFSET,
-		.pll_select_mask= ROOT_CLK_MGR_REG_DIG_PRE_DIV_DIGITAL_PRE_PLL_SELECT_MASK,
-		.pll_select_shift= ROOT_CLK_MGR_REG_DIG_PRE_DIV_DIGITAL_PRE_PLL_SELECT_SHIFT
 	},
 	.src = {
-	    .count = ARRAY_SIZE(dig_ch_peri_clk_src_list),
+	    .count = ARRAY_SIZE(dig_chnl_clk_src_list),
 	    .src_inx = 0,
-	    .list = dig_ch_peri_clk_src_list,
+	    .list = dig_chnl_clk_src_list,
 	},
 };
 
@@ -7351,6 +7367,7 @@ static struct __init clk_lookup hawaii_clk_tbl[] =
 	BRCM_REGISTER_CLK(VAR_104M_REF_CLK_NAME_STR, NULL, var_104m),
 	BRCM_REGISTER_CLK(VAR_52M_REF_CLK_NAME_STR, NULL, var_52m),
 	BRCM_REGISTER_CLK(VAR_13M_REF_CLK_NAME_STR, NULL, var_13m),
+	BRCM_REGISTER_CLK(DIG_PREDIV_PERI_CLK_NAME_STR, NULL, dig_prediv),
 	BRCM_REGISTER_CLK(DIG_CH0_PERI_CLK_NAME_STR, NULL, dig_ch0),
 	BRCM_REGISTER_CLK(DIG_CH1_PERI_CLK_NAME_STR, NULL, dig_ch1),
 	BRCM_REGISTER_CLK(DIG_CH2_PERI_CLK_NAME_STR, NULL, dig_ch2),
@@ -7791,6 +7808,10 @@ int __init __clock_init(void)
 
 	dig_ch_peri_clk_ops = gen_peri_clk_ops;
 	dig_ch_peri_clk_ops.init = dig_clk_init;
+
+	dig_prediv_peri_clk_ops = gen_peri_clk_ops;
+	dig_prediv_peri_clk_ops.enable = NULL;
+	dig_prediv_peri_clk_ops.init = NULL;
 
 	en_8ph_pll1_ref_clk_ops = gen_ref_clk_ops;
 	en_8ph_pll1_ref_clk_ops.init = en_8ph_pll1_clk_init;

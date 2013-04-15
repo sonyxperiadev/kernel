@@ -35,7 +35,6 @@
 #include <asm/cpu.h>
 #include <linux/smp.h>
 #endif
-
 #ifdef CONFIG_DEBUG_FS
 #include <linux/debugfs.h>
 #include <asm/uaccess.h>
@@ -3378,7 +3377,6 @@ static int peri_clk_set_rate(struct clk *clk, u32 rate)
 	__peri_clk_enable(clk);
 	clk_div = &peri_clk->clk_div;
 	new_rate = peri_clk_calculate_div(peri_clk, rate, &div, &pre_div, &src);
-
 	if (abs(rate - new_rate) > CLK_RATE_MAX_DIFF) {
 		pr_info("%s : %s - rate(%d) not supported; nearest: %d\n",
 			__func__, clk->name, rate, new_rate);
@@ -3395,16 +3393,19 @@ static int peri_clk_set_rate(struct clk *clk, u32 rate)
 	/* enable write access */
 	ccu_write_access_enable(peri_clk->ccu_clk, true);
 
-	/*Write DIV */
-	reg_val = readl(CCU_REG_ADDR(peri_clk->ccu_clk, clk_div->div_offset));
-	reg_val =
-	    SET_VAL_USING_MASK_SHIFT(reg_val, clk_div->div_mask,
-				     clk_div->div_shift, div);
-	clk_dbg
-	    ("reg_val: %08x, div_offset:%08x, div_mask:%08x, div_shift:%08x, div:%08x\n",
-	     reg_val, clk_div->div_offset, clk_div->div_mask,
-	     clk_div->div_shift, div);
-	writel(reg_val, CCU_REG_ADDR(peri_clk->ccu_clk, clk_div->div_offset));
+	if (clk_div->div_offset) {
+		/*Write DIV */
+		reg_val = readl(CCU_REG_ADDR(peri_clk->ccu_clk,
+					clk_div->div_offset));
+		reg_val =
+			SET_VAL_USING_MASK_SHIFT(reg_val, clk_div->div_mask,
+					clk_div->div_shift, div);
+		clk_dbg("reg: 0x%x, offset:%x, mask:%x, shift:%x, div:%x\n",
+			 reg_val, clk_div->div_offset, clk_div->div_mask,
+			 clk_div->div_shift, div);
+		writel(reg_val, CCU_REG_ADDR(peri_clk->ccu_clk,
+					clk_div->div_offset));
+	}
 
 	if (clk_div->pre_div_offset && clk_div->pre_div_mask) {
 		reg_val =
@@ -3457,9 +3458,9 @@ static int peri_clk_set_rate(struct clk *clk, u32 rate)
 		reg_val =
 		    readl(CCU_REG_ADDR
 			  (peri_clk->ccu_clk, clk_div->prediv_trig_offset));
-		clk_dbg
-		    ("PERDIV: tigger offset: %08x, reg_value: %08x trig_mask:%08x\n",
-		     clk_div->div_trig_offset, reg_val, clk_div->div_trig_mask);
+		clk_dbg("PREDIV: trig offset: %x, reg_value: %x trig_mask:%x\n",
+			clk_div->prediv_trig_offset, reg_val,
+			clk_div->prediv_trig_mask);
 		reg_val =
 		    SET_BIT_USING_MASK(reg_val, clk_div->prediv_trig_mask);
 		writel(reg_val,
