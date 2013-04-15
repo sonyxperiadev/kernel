@@ -111,6 +111,34 @@ int brcm_disable_smi_lcd_clocks(struct pi_mgr_dfs_node* dfs_node)
 	return 0;
 }
 
+void en_disp_clks()
+{
+	if (!g_display_enabled)
+		return;
+	struct clk *dsi_axi;
+	struct clk *dsi_esc;
+	struct clk *dsi_pll;
+	struct clk *dsi_pll_ch;
+	dsi_axi	= clk_get(NULL, dsi_bus_clk[0].dsi_axi);
+	dsi_esc	= clk_get(NULL, dsi_bus_clk[0].dsi_esc);
+	BUG_ON(IS_ERR_OR_NULL(dsi_axi) || IS_ERR_OR_NULL(dsi_esc));
+	if (clk_enable(dsi_axi))
+		return;
+
+	if (clk_enable(dsi_esc))
+		return;
+
+	dsi_pll     = clk_get(NULL, "dsi_pll");
+	dsi_pll_ch  = clk_get(NULL, dsi_bus_clk[0].dsi_pll_ch);
+	BUG_ON(IS_ERR_OR_NULL(dsi_pll) || IS_ERR_OR_NULL(dsi_pll_ch));
+	if (clk_enable(dsi_pll))
+		return;
+
+	if (clk_enable(dsi_pll_ch))
+		return;
+}
+device_initcall(en_disp_clks);
+
 #ifdef __DSI_USE_CLK_API__
 int brcm_enable_dsi_lcd_clocks(
 	struct pi_mgr_dfs_node* dfs_node,
@@ -123,6 +151,11 @@ int brcm_enable_dsi_lcd_clocks(
 	struct	clk *dsi_axi;
 	struct	clk *dsi_esc;
 	
+	if (g_display_enabled) {
+		printk(KERN_ERR "Skipping brcm_enable_dsi_lcd_clocks\n");
+		return 0;
+	}
+	printk(KERN_INFO "brcm_enable_dsi_lcd_clocks\n");
 	if (pi_mgr_dfs_request_update(dfs_node, PI_OPP_TURBO))
 	{
 	    printk(KERN_ERR "Failed to update dfs request for DSI LCD\n");
@@ -167,6 +200,11 @@ int brcm_enable_dsi_pll_clocks(
         u32	dsi_pll_ch_hz;
 	u32	dsi_pll_ch_hz_csl;
 	
+	if (g_display_enabled) {
+		printk(KERN_ERR "skipping brcm_enable_dsi_pll_clocks\n");
+		return 0;
+	}
+	printk(KERN_INFO "brcm_enable_dsi_pll_clocks\n");
 	/* DSI timing is set-up in CSL/cHal using req. clock values */
 	dsi_pll_ch_hz_csl = dsi_pll_hz / dsi_pll_ch_div;
 
@@ -262,7 +300,7 @@ int brcm_disable_dsi_pll_clocks(u32 dsi_bus)
 	dsi_pll_ch = clk_get (NULL, dsi_bus_clk[dsi_bus].dsi_pll_ch);
 	BUG_ON(IS_ERR_OR_NULL(dsi_pll) || IS_ERR_OR_NULL(dsi_pll_ch));
 
-        mm_ccu_set_pll_select(dsi_bus_clk[dsi_bus].pixel_pll_sel,DSI_NO_CLOCK);
+	mm_ccu_set_pll_select(dsi_bus_clk[dsi_bus].pixel_pll_sel, DSI_NO_CLOCK);
 	clk_disable(dsi_pll_ch);
 	clk_disable(dsi_pll);
 #endif

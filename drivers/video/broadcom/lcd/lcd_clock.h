@@ -25,6 +25,8 @@
 
 #include <linux/clk.h>
 #include <plat/pi_mgr.h>
+
+extern int g_display_enabled;
  
 extern int brcm_enable_smi_lcd_clocks(struct pi_mgr_dfs_node* dfs_node);
 
