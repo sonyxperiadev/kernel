@@ -406,7 +406,15 @@ static const struct v4l2_queryctrl ov2675_controls[] = {
 	 .step = 1,
 	 .default_value = FRAME_RATE_AUTO,
 	 },
-
+	 {
+	 .id = V4L2_CID_CAMERA_FLASH_MODE,
+	 .type = V4L2_CTRL_TYPE_INTEGER,
+	 .name = "non-flash",
+	 .minimum = FLASH_MODE_OFF,
+	 .maximum = FLASH_MODE_OFF,
+	 .step = 1,
+	 .default_value = FLASH_MODE_OFF,
+	 },
 };
 
 /**
