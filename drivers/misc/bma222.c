@@ -36,6 +36,7 @@
 #include <linux/earlysuspend.h>
 #endif
 
+#define BMA222_SW_CALIBRATION 1
 #include <linux/of.h>
 #include <linux/of_fdt.h>
 #include <linux/of_platform.h>
@@ -53,6 +54,20 @@
 #define ANY_MOTION_CT			1
 #define BMA222_INPUT_DEVICE		1
 
+#ifdef BMA222_CALIBRATION
+#define BMA222_CHIP_ID_REG                      0x00
+#define BMA222_X_AXIS_REG                       0x03
+#define BMA222_Y_AXIS_REG                       0x05
+#define BMA222_Z_AXIS_REG                       0x07
+#define BMA222_MODE_CTRL_REG                    0x11
+#define BMA2XX_EEPROM_CTRL_REG                  0x33
+#define BMA2XX_OFFSET_CTRL_REG                  0x36
+#define BMA2XX_OFFSET_PARAMS_REG                0x37
+#endif
+
+#ifdef BMA222_SW_CALIBRATION
+static int bma222_offset[3];
+#endif
 static const struct of_device_id bma222_accl_of_match[] = {
 	{.compatible = "bcm,bma222_accl",},
 	{},
@@ -395,12 +410,17 @@ static void bma222_accl_getdata(struct drv_data *dd)
 		Z = -Z;
 	}
 #ifdef BMA222_INPUT_DEVICE
+#ifdef BMA222_SW_CALIBRATION
+	input_report_rel(dd->ip_dev, REL_X, X-bma222_offset[0]);
+	input_report_rel(dd->ip_dev, REL_Y, Y-bma222_offset[1]);
+	input_report_rel(dd->ip_dev, REL_Z, Z-bma222_offset[2]);
+#else
 	input_report_rel(dd->ip_dev, REL_X, X);
 	input_report_rel(dd->ip_dev, REL_Y, Y);
 	input_report_rel(dd->ip_dev, REL_Z, Z);
-	input_sync(dd->ip_dev);
 #endif
-
+#endif
+	input_sync(dd->ip_dev);
 	newacc.x = X;
 	newacc.y = Y;
 	newacc.z = Z;
@@ -481,11 +501,6 @@ static int bma222_accl_misc_ioctl(struct file *file, unsigned int cmd,
 		if (copy_to_user(argp, &newacc, sizeof(newacc)))
 			return -EFAULT;
 		break;
-#ifdef BMA222_CALIBRATION
-	case BMA222_ACCL_IOCTL_CALI:
-
-		break;
-#endif
 	}
 
 	return 0;
@@ -838,6 +853,48 @@ static struct attribute_group bma222_attr_grp = {
 /*calibrate end*/
 #endif
 
+#ifdef BMA222_SW_CALIBRATION
+static ssize_t bma222_get_offset(struct device *dev,
+				struct device_attribute *attr,
+				char *buf)
+{
+	return sprintf(buf, "%d, %d, %d\n", bma222_offset[0],
+					bma222_offset[1], bma222_offset[2]);
+}
+
+static ssize_t bma222_set_offset(struct device *dev,
+				struct device_attribute *attr,
+				const char *buf, size_t count)
+{
+	int x, y, z;
+	int err = -EINVAL;
+	struct i2c_client *client = to_i2c_client(dev);
+	struct drv_data *dd = i2c_get_clientdata(client);
+	struct input_dev *input_dev = dd->ip_dev;
+	err = sscanf(buf, "%d %d %d", &x, &y, &z);
+	if (err != 3) {
+		pr_err("invalid parameter number: %d\n", err);
+		return err;
+	}
+	mutex_lock(&input_dev->mutex);
+	bma222_offset[0] = x;
+	bma222_offset[1] = y;
+	bma222_offset[2] = z;
+	mutex_unlock(&input_dev->mutex);
+	return count;
+}
+static DEVICE_ATTR(offset, 00664, bma222_get_offset, bma222_set_offset);
+static struct attribute *bma222_attributes[] = {
+	&dev_attr_offset.attr,
+	NULL
+};
+
+static struct attribute_group bma222_attr_swcal_grp = {
+	.attrs = bma222_attributes,
+};
+
+#endif
+
 static int __devinit bma222_accl_probe(struct i2c_client *client,
 				       const struct i2c_device_id *id)
 {
@@ -848,6 +905,11 @@ static int __devinit bma222_accl_probe(struct i2c_client *client,
 	u32 val = 0;
 #ifdef BMA222_CALIBRATION
 	fastcali_ret = false;
+#endif
+#ifdef BMA222_SW_CALIBRATION
+	bma222_offset[0] = 0;
+	bma222_offset[1] = 0;
+	bma222_offset[2] = 0;
 #endif
 	struct bma222_accl_platform_data *pdata;
 
@@ -987,6 +1049,11 @@ static int __devinit bma222_accl_probe(struct i2c_client *client,
 	if (rc != 0)
 		goto probe_err_setmode;
 #endif
+#ifdef BMA222_SW_CALIBRATION
+	rc = sysfs_create_group(&client->dev.kobj, &bma222_attr_swcal_grp);
+	if (rc != 0)
+		goto probe_err_setmode;
+#endif
 	printk(KERN_INFO "- %s\n", __func__);
 
 	return rc;
@@ -994,6 +1061,10 @@ static int __devinit bma222_accl_probe(struct i2c_client *client,
 probe_err_setmode:
 #ifdef BMA222_CALIBRATION
 	sysfs_remove_group(&bma222_accl_client->dev.kobj, &bma222_attr_grp);
+#endif
+#ifdef BMA222_SW_CALIBRATION
+	sysfs_remove_group(&bma222_accl_client->dev.kobj,
+				&bma222_attr_swcal_grp);
 #endif
 probe_err_smbcfg:
 	misc_deregister(&bma222_accl_misc_device);
@@ -1035,6 +1106,10 @@ static int __devexit bma222_accl_remove(struct i2c_client *client)
 #endif
 #ifdef BMA222_CALIBRATION
 	sysfs_remove_group(&bma222_accl_client->dev.kobj, &bma222_attr_grp);
+#endif
+#ifdef BMA222_SW_CALIBRATION
+	sysfs_remove_group(&bma222_accl_client->dev.kobj,
+						&bma222_attr_swcal_grp);
 #endif
 
 	misc_deregister(&bma222_accl_misc_device);
