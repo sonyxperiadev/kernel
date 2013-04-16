@@ -154,6 +154,7 @@ static Boolean enable156MClk = FALSE;
 static Boolean enable2P4MClk = FALSE;
 static struct clk *clkIDCAPH[MAX_CAPH_CLOCK_NUM] = {NULL, NULL, NULL, NULL};
 static struct clk *clkIDSSP[MAX_SSP_CLOCK_NUM] = {NULL, NULL, NULL};
+static int audio_tuning_flag;
 enum SSP_CLK_ID {
 	CLK_SSP3_AUDIO, /* KHUB_SSP3_AUDIO_CLK */
 	CLK_SSP4_AUDIO, /* KHUB_SSP4_AUDIO_CLK */
@@ -2922,7 +2923,7 @@ static void csl_ssp_ControlHWClock(Boolean enable,
 }
 
 /* For digi-mic clock and power control*/
-static void csl_ControlHWClock_2p4m(Boolean enable)
+void csl_ControlHWClock_2p4m(Boolean enable)
 {
 	if (enable && !enable2P4MClk) {
 		/* use DMIC*/
@@ -2961,7 +2962,7 @@ static void csl_ControlHWClock_2p4m(Boolean enable)
 }
 
 /* For eanc clock control*/
-static void csl_ControlHWClock_156m(Boolean enable)
+void csl_ControlHWClock_156m(Boolean enable)
 {
 	if (enable && !enable156MClk) {
 		if (clkIDCAPH[CLK_156M] == NULL)
@@ -2993,7 +2994,6 @@ void csl_caph_ControlHWClock(Boolean enable)
 	if (enable == TRUE) {
 		if (sClkCurEnabled == FALSE) {
 			sClkCurEnabled = TRUE;
-
 			/*Enable CAPH clock.*/
 			clkIDCAPH[CLK_SRCMIXER] =
 				clk_get(NULL, "caph_srcmixer_clk");
@@ -4299,7 +4299,8 @@ Result_t csl_caph_hwctrl_DisablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 	csl_caph_hwctrl_RemovePathInTable(path->pathID);
 
 	/*shutdown all audio clock if no audio activity, at last*/
-	if (csl_caph_hwctrl_allPathsDisabled() == TRUE) {
+	if (csl_caph_hwctrl_allPathsDisabled() == TRUE &&
+		(!csl_caph_TuningFlag())) {
 		csl_ControlHWClock_2p4m(FALSE);
 		csl_ControlHWClock_156m(FALSE);
 		csl_caph_ControlHWClock(FALSE);
@@ -5942,4 +5943,23 @@ int csl_caph_FindPathWithSink(CSL_CAPH_DEVICE_e sink, int skip_path)
 int csl_caph_hwctrl_aadmac_autogate_status(void)
 {
 	return csl_caph_dma_autogate_status();
+}
+/****************************************************************************
+*
+*  Description: Set tuning flag, flag info is sent from CP audio
+*
+*
+*****************************************************************************/
+void csl_caph_SetTuningFlag(int flag)
+{
+	audio_tuning_flag = flag;
+}
+/****************************************************************************
+*
+*  Description: Get tuning flag
+*
+*****************************************************************************/
+int csl_caph_TuningFlag(void)
+{
+	return audio_tuning_flag;
 }

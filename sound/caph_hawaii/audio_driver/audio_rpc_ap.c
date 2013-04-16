@@ -141,6 +141,9 @@ void HandleAudioEventrespCb(RPC_Msg_t *pMsg,
 			"HandleAudioEventrespCb : start tuning addr=0x%x\r\n",
 			addr);
 		AUDDRV_SetTuningFlag(1);
+		csl_caph_ControlHWClock(TRUE);
+		csl_ControlHWClock_156m(TRUE);
+		csl_ControlHWClock_2p4m(TRUE);
 	}
 
 	if (MSG_AUDIO_STOP_TUNING_IND == pMsg->msgId) {
@@ -150,6 +153,11 @@ void HandleAudioEventrespCb(RPC_Msg_t *pMsg,
 			"HandleAudioEventrespCb : stop tuning addr=0x%x\r\n",
 			addr);
 		AUDDRV_SetTuningFlag(0);
+		if (csl_caph_hwctrl_allPathsDisabled() == TRUE) {
+			csl_ControlHWClock_2p4m(FALSE);
+			csl_ControlHWClock_156m(FALSE);
+			csl_caph_ControlHWClock(FALSE);
+		}
 	}
 
 	if (MSG_AUDIO_TUNING_SETPARM_IND == pMsg->msgId) {

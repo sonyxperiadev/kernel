@@ -1738,6 +1738,7 @@ void AUDDRV_SetULSpeechRecordGain(Int16 gain)
 void AUDDRV_SetTuningFlag(int flag)
 {
 	audio_tuning_flag = flag;
+	csl_caph_SetTuningFlag(audio_tuning_flag);
 }
 
 /******************************************************************************

@@ -631,6 +631,24 @@ void csl_caph_ControlHWClock(Boolean enable);
 
 /****************************************************************************
 *
+* Function Name: csl_ControlHWClock_156m
+*
+* Description: control the eanc clock
+*
+* ***************************************************************************/
+void csl_ControlHWClock_156m(Boolean enable);
+
+/****************************************************************************
+*
+*  Function Name: csl_ControlHWClock_2p4m
+*
+*  Description: control the digi-mic clock and power control
+*
+****************************************************************************/
+void csl_ControlHWClock_2p4m(Boolean enable);
+
+/****************************************************************************
+*
 * Function Name: void csl_caph_QueryHWClock(Boolean enable)
 *
 * Description: This is to query if the CAPH clocks are enabled/disabled
@@ -840,4 +858,6 @@ void csl_caph_hwctrl_SetLongDma(CSL_CAPH_PathID pathID);
 int csl_caph_hwctrl_hub(int arg1, int arg2);
 int csl_caph_FindPathWithSink(CSL_CAPH_DEVICE_e sink, int skip_path);
 int csl_caph_hwctrl_aadmac_autogate_status(void);
+void csl_caph_SetTuningFlag(int flag);
+int csl_caph_TuningFlag(void);
 #endif
