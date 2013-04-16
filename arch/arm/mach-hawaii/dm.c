@@ -496,9 +496,7 @@ static void local_secure_api(unsigned service_id,
 
 
 #ifdef CONFIG_MOBICORE_DRIVER
-	/* Before getting new Mobicore OS binary,
-	   temporay block dormant secure api     */
-	//mobicore_smc(service_id,arg0,arg1,arg2);
+	mobicore_smc(service_id,arg0,arg1,arg2);
 
 #else
 	/* Set Up Registers to pass data to Secure Monitor */
