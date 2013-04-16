@@ -1007,7 +1007,7 @@ static struct batt_eoc_curr_cap_map ys_05_eoc_cap_lut[] = {
 static struct batt_cutoff_cap_map ys_05_cutoff_cap_lut[] = {
 	{3460, 2},
 	{3430, 1},
-	{3400, 0},
+	{3350, 0},
 };
 
 
@@ -1491,36 +1491,43 @@ int __init rgltr_init(void)
 		if (prop) {
 			val = prop->value;
 			for (j = 0, total = 0, len = 0; total < prop->length;
-			len = strlen(val) + 1, total += len, val += len, j++)
+			     len = strlen(val) + 1, total += len,
+			     val += len, j++)
 				output[j] = val;
-		}
-		sscanf(output[0], "%d", &int_val);
-		rgltr_pdata.bcmpmu_rgltr[i].initdata->num_consumer_supplies =
-			int_val;
-		rgltr_pdata.bcmpmu_rgltr[i].initdata->consumer_supplies =
-		kzalloc(sizeof(struct regulator_consumer_supply)*int_val,
-					GFP_KERNEL);
-		for (j = 0, k = 1; j < int_val; j++, k++)
+			/* coverity[secure_coding] */
+			sscanf(output[0], "%d", &int_val);
 			rgltr_pdata.bcmpmu_rgltr[i].initdata->
-				consumer_supplies[j].supply = output[k];
+			    num_consumer_supplies = int_val;
+			rgltr_pdata.bcmpmu_rgltr[i].initdata->
+			    consumer_supplies =
+			    kzalloc(sizeof(struct regulator_consumer_supply) *
+				    int_val, GFP_KERNEL);
+			for (j = 0, k = 1; j < int_val; j++, k++)
+				rgltr_pdata.bcmpmu_rgltr[i].initdata->
+				    consumer_supplies[j].supply = output[k];
 
-		sscanf(output[k++], "%d", &int_val);
-		rgltr_pdata.bcmpmu_rgltr[i].initdata->constraints.always_on =
-			int_val;
+			/* coverity[secure_coding] */
+			sscanf(output[k++], "%d", &int_val);
+			rgltr_pdata.bcmpmu_rgltr[i].initdata->
+			    constraints.always_on = int_val;
 
-		sscanf(output[k++], "%d", &int_val);
-		rgltr_pdata.bcmpmu_rgltr[i].pc_pins_map = int_val;
+			/* coverity[secure_coding] */
+			sscanf(output[k++], "%d", &int_val);
+			rgltr_pdata.bcmpmu_rgltr[i].pc_pins_map = int_val;
 
-		sscanf(output[k++], "%d", &int_val);
-		rgltr_pdata.bcmpmu_rgltr[i].dsm_mode = int_val;
+			/* coverity[secure_coding] */
+			sscanf(output[k++], "%d", &int_val);
+			rgltr_pdata.bcmpmu_rgltr[i].dsm_mode = int_val;
 
-		sscanf(output[k++], "%d", &int_val);
-		rgltr_pdata.bcmpmu_rgltr[i].initdata->constraints.boot_on =
-			int_val;
+			/* coverity[secure_coding] */
+			sscanf(output[k++], "%d", &int_val);
+			rgltr_pdata.bcmpmu_rgltr[i].initdata->constraints.
+			    boot_on = int_val;
 
-		sscanf(output[k++], "%d", &int_val);
-		rgltr_pdata.bcmpmu_rgltr[i].req_volt = int_val;
-
+			/* coverity[secure_coding] */
+			sscanf(output[k++], "%d", &int_val);
+			rgltr_pdata.bcmpmu_rgltr[i].req_volt = int_val;
+		}
 	}
 	return 0;
 }
@@ -1541,24 +1548,30 @@ int __init adc_init(void)
 	}
 
 	for (i = 0; i < PMU_ADC_CHANN_MAX; i++) {
+		/* coverity[secure_coding] */
 		sprintf(buf, "channel%d", i);
 		prop = of_find_property(np, buf, NULL);
 		if (prop) {
 			val = prop->value;
 			for (j = 0, total = 0, len = 0; total < prop->length;
-			len = strlen(val) + 1, total += len, val += len, j++)
+			     len = strlen(val) + 1, total += len,
+			     val += len, j++)
 				output[j] = val;
+
+			if (strlen(output[0]) == 1)
+				continue;
+			adc_pdata[i].name = output[0];
+
+			/* coverity[secure_coding] */
+			sscanf(output[1], "%d", &adc_pdata[i].flag);
+			/* coverity[secure_coding] */
+			sscanf(output[2], "%d", &adc_pdata[i].volt_range);
+			/* coverity[secure_coding] */
+			sscanf(output[3], "%d", &adc_pdata[i].adc_offset);
+			/* coverity[secure_coding] */
+			sscanf(output[4], "%x", &addr_offset);
+			adc_pdata[i].reg = PMU_REG_ADCCTRL1 + addr_offset;
 		}
-
-		if (strlen(output[0]) == 1)
-			continue;
-		adc_pdata[i].name = output[0];
-
-		sscanf(output[1], "%d", &adc_pdata[i].flag);
-		sscanf(output[2], "%d", &adc_pdata[i].volt_range);
-		sscanf(output[3], "%d", &adc_pdata[i].adc_offset);
-		sscanf(output[4], "%x", &addr_offset);
-		adc_pdata[i].reg = PMU_REG_ADCCTRL1 + addr_offset;
 	}
 	return 0;
 }
