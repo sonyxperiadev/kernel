@@ -61,6 +61,7 @@ obj-y				+= lis3lv02d/
 obj-y				+= carma/
 obj-$(CONFIG_USB_SWITCH_FSA9480) += fsa9480.o
 obj-$(CONFIG_USB_SWITCH_TSU6111) += tsu6111.o
+obj-$(CONFIG_MFD_RT)		+= rt8973.o
 obj-$(CONFIG_ALTERA_STAPL)	+=altera-stapl/
 obj-$(CONFIG_MAX8997_MUIC)	+= max8997-muic.o
 obj-$(CONFIG_WL127X_RFKILL)	+= wl127x-rfkill.o

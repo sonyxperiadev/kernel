@@ -67,6 +67,11 @@
 #define PMU_BC_DCP		3
 #define PMU_CHP_TYPE_MASK	0x3
 
+#define JIG_BC_STS_SDP_MSK     (1<<2)
+/* uart including Jig UART */
+#define JIG_BC_STS_UART_MSK    ((1<<3) | (1<<11) | (1<<10))
+#define JIG_BC_STS_DCP_MSK     (1<<6)
+#define JIG_BC_STS_CDP_MSK     (1<<5)
 #define CURR_LMT_MAX	0xFFFF
 
 /* PMU ID and Revision */

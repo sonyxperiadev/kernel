@@ -698,6 +698,63 @@ config USB_SWITCH_TSU6111
 	  stereo and mono audio, video, microphone and UART data to use
 	  a common connector port.
 
+config USB_SWITCH_TSU6721
+	tristate "TSU6721 USB Switch"
+	depends on I2C
+	help
+	  The TSU6721 is a USB port accessory detector and switch.
+	  The TSU6721 is fully controlled using I2C and enables USB data,
+	  stereo and mono audio, video, microphone and UART data to use
+	  a common connector port.
+
+config MFD_RT
+	tristate "Richtek USB Switch"
+	depends on I2C
+	help
+	  The RT8973 is a USB port accessory detector and switch.
+
+config RT8973
+	tristate "Richtek USB Switch"
+	depends on I2C
+	help
+	  The RT8973 is a USB port accessory detector and switch.
+
+config RT_I2C_MUSC
+	tristate "Richtek USB Switch"
+	depends on I2C
+	help
+	  The RT8973 is a USB port accessory detector and switch.
+
+config RT8973_CM_AUTO
+	tristate "Richtek USB Switch"
+	depends on I2C
+	help
+	  The RT8973 is a USB port accessory detector and switch.
+
+config RTMUSC_INT_CONFIG
+	tristate "Richtek USB Switch"
+	depends on I2C
+	help
+	  The RT8973 is a USB port accessory detector and switch.
+
+config RTMUSC_IRQ_NUMBER
+	tristate "Richtek USB Switch"
+	depends on I2C
+	help
+	  The RT8973 is a USB port accessory detector and switch.
+
+config RT_SYSFS_DBG
+	tristate "Richtek USB Switch"
+	depends on I2C
+	help
+	  The RT8973 is a USB port accessory detector and switch.
+
+config RT_SHOW_INFO
+	tristate "Richtek USB Switch"
+	depends on I2C
+	help
+	  The RT8973 is a USB port accessory detector and switch.
+
 config MAX8997_MUIC
 	tristate "MAX8997 MUIC Support"
 	depends on MFD_MAX8997
