@@ -88,9 +88,6 @@ static int bcmpmu_otg_xceiv_adp_change_notif_handler(struct notifier_block *nb,
 	    container_of(nb, struct bcmpmu_otg_xceiv_data,
 			 bcm_otg_adp_change_done_notifier);
 
-	if (!xceiv_data)
-		return -EINVAL;
-
 	queue_work(xceiv_data->bcm_otg_work_queue,
 		   &xceiv_data->bcm_otg_adp_change_work);
 
@@ -104,9 +101,6 @@ static int bcmpmu_otg_xceiv_adp_sns_end_notif_handler(struct notifier_block *nb,
 	struct bcmpmu_otg_xceiv_data *xceiv_data =
 	    container_of(nb, struct bcmpmu_otg_xceiv_data,
 			 bcm_otg_adp_sns_end_notifier);
-
-	if (!xceiv_data)
-		return -EINVAL;
 
 	queue_work(xceiv_data->bcm_otg_work_queue,
 		   &xceiv_data->bcm_otg_sens_end_work);

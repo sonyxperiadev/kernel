@@ -164,28 +164,24 @@ void w_shutdown_core(void *p)
 
 	dwc_otg_disable_global_interrupts(core_if);
 
-	if (core_if) {
 #ifdef CONFIG_USB_DELAYED_SUSPEND_POWER_SAVING
 		DWC_TIMER_CANCEL(core_if->suspend_power_saving_timer);
 #endif
-
-		if ((core_if->op_state == B_PERIPHERAL) &&
-			    core_if->xceiver->state != OTG_STATE_UNDEFINED) {
-			if (dwc_otg_is_device_mode(core_if)) {
-				core_if->lx_state = DWC_OTG_L0;
-				/* Make sure PHY clock is on */
-				dwc_otg_start_stop_phy_clk(core_if, true);
-				cil_pcd_stop(core_if);
-				dwc_otg_start_stop_phy_clk(core_if, false);
+	if ((core_if->op_state == B_PERIPHERAL) &&
+		core_if->xceiver->state != OTG_STATE_UNDEFINED) {
+		if (dwc_otg_is_device_mode(core_if)) {
+			core_if->lx_state = DWC_OTG_L0;
+			/* Make sure PHY clock is on */
+			dwc_otg_start_stop_phy_clk(core_if, true);
+			cil_pcd_stop(core_if);
+			dwc_otg_start_stop_phy_clk(core_if, false);
 
 #ifdef CONFIG_USB_OTG_UTILS
-			if (core_if->xceiver->shutdown)
-				usb_phy_shutdown(core_if->xceiver);
+		if (core_if->xceiver->shutdown)
+			usb_phy_shutdown(core_if->xceiver);
 #endif
-			}
-
-			core_if->xceiver->state = OTG_STATE_UNDEFINED;
 		}
+	core_if->xceiver->state = OTG_STATE_UNDEFINED;
 	}
 }
 
@@ -2809,6 +2805,10 @@ void ep_xfer_timeout(void *ptr)
 
 	if (ptr)
 		xfer_info = (struct ep_xfer_info *) ptr;
+	else {
+		DWC_ERROR("ptr == NULL\n");
+		return;
+	}
 
 	if (!xfer_info->ep) {
 		DWC_ERROR("xfer_info->ep = %p\n", xfer_info->ep);

@@ -389,10 +389,12 @@ static int ep_queue(struct usb_ep *usb_ep, struct usb_request *usb_req,
 	usb_req->actual = 0;
 
 	ep = ep_from_handle(pcd, usb_ep);
-	if (ep == NULL)
-		is_isoc_ep = 0;
-	else
-		is_isoc_ep = (ep->dwc_ep.type == DWC_OTG_EP_TYPE_ISOC) ? 1 : 0;
+	if (!ep) {
+		DWC_ERROR("bad endpoint\n");
+		return -EINVAL;
+	}
+
+	is_isoc_ep = (ep->dwc_ep.type == DWC_OTG_EP_TYPE_ISOC) ? 1 : 0;
 
 #ifdef DWC_UTE_PER_IO
 
@@ -840,7 +842,7 @@ static int dwc_udc_start(struct usb_gadget *gadget,
 	 */
 	gadget_wrapper->pcd->core_if->gadget_pullup_on = true;
 	dwc_otg_pcd_disconnect(gadget_wrapper->pcd, false);
-	
+
 	DWC_DEBUGPL(DBG_ANY, "probed gadget driver '%s'\n",
 		    driver->driver.name);
 
@@ -886,7 +888,7 @@ static int dwc_udc_stop(struct usb_gadget *gadget,
 	dwc_otg_pcd_stop(gadget_wrapper->pcd);
 
 	dwc_otg_enable_global_interrupts(gadget_wrapper->pcd->core_if);
-	
+
 	/* Schedule a work item to shutdown the core */
 	DWC_WORKQ_SCHEDULE(gadget_wrapper->pcd->core_if->wq_otg,
 			   w_shutdown_core, gadget_wrapper->pcd->core_if,
@@ -1467,7 +1469,7 @@ int pcd_init(
 	}
 #endif
 	dwc_otg_pcd_start(gadget_wrapper->pcd, &fops);
-	usb_add_gadget_udc(&_dev->dev,&gadget_wrapper->gadget);
+	usb_add_gadget_udc(&_dev->dev, &gadget_wrapper->gadget);
 	return retval;
 }
 
@@ -1506,6 +1508,6 @@ void pcd_remove(
 	dwc_otg_pcd_remove(otg_dev->pcd);
 	free_wrapper(gadget_wrapper);
 	otg_dev->pcd = 0;
-	
+
 }
 #endif /* DWC_HOST_ONLY */
