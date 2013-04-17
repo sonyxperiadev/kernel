@@ -44,6 +44,9 @@
 #include <linux/input.h>
 #include <linux/miscdevice.h>
 #include <linux/wakelock.h>
+#ifdef CONFIG_HAS_EARLYSUSPEND
+#include <linux/earlysuspend.h>
+#endif
 #include <linux/of.h>
 #include <linux/of_fdt.h>
 #include <linux/of_platform.h>
@@ -140,6 +143,10 @@ static loff_t isl290xx_llseek(struct file *file, loff_t offset, int orig);
 #ifdef ISL290XX_POLL_MODE
 static struct timer_list prox_poll_timer;
 #endif
+#ifdef CONFIG_HAS_EARLYSUSPEND
+static void isl290xx_early_suspend(struct early_suspend *handler);
+static void isl290xx_late_resume(struct early_suspend *handler);
+#endif
 
 static int prv_isl290xx_get_lux(void);
 static int prv_isl290xx_device_name(unsigned char *bufp, char **device_name);
@@ -183,6 +190,10 @@ static struct i2c_driver isl290xx_driver = {
 		   .of_match_table = isl290xx_of_match,
 		   },
 	.id_table = isl290xx_idt,
+#ifndef CONFIG_HAS_EARLYSUSPEND
+	.suspend = isl290xx_suspend,
+	.resume	= isl290xx_resume,
+#endif
 	.probe = isl290xx_probe,
 	.remove = __devexit_p(isl290xx_remove),
 };
@@ -207,6 +218,9 @@ struct isl290xx_data_t {
 	unsigned long last_updated;
 	struct isl290xx_intr_data_t *pdata;
 	struct work_struct isl290xx_work;
+#ifdef CONFIG_HAS_EARLYSUSPEND
+	struct early_suspend	early_suspend;
+#endif
 	enum isl290xx_chip_type_e chip_type;
 	struct mutex proximity_calibrating;
 } *isl290xx_data_tp;
@@ -232,8 +246,8 @@ static u8 gain_param = 1;
 
 static u16 gain_trim_param = 25;
 
-static u16 prox_threshold_hi_param = 75;
-static u16 prox_threshold_lo_param = 40;
+static u16 prox_threshold_hi_param = 48;
+static u16 prox_threshold_lo_param = 24;
 static u8 prox_int_time_param = 0xF6;
 static u8 prox_adc_time_param = 0xFF;
 static u8 prox_wait_time_param = 0xFF;
@@ -310,7 +324,7 @@ static void prv_isl290xx_work_func(struct work_struct *w)
 
 	if ((status & ISL290XX_INT_PROX_BIT) != 0) {
 		status = status & (~ISL290XX_INT_PROX_BIT);
-		pr_debug("isl290xx: data %d, hi=%d, lo=%d\n",
+		pr_info("isl290xx: data %d, hi=%d, lo=%d\n",
 			 isl290xx_prox_cur_infop->prox_data,
 			 isl290xx_cfgp->prox_threshold_hi,
 			 isl290xx_cfgp->prox_threshold_lo);
@@ -562,6 +576,41 @@ static void isl290xx_prox_poll_work_f(struct work_struct *work)
 }
 #endif
 
+static int isl290xx_suspend(struct i2c_client *client, pm_message_t mesg)
+{
+	int ret = 0;
+	ret = cancel_work_sync(&isl290xx_data_tp->isl290xx_work);
+#ifdef ISL290XX_POLL_MODE
+	ret = cancel_delayed_work_sync(&isl290xx_data_tp->prox_poll_work);
+#endif
+	return 0;
+}
+
+static int isl290xx_resume(struct i2c_client *client)
+{
+	int ret = 0;
+	return ret;
+}
+
+#ifdef CONFIG_HAS_EARLYSUSPEND
+static void isl290xx_early_suspend(struct early_suspend *handler)
+{
+	struct isl290xx_data_t *isl290xx_data;
+
+	isl290xx_data = container_of(handler, struct isl290xx_data_t,
+						early_suspend);
+	isl290xx_suspend(isl290xx_data->client, PMSG_SUSPEND);
+}
+
+static void isl290xx_late_resume(struct early_suspend *handler)
+{
+	struct isl290xx_data_t *isl290xx_data;
+
+	isl290xx_data = container_of(handler, struct isl290xx_data_t, early_suspend);
+	isl290xx_resume(isl290xx_data->client);
+}
+#endif
+
 static int isl290xx_probe(struct i2c_client *clientp,
 			  const struct i2c_device_id *idp)
 {
@@ -772,7 +821,12 @@ static int isl290xx_probe(struct i2c_client *clientp,
 		goto exit_input_register_device_failed;
                 pr_isl(ERROR, "sysfs create debug node fail, ret: %d\n", ret);
 	}
-	prv_isl290xx_ctrl_lp(0x10);
+#ifdef CONFIG_HAS_EARLYSUSPEND
+	isl290xx_data_tp->early_suspend.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN + 1;
+	isl290xx_data_tp->early_suspend.suspend = isl290xx_early_suspend;
+	isl290xx_data_tp->early_suspend.resume = isl290xx_late_resume;
+	register_early_suspend(&isl290xx_data_tp->early_suspend);
+#endif
 	pr_info("isl probe ---\n");
 	return ret;
 exit_input_register_device_failed:
