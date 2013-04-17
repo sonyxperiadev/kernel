@@ -210,14 +210,18 @@ static int ion_system_heap_allocate(struct ion_heap *heap,
 	}
 	pr_debug("%16s: iommu map buffer(%p) da(%#x) size(%#x)\n",
 			heap->name, buffer, buffer->dma_addr, buffer->size);
+	buffer->priv_virt = table;
+	return 0;
 #else
 	pr_err("%16s: map dma not supported without iommu\n",
 			heap->name);
 	goto err1;
 #endif /* CONFIG_BCM_IOVMM */
-#endif /* CONFIG_ION_BCM */
+#else /* CONFIG_ION_BCM */
 	buffer->priv_virt = table;
 	return 0;
+#endif /* CONFIG_ION_BCM */
+
 err1:
 	kfree(table);
 err:
