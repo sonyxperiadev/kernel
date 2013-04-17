@@ -132,7 +132,7 @@ static ssize_t sysrpc_store(struct sysrpc_obj *sysrpc_obj,
 
 static struct sysrpc_attribute sysrpc_attribute =
 	__ATTR(lps,
-		(S_IRUSR|S_IRGRP|S_IROTH|S_IWUSR|S_IWGRP|S_IWOTH),
+		(S_IRUSR|S_IRGRP|S_IROTH|S_IWUSR),
 		sysrpc_show, sysrpc_store);
 
 static struct attribute *sysrpc_default_attrs[] = {

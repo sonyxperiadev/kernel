@@ -600,8 +600,8 @@ static ssize_t kxtik_set_offset(struct device *dev,
 	return count;
 }
 
-static DEVICE_ATTR(poll, 00777, kxtik_get_poll, kxtik_set_poll);
-static DEVICE_ATTR(enable, 00777, NULL, kxtik_set_enable);
+static DEVICE_ATTR(poll, 00644, kxtik_get_poll, kxtik_set_poll);
+static DEVICE_ATTR(enable, 00644, NULL, kxtik_set_enable);
 static DEVICE_ATTR(offset, 00664, kxtik_get_offset, kxtik_set_offset);
 
 static struct attribute *kxtik_attributes[] = {
