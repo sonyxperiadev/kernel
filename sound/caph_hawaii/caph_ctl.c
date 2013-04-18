@@ -2009,6 +2009,16 @@ static TPcm_Stream_Ctrls sgCaphStreamCtls[CAPH_MAX_PCM_STREAMS] __devinitdata
 	 .strStreamName = "C2",
 	 .ctlLine = BCM_CTL_SRC_LINES,
 	 },
+	  /*
+	 * Capture Mix O/P In
+	 */
+	{
+	 .iFlags = MIXER_STREAM_FLAGS_CAPTURE,
+	 .iTotalCtlLines = MIC_TOTAL_COUNT_FOR_USER,
+	 .iLineSelect = {AUDIO_SOURCE_IHF, AUDIO_SOURCE_IHF},
+	 .strStreamName = "C3",
+	 .ctlLine = BCM_CTL_SRC_LINES,
+	 },
 	/*
 	 * VOIP In
 	 */

@@ -2124,6 +2124,7 @@ static void csl_caph_config_sw
 	CSL_CAPH_DEVICE_e sink;
 	int src_path;
 	int is_broadcast = 0;
+	unsigned int aud_assert = 0;
 
 	if (!pathID)
 		return;
@@ -2145,8 +2146,27 @@ static void csl_caph_config_sw
 
 	if (!swCfg->FIFO_srcAddr) {
 		/*blockPathIdx == 0, sw is the first*/
-		if (path->source != CSL_CAPH_ECHO_REF_MIC)
+		if (path->source != CSL_CAPH_ECHO_REF_MIC) {
 			swCfg->trigger = csl_caph_get_dev_trigger(path->source);
+
+			if (path->source == CSL_CAPH_DEV_EP) {
+				swCfg->FIFO_srcAddr =
+					csl_caph_srcmixer_get_fifo_addr
+					(CAPH_MIXER2_OUTFIFO2);
+				aud_assert = 1;
+			} else if (path->source == CSL_CAPH_DEV_IHF) {
+					swCfg->FIFO_srcAddr =
+						csl_caph_srcmixer_get_fifo_addr
+						(CAPH_MIXER2_OUTFIFO1);
+				aud_assert = 1;
+			} else if (path->source == CSL_CAPH_DEV_HS) {
+					swCfg->FIFO_srcAddr =
+						csl_caph_srcmixer_get_fifo_addr
+						(CAPH_MIXER1_OUTFIFO);
+				aud_assert = 1;
+			}
+		}
+
 		if (path->source == CSL_CAPH_ECHO_REF_MIC) {
 			/*only consider ihf output for now*/
 			swCfg->FIFO_srcAddr = csl_caph_srcmixer_get_fifo_addr
@@ -2169,7 +2189,8 @@ static void csl_caph_config_sw
 			swCfg->FIFO_srcAddr = csl_i2s_get_rx0_fifo_data_port
 				(fmHandleSSP);
 		} else {
-			audio_xassert(0, pathID);
+			if (aud_assert == 0)
+				audio_xassert(0, pathID);
 		}
 	}
 
@@ -3899,6 +3920,9 @@ CSL_CAPH_PathID csl_caph_hwctrl_SetupPath(CSL_CAPH_HWCTRL_CONFIG_t config,
 		}
 	} else if (((path->source == CSL_CAPH_DEV_ANALOG_MIC)
 		|| (path->source == CSL_CAPH_DEV_HS_MIC)
+		|| (path->source == CSL_CAPH_DEV_HS)
+		|| (path->source == CSL_CAPH_DEV_IHF)
+		|| (path->source == CSL_CAPH_DEV_EP)
 		|| (path->source == CSL_CAPH_DEV_DIGI_MIC_L)
 		|| (path->source == CSL_CAPH_DEV_DIGI_MIC_R)
 		|| (path->source == CSL_CAPH_DEV_DIGI_MIC)
@@ -4223,7 +4247,12 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 
 	path = &HWConfig_Table[pathID-1];
 
-	path->sinkCount = 1;
+	if ((config.source == CSL_CAPH_DEV_HS)
+		|| (config.source == CSL_CAPH_DEV_IHF)
+		|| (config.source == CSL_CAPH_DEV_EP))
+		path->sinkCount = 0;
+	else
+		path->sinkCount = 1;
 
 	config.pathID = csl_caph_hwctrl_SetupPath(config, 0);
 
@@ -4270,7 +4299,12 @@ Result_t csl_caph_hwctrl_DisablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 
 			csl_caph_hwctrl_remove_blocks
 				(path->pathID, i, path->block_split_offset);
-			path->sinkCount--;
+				if ((config.source == CSL_CAPH_DEV_HS)
+				|| (config.source == CSL_CAPH_DEV_IHF)
+				|| (config.source == CSL_CAPH_DEV_EP))
+					path->sinkCount = 0;
+				else
+					path->sinkCount--;
 		}
 	}
 
@@ -4436,7 +4470,12 @@ Result_t csl_caph_hwctrl_RemovePath(CSL_CAPH_PathID pathID,
 
 	path->sink[sinkNo] = CSL_CAPH_DEV_NONE;
 
-	path->sinkCount--;
+	if ((config.source == CSL_CAPH_DEV_HS)
+		|| (config.source == CSL_CAPH_DEV_IHF)
+		|| (config.source == CSL_CAPH_DEV_EP))
+		path->sinkCount = 0;
+	else
+		path->sinkCount--;
 
 	csl_caph_hwctrl_PrintPath(path);
 

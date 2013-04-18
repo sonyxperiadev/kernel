@@ -65,7 +65,7 @@ the GPL, without Broadcom's express prior written consent.
 #define VOICE_CALL_SUB_DEVICE 8
 
 #define	NUM_PLAYBACK_SUBDEVICE	3
-#define	NUM_CAPTURE_SUBDEVICE	2
+#define	NUM_CAPTURE_SUBDEVICE	3
 
 /* limitation for RHEA - only two blocks */
 #define	PCM_MAX_PLAYBACK_BUF_BYTES			(64*1024)
@@ -668,7 +668,8 @@ static int PcmCaptureOpen(struct snd_pcm_substream *substream)
 
 	callMode = chip->iCallMode;
 
-	if ((substream_number + 1) == CTL_STREAM_PANEL_PCMIN) {
+	if (((substream_number + 1) == CTL_STREAM_PANEL_PCMIN)
+		|| ((substream_number + 1) == CTL_STREAM_PANEL_PCM_IN)) {
 		chip->streamCtl[substream_number].dev_prop.c.drv_type =
 		    AUDIO_DRIVER_CAPT_HQ;
 		runtime->hw = brcm_capture_hw;
@@ -865,7 +866,8 @@ static int PcmCaptureTrigger(struct snd_pcm_substream *substream,
 		param_start.rate = runtime->rate;
 		param_start.callMode = callMode;
 
-		if ((substream_number + 1) == CTL_STREAM_PANEL_PCMIN)
+		if (((substream_number + 1) == CTL_STREAM_PANEL_PCMIN)
+			|| ((substream_number + 1) == CTL_STREAM_PANEL_PCM_IN))
 			chip->streamCtl[substream_number].dev_prop.c.
 			    sink = AUDIO_SINK_MEM;
 		else if ((substream_number + 1) ==
