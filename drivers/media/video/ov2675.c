@@ -1682,6 +1682,7 @@ static int ov2675_enum_frameintervals(struct v4l2_subdev *sd,
 
 	switch (size) {
 	case OV2675_SIZE_UXGA:
+	case  OV2675_SIZE_1280x1024:
 		interval->discrete.numerator = 1;
 		interval->discrete.denominator = 15;
 		break;
