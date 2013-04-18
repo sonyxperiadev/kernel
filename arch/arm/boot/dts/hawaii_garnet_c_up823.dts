@@ -221,7 +221,7 @@
 		channel = <0>;
 		phy-rate = <0>;
 		pix-clk = <0>;
-		regulators = "lvldo1_uc", "mmc1_vcc", "mmc2_vcc";
+		regulators = "lvldo1_uc", "mmc1_vcc", "mmc2_vcc", "lvldo2_uc";
 	};
 
 	soc-front-camera {
@@ -240,7 +240,7 @@
 		channel = <1>;
 		phy-rate = <0>;
 		pix-clk = <0>;
-		regulators = "lvldo1_uc", "mmc1_vcc";
+		regulators = "lvldo2_uc", "mmc1_vcc", "mmc2_vcc", "lvldo1_uc";
 	};
 
 	kona-fb {
