@@ -1035,9 +1035,9 @@ struct bcmpmu_adc_pdata adc_pdata[PMU_ADC_CHANN_MAX] = {
 };
 
 
-/* SS EB425161 profile */
+/* SS B100BE profile */
 /* Logan rev 02 battery profile CSP 626787 */
-static struct batt_volt_cap_map ss_eb425161_volt_cap_lut[] = {
+static struct batt_volt_cap_map ss_logands_volt_cap_lut[] = {
 	{4321, 100},
 	{4250, 95},
 	{4183, 90},
@@ -1070,7 +1070,7 @@ static struct batt_volt_cap_map ss_eb425161_volt_cap_lut[] = {
 	{3400, 0},
 };
 
-static struct batt_eoc_curr_cap_map ss_eb425161_eoc_cap_lut[] = {
+static struct batt_eoc_curr_cap_map ss_logands_eoc_cap_lut[] = {
 	 {290, 90},
 	 {270, 91},
 	 {250, 92},
@@ -1085,15 +1085,15 @@ static struct batt_eoc_curr_cap_map ss_eb425161_eoc_cap_lut[] = {
 	 {0, 100},
 };
 
-static struct batt_cutoff_cap_map ss_eb425161_cutoff_cap_lut[] = {
+static struct batt_cutoff_cap_map ss_logands_cutoff_cap_lut[] = {
 	{3480, 2},
 	{3440, 1},
 	{3400, 0},
 };
 
-/* SS EB425161 profile */
+/* SS B100BE profile */
 /* Logan rev 02 battery profile CSP 626787 */
-static struct batt_esr_temp_lut ss_eb425161_esr_temp_lut[] = {
+static struct batt_esr_temp_lut ss_logands_esr_temp_lut[] = {
 	{
 		.temp = -200,
 		.reset = 0, .fct = 271, .guardband = 50,
@@ -1177,32 +1177,32 @@ static struct batt_esr_temp_lut ss_eb425161_esr_temp_lut[] = {
 	},
 };
 
-/* SS EB425161 profile */
-static struct bcmpmu_batt_property ss_eb425161_props = {
-	.model = "SS EB425161",
+/* SS B100BE profile */
+static struct bcmpmu_batt_property ss_logands_props = {
+	.model = "SS B100BE",
 	.min_volt = 3400,
 	.max_volt = 4350,
 	.full_cap = 1500 * 3600,
 	.one_c_rate = 1500,
-	.volt_cap_lut = ss_eb425161_volt_cap_lut,
-	.volt_cap_lut_sz = ARRAY_SIZE(ss_eb425161_volt_cap_lut),
-	.esr_temp_lut = ss_eb425161_esr_temp_lut,
-	.esr_temp_lut_sz = ARRAY_SIZE(ss_eb425161_esr_temp_lut),
-	.eoc_cap_lut = ss_eb425161_eoc_cap_lut,
-	.eoc_cap_lut_sz = ARRAY_SIZE(ss_eb425161_eoc_cap_lut),
-	.cutoff_cap_lut = ss_eb425161_cutoff_cap_lut,
-	.cutoff_cap_lut_sz = ARRAY_SIZE(ss_eb425161_cutoff_cap_lut),
+	.volt_cap_lut = ss_logands_volt_cap_lut,
+	.volt_cap_lut_sz = ARRAY_SIZE(ss_logands_volt_cap_lut),
+	.esr_temp_lut = ss_logands_esr_temp_lut,
+	.esr_temp_lut_sz = ARRAY_SIZE(ss_logands_esr_temp_lut),
+	.eoc_cap_lut = ss_logands_eoc_cap_lut,
+	.eoc_cap_lut_sz = ARRAY_SIZE(ss_logands_eoc_cap_lut),
+	.cutoff_cap_lut = ss_logands_cutoff_cap_lut,
+	.cutoff_cap_lut_sz = ARRAY_SIZE(ss_logands_cutoff_cap_lut),
 };
 
-static struct bcmpmu_batt_cap_levels ss_eb425161_cap_levels = {
+static struct bcmpmu_batt_cap_levels ss_logands_cap_levels = {
 	.critical = 5,
 	.low = 15,
 	.normal = 75,
 	.high = 95,
 };
 
-/* SS EB425161 profile */
-static struct bcmpmu_batt_volt_levels ss_eb425161_volt_levels = {
+/* SS B100BE profile */
+static struct bcmpmu_batt_volt_levels ss_logands_volt_levels = {
 	.critical = 3400,
 	.low = 3500,
 	.normal = 3700,
@@ -1213,16 +1213,16 @@ static struct bcmpmu_batt_volt_levels ss_eb425161_volt_levels = {
 	.vfloat_gap = 150, /* in mV */
 };
 
-static struct bcmpmu_batt_cal_data ss_eb425161_cal_data = {
+static struct bcmpmu_batt_cal_data ss_logands_cal_data = {
 	.volt_low = 3550,
 	.cap_low = 30,
 };
 
 static struct bcmpmu_fg_pdata fg_pdata = {
-	.batt_prop = &ss_eb425161_props,
-	.cap_levels = &ss_eb425161_cap_levels,
-	.volt_levels = &ss_eb425161_volt_levels,
-	.cal_data = &ss_eb425161_cal_data,
+	.batt_prop = &ss_logands_props,
+	.cap_levels = &ss_logands_cap_levels,
+	.volt_levels = &ss_logands_volt_levels,
+	.cal_data = &ss_logands_cal_data,
 	.sns_resist = 10,
 	.sys_impedence = 33,
 	/* End of charge current in mA */ /* Samsung spec TBD */
