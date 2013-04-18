@@ -552,7 +552,7 @@ __initdata DISPCTRL_REC_T nt35512_init_panel_vid[] = {
 	{DISPCTRL_WR_DATA, 0x00},
 
 	{DISPCTRL_WR_CMND, 0xB6},
-	{DISPCTRL_WR_DATA, 0x05},
+	{DISPCTRL_WR_DATA, 0x03},
 
 	{DISPCTRL_WR_CMND, 0xB7},
 	{DISPCTRL_WR_DATA, 0x70},
@@ -659,7 +659,7 @@ __initdata DISPCTRL_REC_T nt35512_init_panel_vid[] = {
 	{DISPCTRL_WR_CMND, 0xB9},
 	{DISPCTRL_WR_DATA, 0X34},
 
-	{DISPCTRL_WR_CMND, 0xBA},
+	{DISPCTRL_WR_DATA, 0xBA},
 	{DISPCTRL_WR_DATA, 0X14},
 
 	{DISPCTRL_WR_CMND, 0XBC},
@@ -778,7 +778,7 @@ __initdata DISPCTRL_REC_T nt35512_init_panel_vid[] = {
 	{DISPCTRL_WR_DATA, 0x10},
 
 	{DISPCTRL_WR_CMND, 0xB6},
-	{DISPCTRL_WR_DATA, 0x05},
+	{DISPCTRL_WR_DATA, 0x03},
 
 	{DISPCTRL_WR_CMND, 0xB5},
 	{DISPCTRL_WR_DATA, 0x6C},
@@ -849,11 +849,11 @@ __initdata struct lcd_config nt35512_cfg = {
 	.vburst = true,
 	.cont_clk = false,
 	.hs = 10,
-	.hbp = 20,
-	.hfp = 20,
+	.hbp = 80,
+	.hfp = 80,
 	.vs = 2,
-	.vbp = 8,
-	.vfp = 8,
+	.vbp = 40,
+	.vfp = 40,
 };
 
 #endif
