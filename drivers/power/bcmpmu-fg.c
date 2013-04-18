@@ -2741,7 +2741,11 @@ static int bcmpmu_fg_get_properties(struct power_supply *psy,
 		val->intval = POWER_SUPPLY_TECHNOLOGY_LION;
 		break;
 	case POWER_SUPPLY_PROP_STATUS:
-		val->intval = flags.batt_status;
+		if (fg->capacity_info.percentage == 100 &&
+			flags.batt_status == POWER_SUPPLY_STATUS_CHARGING)
+			val->intval = POWER_SUPPLY_STATUS_FULL;
+		else
+			val->intval = flags.batt_status;
 		break;
 	case POWER_SUPPLY_PROP_PRESENT:
 		val->intval = 1;
