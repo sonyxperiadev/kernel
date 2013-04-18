@@ -295,8 +295,8 @@ void ktime_get_ts(struct timespec *ts)
 
 	} while (read_seqretry(&timekeeper.lock, seq));
 
-	set_normalized_timespec(ts, ts->tv_sec + tomono.tv_sec,
-				ts->tv_nsec + tomono.tv_nsec + nsecs);
+	ts->tv_sec += tomono.tv_sec;
+	timespec_add_ns(ts, nsecs + tomono.tv_nsec);
 }
 EXPORT_SYMBOL_GPL(ktime_get_ts);
 
@@ -1141,8 +1141,8 @@ void get_monotonic_boottime(struct timespec *ts)
 
 	} while (read_seqretry(&timekeeper.lock, seq));
 
-	set_normalized_timespec(ts, ts->tv_sec + tomono.tv_sec + sleep.tv_sec,
-			ts->tv_nsec + tomono.tv_nsec + sleep.tv_nsec + nsecs);
+	ts->tv_sec += tomono.tv_sec + sleep.tv_sec;
+	timespec_add_ns(ts, nsecs + tomono.tv_nsec + sleep.tv_nsec);
 }
 EXPORT_SYMBOL_GPL(get_monotonic_boottime);
 
