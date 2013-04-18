@@ -2025,8 +2025,10 @@ int32_t dwc_otg_hcd_handle_hc_n_intr(dwc_otg_hcd_t *dwc_otg_hcd, uint32_t num)
 		 */
 		hcint.b.nyet = 0;
 	}
-	if (hcint.b.chhltd)
+	if (hcint.b.chhltd) {
 		retval |= handle_hc_chhltd_intr(dwc_otg_hcd, hc, hc_regs, qtd);
+		hcint.b.ack = 0;
+	}
 
 	if (hcint.b.ahberr)
 		retval |= handle_hc_ahberr_intr(dwc_otg_hcd, hc, hc_regs, qtd);
