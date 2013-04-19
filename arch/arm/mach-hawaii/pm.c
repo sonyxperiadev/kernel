@@ -115,6 +115,7 @@ static struct kona_idle_state idle_states[] = {
 		.name = "C2",
 		.desc = "26Mhz-WFI", /*26MHz WFI*/
 		.flags = CPUIDLE_FLAG_TIME_VALID,
+		.params = CTRL_PARAMS_CSTATE_DISABLED,
 		.latency = EXIT_LAT_26MHZ_WFI,
 		.target_residency = TRGT_RESI_26MHZ_WFI,
 		.state = CSTATE_26MHZ_WFI,
