@@ -52,7 +52,8 @@ static const struct ov7692_reg configscript_common1[] = {
     {0xb4, 0xc0}, // MIPI Enable, 8-bit
     {0xb5, 0x40}, // wake up MIPI, wake up MIPI low power transmitter.
     {0xff, 0x00}, // select DVP register bank
-#ifdef CONFIG_MACH_HAWAII_GARNET_EDN010
+#if (defined(CONFIG_MACH_HAWAII_GARNET_EDN010) || \
+	defined(CONFIG_MACH_HAWAII_GARNET_EDN020))
 {0x0c, 0x10},
 #else
 {0x0c, 0xd0},

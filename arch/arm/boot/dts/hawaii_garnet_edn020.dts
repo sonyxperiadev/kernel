@@ -44,6 +44,7 @@
 		* PADCTRL_UBRTSN from UART3_RTSN to
 		* UBRTSN (Debug UART) when GPS is inactive.*/
 		power-save-enable = <1>;
+
 	};
 
 	i2c0: i2c@3e016000 {
@@ -274,7 +275,7 @@
 		channel = <0>;
 		phy-rate = <0>;
 		pix-clk = <0>;
-		regulators = "lvldo1_uc", "mmc1_vcc", "mmc2_vcc";
+		regulators = "lvldo1_uc", "mmc1_vcc", "mmc2_vcc", "lvldo2_uc";
 	};
 
 	soc-front-camera {
@@ -293,7 +294,7 @@
 		channel = <1>;
 		phy-rate = <0>;
 		pix-clk = <0>;
-		regulators = "lvldo2_uc", "mmc1_vcc";
+		regulators = "lvldo2_uc", "mmc1_vcc", "mmc2_vcc", "lvldo1_uc";
 	};
 
 	kona-fb {
@@ -441,7 +442,6 @@
 		dft-brightness = <32>;
 		polarity = <1>;		/* Inverted polarity */
 		pwm-period-ns = <99900>; /* ~10010 Hz */
-		lth-brightness = <1>;
 		pwm-request-label = "backlight";
 		bl-on-delay = <7000>;
 	};
