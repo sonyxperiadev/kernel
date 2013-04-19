@@ -2547,6 +2547,7 @@ CONFIG_CLKDEV_LOOKUP=y
 # Hardware Spinlock drivers
 #
 CONFIG_IOMMU_SUPPORT=y
+# CONFIG_BCM_IOMMU_M4U is not set
 
 #
 # Remoteproc drivers (EXPERIMENTAL)

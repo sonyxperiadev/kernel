@@ -73,8 +73,19 @@
 		is-pmu-i2c = <0>;
 		fs-ref-frequency = <13000000>;
 		hs-ref-frequency = <104000000>;
-
-
+		bma222_accl@18 {
+			compatible = "bcm,bma222_accl";
+			reg = <0x18>;
+			gpio-irq-pin = <0xFFFFFFFF>;
+			orientation  = <4>;
+			invert = <1>;
+		};
+		akm8975@0c {
+			compatible = "bcm,akm8975";
+			reg = <0x0c>;
+			gpio-irq-pin = <4>;
+			layout = <6>;
+		};
 		tmd2771@39 {
 			compatible = "bcm,tmd2771";
 			reg = <0x39>;

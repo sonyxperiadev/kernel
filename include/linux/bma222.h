@@ -35,6 +35,7 @@ enum bma_orientation {
 	BMA_ROT_90,
 	BMA_ROT_180,
 	BMA_ROT_270,
+	BMA_ROT_010_f00_001,
 };
 
 struct bma222_accl_platform_data {

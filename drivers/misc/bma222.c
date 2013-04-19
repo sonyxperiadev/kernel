@@ -397,6 +397,11 @@ static void bma222_accl_getdata(struct drv_data *dd)
 		Y = acc.x;
 		Z = -acc.z;
 		break;
+	case BMA_ROT_010_f00_001:
+		X = acc.y;
+		Y = -acc.x;
+		Z = acc.z;
+		break;
 	default:
 		pr_err("bma222_accl: invalid orientation specified\n");
 	case BMA_NO_ROT:
