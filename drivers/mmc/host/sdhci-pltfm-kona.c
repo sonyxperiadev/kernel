@@ -1057,6 +1057,9 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 		 */
 		if (dev->vddo_sd_regulator)
 			host->vmmc = dev->vddo_sd_regulator;
+
+		/* support SD card detect interrupts for insert/removal */
+		host->mmc->card_detect_cap = true;
 	}
 
 	/* if device is eMMC, emulate card insert right here */
@@ -1105,9 +1108,6 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 				gpio_to_irq(dev->cd_gpio), dev->cd_gpio);
 			goto err_free_cd_gpio;
 		}
-
-		/* support SD card detect interrupts for insert/removal */
-		host->mmc->card_detect_cap = true;
 
 		/* Set debounce for SD Card detect to maximum value (128ms)
 		 *
