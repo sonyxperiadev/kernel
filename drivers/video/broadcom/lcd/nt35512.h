@@ -158,7 +158,7 @@ __initdata DISPCTRL_REC_T nt35512_init_panel_vid[] = {
 
 	{DISPCTRL_WR_CMND, 0xB1},
 	{DISPCTRL_WR_DATA, 0x0A},
-	{DISPCTRL_WR_CMND, 0x0A},
+	{DISPCTRL_WR_DATA, 0x0A},
 	{DISPCTRL_WR_DATA, 0x0A},
 
 	{DISPCTRL_WR_CMND, 0xB7},
@@ -175,6 +175,9 @@ __initdata DISPCTRL_REC_T nt35512_init_panel_vid[] = {
 	{DISPCTRL_WR_DATA, 0x34},
 	{DISPCTRL_WR_DATA, 0x34},
 	{DISPCTRL_WR_DATA, 0x34},
+
+	{DISPCTRL_WR_CMND, 0xBF},
+	{DISPCTRL_WR_DATA, 0x01},
 
 	{DISPCTRL_WR_CMND, 0xB3},
 	{DISPCTRL_WR_DATA, 0x08},
@@ -211,7 +214,7 @@ __initdata DISPCTRL_REC_T nt35512_init_panel_vid[] = {
 
 	{DISPCTRL_WR_CMND, 0xBE},
 	{DISPCTRL_WR_DATA, 0x00},
-	{DISPCTRL_WR_DATA, 0x57},
+	{DISPCTRL_WR_DATA, 0x55},
 
 	{DISPCTRL_WR_CMND, 0xD1},
 	{DISPCTRL_WR_DATA, 0x00},
@@ -552,7 +555,7 @@ __initdata DISPCTRL_REC_T nt35512_init_panel_vid[] = {
 	{DISPCTRL_WR_DATA, 0x00},
 
 	{DISPCTRL_WR_CMND, 0xB6},
-	{DISPCTRL_WR_DATA, 0x03},
+	{DISPCTRL_WR_DATA, 0x05},
 
 	{DISPCTRL_WR_CMND, 0xB7},
 	{DISPCTRL_WR_DATA, 0x70},
@@ -560,7 +563,7 @@ __initdata DISPCTRL_REC_T nt35512_init_panel_vid[] = {
 
 	{DISPCTRL_WR_CMND, 0xB8},
 	{DISPCTRL_WR_DATA, 0x01},
-	{DISPCTRL_WR_CMND, 0x03},
+	{DISPCTRL_WR_DATA, 0x03},
 	{DISPCTRL_WR_DATA, 0x03},
 	{DISPCTRL_WR_DATA, 0x03},
 
@@ -659,7 +662,7 @@ __initdata DISPCTRL_REC_T nt35512_init_panel_vid[] = {
 	{DISPCTRL_WR_CMND, 0xB9},
 	{DISPCTRL_WR_DATA, 0X34},
 
-	{DISPCTRL_WR_DATA, 0xBA},
+	{DISPCTRL_WR_CMND, 0xBA},
 	{DISPCTRL_WR_DATA, 0X14},
 
 	{DISPCTRL_WR_CMND, 0XBC},
@@ -832,7 +835,7 @@ __initdata struct lcd_config nt35512_cfg = {
 	.phy_timing = &nt35512_timing[0],
 	.max_lanes = 2,
 	.max_hs_bps = 500000000,
-	.max_lp_bps = 5000000,
+	.max_lp_bps = 10000000,
 	.phys_width = 55,
 	.phys_height = 99,
 	.init_cmd_seq = NULL,
