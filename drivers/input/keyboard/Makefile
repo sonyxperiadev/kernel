@@ -55,3 +55,4 @@ obj-$(CONFIG_KEYBOARD_XTKBD)		+= xtkbd.o
 obj-$(CONFIG_KEYBOARD_W90P910)		+= w90p910_keypad.o
 obj-$(CONFIG_KEYBOARD_KONA)	        += kona_keypad.o
 obj-$(CONFIG_KEYBOARD_LM8325)	        += lm8325.o
+obj-$(CONFIG_KEYBOARD_VIRTUAL)	        += virtual_keyboard.o

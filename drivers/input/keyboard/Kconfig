@@ -612,4 +612,12 @@ config KEYBOARD_W90P910
 	  To compile this driver as a module, choose M here: the
 	  module will be called w90p910_keypad.
 
+config KEYBOARD_VIRTUAL
+	bool "Virtual keyboard driver"
+	depends on DEBUG_FS
+	default n
+	help
+	  Say Y here to enable the virtual keyboard driver.
+	  It is only used for debug.
+	  Use debugfs to access this driver.
 endif
