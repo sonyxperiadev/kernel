@@ -121,6 +121,8 @@ struct sdio_dev {
 	struct regulator *vddo_sd_regulator;
 	struct regulator *vdd_sdxc_regulator;
 	struct wake_lock cd_int_wake_lock;
+	struct mutex regulator_lock;
+	int sdxc_regulator_enable;
 	unsigned char *cd_int_wake_lock_name;
 };
 
@@ -971,6 +973,7 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 #endif
 	}
 
+	mutex_init(&dev->regulator_lock);
 	kona_sdxc_regulator_power(dev, 1);
 
 	ret = bcm_kona_sd_reset(dev);
@@ -1636,8 +1639,8 @@ kona_sdxc_regulator_power(struct sdio_dev *dev, int power_state)
 	struct device *pdev = dev->dev;
 	struct sdio_platform_cfg *hw_cfg =
 		(struct sdio_platform_cfg *)pdev->platform_data;
-	static atomic_t sdxc_regulator_enable;
 
+	mutex_lock(&dev->regulator_lock);
 	/*
 	 * Note that from the board file the appropriate regualtor names are
 	 * populated. For example, in SD Card case there are two regulators to
@@ -1651,8 +1654,7 @@ kona_sdxc_regulator_power(struct sdio_dev *dev, int power_state)
 	 */
 	if (dev->vdd_sdxc_regulator &&
 			dev->devtype == SDIO_DEV_TYPE_SDMMC) {
-		if (power_state &&
-				!atomic_read(&sdxc_regulator_enable)) {
+		if (power_state && !dev->sdxc_regulator_enable) {
 			if ((hw_cfg->devtype == SDIO_DEV_TYPE_SDMMC) &&
 				(hw_cfg->configure_sdio_pullup))	{
 				dev_info(dev->dev, "Pull Up CMD/DAT Line\n");
@@ -1662,13 +1664,18 @@ kona_sdxc_regulator_power(struct sdio_dev *dev, int power_state)
 			}
 			pr_info("Turning ON sdxc sd\n");
 			ret = regulator_enable(dev->vdd_sdxc_regulator);
-			atomic_inc(&sdxc_regulator_enable);
+			if (ret)
+				pr_err("regulator_enable failed : %d\n", ret);
+			else
+				dev->sdxc_regulator_enable = 1;
 			mdelay(2);
-		} else if (!power_state &&
-				atomic_read(&sdxc_regulator_enable)) {
+		} else if (!power_state && dev->sdxc_regulator_enable) {
 			pr_info("Turning OFF sdxc sd\n");
 			ret = regulator_disable(dev->vdd_sdxc_regulator);
-			atomic_dec(&sdxc_regulator_enable);
+			if (ret)
+				pr_err("regulator_disable failed : %d\n", ret);
+			else
+				dev->sdxc_regulator_enable = 0;
 
 			if ((hw_cfg->devtype == SDIO_DEV_TYPE_SDMMC) &&
 			(hw_cfg->configure_sdio_pullup)) {
@@ -1678,6 +1685,7 @@ kona_sdxc_regulator_power(struct sdio_dev *dev, int power_state)
 			}
 		}
 	}
+	mutex_unlock(&dev->regulator_lock);
 
 	return ret;
 }
