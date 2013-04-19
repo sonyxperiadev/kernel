@@ -420,7 +420,10 @@ __initdata struct lcd_config otm8018b_cfg = {
 	.mode_supp = LCD_VID_ONLY,
 	.phy_timing = &otm8018b_timing[0],
 	.max_lanes = 2,
-	.max_hs_bps = 500000000,
+	/*this driver ic supports higher data
+	rate but we set it to 330 Mbps because of
+	lcd auto detection on garnet*/
+	.max_hs_bps = 330000000,
 	.max_lp_bps = 5000000,
 	.phys_width = 55,
 	.phys_height = 99,
