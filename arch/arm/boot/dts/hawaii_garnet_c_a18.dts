@@ -396,7 +396,7 @@
 		compatible = "bcm,pwm-backlight";
 		reg = <0x0 0x0>;
 		backlight-gpio = <24>;
-		max-brightness = <22>;	/* level 32 consumes too much power, MobC00299898*/
+		max-brightness = <32>;	/* Android calibrates to 32 levels */
 		dft-brightness = <12>;	/* default brightness*/
 		shutdown-time = <3500>;	/* unit us */
 		ready-time = <150>;		/* unit us */
