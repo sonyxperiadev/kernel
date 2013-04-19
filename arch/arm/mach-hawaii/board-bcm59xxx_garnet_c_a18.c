@@ -1152,7 +1152,7 @@ static struct bcmpmu_fg_pdata fg_pdata = {
 	.i_sat = 3000,			/* saturation current in mA
 						for chrgr while using ACLD */
 	.i_def_dcp = 700,
-	.acld_cc_lmt = 1800,
+	.acld_cc_lmt = 1000,
 	.otp_cc_trim = 0x1F,
 };
 
