@@ -1314,14 +1314,6 @@ static int ov5640_af_status(struct i2c_client *client, int num_trys)
 	u8 af_zone0, af_zone1, af_zone2, af_zone3, af_zone4;
 
 	if (ov5640->focus_mode == FOCUS_MODE_AUTO) {
-
-		/* Wait for Focus Command Ack */
-		ret = ov5640_af_ack(client, num_trys);
-		if (ret) {
-			dev_dbg(&client->dev, "af ack failed\n");
-			ret = OV5640_AF_FAIL;
-			goto out;
-		}
 		/* Check if Focused */
 		af_st = ov5640_af_fw_status(client);
 		if (af_st != 0x10) {
@@ -2280,32 +2272,47 @@ static int ov5640_g_chip_ident(struct v4l2_subdev *sd,
 
 /*
  * return value of this function should be
- * 0 == failed
- * 1 == done
- * 2 == canceled
+ * 0 == CAMERA_AF_STATUS_FOCUSED
+ * 1 == CAMERA_AF_STATUS_FAILED
+ * 2 == CAMERA_AF_STATUS_SEARCHING
+ * 3 == CAMERA_AF_STATUS_CANCELLED
+ * to keep consistent with auto_focus_result
+ * in videodev2_brcm.h
  */
 static int ov5640_get_af_status(struct i2c_client *client, int num_trys)
 {
-	int ret = 0;
+	int ret = OV5640_AF_PENDING;
 	struct ov5640 *ov5640 = to_ov5640(client);
 
 	if (atomic_read(&ov5640->focus_status)
 	    == OV5640_FOCUSING) {
 		ret = ov5640_af_status(client, num_trys);
-		if (ret == 0) {
-			ret = 1;
-			goto out;
+		/*
+		 * convert OV5640_AF_* to auto_focus_result
+		 * in videodev2_brcm
+		 */
+		switch (ret) {
+		case OV5640_AF_SUCCESS:
+			ret = CAMERA_AF_STATUS_FOCUSED;
+			break;
+		case OV5640_AF_PENDING:
+			ret = CAMERA_AF_STATUS_SEARCHING;
+			break;
+		case OV5640_AF_FAIL:
+			ret = CAMERA_AF_STATUS_FAILED;
+			break;
+		default:
+			ret = CAMERA_AF_STATUS_SEARCHING;
+			break;
 		}
 	}
 	if (atomic_read(&ov5640->focus_status)
 	    == OV5640_NOT_FOCUSING) {
-		ret = 2;
-		goto out;
+		ret = CAMERA_AF_STATUS_CANCELLED;	/* cancelled? */
 	}
-
-	ret = 0;
-out:
-	atomic_set(&ov5640->focus_status, OV5640_NOT_FOCUSING);
+	if ((CAMERA_AF_STATUS_FOCUSED == ret) ||
+	    (CAMERA_AF_STATUS_FAILED == ret))
+		atomic_set(&ov5640->focus_status, OV5640_NOT_FOCUSING);
 
 	return ret;
 }
