@@ -298,29 +298,29 @@
 	};
 
 	kona-fb {
-		module-name = "NT35512";
+		module-name = "OTM1281A";
 		reg-name = "cam2";
 		rst-gpio = <8>;
 		detect-gpio = <10>;
-		rst-setup = <700>;	/* 700us */
-		rst-pulse = <1000>;	/* 1ms */
-		rst-hold = <100000>;	/* 100ms */
+		rst-setup = <5>;	/* 5us */
+		rst-pulse = <20>;	/* 20us */
+		rst-hold = <20000>;	/* 20ms */
+		/* rst-active-high */	/* Commented => Active Low */
+		vmode;		/* Commented => Command mode */
+		/* vburst = <0>; */	/* Non-burst mode */
+		cmnd-LP;		/* Commands in LP mode*/
+		/* te-ctrl; */		/* Tearing Effect Control disabled */
 		col-mod-i = <3>;
 		col-mod-o = <2>;
-		width = <480>;
-		height = <854>;
-		/* rst-active-high */	/* Commented => Active Low */
-		vmode;
-		/* vburst */	/* Non-burst mode */
-		/* te-ctrl; */		/* Tearing Effect Control disabled */
+		width = <720>;
+		height = <1280>;
 		fps = <60>;
-		lanes = <2>;
-		cmnd-LP;		/* Commands in LP mode*/
-		hs-bitrate = <440000000>;
-		lp-bitrate = <7000000>;	/* 7mbps */
+		lanes = <4>;
+		hs-bitrate = <330000000>;	/* 330mbps */
+		lp-bitrate = <5000000>;	/* 5mbps */
 		iommu = <&iommu_mm>;
 		iovmm = <&iovmm_mm>;
-		rotation = <180>;
+		rotation = <0>;
 	};
 
 	tmon@0x34008000 {
