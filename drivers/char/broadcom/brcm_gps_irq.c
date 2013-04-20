@@ -320,7 +320,8 @@ static ssize_t gps_irq_read(struct file *filp,
 				(ac_data->rbuffer_rp+1) & (RX_SIZE-1);
 			ac_data->rxlength_rp = (ac_data->rxlength_rp+1) & (RX_SIZE-1);
 		}
-		copy_to_user(buffer, ac_data->tmp, l);
+		if (copy_to_user(buffer, ac_data->tmp, l) != 0)
+			return 0;
 		return l;
 	} else
 		return 0;
@@ -337,7 +338,8 @@ static ssize_t gps_irq_read(struct file *filp,
 		
 		ac_data->rxlength_rp = (ac_data->rxlength_rp+1) & (RX_SIZE-1);
 
-		copy_to_user(buffer, ac_data->tmp, I2C_PACKET_SIZE);
+		if (copy_to_user(buffer, ac_data->tmp, I2C_PACKET_SIZE) != 0)
+			return 0;
 		//printk(KERN_INFO "read2 %d bytes %x",l,ac_data->tmp[0]);
 		return I2C_PACKET_SIZE;
 	} else
@@ -423,8 +425,10 @@ static int gps_hostwake_probe(struct i2c_client *client,
 	gpio_direction_input(hostwake_gpio);
 
 	irq = gpio_to_irq(hostwake_gpio);
-	if (irq < 0)
+	if (irq < 0) {
+		kfree(ac_data);
 		return -1;
+	}
 	ac_data->irq = irq;
 	ac_data->host_req_pin = hostwake_gpio;
 	ret = request_irq(irq, gps_irq_handler,
@@ -460,8 +464,6 @@ static int gps_hostwake_remove(struct i2c_client *client)
 	pdata = client->dev.platform_data;
 
 	ac_data = i2c_get_clientdata(client);
-	destroy_workqueue(&ac_data->read_task);
-	destroy_workqueue(&ac_data->write_task);
 	free_irq(ac_data->irq, ac_data);
 	misc_deregister(&ac_data->misc);
 	kfree(ac_data);
