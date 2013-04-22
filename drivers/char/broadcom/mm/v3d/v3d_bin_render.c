@@ -383,7 +383,7 @@ int v3d_bin_render_init(MM_CORE_HW_IFC *core_param)
 	v3d_device->v3d_bin_oom_client = ion_client_create(idev, "v3d");
 	if (v3d_device->v3d_bin_oom_client == NULL) {
 		ret = -ENOMEM;
-		goto err;
+		goto err1;
 	}
 	INIT_LIST_HEAD(&v3d_device->mem_head);
 
@@ -419,6 +419,8 @@ int v3d_bin_render_init(MM_CORE_HW_IFC *core_param)
 	pr_err("v3d_init job va = %p job pa = %x", job_va, job_pa);
 	return ret;
 
+err1:
+	kfree(v3d_device);
 err:
 	pr_err("V3D bin_render driver Module Init Error");
 	return ret;
