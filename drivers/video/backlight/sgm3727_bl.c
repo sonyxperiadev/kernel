@@ -289,8 +289,8 @@ static int sgm3727_backlight_probe(struct platform_device *pdev)
 
 	bl->props.brightness = data->dft_brightness;
 
-	/*brightness set in uboot is 16*/
-	pb->last_brightness = 16;
+	/*brightness set in uboot is 17*/
+	pb->last_brightness = 17;
 
 	pr_info("sgm3727_backlight_probe bl-delay-on %d\r\n", bl_delay_on);
 	if (bl_delay_on == 0)
