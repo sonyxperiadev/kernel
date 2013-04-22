@@ -168,7 +168,11 @@ void completeEncodeSlice(void *id, struct enc_info_t *enc_info)
 	h264_write(id, ENC_SG_POSTED_SYMBOL, 0);
 	h264_write(id, ENC_SG_POSTED_PUTSYM, 32);
 	h264_write(id, ENC_SG_POSTED_SYMBOL, 0);
-	h264_write(id, ENC_SG_POSTED_PUTSYM, 16);
+	h264_write(id, ENC_SG_POSTED_PUTSYM, 32);
+	h264_write(id, ENC_SG_POSTED_SYMBOL, 0);
+	h264_write(id, ENC_SG_POSTED_PUTSYM, 32);
+	h264_write(id, ENC_SG_POSTED_SYMBOL, 0);
+	h264_write(id, ENC_SG_POSTED_PUTSYM, 32);
 #endif
 	enc_info->endBits = entropy_flush(id);
 
