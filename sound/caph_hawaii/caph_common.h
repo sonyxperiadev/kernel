@@ -160,7 +160,7 @@ extern int gAudioDebugLevel;
 					(int)AUDIO_SINK_TOTAL_COUNT) ? \
 					MIC_TOTAL_COUNT_FOR_USER : \
 					AUDIO_SINK_TOTAL_COUNT)
-#define	CAPH_MAX_PCM_STREAMS		8
+#define	CAPH_MAX_PCM_STREAMS		9
 
 /* Output volume */
 #define	MIN_VOLUME_mB			-5000
