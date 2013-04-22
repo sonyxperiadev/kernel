@@ -1117,7 +1117,7 @@ CSL_LCD_RES_T CSL_DSI_SendPacket(CSL_LCD_HANDLE client,
 	txPkt.isLP = command->isLP;
 	txPkt.endWithBta = command->endWithBta;
 	txPkt.isTe = isTE;
-	txPkt.vmWhen = CHAL_DSI_CMND_WHEN_BEST_EFFORT;
+	txPkt.vmWhen = videoEnabled ? CHAL_DSI_CMND_WHEN_VBP : CHAL_DSI_CMND_WHEN_BEST_EFFORT;
 	txPkt.repeat = 1;
 	txPkt.start = 1;
 	txPkt.dispEngine = 1;
