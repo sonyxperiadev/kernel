@@ -818,10 +818,9 @@ static int __taos_late_resume(struct i2c_client *client)
 	}
 
 	reg_val = i2c_smbus_read_byte(taos_datap->client);
-	if ((reg_val & TAOS_TRITON_CNTL_PROX_DET_ENBL) == 0x0)
+	if (((reg_val & TAOS_TRITON_CNTL_PROX_DET_ENBL) == 0x0)
+		&& (ALS_ON == 1))
 		taos_sensors_als_on();
-
-	ALS_ON = 1;
 
 	if (PROX_ON == 1)
 		reg_val = 0x3f;
