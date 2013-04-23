@@ -136,7 +136,9 @@ int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
 	/* Let go of the secondary core */
 	boot_2nd_addr =
 		readl_relaxed(KONA_CHIPREG_VA+CHIPREG_BOOT_2ND_ADDR_OFFSET);
-	boot_2nd_addr |= cpu;
+
+	boot_2nd_addr &= ~0x3; /* Clear the CPU ID bits */
+	boot_2nd_addr |= cpu; /* Set CPU number in CPU ID bits */
 	writel_relaxed(boot_2nd_addr,
 			KONA_CHIPREG_VA+CHIPREG_BOOT_2ND_ADDR_OFFSET);
 
