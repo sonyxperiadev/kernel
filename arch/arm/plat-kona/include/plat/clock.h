@@ -24,8 +24,6 @@
 #include <linux/debugfs.h>
 #endif
 
-extern unsigned read_mpidr(void);
-
 #define GET_BIT_USING_MASK(reg_val, mask)	(!!((reg_val) & (mask)))
 #define SET_BIT_USING_MASK(reg_val, mask)	((reg_val) | (mask))
 #define RESET_BIT_USING_MASK(reg_val, mask)	((reg_val) & ~(mask))
@@ -119,6 +117,8 @@ extern unsigned read_mpidr(void);
 #define CCU_DBG_BUS_SEL_MASK		(0x1F << 16)
 #define CCU_DBG_BUS_SEL_SHIFT		16
 
+#define POLICY_RESUME_INS_COUNT	20000
+#define CLK_EN_INS_COUNT	1000
 
 #define CCU_POLICY_MASK_ENABLE_ALL_MASK	0x7FFFFFFF
 

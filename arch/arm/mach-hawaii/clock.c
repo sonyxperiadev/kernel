@@ -217,7 +217,7 @@ static int en_8ph_pll1_clk_enable(struct clk *clk, int enable)
 {
 	struct ref_clk *ref_clk;
 	u32 reg_val = 0;
-	int insurance = 1000;
+	int insurance = CLK_EN_INS_COUNT;
 
 	BUG_ON(clk->clk_type != CLK_TYPE_REF);
 	ref_clk = to_ref_clk(clk);
@@ -243,6 +243,10 @@ static int en_8ph_pll1_clk_enable(struct clk *clk, int enable)
 			ROOT_CLK_MGR_REG_PLL1CTRL0_PLL1_8PHASE_EN_MASK) &&
 			insurance);
 		CCU_ACCESS_EN(ref_clk->ccu_clk, 0);
+		if (insurance == 0) {
+			__WARN();
+			return -1;
+		}
 	} else {
 		CCU_ACCESS_EN(ref_clk->ccu_clk, 1);
 		reg_val = readl(KONA_ROOT_CLK_VA +
