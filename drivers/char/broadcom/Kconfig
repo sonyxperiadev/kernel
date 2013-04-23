@@ -10,7 +10,7 @@ menuconfig BRCM_CHAR_DRIVERS
 
 config V3D
 	tristate "V3D Driver"
-	depends on BRCM_CHAR_DRIVERS && (ARCH_RHEA || ARCH_HAWAII || ARCH_JAVA)
+	depends on BRCM_CHAR_DRIVERS && (ARCH_RHEA)
 	default n
 	help
 	 This config enables v3d driver. This driver
