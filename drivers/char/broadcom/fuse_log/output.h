@@ -44,5 +44,6 @@ void BCMLOG_Output(unsigned char *pUserBuf, unsigned long userBufSz,
  *	@return	int zero if success, nonzero if error
  **/
 BCMLOG_Fifo_t *BCMLOG_OutputInit(unsigned char *buffer, int buffer_size);
+int Get_SDCARD_Available(void);
 
 #endif /* __BCMLOG_OUTPUT_H__ */

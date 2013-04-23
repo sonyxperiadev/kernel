@@ -96,6 +96,7 @@
 #define CP_CRASH_DUMP_FILE_EXT          ".bin"
 #define CP_CRASH_DUMP_MAX_LEN           100
 #define CP_DUMP_LEN			512
+#define CP_CRASH_DUMP_SDCARD_SIZE	(20*1024*1024)
 #define KPANIC_CP_DUMP_OFFSET		0x100000
 
 #define BCMLOG_OUTPUT_FIFO_MAX_BYTES  (64 * 1024 * 1024)
@@ -1256,7 +1257,8 @@ void BCMLOG_StartCpCrashDump(struct file *inDumpFile, int cpresetStatus)
 
 	switch (BCMLOG_GetCpCrashLogDevice()) {
 	case BCMLOG_OUTDEV_SDCARD:
-		if (!start_sdcard_crashlog(inDumpFile)) {
+		if ((Get_SDCARD_Available() < CP_CRASH_DUMP_SDCARD_SIZE) ||
+				!start_sdcard_crashlog(inDumpFile)) {
 			if (!cpresetStatus) {
 				plat_iounmap_ns(get_vaddr_ipc
 				(IPC_CP_CRASH_SUMMARY_AREA),

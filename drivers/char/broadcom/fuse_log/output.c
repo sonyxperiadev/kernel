@@ -197,7 +197,7 @@ static void GetLogFileName(char *buf, char *rootdev, int size)
  *	Return available SD card size (bytes)
  *	If over 2G, return 2G
  */
-static int Get_SDCARD_Available(void)
+int Get_SDCARD_Available(void)
 {
 	struct kstatfs sbuf;
 	struct path path;
