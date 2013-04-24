@@ -781,22 +781,12 @@ static int prox_calibrate(void)
 		taos_cfgp->prox_threshold_hi);
 	pr_taos(DEBUG, "----------- taos_cfgp->prox_threshold_lo = %d\n",
 		taos_cfgp->prox_threshold_lo);
-	/*
-	   for (i = 0; i < sizeof(taos_triton_reg_init); i++) {
-	   if (i != 11) {
-	   ret = i2c_smbus_write_byte_data(taos_datap->client,
-	   TAOS_TRITON_CMD_REG
-	   | (TAOS_TRITON_CNTRL + i),
-	   taos_triton_reg_init[i]);
-	   if (ret < 0) {
-	   pr_taos(ERROR,
-	   "TAOS: i2c_smbus_write_byte_data failed "
-	   "in ioctl als_on\n");
-	   return ret;
-	   }
-	   }
-	   }
-	 */
+	ret = i2c_smbus_write_byte_data(taos_datap->client,
+						TAOS_TRITON_CMD_REG |
+						TAOS_TRITON_CNTRL, 0x00);
+	if (ret < 0)
+		pr_taos(ERROR,
+			"Power Off FAIL in prox_calibrate ret=%d\n", ret);
 	return 0;
 }
 
