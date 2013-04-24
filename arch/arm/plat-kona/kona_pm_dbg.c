@@ -320,7 +320,7 @@ static u32 handle_clk_parm(struct snapshot *s)
 		goto err;
 
 	clk = clk_get(NULL, (char *)s->data);
-	if (IS_ERR(clk))
+	if (IS_ERR_OR_NULL(clk))
 		goto err;
 
 	ret = clk_get_usage(clk);
@@ -340,7 +340,7 @@ static u32 handle_ahb_reg_parm(struct snapshot *s)
 		goto err;
 
 	clk = clk_get(NULL, (char *)s->data);
-	if (IS_ERR(clk))
+	if (IS_ERR_OR_NULL(clk))
 		goto err;
 
 	clk_enable(clk);

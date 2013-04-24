@@ -33,34 +33,53 @@
  */
 /* #define DORMANT_PROFILE */
 
-/* Set this to 0 to disable dormant mode tracing code */
-#define DORMANT_TRACE_ENABLE		1
-#define DORMANT_MAX_TRACE_ENTRIES	0x1f
 
-/* Dormant trace values */
-#define DORMANT_ENTRY			0x10
-#define DORMANT_ENTRY_REGS_SAVE		0x20
-#define DORMANT_ENTRY_L2_OFF		0x30
-#define DORMANT_ENTRY_SWITCHES_OFF	0x40
-#define DORMANT_ENTRY_LINUX		0x50
-#define DORMANT_EXIT_WAKE_UP		0x90
-#define DORMANT_EXIT_L2_ON		0xA0
-#define DORMANT_EXIT_BASIC_RESTORE	0xB0
-#define DORMANT_EXIT_SWITCHES_ON	0xC0
-#define DORMANT_EXIT_REGS_RESTORE	0xD0
-#define DORMANT_EXIT_CPU1_WAKEUP	0xE0
-#define DORMANT_EXIT			0xF0
+/* LPM trace values */
+#define LPM_TRACE_ENTER_WFI		0x10
+#define LPM_TRACE_EXIT_WFI		0x20
+
+#define LPM_TRACE_ENTER_26MWFI		0x40
+#define LPM_TRACE_26MWFI_SET_FREQ	0x42
+#define LPM_TRACE_26MWFI_RES_FREQ	0x44
+#define LPM_TRACE_EXIT_26MWFI		0x46
+
+#define LPM_TRACE_ENTER_DRMNT		0x60
+#define LPM_TRACE_DRMNT_SAVE_REG	0x61
+#define LPM_TRACE_DRMNT_L2_OFF		0x62
+#define LPM_TRACE_DRMNT_SAVE_SHRD	0x63
+#define LPM_TRACE_DRMNT_SAVE_PROC	0x64
+#define LPM_TRACE_DRMNT_SAVE_ADDNL	0x65
+#define LPM_TRACE_DRMNT_CORE_CNT	0x66
+#define LPM_TRACE_DRMNT_CPU_SUSPEND	0x67
+#define LPM_TRACE_DRMNT_CNTNUE		0x68
+#define LPM_TRACE_DRMNT_DIS_SMP		0x69
+#define LPM_TRACE_DRMNT_SMC		0x6A
+#define LPM_TRACE_DRMNT_WFI		0x6B
+#define LPM_TRACE_DRMNT_WFI_EXIT	0x6C
+#define LPM_TRACE_DRMNT_WAKEUP		0x6D
+#define LPM_TRACE_DRMNT_L2_ON		0x6E
+#define LPM_TRACE_DRMNT_RS1		0x6F
+#define LPM_TRACE_DRMNT_RS2		0x70
+#define LPM_TRACE_DRMNT_RS_PROC		0x71
+#define LPM_TRACE_DRMNT_RS_ADDNL	0x72
+#define LPM_TRACE_DRMNT_RS3		0x73
+#define LPM_TRACE_DRMNT_RS4		0x74
+#define LPM_TRACE_DRMNT_CPU_WAIT1	0x75
+#define LPM_TRACE_DRMNT_CPU_WAIT2	0x76
+#define LPM_TRACE_EXIT_DRMNT	0x77
+
+/*Below traces are logged only by core-0*/
+#define LPM_TRACE_DRMNT_ATMPT_CNT	0x78
+#define LPM_TRACE_DRMNT_FAIL_CNT	0x79
+#define LPM_TRACE_DRMNT_SUCSS_CNT	0x7A
+
+#define LPM_TRACE_PARAM_SHIFT		16
+#define LPM_TRACE_PARAM_MASK		0xFFFF
+#define LPM_TRACE_VAL_MASK		0xFFFF
+
+#define DRMT_FAILURE_PARAM		0x1000
 
 #define DEEP_SLEEP_LATENCY     8000 /*latency due to xtal warm up delay*/
-
-/* Following macro values should be loadable via a single
- * mov instruction.
- */
-#define DORMANT_RESTORE1_START      0xF1
-#define DORMANT_RESTORE1_END        0xF2
-#define DORMANT_RESTORE2_START      0xF3
-#define DORMANT_CTRL_PROG_START     0xE0
-#define DORMANT_CTRL_PROG_END       0xE1
 
 #ifndef __ASSEMBLY__
 
@@ -69,7 +88,6 @@
  */
 enum {
 	CSTATE_SIMPLE_WFI, /* Simple WFI */
-	CSTATE_SUSPEND_RETN, /* suspend retention */
 	CSTATE_SUSPEND_DRMT, /* suspend dormant */
 	CSTATE_DS_DRMT, /* deep sleep dormant */
 };
@@ -77,7 +95,6 @@ enum {
 /*Cstate Exit latency*/
 enum {
 	EXIT_LAT_SIMPLE_WFI = 0,
-	EXIT_LAT_SUSPEND_RETN = 200,
 	/* Worst case dormant sequence delay */
 	EXIT_LAT_SUSPEND_DRMT = 2000,
 	/*dormant latency + xtal warmup delay*/
@@ -87,7 +104,6 @@ enum {
 /*CState target residency values*/
 enum {
 	TRGT_RESI_SIMPLE_WFI = 0,
-	TRGT_RESI_SUSPEND_RETN = 200,
 	TRGT_RESI_SUSPEND_DRMT = EXIT_LAT_SUSPEND_DRMT + 2000,
 	TRGT_RESI_DS_DRMT = EXIT_LAT_DS_DRMT + 5000,
 };
@@ -135,12 +151,11 @@ extern void request_suspend_state(suspend_state_t state);
 #else
 static inline void request_suspend_state(suspend_state_t state) { }
 #endif
-extern void instrument_dormant_trace(u32 trace, u32 service, u32 success);
-extern void instrument_wfi(int trace_path);
-extern void instrument_retention(int trace_path);
+extern void instrument_lpm(u16 trace, u16 param);
 extern int get_force_sleep_state(void);
-extern void set_spare_power_status(unsigned int mode);
-extern u32 num_cpus(void);
+extern int pm_is_forced_sleep(void);
+extern int pm_get_pending_intr(u32 *en_set, u32 *pend_set);
+extern void pm_log_intr_status(u32 *en_set_rd, u32 *pend_set_rd);
 
 #endif /* __ASSEMBLY__ */
 

@@ -233,6 +233,11 @@ static struct platform_device *hawaii_ray_plat_devices[] __initdata = {
 	&hawaii_spum_aes_device,
 #endif
 
+#ifdef CONFIG_BRCM_CDC
+	&brcm_cdc_device,
+#endif
+
+
 #if defined(CONFIG_BCM_ALSA_SOUND)
 	&board_caph_device,
 #endif

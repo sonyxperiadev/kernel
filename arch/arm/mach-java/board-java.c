@@ -735,6 +735,10 @@ struct platform_device *hawaii_common_plat_devices[] __initdata = {
 	&hawaii_otg_platform_device,
 #endif
 
+#ifdef CONFIG_BRCM_CDC
+	&brcm_cdc_device,
+#endif
+
 #ifdef CONFIG_KONA_AVS
 	&kona_avs_device,
 #endif

@@ -253,12 +253,20 @@ config PM_LOG_TO_UNCACHED_MEM
         retrieve information from RAM-dumps in case of errors or failures.
 
 config KONA_MEMC
-       bool "Enable Kona MEMC driver"
-       help
-         Say Y to enable MEMC driver fot BROADCOM
+	bool "Enable Kona MEMC driver"
+	help
+	 Say Y to enable MEMC driver fot BROADCOM
 	 mobile platform.
 	 MEMC config params (self refresh, DDRLDO state etc)
 	 can be set through driver platform data.
+
+config BRCM_CDC
+	bool "Enable Broadcom CDC driver"
+	help
+	 Say Y to enable Broadcom CDC driver
+	 Cluster Dormant Controller handles state
+	 CPU state machine for CPU dormant and need
+	 to be enabled to enable dormant support
 
 config KONA_ATAG_DT
        bool "Enable ATAG-based DT support"

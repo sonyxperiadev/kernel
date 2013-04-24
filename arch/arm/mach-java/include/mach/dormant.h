@@ -12,10 +12,15 @@
 #ifndef DORMANT_H
 #define DORMANT_H
 
-enum DORMANT_SERVICE_TYPE {
-	DORMANT_CORE_DOWN = 0,    /* Take down this core */
-	DORMANT_CLUSTER_DOWN = 1  /* Take down the cluster */
+enum dormant_service {
+	CORE_DORMANT = 0,
+	FULL_DORMANT_L2_ON,
+	FULL_DORMANT_L2_OFF
 };
+
+#define DORMANT_ENTRY_SUCCESS		0
+#define DORMANT_ENTRY_FAILURE		1
+
 
 /* Main API for dormant entry */
 extern void dormant_enter(u32 service);
@@ -24,8 +29,5 @@ extern void dormant_enter(u32 service);
 extern u32 dormant_enter_prepare(u32 dont_care, u32 v_to_p_offset);
 
 extern void invalidate_tlb_btac(void);
-
-/* Exported API to check if dormant is enabled or not */
-extern u32 is_dormant_enabled(void);
 
 #endif /* DORMANT_H */

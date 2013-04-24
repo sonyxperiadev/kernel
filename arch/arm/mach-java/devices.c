@@ -102,6 +102,11 @@
 #include <linux/broadcom/kona_tmon.h>
 #endif
 
+#ifdef CONFIG_BRCM_CDC
+#include <plat/cdc.h>
+#endif
+
+
 #include "devices.h"
 
 /* dynamic ETM support */
@@ -385,6 +390,31 @@ struct platform_device hawaii_headset_device = {
 	.num_resources	= ARRAY_SIZE(board_headset_resource),
 };
 #endif /* CONFIG_KONA_HEADSET_MULTI_BUTTON */
+
+#ifdef CONFIG_BRCM_CDC
+static struct resource brcm_cdc_res = {
+	.start = CDC_BASE_ADDR,
+	.end = CDC_BASE_ADDR + SZ_4K - 1,
+	.flags = IORESOURCE_MEM,
+};
+
+static struct cdc_pdata cdc_pdata = {
+	.flags = 0,
+	.nr_cpus = 4,
+};
+
+
+struct platform_device brcm_cdc_device = {
+	.name = "brcm-cdc",
+	.id = -1,
+	.resource = &brcm_cdc_res,
+	.num_resources = 1,
+	.dev = {
+		.platform_data = &cdc_pdata,
+	}
+};
+
+#endif /*CONFIG_BRCM_CDC*/
 
 #ifdef CONFIG_DMAC_PL330
 struct platform_device hawaii_pl330_dmac_device = {

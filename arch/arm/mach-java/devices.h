@@ -25,6 +25,9 @@ extern struct platform_device hawaii_kp_device;
 extern struct platform_device hawaii_headset_device;
 extern struct platform_device hawaii_pl330_dmac_device;
 extern struct platform_device hawaii_backlight_device;
+#ifdef CONFIG_BRCM_CDC
+extern struct platform_device brcm_cdc_device;
+#endif
 #ifdef CONFIG_SENSORS_KONA
 extern struct platform_device tmon_device;
 extern struct platform_device thermal_device;

@@ -29,14 +29,17 @@
 #include <linux/broadcom/bcm_rpc.h>
 #endif
 
+#ifdef CONFIG_KONA_PROFILER
 #include <plat/ccu_profiler.h>
 #include <plat/profiler.h>
 #include <mach/kona_timer.h>
+#endif /*CONFIG_KONA_PROFILER*/
 
-
+#ifdef CONFIG_KONA_PROFILER
 int deepsleep_profiling;
 module_param_named(deepsleep_profiling, deepsleep_profiling, int,
 	S_IRUGO | S_IWUSR | S_IWGRP);
+#endif /*CONFIG_KONA_PROFILER*/
 
 
 enum {
@@ -166,11 +169,13 @@ __weak int kona_mach_pm_prepare(void)
 __weak int kona_mach_pm_enter(suspend_state_t state)
 {
 	int ret = 0;
+#ifdef CONFIG_KONA_PROFILER
 	int err = 0;
 	long unsigned time_awake, time1, time2;
 	struct ccu_prof_parameter param = {
 		.count_type = CCU_PROF_ALWAYS_ON,
 	};
+#endif /*CONFIG_KONA_PROFILER*/
 	struct kona_idle_state *suspend =
 		&pm_prms.states[pm_prms.suspend_state];
 	BUG_ON(!suspend);
@@ -194,13 +199,17 @@ __weak int kona_mach_pm_enter(suspend_state_t state)
 #ifdef CONFIG_BCM_MODEM
 			BcmRpc_SetApSleep(1);
 #endif
+
+#ifdef CONFIG_KONA_PROFILER
 			if (deepsleep_profiling)
 				err = start_profiler("ccu_root",
 						((void *)&param));
 
 			time1 = kona_hubtimer_get_counter();
+#endif /*CONFIG_KONA_PROFILER*/
 			suspend->enter(suspend,
 				suspend->params | CTRL_PARAMS_ENTER_SUSPEND);
+#ifdef CONFIG_KONA_PROFILER
 			time2 = kona_hubtimer_get_counter();
 			if (!err && deepsleep_profiling) {
 				time_awake = stop_profiler("ccu_root");
@@ -214,6 +223,7 @@ __weak int kona_mach_pm_enter(suspend_state_t state)
 						time_awake);
 				}
 			}
+#endif /*CONFIG_KONA_PROFILER*/
 
 #ifdef CONFIG_BCM_MODEM
 			BcmRpc_SetApSleep(0);

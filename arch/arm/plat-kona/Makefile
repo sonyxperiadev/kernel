@@ -88,3 +88,4 @@ obj-$(CONFIG_KONA_WFI_WORKAROUND) += wfi_count.o
 obj-$(CONFIG_KONA_PROFILER) += profiler.o ccu_profiler.o pi_profiler.o
 obj-$(CONFIG_KONA_MEMC) += kona_memc.o
 obj-$(CONFIG_KONA_AXITRACE)	+= axitrace.o
+obj-$(CONFIG_BRCM_CDC)	+= cdc.o

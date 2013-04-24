@@ -26,29 +26,51 @@
 #include <plat/kona_pm.h>
 #include <plat/pwr_mgr.h>
 #include <plat/pi_mgr.h>
-#include <plat/scu.h>
 #include <plat/clock.h>
 #include <mach/io_map.h>
 #include <mach/rdb/brcm_rdb_chipreg.h>
 #include <mach/rdb/brcm_rdb_root_clk_mgr_reg.h>
-#include <mach/rdb/brcm_rdb_gicdist.h>
+#include <mach/rdb/brcm_rdb_gic.h>
 #include <mach/rdb/brcm_rdb_pwrmgr.h>
 #include <mach/pwr_mgr.h>
 #include <mach/rdb/brcm_rdb_kona_gptimer.h>
 #include <mach/pm.h>
+#include <mach/irqs.h>
 #include <mach/memory.h>
 #include <mach/dormant.h>
 
 #include "pm_params.h"
 
-static int keep_xtl_on;
-module_param_named(keep_xtl_on, keep_xtl_on, int, S_IRUGO|S_IWUSR|S_IWGRP);
+struct pm_info {
+	int keep_xtl_on;
+	int clk_dbg_dsm;
+	int wfi_26mhz_cnt;
+	int force_sleep;
+	u32 dormant_enable;
+	u32 log_mask;
+	struct ccu_clk *proc_ccu;
+	spinlock_t lock;
 
+};
+
+static struct pm_info pm_info = {
+	.keep_xtl_on = 0,
+	.clk_dbg_dsm = 0,
+	.wfi_26mhz_cnt = 0,
+	.force_sleep = 0,
+	.dormant_enable = 0,
+	.log_mask = 0,
+};
+
+module_param_named(keep_xtl_on, pm_info.keep_xtl_on, int,
+	S_IRUGO|S_IWUSR|S_IWGRP);
+module_param_named(wfi_26mhz_cnt, pm_info.wfi_26mhz_cnt, int,
+	S_IRUGO | S_IWGRP);
 /**
  * Run time flag to debug the Rhea clocks preventing deepsleep
  */
-static int clk_dbg_dsm;
-module_param_named(clk_dbg_dsm, clk_dbg_dsm, int, S_IRUGO|S_IWUSR|S_IWGRP);
+module_param_named(clk_dbg_dsm, pm_info.clk_dbg_dsm, int,
+	S_IRUGO|S_IWUSR|S_IWGRP);
 
 
 /* PM log masks */
@@ -60,24 +82,17 @@ enum {
 
 #define pm_dbg(id, format...) \
 	do {		\
-		if (log_mask & (id)) \
+		if (pm_info.log_mask & (id)) \
 			pr_info(format); \
 	} while (0)
 
-
-static u32 log_mask;
-/* Set this to 1 to enable dormant from boot */
-static u32 dormant_enable = 1;
-static int force_sleep;
-
-static DEFINE_SPINLOCK(pm_idle_lock);
 
 #define CHIPREG_PERIPH_SPARE_CONTROL2    \
 	(KONA_CHIPREG_VA + CHIPREG_PERIPH_SPARE_CONTROL2_OFFSET)
 
 
 static int enter_idle_state(struct kona_idle_state *state, u32 ctrl_params);
-static int enter_suspend_state(struct kona_idle_state *state);
+static int enter_suspend_state(struct kona_idle_state *state, u32 ctrl_params);
 static int enter_dormant_state(u32 ctrl_params);
 
 static struct kona_idle_state idle_states[] = {
@@ -90,30 +105,21 @@ static struct kona_idle_state idle_states[] = {
 		.state = CSTATE_SIMPLE_WFI,
 		.enter = enter_suspend_state,
 	},
-#ifdef CONFIG_A9_RETENTION_CSTATE
+#ifdef CONFIG_26MHZ_WFI
 	{
 		.name = "C2",
-		.desc = "suspend-rtn", /*suspend-retention (XTAL ON)*/
+		.desc = "26Mhz-WFI", /*26MHz WFI*/
 		.flags = CPUIDLE_FLAG_TIME_VALID,
-		.params = CTRL_PARAMS_FLAG_XTAL_ON,
-		.latency = EXIT_LAT_SUSPEND_RETN,
-		.target_residency = TRGT_RESI_SUSPEND_RETN,
-		.state = CSTATE_SUSPEND_RETN,
-		.enter = enter_idle_state,
+		.params = CTRL_PARAMS_CSTATE_DISABLED,
+		.latency = EXIT_LAT_26MHZ_WFI,
+		.target_residency = TRGT_RESI_26MHZ_WFI,
+		.state = CSTATE_26MHZ_WFI,
+		.enter = enter_suspend_state,
 	},
 #endif
-#ifdef CONFIG_A9_DORMANT_MODE
+#ifdef CONFIG_DORMANT_MODE
 	{
 		.name = "C3",
-		.desc = "suspend-drmnt", /* suspend-dormant */
-		.flags = CPUIDLE_FLAG_TIME_VALID,
-		.params = CTRL_PARAMS_FLAG_XTAL_ON,
-		.latency = EXIT_LAT_SUSPEND_DRMT,
-		.target_residency = TRGT_RESI_SUSPEND_DRMT,
-		.state = CSTATE_SUSPEND_DRMT,
-		.enter = enter_idle_state,
-	}, {
-		.name = "C4",
 		.desc = "ds-drmnt", /* deepsleep-dormant(XTAL OFF) */
 		.flags = CPUIDLE_FLAG_TIME_VALID,
 		.latency = EXIT_LAT_DS_DRMT,
@@ -122,6 +128,7 @@ static struct kona_idle_state idle_states[] = {
 		.enter = enter_idle_state,
 	},
 #endif
+
 };
 
 
@@ -136,40 +143,15 @@ when subsystems are acvtive and 1 if in sleep (retention/dormant) */
 	/*Enable standby for ROM, RAM & SRAM*/
 	reg_val |= 0x7F;
 	writel(reg_val, KONA_CHIPREG_VA+CHIPREG_RAM_STBY_RET_OVERRIDE_OFFSET);
-	reg_val = readl(CHIPREG_PERIPH_SPARE_CONTROL2);
-	reg_val |= CHIPREG_PERIPH_SPARE_CONTROL2_RAM_PM_DISABLE_MASK;
-	writel(reg_val, CHIPREG_PERIPH_SPARE_CONTROL2);
-	pwr_mgr_arm_core_dormant_enable(false);
-	set_spare_power_status(SCU_STATUS_NORMAL);
 	return 0;
 }
 
-/*
-For timebeing, COMMON_INT_TO_AC_EVENT related functions are added here
-We may have to move these fucntions to somewhere else later
-*/
-static void clear_wakeup_interrupts(void)
-{
-	/* clear interrupts for COMMON_INT_TO_AC_EVENT */
-	writel_relaxed(0xFFFFFFFF,
-			KONA_CHIPREG_VA + CHIPREG_ENABLE_CLR0_OFFSET);
-	writel_relaxed(0xFFFFFFFF,
-			KONA_CHIPREG_VA + CHIPREG_ENABLE_CLR1_OFFSET);
-	writel_relaxed(0xFFFFFFFF,
-			KONA_CHIPREG_VA + CHIPREG_ENABLE_CLR2_OFFSET);
-	writel_relaxed(0xFFFFFFFF,
-			KONA_CHIPREG_VA + CHIPREG_ENABLE_CLR3_OFFSET);
-	writel_relaxed(0xFFFFFFFF,
-			KONA_CHIPREG_VA + CHIPREG_ENABLE_CLR4_OFFSET);
-	writel_relaxed(0xFFFFFFFF,
-			KONA_CHIPREG_VA + CHIPREG_ENABLE_CLR5_OFFSET);
-	writel_relaxed(0xFFFFFFFF,
-			KONA_CHIPREG_VA + CHIPREG_ENABLE_CLR6_OFFSET);
-
-}
 
 static void log_wakeup_interrupts(void)
 {
+#if 0
+	pm_dbg(LOG_INTR_STATUS, "enable_set1 = %x\n",
+		readl(KONA_GICDIST_VA+GICDIST_ENABLE_SET1_OFFSET));
 	pm_dbg(LOG_INTR_STATUS, "enable_set1 = %x\n",
 		readl(KONA_GICDIST_VA+GICDIST_ENABLE_SET1_OFFSET));
 	pm_dbg(LOG_INTR_STATUS, "enable_set2 = %x\n",
@@ -219,87 +201,97 @@ static void log_wakeup_interrupts(void)
 
 	pm_dbg(LOG_INTR_STATUS, "GIC pending status7 = %x\n",
 			readl(KONA_GICDIST_VA+GICDIST_PENDING_SET7_OFFSET));
+#endif
 }
 
-static void config_wakeup_interrupts(void)
+
+int enter_suspend_state(struct kona_idle_state *state, u32 ctrl_params)
 {
-	/*all enabled interrupts can trigger COMMON_INT_TO_AC_EVENT*/
+#ifdef CONFIG_26MHZ_WFI
+	static u32 freq_id = 0xFFFF;
+#endif
 
-	if (force_sleep)
-		return;
+#ifdef CONFIG_26MHZ_WFI
+	if (state->state == CSTATE_26MHZ_WFI) {
+		struct opp_info opp_info;
+		spin_lock(&pm_info.lock);
+		opp_info.ctrl_prms = CCU_POLICY_FREQ_REG_INIT;
+		opp_info.freq_id = PROC_CCU_FREQ_ID_XTAL;
+		state->num_cpu_in_state++;
+		BUG_ON(state->num_cpu_in_state > CONFIG_NR_CPUS);
+		instrument_lpm(LPM_TRACE_ENTER_26MWFI,
+				(u16)state->num_cpu_in_state);
 
-	writel_relaxed(readl(KONA_GICDIST_VA+GICDIST_ENABLE_SET1_OFFSET),
-		KONA_CHIPREG_VA+CHIPREG_ENABLE_SET0_OFFSET);
-	writel_relaxed(readl(KONA_GICDIST_VA+GICDIST_ENABLE_SET2_OFFSET),
-		KONA_CHIPREG_VA+CHIPREG_ENABLE_SET1_OFFSET);
-	writel_relaxed(readl(KONA_GICDIST_VA+GICDIST_ENABLE_SET3_OFFSET),
-		KONA_CHIPREG_VA+CHIPREG_ENABLE_SET2_OFFSET);
-	writel_relaxed(readl(KONA_GICDIST_VA+GICDIST_ENABLE_SET4_OFFSET),
-		KONA_CHIPREG_VA+CHIPREG_ENABLE_SET3_OFFSET);
-	writel_relaxed(readl(KONA_GICDIST_VA+GICDIST_ENABLE_SET5_OFFSET),
-		KONA_CHIPREG_VA+CHIPREG_ENABLE_SET4_OFFSET);
-	writel_relaxed(readl(KONA_GICDIST_VA+GICDIST_ENABLE_SET6_OFFSET),
-		KONA_CHIPREG_VA+CHIPREG_ENABLE_SET5_OFFSET);
-	writel_relaxed(readl(KONA_GICDIST_VA+GICDIST_ENABLE_SET7_OFFSET),
-		KONA_CHIPREG_VA+CHIPREG_ENABLE_SET6_OFFSET);
-}
+		if (state->num_cpu_in_state == CONFIG_NR_CPUS) {
+			pm_info.wfi_26mhz_cnt++;
+			freq_id = ccu_get_freq_policy(pm_info.proc_ccu,
+				CCU_POLICY(PM_DFS));
+			ccu_set_freq_policy(pm_info.proc_ccu,
+				CCU_POLICY(PM_DFS), &opp_info);
+			instrument_lpm(LPM_TRACE_26MWFI_SET_FREQ,
+				(u16)freq_id);
 
-int enter_suspend_state(struct kona_idle_state *state)
-{
-	if (WFI_TRACE_ENABLE)
-		instrument_wfi(TRACE_ENTRY);
+
+		}
+		spin_unlock(&pm_info.lock);
+	} else {
+		instrument_lpm(LPM_TRACE_ENTER_WFI, 0);
+	}
+#endif /*CONFIG_26MHZ_WFI*/
 
 	enter_wfi();
 
-	if (WFI_TRACE_ENABLE)
-		instrument_wfi(TRACE_EXIT);
+#ifdef CONFIG_26MHZ_WFI
+	if (state->state == CSTATE_26MHZ_WFI) {
+		struct opp_info opp_info;
+		spin_lock(&pm_info.lock);
+		opp_info.ctrl_prms = CCU_POLICY_FREQ_REG_INIT;
+		BUG_ON(state->num_cpu_in_state == 0);
+		instrument_lpm(LPM_TRACE_EXIT_26MWFI,
+				(u16)state->num_cpu_in_state);
+
+		if (state->num_cpu_in_state == CONFIG_NR_CPUS) {
+			BUG_ON(freq_id == 0xFFFF);
+			opp_info.freq_id = freq_id;
+			ccu_set_freq_policy(pm_info.proc_ccu,
+				CCU_POLICY(PM_DFS), &opp_info);
+			instrument_lpm(LPM_TRACE_26MWFI_RES_FREQ,
+				(u16)freq_id);
+
+			freq_id = 0xFFFF;
+		}
+		state->num_cpu_in_state--;
+		spin_unlock(&pm_info.lock);
+	} else {
+		instrument_lpm(LPM_TRACE_EXIT_WFI, 0);
+	}
+
+#endif /*CONFIG_26MHZ_WFI*/
 
 	return -1;
 }
 
-/*  PWRCTL1_bypass & PWRCTL0_bypass in Periph Spare Control2
- * registers holds CPU power mode. Boot ROM reads this register
- * instead of SCU Power Status register to differentiate between POR and
- * dormant reset. Linux needs to set this register to DORMANT_MODE before
- * dormant entry.
- *
- * In the dormant entry path, if an event or interrupt becomes pending
- * soon after the power manager starts the dormant state machine, the SCU
- * power status bits gets changed from dormant to normal mode. This also
- * gets latched in the power manager. But the system anyway enters dormant
- * mode and on wakeup, boot ROM incorrectly senses POR instead of dormant
- * wakeup. The new bits listed above is meant to overcome this problem.
- */
-void set_spare_power_status(unsigned int mode)
-{
-	unsigned int val;
-
-	mode = mode & 0x3;
-
-	val = readl(KONA_CHIPREG_VA + CHIPREG_PERIPH_SPARE_CONTROL2_OFFSET);
-	val &= ~(3 << CHIPREG_PERIPH_SPARE_CONTROL2_PWRCTL0_BYPASS_SHIFT);
-	val |= mode << CHIPREG_PERIPH_SPARE_CONTROL2_PWRCTL0_BYPASS_SHIFT;
-	writel_relaxed(val, KONA_CHIPREG_VA +
-		       CHIPREG_PERIPH_SPARE_CONTROL2_OFFSET);
-}
-
 int enter_dormant_state(u32 ctrl_params)
 {
-#ifdef CONFIG_A9_DORMANT_MODE
-	if (dormant_enable != 0) {
+#ifdef CONFIG_DORMANT_MODE
+	if (pm_info.dormant_enable) {
+		u32 svc;
 		if (ctrl_params & CTRL_PARAMS_ENTER_SUSPEND)
-			dormant_enter(DORMANT_CLUSTER_DOWN);
+			svc = FULL_DORMANT_L2_OFF;
 		else
-			dormant_enter(DORMANT_CORE_DOWN);
+			svc = FULL_DORMANT_L2_ON;
+
+		dormant_enter(svc);
 	} else
 		enter_wfi();
-#endif /* CONFIG_A9_DORMANT_MODE */
+#endif /* CONFIG_DORMANT_MODE */
 	return 0;
 }
 
 int disable_all_interrupts(void)
 {
-	if (force_sleep) {
+#if 0
+	if (pm_info.force_sleep) {
 		writel(0xFFFFFFFF, KONA_GICDIST_VA +
 				GICDIST_ENABLE_CLR1_OFFSET);
 		writel(0xFFFFFFFF, KONA_GICDIST_VA +
@@ -315,63 +307,13 @@ int disable_all_interrupts(void)
 		writel(0xFFFFFFFF, KONA_GICDIST_VA +
 				GICDIST_ENABLE_CLR7_OFFSET);
 	}
+#endif
 	return 0;
 }
 
-static u32 sctlr[CONFIG_NR_CPUS];
-static u32 actlr[CONFIG_NR_CPUS];
-static u32 ncores_in_retention;
 
-u32 num_cpus(void)
-{
-	return (readl(KONA_SCU_VA + SCU_CONFIG_OFFSET) &
-		SCU_CONFIG_NUM_CPUS_MASK) + 1;
-}
 
-static int enter_retention_state(struct kona_idle_state *state)
-{
-	unsigned long flags;
 
-	sctlr[smp_processor_id()] = read_sctlr();
-	actlr[smp_processor_id()] = read_actlr();
-
-	spin_lock_irqsave(&pm_idle_lock, flags);
-
-	ncores_in_retention++;
-	/* This is the last core trying to enter into retention */
-	if (ncores_in_retention == num_cpus())
-		set_spare_power_status(SCU_STATUS_DORMANT);
-
-	spin_unlock_irqrestore(&pm_idle_lock, flags);
-
-	disable_clean_inv_dcache_v7_l1();
-	write_actlr(read_actlr() & ~(A9_SMP_BIT));
-
-	writeb_relaxed(SCU_STATUS_DORMANT,
-		       KONA_SCU_VA + SCU_POWER_STATUS_OFFSET +
-		       smp_processor_id());
-
-	wfi();
-
-	writeb_relaxed(SCU_STATUS_NORMAL,
-		       KONA_SCU_VA + SCU_POWER_STATUS_OFFSET +
-		       smp_processor_id());
-
-	write_sctlr(sctlr[smp_processor_id()]);
-	write_actlr(actlr[smp_processor_id()]);
-
-	spin_lock_irqsave(&pm_idle_lock, flags);
-
-	/* This is the first core trying to come out of retention */
-	if (ncores_in_retention == num_cpus())
-		set_spare_power_status(SCU_STATUS_NORMAL);
-
-	if (ncores_in_retention)
-		ncores_in_retention--;
-
-	spin_unlock_irqrestore(&pm_idle_lock, flags);
-	return 0;
-}
 
 int hawaii_force_sleep(suspend_state_t state)
 {
@@ -384,7 +326,7 @@ int hawaii_force_sleep(suspend_state_t state)
 	local_irq_disable();
 	local_fiq_disable();
 
-	force_sleep = 1;
+	pm_info.force_sleep = 1;
 
 	while (1) {
 		for (i = 0; i < PWR_MGR_NUM_EVENTS; i++) {
@@ -415,24 +357,18 @@ int enter_idle_state(struct kona_idle_state *state, u32 ctrl_params)
 	pwr_mgr_event_clear_events(USBOTG_EVENT, MODEMBUS_ACTIVE_EVENT);
 
 		/*Turn off XTAL only for deep sleep state*/
-	if (ctrl_params & CTRL_PARAMS_FLAG_XTAL_ON || keep_xtl_on)
+	if (ctrl_params & CTRL_PARAMS_FLAG_XTAL_ON || pm_info.keep_xtl_on)
 		clk_set_crystal_pwr_on_idle(false);
-
-	clear_wakeup_interrupts();
-	config_wakeup_interrupts();
 
 	pi = pi_mgr_get(PI_MGR_PI_ID_ARM_CORE);
 	BUG_ON(pi == NULL);
 	pi_enable(pi, 0);
 
-	if (clk_dbg_dsm)
+	if (pm_info.clk_dbg_dsm)
 		if (ctrl_params & CTRL_PARAMS_ENTER_SUSPEND)
 			__clock_print_act_clks();
 
 	switch (state->state) {
-	case CSTATE_SUSPEND_RETN:
-		enter_retention_state(state);
-		break;
 	case CSTATE_SUSPEND_DRMT:
 	case CSTATE_DS_DRMT:
 		enter_dormant_state(ctrl_params);
@@ -444,67 +380,7 @@ int enter_idle_state(struct kona_idle_state *state, u32 ctrl_params)
 	pwr_mgr_event_set(SOFTWARE_2_EVENT, 1);
 
 	pi_enable(pi, 1);
-	scu_set_power_mode(SCU_STATUS_NORMAL);
-#ifdef PM_DEBUG
-	if (pwr_mgr_is_event_active(COMMON_INT_TO_AC_EVENT)) {
-		pm_dbg(LOG_INTR_STATUS, "%s:GIC act status1 = %x\n",
-			__func__,
-			readl(KONA_GICDIST_VA+GICDIST_ACTIVE_STATUS1_OFFSET));
-		pm_dbg(LOG_INTR_STATUS, "%s:GIC act status2 = %x\n",
-			__func__,
-			readl(KONA_GICDIST_VA+GICDIST_ACTIVE_STATUS2_OFFSET));
 
-		pm_dbg(LOG_INTR_STATUS, "%s:GIC act status3 = %x\n",
-			__func__,
-			readl(KONA_GICDIST_VA+GICDIST_ACTIVE_STATUS3_OFFSET));
-
-		pm_dbg(LOG_INTR_STATUS, "%s:GIC act status4 = %x\n",
-			__func__,
-			readl(KONA_GICDIST_VA+GICDIST_ACTIVE_STATUS4_OFFSET));
-
-		pm_dbg(LOG_INTR_STATUS, "%s:GIC act status5 = %x\n",
-			__func__,
-			readl(KONA_GICDIST_VA+GICDIST_ACTIVE_STATUS5_OFFSET));
-
-		pm_dbg(LOG_INTR_STATUS, "%s:GIC act status6 = %x\n",
-			__func__,
-			readl(KONA_GICDIST_VA+GICDIST_ACTIVE_STATUS6_OFFSET));
-
-		pm_dbg(LOG_INTR_STATUS, "%s:GIC act status7 = %x\n",
-			__func__,
-			readl(KONA_GICDIST_VA+GICDIST_ACTIVE_STATUS7_OFFSET));
-
-		pm_dbg(LOG_INTR_STATUS, "%s:GIC pending status1 = %x\n",
-			__func__,
-			readl(KONA_GICDIST_VA+GICDIST_PENDING_SET1_OFFSET));
-		pm_dbg(LOG_INTR_STATUS, "%s:GIC pending status2 = %x\n",
-			__func__,
-			readl(KONA_GICDIST_VA+GICDIST_PENDING_SET2_OFFSET));
-
-		pm_dbg(LOG_INTR_STATUS, "%s:GIC pending status3 = %x\n",
-			__func__,
-			readl(KONA_GICDIST_VA+GICDIST_PENDING_SET4_OFFSET));
-
-		pm_dbg(LOG_INTR_STATUS, "%s:GIC pending status4 = %x\n",
-			__func__,
-			readl(KONA_GICDIST_VA+GICDIST_PENDING_SET4_OFFSET));
-
-		pm_dbg(LOG_INTR_STATUS, "%s:GIC pending status5 = %x\n",
-			__func__,
-			readl(KONA_GICDIST_VA+GICDIST_PENDING_SET5_OFFSET));
-
-		pm_dbg(LOG_INTR_STATUS, "%s:GIC pending status6 = %x\n",
-			__func__,
-			readl(KONA_GICDIST_VA+GICDIST_PENDING_SET6_OFFSET));
-
-		pm_dbg(LOG_INTR_STATUS, "%s:GIC pending status7 = %x\n",
-			__func__,
-			readl(KONA_GICDIST_VA+GICDIST_PENDING_SET7_OFFSET));
-
-	}
-#endif
-
-	clear_wakeup_interrupts();
 	pwr_mgr_process_events(LCDTE_EVENT, KEY_R7_EVENT, false);
 	pwr_mgr_process_events(MISC_WKP_EVENT, BRIDGE_TO_MODEM_EVENT, false);
 	pwr_mgr_process_events(USBOTG_EVENT, PHY_RESUME_EVENT, false);
@@ -512,7 +388,7 @@ int enter_idle_state(struct kona_idle_state *state, u32 ctrl_params)
 	if (ctrl_params & CTRL_PARAMS_ENTER_SUSPEND)
 		log_wakeup_interrupts();
 
-	if (ctrl_params & CTRL_PARAMS_FLAG_XTAL_ON || keep_xtl_on)
+	if (ctrl_params & CTRL_PARAMS_FLAG_XTAL_ON || pm_info.keep_xtl_on)
 		clk_set_crystal_pwr_on_idle(true);
 	return -1;
 }
@@ -523,9 +399,19 @@ static struct pm_init_param pm_init = {
 	.suspend_state =  ARRAY_SIZE(idle_states)-1,
 };
 
+int pm_is_forced_sleep()
+{
+	return !!pm_info.force_sleep;
+}
+
 
 int __init __pm_init(void)
 {
+	struct clk *clk;
+	spin_lock_init(&pm_info.lock);
+	clk = clk_get(NULL, KPROC_CCU_CLK_NAME_STR);
+	BUG_ON(IS_ERR_OR_NULL(clk));
+	pm_info.proc_ccu = to_ccu_clk(clk);
 	pm_config_deep_sleep();
 	return kona_pm_init(&pm_init);
 }
@@ -538,9 +424,9 @@ device_initcall(__pm_init);
 static int dormant_enable_set(void *data, u64 val)
 {
 	if (val)
-		dormant_enable = 1;
+		pm_info.dormant_enable = 1;
 	else
-		dormant_enable = 0;
+		pm_info.dormant_enable = 0;
 	return 0;
 }
 
@@ -551,11 +437,11 @@ static struct dentry *dent_pm_root_dir;
 int __init __pm_debug_init(void)
 {
 	/* create root clock dir /clock */
-	dent_pm_root_dir = debugfs_create_dir("hawaii_pm", 0);
+	dent_pm_root_dir = debugfs_create_dir("pm", 0);
 	if (!dent_pm_root_dir)
 		return -ENOMEM;
 	if (!debugfs_create_u32("log_mask", S_IRUGO | S_IWUSR,
-		dent_pm_root_dir, (int *)&log_mask))
+		dent_pm_root_dir, (int *)&pm_info.log_mask))
 		return -ENOMEM;
 
 	/* Interface to enable disable dormant mode at runtime */

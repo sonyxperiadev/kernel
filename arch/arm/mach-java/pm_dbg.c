@@ -14,8 +14,10 @@
 #include <plat/kona_pm_dbg.h>
 #include <plat/pwr_mgr.h>
 #include <plat/pi_mgr.h>
+#include <plat/cdc.h>
 #include <mach/io_map.h>
 #include <mach/rdb/brcm_rdb_csr.h>
+#include <mach/rdb/brcm_rdb_gic.h>
 #include <mach/rdb/brcm_rdb_hsotg_ctrl.h>
 #include <mach/rdb/brcm_rdb_gpio.h>
 #include <mach/pm.h>
@@ -36,12 +38,12 @@
 #define GPIO_GPORC_BASE_PHYS    (GPIO2_BASE_ADDR + GPIO_GPORC0_OFFSET)
 #define GPIO_GPORC_BASE_VIRT    (KONA_GPIO2_VA + GPIO_GPORC0_OFFSET)
 
-#define CURR_DORM_TRACE_OFFSET		(SZ_4)
-#define DORMANT_TRACE_OFFSET		(SZ_8)
-#define	RETENTION_TRACE_OFFSET		(SZ_1K)
-#define	WFI_TRACE_OFFSET		(SZ_2K)
-#define	TRACE_PATTERN_OFFSET		0 /* 1st word from offset */
-#define	COUNTER_OFFSET			1 /* 2nd word from offset */
+#define LPM_TRACE_PER_CORE_BUF_SIZE	SZ_1K /*should be a multiple of 4*/
+#define LPM_TRACE_CORE_OFFSET(c)	(LPM_TRACE_PER_CORE_BUF_SIZE*(c))
+
+#define LPM_TRACE_ENCODE(p, v)	((((p) & LPM_TRACE_PARAM_MASK) << \
+					LPM_TRACE_PARAM_SHIFT) | \
+					((v) & LPM_TRACE_VAL_MASK))
 
 /* No check for gpio number to speed up the API */
 void dbg_gpio_set(u32 gpio)
@@ -84,6 +86,7 @@ void clear_ns_gpio(void)
 		dbg_gpio_clr(ns_gpio);
 }
 
+/*
 static void dormant_profile_entry(void)
 {
 	if (dormant_profile_on) {
@@ -101,6 +104,7 @@ static void dormant_profile_exit(void)
 		dbg_gpio_clr(ref_gpio);
 	}
 }
+*/
 
 static void dormant_profile_config(u32 on, u32 ns, u32 sec, u32 ref)
 {
@@ -127,30 +131,13 @@ void clear_ns_gpio(void)
 {
 }
 
-static void dormant_profile_entry(void)
-{
-}
-
-static void dormant_profile_exit(void)
-{
-}
-
 static void dormant_profile_config(u32 on, u32 ns, u32 sec, u32 ref)
 {
 }
 #endif /* DORMANT_PROFILE && CONFIG_A9_DORMANT_MODE */
 u32 dorm_profile_enable;
 
-struct lowpower_trace {
-	u32 *dormant_trace_v;
-	u32 *dormant_trace_p;
-	u32 *retention_trace;
-	u32 *wfi_trace;
-	u32 *dorm_count;
-	u32 *curr_dorm_trace;
-};
-
-struct lowpower_trace lp_trace[CONFIG_NR_CPUS];
+static u32 lpm_trace_buf[CONFIG_NR_CPUS];
 
 struct debug {
 	int dummy;
@@ -210,6 +197,7 @@ int get_force_sleep_state(void)
 
 static void cmd_force_sleep(const char *p)
 {
+	/* coverity[secure_coding] */
 	sscanf(p, "%d", &force_sleep_state);
 	if (force_sleep_state < 0 || force_sleep_state > 4) {
 		pr_err("Invalid state: %d\n", force_sleep_state);
@@ -217,7 +205,8 @@ static void cmd_force_sleep(const char *p)
 		return;
 	}
 
-	pr_info("Forcing system to state: %d\n", force_sleep_state);
+	pr_info("%s: Forcing system to state: %d\n", __func__,
+			force_sleep_state);
 	kona_pm_reg_pm_enter_handler(&hawaii_force_sleep);
 
 	request_suspend_state(PM_SUSPEND_MEM);
@@ -228,6 +217,7 @@ static void cmd_dormant_profile(const char *p)
 {
 	u32 on, ns, sec, ref;
 
+	/* coverity[secure_coding] */
 	sscanf(p, "%08x %08x %08x %08x", &on, &ns, &sec, &ref);
 	dormant_profile_config(on, ns, sec, ref);
 }
@@ -291,23 +281,25 @@ static int param_get_debug(char *buffer, const struct kernel_param *kp)
 }
 
 /*****************************************************************************
- *                       DORMANT MODE INSTRUMENTATION                        *
+ *                       LPM MODE INSTRUMENTATION                        *
  *****************************************************************************/
-void instrument_dormant_trace(u32 trace, u32 service, u32 success)
+void instrument_lpm(u16 trace, u16 param)
 {
-	u32 cpu = smp_processor_id();
-	if (lp_trace[cpu].dormant_trace_v) {
-		lp_trace[cpu].curr_dorm_trace
-			= lp_trace[cpu].dormant_trace_v
-				+ *lp_trace[cpu].dorm_count;
-		*(lp_trace[cpu].curr_dorm_trace)
-			= trace + success + (service * 2);
-		*lp_trace[cpu].dorm_count
-			= (*lp_trace[cpu].dorm_count + 1)
-				& DORMANT_MAX_TRACE_ENTRIES;
-	}
+	u32 pos;
+	u32 byte_off;
+	u32 val;
+/* Fn will be called with interrupts disabled, so use smp_processor_id.
+ get_cpu can't be used here due to dormant */
+	int cpu = smp_processor_id();
+	pos = readl_relaxed(lpm_trace_buf[cpu]) + 1;
+	byte_off = pos << 2; /*pos*4*/
+	BUG_ON(byte_off > (LPM_TRACE_PER_CORE_BUF_SIZE - 4));
+	val = LPM_TRACE_ENCODE(param, trace);
+	writel_relaxed(val, (lpm_trace_buf[cpu] + byte_off));
+	if (byte_off == (LPM_TRACE_PER_CORE_BUF_SIZE - 4))
+		pos = 0;
+	writel_relaxed(pos, lpm_trace_buf[cpu]);
 }
-
 /*****************************************************************************
  *               INTERFACE TO TAKE REGISTER SNAPSHOT BEFORE SLEEP            *
  *****************************************************************************/
@@ -379,6 +371,7 @@ static struct snapshot snapshot[] = {
 	USER_DEFINED_PARM(get_pi_count, &modem_pi_id, "modem"),
 };
 
+
 /*****************************************************************************
  *                        INSTRUMENT LOW POWER STATES                        *
  *****************************************************************************/
@@ -403,57 +396,29 @@ void instrument_idle_exit(void)
 {
 }
 
-/*****************************************************************************
- *                       RETENTION MODE INSTRUMENTATION                        *
- *****************************************************************************/
-
-void instrument_retention(int trace_path)
-{
-}
-
-/*****************************************************************************
- *                       IDLE INSTRUMENTATION                        *
- *****************************************************************************/
-
-void instrument_wfi(int trace_path)
-{
-}
-
 
 int __init __pmdbg_init(void)
 {
-	void *v[CONFIG_NR_CPUS];
-	dma_addr_t p[CONFIG_NR_CPUS];
+	u8 *trace_v;
+	dma_addr_t trace_p;
 	int i;
 
 	snapshot_table_register(snapshot, ARRAY_SIZE(snapshot));
 	dormant_profile_config(0, 0, 0, 0);
 
-	for (i = 0; i < CONFIG_NR_CPUS; i++) {
-		v[i] = dma_alloc_coherent(NULL, SZ_4K, &p[i],
+	trace_v = dma_alloc_coherent(NULL,
+				LPM_TRACE_PER_CORE_BUF_SIZE*CONFIG_NR_CPUS,
+				&trace_p,
 				GFP_ATOMIC | __GFP_ZERO);
-		if (v[i] == NULL) {
-			pr_info("%s: cpu%d tracer dma buffer alloc failed\n",
-				__func__, i);
-			return -ENOMEM;
-		}
-		lp_trace[i].dorm_count = (u32 *) v[i];
-		lp_trace[i].curr_dorm_trace = (u32 *)((u32)v[i]
-						+ CURR_DORM_TRACE_OFFSET);
-		lp_trace[i].dormant_trace_v = (u32 *)((u32)v[i]
-						+ DORMANT_TRACE_OFFSET);
-		lp_trace[i].dormant_trace_p = (u32 *)((u32)p[i]
-						+ DORMANT_TRACE_OFFSET);
-		lp_trace[i].retention_trace = (u32 *)((u32)v[i]
-						+ RETENTION_TRACE_OFFSET);
-		lp_trace[i].wfi_trace = (u32 *)((u32)v[i] + WFI_TRACE_OFFSET);
-		*lp_trace[i].dorm_count = 0;
-		pr_info("%s: cpu%d dormant_trace_v:0x%x,_p:0x%x\n",
-				__func__, i, (u32) v[i], (u32) p[i]);
-		pr_info("%s: cpu%d ret_trace:0x%x; wfi_trace:0x%x\n",
-			__func__, i, (u32) lp_trace[i].retention_trace,
-				(u32) lp_trace[i].wfi_trace);
+
+	pr_info("%s LPM trace_v:0x%x, _p:0x%x\n",
+				__func__, (u32)trace_v, (u32) trace_p);
+	if (!trace_v) {
+		pr_info("%s: LPM dma buffer alloc failed\n", __func__);
+		return -ENOMEM;
 	}
+	for (i = 0; i < CONFIG_NR_CPUS; i++)
+		lpm_trace_buf[i] = (u32)&trace_v[i*LPM_TRACE_PER_CORE_BUF_SIZE];
 	return 0;
 }
 
