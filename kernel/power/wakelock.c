@@ -19,6 +19,7 @@
 #include <linux/suspend.h>
 #include <linux/syscalls.h> /* sys_sync */
 #include <linux/wakelock.h>
+#include <linux/atomic.h>
 #ifdef CONFIG_WAKELOCK_STAT
 #include <linux/proc_fs.h>
 #endif
@@ -44,6 +45,8 @@ static DEFINE_SPINLOCK(list_lock);
 static LIST_HEAD(inactive_locks);
 static struct list_head active_wake_locks[WAKE_LOCK_TYPE_COUNT];
 static int current_event_num;
+static atomic_t sys_sync_count = ATOMIC_INIT(0);
+static struct workqueue_struct *sys_sync_work_queue;
 struct workqueue_struct *suspend_work_queue;
 struct wake_lock main_wake_lock;
 suspend_state_t requested_suspend_state = PM_SUSPEND_MEM;
@@ -261,6 +264,85 @@ long has_wake_lock(int type)
 	return ret;
 }
 
+static void suspend_sys_sync(struct work_struct *work)
+{
+	if (debug_mask & DEBUG_SUSPEND)
+		pr_info("PM: sys_sync - Synchronizing Filesystems ...\n");
+
+	sys_sync();
+
+	if (debug_mask & DEBUG_SUSPEND)
+		pr_info("Done.\n");
+
+	atomic_dec(&sys_sync_count);
+}
+static DECLARE_WORK(suspend_sys_sync_work, suspend_sys_sync);
+
+void suspend_sys_sync_queue(void)
+{
+	int ret;
+
+	ret = queue_work(sys_sync_work_queue, &suspend_sys_sync_work);
+	if (ret)
+		atomic_inc(&sys_sync_count);
+}
+
+static void sys_sync_handler(unsigned long);
+/* value should be less then half of input event wake lock timeout value
+ * which is currently set to 5*HZ (see drivers/input/evdev.c)
+ */
+#define SUSPEND_SYS_SYNC_TIMEOUT (HZ/4)
+
+struct sys_sync_struct {
+	struct timer_list timer;
+	bool abort;
+	struct completion *complete;
+};
+
+static void sys_sync_handler(unsigned long data)
+{
+	struct sys_sync_struct *sys_sync = (struct sys_sync_struct *)data;
+
+	if (atomic_read(&sys_sync_count) == 0) {
+		complete(sys_sync->complete);
+	} else if (has_wake_lock(WAKE_LOCK_SUSPEND)) {
+		sys_sync->abort = true;
+		complete(sys_sync->complete);
+	} else {
+		mod_timer(&sys_sync->timer, jiffies +
+				SUSPEND_SYS_SYNC_TIMEOUT);
+	}
+}
+
+int suspend_sys_sync_wait(void)
+{
+	struct sys_sync_struct sys_sync;
+	DECLARE_COMPLETION_ONSTACK(sys_sync_complete);
+	int ret = 0;
+
+	sys_sync.abort = false;
+	sys_sync.complete = &sys_sync_complete;
+	init_timer_on_stack(&sys_sync.timer);
+
+	sys_sync.timer.function = sys_sync_handler;
+	sys_sync.timer.data = (unsigned long)&sys_sync;
+	sys_sync.timer.expires = SUSPEND_SYS_SYNC_TIMEOUT;
+
+	if (atomic_read(&sys_sync_count) != 0) {
+		add_timer(&sys_sync.timer);
+		wait_for_completion(&sys_sync_complete);
+	}
+	if (sys_sync.abort) {
+		pr_info("suspend aborted....while waiting for sys_sync\n");
+		ret = -EAGAIN;
+	}
+
+	del_timer_sync(&sys_sync.timer);
+	destroy_timer_on_stack(&sys_sync.timer);
+
+	return ret;
+}
+
 static void suspend_backoff(void)
 {
 	pr_info("suspend: too many immediate wakeups, back off\n");
@@ -281,7 +363,8 @@ static void suspend(struct work_struct *work)
 	}
 
 	entry_event_num = current_event_num;
-	sys_sync();
+	/* sys_sync(); */
+	suspend_sys_sync_queue();
 	if (debug_mask & DEBUG_SUSPEND)
 		pr_info("suspend: enter suspend\n");
 	getnstimeofday(&ts_entry);
@@ -596,12 +679,21 @@ static int __init wakelocks_init(void)
 		goto err_suspend_work_queue;
 	}
 
+	sys_sync_work_queue =
+		create_singlethread_workqueue("suspend_sys_sync");
+	if (sys_sync_work_queue == NULL) {
+		ret = -ENOMEM;
+		goto err_sys_sync_work_queue;
+	}
+
 #ifdef CONFIG_WAKELOCK_STAT
 	proc_create("wakelocks", S_IRUGO, NULL, &wakelock_stats_fops);
 #endif
 
 	return 0;
 
+err_sys_sync_work_queue:
+	destroy_workqueue(suspend_work_queue);
 err_suspend_work_queue:
 	platform_driver_unregister(&power_driver);
 err_platform_driver_register:
@@ -622,6 +714,7 @@ static void  __exit wakelocks_exit(void)
 	remove_proc_entry("wakelocks", NULL);
 #endif
 	destroy_workqueue(suspend_work_queue);
+	destroy_workqueue(sys_sync_work_queue);
 	platform_driver_unregister(&power_driver);
 	platform_device_unregister(&power_device);
 	wake_lock_destroy(&suspend_backoff_lock);

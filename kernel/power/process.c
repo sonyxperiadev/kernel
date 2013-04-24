@@ -18,6 +18,7 @@
 #include <linux/workqueue.h>
 #include <linux/kmod.h>
 #include <linux/wakelock.h>
+#include "power.h"
 
 /* 
  * Timeout for stopping processes
@@ -154,8 +155,12 @@ int freeze_processes(void)
 	if (!error) {
 		printk("done.");
 		__usermodehelper_set_disable_depth(UMH_DISABLED);
+		error = suspend_sys_sync_wait();
+		if (error)
+			goto Exit;
 		oom_killer_disable();
 	}
+Exit:
 	printk("\n");
 	BUG_ON(in_atomic());
 
