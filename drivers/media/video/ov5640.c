@@ -727,8 +727,8 @@ static const struct v4l2_queryctrl ov5640_controls[] = {
 	 .id = V4L2_CID_CAMERA_BRIGHTNESS,
 	 .type = V4L2_CTRL_TYPE_INTEGER,
 	 .name = "Brightness",
-	 .minimum = EV_MINUS_1,
-	 .maximum = EV_PLUS_1,
+	 .minimum = EV_MINUS_2,
+	 .maximum = EV_PLUS_2,
 	 .step = 1,
 	 .default_value = EV_DEFAULT,
 	 },
@@ -2478,16 +2478,24 @@ static int ov5640_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	switch (ctrl->id) {
 	case V4L2_CID_CAMERA_BRIGHTNESS:
 
-		if (ctrl->value > EV_PLUS_1)
+		if (ctrl->value > EV_PLUS_2)
 			return -EINVAL;
 
 		ov5640->brightness = ctrl->value;
 		switch (ov5640->brightness) {
-		case EV_MINUS_1:
+		case EV_MINUS_2:
 			ret = ov5640_reg_writes(client,
 						ov5640_brightness_lv4_tbl);
 			break;
+		case EV_MINUS_1:
+			ret = ov5640_reg_writes(client,
+						ov5640_brightness_lv3_tbl);
+			break;
 		case EV_PLUS_1:
+			ret = ov5640_reg_writes(client,
+						ov5640_brightness_lv1_tbl);
+			break;
+		case EV_PLUS_2:
 			ret = ov5640_reg_writes(client,
 						ov5640_brightness_lv0_tbl);
 			break;
