@@ -236,7 +236,7 @@ config KONA_PMU_BSC_USE_PMGR_HW_SEM
 
 config KONA_I2C_SEQUENCER_LOG
 	bool "enable pwrmgr i2c sequencer logging"
-	depends on ARCH_HAWAII && KONA_POWER_MGR
+	depends on (ARCH_HAWAII || ARCH_JAVA) && KONA_POWER_MGR
 	default n
 	help
 	 Say Y to enable sequencer logging. All the pwrmgr i2c

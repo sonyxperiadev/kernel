@@ -1,8 +1,9 @@
-#ifndef __MACH_HAWAII_DEVICE_H
-#define __MACH_HAWAII_DEVICE_H
+#ifndef __MACH_JAVA_DEVICE_H
+#define __MACH_JAVA_DEVICE_H
 
 void __init hawaii_add_common_devices(void);
 void __init hawaii_reserve(void);
+int configure_sdio_pullup(bool pull_up);
 
 #ifdef CONFIG_KONA_AVS
 extern u32 svt_pmos_bin[3 + 1];
@@ -85,4 +86,4 @@ extern struct platform_device ion_cma_device;
 #endif
 #endif
 
-#endif /* __MACH_HAWAII_DEVICE_H */
+#endif /* __MACH_JAVA_DEVICE_H */

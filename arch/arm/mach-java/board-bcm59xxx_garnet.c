@@ -180,7 +180,7 @@ static struct regulator_init_data bcm59xxx_rfldo_data = {
 			.min_uV = 1300000,
 			.max_uV = 3300000,
 			.valid_ops_mask = REGULATOR_CHANGE_STATUS |
-			REGULATOR_CHANGE_VOLTAGE,
+					REGULATOR_CHANGE_VOLTAGE,
 			.always_on = 1,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(rf_supply),
@@ -1014,86 +1014,86 @@ static struct batt_cutoff_cap_map ys_05_cutoff_cap_lut[] = {
 
 static struct batt_esr_temp_lut ys_05_esr_temp_lut[] = {
 	{
-		.temp = -200,
+	 .temp = -200,
 	 .reset = 0, .fct = 254, .guardband = 50,
 	 .esr_vl_lvl = 3781, .esr_vm_lvl = 3805, .esr_vh_lvl = 4141,
 	 .esr_vl_slope = -16793, .esr_vl_offset = 65207,
 	 .esr_vm_slope = -6920, .esr_vm_offset = 27882,
 	 .esr_vh_slope = -441, .esr_vh_offset = 3228,
 	 .esr_vf_slope = -2635, .esr_vf_offset = 12313,
-	},
+	 },
 	{
-		.temp = -150,
+	 .temp = -150,
 	 .reset = 0, .fct = 456.5, .guardband = 50,
 	 .esr_vl_lvl = 3708, .esr_vm_lvl = 3805, .esr_vh_lvl = 3998,
 	 .esr_vl_slope = -19711, .esr_vl_offset = 74373,
 	 .esr_vm_slope = -3819, .esr_vm_offset = 15439,
 	 .esr_vh_slope = 166, .esr_vh_offset = 275,
 	 .esr_vf_slope = -669, .esr_vf_offset = 3613,
-	},
+	 },
 	{
-		.temp = -100,
+	 .temp = -100,
 	 .reset = 0, .fct = 659, .guardband = 50,
 	 .esr_vl_lvl = 3708, .esr_vm_lvl = 3805, .esr_vh_lvl = 3998,
 	 .esr_vl_slope = -19711, .esr_vl_offset = 74373,
 	 .esr_vm_slope = -3819, .esr_vm_offset = 15439,
 	 .esr_vh_slope = 166, .esr_vh_offset = 275,
 	 .esr_vf_slope = -669, .esr_vf_offset = 3613,
-	},
+	 },
 	{
-		.temp = -50,
+	 .temp = -50,
 	 .reset = 0, .fct = 772.5, .guardband = 50,
 	 .esr_vl_lvl = 3708, .esr_vm_lvl = 3825, .esr_vh_lvl = 3998,
 	 .esr_vl_slope = -6386, .esr_vl_offset = 24399,
 	 .esr_vm_slope = -1475, .esr_vm_offset = 6188,
 	 .esr_vh_slope = 325, .esr_vh_offset = -697,
 	 .esr_vf_slope = -489, .esr_vf_offset = 2557,
-	},
+	 },
 	{
-		.temp = 0,
+	 .temp = 0,
 	 .reset = 0, .fct = 886, .guardband = 30,
 	 .esr_vl_lvl = 3708, .esr_vm_lvl = 3825, .esr_vh_lvl = 3998,
 	 .esr_vl_slope = -6386, .esr_vl_offset = 24399,
 	 .esr_vm_slope = -1475, .esr_vm_offset = 6188,
 	 .esr_vh_slope = 325, .esr_vh_offset = -697,
 	 .esr_vf_slope = -489, .esr_vf_offset = 2557,
-	},
+	 },
 	{
-		.temp = 50,
+	 .temp = 50,
 	 .reset = 0, .fct = 923.5, .guardband = 30,
 	 .esr_vl_lvl = 3708, .esr_vm_lvl = 3825, .esr_vh_lvl = 3928,
 	 .esr_vl_slope = -3170, .esr_vl_offset = 12161,
 	 .esr_vm_slope = -506, .esr_vm_offset = 2282,
 	 .esr_vh_slope = 517, .esr_vh_offset = -1630,
 	 .esr_vf_slope = -306, .esr_vf_offset = 1603,
-	},
+	 },
 	{
-		.temp = 100,
+	 .temp = 100,
 	 .reset = 0, .fct = 961, .guardband = 30,
 	 .esr_vl_lvl = 3708, .esr_vm_lvl = 3825, .esr_vh_lvl = 3928,
 	 .esr_vl_slope = -3170, .esr_vl_offset = 12161,
 	 .esr_vm_slope = -506, .esr_vm_offset = 2282,
 	 .esr_vh_slope = 517, .esr_vh_offset = -1630,
 	 .esr_vf_slope = -306, .esr_vf_offset = 1603,
-	},
+	 },
 	{
-		.temp = 150,
+	 .temp = 150,
 	 .reset = 0, .fct = 980.5, .guardband = 30,
 	 .esr_vl_lvl = 3500, .esr_vm_lvl = 3708, .esr_vh_lvl = 3928,
 	 .esr_vl_slope = -4327, .esr_vl_offset = 15680,
 	 .esr_vm_slope = -1432, .esr_vm_offset = 5547,
 	 .esr_vh_slope = 129, .esr_vh_offset = -242,
 	 .esr_vf_slope = -228, .esr_vf_offset = 1161,
-	},
+	 },
 	{
-		.temp = 200,
-		.reset = 0, .fct = 1000, .guardband = 30,
+	 .temp = 200,
+	 .reset = 0, .fct = 1000, .guardband = 30,
 	 .esr_vl_lvl = 3500, .esr_vm_lvl = 3708, .esr_vh_lvl = 3928,
 	 .esr_vl_slope = -4327, .esr_vl_offset = 15680,
 	 .esr_vm_slope = -1432, .esr_vm_offset = 5547,
 	 .esr_vh_slope = 129, .esr_vh_offset = -242,
 	 .esr_vf_slope = -228, .esr_vf_offset = 1161,
-	},
+	 },
 };
 
 static struct bcmpmu_batt_property ys_05_props = {
@@ -1156,6 +1156,12 @@ static struct bcmpmu_fg_pdata fg_pdata = {
 	.acld_cc_lmt = 1800,
 	.otp_cc_trim = 0x1F,
 };
+
+#if defined(CONFIG_LEDS_BCM_PMU59xxx)
+static struct bcmpmu59xxx_led_pdata led_pdata = {
+	.led_name = "red",
+};
+#endif
 
 #if defined(CONFIG_LEDS_BCM_PMU59xxx)
 static struct bcmpmu59xxx_led_pdata led_pdata = {

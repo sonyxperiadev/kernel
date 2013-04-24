@@ -206,21 +206,14 @@ config	59055_SIM_EM_SHDWN
 	help
 	  For 59055 supported emergency sim shutdown
 
-config	MACH_HAWAII_SS_EMMC_EXTLDO
-	depends on !MACH_HAWAII_FPGA && !MACH_HAWAII_FPGA_E
-	bool "Enable SS EMMC external LDO"
-	default y
-	help
-	  For SS EMMC memory external LDO
-
 config DORMANT_MODE
 	bool "Enable dormant state"
 	depends on BRCM_CDC
-	default n
 	help
-	  Option to enable dormant state for cpuidle and suspend. Dormant
-	  mode results in PROC CCU domain voltage being shutoff, resulting
-	  in better power savings during idle.
+	Option to enable dormant state for cpuidle and suspend.
+	Dormant mode results in PROC CCU domain voltage
+	being shutoff, resulting in better power
+	savings during idle.
 
 config KONA_SECURE_MONITOR_CALL
 	bool "Execute in non-secure mode using Kona secure monitor"
@@ -239,6 +232,9 @@ config HAWAII_PTM
 	help
 	  Say Y here to enable PTM hardware on hawaii.
 
+config BRD_NAME
+	string "customer board name"
+	default "java"
 endmenu
 
 endif

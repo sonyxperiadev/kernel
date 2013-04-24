@@ -169,7 +169,7 @@ config KEYBOARD_QT2160
 
 config KEYBOARD_BCM
 	bool "BCM keypad"
-	depends on ARCH_BCM215XX || ARCH_BCM116X || ARCH_RHEA || ARCH_HAWAII && ! (INPUT_GPIO)
+	depends on ARCH_BCM215XX || ARCH_BCM116X || ARCH_RHEA || ARCH_HAWAII || ARCH_JAVA && ! (INPUT_GPIO)
 	default y
 	help
 	  BCM keypad

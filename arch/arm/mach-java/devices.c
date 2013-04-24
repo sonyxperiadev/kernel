@@ -48,6 +48,7 @@
 #include <asm/mach-types.h>
 #include <mach/hardware.h>
 #include <mach/kona.h>
+#include <mach/pinmux.h>
 #include <mach/hawaii.h>
 #include <mach/rdb/brcm_rdb_uartb.h>
 #include <plat/chal/chal_trace.h>
@@ -108,6 +109,8 @@
 
 
 #include "devices.h"
+
+static int board_version = -1;
 
 /* dynamic ETM support */
 unsigned int etm_on;
@@ -1404,3 +1407,112 @@ void __init hawaii_reserve(void)
 #endif
 
 }
+
+static int __init setup_board_version(char *p)
+{
+	if (get_option(&p, &board_version) == 1)
+		return 0;
+	else
+		return -1;
+}
+early_param("brd_ver", setup_board_version);
+
+int configure_sdio_pullup(bool pull_up)
+{
+	int ret = 0;
+	char i;
+	struct pin_config new_pin_config;
+
+	if (pull_up)
+		pr_info("%s, Pull-up enable for SD card pins!\n", __func__);
+	else
+		pr_info("%s, Pull-down enable for SD card pins!\n", __func__);
+
+	new_pin_config.name = PN_SDCMD;
+
+	ret = pinmux_get_pin_config(&new_pin_config);
+	if (ret) {
+		pr_err("%s, Error pinmux_get_pin_config!%d\n", __func__, ret);
+		return ret;
+	}
+
+	if (pull_up) {
+		new_pin_config.reg.b.pull_up = PULL_UP_ON;
+		new_pin_config.reg.b.pull_dn = PULL_DN_OFF;
+	} else {
+		new_pin_config.reg.b.pull_up = PULL_UP_OFF;
+		new_pin_config.reg.b.pull_dn = PULL_DN_ON;
+	}
+
+	ret = pinmux_set_pin_config(&new_pin_config);
+	if (ret) {
+		pr_err("%s Failed to configure SDCMD:%d\n", __func__, ret);
+		return ret;
+	}
+
+	for (i = PN_SDDAT0; i <= PN_SDDAT3; i++) {
+		new_pin_config.name = i;
+		ret = pinmux_get_pin_config(&new_pin_config);
+		if (ret) {
+			pr_info("%s, Error pinmux_get_pin_config():%d\n",
+				__func__, ret);
+			return ret;
+		}
+
+		if (pull_up) {
+			new_pin_config.reg.b.pull_up = PULL_UP_ON;
+			new_pin_config.reg.b.pull_dn = PULL_DN_OFF;
+		} else {
+			new_pin_config.reg.b.pull_up = PULL_UP_OFF;
+			new_pin_config.reg.b.pull_dn = PULL_DN_ON;
+		}
+
+		ret = pinmux_set_pin_config(&new_pin_config);
+		if (ret) {
+			pr_err("%s: Failed to configure SDDAT%d:%d\n",
+				__func__, i, ret);
+			return ret;
+		}
+	}
+
+	return ret;
+}
+
+/* API to get the Board version.
+ * Based on the BOM detection, bootloader updates the command line with the
+ * HW board version.
+ * Basically Boot loader reads the ADC value and finds the board version.
+ * The following is the ADC range and the corresponding board version:
+ *
+ * ADC MIN	MAX	Board_ver
+ *	0	23	00
+ *	23	46	01
+ *	46	70	02
+ *	70	96	03
+ *	96	124	04
+ *	124	154	05
+ *	154	187	06
+ *	187	220	07 Hawaii Garnet EDN 01x
+ *	220	254	08
+ *	254	293	09
+ *	293	332	0A
+ *	332	373	0B
+ *	373	416	0C Hawaiistone EDN 01x
+ *	416	458	0D
+ *	458	501	0E
+ *	501	544	0F
+ *	544	589	10 Hawaiistone EDN 010
+ *	589	637	11
+ *	637	682	12
+ *	682	726	13
+ *	726	771	14
+ *	771	816	15
+ *	816	858	16
+ *	858	889	17
+ *			-1 Unknow Board version
+ */
+int get_board_ver(void)
+{
+	return board_version;
+}
+EXPORT_SYMBOL(get_board_ver);

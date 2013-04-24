@@ -34,7 +34,7 @@
 #include <mach/rdb/brcm_rdb_padctrlreg.h>
 #include <mach/sdio_platform.h>
 #include <mach/rdb/brcm_rdb_padctrlreg.h>
-#include "hawaii_wifi.h"
+#include "java_wifi.h"
 
 #ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
 

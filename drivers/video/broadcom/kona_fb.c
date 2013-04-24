@@ -855,7 +855,8 @@ static struct kona_fb_platform_data * __init get_of_data(struct device_node *np)
 	fb_data->rotation = val;
 
 #if (defined(CONFIG_MACH_HAWAII_GARNET_EDN010) || \
-	defined(CONFIG_MACH_HAWAII_GARNET_EDN020))
+	defined(CONFIG_MACH_HAWAII_GARNET_EDN020) || \
+	defined(CONFIG_MACH_JAVA_GARNET_EDN000))
 	if (of_property_read_u32(np, "detect-gpio", &val))
 		goto of_fail;
 	fb_data->detect.gpio = val;

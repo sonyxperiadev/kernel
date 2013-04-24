@@ -36,13 +36,14 @@
 #include <linux/of_platform.h>
 #include <linux/of.h>
 #include <linux/of_fdt.h>
+#include <mach/pinmux.h>
 
 #ifdef CONFIG_ANDROID_PMEM
 #include <linux/android_pmem.h>
 #endif
-#ifdef CONFIG_ION
+#ifdef CONFIG_ION_BCM_NO_DT
 #include <linux/ion.h>
-#include <linux/broadcom/kona_ion.h>
+#include <linux/broadcom/bcm_ion.h>
 #endif
 #include <linux/serial_8250.h>
 #include <linux/i2c.h>
@@ -87,10 +88,6 @@
 #include <mach/bcm_keypad.h>
 #endif
 
-#if defined(CONFIG_LEDS_GPIO) || defined(CONFIG_LEDS_GPIO_MODULE)
-#include <linux/leds.h>
-#endif
-
 #ifdef CONFIG_DMAC_PL330
 #include <mach/irqs.h>
 #include <plat/pl330-pdata.h>
@@ -117,13 +114,8 @@
 #include <linux/broadcom/bcmbt_lpm.h>
 #endif
 
-#if defined(CONFIG_BCMI2CNFC)
-#include <linux/bcmi2cnfc.h>
-#endif
 
-#if defined(CONFIG_SENSORS_BMA222)
-#include <linux/bma222.h>
-#endif
+
 
 #if defined(CONFIG_BMP18X) || defined(CONFIG_BMP18X_I2C) || defined(CONFIG_BMP18X_I2C_MODULE)
 #include <linux/bmp18x.h>
@@ -145,18 +137,8 @@
 #include <linux/kxtik.h>
 #endif /* CONFIG_SENSORS_KIONIX_KXTIK */
 
-#if defined(CONFIG_SENSORS_AK8963) || defined(CONFIG_SENSORS_AK8963_MODULE)
-#include <linux/akm8963.h>
-#include <linux/i2c/akm8963_i2c_settings.h>
-#endif /* CONFIG_SENSORS_AK8963 */
-
 #ifdef CONFIG_BACKLIGHT_PWM
 #include <linux/pwm_backlight.h>
-#endif
-
-#ifdef CONFIG_FB_BRCM_KONA
-#include <video/kona_fb_boot.h>
-#include <video/kona_fb.h>
 #endif
 
 #if defined(CONFIG_BCM_ALSA_SOUND)
@@ -179,8 +161,10 @@
 #include <linux/broadcom/wd-tapper.h>
 #endif
 
-#if defined(CONFIG_TOUCHSCREEN_BCM915500) || defined(CONFIG_TOUCHSCREEN_BCM915500_MODULE)
+#if defined(CONFIG_TOUCHSCREEN_BCM15500) || \
+defined(CONFIG_TOUCHSCREEN_BCM15500_MODULE)
 #include <linux/i2c/bcm15500_i2c_ts.h>
+#include <linux/i2c/bcm15500_settings.h>
 #endif
 
 #ifdef CONFIG_USB_DWC_OTG
@@ -193,43 +177,18 @@
 #endif
 
 #ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
-#include "hawaii_wifi.h"
+#include "java_wifi.h"
 
 extern int
 hawaii_wifi_status_register(void (*callback) (int card_present, void *dev_id),
 			    void *dev_id);
 #endif
-#ifdef CONFIG_TOUCHSCREEN_FT5306
-#include <linux/i2c/ft5306.h>
-#endif
+
 /* SD */
 #define SD_CARDDET_GPIO_PIN	91
 
-/* keypad map */
-#define BCM_KEY_ROW_0  0
-#define BCM_KEY_ROW_1  1
-#define BCM_KEY_ROW_2  2
-#define BCM_KEY_ROW_3  3
-#define BCM_KEY_ROW_4  4
-#define BCM_KEY_ROW_5  5
-#define BCM_KEY_ROW_6  6
-#define BCM_KEY_ROW_7  7
-
-#define BCM_KEY_COL_0  0
-#define BCM_KEY_COL_1  1
-#define BCM_KEY_COL_2  2
-#define BCM_KEY_COL_3  3
-#define BCM_KEY_COL_4  4
-#define BCM_KEY_COL_5  5
-#define BCM_KEY_COL_6  6
-#define BCM_KEY_COL_7  7
-
-#ifdef CONFIG_MACH_HAWAII_GARNET
-#define FT5306_MAX_X 720
-#define FT5306_MAX_Y 1280
-#else
-#define FT5306_MAX_X 480
-#define FT5306_MAX_Y 800
+#ifndef CONFIG_BRD_NAME
+#define CONFIG_BRD_NAME "hawaii"
 #endif
 
 /* Touch */
@@ -240,10 +199,15 @@ hawaii_wifi_status_register(void (*callback) (int card_present, void *dev_id),
 
 #define TANGO_I2C_TS_DRIVER_NUM_BYTES_TO_READ	14
 
-/* NFC */
-#define NFC_INT	90
-#define NFC_WAKE 25
-#define NFC_ENABLE 100
+int reset_pwm_padcntrl(void)
+{
+	struct pin_config new_pin_config;
+	int ret;
+	new_pin_config.name = PN_GPIO24;
+	new_pin_config.func = PF_GPIO24;
+	ret = pinmux_set_pin_config(&new_pin_config);
+	return ret;
+}
 
 #ifdef CONFIG_ANDROID_PMEM
 struct android_pmem_platform_data android_pmem_data = {
@@ -254,14 +218,14 @@ struct android_pmem_platform_data android_pmem_data = {
 };
 #endif
 
-#ifdef CONFIG_ION
+#ifdef CONFIG_ION_BCM_NO_DT
 struct ion_platform_data ion_system_data = {
 	.nr = 1,
 	.heaps = {
 		[0] = {
 			.id    = 0,
 			.type  = ION_HEAP_TYPE_SYSTEM,
-			.name  = "ion-system-0",
+			.name  = "ion-system",
 			.base  = 0,
 			.limit = 0,
 			.size  = 0,
@@ -275,7 +239,7 @@ struct ion_platform_data ion_carveout_data = {
 		[0] = {
 			.id    = 3,
 			.type  = ION_HEAP_TYPE_CARVEOUT,
-			.name  = "ion-carveout-0",
+			.name  = "ion-carveout",
 			.base  = 0xa0000000,
 			.limit = 0xb0000000,
 			.size  = (8 * SZ_1M),
@@ -288,9 +252,9 @@ struct ion_platform_data ion_carveout_data = {
 		[1] = {
 			.id    = 1,
 			.type  = ION_HEAP_TYPE_CARVEOUT,
-			.name  = "ion-carveout-1",
+			.name  = "ion-carveout-extra",
 			.base  = 0,
-			.limit = 0,
+			.limit = 0xa0000000,
 			.size  = (0 * SZ_1M),
 #ifdef CONFIG_ION_OOM_KILLER
 			.lmk_enable = 0,
@@ -303,14 +267,27 @@ struct ion_platform_data ion_carveout_data = {
 
 #ifdef CONFIG_CMA
 struct ion_platform_data ion_cma_data = {
-	.nr = 1,
+	.nr = 2,
 	.heaps = {
 		[0] = {
 			.id = 2,
 			.type  = ION_HEAP_TYPE_DMA,
-			.name  = "ion-cma-0",
+			.name  = "ion-cma",
 			.base  = 0xa0000000,
 			.limit = 0xb0000000,
+			.size  = (0 * SZ_1M),
+#ifdef CONFIG_ION_OOM_KILLER
+			.lmk_enable = 1,
+			.lmk_min_score_adj = 411,
+			.lmk_min_free = 32,
+#endif
+		},
+		[1] = {
+			.id = 0,
+			.type  = ION_HEAP_TYPE_DMA,
+			.name  = "ion-cma-extra",
+			.base  = 0x00000000,
+			.limit = 0xa0000000,
 			.size  = (0 * SZ_1M),
 #ifdef CONFIG_ION_OOM_KILLER
 			.lmk_enable = 1,
@@ -321,7 +298,7 @@ struct ion_platform_data ion_cma_data = {
 	},
 };
 #endif /* CONFIG_CMA */
-#endif /* CONFIG_ION */
+#endif /* CONFIG_ION_BCM_NO_DT */
 
 #ifdef CONFIG_VIDEO_ADP1653
 #define ADP1653_I2C_ADDR 0x60
@@ -350,7 +327,11 @@ static struct regulator *d_3v0_mmc1_vcc;
 #define SENSOR_0_GPIO_PWRDN             (002)
 #define SENSOR_0_GPIO_RST               (111)
 #define SENSOR_0_CLK                    "dig_ch0_clk"	/*DCLK1 */
+#if defined(CONFIG_SOC_CAMERA_OV2675) || defined(CONFIG_SOC_CAMERA_GC2035)
+#define SENSOR_0_CLK_FREQ               (26000000)
+#else
 #define SENSOR_0_CLK_FREQ               (13000000)
+#endif
 #define CSI0_LP_FREQ			(100000000)
 #define CSI1_LP_FREQ			(100000000)
 
@@ -368,6 +349,8 @@ static int hawaii_camera_power(struct device *dev, int on)
 	struct clk *lp_clock;
 	struct clk *axi_clk;
 	static struct pi_mgr_dfs_node unicam_dfs_node;
+	struct soc_camera_device *icd = to_soc_camera_dev(dev);
+	struct soc_camera_link *icl = to_soc_camera_link(icd);
 
 	printk(KERN_INFO "%s:camera power %s\n", __func__, (on ? "on" : "off"));
 	if (!unicam_dfs_node.valid) {
@@ -388,15 +371,22 @@ static int hawaii_camera_power(struct device *dev, int on)
 			return -1;
 		}
 		/*MMC1 VCC */
-		d_1v8_mmc1_vcc = regulator_get(NULL, "mmc1_vcc");
+		d_1v8_mmc1_vcc = regulator_get(NULL, icl->regulators[1].supply);
 		if (IS_ERR_OR_NULL(d_1v8_mmc1_vcc))
 			printk(KERN_ERR "Failed to  get d_1v8_mmc1_vcc\n");
-		d_3v0_mmc1_vcc = regulator_get(NULL, "mmc2_vcc");
+		d_3v0_mmc1_vcc = regulator_get(NULL, icl->regulators[2].supply);
 		if (IS_ERR_OR_NULL(d_3v0_mmc1_vcc))
 			printk(KERN_ERR "Failed to  get d_3v0_mmc1_vcc\n");
-		d_gpsr_cam0_1v8 = regulator_get(NULL, "vsr_uc");
+		d_gpsr_cam0_1v8 = regulator_get(NULL,
+			icl->regulators[0].supply);
 		if (IS_ERR_OR_NULL(d_gpsr_cam0_1v8))
 			printk(KERN_ERR "Failed to  get d_gpsr_cam0_1v8\n");
+		if (d_lvldo2_cam1_1v8 == NULL) {
+			d_lvldo2_cam1_1v8 = regulator_get(NULL,
+			icl->regulators[3].supply);
+			if (IS_ERR_OR_NULL(d_lvldo2_cam1_1v8))
+				printk(KERN_ERR "Fd_lvldo2_cam1_1v8 cam\n");
+		}
 	}
 
 	ret = -1;
@@ -420,11 +410,13 @@ static int hawaii_camera_power(struct device *dev, int on)
 	if (on) {
 		if (pi_mgr_dfs_request_update(&unicam_dfs_node, PI_OPP_TURBO))
 			printk("DVFS for UNICAM failed\n");
+		regulator_enable(d_gpsr_cam0_1v8);
+		usleep_range(1000, 1010);
 		regulator_enable(d_3v0_mmc1_vcc);
 		usleep_range(1000, 1010);
 		regulator_enable(d_1v8_mmc1_vcc);
 		usleep_range(1000, 1010);
-		regulator_enable(d_gpsr_cam0_1v8);
+		regulator_enable(d_lvldo2_cam1_1v8);
 		usleep_range(1000, 1010);
 
 		if (mm_ccu_set_pll_select(CSI0_BYTE1_PLL, 8)) {
@@ -474,10 +466,13 @@ static int hawaii_camera_power(struct device *dev, int on)
 		gpio_set_value(SENSOR_0_GPIO_RST, 1);
 		msleep(30);
 	} else {
+		gpio_set_value(SENSOR_0_GPIO_RST, 0);
+		usleep_range(1000, 1100);
 		gpio_set_value(SENSOR_0_GPIO_PWRDN, 1);
 		clk_disable(clock);
 		clk_disable(lp_clock);
 		clk_disable(axi_clk);
+		regulator_disable(d_lvldo2_cam1_1v8);
 		regulator_disable(d_3v0_mmc1_vcc);
 		regulator_disable(d_1v8_mmc1_vcc);
 		regulator_disable(d_gpsr_cam0_1v8);
@@ -517,6 +512,9 @@ static int hawaii_camera_power_front(struct device *dev, int on)
 	struct clk *lp_clock_0;
 	struct clk *lp_clock_1;
 	static struct pi_mgr_dfs_node unicam_dfs_node;
+	struct soc_camera_device *icd = to_soc_camera_dev(dev);
+	struct soc_camera_link *icl = to_soc_camera_link(icd);
+
 
 	printk(KERN_INFO "%s:camera power %s\n", __func__, (on ? "on" : "off"));
 	if (!unicam_dfs_node.valid) {
@@ -531,17 +529,27 @@ static int hawaii_camera_power_front(struct device *dev, int on)
 			printk(KERN_ERR "Unable to get CAM1PWDN\n");
 			return -1;
 		}
-
-		if (d_gpsr_cam0_1v8 == NULL){
-			d_gpsr_cam0_1v8 = regulator_get(NULL, "vsr_uc");
-			if (IS_ERR_OR_NULL(d_gpsr_cam0_1v8))
-				printk(KERN_ERR "Failed to  get d_gpsr_cam0_1v8\n");
-		}
-
+		d_lvldo2_cam1_1v8 = regulator_get(NULL,
+			icl->regulators[0].supply);
+		if (IS_ERR_OR_NULL(d_lvldo2_cam1_1v8))
+			printk(KERN_ERR "Failed to get d_lvldo2_cam1_1v8\n");
 		if (d_1v8_mmc1_vcc == NULL) {
-			d_1v8_mmc1_vcc = regulator_get(NULL, "mmc1_vcc");
+			d_1v8_mmc1_vcc = regulator_get(NULL,
+				icl->regulators[1].supply);
 			if (IS_ERR_OR_NULL(d_1v8_mmc1_vcc))
 				printk(KERN_ERR "Err d_1v8_mmc1_vcc\n");
+		}
+		if (d_3v0_mmc1_vcc == NULL) {
+			d_3v0_mmc1_vcc = regulator_get(NULL,
+			icl->regulators[2].supply);
+			if (IS_ERR_OR_NULL(d_3v0_mmc1_vcc))
+				printk(KERN_ERR "d_3v0_mmc1_vcc");
+		}
+		if (d_gpsr_cam0_1v8 == NULL) {
+			d_gpsr_cam0_1v8 = regulator_get(NULL,
+			icl->regulators[3].supply);
+			if (IS_ERR_OR_NULL(d_gpsr_cam0_1v8))
+				printk(KERN_ERR "Fl d_gpsr_cam0_1v8 get	fail");
 		}
 
 	}
@@ -581,9 +589,14 @@ static int hawaii_camera_power_front(struct device *dev, int on)
 			printk("DVFS for UNICAM failed\n");
 		gpio_set_value(SENSOR_1_GPIO_PWRDN, 1);
 		usleep_range(5000, 5010);
-		regulator_enable(d_gpsr_cam0_1v8);
+		regulator_enable(d_lvldo2_cam1_1v8);
 		usleep_range(1000, 1010);
 		regulator_enable(d_1v8_mmc1_vcc);
+		usleep_range(1000, 1010);
+		/* Secondary cam addition */
+		regulator_enable(d_gpsr_cam0_1v8);
+		usleep_range(1000, 1010);
+		regulator_enable(d_3v0_mmc1_vcc);
 		usleep_range(1000, 1010);
 
 		if (mm_ccu_set_pll_select(CSI1_BYTE1_PLL, 8)) {
@@ -653,8 +666,10 @@ static int hawaii_camera_power_front(struct device *dev, int on)
 		clk_disable(clock);
 		clk_disable(axi_clk);
 		clk_disable(axi_clk_0);
-		regulator_disable(d_gpsr_cam0_1v8);
+		regulator_disable(d_lvldo2_cam1_1v8);
 		regulator_disable(d_1v8_mmc1_vcc);
+		regulator_disable(d_gpsr_cam0_1v8);
+		regulator_disable(d_3v0_mmc1_vcc);
 		if (pi_mgr_dfs_request_update
 		    (&unicam_dfs_node, PI_MGR_DFS_MIN_VALUE)) {
 			printk("Failed to set DVFS for unicam\n");
@@ -698,13 +713,6 @@ static struct soc_camera_link iclink_ov7692 = {
 };
 
 #endif /* CONFIG_VIDEO_UNICAM_CAMERA */
-static const struct of_dev_auxdata hawaii_auxdata_lookup[] __initconst = {
-	OF_DEV_AUXDATA("bcm,soc-camera", 0x3c,
-		"soc-back-camera", &iclink_ov5640),
-	OF_DEV_AUXDATA("bcm,soc-camera", 0x3e,
-		"soc-front-camera", &iclink_ov7692),
-	{},
-};
 
 static struct spi_kona_platform_data hawaii_ssp0_info = {
 #ifdef CONFIG_DMAC_PL330
@@ -724,7 +732,7 @@ static struct spi_kona_platform_data hawaii_ssp1_info = {
 #endif
 };
 
-#ifdef CONFIG_STM_TRACE
+#ifdef CONFIG_BCM_STM
 static struct stm_platform_data hawaii_stm_pdata = {
 	.regs_phys_base = STM_BASE_ADDR,
 	.channels_phys_base = SWSTM_BASE_ADDR,
@@ -790,380 +798,15 @@ struct platform_device *hawaii_common_plat_devices[] __initdata = {
 #endif
 
 #ifdef CONFIG_SND_BCM_SOC
+	&hawaii_audio_device,
 	&caph_i2s_device,
 	&caph_pcm_device,
-#endif
-};
-
-#if defined(CONFIG_LEDS_GPIO) || defined(CONFIG_LEDS_GPIO_MODULE)
-#define BLUE_LED_GPIO		22
-#define GREEN_LED_GPIO		9
-static struct gpio_led gpio_leds[] = {
-	{
-		.name	= "blue",
-		.default_trigger = "timer",
-		.gpio	= BLUE_LED_GPIO ,
-		.active_low = 0,
-	},
-	{
-		.name	= "green",
-		.default_trigger = "timer",
-		.gpio	= GREEN_LED_GPIO ,
-		.active_low = 0,
-	},
-};
-
-static struct gpio_led_platform_data gpio_led_info = {
-	.leds		= gpio_leds,
-	.num_leds	= ARRAY_SIZE(gpio_leds),
-};
-
-static struct platform_device leds_gpio = {
-	.name	= "leds-gpio",
-	.id	= -1,
-	.dev	= {
-		.platform_data	= &gpio_led_info,
-	},
-};
-#endif
-
-struct regulator_consumer_supply sd_supply[] = {
-	{.supply = "sdldo_uc"},
-	REGULATOR_SUPPLY("vddmmc", "sdhci.3"),	/* 0x3f1b0000.sdhci */
-	{.supply = "vdd_sdio"},
-};
-
-struct regulator_consumer_supply sdx_supply[] = {
-	{.supply = "sdxldo_uc"},
-	REGULATOR_SUPPLY("vddo", "sdhci.3"),	/* 0x3f1b0000.sdhci */
-	{.supply = "vdd_sdxc"},
-	{.supply = "sddat_debug_bus"},
-};
-
-#ifdef CONFIG_KEYBOARD_BCM
-#if defined(CONFIG_MACH_HAWAII_GARNET_EDN000)
-static struct bcm_keymap hawaii_keymap[] = {
-	{BCM_KEY_ROW_0, BCM_KEY_COL_0, "Vol Down Key", KEY_VOLUMEDOWN},
-	{BCM_KEY_ROW_0, BCM_KEY_COL_1, "unused", 0},
-	{BCM_KEY_ROW_0, BCM_KEY_COL_2, "unused", 0},
-	{BCM_KEY_ROW_0, BCM_KEY_COL_3, "unused", 0},
-	{BCM_KEY_ROW_0, BCM_KEY_COL_4, "unused", 0},
-	{BCM_KEY_ROW_0, BCM_KEY_COL_5, "unused", 0},
-	{BCM_KEY_ROW_0, BCM_KEY_COL_6, "unused", 0},
-	{BCM_KEY_ROW_0, BCM_KEY_COL_7, "unused", 0},
-	{BCM_KEY_ROW_1, BCM_KEY_COL_0, "Vol Up Key", KEY_VOLUMEUP},
-	{BCM_KEY_ROW_1, BCM_KEY_COL_1, "Camera Key", KEY_CAMERA},
-	{BCM_KEY_ROW_1, BCM_KEY_COL_2, "unused", 0},
-	{BCM_KEY_ROW_1, BCM_KEY_COL_3, "unused", 0},
-	{BCM_KEY_ROW_1, BCM_KEY_COL_4, "unused", 0},
-	{BCM_KEY_ROW_1, BCM_KEY_COL_5, "unused", 0},
-	{BCM_KEY_ROW_1, BCM_KEY_COL_6, "unused", 0},
-	{BCM_KEY_ROW_1, BCM_KEY_COL_7, "unused", 0},
-	{BCM_KEY_ROW_2, BCM_KEY_COL_0, "unused", 0},
-	{BCM_KEY_ROW_2, BCM_KEY_COL_1, "unused", 0},
-	{BCM_KEY_ROW_2, BCM_KEY_COL_2, "unused", 0},
-	{BCM_KEY_ROW_2, BCM_KEY_COL_3, "unused", 0},
-	{BCM_KEY_ROW_2, BCM_KEY_COL_4, "unused", 0},
-	{BCM_KEY_ROW_2, BCM_KEY_COL_5, "unused", 0},
-	{BCM_KEY_ROW_2, BCM_KEY_COL_6, "unused", 0},
-	{BCM_KEY_ROW_2, BCM_KEY_COL_7, "unused", 0},
-	{BCM_KEY_ROW_3, BCM_KEY_COL_0, "unused", 0},
-	{BCM_KEY_ROW_3, BCM_KEY_COL_1, "unused", 0},
-	{BCM_KEY_ROW_3, BCM_KEY_COL_2, "unused", 0},
-	{BCM_KEY_ROW_3, BCM_KEY_COL_3, "unused", 0},
-	{BCM_KEY_ROW_3, BCM_KEY_COL_4, "unused", 0},
-	{BCM_KEY_ROW_3, BCM_KEY_COL_5, "unused", 0},
-	{BCM_KEY_ROW_3, BCM_KEY_COL_6, "unused", 0},
-	{BCM_KEY_ROW_3, BCM_KEY_COL_7, "unused", 0},
-	{BCM_KEY_ROW_4, BCM_KEY_COL_0, "unused", 0},
-	{BCM_KEY_ROW_4, BCM_KEY_COL_1, "unused", 0},
-	{BCM_KEY_ROW_4, BCM_KEY_COL_2, "unused", 0},
-	{BCM_KEY_ROW_4, BCM_KEY_COL_3, "unused", 0},
-	{BCM_KEY_ROW_4, BCM_KEY_COL_4, "unused", 0},
-	{BCM_KEY_ROW_4, BCM_KEY_COL_5, "unused", 0},
-	{BCM_KEY_ROW_4, BCM_KEY_COL_6, "unused", 0},
-	{BCM_KEY_ROW_4, BCM_KEY_COL_7, "unused", 0},
-	{BCM_KEY_ROW_5, BCM_KEY_COL_0, "unused", 0},
-	{BCM_KEY_ROW_5, BCM_KEY_COL_1, "unused", 0},
-	{BCM_KEY_ROW_5, BCM_KEY_COL_2, "unused", 0},
-	{BCM_KEY_ROW_5, BCM_KEY_COL_3, "unused", 0},
-	{BCM_KEY_ROW_5, BCM_KEY_COL_4, "unused", 0},
-	{BCM_KEY_ROW_5, BCM_KEY_COL_5, "unused", 0},
-	{BCM_KEY_ROW_5, BCM_KEY_COL_6, "unused", 0},
-	{BCM_KEY_ROW_5, BCM_KEY_COL_7, "unused", 0},
-	{BCM_KEY_ROW_6, BCM_KEY_COL_0, "unused", 0},
-	{BCM_KEY_ROW_6, BCM_KEY_COL_1, "unused", 0},
-	{BCM_KEY_ROW_6, BCM_KEY_COL_2, "unused", 0},
-	{BCM_KEY_ROW_6, BCM_KEY_COL_3, "unused", 0},
-	{BCM_KEY_ROW_6, BCM_KEY_COL_4, "unused", 0},
-	{BCM_KEY_ROW_6, BCM_KEY_COL_5, "unused", 0},
-	{BCM_KEY_ROW_6, BCM_KEY_COL_6, "unused", 0},
-	{BCM_KEY_ROW_6, BCM_KEY_COL_7, "unused", 0},
-	{BCM_KEY_ROW_7, BCM_KEY_COL_0, "unused", 0},
-	{BCM_KEY_ROW_7, BCM_KEY_COL_1, "unused", 0},
-	{BCM_KEY_ROW_7, BCM_KEY_COL_2, "unused", 0},
-	{BCM_KEY_ROW_7, BCM_KEY_COL_3, "unused", 0},
-	{BCM_KEY_ROW_7, BCM_KEY_COL_4, "unused", 0},
-	{BCM_KEY_ROW_7, BCM_KEY_COL_5, "unused", 0},
-	{BCM_KEY_ROW_7, BCM_KEY_COL_6, "unused", 0},
-	{BCM_KEY_ROW_7, BCM_KEY_COL_7, "unused", 0},
-};
-
-static struct bcm_keypad_platform_info hawaii_keypad_data = {
-	.row_num = 2,
-	.col_num = 3,
-	.keymap = hawaii_keymap,
-	.bcm_keypad_base = (void *)__iomem HW_IO_PHYS_TO_VIRT(KEYPAD_BASE_ADDR),
-};
-
-#else
-static struct bcm_keymap hawaii_keymap[] = {
-	{BCM_KEY_ROW_0, BCM_KEY_COL_0, "Vol Down Key", KEY_VOLUMEDOWN},
-	{BCM_KEY_ROW_0, BCM_KEY_COL_1, "Vol Up Key", KEY_VOLUMEUP},
-	{BCM_KEY_ROW_0, BCM_KEY_COL_2, "Search Key", KEY_SEARCH},
-	{BCM_KEY_ROW_0, BCM_KEY_COL_3, "unused", 0},
-	{BCM_KEY_ROW_0, BCM_KEY_COL_4, "unused", 0},
-	{BCM_KEY_ROW_0, BCM_KEY_COL_5, "unused", 0},
-	{BCM_KEY_ROW_0, BCM_KEY_COL_6, "unused", 0},
-	{BCM_KEY_ROW_0, BCM_KEY_COL_7, "unused", 0},
-	{BCM_KEY_ROW_1, BCM_KEY_COL_0, "Home-Key", KEY_HOME},
-	{BCM_KEY_ROW_1, BCM_KEY_COL_1, "Back Key", KEY_BACK},
-	{BCM_KEY_ROW_1, BCM_KEY_COL_2, "Menu-Key", KEY_MENU},
-	{BCM_KEY_ROW_1, BCM_KEY_COL_3, "unused", 0},
-	{BCM_KEY_ROW_1, BCM_KEY_COL_4, "unused", 0},
-	{BCM_KEY_ROW_1, BCM_KEY_COL_5, "unused", 0},
-	{BCM_KEY_ROW_1, BCM_KEY_COL_6, "unused", 0},
-	{BCM_KEY_ROW_1, BCM_KEY_COL_7, "unused", 0},
-	{BCM_KEY_ROW_2, BCM_KEY_COL_0, "unused", 0},
-	{BCM_KEY_ROW_2, BCM_KEY_COL_1, "unused", 0},
-	{BCM_KEY_ROW_2, BCM_KEY_COL_2, "unused", 0},
-	{BCM_KEY_ROW_2, BCM_KEY_COL_3, "unused", 0},
-	{BCM_KEY_ROW_2, BCM_KEY_COL_4, "unused", 0},
-	{BCM_KEY_ROW_2, BCM_KEY_COL_5, "unused", 0},
-	{BCM_KEY_ROW_2, BCM_KEY_COL_6, "unused", 0},
-	{BCM_KEY_ROW_2, BCM_KEY_COL_7, "unused", 0},
-	{BCM_KEY_ROW_3, BCM_KEY_COL_0, "unused", 0},
-	{BCM_KEY_ROW_3, BCM_KEY_COL_1, "unused", 0},
-	{BCM_KEY_ROW_3, BCM_KEY_COL_2, "unused", 0},
-	{BCM_KEY_ROW_3, BCM_KEY_COL_3, "unused", 0},
-	{BCM_KEY_ROW_3, BCM_KEY_COL_4, "unused", 0},
-	{BCM_KEY_ROW_3, BCM_KEY_COL_5, "unused", 0},
-	{BCM_KEY_ROW_3, BCM_KEY_COL_6, "unused", 0},
-	{BCM_KEY_ROW_3, BCM_KEY_COL_7, "unused", 0},
-	{BCM_KEY_ROW_4, BCM_KEY_COL_0, "unused", 0},
-	{BCM_KEY_ROW_4, BCM_KEY_COL_1, "unused", 0},
-	{BCM_KEY_ROW_4, BCM_KEY_COL_2, "unused", 0},
-	{BCM_KEY_ROW_4, BCM_KEY_COL_3, "unused", 0},
-	{BCM_KEY_ROW_4, BCM_KEY_COL_4, "unused", 0},
-	{BCM_KEY_ROW_4, BCM_KEY_COL_5, "unused", 0},
-	{BCM_KEY_ROW_4, BCM_KEY_COL_6, "unused", 0},
-	{BCM_KEY_ROW_4, BCM_KEY_COL_7, "unused", 0},
-	{BCM_KEY_ROW_5, BCM_KEY_COL_0, "unused", 0},
-	{BCM_KEY_ROW_5, BCM_KEY_COL_1, "unused", 0},
-	{BCM_KEY_ROW_5, BCM_KEY_COL_2, "unused", 0},
-	{BCM_KEY_ROW_5, BCM_KEY_COL_3, "unused", 0},
-	{BCM_KEY_ROW_5, BCM_KEY_COL_4, "unused", 0},
-	{BCM_KEY_ROW_5, BCM_KEY_COL_5, "unused", 0},
-	{BCM_KEY_ROW_5, BCM_KEY_COL_6, "unused", 0},
-	{BCM_KEY_ROW_5, BCM_KEY_COL_7, "unused", 0},
-	{BCM_KEY_ROW_6, BCM_KEY_COL_0, "unused", 0},
-	{BCM_KEY_ROW_6, BCM_KEY_COL_1, "unused", 0},
-	{BCM_KEY_ROW_6, BCM_KEY_COL_2, "unused", 0},
-	{BCM_KEY_ROW_6, BCM_KEY_COL_3, "unused", 0},
-	{BCM_KEY_ROW_6, BCM_KEY_COL_4, "unused", 0},
-	{BCM_KEY_ROW_6, BCM_KEY_COL_5, "unused", 0},
-	{BCM_KEY_ROW_6, BCM_KEY_COL_6, "unused", 0},
-	{BCM_KEY_ROW_6, BCM_KEY_COL_7, "unused", 0},
-	{BCM_KEY_ROW_7, BCM_KEY_COL_0, "unused", 0},
-	{BCM_KEY_ROW_7, BCM_KEY_COL_1, "unused", 0},
-	{BCM_KEY_ROW_7, BCM_KEY_COL_2, "unused", 0},
-	{BCM_KEY_ROW_7, BCM_KEY_COL_3, "unused", 0},
-	{BCM_KEY_ROW_7, BCM_KEY_COL_4, "unused", 0},
-	{BCM_KEY_ROW_7, BCM_KEY_COL_5, "unused", 0},
-	{BCM_KEY_ROW_7, BCM_KEY_COL_6, "unused", 0},
-	{BCM_KEY_ROW_7, BCM_KEY_COL_7, "unused", 0},
-};
-
-static struct bcm_keypad_platform_info hawaii_keypad_data = {
-	.row_num = 2,
-	.col_num = 3,
-	.keymap = hawaii_keymap,
-	.bcm_keypad_base = (void *)__iomem HW_IO_PHYS_TO_VIRT(KEYPAD_BASE_ADDR),
-};
+	&spdif_dit_device,
 
 #endif
-
-#endif
-
-#if defined(CONFIG_BCMI2CNFC)
-static int bcmi2cnfc_gpio_setup(void *);
-static int bcmi2cnfc_gpio_clear(void *);
-static struct bcmi2cnfc_i2c_platform_data bcmi2cnfc_pdata = {
-	.i2c_pdata = {ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_400K),
-		      SET_CLIENT_FUNC(TX_FIFO_ENABLE | RX_FIFO_ENABLE)},
-	.irq_gpio = NFC_INT,
-	.en_gpio = NFC_ENABLE,
-	.wake_gpio = NFC_WAKE,
-	.init = bcmi2cnfc_gpio_setup,
-	.reset = bcmi2cnfc_gpio_clear,
 };
 
-static int bcmi2cnfc_gpio_setup(void *this)
-{
-	return 0;
-}
-static int bcmi2cnfc_gpio_clear(void *this)
-{
-	return 0;
-}
 
-static struct i2c_board_info __initdata bcmi2cnfc[] = {
-	{
-	 I2C_BOARD_INFO("bcmi2cnfc", 0x1F0),
-	 .flags = I2C_CLIENT_TEN,
-	 .platform_data = (void *)&bcmi2cnfc_pdata,
-	 .irq = gpio_to_irq(NFC_INT),
-	 },
-};
-#endif
-
-#if  defined(CONFIG_BMP18X) || defined(CONFIG_BMP18X_I2C) || defined(CONFIG_BMP18X_I2C_MODULE)
-static struct i2c_board_info __initdata i2c_bmp18x_info[] = {
-	{
-	 I2C_BOARD_INFO(BMP18X_NAME, BMP18X_I2C_ADDRESS),
-	 },
-};
-#endif
-
-#if defined(CONFIG_TMD2771)
-static struct i2c_board_info __initdata i2c_tmd2771_info[] = {
-	{
-		I2C_BOARD_INFO("tmd2771", 0x39),
-	},
-};
-#endif
-
-#if defined(CONFIG_AL3006) || defined(CONFIG_AL3006_MODULE)
-static struct al3006_platform_data al3006_pdata = {
-#ifdef AL3006_IRQ_GPIO
-	.irq_gpio = AL3006_IRQ_GPIO,
-#else
-	.irq_gpio = -1,
-#endif
-};
-
-static struct i2c_board_info __initdata i2c_al3006_info[] = {
-	{
-	 I2C_BOARD_INFO("al3006", AL3006_I2C_ADDRESS),
-	 .platform_data = &al3006_pdata,
-	 },
-};
-#endif
-
-#if defined(CONFIG_SENSORS_KIONIX_KXTIK) \
-	|| defined(CONFIG_SENSORS_KIONIX_KXTIK_MODULE)
-#define KXTIK_DEVICE_MAP    2
-#define KXTIK_MAP_X         ((KXTIK_DEVICE_MAP-1)%2)
-#define KXTIK_MAP_Y         (KXTIK_DEVICE_MAP%2)
-#define KXTIK_NEG_X         (((KXTIK_DEVICE_MAP+2)/2)%2)
-#define KXTIK_NEG_Y         (((KXTIK_DEVICE_MAP+5)/4)%2)
-#define KXTIK_NEG_Z         ((KXTIK_DEVICE_MAP-1)/4)
-
-struct kxtik_platform_data kxtik_pdata = {
-	.min_interval = 5,
-	.poll_interval = 200,
-	.axis_map_x = KXTIK_MAP_X,
-	.axis_map_y = KXTIK_MAP_Y,
-	.axis_map_z = 2,
-	.negate_x = KXTIK_NEG_X,
-	.negate_y = KXTIK_NEG_Y,
-	.negate_z = KXTIK_NEG_Z,
-	.res_12bit = RES_12BIT,
-	.g_range = KXTIK_G_2G,
-};
-
-#define KXTIK_GPIO_IRQ_PIN          (64)
-#define KXTIK_I2C_BUS_ID            (0)
-
-static struct i2c_board_info __initdata kxtik_i2c_boardinfo[] = {
-	{
-	 I2C_BOARD_INFO("kxtik", KXTIK_SLAVE_ADDR),
-	 .platform_data = &kxtik_pdata,
-	 .irq = gpio_to_irq(KXTIK_GPIO_IRQ_PIN),
-	 },
-};
-
-static int kxtik_init_platform_hw(void)
-{
-	int ret = 0;
-	ret = gpio_request(KXTIK_GPIO_IRQ_PIN, "kxtik-irq");
-	if (ret < 0) {
-		printk(KERN_INFO
-		       "kxtik: sensors gpio_request GPIO %d failed, err %d\n",
-		       KXTIK_GPIO_IRQ_PIN, ret);
-		return ret;
-	}
-	ret = gpio_direction_input(KXTIK_GPIO_IRQ_PIN);
-	if (ret < 0) {
-		printk(KERN_INFO
-		       "kxtik: sensors gpio_direction_input set GPIO %d as input failed, err %d\n",
-		       KXTIK_GPIO_IRQ_PIN, ret);
-		gpio_free(KXTIK_GPIO_IRQ_PIN);
-		return ret;
-	}
-	return ret;
-}
-#endif /* CONFIG_SENSORS_KIONIX_KXTIK */
-
-#if defined(CONFIG_SENSORS_AK8963) || defined(CONFIG_SENSORS_AK8963_MODULE)
-static struct akm8963_platform_data akm_platform_data_akm8963 = {
-	.gpio_DRDY = AKM8963_IRQ_GPIO,
-	.gpio_RST = AKM8963_GPIO_RESET_PIN,
-	.layout = 1,
-	.outbit = 1,
-};
-
-static struct i2c_board_info __initdata akm8963_info[] = {
-	{
-	 I2C_BOARD_INFO("akm8963", AKM8963_I2C_ADDRESS),
-	 .flags = I2C_CLIENT_WAKE,
-	 .platform_data = &akm_platform_data_akm8963,
-	 .irq = gpio_to_irq(AKM8963_IRQ_GPIO),
-	 },
-};
-
-static int akm8963_init_platform_hw(void)
-{
-	int ret;
-	pr_info("akm8963]init_platform_hw\n");
-	ret = gpio_request(AKM8963_IRQ_GPIO, "akm8963");
-	gpio_direction_input(AKM8963_IRQ_GPIO);
-	return 0;
-}
-#endif /* CONFIG_SENSORS_AK8963 */
-
-#if defined(CONFIG_SENSORS_BMA222)
-static struct bma222_accl_platform_data bma_pdata = {
-	.orientation = BMA_ROT_90,
-	.invert = false,
-};
-#endif
-
-#if defined(CONFIG_INV_MPU_IIO) || defined(CONFIG_INV_MPU_IIO_MODULE)
-
-static struct mpu_platform_data inv_mpu_platform_data = {
-	.int_config = INV_MPU_INIT_CFG,
-	.level_shifter = 0,
-	.orientation = INV_MPU_DRIVER_GYRO_ORIENTATION,
-};
-
-static struct i2c_board_info __initdata inv_mpu_i2c0_boardinfo[] = {
-	{
-	 I2C_BOARD_INFO(INV_MPU_DRIVER_NAME, INV_MPU_SLAVE_ADDR),
-	 .platform_data = &inv_mpu_platform_data,
-	 },
-};
-#endif /* CONFIG_INV_MPU_IIO */
 
 #ifdef CONFIG_KONA_HEADSET_MULTI_BUTTON
 
@@ -1192,7 +835,13 @@ static struct kona_headset_pd hawaii_headset_data = {
 	 * HS remove
 	 */
 
+#if defined(CONFIG_MACH_HAWAII_GARNET_C_A18) || \
+	defined(CONFIG_MACH_HAWAII_GARNET_C_W68) \
+	|| defined(CONFIG_MACH_HAWAII_GARNET_C_M530)
+	.hs_default_state = 1,
+#else
 	.hs_default_state = 0,
+#endif
 	/*
 	 * Because of the presence of the resistor in the MIC_IN line.
 	 * The actual ground may not be 0, but a small offset is added to it.
@@ -1223,6 +872,9 @@ static struct kona_headset_pd hawaii_headset_data = {
 	 */
 	.button_adc_values_high = hawaii_button_adc_values_2_1,
 
+	/* AUDLDO supply id for changing regulator mode*/
+	.ldo_id = "audldo_uc",
+
 };
 #endif /* CONFIG_KONA_HEADSET_MULTI_BUTTON */
 
@@ -1245,11 +897,13 @@ static struct kona_pl330_data hawaii_pl330_pdata = {
 #define GPIO_BT_WAKE	32
 #define GPIO_HOST_WAKE	72
 
-static struct bcm_bt_lpm_platform_data brcm_bt_lpm_data = {
-	.gpio_bt_wake = GPIO_BT_WAKE,
-	.gpio_host_wake = GPIO_HOST_WAKE,
+static struct bcmbt_platform_data brcm_bt_lpm_data = {
+	.bt_wake_gpio = GPIO_BT_WAKE,
+	.host_wake_gpio = GPIO_HOST_WAKE,
+	.bt_uart_port = 1,
 };
 
+#if !defined(CONFIG_OF_DEVICE)
 static struct platform_device board_bcmbt_lpm_device = {
 	.name = "bcmbt-lpm",
 	.id = -1,
@@ -1257,6 +911,7 @@ static struct platform_device board_bcmbt_lpm_device = {
 		.platform_data = &brcm_bt_lpm_data,
 		},
 };
+#endif
 #endif
 
 /*
@@ -1300,77 +955,39 @@ struct platform_device haptic_pwm_device = {
 
 #endif /* CONFIG_HAPTIC_SAMSUNG_PWM */
 
-static struct sdio_platform_cfg hawaii_sdio_param[] = {
-	{
-	 .id = 0,
-	 .data_pullup = 0,
-	 .cd_gpio = SD_CARDDET_GPIO_PIN,
-	 .devtype = SDIO_DEV_TYPE_SDMMC,
-	 .flags = KONA_SDIO_FLAGS_DEVICE_REMOVABLE,
-	 .peri_clk_name = "sdio1_clk",
-	 .ahb_clk_name = "sdio1_ahb_clk",
-	 .sleep_clk_name = "sdio1_sleep_clk",
-	 .peri_clk_rate = 48000000,
-	 /*The SD card regulator */
-	 .vddo_regulator_name = "vdd_sdio",
-	 /*The SD controller regulator */
-	 .vddsdxc_regulator_name = "vdd_sdxc",
-	 },
-	{
-	 .id = 1,
-	 .data_pullup = 0,
-	 .is_8bit = 1,
-	 .devtype = SDIO_DEV_TYPE_EMMC,
-	 .flags = KONA_SDIO_FLAGS_DEVICE_NON_REMOVABLE,
-	 .peri_clk_name = "sdio2_clk",
-	 .ahb_clk_name = "sdio2_ahb_clk",
-	 .sleep_clk_name = "sdio2_sleep_clk",
-	 .peri_clk_rate = 52000000,
-	 },
+static struct sdio_platform_cfg hawaii_sdio_param = {
+
 #ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
-	{
-	 .id = 2,
-	 .data_pullup = 0,
-	 .devtype = SDIO_DEV_TYPE_WIFI,
-	 .flags = KONA_SDIO_FLAGS_DEVICE_REMOVABLE,
-	 .peri_clk_name = "sdio3_clk",
-	 .ahb_clk_name = "sdio3_ahb_clk",
-	 .sleep_clk_name = "sdio3_sleep_clk",
-	 .peri_clk_rate = 48000000,
-	 .register_status_notify = hawaii_wifi_status_register,
-	 },
-#else
-	{
-	 .id = 2,
-	 .data_pullup = 0,
-	 .devtype = SDIO_DEV_TYPE_WIFI,
-	 .wifi_gpio = {
-		       .reset = 3,
-		       .reg = -1,
-		       .host_wake = 74,
-		       .shutdown = -1,
-		       },
-	 .flags = KONA_SDIO_FLAGS_DEVICE_REMOVABLE,
-	 .peri_clk_name = "sdio3_clk",
-	 .ahb_clk_name = "sdio3_ahb_clk",
-	 .sleep_clk_name = "sdio3_sleep_clk",
-	 .peri_clk_rate = 48000000,
-	 },
+	.register_status_notify = hawaii_wifi_status_register,
 #endif
+
 };
 
-#ifdef CONFIG_BACKLIGHT_PWM
-
-static struct platform_pwm_backlight_data hawaii_backlight_data = {
-/* backlight */
-	.pwm_id = 2,
-	.max_brightness = 32,	/* Android calibrates to 32 levels */
-	.dft_brightness = 32,
-	.polarity = 1,		/* Inverted polarity */
-	.pwm_period_ns = 1000000,
+static struct sdio_platform_cfg hawaii_sdio0_param = {
+	.configure_sdio_pullup = configure_sdio_pullup,
 };
 
-#endif /*CONFIG_BACKLIGHT_PWM */
+static const struct of_dev_auxdata hawaii_auxdata_lookup[] __initconst = {
+
+	OF_DEV_AUXDATA("bcm,pwm-backlight", 0x0,
+		"pwm-backlight.0", NULL),
+
+	OF_DEV_AUXDATA("bcm,sdhci", 0x3F190000,
+		"sdhci.1", NULL),
+
+	OF_DEV_AUXDATA("bcm,sdhci", 0x3F1A0000,
+		"sdhci.2", &hawaii_sdio_param),
+
+	OF_DEV_AUXDATA("bcm,sdhci", 0x3F180000,
+		"sdhci.0", &hawaii_sdio0_param),
+
+	OF_DEV_AUXDATA("bcm,soc-camera", 0x3c,
+		"soc-back-camera", &iclink_ov5640),
+
+	OF_DEV_AUXDATA("bcm,soc-camera", 0x3e,
+		"soc-front-camera", &iclink_ov7692),
+	{},
+};
 
 #ifdef CONFIG_VIDEO_KONA
 static struct ov5640_platform_data ov5640_cam1_pdata = {
@@ -1427,82 +1044,62 @@ late_initcall(hawaii_camera_init);
 #endif
 /* Remove this comment when camera data for Hawaii is updated */
 
-#if defined(CONFIG_SENSORS_BMA222)
-static struct i2c_board_info __initdata bma222_accl_info[] = {
-	{
-	 I2C_BOARD_INFO("bma222_accl", 0x08),
-	 .irq = -1,
-	 .platform_data = &bma_pdata,
-	 },
-};
-#endif
 
-#ifdef CONFIG_TOUCHSCREEN_FT5306
-static int ts_power(ts_power_status vreg_en)
+
+#if defined(CONFIG_TOUCHSCREEN_BCM15500) ||\
+defined(CONFIG_TOUCHSCREEN_BCM15500_MODULE)
+static int BCMTCH_TSP_PowerOnOff(bool on)
 {
-	struct regulator *reg = NULL;
-	if (!reg) {
-/* Remove this comment when the regulator references are fixed here for Hawaii */
-		reg = regulator_get(NULL, "camldo2");
-		if (!reg || IS_ERR(reg)) {
-			pr_err("No Regulator available for ldo_camldo2\n");
-			return -1;
-		}
-	}
-	if (reg) {
-		if (vreg_en) {
-			regulator_set_voltage(reg, 3000000, 3000000);
-			pr_err("Turn on TP (ldo_camldo2) to 2.8V\n");
-			regulator_enable(reg);
-		} else {
-			pr_err("Turn off TP (ldo_camldo2)\n");
-			regulator_disable(reg);
-		}
-	} else {
-		pr_err("TP Regulator Alloc Failed");
-		return -1;
-	}
+	/* PLACE TOUCH CONTROLLER REGULATOR CODE HERE . SEE STEP 6 */
 	return 0;
 }
 
-static struct Synaptics_ts_platform_data ft5306_plat_data = {
-    .gpio_irq_pin		= TSC_GPIO_IRQ_PIN,
-    .gpio_reset_pin		= TSC_GPIO_RESET_PIN,
-    .gpio_wakeup_pin    = TSC_GPIO_WAKEUP_PIN,
-    .x_max_value		= FT5306_MAX_X-1,
-    .y_max_value	= FT5306_MAX_Y-1,
-	.power              = ts_power,
+static struct bcmtch_platform_data bcm15500_i2c_platform_data = {
+	.i2c_bus_id       = BCMTCH_HW_I2C_BUS_ID,
+	.i2c_addr_spm = BCMTCH_HW_I2C_ADDR_SPM,
+	.i2c_addr_sys   = BCMTCH_HW_I2C_ADDR_SYS,
+
+	.gpio_interrupt_pin       = BCMTCH_HW_GPIO_INTERRUPT_PIN,
+	.gpio_interrupt_trigger = BCMTCH_HW_GPIO_INTERRUPT_TRIGGER,
+
+	.gpio_reset_pin           = BCMTCH_HW_GPIO_RESET_PIN,
+	.gpio_reset_polarity   = BCMTCH_HW_GPIO_RESET_POLARITY,
+	.gpio_reset_time_ms = BCMTCH_HW_GPIO_RESET_TIME_MS,
+
+	.ext_button_count = BCMTCH_HW_BUTTON_COUNT,
+	.ext_button_map   = bcmtch_hw_button_map,
+
+	.axis_orientation_flag =
+		((BCMTCH_HW_AXIS_REVERSE_X << BCMTCH_AXIS_FLAG_X_BIT_POS)
+		|(BCMTCH_HW_AXIS_REVERSE_Y << BCMTCH_AXIS_FLAG_Y_BIT_POS)
+		|(BCMTCH_HW_AXIS_SWAP_X_Y << BCMTCH_AXIS_FLAG_X_Y_BIT_POS)),
+
+	.bcmtch_on = BCMTCH_TSP_PowerOnOff,
 };
 
-static struct i2c_board_info __initdata ft5306_info[] = {
-	{			/* New touch screen i2c slave address. */
-	 I2C_BOARD_INFO("FocalTech-Ft5306", (0x70 >> 1)),
-	 .platform_data = &ft5306_plat_data,
-	 .irq = gpio_to_irq(TSC_GPIO_IRQ_PIN),
-	 },
-};
-#endif
-
-#if defined(CONFIG_TOUCHSCREEN_BCM915500) || defined(CONFIG_TOUCHSCREEN_BCM915500_MODULE)
-static struct bcm915500_platform_data bcm915500_i2c_param = {
-	.id = 3,
-	.i2c_adapter_id = 3,
-	.gpio_reset = TSC_GPIO_RESET_PIN,
-	.gpio_interrupt = TSC_GPIO_IRQ_PIN,
-};
-
-static struct i2c_board_info bcm915500_i2c_boardinfo[] = {
+static struct i2c_board_info __initdata bcm15500_i2c_boardinfo[] = {
 	{
-	 .type = BCM915500_TSC_NAME,
-	 .addr = HW_BCM915500_SLAVE_SPM,
-	 .platform_data = &bcm915500_i2c_param,
-	 .irq = gpio_to_irq(TSC_GPIO_IRQ_PIN),
-	 },
+		I2C_BOARD_INFO(BCM15500_TSC_NAME, BCMTCH_HW_I2C_ADDR_SPM),
+		.platform_data  = &bcm15500_i2c_platform_data,
+		.irq	= gpio_to_irq(BCMTCH_HW_GPIO_INTERRUPT_PIN),
+	},
 };
 #endif
 
 #if defined(CONFIG_BCM_ALSA_SOUND)
 static struct caph_platform_cfg board_caph_platform_cfg =
+#if defined(CONFIG_MACH_HAWAII_GARNET_C_M530)
+{
+	.aud_ctrl_plat_cfg = {
+			      .ext_aud_plat_cfg = {
+						   .ihf_ext_amp_gpio = -1,
+#if defined(CONFIG_GPIO_2IN1_SPK)
+						   .spk_2in1_gpio = 11,
+#endif
+						   }
+			      }
+};
+#else
 #ifdef HW_CFG_CAPH
 	HW_CFG_CAPH;
 #else
@@ -1510,9 +1107,13 @@ static struct caph_platform_cfg board_caph_platform_cfg =
 	.aud_ctrl_plat_cfg = {
 			      .ext_aud_plat_cfg = {
 						   .ihf_ext_amp_gpio = -1,
+#if defined(CONFIG_GPIO_2IN1_SPK)
+						   .spk_2in1_gpio = -1,
+#endif
 						   }
 			      }
 };
+#endif
 #endif
 
 static struct platform_device board_caph_device = {
@@ -1526,12 +1127,6 @@ static struct platform_device board_caph_device = {
 #endif /* CONFIG_BCM_ALSA_SOUND */
 
 static struct platform_device *hawaii_devices[] __initdata = {
-#ifdef CONFIG_KEYBOARD_BCM
-	&hawaii_kp_device,
-#endif
-#if defined(CONFIG_LEDS_GPIO) || defined(CONFIG_LEDS_GPIO_MODULE)
-	&leds_gpio,
-#endif
 #ifdef CONFIG_KONA_HEADSET_MULTI_BUTTON
 	&hawaii_headset_device,
 #endif
@@ -1544,13 +1139,10 @@ static struct platform_device *hawaii_devices[] __initdata = {
 	&haptic_pwm_device,
 #endif
 
-#ifdef CONFIG_BACKLIGHT_PWM
-	&hawaii_backlight_device,
-#endif
-
-#ifdef CONFIG_BCM_BT_LPM
+#if defined(CONFIG_BCM_BT_LPM) && !defined(CONFIG_OF_DEVICE)
 	&board_bcmbt_lpm_device,
 #endif
+
 
 #ifdef CONFIG_VIDEO_KONA
 	&hawaii_unicam_device,
@@ -1560,12 +1152,6 @@ static struct platform_device *hawaii_devices[] __initdata = {
 	&board_caph_device,
 #endif
 
-};
-
-struct platform_device *hawaii_sdio_devices[] __initdata = {
-	&hawaii_sdio2_device,
-	&hawaii_sdio3_device,
-	&hawaii_sdio1_device,
 };
 
 static void __init hawaii_add_i2c_devices(void)
@@ -1578,99 +1164,30 @@ static void __init hawaii_add_i2c_devices(void)
 	i2c_register_board_info(0, as3643_flash, ARRAY_SIZE(as3643_flash));
 #endif
 
-#ifdef CONFIG_TOUCHSCREEN_FT5306
-	i2c_register_board_info(3, ft5306_info, ARRAY_SIZE(ft5306_info));
-#endif
 
-#ifdef CONFIG_SENSORS_BMA222
-	i2c_register_board_info(2, bma222_accl_info,
-				ARRAY_SIZE(bma222_accl_info));
-#endif
 
-#if defined(CONFIG_SENSORS_KIONIX_KXTIK)	\
-			|| defined(CONFIG_SENSORS_KIONIX_KXTIK_MODULE)
-	i2c_register_board_info(2,
-			kxtik_i2c_boardinfo,
-			ARRAY_SIZE(kxtik_i2c_boardinfo));
-#endif /* CONFIG_SENSORS_KIONIX_KXTIK */
-
-#if defined(CONFIG_SENSORS_AK8963) || defined(CONFIG_SENSORS_AK8963_MODULE)
-	i2c_register_board_info(AKM8963_I2C_BUS_ID,
-				km8963_info, ARRAY_SIZE(akm8963_info));
-#endif /* CONFIG_SENSORS_AK8963 */
-
-#if defined(CONFIG_TOUCHSCREEN_BCM915500) || defined(CONFIG_TOUCHSCREEN_BCM915500_MODULE)
-	i2c_register_board_info(3, bcm915500_i2c_boardinfo,
-				ARRAY_SIZE(bcm915500_i2c_boardinfo));
+#if defined(CONFIG_TOUCHSCREEN_BCM15500) ||\
+defined(CONFIG_TOUCHSCREEN_BCM15500_MODULE)
+	i2c_register_board_info(bcm15500_i2c_platform_data.i2c_bus_id,
+		bcm15500_i2c_boardinfo,
+		ARRAY_SIZE(bcm15500_i2c_boardinfo));
 #endif
-
-#if defined(CONFIG_BCMI2CNFC)
-	i2c_register_board_info(1, bcmi2cnfc, ARRAY_SIZE(bcmi2cnfc));
-#endif
-
-#if defined(CONFIG_INV_MPU_IIO) || defined(CONFIG_INV_MPU_IIO_MODULE)
-#if defined(INV_MPU_IRQ_GPIO)
-	inv_mpu_i2c0_boardinfo[0].irq = gpio_to_irq(INV_MPU_IRQ_GPIO);
-#endif
-	i2c_register_board_info(INV_MPU_I2C_BUS_ID,
-				inv_mpu_i2c0_boardinfo,
-				ARRAY_SIZE(inv_mpu_i2c0_boardinfo));
-#endif /* CONFIG_INV_MPU_IIO */
-
-#if defined(CONFIG_TMD2771)
-	i2c_register_board_info(2,
-					i2c_tmd2771_info,
-					ARRAY_SIZE(i2c_tmd2771_info));
-#endif
-
-#if  defined(CONFIG_BMP18X) || defined(CONFIG_BMP18X_I2C) || defined(CONFIG_BMP18X_I2C_MODULE)
-	i2c_register_board_info(
-#ifdef BMP18X_I2C_BUS_ID
-				       BMP18X_I2C_BUS_ID,
-#else
-				       -1,
-#endif
-				       i2c_bmp18x_info,
-				       ARRAY_SIZE(i2c_bmp18x_info));
-#endif
-
-#if defined(CONFIG_AL3006) || defined(CONFIG_AL3006_MODULE)
-#ifdef AL3006_IRQ
-	i2c_al3006_info[0].irq = gpio_to_irq(AL3006_IRQ_GPIO);
-#else
-	i2c_al3006_info[0].irq = -1;
-#endif
-	i2c_register_board_info(
-#ifdef AL3006_I2C_BUS_ID
-				       AL3006_I2C_BUS_ID,
-#else
-				       -1,
-#endif
-				       i2c_al3006_info,
-				       ARRAY_SIZE(i2c_al3006_info));
-#endif /* CONFIG_AL3006 */
-
 }
 
 static void hawaii_add_pdata(void)
 {
-	hawaii_sdio1_device.dev.platform_data = &hawaii_sdio_param[0];
-	hawaii_sdio2_device.dev.platform_data = &hawaii_sdio_param[1];
-	hawaii_sdio3_device.dev.platform_data = &hawaii_sdio_param[2];
 	hawaii_ssp0_device.dev.platform_data = &hawaii_ssp0_info;
 	hawaii_ssp1_device.dev.platform_data = &hawaii_ssp1_info;
+#ifdef CONFIG_BCM_STM
 	hawaii_stm_device.dev.platform_data = &hawaii_stm_pdata;
+#endif
 	hawaii_headset_device.dev.platform_data = &hawaii_headset_data;
 	hawaii_pl330_dmac_device.dev.platform_data = &hawaii_pl330_pdata;
-	hawaii_backlight_device.dev.platform_data = &hawaii_backlight_data;
 #ifdef CONFIG_USB_DWC_OTG
 	hawaii_hsotgctrl_platform_device.dev.platform_data =
 	    &hsotgctrl_plat_data;
 	hawaii_usb_phy_platform_device.dev.platform_data =
 		&hsotgctrl_plat_data;
-#endif
-#ifdef CONFIG_ION
-	ion_system_device.dev.platform_data = &ion_system_data;
 #endif
 }
 
@@ -1689,19 +1206,12 @@ static void __init hawaii_add_devices(void)
 
 	hawaii_add_pdata();
 
-#ifdef CONFIG_KEYBOARD_BCM
-	hawaii_kp_device.dev.platform_data = &hawaii_keypad_data;
-#endif
-
-#ifdef CONFIG_ION
-#ifdef CONFIG_M4U
-	platform_device_register(&ion_system_device);
-#endif
+#ifdef CONFIG_ION_BCM_NO_DT
 	platform_device_register(&ion_carveout_device);
 #ifdef CONFIG_CMA
 	platform_device_register(&ion_cma_device);
-#endif /* CONFIG_CMA */
-#endif /* CONFIG_ION */
+#endif
+#endif
 
 	platform_add_devices(hawaii_devices, ARRAY_SIZE(hawaii_devices));
 
@@ -1712,66 +1222,23 @@ static void __init hawaii_add_devices(void)
 
 }
 
-static void __init hawaii_add_sdio_devices(void)
-{
-	platform_add_devices(hawaii_sdio_devices,
-			     ARRAY_SIZE(hawaii_sdio_devices));
-}
-
-#ifdef CONFIG_FB_BRCM_KONA
-/*
- * KONA FRAME BUFFER DISPLAY DRIVER PLATFORM CONFIG
- */
-struct kona_fb_platform_data konafb_devices[] __initdata = {
-	{
-		.dispdrv_name  = "OTM1281A",
-		.dispdrv_entry = DISP_DRV_OTM1281A_GetFuncTable,
-		.parms = {
-			.w0 = {
-				.bits = {
-					.boot_mode  = 0,
-					.bus_type   = KONA_BUS_DSI,
-					.bus_no     = KONA_BUS_0,
-					.bus_ch     = KONA_BUS_CH_0,
-					.bus_width  = 3,
-					.te_input   = KONA_TE_IN_1_DSI0,
-					.col_mode_i = KONA_CM_I_XRGB888,
-					.col_mode_o = KONA_CM_O_RGB888,
-				},
-			},
-			.w1 = {
-			.bits = {
-					.api_rev  =  KONA_LCD_BOOT_API_REV,
-					.lcd_rst0 =  8,
-				},
-			},
-		},
-	},
-};
-
-#include "kona_fb_init.c"
-#endif /* #ifdef CONFIG_FB_BRCM_KONA */
 
 static struct of_device_id hawaii_dt_match_table[] __initdata = {
 	{ .compatible = "simple-bus", },
 	{}
 };
-static void __init hawaii_init(void)
+static void __init java_init(void)
 {
 	hawaii_add_devices();
-#ifdef CONFIG_FB_BRCM_KONA
-	konafb_init();
-#endif
 	hawaii_add_common_devices();
 	/* Populate platform_devices from device tree data */
 	of_platform_populate(NULL, hawaii_dt_match_table,
-			hawaii_auxdata_lookup, NULL);
+			hawaii_auxdata_lookup, &platform_bus);
 	return;
 }
 
 static int __init hawaii_add_lateinit_devices(void)
 {
-	hawaii_add_sdio_devices();
 
 #ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
 	hawaii_wlan_init();
@@ -1781,14 +1248,14 @@ static int __init hawaii_add_lateinit_devices(void)
 
 late_initcall(hawaii_add_lateinit_devices);
 
-static const char *hawaii_dt_compat[] = { "bcm,hawaii", NULL, };
-DT_MACHINE_START(HAWAII, "hawaii")
+static const char * const java_dt_compat[] = { "bcm,java", NULL, };
+DT_MACHINE_START(HAWAII, CONFIG_BRD_NAME)
 	.map_io = hawaii_map_io,
 	.init_irq = kona_init_irq,
 	.handle_irq = gic_handle_irq,
 	.timer = &kona_timer,
-	.init_machine = hawaii_init,
+	.init_machine = java_init,
 	.reserve = hawaii_reserve,
 	.restart = hawaii_restart,
-	.dt_compat = hawaii_dt_compat,
+	.dt_compat = java_dt_compat,
 MACHINE_END
