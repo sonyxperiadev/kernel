@@ -44,7 +44,7 @@
 #define OPP_ECONOMY_STRING	"ECONOMY"
 #define OPP_NORMAL_STRING	"NORMAL"
 #define OPP_TURBO_STRING	"TURBO"
-#define OPP_SUPER_TURBO_STRING	"SUPER TURBO"
+#define OPP_SUPER_TURBO_STRING	"SUPER_TURBO"
 
 #define	ARM_PI_NUM_OPP			ARRAY_SIZE(__arm_opp_info)
 #define	MM_PI_NUM_OPP			ARRAY_SIZE(__mm_opp_info)
@@ -71,12 +71,10 @@ struct opp_info __arm_opp_info[] = {
 	[1] = {
 		.freq_id = PROC_CCU_FREQ_ID_NRML,
 		.opp_id = PI_OPP_NORMAL,
-		.ctrl_prms = A9_NORMAL_FREQ,
 	},
 	[2] = {
 		.freq_id = PROC_CCU_FREQ_ID_TURBO,
 		.opp_id = PI_OPP_TURBO,
-		.ctrl_prms = A9_TURBO_FREQ,
 	},
 	[3] = {
 		.freq_id = PROC_CCU_FREQ_ID_SUPER_TURBO,
@@ -657,30 +655,22 @@ struct pi *pi_list[] = {
 	&modem_pi
 };
 
+char *opp_names[] = {OPP_XTAL_STRING, OPP_ECONOMY_STRING,
+	OPP_NORMAL_STRING, OPP_TURBO_STRING, OPP_SUPER_TURBO_STRING};
 char *get_opp_name(int opp)
 {
-	char *name = NULL;
-	switch (opp) {
-	case PI_OPP_XTAL:
-		name = OPP_XTAL_STRING;
-		break;
-	case PI_OPP_ECONOMY:
-		name = OPP_ECONOMY_STRING;
-		break;
-	case PI_OPP_NORMAL:
-		name = OPP_NORMAL_STRING;
-		break;
-	case PI_OPP_TURBO:
-		name = OPP_TURBO_STRING;
-		break;
-	case PI_OPP_SUPER_TURBO:
-		name = OPP_SUPER_TURBO_STRING;
-		break;
-	default:
+	if ((opp >= PI_OPP_MAX) || (opp < 0))
 		return NULL;
+	return opp_names[opp];
 	}
 
-	return name;
+u32 get_opp_from_name(char *name)
+{
+	int i;
+	for (i = 0; i < PI_OPP_MAX; i++)
+		if (strnicmp(opp_names[i], name, strlen(opp_names[i])) == 0)
+			return i;
+	return -EINVAL;
 }
 
 void __init hawaii_pi_mgr_init()

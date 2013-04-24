@@ -30,6 +30,14 @@
 extern const char *__event2str[];
 #endif
 
+/*PM policy definitions */
+#define PM_OFF		0
+#define PM_RET		1
+#define	PM_ECO		4
+#define	PM_DFS		5
+#define	PM_WKP		7
+
+
 enum {
 	LCDTE_EVENT = 0,
 	SSP2SYN_EVENT,		/*1*/

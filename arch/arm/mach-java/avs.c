@@ -85,6 +85,11 @@
 		} \
 	} while (0)
 
+static char *silicon_type_names[] = {
+	"SLOW", "TYP SLOW", "TYPICAL", "TYP FAST", "FAST"
+};
+
+
 enum {
 	AVS_LOG_ERR  = 1 << 0,
 	AVS_LOG_WARN = 1 << 1,
@@ -602,8 +607,13 @@ err:
 
 static int param_get_irdrop_si_type(char *buffer, const struct kernel_param *kp)
 {
-	u32 si_type = avs_compute_type_from_irdrop(&avs_info, true);
-	return snprintf(buffer, 10, "%u\n", si_type);
+	static int tries;
+	static u32 si_type;
+	if (tries == 0) {
+		si_type = avs_compute_type_from_irdrop(&avs_info, true);
+		tries++;
+}
+	return snprintf(buffer, 10, "%s\n", silicon_type_names[si_type]);
 }
 
 static void avs_pack_n_cpy(char **ptr, u32 val, u32 num_bits)
@@ -711,7 +721,6 @@ static int avs_find_silicon_type(struct avs_info *avs_info_ptr)
 	if (!pdata)
 		return -EPERM;
 
-	avs_ate_get_silicon_type(&avs_info);
 	if (!avs_info_ptr->avs_ate_val &&
 		(AVS_USE_IRDROP_IF_NO_OTP & pdata->flags) &&
 		irdrop_osc_check_en) {
@@ -723,14 +732,16 @@ static int avs_find_silicon_type(struct avs_info *avs_info_ptr)
 
 		avs_dbg(AVS_LOG_INIT, "[IRDROP OSC] silicon type = %u\n",
 			avs_info_ptr->silicon_type);
-	}
+	} else
+		avs_ate_get_silicon_type(&avs_info);
+
 
 	if (pdata->silicon_type_notify)
 		pdata->silicon_type_notify(avs_info_ptr->silicon_type,
 				avs_info_ptr->freq);
 
-	avs_dbg(AVS_LOG_INIT, "%s: silicon type: %d\n",
-			__func__, avs_info.silicon_type);
+	avs_dbg(AVS_LOG_INIT, "%s: silicon type: %s\n",
+			__func__, silicon_type_names[avs_info.silicon_type]);
 	return 0;
 }
 

@@ -26,6 +26,7 @@
 #define VLT_ID_OFF		0x0
 #define VLT_ID_RETN		0x1
 #define VLT_ID_WAKEUP		0x2
+#define VLT_ID_A9_26M_WFI	0x7
 #define VLT_ID_A9_ECO		0x8
 #define VLT_ID_OTHER_ECO	0x9
 #define VLT_ID_A9_NORMAL	0xA
@@ -35,10 +36,10 @@
 #define VLT_ID_A9_SUPER_TURBO		0xE
 #define VLT_ID_OTHER_SUPER_TURBO	0xF
 
-#define A9_NORMAL_FREQ	FREQ_MHZ(500)
-#define A9_TURBO_FREQ	FREQ_MHZ(667)
+#define ACTIVE_VOLTAGE_OFFSET	7
 
-#define INIT_A9_VLT_TABLE(ECO, NM, TURBO, STURBO) \
+#define INIT_A9_VLT_TABLE(WFI, ECO, NM, TURBO, STURBO) \
+				[VLT_ID_A9_26M_WFI] = WFI,\
 				[VLT_ID_A9_ECO] = ECO, \
 				[VLT_ID_A9_NORMAL] = NM, \
 				[VLT_ID_A9_TURBO] = TURBO, \
@@ -59,9 +60,9 @@
 				[0x3] =		init_val, \
 				[0x4] =		init_val, \
 				[0x5] =		init_val, \
-				[0x6] =		init_val, \
-				[0x7] =		init_val
+				[0x6] =		init_val,
 
+#define PROC_CCU_FREQ_ID_XTAL		0
 #define PROC_CCU_FREQ_ID_ECO		4
 #define PROC_CCU_FREQ_ID_NRML		5
 #define PROC_CCU_FREQ_ID_TURBO		6
@@ -97,9 +98,9 @@
 
 
 #define PROC_CCU_FREQ_VOLT_TBL	\
-		ARRAY_LIST(VLT_ID_A9_ECO, VLT_ID_A9_ECO, VLT_ID_A9_ECO,\
+		ARRAY_LIST(VLT_ID_A9_26M_WFI, VLT_ID_A9_ECO,\
 			VLT_ID_A9_ECO, VLT_ID_A9_ECO, VLT_ID_A9_ECO,\
-			VLT_ID_A9_TURBO, VLT_ID_A9_SUPER_TURBO)
+			VLT_ID_A9_ECO, VLT_ID_A9_TURBO, VLT_ID_A9_SUPER_TURBO)
 #define PROC_CCU_FREQ_VOLT_TBL_SZ	8
 
 #define MM_CCU_FREQ_VOLT_TBL	\
@@ -225,12 +226,10 @@ extern struct pwrmgr_init_param pwrmgr_init_param;
 #endif	/*CONFIG_KONA_POWER_MGR */
 
 /*This API should be defined in appropriate PMU board file*/
-extern const u8 *get_sr_vlt_table(u32 silicon_type, int freq_id,
-		void *param);
-extern bool is_pm_erratum(u32 erratum);
-extern int __init pm_params_init(void);
-extern int pm_init_pmu_sr_vlt_map_table(u32 silicon_type, int *freq_id,
-		void *param);
+bool is_pm_erratum(u32 erratum);
+int __init pm_params_init(void);
+int pm_init_pmu_sr_vlt_map_table(u32 silicon_type, int freq_id);
+extern int bcmpmu_init_sr_volt(void);
 
 #define CONFIG_A9_PLL_2GHZ	1
 #define CONFIG_A9_PLL_2P4GHZ	2

@@ -586,26 +586,6 @@ static struct therm_data thermal_pdata = {
 	.sensors = sensor_data,
 };
 
-static struct resource hawaii_tmon_resource[] = {
-	{
-		.start = TMON_BASE_ADDR,
-		.end = TMON_BASE_ADDR + SZ_4K - 1,
-		.flags = IORESOURCE_MEM,
-	},
-	{
-		.start = BCM_INT_ID_TEMP_MON,
-		.end = BCM_INT_ID_TEMP_MON,
-		.flags = IORESOURCE_IRQ,
-	},
-};
-
-struct platform_device hawaii_tmon_device = {
-	.name = "kona-tmon",
-	.id = -1,
-	.resource = hawaii_tmon_resource,
-	.num_resources = ARRAY_SIZE(hawaii_tmon_resource),
-};
-
 static struct resource hawaii_thermal_resource[] = {
 	{
 		.start = TMON_BASE_ADDR,
@@ -737,8 +717,8 @@ struct platform_device hawaii_otg_platform_device = {
 struct kona_freq_tbl kona_freq_tbl[] = {
 	FTBL_INIT(312000, PI_OPP_ECONOMY, TEMP_DONT_CARE),
 	FTBL_INIT(499999, PI_OPP_NORMAL, 100),
-	FTBL_INIT(666667, PI_OPP_TURBO, 90),
-	FTBL_INIT(1000000, PI_OPP_SUPER_TURBO, 80),
+	FTBL_INIT(666667, PI_OPP_TURBO, TEMP_DONT_CARE),
+	FTBL_INIT(1000000, PI_OPP_SUPER_TURBO, 85),
 };
 
 void hawaii_cpufreq_init(void)
@@ -786,49 +766,71 @@ struct platform_device kona_cpufreq_device = {
 #endif /*CONFIG_KONA_CPU_FREQ_DRV */
 
 #ifdef CONFIG_KONA_AVS
-void avs_silicon_type_notify(u32 silicon_type, int *freq_id,
-		struct adj_param *param)
+void avs_silicon_type_notify(u32 silicon_type, u32 ate_freq)
 {
-	pr_info("%s : silicon type = %d freq = %d\n", __func__,
-			silicon_type, *freq_id);
+	u32 freq_id = A9_FREQ_1000_MHZ;
+	pr_info("%s : silicon type = %d freq_id = %d\n", __func__,
+			silicon_type, freq_id);
 
-	switch ((*freq_id)) {
+	switch (ate_freq) {
 	case A9_FREQ_UNKNOWN:
-		printk(KERN_ALERT "Unknown freqid. Set to max supported\n");
+		pr_info("Unknown freqid. Set to max supported\n");
 #ifdef CONFIG_PWRMGR_1P2GHZ_OPS_SET_SELECT
-		*freq_id = A9_FREQ_1200_MHZ;
+		freq_id = A9_FREQ_1200_MHZ;
 #else
-		*freq_id = A9_FREQ_1000_MHZ;
+		freq_id = A9_FREQ_1000_MHZ;
 #endif
 		break;
 	case A9_FREQ_1000_MHZ:
 #ifdef CONFIG_PWRMGR_1P2GHZ_OPS_SET_SELECT
-		printk(KERN_ALERT "AVS says 1 GHZ, system conf says 1.2 GHZ");
+		pr_err("AVS says 1 GHZ, system conf says 1.2 GHZ\n");
 		BUG();
 #endif
 		break;
 	case A9_FREQ_1200_MHZ:
 #ifndef CONFIG_PWRMGR_1P2GHZ_OPS_SET_SELECT
-		printk(KERN_ALERT "AVS says 1.2 GHZ, system conf for 1GHZ");
-		*freq_id = A9_FREQ_1000_MHZ;
+		pr_err("AVS says 1.2 GHZ, system conf for 1GHZ\n");
+		freq_id = A9_FREQ_1000_MHZ;
 #endif
 		break;
 	case A9_FREQ_1500_MHZ:
-		break;
 	default:
 		BUG();
 	}
 
-	pm_init_pmu_sr_vlt_map_table(silicon_type, freq_id, param);
+	pm_init_pmu_sr_vlt_map_table(silicon_type, freq_id);
 }
 
-u32 silicon_type_lut[] = {
-	SILICON_TYPE_SLOW, SILICON_TYPE_TYP_SLOW,
-	SILICON_TYPE_TYPICAL, SILICON_TYPE_TYP_FAST,
-	SILICON_TYPE_FAST,
+u32 vddvar_vret_lut[] = {
+	800, 810, 820, 830,
+	840, 850, 860, 870,
+	880, 890, 900, 910,
+	920, 930, 940, 950,
 };
 
-static struct kona_ate_lut_entry ate_lut[] = {
+u32 vddfix_vret_lut[] = {
+	860, 870, 880, 890,
+	900, 910, 920, 930,
+	940, 950, 960, 970,
+	980, 990, 1000, 1010,
+};
+
+u32 vddvar_vmin_lut[] = {
+	860, 870, 880, 890,
+	900, 910, 920, 930,
+	940, 950, 960, 970,
+	980, 990, 1000, 1010,
+};
+
+u32 vddvar_a9_vmin_lut[] = {
+	860, 870, 880, 890,
+	900, 910, 920, 930,
+	940, 950, 960, 970,
+	980, 990, 1000, 1010,
+};
+
+
+static struct avs_ate_lut_entry ate_lut[] = {
 	{A9_FREQ_UNKNOWN, SILICON_TYPE_SLOW}, /* 0 - Default*/
 	{A9_FREQ_1000_MHZ, SILICON_TYPE_FAST},   /* 1 */
 	{A9_FREQ_1000_MHZ, SILICON_TYPE_TYP_FAST},/* 2 */
@@ -847,33 +849,49 @@ static struct kona_ate_lut_entry ate_lut[] = {
 	{A9_FREQ_1500_MHZ, SILICON_TYPE_SLOW},/* 15 */
 };
 
-static u32 irdrop_lut[] = {470, 489, 519, 550, UINT_MAX};
+static u32 irdrop_lut[] = {459, 477, 506, 525, UINT_MAX};
 
-static int vddvar_a9_adj_val[] = {0, 0, 0, 0, 0};
+static u32 vddvar_adj_val_1g[] = {40, 40, 30, 30, 30};
+static u32 vddvar_adj_val_1200m[] = {50, 50, 40, 40, 30};
 
-static struct adj_param adj_param = {
-	.vddvar_a9_adj_val = vddvar_a9_adj_val, /*0 mv */
-	.vddfix_adj_val = NULL, /*0 mv*/
-	.flags = 0,
+static u32 *vddvar_adj_lut[] = {vddvar_adj_val_1g, vddvar_adj_val_1200m};
+
+int vddfix_adj_lut[] = {
+	0, 10, 20, 30,
+	40, 50, 60, 70,
+	80, 90, 100, 110,
+	120, 130, 140, 150,
+	0, -10, -20, -30,
+	-40, -50, -60, -70,
+	-80, -90, -100, -110,
+	-120, -130, -140, -150
 };
 
-static struct kona_avs_pdata avs_pdata = {
-	.flags = AVS_VDDVAR_A9_EN,
-	/* Mem addr where perf mon and SDSR OPP values are copied by ABI */
-	.avs_addr_row4 = 0x34051FB0,
-	/* Mem addr where ATE values is copied by ABI */
+static struct avs_pdata avs_pdata = {
+	.flags = AVS_VDDVAR_A9_MIN_EN | AVS_VDDVAR_MIN_EN | AVS_VDDFIX_MIN_EN |
+	AVS_VDDFIX_ADJ_EN | AVS_IGNORE_CRC_ERR | AVS_USE_IRDROP_IF_NO_OTP,
+	/* Mem addr where OTP row 3 is copied by ABI*/
+	.avs_addr_row3 = 0x34051FB0,
+	/* Mem addr where OTP row 5 is copied by ABI*/
 	.avs_addr_row5 = 0x34051FA0,
-	/* Mem addr where MSR OPP values are copied by ABI */
+	/* Mem addr where OTP row 8 is copied by ABI*/
 	.avs_addr_row8 = 0x34051FA8,
-	.silicon_type_lut = silicon_type_lut,
 	.ate_lut = ate_lut,
 	.irdrop_lut = irdrop_lut,
+	.irdrop_vreq = 1200000,
+	.vddvar_vret_lut = vddvar_vret_lut,
+	.vddfix_vret_lut = vddfix_vret_lut,
+	.vddvar_vmin_lut = vddvar_vmin_lut,
+	.vddvar_a9_vmin_lut = vddvar_a9_vmin_lut,
 	.silicon_type_notify = avs_silicon_type_notify,
-	.adj_param = &adj_param,
+	.vddvar_adj_lut = vddvar_adj_lut,
+	.vddfix_adj_lut = vddfix_adj_lut,
+	.a9_regl_id = "csr_uc",
+	.pwrwdog_base = KONA_PWRWDOG_VA,
 };
 
-struct platform_device kona_avs_device = {
-	.name = "kona-avs",
+struct platform_device avs_device = {
+	.name = "avs",
 	.id = -1,
 	.dev = {
 		.platform_data = &avs_pdata,

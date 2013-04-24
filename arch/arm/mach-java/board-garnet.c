@@ -766,7 +766,7 @@ struct platform_device *hawaii_common_plat_devices[] __initdata = {
 #endif
 
 #ifdef CONFIG_KONA_AVS
-	&kona_avs_device,
+	&avs_device,
 #endif
 
 #ifdef CONFIG_KONA_CPU_FREQ_DRV

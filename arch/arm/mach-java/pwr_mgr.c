@@ -42,20 +42,18 @@
 #include "pm_params.h"
 #include "sequencer_ucode.h"
 #include <mach/avs.h>
+#ifdef CONFIG_DELAYED_PM_INIT
+#include <mach/pm.h>
+#include <plat/kona_pm.h>
+#endif
+#include <mach/rdb/brcm_rdb_root_clk_mgr_reg.h>
+
 
 #define VLT_LUT_SIZE	16
-/*PM policy definitions */
-#define PM_OFF		0
-#define PM_RET		1
-#define	PM_ECO		4
-#define	PM_DFS		5
-#define	PM_WKP		7
 
 static int delayed_init_complete;
 
 #ifdef CONFIG_DELAYED_PM_INIT
-struct pi_mgr_qos_node delay_arm_lpm;
-
 struct pm_late_init {
 	int dummy;
 };
@@ -717,8 +715,14 @@ struct pwr_mgr_info __pwr_mgr_info = {
 static int __init hawaii_pwr_mgr_init(void)
 {
 	struct pm_policy_cfg cfg;
-
+#ifdef CONFIG_KONA_AVS
+	int update_vlt_tbl = 0;
+#else
+	int update_vlt_tbl = 1;
+#endif
 	int i;
+	u32 reg_val;
+	int insurance = 1000;
 	struct pi *pi;
 	struct v0x_spec_i2c_cmd_ptr dummy_seq_v0_ptr = {
 		.other_ptr = DUMMY_SEQ_VO0_HW_SEQ_START_OFF,
@@ -756,10 +760,6 @@ static int __init hawaii_pwr_mgr_init(void)
 
 	pwr_mgr_init(&__pwr_mgr_info);
 
-#ifndef CONFIG_KONA_AVS
-		pm_init_pmu_sr_vlt_map_table(0, 0, NULL);
-#endif
-
 	hawaii_pi_mgr_init();
 
 
@@ -772,6 +772,32 @@ static int __init hawaii_pwr_mgr_init(void)
 		pwr_mgr_ignore_power_ok_signal(false);
 #endif
 #endif
+
+#if defined(CONFIG_PLL1_8PHASE_OFF_ERRATUM) ||\
+		defined(CONFIG_MM_FREEZE_VAR500M_ERRATUM)
+	writel(0x00A5A501, KONA_ROOT_CLK_VA +
+			ROOT_CLK_MGR_REG_WR_ACCESS_OFFSET);
+	if (is_pm_erratum(ERRATUM_PLL1_8PHASE_OFF)) {
+		reg_val = readl(KONA_ROOT_CLK_VA
+				+ ROOT_CLK_MGR_REG_PLL1CTRL0_OFFSET);
+		reg_val |= ROOT_CLK_MGR_REG_PLL1CTRL0_PLL1_8PHASE_EN_MASK;
+		/*Enable 8ph bit in pll 1*/
+		do {
+			writel(reg_val, KONA_ROOT_CLK_VA
+				+ ROOT_CLK_MGR_REG_PLL1CTRL0_OFFSET);
+			insurance--;
+		} while (!(readl(KONA_ROOT_CLK_VA +
+			ROOT_CLK_MGR_REG_PLL1CTRL0_OFFSET) &
+			ROOT_CLK_MGR_REG_PLL1CTRL0_PLL1_8PHASE_EN_MASK) &&
+			insurance);
+		BUG_ON(insurance == 0);
+	}
+	if (is_pm_erratum(ERRATUM_MM_FREEZE_VAR500M))
+		var500m_clk_en_override(true);
+
+	writel(0, KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_WR_ACCESS_OFFSET);
+#endif
+
 	/*MM override is not set by default */
 	pwr_mgr_pi_set_wakeup_override(PI_MGR_PI_ID_MM, false /*clear */);
 
@@ -841,9 +867,9 @@ static int __init hawaii_pwr_mgr_init(void)
 #if !defined(CONFIG_MACH_BCM_FPGA_E) && \
 	!defined(CONFIG_MACH_BCM_FPGA)
 #ifdef CONFIG_PWRMGR_1P2GHZ_OPS_SET_SELECT
-	mach_config_a9_pll(CONFIG_A9_PLL_2P4GHZ, 0);
+	mach_config_a9_pll(CONFIG_A9_PLL_2P4GHZ, update_vlt_tbl);
 #else
-	mach_config_a9_pll(CONFIG_A9_PLL_2GHZ, 0);
+	mach_config_a9_pll(CONFIG_A9_PLL_2GHZ, update_vlt_tbl);
 #endif
 #endif /*CONFIG_MACH_BCM_FPGA_E*/
 
@@ -867,7 +893,7 @@ void pwr_mgr_mach_debug_fs_init(int type, int db_mux, int mux_param,
 #endif /*CONFIG_DEBUG_FS */
 
 
-int __init hawaii_pwr_mgr_delayed_init(void)
+int hawaii_pwr_mgr_delayed_init(void)
 {
 	int i;
 	struct pi *pi;
@@ -885,15 +911,11 @@ int __init hawaii_pwr_mgr_delayed_init(void)
 	pwr_mgr_ignore_mdm_dap_powerup_req(true);
 #endif
 	delayed_init_complete = 1;
-#ifdef CONFIG_DEBUG_FS
-	return pwr_mgr_debug_init(KONA_BMDM_PWRMGR_VA);
-#else
 	return 0;
-#endif
 }
 
 #ifdef CONFIG_DELAYED_PM_INIT
-static int __init param_set_pm_late_init(const char *val,
+static int param_set_pm_late_init(const char *val,
 			const struct kernel_param *kp)
 {
 	int ret = -1;
@@ -905,15 +927,13 @@ static int __init param_set_pm_late_init(const char *val,
 	if (!val)
 		return -EINVAL;
 
+	/* coverity[secure_coding] */
 	ret = sscanf(val, "%d", &pm_delayed_init);
 	pr_info("%s, pm_delayed_init:%d\n", __func__, pm_delayed_init);
 	if (pm_delayed_init == 1)
 		hawaii_pwr_mgr_delayed_init();
 
-	set_cpufreq_limit(get_cpu_freq_from_opp(PI_OPP_ECONOMY), MIN_LIMIT);
-	if (delay_arm_lpm.valid)
-		pi_mgr_qos_request_remove(&delay_arm_lpm);
-
+	kona_pm_disable_idle_state(CSTATE_ALL, 0);
 	return 0;
 }
 #endif
@@ -921,19 +941,17 @@ static int __init param_set_pm_late_init(const char *val,
 int __init hawaii_pwr_mgr_late_init(void)
 {
 #ifdef CONFIG_DELAYED_PM_INIT
-	int ret;
 	if (is_charging_state()) {
 		pr_info("%s: power off charging, complete int here\n",
 						__func__);
 		hawaii_pwr_mgr_delayed_init();
-		set_cpufreq_limit(get_cpu_freq_from_opp(PI_OPP_ECONOMY),
-				MIN_LIMIT);
-	} else {
-		ret = pi_mgr_qos_add_request(&delay_arm_lpm, "delay_arm_lpm",
-				PI_MGR_PI_ID_ARM_CORE, 0);
-	}
+	} else
+		kona_pm_disable_idle_state(CSTATE_ALL, 1);
 #else
 	hawaii_pwr_mgr_delayed_init();
+#endif
+#ifdef CONFIG_DEBUG_FS
+	return pwr_mgr_debug_init(KONA_BMDM_PWRMGR_VA);
 #endif
 	return 0;
 }
