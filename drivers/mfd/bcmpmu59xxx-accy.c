@@ -480,6 +480,7 @@ static void usb_handle_state(struct bcmpmu_accy *paccy)
 					__func__, paccy->retry_cnt);
 		if (paccy->retry_cnt < BC_MAX_RETRIES) {
 			bcdldo_cycle_power(paccy);
+			reset_bc(paccy);
 			schedule_delayed_work(&paccy->det_work,
 						ACCY_RETRY_DELAY);
 			paccy->retry_cnt++;
