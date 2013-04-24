@@ -1420,8 +1420,8 @@ void AUDCTRL_GetSrcSinkByMode(AudioMode_t mode, AUDIO_SOURCE_Enum_t *pMic,
 
 	default:
 		/*must set a default, o.w. it would be used uninitialized */
-		*pMic = AUDIO_SOURCE_UNDEFINED;
-		*pSpk = AUDIO_SINK_UNDEFINED;
+		*pMic = AUDIO_SOURCE_ANALOG_MAIN;
+		*pSpk = AUDIO_SINK_LOUDSPK;
 		aWarn("AUDCTRL_GetSrcSinkByMode()" \
 		      "mode %d is out of range\n", mode);
 		break;
