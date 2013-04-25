@@ -33,6 +33,7 @@
 
 #ifdef CONFIG_BCM_BT_LPM
 
+#define TIMER_PERIOD 2
 struct bcmbt_lpm_entry_struct *priv_g;
 
 struct bcmbt_ldisc_data {
@@ -76,6 +77,27 @@ static int bcmbt_lpm_init_clock(struct bcmbt_lpm_entry_struct *priv)
 	pr_debug("%s BLUETOOTH:bt_qos_node_bw, bt_qos_node_hw" \
 				 "SUCCESFULL\n", __func__);
 	return 0;
+}
+
+static void hw_timer_expire(void *data)
+{
+	unsigned int host_wake;
+	unsigned long flags;
+
+	struct bcmbt_lpm_entry_struct *priv =
+			(struct bcmbt_lpm_entry_struct *)data;
+
+	spin_lock_irqsave(&priv->plpm->bcmbt_lpm_lock, flags);
+	host_wake = gpio_get_value(priv->pdata->host_wake_gpio);
+	if (host_wake == BCMBT_LPM_HOST_WAKE_DEASSERT) {
+		pi_mgr_qos_request_update(&priv->plpm->host_wake_qos_node,
+					PI_MGR_QOS_DEFAULT_VALUE);
+		if (wake_lock_active(&priv->plpm->host_wake_lock))
+			wake_unlock(&priv->plpm->host_wake_lock);
+	}
+	/* else do nothing if host_wake == BCMBT_LPM_HOST_WAKE_ASSERT */
+	priv->plpm->hw_timer_st = IDLE;
+	spin_unlock_irqrestore(&priv->plpm->bcmbt_lpm_lock, flags);
 }
 
 int bcmbt_lpm_assert_bt_wake(void)
@@ -191,9 +213,7 @@ static void bcmbt_lpm_clean_bt_wake(struct bcmbt_lpm_entry_struct *priv,
 static irqreturn_t bcmbt_lpm_host_wake_isr(int irq, void *dev)
 {
 	unsigned int host_wake;
-	unsigned int bt_wake;
 	unsigned long flags;
-	int ret = -1;
 
 	struct bcmbt_lpm_entry_struct *priv =
 				(struct bcmbt_lpm_entry_struct *)dev;
@@ -201,20 +221,27 @@ static irqreturn_t bcmbt_lpm_host_wake_isr(int irq, void *dev)
 		pr_err("%s BLUETOOTH: Error data pointer is null\n", __func__);
 		return IRQ_HANDLED;
 	}
+	spin_lock_irqsave(&priv->plpm->bcmbt_lpm_lock, flags);
 	host_wake = gpio_get_value(priv->pdata->host_wake_gpio);
 	if (BCMBT_LPM_HOST_WAKE_ASSERT == host_wake) {
-		pr_debug("%s BLUETOOTH: hostwake ISR Assert\n", __func__);
-		/* wake up peripheral clock */
-		ret = pi_mgr_qos_request_update(
-			      &priv->plpm->host_wake_qos_node, 0);
+		if (priv->plpm->hw_timer_st == IDLE) {
+			/* wake up peripheral clock */
+			if (!wake_lock_active(&priv->plpm->host_wake_lock))
+				wake_lock(&priv->plpm->host_wake_lock);
+
+			pi_mgr_qos_request_update(
+				      &priv->plpm->host_wake_qos_node, 0);
+		}
+		/* else do nothing if state == ACTIVE */
+		spin_unlock_irqrestore(&priv->plpm->bcmbt_lpm_lock, flags);
 	} else {
-		pr_debug("%s BLUETOOTH: hostwake ISR DeAssert\n", __func__);
-		host_wake = gpio_get_value(priv->pdata->host_wake_gpio);
-		bt_wake = gpio_get_value(priv->pdata->bt_wake_gpio);
-		pr_debug("%s BLUETOOTH: hostwake idr ready to sleep\n",
-								__func__);
-		pi_mgr_qos_request_update(&priv->plpm->host_wake_qos_node,
-					PI_MGR_QOS_DEFAULT_VALUE);
+		if (priv->plpm->hw_timer_st == IDLE) {
+			mod_timer(&priv->plpm->hw_timer,
+				jiffies + msecs_to_jiffies(TIMER_PERIOD));
+			priv->plpm->hw_timer_st = ACTIVE;
+		}
+		/* else do nothing if state == ACTIVE */
+		spin_unlock_irqrestore(&priv->plpm->bcmbt_lpm_lock, flags);
 	}
 	pr_debug("%s BLUETOOTH:Exiting.\n", __func__);
 	return IRQ_HANDLED;
@@ -232,8 +259,12 @@ static int bcmbt_lpm_init_hostwake(struct bcmbt_lpm_entry_struct *priv)
 		     __func__, rc);
 		return rc;
 	}
-	rc = gpio_direction_input(priv->pdata->host_wake_gpio);
-	rc = bcmbt_lpm_init_clock(priv);
+	gpio_direction_input(priv->pdata->host_wake_gpio);
+
+#ifdef CONFIG_HAS_WAKELOCK
+	wake_lock_init(&priv->plpm->host_wake_lock,
+			WAKE_LOCK_SUSPEND, "BTWAKE");
+#endif
 
 	pr_debug("%s BLUETOOTH:Exiting.\n", __func__);
 	return 0;
@@ -245,9 +276,15 @@ static void bcmbt_lpm_clean_host_wake(struct bcmbt_lpm_entry_struct *priv)
 		return;
 
 	free_irq(priv->plpm->host_irq, priv_g);
+	/* delete timer */
+	del_timer(&priv->plpm->hw_timer);
+	priv->plpm->hw_timer_st = IDLE;
 	gpio_free((unsigned)priv->pdata->host_wake_gpio);
 	pi_mgr_qos_request_update(&priv->plpm->host_wake_qos_node,
 				    PI_MGR_QOS_DEFAULT_VALUE);
+#ifdef CONFIG_HAS_WAKELOCK
+	wake_lock_destroy(&priv->plpm->host_wake_lock);
+#endif
 	pr_debug("%s BLUETOOTH:Exiting.\n", __func__);
 }
 
@@ -269,11 +306,17 @@ void bcmbt_lpm_start(void)
 		priv_g->plpm->host_irq = rc;
 		pr_debug("%s: BLUETOOTH: request_irq host_irq=%d\n",
 			__func__, priv_g->plpm->host_irq);
+
+		init_timer(&priv_g->plpm->hw_timer);
+		priv_g->plpm->hw_timer.function = hw_timer_expire;
+		priv_g->plpm->hw_timer_st = IDLE;
+		priv_g->plpm->hw_timer.data = priv_g;
+
 		rc = request_irq(
 			priv_g->plpm->host_irq, bcmbt_lpm_host_wake_isr,
 			 (IRQF_TRIGGER_FALLING | IRQF_TRIGGER_RISING |
 			  IRQF_NO_SUSPEND), "bt_host_wake", priv_g);
-		 if (rc) {
+		if (rc) {
 			pr_err
 		("%s: failed to configure BT Host Mgmt:request_irq err=%d\n",
 			     __func__, rc);
@@ -443,6 +486,9 @@ static int bcmbt_lpm_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 	spin_lock_init(&priv_g->plpm->bcmbt_lpm_lock);
+
+	/* Initialize clocks once */
+	bcmbt_lpm_init_clock(priv_g);
 
 	if (pdev->dev.platform_data) {
 		pdata = pdev->dev.platform_data;

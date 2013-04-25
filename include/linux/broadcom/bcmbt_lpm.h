@@ -41,6 +41,11 @@
 #define TIO_GET_BT_UART_PORT	0x8006
 #define TIO_GET_BT_FIRMWARE	0x8007
 
+enum {
+	IDLE,
+	ACTIVE,
+	NO_STATE
+};
 struct bcmbt_lpm_struct {
 #ifdef CONFIG_HAS_WAKELOCK
 	struct wake_lock bt_wake_lock;
@@ -49,6 +54,8 @@ struct bcmbt_lpm_struct {
 	struct pi_mgr_qos_node bt_wake_qos_node;
 	struct pi_mgr_qos_node host_wake_qos_node;
 	spinlock_t bcmbt_lpm_lock;
+	struct timer_list hw_timer;
+	uint8_t hw_timer_st;
 	struct uart_port *uport;
 	int host_irq;
 };
