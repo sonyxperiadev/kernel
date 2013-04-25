@@ -359,16 +359,20 @@ static void usb_detect_state(struct bcmpmu_accy *paccy)
 	u32 vbus_status = 0, id_status = 0, bc_status;
 	struct bcmpmu59xxx *bcmpmu = paccy->bcmpmu;
 	static u8 type2;
-	bool id_check;
+	bool id_check = true;
 	bcmpmu_usb_get(bcmpmu,
 			BCMPMU_USB_CTRL_GET_SESSION_STATUS,
 			(void *)&vbus_status);
-	bcmpmu_usb_get(bcmpmu,
+	pr_accy(FLOW, "%s, vbus %d\n",
+			__func__, vbus_status);
+	if (paccy->bc != BC_EXT_DETECT) {
+		bcmpmu_usb_get(bcmpmu,
 			BCMPMU_USB_CTRL_GET_ID_VALUE,
 			(void *)&id_status);
-	pr_accy(FLOW, "%s, vbus %d, id %d\n",
+		pr_accy(FLOW, "%s, vbus %d, id %d\n",
 			__func__, vbus_status, id_status);
-	id_check = bcmpmu_supported_chrgr_usbid(paccy, id_status);
+		id_check = bcmpmu_supported_chrgr_usbid(paccy, id_status);
+	}
 
 	if (vbus_status && id_check) {
 		bc_status = get_bc_status(paccy);
@@ -439,18 +443,20 @@ static void usb_detect_state(struct bcmpmu_accy *paccy)
 static void usb_handle_state(struct bcmpmu_accy *paccy)
 {
 	int id_status;
-	bool id_check;
+	bool id_check = true;
 	switch (paccy->det_state) {
 	case USB_DETECT:
 		if (!atomic_read(&paccy->usb_allow_bc_detect))
 			break;
-		bcmpmu_usb_get(paccy->bcmpmu,
-			BCMPMU_USB_CTRL_GET_ID_VALUE,
-			(void *)&id_status);
-		pr_accy(FLOW, "%s,== id =%d\n",
-			__func__, id_status);
-		id_check = bcmpmu_supported_chrgr_usbid
+		if (paccy->bc != BC_EXT_DETECT) {
+			bcmpmu_usb_get(paccy->bcmpmu,
+				BCMPMU_USB_CTRL_GET_ID_VALUE,
+				(void *)&id_status);
+			pr_accy(FLOW, "%s,id =%d\n",
+				__func__, id_status);
+			id_check = bcmpmu_supported_chrgr_usbid
 				(paccy, id_status);
+		}
 		if (!id_check)
 			break;
 		if (!paccy->clock_en)
@@ -677,20 +683,26 @@ static void bcmpmu_accy_isr(enum bcmpmu59xxx_irq irq, void *data)
 	case PMU_IRQ_VBUS_VALID_R:
 		pr_accy(INIT, "### ISR  PMU_IRQ_VBUS_VALID_R: %x\n",
 			PMU_IRQ_VBUS_VALID_R);
-		ret = bcmpmu_usb_get(bcmpmu,
+		if (paccy->bc != BC_EXT_DETECT) {
+			ret = bcmpmu_usb_get(bcmpmu,
 					 BCMPMU_USB_CTRL_GET_ID_VALUE,
 					 &id_status);
-		bcmpmu_paccy_latch_event(paccy,
+			bcmpmu_paccy_latch_event(paccy,
 				BCMPMU_USB_EVENT_VBUS_VALID, NULL);
 
-		if (id_status != PMU_USB_ID_GROUND) {
+			if (id_status != PMU_USB_ID_GROUND) {
 				paccy->det_state = USB_IDLE;
 				schedule_delayed_work(
 					&paccy->det_work, ACCY_WORK_DELAY);
-			}
-		else
-			pr_accy(FLOW, "%s, USB Host mode skipping BC detect\n",
+			} else {
+				pr_accy(FLOW,
+				"%s, USB Host mode skipping BC detect\n",
 				__func__);
+			}
+		} else {
+			bcmpmu_paccy_latch_event(paccy,
+				BCMPMU_USB_EVENT_VBUS_VALID, NULL);
+		}
 
 		break;
 
@@ -899,27 +911,30 @@ static void usb_deferred_work(struct work_struct *work)
 	struct bcmpmu_accy *paccy =
 		container_of(work, struct bcmpmu_accy, det_work.work);
 	struct bcmpmu59xxx *bcmpmu = paccy->bcmpmu;
-	bool id_check;
+	bool id_check = true;
 	u32 vbus_status;
-	bcmpmu_usb_get(bcmpmu,
-			BCMPMU_USB_CTRL_GET_ID_VALUE,
-			(void *)&id_status);
 
-	bcmpmu_usb_get(bcmpmu,
+	if (paccy->bc != BC_EXT_DETECT) {
+		bcmpmu_usb_get(bcmpmu,
+				BCMPMU_USB_CTRL_GET_ID_VALUE,
+				(void *)&id_status);
+		id_check = bcmpmu_supported_chrgr_usbid
+				(paccy, id_status);
+		pr_accy(FLOW, "%s, id %x, vbus %d\n",
+			__func__, id_status, vbus_status);
+		bcmpmu_usb_get(bcmpmu,
 			BCMPMU_USB_CTRL_GET_SESSION_STATUS,
 			(void *)&vbus_status);
-	id_check = bcmpmu_supported_chrgr_usbid
-			(paccy, id_status);
-	pr_accy(FLOW, "%s, enter state=%d, id %x\n", __func__,
-			paccy->det_state, id_status);
+		if (id_check && vbus_status &&
+			(bc_start != PMU_BC_DETECTION_END)) {
+			schedule_delayed_work(&paccy->det_work,
+					ACCY_RETRY_DELAY);
+		}
+
+	}
 	pr_accy(FLOW, "###<%s> , DEV_STATE %x\n",
 			__func__, paccy->det_state);
 
-	if (id_check && vbus_status &&
-		(bc_start != PMU_BC_DETECTION_END)) {
-		schedule_delayed_work(&paccy->det_work,
-					ACCY_RETRY_DELAY);
-		}
 
 	list_for_each_safe(pos, temp, (&paccy->dispatch_list->node)) {
 		if (!list_empty(&paccy->dispatch_list->node)) {
@@ -1364,15 +1379,19 @@ int bcmpmu_usb_get(struct bcmpmu59xxx *bcmpmu,
 		val = val >> OTG_VBUS_STAT_SHIFT;
 		break;
 	case BCMPMU_USB_CTRL_GET_ID_VALUE:
-		ret = bcmpmu->read_dev(bcmpmu,
+		if (paccy->bc != BC_EXT_DETECT) {
+			ret = bcmpmu->read_dev(bcmpmu,
 				PMU_REG_ENV4,
 				&val);
-		val &= ENV4_ID_CODE_MASK;
-		val = val >> ENV4_ID_CODE_SHIFT;
-		if ((paccy->usb_id_map) && (val < paccy->usb_id_map_len))
-			val = paccy->usb_id_map[val];
-		pr_accy(FLOW, "ENV4 %x val, id mak %x\n",
-			val, ENV4_ID_CODE_SHIFT);
+			val &= ENV4_ID_CODE_MASK;
+			val = val >> ENV4_ID_CODE_SHIFT;
+			if ((paccy->usb_id_map) &&
+					(val < paccy->usb_id_map_len))
+				val = paccy->usb_id_map[val];
+			pr_accy(FLOW, "ENV4 %x val, id mak %x\n",
+				val, ENV4_ID_CODE_SHIFT);
+		} else
+			val = PMU_USB_ID_FLOAT;
 		break;
 		/* client for bcmpmu-accy notification can not register
 		 *before accy driver get probed if, USB/Charger is
