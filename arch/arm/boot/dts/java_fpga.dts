@@ -150,5 +150,11 @@
 		quirks	= <0x00000040>;		/*SDHCI_QUIRK_BROKEN_ADMA (1 << 6)*/
 		quirks2	= <0x00000008>;		/*SDHCI_QUIRK2_HOST_MASK_HS_BIT (1<<3)*/
 	};
+        timer {
+		compatible = "arm,armv7-timer";
+		interrupts = <1 13 0xf08>,
+			     <1 14 0xf08>;
+		status = "disabled";
+	};
 
 };
