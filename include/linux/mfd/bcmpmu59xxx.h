@@ -344,7 +344,7 @@ enum bcmpmu_adc_flag {
  */
 struct bcmpmu_adc_result {
 	unsigned int raw;
-	unsigned int conv;
+	int conv;
 };
 
 struct bcmpmu_adc_lut {
