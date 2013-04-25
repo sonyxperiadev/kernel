@@ -75,3 +75,9 @@ config AUDIO_FEATURE_SET_DISABLE_ECNS
 	default n
 	help
 	  Say Y here to activate Brcm BT NREC OFF
+config IHF_TWO_EXT_AMPLIFIER
+        boolean "Define if two external amp is used for IHF"
+        depends on BCM_ALSA_SOUND
+        default n
+        help
+          Say Y here to enable the two external amp for IHF

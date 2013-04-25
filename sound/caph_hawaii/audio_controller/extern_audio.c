@@ -122,7 +122,7 @@ static struct PMU_AudioGainMapping_t hsPMUGainTable[PMU_HSGAIN_NUM] = {
 	{-4800, PMU_HSGAIN_48DB_N},
 	{-4500, PMU_HSGAIN_45DB_N},
 	{-4200, PMU_HSGAIN_42DB_N},
-	{-4000, PMU_HSGAIN_40P5DB_N},	/*10*/
+	{-4000, PMU_HSGAIN_40P5DB_N},	/*10 */
 	{-3900, PMU_HSGAIN_39DB_N},
 	{-3750, PMU_HSGAIN_37P5DB_N},
 	{-3600, PMU_HSGAIN_36DB_N},
@@ -132,7 +132,7 @@ static struct PMU_AudioGainMapping_t hsPMUGainTable[PMU_HSGAIN_NUM] = {
 	{-3000, PMU_HSGAIN_30DB_N},
 	{-2850, PMU_HSGAIN_28P5DB_N},
 	{-2700, PMU_HSGAIN_27DB_N},
-	{-2550, PMU_HSGAIN_25P5DB_N},	/*20*/
+	{-2550, PMU_HSGAIN_25P5DB_N},	/*20 */
 	{-2400, PMU_HSGAIN_24DB_N},
 	{-2250, PMU_HSGAIN_22P5DB_N},
 	{-2200, PMU_HSGAIN_22DB_N},
@@ -142,7 +142,7 @@ static struct PMU_AudioGainMapping_t hsPMUGainTable[PMU_HSGAIN_NUM] = {
 	{-2000, PMU_HSGAIN_20DB_N},
 	{-1950, PMU_HSGAIN_19P5DB_N},
 	{-1900, PMU_HSGAIN_19DB_N},
-	{-1850, PMU_HSGAIN_18P5DB_N},	/*30*/
+	{-1850, PMU_HSGAIN_18P5DB_N},	/*30 */
 	{-1800, PMU_HSGAIN_18DB_N},
 	{-1750, PMU_HSGAIN_17P5DB_N},
 	{-1700, PMU_HSGAIN_17DB_N},
@@ -152,7 +152,7 @@ static struct PMU_AudioGainMapping_t hsPMUGainTable[PMU_HSGAIN_NUM] = {
 	{-1500, PMU_HSGAIN_15DB_N},
 	{-1450, PMU_HSGAIN_14P5DB_N},
 	{-1400, PMU_HSGAIN_14DB_N},
-	{-1350, PMU_HSGAIN_13P5DB_N},	/*40*/
+	{-1350, PMU_HSGAIN_13P5DB_N},	/*40 */
 	{-1300, PMU_HSGAIN_13DB_N},
 	{-1250, PMU_HSGAIN_12P5DB_N},
 	{-1200, PMU_HSGAIN_12DB_N},
@@ -162,7 +162,7 @@ static struct PMU_AudioGainMapping_t hsPMUGainTable[PMU_HSGAIN_NUM] = {
 	{-1000, PMU_HSGAIN_10DB_N},
 	{-950, PMU_HSGAIN_9P5DB_N},
 	{-900, PMU_HSGAIN_9DB_N},
-	{-850, PMU_HSGAIN_8P5DB_N},	/*50*/
+	{-850, PMU_HSGAIN_8P5DB_N},	/*50 */
 	{-800, PMU_HSGAIN_8DB_N},
 	{-750, PMU_HSGAIN_7P5DB_N},
 	{-700, PMU_HSGAIN_7DB_N},
@@ -172,10 +172,10 @@ static struct PMU_AudioGainMapping_t hsPMUGainTable[PMU_HSGAIN_NUM] = {
 	{-500, PMU_HSGAIN_5DB_N},
 	{-450, PMU_HSGAIN_4P5DB_N},
 	{-400, PMU_HSGAIN_4DB_N},
-	{-350, PMU_HSGAIN_3P5DB_N},	/*60*/
+	{-350, PMU_HSGAIN_3P5DB_N},	/*60 */
 	{-300, PMU_HSGAIN_3DB_N},
 	{-250, PMU_HSGAIN_2P5DB_N},
-	{-200, PMU_HSGAIN_2DB_N}	/*63*/
+	{-200, PMU_HSGAIN_2DB_N}	/*63 */
 };
 
 static struct PMU_AudioGainMapping_t ihfPMUGainTable[PMU_IHFGAIN_NUM] = {
@@ -190,7 +190,7 @@ static struct PMU_AudioGainMapping_t ihfPMUGainTable[PMU_IHFGAIN_NUM] = {
 	{-4200, PMU_IHFGAIN_42DB_N},
 	{-3900, PMU_IHFGAIN_39DB_N},
 	{-3600, PMU_IHFGAIN_36DB_N},
-	{-3450, PMU_IHFGAIN_34P5DB_N},	/*10*/
+	{-3450, PMU_IHFGAIN_34P5DB_N},	/*10 */
 	{-3300, PMU_IHFGAIN_33DB_N},
 	{-3150, PMU_IHFGAIN_31P5DB_N},
 	{-3000, PMU_IHFGAIN_30DB_N},
@@ -200,7 +200,7 @@ static struct PMU_AudioGainMapping_t ihfPMUGainTable[PMU_IHFGAIN_NUM] = {
 	{-2400, PMU_IHFGAIN_24DB_N},
 	{-2250, PMU_IHFGAIN_22P5DB_N},
 	{-2100, PMU_IHFGAIN_21DB_N},
-	{-1950, PMU_IHFGAIN_19P5DB_N},	/*20*/
+	{-1950, PMU_IHFGAIN_19P5DB_N},	/*20 */
 	{-1800, PMU_IHFGAIN_18DB_N},
 	{-1650, PMU_IHFGAIN_16P5DB_N},
 	{-1600, PMU_IHFGAIN_16DB_N},
@@ -210,7 +210,7 @@ static struct PMU_AudioGainMapping_t ihfPMUGainTable[PMU_IHFGAIN_NUM] = {
 	{-1400, PMU_IHFGAIN_14DB_N},
 	{-1350, PMU_IHFGAIN_13P5DB_N},
 	{-1300, PMU_IHFGAIN_13DB_N},
-	{-1250, PMU_IHFGAIN_12P5DB_N},	/*30*/
+	{-1250, PMU_IHFGAIN_12P5DB_N},	/*30 */
 	{-1200, PMU_IHFGAIN_12DB_N},
 	{-1150, PMU_IHFGAIN_11P5DB_N},
 	{-1100, PMU_IHFGAIN_11DB_N},
@@ -220,7 +220,7 @@ static struct PMU_AudioGainMapping_t ihfPMUGainTable[PMU_IHFGAIN_NUM] = {
 	{-900, PMU_IHFGAIN_9DB_N},
 	{-850, PMU_IHFGAIN_8P5DB_N},
 	{-800, PMU_IHFGAIN_8DB_N},
-	{-750, PMU_IHFGAIN_7P5DB_N},	/*40*/
+	{-750, PMU_IHFGAIN_7P5DB_N},	/*40 */
 	{-700, PMU_IHFGAIN_7DB_N},
 	{-650, PMU_IHFGAIN_6P5DB_N},
 	{-600, PMU_IHFGAIN_6DB_N},
@@ -230,17 +230,17 @@ static struct PMU_AudioGainMapping_t ihfPMUGainTable[PMU_IHFGAIN_NUM] = {
 	{-400, PMU_IHFGAIN_4DB_N},
 	{-350, PMU_IHFGAIN_3P5DB_N},
 	{-300, PMU_IHFGAIN_3DB_N},
-	{-250, PMU_IHFGAIN_2P5DB_N},	/*50*/
+	{-250, PMU_IHFGAIN_2P5DB_N},	/*50 */
 	{-200, PMU_IHFGAIN_2DB_N},
 	{-150, PMU_IHFGAIN_1P5DB_N},
 	{-100, PMU_IHFGAIN_1DB_N},
 	{-50, PMU_IHFGAIN_P5DB_N},
-	{0, PMU_IHFGAIN_0DB},	/*55*/
+	{0, PMU_IHFGAIN_0DB},	/*55 */
 	{50, PMU_IHFGAIN_P5DB_P},
 	{100, PMU_IHFGAIN_1DB_P},
 	{150, PMU_IHFGAIN_1P5DB_P},
 	{200, PMU_IHFGAIN_2DB_P},
-	{250, PMU_IHFGAIN_2P5DB_P},	/*60*/
+	{250, PMU_IHFGAIN_2P5DB_P},	/*60 */
 	{300, PMU_IHFGAIN_3DB_P},
 	{350, PMU_IHFGAIN_3P5DB_P},
 	{400, PMU_IHFGAIN_4DB_P}
@@ -249,9 +249,9 @@ static struct PMU_AudioGainMapping_t ihfPMUGainTable[PMU_IHFGAIN_NUM] = {
 static char ihf_IsOn;
 static char hs_IsOn;
 static int pll_IsOn;
-static int hs_gain_l = -400; /* mB */
-static int hs_gain_r = -400; /* mB */
-static int ihf_gain = -400; /* mB */
+static int hs_gain_l = -400;	/* mB */
+static int hs_gain_r = -400;	/* mB */
+static int ihf_gain = -400;	/* mB */
 
 static struct extern_audio_platform_cfg ext_aud_plat_cfg = {
 	.ihf_ext_amp_gpio = -1,
@@ -274,18 +274,17 @@ static void audio_gpio_output(char *name, int gpio_pin, int value)
 	int rc = gpio_request(gpio_pin, name);
 
 	if (!rc) {
-	aTrace(LOG_AUDIO_CNTLR,
-		"audio_gpio_output::gpio pin %d value %d, rc=0x%x\n",
-		gpio_pin, value, rc);
+		aTrace(LOG_AUDIO_CNTLR,
+		       "audio_gpio_output::gpio pin %d value %d, rc=0x%x\n",
+		       gpio_pin, value, rc);
 
-	gpio_direction_output(gpio_pin, 0);
-	gpio_set_value(gpio_pin, value);
-	gpio_free(gpio_pin);
+		gpio_direction_output(gpio_pin, 0);
+		gpio_set_value(gpio_pin, value);
+		gpio_free(gpio_pin);
 	} else {
 		aTrace(LOG_AUDIO_CNTLR, "%s::"
-			" failed to request"
-			"%s gpio pin %d rc=%u\n",
-			__func__, name, gpio_pin, rc);
+		       " failed to request"
+		       "%s gpio pin %d rc=%u\n", __func__, name, gpio_pin, rc);
 	}
 }
 
@@ -311,7 +310,7 @@ static struct PMU_AudioGainMapping_t map2pmu_hs_gain(int arg_gain_mB)
 			return hsPMUGainTable[i];
 	}
 
-	/*Should not run to here.*/
+	/*Should not run to here. */
 	return hsPMUGainTable[PMU_HSGAIN_NUM - 1];
 
 }
@@ -338,11 +337,10 @@ static struct PMU_AudioGainMapping_t map2pmu_ihf_gain(int arg_gain_mB)
 			return ihfPMUGainTable[i];
 	}
 
-	/*Should not run to here.*/
+	/*Should not run to here. */
 	return ihfPMUGainTable[PMU_IHFGAIN_NUM - 1];
 
 }
-
 
 /********************************************************************
 *  @brief  power on external headset amplifier
@@ -359,14 +357,13 @@ void extern_hs_on(void)
 		pll_IsOn = 1;
 	}
 
-	AUDIO_PMU_HS_SET_GAIN(PMU_AUDIO_HS_BOTH,
-				  PMU_HSGAIN_MUTE);
+	AUDIO_PMU_HS_SET_GAIN(PMU_AUDIO_HS_BOTH, PMU_HSGAIN_MUTE);
 
 	/*
-	./drivers/misc/bcm59055-audio.c:int bcm59055_hs_power(bool on)
-	drivers/misc/bcm59055-audio.c
-	drivers/misc/bcmpmu_audio.c
-	*/
+	   ./drivers/misc/bcm59055-audio.c:int bcm59055_hs_power(bool on)
+	   drivers/misc/bcm59055-audio.c
+	   drivers/misc/bcmpmu_audio.c
+	 */
 
 	AUDIO_PMU_HS_POWER(1);
 
@@ -383,15 +380,15 @@ void extern_hs_on(void)
 void extern_hs_off(void)
 {
 	/*BCM59056 PMU HW ramps down HS gain when powers off HS amp.
-	no need for software to ramp down HS gain.
-	AUDIO_PMU_HS_SET_GAIN(PMU_AUDIO_HS_BOTH,
-				  PMU_HSGAIN_MUTE);*/
+	   no need for software to ramp down HS gain.
+	   AUDIO_PMU_HS_SET_GAIN(PMU_AUDIO_HS_BOTH,
+	   PMU_HSGAIN_MUTE); */
 	AUDIO_PMU_HS_POWER(0);
 
 	hs_IsOn = 0;
 
 	if (ihf_IsOn == 0 && hs_IsOn == 0)
-		/*disable the audio PLL after power OFF*/
+		/*disable the audio PLL after power OFF */
 		if (pll_IsOn == 1) {
 			AUDIO_PMU_DEINIT();
 			pll_IsOn = 0;
@@ -411,17 +408,17 @@ void extern_ihf_on(void)
 #if defined(CONFIG_GPIO_2IN1_SPK)
 	if (ext_aud_plat_cfg.spk_2in1_gpio > 0) {
 		aTrace(LOG_AUDIO_CNTLR,
-			" caph_hawaii CONFIG_GPIO_2IN1_SPK %d\n",
-			ext_aud_plat_cfg.spk_2in1_gpio);
+		       " caph_hawaii CONFIG_GPIO_2IN1_SPK %d\n",
+		       ext_aud_plat_cfg.spk_2in1_gpio);
 		audio_gpio_output("IHF_EXT_AMP",
-			ext_aud_plat_cfg.spk_2in1_gpio, 0);
+				  ext_aud_plat_cfg.spk_2in1_gpio, 0);
 	}
 #endif
 
 #if defined(CONFIG_IHF_EXT_AMPLIFIER)
 	if (ext_aud_plat_cfg.ihf_ext_amp_gpio > 0)
 		audio_gpio_output("IHF_EXT_AMP",
-			ext_aud_plat_cfg.ihf_ext_amp_gpio, 1);
+				  ext_aud_plat_cfg.ihf_ext_amp_gpio, 1);
 #else
 	/*enable the audio PLL before power ON */
 	if (pll_IsOn == 0) {
@@ -448,30 +445,92 @@ void extern_ihf_off(void)
 #if defined(CONFIG_IHF_EXT_AMPLIFIER)
 	if (ext_aud_plat_cfg.ihf_ext_amp_gpio > 0)
 		audio_gpio_output("IHF_EXT_AMP",
-			ext_aud_plat_cfg.ihf_ext_amp_gpio, 0);
+				  ext_aud_plat_cfg.ihf_ext_amp_gpio, 0);
 #else
 	AUDIO_PMU_IHF_SET_GAIN(PMU_IHFGAIN_MUTE);
 	AUDIO_PMU_IHF_POWER(0);
 
 	if (ihf_IsOn == 0 && hs_IsOn == 0)
-		/*disable the audio PLL after power OFF*/
+		/*disable the audio PLL after power OFF */
 		if (pll_IsOn == 1) {
 			AUDIO_PMU_DEINIT();
 			pll_IsOn = 0;
 		}
-
 #endif
 #if defined(CONFIG_GPIO_2IN1_SPK)
 	if (ext_aud_plat_cfg.spk_2in1_gpio > 0) {
 		aTrace(LOG_AUDIO_CNTLR,
-			" extern_ihf_off CONFIG_GPIO_2IN1_SPK %d\n",
-			ext_aud_plat_cfg.spk_2in1_gpio);
+		       " extern_ihf_off CONFIG_GPIO_2IN1_SPK %d\n",
+		       ext_aud_plat_cfg.spk_2in1_gpio);
 		audio_gpio_output("IHF_EXT_AMP",
-			ext_aud_plat_cfg.spk_2in1_gpio, 1);
+				  ext_aud_plat_cfg.spk_2in1_gpio, 1);
 	}
 #endif
 
 }
+
+#if defined(CONFIG_IHF_TWO_EXT_AMPLIFIER)
+
+/********************************************************************
+*  @brief  power on two external IHF (loud speaker) amplifiers
+*
+*  @param  none
+*  @return none
+*
+****************************************************************************/
+void extern_ihf_two_external_amplifier_on(int isVoiceCall)
+{
+	/* turn on one external amplifier for voice call,
+	turn on both for music */
+	if (ext_aud_plat_cfg.ihf_ext_amp_gpio > 0) {
+		audio_gpio_output("IHF_EXT_AMP",
+				  ext_aud_plat_cfg.ihf_ext_amp_gpio, 1);
+		aTrace(LOG_AUDIO_CNTLR, "turn on IHF_EXT_AMP, gpio=%d",
+		       ext_aud_plat_cfg.ihf_ext_amp_gpio);
+	}
+
+	if (!isVoiceCall) {
+		if (ext_aud_plat_cfg.ihf_ext_amp_second_gpio > 0) {
+			audio_gpio_output("IHF_EXT_AMP_2ND",
+					  ext_aud_plat_cfg.
+					  ihf_ext_amp_second_gpio, 1);
+			aTrace(LOG_AUDIO_CNTLR,
+			       "turn on IHF_EXT_AMP_2ND, gpio=%d",
+			       ext_aud_plat_cfg.ihf_ext_amp_second_gpio);
+		}
+	}
+
+	ihf_IsOn = 1;
+}
+
+/********************************************************************
+*  @brief  power off two external IHF (loud speaker) amplifiers
+*
+*  @param  none
+*  @return none
+*
+****************************************************************************/
+void extern_ihf_two_external_amplifier_off(int isVoiceCall)
+{
+	ihf_IsOn = 0;
+	if (ext_aud_plat_cfg.ihf_ext_amp_gpio > 0) {
+		audio_gpio_output("IHF_EXT_AMP",
+				  ext_aud_plat_cfg.ihf_ext_amp_gpio, 0);
+		aTrace(LOG_AUDIO_CNTLR, "turn off IHF_EXT_AMP, gpio=%d",
+		       ext_aud_plat_cfg.ihf_ext_amp_gpio);
+	}
+	if (!isVoiceCall) {
+		if (ext_aud_plat_cfg.ihf_ext_amp_second_gpio > 0) {
+			audio_gpio_output("IHF_EXT_AMP_2ND",
+					  ext_aud_plat_cfg.
+					  ihf_ext_amp_second_gpio, 0);
+			aTrace(LOG_AUDIO_CNTLR,
+			       "turn off IHF_EXT_AMP_2ND, gpio=%d",
+			       ext_aud_plat_cfg.ihf_ext_amp_second_gpio);
+		}
+	}
+}
+#endif /* CONFIG_IHF_TWO_EXT_AMPLIFIER */
 
 /********************************************************************
 *  @brief  Find the actual headset gain (mB) that external audio chip can support
@@ -486,7 +545,7 @@ int extern_hs_find_gain(int gain_mB)
 
 	gain_map = map2pmu_hs_gain(gain_mB);
 	aTrace(LOG_AUDIO_CNTLR, "%s need %d, find %d\n", __func__,
-			gain_mB, gain_map.gain_mB);
+	       gain_mB, gain_map.gain_mB);
 
 	return gain_map.gain_mB;
 }
@@ -504,20 +563,20 @@ void extern_hs_set_gain(int gain_mB, AUDIO_GAIN_LR_t lr)
 
 	gain_map = map2pmu_hs_gain(gain_mB);
 	aTrace(LOG_AUDIO_CNTLR, "%s need %d, pmu_gain_enum=%d\n",
-			__func__, gain_mB, gain_map.PMU_gain_enum);
+	       __func__, gain_mB, gain_map.PMU_gain_enum);
 
 	if (lr == AUDIO_HS_BOTH) {
 		AUDIO_PMU_HS_SET_GAIN(PMU_AUDIO_HS_BOTH,
-			gain_map.PMU_gain_enum);
+				      gain_map.PMU_gain_enum);
 		hs_gain_l = gain_map.gain_mB;
 		hs_gain_r = gain_map.gain_mB;
 	} else if (lr == AUDIO_HS_LEFT) {
 		AUDIO_PMU_HS_SET_GAIN(PMU_AUDIO_HS_LEFT,
-			gain_map.PMU_gain_enum);
+				      gain_map.PMU_gain_enum);
 		hs_gain_l = gain_map.gain_mB;
 	} else if (lr == AUDIO_HS_RIGHT) {
 		AUDIO_PMU_HS_SET_GAIN(PMU_AUDIO_HS_RIGHT,
-			gain_map.PMU_gain_enum);
+				      gain_map.PMU_gain_enum);
 		hs_gain_r = gain_map.gain_mB;
 	}
 }
@@ -560,7 +619,6 @@ void extern_hs_unmute(AUDIO_GAIN_LR_t lr)
 		extern_hs_set_gain(hs_gain_r, AUDIO_HS_RIGHT);
 }
 
-
 /********************************************************************
 *  @brief  Find the actual IHF gain (mB) that external audio chip can support
 *
@@ -574,7 +632,7 @@ int extern_ihf_find_gain(int gain_mB)
 
 	gain_map = map2pmu_ihf_gain(gain_mB);
 	aTrace(LOG_AUDIO_CNTLR, "%s need %d, find %d\n",
-			__func__, gain_mB, gain_map.gain_mB);
+	       __func__, gain_mB, gain_map.gain_mB);
 
 	return gain_map.gain_mB;
 }
@@ -592,13 +650,12 @@ void extern_ihf_set_gain(int gain_mB)
 
 	gain_map = map2pmu_ihf_gain(gain_mB);
 	aTrace(LOG_AUDIO_CNTLR, "%s gain_mB=%d, pmu_gain_enum=%d\n",
-			__func__, gain_mB, gain_map.PMU_gain_enum);
+	       __func__, gain_mB, gain_map.PMU_gain_enum);
 
 	AUDIO_PMU_IHF_SET_GAIN(gain_map.PMU_gain_enum);
 
 	ihf_gain = gain_map.gain_mB;
 }
-
 
 /********************************************************************
 *  @brief  Mute IHF gain in PMU
@@ -634,12 +691,12 @@ void extern_ihf_unmute(void)
 void extern_hs_en_hi_gain_mode(int enable)
 {
 	aTrace(LOG_AUDIO_CNTLR, "%s enable=%d\n", __func__, enable);
-#if 0 // Kishore PMU does not support
+#if 0				/* Kishore PMU does not support */
 	if (0 == enable)
 		AUDIO_PMU_HS_HI_GAIN_MODE_EN(PMU_AUDIO_HS_BOTH, 0);
 	else
 		AUDIO_PMU_HS_HI_GAIN_MODE_EN(PMU_AUDIO_HS_BOTH, 1);
-#endif		
+#endif
 }
 
 /********************************************************************
@@ -669,7 +726,7 @@ void extern_ihf_en_hi_gain_mode(int enable)
 void extern_audio_platform_cfg_set(void *cfg)
 {
 	struct extern_audio_platform_cfg *extaud_cfg =
-		(struct extern_audio_platform_cfg *)cfg;
+	    (struct extern_audio_platform_cfg *)cfg;
 	memcpy(&ext_aud_plat_cfg, extaud_cfg, sizeof(ext_aud_plat_cfg));
 }
 

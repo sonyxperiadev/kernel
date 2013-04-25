@@ -72,6 +72,27 @@ void extern_ihf_on(void);
 ****************************************************************************/
 void extern_ihf_off(void);
 
+#if defined(CONFIG_IHF_TWO_EXT_AMPLIFIER)
+
+/********************************************************************
+*  @brief  power on two external IHF (loud speaker) amplifiers
+*
+*  @param  none
+*  @return none
+*
+****************************************************************************/
+void extern_ihf_two_external_amplifier_on(int isVoiceCall);
+
+/********************************************************************
+*  @brief  power off two external IHF (loud speaker) amplifiers
+*
+*  @param  none
+*  @return none
+*
+****************************************************************************/
+void extern_ihf_two_external_amplifier_off(int isVoiceCall);
+
+#endif /* CONFIG_IHF_TWO_EXT_AMPLIFIER */
 
 /********************************************************************
 *  @brief  Find the actual headset gain (mB) that external audio chip can support
@@ -108,7 +129,6 @@ void extern_hs_mute(AUDIO_GAIN_LR_t lr);
 *
 ****************************************************************************/
 void extern_hs_unmute(AUDIO_GAIN_LR_t lr);
-
 
 /********************************************************************
 *  @brief  Find the actual IHF gain (mB) that external audio chip can support

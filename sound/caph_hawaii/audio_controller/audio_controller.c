@@ -4038,19 +4038,28 @@ static void powerOnExternalAmp(AUDIO_SINK_Enum_t speaker,
 
 
 	aTrace(LOG_AUDIO_CNTLR, "%s speaker %d, usage_flag %d, use %d,"
-	" force %d\n", __func__, speaker, usage_flag, use, force);
+	" force %d, bInVoiceCall=%d\n", __func__, speaker, usage_flag, use, \
+	force, bInVoiceCall);
 	/* if force == TRUE, do not care useage flag */
 	if (force == TRUE) {
 		if (use == FALSE) {
 			if (IHF_IsOn == TRUE)
+#if defined(CONFIG_IHF_TWO_EXT_AMPLIFIER)
+				extern_ihf_two_external_amplifier_off(bInVoiceCall);
+#else
 				extern_ihf_off();
+#endif
 			if (HS_IsOn == TRUE)
 				extern_hs_off();
 			ampControl = FALSE;
 		}
 		if (use == TRUE) {
 			if (IHF_IsOn == TRUE) {
+#if defined(CONFIG_IHF_TWO_EXT_AMPLIFIER)
+				extern_ihf_two_external_amplifier_on(bInVoiceCall);
+#else
 				extern_ihf_on();
+#endif
 				setExternAudioGain(GetAudioModeBySink
 						   (AUDIO_SINK_LOUDSPK),
 						   AUDCTRL_GetAudioApp());
@@ -4167,7 +4176,11 @@ static void powerOnExternalAmp(AUDIO_SINK_Enum_t speaker,
 	    && (fmUseIHF == FALSE) && (audio2UseIHF == FALSE)) {
 		if (IHF_IsOn != FALSE) {
 			aTrace(LOG_AUDIO_CNTLR, "power OFF pmu IHF amp\n");
+#if defined(CONFIG_IHF_TWO_EXT_AMPLIFIER)
+			extern_ihf_two_external_amplifier_off(bInVoiceCall);
+#else
 			extern_ihf_off();
+#endif
 			audctl_usleep_range(wait_pmu_off, wait_pmu_off + 2000);
 		}
 		IHF_IsOn = FALSE;
@@ -4176,7 +4189,11 @@ static void powerOnExternalAmp(AUDIO_SINK_Enum_t speaker,
 			aTrace(LOG_AUDIO_CNTLR,
 			       "powerOnExternalAmp power on IHF");
 			audioh_start_ihf();
+#if defined(CONFIG_IHF_TWO_EXT_AMPLIFIER)
+			extern_ihf_two_external_amplifier_on(bInVoiceCall);
+#else
 			extern_ihf_on();
+#endif
 			audctl_usleep_range(wait_ihfpmu_on,
 					    wait_ihfpmu_on + 2000);
 		}
