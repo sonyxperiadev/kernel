@@ -720,9 +720,10 @@ static int __devinit bcmpmu_chrgr_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	/*do not register psy if SPA is enabled*/
-	if (bcmpmu->flags & BCMPMU_SPA_EN)
+	if (bcmpmu->flags & BCMPMU_SPA_EN) {
+		atomic_set(&drv_init_done, 1);
 		return 0;
-
+	}
 	di->ac_psy.name = "bcmpmu_ac";
 	di->ac_psy.type = POWER_SUPPLY_TYPE_MAINS;
 	di->ac_psy.properties = bcmpmu_chrgr_props;
