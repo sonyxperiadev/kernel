@@ -788,7 +788,6 @@ void avs_silicon_type_notify(u32 silicon_type, u32 ate_freq)
 		#endif
 		break;
 	case A9_FREQ_1500_MHZ:
-		break;
 	default:
 		BUG();
 	}
@@ -864,7 +863,7 @@ int vddfix_adj_lut[] = {
 
 static struct avs_pdata avs_pdata = {
 	.flags = AVS_VDDVAR_A9_MIN_EN | AVS_VDDVAR_MIN_EN | AVS_VDDFIX_MIN_EN |
-	AVS_VDDFIX_ADJ_EN | AVS_IGNORE_CRC_ERR | AVS_USE_IRDROP_IF_NO_OTP,
+	AVS_VDDFIX_ADJ_EN | AVS_USE_IRDROP_IF_NO_OTP,
 	/* Mem addr where OTP row 3 is copied by ABI*/
 	.avs_addr_row3 = 0x34051FB0,
 	/* Mem addr where OTP row 5 is copied by ABI*/
