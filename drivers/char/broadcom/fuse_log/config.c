@@ -470,7 +470,7 @@ static ssize_t bcmlog_file_base_store(struct device *dev,
 static ssize_t bcmlog_file_max_show(struct device *dev,
 				    struct device_attribute *attr, char *buf)
 {
-	return snprintf(buf, MAX_STR_NAME + 3, "%0x\n", g_config.file_max);
+	return snprintf(buf, MAX_STR_NAME + 3, "%0d\n", g_config.file_max);
 }
 
 static ssize_t bcmlog_file_max_store(struct device *dev,
@@ -479,7 +479,7 @@ static ssize_t bcmlog_file_max_store(struct device *dev,
 {
 	int res, val;
 
-	res = kstrtoint(buf, 16, &val);
+	res = kstrtoint(buf, 10, &val);
 	g_config.file_max = val;
 	return size;
 }
