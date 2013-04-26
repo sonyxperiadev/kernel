@@ -136,14 +136,13 @@ struct ov5648 {
 	int i_fmt;
 	int framerate;
 	int focus_mode;
-	int gain_mode;
 	int gain_current;
-	int exposure_mode;
 	int exposure_current;
 
 	int line_length;
 	int vts;
-	int extended_frame_length;	/* frame length extention in use*/
+	int vts_max;
+	int vts_min;
 	int current_coarse_int;
 	int framerate_lo;
 	int framerate_hi;
@@ -159,6 +158,13 @@ struct ov5648 {
 	 */
 	atomic_t focus_status;
 	int delay_count;
+#define EXP_DELAY_MAX 8
+#define GAIN_DELAY_MAX 8
+#define LENS_READ_DELAY 4
+	int exp_read_buf[EXP_DELAY_MAX];
+	int gain_read_buf[GAIN_DELAY_MAX];
+	int lens_read_buf[LENS_READ_DELAY];
+	int lenspos_delay;
 
 	int flashmode;
 	int flash_intensity;
@@ -722,6 +728,7 @@ static const struct ov5648_reg ov5648_reg_state[OV5648_STATE_MAX][3] = {
 static int set_flash_mode(struct i2c_client *client, int mode);
 static int ov5648_set_mode(struct i2c_client *client, int new_mode_idx);
 static int ov5648_set_state(struct i2c_client *client, int new_state);
+static int ov5648_init(struct i2c_client *client);
 
 /*
  * Find a data format by a pixel code in an array
@@ -1047,18 +1054,22 @@ static int ov5648_array_write(struct i2c_client *client,
  *the estimated time required to get to this position, the flying time in us.
 */
 static int ov5648_lens_set_position(struct i2c_client *client,
-					int target_position)
+				    int target_position)
 {
 	int ret = 0;
 
 #ifdef CONFIG_VIDEO_A3907
-	ret = a3907_lens_set_position(target_position);
+	if (target_position & 0x80000000) {
+		int fine_target_position = target_position & ~0x80000000;
+		ret = a3907_lens_set_position_fine(fine_target_position);
+	} else {
+		ret = a3907_lens_set_position(target_position);
+	}
 #endif
 	return ret;
 }
 
 
-#define LENS_READ_DELAY 8
 /*
  * Routine used to get the current lens position and/or the estimated
  *time required to get to the requested destination (time in us).
@@ -1076,12 +1087,10 @@ static void ov5648_lens_get_position(struct i2c_client *client,
 	ret = a3907_lens_get_position(current_position, time_to_destination);
 #endif
 
-	if (ov5648->delay_count > 0) {
-		lens_read_buf[ov5648->delay_count - 1] = *current_position;
-		*current_position = lens_read_buf[0];
-		for (i = 0; i < LENS_READ_DELAY - 1; i++)
-			lens_read_buf[i] = lens_read_buf[i + 1];
-	}
+	for (i = 0; i < ov5648->lenspos_delay; i++)
+		lens_read_buf[i] = lens_read_buf[i + 1];
+	lens_read_buf[ov5648->lenspos_delay] = *current_position;
+	*current_position = lens_read_buf[0];
 
 	return;
 }
@@ -1097,7 +1106,12 @@ static void ov5648_set_framerate_lo(struct i2c_client *client, int framerate)
 	framerate = min(framerate, ov5648->framerate_hi_absolute);
 
 	ov5648->framerate_lo = framerate;
-	ov5648->extended_frame_length = 1;
+	ov5648->vts_max = 1000000000
+		/ (unsigned long)((ov5648->line_length * framerate) >> 8);
+	ov5648->vts_max = min(ov5648->vts_max,
+			ov5648_mode[ov5648->mode_idx].vts_max);
+	pr_debug("Setting frame rate lo %d vts_max %d",
+			ov5648->framerate_lo, ov5648->vts_max);
 }
 
 /*
@@ -1111,9 +1125,14 @@ static void ov5648_set_framerate_hi(struct i2c_client *client, int framerate)
 	framerate = max(framerate, ov5648->framerate_lo_absolute);
 	framerate = min(framerate, ov5648->framerate_hi_absolute);
 
-	ov5648->framerate_hi = 1000000000
-		/ (unsigned long)((ov5648->vts * ov5648->line_length)>>8);
-	ov5648->extended_frame_length = 1;
+	ov5648->framerate_hi = framerate;
+	ov5648->vts_min = 1000000000
+		/ (unsigned long)((ov5648->line_length * framerate) >> 8);
+
+	ov5648->vts_min = max(ov5648->vts_min,
+			ov5648_mode[ov5648->mode_idx].vts);
+	pr_debug("Setting frame rate hi %d vts_min %d",
+		ov5648->framerate_hi, ov5648->vts_min);
 }
 
 
@@ -1172,11 +1191,9 @@ static int ov5648_set_gain(struct i2c_client *client, int gain_value)
 	return 0;
 }
 
-#define GAIN_DELAY_MAX 8
 static int ov5648_get_gain(struct i2c_client *client,
 		int *gain_value_p, int *gain_code_p)
 {
-	static int gain_read_buf[GAIN_DELAY_MAX];
 	struct ov5648 *ov5648 = to_ov5648(client);
 
 	int ret = 0;
@@ -1188,10 +1205,10 @@ static int ov5648_get_gain(struct i2c_client *client,
 	gain_code = ((gain_buf[0] & 0x3f) << 8) + gain_buf[1];
 
 	if (ov5648->delay_count > 0) {
-		gain_read_buf[ov5648->delay_count] = gain_code;
-		gain_code = gain_read_buf[0];
+		ov5648->gain_read_buf[ov5648->delay_count] = gain_code;
+		gain_code = ov5648->gain_read_buf[0];
 		for (i = 0; i < GAIN_DELAY_MAX-1; i++)
-			gain_read_buf[i] = gain_read_buf[i+1];
+			ov5648->gain_read_buf[i] = ov5648->gain_read_buf[i+1];
 	}
 	if (gain_code < 0x10)
 		gain_code = 0x10;
@@ -1203,11 +1220,9 @@ static int ov5648_get_gain(struct i2c_client *client,
 	return ret;
 }
 
-#define EXP_DELAY_MAX 8
 static int ov5648_get_exposure(struct i2c_client *client,
 		int *exp_value_p, int *exp_code_p)
 {
-	static int exp_read_buf[EXP_DELAY_MAX];
 	struct ov5648 *ov5648 = to_ov5648(client);
 	int i, ret = 0;
 	int exp_code;
@@ -1220,10 +1235,10 @@ static int ov5648_get_exposure(struct i2c_client *client,
 		(exp_buf[2] & 0xf0);
 
 	if (ov5648->delay_count > 0) {
-		exp_read_buf[ov5648->delay_count] = exp_code;
-		exp_code = exp_read_buf[0];
+		ov5648->exp_read_buf[ov5648->delay_count] = exp_code;
+		exp_code = ov5648->exp_read_buf[0];
 		for (i = 0; i < EXP_DELAY_MAX-1; i++)
-			exp_read_buf[i] = exp_read_buf[i+1];
+			ov5648->exp_read_buf[i] = ov5648->exp_read_buf[i+1];
 	}
 
 	if (exp_code_p)
@@ -1249,11 +1264,12 @@ static int ov5648_calc_exposure(struct i2c_client *client,
 	integration_lines = (1000 * exposure_value) / ov5648->line_length;
 	if (integration_lines < INTEGRATION_MIN)
 		integration_lines = INTEGRATION_MIN;
-	else if (integration_lines > ov5648_mode[ov5648->mode_idx].vts_max)
-		integration_lines = ov5648_mode[ov5648->mode_idx].vts_max;
+	else if (integration_lines > ov5648->vts_max - INTEGRATION_OFFSET)
+		integration_lines = ov5648->vts_max - INTEGRATION_OFFSET;
 	vts = min(integration_lines + INTEGRATION_OFFSET,
 		ov5648_mode[ov5648->mode_idx].vts_max);
 	vts = max(vts, ov5648_mode[ov5648->mode_idx].vts);
+	vts = max(vts, ov5648->vts_min);
 	if (coarse_int_lines)
 		*coarse_int_lines = integration_lines;
 	if (vts_ptr)
@@ -1268,6 +1284,7 @@ static int ov5648_calc_exposure(struct i2c_client *client,
  * Setup the sensor integration and frame length based on requested exposure
  * in microseconds.
  */
+#define EXP_HIST_MAX 4
 static void ov5648_set_exposure(struct i2c_client *client, int exp_value)
 {
 	struct ov5648 *ov5648 = to_ov5648(client);
@@ -1275,7 +1292,19 @@ static void ov5648_set_exposure(struct i2c_client *client, int exp_value)
 	unsigned int actual_exposure;
 	unsigned int vts;
 	unsigned int coarse_int_lines;
-	int ret = 0;
+	int i, ret = 0;
+
+	if (EXP_HIST_MAX > 1) {
+		static int exp_prev[EXP_HIST_MAX];
+
+		for (i = 0; i < EXP_HIST_MAX - 1; i++)
+			exp_prev[i] = exp_prev[i + 1];
+		exp_prev[EXP_HIST_MAX - 1] = exp_value;
+		exp_value = 0;
+		for (i = 0; i < EXP_HIST_MAX; i++)
+			exp_value = exp_value + exp_prev[i];
+		exp_value = exp_value / EXP_HIST_MAX;
+	}
 
 	actual_exposure = ov5648_calc_exposure(client, exp_value,
 			&vts, &coarse_int_lines);
@@ -1402,6 +1431,7 @@ static int ov5648_set_mode(struct i2c_client *client, int new_mode_idx)
 		pr_debug("full init from mode[%d]=%s to mode[%d]=%s",
 		ov5648->mode_idx, ov5648_mode[ov5648->mode_idx].name,
 		new_mode_idx, ov5648_mode[new_mode_idx].name);
+		ov5648_init(client);
 		ret = ov5648_reg_writes(client, ov5648_regtbl[new_mode_idx]);
 	} else {
 		pr_debug("diff init from mode[%d]=%s to mode[%d]=%s",
@@ -1547,38 +1577,41 @@ static int ov5648_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 
 		switch (ov5648->framerate) {
 		case FRAME_RATE_5:
-			ov5648->framerate_lo_absolute = F24p8(5.0);
-			ov5648->framerate_hi_absolute = F24p8(5.0);
+			ov5648->framerate_lo = F24p8(5.0);
+			ov5648->framerate_hi = F24p8(5.0);
 			break;
 		case FRAME_RATE_7:
-			ov5648->framerate_lo_absolute = F24p8(7.0);
-			ov5648->framerate_hi_absolute = F24p8(7.0);
+			ov5648->framerate_lo = F24p8(7.0);
+			ov5648->framerate_hi = F24p8(7.0);
 			break;
 		case FRAME_RATE_10:
-			ov5648->framerate_lo_absolute = F24p8(10.0);
-			ov5648->framerate_hi_absolute = F24p8(10.0);
+			ov5648->framerate_lo = F24p8(10.0);
+			ov5648->framerate_hi = F24p8(10.0);
 			break;
 		case FRAME_RATE_15:
-			ov5648->framerate_lo_absolute = F24p8(15.0);
-			ov5648->framerate_hi_absolute = F24p8(15.0);
+			ov5648->framerate_lo = F24p8(15.0);
+			ov5648->framerate_hi = F24p8(15.0);
 			break;
 		case FRAME_RATE_20:
-			ov5648->framerate_lo_absolute = F24p8(20.0);
-			ov5648->framerate_hi_absolute = F24p8(20.0);
+			ov5648->framerate_lo = F24p8(20.0);
+			ov5648->framerate_hi = F24p8(20.0);
 			break;
 		case FRAME_RATE_25:
-			ov5648->framerate_lo_absolute = F24p8(25.0);
-			ov5648->framerate_hi_absolute = F24p8(25.0);
+			ov5648->framerate_lo = F24p8(25.0);
+			ov5648->framerate_hi = F24p8(25.0);
 			break;
 		case FRAME_RATE_30:
+			ov5648->framerate_lo = F24p8(30.0);
+			ov5648->framerate_hi = F24p8(30.0);
+			break;
 		case FRAME_RATE_AUTO:
 		default:
-			ov5648->framerate_lo_absolute = F24p8(1.0);
-			ov5648->framerate_hi_absolute = F24p8(30.0);
+			ov5648->framerate_lo = F24p8(1.0);
+			ov5648->framerate_hi = F24p8(30.0);
 			break;
 		}
-		ov5648_set_framerate_lo(client, ov5648->framerate_lo_absolute);
-		ov5648_set_framerate_hi(client, ov5648->framerate_hi_absolute);
+		ov5648_set_framerate_lo(client, ov5648->framerate_lo);
+		ov5648_set_framerate_hi(client, ov5648->framerate_hi);
 		ov5648_set_exposure(client, ov5648->exposure_current);
 		ov5648_set_gain(client, ov5648->gain_current);
 
@@ -1688,7 +1721,6 @@ int set_flash_mode(struct i2c_client *client, int mode)
 #ifdef CONFIG_VIDEO_AS3643
 	if ((mode == FLASH_MODE_OFF) || (mode == FLASH_MODE_TORCH_OFF)) {
 		if (ov5648->flashmode != FLASH_MODE_OFF) {
-			printk(KERN_ERR "FLASH MODE OFF");
 			ov5648_reg_write(client, 0x3B00, 0x00);
 			as3643_clear_all();
 			as3643_gpio_toggle(0);
@@ -1698,7 +1730,6 @@ int set_flash_mode(struct i2c_client *client, int mode)
 		usleep_range(25, 30);
 		as3643_set_torch_flash(0x80);
 	} else if (mode == FLASH_MODE_ON) {
-		printk(KERN_ERR "FLASH MODE ON");
 		ov5648_reg_write(client, 0x3B00, 0x83);
 		as3643_gpio_toggle(1);
 		usleep_range(25, 30);
@@ -1706,7 +1737,6 @@ int set_flash_mode(struct i2c_client *client, int mode)
 		as3643_set_ind_led(ov5648->flash_intensity / 5,
 				ov5648->flash_timeout);
 	} else if (mode == FLASH_MODE_AUTO) {
-		printk(KERN_ERR "FLASH MODE AUTO");
 		as3643_gpio_toggle(1);
 		usleep_range(25, 30);
 		as3643_set_ind_led(0x80, 30000);
@@ -1831,11 +1861,18 @@ static int ov5648_init(struct i2c_client *client)
 	/* default settings */
 	ov5648->framerate         = FRAME_RATE_AUTO;
 	ov5648->focus_mode        = FOCUS_MODE_AUTO;
-	ov5648->gain_mode         = 0;
-	ov5648->exposure_mode     = V4L2_EXPOSURE_AUTO;
 	ov5648->gain_current      = DEFAULT_GAIN;
-	ov5648->exposure_current  = DEFAULT_EXPO;
+
+	memset(&ov5648->exp_read_buf, 0, sizeof(ov5648->exp_read_buf));
+	memset(&ov5648->gain_read_buf, 0, sizeof(ov5648->gain_read_buf));
+	memset(&ov5648->lens_read_buf, 0, sizeof(ov5648->lens_read_buf));
+	/*
+	 *  Exposure should be DEFAULT_EXPO * line_length / 1000
+	 *  Since we don't have line_length yet, just estimate
+	 */
+	ov5648->exposure_current  = DEFAULT_EXPO * 22;
 	ov5648->delay_count       = 2;
+	ov5648->lenspos_delay     = 0;
 	ov5648->flashmode         = FLASH_MODE_OFF;
 	ov5648->flash_intensity   = OV5648_FLASH_INTENSITY_DEFAULT;
 	ov5648->flash_timeout     = OV5648_FLASH_TIMEOUT_DEFAULT;

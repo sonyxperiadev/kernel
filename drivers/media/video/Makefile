@@ -212,6 +212,7 @@ obj-$(CONFIG_VIDEO_SAMSUNG_S5P_TV)	+= s5p-tv/
 obj-$(CONFIG_VIDEO_SAMSUNG_S5P_G2D)	+= s5p-g2d/
 
 obj-$(CONFIG_VIDEO_UNICAM_CAMERA_USE_CSL)		+= unicam_camera_csl.o
+obj-$(CONFIG_VIDEO_UNICAM_CAMERA_USE_CSL_RESERVED)	+= unicam_camera_csl.o
 obj-$(CONFIG_VIDEO_UNICAM_CAMERA_USE_MM_CSI0)		+= unicam_camera.o mm_csi0.o
 
 obj-$(CONFIG_BLACKFIN)                  += blackfin/

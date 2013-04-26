@@ -297,8 +297,6 @@ CHAL_CAM_STATUS_CODES chal_cam_cfg_intf(CHAL_HANDLE handle, CHAL_CAM_CFG_INTF_st
     DBG_OUT( chal_dprintf( CDBG_INFO, "chal_cam_cfg_intf\n") ); 
 
 
-	printk(KERN_ERR "chal_cam_cfg_intf() base=0x%x\n",
-					pCamDevice->baseAddr);
     // Set Camera CSIx Phy & Clock Registers
         cfg_base_addr = HW_IO_PHYS_TO_VIRT(MM_CFG_BASE_ADDR);
 

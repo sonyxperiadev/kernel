@@ -30,7 +30,15 @@
 #include <linux/videodev2.h>
 #include <media/v4l2-common.h>
 #include <media/v4l2-dev.h>
+#if defined(CONFIG_VIDEOBUF2_DMA_RESERVED)
+#include <media/videobuf2-dma-reserved.h>
+#define vb2_plane_dma_addr vb2_dma_reserved_plane_dma_addr
+#elif defined(CONFIG_VIDEOBUF2_DMA_CONTIG)
 #include <media/videobuf2-dma-contig.h>
+#define vb2_plane_dma_addr vb2_dma_contig_plane_dma_addr
+#else
+#error "Unicam driver expect DMA_CONTIG or DMA_RESERVED"
+#endif
 #include <media/soc_camera.h>
 #include <media/soc_mediabus.h>
 
@@ -44,8 +52,6 @@
 /* CSL_CAM_CAPTURE_MODE_TRIGGER (Stills) CSL_CAM_CAPTURE_MODE_NORMAL (Video) */
 #define UNICAM_CAPTURE_MODE		CSL_CAM_CAPTURE_MODE_TRIGGER
 #define UNPACK_RAW10_TO_16BITS
-#define iprintk(format, arg...)	\
-	printk(KERN_INFO"[%s]: "format"\n", __func__, ##arg)
 
 /* #define UNICAM_DEBUG */
 
@@ -62,7 +68,9 @@
 struct unicam_camera_dev {
 	/* soc and vb3 rleated */
 	struct soc_camera_device *icd;
+#if defined(CONFIG_VIDEOBUF2_DMA_CONTIG)
 	struct vb2_alloc_ctx *alloc_ctx;
+#endif
 	struct soc_camera_host soc_host;
 	/* generic driver related */
 	unsigned int irq;
@@ -148,12 +156,14 @@ static int unicam_videobuf_setup(struct vb2_queue *vq, const struct v4l2_format 
 	unicam_dev->sequence = 0;
 
 	sizes[0] = bytes_per_line * icd->user_height;
+#if defined(CONFIG_VIDEOBUF2_DMA_CONTIG)
 	alloc_ctxs[0] = unicam_dev->alloc_ctx;
+#endif
 
 	if (!*count)
 		*count = 2;
 
-	iprintk("no_of_buf=%d size=%u bytesperline=%d",
+	dprintk("no_of_buf=%d size=%u bytesperline=%d",
 			*count, sizes[0], bytes_per_line);
 	dprintk("-exit");
 	return 0;
@@ -169,10 +179,9 @@ static int unicam_videobuf_prepare(struct vb2_buffer *vb)
 	if (bytes_per_line < 0)
 		return bytes_per_line;
 
-	dprintk("vb=0x%p vbuf=0x%p pbuf=0x%p, size=%lu", vb,
-		vb2_plane_vaddr(vb, 0), (void *)vb2_dma_contig_plane_dma_addr(vb,
-									   0),
-		vb2_get_plane_payload(vb, 0));
+	pr_debug("vb=0x%p buf=0x%p, size=%lu", vb,
+			(void *)vb2_plane_dma_addr(vb, 0),
+			vb2_get_plane_payload(vb, 0));
 
 	size = icd->user_height * bytes_per_line;
 
@@ -210,7 +219,12 @@ static int unicam_camera_update_buf(struct unicam_camera_dev *unicam_dev)
 		return -ENOMEM;
 	}
 
-	phys_addr = vb2_dma_contig_plane_dma_addr(unicam_dev->active, 0);
+	phys_addr = vb2_plane_dma_addr(unicam_dev->active, 0);
+	if (!phys_addr) {
+		unicam_dev->active = NULL;
+		pr_err("No valid address. skip capture\n");
+		return -ENOMEM;
+	}
 
 	dprintk("updating buffer phys=0x%p", (void *)phys_addr);
 
@@ -375,10 +389,9 @@ static void unicam_videobuf_queue(struct vb2_buffer *vb)
 	unsigned long flags;
 
 	dprintk("-enter");
-	dprintk("vb=0x%p vbuf=0x%p pbuf=0x%p size=%lu", vb,
-		vb2_plane_vaddr(vb, 0), (void *)vb2_dma_contig_plane_dma_addr(vb,
-									   0),
-		vb2_get_plane_payload(vb, 0));
+	pr_debug("vb=0x%p pbuf=0x%p size=%lu", vb,
+			(void *)vb2_plane_dma_addr(vb, 0),
+			vb2_get_plane_payload(vb, 0));
 
 	spin_lock_irqsave(&unicam_dev->lock, flags);
 	list_add_tail(&buf->queue, &unicam_dev->capture);
@@ -398,7 +411,7 @@ static void unicam_videobuf_queue(struct vb2_buffer *vb)
 	}
 	if (update_fps != curr_fps) {
 		update_fps = curr_fps;
-		iprintk("sensor fps = %d\n", update_fps);
+		dprintk("sensor fps = %d\n", update_fps);
 	}
 	spin_unlock_irqrestore(&unicam_dev->lock, flags);
 	dprintk("-exit");
@@ -413,11 +426,10 @@ static void unicam_videobuf_release(struct vb2_buffer *vb)
 	unsigned long flags;
 
 	dprintk("-enter");
+	pr_debug("vb=0x%p pbuf=0x%p size=%lu", vb,
+			(void *)vb2_plane_dma_addr(vb, 0),
+			vb2_get_plane_payload(vb, 0));
 
-	dprintk("vb=0x%p vbuf=0x%p pbuf=0x%p size=%lu", vb,
-		vb2_plane_vaddr(vb, 0), (void *)vb2_dma_contig_plane_dma_addr(vb,
-									   0),
-		vb2_get_plane_payload(vb, 0));
 	spin_lock_irqsave(&unicam_dev->lock, flags);
 
 	if (buf->magic == UNICAM_BUF_MAGIC)
@@ -454,7 +466,7 @@ int unicam_videobuf_start_streaming(struct vb2_queue *q, unsigned int count)
 	CSL_CAM_FRAME_st_t cslCamFrame;
 
 	dprintk("-enter");
-	iprintk("enabling csi");
+	dprintk("enabling csi");
 
 	spin_lock_irqsave(&unicam_dev->lock, flags);
 	unicam_dev->stopping = false;
@@ -735,7 +747,7 @@ int unicam_videobuf_stop_streaming(struct vb2_queue *q)
 	spin_lock_irqsave(&unicam_dev->lock, flags);
 	dprintk("-enter");
 	dprintk("disabling csi");
-	iprintk("stopping stream");
+	dprintk("stopping stream");
 	if (!unicam_dev->streaming) {
 		dev_err(unicam_dev->dev, "stream already turned off\n");
 		goto out;
@@ -820,7 +832,13 @@ static int unicam_camera_init_videobuf(struct vb2_queue *q,
 	q->io_modes = VB2_MMAP | VB2_USERPTR | VB2_READ;
 	q->drv_priv = icd;
 	q->ops = &unicam_videobuf_ops;
+#if defined(CONFIG_VIDEOBUF2_DMA_RESERVED)
+	pr_info("Unicam uses vb2-dma-reserved\n");
+	q->mem_ops = &vb2_dma_reserved_memops;
+#elif defined(CONFIG_VIDEOBUF2_DMA_CONTIG)
+	pr_info("Unicam uses vb2-dma-contig\n");
 	q->mem_ops = &vb2_dma_contig_memops;
+#endif
 	q->buf_struct_size = sizeof(struct unicam_camera_buffer);
 	dprintk("-exit");
 	return vb2_queue_init(q);
@@ -926,7 +944,7 @@ static int unicam_camera_try_fmt(struct soc_camera_device *icd,
 			switch (thumb_pix->pixelformat) {
 			case V4L2_PIX_FMT_YUYV:
 			case V4L2_PIX_FMT_UYVY:
-				iprintk
+				dprintk
 				    ("sensor supports thumbnail %c%c%c%c format",
 				     pixfmtstr(thumb_pix->pixelformat));
 				break;
@@ -937,7 +955,7 @@ static int unicam_camera_try_fmt(struct soc_camera_device *icd,
 				return -EINVAL;
 			}
 		} else
-			iprintk
+			dprintk
 			    ("sensor doesnot support thumbnail (thumb=%d, ret=%d)\n",
 			     thumb, ret);
 
@@ -968,7 +986,7 @@ static int unicam_camera_try_fmt(struct soc_camera_device *icd,
 		return -EINVAL;
 	}
 	pix->sizeimage = pix->height * pix->bytesperline;
-	iprintk("trying format=%c%c%c%c res=%dx%d success=%d",
+	dprintk("trying format=%c%c%c%c res=%dx%d success=%d",
 		pixfmtstr(pixfmt), mf.width, mf.height, ret);
 	dprintk("-exit");
 	return ret;
@@ -1028,7 +1046,7 @@ static int unicam_camera_set_fmt(struct soc_camera_device *icd,
 	pix->field = mf.field;
 	pix->colorspace = mf.colorspace;
 	icd->current_fmt = xlate;
-	iprintk("format set to %c%c%c%c res=%dx%d bytesperline=%d success=%d",
+	dprintk("format set to %c%c%c%c res=%dx%d bytesperline=%d success=%d",
 		pixfmtstr(pix->pixelformat), pix->width, pix->height,
 		pix->bytesperline, ret);
 	dprintk("-exit");
@@ -1309,11 +1327,13 @@ static int __devinit unicam_camera_probe(struct platform_device *pdev)
 	soc_host->v4l2_dev.dev = &pdev->dev;
 	soc_host->nr = pdev->id;
 
+#if defined(CONFIG_VIDEOBUF2_DMA_CONTIG)
 	unicam_dev->alloc_ctx = vb2_dma_contig_init_ctx(&pdev->dev);
 	if (IS_ERR(unicam_dev->alloc_ctx)) {
 		err = PTR_ERR(unicam_dev->alloc_ctx);
 		goto eallocctx;
 	}
+#endif
 
 	err = soc_camera_host_register(soc_host);
 	if (err)
@@ -1322,7 +1342,9 @@ static int __devinit unicam_camera_probe(struct platform_device *pdev)
 	return 0;
 
 ecamhostreg:
+#if defined(CONFIG_VIDEOBUF2_DMA_CONTIG)
 	vb2_dma_contig_cleanup_ctx(unicam_dev->alloc_ctx);
+#endif
 eallocctx:
 	vfree(unicam_dev);
 ealloc:

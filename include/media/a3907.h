@@ -15,6 +15,7 @@
 
 
 extern int a3907_lens_set_position(int target_position);
+extern int a3907_lens_set_position_fine(int target_position);
 extern int a3907_lens_get_position(int *current_position,
 		int *time_to_destination);
 extern int a3907_enable(bool enable);

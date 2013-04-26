@@ -56,7 +56,7 @@
 #define OV5648_APERTURE_MIN				0
 #define OV5648_APERTURE_STEP				1
 #define DEFAULT_APERTURE				215
-#define DEFAULT_EXPO			                0
+#define DEFAULT_EXPO			                32
 #define DEFAULT_GAIN			                UINT8P8(1.0)
 
 /* Flash */

@@ -611,7 +611,6 @@ Int32 csl_cam_init(void)
 
 // Set interface pointer
 	if (cslCamDrv.init != 1) {
-		printk("csl_cam_init() clear handle\n");
 		memset(&cslCamDrv, 0, sizeof(CSL_CAM_DRV_st));
 		cslCamDrv.currHandle = &cslCamDrv.camH[0];
 
@@ -622,7 +621,6 @@ Int32 csl_cam_init(void)
 		}
 
 		// Init CHAL
-		printk("csl_cam_init() chal_cam_init()\n");
 		cslCamDrv.chalCamH =
 		    (CHAL_HANDLE)
 		    chal_cam_init(HW_IO_PHYS_TO_VIRT(MM_CSI0_BASE_ADDR));

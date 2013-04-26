@@ -31,13 +31,13 @@
 #define MK_REG_VAL(PD, POS, TIME) \
 	(((PD) << 15) | ((POS) << 4) | (TIME))
 
-#define A3907_MIN_POSITION   64
+#define A3907_MIN_POSITION   0
 #define A3907_MAX_POSITION   1023
 #define A3907_DEFAULT_POSITION     160    /* where to go on initialise. */
-#define A3907_STEP_PERIOD_US       50    /* in microseconds */
-#define A3907_SLEEP_OP             0x01
-#define A3907_NORM_OP              0x00
-#define A3907_TIM                  0x04
+#define A3907_STEP_PERIOD_US       25    /* in microseconds */
+#define A3907_SLEEP_OP             0x1
+#define A3907_NORM_OP              0x0
+#define A3907_TIM                  0xb
 
 /* #define A3907_DEBUG */
 #ifdef A3907_DEBUG
@@ -130,7 +130,6 @@ int a3907_lens_set_position(int target_position)
 	unsigned int diff;
 	int dac_code;
 
-	iprintk("+\n");
 	if (!a3907)
 		return -ENOMEM;
 
@@ -141,12 +140,46 @@ int a3907_lens_set_position(int target_position)
 	a3907->position = dac_code;
 	a3907->dac_code = a3907_position_code(a3907);
 
-	a3907->flying_time = diff * A3907_STEP_PERIOD_US;
+	/* Not exact, but close (off by <500us) */
+	a3907->flying_time = (diff+1)/2 * A3907_STEP_PERIOD_US + diff/2;
 	a3907->flying_start_time = jiffies_to_usecs(jiffies);
 	ret |= a3907_reg_write(client_a3907, a3907->dac_code);
-	iprintk("target_position=%d dac_position=0x%x",
-			 target_position, a3907->dac_code);
-	iprintk("-\n");
+	iprintk("target_position=%d dac_code=%X dac_position=0x%x",
+			target_position, dac_code, a3907->dac_code);
+	return ret;
+}
+
+/*
+ *Routine used to send lens to a traget position position and calculate
+ *the estimated time required to get to this position, the flying time in us.
+*/
+int a3907_lens_set_position_fine(int target_position)
+{
+	int ret = 0;
+	unsigned int diff;
+	unsigned int dac_code;
+
+	if (!a3907)
+		return -ENOMEM;
+
+	a3907->requested_position = target_position;
+	dac_code =  (A3907_MAX_POSITION - target_position);
+	dac_code = max(A3907_MIN_POSITION, min(dac_code, A3907_MAX_POSITION));
+	iprintk("target_position=%X dac_code=%X max=%X min=%X\n",
+			target_position, dac_code, A3907_MAX_POSITION,
+			A3907_MIN_POSITION);
+	diff = abs(dac_code - a3907->position);
+	a3907->position = dac_code;
+	a3907->dac_code = a3907_position_code(a3907);
+
+	/* Not exact, but close (off by <500us) */
+	a3907->flying_time = (diff+1)/2 * A3907_STEP_PERIOD_US + diff/2;
+	a3907->flying_start_time = jiffies_to_usecs(jiffies);
+	ret |= a3907_reg_write(client_a3907, a3907->dac_code);
+	iprintk("target_position=%X(%d) dac_code=%X dac_position=0x%x",
+			target_position, target_position&(~0x80000000),
+			dac_code, a3907->dac_code);
+
 	return ret;
 }
 
@@ -156,7 +189,6 @@ int a3907_lens_set_position(int target_position)
 */
 int a3907_lens_get_position(int *current_position, int *time_to_destination)
 {
-	iprintk("+\n");
 	if (!a3907)
 		return -ENOMEM;
 
@@ -170,7 +202,10 @@ int a3907_lens_get_position(int *current_position, int *time_to_destination)
 	} else {
 		*current_position = -1;
 	}
-	iprintk("-\n");
+	iprintk("current_position=%X(%d)",
+			(*current_position) & 0xffff,
+			(*current_position) & 0xffff);
+
 	return 0;
 }
 

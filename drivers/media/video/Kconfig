@@ -1308,22 +1308,31 @@ config VIDEO_S5P_MIPI_CSIS
 config VIDEO_UNICAM_CAMERA
 	tristate "Broadcom Unicam camera host interface driver"
 	depends on VIDEO_V4L2 && VIDEO_V4L2_SUBDEV_API
-	select VIDEOBUF2_DMA_CONTIG
 	---help---
 	  This is a v4l2 driver for Broadcom Unicam host interface.
 
 	  To compile this driver as a modulem choose M here: the
 	  module will be called unicam_camera
 
-config VIDEO_UNICAM_CAMERA_USE_CSL
+config VIDEO_UNICAM_CAMERA_USE_CSL_RESERVED
 	tristate "Broadcom Unicam camera CSL driver"
 	depends on VIDEO_V4L2 && VIDEO_V4L2_SUBDEV_API && VIDEO_UNICAM_CAMERA
-	default y
+	select VIDEOBUF2_DMA_RESERVED
 	select KONA_CSL_CAMERA
 	select KONA_CHAL_CAMERA
 	---help---
 		This enables the camera CSL and CHAL drivers
-		to be used by UNICAM driver
+		to be used by UNICAM driver with IOMMU
+
+config VIDEO_UNICAM_CAMERA_USE_CSL
+	tristate "Broadcom Unicam camera CSL driver"
+	depends on VIDEO_V4L2 && VIDEO_V4L2_SUBDEV_API && VIDEO_UNICAM_CAMERA
+	select VIDEOBUF2_DMA_CONTIG
+	select KONA_CSL_CAMERA
+	select KONA_CHAL_CAMERA
+	---help---
+		This enables the camera CSL and CHAL drivers
+		to be used by UNICAM driver without IOMMU
 
 config VIDEO_UNICAM_CAMERA_USE_MM_CSI0
 	tristate "Broadcom Unicam camera MM CSI0 driver"
