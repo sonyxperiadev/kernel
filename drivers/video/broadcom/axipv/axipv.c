@@ -464,6 +464,21 @@ static irqreturn_t axipv_isr(int err, void *dev_id)
 		readl(axipv_base + REG_CTRL));
 		disable_clk = true;
 	}
+	if ((irq_stat & PV_START_THRESH_INT) && (dev->config.cmd)) {
+		/* Change PV_START_THRESH_INT to (WC - 1) where
+		 * WC = WordCount or packetsize chosen in DSI.
+		 * WC = DSI FIFO size as of now. */
+		int pv_thresh;
+		if ((AXIPV_PIXEL_FORMAT_24BPP_RGB == dev->config.pix_fmt) ||
+			(AXIPV_PIXEL_FORMAT_24BPP_BGR == dev->config.pix_fmt))
+			pv_thresh = CM_PKT_SIZE_B / 6;
+		else
+			pv_thresh = CM_PKT_SIZE_B / 8;
+		axipv_err("changing pv_start_thresh from 0x%x to 0x%x\n",
+		readl(axipv_base + REG_PV_THRESH), pv_thresh);
+
+		writel(pv_thresh, axipv_base + REG_PV_THRESH);
+	}
 	if (irq_stat & WATER_LVL2_INT) {
 		if ((AXIPV_STOPPED == dev->state)
 			|| ((AXIPV_STOPPING == dev->state) &&

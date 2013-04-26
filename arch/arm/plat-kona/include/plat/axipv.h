@@ -38,6 +38,7 @@
 
 typedef u32 axipv_async_buf_t;
 
+#define CM_PKT_SIZE_B	768
 #define PV_START_THRESH_INT (1<<7)
 #define AXIPV_DISABLED_INT (1<<6)
 #define WATER_LVL2_INT	(1<<1)

@@ -86,7 +86,6 @@ int DE1_DEF_THRESHOLD_B = 256 * 3;
 #define DE1_DEF_THRESHOLD_B	(DE1_FIFO_SIZE_W * 4)
 #endif
 #else
-#define CM_PKT_SIZE_B		768
 #define DE1_DEF_THRESHOLD_W	(CM_PKT_SIZE_B >> 2)
 #define DE1_DEF_THRESHOLD_B	(CM_PKT_SIZE_B)
 #endif
