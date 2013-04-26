@@ -119,8 +119,7 @@ struct kona_fb {
 #ifdef CONFIG_FB_BRCM_CP_CRASH_DUMP_IMAGE_SUPPORT
 	struct notifier_block die_nb;
 #endif
-	struct work_struct vsync_smart;
-	struct workqueue_struct *fb_wq;
+	struct delayed_work vsync_smart;
 };
 
 static struct completion vsync_event;
@@ -573,14 +572,13 @@ static void konafb_vsync_cb(void)
 		complete(&vsync_event);
 }
 
-static void vsync_work_smart(struct work_struct* work)
+static void vsync_work_smart(struct work_struct *work)
 {
-	struct kona_fb *fb = container_of(work, \
-					struct kona_fb,\
-					 vsync_smart);
-	msleep(10);
+	struct kona_fb *fb = container_of(work, struct kona_fb,
+						vsync_smart.work);
+
 	complete(&vsync_event);
-	queue_work(fb->fb_wq,work);
+	schedule_delayed_work(&fb->vsync_smart, msecs_to_jiffies(16));
 }
 
 static int enable_display(struct kona_fb *fb)
@@ -606,9 +604,9 @@ static int enable_display(struct kona_fb *fb)
 		konafb_error("Failed to power on this display device!\n");
 		goto fail_to_power_control;
 	}
-	INIT_WORK(&fb->vsync_smart,vsync_work_smart);
+	INIT_DELAYED_WORK(&fb->vsync_smart, vsync_work_smart);
 	if(!fb->display_info->vmode)
-		queue_work(fb->fb_wq,&fb->vsync_smart);
+		schedule_delayed_work(&fb->vsync_smart, 0);
 
 	konafb_debug("kona display is enabled successfully\n");
 	return 0;
@@ -627,7 +625,7 @@ static int disable_display(struct kona_fb *fb)
 {
 	int ret = 0;
 
-	cancel_work_sync(&fb->vsync_smart);
+	cancel_delayed_work_sync(&fb->vsync_smart);
 
 	fb->display_ops->power_control(fb->display_hdl, CTRL_PWR_OFF);
 	fb->display_ops->close(fb->display_hdl);
@@ -1243,8 +1241,6 @@ static int __ref kona_fb_probe(struct platform_device *pdev)
 	init_completion(&vsync_event);
 	complete(&fb->prev_buf_done_sem);
 	atomic_set(&fb->is_graphics_started, 0);
-	fb->fb_wq = alloc_workqueue("FB WQ",
-			WQ_NON_REENTRANT, 1);
 
 	ret = enable_display(fb);
 	if (ret) {
