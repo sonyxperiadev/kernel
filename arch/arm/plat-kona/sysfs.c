@@ -314,7 +314,7 @@ kona_timer_module_cfg(struct device *dev, struct device_attribute *attr,
 	}
 
 	pr_info("\r\nusage: echo [timer_name(aon-timer/slave-timer)]"
-		"[rate 32000 (32KHz), 1000000 (1MHz), 19500000 (19.5MHz)] > /sys/bcm/timer_module_cfg \r\n");
+		"[rate 32768 (32KHz), 1000000 (1MHz), 19500000 (19.5MHz)] > /sys/bcm/timer_module_cfg \r\n");
 
 	return -EINVAL;
 }

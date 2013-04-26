@@ -97,7 +97,7 @@ static struct kona_timer_module timer_module_list[NUM_OF_TIMER_MODULES] = {
 	{.pkt = &aon_hub_timer[0], .name = "aon-timer",
 	 .cfg_state = NOT_CONFIGURED, .rate = 0,
 	 .num_of_timers = NUM_OF_CHANNELS, .reg_base = IOMEM(KONA_TMR_HUB_VA),
-	 .clk_name = "hub_timer_clk",
+	 .clk_name = HUB_TIMER_PERI_CLK_NAME_STR,
 #ifdef CONFIG_KONA_TIMER_DEBUG
 	 .max_repeat_count = 0
 #endif
@@ -105,7 +105,7 @@ static struct kona_timer_module timer_module_list[NUM_OF_TIMER_MODULES] = {
 	{.pkt = &periph_timer[0], .name = "slave-timer",
 	 .cfg_state = NOT_CONFIGURED, .rate = 0,
 	 .num_of_timers = NUM_OF_CHANNELS, .reg_base = IOMEM(KONA_SYSTMR_VA),
-	 .clk_name = "timers_clk",
+	 .clk_name = TIMERS_PERI_CLK_NAME_STR,
 #ifdef CONFIG_KONA_TIMER_DEBUG
 	 .max_repeat_count = 0
 #endif
@@ -812,7 +812,7 @@ static int __config_slave_timer_have_clock(unsigned int rt)
 {
 	struct clk *clk;
 
-	clk = clk_get(NULL, "timers_apb_clk");
+	clk = clk_get(NULL, TIMERS_APB_BUS_CLK_NAME_STR);
 	if (IS_ERR(clk)) {
 		pr_err("clk_get failed, so clock manager is not up"
 		       " use local calls\r\n");
@@ -820,7 +820,7 @@ static int __config_slave_timer_have_clock(unsigned int rt)
 	}
 	clk_enable(clk);
 
-	clk = clk_get(NULL, "timers_clk");
+	clk = clk_get(NULL, TIMERS_PERI_CLK_NAME_STR);
 	if (IS_ERR(clk)) {
 		pr_err("clk_get failed, so clock manager is not up"
 		       " use local calls\r\n");
@@ -1033,7 +1033,7 @@ static int __config_aon_hub_timer_have_clock(unsigned int rt)
 {
 	struct clk *clk;
 
-	clk = clk_get(NULL, "hub_timer_apb_clk");
+	clk = clk_get(NULL, HUB_TIMER_APB_BUS_CLK_NAME_STR);
 	if (IS_ERR(clk)) {
 		pr_err("clk_get failed, so clock manager is not up use"
 		       " local calls\r\n");
@@ -1041,7 +1041,7 @@ static int __config_aon_hub_timer_have_clock(unsigned int rt)
 	}
 	clk_enable(clk);
 
-	clk = clk_get(NULL, "hub_timer_clk");
+	clk = clk_get(NULL, HUB_TIMER_PERI_CLK_NAME_STR);
 	if (IS_ERR(clk)) {
 		pr_err("clk_get failed, so clock manager is not up use"
 		       " local calls\r\n");
