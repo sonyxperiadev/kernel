@@ -891,7 +891,6 @@ CHAL_DSI_RES_t chal_dsi_tx_short(CHAL_HANDLE handle,
 	pktc |= DSI_REG_FIELD_SET(DSI1_TXPKT1_C, CMD_TX_TIME, txCfg->vmWhen);
 	pktc |= DSI_REG_FIELD_SET(DSI1_TXPKT1_C, DISPLAY_NO,
 				  DSI_PKT_SRC_CMND_FIFO);
-	pktc |= DSI_REG_FIELD_SET(DSI1_TXPKT1_C, CMD_EN, 1);
 
 	if (txCfg->start)
 		pktc |= DSI_REG_FIELD_SET(DSI1_TXPKT1_C, CMD_EN, 1);
