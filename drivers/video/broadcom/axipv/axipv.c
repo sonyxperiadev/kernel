@@ -489,8 +489,7 @@ static irqreturn_t axipv_isr(int err, void *dev_id)
 		}
 #endif
 		curr_reg_val = readl(axipv_base + REG_CUR_FRAME);
-		if ((g_curr != curr_reg_val) ||
-			(AXIPV_STOPPING == dev->state)) {
+		if (g_curr != curr_reg_val) {
 			if (g_curr) {
 				axipv_debug("isr %p\n", (void *) g_curr);
 				axipv_release_buff(g_curr);
