@@ -265,15 +265,15 @@
 	};
 
 	kona-fb {
-		module-name = "NT35510";
+		module-name = "NT35512";
 		reg-name = "cam2";
 		rst-gpio = <22>;
 		detect-gpio = <10>;
 		rst-setup = <700>;	/* 700us */
-		rst-pulse = <20>;	/* 10us */
-		rst-hold = <10000>;	/* 2ms */
-		col-mod-i = <2>;
-		col-mod-o = <3>;
+		rst-pulse = <1000>;	/* 1ms */
+		rst-hold = <100000>;	/* 100ms */
+		col-mod-i = <3>;
+		col-mod-o = <2>;
 		width = <480>;
 		height = <800>;
 		/* rst-active-high */	/* Commented => Active Low */
