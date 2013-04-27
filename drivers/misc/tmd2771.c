@@ -211,7 +211,6 @@ unsigned short const taos_addr_list[2] = { TAOS_DEVICE_ADDR2, I2C_CLIENT_END };
 /*client and device*/
 struct i2c_client *my_clientp;
 struct i2c_client *bad_clientp[TAOS_MAX_NUM_DEVICES];
-static int num_bad;
 static int device_found;
 
 static char pro_buf[4];
@@ -517,8 +516,7 @@ static int taos_prox_threshold_set(void)
 
 static int __init taos_init(void)
 {
-	int ret = 0, i = 0, k = 0;
-	struct i2c_adapter *my_adap;
+	int ret = 0;
 	struct device *temp_dev;
 
 	ret = alloc_chrdev_region(&taos_dev_number, 0,
@@ -562,29 +560,6 @@ static int __init taos_init(void)
 			"TAOS: i2c_add_driver() failed in taos_init()\n");
 		goto err_create_taos_dev;
 	}
-
-	for (i = 0; i < I2C_MAX_ADAPTERS; i++) {
-		my_adap = i2c_get_adapter(i);
-		if (my_adap == NULL)
-			break;
-		my_clientp =
-		    i2c_new_probed_device(my_adap, &taos_board_info[0],
-					  taos_addr_list, NULL);
-		if ((my_clientp) && (!device_found)) {
-			bad_clientp[num_bad] = my_clientp;
-			num_bad++;
-		}
-		if (device_found)
-			break;
-		if (num_bad) {
-			for (k = 0; k < num_bad; k++)
-				i2c_unregister_device(bad_clientp[k]);
-			num_bad = 0;
-		}
-		if (device_found)
-			break;
-	}
-
 	return 0;
 
 err_create_taos_dev:
@@ -812,11 +787,13 @@ static int __taos_late_resume(struct i2c_client *client)
 		&& (ALS_ON == 1))
 		taos_sensors_als_on();
 
-	if (PROX_ON == 1)
+	if (PROX_ON == 1 && ALS_ON == 1)
 		reg_val = 0x3f;
-	else
+	else if (ALS_ON == 1)
 		reg_val = 0x13;
-
+	else if (PROX_ON == 1)
+		reg_val = 0x2d;
+	pr_taos(DEBUG, "TAOS: enabled reg in resume=0x%x\n", reg_val);
 	ret = i2c_smbus_write_byte(taos_datap->client, TAOS_TRITON_CMD_REG
 					| TAOS_TRITON_CNTRL);
 	if (ret < 0) {
