@@ -2842,6 +2842,7 @@ static int bcmpmu_fg_get_properties(struct power_supply *psy,
 			val->intval = 3700;
 		else
 			val->intval = bcmpmu_fg_get_batt_volt(fg);
+		val->intval = val->intval * 1000;
 		break;
 	case POWER_SUPPLY_PROP_TEMP:
 		val->intval = fg->adc_data.temp;
