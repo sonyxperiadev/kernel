@@ -310,7 +310,10 @@ int axipv_init(struct axipv_init_t *init, struct axipv_config_t **config)
 	} else {
 		dev->prev_irq_handled = 1;
 		dev->irq_stat = 0;
-		dev->state = AXIPV_ENABLED;
+		if (readl(dev->base_addr + REG_CTRL) & AXIPV_CMD_MODE)
+			dev->state = AXIPV_STOPPED;
+		else
+			dev->state = AXIPV_ENABLED;
 		writel_relaxed(UINT_MAX, dev->base_addr + REG_INTR_CLR);
 		writel_relaxed(UINT_MAX, dev->base_addr + REG_INTR_EN);
 	}
