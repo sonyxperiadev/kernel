@@ -1102,6 +1102,10 @@ static int __init populate_dispdrv_cfg(struct kona_fb *fb,
 		goto err_init_seq;
 
 	if (!info->vmode) {
+		if (!info->updt_win_seq_len) {
+			pr_err("Abort: win_seq_len = 0 for command mode\n");
+			goto err_win_seq;
+		}
 		info->win_seq = kmalloc(info->updt_win_seq_len, GFP_KERNEL);
 		if (!info->win_seq)
 			goto err_win_seq;
