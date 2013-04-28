@@ -209,7 +209,7 @@ static int bma222_accl_suspend(struct i2c_client *client, pm_message_t mesg)
 #ifdef BMA222_ACCL_IRQ_MODE
 	disable_irq(dd->irq);
 #else
-	del_timer(&bma_wakeup_timer);
+	del_timer_sync(&bma_wakeup_timer);
 	cancel_delayed_work_sync(&dd->work_data);
 #endif
 	if (atomic_read(&bma_on))
@@ -278,7 +278,6 @@ void bma_wakeup_timer_func(unsigned long data)
 	struct drv_data *dd;
 	long delay = 0;
 	dd = (struct drv_data *)data;
-
 	delay = dd->bma222_accl_mode * HZ / 1000;
 	if (delay < 2)
 		delay = 2;
@@ -369,7 +368,6 @@ static void bma222_accl_getdata(struct drv_data *dd)
 	int X, Y, Z;
 	struct bma222_accl_platform_data *pdata = pdata =
 	    bma222_accl_client->dev.platform_data;
-
 	mutex_lock(&bma222_accl_wrk_lock);
 #ifndef BMA222_ACCL_IRQ_MODE
 	if (!atomic_read(&bma_on)) {
@@ -430,12 +428,7 @@ static void bma222_accl_getdata(struct drv_data *dd)
 	newacc.y = Y;
 	newacc.z = Z;
 
-#ifndef BMA222_ACCL_IRQ_MODE
-	if (dd->bma222_accl_mode >= SENSOR_DELAY_UI)
-		/*bma222_accl_power_down(dd); */
-#endif
-		mutex_unlock(&bma222_accl_wrk_lock);
-
+	mutex_unlock(&bma222_accl_wrk_lock);
 	return;
 
 }
@@ -462,7 +455,7 @@ static int bma222_accl_misc_open(struct inode *inode, struct file *file)
 	return 0;
 }
 
-static int bma222_accl_misc_ioctl(struct file *file, unsigned int cmd,
+static long bma222_accl_misc_ioctl(struct file *file, unsigned int cmd,
 				  unsigned long arg)
 {
 	void __user *argp = (void __user *)arg;
@@ -859,6 +852,32 @@ static struct attribute_group bma222_attr_grp = {
 #endif
 
 #ifdef BMA222_SW_CALIBRATION
+
+static ssize_t bma222_delay_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	struct drv_data *dd = i2c_get_clientdata(client);
+	return sprintf(buf, "%d\n", dd->bma222_accl_mode);
+}
+
+static ssize_t bma222_delay_store(struct device *dev,
+				struct device_attribute *attr,
+				const char *buf, size_t count)
+{
+	unsigned long data;
+	int error;
+	struct i2c_client *client = to_i2c_client(dev);
+	struct drv_data *dd = i2c_get_clientdata(client);
+	error = kstrtoul(buf, 10, &data);
+	if (error)
+		return error;
+	if (data > SENSOR_DELAY_NORMAL)
+		data = SENSOR_DELAY_NORMAL;
+	dd->bma222_accl_mode = data;
+	return count;
+}
+
 static ssize_t bma222_get_offset(struct device *dev,
 				struct device_attribute *attr,
 				char *buf)
@@ -889,8 +908,11 @@ static ssize_t bma222_set_offset(struct device *dev,
 	return count;
 }
 static DEVICE_ATTR(offset, 00664, bma222_get_offset, bma222_set_offset);
+static DEVICE_ATTR(delay, S_IRUGO | S_IWUSR | S_IWGRP | S_IWOTH,
+			bma222_delay_show, bma222_delay_store);
 static struct attribute *bma222_attributes[] = {
 	&dev_attr_offset.attr,
+	&dev_attr_delay.attr,
 	NULL
 };
 
@@ -905,8 +927,9 @@ static int __devinit bma222_accl_probe(struct i2c_client *client,
 {
 	struct drv_data *dd;
 	int rc = 0;
-	unsigned char tempvalue;
+	unsigned char tempvalue = 0;
 	struct device_node *np;
+	struct bma222_accl_platform_data *pdata;
 	u32 val = 0;
 #ifdef BMA222_CALIBRATION
 	fastcali_ret = false;
@@ -916,7 +939,6 @@ static int __devinit bma222_accl_probe(struct i2c_client *client,
 	bma222_offset[1] = 0;
 	bma222_offset[2] = 0;
 #endif
-	struct bma222_accl_platform_data *pdata;
 
 	printk(KERN_INFO "+ %s\n", __func__);
 
@@ -1044,10 +1066,10 @@ static int __devinit bma222_accl_probe(struct i2c_client *client,
 #endif
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
-	dd->suspend_desc.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN,
-	    dd->suspend_desc.suspend = bma222_accl_early_suspend,
-	    dd->suspend_desc.resume = bma222_accl_late_resume,
-	    register_early_suspend(&dd->suspend_desc);
+	dd->suspend_desc.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN;
+	dd->suspend_desc.suspend = bma222_accl_early_suspend;
+	dd->suspend_desc.resume = bma222_accl_late_resume;
+	register_early_suspend(&dd->suspend_desc);
 #endif
 #ifdef BMA222_CALIBRATION
 	rc = sysfs_create_group(&client->dev.kobj, &bma222_attr_grp);
@@ -1083,7 +1105,6 @@ probe_err_reg_dev:
 #endif
 err_read:
 	pr_info("bma dts error read\n");
-probe_err_cfg:
 probe_err_reg:
 	mutex_lock(&bma222_accl_dd_lock);
 	list_del(&dd->next_dd);
