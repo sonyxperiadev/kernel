@@ -839,12 +839,12 @@ irqreturn_t inv_read_fifo(int irq, void *dev_id)
 	}
 	tmp = (s8 *)buf;
 
-	/* Ignoring the coverity issue: bytest_per_datum can range from 1 to 499
-	* Since bytes_per_datum does not go above 32 which is coming from
-	* get_bytes_per_datum() function
-	*/
-	/*coverity[overrun-buffer-arg]*/
 	while ((bytes_per_datum != 0) && (fifo_count >= bytes_per_datum)) {
+		/* Ignoring the coverity issue: bytest_per_datum can range from
+		 * 1 to 499. Since bytes_per_datum does not go above 32 which
+		 * is coming from get_bytes_per_datum() function
+		 */
+		// coverity[overrun-buffer-arg]
 		result = inv_i2c_read(st, reg->fifo_r_w, bytes_per_datum,
 			data);
 		if (result)
