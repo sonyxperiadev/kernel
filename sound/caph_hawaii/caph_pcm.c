@@ -245,7 +245,7 @@ static int PcmHwFree(struct snd_pcm_substream *substream)
 	if (compl_ptr) {
 		long ret;
 		#define	TIMEOUT_STOP_REQ_MS	30000
-		ret = wait_for_completion_interruptible_timeout(compl_ptr,
+		ret = wait_for_completion_timeout(compl_ptr,
 			msecs_to_jiffies(TIMEOUT_STOP_REQ_MS));
 		/* The return value is -ERESTARTSYS if interrupted,      */
 		/* 0 if timed out, positive (at least 1, or number of jiffies*/
