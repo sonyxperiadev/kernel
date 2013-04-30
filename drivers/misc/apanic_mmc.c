@@ -79,6 +79,7 @@ struct apanic_data {
 
 struct apanic_data drv_ctx;
 static struct work_struct proc_removal_work;
+static struct workqueue_struct *apanic_wq;
 static DEFINE_MUTEX(drv_mutex);
 
 void mmc_panic_copy_dev_name(char *dev_name, int dev_num)
@@ -301,7 +302,7 @@ static void apanic_remove_proc_work(struct work_struct *work)
 static int apanic_proc_write(struct file *file, const char __user *buffer,
 				unsigned long count, void *data)
 {
-	schedule_work(&proc_removal_work);
+	queue_work(apanic_wq, &proc_removal_work);
 	return count;
 }
 
@@ -683,6 +684,12 @@ out:
 
 int __init apanic_init(void)
 {
+
+	apanic_wq = alloc_workqueue("apanic_wq", WQ_FREEZABLE | WQ_UNBOUND, 1);
+	if (!apanic_wq) {
+		pr_err("%s: Failed to create workqueue\n", __func__);
+		return -ENOMEM;
+	}
 	atomic_notifier_chain_register(&panic_notifier_list, &panic_blk);
 	debugfs_create_file("apanic", 0644, NULL, NULL, &panic_dbg_fops);
 	memset(&drv_ctx, 0, sizeof(drv_ctx));
