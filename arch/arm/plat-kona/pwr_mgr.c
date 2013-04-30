@@ -233,7 +233,8 @@ static struct pwr_mgr pwr_mgr;
 
 static void pwr_mgr_dump_i2c_cmd_regs(void);
 
-static void dump_jig_registers(void)
+#ifdef CONFIG_MACH_HAWAII
+static void dump_gic_registers(void)
 {
 #ifdef CONFIG_KONA_I2C_SEQUENCER_LOG
 	pr_info("pwr_mgr intr mask: %x intr status: %x\n",
@@ -269,6 +270,12 @@ static void dump_jig_registers(void)
 			readl(KONA_GICDIST_VA + GICDIST_PENDING_SET7_OFFSET));
 #endif
 }
+#else
+static void dump_gic_registers(void)
+{
+
+}
+#endif
 
 int pwr_mgr_event_trg_enable(int event_id, int event_trg_type)
 {
@@ -2110,7 +2117,7 @@ exit:
 #endif
 	if (i == retry) {
 		pwr_dbg(PWR_LOG_ERR, "%s: max tries\n", __func__);
-		dump_jig_registers();
+		dump_gic_registers();
 		pwr_mgr_seq_log_buf_dump();
 		ret = -EAGAIN;
 	}
