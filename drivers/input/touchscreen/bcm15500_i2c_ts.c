@@ -4949,9 +4949,10 @@ static int32_t bcmtch_dev_post_boot_get_section(void)
 				bcmtch_data_p->post_boot_section++;
 			}
 		}
+		return pb_entry[bcmtch_data_p->post_boot_section].length;
 	}
 
-	return pb_entry[bcmtch_data_p->post_boot_section].length;
+	return 0;
 }
 
 static int32_t bcmtch_dev_post_boot_download(int16_t data_rate)

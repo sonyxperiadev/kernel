@@ -907,8 +907,10 @@ void enable_axipv_clk_debug(struct axipv_config_t *config)
 	u32 axipv_base;
 	struct axipv_dev *dev;
 
-	if (!config)
+	if (!config) {
 		axipv_err("config NULL\n");
+		return -EINVAL;
+	}
 
 	dev = container_of(config, struct axipv_dev, config);
 	axipv_base = dev->base_addr;
@@ -921,8 +923,10 @@ void disable_axipv_clk_debug(struct axipv_config_t *config)
 	u32 axipv_base;
 	struct axipv_dev *dev;
 
-	if (!config)
+	if (!config) {
 		axipv_err("config NULL\n");
+		return -EINVAL;
+	}
 
 	dev = container_of(config, struct axipv_dev, config);
 	axipv_base = dev->base_addr;
