@@ -333,14 +333,22 @@ static struct regulator *d_lvldo2_cam1_1v8;
 static struct regulator *d_1v8_mmc1_vcc;
 static struct regulator *d_3v0_mmc1_vcc;
 
+/* The pre-div clock rate needs to satisfy
+   the rate requirements of all digital
+   channel clocks in use. */
+#define SENSOR_PREDIV_CLK               "dig_prediv_clk"
+
 #define SENSOR_0_GPIO_PWRDN             (002)
 #define SENSOR_0_GPIO_RST               (111)
 #define SENSOR_0_CLK                    "dig_ch0_clk"	/*DCLK1 */
 #if defined(CONFIG_SOC_CAMERA_OV2675) || defined(CONFIG_SOC_CAMERA_GC2035)
+#define SENSOR_PREDIV_CLK_FREQ         (312000000)
 #define SENSOR_0_CLK_FREQ               (26000000)
 #elif defined(CONFIG_SOC_CAMERA_OV5648)
+#define SENSOR_PREDIV_CLK_FREQ         (312000000)
 #define SENSOR_0_CLK_FREQ               (24000000)
 #elif defined(CONFIG_SOC_CAMERA_OV5640)
+#define SENSOR_PREDIV_CLK_FREQ          (26000000)
 #define SENSOR_0_CLK_FREQ               (13000000)
 #else
 #error "SENSOR_0_CLK_FREQ not defined"
@@ -353,11 +361,13 @@ static struct regulator *d_3v0_mmc1_vcc;
 
 #define SENSOR_1_GPIO_PWRDN             (005)
 
+
 static int hawaii_camera_power(struct device *dev, int on)
 {
 	unsigned int value;
 	int ret = -1;
 	struct clk *clock;
+	struct clk *prediv_clock;
 	struct clk *lp_clock;
 	struct clk *axi_clk;
 	static struct pi_mgr_dfs_node unicam_dfs_node;
@@ -423,7 +433,11 @@ static int hawaii_camera_power(struct device *dev, int on)
 		CSI0_LP_PERI_CLK_NAME_STR);
 		goto e_clk_get;
 	}
-
+	prediv_clock = clk_get(NULL, SENSOR_PREDIV_CLK);
+	if (IS_ERR_OR_NULL(prediv_clock)) {
+		printk(KERN_ERR "Unable to get SENSOR_PREDIV_CLK clock\n");
+		goto e_clk_get;
+	}
 	clock = clk_get(NULL, SENSOR_0_CLK);
 	if (IS_ERR_OR_NULL(clock)) {
 		printk(KERN_ERR "Unable to get SENSOR_0 clock\n");
@@ -475,10 +489,20 @@ static int hawaii_camera_power(struct device *dev, int on)
 			pr_err("Failed to set lp clock\n");
 			goto e_clk_set_lp;
 		}
+		value = clk_enable(prediv_clock);
+		if (value) {
+			pr_err("Failed to enable prediv clock\n");
+			goto e_clk_prediv;
+		}
 		value = clk_enable(clock);
 		if (value) {
 			pr_err("Failed to enable sensor 0 clock\n");
 			goto e_clk_sensor;
+		}
+		value = clk_set_rate(prediv_clock, SENSOR_PREDIV_CLK_FREQ);
+		if (value) {
+			pr_err("Failed to set prediv clock\n");
+			goto e_clk_set_prediv;
 		}
 		value = clk_set_rate(clock, SENSOR_0_CLK_FREQ);
 		if (value) {
@@ -515,6 +539,7 @@ static int hawaii_camera_power(struct device *dev, int on)
 #ifdef CONFIG_SOC_CAMERA_OV5648
 		gpio_set_value(SENSOR_0_GPIO_PWRDN, 0);
 #endif
+		clk_disable(prediv_clock);
 		clk_disable(clock);
 		clk_disable(lp_clock);
 		clk_disable(axi_clk);
@@ -532,6 +557,9 @@ static int hawaii_camera_power(struct device *dev, int on)
 e_clk_set_sensor:
 	clk_disable(clock);
 e_clk_sensor:
+e_clk_set_prediv:
+	clk_disable(prediv_clock);
+e_clk_prediv:
 e_clk_set_lp:
 	clk_disable(lp_clock);
 e_clk_lp:
@@ -541,6 +569,7 @@ e_clk_pll:
 e_clk_get:
 	return ret;
 }
+
 static int hawaii_camera_reset(struct device *dev)
 {
 	/* reset the camera gpio */
