@@ -203,6 +203,10 @@ void *mm_core_init(struct mm_common *mm_common, \
 		goto err_register;
 
 	core_dev = kmalloc(sizeof(struct mm_core), GFP_KERNEL);
+	if (core_dev == NULL) {
+		pr_err("mm_core_init: kmalloc failed\n");
+		goto err_register;
+	}
 	memset(core_dev, 0, sizeof(struct mm_core));
 
 	/* Init structure */
