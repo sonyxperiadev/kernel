@@ -43,13 +43,13 @@ REMEDY.
 #include <linux/wait.h>
 #include <linux/completion.h>
 #include <linux/bio.h>
+#include <linux/blkdev.h>
 #include <linux/stat.h>
 #include <linux/types.h>
 #include <linux/string.h>
 #include <linux/errno.h>
 #include <linux/genhd.h>
 #include <linux/completion.h>
-#include <linux/bio.h>
 #include <linux/mutex.h>
 #include <linux/module.h>
 
@@ -81,12 +81,8 @@ REMEDY.
 #define KEYBOX_DATA_RPMB_START_ADDR	0xf
 #define KEYBOX_DATA_RPMB_LEN			256
 
-struct kobject *emmc_rpmb_test_kobj;
 static void *bio_buff;
-
-#define RPMB_DEV_NODE_PATH "/dev/block/mmcblk0rpmb"
-
-int fd; /* File descriptor to hold /dev/mmcblk0rpmb */
+static struct block_device *bdev[TOTAL_BLK_DEV];
 
 static DEFINE_MUTEX(rpmb_mutex);
 
@@ -122,6 +118,65 @@ static void dump_buffer(const char *cmdbuf, unsigned int size)
 }
 #endif
 
+static void start_queue(int index)
+{
+	unsigned long flags;
+	struct request_queue *q;
+
+	if (bdev[index]) {
+		q = bdev_get_queue(bdev[index]);
+		if (!q) {
+			pr_err("queue not found bdev[index]=%d\n",
+				index);
+			return;
+		}
+		spin_lock_irqsave(q->queue_lock, flags);
+		blk_start_queue(q);
+		spin_unlock_irqrestore(q->queue_lock, flags);
+		blkdev_put(bdev[index], FMODE_READ);
+		bdev[index] = NULL;
+	}
+}
+
+static void stop_queue(int index, char *path)
+{
+	unsigned long flags;
+	struct request_queue *q;
+
+	bdev[index] = blkdev_get_by_path(path, FMODE_READ,
+			stop_queue);
+	if (IS_ERR(bdev[index])) {
+		pr_err("failed to get block device %s (%ld)\n",
+		      path, PTR_ERR(bdev[index]));
+		return;
+	}
+	q = bdev_get_queue(bdev[index]);
+	if (!q) {
+		pr_err("queue not found bdev[index]=%d\n", index);
+		return;
+	}
+	spin_lock_irqsave(q->queue_lock, flags);
+	blk_stop_queue(q);
+	spin_unlock_irqrestore(q->queue_lock, flags);
+}
+
+static void rpmb_access_begin(void)
+{
+	mutex_lock(&rpmb_mutex);
+
+	stop_queue(MAIN_DEV_NODE, MAIN_DEV_NODE_PATH);
+	stop_queue(BOOT0_DEV_NODE, BOOT0_DEV_NODE_PATH);
+	stop_queue(BOOT1_DEV_NODE, BOOT1_DEV_NODE_PATH);
+}
+
+static void rpmb_access_end(void)
+{
+	start_queue(BOOT1_DEV_NODE);
+	start_queue(BOOT0_DEV_NODE);
+	start_queue(MAIN_DEV_NODE);
+
+	mutex_unlock(&rpmb_mutex);
+}
 
 static void format_read_result_reg_data_packet(
 				struct rpmb_data_frame *read_result)
@@ -984,7 +1039,7 @@ int readCKDataBlock(char *buff, int len)
 		return -1;
 	}
 
-	mutex_lock(&rpmb_mutex);
+	rpmb_access_begin();
 
 	ret = authenticated_data_read(buff, len, CKDATA_RPMB_START_ADDR);
 	if (ret < 0) {
@@ -995,7 +1050,7 @@ int readCKDataBlock(char *buff, int len)
 	pr_info("Done Reading %d bytes of CKData from RPMB\n", len);
 
 err_out:
-	mutex_unlock(&rpmb_mutex);
+	rpmb_access_end();
 	return ret;
 }
 EXPORT_SYMBOL(readCKDataBlock);
@@ -1029,7 +1084,7 @@ int read_imei1(char *imei1, char *imei_mac1, int imei1_len, int imei_mac1_len)
 		return -1;
 	}
 
-	mutex_lock(&rpmb_mutex);
+	rpmb_access_begin();
 
 	ret1 = authenticated_data_read(imei1, imei1_len,
 						IMEI1_RPMB_START_ADDR);
@@ -1051,7 +1106,7 @@ int read_imei1(char *imei1, char *imei_mac1, int imei1_len, int imei_mac1_len)
 							imei_mac1_len);
 
 err_out:
-	mutex_unlock(&rpmb_mutex);
+	rpmb_access_end();
 	if (ret1 || ret2)
 		return ret1 ? ret1 : ret2;
 	else
@@ -1088,7 +1143,7 @@ int read_imei2(char *imei2, char *imei_mac2, int imei2_len, int imei_mac2_len)
 		return -1;
 	}
 
-	mutex_lock(&rpmb_mutex);
+	rpmb_access_begin();
 
 	ret1 = authenticated_data_read(imei2, imei2_len,
 						IMEI2_RPMB_START_ADDR);
@@ -1110,7 +1165,7 @@ int read_imei2(char *imei2, char *imei_mac2, int imei2_len, int imei_mac2_len)
 							imei_mac2_len);
 
 err_out:
-	mutex_unlock(&rpmb_mutex);
+	rpmb_access_end();
 	if (ret1 || ret2)
 		return ret1 ? ret1 : ret2;
 	else
@@ -1140,7 +1195,7 @@ int readkeyboxKey(char *buff, int len)
 		return -1;
 	}
 
-	mutex_lock(&rpmb_mutex);
+	rpmb_access_begin();
 
 	ret = authenticated_data_read(buff, len, KEYBOX_KEY_RPMB_START_ADDR);
 	if (ret < 0) {
@@ -1151,7 +1206,7 @@ int readkeyboxKey(char *buff, int len)
 	pr_info("Done Reading %d bytes of keybox from RPMB\n", len);
 
 err_out:
-	mutex_unlock(&rpmb_mutex);
+	rpmb_access_end();
 	return ret;
 }
 EXPORT_SYMBOL(readkeyboxKey);
@@ -1178,7 +1233,7 @@ int readkeyboxData(char *buff, int len)
 		return -1;
 	}
 
-	mutex_lock(&rpmb_mutex);
+	rpmb_access_begin();
 
 	ret = authenticated_data_read(buff, len, KEYBOX_DATA_RPMB_START_ADDR);
 	if (ret < 0) {
@@ -1189,7 +1244,7 @@ int readkeyboxData(char *buff, int len)
 	pr_info("Done Reading %d bytes of keybox from RPMB\n", len);
 
 err_out:
-	mutex_unlock(&rpmb_mutex);
+	rpmb_access_end();
 	return ret;
 }
 EXPORT_SYMBOL(readkeyboxData);
@@ -1216,7 +1271,7 @@ int writekeyboxData(char *buff, int len)
 		return -1;
 	}
 
-	mutex_lock(&rpmb_mutex);
+	rpmb_access_begin();
 
 	ret = authenticated_data_write(buff, len, KEYBOX_DATA_RPMB_START_ADDR);
 	if (ret < 0) {
@@ -1226,7 +1281,7 @@ int writekeyboxData(char *buff, int len)
 	pr_info("Done Writing %d bytes of keybox from RPMB\n", len);
 
 err_out:
-	mutex_unlock(&rpmb_mutex);
+	rpmb_access_end();
 	return ret;
 }
 EXPORT_SYMBOL(writekeyboxData);

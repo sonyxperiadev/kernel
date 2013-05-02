@@ -26,6 +26,16 @@
 #define EMMC_RPMB_RW_H
 
 #define RPMB_DEV_NODE_PATH "/dev/block/mmcblk0rpmb"
+#define MAIN_DEV_NODE_PATH "/dev/block/mmcblk0"
+#define BOOT0_DEV_NODE_PATH "/dev/block/mmcblk0boot0"
+#define BOOT1_DEV_NODE_PATH "/dev/block/mmcblk0boot1"
+
+enum blk_dev_list {
+	MAIN_DEV_NODE,
+	BOOT0_DEV_NODE,
+	BOOT1_DEV_NODE,
+	TOTAL_BLK_DEV,
+};
 
 /* Utility Macros and Functions to make code endian independent */
 const int endian_var = 1;
