@@ -273,8 +273,11 @@ int enter_suspend_state(struct kona_idle_state *state, u32 ctrl_params)
 
 int enter_dormant_state(u32 ctrl_params)
 {
+	u32 cpu;
+	cpu = smp_processor_id();
+
 #ifdef CONFIG_DORMANT_MODE
-	if (pm_info.dormant_enable) {
+	if (pm_info.dormant_enable & (0x1 << cpu)) {
 		u32 svc;
 		if (ctrl_params & CTRL_PARAMS_ENTER_SUSPEND)
 			svc = FULL_DORMANT_L2_OFF;
@@ -423,10 +426,7 @@ device_initcall(__pm_init);
 /* Disable/enable dormant mode at runtime */
 static int dormant_enable_set(void *data, u64 val)
 {
-	if (val)
-		pm_info.dormant_enable = 1;
-	else
-		pm_info.dormant_enable = 0;
+	pm_info.dormant_enable = val;
 	return 0;
 }
 

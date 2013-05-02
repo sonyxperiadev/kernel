@@ -26,6 +26,9 @@
 #include <asm/smp_scu.h>
 #endif
 #include <asm/io.h>
+#ifdef CONFIG_BRCM_CDC
+#include <plat/cdc.h>
+#endif
 #include <mach/smp.h>
 #include <mach/io_map.h>
 #include <mach/rdb/brcm_rdb_chipreg.h>
@@ -64,6 +67,10 @@ static DEFINE_SPINLOCK(boot_lock);
 
 void __cpuinit platform_secondary_init(unsigned int cpu)
 {
+#ifdef CONFIG_BRCM_CDC
+/* Bring this CPU to RUN state so that nIRQ nFIQ signals are unblocked */
+	cdc_send_cmd_early(CDC_CMD_SDEC, cpu);
+#endif
 	/*
 	 * If any interrupts are already enabled for the primary
 	 * core (e.g. timer irq), then they will not have been enabled

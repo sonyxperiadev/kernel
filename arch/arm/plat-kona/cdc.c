@@ -30,6 +30,7 @@
 #include <plat/cdc.h>
 #include <mach/rdb/brcm_rdb_cdc.h>
 #include <mach/memory.h>
+#include <mach/io_map.h>
 
 #define cdc_dbg(level, args...) \
 	do { \
@@ -92,6 +93,11 @@ static bool cdc_is_cmd_allowed(u32 cmd, int cpu)
 	return !!(valid_cmd_status_map[cmd] & cdc_get_status_for_core(cpu));
 }
 
+int cdc_send_cmd_early(u32 cmd, int cpu)
+{
+	writel_relaxed(cmd, KONA_CDC_VA + CDC_CMD_REG_OFFSET(cpu));
+	return 0;
+}
 
 int cdc_send_cmd(u32 cmd)
 {
@@ -284,6 +290,99 @@ int cdc_get_dbg_bus_val()
 	reg >>= DEBUG_BUS_STATUS_SHIFT;
 	return (int)reg;
 }
+
+int cdc_set_reset_counter(int type, u32 val)
+{
+	u32 reg;
+	u32 mask;
+	u32 shift;
+
+	if (!cdc)
+		return -EINVAL;
+
+	switch (type) {
+	case FD_RESET_TIMER:
+		shift = CDC_RESET_COUNTER_VALUES_FD_RESET_TIMER_SHIFT;
+		mask = CDC_RESET_COUNTER_VALUES_FD_RESET_TIMER_MASK;
+		break;
+
+	case CD_RESET_TIMER:
+		shift = CDC_RESET_COUNTER_VALUES_CD_RESET_TIMER_SHIFT;
+		mask = CDC_RESET_COUNTER_VALUES_CD_RESET_TIMER_MASK;
+		break;
+
+	default:
+		BUG();
+	}
+
+	spin_lock(&cdc->lock);
+	reg = readl_relaxed(cdc->base +
+		CDC_RESET_COUNTER_VALUES_OFFSET);
+	reg &= ~mask;
+	reg |= (val << shift) & mask;
+	writel_relaxed(reg,
+		cdc->base + CDC_RESET_COUNTER_VALUES_OFFSET);
+	spin_unlock(&cdc->lock);
+	return 0;
+}
+
+int cdc_set_switch_counter(int type, u32 val)
+{
+	u32 reg;
+	u32 mask;
+	u32 shift;
+
+	if (!cdc)
+		return -EINVAL;
+
+	switch (type) {
+	case WEAK_SWITCH_TIMER:
+		shift = CDC_SWITCH_COUNTER_VALUES_WEAK_SWITCH_TIMER_SHIFT;
+		mask = CDC_SWITCH_COUNTER_VALUES_WEAK_SWITCH_TIMER_MASK;
+		break;
+
+	case STRONG_SWITCH_TIMER:
+		shift = CDC_SWITCH_COUNTER_VALUES_STRONG_SWITCH_TIMER_SHIFT;
+		mask = CDC_SWITCH_COUNTER_VALUES_STRONG_SWITCH_TIMER_MASK;
+		break;
+
+	default:
+		BUG();
+	}
+
+	spin_lock(&cdc->lock);
+	reg = readl_relaxed(cdc->base +
+		CDC_SWITCH_COUNTER_VALUES_OFFSET);
+	reg &= ~mask;
+	reg |= (val << shift) & mask;
+	writel_relaxed(reg,
+		cdc->base + CDC_SWITCH_COUNTER_VALUES_OFFSET);
+	spin_unlock(&cdc->lock);
+	return 0;
+}
+
+int cdc_master_clk_gating_en(bool en)
+{
+	u32 reg;
+	u32 mask;
+	if (!cdc)
+		return -EINVAL;
+
+	spin_lock(&cdc->lock);
+	reg = readl_relaxed(cdc->base +
+		CDC_ENABLE_MASTER_CLK_GATING_OFFSET);
+	mask = CDC_ENABLE_MASTER_CLK_GATING_ENABLE_MASTER_CLK_GATING_MASK;
+	if (en)
+		reg |= mask;
+	else
+		reg &= ~mask;
+	writel_relaxed(reg,
+		cdc->base + CDC_ENABLE_MASTER_CLK_GATING_OFFSET);
+	spin_unlock(&cdc->lock);
+	return 0;
+}
+
+
 
 
 

@@ -87,6 +87,15 @@ enum {
 	IS_IDLE_OVERRIDE
 };
 
+/*CDC counter timer values...*/
+enum {
+	FD_RESET_TIMER,
+	CD_RESET_TIMER,
+	WEAK_SWITCH_TIMER,
+	STRONG_SWITCH_TIMER,
+};
+
+
 
 struct cdc_pdata {
 	u32 flags;
@@ -109,5 +118,8 @@ int cdc_get_override(u32 type);
 int cdc_set_override(u32 type, u32 val);
 int cdc_dbg_bus_sel(u32 sel);
 int cdc_get_dbg_bus_val(void);
-
+int cdc_send_cmd_early(u32 cmd, int cpu);
+int cdc_set_reset_counter(int type, u32 val);
+int cdc_set_switch_counter(int type, u32 val);
+int cdc_master_clk_gating_en(bool en);
 #endif /*__CDC_H__*/

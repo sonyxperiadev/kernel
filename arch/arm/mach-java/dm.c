@@ -108,8 +108,6 @@ static u32 fdm_attempt;
 static u32 l2_off_en;
 static u32 fdm_en;
 static u32 dbg_log;
-static u32 dbg_test_cnt = 10;
-static u32 gic_restore_test;
 
 /* Data for the entire cluster */
 static DEFINE_SPINLOCK(dormant_entry_lock);
@@ -292,7 +290,7 @@ static u32 is_l2_disabled(void)
 	aux = readl_relaxed(KONA_L2C_VA + L2X0_CTRL);
 	return !(aux & 1);
 #endif
-	return 1;
+	return 0;
 }
 
 static void clear_wakeup_interrupts(void)
@@ -454,7 +452,7 @@ void dormant_enter(u32 svc)
 	int cdc_resp;
 	u32 drmt_status = DORMANT_ENTRY_FAILURE;
 	bool fd = false;
-	bool restore_gic = false;
+	bool restore_gic = true;
 	bool retry;
 	u32 cpu;
 	u32 insurance = 1000;
@@ -615,6 +613,8 @@ void dormant_enter(u32 svc)
 				restore_a15_l2((void *)l2_data);
 			set_spare_power_status(CDC_PWR_NORMAL);
 			cdc_set_pwr_status(CDC_PWR_NORMAL);
+			/*Workaround for HWJAVA-215*/
+			cdc_set_reset_counter(CD_RESET_TIMER, 0);
 
 			cdc_resp = cdc_send_cmd_for_core(CDC_CMD_MDEC, cpu);
 			fd = true;
@@ -624,7 +624,7 @@ void dormant_enter(u32 svc)
 		case CDC_STATUS_RESFDWAIT:
 		case CDC_STATUS_RESCDWAIT:
 			retry = true;
-			wfe();
+			/*wfe();*/
 			break;
 
 		default:
@@ -656,7 +656,7 @@ void dormant_enter(u32 svc)
 	/*For Java, GIC gets powered down only during
 	cluster dormant.
 	*/
-	if (restore_gic || gic_restore_test) {
+	if (restore_gic) {
 		/* continue restoring cpu specific content */
 		restore_gic_distributor_private((void *)
 						__get_cpu_var
@@ -694,12 +694,11 @@ static int dormant_enter_continue(unsigned long data)
 	disable_clean_inv_dcache_v7_l1();
 	write_actlr(read_actlr() & ~A15_SMP_BIT);
 
-#if 0
-	/* Let us always indicate the dormant mode to the SCU
-	 * the external power-controller sees what is in the bypass
-	 * register any way
-	 */
-	if (cpu == MASTER_CORE) {
+/* Inform Secure Core (core 0) that we are entering dormant.
+ * so that Secure core( core 0) will save secure world context
+ * and the return address.
+ */
+	if (cpu == 0) {
 
 		secure_params->core0_reset_address = virt_to_phys(cpu_resume);
 
@@ -707,49 +706,41 @@ static int dormant_enter_continue(unsigned long data)
 
 		secure_params->dram_log_buffer = drmt_buf_phy;
 
-		/* Check if L2 controller is off  or if this is a fake dormant
-		 * if it is, do not bother saving/restoring L2 controlelr
-		 * in the secure side.  For fake dormant, we do not want
-		 * to save and restore the L2 controller since it would not
-		 * be turned off.
-		 */
-
-		if (force_retention_in_idle && !is_l2_disabled()) {
-			/* We want to enter retention in idle path */
-			wfi();
+/* Check if L2 controller is off  or if this is a fake dormant
+ * if it is, do not bother saving/restoring L2 controlelr
+ * in the secure side.  For fake dormant, we do not want
+ * to save and restore the L2 controller since it would not
+ * be turned off.
+ */
+		if (is_l2_disabled()) {
+			local_secure_api(SSAPI_DORMANT_ENTRY_SERV,
+				 (u32)SEC_BUFFER_ADDR,
+				 (u32)SEC_BUFFER_ADDR +
+				 MAX_SECURE_BUFFER_SIZE, 3);
 		} else {
-			if (is_l2_disabled() || fake_dormant) {
-				instrument_dormant_trace(DORMANT_ENTRY_LINUX,
-									1, 0);
-				local_secure_api(SSAPI_DORMANT_ENTRY_SERV,
-						 (u32)SEC_BUFFER_ADDR,
-						 (u32)SEC_BUFFER_ADDR +
-						 MAX_SECURE_BUFFER_SIZE, 3);
-			} else {
-				instrument_dormant_trace(DORMANT_ENTRY_LINUX,
-									0, 0);
-				local_secure_api(SSAPI_DORMANT_ENTRY_SERV,
-						 (u32)SEC_BUFFER_ADDR,
-						 (u32)SEC_BUFFER_ADDR +
-						 MAX_SECURE_BUFFER_SIZE, 2);
-			}
+			local_secure_api(SSAPI_DORMANT_ENTRY_SERV,
+				 (u32)SEC_BUFFER_ADDR,
+				 (u32)SEC_BUFFER_ADDR +
+				 MAX_SECURE_BUFFER_SIZE, 2);
 		}
-
-
 	} else {
-		/* Write the address where we want core-1 to boot */
+		/* Write the address where we want other cores to boot */
 		writel_relaxed(virt_to_phys(cpu_resume),
-			       KONA_CHIPREG_VA + CHIPREG_BOOT_2ND_ADDR_OFFSET);
-
-		instrument_dormant_trace(DORMANT_ENTRY_LINUX, 0, 0);
+				KONA_CHIPREG_VA +
+				CHIPREG_BOOT_2ND_ADDR_OFFSET);
+		writel_relaxed(virt_to_phys(cpu_resume),
+				KONA_CHIPREG_VA +
+				CHIPREG_A9_DORMANT_BOOT_ADDR_REG0_OFFSET);
+		writel_relaxed(virt_to_phys(cpu_resume),
+				KONA_CHIPREG_VA +
+				CHIPREG_A9_DORMANT_BOOT_ADDR_REG1_OFFSET);
 		/* Directly execute WFI for non core-0 cores */
-		wfi();
-
 	}
-#else
+
+	instrument_lpm(LPM_TRACE_DRMNT_CNTNUE,
+						0);
 	wfi();
-#endif
-	return 0;
+	return 1;
 }
 
 #ifdef CONFIG_DEBUG_FS
@@ -806,15 +797,6 @@ static int __init dm_debug_init(void)
 			dm_root_dir, &dbg_log))
 		goto err;
 
-	if (!debugfs_create_u32("dbg_test_cnt", S_IRUGO | S_IWUGO,
-			dm_root_dir, &dbg_test_cnt))
-		goto err;
-
-	if (!debugfs_create_u32("gic_restore_test", S_IRUGO | S_IWUGO,
-			dm_root_dir, &gic_restore_test))
-		goto err;
-
-
 	return 0;
 err:
 	debugfs_remove_recursive(dm_root_dir);
@@ -867,6 +849,9 @@ static int __init dm_init(void)
 	secure_params->core0_reset_address = virt_to_phys(cpu_resume);
 	pr_info("%s: secure_params->core0_reset_address = %x\n", __func__,
 		secure_params->core0_reset_address);
+
+	/*Workaround for HWJAVA-215*/
+	cdc_set_reset_counter(CD_RESET_TIMER, 0);
 
 #ifdef CONFIG_DEBUG_FS
 	dm_debug_init();
