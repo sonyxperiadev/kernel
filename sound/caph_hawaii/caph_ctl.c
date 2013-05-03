@@ -1532,11 +1532,13 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 				&ctl_parm.parm_cfg_ihf,
 				NULL, 0);
 		} else if (ucontrol->value.integer.value[0] == 2) {
+#ifdef CONFIG_CAPH_STEREO_IHF
 			ctl_parm.parm_cfg_ihf.stIHF = TRUE;	/* stereo IHF */
 			isSTIHF = TRUE;	/* stereo IHF */
 			AUDIO_Ctrl_Trigger(ACTION_AUD_CfgIHF,
 				&ctl_parm.parm_cfg_ihf,
 				NULL, 0);
+#endif
 		} else {
 			aWarn("%s, Invalid value for"
 			      "setting IHF mode: %ld, 1-mono, 2-stereo.",
