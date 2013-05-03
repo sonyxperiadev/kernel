@@ -222,7 +222,9 @@ static void process_release(struct work_struct *work)
 	struct axipv_dev *dev = container_of(work, struct axipv_dev,
 						release_work);
 	struct axipv_buff *buff =  dev->buff;
+	unsigned long flags;
 
+	spin_lock_irqsave(&lock, flags);
 	for (i = 0; i < AXIPV_MAX_DISP_BUFF_SUPP; i++) {
 		if (AXIPV_BUFF_TXFERED == buff[i].status) {
 			axipv_debug("releasing %p\n", (void *) buff[i].addr);
@@ -234,6 +236,7 @@ static void process_release(struct work_struct *work)
 					err);
 		}
 	}
+	spin_unlock_irqrestore(&lock, flags);
 }
 
 
@@ -267,6 +270,9 @@ int axipv_init(struct axipv_init_t *init, struct axipv_config_t **config)
 		axipv_err("failed to irq\n");
 		goto fail_irq;
 	}
+#ifdef CONFIG_SMP
+	irq_set_affinity(init->irq, cpumask_of(0));
+#endif
 
 #ifdef AXIPV_HAS_CLK
 	dev->clk = clk_get(NULL, init->clk_name);
@@ -452,11 +458,14 @@ static irqreturn_t axipv_isr(int err, void *dev_id)
 	u32 axipv_base;
 	bool disable_axipv = false, disable_clk = false;
 	u32 curr_reg_val;
+	unsigned long flags;
 
 	axipv_base = dev->base_addr;
-	irq_stat = readl(axipv_base + REG_INTR_STAT);
 
+	spin_lock_irqsave(&lock, flags);
+	irq_stat = readl(axipv_base + REG_INTR_STAT);
 	axipv_debug("irq_stat=0x%x\n", irq_stat);
+
 	if (!irq_stat) {
 		/* If clock is disabled due to wrong state transitions */
 		axipv_clk_enable(dev);
@@ -562,6 +571,8 @@ static irqreturn_t axipv_isr(int err, void *dev_id)
 		dev->state = AXIPV_STOPPED;
 		writel(AXIPV_DISABLED_INT, axipv_base + REG_INTR_CLR);
 	}
+	spin_unlock_irqrestore(&lock, flags);
+
 	if (disable_clk)
 		axipv_clk_disable(dev);
 
@@ -708,9 +719,9 @@ void dump_debug_info(struct axipv_dev *dev)
 	u32 axipv_base;
 	axipv_clk_enable(dev);
 	axipv_base = dev->base_addr;
-	axipv_debug("state=%d, gcurr=%p, gnxt=%p\n", dev->state, (void *)
+	axipv_err("state=%d, gcurr=%p, gnxt=%p\n", dev->state, (void *)
 			g_curr, (void *) g_nxt);
-	axipv_debug("%p %p %p %p %p\n",
+	axipv_err("%p %p %p %p %p\n",
 	(void *) readl(axipv_base+REG_CUR_FRAME),
 	(void *) readl(axipv_base+REG_NXT_FRAME),
 	(void *) readl(axipv_base+REG_CTRL),
@@ -860,7 +871,8 @@ int axipv_change_state(u32 event, struct axipv_config_t *config)
 			spin_unlock_irqrestore(&lock, flags);
 			ret = 0;
 		} else {
-			axipv_err("AXIPV_STOP_IMM ignored\n");
+			axipv_err("AXIPV_STOP_IMM ignored, curr_state=%d\n",
+				dev->state);
 			return -EBUSY;
 		}
 		break;
@@ -882,18 +894,18 @@ int axipv_change_state(u32 event, struct axipv_config_t *config)
 		} while (ctrl && !intr);
 		writel(intr, axipv_base + REG_INTR_CLR);
 
-		spin_lock_irqsave(&lock, flags);
 		if (!ctrl) {
+			spin_lock_irqsave(&lock, flags);
 			dev->state = AXIPV_STOPPED;
 			if (g_curr)
 				axipv_release_buff(g_curr);
 			if (g_nxt && (g_nxt != g_curr))
 				axipv_release_buff(g_nxt);
-			process_release(&dev->release_work);
 			g_curr = 0;
 			g_nxt = 0;
+			spin_unlock_irqrestore(&lock, flags);
+			process_release(&dev->release_work);
 		}
-		spin_unlock_irqrestore(&lock, flags);
 		axipv_clk_disable(dev);
 		break;
 	}
@@ -915,6 +927,72 @@ int axipv_get_state(struct axipv_config_t *config)
 	dev = container_of(config, struct axipv_dev, config);
 
 	return dev->state;
+}
+
+int axipv_check_completion(u32 event, struct axipv_config_t *config)
+{
+	/*
+	 * 1. Interrupt is disabled on the core which is supposed to
+	 *	service axipv_isr => Read INT_STATUS and ack
+	 * 2. Workqueue doesn't run. process_release and if
+	 *	dev->irq_stat is valid, then process_irq
+	 * 3. Unknown case -> Halt AXIPV immediately
+	 */
+	u32 ret = -1, axipv_base;
+	struct axipv_dev *dev;
+	unsigned long flags;
+	u32 int_stat;
+
+	axipv_debug("event=%d\n", event);
+	if (!config)
+		return -EINVAL;
+
+	dev = container_of(config, struct axipv_dev, config);
+	axipv_base = dev->base_addr;
+
+	spin_lock_irqsave(&lock, flags);
+	int_stat = readl(axipv_base + REG_INTR_STAT);
+	switch (event) {
+	case AXIPV_START:
+		if (int_stat & PV_START_THRESH_INT) {
+			axipv_err("ISR was pending\n");
+			writel(PV_START_THRESH_INT, axipv_base + REG_INTR_CLR);
+			ret = 0;
+		} else if (dev->irq_stat & PV_START_THRESH_INT) {
+				axipv_err("WQ was pending\n");
+				dev->irq_stat &= (~PV_START_THRESH_INT);
+				ret = 0;
+		} else {
+			axipv_err("%d wasn't triggered\n", PV_START_THRESH_INT);
+			ret = -1;
+		}
+		break;
+	case AXIPV_STOP_EOF:
+		if (int_stat & FRAME_END_INT) {
+			axipv_err("ISR was pending\n");
+			writel(FRAME_END_INT, axipv_base + REG_INTR_CLR);
+			ret = 0;
+		} else if (dev->irq_stat & FRAME_END_INT) {
+			axipv_err("work queue was pending\n");
+			dev->irq_stat &= (~FRAME_END_INT);
+			ret = 0;
+		} else {
+			axipv_err("%d wan't triggered\n", FRAME_END_INT);
+			ret = -1;
+		}
+		if (0 == ret) {
+			axipv_err("buff set to available\n");
+			u32 curr_buff = readl(axipv_base + REG_CUR_FRAME);
+			axipv_set_buff_status(dev->buff, curr_buff,
+						AXIPV_BUFF_AVAILABLE);
+		}
+		break;
+	default:
+		axipv_err("%d unsupported\n", event);
+		break;
+	}
+	spin_unlock_irqrestore(&lock, flags);
+	return ret;
 }
 
 /***************************** DEBUG API **************************************/

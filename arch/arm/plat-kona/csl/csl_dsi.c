@@ -291,9 +291,14 @@ static CSL_LCD_RES_T cslDsiAxipvStart(DSI_UPD_REQ_MSG_T *updMsg)
 		cslDsiAxipvPollInt(updMsg);
 	else if (OSSTATUS_SUCCESS != OSSEMAPHORE_Obtain(updMsg->dsiH->semaAxipv,
 		TICKS_IN_MILLISECONDS(100))) {
-		pr_err("Timed out waiting for PV_START_THRESH interrupt\n");
-		axipv_change_state(AXIPV_STOP_IMM, axipvCfg);
-		return CSL_LCD_ERR;
+		int tx_done = axipv_check_completion(AXIPV_START, axipvCfg);
+		if (tx_done < 0) {
+			pr_err("Timed out waiting for PV_START_THRESH intr\n");
+			axipv_change_state(AXIPV_STOP_IMM, axipvCfg);
+			return CSL_LCD_ERR;
+		} else {
+			pr_err("csl_dsi:recovered %d\n", __LINE__);
+		}
 	}
 	if (axipvCfg->cmd == false)
 		chal_dsi_de0_enable(updMsg->dsiH->chalH, TRUE);
@@ -307,18 +312,25 @@ static CSL_LCD_RES_T cslDsiAxipvStop(DSI_UPD_REQ_MSG_T *updMsg)
 {
 	struct axipv_config_t *axipvCfg = updMsg->dsiH->axipvCfg;
 	struct pv_config_t *pvCfg = updMsg->dsiH->pvCfg;
+	int tx_done;
 
 	if (!axipvCfg) {
 		pr_err("axipvCfg is NULL\n");
 		return CSL_LCD_BAD_HANDLE;
 	}
-	axipv_change_state(AXIPV_STOP_IMM, axipvCfg);
-	if (!updMsg->dsiH->dispEngine) {
-		if (!pvCfg) {
-			pr_err("pvCfg is NULL\n");
-			return CSL_LCD_BAD_HANDLE;
+	tx_done = axipv_check_completion(AXIPV_STOP_EOF, axipvCfg);
+	if (tx_done < 0) {
+		axipv_change_state(AXIPV_STOP_IMM, axipvCfg);
+		if (!updMsg->dsiH->dispEngine) {
+			if (!pvCfg) {
+				pr_err("csl_dsi: pvCfg is NULL %d\n", __LINE__);
+				return CSL_LCD_BAD_HANDLE;
+			}
+			pv_change_state(PV_STOP_IMM, pvCfg);
+			return CSL_LCD_OS_TOUT;
 		}
-		pv_change_state(PV_STOP_IMM, pvCfg);
+	} else {
+		pr_err("csl_dsi: recovered %d\n", __LINE__);
 	}
 	return CSL_LCD_OK;
 }
@@ -365,6 +377,9 @@ static void pv_eof_cb()
 	OSSEMAPHORE_Release(dsiH->semaPV);
 }
 
+static DEFINE_SPINLOCK(lock);
+static unsigned long flags;
+
 /*
  *
  * Function Name:  cslDsi0Stat_LISR
@@ -374,11 +389,14 @@ static void pv_eof_cb()
  */
 static irqreturn_t cslDsi0Stat_LISR(int i, void *j)
 {
+	u32 int_status;
 	DSI_HANDLE dsiH = &dsiBus[0];
 
-	uint32_t int_status = chal_dsi_get_int(dsiH->chalH);
+	spin_lock_irqsave(&lock, flags);
+	int_status = chal_dsi_get_int(dsiH->chalH);
 	if (!int_status) {
 		pr_err("DSI interrupt status is NULL. Hence ignoring\n");
+		spin_unlock_irqrestore(&lock, flags);
 		return IRQ_HANDLED;
 	}
 	if (int_status & (1 << 22))
@@ -388,21 +406,9 @@ static irqreturn_t cslDsi0Stat_LISR(int i, void *j)
 	chal_dsi_clr_int(dsiH->chalH, int_status);
 
 	OSSEMAPHORE_Release(dsiH->semaInt);
+	spin_unlock_irqrestore(&lock, flags);
 
 	return IRQ_HANDLED;
-}
-
-/*
- *
- * Function Name:  cslDsi0Stat_HISR
- *
- * Description:    DSI Controller 0 HISR
- *
- */
-static void cslDsi0Stat_HISR(void)
-{
-	DSI_HANDLE dsiH = &dsiBus[0];
-	OSSEMAPHORE_Release(dsiH->semaInt);
 }
 
 
@@ -452,6 +458,7 @@ static void cslDsi0UpdateTask(void)
 								  timeOut_ms));
 
 		if (osStat != OSSTATUS_SUCCESS) {
+			int tx_done;
 			if (osStat == OSSTATUS_TIMEOUT) {
 				LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI] %s: "
 					"TIMED OUT While waiting for "
@@ -464,7 +471,15 @@ static void cslDsi0UpdateTask(void)
 				res = CSL_LCD_OS_ERR;
 			}
 
-			cslDsiPixTxStop(&updMsg);
+			tx_done = cslDsiPixTxStop(&updMsg);
+			if (tx_done == CSL_LCD_OK) {
+				osStat = OSSTATUS_SUCCESS;
+				res = CSL_LCD_OK;
+				pr_err("csl_dsi: recovered %d\n", __LINE__);
+			} else {
+				pr_err("csl_dsi: didn't recovered %d\n",
+					__LINE__);
+			}
 		}
 
 		if (!dsiH->vmode) {
@@ -590,6 +605,9 @@ Boolean cslDsiOsInit(DSI_HANDLE dsiH)
 		       __func__, __FILE__, __LINE__, dsiH->interruptId);
 		goto free_irq;
 	}
+#ifdef CONFIG_SMP
+	irq_set_affinity(dsiH->interruptId, cpumask_of(0));
+#endif
 
 	return res;
 
@@ -900,6 +918,43 @@ static void cslDsiDisInt(DSI_HANDLE dsiH)
 	chal_dsi_clr_int(dsiH->chalH, 0xFFFFFFFF);
 }
 
+
+static inline int cslDsiCheckCompletion(DSI_HANDLE dsiH)
+{
+	int ret = -1;
+	u32 int_status, enabled_int;
+#if 0
+	pr_err("stat = 0x%x\n", readl(HW_IO_PHYS_TO_VIRT(0x3c200028)));
+	pr_err("istat= 0x%x\n", readl(HW_IO_PHYS_TO_VIRT(0x3c200030)));
+	pr_err("ien= 0x%x\n", readl(HW_IO_PHYS_TO_VIRT(0x3c200034)));
+	pr_err("pktc1= 0x%x\n", readl(HW_IO_PHYS_TO_VIRT(0x3c200004)));
+#endif
+	spin_lock_irqsave(&lock, flags);
+
+	/* Similar to cslDsi0Stat_LISR but doesn't signal the semaphore */
+	int_status = chal_dsi_get_int(dsiH->chalH);
+	if (!int_status) {
+		pr_info("Intr stat is NULL\n");
+		ret = -1;
+		goto done;
+	}
+	if (int_status & (1 << 22))
+		pr_info("dsi int fifo error 0x%x\n", int_status);
+
+	enabled_int = chal_dsi_get_ena_int(dsiH->chalH);
+	if (int_status & enabled_int) {
+		pr_err("DSI ISR was pending\n");
+		chal_dsi_ena_int(dsiH->chalH, 0);
+		chal_dsi_clr_int(dsiH->chalH, int_status);
+		ret = 0;
+		goto done;
+	}
+done:
+	spin_unlock_irqrestore(&lock, flags);
+
+	return ret;
+}
+
 /*
  *
  * Function Name:  cslDsiWaitForInt
@@ -916,8 +971,7 @@ static CSL_LCD_RES_T cslDsiWaitForInt(DSI_HANDLE dsiH, UInt32 tout_msec)
 	    OSSEMAPHORE_Obtain(dsiH->semaInt, TICKS_IN_MILLISECONDS(tout_msec));
 
 	if (osRes != OSSTATUS_SUCCESS) {
-		cslDsiDisInt(dsiH);
-
+		int tx_done;
 		if (osRes == OSSTATUS_TIMEOUT) {
 			LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI] %s: "
 				"ERR Timed Out!\n", __func__);
@@ -927,7 +981,16 @@ static CSL_LCD_RES_T cslDsiWaitForInt(DSI_HANDLE dsiH, UInt32 tout_msec)
 				"ERR OS Err...!\n", __func__);
 			res = CSL_LCD_OS_ERR;
 		}
+		/* If DSI interrupt was blocked */
+		tx_done = cslDsiCheckCompletion(dsiH);
+		if (tx_done == 0) {
+			pr_err("csl_dsi: DSI recovered %d\n", __LINE__);
+			res = CSL_LCD_OK;
+			goto done;
+		}
+		cslDsiDisInt(dsiH);
 	}
+done:
 	return res;
 }
 
@@ -1789,16 +1852,26 @@ CSL_LCD_RES_T CSL_DSI_Suspend(CSL_LCD_HANDLE vcH)
 	axipv_change_state(AXIPV_STOP_EOF, axipvCfg);
 	osStat = OSSEMAPHORE_Obtain(dsiH->semaAxipv, msecs_to_jiffies(100));
 	if (osStat == OSSTATUS_TIMEOUT) {
-		pr_err("couldn't stop AXIPV at EOF!\n");
-		axipv_change_state(AXIPV_STOP_IMM, axipvCfg);
+		int tx_done = axipv_check_completion(AXIPV_STOP_EOF, axipvCfg);
+		if (tx_done < 0) {
+			pr_err("couldn't stop AXIPV at EOF!\n");
+			axipv_change_state(AXIPV_STOP_IMM, axipvCfg);
+		} else {
+			pr_err("csl_dsi: recovered %d\n", __LINE__);
+		}
 	}
 	pv_change_state(PV_STOP_EOF_ASYNC, pvCfg);
 	/*cslDsiEnaIntEvent(dsiH, (UInt32)CHAL_DSI_ISTAT_PHY_CLK_ULPS);*/
 	/*wait for pv to stop*/
 	osStat = OSSEMAPHORE_Obtain(dsiH->semaPV, msecs_to_jiffies(100));
 	if (osStat == OSSTATUS_TIMEOUT) {
-		pr_err("couldn't stop PV at EOF!");
-		pv_change_state(PV_STOP_IMM, pvCfg);
+		int tx_done = check_pv_state(PV_STOP_EOF_ASYNC, pvCfg);
+		if (tx_done < 0) {
+			pr_err("couldn't stop PV at EOF!");
+			pv_change_state(PV_STOP_IMM, pvCfg);
+		} else {
+			pr_err("csl_dsi: recovered %d\n", __LINE__);
+		}
 	}
 	/*wait for DSI lanes to go to low power*/
 	/*cslDsiWaitForInt(dsiH, TICKS_IN_MILLISECONDS(50));*/
@@ -2049,7 +2122,7 @@ CSL_LCD_RES_T CSL_DSI_UpdateCmVc(CSL_LCD_HANDLE vcH,
 								  timeOut_ms));
 
 			if (osStat != OSSTATUS_SUCCESS) {
-				cslDsiPixTxStop(&updMsgCm);
+				int tx_done;
 				if (osStat == OSSTATUS_TIMEOUT) {
 					LCD_DBG(LCD_DBG_ERR_ID,
 					"[CSL DSI][%d] %s: "
@@ -2062,6 +2135,11 @@ CSL_LCD_RES_T CSL_DSI_UpdateCmVc(CSL_LCD_HANDLE vcH,
 					"ERR OS Err...\n",
 					dsiH->bus, __func__);
 					res = CSL_LCD_OS_ERR;
+				}
+				tx_done = cslDsiPixTxStop(&updMsgCm);
+				if (tx_done == CSL_LCD_OK) {
+					osStat = OSSTATUS_SUCCESS;
+					res = CSL_LCD_OK;
 				}
 			}
 
@@ -2463,7 +2541,7 @@ CSL_LCD_RES_T CSL_DSI_Init(const pCSL_DSI_CFG dsiCfg)
 			dsiH->dsiCoreRegAddr = CSL_DSI0_BASE_ADDR;
 			dsiH->interruptId = CSL_DSI0_IRQ;
 			dsiH->lisr = cslDsi0Stat_LISR;
-			dsiH->hisr = cslDsi0Stat_HISR;
+			dsiH->hisr = NULL;
 			dsiH->task = cslDsi0UpdateTask;
 			dsiH->dma_cb = cslDsi0EofDma;
 		}

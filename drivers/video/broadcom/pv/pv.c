@@ -165,6 +165,9 @@ int pv_init(struct pv_init_t *init, struct pv_config_t **config)
 		pv_err("failed to get irq\n");
 		goto fail;
 	}
+#ifdef CONFIG_SMP
+	irq_set_affinity(init->irq, cpumask_of(0));
+#endif
 #ifdef PV_HAS_CLK
 	dev->apb_clk = clk_get(NULL, init->apb_clk_name);
 	if (IS_ERR(dev->apb_clk)) {
@@ -493,4 +496,24 @@ int pv_get_state(struct pv_config_t *config)
 	dev = container_of(config, struct pv_dev, vid_config);
 
 	return dev->state;
+}
+
+
+int check_pv_state(int event, struct pv_config_t *config)
+{
+	u32 pv_base;
+	struct pv_dev *dev;
+	int ret = -EINVAL;
+
+	if (!config)
+		return -EINVAL;
+
+	dev = container_of(config, struct pv_dev, vid_config);
+	pv_base = dev->base_addr;
+
+	pv_err("event=%d istat=0x%x stat=0x%x ien=0x%x\n", event,
+		readl(pv_base + REG_PV_INTSTAT),
+		readl(pv_base + REG_PV_STAT),
+		readl(pv_base + REG_PV_INTEN));
+	return 0;
 }
