@@ -309,12 +309,18 @@ cVoid chal_dsi_phy_afe_on(CHAL_HANDLE handle, pCHAL_DSI_AFE_CFG afeCfg)
 	    | DSI1_PHY_AFEC0_PD_MASK
 	    | DSI1_PHY_AFEC0_RESET_MASK
 	    | DSI1_PHY_AFEC0_DDR2CLK_EN_MASK
+	    | DSI1_PHY_AFEC0_IDR_DLANE3_MASK
+	    | DSI1_PHY_AFEC0_IDR_DLANE2_MASK
+	    | DSI1_PHY_AFEC0_IDR_DLANE1_MASK
 	    | DSI1_PHY_AFEC0_IDR_DLANE0_MASK | DSI1_PHY_AFEC0_IDR_CLANE_MASK;
 
 	afeVal = DSI_REG_FIELD_SET(DSI1_PHY_AFEC0, CTATADJ, afeCfg->afeCtaAdj)
 	    | DSI_REG_FIELD_SET(DSI1_PHY_AFEC0, PTATADJ, afeCfg->afePtaAdj)
 	    | DSI_REG_FIELD_SET(DSI1_PHY_AFEC0, IDR_CLANE, afeCfg->afeClkIdr)
-	    | DSI_REG_FIELD_SET(DSI1_PHY_AFEC0, IDR_DLANE0, afeCfg->afeDlIdr);
+	    | DSI_REG_FIELD_SET(DSI1_PHY_AFEC0, IDR_DLANE0, afeCfg->afeDlIdr)
+	    | DSI_REG_FIELD_SET(DSI1_PHY_AFEC0, IDR_DLANE1, afeCfg->afeDlIdr)
+	    | DSI_REG_FIELD_SET(DSI1_PHY_AFEC0, IDR_DLANE2, afeCfg->afeDlIdr)
+	    | DSI_REG_FIELD_SET(DSI1_PHY_AFEC0, IDR_DLANE3, afeCfg->afeDlIdr);
 
 /*    if( !afeCfg->afeBandGapOn ) */
 /*        afeVal |= DSI_REG_FIELD_SET( DSI1_PHY_AFEC0, PD_BG, 1 ); */
@@ -712,6 +718,20 @@ cVoid chal_dsi_on(CHAL_HANDLE handle, pCHAL_DSI_MODE dsiMode)
 	ctrl |= DSI_REG_FIELD_SET(DSI1_PHYC, PHY_CLANE_EN, 1);
 
 	DSI_REG_WRITE_MASKED(pDev->baseAddr, DSI1_PHYC, mask, ctrl);
+}
+
+/*
+ *
+ *  Function Name:  chal_dsi_get_ena_int
+ *
+ *  Description:    Get enabled DSI Interrupts
+ *
+ */
+cUInt32 chal_dsi_get_ena_int(CHAL_HANDLE handle)
+{
+	struct CHAL_DSI *pDev = (struct CHAL_DSI *)handle;
+
+	return BRCM_READ_REG(pDev->baseAddr, DSI1_INT_EN);
 }
 
 /*

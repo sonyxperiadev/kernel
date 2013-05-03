@@ -374,7 +374,55 @@ int pv_change_state(int event, struct pv_config_t *vid_config)
 			return -EBUSY;
 		}
 		break;
-	case PV_STOP_EOF:
+	case PV_RESUME_STREAM:
+		if (PV_STOPPED == dev->state) {
+			writel((readl(pv_base + REG_PV_INTEN)
+				& ~VFP_END), pv_base + REG_PV_INTEN);
+			writel(readl(pv_base + REG_PV_C) | PVEN,
+				pv_base + REG_PV_C);
+			writel(readl(pv_base + REG_PV_VC) | VIDEN,
+					pv_base + REG_PV_VC);
+			if (!vid_config->cont) {
+				writel((readl(pv_base + REG_PV_INTEN)
+				| VFP_END), pv_base + REG_PV_INTEN);
+				dev->state = PV_STOPPING;
+			} else {
+				dev->state = PV_ENABLED;
+			}
+			ret = 0;
+		} else {
+			return -EBUSY;
+		}
+		break;
+	case PV_PAUSE_STREAM_SYNC:
+		if (PV_ENABLED == dev->state) {
+			unsigned long flags;
+			if (vid_config->cont) {
+				writel(readl(pv_base + REG_PV_VC) & ~VIDEN,
+					pv_base + REG_PV_VC);
+				spin_lock_irqsave(&lock, flags);
+				dev->state = PV_STOPPING;
+				spin_unlock_irqrestore(&lock, flags);
+			}
+		}
+
+		/* In case of !cont mode, PV would be in stopping state */
+		if (PV_STOPPING == dev->state) {
+			unsigned long flags;
+			while (1) {
+				if (readl(pv_base + REG_PV_STAT)
+					& VID_IDLE_STAT)
+					break;
+				usleep_range(50, 60);
+			}
+
+			spin_lock_irqsave(&lock, flags);
+			dev->state = PV_STOPPED;
+			spin_unlock_irqrestore(&lock, flags);
+		}
+		ret = 0;
+		break;
+	case PV_STOP_EOF_ASYNC:
 		if (PV_ENABLED == dev->state) {
 			unsigned long flags;
 			if (vid_config->cont) {

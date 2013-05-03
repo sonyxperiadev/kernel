@@ -1059,6 +1059,12 @@ exit_err:
 	return res;
 }
 
+#define WAIT_FOR_FIFO_FLUSH_US 10
+#define WAIT_GENERAL_US 10
+#define WAIT_FOR_RETRY_CNT 20
+#define PKT1_STAT_MASK (CHAL_DSI_STAT_TXPKT1_END	\
+			| CHAL_DSI_STAT_TXPKT1_DONE	\
+			| CHAL_DSI_STAT_TXPKT1_BUSY)
 /*
  *
  * Function Name:  CSL_DSI_SendPacket
@@ -1079,6 +1085,7 @@ CSL_LCD_RES_T CSL_DSI_SendPacket(CSL_LCD_HANDLE client,
 	UInt32 stat;
 	UInt32 event;
 	UInt32 pfifo_len = 0;
+	int pkt_to_be_enabled;
 
 	clientH = (DSI_CLIENT) client;
 	dsiH = (DSI_HANDLE)clientH->lcdH;
@@ -1116,21 +1123,31 @@ CSL_LCD_RES_T CSL_DSI_SendPacket(CSL_LCD_HANDLE client,
 	txPkt.isLP = command->isLP;
 	txPkt.endWithBta = command->endWithBta;
 	txPkt.isTe = isTE;
-	txPkt.vmWhen = videoEnabled ? CHAL_DSI_CMND_WHEN_VBP : CHAL_DSI_CMND_WHEN_BEST_EFFORT;
+	txPkt.vmWhen = CHAL_DSI_CMND_WHEN_BEST_EFFORT;
 	txPkt.repeat = 1;
-	txPkt.start = 1;
+	/* Don't start here if PV is enabled,
+	 * instead wait for video stream to stop */
+	txPkt.start = !videoEnabled;
+	pkt_to_be_enabled = !txPkt.start;
 	txPkt.dispEngine = 1;
 
 	chal_dsi_clr_status(dsiH->chalH, 0xFFFFFFFF);
 
 	if (!clientH->hasLock) {
+		u32 dsi_stat, dsi_i_stat;
 		if (txPkt.endWithBta) {
 			event = CHAL_DSI_ISTAT_PHY_RX_TRIG
 			    | CHAL_DSI_ISTAT_RX2_PKT | CHAL_DSI_ISTAT_RX1_PKT;
 		} else {
 			event = CHAL_DSI_ISTAT_TXPKT1_DONE;
 		}
-		cslDsiEnaIntEvent(dsiH, event);
+		dsi_stat = chal_dsi_get_status(dsiH->chalH);
+		dsi_i_stat = chal_dsi_get_int(dsiH->chalH);
+		if ((dsi_stat | dsi_i_stat) & PKT1_STAT_MASK)
+			pr_err("dsi_stat=0x%x dsi_i_stat=0x%x\n",
+				dsi_stat, dsi_i_stat);
+		if (txPkt.start)
+			cslDsiEnaIntEvent(dsiH, event);
 	} else {
 		if (txPkt.endWithBta) {
 			event = CHAL_DSI_STAT_PHY_RX_TRIG
@@ -1230,6 +1247,75 @@ CSL_LCD_RES_T CSL_DSI_SendPacket(CSL_LCD_HANDLE client,
 		}
 	}
 
+	if (pkt_to_be_enabled) {
+		u32 cnt2 = 0;
+		u32 dsi_stat, int_status, int_en_mask;
+		unsigned long pkt_flags;
+		pv_change_state(PV_PAUSE_STREAM_SYNC, dsiH->pvCfg);
+		local_irq_save(pkt_flags);
+		udelay(WAIT_FOR_FIFO_FLUSH_US);
+		dsi_stat = chal_dsi_get_status(dsiH->chalH);
+		if (dsi_stat & PKT1_STAT_MASK) {
+			chal_dsi_clr_status(dsiH->chalH, PKT1_STAT_MASK);
+			pr_err("DSI status not cleared %d\n", __LINE__);
+			dsi_stat = chal_dsi_get_status(dsiH->chalH);
+			if (dsi_stat & PKT1_STAT_MASK)
+				pr_err("DSI status not cleared %d\n", __LINE__);
+		}
+		int_status = chal_dsi_get_int(dsiH->chalH);
+		int_en_mask = chal_dsi_get_ena_int(dsiH->chalH);
+
+		if (int_status || int_en_mask) {
+			pr_err("DSI Error: int_status=0x%x int_en_mask=0x%x\n",
+				int_status, int_en_mask);
+		}
+		cslDsiDisInt(dsiH);
+		chal_dsi_de0_enable(dsiH->chalH, FALSE);
+		udelay(WAIT_GENERAL_US);
+		chal_dsi_tx_start(dsiH->chalH, TX_PKT_ENG_1, TRUE);
+start_tx:
+		udelay(WAIT_GENERAL_US);
+		dsi_stat = chal_dsi_get_status(dsiH->chalH) & PKT1_STAT_MASK;
+		if (!dsi_stat) {
+			cnt2++;
+			if ((cnt2 % WAIT_FOR_RETRY_CNT) != 0)
+				goto start_tx;
+			/* Retry after 10*20 = 200us */
+			chal_dsi_tx_start(dsiH->chalH, TX_PKT_ENG_1, FALSE);
+			udelay(WAIT_GENERAL_US);
+			chal_dsi_tx_start(dsiH->chalH, TX_PKT_ENG_1, TRUE);
+			goto start_tx;
+		}
+		while (dsi_stat & CHAL_DSI_STAT_TXPKT1_BUSY) {
+			udelay(WAIT_GENERAL_US);
+			dsi_stat = chal_dsi_get_status(dsiH->chalH);
+		}
+		if (!(dsi_stat & PKT1_STAT_MASK))
+			pr_err("something fishy\n");
+		chal_dsi_clr_status(dsiH->chalH, PKT1_STAT_MASK);
+		dsi_stat = chal_dsi_get_status(dsiH->chalH);
+		if (dsi_stat & PKT1_STAT_MASK) {
+			pr_err("status not cleared %d\n", __LINE__);
+			chal_dsi_clr_status(dsiH->chalH, PKT1_STAT_MASK);
+		}
+		chal_dsi_de0_enable(dsiH->chalH, TRUE);
+		udelay(WAIT_GENERAL_US);
+		pv_change_state(PV_RESUME_STREAM, dsiH->pvCfg);
+		local_irq_restore(pkt_flags);
+		if (txPkt.endWithBta) {
+			stat = chal_dsi_get_status(dsiH->chalH);
+			chalRes = chal_dsi_read_reply(dsiH->chalH, stat,
+						      (pCHAL_DSI_REPLY)
+						      command->reply);
+			if (chalRes == CHAL_DSI_RX_NO_PKT) {
+				pr_err("BTA- No Data Received\n");
+				res = CSL_LCD_INT_ERR;
+			}
+		}
+		goto exit_ok;
+	}
+
+
 	if (!clientH->hasLock) {
 		res = cslDsiWaitForInt(dsiH, 100);
 		stat = chal_dsi_get_status(dsiH->chalH);
@@ -1253,8 +1339,10 @@ CSL_LCD_RES_T CSL_DSI_SendPacket(CSL_LCD_HANDLE client,
 					cslDsiEnaIntEvent(dsiH, event);
 				chal_dsi_tx_start(dsiH->chalH, TX_PKT_ENG_1,
 						FALSE);
-				chal_dsi_tx_start(dsiH->chalH, TX_PKT_ENG_1,
-						TRUE);
+				if (txPkt.start)
+					chal_dsi_tx_start(dsiH->chalH,
+						TX_PKT_ENG_1, TRUE);
+				pkt_to_be_enabled = !txPkt.start;
 				if (!clientH->hasLock) {
 					cslDsiEnaIntEvent(dsiH, event);
 					res = cslDsiWaitForInt(dsiH, 100);
@@ -1297,8 +1385,12 @@ read_reply:
 					cslDsiEnaIntEvent(dsiH, event);
 				chal_dsi_tx_start(dsiH->chalH, TX_PKT_ENG_1,
 						FALSE);
-				chal_dsi_tx_start(dsiH->chalH, TX_PKT_ENG_1,
-						TRUE);
+				if (pkt_to_be_enabled)
+					pr_err("PV hasn't trigerred!\n");
+				if (txPkt.start)
+					chal_dsi_tx_start(dsiH->chalH,
+						TX_PKT_ENG_1, TRUE);
+				pkt_to_be_enabled = !txPkt.start;
 				if (!clientH->hasLock) {
 					cslDsiEnaIntEvent(dsiH, event);
 					res = cslDsiWaitForInt(dsiH, 100);
@@ -1324,6 +1416,7 @@ exit_err:
 	cslDsiDisInt(dsiH);
 	cslDsiClearAllFifos(dsiH);
 exit_ok:
+	pkt_to_be_enabled = 0;
 	chal_dsi_de1_enable(dsiH->chalH, FALSE);
 	chal_dsi_tx_start(dsiH->chalH, TX_PKT_ENG_1, FALSE);
 
@@ -1699,7 +1792,7 @@ CSL_LCD_RES_T CSL_DSI_Suspend(CSL_LCD_HANDLE vcH)
 		pr_err("couldn't stop AXIPV at EOF!\n");
 		axipv_change_state(AXIPV_STOP_IMM, axipvCfg);
 	}
-	pv_change_state(PV_STOP_EOF, pvCfg);
+	pv_change_state(PV_STOP_EOF_ASYNC, pvCfg);
 	/*cslDsiEnaIntEvent(dsiH, (UInt32)CHAL_DSI_ISTAT_PHY_CLK_ULPS);*/
 	/*wait for pv to stop*/
 	osStat = OSSEMAPHORE_Obtain(dsiH->semaPV, msecs_to_jiffies(100));

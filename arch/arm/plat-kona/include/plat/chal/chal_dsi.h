@@ -127,8 +127,10 @@ extern "C" {
 #define     CHAL_DSI_STAT_RX2_PKT                   (0x00000080)	/*07 */
 #define     CHAL_DSI_STAT_RX1_PKT                   (0x00000040)	/*06 */
 
+#define     CHAL_DSI_STAT_TXPKT2_BUSY               (0x00000020)
 #define     CHAL_DSI_STAT_TXPKT2_DONE               (0x00000010)	/*04 HERA only */
 #define     CHAL_DSI_STAT_TXPKT2_END                (0x00000008)	/*03 HERA only */
+#define     CHAL_DSI_STAT_TXPKT1_BUSY               (0x00000004)
 #define     CHAL_DSI_STAT_TXPKT1_DONE               (0x00000002)	/*01 */
 #define     CHAL_DSI_STAT_TXPKT1_END                (0x00000001)	/*00 */
 
@@ -360,6 +362,9 @@ extern "C" {
 *  @note
 *****************************************************************************/
 	cVoid chal_dsi_ena_int(CHAL_HANDLE handle, cUInt32 intMask);
+
+	/* To get the interrupts that have been enabled */
+	cUInt32 chal_dsi_get_ena_int(CHAL_HANDLE handle);
 
 /**
 *
