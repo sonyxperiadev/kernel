@@ -1537,9 +1537,17 @@ static int kona_fb_reboot_cb(struct notifier_block *nb,
 		pr_err("Display is already suspended, nothing to do\n");
 		goto exit;
 	}
+
+	mutex_lock(&fb->update_sem);
+	fb->g_stop_drawing = 1;
+	if (!fb->display_info->vmode)
+		wait_for_completion_interruptible_timeout(
+		&fb->prev_buf_done_sem,	msecs_to_jiffies(100));
 	kona_clock_start(fb);
+	fb->display_ops->power_control(fb->display_hdl, CTRL_SCREEN_OFF);
 	disable_display(fb);
 	kona_clock_stop(fb);
+	mutex_unlock(&fb->update_sem);
 	pr_err("Display disabled\n");
 exit:
 	return 0;
