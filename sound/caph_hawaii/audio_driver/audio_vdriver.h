@@ -132,7 +132,7 @@ struct _AudioCompfilter_t {
 };
 #define AudioCompfilter_t struct _AudioCompfilter_t
 
-#ifndef CONFIG_BCM_MODEM
+#if (!defined(CONFIG_BCM_MODEM) || defined(JAVA_ZEBU_TEST))
 struct _AudioSysParm_t {
 	UInt16 mic_pga;
 	UInt16 voice_volume_max;	/* in dB. */
@@ -278,7 +278,7 @@ void AUDDRV_DisableDSPInput(int stop);
 
 SysMultimediaAudioParm_t *MMAudParmP(void);
 
-#ifdef CONFIG_BCM_MODEM
+#if defined(CONFIG_BCM_MODEM) && (!defined(JAVA_ZEBU_TEST))
 SysAudioParm_t *AudParmP(void);
 #else
 AudioSysParm_t *AudParmP(void);

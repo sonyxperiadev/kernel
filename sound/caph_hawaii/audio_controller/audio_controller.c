@@ -735,7 +735,7 @@ void AUDCTRL_SetTelephonySpkrVolume(AUDIO_SINK_Enum_t speaker,
 	AudioApp_t app;
 	AudioMode_t mode;
 
-#ifdef CONFIG_BCM_MODEM
+#if defined(CONFIG_BCM_MODEM) && (!defined(JAVA_ZEBU_TEST))
 	SysAudioParm_t *p;
 #else
 	AudioSysParm_t *p;
@@ -1789,7 +1789,7 @@ void AUDCTRL_SetPlayVolume(AUDIO_SOURCE_Enum_t source,
 	AudioApp_t app;
 	SysMultimediaAudioParm_t *p1 = NULL;
 
-#ifdef CONFIG_BCM_MODEM
+#if defined(CONFIG_BCM_MODEM) && (!defined(JAVA_ZEBU_TEST))
 	SysAudioParm_t *p = NULL;
 #else
 	AudioSysParm_t *p = NULL;
@@ -2082,7 +2082,7 @@ void AUDCTRL_SetPlayMute(AUDIO_SOURCE_Enum_t source,
 	int mixInGain, mixInGainR;
 	SysMultimediaAudioParm_t *p1 = NULL;
 
-#ifdef CONFIG_BCM_MODEM
+#if defined(CONFIG_BCM_MODEM) && (!defined(JAVA_ZEBU_TEST))
 	SysAudioParm_t *p = NULL;
 #else
 	AudioSysParm_t *p = NULL;
@@ -4201,7 +4201,7 @@ static void setExternAudioGain(AudioMode_t mode, AudioApp_t app)
 	int pmu_gain = 0;
 	SysMultimediaAudioParm_t *p1 = NULL;
 
-#ifdef CONFIG_BCM_MODEM
+#if defined(CONFIG_BCM_MODEM) && (!defined(JAVA_ZEBU_TEST))
 	SysAudioParm_t *p = NULL;
 #else
 	AudioSysParm_t *p = NULL;
@@ -4344,7 +4344,7 @@ static void fillUserVolSetting(AudioMode_t mode, AudioApp_t app)
 {
 	SysMultimediaAudioParm_t *p1;
 
-#ifdef CONFIG_BCM_MODEM
+#if defined(CONFIG_BCM_MODEM) && (!defined(JAVA_ZEBU_TEST))
 	SysAudioParm_t *p;
 #else
 	AudioSysParm_t *p;

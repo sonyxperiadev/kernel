@@ -24,6 +24,10 @@ ifdef CONFIG_BCM_MODEM
 subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -DENABLE_DMA_VOICE
 endif
 
+ifdef CONFIG_ARCH_JAVA
+subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -DJAVA_ZEBU_TEST
+endif
+
 subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -DENABLE_BT16
 subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -DCAPH_48K_MONO_PASSTHRU
 
@@ -57,19 +61,19 @@ subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./arch/arm/plat-kona/include/plat/
 subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./arch/arm/plat-kona/include/mach
 subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./drivers/char/broadcom/
 
-#ifdef CONFIG_ARCH_HAWAII
+ifdef CONFIG_ARCH_HAWAII
 subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./arch/arm/mach-hawaii/include/mach/rdb_A0/
 subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./arch/arm/mach-hawaii/
 subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./arch/arm/mach-hawaii/include/
 subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./arch/arm/mach-hawaii/include/mach/
-#endif
+endif
 
-#ifdef CONFIG_ARCH_JAVA
+ifdef CONFIG_ARCH_JAVA
 subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./arch/arm/mach-java/include/mach/rdb_A0/
 subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./arch/arm/mach-java/
 subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./arch/arm/mach-java/include/
 subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./arch/arm/mach-java/include/mach/
-#endif
+endif
 
 subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./arch/arm/plat-kona/include/plat/chal/
 subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./arch/arm/plat-kona/include/plat/csl/

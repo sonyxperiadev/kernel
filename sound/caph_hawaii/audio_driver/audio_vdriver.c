@@ -200,7 +200,7 @@ MIC_Mapping_Table[AUDIO_SOURCE_TOTAL_COUNT] = {
 // Private function prototypes
 //=============================================================================
 */
-#ifndef CONFIG_BCM_MODEM
+#if (!defined(CONFIG_BCM_MODEM) || defined(JAVA_ZEBU_TEST))
 /* this array initializes the system parameters with the values
  from param_audio_rhea.txt for different modes(mic_pga - hw_sidetone_gain)*/
 static AudioSysParm_t audio_parm_table[AUDIO_MODE_NUMBER_VOICE] = {
@@ -279,13 +279,13 @@ static SysMultimediaAudioParm_t mmaudio_parm_table
 
 #endif
 
-#ifdef CONFIG_BCM_MODEM
+#if defined(CONFIG_BCM_MODEM) && (!defined(JAVA_ZEBU_TEST))
 SysAudioParm_t *AudParmP(void)
 #else
 AudioSysParm_t *AudParmP(void)
 #endif
 {
-#if defined(CONFIG_BCM_MODEM)
+#if defined(CONFIG_BCM_MODEM) && (!defined(JAVA_ZEBU_TEST))
 	return APSYSPARM_GetAudioParmAccessPtr();
 #else
 	return &audio_parm_table[0];
@@ -294,7 +294,7 @@ AudioSysParm_t *AudParmP(void)
 
 SysMultimediaAudioParm_t *MMAudParmP(void)
 {
-#if defined(CONFIG_BCM_MODEM)
+#if defined(CONFIG_BCM_MODEM) && !defined(JAVA_ZEBU_TEST)
 	return APSYSPARM_GetMultimediaAudioParmAccessPtr();
 #else
 	return &mmaudio_parm_table[0];
@@ -1001,7 +1001,7 @@ void AUDDRV_SetAudioMode_Multicast(SetAudioMode_Sp_t param)
 
 	SysMultimediaAudioParm_t *p1;
 
-#ifdef CONFIG_BCM_MODEM
+#if defined(CONFIG_BCM_MODEM) && (!defined(JAVA_ZEBU_TEST))
 	SysAudioParm_t *p = NULL;
 #else
 	AudioSysParm_t *p = NULL;
@@ -1208,7 +1208,7 @@ void AUDDRV_SetAudioMode_Speaker(SetAudioMode_Sp_t param)
 
 	SysMultimediaAudioParm_t *p1;
 
-#ifdef CONFIG_BCM_MODEM
+#if defined(CONFIG_BCM_MODEM) && (!defined(JAVA_ZEBU_TEST))
 	SysAudioParm_t *p;
 #else
 	AudioSysParm_t *p;
@@ -1587,7 +1587,7 @@ void AUDDRV_SetAudioMode_Mic(AudioMode_t audio_mode,
 
 	SysMultimediaAudioParm_t *p1;
 
-#ifdef CONFIG_BCM_MODEM
+#if defined(CONFIG_BCM_MODEM) && (!defined(JAVA_ZEBU_TEST))
 	SysAudioParm_t *p;
 #else
 	AudioSysParm_t *p;

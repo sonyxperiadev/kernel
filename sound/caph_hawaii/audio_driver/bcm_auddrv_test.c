@@ -1707,6 +1707,7 @@ void AUDTST_VoIP(UInt32 Val2, UInt32 Val3, UInt32 Val4, UInt32 Val5,
 	/* configure EC and NS for the loopback test */
 #if defined(USE_LOOPBACK_SYSPARM)
 	/* use sysparm to configure EC */
+#if defined(CONFIG_BCM_MODEM) && (!defined(JAVA_ZEBU_TEST))
 	AUDCTRL_EC((Boolean)(AudParmP()[mode +
 				AUDIO_APP_LOOPBACK *
 				AUDIO_MODE_NUMBER].echo_cancelling_enable),
@@ -1715,6 +1716,7 @@ void AUDTST_VoIP(UInt32 Val2, UInt32 Val3, UInt32 Val4, UInt32 Val5,
 	AUDCTRL_NS((Boolean)(AudParmP()[mode +
 				AUDIO_APP_LOOPBACK * AUDIO_MODE_NUMBER].\
 				ul_noise_suppression_enable));
+#endif
 #else	/* USE_LOOPBACK_SYSPARM */
 	AUDCTRL_EC(FALSE, 0);
 	AUDCTRL_NS(FALSE);
