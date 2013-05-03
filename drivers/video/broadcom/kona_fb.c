@@ -532,8 +532,10 @@ static int kona_fb_pan_display(struct fb_var_screeninfo *var,
 			p_region = NULL;
 		}
 		if (!fb->display_info->vmode)
-			wait_for_completion_interruptible_timeout(
-				&fb->prev_buf_done_sem,	msecs_to_jiffies(100));
+			if (wait_for_completion_interruptible_timeout(
+			&fb->prev_buf_done_sem,	msecs_to_jiffies(10000)) <= 0)
+				pr_err("%s:%d timed out waiting for completion",
+					__func__, __LINE__);
 		ret =
 		    fb->display_ops->update(fb->display_hdl,
 					buff_idx ? fb->buff1 : fb->buff0,
@@ -543,8 +545,10 @@ static int kona_fb_pan_display(struct fb_var_screeninfo *var,
 		if (fb->display_info->vmode) {
 			konafb_debug("waiting for release of 0x%x\n",
 					buff_idx ? fb->buff0 : fb->buff1);
-			wait_for_completion_interruptible_timeout(
-				&fb->prev_buf_done_sem,	msecs_to_jiffies(100));
+			if (wait_for_completion_interruptible_timeout(
+			&fb->prev_buf_done_sem,	msecs_to_jiffies(10000)) <= 0)
+				pr_err("%s:%d timed out waiting for completion",
+					__func__, __LINE__);
 		}
 	}
 skip_drawing:
@@ -662,8 +666,10 @@ static int kona_fb_ioctl(struct fb_info *info, unsigned int cmd,
 		}
 
 		if (!fb->display_info->vmode)
-			wait_for_completion_interruptible_timeout(
-				&fb->prev_buf_done_sem,	msecs_to_jiffies(100));
+			if (wait_for_completion_interruptible_timeout(
+			&fb->prev_buf_done_sem,	msecs_to_jiffies(10000)) <= 0)
+				pr_err("%s:%d timed out waiting for completion",
+					__func__, __LINE__);
 		ret = fb->display_ops->update(fb->display_hdl, ptr, NULL, NULL);
 		if (!fb->display_info->vmode)
 			complete(&g_kona_fb->prev_buf_done_sem);
@@ -695,8 +701,10 @@ static void kona_fb_early_suspend(struct early_suspend *h)
 		/* In case of video mode, DSI commands can be sent out-of-sync
 		 * of buffers */
 		if (!fb->display_info->vmode)
-			wait_for_completion_interruptible_timeout(
-				&fb->prev_buf_done_sem,	msecs_to_jiffies(100));
+			if (wait_for_completion_interruptible_timeout(
+			&fb->prev_buf_done_sem,	msecs_to_jiffies(10000)) <= 0)
+				pr_err("%s:%d timed out waiting for completion",
+					__func__, __LINE__);
 		if (fb->display_ops->power_control(fb->display_hdl,
 					       CTRL_SCREEN_OFF))
 			konafb_error("Failed to blank this display device!\n");
@@ -710,8 +718,10 @@ static void kona_fb_early_suspend(struct early_suspend *h)
 		fb = container_of(h, struct kona_fb, early_suspend_level2);
 		mutex_lock(&fb->update_sem);
 		if (!fb->display_info->vmode)
-			wait_for_completion_interruptible_timeout(
-				&fb->prev_buf_done_sem,	msecs_to_jiffies(100));
+			if (wait_for_completion_interruptible_timeout(
+			&fb->prev_buf_done_sem,	msecs_to_jiffies(10000)) <= 0)
+				pr_err("%s:%d timed out waiting for completion",
+					__func__, __LINE__);
 		fb->g_stop_drawing = 1;
 		if (!fb->display_info->vmode)
 			complete(&g_kona_fb->prev_buf_done_sem);
@@ -777,15 +787,20 @@ static void kona_fb_late_resume(struct early_suspend *h)
 		    fb->display_info->Bpp * 2;
 		memset(fb->fb.screen_base, 0, framesize);
 		if (!fb->display_info->vmode)
-			wait_for_completion_interruptible_timeout(
-				&fb->prev_buf_done_sem,	msecs_to_jiffies(100));
+			if (wait_for_completion_interruptible_timeout(
+			&fb->prev_buf_done_sem,	msecs_to_jiffies(10000)) <= 0)
+				pr_err("%s:%d timed out waiting for completion",
+					__func__, __LINE__);
 		fb->display_ops->update(fb->display_hdl,
 				fb->fb.var.yoffset ? fb->buff1 : fb->buff0,
 				NULL,
 				(DISPDRV_CB_T)kona_display_done_cb);
 		if (fb->display_info->vmode)
-			wait_for_completion_interruptible_timeout(
-				&fb->prev_buf_done_sem,	msecs_to_jiffies(100));
+			if (wait_for_completion_interruptible_timeout(
+				&fb->prev_buf_done_sem,	msecs_to_jiffies(10000))
+				<= 0)
+				pr_err("%s:%d timed out waiting for completion",
+					__func__, __LINE__);
 		break;
 
 	default:
@@ -1261,6 +1276,8 @@ static int __ref kona_fb_probe(struct platform_device *pdev)
 	fb->fb.screen_base = dma_alloc_writecombine(&pdev->dev,
 						    framesize, &phys_fbbase,
 						    GFP_KERNEL);
+	pr_info("kona_fb: screen_base=%p, phys_fbbase=%p size=0x%x\n",
+		(void *)fb->fb.screen_base, (void *)phys_fbbase, framesize);
 	if (fb->fb.screen_base == NULL) {
 		ret = -ENOMEM;
 		konafb_error("Unable to allocate fb memory\n");
@@ -1541,8 +1558,10 @@ static int kona_fb_reboot_cb(struct notifier_block *nb,
 	mutex_lock(&fb->update_sem);
 	fb->g_stop_drawing = 1;
 	if (!fb->display_info->vmode)
-		wait_for_completion_interruptible_timeout(
-		&fb->prev_buf_done_sem,	msecs_to_jiffies(100));
+		if (wait_for_completion_interruptible_timeout(
+		&fb->prev_buf_done_sem,	msecs_to_jiffies(10000)) <= 0)
+			pr_err("%s:%d timed out waiting for completion",
+				__func__, __LINE__);
 	kona_clock_start(fb);
 	fb->display_ops->power_control(fb->display_hdl, CTRL_SCREEN_OFF);
 	disable_display(fb);

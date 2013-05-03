@@ -320,7 +320,8 @@ static CSL_LCD_RES_T cslDsiAxipvStop(DSI_UPD_REQ_MSG_T *updMsg)
 	}
 	tx_done = axipv_check_completion(AXIPV_STOP_EOF, axipvCfg);
 	if (tx_done < 0) {
-		axipv_change_state(AXIPV_STOP_IMM, axipvCfg);
+		if (axipv_change_state(AXIPV_STOP_IMM, axipvCfg) < 0)
+			pr_err("failed to stop AXIPV\n");
 		if (!updMsg->dsiH->dispEngine) {
 			if (!pvCfg) {
 				pr_err("csl_dsi: pvCfg is NULL %d\n", __LINE__);
@@ -332,6 +333,7 @@ static CSL_LCD_RES_T cslDsiAxipvStop(DSI_UPD_REQ_MSG_T *updMsg)
 	} else {
 		pr_err("csl_dsi: recovered %d\n", __LINE__);
 	}
+	cslDsiClearAllFifos(updMsg->dsiH);
 	return CSL_LCD_OK;
 }
 
@@ -1880,7 +1882,6 @@ CSL_LCD_RES_T CSL_DSI_Suspend(CSL_LCD_HANDLE vcH)
 	return CSL_LCD_OK;
 }
 
-
 /*
  *
  * Function Name: CSL_DSI_UpdateCmVc
@@ -1916,9 +1917,6 @@ CSL_LCD_RES_T CSL_DSI_UpdateCmVc(CSL_LCD_HANDLE vcH,
 
 	if (dsiH->ulps)
 		return CSL_LCD_BAD_STATE;
-
-	cslDsiClearAllFifos(dsiH);
-	chal_dsi_clr_status(dsiH->chalH, 0xffffffff);
 
 	txPkt.vc = dsiChH->vc;
 	txPkt.dsiCmnd = dsiChH->dsiCmnd;
@@ -1986,6 +1984,7 @@ CSL_LCD_RES_T CSL_DSI_UpdateCmVc(CSL_LCD_HANDLE vcH,
 		return CSL_LCD_BAD_STATE;
 	}
 
+	cslDsiClearAllFifos(dsiH);
 	chal_dsi_clr_status(dsiH->chalH, 0xFFFFFFFF);
 
 	/* set TE mode -- SHOULD BE PART OF INIT or OPEN */

@@ -137,6 +137,13 @@ static inline u32 axipv_get_buff_status(struct axipv_buff *buff, u32 addr)
 	return ret;
 }
 
+static inline void axipv_dump_buff_status(struct axipv_buff *buff)
+{
+	int i;
+	for (i = 0; i < AXIPV_MAX_DISP_BUFF_SUPP; i++)
+		axipv_err("0x%x state=%d\n", buff[i].addr, buff[i].status);
+}
+
 static inline u32 axipv_get_free_buff_index(struct axipv_buff *buff)
 {
 	int i;
@@ -146,9 +153,7 @@ static inline u32 axipv_get_free_buff_index(struct axipv_buff *buff)
 	}
 
 	if (unlikely(AXIPV_MAX_DISP_BUFF_SUPP == i)) {
-		for (i = 0; i < AXIPV_MAX_DISP_BUFF_SUPP; i++)
-			axipv_err("0x%x state=%d\n",
-				buff[i].addr, buff[i].status);
+		axipv_dump_buff_status(buff);
 	}
 	return i;
 }
@@ -721,12 +726,14 @@ void dump_debug_info(struct axipv_dev *dev)
 	axipv_base = dev->base_addr;
 	axipv_err("state=%d, gcurr=%p, gnxt=%p\n", dev->state, (void *)
 			g_curr, (void *) g_nxt);
-	axipv_err("%p %p %p %p %p\n",
+	axipv_err("%p %p %p %p %p %p %p\n",
 	(void *) readl(axipv_base+REG_CUR_FRAME),
 	(void *) readl(axipv_base+REG_NXT_FRAME),
 	(void *) readl(axipv_base+REG_CTRL),
 	(void *) readl(axipv_base+REG_AXIPV_STATUS),
-	(void *) readl(axipv_base+REG_INTR_STAT));
+	(void *) readl(axipv_base+REG_INTR_STAT),
+	(void *) readl(axipv_base+REG_LB_WPTR),
+	(void *) readl(axipv_base+REG_LB_RPTR));
 	axipv_clk_disable(dev);
 }
 
@@ -800,7 +807,7 @@ int axipv_change_state(u32 event, struct axipv_config_t *config)
 			ret = 0;
 		} else {
 			axipv_err("Frame transfer in progress\n");
-			return -EBUSY;
+			ret = -EBUSY;
 		}
 		break;
 	case AXIPV_START:
@@ -832,7 +839,7 @@ int axipv_change_state(u32 event, struct axipv_config_t *config)
 			spin_unlock_irqrestore(&lock, flags);
 			ret = 0;
 		} else {
-			return -EBUSY;
+			ret = -EBUSY;
 		}
 		break;
 	case AXIPV_STOP_EOF:
@@ -845,7 +852,7 @@ int axipv_change_state(u32 event, struct axipv_config_t *config)
 			spin_unlock_irqrestore(&lock, flags);
 			ret = 0;
 		} else {
-			return -EBUSY;
+			ret = -EBUSY;
 		}
 		break;
 	case AXIPV_STOP_IMM:
@@ -867,13 +874,27 @@ int axipv_change_state(u32 event, struct axipv_config_t *config)
 				axipv_err("Soft reset failed\n");
 			dev->state = AXIPV_STOPPED;
 			/* Set all buffers to transferred state */
+			if (g_curr) {
+				axipv_err("0x%x marked as available\n", g_curr);
+				axipv_set_buff_status(dev->buff, g_curr,
+						AXIPV_BUFF_AVAILABLE);
+			}
+			if (g_nxt && (g_nxt != g_curr)) {
+				axipv_err("0x%x marked as available\n", g_nxt);
+				axipv_set_buff_status(dev->buff, g_nxt,
+						AXIPV_BUFF_AVAILABLE);
+			}
+			g_curr = 0;
+			g_nxt = 0;
+			dump_debug_info(dev);
+			axipv_dump_buff_status(dev->buff);
 			axipv_clk_disable(dev);
 			spin_unlock_irqrestore(&lock, flags);
 			ret = 0;
 		} else {
 			axipv_err("AXIPV_STOP_IMM ignored, curr_state=%d\n",
 				dev->state);
-			return -EBUSY;
+			ret = -EBUSY;
 		}
 		break;
 	case AXIPV_RESET:
@@ -981,10 +1002,14 @@ int axipv_check_completion(u32 event, struct axipv_config_t *config)
 			ret = -1;
 		}
 		if (0 == ret) {
-			axipv_err("buff set to available\n");
 			u32 curr_buff = readl(axipv_base + REG_CUR_FRAME);
+			axipv_err("marking 0x%x as available\n", curr_buff);
 			axipv_set_buff_status(dev->buff, curr_buff,
 						AXIPV_BUFF_AVAILABLE);
+			if (curr_buff == g_curr)
+				g_curr = 0;
+			if (curr_buff == g_nxt)
+				g_nxt = 0;
 		}
 		break;
 	default:
