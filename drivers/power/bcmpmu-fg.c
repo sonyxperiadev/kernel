@@ -338,7 +338,7 @@ struct bcmpmu_fg_data {
 };
 
 #ifdef CONFIG_DEBUG_FS
-#define DEBUG_FS_PERMISSIONS	(S_IRUSR | S_IWUSR)
+#define DEBUG_FS_PERMISSIONS	(S_IRUSR | S_IWUSR | S_IROTH | S_IRGRP)
 #endif
 
 static u32 debug_mask = BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT | \
