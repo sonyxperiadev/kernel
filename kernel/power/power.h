@@ -273,6 +273,7 @@ extern suspend_state_t requested_suspend_state;
 extern void suspend_sys_sync_queue(void);
 extern int suspend_sys_sync_wait(void);
 #else
+#include <linux/syscalls.h>
 static inline void suspend_sys_sync_queue(void) { sys_sync(); }
 static inline int suspend_sys_sync_wait(void) { return 0; }
 #endif
