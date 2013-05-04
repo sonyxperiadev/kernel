@@ -89,6 +89,15 @@ config	MACH_HAWAII_SS_LOGAN_REV02
 	  Relative to Logan R0.1, has several GPIO changes for
 	  keyboard, flash, and band selects.
 	  Assumes that MACH_HAWAII_SS_LOGAN is also set.
+
+config	MACH_HAWAII_SS_LOGANDS_REV00
+	bool "Support Broadcom Hawaii SS logands board"
+	help
+      Support for the Broadcom Hawaii SS logands board.
+	  Relative to Logan DSR 0.0, has several GPIO changes for
+	  keyboard, flash, and band selects.
+	  Assumes that MACH_HAWAII_SS_LOGAN is also set.
+
 config	MACH_HAWAII_SS_LOGANDS_REV01
 	bool "Support Broadcom Hawaii SS logands board"
 	help
