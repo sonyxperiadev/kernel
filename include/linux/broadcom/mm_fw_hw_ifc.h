@@ -69,7 +69,11 @@ enum {
 enum {
 	ECONOMY = PI_OPP_ECONOMY,
 	NORMAL,
+#if defined(CONFIG_PI_MGR_MM_STURBO_ENABLE)
+	TURBO = PI_OPP_SUPER_TURBO,
+#else
 	TURBO,
+#endif
 };
 #define dvfs_mode_e unsigned int
 
