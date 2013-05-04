@@ -89,6 +89,13 @@ config	MACH_HAWAII_SS_LOGAN_REV02
 	  Relative to Logan R0.1, has several GPIO changes for
 	  keyboard, flash, and band selects.
 	  Assumes that MACH_HAWAII_SS_LOGAN is also set.
+config	MACH_HAWAII_SS_LOGANDS_REV01
+	bool "Support Broadcom Hawaii SS logands board"
+	help
+	  Support for the Broadcom Hawaii SS logands board.
+	  Relative to Logan DS R0.1, has several GPIO changes for
+	  keyboard, flash, and band selects.
+	  Assumes that MACH_HAWAII_SS_LOGAN is also set.
 
 endchoice
 
@@ -112,7 +119,7 @@ choice
 		Hawaii based
 		Garnet
 		edn010
-	
+
 	config MACH_HAWAII_GARNET_EDN020
 	bool "GARNET EDN020"
 	help
@@ -120,17 +127,23 @@ choice
 		Hawaii based
 		Garnet
 		edn020
-		
+
 	config MACH_HAWAII_GARNET_C_A18
 	bool "GARNET A18"
 	help
-	  Support for Garnet A18
+	  Support for
+		Hawaii based
+		Garnet
+		A18
 
 	config MACH_HAWAII_GARNET_C_UP823
 	bool "GARNET UP823"
 	help
-	  Support for Garnet UP823
-	  
+	  Support for
+		Hawaii based
+		Garnet
+		UP823
+
         config MACH_HAWAII_GARNET_C_W68
         bool "GARNET W68"
         help
@@ -194,6 +207,12 @@ config	MACH_HAWAII_SS_LOGAN
 	  This option is used to enable features that apply to all
 	  existing and future revisions of Hawaii-Logan form-factor
 	  boards.
+
+config  MACH_HAWAII_SS_LOGANDS
+        bool "Support Broadcom Hawaii Samsung Logan DS board"
+	default n
+        help
+          Support for the Broadcom Hawaii Samsung Logan DS board.
 
 config	IGNORE_DAP_POWERUP_REQ
 	bool "Ignore Powerup request from DAP"
