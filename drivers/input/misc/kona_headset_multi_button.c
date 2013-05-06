@@ -204,6 +204,9 @@ struct mic_t {
 	struct wake_lock accessory_wklock;
 #endif
 	struct regulator *ldo;
+#ifdef CONFIG_HEADSET_PERIODIC_CHECK
+	struct delayed_work headset_check_work;
+#endif
 };
 
 static struct mic_t *mic_dev;
@@ -1137,6 +1140,76 @@ static void no_gpio_accessory_remove_work_func(struct work_struct *work)
 #endif
 }
 
+#ifdef CONFIG_HEADSET_PERIODIC_CHECK
+#define HEADSET_CHECK_PERIOD	msecs_to_jiffies(800)
+static void headset_check_work_func(struct work_struct *work)
+{
+	struct mic_t *p = container_of(work, struct mic_t,
+				       headset_check_work.work);
+	int hs_state;
+
+	pr_info("headset_timer_function entery\r\n");
+
+	if (p->hs_state != HEADPHONE)
+		return;
+
+#ifdef CONFIG_HAS_WAKELOCK
+	wake_lock(&p->accessory_wklock);
+#endif
+
+	/* Switch ON the MIC BIAS */
+	__headset_hw_init_micbias_on(p);
+
+	hs_state = detect_hs_type(p);
+
+	pr_info("detecting type = %d\r\n", hs_state);
+
+	if (hs_state == HEADSET) {
+		p->button_state = BUTTON_RELEASED;
+		p->hs_state = HEADSET;
+
+		/* Clear pending interrupts if any */
+		chal_aci_block_ctrl(p->aci_chal_hdl,
+				    CHAL_ACI_BLOCK_ACTION_INTERRUPT_ACKNOWLEDGE,
+				    CHAL_ACI_BLOCK_COMP);
+
+		/* Configure the ADC to read button press values */
+		config_adc_for_bp_detection();
+
+#ifdef CONFIG_SWITCH
+		/*
+		 * While notifying this to the androind world we need to pass
+		 * the accessory typ as Androind understands. The Android
+		 * 'state' variable is a bitmap as defined below.
+		 * BIT 0 : 1 - Headset (with MIC) connected
+		 * BIT 1 : 1 - Headphone (the one without MIC) is connected
+		 */
+
+		/*first emulte a fake remove*/
+		switch_set_state(&(p->sdev), DISCONNECTED);
+		msleep(50);
+		switch_set_state(&(p->sdev), (p->hs_state == HEADSET) ? 1 : 2);
+#endif
+
+		/*
+		 * Enable the COMP1 interrupt for button press detection in
+		 * case if the inserted item is Headset
+		 */
+		chal_aci_block_ctrl(p->aci_chal_hdl,
+			CHAL_ACI_BLOCK_ACTION_INTERRUPT_ENABLE,
+			CHAL_ACI_BLOCK_COMP1);
+	} else {
+		__headset_hw_init_micbias_off(p);
+		schedule_delayed_work(&(p->headset_check_work),
+		      HEADSET_CHECK_PERIOD);
+	}
+
+#ifdef CONFIG_HAS_WAKELOCK
+	wake_unlock(&p->accessory_wklock);
+#endif
+}
+#endif
+
 static void __handle_accessory_inserted(struct mic_t *p)
 {
 	pr_info(" ACCESSORY INSERTED \r\n");
@@ -1221,6 +1294,14 @@ static void __handle_accessory_inserted(struct mic_t *p)
 		__func__, p->hs_state);
 		break;
 	}
+
+#ifdef CONFIG_HEADSET_PERIODIC_CHECK
+	if (p->hs_state == HEADPHONE) {
+		schedule_delayed_work(&(p->headset_check_work),
+		      HEADSET_CHECK_PERIOD);
+	}
+#endif
+
 
 	pr_debug("Interrupt status after detecting hs_type 0x%x \r\n",
 		 readl(p->aci_base + ACI_INT_OFFSET));
@@ -2298,6 +2379,12 @@ defined(CONFIG_MACH_HAWAII_SS_LOGANDS_REV01)
 
 	/* Store the mic structure data as private driver data for later use */
 	platform_set_drvdata(pdev, mic);
+
+
+#ifdef CONFIG_HEADSET_PERIODIC_CHECK
+	INIT_DELAYED_WORK(&(mic->headset_check_work),
+			  headset_check_work_func);
+#endif
 
 	/*
 	 * Please note that all the HS accessory interrupts

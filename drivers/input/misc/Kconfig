@@ -653,6 +653,12 @@ config KONA_HEADSET_MULTI_BUTTON
 	tristate "Kona headset driver with multi button support"
         help
           Activate Kona headset driver with multi button support
+
+config HEADSET_PERIODIC_CHECK
+	tristate "Kona headset type periodic check"
+	depends on KONA_HEADSET_MULTI_BUTTON
+        help
+          Activate Kona headset type periodic check support
 endchoice
 
 endif
