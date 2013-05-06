@@ -54,6 +54,8 @@ struct
 };
 #endif
 
+int en_disp_clks(void);
+
 int brcm_enable_smi_lcd_clocks(struct pi_mgr_dfs_node *dfs_node)
 {
 #ifndef CONFIG_MACH_BCM_FPGA
@@ -111,31 +113,34 @@ int brcm_disable_smi_lcd_clocks(struct pi_mgr_dfs_node* dfs_node)
 	return 0;
 }
 
-void en_disp_clks()
+int en_disp_clks()
 {
-	if (!g_display_enabled)
-		return;
 	struct clk *dsi_axi;
 	struct clk *dsi_esc;
 	struct clk *dsi_pll;
 	struct clk *dsi_pll_ch;
+
+	if (!g_display_enabled)
+		return -1;
+
 	dsi_axi	= clk_get(NULL, dsi_bus_clk[0].dsi_axi);
 	dsi_esc	= clk_get(NULL, dsi_bus_clk[0].dsi_esc);
 	BUG_ON(IS_ERR_OR_NULL(dsi_axi) || IS_ERR_OR_NULL(dsi_esc));
 	if (clk_enable(dsi_axi))
-		return;
+		return -1;
 
 	if (clk_enable(dsi_esc))
-		return;
+		return -1;
 
 	dsi_pll     = clk_get(NULL, "dsi_pll");
 	dsi_pll_ch  = clk_get(NULL, dsi_bus_clk[0].dsi_pll_ch);
 	BUG_ON(IS_ERR_OR_NULL(dsi_pll) || IS_ERR_OR_NULL(dsi_pll_ch));
 	if (clk_enable(dsi_pll))
-		return;
+		return -1;
 
 	if (clk_enable(dsi_pll_ch))
-		return;
+		return -1;
+	return 0;
 }
 device_initcall(en_disp_clks);
 

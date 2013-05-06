@@ -503,7 +503,6 @@ int check_pv_state(int event, struct pv_config_t *config)
 {
 	u32 pv_base;
 	struct pv_dev *dev;
-	int ret = -EINVAL;
 
 	if (!config)
 		return -EINVAL;

@@ -491,7 +491,7 @@ static irqreturn_t axipv_isr(int err, void *dev_id)
 			pv_thresh = CM_PKT_SIZE_B / 6;
 		else
 			pv_thresh = CM_PKT_SIZE_B / 8;
-		axipv_err("changing pv_start_thresh from 0x%x to 0x%x\n",
+		axipv_debug("changing pv_start_thresh from 0x%x to 0x%x\n",
 		readl(axipv_base + REG_PV_THRESH), pv_thresh);
 
 		writel(pv_thresh, axipv_base + REG_PV_THRESH);
@@ -1029,7 +1029,7 @@ void enable_axipv_clk_debug(struct axipv_config_t *config)
 
 	if (!config) {
 		axipv_err("config NULL\n");
-		return -EINVAL;
+		return;
 	}
 
 	dev = container_of(config, struct axipv_dev, config);
@@ -1045,7 +1045,7 @@ void disable_axipv_clk_debug(struct axipv_config_t *config)
 
 	if (!config) {
 		axipv_err("config NULL\n");
-		return -EINVAL;
+		return;
 	}
 
 	dev = container_of(config, struct axipv_dev, config);
