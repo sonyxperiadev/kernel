@@ -214,6 +214,14 @@ choice
 		Garnet
 		c_edn010
 
+	config MACH_HAWAII_GARNET_C_W81
+	bool "GARNET W81"
+	help
+	  Support for
+		Garnet_c_w81 based
+		Garnet
+		c_edn010
+
 
         config MACH_HAWAII_GARNET_C_5606
         bool "GARNET 5606"
