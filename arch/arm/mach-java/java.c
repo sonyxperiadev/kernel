@@ -191,6 +191,19 @@ static void cpu_info_verbose(void)
 		pr_info("Java CHIPID-A0\n");
 }
 
+static void block_mm_access_to_hub(void)
+{
+	unsigned int value = 0x00;
+	value =	readl_relaxed(KONA_CHIPREG_VA +
+				CHIPREG_PERIPH_SPARE_CONTROL1_OFFSET);
+
+	value |= (CHIPREG_PERIPH_SPARE_CONTROL1_MM2HUB_WR_DISABLE_MASK |
+			CHIPREG_PERIPH_SPARE_CONTROL1_MM2HUB_RD_DISABLE_MASK);
+
+	writel_relaxed(value, (KONA_CHIPREG_VA +
+				CHIPREG_PERIPH_SPARE_CONTROL1_OFFSET));
+}
+
 static int __init hawaii_init(void)
 {
 	pm_power_off = hawaii_poweroff;
@@ -208,7 +221,14 @@ static int __init hawaii_init(void)
 	/* hawaii has 4 banks of GPIO pins */
 	kona_gpio_init(4);
 #endif
-
+	/*
+	  Ensure that all MM accesss to CENTRAL HUB are blocked.
+	  This is to ensure that spurious access such as :
+	  1. reset value of UNICAM address registers,
+	  2. V3D access (un-intentional)
+	  are ignored.
+	*/
+	block_mm_access_to_hub();
 	//scu_init((void __iomem *)KONA_SCU_VA);
 	return 0;
 }
