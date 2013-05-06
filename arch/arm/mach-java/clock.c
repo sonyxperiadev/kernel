@@ -222,7 +222,7 @@ static int en_8ph_pll1_clk_enable(struct clk *clk, int enable)
 {
 	struct ref_clk *ref_clk;
 	u32 reg_val = 0;
-	int insurance = 1000;
+	int insurance = CLK_EN_INS_COUNT;
 
 	BUG_ON(clk->clk_type != CLK_TYPE_REF);
 	ref_clk = to_ref_clk(clk);
@@ -248,6 +248,10 @@ static int en_8ph_pll1_clk_enable(struct clk *clk, int enable)
 			ROOT_CLK_MGR_REG_PLL1CTRL0_PLL1_8PHASE_EN_MASK) &&
 			insurance);
 		CCU_ACCESS_EN(ref_clk->ccu_clk, 0);
+		if (insurance == 0) {
+			pr_err("Unable to enable 8ph_pll1_clk\n");
+			return -1;
+		}
 	} else {
 		CCU_ACCESS_EN(ref_clk->ccu_clk, 1);
 		reg_val = readl(KONA_ROOT_CLK_VA +
@@ -818,6 +822,8 @@ static struct ref_clk CLK_NAME(ref_32k) = {
     .ccu_clk = &CLK_NAME(root),
 };
 
+static struct gen_clk_ops proc_ccu_ops;
+
 /*
 CCU clock name PROC_CCU
 */
@@ -828,7 +834,7 @@ static struct ccu_clk CLK_NAME(kproc) = {
 			.id	= CLK_KPROC_CCU_CLK_ID,
 			.name = KPROC_CCU_CLK_NAME_STR,
 			.clk_type = CLK_TYPE_CCU,
-			.ops = &gen_ccu_clk_ops,
+			.ops = &proc_ccu_ops,
 		},
 	.ccu_ops = &gen_ccu_ops,
 	.pi_id = PI_MGR_PI_ID_ARM_CORE,
@@ -988,7 +994,7 @@ static u32 freq_tbl[] = {
 		FREQ_MHZ(312),
 		FREQ_MHZ(312)
 	};
-static struct core_clk CLK_NAME(a9_core) = {
+static struct core_clk CLK_NAME(arm_core) = {
 	.clk =	{
 		.flags = ARM_CORE_CLK_FLAGS,
 		.clk_type = CLK_TYPE_CORE,
@@ -1044,6 +1050,28 @@ static struct bus_clk CLK_NAME(arm_switch) = {
 		KPROC_CLK_MGR_REG_AXI_CLKGATE_AXI_HYST_EN_MASK,
 	.stprsts_mask =
 		KPROC_CLK_MGR_REG_AXI_CLKGATE_AXI_STPRSTS_MASK,
+	.freq_tbl_index = -1,
+	.src_clk = NULL,
+	.soft_reset_offset = KPROC_RST_MGR_REG_SOFT_RSTN_OFFSET,
+	.clk_reset_mask = KPROC_RST_MGR_REG_SOFT_RSTN_APB_SOFT_RSTN_MASK,
+};
+
+static struct bus_clk CLK_NAME(cci) = {
+	.clk = {
+		.flags = CCI_CLK_FLAGS,
+		.clk_type = CLK_TYPE_BUS,
+		.id = CLK_CCI_CLK_ID,
+		.name =	CCI_CLK_NAME_STR,
+		.dep_clks = DEFINE_ARRAY_ARGS(NULL),
+		.ops = &gen_bus_clk_ops,
+	},
+	.ccu_clk = &CLK_NAME(kproc),
+	.clk_gate_offset  = KPROC_CLK_MGR_REG_CCI_CLKGATE_OFFSET,
+	.clk_en_mask = KPROC_CLK_MGR_REG_CCI_CLKGATE_CCI_CLK_EN_MASK,
+	.gating_sel_mask = KPROC_CLK_MGR_REG_CCI_CLKGATE_CCI_HW_SW_GATING_SEL_MASK,
+	.hyst_val_mask = KPROC_CLK_MGR_REG_CCI_CLKGATE_CCI_HYST_VAL_MASK,
+	.hyst_en_mask = KPROC_CLK_MGR_REG_CCI_CLKGATE_CCI_HYST_EN_MASK,
+	.stprsts_mask = KPROC_CLK_MGR_REG_CCI_CLKGATE_CCI_STPRSTS_MASK,
 	.freq_tbl_index = -1,
 	.src_clk = NULL,
 	.soft_reset_offset = KPROC_RST_MGR_REG_SOFT_RSTN_OFFSET,
@@ -7542,7 +7570,8 @@ static struct __init clk_lookup hawaii_clk_tbl[] =
 	BRCM_REGISTER_CLK(A9_PLL_CLK_NAME_STR, NULL, a9_pll),
 	BRCM_REGISTER_CLK(A9_PLL_CHNL0_CLK_NAME_STR, NULL, a9_pll_chnl0),
 	BRCM_REGISTER_CLK(A9_PLL_CHNL1_CLK_NAME_STR, NULL, a9_pll_chnl1),
-	BRCM_REGISTER_CLK(ARM_CORE_CLK_NAME_STR, NULL, a9_core),
+	BRCM_REGISTER_CLK(ARM_CORE_CLK_NAME_STR, NULL, arm_core),
+	BRCM_REGISTER_CLK(CCI_CLK_NAME_STR, NULL, cci),
 	/*ROOT CCU*/
 	BRCM_REGISTER_CLK(REF_8PHASE_EN_PLL1_CLK_NAME_STR,
 			NULL,  8phase_en_pll1),
@@ -7873,6 +7902,31 @@ static int bmdm_ccu_clk_get_dbg_bus_sel(struct ccu_clk *ccu_clk)
 					BMDM_CCU_DBG_BUS_SEL_SHIFT);
 }
 
+static int proc_ccu_clk_init(struct clk *clk)
+{
+	struct ccu_clk *ccu_clk;
+	u32 reg_val;
+
+	ccu_clk = to_ccu_clk(clk);
+	ccu_write_access_enable(ccu_clk, true);
+
+	/* Calling the generic init func */
+	gen_ccu_clk_ops.init(clk);
+
+	/* enabling all_clk_idle for proc ccu */
+	reg_val = readl(CCU_REG_ADDR(ccu_clk,
+				KPROC_CLK_MGR_REG_ALL_CLK_IDLE_OFFSET));
+	reg_val |= (KPROC_CLK_MGR_REG_ALL_CLK_IDLE_ALL_CLK_IDLE_EN_MASK <<
+		KPROC_CLK_MGR_REG_ALL_CLK_IDLE_ALL_CLK_IDLE_EN_SHIFT);
+	writel(reg_val, CCU_REG_ADDR(ccu_clk,
+				KPROC_CLK_MGR_REG_ALL_CLK_IDLE_OFFSET));
+
+	/* disable write access */
+	ccu_write_access_enable(ccu_clk, false);
+
+	return 0;
+}
+
 int __init __clock_init(void)
 {
 
@@ -7887,6 +7941,9 @@ int __init __clock_init(void)
 	root_ccu_ops.get_dbg_bus_status =  gen_ccu_ops.get_dbg_bus_status;
 	root_ccu_ops.set_dbg_bus_sel =  gen_ccu_ops.set_dbg_bus_sel;
 	root_ccu_ops.get_dbg_bus_sel =  gen_ccu_ops.get_dbg_bus_sel;
+
+	proc_ccu_ops = gen_ccu_clk_ops;
+	proc_ccu_ops.init = proc_ccu_clk_init;
 
 	mm_ccu_ops = gen_ccu_ops;
 	mm_ccu_ops.set_freq_policy = mm_ccu_set_freq_policy;
