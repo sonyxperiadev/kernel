@@ -371,6 +371,7 @@ static int bcmpmu_otg_xceiv_chg_detection_notif_handler(struct notifier_block
 	case PMU_USB_TYPE_CDP:
 	case PMU_USB_TYPE_ACA:
 		g_usb_charger_type = usb_charger_type;
+
 		queue_work(xceiv_data->bcm_otg_work_queue,
 			   &xceiv_data->bcm_otg_chg_detect_work);
 		break;
@@ -453,6 +454,13 @@ static int bcmpmu_otg_xceiv_set_vbus_power(struct usb_phy *phy,
 					   unsigned int ma)
 {
 	struct bcmpmu_otg_xceiv_data *xceiv_data = dev_get_drvdata(phy->dev);
+	int usb_type = 0;
+
+	/* during multiple usb_disconnect g_usb_charger_type is set to 0
+	from bcmpmu_otg_xceiv_shutdown */
+	bcmpmu_usb_get(xceiv_data->bcmpmu, BCMPMU_USB_CTRL_GET_USB_TYPE,
+			&usb_type);
+	g_usb_charger_type = usb_type;
 
 	if ((g_usb_charger_type == PMU_USB_TYPE_SDP) ||
 		(g_usb_charger_type == PMU_USB_TYPE_CDP) ||
