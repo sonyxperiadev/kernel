@@ -77,7 +77,11 @@ module_param_named(clk_dbg_dsm, pm_info.clk_dbg_dsm, int,
 enum {
 
 	LOG_SW2_STATUS	= 1 << 0,
-	LOG_INTR_STATUS	= 1 << 1,
+	LOG_INTR_CPU0	= 1 << 1,
+	LOG_INTR_CPU1	= 1 << 2,
+	LOG_INTR_CPU2	= 1 << 3,
+	LOG_INTR_CPU3	= 1 << 4,
+	LOG_IDLE_INTR = 1 << 5,
 };
 
 #define pm_dbg(id, format...) \
@@ -146,64 +150,37 @@ when subsystems are acvtive and 1 if in sleep (retention/dormant) */
 	return 0;
 }
 
-
-static void log_wakeup_interrupts(void)
+static void pm_log_wakeup_intr(void)
 {
-#if 0
-	pm_dbg(LOG_INTR_STATUS, "enable_set1 = %x\n",
-		readl(KONA_GICDIST_VA+GICDIST_ENABLE_SET1_OFFSET));
-	pm_dbg(LOG_INTR_STATUS, "enable_set1 = %x\n",
-		readl(KONA_GICDIST_VA+GICDIST_ENABLE_SET1_OFFSET));
-	pm_dbg(LOG_INTR_STATUS, "enable_set2 = %x\n",
-		readl(KONA_GICDIST_VA+GICDIST_ENABLE_SET2_OFFSET));
-	pm_dbg(LOG_INTR_STATUS, "enable_set3 = %x\n",
-		readl(KONA_GICDIST_VA+GICDIST_ENABLE_SET3_OFFSET));
-	pm_dbg(LOG_INTR_STATUS, "enable_set4 = %x\n",
-		readl(KONA_GICDIST_VA+GICDIST_ENABLE_SET4_OFFSET));
-	pm_dbg(LOG_INTR_STATUS, "enable_set5 = %x\n",
-		readl(KONA_GICDIST_VA+GICDIST_ENABLE_SET5_OFFSET));
-	pm_dbg(LOG_INTR_STATUS, "enable_set6 = %x\n",
-		readl(KONA_GICDIST_VA+GICDIST_ENABLE_SET6_OFFSET));
-	pm_dbg(LOG_INTR_STATUS, "enable_set7 = %x\n",
-		readl(KONA_GICDIST_VA+GICDIST_ENABLE_SET7_OFFSET));
+	#define NUM_REQ 7
+	int i;
+	int mask;
+	u32 en_set[NUM_REQ];
+	u32 pend_set[NUM_REQ];
+	int cpu = get_cpu();
+	mask = LOG_INTR_CPU0 << cpu;
 
-	pm_dbg(LOG_INTR_STATUS, "active_set1 = %x\n",
-		readl(KONA_GICDIST_VA+GICDIST_ACTIVE_STATUS1_OFFSET));
-	pm_dbg(LOG_INTR_STATUS, "active_set2 = %x\n",
-		readl(KONA_GICDIST_VA+GICDIST_ACTIVE_STATUS2_OFFSET));
-	pm_dbg(LOG_INTR_STATUS, "active_set3 = %x\n",
-		readl(KONA_GICDIST_VA+GICDIST_ACTIVE_STATUS3_OFFSET));
-	pm_dbg(LOG_INTR_STATUS, "active_set4 = %x\n",
-		readl(KONA_GICDIST_VA+GICDIST_ACTIVE_STATUS4_OFFSET));
-	pm_dbg(LOG_INTR_STATUS, "active_set5 = %x\n",
-		readl(KONA_GICDIST_VA+GICDIST_ACTIVE_STATUS5_OFFSET));
-	pm_dbg(LOG_INTR_STATUS, "active_set6 = %x\n",
-		readl(KONA_GICDIST_VA+GICDIST_ACTIVE_STATUS6_OFFSET));
-	pm_dbg(LOG_INTR_STATUS, "active_set7 = %x\n",
-		readl(KONA_GICDIST_VA+GICDIST_ACTIVE_STATUS7_OFFSET));
+	if (!(mask & pm_info.log_mask))
+		goto ret;
 
-	pm_dbg(LOG_INTR_STATUS, "GIC pending status1 = %x\n",
-			readl(KONA_GICDIST_VA+GICDIST_PENDING_SET1_OFFSET));
-	pm_dbg(LOG_INTR_STATUS, "GIC pending status2 = %x\n",
-			readl(KONA_GICDIST_VA+GICDIST_PENDING_SET2_OFFSET));
+	for (i = 0; i < NUM_REQ; i++) {
+		en_set[i] = readl(KONA_GICAXI_VA +
+				GIC_GICD_ISENABLERN_1_OFFSET + i*4);
+		pend_set[i] = readl(KONA_GICAXI_VA +
+				GIC_GICD_ISPENDRN_1_OFFSET + i*4);
+	}
+	for (i = 0; i < NUM_REQ; i++) {
+		if (en_set[i] & pend_set[i]) {
+			pm_dbg(mask, "p_set_%d = 0x%x en_set_%d = 0x%x\n",
+				i+1, pend_set[i], i+1, en_set[i]);
+			pm_dbg(mask, "intr = 0x%x\n",
+				en_set[i] & pend_set[i]);
 
-	pm_dbg(LOG_INTR_STATUS, "GIC pending status3 = %x\n",
-			readl(KONA_GICDIST_VA+GICDIST_PENDING_SET3_OFFSET));
-
-	pm_dbg(LOG_INTR_STATUS, "GIC pending status4 = %x\n",
-			readl(KONA_GICDIST_VA+GICDIST_PENDING_SET4_OFFSET));
-
-	pm_dbg(LOG_INTR_STATUS, "GIC pending status5 = %x\n",
-			readl(KONA_GICDIST_VA+GICDIST_PENDING_SET5_OFFSET));
-
-	pm_dbg(LOG_INTR_STATUS, "GIC pending status6 = %x\n",
-			readl(KONA_GICDIST_VA+GICDIST_PENDING_SET6_OFFSET));
-
-	pm_dbg(LOG_INTR_STATUS, "GIC pending status7 = %x\n",
-			readl(KONA_GICDIST_VA+GICDIST_PENDING_SET7_OFFSET));
-#endif
+		}
+	}
+ret:
+	put_cpu();
 }
-
 
 int enter_suspend_state(struct kona_idle_state *state, u32 ctrl_params)
 {
@@ -388,8 +365,9 @@ int enter_idle_state(struct kona_idle_state *state, u32 ctrl_params)
 	pwr_mgr_process_events(MISC_WKP_EVENT, BRIDGE_TO_MODEM_EVENT, false);
 	pwr_mgr_process_events(USBOTG_EVENT, PHY_RESUME_EVENT, false);
 
-	if (ctrl_params & CTRL_PARAMS_ENTER_SUSPEND)
-		log_wakeup_interrupts();
+	if (ctrl_params & CTRL_PARAMS_ENTER_SUSPEND ||
+		(pm_info.log_mask & LOG_IDLE_INTR))
+		pm_log_wakeup_intr();
 
 	if (ctrl_params & CTRL_PARAMS_FLAG_XTAL_ON || pm_info.keep_xtl_on)
 		clk_set_crystal_pwr_on_idle(true);

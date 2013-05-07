@@ -154,8 +154,6 @@ static inline void request_suspend_state(suspend_state_t state) { }
 extern void instrument_lpm(u16 trace, u16 param);
 extern int get_force_sleep_state(void);
 extern int pm_is_forced_sleep(void);
-extern int pm_get_pending_intr(u32 *en_set, u32 *pend_set);
-extern void pm_log_intr_status(u32 *en_set_rd, u32 *pend_set_rd);
 
 #endif /* __ASSEMBLY__ */
 
