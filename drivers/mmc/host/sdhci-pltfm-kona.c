@@ -1274,6 +1274,44 @@ static int __devexit sdhci_pltfm_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static void sdhci_pltfm_shutdown(struct platform_device *pdev)
+{
+	u16 clk;
+	int ret;
+	struct sdio_dev *dev = platform_get_drvdata(pdev);
+	struct sdhci_host *host = dev->host;
+
+	if (sdhci_pltfm_rpm_enabled(dev)) {
+		pm_runtime_get_sync(dev->dev);
+	} else {
+		ret = sdhci_pltfm_clk_enable(dev, 1);
+		if (ret)
+			dev_err(dev->dev,
+			"enable clock during shutdown failed\n");
+	}
+
+	/* Certain cards don't like abrupt clock
+	 * shutdown, and they go insane if we do so.
+	 * When PM runtime autosuspend is enabled,
+	 * it takes time for the clock to be cut,
+	 * but during this time, the system reboot
+	 * can abruptly cut it off. Avoid that by
+	 * disabling the clock to the card.
+	 */
+	clk = sdhci_readw(host, SDHCI_CLOCK_CONTROL);
+	clk &= ~SDHCI_CLOCK_CARD_EN;
+	sdhci_writew(host, clk, SDHCI_CLOCK_CONTROL);
+
+	if (sdhci_pltfm_rpm_enabled(dev)) {
+		pm_runtime_put_sync_suspend(dev->dev);
+	} else {
+		ret = sdhci_pltfm_clk_enable(dev, 0);
+		if (ret)
+			dev_err(dev->dev,
+			"disable clock during shutdown failed\n");
+	}
+}
+
 #ifdef CONFIG_PM
 static int sdhci_pltfm_suspend(struct device *device)
 {
@@ -1402,6 +1440,7 @@ static struct platform_driver sdhci_pltfm_driver = {
 		   },
 	.probe = sdhci_pltfm_probe,
 	.remove = __devexit_p(sdhci_pltfm_remove),
+	.shutdown = sdhci_pltfm_shutdown,
 };
 
 static int __init sdhci_drv_init(void)
