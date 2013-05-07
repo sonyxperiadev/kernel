@@ -22,7 +22,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: linuxver.h 353905 2012-08-29 07:33:08Z $
+ * $Id: linuxver.h 396585 2013-04-13 08:51:26Z $
  */
 
 #ifndef _linuxver_h_
@@ -165,7 +165,6 @@ typedef irqreturn_t(*FN_ISR) (int irq, void *dev_id, struct pt_regs *ptregs);
 
 
 #ifdef CUSTOMER_HW4
-#define USE_KTHREAD_API
 #include <linux/kthread.h>
 #endif
 
@@ -466,9 +465,11 @@ pci_restore_state(struct pci_dev *dev, u32 *buffer)
 #define SET_NETDEV_DEV(net, pdev)	do {} while (0)
 #endif
 
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3, 1, 0))
 #ifndef HAVE_FREE_NETDEV
 #define free_netdev(dev)		kfree(dev)
 #endif
+#endif 
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 0))
 

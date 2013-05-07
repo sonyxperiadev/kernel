@@ -61,7 +61,6 @@ const struct cntry_locales_custom translate_custom_table[] = {
 	{"BN", "BN", 1},
 	{"CA", "CA", 2},
 	{"CH", "CH", 1},
-	{"CN", "CN", 0},
 	{"CY", "CY", 1},
 	{"CZ", "CZ", 1},
 	{"DE", "DE", 3},
@@ -70,7 +69,11 @@ const struct cntry_locales_custom translate_custom_table[] = {
 	{"ES", "ES", 1},
 	{"FI", "FI", 1},
 	{"FR", "FR", 1},
+#ifdef BCM4335_CHIP
+	{"GB", "GB", 6},
+#else
 	{"GB", "GB", 1},
+#endif
 	{"GR", "GR", 1},
 	{"HR", "HR", 1},
 	{"HU", "HU", 1},
@@ -84,7 +87,9 @@ const struct cntry_locales_custom translate_custom_table[] = {
 	{"LT", "LT", 1},
 	{"LU", "LU", 1},
 	{"LV", "LV", 1},
+#ifndef BCM4330_CHIP
 	{"MA", "MA", 1},
+#endif
 	{"MT", "MT", 1},
 	{"MX", "MX", 1},
 	{"NL", "NL", 1},
@@ -96,7 +101,9 @@ const struct cntry_locales_custom translate_custom_table[] = {
 	{"SE", "SE", 1},
 	{"SI", "SI", 1},
 	{"SK", "SK", 1},
+#ifndef BCM4330_CHIP
 	{"TR", "TR", 7},
+#endif
 	{"TW", "TW", 2},
 	{"IR", "XZ", 11},	/* Universal if Country code is IRAN, (ISLAMIC REPUBLIC OF) */
 	{"SD", "XZ", 11},	/* Universal if Country code is SUDAN */
@@ -107,14 +114,50 @@ const struct cntry_locales_custom translate_custom_table[] = {
 	{"MH", "XZ", 11},	/* Universal if Country code is MARSHALL ISLANDS */
 	{"PK", "XZ", 11},	/* Universal if Country code is PAKISTAN */
 #ifdef BCM4334_CHIP
-	{"RU", "RU", 5},
+	{"RU", "RU", 13},
 	{"SG", "SG", 4},
-	{"US", "US", 46}
+	{"US", "US", 46},
+	{"UA", "UA", 8},
+	{"CO", "CO", 4},
+	{"ID", "ID", 1},
+	{"LA", "LA", 1},
+	{"LB", "LB", 2},
+	{"VN", "VN", 4},
 #endif
 #ifdef BCM4330_CHIP
-	{"RU", "RU", 1},
-	{"US", "US", 5}
+	{"RU", "RU", 13},
+	{"US", "US", 5},
+	{"UA", "UY", 0},
+	{"AD", "AL", 0},
+	{"CX", "AU", 2},
+	{"GE", "GB", 1},
+	{"ID", "MW", 0},
+	{"KI", "AU", 2},
+	{"NP", "SA", 0},
+	{"WS", "SA", 0},
+	{"LR", "BR", 0},
+	{"ZM", "IN", 0},
+	{"AN", "AG", 0},
+	{"AI", "AS", 0},
+	{"BM", "AS", 0},
+	{"DZ", "IL", 0},
+	{"LC", "AG", 0},
+	{"MF", "BY", 0},
+	{"GY", "CU", 0},
+	{"LA", "GB", 1},
+	{"LB", "BR", 0},
+	{"MA", "IL", 0},
+	{"MO", "BD", 0},
+	{"MW", "BD", 0},
+	{"QA", "BD", 0},
+	{"TR", "GB", 1},
+	{"TZ", "BF", 0},
+	{"VN", "BR", 0},
+	{"JO", "XZ", 1},
+	{"PG", "XZ", 1},
+	{"SA", "XZ", 1},
 #endif
+	{"UA", "UA", 2}
 };
 
 /* Customized Locale convertor
@@ -152,7 +195,7 @@ void get_customized_country_code(char *country_iso_code, wl_country_t *cspec)
 #define	REVINFO "/data/.rev"
 #else
 #define MACINFO "/data/misc/wifi/.mac.info"
-#define MACINFO_EFS  MACINFO
+#define MACINFO_EFS MACINFO
 #define NVMACINFO "/data/.nvmac.info"
 #define	REVINFO "/data/.rev"
 #define CIDINFO "/data/.cid.info"
@@ -216,8 +259,6 @@ start_readmac:
 		ret = kernel_read(fp, 0, buf, 18);
 /* to prevent abnormal string display when mac address is displayed on the screen. */
 		buf[17] = '\0';
-		DHD_ERROR(("Read MAC : [%s] [%d] \r\n",
-			buf, strncmp(buf, "00:00:00:00:00:00", 17)));
 		if (strncmp(buf, "00:00:00:00:00:00", 17) < 1) {
 			DHD_ERROR(("goto start_readmac \r\n"));
 			filp_close(fp, NULL);
@@ -345,12 +386,13 @@ int dhd_check_rdwr_macaddr(struct dhd_info *dhd, dhd_pub_t *dhdp,
 
 	g_imac_flag = MACADDR_NONE;
 
+	fp_nvm = filp_open(nvfilepath, O_RDONLY, 0);
+	
 	/* Replace the nvmac check below since it is
 	 * not used in the MPS reference platforms
-	fp_nvm = filp_open(nvfilepath, O_RDONLY, 0);
 	if (IS_ERR(fp_nvm)) {
 	*/
-
+	
 	if (TRUE) { /* file does not exist */
 
 		/* Create the .nvmac.info */
@@ -837,7 +879,7 @@ static int dhd_write_mac_file(const char *filepath, const char *buf, int buf_len
 
 #define CIS_MAC_OFFSET 33
 
-int dhd_check_module_mac(dhd_pub_t *dhd)
+int dhd_check_module_mac(dhd_pub_t *dhd, struct ether_addr *mac)
 {
 	int ret = -1;
 	unsigned char cis_buf[250] = {0};
@@ -859,7 +901,11 @@ int dhd_check_module_mac(dhd_pub_t *dhd)
 	if (ret < 0) {
 		DHD_TRACE(("%s: CIS reading failed, err=%d\n", __func__,
 			ret));
-		return ret;
+		sprintf(otp_mac_buf, "%02X:%02X:%02X:%02X:%02X:%02X\n",
+			mac->octet[0], mac->octet[1], mac->octet[2],
+			mac->octet[3], mac->octet[4], mac->octet[5]);
+		DHD_ERROR(("%s: Check module mac by legacy FW : %02X:%02X:%02X\n",
+			__func__, mac->octet[0], mac->octet[4], mac->octet[5]));
 	} else {
 		unsigned char mac_id[6] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 #ifdef DUMP_CIS
@@ -882,6 +928,7 @@ int dhd_check_module_mac(dhd_pub_t *dhd)
 	if (!IS_ERR(fp_mac)) {
 		DHD_ERROR(("[WIFI]Check Mac address in .mac.info \n"));
 		kernel_read(fp_mac, fp_mac->f_pos, mac_buf, sizeof(mac_buf));
+		filp_close(fp_mac, NULL);
 
 		if (strncmp(mac_buf, otp_mac_buf, 17) != 0) {
 			DHD_ERROR(("[WIFI]file MAC is wrong. Write OTP MAC in .mac.info \n"));
@@ -1146,6 +1193,7 @@ int dhd_sel_ant_from_file(dhd_pub_t *dhd)
 	struct file *fp = NULL;
 	int ret = -1;
 	uint32 ant_val = 0;
+	uint32 btc_mode = 0;
 	char *filepath = "/data/.ant.info";
 	char iovbuf[WLC_IOCTL_SMLEN];
 
@@ -1172,6 +1220,18 @@ int dhd_sel_ant_from_file(dhd_pub_t *dhd)
 			DHD_ERROR(("[WIFI] %s: Invalid value %d read from the file %s\n",
 				__FUNCTION__, ant_val, filepath));
 			return -1;
+		}
+	}
+
+	/* bt coex mode off */
+	if (strstr(fw_path, "_mfg") != NULL) {
+		bcm_mkiovar("btc_mode", (char *)&btc_mode, 4, iovbuf, sizeof(iovbuf));
+		ret = dhd_wl_ioctl_cmd(dhd, WLC_SET_VAR, iovbuf, sizeof(iovbuf), TRUE, 0);
+		if (ret) {
+			DHD_ERROR(("[WIFI] %s: Fail to execute dhd_wl_ioctl_cmd(): "
+				"btc_mode, ret=%d\n",
+				__FUNCTION__, ret));
+			return ret;
 		}
 	}
 

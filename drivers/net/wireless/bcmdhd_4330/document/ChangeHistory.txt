@@ -1,0 +1,247 @@
+DHD 1.28.19.20 - Android Jelly Bean only for BCM4330/BCM4334
+
+2013.4.14
+DHD version upgrade (1.28.19.17 --> 1.28.19.20)
+Kernel Panic
+   - CSP 637552 : Modified the position of virtual interface deletion process
+   - Added Kernel version condition check for use free_netdev() macro force in all kernel version
+
+Others
+   - Added NULL check routine in case of WPA supplicant does not use probe response data
+   - Enhanced Parsing routine for finding attributes in P2P IE
+   - Extended padding size for insufficient skb tailroom case
+   - Optimized for packet padding routine
+
+
+
+2013.4.4
+DHD version upgrade (1.28.19.15 --> 1.28.19.17)
+Kernel Panic
+   - CSP 630796 : Fixed unalignment socket buffer for SoftAP mode
+   - CSP 631804 : Added the SSID length check routine during AP connect
+   - CSP 635649 : Fixed memory violation during scan routine
+
+Others
+   - CSP 630693 : Removed unnecessary code for WLAN_REGION_CODE
+   - CSP 631858 : Enhanced 4-way handshake routine for P2P connection. It needs firmware patch.
+   - CSP 632422 : Increased max private command buffer size
+   - CSP 632432 : Fixed PREVENT tools report - Memory leakage
+   - CSP 632874 : Enhanced P2P Connection / Scan logic
+   - Added WL_SUPPORT_BACKPORTED_KPATCHES defintion for Supporting JellyBean Plus for old kernel version projects
+   - Cleaned unnecessary code up to fix PREVENT report
+   - Optimized XTAL pull time setting
+   - Improved P2P Connection
+
+
+2013.3.22
+DHD version upgrade (1.28.19.9 --> 1.28.19.15)
+Kernel Panic
+   - CSP 589891, 604585 : Fixed kernel panic during Power On/Off test
+   - CSP 597802 Fixed kernel panic on low memory during insmod
+   - CSP 606991 : Fixed page allocation failed case during interface up/down
+   - CSP 616114 : Added to prevent calling dhd_open() abnormally in quick succession
+   - CSP 617432 : Prevent SCAN operation at SoftAP mode 
+   - CSP 617617 : Enhanced scan timeout routine
+   - CSP 622074 : Fixed kernel panic while P2P connection
+   - CSP 626401 : Enhanced error handling logic for SDIO failed case
+   - CSP 611314 : Fixed duplicated packet free
+
+P2P Enhancement
+   - CSP 620823 : Fixed scanning issue while creating GO interface
+   - CSP 621627 : Fixed P2P connection issue (Optimized time)
+   - CSP 624580 : Fixed corner case for P2P operation
+   - CSP 627990 : Enhanced p2p connection under VSDB + noisy environment
+   - CSP 617396 : Removed GO Nego collision feature from BCM4334/43241 projects
+   - CSP 624580 : Fixed corner case for P2P operation
+   - Removed unnecessary delay during P2P connection and disconnection process 
+
+Debug Message
+   - Added condition for SDIO timeout message
+   - CSP 611999 : Added message of scanned AP number
+
+Others
+   - CSP 592085 : Print chip revision log for BCM4330 chip 
+   - CSP 604817 : Supported Vendor Specific IE in probe response frame(Minor Bug fixed)
+   - CSP 608834 : Supported TEST_FORCE_HANG private command
+   - CSP 609752 : Fixed code defect
+   - CSP 613605 : limited Antenna selection for MFG firmware
+   - CSP 615988 : Changed keep alive time can be tunable
+   - CSP 616667, 616642 : Fixed unnecessary log caused by ASSERT() macro
+   - CSP 616683 : Added checking routine for SoftAP SSID Max length
+   - CSP 628685 : Fixed channel spec list setting error
+   - Changed macro name from DISABLE_FW_ROAM_SUSPEND to ENABLE_FW_ROAM_SUSPEND as per code meaning
+   - Fixed AP compatibility issue with Apple Airport for WEP security
+   - Fixed PM issue on concurrent mode 
+   - Supported 802.11r
+
+
+2012.12.27
+DHD version upgrade (1.28.19.8 --> 1.28.19.9)
+- Update country code mapping table for BCM4330
+- CSP:598043, 598837 : The misc typo and bug fixes
+
+
+2012.12.7
+DHD version upgrade (1.28.19.4 --> 1.28.19.8)
+Kernel Panic issue 
+   - CSP 581592 : Fixed kernel panic during rmmod
+   - CSP 582969 : Fixed kernel panic by unknown action frame in SoftAP mode
+   - CSP 585467 : Fixed kernel panic by non-broadcom device interface's notification.
+   - CSP 587407 : Fixed kernel panic during Automation On/Off test
+   - CSP 589762 : Fixed kernel panic when netdev register failed case
+   - CSP 594066 : Fixed Kernel panic during interface down
+   - CSP 590288 : Fixed kernel panic by neighbour cache releated issue
+   - CSP 589112 : Fixed Bad chanspec during create P2P-GO for BCM4330 chips
+   - CSP 586690 : Fixed typo error of btcoex timer check routine
+
+Feature Enhancement 
+   - CSP 575045 : Enhanced to support multiple supplicant(Stability)
+   - CSP 589418 : Fixed power consumption issue during GC in VSDB mode
+   - CSP 591203 : Enhanced Hang recovery mechanism when chip has SDIO bus communication error happen
+   - CSP 589418, 570018 : Fixed power consumption issue after GO link down
+   - CSP 587421, 589903 : Fixed P2P-GC can't send DEAUTH event on BCM4334 chips
+   - CSP 593318 : Fixed P2P interface down by android priv STOP command
+   - CSP 592718 : Fixed roamoff didn't activated when concurrent was enabled
+   - Applied multicast offloading for all interface in suspend mode
+   - Fixed invalid chanspec list parsing
+
+Others
+   - CSP 584247 : Source code sync up with Samsung repository
+   - CSP 589762 : Rhea/Capri - support new way of MMC Power management operation
+   - CSP 576264, 593318 : Add/Change Country code(GB, RU, UA, CO, ID, LA, LB, VN, AD, CX, GE, KI, NP, WS, LR, ZM, AN)
+   - CSP 592178 : Fixed P2P disconnection issue from kernel version higher than 3.2.0
+   - Manta platform : Added SDIO_CRC_ERROR_FIX and CUSTOM_SDIO_F2_BLKSIZE definitions for BCM43241
+   - Rhea & Capri platform : Remove unbalanced IRQ warning message
+   - Fixed typo : dhd_watchdog_prio variable / GAS Comback Request/Response AF 
+   - Fixed PM2 code related minor bug
+   - Supported GB/6 for HT80
+   - Added log in ASSERT function for debugging
+
+
+2012. 10.25
+DHD version upgrade (1.28.11.12 --> 1.28.19.4)
+Kernel Panic issue 
+   - CSP 575045, 577469: Fixed VSDB kernel panic
+   - CSP 571728: Fixed VSDB initialization issue for Manta platform
+   - CSP 578051: Increased TX control packet timeout
+   - CSP 576742: Fixed kernel panic during rmmod
+   - CSP 577180: Fixed kernel panic while removing P2P interface
+   - CSP 575654: Fixed kernel panic during P2P operation
+   - Fixed kernel panic for roam cache
+   - Fixed memory leak during P2P On/Off and SoftAP mode
+                
+Feature Enhancement 
+   - CSP:571034 - Fixed connection status information of DHD driver to CFG8011 layer
+   - CSP:539794 - Fixed roaming failure in case of hidden SSID AP
+   - CSP:576685 - Added private command for roaming on/off
+   - Fixed ARP Offload
+   - Fixed concurrency connection problem in different bandwidth
+   - Fixed connection issue with 802.11n AP only
+   - Added a function to notify the current power mode to CFG80211 layer
+   - Fixed KDDI SoftAP Throughput issue
+   - Improved host reordering for VSDB
+
+Others
+   - CSP 565333: Added debug message for SDIO timeout error        
+   - Added debug message for Roaming and suspend/resume state in MMC
+   - Manta Platform - Support 'data CRC error' on SDIO bus
+   - Rhea & Capri - Support old PM suspend/resume operation
+   - Support SETBAND private command in concurrent mode
+
+2012. 09. 21
+1. DHD version upgrade (1.28.11.10 --> 1.28.11.12)
+   - Enabled NCHO feature by default for BCM4334 chipset as per Samsung's
+   request
+   - Added ARP white packet filter list during P2P mode for BCM4330 chipset only
+   - Improved SW-OOB function in case of host is slow or traffic is heavy
+   - Applied roaming trigger function only for BCM4334 chipset
+   - Set default SDIO drive strength for BCM4334 Chips
+   - Fixed flow control logic for VSDB
+   - Changed debug level of WL message at run-time
+   - Supported to load NVRAM file for manufaturing test in case of built-in
+   driver
+2. Patch for CSP issue
+   - 526368, 569838, 570996 : Fixed kernel panic
+   - 565333 : Added debug message for the purpose of further investigation
+   - 566247 : Disabled WL_ENABLE_P2P_IF, MULTIPLE_SUPPLICANT, and
+   WL_CFG80211_STA_EVENT for SLP
+   - 568550 : Implemented to perform shared-key authentication first when STA
+   tries to connect to WEP-enabled AP
+   - 569224 : Fixed remain on chan cookie mismatch
+   - 570167 : Implemented WLC_E_P2P_PROBREQ_MSG event offloading to reduce
+   power consumption in GO mode of P2P
+   - 570189 : Fixed to send up exact connect state to wpa_supplicant
+   - 571022 : Added wake lock time not to keep wake-up state by PNO
+   - 571521 : Implemented to disable 802.11n feature for Samsung SPI platform
+
+2012. 09. 13
+1. DHD version upgrade (1.28.11.9 --> 1.28.11.10)
+   - Disabled glom function for BCM4330 chipset for throughput performance
+2. Patch for CSP issue
+   - 537064 : Fix for scanning APs operating in 5 GHz for BCM4330 chipset
+   - 564738 : Added status value to be returned for failure cases while
+   registering Wi-Fi network interface
+
+2012. 09. 11
+1. DHD version upgrade (1.28.11.5 --> 1.28.11.9)
+   - Throughput enhancement for Samsung platforms using SPI interface
+2. Patch for CSP issue
+   - 530766 : Added pre-suspend patch for SLP platform
+   - 567123 : Added error check routine in _dhd_wlfc_pullheader()
+   - 567141 : Changed roaming trigger condition considering number of APs which
+   have the same SSID as the currently connected AP.
+   - 567266, 566731 : Fixed failure cases while creating network interface for
+   P2P
+
+2012. 09. 01
+1. DHD version upgrade (1.28.9.7 --> 1.28.11.5)
+   - Added WES feature
+   - Fixed Hotspot 2.0 issue on JB platform
+   - Fixed P2P's ARP operation
+   - Fixed packet filter configuration
+   - Fixed memory leakage while adding and deleting p2p interface
+2. Patch for CSP issue
+   - 557102 : Replaced kernel_thread() with kthread_run()
+   - 564802 : Added full roaming scan period time
+   - 557176, 556351 : Added/removed log messages
+   - 564101, 561515 : Fixed kernel panic/warning issues while P2P operation
+   - 353908 : Optimized memory management in case of failure for SDIO
+   registeration
+
+2012. 08. 27
+1. DHD version upgrade (1.28.9.4 --> 1.28.9.7)
+   - Added Hotspot 2.0 feature
+   - Set PRIVATE_COMMAND_MAX_LEN to 8192
+2. Patch for CSP issue
+   - Removed MAX_CNTL_TIMEOUT flage from Makefile
+   - Added exception routine considering order of unregistering wlan0 and p2p
+   network interface, while turning off Wi-Fi
+
+2012. 08. 22
+1. DHD version upgrade (1.28.9.3 --> 1.28.9.4)
+2. Patch for CSP issue
+   - 561542 : Set PM mode of GC to 0 and changed full scan dwell time from 20
+   to 40ms for peers to be GC in VSDB mode
+
+1. DHD version upgrade (1.28.9.1 --> 1.28.9.3)
+   - Improved the P2P peer find and connection, while the device is connected
+   to an AP in VDDB mode
+2. Patch for CSP issue
+   - 561515, 561494 : fix kernel panic/soft lockup issue while VSDB connection
+
+1. DHD version upgrade (1.28.8.1 --> 1.28.9.1)
+   - Enabled debugging prints of SPI interface
+   - Reconstructed hang event routine
+   - Fixed P2P certification issue, 4.2.1
+   - Improved cfg80211 management Tx
+   - Clear REMAINING_ON_CHANNEL flag on the proper interface (p2p0 interface)
+   - pktfilter code enhancement
+   - Added ENABLE_BCN_LI_DTIM definition for setting bcn_li_dtim code
+2. Patch for CSP issue
+   - 558812, 558752, 557092, 556865 : Fixed kernel panic while Hotspot operation
+   - 558058, 558507, 557492 : Fixed kernel panic while WiFi/P2P off
+   - 557176 : Removed MAC address from log message / Some log level changed /
+   Added Country Code (CN/0, PK/11)
+   - 558530 : Added BROADCOM_WIFI_RESERVED_MEM config in Kconfig,
+   and fixed kernel panic for static buffer
+   - 559827 : Tuned scanning parameters for P2P connection enhancement 

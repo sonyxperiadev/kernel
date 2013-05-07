@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: bcmsdh_sdmmc_linux.c 353908 2012-08-29 08:09:02Z $
+ * $Id: bcmsdh_sdmmc_linux.c 381545 2013-01-28 17:04:40Z $
  */
 
 #include <typedefs.h>
@@ -136,6 +136,8 @@ static int bcmsdh_sdmmc_probe(struct sdio_func *func,
 	#endif
 			sd_trace(("F2 found, calling bcmsdh_probe...\n"));
 			ret = bcmsdh_probe(&func->dev);
+			if (ret < 0 && gInstance)
+				gInstance->func[2] = NULL;
 		}
 	} else {
 		ret = -ENODEV;
@@ -153,10 +155,12 @@ static void bcmsdh_sdmmc_remove(struct sdio_func *func)
 		sd_info(("sdio_device: 0x%04x\n", func->device));
 		sd_info(("Function#: 0x%04x\n", func->num));
 
-		if (func->num == 2) {
+		if (gInstance->func[2]) {
 			sd_trace(("F2 found, calling bcmsdh_remove...\n"));
 			bcmsdh_remove(&func->dev);
-		} else if (func->num == 1) {
+			gInstance->func[2] = NULL;
+		}
+		if (func->num == 1) {
 			sdio_claim_host(func);
 			sdio_disable_func(func);
 			sdio_release_host(func);
@@ -192,7 +196,7 @@ static int bcmsdh_sdmmc_suspend(struct device *pdev)
 	if (func->num != 2)
 		return 0;
 
-	sd_trace(("%s Enter\n", __FUNCTION__));
+	sd_trace_hw4(("%s Enter\n", __FUNCTION__));
 
 	if (dhd_os_check_wakelock(bcmsdh_get_drvdata()))
 		return -EBUSY;
@@ -232,7 +236,7 @@ static int bcmsdh_sdmmc_resume(struct device *pdev)
 	struct sdio_func *func = dev_to_sdio_func(pdev);
 #endif /* defined(OOB_INTR_ONLY) */
 #endif /* defined(CUSTOMER_HW4) */
-	sd_trace(("%s Enter\n", __FUNCTION__));
+	sd_trace_hw4(("%s Enter\n", __FUNCTION__));
 
 	dhd_mmc_suspend = FALSE;
 #if !defined(CUSTOMER_HW4)

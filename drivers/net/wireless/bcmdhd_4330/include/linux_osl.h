@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: linux_osl.h 352246 2012-08-22 05:42:04Z $
+ * $Id: linux_osl.h 396189 2013-04-11 07:41:47Z $
  */
 
 #ifndef _linux_osl_h_
@@ -165,8 +165,11 @@ extern int osl_error(int bcmerror);
 #include <linuxver.h>           
 #include <linux/kernel.h>       
 #include <linux/string.h>       
-
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 4, 29)
 #define OSL_SYSUPTIME()		((uint32)jiffies_to_msecs(jiffies))
+#else
+#define OSL_SYSUPTIME()		((uint32)jiffies * (1000 / HZ))
+#endif 
 #define	printf(fmt, args...)	printk(fmt , ## args)
 #include <linux/kernel.h>	
 #include <linux/string.h>	
@@ -261,6 +264,7 @@ extern int osl_error(int bcmerror);
 #define	PKTLEN(osh, skb)		(((struct sk_buff*)(skb))->len)
 #define PKTHEADROOM(osh, skb)		(PKTDATA(osh, skb)-(((struct sk_buff*)(skb))->head))
 #define PKTTAILROOM(osh, skb) ((((struct sk_buff*)(skb))->end)-(((struct sk_buff*)(skb))->tail))
+#define PKTPADTAILROOM(osh, skb, padlen)	skb_pad((struct sk_buff*)(skb), (padlen))
 #define	PKTNEXT(osh, skb)		(((struct sk_buff*)(skb))->next)
 #define	PKTSETNEXT(osh, skb, x)		(((struct sk_buff*)(skb))->next = (struct sk_buff*)(x))
 #define	PKTSETLEN(osh, skb, len)	__skb_trim((struct sk_buff*)(skb), (len))

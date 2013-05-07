@@ -24,7 +24,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: sbsdio.h 308945 2012-01-18 02:15:27Z $
+ * $Id: sbsdio.h 361940 2012-10-10 08:32:12Z $
  */
 
 #ifndef	_SBSDIO_H
@@ -120,6 +120,7 @@
 #define SBSDIO_DEVCTL_RST_CORECTL	0x00		/*   Determined by CoreControl bit */
 #define SBSDIO_DEVCTL_RST_BPRESET	0x10		/*   Force backplane reset */
 #define SBSDIO_DEVCTL_RST_NOBPRESET	0x20		/*   Force no backplane reset */
+#define SBSDIO_DEVCTL_EN_F2_BLK_WATERMARK 0x10  /* Enable function 2 tx for each block */
 
 
 /* SBSDIO_FUNC1_CHIPCLKCSR */

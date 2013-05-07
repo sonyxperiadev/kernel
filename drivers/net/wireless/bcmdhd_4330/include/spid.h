@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: spid.h 354172 2012-08-30 07:19:26Z $
+ * $Id: spid.h 354197 2012-08-30 09:05:59Z $
  */
 
 #ifndef	_SPI_H

@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: bcmutils.h 354184 2012-08-30 08:08:08Z $
+ * $Id: bcmutils.h 354837 2012-09-04 06:58:44Z $
  */
 
 #ifndef	_bcmutils_h_
@@ -659,10 +659,10 @@ extern void *_bcmutils_dummy_fn;
 							(ea).octet[5]
 #if !defined(SIMPLE_MAC_PRINT)
 #define MACDBG "%02x:%02x:%02x:%02x:%02x:%02x"
-#define STR_TO_MACD(ea) (ea)[0], (ea)[1], (ea)[2], (ea)[3], (ea)[4], (ea)[5]
+#define MAC2STRDBG(ea) (ea)[0], (ea)[1], (ea)[2], (ea)[3], (ea)[4], (ea)[5]
 #else
 #define MACDBG				"%02x:%02x:%02x"
-#define STR_TO_MACD(ea) (ea)[0], (ea)[4], (ea)[5]
+#define MAC2STRDBG(ea) (ea)[0], (ea)[4], (ea)[5]
 #endif 
 
 

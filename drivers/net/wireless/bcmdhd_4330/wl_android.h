@@ -21,12 +21,21 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: wl_android.h 307885 2012-01-12 23:30:48Z $
+ * $Id: wl_android.h 363350 2012-10-17 08:29:23Z $
  */
 
 #include <linux/module.h>
 #include <linux/netdevice.h>
 #include <wldev_common.h>
+
+/* If any feature uses the Generic Netlink Interface, put it here to enable WL_GENL
+ * automatically
+ */
+
+
+#ifdef WL_GENL
+#include <net/genetlink.h>
+#endif
 
 /**
  * Android platform dependent functions, feel free to add Android specific functions here
@@ -55,3 +64,29 @@ int wifi_set_power(int on, unsigned long msec);
 int wifi_get_mac_addr(unsigned char *buf);
 void *wifi_get_country_code(char *ccode);
 #endif /* CONFIG_WIFI_CONTROL_FUNC */
+
+#ifdef WL_GENL
+/* attributes (variables): the index in this enum is used as a reference for the type,
+ *             userspace application has to indicate the corresponding type
+ *             the policy is used for security considerations
+ */
+enum {
+	BCM_GENL_ATTR_UNSPEC,
+	BCM_GENL_ATTR_STRING,
+	BCM_GENL_ATTR_MSG,
+	__BCM_GENL_ATTR_MAX
+};
+#define BCM_GENL_ATTR_MAX (__BCM_GENL_ATTR_MAX - 1)
+
+/* commands: enumeration of all commands (functions),
+ * used by userspace application to identify command to be ececuted
+ */
+enum {
+	BCM_GENL_CMD_UNSPEC,
+	BCM_GENL_CMD_MSG,
+	__BCM_GENL_CMD_MAX
+};
+#define BCM_GENL_CMD_MAX (__BCM_GENL_CMD_MAX - 1)
+
+s32 wl_genl_send_msg(struct net_device *ndev, int pid, u8 *string, u8 len, int mcast);
+#endif /* WL_GENL */

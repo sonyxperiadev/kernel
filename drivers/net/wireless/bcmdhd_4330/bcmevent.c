@@ -20,7 +20,7 @@
  *      Notwithstanding the above, under no circumstances may you combine this
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
- * $Id: bcmevent.c 327460 2012-04-13 18:38:41Z $
+ * $Id: bcmevent.c 364790 2012-10-25 08:39:02Z $
  */
 
 #include <typedefs.h>
@@ -29,7 +29,7 @@
 #include <proto/bcmeth.h>
 #include <proto/bcmevent.h>
 
-#if WLC_E_LAST != 94
+#if WLC_E_LAST != 105
 #error "You need to add an entry to bcmevent_names[] for the new event"
 #endif
 
