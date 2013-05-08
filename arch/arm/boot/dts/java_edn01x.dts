@@ -198,12 +198,10 @@
 		module-name = "SIMULATOR";
 		reg-name = "cam2";
 		rst-gpio = <22>;
+		detect-gpio = <10>;
 		rst-setup = <5>;	/* 5us */
 		rst-pulse = <15>;	/* 15us */
 		rst-hold = <10000>;	/* 10ms */
-		/* rst-active-high */	/* Commented => Active Low */
-		/* vburst = <0>; */	/* Non-burst mode */
-		/* cmnd-LP; */		/* Commands in HS mode*/
 		col-mod-i = <2>;	/* KONA_CM_I_XBGR888 */
 		col-mod-o = <3>;	/* KONA_CM_O_RGB888 */
 		width = <480>;
