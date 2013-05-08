@@ -284,8 +284,9 @@ static ssize_t bcm_keypad_showkey(struct file *file, char __user * user_buf,
 	keyreadstatus1 = chal_keypad_config_read_status1();
 	keyreadstatus2 = chal_keypad_config_read_status2();
 
+#ifdef CONFIG_INPUT_PONKEY_BCMPMU
 	onkey_pressed = bcmpmu_get_ponkey_state();
-
+#endif
 	/*
 	   KPSSRx : Keypress status
 	   if scan mode type in KPCR is pull-up : 1-Not pressed, 0-Pressed

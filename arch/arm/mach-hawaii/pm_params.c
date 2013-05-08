@@ -135,8 +135,10 @@ int pm_init_pmu_sr_vlt_map_table(u32 silicon_type, int freq_id)
 	for (inx = 0; inx < SR_VLT_LUT_SIZE; inx++)
 		sr_vlt_table[inx] = vlt_table[inx];
 	/*Init SR voltages that are not set by HW seq*/
+#ifdef CONFIG_MFD_BCM_PMU59xxx
 	ret = bcmpmu_init_sr_volt();
 	WARN_ON(ret);
+#endif
 	populate_pmu_voltage_log();
 	return pwr_mgr_pm_i2c_var_data_write(vlt_table, SR_VLT_LUT_SIZE);
 }
