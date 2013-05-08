@@ -25,7 +25,6 @@ config ARCH_HAWAII
     select ARM_ERRATA_754322
     select ARM_ERRATA_764369 if SMP
 	select ARM_ERRATA_782773
-    select KONA_WFI_WORKAROUND if SMP
 	select MIGHT_HAVE_CACHE_L2X0
 	help
 	  Support for the Broadcom Hawaii Soc platform.
@@ -289,14 +288,6 @@ config PROC_PINMUX_DUMP
        bool "Enable Pin-mux Dump"
        help
          Say Y if you want to enable pin-mix dump
-
-config KONA_WFI_WORKAROUND
-       bool "Prevent both cores from doing cpu_do_idle calls when VCHIQ bulk transfers pending"
-       depends on SMP
-       help
-	 If both cores do a WFI call at the same time, then the DDR3 seems to go into some
-	 type of low power mode which causes videocore accesses to the DDR3 to slow down
-	 dramatically. This enables a workaround which prevents this from happening.
 
 config KONA_DT_BCMPMU
 	bool "Support DT for bcmpmu drivers"
