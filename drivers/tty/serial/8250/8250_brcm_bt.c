@@ -119,8 +119,6 @@ bt_serial8250_rx_chars(struct uart_8250_port *up, unsigned char lsr)
 			else if (lsr & UART_LSR_FE)
 				flag = TTY_FRAME;
 		}
-		if (uart_handle_sysrq_char(&up->port, ch))
-			goto ignore_char;
 
 		if (afe_status) {
 			/* Re-enable AFE if FIFO level go up. (this is not
