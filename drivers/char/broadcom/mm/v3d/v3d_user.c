@@ -47,11 +47,9 @@ static int v3d_user_reset(void *device_id)
 	v3d_user_device_t *id = (v3d_user_device_t *)device_id;
 	pr_debug("v3d_user_reset:\n");
 	v3d_write(id, V3D_SRQCS_OFFSET, 1 | (1 << 8) | (1 << 16));
-	v3d_write(id, V3D_VPMBASE_OFFSET, 0);
 	v3d_write(id, V3D_VPACNTL_OFFSET, 0);
 	v3d_write(id, V3D_DBQITC_OFFSET, 0xffff);
 	v3d_write(id, V3D_DBQITE_OFFSET, 0xffff);
-	v3d_write(id, V3D_VPMBASE_OFFSET , 0);
 
 	return 0;
 }
@@ -79,10 +77,18 @@ static mm_isr_type_e process_v3d_user_irq(void *device_id)
 	if (flags_qpu) {
 		v3d_write(id, V3D_DBQITC_OFFSET, flags_qpu);
 		numCompletedJobs = (v3d_read(id, V3D_SRQCS_OFFSET) >> 16) & 0xff;
-		if (numCompletedJobs == v3d_read(id, V3D_SCRATCH_OFFSET))
+		if (numCompletedJobs == v3d_read(id, V3D_SCRATCH_OFFSET)) {
+			v3d_write(id, V3D_VPMBASE_OFFSET, 0);
 			return MM_ISR_SUCCESS;
+			}
 		return MM_ISR_PROCESSED;
 	}
+	if (v3d_read(id, V3D_VPMBASE_OFFSET) != 16) {
+		if ((v3d_read(id, V3D_PCS_OFFSET)&0xF) == 0) {
+			v3d_write(id, V3D_VPMBASE_OFFSET, 16);
+			return MM_ISR_SUCCESS;
+			}
+		}
 	return MM_ISR_UNKNOWN;
 }
 
@@ -95,6 +101,12 @@ mm_job_status_e v3d_user_start_job(void *device_id, mm_job_post_t *job, u32 prof
 	switch (job->status) {
 	case MM_JOB_STATUS_READY:
 		{
+			if (v3d_read(id, V3D_VPMBASE_OFFSET) != 16) {
+				if ((v3d_read(id, V3D_PCS_OFFSET)&0xF) == 0)
+					v3d_write(id, V3D_VPMBASE_OFFSET, 16);
+				else
+					return MM_JOB_STATUS_RUNNING;
+				}
 			v3d_user_reset(id);
 			if (job->type == V3D_USER_JOB) {
 				if ((v3d_read(id, V3D_SRQCS_OFFSET) & 0x3F) == MAX_USER_JOBS) {
@@ -110,7 +122,6 @@ mm_job_status_e v3d_user_start_job(void *device_id, mm_job_post_t *job, u32 prof
 				v3d_write(id, V3D_SCRATCH_OFFSET, job_params->numUserJobs);
 				job->status = MM_JOB_STATUS_RUNNING;
 				for (i = 0; i < job_params->numUserJobs; i++) {
-					v3d_write(id, job_params->v3d_vpm_size[i], V3D_VPMBASE_OFFSET);
 					pr_debug("Submitting user job %x : %x (%x)\n",
 						job_params->v3d_srqpc[i], job_params->v3d_srqua[i],
 						job_params->v3d_srqul[i]);
@@ -149,9 +160,10 @@ bool get_v3d_user_status(void *device_id)
 	v3d_user_device_t *id = (v3d_user_device_t *)device_id;
 
 	/*Read the status to find Hardware busy status*/
-	if ((v3d_read(id, V3D_SRQCS_OFFSET) & 0x3F)) {
+	uint32_t status = v3d_read(id, V3D_SRQCS_OFFSET);
+	if (((status >> 8) & 0xff) != ((status >> 16) & 0xff))
 		return true;
-	}
+
 	return false;
 }
 
