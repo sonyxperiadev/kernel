@@ -1939,6 +1939,8 @@ static ssize_t pi_debug_set_dfs_client_opp(struct file *file,
 		len = 15;
 	else
 		len = count;
+/* usage of sscanf and copy from user are for debugfs operations, so they will
+ * not create any problems, so using coverity ignore comments */
 	/* coverity[secure_coding] */
 	/* coverity[tainted_data_argument] */
 	if (copy_from_user(input_str, buf, len))
@@ -1947,6 +1949,7 @@ static ssize_t pi_debug_set_dfs_client_opp(struct file *file,
 	/* coverity[tainted_data_argument] */
 	sscanf(input_str, "%s%u", opp_str, &weightage);
 	/* coverity[secure_coding] */
+	/* coverity[tainted_data_argument] */
 	if (isdigit(opp_str[0]))
 		opp = (opp_str[0] - toascii('0'));
 	else
@@ -2165,6 +2168,8 @@ static ssize_t pi_opp_set_min_lmt(struct file *file, const char __user *buf,
 		len = 15;
 	else
 		len = count;
+/* usage of sscanf and copy from user are for debugfs operations, so they will
+ * not create any problems, so using coverity ignore comments */
 	/* coverity[secure_coding] */
 	/* coverity[tainted_data_argument] */
 	if (copy_from_user(input_str, buf, len))
@@ -2173,6 +2178,7 @@ static ssize_t pi_opp_set_min_lmt(struct file *file, const char __user *buf,
 	/* coverity[tainted_data_argument] */
 	sscanf(input_str, "%s", opp_str);
 	/* coverity[secure_coding] */
+	/* coverity[tainted_data_argument] */
 	if (isdigit(opp_str[0]))
 		val = (opp_str[0] - toascii('0'));
 	else
@@ -2236,6 +2242,8 @@ static ssize_t pi_opp_set_max_lmt(struct file *file, const char __user *buf,
 		len = 15;
 	else
 		len = count;
+/* usage of sscanf and copy from user are for debugfs operations, so they will
+ * not create any problems, so using coverity ignore comments */
 	/* coverity[secure_coding] */
 	/* coverity[tainted_data_argument] */
 	if (copy_from_user(input_str, buf, len))
@@ -2244,6 +2252,7 @@ static ssize_t pi_opp_set_max_lmt(struct file *file, const char __user *buf,
 	/* coverity[tainted_data_argument] */
 	sscanf(input_str, "%s", opp_str);
 	/* coverity[secure_coding] */
+	/* coverity[tainted_data_argument] */
 	if (isdigit(opp_str[0]))
 		val = (opp_str[0] - toascii('0'));
 	else
