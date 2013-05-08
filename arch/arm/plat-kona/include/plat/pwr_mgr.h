@@ -335,4 +335,6 @@ int pwr_mgr_set_i2c_mode(int poll);
 int pwr_mgr_debug_init(u32 bmdm_pwr_base);
 #endif
 
+void pwr_mgr_log_active_events(void);
+
 #endif /*__KONA_POWER_MANAGER_H__*/

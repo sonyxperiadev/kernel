@@ -613,8 +613,10 @@ int enter_idle_state(struct kona_idle_state *state, u32 ctrl_params)
 	pwr_mgr_process_events(MISC_WKP_EVENT, BRIDGE_TO_MODEM_EVENT, false);
 	pwr_mgr_process_events(USBOTG_EVENT, PHY_RESUME_EVENT, false);
 
-	if (ctrl_params & CTRL_PARAMS_ENTER_SUSPEND)
+	if (ctrl_params & CTRL_PARAMS_ENTER_SUSPEND) {
 		log_wakeup_interrupts();
+		pwr_mgr_log_active_events();
+	}
 
 	if (ctrl_params & CTRL_PARAMS_FLAG_XTAL_ON || pm_info.keep_xtl_on)
 		clk_set_crystal_pwr_on_idle(true);

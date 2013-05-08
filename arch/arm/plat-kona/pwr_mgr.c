@@ -404,12 +404,26 @@ bool pwr_mgr_is_event_active(int event_id)
 		pwr_dbg(PWR_LOG_ERR, "%s:invalid event id\n", __func__);
 		return false;
 	}
+	if (unlikely(pwr_mgr.info->event_policy_offset[event_id]
+			== INVALID_EVENT_OFFSET)) {
+		pwr_dbg(PWR_LOG_CONFIG, "%s:invalid id\n", __func__);
+		return false;
+	}
 	reg_val = readl(PWR_MGR_REG_ADDR(event_id * 4));
 	return !!(reg_val & PWRMGR_EVENT_CONDITION_ACTIVE_MASK);
 
 }
 
 EXPORT_SYMBOL(pwr_mgr_is_event_active);
+
+
+void pwr_mgr_log_active_events(void)
+{
+	int i = 0;
+	for (i = 0; i < PWR_MGR_NUM_EVENTS; i++)
+		if (pwr_mgr_is_event_active(i))
+			pr_info("%s: Event %d is active\n", __func__, i);
+}
 
 int pwr_mgr_event_set(int event_id, int event_state)
 {
