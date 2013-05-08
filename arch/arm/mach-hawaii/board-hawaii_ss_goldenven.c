@@ -71,8 +71,8 @@
 #include <mach/kona.h>
 #if defined(CONFIG_BCM2079X_NFC_I2C)
 #include <linux/nfc/bcm2079x.h>
-//different with capri directory tree
-//#include <bcm2079x_nfc_settings.h>
+/* different with capri directory tree */
+/* #include <bcm2079x_nfc_settings.h> */
 #endif
 #include <mach/sdio_platform.h>
 #include <mach/hawaii.h>
@@ -130,7 +130,8 @@
 #include <linux/gp2ap002_dev.h>
 #endif
 
-#if defined(CONFIG_BMP18X) || defined(CONFIG_BMP18X_I2C) || defined(CONFIG_BMP18X_I2C_MODULE)
+#if defined(CONFIG_BMP18X) || defined(CONFIG_BMP18X_I2C)	\
+	|| defined(CONFIG_BMP18X_I2C_MODULE)
 #include <linux/bmp18x.h>
 #include <mach/bmp18x_i2c_settings.h>
 #endif
@@ -155,7 +156,7 @@
 #endif
 
 #ifdef CONFIG_FB_BRCM_KONA
-//#include <video/kona_fb_boot.h>
+/* #include <video/kona_fb_boot.h> */
 #include <video/kona_fb.h>
 #endif
 
@@ -187,10 +188,11 @@
 #include <linux/i2c/tsu6111.h>
 #endif
 #if defined(CONFIG_SEC_CHARGING_FEATURE)
-// Samsung charging feature
+/* Samsung charging feature */
 #include <linux/spa_power.h>
 #endif
-#if defined(CONFIG_TOUCHSCREEN_BCM915500) || defined(CONFIG_TOUCHSCREEN_BCM915500_MODULE)
+#if defined(CONFIG_TOUCHSCREEN_BCM915500)	\
+	|| defined(CONFIG_TOUCHSCREEN_BCM915500_MODULE)
 #include <linux/i2c/bcm15500_i2c_ts.h>
 #endif
 
@@ -368,7 +370,7 @@ struct ion_platform_data ion_cma_data = {
 #endif /* CONFIG_ION_BCM_NO_DT */
 
 #ifdef CONFIG_VIDEO_UNICAM_CAMERA
-extern bool camdrv_ss_power(int cam_id,int bOn);
+extern bool camdrv_ss_power(int cam_id, int bOn);
 
 #define S5K4ECGX_I2C_ADDRESS (0xAC>>1)
 #define SR030PC50_I2C_ADDRESS (0x60>>1)
@@ -376,10 +378,10 @@ extern bool camdrv_ss_power(int cam_id,int bOn);
 
 #define SENSOR_0_GPIO_PWRDN             (002)
 #define SENSOR_0_GPIO_RST               (111)
-#define SENSOR_0_CLK                    "dig_ch0_clk" // DCLK1 ??
+#define SENSOR_0_CLK                    "dig_ch0_clk" /* DCLK1 */
 #define SENSOR_0_CLK_FREQ               (13000000)
 
-#define SENSOR_1_CLK                    "dig_ch0_clk" // DCLK1 ??
+#define SENSOR_1_CLK                    "dig_ch0_clk" /* DCLK1 */
 #define SENSOR_1_CLK_FREQ               (26000000)
 
 #define SENSOR_1_GPIO_PWRDN             (005)
@@ -398,34 +400,46 @@ static int hawaii_camera_power(struct device *dev, int on)
 	static struct pi_mgr_dfs_node unicam_dfs_node;
 	int ret;
 
-	printk(KERN_INFO "%s:camera power %s, %d\n", __func__, (on ? "on" : "off"), unicam_dfs_node.valid);
+	printk(KERN_INFO
+	"%s:camera power %s, %d\n",
+	__func__,
+	(on ? "on" : "off"),
+	unicam_dfs_node.valid);
 
 	if (!unicam_dfs_node.valid) {
 		ret = pi_mgr_dfs_add_request(&unicam_dfs_node, "unicam",
 						PI_MGR_PI_ID_MM,
 						PI_MGR_DFS_MIN_VALUE);
 		if (ret) {
-			printk(KERN_ERR "%s: failed to register PI DFS request\n", __func__);
+			printk(KERN_ERR
+			"%s: failed to register PI DFS request\n",
+			__func__);
 			return -1;
 		}
 	}
 
 	if (on) {
 		if (pi_mgr_dfs_request_update(&unicam_dfs_node, PI_OPP_TURBO)) {
-			printk(KERN_ERR "%s:failed to update dfs request for unicam\n", __func__);
+			printk(KERN_ERR
+			"%s:failed to update dfs request for unicam\n",
+			__func__);
 			return -1;
 		}
 	}
 
 	if (!camdrv_ss_power(0, (bool)on)) {
-		printk(KERN_ERR "%s,camdrv_ss_power failed for MAIN CAM!!\n", __func__);
+		printk(KERN_ERR
+		"%s,camdrv_ss_power failed for MAIN CAM!!\n",
+		__func__);
 		return -1;
 	}
 
 	if (!on) {
 		if (pi_mgr_dfs_request_update(&unicam_dfs_node,
 						PI_MGR_DFS_MIN_VALUE)) {
-			printk(KERN_ERR "%s: failed to update dfs request for unicam\n", __func__);
+			printk(KERN_ERR
+			"%s: failed to update dfs request for unicam\n",
+			__func__);
 		}
 	}
 
@@ -443,34 +457,44 @@ static int hawaii_camera_power_sub(struct device *dev, int on)
 	static struct pi_mgr_dfs_node unicam_dfs_node;
 	int ret;
 
-	printk(KERN_INFO "%s:camera power %s, %d\n", __func__, (on ? "on" : "off"), unicam_dfs_node.valid);
+	printk(KERN_INFO "%s:camera power %s, %d\n",
+	__func__, (on ? "on" : "off"),
+	unicam_dfs_node.valid);
 
 	if (!unicam_dfs_node.valid) {
 		ret = pi_mgr_dfs_add_request(&unicam_dfs_node, "unicam",
 						PI_MGR_PI_ID_MM,
 						PI_MGR_DFS_MIN_VALUE);
 		if (ret) {
-			printk(KERN_ERR "%s: failed to register PI DFS request\n", __func__);
+			printk(KERN_ERR
+			"%s: failed to register PI DFS request\n",
+			__func__);
 			return -1;
 		}
 	}
 
 	if (on) {
 		if (pi_mgr_dfs_request_update(&unicam_dfs_node, PI_OPP_TURBO)) {
-			printk(KERN_ERR "%s:failed to update dfs request for unicam\n", __func__);
+			printk(KERN_ERR
+			"%s:failed to update dfs request for unicam\n",
+			__func__);
 			return -1;
 		}
 	}
 
 	if (!camdrv_ss_power(1, (bool)on)) {
-		printk(KERN_ERR "%s, camdrv_ss_power failed for SUB CAM!!\n", __func__);
+		printk(KERN_ERR
+		"%s, camdrv_ss_power failed for SUB CAM!!\n",
+		__func__);
 		return -1;
 	}
 
 	if (!on) {
 		if (pi_mgr_dfs_request_update(&unicam_dfs_node,
 						PI_MGR_DFS_MIN_VALUE)) {
-			printk(KERN_ERR "%s: failed to update dfs request for unicam\n", __func__);
+			printk(KERN_ERR
+			"%s: failed to update dfs request for unicam\n",
+			__func__);
 		}
 	}
 
@@ -521,7 +545,7 @@ static struct platform_device hawaii_camera = {
 static struct v4l2_subdev_sensor_interface_parms sr030pc50_if_params = {
 	.if_type = V4L2_SUBDEV_SENSOR_SERIAL,
 	.if_mode = V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2,
-	.orientation =V4L2_SUBDEV_SENSOR_ORIENT_270,
+	.orientation = V4L2_SUBDEV_SENSOR_ORIENT_270,
 	.facing = V4L2_SUBDEV_SENSOR_FRONT,
 	.parms.serial = {
 		.lanes = 1,
@@ -532,19 +556,19 @@ static struct v4l2_subdev_sensor_interface_parms sr030pc50_if_params = {
 	},
 };
 static struct soc_camera_link iclink_sr030pc50 = {
-	.bus_id		= 0,
+	.bus_id = 0,
 	.board_info	= &hawaii_i2c_camera[1],
 	.i2c_adapter_id	= 0,
-	.module_name	= "camdrv_ss_sub",
-	.power		= &hawaii_camera_power_sub,
-	.reset		= &hawaii_camera_reset_sub,
-	.priv		= &sr030pc50_if_params,
+	.module_name = "camdrv_ss_sub",
+	.power = &hawaii_camera_power_sub,
+	.reset = &hawaii_camera_reset_sub,
+	.priv = &sr030pc50_if_params,
 };
 
 static struct platform_device hawaii_camera_sub = {
-	.name	= "soc-camera-pdrv",
-	.id		= 1,
-	.dev	= {
+	.name = "soc-camera-pdrv",
+	.id	= 1,
+	.dev = {
 		.platform_data = &iclink_sr030pc50,
 	},
 };
@@ -664,16 +688,16 @@ static struct spi_kona_platform_data hawaii_ssp1_info = {
 #define NFC_WAKE 25
 #define NFC_ENABLE 100
 
-#define BCM_NFC_IRQ_GPIO	(90)       			//NFC_IRQ
-#define BCM_NFC_WAKE_GPIO	(25)       			//NFC_WAKE
-#define BCM_NFC_EN_GPIO		(100)      			//NFC_EN
+#define BCM_NFC_IRQ_GPIO	(90)	/*NFC_IRQ*/
+#define BCM_NFC_WAKE_GPIO	(25)	/*NFC_WAKE*/
+#define BCM_NFC_EN_GPIO		(100)	/*NFC_EN*/
 
 
-#define BCM_NFC_SCL_GPIO	(16)       			//NFC_SCL
-#define BCM_NFC_SDA_GPIO	(17)       			//NFC_SDA
-#define BCM_NFC_BUSID  		(1)
-//#define BCM_NFC_BUSID  		(7)
-#define BCM_NFC_ADDR   		(0x77)
+#define BCM_NFC_SCL_GPIO	(16)	/*NFC_SCL*/
+#define BCM_NFC_SDA_GPIO	(17)	/*NFC_SDA*/
+#define BCM_NFC_BUSID		(1)
+/*#define BCM_NFC_BUSID	(7)*/
+#define BCM_NFC_ADDR		(0x77)
 static struct bcm2079x_platform_data bcm2079x_pdata = {
 	.irq_gpio = BCM_NFC_IRQ_GPIO,
 	.en_gpio = BCM_NFC_EN_GPIO,
@@ -690,22 +714,22 @@ static struct i2c_board_info __initdata i2c_devs_nfc[] = {
 };
 
 static struct i2c_gpio_platform_data nfc_i2c_gpio_data = {
-	.sda_pin    = BCM_NFC_SDA_GPIO,
-	.scl_pin    = BCM_NFC_SCL_GPIO,
-	.udelay  = 3, 
+	.sda_pin = BCM_NFC_SDA_GPIO,
+	.scl_pin = BCM_NFC_SCL_GPIO,
+	.udelay = 3,
 	.timeout = 100,
 };
 
 static struct platform_device nfc_i2c_gpio_device = {
-        .name   = "i2c-gpio",
-        .id     = BCM_NFC_BUSID,
-        .dev        = {
+	.name = "i2c-gpio",
+	.id = BCM_NFC_BUSID,
+	.dev = {
 		.platform_data  = &nfc_i2c_gpio_data,
-        },
+	},
 };
 
 static struct platform_device *nfc_i2c_devices[] __initdata = {
-        &nfc_i2c_gpio_device,
+	&nfc_i2c_gpio_device,
 };
 #endif
 
@@ -744,7 +768,7 @@ struct platform_device *hawaii_common_plat_devices[] __initdata = {
 #endif
 
 #ifdef CONFIG_STM_TRACE
-//	&hawaii_stm_device,
+/* &hawaii_stm_device, */
 #endif
 
 #if defined(CONFIG_HW_RANDOM_KONA)
@@ -758,7 +782,7 @@ struct platform_device *hawaii_common_plat_devices[] __initdata = {
 #endif
 
 #ifdef CONFIG_KONA_AVS
-	&kona_avs_device,
+	&avs_device,
 #endif
 
 #ifdef CONFIG_KONA_CPU_FREQ_DRV
@@ -891,31 +915,33 @@ static struct bcm_keypad_platform_info hawaii_keypad_data = {
 #endif
 
 #define GPIO_KEYS_SETTINGS { \
-        { KEY_HOME, 10, 1, "HOME", EV_KEY, 0, 64}, \
+	{ KEY_HOME, 10, 1, "HOME", EV_KEY, 0, 64}, \
 }
 
 #if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
-//#define board_gpio_keys concatenate(ISLAND_BOARD_ID, _board_gpio_keys)
+/* #define board_gpio_keys concatenate(ISLAND_BOARD_ID, _board_gpio_keys) */
 static struct gpio_keys_button board_gpio_keys[] = GPIO_KEYS_SETTINGS;
 
-//#define gpio_keys_data concatenate(ISLAND_BOARD_ID, _gpio_keys_data)
+/* #define gpio_keys_data concatenate(ISLAND_BOARD_ID, _gpio_keys_data) */
 static struct gpio_keys_platform_data gpio_keys_data = {
-        .nbuttons = ARRAY_SIZE(board_gpio_keys),
-        .buttons = board_gpio_keys,
+	.nbuttons = ARRAY_SIZE(board_gpio_keys),
+	.buttons = board_gpio_keys,
 };
 
-//#define board_gpio_keys_device concatenate(ISLAND_BOARD_ID, _gpio_keys_device)
+/* #define board_gpio_keys_device
+concatenate(ISLAND_BOARD_ID, _gpio_keys_device) */
 static struct platform_device board_gpio_keys_device = {
-        .name = "gpio-keys",
-        .id = -1,
-        .dev = {
-                .platform_data = &gpio_keys_data,
-        },
+	.name = "gpio-keys",
+	.id = -1,
+	.dev = {
+		.platform_data = &gpio_keys_data,
+	},
 };
 #endif
 
 
-#if  defined(CONFIG_BMP18X) || defined(CONFIG_BMP18X_I2C) || defined(CONFIG_BMP18X_I2C_MODULE)
+#if  defined(CONFIG_BMP18X) || defined(CONFIG_BMP18X_I2C) || \
+		defined(CONFIG_BMP18X_I2C_MODULE)
 static struct i2c_board_info __initdata i2c_bmp18x_info[] = {
 	{
 		I2C_BOARD_INFO(BMP18X_NAME, BMP18X_I2C_ADDRESS),
@@ -950,18 +976,18 @@ static void sensors_regulator_on(bool onoff)
 static struct mpu6k_input_platform_data mpu6k_pdata = {
 	.power_on = sensors_regulator_on,
 	.orientation = {
-	0, -1, 0,
-        1, 0, 0,
-        0, 0, 1},
+		0, -1, 0,
+		1, 0, 0,
+		0, 0, 1
+	},
 	.acc_cal_path = "/efs/calibration_data",
 	.gyro_cal_path = "/efs/gyro_cal_data",
 };
 #endif
 
 #if defined(CONFIG_INPUT_MPU6050)
-#define GYRO_INT_GPIO_PIN   	(24)
-static struct i2c_board_info __initdata bsc3_i2c_boardinfo[] =
-{
+#define GYRO_INT_GPIO_PIN	(24)
+static struct i2c_board_info __initdata bsc3_i2c_boardinfo[] = {
 
 #if defined(CONFIG_INPUT_MPU6050)
 	{
@@ -971,7 +997,7 @@ static struct i2c_board_info __initdata bsc3_i2c_boardinfo[] =
 	},
 #endif
 
-#if defined (CONFIG_INPUT_YAS_SENSORS)
+#if defined(CONFIG_INPUT_YAS_SENSORS)
 	{
 		I2C_BOARD_INFO("geomagnetic", 0x2e),
 	},
@@ -982,48 +1008,51 @@ static struct i2c_board_info __initdata bsc3_i2c_boardinfo[] =
 #endif
 
 
-#if defined  (CONFIG_SENSORS_GP2AP002)
+#if defined(CONFIG_SENSORS_GP2AP002)
 static void gp2ap002_power_onoff(bool onoff)
-{                 
+{
 	if (onoff) {
-            struct regulator *power_regulator = NULL;
-            int ret=0;
-            power_regulator = regulator_get(NULL, "tcxldo_uc");
-            if (IS_ERR(power_regulator)){
-                printk(KERN_ERR "[GP2A] can not get prox_regulator (SENSOR_3.0V) \n");
-            } else {
-                ret = regulator_set_voltage(power_regulator,3000000,3000000);
-                printk(KERN_INFO "[GP2A] regulator_set_voltage : %d\n", ret);
-                ret = regulator_enable(power_regulator);
-                printk(KERN_INFO "[GP2A] regulator_enable : %d\n", ret);
-                regulator_put(power_regulator);
-                mdelay(5);
-            }
+		struct regulator *power_regulator = NULL;
+		int ret = 0;
+		power_regulator = regulator_get(NULL, "tcxldo_uc");
+		if (IS_ERR(power_regulator)) {
+			printk(KERN_ERR "[GP2A] can not get prox_regulator (SENSOR_3.0V)\n");
+		} else {
+			ret = regulator_set_voltage(power_regulator,
+					3000000, 3000000);
+			printk(KERN_INFO
+				"[GP2A] regulator_set_voltage : %d\n", ret);
+			ret = regulator_enable(power_regulator);
+			printk(KERN_INFO "[GP2A] regulator_enable : %d\n", ret);
+			regulator_put(power_regulator);
+			mdelay(5);
+		}
 	}
 }
 
 static void gp2ap002_led_onoff(bool onoff)
-{            
-        struct regulator *led_regulator = NULL;
-        int ret=0;
-            
-	if (onoff) {	
-                led_regulator = regulator_get(NULL, "sim2_vcc");
-                if (IS_ERR(led_regulator)){
-                    printk(KERN_ERR "[GP2A] can not get prox_regulator (SENSOR_LED_3.0V) \n");
-                } else {
-                    ret = regulator_set_voltage(led_regulator,3000000,3000000);
-                    printk(KERN_INFO "[GP2A] regulator_set_voltage : %d\n", ret);
-                    ret = regulator_enable(led_regulator);
-                    printk(KERN_INFO "[GP2A] regulator_enable : %d\n", ret);
-                    regulator_put(led_regulator);
-                    mdelay(5);
-                }
+{
+	struct regulator *led_regulator = NULL;
+	int ret = 0;
+	if (onoff) {
+		led_regulator = regulator_get(NULL, "sim2_vcc");
+		if (IS_ERR(led_regulator)) {
+			printk(KERN_ERR "[GP2A] can not get prox_regulator (SENSOR_LED_3.0V)\n");
+		} else {
+			ret = regulator_set_voltage(led_regulator,
+					3000000, 3000000);
+			printk(KERN_INFO
+				"[GP2A] regulator_set_voltage : %d\n", ret);
+			ret = regulator_enable(led_regulator);
+			printk(KERN_INFO "[GP2A] regulator_enable : %d\n", ret);
+			regulator_put(led_regulator);
+			mdelay(5);
+		}
 	} else {
-                led_regulator = regulator_get(NULL, "sim2_vcc");
-		ret = regulator_disable(led_regulator); 
-                printk(KERN_INFO "[GP2A] regulator_disable : %d\n", ret);
-                regulator_put(led_regulator);
+		led_regulator = regulator_get(NULL, "sim2_vcc");
+		ret = regulator_disable(led_regulator);
+		printk(KERN_INFO "[GP2A] regulator_disable : %d\n", ret);
+		regulator_put(led_regulator);
 	}
 }
 
@@ -1031,36 +1060,35 @@ static void gp2ap002_led_onoff(bool onoff)
 #define GPIO_SENSOR_I2C_SDA  85
 #define PROXI_INT_GPIO_PIN  89
 static struct gp2ap002_platform_data gp2ap002_platform_data = {
-    	.power_on = gp2ap002_power_onoff,
-    	.led_on = gp2ap002_led_onoff,
+	.power_on = gp2ap002_power_onoff,
+	.led_on = gp2ap002_led_onoff,
 	.irq_gpio = PROXI_INT_GPIO_PIN,
-	.irq = gpio_to_irq(PROXI_INT_GPIO_PIN),        
+	.irq = gpio_to_irq(PROXI_INT_GPIO_PIN),
 };
 
 static struct i2c_board_info __initdata sensor_gpio_i2c_devices[] = {
 	{
 		I2C_BOARD_INFO("gp2ap002", 0x44),
-		.platform_data = &gp2ap002_platform_data,            
+		.platform_data = &gp2ap002_platform_data,
 	},
 };
 
 static struct i2c_gpio_platform_data sensor_i2c_gpio_data = {
-        .sda_pin    = GPIO_SENSOR_I2C_SDA,
-        .scl_pin    = GPIO_SENSOR_I2C_SCL,
-        .udelay  = 3, 
-        .timeout = 100,
+	.sda_pin = GPIO_SENSOR_I2C_SDA,
+	.scl_pin = GPIO_SENSOR_I2C_SCL,
+	.udelay = 3,
+	.timeout = 100,
 };
 
 static struct platform_device sensor_i2c_gpio_device = {
-        .name       = "i2c-gpio",
-        .id     = 7,
-        .dev        = {
-                .platform_data  = &sensor_i2c_gpio_data,
-        },
+	.name = "i2c-gpio",
+	.id = 7,
+	.dev = {
+		.platform_data  = &sensor_i2c_gpio_data,},
 };
 
 static struct platform_device *sensor_i2c_devices[] __initdata = {
-        &sensor_i2c_gpio_device,
+	&sensor_i2c_gpio_device,
 };
 
 #endif
@@ -1097,9 +1125,9 @@ static struct kona_headset_pd hawaii_headset_data = {
 	/*
 	 * Because of the presence of the resistor in the MIC_IN line.
 	 * The actual ground may not be 0, but a small offset is added to it.
-	 * This needs to be subtracted from the measured voltage to determine the
-	 * correct value. This will vary for different HW based on the resistor
-	 * values used.
+	 * This needs to be subtracted from the measured voltage to
+	 * determine the correct value. This will vary for different HW based
+	 * on the resistor values used.
 	 *
 	 * if there is a resistor present on this line, please measure the load
 	 * value and put it here, otherwise 0.
@@ -1254,60 +1282,60 @@ static struct haptic_platform_data haptic_control_data = {
 };
 
 struct platform_device haptic_pwm_device = {
-	.name   = "samsung_pwm_haptic",
-	.id     = -1,
-	.dev	=	 {	.platform_data = &haptic_control_data,}
+	.name = "samsung_pwm_haptic",
+	.id = -1,
+	.dev = {.platform_data = &haptic_control_data,}
 };
 
 #endif /* CONFIG_HAPTIC_SAMSUNG_PWM */
 
 static struct sdio_platform_cfg hawaii_sdio_param[] = {
-        {
-                .id = 0,
-                .data_pullup = 0,
-                .cd_gpio = SD_CARDDET_GPIO_PIN,
-                .devtype = SDIO_DEV_TYPE_SDMMC,
-                .flags = KONA_SDIO_FLAGS_DEVICE_REMOVABLE,
-                .peri_clk_name = "sdio1_clk",
-                .ahb_clk_name = "sdio1_ahb_clk",
-                .sleep_clk_name = "sdio1_sleep_clk",
-                .peri_clk_rate = 48000000,
-                /*The SD card regulator*/
-                .vddo_regulator_name = "vdd_sdio",
-                /*The SD controller regulator*/
-                .vddsdxc_regulator_name = "vdd_sdxc",
-		.configure_sdio_pullup = configure_sdio_pullup,
-        },
-        {
-                .id = 1,
-                .data_pullup = 0,
-                .is_8bit = 1,
-                .devtype = SDIO_DEV_TYPE_EMMC,
-                .flags = KONA_SDIO_FLAGS_DEVICE_NON_REMOVABLE ,
-                .peri_clk_name = "sdio2_clk",
-                .ahb_clk_name = "sdio2_ahb_clk",
-                .sleep_clk_name = "sdio2_sleep_clk",
-                .peri_clk_rate = 52000000,
-        },
-        {
-                .id = 2,
-                .data_pullup = 0,
-                .devtype = SDIO_DEV_TYPE_WIFI,
-                .flags = KONA_SDIO_FLAGS_DEVICE_REMOVABLE,
-                .peri_clk_name = "sdio3_clk",
-                .ahb_clk_name = "sdio3_ahb_clk",
-                .sleep_clk_name = "sdio3_sleep_clk",
-                .peri_clk_rate = 48000000,
+	{
+			.id = 0,
+			.data_pullup = 0,
+			.cd_gpio = SD_CARDDET_GPIO_PIN,
+			.devtype = SDIO_DEV_TYPE_SDMMC,
+			.flags = KONA_SDIO_FLAGS_DEVICE_REMOVABLE,
+			.peri_clk_name = "sdio1_clk",
+			.ahb_clk_name = "sdio1_ahb_clk",
+			.sleep_clk_name = "sdio1_sleep_clk",
+			.peri_clk_rate = 48000000,
+			/*The SD card regulator*/
+			.vddo_regulator_name = "vdd_sdio",
+			/*The SD controller regulator*/
+			.vddsdxc_regulator_name = "vdd_sdxc",
+			.configure_sdio_pullup = configure_sdio_pullup,
+	},
+	{
+			.id = 1,
+			.data_pullup = 0,
+			.is_8bit = 1,
+			.devtype = SDIO_DEV_TYPE_EMMC,
+			.flags = KONA_SDIO_FLAGS_DEVICE_NON_REMOVABLE,
+			.peri_clk_name = "sdio2_clk",
+			.ahb_clk_name = "sdio2_ahb_clk",
+			.sleep_clk_name = "sdio2_sleep_clk",
+			.peri_clk_rate = 52000000,
+	},
+	{
+			.id = 2,
+			.data_pullup = 0,
+			.devtype = SDIO_DEV_TYPE_WIFI,
+			.flags = KONA_SDIO_FLAGS_DEVICE_REMOVABLE,
+			.peri_clk_name = "sdio3_clk",
+			.ahb_clk_name = "sdio3_ahb_clk",
+			.sleep_clk_name = "sdio3_sleep_clk",
+			.peri_clk_rate = 48000000,
 #ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
-                .wifi_gpio = {
-                        .reset          = 3,
-                        .reg            = -1,
-                        .host_wake      = 74,
-                        .shutdown       = -1,
-                },
-		.register_status_notify = hawaii_wifi_status_register,
+			.wifi_gpio = {
+					.reset = 3,
+					.reg = -1,
+					.host_wake = 74,
+					.shutdown = -1,
+			},
+			.register_status_notify = hawaii_wifi_status_register,
 #endif
-        },
+		},
 };
 
 
@@ -1315,11 +1343,11 @@ static struct sdio_platform_cfg hawaii_sdio_param[] = {
 
 static struct platform_pwm_backlight_data hawaii_backlight_data = {
 /* backlight */
-	.pwm_id		= 2,
+	.pwm_id	= 2,
 	.max_brightness	= 32,   /* Android calibrates to 32 levels*/
 	.dft_brightness	= 32,
-	.polarity	= 1,    /* Inverted polarity */
-	.pwm_period_ns	= 1000000,
+	.polarity = 1,    /* Inverted polarity */
+	.pwm_period_ns = 1000000,
 };
 
 #endif /*CONFIG_BACKLIGHT_PWM */
@@ -1333,10 +1361,10 @@ static struct platform_ktd259b_backlight_data bcm_ktd259b_backlight_data = {
 };
 
 struct platform_device hawaii_backlight_device = {
-	.name           = "panel",
-	.id 		= -1,
-	.dev 	= {
-		.platform_data  =  &bcm_ktd259b_backlight_data,
+	.name = "panel",
+	.id = -1,
+	.dev = {
+		.platform_data = &bcm_ktd259b_backlight_data,
 	},
 };
 
@@ -1363,10 +1391,10 @@ static struct platform_device wd_tapper = {
 };
 #endif
 
-#if defined (CONFIG_TOUCHKEY_BACKLIGHT)
+#if defined(CONFIG_TOUCHKEY_BACKLIGHT)
 static struct platform_device touchkeyled_device = {
-	.name 		= "touchkey-led",
-	.id 		= -1,
+	.name = "touchkey-led",
+	.id = -1,
 };
 #endif
 
@@ -1378,51 +1406,62 @@ static struct platform_device touchkeyled_device = {
 
 int tc360_keycodes[] = {KEY_MENU, KEY_BACK};
 
-static struct regulator *touchkey_regulator=NULL;
-static struct regulator *touchkeyled_regulator=NULL;
+static struct regulator *touchkey_regulator;
+static struct regulator *touchkeyled_regulator;
 extern u8 touch_pressed;
 
 static int tc360_setup_power(struct device *dev, bool setup)
 {
 	int ret;
-		
-	printk(KERN_ERR "%s \n", __func__);
+	printk(KERN_ERR "%s\n", __func__);
 	if (setup) {
-		if(touchkey_regulator == NULL){
-		touchkey_regulator = regulator_get(NULL, "gpldo1_uc"); 
-			if(IS_ERR(touchkey_regulator)){
+		if (touchkey_regulator == NULL) {
+			touchkey_regulator = regulator_get(NULL, "gpldo1_uc");
+			if (IS_ERR(touchkey_regulator)) {
 				ret = PTR_ERR(touchkey_regulator);
-				printk("Fail to get Touch Key regulator (%d)\n", ret);
+				printk(KERN_ERR
+				"Fail to get Touch Key regulator (%d)\n",
+				ret);
 				goto err_get_gpldo1_regulator;
 			}
-			ret = regulator_set_voltage(touchkey_regulator,2500000,2500000); //@Fixed me, HW		
-			if(ret < 0)	{
-				printk("[TSP] Fail to set voltage 2.5v ret = %d \n", ret);  		
+			ret = regulator_set_voltage(touchkey_regulator,
+					2500000, 2500000);
+			/*@Fixed me, HW*/
+			if (ret < 0) {
+				printk(KERN_ERR
+				"[TSP] Fail to set voltage 2.5v ret = %d\n",
+				ret);
 				goto err_set_gpldo1_voltage;
 			}
 	}
-	
-		if(touchkeyled_regulator == NULL){
-			touchkeyled_regulator = regulator_get(NULL, "gpldo3_uc"); 
-			if(IS_ERR(touchkeyled_regulator)){
+
+		if (touchkeyled_regulator == NULL) {
+			touchkeyled_regulator =
+				regulator_get(NULL, "gpldo3_uc");
+			if (IS_ERR(touchkeyled_regulator)) {
 				ret = PTR_ERR(touchkeyled_regulator);
-				printk("Fail to get Touch Key regulator (%d)\n", ret);
+				printk(KERN_ERR
+				"Fail to get Touch Key regulator (%d)\n",
+				ret);
 				goto err_get_gpldo3_regulator;
 			}
-			ret = regulator_set_voltage(touchkeyled_regulator,3300000,3300000); //@Fixed me, HW		
-			if(ret < 0)	{
-				printk("[TSP] Fail to set voltage 2.5v ret = %d \n", ret);  		
+			ret = regulator_set_voltage(touchkeyled_regulator,
+					3300000, 3300000);
+			/*@Fixed me, HW*/
+			if (ret < 0) {
+				printk(KERN_ERR
+				"[TSP] Fail to set voltage 2.5v ret = %d\n",
+				ret);
 				goto err_set_gpldo3_voltage;
 			}
-		}		
-		
+		}
 	}
 	 else {
 		regulator_force_disable(touchkey_regulator);
 		regulator_put(touchkey_regulator);
 
 		regulator_force_disable(touchkeyled_regulator);
-		regulator_put(touchkeyled_regulator);		
+		regulator_put(touchkeyled_regulator);
 	}
 
 	return ret;
@@ -1432,30 +1471,23 @@ err_set_gpldo1_voltage:
 	regulator_put(touchkey_regulator);
 err_get_gpldo3_regulator:
 err_set_gpldo3_voltage:
-	regulator_put(touchkeyled_regulator);	
-	
+	regulator_put(touchkeyled_regulator);
 	return ret;
 }
 
 static void tc360_power(bool on)
 {
 	int ret;
-	
-	if(!touchkey_regulator) {
-		printk(KERN_ERR "%s: No regulator. \n", __func__);
+	if (!touchkey_regulator) {
+		printk(KERN_ERR "%s: No regulator.\n", __func__);
 		return;
 	}
-	
-	printk(KERN_ERR "%s %s\n", __func__, (on) ? "on" : "off");	
-	
+
+	printk(KERN_ERR "%s %s\n", __func__, (on) ? "on" : "off");
 	if (on)
-	{
 		ret = regulator_enable(touchkey_regulator);
-	}
 	else
-	{
 		ret = regulator_disable(touchkey_regulator);
-	}
 
 	printk(KERN_INFO "%s: %s (%d)\n", __func__, (on) ? "on" : "off", ret);
 }
@@ -1504,7 +1536,7 @@ static void tc360_int_set_pull(bool to_up)
 		printk(KERN_ERR "%s: fail to set pull-%s on interrupt pin\n",
 		       __func__,
 		       (pull == NMK_GPIO_PULL_UP) ? "up" : "down");
-#endif		       
+#endif
 }
 
 
@@ -1522,37 +1554,37 @@ struct tc360_platform_data tc360_pdata = {
 	.led_power = tc360_led_power,
 	.pin_configure = tc360_pin_configure,
 	.int_set_pull = tc360_int_set_pull,
-	.touchscreen_is_pressed= &touch_pressed,
+	.touchscreen_is_pressed = &touch_pressed,
 };
 
 static struct i2c_board_info __initdata touchkey_gpio_i2c_devices[] = {
 	{
 		I2C_BOARD_INFO(TC360_DEVICE, 0x20),
-		.platform_data	= &tc360_pdata,
+		.platform_data = &tc360_pdata,
 		.irq = gpio_to_irq(GPIO_3_TOUCH_INT),
 	},
 };
 
 static struct i2c_gpio_platform_data touch_i2c_gpio_data = {
-        .sda_pin    = GPIO_3_TOUCH_SDA,
-        .scl_pin    = GPIO_3_TOUCH_SCL,
-        .udelay  = 3,
-        .timeout = 100,
+	.sda_pin = GPIO_3_TOUCH_SDA,
+	.scl_pin = GPIO_3_TOUCH_SCL,
+	.udelay = 3,
+	.timeout = 100,
 };
 
 
 static struct platform_device touchkey_device = {
-        .name       = "i2c-gpio",
-        .id     = 5,
-        .dev        = {
-            .platform_data  = &touch_i2c_gpio_data,
-        },
+	.name = "i2c-gpio",
+	.id = 5,
+	.dev = {
+		.platform_data = &touch_i2c_gpio_data,
+	},
 };
 
 #endif	/*CONFIG_KEYBOARD_TC360_TOUCHKEY*/
 
-#if defined (CONFIG_TOUCHSCREEN_IST30XX)
-#define TSP_INT_GPIO_PIN   	(73)
+#if defined(CONFIG_TOUCHSCREEN_IST30XX)
+#define TSP_INT_GPIO_PIN	(73)
 static struct i2c_board_info __initdata zinitix_i2c_devices[] = {
 	  {
 		I2C_BOARD_INFO("sec_touch", 0x50),
@@ -1566,7 +1598,8 @@ static int ts_power(ts_power_status vreg_en)
 {
 	struct regulator *reg = NULL;
 	if (!reg) {
-/* Remove this comment when the regulator references are fixed here for Hawaii */
+		/* Remove this comment when the regulator
+		references are fixed here for Hawaii */
 		reg = regulator_get(NULL, "hv8");
 		if (!reg || IS_ERR(reg)) {
 			pr_err("No Regulator available for ldo_hv8\n");
@@ -1602,7 +1635,8 @@ static struct i2c_board_info __initdata ft5306_info[] = {
 };
 #endif
 
-#if defined(CONFIG_TOUCHSCREEN_BCM915500) || defined(CONFIG_TOUCHSCREEN_BCM915500_MODULE)
+#if defined(CONFIG_TOUCHSCREEN_BCM915500) ||	\
+	defined(CONFIG_TOUCHSCREEN_BCM915500_MODULE)
 static struct bcm915500_platform_data bcm915500_i2c_param = {
 	.id = 3,
 	.i2c_adapter_id = 3,
@@ -1648,10 +1682,10 @@ static struct platform_device board_caph_device = {
 
 #ifdef CONFIG_USB_SWITCH_TSU6111
 
-enum cable_type_t{
-        CABLE_TYPE_USB,
-        CABLE_TYPE_AC,
-        CABLE_TYPE_NONE
+enum cable_type_t {
+	CABLE_TYPE_USB,
+	CABLE_TYPE_AC,
+	CABLE_TYPE_NONE
 };
 
 
@@ -1665,12 +1699,14 @@ static struct pi_mgr_qos_node qos_node;
 static void tsu6111_wakelock_init(void)
 {
 #ifdef CONFIG_HAS_WAKELOCK
-	wake_lock_init(&tsu6111_jig_wakelock, WAKE_LOCK_SUSPEND, "tsu6111_jig_wakelock");
+	wake_lock_init(&tsu6111_jig_wakelock, WAKE_LOCK_SUSPEND,
+		"tsu6111_jig_wakelock");
 #endif
 
 #ifdef CONFIG_KONA_PI_MGR
-	pi_mgr_qos_add_request(&qos_node, "tsu6111_jig_qos", PI_MGR_PI_ID_ARM_SUB_SYSTEM,
-			       PI_MGR_QOS_DEFAULT_VALUE);
+	pi_mgr_qos_add_request(&qos_node, "tsu6111_jig_qos",
+		PI_MGR_PI_ID_ARM_SUB_SYSTEM,
+		PI_MGR_QOS_DEFAULT_VALUE);
 #endif
 }
 enum cable_type_t set_cable_status;
@@ -1679,8 +1715,8 @@ static void tsu6111_usb_cb(bool attached)
 	enum bcmpmu_chrgr_type_t chrgr_type;
 	enum bcmpmu_usb_type_t usb_type;
 
-	#if defined(CONFIG_SEC_CHARGING_FEATURE)	
-	int spa_data=POWER_SUPPLY_TYPE_BATTERY;
+	#if defined(CONFIG_SEC_CHARGING_FEATURE)
+	int spa_data = POWER_SUPPLY_TYPE_BATTERY;
 #endif
 	pr_info("ftsu6111_usb_cb attached %d\n", attached);
 
@@ -1690,29 +1726,32 @@ static void tsu6111_usb_cb(bool attached)
 	case CABLE_TYPE_USB:
 			usb_type = PMU_USB_TYPE_SDP;
 			chrgr_type = PMU_CHRGR_TYPE_SDP;
-#if defined(CONFIG_SEC_CHARGING_FEATURE)	
+#if defined(CONFIG_SEC_CHARGING_FEATURE)
 		spa_data = POWER_SUPPLY_TYPE_USB_CDP;
 #endif
-			pr_info("%s USB attached\n",__func__);
-			//send_usb_insert_event(BCMPMU_USB_EVENT_USB_DETECTION, &usb_type); //remove to fix enumeration failure issue
+			pr_info("%s USB attached\n", __func__);
+			/*send_usb_insert_event(BCMPMU_USB_EVENT_USB_DETECTION,
+				&usb_type);
+			//remove to fix enumeration failure issue */
 			break;
-		case CABLE_TYPE_NONE:
+	case CABLE_TYPE_NONE:
 			usb_type = PMU_USB_TYPE_NONE;
 			chrgr_type = PMU_CHRGR_TYPE_NONE;
 			spa_data = POWER_SUPPLY_TYPE_BATTERY;
-			pr_info("%s USB removed\n",__func__);
-			//set_usb_connection_status(&usb_type); // for unplug, we only set status, but not send event
+			pr_info("%s USB removed\n", __func__);
+			/*set_usb_connection_status(&usb_type);
+			//for unplug, we only set status, but not send event */
 			break;
 
 	}
-	send_chrgr_insert_event(BCMPMU_CHRGR_EVENT_CHGR_DETECTION,&chrgr_type);
+	send_chrgr_insert_event(BCMPMU_CHRGR_EVENT_CHGR_DETECTION, &chrgr_type);
 #if defined(CONFIG_SEC_CHARGING_FEATURE)
 	spa_event_handler(SPA_EVT_CHARGER, spa_data);
-#endif	
+#endif
 	pr_info("tsu6111_usb_cb attached %d\n", attached);
 }
 
-#if defined (CONFIG_TOUCHSCREEN_IST30XX)
+#if defined(CONFIG_TOUCHSCREEN_IST30XX)
 extern void ist30xx_set_ta_mode(bool charging);
 #endif
 
@@ -1720,8 +1759,8 @@ static void tsu6111_charger_cb(bool attached)
 {
 	enum bcmpmu_chrgr_type_t chrgr_type;
 	enum cable_type_t set_cable_status;
-#if defined(CONFIG_SEC_CHARGING_FEATURE)	
-	int spa_data=POWER_SUPPLY_TYPE_BATTERY;
+#if defined(CONFIG_SEC_CHARGING_FEATURE)
+	int spa_data = POWER_SUPPLY_TYPE_BATTERY;
 #endif
 
 	pr_info("tsu6111_charger_cb attached %d\n", attached);
@@ -1731,28 +1770,28 @@ static void tsu6111_charger_cb(bool attached)
 	case CABLE_TYPE_AC:
 			chrgr_type = PMU_CHRGR_TYPE_DCP;
 			pr_info("%s TA attached\n", __func__);
-			#if defined (CONFIG_TOUCHSCREEN_IST30XX)
+			#if defined(CONFIG_TOUCHSCREEN_IST30XX)
 				ist30xx_set_ta_mode(1);
-			#endif			
-#if defined(CONFIG_SEC_CHARGING_FEATURE)	
+			#endif
+#if defined(CONFIG_SEC_CHARGING_FEATURE)
 		spa_data = POWER_SUPPLY_TYPE_USB_DCP;
 #endif
 			break;
-		case CABLE_TYPE_NONE:
+	case CABLE_TYPE_NONE:
 			chrgr_type = PMU_CHRGR_TYPE_NONE;
 			pr_info("%s TA removed\n", __func__);
-			#if defined (CONFIG_TOUCHSCREEN_IST30XX)
+			#if defined(CONFIG_TOUCHSCREEN_IST30XX)
 				ist30xx_set_ta_mode(0);
-			#endif				
+			#endif
 			break;
-		default:
+	default:
 			break;
 	}
 	send_chrgr_insert_event(BCMPMU_CHRGR_EVENT_CHGR_DETECTION,
 			&chrgr_type);
 #if defined(CONFIG_SEC_CHARGING_FEATURE)
 	spa_event_handler(SPA_EVT_CHARGER, spa_data);
-#endif		
+#endif
 	pr_info("tsu6111_charger_cb attached %d\n", attached);
 }
 
@@ -1762,32 +1801,32 @@ static void tsu6111_jig_cb(bool attached)
 
 	if (attached) {
 #ifdef CONFIG_HAS_WAKELOCK
-		if ( !wake_lock_active( &tsu6111_jig_wakelock ) )
-			wake_lock( &tsu6111_jig_wakelock );
+		if (!wake_lock_active(&tsu6111_jig_wakelock))
+			wake_lock(&tsu6111_jig_wakelock);
 #endif
 #ifdef CONFIG_KONA_PI_MGR
 			pi_mgr_qos_request_update(&qos_node, 0);
 #endif
 	} else {
 #ifdef CONFIG_HAS_WAKELOCK
-		if ( wake_lock_active( &tsu6111_jig_wakelock ) )
-			wake_unlock( &tsu6111_jig_wakelock );
+		if (wake_lock_active(&tsu6111_jig_wakelock))
+			wake_unlock(&tsu6111_jig_wakelock);
 #endif
 #ifdef CONFIG_KONA_PI_MGR
 		pi_mgr_qos_request_update(&qos_node, PI_MGR_QOS_DEFAULT_VALUE);
 #endif
 	}
-	
+
 }
-extern int musb_info_handler(struct notifier_block *nb, unsigned long event, void *para);
+extern int musb_info_handler(struct notifier_block *nb,
+			unsigned long event, void *para);
 static void tsu6111_uart_cb(bool attached)
 {
-	pr_info("%s attached %d\n",__func__, attached);
-	
+	pr_info("%s attached %d\n", __func__, attached);
 		if (attached) {
 #ifdef CONFIG_HAS_WAKELOCK
-			if ( !wake_lock_active( &tsu6111_jig_wakelock ) )
-			wake_lock( &tsu6111_jig_wakelock );
+			if (!wake_lock_active(&tsu6111_jig_wakelock))
+				wake_lock(&tsu6111_jig_wakelock);
 #endif
 #ifdef CONFIG_KONA_PI_MGR
 			pi_mgr_qos_request_update(&qos_node, 0);
@@ -1795,11 +1834,12 @@ static void tsu6111_uart_cb(bool attached)
 			musb_info_handler(NULL, 0, 1);
 	} else {
 #ifdef CONFIG_HAS_WAKELOCK
-			if ( wake_lock_active( &tsu6111_jig_wakelock ) )
-			wake_unlock( &tsu6111_jig_wakelock );
+			if (wake_lock_active(&tsu6111_jig_wakelock))
+				wake_unlock(&tsu6111_jig_wakelock);
 #endif
 #ifdef CONFIG_KONA_PI_MGR
-			pi_mgr_qos_request_update(&qos_node, PI_MGR_QOS_DEFAULT_VALUE);
+			pi_mgr_qos_request_update(&qos_node,
+			PI_MGR_QOS_DEFAULT_VALUE);
 #endif
 			musb_info_handler(NULL, 0, 0);
 		}
@@ -1809,8 +1849,7 @@ static void tsu6111_uart_cb(bool attached)
 void uas_jig_force_sleep(void)
 {
 #ifdef CONFIG_HAS_WAKELOCK
-	if(wake_lock_active(&tsu6111_jig_wakelock))
-	{
+	if (wake_lock_active(&tsu6111_jig_wakelock)) {
 		wake_unlock(&tsu6111_jig_wakelock);
 		pr_info("Force unlock jig_uart_wl\n");
 	}
@@ -1824,36 +1863,36 @@ void uas_jig_force_sleep(void)
 }
 
 static struct tsu6111_platform_data tsu6111_pdata = {
-        .usb_cb = tsu6111_usb_cb,
-        .charger_cb = tsu6111_charger_cb,
-        .jig_cb = tsu6111_jig_cb,
-        .uart_cb = tsu6111_uart_cb,
+	.usb_cb = tsu6111_usb_cb,
+	.charger_cb = tsu6111_charger_cb,
+	.jig_cb = tsu6111_jig_cb,
+	.uart_cb = tsu6111_uart_cb,
 };
 
-static struct i2c_board_info  __initdata micro_usb_i2c_devices_info[]  = {
-        {
-                I2C_BOARD_INFO("tsu6111", 0x4A >> 1),
-                .platform_data = &tsu6111_pdata,
-                .irq = gpio_to_irq(GPIO_USB_INT),
-        },
+static struct i2c_board_info  __initdata micro_usb_i2c_devices_info[] = {
+	{
+		I2C_BOARD_INFO("tsu6111", 0x4A >> 1),
+		.platform_data = &tsu6111_pdata,
+		.irq = gpio_to_irq(GPIO_USB_INT),
+	},
 };
 
-static struct i2c_gpio_platform_data mUSB_i2c_gpio_data={
-        .sda_pin        = GPIO_USB_I2C_SDA,
-                .scl_pin= GPIO_USB_I2C_SCL,
-                .udelay                 = 2,
-        };
+static struct i2c_gpio_platform_data mUSB_i2c_gpio_data = {
+	.sda_pin = GPIO_USB_I2C_SDA,
+	.scl_pin = GPIO_USB_I2C_SCL,
+	.udelay = 2,
+};
 
 static struct platform_device mUSB_i2c_gpio_device = {
-        .name                   = "i2c-gpio",
-        .id                     = TSU6111_I2C_BUS_ID,
-        .dev                    ={
-                .platform_data  = &mUSB_i2c_gpio_data,
-        },
+	.name = "i2c-gpio",
+	.id = TSU6111_I2C_BUS_ID,
+	.dev = {
+		.platform_data = &mUSB_i2c_gpio_data,
+	},
 };
 
 static struct platform_device *mUSB_i2c_devices[] __initdata = {
-        &mUSB_i2c_gpio_device,
+	&mUSB_i2c_gpio_device,
 };
 
 #endif
@@ -1863,7 +1902,7 @@ struct platform_device bcm_vibrator_device = {
 	.name = "vibrator",
 	.id = 0,
 	.dev = {
-		.platform_data="vibldo_uc",
+		.platform_data = "vibldo_uc",
 	},
 };
 #endif
@@ -1915,7 +1954,7 @@ static struct platform_device *hawaii_devices[] __initdata = {
 #endif
 
 #if defined(CONFIG_BCM_ALSA_SOUND)
-	        &board_caph_device,
+	&board_caph_device,
 #endif
 
 #if defined(CONFIG_KEYBOARD_TC360_TOUCHKEY)
@@ -1923,17 +1962,17 @@ static struct platform_device *hawaii_devices[] __initdata = {
 #endif
 
 #if defined(CONFIG_TOUCHKEY_BACKLIGHT)
-        &touchkeyled_device
-#endif        
+	&touchkeyled_device
+#endif
 };
 
 struct platform_device *hawaii_sdio_devices[] __initdata = {
-        &hawaii_sdio2_device,
-        &hawaii_sdio3_device,
-        &hawaii_sdio1_device,
+	&hawaii_sdio2_device,
+	&hawaii_sdio3_device,
+	&hawaii_sdio1_device,
 };
 
-#if defined (CONFIG_TOUCHSCREEN_ATMEL_MXT224S)
+#if defined(CONFIG_TOUCHSCREEN_ATMEL_MXT224S)
 extern void mxt_init(void);
 #endif
 
@@ -1946,11 +1985,12 @@ static void __init hawaii_add_i2c_devices(void)
 #ifdef CONFIG_TOUCHSCREEN_TANGO
 	i2c_register_board_info(3, tango_info, ARRAY_SIZE(tango_info));
 #endif
-#if defined (CONFIG_TOUCHSCREEN_IST30XX)
-	i2c_register_board_info(3, zinitix_i2c_devices, ARRAY_SIZE(zinitix_i2c_devices));
+#if defined(CONFIG_TOUCHSCREEN_IST30XX)
+	i2c_register_board_info(3, zinitix_i2c_devices,
+		ARRAY_SIZE(zinitix_i2c_devices));
 #endif
 
-#if defined (CONFIG_TOUCHSCREEN_ATMEL_MXT224S)
+#if defined(CONFIG_TOUCHSCREEN_ATMEL_MXT224S)
 	mxt_init();
 #endif
 
@@ -1958,32 +1998,37 @@ static void __init hawaii_add_i2c_devices(void)
 	i2c_register_board_info(3, ft5306_info, ARRAY_SIZE(ft5306_info));
 #endif
 
-#if defined(CONFIG_TOUCHSCREEN_BCM915500) || defined(CONFIG_TOUCHSCREEN_BCM915500_MODULE)
+#if defined(CONFIG_TOUCHSCREEN_BCM915500) ||	\
+	defined(CONFIG_TOUCHSCREEN_BCM915500_MODULE)
 	i2c_register_board_info(3, bcm915500_i2c_boardinfo,
 				ARRAY_SIZE(bcm915500_i2c_boardinfo));
 #endif
 
 #if defined(CONFIG_INPUT_MPU6050)
-	i2c_register_board_info(2, bsc3_i2c_boardinfo, ARRAY_SIZE(bsc3_i2c_boardinfo));
+	i2c_register_board_info(2, bsc3_i2c_boardinfo,
+		ARRAY_SIZE(bsc3_i2c_boardinfo));
 #endif
 #ifdef CONFIG_USB_SWITCH_TSU6111
-        pr_info("tsu6111\n");
-#if defined( CONFIG_HAS_WAKELOCK ) || defined( CONFIG_KONA_PI_MGR )
+	pr_info("tsu6111\n");
+#if defined(CONFIG_HAS_WAKELOCK) || defined(CONFIG_KONA_PI_MGR)
 		tsu6111_wakelock_init();
 #endif
-        i2c_register_board_info(TSU6111_I2C_BUS_ID, micro_usb_i2c_devices_info,ARRAY_SIZE(micro_usb_i2c_devices_info));
+	i2c_register_board_info(TSU6111_I2C_BUS_ID, micro_usb_i2c_devices_info,
+		ARRAY_SIZE(micro_usb_i2c_devices_info));
 #endif
 
 #ifdef CONFIG_USB_SWITCH_TSU6111
-        pr_info("tsu6111 mUSB_i2c_devices\n");
-        platform_add_devices(mUSB_i2c_devices, ARRAY_SIZE(mUSB_i2c_devices));
+	pr_info("tsu6111 mUSB_i2c_devices\n");
+	platform_add_devices(mUSB_i2c_devices, ARRAY_SIZE(mUSB_i2c_devices));
 #endif
 
 #if defined(CONFIG_BCM2079X_NFC_I2C)
 	pr_info("add i2c_devs_nfc\n");
-	i2c_register_board_info(BCM_NFC_BUSID, i2c_devs_nfc, ARRAY_SIZE(i2c_devs_nfc));
+	i2c_register_board_info(BCM_NFC_BUSID, i2c_devs_nfc,
+		ARRAY_SIZE(i2c_devs_nfc));
 #endif
-#if  defined(CONFIG_BMP18X) || defined(CONFIG_BMP18X_I2C) || defined(CONFIG_BMP18X_I2C_MODULE)
+#if defined(CONFIG_BMP18X) || defined(CONFIG_BMP18X_I2C) \
+	|| defined(CONFIG_BMP18X_I2C_MODULE)
 	i2c_register_board_info(
 #ifdef BMP18X_I2C_BUS_ID
 			BMP18X_I2C_BUS_ID,
@@ -2010,13 +2055,16 @@ static void __init hawaii_add_i2c_devices(void)
 #endif /* CONFIG_AL3006 */
 
 #if defined(CONFIG_KEYBOARD_TC360_TOUCHKEY)
-	i2c_register_board_info(5, touchkey_gpio_i2c_devices, ARRAY_SIZE(touchkey_gpio_i2c_devices));
+	i2c_register_board_info(5, touchkey_gpio_i2c_devices,
+		ARRAY_SIZE(touchkey_gpio_i2c_devices));
 #endif
 
 
-#if defined(CONFIG_SENSORS_GP2AP002)   
-	i2c_register_board_info(7, sensor_gpio_i2c_devices, ARRAY_SIZE(sensor_gpio_i2c_devices));
-        platform_add_devices(sensor_i2c_devices, ARRAY_SIZE(sensor_i2c_devices));
+#if defined(CONFIG_SENSORS_GP2AP002)
+	i2c_register_board_info(7, sensor_gpio_i2c_devices,
+		ARRAY_SIZE(sensor_gpio_i2c_devices));
+	platform_add_devices(sensor_i2c_devices,
+		ARRAY_SIZE(sensor_i2c_devices));
 #endif
 
 
@@ -2038,14 +2086,15 @@ static void hawaii_add_pdata(void)
 	hawaii_stm_device.dev.platform_data = &hawaii_stm_pdata;
 	hawaii_headset_device.dev.platform_data = &hawaii_headset_data;
 	hawaii_pl330_dmac_device.dev.platform_data = &hawaii_pl330_pdata;
-#ifdef 	CONFIG_BACKLIGHT_PWM
+#ifdef CONFIG_BACKLIGHT_PWM
 	hawaii_backlight_device.dev.platform_data = &hawaii_backlight_data;
 	hawaii_usb_phy_platform_device.dev.platform_data =
 		&hsotgctrl_plat_data;
 #endif
 
 #ifdef CONFIG_USB_DWC_OTG
-	hawaii_hsotgctrl_platform_device.dev.platform_data = &hsotgctrl_plat_data;
+	hawaii_hsotgctrl_platform_device.dev.platform_data =
+		&hsotgctrl_plat_data;
 #endif
 }
 
@@ -2069,7 +2118,7 @@ static void __init hawaii_add_devices(void)
 #endif
 
 #if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
-        platform_device_register(&board_gpio_keys_device);
+	platform_device_register(&board_gpio_keys_device);
 #endif
 
 #ifdef CONFIG_ION_BCM_NO_DT
@@ -2087,15 +2136,15 @@ static void __init hawaii_add_devices(void)
 	spi_register_board_info(spi_slave_board_info,
 				ARRAY_SIZE(spi_slave_board_info));
 #ifdef CONFIG_BCM_SS_VIBRA
-	platform_device_register( &bcm_vibrator_device);
+	platform_device_register(&bcm_vibrator_device);
 #endif
 
 }
 
 static void __init hawaii_add_sdio_devices(void)
 {
-        platform_add_devices(hawaii_sdio_devices,
-                                ARRAY_SIZE(hawaii_sdio_devices));
+	platform_add_devices(hawaii_sdio_devices,
+		ARRAY_SIZE(hawaii_sdio_devices));
 }
 
 #ifdef CONFIG_FB_BRCM_KONA
@@ -2144,7 +2193,7 @@ static void __init hawaii_init(void)
 
 static int __init hawaii_add_lateinit_devices(void)
 {
-        hawaii_add_sdio_devices();
+	hawaii_add_sdio_devices();
 
 #ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
 	hawaii_wlan_init();
