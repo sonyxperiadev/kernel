@@ -115,6 +115,25 @@ int bcm_nfc_sim_ctrl(int cmd)
 }
 EXPORT_SYMBOL(bcm_nfc_sim_ctrl);
 
+static ssize_t store_nfc_rst(struct device *dev, struct device_attribute *attr,
+				const char *buf, size_t count)
+{
+	unsigned int val;
+	sscanf(buf, "%d", &val);
+	bcm_nfc_sim_ctrl(val);
+	return count;
+}
+
+static DEVICE_ATTR(nfc_rst, 0666, NULL, store_nfc_rst);
+static struct attribute *nfc_rst_attrs[] = {
+	&dev_attr_nfc_rst.attr,
+	NULL
+};
+
+static const struct attribute_group nfc_attr_group = {
+	.attrs = nfc_rst_attrs,
+};
+
 static void bcmi2cnfc_init_stat(struct bcmi2cnfc_dev *bcmi2cnfc_dev)
 {
 	bcmi2cnfc_dev->error_write = 0;
@@ -481,6 +500,7 @@ static const struct file_operations bcmi2cnfc_dev_fops = {
 };
 
 static struct bcmi2cnfc_i2c_platform_data bcmi2cnfc_pdata;
+static struct kobject *bcmnfc_kobj;
 
 static int bcmi2cnfc_probe(struct i2c_client *client,
 			   const struct i2c_device_id *id)
@@ -586,6 +606,10 @@ static int bcmi2cnfc_probe(struct i2c_client *client,
 	i2c_set_clientdata(client, bcmi2cnfc_dev);
 	_bcmi2cnfc_dev = bcmi2cnfc_dev;
 	bcmi2cnfc_dev->sim_reset = 0;
+
+	bcmnfc_kobj = kobject_create_and_add("bcmnfc", kernel_kobj);
+	if (bcmnfc_kobj)
+		ret = sysfs_create_group(bcmnfc_kobj, &nfc_attr_group);
 
 	DBG(dev_info(&client->dev,
 		     "%s, probing bcmi2cnfc driver exited successfully\n",
