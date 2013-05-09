@@ -78,7 +78,8 @@ static mm_isr_type_e process_v3d_user_irq(void *device_id)
 		v3d_write(id, V3D_DBQITC_OFFSET, flags_qpu);
 		numCompletedJobs = (v3d_read(id, V3D_SRQCS_OFFSET) >> 16) & 0xff;
 		if (numCompletedJobs == v3d_read(id, V3D_SCRATCH_OFFSET)) {
-			v3d_write(id, V3D_VPMBASE_OFFSET, 0);
+			if ((v3d_read(id, V3D_PCS_OFFSET)&0xF) == 0)
+				v3d_write(id, V3D_VPMBASE_OFFSET, 0);
 			return MM_ISR_SUCCESS;
 			}
 		return MM_ISR_PROCESSED;
