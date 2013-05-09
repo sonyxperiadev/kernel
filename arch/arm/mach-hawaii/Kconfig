@@ -111,6 +111,11 @@ config	MACH_HAWAII_SS_GOLDENVEN_REV01
 	help
 	  Support for the Broadcom Hawaii SS GoldenVE N board.
 
+config	MACH_HAWAII_SS_GOLDENVEN_REV02
+	bool "Support Broadcom Hawaii SS GoldenVE N board"
+	help
+	  Support for the Broadcom Hawaii SS GoldenVE N board.
+
 endchoice
 
 choice
