@@ -2089,9 +2089,17 @@ static int ov5640_s_stream(struct v4l2_subdev *sd, int enable)
 		return ret;
 	}
 	if (enable) {
+		int delayMs = 50;
 		if ((ov5640->flashmode == FLASH_MODE_ON)
 		    || (ov5640->flashmode == FLASH_MODE_AUTO))
 			flash_gpio_strobe(1);
+		if (CAM_RUNNING_MODE_PREVIEW == runmode) {
+			/* need more delay to get stable
+			 * preview output, or burst capture may
+			 * calc based on wrong exposure/gain
+			 */
+			delayMs = 200;
+		}
 		/* Power Up, Start Streaming */
 		/* ret = ov5640_reg_writes(client, ov5640_stream); */
 		/* use MIPI on/off as OVT suggested on AppNote */
@@ -2099,7 +2107,7 @@ static int ov5640_s_stream(struct v4l2_subdev *sd, int enable)
 		if ((ov5640->flashmode == FLASH_MODE_ON)
 		    || (ov5640->flashmode == FLASH_MODE_AUTO))
 			flash_gpio_strobe(0);
-		msleep(50);
+		msleep(delayMs);
 	} else {
 		/* Stop Streaming, Power Down */
 		/* ret = ov5640_reg_writes(client, ov5640_power_down); */
