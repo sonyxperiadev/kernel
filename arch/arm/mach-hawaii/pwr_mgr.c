@@ -930,6 +930,17 @@ static int param_set_pm_late_init(const char *val,
 	pr_info("%s, pm_delayed_init:%d\n", __func__, pm_delayed_init);
 	if (pm_delayed_init == 1)
 		hawaii_pwr_mgr_delayed_init();
+/* For sequencer to run with the update voltage table. During boot MM will be
+   running at wakeup policy at 1.3V(set by loader), at turbo OPP.
+   There will be no sequencer at that point. After that voltage tables will be
+   setup, sequencer will be enabled. Once boot completes MM will be at DFS.
+   But it will still be running at turbo, so new voltage req won't go to PMU.
+   Therefore for the voltage to get updated we limit the OPP to normal and
+   set it back to turbo. Turbo voltage will change from 1.3 to 1.2 or less */
+	pi_mgr_set_dfs_opp_limit(PI_MGR_PI_ID_MM, PI_OPP_ECONOMY,
+					PI_OPP_NORMAL);
+	pi_mgr_set_dfs_opp_limit(PI_MGR_PI_ID_MM, PI_OPP_ECONOMY,
+					PI_OPP_TURBO);
 
 	kona_pm_disable_idle_state(CSTATE_ALL, 0);
 	return 0;
