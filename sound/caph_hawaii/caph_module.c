@@ -434,8 +434,6 @@ static int BCMAudLOG_release(struct inode *inode, struct file *file)
 
 	if (audio_log_thread) {
 		/* kthread_stop(audio_log_thread); */
-		audio_log_cbinfo[0].capture_ready = 1;
-		wake_up_interruptible(&audio_log_queue);
 		aTrace(LOG_ALSA_INTERFACE,
 			"\n BCMLOG_release : waiting for kthread to stop %d\n",
 			dev_use_count);
@@ -802,26 +800,27 @@ int process_logmsg(void *data)
 	while (1) {
 		wait_event_interruptible(audio_log_queue,
 					 audio_log_cbinfo[0].
-					 capture_ready | audio_log_cbinfo[1].
-					 capture_ready | audio_log_cbinfo[2].
-					 capture_ready | audio_log_cbinfo[3].
-					 capture_ready);
+					 capture_ready || audio_log_cbinfo[1].
+					 capture_ready || audio_log_cbinfo[2].
+					 capture_ready || audio_log_cbinfo[3].
+					 capture_ready ||
+					 kthread_should_stop());
 
 		/* DEBUG("\n Capture thread running now\n"); */
-
 		if (dev_use_count == 0) {
-			aTrace(LOG_ALSA_INTERFACE,
-				"\n Stop process_logmsg thread\n");
 			if (kthread_should_stop())
 				aTrace(LOG_ALSA_INTERFACE,
 					"\n kthread_should_stop returns TRUE\n");
 			else
 				aTrace(LOG_ALSA_INTERFACE,
 					"\n kthread_should_stop returns FALSE\n");
+		}
+		if (kthread_should_stop()) {
+			aTrace(LOG_ALSA_INTERFACE,
+				"\n Stop process_logmsg thread\n");
 			audio_log_writecb.pPrivate = NULL;
 			break;
 		}
-
 		for (i = 0; i < LOG_STREAM_NUMBER; i++) {
 			if (audio_log_cbinfo[i].capture_ready) {
 				/* DEBUG("\n Capture stream at
