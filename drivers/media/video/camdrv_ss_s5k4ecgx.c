@@ -89,7 +89,9 @@ static struct regulator *VCAM_AF_2_8V;
 #define GPIO_CAM_FLASH_EN		33
 #define EXIF_MODEL			"GT-B7810"
 
-#elif defined(CONFIG_MACH_HAWAII_SS_LOGAN_REV01)
+#elif defined(CONFIG_MACH_HAWAII_SS_LOGAN_REV01) \
+	|| defined(CONFIG_MACH_HAWAII_SS_GOLDENVEN_REV01)\
+	|| defined(CONFIG_MACH_HAWAII_SS_CODINAN)
 
 #define VCAM_A_2_8V_REGULATOR		"mmcldo1"
 #define VCAM_IO_1_8V_REGULATOR		"lvldo1"
@@ -133,8 +135,6 @@ static struct regulator *VCAM_AF_2_8V;
 #define VCAM_AF_2_8V_REGULATOR_uV	2800000
 #define CAM0_RESET			111
 #define CAM0_STNBY			2
-#define CAM1_RESET			4
-#define CAM1_STNBY			5
 #define GPIO_CAM_FLASH_SET		34
 #define GPIO_CAM_FLASH_EN		11
 #define EXIF_MODEL			"GT-B7810"
@@ -509,7 +509,7 @@ static int camdrv_ss_s5k4ecgx_enum_frameintervals(struct v4l2_subdev *sd,struct 
 		return -EINVAL;
 	}
 	
-	CAM_INFO_PRINTK("%s :  check w = %d h = %d \n",__func__,fival->width,fival->height);
+
 	fival->type = V4L2_FRMIVAL_TYPE_DISCRETE;
 
 	for(i = 0; i < ARRAY_SIZE(s5k4ecgx_supported_preview_framesize_list); i++) {
@@ -523,11 +523,10 @@ static int camdrv_ss_s5k4ecgx_enum_frameintervals(struct v4l2_subdev *sd,struct 
 
 	if(i == ARRAY_SIZE(s5k4ecgx_supported_preview_framesize_list))
 	{
-		CAM_ERROR_PRINTK("%s unsupported width = %d and height = %d  \n",__func__,fival->width,fival->height);
+		CAM_ERROR_PRINTK("%s unsupported width = %d and height = %d\n",
+			__func__, fival->width, fival->height);
 		return -EINVAL;
 	}
-	else
-		CAM_INFO_PRINTK(" %s :  found i = %d\n",__func__,i);
 
 	switch (size) {
 	case PREVIEW_SIZE_5MP:
@@ -536,10 +535,14 @@ static int camdrv_ss_s5k4ecgx_enum_frameintervals(struct v4l2_subdev *sd,struct 
 	case PREVIEW_SIZE_W1MP:
 		fival->discrete.numerator = 2;
 		fival->discrete.denominator = 15;
+		CAM_INFO_PRINTK("%s: w = %d, h = %d, fps = 7.5\n",
+			__func__, fival->width, fival->height);
 		break;
 	default:
 		fival->discrete.numerator = 1;
 		fival->discrete.denominator = 30;
+		CAM_INFO_PRINTK("%s: w = %d, h = %d, fps = 30\n",
+			__func__, fival->width, fival->height);
 		break;
 	}
 
@@ -736,61 +739,57 @@ static int camdrv_ss_s5k4ecgx_set_capture_start(struct v4l2_subdev *sd, struct v
 		return -EIO;
 	}
 
+	if (state->camera_af_flash_checked == 0) {
+		if (state->current_flash_mode == FLASH_MODE_ON) {
+			state->camera_flash_fire = 1;
+			CAM_INFO_PRINTK("%s : Flash mode is ON\n", __func__);
+		} else if (state->current_flash_mode == FLASH_MODE_AUTO) {
+			if (camdrv_ss_s5k4ecgx_check_flash_needed(sd)) {
+				state->camera_flash_fire = 1;
+				CAM_INFO_PRINTK(
+					"%s: Auto Flash : flash needed\n",
+					__func__);
+			} else
+				CAM_INFO_PRINTK(
+					"%s: Auto Flash : flash not needed\n",
+					__func__);
+		}
+	}
 
-{
-  if (state->camera_af_flash_checked == 0) {
-  // state->camera_flash_fire = 0;
-     CAM_ERROR_PRINTK( " for auto flash af flash checked: %d\n",state->camera_af_flash_checked);
-	CAM_ERROR_PRINTK( " for auto flash current_flash_mode: %d\n",state->current_flash_mode);
+	/* Set Flash registers */
+	if (state->camera_flash_fire) {
+		err = camdrv_ss_i2c_set_config_register(
+				client, s5k4ecgx_Main_Flash_Start_EVT1,
+				ARRAY_SIZE(s5k4ecgx_Main_Flash_Start_EVT1),
+				"Main_Flash_Start_EVT1");
+		if (err < 0)
+			CAM_ERROR_PRINTK(
+				"[%s : %d] ERROR! Couldn't Set s5k4ecgx_Main_Flash_Start_EVT1\n",
+				__FILE__, __LINE__);
 
-   if (state->current_flash_mode == FLASH_MODE_ON) {
-    state->camera_flash_fire = 1;
-	     CAM_ERROR_PRINTK( " for auto flash current_flash_mode: %d\n",state->current_flash_mode);
-   } else if (state->current_flash_mode == FLASH_MODE_AUTO) {
-    bool bflash_needed = false;
-	     CAM_ERROR_PRINTK( " for auto flash flash mode is auto: %d\n",state->current_flash_mode);
-    if (camdrv_ss_s5k4ecgx_check_flash_needed(sd)){
-     bflash_needed = camdrv_ss_s5k4ecgx_check_flash_needed(sd);
-CAM_ERROR_PRINTK( " for auto flash : flash mode is auto  blashneeded: %d\n",bflash_needed);	
-}
-    else{
-     CAM_ERROR_PRINTK( "%s : check_flash_needed is NULL !!!\n", __func__);
-    	}
-
-    if (bflash_needed) {
-     state->camera_flash_fire = 1;
-    }
-   }
-  }
-
-  if (state->camera_flash_fire) {
-     //Nikhil
-    /* Set Flash registers */
-     err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_Main_Flash_Start_EVT1, ARRAY_SIZE(s5k4ecgx_Main_Flash_Start_EVT1),
-         "Main_Flash_Start_EVT1");
-   if (err < 0) {
-       CAM_ERROR_PRINTK( "[%s : %d] ERROR! Couldn't Set s5k4ecgx_Main_Flash_Start_EVT1\n", __FILE__, __LINE__);
-   }
-      //Nikihl    
 #ifdef CONFIG_FLASH_MIC2871
-	camdrv_ss_s5k4ecgx_MIC2871_flash_control(sd, FLASH_CONTROL_MAX_LEVEL);
+		camdrv_ss_s5k4ecgx_MIC2871_flash_control(
+			sd, FLASH_CONTROL_MAX_LEVEL);
 #else
-	camdrv_ss_s5k4ecgx_AAT_flash_control(sd, FLASH_CONTROL_MAX_LEVEL);
+		camdrv_ss_s5k4ecgx_AAT_flash_control(
+			sd, FLASH_CONTROL_MAX_LEVEL);
 #endif
-  }
+	}
 
- 
-
-
- }
 
 	/* Set Snapshot registers */
 
-		err = camdrv_ss_i2c_set_config_register(client, s5k4ecgx_snapshot_normal_regs, ARRAY_SIZE(s5k4ecgx_snapshot_normal_regs), "snapshot_normal_regs");
-		if (err < 0) {
-		CAM_ERROR_PRINTK( "%s : camdrv_ss_i2c_set_config_register failed  not supported !!!\n",  __func__);
+	err = camdrv_ss_i2c_set_config_register(client,
+			s5k4ecgx_snapshot_normal_regs,
+			ARRAY_SIZE(s5k4ecgx_snapshot_normal_regs),
+			"snapshot_normal_regs");
+
+	if (err < 0) {
+		CAM_ERROR_PRINTK(
+		"%s : s5k4ecgx_snapshot_normal_regs i2c failed !\n",
+		__func__);
 		return -EIO;
-		}
+	}
 
 	return 0;
 }
@@ -2462,18 +2461,7 @@ static int camdrv_ss_s5k4ecgx_AAT_flash_control(struct v4l2_subdev *sd, int cont
 		udelay(1);
 
 		gpio_set_value(GPIO_CAM_FLASH_EN, 1);
-		udelay(10); /* Flash Mode Set time */
-
-
-#define VCAM_A_2_8V_REGULATOR		"mmcldo1"
-#if defined(CONFIG_MACH_HAWAII_SS_LOGAN_REV01) || defined(CONFIG_MACH_HAWAII_SS_LOGAN_REV02) || defined(CONFIG_MACH_HAWAII_SS_LOGANDS_REV00) || defined(CONFIG_MACH_HAWAII_SS_GOLDENVE_REV01) || defined(CONFIG_MACH_HAWAII_SS_LOGAN_COMBINED) \
-	|| defined(CONFIG_MACH_HAWAII_SS_GOLDENVEN_REV01) || defined(CONFIG_MACH_HAWAII_SS_LOGANDS_REV01)
-#define VCAM_IO_1_8V_REGULATOR		"lvldo1"
-#else
-#define VCAM_IO_1_8V_REGULATOR		"tcxldo"
-#endif
-#define VCAM_AF_2_8V_REGULATOR		"mmcldo2"
-#define VCAM_CORE_1_2V_REGULATOR	"vsrldo"
+		udelay(10);    /* Flash Mode Set time */
 
 		camdrv_ss_AAT_flash_write_data(3);
 		break;
@@ -2926,30 +2914,41 @@ bool camdrv_ss_s5k4ecgx_get_esd_status(struct v4l2_subdev *sd)
 	return bEsdStatus;
 }
 
-int camdrv_ss_s5k4ecgx_get_mode_change(struct v4l2_subdev *sd)
+enum camdrv_ss_capture_mode_state
+	camdrv_ss_s5k4ecgx_get_mode_change(struct v4l2_subdev *sd)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	unsigned short read_value = 0xFFFF;
 	int ret = -1;
-
 	camdrv_ss_i2c_write_4_bytes(client, 0xFCFC, 0xD000);
 	camdrv_ss_i2c_write_4_bytes(client, 0x002C, 0x7000);
 	camdrv_ss_i2c_write_4_bytes(client, 0x002E, 0x215F);
 	ret = camdrv_ss_i2c_read_2_bytes(client, 0x0F12, &read_value);
 	if (ret < 0) {
-		CAM_ERROR_PRINTK("%s: mode change read failed(%d)\n", ret);
-		return -1; /* read fail */
+		CAM_ERROR_PRINTK("%s: CAMDRV_SS_CAPTURE_MODE_READ_FAILED\n");
+		return CAMDRV_SS_CAPTURE_MODE_READ_FAILED; /* read fail */
 	}
 
 	/* CAM_INFO_PRINTK("read mode change value <7000.215Fh>=0x%X\n", read_value); */
-	if (read_value == 0x0100) /* capture mode */
-		ret = 1;
-	else if (read_value == 0x0000) /* preview mode */
-		ret = 0;
-	else
-		ret = -2; /* unknown mode */
+	if (read_value == 0x0100) { /* capture mode */
+		CAM_INFO_PRINTK(
+		"%s: CAPTURE_MODE_READY read_value = 0x%x\n"
+		, __func__, read_value);
 
-	return ret;
+		return CAMDRV_SS_CAPTURE_MODE_READY;
+	} else if (read_value == 0x0000) { /* preview mode */
+		CAM_INFO_PRINTK(
+		"%s: CAPTURE_MODE_READ_PROCESSING..read_value = 0x%x\n"
+		, __func__, read_value);
+
+		return CAMDRV_SS_CAPTURE_MODE_READ_PROCESSING;
+	}
+	CAM_ERROR_PRINTK(
+	"%s: CAPTURE_MODE_READ_FAILED! read_value = 0x%x\n"
+	, __func__, read_value);
+
+	return CAMDRV_SS_CAPTURE_MODE_READ_FAILED; /* unknown mode */
+
 }
 //New code
 int camdrv_ss_s5k4ecgx_set_preflash_sequence(struct v4l2_subdev *sd, struct v4l2_control *ctrl)

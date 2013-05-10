@@ -1265,7 +1265,7 @@ static int camdrv_ss_set_vt_mode(struct v4l2_subdev *sd, struct v4l2_control *ct
 			} else
 				camdrv_ss_set_preview_start(sd);
 		}
-
+		break;
 	}
 
 	default:
@@ -3119,7 +3119,10 @@ static int camdrv_ss_set_ev(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		if (sensor.ev_plus_1_5_regs == 0)
 			CAM_ERROR_PRINTK("%s %s : ev_plus_1_5_regs not supported !!!\n", sensor.name, __func__);
 		else
-			err = camdrv_ss_i2c_set_config_register(client, sensor.ev_plus_1_regs, sensor.rows_num_ev_plus_1_5_regs, "ev_plus_1_5_regs");
+			err = camdrv_ss_i2c_set_config_register(client,
+					sensor.ev_plus_1_5_regs,
+					sensor.rows_num_ev_plus_1_5_regs,
+					"ev_plus_1_5_regs");
 
 		break;
 	}
@@ -3569,7 +3572,7 @@ static int camdrv_ss_set_autocontrast(struct v4l2_subdev *sd, struct v4l2_contro
 		/*  off */
 		CAM_INFO_PRINTK("%s %s :OFF !!\n", sensor.name, __func__);
 
-		if (sensor.auto_contrast_on_regs == NULL)
+		if (sensor.auto_contrast_off_regs == NULL)
 			CAM_ERROR_PRINTK("%s %s : auto_contrast_off_regs is NULL, please check if it is needed !!!\n", sensor.name, __func__);
 		else
 			err = camdrv_ss_i2c_set_config_register(client, sensor.auto_contrast_off_regs, sensor.rows_num_auto_contrast_off_regs, "auto_contrast_off_regs");
@@ -3824,8 +3827,6 @@ static int camdrv_ss_enum_framesizes(struct v4l2_subdev *sd, struct v4l2_frmsize
 {
 	/* struct i2c_client *client = v4l2_get_subdevdata(sd); */
 
-	CAM_INFO_PRINTK("%s %s Entered\n", sensor.name, __func__);
-
 	if (fsize->pixel_format == sensor.default_pix_fmt || fsize->pixel_format == sensor.default_mbus_pix_fmt) {
 		if (fsize->index >= sensor.supported_number_of_preview_sizes) {
 			CAM_ERROR_PRINTK("%s %s : exceeded index =%d\n", sensor.name, __func__, fsize->index);
@@ -3870,7 +3871,6 @@ static int camdrv_ss_enum_framesizes(struct v4l2_subdev *sd, struct v4l2_frmsize
 static int camdrv_ss_enum_frameintervals(struct v4l2_subdev *sd,
 					struct v4l2_frmivalenum *fival)
 {
-	CAM_INFO_PRINTK("%s : camdrv_ss_enum_frameintervals w = %d h = %d\n", __func__, fival->width, fival->height);
 	return sensor.enum_frameintervals(sd, fival);
 }
 
@@ -4021,13 +4021,18 @@ static int camdrv_ss_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	switch (ctrl->id) {
 	case V4L2_CID_CAMERA_READ_MODE_CHANGE_REG:
 	{
-		if (atomic_read(&gCapModeState) == CAMDRV_SS_CAPTURE_MODE_READ_PROCESSING)
+		if (atomic_read(&gCapModeState) ==
+			CAMDRV_SS_CAPTURE_MODE_READ_PROCESSING) {
 			/* if successful read sensor mode change value */
 			/* and that value is preview mode, skip one frame */
 			/* but other case include error case, just do capture without skip frame */
-			ctrl->value = 0;
-		else
+			CAM_INFO_PRINTK(
+			"%s %s : CAPTURE MODE STILL PROCESSING....\n",
+			sensor.name, __func__, ctrl->id);
+
 			ctrl->value = 1;
+		} else
+			ctrl->value = 0;
 		break;
 	}
 	case V4L2_CID_EXPOSURE:
@@ -4259,7 +4264,8 @@ static int camdrv_ss_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	int err = 0;
 	int temp_sensor_state = 0;
 
-	CAM_INFO_PRINTK("%s %s : id = %d\n", sensor.name, __func__, ctrl->id);
+	/*CAM_INFO_PRINTK("%s %s : id = %d\n",
+		sensor.name, __func__, ctrl->id);*/
 
 	if (ctrl->id == V4L2_CID_CAMERA_INITIALIZE) {
 		CAM_INFO_PRINTK("denis : sensor initialize %s\n", sensor.name);
@@ -4781,7 +4787,8 @@ static int camdrv_ss_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	}
 
 	mutex_unlock(&sensor_s_ctrl);
-	CAM_INFO_PRINTK("%s %s : %d SUCCESS\n", sensor.name, __func__, ctrl->id);
+	/* CAM_INFO_PRINTK("%s %s : %d SUCCESS\n",
+			sensor.name, __func__, ctrl->id); */
 	return err;
 }
 
@@ -4852,21 +4859,20 @@ static int camdrv_ss_cap_mode_change_monitor(struct v4l2_subdev *sd)
 static int camdrv_ss_cap_mode_change_monitor_thread_func(void *data)
 {
 	struct v4l2_subdev *sd = (struct v4l2_subdev *)data;
-	int ret = -1;
-	int mode_change_reg_value = 0;
+	enum camdrv_ss_capture_mode_state mode = 0;
 	int timeout = CAP_MODE_CHANGE_MORNITOR_TIMEOUT;
+
+	CAM_INFO_PRINTK("%s %s :E\n", sensor.name, __func__);
 
 	do {
 		msleep(CAP_MODE_CHANGE_MORNITOR_INTERVAL_MS);
 		timeout--;
 
-		mode_change_reg_value = sensor.get_mode_change_reg(sd);
-		if (mode_change_reg_value == 1) {
+		mode = sensor.get_mode_change_reg(sd);
+		if (mode == CAMDRV_SS_CAPTURE_MODE_READY) {
 			atomic_set(&gCapModeState, CAMDRV_SS_CAPTURE_MODE_READY);
-			ret = 0;
-		} else if (mode_change_reg_value == 0) {
+		} else if (mode == CAMDRV_SS_CAPTURE_MODE_READ_PROCESSING) {
 			atomic_set(&gCapModeState, CAMDRV_SS_CAPTURE_MODE_READ_PROCESSING);
-
 			if (timeout <= 0) {
 				atomic_set(&gCapModeState, CAMDRV_SS_CAPTURE_MODE_READ_FAILED);
 				CAM_ERROR_PRINTK(
@@ -4880,10 +4886,10 @@ static int camdrv_ss_cap_mode_change_monitor_thread_func(void *data)
 				"[WARN]%s %s:get_mode_change_reg read failed\n",
 				sensor.name, __func__);
 		}
-	} while (mode_change_reg_value == 0);
+	} while (mode == CAMDRV_SS_CAPTURE_MODE_READ_PROCESSING);
 
-	/* CAM_INFO_PRINTK("%s %s, gCapModeState=%d, timeout=%d\n", sensor.name, __func__, atomic_read(&gCapModeState), timeout); */
-	return ret;
+	CAM_INFO_PRINTK("%s %s :X\n", sensor.name, __func__);
+	return 0;
 }
 /**************************************************************************
  * DRIVER REGISTRATION FACTORS
@@ -4900,7 +4906,7 @@ static int camdrv_ss_s_stream(struct v4l2_subdev *sd, int enable)
 	tmp_sensor_state = atomic_read(&sensor_state);
 
 	if (enable && (tmp_sensor_state != CAMDRV_SS_STREAMING)) {
-		CAM_INFO_PRINTK("%s %s :\n", sensor.name, __func__);
+		CAM_INFO_PRINTK("%s %s : START\n", sensor.name, __func__);
 		if (tmp_sensor_state == CAMDRV_SS_NOT_INITIALIZED) {
 			CAM_ERROR_PRINTK("%s %s : CAMDRV_SS_NOT_INITIALIZED! Initialize again! Normally this case will not happen! !\n", sensor.name, __func__);
 			if (0 != camdrv_ss_actual_sensor_power_up()) {
@@ -4962,11 +4968,12 @@ static int camdrv_ss_s_stream(struct v4l2_subdev *sd, int enable)
 
 		atomic_set(&sensor_state, CAMDRV_SS_STREAMING);
 
-		CAM_INFO_PRINTK("%s %s : START SUCCESS!!\n", sensor.name, __func__);
+		CAM_INFO_PRINTK(
+			"%s %s : START success\n", sensor.name, __func__);
 	}
 
 	if (!enable && (tmp_sensor_state != CAMDRV_SS_INITIALIZE_DONE)) {
-		CAM_INFO_PRINTK("%s %s :\n", sensor.name, __func__);
+		CAM_INFO_PRINTK("%s %s :STOP\n", sensor.name, __func__);
 		/* camdrv_ss_set_preview_stop(sd); */
 		atomic_set(&sensor_state, CAMDRV_SS_INITIALIZE_DONE);
 		CAM_INFO_PRINTK("%s : STOP success\n", __func__);
@@ -5157,6 +5164,13 @@ bool camdrv_ss_power(int cam_id, int bOn)
 	camera_id = cam_id;
 
 	if (bOn) {
+		if (atomic_read(&sensor_state) != CAMDRV_SS_NOT_INITIALIZED) {
+			CAM_ERROR_PRINTK(
+				"%s:cam_id = %d ,Camera in use by another client\n",
+				__func__, cam_id);
+			return false;
+		}
+
 		memset(&sensor, 0, sizeof(struct camdrv_ss_sensor_cap));
 		CAM_INFO_PRINTK("%s : cam_id = %d powering ON ..\n", __func__, cam_id);
 
@@ -5219,8 +5233,7 @@ bool camdrv_ss_power(int cam_id, int bOn)
 		GPIOSetup.reg.b.pull_dn = 0;
 		pinmux_set_pin_config(&GPIOSetup);
 		gpio_request(51, "bsc1scl");
-		gpio_direction_output(51,0);
-		gpio_set_value(51,0);
+		gpio_direction_input(51);
 		gpio_free(51);
 
 		GPIOSetup.name = PN_BSC1DAT;
@@ -5230,8 +5243,7 @@ bool camdrv_ss_power(int cam_id, int bOn)
 		GPIOSetup.reg.b.pull_dn = 0;
 		pinmux_set_pin_config(&GPIOSetup);
 		gpio_request(52, "bsc1sda");
-		gpio_direction_output(52,0);
-		gpio_set_value(52,0);
+		gpio_direction_input(52);
 		gpio_free(52);
 
 		sensor.sensor_power(0);
@@ -5370,8 +5382,7 @@ static int camdrv_ss_probe(struct i2c_client *client, const struct i2c_device_id
 	GPIOSetup.reg.b.pull_dn = 0;
 	pinmux_set_pin_config(&GPIOSetup);
 	gpio_request(51, "bsc1scl");
-	gpio_direction_output(51,0);
-	gpio_set_value(51,0);
+	gpio_direction_input(51);
 	gpio_free(51);
 
 	GPIOSetup.name = PN_BSC1DAT;
@@ -5381,8 +5392,7 @@ static int camdrv_ss_probe(struct i2c_client *client, const struct i2c_device_id
 	GPIOSetup.reg.b.pull_dn = 0;
 	pinmux_set_pin_config(&GPIOSetup);
 	gpio_request(52, "bsc1sda");
-	gpio_direction_output(52,0);
-	gpio_set_value(52,0);
+	gpio_direction_input(52);
 	gpio_free(52);
 
 	CAM_INFO_PRINTK("%s %s : success\n", sensor.name, __func__);

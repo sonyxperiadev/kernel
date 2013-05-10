@@ -299,6 +299,7 @@ static int soc_camera_reqbufs(struct file *file, void *priv,
 
 	WARN_ON(priv != file->private_data);
 
+	dev_info(&icd->dev, "soc_camera_reqbufs\n");
 	if (icd->streamer && icd->streamer != file) {
 		dev_err(&icd->dev,
 			"icd->streamer is not a file, returning error\n");
@@ -538,8 +539,11 @@ static int soc_camera_open(struct file *file)
 		};
 
 		ret = soc_camera_power_set(icd, icl, 1);
-		if (ret < 0)
+		if (ret < 0) {
+			dev_err(&icd->dev, "Camera already in use,return error: %d\n",
+				ret);
 			goto epower;
+		}
 
 		/* The camera could have been already on, try to reset */
 		if (icl->reset)
@@ -797,11 +801,19 @@ static int soc_camera_streamon(struct file *file, void *priv,
 
 	WARN_ON(priv != file->private_data);
 
-	if (i != V4L2_BUF_TYPE_VIDEO_CAPTURE)
-		return -EINVAL;
+	dev_info(&icd->dev, "soc_camera_streamon\n");
 
-	if (icd->streamer != file)
+	if (i != V4L2_BUF_TYPE_VIDEO_CAPTURE) {
+		dev_err(&icd->dev,
+				"not V4L2_BUF_TYPE_VIDEO_CAPTURE, returning error\n");
+		return -EINVAL;
+	}
+
+	if (icd->streamer != file) {
+		dev_err(&icd->dev,
+				"streamer is not a file, returning error\n");
 		return -EBUSY;
+	}
 
 	/* This calls buf_queue from host driver's videobuf_queue_ops */
 	if (ici->ops->init_videobuf)
@@ -824,11 +836,19 @@ static int soc_camera_streamoff(struct file *file, void *priv,
 
 	WARN_ON(priv != file->private_data);
 
-	if (i != V4L2_BUF_TYPE_VIDEO_CAPTURE)
-		return -EINVAL;
+	dev_info(&icd->dev, "soc_camera_streamoff\n");
 
-	if (icd->streamer != file)
+	if (i != V4L2_BUF_TYPE_VIDEO_CAPTURE) {
+		dev_err(&icd->dev,
+			"not V4L2_BUF_TYPE_VIDEO_CAPTURE, returning error\n");
+		return -EINVAL;
+	}
+
+	if (icd->streamer != file) {
+		dev_err(&icd->dev,
+				"streamer is not a file, returning error\n");
 		return -EBUSY;
+	}
 
 	/*
 	 * This calls buf_release from host driver's videobuf_queue_ops for all

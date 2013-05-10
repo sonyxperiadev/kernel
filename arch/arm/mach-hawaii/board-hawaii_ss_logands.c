@@ -165,6 +165,7 @@
 #endif
 #ifdef CONFIG_VIDEO_UNICAM_CAMERA
 #include <media/soc_camera.h>
+#include "../../../drivers/media/video/camdrv_ss.h"
 #endif
 
 #ifdef CONFIG_VIDEO_KONA
@@ -367,7 +368,6 @@ struct ion_platform_data ion_cma_data = {
 #endif /* CONFIG_ION_BCM_NO_DT */
 
 #ifdef CONFIG_VIDEO_UNICAM_CAMERA
-extern bool camdrv_ss_power(int cam_id, int bOn);
 
 #define S5K4ECGX_I2C_ADDRESS (0xAC>>1)
 #define SR030PC50_I2C_ADDRESS (0x60>>1)

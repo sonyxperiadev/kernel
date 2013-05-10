@@ -478,13 +478,11 @@ int unicam_videobuf_start_streaming(struct vb2_queue *q, unsigned int count)
 		return -1;
 	}
 
-/*
 	ret = v4l2_subdev_call(sd, video, s_stream, 1);
 	if (ret < 0 && ret != -ENOIOCTLCMD) {
 		dev_err(unicam_dev->dev, "error on s_stream(%d)\n", ret);
 		return ret;
 	}
-	*/
 
 	/* get the sensor interface information */
 	ret = v4l2_subdev_call(sd, sensor, g_interface_parms,
@@ -690,13 +688,6 @@ int unicam_videobuf_start_streaming(struct vb2_queue *q, unsigned int count)
 		return -1;
 	}
 
-	/* Enabling sensor after enabling unicam */
-	ret = v4l2_subdev_call(sd, video, s_stream, 1);
-	if (ret < 0 && ret != -ENOIOCTLCMD) {
-		dev_err(unicam_dev->dev, "error on s_stream(%d)\n", ret);
-		return ret;
-	}
-
 	if (unicam_dev->if_params.if_mode ==
 		V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI1) {
 		cslCamFrame.int_enable = CSL_CAM_INT_LINE_COUNT;
@@ -715,6 +706,7 @@ int unicam_videobuf_start_streaming(struct vb2_queue *q, unsigned int count)
 		}
 	}
 	/* Configure HW if buffer is queued ahead of streamon */
+	spin_lock_irqsave(&unicam_dev->lock, flags);
 	if(unicam_dev->active){
 		unicam_camera_update_buf(unicam_dev);
 		if (unicam_dev->if_params.if_mode ==
@@ -722,6 +714,8 @@ int unicam_videobuf_start_streaming(struct vb2_queue *q, unsigned int count)
 			unicam_camera_capture(unicam_dev);
 	}
 	unicam_dev->streaming = 1;
+	spin_unlock_irqrestore(&unicam_dev->lock, flags);
+
 	csl_cam_register_display(unicam_dev->cslCamHandle);
 	dprintk("-exit");
 	return 0;
@@ -1144,6 +1138,7 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 	CSL_CAM_BUFFER_STATUS_st_t bufStatus;
 	unsigned int bytes_used;
 	unsigned long flags;
+	struct v4l2_subdev *sd = soc_camera_to_subdev(unicam_dev->icd);
 
 	spin_lock_irqsave(&unicam_dev->lock, flags);
 	if (!unicam_dev->streaming) {
@@ -1193,6 +1188,21 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 			/* csl_cam_register_display(unicam_dev->cslCamHandle);*/
 			if (!vb)
 				goto out;
+
+			if (unicam_dev->skip_frames <= 0) {
+				struct v4l2_control ctrl;
+				int ret = -1;
+				ctrl.value = 0;
+				ctrl.id = V4L2_CID_CAMERA_READ_MODE_CHANGE_REG;
+				ret = v4l2_subdev_call(sd, core, g_ctrl, &ctrl);
+
+				if ((ret >= 0) && (ctrl.value > 0)) {
+					/* capture mode is not ready yet */
+					unicam_dev->skip_frames = ctrl.value;
+					pr_info("%s: sensor mode change in process ,need_skip_frame=%d\n",
+					__func__, ctrl.value);
+				}
+			}
 			/* mark  the buffer done */
 			/* queue another buffer and trigger capture */
 			if (likely(unicam_dev->skip_frames <= 0)) {

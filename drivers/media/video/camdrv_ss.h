@@ -221,7 +221,8 @@ struct camdrv_ss_sensor_cap {
 	int (*get_light_condition)(struct v4l2_subdev *sd, int *Result);
 	int (*sensor_power)(int on);
 	bool (*getEsdStatus)(struct v4l2_subdev *sd);
-	int (*get_mode_change_reg)(struct v4l2_subdev *sd);
+	enum camdrv_ss_capture_mode_state
+		(*get_mode_change_reg)(struct v4l2_subdev *sd);
 	int (*set_scene_mode)(struct v4l2_subdev *sd, struct v4l2_control *ctrl);  /* denis */
 	void (*smartStayChangeInitSetting)(struct camdrv_ss_sensor_cap *sensor);
         int(* get_prefalsh_on) (struct v4l2_subdev *sd, struct v4l2_control *ctrl); //Backporting Rhea to Hawaii: added to call sensor Specific preflash rotuine
