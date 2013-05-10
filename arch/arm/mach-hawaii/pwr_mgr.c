@@ -937,10 +937,16 @@ static int param_set_pm_late_init(const char *val,
    But it will still be running at turbo, so new voltage req won't go to PMU.
    Therefore for the voltage to get updated we limit the OPP to normal and
    set it back to turbo. Turbo voltage will change from 1.3 to 1.2 or less */
+
 	pi_mgr_set_dfs_opp_limit(PI_MGR_PI_ID_MM, PI_OPP_ECONOMY,
 					PI_OPP_NORMAL);
+#ifdef CONFIG_PI_MGR_MM_STURBO_ENABLE
+	pi_mgr_set_dfs_opp_limit(PI_MGR_PI_ID_MM, PI_OPP_ECONOMY,
+					PI_OPP_SUPER_TURBO);
+#else
 	pi_mgr_set_dfs_opp_limit(PI_MGR_PI_ID_MM, PI_OPP_ECONOMY,
 					PI_OPP_TURBO);
+#endif
 
 	kona_pm_disable_idle_state(CSTATE_ALL, 0);
 	return 0;
