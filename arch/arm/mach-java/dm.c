@@ -615,7 +615,7 @@ void dormant_enter(u32 svc)
 			cdc_set_pwr_status(CDC_PWR_NORMAL);
 			/*Workaround for HWJAVA-215*/
 			cdc_set_reset_counter(CD_RESET_TIMER, 0);
-
+			cdc_set_override(IS_IDLE_OVERRIDE, 0x1C0);
 			cdc_resp = cdc_send_cmd_for_core(CDC_CMD_MDEC, cpu);
 			fd = true;
 			break;
@@ -852,6 +852,7 @@ static int __init dm_init(void)
 
 	/*Workaround for HWJAVA-215*/
 	cdc_set_reset_counter(CD_RESET_TIMER, 0);
+	cdc_set_override(IS_IDLE_OVERRIDE, 0x1C0);
 
 #ifdef CONFIG_DEBUG_FS
 	dm_debug_init();

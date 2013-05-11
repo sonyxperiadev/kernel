@@ -262,9 +262,47 @@ int cdc_get_override(u32 type)
 #endif
 	return -EINVAL;
 }
+
 int cdc_set_override(u32 type, u32 val)
 {
-			return -EINVAL;
+	u32 reg;
+	u32 mask;
+	u32 shift;
+
+	if (!cdc)
+		return -EINVAL;
+	switch (type) {
+	case WAIT_IDLE_TIMEOUT:
+		mask = CDC_IS_IDLE_OVERRIDE_WAIT_IDLE_TIMEOUT_MASK;
+		shift = CDC_IS_IDLE_OVERRIDE_WAIT_IDLE_TIMEOUT_SHIFT;
+		break;
+	case STBYWFIL2_OVERRIDE:
+		mask = CDC_IS_IDLE_OVERRIDE_STBYWFIL2_OVERRIDE_MASK;
+		shift = CDC_IS_IDLE_OVERRIDE_STBYWFIL2_OVERRIDE_SHIFT;
+		break;
+	case ARMSYSIDLE_TIMER:
+		mask = CDC_IS_IDLE_OVERRIDE_ARMSYSIDLE_TIMER_MASK;
+		shift = CDC_IS_IDLE_OVERRIDE_ARMSYSIDLE_TIMER_SHIFT;
+		break;
+	case IS_IDLE_OVERRIDE:
+		mask = CDC_IS_IDLE_OVERRIDE_IS_IDLE_OVERRIDE_MASK;
+		shift = CDC_IS_IDLE_OVERRIDE_IS_IDLE_OVERRIDE_SHIFT;
+		break;
+
+	default:
+		return -EINVAL;
+	};
+
+	spin_lock(&cdc->lock);
+	reg = readl_relaxed(cdc->base +
+					CDC_IS_IDLE_OVERRIDE_OFFSET);
+	reg &= ~mask;
+	reg |= (val << shift) & mask;
+	writel_relaxed(reg,
+			cdc->base + CDC_IS_IDLE_OVERRIDE_OFFSET);
+	spin_unlock(&cdc->lock);
+
+	return 0;
 }
 
 int cdc_dbg_bus_sel(u32 sel)
@@ -323,6 +361,7 @@ int cdc_set_reset_counter(int type, u32 val)
 	writel_relaxed(reg,
 		cdc->base + CDC_RESET_COUNTER_VALUES_OFFSET);
 	spin_unlock(&cdc->lock);
+
 	return 0;
 }
 
