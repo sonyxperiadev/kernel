@@ -354,7 +354,7 @@ int bcmpmu59xxx_trim_table[] = {
 
 int bcmpmu_rgltr_get_volt_id(u32 voltage)
 {
-	u8 first, last, middle, size;
+	u32 first, last, middle, size;
 	u32 volt_uv;
 
 	size = ARRAY_SIZE(bcmpmu_csr_v_table);

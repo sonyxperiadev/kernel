@@ -75,11 +75,11 @@ static struct pmu_volt_dbg volt_dbg_log;
 #define CSR_TURBO_1G_FF			960
 #define CSR_SUPER_TURBO_1G_FF		1100
 
-#define CSR_XTAL_1200M_SS		930
-#define CSR_ECO_1200M_SS		950
-#define CSR_NM_1200M_SS			1030
-#define CSR_TURBO_1200M_SS		1130
-#define CSR_SUPER_TURBO_1200M_SS	1310
+#define CSR_XTAL_1200M_SS		970
+#define CSR_ECO_1200M_SS		990
+#define CSR_NM_1200M_SS			1070
+#define CSR_TURBO_1200M_SS		1170
+#define CSR_SUPER_TURBO_1200M_SS	1350
 
 #define CSR_XTAL_1200M_TS		920
 #define CSR_ECO_1200M_TS		940
@@ -132,10 +132,10 @@ static struct pmu_volt_dbg volt_dbg_log;
 #define MSR_TURBO_1G_FF			1100
 #define MSR_SUPER_TURBO_1G_FF		1190
 
-#define MSR_ECO_1200M_SS		950
-#define MSR_NM_1200M_SS			1090
-#define MSR_TURBO_1200M_SS		1220
-#define MSR_SUPER_TURBO_1200M_SS	1310
+#define MSR_ECO_1200M_SS		990
+#define MSR_NM_1200M_SS			1130
+#define MSR_TURBO_1200M_SS		1260
+#define MSR_SUPER_TURBO_1200M_SS	1350
 
 #define MSR_ECO_1200M_TS		940
 #define MSR_NM_1200M_TS			1070

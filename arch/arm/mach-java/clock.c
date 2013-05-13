@@ -822,7 +822,8 @@ static struct ref_clk CLK_NAME(ref_32k) = {
     .ccu_clk = &CLK_NAME(root),
 };
 
-static struct gen_clk_ops proc_ccu_ops;
+static struct gen_clk_ops proc_ccu_clk_ops;
+static struct ccu_clk_ops proc_ccu_ops;
 
 /*
 CCU clock name PROC_CCU
@@ -834,9 +835,9 @@ static struct ccu_clk CLK_NAME(kproc) = {
 			.id	= CLK_KPROC_CCU_CLK_ID,
 			.name = KPROC_CCU_CLK_NAME_STR,
 			.clk_type = CLK_TYPE_CCU,
-			.ops = &proc_ccu_ops,
+			.ops = &proc_ccu_clk_ops,
 		},
-	.ccu_ops = &gen_ccu_ops,
+	.ccu_ops = &proc_ccu_ops,
 	.pi_id = PI_MGR_PI_ID_ARM_CORE,
 	.ccu_clk_mgr_base = HW_IO_PHYS_TO_VIRT(PROC_CLK_BASE_ADDR),
 	.wr_access_offset = KPROC_CLK_MGR_REG_WR_ACCESS_OFFSET,
@@ -870,7 +871,7 @@ PLL Clk name a9_pll
 */
 
 u32 a9_vc0_thold[] = {FREQ_MHZ(1750),PLL_VCO_RATE_MAX};
-u32 a9_cfg_val[] = {0x8000000,0x8102000};
+u32 a9_cfg_val[] = {0x8000000, 0x8002000};
 static struct pll_cfg_ctrl_info a9_cfg_ctrl =
 {
 	.pll_cfg_ctrl_offset = KPROC_CLK_MGR_REG_PLLARMCTRL3_OFFSET,
@@ -7376,7 +7377,7 @@ static int mm_ccu_set_freq_policy(struct ccu_clk *ccu_clk, int policy_id,
 		reg_val &= ~MM_CLK_MGR_REG_POLICY_FREQ_POLICY_BASE_312_MASK;
 	else
 		reg_val |= MM_CLK_MGR_REG_POLICY_FREQ_POLICY_BASE_312_MASK;
-	clk_dbg("%s: reg_val = %x\n", __func__, reg_val);
+	pr_info("%s: reg_val = %x\n", __func__, reg_val);
 	writel(reg_val, CCU_POLICY_FREQ_REG(ccu_clk));
 	ccu_policy_engine_resume(ccu_clk,
 		ccu_clk->clk.flags & CCU_TARGET_LOAD ? CCU_LOAD_TARGET : CCU_LOAD_ACTIVE);
@@ -7927,6 +7928,38 @@ static int proc_ccu_clk_init(struct clk *clk)
 	return 0;
 }
 
+static int proc_ccu_set_freq_policy(struct ccu_clk *ccu_clk,
+	int policy_id, struct opp_info *opp_info)
+{
+	u32 reg;
+	clk_dbg("%s:policy = %d, freq = %d opp = %d prms = %d\n",
+			__func__, policy_id, opp_info->freq_id,
+			opp_info->opp_id, opp_info->ctrl_prms);
+
+	/*Disable A9 PLL auto power down before
+	changing freq - workaround for HWJAVA-218*/
+	reg = readl(ccu_clk->ccu_clk_mgr_base +
+		KPROC_CLK_MGR_REG_PLLARMA_OFFSET);
+	reg &=
+		~KPROC_CLK_MGR_REG_PLLARMA_PLLARM_IDLE_PWRDWN_SW_OVRRIDE_MASK;
+	writel(reg, ccu_clk->ccu_clk_mgr_base +
+			KPROC_CLK_MGR_REG_PLLARMA_OFFSET);
+
+	gen_ccu_ops.set_freq_policy(ccu_clk,
+		policy_id, opp_info);
+
+	/*re-enable PLL power down*/
+	reg = readl(ccu_clk->ccu_clk_mgr_base +
+		KPROC_CLK_MGR_REG_PLLARMA_OFFSET);
+	reg |=
+		KPROC_CLK_MGR_REG_PLLARMA_PLLARM_IDLE_PWRDWN_SW_OVRRIDE_MASK;
+	writel(reg, ccu_clk->ccu_clk_mgr_base +
+			KPROC_CLK_MGR_REG_PLLARMA_OFFSET);
+
+	return 0;
+}
+
+
 int __init __clock_init(void)
 {
 
@@ -7942,8 +7975,10 @@ int __init __clock_init(void)
 	root_ccu_ops.set_dbg_bus_sel =  gen_ccu_ops.set_dbg_bus_sel;
 	root_ccu_ops.get_dbg_bus_sel =  gen_ccu_ops.get_dbg_bus_sel;
 
-	proc_ccu_ops = gen_ccu_clk_ops;
-	proc_ccu_ops.init = proc_ccu_clk_init;
+	proc_ccu_clk_ops = gen_ccu_clk_ops;
+	proc_ccu_clk_ops.init = proc_ccu_clk_init;
+	proc_ccu_ops = gen_ccu_ops;
+	proc_ccu_ops.set_freq_policy = proc_ccu_set_freq_policy;
 
 	mm_ccu_ops = gen_ccu_ops;
 	mm_ccu_ops.set_freq_policy = mm_ccu_set_freq_policy;
