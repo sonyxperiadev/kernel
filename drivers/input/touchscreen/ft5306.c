@@ -625,6 +625,8 @@ int fts_upgrade_firmware(void)
 	} else {
 		printk(KERN_INFO "UNKNOWN TP or TP absence\n");
 	}
+
+	return 0;
 }
 
 FTS_BYTE bt_parser_std(FTS_BYTE* pbt_buf, FTS_BYTE bt_len, ST_TOUCH_INFO* pst_touch_info)
@@ -1551,9 +1553,19 @@ static ssize_t ft5306_vendor_show(struct kobject *kobj,
 	unsigned char vendor_id = 0;
 	vendor_id = fts_ctpm_get_vendor_id();
 	printk(KERN_INFO "ft5306 vendor_id is: %x\n", vendor_id);
-	return sprintf(buf, "%s\n", (vendor_id == 0x53) ? ("Mutto Optronics") :
-			((vendor_id == 0x53) ? ("BAOMING OPTRONICS CO,.LTD") :
-				("UNKNOWN")));
+
+	if (vendor_id == 0x53)
+		return   sprintf(buf, "%s\n",  "Mutto Optronics") ;
+	else if (vendor_id == 0x5D)
+		return   sprintf(buf, "%s\n", "BAOMING OPTRONICS CO,.LTD") ;
+	else if  (vendor_id == HAWAII_GARNET_FT5X06_VENDOR_ID)
+		return sprintf(buf, "%s\n", "FocalTech FT5X06 Hawaii Garnet");
+	else if  (vendor_id == G5_A18_FT5X06_VENDOR_ID)
+		return   sprintf(buf, "%s\n", "FocalTech FT5X06 G5 A18");
+	else if  (vendor_id == KTOUCH_W68_FT6X06_VENDOR_ID)
+		return   sprintf(buf, "%s\n", "FocalTech FT6X06 Ktouch W68");
+	else
+		return   sprintf(buf, "%s\n",  "UNKNOWN");
 }
 
 static struct kobj_attribute ft5306_vendor_attr = {
