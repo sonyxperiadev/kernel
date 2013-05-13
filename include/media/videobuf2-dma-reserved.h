@@ -23,6 +23,11 @@
 static inline dma_addr_t
 vb2_dma_reserved_plane_dma_addr(struct vb2_buffer *vb, unsigned int plane_no)
 {
+	if (vb == NULL) {
+		pr_err("ERROR: vb2_buffer is NULL in vb2-dma-reserved\n");
+		return 0;
+	}
+
 	if (plane_no != 0) {
 		pr_err("ERROR: Plane number(%d) >0 not supported in vb2-dma-reserved\n",
 				plane_no);
