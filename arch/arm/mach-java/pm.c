@@ -295,7 +295,7 @@ int disable_all_interrupts(void)
 
 
 
-int hawaii_force_sleep(suspend_state_t state)
+int force_sleep(suspend_state_t state)
 {
 	struct kona_idle_state s;
 	int i;
@@ -305,6 +305,14 @@ int hawaii_force_sleep(suspend_state_t state)
 	/* No more scheduling out */
 	local_irq_disable();
 	local_fiq_disable();
+
+	if (pi_mgr_print_active_pis() || __clock_print_act_clks()) {
+		pr_err("%s: Can't force sleep. There are active pis",
+				__func__);
+		local_irq_enable();
+		local_fiq_enable();
+		return -EINVAL;
+	}
 
 	pm_info.force_sleep = 1;
 
@@ -345,8 +353,10 @@ int enter_idle_state(struct kona_idle_state *state, u32 ctrl_params)
 	pi_enable(pi, 0);
 
 	if (pm_info.clk_dbg_dsm)
-		if (ctrl_params & CTRL_PARAMS_ENTER_SUSPEND)
+		if (ctrl_params & CTRL_PARAMS_ENTER_SUSPEND) {
 			__clock_print_act_clks();
+			pi_mgr_print_active_pis();
+		}
 
 	switch (state->state) {
 	case CSTATE_SUSPEND_DRMT:
@@ -400,6 +410,10 @@ int __init __pm_init(void)
 }
 device_initcall(__pm_init);
 
+u32 is_dormant_enabled(void)
+{
+	return pm_info.dormant_enable;
+}
 
 #ifdef CONFIG_DEBUG_FS
 

@@ -7376,7 +7376,7 @@ static int mm_ccu_set_freq_policy(struct ccu_clk *ccu_clk, int policy_id,
 		reg_val &= ~MM_CLK_MGR_REG_POLICY_FREQ_POLICY_BASE_312_MASK;
 	else
 		reg_val |= MM_CLK_MGR_REG_POLICY_FREQ_POLICY_BASE_312_MASK;
-	pr_info("%s: reg_val = %x\n", __func__, reg_val);
+	clk_dbg("%s: reg_val = %x\n", __func__, reg_val);
 	writel(reg_val, CCU_POLICY_FREQ_REG(ccu_clk));
 	ccu_policy_engine_resume(ccu_clk,
 		ccu_clk->clk.flags & CCU_TARGET_LOAD ? CCU_LOAD_TARGET : CCU_LOAD_ACTIVE);

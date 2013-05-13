@@ -15,7 +15,7 @@
 #include <asm/cp15.h>
 #include <asm/cacheflush.h>
 #include <plat/kona_pm.h>
-#ifdef CONFIG_A9_DORMANT_MODE
+#if defined(CONFIG_A9_DORMANT_MODE) || defined(CONFIG_DORMANT_MODE)
 #include <mach/dormant.h>
 #endif
 
@@ -69,7 +69,7 @@ static inline void platform_do_lowpower(unsigned int cpu)
 		/*
 		 * here's the WFI
 		 */
-#ifdef CONFIG_A9_DORMANT_MODE
+#if defined(CONFIG_A9_DORMANT_MODE) || defined(CONFIG_DORMANT_MODE)
 		kona_pm_cpu_lowpower();
 #else
 		asm(".word	0xe320f003\n"
@@ -120,7 +120,7 @@ void platform_cpu_die(unsigned int cpu)
 
 	pr_notice("CPU%u: shutdown\n", cpu);
 
-#ifdef CONFIG_A9_DORMANT_MODE
+#if defined(CONFIG_A9_DORMANT_MODE) || defined(CONFIG_DORMANT_MODE)
 	if (is_dormant_enabled())
 		platform_do_lowpower(cpu);
 	else {
@@ -136,7 +136,7 @@ void platform_cpu_die(unsigned int cpu)
 	 * coherency, and then restore interrupts
 	 */
 	cpu_leave_lowpower();
-#ifdef CONFIG_A9_DORMANT_MODE
+#if defined(CONFIG_A9_DORMANT_MODE) || defined(CONFIG_DORMANT_MODE)
 	}
 #endif
 }

@@ -74,7 +74,7 @@ EXPORT_SYMBOL_GPL(dbg_gpio_clr);
 /*
  * Dormant mode profiling
  */
-#if defined(DORMANT_PROFILE) && defined(CONFIG_A9_DORMANT_MODE)
+#if defined(DORMANT_PROFILE) && defined(CONFIG_DORMANT_MODE)
 
 static u32 ns_gpio;
 static u32 sec_gpio;
@@ -126,7 +126,7 @@ static void dormant_profile_config(u32 on, u32 ns, u32 sec, u32 ref)
 	/* Setup common configs */
 	dormant_profile_on = on;
 }
-#else /* !DORMANT_PROFILE && !CONFIG_A9_DORMANT_MODE */
+#else /* !DORMANT_PROFILE && !CONFIG_DORMANT_MODE */
 void clear_ns_gpio(void)
 {
 }
@@ -134,7 +134,7 @@ void clear_ns_gpio(void)
 static void dormant_profile_config(u32 on, u32 ns, u32 sec, u32 ref)
 {
 }
-#endif /* DORMANT_PROFILE && CONFIG_A9_DORMANT_MODE */
+#endif /* DORMANT_PROFILE && CONFIG_DORMANT_MODE */
 u32 dorm_profile_enable;
 
 static u32 lpm_trace_buf[CONFIG_NR_CPUS];
@@ -207,12 +207,12 @@ static void cmd_force_sleep(const char *p)
 
 	pr_info("%s: Forcing system to state: %d\n", __func__,
 			force_sleep_state);
-	kona_pm_reg_pm_enter_handler(&hawaii_force_sleep);
+	kona_pm_reg_pm_enter_handler(&force_sleep);
 
 	request_suspend_state(PM_SUSPEND_MEM);
 }
 
-#ifdef CONFIG_A9_DORMANT_MODE
+#ifdef CONFIG_DORMANT_MODE
 static void cmd_dormant_profile(const char *p)
 {
 	u32 on, ns, sec, ref;
@@ -254,7 +254,7 @@ static int param_set_debug(const char *val, const struct kernel_param *kp)
 		p++;
 
 	switch (val[0]) {
-#ifdef CONFIG_A9_DORMANT_MODE
+#ifdef CONFIG_DORMANT_MODE
 	case CMD_DORMANT:
 		cmd_dormant(p);
 		break;

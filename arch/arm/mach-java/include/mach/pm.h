@@ -144,7 +144,7 @@ extern void clear_ns_gpio(void);
 extern void enter_wfi(void);
 extern void dbg_gpio_set(u32 gpio);
 extern void dbg_gpio_clr(u32 gpio);
-extern int hawaii_force_sleep(suspend_state_t state);
+extern int force_sleep(suspend_state_t state);
 
 #ifdef CONFIG_EARLYSUSPEND
 extern void request_suspend_state(suspend_state_t state);
