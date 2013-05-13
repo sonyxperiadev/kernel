@@ -2307,6 +2307,86 @@ static const struct file_operations pi_opp_max_lmt_fops = {
 	.write = pi_opp_set_max_lmt
 };
 
+static ssize_t pi_dfs_set_opp_list(struct file *file, const char __user *buf,
+		size_t count, loff_t *ppos)
+{
+	struct pi *pi = file->private_data;
+	u32 len = 0;
+	u32 i = 0xFF;
+	u32 c = 0xFF;
+	u32 f = 0xFF;
+	char input_str[15];
+
+	struct pi_opp *pi_opp;
+	struct opp_info *opp_info;
+	BUG_ON(!pi || !pi->pi_opp);
+	pi_opp = pi->pi_opp;
+
+	BUG_ON(pi == NULL);
+	if (count > 15)
+		len = 15;
+	else
+		len = count;
+/* usage of sscanf and copy from user are for debugfs operations, so they will
+ * not create any problems, so using coverity ignore comments */
+	/* coverity[secure_coding] */
+	/* coverity[tainted_data_argument] */
+	if (copy_from_user(input_str, buf, len))
+		return -EFAULT;
+	/* coverity[secure_coding] */
+	/* coverity[tainted_data_argument] */
+	sscanf(input_str, "%u%u%u", &c, &i, &f);
+
+	if (c == 0xFF || i == 0xFF || f == 0xFF) {
+		pr_info("invalid  param\n");
+		goto ret;
+	}
+	if (c >= pi->num_ccu_id ||
+		i >= pi_opp->num_opp) {
+		pr_info("invalid  param\n");
+		goto ret;
+	}
+	opp_info = &pi_opp->opp_info[c][i];
+	opp_info->freq_id = f;
+ret:
+	return count;
+}
+
+static int pi_dfs_get_opp_list(struct file *file, char __user *buf,
+		size_t count, loff_t *ppos)
+{
+	struct pi *pi = file->private_data;
+	u32 len = 0;
+	int i;
+	int c;
+	struct pi_opp *pi_opp;
+	struct opp_info *opp_info;
+	BUG_ON(!pi || !pi->pi_opp);
+	pi_opp = pi->pi_opp;
+	for (c = 0; c < pi->num_ccu_id; c++) {
+		len += snprintf(debug_fs_buf + len, sizeof(debug_fs_buf) - len,
+		"****%s****\n",
+		pi->pi_ccu[c]->name ? pi->pi_ccu[c]->name : "NULL");
+		for (i = 0; i < pi_opp->num_opp; i++) {
+			opp_info = &pi_opp->opp_info[c][i];
+			len += snprintf(debug_fs_buf + len,
+					sizeof(debug_fs_buf) - len,
+					"%s:%d\n",
+					get_opp_name(opp_info->opp_id),
+					opp_info->freq_id);
+		}
+	}
+	return simple_read_from_buffer(buf, count,
+			ppos, debug_fs_buf, len);
+}
+
+static const struct file_operations pi_dfs_opp_list_fops = {
+	.open = pi_debugfs_open,
+	.read = pi_dfs_get_opp_list,
+	.write = pi_dfs_set_opp_list,
+};
+
+
 #ifdef CONFIG_KONA_PI_DFS_STATS
 static ssize_t pi_dfs_get_time_in_state(struct file *file,
 					   char __user *user_buf, size_t count,
@@ -2871,6 +2951,10 @@ int __init pi_debug_add_pi(struct pi *pi)
 			debugfs_create_file("opp_lmt_min", S_IRUSR | S_IWUSR,
 				dent_dfs_dir, pi, &pi_opp_min_lmt_fops);
 		}
+		debugfs_create_file("opp_list", S_IWUSR | S_IRUSR,
+					dent_dfs_dir, pi,
+					&pi_dfs_opp_list_fops);
+
 	}
 
 	return 0;
