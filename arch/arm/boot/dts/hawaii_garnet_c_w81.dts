@@ -241,7 +241,7 @@
 	};
 
 	kona-fb {
-		module-name = "OTM8009A";
+		module-name = "OTM8018B";
 		reg-name = "cam2";
 		rst-gpio = <22>;
 		rst-setup = <700>;	/* 700us */
@@ -250,7 +250,7 @@
 		col-mod-i = <3>;
 		col-mod-o = <2>;
 		width = <480>;
-		height = <800>;
+		height = <854>;
 		/* rst-active-high */	/* Commented => Active Low */
 		vmode;
 		/* vburst */	/* Non-burst mode */
