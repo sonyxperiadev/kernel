@@ -24,9 +24,6 @@ ifdef CONFIG_BCM_MODEM
 subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -DENABLE_DMA_VOICE
 endif
 
-ifdef CONFIG_ARCH_JAVA
-subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -DJAVA_ZEBU_TEST
-endif
 
 subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -DENABLE_BT16
 subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -DCAPH_48K_MONO_PASSTHRU
