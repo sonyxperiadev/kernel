@@ -69,13 +69,21 @@ static inline void platform_do_lowpower(unsigned int cpu)
 		/*
 		 * here's the WFI
 		 */
-#if defined(CONFIG_A9_DORMANT_MODE) || defined(CONFIG_DORMANT_MODE)
-		kona_pm_cpu_lowpower();
+#if defined(CONFIG_A9_DORMANT_MODE)
+				kona_pm_cpu_lowpower();
+#elif defined(CONFIG_DORMANT_MODE)
+				if (is_dormant_enabled())
+					kona_pm_cpu_lowpower();
+				else
+					asm(".word	0xe320f003\n"
+						:
+						:
+						: "memory", "cc");
 #else
-		asm(".word	0xe320f003\n"
-		    :
-		    :
-		    : "memory", "cc");
+				asm(".word	0xe320f003\n"
+					:
+					:
+					: "memory", "cc");
 #endif
 		if (pen_release == cpu) {
 			/*

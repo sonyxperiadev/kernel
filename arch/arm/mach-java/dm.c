@@ -106,7 +106,7 @@ static u32 fdm_success;
 static u32 fdm_short_success;
 static u32 fdm_attempt;
 static u32 l2_off_en;
-static u32 fdm_en;
+static u32 fdm_en = 1; /* Enable full dormant */
 static u32 dbg_log;
 
 /* Data for the entire cluster */

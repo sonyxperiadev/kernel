@@ -58,7 +58,7 @@ static struct pm_info pm_info = {
 	.clk_dbg_dsm = 0,
 	.wfi_26mhz_cnt = 0,
 	.force_sleep = 0,
-	.dormant_enable = 0,
+	.dormant_enable = 0xf, /* Enable dormant for all 4 cores */
 	.log_mask = 0,
 };
 
