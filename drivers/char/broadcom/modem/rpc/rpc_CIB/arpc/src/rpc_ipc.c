@@ -847,7 +847,8 @@ static int rpcKthreadFn(MsgQueueHandle_t *mHandle, void *data)
 	      ("RPC_BufferDelivery PROCESS mHandle=%x event=%d\n", (int)mHandle,
 	       (int)data));*/
 
-	if (ipcInfoList[(int)type].filterPktIndCb != NULL) {
+	if ((type >= 0) &&
+		ipcInfoList[(int)type].filterPktIndCb != NULL) {
 		RpcDbgUpdatePktState((int)bufHandle, PKT_STATE_RPC_PROCESS);
 
 		result =
