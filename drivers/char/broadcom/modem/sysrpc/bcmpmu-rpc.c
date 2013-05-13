@@ -30,6 +30,11 @@
 #include <linux/regulator/machine.h>
 #include <linux/mfd/bcmpmu59xxx.h>
 #include <linux/mfd/bcmpmu59xxx_reg.h>
+#ifdef CONFIG_WD_TAPPER
+#include <linux/broadcom/wd-tapper.h>
+#else
+#include <linux/alarmtimer.h>
+#endif
 
 #include "mobcom_types.h"
 #include "rpc_global.h"
@@ -47,8 +52,10 @@
 #define VMMBAT_ADC_SHIFT	20
 #define TEMPPA_ADC_SHIFT	10
 #define TEMP32K_ADC_SHIFT	0
+#define ADC_RETRY		5
 
-static int debug_mask =  BCMPMU_PRINT_INIT | BCMPMU_PRINT_ERROR;
+static int debug_mask =  BCMPMU_PRINT_INIT | BCMPMU_PRINT_ERROR |
+				BCMPMU_PRINT_FLOW;
 
 #define pr_rpc(debug_level, args...) \
 	do { \
@@ -66,25 +73,76 @@ struct bcmpmu_rpc {
 	u32 temp_pa;
 	u32 temp_32k;
 	u32 adc_mux;
+	int poll_time;
+	int htem_poll_time;
+	int mod_tem;
+	int htem;
+	int tapper_time;
+#ifdef CONFIG_WD_TAPPER
+	struct wd_tapper_node wd_node;
+#else
+	struct alarm alarm;
+	int alarm_timeout;
+#endif
 #ifdef CONFIG_DEBUG_FS
 	struct dentry *dent_rpc;
 #endif
 };
 
+#ifndef CONFIG_WD_TAPPER
+static void bcmpmu_rpc_program_alarm(struct bcmpmu_rpc *rpc,
+		long seconds)
+{
+	ktime_t interval = ktime_set(seconds, 0);
+	ktime_t next;
 
+	pr_rpc(VERBOSE, "set timeout %ld s.\n", seconds);
+	next = ktime_add(ktime_get_real(), interval);
+
+	alarm_start(&rpc->alarm, next);
+}
+
+static enum alarmtimer_restart bcmpmu_rpc_alarm_callback(
+		struct alarm *alarm, ktime_t now)
+{
+	struct bcmpmu_rpc *bcmpmu_rpc =
+		 container_of(alarm, struct bcmpmu_rpc, alarm);
+	pr_rpc(VERBOSE, "rpc Alarm cb\n");
+	schedule_delayed_work(&bcmpmu_rpc->work, 0);
+	return ALARMTIMER_NORESTART;
+}
+#endif
+
+static int bcmpmu_rpc_get_val(struct bcmpmu59xxx *bcmpmu,
+				enum bcmpmu_adc_channel channel,
+				enum bcmpmu_adc_req req,
+				struct bcmpmu_adc_result *result)
+{
+	int ret;
+	int retry = ADC_RETRY;
+	while (retry) {
+		ret = bcmpmu_adc_read(bcmpmu, channel, req, result);
+		if (!ret)
+			break;
+		retry--;
+	}
+	return ret;
+}
 static void bcmpmu_rpc_work(struct work_struct *work)
 {
 	int ret;
 	struct bcmpmu59xxx *bcmpmu;
 	struct bcmpmu_adc_result result;
+	int tem, poll_time;
+	bool config_tapper = false;
 	struct bcmpmu_rpc *bcmpmu_rpc =
 	    container_of(work, struct bcmpmu_rpc, work.work);
 	BUG_ON(!bcmpmu_rpc);
 	bcmpmu = bcmpmu_rpc->bcmpmu;
 
-	pr_rpc(FLOW, "%s, called\n", __func__);
+	pr_rpc(VERBOSE, "%s, called\n", __func__);
 
-	ret = bcmpmu_adc_read(bcmpmu, PMU_ADC_CHANN_VMBATT,
+	ret = bcmpmu_rpc_get_val(bcmpmu, PMU_ADC_CHANN_VMBATT,
 				PMU_ADC_REQ_SAR_MODE, &result);
 	if (ret) {
 		pr_rpc(ERROR, "%s: PMU_ADC_CHANN_VMBATT read error\n",
@@ -93,7 +151,7 @@ static void bcmpmu_rpc_work(struct work_struct *work)
 	}
 	bcmpmu_rpc->vbat = result.raw & ADC_RAW_MASK;
 
-	ret = bcmpmu_adc_read(bcmpmu, PMU_ADC_CHANN_PATEMP,
+	ret = bcmpmu_rpc_get_val(bcmpmu, PMU_ADC_CHANN_PATEMP,
 				PMU_ADC_REQ_SAR_MODE, &result);
 	if (ret) {
 		pr_rpc(ERROR, "%s: PMU_ADC_CHANN_PATEMP read error\n",
@@ -101,8 +159,11 @@ static void bcmpmu_rpc_work(struct work_struct *work)
 		goto err;
 	}
 	bcmpmu_rpc->temp_pa = result.raw & ADC_RAW_MASK;
+	tem = result.conv;
 
-	ret = bcmpmu_adc_read(bcmpmu, PMU_ADC_CHANN_32KTEMP,
+	pr_rpc(FLOW, "%s, pa_temp %d\n", __func__, result.conv);
+
+	ret = bcmpmu_rpc_get_val(bcmpmu, PMU_ADC_CHANN_32KTEMP,
 				PMU_ADC_REQ_SAR_MODE, &result);
 	if (ret) {
 		pr_rpc(ERROR, "%s: PMU_ADC_CHANN_32KTEMP read error\n",
@@ -120,16 +181,56 @@ static void bcmpmu_rpc_work(struct work_struct *work)
 	       "%s, ADC readings result = 0x%x\n",
 	       __func__, bcmpmu_rpc->adc_mux);
 
+
+	if (tem >= bcmpmu_rpc->mod_tem && tem < bcmpmu_rpc->htem) {
+		poll_time = bcmpmu_rpc->poll_time;
+		config_tapper = true;
+	} else if (tem >= bcmpmu_rpc->htem) {
+		poll_time = bcmpmu_rpc->htem_poll_time;
+		config_tapper = true;
+	}
+#ifdef CONFIG_WD_TAPPER
+	if (config_tapper &&
+			(bcmpmu_rpc->tapper_time != poll_time)) {
+		bcmpmu_rpc->tapper_time = poll_time;
+		pr_rpc(FLOW, "==%s== wd tapper timeout to %d\n", __func__,
+				(poll_time / 1000));
+		ret = wd_tapper_update_timeout_req(&bcmpmu_rpc->wd_node,
+				(poll_time / 1000));
+		BUG_ON(ret);
+	}
+#else
+	if (config_tapper) {
+		bcmpmu_rpc->alarm_timeout = poll_time / 1000;
+		bcmpmu_rpc_program_alarm(bcmpmu_rpc,
+			bcmpmu_rpc->alarm_timeout);
+	}
+#endif /*CONFIG_WD_TAPPER*/
+
+
 err:
 	schedule_delayed_work(&bcmpmu_rpc->work,
 			msecs_to_jiffies(bcmpmu_rpc->delay));
 
 }
 
+#ifdef CONFIG_PM
+
 static int bcmpmu_rpc_resume(struct platform_device *pdev)
 {
+	struct bcmpmu59xxx *bcmpmu = dev_get_drvdata(pdev->dev.parent);
+	struct bcmpmu_rpc *bcmpmu_rpc;
+	bcmpmu_rpc = bcmpmu->rpcinfo;
+	schedule_delayed_work(&bcmpmu_rpc->work, 0);
 	return 0;
 }
+
+#else
+
+#define bcmpmu_rpc_resume	NULL
+#define bcmpmu_rpc_suspend	NULL
+
+#endif
 
 #ifdef CONFIG_DEBUG_FS
 static void bcmpmu_rpc_dbg_init(struct bcmpmu_rpc *bcmpmu_rpc)
@@ -192,7 +293,23 @@ static int __devinit bcmpmu_rpc_probe(struct platform_device *pdev)
 
 	bcmpmu_rpc->bcmpmu = bcmpmu;
 	bcmpmu_rpc->delay = pdata->delay;
+	bcmpmu_rpc->poll_time = pdata->poll_time;
+	bcmpmu_rpc->htem_poll_time = pdata->htem_poll_time;
+	bcmpmu_rpc->mod_tem = pdata->mod_tem;
+	bcmpmu_rpc->htem = pdata->htem;
 	bcmpmu->rpcinfo = bcmpmu_rpc;
+#ifdef CONFIG_WD_TAPPER
+	ret = wd_tapper_add_timeout_req(&bcmpmu_rpc->wd_node, "rpc",
+				TAPPER_DEFAULT_TIMEOUT);
+	if (ret) {
+		pr_rpc(ERROR, "failed to register with wd-tapper\n");
+		goto err1;
+	}
+#else
+	alarm_init(&bcmpmu_rpc->alarm,
+		ALARM_REALTIME, bcmpmu_rpc_alarm_callback);
+#endif /*CONFIG_WD_TAPPER*/
+
 
 	INIT_DELAYED_WORK(&bcmpmu_rpc->work, bcmpmu_rpc_work);
 
@@ -202,6 +319,11 @@ static int __devinit bcmpmu_rpc_probe(struct platform_device *pdev)
 	schedule_delayed_work(&bcmpmu_rpc->work,
 			msecs_to_jiffies(bcmpmu_rpc->delay));
 err:
+	return ret;
+#ifdef CONFIG_WD_TAPPER
+err1:
+	kfree(bcmpmu_rpc);
+#endif /*CONFIG_WD_TAPPER*/
 	return ret;
 }
 
@@ -213,6 +335,11 @@ static int __devexit bcmpmu_rpc_remove(struct platform_device *pdev)
 #ifdef CONFIG_DEBUG_FS
 	if (bcmpmu_rpc && bcmpmu_rpc->dent_rpc)
 		debugfs_remove(bcmpmu_rpc->dent_rpc);
+#endif
+#ifdef CONFIG_WD_TAPPER
+	wd_tapper_del_timeout_req(&bcmpmu_rpc->wd_node);
+#else
+	alarm_cancel(&bcmpmu_rpc->alarm);
 #endif
 	kfree(bcmpmu_rpc);
 	return 0;
