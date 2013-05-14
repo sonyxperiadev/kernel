@@ -148,6 +148,7 @@ static void stop_queue(int index, char *path)
 	if (IS_ERR(bdev[index])) {
 		pr_err("failed to get block device %s (%ld)\n",
 		      path, PTR_ERR(bdev[index]));
+		bdev[index] = NULL;
 		return;
 	}
 	q = bdev_get_queue(bdev[index]);
