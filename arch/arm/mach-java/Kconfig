@@ -235,6 +235,17 @@ config HAWAII_PTM
 config BRD_NAME
 	string "customer board name"
 	default "java"
+
+config DISABLE_USBBOOT_NEXTBOOT
+	bool "Disable USB Boot in the next boot"
+	depends on ARCH_JAVA
+	default y
+	help
+	  During Java Bringup when we tried reboot, during the next
+          boot the BootROM was detecting USB and was never timing out
+          This could be because the BIT 29 of usbotgcontrol register
+          was wrongly set to 1. Until we root cuase this and fix it
+          We can enable this workaround only for JAVA
 endmenu
 
 endif

@@ -57,9 +57,35 @@
 DECLARE_PER_CPU(u32, idle_count);
 #endif
 
+#ifdef CONFIG_DISABLE_USBBOOT_NEXTBOOT
+static void  __disable_usb_in_next_boot(void)
+{
+	int reg_val;
+
+	/*
+	 * Temporary:
+	 * Disable USB Boot i.e when reboot command is issued
+	 * Boot ROM would ignore looking for USB connection and will
+	 * boot from eMMC - suggestion from BOOT ROM team
+	 */
+	reg_val = readl(KONA_CHIPREG_VA + 0x1C);
+	pr_info("Address:0x%x Value:0x%x \r\n",
+		KONA_CHIPREG_VA + 0x1C, reg_val);
+	reg_val &= ~0x00000002;
+	writel(reg_val, KONA_CHIPREG_VA + 0x1C);
+	reg_val = readl(KONA_CHIPREG_VA + 0x1C);
+	pr_info("Address:0x%x Value:0x%x \r\n",
+		KONA_CHIPREG_VA + 0x1C, reg_val);
+}
+#endif
+
 static void kona_reset(char mode, const char *cmd)
 {
 	unsigned int val;
+
+#ifdef CONFIG_DISABLE_USBBOOT_NEXTBOOT
+	__disable_usb_in_next_boot();
+#endif
 
 	/*
 	 * Disable GIC interrupt distribution.
