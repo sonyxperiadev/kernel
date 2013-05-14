@@ -80,6 +80,7 @@
 /*#define PARTIAL_UPDATE_SUPPORT */
 
 #define KONA_IOCTL_SET_BUFFER_AND_UPDATE	_IO('F', 0x80)
+#define KONA_IOCTL_GET_IOVA			_IOR('F', 0x81, u32)
 
 static struct pi_mgr_qos_node g_mm_qos_node;
 
@@ -676,9 +677,20 @@ static int kona_fb_ioctl(struct fb_info *info, unsigned int cmd,
 		mutex_unlock(&fb->update_sem);
 		break;
 
-	default:
+	case KONA_IOCTL_GET_IOVA:
+		ptr = (void *)arg;
+		if (ptr == NULL) {
+			pr_err("arg=NULL\n");
+			return -EFAULT;
+		}
+		ret = copy_to_user(ptr, &fb->buff0, sizeof(u32));
+		if (ret < 0)
+			pr_err("copy2user failed ret=%d\n", ret);
+		break;
 
+	default:
 		konafb_error("Wrong ioctl cmd\n");
+		ret = -ENOTTY;
 		break;
 	}
 
@@ -1193,7 +1205,10 @@ static int __ref kona_fb_probe(struct platform_device *pdev)
 	dma_addr_t phys_fbbase, dma_addr;
 	uint64_t pixclock_64;
 #ifdef CONFIG_IOMMU_API
-#ifdef CONFIG_BCM_IOVMM
+	/* TODO: Temporary workaround to have fb iova=pa.
+	 * Will remove it soon.
+	 **/
+#ifdef CONFIG_BCM_IOVMM_DISABLED__
 	struct dma_iommu_mapping *mapping;
 #else
 	struct iommu_domain *domain;
@@ -1289,7 +1304,10 @@ static int __ref kona_fb_probe(struct platform_device *pdev)
 	pdev->dev.archdata.iommu = &fb_data->pdev_iommu->dev;
 	pr_info("%s iommu-device(%p)\n", "framebuffer",
 			pdev->dev.archdata.iommu);
-#ifdef CONFIG_BCM_IOVMM
+	/* TODO: Temporary workaround to have fb iova=pa.
+	 * Will remove it soon.
+	 **/
+#ifdef CONFIG_BCM_IOVMM_DISABLED__
 	{
 		int n_pages, i;
 		struct scatterlist *sg;
@@ -1432,7 +1450,7 @@ static int __ref kona_fb_probe(struct platform_device *pdev)
 		break;
 	}
 
-	fb->fb.fix.smem_start = dma_addr;
+	fb->fb.fix.smem_start = phys_fbbase;
 	fb->fb.fix.smem_len = framesize;
 
 	konafb_debug(
