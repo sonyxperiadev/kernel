@@ -55,7 +55,8 @@ static const struct ov7692_reg configscript_common1[] = {
 #if (defined(CONFIG_MACH_HAWAII_GARNET_EDN010) || \
 	defined(CONFIG_MACH_HAWAII_GARNET_EDN020) || \
 	defined(CONFIG_MACH_JAVA_SS_EVAL_REV00) || \
-	defined(CONFIG_MACH_JAVA_GARNET_EDN000))
+	defined(CONFIG_MACH_JAVA_GARNET_EDN000) || \
+	defined(CONFIG_MACH_JAVA_GARNET_C_EDN000))
 {0x0c, 0x10},
 #else
 {0x0c, 0xd0},
