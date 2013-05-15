@@ -288,7 +288,17 @@ int read_sar_adc(struct bcmpmu59xxx *bcmpmu, enum bcmpmu_adc_channel channel,
 		break;
 
 #elif defined(CONFIG_MACH_HAWAII_SS_LOGAN) \
-	|| defined(CONFIG_MACH_HAWAII_SS_LOGAN_REV01)
+	|| defined(CONFIG_MACH_HAWAII_SS_LOGAN_REV01) \
+	|| defined(CONFIG_MACH_HAWAII_SS_LOGAN_REV02) \
+	|| defined(CONFIG_MACH_HAWAII_SS_LOGANDS_REV00) \
+	|| defined(CONFIG_MACH_HAWAII_SS_LOGANDS_REV01) \
+	|| defined(CONFIG_MACH_HAWAII_SS_GOLDENVE_REV01) \
+	|| defined(CONFIG_MACH_HAWAII_SS_GOLDENVE_REV02) \
+	|| defined(CONFIG_MACH_HAWAII_SS_GOLDENVEN_REV01) \
+	|| defined(CONFIG_MACH_HAWAII_SS_GOLDENVEN_REV02) \
+	|| defined(CONFIG_MACH_HAWAII_SS_LOGAN_COMBINED) \
+	|| defined(CONFIG_MACH_HAWAII_SS_LOGANDS_COMBINED)
+
 	/* Logan R01 and future */
 	case PMU_ADC_CHANN_NTC:
 		mutex_lock(&adc->chann_mutex[PMU_ADC_CHANN_NTC]);
