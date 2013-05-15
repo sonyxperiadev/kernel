@@ -300,6 +300,28 @@ obj-$(CONFIG_ARCH_MSM8974) += krait-regulator.o
 obj-$(CONFIG_ARCH_MSM9625) += board-9625.o board-9625-gpiomux.o
 obj-$(CONFIG_ARCH_MSM8930) += acpuclock-8930.o acpuclock-8627.o acpuclock-8930aa.o acpuclock-8930ab.o
 obj-$(CONFIG_ARCH_MPQ8092) += board-8092.o board-8092-gpiomux.o
+
+board-sony_fusion3-all-objs += board-sony_fusion3.o board-sony_fusion3-storage.o board-sony_fusion3-display.o board-8064-gpu.o board-sony_fusion3-hwrev.o
+
+obj-$(CONFIG_MACH_SONY_YUGA) += board-sony_fusion3-all.o board-sony_fusion3_yuga.o
+obj-$(CONFIG_MACH_SONY_YUGA) += board-sony_yuga-camera.o board-sony_yuga-pmic.o board-sony_yuga-gpiomux.o board-sony_yuga-regulator.o board-sony_yuga-touch.o
+obj-$(CONFIG_MACH_SONY_YUGA) += board-sony_yuga-mpu.o gyro-semc_common.o bms-batterydata-lucius.o
+
+board-sony_fusion3-pollux-all-objs += board-sony_fusion3.o board-sony_fusion3-storage.o board-8064-gpu.o board-sony_fusion3-hwrev.o
+board-sony_fusion3-pollux-all-objs += board-sony_pollux-display.o
+board-sony_fusion3-pollux-all-objs += board-sony_fusion3_pollux.o
+board-sony_fusion3-pollux-all-objs += board-sony_pollux-camera.o board-sony_pollux-touch.o board-sony_pollux-mpu.o gyro-semc_common.o
+
+obj-$(CONFIG_MACH_SONY_POLLUX) += board-sony_fusion3-pollux-all.o
+obj-$(CONFIG_MACH_SONY_POLLUX) += board-sony_pollux-pmic.o board-sony_pollux-gpiomux.o board-sony_pollux-regulator.o
+obj-$(CONFIG_MACH_SONY_POLLUX) += bms-batterydata-gemini.o
+obj-$(CONFIG_MACH_SONY_POLLUX) += board-sony_ir_remote.o
+
+obj-$(CONFIG_MACH_SONY_ODIN) += board-sony_fusion3-all.o board-sony_fusion3_odin.o
+obj-$(CONFIG_MACH_SONY_ODIN) += board-sony_odin-camera.o board-sony_odin-pmic.o board-sony_odin-gpiomux.o board-sony_odin-regulator.o board-sony_odin-mpu.o board-sony_odin-touch.o
+obj-$(CONFIG_MACH_SONY_ODIN) += gyro-semc_common.o bms-batterydata-sleipner.o
+obj-$(CONFIG_MACH_SONY_ODIN) += board-sony_ir_remote.o
+
 obj-$(CONFIG_MACH_SAPPHIRE) += board-sapphire.o board-sapphire-gpio.o
 obj-$(CONFIG_MACH_SAPPHIRE) += board-sapphire-keypad.o board-sapphire-panel.o
 obj-$(CONFIG_MACH_SAPPHIRE) += board-sapphire-mmc.o board-sapphire-wifi.o
@@ -381,6 +403,7 @@ obj-$(CONFIG_MSM_RTB) += msm_rtb.o
 obj-$(CONFIG_MSM_CACHE_ERP) += cache_erp.o
 obj-$(CONFIG_MSM_EBI_ERP) += ebi_erp.o
 obj-$(CONFIG_MSM_CACHE_DUMP) += msm_cache_dump.o
+obj-$(CONFIG_SONY_SSM) += sony_ssm.o
 
 obj-$(CONFIG_MSM_HSIC_SYSMON) += hsic_sysmon.o
 obj-$(CONFIG_MSM_HSIC_SYSMON_TEST) += hsic_sysmon_test.o
@@ -389,7 +412,18 @@ obj-$(CONFIG_MSM_RPM_SMD) += rpm-smd.o
 obj-$(CONFIG_MSM_CPR) += msm_cpr.o
 obj-$(CONFIG_MSM_VP_REGULATOR) += msm_vp.o
 
+obj-$(CONFIG_MSM_USE_USER_ACCESSIBLE_TIMERS) += timer_page.o
+
 ifdef CONFIG_MSM_CPR
 obj-$(CONFIG_DEBUG_FS) += msm_cpr-debug.o
 endif
 obj-$(CONFIG_MSM_CPU_PWRCTL) +=  msm_cpu_pwrctl.o
+
+obj-$(CONFIG_RAMDUMP_TAGS) += board-rdtags.o
+CFLAGS_board-rdtags.o	:= \
+	-D"INFO_PRODUCT=\"$(if $(TARGET_PRODUCT),$(TARGET_PRODUCT),unknown)\"" \
+	-D"INFO_VARIANT=\"$(if $(TARGET_BUILD_VARIANT),$(TARGET_BUILD_VARIANT),unknown)\"" \
+	-D"INFO_BUILDID=\"$(if $(BUILD_ID),$(BUILD_ID),unknown)\""
+
+obj-y += power_debug.o
+obj-$(CONFIG_MSM_MODEM_SUBSYSTEM_RESTART_MONITOR) += modem_restart_monitor.o

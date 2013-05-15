@@ -997,11 +997,12 @@ timeout_err:
 					dev_err(dev->dev,
 					"I2C slave addr:0x%x not connected\n",
 					dev->msg->addr);
-					dev->err = ENOTCONN;
+					ret = -ENOTCONN;
+					goto out_err;
 				} else if (dev->err < 0) {
 					dev_err(dev->dev,
 					"QUP data xfer error %d\n", dev->err);
-					ret = dev->err;
+					ret = -EIO;
 					goto out_err;
 				} else if (dev->err > 0) {
 					/*
@@ -1012,7 +1013,7 @@ timeout_err:
 					 */
 					qup_i2c_recover_bus_busy(dev);
 				}
-				ret = -dev->err;
+				ret = -EIO;
 				goto out_err;
 			}
 			if (dev->msg->flags & I2C_M_RD) {

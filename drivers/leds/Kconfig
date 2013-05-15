@@ -435,6 +435,22 @@ config LEDS_MC13783
 	  This option enable support for on-chip LED drivers found
 	  on Freescale Semiconductor MC13783 PMIC.
 
+config LEDS_AS3676
+	tristate "LED Support for AMS AS3676 I2C chips"
+	depends on LEDS_CLASS && I2C
+	default n
+	help
+	  This option enables support for LEDs connected to AS3676
+	  LED driver chips accessed via the I2C bus.
+
+config LEDS_AS3676_HW_BLINK
+	bool "HW blink support for AS3676 chips"
+	default y
+	depends on LEDS_AS3676 && LEDS_TRIGGER_TIMER
+	help
+	  This option enables support for HW blinking of LEDs connected to
+	  an AS3676 chip. Say Y. Just do it.
+
 config LEDS_QCIBL
 	tristate "LED Support for Quanta LCD backlight"
 	depends on SENSORS_WPCE775X && ARCH_MSM_SCORPION
@@ -508,6 +524,15 @@ config LEDS_OT200
 	help
 	  This option enables support for the LEDs on the Bachmann OT200.
 	  Say Y to enable LEDs on the Bachmann OT200.
+
+config LEDS_LM3533
+        tristate "LED Support for LM3533 LMU IC"
+        depends on I2C
+        default n
+        help
+          If you say 'Y' here you get support for the National Semiconductor
+          LM3533 light management unit IC for backlight, keypad and indicator
+          LEDs. If unsure, say N.
 
 config LEDS_TRIGGERS
 	bool "LED Trigger support"

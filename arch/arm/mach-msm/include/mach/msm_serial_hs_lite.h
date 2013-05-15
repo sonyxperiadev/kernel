@@ -1,4 +1,5 @@
 /* Copyright (c) 2011-2013 The Linux Foundation. All rights reserved.
+ * Copyright (C) 2012 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -13,6 +14,9 @@
 
 #ifndef __ASM_ARCH_MSM_SERIAL_HS_LITE_H
 #define __ASM_ARCH_MSM_SERIAL_HS_LITE_H
+
+#include <linux/serial_core.h>
+
 /**
  * struct msm_serial_hslite_platform_data - platform device data
  *              for msm_hs_lite.
@@ -38,6 +42,8 @@ struct msm_serial_hslite_platform_data {
 	bool set_uart_clk_zero;
 	bool use_pm;
 	int line;
+	int type;
+	int (*pre_startup)(struct uart_port *);
 };
 
 #endif

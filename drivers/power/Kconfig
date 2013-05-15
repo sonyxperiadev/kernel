@@ -415,6 +415,13 @@ config PM8921_BMS
 	help
 	  Say Y here to enable support for pm8921 chip bms subdevice
 
+config PM8921_SONY_BMS_CHARGER
+	tristate "PM8921 Sony Fuel Gauge"
+	depends on MFD_PM8921_CORE && PM8921_BMS && PM8921_CHARGER
+	default n
+	help
+	  Say Y here to enable support for PM8921 Sony Fuel Gauge
+
 config BATTERY_BCL
 	tristate "Battery Current Limit driver"
 	help

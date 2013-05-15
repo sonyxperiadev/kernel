@@ -5,6 +5,8 @@
  *  Copyright (c) 1999 Andreas Gal
  *  Copyright (c) 2000-2001 Vojtech Pavlik
  *  Copyright (c) 2006-2007 Jiri Kosina
+ *  Copyright 2011,2012 Sony Corporation
+ *  Copyright (c) 2012 Sony Mobile Communications AB.
  */
 
 /*
@@ -286,6 +288,14 @@ struct hid_item {
 #define HID_INPUT_REPORT	0
 #define HID_OUTPUT_REPORT	1
 #define HID_FEATURE_REPORT	2
+#ifdef CONFIG_HID_SONY_PS3_CTRL_BT
+/* feature report with data size */
+#define HID_FEATREP_WDATASIZE	3
+/* feature report skip report id */
+#define HID_FEATREP_SKIPREPID	4
+/* output report skip report id */
+#define HID_OUTREP_SKIPREPID	5
+#endif
 
 /*
  * HID connect requests

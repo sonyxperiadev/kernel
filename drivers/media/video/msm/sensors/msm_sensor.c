@@ -1,4 +1,5 @@
 /* Copyright (c) 2011-2013, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2013 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -486,6 +487,12 @@ int32_t msm_sensor_config(struct msm_sensor_ctrl_t *s_ctrl, void __user *argp)
 				rc = -EFAULT;
 				break;
 			}
+#if defined(CONFIG_SONY_CAM_V4L2)
+			if (cdata.cfg.output_info.output_info != NULL) {
+				s_ctrl->msm_sensor_reg->output_settings =
+					cdata.cfg.output_info.output_info;
+			}
+#endif
 			rc = s_ctrl->func_tbl->
 				sensor_set_sensor_mode(
 					s_ctrl,

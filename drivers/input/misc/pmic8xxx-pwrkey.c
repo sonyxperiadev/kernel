@@ -1,4 +1,5 @@
-/* Copyright (c) 2010-2012, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2010-2011, Code Aurora Forum. All rights reserved.
+ * Copyright (c) 2013, Sony Mobile Communications. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -19,6 +20,7 @@
 #include <linux/interrupt.h>
 #include <linux/platform_device.h>
 #include <linux/log2.h>
+#include <linux/workqueue.h>
 
 #include <linux/mfd/pm8xxx/core.h>
 #include <linux/input/pmic8xxx-pwrkey.h>
@@ -26,6 +28,7 @@
 #define PON_CNTL_1 0x1C
 #define PON_CNTL_PULL_UP BIT(7)
 #define PON_CNTL_TRIG_DELAY_MASK (0x7)
+#define CHECK_DELAY msecs_to_jiffies(100)
 
 /**
  * struct pmic8xxx_pwrkey - pmic8xxx pwrkey information
@@ -36,20 +39,51 @@ struct pmic8xxx_pwrkey {
 	struct input_dev *pwr;
 	int key_press_irq;
 	int key_release_irq;
-	bool press;
+	atomic_t press;
 	const struct pm8xxx_pwrkey_platform_data *pdata;
+	struct delayed_work confirm_work;
+	struct platform_device *pdev;
 };
+
+static void confirm_key_status(struct work_struct *work)
+{
+	struct pmic8xxx_pwrkey *pwrkey =
+		container_of(to_delayed_work(work), struct pmic8xxx_pwrkey,
+		confirm_work);
+	int pressed = pm8xxx_read_irq_stat(pwrkey->pdev->dev.parent,
+			pwrkey->key_press_irq);
+	int released = pm8xxx_read_irq_stat(pwrkey->pdev->dev.parent,
+			pwrkey->key_release_irq);
+
+	if (pressed < 0 || released < 0) {
+		dev_err(&pwrkey->pdev->dev, "reading irq status failed\n");
+	} else if (pressed != !released) {
+		dev_warn(&pwrkey->pdev->dev, "key status unstable\n");
+	} else if (atomic_cmpxchg(&pwrkey->press, !pressed, pressed) !=
+				!pressed) {
+		dev_warn(&pwrkey->pdev->dev, "key status changed to %d\n",
+			pressed);
+		input_report_key(pwrkey->pwr, KEY_POWER, pressed);
+		input_sync(pwrkey->pwr);
+		return;
+	}
+	schedule_delayed_work(to_delayed_work(work), CHECK_DELAY);
+}
+
 
 static irqreturn_t pwrkey_press_irq(int irq, void *_pwrkey)
 {
 	struct pmic8xxx_pwrkey *pwrkey = _pwrkey;
 
-	if (pwrkey->press == true) {
-		pwrkey->press = false;
-		return IRQ_HANDLED;
-	} else {
-		pwrkey->press = true;
+	if (atomic_cmpxchg(&pwrkey->press, false, true) != false) {
+		dev_warn(pwrkey->pwr->dev.parent, "unexpected key press\n");
+		__cancel_delayed_work(&pwrkey->confirm_work);
+		schedule_delayed_work(&pwrkey->confirm_work, CHECK_DELAY);
 	}
+
+#ifdef CONFIG_PMIC8XXX_FORCECRASH
+	pmic8xxx_forcecrash_timer_setup(1);
+#endif
 
 	input_report_key(pwrkey->pwr, KEY_POWER, 1);
 	input_sync(pwrkey->pwr);
@@ -61,14 +95,15 @@ static irqreturn_t pwrkey_release_irq(int irq, void *_pwrkey)
 {
 	struct pmic8xxx_pwrkey *pwrkey = _pwrkey;
 
-	if (pwrkey->press == false) {
-		input_report_key(pwrkey->pwr, KEY_POWER, 1);
-		input_sync(pwrkey->pwr);
-		pwrkey->press = true;
-	} else {
-		pwrkey->press = false;
+	if (atomic_cmpxchg(&pwrkey->press, true, false) != true) {
+		dev_warn(pwrkey->pwr->dev.parent, "unexpected key release\n");
+		__cancel_delayed_work(&pwrkey->confirm_work);
+		schedule_delayed_work(&pwrkey->confirm_work, CHECK_DELAY);
 	}
 
+#ifdef CONFIG_PMIC8XXX_FORCECRASH
+	pmic8xxx_forcecrash_timer_setup(0);
+#endif
 	input_report_key(pwrkey->pwr, KEY_POWER, 0);
 	input_sync(pwrkey->pwr);
 
@@ -80,6 +115,7 @@ static int pmic8xxx_pwrkey_suspend(struct device *dev)
 {
 	struct pmic8xxx_pwrkey *pwrkey = dev_get_drvdata(dev);
 
+	flush_delayed_work_sync(&pwrkey->confirm_work);
 	if (device_may_wakeup(dev)) {
 		enable_irq_wake(pwrkey->key_press_irq);
 		enable_irq_wake(pwrkey->key_release_irq);
@@ -178,21 +214,10 @@ static int __devinit pmic8xxx_pwrkey_probe(struct platform_device *pdev)
 	pwrkey->key_press_irq = key_press_irq;
 	pwrkey->key_release_irq = key_release_irq;
 	pwrkey->pwr = pwr;
+	pwrkey->pdev = pdev;
+	INIT_DELAYED_WORK(&pwrkey->confirm_work, confirm_key_status);
 
 	platform_set_drvdata(pdev, pwrkey);
-
-	/* check power key status during boot */
-	err = pm8xxx_read_irq_stat(pdev->dev.parent, key_press_irq);
-	if (err < 0) {
-		dev_err(&pdev->dev, "reading irq status failed\n");
-		goto unreg_input_dev;
-	}
-	pwrkey->press = !!err;
-
-	if (pwrkey->press) {
-		input_report_key(pwrkey->pwr, KEY_POWER, 1);
-		input_sync(pwrkey->pwr);
-	}
 
 	err = request_any_context_irq(key_press_irq, pwrkey_press_irq,
 		IRQF_TRIGGER_RISING, "pmic8xxx_pwrkey_press", pwrkey);
@@ -212,6 +237,10 @@ static int __devinit pmic8xxx_pwrkey_probe(struct platform_device *pdev)
 	}
 
 	device_init_wakeup(&pdev->dev, pdata->wakeup);
+
+#ifdef CONFIG_PMIC8XXX_FORCECRASH
+	pmic8xxx_forcecrash_init(pdev);
+#endif
 
 	return 0;
 
@@ -234,6 +263,9 @@ static int __devexit pmic8xxx_pwrkey_remove(struct platform_device *pdev)
 	int key_release_irq = platform_get_irq(pdev, 0);
 	int key_press_irq = platform_get_irq(pdev, 1);
 
+#ifdef CONFIG_PMIC8XXX_FORCECRASH
+	pmic8xxx_forcecrash_exit(pdev);
+#endif
 	device_init_wakeup(&pdev->dev, 0);
 
 	free_irq(key_press_irq, pwrkey);

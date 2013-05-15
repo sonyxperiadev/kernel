@@ -209,4 +209,9 @@ config SND_SOC_DUAL_AMIC
 	help
 	 To add support for dual analog mic.
 
+config SND_SOC_DIFFERENTIAL_SPEAKER
+	bool "support flag for differential speaker"
+	default n
+	help
+	 To add support for differential speaker.
 endmenu

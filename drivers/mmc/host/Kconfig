@@ -518,6 +518,13 @@ config MMC_MSM_SDC3_WP_SUPPORT
 	help
 	  Select Y to enable write protection support for Slot 3.
 
+config MMC_MSM_SDC3_POLLUX_DOWN_CLKRATE
+	boolean "Qualcomm SDC3 clock down support"
+	depends on MMC_MSM_SDC3_SUPPORT
+	default n
+        help
+          Select Y to enable clock down support for slot 3.
+
 config MMC_MSM_SDC4_SUPPORT
 	boolean "Qualcomm SDC4 support"
 	depends on MMC_MSM

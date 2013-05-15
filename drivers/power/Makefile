@@ -53,9 +53,18 @@ obj-$(CONFIG_BATTERY_QCIBAT)    += qci_battery.o
 obj-$(CONFIG_BATTERY_BQ27520)	+= bq27520_fuelgauger.o
 obj-$(CONFIG_BATTERY_BQ27541)	+= bq27541_fuelgauger.o
 obj-$(CONFIG_SMB137B_CHARGER)   += smb137b.o
+ifdef CONFIG_PM8921_SONY_BMS_CHARGER
+pm8xxx-ccadc-y			:= pm8xxx-ccadc-sony.o
+obj-$(CONFIG_PM8XXX_CCADC)	+= pm8xxx-ccadc.o
+pm8921-bms-y			:= pm8921-bms-sony.o
+obj-$(CONFIG_PM8921_BMS)	+= pm8921-bms.o
+pm8921-charger-y		:= pm8921-charger-sony.o
+obj-$(CONFIG_PM8921_CHARGER)	+= pm8921-charger.o
+else
 obj-$(CONFIG_PM8XXX_CCADC)	+= pm8xxx-ccadc.o
 obj-$(CONFIG_PM8921_BMS)	+= pm8921-bms.o
 obj-$(CONFIG_PM8921_CHARGER)	+= pm8921-charger.o
+endif
 obj-$(CONFIG_LTC4088_CHARGER)	+= ltc4088-charger.o
 obj-$(CONFIG_CHARGER_SMB347)	+= smb347-charger.o
 obj-$(CONFIG_BATTERY_BCL)	+= battery_current_limit.o

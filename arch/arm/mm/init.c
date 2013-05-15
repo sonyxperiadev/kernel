@@ -689,6 +689,9 @@ void __init mem_init(void)
 	extern u32 dtcm_end;
 	extern u32 itcm_end;
 #endif
+#ifdef CONFIG_FIX_MOVABLE_ZONE
+	struct zone *zone;
+#endif
 
 	max_mapnr   = pfn_to_page(max_pfn + PHYS_PFN_OFFSET) - mem_map;
 
@@ -734,6 +737,14 @@ void __init mem_init(void)
 #endif
 	}
 
+#ifdef CONFIG_FIX_MOVABLE_ZONE
+	for_each_zone(zone) {
+		if (zone_idx(zone) == ZONE_MOVABLE)
+			total_unmovable_pages = totalram_pages -
+							zone->spanned_pages;
+	}
+#endif
+
 	/*
 	 * Since our memory may not be contiguous, calculate the
 	 * real number of pages we have in this system
@@ -760,6 +771,9 @@ void __init mem_init(void)
 
 	printk(KERN_NOTICE "Virtual kernel memory layout:\n"
 			"    vector  : 0x%08lx - 0x%08lx   (%4ld kB)\n"
+#ifdef CONFIG_ARM_USE_USER_ACCESSIBLE_TIMERS
+			"    timers  : 0x%08lx - 0x%08lx   (%4ld kB)\n"
+#endif
 #ifdef CONFIG_HAVE_TCM
 			"    DTCM    : 0x%08lx - 0x%08lx   (%4ld kB)\n"
 			"    ITCM    : 0x%08lx - 0x%08lx   (%4ld kB)\n"
@@ -780,6 +794,11 @@ void __init mem_init(void)
 
 			MLK(UL(CONFIG_VECTORS_BASE), UL(CONFIG_VECTORS_BASE) +
 				(PAGE_SIZE)),
+#ifdef CONFIG_ARM_USE_USER_ACCESSIBLE_TIMERS
+			MLK(UL(CONFIG_ARM_USER_ACCESSIBLE_TIMER_BASE),
+				UL(CONFIG_ARM_USER_ACCESSIBLE_TIMER_BASE)
+					+ (PAGE_SIZE)),
+#endif
 #ifdef CONFIG_HAVE_TCM
 			MLK(DTCM_OFFSET, (unsigned long) dtcm_end),
 			MLK(ITCM_OFFSET, (unsigned long) itcm_end),
@@ -847,8 +866,38 @@ void free_initmem(void)
 					    __phys_to_pfn(__pa(__init_end)),
 					    "init");
 		totalram_pages += reclaimed_initmem;
+#ifdef CONFIG_FIX_MOVABLE_ZONE
+		total_unmovable_pages += reclaimed_initmem;
+#endif
 	}
 }
+
+#ifdef CONFIG_MEMORY_HOTPLUG
+int arch_add_memory(int nid, u64 start, u64 size)
+{
+	struct pglist_data *pgdata = NODE_DATA(nid);
+	struct zone *zone = pgdata->node_zones + ZONE_MOVABLE;
+	unsigned long start_pfn = start >> PAGE_SHIFT;
+	unsigned long nr_pages = size >> PAGE_SHIFT;
+
+	return __add_pages(nid, zone, start_pfn, nr_pages);
+}
+
+int arch_physical_active_memory(u64 start, u64 size)
+{
+	return platform_physical_active_pages(start, size);
+}
+
+int arch_physical_remove_memory(u64 start, u64 size)
+{
+	return platform_physical_remove_pages(start, size);
+}
+
+int arch_physical_low_power_memory(u64 start, u64 size)
+{
+	return platform_physical_low_power_pages(start, size);
+}
+#endif
 
 #ifdef CONFIG_BLK_DEV_INITRD
 
@@ -864,6 +913,9 @@ void free_initrd_mem(unsigned long start, unsigned long end)
 						 __phys_to_pfn(__pa(end)),
 						 "initrd");
 		totalram_pages += reclaimed_initrd_mem;
+#ifdef CONFIG_FIX_MOVABLE_ZONE
+		total_unmovable_pages += reclaimed_initrd_mem;
+#endif
 	}
 }
 

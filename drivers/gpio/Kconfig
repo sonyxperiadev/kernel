@@ -575,4 +575,11 @@ config GPIO_QPNP_PIN_DEBUG
 	help
 	  Say 'y' here to include debug support for the Qualcomm
 	  QPNP gpio driver.
+
+config GPIO_SEMC_ETS
+	bool "SEMC ETS GPIO flag"
+	help
+	  This enables the SEMC ETS GPIO driver which will enable gpio exposure
+	  to userspace without taking gpio requests from drivers into consideration.
+
 endif

@@ -1,4 +1,5 @@
 /* Copyright (c) 2008-2013, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2012-2013 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -34,6 +35,7 @@
 #include "mipi_dsi.h"
 #include "mdp.h"
 #include "mdp4.h"
+#include "mipi_dsi_panel_driver.h"
 
 u32 dsi_irq;
 u32 esc_byte_ratio;
@@ -600,6 +602,16 @@ static int mipi_dsi_probe(struct platform_device *pdev)
 		goto mipi_dsi_probe_err;
 
 	pdev_list[pdev_list_cnt++] = pdev;
+
+	if (mfd->panel_pdev) {
+		struct mipi_dsi_data *dsi_data;
+		dsi_data = platform_get_drvdata(mfd->panel_pdev);
+		if (!dsi_data)
+			return -ENODEV;
+		if (mipi_dsi_pdata && mipi_dsi_pdata->dsi_power_save)
+			dsi_data->dsi_power_save =
+				mipi_dsi_pdata->dsi_power_save;
+	}
 
 	esc_byte_ratio = pinfo->mipi.esc_byte_ratio;
 

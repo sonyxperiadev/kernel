@@ -1,0 +1,50 @@
+
+menu "Motion Sensors Support"
+
+config SENSORS_MPU3050
+    tristate "MPU3050"
+    default n
+    depends on I2C
+    help
+      If you say yes here you get support for the MPU3050 Gyroscope driver
+      This driver can also be built as a module.  If so, the module
+      will be called mpu3050.
+
+config SENSORS_BMA250
+    bool "Bosch BMA250"
+    default n
+    depends on SENSORS_MPU3050
+    help
+      This enables support for the Bosch BMA250 accelerometer
+
+config SENSORS_AKM8975
+    bool "AKM ak8975"
+    default n
+    depends on SENSORS_MPU3050
+    help
+      This enables support for the AKM ak8975 compass
+
+config SENSORS_AKM8972
+    bool "AKM ak8972"
+    default n
+    depends on SENSORS_MPU3050
+    help
+      This enables support for the AKM ak8972 compass
+
+config SENSORS_AKM8963
+    bool "AKM ak8963"
+    depends on SENSORS_MPU3050
+    help
+      This enables support for the AKM ak8963 compass
+
+config MPU_SENSORS_TIMERIRQ
+    tristate "Timer IRQ"
+    default n
+    help
+      If you say yes here you get access to the timerirq device handle which
+      can be used to select on.  This can be used instead of IRQ's, sleeping,
+      or timer threads.  Reading from this device returns the same type of
+      information as reading from the MPU and slave IRQ's.
+
+endmenu
+

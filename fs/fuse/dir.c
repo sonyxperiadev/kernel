@@ -1,6 +1,7 @@
 /*
   FUSE: Filesystem in Userspace
   Copyright (C) 2001-2008  Miklos Szeredi <miklos@szeredi.hu>
+  Copyright (C) 2013 Sony Mobile Communications AB.
 
   This program can be distributed under the terms of the GNU GPL.
   See the file COPYING.
@@ -1325,6 +1326,16 @@ void fuse_release_nowrite(struct inode *inode)
 	spin_unlock(&fc->lock);
 }
 
+static int fuse_allow_set_time(struct fuse_conn *fc, struct inode *inode)
+{
+	if (fc->flags & FUSE_ALLOW_UTIME_GRP) {
+		if (current_uid() != inode->i_uid &&
+		    inode->i_mode & S_IWGRP && in_group_p(inode->i_gid))
+			return 1;
+	}
+	return 0;
+}
+
 /*
  * Set attributes, and at the same time refresh them.
  *
@@ -1343,6 +1354,7 @@ static int fuse_do_setattr(struct dentry *entry, struct iattr *attr,
 	struct fuse_attr_out outarg;
 	bool is_truncate = false;
 	loff_t oldsize;
+	unsigned int ia_valid;
 	int err;
 
 	if (!fuse_allow_task(fc, current))
@@ -1351,7 +1363,15 @@ static int fuse_do_setattr(struct dentry *entry, struct iattr *attr,
 	if (!(fc->flags & FUSE_DEFAULT_PERMISSIONS))
 		attr->ia_valid |= ATTR_FORCE;
 
+	ia_valid = attr->ia_valid;
+	if (ia_valid & (ATTR_MTIME_SET | ATTR_ATIME_SET | ATTR_TIMES_SET)) {
+		if (fuse_allow_set_time(fc, inode))
+			attr->ia_valid &= ~(ATTR_MTIME_SET | ATTR_ATIME_SET |
+					    ATTR_TIMES_SET);
+	}
+
 	err = inode_change_ok(inode, attr);
+	attr->ia_valid = ia_valid;
 	if (err)
 		return err;
 

@@ -2,6 +2,7 @@
  *  linux/include/linux/console.h
  *
  *  Copyright (C) 1993        Hamish Macdonald
+ *  Copyright (C) 2012 Sony Mobile Communications AB.
  *
  * This file is subject to the terms and conditions of the GNU General Public
  * License.  See the file COPYING in the main directory of this archive
@@ -157,6 +158,8 @@ extern bool console_suspend_enabled;
 /* Suspend and resume console messages over PM events */
 extern void suspend_console(void);
 extern void resume_console(void);
+
+extern void panic_console(void);
 
 int mda_console_init(void);
 void prom_con_init(void);

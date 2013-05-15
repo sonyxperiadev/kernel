@@ -2,7 +2,10 @@
  *
  * Copyright (C) 2007 Google, Inc.
  * Copyright (c) 2008-2013, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2012 Sony Mobile Communications AB.
+ *
  * Author: Brian Swetland <swetland@google.com>
+ * Author: Johan Olson <johan.olson@sonymobile.com>
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -386,6 +389,9 @@ struct msm_panel_common_pdata {
 	void (*panel_config_gpio)(int);
 	int (*vga_switch)(int select_vga);
 	int *gpio_num;
+	int mdp_core_clk_rate;
+	unsigned num_mdp_clk;
+	int *mdp_core_clk_table;
 	u32 mdp_max_clk;
 	u32 mdp_max_bw;
 	u32 mdp_bw_ab_factor;
@@ -483,6 +489,7 @@ struct msm_fb_platform_data {
 
 struct msm_hdmi_platform_data {
 	int irq;
+	const char *coupled_mhl_device;
 	int (*cable_detect)(int insert);
 	int (*comm_power)(int on, int show);
 	int (*enable_5v)(int on);

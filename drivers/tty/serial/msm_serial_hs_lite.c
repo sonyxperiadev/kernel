@@ -3,6 +3,7 @@
  *
  * Copyright (C) 2007 Google, Inc.
  * Copyright (c) 2010-2013, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2012 Sony Mobile Communications AB.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -100,6 +101,7 @@ static const unsigned int regmap[][UARTDM_LAST] = {
 		[UARTDM_DMEN] = UARTDM_DMEN_ADDR,
 		[UARTDM_TXFS] = UARTDM_TXFS_ADDR,
 		[UARTDM_RXFS] = UARTDM_RXFS_ADDR,
+		[UARTDM_IRDA] = UARTDM_IRDA_ADDR,
 	},
 	[UARTDM_VERSION_14] = {
 		[UARTDM_MR1] = 0x0,
@@ -121,6 +123,7 @@ static const unsigned int regmap[][UARTDM_LAST] = {
 		[UARTDM_DMEN] = 0x3c,
 		[UARTDM_TXFS] = 0x4c,
 		[UARTDM_RXFS] = 0x50,
+		[UARTDM_IRDA] = 0xffff, /* unsupport */
 	},
 };
 
@@ -706,6 +709,15 @@ static int msm_hsl_startup(struct uart_port *port)
 	snprintf(msm_hsl_port->name, sizeof(msm_hsl_port->name),
 		 "msm_serial_hsl%d", port->line);
 
+	if (pdata && pdata->pre_startup) {
+		ret = pdata->pre_startup(port);
+		if (ret) {
+			pr_err("%s: pre-process failed (line%d)\n",
+			__func__, port->line);
+			return ret;
+		}
+	}
+
 	if (!(is_console(port)) || (!port->cons) ||
 		(port->cons && (!(port->cons->flags & CON_ENABLED)))) {
 
@@ -770,6 +782,11 @@ static int msm_hsl_startup(struct uart_port *port)
 		printk(KERN_ERR "%s: failed to request_irq\n", __func__);
 		return ret;
 	}
+	if (pdata && pdata->type == PORT_IRDA &&
+		regmap[vid][UARTDM_IRDA] != 0xffff)
+		msm_hsl_write(port, (UARTDM_IRDA_INVERT_RX_BMSK |
+					UARTDM_IRDA_EN_BMSK),
+					regmap[vid][UARTDM_IRDA]);
 	return 0;
 }
 
@@ -783,6 +800,10 @@ static void msm_hsl_shutdown(struct uart_port *port)
 	msm_hsl_port->imr = 0;
 	/* disable interrupts */
 	msm_hsl_write(port, 0, regmap[msm_hsl_port->ver_id][UARTDM_IMR]);
+	if (pdata && pdata->type == PORT_IRDA &&
+		regmap[msm_hsl_port->ver_id][UARTDM_IRDA] != 0xffff)
+		msm_hsl_write(port, 0,
+				regmap[msm_hsl_port->ver_id][UARTDM_IRDA]);
 
 	free_irq(port->irq, port);
 
@@ -1071,6 +1092,15 @@ static struct msm_hsl_port msm_hsl_uart_ports[] = {
 			.flags = UPF_BOOT_AUTOCONF,
 			.fifosize = 64,
 			.line = 2,
+		},
+	},
+	{
+		.uart = {
+			.iotype = UPIO_MEM,
+			.ops = &msm_hsl_uart_pops,
+			.flags = UPF_BOOT_AUTOCONF,
+			.fifosize = 64,
+			.line = 3,
 		},
 	},
 };

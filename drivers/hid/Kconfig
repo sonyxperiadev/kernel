@@ -532,6 +532,16 @@ config HID_SONY
 	---help---
 	Support for Sony PS3 controller.
 
+config HID_SONY_PS3_CTRL_BT
+	tristate "Sony PS3 controller bluetooth connection support"
+	depends on HID_SONY=m && HIDRAW && BT_HIDP
+	---help---
+	Support for Sony PS3 controller bluetooth connection.
+	This includes add following HID report types as special feature.
+	- HID feature report with data size (HID_FEATREP_WDATASIZE)
+	- HID feature report skip report id (HID_FEATREP_SKIPREPID)
+	- HID output report skip report id (HID_OUTREP_SKIPREPID)
+
 config HID_SPEEDLINK
 	tristate "Speedlink VAD Cezanne mouse support"
 	depends on USB_HID

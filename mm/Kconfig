@@ -117,7 +117,7 @@ config SPARSEMEM_VMEMMAP_ENABLE
 
 config SPARSEMEM_ALLOC_MEM_MAP_TOGETHER
 	def_bool y
-	depends on SPARSEMEM && X86_64
+	depends on SPARSEMEM && (X86_64 || ARM)
 
 config SPARSEMEM_VMEMMAP
 	bool "Sparse Memory virtual memmap"
@@ -379,3 +379,15 @@ config CLEANCACHE
 	  in a negligible performance hit.
 
 	  If unsure, say Y to enable cleancache
+
+config USE_USER_ACCESSIBLE_TIMERS
+	bool "Enables timers accessible from userspace"
+	depends on MMU
+	help
+	  User-accessible timers allow the kernel to map kernel timer
+	  registers to a userspace accessible page, to allow faster
+	  access to time information.  This flag will enable the
+	  interface code in the main kernel.  However, there are
+	  architecture-specific code that will need to be enabled
+	  separately.
+

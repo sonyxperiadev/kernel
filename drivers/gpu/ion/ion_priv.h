@@ -102,6 +102,7 @@ struct ion_buffer {
 	unsigned int iommu_map_cnt;
 	struct rb_root iommu_maps;
 	int marked;
+	int vma_inserted;
 };
 
 /**

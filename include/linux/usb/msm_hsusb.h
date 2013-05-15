@@ -3,6 +3,7 @@
  * Copyright (C) 2008 Google, Inc.
  * Author: Brian Swetland <swetland@google.com>
  * Copyright (c) 2009-2012, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2012 Sony Mobile Communications AB.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -106,6 +107,9 @@ enum msm_usb_phy_type {
  * USB_CHG_STATE_SECONDARY_DONE	Secondary detection is completed (Detects
  *                              between DCP and CDP).
  * USB_CHG_STATE_DETECTED	USB charger type is determined.
+ * USB_CHG_STATE_RECHECK	DCP can be miss-detected as SDP when user
+ *				insert USB cable very slowly. Rechecking chager
+ *				type after a while.
  *
  */
 enum usb_chg_state {
@@ -115,6 +119,7 @@ enum usb_chg_state {
 	USB_CHG_STATE_PRIMARY_DONE,
 	USB_CHG_STATE_SECONDARY_DONE,
 	USB_CHG_STATE_DETECTED,
+	USB_CHG_STATE_RECHECK,
 };
 
 /**
@@ -177,8 +182,10 @@ enum usb_vdd_value {
 /**
  * struct msm_otg_platform_data - platform device data
  *              for msm_otg driver.
- * @phy_init_seq: PHY configuration sequence. val, reg pairs
- *              terminated by -1.
+ * @phy_init_seq: PHY configuration sequence for device mode.
+ *              val, reg pairs terminated by -1.
+ * @phy_init_seq_host: PHY configuration sequence for host mode.
+ *              val, reg pairs terminated by -1.
  * @vbus_power: VBUS power on/off routine.It should return result
  *		as success(zero value) or failure(non-zero value).
  * @power_budget: VBUS power budget in mA (0 will be treated as 500mA).
@@ -199,9 +206,11 @@ enum usb_vdd_value {
  *              USB enters LPM.
  * @bus_scale_table: parameters for bus bandwidth requirements
  * @mhl_dev_name: MHL device name used to register with MHL driver.
+ * @chg_drawable_ida: Drawable current value when ID_A.
  */
 struct msm_otg_platform_data {
 	int *phy_init_seq;
+	int *phy_init_seq_host;
 	int (*vbus_power)(bool on);
 	unsigned power_budget;
 	enum usb_mode_type mode;
@@ -217,6 +226,7 @@ struct msm_otg_platform_data {
 	bool core_clk_always_on_workaround;
 	struct msm_bus_scale_pdata *bus_scale_table;
 	const char *mhl_dev_name;
+	unsigned chg_drawable_ida;
 };
 
 /* Timeout (in msec) values (min - max) associated with OTG timers */
@@ -280,6 +290,8 @@ struct msm_otg_platform_data {
  * @chg_type: The type of charger attached.
  * @dcd_retires: The retry count used to track Data contact
  *               detection process.
+ * @chg_recheck_stop_work: Work to stop rechecking charger type
+ * @chg_recheck_retries: The retry count used to recheck charger type
  * @wlock: Wake lock struct to prevent system suspend when
  *               USB is active.
  * @usbdev_nb: The notifier block used to know about the B-device
@@ -290,6 +302,7 @@ struct msm_otg_platform_data {
  * @xo_handle: TCXO buffer handle
  * @bus_perf_client: Bus performance client handle to request BUS bandwidth
  * @mhl_enabled: MHL driver registration successful and MHL enabled.
+ * @wq: Work queue for sm_work, chg_work and msm_pmic_id_status_w.
  */
 struct msm_otg {
 	struct usb_phy phy;
@@ -319,6 +332,7 @@ struct msm_otg {
 #define A_CONN		15
 #define B_BUS_REQ	16
 #define MHL	        17
+#define VBUS_DROP_DET	18
 	unsigned long inputs;
 	struct work_struct sm_work;
 	bool sm_work_pending;
@@ -332,6 +346,9 @@ struct msm_otg {
 	enum usb_chg_state chg_state;
 	enum usb_chg_type chg_type;
 	unsigned dcd_time;
+	u8 dcd_retries;
+	struct work_struct chg_recheck_stop_work;
+	u8 chg_recheck_retries;
 	struct wake_lock wlock;
 	struct notifier_block usbdev_nb;
 	unsigned mA_port;
@@ -369,6 +386,7 @@ struct msm_otg {
 	u8 active_tmout;
 	struct hrtimer timer;
 	enum usb_vdd_type vdd_type;
+	struct workqueue_struct *wq;
 };
 
 struct msm_hsic_host_platform_data {
@@ -442,6 +460,8 @@ enum usb_bam {
 	HSIC_BAM,
 };
 
+void msm_otg_notify_vbus_drop(void);
+
 #ifdef CONFIG_USB_DWC3_MSM
 int msm_ep_config(struct usb_ep *ep);
 int msm_ep_unconfig(struct usb_ep *ep);
@@ -465,4 +485,7 @@ static inline int msm_ep_unconfig(struct usb_ep *ep)
 	return -ENODEV;
 }
 #endif
+
+void msm_otg_notify_vbus_drop(void);
+
 #endif

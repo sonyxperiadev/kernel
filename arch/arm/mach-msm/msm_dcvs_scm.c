@@ -136,26 +136,7 @@ EXPORT_SYMBOL(msm_dcvs_scm_set_algo_params);
 
 int msm_mpd_scm_set_algo_params(struct msm_mpd_algo_param *param)
 {
-	int ret = 0;
-	struct scm_algo algo;
-	struct msm_algo_param *p = NULL;
-
-	p = kzalloc(PAGE_ALIGN(sizeof(struct msm_algo_param)), GFP_KERNEL);
-	if (!p)
-		return -ENOMEM;
-
-	p->type = MSM_DCVS_ALGO_MPD_PARAM;
-	memcpy(&p->u.mpd_param, param, sizeof(struct msm_mpd_algo_param));
-
-	algo.core_id = 0;
-	algo.algo_phy = virt_to_phys(p);
-
-	ret = scm_call(SCM_SVC_DCVS, DCVS_CMD_SET_ALGO_PARAM,
-			&algo, sizeof(algo), NULL, 0);
-
-	kfree(p);
-
-	return ret;
+	return 0;
 }
 EXPORT_SYMBOL(msm_mpd_scm_set_algo_params);
 

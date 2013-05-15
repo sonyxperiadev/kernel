@@ -423,6 +423,12 @@ config INPUT_GPIO
 	help
 	  Say Y here if you want to support gpio based keys, wheels etc...
 
+config INPUT_BU52031NVX
+	tristate "BU52031NVX driver support"
+	default n
+	help
+	  Say Y here if you want to support BU52031NVX as bipolar detection device.
+
 config INPUT_ISA1200_FF_MEMLESS
 	tristate "ISA1200 haptic ff-memless support"
 	depends on I2C
@@ -618,6 +624,15 @@ config INPUT_XEN_KBDDEV_FRONTEND
 	  To compile this driver as a module, choose M here: the
 	  module will be called xen-kbdfront.
 
+config PMIC8XXX_FORCECRASH
+	boolean "PMIC8XXX power key forcecrash support"
+	default n
+	depends on INPUT_PMIC8XXX_PWRKEY && (ARCH_MSM8X60 || ARCH_MSM8960)
+	help
+	  Say Y here if you want support forcecrash functionality through
+	  PMIC8XXX power key. Triggers panic if power key is hold for more
+	  than 10secs.
+
 config PMIC8058_OTHC
         tristate "Qualcomm PMIC8058 OTHC support"
         default n
@@ -673,5 +688,46 @@ config BMP18X_I2C
 
          To compile this driver as a module, choose M here: the
          module will be called bmp18x-i2c.
+
+config INPUT_AKM8963
+	tristate "AKM8963 Compass Driver"
+	default n
+	depends on I2C
+	help
+	  Say Y here if you want support for the AKM8963 Compass Driver.
+
+config INPUT_BMA250_NG
+        tristate "Bosch BMA250 accelerometer (next gen)"
+        default n
+        depends on I2C
+        help
+          Say Y here if you want support for the BMA250 accelerometer
+          device. This driver only supports I2C communication.
+          This device driver supprot to get accelerometer data from
+          other parent device's register.
+
+config INPUT_BMG160
+	tristate "Bosch BMG160 gyroscope"
+	default n
+	depends on I2C
+	help
+	  Say Y here if you want support for the BMG160 gyroscope
+	  device. This driver only supports I2C communication.
+
+config INPUT_APDS9702
+	tristate "APDS9702 proximity driver"
+	depends on I2C
+	default n
+	help
+	 If you say yes here you get support for the APDS9702 chip.
+	 This is used as a proximity sensor.
+
+config INPUT_BMP180
+	tristate "Bosch BMP180 pressure sensor"
+	default n
+	depends on I2C
+	help
+	  Say Y here if you want support for the BMP180 pressure
+	  device. This driver only supports I2C communication.
 
 endif

@@ -1,4 +1,5 @@
 /* Copyright (c) 2010-2011, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2012 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -156,8 +157,6 @@ retry:
 	if (value == 0)
 		vib->state = 0;
 	else {
-		value = (value > vib->pdata->max_timeout_ms ?
-				 vib->pdata->max_timeout_ms : value);
 		vib->state = 1;
 		hrtimer_start(&vib->vib_timer,
 			      ktime_set(value / 1000, (value % 1000) * 1000000),

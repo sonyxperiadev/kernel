@@ -33,8 +33,8 @@ extern u32 mdp_max_clk;
 extern u64 mdp_max_bw;
 extern u32 mdp_bw_ab_factor;
 extern u32 mdp_bw_ib_factor;
-#define MDP4_BW_AB_DEFAULT_FACTOR (115)	/* 1.15 */
-#define MDP4_BW_IB_DEFAULT_FACTOR (125)	/* 1.25 */
+#define MDP4_BW_AB_DEFAULT_FACTOR (115)
+#define MDP4_BW_IB_DEFAULT_FACTOR (205)
 #define MDP_BUS_SCALE_AB_STEP (0x4000000)
 
 #define MDP4_OVERLAYPROC0_BASE	0x10000
@@ -794,7 +794,6 @@ int mdp4_dsi_cmd_on(struct platform_device *pdev);
 int mdp4_dsi_cmd_off(struct platform_device *pdev);
 int mdp4_dsi_video_off(struct platform_device *pdev);
 int mdp4_dsi_video_on(struct platform_device *pdev);
-int mdp4_dsi_video_splash_done(void);
 void mdp4_primary_vsync_dsi_video(void);
 void mdp4_dsi_cmd_base_swap(int cndx, struct mdp4_overlay_pipe *pipe);
 void mdp4_dsi_cmd_wait4vsync(int cndx);
@@ -863,10 +862,6 @@ static inline void mdp4_dsi_video_vsync_ctrl(struct fb_info *info,
 static inline void mdp4_overlay_dsi_video_start(void)
 {
 	/* empty */
-}
-
-static int mdp4_dsi_video_splash_done(void)
-{
 }
 #endif /* CONFIG_FB_MSM_MIPI_DSI */
 

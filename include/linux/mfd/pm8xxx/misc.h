@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2011-2012, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2012 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -71,6 +72,40 @@ enum pm8xxx_pon_config {
 	PM8XXX_DISABLE_HARD_RESET = 0,
 	PM8XXX_SHUTDOWN_ON_HARD_RESET,
 	PM8XXX_RESTART_ON_HARD_RESET,
+};
+
+enum pm8xxx_pon_delay_config {
+	PM8XXX_HARD_RESET_DELAY_MS_MIN = 0,
+	PM8XXX_HARD_RESET_DELAY_MS_0 = PM8XXX_HARD_RESET_DELAY_MS_MIN,
+	PM8XXX_HARD_RESET_DELAY_MS_10,
+	PM8XXX_HARD_RESET_DELAY_MS_50,
+	PM8XXX_HARD_RESET_DELAY_MS_100,
+	PM8XXX_HARD_RESET_DELAY_MS_250,
+	PM8XXX_HARD_RESET_DELAY_MS_500,
+	PM8XXX_HARD_RESET_DELAY_MS_1000,
+	PM8XXX_HARD_RESET_DELAY_MS_2000,
+	PM8XXX_HARD_RESET_DELAY_MS_MAX,
+};
+
+enum pm8xxx_pon_debounce_config {
+	PM8XXX_HARD_RESET_DEBOUNCE_MS_MIN = 0,
+	PM8XXX_HARD_RESET_DEBOUNCE_MS_0 = PM8XXX_HARD_RESET_DEBOUNCE_MS_MIN,
+	PM8XXX_HARD_RESET_DEBOUNCE_MS_32,
+	PM8XXX_HARD_RESET_DEBOUNCE_MS_56,
+	PM8XXX_HARD_RESET_DEBOUNCE_MS_80,
+	PM8XXX_HARD_RESET_DEBOUNCE_MS_128,
+	PM8XXX_HARD_RESET_DEBOUNCE_MS_184,
+	PM8XXX_HARD_RESET_DEBOUNCE_MS_272,
+	PM8XXX_HARD_RESET_DEBOUNCE_MS_408,
+	PM8XXX_HARD_RESET_DEBOUNCE_MS_608,
+	PM8XXX_HARD_RESET_DEBOUNCE_MS_904,
+	PM8XXX_HARD_RESET_DEBOUNCE_MS_1352,
+	PM8XXX_HARD_RESET_DEBOUNCE_MS_2048,
+	PM8XXX_HARD_RESET_DEBOUNCE_MS_3072,
+	PM8XXX_HARD_RESET_DEBOUNCE_MS_4480,
+	PM8XXX_HARD_RESET_DEBOUNCE_MS_6720,
+	PM8XXX_HARD_RESET_DEBOUNCE_MS_10256,
+	PM8XXX_HARD_RESET_DEBOUNCE_MS_MAX,
 };
 
 enum pm8xxx_aux_clk_id {
@@ -168,6 +203,27 @@ int pm8xxx_watchdog_reset_control(int enable);
  * RETURNS: an appropriate -ERRNO error value on error, or zero for success.
  */
 int pm8xxx_hard_reset_config(enum pm8xxx_pon_config config);
+
+/**
+ * pm8xxx_hard_reset_delay_config - Set hard reset delay time
+ *
+ * Available delay time values are as follows:
+ *   0, 10, 50, 100, 250, 500, 1000, 2000
+ *
+ * RETURNS: an appropriate -ERRNO error value on error, or zero for success.
+ */
+int pm8xxx_hard_reset_delay_config(enum pm8xxx_pon_delay_config config);
+
+/**
+ * pm8xxx_hard_reset_debounce_config - Set hard reset debounce time
+ *
+ *  Available debounce time values are as follows:
+ *   0, 32, 56, 80, 128, 184, 272, 408, 608, 904, 1352, 2048, 3072,
+ *   4480, 6720, 10256
+ *
+ * RETURNS: an appropriate -ERRNO error value on error, or zero for success.
+ */
+int pm8xxx_hard_reset_debounce_config(enum pm8xxx_pon_debounce_config config);
 
 /**
  * pm8xxx_stay_on - enables stay_on feature

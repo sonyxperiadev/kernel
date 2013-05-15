@@ -292,6 +292,7 @@ void mipi_dsi_init(void);
 void mipi_dsi_lane_cfg(void);
 void mipi_dsi_bist_ctrl(void);
 int mipi_dsi_buf_alloc(struct dsi_buf *, int size);
+void mipi_dsi_buf_release(struct dsi_buf *dp);
 int mipi_dsi_cmd_dma_add(struct dsi_buf *dp, struct dsi_cmd_desc *cm);
 int mipi_dsi_cmds_tx(struct dsi_buf *dp, struct dsi_cmd_desc *cmds, int cnt);
 int mipi_dsi_cmds_single_tx(struct dsi_buf *dp, struct dsi_cmd_desc *cmds,

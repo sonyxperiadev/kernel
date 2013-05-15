@@ -4,5 +4,6 @@ header-y += msm_camera.h
 header-y += vcap_fmt.h
 header-y += msm_isp.h
 header-y += msm_gemini.h
+header-y += msm_vpe_standalone.h
 header-y += msm_gestures.h
 header-y += msm_mercury.h

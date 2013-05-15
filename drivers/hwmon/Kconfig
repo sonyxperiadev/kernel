@@ -860,6 +860,22 @@ config SENSORS_PM8XXX_ADC
 	  The driver supports reading the HKADC, XOADC and support to set and receive
 	  temperature threshold notifications using the Battery temperature module.
 
+choice
+	prompt "Switch bl_therm tamperature table"
+	default SENSORS_PM8XXX_PULLUP_DEFAULT_BLTHERM
+	depends on SENSORS_PM8XXX_ADC
+	help
+	  This option switches bl_therm temperature table.
+
+	config SENSORS_PM8XXX_PULLUP_100K_BLTHERM
+	  bool
+	    prompt "100k pull-up"
+
+	config SENSORS_PM8XXX_PULLUP_DEFAULT_BLTHERM
+	  bool
+	    prompt "default"
+endchoice
+
 config SENSORS_EPM_ADC
 	tristate "EPM ADC Driver for power measurement"
 	depends on I2C && SPI_MASTER

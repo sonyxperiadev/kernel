@@ -1,4 +1,5 @@
 /* Copyright (c) 2012, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2013 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -73,6 +74,10 @@ enum battery_type {
 	BATT_UNKNOWN = 0,
 	BATT_PALLADIUM,
 	BATT_DESAY,
+#ifndef CONFIG_PM8921_SONY_BMS_CHARGER
+	BATT_LGE,
+	BATT_OEM,
+#endif
 };
 
 /**
@@ -108,6 +113,10 @@ struct bms_battery_data {
 	defined(CONFIG_PM8921_BMS_MODULE)
 extern struct bms_battery_data  palladium_1500_data;
 extern struct bms_battery_data  desay_5200_data;
+#ifndef CONFIG_PM8921_SONY_BMS_CHARGER
+extern struct bms_battery_data  lge_2100_mako_data;
+extern struct bms_battery_data  oem_batt_data;
+#endif
 
 int interpolate_fcc(struct single_row_lut *fcc_temp_lut, int batt_temp);
 int interpolate_scalingfactor(struct sf_lut *sf_lut, int row_entry, int pc);

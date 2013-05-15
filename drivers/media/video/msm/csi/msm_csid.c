@@ -1,4 +1,5 @@
 /* Copyright (c) 2011-2012, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2013 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -358,6 +359,11 @@ static int msm_csid_release(struct csid_device *csid_dev)
 {
 	uint32_t irq;
 	uint8_t core_id = 0;
+
+#if defined(CONFIG_SONY_CAM_V4L2)
+	if (!csid_dev->base)
+		return -EINVAL;
+#endif
 
 	if (csid_dev->csid_state != CSID_POWER_UP) {
 		pr_err("%s: csid invalid state %d\n", __func__,

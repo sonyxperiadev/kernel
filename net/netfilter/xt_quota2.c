@@ -7,6 +7,8 @@
  * 	netfilter module to enforce network quotas
  * 	Sam Johnston <samj@samj.net>
  *
+ * Copyright (c) 2013 Sony Mobile Communications AB.
+ *
  *	This program is free software; you can redistribute it and/or modify
  *	it under the terms of the GNU General Public License; either
  *	version 2 of the License, as published by the Free Software Foundation.
@@ -298,7 +300,7 @@ quota_mt2(const struct sk_buff *skb, struct xt_action_param *par)
 		}
 		ret = true;
 	} else {
-		if (e->quota >= skb->len) {
+		if (e->quota > skb->len) {
 			if (!(q->flags & XT_QUOTA_NO_CHANGE))
 				e->quota -= (q->flags & XT_QUOTA_PACKET) ? 1 : skb->len;
 			ret = !ret;

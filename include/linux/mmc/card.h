@@ -127,10 +127,15 @@ struct sd_ssr {
 struct sd_switch_caps {
 	unsigned int		hs_max_dtr;
 	unsigned int		uhs_max_dtr;
+#ifndef CONFIG_MMC_MSM_SDC3_POLLUX_DOWN_CLKRATE
 #define HIGH_SPEED_MAX_DTR	50000000
+#define UHS_DDR50_MAX_DTR	50000000
+#else /* CONFIG_MMC_MSM_SDC3_POLLUX_DOWN_CLKRATE */
+#define HIGH_SPEED_MAX_DTR	40000000
+#define UHS_DDR50_MAX_DTR	32000000
+#endif /* CONFIG_MMC_MSM_SDC3_POLLUX_DOWN_CLKRATE */
 #define UHS_SDR104_MAX_DTR	208000000
 #define UHS_SDR50_MAX_DTR	100000000
-#define UHS_DDR50_MAX_DTR	50000000
 #define UHS_SDR25_MAX_DTR	UHS_DDR50_MAX_DTR
 #define UHS_SDR12_MAX_DTR	25000000
 	unsigned int		sd3_bus_mode;
@@ -197,6 +202,7 @@ enum mmc_packed_stop_reasons {
 	REL_WRITE,
 	THRESHOLD,
 	LARGE_SEC_ALIGN,
+	NON_SEQ_WRITE,
 	MAX_REASONS,
 };
 
@@ -297,6 +303,7 @@ struct mmc_card {
 #define MMC_CARD_SDXC		(1<<6)		/* card is SDXC */
 #define MMC_CARD_REMOVED	(1<<7)		/* card has been removed */
 #define MMC_STATE_HIGHSPEED_200	(1<<8)		/* card is in HS200 mode */
+#define MMC_STATE_SLEEP		(1<<9)		/* card is in sleep state */
 #define MMC_STATE_DOING_BKOPS	(1<<10)		/* card is doing BKOPS */
 #define MMC_STATE_NEED_BKOPS	(1<<11)		/* card needs to do BKOPS */
 	unsigned int		quirks; 	/* card quirks */
@@ -469,6 +476,7 @@ static inline void __maybe_unused remove_quirk(struct mmc_card *card, int data)
 #define mmc_sd_card_uhs(c)	((c)->state & MMC_STATE_ULTRAHIGHSPEED)
 #define mmc_card_ext_capacity(c) ((c)->state & MMC_CARD_SDXC)
 #define mmc_card_removed(c)	((c) && ((c)->state & MMC_CARD_REMOVED))
+#define mmc_card_is_sleep(c)	((c)->state & MMC_STATE_SLEEP)
 #define mmc_card_doing_bkops(c)	((c)->state & MMC_STATE_DOING_BKOPS)
 #define mmc_card_need_bkops(c)	((c)->state & MMC_STATE_NEED_BKOPS)
 
@@ -482,10 +490,14 @@ static inline void __maybe_unused remove_quirk(struct mmc_card *card, int data)
 #define mmc_sd_card_set_uhs(c) ((c)->state |= MMC_STATE_ULTRAHIGHSPEED)
 #define mmc_card_set_ext_capacity(c) ((c)->state |= MMC_CARD_SDXC)
 #define mmc_card_set_removed(c) ((c)->state |= MMC_CARD_REMOVED)
+#define mmc_card_set_sleep(c) ((c)->state |= MMC_STATE_SLEEP)
+
 #define mmc_card_set_doing_bkops(c)	((c)->state |= MMC_STATE_DOING_BKOPS)
 #define mmc_card_clr_doing_bkops(c)	((c)->state &= ~MMC_STATE_DOING_BKOPS)
 #define mmc_card_set_need_bkops(c)	((c)->state |= MMC_STATE_NEED_BKOPS)
 #define mmc_card_clr_need_bkops(c)	((c)->state &= ~MMC_STATE_NEED_BKOPS)
+#define mmc_card_clr_sleep(c)		((c)->state &= ~MMC_STATE_SLEEP)
+
 /*
  * Quirk add/remove for MMC products.
  */

@@ -14,6 +14,7 @@
  * GNU General Public License for more details.
  *
  */
+#include <asm/cacheflush.h>
 #include <linux/module.h>
 #include <linux/types.h>
 #include <linux/fb.h>
@@ -25,8 +26,12 @@
 #include <asm/system.h>
 
 #define fb_width(fb)	((fb)->var.xres)
+#define fb_linewidth(fb) \
+	((fb)->fix.line_length / (fb_depth(fb) == 2 ? 2 : 4))
 #define fb_height(fb)	((fb)->var.yres)
-#define fb_size(fb)	((fb)->var.xres * (fb)->var.yres * 2)
+#define fb_depth(fb)	((fb)->var.bits_per_pixel >> 3)
+#define fb_size(fb)	(fb_width(fb) * fb_height(fb) * fb_depth(fb))
+#define INIT_IMAGE_FILE "/logo.rle"
 
 static void memset16(void *_ptr, unsigned short val, unsigned count)
 {
@@ -36,13 +41,22 @@ static void memset16(void *_ptr, unsigned short val, unsigned count)
 		*ptr++ = val;
 }
 
+static void memset32(void *_ptr, unsigned int val, unsigned count)
+{
+	unsigned int *ptr = _ptr;
+	count >>= 2;
+	while (count--)
+		*ptr++ = val;
+}
+
 /* 565RLE image format: [count(2 bytes), rle(2 bytes)] */
-int load_565rle_image(char *filename, bool bf_supported)
+int load_565rle_image(char *filename)
 {
 	struct fb_info *info;
-	int fd, count, err = 0;
-	unsigned max;
-	unsigned short *data, *bits, *ptr;
+	int fd, err = 0;
+	unsigned count, max, width, stride, line_pos = 0;
+	unsigned short *data, *ptr;
+	unsigned char *bits;
 
 	info = registered_fb[0];
 	if (!info) {
@@ -73,33 +87,78 @@ int load_565rle_image(char *filename, bool bf_supported)
 		err = -EIO;
 		goto err_logo_free_data;
 	}
-
-	max = fb_width(info) * fb_height(info);
+	width = fb_width(info);
+	stride = fb_linewidth(info);
+	max = width * fb_height(info);
 	ptr = data;
-	if (bf_supported && (info->node == 1 || info->node == 2)) {
-		err = -EPERM;
-		pr_err("%s:%d no info->creen_base on fb%d!\n",
-		       __func__, __LINE__, info->node);
-		goto err_logo_free_data;
-	}
-	if (info->screen_base) {
-		bits = (unsigned short *)(info->screen_base);
-		while (count > 3) {
-			unsigned n = ptr[0];
-			if (n > max)
-				break;
-			memset16(bits, ptr[1], n << 1);
-			bits += n;
-			max -= n;
-			ptr += 2;
-			count -= 4;
+	bits = (unsigned char *)(info->screen_base);
+	while (count > 3) {
+		int n = ptr[0];
+
+		if (n > max)
+			break;
+		max -= n;
+		while (n > 0) {
+			unsigned int j =
+				(line_pos + n > width ? width-line_pos : n);
+
+			if (fb_depth(info) == 2)
+				memset16(bits, swab16(ptr[1]), j << 1);
+			else {
+				unsigned int widepixel = ptr[1];
+				/*
+				 * Format is RGBA, but fb is big
+				 * endian so we should make widepixel
+				 * as ABGR.
+				 */
+				widepixel =
+					/* red :   f800 -> 000000f8 */
+					(widepixel & 0xf800) >> 8 |
+					/* green : 07e0 -> 0000fc00 */
+					(widepixel & 0x07e0) << 5 |
+					/* blue :  001f -> 00f80000 */
+					(widepixel & 0x001f) << 19;
+				memset32(bits, widepixel, j << 2);
+			}
+			bits += j * fb_depth(info);
+			line_pos += j;
+			n -= j;
+			if (line_pos == width) {
+				bits += (stride-width) * fb_depth(info);
+				line_pos = 0;
+			}
 		}
+		ptr += 2;
+		count -= 4;
 	}
 
+	dmac_flush_range(info->screen_base, info->screen_base + fb_size(info));
 err_logo_free_data:
 	kfree(data);
 err_logo_close_file:
 	sys_close(fd);
+
 	return err;
 }
-EXPORT_SYMBOL(load_565rle_image);
+
+static void __init draw_logo(void)
+{
+	struct fb_info *fb_info;
+
+	fb_info = registered_fb[0];
+	if (fb_info && fb_info->fbops->fb_open) {
+		printk(KERN_INFO "Drawing logo.\n");
+		fb_info->fbops->fb_open(fb_info, 0);
+		fb_info->fbops->fb_pan_display(&fb_info->var, fb_info);
+	}
+}
+
+int __init logo_init(void)
+{
+	if (!load_565rle_image(INIT_IMAGE_FILE))
+		draw_logo();
+
+	return 0;
+}
+
+module_init(logo_init);

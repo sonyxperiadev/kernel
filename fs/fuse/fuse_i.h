@@ -1,6 +1,7 @@
 /*
   FUSE: Filesystem in Userspace
   Copyright (C) 2001-2008  Miklos Szeredi <miklos@szeredi.hu>
+  Copyright (C) 2013 Sony Mobile Communications AB.
 
   This program can be distributed under the terms of the GNU GPL.
   See the file COPYING.
@@ -43,6 +44,11 @@
 /** If the FUSE_ALLOW_OTHER flag is given, then not only the user
     doing the mount will be allowed to access the filesystem */
 #define FUSE_ALLOW_OTHER         (1 << 1)
+
+/** If the FUSE_ALLOW_UTIME_GRP flag is given, then call to utime() is
+    allowed for the current process if it's in the same group as the
+    file and if the file's group is writeable */
+#define FUSE_ALLOW_UTIME_GRP     (1 << 2)
 
 /** List of active connections */
 extern struct list_head fuse_conn_list;

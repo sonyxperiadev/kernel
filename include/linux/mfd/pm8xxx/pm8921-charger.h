@@ -84,6 +84,7 @@ enum pm8921_chg_led_src_config {
  * @warm_temp:		the temperature (degC) at which the battery is
  *			considered warm charging current and voltage is reduced
  *			Use INT_MIN to indicate not valid.
+ * @hysteresis_temp:	the hysteresis between temp thresholds in degC
  * @temp_check_period:	The polling interval in seconds to check battery
  *			temeperature if it has gone to cool or warm temperature
  *			area
@@ -97,6 +98,7 @@ enum pm8921_chg_led_src_config {
  * @get_batt_capacity_percent:
  *			a board specific function to return battery
  *			capacity. If null - a default one will be used
+ * @ibat_calib_enable:	enables the ibatmax calibration algorithm
  * @has_dc_supply:	report DC online if this bit is set in board file
  * @trkl_voltage:	the trkl voltage in (mV) below which hw controlled
  *			 trkl charging happens with linear charger
@@ -142,6 +144,9 @@ enum pm8921_chg_led_src_config {
  *				stop charging the battery when the safety timer
  *				expires. If not set the charger driver will
  *				restart charging upon expiry.
+ * @repeat_safety_time:		how many times safety_time should should repeat
+ * @safety_time:		charging safety timer in minutes
+ * @soc_scaling:		indicates whether capacity scaling is to be used
  */
 struct pm8921_charger_platform_data {
 	struct pm8xxx_charger_core_data	charger_cdata;
@@ -158,6 +163,7 @@ struct pm8921_charger_platform_data {
 	unsigned int			term_current;
 	int				cool_temp;
 	int				warm_temp;
+	int				hysteresis_temp;
 	unsigned int			temp_check_period;
 	unsigned int			max_bat_chg_current;
 	unsigned int			usb_max_current;
@@ -169,6 +175,7 @@ struct pm8921_charger_platform_data {
 	int64_t				batt_id_min;
 	int64_t				batt_id_max;
 	bool				keep_btm_on_suspend;
+	bool				ibat_calib_enable;
 	bool				has_dc_supply;
 	int				trkl_voltage;
 	int				weak_voltage;
@@ -188,7 +195,10 @@ struct pm8921_charger_platform_data {
 	int				btc_delay_ms;
 	int				btc_panic_if_cant_stop_chg;
 	int				stop_chg_upon_expiry;
+	int				repeat_safety_time;
+	unsigned int			safety_time;
 	bool				disable_chg_rmvl_wrkarnd;
+	int				soc_scaling;
 };
 
 enum pm8921_charger_source {

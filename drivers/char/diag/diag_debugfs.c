@@ -353,6 +353,27 @@ const struct file_operations diag_dbgfs_bridge_ops = {
 };
 #endif
 
+static int diag_dbgfs_read_mask_check_flag(void *data, u64 *val)
+{
+	*val = (u64) driver->mask_check;
+	return 0;
+}
+
+static int diag_dbgfs_write_mask_check_flag(void *data, u64 val)
+{
+
+	if (val < 0 || val > 1)
+		return -EINVAL;
+
+	driver->mask_check = (int) val;
+	return 0;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(diag_dbgfs_mask_check_ops,
+			diag_dbgfs_read_mask_check_flag,
+			diag_dbgfs_write_mask_check_flag,
+			"%llu\n");
+
 const struct file_operations diag_dbgfs_status_ops = {
 	.read = diag_dbgfs_read_status,
 };

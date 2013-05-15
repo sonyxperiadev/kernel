@@ -3,6 +3,7 @@
  *
  * Copyright (C) 2008 Google, Inc.
  * Author: Mike Lockwood <lockwood@android.com>
+ * Copyright (C) 2012 Sony Mobile Communications AB.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -24,6 +25,7 @@ struct android_usb_platform_data {
 	u32 swfi_latency;
 	u8 usb_core_id;
 	bool cdrom;
+	char can_stall;
 };
 
 #ifndef CONFIG_TARGET_CORE
