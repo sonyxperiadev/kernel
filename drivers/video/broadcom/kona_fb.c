@@ -80,7 +80,7 @@
 /*#define PARTIAL_UPDATE_SUPPORT */
 
 #define KONA_IOCTL_SET_BUFFER_AND_UPDATE	_IO('F', 0x80)
-#define KONA_IOCTL_GET_IOVA			_IOR('F', 0x81, u32)
+#define KONA_IOCTL_GET_FB_IOVA			_IOR('F', 0x81, u32)
 
 static struct pi_mgr_qos_node g_mm_qos_node;
 
@@ -677,7 +677,7 @@ static int kona_fb_ioctl(struct fb_info *info, unsigned int cmd,
 		mutex_unlock(&fb->update_sem);
 		break;
 
-	case KONA_IOCTL_GET_IOVA:
+	case KONA_IOCTL_GET_FB_IOVA:
 		ptr = (void *)arg;
 		if (ptr == NULL) {
 			pr_err("arg=NULL\n");
