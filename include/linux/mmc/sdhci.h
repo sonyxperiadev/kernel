@@ -175,6 +175,7 @@ struct sdhci_host {
 #ifdef CONFIG_SDHCI_THROUGHPUT
 	u8 thrpt_dbgfs_enable;
 #endif
+	unsigned int detect_delay; /*Delay in msecs for detecting change*/
 
 	unsigned long private[0] ____cacheline_aligned;
 };

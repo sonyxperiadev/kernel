@@ -897,6 +897,11 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 		}
 	}
 
+	if (dev->devtype == SDIO_DEV_TYPE_EMMC)
+		host->detect_delay = 0;
+	else
+		host->detect_delay = 200;
+
 	pr_debug("%s: DEV TYPE %x\n", __func__, dev->devtype);
 
 	gDevs[dev->devtype] = dev;

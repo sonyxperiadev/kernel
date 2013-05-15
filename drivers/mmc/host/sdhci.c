@@ -2182,7 +2182,19 @@ static void sdhci_tasklet_card(unsigned long param)
 	 */
 	host->ops->clk_enable(host, 0);
 
+#ifdef CONFIG_MMC_BCM_SD
+
+	/*
+	 * On Java with a delay of 0 results in workqueque
+	 * being run on the same CPU,otherwise this results
+	 * in SD-card getting the device name as mmcblk0
+	 * but for our rpmb driver to work eMMC always
+	 * needs to be mmcblk0
+	 */
+	mmc_detect_change(host->mmc, msecs_to_jiffies(host->detect_delay));
+#else
 	mmc_detect_change(host->mmc, msecs_to_jiffies(200));
+#endif
 }
 
 static void sdhci_tasklet_finish(unsigned long param)
