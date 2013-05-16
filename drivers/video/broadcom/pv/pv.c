@@ -160,7 +160,7 @@ int pv_init(struct pv_init_t *init, struct pv_config_t **config)
 		ret = -ENOMEM;
 		goto done;
 	}
-	ret = request_irq(init->irq, pv_isr, IRQF_TRIGGER_RISING, "PV", dev);
+	ret = request_irq(init->irq, pv_isr, IRQF_TRIGGER_HIGH, "PV", dev);
 	if (ret < 0) {
 		pv_err("failed to get irq\n");
 		goto fail;
