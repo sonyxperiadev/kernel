@@ -46,6 +46,12 @@ config	MACH_JAVA_GARNET
 	help
 	  Support for Broadcom Hawaii garnet board.
 
+config	MACH_JAVA_SS_EVAL
+		tristate "MACH_JAVA_SS_EVAL"
+	select MACH_JAVA_SS_EVAL
+	help
+	  Support for Broadcom Hawaii ss eval board.
+
 endchoice
 
 choice
@@ -59,6 +65,19 @@ choice
 	  Support for Garnet edn000
 
 endchoice
+
+choice
+	prompt "Java SS EVAL type"
+	depends on MACH_JAVA_SS_EVAL
+	default MACH_JAVA_SS_EVAL_REV00
+
+	config MACH_JAVA_SS_EVAL_REV00
+	bool "SS EVAL REV00"
+	help
+	  Support for SS Eval Rev00
+
+endchoice
+
 choice
 	prompt "Java FPGA type"
 	depends on MACH_BCM_FPGA || MACH_BCM_FPGA_E

@@ -17,6 +17,7 @@ obj-$(CONFIG_ARCH_JAVA) += clock.o
 obj-$(CONFIG_MACH_JAVA_RAY) += java.o board-java.o java_wifi.o
 obj-$(CONFIG_MACH_JAVA_STONE) += java.o board-java.o java_wifi.o
 obj-$(CONFIG_MACH_JAVA_GARNET) += java.o board-garnet.o java_wifi.o
+obj-$(CONFIG_MACH_JAVA_SS_EVAL) += java.o board-ss_eval.o java_ss_eval_wifi.o
 obj-$(CONFIG_MACH_JAVA_FPGA) += java_fpga.o
 obj-$(CONFIG_MACH_JAVA_FPGA_E) += java_fpga.o
 obj-$(CONFIG_CDEBUGGER) += crash_debugger.o
@@ -43,7 +44,11 @@ ifeq ($(CONFIG_MFD_BCM_PMU59xxx), y)
 ifeq ($(CONFIG_MACH_JAVA_GARNET), y)
 obj-y += board-bcm59xxx_garnet.o
 else
+ifeq ($(CONFIG_MACH_JAVA_SS_EVAL), y)
+obj-y += board-bcm59xxx_ss_eval.o
+else
 obj-y += board-bcm59xxx.o
+endif
 endif
 endif
 

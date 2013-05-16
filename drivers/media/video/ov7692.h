@@ -54,6 +54,7 @@ static const struct ov7692_reg configscript_common1[] = {
     {0xff, 0x00}, // select DVP register bank
 #if (defined(CONFIG_MACH_HAWAII_GARNET_EDN010) || \
 	defined(CONFIG_MACH_HAWAII_GARNET_EDN020) || \
+	defined(CONFIG_MACH_JAVA_SS_EVAL_REV00) || \
 	defined(CONFIG_MACH_JAVA_GARNET_EDN000))
 {0x0c, 0x10},
 #else
