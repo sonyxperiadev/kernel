@@ -1772,6 +1772,45 @@ static irqreturn_t serial8250_interrupt(int irq, void *dev_id)
 
 		if (l == i->head && pass_counter++ > PASS_LIMIT) {
 			/* If we hit this, we're dead. */
+			printk_ratelimited(KERN_ERR"DLH_IER     = 0x%02x\n",
+					serial_in(up, UART_IER));
+			printk_ratelimited(KERN_ERR"IIR_FCR    = 0x%02x\n",
+					serial_in(up, UART_IIR));
+			printk_ratelimited(KERN_ERR"LCR        = 0x%02x\n",
+					serial_in(up, UART_LCR));
+			printk_ratelimited(KERN_ERR"MCR        = 0x%02x\n",
+					serial_in(up, UART_MCR));
+			printk_ratelimited(KERN_ERR"LSR        = 0x%02x\n",
+					serial_in(up, UART_LSR));
+			printk_ratelimited(KERN_ERR"MSR        = 0x%02x\n",
+					serial_in(up, UART_MSR));
+			printk_ratelimited(KERN_ERR"SCR        = 0x%02x\n",
+					serial_in(up, UART_SCR));
+			printk_ratelimited(KERN_ERR"USR        = 0x%02x\n",
+					serial_in(up, UART_USR));
+			printk_ratelimited(KERN_ERR"TFL        = 0x%02x\n",
+					serial_in(up, UART_TX_FIFO_LEVEL));
+			printk_ratelimited(KERN_ERR"RFL        = 0x%02x\n",
+					serial_in(up, UART_RX_FIFO_LEVEL));
+			printk_ratelimited(KERN_ERR"HTX        = 0x%02x\n",
+					serial_in(up, UART_HALT_TX));
+			printk_ratelimited(KERN_ERR"CID        = 0x%02x\n",
+					serial_in(up, UART_CONFIG_ID));
+			printk_ratelimited(KERN_ERR"UCV        = 0x%02x\n",
+					serial_in(up, UART_COMPONENT_VER));
+			printk_ratelimited(KERN_ERR"PID        = 0x%02x\n",
+					serial_in(up, UART_PERIPHERAL_ID));
+			printk_ratelimited(KERN_ERR"UCR        = 0x%02x\n",
+					serial_in(up, UART_CONFIG));
+			printk_ratelimited(KERN_ERR"IRCR       = 0x%02x\n",
+					serial_in(up, UART_IRCR));
+			printk_ratelimited(KERN_ERR"UBABCSR    = 0x%02x\n",
+					serial_in(up, UART_UBABCSR));
+			printk_ratelimited(KERN_ERR"UBABCNTR   = 0x%02x\n",
+					serial_in(up, UART_UBABCNTR));
+			printk_ratelimited(KERN_ERR"RBR_THR_DLL = 0x%02x\n",
+					serial_in(up, UART_RX));
+
 			printk_ratelimited(KERN_ERR
 				"serial8250: too much work for irq%d\n", irq);
 			break;

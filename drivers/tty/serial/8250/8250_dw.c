@@ -105,6 +105,7 @@ static int dw8250_handle_irq(struct uart_port *port)
 	struct dw8250_data *d = port->private_data;
 	unsigned int iir = port->serial_in(port, UART_IIR);
 #ifdef CONFIG_BRCM_UART_CHANGES
+	unsigned long flags;
 	struct uart_8250_port *up =
 		container_of(port, struct uart_8250_port, port);
 
@@ -120,9 +121,13 @@ static int dw8250_handle_irq(struct uart_port *port)
 		(void)port->serial_in(port, UART_USR);
 #ifdef CONFIG_BRCM_UART_CHANGES
 		/* Stop writing to LCR if the value is same. */
+		spin_lock_irqsave(&port->lock, flags);
 		if (port->serial_in(port, UART_LCR) != d->last_lcr)
-#endif
 			port->serial_out(port, UART_LCR, d->last_lcr);
+		spin_unlock_irqrestore(&port->lock, flags);
+#else
+		port->serial_out(port, UART_LCR, d->last_lcr);
+#endif
 
 		return 1;
 	}
