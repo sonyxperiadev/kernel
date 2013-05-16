@@ -763,14 +763,12 @@ static int __init hawaii_pwr_mgr_init(void)
 	hawaii_pi_mgr_init();
 
 
-#if 0
 #ifdef CONFIG_MM_POWER_OK_ERRATUM
 /* it was observed that if MM CCU is switched to and
 	from shutdown state, it would break the DDR self refresh.
 	Recommended workaround is to set the POWER_OK_MASK bit to 0 */
 	if (is_pm_erratum(ERRATUM_MM_POWER_OK))
 		pwr_mgr_ignore_power_ok_signal(false);
-#endif
 #endif
 
 #if defined(CONFIG_PLL1_8PHASE_OFF_ERRATUM) ||\
