@@ -61,9 +61,9 @@ extern u8 jbd2_journal_enable_debug;
 #define jbd_debug(n, f, a...)						\
 	do {								\
 		if ((n) <= jbd2_journal_enable_debug) {			\
-			printk (KERN_DEBUG "(%s, %d): %s: ",		\
+			printk(KERN_DEBUG "(%s, %d): %s: ",		\
 				__FILE__, __LINE__, __func__);	\
-			printk (f, ## a);				\
+			printk(f, ## a);				\
 		}							\
 	} while (0)
 #else
@@ -134,8 +134,7 @@ typedef struct journal_s	journal_t;	/* Journal control structure */
 /*
  * Standard header for all descriptor blocks:
  */
-typedef struct journal_header_s
-{
+typedef struct journal_header_s {
 	__be32		h_magic;
 	__be32		h_blocktype;
 	__be32		h_sequence;
@@ -160,8 +159,8 @@ struct commit_header {
 	__be32          h_sequence;
 	unsigned char   h_chksum_type;
 	unsigned char   h_chksum_size;
-	unsigned char 	h_padding[2];
-	__be32 		h_chksum[JBD2_CHECKSUM_BYTES];
+	unsigned char	h_padding[2];
+	__be32		h_chksum[JBD2_CHECKSUM_BYTES];
 	__be64		h_commit_sec;
 	__be32		h_commit_nsec;
 };
@@ -172,8 +171,7 @@ struct commit_header {
  * raw struct shouldn't be used for pointer math or sizeof() - use
  * journal_tag_bytes(journal) instead to compute this.
  */
-typedef struct journal_block_tag_s
-{
+typedef struct journal_block_tag_s {
 	__be32		t_blocknr;	/* The on-disk block number */
 	__be32		t_flags;	/* See below */
 	__be32		t_blocknr_high; /* most-significant high 32bits. */
@@ -186,8 +184,7 @@ typedef struct journal_block_tag_s
  * The revoke descriptor: used on disk to describe a series of blocks to
  * be revoked from the log
  */
-typedef struct jbd2_journal_revoke_header_s
-{
+typedef struct jbd2_journal_revoke_header_s {
 	journal_header_t r_header;
 	__be32		 r_count;	/* Count of bytes used in the block */
 } jbd2_journal_revoke_header_t;
@@ -203,8 +200,7 @@ typedef struct jbd2_journal_revoke_header_s
 /*
  * The journal superblock.  All fields are in big-endian byte order.
  */
-typedef struct journal_superblock_s
-{
+typedef struct journal_superblock_s {
 /* 0x0000 */
 	journal_header_t s_header;
 
@@ -248,13 +244,13 @@ typedef struct journal_superblock_s
 /* 0x0400 */
 } journal_superblock_t;
 
-#define JBD2_HAS_COMPAT_FEATURE(j,mask)					\
+#define JBD2_HAS_COMPAT_FEATURE(j, mask)			\
 	((j)->j_format_version >= 2 &&					\
 	 ((j)->j_superblock->s_feature_compat & cpu_to_be32((mask))))
-#define JBD2_HAS_RO_COMPAT_FEATURE(j,mask)				\
+#define JBD2_HAS_RO_COMPAT_FEATURE(j, mask)				\
 	((j)->j_format_version >= 2 &&					\
 	 ((j)->j_superblock->s_feature_ro_compat & cpu_to_be32((mask))))
-#define JBD2_HAS_INCOMPAT_FEATURE(j,mask)				\
+#define JBD2_HAS_INCOMPAT_FEATURE(j, mask)				\
 	((j)->j_format_version >= 2 &&					\
 	 ((j)->j_superblock->s_feature_incompat & cpu_to_be32((mask))))
 
@@ -321,7 +317,8 @@ struct jbd2_inode {
 	transaction_t *i_transaction;
 
 	/* Pointer to the running transaction modifying inode's data in case
-	 * there is already a committing transaction touching it. [j_list_lock] */
+	 * there is already a committing transaction touching it.
+	 * [j_list_lock] */
 	transaction_t *i_next_transaction;
 
 	/* List of inodes in the i_transaction [j_list_lock] */
@@ -353,8 +350,7 @@ struct jbd2_revoke_table_s;
  * in so it can be fixed later.
  */
 
-struct jbd2_journal_handle
-{
+struct jbd2_journal_handle {
 	/* Which compound transaction is this update a part of? */
 	transaction_t		*h_transaction;
 
@@ -447,8 +443,7 @@ struct transaction_chp_stats_s {
  *
  */
 
-struct transaction_s
-{
+struct transaction_s {
 	/* Pointer to the journal for this transaction. [no locking] */
 	journal_t		*t_journal;
 
@@ -470,6 +465,7 @@ struct transaction_s
 		T_COMMIT,
 		T_COMMIT_DFLUSH,
 		T_COMMIT_JFLUSH,
+		T_COMMIT_CALLBACK,
 		T_FINISHED
 	}			t_state;
 
@@ -705,8 +701,7 @@ jbd2_time_diff(unsigned long start, unsigned long end)
  * @j_private: An opaque pointer to fs-private information.
  */
 
-struct journal_s
-{
+struct journal_s {
 	/* General journaling state flags [j_state_lock] */
 	unsigned long		j_flags;
 
@@ -785,7 +780,7 @@ struct journal_s
 	 * j_checkpoint_mutex.  [j_checkpoint_mutex]
 	 */
 	struct buffer_head	*j_chkpt_bhs[JBD2_NR_BATCH];
-	
+
 	/*
 	 * Journal head: identifies the first unused block in the journal.
 	 * [j_state_lock]
@@ -963,13 +958,15 @@ struct journal_s
 extern void jbd2_journal_unfile_buffer(journal_t *, struct journal_head *);
 extern void __jbd2_journal_refile_buffer(struct journal_head *);
 extern void jbd2_journal_refile_buffer(journal_t *, struct journal_head *);
-extern void __jbd2_journal_file_buffer(struct journal_head *, transaction_t *, int);
+extern void __jbd2_journal_file_buffer
+			(struct journal_head *, transaction_t *, int);
 extern void __journal_free_buffer(struct journal_head *bh);
-extern void jbd2_journal_file_buffer(struct journal_head *, transaction_t *, int);
+extern void jbd2_journal_file_buffer
+			(struct journal_head *, transaction_t *, int);
 extern void __journal_clean_data_list(transaction_t *transaction);
 
 /* Log buffer allocation */
-extern struct journal_head * jbd2_journal_get_descriptor_buffer(journal_t *);
+extern struct journal_head *jbd2_journal_get_descriptor_buffer(journal_t *);
 int jbd2_journal_next_log_block(journal_t *, unsigned long long *);
 int jbd2_journal_get_log_tail(journal_t *journal, tid_t *tid,
 			      unsigned long *block);
@@ -1009,20 +1006,20 @@ struct jbd2_buffer_trigger_type {
 };
 
 extern void jbd2_buffer_frozen_trigger(struct journal_head *jh,
-				       void *mapped_data,
-				       struct jbd2_buffer_trigger_type *triggers);
+			void *mapped_data,
+			struct jbd2_buffer_trigger_type *triggers);
 extern void jbd2_buffer_abort_trigger(struct journal_head *jh,
-				      struct jbd2_buffer_trigger_type *triggers);
+			struct jbd2_buffer_trigger_type *triggers);
 
 /* Buffer IO */
 extern int
-jbd2_journal_write_metadata_buffer(transaction_t	  *transaction,
-			      struct journal_head  *jh_in,
+jbd2_journal_write_metadata_buffer(transaction_t *transaction,
+			      struct journal_head *jh_in,
 			      struct journal_head **jh_out,
-			      unsigned long long   blocknr);
+			      unsigned long long blocknr);
 
 /* Transaction locking */
-extern void		__wait_on_journal (journal_t *);
+extern void	__wait_on_journal(journal_t *);
 
 /* Transaction cache support */
 extern void jbd2_journal_destroy_transaction_cache(void);
@@ -1053,58 +1050,61 @@ static inline handle_t *journal_current_handle(void)
 
 extern handle_t *jbd2_journal_start(journal_t *, int nblocks);
 extern handle_t *jbd2__journal_start(journal_t *, int nblocks, gfp_t gfp_mask);
-extern int	 jbd2_journal_restart(handle_t *, int nblocks);
-extern int	 jbd2__journal_restart(handle_t *, int nblocks, gfp_t gfp_mask);
-extern int	 jbd2_journal_extend (handle_t *, int nblocks);
-extern int	 jbd2_journal_get_write_access(handle_t *, struct buffer_head *);
-extern int	 jbd2_journal_get_create_access (handle_t *, struct buffer_head *);
-extern int	 jbd2_journal_get_undo_access(handle_t *, struct buffer_head *);
-void		 jbd2_journal_set_triggers(struct buffer_head *,
-					   struct jbd2_buffer_trigger_type *type);
-extern int	 jbd2_journal_dirty_metadata (handle_t *, struct buffer_head *);
-extern void	 jbd2_journal_release_buffer (handle_t *, struct buffer_head *);
-extern int	 jbd2_journal_forget (handle_t *, struct buffer_head *);
-extern void	 journal_sync_buffer (struct buffer_head *);
-extern void	 jbd2_journal_invalidatepage(journal_t *,
+extern int jbd2_journal_restart(handle_t *, int nblocks);
+extern int jbd2__journal_restart(handle_t *, int nblocks, gfp_t gfp_mask);
+extern int jbd2_journal_extend(handle_t *, int nblocks);
+extern int jbd2_journal_get_write_access(handle_t *, struct buffer_head *);
+extern int jbd2_journal_get_create_access(handle_t *, struct buffer_head *);
+extern int jbd2_journal_get_undo_access(handle_t *, struct buffer_head *);
+void jbd2_journal_set_triggers(struct buffer_head *,
+		struct jbd2_buffer_trigger_type *type);
+extern int jbd2_journal_dirty_metadata(handle_t *, struct buffer_head *);
+extern void jbd2_journal_release_buffer(handle_t *, struct buffer_head *);
+extern int jbd2_journal_forget(handle_t *, struct buffer_head *);
+extern void journal_sync_buffer(struct buffer_head *);
+extern void jbd2_journal_invalidatepage(journal_t *,
 				struct page *, unsigned long);
-extern int	 jbd2_journal_try_to_free_buffers(journal_t *, struct page *, gfp_t);
-extern int	 jbd2_journal_stop(handle_t *);
-extern int	 jbd2_journal_flush (journal_t *);
-extern void	 jbd2_journal_lock_updates (journal_t *);
-extern void	 jbd2_journal_unlock_updates (journal_t *);
+extern int jbd2_journal_try_to_free_buffers(journal_t *, struct page *, gfp_t);
+extern int jbd2_journal_stop(handle_t *);
+extern int jbd2_journal_flush(journal_t *);
+extern void jbd2_journal_lock_updates(journal_t *);
+extern void jbd2_journal_unlock_updates(journal_t *);
 
-extern journal_t * jbd2_journal_init_dev(struct block_device *bdev,
+extern journal_t *jbd2_journal_init_dev(struct block_device *bdev,
 				struct block_device *fs_dev,
 				unsigned long long start, int len, int bsize);
-extern journal_t * jbd2_journal_init_inode (struct inode *);
-extern int	   jbd2_journal_update_format (journal_t *);
-extern int	   jbd2_journal_check_used_features
+extern journal_t *jbd2_journal_init_inode(struct inode *);
+extern int jbd2_journal_update_format(journal_t *);
+extern int jbd2_journal_check_used_features
 		   (journal_t *, unsigned long, unsigned long, unsigned long);
-extern int	   jbd2_journal_check_available_features
+extern int jbd2_journal_check_available_features
 		   (journal_t *, unsigned long, unsigned long, unsigned long);
-extern int	   jbd2_journal_set_features
+extern int jbd2_journal_set_features
 		   (journal_t *, unsigned long, unsigned long, unsigned long);
-extern void	   jbd2_journal_clear_features
+extern void	jbd2_journal_clear_features
 		   (journal_t *, unsigned long, unsigned long, unsigned long);
-extern int	   jbd2_journal_load       (journal_t *journal);
-extern int	   jbd2_journal_destroy    (journal_t *);
-extern int	   jbd2_journal_recover    (journal_t *journal);
-extern int	   jbd2_journal_wipe       (journal_t *, int);
-extern int	   jbd2_journal_skip_recovery	(journal_t *);
-extern void	   jbd2_journal_update_sb_log_tail	(journal_t *, tid_t,
+extern int jbd2_journal_load(journal_t *journal);
+extern int jbd2_journal_destroy(journal_t *);
+extern int jbd2_journal_recover(journal_t *journal);
+extern int jbd2_journal_wipe(journal_t *, int);
+extern int jbd2_journal_skip_recovery(journal_t *);
+extern void	jbd2_journal_update_sb_log_tail(journal_t *, tid_t,
 				unsigned long, int);
-extern void	   __jbd2_journal_abort_hard	(journal_t *);
-extern void	   jbd2_journal_abort      (journal_t *, int);
-extern int	   jbd2_journal_errno      (journal_t *);
-extern void	   jbd2_journal_ack_err    (journal_t *);
-extern int	   jbd2_journal_clear_err  (journal_t *);
-extern int	   jbd2_journal_bmap(journal_t *, unsigned long, unsigned long long *);
-extern int	   jbd2_journal_force_commit(journal_t *);
-extern int	   jbd2_journal_file_inode(handle_t *handle, struct jbd2_inode *inode);
-extern int	   jbd2_journal_begin_ordered_truncate(journal_t *journal,
-				struct jbd2_inode *inode, loff_t new_size);
-extern void	   jbd2_journal_init_jbd_inode(struct jbd2_inode *jinode, struct inode *inode);
-extern void	   jbd2_journal_release_jbd_inode(journal_t *journal, struct jbd2_inode *jinode);
+extern void __jbd2_journal_abort_hard(journal_t *);
+extern void	jbd2_journal_abort(journal_t *, int);
+extern int jbd2_journal_errno(journal_t *);
+extern void	jbd2_journal_ack_err(journal_t *);
+extern int jbd2_journal_clear_err(journal_t *);
+extern int jbd2_journal_bmap(journal_t *, unsigned long, unsigned long long *);
+extern int jbd2_journal_force_commit(journal_t *);
+extern int jbd2_journal_file_inode
+			(handle_t *handle, struct jbd2_inode *inode);
+extern int jbd2_journal_begin_ordered_truncate
+		(journal_t *journal, struct jbd2_inode *inode, loff_t new_size);
+extern void	jbd2_journal_init_jbd_inode
+			(struct jbd2_inode *jinode, struct inode *inode);
+extern void jbd2_journal_release_jbd_inode
+			(journal_t *journal, struct jbd2_inode *jinode);
 
 /*
  * journal_head management
@@ -1146,19 +1146,20 @@ static inline void jbd2_free_inode(struct jbd2_inode *jinode)
 
 /* Primary revoke support */
 #define JOURNAL_REVOKE_DEFAULT_HASH 256
-extern int	   jbd2_journal_init_revoke(journal_t *, int);
-extern void	   jbd2_journal_destroy_revoke_caches(void);
-extern int	   jbd2_journal_init_revoke_caches(void);
+extern int jbd2_journal_init_revoke(journal_t *, int);
+extern void	jbd2_journal_destroy_revoke_caches(void);
+extern int jbd2_journal_init_revoke_caches(void);
 
-extern void	   jbd2_journal_destroy_revoke(journal_t *);
-extern int	   jbd2_journal_revoke (handle_t *, unsigned long long, struct buffer_head *);
-extern int	   jbd2_journal_cancel_revoke(handle_t *, struct journal_head *);
-extern void	   jbd2_journal_write_revoke_records(journal_t *,
+extern void	jbd2_journal_destroy_revoke(journal_t *);
+extern int jbd2_journal_revoke(handle_t *,
+			unsigned long long, struct buffer_head *);
+extern int jbd2_journal_cancel_revoke(handle_t *, struct journal_head *);
+extern void jbd2_journal_write_revoke_records(journal_t *,
 						     transaction_t *, int);
 
 /* Recovery revoke support */
-extern int	jbd2_journal_set_revoke(journal_t *, unsigned long long, tid_t);
-extern int	jbd2_journal_test_revoke(journal_t *, unsigned long long, tid_t);
+extern int jbd2_journal_set_revoke(journal_t *, unsigned long long, tid_t);
+extern int jbd2_journal_test_revoke(journal_t *, unsigned long long, tid_t);
 extern void	jbd2_journal_clear_revoke(journal_t *);
 extern void	jbd2_journal_switch_revoke_table(journal_t *journal);
 extern void	jbd2_clear_buffer_revoked_flags(journal_t *journal);
@@ -1187,7 +1188,7 @@ extern int jbd2_cleanup_journal_tail(journal_t *);
 
 #define jbd_ENOSYS() \
 do {								           \
-	printk (KERN_ERR "JBD unimplemented function %s\n", __func__); \
+	printk(KERN_ERR "JBD unimplemented function %s\n", __func__); \
 	current->state = TASK_UNINTERRUPTIBLE;			           \
 	schedule();						           \
 } while (1)
