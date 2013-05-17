@@ -203,34 +203,38 @@ static long bsc_ioctl(
 			     unsigned int cmd, unsigned long arg)
 {
 	int rc;
-	void *usr_data;
 	BSC_PARAM_T param;
+	BSC_PARAM_T *usr_param = NULL;
 
 	switch (cmd) {
 	case BSC_IOCTL_REGISTER:
 		{
+			usr_param = (BSC_PARAM_T *) arg;
 			/* copy BSC parameters from user space */
-			if (copy_from_user(&param, (void *)arg, sizeof(param))
-			    != 0) {
+			if (copy_from_user(&param.name,
+				(void *) &(usr_param->name),
+				BSC_NAME_LEN) != 0) {
 				printk(KERN_ERR
-				       "BSC: copy_from_user failed for "
+				       "BSC: copy_from_user *name* failed for "
 				       "ioctl=BSC_IOCTL_REGISTER\n");
 				return -EFAULT;
 			}
+
+			param.len = usr_param->len;
 
 			/* validate the data length */
 			if (param.len <= 0)
 				return -EINVAL;
 
 			/* allocate temporary memory in kernel to store user data */
-			usr_data = param.data;
 			param.data = kcalloc(1, param.len, GFP_KERNEL);
 			if (param.data == NULL)
 				return -ENOMEM;
 
 			/* copy user data from user space into kernel */
 			if (copy_from_user
-			    (param.data, (void *)usr_data, param.len) != 0) {
+			    (param.data, (void *)usr_param->data,
+			     param.len) != 0) {
 				printk(KERN_ERR
 				       "BSC: copy_from_user failed for "
 				       "ioctl=BSC_IOCTL_REGISTER during copying user data\n");
@@ -273,21 +277,23 @@ static long bsc_ioctl(
 
 	case BSC_IOCTL_QUERY:
 		{
+			usr_param = (BSC_PARAM_T *) arg;
 			/* copy BSC parameters from user space */
-			if (copy_from_user(&param, (void *)arg, sizeof(param))
-			    != 0) {
+			if (copy_from_user(&param.name,
+				(void *)&(usr_param->name),
+				BSC_NAME_LEN) != 0) {
 				printk(KERN_ERR
 				       "BSC: copy_from_user failed for "
 				       "ioctl=BSC_IOCTL_QUERY\n");
 				return -EFAULT;
 			}
 
+			param.len = usr_param->len;
 			/* validate the data length */
 			if (param.len <= 0)
 				return -EINVAL;
 
 			/* allocate temporary memory in kernel to store user data */
-			usr_data = param.data;
 			param.data = kcalloc(1, param.len, GFP_KERNEL);
 			if (param.data == NULL)
 				return -ENOMEM;
@@ -299,8 +305,8 @@ static long bsc_ioctl(
 			}
 
 			/* copy user data from kernel into user space */
-			if (copy_to_user
-			    (usr_data, (void *)param.data, param.len) != 0) {
+			if (copy_to_user((void *)usr_param->data,
+				(void *)param.data, param.len) != 0) {
 				printk(KERN_ERR "BSC: copy_to_user failed for "
 				       "ioctl=BSC_IOCTL_QUERY during copying user data\n");
 				kfree(param.data);
