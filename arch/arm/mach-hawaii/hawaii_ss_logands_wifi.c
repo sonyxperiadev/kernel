@@ -10,6 +10,9 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  */
+#include <mach/chip_pinmux.h>
+#include <mach/pinmux.h>
+
 #include <linux/kernel.h>
 #include <linux/init.h>
 #include <linux/platform_device.h>
@@ -36,10 +39,386 @@
 #include <mach/rdb/brcm_rdb_padctrlreg.h>
 #include "hawaii_wifi.h"
 
+#include <linux/of.h>
+#include <linux/of_irq.h>
+#include <linux/of_platform.h>
+
+#include <linux/irq.h>
+#include <mach/sdio_platform.h>
+
+
 #ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
 
-#define GPIO_WLAN_PMENA		104
-#define GPIO_WLAN_IRQ		2
+static struct sdio_wifi_gpio_cfg devtreeWifiParms;
+
+#ifndef CONFIG_MMC_KONA_SDIO_WIFI
+/* Functions below imported from sdio-wifi.c */
+
+struct pin_config SdioPinCfgs;
+
+struct sdio_wifi_dev {
+	atomic_t dev_is_ready;
+	struct sdio_wifi_gpio_cfg *wifi_gpio;
+};
+
+static struct sdio_wifi_dev gDev;
+
+static void __wifi_reset(int reset_pin, int onoff)
+{
+	gpio_set_value(reset_pin, onoff);
+	msleep(250);
+}
+
+
+static int wifi_gpio_request(struct sdio_wifi_gpio_cfg *gpio)
+{
+	int rc = 0;
+
+	printk(KERN_ERR "%s:ENTRY\n", __func__);
+
+	if (gpio->reserved)
+		return rc;
+
+
+	PRINT_INFO("gpio pins reset:%d, req:%d wake:%d shutdown:%d\n",
+		   gpio->reset, gpio->reg, gpio->host_wake, gpio->shutdown);
+
+	if (gpio->reg >= 0) {
+		rc = gpio_request(gpio->reg, "wl_reg_on");
+		if (rc < 0) {
+			PRINT_ERR("unable to request reg GPIO pin %d\n",
+				  gpio->reg);
+			return -EBUSY;
+		}
+		PRINT_INFO("current value of reg GPIO: %d\n",
+			   gpio_get_value(gpio->reg));
+		printk(KERN_ERR "%s: REG=%x\n", __func__, gpio->reg);
+		gpio_direction_output(gpio->reg, 1);
+		gpio_set_value(gpio->reg, 1);
+	}
+
+	if (gpio->reset >= 0) {
+		rc = gpio_request(gpio->reset, "wl_reset");
+		if (rc < 0) {
+			PRINT_ERR("unable to request reset GPIO pin %d\n",
+				  gpio->reset);
+			goto err_free_gpio_reg;
+		}
+		printk(KERN_ERR "%s: RESET=%x\n", __func__, gpio->reset);
+		PRINT_INFO("current value of reset GPIO: %d\n",
+			   gpio_get_value(gpio->reset));
+		gpio_direction_output(gpio->reset, 0);
+	}
+
+	if (gpio->shutdown >= 0) {
+		rc = gpio_request(gpio->shutdown, "wl_shutdown");
+		if (rc < 0) {
+			PRINT_ERR("unable to request shutdown GPIO pin %d\n",
+				  gpio->shutdown);
+			goto err_free_gpio_reset;
+		}
+		printk(KERN_ERR "%s: SHUTDOWN=%x\n", __func__,
+		       gpio->shutdown);
+		PRINT_INFO("current value of shutdown GPIO: %d\n",
+			   gpio_get_value(gpio->shutdown));
+		gpio_direction_output(gpio->shutdown, 1);
+		gpio_set_value(gpio->shutdown, 1);
+	}
+
+	if (gpio->host_wake >= 0) {
+		rc = gpio_request(gpio->host_wake, "wl_host_wake");
+		if (rc < 0) {
+			PRINT_ERR("unable to request wake GPIO pin %d\n",
+				  gpio->host_wake);
+			goto err_free_gpio_shutdown;
+		}
+		gpio_direction_input(gpio->host_wake);
+		rc = irq_set_irq_type(gpio_to_irq(gpio->host_wake),
+				      IRQ_TYPE_EDGE_RISING);
+		if (rc < 0) {
+			PRINT_ERR("unable to set irq type for GPIO pin %d\n",
+				  gpio->host_wake);
+			goto err_free_gpio_shutdown;
+		}
+	}
+	printk(KERN_ERR "%s: HOST_WAKE=%x\n", __func__, gpio->host_wake);
+
+	gpio->reserved = 1;
+
+	return 0;
+
+err_free_gpio_shutdown:
+	if (gpio->shutdown >= 0)
+		gpio_free(gpio->shutdown);
+
+err_free_gpio_reset:
+	if (gpio->reset >= 0)
+		gpio_free(gpio->reset);
+
+err_free_gpio_reg:
+	if (gpio->reg >= 0)
+		gpio_free(gpio->reg);
+
+	return rc;
+}
+
+static void wifi_gpio_free(struct sdio_wifi_gpio_cfg *gpio)
+{
+	if (gpio->shutdown >= 0)
+		gpio_free(gpio->shutdown);
+
+	if (gpio->reset >= 0)
+		gpio_free(gpio->reset);
+
+	if (gpio->reg >= 0)
+		gpio_free(gpio->reg);
+
+	if (gpio->host_wake >= 0)
+		gpio_free(gpio->host_wake);
+		gpio->reserved = 0;
+}
+
+static int bcm_sdiowl_init(int onoff)
+{
+	int rc;
+	struct sdio_wifi_dev *dev = &gDev;
+#ifndef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
+	int wait_cnt;
+	struct mmc_card *card;
+#endif
+
+	printk(KERN_ERR "%s:ENTRY\n", __func__);
+
+
+/* Set the Pull of Sdio Lines first */
+
+	SdioPinCfgs.name = PN_MMC1CK;
+	pinmux_get_pin_config(&SdioPinCfgs);
+	SdioPinCfgs.reg.b.input_dis = 0;
+	SdioPinCfgs.reg.b.pull_dn = 0;
+	SdioPinCfgs.reg.b.pull_up = 0;
+	SdioPinCfgs.reg.b.drv_sth = 3;
+	pinmux_set_pin_config(&SdioPinCfgs);
+
+	SdioPinCfgs.name = PN_MMC1CMD;
+	pinmux_get_pin_config(&SdioPinCfgs);
+	SdioPinCfgs.reg.b.pull_dn = 0;
+	SdioPinCfgs.reg.b.pull_up = 1;
+	SdioPinCfgs.reg.b.drv_sth = 3;
+	pinmux_set_pin_config(&SdioPinCfgs);
+
+
+	SdioPinCfgs.name = PN_MMC1DAT0;
+	pinmux_get_pin_config(&SdioPinCfgs);
+	SdioPinCfgs.reg.b.pull_dn = 0;
+	SdioPinCfgs.reg.b.pull_up = 1;
+	SdioPinCfgs.reg.b.drv_sth = 3;
+	pinmux_set_pin_config(&SdioPinCfgs);
+
+	SdioPinCfgs.name = PN_MMC1DAT1;
+	pinmux_get_pin_config(&SdioPinCfgs);
+	SdioPinCfgs.reg.b.pull_dn = 0;
+	SdioPinCfgs.reg.b.pull_up = 1;
+	SdioPinCfgs.reg.b.drv_sth = 3;
+	pinmux_set_pin_config(&SdioPinCfgs);
+
+
+	SdioPinCfgs.name = PN_MMC1DAT2;
+	pinmux_get_pin_config(&SdioPinCfgs);
+	SdioPinCfgs.reg.b.pull_dn = 0;
+	SdioPinCfgs.reg.b.pull_up = 1;
+	SdioPinCfgs.reg.b.drv_sth = 3;
+	pinmux_set_pin_config(&SdioPinCfgs);
+
+
+	SdioPinCfgs.name = PN_MMC1DAT3;
+	pinmux_get_pin_config(&SdioPinCfgs);
+	SdioPinCfgs.reg.b.pull_dn = 0;
+	SdioPinCfgs.reg.b.pull_up = 1;
+	SdioPinCfgs.reg.b.drv_sth = 3;
+	pinmux_set_pin_config(&SdioPinCfgs);
+
+
+	SdioPinCfgs.name = PN_MMC1DAT4;
+	pinmux_get_pin_config(&SdioPinCfgs);
+	SdioPinCfgs.reg.b.pull_dn = 1;
+	SdioPinCfgs.reg.b.pull_up = 0;
+	SdioPinCfgs.reg.b.drv_sth = 3;
+	pinmux_set_pin_config(&SdioPinCfgs);
+
+
+
+/* ----------------------------------- */
+
+
+	/* check if the SDIO device is already up */
+	rc = sdio_dev_is_initialized(SDIO_DEV_TYPE_WIFI);
+	if (rc <= 0) {
+		PRINT_ERR("sdio interface is not initialized or err=%d\n", rc);
+		return rc;
+	}
+	printk(KERN_ERR "%s:GET_GPIO INFO\n", __func__);
+
+	dev->wifi_gpio = sdio_get_wifi_gpio(SDIO_DEV_TYPE_WIFI);
+
+#ifndef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
+	if (dev->wifi_gpio == NULL) {
+		PRINT_ERR("wifi gpio hardware config is missing\n");
+		return -EFAULT;
+	}
+#endif
+
+#ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
+	dev->wifi_gpio->reg = -1;		/* Unused */
+	dev->wifi_gpio->shutdown = -1;	/* Unused */
+	dev->wifi_gpio->reset = devtreeWifiParms.reset;
+	dev->wifi_gpio->host_wake = devtreeWifiParms.host_wake;
+
+#endif
+
+	/* reserve GPIOs */
+	rc = wifi_gpio_request(dev->wifi_gpio);
+	if (rc < 0) {
+		PRINT_ERR("unable to reserve certain gpio pins\n");
+		return rc;
+	}
+
+	/* reset the wifi chip */
+	if (onoff)
+		__wifi_reset(dev->wifi_gpio->reset, 1);
+	else
+		__wifi_reset(dev->wifi_gpio->reset, 0);
+
+	printk(KERN_ERR "%s: WLAN_REG_ON(GPIO%d) : value(%d)\n", __func__,
+			dev->wifi_gpio->reset,
+			gpio_get_value(dev->wifi_gpio->reset));
+
+	printk(KERN_ERR "%s:GPIO TOGGLED AND EXIT\n", __func__);
+
+#ifndef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
+
+	/* now, emulate the card insertion */
+	rc = sdio_card_emulate(SDIO_DEV_TYPE_WIFI, 1);
+	if (rc < 0) {
+		PRINT_ERR("sdio_card_emulate failed\n");
+		goto err_free_gpio;
+	}
+#define WAIT_CNT 10
+	/* need to wait for the mmc device population to finish */
+	wait_cnt = 0;
+	while (wait_cnt++ < WAIT_CNT) {
+		card = sdio_get_mmc_card(SDIO_DEV_TYPE_WIFI);
+		if (card) {
+			atomic_set(&dev->dev_is_ready, 1);
+			return 0;
+		}
+		msleep(100);
+	}
+	PRINT_ERR("timeout while populating sdio wifi device\n");
+	rc = -EIO;
+	sdio_card_emulate(SDIO_DEV_TYPE_WIFI, 0);
+
+err_free_gpio:
+	wifi_gpio_free(dev->wifi_gpio);
+#endif /* CONFIG_BRCM_UNIFIED_DHD_SUPPORT */
+	return rc;
+}
+
+static void bcm_sdiowl_term(void)
+{
+	struct sdio_wifi_dev *dev = &gDev;
+	printk(KERN_ERR " %s ENTRY\n", __func__);
+
+	atomic_set(&dev->dev_is_ready, 0);
+
+#ifndef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
+	sdio_card_emulate(SDIO_DEV_TYPE_WIFI, 0);
+
+#endif
+
+#ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
+	msleep(20);
+#endif
+
+#ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
+
+
+	__wifi_reset(dev->wifi_gpio->reset, 0);
+#endif
+
+	/* free GPIOs */
+	wifi_gpio_free(dev->wifi_gpio);
+	printk(KERN_ERR " %s GPIO Released\n", __func__);
+
+	dev->wifi_gpio = NULL;
+
+
+/*
+ * 4334 bug requires us to Pull down on sdio lines on reset
+ */
+
+	SdioPinCfgs.name = PN_MMC1CK;
+	pinmux_get_pin_config(&SdioPinCfgs);
+	SdioPinCfgs.reg.b.input_dis = 1;
+	SdioPinCfgs.reg.b.pull_dn = 0;
+	SdioPinCfgs.reg.b.pull_up = 0;
+	SdioPinCfgs.reg.b.drv_sth = 3;
+	pinmux_set_pin_config(&SdioPinCfgs);
+
+	SdioPinCfgs.name = PN_MMC1CMD;
+	pinmux_get_pin_config(&SdioPinCfgs);
+	SdioPinCfgs.reg.b.pull_dn = 1;
+	SdioPinCfgs.reg.b.pull_up = 0;
+	SdioPinCfgs.reg.b.drv_sth = 3;
+	pinmux_set_pin_config(&SdioPinCfgs);
+
+
+	SdioPinCfgs.name = PN_MMC1DAT0;
+	pinmux_get_pin_config(&SdioPinCfgs);
+	SdioPinCfgs.reg.b.pull_dn = 1;
+	SdioPinCfgs.reg.b.pull_up = 0;
+	SdioPinCfgs.reg.b.drv_sth = 3;
+	pinmux_set_pin_config(&SdioPinCfgs);
+
+	SdioPinCfgs.name = PN_MMC1DAT1;
+	pinmux_get_pin_config(&SdioPinCfgs);
+	SdioPinCfgs.reg.b.pull_dn = 1;
+	SdioPinCfgs.reg.b.pull_up = 0;
+	SdioPinCfgs.reg.b.drv_sth = 3;
+	pinmux_set_pin_config(&SdioPinCfgs);
+
+
+	SdioPinCfgs.name = PN_MMC1DAT2;
+	pinmux_get_pin_config(&SdioPinCfgs);
+	SdioPinCfgs.reg.b.pull_dn = 1;
+	SdioPinCfgs.reg.b.pull_up = 0;
+	SdioPinCfgs.reg.b.drv_sth = 3;
+	pinmux_set_pin_config(&SdioPinCfgs);
+
+
+	SdioPinCfgs.name = PN_MMC1DAT3;
+	pinmux_get_pin_config(&SdioPinCfgs);
+	SdioPinCfgs.reg.b.pull_dn = 1;
+	SdioPinCfgs.reg.b.pull_up = 0;
+	SdioPinCfgs.reg.b.drv_sth = 3;
+	pinmux_set_pin_config(&SdioPinCfgs);
+
+	SdioPinCfgs.name = PN_MMC1DAT4;
+	pinmux_get_pin_config(&SdioPinCfgs);
+	SdioPinCfgs.reg.b.pull_dn = 0;
+	SdioPinCfgs.reg.b.pull_up = 1;
+	SdioPinCfgs.reg.b.drv_sth = 3;
+	pinmux_set_pin_config(&SdioPinCfgs);
+
+
+
+
+/*----------------------------------- */
+
+
+}
+
+#endif	/* CONFIG_MMC_KONA_SDIO_WIFI */
 
 #ifdef CONFIG_BROADCOM_WIFI_RESERVED_MEM
 
@@ -127,7 +506,7 @@ int __init hawaii_init_wifi_mem(void)
 	if (!wlan_static_scan_buf1)
 		goto err_mem_alloc;
 
-	printk("%s: WIFI MEM Allocated\n", __FUNCTION__);
+	printk(KERN_WARNING "%s: WIFI MEM Allocated\n", __func__);
 	return 0;
 
 err_mem_alloc:
@@ -147,22 +526,14 @@ err_skb_alloc:
 #endif /* CONFIG_BROADCOM_WIFI_RESERVED_MEM */
 
 
-extern int bcm_sdiowl_init(int onoff);
-extern int bcm_sdiowl_term(void);
-
-int hawaii_wifi_status_register(void (*callback) (int card_present, void *dev_id),
-			      void *dev_id);
-
-EXPORT_SYMBOL(hawaii_wifi_status_register);
-
-static int hawaii_wifi_cd = 0;	/* WIFI virtual 'card detect' status */
+static int hawaii_wifi_cd;	/* WIFI virtual 'card detect' status */
 static void (*wifi_status_cb) (int card_present, void *dev_id);
 static void *wifi_status_cb_devid;
 
-int hawaii_wifi_status_register(void (*callback) (int card_present, void *dev_id),
-			      void *dev_id)
+int hawaii_wifi_status_register(void (*callback) (int card_present,
+				void *dev_id), void *dev_id)
 {
-	printk(KERN_ERR " %s ENTRY\n", __FUNCTION__);
+	printk(KERN_ERR " %s ENTRY\n", __func__);
 
 	if (wifi_status_cb)
 		return -EAGAIN;
@@ -170,6 +541,8 @@ int hawaii_wifi_status_register(void (*callback) (int card_present, void *dev_id
 	wifi_status_cb_devid = dev_id;
 	return 0;
 }
+EXPORT_SYMBOL(hawaii_wifi_status_register);
+
 
 static unsigned int hawaii_wifi_status(struct device *dev)
 {
@@ -187,12 +560,12 @@ struct mmc_platform_data hawaii_wifi_data = {
 static int hawaii_wifi_set_carddetect(int val)
 {
 	pr_debug("%s: %d\n", __func__, val);
-	printk(KERN_ERR " %s INSIDE hawaii_wifi_set_carddetect\n", __FUNCTION__);
+	printk(KERN_ERR " %s INSIDE hawaii_wifi_set_carddetect\n", __func__);
 	hawaii_wifi_cd = val;
 	if (wifi_status_cb) {
-		printk(KERN_ERR " %s CALLBACK NOT NULL\n", __FUNCTION__);
+		printk(KERN_ERR " %s CALLBACK NOT NULL\n", __func__);
 		wifi_status_cb(val, wifi_status_cb_devid);
-		printk(KERN_ERR " %s CALLBACK COMPLETE\n", __FUNCTION__);
+		printk(KERN_ERR " %s CALLBACK COMPLETE\n", __func__);
 	} else
 		pr_warning("%s: Nobody to notify\n", __func__);
 
@@ -203,7 +576,7 @@ static int hawaii_wifi_power_state;
 
 static int hawaii_wifi_power(int on)
 {
-	printk(KERN_ERR " %s INSIDE hawaii_wifi_power\n", __FUNCTION__);
+	printk(KERN_ERR " %s INSIDE hawaii_wifi_power\n", __func__);
 
 	if (on)
 		bcm_sdiowl_init(on);
@@ -220,7 +593,7 @@ static int hawaii_wifi_reset_state;
 static int hawaii_wifi_reset(int on)
 {
 	pr_debug("%s: do nothing\n", __func__);
-	printk(KERN_ERR " %s INSIDE hawaii_wifi_reset\n", __FUNCTION__);
+	printk(KERN_ERR " %s INSIDE hawaii_wifi_reset\n", __func__);
 	hawaii_wifi_reset_state = on;
 	return 0;
 }
@@ -247,7 +620,7 @@ static int __init hawaii_mac_addr_setup(char *str)
 
 		if (i >= IFHWADDRLEN)
 			break;
-		res = strict_strtoul(token, 0x10, &val);
+		res = kstrtoul(token, 0x10, &val);
 		if (res < 0)
 			return 0;
 		hawaii_mac_addr[i++] = (u8)val;
@@ -275,13 +648,14 @@ static int hawaii_wifi_get_mac_addr(unsigned char *buf)
 
 /* Customized Locale table : OPTIONAL feature */
 #define WLC_CNTRY_BUF_SZ	4
-typedef struct cntry_locales_custom {
+struct cntry_locales_custom {
 	char iso_abbrev[WLC_CNTRY_BUF_SZ];
 	char custom_locale[WLC_CNTRY_BUF_SZ];
 	int custom_locale_rev;
-} cntry_locales_custom_t;
+};
 
-static cntry_locales_custom_t hawaii_wifi_translate_custom_table[] = {
+static struct cntry_locales_custom
+	hawaii_wifi_translate_custom_table[] = {
 /* Table should be filled out based on custom platform regulatory requirement */
 	{"", "XY", 4},		/* universal */
 	{"US", "US", 69},	/* input ISO "US" to : US regrev 69 */
@@ -346,14 +720,14 @@ static void *hawaii_wifi_get_country_code(char *ccode)
 static struct resource hawaii_wifi_resources[] = {
 	[0] = {
 		.name		= "bcmdhd_wlan_irq",
-		.start		= gpio_to_irq(74),	//GPIO74
-		.end		= gpio_to_irq(74),	//GPIO74
+		.start		= gpio_to_irq(74),	/* GPIO74 */
+		.end		= gpio_to_irq(74),	/* GPIO74 */
 		.flags          = IORESOURCE_IRQ | IORESOURCE_IRQ_LOWEDGE
-					| IORESOURCE_IRQ_SHAREABLE | IRQF_NO_SUSPEND,
+				| IORESOURCE_IRQ_SHAREABLE | IRQF_NO_SUSPEND,
 	},
 };
 
-//New change
+
 static struct wifi_platform_data hawaii_wifi_control = {
 	.set_power = hawaii_wifi_power,
 	.set_reset = hawaii_wifi_reset,
@@ -375,23 +749,138 @@ static struct platform_device hawaii_wifi_device = {
 	},
 };
 
-static void __init hawaii_wlan_gpio(void)
+#define MAX_WIFI_NVRAM_PATH_LEN		200
+#define MAX_WIFI_DRIVER_NAME_LEN	20
+
+static char custom_fw_path[MAX_WIFI_NVRAM_PATH_LEN];
+static char custom_module_name[MAX_WIFI_DRIVER_NAME_LEN];
+
+
+static ssize_t show_module_name(struct device_driver *driver, char *buf)
 {
-	pr_debug("%s: start\n", __func__);
+	return scnprintf(buf, PAGE_SIZE, "%s\n", custom_module_name);
 }
+
+static DRIVER_ATTR(module_name, S_IRUGO, show_module_name, NULL);
+
+
+static int __devinit bcm_wifi_pltfm_probe(struct platform_device *pdev)
+{
+u32 readval;
+const char *prop;
+
+	printk(KERN_INFO "%s: probe called!\n", __func__);
+
+	if (pdev->dev.platform_data) {
+		struct board_wifi_info *wifi_dev = pdev->dev.platform_data;
+
+		printk(KERN_INFO "%s: calling with board platform data\n",
+				__func__);
+
+		devtreeWifiParms.reset = wifi_dev->wl_reset_gpio;
+		devtreeWifiParms.host_wake = wifi_dev->host_wake_gpio;
+		strcpy(custom_fw_path, wifi_dev->board_nvram_file);
+		strcpy(custom_module_name, wifi_dev->module_name);
+
+	} else {	/*Get parms from device tree */
+
+		if (!pdev->dev.of_node)
+			goto wifi_err1;
+
+		/* Read device tree properties */
+
+		printk(KERN_INFO "%s: calling DTS node\n", __func__);
+
+		if (of_property_read_u32(pdev->dev.of_node,
+					"wl-reset-gpio", &readval))
+			goto wifi_err1;
+		devtreeWifiParms.reset = readval;
+
+		if (of_property_read_u32(pdev->dev.of_node,
+					"host-wake-gpio", &readval))
+			goto wifi_err1;
+		devtreeWifiParms.host_wake = readval;
+
+		if (of_property_read_string(pdev->dev.of_node,
+					"board-nvram-file", &prop))
+			goto wifi_err1;
+		strcpy(custom_fw_path, prop);
+
+		if (of_property_read_string(pdev->dev.of_node,
+					"module-name", &prop))
+			goto wifi_err1;
+		strcpy(custom_module_name, prop);
+	}
+
+	hawaii_wifi_device.resource->start =
+		hawaii_wifi_device.resource->end =
+		gpio_to_irq(devtreeWifiParms.host_wake);
+
+	/* Setup attributes to read from sysfs */
+	if (driver_create_file(pdev->dev.driver, &driver_attr_module_name)) {
+		printk(KERN_ERR "Error writing to dev_attr file\n");
+		return -EINVAL;
+	}
+
+	return 0;
+
+wifi_err1:
+	printk(KERN_ERR "%s: Error parsing Devtree!\n", __func__);
+	return -EINVAL;
+}
+
+static int bcm_wifi_pltfm_remove(struct platform_device *pdev)
+{
+/* Dummy function. No work needed here for now */
+
+	return 0;
+}
+
+
+#ifndef CONFIG_BYPASS_WIFI_DEVTREE
+static const struct of_device_id bcm_wifi_match[] = {
+	{ .compatible = "bcm,bcm_wifi"},
+	{ /* Sentinel */ }
+};
+#endif
+
+static struct platform_driver bcm_wifi_pltfm_driver = {
+	.driver = {
+		.name = "bcm_wifi",
+		.owner = THIS_MODULE,
+#ifndef CONFIG_BYPASS_WIFI_DEVTREE
+		.of_match_table = bcm_wifi_match,
+#endif
+		},
+	.probe = bcm_wifi_pltfm_probe,
+	.remove = __devexit_p(bcm_wifi_pltfm_remove),
+};
+
+
+int wifi_set_custom_nvram_path(char *nv_path)
+{
+	if (strlen(custom_fw_path) == 0)
+		return -EINVAL;
+	strcpy(nv_path, custom_fw_path);
+	return 0;
+}
+EXPORT_SYMBOL(wifi_set_custom_nvram_path);
+
 
 int __init hawaii_wlan_init(void)
 {
 	pr_debug("%s: start\n", __func__);
-	printk(KERN_ERR " %s Calling GPIO INIT!\n", __FUNCTION__);
 
-	hawaii_wlan_gpio();
-	printk(KERN_ERR " %s Calling GPIO INIT DONE !\n", __FUNCTION__);
 #ifdef CONFIG_BROADCOM_WIFI_RESERVED_MEM
 	hawaii_init_wifi_mem();
+	printk(KERN_ERR " %s Calling MEM INIT DONE !\n", __func__);
+
 #endif
-	printk(KERN_ERR " %s Calling MEM INIT DONE !\n", __FUNCTION__);
+	if (platform_driver_register(&bcm_wifi_pltfm_driver) != 0)
+		printk(KERN_ERR
+			"%s: Error register wifi_pltfm_driver\n", __func__);
 
 	return platform_device_register(&hawaii_wifi_device);
 }
-#endif
+
+#endif /* top of file: CONFIG_BRCM_UNIFIED_DHD_SUPPORT */
