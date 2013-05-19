@@ -37,6 +37,7 @@
 #include <linux/rtc.h>
 #include <linux/hardirq.h>
 #include <linux/vmalloc.h>
+#include <linux/bootmem.h>
 #ifdef CONFIG_BRCM_CP_CRASH_DUMP_EMMC
 #include <linux/mmc-poll/mmc_poll_stack.h>
 #include <linux/mmc-poll/mmc_poll.h>
@@ -605,6 +606,28 @@ int __init bcmlog_crashsupport_init(void)
 	return 0;
 }
 
+static int __init setup_mtt_logbuffer(char *str)
+{
+	if (str)
+		get_option(&str, &g_module.buffer_size);
+	if ((g_module.buffer_size <= 0)
+		|| (g_module.buffer_size > BCMLOG_OUTPUT_FIFO_MAX_BYTES))
+		g_module.buffer_size = KMALLOC_MAX_SIZE;
+	pr_info("Allocating mtt log buffer size : %d Bytes\n",\
+	g_module.buffer_size);
+	g_module.buffer = alloc_bootmem_pages(g_module.buffer_size);
+	if (!g_module.buffer) {
+		pr_err("Failed to allocate mtt log buffer\n");
+		return -1;
+	}	else {
+		pr_info("[allocated mtt log buffer] base:0x%x,size:%d,bytes\n",\
+		(unsigned int)g_module.buffer, g_module.buffer_size);
+	}
+	return 0;
+}
+
+__setup("bcmlog.mtt_log_buffer=", setup_mtt_logbuffer);
+
 /**
  *	Called by Linux I/O system to initialize module.
  *	@return	int		0 if success, -1 if error
@@ -622,15 +645,15 @@ static int __init BCMLOG_ModuleInit(void)
 	g_module.console_msg_lvl = BCMLOG_CONSOLE_MSG_LVL;
 	g_module.logdrv_class = NULL;
 
-	if ((g_module.buffer_size <= 0) ||
-			(g_module.buffer_size > BCMLOG_OUTPUT_FIFO_MAX_BYTES))
+	pr_info("[%s]g_module.buffer=0x%x, g_module.buffer_size=%d\n",\
+	__func__, (unsigned int)g_module.buffer, g_module.buffer_size);
+
+	if (!g_module.buffer) {
+		pr_err("[%s] Forced to allocate 4MB mtt log buffer\n",\
+		__func__);
 		g_module.buffer_size = KMALLOC_MAX_SIZE;
-
-	if (g_module.buffer_size <= KMALLOC_MAX_SIZE)
 		g_module.buffer = kmalloc(g_module.buffer_size, GFP_KERNEL);
-	else
-		g_module.buffer = vmalloc(g_module.buffer_size);
-
+	}
 	if (!g_module.buffer) {
 		BCMLOG_PRINTF(BCMLOG_CONSOLE_MSG_ERROR,
 			"BCM Log Failed to allocate buffer\n");

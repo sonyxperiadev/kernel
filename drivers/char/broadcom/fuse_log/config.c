@@ -194,7 +194,7 @@ static int proc_read(char *page, char **start,
  *		p - CP crash dump -> ACM
  *		s -  both BMTT and CP crash dump -> STM
  **/
-static ssize_t proc_write(struct file *file, const char __user * buffer,
+static ssize_t proc_write(struct file *file, const char __user *buffer,
 			  unsigned long count, void *data)
 {
 	int rc;
@@ -522,23 +522,6 @@ static ssize_t bcmlog_acm_dev_store(struct device *dev,
 	return -EINVAL;
 }
 
-static ssize_t bcmlog_log_buffer_show(struct device *dev,
-		struct device_attribute *attr, char *buf)
-{
-	return snprintf(buf, MAX_STR_NAME + 1, "%0x\n", BCMLOG_GetBufferSize());
-}
-
-static ssize_t bcmlog_log_buffer_store(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t size)
-{
-	int res, val;
-
-	res = kstrtoint(buf, 16, &val);
-	if (res == 0)
-		BCMLOG_SetBufferSize(val);
-	return size;
-}
-
 static DEVICE_ATTR(log, S_IRUGO | S_IWUSR, bcmlog_log_show,
 					     bcmlog_log_store);
 
@@ -569,9 +552,6 @@ static DEVICE_ATTR(uart_dev, S_IRUGO | S_IWUSR, bcmlog_uart_dev_show,
 static DEVICE_ATTR(acm_dev, S_IRUGO | S_IWUSR, bcmlog_acm_dev_show,
 						 bcmlog_acm_dev_store);
 
-static DEVICE_ATTR(log_buffer, S_IRUGO | S_IWUSR, bcmlog_log_buffer_show,
-			bcmlog_log_buffer_store);
-
 char *BCMLOG_GetFileBase(void)
 {
 	return g_config.file_base;
@@ -594,7 +574,7 @@ char *BCMLOG_GetAcmDev(void)
 void BCMLOG_InitConfig(void *h)
 {
 	int value;
-	struct device * dev = (struct device *)h;
+	struct device *dev = (struct device *)h;
 	/*
 	 *      disable all AP logging (CP logging is
 	 *      handled by CP) [MobC00126731]
@@ -665,11 +645,6 @@ void BCMLOG_InitConfig(void *h)
 	if (value < 0)
 		pr_err
 	    ("BCMLOG Init failed to create bcmlog acm_dev attribute\n");
-	value = device_create_file(dev, &dev_attr_log_buffer);
-	if (value < 0)
-		pr_err
-		("BCMLOG Init failed to create bcmlog acm_dev attribute\n");
-
 }
 
 int BCMLOG_GetRunlogDevice(void)
