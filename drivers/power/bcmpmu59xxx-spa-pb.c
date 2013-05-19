@@ -239,7 +239,7 @@ static int bcmpmu_spa_pb_chrgr_get_property(struct power_supply *ps,
 		break;
 
 	case POWER_SUPPLY_PROP_CAPACITY:
-		propval->intval = bcmpmu_spa_pb->capacity;
+		propval->intval = bcmpmu_fg_get_current_capacity(bcmpmu);
 		break;
 
 	case POWER_SUPPLY_PROP_VOLTAGE_NOW:
@@ -284,7 +284,16 @@ int bcmpmu_post_spa_event_to_queue(struct bcmpmu59xxx *bcmpmu, u32 event,
 	int ret = 0;
 	int empty;
 	pr_pb(FLOW, "%s: event = %d\n", __func__, event);
-	BUG_ON(!bcmpmu_spa_pb);
+
+	/* BUG_ON(!bcmpmu_spa_pb); */
+	if (!bcmpmu_spa_pb) {
+		pr_pb(ERROR,
+			"%s: spa_pb is null, and not ready yet\n",
+			__func__);
+		msleep(500);
+		return -1;
+	}
+
 	if (SPA_FIFO_IS_FULL(bcmpmu_spa_pb->spa_fifo)) {
 		pr_pb(ERROR, "%s: Queue full !!\n", __func__);
 		return -ENOMEM;
@@ -293,9 +302,13 @@ int bcmpmu_post_spa_event_to_queue(struct bcmpmu59xxx *bcmpmu, u32 event,
 	empty = SPA_FIFO_IS_EMPTY(bcmpmu_spa_pb->spa_fifo);
 	ret = __spa_fifo_add(&bcmpmu_spa_pb->spa_fifo, event, param);
 	mutex_unlock(&bcmpmu_spa_pb->lock);
+
 	if (empty && !ret)
 		schedule_delayed_work(&bcmpmu_spa_pb->spa_work,
 				SPA_WORK_SCHEDULE_DELAY);
+	else
+		pr_pb(ERROR, "%s: fails to schedule\n", __func__);
+
 	return ret;
 }
 EXPORT_SYMBOL(bcmpmu_post_spa_event_to_queue);
@@ -358,7 +371,7 @@ static void bcmpmu_spa_pb_work(struct work_struct *work)
 		}
 		spa_event_handler(spa_evt, (void *)data);
 	} else
-		pr_pb(ERROR, "%s: Q emptly\n", __func__);
+		pr_pb(ERROR, "%s: Q empty\n", __func__);
 	mutex_unlock(&bcmpmu_spa_pb->lock);
 	if (!SPA_FIFO_IS_EMPTY(bcmpmu_spa_pb->spa_fifo))
 		schedule_delayed_work(&bcmpmu_spa_pb->spa_work,

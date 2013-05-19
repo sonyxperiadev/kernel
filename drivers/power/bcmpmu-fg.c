@@ -677,7 +677,7 @@ static int bcmpmu_fg_reset(struct bcmpmu_fg_data *fg)
 	int ret;
 	pr_fg(INIT, "Reset Fuel Gauge HW\n");
 	ret = fg->bcmpmu->read_dev(fg->bcmpmu, PMU_REG_FGCTRL2, &reg);
-	if(!ret) {
+	if (!ret) {
 		reg |= FGCTRL2_FGRESET_MASK;
 		ret = fg->bcmpmu->write_dev(fg->bcmpmu, PMU_REG_FGCTRL2, reg);
 	}
@@ -743,8 +743,7 @@ static int bcmpmu_fg_volt_to_cap(struct bcmpmu_fg_data *fg, int volt)
 				lut[idx - 1].volt,
 				lut[idx - 1].cap);
 
-	}
-	else if (idx == 0)
+	} else if (idx == 0)
 		cap_percentage = 100; /* full capacity */
 
 	return cap_percentage;
@@ -1427,6 +1426,23 @@ static void bcmpmu_fg_get_coulomb_counter(struct bcmpmu_fg_data *fg)
 			fg->capacity_info.capacity,
 			fg->capacity_info.percentage);
 }
+
+int bcmpmu_fg_get_current_capacity(struct bcmpmu59xxx *bcmpmu)
+{
+	struct bcmpmu_fg_data *fg;
+	if (!bcmpmu)
+		return -EINVAL;
+
+	fg = bcmpmu->fg;
+
+	BUG_ON(!fg);
+
+	pr_fg(FLOW, "%s : capacity %d\n",
+			__func__, fg->capacity_info.percentage);
+
+	return fg->capacity_info.percentage;
+}
+EXPORT_SYMBOL(bcmpmu_fg_get_current_capacity);
 
 static int bcmpmu_fg_save_cap(struct bcmpmu_fg_data *fg, int cap_percentage)
 {
@@ -2629,6 +2645,30 @@ static void bcmpmu_fg_periodic_work(struct work_struct *work)
 	 * and BCL pin floating, we will not do coloumb counting
 	 */
 	if (!fg->flags.batt_present && !fg->flags.init_capacity) {
+		fg->capacity_info.initial = fg->capacity_info.max_design;
+		fg->capacity_info.percentage =
+			bcmpmu_fg_get_load_comp_capacity(fg, false, true);
+
+		pr_fg(ERROR, "no batt; vbat=%d fg_capty=%d\n",
+			fg->adc_data.volt, fg->capacity_info.percentage);
+
+		/* compensate the volt line dropping
+		   QA camera app still can be run @ low batt  */
+		if (fg->capacity_info.percentage < 10) {
+			pr_fg(FLOW, "actual capty=%d, limit 10\n",
+					fg->capacity_info.percentage);
+			fg->capacity_info.percentage = 10;
+		}
+
+		fg->capacity_info.prev_percentage
+			= fg->capacity_info.percentage;
+		bcmpmu_fg_save_cap(fg, fg->capacity_info.prev_percentage);
+		if (fg->bcmpmu->flags & BCMPMU_SPA_EN)
+			bcmpmu_post_spa_event_to_queue(fg->bcmpmu,
+				BCMPMU_CHRGR_EVENT_CAPACITY,
+				fg->capacity_info.prev_percentage);
+		else
+			bcmpmu_fg_update_psy(fg, false);
 		queue_delayed_work(fg->fg_wq, &fg->fg_periodic_work,
 				msecs_to_jiffies(FAKE_BATT_POLL_TIME_MS));
 		return;
@@ -2854,8 +2894,9 @@ static int bcmpmu_fg_power_supply_class_data(struct device *dev, void *data)
 	}
 
 	if (online.intval) {
-		pr_fg(VERBOSE, "Power supply %s is online & "
-				"and charging\n", ext_psy->name);
+		pr_fg(VERBOSE,
+			"Power supply %s is online & and charging\n",
+			ext_psy->name);
 		FG_LOCK(fg);
 		fg->flags.prev_batt_status = fg->flags.batt_status;
 		fg->flags.batt_status =
@@ -3284,7 +3325,7 @@ static int bcmpmu_fg_suspend(struct platform_device *pdev, pm_message_t state)
 	return 0;
 }
 #else
-#define bcmpmu_fg_resume 	NULL
+#define bcmpmu_fg_resume	NULL
 #define bcmpmu_fg_suspend	NULL
 #endif
 

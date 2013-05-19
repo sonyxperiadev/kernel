@@ -645,9 +645,8 @@ static void bcmpmu_accy_isr(enum bcmpmu59xxx_irq irq, void *data)
 
 	pr_accy(INIT, "#### %s interrupt = %d  det state %d\n",
 		__func__, irq, paccy->det_state);
-	if (paccy->bc == BC_EXT_DETECT) {
+	if (paccy->bc == BC_EXT_DETECT)
 		bcmpmu_accy_check_BC12_EN(bcmpmu);
-	}
 
 	switch (irq) {
 	case PMU_IRQ_VA_SESS_VALID_R:
@@ -990,12 +989,10 @@ static void bcmpmu_accy_check_BC12_EN(struct bcmpmu59xxx *bcmpmu)
 	u8 reg;
 	bcmpmu->read_dev(bcmpmu, PMU_REG_MBCCTRL5, &reg);
 	pr_accy(FLOW, "###<%s> MBCCTRL5 %x\n", __func__, reg);
-	if (reg & MBCCTRL5_BC12_EN_MASK) {
+	if (reg & MBCCTRL5_BC12_EN_MASK)
 		pr_accy(FLOW, "<%s> BC12 is enabled\n", __func__);
-	}
-	else {
+	else
 		pr_accy(FLOW, "<%s> BC12 is disabled\n", __func__);
-	}
 }
 
 static void bcdldo_cycle_power(struct bcmpmu_accy *paccy)
@@ -1051,16 +1048,15 @@ static void usb_deferred_work(struct work_struct *work)
 		bcmpmu_usb_get(bcmpmu,
 			BCMPMU_USB_CTRL_GET_SESSION_STATUS,
 			(void *)&vbus_status);
-		if (id_check && vbus_status &&
-			(bc_start != PMU_BC_DETECTION_END)) {
-			schedule_delayed_work(&paccy->det_work,
-					ACCY_RETRY_DELAY);
-		}
-
 	}
 	pr_accy(FLOW, "###<%s> , DEV_STATE %x\n",
 			__func__, paccy->det_state);
 
+	if (paccy->bc != BC_EXT_DETECT && id_check && vbus_status &&
+		(bc_start != PMU_BC_DETECTION_END)) {
+		schedule_delayed_work(&paccy->det_work,
+					ACCY_RETRY_DELAY);
+		}
 
 	list_for_each_safe(pos, temp, (&paccy->dispatch_list->node)) {
 		if (!list_empty(&paccy->dispatch_list->node)) {
@@ -1679,8 +1675,10 @@ static int __devinit bcmpmu_accy_probe(struct platform_device *pdev)
 				bcmpmu_accy_isr, paccy);
 	bcmpmu->register_irq(bcmpmu, PMU_IRQ_VBUS_VALID_F,
 				bcmpmu_accy_isr, paccy);
+#ifndef CONFIG_MACH_HAWAII_SS_COMMON
 	bcmpmu->register_irq(bcmpmu, PMU_IRQ_IDCHG,
 				bcmpmu_accy_isr, paccy);
+#endif
 	bcmpmu->register_irq(bcmpmu, PMU_IRQ_RESUME_VBUS,
 				bcmpmu_accy_isr, paccy);
 #ifndef CONFIG_SEC_CHARGING_FEATURE
@@ -1701,7 +1699,9 @@ static int __devinit bcmpmu_accy_probe(struct platform_device *pdev)
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_VBUS_VALID_R);
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_OTG_SESS_VALID_F);
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_VBUS_VALID_F);
+#ifndef CONFIG_MACH_HAWAII_SS_COMMON
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_IDCHG);
+#endif
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_RESUME_VBUS);
 #ifndef CONFIG_SEC_CHARGING_FEATURE
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_USBOV);
@@ -1731,7 +1731,13 @@ static int __devinit bcmpmu_accy_probe(struct platform_device *pdev)
 	bcmpmu_accy_debug_init(paccy);
 #endif
 	paccy->det_state = USB_DETECT;
-	schedule_delayed_work(&paccy->init_work, ACCY_RETRY_DELAY);
+
+	if (paccy->bc == BC_EXT_DETECT) {
+		schedule_delayed_work(&paccy->init_work,
+			msecs_to_jiffies(15000));
+	} else {
+		schedule_delayed_work(&paccy->init_work, ACCY_RETRY_DELAY);
+	}
 
 	return 0;
 
@@ -1753,7 +1759,9 @@ static int __devexit bcmpmu_accy_remove(struct platform_device *pdev)
 	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_VBUS_VALID_R);
 	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_OTG_SESS_VALID_F);
 	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_VBUS_VALID_F);
+#ifndef CONFIG_MACH_HAWAII_SS_COMMON
 	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_IDCHG);
+#endif
 	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_RESUME_VBUS);
 #ifndef CONFIG_SEC_CHARGING_FEATURE
 	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_USBOV);

@@ -166,3 +166,4 @@ struct bcmpmu_fg_pdata {
 
 int bcmpmu_fg_set_sw_eoc_current(struct bcmpmu59xxx *bcmpmu, int eoc_current);
 int bcmpmu_fg_calibrate_battery(struct bcmpmu59xxx *bcmpmu);
+int bcmpmu_fg_get_current_capacity(struct bcmpmu59xxx *bcmpmu);

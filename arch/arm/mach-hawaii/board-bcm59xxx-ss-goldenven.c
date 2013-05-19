@@ -142,9 +142,14 @@ static struct bcmpmu59xxx_rw_data __initdata register_init_data[] = {
 	{.addr =  PMU_REG_CMPCTRL17, .val = 0x01, .mask = 0xFF},
 	/* Mask RTM conversion */
 	{.addr =  PMU_REG_ADCCTRL1, .val = 0x08, .mask = 0x08},
-	/* EN_SESS_VALID  disable ID detection */
+#ifdef CONFIG_MACH_HAWAII_SS_COMMON
+	/* EN_SESS_VALID disable ID detection */
 	{.addr = PMU_REG_OTGCTRL1 , .val = 0x10, .mask = 0xFF},
 
+#else
+	/* EN_SESS_VALID  enable ID detection */
+	{.addr = PMU_REG_OTGCTRL1 , .val = 0x18, .mask = 0xFF},
+#endif
 
 	/* MMSR LPM voltage - 0.88V */
 	{.addr = PMU_REG_MMSRVOUT2 , .val = 0x4, .mask = 0x3F},
@@ -177,14 +182,6 @@ static struct bcmpmu59xxx_rw_data __initdata register_init_data[] = {
 	/*RFLDO and AUDLDO pulldown disable MobC00290043*/
 	{.addr = PMU_REG_RFLDOCTRL , .val = 0x40, .mask = 0x40},
 	{.addr = PMU_REG_AUDLDOCTRL , .val = 0x40, .mask = 0x40},
-
-
-#if defined(CONFIG_MACH_HAWAII_SS_LOGAN_REV00)
-	/* enable PASR mode */
-	{.addr = PMU_REG_GPIOCTRL3 , .val = 0x02, .mask = 0xFF},
-	{.addr = PMU_REG_PASRCTRL1 , .val = 0x19, .mask = 0xFF},
-	{.addr = PMU_REG_PASRCTRL2 , .val = 0x02, .mask = 0xFF},
-#endif /* defined(CONFIG_MACH_HAWAII_SS_LOGAN_REV00 */
 
 };
 
@@ -744,21 +741,24 @@ struct bcmpmu59xxx_regulator_init_data
 		[BCMPMU_REGULATOR_GPLDO1] = {
 			.id = BCMPMU_REGULATOR_GPLDO1,
 			.initdata = &bcm59xxx_gpldo1_data,
-			.pc_pins_map = PCPIN_MAP_ENC(0,  PMU_PC1|PMU_PC2|PMU_PC3),
+			.pc_pins_map =
+				PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
 			.name = "gp1",
 			.req_volt = 0,
 		},
 		[BCMPMU_REGULATOR_GPLDO2] = {
 			.id = BCMPMU_REGULATOR_GPLDO2,
 			.initdata = &bcm59xxx_gpldo2_data,
-			.pc_pins_map = PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
+			.pc_pins_map =
+				PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
 			.name = "gp2",
 			.req_volt = 0,
 		},
 		[BCMPMU_REGULATOR_GPLDO3] = {
 			.id = BCMPMU_REGULATOR_GPLDO3,
 			.initdata = &bcm59xxx_gpldo3_data,
-			.pc_pins_map = PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
+			.pc_pins_map =
+				PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
 			.name = "gp3",
 			.req_volt = 0,
 		},
@@ -845,10 +845,6 @@ struct bcmpmu59xxx_regulator_init_data
 
 	};
 
-
-
-/* logan compilation fix */
-
 /*Ponkey platform data*/
 struct pkey_timer_act pkey_t3_action = {
 	.flags = PKEY_SMART_RST_PWR_EN,
@@ -864,18 +860,7 @@ struct bcmpmu59xxx_pkey_pdata pkey_pdata = {
 	.wakeup_deb = PKEY_WUP_DEB_1000MS,
 	.t3 = &pkey_t3_action,
 };
-/*
-struct bcmpmu59xxx_pok_pdata pok_pdata = {
-	.hard_reset_en = -1,
-	.restart_en = -1,
-	.pok_hold_deb = -1,
-	.pok_shtdwn_dly = -1,
-	.pok_restart_dly = -1,
-	.pok_restart_deb = -1,
-	.pok_lock = 1,
-	.pok_turn_on_deb = -1,
-};
-*/
+
 struct bcmpmu59xxx_audio_pdata audio_pdata = {
 	.ihf_autoseq_dis = 100,
 };
@@ -994,39 +979,43 @@ struct bcmpmu_adc_pdata adc_pdata[PMU_ADC_CHANN_MAX] = {
 };
 
 
-/* SS EB425161 profile */
-/* Logan rev 02 battery profile CSP 626787 */
+/* SS Battery_1500_mAh_AAaD321BS profile */
+/* GoldenVE rev 02 battery profile CSP 636191 */
 static struct batt_volt_cap_map ss_eb425161_volt_cap_lut[] = {
-	{4321, 100},
-	{4250, 95},
-	{4183, 90},
-	{4126, 85},
-	{4082, 80},
-	{4038, 75},
-	{3993, 70},
-	{3952, 65},
-	{3914, 60},
-	{3862, 55},
-	{3826, 50},
-	{3804, 45},
-	{3787, 40},
-	{3775, 35},
-	{3769, 30},
-	{3764, 26},
-	{3746, 21},
-	{3708, 16},
-	{3654, 11},
-	{3647, 10},
-	{3643, 9},
-	{3636, 8},
-	{3628, 7},
-	{3616, 6},
-	{3599, 5},
-	{3578, 4},
-	{3552, 3},
-	{3517, 2},
-	{3466, 1},
-	{3400, 0},
+	{4334, 100},
+	{4268, 95},
+	{4210, 90},
+	{4166, 86},
+	{4113, 81},
+	{4070, 76},
+	{4005, 71},
+	{3976, 67},
+	{3945, 62},
+	{3902, 57},
+	{3859, 52},
+	{3834, 48},
+	{3812, 43},
+	{3796, 38},
+	{3784, 33},
+	{3777, 29},
+	{3772, 24},
+	{3752, 19},
+	{3713, 14},
+	{3703, 13},
+	{3697, 12},
+	{3694, 11},
+	{3693, 10},
+	{3693, 10},
+	{3692, 9},
+	{3692, 8},
+	{3691, 7},
+	{3690, 6},
+	{3688, 5},
+	{3676, 4},
+	{3640, 3},
+	{3585, 2},
+	{3511, 1},
+	{3400, 0}
 };
 
 static struct batt_eoc_curr_cap_map ss_eb425161_eoc_cap_lut[] = {
@@ -1050,89 +1039,98 @@ static struct batt_cutoff_cap_map ss_eb425161_cutoff_cap_lut[] = {
 	{3400, 0},
 };
 
-/* SS EB425161 profile */
-/* Logan rev 02 battery profile CSP 626787 */
+/* SS Battery_1500_mAh_AAaD321BS profile */
+/* GoldenVE rev 02 battery profile CSP 636191 */
 static struct batt_esr_temp_lut ss_eb425161_esr_temp_lut[] = {
 	{
 		.temp = -200,
-		.reset = 0, .fct = 271, .guardband = 50,
-		.esr_vl_lvl = 3828, .esr_vm_lvl = 4040, .esr_vh_lvl = 4250,
-		.esr_vl_slope = -9455, .esr_vl_offset = 38482,
-		.esr_vm_slope = -625,  .esr_vm_offset = 4680,
-		.esr_vh_slope = 337,   .esr_vh_offset = 794,
-		.esr_vf_slope = -7962, .esr_vf_offset = 36066,
+		.reset = 0, .fct = 308, .guardband = 50,
+		.esr_vl_lvl = 3831, .esr_vl_slope = -5697,
+		.esr_vl_offset = 23742, .esr_vm_lvl = 4113,
+		.esr_vm_slope = 671, .esr_vm_offset = -656,
+		.esr_vh_lvl = 4271, .esr_vh_slope = 1547,
+		.esr_vh_offset = -4259, .esr_vf_slope = -8752,
+		.esr_vf_offset = 39727,
 	},
 	{
 		.temp = -150,
-		.reset = 0, .fct = 451, .guardband = 50,
-		.esr_vl_lvl = 3828, .esr_vm_lvl = 4084, .esr_vh_lvl = 4250,
-		.esr_vl_slope = -11415, .esr_vl_offset = 44972,
-		.esr_vm_slope = 491,    .esr_vm_offset = -604,
-		.esr_vh_slope = -699,   .esr_vh_offset = 4256,
-		.esr_vf_slope = -6762,  .esr_vf_offset = 30024,
+		.reset = 0, .fct = 452, .guardband = 50,
+		.esr_vl_lvl = 3698, .esr_vl_slope = -67595,
+		.esr_vl_offset = 251763, .esr_vm_lvl = 3861,
+		.esr_vm_slope = -3545, .esr_vm_offset = 14906,
+		.esr_vh_lvl = 4163, .esr_vh_slope = 920,
+		.esr_vh_offset = -2333, .esr_vf_slope = -2503,
+		.esr_vf_offset = 11917,
 	},
 	{
 		.temp = -100,
-		.reset = 0, .fct = 631, .guardband = 50,
-		.esr_vl_lvl = 3828, .esr_vm_lvl = 4084, .esr_vh_lvl = 4250,
-		.esr_vl_slope = -11415, .esr_vl_offset = 44972,
-		.esr_vm_slope =  491,   .esr_vm_offset = -604,
-		.esr_vh_slope = -699,   .esr_vh_offset = 4256,
-		.esr_vf_slope = -6762,  .esr_vf_offset = 30024,
+		.reset = 0, .fct = 596, .guardband = 50,
+		.esr_vl_lvl = 3698, .esr_vl_slope = -67595,
+		.esr_vl_offset = 251763, .esr_vm_lvl = 3861,
+		.esr_vm_slope = -3545, .esr_vm_offset = 14906,
+		.esr_vh_lvl = 4163, .esr_vh_slope = 920,
+		.esr_vh_offset = -2333, .esr_vf_slope = -2503,
+		.esr_vf_offset = 11917,
 	},
 	{
 		.temp = -50,
-		.reset = 0, .fct = 744, .guardband = 50,
-		.esr_vl_lvl = 3650, .esr_vm_lvl = 3828, .esr_vh_lvl = 4084,
-		.esr_vl_slope = -36494, .esr_vl_offset = 135322,
-		.esr_vm_slope = -8143,  .esr_vm_offset = 31855,
-		.esr_vh_slope =  830,   .esr_vh_offset = -2494,
-		.esr_vf_slope = -2068,  .esr_vf_offset = 9340,
+		.reset = 0, .fct = 699, .guardband = 50,
+		.esr_vl_lvl = 3692, .esr_vl_slope = -9561,
+		.esr_vl_offset = 36905, .esr_vm_lvl = 3811,
+		.esr_vm_slope = -7588, .esr_vm_offset = 29622,
+		.esr_vh_lvl = 4073, .esr_vh_slope = 651,
+		.esr_vh_offset = -1780, .esr_vf_slope = -1176,
+		.esr_vf_offset = 5661,
 	},
 	{
 		.temp = 0,
-		.reset = 0, .fct = 856, .guardband = 30,
-		.esr_vl_lvl = 3650, .esr_vm_lvl = 3828, .esr_vh_lvl = 4084,
-		.esr_vl_slope = -36494, .esr_vl_offset = 135322,
-		.esr_vm_slope = -8143,  .esr_vm_offset = 31855,
-		.esr_vh_slope =   830,  .esr_vh_offset = -2494,
-		.esr_vf_slope = -2068,  .esr_vf_offset = 9340,
+		.reset = 0, .fct = 802, .guardband = 30,
+		.esr_vl_lvl = 3692, .esr_vl_slope = -9561,
+		.esr_vl_offset = 36905, .esr_vm_lvl = 3811,
+		.esr_vm_slope = -7588, .esr_vm_offset = 29622,
+		.esr_vh_lvl = 4073, .esr_vh_slope = 651,
+		.esr_vh_offset = -1780, .esr_vf_slope = -1176,
+		.esr_vf_offset = 5661,
 	},
 	{
 		.temp = 50,
-		.reset = 0, .fct = 919, .guardband = 30,
-		.esr_vl_lvl = 3650, .esr_vm_lvl = 3828, .esr_vh_lvl = 4040,
-		.esr_vl_slope = -13420, .esr_vl_offset = 50225,
-		.esr_vm_slope = -4633,  .esr_vm_offset = 18157,
-		.esr_vh_slope =   568,  .esr_vh_offset = -1753,
-		.esr_vf_slope = -1107,  .esr_vf_offset = 5014,
+		.reset = 0, .fct = 875, .guardband = 30,
+		.esr_vl_lvl = 3690, .esr_vl_slope = -5235,
+		.esr_vl_offset = 20299, .esr_vm_lvl = 3698,
+		.esr_vm_slope = -46051, .esr_vm_offset = 170898,
+		.esr_vh_lvl = 4334, .esr_vh_slope = -441,
+		.esr_vh_offset = 2232, .esr_vf_slope = -1493,
+		.esr_vf_offset = 6792,
 	},
 	{
 		.temp = 100,
-		.reset = 0, .fct = 981, .guardband = 30,
-		.esr_vl_lvl = 3650, .esr_vm_lvl = 3828, .esr_vh_lvl = 4040,
-		.esr_vl_slope = -13420, .esr_vl_offset = 50225,
-		.esr_vm_slope = -4633,  .esr_vm_offset = 18157,
-		.esr_vh_slope =   568,  .esr_vh_offset = -1753,
-		.esr_vf_slope = -1107,  .esr_vf_offset = 5014,
+		.reset = 0 , .fct = 948, .guardband = 30,
+		.esr_vl_lvl = 3690, .esr_vl_slope = -5235,
+		.esr_vl_offset = 20299, .esr_vm_lvl = 3698,
+		.esr_vm_slope = -46051, .esr_vm_offset = 170898,
+		.esr_vh_lvl = 4334, .esr_vh_slope = -441,
+		.esr_vh_offset = 2232, .esr_vf_slope = -1493,
+		.esr_vf_offset = 6792,
 	},
 	{
 		.temp = 150,
-		.reset = 0, .fct = 991, .guardband = 30,
-		.esr_vl_lvl = 3650, .esr_vm_lvl = 3770, .esr_vh_lvl = 4250,
-		.esr_vl_slope = -2627, .esr_vl_offset = 10179,
-		.esr_vm_slope = -2399, .esr_vm_offset = 9347,
-		.esr_vh_slope = -199,  .esr_vh_offset = 1053,
-		.esr_vf_slope = -1049, .esr_vf_offset = 4666,
+		.reset = 0, .fct = 974, .guardband = 30,
+		.esr_vl_lvl = 3687, .esr_vl_slope = -1709,
+		.esr_vl_offset = 6697, .esr_vm_lvl = 3698,
+		.esr_vm_slope = -12178, .esr_vm_offset = 45294,
+		.esr_vh_lvl = 3974, .esr_vh_slope = 150,
+		.esr_vh_offset = -295, .esr_vf_slope = -299,
+		.esr_vf_offset = 1489,
 	},
 	{
 		.temp = 200,
 		.reset = 0, .fct = 1000, .guardband = 30,
-		.esr_vl_lvl = 3650, .esr_vm_lvl = 3770, .esr_vh_lvl = 4250,
-		.esr_vl_slope = -2627, .esr_vl_offset = 10179,
-		.esr_vm_slope = -2399, .esr_vm_offset = 9347,
-		.esr_vh_slope = -199,  .esr_vh_offset = 1053,
-		.esr_vf_slope = -1049, .esr_vf_offset = 4666,
+		.esr_vl_lvl = 3687, .esr_vl_slope = -1709,
+		.esr_vl_offset = 6697, .esr_vm_lvl = 3698,
+		.esr_vm_slope = -12178 , .esr_vm_offset = 45294,
+		.esr_vh_lvl = 3974, .esr_vh_slope = 150,
+		.esr_vh_offset = -295, .esr_vf_slope = -299,
+		.esr_vf_offset = 1489,
 	},
 };
 
@@ -1191,9 +1189,13 @@ static struct bcmpmu_fg_pdata fg_pdata = {
 	/* floor during sleep from Hawaii HW workshop Dec7 2012 */
 	.sleep_current_ua = 1460,
 	.sleep_sample_rate = 32000,
-	.fg_factor = 950, /* Logan00 board : 2.76% err Jan30 2010 */
+
+	/* GoldenVEn r00 AAaD321: 1.18% err Apr9 2013 */
+	.fg_factor = 950,
+
 	.poll_rate_low_batt = 5000, /* every 5 seconds */
 	.poll_rate_crit_batt = 2000, /* every 2 Seconds */
+
 	.acld_vbus_margin = 200,	/*mV*/
 
 	/* CIG22H2R2MNE, rated current 1.6A  */
@@ -1222,13 +1224,13 @@ struct spa_power_data spa_data = {
 
 #if defined(CONFIG_SPA_SUPPLEMENTARY_CHARGING)
 	.eoc_current = 150,
-	.backcharging_time = 30, //mins
+	.backcharging_time = 30, /*mins*/
 	.recharging_eoc = 100,
 #else
 	.eoc_current = 100,
 #endif
 	.recharge_voltage = 4300,
-	.charging_cur_usb = 500,
+	.charging_cur_usb = 511,
 	.charging_cur_wall = 766,
 	.charge_timer_limit = 10,
 };
@@ -1344,9 +1346,7 @@ static struct bcmpmu59xxx_platform_data bcmpmu_i2c_pdata = {
 	.init_max = ARRAY_SIZE(register_init_data),
 #ifdef CONFIG_CHARGER_BCMPMU_SPA
 	.flags = BCMPMU_SPA_EN,
-// logan compilation fix
-	.bc = BCMPMU_BC_BB_BC12,
-//	.bc = BCMPMU_BC_JIG_BC12,
+	.bc = BC_EXT_DETECT,
 #else
 	.bc = BCMPMU_BC_PMU_BC12,
 #endif
@@ -1470,7 +1470,7 @@ int __init board_bcm59xx_init(void)
 	bcmpmu_i2c_pdata.irq = irq;
 	ret  = i2c_register_board_info(PMU_DEVICE_I2C_BUSNO,
 			bcmpmu_i2c_info, ARRAY_SIZE(bcmpmu_i2c_info));
-	platform_add_devices(spa_devices, ARRAY_SIZE(spa_devices));
+
 	return 0;
 exit:
 	return ret;
