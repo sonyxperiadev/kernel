@@ -501,7 +501,7 @@ int pv_get_state(struct pv_config_t *config)
 
 int check_pv_state(int event, struct pv_config_t *config)
 {
-	u32 pv_base;
+	u32 pv_base, stat, istat, ien;
 	struct pv_dev *dev;
 
 	if (!config)
@@ -509,10 +509,16 @@ int check_pv_state(int event, struct pv_config_t *config)
 
 	dev = container_of(config, struct pv_dev, vid_config);
 	pv_base = dev->base_addr;
+	istat = readl(pv_base + REG_PV_INTSTAT);
+	stat = readl(pv_base + REG_PV_STAT);
+	ien = readl(pv_base + REG_PV_INTEN);
+	pv_err("event=%d state=%d istat=0x%x stat=0x%x ien=0x%x\n",
+		event, dev->state, istat, stat, ien);
 
-	pv_err("event=%d istat=0x%x stat=0x%x ien=0x%x\n", event,
-		readl(pv_base + REG_PV_INTSTAT),
-		readl(pv_base + REG_PV_STAT),
-		readl(pv_base + REG_PV_INTEN));
-	return 0;
+	if (istat & ien) {
+		writel(istat, pv_base + REG_PV_INTSTAT);
+		return 0;
+	} else {
+		return -1;
+	}
 }

@@ -533,7 +533,7 @@ static int kona_fb_pan_display(struct fb_var_screeninfo *var,
 			p_region = NULL;
 		}
 		if (!fb->display_info->vmode)
-			if (wait_for_completion_interruptible_timeout(
+			if (wait_for_completion_timeout(
 			&fb->prev_buf_done_sem,	msecs_to_jiffies(10000)) <= 0)
 				pr_err("%s:%d timed out waiting for completion",
 					__func__, __LINE__);
@@ -546,7 +546,7 @@ static int kona_fb_pan_display(struct fb_var_screeninfo *var,
 		if (fb->display_info->vmode) {
 			konafb_debug("waiting for release of 0x%x\n",
 					buff_idx ? fb->buff0 : fb->buff1);
-			if (wait_for_completion_interruptible_timeout(
+			if (wait_for_completion_timeout(
 			&fb->prev_buf_done_sem,	msecs_to_jiffies(10000)) <= 0)
 				pr_err("%s:%d timed out waiting for completion",
 					__func__, __LINE__);
@@ -667,7 +667,7 @@ static int kona_fb_ioctl(struct fb_info *info, unsigned int cmd,
 		}
 
 		if (!fb->display_info->vmode)
-			if (wait_for_completion_interruptible_timeout(
+			if (wait_for_completion_timeout(
 			&fb->prev_buf_done_sem,	msecs_to_jiffies(10000)) <= 0)
 				pr_err("%s:%d timed out waiting for completion",
 					__func__, __LINE__);
@@ -713,7 +713,7 @@ static void kona_fb_early_suspend(struct early_suspend *h)
 		/* In case of video mode, DSI commands can be sent out-of-sync
 		 * of buffers */
 		if (!fb->display_info->vmode)
-			if (wait_for_completion_interruptible_timeout(
+			if (wait_for_completion_timeout(
 			&fb->prev_buf_done_sem,	msecs_to_jiffies(10000)) <= 0)
 				pr_err("%s:%d timed out waiting for completion",
 					__func__, __LINE__);
@@ -730,7 +730,7 @@ static void kona_fb_early_suspend(struct early_suspend *h)
 		fb = container_of(h, struct kona_fb, early_suspend_level2);
 		mutex_lock(&fb->update_sem);
 		if (!fb->display_info->vmode)
-			if (wait_for_completion_interruptible_timeout(
+			if (wait_for_completion_timeout(
 			&fb->prev_buf_done_sem,	msecs_to_jiffies(10000)) <= 0)
 				pr_err("%s:%d timed out waiting for completion",
 					__func__, __LINE__);
@@ -799,7 +799,7 @@ static void kona_fb_late_resume(struct early_suspend *h)
 		    fb->display_info->Bpp * 2;
 		memset(fb->fb.screen_base, 0, framesize);
 		if (!fb->display_info->vmode)
-			if (wait_for_completion_interruptible_timeout(
+			if (wait_for_completion_timeout(
 			&fb->prev_buf_done_sem,	msecs_to_jiffies(10000)) <= 0)
 				pr_err("%s:%d timed out waiting for completion",
 					__func__, __LINE__);
@@ -808,7 +808,7 @@ static void kona_fb_late_resume(struct early_suspend *h)
 				NULL,
 				(DISPDRV_CB_T)kona_display_done_cb);
 		if (fb->display_info->vmode)
-			if (wait_for_completion_interruptible_timeout(
+			if (wait_for_completion_timeout(
 				&fb->prev_buf_done_sem,	msecs_to_jiffies(10000))
 				<= 0)
 				pr_err("%s:%d timed out waiting for completion",
@@ -964,6 +964,7 @@ static struct kona_fb_platform_data * __init get_of_data(struct device_node *np)
 	return fb_data;
 
 of_fail:
+	konafb_error("get_of_data failed\n");
 	kfree(fb_data);
 alloc_failed:
 	return NULL;
@@ -1241,7 +1242,7 @@ static int __ref kona_fb_probe(struct platform_device *pdev)
 	if (ret_val) {
 		printk(KERN_ERR "Failed to add dfs request for LCD\n");
 		ret = -EIO;
-		goto fb_data_failed;
+		goto fb_dfs_fail;
 	}
 
 	if (pdev->dev.of_node) {
@@ -1537,17 +1538,17 @@ err_set_var_failed:
 	dma_free_writecombine(&pdev->dev, framesize, fb->fb.screen_base,
 			phys_fbbase);
 
-	disable_display(fb);
-
 err_fbmem_alloc_failed:
-	if (pi_mgr_dfs_request_remove(&fb->dfs_node))
-		printk(KERN_ERR "Failed to remove dfs request for LCD\n");
+	disable_display(fb);
 err_enable_display_failed:
 	kona_clock_stop(fb);
 	release_dispdrv_info(fb->display_info);
 dispdrv_data_failed:
 	free_platform_data(&pdev->dev);
 fb_data_failed:
+	if (pi_mgr_dfs_request_remove(&fb->dfs_node))
+		printk(KERN_ERR "Failed to remove dfs request for LCD\n");
+fb_dfs_fail:
 	kfree(fb);
 	g_kona_fb = NULL;
 err_fb_alloc_failed:
@@ -1577,7 +1578,7 @@ static int kona_fb_reboot_cb(struct notifier_block *nb,
 	mutex_lock(&fb->update_sem);
 	fb->g_stop_drawing = 1;
 	if (!fb->display_info->vmode)
-		if (wait_for_completion_interruptible_timeout(
+		if (wait_for_completion_timeout(
 		&fb->prev_buf_done_sem,	msecs_to_jiffies(10000)) <= 0)
 			pr_err("%s:%d timed out waiting for completion",
 				__func__, __LINE__);

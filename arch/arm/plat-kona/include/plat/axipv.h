@@ -35,6 +35,13 @@
 #include <linux/types.h>
 #include <linux/interrupt.h>
 #include <linux/io.h>
+#include <linux/delay.h>
+#include <linux/err.h>
+#include <linux/sysrq.h>
+#include <mach/memory.h>
+#include <asm/io.h>
+#include <linux/time.h>
+#include <mach/rdb/brcm_rdb_sysmap.h>
 
 typedef u32 axipv_async_buf_t;
 

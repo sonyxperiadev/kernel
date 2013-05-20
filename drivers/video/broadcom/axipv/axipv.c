@@ -29,14 +29,11 @@
 
 #include <plat/reg_axipv.h>
 #include <plat/axipv.h>
-#include <linux/delay.h>
-#include <linux/err.h>
 
 #ifdef AXIPV_HAS_CLK
 #include <linux/clk.h>
 #endif
 
-#include <linux/time.h>
 #if defined(CONFIG_MACH_BCM_FPGA) || defined(CONFIG_MACH_BCM_FPGA_E)
 static struct timeval prof_tv1, prof_tv2;
 #endif
@@ -598,8 +595,10 @@ static inline int post_async(struct axipv_config_t *config)
 
 	/* Handle the unusal case by bypassing the hardware since the hardware
 	 * is transferring the same buffer */
-	if (config->buff.async == g_curr) {
-		axipv_err("Likely tearing on screen\n");
+	if ((config->buff.async == g_curr) || (config->buff.async == g_nxt)) {
+		axipv_err("Likely tearing on screen posted:0x%x curr= 0x%x nxt=0x%x\n",
+		config->buff.async, g_curr, g_nxt);
+		axipv_dump_buff_status(dev->buff);
 		dev->release_cb(config->buff.async);
 		return 0;
 	}
@@ -962,7 +961,9 @@ int axipv_check_completion(u32 event, struct axipv_config_t *config)
 	u32 ret = -1, axipv_base;
 	struct axipv_dev *dev;
 	unsigned long flags;
-	u32 int_stat;
+	u32 int_stat, int_en;
+	u32 pcsr[CONFIG_NR_CPUS];
+	int i;
 
 	axipv_debug("event=%d\n", event);
 	if (!config)
@@ -973,16 +974,29 @@ int axipv_check_completion(u32 event, struct axipv_config_t *config)
 
 	spin_lock_irqsave(&lock, flags);
 	int_stat = readl(axipv_base + REG_INTR_STAT);
+	int_en = readl(axipv_base + REG_INTR_EN);
+
+#ifdef CONFIG_ARCH_HAWAII
+#define CPU0_BASE HW_IO_PHYS_TO_VIRT(A9CPU0_BASE_ADDR)
+#define CPU1_OFFSET (A9CPU1_BASE_ADDR - A9CPU0_BASE_ADDR)
+#elif defined(CONFIG_ARCH_JAVA)
+#define CPU0_BASE HW_IO_PHYS_TO_VIRT(A7CPU0_BASE_ADDR)
+#define CPU1_OFFSET (A7CPU1_BASE_ADDR - A7CPU0_BASE_ADDR)
+#endif
+	for (i = 0; i < CONFIG_NR_CPUS; i++)
+		pcsr[i] = readl(CPU0_BASE + i * CPU1_OFFSET);
+
 	switch (event) {
 	case AXIPV_START:
 		if (int_stat & PV_START_THRESH_INT) {
-			axipv_err("ISR was pending\n");
+			axipv_err("ISR was pending stat 0x%x en 0x%x\n",
+			int_stat, int_en);
 			writel(PV_START_THRESH_INT, axipv_base + REG_INTR_CLR);
 			ret = 0;
 		} else if (dev->irq_stat & PV_START_THRESH_INT) {
-				axipv_err("WQ was pending\n");
-				dev->irq_stat &= (~PV_START_THRESH_INT);
-				ret = 0;
+			axipv_err("WQ was pending 0x%x\n", dev->irq_stat);
+			dev->irq_stat &= (~PV_START_THRESH_INT);
+			ret = 0;
 		} else {
 			axipv_err("%d wasn't triggered\n", PV_START_THRESH_INT);
 			ret = -1;
@@ -990,11 +1004,12 @@ int axipv_check_completion(u32 event, struct axipv_config_t *config)
 		break;
 	case AXIPV_STOP_EOF:
 		if (int_stat & FRAME_END_INT) {
-			axipv_err("ISR was pending\n");
+			axipv_err("ISR was pending stat 0x%x en 0x%x\n",
+			int_stat, int_en);
 			writel(FRAME_END_INT, axipv_base + REG_INTR_CLR);
 			ret = 0;
 		} else if (dev->irq_stat & FRAME_END_INT) {
-			axipv_err("work queue was pending\n");
+			axipv_err("WQ was pending 0x%x\n", dev->irq_stat);
 			dev->irq_stat &= (~FRAME_END_INT);
 			ret = 0;
 		} else {
@@ -1017,6 +1032,8 @@ int axipv_check_completion(u32 event, struct axipv_config_t *config)
 		break;
 	}
 	spin_unlock_irqrestore(&lock, flags);
+	for (i = 0; i < CONFIG_NR_CPUS; i++)
+		axipv_err("PCSR[%d] = 0x%x\n", i, pcsr[i]);
 	return ret;
 }
 

@@ -1860,6 +1860,7 @@ CSL_LCD_RES_T CSL_DSI_Suspend(CSL_LCD_HANDLE vcH)
 			axipv_change_state(AXIPV_STOP_IMM, axipvCfg);
 		} else {
 			pr_err("csl_dsi: recovered %d\n", __LINE__);
+			OSSEMAPHORE_Release(dsiH->semaDma);
 		}
 	}
 	pv_change_state(PV_STOP_EOF_ASYNC, pvCfg);
