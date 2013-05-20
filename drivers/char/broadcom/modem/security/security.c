@@ -371,6 +371,12 @@ static long handle_set_lock_ioc(struct file *filp, unsigned int cmd,
 		return -EFAULT;
 	}
 
+	if (ioc_param.sim_id >= DUAL_SIM_SIZE)	{
+		pr_err("handle_set_lock_ioc - SIMid=%d invalid.\n",
+		    ioc_param.sim_id);
+		return -EFAULT;
+	}
+
 	/* try setting lock */
 	ioc_param.set_lock_status = SIMLockSetLock(ioc_param.sim_id,
 					(UInt8)ioc_param.action,
@@ -431,6 +437,12 @@ static long handle_unlock_sim_ioc(struct file *filp, unsigned int cmd,
 		return -EFAULT;
 	}
 
+	if (ioc_param.sim_id >= DUAL_SIM_SIZE)	{
+		pr_err("handle_unlock_sim_ioc - SIMid=%d invalid.\n",
+		    ioc_param.sim_id);
+		return -EFAULT;
+	}
+
 	/* try to unlock here, and set ioc_param result fields appropriately */
 	ioc_param.unlock_status = SIMLockUnlockSIM(ioc_param.sim_id,
 							ioc_param.lock_type,
@@ -486,6 +498,12 @@ static long handle_get_lock_state_ioc(struct file *filp, unsigned int cmd,
 		return -EFAULT;
 	}
 
+	if (ioc_param.sim_id >= DUAL_SIM_SIZE)	{
+		pr_err("handle_get_lock_state_ioc - SIMid=%d invalid.\n",
+		    ioc_param.sim_id);
+		return -EFAULT;
+	}
+
 	/* retrieve current lock state */
 	/* Coverity [TAINTED_SCALAR]   */
 	SIMLockGetSIMLockState(ioc_param.sim_id, &ioc_param);
@@ -509,6 +527,12 @@ static long handle_get_remain_attempt_info_ioc(struct file *filp,
 	if (copy_from_user(&ioc_param, (sec_simlock_remain_t *) param,
 			   sizeof(sec_simlock_remain_t)) != 0) {
 		pr_err("handle_get_remain_attempt_info_ioc: copy_from_user error\n");
+		return -EFAULT;
+	}
+
+	if (ioc_param.sim_id >= DUAL_SIM_SIZE)	{
+		pr_err("handle_get_remain_attempt_info_ioc - SIMid=%d invalid.\n",
+		    ioc_param.sim_id);
 		return -EFAULT;
 	}
 
