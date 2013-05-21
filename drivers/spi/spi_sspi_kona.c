@@ -1410,9 +1410,9 @@ static int spi_kona_remove(struct platform_device *pdev)
 	if (!spi_kona)
 		return 0;
 
-	spi_unregister_master(master);
 	WARN_ON(!list_empty(&spi_kona->queue));
 	destroy_workqueue(spi_kona->workqueue);
+	spi_unregister_master(master);
 
 	status = chal_sspi_deinit(spi_kona->chandle);
 	if (status != CHAL_SSPI_STATUS_SUCCESS)
