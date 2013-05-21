@@ -32,6 +32,7 @@
 #include <linux/regulator/driver.h>
 #include <linux/notifier.h>
 #include <linux/i2c/ft6x06_ex_fun.h>
+#include <linux/wakelock.h>
 
 #define GPIO_TO_IRQ gpio_to_irq
 
@@ -68,6 +69,9 @@ typedef signed int		FTS_BOOL;
 #define HAWAII_GARNET_FT5X06_VENDOR_ID 0x87
 #define G5_A18_FT5X06_VENDOR_ID 0x79
 #define KTOUCH_W68_FT6X06_VENDOR_ID 0x5a
+#define KTOUCH_5606_FT6X06_VENDOR_ID 0x5a
+#define KTOUCH_W81_FT6X06_VENDOR_ID 0x51
+#define TCL_UP823_FT6206_VENDOR_ID 0x11
 
 #define PROTOCOL_LEN 33
 
@@ -148,8 +152,16 @@ typedef struct
 
 #define TP_MIN_GAP 3
 static int pressure_support;
+static int auto_update_fw;
 static BLOCKING_NOTIFIER_HEAD(touch_key_notifier);
+static int focaltec_fts_ctpm_fw_upgrade(struct i2c_client *client, u8 *pbt_buf,
+			  u32 dw_lenth);
+
 static struct workqueue_struct *synaptics_wq;
+static struct delayed_work ft6x06_firmware_update;
+static struct wake_lock update_wake_lock;
+
+
 static struct i2c_client *ft5306_i2c_client;
 static ST_TOUCH_INFO ft5306_touch_info;
 static ST_TOUCH_POINT ft5306_touch_point[FTS_MAX_FINGER];
@@ -421,7 +433,9 @@ FTS_BOOL byte_read(FTS_BYTE* pbt_buf, FTS_BYTE bt_len)
 
 static unsigned char CTPM_FW[]=
 {
+#if defined(CONFIG_TOUCHSCREEN_HAWAII_GARNET_FT5306_FW)
 	#include "45HD_FT5306_U82_LCID0x87_ver0x10_20130320_app.i"
+#endif
 };
 
 
@@ -567,8 +581,7 @@ E_UPGRADE_ERR_TYPE  fts_ctpm_fw_upgrade(FTS_BYTE* pbt_buf, FTS_DWRD dw_lenth)
 	return ERR_OK;
 }
 
-
-int fts_ctpm_fw_upgrade_with_i_file(void)
+int focaltec_fts_ctpm_fw_upgrade_with_i_file(void)
 {
 	FTS_BYTE*     pbt_buf = FTS_NULL;
 	int i_ret;
@@ -576,13 +589,14 @@ int fts_ctpm_fw_upgrade_with_i_file(void)
 	//=========FW upgrade========================*/
 	pbt_buf = CTPM_FW;
 	/*call the upgrade function*/
-	i_ret =  fts_ctpm_fw_upgrade(pbt_buf,sizeof(CTPM_FW));
+	i_ret =  focaltec_fts_ctpm_fw_upgrade(ft5306_i2c_client, pbt_buf, sizeof(CTPM_FW));
 	if (i_ret != 0) {
-		printk("FT520x upgrade firmware is failed! \r\n");
+		printk(KERN_ERR "FT6x06 upgrade firmware failed! \r\n");
 		return i_ret;
-	} else	{
-		printk("[FTS] upgrade successfully.\n");
-		fts_ctpm_auto_clb();
+	} else {
+		if (NEED_CALIBRATION)
+			fts_ctpm_auto_clb();
+		printk(KERN_INFO "[FT6x06] upgrade successfully.\n");
 	}
 	return i_ret;
 }
@@ -606,28 +620,21 @@ unsigned char fts_ctpm_get_vendor_id(void)
 }
 #endif
 
-int fts_upgrade_firmware(void)
+int focaltec_fts_upgrade_firmware(void)
 {
-	if (fts_ctpm_get_vendor_id() == HAWAII_GARNET_FT5X06_VENDOR_ID) {
-		printk(KERN_INFO "Detected hawaii garnet ft5x06 Touch Pannel\n");
-		if (ft520x_read_fw_ver() < fts_ctpm_get_upg_ver()) {
-			unsigned char ver = 0;
-			ver = ft520x_read_fw_ver();
-			printk(KERN_INFO "ft5306 upgrading fw... before upgrd ver: %x\n", ver);
-			fts_ctpm_fw_upgrade_with_i_file();
-			ver = ft520x_read_fw_ver();
-			printk(KERN_INFO "ft5306 upgrading fw... after upgrd ver: %x\n", ver);
-		} else {
-			printk(KERN_INFO "No need upgrade firmware\n");
-		}
-	} else if (fts_ctpm_get_vendor_id() == 0x5D) {
-		printk(KERN_INFO "Detected BAOMING Optronics Touch Pannel\n");
-	} else {
-		printk(KERN_INFO "UNKNOWN TP or TP absence\n");
-	}
+	unsigned char ver = 0;
+	if (ft520x_read_fw_ver() < fts_ctpm_get_upg_ver()) {
+		ver = ft520x_read_fw_ver();
+		printk(KERN_INFO "ft6x06 upgrading fw... before upgrd ver: %x\n", ver);
+		focaltec_fts_ctpm_fw_upgrade_with_i_file();
+		ver = ft520x_read_fw_ver();
+		printk(KERN_INFO "ft6x06 upgrading fw... after upgrd ver: %x\n", ver);
+	} else
+		printk(KERN_INFO "No need to upgrade firmware\n");
 
-	return 0;
+	return 1;
 }
+
 
 FTS_BYTE bt_parser_std(FTS_BYTE* pbt_buf, FTS_BYTE bt_len, ST_TOUCH_INFO* pst_touch_info)
 {
@@ -998,12 +1005,6 @@ static void focaltech_ft5306_work_func(struct work_struct *work)
 	//ReportFingers(ts, &ft5306_touch_info);
 }
 
-static void focaltech_ft5306_firmware_update_func(void)
-{
-	fts_upgrade_firmware();
-}
-
-
 irqreturn_t focaltech_ft5306_irq_handler(int irq, void *dev_id)
 {
 	struct synaptics_rmi4 *ts = dev_id;
@@ -1160,35 +1161,6 @@ static struct kobj_attribute ft5306_sensitivity_attr = {
 	.store = &ft5306_sensitivity_store,
 };
 
-static ssize_t ft5306_upgrade_fw_show(struct kobject *kobj,
-				   struct kobj_attribute *attr, char *buf)
-{
-	unsigned char ver = 0;
-	ver = ft520x_read_fw_ver();
-	printk(KERN_INFO "ft5306 fw ver show: %x\n", ver);
-	return sprintf(buf, "fw version: %x\n", ver);
-}
-
-ssize_t ft5306_upgrade_fw_store(struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t count)
-{
-	unsigned char ver = 0;
-	ver = ft520x_read_fw_ver();
-	printk(KERN_INFO "ft5306 upgrading fw... before upgrd ver: %x\n", ver);
-	fts_ctpm_fw_upgrade_with_i_file();
-	ver = ft520x_read_fw_ver();
-	printk(KERN_INFO "ft5306 upgrading fw... after upgrd ver: %x\n", ver);
-	return count;
-}
-
-static struct kobj_attribute ft5306_upgrade_fw_attr = {
-	.attr = {
-		.name = "upgradefw",
-		.mode = 0644,
-	},
-	.show = &ft5306_upgrade_fw_show,
-	.store = &ft5306_upgrade_fw_store,
-};
-
 int ft6x06_i2c_Read(struct i2c_client *client, char *writebuf,
 		    int writelen, char *readbuf, int readlen)
 {
@@ -1250,10 +1222,10 @@ static int ft6x06_GetFirmwareSize(char *firmware_name)
 	struct inode *inode;
 	unsigned long magic;
 	off_t fsize = 0;
-	char filepath[128];
+	char filepath[256];
 	memset(filepath, 0, sizeof(filepath));
 
-	sprintf(filepath, "/sdcard/%s", firmware_name);
+	sprintf(filepath, "%s", firmware_name);
 
 	if (NULL == pfile)
 		pfile = filp_open(filepath, O_RDONLY, 0);
@@ -1275,7 +1247,7 @@ static int ft6x06_GetFirmwareSize(char *firmware_name)
 /*
 *read firmware buf for .bin file.
 
-@firmware_name: fireware name
+@firmware_name: fireware name of full path
 @firmware_buf: data buf of fireware
 
 note:the firmware default path is sdcard.
@@ -1288,12 +1260,12 @@ static int ft6x06_ReadFirmware(char *firmware_name,
 	struct inode *inode;
 	unsigned long magic;
 	off_t fsize;
-	char filepath[128];
+	char filepath[256];
 	loff_t pos;
 	mm_segment_t old_fs;
 
 	memset(filepath, 0, sizeof(filepath));
-	sprintf(filepath, "/sdcard/%s", firmware_name);
+	sprintf(filepath, "%s", firmware_name);
 	if (NULL == pfile)
 		pfile = filp_open(filepath, O_RDONLY, 0);
 	if (IS_ERR(pfile)) {
@@ -1314,13 +1286,13 @@ static int ft6x06_ReadFirmware(char *firmware_name,
 	return 0;
 }
 
-static int ft6x06_ctpm_fw_upgrade(struct i2c_client *client, u8 *pbt_buf,
+static int focaltec_fts_ctpm_fw_upgrade(struct i2c_client *client, u8 *pbt_buf,
 			  u32 dw_lenth)
 {
 	u8 reg_val[2] = {0};
 	u32 i = 0;
 	u32 packet_number;
-	u32 j;
+	u32 j = 0;
 	u32 temp;
 	u32 lenght;
 	u8 packet_buf[FTS_PACKET_LENGTH + 6];
@@ -1331,26 +1303,26 @@ static int ft6x06_ctpm_fw_upgrade(struct i2c_client *client, u8 *pbt_buf,
 	for (i = 0; i < FTS_UPGRADE_LOOP; i++) {
 		/*********Step 1:Reset  CTPM *****/
 		/*write 0xaa to register 0xbc */
-		ft520x_write_reg(0xbc, FT_UPGRADE_AA);
+		ft520x_write_reg(FTS_UPGRADE_REG, FT_UPGRADE_AA);
 		msleep(FT6X06_UPGRADE_AA_DELAY);
 
 		/*write 0x55 to register 0xbc */
-		ft520x_write_reg(0xbc, FT_UPGRADE_55);
+		ft520x_write_reg(FTS_UPGRADE_REG, FT_UPGRADE_55);
 
-		msleep(FT6X06_UPGRADE_55_DELAY);
+		msleep(FT6X06_UPGRADE_55_DELAY + i*5);
 
 		/*********Step 2:Enter upgrade mode *****/
 		auc_i2c_write_buf[0] = FT_UPGRADE_55;
 		auc_i2c_write_buf[1] = FT_UPGRADE_AA;
 		do {
-			i++;
+			j++;
 			auc_i2c_write_buf[0] = FT_UPGRADE_55;
 			i_ret = ft6x06_i2c_Write(client, auc_i2c_write_buf, 1);
 			msleep(5);
 			auc_i2c_write_buf[0] = FT_UPGRADE_AA;
 			i_ret = ft6x06_i2c_Write(client, auc_i2c_write_buf, 1);
 			msleep(5);
-		} while (i_ret <= 0 && i < 5);
+		} while (i_ret <= 0 && j < 5);
 
 
 		/*********Step 3:check READ-ID***********************/
@@ -1362,13 +1334,13 @@ static int ft6x06_ctpm_fw_upgrade(struct i2c_client *client, u8 *pbt_buf,
 		ft6x06_i2c_Read(client, auc_i2c_write_buf, 4, reg_val, 2);
 
 
-		if (reg_val[0] == FT6X06_UPGRADE_ID_1
-			&& reg_val[1] == FT6X06_UPGRADE_ID_2) {
+		if (reg_val[0] == FTS_UPGRADE_ID_1
+			&& reg_val[1] == FTS_UPGRADE_ID_2) {
 			DBG("[FTS] Step 3: CTPM ID,ID1 = 0x%x,ID2 = 0x%x\n",
 				reg_val[0], reg_val[1]);
 			break;
 		} else {
-			dev_err(&client->dev, "[FTS] Step 3: CTPM ID,ID1 = 0x%x,ID2 = 0x%x\n",
+			dev_err(&client->dev, "[FTS] Step 3: Retry---CTPM ID,ID1 = 0x%x,ID2 = 0x%x\n",
 				reg_val[0], reg_val[1]);
 		}
 	}
@@ -1468,9 +1440,17 @@ static int ft6x06_ctpm_fw_upgrade(struct i2c_client *client, u8 *pbt_buf,
 	return 0;
 }
 
+static int update_complete = 1;
+static void focaltech_fts_firmware_update_func(void)
+{
+	update_complete = 0;
+	focaltec_fts_upgrade_firmware();
+	wake_unlock(&update_wake_lock);
+	update_complete = 1;
+}
 
 /*
-upgrade with *.bin file
+upgrade with *.bin file with full path firmware_name
 */
 
 int fts_ctpm_fw_upgrade_with_app_file(struct i2c_client *client,
@@ -1500,13 +1480,16 @@ int fts_ctpm_fw_upgrade_with_app_file(struct i2c_client *client,
 		return -EIO;
 	}
 	/*call the upgrade function */
-	i_ret = ft6x06_ctpm_fw_upgrade(client, pbt_buf, fwsize);
+	i_ret = focaltec_fts_ctpm_fw_upgrade(client, pbt_buf, fwsize);
 
 	if (i_ret != 0)
 		dev_err(&client->dev, "%s() - ERROR:[FTS] upgrade failed..\n",
 					__func__);
-	else
-		fts_ctpm_auto_clb();
+	else {
+		if (NEED_CALIBRATION)
+			fts_ctpm_auto_clb();
+		printk(KERN_INFO "[FTS] upgrade successfully.\n");
+	}
 	kfree(pbt_buf);
 
 	return i_ret;
@@ -1526,15 +1509,18 @@ static ssize_t ft6x06_fwupgradeapp_show(struct kobject *kobj,
 ssize_t ft6x06_fwupgradeapp_store(struct kobject *kobj,
 		struct kobj_attribute *attr, const char *buf, size_t count)
 {
-	char fwname[128];
+	char fwname[256];
 
 	struct i2c_client *client = ft5306_i2c_client;
+
+	wake_lock(&update_wake_lock);
 	memset(fwname, 0, sizeof(fwname));
 	sprintf(fwname, "%s", buf);
 	fwname[count - 1] = '\0';
 	disable_irq(client->irq);
 	fts_ctpm_fw_upgrade_with_app_file(client, fwname);
 	enable_irq(client->irq);
+	wake_unlock(&update_wake_lock);
 	return count;
 }
 
@@ -1547,13 +1533,41 @@ static struct kobj_attribute ft6x06_upgrade_app_attr = {
 	.store = &ft6x06_fwupgradeapp_store,
 };
 
+static ssize_t ft5306_upgrade_fw_show(struct kobject *kobj,
+				   struct kobj_attribute *attr, char *buf)
+{
+	unsigned char ver = 0;
+	ver = ft520x_read_fw_ver();
+	printk(KERN_INFO "ft5306 fw ver show: %x\n", ver);
+	return sprintf(buf, "fw version: %x\n", ver);
+}
+
+ssize_t ft5306_upgrade_fw_store(struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t count)
+{
+	unsigned char ver = 0;
+	ver = ft520x_read_fw_ver();
+	printk(KERN_INFO "ft5306 upgrading fw... before upgrd ver: %x\n", ver);
+	focaltec_fts_ctpm_fw_upgrade_with_i_file();
+	ver = ft520x_read_fw_ver();
+	printk(KERN_INFO "ft5306 upgrading fw... after upgrd ver: %x\n", ver);
+	return count;
+}
+
+static struct kobj_attribute ft5306_upgrade_fw_attr = {
+	.attr = {
+		.name = "upgradefw",
+		.mode = 0644,
+	},
+	.show = &ft5306_upgrade_fw_show,
+	.store = &ft5306_upgrade_fw_store,
+};
+
 static ssize_t ft5306_vendor_show(struct kobject *kobj,
 				   struct kobj_attribute *attr, char *buf)
 {
 	unsigned char vendor_id = 0;
 	vendor_id = fts_ctpm_get_vendor_id();
 	printk(KERN_INFO "ft5306 vendor_id is: %x\n", vendor_id);
-
 	if (vendor_id == 0x53)
 		return   sprintf(buf, "%s\n",  "Mutto Optronics") ;
 	else if (vendor_id == 0x5D)
@@ -1566,6 +1580,7 @@ static ssize_t ft5306_vendor_show(struct kobject *kobj,
 		return   sprintf(buf, "%s\n", "FocalTech FT6X06 Ktouch W68");
 	else
 		return   sprintf(buf, "%s\n",  "UNKNOWN");
+
 }
 
 static struct kobj_attribute ft5306_vendor_attr = {
@@ -1595,9 +1610,9 @@ static struct attribute *ft5306_properties_attrs[] = {
 	&ft5306_virtual_keys_attr.attr,
 	&ft5306_sensitivity_attr.attr,
 	&ft5306_min_gap_attr.attr,
-	&ft5306_upgrade_fw_attr.attr,
 	&ft5306_vendor_attr.attr,
 	&ft6x06_upgrade_app_attr.attr,
+	&ft5306_upgrade_fw_attr.attr,
 	NULL
 };
 
@@ -1638,6 +1653,7 @@ static int ts_power(ts_power_status vreg_en)
 			pr_err("Turn off TP (%s)\n", tp_power);
 			regulator_disable(reg);
 		}
+		regulator_put(reg);
 	} else {
 		pr_err("TP Regulator Alloc Failed");
 		return -1;
@@ -1655,7 +1671,7 @@ static int focaltech_ft5306_probe(
 	unsigned char vendor_id = 0;
 	struct synaptics_rmi4 *ts;
 	struct Synaptics_ts_platform_data *pdata;
-	struct device_node *np = client->dev.of_node;
+	struct device_node *np;
 	struct kobject *properties_kobj;
 	ret = -1;
 
@@ -1664,6 +1680,7 @@ static int focaltech_ft5306_probe(
 	    printk(KERN_ERR "ft5306 client null.\n");
 	    goto err_i2c_client_check;
 	}
+	np = client->dev.of_node;
 	ft5306_i2c_client = client;
 	ts = kzalloc(sizeof(struct synaptics_rmi4), GFP_KERNEL);
 	ts->client = client;
@@ -1703,6 +1720,8 @@ static int focaltech_ft5306_probe(
 			ts_y_max_value = val;
 		if (!of_property_read_u32(np, "use-irq", &val))
 			client->irq = val;
+		if (!of_property_read_u32(np, "auto_update_fw", &val))
+			auto_update_fw = val;
 		if (!of_property_read_u32(np, "pressure_support", &val))
 			pressure_support = val;
 		of_property_read_string(np, "power", &tp_power);
@@ -1737,6 +1756,9 @@ static int focaltech_ft5306_probe(
 		vendor_id = fts_ctpm_get_vendor_id();
 		if ((vendor_id != HAWAII_GARNET_FT5X06_VENDOR_ID)
 			&& (vendor_id != G5_A18_FT5X06_VENDOR_ID)
+			&& (vendor_id != KTOUCH_W81_FT6X06_VENDOR_ID)
+			&& (vendor_id != TCL_UP823_FT6206_VENDOR_ID)
+			&& (vendor_id != KTOUCH_5606_FT6X06_VENDOR_ID)
 			&& (vendor_id != KTOUCH_W68_FT6X06_VENDOR_ID)) {
 			if (ts->power) {
 				ts->power(TS_OFF);
@@ -1754,12 +1776,15 @@ static int focaltech_ft5306_probe(
 		Ft5306_Hw_Reset();
 #endif
 		INIT_WORK(&ts->work, focaltech_ft5306_work_func);
-		#if 0
-		{
-			INIT_WORK(&ts->firmware_update_work, focaltech_ft5306_firmware_update_func);
-			queue_work(synaptics_wq, &ts->firmware_update_work);
+
+		if (auto_update_fw) {
+			wake_lock_init(&update_wake_lock, WAKE_LOCK_SUSPEND, "touch");
+			update_complete = 0;
+			INIT_DELAYED_WORK(&ft6x06_firmware_update, focaltech_fts_firmware_update_func);
+			wake_lock(&update_wake_lock);
+			queue_delayed_work(synaptics_wq, &ft6x06_firmware_update, 5*HZ);
 		}
-		#endif
+
 
 #if ENABLE_TP_DIAG
 		INIT_WORK(&ts->diag_work, focaltech_ft5306_diag_work_func);
@@ -1901,7 +1926,8 @@ static int focaltech_ft5306_suspend(struct i2c_client *client, pm_message_t mesg
 {
 	struct synaptics_rmi4 *ts = i2c_get_clientdata(client);
 
-
+	if (!update_complete)
+		return 0;
 	focaltech_ft5306_disable(ts);
 	Ft5306_Enter_Sleep();
 	mdelay(10);
@@ -1915,6 +1941,8 @@ static int focaltech_ft5306_resume(struct i2c_client *client)
 {
 	struct synaptics_rmi4 *ts = i2c_get_clientdata(client);
 
+	if (!update_complete)
+		return 0;
 	Ft5306_Exit_Sleep();
 	mdelay(2);
 	if (ts->power)
