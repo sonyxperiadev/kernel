@@ -23,11 +23,10 @@
 #include "ist30xx.h"
 #include "ist30xx_update.h"
 
-#if IST30XX_INTERNAL_BIN
-#include "ist30xx_fw.h"
-#endif
+/*#include "ist30xx_fw.h"*/
+#include "ist30xx_fw3_2_3.h"
 
-u32 ist30xx_fw_ver = 0;
+u32 ist30xx_fw_ver;
 
 extern struct ist30xx_data *ts_data;
 
@@ -51,7 +50,7 @@ int ist30xx_i2c_transfer(struct i2c_adapter *adap, struct i2c_msg *msgs,
 		max_size = I2C_MAX_READ_SIZE;
 
 	if (max_size == 0) {
-		printk(KERN_ERR "[ TSP ] %s() : transaction size(%d)\n",
+		pr_err("[ TSP ] %s() : transaction size(%d)\n",
 		       __func__, max_size);
 		return -EINVAL;
 	}
@@ -75,7 +74,7 @@ int ist30xx_i2c_transfer(struct i2c_adapter *adap, struct i2c_msg *msgs,
 		}
 		ret = i2c_transfer(adap, msgs, msg_num);
 		if (ret != msg_num) {
-			printk(KERN_ERR " [ TSP ] %s() : i2c_transfer failed(%d), num=%d\n",
+			pr_err("[ TSP ] %s() : i2c_transfer failed(%d), num=%d\n",
 			       __func__, ret, msg_num);
 			break;
 		}
@@ -114,7 +113,8 @@ int ist30xx_read_buf(struct i2c_client *client, u32 cmd, u32 *buf, u16 len)
 		},
 	};
 
-	ret = ist30xx_i2c_transfer(client->adapter, msg, READ_CMD_MSG_LEN, NULL);
+	ret = ist30xx_i2c_transfer(client->adapter,
+		msg, READ_CMD_MSG_LEN, NULL);
 	if (ret != READ_CMD_MSG_LEN)
 		return -EIO;
 
@@ -136,7 +136,8 @@ int ist30xx_write_buf(struct i2c_client *client, u32 cmd, u32 *buf, u16 len)
 
 	if (len > 0) {
 		for (i = 0; i < len; i++)
-			put_unaligned_be32(buf[i], msg_buf + (i * IST30XX_DATA_LEN));
+			put_unaligned_be32(buf[i],
+			msg_buf + (i * IST30XX_DATA_LEN));
 	} else {
 		/* then add dummy data(4byte) */
 		put_unaligned_be32(0, msg_buf);
@@ -148,7 +149,8 @@ int ist30xx_write_buf(struct i2c_client *client, u32 cmd, u32 *buf, u16 len)
 	msg.len = IST30XX_DATA_LEN * len;
 	msg.buf = msg_buf;
 
-	ret = ist30xx_i2c_transfer(client->adapter, &msg, WRITE_CMD_MSG_LEN, cmd_buf);
+	ret = ist30xx_i2c_transfer(client->adapter,
+		&msg, WRITE_CMD_MSG_LEN, cmd_buf);
 	if (ret != WRITE_CMD_MSG_LEN)
 		return -EIO;
 
@@ -347,7 +349,8 @@ int ist30xx_fw_write(struct i2c_client *client, const u8 *buf)
 	while (size > 0) {
 		len = (size >= EEPROM_PAGE_SIZE ? EEPROM_PAGE_SIZE : size);
 
-		ret = ist30xx_write_buf(client, CMD_ENTER_FW_UPDATE, buf32, (len >> 2));
+		ret = ist30xx_write_buf(client,
+			CMD_ENTER_FW_UPDATE, buf32, (len >> 2));
 		if (ret)
 			return ret;
 
@@ -368,13 +371,13 @@ int ist30xx_extra_write(struct i2c_client *client, const u8 *buf, u32 size)
 	struct i2c_msg msg;
 	u8 cmd_buf[IST30XX_ADDR_LEN];
 	u8 *msg_buf;
-	u32 *buf32 = (u32 *)buf;;
+	u32 *buf32 = (u32 *)buf;
 
 	msg_buf = kmalloc(size, GFP_KERNEL);
 	if (msg_buf == NULL)
 		return -ENOMEM;
 
-	len = (size >> 2); // word unit : 4bytes;
+	len = (size >> 2); /*word unit : 4bytes;*/
 	put_unaligned_be32(len, cmd_buf);
 
 	for (i = 0; i < len; i++)
@@ -385,9 +388,11 @@ int ist30xx_extra_write(struct i2c_client *client, const u8 *buf, u32 size)
 	msg.len = size;
 	msg.buf = &msg_buf[0];
 
-	ret = ist30xx_i2c_transfer(client->adapter, &msg, WRITE_CMD_MSG_LEN, cmd_buf);
+	ret = ist30xx_i2c_transfer(client->adapter,
+		&msg, WRITE_CMD_MSG_LEN, cmd_buf);
 	if (ret != WRITE_CMD_MSG_LEN) {
-		printk(KERN_ERR "[ TSP ] %s i2c transfer failed (ret=%d)\n", __func__, ret);
+		pr_err("[ TSP ] %s i2c transfer failed (ret=%d)\n",
+		__func__, ret);
 		kfree(msg_buf);
 		return -EIO;
 	}
@@ -430,25 +435,28 @@ u32 ist30xx_parse_param_ver(int flag, u8 *buf)
 }
 
 
-static int ist30xx_calib_wait(void)
+int calib_ms_delay = WAIT_CALIB_CNT;
+int ist30xx_calib_wait(void)
 {
-	int cnt = WAIT_CALIB_CNT;
+	int cnt = calib_ms_delay;
 
 	ts_data->status.calib = 0;
 	while (cnt-- > 0) {
 		msleep(100);
 
 		if (ts_data->status.calib) {
-			DMSG("[ TSP ] Calibration Status : %d, Max raw gap : %d - (raw: %08x)\n",
-			     CALIB_TO_STATUS(ts_data->status.calib),
-			     CALIB_TO_GAP(ts_data->status.calib), ts_data->status.calib);
+			DMSG(
+				"[ TSP ] Calibration Status : %d, Max raw gap : %d - (raw: %08x)\n",
+			    CALIB_TO_STATUS(ts_data->status.calib),
+			    CALIB_TO_GAP(ts_data->status.calib),
+				ts_data->status.calib);
 
 			return 0;
 		}
 	}
-	DMSG("[ TSP ] Calibration time out\n");
+	pr_err("[ TSP ] Calibration time out\n");
 
-	return -1;
+	return -EPERM;
 }
 
 
@@ -471,14 +479,18 @@ u32 ist30xx_make_checksum(const u8 *buf)
 
 
 struct ist30xx_tags *ts_tags;
-int ist30xx_parse_tags(struct ist30xx_data *data, const u8 *buf, const u32 size)
+int ist30xx_parse_tags(struct ist30xx_data *data,
+		const u8 *buf, const u32 size)
 {
 	int ret = -1;
 
-	ts_tags = (struct ist30xx_tags *)(&buf[size - sizeof(struct ist30xx_tags)]);
+	ts_tags = (struct ist30xx_tags *)
+		(&buf[size - sizeof(struct ist30xx_tags)]);
 
-	if (!strncmp(ts_tags->magic1, IST30XX_TAG_MAGIC, sizeof(ts_tags->magic1))
-	    && !strncmp(ts_tags->magic2, IST30XX_TAG_MAGIC, sizeof(ts_tags->magic2))) {
+	if (!strncmp(ts_tags->magic1, IST30XX_TAG_MAGIC,
+		sizeof(ts_tags->magic1))
+	    && !strncmp(ts_tags->magic2, IST30XX_TAG_MAGIC,
+		sizeof(ts_tags->magic2))) {
 		data->fw.index = ts_tags->fw_addr;
 		data->fw.size = ts_tags->flag_addr - ts_tags->fw_addr +
 				ts_tags->flag_size;
@@ -491,19 +503,23 @@ int ist30xx_parse_tags(struct ist30xx_data *data, const u8 *buf, const u32 size)
 	return ret;
 }
 
-void ist30xx_get_update_info(struct ist30xx_data *data, const u8 *buf, const u32 size)
+void ist30xx_get_update_info(struct ist30xx_data *data,
+	const u8 *buf, const u32 size)
 {
 	int ret;
 
 	ret = ist30xx_parse_tags(data, buf, size);
 	if (ret != TAGS_PARSE_OK) {
-		printk(KERN_ERR "[ TSP ] Cannot find tags of F/W, make a tags by 'tagts.exe'\n");
-		if (size >= IST30XX_EEPROM_SIZE) { // Firmware update
+		pr_err("[ TSP ] Cannot find tags of F/W, make a tags by 'tagts.exe'\n");
+		if (size >= IST30XX_EEPROM_SIZE) {
+			/*Firmware update*/
 			data->fw.index = IST30XX_FW_START_ADDR;
 			data->fw.size = IST30XX_FW_SIZE;
+			data->tags.flag_addr =
+				IST30XX_FW_END_ADDR - IST30XX_FLAG_SIZE;
 			data->tags.flag_size = IST30XX_FLAG_SIZE;
 			data->fw.chksum = ist30xx_make_checksum(buf);
-		} else {                    // Parameters update
+		} else {                    /* Parameters update*/
 			data->tags.cfg_size = IST30XX_CONFIG_SIZE;
 			data->tags.sensor1_size = IST30XX_SENSOR1_SIZE;
 			data->tags.sensor2_size = IST30XX_SENSOR2_SIZE;
@@ -513,13 +529,14 @@ void ist30xx_get_update_info(struct ist30xx_data *data, const u8 *buf, const u32
 
 
 #define update_next_step(ret)   { if (ret) goto end; }
-void ist30xx_fw_update(struct i2c_client *client, const u8 *buf, int size, bool mode)
+int ist30xx_fw_update(struct i2c_client *client,
+	const u8 *buf, int size, bool mode)
 {
 	int ret = 0;
 	u32 val = 0;
 
-	DMSG("[ TSP ] *** F/W update ***\n");
-	DMSG("[ TSP ] F/W ver: %08x, addr: 0x%04x ~ 0x%04x\n",
+	printk(KERN_INFO "[ TSP ] *** F/W update ***\n");
+	printk(KERN_INFO "[ TSP ] F/W ver: %08x, addr: 0x%04x ~ 0x%04x\n",
 	     ist30xx_fw_ver, ts_data->fw.index,
 	     ts_data->fw.index + ts_data->fw.size);
 
@@ -530,56 +547,58 @@ void ist30xx_fw_update(struct i2c_client *client, const u8 *buf, int size, bool 
 	ist30xx_reset();
 
 	if (mode) {     /* ISP Mode */
+			printk(KERN_INFO "[ TSP ] ist30xx_fw_update ISP mode\n");
 		ret = ist30xx_isp_update(client, buf);
 		update_next_step(ret);
 	} else {        /* I2C Mode */
-		ret = ist30xx_write_cmd(client, CMD_ENTER_FW_UPDATE, 0);
+		DMSG("[ TSP ] by ISP Mode\n");
+		ret = ist30xx_cmd_update(client, CMD_ENTER_FW_UPDATE);
 		update_next_step(ret);
-		msleep(10);
 
 		ret = ist30xx_fw_write(client, buf);
 		update_next_step(ret);
 	}
 	msleep(50);
-	ist30xx_reset();
 
 	buf += IST30XX_EEPROM_SIZE;
 	size -= IST30XX_EEPROM_SIZE;
 
-	ret = ist30xx_write_cmd(client, CMD_RUN_DEVICE, 0);
+	ret = ist30xx_cmd_run_device(client);
 	update_next_step(ret);
-	msleep(10);
 
 	ret = ist30xx_read_cmd(client, CMD_GET_CHECKSUM, &val);
 	if ((ret) || (val != ts_data->fw.chksum))
 		goto end;
-	msleep(20);
 
-	ret = ist30xx_write_cmd(client, CMD_CALIBRATE, 0);
+	ret = ist30xx_cmd_calibrate(client);
 	update_next_step(ret);
-	msleep(10);
 
 	if (ist30xx_fw_ver < IST30XX_FW_VER3) {
 		size -= sizeof(struct ist30xx_tags);
 		ret = ist30xx_extra_write(client, buf, size);
+		update_next_step(ret);
 	}
 
 end:
+	if (ret) {
+		pr_err("[ TSP ] F/W update Fail!, ret=%d", ret);
+	} else if (val != ts_data->fw.chksum) {
+		pr_err("[ TSP ] Error CheckSum: 0x%08x, 0x%08x\n",
+		       ts_data->fw.chksum, val);
+		ret = -ENOEXEC;
+	}
+
 	ist30xx_enable_irq(ts_data);
 
-	ist30xx_calib_wait();
-
-	if (ret)
-		printk(KERN_ERR "[ TSP ] F/W update Fail!, ret=%d", ret);
-	else if (val != ts_data->fw.chksum)
-		printk(KERN_ERR "[ TSP ] Error CheckSum: 0x%08x, 0x%08x\n",
-		       ts_data->fw.chksum, val);
+	ret = ist30xx_calib_wait();
 
 	ts_data->status.fw_update = 2;
+
+	return ret;
 }
 
 
-void ist30xx_param_update(struct i2c_client *client, const u8 *buf, int size)
+int ist30xx_param_update(struct i2c_client *client, const u8 *buf, int size)
 {
 	int ret;
 	u32 val, ver;
@@ -591,11 +610,9 @@ void ist30xx_param_update(struct i2c_client *client, const u8 *buf, int size)
 	DMSG("[ TSP ] *** Parameters update ***\n");
 
 	ist30xx_disable_irq(ts_data);
-	ist30xx_reset();
 
-	ret = ist30xx_write_cmd(client, CMD_RUN_DEVICE, 0);
+	ret = ist30xx_cmd_run_device(client);
 	update_next_step(ret);
-	msleep(10);
 
 	/* Compare F/W version */
 	ret = ist30xx_read_cmd(client, CMD_GET_FW_VER, &ver);
@@ -603,17 +620,14 @@ void ist30xx_param_update(struct i2c_client *client, const u8 *buf, int size)
 
 	val = ist30xx_parse_fw_ver(PARSE_FLAG_PARAM, buf);
 	if ((val & MASK_FW_VER) != (ver & MASK_FW_VER)) {
-		printk(KERN_ERR "[ TSP ] Fail, F/W ver check. 0x%04x -> 0x%04x\n",
+		pr_err("[ TSP ] Fail, F/W ver check. 0x%04x -> 0x%04x\n",
 		       ver, val);
 		goto end;
 	}
 	ist30xx_fw_ver = val;
 
-	msleep(10);
-
-	ret = ist30xx_write_cmd(client, CMD_ENTER_UPDATE, 0);
+	ret = ist30xx_cmd_update(client, CMD_ENTER_UPDATE);
 	update_next_step(ret);
-	msleep(10);
 
 	/* update config */
 	len = (ts_data->tags.cfg_size >> 2);
@@ -633,18 +647,16 @@ void ist30xx_param_update(struct i2c_client *client, const u8 *buf, int size)
 	param += len;
 	size -= (len << 2);
 
-	ret = ist30xx_write_cmd(client, CMD_EXIT_UPDATE, 0);
+	ret = ist30xx_cmd_update(client, CMD_EXIT_UPDATE);
 	update_next_step(ret);
 	msleep(120);
 
-	ret = ist30xx_write_cmd(client, CMD_RUN_DEVICE, 0);
+	ret = ist30xx_cmd_run_device(client);
 	update_next_step(ret);
-	msleep(10);
 
 	/* update auto calibration code */
-	ret = ist30xx_write_cmd(client, CMD_CALIBRATE, 0);
+	ret = ist30xx_cmd_calibrate(client);
 	update_next_step(ret);
-	msleep(10);
 
 	if (ist30xx_fw_ver < IST30XX_FW_VER3) {
 		buf = (u8 *)param;
@@ -653,71 +665,121 @@ void ist30xx_param_update(struct i2c_client *client, const u8 *buf, int size)
 	}
 
 end:
+	if (size < 0)
+		pr_err("[ TSP ] Param update_fail, size=%d\n", size);
+	else if (ret)
+		pr_err("[ TSP ] Param update_fail, ret=%d\n", ret);
+
 	ist30xx_enable_irq(ts_data);
 
-	ist30xx_calib_wait();
-
-	if (size < 0)
-		printk(KERN_ERR "[ TSP ] Param update_fail, size=%d\n", size);
-	else if (ret)
-		printk(KERN_ERR "[ TSP ] Param update_fail, ret=%d\n", ret);
+	ret = ist30xx_calib_wait();
 
 	ts_data->status.fw_update = 2;
+
+	return ret;
 }
 
+
+int ist30xx_get_ic_fw_ver(void)
+{
+	return ist30xx_parse_param_ver(PARSE_FLAG_PARAM, ist30xx_param);
+
+}
 
 #if IST30XX_INTERNAL_BIN
 int ist30xx_auto_fw_update(struct ist30xx_data *data)
 {
+	int ret = 0;
+	int retry = IST30XX_FW_UPDATE_RETRY;
 	bool isp_mode = false;
-
-	if ((data->fw.ver > 0) && (data->fw.ver < 0xFFFFFFFF)) {
-		ist30xx_fw_ver = ist30xx_parse_fw_ver(PARSE_FLAG_FW, ist30xx_fw);
+	printk(KERN_INFO "[TSP]ist30xx_auto_fw_update\n");
+	ist30xx_get_update_info(data, ist30xx_fw, sizeof(ist30xx_fw));
+	if ((data->fw.ver != 0) && (data->fw.ver != 0xFFFFFFFF)) {
+		ist30xx_fw_ver =
+			ist30xx_parse_fw_ver(PARSE_FLAG_FW, ist30xx_fw);
 		if (data->fw.ver >= ist30xx_fw_ver)
-			return -EPERM;
+			return 0;
 	}
 
 	DMSG("[ TSP ] F/W version is new. 0x%08x -> 0x%08x\n",
 	     data->fw.ver, ist30xx_fw_ver);
 
-	ist30xx_get_update_info(data, ist30xx_fw, sizeof(ist30xx_fw));
-
 	mutex_lock(&ist30xx_mutex);
-	ist30xx_fw_update(data->client, ist30xx_fw, sizeof(ist30xx_fw), isp_mode);
+	while (retry--) {
+		ret = ist30xx_fw_update(data->client,
+			ist30xx_fw, sizeof(ist30xx_fw),
+			isp_mode);
+		if (!ret)
+			break;
+	}
 	mutex_unlock(&ist30xx_mutex);
 
-	return 0;
+	return ret;
 }
 
 
 int ist30xx_auto_param_update(struct ist30xx_data *data)
 {
+	int ret = 0;
 	u32 val = 0;
 
+	ist30xx_get_update_info(data, ist30xx_fw, sizeof(ist30xx_fw));
 	if ((data->param_ver > 0) && (data->param_ver < 0xFFFFFFFF)) {
 		val = ist30xx_parse_param_ver(PARSE_FLAG_PARAM, ist30xx_param);
 		if (data->param_ver >= val)
-			return -EPERM;
+			return 0;
 	}
 
 	DMSG("[ TSP ] Param version is new. 0x%04x -> 0x%04x\n",
 	     data->param_ver, val);
 
-	ist30xx_get_update_info(data, ist30xx_fw, sizeof(ist30xx_fw));
 	mutex_lock(&ist30xx_mutex);
-	ist30xx_param_update(data->client, ist30xx_param, sizeof(ist30xx_param));
+	ret = ist30xx_param_update(data->client,
+		ist30xx_param, sizeof(ist30xx_param));
 	mutex_unlock(&ist30xx_mutex);
 
-	return 0;
+	return ret;
+}
+
+int ist30xx_force_fw_update(struct ist30xx_data *data)
+{
+	int ret = 0;
+	int retry = IST30XX_FW_UPDATE_RETRY;
+	bool isp_mode = false;
+
+	mutex_lock(&ist30xx_mutex);
+	while (retry--) {
+		ret = ist30xx_fw_update(data->client,
+			ist30xx_fw, sizeof(ist30xx_fw),
+			isp_mode);
+		if (!ret)
+			break;
+	}
+	mutex_unlock(&ist30xx_mutex);
+
+	return ret;
 }
 #endif
 
+int ist30xx_force_param_update(struct ist30xx_data *data)
+{
+	int ret = 0;
+	u32 val = 0;
+
+	mutex_lock(&ist30xx_mutex);
+	ret = ist30xx_param_update(data->client,
+		ist30xx_param, sizeof(ist30xx_param));
+	mutex_unlock(&ist30xx_mutex);
+
+	return ret;
+}
 
 /* sysfs: /sys/class/touch/firmware/firmware */
 ssize_t ist30xx_fw_store(struct device *dev, struct device_attribute *attr,
 			 const char *buf, size_t size)
 {
 	int ret;
+	int retry = IST30XX_FW_UPDATE_RETRY;
 	bool isp_mode = false;
 	int fw_size = 0;
 	u8 *fw = NULL;
@@ -727,10 +789,11 @@ ssize_t ist30xx_fw_store(struct device *dev, struct device_attribute *attr,
 	unsigned long mode = simple_strtoul(buf, &tmp, 10);
 
 	if (mode == MASK_UPDATE_ISP || mode == MASK_UPDATE_FW) {
-		ret = request_firmware(&request_fw, IST30XX_FW_NAME, &ts_data->client->dev);
+		ret = request_firmware(&request_fw,
+			IST30XX_FW_NAME, &ts_data->client->dev);
 		if (ret) {
-			printk(KERN_ERR "[ TSP ] File not found, %s\n", IST30XX_FW_NAME);
-			return 0;
+			pr_err("[ TSP ] File not found, %s\n", IST30XX_FW_NAME);
+			return size;
 		}
 		fw = (u8 *)request_fw->data;
 		fw_size = (u32)request_fw->size;
@@ -740,15 +803,19 @@ ssize_t ist30xx_fw_store(struct device *dev, struct device_attribute *attr,
 		fw = (u8 *)ist30xx_fw;
 		fw_size = sizeof(ist30xx_fw);
 #else
-		return 0;
+		return size;
 #endif
 	}
 
-	ist30xx_fw_ver = ist30xx_parse_fw_ver(PARSE_FLAG_FW, fw);
 	ist30xx_get_update_info(ts_data, fw, fw_size);
+	ist30xx_fw_ver = ist30xx_parse_fw_ver(PARSE_FLAG_FW, fw);
 
 	mutex_lock(&ist30xx_mutex);
-	ist30xx_fw_update(ts_data->client, fw, fw_size, isp_mode);
+	while (retry--) {
+		ret = ist30xx_fw_update(ts_data->client, fw, fw_size, isp_mode);
+		if (!ret)
+			break;
+	}
 	ist30xx_init_touch_driver(ts_data);
 	mutex_unlock(&ist30xx_mutex);
 
@@ -768,7 +835,8 @@ ssize_t ist30xx_fw_status(struct device *dev, struct device_attribute *attr,
 		count = sprintf(buf, "Downloading\n");
 		break;
 	case 2:
-		count = sprintf(buf, "Update success, ver %x -> %x, status : %d, gap : %d\n",
+		count = sprintf(buf,
+				"Update success, ver %x -> %x, status : %d, gap : %d\n",
 				ts_data->fw.pre_ver, ts_data->fw.ver,
 				CALIB_TO_STATUS(ts_data->status.calib),
 				CALIB_TO_GAP(ts_data->status.calib));
@@ -787,8 +855,9 @@ ssize_t ist30xx_fw_version(struct device *dev, struct device_attribute *attr,
 {
 	int count;
 
-	count = sprintf(buf, "IST30XX id: 0x%x, f/w ver: 0x%x, param ver: 0x%x\n",
-			ts_data->chip_id, ts_data->fw.ver, ts_data->param_ver);
+	count = sprintf(buf,
+		"IST30XX id: 0x%x, f/w ver: 0x%x, param ver: 0x%x\n",
+		ts_data->chip_id, ts_data->fw.ver, ts_data->param_ver);
 	return count;
 }
 
@@ -806,10 +875,12 @@ ssize_t ist30xx_param_store(struct device *dev, struct device_attribute *attr,
 
 	mode = simple_strtoul(buf, &tmp, 10);
 	if (mode == MASK_UPDATE_BIN) {
-		ret = request_firmware(&request_fw, IST30XX_PARAM_NAME, &ts_data->client->dev);
+		ret = request_firmware(&request_fw,
+			IST30XX_PARAM_NAME, &ts_data->client->dev);
 		if (ret) {
-			printk(KERN_ERR "[ TSP ] File not found, %s\n", IST30XX_PARAM_NAME);
-			return 0;
+			pr_err("[ TSP ] File not found, %s\n",
+				IST30XX_PARAM_NAME);
+			return size;
 		}
 		param = (u8 *)request_fw->data;
 		param_size = (u32)request_fw->size;
@@ -818,7 +889,7 @@ ssize_t ist30xx_param_store(struct device *dev, struct device_attribute *attr,
 		param = (u8 *)ist30xx_param;
 		param_size = (u32)sizeof(ist30xx_param);
 #else
-		return 0;
+		return size;
 #endif
 	}
 
@@ -851,24 +922,26 @@ int ist30xx_init_update_sysfs(void)
 	ist30xx_class = class_create(THIS_MODULE, "touch");
 
 	/* /sys/class/touch/firmware */
-	ist30xx_fw_dev = device_create(ist30xx_class, NULL, 0, NULL, "firmware");
+	ist30xx_fw_dev = device_create(ist30xx_class,
+		NULL, 0, NULL, "firmware");
 
 	/* /sys/class/touch/firmwware/firmware */
 	if (device_create_file(ist30xx_fw_dev, &dev_attr_firmware) < 0)
-		printk(KERN_ERR "[ TSP ] Failed to create device file(%s)!\n",
+		pr_err("[ TSP ] Failed to create device file(%s)!\n",
 		       dev_attr_firmware.attr.name);
 
 	/* /sys/class/touch/firmware/version */
 	if (device_create_file(ist30xx_fw_dev, &dev_attr_version) < 0)
-		printk(KERN_ERR "[ TSP ] Failed to create device file(%s)!\n",
+		pr_err("[ TSP ] Failed to create device file(%s)!\n",
 		       dev_attr_version.attr.name);
 
 	/* /sys/class/touch/parameters */
-	ist30xx_param_dev = device_create(ist30xx_class, NULL, 0, NULL, "parameters");
+	ist30xx_param_dev = device_create(ist30xx_class,
+		NULL, 0, NULL, "parameters");
 
 	/* /sys/class/touch/parameters/param */
 	if (device_create_file(ist30xx_param_dev, &dev_attr_param) < 0)
-		printk(KERN_ERR "[ TSP ] Failed to create device file(%s)!\n",
+		pr_err("[ TSP ] Failed to create device file(%s)!\n",
 		       dev_attr_param.attr.name);
 
 	return 0;

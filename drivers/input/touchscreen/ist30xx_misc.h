@@ -26,6 +26,46 @@
 #define IST30XX_RX_CNT_ADDR         (0x20000038)
 #define IST30XX_CONFIG_ADDR         (0x20000040)
 
+struct TSP_CH_INFO {
+	u8	x;
+	u8	y;
+};
+struct TSP_FRAME_BUF {
+	u16 **raw;
+	u16 **base;
+	u16 **filter;
+	u16	min_raw;
+	u16	max_raw;
+	u16	min_base;
+	u16	max_base;
+	u16	int_len;
+	u16	mod_len;
+};
+struct TSP_DIRECTION {
+	bool	txch_y;
+	u8	swap_xy;
+	u8	flip_x;
+	u8	flip_y;
+};
+typedef struct _TSP_INFO {
+	struct TSP_CH_INFO	mod;
+	struct TSP_CH_INFO	intl;
+	struct TSP_DIRECTION	dir;
+	struct TSP_FRAME_BUF	buf;
+	int			height;
+	int			width;
+} TSP_INFO;
+typedef struct _TKEY_INFO {
+	bool	enable;
+	bool	tx_line;
+	u8	axis_chnum;
+	u8	ch_num[5];
+} TKEY_INFO;
+
+int ist30xx_enter_debug_mode(void);
+int ist30xx_parse_tsp_node(u16 *raw_buf, u16 *base_buf);
+int ist30xx_read_tsp_node(u16 *raw_buf, u16 *base_buf);
+
 int ist30xx_init_misc_sysfs(void);
 
-#endif  // __IST30XX_MISC_H__
+#endif  /*__IST30XX_MISC_H__*/
