@@ -148,7 +148,13 @@
 		compatible = "bcm,bcm_keypad" ;
 		reg = <0x35003800 0x800>;
 	};
+
 	kona-fb {
+		compatible = "bcm,kona-fb";
+		reg = <0x3c200000 0x1000>;
+	};
+
+	kona-fb-2 {
 		compatible = "bcm,kona-fb";
 		reg = <0x3c200000 0x1000>;
 	};

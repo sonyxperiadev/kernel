@@ -198,7 +198,6 @@
 		module-name = "SIMULATOR";
 		reg-name = "cam2";
 		rst-gpio = <22>;
-		detect-gpio = <10>;
 		rst-setup = <5>;	/* 5us */
 		rst-pulse = <15>;	/* 15us */
 		rst-hold = <10000>;	/* 10ms */
@@ -214,7 +213,6 @@
 		iovmm = <&iovmm_mm>;
 		rotation = <0>;
 	};
-
 
 	tmon@0x34008000 {
 		compatible = "bcm,tmon";

@@ -103,6 +103,12 @@
 		reg = <0x3c200000 0x1000>;
 	};
 
+	kona-fb-2 {
+		compatible = "bcm,kona-fb";
+		reg = <0x3c200000 0x1000>;
+	};
+
+
 	iommu-mm {
 		compatible = "bcm,iommu-m4u";
 		interrupts = <0 181 0>;

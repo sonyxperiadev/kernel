@@ -27,6 +27,7 @@ struct hw_rst_info {
 
 struct hw_detect_info {
 	uint32_t gpio;	/* gpio number */
+	bool gpio_val;	/* low or high */
 	bool active;/* low or high */
 };
 

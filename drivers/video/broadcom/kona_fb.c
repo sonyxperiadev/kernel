@@ -847,10 +847,10 @@ static struct kona_fb_platform_data * __init get_of_data(struct device_node *np)
 
 	if (of_property_read_string(np,	"module-name", &str))
 		goto of_fail;
-
 	if (unlikely(strlen(str) > DISPDRV_NAME_SZ))
 		goto of_fail;
 	strcpy(fb_data->name, str);
+
 	if (of_property_read_string(np, "reg-name", &str))
 		goto of_fail;
 	if (unlikely(strlen(str) > DISPDRV_NAME_SZ))
@@ -879,18 +879,20 @@ static struct kona_fb_platform_data * __init get_of_data(struct device_node *np)
 		goto of_fail;
 	fb_data->rotation = val;
 
-#if (defined(CONFIG_MACH_HAWAII_GARNET_EDN010) || \
-	defined(CONFIG_MACH_HAWAII_GARNET_EDN020) || \
-	defined(CONFIG_MACH_JAVA_SS_EVAL_REV00) || \
-	defined(CONFIG_MACH_JAVA_GARNET_EDN000) || \
-	defined(CONFIG_MACH_JAVA_GARNET_C_EDN000))
-	if (of_property_read_u32(np, "detect-gpio", &val))
-		goto of_fail;
-	fb_data->detect.gpio = val;
-	fb_data->detect.active = gpio_get_value(fb_data->detect.gpio);
-	if (fb_data->detect.active)
-		strcpy(fb_data->name, "OTM8018B");
-#endif
+	if (!(of_property_read_u32(np, "detect-gpio", &val))) {
+		fb_data->detect.gpio = val;
+		if (of_property_read_u32(np, "detect-gpio-val", &val))
+			goto of_fail;
+		fb_data->detect.gpio_val = val;
+
+		fb_data->detect.active = gpio_get_value(fb_data->detect.gpio);
+		if (fb_data->detect.active != fb_data->detect.gpio_val) {
+			konafb_error("gpio %d value failed for panel %s\n",
+					fb_data->detect.gpio, fb_data->name);
+			goto of_fail;
+		}
+	}
+
 	if (of_property_read_bool(np, "vmode"))
 		fb_data->vmode = true;
 	else

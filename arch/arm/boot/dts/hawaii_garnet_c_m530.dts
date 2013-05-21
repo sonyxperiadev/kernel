@@ -269,6 +269,34 @@
 		reg-name = "cam2";
 		rst-gpio = <22>;
 		detect-gpio = <10>;
+		detect-gpio-val = <0>;
+		rst-setup = <700>;	/* 700us */
+		rst-pulse = <1000>;	/* 1ms */
+		rst-hold = <100000>;	/* 100ms */
+		col-mod-i = <3>;
+		col-mod-o = <2>;
+		width = <480>;
+		height = <800>;
+		/* rst-active-high */	/* Commented => Active Low */
+		vmode;
+		/* vburst */	/* Non-burst mode */
+		/* te-ctrl; */		/* Tearing Effect Control disabled */
+		fps = <60>;
+		lanes = <2>;
+		cmnd-LP;		/* Commands in LP mode*/
+		hs-bitrate = <330000000>;
+		lp-bitrate = <5000000>;	/* 5mbps */
+		iommu = <&iommu_mm>;
+		iovmm = <&iovmm_mm>;
+		rotation = <0>;
+	};
+
+	kona-fb-2 {
+		module-name = "OTM8018B";
+		reg-name = "cam2";
+		rst-gpio = <22>;
+		detect-gpio = <10>;
+		detect-gpio-val = <1>;
 		rst-setup = <700>;	/* 700us */
 		rst-pulse = <1000>;	/* 1ms */
 		rst-hold = <100000>;	/* 100ms */
