@@ -147,6 +147,14 @@ choice
 		Garnet
 		edn020
 
+	config MACH_HAWAII_GARNET_EDN020_SINGLESIM
+	bool "GARNET EDN020 SingleSime"
+	help
+	  Support for
+		Hawaii based
+		Garnet
+		edn020
+
 	config MACH_HAWAII_GARNET_C_A18
 	bool "GARNET A18"
 	help
