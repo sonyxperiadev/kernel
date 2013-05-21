@@ -1081,6 +1081,11 @@ static int MiscCtrlInfo(struct snd_kcontrol *kcontrol,
 		uinfo->value.integer.min = 0;
 		uinfo->value.integer.max = 2;
 		break;
+	case CTL_FUNCTION_COMMIT_AUD_PROFILE:
+		uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
+		uinfo->count = 1;
+		uinfo->value.integer.min = 0;
+		break;
 	default:
 		aWarn("%s, Unexpected function code %d\n",
 			  __func__, function);
@@ -1206,6 +1211,9 @@ static int MiscCtrlGet(struct snd_kcontrol *kcontrol,
 		ucontrol->value.integer.value[0] = pChip->i32CurApp;
 		break;
 	case CTL_FUNCTION_APP_RMV:
+		/* don't need to do anything */
+		break;
+	case CTL_FUNCTION_COMMIT_AUD_PROFILE:
 		/* don't need to do anything */
 		break;
 	case CTL_FUNCTION_AMP_CTL:
@@ -1771,6 +1779,16 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 			&ctl_parm.parm_rmapp,
 			NULL, 0);
 		break;
+	case CTL_FUNCTION_COMMIT_AUD_PROFILE:
+		aTrace(LOG_ALSA_INTERFACE,
+				"CTL_FUNCTION_COMMIT_AUD_PROFILE ");
+
+		/*Set the audio profile based on the existing
+			app profile and the audio mode*/
+		AUDIO_Ctrl_Trigger(ACTION_AUD_CommitAudioProfile,
+			NULL,
+			NULL, 0);
+		break;
 	case CTL_FUNCTION_AMP_CTL:
 		aTrace(LOG_ALSA_INTERFACE,
 		       "CTL_FUNCTION_AMP_CTL curAmpStatus =%d, newAmpStatus=%d",
@@ -2199,6 +2217,9 @@ static struct snd_kcontrol_new sgSndCtrls[] __devinitdata = {
 	BRCM_MIXER_CTRL_MISC(0, 0, "AMP-CTL", 0,
 			     CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_MISC, 1,
 				 CTL_FUNCTION_AMP_CTL)),
+	BRCM_MIXER_CTRL_MISC(0, 0, "COMMIT-AUD-PROFILE", 0,
+				CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_MISC, 1,
+				CTL_FUNCTION_COMMIT_AUD_PROFILE)),
 };
 
 #define	MAX_CTL_NUMS	161

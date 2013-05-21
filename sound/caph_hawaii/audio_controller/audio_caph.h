@@ -110,6 +110,7 @@ enum __BRCM_AUDIO_ACTION_en_t {
 	ACTION_AUD_CfgSSP,
 	ACTION_AUD_HwCtl,
 	ACTION_AUD_AtCtl,
+	ACTION_AUD_CommitAudioProfile,
 	ACTION_AUD_TOTAL
 };
 #define BRCM_AUDIO_ACTION_en_t enum __BRCM_AUDIO_ACTION_en_t

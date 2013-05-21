@@ -1347,6 +1347,17 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 		}
 		break;
 
+	case ACTION_AUD_CommitAudioProfile:
+		{
+			aTrace(LOG_AUDIO_CNTLR,
+				"AUDIO_Ctrl_Process ACTION_AUD_CommitAudioProfile:Mode=%d, app=%d\n",
+				AUDCTRL_GetAudioMode(), AUDCTRL_GetAudioApp());
+
+			AUDCTRL_SetAudioMode(AUDCTRL_GetAudioMode(),
+					AUDCTRL_GetAudioApp());
+		}
+		break;
+
 	case ACTION_AUD_SetHWLoopback:
 		{
 			BRCM_AUDIO_Param_Loopback_t *parm_loop =
