@@ -326,7 +326,7 @@ int suspend_sys_sync_wait(void)
 
 	sys_sync.timer.function = sys_sync_handler;
 	sys_sync.timer.data = (unsigned long)&sys_sync;
-	sys_sync.timer.expires = SUSPEND_SYS_SYNC_TIMEOUT;
+	sys_sync.timer.expires = jiffies + SUSPEND_SYS_SYNC_TIMEOUT;
 
 	if (atomic_read(&sys_sync_count) != 0) {
 		add_timer(&sys_sync.timer);
