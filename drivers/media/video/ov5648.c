@@ -34,6 +34,7 @@
 #endif
 
 /* #define OV5648_DEBUG */
+/* #define OV5648_DEBUG_PRINT */
 
 /* OV5648 has only one fixed colorspace per pixelcode */
 struct ov5648_datafmt {
@@ -157,7 +158,7 @@ struct ov5648 {
 	 * focus_status = 0 focus cancelled or not focusing
 	 */
 	atomic_t focus_status;
-	int delay_count;
+	int aecpos_delay;
 #define EXP_DELAY_MAX 8
 #define GAIN_DELAY_MAX 8
 #define LENS_READ_DELAY 4
@@ -293,10 +294,12 @@ static const struct ov5648_reg ov5648_regtbl[OV5648_MODE_MAX][256] = {
 	{0x4001, 0x02},
 	{0x4002, 0x45},
 	{0x4004, 0x02},
-	{0x4005, 0x18},
+	{0x4005, 0x1a},
 	{0x4006, 0x08},
 	{0x4007, 0x10},
 	{0x4008, 0x00},
+	{0x4050, 0x6e},
+	{0x4051, 0x8f},
 	{0x4300, 0xf8},
 	{0x4303, 0xff},
 	{0x4304, 0x00},
@@ -319,7 +322,7 @@ static const struct ov5648_reg ov5648_regtbl[OV5648_MODE_MAX][256] = {
 	{0x5b02, 0x00},
 	{0x5b03, 0xf0},
 	{0x4800, 0x24},
-	{0x3503, 0x13},
+	{0x3503, 0x03},
 	{0x5000, 0Xff},
 	{0x5001, 0X00},
 
@@ -432,10 +435,12 @@ static const struct ov5648_reg ov5648_regtbl[OV5648_MODE_MAX][256] = {
 	{0x4001, 0x02},
 	{0x4002, 0x45},
 	{0x4004, 0x02},
-	{0x4005, 0x18},
+	{0x4005, 0x1a},
 	{0x4006, 0x08},
 	{0x4007, 0x10},
 	{0x4008, 0x00},
+	{0x4050, 0x6e},
+	{0x4051, 0x8f},
 	{0x4300, 0xf8},
 	{0x4303, 0xff},
 	{0x4304, 0x00},
@@ -458,7 +463,7 @@ static const struct ov5648_reg ov5648_regtbl[OV5648_MODE_MAX][256] = {
 	{0x5b02, 0x00},
 	{0x5b03, 0xf0},
 	{0x4800, 0x24},
-	{0x3503, 0x13},
+	{0x3503, 0x03},
 	{0x5000, 0Xff},
 	{0x5001, 0X00},
 
@@ -571,10 +576,12 @@ static const struct ov5648_reg ov5648_regtbl[OV5648_MODE_MAX][256] = {
 	{0x4001, 0x02},
 	{0x4002, 0x45},
 	{0x4004, 0x04},
-	{0x4005, 0x18},
+	{0x4005, 0x1a},
 	{0x4006, 0x08},
 	{0x4007, 0x10},
 	{0x4008, 0x00},
+	{0x4050, 0x6e},
+	{0x4051, 0x8f},
 	{0x4300, 0xf8},
 	{0x4303, 0xff},
 	{0x4304, 0x00},
@@ -597,7 +604,7 @@ static const struct ov5648_reg ov5648_regtbl[OV5648_MODE_MAX][256] = {
 	{0x5b02, 0x00},
 	{0x5b03, 0xf0},
 	{0x4800, 0x24},
-	{0x3503, 0x13},
+	{0x3503, 0x03},
 	{0x5000, 0Xff},
 	{0x5001, 0X00},
 
@@ -641,7 +648,7 @@ static const struct ov5648_reg ov5648_regdif[OV5648_MODE_MAX][32] = {
 	{0xFFFF, 0x00}
 	},
 	{
-	/* to 1280x960P30 */
+	/* to 1280x960P30       */
 	{0x301a, 0xf1},
 	{0x3708, 0x66},
 	{0x3709, 0x52},
@@ -675,7 +682,7 @@ static const struct ov5648_reg ov5648_regdif[OV5648_MODE_MAX][32] = {
 	{0xFFFF, 0x00}
 	},
 	{
-	/* to 2592x1944P15 */
+	/* to 2592x1944P15       */
 	{0x301a, 0xf1},
 	{0x3708, 0x63},
 	{0x3709, 0x12},
@@ -712,15 +719,14 @@ static const struct ov5648_reg ov5648_regdif[OV5648_MODE_MAX][32] = {
 
 static const struct ov5648_reg ov5648_reg_state[OV5648_STATE_MAX][3] = {
 	{ /* to power down */
-	{0x0100, 0x00}, /* disable streaming */
-	{0x3018, 0x5c}, /* disable mipi */
+	{0x0100, 0x00},	       /* disable streaming  */
+	{0x3018, 0x5c},        /* disable mipi */
 
 	{0xFFFF, 0x00}
 	},
 	{ /* to streaming */
-	{0x3018, 0x4c}, /* enable mipi */
-	{0x0100, 0x01}, /* enable streaming */
-
+	{0x3018, 0x4c},         /* enable mipi */
+	{0x0100, 0x01},		/* enable streaming */
 	{0xFFFF, 0x00}
 	},
 };
@@ -1004,10 +1010,7 @@ static int ov5648_reglist_compare(struct i2c_client *client,
 		err |=
 			ov5648_reg_read(client, reglist[index].reg,
 				&reg);
-		if (reglist[index].val != reg) {
-			pr_debug("reg err:reg=0x%x val=0x%x rd=0x%x",
-				reglist[index].reg, reglist[index].val, reg);
-		}
+		pr_debug("[0x%04x]=0x%02x", reglist[index].reg, reg);
 		/*  Check for Pause condition */
 		if ((reglist[index + 1].reg == 0xFFFF)
 			&& (reglist[index + 1].val != 0)) {
@@ -1157,7 +1160,7 @@ static int ov5648_calc_gain(struct i2c_client *client, int gain_value,
 /*
  *setup the sensor analog gain on requested gain value 8.8 linear scale.
 */
-#define GAIN_HIST_MAX 4
+#define GAIN_HIST_MAX 0
 static int ov5648_set_gain(struct i2c_client *client, int gain_value)
 {
 	struct ov5648 *ov5648 = to_ov5648(client);
@@ -1204,8 +1207,8 @@ static int ov5648_get_gain(struct i2c_client *client,
 	ov5648_reg_read_multi(client, OV5648_REG_AGC_HI, gain_buf, 2);
 	gain_code = ((gain_buf[0] & 0x3f) << 8) + gain_buf[1];
 
-	if (ov5648->delay_count > 0) {
-		ov5648->gain_read_buf[ov5648->delay_count] = gain_code;
+	if (ov5648->aecpos_delay > 0) {
+		ov5648->gain_read_buf[ov5648->aecpos_delay] = gain_code;
 		gain_code = ov5648->gain_read_buf[0];
 		for (i = 0; i < GAIN_DELAY_MAX-1; i++)
 			ov5648->gain_read_buf[i] = ov5648->gain_read_buf[i+1];
@@ -1234,8 +1237,8 @@ static int ov5648_get_exposure(struct i2c_client *client,
 		((exp_buf[1] & 0xff) << 8) +
 		(exp_buf[2] & 0xf0);
 
-	if (ov5648->delay_count > 0) {
-		ov5648->exp_read_buf[ov5648->delay_count] = exp_code;
+	if (ov5648->aecpos_delay > 0) {
+		ov5648->exp_read_buf[ov5648->aecpos_delay] = exp_code;
 		exp_code = ov5648->exp_read_buf[0];
 		for (i = 0; i < EXP_DELAY_MAX-1; i++)
 			ov5648->exp_read_buf[i] = ov5648->exp_read_buf[i+1];
@@ -1284,7 +1287,7 @@ static int ov5648_calc_exposure(struct i2c_client *client,
  * Setup the sensor integration and frame length based on requested exposure
  * in microseconds.
  */
-#define EXP_HIST_MAX 4
+#define EXP_HIST_MAX 0
 static void ov5648_set_exposure(struct i2c_client *client, int exp_value)
 {
 	struct ov5648 *ov5648 = to_ov5648(client);
@@ -1871,14 +1874,12 @@ static int ov5648_init(struct i2c_client *client)
 	 *  Since we don't have line_length yet, just estimate
 	 */
 	ov5648->exposure_current  = DEFAULT_EXPO * 22;
-	ov5648->delay_count       = 2;
+	ov5648->aecpos_delay      = 1;
 	ov5648->lenspos_delay     = 0;
 	ov5648->flashmode         = FLASH_MODE_OFF;
 	ov5648->flash_intensity   = OV5648_FLASH_INTENSITY_DEFAULT;
 	ov5648->flash_timeout     = OV5648_FLASH_TIMEOUT_DEFAULT;
 	dev_dbg(&client->dev, "Sensor initialized\n");
-
-out:
 	return ret;
 }
 
