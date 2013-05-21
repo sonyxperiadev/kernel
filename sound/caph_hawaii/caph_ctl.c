@@ -1673,7 +1673,7 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 						    && pSel[indexVal] <
 						    AUDIO_SINK_VALID_TOTAL) {
 							ctl_parm.parm_spkr.src =
-							    AUDIO_SINK_MEM;
+							    AUDIO_SOURCE_MEM;
 							ctl_parm.
 								parm_spkr.sink =
 								pSel[indexVal];
@@ -1723,7 +1723,7 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 					    || pStream->runtime->status->
 					    state == SNDRV_PCM_STATE_PAUSED) {
 						ctl_parm.parm_spkr.src =
-							AUDIO_SINK_MEM;
+							AUDIO_SOURCE_MEM;
 						ctl_parm.parm_spkr.sink = sink;
 						ctl_parm.parm_spkr.stream =
 							(stream - 1);
