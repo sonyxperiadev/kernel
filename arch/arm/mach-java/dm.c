@@ -449,6 +449,7 @@ void dormant_enter(u32 svc)
 	unsigned long flgs;
 	u32 fd_cmd = CDC_CMD_CDCE;
 	u32 pwr_ctrl;
+	u32 cdc_states;
 	int cdc_resp;
 	u32 drmt_status = DORMANT_ENTRY_FAILURE;
 	bool fd = false;
@@ -473,10 +474,17 @@ void dormant_enter(u32 svc)
 
 	case CDC_STATUS_RFDLC:
 		if (fdm_en && (FULL_DORMANT_L2_ON == svc ||
-			FULL_DORMANT_L2_OFF == svc))
+			FULL_DORMANT_L2_OFF == svc)) {
+
 			fd_cmd = CDC_CMD_FDCE;
-		else
+			cdc_set_override(IS_IDLE_OVERRIDE, 0x1C0);
+
+		} else {
+
 			fd_cmd = CDC_CMD_CDCE;
+			cdc_set_override(IS_IDLE_OVERRIDE, 0x180);
+			cdc_master_clk_gating_en(TRUE);
+		}
 		break;
 
 	default:
@@ -534,8 +542,10 @@ void dormant_enter(u32 svc)
 		if (!pm_is_forced_sleep())
 			config_wakeup_interrupts();
 		/*Clear L2_IS_ON flags for FDCEOK irrespective
-		of L2 ON status*/
-		cdc_set_fsm_ctrl(FSM_CLR_L2_IS_ON);
+		of L2 ON status.Also clear other error status */
+		cdc_set_fsm_ctrl(FSM_CLR_ALL_STATUS);
+		cdc_master_clk_gating_en(FALSE);
+		cdc_set_override(WAIT_IDLE_TIMEOUT, 0xF);
 		fdm_attempt++;
 		spin_unlock_irqrestore(&dormant_entry_lock, flgs);
 
@@ -615,7 +625,28 @@ void dormant_enter(u32 svc)
 			cdc_set_pwr_status(CDC_PWR_NORMAL);
 			/*Workaround for HWJAVA-215*/
 			cdc_set_reset_counter(CD_RESET_TIMER, 0);
+			cdc_states = CDC_STATUS_POR |
+					CDC_STATUS_RESCDWAIT |
+					CDC_STATUS_WAIT_CD_POK_STRONG |
+					CDC_STATUS_WAIT_CD_POK_WEAK |
+					CDC_STATUS_CLUSTER_DORMANT |
+					CDC_STATUS_CORE_DORMANT;
+			cdc_assert_reset_in_state(cdc_states);
+			cdc_states = CDC_STATUS_POR |
+				CDC_STATUS_RESCDWAIT |
+				CDC_STATUS_WAIT_CD_POK_STRONG |
+				CDC_STATUS_WAIT_CD_POK_WEAK |
+				CDC_STATUS_RESVD |
+				CDC_STATUS_CD_CLAMP_ASSERT |
+				CDC_STATUS_CLUSTER_WAIT_IDLE |
+				CDC_STATUS_CLUSTER_DORMANT |
+				CDC_STATUS_CORE_DORMANT;
+			cdc_enable_isolation_in_state(cdc_states);
+
 			cdc_set_override(IS_IDLE_OVERRIDE, 0x1C0);
+			cdc_set_switch_counter(WEAK_SWITCH_TIMER, 0x0C);
+			cdc_set_switch_counter(STRONG_SWITCH_TIMER, 0x0C);
+
 			cdc_resp = cdc_send_cmd_for_core(CDC_CMD_MDEC, cpu);
 			fd = true;
 			break;
@@ -810,7 +841,7 @@ err:
 static int __init dm_init(void)
 {
 	struct resource *res;
-
+	u32 cdc_states;
 
 	void *vptr = NULL;
 	struct clk *clk;
@@ -852,7 +883,31 @@ static int __init dm_init(void)
 
 	/*Workaround for HWJAVA-215*/
 	cdc_set_reset_counter(CD_RESET_TIMER, 0);
+
+	cdc_set_reset_counter(CD_RESET_TIMER, 0);
+
+	cdc_states = CDC_STATUS_POR |
+			CDC_STATUS_RESCDWAIT |
+			CDC_STATUS_WAIT_CD_POK_STRONG |
+			CDC_STATUS_WAIT_CD_POK_WEAK |
+			CDC_STATUS_CLUSTER_DORMANT |
+			CDC_STATUS_CORE_DORMANT;
+	cdc_assert_reset_in_state(cdc_states);
+
+	cdc_states = CDC_STATUS_POR |
+		CDC_STATUS_RESCDWAIT |
+		CDC_STATUS_WAIT_CD_POK_STRONG |
+		CDC_STATUS_WAIT_CD_POK_WEAK |
+		CDC_STATUS_RESVD |
+		CDC_STATUS_CD_CLAMP_ASSERT |
+		CDC_STATUS_CLUSTER_WAIT_IDLE |
+		CDC_STATUS_CLUSTER_DORMANT |
+		CDC_STATUS_CORE_DORMANT;
+	cdc_enable_isolation_in_state(cdc_states);
+
 	cdc_set_override(IS_IDLE_OVERRIDE, 0x1C0);
+	cdc_set_switch_counter(WEAK_SWITCH_TIMER, 0x0C);
+	cdc_set_switch_counter(STRONG_SWITCH_TIMER, 0x0C);
 
 #ifdef CONFIG_DEBUG_FS
 	dm_debug_init();

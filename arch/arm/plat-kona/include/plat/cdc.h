@@ -74,7 +74,8 @@ enum {
 	FSM_CLR_TIMEOUT_INT = 1,
 	FSM_CLR_L2_IS_ON =  1 << 1,
 	FSM_CLR_FIRST_TO_POLL =  1 << 2,
-	FSM_CLR_WAIT_IDLE_TIMEOUT =  1 << 3
+	FSM_CLR_WAIT_IDLE_TIMEOUT =  1 << 3,
+	FSM_CLR_ALL_STATUS = 0xF
 };
 
 /*CDC overrides...*/
@@ -122,4 +123,7 @@ int cdc_send_cmd_early(u32 cmd, int cpu);
 int cdc_set_reset_counter(int type, u32 val);
 int cdc_set_switch_counter(int type, u32 val);
 int cdc_master_clk_gating_en(bool en);
+int cdc_assert_reset_in_state(u32 states);
+int cdc_enable_isolation_in_state(u32 states);
+
 #endif /*__CDC_H__*/

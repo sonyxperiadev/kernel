@@ -329,6 +329,40 @@ int cdc_get_dbg_bus_val()
 	return (int)reg;
 }
 
+int cdc_assert_reset_in_state(u32 states)
+{
+	u32 reg;
+	if (!cdc)
+		return -EINVAL;
+
+	spin_lock(&cdc->lock);
+	reg = readl_relaxed(cdc->base +
+		CDC_RESET_STATE_ENABLE_OFFSET);
+	reg |= states;
+	writel_relaxed(states,
+	cdc->base + CDC_RESET_STATE_ENABLE_OFFSET);
+	spin_unlock(&cdc->lock);
+
+	return 0;
+}
+
+int cdc_enable_isolation_in_state(u32 states)
+{
+	u32 reg;
+	if (!cdc)
+		return -EINVAL;
+
+	spin_lock(&cdc->lock);
+	reg = readl_relaxed(cdc->base +
+		CDC_ISOLATION_STATE_ENABLE_OFFSET);
+	reg |= states;
+	writel_relaxed(states,
+		cdc->base + CDC_ISOLATION_STATE_ENABLE_OFFSET);
+	spin_unlock(&cdc->lock);
+
+	return 0;
+}
+
 int cdc_set_reset_counter(int type, u32 val)
 {
 	u32 reg;
@@ -360,6 +394,7 @@ int cdc_set_reset_counter(int type, u32 val)
 	reg |= (val << shift) & mask;
 	writel_relaxed(reg,
 		cdc->base + CDC_RESET_COUNTER_VALUES_OFFSET);
+
 	spin_unlock(&cdc->lock);
 
 	return 0;
@@ -420,9 +455,6 @@ int cdc_master_clk_gating_en(bool en)
 	spin_unlock(&cdc->lock);
 	return 0;
 }
-
-
-
 
 
 
