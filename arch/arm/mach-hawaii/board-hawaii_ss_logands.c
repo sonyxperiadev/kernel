@@ -54,7 +54,6 @@
 #include <linux/bootmem.h>
 #include <linux/input.h>
 #include <linux/mfd/bcm590xx/core.h>
-#include <asm/gpio.h>
 #include <linux/gpio.h>
 #include <linux/gpio_keys.h>
 #include <linux/i2c-kona.h>
@@ -121,12 +120,8 @@
 #include <linux/bcmi2cnfc.h>
 #endif
 
-#if defined(CONFIG_SENSORS_BMC150)
-#include <linux/bst_sensor_common.h>
-#endif
-
-#if defined(CONFIG_SENSORS_GP2AP002)
-#include <linux/gp2ap002_dev.h>
+#if defined(CONFIG_SENSORS_BMA2X2)
+#include <linux/bma222.h>
 #endif
 
 #if defined(CONFIG_BMP18X) || defined(CONFIG_BMP18X_I2C)
@@ -138,6 +133,19 @@
 #if defined(CONFIG_AL3006) || defined(CONFIG_AL3006_MODULE)
 #include <linux/al3006.h>
 #include <mach/al3006_i2c_settings.h>
+#endif
+
+#if defined(CONFIG_MPU_SENSORS_MPU6050B1)
+	|| defined(CONFIG_MPU_SENSORS_MPU6050B1_MODULE)
+#include <linux/mpu.h>
+#include <mach/mpu6050_settings.h>
+#endif
+
+#if defined(CONFIG_MPU_SENSORS_AMI306)
+	|| defined(CONFIG_MPU_SENSORS_AMI306_MODULE)
+#include <linux/ami306_def.h>
+#include <linux/ami_sensor.h>
+#include <mach/ami306_settings.h>
 #endif
 
 #if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
@@ -155,7 +163,6 @@
 #endif
 
 #ifdef CONFIG_FB_BRCM_KONA
-/* #include <video/kona_fb_boot.h> */
 #include <video/kona_fb.h>
 #endif
 
@@ -208,11 +215,22 @@
 #include <linux/usb/otg.h>
 #endif
 
+#ifdef CONFIG_MOBICORE_DRIVER
+#include <linux/broadcom/mobicore.h>
+#endif
+
+
 #ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
 #include "hawaii_wifi.h"
 
 void send_usb_insert_event(enum bcmpmu_event_t event, void *para);
 void send_chrgr_insert_event(enum bcmpmu_event_t event, void *para);
+
+#include <linux/bmm050.h>
+#include <linux/bma150.h>
+
+#include <linux/gp2ap002_dev.h>
+#include <linux/gp2ap002.h>
 
 extern int hawaii_wifi_status_register(
 		void (*callback)(int card_present, void *dev_id),
@@ -256,7 +274,7 @@ extern int hawaii_wifi_status_register(
 #define KONA_UART1_PA   UARTB2_BASE_ADDR
 #define KONA_UART2_PA   UARTB3_BASE_ADDR
 
-#define HAWAII_8250PORT(name, clk, freq, uart_name)		\
+#define HAWAII_8250PORT(name, clk, freq, uart_name, power_save_en)\
 {								\
 	.membase    = (void __iomem *)(KONA_##name##_VA),	\
 	.mapbase    = (resource_size_t)(KONA_##name##_PA),	\
@@ -267,11 +285,14 @@ extern int hawaii_wifi_status_register(
 	.type       = PORT_16550A,				\
 	.flags      = UPF_BOOT_AUTOCONF | UPF_BUG_THRE |	\
 			UPF_FIXED_TYPE | UPF_SKIP_TEST,		\
-	.private_data = (void __iomem *)((KONA_##name##_VA) +	\
-					UARTB_USR_OFFSET),	\
+	.private_data = power_save_en,				\
 	.clk_name = clk,					\
 	.port_name = uart_name,					\
 }
+
+/*This flag is added for saving power for UART GPS. If you want to save power
+ * pass the address of this flag as a parameter to power_save_en*/
+static bool power_save_enable = 1;
 
 int reset_pwm_padcntrl(void)
 {
@@ -581,9 +602,12 @@ static struct platform_device hawaii_camera_sub = {
 
 
 static struct plat_serial8250_port hawaii_uart_platform_data[] = {
-	HAWAII_8250PORT(UART0, UARTB_PERI_CLK_NAME_STR, 48000000, "bluetooth"),
-	HAWAII_8250PORT(UART1, UARTB2_PERI_CLK_NAME_STR, 26000000, "gps"),
-	HAWAII_8250PORT(UART2, UARTB3_PERI_CLK_NAME_STR, 26000000, "console"),
+	HAWAII_8250PORT(UART0, UARTB_PERI_CLK_NAME_STR, 48000000,
+					"bluetooth", NULL),
+	HAWAII_8250PORT(UART1, UARTB2_PERI_CLK_NAME_STR, 26000000,
+				"gps", &power_save_enable),
+	HAWAII_8250PORT(UART2, UARTB3_PERI_CLK_NAME_STR, 26000000,
+				"console", NULL),
 	{
 		.flags = 0,
 	},
@@ -861,7 +885,7 @@ static struct bcm_keymap hawaii_keymap[] = {
 
 static struct bcm_keypad_platform_info hawaii_keypad_data = {
 	.row_num = 1,
-	.col_num = 5,
+	.col_num = 4,
 	.keymap = hawaii_keymap,
 	.bcm_keypad_base = (void *)__iomem HW_IO_PHYS_TO_VIRT(KEYPAD_BASE_ADDR),
 };
@@ -873,17 +897,13 @@ static struct bcm_keypad_platform_info hawaii_keypad_data = {
 }
 
 #if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
-/* #define board_gpio_keys concatenate(ISLAND_BOARD_ID, _board_gpio_keys) */
 static struct gpio_keys_button board_gpio_keys[] = GPIO_KEYS_SETTINGS;
 
-/* #define gpio_keys_data concatenate(ISLAND_BOARD_ID, _gpio_keys_data) */
 static struct gpio_keys_platform_data gpio_keys_data = {
 	.nbuttons = ARRAY_SIZE(board_gpio_keys),
 	.buttons = board_gpio_keys,
 };
 
-/* #define board_gpio_keys_device concatenate
-(ISLAND_BOARD_ID, _gpio_keys_device) */
 static struct platform_device board_gpio_keys_device = {
 	.name = "gpio-keys",
 	.id = -1,
@@ -951,94 +971,89 @@ static struct i2c_board_info __initdata i2c_al3006_info[] = {
 };
 #endif
 
-#if defined(CONFIG_SENSORS_BMC150)
-static struct bosch_sensor_specific bss_bma2x2 = {
-	.name = "bma2x2",
-	.place = 0,
-};
-
-static struct bosch_sensor_specific bss_bmm050 = {
-	.name = "bmm050",
-	.place = 0,
+#if defined(CONFIG_MPU_SENSORS_AMI306)
+	|| defined(CONFIG_MPU_SENSORS_AMI306_MODULE)
+static struct ami306_platform_data ami306_data = AMI306_DATA;
+static struct i2c_board_info __initdata i2c_ami306_info[] = {
+	{
+		I2C_BOARD_INFO(AMI_DRV_NAME, AMI_I2C_ADDRESS),
+		.platform_data = &ami306_data,
+	},
 };
 #endif
 
-#if defined(CONFIG_SENSORS_GP2AP002)
-static void gp2ap002_power_onoff(bool onoff)
+#if defined(CONFIG_MPU_SENSORS_MPU6050B1)
+	|| defined(CONFIG_MPU_SENSORS_MPU6050B1_MODULE)
+
+static struct mpu_platform_data mpu6050_platform_data = {
+	.int_config  = MPU6050_INIT_CFG,
+	.level_shifter = 0,
+	.orientation = MPU6050_DRIVER_ACCEL_GYRO_ORIENTATION,
+};
+
+/*static struct ext_slave_platform_data mpu_compass_data =
 {
-	if (onoff) {
-		struct regulator *power_regulator = NULL;
-		int ret = 0;
-		power_regulator = regulator_get(NULL, "tcxldo_uc");
-		if (IS_ERR(power_regulator)) {
-			printk(KERN_ERR "[GP2A] can not get prox_regulator (SENSOR_3.0V)\n");
-		} else {
-			ret = regulator_set_voltage(power_regulator,
-				3300000, 3300000);
-			printk(KERN_INFO
-				"[GP2A] regulator_set_voltage : %d\n",
-				ret);
-			ret = regulator_enable(power_regulator);
-			printk(KERN_INFO "[GP2A] regulator_enable : %d\n", ret);
-	}
-}
+//	.bus = EXT_SLAVE_BUS_SECONDARY,
+	.orientation = MPU6050_DRIVER_COMPASS_ORIENTATION,
+};*/
 
-static void gp2ap002_led_onoff(bool onoff)
-{
-	struct regulator *led_regulator = NULL;
-	int ret = 0;
 
-	if (onoff) {
-		led_regulator = regulator_get(NULL, "gpldo1_uc");
-		if (IS_ERR(led_regulator)) {
-			printk(KERN_ERR "[GP2A] can not get prox_regulator (SENSOR_LED_3.0V)\n");
-		} else {
-			ret = regulator_set_voltage(led_regulator,
-				3300000, 3300000);
-			printk(KERN_INFO
-				"[GP2A] regulator_set_voltage : %d\n",
-				ret);
-			ret = regulator_enable(led_regulator);
-			printk(KERN_INFO "[GP2A] regulator_enable : %d\n", ret);
-			regulator_put(led_regulator);
-	} else {
-		led_regulator = regulator_get(NULL, "gpldo1_uc");
-		ret = regulator_disable(led_regulator);
-		printk(KERN_INFO "[GP2A] regulator_disable : %d\n", ret);
-		regulator_put(led_regulator);
-	}
-}
+static struct i2c_board_info __initdata inv_mpu_i2c0_boardinfo[] = {
+	{
+		I2C_BOARD_INFO("mpu6050", MPU6050_SLAVE_ADDR),
+		.platform_data = &mpu6050_platform_data,
+	},
+/*	{
+		I2C_BOARD_INFO("ami_sensor", MPU6050_COMPASS_SLAVE_ADDR),
+		.platform_data = &mpu_compass_data,
+		.irq =  gpio_to_irq(3),
+	},*/
+};
 
-#define PROXI_INT_GPIO_PIN  89
+#endif /* CONFIG_MPU_SENSORS_MPU6050B1 */
+
+
+
+#if defined(CONFIG_SENSORS_BMA2X2)
+
+static struct bma222_accl_platform_data bma_pdata = {
+	.orientation = BMA_ROT_90,
+	.invert = false,
+};
+#endif
+
+#if defined(CONFIG_SENSORS_BMA2X2) || defined(CONFIG_SENSORS_BMM050)
+
+static struct i2c_board_info __initdata bmm150_boardinfo[] = {
+#if defined(CONFIG_SENSORS_BMA2X2)
+		{
+			I2C_BOARD_INFO("bma2x2", 0x10),
+			.irq = -1,
+			.platform_data = &bma_pdata,
+		},
+#endif
+
+#if defined(CONFIG_SENSORS_BMM050)
+		I2C_BOARD_INFO("bmm050", 0x12),
+#endif
+
+
+};
+
+#endif
+
+#if defined(CONFIG_SENSORS_GP2A)
+#define PROXI_INT_GPIO_PIN 89
 static struct gp2ap002_platform_data gp2ap002_platform_data = {
-	.power_on = gp2ap002_power_onoff,
-	.led_on = gp2ap002_led_onoff,
 	.irq_gpio = PROXI_INT_GPIO_PIN,
 	.irq = gpio_to_irq(PROXI_INT_GPIO_PIN),
 };
-#endif
 
-#if defined(CONFIG_SENSORS_BMC150) || defined(CONFIG_SENSORS_GP2AP002)
-
-static struct i2c_board_info __initdata bsc3_i2c_boardinfo[] = {
-#if defined(CONFIG_SENSORS_BMC150)
-	{
-		I2C_BOARD_INFO("bma2x2", 0x10),
-		.platform_data = &bss_bma2x2,
-	},
-	{
-		I2C_BOARD_INFO("bmm050", 0x12),
-		.platform_data = &bss_bmm050,
-	},
-#endif
-
-#if defined(CONFIG_SENSORS_GP2AP002)
+static struct i2c_board_info __initdata proxy_boardinfo[] = {
 	{
 		I2C_BOARD_INFO("gp2ap002", 0x44),
 		.platform_data = &gp2ap002_platform_data,
 	}
-#endif
-
 };
 
 #endif
@@ -1103,7 +1118,7 @@ static struct kona_headset_pd hawaii_headset_data = {
 	 * Pass the board specific button detection range
 	 */
 	.button_adc_values_high = hawaii_button_adc_values_2_1,
-	.ldo_id = "audldo_uc",
+
 };
 #endif /* CONFIG_KONA_HEADSET_MULTI_BUTTON */
 
@@ -1267,7 +1282,8 @@ static struct sdio_platform_cfg hawaii_sdio_param[] = {
 		.ahb_clk_name = "sdio2_ahb_clk",
 		.sleep_clk_name = "sdio2_sleep_clk",
 		.peri_clk_rate = 52000000,
-	},
+		},
+#ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
 	{
 		.id = 2,
 		.data_pullup = 0,
@@ -1277,16 +1293,27 @@ static struct sdio_platform_cfg hawaii_sdio_param[] = {
 		.ahb_clk_name = "sdio3_ahb_clk",
 		.sleep_clk_name = "sdio3_sleep_clk",
 		.peri_clk_rate = 48000000,
-#ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
+		.register_status_notify = hawaii_wifi_status_register,
+	},
+#else
+	{
+		.id = 2,
+		.data_pullup = 0,
+		.devtype = SDIO_DEV_TYPE_WIFI,
 		.wifi_gpio = {
 			.reset = 3,
 			.reg = -1,
 			.host_wake = 74,
 			.shutdown = -1,
 		},
-		.register_status_notify = hawaii_wifi_status_register,
-#endif
+		.flags = KONA_SDIO_FLAGS_DEVICE_REMOVABLE,
+		.peri_clk_name = "sdio3_clk",
+		.ahb_clk_name = "sdio3_ahb_clk",
+		.sleep_clk_name = "sdio3_sleep_clk",
+		.peri_clk_rate = 48000000,
 	},
+#endif
+
 };
 
 
@@ -1328,7 +1355,7 @@ static struct wd_tapper_platform_data wd_tapper_data = {
 	/* Set the count to the time equivalent to the time-out in seconds
 	 * required to pet the PMU watchdog to overcome the problem of reset in
 	 * suspend*/
-	.count = 300,
+	.count = 120,
 	.ch_num = 1,
 	.name = "aon-timer",
 };
@@ -1342,18 +1369,23 @@ static struct platform_device wd_tapper = {
 };
 #endif
 
-#if defined CONFIG_TOUCHKEY_BACKLIGHT
+#if defined(CONFIG_TOUCHKEY_BACKLIGHT)
 static struct platform_device touchkeyled_device = {
 	.name = "touchkey-led",
 	.id = -1,
 };
 #endif
 
-#if defined CONFIG_TOUCHSCREEN_IST30XX
+#if defined(CONFIG_TOUCHSCREEN_IST30XX)	\
+	|| defined(CONFIG_TOUCHSCREEN_BT432_LOGAN)
 #define TSP_INT_GPIO_PIN	(73)
 static struct i2c_board_info __initdata zinitix_i2c_devices[] = {
 	  {
 		I2C_BOARD_INFO("sec_touch", 0x50),
+		.irq = gpio_to_irq(TSP_INT_GPIO_PIN),
+	  },
+	   {
+		I2C_BOARD_INFO("zinitix_touch", 0x20),
 		.irq = gpio_to_irq(TSP_INT_GPIO_PIN),
 	  },
 };
@@ -1364,8 +1396,6 @@ static int ts_power(ts_power_status vreg_en)
 {
 	struct regulator *reg = NULL;
 	if (!reg) {
-		/* Remove this comment when the regulator
-		references are fixed here for Hawaii */
 		reg = regulator_get(NULL, "hv8");
 		if (!reg || IS_ERR(reg)) {
 			pr_err("No Regulator available for ldo_hv8\n");
@@ -1445,7 +1475,6 @@ static struct platform_device board_caph_device = {
 };
 
 #endif /* CONFIG_BCM_ALSA_SOUND */
-
 
 #ifdef CONFIG_RT8973
 
@@ -1553,7 +1582,7 @@ static void uart_attach(uint8_t attached)
 	}
 }
 
-#if defined (CONFIG_TOUCHSCREEN_IST30XX)
+#if defined(CONFIG_TOUCHSCREEN_IST30XX)
 extern void ist30xx_set_ta_mode(bool charging);
 #endif
 
@@ -1575,7 +1604,7 @@ static void charger_attach(uint8_t attached)
 	case CABLE_TYPE_AC:
 		chrgr_type = PMU_CHRGR_TYPE_DCP;
 		pr_info("%s TA attached\n", __func__);
-		#if defined (CONFIG_TOUCHSCREEN_IST30XX)
+		#if defined(CONFIG_TOUCHSCREEN_IST30XX)
 			ist30xx_set_ta_mode(1);
 		#endif
 #if defined(CONFIG_SEC_CHARGING_FEATURE)
@@ -1585,7 +1614,7 @@ static void charger_attach(uint8_t attached)
 	case CABLE_TYPE_NONE:
 		chrgr_type = PMU_CHRGR_TYPE_NONE;
 		pr_info("%s TA removed\n", __func__);
-		#if defined (CONFIG_TOUCHSCREEN_IST30XX)
+		#if defined(CONFIG_TOUCHSCREEN_IST30XX)
 			ist30xx_set_ta_mode(0);
 		#endif
 		break;
@@ -1605,16 +1634,16 @@ static void jig_attach(uint8_t attached, uint8_t factory_mode)
 {
 	switch (factory_mode) {
 	case RTMUSC_FM_BOOT_OFF_UART:
-		printk("JIG BOOT OFF UART\n");
+		printk(KERN_INFO "JIG BOOT OFF UART\n");
 		break;
 	case RTMUSC_FM_BOOT_OFF_USB:
-		printk("JIG BOOT OFF USB\n");
+		printk(KERN_INFO "JIG BOOT OFF USB\n");
 		break;
 	case RTMUSC_FM_BOOT_ON_UART:
-		printk("JIG BOOT ON UART\n");
+		printk(KERN_INFO "JIG BOOT ON UART\n");
 		break;
 	case RTMUSC_FM_BOOT_ON_USB:
-		printk("JIG BOOT ON USB\n");
+		printk(KERN_INFO "JIG BOOT ON USB\n");
 		break;
 	default:
 		break;
@@ -1647,13 +1676,13 @@ static void jig_attach(uint8_t attached, uint8_t factory_mode)
 
 static void over_temperature(uint8_t detected)
 {
-	printk("over temperature detected = %d!\n", detected);
+	printk(KERN_INFO "over temperature detected = %d!\n", detected);
 }
 
 static void over_voltage(uint8_t detected)
 {
-	printk("over voltage = %d\n", (int32_t)detected);
-	printk("OVP triggered by musb - %d\n", detected);
+	printk(KERN_INFO "over voltage = %d\n", (int32_t)detected);
+	printk(KERN_INFO "OVP triggered by musb - %d\n", detected);
 	spa_event_handler(SPA_EVT_OVP, detected);
 }
 static void set_usb_power(uint8_t on)
@@ -1694,9 +1723,9 @@ static struct rtmus_platform_data __initdata rtmus_pdata = {
 static struct i2c_board_info __initdata micro_usb_i2c_devices_info[]  = {
 /* Add for Ricktek RT8969 */
 #ifdef CONFIG_RT8973
-   {I2C_BOARD_INFO("rt8973", 0x28>>1),
-   .irq = -1,
-   .platform_data = &rtmus_pdata,},
+	{I2C_BOARD_INFO("rt8973", 0x28>>1),
+	.irq = -1,
+	.platform_data = &rtmus_pdata,},
 #endif
 };
 
@@ -1722,228 +1751,143 @@ static struct platform_device *mUSB_i2c_devices[] __initdata = {
 
 
 #ifdef CONFIG_USB_SWITCH_TSU6111
-
 enum cable_type_t {
-	CABLE_TYPE_USB,
-	CABLE_TYPE_AC,
-	CABLE_TYPE_NONE
+		CABLE_TYPE_USB,
+		CABLE_TYPE_AC,
+		CABLE_TYPE_NONE
 };
 
 
+#define FSA9485_I2C_BUS_ID 8
+#define GPIO_USB_I2C_SDA 113
+#define GPIO_USB_I2C_SCL 114
+#define GPIO_USB_INT 56
+
 #ifdef CONFIG_HAS_WAKELOCK
-static struct wake_lock tsu6111_jig_wakelock;
+static struct wake_lock fsa9485_jig_wakelock;
 #endif
+
 #ifdef CONFIG_KONA_PI_MGR
 static struct pi_mgr_qos_node qos_node;
 #endif
 
-static void tsu6111_wakelock_init(void)
+static void fsa9485_wakelock_init(void)
 {
 #ifdef CONFIG_HAS_WAKELOCK
-	wake_lock_init(&tsu6111_jig_wakelock,
-			WAKE_LOCK_SUSPEND, "tsu6111_jig_wakelock");
+	wake_lock_init(&fsa9485_jig_wakelock, WAKE_LOCK_SUSPEND,
+		"fsa9485_jig_wakelock");
 #endif
 
 #ifdef CONFIG_KONA_PI_MGR
-	pi_mgr_qos_add_request(&qos_node, "tsu6111_jig_qos",
-			PI_MGR_PI_ID_ARM_SUB_SYSTEM, PI_MGR_QOS_DEFAULT_VALUE);
+	pi_mgr_qos_add_request(&qos_node, "fsa9485_jig_qos",
+		PI_MGR_PI_ID_ARM_SUB_SYSTEM, PI_MGR_QOS_DEFAULT_VALUE);
 #endif
 }
-static enum cable_type_t set_cable_status;
-static void tsu6111_usb_cb(bool attached)
+
+static void fsa9485_usb_cb(bool attached)
 {
-	enum bcmpmu_chrgr_type_t chrgr_type;
-	enum bcmpmu_usb_type_t usb_type;
-
-	#if defined(CONFIG_SEC_CHARGING_FEATURE)
-	int spa_data = POWER_SUPPLY_TYPE_BATTERY;
-#endif
-	pr_info("ftsu6111_usb_cb attached %d\n", attached);
-
-	set_cable_status = attached ? CABLE_TYPE_USB : CABLE_TYPE_NONE;
-
-	switch (set_cable_status) {
-	case CABLE_TYPE_USB:
-		usb_type = PMU_USB_TYPE_SDP;
-		chrgr_type = PMU_CHRGR_TYPE_SDP;
-		#if defined(CONFIG_SEC_CHARGING_FEATURE)
-			spa_data = POWER_SUPPLY_TYPE_USB_CDP;
-		#endif
-		pr_info("%s USB attached\n", __func__);
-		/* send_usb_insert_event(BCMPMU_USB_EVENT_USB_DETECTION,
-				&usb_type); */
-		break;
-	case CABLE_TYPE_NONE:
-		usb_type = PMU_USB_TYPE_NONE;
-		chrgr_type = PMU_CHRGR_TYPE_NONE;
-		spa_data = POWER_SUPPLY_TYPE_BATTERY;
-		pr_info("%s USB removed\n", __func__);
-		/* set_usb_connection_status(&usb_type);
-		for unplug, we only set status, but not send event */
-	}
-	send_chrgr_insert_event(BCMPMU_CHRGR_EVENT_CHGR_DETECTION, &chrgr_type);
-#if defined(CONFIG_SEC_CHARGING_FEATURE)
-	spa_event_handler(SPA_EVT_CHARGER, spa_data);
-#endif
-	pr_info("tsu6111_usb_cb attached %d\n", attached);
+	pr_info("fsa9485_usb_cb attached %d\n", attached);
 }
 
-#if defined CONFIG_TOUCHSCREEN_IST30XX
-extern void ist30xx_set_ta_mode(bool charging);
-#endif
-
-static void tsu6111_charger_cb(bool attached)
+static void fsa9485_charger_cb(bool attached)
 {
-	enum bcmpmu_chrgr_type_t chrgr_type;
-	enum cable_type_t set_cable_status;
-#if defined(CONFIG_SEC_CHARGING_FEATURE)
-	int spa_data = POWER_SUPPLY_TYPE_BATTERY;
-#endif
-
-	pr_info("tsu6111_charger_cb attached %d\n", attached);
-
-	set_cable_status = attached ? CABLE_TYPE_AC : CABLE_TYPE_NONE;
-	switch (set_cable_status) {
-	case CABLE_TYPE_AC:
-		chrgr_type = PMU_CHRGR_TYPE_DCP;
-		pr_info("%s TA attached\n", __func__);
-		#if defined(CONFIG_TOUCHSCREEN_IST30XX)
-			ist30xx_set_ta_mode(1);
-		#endif
-		#if defined(CONFIG_SEC_CHARGING_FEATURE)
-			spa_data = POWER_SUPPLY_TYPE_USB_DCP;
-		#endif
-		break;
-	case CABLE_TYPE_NONE:
-		chrgr_type = PMU_CHRGR_TYPE_NONE;
-		pr_info("%s TA removed\n", __func__);
-		#if defined CONFIG_TOUCHSCREEN_IST30XX
-			ist30xx_set_ta_mode(0);
-		#endif
-		break;
-	default:
-		break;
-	}
-	send_chrgr_insert_event(BCMPMU_CHRGR_EVENT_CHGR_DETECTION,
-			&chrgr_type);
-#if defined(CONFIG_SEC_CHARGING_FEATURE)
-	spa_event_handler(SPA_EVT_CHARGER, spa_data);
-#endif
-	pr_info("tsu6111_charger_cb attached %d\n", attached);
+	pr_info("fsa9480_charger_cb attached %d\n", attached);
 }
 
-static void tsu6111_jig_cb(bool attached)
+static void fsa9485_jig_cb(bool attached)
 {
-	pr_info("tsu6111_jig_cb attached %d\n", attached);
-
+	pr_info("fsa9480_jig_cb attached %d\n", attached);
 	if (attached) {
-#ifdef CONFIG_HAS_WAKELOCK
-		if (!wake_lock_active(&tsu6111_jig_wakelock))
-			wake_lock(&tsu6111_jig_wakelock);
-#endif
-#ifdef CONFIG_KONA_PI_MGR
+		#ifdef CONFIG_HAS_WAKELOCK
+			if (!wake_lock_active(&fsa9485_jig_wakelock))
+				wake_lock(&fsa9485_jig_wakelock);
+		#endif
+		#ifdef CONFIG_KONA_PI_MGR
 			pi_mgr_qos_request_update(&qos_node, 0);
-#endif
+		#endif
 	} else {
-#ifdef CONFIG_HAS_WAKELOCK
-		if (wake_lock_active(&tsu6111_jig_wakelock))
-			wake_unlock(&tsu6111_jig_wakelock);
-#endif
-#ifdef CONFIG_KONA_PI_MGR
-		pi_mgr_qos_request_update(&qos_node, PI_MGR_QOS_DEFAULT_VALUE);
-#endif
+		#ifdef CONFIG_HAS_WAKELOCK
+			if (wake_lock_active(&fsa9485_jig_wakelock))
+				wake_unlock(&fsa9485_jig_wakelock);
+		#endif
+		#ifdef CONFIG_KONA_PI_MGR
+			pi_mgr_qos_request_update(&qos_node,
+				PI_MGR_QOS_DEFAULT_VALUE);
+		#endif
 	}
 }
-extern int musb_info_handler(struct notifier_block *nb,
-					unsigned long event, void *para);
-static void tsu6111_uart_cb(bool attached)
+
+static void fsa9485_uart_cb(bool attached)
 {
-	pr_info("%s attached %d\n", __func__, attached);
+	pr_info("fsa9485_uart_cb attached %d\n", attached);
 	if (attached) {
-#ifdef CONFIG_HAS_WAKELOCK
-		if (!wake_lock_active(&tsu6111_jig_wakelock))
-			wake_lock(&tsu6111_jig_wakelock);
-#endif
-#ifdef CONFIG_KONA_PI_MGR
-		pi_mgr_qos_request_update(&qos_node, 0);
-#endif
-		musb_info_handler(NULL, 0, 1);
+		#ifdef CONFIG_HAS_WAKELOCK
+		if (!wake_lock_active(&fsa9485_jig_wakelock))
+			wake_lock(&fsa9485_jig_wakelock);
+		#endif
+		#ifdef CONFIG_KONA_PI_MGR
+			pi_mgr_qos_request_update(&qos_node, 0);
+		#endif
 	} else {
-#ifdef CONFIG_HAS_WAKELOCK
-		if (wake_lock_active(&tsu6111_jig_wakelock))
-			wake_unlock(&tsu6111_jig_wakelock);
-#endif
-#ifdef CONFIG_KONA_PI_MGR
-		pi_mgr_qos_request_update(&qos_node,
+		#ifdef CONFIG_HAS_WAKELOCK
+		if (wake_lock_active(&fsa9485_jig_wakelock))
+			wake_unlock(&fsa9485_jig_wakelock);
+		#endif
+		#ifdef CONFIG_KONA_PI_MGR
+			pi_mgr_qos_request_update(&qos_node,
 				PI_MGR_QOS_DEFAULT_VALUE);
-#endif
-		musb_info_handler(NULL, 0, 0);
-	}
+		#endif
+		}
 
 }
 
 void uas_jig_force_sleep(void)
 {
-#ifdef CONFIG_HAS_WAKELOCK
-	if (wake_lock_active(&tsu6111_jig_wakelock)) {
-		wake_unlock(&tsu6111_jig_wakelock);
+	#ifdef CONFIG_HAS_WAKELOCK
+	if (wake_lock_active(&fsa9485_jig_wakelock)) {
+		wake_unlock(&fsa9485_jig_wakelock);
 		pr_info("Force unlock jig_uart_wl\n");
 	}
-#else
-	pr_info("Warning : %s - Empty function!!!\n", __func__);
-#endif
-#ifdef CONFIG_KONA_PI_MGR
+	#endif
+	#ifdef CONFIG_KONA_PI_MGR
 	pi_mgr_qos_request_update(&qos_node, PI_MGR_QOS_DEFAULT_VALUE);
-#endif
-	return;
+	#endif
 }
 
-static struct tsu6111_platform_data tsu6111_pdata = {
-		.usb_cb = tsu6111_usb_cb,
-		.charger_cb = tsu6111_charger_cb,
-		.jig_cb = tsu6111_jig_cb,
-		.uart_cb = tsu6111_uart_cb,
+static struct fsa9485_platform_data fsa9485_pdata = {
+	.usb_cb = fsa9485_usb_cb,
+	.charger_cb = fsa9485_charger_cb,
+	.jig_cb = fsa9485_jig_cb,
+	.uart_cb = fsa9485_uart_cb,
 };
 
 static struct i2c_board_info  __initdata micro_usb_i2c_devices_info[]  = {
 	{
-			I2C_BOARD_INFO("tsu6111", 0x4A >> 1),
-			.platform_data = &tsu6111_pdata,
-			.irq = gpio_to_irq(GPIO_USB_INT),
+		I2C_BOARD_INFO("fsa9485", 0x4A >> 1),
+		.platform_data = &fsa9485_pdata,
+		.irq = gpio_to_irq(GPIO_USB_INT),
 	},
 };
 
-static struct i2c_gpio_platform_data mUSB_i2c_gpio_data = {
-		.sda_pin = GPIO_USB_I2C_SDA,
-		.scl_pin = GPIO_USB_I2C_SCL,
-		.udelay = 2,
-};
+static struct i2c_gpio_platform_data fsa_i2c_gpio_data = {
+	.sda_pin = GPIO_USB_I2C_SDA,
+	.scl_pin = GPIO_USB_I2C_SCL,
+	.udelay = 2,
+	};
 
-static struct platform_device mUSB_i2c_gpio_device = {
-		.name = "i2c-gpio",
-		.id = TSU6111_I2C_BUS_ID,
-		.dev = {
-			.platform_data  = &mUSB_i2c_gpio_data,
-		},
+static struct platform_device fsa_i2c_gpio_device = {
+	.name = "i2c-gpio",
+	.id = FSA9485_I2C_BUS_ID,
+	.dev = {
+	.platform_data = &fsa_i2c_gpio_data,
+	},
 };
 
 static struct platform_device *mUSB_i2c_devices[] __initdata = {
-	&mUSB_i2c_gpio_device,
+	&fsa_i2c_gpio_device,
 };
 
 #endif
-
-#ifdef CONFIG_BCM_SS_VIBRA
-struct platform_device bcm_vibrator_device = {
-	.name = "vibrator",
-	.id = 0,
-	.dev = {
-		.platform_data = "vibldo_uc",
-	},
-};
-#endif
-
-
 
 static struct platform_device *hawaii_devices[] __initdata = {
 #ifdef CONFIG_KEYBOARD_BCM
@@ -2013,32 +1957,34 @@ static void __init hawaii_add_i2c_devices(void)
 #ifdef CONFIG_TOUCHSCREEN_TANGO
 	i2c_register_board_info(3, tango_info, ARRAY_SIZE(tango_info));
 #endif
-#if defined CONFIG_TOUCHSCREEN_IST30XX
+#if defined(CONFIG_TOUCHSCREEN_IST30XX)	\
+		|| defined(CONFIG_TOUCHSCREEN_BT432_LOGAN)
 	i2c_register_board_info(3, zinitix_i2c_devices,
-			ARRAY_SIZE(zinitix_i2c_devices));
+		ARRAY_SIZE(zinitix_i2c_devices));
 #endif
 
 #ifdef CONFIG_TOUCHSCREEN_FT5306
 	i2c_register_board_info(3, ft5306_info, ARRAY_SIZE(ft5306_info));
 #endif
 
+#ifdef CONFIG_SENSORS_BMA222
+	i2c_register_board_info(2, bma222_accl_info,
+		ARRAY_SIZE(bma222_accl_info));
+#endif
+
 #if defined(CONFIG_TOUCHSCREEN_BCM915500)
 	|| defined(CONFIG_TOUCHSCREEN_BCM915500_MODULE)
 	i2c_register_board_info(3, bcm915500_i2c_boardinfo,
-			ARRAY_SIZE(bcm915500_i2c_boardinfo));
+				ARRAY_SIZE(bcm915500_i2c_boardinfo));
 #endif
 
-#if defined(CONFIG_SENSORS_BMC150) || defined(CONFIG_SENSORS_GP2AP002)
-	i2c_register_board_info(2, bsc3_i2c_boardinfo,
-	ARRAY_SIZE(bsc3_i2c_boardinfo));
-#endif
 #ifdef CONFIG_USB_SWITCH_TSU6111
 	pr_info("tsu6111\n");
-#if defined(CONFIG_HAS_WAKELOCK) || defined(CONFIG_KONA_PI_MGR)
-		tsu6111_wakelock_init();
+#ifdef CONFIG_HAS_WAKELOCK
+	fsa9485_wakelock_init();
 #endif
-	i2c_register_board_info(TSU6111_I2C_BUS_ID,
-	micro_usb_i2c_devices_info, ARRAY_SIZE(micro_usb_i2c_devices_info));
+	i2c_register_board_info(FSA9485_I2C_BUS_ID, micro_usb_i2c_devices_info,
+		ARRAY_SIZE(micro_usb_i2c_devices_info));
 #endif
 
 #ifdef CONFIG_RT8973
@@ -2057,8 +2003,27 @@ static void __init hawaii_add_i2c_devices(void)
 	i2c_register_board_info(1, bcmi2cnfc, ARRAY_SIZE(bcmi2cnfc));
 #endif
 
+#if defined(CONFIG_MPU_SENSORS_MPU6050B1)
+	|| defined(CONFIG_MPU_SENSORS_MPU6050B1_MODULE)
+#if defined(MPU6050_IRQ_GPIO)
+	inv_mpu_i2c0_boardinfo[0].irq = gpio_to_irq(MPU6050_IRQ_GPIO);
+#endif
+	i2c_register_board_info(MPU6050_I2C_BUS_ID,
+		inv_mpu_i2c0_boardinfo, ARRAY_SIZE(inv_mpu_i2c0_boardinfo));
+#endif
+
+#if defined(CONFIG_SENSORS_BMA2X2) || defined(CONFIG_SENSORS_BMM050)
+	i2c_register_board_info(2,
+	bmm150_boardinfo, ARRAY_SIZE(bmm150_boardinfo));
+#endif
+
+#if defined(CONFIG_SENSORS_GP2A)
+	i2c_register_board_info(2,
+		proxy_boardinfo, ARRAY_SIZE(proxy_boardinfo));
+#endif
+
 #if  defined(CONFIG_BMP18X) || defined(CONFIG_BMP18X_I2C)
-		|| defined(CONFIG_BMP18X_I2C_MODULE)
+	|| defined(CONFIG_BMP18X_I2C_MODULE)
 	i2c_register_board_info(
 #ifdef BMP18X_I2C_BUS_ID
 			BMP18X_I2C_BUS_ID,
@@ -2083,6 +2048,18 @@ static void __init hawaii_add_i2c_devices(void)
 #endif
 		i2c_al3006_info, ARRAY_SIZE(i2c_al3006_info));
 #endif /* CONFIG_AL3006 */
+
+#if  defined(CONFIG_MPU_SENSORS_AMI306) || defined(CONFIG_MPU_SENSORS_AMI306)
+	i2c_register_board_info(
+#ifdef AMI306_I2C_BUS_ID
+			AMI306_I2C_BUS_ID,
+#else
+			-1,
+#endif
+			i2c_ami306_info, ARRAY_SIZE(i2c_ami306_info));
+#endif
+
+
 }
 
 static void hawaii_add_pdata(void)
@@ -2103,12 +2080,12 @@ static void hawaii_add_pdata(void)
 	hawaii_pl330_dmac_device.dev.platform_data = &hawaii_pl330_pdata;
 #ifdef CONFIG_BACKLIGHT_PWM
 	hawaii_backlight_device.dev.platform_data = &hawaii_backlight_data;
-	hawaii_usb_phy_platform_device.dev.platform_data =
-		&hsotgctrl_plat_data;
 #endif
 
 #ifdef CONFIG_USB_DWC_OTG
 	hawaii_hsotgctrl_platform_device.dev.platform_data
+		= &hsotgctrl_plat_data;
+	hawaii_usb_phy_platform_device.dev.platform_data
 		= &hsotgctrl_plat_data;
 #endif
 }
@@ -2128,6 +2105,13 @@ static void __init hawaii_add_devices(void)
 
 	hawaii_add_pdata();
 
+#ifdef CONFIG_ION_BCM_NO_DT
+	platform_device_register(&ion_carveout_device);
+#ifdef CONFIG_CMA
+	platform_device_register(&ion_cma_device);
+#endif
+#endif
+
 #ifdef CONFIG_KEYBOARD_BCM
 	hawaii_kp_device.dev.platform_data = &hawaii_keypad_data;
 #endif
@@ -2136,25 +2120,21 @@ static void __init hawaii_add_devices(void)
 	platform_device_register(&board_gpio_keys_device);
 #endif
 
-#ifdef CONFIG_ION_BCM_NO_DT
-	platform_device_register(&ion_carveout_device);
-#ifdef CONFIG_CMA
-	platform_device_register(&ion_cma_device);
-#endif
-#endif
-
-
 	platform_add_devices(hawaii_devices, ARRAY_SIZE(hawaii_devices));
 
 	hawaii_add_i2c_devices();
 
 	spi_register_board_info(spi_slave_board_info,
 				ARRAY_SIZE(spi_slave_board_info));
-#ifdef CONFIG_BCM_SS_VIBRA
-	platform_device_register(&bcm_vibrator_device);
-#endif
-
 }
+
+#ifdef CONFIG_MOBICORE_OS
+static void hawaii_mem_reserve(void)
+{
+	mobicore_device.dev.platform_data = &mobicore_plat_data;
+	hawaii_reserve();
+}
+#endif
 
 static void __init hawaii_add_sdio_devices(void)
 {
@@ -2181,14 +2161,20 @@ struct kona_fb_platform_data konafb_devices[] __initdata = {
 		.vburst = false,
 		.cmnd_LP = true,
 		.te_ctrl = false,
-		.col_mod_i = 2,
-		.col_mod_o = 3,
+		.col_mod_i = 3,  /*DISPDRV_FB_FORMAT_xBGR8888*/
+		.col_mod_o = 2, /*DISPDRV_FB_FORMAT_xRGB8888*/
 		.width = 480,
 		.height = 800,
 		.fps = 60,
 		.lanes = 2,
 		.hs_bps = 500000000,
 		.lp_bps = 5000000,
+#ifdef CONFIG_IOMMU_API
+		.pdev_iommu = &iovmm_mm_device,
+#endif
+#ifdef CONFIG_BCM_IOVMM
+		.pdev_iovmm = &iovmm_mm_256mb_device,
+#endif
 	},
 };
 
@@ -2225,6 +2211,10 @@ MACHINE_START(HAWAII, "hawaii_ss_logands")
 	.handle_irq = gic_handle_irq,
 	.timer = &kona_timer,
 	.init_machine = hawaii_init,
+#ifdef CONFIG_MOBICORE_OS
+	.reserve = hawaii_mem_reserve,
+#else
 	.reserve = hawaii_reserve,
+#endif
 	.restart = hawaii_restart,
 MACHINE_END

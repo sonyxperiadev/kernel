@@ -106,10 +106,29 @@ config	MACH_HAWAII_SS_LOGANDS_REV01
 	  keyboard, flash, and band selects.
 	  Assumes that MACH_HAWAII_SS_LOGAN is also set.
 
+config	MACH_HAWAII_SS_LOGANDS_COMBINED
+	bool "Support Broadcom Hawaii SS logands COMBINED board"
+	help
+	  Support for the Broadcom Hawaii SS logands COMBINED boa
+	  Relative to Logan DS Combined, has several GPIO changes for
+	  keyboard, flash, and band selects.
+	  Assumes that MACH_HAWAII_SS_LOGAN is also set.
+
+config	MACH_HAWAII_SS_LOGANDS_REV00_POWER
+	bool "Support Broadcom Hawaii SS logands power board"
+	help
+	  Support for
+	  the Broadcom
+	  Hawaii SS logands
+	  power board.
+
 config	MACH_HAWAII_SS_GOLDENVEN_REV01
 	bool "Support Broadcom Hawaii SS GoldenVE N board"
 	help
-	  Support for the Broadcom Hawaii SS GoldenVE N board.
+	  Support for
+	  the Broadcom
+	  Hawaii SS GoldenVE
+	  N board.
 
 config	MACH_HAWAII_SS_GOLDENVEN_REV02
 	bool "Support Broadcom Hawaii SS GoldenVE N board"

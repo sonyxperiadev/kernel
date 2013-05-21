@@ -251,7 +251,7 @@ extern int hawaii_wifi_status_register(
 #define KONA_UART1_PA   UARTB2_BASE_ADDR
 #define KONA_UART2_PA   UARTB3_BASE_ADDR
 
-#define HAWAII_8250PORT(name, clk, freq, uart_name)		\
+#define HAWAII_8250PORT(name, clk, freq, uart_name, power_save_en)\
 {								\
 	.membase    = (void __iomem *)(KONA_##name##_VA),	\
 	.mapbase    = (resource_size_t)(KONA_##name##_PA),	\
@@ -262,11 +262,14 @@ extern int hawaii_wifi_status_register(
 	.type       = PORT_16550A,				\
 	.flags      = UPF_BOOT_AUTOCONF | UPF_BUG_THRE |	\
 			UPF_FIXED_TYPE | UPF_SKIP_TEST,		\
-	.private_data = (void __iomem *)((KONA_##name##_VA) +	\
-					UARTB_USR_OFFSET),	\
+	.private_data = power_save_en,				\
 	.clk_name = clk,					\
 	.port_name = uart_name,					\
 }
+
+/*This flag is added for saving power for UART GPS. If you want to save power
+ * pass the address of this flag as a parameter to power_save_en*/
+static bool power_save_enable = 1;
 
 int reset_pwm_padcntrl(void)
 {
@@ -577,9 +580,12 @@ static struct platform_device hawaii_camera_sub = {
 
 
 static struct plat_serial8250_port hawaii_uart_platform_data[] = {
-	HAWAII_8250PORT(UART0, UARTB_PERI_CLK_NAME_STR, 48000000, "bluetooth"),
-	HAWAII_8250PORT(UART1, UARTB2_PERI_CLK_NAME_STR, 26000000, "gps"),
-	HAWAII_8250PORT(UART2, UARTB3_PERI_CLK_NAME_STR, 26000000, "console"),
+	HAWAII_8250PORT(UART0, UARTB_PERI_CLK_NAME_STR, 48000000,
+					"bluetooth", NULL),
+	HAWAII_8250PORT(UART1, UARTB2_PERI_CLK_NAME_STR, 26000000,
+				"gps", &power_save_enable),
+	HAWAII_8250PORT(UART2, UARTB3_PERI_CLK_NAME_STR, 26000000,
+				"console", NULL),
 	{
 		.flags = 0,
 	},
@@ -1153,7 +1159,7 @@ static struct kona_headset_pd hawaii_headset_data = {
 	 * Pass the board specific button detection range
 	 */
 	.button_adc_values_high = hawaii_button_adc_values_2_1,
-	.ldo_id = "audldo_uc",
+
 };
 #endif /* CONFIG_KONA_HEADSET_MULTI_BUTTON */
 
@@ -1216,9 +1222,10 @@ static struct platform_device hawaii_bcm_bzhw_device = {
 #define GPIO_BT_WAKE	32
 #define GPIO_HOST_WAKE	72
 
-static struct bcm_bt_lpm_platform_data brcm_bt_lpm_data = {
-	.gpio_bt_wake = GPIO_BT_WAKE,
-	.gpio_host_wake = GPIO_HOST_WAKE,
+static struct bcmbt_platform_data brcm_bt_lpm_data = {
+	.bt_wake_gpio = GPIO_BT_WAKE,
+	.host_wake_gpio = GPIO_HOST_WAKE,
+	.bt_uart_port = 0,
 };
 
 static struct platform_device board_bcmbt_lpm_device = {
@@ -1689,210 +1696,137 @@ enum cable_type_t {
 };
 
 
+#define FSA9485_I2C_BUS_ID 8
+#define GPIO_USB_I2C_SDA 113
+#define GPIO_USB_I2C_SCL 114
+#define GPIO_USB_INT 56
+
 #ifdef CONFIG_HAS_WAKELOCK
-static struct wake_lock tsu6111_jig_wakelock;
+static struct wake_lock fsa9485_jig_wakelock;
 #endif
 #ifdef CONFIG_KONA_PI_MGR
 static struct pi_mgr_qos_node qos_node;
 #endif
 
-static void tsu6111_wakelock_init(void)
+static void fsa9485_wakelock_init(void)
 {
 #ifdef CONFIG_HAS_WAKELOCK
-	wake_lock_init(&tsu6111_jig_wakelock, WAKE_LOCK_SUSPEND,
-		"tsu6111_jig_wakelock");
+	wake_lock_init(&fsa9485_jig_wakelock, WAKE_LOCK_SUSPEND,
+		"fsa9485_jig_wakelock");
 #endif
 
 #ifdef CONFIG_KONA_PI_MGR
-	pi_mgr_qos_add_request(&qos_node, "tsu6111_jig_qos",
-		PI_MGR_PI_ID_ARM_SUB_SYSTEM,
-		PI_MGR_QOS_DEFAULT_VALUE);
+	pi_mgr_qos_add_request(&qos_node, "fsa9485_jig_qos",
+		PI_MGR_PI_ID_ARM_SUB_SYSTEM, PI_MGR_QOS_DEFAULT_VALUE);
 #endif
 }
 enum cable_type_t set_cable_status;
-static void tsu6111_usb_cb(bool attached)
+static void fsa9485_usb_cb(bool attached)
 {
-	enum bcmpmu_chrgr_type_t chrgr_type;
-	enum bcmpmu_usb_type_t usb_type;
-
-	#if defined(CONFIG_SEC_CHARGING_FEATURE)
-	int spa_data = POWER_SUPPLY_TYPE_BATTERY;
-#endif
-	pr_info("ftsu6111_usb_cb attached %d\n", attached);
-
-	set_cable_status = attached ? CABLE_TYPE_USB : CABLE_TYPE_NONE;
-
-	switch (set_cable_status) {
-	case CABLE_TYPE_USB:
-			usb_type = PMU_USB_TYPE_SDP;
-			chrgr_type = PMU_CHRGR_TYPE_SDP;
-#if defined(CONFIG_SEC_CHARGING_FEATURE)
-		spa_data = POWER_SUPPLY_TYPE_USB_CDP;
-#endif
-			pr_info("%s USB attached\n", __func__);
-			/*send_usb_insert_event(BCMPMU_USB_EVENT_USB_DETECTION,
-				&usb_type);
-			//remove to fix enumeration failure issue */
-			break;
-	case CABLE_TYPE_NONE:
-			usb_type = PMU_USB_TYPE_NONE;
-			chrgr_type = PMU_CHRGR_TYPE_NONE;
-			spa_data = POWER_SUPPLY_TYPE_BATTERY;
-			pr_info("%s USB removed\n", __func__);
-			/*set_usb_connection_status(&usb_type);
-			//for unplug, we only set status, but not send event */
-			break;
-
-	}
-	send_chrgr_insert_event(BCMPMU_CHRGR_EVENT_CHGR_DETECTION, &chrgr_type);
-#if defined(CONFIG_SEC_CHARGING_FEATURE)
-	spa_event_handler(SPA_EVT_CHARGER, spa_data);
-#endif
-	pr_info("tsu6111_usb_cb attached %d\n", attached);
+	pr_info("fsa9485_usb_cb attached %d\n", attached);
 }
 
 #if defined(CONFIG_TOUCHSCREEN_IST30XX)
 extern void ist30xx_set_ta_mode(bool charging);
 #endif
 
-static void tsu6111_charger_cb(bool attached)
+static void fsa9485_charger_cb(bool attached)
 {
-	enum bcmpmu_chrgr_type_t chrgr_type;
-	enum cable_type_t set_cable_status;
-#if defined(CONFIG_SEC_CHARGING_FEATURE)
-	int spa_data = POWER_SUPPLY_TYPE_BATTERY;
-#endif
-
-	pr_info("tsu6111_charger_cb attached %d\n", attached);
-
-	set_cable_status = attached ? CABLE_TYPE_AC : CABLE_TYPE_NONE;
-	switch (set_cable_status) {
-	case CABLE_TYPE_AC:
-			chrgr_type = PMU_CHRGR_TYPE_DCP;
-			pr_info("%s TA attached\n", __func__);
-			#if defined(CONFIG_TOUCHSCREEN_IST30XX)
-				ist30xx_set_ta_mode(1);
-			#endif
-#if defined(CONFIG_SEC_CHARGING_FEATURE)
-		spa_data = POWER_SUPPLY_TYPE_USB_DCP;
-#endif
-			break;
-	case CABLE_TYPE_NONE:
-			chrgr_type = PMU_CHRGR_TYPE_NONE;
-			pr_info("%s TA removed\n", __func__);
-			#if defined(CONFIG_TOUCHSCREEN_IST30XX)
-				ist30xx_set_ta_mode(0);
-			#endif
-			break;
-	default:
-			break;
-	}
-	send_chrgr_insert_event(BCMPMU_CHRGR_EVENT_CHGR_DETECTION,
-			&chrgr_type);
-#if defined(CONFIG_SEC_CHARGING_FEATURE)
-	spa_event_handler(SPA_EVT_CHARGER, spa_data);
-#endif
-	pr_info("tsu6111_charger_cb attached %d\n", attached);
+	pr_info("fsa9480_charger_cb attached %d\n", attached);
 }
 
-static void tsu6111_jig_cb(bool attached)
+static void fsa9485_jig_cb(bool attached)
 {
-	pr_info("tsu6111_jig_cb attached %d\n", attached);
+	pr_info("fsa9480_jig_cb attached %d\n", attached);
 
 	if (attached) {
-#ifdef CONFIG_HAS_WAKELOCK
-		if (!wake_lock_active(&tsu6111_jig_wakelock))
-			wake_lock(&tsu6111_jig_wakelock);
-#endif
-#ifdef CONFIG_KONA_PI_MGR
+		#ifdef CONFIG_HAS_WAKELOCK
+			if (!wake_lock_active(&fsa9485_jig_wakelock))
+				wake_lock(&fsa9485_jig_wakelock);
+		#endif
+		#ifdef CONFIG_KONA_PI_MGR
 			pi_mgr_qos_request_update(&qos_node, 0);
-#endif
+		#endif
 	} else {
-#ifdef CONFIG_HAS_WAKELOCK
-		if (wake_lock_active(&tsu6111_jig_wakelock))
-			wake_unlock(&tsu6111_jig_wakelock);
-#endif
-#ifdef CONFIG_KONA_PI_MGR
-		pi_mgr_qos_request_update(&qos_node, PI_MGR_QOS_DEFAULT_VALUE);
-#endif
+		#ifdef CONFIG_HAS_WAKELOCK
+			if (wake_lock_active(&fsa9485_jig_wakelock))
+				wake_unlock(&fsa9485_jig_wakelock);
+		#endif
+		#ifdef CONFIG_KONA_PI_MGR
+			pi_mgr_qos_request_update(&qos_node,
+				PI_MGR_QOS_DEFAULT_VALUE);
+		#endif
 	}
 
 }
-extern int musb_info_handler(struct notifier_block *nb,
-			unsigned long event, void *para);
-static void tsu6111_uart_cb(bool attached)
+static void fsa9485_uart_cb(bool attached)
 {
-	pr_info("%s attached %d\n", __func__, attached);
-		if (attached) {
-#ifdef CONFIG_HAS_WAKELOCK
-			if (!wake_lock_active(&tsu6111_jig_wakelock))
-				wake_lock(&tsu6111_jig_wakelock);
-#endif
-#ifdef CONFIG_KONA_PI_MGR
+	pr_info("fsa9485_uart_cb attached %d\n", attached);
+	if (attached) {
+		#ifdef CONFIG_HAS_WAKELOCK
+		if (!wake_lock_active(&fsa9485_jig_wakelock))
+			wake_lock(&fsa9485_jig_wakelock);
+		#endif
+		#ifdef CONFIG_KONA_PI_MGR
 			pi_mgr_qos_request_update(&qos_node, 0);
-#endif
-			musb_info_handler(NULL, 0, 1);
+		#endif
 	} else {
-#ifdef CONFIG_HAS_WAKELOCK
-			if (wake_lock_active(&tsu6111_jig_wakelock))
-				wake_unlock(&tsu6111_jig_wakelock);
-#endif
-#ifdef CONFIG_KONA_PI_MGR
+		#ifdef CONFIG_HAS_WAKELOCK
+		if (wake_lock_active(&fsa9485_jig_wakelock))
+			wake_unlock(&fsa9485_jig_wakelock);
+		#endif
+		#ifdef CONFIG_KONA_PI_MGR
 			pi_mgr_qos_request_update(&qos_node,
-			PI_MGR_QOS_DEFAULT_VALUE);
-#endif
-			musb_info_handler(NULL, 0, 0);
+				PI_MGR_QOS_DEFAULT_VALUE);
+		#endif
 		}
 
 }
 
 void uas_jig_force_sleep(void)
 {
-#ifdef CONFIG_HAS_WAKELOCK
-	if (wake_lock_active(&tsu6111_jig_wakelock)) {
-		wake_unlock(&tsu6111_jig_wakelock);
+	#ifdef CONFIG_HAS_WAKELOCK
+	if (wake_lock_active(&fsa9485_jig_wakelock)) {
+		wake_unlock(&fsa9485_jig_wakelock);
 		pr_info("Force unlock jig_uart_wl\n");
 	}
-#else
-	pr_info("Warning : %s - Empty function!!!\n", __func__);
-#endif
-#ifdef CONFIG_KONA_PI_MGR
+	#endif
+	#ifdef CONFIG_KONA_PI_MGR
 	pi_mgr_qos_request_update(&qos_node, PI_MGR_QOS_DEFAULT_VALUE);
-#endif
-	return;
+	#endif
 }
 
-static struct tsu6111_platform_data tsu6111_pdata = {
-	.usb_cb = tsu6111_usb_cb,
-	.charger_cb = tsu6111_charger_cb,
-	.jig_cb = tsu6111_jig_cb,
-	.uart_cb = tsu6111_uart_cb,
+static struct fsa9485_platform_data fsa9485_pdata = {
+	.usb_cb = fsa9485_usb_cb,
+	.charger_cb = fsa9485_charger_cb,
+	.jig_cb = fsa9485_jig_cb,
+	.uart_cb = fsa9485_uart_cb,
 };
 
-static struct i2c_board_info  __initdata micro_usb_i2c_devices_info[] = {
+static struct i2c_board_info  __initdata micro_usb_i2c_devices_info[]  = {
 	{
-		I2C_BOARD_INFO("tsu6111", 0x4A >> 1),
-		.platform_data = &tsu6111_pdata,
+		I2C_BOARD_INFO("fsa9485", 0x4A >> 1),
+		.platform_data = &fsa9485_pdata,
 		.irq = gpio_to_irq(GPIO_USB_INT),
 	},
 };
 
-static struct i2c_gpio_platform_data mUSB_i2c_gpio_data = {
+static struct i2c_gpio_platform_data fsa_i2c_gpio_data = {
 	.sda_pin = GPIO_USB_I2C_SDA,
 	.scl_pin = GPIO_USB_I2C_SCL,
 	.udelay = 2,
 };
 
-static struct platform_device mUSB_i2c_gpio_device = {
+static struct platform_device fsa_i2c_gpio_device = {
 	.name = "i2c-gpio",
-	.id = TSU6111_I2C_BUS_ID,
+	.id = FSA9485_I2C_BUS_ID,
 	.dev = {
-		.platform_data = &mUSB_i2c_gpio_data,
+		.platform_data = &fsa_i2c_gpio_data,
 	},
 };
 
 static struct platform_device *mUSB_i2c_devices[] __initdata = {
-	&mUSB_i2c_gpio_device,
+	&fsa_i2c_gpio_device,
 };
 
 #endif
@@ -2011,10 +1945,10 @@ static void __init hawaii_add_i2c_devices(void)
 #ifdef CONFIG_USB_SWITCH_TSU6111
 	pr_info("tsu6111\n");
 #if defined(CONFIG_HAS_WAKELOCK) || defined(CONFIG_KONA_PI_MGR)
-		tsu6111_wakelock_init();
+	fsa9485_wakelock_init();
 #endif
-	i2c_register_board_info(TSU6111_I2C_BUS_ID, micro_usb_i2c_devices_info,
-		ARRAY_SIZE(micro_usb_i2c_devices_info));
+	i2c_register_board_info(FSA9485_I2C_BUS_ID, micro_usb_i2c_devices_info,
+	ARRAY_SIZE(micro_usb_i2c_devices_info));
 #endif
 
 #ifdef CONFIG_USB_SWITCH_TSU6111
@@ -2088,13 +2022,13 @@ static void hawaii_add_pdata(void)
 	hawaii_pl330_dmac_device.dev.platform_data = &hawaii_pl330_pdata;
 #ifdef CONFIG_BACKLIGHT_PWM
 	hawaii_backlight_device.dev.platform_data = &hawaii_backlight_data;
-	hawaii_usb_phy_platform_device.dev.platform_data =
-		&hsotgctrl_plat_data;
 #endif
 
 #ifdef CONFIG_USB_DWC_OTG
-	hawaii_hsotgctrl_platform_device.dev.platform_data =
-		&hsotgctrl_plat_data;
+	hawaii_hsotgctrl_platform_device.dev.platform_data
+		= &hsotgctrl_plat_data;
+	hawaii_usb_phy_platform_device.dev.platform_data
+		=	&hsotgctrl_plat_data;
 #endif
 }
 
@@ -2113,14 +2047,6 @@ static void __init hawaii_add_devices(void)
 
 	hawaii_add_pdata();
 
-#ifdef CONFIG_KEYBOARD_BCM
-	hawaii_kp_device.dev.platform_data = &hawaii_keypad_data;
-#endif
-
-#if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
-	platform_device_register(&board_gpio_keys_device);
-#endif
-
 #ifdef CONFIG_ION_BCM_NO_DT
 	platform_device_register(&ion_carveout_device);
 #ifdef CONFIG_CMA
@@ -2128,6 +2054,13 @@ static void __init hawaii_add_devices(void)
 #endif
 #endif
 
+#ifdef CONFIG_KEYBOARD_BCM
+	hawaii_kp_device.dev.platform_data = &hawaii_keypad_data;
+#endif
+
+#if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
+	platform_device_register(&board_gpio_keys_device);
+#endif
 
 	platform_add_devices(hawaii_devices, ARRAY_SIZE(hawaii_devices));
 
@@ -2166,14 +2099,20 @@ struct kona_fb_platform_data konafb_devices[] __initdata = {
 		.vburst = true,
 		.cmnd_LP = true,
 		.te_ctrl = false,
-		.col_mod_i = 2,
-		.col_mod_o = 3,
+		.col_mod_i = 3,  /*DISPDRV_FB_FORMAT_xBGR8888*/
+		.col_mod_o = 2, /*DISPDRV_FB_FORMAT_xRGB8888*/
 		.width = 480,
 		.height = 800,
 		.fps = 60,
 		.lanes = 2,
 		.hs_bps = 350000000,
 		.lp_bps = 5000000,
+#ifdef CONFIG_IOMMU_API
+		.pdev_iommu = &iovmm_mm_device,
+#endif
+#ifdef CONFIG_BCM_IOVMM
+		.pdev_iovmm = &iovmm_mm_256mb_device,
+#endif
 	},
 };
 
@@ -2203,7 +2142,7 @@ static int __init hawaii_add_lateinit_devices(void)
 
 late_initcall(hawaii_add_lateinit_devices);
 
-MACHINE_START(HAWAII, "hawaii_ss_goldenven")
+MACHINE_START(HAWAII, "hawaii_ss_goldenve")
 	.atag_offset = 0x100,
 	.map_io = hawaii_map_io,
 	.init_irq = kona_init_irq,
