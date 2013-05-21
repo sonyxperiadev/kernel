@@ -40,7 +40,6 @@ void mm_common_enable_clock(struct mm_common *common)
 			clk_enable(common->common_clk);
 #ifdef CONFIG_ARCH_JAVA
 		if (strncmp(common->mm_name, "mm_h264", 7) == 0) {
-			printk(KERN_ERR "%s, %s\n", common->mm_name, __func__);
 			/* Access to root reset manager register block. */
 			writel(0xa5a501, HW_IO_PHYS_TO_VIRT(0x35001f00));
 			usleep_range(10, 20);
