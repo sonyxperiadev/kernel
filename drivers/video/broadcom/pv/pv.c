@@ -197,8 +197,15 @@ int pv_init(struct pv_init_t *init, struct pv_config_t **config)
 	dev->state = PV_INIT_DONE;
 	if (!g_display_enabled)
 		dev->state = PV_INIT_DONE;
-	else
-		dev->state = PV_ENABLED;
+	else{
+		if (readl(dev->base_addr + REG_PV_VC) & CMD_MODE)
+			dev->state = PV_STOPPED;
+		else {
+			pv_clk_enable(dev);
+			dev->state = PV_ENABLED;
+		}
+
+	}
 	g_pv_init[init->id] = true;
 	*config = &dev->vid_config;
 	ret = 0;

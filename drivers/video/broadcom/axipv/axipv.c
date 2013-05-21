@@ -284,8 +284,8 @@ int axipv_init(struct axipv_init_t *init, struct axipv_config_t **config)
 		goto fail_clk;
 	}
 #endif
+	axipv_clk_enable(dev);
 	if (!g_display_enabled) {
-		axipv_clk_enable(dev);
 
 		ctrl &= SFT_RSTN_MASK;
 		/* Do an immediate soft reset and wait for completion */
@@ -318,9 +318,10 @@ int axipv_init(struct axipv_init_t *init, struct axipv_config_t **config)
 	} else {
 		dev->prev_irq_handled = 1;
 		dev->irq_stat = 0;
-		if (readl(dev->base_addr + REG_CTRL) & AXIPV_CMD_MODE)
+		if (readl(dev->base_addr + REG_CTRL) & AXIPV_CMD_MODE) {
+			axipv_clk_disable(dev);
 			dev->state = AXIPV_STOPPED;
-		else
+		} else
 			dev->state = AXIPV_ENABLED;
 		writel_relaxed(UINT_MAX, dev->base_addr + REG_INTR_CLR);
 		writel_relaxed(UINT_MAX, dev->base_addr + REG_INTR_EN);
