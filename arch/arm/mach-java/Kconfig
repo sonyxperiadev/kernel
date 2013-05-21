@@ -48,7 +48,7 @@ config	MACH_JAVA_GARNET
 
 config	MACH_JAVA_SS_EVAL
 		tristate "MACH_JAVA_SS_EVAL"
-	select MACH_JAVA_SS_EVAL
+	select MACH_BCM_SS_EVAL
 	help
 	  Support for Broadcom Hawaii ss eval board.
 
