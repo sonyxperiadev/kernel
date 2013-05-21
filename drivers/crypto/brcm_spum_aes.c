@@ -77,9 +77,63 @@ struct spum_request_context {
 	u8 spum_out_hdr[128] DWORD_ALIGNED;
 	u8 spum_in_stat[4] DWORD_ALIGNED;
 	u8 spum_out_stat[4] DWORD_ALIGNED;
+	struct scatterlist *src_sg, *dst_sg;
+	u32 src_change, dst_change;
+	u32 src_len, dst_len;
+	u32 src_dst_mod;
 };
 
 static int spum_aes_dma_init(struct spum_aes_device *dd);
+/*
+ * To modify the src and dst sg list in case the nbytes and the sg->length
+ * differ
+ */
+static void modify_src_dst_list(struct scatterlist *src,
+		struct scatterlist *dst, int nbytes,
+		struct spum_request_context *rctx)
+{
+	int list_len = 0, sg_counter = 0;
+
+	while (list_len < nbytes) {
+		if ((list_len + src->length) == nbytes) {
+			sg_mark_end(src);
+			rctx->src_sg = sg_next(src);
+			break;
+		} else if ((list_len + src->length) > nbytes) {
+			rctx->src_change = sg_counter;
+			rctx->src_len = src->length;
+			src->length = nbytes - list_len;
+			rctx->src_sg = sg_next(src);
+			sg_mark_end(src);
+			break;
+		}
+		list_len += src->length;
+		src = sg_next(src);
+		sg_counter++;
+	}
+
+	list_len = 0;
+	sg_counter = 0;
+
+	while (list_len < nbytes) {
+		if ((list_len + dst->length) == nbytes) {
+			sg_mark_end(dst);
+			rctx->dst_sg = sg_next(dst);
+			break;
+		} else if ((list_len + dst->length) > nbytes) {
+			rctx->dst_change = sg_counter;
+			rctx->dst_len = dst->length;
+			dst->length = nbytes - list_len;
+			rctx->dst_sg = sg_next(dst);
+			sg_mark_end(dst);
+			break;
+		}
+		list_len += dst->length;
+		dst = sg_next(dst);
+		sg_counter++;
+	}
+
+}
 
 static void dump_sg_list(struct scatterlist *sg)
 {
@@ -91,7 +145,6 @@ static void dump_sg_list(struct scatterlist *sg)
 	}
 }
 
-#ifdef SPUM_PIO_MODE
 static unsigned int get_sg_list_len(struct scatterlist *sg)
 {
 	struct scatterlist *sgl = sg;
@@ -103,7 +156,6 @@ static unsigned int get_sg_list_len(struct scatterlist *sg)
 	}
 	return cnt;
 }
-#endif
 
 static unsigned int get_sg_list_cnt(struct scatterlist *sg)
 {
@@ -151,8 +203,41 @@ static int spum_aes_finish_req(struct spum_aes_device *dd, int err)
 {
 	struct spum_request_context *rctx = ablkcipher_request_ctx(dd->req);
 	unsigned long flags;
+	struct scatterlist *src, *dst;
+
+	src = dd->req->src;
+	dst = dd->req->dst;
 
 	pr_debug("%s: entry tx_len %d\n", __func__, rctx->tx_len);
+	/* To restore the src and dst sg's back to original
+	 * state before returning */
+	while (rctx->src_dst_mod == 1) {
+		int src_change = rctx->src_change;
+		int dst_change = rctx->dst_change;
+
+		if (!rctx->src_change) {
+			src->length = rctx->src_len;
+			if (rctx->src_sg)
+				sg_chain(src, rctx->src_change, rctx->src_sg);
+			rctx->src_dst_mod = 0;
+		} else {
+			src = sg_next(src);
+			src_change--;
+		}
+
+		if (!rctx->dst_change) {
+			dst->length = rctx->dst_len;
+			if (rctx->dst_sg)
+				sg_chain(dst, rctx->dst_change, rctx->dst_sg);
+			rctx->src_dst_mod = 0;
+		} else {
+			dst = sg_next(dst);
+			dst_change--;
+		}
+
+		if (!(src_change || dst_change))
+			break;
+	}
 
 	dd->req->base.complete(&dd->req->base, err);
 	dd->req = NULL;
@@ -591,6 +676,7 @@ static int spum_aes_crypt(struct ablkcipher_request *req, spum_crypto_algo algo,
 
 	cmd_len_bytes = spum_format_command(&spum_hw_aes_ctx,
 						rctx->spum_in_hdr);
+	rctx->src_dst_mod = 0;
 	rctx->rx_len = cmd_len_bytes +
 			    spum_hw_aes_ctx.data_attribute.data_length +
 			    SPUM_INPUT_STATUS_LEN;
@@ -614,7 +700,12 @@ static int spum_aes_crypt(struct ablkcipher_request *req, spum_crypto_algo algo,
 		sg_init_one(&rctx->spum_in_cmd_tweak, req->info,
 		crypto_ablkcipher_ivsize(crypto_ablkcipher_reqtfm(req)));
 	}
-
+	/* Check if sg->length is greater than nbytes */
+	if ((req->nbytes < get_sg_list_len(req->src)) ||
+		(req->nbytes < get_sg_list_len(req->dst))) {
+		rctx->src_dst_mod = 1;
+		modify_src_dst_list(req->src, req->dst, req->nbytes, rctx);
+	}
 	ret = spum_enqueue_request(&req->base);
 
 	if (ret == -EINPROGRESS)
