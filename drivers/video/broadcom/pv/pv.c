@@ -128,8 +128,12 @@ static void err_cb(struct work_struct *work)
 static void eof_cb(struct work_struct *work)
 {
 	struct pv_dev *dev = container_of(work, struct pv_dev, eof_work);
-	if (PV_STOPPED == dev->state)
+	if (PV_STOPPED == dev->state) {
+		u32 pv_base = dev->base_addr;
+		writel(0, pv_base + REG_PV_INTEN);
+		writel(readl(pv_base + REG_PV_C) & ~PVEN, pv_base + REG_PV_C);
 		pv_clk_disable(dev);
+	}
 	if (dev->eof_cb)
 		dev->eof_cb();
 }
@@ -211,6 +215,7 @@ static irqreturn_t pv_isr(int irq, void *dev_data)
 {
 	u32 pv_base, irq_stat;
 	struct pv_dev *dev = dev_data;
+	u32 schedule_wk = 0;
 
 	pv_base = dev->base_addr;
 	irq_stat = readl(pv_base + REG_PV_INTSTAT);
@@ -229,11 +234,9 @@ static irqreturn_t pv_isr(int irq, void *dev_data)
 		}
 #else
 		if (PV_STOPPING == dev->state) {
-			writel(readl(pv_base + REG_PV_C) & ~PVEN,
-				pv_base + REG_PV_C);
 			/*Change PV state to Stopped*/
 			dev->state = PV_STOPPED;
-			schedule_work(&dev->eof_work);
+			schedule_wk = 1;
 		}
 #endif
 		writel(VFP_END, pv_base + REG_PV_INTSTAT);
@@ -253,6 +256,9 @@ static irqreturn_t pv_isr(int irq, void *dev_data)
 	if (irq_stat) {
 		writel(irq_stat, pv_base + REG_PV_INTSTAT);
 	}
+
+	if (schedule_wk)
+		schedule_work(&dev->eof_work);
 	return IRQ_HANDLED;
 }
 
