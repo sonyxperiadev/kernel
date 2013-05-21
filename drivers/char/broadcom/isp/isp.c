@@ -311,13 +311,19 @@ static int enable_isp_clock(void)
 		err_print("%s: error get clock\n", __func__);
 		return -EIO;
 	}
-
+#if defined(CONFIG_PI_MGR_MM_STURBO_ENABLE)
+	if (pi_mgr_dfs_request_update(&isp_dfs_node, PI_OPP_SUPER_TURBO)) {
+		printk(KERN_ERR "%s:failed to update dfs request for isp\n",
+		   __func__);
+		return -1;
+	}
+#else
 	if (pi_mgr_dfs_request_update(&isp_dfs_node, PI_OPP_TURBO)) {
 		printk(KERN_ERR "%s:failed to update dfs request for isp\n",
 		       __func__);
 		return -1;
 	}
-
+#endif
 	ret = clk_enable(isp_clk);
 	if (ret) {
 		err_print("%s: error enable ISP clock\n", __func__);
