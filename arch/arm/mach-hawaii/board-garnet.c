@@ -453,8 +453,6 @@ static int hawaii_camera_power(struct device *dev, int on)
 			printk("DVFS for UNICAM failed\n");
 		regulator_enable(d_gpsr_cam0_1v8);
 		usleep_range(1000, 1010);
-		regulator_enable(d_3v0_mmc1_vcc);
-		usleep_range(1000, 1010);
 		regulator_enable(d_1v8_mmc1_vcc);
 		usleep_range(1000, 1010);
 		regulator_enable(d_lvldo2_cam1_1v8);
@@ -523,6 +521,8 @@ static int hawaii_camera_power(struct device *dev, int on)
 		gpio_set_value(SENSOR_0_GPIO_RST, 1);
 #endif
 
+		regulator_enable(d_3v0_mmc1_vcc);
+		usleep_range(1000, 1010);
 #ifdef CONFIG_VIDEO_A3907
 		a3907_enable(1);
 #endif
@@ -532,9 +532,9 @@ static int hawaii_camera_power(struct device *dev, int on)
 		a3907_enable(0);
 #endif
 #ifdef CONFIG_SOC_CAMERA_OV5640
-		gpio_set_value(SENSOR_0_GPIO_RST, 0);
-		usleep_range(1000, 1100);
 		gpio_set_value(SENSOR_0_GPIO_PWRDN, 1);
+		usleep_range(1000, 1100);
+		gpio_set_value(SENSOR_0_GPIO_RST, 0);
 #endif
 #ifdef CONFIG_SOC_CAMERA_OV5648
 		gpio_set_value(SENSOR_0_GPIO_PWRDN, 0);
@@ -545,8 +545,8 @@ static int hawaii_camera_power(struct device *dev, int on)
 		clk_disable(clock);
 		clk_disable(lp_clock);
 		clk_disable(axi_clk);
-		regulator_disable(d_lvldo2_cam1_1v8);
 		regulator_disable(d_3v0_mmc1_vcc);
+		regulator_disable(d_lvldo2_cam1_1v8);
 		regulator_disable(d_1v8_mmc1_vcc);
 		regulator_disable(d_gpsr_cam0_1v8);
 		if (pi_mgr_dfs_request_update
