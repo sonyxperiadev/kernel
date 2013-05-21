@@ -39,6 +39,11 @@
  * header file.
  */
 
+#define DWC_HS_ELECT_TST 1
+#ifdef DWC_HS_ELECT_TST
+#include <linux/io.h>
+#endif
+
 #include "dwc_otg_hcd.h"
 #include "dwc_otg_regs.h"
 
@@ -1590,10 +1595,6 @@ void dwc_otg_hcd_queue_transactions(dwc_otg_hcd_t *hcd,
 	}
 }
 
-#ifdef CONFIG_USB_OTG
-#define DWC_HS_ELECT_TST 1
-#endif
-
 #ifdef DWC_HS_ELECT_TST
 /*
  * Quick and dirty hack to implement the HS Electrical Test
@@ -1622,6 +1623,7 @@ static void do_setup(void)
 	haint_data_t haint;
 	hcint_data_t hcint;
 	int timeout = MAX_LOOPS;
+	uint32_t *dma_addr;
 
 	/* Enable HAINTs */
 	dwc_write_reg32(&hc_global_regs->haintmsk, 0x0001);
@@ -1697,6 +1699,12 @@ static void do_setup(void)
 	hctsiz.b.pid = DWC_OTG_HC_PID_SETUP;
 	dwc_write_reg32(&hc_regs->hctsiz, hctsiz.d32);
 
+	/* Write packet to DMA buffer */
+	dma_addr = (uint32_t *)dwc_read_reg32(&hc_regs->hcdma);
+	dma_addr = phys_to_virt((phys_addr_t)dma_addr);
+	*dma_addr++ = 0x01000680;
+	*dma_addr++ = 0x00080000;
+
 	/* Set HCCHAR */
 	hcchar.d32 = dwc_read_reg32(&hc_regs->hcchar);
 	hcchar.b.eptype = DWC_OTG_EP_TYPE_CONTROL;
@@ -1705,11 +1713,6 @@ static void do_setup(void)
 	hcchar.b.mps = 8;
 	hcchar.b.chen = 1;
 	dwc_write_reg32(&hc_regs->hcchar, hcchar.d32);
-
-	/* Fill FIFO with Setup data for Get Device Descriptor */
-	data_fifo = (uint32_t *)((char *)global_regs + 0x1000);
-	dwc_write_reg32(data_fifo++, 0x01000680);
-	dwc_write_reg32(data_fifo++, 0x00080000);
 
 	gintsts.d32 = dwc_read_reg32(&global_regs->gintsts);
 
@@ -1754,6 +1757,7 @@ static void do_in_ack(void)
 	haint_data_t haint;
 	hcint_data_t hcint;
 	host_grxsts_data_t grxsts;
+
 
 	/* Enable HAINTs */
 	dwc_write_reg32(&hc_global_regs->haintmsk, 0x0001);
@@ -2035,6 +2039,7 @@ static void do_in_ack(void)
 	/* Read GINTSTS */
 	gintsts.d32 = dwc_read_reg32(&global_regs->gintsts);
 }
+
 #endif
 
 /** Handles hub class-specific requests. */
@@ -2758,7 +2763,7 @@ int dwc_otg_hcd_hub_control(dwc_otg_hcd_t *dwc_otg_hcd,
 						dwc_write_reg32(&global_regs->
 								gintmsk,
 								gintmsk.d32);
-					}
+						}
 #ifdef CONFIG_USB_OTG
 					else if (t == 16) {
 #ifdef CONFIG_USB_OTG_UTILS
