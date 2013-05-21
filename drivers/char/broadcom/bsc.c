@@ -334,7 +334,10 @@ proc_register_write(struct file *file, const char __user *buffer,
 {
 	int rc;
 	BSC_PARAM_T param;
-	unsigned char kbuf[MAX_PROC_BUF_SIZE];
+	/* Coverity OverRun error fix. Added #1 byte
+	 * more for the kbuf array */
+	unsigned char kbuf[MAX_PROC_BUF_SIZE + 1];
+	unsigned char *tmp = kbuf;
 
 	if (count > MAX_PROC_BUF_SIZE)
 		count = MAX_PROC_BUF_SIZE;
@@ -345,11 +348,17 @@ proc_register_write(struct file *file, const char __user *buffer,
 		return -EFAULT;
 	}
 
-	if (sscanf(kbuf, "%s %d", param.name, &param.len) != 2) {
+	tmp[count] = '\0';
+	if (sscanf(kbuf, "%s", param.name) != 1) {
 		printk(KERN_ERR "echo <name> <len> > /proc/%s/%s\n",
 		       PROC_PARENT_DIR, PROC_ENTRY_REGISTER);
 		return count;
 	}
+
+	tmp = tmp + strlen(param.name);
+
+	if (kstrtol(tmp, 10, &param.len) < 0)
+		return -EINVAL;
 
 	if (param.len <= 0) {
 		printk(KERN_INFO "Data length needs to be greater than zero\n");
