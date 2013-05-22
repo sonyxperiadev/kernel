@@ -291,7 +291,7 @@ int __init mm_isp_init(void)
 	core_param.mm_device_id = (void *)isp_device;
 	core_param.mm_virt_addr = NULL;
 
-	dvfs_param.is_dvfs_on = 1;
+	dvfs_param.is_dvfs_on = 0;
 	dvfs_param.user_requested_mode = TURBO;
 	dvfs_param.enable_suspend_resume = 0;
 	dvfs_param.T1 = 300;

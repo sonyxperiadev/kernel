@@ -341,15 +341,16 @@ void *mm_dvfs_init(struct mm_common *mm_common, \
 	/* Init prof counters */
 	mm_dvfs->dvfs = *dvfs_params;
 	mm_dvfs->requested_mode = mm_dvfs->dvfs.user_requested_mode;
-	mm_dvfs->current_mode = mm_dvfs->requested_mode;
 
 	if (mm_dvfs->dvfs.is_dvfs_on) {
+		mm_dvfs->requested_mode = NORMAL;
 		mm_dvfs->mm_fmwk_notifier_blk.notifier_call \
 				= mm_dvfs_notification_handler;
 		atomic_notifier_chain_register(\
 			&mm_common->notifier_head, \
 			&mm_dvfs->mm_fmwk_notifier_blk);
 		}
+	mm_dvfs->current_mode = mm_dvfs->requested_mode;
 
 	mm_dvfs->dvfs_dir = debugfs_create_dir("dvfs", \
 				mm_dvfs->mm_common->debugfs_dir);
