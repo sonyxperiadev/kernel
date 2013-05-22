@@ -918,7 +918,6 @@ struct platform_device kona_memc_device = {
 
 #ifdef CONFIG_KONA_TMON
 struct tmon_state threshold_val[] = {
-	{.rising = 70, .falling = 65, .flags = TMON_NOTIFY,},
 	{.rising = 85, .falling = 75, .flags = TMON_NOTIFY,},
 	{.rising = 100, .falling = 90, .flags = TMON_NOTIFY,},
 	{.rising = 115, .falling = 112, .flags = TMON_SHDWN,},

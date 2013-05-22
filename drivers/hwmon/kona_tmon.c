@@ -83,12 +83,12 @@ enum {
 
 static long raw_to_celcius(long raw)
 {
-	return (407000 - (538 * raw)) / 1000;
+	return (426000 - (562 * raw)) / 1000;
 }
 
 static unsigned long celcius_to_raw(long celcius)
 {
-	return (407000 - celcius * 1000) / 538;
+	return (426000 - celcius * 1000) / 562;
 }
 
 static int cmp(const void *a, const void *b)
@@ -348,6 +348,8 @@ static irqreturn_t tmon_isr(int irq, void *drvdata)
 			"Current temperature is %ld\n",
 	pdata->thold[tmon->thresh_inx].rising, curr_temp);
 
+	/*Clear interrupt*/
+	writel(CLR_INT, pdata->base_addr + TMON_CFG_CLR_INT_OFFSET);
 	tmon->poll_inx = tmon->thresh_inx;
 	/*Find next rising thold*/
 	if ((tmon->thresh_inx < pdata->thold_size - 1) &&
@@ -361,8 +363,6 @@ static irqreturn_t tmon_isr(int irq, void *drvdata)
 		disable_irq_nosync(tmon->irq);
 		tmon->thresh_inx = INVALID_INX;
 	}
-	/*Clear interrupt*/
-	writel(CLR_INT, pdata->base_addr + TMON_CFG_CLR_INT_OFFSET);
 	queue_work(tmon->wqueue, &tmon->tmon_work);
 	return IRQ_HANDLED;
 }
