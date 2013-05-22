@@ -864,10 +864,8 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 			    || (param_stop->pdev_prop->p[0].drv_type ==
 				AUDIO_DRIVER_PLAY_EPT)) {
 				/* disable the playback path */
-				AUDCTRL_DisablePlay(param_stop->pdev_prop->p[0].
-						    source,
-						    param_stop->pdev_prop->p[0].
-						    sink,
+				AUDCTRL_DisablePlay(param_stop->source,
+						    param_stop->sink,
 						    pathID[param_stop->stream]);
 
 				pathID[param_stop->stream] = 0;

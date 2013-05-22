@@ -560,6 +560,11 @@ static int PcmPlaybackTrigger(struct snd_pcm_substream *substream, int cmd)
 			param_stop.pdev_prop =
 			    &chip->streamCtl[substream_number].dev_prop;
 			param_stop.stream = substream_number;
+			param_stop.source = chip->streamCtl[substream_number].
+					dev_prop.p[0].source;
+			param_stop.sink = chip->streamCtl[substream_number].
+					dev_prop.p[0].sink;
+
 			aTrace
 			    (LOG_ALSA_INTERFACE,
 			     "ACTION_AUD_StopPlay stream=%d\n",
