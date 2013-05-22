@@ -1779,6 +1779,8 @@ dhdsdio_txpkt(dhd_bus_t *bus, void *pkt, uint chan, bool free_pkt, bool queue_on
 		__FUNCTION__, (int)PKTTAILROOM(osh, pkt), real_pad));
 		if (PKTPADTAILROOM(osh, pkt, real_pad)) {
 			DHD_ERROR(("padding error size %d\n", real_pad));
+			ret = BCME_NOMEM;
+			goto done;
 		}
 	}
 #ifdef BCMLXSDMMC
