@@ -272,6 +272,7 @@ static int pv_vid_config(struct pv_config_t *vid_config)
 	/*Check bounds*/
 	if ((vid_config->pclk_sel >= PCLK_SEL_TYPE_MAX)
 		|| (vid_config->pix_fmt >= PIX_FMT_TYPE_MAX)
+		|| ((0 == vid_config->vbp) && !vid_config->cmd)
 		|| (vid_config->vsyncd & ~((1 << 17) - 1))) /* PV_VC[22:6]*/
 		return -EINVAL;
 
@@ -294,8 +295,8 @@ static int pv_vid_config(struct pv_config_t *vid_config)
 	writel_relaxed(vid_config->hact | (vid_config->hfp << HFP_SHIFT),
 			pv_base + REG_PV_HORZB);
 	writel_relaxed((vid_config->hact), pv_base + REG_PV_DSI_HACT_ACT);
-	writel_relaxed(vid_config->vs | (vid_config->vbp << VBP_SHIFT),
-			pv_base + REG_PV_VERTA);
+	writel_relaxed((vid_config->vs + 1) |
+		((vid_config->vbp - 1) << VBP_SHIFT), pv_base + REG_PV_VERTA);
 	writel_relaxed(vid_config->vact | (vid_config->vfp << VFP_SHIFT),
 			pv_base + REG_PV_VERTB);
 
