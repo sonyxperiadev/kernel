@@ -1339,45 +1339,55 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 				}
 
 				vb2_buffer_done(vb, VB2_BUF_STATE_DONE);
-				if(unicam_dev->cap_mode == 1){
-					unicam_dev->cap_done = 1;
-					goto out;
-				}
-				if (!list_empty(&unicam_dev->capture)){
-						unicam_dev->active =
-						    &list_entry(unicam_dev->
-							capture.next, struct
- 							unicam_camera_buffer,
-								queue)->vb;
-					}
-				else {
-					pr_info("Buffers not available!!\n");
+
+				spin_lock_irqsave(&unicam_dev->lock, flags);
+				if (atomic_read(&unicam_dev->stopping) == 1) {
+					up(&unicam_dev->stop_sem);
 					unicam_dev->active = NULL;
+				} else if (!list_empty(&unicam_dev->capture)) {
+					unicam_dev->active =
+					    &list_entry(unicam_dev->
+							capture.next, struct
+							unicam_camera_buffer,
+							queue)->vb;
+				} else {
+					unicam_dev->active = NULL;
+				}
+				spin_unlock_irqrestore(&unicam_dev->lock,
+					flags);
+
+				if (unicam_dev->cap_mode == 1) {
+					unicam_dev->cap_done = 1;
 					goto out;
 				}
 			} else {
 				unicam_dev->skip_frames--;
 			}
-			dma_addr = vb2_plane_dma_addr(unicam_dev->active, 0);
-			if (!dma_addr) {
-				unicam_dev->active = NULL;
-				pr_err("ISR: No valid address. skip capture\n");
-				goto out;
-			}
-			im0.start = dma_addr;
-			im0.size = unicam_dev->icd->user_width *
-				unicam_dev->icd->user_height * 2;
-			im0.ls = unicam_dev->icd->user_width * 2;
-			if (unicam_dev->icd->current_fmt->code != V4L2_MBUS_FMT_JPEG_1X8) {
-				mm_csi0_update_one(&im0, unicam_dev->curr, IMAGE_BUFFER);
+
+			if (unicam_dev->active) {
+				dma_addr = vb2_plane_dma_addr(
+					unicam_dev->active, 0);
+				if (!dma_addr) {
+					unicam_dev->active = NULL;
+					pr_err("ISR: No valid address.skip capture\n");
+					goto out;
+				}
+				im0.start = dma_addr;
+				im0.size = unicam_dev->icd->user_width *
+					unicam_dev->icd->user_height * 2;
+				im0.ls = unicam_dev->icd->user_width * 2;
+				if (unicam_dev->icd->current_fmt->code !=
+					V4L2_MBUS_FMT_JPEG_1X8) {
+					mm_csi0_update_one(&im0,
+						unicam_dev->curr, IMAGE_BUFFER);
+				} else {
+					mm_csi0_update_one(&im0,
+						unicam_dev->curr, DATA_BUFFER);
+				}
+				unicam_camera_capture(unicam_dev);
 			} else {
-				mm_csi0_update_one(&im0, unicam_dev->curr, DATA_BUFFER);
+				pr_err("ran out of buffers\n");
 			}
-
-			unicam_camera_capture(unicam_dev);
-
-		}
-		else{
 		}
 	}
 
