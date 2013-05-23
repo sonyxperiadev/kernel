@@ -31,13 +31,18 @@
 #include <linux/module.h>
 #include <linux/wait.h>
 #include <linux/input.h>
+#include <linux/sysfs.h>
 #include <linux/mfd/bcmpmu59xxx.h>
 #include <linux/mfd/bcmpmu59xxx_reg.h>
 
 struct bcmpmu_ponkey {
 	struct input_dev *idev;
+	struct bcmpmu59xxx *bcmpmu;
 	u32 ponkey_state;/*0: Released, 1 : Pressed */
+	u32 ponkey_mode;
 };
+
+static struct kobject *ponkey_kobj;
 
 enum {
 	PKEY_TIMER_T1,
@@ -46,6 +51,55 @@ enum {
 };
 
 static struct bcmpmu_ponkey *bcmpmu_pkey;
+
+static ssize_t
+ponkey_mode_store(struct device *dev, struct device_attribute *attr,
+		  const char *buf, size_t n)
+{
+	struct bcmpmu59xxx *bcmpmu;
+	unsigned int in_ponkey_mode;
+	if (bcmpmu_pkey)
+		bcmpmu = bcmpmu_pkey->bcmpmu;
+	else
+		goto err;
+	if (sscanf(buf, "%d", &in_ponkey_mode) == 1) {
+		if (in_ponkey_mode > 1)
+			goto err;
+		if (in_ponkey_mode == 0) {
+			bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_POK_PRESSED);
+			bcmpmu->mask_irq(bcmpmu, PMU_IRQ_POK_T1);
+		} else {
+			bcmpmu->mask_irq(bcmpmu, PMU_IRQ_POK_PRESSED);
+			bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_POK_T1);
+		}
+		bcmpmu_pkey->ponkey_mode = in_ponkey_mode;
+		return n;
+	}
+err:
+	pr_info("\r\nusage: \r\n"
+		"set ponkey_mode : "
+		"echo [ponkey_mode (0-1)] > /sys/ponkey/ponkey_mode\r\n");
+	return -EINVAL;
+}
+
+static ssize_t
+ponkey_mode_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	if (bcmpmu_pkey)
+		return sprintf(buf, "%d\n", bcmpmu_pkey->ponkey_mode);
+	return 0;
+}
+
+static DEVICE_ATTR(ponkey_mode, 0644, ponkey_mode_show, ponkey_mode_store);
+
+static struct attribute *ponkey_attrs[] = {
+	&dev_attr_ponkey_mode.attr,
+	NULL,
+};
+
+static struct attribute_group ponkey_mode_attr_group = {
+	.attrs = ponkey_attrs,
+};
 
 u32 bcmpmu_get_ponkey_state(void)
 {
@@ -124,6 +178,11 @@ static void bcmpmu_ponkey_isr(u32 irq, void *data)
 	switch (irq) {
 	case PMU_IRQ_POK_PRESSED:
 		ponkey->ponkey_state = 1;
+		break;
+
+	case PMU_IRQ_POK_T1:
+		ponkey->ponkey_state = 1;
+		pr_info("PMU_IRQ_POK_T1\n");
 		break;
 
 	case PMU_IRQ_POK_RELEASED:
@@ -239,6 +298,8 @@ static int __devinit bcmpmu59xxx_ponkey_probe(struct platform_device *pdev)
 		goto out_input;
 	}
 	ponkey->ponkey_state = 0;
+	ponkey->ponkey_mode = 0;
+	ponkey->bcmpmu = bcmpmu;
 	bcmpmu->ponkeyinfo = (void *)ponkey;
 	ponkey->idev->name = "bcmpmu_on";
 	ponkey->idev->phys = "bcmpmu_on/input0";
@@ -282,6 +343,7 @@ static int __devinit bcmpmu59xxx_ponkey_probe(struct platform_device *pdev)
 			     ponkey);
 	bcmpmu->register_irq(bcmpmu, PMU_IRQ_POK_RELEASED, bcmpmu_ponkey_isr,
 			     ponkey);
+	bcmpmu->register_irq(bcmpmu, PMU_IRQ_POK_T1, bcmpmu_ponkey_isr, ponkey);
 
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_POK_PRESSED);
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_POK_RELEASED);
@@ -292,6 +354,16 @@ static int __devinit bcmpmu59xxx_ponkey_probe(struct platform_device *pdev)
 			error);
 		goto out;
 	}
+	ponkey_kobj = kobject_create_and_add("ponkey", NULL);
+	if (!ponkey_kobj)
+		goto err;
+	error = sysfs_create_group(ponkey_kobj, &ponkey_mode_attr_group);
+	if (error) {
+		dev_err(bcmpmu->dev, "failed to create attribute group: %d\n",
+			error);
+		kobject_put(ponkey_kobj);
+		goto err;
+	}
 
 	return 0;
 
@@ -299,6 +371,7 @@ out:
 	input_free_device(ponkey->idev);
 out_input:
 	kfree(ponkey);
+err:
 	return error;
 }
 
@@ -307,9 +380,13 @@ static int __devexit bcmpmu59xxx_ponkey_remove(struct platform_device *pdev)
 	struct bcmpmu59xxx *bcmpmu = dev_get_drvdata(pdev->dev.parent);
 	struct bcmpmu_ponkey *ponkey = bcmpmu->ponkeyinfo;
 
+	sysfs_remove_group(ponkey_kobj, &ponkey_mode_attr_group);
+
 	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_POK_PRESSED);
 	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_POK_RELEASED);
+	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_POK_T1);
 	input_unregister_device(ponkey->idev);
+	kobject_put(ponkey_kobj);
 	kfree(ponkey);
 	return 0;
 }
