@@ -1,8 +1,9 @@
 /*
  * OmniVision OV5648 sensor driver
  *
- * Copyright (C) 2011 Texas Instruments Incorporated - http://www.ti.com/
+ * Copyright (C) 2013 Broadcom Corporation
  *
+
  * This program is free software; you can redistribute it and/or
  *modify it under the terms of the GNU General Public License as
  *published by the Free Software Foundation version 2.
@@ -19,6 +20,7 @@
 #include <linux/log2.h>
 #include <linux/delay.h>
 #include <linux/module.h>
+#include <linux/printk.h>
 
 #include <media/v4l2-subdev.h>
 #include <media/v4l2-chip-ident.h>
@@ -34,7 +36,6 @@
 #endif
 
 /* #define OV5648_DEBUG */
-/* #define OV5648_DEBUG_PRINT */
 
 /* OV5648 has only one fixed colorspace per pixelcode */
 struct ov5648_datafmt {
@@ -128,6 +129,28 @@ struct sensor_mode ov5648_mode[OV5648_MODE_MAX + 1] = {
 	}
 };
 
+/**
+ *struct ov5648_otp - ov5648 OTP format
+ *@module_integrator_id: 32-bit module integrator ID number
+ *@lens_id: 32-bit lens ID number
+ *@rg_ratio: 32-bit AWB R/G channel ratio
+ *@bg_ratio: 32-bit AWB B/G channel ratio
+ *@user_data: 64-bit OTP user data
+ *@light_rg: 32-bit light source R/G ratio
+ *@light_bg: 32-bit light source B/G ratio
+ *
+ * Define a structure for OV5648 OTP calibration data
+ */
+struct ov5648_otp {
+	int module_integrator_id;
+	int lens_id;
+	int rg_ratio;
+	int bg_ratio;
+	int user_data[2];
+	int light_rg;
+	int light_bg;
+};
+
 struct ov5648 {
 	struct v4l2_subdev subdev;
 	struct v4l2_subdev_sensor_interface_parms *plat_parms;
@@ -170,6 +193,7 @@ struct ov5648 {
 	int flashmode;
 	int flash_intensity;
 	int flash_timeout;
+	struct ov5648_otp otp;
 };
 
 /**
@@ -731,6 +755,24 @@ static const struct ov5648_reg ov5648_reg_state[OV5648_STATE_MAX][3] = {
 	},
 };
 
+static const struct ov5648_reg ov5648_otpbank_sel[2][5] = {
+	{ /* bank 0 */
+	{0x3d84, 0xc0},
+	{0x3d85, 0x00},
+	{0x3d86, 0x0f},
+	{0x3d81, 0x01},
+	{0xFFFF, 0x00}
+	},
+
+	{ /* bank 1 */
+	{0x3d84, 0xc0},
+	{0x3d85, 0x10},
+	{0x3d86, 0x1f},
+	{0x3d81, 0x01},
+	{0xFFFF, 0x00}
+	}
+};
+
 static int set_flash_mode(struct i2c_client *client, int mode);
 static int ov5648_set_mode(struct i2c_client *client, int new_mode_idx);
 static int ov5648_set_state(struct i2c_client *client, int new_state);
@@ -998,7 +1040,7 @@ static int ov5648_reg_writes(struct i2c_client *client,
 	return 0;
 }
 
-#ifdef OV5648_DEBUG
+#ifdef OV5648_DEBUG_PRINT
 static int ov5648_reglist_compare(struct i2c_client *client,
 			const struct ov5648_reg reglist[])
 {
@@ -1010,7 +1052,7 @@ static int ov5648_reglist_compare(struct i2c_client *client,
 		err |=
 			ov5648_reg_read(client, reglist[index].reg,
 				&reg);
-		pr_debug("[0x%04x]=0x%02x", reglist[index].reg, reg);
+		pr_debug("ov5648: [0x%04x]=0x%02x", reglist[index].reg, reg);
 		/*  Check for Pause condition */
 		if ((reglist[index + 1].reg == 0xFFFF)
 			&& (reglist[index + 1].val != 0)) {
@@ -1051,6 +1093,186 @@ static int ov5648_array_write(struct i2c_client *client,
 	return 0;
 }
 
+/**
+ * Select to OTP bank
+ *@client: i2c driver client structure.
+ *@bank: OTP bank index
+ * Returns zero if OTP if successful or non-zero otherwise.
+ */
+static int ov5648_otp_bank_select(struct i2c_client *client, int bank)
+{
+	int ret;
+
+	ret = ov5648_reg_writes(client, ov5648_otpbank_sel[bank&1]);
+	if (ret < 0) {
+		dev_err(&client->dev, "OTP bank %d select failed\n", bank);
+		return -1;
+	}
+	return 0;
+}
+
+/**
+ * Print ov5648 OTP calibration data
+ *@otp: Address of otp structure to print
+ *@index: OTP index
+ */
+#ifdef OV5648_DEBUG_PRINT
+static void ov5648_otp_print(struct ov5648_otp *otp, int index)
+{
+	pr_debug("ov5648: OTP index=%d\n", index);
+	pr_debug("ov5648: integr_id = 0x%02X\n", otp->module_integrator_id);
+	pr_debug("ov5648: lens_id   = 0x%02X\n", otp->lens_id);
+	pr_debug("ov5648: rg_ratio  = 0x%04X\n", otp->rg_ratio);
+	pr_debug("ov5648: bg_ratio  = 0x%04X\n", otp->bg_ratio);
+	pr_debug("ov5648: light_rg  = 0x%04X\n", otp->light_rg);
+	pr_debug("ov5648: light_bg  = 0x%04X\n", otp->light_bg);
+	pr_debug("ov5648: user_data = [0x%02X 0x%02X]\n",
+		 otp->user_data[0], otp->user_data[1]);
+}
+#endif
+
+/**
+ * Read OTP calibration data from ov5648 sensor device.
+ *@client: i2c driver client structure.
+ *@otp: Address of otp structure to read values into
+ *@bank: otp index select
+ * Returns zero if OTP is present and read is successful
+ * or non-zero otherwise.
+ */
+static int ov5648_otp_read(struct i2c_client *client,
+			   struct ov5648_otp *otp, int index)
+{
+	int ret = -1;
+	u8 val, temp;
+
+	memset(otp, 0, sizeof(*otp));
+
+	pr_debug("ov5648: index %d OTP read\n", index);
+
+	switch (index) {
+	case 0:
+		if (ov5648_otp_bank_select(client, 0) < 0)
+			break;
+		ret  = ov5648_reg_read(client, 0x3d05, &val);
+		otp->module_integrator_id = val & 0x7f;
+		ret |= ov5648_reg_read(client, 0x3d06, &val);
+		otp->lens_id = val;
+		ret |= ov5648_reg_read(client, 0x3d0b, &temp);
+		ret |= ov5648_reg_read(client, 0x3d07, &val);
+		otp->rg_ratio = (val << 2) + ((temp >> 6) & 3);
+		ret |= ov5648_reg_read(client, 0x3d08, &val);
+		otp->bg_ratio = (val << 2) + ((temp >> 4) & 3);
+		ret |= ov5648_reg_read(client, 0x3d0c, &val);
+		otp->light_rg = (val << 2) + ((temp >> 2) & 3);
+		ret |= ov5648_reg_read(client, 0x3d0d, &val);
+		otp->light_bg = (val << 2) + ((temp >> 0) & 3);
+		ret |= ov5648_reg_read(client, 0x3d09, &val);
+		otp->user_data[0] = val;
+		ret |= ov5648_reg_read(client, 0x3d0a, &val);
+		otp->user_data[1] = val;
+		break;
+	case 1:
+		if (ov5648_otp_bank_select(client, 0) < 0)
+			break;
+		ret  = ov5648_reg_read(client, 0x3d0e, &val);
+		otp->module_integrator_id = val & 0x7f;
+		ret |= ov5648_reg_read(client, 0x3d0f, &val);
+		otp->lens_id = val;
+		if (ov5648_otp_bank_select(client, 1) < 0)
+			break;
+		ret |= ov5648_reg_read(client, 0x3d04, &temp);
+		ret |= ov5648_reg_read(client, 0x3d00, &val);
+		otp->rg_ratio = (val << 2) + ((temp >> 6) & 3);
+		ret |= ov5648_reg_read(client, 0x3d01, &val);
+		otp->bg_ratio = (val << 2) + ((temp >> 4) & 3);
+		ret |= ov5648_reg_read(client, 0x3d05, &val);
+		otp->light_rg = (val << 2) + ((temp >> 2) & 3);
+		ret |= ov5648_reg_read(client, 0x3d06, &val);
+		otp->light_bg = (val << 2) + ((temp >> 0) & 3);
+		ret |= ov5648_reg_read(client, 0x3d02, &val);
+		otp->user_data[0] = val;
+		ret |= ov5648_reg_read(client, 0x3d03, &val);
+		otp->user_data[1] = val;
+		break;
+	case 2:
+		if (ov5648_otp_bank_select(client, 1) < 0)
+			break;
+		ret  = ov5648_reg_read(client, 0x3d07, &val);
+		otp->module_integrator_id = val & 0x7f;
+		ret |= ov5648_reg_read(client, 0x3d08, &val);
+		otp->lens_id = val;
+		ret |= ov5648_reg_read(client, 0x3d0d, &temp);
+		ret |= ov5648_reg_read(client, 0x3d09, &val);
+		otp->rg_ratio = (val << 2) + ((temp >> 6) & 3);
+		ret |= ov5648_reg_read(client, 0x3d0a, &val);
+		otp->bg_ratio = (val << 2) + ((temp >> 4) & 3);
+		ret |= ov5648_reg_read(client, 0x3d0e, &val);
+		otp->light_rg = (val << 2) + ((temp >> 2) & 3);
+		ret |= ov5648_reg_read(client, 0x3d0f, &val);
+		otp->light_bg = (val << 2) + ((temp >> 0) & 3);
+		ret |= ov5648_reg_read(client, 0x3d0b, &val);
+		otp->user_data[0] = val;
+		ret |= ov5648_reg_read(client, 0x3d0c, &val);
+		otp->user_data[1] = val;
+		break;
+	default:
+		pr_debug("ov5648: invalid OTP index: %d\n", index);
+		ret = -1;
+		break;
+	}
+	if (ret != 0) {
+		pr_debug("ov5648: index %d OTP read failed\n", index);
+		memset(otp, 0, sizeof(*otp));
+		return -1;
+	}
+
+#ifdef OV5648_DEBUG_PRINT
+	ov5648_otp_print(otp, index);
+#endif
+	if (otp->rg_ratio == 0 || otp->bg_ratio == 0) {
+		memset(otp, 0, sizeof(*otp));
+		return -1;
+	}
+	return 0;
+}
+
+/**
+ * Set Sensor R and B channel gains according to OTP calibration data.
+ *@client: i2c driver client structure.
+ *@otp: Address of otp structure with calibration data
+ * Returns zero if successful, or non-zero otherwise.
+ */
+static int ov5648_rbgains_update(struct i2c_client *client,
+				 struct ov5648_otp *otp)
+{
+#define RG_GOLDEN 0x400
+#define BG_GOLDEN 0x400
+
+	u16 gainr, gaing, gainb;
+	int ret;
+	if (otp->rg_ratio == 0 || otp->bg_ratio == 0) {
+		pr_debug("ov5648: OTP not initialized\n");
+		return -1;
+	}
+	gainr = 0x400 * RG_GOLDEN / otp->rg_ratio;
+	gaing = 0x400;
+	gainb = 0x400 * BG_GOLDEN / otp->bg_ratio;
+	ret  = ov5648_reg_write(client, 0x5186, gainr >> 8);
+	ret |= ov5648_reg_write(client, 0x5187, gainr & 0xff);
+	ret |= ov5648_reg_write(client, 0x5188, gaing >> 8);
+	ret |= ov5648_reg_write(client, 0x5189, gaing & 0xff);
+	ret |= ov5648_reg_write(client, 0x518a, gainb >> 8);
+	ret |= ov5648_reg_write(client, 0x518b, gainb & 0xff);
+	if (ret == 0) {
+		pr_debug("ov5648: Upd [gr,gg,gb]=[0x%04X, 0x%04X, 0x%04X]\n",
+			 gainr, gaing, gainb);
+		return 0;
+	} else {
+		dev_info(&client->dev,
+			 "ov5648: Sensor update for calibrated data failed\n");
+		return -1;
+	}
+}
 
 /*
  *Routine used to send lens to a traget position position and calculate
@@ -1166,21 +1388,20 @@ static int ov5648_set_gain(struct i2c_client *client, int gain_value)
 	struct ov5648 *ov5648 = to_ov5648(client);
 	int ret = 0;
 	int gain_code_analog, gain_actual;
+
+#if GAIN_HIST_MAX > 0
 	int i;
+	static int gain_prev[GAIN_HIST_MAX] = {DEFAULT_GAIN, DEFAULT_GAIN,
+					       DEFAULT_GAIN, DEFAULT_GAIN};
 
-	if (GAIN_HIST_MAX > 1) {
-		static int gain_prev[GAIN_HIST_MAX] = {DEFAULT_GAIN,
-			DEFAULT_GAIN, DEFAULT_GAIN, DEFAULT_GAIN};
-
-		for (i = 0; i < GAIN_HIST_MAX - 1; i++)
-			gain_prev[i] = gain_prev[i + 1];
-		gain_prev[GAIN_HIST_MAX-1] = gain_value;
-		gain_value = 0;
-		for (i = 0; i < GAIN_HIST_MAX ; i++)
-			gain_value = gain_value + gain_prev[i];
-		gain_value = gain_value / GAIN_HIST_MAX;
-	}
-
+	for (i = 0; i < GAIN_HIST_MAX - 1; i++)
+		gain_prev[i] = gain_prev[i + 1];
+	gain_prev[GAIN_HIST_MAX-1] = gain_value;
+	gain_value = 0;
+	for (i = 0; i < GAIN_HIST_MAX ; i++)
+		gain_value = gain_value + gain_prev[i];
+	gain_value = gain_value / GAIN_HIST_MAX;
+#endif
 	gain_actual = ov5648_calc_gain(client, gain_value, &gain_code_analog);
 	pr_debug("cur=%u req=%u act=%u cod=%u", ov5648->gain_current,
 		gain_value, gain_actual, gain_code_analog);
@@ -1262,15 +1483,16 @@ static int ov5648_calc_exposure(struct i2c_client *client,
 {
 	struct ov5648 *ov5648 = to_ov5648(client);
 	unsigned int integration_lines;
-	unsigned int vts = ov5648_mode[ov5648->mode_idx].vts;
+	int vts = ov5648_mode[ov5648->mode_idx].vts;
 
 	integration_lines = (1000 * exposure_value) / ov5648->line_length;
 	if (integration_lines < INTEGRATION_MIN)
 		integration_lines = INTEGRATION_MIN;
-	else if (integration_lines > ov5648->vts_max - INTEGRATION_OFFSET)
+	else if (integration_lines > (unsigned int)
+		 (ov5648->vts_max - INTEGRATION_OFFSET))
 		integration_lines = ov5648->vts_max - INTEGRATION_OFFSET;
 	vts = min(integration_lines + INTEGRATION_OFFSET,
-		ov5648_mode[ov5648->mode_idx].vts_max);
+		  (unsigned int)ov5648_mode[ov5648->mode_idx].vts_max);
 	vts = max(vts, ov5648_mode[ov5648->mode_idx].vts);
 	vts = max(vts, ov5648->vts_min);
 	if (coarse_int_lines)
@@ -1295,23 +1517,24 @@ static void ov5648_set_exposure(struct i2c_client *client, int exp_value)
 	unsigned int actual_exposure;
 	unsigned int vts;
 	unsigned int coarse_int_lines;
-	int i, ret = 0;
+	int ret = 0;
 
-	if (EXP_HIST_MAX > 1) {
-		static int exp_prev[EXP_HIST_MAX];
+#if EXP_HIST_MAX > 0
+	int i;
+	static int exp_prev[EXP_HIST_MAX];
 
-		for (i = 0; i < EXP_HIST_MAX - 1; i++)
-			exp_prev[i] = exp_prev[i + 1];
-		exp_prev[EXP_HIST_MAX - 1] = exp_value;
-		exp_value = 0;
-		for (i = 0; i < EXP_HIST_MAX; i++)
+	for (i = 0; i < EXP_HIST_MAX - 1; i++)
+		exp_prev[i] = exp_prev[i + 1];
+	exp_prev[EXP_HIST_MAX - 1] = exp_value;
+	exp_value = 0;
+	for (i = 0; i < EXP_HIST_MAX; i++)
 			exp_value = exp_value + exp_prev[i];
-		exp_value = exp_value / EXP_HIST_MAX;
-	}
+	exp_value = exp_value / EXP_HIST_MAX;
+#endif
 
 	actual_exposure = ov5648_calc_exposure(client, exp_value,
 			&vts, &coarse_int_lines);
-	pr_debug("cur=%d req=%d act=%d coarse=%d vts=%d",
+	pr_debug("ov5648_set_exposure: cur=%d req=%d act=%d coarse=%d vts=%d",
 			ov5648->exposure_current, exp_value, actual_exposure,
 			coarse_int_lines, vts);
 	ov5648->vts = vts;
@@ -1435,7 +1658,8 @@ static int ov5648_set_mode(struct i2c_client *client, int new_mode_idx)
 		ov5648->mode_idx, ov5648_mode[ov5648->mode_idx].name,
 		new_mode_idx, ov5648_mode[new_mode_idx].name);
 		ov5648_init(client);
-		ret = ov5648_reg_writes(client, ov5648_regtbl[new_mode_idx]);
+		ret  = ov5648_reg_writes(client, ov5648_regtbl[new_mode_idx]);
+		ov5648_rbgains_update(client, &(ov5648->otp));
 	} else {
 		pr_debug("diff init from mode[%d]=%s to mode[%d]=%s",
 			ov5648->mode_idx, ov5648_mode[ov5648->mode_idx].name,
@@ -1894,6 +2118,8 @@ static int ov5648_video_probe(struct soc_camera_device *icd,
 	int ret = 0;
 	u8 revision = 0, id_high, id_low;
 	u16 id;
+	struct ov5648 *ov5648;
+	int i;
 
 	/*
 	 * We must have a parent by now. And it cannot be a wrong one.
@@ -1908,7 +2134,6 @@ static int ov5648_video_probe(struct soc_camera_device *icd,
 		dev_err(&client->dev, "Failure to detect OV5648 chip\n");
 		goto out;
 	}
-	printk(KERN_ERR "OV5648 value read=%x\n", revision);
 
 	revision &= 0xF;
 
@@ -1933,7 +2158,19 @@ static int ov5648_video_probe(struct soc_camera_device *icd,
 	dev_info(&client->dev, "Detected a OV5648 chip 0x%04x, revision %x\n",
 		 id, revision);
 
-	/* TODO: Do something like ov5648_init */
+	/* Read OTP data */
+	ov5648 = to_ov5648(client);
+	for (i = 0; i < 3; i++) {
+		ret = ov5648_otp_read(client, &ov5648->otp, i);
+		if (ret == 0)
+			break;
+	}
+	if (ret == 0) {
+		dev_info(&client->dev, "Found OV5648 OTP at index %d\n", i);
+	} else {
+		dev_info(&client->dev, "OV5648 OTP not found\n");
+		ret = 0;
+	}
 
 out:
 	return ret;
