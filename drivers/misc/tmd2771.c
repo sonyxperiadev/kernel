@@ -676,8 +676,8 @@ static int __attribute__ ((unused)) als_calibrate(struct taos_cfg *taos_cfg,
 	reg_val = i2c_smbus_read_byte(taos_datap->client);
 	if ((reg_val & 0x01) != 0x01)
 		return -ENODATA;
-
-	taos_als_get_data();
+	ret = taos_als_get_data();
+	return ret;
 }
 
 static int prox_calibrate(void)
@@ -1429,9 +1429,6 @@ static loff_t taos_llseek(struct file *file, loff_t offset, int orig)
 		break;
 	case 1:
 		new_pos = file->f_pos + offset;
-		break;
-	default:
-		new_pos = -EINVAL;
 		break;
 	}
 	if ((new_pos < 0) || (new_pos >= TAOS_MAX_DEVICE_REGS) || (ret < 0)) {
