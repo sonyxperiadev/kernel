@@ -1,0 +1,14 @@
+#
+# touchkey configuration
+#
+
+config KEYBOARD_CYPRESS_TOUCH
+	tristate "Cypress I2C Touchkey"
+	depends on I2C
+	help
+	Say Y here if you have Cypress I2C Touchkey.
+config KEYBOARD_TC360L_TOUCHKEY
+	tristate "CoreRiver I2C Touchkey"
+	depends on I2C
+	help
+	Say Y here if you have CoreRiver I2C Touchkey.

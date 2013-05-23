@@ -98,6 +98,18 @@ config TOUCHSCREEN_ATMEL_MXT
 	  To compile this driver as a module, choose M here: the
 	  module will be called atmel_mxt_ts.
 
+config TOUCHSCREEN_ATMEL_MXT224S
+	tristate "Atmel mXT224S I2C Touchscreen"
+	depends on I2C
+	help
+	  Say Y here if you have Atmel mXT series I2C touchscreen,
+	  such as AT42QT602240/ATMXT224S, connected to your system.
+
+	  If unsure, say N.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called mxt224S.
+
 config TOUCHSCREEN_AUO_PIXCIR
 	tristate "AUO in-cell touchscreen using Pixcir ICs"
 	depends on I2C
@@ -526,6 +538,18 @@ config TOUCHSCREEN_BT403_ZANIN
 
 	  To compile this driver as a module, choose M here: the
 	  module will be called bt403_ts.
+
+config TOUCHSCREEN_BT432_LOGAN
+        tristate "BT432 I2C Touchscreen"
+        depends on I2C
+        help
+          Say Y here if you have the Zinitix  I2C touchscreen
+          connected to your system.
+
+          If unsure, say N.
+
+          To compile this driver as a module, choose M here: the
+          module will be called bt432_ts.
 
 config TOUCHSCREEN_F761
         tristate "F761 I2C Touchscreen"
@@ -984,5 +1008,6 @@ config TOUCHSCREEN_IST30XX
 
           To compile this driver as a module, choose M here: the
           module will be called ist30xx.
+source "drivers/input/touchscreen/coreriver_touchkey/Kconfig"
 
 endif
