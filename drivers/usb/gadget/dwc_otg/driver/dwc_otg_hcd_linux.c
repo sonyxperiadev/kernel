@@ -692,6 +692,9 @@ static int urb_enqueue(struct usb_hcd *hcd,
 					    mem_flags == GFP_ATOMIC ? 1 : 0);
 	if (!dwc_otg_urb) {
 		DWC_PRINTF("USB Host urb_enqueue failed to alloc urb.\n");
+		DWC_SPINLOCK_IRQSAVE(dwc_otg_hcd->lock, &lock_flags);
+		usb_hcd_unlink_urb_from_ep(hcd, urb);
+		DWC_SPINUNLOCK_IRQRESTORE(dwc_otg_hcd->lock, lock_flags);
 		return -ENOMEM;
 	}
 
@@ -743,6 +746,13 @@ static int urb_enqueue(struct usb_hcd *hcd,
 	} else {
 		if (retval == -DWC_E_NO_DEVICE)
 			retval = -ENODEV;
+
+		if (retval == -DWC_E_NO_MEMORY)
+			retval = -ENOMEM;
+
+		dwc_free(dwc_otg_urb);
+		/* This will be done in hcd.c */
+		/* urb->hcpriv = NULL; */
 
 		DWC_SPINLOCK_IRQSAVE(dwc_otg_hcd->lock, &lock_flags);
 		usb_hcd_unlink_urb_from_ep(hcd, urb);
