@@ -210,8 +210,8 @@ static int unicam_camera_update_buf(struct unicam_camera_dev *unicam_dev)
 {
 
 	struct v4l2_subdev *sd = soc_camera_to_subdev(unicam_dev->icd);
-	struct buffer_desc im0, im1, dat0;
-	dma_addr_t phys_addr, phys_addr1 = 0;
+	struct buffer_desc im0, dat0;
+	dma_addr_t phys_addr;
 	unsigned int line_stride;
 	struct v4l2_format thumb_fmt;
 	struct v4l2_pix_format *pix;
@@ -625,6 +625,8 @@ static int unicam_videobuf_start_streaming_int(struct unicam_camera_dev \
 			mm_csi0_config_int(&idesc, IMAGE_BUFFER);
 		}
 
+		atomic_set(&unicam_dev->streaming, 1);
+
 		ret = v4l2_subdev_call(sd, video, s_stream, 1);
 		if (ret < 0 && ret != -ENOIOCTLCMD) {
 			dev_err(unicam_dev->dev, "error on s_stream(%d)\n", ret);
@@ -675,7 +677,6 @@ static int unicam_videobuf_start_streaming_int(struct unicam_camera_dev \
 	}
 
 	unicam_reg_dump();
-	atomic_set(&unicam_dev->streaming, 1);
 /*	if (unicam_dev->active)
 		if (unicam_dev->if_params.if_mode == \
 				V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2)
@@ -1260,7 +1261,7 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 	int ret;
 	struct int_desc idesc;
 	struct rx_stat_list rx;
-	u32 isr_status;
+	u32 isr_status, raw_stat;
 	static unsigned int t1 = 0, t2 = 0, fps = 0;
 	struct buffer_desc im0;
 	dma_addr_t dma_addr;
@@ -1268,8 +1269,15 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 
 	/* has the interrupt occured for Channel 0? */
 	memset(&rx, 0x00, sizeof(struct rx_stat_list));
-	mm_csi0_get_rx_stat(&rx, 1);
-	if (rx.is) {
+	raw_stat = mm_csi0_get_rx_stat(&rx, 1);
+	if (atomic_read(&unicam_dev->streaming) == 0) {
+		memset(&idesc, 0x00, sizeof(struct int_desc));
+		isr_status = mm_csi0_get_int_stat(&idesc, 1);
+		pr_err("ISR triggered after stop stat=0x%x istat=0x%x\n",
+			raw_stat, isr_status);
+
+		goto out;
+	} else if (rx.is) {
 		memset(&idesc, 0x00, sizeof(struct int_desc));
 		isr_status = mm_csi0_get_int_stat(&idesc, 1);
 		if (idesc.fsi) {
