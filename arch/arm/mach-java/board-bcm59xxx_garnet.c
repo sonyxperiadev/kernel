@@ -148,8 +148,8 @@ static struct bcmpmu59xxx_rw_data __initdata register_init_data[] = {
 
 	/* MMSR LPM voltage - 0.88V */
 	{.addr = PMU_REG_MMSRVOUT2 , .val = 0x4, .mask = 0x3F},
-	/* SDSR1 NM1 voltage - 1.24V */
-	{.addr = PMU_REG_SDSR1VOUT1 , .val = 0x28, .mask = 0x3F},
+	/* SDSR1 NM1 voltage - 1.28V */
+	{.addr = PMU_REG_SDSR1VOUT1 , .val = 0x2C, .mask = 0x3F},
 	/* SDSR1 LPM voltage - 0.97V */
 	{.addr = PMU_REG_SDSR1VOUT2 , .val = 0xD, .mask = 0x3F},
 	/* SDSR2 NM1 voltage - 1.24 */
