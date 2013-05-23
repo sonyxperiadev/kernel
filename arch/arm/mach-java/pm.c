@@ -356,6 +356,8 @@ int enter_idle_state(struct kona_idle_state *state, u32 ctrl_params)
 		if (ctrl_params & CTRL_PARAMS_ENTER_SUSPEND) {
 			__clock_print_act_clks();
 			pi_mgr_print_active_pis();
+			pr_info("Active events when entering suspend\n");
+			pwr_mgr_log_active_events();
 		}
 
 	switch (state->state) {
@@ -377,6 +379,7 @@ int enter_idle_state(struct kona_idle_state *state, u32 ctrl_params)
 
 	if (ctrl_params & CTRL_PARAMS_ENTER_SUSPEND ||
 		(pm_info.log_mask & LOG_IDLE_INTR)) {
+		pr_info("Active Events at wakeup\n");
 		pm_log_wakeup_intr();
 		pwr_mgr_log_active_events();
 	}

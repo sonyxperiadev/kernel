@@ -524,7 +524,9 @@ int enter_idle_state(struct kona_idle_state *state, u32 ctrl_params)
 		if (ctrl_params & CTRL_PARAMS_ENTER_SUSPEND) {
 			__clock_print_act_clks();
 			pi_mgr_print_active_pis();
-		}
+			pr_info("Active events before suspend\n");
+			pwr_mgr_log_active_events();
+	}
 	if (smp_processor_id() == 0)
 		log_pm(num_dbg_args[DBG_MSG_PM_LPM_ENTER],
 			DBG_MSG_PM_LPM_ENTER, pi->id, state->state);
@@ -614,6 +616,7 @@ int enter_idle_state(struct kona_idle_state *state, u32 ctrl_params)
 	pwr_mgr_process_events(USBOTG_EVENT, PHY_RESUME_EVENT, false);
 
 	if (ctrl_params & CTRL_PARAMS_ENTER_SUSPEND) {
+		pr_info("Active Events at wakeup\n");
 		log_wakeup_interrupts();
 		pwr_mgr_log_active_events();
 	}

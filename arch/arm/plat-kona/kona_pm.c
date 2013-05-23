@@ -216,10 +216,9 @@ __weak int kona_mach_pm_enter(suspend_state_t state)
 				if (time_awake == OVERFLOW_VAL)
 					printk(KERN_ALERT "counter overflow");
 				else if	(time_awake > 0) {
-					printk(KERN_ALERT "SuspendTime:	%lums",
+					pr_info("Approx Suspend Time: %lums",
 						(time2 - time1)/32);
-					printk(KERN_ALERT "System awake	time" \
-						"during deepsleep:%lums",
+					pr_info("System remained awake: %lums",
 						time_awake);
 				}
 			}
