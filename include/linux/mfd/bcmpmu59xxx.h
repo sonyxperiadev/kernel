@@ -640,15 +640,6 @@ enum bcmpmu_usb_det_state_t {
 	USB_DISCONNECTED,
 };
 
-/*State of enabled regualtor in deep sleep
-Used to program PC2PC1 = 0b10 & 0b00 case
-when the regulator is enabled*/
-enum {
-	BCMPMU_REGL_ON_IN_DSM = 0,
-	BCMPMU_REGL_LPM_IN_DSM,
-	BCMPMU_REGL_OFF_IN_DSM
-};
-
 struct bcmpmu59xxx_rw_data {
 	unsigned int addr;
 	unsigned int val;
@@ -878,15 +869,8 @@ struct bcmpmu59xxx_audio_pdata {
 struct bcmpmu59xxx_regulator_init_data {
 	int id; /* Regulator ID */
 	struct regulator_init_data *initdata;
-
-	/*For always_on LDOs, dsm_mode is used to init
-	regulaor opmode in deep sleep state.
-	For LDOs managed by SW drivers, dsm_mode defines LDO
-	state in deep sleep when the LDO is left enabled by SW.
-	BCMPMU_REGL_OFF_IN_DSM is NOT allowed in this case*/
-
-	u32 dsm_mode;
 	u32 pc_pins_map;
+	u32 mode;/* normal mode*/
 	char *name;
 	u32 req_volt; /*in uV*/
 

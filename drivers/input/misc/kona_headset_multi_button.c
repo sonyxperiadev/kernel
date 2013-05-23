@@ -1553,7 +1553,7 @@ static int __headset_hw_init_micbias_off(struct mic_t *p)
 
 	if (p->ldo) {
 		pr_debug("Turning regulator off\n");
-		regulator_set_mode(p->ldo, REGULATOR_MODE_IDLE);
+		regulator_set_mode(p->ldo, REGULATOR_MODE_STANDBY);
 		regulator_put(p->ldo);
 		p->ldo = NULL;
 	}
@@ -1592,8 +1592,8 @@ static int __headset_hw_init_micbias_on(struct mic_t *p)
 			p->ldo = NULL;
 			return -ENOENT;
 		}
-		pr_debug("Setting regulator mode to standby\n");
-		regulator_set_mode(p->ldo, REGULATOR_MODE_STANDBY);
+		pr_debug("Setting regulator mode to low power\n");
+		regulator_set_mode(p->ldo, REGULATOR_MODE_IDLE);
 	}
 
 /*

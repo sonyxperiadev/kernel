@@ -51,9 +51,19 @@
 #define TRIM_DOWN_MAX_INX	63
 #define SR_VOLT_START_INX 2
 
+#define MK_3BIT_PMMODE(m0, m1) \
+	((((m0) & PMMODE_3BIT_PMx_MASK) << PMMODE_3BIT_PM0_SHIFT) | \
+		(((m1) & PMMODE_3BIT_PMx_MASK) << PMMODE_3BIT_PM1_SHIFT))
+
+#define MK_2BIT_PMMODE(m0, m1, m2, m3) \
+	((((m0) & PMMODE_2BIT_PMx_MASK) << PMMODE_2BIT_PM0_SHIFT) | \
+		(((m1) & PMMODE_2BIT_PMx_MASK) << PMMODE_2BIT_PM1_SHIFT) | \
+		(((m2) & PMMODE_2BIT_PMx_MASK) << PMMODE_2BIT_PM2_SHIFT) | \
+		(((m3) & PMMODE_2BIT_PMx_MASK) << PMMODE_2BIT_PM3_SHIFT))
+
 static int bcmpmuldo_get_voltage(struct regulator_dev *rdev);
 static int bcmpmuldo_set_voltage(struct regulator_dev *rdev,
-				 int min_uv, int max_uv, unsigned *selector);
+				int min_uv, int max_uv, unsigned *selector);
 static int bcmpmuldo_list_voltage(struct regulator_dev *rdev,
 				  unsigned selector);
 static int bcmpmureg_get_status(struct regulator_dev *rdev);
@@ -100,13 +110,11 @@ static int debug_mask =  BCMPMU_PRINT_INIT | BCMPMU_PRINT_ERROR;
 struct pwr_mode_reg {
 	u8 pwr_mode[REGL_PMMODE_REG_MAX];
 };
-
 struct pwr_mode_reg rgltr_pmode_buf[BCMPMU_REGULATOR_MAX];
-
-static int force_enable;
 #endif
+static int force_enable;
 
-static u32 __rgltr_to_pmmode(u32 rmode)
+static u32 rmode_to_pmmode(u32 rmode)
 {
 	u32 pmmode = PMMODE_ON;
 	switch (rmode) {
@@ -115,68 +123,15 @@ static u32 __rgltr_to_pmmode(u32 rmode)
 		pmmode = PMMODE_ON;
 		break;
 	case REGULATOR_MODE_IDLE:
-		pmmode = PMMODE_OFF;
+		pmmode = PMMODE_LPM;
 		break;
 	case REGULATOR_MODE_STANDBY:
-		pmmode = PMMODE_LPM;
+		pmmode = PMMODE_OFF;
 		break;
 	}
 	return pmmode;
 }
 
-static u32 __dsm_mode_to_rgltr(u32 dsmmode)
-{
-	u32 mode = REGULATOR_MODE_NORMAL;
-	switch (dsmmode) {
-	case BCMPMU_REGL_ON_IN_DSM:
-		mode = REGULATOR_MODE_NORMAL;
-		break;
-	case BCMPMU_REGL_LPM_IN_DSM:
-		mode = REGULATOR_MODE_STANDBY;
-		break;
-	case BCMPMU_REGL_OFF_IN_DSM:
-		mode = REGULATOR_MODE_IDLE;
-		break;
-	}
-	return mode;
-}
-
-static u32 __pmmode_to_dsm_mode(u32 pmumode)
-{
-	u32 dsmmode = BCMPMU_REGL_ON_IN_DSM;
-	switch (pmumode) {
-	case PMMODE_ON:
-		dsmmode = BCMPMU_REGL_ON_IN_DSM;
-		break;
-	case PMMODE_LPM:
-		dsmmode = BCMPMU_REGL_LPM_IN_DSM;
-		break;
-	case PMMODE_OFF:
-		dsmmode = BCMPMU_REGL_OFF_IN_DSM;
-		break;
-	};
-	return dsmmode;
-}
-
-static u32 __dsm_mode_to_pmmode(u32 dsm_mode)
-{
-	u32 opmode = PMMODE_ON;
-	switch (dsm_mode) {
-
-	case BCMPMU_REGL_ON_IN_DSM:
-		opmode = PMMODE_ON;
-		break;
-
-	case BCMPMU_REGL_LPM_IN_DSM:
-		opmode = PMMODE_LPM;
-		break;
-
-	case BCMPMU_REGL_OFF_IN_DSM:
-		opmode = PMMODE_OFF;
-		break;
-	};
-	return opmode;
-}
 
 static int __3bit_pmmode_frm_map(u32 pcpin_map, u32 dsm_pmmode,
 					u8 *pmmode)
@@ -347,47 +302,37 @@ static int bcmpmureg_is_enabled(struct regulator_dev *rdev)
 */
 static int __bcmpmureg_enable(struct bcmpmu59xxx *bcmpmu, int id)
 {
-	u8 pmmode[REGL_PMMODE_REG_MAX] = {0};
+	u8 pmmode;
 	struct bcmpmu59xxx_regulator_info *rinfo;
-	struct bcmpmu59xxx_regulator_init_data *initdata;
-	struct bcmpmu59xxx_rgltr_param *param;
 	int count, i;
 	int ret = 0;
 
 	rinfo = bcmpmu59xxx_get_rgltr_info(bcmpmu);
-	param = bcmpmu->rgltr_data;
 	pr_rgltr(FLOW, "<%s> id =  %d\n",
 		__func__, id);
-	initdata = param->pdata->bcmpmu_rgltr + id;
+	BUG_ON(!rinfo);
 
-	BUG_ON(!rinfo || !param || !initdata);
-
-	if (rinfo[id].flags & RGLR_3BIT_PMCTRL)
-		count = __3bit_pmmode_frm_map(initdata->pc_pins_map,
-				__dsm_mode_to_pmmode(initdata->dsm_mode),
-						pmmode);
-	else
-		count = __2bit_pmmode_frm_map(initdata->pc_pins_map,
-				__dsm_mode_to_pmmode(initdata->dsm_mode),
-					pmmode);
+	if (rinfo[id].flags & RGLR_3BIT_PMCTRL) {
+		count = REGL_PMMODE_REG_MAX;
+		pmmode = MK_3BIT_PMMODE(PMMODE_ON, PMMODE_ON);
+	} else {
+		count = REGL_PMMODE_REG_MAX/2;
+		pmmode = MK_2BIT_PMMODE(PMMODE_ON, PMMODE_ON,
+				PMMODE_ON, PMMODE_ON);
+	}
 	for (i = 0; i < count; i++) {
-#ifdef CONFIG_DEBUG_FS
-		if (force_enable == 0) {
-#endif
-			/*TODO: should we change to read-modify-write ??*/
+		if (!force_enable) {
 			ret = bcmpmu->write_dev(bcmpmu,
 					rinfo[id].reg_pmctrl1 + i,
-					pmmode[i]);
+					pmmode);
 			if (ret)
 				break;
 			pr_rgltr(FLOW, "<%s> wrtite : reg[%x] =  %x\n",
 					__func__, rinfo[id].reg_pmctrl1 + i,
-					pmmode[i]);
-#ifdef CONFIG_DEBUG_FS
+					pmmode);
 		} else {
-			rgltr_pmode_buf[id].pwr_mode[i] = pmmode[i];
+			rgltr_pmode_buf[id].pwr_mode[i] = pmmode;
 		}
-#endif
 	}
 	if (ret) {
 		pr_rgltr(ERROR, "regltr enable error <%s>\n", __func__);
@@ -416,52 +361,42 @@ static int bcmpmureg_enable(struct regulator_dev *rdev)
 */
 static int __bcmpmureg_disable(struct bcmpmu59xxx *bcmpmu, int id)
 {
+	u8 pmmode;
 	struct bcmpmu59xxx_regulator_info *rinfo;
-	int reg_cnt, i;
+	int count, i;
 	int ret = 0;
-	u8 val;
 
 	rinfo = bcmpmu59xxx_get_rgltr_info(bcmpmu);
 	pr_rgltr(FLOW, "<%s> id =  %d\n",
 		__func__, id);
-	BUG_ON(rinfo == NULL);
+	BUG_ON(!rinfo);
 
 	if (rinfo[id].flags & RGLR_3BIT_PMCTRL) {
-		val = PMMODE_OFF << PMMODE_3BIT_PM0_SHIFT |
-				PMMODE_OFF << PMMODE_3BIT_PM1_SHIFT;
-		reg_cnt = REGL_PMMODE_REG_MAX;
+		count = REGL_PMMODE_REG_MAX;
+		pmmode = MK_3BIT_PMMODE(PMMODE_OFF, PMMODE_OFF);
 	} else {
-		val = PMMODE_OFF << PMMODE_2BIT_PM0_SHIFT |
-				PMMODE_OFF << PMMODE_2BIT_PM1_SHIFT |
-				PMMODE_OFF << PMMODE_2BIT_PM2_SHIFT |
-				PMMODE_OFF << PMMODE_2BIT_PM3_SHIFT;
-		reg_cnt = 2;
+		count = REGL_PMMODE_REG_MAX/2;
+		pmmode = MK_2BIT_PMMODE(PMMODE_OFF, PMMODE_OFF,
+				PMMODE_OFF, PMMODE_OFF);
 	}
-
-#ifdef CONFIG_DEBUG_FS
-	if (force_enable == 0) {
-#endif
-		for (i = 0; i < reg_cnt; i++) {
-			/*TODO: should we change to read-modify-write ??*/
+	for (i = 0; i < count; i++) {
+		if (!force_enable) {
 			ret = bcmpmu->write_dev(bcmpmu,
 					rinfo[id].reg_pmctrl1 + i,
-					val);
+					pmmode);
 			if (ret)
 				break;
 			pr_rgltr(FLOW, "<%s> wrtite : reg[%x] =  %x\n",
 					__func__, rinfo[id].reg_pmctrl1 + i,
-					val);
+					pmmode);
+		} else {
+			rgltr_pmode_buf[id].pwr_mode[i] = pmmode;
 		}
-		if (ret) {
-			pr_rgltr(ERROR, "ERROR <%s>\n", __func__);
-			return ret;
-		}
-#ifdef CONFIG_DEBUG_FS
-	} else {
-		for (i = 0; i < reg_cnt; i++)
-			rgltr_pmode_buf[id].pwr_mode[i] = val;
 	}
-#endif
+	if (ret) {
+		pr_rgltr(ERROR, "regltr disable error <%s>\n", __func__);
+		return ret;
+	}
 	rinfo[id].flags &= ~RGLR_ON;
 	return 0;
 }
@@ -509,7 +444,7 @@ static int bcmpmureg_get_status(struct regulator_dev *rdev)
 	if (rinfo[id].flags & RGLR_3BIT_PMCTRL)
 			reg_cnt = REGL_PMMODE_REG_MAX;
 	else
-		reg_cnt = 2;
+		reg_cnt = REGL_PMMODE_REG_MAX/2;
 
 	for (i = 0; i < reg_cnt; i++) {
 		/*TODO: should we change to read-modify-write ??*/
@@ -657,24 +592,20 @@ static u32 bcmpmuldo_get_mode(struct regulator_dev *rdev)
 	rgltr_pdata = param->pdata->bcmpmu_rgltr + id;
 	BUG_ON(!param || !rgltr_pdata);
 
-	return __dsm_mode_to_rgltr(rgltr_pdata->dsm_mode);
+	return rgltr_pdata->mode;
 }
 
-static int bcmpmuldo_set_mode(struct regulator_dev *rdev, u32 mode)
+static int __bcmpmuldo_set_mode(struct bcmpmu59xxx *bcmpmu,
+	u32 mode, int id)
 {
-	struct bcmpmu59xxx *bcmpmu;
 	struct bcmpmu59xxx_regulator_info *rinfo;
 	struct bcmpmu59xxx_regulator_init_data *rgltr_pdata;
 	struct bcmpmu59xxx_rgltr_param *param;
 	u32 pmu_mode;
 	u8 pmmode[REGL_PMMODE_REG_MAX] = {0};
-	int id, count, i;
+	int count, i;
 	int ret = 0;
 
-	if ((!rdev || !rdev->desc))
-		return -1;
-	bcmpmu = rdev_get_drvdata(rdev);
-	id = rdev_get_id(rdev);
 	rinfo = bcmpmu59xxx_get_rgltr_info(bcmpmu);
 
 	BUG_ON(id >= BCMPMU_REGULATOR_MAX ||
@@ -687,13 +618,7 @@ static int bcmpmuldo_set_mode(struct regulator_dev *rdev, u32 mode)
 
 	BUG_ON(!param || !rgltr_pdata);
 
-	if (!rgltr_pdata->initdata->constraints.always_on) {
-		pr_rgltr(ERROR,
-			"set_mode only supported for alway on rglt\n");
-		return -EINVAL;
-	}
-
-	pmu_mode = __rgltr_to_pmmode(mode);
+	pmu_mode = rmode_to_pmmode(mode);
 	if (rinfo[id].flags & RGLR_3BIT_PMCTRL)
 		count = __3bit_pmmode_frm_map(rgltr_pdata->pc_pins_map,
 						pmu_mode, pmmode);
@@ -701,9 +626,7 @@ static int bcmpmuldo_set_mode(struct regulator_dev *rdev, u32 mode)
 		count = __2bit_pmmode_frm_map(rgltr_pdata->pc_pins_map,
 						pmu_mode, pmmode);
 	for (i = 0; i < count; i++) {
-#ifdef CONFIG_DEBUG_FS
-		if (force_enable == 0) {
-#endif
+		if (!force_enable) {
 			ret = bcmpmu->write_dev(bcmpmu,
 					rinfo[id].reg_pmctrl1 + i,
 					pmmode[i]);
@@ -712,20 +635,33 @@ static int bcmpmuldo_set_mode(struct regulator_dev *rdev, u32 mode)
 			pr_rgltr(FLOW, "<%s> wrtite : reg[%x] =  %x\n",
 					__func__, rinfo[id].reg_pmctrl1 + i,
 					pmmode[i]);
-#ifdef CONFIG_DEBUG_FS
 		} else {
 			rgltr_pmode_buf[id].pwr_mode[i] = pmmode[i];
 		}
-#endif
 	}
 	if (ret) {
 		pr_rgltr(ERROR, "regltr set mode error <%s>\n", __func__);
 		return ret;
 	}
 
-	rgltr_pdata->dsm_mode = __pmmode_to_dsm_mode(pmu_mode);
+	rgltr_pdata->mode = mode;
 	return ret;
 }
+
+static int bcmpmuldo_set_mode(struct regulator_dev *rdev, u32 mode)
+{
+	struct bcmpmu59xxx *bcmpmu;
+	int id;
+
+	if ((!rdev || !rdev->desc))
+		return -1;
+	bcmpmu = rdev_get_drvdata(rdev);
+	id = rdev_get_id(rdev);
+	BUG_ON(bcmpmu == NULL || id >= BCMPMU_REGULATOR_MAX);
+
+	return __bcmpmuldo_set_mode(bcmpmu, mode, id);
+}
+
 
 static int rgltr_set_trim_volt(struct regulator *rglr, int rgltr_id, int vindex)
 {
@@ -1415,21 +1351,11 @@ static int bcmpmu_regulator_probe(struct platform_device *pdev)
 		rgltr_id = bcmpmu_rgltrs[i].id;
 		if (bcmpmu_rgltrs[i].initdata) {
 			pr_rgltr(INIT,
-				"%s:id:%d, name:%s dsm_mode=%x pc_map=%x\n",
-					__func__, rgltr_id,
-					rgltr_info->rdesc[rgltr_id].name,
-					bcmpmu_rgltrs[i].dsm_mode,
-					bcmpmu_rgltrs[i].pc_pins_map);
-			if (bcmpmu_rgltrs[i].initdata->constraints.always_on ||
-				bcmpmu_rgltrs[i].initdata->constraints.boot_on)
-				__bcmpmureg_enable(bcmpmu, rgltr_id);
-			else {
-				/*As per design, dsm_mode shouldn't be set to
-				BCMPMU_REGL_OFF_IN_DSM for LDOs managed by SW*/
-				WARN_ON(bcmpmu_rgltrs[i].dsm_mode ==
-						BCMPMU_REGL_OFF_IN_DSM);
-				__bcmpmureg_disable(bcmpmu, rgltr_id);
-			}
+				"%s:id:%d, name:%s pc_map=%x init_mode = %d\n",
+				__func__, rgltr_id,
+			rgltr_info->rdesc[rgltr_id].name,
+			bcmpmu_rgltrs[i].pc_pins_map,
+			bcmpmu_rgltrs[i].initdata->constraints.initial_mode);
 			regl[i] =
 				regulator_register(rgltr_info[rgltr_id].rdesc,
 						&pdev->dev,
@@ -1442,6 +1368,19 @@ static int bcmpmu_regulator_probe(struct platform_device *pdev)
 
 				goto register_fail;
 			}
+			/* We need to set mode here as regulator framework
+			(set_machine_constraints) set the mode first and
+			then call enable. We have updated enable function
+			to set ON for all states based on customer request
+			set_mode function sets PMMODE as needed*/
+			if (bcmpmu_rgltrs[i].initdata->constraints.always_on ||
+				bcmpmu_rgltrs[i].initdata->constraints.boot_on)
+					__bcmpmuldo_set_mode(bcmpmu,
+					bcmpmu_rgltrs[i].initdata->
+					constraints.initial_mode,
+					rgltr_id);
+			else
+				__bcmpmureg_disable(bcmpmu, rgltr_id);
 
 			if (bcmpmu_rgltrs[i].req_volt && !is_soft_reset())
 				rgltr_set_trim_vlt(bcmpmu_rgltrs[i].initdata->

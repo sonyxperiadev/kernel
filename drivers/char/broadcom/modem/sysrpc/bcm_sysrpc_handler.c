@@ -208,6 +208,9 @@ Result_t Handle_CAPI2_SYSRPC_PMU_ActivateSIM(RPC_Msg_t *pReqMsg,
 
 		ret = regulator_enable(curReg->handle);
 		KRIL_DEBUG(DBG_INFO, " regulator_enable returned %d\n", ret);
+		/*Set SIMLDO mode to LPM in DSM*/
+		ret = regulator_set_mode(curReg->handle, REGULATOR_MODE_IDLE);
+		KRIL_DEBUG(DBG_INFO, "regulator_set_mode returned %d\n", ret);
 
 		curReg->isSimInit = TRUE;
 	}
