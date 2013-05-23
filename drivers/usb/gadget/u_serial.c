@@ -605,6 +605,9 @@ static void gs_read_complete(struct usb_ep *ep, struct usb_request *req)
 {
 	struct gs_port	*port = ep->driver_data;
 
+	if (WARN_ON(!port))
+		return;
+
 	/* Queue all received data until the tty layer is ready for it. */
 	spin_lock(&port->port_lock);
 	list_add_tail(&req->list, &port->read_queue);
@@ -619,6 +622,9 @@ static void gs_read_complete(struct usb_ep *ep, struct usb_request *req)
 static void gs_write_complete(struct usb_ep *ep, struct usb_request *req)
 {
 	struct gs_port	*port = ep->driver_data;
+
+	if (WARN_ON(!port))
+		return;
 
 	spin_lock(&port->port_lock);
 	list_add(&req->list, &port->write_pool);
@@ -858,6 +864,9 @@ static void gs_close(struct tty_struct *tty, struct file *file)
 	struct gs_port *port = tty->driver_data;
 	struct gserial	*gser;
 
+	if (WARN_ON(!port))
+		return;
+
 	spin_lock_irq(&port->port_lock);
 
 	if (port->open_count != 1) {
@@ -946,6 +955,9 @@ static int gs_put_char(struct tty_struct *tty, unsigned char ch)
 	unsigned long	flags;
 	int		status;
 
+	if (WARN_ON(!port))
+		return 0;
+
 	pr_vdebug("gs_put_char: (%d,%p) char=0x%x, called from %p\n",
 		port->port_num, tty, ch, __builtin_return_address(0));
 
@@ -961,6 +973,9 @@ static void gs_flush_chars(struct tty_struct *tty)
 	struct gs_port	*port = tty->driver_data;
 	unsigned long	flags;
 
+	if (WARN_ON(!port))
+		return;
+
 	pr_vdebug("gs_flush_chars: (%d,%p)\n", port->port_num, tty);
 
 	spin_lock_irqsave(&port->port_lock, flags);
@@ -974,6 +989,9 @@ static int gs_write_room(struct tty_struct *tty)
 	struct gs_port	*port = tty->driver_data;
 	unsigned long	flags;
 	int		room = 0;
+
+	if (WARN_ON(!port))
+		return 0;
 
 	spin_lock_irqsave(&port->port_lock, flags);
 	if (port->port_usb)
@@ -992,6 +1010,9 @@ static int gs_chars_in_buffer(struct tty_struct *tty)
 	unsigned long	flags;
 	int		chars = 0;
 
+	if (WARN_ON(!port))
+		return 0;
+
 	spin_lock_irqsave(&port->port_lock, flags);
 	chars = gs_buf_data_avail(&port->port_write_buf);
 	spin_unlock_irqrestore(&port->port_lock, flags);
@@ -1007,6 +1028,9 @@ static void gs_unthrottle(struct tty_struct *tty)
 {
 	struct gs_port		*port = tty->driver_data;
 	unsigned long		flags;
+
+	if (WARN_ON(!port))
+		return;
 
 	spin_lock_irqsave(&port->port_lock, flags);
 	if (port->port_usb) {
@@ -1029,6 +1053,9 @@ static int gs_break_ctl(struct tty_struct *tty, int duration)
 	struct gs_port	*port = tty->driver_data;
 	int		status = 0;
 	struct gserial	*gser;
+
+	if (WARN_ON(!port))
+		return 0;
 
 	pr_vdebug("gs_break_ctl: ttyGS%d, send break (%d)\n",
 			port->port_num, duration);
