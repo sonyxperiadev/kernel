@@ -987,13 +987,20 @@ static int HandleControlCommand()
 
 		if (sgBrcm_auddrv_TestValues[4] == 1) {
 			en_lpbk = 1;
-			if (sgBrcm_auddrv_TestValues[3] == 1)
-				AUDCTRL_SetBTMode(BT_MODE_NB_TEST);
+			AUDCTRL_SetBTMode(BT_MODE_NB_TEST);
+
+		} else if (sgBrcm_auddrv_TestValues[4] == 2) {
+			en_lpbk = 1;
+			AUDCTRL_SetBTMode(BT_MODE_WB_TEST);
 
 		} else if (sgBrcm_auddrv_TestValues[4] == 0) {
 			en_lpbk = 2;
-			if (sgBrcm_auddrv_TestValues[3] == 1)
-				AUDCTRL_SetBTMode(BT_MODE_NB);
+			AUDCTRL_SetBTMode(BT_MODE_NB);
+
+		} else if (sgBrcm_auddrv_TestValues[4] == 3) {
+			en_lpbk = 2;
+			AUDCTRL_SetBTMode(BT_MODE_WB);
+
 		} else
 			return 0;
 
@@ -1009,13 +1016,13 @@ static int HandleControlCommand()
 			WR_REG(0x3500482C, 0x00000203); /* DCLKREQ4*/
 
 		} else if (sgBrcm_auddrv_TestValues[2] == 3) { /* BT SSP3 */
+
+			WR_REG(0x35004874, 0x00000443); /* GPIO14*/
+			WR_REG(0x35004878, 0x00000443); /* GPIO15*/
+			WR_REG(0x35004854, 0x00000403); /* GPIO06 -> DI*/
+			WR_REG(0x35004858, 0x00000403); /* GPIO07 -> DO*/
+
 		}
-
-			WR_REG(0x35004874, 0x00000243); /* GPIO14*/
-			WR_REG(0x35004878, 0x00000243); /* GPIO15*/
-			WR_REG(0x35004854, 0x00000203); /* GPIO06 -> DI*/
-			WR_REG(0x35004858, 0x00000203); /* GPIO07 -> DO*/
-
 		}
 		break;
 	default:

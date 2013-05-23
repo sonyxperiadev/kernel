@@ -699,9 +699,9 @@ CSL_PCM_OPSTATUS_t csl_pcm_config(CSL_PCM_HANDLE handle,
 		frm_arr[i].tx_prepad_bits = devCfg->ch_info[i].tx_prepad_bits;
 		frm_arr[i].tx_postpad_bits = devCfg->ch_info[i].tx_postpad_bits;
 
-		chal_sspi_set_fifo_repeat_count(handle, SSPI_FIFO_ID_RX0,
+		chal_sspi_set_fifo_repeat_count(handle, SSPI_FIFO_ID_RX0 + i,
 				rate / devCfg->ch_info[i].sample_rate - 1);
-		chal_sspi_set_fifo_repeat_count(handle, SSPI_FIFO_ID_TX0,
+		chal_sspi_set_fifo_repeat_count(handle, SSPI_FIFO_ID_TX0 + i,
 				rate / devCfg->ch_info[i].sample_rate - 1);
 		set_fifo_pack(handle, i, devCfg->ch_info[i].rx_len,
 				devCfg->ch_info[i].rx_pack, 1);
@@ -837,6 +837,8 @@ CSL_PCM_OPSTATUS_t csl_pcm_config(CSL_PCM_HANDLE handle,
 		} else { /* not the first sequence */
 			seq_conf.cs_activate = 0;
 			seq_conf.cs_deactivate = 0;
+			seq_conf.rx_fifo_sel = 1;
+			seq_conf.tx_fifo_sel = 1;
 			seq_conf.rep_cnt =
 				devCfg->ch_info[i].num_intrlvd_ch - 1;
 

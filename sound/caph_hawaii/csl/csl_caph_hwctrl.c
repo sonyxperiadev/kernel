@@ -2700,7 +2700,10 @@ static void csl_caph_start_blocks
 		if (!pcmRxRunning && !pcmTxRunning) {
 			if (!sspTDM_enabled)
 				csl_pcm_enable_scheduler(pcmHandleSSP, TRUE);
+			else if (!csl_caph_hwctrl_ssp_running())
+				csl_pcm_enable_scheduler(pcmHandleSSP, TRUE);
 		}
+
 		if (!pcmRxRunning &&
 		    path->sink[sinkNo] != CSL_CAPH_DEV_DSP &&
 		    path->source == CSL_CAPH_DEV_BT_MIC)
@@ -2784,14 +2787,10 @@ static void csl_caph_start_blocks
 
 	if (sspTDM_enabled
 		&& !csl_caph_hwctrl_ssp_running() &&
-		(path->sink[sinkNo] == CSL_CAPH_DEV_BT_SPKR
-			|| path->source == CSL_CAPH_DEV_BT_MIC ||
-		path->sink[sinkNo] == CSL_CAPH_DEV_FM_TX
+		(path->sink[sinkNo] == CSL_CAPH_DEV_FM_TX
 			|| path->source == CSL_CAPH_DEV_FM_RADIO)) {
 		csl_pcm_enable_scheduler(pcmHandleSSP, TRUE);
 	}
-
-
 
 	if (!fmTxRunning &&
 		(path->sink[sinkNo] == CSL_CAPH_DEV_FM_TX)) {
@@ -2804,8 +2803,8 @@ static void csl_caph_start_blocks
 		fmTxRunning = TRUE;
 	}
 
-	if (!fmRxRunning && path->source ==
-			CSL_CAPH_DEV_FM_RADIO) {
+	if (!fmRxRunning && (path->source ==
+			CSL_CAPH_DEV_FM_RADIO)) {
 		if (sspTDM_enabled)
 			csl_pcm_start_rx(pcmHandleSSP, CSL_PCM_CHAN_RX1);
 		else {
@@ -5453,7 +5452,7 @@ static void csl_caph_hwctrl_tdm_config(
 		pcmCfg.mode = CSL_PCM_MASTER_MODE;
 		pcmCfg.protocol = CSL_PCM_PROTOCOL_INTERLEAVE_3CHANNEL;
 		pcmCfg.rx_lpbk = 0;
-		pcmCfg.tx_lpbk = 0;
+		pcmCfg.tx_lpbk = en_lpbk_pcm;
 
 		pcmCfg.num_ch_info = 2;
 		/* setup channel 0 for voice */
@@ -5465,7 +5464,7 @@ static void csl_caph_hwctrl_tdm_config(
 		pcmCfg.ch_info[0].rx_len = 16;
 		pcmCfg.ch_info[0].rx_ena = 1; /* rx enable for this chan */
 		/* rx data is unpacked for this chan */
-		pcmCfg.ch_info[0].rx_pack = 0;
+		pcmCfg.ch_info[0].rx_pack = 1;
 		/* No pad data before tx data of the frame */
 		pcmCfg.ch_info[0].tx_prepad_bits = 0;
 		/* No pad data after tx data of the frame */
@@ -5475,7 +5474,7 @@ static void csl_caph_hwctrl_tdm_config(
 		pcmCfg.ch_info[0].tx_len = 16;
 		pcmCfg.ch_info[0].tx_ena = 1; /* tx enable for this chan */
 		/* tx data is unpacked for this chan */
-		pcmCfg.ch_info[0].tx_pack = 0;
+		pcmCfg.ch_info[0].tx_pack = 1;
 
 		if (path->source == CSL_CAPH_DEV_DSP
 			|| path->sink[sinkNo] == CSL_CAPH_DEV_DSP) {
