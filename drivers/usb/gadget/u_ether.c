@@ -47,6 +47,83 @@
 
 #define UETH__VERSION	"29-May-2008"
 
+#ifdef CONFIG_BRCM_NETCONSOLE
+
+#define USB_EVENTQUEUE_SIZE 4
+
+struct usb_event_queue_t {
+	uint32_t		in_index;
+	uint32_t		out_index;
+	uint32_t		is_empty;
+	spinlock_t		usbevent_lock;
+	uint32_t		event[USB_EVENTQUEUE_SIZE];
+};
+
+static uint32_t queue_usbevent(struct usb_event_queue_t *queue, uint32_t event);
+static uint32_t dequeue_usbevent(struct usb_event_queue_t *queue, uint32_t *pevent);
+static uint32_t usb_eventqueue_init(struct usb_event_queue_t *queue);
+
+static uint32_t usb_eventqueue_init(struct usb_event_queue_t *queue)
+{
+	spin_lock_init(&queue->usbevent_lock);
+	queue->in_index = 0;
+	queue->out_index = 0;
+	queue->is_empty = 1;
+	return 1;
+}
+
+static uint32_t is_queue_empty(struct usb_event_queue_t *queue)
+{
+	if ((queue->in_index == queue->out_index) && (queue->is_empty))
+		return 1;
+	else
+		return 0;
+}
+static uint32_t is_queue_full(struct usb_event_queue_t *queue)
+{
+	if ((queue->in_index == queue->out_index) && (!queue->is_empty))
+		return 1;
+	else
+		return 0;
+}
+
+static uint32_t queue_usbevent(struct usb_event_queue_t *queue, uint32_t event)
+{
+	unsigned long flags;
+	spin_lock_irqsave(&queue->usbevent_lock, flags);
+	if (is_queue_full(queue)) {
+		spin_unlock_irqrestore(&queue->usbevent_lock, flags);
+		return 0;
+	}
+	queue->event[queue->in_index++] = event;
+	if (queue->in_index >= USB_EVENTQUEUE_SIZE) {
+		queue->in_index = 0;
+	}
+	queue->is_empty = 0;
+	spin_unlock_irqrestore(&queue->usbevent_lock, flags);
+	return 1;
+}
+
+static uint32_t dequeue_usbevent(struct usb_event_queue_t *queue, uint32_t *pevent)
+{
+	unsigned long flags;
+	spin_lock_irqsave(&queue->usbevent_lock, flags);
+	if (is_queue_empty(queue)) {
+		spin_unlock_irqrestore(&queue->usbevent_lock, flags);
+		return 0;
+	}
+	*pevent = queue->event[queue->out_index++];
+	if (queue->out_index >= USB_EVENTQUEUE_SIZE) {
+		queue->out_index = 0;
+	}
+	if (queue->out_index == queue->in_index) {
+		queue->is_empty = 1;
+	}
+	spin_unlock_irqrestore(&queue->usbevent_lock, flags);
+	return 1;
+}
+#endif
+
 struct eth_dev {
 	/* lock is held while accessing port_usb
 	 * or updating its backlink port_usb->ioport
@@ -74,6 +151,10 @@ struct eth_dev {
 						struct sk_buff_head *list);
 
 	struct work_struct	work;
+#ifdef CONFIG_BRCM_NETCONSOLE
+	struct usb_event_queue_t usbevent_queue;
+#endif
+
 #ifdef CONFIG_USB_ETH_SKB_ALLOC_OPTIMIZATION
 	struct workqueue_struct *rx_workqueue;
 	unsigned char			*skb_data;
@@ -353,6 +434,15 @@ static void defer_kevent(struct eth_dev *dev, int flag)
 	if (testwkbit)
 		return;
 
+#ifdef CONFIG_BRCM_NETCONSOLE
+	if ((flag == WORK_BRCM_NETCONSOLE_ON) || (flag == WORK_BRCM_NETCONSOLE_OFF)) {
+		if (!queue_usbevent(&dev->usbevent_queue, flag)) {
+			ERROR(dev, "event queue full, kevent %d may have been dropped\n", flag);
+			return;
+		}
+	}
+#endif
+
 	if (dev->rx_workqueue) {
 		if (!queue_work(dev->rx_workqueue, &dev->work))
 			ERROR(dev, "kevent %d may have been dropped\n", flag);
@@ -368,6 +458,16 @@ static void defer_kevent(struct eth_dev *dev, int flag)
 #endif
 	if (test_and_set_bit(flag, &dev->todo))
 		return;
+
+#ifdef CONFIG_BRCM_NETCONSOLE
+	if ((flag == WORK_BRCM_NETCONSOLE_ON) || (flag == WORK_BRCM_NETCONSOLE_OFF)) {
+		if (!queue_usbevent(&dev->usbevent_queue, flag)) {
+			ERROR(dev, "event queue full, kevent %d may have been dropped\n", flag);
+			return;
+		}
+	}
+#endif
+
 	if (!schedule_work(&dev->work))
 		ERROR(dev, "kevent %d may have been dropped\n", flag);
 	else
@@ -653,6 +753,33 @@ static void rx_fill(struct eth_dev *dev, gfp_t gfp_flags)
 	spin_unlock_irqrestore(&dev->req_lock, flags);
 
 }
+#ifdef CONFIG_BRCM_NETCONSOLE
+static void usb_test_work(struct work_struct *work)
+{
+	struct eth_dev	*dev = container_of(work, struct eth_dev, work);
+	uint32_t event;
+
+	while (dequeue_usbevent(&dev->usbevent_queue, &event)) {
+		switch (event) {
+		case WORK_BRCM_NETCONSOLE_ON:
+			cleanup_netpoll_lock();
+			brcm_current_netcon_status(USB_RNDIS_ON);
+			cleanup_netpoll_unlock();
+			break;
+
+		case WORK_BRCM_NETCONSOLE_OFF:
+			cleanup_netpoll_lock();
+			brcm_current_netcon_status(USB_RNDIS_OFF);
+			cleanup_netpoll_unlock();
+			break;
+
+		default:
+			break;
+		}
+	}
+	return;
+}
+#endif
 
 static void eth_work(struct work_struct *work)
 {
@@ -671,15 +798,10 @@ static void eth_work(struct work_struct *work)
 			rx_fill(dev, GFP_KERNEL);
 	}
 #ifdef CONFIG_BRCM_NETCONSOLE
-	else if (test_and_clear_bit(WORK_BRCM_NETCONSOLE_ON, &dev->todo)) {
-				cleanup_netpoll_lock();
-				brcm_current_netcon_status(USB_RNDIS_ON);
-				cleanup_netpoll_unlock();
-	} else if (test_and_clear_bit(WORK_BRCM_NETCONSOLE_OFF, &dev->todo)) {
-				cleanup_netpoll_lock();
-				brcm_current_netcon_status(USB_RNDIS_OFF);
-				cleanup_netpoll_unlock();
+	else {
+		usb_test_work(work);
 	}
+
 	if (test_and_clear_bit(WORK_ALLOC_RX_SKB, &dev->todo))
 		ueth_recycle_rx_skb_data(dev->skb_data, GFP_KERNEL);
 #endif
@@ -695,14 +817,8 @@ static void eth_work(struct work_struct *work)
 			rx_fill(dev, GFP_KERNEL);
 	}
 #ifdef CONFIG_BRCM_NETCONSOLE
-	else if (test_and_clear_bit(WORK_BRCM_NETCONSOLE_ON, &dev->todo)) {
-		cleanup_netpoll_lock();
-		brcm_current_netcon_status(USB_RNDIS_ON);
-		cleanup_netpoll_unlock();
-	} else if (test_and_clear_bit(WORK_BRCM_NETCONSOLE_OFF, &dev->todo)) {
-		cleanup_netpoll_lock();
-		brcm_current_netcon_status(USB_RNDIS_OFF);
-		cleanup_netpoll_unlock();
+	else {
+		usb_test_work(work);
 	}
 #endif
 
@@ -1107,6 +1223,9 @@ int gether_setup_name(struct usb_gadget *g, u8 ethaddr[ETH_ALEN],
 		pr_err("rx_ether_queue creation fail once\n");
 #endif
 
+#ifdef CONFIG_BRCM_NETCONSOLE
+	usb_eventqueue_init(&dev->usbevent_queue);
+#endif
 	/* network device setup */
 	dev->net = net;
 	snprintf(net->name, sizeof(net->name), "%s%%d", netname);
