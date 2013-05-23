@@ -86,6 +86,8 @@ struct unicam_camera_dev {
 	atomic_t streaming;
 	u32 skip_frames;
 	struct v4l2_subdev_sensor_interface_parms if_params;
+	struct semaphore stop_sem;
+	atomic_t stopping;
 	enum buffer_mode b_mode;
 	struct v4l2_crop crop;
 	int cap_mode;
@@ -731,6 +733,20 @@ static int unicam_videobuf_stop_streaming_int(struct unicam_camera_dev \
 		pr_err("stream already turned off\n");
 		goto out;
 	}
+	if (unicam_dev->active) {
+		atomic_set(&unicam_dev->stopping, 1);
+		spin_unlock_irqrestore(&unicam_dev->lock, flags);
+		ret = down_timeout(&unicam_dev->stop_sem,
+				msecs_to_jiffies(500));
+		atomic_set(&unicam_dev->stopping, 0);
+		if (ret == -ETIME)
+			pr_err("Unicam: semaphore timed out waiting to STOP\n");
+	} else {
+		spin_unlock_irqrestore(&unicam_dev->lock, flags);
+	}
+	usleep_range(50, 60); /*TODO: Need to double-check with ASIC team*/
+	spin_lock_irqsave(&unicam_dev->lock, flags);
+
 	unicam_stop();
 	/* Restart rx stat */
 	mm_csi0_get_rx_stat(&rx, 1);
@@ -1307,12 +1323,8 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 			pr_debug("frame received");
 			if (!vb)
 				goto out;
-#if 1 /*Commenting out  - this is buggy @ head*/
 
-			if (atomic_read(&unicam_dev->streaming) == 0) {
-				pr_err("Interrupt triggered after stopping camera!\n");
-				unicam_dev->skip_frames++;
-			} else if (unicam_dev->skip_frames <= 0) {
+			if (unicam_dev->skip_frames <= 0) {
 				struct v4l2_control ctrl;
 				int ret = -1;
 				ctrl.value = 0;
@@ -1326,7 +1338,6 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 					__func__, ctrl.value);
 				}
 			}
-#endif
 			if (likely(unicam_dev->skip_frames <= 0)) {
 				list_del_init(&to_unicam_camera_vb(vb)->queue);
 				do_gettimeofday(&vb->v4l2_buf.timestamp);
@@ -1427,6 +1438,8 @@ static int __devinit unicam_camera_probe(struct platform_device *pdev)
 	soc_host->priv = unicam_dev;
 	soc_host->v4l2_dev.dev = &pdev->dev;
 	soc_host->nr = pdev->id;
+	atomic_set(&unicam_dev->stopping, 0);
+	sema_init(&unicam_dev->stop_sem, 0);
 
 #if defined(CONFIG_VIDEOBUF2_DMA_CONTIG)
 	unicam_dev->alloc_ctx = vb2_dma_contig_init_ctx(&pdev->dev);
@@ -1458,8 +1471,8 @@ static int __devinit unicam_camera_probe(struct platform_device *pdev)
 ecamhostreg:
 #if defined(CONFIG_VIDEOBUF2_DMA_CONTIG)
 	vb2_dma_contig_cleanup_ctx(unicam_dev->alloc_ctx);
-#endif
 eallocctx:
+#endif
 	vfree(unicam_dev);
 ealloc:
 edev:
