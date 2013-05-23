@@ -90,6 +90,12 @@ static int __ccu_clk_init(struct clk *clk)
 		/* enable write access */
 		ccu_write_access_enable(ccu_clk, true);
 	}
+	ccu_write_access_enable(ccu_clk, true);
+	/*Keep CCU intr disabled by default*/
+	ccu_int_enable(ccu_clk, ACT_INT, false);
+	ccu_int_enable(ccu_clk, TGT_INT, false);
+	ccu_write_access_enable(ccu_clk, false);
+
 	CCU_ACCESS_EN(ccu_clk, 0);
 
 	return ret;
