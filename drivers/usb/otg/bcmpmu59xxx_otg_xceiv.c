@@ -997,6 +997,13 @@ static int __devinit bcmpmu_otg_xceiv_probe(struct platform_device *pdev)
 	    bcmpmu_otg_xceiv_check_id_gnd(xceiv_data) ||
 	    bcmpmu_otg_xceiv_check_id_rid_a(xceiv_data);
 
+	/* Initialize OTG PHY */
+	error = bcm_hsotgctrl_phy_init(!xceiv_data->otg_xceiver.phy.otg->default_a);
+	if (error) {
+		printk(KERN_ERR "%s-Fail to USB Phy Init\n", __func__);
+		goto error_attr_wake;
+	}
+
 	bcmpmu_otg_xceiv_set_def_state(xceiv_data,
 		xceiv_data->otg_xceiver.phy.otg->default_a);
 
