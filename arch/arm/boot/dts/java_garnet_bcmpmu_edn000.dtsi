@@ -113,6 +113,12 @@
 		 /*SIMLDO2 enable pulldown MobC00298660*/
 		 0x9a 0x00 0x40 0
 		>;
+
+	exitdata = <
+		/* Address Value Mask Map*/
+		0x14 0x5 0xFF 0
+		0x53 0x1 0xFF 0
+		>;
 	};
 
 	bcmpmu_rgltrs {

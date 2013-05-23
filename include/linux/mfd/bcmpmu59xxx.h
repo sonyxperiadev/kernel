@@ -943,7 +943,9 @@ struct bcmpmu59xxx_platform_data {
 	int i2c_pagesize;
 	int irq;
 	struct bcmpmu59xxx_rw_data *init_data;
+	struct bcmpmu59xxx_rw_data *exit_data;
 	int init_max;
+	int exit_max;
 	/*FIXME need to check this variable */
 	enum bcmpmu_bc_t bc;
 	int piggyback_chrg;

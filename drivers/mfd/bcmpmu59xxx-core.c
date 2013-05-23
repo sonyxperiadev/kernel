@@ -628,29 +628,39 @@ static struct miscdevice bcmpmu_device = {
 	MISC_DYNAMIC_MINOR, "bcmpmu", &bcmpmu_fops
 };
 
+static void bcmpmu59xxx_reg_update(struct bcmpmu59xxx *pmu,
+		struct bcmpmu59xxx_rw_data *data, int max)
+{
+	int i;
+	u8 temp;
+	for (i = 0; i < max; i++) {
+		if (!data[i].mask)
+			continue;
+		else if (data[i].mask ==  0xFF)
+			pmu->write_dev(pmu, data[i].addr, data[i].val);
+		else {
+			pmu->read_dev(pmu, data[i].addr, &temp);
+			temp &= ~(data[i].mask);
+			temp |= (data[i].val & data[i].mask);
+			pmu->write_dev(pmu, data[i].addr, temp);
+		}
+	}
+}
+
 static void bcmpmu_register_init(struct bcmpmu59xxx *pmu)
 {
 	struct bcmpmu59xxx_platform_data *pdata;
-	int i;
-	u8 temp;
 	pdata = pmu->pdata;
-	for (i = 0; i < pdata->init_max; i++) {
-		if (!pdata->init_data[i].mask)
-			continue;
-		else if (pdata->init_data[i].mask ==  0xFF)
-			pmu->write_dev(pmu,
-					pdata->init_data[i].addr,
-					pdata->init_data[i].val);
-		else {
-			pmu->read_dev(pmu,
-					pdata->init_data[i].addr,
-					&temp);
-			temp &= ~(pdata->init_data[i].mask);
-			temp |= (pdata->init_data[i].val &
-				pdata->init_data[i].mask);
-			pmu->write_dev(pmu, pdata->init_data[i].addr, temp);
-		}
-	}
+
+	bcmpmu59xxx_reg_update(pmu, pdata->init_data, pdata->init_max);
+}
+
+static void bcmpmu59xxx_shutdown(struct platform_device *pdev)
+{
+	struct bcmpmu59xxx *bcmpmu = pdev->dev.platform_data;
+	struct bcmpmu59xxx_platform_data *pdata = bcmpmu->pdata;
+
+	bcmpmu59xxx_reg_update(bcmpmu, pdata->exit_data, pdata->exit_max);
 }
 
 static int __devinit bcmpmu59xxx_probe(struct platform_device *pdev)
@@ -726,6 +736,7 @@ static struct platform_driver bcmpmu59xxx_driver = {
 		   },
 	.probe = bcmpmu59xxx_probe,
 	.remove = __devexit_p(bcmpmu59xxx_remove),
+	.shutdown = bcmpmu59xxx_shutdown,
 };
 
 static int __init bcmpmu59xxx_init(void)
