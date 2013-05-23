@@ -288,7 +288,14 @@ static int alarm_release(struct inode *inode, struct file *file)
 				alarm_enabled &= ~alarm_type_mask;
 			}
 			spin_unlock_irqrestore(&alarm_slock, flags);
+#ifdef CONFIG_BCM_RTC_ALARM_BOOT
+			if (alarms[i].type == ANDROID_ALARM_RTC_POWERON)
+				alarm_poweron_cancel();
+			else
+				devalarm_cancel(&alarms[i]);
+#else
 			devalarm_cancel(&alarms[i]);
+#endif /*CONFIG_BCM_RTC_ALARM_BOOT*/
 			spin_lock_irqsave(&alarm_slock, flags);
 		}
 		if (alarm_pending | wait_pending) {
