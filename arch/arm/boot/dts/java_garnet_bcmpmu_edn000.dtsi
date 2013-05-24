@@ -39,10 +39,10 @@
 		0x44 0x01 0x01 0
 		  /*  ICCMAX to 1500mA*/
 		0x47 0x0B 0xFF 0
-		  /* NTC Hot Temperature Comparator rising = 60C*/
-		0xCC 0x40 0xFF 1
-		  /* NTC Hot Temperature Comparator falling = 50C*/
-		0xCD 0x5C 0xFF 1
+		  /* NTC Hot Temperature Comparator rising = 45C*/
+		0xCC 0x70 0xFF 1
+		  /* NTC Hot Temperature Comparator falling = 40C*/
+		0xCD 0x84 0xFF 1
 		  /* NTC Cold Temperature Comparator rising = 0C*/
 		0xCE 0xF4 0xFF 1
 		  /* NTC Cold Temperature Comparator falling = 5C*/

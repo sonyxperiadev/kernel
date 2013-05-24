@@ -98,16 +98,16 @@ static struct bcmpmu59xxx_rw_data __initdata register_init_data[] = {
 	{.addr = PMU_REG_MBCCTRL8, .val = 0x09, .mask = 0xFF},
 	/* Set curr to 100mA during boot*/
 	{.addr = PMU_REG_MBCCTRL10, .val = 0x0, .mask = 0xF},
-	/* NTC Hot Temperature Comparator*/
-	{.addr = PMU_REG_CMPCTRL5, .val = 0x43, .mask = 0xFF},
-	/* NTC Hot Temperature Comparator*/
-	{.addr = PMU_REG_CMPCTRL6, .val = 0x7F, .mask = 0xFF},
-	/* NTC Cold Temperature Comparator */
-	{.addr = PMU_REG_CMPCTRL7, .val = 0x3B, .mask = 0xFF},
-	/* NTC Cold Temperature Comparator */
-	{.addr = PMU_REG_CMPCTRL8, .val = 0xF8, .mask = 0xFF},
+	/* NTC Hot Temperature Comparator set to 45C */
+	{.addr = PMU_REG_CMPCTRL5, .val = 0x70, .mask = 0xFF},
+	/* NTC Hot Temperature Comparator set to 40C*/
+	{.addr = PMU_REG_CMPCTRL6, .val = 0x84, .mask = 0xFF},
+	/* NTC Cold Temperature Comparator set to 0C*/
+	{.addr = PMU_REG_CMPCTRL7, .val = 0xF4, .mask = 0xFF},
+	/* NTC Cold Temperature Comparator set to 5C*/
+	{.addr = PMU_REG_CMPCTRL8, .val = 0xB8, .mask = 0xFF},
 	/* NTC Hot Temperature Comparator bit 9,8 */
-	{.addr = PMU_REG_CMPCTRL9, .val = 0x09, .mask = 0xFF},
+	{.addr = PMU_REG_CMPCTRL9, .val = 0x05, .mask = 0xFF},
 	/* ID detection method selection
 	 *  current source Trimming */
 	{.addr = PMU_REG_OTGCTRL8, .val = 0xD2, .mask = 0xFF},
