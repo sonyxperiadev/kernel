@@ -115,13 +115,18 @@
 /*
  * Button/Hook Filter configuration
  */
-#ifdef CONFIG_MACH_HAWAII_SS_LOGAN
+#if defined(CONFIG_MACH_HAWAII_SS_LOGAN) || \
+defined(CONFIG_MACH_HAWAII_SS_GOLDENVE) || \
+defined(CONFIG_MACH_HAWAII_SS_GOLDENVEN) || \
+defined(CONFIG_MACH_HAWAII_SS_LOGANDS_REV00) || \
+defined(CONFIG_MACH_HAWAII_SS_LOGANDS_REV01)
+
 /* = 2048 / (Filter block frequency) = 2048 / 32768 => 62ms */
 #define ACC_HW_COMP1_FILTER_WIDTH   2048
-#else		/* CONFIG_MACH_HAWAII_SS_LOGAN */
+#else	/* CONFIG_MACH_HAWAII_SS_LOGAN  || CONFIG_MACH_HAWAII_SS_GOLDENVE */
 /* = 1024 / (Filter block frequencey) = 1024 / 32768 => 31ms */
 #define ACC_HW_COMP1_FILTER_WIDTH   1024
-#endif	/* CONFIG_MACH_HAWAII_SS_LOGAN */
+#endif	/* CONFIG_MACH_HAWAII_SS_LOGAN  || CONFIG_MACH_HAWAII_SS_GOLDENVE*/
 
 /*
  * Accessory Detecting voltage
@@ -132,11 +137,15 @@
 #define HEADPHONE_DETECT_LEVEL_MAX      40
 #define HEADPHONE_DETECT_LEVEL2_MIN     91
 
-#ifdef CONFIG_MACH_HAWAII_SS_LOGAN
-#define HEADPHONE_DETECT_LEVEL2_MAX     899
-#else		/* CONFIG_MACH_HAWAII_SS_LOGAN */
+#if defined(CONFIG_MACH_HAWAII_SS_LOGAN) || \
+defined(CONFIG_MACH_HAWAII_SS_GOLDENVE) || \
+defined(CONFIG_MACH_HAWAII_SS_GOLDENVEN) || \
+defined(CONFIG_MACH_HAWAII_SS_LOGANDS_REV00) || \
+defined(CONFIG_MACH_HAWAII_SS_LOGANDS_REV01)
+#define HEADPHONE_DETECT_LEVEL2_MAX     650
+#else	/* CONFIG_MACH_HAWAII_SS_LOGAN  || CONFIG_MACH_HAWAII_SS_GOLDENVE */
 #define HEADPHONE_DETECT_LEVEL2_MAX     599
-#endif	/* CONFIG_MACH_HAWAII_SS_LOGAN */
+#endif	/* CONFIG_MACH_HAWAII_SS_LOGAN  || CONFIG_MACH_HAWAII_SS_GOLDENVE */
 
 #define OPENCABLE_DETECT_LEVEL_MIN      1900
 #define OPENCABLE_DETECT_LEVEL_MAX      5000
@@ -226,20 +235,24 @@ enum button_state {
  * Default table used if the platform does not pass one
  */
 static unsigned int button_adc_values_no_resistor[3][2] = {
-#ifdef CONFIG_MACH_HAWAII_SS_LOGAN
+#if defined(CONFIG_MACH_HAWAII_SS_LOGAN) || \
+defined(CONFIG_MACH_HAWAII_SS_GOLDENVE) || \
+defined(CONFIG_MACH_HAWAII_SS_GOLDENVEN) || \
+defined(CONFIG_MACH_HAWAII_SS_LOGANDS_REV00) || \
+defined(CONFIG_MACH_HAWAII_SS_LOGANDS_REV01)
 	/* SEND/END Min, Max */
 	{0, 110},
 	/* Volume Up  Min, Max */
 	{111, 250},
 	/* Volue Down Min, Max */
 	{251, 500},
-#else		/* CONFIG_MACH_HAWAII_SS_LOGAN */
+#else	/* CONFIG_MACH_HAWAII_SS_LOGAN  || CONFIG_MACH_HAWAII_SS_GOLDENVE */
 	{0, 104},
 	/* Volume Up  Min, Max */
 	{139, 270},
 	/* Volue Down Min, Max */
 	{330, 680},
-#endif	/* CONFIG_MACH_HAWAII_SS_LOGAN */
+#endif	/* CONFIG_MACH_HAWAII_SS_LOGAN || CONFIG_MACH_HAWAII_SS_GOLDENVE */
 };
 static unsigned int (*button_adc_values)[2];
 
@@ -252,11 +265,15 @@ static const CHAL_ACI_filter_config_comp_t comp_values_for_button_press = {
 	CHAL_ACI_FILTER_RESET_FIRMWARE,
 	0,			/* = S */
 	0xFE,			/* = T */
-#ifdef CONFIG_MACH_HAWAII_SS_LOGAN
+#if defined(CONFIG_MACH_HAWAII_SS_LOGAN) || \
+defined(CONFIG_MACH_HAWAII_SS_GOLDENVE) || \
+defined(CONFIG_MACH_HAWAII_SS_GOLDENVEN) || \
+defined(CONFIG_MACH_HAWAII_SS_LOGANDS_REV00) || \
+defined(CONFIG_MACH_HAWAII_SS_LOGANDS_REV01)
 	0xA00,			/* = M = 2560 / 32768 => 78ms */
-#else /* CONFIG_MACH_HAWAII_SS_LOGAN */
+#else /* CONFIG_MACH_HAWAII_SS_LOGAN || CONFIG_MACH_HAWAII_SS_GOLDENVE */
 	0x500,			/* = M = 1280 / 32768 => 39ms */
-#endif /* CONFIG_MACH_HAWAII_SS_LOGAN	 */
+#endif /* CONFIG_MACH_HAWAII_SS_LOGAN || CONFIG_MACH_HAWAII_SS_GOLDENVE */
 	ACC_HW_COMP1_FILTER_WIDTH	/* = MT */
 };
 
@@ -372,9 +389,9 @@ static int config_adc_for_accessory_detection(int hst)
 	switch (hst) {
 	case HEADPHONE:
 
-		pr_debug
-		    ("config_adc_for_accessory_detection:"
-				" Configuring for headphone \r\n");
+		pr_debug(
+			"config_adc_for_accessory_detection: Configuring for headphone \r\n"
+		);
 		/* Setup MIC bias */
 		aci_mic_bias.mode = CHAL_ACI_MIC_BIAS_ON;
 		chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
@@ -405,6 +422,7 @@ static int config_adc_for_accessory_detection(int hst)
 				    CHAL_ACI_BLOCK_ACTION_ADC_RANGE,
 				    CHAL_ACI_BLOCK_ADC,
 				    CHAL_ACI_BLOCK_ADC_HIGH_VOLTAGE);
+
 		chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
 				    CHAL_ACI_BLOCK_ACTION_CONFIGURE_FILTER,
 				    CHAL_ACI_BLOCK_ADC, &aci_filter_adc_config);
@@ -414,9 +432,9 @@ static int config_adc_for_accessory_detection(int hst)
 
 	case OPEN_CABLE:
 
-		pr_debug
-		    ("config_adc_for_accessory_detection:"
-				" Configuring for open cable \r\n");
+		pr_debug(
+			"config_adc_for_accessory_detection: Configuring for open cable \r\n"
+		);
 
 		/* Powerup ADC */
 		chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
@@ -442,9 +460,9 @@ static int config_adc_for_accessory_detection(int hst)
 
 	case HEADSET:
 
-		pr_debug
-		    ("config_adc_for_accessory_detection:"
-				" Configuring for HEADSET \r\n");
+		pr_debug(
+			"config_adc_for_accessory_detection: Configuring for HEADSET \r\n"
+		);
 
 		/* Turn OFF MIC Bias */
 		aci_mic_bias.mode = CHAL_ACI_MIC_BIAS_GND;
@@ -593,18 +611,16 @@ static int read_adc_for_accessory_detection(int hst)
 	mic_level = chal_aci_block_read(mic_dev->aci_chal_hdl,
 					CHAL_ACI_BLOCK_ADC,
 					CHAL_ACI_BLOCK_ADC_RAW);
-	pr_debug
-	    (" ++ read_adc_for_accessory_detection:"
-				" mic_level before calc %d \r\n",
+	pr_debug(
+		" ++ read_adc_for_accessory_detection: mic_level before calc %d \r\n",
 	     mic_level);
 	mic_level =
 	    mic_level <=
 	    0 ? mic_level : ((mic_level > mic_dev->headset_pd->phone_ref_offset)
 			     ? (mic_level -
 				mic_dev->headset_pd->phone_ref_offset) : 0);
-	pr_info
-	    ("\n read_adc_for_accessory_detection:"
-				" mic_level after calc %d \r\n",
+	pr_info(
+		"\n read_adc_for_accessory_detection: mic_level after calc %d \r\n",
 	     mic_level);
 
 	switch (hst) {
@@ -726,9 +742,9 @@ static void button_work_func(struct work_struct *work)
 	int button_name;
 
 	if (p->hs_state != HEADSET) {
-		pr_err
-		    ("%s() ..scheduled while acessory is not Headset"
-				" or spurious \r\n", __func__);
+		pr_err(
+			"%s() ..scheduled while acessory is not Headset or spurious \r\n",
+			__func__);
 #ifdef CONFIG_HAS_WAKELOCK
 		wake_unlock(&p->accessory_wklock);
 #endif
@@ -778,8 +794,9 @@ static void button_work_func(struct work_struct *work)
 					p->button_pressed = KEY_VOLUMEDOWN;
 					break;
 				default:
-					pr_err("Button type not supported or"
-								" spurious \r\n");
+					pr_err(
+						"Button type not supported or spurious \r\n"
+					);
 					err = 1;
 #ifdef CONFIG_HAS_WAKELOCK
 					wake_unlock(&p->accessory_wklock);
@@ -1132,9 +1149,9 @@ static void __handle_accessory_inserted(struct mic_t *p)
 
 	case OPEN_CABLE:
 		/* Configure the COMP2 threshold for accessory detection */
-		pr_debug
-		    ("Detected Open cable enabling reconfig threshold"
-				" values of COMP2\r\n");
+		pr_debug(
+			"Detected Open cable enabling reconfig threshold values of COMP2\r\n"
+		);
 
 		/* Configure the comparator 2 for type detection */
 		chal_aci_block_ctrl(p->aci_chal_hdl,
@@ -1156,9 +1173,9 @@ static void __handle_accessory_inserted(struct mic_t *p)
 		break;
 
 	case HEADSET:
-		pr_debug
-		    ("accessory_detect_work_func:"
-				" Detected headset config for button press \r\n");
+		pr_debug(
+			"accessory_detect_work_func: Detected headset config for button press \r\n"
+		);
 
 		/* Put back the aci interface to be able to detect the
 		 * button press. Especially this functions puts the
@@ -1178,8 +1195,9 @@ static void __handle_accessory_inserted(struct mic_t *p)
 		/* Fall through to send the update to userland */
 	case HEADPHONE:
 
-		pr_debug("accessory_detect_work_func:"
-				" Detected headphone\r\n");
+		pr_debug(
+			"accessory_detect_work_func: Detected headphone\r\n"
+		);
 		/* Clear pending interrupts if any */
 		chal_aci_block_ctrl(p->aci_chal_hdl,
 				    CHAL_ACI_BLOCK_ACTION_INTERRUPT_ACKNOWLEDGE,
@@ -1198,8 +1216,9 @@ static void __handle_accessory_inserted(struct mic_t *p)
 #endif
 		break;
 	default:
-		pr_err("%s():Unknown accessory type "
-			"%d \r\n", __func__, p->hs_state);
+		pr_err(
+			"%s():Unknown accessory type %d \r\n",
+		__func__, p->hs_state);
 		break;
 	}
 
@@ -1365,7 +1384,8 @@ inputdev_err:
 irqreturn_t gpio_isr(int irq, void *dev_id)
 {
 	struct mic_t *p = (struct mic_t *)dev_id;
-	if (gpio_get_value(irq_to_gpio(p->gpio_irq)) == p->headset_pd->hs_default_state)
+	if (gpio_get_value(irq_to_gpio(p->gpio_irq))
+			== p->headset_pd->hs_default_state)
 		p->hs_state = DISCONNECTED;
 #ifdef CONFIG_HAS_WAKELOCK
 	wake_lock(&p->accessory_wklock);
@@ -1580,14 +1600,16 @@ static int __headset_hw_init_micbias_on(struct mic_t *p)
 
 	if (!p->headset_pd->ldo_id) {
 		pr_err("%s: No LDO id passed in pdata\n", __func__);
-		pr_warning("WARNING: With Headset inserted, deep "
-			   "sleep might break\n");
+		pr_warning(
+			"WARNING: With Headset inserted, deep sleep might break\n"
+		);
 	} else {
 		p->ldo = regulator_get(NULL, p->headset_pd->ldo_id);
 		if (IS_ERR_OR_NULL(p->ldo)) {
 			pr_err("%s: ERR/NULL getting MICBIAS LDO\n", __func__);
-			pr_warning("WARNING: With Headset inserted, deep "
-				   "sleep might break\n");
+			pr_warning(
+				"WARNING: With Headset inserted, deep sleep might break\n"
+			);
 			/* Setting to null */
 			p->ldo = NULL;
 			return -ENOENT;
@@ -1642,15 +1664,16 @@ static int __headset_hw_init_micbias_on(struct mic_t *p)
 			    CHAL_ACI_BLOCK_ACTION_INTERRUPT_ACKNOWLEDGE,
 			    CHAL_ACI_BLOCK_COMP);
 
-	pr_debug("=== aci_interface_init:"
-				" Interrupts disabled \r\n");
+	pr_debug(
+		"=== aci_interface_init: Interrupts disabled \r\n"
+	);
 
 	/* Turn ON only if its not already ON */
 	if (p->mic_bias_status == 0) {
 		kona_mic_bias_on();
-		pr_debug
-		    ("=== __headset_hw_init_micbias_on:"
-				"called kona_mic_bias_on\r\n");
+		pr_debug(
+			"=== __headset_hw_init_micbias_on:called kona_mic_bias_on\r\n"
+		);
 		p->mic_bias_status = 1;
 	}
 
@@ -1700,8 +1723,9 @@ static int __headset_hw_init_micbias_on(struct mic_t *p)
 			    CHAL_ACI_BLOCK_ACTION_COMP_THRESHOLD,
 			    CHAL_ACI_BLOCK_COMP2, 1900);
 
-	pr_debug("===%s Configured the threshold value for "
-				"button press\r\n", __func__);
+	pr_debug(
+		"===%s Configured the threshold value for button press\r\n",
+		__func__);
 	return 0;
 }
 
@@ -1786,8 +1810,9 @@ static int __headset_hw_init(struct mic_t *p)
 	 * Optional, but for efficient Power Mgmt enabled
 	 * periodic mic bias mode
 	 */
-	pr_info("%s(): ***************** CONFIG_MIC_BIAS_PERIODIC"
-		" enabled \r\n", __func__);	/* tbr */
+	pr_info(
+		"%s(): ***************** CONFIG_MIC_BIAS_PERIODIC enabled \r\n"
+		, __func__);	/* tbr */
 	aci_init_mic_bias.mode = CHAL_ACI_MIC_BIAS_DISCONTINUOUS;
 #else
 	aci_init_mic_bias.mode = CHAL_ACI_MIC_BIAS_ON;
@@ -1796,8 +1821,9 @@ static int __headset_hw_init(struct mic_t *p)
 			    CHAL_ACI_BLOCK_ACTION_MIC_BIAS,
 			    CHAL_ACI_BLOCK_GENERIC, &aci_init_mic_bias);
 
-	pr_debug("=== __headset_hw_init:"
-				" MIC BIAS settings done \r\n");
+	pr_debug(
+		"=== __headset_hw_init: MIC BIAS settings done \r\n"
+	);
 
 	/* Configure comparator 1 for button press */
 	chal_aci_block_ctrl(p->aci_chal_hdl,
@@ -1805,18 +1831,18 @@ static int __headset_hw_init(struct mic_t *p)
 			    CHAL_ACI_BLOCK_COMP1,
 			    &comp_values_for_button_press);
 
-	pr_debug
-	    ("=== __headset_hw_init:"
-				" ACI Block1 comprator1 configured \r\n");
+	pr_debug(
+		"=== __headset_hw_init: ACI Block1 comprator1 configured \r\n"
+	);
 
 	/* Configure the comparator 2 for accessory detection */
 	chal_aci_block_ctrl(p->aci_chal_hdl,
 			    CHAL_ACI_BLOCK_ACTION_CONFIGURE_FILTER,
 			    CHAL_ACI_BLOCK_COMP2, &comp_values_for_type_det);
 
-	pr_debug
-	    ("=== __headset_hw_init:"
-				" ACI Block2 comprator2 configured \r\n");
+	pr_debug(
+		"=== __headset_hw_init: ACI Block2 comprator2 configured \r\n"
+	);
 
 	/*
 	 * Connect P_MIC_DATA_IN to P_MIC_OUT  and P_MIC_OUT to COMP2
@@ -1832,8 +1858,9 @@ static int __headset_hw_init(struct mic_t *p)
 	 * for button press detection.
 	 */
 
-	pr_debug("=== __headset_hw_init:"
-				" Configured MIC route \r\n");
+	pr_debug(
+		"=== __headset_hw_init: Configured MIC route \r\n"
+	);
 
 	/* Fast power up the Vref of ADC block */
 	/*
@@ -1846,17 +1873,18 @@ static int __headset_hw_init(struct mic_t *p)
 	chal_aci_block_ctrl(p->aci_chal_hdl, CHAL_ACI_BLOCK_ACTION_VREF,
 			    CHAL_ACI_BLOCK_GENERIC, &aci_vref_config);
 
-	pr_debug("=== __headset_hw_init:"
-				" Configured Vref and ADC \r\n");
+	pr_debug(
+		"=== __headset_hw_init: Configured Vref and ADC \r\n"
+	);
 
 	/* Power down the MIC Bias and put in HIZ */
 	chal_aci_block_ctrl(p->aci_chal_hdl,
 			    CHAL_ACI_BLOCK_ACTION_MIC_POWERDOWN_HIZ_IMPEDANCE,
 			    CHAL_ACI_BLOCK_GENERIC, TRUE);
 
-	pr_debug
-	    ("=== __headset_hw_init: powered down MIC BIAS"
-			" and put in High impedence state \r\n");
+	pr_debug(
+		"=== __headset_hw_init: powered down MIC BIAS and put in High impedence state \r\n"
+	);
 
 	/* Set the threshold value for button press */
 	/*
@@ -1876,9 +1904,9 @@ static int __headset_hw_init(struct mic_t *p)
 			    CHAL_ACI_BLOCK_ACTION_COMP_THRESHOLD,
 			    CHAL_ACI_BLOCK_COMP1, 600);
 
-	pr_debug
-	    ("=== __headset_hw_init:"
-				" Configured the threshold value for button press\r\n");
+	pr_debug(
+		"=== __headset_hw_init: Configured the threshold value for button press\r\n"
+	);
 
 	/* Set the threshold value for accessory type detection */
 	/* COMP2 used for accessory insertion/removal detection */
@@ -1891,9 +1919,9 @@ static int __headset_hw_init(struct mic_t *p)
 					  CHAL_ACI_BLOCK_COMP2,
 					  CHAL_ACI_BLOCK_COMP_RAW);
 
-	pr_debug
-	    ("=== __headset_hw_init:"
-				" Configured the threshold value for type detection\r\n");
+	pr_debug(
+		"=== __headset_hw_init: Configured the threshold value for type detection\r\n"
+	);
 
 	return 0;
 }
@@ -1947,9 +1975,8 @@ static int headset_hw_init(struct mic_t *mic)
 	 */
 	if (mic->headset_pd->gpio_for_accessory_detection == 1) {
 
-		pr_info
-		    ("%s() - Platform configures gpio %d"
-			" for accessory insertion detection \r\n",
+		pr_info(
+			"%s() - Platform configures gpio %d for accessory insertion detection \r\n",
 		     __func__, mic->gpio_irq);
 
 		hs_gpio = irq_to_gpio(mic->gpio_irq);
@@ -1988,9 +2015,8 @@ static int headset_hw_init(struct mic_t *mic)
 	} else {
 
 		__headset_hw_init(mic);
-		pr_info
-		    ("%s() - Platform uses COMP2 for "
-				"accessory insertion and COMP2 INV for removal \r\n",
+		pr_info(
+			"%s() - Platform uses COMP2 for accessory insertion and COMP2 INV for removal \r\n",
 		     __func__);
 		/*
 		 * This platform does not have GPIO for accessory
@@ -2136,9 +2162,9 @@ static int __init hs_probe(struct platform_device *pdev)
 		 *
 		 * So if the platform data is not present, do not proceed.
 		 */
-		pr_err
-		    ("hs_probe: Platform data not present,"
-				" could not proceed \r\n");
+		pr_err(
+			"hs_probe: Platform data not present, could not proceed \r\n"
+		);
 		ret = EINVAL;
 		goto err2;
 	}
@@ -2192,17 +2218,20 @@ static int __init hs_probe(struct platform_device *pdev)
 				mic->headset_pd->button_adc_values_high;
 		mic_dev->low_voltage_mode = false;
 	} else {
-		pr_info("%s(): WARNING Board specific button adc values are not passed"
-		"using the default one, this may not work correctly for your"
-		"platform \r\n",
+		pr_info(
+			"%s(): WARNING Board specific button adc values are not passed using the default one, this may not work correctly for your platform \r\n",
 			__func__);
 		button_adc_values =
 				button_adc_values_no_resistor;
 	}
 
-#ifdef CONFIG_MACH_HAWAII_SS_LOGAN
+#if defined(CONFIG_MACH_HAWAII_SS_LOGAN) || \
+defined(CONFIG_MACH_HAWAII_SS_GOLDENVE) || \
+defined(CONFIG_MACH_HAWAII_SS_GOLDENVEN) || \
+defined(CONFIG_MACH_HAWAII_SS_LOGANDS_REV00) || \
+defined(CONFIG_MACH_HAWAII_SS_LOGANDS_REV01)
 	 mic_dev->low_voltage_mode = false;
-#endif /* CONFIG_MACH_HAWAII_SS_LOGAN	 */
+#endif /* CONFIG_MACH_HAWAII_SS_LOGAN	|| CONFIG_MACH_HAWAII_SS_GOLDENVE */
 
 	/* COMP2 irq */
 	mic->comp2_irq = platform_get_irq(pdev, irq_resource_num);
@@ -2427,9 +2456,9 @@ hs_regwrite_func(struct device *dev, struct device_attribute *attr,
 	unsigned int val;
 
 	if (sscanf(buf, "%x %x", &reg_off, &val) != 2) {
-		pr_info
-		    ("Usage: echo reg_offset value"
-				" > /sys/hs_debug/hs_regwrite \r\n");
+		pr_info(
+			"Usage: echo reg_offset value > /sys/hs_debug/hs_regwrite \r\n"
+		);
 		return n;
 	}
 	pr_info("Writing 0x%x to Address 0x%x \r\n", val,
