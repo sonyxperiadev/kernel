@@ -3404,6 +3404,9 @@ static int ov5640_g_interface_parms(struct v4l2_subdev *sd,
 	else
 		parms->parms.serial.hs_term_time = 0x08;
 
+	#ifdef CONFIG_MACH_HAWAII_GARNET_C_A18
+	parms->parms.serial.hs_term_time = 0x06;
+	#endif
 	switch (ov5640->framerate) {
 	case FRAME_RATE_5:
 		parms->parms.serial.hs_settle_time = 9;
