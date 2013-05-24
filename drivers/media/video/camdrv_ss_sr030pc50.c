@@ -865,13 +865,13 @@ bool camdrv_ss_sensor_init_sub(bool bOn, struct camdrv_ss_sensor_cap *sensor)
 	sensor->rows_num_controls =
 		ARRAY_SIZE(sr030pc50_controls);
 
-	sensor->default_pix_fmt = sr030pc50_DEFAULT_PIX_FMT;
+	sensor->default_pix_fmt = SR030PC50_DEFAULT_PIX_FMT;
 	sensor->default_mbus_pix_fmt =
-		sr030pc50_DEFAULT_MBUS_PIX_FMT;
-	sensor->register_size = sr030pc50_REGISTER_SIZE;
+		SR030PC50_DEFAULT_MBUS_PIX_FMT;
+	sensor->register_size = SR030PC50_REGISTER_SIZE;
 	sensor->skip_frames = 0;
 
-	sensor->delay_duration = sr030pc50_DELAY_DURATION;
+	sensor->delay_duration = SR030PC50_DELAY_DURATION;
 
 	/* sensor dependent functions , Mandatory*/
 	sensor->thumbnail_ioctl = camdrv_ss_sr030pc50_ss_ioctl;

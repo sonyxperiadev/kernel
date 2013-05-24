@@ -451,7 +451,7 @@ static int hawaii_camera_power(struct device *dev, int on)
 			return -1;
 		}
 		}
-#if 0
+
 	if (!camdrv_ss_power(0, (bool)on)) {
 		printk(
 		KERN_ERR "%s,camdrv_ss_power failed for MAIN CAM!!\n",
@@ -459,7 +459,7 @@ static int hawaii_camera_power(struct device *dev, int on)
 		);
 			return -1;
 		}
-	#endif
+
 	if (!on) {
 		if (pi_mgr_dfs_request_update(&unicam_dfs_node,
 						PI_MGR_DFS_MIN_VALUE)) {
@@ -509,13 +509,13 @@ static int hawaii_camera_power_sub(struct device *dev, int on)
 			return -1;
 		}
 		}
-#if 0
+
 	if (!camdrv_ss_power(1, (bool)on)) {
 		printk(KERN_ERR "%s, camdrv_ss_power failed for SUB CAM!!\n",
 		__func__);
 		return -1;
 	}
-#endif
+
 	if (!on) {
 		if (pi_mgr_dfs_request_update(&unicam_dfs_node,
 						PI_MGR_DFS_MIN_VALUE)) {
@@ -711,8 +711,7 @@ static struct spi_kona_platform_data hawaii_ssp1_info = {
 #endif
 };
 
-
-#if 0
+#ifdef CONFIG_STM_TRACE
 static struct stm_platform_data hawaii_stm_pdata = {
 	.regs_phys_base = STM_BASE_ADDR,
 	.channels_phys_base = SWSTM_BASE_ADDR,

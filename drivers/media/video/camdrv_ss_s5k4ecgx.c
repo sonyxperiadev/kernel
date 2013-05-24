@@ -1769,9 +1769,9 @@ static  camdrv_ss_s5k4ecgx_set_ae_stable_status(
 
 	/*Check AE stable*/
 	err = camdrv_ss_i2c_write_4_bytes(client, 0xFCFC, 0xD000);
-	err + = camdrv_ss_i2c_write_4_bytes(client, 0x0028, 0x7000);
-	err + = camdrv_ss_i2c_write_4_bytes(client, 0x002A, 0x0588);
-	err + = camdrv_ss_i2c_write_2_bytes(client, 0x0F12, value);
+	err += camdrv_ss_i2c_write_4_bytes(client, 0x0028, 0x7000);
+	err += camdrv_ss_i2c_write_4_bytes(client, 0x002A, 0x0588);
+	err += camdrv_ss_i2c_write_2_bytes(client, 0x0F12, value);
 
 	if (err < 0) {
 		CAM_ERROR_PRINTK(
@@ -1793,9 +1793,9 @@ static int camdrv_ss_s5k4ecgx_get_ae_stable_status_value(
 
 	/*Check AE stable*/
 	err = camdrv_ss_i2c_write_4_bytes(client, 0xFCFC, 0xD000);
-	err + = camdrv_ss_i2c_write_4_bytes(client, 0x0028, 0x7000);
-	err + = camdrv_ss_i2c_write_4_bytes(client, 0x002A, 0x2c74);
-	err + = camdrv_ss_i2c_read_2_bytes(client, 0x0F12, &AE_stable);
+	err += camdrv_ss_i2c_write_4_bytes(client, 0x0028, 0x7000);
+	err += camdrv_ss_i2c_write_4_bytes(client, 0x002A, 0x2c74);
+	err += camdrv_ss_i2c_read_2_bytes(client, 0x0F12, &AE_stable);
 
 	if (err < 0) {
 		CAM_ERROR_PRINTK(
@@ -1817,9 +1817,9 @@ static int camdrv_ss_s5k4ecgx_get_ae_stable_status(
 
 	/*Check AE stable*/
 	err = camdrv_ss_i2c_write_4_bytes(client, 0xFCFC, 0xD000);
-	err + = camdrv_ss_i2c_write_4_bytes(client, 0x002C, 0x7000);
-	err + = camdrv_ss_i2c_write_4_bytes(client, 0x002E, 0x1E3C);
-	err + = camdrv_ss_i2c_read_2_bytes(client, 0x0F12, &AE_stable);
+	err += camdrv_ss_i2c_write_4_bytes(client, 0x002C, 0x7000);
+	err += camdrv_ss_i2c_write_4_bytes(client, 0x002E, 0x1E3C);
+	err += camdrv_ss_i2c_read_2_bytes(client, 0x0F12, &AE_stable);
 
 	if (err < 0)
 		CAM_ERROR_PRINTK(
@@ -1838,9 +1838,9 @@ static int camdrv_ss_s5k4ecgx_get_ae_stable_status(
 		"camdrv_ss_s5k4ecgx_get_ae_stable_status E\n");
 	/*Check AE stable*/
 	err = camdrv_ss_i2c_write_4_bytes(client, 0xFCFC, 0xD000);
-	err + = camdrv_ss_i2c_write_4_bytes(client, 0x0028, 0x7000);
-	err + = camdrv_ss_i2c_write_4_bytes(client, 0x002A, 0x2c74);
-	err + = camdrv_ss_i2c_read_2_bytes(client, 0x0F12, &AE_stable);
+	err += camdrv_ss_i2c_write_4_bytes(client, 0x0028, 0x7000);
+	err += camdrv_ss_i2c_write_4_bytes(client, 0x002A, 0x2c74);
+	err += camdrv_ss_i2c_read_2_bytes(client, 0x0F12, &AE_stable);
 
 	if (err < 0)
 		CAM_ERROR_PRINTK(
@@ -2542,7 +2542,7 @@ static int camdrv_ss_s5k4ecgx_set_touch_focus_area(
 			SecondWinStartY = 0;
 		if (SecondWinStartY+AF_INNER_WINDOW_HEIGHT > preview_height)
 			SecondWinStartY =
-				review_height - AF_INNER_WINDOW_HEIGHT-1;
+				preview_height - AF_INNER_WINDOW_HEIGHT-1;
 
 		FirstWinStartX
 			= touch_area->leftTopX - ((
@@ -3567,15 +3567,15 @@ bool camdrv_ss_sensor_init_main(bool bOn, struct camdrv_ss_sensor_cap *sensor)
 		= ARRAY_SIZE(s5k4ecgx_controls);
 
 	sensor->default_pix_fmt
-		= s5k4ecgx_DEFAULT_PIX_FMT;
+		= S5K4ECGX_DEFAULT_PIX_FMT;
 	sensor->default_mbus_pix_fmt
-		= s5k4ecgx_DEFAULT_MBUS_PIX_FMT;
+		= S5K4ECGX_DEFAULT_MBUS_PIX_FMT;
 	sensor->register_size
-		= s5k4ecgx_REGISTER_SIZE;
+		= S5K4ECGX_REGISTER_SIZE;
 	sensor->skip_frames = 1;
 
 	sensor->delay_duration
-		= s5k4ecgx_DELAY_DURATION;
+		= S5K4ECGX_DELAY_DURATION;
 
 	/* sensor dependent functions */
 
