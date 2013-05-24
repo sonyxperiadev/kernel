@@ -665,6 +665,11 @@ DEFINE_SIMPLE_ATTRIBUTE(memc_get_ddr_clk_freq_ops,
 		memc_dbg_get_ddr_clk_freq,
 		NULL, "%llu\n");
 
+u32 kona_memc_get_ddr_clk_freq(void)
+{
+	return compute_ddr_clk_freq(&kona_memc);
+}
+
 static struct dentry *dent_kona_memc_dir;
 
 static int kona_menc_init_debugfs(void)
@@ -727,7 +732,7 @@ static void __exit kona_memc_exit(void)
 	platform_driver_unregister(&kona_memc_driver);
 }
 
-module_init(kona_memc_init);
+arch_initcall(kona_memc_init);
 module_exit(kona_memc_exit);
 
 MODULE_DESCRIPTION("KONA MEMC DRIVER");

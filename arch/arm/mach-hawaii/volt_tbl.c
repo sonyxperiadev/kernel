@@ -26,6 +26,7 @@
 #include <asm/uaccess.h>
 #include <linux/seq_file.h>
 #endif
+#include <plat/kona_memc.h>
 
 #define REV_ID	"0.17"
 
@@ -248,6 +249,16 @@ static struct pmu_volt_dbg volt_dbg_log;
 		INIT_LPM_VLT_IDS(MSR_RETN_VAL, MSR_RETN_VAL, MSR_RETN_VAL),\
 		INIT_UNUSED_VLT_IDS(MSR_RETN_VAL))
 
+
+#define DEFAULT_VDDFIX_VOLTAGE	1240
+
+#define VDDFIX_VOLT_SS_450M	1300
+#define VDDFIX_VOLT_TS_450M	1300
+#define VDDFIX_VOLT_TT_450M	1280
+#define VDDFIX_VOLT_TF_450M	1280
+#define VDDFIX_VOLT_FF_450M	1240
+
+
 u32 pmu_vlt_table_1g[SILICON_TYPE_MAX][SR_VLT_LUT_SIZE] = {
 	PMU_VLT_TBL_1G_SS, PMU_VLT_TBL_1G_TS, PMU_VLT_TBL_1G_TT,
 	PMU_VLT_TBL_1G_TF, PMU_VLT_TBL_1G_FF,
@@ -257,6 +268,10 @@ u32 pmu_vlt_table_1200m[SILICON_TYPE_MAX][SR_VLT_LUT_SIZE] = {
 	PMU_VLT_TBL_1200M_SS, PMU_VLT_TBL_1200M_TS, PMU_VLT_TBL_1200M_TT,
 	PMU_VLT_TBL_1200M_TF, PMU_VLT_TBL_1200M_FF,
 };
+
+u32 sdsr1_active_voltage_450m[SILICON_TYPE_MAX] = {VDDFIX_VOLT_SS_450M,
+	VDDFIX_VOLT_TS_450M, VDDFIX_VOLT_TT_450M, VDDFIX_VOLT_TF_450M,
+	VDDFIX_VOLT_FF_450M};
 
 #ifdef CONFIG_KONA_AVS
 u8 *get_sr_vlt_table(u32 silicon_type, int freq_id)
@@ -381,10 +396,32 @@ int get_vddvar_retn_vlt_id(void)
 int get_vddfix_vlt_adj(u32 vddfix_vlt)
 {
 	int voltage = bcmpmu_rgltr_get_volt_val(vddfix_vlt);
+	int adj_val, silicon_type = SILICON_TYPE_SLOW;
+	u32 ddr_freq, ddr_freq_id;
 	/* Convert uV to mV */
 	voltage = voltage/1000;
+
+	ddr_freq = kona_memc_get_ddr_clk_freq();
+	if (ddr_freq < 400000000)
+		ddr_freq_id = DDR_FREQ_400M;
+	else
+		ddr_freq_id = DDR_FREQ_450M;
+
 #ifdef CONFIG_KONA_AVS
-	voltage += avs_get_vddfix_adj();
+	adj_val = avs_get_vddfix_adj();
+	if (adj_val == 0) {
+		if (ddr_freq_id == DDR_FREQ_450M) {
+			silicon_type = avs_get_silicon_type();
+			voltage = sdsr1_active_voltage_450m[silicon_type];
+		} else
+			voltage = DEFAULT_VDDFIX_VOLTAGE;
+	} else
+		voltage = DEFAULT_VDDFIX_VOLTAGE + adj_val;
+#else
+	if (ddr_freq_id == DDR_FREQ_450M)
+		voltage = sdsr1_active_voltage_450m[silicon_type];
+	else
+		voltage = DEFAULT_VDDFIX_VOLTAGE;
 #endif
 	pr_info("SDSR1 active voltage: %dmV\n", voltage);
 	return bcmpmu_rgltr_get_volt_id(voltage);

@@ -61,6 +61,12 @@ enum {
 	APPS_MIN_PWR_MAX = APPS_MIN_PWR_STATE3
 };
 
+enum {
+	DDR_FREQ_400M,
+	DDR_FREQ_450M,
+	DDR_FREQ_MAX,
+};
+
 struct kona_memc_node {
 	char *name;
 	struct plist_node node;
@@ -83,6 +89,7 @@ int memc_add_min_pwr_req(struct kona_memc_node *memc_node,
 int memc_del_min_pwr_req(struct kona_memc_node *memc_node);
 int memc_update_min_pwr_req(struct kona_memc_node *memc_node, u32 min_pwr);
 int memc_enable_selfrefresh(struct kona_memc *kmemc, int enable);
+u32 kona_memc_get_ddr_clk_freq(void);
 
 #endif /*__KONA_MEMC_H__*/
 

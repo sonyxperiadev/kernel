@@ -765,7 +765,7 @@ struct platform_device kona_cpufreq_device = {
 #ifdef CONFIG_KONA_AVS
 void avs_silicon_type_notify(u32 silicon_type, u32 ate_freq)
 {
-	u32 freq_id = A9_FREQ_1000_MHZ;
+	u32 freq_id = ate_freq;
 	pr_info("%s : silicon type = %d freq_id = %d\n", __func__,
 			silicon_type, freq_id);
 
