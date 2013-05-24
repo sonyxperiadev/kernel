@@ -295,7 +295,7 @@ int ion_system_heap_clean_cache(struct ion_heap *heap,
 		unsigned long sglen = sg_dma_len(sg);
 		unsigned long curr_end = curr_offset + sglen;
 
-		if ((curr_offset <= end) && (curr_end <= offset)) {
+		if ((curr_offset <= end) && (curr_end >= offset)) {
 			unsigned long l_off = max(offset, curr_offset);
 			unsigned long l_len = min(end, curr_end) - l_off;
 			__dma_page_cpu_to_dev(page, l_off, l_len,
@@ -323,10 +323,10 @@ int ion_system_heap_invalidate_cache(struct ion_heap *heap,
 		unsigned long sglen = sg_dma_len(sg);
 		unsigned long curr_end = curr_offset + sglen;
 
-		if ((curr_offset <= end) && (curr_end <= offset)) {
+		if ((curr_offset <= end) && (curr_end >= offset)) {
 			unsigned long l_off = max(offset, curr_offset);
 			unsigned long l_len = min(end, curr_end) - l_off;
-			__dma_page_cpu_to_dev(page, l_off, l_len,
+			__dma_page_dev_to_cpu(page, l_off, l_len,
 					DMA_BIDIRECTIONAL);
 		}
 		curr_offset = curr_end;
