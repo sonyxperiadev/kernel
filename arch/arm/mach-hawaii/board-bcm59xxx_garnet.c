@@ -968,6 +968,15 @@ struct bcmpmu_adc_pdata adc_pdata[PMU_ADC_CHANN_MAX] = {
 					.name = "als",
 					.reg = PMU_REG_ADCCTRL23,
 	},
+	[PMU_ADC_CHANN_DIE_TEMP] = {
+					.flag = 0,
+					.volt_range = 1200,
+					.adc_offset = 0,
+					.lut = NULL,
+					.lut_len = 0,
+					.name = "dietemp",
+					.reg = PMU_REG_ADCCTRL25,
+	},
 };
 
 static struct batt_volt_cap_map ys_05_volt_cap_lut[] = {
