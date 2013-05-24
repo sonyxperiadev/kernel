@@ -367,12 +367,13 @@ __initdata struct lcd_config otm1281a_cfg = {
 	.vid_cmnds = false,
 	.vburst = true,
 	.cont_clk = false,
-	.hs = 46,
-	.hbp = 46,
-	.hfp = 46,
-	.vs = 20,
-	.vbp = 20,
-	.vfp = 20,
+	/* Tuned to 60FPS with 4lanes @ 384Mbps */
+	.hs = 25,	/* min = 0.38us */
+	.hbp = 55,	/* min = 0.80us */
+	.hfp = 25,	/* min = 0.38us */
+	.vs = 3,	/* min = 2 */
+	.vbp = 3,	/* min = 2 */
+	.vfp = 3,	/* min = 2 */
 };
 
 #endif
