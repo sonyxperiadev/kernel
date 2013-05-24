@@ -602,6 +602,25 @@ static unsigned long apanic_partition_start;
 static unsigned long apanic_partition_size;
 #endif
 
+static struct parsed_partitions partitions;
+static int num_of_partitions;
+int emmc_partition_read_proc(char *page, char **start, off_t off,
+				int count, int *eof, void *data)
+{
+	int i;
+	char *p = page;
+
+	p += sprintf(p, "dev:		start	size	name\n");
+	for (i = 0; i < num_of_partitions; i++) {
+		p += sprintf(p, "mmcblk0p%i: 0x%08llx 0x%08llx %s\n", i + 1,
+					(u64)partitions.parts[i].from,
+					(u64)partitions.parts[i].size,
+					partitions.parts[i].info.volname);
+	}
+
+	return p - page;
+}
+
 /**
  * efi_partition(struct parsed_partitions *state)
  * @state
@@ -644,6 +663,9 @@ int efi_partition(struct parsed_partitions *state)
 
 	pr_debug("GUID Partition Table is valid!  Yea!\n");
 
+	create_proc_read_entry("emmc", 0, NULL, emmc_partition_read_proc, NULL);
+	num_of_partitions = le32_to_cpu(gpt->num_partition_entries);
+
 	for (i = 0; i < le32_to_cpu(gpt->num_partition_entries) && i < state->limit-1; i++) {
 		int partition_name_len;
 		struct partition_meta_info *info;
@@ -652,6 +674,9 @@ int efi_partition(struct parsed_partitions *state)
 		u64 start = le64_to_cpu(ptes[i].starting_lba);
 		u64 size = le64_to_cpu(ptes[i].ending_lba) -
 			   le64_to_cpu(ptes[i].starting_lba) + 1ULL;
+
+		partitions.parts[i].from = start * ssz;
+		partitions.parts[i].size = size * ssz;
 
 		if (!is_pte_valid(&ptes[i], last_lba(state->bdev)))
 			continue;
@@ -695,6 +720,9 @@ int efi_partition(struct parsed_partitions *state)
 			if (c && !isprint(c))
 				c = '!';
 			info->volname[label_count] = c;
+			if (label_count <= partition_name_len)
+				partitions.parts[i].info.volname[label_count]
+									= c;
 			label_count++;
 		}
 		state->parts[i + 1].has_info = true;
