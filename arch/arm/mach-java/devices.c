@@ -374,6 +374,18 @@ struct platform_device hawaii_kp_device = {
 };
 #endif
 
+
+#ifdef CONFIG_KONA_SECURE_MEMC
+struct platform_device kona_secure_memc_device = {
+	.name = "kona_secure_memc",
+	.id = -1,
+	.dev = {
+		.platform_data = &k_s_memc_plat_data,
+	},
+};
+#endif
+
+
 #ifdef CONFIG_KONA_HEADSET_MULTI_BUTTON
 #define HS_IRQ		gpio_to_irq(92)
 #define HSB_IRQ		BCM_INT_ID_AUXMIC_COMP2

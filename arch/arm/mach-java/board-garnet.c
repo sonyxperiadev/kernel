@@ -184,6 +184,11 @@ defined(CONFIG_TOUCHSCREEN_BCM15500_MODULE)
 #include <linux/i2c/taos_common.h>
 #endif
 
+#ifdef CONFIG_KONA_SECURE_MEMC
+#include <plat/kona_secure_memc.h>
+#include <plat/kona_secure_memc_settings.h>
+#endif
+
 #ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
 #include "java_wifi.h"
 
@@ -886,7 +891,10 @@ struct platform_device *hawaii_common_plat_devices[] __initdata = {
 	&caph_i2s_device,
 	&caph_pcm_device,
 	&spdif_dit_device,
+#endif
 
+#ifdef CONFIG_KONA_SECURE_MEMC
+	&kona_secure_memc_device,
 #endif
 };
 
@@ -1241,6 +1249,33 @@ static struct platform_device board_caph_device = {
 		.platform_data = &board_caph_platform_cfg,
 		},
 };
+
+#ifdef CONFIG_KONA_SECURE_MEMC
+struct kona_secure_memc_pdata k_s_memc_plat_data = {
+	.kona_s_memc_base = KONA_MEMC0_S_VA,
+	.num_of_memc_ports = NUM_OF_MEMC_PORTS,
+	.num_of_groups = NUM_OF_GROUPS,
+	.num_of_regions = NUM_OF_REGIONS,
+	.cp_area_start = 0x80000000,
+	.cp_area_end = 0x81FFFFFF,
+	.ap_area_start = 0x82000000,
+	.ap_area_end = 0xBFFFFFFF,
+	.ddr_start = 0x80000000,
+	.ddr_end = 0xBFFFFFFF,
+	.masters = {
+		A7,
+		COMMS,
+		FABRIC,
+		MM,
+	},
+	.default_master_map = {
+		FABRIC,
+		A7,
+		COMMS,
+		MM,
+	},
+};
+#endif
 
 #endif /* CONFIG_BCM_ALSA_SOUND */
 

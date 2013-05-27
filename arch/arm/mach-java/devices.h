@@ -53,6 +53,10 @@ extern struct platform_device kona_memc_device;
 #ifdef CONFIG_KONA_TMON
 extern struct platform_device kona_tmon_device;
 #endif
+#ifdef CONFIG_KONA_SECURE_MEMC
+extern struct platform_device kona_secure_memc_device;
+extern struct kona_secure_memc_pdata k_s_memc_plat_data;
+#endif
 #ifdef CONFIG_KONA_CPU_FREQ_DRV
 extern struct platform_device kona_cpufreq_device;
 #endif

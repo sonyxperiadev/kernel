@@ -85,5 +85,6 @@ obj-$(CONFIG_LOCAL_TIMERS)	+= localtimer.o
 #kona profiler
 obj-$(CONFIG_KONA_PROFILER) += profiler.o ccu_profiler.o pi_profiler.o
 obj-$(CONFIG_KONA_MEMC) += kona_memc.o
+obj-$(CONFIG_KONA_SECURE_MEMC) += kona_secure_memc.o
 obj-$(CONFIG_KONA_AXITRACE)	+= axitrace.o
 obj-$(CONFIG_BRCM_CDC)	+= cdc.o
