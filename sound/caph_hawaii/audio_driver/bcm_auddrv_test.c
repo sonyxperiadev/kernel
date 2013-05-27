@@ -1780,12 +1780,12 @@ void AUDTST_VoIP(UInt32 Val2, UInt32 Val3, UInt32 Val4, UInt32 Val5,
 void AUDTST_VoIP_Stop(void)
 {
 	if (cur_drv_handle) {
-		AUDIO_DRIVER_Ctrl(cur_drv_handle, AUDIO_DRIVER_STOP, NULL);
-
-		aTrace(LOG_AUDIO_DRIVER, "\nVoIP: Stop\n");
-
 		/* disable the hw */
 		AUDCTRL_DisableTelephony();
+
+		aTrace(LOG_AUDIO_DRIVER, "\nVoIP: Stop\n");
+		AUDIO_DRIVER_Ctrl(cur_drv_handle, AUDIO_DRIVER_STOP, NULL);
+
 		/* VOIP_PCM_16K or VOIP_AMR_WB_MODE_7k */
 		if ((cur_codecVal == 4) || (cur_codecVal == 5))
 			AUDCTRL_SetAudioMode(cur_mode, AUDIO_APP_LOOPBACK);
