@@ -1480,13 +1480,13 @@ int __init bcmpmu_reg_init(void)
 	const char *model;
 
 	updt = bcmpmu_update_pdata("initdata", bcmpmu_i2c_pdata.init_data);
-	if (!updt) {
+	if (updt) {
 		bcmpmu_i2c_pdata.init_data =  register_init_data;
 		bcmpmu_i2c_pdata.init_max = ARRAY_SIZE(register_init_data);
 	}
 
 	updt = bcmpmu_update_pdata("exitdata", bcmpmu_i2c_pdata.exit_data);
-	if (!updt) {
+	if (updt) {
 		bcmpmu_i2c_pdata.exit_data =  register_exit_data;
 		bcmpmu_i2c_pdata.exit_max = ARRAY_SIZE(register_exit_data);
 	}
