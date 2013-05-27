@@ -583,7 +583,7 @@ static void vsync_work_smart(struct work_struct *work)
 						vsync_smart.work);
 
 	complete(&vsync_event);
-	schedule_delayed_work(&fb->vsync_smart, msecs_to_jiffies(16));
+	schedule_delayed_work(&fb->vsync_smart, msecs_to_jiffies(10));
 }
 
 static int enable_display(struct kona_fb *fb)
