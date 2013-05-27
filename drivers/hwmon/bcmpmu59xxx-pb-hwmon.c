@@ -297,7 +297,8 @@ int read_sar_adc(struct bcmpmu59xxx *bcmpmu, enum bcmpmu_adc_channel channel,
 	|| defined(CONFIG_MACH_HAWAII_SS_GOLDENVEN_REV01) \
 	|| defined(CONFIG_MACH_HAWAII_SS_GOLDENVEN_REV02) \
 	|| defined(CONFIG_MACH_HAWAII_SS_LOGAN_COMBINED) \
-	|| defined(CONFIG_MACH_HAWAII_SS_LOGANDS_COMBINED)
+	|| defined(CONFIG_MACH_HAWAII_SS_LOGANDS_COMBINED) \
+	|| defined(CONFIG_MACH_JAVA_SS_EVAL)
 
 	/* Logan R01 and future */
 	case PMU_ADC_CHANN_NTC:
