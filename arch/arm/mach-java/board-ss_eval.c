@@ -1387,15 +1387,22 @@ static struct platform_device touchkeyled_device = {
 
 #if defined(CONFIG_TOUCHSCREEN_IST30XX)
 	|| defined(CONFIG_TOUCHSCREEN_BT432_LOGAN)
+
+struct i2c_slave_platform_data bcmi2c_pdata = {
+	SET_CLIENT_FUNC(TX_FIFO_ENABLE | RX_FIFO_ENABLE),
+};
+
 #define TSP_INT_GPIO_PIN	(73)
 static struct i2c_board_info __initdata zinitix_i2c_devices[] = {
 	{
 		I2C_BOARD_INFO("sec_touch", 0x50),
 		.irq = gpio_to_irq(TSP_INT_GPIO_PIN),
+		.platform_data = (void *)&bcmi2c_pdata,
 		 },
 	   {
 		I2C_BOARD_INFO("zinitix_touch", 0x20),
 		.irq = gpio_to_irq(TSP_INT_GPIO_PIN),
+		.platform_data = (void *)&bcmi2c_pdata,
 	 },
 };
 #endif
