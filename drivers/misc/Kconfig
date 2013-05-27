@@ -383,13 +383,6 @@ config SENSORS_TSL2550
 
 	  This driver can also be built as a module.  If so, the module
 	  will be called tsl2550.
-config SENSORS_BMA222
-        bool "Bosch bma222 support"
-        default n
-        help
-          If you say yes here you get support for BMA222 sensor
-
-          This driver adds Low Power mode support for Broadcom bluetooth
 
 config SENSORS_BH1780
 	tristate "ROHM BH1780GLI ambient light sensor"
@@ -524,14 +517,6 @@ config SENSORS_AK8963
 	  If you say yes here you get support for Asahi Kasei's
 	  orientation sensor AK8963.
 
-config SENSORS_BMA150
-	tristate "BMA150 accelerometer sensor"
-	depends on I2C && BRCM_VIRTUAL_SENSOR
-	help
-		Say Y or M here if you have BCMRING or BCMHANA and want to
-		support Bosch Sensortec BMA150 accelerometer.
-		If unsure, say N.
-
 config BOSCH_BMA2XX
         tristate "bma2xx acceleration sensor support"
         depends on I2C
@@ -576,6 +561,28 @@ config SENSORS_AK8975_BRCM
 	help
 	  If you say yes here you get support for Asahi Kasei's
 	  orientation sensor AK8975.
+
+config SENSORS_GP2AP002
+	tristate "GP2AP002 sensor support"
+	depends on I2C
+	default n
+	help
+	  If you say yes here you get support for Sharp's sensor GP2A.
+
+config SENSORS_BMC150
+	tristate "BMC150 6-axis Accelerometer and Magnetic Sensor Driver"
+        depends on I2C
+	default n
+	help
+	 BMM050 Magnetic Sensor Driver implemented by Bosch-Sensortec.
+
+config INPUT_BMA2x2_ACC_ALERT_INT
+	tristate "BMA255/BMA250E/BMA222E/BMA280 acceleration sensor support"
+	depends on I2C
+	default n
+	help
+	  If you say yes here you get support for Bosch Sensortec's 
+	  acceleration sensors BMA255/BMA250E/BMA222E/BMA280.
 
 config EP93XX_PWM
 	tristate "EP93xx PWM support"
@@ -937,4 +944,5 @@ source "drivers/misc/carma/Kconfig"
 source "drivers/misc/altera-stapl/Kconfig"
 source "drivers/misc/btport/Kconfig"
 source "drivers/misc/emmc_rpmb/Kconfig"
+source "drivers/misc/bmc150/Kconfig"
 endmenu

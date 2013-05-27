@@ -3,6 +3,8 @@
 
 /*Platform data */
 struct gp2ap002_platform_data {
+	void (*power_on) (bool);
+	void (*led_on) (bool);
 	unsigned int irq_gpio;
 	int irq;
 };
