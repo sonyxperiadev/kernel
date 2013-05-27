@@ -1434,13 +1434,14 @@ static const struct of_device_id bcmpmu_adc_dt_ids[] __initconst = {
 };
 
 static int __init bcmpmu_update_pdata(char *name,
-		struct bcmpmu59xxx_rw_data *data)
+		struct bcmpmu59xxx_platform_data *bcmpmu_i2c_pdata, int init)
 {
 	struct device_node *np;
 	struct property *prop;
-	int size, i, max, ret = 0;
+	int size, i, ret = 0;
+	int max = 0;
 	uint32_t *p, *p1;
-	struct bcmpmu59xxx_rw_data *tbl;
+	struct bcmpmu59xxx_rw_data *tbl, *data;
 
 	np = of_find_matching_node(NULL, matches);
 	if (np) {
@@ -1448,25 +1449,32 @@ static int __init bcmpmu_update_pdata(char *name,
 		if (prop == NULL) {
 			printk(KERN_INFO "%s pmu data not found\n",
 					__func__);
+			return ret;
+		}
+		tbl = kzalloc(size, GFP_KERNEL);
+		if (tbl == NULL) {
+			printk(KERN_INFO
+					"%s Failed  alloc bcmpmu data\n"
+					, __func__);
+			return ret;
+		}
+		p = (uint32_t *)prop->value;
+		p1 = (uint32_t *)tbl;
+		for (i = 0; i < size/sizeof(p); i++)
+			*p1++ = be32_to_cpu(*p++);
+		data = tbl;
+		max = size / sizeof(struct bcmpmu59xxx_rw_data);
+		ret = 1;
+		for (i = 0; i < max; i++) {
+			data[i].addr = ENC_PMU_REG(FIFO_MODE,
+					data[i].map, data[i].addr);
+		}
+		if (init) {
+			bcmpmu_i2c_pdata->init_data = data;
+			bcmpmu_i2c_pdata->init_max = max;
 		} else {
-			tbl = kzalloc(size, GFP_KERNEL);
-			if (tbl == NULL)
-				printk(KERN_INFO
-						"%s Failed  alloc bcmpmu data\n"
-						, __func__);
-			else {
-				p = (uint32_t *)prop->value;
-				p1 = (uint32_t *)tbl;
-				for (i = 0; i < size/sizeof(p); i++)
-					*p1++ = be32_to_cpu(*p++);
-				data = tbl;
-				max = size / sizeof(struct bcmpmu59xxx_rw_data);
-				ret = 1;
-			}
-			for (i = 0; i < max; i++) {
-				data[i].addr = ENC_PMU_REG(FIFO_MODE,
-						data[i].map, data[i].addr);
-			}
+			bcmpmu_i2c_pdata->exit_data = data;
+			bcmpmu_i2c_pdata->exit_max = max;
 		}
 	}
 	return ret;
@@ -1479,14 +1487,14 @@ int __init bcmpmu_reg_init(void)
 	struct property *prop;
 	const char *model;
 
-	updt = bcmpmu_update_pdata("initdata", bcmpmu_i2c_pdata.init_data);
-	if (updt) {
+	updt = bcmpmu_update_pdata("initdata", &bcmpmu_i2c_pdata, 1);
+	if (!updt) {
 		bcmpmu_i2c_pdata.init_data =  register_init_data;
 		bcmpmu_i2c_pdata.init_max = ARRAY_SIZE(register_init_data);
 	}
 
-	updt = bcmpmu_update_pdata("exitdata", bcmpmu_i2c_pdata.exit_data);
-	if (updt) {
+	updt = bcmpmu_update_pdata("exitdata", &bcmpmu_i2c_pdata, 0);
+	if (!updt) {
 		bcmpmu_i2c_pdata.exit_data =  register_exit_data;
 		bcmpmu_i2c_pdata.exit_max = ARRAY_SIZE(register_exit_data);
 	}

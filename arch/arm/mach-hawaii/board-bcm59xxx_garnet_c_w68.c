@@ -170,6 +170,11 @@ static struct bcmpmu59xxx_rw_data __initdata register_init_data[] = {
 	{.addr = PMU_REG_AUDLDOCTRL , .val = 0x40, .mask = 0x40},
 };
 
+static struct bcmpmu59xxx_rw_data register_exit_data[] = {
+	{.addr = PMU_REG_GPIOCTRL1, .val = 0x5, .mask = 0xFF},
+	{.addr = PMU_REG_MBCCTRL20, .val = 0x1, .mask = 0xFF},
+};
+
 __weak struct regulator_consumer_supply rf_supply[] = {
 	{.supply = "rf"},
 };
@@ -1410,49 +1415,74 @@ static const struct of_device_id bcmpmu_adc_dt_ids[] __initconst = {
 	{ },
 };
 
-int __init bcmpmu_reg_init(void)
+static int __init bcmpmu_update_pdata(char *name,
+		struct bcmpmu59xxx_platform_data *bcmpmu_i2c_pdata, int init)
 {
 	struct device_node *np;
-	int reg_init = 0;
 	struct property *prop;
-	int size, i;
+	int size, i, ret = 0;
+	int max = 0;
 	uint32_t *p, *p1;
-	struct bcmpmu59xxx_rw_data *tbl;
-	const char *model;
+	struct bcmpmu59xxx_rw_data *tbl, *data;
 
 	np = of_find_matching_node(NULL, matches);
 	if (np) {
-		prop = of_find_property(np, "initdata", &size);
+		prop = of_find_property(np, name, &size);
 		if (prop == NULL) {
-			printk(KERN_INFO "%s pmu initdata not found\n",
+			printk(KERN_INFO "%s pmu data not found\n",
 					__func__);
-		} else {
-			tbl = kzalloc(size, GFP_KERNEL);
-			if (tbl == NULL)
-				printk(KERN_INFO
-						"%s Failed  alloc bcmpmu init_data\n"
-						, __func__);
-			else {
-				p = (uint32_t *)prop->value;
-				p1 = (uint32_t *)tbl;
-				for (i = 0; i < size/sizeof(p); i++)
-					*p1++ = be32_to_cpu(*p++);
-				bcmpmu_i2c_pdata.init_data = tbl;
-				bcmpmu_i2c_pdata.init_max =
-					size /
-					sizeof(struct bcmpmu59xxx_rw_data);
-				reg_init = 1;
-			}
-			for (i = 0; i < bcmpmu_i2c_pdata.init_max; i++) {
-				bcmpmu_i2c_pdata.init_data[i].addr =
-					ENC_PMU_REG(FIFO_MODE,
-							bcmpmu_i2c_pdata.
-							init_data[i].map,
-							bcmpmu_i2c_pdata.
-							init_data[i].addr);
-			}
+			return ret;
 		}
+		tbl = kzalloc(size, GFP_KERNEL);
+		if (tbl == NULL) {
+			printk(KERN_INFO
+					"%s Failed  alloc bcmpmu data\n"
+					, __func__);
+			return ret;
+		}
+		p = (uint32_t *)prop->value;
+		p1 = (uint32_t *)tbl;
+		for (i = 0; i < size/sizeof(p); i++)
+			*p1++ = be32_to_cpu(*p++);
+		data = tbl;
+		max = size / sizeof(struct bcmpmu59xxx_rw_data);
+		ret = 1;
+		for (i = 0; i < max; i++) {
+			data[i].addr = ENC_PMU_REG(FIFO_MODE,
+					data[i].map, data[i].addr);
+		}
+		if (init) {
+			bcmpmu_i2c_pdata->init_data = data;
+			bcmpmu_i2c_pdata->init_max = max;
+		} else {
+			bcmpmu_i2c_pdata->exit_data = data;
+			bcmpmu_i2c_pdata->exit_max = max;
+		}
+	}
+	return ret;
+}
 
+int __init bcmpmu_reg_init(void)
+{
+	struct device_node *np;
+	int updt = 0;
+	struct property *prop;
+	const char *model;
+
+	updt = bcmpmu_update_pdata("initdata", &bcmpmu_i2c_pdata, 1);
+	if (!updt) {
+		bcmpmu_i2c_pdata.init_data =  register_init_data;
+		bcmpmu_i2c_pdata.init_max = ARRAY_SIZE(register_init_data);
+	}
+
+	updt = bcmpmu_update_pdata("exitdata", &bcmpmu_i2c_pdata, 0);
+	if (!updt) {
+		bcmpmu_i2c_pdata.exit_data =  register_exit_data;
+		bcmpmu_i2c_pdata.exit_max = ARRAY_SIZE(register_exit_data);
+	}
+
+	np = of_find_matching_node(NULL, matches);
+	if (np) {
 		prop = of_find_property(np, "model", NULL);
 		if (prop) {
 			model = prop->value;
@@ -1465,11 +1495,6 @@ int __init bcmpmu_reg_init(void)
 
 		pr_info("Board id from dtb %x\n",
 				bcmpmu_i2c_pdata.board_id);
-	}
-
-	if (!reg_init) {
-		bcmpmu_i2c_pdata.init_data =  register_init_data;
-		bcmpmu_i2c_pdata.init_max = ARRAY_SIZE(register_init_data);
 	}
 
 	return 0;
