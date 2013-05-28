@@ -1235,8 +1235,8 @@ static int ov5648_otp_read(struct i2c_client *client)
  */
 static int ov5648_rbgains_update(struct i2c_client *client)
 {
-#define RG_GOLDEN 0x17a
-#define BG_GOLDEN 0x16a
+#define RG_GOLDEN 0x145
+#define BG_GOLDEN 0x15e
 
 	u16 gainr, gaing, gainb;
 	int ret;
