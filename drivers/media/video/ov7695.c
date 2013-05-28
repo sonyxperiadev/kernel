@@ -671,19 +671,19 @@ static int ov7695_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		ov7695_reg_read(client, 0x5800, &ov_reg);
 		switch (ov7695->colorlevel) {
 		case IMAGE_EFFECT_BNW:
-			ov_reg = (ov_reg | 0x18) & ~0x40;
+			ov_reg = (ov_reg | 0x18) &~ 0x40;
 			ov7695_reg_write(client, 0x5800, ov_reg);
 			ret = ov7695_write_reglist(client,
 					ov7695_effect_bw_tbl);
 			break;
 		case IMAGE_EFFECT_SEPIA:
-			ov_reg = (ov_reg | 0x18) & ~0x40;
+			ov_reg = (ov_reg | 0x18) &~ 0x40;
 			ov7695_reg_write(client, 0x5800, ov_reg);
 			ret = ov7695_write_reglist(client,
 					ov7695_effect_sepia_tbl);
 			break;
 		case IMAGE_EFFECT_NEGATIVE:
-			ov_reg = (ov_reg & ~0x18) | 0x40;
+			ov_reg = (ov_reg &~ 0x18) | 0x40;
 			ov7695_reg_write(client, 0x5800, ov_reg);
 			ret = ov7695_write_reglist(client,
 					ov7695_effect_negative_tbl);
