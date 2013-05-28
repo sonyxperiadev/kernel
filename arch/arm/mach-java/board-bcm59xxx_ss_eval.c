@@ -1366,6 +1366,7 @@ static struct bcmpmu59xxx_platform_data bcmpmu_i2c_pdata = {
 #else
 	.bc = BCMPMU_BC_PMU_BC12,
 #endif
+	.bc = BC_EXT_DETECT,
 
 };
 
@@ -1488,7 +1489,9 @@ int __init board_bcm59xx_init(void)
 	bcmpmu_i2c_pdata.irq = irq;
 	ret  = i2c_register_board_info(PMU_DEVICE_I2C_BUSNO,
 			bcmpmu_i2c_info, ARRAY_SIZE(bcmpmu_i2c_info));
+#if defined(CONFIG_SEC_CHARGING_FEATURE)
 	platform_add_devices(spa_devices, ARRAY_SIZE(spa_devices));
+#endif
 	return 0;
 exit:
 	return ret;

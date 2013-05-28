@@ -1551,7 +1551,9 @@ static void usb_attach(uint8_t attached)
 	case CABLE_TYPE_NONE:
 		usb_type = PMU_USB_TYPE_NONE;
 		chrgr_type = PMU_CHRGR_TYPE_NONE;
+#if defined(CONFIG_SEC_CHARGING_FEATURE)
 		spa_data = POWER_SUPPLY_TYPE_BATTERY;
+#endif
 		pr_info("%s USB removed\n", __func__);
 		/* set_usb_connection_status(&usb_type);  // only set status */
 		break;
@@ -1701,7 +1703,9 @@ static void over_voltage(uint8_t detected)
 {
 	printk(KERN_INFO "over voltage = %d\n", (int32_t)detected);
 	printk(KERN_INFO "OVP triggered by musb - %d\n", detected);
+#if defined(CONFIG_SEC_CHARGING_FEATURE)
 	spa_event_handler(SPA_EVT_OVP, detected);
+#endif
 }
 static void set_usb_power(uint8_t on)
 {
