@@ -158,6 +158,8 @@ struct bcmpmu_fg_pdata {
 	int poll_rate_low_batt;
 	int poll_rate_crit_batt;
 	int acld_vbus_margin;
+	int acld_vbus_thrs;
+	int acld_vbat_thrs;
 	int i_sat;
 	int i_def_dcp; /* Default DCP current */
 	int acld_cc_lmt;

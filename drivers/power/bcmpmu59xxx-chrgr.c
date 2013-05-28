@@ -335,6 +335,7 @@ int bcmpmu_set_icc_fc(struct bcmpmu59xxx *bcmpmu, int curr)
 		gbl_di->icc_host_ctrl = false;
 	} else if ((!gbl_di->icc_host_ctrl) &&
 			(curr > bcmpmu_pmu_curr_table[0])) {
+		pr_chrgr(INIT, "Enabling charging from %s\n", __func__);
 		ret = bcmpmu_chrgr_usb_en(bcmpmu, 1);
 		gbl_di->icc_host_ctrl = true;
 	}

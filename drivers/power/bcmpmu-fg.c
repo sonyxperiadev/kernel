@@ -62,7 +62,9 @@
 #define ACLD_DELAY_1000			1000
 #define ACLD_RETRIES			10
 #define ACLD_VBUS_MARGIN		200 /* 200mV */
-#define ACLD_CC_LIMIT			1800 /* mA */
+#define ACLD_VBUS_THRS			6000
+#define ACLD_VBAT_THRS			3000
+#define ACLD_CC_LIMIT			1500 /* mA */
 #define ACLD_VBUS_ON_LOW_THRLD		4400
 #define ADC_READ_TRIES			10
 #define ADC_RETRY_DELAY		20 /* 20ms */
@@ -2146,7 +2148,7 @@ static void bcmpmu_check_battery_current_limit(struct bcmpmu_fg_data *fg)
 	fg->last_curr_sample_tm = t_now;
 
 
-	i_inst = bcmpmu_fg_get_curr_inst(fg);
+	i_inst = fg->adc_data.curr_inst;
 	i_ind = bcmpmu_get_inductor_current(fg);
 
 	pr_fg(VERBOSE, "i_inst = %d, i_ind = %d\n", i_inst, i_ind);
@@ -2163,12 +2165,13 @@ static void bcmpmu_check_battery_current_limit(struct bcmpmu_fg_data *fg)
 		pr_fg(ERROR, "ACLD disabled: i_inst = %d, i_ind = %d\n",
 				i_inst, i_ind);
 
-	} else if (((i_inst < fg->pdata->batt_prop->one_c_rate) ||
-			(i_ind < fg->pdata->i_sat)) &&
+	} else if ((i_inst < fg->pdata->batt_prop->one_c_rate) &&
+			(i_ind < fg->pdata->i_sat) &&
 			(fg->flags.acld_en) &&
 			(fg->acld_err_cnt > 0)) {
+		pr_fg(ERROR, "ACLD Error Count:%d restarted\n",
+				fg->acld_err_cnt);
 		fg->acld_err_cnt = 0;
-		pr_fg(ERROR, "ACLD Error Count restarted\n");
 	}
 }
 
@@ -2178,9 +2181,6 @@ static void bcmpmu_fg_charging_algo(struct bcmpmu_fg_data *fg)
 
 	pr_fg(VERBOSE, "%s\n", __func__);
 
-	if ((fg->bcmpmu->flags & BCMPMU_ACLD_EN) &&
-			(fg->chrgr_type == PMU_CHRGR_TYPE_DCP))
-		bcmpmu_check_battery_current_limit(fg);
 
 	if (fg->discharge_state != DISCHARG_STATE_HIGH_BATT) {
 #ifdef CONFIG_WD_TAPPER
@@ -2191,6 +2191,11 @@ static void bcmpmu_fg_charging_algo(struct bcmpmu_fg_data *fg)
 	}
 
 	bcmpmu_fg_get_coulomb_counter(fg);
+
+	if ((fg->bcmpmu->flags & BCMPMU_ACLD_EN) &&
+			(fg->chrgr_type == PMU_CHRGR_TYPE_DCP) &&
+			(fg->flags.acld_en))
+		bcmpmu_check_battery_current_limit(fg);
 
 	if (!fg->pdata->hw_maintenance_charging)
 		bcmpmu_fg_sw_maint_charging_algo(fg);
@@ -2400,7 +2405,6 @@ static int bcmpmu_get_vbus_load(struct bcmpmu_fg_data *fg, int vbus_chrg_off,
 		pr_fg(INIT, "vbus_off = %d vbus_res = %d\n",
 				vbus_chrg_off, vbus_res);
 		vbus_load = vbus_chrg_off - fg->pdata->acld_vbus_margin;
-		WARN_ON(1);
 	}
 
 	return vbus_load;
@@ -2428,13 +2432,30 @@ static bool bcmpmu_is_usb_valid(struct bcmpmu_fg_data *fg)
 	return true;
 
 }
+static bool bcmpmu_is_vbus_vbat_valid(struct bcmpmu_fg_data *fg)
+{
+	int vbus;
+	int vbat;
+	bool ret;
+
+	vbus = bcmpmu_fg_get_avg_vbus(fg);
+	vbat = bcmpmu_fg_get_avg_volt(fg);
+
+	if ((vbus > fg->pdata->acld_vbus_thrs) ||
+			(vbat < fg->pdata->acld_vbat_thrs))
+		return false;
+
+	return true;
+
+}
+
 static void bcmpmu_fg_acld_algo(struct work_struct *work)
 {
 
 	struct bcmpmu_fg_data *fg = to_bcmpmu_fg_data(work, fg_acld_work.work);
 	struct bcmpmu_fg_status_flags *flags = &fg->flags;
 	bool cc_lmt_hit = false;
-	bool chrgr_fault = false;
+	bool fault = false;
 	bool mbc_in_cv = false;
 	int vbus_chrg_off;
 	int vbus_chrg_on;
@@ -2461,16 +2482,25 @@ static void bcmpmu_fg_acld_algo(struct work_struct *work)
 	 * DCP is quickly removed after insertion.
 	 * */
 	if (!bcmpmu_get_ubpd_int(fg)) {
-		chrgr_fault = true;
+		fault = true;
 		goto chrgr_pre_chk;
 	}
 
 	msleep(ACLD_DELAY_1000);
 
 	if (!bcmpmu_get_ubpd_int(fg)) {
-		chrgr_fault = true;
+		fault = true;
 		goto chrgr_pre_chk;
 	}
+
+	if (!bcmpmu_is_vbus_vbat_valid(fg)) {
+		pr_fg(ERROR, "VBUS/VBAT crossed Thresholds\n");
+		bcmpmu_set_icc_fc(fg->bcmpmu, PMU_DCP_DEF_CURR_LMT);
+		bcmpmu_chrgr_usb_en(fg->bcmpmu, 1);
+		fault = true;
+		goto chrgr_pre_chk;
+	}
+
 
 	vbus_chrg_off = bcmpmu_fg_get_avg_vbus(fg);
 	pr_fg(INIT, "vbus_chrg_off = %d\n", vbus_chrg_off);
@@ -2503,7 +2533,7 @@ static void bcmpmu_fg_acld_algo(struct work_struct *work)
 
 		/* Check for Charger Errors and battery CV mode */
 		if (!bcmpmu_get_ubpd_int(fg)) {
-			chrgr_fault = true;
+			fault = true;
 			goto chrgr_pre_chk;
 		}
 		if (bcmpmu_get_mbc_cv_status(fg)) {
@@ -2577,7 +2607,7 @@ static void bcmpmu_fg_acld_algo(struct work_struct *work)
 				vbus_chrg_on, vbus_res, vbus_load);
 
 		if (!bcmpmu_get_ubpd_int(fg)) {
-			chrgr_fault = true;
+			fault = true;
 			goto chrgr_pre_chk;
 		}
 		if (bcmpmu_get_mbc_cv_status(fg)) {
@@ -2614,7 +2644,7 @@ static void bcmpmu_fg_acld_algo(struct work_struct *work)
 	bcmpmu_set_icc_fc(fg->bcmpmu, usb_fc_cc_reached);
 chrgr_pre_chk:
 	/* charger presence check */
-	if ((!bcmpmu_is_usb_valid(fg)) || chrgr_fault) {
+	if ((!bcmpmu_is_usb_valid(fg)) || fault) {
 		pr_fg(INIT, "Charger Error, restoring cc trim\n");
 		bcmpmu_restore_cc_trim_otp(fg);
 		return;
@@ -3033,6 +3063,10 @@ static int bcmpmu_fg_set_platform_data(struct bcmpmu_fg_data *fg,
 		fg->pdata->i_sat = PMU_TYP_SAT_CURR;
 	if (!fg->pdata->acld_vbus_margin)
 		fg->pdata->acld_vbus_margin = ACLD_VBUS_MARGIN;
+	if (!fg->pdata->acld_vbus_thrs)
+		fg->pdata->acld_vbus_thrs = ACLD_VBUS_THRS;
+	if (!fg->pdata->acld_vbat_thrs)
+		fg->pdata->acld_vbat_thrs = ACLD_VBAT_THRS;
 	if (!fg->pdata->acld_cc_lmt)
 		fg->pdata->acld_cc_lmt = ACLD_CC_LIMIT;
 	if (!fg->pdata->otp_cc_trim)
