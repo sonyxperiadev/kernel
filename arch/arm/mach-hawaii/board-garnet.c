@@ -384,7 +384,7 @@ static int hawaii_camera_power(struct device *dev, int on)
 		}
 	#ifdef CONFIG_SOC_CAMERA_OV5648
 		if (gpio_request_one(SENSOR_0_GPIO_RST, GPIOF_DIR_OUT |
-				     GPIOF_INIT_HIGH, "Cam0Rst")) {
+				     GPIOF_INIT_LOW, "Cam0Rst")) {
 			printk(KERN_ERR "Unable to get cam0 RST GPIO\n");
 			return -1;
 		}
@@ -538,6 +538,8 @@ static int hawaii_camera_power(struct device *dev, int on)
 #endif
 #ifdef CONFIG_SOC_CAMERA_OV5648
 		gpio_set_value(SENSOR_0_GPIO_PWRDN, 0);
+		usleep_range(5000, 5100);
+		gpio_set_value(SENSOR_0_GPIO_RST, 0);
 #endif
 		clk_disable(prediv_clock);
 		clk_disable(clock);
