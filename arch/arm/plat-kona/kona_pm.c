@@ -207,8 +207,16 @@ __weak int kona_mach_pm_enter(suspend_state_t state)
 
 			time1 = kona_hubtimer_get_counter();
 #endif /*CONFIG_KONA_PROFILER*/
+			time1 = kona_hubtimer_get_counter();
+					pr_info(" Timer value before suspend: %lu",
+						time1);
 			suspend->enter(suspend,
 				suspend->params | CTRL_PARAMS_ENTER_SUSPEND);
+			time2 = kona_hubtimer_get_counter();
+					pr_info(" Timer value when resume: %lu",
+						time2);
+					pr_info("Approx Suspend Time: %lums",
+						(time2 - time1)/32);
 #ifdef CONFIG_KONA_PROFILER
 			time2 = kona_hubtimer_get_counter();
 			if (!err && deepsleep_profiling) {

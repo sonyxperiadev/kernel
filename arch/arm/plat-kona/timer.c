@@ -266,5 +266,6 @@ void __init gp_timer_init(struct gp_timer_setup *gpt_setup)
 	local_timer_register(&kona_local_timer_ops);
 #endif
 #endif
-	setup_sched_clock(kona_update_sched_clock, 32, CLOCK_TICK_RATE);
+	setup_sched_clock_needs_suspend(kona_update_sched_clock,
+			32, CLOCK_TICK_RATE);
 }
