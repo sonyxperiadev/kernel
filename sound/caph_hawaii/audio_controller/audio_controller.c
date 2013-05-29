@@ -3037,13 +3037,15 @@ static void AUDCTRL_RemoveVoiceApp(AudioApp_t app)
 	    app == AUDIO_APP_VOICE_CALL_WB ||
 	    app == AUDIO_APP_VT_CALL ||
 	    app == AUDIO_APP_VT_CALL_WB ||
-	    app == AUDIO_APP_VOIP || app == AUDIO_APP_VOIP_INCOMM) {
+	    app == AUDIO_APP_VOIP ||
+	    app == AUDIO_APP_VOIP_INCOMM || app == AUDIO_APP_LOOPBACK) {
 		sAudioAppStates[AUDIO_APP_VOICE_CALL] = FALSE;
 		sAudioAppStates[AUDIO_APP_VOICE_CALL_WB] = FALSE;
 		sAudioAppStates[AUDIO_APP_VT_CALL] = FALSE;
 		sAudioAppStates[AUDIO_APP_VT_CALL_WB] = FALSE;
 		sAudioAppStates[AUDIO_APP_VOIP] = FALSE;
 		sAudioAppStates[AUDIO_APP_VOIP_INCOMM] = FALSE;
+		sAudioAppStates[AUDIO_APP_LOOPBACK] = FALSE;
 	}
 }
 
