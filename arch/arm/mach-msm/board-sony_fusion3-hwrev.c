@@ -96,6 +96,10 @@ static const struct hw_rev_map hw_revisions[] = {
 	{ "1266-1660", "1B", HW_REV_POLLUX_REX_SP1, HW_POLLUX, "pollux_rex_sp1" },
 	{ "1266-1660", "1C", HW_REV_POLLUX_REX_SP1, HW_POLLUX, "pollux_rex_sp1" },
 	{ "1266-1660", "1D", HW_REV_POLLUX_REX_SP1, HW_POLLUX, "pollux_rex_sp1" },
+	{ "1266-1675", "1A", HW_REV_POLLUX_WINDY_DP11, HW_POLLUX, "pollux_windy_dp1.1" },
+	{ "1266-1675", "1B", HW_REV_POLLUX_WINDY_DP2_DP3, HW_POLLUX, "pollux_windy_dp2_dp3" },
+	{ "1266-1675", "1C", HW_REV_POLLUX_WINDY_AP1, HW_POLLUX, "pollux_windy_ap1" },
+	{ "1266-4533", "1A", HW_REV_POLLUX_WINDY_AP1, HW_POLLUX, "pollux_windy_ap1" },
 };
 
 #define SONY_HW_PBA_ID_MAXLEN 15

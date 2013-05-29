@@ -317,6 +317,11 @@ obj-$(CONFIG_MACH_SONY_POLLUX) += board-sony_pollux-pmic.o board-sony_pollux-gpi
 obj-$(CONFIG_MACH_SONY_POLLUX) += bms-batterydata-gemini.o
 obj-$(CONFIG_MACH_SONY_POLLUX) += board-sony_ir_remote.o
 
+obj-$(CONFIG_MACH_SONY_POLLUX_WINDY) += board-sony_fusion3-pollux-all.o
+obj-$(CONFIG_MACH_SONY_POLLUX_WINDY) += board-sony_pollux_windy-pmic.o board-sony_pollux_windy-gpiomux.o board-sony_pollux_windy-regulator.o
+obj-$(CONFIG_MACH_SONY_POLLUX_WINDY) += bms-batterydata-gemini.o
+obj-$(CONFIG_MACH_SONY_POLLUX_WINDY) += board-sony_ir_remote.o
+
 obj-$(CONFIG_MACH_SONY_ODIN) += board-sony_fusion3-all.o board-sony_fusion3_odin.o
 obj-$(CONFIG_MACH_SONY_ODIN) += board-sony_odin-camera.o board-sony_odin-pmic.o board-sony_odin-gpiomux.o board-sony_odin-regulator.o board-sony_odin-mpu.o board-sony_odin-touch.o
 obj-$(CONFIG_MACH_SONY_ODIN) += gyro-semc_common.o bms-batterydata-sleipner.o

@@ -940,6 +940,12 @@ config MACH_SONY_POLLUX
 	help
 	  Support for the Sony Mobile Pollux device.
 
+config MACH_SONY_POLLUX_WINDY
+	depends on ARCH_APQ8064
+	bool "Sony Mobile Pollux Windy"
+	help
+	  Support for the Sony Mobile Pollux Windy device.
+
 config MACH_FSM9XXX_SURF
 	depends on ARCH_FSM9XXX
 	depends on !MSM_STACKED_MEMORY

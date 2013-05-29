@@ -205,6 +205,8 @@
 #include "board-sony_fusion3_yuga.h"
 #elif defined(CONFIG_MACH_SONY_POLLUX)
 #include "board-sony_fusion3_pollux.h"
+#elif defined(CONFIG_MACH_SONY_POLLUX_WINDY)
+#include "board-sony_fusion3_pollux.h"
 #elif defined(CONFIG_MACH_SONY_ODIN)
 #include "board-sony_fusion3_odin.h"
 #else
@@ -4264,7 +4266,7 @@ static void __init register_i2c_devices(void)
 	/* Build the matching 'supported_machs' bitmask */
 	if (machine_is_apq8064_cdp())
 		mach_mask = I2C_SURF;
-	else if (machine_is_apq8064_mtp() || machine_is_sony_fusion3())
+	else if (machine_is_apq8064_mtp() || machine_is_sony_fusion3() || machine_is_sony_pollux_windy())
 		mach_mask = I2C_FFA;
 	else if (machine_is_apq8064_liquid())
 		mach_mask = I2C_LIQUID;
@@ -4382,7 +4384,7 @@ static void __init apq8064_common_init(void)
 	platform_add_devices(common_devices, ARRAY_SIZE(common_devices));
 		msm_hsic_pdata.swfi_latency =
 			msm_rpmrs_levels[0].latency_us;
-	if ((machine_is_apq8064_mtp() || machine_is_sony_fusion3())) {
+	if ((machine_is_apq8064_mtp() || machine_is_sony_fusion3()) && !machine_is_sony_pollux_windy()) {
 		msm_hsic_pdata.log2_irq_thresh = 5;
 		apq8064_device_hsic_host.dev.platform_data = &msm_hsic_pdata;
 		device_initialize(&apq8064_device_hsic_host.dev);
@@ -4390,7 +4392,7 @@ static void __init apq8064_common_init(void)
 	apq8064_pm8xxx_gpio_mpp_init();
 	apq8064_init_mmc();
 
-	if ((machine_is_apq8064_mtp() || machine_is_sony_fusion3())) {
+	if ((machine_is_apq8064_mtp() || machine_is_sony_fusion3()) && !machine_is_sony_pollux_windy()) {
 		mdm_8064_device.dev.platform_data = &amdm_platform_data;
 		platform_device_register(&mdm_8064_device);
 	}
@@ -4445,7 +4447,11 @@ static void __init sony_fusion3_very_early_init(void)
 	apq8064_early_reserve();
 }
 
+#if defined(CONFIG_MACH_SONY_POLLUX_WINDY)
+MACHINE_START(SONY_POLLUX_WINDY, "Sony Mobile fusion3")
+#else
 MACHINE_START(SONY_FUSION3, "Sony Mobile fusion3")
+#endif
 	.map_io = apq8064_map_io,
 	.reserve = apq8064_reserve,
 	.init_irq = apq8064_init_irq,
