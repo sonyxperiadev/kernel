@@ -184,6 +184,14 @@
 		.val = sel,\
 }
 
+/*PLL OFFSET register offsets and masks*/
+#define PLL_OFFSET_NDIV_MASK	(0x1FF << PLL_OFFSET_NDIV_SHIFT)
+#define PLL_OFFSET_NDIV_SHIFT	20
+#define PLL_OFFSET_NDIV_F_MASK	(0xFFFFF << PLL_OFFSET_NDIV_F_SHIFT)
+#define PLL_OFFSET_NDIV_F_SHIFT	0
+#define PLL_OFFSET_MODE_MASK	(1 << 28)
+#define PLL_OFFSET_SW_CTRL_MASK	(1 << 29)
+
 
 /* CCU Policy ids*/
 enum {
@@ -294,9 +302,7 @@ enum {
 	/*Ref clk flags */
 	CLK_RATE_FIXED = (1 << 24),
 
-	/* PLL flags */
-	INIT_PLL_OFFSET_CFG = (1 << 28),
-	DELAYED_PLL_LOCK = (1 << 29),
+	DELAYED_PLL_LOCK = (1 << 28),
 };
 
 /*clk type*/
@@ -602,6 +608,20 @@ struct pll_cfg_ctrl_info {
 	u32 thold_count;
 };
 
+/*PLL desense adjust params*/
+enum {
+	PLL_OFFSET_EN = 1,
+	PLL_OFFSET_NDIV = 1 << 1,
+	PLL_OFFSET_NDIV_FRAC = 1 << 2,
+	PLL_OFFSET_SW_MODE = 1 << 3,
+
+};
+struct pll_desense {
+	u32 flags;
+	u32 pll_offset_offset;
+	int def_delta;
+};
+
 struct pll_clk {
 	struct clk clk;
 	struct ccu_clk *ccu_clk;
@@ -627,9 +647,7 @@ struct pll_clk {
 	u32 ndiv_frac_offset;
 	u32 ndiv_frac_mask;
 	u32 ndiv_frac_shift;
-
-	u32 pll_offset_offset;
-	u32 pll_offset_cfg_val;
+	struct pll_desense *desense;
 	struct pll_cfg_ctrl_info *cfg_ctrl_info;
 };
 
@@ -777,6 +795,10 @@ int ccu_get_dbg_bus_status(struct ccu_clk *ccu_clk);
 int ccu_set_dbg_bus_sel(struct ccu_clk *ccu_clk, u32 sel);
 int ccu_get_dbg_bus_sel(struct ccu_clk *ccu_clk);
 int ccu_print_sleep_prevent_clks(struct clk *clk);
+
+int pll_set_desense_offset(struct clk *clk, int offset);
+int pll_get_desense_offset(struct clk *clk);
+int pll_desense_enable(struct clk *clk, int enable);
 
 /*These clock API should only be called after
 * appropriate locks are acquired*/

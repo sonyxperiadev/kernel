@@ -1405,7 +1405,7 @@ unsigned long clk_get_rate(struct clk *clk)
 
 	if (IS_ERR_OR_NULL(clk) || !clk->ops || !clk->ops->get_rate)
 		return -EINVAL;
-	 clk_dbg("%s - %s\n", __func__, clk->name);
+	clk_dbg("%s - %s\n", __func__, clk->name);
 	clk_lock(clk, &flags);
 	rate = __clk_get_rate(clk);
 	clk_unlock(clk, &flags);
@@ -4358,6 +4358,196 @@ static unsigned long compute_pll_vco_div(struct pll_clk *pll_clk, u32 rate,
 	return new_rate;
 }
 
+
+int __pll_set_desense_offset(struct clk *clk, int offset)
+{
+	struct pll_clk *pll_clk;
+	struct pll_desense *des;
+	unsigned long rate;
+	int off_rate;
+	u32 new_rate;
+	u32 reg;
+	u32 ndiv_off, nfrac_off;
+	u32 ndiv, nfrac;
+	int err = 0;
+
+	clk_dbg("%s - %s\n", __func__, clk->name);
+	BUG_ON(clk->clk_type != CLK_TYPE_PLL);
+	pll_clk = to_pll_clk(clk);
+
+	CCU_ACCESS_EN(pll_clk->ccu_clk, 1);
+/* enable write access */
+	ccu_write_access_enable(pll_clk->ccu_clk, true);
+	des = pll_clk->desense;
+	if (!des || !(des->flags & PLL_OFFSET_EN)) {
+		err = -EINVAL;
+		goto ret;
+	}
+	rate = __pll_clk_get_rate(clk);
+
+	off_rate = (int)rate + offset;
+	new_rate = compute_pll_vco_div(pll_clk, (u32)off_rate, NULL,
+		&ndiv_off, &nfrac_off);
+	clk_dbg("%s- compute_pll_vco_div: %u %u %x %x\n", __func__,
+		new_rate, (u32)off_rate,
+		ndiv_off, nfrac_off);
+	if (abs(new_rate - (u32)off_rate) > 100) {
+		clk_dbg("%s : %s - rate(%u) not supported\n",
+			__func__, clk->name, rate);
+		err = -EINVAL;
+		goto ret;
+	}
+
+	reg =
+	    readl(CCU_REG_ADDR(pll_clk->ccu_clk, pll_clk->ndiv_frac_offset));
+	reg &= pll_clk->ndiv_frac_mask;
+	nfrac = reg >> pll_clk->ndiv_frac_shift;
+
+	reg =
+	    readl(CCU_REG_ADDR(pll_clk->ccu_clk, pll_clk->ndiv_pdiv_offset));
+	reg &= pll_clk->ndiv_int_mask;
+	ndiv =  reg >> pll_clk->ndiv_int_shift;
+
+	clk_dbg("%s: ndiv =  %x, frac = %x\n", __func__, ndiv, nfrac);
+
+	reg =  readl(CCU_REG_ADDR(pll_clk->ccu_clk, des->pll_offset_offset));
+	if (des->flags & PLL_OFFSET_NDIV) {
+		reg &= ~PLL_OFFSET_NDIV_MASK;
+		reg |= (ndiv_off << PLL_OFFSET_NDIV_SHIFT) &
+				PLL_OFFSET_NDIV_MASK;
+	} else if (ndiv != ndiv_off) {
+		pr_info("%s - ndiv != ndiv_off. PLL_OFFSET_NDIV not eanbled\n",
+			__func__);
+		err = -EINVAL;
+		goto ret;
+	}
+
+	if (des->flags & PLL_OFFSET_NDIV_FRAC) {
+		reg &= ~PLL_OFFSET_NDIV_F_MASK;
+		reg |= (nfrac_off << PLL_OFFSET_NDIV_F_SHIFT) &
+				PLL_OFFSET_NDIV_F_MASK;
+	} else if (nfrac_off != nfrac) {
+		pr_info("%s - ndiv != ndiv_off. PLL_OFFSET_NDIV not eanbled\n",
+			__func__);
+		err = -EINVAL;
+		goto ret;
+	}
+	clk_dbg("%s %x written to %x\n", __func__, reg,
+		CCU_REG_ADDR(pll_clk->ccu_clk, des->pll_offset_offset));
+	writel(reg, CCU_REG_ADDR(pll_clk->ccu_clk, des->pll_offset_offset));
+ret:
+	ccu_write_access_enable(pll_clk->ccu_clk, false);
+	CCU_ACCESS_EN(pll_clk->ccu_clk, 0);
+	return err;
+}
+
+int pll_set_desense_offset(struct clk *clk, int offset)
+{
+	int ret;
+	unsigned long flgs;
+	clk_lock(clk, &flgs);
+	ret = __pll_set_desense_offset(clk, offset);
+	clk_unlock(clk, &flgs);
+	return ret;
+}
+EXPORT_SYMBOL(pll_set_desense_offset);
+
+int pll_get_desense_offset(struct clk *clk)
+{
+	struct pll_clk *pll_clk;
+	unsigned long flgs;
+	int off_rate = 0;
+	u32 pll_rate;
+	u32 ndiv_int, nfrac, pdiv;
+	u32 frac_div;
+	u32 reg;
+	u32 off_reg;
+	struct pll_desense *des;
+
+	BUG_ON(clk->clk_type != CLK_TYPE_PLL);
+
+	clk_lock(clk, &flgs);
+	pll_clk = to_pll_clk(clk);
+	des = pll_clk->desense;
+	if (!des || !(des->flags & PLL_OFFSET_EN))
+		goto ret;
+	pll_rate = __pll_clk_get_rate(clk);
+	off_reg = readl(CCU_REG_ADDR(pll_clk->ccu_clk,
+		des->pll_offset_offset));
+	if (des->flags & PLL_OFFSET_NDIV_FRAC) {
+		nfrac = off_reg & PLL_OFFSET_NDIV_F_MASK;
+		nfrac >>= PLL_OFFSET_NDIV_F_SHIFT;
+	} else {
+		reg =
+	    readl(CCU_REG_ADDR(pll_clk->ccu_clk,
+			pll_clk->ndiv_frac_offset));
+		nfrac = (reg & pll_clk->ndiv_frac_mask) >>
+					pll_clk->ndiv_frac_shift;
+	}
+	if (des->flags & PLL_OFFSET_NDIV) {
+		ndiv_int = off_reg & PLL_OFFSET_NDIV_MASK;
+		ndiv_int >>= PLL_OFFSET_NDIV_SHIFT;
+	} else {
+		reg =
+			readl(CCU_REG_ADDR(pll_clk->ccu_clk,
+				pll_clk->ndiv_pdiv_offset));
+		ndiv_int =
+			(reg & pll_clk->ndiv_int_mask) >>
+					pll_clk->ndiv_int_shift;
+	}
+	reg =
+	    readl(CCU_REG_ADDR(pll_clk->ccu_clk,
+			pll_clk->ndiv_pdiv_offset));
+	pdiv = (reg & pll_clk->pdiv_mask) >> pll_clk->pdiv_shift;
+	if (pdiv == 0)
+		pdiv = pll_clk->pdiv_max;
+	if (ndiv_int == 0)
+		ndiv_int = pll_clk->ndiv_int_max;
+
+	frac_div = 1 + (pll_clk->ndiv_frac_mask >> pll_clk->ndiv_frac_shift);
+	 off_rate = (int)compute_pll_vco_rate(ndiv_int, nfrac,
+						frac_div, pdiv) - (int)pll_rate;
+ret:
+	clk_unlock(clk, &flgs);
+	return off_rate;
+}
+EXPORT_SYMBOL(pll_get_desense_offset);
+
+int pll_desense_enable(struct clk *clk, int enable)
+{
+	struct pll_clk *pll_clk;
+	struct pll_desense *des;
+	unsigned long flgs;
+	u32 reg;
+	int err = 0;
+
+	clk_dbg("%s - %s\n", __func__, clk->name);
+	BUG_ON(clk->clk_type != CLK_TYPE_PLL);
+	pll_clk = to_pll_clk(clk);
+
+	clk_lock(clk, &flgs);
+/* enable write access */
+	ccu_write_access_enable(pll_clk->ccu_clk, true);
+	des = pll_clk->desense;
+	if (!des || !(des->flags & PLL_OFFSET_EN) ||
+		!(des->flags & PLL_OFFSET_SW_MODE)) {
+		err = -EINVAL;
+		goto ret;
+	}
+	reg = readl(CCU_REG_ADDR(pll_clk->ccu_clk, des->pll_offset_offset));
+	if (enable)
+		reg |= PLL_OFFSET_SW_CTRL_MASK;
+	else
+		reg &= PLL_OFFSET_SW_CTRL_MASK;
+	writel(reg,
+		CCU_REG_ADDR(pll_clk->ccu_clk, des->pll_offset_offset));
+ret:
+	ccu_write_access_enable(pll_clk->ccu_clk, false);
+	clk_unlock(clk, &flgs);
+	return err;
+}
+EXPORT_SYMBOL(pll_desense_enable);
+
 static unsigned long pll_clk_round_rate(struct clk *clk, unsigned long rate)
 {
 	u32 new_rate;
@@ -4634,6 +4824,7 @@ static int pll_clk_init(struct clk *clk)
 {
 	struct pll_clk *pll_clk;
 	u32 reg_val;
+	struct pll_desense *des;
 
 	BUG_ON(clk->clk_type != CLK_TYPE_PLL);
 	pll_clk = to_pll_clk(clk);
@@ -4658,9 +4849,26 @@ static int pll_clk_init(struct clk *clk)
 		       CCU_REG_ADDR(pll_clk->ccu_clk,
 				    pll_clk->pll_ctrl_offset));
 	}
-	if (clk->flags & INIT_PLL_OFFSET_CFG) {
-		writel(pll_clk->pll_offset_cfg_val,
-		CCU_REG_ADDR(pll_clk->ccu_clk, pll_clk->pll_offset_offset));
+	des = pll_clk->desense;
+	if (des) {
+
+		if (des->flags & PLL_OFFSET_EN) {
+			reg_val = readl(CCU_REG_ADDR(pll_clk->ccu_clk,
+					des->pll_offset_offset));
+			if (des->flags & PLL_OFFSET_SW_MODE)
+				reg_val |= PLL_OFFSET_MODE_MASK;
+			else
+				reg_val &= PLL_OFFSET_MODE_MASK;
+			writel(reg_val,
+				CCU_REG_ADDR(pll_clk->ccu_clk,
+						des->pll_offset_offset));
+			__pll_set_desense_offset(clk, des->def_delta);
+		} else {
+			reg_val = PLL_OFFSET_MODE_MASK;
+			writel(reg_val,
+				CCU_REG_ADDR(pll_clk->ccu_clk,
+					des->pll_offset_offset));
+		}
 	}
 	/* Disable write access */
 	ccu_write_access_enable(pll_clk->ccu_clk, false);
@@ -5328,6 +5536,26 @@ static int clk_debug_set_rate(void *data, u64 val)
 
 DEFINE_SIMPLE_ATTRIBUTE(clock_rate_fops, clk_debug_get_rate,
 			clk_debug_set_rate, "%llu\n");
+
+
+static int pll_des_dbg_get_rate(void *data, u64 *val)
+{
+	struct clk *clk = data;
+	*val = pll_get_desense_offset(clk);
+	return 0;
+}
+
+static int pll_des_dbg_set_rate(void *data, u64 val)
+{
+	struct clk *clk = data;
+	int ret;
+	ret = pll_set_desense_offset(clk, (int)val);
+	return ret;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(pll_desense_rate_fops, pll_des_dbg_get_rate,
+			pll_des_dbg_set_rate, "%lli\n");
+
 
 static int ccu_debug_get_freqid(void *data, u64 *val)
 {
@@ -6307,16 +6535,24 @@ int __init clock_debug_add_clock(struct clk *c)
 
 	/* file /clock/clk_a/parent */
 	dent_parent = debugfs_create_file("parent", S_IRUGO,
-					  dent_clk_dir, c, &clock_parent_fops);
+		dent_clk_dir, c, &clock_parent_fops);
 	if (!dent_parent)
 		goto err;
 
 	/* file /clock/clk_a/source */
 	dent_source = debugfs_create_file("source", S_IRUGO,
-					  dent_clk_dir, c, &clock_source_fops);
+		dent_clk_dir, c, &clock_source_fops);
 	if (!dent_source)
 		goto err;
 
+	if (c->clk_type == CLK_TYPE_PLL &&
+		pll_clk->desense &&
+		pll_clk->desense->flags & PLL_OFFSET_EN) {
+
+		debugfs_create_file("desense_rate", S_IRUGO | S_IWUSR,
+				dent_clk_dir, c, &pll_desense_rate_fops);
+
+	}
 	return 0;
 
 err:

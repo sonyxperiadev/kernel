@@ -879,6 +879,14 @@ static struct pll_cfg_ctrl_info a9_cfg_ctrl =
 	.pll_config_value= a9_cfg_val,
 	.thold_count = ARRAY_SIZE(a9_cfg_val),
 };
+
+struct pll_desense a9_pll_des = {
+			/*A9 desense disabled*/
+	.flags = /*PLL_OFFSET_EN |*/PLL_OFFSET_NDIV_FRAC | PLL_OFFSET_NDIV,
+	.pll_offset_offset = KPROC_CLK_MGR_REG_PLLARM_OFFSET_OFFSET,
+	.def_delta = 0,
+};
+
 static struct pll_clk CLK_NAME(a9_pll) = {
 
 	.clk =	{
@@ -911,9 +919,7 @@ static struct pll_clk CLK_NAME(a9_pll) = {
 	.ndiv_frac_offset = KPROC_CLK_MGR_REG_PLLARMB_OFFSET,
 	.ndiv_frac_mask = KPROC_CLK_MGR_REG_PLLARMB_PLLARM_NDIV_FRAC_MASK,
 	.ndiv_frac_shift = KPROC_CLK_MGR_REG_PLLARMB_PLLARM_NDIV_FRAC_SHIFT,
-	.pll_offset_offset = KPROC_CLK_MGR_REG_PLLARM_OFFSET_OFFSET,
-	.pll_offset_cfg_val = PLLARM_OFFEST_CONFIG,
-
+	.desense = &a9_pll_des,
 	.cfg_ctrl_info = &a9_cfg_ctrl,
 };
 
@@ -6007,6 +6013,13 @@ static struct pll_cfg_ctrl_info dsi_pll_cfg_ctrl =
 	.thold_count = ARRAY_SIZE(dsi_vc0_thold),
 };
 
+struct pll_desense dsi_pll_des = {
+	.flags = PLL_OFFSET_EN | PLL_OFFSET_NDIV_FRAC,
+	.pll_offset_offset = MM_CLK_MGR_REG_PLLDSI_OFFSET_OFFSET,
+	.def_delta = 0,
+};
+
+
 static struct pll_clk CLK_NAME(dsi_pll) = {
 
 	.clk =	{
@@ -6037,9 +6050,8 @@ static struct pll_clk CLK_NAME(dsi_pll) = {
 	.ndiv_frac_offset = MM_CLK_MGR_REG_PLLDSIB_OFFSET,
 	.ndiv_frac_mask = MM_CLK_MGR_REG_PLLDSIB_PLLDSI_NDIV_FRAC_MASK,
 	.ndiv_frac_shift = MM_CLK_MGR_REG_PLLDSIB_PLLDSI_NDIV_FRAC_SHIFT,
+	.desense = &dsi_pll_des,
 	.cfg_ctrl_info = &dsi_pll_cfg_ctrl,
-	.pll_offset_offset = MM_CLK_MGR_REG_PLLDSI_OFFSET_OFFSET,
-	.pll_offset_cfg_val = PLLDSI_OFFEST_CONFIG,
 };
 
 /*dsi pll - channel 0*/

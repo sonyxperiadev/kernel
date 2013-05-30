@@ -184,13 +184,6 @@
 		ARRAY_LIST(KPS_CCU_FREQ_ID_ECO, KPS_CCU_FREQ_ID_ECO,\
 			KPS_CCU_FREQ_ID_ECO, KPS_CCU_FREQ_ID_NRML)
 
-/* PLL Offset config values for RF interference reduction
-*  as suggested by modem team */
-#define PLLARM_OFFEST_CONFIG    0x35589D9
-#define PLLDSI_OFFEST_CONFIG    0x0
-#define PLL1_OFFSET_CONFIG	0xBFFFF
-
-
 /*PM Eratta ids*/
 #define ERRATUM_MM_V3D_TIMEOUT		(1 << 0)
 #define ERRATUM_MM_POWER_OK		(1 << 1)
