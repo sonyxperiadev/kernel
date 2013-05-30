@@ -15,7 +15,7 @@ choice
 	default y
 
 config	MACH_HAWAII_FPGA
-		tristate "MACH_HAWAII_FPGA"
+		bool "MACH_HAWAII_FPGA"
 	select MACH_BCM_FPGA
         help
 	  "This config
@@ -24,7 +24,7 @@ config	MACH_HAWAII_FPGA
 	  Chip-it where CCU is absent."
 
 config	MACH_HAWAII_FPGA_E
-		tristate "MACH_HAWAII_FPGA_E"
+		bool "MACH_HAWAII_FPGA_E"
 	select MACH_BCM_FPGA_E
 	help
 		This config option will
@@ -33,7 +33,7 @@ config	MACH_HAWAII_FPGA_E
 		Eve where CCU is present.
 
 config	MACH_HAWAII_RAY
-		tristate  "MACH_HAWAII_RAY"
+		bool  "MACH_HAWAII_RAY"
 	help
 		Support for
 		the Broadcom
@@ -41,7 +41,7 @@ config	MACH_HAWAII_RAY
 		board.
 
 config	MACH_HAWAII_STONE
-		tristate "MACH_HAWAII_STONE"
+		bool "MACH_HAWAII_STONE"
 	select MACH_BCM_STONE
 	help
 	  Support for
@@ -50,7 +50,7 @@ config	MACH_HAWAII_STONE
 	  board.
 
 config	MACH_HAWAII_GARNET
-		tristate "MACH_HAWAII_GARNET"
+		bool "MACH_HAWAII_GARNET"
 	select MACH_BCM_GARNET
 	help
 	  Support for

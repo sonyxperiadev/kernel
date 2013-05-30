@@ -15,39 +15,39 @@ choice
 	prompt "Java SoC based board type"
 
 config	MACH_JAVA_FPGA
-	tristate "MACH_JAVA_FPGA"
+	bool "MACH_JAVA_FPGA"
         select MACH_BCM_FPGA
 	help
 	  "This config option will enable support
 	  for FPGA platform like Chip-it where CCU is absent."
 
 config	MACH_JAVA_FPGA_E
-	tristate "MACH_JAVA_FPGA_E"
+	bool "MACH_JAVA_FPGA_E"
         select MACH_BCM_FPGA_E
 	help
 	  "This config option will enable support for
 	  FPGA platform like Eve where CCU is present."
 
 config	MACH_JAVA_RAY
-	tristate "MACH_JAVA_RAY"
+	bool "MACH_JAVA_RAY"
 	select MACH_BCM_RAY
 	help
 	  Support for the Broadcom Hawaii Ray board.
 
 config	MACH_JAVA_STONE
-		tristate "MACH_JAVA_STONE"
+		bool "MACH_JAVA_STONE"
 	select MACH_BCM_STONE
 	help
 	  Support for the Broadcom Hawaii Stone board.
 
 config	MACH_JAVA_GARNET
-		tristate "MACH_JAVA_GARNET"
+		bool "MACH_JAVA_GARNET"
 	select MACH_BCM_GARNET
 	help
 	  Support for Broadcom Hawaii garnet board.
 
 config	MACH_JAVA_SS_EVAL
-		tristate "MACH_JAVA_SS_EVAL"
+		bool "MACH_JAVA_SS_EVAL"
 	select MACH_BCM_SS_EVAL
 	help
 	  Support for Broadcom Hawaii ss eval board.
