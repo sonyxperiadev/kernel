@@ -112,6 +112,7 @@ struct MM_JOB_POST_T {
 #define INTERLOCK_DEV_NAME	"mm_interlock"
 #define V3D_DEV_NAME	"mm_v3d"
 #define ISP_DEV_NAME	"mm_isp"
+#define ISP2_DEV_NAME	"mm_isp2"
 #define H264_DEV_NAME	"mm_h264"
 #define MM_DEV_MAGIC	'M'
 
