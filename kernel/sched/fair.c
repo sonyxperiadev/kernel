@@ -168,6 +168,17 @@ void sched_init_granularity(void)
  */
 DEFINE_PER_CPU(int, sd_pack_buddy);
 
+static inline bool is_packing_cpu(int cpu)
+{
+	int my_buddy = per_cpu(sd_pack_buddy, cpu);
+	return (my_buddy == -1) || (cpu == my_buddy);
+}
+
+static inline int get_buddy(int cpu)
+{
+	return per_cpu(sd_pack_buddy, cpu);
+}
+
 /*
  * Look for the best buddy CPU that can be used to pack small tasks
  * We make the assumption that it doesn't wort to pack on CPU that share the
@@ -227,6 +238,32 @@ void update_packing_domain(int cpu)
 	pr_debug("CPU%d packing on CPU%d\n", cpu, id);
 	per_cpu(sd_pack_buddy, cpu) = id;
 }
+
+static int check_nohz_packing(int cpu)
+{
+	if (!is_packing_cpu(cpu))
+		return true;
+
+	return false;
+}
+#else /* CONFIG_SCHED_PACKING_TASKS */
+
+static inline bool is_packing_cpu(int cpu)
+{
+	return 1;
+}
+
+static inline int get_buddy(int cpu)
+{
+	return -1;
+}
+
+static inline int check_nohz_packing(int cpu)
+{
+	return false;
+}
+
+
 #endif /* CONFIG_SCHED_PACKING_TASKS */
 #endif /* CONFIG_SMP */
 
@@ -3277,7 +3314,7 @@ find_idlest_group(struct sched_domain *sd, struct task_struct *p,
 
 	do {
 		unsigned long load, avg_load;
-		int local_group;
+		int local_group, packing_cpus = 0;
 		int i;
 
 		/* Skip over this group if it has no CPUs allowed */
@@ -3299,7 +3336,13 @@ find_idlest_group(struct sched_domain *sd, struct task_struct *p,
 				load = target_load(i, load_idx);
 
 			avg_load += load;
+
+			if (is_packing_cpu(i))
+				packing_cpus = 1;
 		}
+
+		if (!packing_cpus)
+			continue;
 
 		/* Adjust by relative CPU power of the group */
 		avg_load = (avg_load * SCHED_POWER_SCALE) / group->sgp->power;
@@ -3355,7 +3398,8 @@ static int select_idle_sibling(struct task_struct *p, int target)
 	/*
 	 * If the prevous cpu is cache affine and idle, don't be stupid.
 	 */
-	if (i != target && cpus_share_cache(i, target) && idle_cpu(i))
+	if (i != target && cpus_share_cache(i, target) && idle_cpu(i)
+			&& is_packing_cpu(i))
 		return i;
 
 	/*
@@ -3370,7 +3414,8 @@ static int select_idle_sibling(struct task_struct *p, int target)
 				goto next;
 
 			for_each_cpu(i, sched_group_cpus(sg)) {
-				if (i == target || !idle_cpu(i))
+				if (i == target || !idle_cpu(i)
+						|| !is_packing_cpu(i))
 					goto next;
 			}
 
@@ -3435,8 +3480,12 @@ select_task_rq_fair(struct task_struct *p, int sd_flag, int wake_flags)
 	}
 
 	if (affine_sd) {
-		if (cpu != prev_cpu && wake_affine(affine_sd, p, sync))
+		if (cpu != prev_cpu && (wake_affine(affine_sd, p, sync)
+					|| !is_packing_cpu(prev_cpu)))
 			prev_cpu = cpu;
+
+		if (!is_packing_cpu(prev_cpu))
+			prev_cpu =  get_buddy(prev_cpu);
 
 		new_cpu = select_idle_sibling(p, prev_cpu);
 		goto unlock;
@@ -4527,7 +4576,8 @@ static inline void update_sg_lb_stats(struct lb_env *env,
 		/* Bias balancing toward cpus of our domain */
 		if (local_group) {
 			if (idle_cpu(i) && !first_idle_cpu &&
-					cpumask_test_cpu(i, sched_group_mask(group))) {
+					cpumask_test_cpu(i, sched_group_mask(group))
+					&& is_packing_cpu(i)) {
 				first_idle_cpu = 1;
 				balance_cpu = i;
 			}
@@ -4544,6 +4594,9 @@ static inline void update_sg_lb_stats(struct lb_env *env,
 				max_nr_running = nr_running;
 			if (min_nr_running > nr_running)
 				min_nr_running = nr_running;
+
+			if (!is_packing_cpu(i) && nr_running > 0)
+				sgs->group_imb = 1;
 		}
 
 		sgs->group_load += load;
@@ -5441,7 +5494,26 @@ static struct {
 
 static inline int find_new_ilb(int call_cpu)
 {
+	struct sched_domain *sd;
 	int ilb = cpumask_first(nohz.idle_cpus_mask);
+	int buddy = get_buddy(call_cpu);
+
+	/*
+	 * If we have a pack buddy CPU, we try to run load balance on a CPU
+	 * that is close to the buddy.
+	 */
+	if (buddy != -1) {
+		for_each_domain(buddy, sd) {
+			if (sd->flags & SD_SHARE_CPUPOWER)
+				continue;
+
+			ilb = cpumask_first_and(sched_domain_span(sd),
+					nohz.idle_cpus_mask);
+
+			if (ilb < nr_cpu_ids)
+				break;
+		}
+	}
 
 	if (ilb < nr_cpu_ids && idle_cpu(ilb))
 		return ilb;
@@ -5722,6 +5794,10 @@ static inline int nohz_kick_needed(struct rq *rq, int cpu)
 		return 0;
 
 	if (rq->nr_running >= 2)
+		goto need_kick;
+
+	/* This cpu doesn't contribute to packing effort */
+	if (check_nohz_packing(cpu))
 		goto need_kick;
 
 	rcu_read_lock();
