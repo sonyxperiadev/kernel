@@ -1203,7 +1203,7 @@ static int __ref kona_fb_probe(struct platform_device *pdev)
 {
 	int ret = -ENXIO;
 	struct kona_fb *fb;
-	size_t framesize;
+	size_t framesize, framesize_alloc;
 	uint32_t width, height;
 	int ret_val = -1;
 	struct kona_fb_platform_data *fb_data;
@@ -1291,13 +1291,17 @@ static int __ref kona_fb_probe(struct platform_device *pdev)
 
 	framesize = fb->display_info->width * fb->display_info->height *
 	    fb->display_info->Bpp * 2;
-	framesize = PAGE_ALIGN(framesize);
+	/* Workaround: One page extra allocated and mapped via m4u to avoid
+	 * v3d write faulting in m4u doing extra access */
+	framesize_alloc = PAGE_ALIGN(framesize + 4096);
 
 	fb->fb.screen_base = dma_alloc_writecombine(&pdev->dev,
-						    framesize, &phys_fbbase,
-						    GFP_KERNEL);
+			framesize_alloc,
+			&phys_fbbase,
+			GFP_KERNEL);
 	pr_info("kona_fb: screen_base=%p, phys_fbbase=%p size=0x%x\n",
-		(void *)fb->fb.screen_base, (void *)phys_fbbase, framesize);
+			(void *)fb->fb.screen_base, (void *)phys_fbbase,
+			framesize_alloc);
 	if (fb->fb.screen_base == NULL) {
 		ret = -ENOMEM;
 		konafb_error("Unable to allocate fb memory\n");
@@ -1333,7 +1337,7 @@ static int __ref kona_fb_probe(struct platform_device *pdev)
 			pr_err("Unable to allocate fb sgtable\n");
 			goto err_set_var_failed;
 		}
-		n_pages = framesize >> PAGE_SHIFT;
+		n_pages = framesize_alloc >> PAGE_SHIFT;
 
 		i = sg_alloc_table(table, 1, GFP_KERNEL);
 		if (i) {
@@ -1352,7 +1356,7 @@ static int __ref kona_fb_probe(struct platform_device *pdev)
 			ret = -EINVAL;
 			pr_err("%16s: Failed iommu map da(%#x) pa(%#x) size(%#x)\n",
 					"framebuffer", dma_addr, phys_fbbase,
-					framesize);
+					framesize_alloc);
 			sg_free_table(table);
 			kfree(table);
 			goto err_set_var_failed;
@@ -1369,17 +1373,18 @@ static int __ref kona_fb_probe(struct platform_device *pdev)
 					&fb_data->pdev_iommu->dev);
 			goto err_set_var_failed;
 		}
-		if (iommu_map(domain, dma_addr, phys_fbbase, framesize, 0)) {
+		if (iommu_map(domain, dma_addr, phys_fbbase, framesize_alloc,
+					0)) {
 			ret = -EINVAL;
 			pr_err("%s iommu mapping domain(%p) da(%#x) to pa(%#x) size(%#08x) failed\n",
 					"framebuffer", domain, dma_addr,
-					phys_fbbase, framesize);
+					phys_fbbase, framesize_alloc);
 			goto err_set_var_failed;
 		}
 	}
 #endif /* CONFIG_BCM_IOVMM */
 	pr_info("%16s: iommu map da(%#x) pa(%#x) size(%#x)\n",
-			"framebuffer", dma_addr, phys_fbbase, framesize);
+			"framebuffer", dma_addr, phys_fbbase, framesize_alloc);
 #endif /* CONFIG_IOMMU_API */
 
 	/* Now we should get correct width and height for this display .. */
@@ -1538,7 +1543,7 @@ static int __ref kona_fb_probe(struct platform_device *pdev)
 
 err_fb_register_failed:
 err_set_var_failed:
-	dma_free_writecombine(&pdev->dev, framesize, fb->fb.screen_base,
+	dma_free_writecombine(&pdev->dev, framesize_alloc, fb->fb.screen_base,
 			phys_fbbase);
 
 err_fbmem_alloc_failed:

@@ -647,7 +647,7 @@ static void m4u_fault_handler(struct m4u_drvdata *mdata, u32 val)
 #endif
 	} else if ((val & MMMMU_OPEN_XFIFO_RW_MASK) == 0) {
 		/* Write access to invalid PTE error */
-		if ((mdata->xfifo_rd_err_cnt & 0xFFF) == 0)
+		if ((mdata->xfifo_wr_err_cnt & 0xFFF) == 0)
 			pr_info("[%04d]xfifo write error(%#x) pt_base(%p) pt(%p) pte(%#x)\n",
 					mdata->xfifo_wr_err_cnt, val,
 					mdata->pt_base, pt, *pt);
