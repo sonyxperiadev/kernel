@@ -93,34 +93,34 @@ struct lm3533_platform_data lm3533_pdata = {
 			.pwm = 0,
 			.ctl = LM3533_HVA_MAP_EXP | LM3533_HVA_BR_CTL,
 			.fsc =  I_UA_TO_FSC(20200),
-			.iname = "lm3533-lcd-bl-1",
+			.iname = "lcd-backlight-1",
 		},
 		[LM3533_CBNKB] = {
 			.pwm = 0,
 			.ctl = LM3533_HVB_MAP_EXP | LM3533_HVB_BR_CTL,
 			.fsc =  I_UA_TO_FSC(20200),
-			.iname = "lm3533-lcd-bl-2",
+			.iname = "lcd-backlight-2",
 		},
 		[LM3533_CBNKC] = {
 			.pwm = 0,
 			.ctl = LM3533_LV_MAP_LIN | LM3533_LV_BR_CTL,
 			/* 1ma in spec, but this is not possible */
 			.fsc =  I_UA_TO_FSC(5000),
-			.iname = "lm3533-red",
+			.iname = "red",
 		},
 		[LM3533_CBNKD] = {
 			.pwm = 0,
 			.ctl = LM3533_LV_MAP_LIN | LM3533_LV_BR_CTL,
 			/* 1ma in spec, but this is not possible */
 			.fsc =  I_UA_TO_FSC(5000),
-			.iname = "lm3533-green",
+			.iname = "green",
 		},
 		[LM3533_CBNKE] = {
 			.pwm = 0,
 			.ctl = LM3533_LV_MAP_LIN | LM3533_LV_BR_CTL,
 			/* 1ma in spec, but this is not possible */
 			.fsc =  I_UA_TO_FSC(5000),
-			.iname = "lm3533-blue",
+			.iname = "blue",
 		},
 		[LM3533_CBNKF] = {
 			.pwm = 0,

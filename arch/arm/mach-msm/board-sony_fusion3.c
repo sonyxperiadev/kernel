@@ -2139,13 +2139,13 @@ struct as3676_platform_data as3676_platform_data = {
 					2=GPIO1,  3=GPIO2 */
 	.step_up_lowcur = true,
 	.leds[0] = {
-		.name = "lcd-backlight_1",
+		.name = "lcd-backlight-1",
 		.on_charge_pump = 0,
 		.max_current_uA = 19950,
 		.startup_current_uA = 19950,
 	},
 	.leds[1] = {
-		.name = "lcd-backlight_2",
+		.name = "lcd-backlight-2",
 		.on_charge_pump = 0,
 		.max_current_uA = 19950,
 		.startup_current_uA = 19950,
@@ -2156,12 +2156,12 @@ struct as3676_platform_data as3676_platform_data = {
 		.max_current_uA = 0,
 	},
 	.leds[3] = {
-		.name = "logo-backlight_1",
+		.name = "logo-backlight-1",
 		.on_charge_pump = 1,
 		.max_current_uA = 3000,
 	},
 	.leds[4] = {
-		.name = "logo-backlight_2",
+		.name = "logo-backlight-2",
 		.on_charge_pump = 1,
 		.max_current_uA = 3000,
 	},
@@ -2171,17 +2171,17 @@ struct as3676_platform_data as3676_platform_data = {
 		.max_current_uA = 0,
 	},
 	.leds[6] = {
-		.name = "pwr-red",
+		.name = "red",
 		.on_charge_pump = 1,
 		.max_current_uA = 2000,
 	},
 	.leds[7] = {
-		.name = "pwr-green",
+		.name = "green",
 		.on_charge_pump = 1,
 		.max_current_uA = 2000,
 	},
 	.leds[8] = {
-		.name = "pwr-blue",
+		.name = "blue",
 		.on_charge_pump = 1,
 		.max_current_uA = 2000,
 	},

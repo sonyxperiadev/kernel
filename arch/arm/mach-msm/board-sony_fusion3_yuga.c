@@ -82,8 +82,8 @@ static int lm3533_als_power_off(struct device *dev)
 }
 
 static struct lm3533_startup_brightenss lm3533_startup_brightnesses[] = {
-				[0] = {"lm3533-lcd-bl", 255},
-				[1] = {"lm3533-red", 0},
+				[0] = {"lcd-backlight-1", 255},
+				[1] = {"red", 0},
 				[2] = { NULL, 0} };
 
 struct lm3533_platform_data lm3533_pdata = {
@@ -92,7 +92,7 @@ struct lm3533_platform_data lm3533_pdata = {
 			.pwm = 0, /* TDOD: set 0x3f when DBC is present */
 			.ctl = LM3533_HVA_MAP_LIN | LM3533_HVA_BR_CTL,
 			.fsc =  I_UA_TO_FSC(20200),
-			.iname = "lm3533-lcd-bl",
+			.iname = "lcd-backlight-1",
 		},
 		[LM3533_CBNKB] = {
 			.pwm = 0, /* TDOD: set 0x3f when DBC is present */
@@ -105,21 +105,21 @@ struct lm3533_platform_data lm3533_pdata = {
 			.ctl = LM3533_LV_MAP_LIN | LM3533_LV_BR_CTL,
 			/* 1ma in spec, but this is not possible */
 			.fsc =  I_UA_TO_FSC(5000),
-			.iname = "lm3533-red",
+			.iname = "red",
 		},
 		[LM3533_CBNKD] = {
 			.pwm = 0,
 			.ctl = LM3533_LV_MAP_LIN | LM3533_LV_BR_CTL,
 			/* 1ma in spec, but this is not possible */
 			.fsc =  I_UA_TO_FSC(5000),
-			.iname = "lm3533-green",
+			.iname = "green",
 		},
 		[LM3533_CBNKE] = {
 			.pwm = 0,
 			.ctl = LM3533_LV_MAP_LIN | LM3533_LV_BR_CTL,
 			/* 1ma in spec, but this is not possible */
 			.fsc =  I_UA_TO_FSC(5000),
-			.iname = "lm3533-blue",
+			.iname = "blue",
 		},
 		[LM3533_CBNKF] = {
 			.pwm = 0,
