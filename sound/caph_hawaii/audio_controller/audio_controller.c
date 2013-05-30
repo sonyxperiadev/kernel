@@ -3523,7 +3523,9 @@ void AUDCTRL_EnableBypassVibra(UInt32 Strength, int direction)
 
 		if (IS_ERR(vibra_reg))
 			aError("Failed to get LDO for Vibra\n");
-	}
+	} else
+		return ret;
+
 	if (vibra_reg) {
 		ret = regulator_enable(vibra_reg);
 		if (ret != 0)
