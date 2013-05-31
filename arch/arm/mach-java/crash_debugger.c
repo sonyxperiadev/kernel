@@ -33,7 +33,6 @@
 #include <mach/kona_timer.h>
 #include <mach/sram_config.h>
 #include <linux/fs.h>
-#include <mach/rdb/brcm_rdb_cortexa7_debug.h>
 #include <mach/rdb/brcm_rdb_gic.h>
 
 enum cdebugger_upload_cause_t {
@@ -222,8 +221,8 @@ static const char * const gkernel_cdebugger_build_info_date_time[] = {
 
 static char gkernel_cdebugger_build_info[100];
 
-struct cdebugger_core_t cdebugger_core_reg;
-struct cdebugger_mmu_reg_t cdebugger_mmu_reg;
+struct cdebugger_core_t cdebugger_core_reg[NR_CPUS];
+struct cdebugger_mmu_reg_t cdebugger_mmu_reg[NR_CPUS];
 enum cdebugger_upload_cause_t cdebugger_upload_cause;
 
 struct cdebugger_fault_status_t cdebugger_fault_status[NR_CPUS];
@@ -362,7 +361,7 @@ void *log_tx_param[] __aligned(8) = {
 	0,
 	0,
 	0,
-	(void *)0x7A92,	/* 0x7A92 = CortexA9MPCore with 2 cores */
+	(void *)0x7A74,	/* 0x7A92 = CortexA7MPCore with 4 cores */
 	(void *)2,	/* 0=Nucleus, 1=ThreadX 2=Linux*/
 	&main_log,
 	&radio_log,
@@ -538,9 +537,13 @@ static void cdebugger_save_mmu_reg(struct cdebugger_mmu_reg_t *mmu_reg)
 static void cdebugger_save_context(void)
 {
 	unsigned long flags;
+	unsigned int cpuid;
+
 	local_irq_save(flags);
-	cdebugger_save_mmu_reg(&cdebugger_mmu_reg);
-	cdebugger_save_core_reg(&cdebugger_core_reg);
+	cpuid = get_cpu();
+	cdebugger_save_mmu_reg(&cdebugger_mmu_reg[cpuid]);
+	cdebugger_save_core_reg(&cdebugger_core_reg[cpuid]);
+	put_cpu();
 	local_irq_restore(flags);
 }
 
@@ -553,6 +556,8 @@ void cdebugger_save_pte(void *pte, int task_addr)
 	memcpy(&cdebugger_fault_status[cpuid], pte,
 			sizeof(struct cdebugger_fault_status_t));
 	cdebugger_fault_status[cpuid].cur_process_magic = task_addr;
+	cdebugger_save_mmu_reg(&cdebugger_mmu_reg[cpuid]);
+	cdebugger_save_core_reg(&cdebugger_core_reg[cpuid]);
 
 	put_cpu();
 }
@@ -733,7 +738,7 @@ static void setup_log_tx_param(void)
 	log_tx_param[80] =
 	    (void *)virt_to_phys((void *)&cdebugger_mmu_reg);
 	log_tx_param[84] =
-	    (void *)(cdebugger_mmu_reg.TTBR0 & 0xFFFFC000);
+	    (void *)(cdebugger_mmu_reg[0].TTBR0 & 0xFFFFC000);
 
 	log_tx_param[87] = (void *)virt_to_phys((void *)&main_log);
 	log_tx_param[88] = (void *)virt_to_phys((void *)&radio_log);
