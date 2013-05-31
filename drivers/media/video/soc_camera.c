@@ -299,7 +299,7 @@ static int soc_camera_reqbufs(struct file *file, void *priv,
 
 	WARN_ON(priv != file->private_data);
 
-	dev_info(&icd->dev, "soc_camera_reqbufs\n");
+	dev_dbg(&icd->dev, "soc_camera_reqbufs\n");
 	if (icd->streamer && icd->streamer != file) {
 		dev_err(&icd->dev,
 			"icd->streamer is not a file, returning error\n");
@@ -801,7 +801,7 @@ static int soc_camera_streamon(struct file *file, void *priv,
 
 	WARN_ON(priv != file->private_data);
 
-	dev_info(&icd->dev, "soc_camera_streamon\n");
+	dev_dbg(&icd->dev, "soc_camera_streamon\n");
 
 	if (i != V4L2_BUF_TYPE_VIDEO_CAPTURE) {
 		dev_err(&icd->dev,
@@ -836,7 +836,7 @@ static int soc_camera_streamoff(struct file *file, void *priv,
 
 	WARN_ON(priv != file->private_data);
 
-	dev_info(&icd->dev, "soc_camera_streamoff\n");
+	dev_dbg(&icd->dev, "soc_camera_streamoff\n");
 
 	if (i != V4L2_BUF_TYPE_VIDEO_CAPTURE) {
 		dev_err(&icd->dev,
@@ -1143,7 +1143,6 @@ static int soc_camera_probe(struct device *dev)
 	int ret;
 
 	dev_info(dev, "Probing %s\n", dev_name(dev));
-	printk("soc_camera_probe \n");	/* @HW */
 
 	ret = regulator_bulk_get(icd->pdev, icl->num_regulators,
 				 icl->regulators);

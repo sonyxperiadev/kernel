@@ -21,7 +21,7 @@
 
 #include <media/videobuf2-core.h>
 
-static int debug = 2;
+static int debug;
 module_param(debug, int, 0644);
 
 #define dprintk(level, fmt, arg...)					\

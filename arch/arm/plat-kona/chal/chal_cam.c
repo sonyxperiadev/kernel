@@ -177,23 +177,22 @@ CHAL_CAM_STATUS_CODES chal_cam_register_display(CHAL_HANDLE handle, CHAL_CAM_PAR
         dbea1 = BRCM_READ_REG ( pCamDevice->baseAddr, CAM_DBEA1 );
         dbctl = BRCM_READ_REG ( pCamDevice->baseAddr, CAM_DBCTL );
         misc = BRCM_READ_REG ( pCamDevice->baseAddr, CAM_MISC );
-
-	printk(KERN_INFO "CTL=0x%x STA=0x%x ANA=0x%x PRI=0x%x "
+	pr_debug("CTL=0x%x STA=0x%x ANA=0x%x PRI=0x%x "
 		"CLK=0x%x CLT=0x%x DAT0=0x%x DAT1=0x%x DLT=0x%x\r\n",
 		ctl, sta, ana, pri, clk, clt, dat0, dat1, dlt);
-	printk(KERN_INFO "CMP0=0x%x CMP1=0x%x CAP0=0x%x CAP1=0x%x "
+	pr_debug("CMP0=0x%x CMP1=0x%x CAP0=0x%x CAP1=0x%x "
 		"DBG0=0x%x DBG1=0x%x DBG2=0x%x DBG3=0x%x\r\n",
 		cmp0, cmp1, cap0, cap1, dbg0, dbg1, dbg2, dbg3);
-	printk(KERN_INFO "ICTL=0x%x ISTA=0x%x IDI=0x%x IPIPE=0x%x "
+	pr_debug("ICTL=0x%x ISTA=0x%x IDI=0x%x IPIPE=0x%x "
 		"IBSA=0x%x IBEA=0x%x IBLS=0x%x\r\n",
 		ictl, ista, idi, ipipe, ibsa, ibea, ibls);
-	printk(KERN_INFO "IBSA1=0x%x IBEA1=0x%x IDI1=0x%x "
+	pr_debug("IBSA1=0x%x IBEA1=0x%x IDI1=0x%x "
 		"IBWP=0x%x IHWIN=0x%x IHSTA=0x%x IVWIN=0x%x IVSTA=0x%x\r\n",
 		ibsa1, ibea1, idi1, ibwp, ihwin, ihsta, ivwin, ivsta);
-	printk(KERN_INFO "DCS=0x%x DBSA=0x%x DBEA=0x%x DBWP=0x%x "
+	pr_debug("DCS=0x%x DBSA=0x%x DBEA=0x%x DBWP=0x%x "
 		"DBSA1=0x%x DBEA1=0x%x DBCTL=0x%x\r\n",
 		dcs, dbsa, dbea, dbwp, dbsa1, dbea1, dbctl);
-	printk(KERN_INFO "ICC=0x%x ICS=0x%x IDC=0x%x IDPO=0x%x IDCA=0x%x "
+	pr_debug("ICC=0x%x ICS=0x%x IDC=0x%x IDPO=0x%x IDCA=0x%x "
 		"IDCD=0x%x IDS=0x%x MISC=0x%x\r\n\r\n",
 		icc, ics, idc, idpo, idca, idcd, ids, misc);
 
