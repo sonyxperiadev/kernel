@@ -92,7 +92,6 @@ struct axipv_dev {
 #ifdef AXIPV_HAS_CLK
 	struct clk *clk;
 #endif
-	bool bypassPV;
 	struct axipv_buff buff[AXIPV_MAX_DISP_BUFF_SUPP];
 	struct axipv_config_t config;
 	struct work_struct irq_work;
@@ -307,7 +306,6 @@ int axipv_init(struct axipv_init_t *init, struct axipv_config_t **config)
 	}
 	dev->base_addr = init->base_addr;
 	dev->irq_cb = init->irq_cb;
-	dev->bypassPV = init->bypassPV;
 	dev->release_cb = init->release_cb;
 	INIT_WORK(&dev->irq_work, process_irq);
 	INIT_WORK(&dev->release_work, process_release);
@@ -390,9 +388,9 @@ static inline int axipv_config(struct axipv_config_t *config)
 		| NUM_OUTSTDG_XFERS_8 | AXI_ID_SYS_DUAL | AXIPV_ARPROT
 		| AXIPV_ARCACHE	| (config->test ? AXIPV_TESTMODE : 0);
 
-	if (dev->bypassPV) {
+	if (config->bypassPV)
 		ctrl = ctrl | (1 << 8) | (1 << 29);
-	}
+
 	ctrl |= (config->pix_fmt << PIXEL_FORMAT_SHIFT);
 
 	tx_size = config->buff.sync.xlen * config->buff.sync.ylen;
@@ -417,7 +415,8 @@ static inline int axipv_config(struct axipv_config_t *config)
 		axipv_err("tx_size=%d is too less to be sent via axipv\n",
 			tx_size);
 	}
-	if (dev->bypassPV) {
+
+	if (config->bypassPV) {
 		int pv_start_thre = readl(axipv_base + REG_PV_THRESH);
 		if (!((config->pix_fmt == AXIPV_PIXEL_FORMAT_24BPP_RGB) ||
 			(config->pix_fmt == AXIPV_PIXEL_FORMAT_24BPP_BGR) ||
@@ -752,7 +751,7 @@ void axipv_release_pixdfifo_ownership(struct axipv_config_t *config)
 	dev = container_of(config, struct axipv_dev, config);
 	axipv_base = dev->base_addr;
 
-	if (!config->cmd || !dev->bypassPV) {
+	if (!config->cmd || !config->bypassPV) {
 		axipv_debug("No explicit access required\n");
 		goto done;
 	}

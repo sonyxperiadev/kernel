@@ -70,7 +70,7 @@
 extern "C" {
 #endif
 
-//#define __RHEA_LCD_DBG__ 
+/* #define __RHEA_LCD_DBG__ */
 
 #ifdef __RHEA_LCD_DBG__
 #define LCD_DBG(id, fmt, args...)         printk(KERN_ERR fmt, ##args)
