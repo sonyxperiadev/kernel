@@ -81,7 +81,7 @@
 #define BCMTCH_HW_GPIO_INTERRUPT_TRIGGER    IRQF_TRIGGER_FALLING
 
 /* I2C addresses of the BCM Touch Controller */
-#if (BCMTCH_HW_CHIP_VERSION == BCMTCH_HW_BCM15200A0||BCMTCH_HW_BCM15200A1)
+#if ((BCMTCH_HW_CHIP_VERSION == BCMTCH_HW_BCM15200A0)||(BCMTCH_HW_CHIP_VERSION == BCMTCH_HW_BCM15200A1))
 #define BCMTCH_HW_I2C_ADDR_SPM      0x67 /* SPM address on I2C bus */
 #elif (BCMTCH_HW_CHIP_VERSION == BCMTCH_HW_BCM15500A0)
 #define BCMTCH_HW_I2C_ADDR_SPM      0x66 /* SPM address on I2C bus */
@@ -93,7 +93,7 @@
 
 /* Orientation of the LCD/touch panel to the BCM Touch Controller */
 #define BCMTCH_HW_AXIS_SWAP_X_Y		0	/* swap x <-> y axes */
-#define BCMTCH_HW_AXIS_REVERSE_Y	0	/* reverse x-axis */
+#define BCMTCH_HW_AXIS_REVERSE_Y	1 	/* reverse x-axis */
 #define BCMTCH_HW_AXIS_REVERSE_X	0	/* reverse y-axis */
 
 /*
@@ -107,7 +107,7 @@
  *
  */
 #define	BCMTCH_HW_BUTTON_COUNT		0
-
+ 
 static const int32_t bcmtch_hw_button_map[] = {
 		KEY_MENU,
 		KEY_BACK

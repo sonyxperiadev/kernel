@@ -40,7 +40,18 @@
 #ifndef BCM915500_I2C_TS_H
 #define BCM915500_I2C_TS_H
 
-#define BCM15500_TSC_NAME "bcm15500"
+
+#define BCMTCH15XXX_NAME		"bcmtch15xxx"
+//#define BCM15500_TSC_NAME "bcm15500"
+
+/* prem copied from 15xxx*/
+
+#define BCMTCH_VENDOR_ID		0x0A5C
+
+#define BCMTCH_CHIPID_PID_MASK	0x00FFFF00
+#define BCMTCH_CHIPID_PID_SHIFT	8
+
+//end prem
 
 /* --------------------------------- */
 /* - Touch Controller Chip Version - */
@@ -61,8 +72,13 @@
 #define BCMTCH_AXIS_FLAG_X_REVERSED_MASK	0x01
 #define BCMTCH_AXIS_FLAG_Y_REVERSED_MASK	0x02
 #define BCMTCH_AXIS_FLAG_X_Y_SWAPPED_MASK	0x04
+//prem
+#define BCMTCH_MAX_BUTTON_COUNT				16
+
 
 typedef int (*bcmtch_power_on_t)(bool);
+
+
 
 /* structure for BCM Touch Controller platform hardware configuration */
 struct bcmtch_platform_data {

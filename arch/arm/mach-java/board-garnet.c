@@ -1195,7 +1195,7 @@ static struct bcmtch_platform_data bcm15500_i2c_platform_data = {
 
 static struct i2c_board_info __initdata bcm15500_i2c_boardinfo[] = {
 	{
-		I2C_BOARD_INFO(BCM15500_TSC_NAME, BCMTCH_HW_I2C_ADDR_SPM),
+		I2C_BOARD_INFO(BCMTCH15XXX_NAME, BCMTCH_HW_I2C_ADDR_SPM),
 		.platform_data  = &bcm15500_i2c_platform_data,
 		.irq	= gpio_to_irq(BCMTCH_HW_GPIO_INTERRUPT_PIN),
 	},
