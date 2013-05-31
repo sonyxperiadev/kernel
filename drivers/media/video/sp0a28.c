@@ -334,7 +334,7 @@ static const struct v4l2_queryctrl sp0a28_controls[] = {
 	 .type = V4L2_CTRL_TYPE_INTEGER,
 	 .name = "Framerate control",
 	 .minimum = FRAME_RATE_15,
-	 .maximum = (1 << FRAME_RATE_15),
+	 .maximum = (1 << FRAME_RATE_15 | 1 << FRAME_RATE_30),
 	 .step = 1,
 	 .default_value = FRAME_RATE_15,
 	 },
