@@ -542,6 +542,7 @@ Int32 DSI_Open(DISPDRV_HANDLE_T drvH)
 	if (brcm_enable_dsi_pll_clocks(pPanel->busNo,
 		pPanel->dsi_cfg->hsBitClk.clkIn_MHz * 1000000,
 		pPanel->dsi_cfg->hsBitClk.clkInDiv,
+		pPanel->disp_info->desense_offset,
 		pPanel->dsi_cfg->escClk.clkIn_MHz   * 1000000
 		/ pPanel->dsi_cfg->escClk.clkInDiv)) {
 

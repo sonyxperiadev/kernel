@@ -935,6 +935,15 @@ static struct kona_fb_platform_data * __init get_of_data(struct device_node *np)
 		goto of_fail;
 	fb_data->lp_bps = val;
 
+	/* Desense offset value to be absolute value w.r.t hs-bitrate */
+	if (of_property_read_u32(np, "desense-offset", &val)) {
+		konafb_info("desense offset not populated\n");
+		fb_data->desense_offset = 0;
+	} else {
+		konafb_info("desense offset requested %d\n", val);
+		fb_data->desense_offset = (int) val;
+	}
+
 #ifdef CONFIG_IOMMU_API
 	/* Get the iommu device and link fb dev to iommu dev */
 	tmp_node = of_parse_phandle(np, "iommu", 0);
@@ -1148,6 +1157,7 @@ static int __init populate_dispdrv_cfg(struct kona_fb *fb,
 				 cfg->max_hs_bps : pd->hs_bps;
 	info->lp_bps = (pd->lp_bps > cfg->max_lp_bps) ?
 				 cfg->max_lp_bps : pd->lp_bps;
+	info->desense_offset = pd->desense_offset;
 
 	info->vsync_cb = (info->vmode) ? konafb_vsync_cb : NULL;
 	info->cont_clk = cfg->cont_clk;

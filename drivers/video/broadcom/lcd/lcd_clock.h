@@ -39,6 +39,7 @@ extern int brcm_disable_dsi_lcd_clocks(struct pi_mgr_dfs_node* dfs_node,
 	u32 dsi_bus);
 
 extern int brcm_enable_dsi_pll_clocks(u32 dsi_bus, u32 dsi_pll_hz,
-		u32 dsi_pll_ch_div, u32 esc_clk_hz);
+		u32 dsi_pll_ch_div, int dsi_pll_ch_desense_offset,
+		u32 esc_clk_hz);
 
 extern int brcm_disable_dsi_pll_clocks(u32 dsi_bus);

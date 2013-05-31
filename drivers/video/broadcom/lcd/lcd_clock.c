@@ -194,6 +194,7 @@ int brcm_enable_dsi_pll_clocks(
 	unsigned int dsi_bus, 
         unsigned int dsi_pll_hz, 
         unsigned int dsi_pll_ch_div, 
+	int dsi_pll_ch_desense_offset,
         unsigned int esc_clk_hz )
 {
 #ifndef CONFIG_MACH_BCM_FPGA
@@ -202,6 +203,7 @@ int brcm_enable_dsi_pll_clocks(
 	u32	pixel_pll_val;
         u32	dsi_pll_ch_hz;
 	u32	dsi_pll_ch_hz_csl;
+	int dsi_pll_desense_offset;
 	
 	if (g_display_enabled) {
 		printk(KERN_ERR "skipping brcm_enable_dsi_pll_clocks\n");
@@ -232,7 +234,15 @@ int brcm_enable_dsi_pll_clocks(
                 	dsi_bus, dsi_pll_ch_hz);
 		return -EIO;
 	}
-        
+
+	dsi_pll_desense_offset = dsi_pll_ch_desense_offset * dsi_pll_ch_div;
+	pr_err("Requesting desense offset = %d\n", dsi_pll_desense_offset);
+	if (pll_set_desense_offset(dsi_pll, dsi_pll_desense_offset)) {
+		pr_err("Failed to set desense offset to %dHz\n",
+		dsi_pll_desense_offset);
+		return -EIO;
+	}
+
 	if (clk_enable(dsi_pll_ch)) {
 		printk(KERN_ERR "Failed to enable DSI[%d] PLL CH\n", dsi_bus);
 		return -EIO;
