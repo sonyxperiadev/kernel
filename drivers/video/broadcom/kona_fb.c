@@ -1240,7 +1240,7 @@ static int __ref kona_fb_probe(struct platform_device *pdev)
 	g_kona_fb = fb;
 	ret_val =
 	    pi_mgr_dfs_add_request(&g_kona_fb->dfs_node, "lcd", PI_MGR_PI_ID_MM,
-				   PI_OPP_TURBO);
+				   PI_OPP_NORMAL);
 
 	if (ret_val) {
 		printk(KERN_ERR "Failed to add dfs request for LCD\n");

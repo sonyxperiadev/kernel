@@ -62,10 +62,9 @@ int brcm_enable_smi_lcd_clocks(struct pi_mgr_dfs_node *dfs_node)
 	struct clk *smi_axi;
 	struct clk *smi;
 
-	if (pi_mgr_dfs_request_update(dfs_node, PI_OPP_TURBO))
-	{
-	    printk(KERN_ERR "Failed to update dfs request for SMI LCD at enable\n");
-	    return  -EIO;
+	if (pi_mgr_dfs_request_update(dfs_node, PI_OPP_NORMAL)) {
+		printk(KERN_ERR "Failed to update dfs request for SMI LCD at enable\n");
+		return  -EIO;
 	}
 
 	smi_axi = clk_get (NULL, "smi_axi_clk");
@@ -161,10 +160,9 @@ int brcm_enable_dsi_lcd_clocks(
 		return 0;
 	}
 	printk(KERN_INFO "brcm_enable_dsi_lcd_clocks\n");
-	if (pi_mgr_dfs_request_update(dfs_node, PI_OPP_TURBO))
-	{
-	    printk(KERN_ERR "Failed to update dfs request for DSI LCD\n");
-	    return  -EIO;
+	if (pi_mgr_dfs_request_update(dfs_node, PI_OPP_NORMAL)) {
+		printk(KERN_ERR "Failed to update dfs request for DSI LCD\n");
+		return  -EIO;
 	}
 
 	dsi_axi     = clk_get (NULL, dsi_bus_clk[dsi_bus].dsi_axi);
@@ -324,10 +322,9 @@ int brcm_enable_dsi_lcd_clocks(
 {
 
 #ifndef CONFIG_MACH_BCM_FPGA
-	if (pi_mgr_dfs_request_update(dfs_node, PI_OPP_TURBO))
-	{
-	    printk(KERN_ERR "Failed to update dfs request for DSI LCD\n");
-	    return  -EIO;
+	if (pi_mgr_dfs_request_update(dfs_node, PI_OPP_NORMAL))	{
+		printk(KERN_ERR "Failed to update dfs request for DSI LCD\n");
+		return  -EIO;
 	}
 
 #endif
@@ -338,10 +335,9 @@ int brcm_disable_dsi_lcd_clocks(struct pi_mgr_dfs_node* dfs_node, u32 dsi_bus)
 {
 #ifndef CONFIG_MACH_BCM_FPGA
 
-	if (pi_mgr_dfs_request_update(dfs_node, PI_MGR_DFS_MIN_VALUE));
-	{
-	    printk(KERN_ERR "Failed to update dfs request for DSI LCD\n");
-	    return  -EIO;
+	if (pi_mgr_dfs_request_update(dfs_node, PI_MGR_DFS_MIN_VALUE)) {
+		printk(KERN_ERR "Failed to update dfs request for DSI LCD\n");
+		return  -EIO;
 	}
 #endif
 	return 0;

@@ -346,9 +346,9 @@ static int unicam_enable_clocks(struct unicam_device *unicam)
 {
 	int r;
 
-	r = pi_mgr_dfs_request_update(&unicam->dfs_client, PI_OPP_TURBO);
+	r = pi_mgr_dfs_request_update(&unicam->dfs_client, PI_OPP_NORMAL);
 	if (r) {
-		dev_err(unicam->dev, "failed to update dfs request(turbo)\n");
+		dev_err(unicam->dev, "failed to update dfs request(NORMAL)\n");
 		return r;
 	}
 

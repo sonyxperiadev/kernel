@@ -1665,8 +1665,9 @@ static int camdrv_ss_sr200pc20m_sensor_power(int on)
 	
 	if(on)
 {
-		CAM_INFO_PRINTK("power on the sensor \n"); //@HW
-		if (pi_mgr_dfs_request_update(&unicam_dfs_node, PI_OPP_TURBO)) {
+		CAM_INFO_PRINTK("power on the sensor\n");
+		if (pi_mgr_dfs_request_update(&unicam_dfs_node,
+						PI_OPP_NORMAL)) {
 			CAM_ERROR_PRINTK("%s:failed to update dfs request for unicam\n",
 			       __func__);
 			return -1;
