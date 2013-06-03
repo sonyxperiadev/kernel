@@ -198,13 +198,21 @@ choice
 		Garnet
 		UP823
 
-        config MACH_HAWAII_GARNET_C_W68
-        bool "GARNET W68"
-        help
+	config MACH_HAWAII_GARNET_C_UP828_T
+	bool "GARNET C_UP828_T"
+	help
 	  Support for
-                Garnet_c_w68 based
-                Garnet
-                c_edn010
+		Hawaii based
+		Garnet
+		c_up828_t
+
+	config MACH_HAWAII_GARNET_C_W68
+	bool "GARNET W68"
+	help
+	  Support for
+		Garnet_c_w68 based
+		Garnet
+		c_edn010
 
 	config MACH_HAWAII_GARNET_C_M530
 	bool "GARNET M530"
