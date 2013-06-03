@@ -59,6 +59,9 @@ int __init mm_h264_init(void)
 	h264_device->subdev_init[3] = &h264_vce_init;
 	h264_device->subdev_deinit[3] = &h264_vce_deinit;
 
+	h264_device->subdev_init[4] = &h264_ol_init;
+	h264_device->subdev_deinit[4] = &h264_ol_deinit;
+
 	/*Calling init on sub devices*/
 	for (i = 0; i < H264_SUBDEV_COUNT; i++) {
 		ret = h264_device->subdev_init[i](&core_param[i]);

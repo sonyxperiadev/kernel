@@ -27,6 +27,7 @@ the GPL, without Broadcom's express prior written consent.
 #include "vce_prerun_obj.h"
 #include "vce_postrun_obj.h"
 #include "h264_enc.h"
+#include "h264_dec.h"
 
 #define H264_HW_SIZE (7*1024*1024)
 
@@ -49,7 +50,6 @@ struct vce_device_t {
 void h264_write(void *id, u32 reg, u32 value)
 {
 	struct vce_device_t *vce = (struct vce_device_t *)id;
-	pr_debug("write reg [0x%08x] val [0x%08x]\n", reg, value);
 	mm_write_reg(vce->vaddr, reg, value);
 }
 
@@ -57,7 +57,6 @@ u32 h264_read(void *id, u32 reg)
 {
 	struct vce_device_t *vce = (struct vce_device_t *)id;
 	u32 val = mm_read_reg(vce->vaddr, reg);
-	pr_debug("read reg [0x%08x] val [0x%08x]\n", reg, val);
 	return val;
 }
 static void vce_write(struct vce_device_t *vce, u32 reg, u32 value)
@@ -123,7 +122,6 @@ static void vce_reg_init(void *device_id)
 static int vce_get_regs(void *device_id, MM_REG_VALUE *ptr, int count)
 {
 	struct vce_device_t *id = (struct vce_device_t *)device_id;
-	pr_debug("vce_get_regs:\n");
 	print_regs(id);
 	return 0;
 }
@@ -181,7 +179,6 @@ bool get_vce_status(void *device_id)
 	struct vce_device_t *id = (struct vce_device_t *)device_id;
 	u32 status;
 	u32 reason;
-	pr_debug("get_vce_status:\n");
 
 	/*Read the status to find Hardware status*/
 	status  = vce_read(id, VCE_STATUS_OFFSET);
@@ -215,6 +212,7 @@ mm_job_status_e vce_start_job(void *device_id, mm_job_post_t *job,
 	int ft_csize, lt_csize;
 
 	struct enc_info_t *enc_info = NULL;
+	struct dec_info_t *dec_info = NULL;
 
 	if (jp == NULL) {
 		pr_err("vce_start_job: id or jp is null\n");
@@ -225,6 +223,15 @@ mm_job_status_e vce_start_job(void *device_id, mm_job_post_t *job,
 	case H264_VCE_ENC_SLICE_JOB:
 		enc_info = (struct enc_info_t *)(jp + \
 					(sizeof(struct vce_launch_info_t)));
+		vce_info = (struct vce_launch_info_t *) \
+				(jp);
+		break;
+	case H264_VCE_DEC_SLICE_JOB:
+		dec_info = (struct dec_info_t *)(jp + \
+					(sizeof(struct vce_launch_info_t)));
+		vce_info = (struct vce_launch_info_t *) \
+				(jp);
+		break;
 	case H264_VCE_LAUNCH_JOB:
 		vce_info = (struct vce_launch_info_t *) \
 				(jp);
@@ -236,11 +243,10 @@ mm_job_status_e vce_start_job(void *device_id, mm_job_post_t *job,
 
 	switch (job->status) {
 	case MM_JOB_STATUS_READY:
-		switch (job->type) {
-		case H264_VCE_ENC_SLICE_JOB:
+		if (enc_info != NULL)
 			encodeSlice(id, enc_info);
-		case H264_VCE_LAUNCH_JOB:
-			pr_debug("MM_JOB_STATUS_READY\n");
+		if (dec_info != NULL)
+			decodeSlice(id, dec_info);
 		print_regs(id);
 		print_job_struct(jp);
 		/*Reset VCE*/
@@ -316,13 +322,7 @@ mm_job_status_e vce_start_job(void *device_id, mm_job_post_t *job,
 
 		job->status = MM_JOB_STATUS_RUNNING;
 		return MM_JOB_STATUS_RUNNING;
-		default:
-			pr_err("unknown job type\n");
-			return MM_JOB_STATUS_ERROR;
-		}
-
 	case MM_JOB_STATUS_RUNNING:
-		pr_debug("MM_JOB_STATUS_RUNNING");
 		/*Program VCE*/
 
 		/*Copy extra code*/
@@ -340,6 +340,8 @@ mm_job_status_e vce_start_job(void *device_id, mm_job_post_t *job,
 
 			if (enc_info != NULL)
 				va = va + (sizeof(struct enc_info_t));
+			if (dec_info != NULL)
+				va = va + (sizeof(struct dec_info_t));
 
 			lt_csize /= 4;
 			/*Copy Extra code(After VCE_DMA_LIMIT)*/
@@ -390,7 +392,6 @@ mm_job_status_e vce_start_job(void *device_id, mm_job_post_t *job,
 		return MM_JOB_STATUS_RUNNING;
 
 	case MM_JOB_STATUS_RUNNING1:
-		pr_debug("MM_JOB_STATUS_RUNNING1");
 		/*Handle Job completion*/
 		status = vce_read(id, VCE_STATUS_OFFSET);
 
@@ -457,21 +458,11 @@ mm_job_status_e vce_start_job(void *device_id, mm_job_post_t *job,
 		return MM_JOB_STATUS_RUNNING;
 
 	case MM_JOB_STATUS_RUNNING2:
-		pr_debug("MM_JOB_STATUS_RUNNING2");
-
-		switch (job->type) {
-		case H264_VCE_ENC_SLICE_JOB:
-		case H264_VCE_LAUNCH_JOB:
 
 		if (enc_info != NULL)
 			completeEncodeSlice(id, enc_info);
 		job->status = MM_JOB_STATUS_SUCCESS;
 		return MM_JOB_STATUS_SUCCESS;
-		default:
-			pr_err("unknown job type\n");
-			return MM_JOB_STATUS_ERROR;
-		}
-
 	case MM_JOB_STATUS_SUCCESS:
 	case MM_JOB_STATUS_ERROR:
 	case MM_JOB_STATUS_NOT_FOUND:
