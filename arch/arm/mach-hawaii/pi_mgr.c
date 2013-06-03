@@ -220,7 +220,7 @@ struct opp_info __mm_opp_info[] = {
 };
 
 struct opp_info *mm_opp_info[] = {__mm_opp_info};
-u32 mm_weightage[] = {35, 50, 0, 0};
+u32 mm_weightage[] = {0, 0, 0, 0};
 
 struct pi_opp mm_opp = {
 	.opp_info = mm_opp_info,
