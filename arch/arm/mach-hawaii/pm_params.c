@@ -206,9 +206,9 @@ int mach_config_a9_pll(int turbo_val, int update_volt_tbl)
 		vco_rate = 2400000000UL;
 		break;
 
-	case CONFIG_A9_PLL_3GHZ:
-		freq_id = A9_FREQ_1500_MHZ;
-		vco_rate = 3000000000UL;
+	case CONFIG_A9_PLL_2P8GHZ:
+		freq_id = A9_FREQ_1400_MHZ;
+		vco_rate = 2800000000UL;
 		break;
 
 	default:

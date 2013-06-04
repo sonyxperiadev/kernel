@@ -213,9 +213,15 @@ int __init pm_params_init(void);
 int pm_init_pmu_sr_vlt_map_table(u32 silicon_type, int freq_id);
 extern int bcmpmu_init_sr_volt(void);
 
+enum {
+	DDR_FREQ_400M,
+	DDR_FREQ_450M,
+	DDR_FREQ_MAX,
+};
+
 #define CONFIG_A9_PLL_2GHZ	1
 #define CONFIG_A9_PLL_2P4GHZ	2
-#define CONFIG_A9_PLL_3GHZ	3
+#define CONFIG_A9_PLL_2P8GHZ	3
 /*Wake up PM policy*/
 #define PM_WKP          7
 int mach_config_a9_pll(int turbo_val, int update_volt_tbl);

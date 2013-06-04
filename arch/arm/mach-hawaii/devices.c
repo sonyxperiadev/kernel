@@ -769,28 +769,29 @@ void avs_silicon_type_notify(u32 silicon_type, u32 ate_freq)
 	pr_info("%s : silicon type = %d freq_id = %d\n", __func__,
 			silicon_type, freq_id);
 
+	BUG_ON(silicon_type >= SILICON_TYPE_MAX);
 	switch (ate_freq) {
 	case A9_FREQ_UNKNOWN:
-		printk(KERN_ALERT "Unknown freqid. Set to max supported\n");
-		#ifdef CONFIG_PWRMGR_1P2GHZ_OPS_SET_SELECT
+	#ifdef CONFIG_PWRMGR_1P2GHZ_OPS_SET_SELECT
 		freq_id = A9_FREQ_1200_MHZ;
-		#else
+	#else
 		freq_id = A9_FREQ_1000_MHZ;
-		#endif
+	#endif
+		printk(KERN_ALERT "Unknown freqid. Set to max supported\n");
 		break;
 	case A9_FREQ_1000_MHZ:
-		#ifdef CONFIG_PWRMGR_1P2GHZ_OPS_SET_SELECT
+	#ifdef CONFIG_PWRMGR_1P2GHZ_OPS_SET_SELECT
 		printk(KERN_ALERT "AVS says 1 GHZ, system conf says 1.2 GHZ");
 		BUG();
-		#endif
+	#endif
 		break;
 	case A9_FREQ_1200_MHZ:
-		#ifndef CONFIG_PWRMGR_1P2GHZ_OPS_SET_SELECT
+	#ifndef CONFIG_PWRMGR_1P2GHZ_OPS_SET_SELECT
 		printk(KERN_ALERT "AVS says 1.2 GHZ, system conf for 1GHZ");
 		freq_id = A9_FREQ_1000_MHZ;
-		#endif
+	#endif
 		break;
-	case A9_FREQ_1500_MHZ:
+	case A9_FREQ_1400_MHZ:
 	default:
 		BUG();
 	}
@@ -827,7 +828,7 @@ u32 vddvar_a9_vmin_lut[] = {
 };
 
 
-static struct avs_ate_lut_entry ate_lut[] = {
+static struct avs_ate_lut_entry ate_1g_lut[] = {
 	{A9_FREQ_UNKNOWN, SILICON_TYPE_SLOW}, /* 0 - Default*/
 	{A9_FREQ_1000_MHZ, SILICON_TYPE_FAST},   /* 1 */
 	{A9_FREQ_1000_MHZ, SILICON_TYPE_TYP_FAST},/* 2 */
@@ -839,34 +840,67 @@ static struct avs_ate_lut_entry ate_lut[] = {
 	{A9_FREQ_1200_MHZ, SILICON_TYPE_TYPICAL},/* 8 */
 	{A9_FREQ_1200_MHZ, SILICON_TYPE_TYP_SLOW},/* 9 */
 	{A9_FREQ_1200_MHZ, SILICON_TYPE_SLOW},/* 10 */
-	{A9_FREQ_1500_MHZ, SILICON_TYPE_FAST},    /* 11 */
-	{A9_FREQ_1500_MHZ, SILICON_TYPE_TYP_FAST},/* 12 */
-	{A9_FREQ_1500_MHZ, SILICON_TYPE_TYPICAL},/* 13 */
-	{A9_FREQ_1500_MHZ, SILICON_TYPE_TYP_SLOW},/* 14 */
-	{A9_FREQ_1500_MHZ, SILICON_TYPE_SLOW},/* 15 */
+};
+
+static struct avs_ate_lut_entry ate_1p2_lut[] = {
+	{A9_FREQ_UNKNOWN, SILICON_TYPE_SLOW}, /* 0 - Default*/
+	{A9_FREQ_1200_MHZ, SILICON_TYPE_FAST},/* 1 */
+	{A9_FREQ_1200_MHZ, SILICON_TYPE_TYP_FAST},/* 2 */
+	{A9_FREQ_1200_MHZ, SILICON_TYPE_TYPICAL},/* 3 */
+	{A9_FREQ_1200_MHZ, SILICON_TYPE_TYP_SLOW},/* 4 */
+	{A9_FREQ_1200_MHZ, SILICON_TYPE_SLOW},/* 5 */
+};
+
+
+static struct avs_ate_lut_entry ate_1p4_lut[] = {
+	{A9_FREQ_UNKNOWN, SILICON_TYPE_SLOW}, /* 0 - Default*/
+	{A9_FREQ_1400_MHZ, SILICON_TYPE_FAST},    /* 1 */
+	{A9_FREQ_1400_MHZ, SILICON_TYPE_TYP_FAST},/* 2 */
+	{A9_FREQ_1400_MHZ, SILICON_TYPE_TYPICAL},/* 3 */
+	{A9_FREQ_1400_MHZ, SILICON_TYPE_TYP_SLOW},/* 4 */
+	{A9_FREQ_1400_MHZ, SILICON_TYPE_SLOW},/* 5 */
 };
 
 static u32 irdrop_lut[] = {459, 477, 506, 525, UINT_MAX};
 
-static u32 vddvar_adj_val_1g[] = {40, 40, 30, 30, 30};
-static u32 vddvar_adj_val_1200m[] = {50, 50, 40, 40, 30};
+static u32 vddvar_aging_val_1g[] = {40, 40, 30, 30, 30};
+static u32 vddvar_aging_val_1200m[] = {50, 50, 40, 40, 30};
 
-static u32 *vddvar_adj_lut[] = {vddvar_adj_val_1g, vddvar_adj_val_1200m};
+static u32 *vddvar_aging_lut[] = {vddvar_aging_val_1g, vddvar_aging_val_1200m};
 
-int vddfix_adj_lut[] = {
-	0, 10, 20, 30,
-	40, 50, 60, 70,
-	80, 90, 100, 110,
-	120, 130, 140, 150,
-	0, -10, -20, -30,
-	-40, -50, -60, -70,
-	-80, -90, -100, -110,
-	-120, -130, -140, -150
+int vddfix_adj_lut_400m[] = {
+	0, 10, 20, 30, 40, 50, 60, 70,
+	80, 90, 100, 110, 120, 130, 140, 150,
+	0, -10, -20, -30, -40, -50, -60, -70,
+	-80, -90, -100, -110, -120, -130, -140, -150,
 };
+
+int vddfix_adj_lut_450m[] = {
+	0, 10, 20, 30, 40, 50, 60, 70,
+	80, 90, 100, 110, 120, 130, 140, 150,
+	0, -10, -20, -30, -40, -50, -60, -70,
+	-80, -90, -100, -110, -120, -130, -140, -150,
+};
+
+int vddvar_adj_lut[] = {
+	0, 10, 20, 30, 40, 50, 60, 70,
+	0, -10, -20, -30, -40, -50, -60, -70,
+};
+
+int vddvar_a9_adj_lut[] = {
+	0, 10, 20, 30, 40, 50, 60, 70,
+	0, -10, -20, -30, -40, -50, -60, -70,
+};
+
+static struct avs_ate_lut_entry *ate_lut[] = {ate_1g_lut, ate_1p2_lut,
+	ate_1p4_lut};
+
+static int *vddfix_adj_lut[] = {vddfix_adj_lut_400m, vddfix_adj_lut_450m};
 
 static struct avs_pdata avs_pdata = {
 	.flags = AVS_VDDVAR_A9_MIN_EN | AVS_VDDVAR_MIN_EN | AVS_VDDFIX_MIN_EN |
-	AVS_VDDFIX_ADJ_EN | AVS_USE_IRDROP_IF_NO_OTP,
+		AVS_VDDFIX_ADJ_EN | AVS_USE_IRDROP_IF_NO_OTP |
+		AVS_VDDVAR_ADJ_EN | AVS_VDDVAR_A9_ADJ_EN,
 	/* Mem addr where OTP row 3 is copied by ABI*/
 	.avs_addr_row3 = 0x34051FB0,
 	/* Mem addr where OTP row 5 is copied by ABI*/
@@ -881,8 +915,10 @@ static struct avs_pdata avs_pdata = {
 	.vddvar_vmin_lut = vddvar_vmin_lut,
 	.vddvar_a9_vmin_lut = vddvar_a9_vmin_lut,
 	.silicon_type_notify = avs_silicon_type_notify,
-	.vddvar_adj_lut = vddvar_adj_lut,
+	.vddvar_aging_lut = vddvar_aging_lut,
 	.vddfix_adj_lut = vddfix_adj_lut,
+	.vddvar_adj_lut = vddvar_adj_lut,
+	.vddvar_a9_adj_lut = vddvar_a9_adj_lut,
 	.a9_regl_id = "csr_uc",
 	.pwrwdog_base = KONA_PWRWDOG_VA,
 };
