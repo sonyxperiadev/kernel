@@ -188,11 +188,6 @@ void __init hawaii_timer_init(void)
 
 	if (arch_timer_sched_clock_init() != 0)
 		pr_info("Failed to init scheduler clock\n");
-	/*
-	 * Enable PROC system counter
-	 */
-	writel_relaxed(0x2, KONA_PROC_TIMER_VA);
-
 #endif
 }
 

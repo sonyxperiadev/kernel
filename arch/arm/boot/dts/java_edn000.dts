@@ -441,6 +441,12 @@
 		vddsdxc-regulator-name = "vdd_sdxc";
 	};
 
+	timer {
+		compatible = "arm,armv7-timer";
+		interrupts = <1 13 0xf08>,
+					<1 14 0xf08>;
+	};
+
 	wifi-driver {
 		compatible = "bcm,bcm_wifi";
 		wl-reset-gpio = <3>;
