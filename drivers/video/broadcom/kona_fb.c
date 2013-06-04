@@ -1220,10 +1220,7 @@ static int __ref kona_fb_probe(struct platform_device *pdev)
 	dma_addr_t phys_fbbase, dma_addr;
 	uint64_t pixclock_64;
 #ifdef CONFIG_IOMMU_API
-	/* TODO: Temporary workaround to have fb iova=pa.
-	 * Will remove it soon.
-	 **/
-#ifdef CONFIG_BCM_IOVMM_DISABLED__
+#ifdef CONFIG_BCM_IOVMM
 	struct dma_iommu_mapping *mapping;
 #else
 	struct iommu_domain *domain;
@@ -1323,10 +1320,7 @@ static int __ref kona_fb_probe(struct platform_device *pdev)
 	pdev->dev.archdata.iommu = &fb_data->pdev_iommu->dev;
 	pr_info("%s iommu-device(%p)\n", "framebuffer",
 			pdev->dev.archdata.iommu);
-	/* TODO: Temporary workaround to have fb iova=pa.
-	 * Will remove it soon.
-	 **/
-#ifdef CONFIG_BCM_IOVMM_DISABLED__
+#ifdef CONFIG_BCM_IOVMM
 	{
 		int n_pages, i;
 		struct scatterlist *sg;
