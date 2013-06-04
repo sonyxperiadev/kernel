@@ -341,14 +341,8 @@ int bcm_hsotgctrl_bc_reset(void)
 	writel(val, bcm_hsotgctrl_handle->hsotg_ctrl_base +
 			HSOTG_CTRL_BC_CFG_OFFSET); /*Clear reset*/
 
-	val = readl(bcm_hsotgctrl_handle->hsotg_ctrl_base +
-			HSOTG_CTRL_BC_CFG_OFFSET);
-
-	/* Clear overwrite key so we don't accidently write to these bits */
-	val &= ~(HSOTG_CTRL_BC_CFG_BC_OVWR_KEY_MASK |
-			HSOTG_CTRL_BC_CFG_SW_OVWR_EN_MASK);
-	writel(val, bcm_hsotgctrl_handle->hsotg_ctrl_base +
-			HSOTG_CTRL_BC_CFG_OFFSET);
+	/* Keep the SW overwrite enabled */
+	/* This is required for the USB Electrical tests to pass */
 
 	return 0;
 }
