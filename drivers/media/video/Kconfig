@@ -1132,6 +1132,15 @@ config SOC_CAMERA_OV7692
 	help
 	  This is a ov7692 camera driver
 
+config SOC_CAMERA_OV7695
+	tristate "ov7695 camera support"
+	depends on SOC_CAMERA && I2C
+	help
+	  This is a ov7695 camera driver.
+	  It is a 0.3M image sensor
+	  The camera uses MIPI interface
+	  for communication
+
 config SOC_CAMERA_SP0A28
 	tristate "SP0A28 camera support"
 	depends on SOC_CAMERA && I2C

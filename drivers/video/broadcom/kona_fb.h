@@ -42,6 +42,7 @@ extern unsigned ramdump_enable;
 #include "lcd/otm8018b.h"
 #include "lcd/otm8009a.h"
 #include "lcd/ili9806c.h"
+#include "lcd/hx8389b.h"
 #include "lcd/simulator.h"
 #include "lcd/s6e63m0x3.h"
 
@@ -55,6 +56,7 @@ static struct lcd_config *cfgs[] __initdata = {
 	&otm8018b_cfg,
 	&otm8009a_cfg,
 	&ili9806c_cfg,
+	&hx8389b_cfg,
 	&simulator_cfg,
 };
 

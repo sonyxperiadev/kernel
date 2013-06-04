@@ -68,6 +68,11 @@ choice
 	bool "GARNET CHINA EDN000"
 	help
 	  Support for Garnet china edn000
+
+	config MACH_JAVA_C_5606
+	bool "GARNET CHINA 5606"
+	help
+	  Support for Garnet china 5606
 endchoice
 
 choice
