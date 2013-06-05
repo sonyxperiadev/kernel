@@ -191,7 +191,7 @@
 		compatible = "bcm,btlpm";
 		bt-wake-gpio = <32>;
 		host-wake-gpio = <72>;
-		bt-uart-port = <1>;
+		bt-uart-port = <0>;
 	};
 
 	bcmbt-rfkill {
