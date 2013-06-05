@@ -65,6 +65,7 @@ struct file_private_data {
 	wait_queue_head_t queue;
 	struct list_head read_head;
 	struct list_head write_head;
+	struct list_head file_head;
 };
 
 struct dev_job_list {
@@ -87,6 +88,8 @@ struct dev_status_list {
 	struct file_private_data *filp;
 };
 
+extern void v7_clean_dcache_all(void);
+void mm_common_cache_clean(void);
 void mm_common_interlock_completion(struct dev_job_list *job);
 void mm_common_enable_clock(struct mm_common *common);
 void mm_common_disable_clock(struct mm_common *common);

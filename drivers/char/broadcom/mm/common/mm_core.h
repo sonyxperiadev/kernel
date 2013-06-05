@@ -42,7 +42,6 @@ static inline void mm_core_add_job(\
 {
 	if (job->added2core)
 		return;
-	job->job.status = MM_JOB_STATUS_READY;
 /*	pr_debug("%x %x %x", \
 		&job->core_list, \
 		job->core_list.next, \

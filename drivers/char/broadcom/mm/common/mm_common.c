@@ -26,12 +26,38 @@ the GPL, without Broadcom's express prior written consent.
 
 DEFINE_MUTEX(mm_fmwk_mutex);
 LIST_HEAD(mm_dev_list);
+LIST_HEAD(mm_file_list);
 static struct workqueue_struct *single_wq;
 static char *single_wq_name = "mm_wq";
 wait_queue_head_t mm_queue;
 DEFINE_MUTEX(mm_common_mutex);
 
 /* MM Framework globals end*/
+
+static void _mm_common_cache_clean(struct work_struct *dummy)
+{
+	v7_clean_dcache_all();
+	outer_clean_all();
+	dmb();
+}
+
+void mm_common_cache_clean(void)
+{
+	struct file_private_data *this = NULL;
+	struct file_private_data *next = NULL;
+
+	list_for_each_entry_safe(this, next, &mm_file_list, file_head) {
+		struct dev_job_list *job = NULL;
+		struct dev_job_list *temp = NULL;
+		list_for_each_entry_safe(job, temp, &(this->write_head), \
+								file_list) {
+			if (job->job.status == MM_JOB_STATUS_DIRTY)
+				job->job.status = MM_JOB_STATUS_READY;
+		}
+	}
+
+	schedule_on_each_cpu(_mm_common_cache_clean);
+}
 
 void mm_common_enable_clock(struct mm_common *common)
 {
@@ -76,6 +102,7 @@ void mm_common_disable_clock(struct mm_common *common)
 		pr_debug("mm common clock turned off ");
 		if (common->common_clk)
 			clk_disable(common->common_clk);
+
 		atomic_notifier_call_chain(&common->notifier_head, \
 				MM_FMWK_NOTIFY_CLK_DISABLE, NULL); \
 		}
@@ -101,7 +128,7 @@ static struct dev_job_list *mm_common_alloc_job(\
 	job->job.id = 0;
 	job->job.data = NULL;
 	job->job.size = 0;
-	job->job.status = MM_JOB_STATUS_READY;
+	job->job.status = MM_JOB_STATUS_DIRTY;
 
 	return job;
 }
@@ -173,7 +200,6 @@ void mm_common_add_job(struct work_struct *work)
 				(job->job.type&0xFF0000)>>16];
 
 	mutex_lock(&mm_common_mutex);
-	job->job.status = MM_JOB_STATUS_READY;
 	if (filp->interlock_count == 0)
 		mm_core_add_job(job, core_dev);
 	list_add_tail(&(job->file_list), &(filp->write_head));
@@ -208,7 +234,6 @@ void mm_common_wait_job(struct work_struct *work)
 		}
 	if (from) {
 		struct file_private_data *from_filp = from->filp;
-		from->job.status = MM_JOB_STATUS_READY;
 		list_add_tail(&(from->file_list), &(from_filp->write_head));
 		from->successor = to;
 		to->predecessor = from;
@@ -216,7 +241,6 @@ void mm_common_wait_job(struct work_struct *work)
 		mm_common_priority_update(to->predecessor, to->filp->prio);
 		}
 
-	to->job.status = MM_JOB_STATUS_READY;
 	list_add_tail(&(to->file_list), &(to_filp->write_head));
 
 	if ((from == NULL) && list_is_singular(&to_filp->write_head)) {
@@ -298,6 +322,9 @@ void mm_common_release_jobs(struct work_struct *work)
 		kfree(job);
 		job = NULL;
 		}
+
+	list_del_init(&filp->file_head);
+
 	filp->read_count = -1;
 	pr_debug(" %p %d", filp, filp->read_count);
 	wake_up_all(&filp->queue);
@@ -306,6 +333,21 @@ void mm_common_release_jobs(struct work_struct *work)
 
 #define SCHEDULE_RELEASE_WORK(b)	SCHEDULE_JOB_WORK(filp, \
 					b, mm_common_release_jobs)
+
+void mm_common_add_file(struct work_struct *work)
+{
+	struct job_maint_work *maint_job = container_of(work, \
+					struct job_maint_work, \
+					work);
+	struct file_private_data *filp = maint_job->u.filp;
+
+	mutex_lock(&mm_common_mutex);
+	list_add_tail(&filp->file_head, &mm_file_list);
+	mutex_unlock(&mm_common_mutex);
+}
+
+#define SCHEDULE_ADD_FILE_WORK(b)	SCHEDULE_JOB_WORK(filp, \
+					b, mm_common_add_file)
 
 void mm_common_interlock_completion(struct dev_job_list *job)
 {
@@ -417,9 +459,13 @@ static int mm_file_open(struct inode *inode, struct file *filp)
 
 	INIT_LIST_HEAD(&private->read_head);
 	INIT_LIST_HEAD(&private->write_head);
+	INIT_LIST_HEAD(&private->file_head);
 	pr_debug(" %p ", private);
 
 	filp->private_data = private;
+
+	/* Add file to global file list */
+	SCHEDULE_ADD_FILE_WORK(private);
 
 	return 0;
 }

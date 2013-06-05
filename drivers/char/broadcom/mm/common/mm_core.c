@@ -95,6 +95,8 @@ static void mm_core_disable_clock(struct mm_core *core_dev)
 		}
 }
 
+static unsigned int dirty_cnt;
+static unsigned int clean_cnt;
 static void mm_fmwk_job_scheduler(struct work_struct *work)
 {
 	mm_job_status_e status = MM_JOB_STATUS_INVALID;
@@ -122,6 +124,18 @@ static void mm_fmwk_job_scheduler(struct work_struct *work)
 	is_hw_busy = hw_ifc->mm_get_status(hw_ifc->mm_device_id);
 	if (!is_hw_busy) {
 		if (job_list_elem->job.size) {
+
+			if (job_list_elem->job.status == MM_JOB_STATUS_READY)
+				clean_cnt++;
+
+			if (job_list_elem->job.status == MM_JOB_STATUS_DIRTY) {
+				mm_common_cache_clean();
+				dirty_cnt++;
+				if ((dirty_cnt % 1000) == 0)
+					pr_debug("mm jobs dirty=%d, clean=%d\n",
+					dirty_cnt, clean_cnt);
+			}
+
 			status	= hw_ifc->mm_start_job(\
 					hw_ifc->mm_device_id, \
 					&job_list_elem->job, 0);
