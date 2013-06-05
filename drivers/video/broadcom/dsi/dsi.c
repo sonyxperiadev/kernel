@@ -113,7 +113,14 @@ static Int32 DSI_WinReset(DISPDRV_HANDLE_T drvH);
 
 static int DSI_ReadReg(DISPDRV_HANDLE_T drvH, UInt8 reg, UInt8 *rxBuff);
 
+static Int32 DSI_DCS_Read(DispDrv_PANEL_t *pPanel,
+		UInt8 reg, UInt8 *rxBuff, UInt8 buffLen);
+
 static int DSI_ReadPanelID(DispDrv_PANEL_t *pPanel);
+void panel_write(UInt8 *buff);
+void panel_read(UInt8 reg, UInt8 *rxBuff, UInt8 buffLen);
+extern void panel_initialize(char *init_seq);
+extern void panel_read_id(void);
 
 static DISPDRV_T disp_drv_dsi = {
 	.init = &DSI_Init,
@@ -683,6 +690,29 @@ Int32 DSI_Close(DISPDRV_HANDLE_T drvH)
 	return res;
 }
 
+/*
+ *
+ *   Function Name:   panel_write
+ *
+ *   Description:  interface to other driver
+ *
+ */
+void panel_write(UInt8 *buff)
+{
+	DSI_ExecCmndList(panel, (char *)buff);
+}
+
+/*
+ *
+ *   Function Name:   panel_read
+ *
+ *   Description:  interface to other driver
+ *
+ */
+void panel_read(UInt8 reg, UInt8 *rxBuff, UInt8 buffLen)
+{
+	DSI_DCS_Read(panel, reg, rxBuff, buffLen);
+}
 
 /*
  *
@@ -738,6 +768,95 @@ static void DSI_ExecCmndList(DispDrv_PANEL_t *pPanel, char *buff)
 	}
 err_size:
 	return;
+}
+
+/*
+ *
+ *   Function Name: DSI_SetMaxRtnPktSize
+ *
+ *   Description:   Set Window
+ *
+ */
+static Int32 DSI_SetMaxRtnPktSize(DISPDRV_HANDLE_T drvH, UInt8 size)
+{
+	DispDrv_PANEL_t	*pPanel	= (DispDrv_PANEL_t *)drvH;
+	CSL_DSI_CMND_t msg;
+	UInt8 txData[2];  /* DCS Rd Command */
+	Int32 res = 0;
+	CSL_LCD_RES_T cslRes;
+
+	txData[0] = size;
+	txData[1] = 0x0;
+	msg.vc = pPanel->cmnd_mode->vc;
+	msg.isLP = pPanel->disp_info->cmnd_LP;
+	msg.endWithBta = FALSE;
+	msg.reply = NULL;
+	msg.dsiCmnd    = DSI_DT_SH_MAX_RET_PKT_SIZE;
+	msg.msg        = &txData[0];
+	msg.msgLen     = 2;
+	msg.isLong     = FALSE;
+	msg.endWithBta = FALSE;
+
+	DSI_INFO("[DISPDRV]: disCmnd[0x%02X]\n", DSI_DT_SH_MAX_RET_PKT_SIZE);
+	cslRes = CSL_DSI_SendPacket(pPanel->clientH, &msg, FALSE);
+	if (cslRes != CSL_LCD_OK) {
+
+		DSI_ERR(
+			"[DISPDRV]:	ERR: Setting Max. Return Packet Size [0x%02X]\n\r"
+			, DSI_DT_SH_MAX_RET_PKT_SIZE);
+		res = -1;
+	}
+	return res;
+}
+
+/*
+ *
+ *   Function Name: DSI_DCS_Read
+ *
+ *   Description:   DSI Read Reg
+ *
+ */
+static Int32 DSI_DCS_Read(DispDrv_PANEL_t *pPanel,
+		UInt8 reg, UInt8 *rxBuff, UInt8 buffLen)
+{
+	CSL_DSI_CMND_t msg;
+	CSL_DSI_REPLY_t rxMsg;      /* DSI RX message */
+	UInt8 txData[2], i;  /* DCS Rd Command */
+	Int32 res = 0;
+	CSL_LCD_RES_T cslRes;
+
+	msg.dsiCmnd    = DSI_DT_SH_DCS_RD_P0;
+	msg.msg        = &txData[0];
+	msg.msgLen     = 2;
+	msg.vc = pPanel->cmnd_mode->vc;
+	msg.isLP = pPanel->disp_info->cmnd_LP;
+	if (buffLen > 2)
+		msg.isLong     = TRUE;
+	else
+		msg.isLong     = FALSE;
+	msg.endWithBta = TRUE;
+
+	rxMsg.pReadReply = (UInt8 *)rxBuff;
+	msg.reply        = (CSL_DSI_REPLY_t *)&rxMsg;
+
+	txData[0] = reg;
+	txData[1] = 0x0;
+	DSI_SetMaxRtnPktSize(pPanel, buffLen);
+	cslRes = CSL_DSI_SendPacket(pPanel->clientH, &msg, FALSE);
+	if ((cslRes != CSL_LCD_OK) ||
+		((rxMsg.type & DSI_RX_TYPE_READ_REPLY) == 0)) {
+
+		DSI_ERR(
+			"[DISPDRV]:	ERR: Reading From Reg[0x%08X]\n\r"
+			, reg);
+		res = -1;
+	} else {
+		DSI_INFO("[DISPDRV]: Command: 0x%02X\n", reg);
+		for (i = 0; i < buffLen; i++)
+			DSI_INFO("Parameter[%d]: [0x%02X]\n", i, rxBuff[i]);
+		res = rxMsg.readReplySize;
+	}
+	return res;
 }
 
 /*

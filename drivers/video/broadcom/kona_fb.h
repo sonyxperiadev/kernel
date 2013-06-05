@@ -30,19 +30,26 @@ extern int crash_dump_ui_on;
 extern unsigned ramdump_enable;
 #endif
 
+#if defined(CONFIG_MACH_HAWAII_SS_LOGANDS) ||	\
+	defined(CONFIG_MACH_HAWAII_SS_LOGAN)
+#include "lcd/logan_nt35510.h"
+#else
 #include "lcd/nt35510.h"
+#endif
 #include "lcd/nt35512.h"
 #include "lcd/nt35516.h"
 #include "lcd/otm1281a.h"
 #include "lcd/otm8018b.h"
 #include "lcd/otm8009a.h"
 #include "lcd/simulator.h"
+#include "lcd/s6e63m0x3.h"
 
 
 static struct lcd_config *cfgs[] __initdata = {
 	&nt35510_cfg,
 	&nt35512_cfg,
 	&nt35516_cfg,
+	&s6e63m0x3_cfg,
 	&otm1281a_cfg,
 	&otm8018b_cfg,
 	&otm8009a_cfg,
