@@ -248,7 +248,7 @@ static struct regulator_init_data bcm59xxx_simldo1_data = {
 			.max_uV = 3300000,
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
-			.always_on = 1,
+			.always_on = 0,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(sim1_supply),
 	.consumer_supplies = sim1_supply,
@@ -264,7 +264,7 @@ static struct regulator_init_data bcm59xxx_simldo2_data = {
 			.max_uV = 3300000,
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
-			.always_on = 1,
+			.always_on = 0,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(sim2_supply),
 	.consumer_supplies = sim2_supply,
@@ -282,7 +282,7 @@ static struct regulator_init_data bcm59xxx_sdldo_data = {
 			.max_uV = 3300000,
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
-			.always_on = 1,
+			.always_on = 0,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(sd_supply),
 	.consumer_supplies = sd_supply,
@@ -299,7 +299,7 @@ static struct regulator_init_data bcm59xxx_sdxldo_data = {
 			.max_uV = 3300000,
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
-			.always_on = 1,
+			.always_on = 0,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(sdx_supply),
 	.consumer_supplies = sdx_supply,
@@ -316,7 +316,7 @@ static struct regulator_init_data bcm59xxx_mmcldo1_data = {
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_MODE |
 			REGULATOR_CHANGE_VOLTAGE,
-			.always_on = 1,
+			.always_on = 0,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(mmc1_supply),
 	.consumer_supplies = mmc1_supply,
@@ -333,7 +333,7 @@ static struct regulator_init_data bcm59xxx_mmcldo2_data = {
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_MODE |
 			REGULATOR_CHANGE_VOLTAGE,
-			.always_on = 1,
+			.always_on = 0,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(mmc2_supply),
 	.consumer_supplies = mmc2_supply,
@@ -347,8 +347,12 @@ static struct regulator_init_data bcm59xxx_audldo_data = {
 			.name = "audldo",
 			.min_uV = 1300000,
 			.max_uV = 3300000,
-			.valid_ops_mask =
-			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
+			.valid_ops_mask = REGULATOR_CHANGE_STATUS |
+					REGULATOR_CHANGE_VOLTAGE |
+					REGULATOR_CHANGE_MODE,
+			.valid_modes_mask = REGULATOR_MODE_NORMAL |
+						REGULATOR_MODE_IDLE |
+						REGULATOR_MODE_STANDBY,
 			.always_on = 1,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(aud_supply),
@@ -365,7 +369,7 @@ static struct regulator_init_data bcm59xxx_usbldo_data = {
 			.max_uV = 3300000,
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
-			.always_on = 1,
+			.always_on = 0,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(usb_supply),
 	.consumer_supplies = usb_supply,
@@ -381,7 +385,7 @@ static struct regulator_init_data bcm59xxx_micldo_data = {
 			.max_uV = 3300000,
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
-			.always_on = 1,
+			.always_on = 0,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(mic_supply),
 	.consumer_supplies = mic_supply,
@@ -398,7 +402,7 @@ static struct regulator_init_data bcm59xxx_vibldo_data = {
 			.max_uV = 3300000,
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
-			.always_on = 1,
+			.always_on = 0,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(vib_supply),
 	.consumer_supplies = vib_supply,
@@ -414,7 +418,7 @@ static struct regulator_init_data bcm59xxx_gpldo1_data = {
 			.max_uV = 3300000,
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
-			.always_on = 1,
+			.always_on = 0,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(gpldo1_supply),
 	.consumer_supplies = gpldo1_supply,
@@ -431,7 +435,7 @@ static struct regulator_init_data bcm59xxx_gpldo2_data = {
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_MODE |
 			REGULATOR_CHANGE_VOLTAGE,
-			.always_on = 1,
+			.always_on = 0,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(gpldo2_supply),
 	.consumer_supplies = gpldo2_supply,
@@ -448,7 +452,7 @@ static struct regulator_init_data bcm59xxx_gpldo3_data = {
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE \
 				| REGULATOR_CHANGE_MODE,
-			.always_on = 1,
+			.always_on = 0,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(gpldo3_supply),
 	.consumer_supplies = gpldo3_supply,
@@ -483,7 +487,7 @@ static struct regulator_init_data bcm59xxx_lvldo1_data = {
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE|
 			REGULATOR_CHANGE_MODE,
-			.always_on = 1,
+			.always_on = 0,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(lvldo1_supply),
 	.consumer_supplies = lvldo1_supply,
@@ -500,7 +504,7 @@ static struct regulator_init_data bcm59xxx_lvldo2_data = {
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE|
 			REGULATOR_CHANGE_MODE ,
-			.always_on = 1,
+			.always_on = 0,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(lvldo2_supply),
 	.consumer_supplies = lvldo2_supply,
@@ -517,7 +521,7 @@ static struct regulator_init_data bcm59xxx_vsr_data = {
 			.valid_ops_mask =
 			REGULATOR_CHANGE_MODE | REGULATOR_CHANGE_VOLTAGE \
 				| REGULATOR_CHANGE_STATUS,
-			.always_on = 1,
+			.always_on = 0,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(vsr_supply),
 	.consumer_supplies = vsr_supply,
@@ -614,7 +618,7 @@ static struct regulator_init_data bcm59xxx_iosr2_data = {
 			.min_uV = 860000,
 			.max_uV = 1800000,
 			.valid_ops_mask = REGULATOR_CHANGE_STATUS,
-			.always_on = 1,
+			.always_on = 0,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(iosr2_supply),
 	.consumer_supplies = iosr2_supply,
@@ -627,7 +631,7 @@ struct bcmpmu59xxx_regulator_init_data
 			.id = BCMPMU_REGULATOR_RFLDO,
 			.initdata = &bcm59xxx_rfldo_data,
 			.pc_pins_map =
-				PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
+				PCPIN_MAP_ENC(0, PMU_PC2),
 			.name = "rf",
 			.req_volt = 0,
 #if defined(CONFIG_MACH_HAWAII_SS_COMMON)
@@ -640,8 +644,7 @@ struct bcmpmu59xxx_regulator_init_data
 		[BCMPMU_REGULATOR_CAMLDO1] = {
 			.id = BCMPMU_REGULATOR_CAMLDO1,
 			.initdata = &bcm59xxx_camldo1_data,
-			.pc_pins_map
-				= PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
+			.pc_pins_map = PCPIN_MAP_ENC(0, PMU_PC2|PMU_PC3),
 			.name = "cam1",
 			.req_volt = 0,
 		},
@@ -656,8 +659,7 @@ struct bcmpmu59xxx_regulator_init_data
 		[BCMPMU_REGULATOR_SIMLDO1] = {
 			.id = BCMPMU_REGULATOR_SIMLDO1,
 			.initdata = &bcm59xxx_simldo1_data,
-			.pc_pins_map
-				= PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
+			.pc_pins_map = PCPIN_MAP_ENC(0, PMU_PC1),
 			.name = "sim1",
 			.req_volt = 0,
 		},
@@ -665,7 +667,7 @@ struct bcmpmu59xxx_regulator_init_data
 			.id = BCMPMU_REGULATOR_SIMLDO2,
 			.initdata = &bcm59xxx_simldo2_data,
 			.pc_pins_map =
-				PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
+				PCPIN_MAP_ENC(0, PMU_PC1),
 			.name = "sim2",
 			.req_volt = 0,
 		},
@@ -680,6 +682,7 @@ struct bcmpmu59xxx_regulator_init_data
 		[BCMPMU_REGULATOR_SDXLDO] = {
 			.id = BCMPMU_REGULATOR_SDXLDO,
 			.initdata = &bcm59xxx_sdxldo_data,
+			.dsm_mode = BCMPMU_REGL_LPM_IN_DSM,
 			.pc_pins_map =
 				 PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
 			.name = "sdx",
@@ -705,8 +708,7 @@ struct bcmpmu59xxx_regulator_init_data
 		[BCMPMU_REGULATOR_AUDLDO] = {
 			.id = BCMPMU_REGULATOR_AUDLDO,
 			.initdata = &bcm59xxx_audldo_data,
-			.pc_pins_map
-				= PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
+			.pc_pins_map = PCPIN_MAP_ENC(0, PMU_PC2|PMU_PC3),
 			.name = "aud",
 			.req_volt = 0,
 #if defined(CONFIG_MACH_HAWAII_SS_COMMON)
@@ -721,8 +723,7 @@ struct bcmpmu59xxx_regulator_init_data
 			.id = BCMPMU_REGULATOR_MICLDO,
 			.initdata = &bcm59xxx_micldo_data,
 			.pc_pins_map =
-				PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
-				/*Not used*/
+				PCPIN_MAP_ENC(0, 0),  /*Not used*/
 			.name = "mic",
 			.req_volt = 0,
 		},
@@ -745,34 +746,32 @@ struct bcmpmu59xxx_regulator_init_data
 		[BCMPMU_REGULATOR_GPLDO1] = {
 			.id = BCMPMU_REGULATOR_GPLDO1,
 			.initdata = &bcm59xxx_gpldo1_data,
-			.pc_pins_map
-				= PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
-				/*Not used*/
+			.pc_pins_map = PCPIN_MAP_ENC(0, 0), /*Not used*/
 			.name = "gp1",
 			.req_volt = 0,
 		},
 		[BCMPMU_REGULATOR_GPLDO2] = {
 			.id = BCMPMU_REGULATOR_GPLDO2,
 			.initdata = &bcm59xxx_gpldo2_data,
-			.pc_pins_map
-				= PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
-				/*Not used*/
+			.dsm_mode = BCMPMU_REGL_ON_IN_DSM,
+			.pc_pins_map =
+				PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
 			.name = "gp2",
 			.req_volt = 0,
 		},
 		[BCMPMU_REGULATOR_GPLDO3] = {
 			.id = BCMPMU_REGULATOR_GPLDO3,
 			.initdata = &bcm59xxx_gpldo3_data,
-			.pc_pins_map
-				= PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
+			.pc_pins_map =
+				PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
 			.name = "gp3",
 			.req_volt = 0,
 		},
 		[BCMPMU_REGULATOR_TCXLDO] = {
 			.id = BCMPMU_REGULATOR_TCXLDO,
 			.initdata = &bcm59xxx_tcxldo_data,
-			.pc_pins_map
-				= PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
+			.dsm_mode = BCMPMU_REGL_ON_IN_DSM,
+			.pc_pins_map = PCPIN_MAP_ENC(0, PMU_PC3),
 			.name = "tcx",
 			.req_volt = 0,
 		},
@@ -780,8 +779,8 @@ struct bcmpmu59xxx_regulator_init_data
 		[BCMPMU_REGULATOR_LVLDO1] = {
 			.id = BCMPMU_REGULATOR_LVLDO1,
 			.initdata = &bcm59xxx_lvldo1_data,
-			.pc_pins_map
-				= PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
+			.pc_pins_map =
+				PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
 			.name = "lv1",
 			.req_volt = 0,
 		},
@@ -789,9 +788,7 @@ struct bcmpmu59xxx_regulator_init_data
 		[BCMPMU_REGULATOR_LVLDO1] = {
 			.id = BCMPMU_REGULATOR_LVLDO1,
 			.initdata = &bcm59xxx_lvldo1_data,
-			.pc_pins_map
-				= PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
-				/*Not used*/
+			.pc_pins_map = PCPIN_MAP_ENC(0, 0), /*Not used*/
 			.name = "lv1",
 			.req_volt = 0,
 		},
@@ -815,8 +812,7 @@ struct bcmpmu59xxx_regulator_init_data
 		[BCMPMU_REGULATOR_CSR] = {
 			.id = BCMPMU_REGULATOR_CSR,
 			.initdata = &bcm59xxx_csr_data,
-			.pc_pins_map
-				= PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
+			.pc_pins_map = PCPIN_MAP_ENC(0, PMU_PC3),
 			.name = "csr",
 			.req_volt = 0,
 		},
@@ -824,7 +820,7 @@ struct bcmpmu59xxx_regulator_init_data
 			.id = BCMPMU_REGULATOR_MMSR,
 			.initdata = &bcm59xxx_mmsr_data,
 			.pc_pins_map =
-				PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
+				PCPIN_MAP_ENC(0, PMU_PC2),
 			.name = "mmsr",
 			.req_volt = 0,
 		},
@@ -839,8 +835,7 @@ struct bcmpmu59xxx_regulator_init_data
 		[BCMPMU_REGULATOR_SDSR2] = {
 			.id = BCMPMU_REGULATOR_SDSR2,
 			.initdata = &bcm59xxx_sdsr2_data,
-			.pc_pins_map
-				= PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
+			.pc_pins_map = PCPIN_MAP_ENC(0, PMU_PC2|PMU_PC3),
 			.name = "sdsr2",
 			.req_volt = 0,
 		},
@@ -855,9 +850,7 @@ struct bcmpmu59xxx_regulator_init_data
 		[BCMPMU_REGULATOR_IOSR2] = {
 			.id = BCMPMU_REGULATOR_IOSR2,
 			.initdata = &bcm59xxx_iosr2_data,
-			.pc_pins_map
-				= PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
-				/*not used*/
+			.pc_pins_map = PCPIN_MAP_ENC(0, 0), /*not used*/
 			.name = "iosr2",
 			.req_volt = 0,
 		},
