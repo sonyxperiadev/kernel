@@ -2205,7 +2205,7 @@ int get_signal_to_deliver(siginfo_t *info, struct k_sigaction *return_ka,
 	 * do_signal_stop() and ptrace_stop() do freezable_schedule() and
 	 * thus do not need another check after return.
 	 */
-	try_to_freeze();
+	try_to_freeze_nowarn();
 
 relock:
 	spin_lock_irq(&sighand->siglock);

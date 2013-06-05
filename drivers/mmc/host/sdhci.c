@@ -699,7 +699,6 @@ static u8 sdhci_calc_timeout(struct sdhci_host *host, struct mmc_command *cmd)
 		DBG("%s: Too large timeout 0x%x requested for CMD%d!\n",
 		    mmc_hostname(host->mmc), count, cmd->opcode);
 		count = 0xE;
-	}
 
 	return count;
 }

@@ -429,6 +429,19 @@ static inline void binder_unlock(const char *tag)
 	mutex_unlock(&binder_main_lock);
 }
 
+static inline void binder_lock(const char *tag)
+{
+	trace_binder_lock(tag);
+	mutex_lock(&binder_main_lock);
+	trace_binder_locked(tag);
+}
+
+static inline void binder_unlock(const char *tag)
+{
+	trace_binder_unlock(tag);
+	mutex_unlock(&binder_main_lock);
+}
+
 static void binder_set_nice(long nice)
 {
 	long min_nice;
@@ -2570,6 +2583,8 @@ static long binder_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	void __user *ubuf = (void __user *)arg;
 
 	/*pr_info("binder_ioctl: %d:%d %x %lx\n", proc->pid, current->pid, cmd, arg);*/
+
+	trace_binder_ioctl(cmd, arg);
 
 	trace_binder_ioctl(cmd, arg);
 

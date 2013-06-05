@@ -137,6 +137,13 @@ void led_trigger_set(struct led_classdev *led_cdev, struct led_trigger *trig)
 		kobject_uevent_env(&led_cdev->dev->kobj, KOBJ_CHANGE, envp);
 		kfree(event);
 	}
+
+	if (event) {
+		envp[0] = event;
+		envp[1] = NULL;
+		kobject_uevent_env(&led_cdev->dev->kobj, KOBJ_CHANGE, envp);
+		kfree(event);
+	}
 }
 EXPORT_SYMBOL_GPL(led_trigger_set);
 

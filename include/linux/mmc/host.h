@@ -393,6 +393,14 @@ extern void mmc_set_embedded_sdio_data(struct mmc_host *host,
 				       int num_funcs);
 #endif
 
+#ifdef CONFIG_MMC_EMBEDDED_SDIO
+extern void mmc_set_embedded_sdio_data(struct mmc_host *host,
+				       struct sdio_cis *cis,
+				       struct sdio_cccr *cccr,
+				       struct sdio_embedded_func *funcs,
+				       int num_funcs);
+#endif
+
 static inline void *mmc_priv(struct mmc_host *host)
 {
 	return (void *)host->private;

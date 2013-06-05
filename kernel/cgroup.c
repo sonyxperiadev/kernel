@@ -335,6 +335,33 @@ static void cgroup_release_agent(struct work_struct *work);
 static DECLARE_WORK(release_agent_work, cgroup_release_agent);
 static void check_for_release(struct cgroup *cgrp);
 
+/*
+ * A queue for waiters to do rmdir() cgroup. A tasks will sleep when
+ * cgroup->count == 0 && list_empty(&cgroup->children) && subsys has some
+ * reference to css->refcnt. In general, this refcnt is expected to goes down
+ * to zero, soon.
+ *
+ * CGRP_WAIT_ON_RMDIR flag is set under cgroup's inode->i_mutex;
+ */
+static DECLARE_WAIT_QUEUE_HEAD(cgroup_rmdir_waitq);
+
+static void cgroup_wakeup_rmdir_waiter(struct cgroup *cgrp)
+{
+	if (unlikely(test_and_clear_bit(CGRP_WAIT_ON_RMDIR, &cgrp->flags)))
+		wake_up_all(&cgroup_rmdir_waitq);
+}
+
+void cgroup_exclude_rmdir(struct cgroup_subsys_state *css)
+{
+	css_get(css);
+}
+
+void cgroup_release_and_wakeup_rmdir(struct cgroup_subsys_state *css)
+{
+	cgroup_wakeup_rmdir_waiter(css->cgroup);
+	css_put(css);
+}
+
 /* Link structure for associating css_set objects with cgroups */
 struct cg_cgroup_link {
 	/*
@@ -390,14 +417,9 @@ static unsigned long css_set_hash(struct cgroup_subsys_state *css[])
 	return key;
 }
 
-/* We don't maintain the lists running through each css_set to its
- * task until after the first call to cgroup_iter_start(). This
- * reduces the fork()/exit() overhead for people who have cgroups
- * compiled into their kernel but not actually in use */
-static int use_task_css_set_links __read_mostly;
-
-static void __put_css_set(struct css_set *cg, int taskexit)
+static void free_css_set_work(struct work_struct *work)
 {
+	struct css_set *cg = container_of(work, struct css_set, work);
 	struct cg_cgroup_link *link;
 	struct cg_cgroup_link *saved_link;
 	/*
@@ -417,6 +439,7 @@ static void __put_css_set(struct css_set *cg, int taskexit)
 	hash_del(&cg->hlist);
 	css_set_count--;
 
+	write_lock(&css_set_lock);
 	list_for_each_entry_safe(link, saved_link, &cg->cg_links,
 				 cg_link_list) {
 		struct cgroup *cgrp = link->cgrp;
@@ -434,15 +457,30 @@ static void __put_css_set(struct css_set *cg, int taskexit)
 			if (taskexit)
 				set_bit(CGRP_RELEASABLE, &cgrp->flags);
 			check_for_release(cgrp);
+			cgroup_wakeup_rmdir_waiter(cgrp);
 		}
 		rcu_read_unlock();
 
 		kfree(link);
 	}
-
 	write_unlock(&css_set_lock);
-	kfree_rcu(cg, rcu_head);
+
+	kfree(cg);
 }
+
+static void free_css_set_rcu(struct rcu_head *obj)
+{
+	struct css_set *cg = container_of(obj, struct css_set, rcu_head);
+
+	INIT_WORK(&cg->work, free_css_set_work);
+	schedule_work(&cg->work);
+}
+
+/* We don't maintain the lists running through each css_set to its
+ * task until after the first call to cgroup_iter_start(). This
+ * reduces the fork()/exit() overhead for people who have cgroups
+ * compiled into their kernel but not actually in use */
+static int use_task_css_set_links __read_mostly;
 
 /*
  * refcounted get/put for css_set objects
@@ -452,14 +490,26 @@ static inline void get_css_set(struct css_set *cg)
 	atomic_inc(&cg->refcount);
 }
 
-static inline void put_css_set(struct css_set *cg)
+static void put_css_set(struct css_set *cg)
 {
-	__put_css_set(cg, 0);
-}
+	/*
+	 * Ensure that the refcount doesn't hit zero while any readers
+	 * can see it. Similar to atomic_dec_and_lock(), but for an
+	 * rwlock
+	 */
+	if (atomic_add_unless(&cg->refcount, -1, 1))
+		return;
+	write_lock(&css_set_lock);
+	if (!atomic_dec_and_test(&cg->refcount)) {
+		write_unlock(&css_set_lock);
+		return;
+	}
 
-static inline void put_css_set_taskexit(struct css_set *cg)
-{
-	__put_css_set(cg, 1);
+	hlist_del(&cg->hlist);
+	css_set_count--;
+
+	write_unlock(&css_set_lock);
+	call_rcu(&cg->rcu_head, free_css_set_rcu);
 }
 
 /*
@@ -790,7 +840,7 @@ static struct cgroup *task_cgroup_from_root(struct task_struct *task,
  * cgroup_attach_task(), which overwrites one task's cgroup pointer with
  * another.  It does so using cgroup_mutex, however there are
  * several performance critical places that need to reference
- * task->cgroup without the expense of grabbing a system global
+ * task->cgroups without the expense of grabbing a system global
  * mutex.  Therefore except as noted below, when dereferencing or, as
  * in cgroup_attach_task(), modifying a task's cgroup pointer we use
  * task_lock(), which acts on a spinlock (task->alloc_lock) already in
@@ -1948,6 +1998,7 @@ int cgroup_attach_task(struct cgroup *cgrp, struct task_struct *tsk)
 	struct cgroupfs_root *root = cgrp->root;
 	struct cgroup_taskset tset = { };
 	struct css_set *newcg;
+	struct css_set *cg;
 
 	/* @tsk either already exited or can't exit until the end */
 	if (tsk->flags & PF_EXITING)
@@ -1982,6 +2033,11 @@ int cgroup_attach_task(struct cgroup *cgrp, struct task_struct *tsk)
 		retval = -ENOMEM;
 		goto out;
 	}
+
+	task_lock(tsk);
+	cg = tsk->cgroups;
+	get_css_set(cg);
+	task_unlock(tsk);
 
 	cgroup_task_migrate(cgrp, oldcgrp, tsk, newcg);
 
@@ -4420,7 +4476,6 @@ static int cgroup_destroy_locked(struct cgroup *cgrp)
 	cgroup_d_remove_dir(d);
 	dput(d);
 
-	set_bit(CGRP_RELEASABLE, &parent->flags);
 	check_for_release(parent);
 
 	/*

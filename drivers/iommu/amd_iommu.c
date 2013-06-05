@@ -2479,6 +2479,13 @@ static int device_change_notifier(struct notifier_block *nb,
 
 		dev->archdata.dma_ops = &amd_iommu_dma_ops;
 
+		dev_data = get_dev_data(dev);
+
+		if (!dev_data->passthrough)
+			dev->archdata.dma_ops = &amd_iommu_dma_ops;
+		else
+			dev->archdata.dma_ops = &nommu_dma_ops;
+
 		break;
 	case BUS_NOTIFY_DEL_DEVICE:
 

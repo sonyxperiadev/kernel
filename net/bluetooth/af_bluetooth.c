@@ -35,6 +35,15 @@
 #define BT_DBG(D...)
 #endif
 
+#ifdef CONFIG_ANDROID_PARANOID_NETWORK
+#include <linux/android_aid.h>
+#endif
+
+#ifndef CONFIG_BT_SOCK_DEBUG
+#undef  BT_DBG
+#define BT_DBG(D...)
+#endif
+
 #define VERSION "2.16"
 
 /* Bluetooth sockets */

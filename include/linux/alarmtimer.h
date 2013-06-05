@@ -52,4 +52,7 @@ u64 alarm_forward(struct alarm *alarm, ktime_t now, ktime_t interval);
 /* Provide way to access the rtc device being used by alarmtimers */
 struct rtc_device *alarmtimer_get_rtcdev(void);
 
+/* Provide way to access the rtc device being used by alarmtimers */
+struct rtc_device *alarmtimer_get_rtcdev(void);
+
 #endif

@@ -928,6 +928,7 @@ static void __lpc_handle_xmit(struct net_device *ndev)
 			ndev->stats.tx_packets++;
 			ndev->stats.tx_bytes += skblen;
 		}
+		dev_kfree_skb_irq(skb);
 
 		txcidx = readl(LPC_ENET_TXCONSUMEINDEX(pldat->net_base));
 	}

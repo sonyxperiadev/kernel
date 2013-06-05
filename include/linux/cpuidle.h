@@ -175,6 +175,10 @@ static inline void cpuidle_coupled_parallel_barrier(struct cpuidle_device *dev, 
 }
 #endif
 
+#ifdef CONFIG_ARCH_NEEDS_CPU_IDLE_COUPLED
+void cpuidle_coupled_parallel_barrier(struct cpuidle_device *dev, atomic_t *a);
+#endif
+
 /******************************
  * CPUIDLE GOVERNOR INTERFACE *
  ******************************/

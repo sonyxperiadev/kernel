@@ -263,6 +263,15 @@ static int ehci_hcd_omap_probe(struct platform_device *pdev)
 	}
 
 
+	ret = usb_add_hcd(hcd, irq, IRQF_SHARED);
+	if (ret) {
+		dev_err(dev, "failed to add hcd with err %d\n", ret);
+		goto err_add_hcd;
+	}
+
+	/* root ports should always stay powered */
+	ehci_port_power(omap_ehci, 1);
+
 	return 0;
 
 err_pm_runtime:
