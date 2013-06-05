@@ -1290,11 +1290,11 @@ __initdata struct lcd_config nt35512_cfg = {
 	.vburst = true,
 	.cont_clk = false,
 	.hs = 10,
-	.hbp = 80,
-	.hfp = 80,
+	.hbp = 20,
+	.hfp = 20,
 	.vs = 2,
-	.vbp = 40,
-	.vfp = 40,
+	.vbp = 8,
+	.vfp = 8,
 };
 
 #endif
