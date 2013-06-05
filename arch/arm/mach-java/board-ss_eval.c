@@ -120,8 +120,12 @@
 #include <linux/bcmi2cnfc.h>
 #endif
 
-#if defined(CONFIG_SENSORS_BMA2X2)
-#include <linux/bma222.h>
+#if defined  (CONFIG_SENSORS_BMC150)
+#include <linux/bst_sensor_common.h>
+#endif
+
+#if defined(CONFIG_SENSORS_GP2AP002)
+#include <linux/gp2ap002_dev.h>
 #endif
 
 
@@ -1023,54 +1027,103 @@ static struct i2c_board_info __initdata inv_mpu_i2c0_boardinfo[] = {
 
 #endif /* CONFIG_MPU_SENSORS_MPU6050B1 */
 
+#if defined  (CONFIG_SENSORS_BMC150)
 
+#define ACC_INT_GPIO_PIN  92
 
-#if defined(CONFIG_SENSORS_BMA2X2)
+static struct bosch_sensor_specific bss_bma2x2 = {
+	.name = "bma2x2" ,
+        .place = 4,
+        .irq = ACC_INT_GPIO_PIN,
+};
 
-static struct bma222_accl_platform_data bma_pdata = {
-	.orientation = BMA_ROT_90,
-	.invert = false,
+static struct bosch_sensor_specific bss_bmm050 = {
+	.name = "bmm050" ,
+        .place = 4,
 };
 #endif
 
-#if defined(CONFIG_SENSORS_BMA2X2) || defined(CONFIG_SENSORS_BMM050)
-
-static struct i2c_board_info __initdata bmm150_boardinfo[] = {
-#if defined(CONFIG_SENSORS_BMA2X2)
-		{
-			I2C_BOARD_INFO("bma2x2", 0x10),
-			.irq = -1,
-			.platform_data = &bma_pdata,
-		},
-#endif
-
-#if defined(CONFIG_SENSORS_BMM050)
-	{
-		I2C_BOARD_INFO("bmm050", 0x12),
-	},
-#endif
-
-
-};
-
-#endif
-
-#if defined(CONFIG_SENSORS_GP2A)
-#define PROXI_INT_GPIO_PIN 89
-static struct gp2ap002_platform_data gp2ap002_platform_data = {
-	.irq_gpio = PROXI_INT_GPIO_PIN,
-	.irq = gpio_to_irq(PROXI_INT_GPIO_PIN),
-};
-
-static struct i2c_board_info __initdata proxy_boardinfo[] = {
-	{
-		I2C_BOARD_INFO("gp2ap002", 0x44),
-		.platform_data = &gp2ap002_platform_data,
+#if defined(CONFIG_SENSORS_GP2AP002)
+static void gp2ap002_power_onoff(bool onoff)
+{
+	if (onoff) {
+            struct regulator *power_regulator = NULL;
+            int ret=0;
+            power_regulator = regulator_get(NULL, "tcxldo_uc");
+            if (IS_ERR(power_regulator)){
+                printk(KERN_ERR "[GP2A] can not get prox_regulator (SENSOR_3.3V) \n");
+            } else {
+                ret = regulator_set_voltage(power_regulator,3300000,3300000);
+                printk(KERN_INFO "[GP2A] regulator_set_voltage : %d\n", ret);
+                ret = regulator_enable(power_regulator);
+                printk(KERN_INFO "[GP2A] regulator_enable : %d\n", ret);
+                regulator_put(power_regulator);
+                mdelay(5);
+            }
 	}
+}
+
+static void gp2ap002_led_onoff(bool onoff)
+{
+        struct regulator *led_regulator = NULL;
+        int ret=0;
+
+	if (onoff) {
+                led_regulator = regulator_get(NULL, "gpldo1_uc");
+                if (IS_ERR(led_regulator)){
+                    printk(KERN_ERR "[GP2A] can not get prox_regulator (SENSOR_LED_3.3V) \n");
+                } else {
+                    ret = regulator_set_voltage(led_regulator,3300000,3300000);
+                    printk(KERN_INFO "[GP2A] regulator_set_voltage : %d\n", ret);
+                    ret = regulator_enable(led_regulator);
+                    printk(KERN_INFO "[GP2A] regulator_enable : %d\n", ret);
+                    regulator_put(led_regulator);
+                    mdelay(5);
+                }
+	} else {
+                led_regulator = regulator_get(NULL, "gpldo1_uc");
+		ret = regulator_disable(led_regulator);
+                printk(KERN_INFO "[GP2A] regulator_disable : %d\n", ret);
+                regulator_put(led_regulator);
+	}
+}
+
+#define PROXI_INT_GPIO_PIN  89
+
+static struct gp2ap002_platform_data gp2ap002_platform_data = {
+         .power_on = gp2ap002_power_onoff,
+         .led_on = gp2ap002_led_onoff,
+         .irq_gpio = PROXI_INT_GPIO_PIN,
+         .irq = gpio_to_irq(PROXI_INT_GPIO_PIN),
 };
 #endif
 
+#if defined(CONFIG_SENSORS_BMC150) || defined(CONFIG_SENSORS_GP2AP002)
 
+static struct i2c_board_info __initdata bsc3_i2c_boardinfo[] =
+{
+
+#if defined(CONFIG_SENSORS_BMC150)
+        {
+		I2C_BOARD_INFO("bma2x2", 0x10),
+		.platform_data = &bss_bma2x2,
+        },
+
+        {
+		I2C_BOARD_INFO("bmm050", 0x12),
+		.platform_data = &bss_bmm050,
+        },
+#endif
+
+#if defined(CONFIG_SENSORS_GP2AP002)
+        {
+             I2C_BOARD_INFO("gp2ap002",0x44),
+             .platform_data = &gp2ap002_platform_data,
+        }
+#endif
+
+};
+#endif
 
 #ifdef CONFIG_KONA_HEADSET_MULTI_BUTTON
 
@@ -2036,9 +2089,8 @@ static void __init hawaii_add_i2c_devices(void)
 		inv_mpu_i2c0_boardinfo, ARRAY_SIZE(inv_mpu_i2c0_boardinfo));
 #endif
 
-#if defined(CONFIG_SENSORS_BMA2X2) || defined(CONFIG_SENSORS_BMM050)
-	i2c_register_board_info(2,
-	bmm150_boardinfo, ARRAY_SIZE(bmm150_boardinfo));
+#if defined(CONFIG_SENSORS_BMC150) || defined(CONFIG_SENSORS_GP2AP002)
+	i2c_register_board_info(2, bsc3_i2c_boardinfo, ARRAY_SIZE(bsc3_i2c_boardinfo));
 #endif
 
 #if defined(CONFIG_SENSORS_GP2A)
