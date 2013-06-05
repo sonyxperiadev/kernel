@@ -277,6 +277,8 @@ struct taos_data {
 	struct input_dev *input_dev_als;
 	struct input_dev *input_dev_prox;
 	struct work_struct work;
+	struct work_struct calib_work;
+	struct mutex mutex;
 	struct wake_lock taos_wake_lock;
 	char taos_id;
 	char taos_name[TAOS_ID_NAME_SIZE];
@@ -398,6 +400,66 @@ static void taos_work_func(struct work_struct *work)
 {
 	taos_get_data();
 	taos_interrupts_clear();
+}
+
+static void taos_calib_work_func(struct work_struct *work)
+{
+	int ret = 0;
+	u8 reg_val = 0;
+	u8 reg_cntrl = 0;
+	int itime = 0;
+	struct taos_data *taos_datap = container_of(work,
+			struct taos_data, calib_work);
+
+	mutex_lock(&taos_datap->mutex);
+
+	itime = (((taos_cfgp->als_time / 50) * 18) - 1);
+	itime = (~itime);
+	ret = i2c_smbus_write_byte_data(taos_datap->client,
+			TAOS_TRITON_CMD_REG |
+			TAOS_TRITON_ALS_TIME, itime);
+	if (ret < 0)
+		goto out;
+	ret = i2c_smbus_write_byte(taos_datap->client,
+			TAOS_TRITON_CMD_REG |
+			TAOS_TRITON_CNTRL);
+	if (ret < 0)
+		goto out;
+	reg_val = i2c_smbus_read_byte(taos_datap->client);
+	reg_cntrl = reg_val | (TAOS_TRITON_CNTL_ADC_ENBL |
+			TAOS_TRITON_CNTL_PWRON);
+	ret = i2c_smbus_write_byte_data(taos_datap->client,
+			TAOS_TRITON_CMD_REG |
+			TAOS_TRITON_CNTRL, reg_cntrl);
+	if (ret < 0)
+		goto out;
+	ret = i2c_smbus_write_byte(taos_datap->client,
+			TAOS_TRITON_CMD_REG |
+			TAOS_TRITON_GAIN);
+	if (ret < 0)
+		goto out;
+	reg_val = i2c_smbus_read_byte(taos_datap->client);
+	reg_val = reg_val & 0xFC;
+	reg_val = reg_val | (taos_cfgp->gain & 0x03);
+	ret = i2c_smbus_write_byte_data(taos_datap->client,
+			TAOS_TRITON_CMD_REG |
+			TAOS_TRITON_GAIN, reg_val);
+	if (ret < 0)
+		goto out;
+
+	msleep(500);
+
+	ret = i2c_smbus_write_byte(taos_datap->client,
+			TAOS_TRITON_CMD_REG |
+			TAOS_TRITON_STATUS);
+	if (ret < 0)
+		goto out;
+	reg_val = i2c_smbus_read_byte(taos_datap->client);
+	if ((reg_val & 0x01) != 0x01)
+		goto out;
+	taos_als_get_data();
+out:
+	mutex_unlock(&taos_datap->mutex);
 }
 
 static int taos_als_get_data(void)
@@ -1303,6 +1365,8 @@ static int taos_probe(struct i2c_client *clientp,
 	taos_datap->client = clientp;
 	i2c_set_clientdata(clientp, taos_datap);
 	INIT_WORK(&(taos_datap->work), taos_work_func);
+	INIT_WORK(&(taos_datap->calib_work), taos_calib_work_func);
+	mutex_init(&taos_datap->mutex);
 	mutex_init(&taos_datap->update_lock);
 
 	taos_datap->input_dev_als = input_allocate_device();
@@ -1795,6 +1859,7 @@ static long taos_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	itime = 0;
 	taos_datap = container_of(file->f_dentry->d_inode->i_cdev,
 				  struct taos_data, cdev);
+	mutex_lock(&taos_datap->mutex);
 	switch (cmd) {
 	case TAOS_IOCTL_SENSOR_CHECK:
 		reg_val_temp = 0;
@@ -1803,13 +1868,15 @@ static long taos_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 					   TAOS_TRITON_CNTRL);
 		if (ret < 0) {
 			pr_taos(ERROR, "TAOS_IOCTL_SENSOR_CHECK failed\n");
-			return ret;
+			goto out;
 		}
 		reg_val_temp = i2c_smbus_read_byte(taos_datap->client);
 		pr_taos(INFO, "TAOS_IOCTL_SENSOR_CHECK,prox_adc_time,%d~\n",
 			reg_val_temp);
-		if ((reg_val_temp & 0xFF) == 0xF)
-			return -ENODATA;
+		if ((reg_val_temp & 0xFF) == 0xF) {
+			ret = -ENODATA;
+			goto out;
+		}
 		break;
 
 	case TAOS_IOCTL_SENSOR_CONFIG:
@@ -1818,7 +1885,8 @@ static long taos_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		if (ret) {
 			pr_taos(ERROR,
 				"TAOS: copy_from_user failed in ioctl config_set\n");
-			return -ENODATA;
+			ret = -ENODATA;
+			goto out;
 		}
 		break;
 
@@ -1835,7 +1903,7 @@ static long taos_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		if (ret < 0) {
 			pr_taos(ERROR,
 				"TAOS: i2c_smbus_write_byte failed in ioctl als_on\n");
-			return ret;
+			goto out;
 		}
 
 		ret = i2c_smbus_write_byte_data(taos_datap->client,
@@ -1845,7 +1913,7 @@ static long taos_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		if (ret < 0) {
 			pr_taos(ERROR,
 				"TAOS: i2c_smbus_write_byte_data failed in ioctl prox_on\n");
-			return ret;
+			goto out;
 		}
 
 		ret = i2c_smbus_write_byte_data(taos_datap->client,
@@ -1855,7 +1923,7 @@ static long taos_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		if (ret < 0) {
 			pr_taos(ERROR,
 				"TAOS: i2c_smbus_write_byte_data failed in ioctl prox_on\n");
-			return ret;
+			goto out;
 		}
 
 		ret = i2c_smbus_write_byte_data(taos_datap->client,
@@ -1865,7 +1933,7 @@ static long taos_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		if (ret < 0) {
 			pr_taos(ERROR,
 				"TAOS: i2c_smbus_write_byte_data failed in ioctl prox_on\n");
-			return ret;
+			goto out;
 		}
 
 		ret = i2c_smbus_write_byte_data(taos_datap->client,
@@ -1875,7 +1943,7 @@ static long taos_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		if (ret < 0) {
 			pr_taos(ERROR,
 				"TAOS: i2c_smbus_write_byte_data failed in ioctl prox_on\n");
-			return ret;
+			goto out;
 		}
 
 		ret = i2c_smbus_write_byte_data(taos_datap->client,
@@ -1885,7 +1953,7 @@ static long taos_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		if (ret < 0) {
 			pr_taos(ERROR,
 				"TAOS: i2c_smbus_write_byte_data failed in ioctl prox_on\n");
-			return ret;
+			goto out;
 		}
 
 		ret = i2c_smbus_write_byte_data(taos_datap->client,
@@ -1895,7 +1963,7 @@ static long taos_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		if (ret < 0) {
 			pr_taos(ERROR,
 				"TAOS: i2c_smbus_write_byte_data failed in ioctl prox_on\n");
-			return ret;
+			goto out;
 		}
 		ret = i2c_smbus_write_byte_data(taos_datap->client,
 						TAOS_TRITON_CMD_REG |
@@ -1904,7 +1972,7 @@ static long taos_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		if (ret < 0) {
 			pr_taos(ERROR,
 				"TAOS: i2c_smbus_write_byte_data failed in ioctl prox_on\n");
-			return ret;
+			goto out;
 		}
 		ret = i2c_smbus_write_byte_data(taos_datap->client,
 						TAOS_TRITON_CMD_REG |
@@ -1912,7 +1980,7 @@ static long taos_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		if (ret < 0) {
 			pr_taos(ERROR,
 				"TAOS: i2c_smbus_write_byte_data failed in ioctl prox_on\n");
-			return ret;
+			goto out;
 		}
 		break;
 
@@ -1927,7 +1995,7 @@ static long taos_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		if (ret < 0) {
 			pr_taos(ERROR,
 				"TAOS: i2c_smbus_write_byte_data failed in ioctl prox_off\n");
-			return ret;
+			goto out;
 		}
 		break;
 
@@ -1935,7 +2003,7 @@ static long taos_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		pr_taos(DEBUG, "ioctl: TAOS_IOCTL_ALS_ON\n");
 		if (PROX_ON == 1) {
 			ALS_ON = 1;
-			return ret;
+			goto out;
 		}
 
 		ret = i2c_smbus_write_byte(taos_datap->client,
@@ -1944,7 +2012,7 @@ static long taos_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		if (ret < 0) {
 			pr_taos(ERROR,
 				"TAOS: i2c_smbus_write_byte failed in ioctl als_calibrate\n");
-			return ret;
+			goto out;
 		}
 		reg_val = i2c_smbus_read_byte(taos_datap->client);
 		if ((reg_val & TAOS_TRITON_CNTL_PROX_DET_ENBL) == 0x0)
@@ -1956,7 +2024,7 @@ static long taos_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		pr_taos(DEBUG, "ioctl:TAOS_IOCTL_ALS_OFF\n");
 		if (PROX_ON == 1) {
 			ALS_ON = 0;
-			return ret;
+			goto out;
 		}
 
 		for (i = 0; i < TAOS_FILTER_DEPTH; i++)
@@ -1967,7 +2035,7 @@ static long taos_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		if (ret < 0) {
 			pr_taos(ERROR,
 				"TAOS: i2c_smbus_write_byte failed in ioctl als_calibrate\n");
-			return ret;
+			goto out;
 		}
 		reg_val = i2c_smbus_read_byte(taos_datap->client);
 		if ((reg_val & TAOS_TRITON_CNTL_PROX_DET_ENBL) == 0x0) {
@@ -1978,7 +2046,7 @@ static long taos_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 			if (ret < 0) {
 				pr_taos(ERROR,
 					"TAOS: i2c_smbus_write_byte_data failed in ioctl als_off\n");
-				return ret;
+				goto out;
 			}
 			cancel_work_sync(&taos_datap->work);
 		}
@@ -1992,25 +2060,29 @@ static long taos_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		if (ret < 0) {
 			pr_taos(ERROR,
 				"TAOS: i2c_smbus_write_byte failed in ioctl als_data\n");
-			return ret;
+			goto out;
 		}
 		reg_val = i2c_smbus_read_byte(taos_datap->client);
 		if ((reg_val &
 		     (TAOS_TRITON_CNTL_ADC_ENBL | TAOS_TRITON_CNTL_PWRON)) !=
-		    (TAOS_TRITON_CNTL_ADC_ENBL | TAOS_TRITON_CNTL_PWRON))
-			return -ENODATA;
+		    (TAOS_TRITON_CNTL_ADC_ENBL | TAOS_TRITON_CNTL_PWRON)) {
+			ret = -ENODATA;
+			goto out;
+		}
 		ret = i2c_smbus_write_byte(taos_datap->client,
 					   TAOS_TRITON_CMD_REG |
 					   TAOS_TRITON_STATUS);
 		if (ret < 0) {
 			pr_taos(ERROR,
 				"TAOS: i2c_smbus_write_byte failed in ioctl als_data\n");
-			return ret;
+			goto out;
 		}
 		reg_val = i2c_smbus_read_byte(taos_datap->client);
 		if ((reg_val & TAOS_TRITON_STATUS_ADCVALID) !=
-		    TAOS_TRITON_STATUS_ADCVALID)
-			return -ENODATA;
+		    TAOS_TRITON_STATUS_ADCVALID) {
+			ret = -ENODATA;
+			goto out;
+		}
 		lux_val = taos_get_lux();
 		if (lux_val < 0)
 			pr_taos(ERROR,
@@ -2020,49 +2092,7 @@ static long taos_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		break;
 
 	case TAOS_IOCTL_ALS_CALIBRATE:
-		itime = (((taos_cfgp->als_time / 50) * 18) - 1);
-		itime = (~itime);
-		ret = i2c_smbus_write_byte_data(taos_datap->client,
-						TAOS_TRITON_CMD_REG |
-						TAOS_TRITON_ALS_TIME, itime);
-		if (ret < 0)
-			return ret;
-		ret = i2c_smbus_write_byte(taos_datap->client,
-					   TAOS_TRITON_CMD_REG |
-					   TAOS_TRITON_CNTRL);
-		if (ret < 0)
-			return ret;
-		reg_val = i2c_smbus_read_byte(taos_datap->client);
-		reg_cntrl = reg_val | (TAOS_TRITON_CNTL_ADC_ENBL |
-				       TAOS_TRITON_CNTL_PWRON);
-		ret = i2c_smbus_write_byte_data(taos_datap->client,
-						TAOS_TRITON_CMD_REG |
-						TAOS_TRITON_CNTRL, reg_cntrl);
-		if (ret < 0)
-			return ret;
-		ret = i2c_smbus_write_byte(taos_datap->client,
-					   TAOS_TRITON_CMD_REG |
-					   TAOS_TRITON_GAIN);
-		if (ret < 0)
-			return ret;
-		reg_val = i2c_smbus_read_byte(taos_datap->client);
-		reg_val = reg_val & 0xFC;
-		reg_val = reg_val | (taos_cfgp->gain & 0x03);
-		ret = i2c_smbus_write_byte_data(taos_datap->client,
-						TAOS_TRITON_CMD_REG |
-						TAOS_TRITON_GAIN, reg_val);
-		if (ret < 0)
-			return ret;
-		mdelay(500);
-		ret = i2c_smbus_write_byte(taos_datap->client,
-					   TAOS_TRITON_CMD_REG |
-					   TAOS_TRITON_STATUS);
-		if (ret < 0)
-			return ret;
-		reg_val = i2c_smbus_read_byte(taos_datap->client);
-		if ((reg_val & 0x01) != 0x01)
-			return -ENODATA;
-		taos_als_get_data();
+		schedule_work(&taos_datap->calib_work);
 		break;
 
 	case TAOS_IOCTL_CONFIG_GET:
@@ -2073,15 +2103,19 @@ static long taos_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 #endif
 		ret = copy_to_user((struct taos_cfg *)arg, taos_cfgp,
 				   sizeof(struct taos_cfg));
-		if (ret)
-			return -ENODATA;
+		if (ret) {
+			ret = -ENODATA;
+			goto out;
+		}
 		break;
 
 	case TAOS_IOCTL_CONFIG_SET:
 		ret = copy_from_user(taos_cfgp, (struct taos_cfg *)arg,
 				     sizeof(struct taos_cfg));
-		if (ret)
-			return -ENODATA;
+		if (ret) {
+			ret = -ENODATA;
+			goto out;
+		}
 		if (taos_cfgp->als_time < 50)
 			taos_cfgp->als_time = 50;
 		if (taos_cfgp->als_time > 650)
@@ -2103,37 +2137,37 @@ static long taos_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 						TAOS_TRITON_CMD_REG | 0x01,
 						taos_cfgp->prox_int_time);
 		if (ret < 0)
-			return ret;
+			goto out;
 		ret = i2c_smbus_write_byte_data(taos_datap->client,
 						TAOS_TRITON_CMD_REG | 0x02,
 						taos_cfgp->prox_adc_time);
 		if (ret < 0)
-			return ret;
+			goto out;
 		ret = i2c_smbus_write_byte_data(taos_datap->client,
 						TAOS_TRITON_CMD_REG | 0x03,
 						taos_cfgp->prox_wait_time);
 		if (ret < 0)
-			return ret;
+			goto out;
 		ret = i2c_smbus_write_byte_data(taos_datap->client,
 						TAOS_TRITON_CMD_REG | 0x0C,
 						taos_cfgp->prox_intr_filter);
 		if (ret < 0)
-			return ret;
+			goto out;
 		ret = i2c_smbus_write_byte_data(taos_datap->client,
 						TAOS_TRITON_CMD_REG | 0x0D,
 						taos_cfgp->prox_config);
 		if (ret < 0)
-			return ret;
+			goto out;
 		ret = i2c_smbus_write_byte_data(taos_datap->client,
 						TAOS_TRITON_CMD_REG | 0x0E,
 						taos_cfgp->prox_pulse_cnt);
 		if (ret < 0)
-			return ret;
+			goto out;
 		ret = i2c_smbus_write_byte_data(taos_datap->client,
 						TAOS_TRITON_CMD_REG | 0x0F,
 						taos_cfgp->prox_gain);
 		if (ret < 0)
-			return ret;
+			goto out;
 
 		/* enable the irq of als when prox on */
 		reg_cntrl = TAOS_TRITON_CNTL_PROX_DET_ENBL |
@@ -2147,7 +2181,7 @@ static long taos_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 						TAOS_TRITON_CMD_REG |
 						TAOS_TRITON_CNTRL, reg_cntrl);
 		if (ret < 0)
-			return ret;
+			goto out;
 		taos_prox_threshold_set();
 		break;
 
@@ -2157,7 +2191,7 @@ static long taos_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 						TAOS_TRITON_CMD_REG |
 						TAOS_TRITON_CNTRL, 0x00);
 		if (ret < 0)
-			return ret;
+			goto out;
 		if (ALS_ON == 1)
 			taos_sensors_als_on();
 		else
@@ -2172,50 +2206,53 @@ static long taos_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	case TAOS_IOCTL_PROX_DATA:
 		ret = taos_prox_poll(prox_cur_infop);
 		if (ret < 0)
-			return ret;
+			goto out;
 		ret = copy_to_user((struct taos_prox_info *)arg, prox_cur_infop,
 				   sizeof(struct taos_prox_info));
-		if (ret)
-			return -ENODATA;
+		if (ret) {
+			ret = -ENODATA;
+			goto out;
+		}
 		break;
 
 	case TAOS_IOCTL_PROX_EVENT:
 		ret = taos_prox_poll(prox_cur_infop);
-		if (ret < 0)
-			return ret;
-		return prox_cur_infop->prox_event;
+		if (ret >= 0)
+			ret = prox_cur_infop->prox_event;
+
+		goto out;
 
 	case TAOS_IOCTL_PROX_CALIBRATE:
 		ret = i2c_smbus_write_byte_data(taos_datap->client,
 						TAOS_TRITON_CMD_REG | 0x01,
 						taos_cfgp->prox_int_time);
 		if (ret < 0)
-			return ret;
+			goto out;
 		ret = i2c_smbus_write_byte_data(taos_datap->client,
 						TAOS_TRITON_CMD_REG | 0x02,
 						taos_cfgp->prox_adc_time);
 		if (ret < 0)
-			return ret;
+			goto out;
 		ret = i2c_smbus_write_byte_data(taos_datap->client,
 						TAOS_TRITON_CMD_REG | 0x03,
 						taos_cfgp->prox_wait_time);
 		if (ret < 0)
-			return ret;
+			goto out;
 		ret = i2c_smbus_write_byte_data(taos_datap->client,
 						TAOS_TRITON_CMD_REG | 0x0D,
 						taos_cfgp->prox_config);
 		if (ret < 0)
-			return ret;
+			goto out;
 		ret = i2c_smbus_write_byte_data(taos_datap->client,
 						TAOS_TRITON_CMD_REG | 0x0E,
 						taos_cfgp->prox_pulse_cnt);
 		if (ret < 0)
-			return ret;
+			goto out;
 		ret = i2c_smbus_write_byte_data(taos_datap->client,
 						TAOS_TRITON_CMD_REG | 0x0F,
 						taos_cfgp->prox_gain);
 		if (ret < 0)
-			return ret;
+			goto out;
 		reg_cntrl = reg_val | (TAOS_TRITON_CNTL_PROX_DET_ENBL |
 				       TAOS_TRITON_CNTL_PWRON |
 				       TAOS_TRITON_CNTL_ADC_ENBL);
@@ -2223,13 +2260,13 @@ static long taos_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 						TAOS_TRITON_CMD_REG |
 						TAOS_TRITON_CNTRL, reg_cntrl);
 		if (ret < 0)
-			return ret;
+			goto out;
 		prox_sum = 0;
 		prox_max = 0;
 		for (i = 0; i < 32; i++) {
 			ret = taos_prox_poll(&prox_cal_info[i]);
 			if (ret < 0)
-				return ret;
+				goto out;
 			prox_sum += prox_cal_info[i].prox_data;
 			if (prox_cal_info[i].prox_data > prox_max)
 				prox_max = prox_cal_info[i].prox_data;
@@ -2253,15 +2290,18 @@ static long taos_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 						|(TAOS_TRITON_CNTRL + i),
 						taos_triton_reg_init[i]);
 				if (ret < 0)
-					return ret;
+					goto out;
 			}
 		}
 		break;
 
 	default:
-		return -EINVAL;
+		ret = -EINVAL;
 		break;
 	}
+
+out:
+	mutex_unlock(&taos_datap->mutex);
 	return ret;
 }
 
