@@ -1490,15 +1490,10 @@ static void process_non_periodic_channels(dwc_otg_hcd_t *hcd)
 
 		qh = DWC_LIST_ENTRY(hcd->non_periodic_qh_ptr, dwc_otg_qh_t,
 				    qh_list_entry);
-		if (qh)
-			status =
+
+		status =
 		    queue_transaction(hcd, qh->channel,
 				      tx_status.b.nptxfspcavail);
-		else {
-			DWC_DEBUGPL(DBG_HCD,
-				"Queue non-periodic transactions NULL qh\n");
-			status = -1;
-		}
 
 		if (status > 0)
 			more_to_do = 1;
