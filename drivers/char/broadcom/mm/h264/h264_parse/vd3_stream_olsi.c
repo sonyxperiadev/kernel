@@ -11,15 +11,14 @@
 ==============================================================================*/
 // XXX document me!
 
-#ifdef VC4_LINUX_PORT
-#include"vd3_utils.h"
-#else
+#ifndef VC4_LINUX_PORT
 #include "vcinclude/common.h"
 #include "vcinclude/vcodec.h"
-#include "vcinclude/sv_chip_regmap.h"
+
+#include "hardware_vcodec.h"
 
 #include "vcfw/rtos/rtos.h"
-#include "rtos_common_mem.h"
+#include "rtos_common_mem.h" //KHRN_HW_ADDR
 #include "interface/vcos/vcos_assert.h"
 #endif
 
@@ -27,72 +26,11 @@
 #include "vd3_stream.h"
 #include "vd3_stream_types.h"
 
-#ifdef VC4_LINUX_PORT
-#include "../ol.h"
-#include <mach/rdb/brcm_rdb_h264.h>
-
-u32 ol_read(u32 reg);
-void ol_write(u32 reg, u32 value);
-
-
-/*OLSI access functions */
-
-/***************************************************************************//**
-Read <code>0 < n <= 32</code>bits from the OLSI hardware
-********************************************************************************/
-uint32_t vd3_olsi_SiU(unsigned int n)
-{
-	ol_write(H264_DEC_SINT_GET_SYMB_OFFSET, (n & 0xff));
-	return ol_read(H264_DEC_SINT_GET_SYMB_OFFSET);
-}
-
-/***************************************************************************//**
-Read a ue(v) syntax element from the OLSI hardware
-********************************************************************************/
-uint32_t vd3_olsi_SiUE(void)
-{
-   ol_write(H264_DEC_SINT_GET_SYMB_OFFSET, (1 << 12));
-   return ol_read(H264_DEC_SINT_GET_SYMB_OFFSET);
-}
-
-/***************************************************************************//**
-Read a se(v) syntax element from the OLSI hardware
-********************************************************************************/
-int32_t  vd3_olsi_SiSE(void)
-{
-	ol_write(H264_DEC_SINT_GET_SYMB_OFFSET, (1 << 12) | (1 << 8));
-	return ol_read(H264_DEC_SINT_GET_SYMB_OFFSET);
-}
-
-
-/***************************************************************************//**
-Peek ahead <code>0 < n <= 32</code> bits from the OLSI hardware
-********************************************************************************/
-uint32_t vd3_olsi_SiPeek(unsigned int n)
-{
-	return ol_read(H264_DEC_SINT_STRM_BITS_OFFSET) >> (32 - n);
-}
-
-/***************************************************************************//**
-Read current position from the OLSI hardware
-********************************************************************************/
-int32_t  vd3_olsi_Offset(void)
-{
-	return ol_read(H264_DEC_SINT_STRM_POS_OFFSET);
-}
-
-uint32_t codec_specific_parse(uint32_t n)
-{
-	ol_write(H264_DEC_SINT_GET_SYMB_OFFSET, n);
-	return ol_read(H264_DEC_SINT_GET_SYMB_OFFSET);
-}
-#endif
-
 static void vd3_olsi_SiReset(void)
 {
 #ifdef VC4_LINUX_PORT
-	ol_write(H264_DEC_SINT_STRM_STAT_OFFSET, 1 << H264_DEC_SINT_STRM_STAT_RST_SHIFT);
-	while (ol_read(H264_DEC_SINT_STRM_STAT_OFFSET) & (1 << H264_DEC_SINT_STRM_STAT_RST_SHIFT))
+	VCD_REG_WT(INST, DEC_SINT_OLOOP_STRM_STAT, VC4VCODEC0_DEC_SINT_OLOOP_STRM_STAT_RST_SET);
+	while (VCD_REG_RD(INST, DEC_SINT_OLOOP_STRM_STAT) & VC4VCODEC0_DEC_SINT_OLOOP_STRM_STAT_RST_SET)
       ;
 #else
    uint32_t val = 0;
@@ -116,13 +54,8 @@ static void vd3_olsi_SiBuffer
    const void * end
 )
 {
-#ifdef VC4_LINUX_PORT
-   ol_write(H264_DEC_SINT_DMA_BASE_OFFSET, (uint32_t)start);
-   ol_write(H264_DEC_SINT_DMA_END_OFFSET,  (uint32_t)end);
-#else
    VCD_REG_WT (INST, DEC_SINT_OLOOP_DMA_BASE, (uint32_t)KHRN_HW_ADDR(start));
    VCD_REG_WT (INST, DEC_SINT_OLOOP_DMA_END,  (uint32_t)KHRN_HW_ADDR(end));
-#endif
 }
 
 static void vd3_olsi_SiBlock
@@ -131,13 +64,8 @@ static void vd3_olsi_SiBlock
    uint32_t     length
 )
 {
-#ifdef VC4_LINUX_PORT
-   ol_write(H264_DEC_SINT_DMA_ADDR_OFFSET, (uint32_t)start);
-   ol_write(H264_DEC_SINT_DMA_LEN_OFFSET,  length);
-#else
    VCD_REG_WT (INST, DEC_SINT_OLOOP_DMA_ADDR, (uint32_t)KHRN_HW_ADDR(start));
    VCD_REG_WT(INST, DEC_SINT_OLOOP_DMA_LEN,  length);
-#endif
 }
 
 static uint32_t vd3_stream_olsi_peek_bits
@@ -210,13 +138,10 @@ static uint32_t vd3_stream_olsi_detach
    VD3_DATASTREAM_T * const stream
 )
 {
-#ifdef VC4_LINUX_PORT
-   uint32_t pos = ol_read(H264_DEC_SINT_STRM_POS_OFFSET);
-#else
    uint32_t pos = VCD_REG_RD(INST, DEC_SINT_OLOOP_STRM_POS);
-#endif
    vd3_olsi_SiReset(); /* Ensure all SDRAM access has completed */
 //   rtos_latch_put(&vd3_stream_olsi_latch);
+
    return pos;
 }
 

@@ -71,7 +71,9 @@ extern vd3_error_t PARSE_FN(mp4_parse_video_object_layer)
 *******************************************************************************/
 
 #include "vd3_stream.h"
-//#include "vd3_msgbuf.h" // for picture type definition
+#ifndef VC4_LINUX_PORT
+#include "vd3_msgbuf.h" // for picture type definition
+#endif
 #include "mp4_parse_helper.h"
 
 /*******************************************************************************
@@ -585,7 +587,7 @@ vd3_error_t PARSE_FN(mp4_parse_warping_mv_code)
 
 #ifndef MP4_PARSE_GENERIC
 #ifdef VC4_LINUX_PORT
-   len = codec_specific_parse(2 << 12);
+   len = vd3_olsi_specific_parse(2 << 12);
 #else
    // The OLSI can parse this element directly
    VCD_REG_WT(INST, DEC_SINT_OLOOP_GET_SYMB, (2 << 12));

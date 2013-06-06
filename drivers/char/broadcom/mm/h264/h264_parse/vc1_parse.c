@@ -200,7 +200,7 @@ static _Inline uint8_t vc1_parse_read_norm6_vlc(struct vd3_datastream_t * const 
 {
 #ifdef VC4_LINUX_PORT
    uint8_t val = 0;
-   val = codec_specific_parse((7<<12) | (9<<8));
+   val = vd3_olsi_specific_parse((7<<12) | (9<<8));
    return val;
 #else
    VCD_REG_WT(INST, DEC_SINT_OLOOP_GET_SYMB, (7<<12) | (9<<8));

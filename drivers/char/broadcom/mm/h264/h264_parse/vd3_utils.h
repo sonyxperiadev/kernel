@@ -18,6 +18,19 @@ the GPL, without Broadcom's express prior written consent.
 
 #define UCHAR_MAX 0xFF
 
+#define INST 0
+#define KHRN_HW_ADDR(x) x
+
+u32 	ol_read	(u32 reg);
+void 	ol_write	(u32 reg, u32 value);
+
+#define VCD_REG_RD(x, y) 	ol_read(VC4VCODEC0_##y)
+#define VCD_REG_WT(x, y, z)	ol_write(VC4VCODEC0_##y, z)
+
+#define vd3_wait_for_writes() (void)0
+#define vd3_wait_for_reads()  (void)0
+
+
 /*vcos_assert.h*/
 #define vcos_assert(cond) (cond)
 #define vcos_verify(cond) (cond)
