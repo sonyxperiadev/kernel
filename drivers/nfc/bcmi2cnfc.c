@@ -124,7 +124,7 @@ static ssize_t store_nfc_rst(struct device *dev, struct device_attribute *attr,
 	return count;
 }
 
-static DEVICE_ATTR(nfc_rst, 0666, NULL, store_nfc_rst);
+static DEVICE_ATTR(nfc_rst, 0644, NULL, store_nfc_rst);
 static struct attribute *nfc_rst_attrs[] = {
 	&dev_attr_nfc_rst.attr,
 	NULL
