@@ -2213,7 +2213,7 @@ static int bcmpmu_fg_sw_maint_charging_algo(struct bcmpmu_fg_data *fg)
 
 	if (eoc_condition) {
 		pr_fg(FLOW, "sw_maint_chrgr: SW EOC tripped\n");
-		fg->eoc_cap_delta = -1;
+		fg->eoc_cap_delta = 0;
 		flags->fg_eoc = true;
 		flags->fully_charged = true;
 		flags->prev_batt_status = flags->batt_status;
@@ -2419,7 +2419,7 @@ static void bcmpmu_fg_charging_algo(struct bcmpmu_fg_data *fg)
 {
 	int poll_time = CHARG_ALGO_POLL_TIME_MS;
 
-	pr_fg(VERBOSE, "%s\n", __func__);
+	pr_fg(FLOW, "%s\n", __func__);
 
 
 	if (fg->discharge_state != DISCHARG_STATE_HIGH_BATT) {
@@ -3381,38 +3381,38 @@ int debugfs_fg_flags_init(struct bcmpmu_fg_data *fg, struct dentry *flags_dir)
 	if (IS_ERR_OR_NULL(file))
 		return -1;
 
-	file = debugfs_create_bool("fg_eoc", DEBUG_FS_PERMISSIONS,
-			flags_dir, (u32 *)&fg->flags.fg_eoc);
+	file = debugfs_create_u8("fg_eoc", DEBUG_FS_PERMISSIONS,
+			flags_dir, (u8 *)&fg->flags.fg_eoc);
 	if (IS_ERR_OR_NULL(file))
 		return -1;
 
-	file = debugfs_create_bool("calibration", DEBUG_FS_PERMISSIONS,
-			flags_dir, (u32 *)&fg->flags.calibration);
+	file = debugfs_create_u8("calibration", DEBUG_FS_PERMISSIONS,
+			flags_dir, (u8 *)&fg->flags.calibration);
 	if (IS_ERR_OR_NULL(file))
 		return -1;
 
-	file = debugfs_create_bool("low_bat_cal", DEBUG_FS_PERMISSIONS,
-			flags_dir, (u32 *)&fg->flags.low_bat_cal);
+	file = debugfs_create_u8("low_bat_cal", DEBUG_FS_PERMISSIONS,
+			flags_dir, (u8 *)&fg->flags.low_bat_cal);
 	if (IS_ERR_OR_NULL(file))
 		return -1;
 
-	file = debugfs_create_bool("high_bat_cal", DEBUG_FS_PERMISSIONS,
-			flags_dir, (u32 *)&fg->flags.high_bat_cal);
+	file = debugfs_create_u8("high_bat_cal", DEBUG_FS_PERMISSIONS,
+			flags_dir, (u8 *)&fg->flags.high_bat_cal);
 	if (IS_ERR_OR_NULL(file))
 		return -1;
 
-	file = debugfs_create_bool("fully_charged", DEBUG_FS_PERMISSIONS,
-			flags_dir, (u32 *)&fg->flags.fully_charged);
+	file = debugfs_create_u8("fully_charged", DEBUG_FS_PERMISSIONS,
+			flags_dir, (u8 *)&fg->flags.fully_charged);
 	if (IS_ERR_OR_NULL(file))
 		return -1;
 
-	file = debugfs_create_bool("coulb_dis", DEBUG_FS_PERMISSIONS,
-			flags_dir, (u32 *)&fg->flags.coulb_dis);
+	file = debugfs_create_u8("coulb_dis", DEBUG_FS_PERMISSIONS,
+			flags_dir, (u8 *)&fg->flags.coulb_dis);
 	if (IS_ERR_OR_NULL(file))
 		return -1;
 
-	file = debugfs_create_bool("charging_enabled", DEBUG_FS_PERMISSIONS,
-			flags_dir, (u32 *)&fg->flags.charging_enabled);
+	file = debugfs_create_u8("charging_enabled", DEBUG_FS_PERMISSIONS,
+			flags_dir, (u8 *)&fg->flags.charging_enabled);
 	if (IS_ERR_OR_NULL(file))
 		return -1;
 
