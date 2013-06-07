@@ -33,11 +33,9 @@ wait_queue_head_t mm_queue;
 DEFINE_MUTEX(mm_common_mutex);
 
 /* MM Framework globals end*/
-
 static void _mm_common_cache_clean(struct work_struct *dummy)
 {
 	v7_clean_dcache_all();
-	outer_clean_all();
 	dmb();
 }
 
@@ -58,7 +56,6 @@ void mm_common_cache_clean(void)
 
 	schedule_on_each_cpu(_mm_common_cache_clean);
 }
-
 void mm_common_enable_clock(struct mm_common *common)
 {
 	if (common->mm_hw_is_on == 0) {
@@ -128,8 +125,11 @@ static struct dev_job_list *mm_common_alloc_job(\
 	job->job.id = 0;
 	job->job.data = NULL;
 	job->job.size = 0;
+#ifdef CONFIG_ARCH_JAVA
 	job->job.status = MM_JOB_STATUS_DIRTY;
-
+#else
+	job->job.status = MM_JOB_STATUS_READY;
+#endif
 	return job;
 }
 
