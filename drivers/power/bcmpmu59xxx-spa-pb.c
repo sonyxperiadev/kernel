@@ -325,27 +325,27 @@ static int __map_to_spa_event(u32 event)
 {
 	int ret = -EINVAL;
 	switch (event) {
-	case BCMPMU_CHRGR_EVENT_MBTEMP:
+	case PMU_CHRGR_EVT_MBTEMP:
 		ret = SPA_EVT_TEMP;
 		break;
 
-	case BCMPMU_CHRGR_EVENT_CHGR_DETECTION:
+	case PMU_ACCY_EVT_OUT_CHRGR_TYPE:
 		ret = SPA_EVT_CHARGER;
 		break;
 
-	case BCMPMU_CHRGR_EVENT_MBOV:
+	case PMU_CHRGR_EVT_MBOV:
 		ret = SPA_EVT_OVP;
 		break;
 
-	case BCMPMU_CHRGR_EVENT_USBOV:
+	case PMU_ACCY_EVT_OUT_USBOV:
 		ret = SPA_EVT_OVP;
 		break;
 
-	case BCMPMU_CHRGR_EVENT_EOC:
+	case PMU_CHRGR_EVT_EOC:
 		ret = SPA_EVT_EOC;
 		break;
 
-	case BCMPMU_CHRGR_EVENT_CAPACITY:
+	case PMU_FG_EVT_CAPACITY:
 		ret = SPA_EVT_CAPACITY;
 		break;
 
@@ -365,7 +365,7 @@ static void bcmpmu_spa_pb_work(struct work_struct *work)
 		pr_pb(FLOW, "%s: event = %d\n", __func__, event);
 		spa_evt = __map_to_spa_event(event);
 		BUG_ON(spa_evt < 0 || spa_evt >= SPA_EVT_MAX);
-		if (BCMPMU_CHRGR_EVENT_CAPACITY == event) {
+		if (PMU_FG_EVT_CAPACITY == event) {
 			bcmpmu_spa_pb->capacity = data;
 			pr_pb(FLOW, "%s: capacity = %d\n", __func__, data);
 		}
@@ -388,7 +388,7 @@ static int bcmpmu_spa_pb_event_hndlr(struct notifier_block *nb,
 			__func__, event);
 
 	switch (event) {
-	case BCMPMU_CHRGR_EVENT_CHGR_DETECTION:
+	case PMU_ACCY_EVT_OUT_CHRGR_TYPE:
 		bcmpmu_spa_pb = container_of(nb, struct bcmpmu_spa_pb,
 				nb_chgr_det);
 		BUG_ON(bcmpmu_spa_pb == NULL || para == NULL);
@@ -415,9 +415,8 @@ static int bcmpmu_spa_pb_event_hndlr(struct notifier_block *nb,
 		bcmpmu_post_spa_event_to_queue(bcmpmu_spa_pb->bcmpmu,
 			event, data);
 		break;
-
-	case BCMPMU_USB_EVENT_IN:
-		pr_pb(FLOW, "%s, BCMPMU_USB_EVENT_IN\n",
+	case PMU_ACCY_EVT_OUT_USB_IN:
+		pr_pb(FLOW, "%s, PMU_ACCY_EVT_OUT_USB_IN\n",
 					__func__);
 		break;
 
@@ -436,32 +435,32 @@ static void bcmpmu_spa_pb_isr(u32 irq, void *data)
 	case PMU_IRQ_MBTEMPHIGH:
 		bcmpmu_spa_pb->temp_lmt = 1;
 		bcmpmu_post_spa_event_to_queue(bcmpmu_spa_pb->bcmpmu,
-			BCMPMU_CHRGR_EVENT_MBTEMP,
+			PMU_CHRGR_EVT_MBTEMP,
 			POWER_SUPPLY_HEALTH_OVERHEAT);
 		break;
 
 	case PMU_IRQ_MBTEMPLOW:
 		bcmpmu_spa_pb->temp_lmt = 1;
 		bcmpmu_post_spa_event_to_queue(bcmpmu_spa_pb->bcmpmu,
-			BCMPMU_CHRGR_EVENT_MBTEMP,
+			PMU_CHRGR_EVT_MBTEMP,
 			POWER_SUPPLY_HEALTH_COLD);
 		break;
 
 	case PMU_IRQ_CHGERRDIS:
 		if (bcmpmu_spa_pb->temp_lmt) {
 			bcmpmu_post_spa_event_to_queue(bcmpmu_spa_pb->bcmpmu,
-				BCMPMU_CHRGR_EVENT_MBTEMP,
+				PMU_CHRGR_EVT_MBTEMP,
 				POWER_SUPPLY_HEALTH_GOOD);
 			bcmpmu_spa_pb->temp_lmt = 0;
 		}
 		if (bcmpmu_spa_pb->mb_ov) {
 			bcmpmu_post_spa_event_to_queue(bcmpmu_spa_pb->bcmpmu,
-				BCMPMU_CHRGR_EVENT_MBOV, 0);
+				PMU_CHRGR_EVT_MBOV, 0);
 			bcmpmu_spa_pb->mb_ov = 0;
 		}
 		if (bcmpmu_spa_pb->usb_ov) {
 			bcmpmu_post_spa_event_to_queue(bcmpmu_spa_pb->bcmpmu,
-				BCMPMU_CHRGR_EVENT_USBOV, 0);
+				PMU_ACCY_EVT_OUT_USBOV_DIS, 0);
 			bcmpmu_spa_pb->usb_ov = 0;
 		}
 		break;
@@ -469,27 +468,14 @@ static void bcmpmu_spa_pb_isr(u32 irq, void *data)
 	case PMU_IRQ_MBOV:
 		bcmpmu_spa_pb->mb_ov = 1;
 		bcmpmu_post_spa_event_to_queue(bcmpmu_spa_pb->bcmpmu,
-			BCMPMU_CHRGR_EVENT_MBOV, 1);
+			PMU_CHRGR_EVT_MBOV, 1);
 		break;
 
 	case PMU_IRQ_MBOV_DIS:
 		if (bcmpmu_spa_pb->mb_ov) {
 			bcmpmu_post_spa_event_to_queue(bcmpmu_spa_pb->bcmpmu,
-				BCMPMU_CHRGR_EVENT_MBOV, 0);
+				PMU_CHRGR_EVT_MBOV, 0);
 			bcmpmu_spa_pb->mb_ov = 0;
-		}
-		break;
-
-	case PMU_IRQ_USBOV:
-		bcmpmu_spa_pb->usb_ov = 1;
-		bcmpmu_post_spa_event_to_queue(bcmpmu_spa_pb->bcmpmu,
-			BCMPMU_CHRGR_EVENT_USBOV, 1);
-		break;
-	case PMU_IRQ_USBOV_DIS:
-		if (bcmpmu_spa_pb->usb_ov) {
-			bcmpmu_post_spa_event_to_queue(bcmpmu_spa_pb->bcmpmu,
-				BCMPMU_CHRGR_EVENT_USBOV, 0);
-			bcmpmu_spa_pb->usb_ov = 0;
 		}
 		break;
 
@@ -600,21 +586,14 @@ static int __devinit bcmpmu_spa_pb_probe(struct platform_device *pdev)
 		bcmpmu_spa_pb_isr, bcmpmu_spa_pb);
 	bcmpmu->register_irq(bcmpmu, PMU_IRQ_MBOV_DIS,
 		bcmpmu_spa_pb_isr, bcmpmu_spa_pb);
-	bcmpmu->register_irq(bcmpmu, PMU_IRQ_USBOV,
-	bcmpmu_spa_pb_isr, bcmpmu_spa_pb);
-	bcmpmu->register_irq(bcmpmu, PMU_IRQ_USBOV_DIS,
-	bcmpmu_spa_pb_isr, bcmpmu_spa_pb);
-
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_MBTEMPLOW);
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_MBTEMPHIGH);
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_CHGERRDIS);
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_MBOV);
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_MBOV_DIS);
-	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_USBOV);
-	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_USBOV_DIS);
 
 	bcmpmu_spa_pb->nb_chgr_det.notifier_call = bcmpmu_spa_pb_event_hndlr;
-	ret = bcmpmu_add_notifier(BCMPMU_CHRGR_EVENT_CHGR_DETECTION,
+	ret = bcmpmu_add_notifier(PMU_ACCY_EVT_OUT_CHRGR_TYPE,
 		&bcmpmu_spa_pb->nb_chgr_det);
 	if (ret) {
 		pr_pb(ERROR, "%s, failed to register chrgr det notifier\n",
@@ -622,7 +601,7 @@ static int __devinit bcmpmu_spa_pb_probe(struct platform_device *pdev)
 		goto err;
 	}
 	bcmpmu_spa_pb->nb_usbin.notifier_call = bcmpmu_spa_pb_event_hndlr;
-	ret = bcmpmu_add_notifier(BCMPMU_USB_EVENT_IN,
+	ret = bcmpmu_add_notifier(PMU_ACCY_EVT_OUT_USB_IN,
 		&bcmpmu_spa_pb->nb_usbin);
 	if (ret) {
 		pr_pb(ERROR, "%s, failed to register chrgr det notifier\n",
@@ -637,9 +616,9 @@ static int __devinit bcmpmu_spa_pb_probe(struct platform_device *pdev)
 	return 0;
 
 err:
-	bcmpmu_remove_notifier(BCMPMU_CHRGR_EVENT_CHGR_DETECTION,
+	bcmpmu_remove_notifier(PMU_ACCY_EVT_OUT_CHRGR_TYPE,
 			&bcmpmu_spa_pb->nb_chgr_det);
-	bcmpmu_remove_notifier(BCMPMU_USB_EVENT_IN,
+	bcmpmu_remove_notifier(PMU_ACCY_EVT_OUT_USB_IN,
 			&bcmpmu_spa_pb->nb_usbin);
 	power_supply_unregister(&bcmpmu_spa_pb->chrgr);
 cghr_err:
@@ -658,12 +637,10 @@ static int __devexit bcmpmu_spa_pb_remove(struct platform_device *pdev)
 	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_MBOV);
 	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_MBOV_DIS);
 	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_EOC);
-	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_USBOV);
-	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_USBOV_DIS);
 
-	bcmpmu_remove_notifier(BCMPMU_CHRGR_EVENT_CHGR_DETECTION,
+	bcmpmu_remove_notifier(PMU_ACCY_EVT_OUT_CHRGR_TYPE,
 			&bcmpmu_spa_pb->nb_chgr_det);
-	bcmpmu_remove_notifier(BCMPMU_USB_EVENT_IN,
+	bcmpmu_remove_notifier(PMU_ACCY_EVT_OUT_USB_IN,
 			&bcmpmu_spa_pb->nb_usbin);
 	power_supply_unregister(&bcmpmu_spa_pb->chrgr);
 	kfree(bcmpmu_spa_pb);

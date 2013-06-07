@@ -1387,9 +1387,9 @@ static void bcmpmu_fg_update_adj_factor(struct bcmpmu_fg_data *fg)
 	if (charging) {
 		/**
 		 * These factors are cleared in the bcmpmu_fg_event_handler when
-		 * BCMPMU_CHRGR_EVENT_CHGR_DETECTION event is received but
+		 * PMU_ACCY_EVT_OUT_CHRGR_TYPE event is received but
 		 * there is a possiblity that when
-		 * BCMPMU_CHRGR_EVENT_CHGR_DETECTION event is recieved,
+		 * PMU_ACCY_EVT_OUT_CHRGR_TYPE event is recieved,
 		 * calibration algo is already running and high/low calibration
 		 * factor is updated by the calibration algo after being cleared
 		 * from event_handler.
@@ -1868,9 +1868,9 @@ static int bcmpmu_fg_event_handler(struct notifier_block *nb,
 	bool cancel_n_resch_work = false;
 
 	switch (event) {
-	case BCMPMU_CHRGR_EVENT_CHRG_RESUME_VBUS:
+	case PMU_ACCY_EVT_OUT_CHRG_RESUME_VBUS:
 		fg = to_bcmpmu_fg_data(nb, accy_nb);
-		pr_fg(VERBOSE, "BCMPMU_CHRGR_EVENT_CHRG_RESUME_VBUS\n");
+		pr_fg(VERBOSE, "PMU_ACCY_EVT_OUT_CHRG_RESUME_VBUS\n");
 		FG_LOCK(fg);
 		if (fg->pdata->hw_maintenance_charging && fg->flags.fg_eoc) {
 			pr_fg(FLOW, "maintenance charging: resume charging\n");
@@ -1882,11 +1882,11 @@ static int bcmpmu_fg_event_handler(struct notifier_block *nb,
 		}
 		FG_UNLOCK(fg);
 		break;
-	case BCMPMU_CHRGR_EVENT_CHGR_DETECTION:
+	case PMU_ACCY_EVT_OUT_CHRGR_TYPE:
 		fg = to_bcmpmu_fg_data(nb, usb_det_nb);
 		fg->chrgr_type = *(enum bcmpmu_chrgr_type_t *)data;
 
-		pr_fg(VERBOSE, "BCMPMU_CHRGR_EVENT_CHGR_DETECTION\n");
+		pr_fg(VERBOSE, "PMU_ACCY_EVT_OUT_CHRGR_TYPE\n");
 		pr_fg(VERBOSE, "chrgr type = %d\n", fg->chrgr_type);
 		FG_LOCK(fg);
 		if (fg->chrgr_type == PMU_CHRGR_TYPE_NONE) {
@@ -1924,10 +1924,10 @@ static int bcmpmu_fg_event_handler(struct notifier_block *nb,
 		FG_UNLOCK(fg);
 		bcmpmu_fg_update_psy(fg, true);
 		break;
-	case BCMPMU_CHRGR_EVENT_CHRG_STATUS:
+	case PMU_CHRGR_EVT_CHRG_STATUS:
 		fg = to_bcmpmu_fg_data(nb, chrgr_status_nb);
 		enable = *(int *)data;
-		pr_fg(VERBOSE, "BCMPMU_CHRGR_EVENT_CHRG_STATUS\n");
+		pr_fg(VERBOSE, "PMU_CHRGR_EVENT_CHRG_STATUS\n");
 		FG_LOCK(fg);
 		if (enable && fg->flags.chrgr_connected) {
 			fg->flags.charging_enabled = true;
@@ -1956,10 +1956,10 @@ static int bcmpmu_fg_event_handler(struct notifier_block *nb,
 			queue_delayed_work(fg->fg_wq, &fg->fg_periodic_work, 0);
 		}
 		break;
-	case BCMPMU_CHRGR_EVENT_CHRG_CURR_LMT:
+	case PMU_ACCY_EVT_OUT_CHRG_CURR:
 		fg = to_bcmpmu_fg_data(nb, chrgr_current_nb);
 		chrgr_curr = *(int *)data;
-		pr_fg(VERBOSE, "BCMPMU_CHRGR_EVENT_CHRG_CURR_LMT\n");
+		pr_fg(VERBOSE, "PMU_ACCY_EVT_OUT_CHRG_CURR\n");
 		FG_LOCK(fg);
 		if (fg->flags.chrgr_connected &&
 			fg->flags.charging_enabled &&
@@ -2076,7 +2076,7 @@ static void bcmpmu_fg_update_psy(struct bcmpmu_fg_data *fg,
 	if (update_psy || force_update) {
 		if (fg->bcmpmu->flags & BCMPMU_SPA_EN)
 			bcmpmu_post_spa_event_to_queue(fg->bcmpmu,
-					BCMPMU_CHRGR_EVENT_CAPACITY,
+					PMU_FG_EVT_CAPACITY,
 					fg->capacity_info.percentage);
 		else
 			power_supply_changed(&fg->psy);
@@ -2220,7 +2220,7 @@ static int bcmpmu_fg_sw_maint_charging_algo(struct bcmpmu_fg_data *fg)
 		flags->batt_status = POWER_SUPPLY_STATUS_FULL;
 		if (fg->bcmpmu->flags & BCMPMU_SPA_EN) {
 			bcmpmu_post_spa_event_to_queue(fg->bcmpmu,
-					BCMPMU_CHRGR_EVENT_EOC, 0);
+					PMU_CHRGR_EVT_EOC, 0);
 			flags->eoc_chargr_en = false;
 		} else {
 			pr_fg(FLOW, "sw_maint_chrgr: disable charging\n");
@@ -2950,7 +2950,7 @@ static void bcmpmu_fg_periodic_work(struct work_struct *work)
 		bcmpmu_fg_save_cap(fg, fg->capacity_info.prev_percentage);
 		if (fg->bcmpmu->flags & BCMPMU_SPA_EN)
 			bcmpmu_post_spa_event_to_queue(fg->bcmpmu,
-				BCMPMU_CHRGR_EVENT_CAPACITY,
+				PMU_FG_EVT_CAPACITY,
 				fg->capacity_info.prev_percentage);
 		else
 			bcmpmu_fg_update_psy(fg, false);
@@ -2972,7 +2972,7 @@ static void bcmpmu_fg_periodic_work(struct work_struct *work)
 				fg->capacity_info.percentage);
 		if (fg->bcmpmu->flags & BCMPMU_SPA_EN)
 			bcmpmu_post_spa_event_to_queue(fg->bcmpmu,
-				BCMPMU_CHRGR_EVENT_CAPACITY,
+				PMU_FG_EVT_CAPACITY,
 				fg->capacity_info.prev_percentage);
 		else {
 			/*
@@ -3212,25 +3212,25 @@ static int bcmpmu_fg_register_notifiers(struct bcmpmu_fg_data *fg)
 	int ret = 0;
 
 	fg->usb_det_nb.notifier_call = bcmpmu_fg_event_handler;
-	ret = bcmpmu_add_notifier(BCMPMU_CHRGR_EVENT_CHGR_DETECTION,
+	ret = bcmpmu_add_notifier(PMU_ACCY_EVT_OUT_CHRGR_TYPE,
 			&fg->usb_det_nb);
 	if (ret)
 		return ret;
 
 	fg->chrgr_status_nb.notifier_call = bcmpmu_fg_event_handler;
-	ret = bcmpmu_add_notifier(BCMPMU_CHRGR_EVENT_CHRG_STATUS,
+	ret = bcmpmu_add_notifier(PMU_CHRGR_EVT_CHRG_STATUS,
 			&fg->chrgr_status_nb);
 	if (ret)
 		goto unreg_usb_det_nb;
 
 	fg->accy_nb.notifier_call = bcmpmu_fg_event_handler;
-	ret = bcmpmu_add_notifier(BCMPMU_CHRGR_EVENT_CHRG_RESUME_VBUS,
+	ret = bcmpmu_add_notifier(PMU_ACCY_EVT_OUT_CHRG_RESUME_VBUS,
 			&fg->accy_nb);
 	if (ret)
 		goto unreg_chrg_status_nb;
 
 	fg->chrgr_current_nb.notifier_call = bcmpmu_fg_event_handler;
-	ret = bcmpmu_add_notifier(BCMPMU_CHRGR_EVENT_CHRG_CURR_LMT,
+	ret = bcmpmu_add_notifier(PMU_ACCY_EVT_OUT_CHRG_CURR,
 			&fg->chrgr_current_nb);
 	if (ret)
 		goto unreg_chrgr_current_nb;
@@ -3238,13 +3238,13 @@ static int bcmpmu_fg_register_notifiers(struct bcmpmu_fg_data *fg)
 
 	return 0;
 unreg_chrgr_current_nb:
-	bcmpmu_remove_notifier(BCMPMU_CHRGR_EVENT_CHRG_RESUME_VBUS,
+	bcmpmu_remove_notifier(PMU_ACCY_EVT_OUT_CHRG_RESUME_VBUS,
 			&fg->accy_nb);
 unreg_chrg_status_nb:
-	bcmpmu_remove_notifier(BCMPMU_CHRGR_EVENT_CHRG_STATUS,
+	bcmpmu_remove_notifier(PMU_CHRGR_EVT_CHRG_STATUS,
 			&fg->chrgr_status_nb);
 unreg_usb_det_nb:
-	bcmpmu_remove_notifier(BCMPMU_CHRGR_EVENT_CHGR_DETECTION,
+	bcmpmu_remove_notifier(PMU_ACCY_EVT_OUT_CHRGR_TYPE,
 			&fg->usb_det_nb);
 	return ret;
 }

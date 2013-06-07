@@ -151,14 +151,14 @@ enum bcmpmu59xxx_irq_reg {
 };
 
 enum bcmpmu59xxx_irq {
-	PMU_IRQ_USBINS, /* 1 */
+	PMU_IRQ_USBINS, /* 0 */
 	PMU_IRQ_USBRM,
 	PMU_IRQ_BATINS,
 	PMU_IRQ_BATRM,
 	PMU_IRQ_MBC_CV_LOOP,
 	PMU_IRQ_MBC_CV_TMR_EXP,
 	PMU_IRQ_EOC,
-	PMU_IRQ_RESUME_VBUS, /* 8 */
+	PMU_IRQ_RESUME_VBUS, /* 7 */
 	PMU_IRQ_MBTEMPLOW,
 	PMU_IRQ_MBTEMPHIGH,
 	PMU_IRQ_USBOV,
@@ -166,7 +166,7 @@ enum bcmpmu59xxx_irq {
 	PMU_IRQ_CHGERRDIS,
 	PMU_IRQ_MBOV_DIS,
 	PMU_IRQ_USBOV_DIS,
-	PMU_IRQ_MBC_TF, /* 16 */
+	PMU_IRQ_MBC_TF, /* 15 */
 	PMU_IRQ_CHG_HW_TTR_EXP,
 	PMU_IRQ_CHG_HW_TCH_EXP,
 	PMU_IRQ_CHG_SW_TMR_EXP,
@@ -174,64 +174,64 @@ enum bcmpmu59xxx_irq {
 	PMU_IRQ_USB_PORT_DIS,
 	PMU_IRQ_USB_CC_REDUCE,
 	PMU_IRQ_VBUSLOWBND,
-	PMU_IRQ_UBPD_CHG_F,
-	PMU_IRQ_VBUS_VALID_F, /* 24 */
+	PMU_IRQ_UBPD_CHG_F, /* 23 */
+	PMU_IRQ_VBUS_VALID_F,
 	PMU_IRQ_OTG_SESS_VALID_F,
 	PMU_IRQ_VB_SESS_END_F,
 	PMU_IRQ_ID_RM,
 	PMU_IRQ_VBUS_VALID_R,
 	PMU_IRQ_VA_SESS_VALID_R,
 	PMU_IRQ_VB_SESS_END_R,
-	PMU_IRQ_ID_INS,
-	PMU_IRQ_IDCHG, /* 32 */
+	PMU_IRQ_ID_INS, /* 31 */
+	PMU_IRQ_IDCHG,
 	PMU_IRQ_RIC_C_TO_FLOAT,
 	PMU_IRQ_CHGDET_LATCH,
 	PMU_IRQ_CHGDET_TO,
 	PMU_IRQ_ADP_CHANGE,
 	PMU_IRQ_ADP_SNS_END,
 	PMU_IRQ_ADP_PROB,
-	PMU_IRQ_ADP_PRB_ERR,
-	PMU_IRQ_POK_PRESSED, /* 40 */
+	PMU_IRQ_ADP_PRB_ERR, /* 39 */
+	PMU_IRQ_POK_PRESSED,
 	PMU_IRQ_POK_RELEASED,
 	PMU_IRQ_POK_WAKEUP,
 	PMU_IRQ_POK_BIT_VLD,
 	PMU_IRQ_POK_RESTART,
 	PMU_IRQ_POK_T1,
 	PMU_IRQ_POK_T2,
-	PMU_IRQ_POK_T3,
-	PMU_IRQ_I2C_RESTART, /* 48 */
+	PMU_IRQ_POK_T3, /* 47 */
+	PMU_IRQ_I2C_RESTART,
 	PMU_IRQ_GBAT_PLUG_IN,
 	PMU_IRQ_SMPL_INT,
 	PMU_IRQ_AUX_INS,
 	PMU_IRQ_AUX_RM,
 	PMU_IRQ_XTAL_FAILURE,
 	PMU_IRQ_MBWV_R_10S_WAIT,
-	PMU_IRQ_MBWV_F,
-	PMU_IRQ_RTC_ALARM, /* 56 */
+	PMU_IRQ_MBWV_F, /* 55 */
+	PMU_IRQ_RTC_ALARM,
 	PMU_IRQ_RTC_SEC,
 	PMU_IRQ_RTC_MIN,
 	PMU_IRQ_RTCADJ,
 	PMU_IRQ_FGC,
 	PMU_IRQ_BBLOW,
 	PMU_IRQ_DIE_OT_R,
-	PMU_IRQ_DIE_OT_F,
-	PMU_IRQ_RTM_DATA_RDY, /* 64 */
+	PMU_IRQ_DIE_OT_F, /* 63 */
+	PMU_IRQ_RTM_DATA_RDY,
 	PMU_IRQ_RTM_IN_CON_MEAS,
 	PMU_IRQ_RTM_UPPER,
 	PMU_IRQ_RTM_IGNORE,
 	PMU_IRQ_RTM_OVERRIDDEN,
 	PMU_IRQ_AUD_HSAB_SHCKT,
 	PMU_IRQ_AUD_IHFD_SHCKT,
-	PMU_IRQ_POK_NOP,
-	PMU_IRQ_MIPI_LEN_ERR, /* 72 */
+	PMU_IRQ_POK_NOP, /* 71 */
+	PMU_IRQ_MIPI_LEN_ERR,
 	PMU_IRQ_MIPI_RCV_ERR,
 	PMU_IRQ_MIPI_BUSQ_RESP,
 	PMU_IRQ_MIPI_BUSQ_POS,
 	PMU_IRQ_MIPI_EOT,
 	PMU_IRQ_MIPI_XMT_END,
 	PMU_IRQ_MIPI_INT_POS,
-	PMU_IRQ_LOWBAT,
-	PMU_IRQ_CSROVRI, /* 80 */
+	PMU_IRQ_LOWBAT, /* 79 */
+	PMU_IRQ_CSROVRI,
 	PMU_IRQ_VSROVRI,
 	PMU_IRQ_MSROVRI,
 	PMU_IRQ_SDSR1OVRI,
@@ -239,7 +239,7 @@ enum bcmpmu59xxx_irq {
 	PMU_IRQ_IOSR1OVRI,
 	PMU_IRQ_IOSR2OVRI,
 	PMU_IRQ_RESERVED,
-	PMU_IRQ_RFLDO_OVRI, /* 88 */
+	PMU_IRQ_RFLDO_OVRI, /* 87 */
 	PMU_IRQ_AUDLDO_OVRI,
 	PMU_IRQ_USBLDO_OVR,
 	PMU_IRQ_SDXLDO_OVRI,
@@ -255,7 +255,7 @@ enum bcmpmu59xxx_irq {
 	PMU_IRQ_GPLDO2_OVRI,
 	PMU_IRQ_GPLDO3_OVRI,
 	PMU_IRQ_RFLDO_SHD,
-	PMU_IRQ_AUDLDO_SHD, /* 104 */
+	PMU_IRQ_AUDLDO_SHD, /* 103 */
 	PMU_IRQ_USBLDO_SHD,
 	PMU_IRQ_SDXLDO_SHD,
 	PMU_IRQ_MICLDO_SHD,
@@ -263,7 +263,7 @@ enum bcmpmu59xxx_irq {
 	PMU_IRQ_SIMLDO2_SHD,
 	PMU_IRQ_MMCLDO1_SHD,
 	PMU_IRQ_MMCLDO2_SHD,
-	PMU_IRQ_CAMLDO1_SHD, /* 112 */
+	PMU_IRQ_CAMLDO1_SHD, /* 111 */
 	PMU_IRQ_CAMLDO2_SHD,
 	PMU_IRQ_VIBLDO_SHD,
 	PMU_IRQ_SDLDO_SHD,
@@ -271,7 +271,7 @@ enum bcmpmu59xxx_irq {
 	PMU_IRQ_GPLDO2_SHD,
 	PMU_IRQ_GPLDO3_SHD,
 	PMU_IRQ_TCXLDO_OVRI,
-	PMU_IRQ_LVLDO1_OVRI,
+	PMU_IRQ_LVLDO1_OVRI, /* 119 */
 	PMU_IRQ_LVLDO2_OVRI,
 	PMU_IRQ_TCXLDO_SHD,
 	PMU_IRQ_LVLDO1_SHD,
@@ -494,17 +494,9 @@ enum bcmpmu_chrgr_type_t {
 	PMU_CHRGR_TYPE_TYPE1,
 	PMU_CHRGR_TYPE_TYPE2,
 	PMU_CHRGR_TYPE_PS2,
+	PMU_CHRGR_TYPE_ACA_DOCK,
 	PMU_CHRGR_TYPE_ACA,
 	PMU_CHRGR_TYPE_MAX,
-};
-#define PMU_BC_DETECTION_START 0x10
-#define PMU_BC_DETECTION_END 0x11
-enum bcmpmu_usb_type_t {
-	PMU_USB_TYPE_NONE,
-	PMU_USB_TYPE_SDP,
-	PMU_USB_TYPE_CDP,
-	PMU_USB_TYPE_ACA,
-	PMU_USB_TYPE_MAX,
 };
 
 enum bcmpmu_usb_adp_mode_t {
@@ -525,39 +517,6 @@ enum bcmpmu_usb_id_lvl_t {
 	PMU_USB_ID_LVL_MAX,
 };
 
-enum {
-	FG_TMP_ZONE_MIN,
-	FG_TMP_ZONE_n20 = FG_TMP_ZONE_MIN,
-	FG_TMP_ZONE_n15,
-	FG_TMP_ZONE_n10,
-	FG_TMP_ZONE_n5,
-	FG_TMP_ZONE_0,
-	FG_TMP_ZONE_p5,
-	FG_TMP_ZONE_p10,
-	FG_TMP_ZONE_p15,
-	FG_TMP_ZONE_p20,
-	FG_TMP_ZONE_MAX = FG_TMP_ZONE_p20,
-};
-
-enum bcmpmu_uas_mode {
-	BCMPMU_UAS_MODE_SW,
-	BCMPMU_UAS_MODE_MANUAL,
-	BCMPMU_UAS_MODE_HW,
-	BCMPMU_UAS_MODE_MAX,
-};
-
-enum bcmpmu_uas_switch {
-	UAS_SW1,
-	UAS_SW2,
-	UAS_SW3,
-	UAS_SW4,
-	UAS_SW5,
-	UAS_SW6,
-	UAS_SW7,
-	UAS_SW8,
-	UAS_SW_MAX,
-};
-
 enum bcmpmu_bc_t {
 	BCMPMU_BC_BB_BC11,
 	BCMPMU_BC_BB_BC12,
@@ -566,40 +525,37 @@ enum bcmpmu_bc_t {
 };
 
 enum bcmpmu_event_t {
-	/* events for usb driver */
-	BCMPMU_USB_EVENT_USB_DETECTION,
-	BCMPMU_USB_EVENT_IN,
-	BCMPMU_USB_EVENT_RM,
-	BCMPMU_USB_EVENT_ADP_CHANGE,
-	BCMPMU_USB_EVENT_ADP_SENSE_END,
-	BCMPMU_USB_EVENT_ADP_CALIBRATION_DONE,
-	BCMPMU_USB_EVENT_ID_CHANGE,
-	BCMPMU_USB_EVENT_VBUS_VALID,
-	BCMPMU_USB_EVENT_VBUS_INVALID,
-	BCMPMU_USB_EVENT_SESSION_VALID,
-	BCMPMU_USB_EVENT_SESSION_INVALID,
-	BCMPMU_USB_EVENT_SESSION_END_INVALID,
-	BCMPMU_USB_EVENT_SESSION_END_VALID,
-	BCMPMU_USB_EVENT_VBUS_OVERCURRENT,
-	BCMPMU_USB_EVENT_RIC_C_TO_FLOAT,
-	BCMPMU_USB_EVENT_CHGDET_LATCH,
-	/* events for battery charging */
-	BCMPMU_CHRGR_EVENT_CHGR_DETECTION,
-	BCMPMU_CHRGR_EVENT_CHRG_CURR_LMT,
-	BCMPMU_CHRGR_EVENT_CHRG_RESUME_VBUS,
-	BCMPMU_CHRGR_EVENT_MBOV,
-	BCMPMU_CHRGR_EVENT_USBOV,
-	BCMPMU_CHRGR_EVENT_MBTEMP,
-	BCMPMU_CHRGR_EVENT_EOC,
-	BCMPMU_CHRGR_EVENT_CHRG_STATUS,
-	BCMPMU_CHRGR_EVENT_CAPACITY,
-	/* events for fuel gauge */
-	BCMPMU_FG_EVENT_FGC,
-	/*Events for JIG*/
-	BCMPMU_JIG_EVENT_USB,
-	BCMPMU_JIG_EVENT_UART,
+	PMU_ACCY_EVT_OUT_CHRGR_TYPE,
+	PMU_ACCY_EVT_OUT_USB_IN,
+	PMU_ACCY_EVT_OUT_USB_RM,
+	PMU_ACCY_EVT_OUT_ADP_CHANGE,
+	PMU_ACCY_EVT_OUT_ADP_SENSE_END,
+	PMU_ACCY_EVT_OUT_ADP_CALIBRATION_DONE,
+	PMU_ACCY_EVT_OUT_ID_CHANGE,
+	PMU_ACCY_EVT_OUT_VBUS_VALID,
+	PMU_ACCY_EVT_OUT_VBUS_INVALID,
+	PMU_ACCY_EVT_OUT_SESSION_VALID,
+	PMU_ACCY_EVT_OUT_SESSION_INVALID,
+	PMU_ACCY_EVT_OUT_SESSION_END_INVALID,
+	PMU_ACCY_EVT_OUT_SESSION_END_VALID,
+	PMU_ACCY_EVT_OUT_CHGDET_LATCH,
+	PMU_ACCY_EVT_OUT_CHGDET_LATCH_TO,
+	PMU_ACCY_EVT_OUT_CHRG_RESUME_VBUS,
+	PMU_ACCY_EVT_OUT_CHRG_CURR,
+	PMU_ACCY_EVT_OUT_USBOV,
+	PMU_ACCY_EVT_OUT_USBOV_DIS,
 
-	BCMPMU_EVENT_MAX,
+	PMU_CHRGR_DET_EVT_OUT_XCVR,
+
+	PMU_CHRGR_EVT_MBTEMP,
+	PMU_CHRGR_EVT_MBOV,
+	PMU_CHRGR_EVT_EOC,
+	PMU_CHRGR_EVT_CHRG_STATUS,
+	PMU_FG_EVT_CAPACITY,
+	PMU_FG_EVT_FGC,
+	PMU_JIG_EVT_USB,
+	PMU_JIG_EVT_UART,
+	PMU_EVENT_MAX,
 };
 
 enum bcmpmu_usb_ctrl_t {
@@ -625,19 +581,9 @@ enum bcmpmu_usb_ctrl_t {
 	BCMPMU_USB_CTRL_GET_SESSION_END_STATUS,
 	BCMPMU_USB_CTRL_GET_ID_VALUE,
 	BCMPMU_USB_CTRL_GET_CHRGR_TYPE,
-	BCMPMU_USB_CTRL_GET_USB_TYPE,
 	BCMPMU_USB_CTRL_SW_UP,
 	BCMPMU_USB_CTRL_TPROBE_MAX,
 	BCMPMU_USB_CTRL_ALLOW_BC_DETECT,
-	BCMPMU_USB_CTRL_BCDLDO,
-};
-
-enum bcmpmu_usb_det_state_t {
-	USB_IDLE,
-	USB_CONNECTED,
-	USB_DETECT,
-	USB_RETRY,
-	USB_DISCONNECTED,
 };
 
 struct bcmpmu59xxx_rw_data {
@@ -687,54 +633,6 @@ struct event_list {
 	struct list_head node;
 	u32 event;
 	void *para;
-};
-
-struct bcmpmu_usb_accy_data {
-	enum bcmpmu_chrgr_type_t chrgr_type;
-	enum bcmpmu_usb_type_t usb_type;
-	int max_curr_chrgr;
-	int batt_present;
-	int usb_dis;
-};
-
-struct bcmpmu_accy {
-	struct bcmpmu59xxx *bcmpmu;
-	struct event_list *free_list;
-	struct event_list *dispatch_list;
-	const int *usb_id_map;
-	int usb_id_map_len;
-	wait_queue_head_t wait;
-	struct work_struct adp_work;
-	struct delayed_work det_work;
-	struct delayed_work init_work;
-	spinlock_t accy_lock;
-#ifdef CONFIG_DEBUG_FS
-	struct dentry *dent_accy;
-#endif	/*CONFIG_DEBUG_FS*/
-#ifdef CONFIG_HAS_WAKELOCK
-	struct wake_lock wake_lock;
-#endif
-#ifdef CONFIG_KONA_PI_MGR
-	struct pi_mgr_qos_node qos;
-#endif
-	int adp_cal_done;
-	enum bcmpmu_usb_det_state_t det_state;
-	int otg_block_enabled;
-	int adp_block_enabled;
-	int adp_prob_comp;
-	int adp_sns_comp;
-	int retry_cnt;
-	int latch_event;
-	bool clock_en;
-	enum bcmpmu_bc_t bc;
-	int piggyback_chrg;
-	atomic_t usb_allow_bc_detect;
-	/* usb accy */
-	struct bcmpmu_usb_accy_data usb_accy_data;
-	int (*usb_set) (struct bcmpmu59xxx *pmu, int ctrl,
-			unsigned long val);
-	int (*usb_get) (struct bcmpmu59xxx *pmu, int ctrl,
-			void *val);
 };
 
 struct bcmpmu59xxx_rev_info {
@@ -900,6 +798,15 @@ struct bcmpmu59xxx_spa_pb_pdata {
 	char *chrgr_name;
 };
 
+struct bcmpmu59xxx_accy_pdata {
+#define ACCY_USE_PM_QOS		0x1
+	unsigned long flags;
+	int qos_pi_id;
+};
+
+struct bcmpmu_chrgr_pdata {
+	int *chrgr_curr_lmt_tbl;
+};
 #if defined(CONFIG_LEDS_BCM_PMU59xxx)
 struct bcmpmu59xxx_led_pdata {
 	char *led_name;
@@ -944,6 +851,7 @@ struct bcmpmu59xxx {
 	void *irqinfo;
 	void *rtcinfo;
 	void *accyinfo;
+	void *accy_d;
 	void *rgltr_data;
 	void *ponkeyinfo;
 	void *adc;
@@ -952,7 +860,7 @@ struct bcmpmu59xxx {
 	void *spa_pb_info;
 	u32 flags; /*ctrl flags - copied from pdata*/
 	/* event notifier */
-	struct event_notifier event[BCMPMU_EVENT_MAX];
+	struct event_notifier event[PMU_EVENT_MAX];
 #ifdef CONFIG_DEBUG_FS
 	struct dentry *dent_bcmpmu;
 #endif	/*CONFIG_DEBUG_FS*/
@@ -999,7 +907,8 @@ int bcmpmu_usb_get(struct bcmpmu59xxx *bcmpmu,
 
 int bcmpmu_usb_set(struct bcmpmu59xxx *bcmpmu,
 			int ctrl, unsigned long data);
-
+int bcmpmu_check_vbus(void);
+int bcmpmu_accy_chrgr_type_notify(int chrgr_type);
 u32 bcmpmu_get_chrgr_curr_lmt(u32 chrgr_type);
 int bcmpmu_chrgr_usb_en(struct bcmpmu59xxx *bcmpmu, int enable);
 bool bcmpmu_is_usb_host_enabled(struct bcmpmu59xxx *bcmpmu);
@@ -1010,7 +919,6 @@ int bcmpmu_get_icc_fc(struct bcmpmu59xxx *bcmpmu);
 int bcmpmu_set_cc_trim(struct bcmpmu59xxx *bcmpmu, int cc_trim);
 int bcmpmu_cc_trim_up(struct bcmpmu59xxx *bcmpmu);
 int bcmpmu_cc_trim_down(struct bcmpmu59xxx *bcmpmu);
-int bcmpmu_get_chrgr_type(struct bcmpmu_accy *paccy);
 
 /* ADC */
 int bcmpmu_adc_read(struct bcmpmu59xxx *bcmpmu, enum bcmpmu_adc_channel channel,

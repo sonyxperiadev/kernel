@@ -42,7 +42,6 @@
 #define PERIPHERAL_TO_HOST_DELAY_MS 100
 #define USBLDO_RAMP_UP_DELAY_IN_MS 2
 #define USB_OTG_SUSPEND_CURRENT 2
-static u32 g_usb_charger_type;
 
 static int bcmpmu_otg_xceiv_set_vbus(struct usb_otg *otg, bool enabled)
 {
@@ -144,8 +143,6 @@ static void bcmpmu_otg_xceiv_shutdown(struct usb_phy *phy)
 			}
 		}
 	}
-
-	g_usb_charger_type = PMU_USB_TYPE_NONE;
 
 }
 
@@ -304,11 +301,11 @@ static int bcmpmu_otg_xceiv_vbus_notif_handler(struct notifier_block *nb,
 	bool vbus_status = 0;
 
 	switch (value) {
-	case BCMPMU_USB_EVENT_VBUS_VALID:
+	case PMU_ACCY_EVT_OUT_VBUS_VALID:
 		xceiv_data = container_of(nb, struct bcmpmu_otg_xceiv_data,
 				bcm_otg_vbus_validity_notifier);
 		break;
-	case BCMPMU_USB_EVENT_SESSION_INVALID:
+	case PMU_ACCY_EVT_OUT_SESSION_INVALID:
 		xceiv_data = container_of(nb, struct bcmpmu_otg_xceiv_data,
 				bcm_otg_session_invalid_notifier);
 		break;
@@ -339,7 +336,6 @@ static int bcmpmu_otg_xceiv_chg_detection_notif_handler(struct notifier_block
 	    container_of(nb, struct bcmpmu_otg_xceiv_data,
 			 bcm_otg_chg_detection_notifier);
 	u32 usb_charger_type;
-	static u8 pmu_xceiv_start;
 
 	if (!xceiv_data || !data)
 		return -EINVAL;
@@ -348,30 +344,9 @@ static int bcmpmu_otg_xceiv_chg_detection_notif_handler(struct notifier_block
 
 	dev_info(xceiv_data->dev, "data %x\n", usb_charger_type);
 	switch (usb_charger_type) {
-	case PMU_BC_DETECTION_START:
-		if (xceiv_data->otg_xceiver.phy.state ==
-			OTG_STATE_UNDEFINED) {
-			bcmpmu_otg_xceiv_start
-				(&xceiv_data->otg_xceiver.phy);
-			pmu_xceiv_start = 1;
-		} else
-			pmu_xceiv_start = 0;
-
-		break;
-	case PMU_BC_DETECTION_END:
-		if (pmu_xceiv_start &&
-			(xceiv_data->otg_xceiver.phy.state !=
-				OTG_STATE_UNDEFINED)) {
-			bcmpmu_otg_xceiv_shutdown
-				(&xceiv_data->otg_xceiver.phy);
-			pmu_xceiv_start = 0;
-		}
-		break;
-	case PMU_USB_TYPE_SDP:
-	case PMU_USB_TYPE_CDP:
-	case PMU_USB_TYPE_ACA:
-		g_usb_charger_type = usb_charger_type;
-
+	case PMU_CHRGR_TYPE_SDP:
+	case PMU_CHRGR_TYPE_CDP:
+	case PMU_CHRGR_TYPE_ACA:
 		queue_work(xceiv_data->bcm_otg_work_queue,
 			   &xceiv_data->bcm_otg_chg_detect_work);
 		break;
@@ -382,7 +357,42 @@ static int bcmpmu_otg_xceiv_chg_detection_notif_handler(struct notifier_block
 	return 0;
 
 }
+static int bcmpmu_otg_xceiv_state_handler(struct notifier_block
+					*nb, unsigned long value,
+					void *data)
+{
+	struct bcmpmu_otg_xceiv_data *xceiv_data;
+	bool xceiv_state;
+	static u8 pmu_xceiv_start;
 
+	xceiv_data = container_of(nb, struct bcmpmu_otg_xceiv_data,
+			 bcm_otg_xceive_state_notifier);
+
+	if (!xceiv_data || !data)
+		return -EINVAL;
+
+	xceiv_state = *(u32 *)data;
+
+	dev_info(xceiv_data->dev, "----req xceiv_state %x\n", xceiv_state);
+
+	if (xceiv_state) {
+		if (xceiv_data->otg_xceiver.phy.state ==
+			OTG_STATE_UNDEFINED) {
+			bcmpmu_otg_xceiv_start
+				(&xceiv_data->otg_xceiver.phy);
+			pmu_xceiv_start = 1;
+		}
+	} else {
+		if (pmu_xceiv_start &&
+			(xceiv_data->otg_xceiver.phy.state !=
+				OTG_STATE_UNDEFINED)) {
+			bcmpmu_otg_xceiv_shutdown
+				(&xceiv_data->otg_xceiver.phy);
+			pmu_xceiv_start = 0;
+		}
+	}
+	return 0;
+}
 static int bcmpmu_otg_xceiv_id_chg_notif_handler(struct notifier_block *nb,
 						 unsigned long value,
 						 void *data)
@@ -427,9 +437,9 @@ static int bcmpmu_otg_xceiv_set_peripheral(struct usb_otg *otg,
 		} else {
 			int data;
 			bcmpmu_usb_get(xceiv_data->bcmpmu,
-				       BCMPMU_USB_CTRL_GET_USB_TYPE, &data);
-			if ((data != PMU_USB_TYPE_SDP)
-			    && (data != PMU_USB_TYPE_CDP)) {
+				       BCMPMU_USB_CTRL_GET_CHRGR_TYPE, &data);
+			if ((data != PMU_CHRGR_TYPE_SDP)
+			    && (data != PMU_CHRGR_TYPE_CDP)) {
 				/* Shutdown the core */
 				atomic_notifier_call_chain(&xceiv_data->
 							   otg_xceiver.phy.
@@ -454,19 +464,18 @@ static int bcmpmu_otg_xceiv_set_vbus_power(struct usb_phy *phy,
 					   unsigned int ma)
 {
 	struct bcmpmu_otg_xceiv_data *xceiv_data = dev_get_drvdata(phy->dev);
-	int usb_type = 0;
+	int chrgr_type = 0;
 
-	/* during multiple usb_disconnect g_usb_charger_type is set to 0
-	from bcmpmu_otg_xceiv_shutdown */
-	bcmpmu_usb_get(xceiv_data->bcmpmu, BCMPMU_USB_CTRL_GET_USB_TYPE,
-			&usb_type);
-	g_usb_charger_type = usb_type;
+	bcmpmu_usb_get(xceiv_data->bcmpmu, BCMPMU_USB_CTRL_GET_CHRGR_TYPE,
+			&chrgr_type);
 
-	if ((g_usb_charger_type == PMU_USB_TYPE_SDP) ||
-		(g_usb_charger_type == PMU_USB_TYPE_CDP) ||
-		(g_usb_charger_type == PMU_USB_TYPE_ACA))
+	if ((chrgr_type == PMU_CHRGR_TYPE_SDP) ||
+		(chrgr_type == PMU_CHRGR_TYPE_CDP) ||
+		(chrgr_type == PMU_CHRGR_TYPE_ACA))
 		return bcmpmu_usb_set(xceiv_data->bcmpmu,
 			   BCMPMU_USB_CTRL_CHRG_CURR_LMT, ma);
+
+	return 0;
 }
 
 static int bcmpmu_otg_xceiv_set_host(struct usb_otg *otg,
@@ -931,23 +940,28 @@ static int __devinit bcmpmu_otg_xceiv_probe(struct platform_device *pdev)
 
 	xceiv_data->bcm_otg_vbus_validity_notifier.notifier_call =
 	    bcmpmu_otg_xceiv_vbus_notif_handler;
-	bcmpmu_add_notifier(BCMPMU_USB_EVENT_VBUS_VALID,
+	bcmpmu_add_notifier(PMU_ACCY_EVT_OUT_VBUS_VALID,
 			    &xceiv_data->bcm_otg_vbus_validity_notifier);
 
 	xceiv_data->bcm_otg_session_invalid_notifier.notifier_call =
 	    bcmpmu_otg_xceiv_vbus_notif_handler;
-	bcmpmu_add_notifier(BCMPMU_USB_EVENT_SESSION_INVALID,
+	bcmpmu_add_notifier(PMU_ACCY_EVT_OUT_SESSION_INVALID,
 			    &xceiv_data->bcm_otg_session_invalid_notifier);
 
 	xceiv_data->bcm_otg_id_chg_notifier.notifier_call =
 	    bcmpmu_otg_xceiv_id_chg_notif_handler;
-	bcmpmu_add_notifier(BCMPMU_USB_EVENT_ID_CHANGE,
+	bcmpmu_add_notifier(PMU_ACCY_EVT_OUT_ID_CHANGE,
 			    &xceiv_data->bcm_otg_id_chg_notifier);
 
 	xceiv_data->bcm_otg_chg_detection_notifier.notifier_call =
 	    bcmpmu_otg_xceiv_chg_detection_notif_handler;
-	bcmpmu_add_notifier(BCMPMU_USB_EVENT_USB_DETECTION,
+	bcmpmu_add_notifier(PMU_ACCY_EVT_OUT_CHRGR_TYPE,
 			    &xceiv_data->bcm_otg_chg_detection_notifier);
+
+	xceiv_data->bcm_otg_xceive_state_notifier.notifier_call =
+		bcmpmu_otg_xceiv_state_handler;
+	bcmpmu_add_notifier(PMU_CHRGR_DET_EVT_OUT_XCVR,
+			    &xceiv_data->bcm_otg_xceive_state_notifier);
 
 	wake_lock_init(&xceiv_data->otg_xceiver.xceiver_wake_lock,
 		       WAKE_LOCK_SUSPEND, "otg_xcvr_wakelock");
@@ -1009,7 +1023,6 @@ static int __devinit bcmpmu_otg_xceiv_probe(struct platform_device *pdev)
 
 	pm_runtime_set_active(&pdev->dev);
 	pm_runtime_enable(&pdev->dev);
-	g_usb_charger_type = PMU_USB_TYPE_NONE;
 
 	dev_info(&pdev->dev, "Probing successful\n");
 
@@ -1046,22 +1059,21 @@ static int __exit bcmpmu_otg_xceiv_remove(struct platform_device *pdev)
 	}
 
 	/* Remove notifiers */
-	bcmpmu_remove_notifier(BCMPMU_USB_EVENT_VBUS_VALID,
+	bcmpmu_remove_notifier(PMU_ACCY_EVT_OUT_VBUS_VALID,
 			       &xceiv_data->bcm_otg_vbus_validity_notifier);
-	bcmpmu_remove_notifier(BCMPMU_USB_EVENT_SESSION_INVALID,
+	bcmpmu_remove_notifier(PMU_ACCY_EVT_OUT_SESSION_INVALID,
 			       &xceiv_data->bcm_otg_session_invalid_notifier);
-	bcmpmu_remove_notifier(BCMPMU_USB_EVENT_ID_CHANGE,
+	bcmpmu_remove_notifier(PMU_ACCY_EVT_OUT_ID_CHANGE,
 			       &xceiv_data->bcm_otg_id_chg_notifier);
-	bcmpmu_remove_notifier(BCMPMU_USB_EVENT_USB_DETECTION,
+	bcmpmu_remove_notifier(PMU_ACCY_EVT_OUT_CHRGR_TYPE,
 			       &xceiv_data->bcm_otg_chg_detection_notifier);
+	bcmpmu_remove_notifier(PMU_CHRGR_DET_EVT_OUT_XCVR,
+			    &xceiv_data->bcm_otg_xceive_state_notifier);
 
 	destroy_workqueue(xceiv_data->bcm_otg_work_queue);
 	bcmpmu_otg_free_regulator(xceiv_data);
 	kfree(xceiv_data);
 	bcm_hsotgctrl_phy_deinit();
-
-	g_usb_charger_type = PMU_USB_TYPE_NONE;
-
 	return 0;
 }
 

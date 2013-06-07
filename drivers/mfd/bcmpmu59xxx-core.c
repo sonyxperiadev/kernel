@@ -197,7 +197,7 @@ int bcmpmu_add_notifier(u32 event_id, struct notifier_block *notifier)
 		return -EAGAIN;
 	}
 
-	if (unlikely(event_id >= BCMPMU_EVENT_MAX)) {
+	if (unlikely(event_id >= PMU_EVENT_MAX)) {
 		pr_err("%s: Invalid event id\n", __func__);
 		return -EINVAL;
 	}
@@ -213,7 +213,7 @@ int bcmpmu_remove_notifier(u32 event_id, struct notifier_block *notifier)
 		return -EAGAIN;
 	}
 
-	if (unlikely(event_id >= BCMPMU_EVENT_MAX)) {
+	if (unlikely(event_id >= PMU_EVENT_MAX)) {
 		pr_err("%s: Invalid event id\n", __func__);
 		return -EINVAL;
 	}
@@ -689,13 +689,13 @@ static int __devinit bcmpmu59xxx_probe(struct platform_device *pdev)
 	bcmpmu->flags = bcmpmu->pdata->flags;
 
 	/* Enable ACLD for A1 PMU */
+	pr_pmucore(INIT, "bcmpmu->flags: %x\n", bcmpmu->flags);
 	if ((bcmpmu->rev_info.prj_id == BCMPMU_59054_ID) &&
 			(bcmpmu->rev_info.ana_rev >= BCMPMU_59054A1_ANA_REV)) {
-
 		bcmpmu->flags |= BCMPMU_ACLD_EN;
-		pr_pmucore(INIT, "bcmpmu->flags = 0x%x\n", bcmpmu->flags);
-
+		pr_pmucore(INIT, "set flag BCMPMU_ACLD_EN\n");
 	}
+
 	bcmpmu_gbl = bcmpmu;
 	mfd_add_devices(bcmpmu->dev, -1, irq_devs,
 				ARRAY_SIZE(irq_devs), NULL, 0);
@@ -711,7 +711,7 @@ static int __devinit bcmpmu59xxx_probe(struct platform_device *pdev)
 	if (ret < 0)
 		pr_pmucore(ERROR, "Misc Register failed");
 
-	for (i = 0; i < BCMPMU_EVENT_MAX; i++) {
+	for (i = 0; i < PMU_EVENT_MAX; i++) {
 		bcmpmu->event[i].event_id = i;
 		BLOCKING_INIT_NOTIFIER_HEAD(&bcmpmu->event[i].notifiers);
 	}

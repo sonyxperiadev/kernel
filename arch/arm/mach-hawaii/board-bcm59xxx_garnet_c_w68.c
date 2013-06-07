@@ -856,6 +856,27 @@ struct bcmpmu59xxx_regulator_pdata rgltr_pdata = {
 	.num_rgltr = ARRAY_SIZE(bcm59xxx_regulators),
 };
 
+static int chrgr_curr_lmt[PMU_CHRGR_TYPE_MAX] = {
+	[PMU_CHRGR_TYPE_NONE] = 0,
+	[PMU_CHRGR_TYPE_SDP] = 500,
+	[PMU_CHRGR_TYPE_CDP] = 1500,
+	[PMU_CHRGR_TYPE_DCP] = 1500,
+	[PMU_CHRGR_TYPE_TYPE1] = 700,
+	[PMU_CHRGR_TYPE_TYPE2] = 700,
+	[PMU_CHRGR_TYPE_PS2] = 100,
+	[PMU_CHRGR_TYPE_ACA_DOCK] = 1000,
+	[PMU_CHRGR_TYPE_ACA] = 1000,
+};
+
+struct bcmpmu59xxx_accy_pdata accy_pdata = {
+	.flags = ACCY_USE_PM_QOS,
+	.qos_pi_id = PI_MGR_PI_ID_ARM_SUB_SYSTEM,
+};
+
+struct bcmpmu_chrgr_pdata chrgr_pdata = {
+	.chrgr_curr_lmt_tbl = chrgr_curr_lmt,
+};
+
 static struct bcmpmu_adc_lut batt_temp_map[] = {
 	{16, 1000},			/* 100 C */
 	{20, 950},			/* 95 C */
@@ -1207,6 +1228,8 @@ static struct mfd_cell pmu59xxx_devs[] = {
 	{
 		.name = "bcmpmu_charger",
 		.id = -1,
+		.platform_data = &chrgr_pdata,
+		.pdata_size = sizeof(chrgr_pdata),
 	},
 	{
 		.name = "bcmpmu59xxx-ponkey",
@@ -1226,6 +1249,12 @@ static struct mfd_cell pmu59xxx_devs[] = {
 	},
 	{
 		.name = "bcmpmu_accy",
+		.id = -1,
+		.platform_data = &accy_pdata,
+		.pdata_size = sizeof(accy_pdata),
+	},
+	{
+		.name = "bcmpmu_accy_detect",
 		.id = -1,
 	},
 	{
