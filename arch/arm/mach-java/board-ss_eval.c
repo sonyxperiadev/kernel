@@ -781,6 +781,10 @@ struct platform_device *hawaii_common_plat_devices[] __initdata = {
 	&hawaii_spum_aes_device,
 #endif
 
+#ifdef CONFIG_BRCM_CDC
+        &brcm_cdc_device,
+#endif
+
 #ifdef CONFIG_UNICAM
 	&hawaii_unicam_device,
 #endif
