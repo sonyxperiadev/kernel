@@ -18,8 +18,8 @@
 		reg = <0x82000000 0x2e000000>; /* 736 MB */
 	};
 
-	wd-tapper {
-		count = <300>; /* Time in seconds */
+	rtc-kona {
+		compatible = "bcm,rtc-kona";
 		ch-num = <1>; /* Kona hub timer Channel number */
 		timer-name = "aon-timer";
 	};
