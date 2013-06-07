@@ -24,6 +24,7 @@
 /************************************************************************************************/
 
 #define __DSI_USE_CLK_API__
+#define __PREVENT_MM_RETENTION
 
 #include "lcd_clock.h" 
 #ifdef __DSI_USE_CLK_API__
@@ -112,6 +113,46 @@ int brcm_disable_smi_lcd_clocks(struct pi_mgr_dfs_node* dfs_node)
 	return 0;
 }
 
+static int dsi_axi_clk(int bus, bool on)
+{
+	struct clk *dsi_axi;
+	dsi_axi = clk_get(NULL, dsi_bus_clk[bus].dsi_axi);
+	BUG_ON(IS_ERR_OR_NULL(dsi_axi));
+	if (on) {
+		if (clk_enable(dsi_axi)) {
+			pr_err("Failed to enable the DSI[%d] AXI clock\n",
+			bus);
+		return -EIO;
+		}
+	} else {
+		clk_disable(dsi_axi);
+	}
+	return 0;
+}
+
+static int dsi_esc_clk(int bus, u32 esc_clk_hz, bool on)
+{
+	struct	clk *dsi_esc;
+	dsi_esc = clk_get(NULL, dsi_bus_clk[bus].dsi_esc);
+	BUG_ON(IS_ERR_OR_NULL(dsi_esc));
+
+	if (on) {
+		if (clk_set_rate(dsi_esc, esc_clk_hz)) {
+			pr_err("Failed to set the DSI[%d] ESC clk to %d Hz\n",
+				bus, esc_clk_hz);
+			return -EIO;
+		}
+		if (clk_enable(dsi_esc)) {
+			pr_err("Failed to enable the DSI[%d] ESC clk\n",
+				bus);
+			return -EIO;
+		}
+	} else {
+		clk_disable(dsi_esc);
+	}
+	return 0;
+}
+
 int en_disp_clks()
 {
 	struct clk *dsi_axi;
@@ -152,39 +193,19 @@ int brcm_enable_dsi_lcd_clocks(
         unsigned int esc_clk_hz )
 {
 #ifndef CONFIG_MACH_BCM_FPGA
-	struct	clk *dsi_axi;
-	struct	clk *dsi_esc;
 	
 	if (g_display_enabled) {
 		printk(KERN_ERR "Skipping brcm_enable_dsi_lcd_clocks\n");
 		return 0;
 	}
-	printk(KERN_INFO "brcm_enable_dsi_lcd_clocks\n");
 	if (pi_mgr_dfs_request_update(dfs_node, PI_OPP_NORMAL)) {
 		printk(KERN_ERR "Failed to update dfs request for DSI LCD\n");
 		return  -EIO;
 	}
 
-	dsi_axi     = clk_get (NULL, dsi_bus_clk[dsi_bus].dsi_axi);
-	dsi_esc     = clk_get (NULL, dsi_bus_clk[dsi_bus].dsi_esc);
-	BUG_ON(IS_ERR_OR_NULL(dsi_axi) || IS_ERR_OR_NULL(dsi_esc));
+	dsi_axi_clk(dsi_bus, true);
+	dsi_esc_clk(dsi_bus, esc_clk_hz, true);
 
-	if (clk_enable (dsi_axi)) {
-		printk(KERN_ERR "Failed to enable the DSI[%d] AXI clock\n", 
-                	dsi_bus);
-		return -EIO;
-	}
-       
-	if (clk_set_rate(dsi_esc, esc_clk_hz)) {
-		printk(KERN_ERR "Failed to set the DSI[%d] ESC clk to %d Hz\n", 
-                	dsi_bus, esc_clk_hz);
-		return -EIO;
-	}
-	if (clk_enable(dsi_esc)) {
-		printk(KERN_ERR "Failed to enable the DSI[%d] ESC clk\n", 
-                	dsi_bus );
-		return -EIO;
-	}
 #endif
 
 	return 0;
@@ -225,6 +246,9 @@ int brcm_enable_dsi_pll_clocks(
 	/* DSI timing is set-up in CSL/cHal using req. clock values */
 	dsi_pll_ch_hz_csl = dsi_pll_hz / dsi_pll_ch_div;
 
+#ifdef __PREVENT_MM_RETENTION
+	dsi_axi_clk(dsi_bus, true);
+#endif
 	if (clk_set_rate(dsi_pll, dsi_pll_hz)) {
 		printk(KERN_ERR "Failed to set the DSI[%d] PLL to %d Hz\n", 
                 	dsi_bus, dsi_pll_hz);
@@ -290,15 +314,8 @@ int brcm_enable_dsi_pll_clocks(
 int brcm_disable_dsi_lcd_clocks(struct pi_mgr_dfs_node* dfs_node, u32 dsi_bus)
 {
 #ifndef CONFIG_MACH_BCM_FPGA
-	struct clk *dsi_axi;
-	struct clk *dsi_esc;
-
-	dsi_axi    = clk_get(NULL, dsi_bus_clk[dsi_bus].dsi_axi);
-	dsi_esc    = clk_get(NULL, dsi_bus_clk[dsi_bus].dsi_esc);
-	BUG_ON(IS_ERR_OR_NULL(dsi_axi) || IS_ERR_OR_NULL(dsi_esc));
-
-	clk_disable(dsi_axi);
-	clk_disable(dsi_esc);
+	dsi_axi_clk(dsi_bus, false);
+	dsi_esc_clk(dsi_bus, 0, false);
 
 	if (pi_mgr_dfs_request_update(dfs_node, PI_MGR_DFS_MIN_VALUE))
 	{
@@ -324,6 +341,10 @@ int brcm_disable_dsi_pll_clocks(u32 dsi_bus)
 	mm_ccu_set_pll_select(dsi_bus_clk[dsi_bus].pixel_pll_sel, DSI_NO_CLOCK);
 	clk_disable(dsi_pll_ch);
 	clk_disable(dsi_pll);
+#ifdef __PREVENT_MM_RETENTION
+	dsi_axi_clk(dsi_bus, false);
+#endif
+
 #endif
 
 	return 0;
