@@ -251,3 +251,50 @@ Result_t Handle_CAPI2_SYS_SoftResetSystem(RPC_Msg_t *pReqMsg, UInt32 param)
 	return result;
 }
 
+Result_t Handle_SYS_APSystemCmd(RPC_Msg_t *pReqMsg, UInt32 cmdType,
+	UInt32 param1, UInt32 param2, UInt32 param3)
+{
+	Result_t result = RESULT_OK;
+	SYS_ReqRep_t data;
+	struct regulator *reg_handle;
+	static int rfldo_enabled;
+
+	memset(&data, 0, sizeof(SYS_ReqRep_t));
+
+	data.result = result;
+	Send_SYS_RspForRequest(pReqMsg, MSG_AP_SYS_CMD_RSP, &data);
+
+	switch (cmdType) {
+	case AP_SYS_CMD_RFLDO:
+		printk(KERN_INFO "Excuting SYS_AP_CMD_RFLDO cmd=%d, state=%d\n",
+			(int)param1, rfldo_enabled);
+		reg_handle = regulator_get(NULL, "rf");   /* handle for RFLDO */
+		if (reg_handle != NULL) {
+			if ((param1 == SYS_RFLDO_OFF) &&
+				rfldo_enabled) {
+				printk(KERN_INFO "Turn off RFLDO\n");
+				regulator_disable(reg_handle);
+				rfldo_enabled = 0;
+			} else if ((param1 == SYS_RFLDO_ON) &&
+				!rfldo_enabled) {
+				printk(KERN_INFO "Turn on RFLDO\n");
+				regulator_enable(reg_handle);
+				rfldo_enabled = 1;
+			} else {
+				printk(KERN_INFO "RFLDO already in correct state\n");
+			}
+			regulator_put(reg_handle);
+		} else {
+			printk(KERN_INFO "RFLDO handle is not valid!\n");
+		}
+		break;
+
+
+	default:
+		printk(KERN_INFO "Unhandled AP SYS CMD %d\n", (int)cmdType);
+		break;
+	}
+
+	return result;
+}
+
