@@ -282,6 +282,15 @@ void ion_system_heap_unmap_dma(struct ion_heap *heap,
 }
 
 #ifdef CONFIG_ION_BCM
+/* offset - offset from where clean/flush has to be done within buffer
+ * len - length in bytes which needs to be cleaned/flushed within buffer
+ *
+ * end_off - offset within buffer till which clean/flush has to be done
+ * curr_off - offset of start of each page in sglist from start of buffer
+ * curr_end - offset of end of each page in sglist from start of buffer
+ * l_off - offset within page from where clean/flush has to be done
+ * l_len - length in bytes within page which needs to be cleaned/flushed
+ **/
 int ion_system_heap_clean_cache(struct ion_heap *heap,
 		struct ion_buffer *buffer, unsigned long offset,
 		unsigned long len)
@@ -289,21 +298,22 @@ int ion_system_heap_clean_cache(struct ion_heap *heap,
 	struct scatterlist *sg;
 	struct sg_table *table = buffer->sg_table;
 	int i;
-	unsigned long end, curr_offset = 0;
+	unsigned long end_off, curr_off = 0;
 
-	end = offset + len;
+	end_off = offset + len;
 	for_each_sg(table->sgl, sg, table->nents, i) {
 		struct page *page = sg_page(sg);
 		unsigned long sglen = sg_dma_len(sg);
-		unsigned long curr_end = curr_offset + sglen;
+		unsigned long curr_end = curr_off + sglen;
 
-		if ((curr_offset <= end) && (curr_end >= offset)) {
-			unsigned long l_off = max(offset, curr_offset);
-			unsigned long l_len = min(end, curr_end) - l_off;
+		if ((curr_off < end_off) && (curr_end > offset)) {
+			unsigned long l_off = max(offset, curr_off);
+			unsigned long l_len = min(end_off, curr_end) - l_off;
+			l_off -= curr_off;
 			__dma_page_cpu_to_dev(page, l_off, l_len,
 					DMA_BIDIRECTIONAL);
 		}
-		curr_offset = curr_end;
+		curr_off = curr_end;
 	}
 	pr_debug("clean: off(%ld) len(%ld)\n", offset, len);
 
@@ -317,21 +327,22 @@ int ion_system_heap_invalidate_cache(struct ion_heap *heap,
 	struct scatterlist *sg;
 	struct sg_table *table = buffer->sg_table;
 	int i;
-	unsigned long end, curr_offset = 0;
+	unsigned long end_off, curr_off = 0;
 
-	end = offset + len;
+	end_off = offset + len;
 	for_each_sg(table->sgl, sg, table->nents, i) {
 		struct page *page = sg_page(sg);
 		unsigned long sglen = sg_dma_len(sg);
-		unsigned long curr_end = curr_offset + sglen;
+		unsigned long curr_end = curr_off + sglen;
 
-		if ((curr_offset <= end) && (curr_end >= offset)) {
-			unsigned long l_off = max(offset, curr_offset);
-			unsigned long l_len = min(end, curr_end) - l_off;
+		if ((curr_off < end_off) && (curr_end > offset)) {
+			unsigned long l_off = max(offset, curr_off);
+			unsigned long l_len = min(end_off, curr_end) - l_off;
+			l_off -= curr_off;
 			__dma_page_dev_to_cpu(page, l_off, l_len,
 					DMA_BIDIRECTIONAL);
 		}
-		curr_offset = curr_end;
+		curr_off = curr_end;
 	}
 	pr_debug("inv: off(%ld) len(%ld)\n", offset, len);
 

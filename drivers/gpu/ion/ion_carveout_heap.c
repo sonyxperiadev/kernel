@@ -104,9 +104,9 @@ static void ion_carveout_heap_free(struct ion_buffer *buffer)
 {
 	struct ion_heap *heap = buffer->heap;
 
-		ion_carveout_free(heap, buffer->priv_phys, buffer->size);
-		buffer->priv_phys = ION_CARVEOUT_ALLOCATE_FAIL;
-	}
+	ion_carveout_free(heap, buffer->priv_phys, buffer->size);
+	buffer->priv_phys = ION_CARVEOUT_ALLOCATE_FAIL;
+}
 
 struct sg_table *ion_carveout_heap_map_dma(struct ion_heap *heap,
 					      struct ion_buffer *buffer)
@@ -219,6 +219,15 @@ int ion_carveout_heap_map_user(struct ion_heap *heap, struct ion_buffer *buffer,
 }
 
 #ifdef CONFIG_ION_BCM
+/* offset - offset from where clean/flush has to be done within buffer
+ * len - length in bytes which needs to be cleaned/flushed within buffer
+ *
+ * end_off - offset within buffer till which clean/flush has to be done
+ * curr_off - offset of start of each page from start of buffer
+ * curr_end - offset of end of each page from start of buffer
+ * l_off - offset within page from where clean/flush has to be done
+ * l_len - length in bytes within page which needs to be cleaned/flushed
+ **/
 int ion_carveout_heap_clean_cache(struct ion_heap *heap,
 		struct ion_buffer *buffer, unsigned long offset,
 		unsigned long len)
@@ -233,12 +242,13 @@ int ion_carveout_heap_clean_cache(struct ion_heap *heap,
 	if (buffer->flags & ION_FLAG_WRITEBACK) {
 		/* Arm v7 arch onwards treats WT as uncached */
 		/* Mapping page by page to avoid vmalloc failure */
-		unsigned long curr_off, end_off;
+		unsigned long end_off, curr_off = 0;
 
+		curr_off = offset & ~(PAGE_SIZE - 1);
 		end_off = offset + len;
-		for (curr_off = offset & ~(PAGE_SIZE - 1); curr_off < end_off;
-				curr_off += PAGE_SIZE) {
+		while (curr_off < end_off) {
 			void *va;
+			unsigned long curr_end = curr_off + PAGE_SIZE;
 			unsigned long l_off, l_len;
 
 			va = __arm_ioremap(
@@ -249,12 +259,14 @@ int ion_carveout_heap_clean_cache(struct ion_heap *heap,
 						buffer->priv_phys + curr_off);
 				return -ENOMEM;
 			}
-			l_off = (offset > curr_off) ? (offset - curr_off) : 0;
-			l_len = min(end_off, (curr_off + PAGE_SIZE)) - l_off;
+			l_off = max(offset, curr_off);
+			l_len = min(end_off, curr_end) - l_off;
+			l_off -= curr_off;
 			pr_debug("clean: va(%p) l_off(%lx) l_len(%lx) curr_off(%lx)\n",
 					va, l_off, l_len, curr_off);
 			dmac_map_area(va + l_off, l_len, DMA_BIDIRECTIONAL);
 			__arm_iounmap(va);
+			curr_off = curr_end;
 		}
 	}
 
@@ -281,12 +293,13 @@ int ion_carveout_heap_invalidate_cache(struct ion_heap *heap,
 	if (buffer->flags & ION_FLAG_WRITEBACK) {
 		/* Arm v7 arch onwards treats WT as uncached */
 		/* Mapping page by page to avoid vmalloc failure */
-		unsigned long curr_off, end_off;
-		end_off = offset + len;
+		unsigned long end_off, curr_off = 0;
 
-		for (curr_off = offset & ~(PAGE_SIZE - 1); curr_off < end_off;
-				curr_off += PAGE_SIZE) {
+		curr_off = offset & ~(PAGE_SIZE - 1);
+		end_off = offset + len;
+		while (curr_off < end_off) {
 			void *va;
+			unsigned long curr_end = curr_off + PAGE_SIZE;
 			unsigned long l_off, l_len;
 
 			va = __arm_ioremap(
@@ -297,12 +310,14 @@ int ion_carveout_heap_invalidate_cache(struct ion_heap *heap,
 						buffer->priv_phys + curr_off);
 				return -ENOMEM;
 			}
-			l_off = (offset > curr_off) ? (offset - curr_off) : 0;
-			l_len = min(end_off, (curr_off + PAGE_SIZE)) - l_off;
+			l_off = max(offset, curr_off);
+			l_len = min(end_off, curr_end) - l_off;
+			l_off -= curr_off;
 			pr_debug("inv: va(%p) l_off(%lx) l_len(%lx) curr_off(%lx)\n",
 					va, l_off, l_len, curr_off);
 			dmac_unmap_area(va + l_off, l_len, DMA_BIDIRECTIONAL);
 			__arm_iounmap(va);
+			curr_off = curr_end;
 		}
 	}
 	return 0;
