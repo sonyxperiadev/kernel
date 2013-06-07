@@ -1846,8 +1846,8 @@ static void fsa9485_uart_cb(bool attached)
 		#ifdef CONFIG_KONA_PI_MGR
 			pi_mgr_qos_request_update(&qos_node,
 				PI_MGR_QOS_DEFAULT_VALUE);
-#endif
-						   }
+		#endif
+	}
 
 }
 
@@ -2086,7 +2086,9 @@ static void hawaii_add_pdata(void)
 	hawaii_ssp0_device.dev.platform_data = &hawaii_ssp0_info;
 	hawaii_ssp1_device.dev.platform_data = &hawaii_ssp1_info;
 	hawaii_headset_device.dev.platform_data = &hawaii_headset_data;
+#ifdef CONFIG_DMAC_PL330
 	hawaii_pl330_dmac_device.dev.platform_data = &hawaii_pl330_pdata;
+#endif
 #ifdef CONFIG_BACKLIGHT_PWM
 	hawaii_backlight_device.dev.platform_data = &hawaii_backlight_data;
 #endif
