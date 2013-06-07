@@ -304,9 +304,13 @@ static int __bcmpmureg_enable(struct bcmpmu59xxx *bcmpmu, int id)
 {
 	u8 pmmode;
 	struct bcmpmu59xxx_regulator_info *rinfo;
+	struct bcmpmu59xxx_rgltr_param *param;
+	struct bcmpmu59xxx_regulator_init_data *rgltr_pdata;
 	int count, i;
 	int ret = 0;
 
+	param = bcmpmu->rgltr_data;
+	rgltr_pdata = param->pdata->bcmpmu_rgltr + id;
 	rinfo = bcmpmu59xxx_get_rgltr_info(bcmpmu);
 	pr_rgltr(FLOW, "<%s> id =  %d\n",
 		__func__, id);
@@ -339,6 +343,9 @@ static int __bcmpmureg_enable(struct bcmpmu59xxx *bcmpmu, int id)
 		return ret;
 	}
 	rinfo[id].flags |= RGLR_ON;
+	/* mode needs to updated as enable is overwriting all pmmodes*/
+	rgltr_pdata->mode = pmmode;
+
 	return 0;
 }
 
@@ -363,9 +370,13 @@ static int __bcmpmureg_disable(struct bcmpmu59xxx *bcmpmu, int id)
 {
 	u8 pmmode;
 	struct bcmpmu59xxx_regulator_info *rinfo;
+	struct bcmpmu59xxx_rgltr_param *param;
+	struct bcmpmu59xxx_regulator_init_data *rgltr_pdata;
 	int count, i;
 	int ret = 0;
 
+	param = bcmpmu->rgltr_data;
+	rgltr_pdata = param->pdata->bcmpmu_rgltr + id;
 	rinfo = bcmpmu59xxx_get_rgltr_info(bcmpmu);
 	pr_rgltr(FLOW, "<%s> id =  %d\n",
 		__func__, id);
@@ -398,6 +409,9 @@ static int __bcmpmureg_disable(struct bcmpmu59xxx *bcmpmu, int id)
 		return ret;
 	}
 	rinfo[id].flags &= ~RGLR_ON;
+	/* mode needs to updated as disable is overwriting all pmmodes*/
+	rgltr_pdata->mode = pmmode;
+
 	return 0;
 }
 
