@@ -435,6 +435,8 @@ static unsigned char CTPM_FW[]=
 {
 #if defined(CONFIG_TOUCHSCREEN_HAWAII_GARNET_FT5306_FW)
 	#include "45HD_FT5306_U82_LCID0x87_ver0x10_20130320_app.i"
+#else
+0
 #endif
 };
 
@@ -1300,6 +1302,10 @@ static int focaltec_fts_ctpm_fw_upgrade(struct i2c_client *client, u8 *pbt_buf,
 	u8 bt_ecc;
 	int i_ret;
 
+	if (dw_lenth < 5) {
+		printk(KERN_ERR "firmware size is too short, invalid.\n");
+		return -1;
+	}
 	for (i = 0; i < FTS_UPGRADE_LOOP; i++) {
 		/*********Step 1:Reset  CTPM *****/
 		/*write 0xaa to register 0xbc */
