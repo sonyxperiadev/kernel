@@ -169,10 +169,12 @@ struct m4u_debugfs {
 struct m4u_drvdata {
 	const char		*name;
 	spinlock_t		pgtablelock;
+	int			enabled;
 	void __iomem		*reg_base;
 	int			irq;
 	u32			iova_begin;
 	u32			iova_end;
+	u32			skip_enable;
 	struct page		*garbage_page;
 	dma_addr_t		pt_handle;
 	u32			*pt_base;
@@ -438,12 +440,47 @@ static int m4u_reg_init(struct m4u_drvdata *mdata)
 	ldr = m4u_pte(page_to_phys(mdata->garbage_page), 0, 1);
 	m4u_write_reg(mdata, MMMMU_OPEN_CR_OFFSET, 0);
 	m4u_write_reg(mdata, MMMMU_OPEN_IMR_OFFSET,
-			(MMMMU_OPEN_IMR_PERFCOUNT1_OVERFLOW_MASK |
+			(MMMMU_OPEN_IMR_EXFIFO_NOT_EMPTY_MASK |
+			 MMMMU_OPEN_IMR_PERFCOUNT1_OVERFLOW_MASK |
 			 MMMMU_OPEN_IMR_PERFCOUNT2_OVERFLOW_MASK));
 	m4u_write_reg(mdata, MMMMU_OPEN_TBR_OFFSET, tbr);
 	m4u_write_reg(mdata, MMMMU_OPEN_LR_OFFSET, lr);
 	m4u_write_reg(mdata, MMMMU_OPEN_LDR_OFFSET, ldr);
+
+	return 0;
+}
+
+static int m4u_enable(struct m4u_drvdata *mdata)
+{
+	unsigned int m4u_mode = 1;
+	int i;
+	u32 val;
+
+	if (mdata->enabled) {
+		pr_err("M4U already enabled. mdata(%p)\n", mdata);
+		return -EEXIST;
+	}
+	/* Enable M4U via secure service */
+	pr_info("Configure M4U in (%d)mode via secure service\n", m4u_mode);
+	secure_api_call(SSAPI_BRCM_SET_M4U, m4u_mode, 0, 0, 0);
+
+	/* Invalidate TLB */
 	m4u_write_reg(mdata, MMMMU_OPEN_EFL_OFFSET, 0x11);
+
+	/* Clear xfifo entries */
+	for (i = 0; i < 8; i++) {
+		val = m4u_read_reg(mdata, MMMMU_OPEN_XFIFO_OFFSET);
+		if (!(val & MMMMU_OPEN_XFIFO_VALID_MASK))
+			break;
+	}
+
+	/* Enable xfifo interrupt */
+	m4u_write_reg(mdata, MMMMU_OPEN_IMR_OFFSET,
+			(MMMMU_OPEN_IMR_PERFCOUNT1_OVERFLOW_MASK |
+			 MMMMU_OPEN_IMR_PERFCOUNT2_OVERFLOW_MASK));
+
+	/* Update state machine (debug) */
+	mdata->enabled = 1;
 
 	return 0;
 }
@@ -586,6 +623,8 @@ static int m4u_init(struct m4u_drvdata *mdata)
 
 	/* Initialize m4u registers */
 	m4u_reg_init(mdata);
+	if (!mdata->skip_enable)
+		m4u_enable(mdata);
 
 	return 0;
 
@@ -757,7 +796,7 @@ static int iommu_m4u_parse_dt(struct device *dev, struct m4u_drvdata *mdata)
 {
 	struct device_node *node = dev->of_node;
 	const char *name;
-	u32 val, iova_begin, iova_size, errbuf_size = 0;
+	u32 val, iova_begin, iova_size, errbuf_size = 0, skip_enable = 0;
 	int ret = -EINVAL;
 
 	dev->dma_mask = &m4u_dmamask;
@@ -777,6 +816,7 @@ static int iommu_m4u_parse_dt(struct device *dev, struct m4u_drvdata *mdata)
 	M4U_OF_READ(iova_begin);
 	M4U_OF_READ(iova_size);
 	M4U_OF_READ_OPT(errbuf_size);
+	M4U_OF_READ_OPT(skip_enable);
 	if (!iova_size) {
 		pr_err("ERROR: IOVA size given as '0'\n");
 		goto err;
@@ -787,6 +827,7 @@ static int iommu_m4u_parse_dt(struct device *dev, struct m4u_drvdata *mdata)
 		mdata->iova_end = 0xFFFFF000;
 	mdata->pt_size = (iova_size >> (M4U_PAGE_SHIFT-2));
 	mdata->xfifo_size = errbuf_size;
+	mdata->skip_enable = skip_enable;
 	return 0;
 err:
 	return ret;
@@ -796,13 +837,12 @@ err:
 static int iommu_m4u_parse_pdata(struct device *dev, struct m4u_drvdata *mdata)
 {
 	struct bcm_iommu_pdata *pdata = dev_get_platdata(dev);
-	u32 iova_begin, iova_size, errbuf_size = 0;
+	u32 iova_begin, iova_size;
 	int ret = -EINVAL;
 
 	mdata->name = pdata->name;
 	iova_begin = pdata->iova_begin;
 	iova_size = pdata->iova_size;
-	errbuf_size = pdata->errbuf_size;
 	if (!iova_size) {
 		pr_err("ERROR: IOVA size given as '0'\n");
 		goto err;
@@ -812,7 +852,8 @@ static int iommu_m4u_parse_pdata(struct device *dev, struct m4u_drvdata *mdata)
 	if ((mdata->iova_begin + iova_size) < iova_size)
 		mdata->iova_end = 0xFFFFF000;
 	mdata->pt_size = (iova_size >> (M4U_PAGE_SHIFT-2));
-	mdata->xfifo_size = errbuf_size;
+	mdata->xfifo_size = pdata->errbuf_size;
+	mdata->skip_enable = pdata->skip_enable;
 	return 0;
 err:
 	return ret;
@@ -1168,13 +1209,23 @@ module_exit(iommu_m4u_exit);
 
 static int __init iommu_m4u_ops_init(void)
 {
-	unsigned int m4u_mode = 1;
-	pr_info("Configure M4U in (%d)mode via secure service\n", m4u_mode);
-	secure_api_call(SSAPI_BRCM_SET_M4U, m4u_mode, 0, 0, 0);
 	pr_info("Attach m4u ops to platform bus\n");
 	return bus_set_iommu(&platform_bus_type, &iommu_m4u_ops);
 }
 arch_initcall(iommu_m4u_ops_init);
+
+int bcm_iommu_enable(struct device *dev)
+{
+	struct m4u_drvdata *mdata = dev_get_drvdata(dev->archdata.iommu);
+
+	if (!mdata) {
+		pr_err("IOMMU enable fail: IOMMU device(%p) not set up\n",
+				dev->archdata.iommu);
+		return -ENODEV;
+	}
+	return m4u_enable(mdata);
+}
+EXPORT_SYMBOL(bcm_iommu_enable);
 
 MODULE_AUTHOR("Nishanth Peethambaran <nishanth@broadcom.com>");
 MODULE_DESCRIPTION("M4U device driver");
