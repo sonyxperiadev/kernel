@@ -620,10 +620,11 @@ void handle_IPI(int ipinr, struct pt_regs *regs)
 #if defined(CONFIG_CDEBUGGER)
 		/* save context */
 		cdebugger_save_pte((void *)regs, (int )current);
+#endif
 		flush_cache_all();
 		outer_flush_all();
 		dmb();
-#endif
+
 		irq_enter();
 		ipi_cpu_stop(cpu);
 		irq_exit();
