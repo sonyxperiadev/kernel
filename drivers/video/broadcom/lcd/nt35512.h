@@ -103,12 +103,15 @@ __initdata struct DSI_COUNTER nt35512_timing[] = {
 };
 
 __initdata DISPCTRL_REC_T nt35512_scrn_on[] = {
+	{DISPCTRL_WR_CMND, 0x13},
 	{DISPCTRL_WR_CMND, NT35512_CMD_DISPON},
 	{DISPCTRL_LIST_END, 0}
 };
 
 __initdata DISPCTRL_REC_T nt35512_scrn_off[] = {
-	{DISPCTRL_WR_CMND, NT35512_CMD_DISPOFF},
+	{DISPCTRL_WR_CMND, 0x22},
+	/* Commenting this since it results in a white screen
+	{DISPCTRL_WR_CMND, NT35512_CMD_DISPOFF}, */
 	{DISPCTRL_LIST_END, 0}
 };
 
@@ -1286,7 +1289,7 @@ __initdata struct lcd_config nt35512_cfg = {
 	.verify_id = false,
 	.updt_win_fn = nt35512_winset,
 	.updt_win_seq_len = 0,
-	.vid_cmnds = true,
+	.vid_cmnds = false,
 	.vburst = true,
 	.cont_clk = false,
 	.hs = 10,

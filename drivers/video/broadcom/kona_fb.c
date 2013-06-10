@@ -136,6 +136,9 @@ static int kona_fb_reboot_cb(struct notifier_block *, unsigned long, void *);
 static int kona_fb_die_cb(struct notifier_block *, unsigned long, void *);
 #endif
 
+static char g_disp_str[DISPDRV_NAME_SZ];
+int g_display_enabled;
+
 #ifdef KONA_FB_DEBUG
 #define KONA_PROF_N_RECORDS 50
 static volatile struct {
@@ -829,6 +832,17 @@ void free_platform_data(struct device *dev)
 		kfree(dev->platform_data);
 }
 
+static int __init lcd_panel_setup(char *panel)
+{
+	if (panel) {
+		pr_err("bootloader has initialised %s\n", panel);
+		strcpy(g_disp_str, panel);
+		g_display_enabled = 1;
+	}
+	return 1;
+}
+__setup("lcd_panel=", lcd_panel_setup);
+
 static struct kona_fb_platform_data * __init get_of_data(struct device_node *np)
 {
 	u32 val;
@@ -849,6 +863,10 @@ static struct kona_fb_platform_data * __init get_of_data(struct device_node *np)
 		goto of_fail;
 	if (unlikely(strlen(str) > DISPDRV_NAME_SZ))
 		goto of_fail;
+	if (g_display_enabled && strcmp(str, g_disp_str)) {
+		pr_err("%s != %s enabled by bootloader\n", str, g_disp_str);
+		goto of_fail;
+	}
 	strcpy(fb_data->name, str);
 
 	if (of_property_read_string(np, "reg-name", &str))
@@ -1477,6 +1495,15 @@ static int __ref kona_fb_probe(struct platform_device *pdev)
 		konafb_error("fb_set_var failed\n");
 		goto err_set_var_failed;
 	}
+
+	if (g_display_enabled)
+		fb->display_ops->power_control(fb->display_hdl,
+						CTRL_SCREEN_OFF);
+
+#ifdef CONFIG_IOMMU_API
+	if (bcm_iommu_enable(&pdev->dev) < 0)
+		konafb_error("bcm_iommu_enable failed\n");
+#endif
 	/* Paint it black (assuming default fb contents are all zero) */
 	ret = fb->display_ops->update(fb->display_hdl, fb->buff1, NULL, NULL);
 	if (ret) {
@@ -1484,6 +1511,10 @@ static int __ref kona_fb_probe(struct platform_device *pdev)
 		goto err_fb_register_failed;
 	}
 
+	if (g_display_enabled) {
+		usleep_range(16666, 16668); /* To switch to new buffer */
+		usleep_range(16666, 16668); /* To transfer 1 full buffer */
+	}
 	/* Display on after painted blank */
 	fb->display_ops->power_control(fb->display_hdl, CTRL_SCREEN_ON);
 
@@ -1543,6 +1574,7 @@ static int __ref kona_fb_probe(struct platform_device *pdev)
 	fb->die_nb.notifier_call = kona_fb_die_cb;
 	register_die_notifier(&fb->die_nb);
 #endif
+	g_display_enabled = 0;
 	return 0;
 
 err_fb_register_failed:

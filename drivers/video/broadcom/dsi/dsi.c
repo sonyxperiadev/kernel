@@ -69,12 +69,6 @@ static void DispDrv_WrCmndP0(
 	UInt32 reg);
 #endif
 
-#ifdef CONFIG_BL_SPLASH_SCREEN
-int g_display_enabled = 1;
-#else
-int g_display_enabled;
-#endif
-
 /* DRV INTERFACE FUNCTIONs */
 static Int32 DSI_Init(DISPDRV_INFO_T *, DISPDRV_HANDLE_T *);
 

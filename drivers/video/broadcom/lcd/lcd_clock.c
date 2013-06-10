@@ -204,19 +204,27 @@ int brcm_enable_dsi_pll_clocks(
         u32	dsi_pll_ch_hz;
 	u32	dsi_pll_ch_hz_csl;
 	int dsi_pll_desense_offset;
-	
+
+	dsi_pll = clk_get(NULL, "dsi_pll");
+	dsi_pll_ch = clk_get(NULL, dsi_bus_clk[dsi_bus].dsi_pll_ch);
+	BUG_ON(IS_ERR_OR_NULL(dsi_pll) || IS_ERR_OR_NULL(dsi_pll_ch));
+
 	if (g_display_enabled) {
 		printk(KERN_ERR "skipping brcm_enable_dsi_pll_clocks\n");
+		dsi_pll_desense_offset = dsi_pll_ch_desense_offset * dsi_pll_ch_div;
+		pr_err("Requesting desense offset = %d\n", dsi_pll_desense_offset);
+		if (pll_set_desense_offset(dsi_pll, dsi_pll_desense_offset)) {
+			pr_err("Failed to set desense offset to %dHz\n",
+			dsi_pll_desense_offset);
+			return -EIO;
+		}
 		return 0;
 	}
+
 	printk(KERN_INFO "brcm_enable_dsi_pll_clocks\n");
 	/* DSI timing is set-up in CSL/cHal using req. clock values */
 	dsi_pll_ch_hz_csl = dsi_pll_hz / dsi_pll_ch_div;
 
-	dsi_pll     = clk_get (NULL, "dsi_pll");
-	dsi_pll_ch  = clk_get (NULL, dsi_bus_clk[dsi_bus].dsi_pll_ch);
-	BUG_ON(IS_ERR_OR_NULL(dsi_pll) || IS_ERR_OR_NULL(dsi_pll_ch));
-       
 	if (clk_set_rate(dsi_pll, dsi_pll_hz)) {
 		printk(KERN_ERR "Failed to set the DSI[%d] PLL to %d Hz\n", 
                 	dsi_bus, dsi_pll_hz);
