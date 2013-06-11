@@ -13,9 +13,20 @@
 #ifndef __KONA_RESET_REASON_H__
 #define __KONA_RESET_REASON_H__
 
+/*
+ * IMPORTANT NOTE:
+ * ---------------
+ * Please note that the below values are not bit masks. They are
+ * int values instead. So when checking for a particular reset reason, check
+ * the whole 32-bit value instead of doing (val & 0xf) and then comparing with
+ * below values. This is because we have 32 bit register at 0x34051F80 defined
+ * for SRAM_RST_REASON.
+ */
+#define RST_REASON_MASK 0xFFFFFFFF
+
 #define POWERON_RESET	0x1
-#define AP_ONLY_BOOT	0x4
 #define CHARGING_STATE	0x3
+#define AP_ONLY_BOOT	0x4
 #define BOOTLOADER_BOOT	0x5
 #define RECOVERY_BOOT   0x6
 
