@@ -51,9 +51,6 @@
 #include <plat/scu.h>
 #include <plat/kona_reset_reason.h>
 #include <mach/sec_api.h>
-#ifdef CONFIG_ARM_ARCH_TIMER
-#include <asm/arch_timer.h>
-#endif
 
 static void hawaii_poweroff(void)
 {
@@ -145,8 +142,10 @@ arch_initcall(hawaii_arch_init);
 
 void __init hawaii_timer_init(void)
 {
-#ifndef CONFIG_ARM_ARCH_TIMER
 	struct gp_timer_setup gpt_setup;
+	int cpu = smp_processor_id();
+
+	pr_info("@@@@@@@@@@@@@@ %s()  from CPU %d \r\n", __func__, cpu);
 
 	/*
 	 * IMPORTANT:
@@ -176,19 +175,6 @@ void __init hawaii_timer_init(void)
 	/* Call the init function of timer module */
 	gp_timer_init(&gpt_setup);
 	//profile_timer_init(IOMEM(KONA_PROFTMR_VA));
-#else
-	/*
-	 * IMPORTANT:
-	 * For arch timer(private timer) to work, change in ABI
-	 * is needed.CNTFRQ needs to be programmed to 26MHz which
-	 * can be only done in secure mode.
-	 */
-	if (arch_timer_of_register() != 0)
-		pr_info("Failed to register arch timer\n");
-
-	if (arch_timer_sched_clock_init() != 0)
-		pr_info("Failed to init scheduler clock\n");
-#endif
 }
 
 struct sys_timer kona_timer = {

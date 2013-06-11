@@ -29,6 +29,7 @@
 #include <linux/jiffies.h>
 #include <linux/clockchips.h>
 #include <linux/types.h>
+#include <linux/cpumask.h>
 
 #include <asm/smp_twd.h>
 #include <asm/mach/time.h>
@@ -42,6 +43,10 @@
 
 #ifdef CONFIG_LOCAL_TIMERS
 #include <asm/smp_twd.h>
+#endif
+
+#ifdef CONFIG_USE_ARCH_TIMER_AS_LOCAL_TIMER
+#include <asm/arch_timer.h>
 #endif
 
 static struct kona_timer *gpt_evt = NULL;
@@ -244,6 +249,7 @@ static void __init kona_twd_init(void)
 #endif
 
 #ifdef CONFIG_LOCAL_TIMERS
+
 int local_timer_setup(struct clock_event_device *evt);
 void local_timer_stop(struct clock_event_device *evt);
 
@@ -256,7 +262,6 @@ struct local_timer_ops kona_local_timer_ops __cpuinitdata = {
 void __init gp_timer_init(struct gp_timer_setup *gpt_setup)
 {
 	timers_init(gpt_setup);
-	gptimer_clocksource_init();
 	gptimer_clockevents_init();
 	gptimer_set_next_event((CLOCK_TICK_RATE / HZ), NULL);
 #ifdef CONFIG_LOCAL_TIMERS
@@ -266,6 +271,35 @@ void __init gp_timer_init(struct gp_timer_setup *gpt_setup)
 	local_timer_register(&kona_local_timer_ops);
 #endif
 #endif
+
+/*
+ * If We use Arch Timer as Local timer the source is registered from
+ * drivers/clocksource/arch_timer, function arch_timer_register.
+ * This is called from the arch_timer_of_register called below.
+ * Also, the sched clock is setup via the function
+ * arch_timer_sched_clock_init implemented in  arch/arm/kernel/arch_timer.c
+ * But we saw that using the arch timer which stops duing C3 state
+ * is not suitable for clock source. See the comment in arm_arch_timer.c
+ * for details. So we are using the arch timer as only event source.
+ *
+ * We have done the same for sched_clock as well (though I'm not sure
+ * whether sched clock too should keep running during C3 states.
+ */
+#ifdef CONFIG_USE_ARCH_TIMER_AS_LOCAL_TIMER
+	/*
+	 * IMPORTANT:
+	 * For arch timer(private timer) to work, change in ABI
+	 * is needed.CNTFRQ needs to be programmed to 26MHz which
+	 * can be only done in secure mode.
+	 */
+	if (arch_timer_of_register() != 0)
+		pr_info("Failed to register arch timer\n");
+/*
+	if (arch_timer_sched_clock_init() != 0)
+		pr_info("Failed to init scheduler clock\n");
+*/
+#endif
+	gptimer_clocksource_init();
 	setup_sched_clock_needs_suspend(kona_update_sched_clock,
 			32, CLOCK_TICK_RATE);
 }

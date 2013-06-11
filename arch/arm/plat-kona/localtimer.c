@@ -25,6 +25,35 @@
 #include <linux/jiffies.h>
 #include <linux/delay.h>
 
+/*
+ * There are two local timer implementation.
+ * One to use the Kona AON timer itself as in Hawaii.
+ * The other one is if we choose to use the architecture
+ * timer (only available in A7 and friends) as in case of Java
+ *
+ * Note that from 3.9 onwards the world is moving away from
+ * local timers. This is done to just be in sync with hawaii
+ * But doing away with local timer is simple. We have
+ * commented registering to the CPU hotplug notification
+ * in arm_arch_timer.c. Just uncommenting that would do the trick.
+ */
+
+#ifdef CONFIG_USE_ARCH_TIMER_AS_LOCAL_TIMER
+#include <clocksource/arm_arch_timer.h>
+
+int __cpuinit local_timer_setup(struct clock_event_device *evt)
+{
+	return arch_timer_setup(evt);
+	return 0;
+}
+
+void local_timer_stop(struct clock_event_device *evt)
+{
+	arch_timer_stop(evt);
+}
+
+#else  /* CONFIG_USE_ARCH_TIMER_AS_LOCAL_TIMER is not defined */
+
 #ifndef CONFIG_HAVE_ARM_TWD
 #define TICK_TIMER_NAME TIMER_NAME"-timer"
 #if defined (CONFIG_ARCH_HAWAII)
@@ -84,6 +113,7 @@ static void kona_tick_set_mode(enum clock_event_mode mode,
 }
 
 #ifdef CONFIG_LOCAL_TIMERS
+
 /*
  * Setup the local clock events for a CPU.
  */
@@ -153,7 +183,6 @@ int __cpuinit local_timer_setup(struct clock_event_device *evt)
 	per_cpu(percpu_kona_td, cpu) = kona_td;
 
 	clockevents_register_device(evt);
-
 	return 0;
 }
 
@@ -188,5 +217,8 @@ inline int local_timer_ack(void)
 {
 	return 1;
 }
+
 #endif /* CONFIG_LOCAL_TIMERS */
 #endif
+
+#endif /* CONFIG_USE_ARCH_TIMER_AS_LOCAL_TIMER */

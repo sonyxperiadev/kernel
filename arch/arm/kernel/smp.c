@@ -686,3 +686,13 @@ int setup_profiling_timer(unsigned int multiplier)
 {
 	return -EINVAL;
 }
+
+#ifdef CONFIG_USE_ARCH_TIMER_AS_LOCAL_TIMER
+void smp_get_evt_context(struct clock_event_device __percpu **p_arch_timer_evt)
+{
+	pr_info("======= %s(): &percpu_clockevent %p p_arch_timer_evt %p \r\n",
+		__func__, &percpu_clockevent, p_arch_timer_evt);
+	if (p_arch_timer_evt)
+		*p_arch_timer_evt = &percpu_clockevent;
+}
+#endif

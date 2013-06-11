@@ -38,6 +38,9 @@
 #include <mach/irqs.h>
 #include <mach/memory.h>
 #include <mach/dormant.h>
+#ifdef CONFIG_USE_ARCH_TIMER_AS_LOCAL_TIMER
+#include <linux/clockchips.h>
+#endif
 
 #include "pm_params.h"
 
@@ -336,9 +339,18 @@ int force_sleep(suspend_state_t state)
 int enter_idle_state(struct kona_idle_state *state, u32 ctrl_params)
 {
 	struct pi *pi = NULL;
+	int cpu_id;
 
 	BUG_ON(!state);
 
+#if 0
+#ifdef CONFIG_USE_ARCH_TIMER_AS_LOCAL_TIMER
+	if (state->state == CSTATE_DS_DRMT) {
+		cpu_id = smp_processor_id();
+		clockevents_notify(CLOCK_EVT_NOTIFY_BROADCAST_ENTER, &cpu_id);
+	}
+#endif
+#endif
 	/*Clear all events except auto-clear & SW events*/
 	pwr_mgr_event_clear_events(LCDTE_EVENT, KEY_R7_EVENT);
 	pwr_mgr_event_clear_events(MISC_WKP_EVENT, BRIDGE_TO_MODEM_EVENT);
@@ -388,6 +400,14 @@ int enter_idle_state(struct kona_idle_state *state, u32 ctrl_params)
 
 	if (ctrl_params & CTRL_PARAMS_FLAG_XTAL_ON || pm_info.keep_xtl_on)
 		clk_set_crystal_pwr_on_idle(true);
+#if 0
+#ifdef CONFIG_USE_ARCH_TIMER_AS_LOCAL_TIMER
+	if (state->state == CSTATE_DS_DRMT) {
+		cpu_id = smp_processor_id();
+		clockevents_notify(CLOCK_EVT_NOTIFY_BROADCAST_EXIT, &cpu_id);
+	}
+#endif
+#endif
 	return -1;
 }
 

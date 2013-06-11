@@ -274,6 +274,17 @@ config DISABLE_USBBOOT_NEXTBOOT
           This could be because the BIT 29 of usbotgcontrol register
           was wrongly set to 1. Until we root cuase this and fix it
           We can enable this workaround only for JAVA
+
+config USE_ARCH_TIMER_AS_LOCAL_TIMER
+	bool "Use Architecture Timer as Local Timer"
+	depends on ARCH_JAVA && ARM_ARCH_TIMER
+	default n
+	help
+	  Use the Architecture Timer as Local Timer. When the CPU enters
+	  C3 state, the event timer will be automatically migrated from
+	  local timer another event timer that ca be alive during C3 state
+	  as well. If you are not sure say N
+
 endmenu
 
 endif
