@@ -200,6 +200,7 @@ void mm_common_add_job(struct work_struct *work)
 				(job->job.type&0xFF0000)>>16];
 
 	mutex_lock(&mm_common_mutex);
+	job->job.spl_data_ptr = filp->spl_data_ptr;
 	if (filp->interlock_count == 0)
 		mm_core_add_job(job, core_dev);
 	list_add_tail(&(job->file_list), &(filp->write_head));
@@ -455,6 +456,8 @@ static int mm_file_open(struct inode *inode, struct file *filp)
 	private->prio = current->prio;
 	private->read_count = 0;
 	private->readable = ((filp->f_mode & FMODE_READ) == FMODE_READ);
+	private->spl_data_ptr = NULL;
+	private->spl_data_size = 0;
 	init_waitqueue_head(&private->queue);
 
 	INIT_LIST_HEAD(&private->read_head);
@@ -477,6 +480,8 @@ static int mm_file_release(struct inode *inode, struct file *filp)
 
 	/* Free all jobs posted using this file */
 	SCHEDULE_RELEASE_WORK(private);
+	if (private->spl_data_ptr != NULL)
+		kfree(private->spl_data_ptr);
 	kfree(private);
 	return 0;
 }
@@ -546,7 +551,7 @@ static int mm_file_write(struct file *filp, const char __user *buf,
 		mm_job_node->job.data = job_post;
 		ptr = (uint32_t *)job_post;
 		if (copy_from_user(job_post, buf, size)) {
-			pr_err("MM_IOCTL_POST_JOB data copy_from_user failed");
+			pr_err("mm_file_write: data copy_from_user failed");
 			kfree(job_post);
 			goto out;
 			}
@@ -677,6 +682,8 @@ static long mm_file_ioctl(struct file *filp, \
 	int ret = 0;
 	struct file_private_data *private = filp->private_data;
 	struct mm_common *common = private->common;
+	int size = 0;
+	mm_dev_spl_data_t dev_spl_d;
 
 	if ((_IOC_TYPE(cmd) != MM_DEV_MAGIC) || (_IOC_NR(cmd) > MM_CMD_LAST))
 		return -ENOTTY;
@@ -705,6 +712,43 @@ static long mm_file_ioctl(struct file *filp, \
 					user_virsion_info->version_info_ptr,
 					common->version_info.version_info_ptr,
 					common->version_info.size);
+		}
+	break;
+	case MM_IOCTL_ALLOC_SPL_DATA:
+		if (copy_from_user(&size, (void const *)arg, sizeof(int))) {
+			pr_err("copy_from_user failed");
+			ret = -EINVAL;
+			break;
+		}
+		private->spl_data_ptr = kmalloc(size, GFP_KERNEL);
+		if (private->spl_data_ptr == NULL) {
+			pr_err("%s: spl_data kmalloc failed with size = %d",\
+				__func__, size);
+			ret = -EINVAL;
+		} else {
+			private->spl_data_size = size;
+		}
+	break;
+	case MM_IOCTL_COPY_SPL_DATA:
+		if (copy_from_user(&dev_spl_d, (void const *)arg,\
+			sizeof(mm_dev_spl_data_t))) {
+			pr_err("copy_from_user failed");
+			ret = -EINVAL;
+			break;
+		}
+		if (private->spl_data_size < \
+			(dev_spl_d.offset + dev_spl_d.size)) {
+			pr_err("MM_IOCTL_COPY_SPL_DATA copy size " \
+				"exceeds allocated size");
+			ret = -EINVAL;
+			break;
+		}
+		if (copy_from_user((private->spl_data_ptr + \
+			dev_spl_d.offset), \
+				(void const *)dev_spl_d.buf, \
+				dev_spl_d.size)) {
+			pr_err("copy_from_user failed");
+			ret = -EINVAL;
 		}
 	break;
 	default:

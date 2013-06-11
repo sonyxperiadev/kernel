@@ -107,7 +107,17 @@ struct MM_JOB_POST_T {
 	uint32_t handle;
 	uint32_t num_dep_handles;
 	uint32_t dep_handles[MAX_HANDLES];
+	void *spl_data_ptr;
 };
+
+struct MM_DEV_SPL_DATA_T {
+	unsigned char *buf;
+	unsigned int offset;
+	unsigned int size;
+};
+
+#define mm_dev_spl_data_t struct MM_DEV_SPL_DATA_T
+
 #define mm_job_post_t struct MM_JOB_POST_T
 
 #define INTERLOCK_DEV_NAME	"mm_interlock"
@@ -122,6 +132,8 @@ enum {
 	MM_CMD_POST_JOB,
 	MM_CMD_WAIT_JOB,
 	MM_CMD_WAIT_HANDLES,
+	MM_CMD_ALLOC_SPL_DATA,
+	MM_CMD_COPY_SPL_DATA,
 	MM_CMD_LAST
 };
 
@@ -147,13 +159,11 @@ struct MM_VERSION_INFO_T {
 
 #define mm_handle_status_t struct MM_HANDLE_STATUS_T
 
-#define MM_IOCTL_POST_JOB     _IOWR(MM_DEV_MAGIC, MM_CMD_POST_JOB, \
-						mm_job_post_t)
 #define MM_IOCTL_VERSION_REQ  _IOWR(MM_DEV_MAGIC, MM_CMD_GET_VERSION, \
 						mm_version_info_t)
-#define MM_IOCTL_WAIT_JOB     _IOWR(MM_DEV_MAGIC, MM_CMD_WAIT_JOB, \
-						mm_job_status_t)
-#define MM_IOCTL_WAIT_HANDLES _IOWR(MM_DEV_MAGIC, MM_CMD_WAIT_HANDLES, \
-						mm_handle_status_t)
+#define MM_IOCTL_ALLOC_SPL_DATA _IOWR(MM_DEV_MAGIC, MM_CMD_ALLOC_SPL_DATA, \
+							unsigned int)
+#define MM_IOCTL_COPY_SPL_DATA _IOWR(MM_DEV_MAGIC, MM_CMD_COPY_SPL_DATA, \
+						mm_dev_spl_data_t)
 
 #endif

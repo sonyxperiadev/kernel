@@ -49,12 +49,11 @@ the GPL, without Broadcom's express prior written consent.
 struct decoder_regs_t{
 	unsigned int offset;
 	unsigned int value;
-	unsigned int write;
 };
 
 struct dec_info_t{
-	struct decoder_regs_t dec_regs[NUM_DECODER_REGRW];
 	unsigned int num_dec_regs;
+	struct decoder_regs_t dec_regs;
 };
 
 void decodeSlice(void *id, struct dec_info_t *dec_info);

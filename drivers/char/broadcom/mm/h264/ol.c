@@ -46,14 +46,6 @@ u32 ol_read(u32 reg)
 			reg - (OL_BASE - VIDEOCODEC_BASE));
 }
 
-static void print_job_struct(void *job)
-{
-	struct ol_job_info_t *ol_info;
-	ol_info = (struct ol_job_info_t *) ((u32 *)job);
-	pr_debug("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
-	pr_debug("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
-}
-
 static void print_regs(struct ol_device_t *ol)
 {
 	pr_debug("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
@@ -111,6 +103,7 @@ mm_job_status_e ol_start_job(void *device_id , mm_job_post_t *job,
 	struct ol_device_t *id = (struct ol_device_t *)device_id;
 	struct ol_job_info_t *jp = (struct ol_job_info_t *)job->data;
 	u8 *ptr = (u8 *) jp;
+	u8 *spl_ptr = (u8 *) job->spl_data_ptr;
 	ptr += sizeof(struct ol_job_info_t);
 
 	if (jp == NULL) {
@@ -146,13 +139,13 @@ mm_job_status_e ol_start_job(void *device_id , mm_job_post_t *job,
 			jp->error =  h264_parse_sps_ifc(ptr);
 			break;
 		case  H264_PPS_PARSE_TYPE:
-			jp->error =  h264_parse_pps_ifc(ptr);
+			jp->error =  h264_parse_pps_ifc(ptr, spl_ptr);
 			break;
 		case H264_SLICE_HDR1_PARSE_TYPE:
-			jp->error =  h264_parse_slice_header_1_ifc(ptr);
+			jp->error =  h264_parse_slice_header_1_ifc(ptr, spl_ptr);
 			break;
 		case H264_SLICE_HDR2_PARSE_TYPE:
-			jp->error =  h264_parse_slice_header_2_ifc(ptr);
+			jp->error =  h264_parse_slice_header_2_ifc(ptr, spl_ptr);
 			break;
 		case H264_SPS_EXT_PARSE_TYPE:
 			jp->error =  h264_parse_sps_extension_ifc(ptr);
@@ -170,7 +163,7 @@ mm_job_status_e ol_start_job(void *device_id , mm_job_post_t *job,
 			jp->error =  h264_parse_slice_id_ifc(ptr);
 			break;
 		case H264_SLICE_BC_PARTN_PARSE_TYPE:
-			jp->error =  h264_parse_slice_bc_partition_ifc(ptr);
+			jp->error =  h264_parse_slice_bc_partition_ifc(ptr, spl_ptr);
 			break;
 		case H264_PPS_SPSID_PARSE_TYPE:
 			jp->error =  h264_parse_pps_spsid_ifc(ptr);

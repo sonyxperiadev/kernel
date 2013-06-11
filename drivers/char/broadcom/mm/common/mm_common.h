@@ -66,6 +66,8 @@ struct file_private_data {
 	struct list_head read_head;
 	struct list_head write_head;
 	struct list_head file_head;
+	u8 *spl_data_ptr;
+	int spl_data_size;
 };
 
 struct dev_job_list {

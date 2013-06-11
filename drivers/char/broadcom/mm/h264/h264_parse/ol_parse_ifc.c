@@ -65,7 +65,7 @@ int h264_parse_sps_ifc(u8 *ptr)
 	return (int)ret;
 }
 
-int h264_parse_pps_ifc(u8 *ptr)
+int h264_parse_pps_ifc(u8 *ptr, u8 *spl_ptr)
 {
 	vd3_error_t ret;
 	VD3_DATASTREAM_T *stream;
@@ -74,20 +74,20 @@ int h264_parse_pps_ifc(u8 *ptr)
 	H264_SPS_T *sps;
 	u8 *chroma_format_idc;
 
+	sps = (H264_SPS_T *) spl_ptr;
+
 	stream = (VD3_DATASTREAM_T *) ptr;
 	ptr += sizeof(VD3_DATASTREAM_T);
 	pps = (H264_PPS_T *) ptr;
 	ptr += sizeof(H264_PPS_T);
 	nal = (H264_NAL_HEADER_T *) ptr;
 	ptr += sizeof(H264_NAL_HEADER_T);
-	sps = (H264_SPS_T *) ptr;
-	ptr += sizeof(H264_SPS_T);
 	chroma_format_idc = (u8 *) ptr;
 	ret = h264_parse_pps_ol(stream, pps, nal, sps, *chroma_format_idc);
 	return (int)ret;
 }
 
-int h264_parse_slice_header_1_ifc(u8 *ptr)
+int h264_parse_slice_header_1_ifc(u8 *ptr, u8 *spl_ptr)
 {
 	vd3_error_t ret;
 	VD3_DATASTREAM_T *stream;
@@ -100,20 +100,20 @@ int h264_parse_slice_header_1_ifc(u8 *ptr)
 	H264_PPS_T *pps;
 	int *force_idr;
 
+	sps = (H264_SPS_T *) spl_ptr;
+	spl_ptr += sizeof(H264_SPS_T);
+	pps = (H264_PPS_T *) spl_ptr;
+	spl_ptr += sizeof(H264_PPS_T);
+#ifdef VD3_CONFIG_MVC
+	ssps = (H264_MVC_SSPS_T *) spl_ptr;
+#endif
+
 	stream = (VD3_DATASTREAM_T *) ptr;
 	ptr += sizeof(VD3_DATASTREAM_T);
 	hdr = (H264_SLICE_HEADER_1_T *) ptr;
 	ptr += sizeof(H264_SLICE_HEADER_1_T);
 	nal = (H264_NAL_HEADER_T *) ptr;
 	ptr += sizeof(H264_NAL_HEADER_T);
-	sps = (H264_SPS_T *) ptr;
-	ptr += sizeof(H264_SPS_T);
-#ifdef VD3_CONFIG_MVC
-	ssps = (H264_MVC_SSPS_T *) ptr;
-	ptr += sizeof(H264_MVC_SSPS_T);
-#endif
-	pps = (H264_PPS_T *) ptr;
-	ptr += sizeof(H264_PPS_T);
 	force_idr = (int *) ptr;
 	ret = h264_parse_slice_header_1_ol(stream, hdr, nal, sps,
 #ifdef VD3_CONFIG_MVC
@@ -123,7 +123,7 @@ int h264_parse_slice_header_1_ifc(u8 *ptr)
 	return (int)ret;
 }
 
-int h264_parse_slice_header_2_ifc(u8 *ptr)
+int h264_parse_slice_header_2_ifc(u8 *ptr, u8 *spl_ptr)
 {
 	vd3_error_t ret;
 	VD3_DATASTREAM_T *stream;
@@ -135,6 +135,10 @@ int h264_parse_slice_header_2_ifc(u8 *ptr)
 	H264_SPS_T *sps;
 	H264_PPS_T *pps;
 	int *force_idr;
+
+	sps = (H264_SPS_T *) spl_ptr;
+	spl_ptr += sizeof(H264_SPS_T);
+	pps = (H264_PPS_T *) spl_ptr;
 
 	stream = (VD3_DATASTREAM_T *) ptr;
 	ptr += sizeof(VD3_DATASTREAM_T);
@@ -148,10 +152,6 @@ int h264_parse_slice_header_2_ifc(u8 *ptr)
 	ptr += sizeof(H264_NAL_HEADER_T);
 	hdr1 = (H264_SLICE_HEADER_1_T *) ptr;
 	ptr += sizeof(H264_SLICE_HEADER_1_T);
-	sps = (H264_SPS_T *) ptr;
-	ptr += sizeof(H264_SPS_T);
-	pps = (H264_PPS_T *) ptr;
-	ptr += sizeof(H264_PPS_T);
 	force_idr = (int *) ptr;
 	ret = h264_parse_slice_header_2_ol(stream, hdr, rlm, drpm, nal, hdr1, sps, pps, *force_idr);
 	return (int)ret;
@@ -231,7 +231,7 @@ int h264_parse_slice_id_ifc(u8 *ptr)
 }
 
 #ifdef VD3_CONFIG_MVC
-int h264_parse_slice_bc_partition_ifc(u8 *ptr)
+int h264_parse_slice_bc_partition_ifc(u8 *ptr, u8 *spl_ptr)
 {
 	vd3_error_t ret;
 	VD3_DATASTREAM_T *stream;
@@ -239,12 +239,12 @@ int h264_parse_slice_bc_partition_ifc(u8 *ptr)
 	H264_SPS_T *sps;
 	H264_SLICE_BC_PARTITION_T *partition;
 
+	sps = (H264_SPS_T *) spl_ptr;
+	spl_ptr += sizeof(H264_SPS_T);
+	pps = (H264_PPS_T *) spl_ptr;
+
 	stream = (VD3_DATASTREAM_T *) ptr;
 	ptr += sizeof(VD3_DATASTREAM_T);
-	pps = (H264_PPS_T *) ptr;
-	ptr += sizeof(H264_PPS_T);
-	sps = (H264_SPS_T *) ptr;
-	ptr += sizeof(H264_SPS_T);
 	partition = (H264_SLICE_BC_PARTITION_T *) ptr;
 	ptr += sizeof(H264_SLICE_BC_PARTITION_T);
 	ret = h264_parse_slice_bc_partition_ol(stream, pps, sps, partition);

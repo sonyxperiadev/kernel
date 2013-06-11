@@ -27,11 +27,11 @@ u32 SiOffsetS_ifc(u8 *ptr);
 
 int h264_parse_sps_ifc(u8 *ptr);
 
-int h264_parse_pps_ifc(u8 *ptr);
+int h264_parse_pps_ifc(u8 *ptr, u8 *spl_ptr);
 
-int h264_parse_slice_header_1_ifc(u8 *ptr);
+int h264_parse_slice_header_1_ifc(u8 *ptr, u8 *spl_ptr);
 
-int h264_parse_slice_header_2_ifc(u8 *ptr);
+int h264_parse_slice_header_2_ifc(u8 *ptr, u8 *spl_ptr);
 
 int h264_parse_sps_extension_ifc(u8 *ptr);
 
@@ -43,9 +43,7 @@ int h264_parse_nal_header_extension_ifc(u8 *ptr);
 
 int h264_parse_slice_id_ifc(u8 *ptr);
 
-int h264_parse_slice_bc_partition_ifc(u8 *ptr);
-
-int h264_parse_slice_bc_partition_ifc(u8 *ptr);
+int h264_parse_slice_bc_partition_ifc(u8 *ptr, u8 *spl_ptr);
 
 int h264_parse_pps_spsid_ifc(u8 *ptr);
 

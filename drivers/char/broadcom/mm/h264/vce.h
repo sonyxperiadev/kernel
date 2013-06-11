@@ -30,6 +30,7 @@ struct vce_launch_info_t {
 	unsigned int finaladdr;
 	unsigned int endcode;
 	unsigned int stop_reason;
+	unsigned int pvt_job_size;
 	struct vce_regp_t vce_regpst;
 };
 

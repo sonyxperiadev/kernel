@@ -341,7 +341,7 @@ mm_job_status_e vce_start_job(void *device_id, mm_job_post_t *job,
 			if (enc_info != NULL)
 				va = va + (sizeof(struct enc_info_t));
 			if (dec_info != NULL)
-				va = va + (sizeof(struct dec_info_t));
+				va = va + vce_info->pvt_job_size;
 
 			lt_csize /= 4;
 			/*Copy Extra code(After VCE_DMA_LIMIT)*/
