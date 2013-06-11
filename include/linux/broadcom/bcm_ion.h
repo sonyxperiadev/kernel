@@ -81,6 +81,10 @@ int bcm_ion_get_heap_reserve_data(struct bcm_ion_heap_reserve_data **data,
  */
 #define ION_DEFAULT_HEAP	(0xFFFF)
 
+#define ION_FLAG_WRITECOMBINE (1 << 16)
+#define ION_FLAG_WRITETHROUGH (2 << 16) /* Needs explicit cache invalidates */
+#define ION_FLAG_WRITEBACK    (4 << 16) /* Needs explicit cache flushes */
+
 /**
  * DOC: Buffer property flags and masks
  */

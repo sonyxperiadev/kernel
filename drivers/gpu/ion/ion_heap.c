@@ -22,6 +22,9 @@
 #include <linux/scatterlist.h>
 #include <linux/vmalloc.h>
 #include "ion_priv.h"
+#ifdef CONFIG_ION_BCM
+#include <linux/broadcom/bcm_ion.h>
+#endif
 
 void *ion_heap_map_kernel(struct ion_heap *heap,
 			  struct ion_buffer *buffer)

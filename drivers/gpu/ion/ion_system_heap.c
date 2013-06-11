@@ -25,6 +25,9 @@
 #include <linux/slab.h>
 #include <linux/vmalloc.h>
 #include "ion_priv.h"
+#ifdef CONFIG_ION_BCM
+#include <linux/broadcom/bcm_ion.h>
+#endif
 #ifdef CONFIG_BCM_IOVMM
 #include <plat/bcm_iommu.h>
 #endif

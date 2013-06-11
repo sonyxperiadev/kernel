@@ -31,6 +31,7 @@
 #include <asm/cacheflush.h>
 #include <linux/seq_file.h>
 #include <linux/debugfs.h>
+#include <linux/broadcom/bcm_ion.h>
 #endif
 #include "ion_priv.h"
 #ifdef CONFIG_IOMMU_API
