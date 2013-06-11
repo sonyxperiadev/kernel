@@ -82,12 +82,14 @@ static v3d_boom_t *v3d_alloc_boom(void *device_id)
 {
 	v3d_bin_render_device_t *id = (v3d_bin_render_device_t *)device_id;
 	v3d_boom_t *block = (v3d_boom_t *) kzalloc(sizeof(v3d_boom_t), GFP_KERNEL);
+	unsigned int heap_mask;
 
 	if (!block)
 		return NULL;
 
+	heap_mask = bcm_ion_get_heapmask(ION_FLAG_256M | ION_FLAG_FAST_ALLOC);
 	block->v3d_bin_oom_handle = ion_alloc(id->v3d_bin_oom_client,
-				V3D_BIN_OOM_SIZE, 0, ION_DEFAULT_HEAP, 0);
+				V3D_BIN_OOM_SIZE, 0, heap_mask, 0);
 	block->v3d_bin_oom_block = bcm_ion_map_dma(
 			id->v3d_bin_oom_client,
 			block->v3d_bin_oom_handle);
