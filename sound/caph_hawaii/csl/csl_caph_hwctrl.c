@@ -280,6 +280,7 @@ static void csl_ssp_ControlHWClock(Boolean enable, CSL_CAPH_DEVICE_e source,
 static Boolean csl_caph_hwctrl_ssp_running(void);
 static void csl_caph_hwctrl_tdm_config(
 			CSL_CAPH_HWConfig_Table_t *path, int sinkNo);
+static void csl_caph_hwctrl_pcm_stop_tx(CSL_CAPH_PathID pathID, UInt8 channel);
 
 /*static void csl_caph_hwctrl_SetDSPInterrupt(void);*/
 /******************************************************************************
@@ -1200,9 +1201,11 @@ static void csl_caph_obtain_blocks
 	AUDIO_SAMPLING_RATE_t srOut;
 	CSL_CAPH_SRCM_ROUTE_t *pSrcmRoute;
 	CSL_CAPH_DMA_CHNL_e dmaCH = CSL_CAPH_DMA_NONE;
-	int j;
+	int i, j, bt_path;
+	bool src_found = FALSE;
 	CSL_CAPH_DATAFORMAT_e dataFormatTmp;
-
+	CSL_CAPH_SRCM_ROUTE_t *pSrcmRoute2;
+	CSL_CAPH_HWConfig_Table_t *path2;
 	if (!pathID)
 		return;
 	path = &HWConfig_Table[pathID-1];
@@ -1519,7 +1522,29 @@ static void csl_caph_obtain_blocks
 						   */
 		} else
 #endif
-		{
+		if (path->sink[sinkNo] == CSL_CAPH_DEV_BT_SPKR) {
+			bt_path = csl_caph_hwctrl_readHWResource(
+					csl_pcm_get_tx0_fifo_data_port(
+						pcmHandleSSP), pathID);
+			if (bt_path) {
+				path2 =	&HWConfig_Table[bt_path-1];
+				for (j = 0; j < MAX_SINK_NUM; j++) {
+					for (i = 0; i < MAX_BLOCK_NUM; i++) {
+						pSrcmRoute2 = &path2->
+							srcmRoute[j][i];
+					if (pSrcmRoute2->tapOutChnl != 0) {
+							srcmIn = pSrcmRoute2->
+								inChnl;
+							src_found = TRUE;
+							break;
+						}
+					}
+					if (src_found)
+						break;
+				}
+			}
+		}
+		if (!src_found) {
 			srcmIn = csl_caph_srcmixer_obtain_inchnl
 			(dataFormatTmp, pSrcmRoute->inSampleRate, srOut);
 		}
@@ -1625,7 +1650,7 @@ static void csl_caph_obtain_blocks
 			/* BT playback and BT 48k mono recording requires to
 			 * obtain an extra mixer output here.
 			 * No need for BT to EP/IHF loopback.*/
-#if defined(MIX_ARM2SP)
+#if 1
 			/*consider to use SRC tapout later*/
 			sink = CSL_CAPH_DEV_EP;
 #else
@@ -1897,8 +1922,8 @@ static void csl_caph_hwctrl_remove_blocks(CSL_CAPH_PathID pathID,
 		}
 		if (path->sink[sinkNo] == CSL_CAPH_DEV_BT_SPKR
 			&& pcmTxRunning) {
-			csl_pcm_stop_tx(pcmHandleSSP, CSL_PCM_CHAN_RX0);
-			pcmTxRunning = FALSE;
+			csl_caph_hwctrl_pcm_stop_tx(path->pathID,
+							CSL_PCM_CHAN_TX0);
 		}
 		if (!pcmRxRunning && !pcmTxRunning) {
 			if (sspTDM_enabled) {
@@ -2409,10 +2434,12 @@ static void csl_caph_config_mixer(CSL_CAPH_PathID
 static void csl_caph_config_src
 (CSL_CAPH_PathID pathID, int sinkNo, int blockPathIdx)
 {
-	int blockIdx;
+	int blockIdx, src_path = 0;
 	CAPH_BLOCK_t block;
 	CSL_CAPH_HWConfig_Table_t *path;
-	/*CSL_CAPH_SRCM_ROUTE_t *pSrcmRoute;*/
+	CSL_CAPH_SRCM_ROUTE_t *pSrcmRoute;
+	UInt32 fifoAddr = 0x0;
+	CAPH_SRCMixer_FIFO_e chal_fifo = CAPH_CH_INFIFO_NONE;
 
 	if (!pathID)
 		return;
@@ -2422,10 +2449,14 @@ static void csl_caph_config_src
 		return;
 	blockIdx = path->blockIdx[sinkNo][blockPathIdx];
 
-	/*SrcmRoute = &path->srcmRoute[sinkNo][blockIdx];*/
-
-	csl_caph_srcmixer_config_src_route(path->srcmRoute[sinkNo][blockIdx]);
-	csl_caph_hwctrl_set_srcmixer_filter(path);
+	pSrcmRoute = &path->srcmRoute[sinkNo][blockIdx];
+	chal_fifo = csl_caph_srcmixer_get_inchnl_fifo(pSrcmRoute->inChnl);
+	fifoAddr = csl_caph_srcmixer_get_fifo_addr(chal_fifo);
+	src_path = csl_caph_hwctrl_readHWResource(fifoAddr, pathID);
+	if (src_path == 0) {
+		csl_caph_srcmixer_config_src_route(*pSrcmRoute);
+		csl_caph_hwctrl_set_srcmixer_filter(path);
+	}
 	/*wait for src to overflow, src output fifo size is 8 samples,
 	  1ms for 48-to-8 src*/
 	if (path->sink[0] == CSL_CAPH_DEV_DSP)
@@ -3654,6 +3685,28 @@ static void csl_caph_hwctrl_closeAudioH(CSL_CAPH_DEVICE_e dev,
 
 	return;
 }
+
+/****************************************************************************
+*  Function Name: void csl_caph_hwctrl_pcm_stop_tx(
+*                   CSL_CAPH_PathID pathID, UInt8 channel)
+*  Description: Check whether to turn off BT TX path.
+****************************************************************************/
+static void csl_caph_hwctrl_pcm_stop_tx(CSL_CAPH_PathID pathID, UInt8 channel)
+{
+	UInt32 fifoAddr = 0x0;
+	if ((!pcmTxRunning) || (pathID == 0))
+		return;
+	aTrace(LOG_AUDIO_CSL,
+		"closepcmtx pathid %d, channel %d.\r\n", pathID, channel);
+	fifoAddr = csl_pcm_get_tx0_fifo_data_port(pcmHandleSSP);
+	csl_caph_hwctrl_removeHWResource(fifoAddr, pathID);
+	if (0 == csl_caph_hwctrl_readHWResource(fifoAddr, pathID)) {
+		csl_pcm_stop_tx(pcmHandleSSP, channel);
+		pcmTxRunning = FALSE;
+	}
+	return;
+}
+
 /****************************************************************************
  *  Function Name: void csl_caph_hwctrl_ACIControl()
  *
