@@ -184,7 +184,7 @@ DEFINE_SIMPLE_ATTRIBUTE(debug_grow_pools_fops, debug_drop_pools_get,
 			debug_grow_pools_set, "%llu\n");
 #endif
 
-static int ion_page_pool_total(bool high)
+int ion_page_pool_total(bool high)
 {
 	struct ion_page_pool *pool;
 	int total = 0;

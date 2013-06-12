@@ -257,6 +257,23 @@ int ion_share_dma_buf_fd(struct ion_client *client, struct ion_handle *handle);
  */
 struct ion_handle *ion_import_dma_buf(struct ion_client *client, int fd);
 
+#ifdef CONFIG_ION_BCM
+/**
+ * Total memory (in pages) held in page pool
+ */
+int ion_page_pool_total(bool high);
+
+/**
+ * Total memory (in bytes) to be freed asynchronously
+ */
+int ion_freelist_total(struct ion_device *dev);
+
+/**
+ * Total memory (in bytes) allocated from the heap type
+ */
+int ion_used_total(struct ion_device *dev, enum ion_heap_type heap_type);
+#endif
+
 #endif /* __KERNEL__ */
 
 /**

@@ -206,13 +206,13 @@ static int ion_system_heap_allocate(struct ion_heap *heap,
 #ifdef CONFIG_BCM_IOVMM
 	buffer->dma_addr = arm_iommu_map_sgt(heap->device, table, align);
 	if (buffer->dma_addr == DMA_ERROR_CODE) {
-		pr_err("%16s: Failed iommu buffer(%p) map da(%#x)  size(%#x)\n",
+		pr_err("%16s: Failed iommu buffer(%p) map da(%#x)  size(%#lx)\n",
 				heap->name, buffer, buffer->dma_addr,
-				buffer->size);
+				size);
 		goto err2;
 	}
-	pr_debug("%16s: iommu map buffer(%p) da(%#x) size(%#x)\n",
-			heap->name, buffer, buffer->dma_addr, buffer->size);
+	pr_debug("%16s: iommu map buffer(%p) da(%#x) size(%#lx)\n",
+			heap->name, buffer, buffer->dma_addr, size);
 	buffer->priv_virt = table;
 	return 0;
 #else
@@ -397,7 +397,11 @@ struct ion_heap *ion_system_heap_create(struct ion_platform_heap *unused)
 		return ERR_PTR(-ENOMEM);
 	heap->heap.ops = &system_heap_ops;
 	heap->heap.type = ION_HEAP_TYPE_SYSTEM;
-	heap->heap.flags = ION_HEAP_FLAG_DEFER_FREE;
+	/**
+	 * TODO: Unaccounted leaks seen if asynchronous free is enabled
+	 * Disabling this feature till it is root-caused.
+	 **/
+	/* heap->heap.flags = ION_HEAP_FLAG_DEFER_FREE; */
 	heap->pools = kzalloc(sizeof(struct ion_page_pool *) * num_orders,
 			      GFP_KERNEL);
 	if (!heap->pools)
