@@ -1430,6 +1430,7 @@ static struct ccu_clk CLK_NAME(khub) = {
 	.volt_peri = DEFINE_ARRAY_ARGS(VLT_NORMAL_PERI,VLT_HIGH_PERI),
 	.freq_policy = HUB_CCU_FREQ_POLICY_TBL,
 	.freq_tbl = DEFINE_ARRAY_ARGS(khub_clk_freq_list0,khub_clk_freq_list1,khub_clk_freq_list2,khub_clk_freq_list3,khub_clk_freq_list4,khub_clk_freq_list5,khub_clk_freq_list6),
+	.freq_tbl_size = 7,
 	.ccu_reset_mgr_base = HW_IO_PHYS_TO_VIRT(HUB_RST_BASE_ADDR),
 	.reset_wr_access_offset = KHUB_RST_MGR_REG_WR_ACCESS_OFFSET,
 	.dbg_bus_offset = KHUB_CLK_MGR_REG_CLK_DEBUG_BUS_OFFSET,
@@ -2816,6 +2817,7 @@ static struct ccu_clk CLK_NAME(khubaon) = {
 	.volt_peri = DEFINE_ARRAY_ARGS(VLT_NORMAL_PERI,VLT_HIGH_PERI),
 	.freq_policy = AON_CCU_FREQ_POLICY_TBL,
 	.freq_tbl = DEFINE_ARRAY_ARGS(khubaon_clk_freq_list0,khubaon_clk_freq_list1,khubaon_clk_freq_list2,khubaon_clk_freq_list3,khubaon_clk_freq_list4),
+	.freq_tbl_size = 5,
 	.ccu_reset_mgr_base = HW_IO_PHYS_TO_VIRT(AON_RST_BASE_ADDR),
 	.reset_wr_access_offset = KHUBAON_RST_MGR_REG_WR_ACCESS_OFFSET,
 
@@ -3612,6 +3614,7 @@ static struct ccu_clk CLK_NAME(kpm) = {
 	.volt_peri = DEFINE_ARRAY_ARGS(VLT_NORMAL_PERI,VLT_HIGH_PERI),
 	.freq_policy = KPM_CCU_FREQ_POLICY_TBL,
 	.freq_tbl = DEFINE_ARRAY_ARGS(kpm_clk_freq_list0,kpm_clk_freq_list1,kpm_clk_freq_list2,kpm_clk_freq_list3,kpm_clk_freq_list4,kpm_clk_freq_list5,kpm_clk_freq_list6,kpm_clk_freq_list7),
+	.freq_tbl_size = 8,
 	.ccu_reset_mgr_base = HW_IO_PHYS_TO_VIRT(KONA_MST_RST_BASE_ADDR),
 	.reset_wr_access_offset = KPM_RST_MGR_REG_WR_ACCESS_OFFSET,
 	.dbg_bus_offset = KPM_CLK_MGR_REG_CLK_DEBUG_BUS_OFFSET,
@@ -4569,6 +4572,7 @@ static struct ccu_clk CLK_NAME(kps) = {
 	.volt_peri = DEFINE_ARRAY_ARGS(VLT_NORMAL_PERI,VLT_HIGH_PERI),
 	.freq_policy = KPS_CCU_FREQ_POLICY_TBL,
 	.freq_tbl = DEFINE_ARRAY_ARGS(kps_clk_freq_list0,kps_clk_freq_list1,kps_clk_freq_list2,kps_clk_freq_list3,kps_clk_freq_list4,kps_clk_freq_list5),
+	.freq_tbl_size = 6,
 	.ccu_reset_mgr_base = HW_IO_PHYS_TO_VIRT(KONA_SLV_RST_BASE_ADDR),
 	.reset_wr_access_offset = KPS_RST_MGR_REG_WR_ACCESS_OFFSET,
 	.dbg_bus_offset = KPS_CLK_MGR_REG_CLK_DEBUG_BUS_OFFSET,
@@ -5926,6 +5930,7 @@ static u32 mm_clk_freq_list2[] = DEFINE_ARRAY_ARGS(83200000,83200000);
 static u32 mm_clk_freq_list3[] = DEFINE_ARRAY_ARGS(99840000,99840000);
 static u32 mm_clk_freq_list4[] = DEFINE_ARRAY_ARGS(166400000,166400000);
 static u32 mm_clk_freq_list5[] = DEFINE_ARRAY_ARGS(249600000,249600000);
+static u32 mm_clk_freq_list6[] = DEFINE_ARRAY_ARGS(312000000, 312000000);
 
 /*MM CCU state save register list*/
 static struct reg_save mm_reg_save[] =
@@ -5990,7 +5995,10 @@ static struct ccu_clk CLK_NAME(mm) = {
 	.freq_count = MM_CCU_FREQ_VOLT_TBL_SZ,
 	.volt_peri = DEFINE_ARRAY_ARGS(VLT_NORMAL_PERI,VLT_HIGH_PERI),
 	.freq_policy = MM_CCU_FREQ_POLICY_TBL,
-	.freq_tbl = DEFINE_ARRAY_ARGS(mm_clk_freq_list0,mm_clk_freq_list1,mm_clk_freq_list2,mm_clk_freq_list3,mm_clk_freq_list4,mm_clk_freq_list5),
+	.freq_tbl = DEFINE_ARRAY_ARGS(mm_clk_freq_list0, mm_clk_freq_list1,
+			mm_clk_freq_list2, mm_clk_freq_list3, mm_clk_freq_list4,
+			mm_clk_freq_list5, mm_clk_freq_list6),
+	.freq_tbl_size = 7,
 	.ccu_reset_mgr_base = HW_IO_PHYS_TO_VIRT(MM_RST_BASE_ADDR),
 	.reset_wr_access_offset = MM_RST_MGR_REG_WR_ACCESS_OFFSET,
 

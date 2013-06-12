@@ -521,6 +521,7 @@ struct ccu_clk {
 	struct ccu_clk_ops *ccu_ops;
 	u8 active_policy;
 	u32 *freq_tbl[MAX_CCU_FREQ_COUNT];
+	int freq_tbl_size;
 	struct ccu_state_save *ccu_state_save;
 	spinlock_t clk_lock;
 	spinlock_t access_lock;
@@ -795,10 +796,46 @@ int ccu_get_dbg_bus_status(struct ccu_clk *ccu_clk);
 int ccu_set_dbg_bus_sel(struct ccu_clk *ccu_clk, u32 sel);
 int ccu_get_dbg_bus_sel(struct ccu_clk *ccu_clk);
 int ccu_print_sleep_prevent_clks(struct clk *clk);
+int ccu_volt_id_update_for_freqid(struct clk *clk, u8 freq_id, u8 volt_id);
+int ccu_volt_tbl_display(struct clk *clk, u8 *volt_tbl);
+int ccu_clk_get_freq_id_from_opp(struct ccu_clk *ccu_clk, int opp_id);
+u32 ccu_clk_get_rate(struct clk *clk, int opp_id);
 
 int pll_set_desense_offset(struct clk *clk, int offset);
 int pll_get_desense_offset(struct clk *clk);
 int pll_desense_enable(struct clk *clk, int enable);
+
+int ccu_policy_dbg_get_act_policy(struct ccu_clk *ccu_clk);
+int ref_clk_get_gating_status(struct ref_clk *ref_clk);
+
+int pll_clk_get_lock_status(struct pll_clk *pll_clk);
+int pll_clk_get_pdiv(struct pll_clk *pll_clk);
+int pll_clk_get_ndiv_int(struct pll_clk *pll_clk);
+int pll_clk_get_ndiv_frac(struct pll_clk *pll_clk);
+int pll_clk_get_idle_pwrdwn_sw_ovrride(struct pll_clk *pll_clk);
+int pll_clk_get_pwrdwn(struct pll_clk *pll_clk);
+
+
+int pll_chnl_clk_get_enb_clkout(struct pll_chnl_clk *pll_chnl_clk);
+int pll_chnl_clk_get_mdiv(struct pll_chnl_clk *pll_chnl_clk);
+
+int ref_clk_get_gating_ctrl(struct ref_clk *ref_clk);
+int ref_clk_get_enable_bit(struct ref_clk *ref_clk);
+
+int core_clk_get_gating_ctrl(struct core_clk *core_clk);
+int core_clk_get_gating_status(struct core_clk *core_clk);
+int core_clk_get_enable_bit(struct core_clk *core_clk);
+
+int peri_clk_get_gating_ctrl(struct peri_clk *peri_clk);
+int peri_clk_get_enable_bit(struct peri_clk *peri_clk);
+int peri_clk_get_gating_status(struct peri_clk *peri_clk);
+
+int bus_clk_get_enable_bit(struct bus_clk *bus_clk);
+int bus_clk_get_gating_ctrl(struct bus_clk *bus_clk);
+int bus_clk_get_gating_status(struct bus_clk *bus_clk);
+
+
+
 
 /*These clock API should only be called after
 * appropriate locks are acquired*/
