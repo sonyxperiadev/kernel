@@ -134,7 +134,7 @@ static int __kona_pm_enter_idle(struct cpuidle_device *dev,
  * trade off.
  */
 #ifdef CONFIG_USE_ARCH_TIMER_AS_LOCAL_TIMER
-		/* if (kona_state->state & CSTATE_DS_DRMT) */
+		if (kona_state->state & CSTATE_DS_DRMT)
 			clockevents_notify(CLOCK_EVT_NOTIFY_BROADCAST_ENTER,
 				&cpu_id);
 #endif
@@ -145,7 +145,7 @@ static int __kona_pm_enter_idle(struct cpuidle_device *dev,
 			cpu_do_idle();
 
 #ifdef CONFIG_USE_ARCH_TIMER_AS_LOCAL_TIMER
-		/* if (kona_state->state & CSTATE_DS_DRMT) */
+		if (kona_state->state & CSTATE_DS_DRMT)
 			clockevents_notify(CLOCK_EVT_NOTIFY_BROADCAST_EXIT,
 				&cpu_id);
 #endif
