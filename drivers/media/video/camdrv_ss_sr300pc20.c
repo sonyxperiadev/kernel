@@ -2126,11 +2126,6 @@ int camdrv_ss_sr300pc20_get_sensor_param_for_exif(
 		
 }
 
-void camdrv_ss_sensor_main_name(struct camdrv_ss_sensor_cap *sensor)
-{
-	strcpy(sensor->name, SR300PC20_NAME);
-}
-
 bool camdrv_ss_sensor_init_main(bool bOn, struct camdrv_ss_sensor_cap *sensor)
 {
 

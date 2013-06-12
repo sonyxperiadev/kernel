@@ -85,11 +85,6 @@ static const struct camdrv_ss_framesize sr200pc20m_supported_preview_framesize_l
 	{ PREVIEW_SIZE_2MP,	1600,  1200 },
 };
 
-void camdrv_ss_sensor_main_name(struct camdrv_ss_sensor_cap *sensor)
-{
-	strcpy(sensor->name, SR200PC20M_NAME);
-}
-
 
 static const struct camdrv_ss_framesize  sr200pc20m_supported_capture_framesize_list[] = {
 	{ CAPTURE_SIZE_VGA,		640,  480 },
@@ -1666,8 +1661,7 @@ static int camdrv_ss_sr200pc20m_sensor_power(int on)
 	if(on)
 {
 		CAM_INFO_PRINTK("power on the sensor\n");
-		if (pi_mgr_dfs_request_update(&unicam_dfs_node,
-						PI_OPP_NORMAL)) {
+		if (pi_mgr_dfs_request_update(&unicam_dfs_node, PI_OPP_TURBO)) {
 			CAM_ERROR_PRINTK("%s:failed to update dfs request for unicam\n",
 			       __func__);
 			return -1;

@@ -276,8 +276,10 @@ int __init mm_isp_init(void)
 	core_param.mm_hw_size = ISP_HW_SIZE;
 	core_param.mm_irq = IRQ_ISP;
 
-	core_param.mm_timer = DEFAULT_MM_DEV_TIMER_MS;
-	core_param.mm_timeout = DEFAULT_MM_DEV_TIMEOUT_MS;
+	/*core_param.mm_timer = DEFAULT_MM_DEV_TIMER_MS;*/
+	/*core_param.mm_timeout = DEFAULT_MM_DEV_TIMEOUT_MS;*/
+	core_param.mm_timer = 100;
+	core_param.mm_timeout = 100;
 
 	core_param.mm_get_status = get_isp_status;
 	core_param.mm_start_job = isp_start_job;

@@ -2,6 +2,29 @@
 # Generic video config states
 #
 
+config FLASH_ENABLE
+	bool "Support for Flash Feature"
+	default n
+	help
+	Support for the Flash Feature.
+	This flag needs to be enabled
+	for the flash feature.
+
+	Enable this flag if camera
+	FLASH is implemented and FLASH
+	IC is presented.
+
+config FLASH_MIC2871
+	bool "Support for Flash IC MIC2871"
+	default n
+	help
+	Support for the Flash MIC2871.
+	If the flash IC is MIC2871, Enable
+	this flag.
+
+	Enable this flag if the flash IC
+	is MIC2871.
+
 config VIDEO_V4L2
 	tristate
 	depends on VIDEO_DEV && VIDEO_V4L2_COMMON

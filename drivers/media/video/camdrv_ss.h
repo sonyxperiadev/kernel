@@ -134,6 +134,7 @@ struct camdrv_ss_state {
 	int currentScene;
 	int currentWB;
 	int currentMetering;
+	int currentEffect;
 	int bStartFineSearch;
 	v4l2_touch_area touch_area;
 	bool bTouchFocus;
@@ -226,7 +227,7 @@ struct camdrv_ss_sensor_cap {
 	int (*set_scene_mode)(struct v4l2_subdev *sd, struct v4l2_control *ctrl);  /* denis */
 	void (*smartStayChangeInitSetting)(struct camdrv_ss_sensor_cap *sensor);
         int(* get_prefalsh_on) (struct v4l2_subdev *sd, struct v4l2_control *ctrl); //Backporting Rhea to Hawaii: added to call sensor Specific preflash rotuine
-
+    void (* rear_camera_vendorid) (char *);// add vendor id
 /************************/
 /* REGISTER TABLE SETTINGS */
 /************************/
@@ -385,6 +386,8 @@ struct camdrv_ss_sensor_cap {
 	const regs_t *preview_size_800x600_regs;
 	const regs_t *preview_size_1024x600_regs;
 	const regs_t *preview_size_1024x768_regs;
+	const regs_t *HD_Camcorder_regs;
+	const regs_t *HD_Camcorder_Disable_regs;
 	const regs_t *preview_size_1280x960_regs;
 	const regs_t *preview_size_1600x960_regs;
 	const regs_t *preview_size_1600x1200_regs;
@@ -458,6 +461,21 @@ struct camdrv_ss_sensor_cap {
 	const regs_t *af_return_inf_pos;
 	const regs_t *af_return_macro_pos;
         const  regs_t *main_flash_off_regs; //Add for nevis
+        const regs_t *Pre_Flash_Start_EVT1;
+        const regs_t *Pre_Flash_End_EVT1;
+        const regs_t *Main_Flash_Start_EVT1;
+        const regs_t *Main_Flash_End_EVT1;
+        const regs_t *focus_mode_auto_regs_cancel1;
+        const regs_t *focus_mode_auto_regs_cancel2;
+        const regs_t *focus_mode_auto_regs_cancel3;
+        const regs_t *focus_mode_macro_regs_cancel1;
+        const regs_t *focus_mode_macro_regs_cancel2;
+        const regs_t *focus_mode_macro_regs_cancel3;
+
+	/* flicker */
+	const regs_t *antibanding_50hz_regs;
+	const regs_t *antibanding_60hz_regs;
+        
 	/* NO OF ROWS OF EACH REGISTER SETTING */
 	int  rows_num_init_regs;
 	int  rows_num_vt_mode_regs;
@@ -611,6 +629,8 @@ struct camdrv_ss_sensor_cap {
 	int  rows_num_preview_size_800x600_regs;
 	int  rows_num_preview_size_1024x600_regs;
 	int  rows_num_preview_size_1024x768_regs;
+	int  rows_num_HD_Camcorder_regs;
+	int  rows_num_HD_Camcorder_Disable_regs;
 	int  rows_num_preview_size_1280x960_regs;
 	int  rows_num_preview_size_1600x960_regs;
 	int  rows_num_preview_size_1600x1200_regs;
@@ -686,18 +706,28 @@ struct camdrv_ss_sensor_cap {
 	int rows_num_af_return_inf_pos;
 	int rows_num_af_return_macro_pos;
         int  rows_num_main_flash_off_regs; //Add for nevis
-};
 
+  int rows_num_Pre_Flash_Start_EVT1;
+  int rows_num_Pre_Flash_End_EVT1;
+  int rows_num_Main_Flash_Start_EVT1;
+  int rows_num_Main_Flash_End_EVT1;
+  int rows_num_focus_mode_auto_regs_cancel1;
+  int rows_num_focus_mode_auto_regs_cancel2;
+  int rows_num_focus_mode_auto_regs_cancel3;
+  int rows_num_focus_mode_macro_regs_cancel1;
+  int rows_num_focus_mode_macro_regs_cancel2;
+  int rows_num_focus_mode_macro_regs_cancel3;
+
+	/* flicker */
+	int rows_num_antibanding_60hz_regs;        
+	int rows_num_antibanding_50hz_regs;
+};
 /************************/
 /* EXTERN */
 /************************/
 extern bool camdrv_ss_sensor_init_main(bool bOn, struct camdrv_ss_sensor_cap *sensor);
 #if defined(CONFIG_SOC_SUB_CAMERA)
 extern bool camdrv_ss_sensor_init_sub(bool bOn, struct camdrv_ss_sensor_cap *sensor);
-extern void camdrv_ss_sensor_sub_name(struct camdrv_ss_sensor_cap *sensror);
-#endif
-#if defined(CONFIG_SOC_CAMERA)
-extern void camdrv_ss_sensor_main_name(struct camdrv_ss_sensor_cap *sensror);
 #endif
 
 extern unsigned int HWREV;

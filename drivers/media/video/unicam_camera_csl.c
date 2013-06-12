@@ -52,6 +52,8 @@
 /* CSL_CAM_CAPTURE_MODE_TRIGGER (Stills) CSL_CAM_CAPTURE_MODE_NORMAL (Video) */
 #define UNICAM_CAPTURE_MODE		CSL_CAM_CAPTURE_MODE_TRIGGER
 #define UNPACK_RAW10_TO_16BITS
+#define iprintk(format, arg...)	\
+	printk(KERN_INFO"[%s]: "format"\n", __func__, ##arg)
 
 /* #define UNICAM_DEBUG */
 
@@ -64,6 +66,8 @@
 
 #define pixfmtstr(x) (x) & 0xff, ((x) >> 8) & 0xff, ((x) >> 16) & 0xff, \
 	((x) >> 24) & 0xff
+
+static unsigned int t1_fps, t2_fps, prev_t2_fps, fps;
 
 struct unicam_camera_dev {
 	/* soc and vb3 rleated */
@@ -99,9 +103,6 @@ struct unicam_camera_buffer {
 	struct list_head queue;
 	unsigned int magic;
 };
-
-/* frame timing display variables */
-static unsigned int fps_t1, fps_t2, fps, update_fps, curr_fps;
 
 static irqreturn_t unicam_camera_isr(int irq, void *arg);
 
@@ -410,10 +411,6 @@ static void unicam_videobuf_queue(struct vb2_buffer *vb)
 				unicam_camera_capture(unicam_dev);
 		}
 	}
-	if (update_fps != curr_fps) {
-		update_fps = curr_fps;
-		dprintk("sensor fps = %d\n", update_fps);
-	}
 	spin_unlock_irqrestore(&unicam_dev->lock, flags);
 	dprintk("-exit");
 }
@@ -442,9 +439,15 @@ static void unicam_videobuf_release(struct vb2_buffer *vb)
 
 static int unicam_videobuf_init(struct vb2_buffer *vb)
 {
-	dprintk("-enter");
+	struct soc_camera_device *icd = soc_camera_from_vb2q(vb->vb2_queue);
+	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
+	struct unicam_camera_dev *unicam_dev = ici->priv;
 	struct unicam_camera_buffer *buf = to_unicam_camera_vb(vb);
+	unsigned long flags;
+
+	spin_lock_irqsave(&unicam_dev->lock, flags);
 	INIT_LIST_HEAD(&buf->queue);
+	spin_unlock_irqrestore(&unicam_dev->lock, flags);
 	buf->magic = UNICAM_BUF_MAGIC;
 	return 0;
 }
@@ -467,19 +470,11 @@ int unicam_videobuf_start_streaming(struct vb2_queue *q, unsigned int count)
 	CSL_CAM_FRAME_st_t cslCamFrame;
 
 	dprintk("-enter");
-	dprintk("enabling csi");
+	iprintk("enabling csi");
 
 	spin_lock_irqsave(&unicam_dev->lock, flags);
-	if (unicam_dev->stopping != false) {
 		unicam_dev->stopping = false;
 		spin_unlock_irqrestore(&unicam_dev->lock, flags);
-		dev_warn(unicam_dev->dev, "Trying to start stream"
-				"when already active.");
-	} else {
-		spin_unlock_irqrestore(&unicam_dev->lock, flags);
-	}
-	fps_t1 = fps_t2 = fps = update_fps = curr_fps = 0;
-
 	if (csl_cam_init()) {
 		dev_err(unicam_dev->dev, "error initializing csl camera\n");
 		return -1;
@@ -488,6 +483,12 @@ int unicam_videobuf_start_streaming(struct vb2_queue *q, unsigned int count)
 	ret = v4l2_subdev_call(sd, video, s_stream, 1);
 	if (ret < 0 && ret != -ENOIOCTLCMD) {
 		dev_err(unicam_dev->dev, "error on s_stream(%d)\n", ret);
+		spin_lock_irqsave(&unicam_dev->lock, flags);
+		unicam_dev->active = NULL;
+		unicam_dev->stopping = true;
+		spin_unlock_irqrestore(&unicam_dev->lock, flags);
+		if (csl_cam_exit())
+			dev_err(unicam_dev->dev, "csl_cam_exit(): FAILED\n");
 		return ret;
 	}
 
@@ -499,6 +500,7 @@ int unicam_videobuf_start_streaming(struct vb2_queue *q, unsigned int count)
 			ret);
 		return ret;
 	}
+
 
 	/* set camera interface parameters */
 	memset(&csl_cam_intf_cfg_st, 0, sizeof(CSL_CAM_INTF_CFG_st_t));
@@ -721,6 +723,8 @@ int unicam_videobuf_start_streaming(struct vb2_queue *q, unsigned int count)
 			unicam_camera_capture(unicam_dev);
 	}
 	unicam_dev->streaming = 1;
+	t1_fps = t2_fps = prev_t2_fps = jiffies_to_msecs(jiffies);
+	fps = 0;
 	spin_unlock_irqrestore(&unicam_dev->lock, flags);
 
 	csl_cam_register_display(unicam_dev->cslCamHandle);
@@ -748,7 +752,7 @@ int unicam_videobuf_stop_streaming(struct vb2_queue *q)
 	spin_lock_irqsave(&unicam_dev->lock, flags);
 	dprintk("-enter");
 	dprintk("disabling csi");
-	dprintk("stopping stream");
+	iprintk("stopping stream");
 	if (!unicam_dev->streaming) {
 		spin_unlock_irqrestore(&unicam_dev->lock, flags);
 		dev_err(unicam_dev->dev, "stream already turned off\n");
@@ -768,12 +772,8 @@ int unicam_videobuf_stop_streaming(struct vb2_queue *q)
 	} else {
 		spin_unlock_irqrestore(&unicam_dev->lock, flags);
 	}
+	usleep_range(50, 60); /*TODO: Need to double-check with ASIC team*/
 	spin_lock_irqsave(&unicam_dev->lock, flags);
-
-	unicam_dev->active = NULL;
-	unicam_dev->streaming = 0;
-	spin_unlock_irqrestore(&unicam_dev->lock, flags);
-
 
 	/* disable frame interrupts */
 	cslCamFrame.int_enable = CSL_CAM_INT_DISABLE;
@@ -803,8 +803,11 @@ int unicam_videobuf_stop_streaming(struct vb2_queue *q)
 		ret = -1;
 	}
 
+	unicam_dev->active = NULL;
+	unicam_dev->streaming = 0;
 out:
 	dprintk("-exit");
+	spin_unlock_irqrestore(&unicam_dev->lock, flags);
 	up(&unicam_dev->stop_processing_sem);
 
 	/* Stopping stream after stopping unicam */
@@ -1154,10 +1157,6 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 	struct v4l2_subdev *sd = soc_camera_to_subdev(unicam_dev->icd);
 
 	spin_lock_irqsave(&unicam_dev->lock, flags);
-	reg_status =
-	    csl_cam_get_rx_status(unicam_dev->cslCamHandle,
-				  (CSL_CAM_RX_STATUS_t *) &status);
-
 	if (!unicam_dev->streaming) {
 		pr_err("Interrupt triggered after stopping camera!\n");
 		spin_unlock_irqrestore(&unicam_dev->lock, flags);
@@ -1166,6 +1165,9 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 		spin_unlock_irqrestore(&unicam_dev->lock, flags);
 	}
 	/* has the interrupt occured for Channel 0? */
+	reg_status =
+	    csl_cam_get_rx_status(unicam_dev->cslCamHandle,
+				  (CSL_CAM_RX_STATUS_t *) &status);
 	dprintk("received unicam interrupt reg_status=0x%x status=0x%x\n",
 		reg_status, status);
 
@@ -1186,19 +1188,23 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 			struct vb2_buffer *vb = unicam_dev->active;
 			status &= ~(CSL_CAM_INT_FRAME_END |
 					CSL_CAM_INT_LINE_COUNT);
-			fps++;
+
 			if (reg_status & 0x2000)
 				pr_err("Camera: Urgent request was signalled at FE!!!!\n");
-			if (fps_t1 == 0 && fps_t2 == 0)
-				fps_t1 = fps_t2 = jiffies_to_msecs(jiffies);
 
-			fps_t2 = jiffies_to_msecs(jiffies);
-			if (fps_t2 - fps_t1 > 1000) {
-				curr_fps = fps;
+			t2_fps = jiffies_to_msecs(jiffies);
+			if (t2_fps - t1_fps > 1000) {
+				iprintk("sensor fps = %d\n", fps);
+				if (t2_fps - t1_fps >= 2000)
+					dev_err(unicam_dev->dev,
+						"Camera:No frame in past 1 sec,serious error!!\n");
 				fps = 0;
-				fps_t1 = fps_t2;
+				t1_fps = prev_t2_fps;
 			}
-			dprintk("frame received");
+			fps++;
+			dprintk("frame received: duration = %d\n",
+							(t2_fps-prev_t2_fps));
+			prev_t2_fps = t2_fps;
 			/* csl_cam_register_display(unicam_dev->cslCamHandle);*/
 			if (!vb)
 				goto out;
@@ -1220,8 +1226,10 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 			/* mark  the buffer done */
 			/* queue another buffer and trigger capture */
 			if (likely(unicam_dev->skip_frames <= 0)) {
-
+				spin_lock_irqsave(&unicam_dev->lock, flags);
 				list_del_init(&to_unicam_camera_vb(vb)->queue);
+				spin_unlock_irqrestore(
+					&unicam_dev->lock, flags);
 				do_gettimeofday(&vb->v4l2_buf.timestamp);
 				vb->v4l2_planes[0].bytesused = 0;
 
