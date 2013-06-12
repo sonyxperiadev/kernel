@@ -45,7 +45,7 @@
 
 //#define  DISPLAY_CHAL_CAM_STATUS    
 
-#define MIN_FRAME_RATE  100                // Minimum Camera Video Frame Rate (10Fps)
+#define MIN_FRAME_RATE  200                // Minimum Camera Video Frame Rate (5Fps)
 #define CAM_BUFFER_PAD  0x00000080
 
 typedef struct chal_cam_s {
