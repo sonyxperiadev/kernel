@@ -101,8 +101,8 @@ static void dvfs_work(struct work_struct *work)
 					dvfs_work);
 
 	if (mm_dvfs->suspend_requested)	{
-		mm_dvfs->requested_mode = ECONOMY;
-		pi_mgr_dfs_request_update(&(mm_dvfs->dev_dfs_node), ECONOMY);
+		mm_dvfs->requested_mode = NORMAL;
+		pi_mgr_dfs_request_update(&(mm_dvfs->dev_dfs_node), NORMAL);
 		/* the dvfs timer will be stopped in early suspend */
 		if (mm_dvfs->timer_state)
 			del_timer_sync(&mm_dvfs->dvfs_timeout);
@@ -220,21 +220,26 @@ void mm_dvfs_update_handler(struct work_struct *work)
 	 if (!update->is_read) {
 		switch (update->type) {
 		case MM_DVFS_UPDATE_ENABLE:
-			if (param > 1)
+			if (param > 1) {
 				pr_err("Enter 0/1 ");
-			else
-				mm_dvfs->dvfs.is_dvfs_on = param;
-			if (mm_dvfs->dvfs.is_dvfs_on) {
-				mm_dvfs->mm_fmwk_notifier_blk.notifier_call \
-						= mm_dvfs_notification_handler;
-				atomic_notifier_chain_register( \
-					&mm_dvfs->mm_common->notifier_head, \
-					&mm_dvfs->mm_fmwk_notifier_blk);
+				break;
 				}
-			else{
-				atomic_notifier_chain_unregister( \
-					&mm_dvfs->mm_common->notifier_head, \
-					&mm_dvfs->mm_fmwk_notifier_blk);
+			if (mm_dvfs->dvfs.is_dvfs_on != param) {
+				mm_dvfs->dvfs.is_dvfs_on = param;
+				if (param) {
+					mm_dvfs->mm_fmwk_notifier_blk.\
+					    notifier_call = \
+					    mm_dvfs_notification_handler;
+					atomic_notifier_chain_register( \
+					    &mm_dvfs->mm_common->notifier_head,\
+					    &mm_dvfs->mm_fmwk_notifier_blk);
+					}
+				else{
+					atomic_notifier_chain_unregister( \
+					    &mm_dvfs->mm_common->notifier_head,\
+					    &mm_dvfs->mm_fmwk_notifier_blk);
+					}
+				SCHEDULER_WORK(mm_dvfs, &(mm_dvfs->dvfs_work));
 				}
 			break;
 		case MM_DVFS_UPDATE_SUSPEND:
