@@ -380,8 +380,8 @@
 		compatible = "bcm,pwm-backlight";
 		reg = <0x0 0x0>;
 		pwm-id = <2>;
-		max-brightness = <32>;	/* Android calibrates to 32 levels */
-		dft-brightness = <32>;
+		max-brightness = <255>;	/* Android calibrates to 255 levels */
+		dft-brightness = <255>;
 		polarity = <1>;		/* Inverted polarity */
 		pwm-period-ns = <99900>; /* ~10010 Hz */
 		pwm-request-label = "backlight";
