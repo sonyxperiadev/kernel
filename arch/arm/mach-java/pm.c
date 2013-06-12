@@ -377,11 +377,13 @@ int enter_idle_state(struct kona_idle_state *state, u32 ctrl_params)
 	pwr_mgr_process_events(MISC_WKP_EVENT, BRIDGE_TO_MODEM_EVENT, false);
 	pwr_mgr_process_events(USBOTG_EVENT, PHY_RESUME_EVENT, false);
 
-	if (ctrl_params & CTRL_PARAMS_ENTER_SUSPEND ||
-		(pm_info.log_mask & LOG_IDLE_INTR)) {
-		pr_info("Active Events at wakeup\n");
-		pm_log_wakeup_intr();
-		pwr_mgr_log_active_events();
+	if (pm_info.clk_dbg_dsm) {
+		if (ctrl_params & CTRL_PARAMS_ENTER_SUSPEND ||
+			(pm_info.log_mask & LOG_IDLE_INTR)) {
+			pr_info("Active Events at wakeup\n");
+			pm_log_wakeup_intr();
+			pwr_mgr_log_active_events();
+		}
 	}
 
 	if (ctrl_params & CTRL_PARAMS_FLAG_XTAL_ON || pm_info.keep_xtl_on)

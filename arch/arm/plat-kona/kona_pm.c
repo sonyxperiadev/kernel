@@ -34,13 +34,7 @@
 #include <plat/profiler.h>
 #include <mach/kona_timer.h>
 #endif /*CONFIG_KONA_PROFILER*/
-
-#ifdef CONFIG_KONA_PROFILER
-int deepsleep_profiling;
-module_param_named(deepsleep_profiling, deepsleep_profiling, int,
-	S_IRUGO | S_IWUSR | S_IWGRP);
-#endif /*CONFIG_KONA_PROFILER*/
-
+#include <mach/timex.h>
 
 enum {
 	KONA_PM_LOG_LVL_NONE = 0,
@@ -171,7 +165,7 @@ __weak int kona_mach_pm_enter(suspend_state_t state)
 	int ret = 0;
 #ifdef CONFIG_KONA_PROFILER
 	int err = 0;
-	long unsigned time_awake, time1, time2;
+	u64 time_awake, time1, time2, time_susp;
 	struct ccu_prof_parameter param = {
 		.count_type = CCU_PROF_ALWAYS_ON,
 	};
@@ -201,34 +195,28 @@ __weak int kona_mach_pm_enter(suspend_state_t state)
 #endif
 
 #ifdef CONFIG_KONA_PROFILER
-			if (deepsleep_profiling)
-				err = start_profiler("ccu_root",
+			err = start_profiler("ccu_root",
 						((void *)&param));
+#endif /*CONFIG_KONA_PROFILER*/
 
 			time1 = kona_hubtimer_get_counter();
-#endif /*CONFIG_KONA_PROFILER*/
-			time1 = kona_hubtimer_get_counter();
-					pr_info(" Timer value before suspend: %lu",
-						time1);
+			pr_info(" Timer value before suspend: %llu", time1);
 			suspend->enter(suspend,
 				suspend->params | CTRL_PARAMS_ENTER_SUSPEND);
 			time2 = kona_hubtimer_get_counter();
-					pr_info(" Timer value when resume: %lu",
-						time2);
-					pr_info("Approx Suspend Time: %lums",
-						(time2 - time1)/32);
+
+			pr_info(" Timer value when resume: %llu", time2);
+			time_susp = ((time2 - time1) * 1000)/CLOCK_TICK_RATE;
+			pr_info("Approx Suspend Time: %llums", time_susp);
+
 #ifdef CONFIG_KONA_PROFILER
-			time2 = kona_hubtimer_get_counter();
-			if (!err && deepsleep_profiling) {
+			if (!err) {
 				time_awake = stop_profiler("ccu_root");
 				if (time_awake == OVERFLOW_VAL)
 					printk(KERN_ALERT "counter overflow");
-				else if	(time_awake > 0) {
-					pr_info("Approx Suspend Time: %lums",
-						(time2 - time1)/32);
-					pr_info("System remained awake: %lums",
-						time_awake);
-				}
+				else if	(time_awake > 0)
+					pr_info("System in deepsleep: %llums",
+						time_susp - time_awake);
 			}
 #endif /*CONFIG_KONA_PROFILER*/
 
