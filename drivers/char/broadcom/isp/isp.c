@@ -60,6 +60,8 @@ the GPL, without Broadcom's express prior written consent.
 	printk(KERN_ERR "%s():" fmt, __func__, ##arg)
 
 static int isp_major = ISP_DEV_MAJOR;
+int brcm_global_isp_in_use = 0;
+DEFINE_MUTEX(brcm_global_isp_lock);
 static struct class *isp_class;
 static void __iomem *isp_base;
 static void __iomem *mmclk_base;
@@ -112,6 +114,18 @@ static int isp_open(struct inode *inode, struct file *filp)
 
 	filp->private_data = dev;
 	spin_lock_init(&dev->lock);
+
+	mutex_lock(&brcm_global_isp_lock);
+	if (brcm_global_isp_in_use == 0) {
+		brcm_global_isp_in_use++;
+	} else {
+		mutex_unlock(&brcm_global_isp_lock);
+		kfree(dev);
+		pr_err("ISP already in use");
+		return -EBUSY;
+	}
+	mutex_unlock(&brcm_global_isp_lock);
+
 	dev->isp_status.status = 0;
 
 	init_completion(&dev->irq_sem);
@@ -147,13 +161,15 @@ static int isp_open(struct inode *inode, struct file *filp)
 			ISP_DEV_NAME, dev);
 	if (ret) {
 		err_print("request_irq failed ret = %d\n", ret);
-		goto err;
+		goto irq_request_fail;
 	}
 	/* Ensure that only one CORE handles interrupt for the MM block. */
 	irq_set_affinity(IRQ_ISP, cpumask_of(0));
 	disable_irq(IRQ_ISP);
 	return 0;
 
+irq_request_fail:
+	pi_mgr_qos_request_remove(&isp_qos_node);
 
 qos_request_fail:
 	pi_mgr_dfs_request_remove(&isp_dfs_node);
@@ -165,6 +181,8 @@ err:
 static int isp_release(struct inode *inode, struct file *filp)
 {
 	struct isp_t *dev = (struct isp_t *) filp->private_data;
+
+	free_irq(IRQ_ISP, dev);
 
 	pi_mgr_qos_request_update(&isp_qos_node, PI_MGR_QOS_DEFAULT_VALUE);
 #ifndef CONFIG_ARCH_JAVA
@@ -182,7 +200,10 @@ static int isp_release(struct inode *inode, struct file *filp)
 	pi_mgr_qos_request_remove(&isp_qos_node);
 	isp_qos_node.name = NULL;
 
-	free_irq(IRQ_ISP, dev);
+	mutex_lock(&brcm_global_isp_lock);
+	brcm_global_isp_in_use--;
+	mutex_unlock(&brcm_global_isp_lock);
+
 	kfree(dev);
 
 	return 0;
