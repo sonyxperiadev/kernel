@@ -214,7 +214,8 @@ static int unicam_camera_update_buf(struct unicam_camera_dev *unicam_dev)
 	dprintk("-enter");
 
 	if (!unicam_dev->active) {
-		pr_debug("%s unicam_camera_update_buf no active buffer found:"
+		dev_dbg(unicam_dev->dev,
+			"%s unicam_camera_update_buf no active buffer found:"
 			" WARNING\n", __func__);
 		return -ENOMEM;
 	}
@@ -389,7 +390,7 @@ static void unicam_videobuf_queue(struct vb2_buffer *vb)
 	unsigned long flags;
 
 	dprintk("-enter");
-	pr_debug("vb=0x%p pbuf=0x%p size=%lu", vb,
+	dprintk("vb=0x%p pbuf=0x%p size=%lu", vb,
 			(void *)vb2_plane_dma_addr(vb, 0),
 			vb2_get_plane_payload(vb, 0));
 
@@ -469,8 +470,14 @@ int unicam_videobuf_start_streaming(struct vb2_queue *q, unsigned int count)
 	dprintk("enabling csi");
 
 	spin_lock_irqsave(&unicam_dev->lock, flags);
-	unicam_dev->stopping = false;
-	spin_unlock_irqrestore(&unicam_dev->lock, flags);
+	if (unicam_dev->stopping != false) {
+		unicam_dev->stopping = false;
+		spin_unlock_irqrestore(&unicam_dev->lock, flags);
+		dev_warn(unicam_dev->dev, "Trying to start stream"
+				"when already active.");
+	} else {
+		spin_unlock_irqrestore(&unicam_dev->lock, flags);
+	}
 	fps_t1 = fps_t2 = fps = update_fps = curr_fps = 0;
 
 	if (csl_cam_init()) {
@@ -717,7 +724,7 @@ int unicam_videobuf_start_streaming(struct vb2_queue *q, unsigned int count)
 	spin_unlock_irqrestore(&unicam_dev->lock, flags);
 
 	csl_cam_register_display(unicam_dev->cslCamHandle);
-	dprintk("-exit");
+	dev_dbg(unicam_dev->dev, "-exit start streaming");
 	return 0;
 }
 
@@ -743,6 +750,7 @@ int unicam_videobuf_stop_streaming(struct vb2_queue *q)
 	dprintk("disabling csi");
 	dprintk("stopping stream");
 	if (!unicam_dev->streaming) {
+		spin_unlock_irqrestore(&unicam_dev->lock, flags);
 		dev_err(unicam_dev->dev, "stream already turned off\n");
 		goto out;
 	}
@@ -761,6 +769,11 @@ int unicam_videobuf_stop_streaming(struct vb2_queue *q)
 		spin_unlock_irqrestore(&unicam_dev->lock, flags);
 	}
 	spin_lock_irqsave(&unicam_dev->lock, flags);
+
+	unicam_dev->active = NULL;
+	unicam_dev->streaming = 0;
+	spin_unlock_irqrestore(&unicam_dev->lock, flags);
+
 
 	/* disable frame interrupts */
 	cslCamFrame.int_enable = CSL_CAM_INT_DISABLE;
@@ -790,11 +803,8 @@ int unicam_videobuf_stop_streaming(struct vb2_queue *q)
 		ret = -1;
 	}
 
-	unicam_dev->active = NULL;
-	unicam_dev->streaming = 0;
 out:
 	dprintk("-exit");
-	spin_unlock_irqrestore(&unicam_dev->lock, flags);
 	up(&unicam_dev->stop_processing_sem);
 
 	/* Stopping stream after stopping unicam */
@@ -803,6 +813,9 @@ out:
 		dev_err(unicam_dev->dev, "failed to stop sensor streaming\n");
 		ret = -1;
 	}
+	spin_lock_irqsave(&unicam_dev->lock, flags);
+	unicam_dev->stopping = false;
+	spin_unlock_irqrestore(&unicam_dev->lock, flags);
 	return ret;
 }
 
@@ -1141,6 +1154,10 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 	struct v4l2_subdev *sd = soc_camera_to_subdev(unicam_dev->icd);
 
 	spin_lock_irqsave(&unicam_dev->lock, flags);
+	reg_status =
+	    csl_cam_get_rx_status(unicam_dev->cslCamHandle,
+				  (CSL_CAM_RX_STATUS_t *) &status);
+
 	if (!unicam_dev->streaming) {
 		pr_err("Interrupt triggered after stopping camera!\n");
 		spin_unlock_irqrestore(&unicam_dev->lock, flags);
@@ -1149,9 +1166,6 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 		spin_unlock_irqrestore(&unicam_dev->lock, flags);
 	}
 	/* has the interrupt occured for Channel 0? */
-	reg_status =
-	    csl_cam_get_rx_status(unicam_dev->cslCamHandle,
-				  (CSL_CAM_RX_STATUS_t *) &status);
 	dprintk("received unicam interrupt reg_status=0x%x status=0x%x\n",
 		reg_status, status);
 
@@ -1252,7 +1266,11 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 							bufStatus.
 							lines_per_frame);
 
-					}
+					} else
+						dev_warn(unicam_dev->dev,
+							 "%s:failed to get buffer status",
+							 __func__);
+
 				}
 
 				vb2_buffer_done(vb, VB2_BUF_STATE_DONE);
@@ -1283,7 +1301,7 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 				V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2) {
 				ret = unicam_camera_capture(unicam_dev);
 				if (ret)
-					dprintk(KERN_INFO "error triggering capture\n");
+					pr_err("error triggering capture\n");
 			}
 
 		}
