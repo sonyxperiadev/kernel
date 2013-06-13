@@ -226,6 +226,9 @@ static int ion_system_heap_allocate(struct ion_heap *heap,
 #endif /* CONFIG_ION_BCM */
 
 err2:
+	for_each_sg(table->sgl, sg, table->nents, i)
+		free_buffer_page(sys_heap, buffer, sg_page(sg),
+				get_order(sg_dma_len(sg)));
 	sg_free_table(table);
 err1:
 	kfree(table);
