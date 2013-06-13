@@ -97,6 +97,7 @@ static void print_regs(struct vce_device_t *vce)
 	pr_debug(" PC_RD0: 0x%x\n", vce_read(vce, VCE_PC_RD0_OFFSET));
 	pr_debug(" PC_EX0: 0x%x\n", vce_read(vce, VCE_PC_EX0_OFFSET));
 	pr_debug(" BAD_ADDR: 0x%x\n", vce_read(vce, VCE_BAD_ADDR_OFFSET));
+	pr_debug(" PC_ERR: 0x%x\n", vce_read(vce, VCE_PC_ERR_OFFSET));
 	pr_debug("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
 }
 
@@ -402,6 +403,8 @@ mm_job_status_e vce_start_job(void *device_id, mm_job_post_t *job,
 		if (vce_read(id, VCE_BAD_ADDR_OFFSET) != 0) {
 			pr_err("vce_start_job: Bad_Addr Err [0x%08x]\n", \
 				vce_read(id, VCE_BAD_ADDR_OFFSET));
+			pr_err("vce_start_job: PC Err [0x%08x]\n", \
+				vce_read(id, VCE_PC_ERR_OFFSET));
 			vce_write(id, VCE_BAD_ADDR_OFFSET, 0x0);
 			return MM_JOB_STATUS_ERROR;
 		}
