@@ -129,6 +129,19 @@ struct platform_device mobicore_device = {
 };
 #endif
 
+#include <linux/broadcom/secure_memory.h>
+
+#if defined(CONFIG_OF)
+struct secure_mem_data secure_mem_init_data = {
+	.name = "secure_mem",
+};
+#else /* CONFIG_OF */
+struct platform_device secure_mem_device = {
+	.name = "secure_mem",
+	.id = 0,
+};
+#endif /* CONFIG_OF */
+
 /* dynamic ETM support */
 unsigned int etm_on;
 EXPORT_SYMBOL(etm_on);
@@ -1364,6 +1377,42 @@ static int __init early_init_dt_scan_mobicore_data(unsigned long node,
 }
 #endif
 
+#if defined(CONFIG_OF)
+static int __init early_init_dt_scan_secure_mem_data(unsigned long node,
+		const char *uname, int depth, void *data)
+{
+	struct secure_mem_data *sec_mem_data;
+	__be32 *prop;
+	unsigned long len;
+
+	sec_mem_data = (struct secure_mem_data *)data;
+	if (depth != 1 || !sec_mem_data || !sec_mem_data->name ||
+			(strcmp(uname, sec_mem_data->name) != 0))
+		return 0;
+
+	prop = of_get_flat_dt_prop(node, "sec-mem-base", &len);
+	if ((prop != NULL) && (len > 0)) {
+		sec_mem_data->mem_base = of_read_ulong(prop, len/4);
+		pr_info("secure-mem: DT: mem-base: 0x%08x\n",
+				sec_mem_data->mem_base);
+	} else {
+		pr_err("secure-mem: Cannot read sec-mem-base from DT\n");
+		return -1;
+	}
+
+	prop = of_get_flat_dt_prop(node, "sec-mem-size", &len);
+	if ((prop != NULL) && (len > 0)) {
+		sec_mem_data->mem_size = of_read_ulong(prop, len/4);
+		pr_info("secure-mem: DT: sec-mem-size: 0x%08lx\n",
+				sec_mem_data->mem_size);
+	} else {
+		pr_err("secure-mem: Cannot read sec-mem-size from DT\n");
+		return -1;
+	}
+	return 1;
+}
+#endif
+
 static phys_addr_t __init find_free_memory(phys_addr_t size, phys_addr_t base,
 		phys_addr_t limit)
 {
@@ -1448,36 +1497,35 @@ static void __init ion_reserve_memory(void)
 }
 #endif /* CONFIG_ION */
 
-#ifdef CONFIG_MOBICORE_DRIVER
-static void mobicore_mem_alloc_reserve(phys_addr_t mobicore_base,
-			unsigned long mobicore_size)
+static void mem_alloc_reserve(phys_addr_t mem_base,
+			unsigned long mem_size)
 {
-	phys_addr_t mobi_base;
+	phys_addr_t base;
 	int ret = 0;
-	mobi_base = memblock_alloc_from_range(mobicore_size,
-			SZ_1M, mobicore_base, mobicore_base +
-			mobicore_size);
+	base = memblock_alloc_from_range(mem_size,
+			SZ_1M, mem_base, mem_base + mem_size);
 
-	if (!mobi_base) {
-		pr_err("MOBICORE: Unable to reserve memory at 0x%x\n",
-			mobicore_base);
+	if (!base) {
+		pr_err("%s: Unable to reserve secure memory at 0x%x\n",
+			__func__, mem_base);
 		return;
 	}
-	if (mobi_base != mobicore_base) {
-		pr_err("MOBICORE: Requested memory block at 0x%x ",
-			mobicore_base);
-		pr_err("but got at 0x%x\n", mobicore_base);
-		pr_err("MOBICORE: Failed to reserve MOBICORE MEMORY\n");
+	if (base != mem_base) {
+		pr_err("%s: Requested memory block at 0x%x ,"
+			"but got at 0x%x\n", __func__, mem_base, base);
+		pr_err("%s: Failed to reserve secure memory\n", __func__);
 		return;
 	}
-	memblock_free(mobi_base, mobicore_size);
-	ret = memblock_remove(mobi_base, mobicore_size);
+	memblock_free(base, mem_size);
+	ret = memblock_remove(base, mem_size);
 	if (ret)
-		pr_err("MOBICORE: Failed to reserve MOBICORE MEMORY\n");
+		pr_err("%s: Failed to reserve secure memory\n", __func__);
 	else
-		pr_info("MOBICORE: Successfully reserved MOBICORE MEMORY!!\n");
+		pr_info("%s: Successfully reserved secure memory!!\n",
+			__func__);
 }
 
+#ifdef CONFIG_MOBICORE_DRIVER
 static void mobicore_reserve_memory(void)
 {
 	struct mobicore_data *reserve_data;
@@ -1496,7 +1544,7 @@ static void mobicore_reserve_memory(void)
 			pr_info("MOBICORE: From DT mobicore-size: 0x%08lx\n",
 				reserve_data->mobicore_size);
 
-			mobicore_mem_alloc_reserve(reserve_data->mobicore_base,
+			mem_alloc_reserve(reserve_data->mobicore_base,
 					reserve_data->mobicore_size);
 			return;
 		}
@@ -1514,11 +1562,49 @@ static void mobicore_reserve_memory(void)
 		reserve_data->mobicore_base);
 	pr_info("MOBICORE: from platform data mobicore_size 0x%08lx\n",
 		reserve_data->mobicore_size);
-	mobicore_mem_alloc_reserve(reserve_data->mobicore_base,
+	mem_alloc_reserve(reserve_data->mobicore_base,
 		reserve_data->mobicore_size);
 #endif
 }
 #endif
+
+static void reserve_secure_memory(void)
+{
+	struct secure_mem_data *reserve_data;
+#ifdef CONFIG_OF /* Get data from DT */
+	int ret = 0;
+	reserve_data = &secure_mem_init_data;
+
+	ret = of_scan_flat_dt(early_init_dt_scan_secure_mem_data,
+		reserve_data);
+	if ((ret <= 0) || !reserve_data)
+		pr_err("%s: Failed to get DT values\n", __func__);
+	else {
+		pr_info("%s: From DT sec-mem-base: 0x%08x\n", __func__,
+			reserve_data->mem_base);
+		pr_info("%s: From DT sec-mem-size: 0x%08lx\n", __func__,
+			reserve_data->mem_size);
+
+		mem_alloc_reserve(reserve_data->mem_base,
+				reserve_data->mem_size);
+		return;
+	}
+#else /* CONFIG_OF */
+	if (!secure_mem_device.dev.platform_data) {
+		pr_err("%s: ERROR! Platform data is NULL\n", __func__);
+		pr_err("%s: Memory reserve failed\n", __func__);
+		return;
+	}
+	reserve_data =
+		(struct sec_mem_data *)secure_mem_device.dev.platform_data;
+	pr_info("%s: from platform data mem_base: 0x%08x\n", __func__,
+		reserve_data->mem_base);
+	pr_info("%s: from platform data mem_size 0x%08lx\n", __func__,
+		reserve_data->mem_size);
+	mem_alloc_reserve(reserve_data->mem_base,
+		reserve_data->mem_size);
+#endif /* CONFIG_OF */
+}
 
 void __init hawaii_reserve(void)
 {
@@ -1534,6 +1620,7 @@ void __init hawaii_reserve(void)
 #ifdef CONFIG_MOBICORE_DRIVER
 	mobicore_reserve_memory();
 #endif
+	reserve_secure_memory();
 }
 
 static int __init setup_board_version(char *p)

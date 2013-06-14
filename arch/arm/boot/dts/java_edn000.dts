@@ -501,4 +501,10 @@
 			gpios = <&gpio 9 0>;
 		};
 	};
+
+	secure_mem {
+		sec-mem-base = <0x8ff00000>;
+		sec-mem-size = <0x100000>;
+	};
+
 };
