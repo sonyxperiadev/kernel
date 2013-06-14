@@ -1688,7 +1688,7 @@ void csl_caph_srcmixer_config_mix_route(CSL_CAPH_SRCM_ROUTE_t routeConfig)
 			else
 				/* Mono IHF */
 				chal_caph_srcmixer_set_mixer2_mono(handle, 1);
-		} else
+		} else if (routeConfig.sink == CSL_CAPH_DEV_EP)
 			/* default is mono */
 			chal_caph_srcmixer_set_mixer2_mono(handle, 1);
 #endif
