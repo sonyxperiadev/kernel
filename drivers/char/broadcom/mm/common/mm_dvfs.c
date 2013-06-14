@@ -56,7 +56,7 @@ int mm_dvfs_notification_handler(struct notifier_block *block, \
 		break;
 	case MM_FMWK_NOTIFY_CLK_ENABLE:
 		getnstimeofday(&mm_dvfs->ts1);
-		if (mm_dvfs->timer_state == false)
+		if (mm_dvfs->timer_state == false || !mm_dvfs->dvfs.is_dvfs_on)
 			SCHEDULER_WORK(mm_dvfs, &(mm_dvfs->dvfs_work));
 		break;
 	case MM_FMWK_NOTIFY_CLK_DISABLE:
@@ -65,6 +65,8 @@ int mm_dvfs_notification_handler(struct notifier_block *block, \
 		mm_dvfs->hw_on_dur += timespec_to_ns(&diff);
 		pr_debug("dev stayed on for %llu nanoseconds", \
 			(unsigned long long)timespec_to_ns(&diff));
+		if (!mm_dvfs->dvfs.is_dvfs_on)
+			SCHEDULER_WORK(mm_dvfs, &(mm_dvfs->dvfs_work));
 		break;
 	case MM_FMWK_NOTIFY_INVALID:
 	default:
@@ -110,10 +112,12 @@ static void dvfs_work(struct work_struct *work)
 		return;
 		}
 
-	if ((mm_dvfs->dvfs.is_dvfs_on == false) &&
-		(mm_dvfs->requested_mode \
-		!= mm_dvfs->dvfs.user_requested_mode)) {
-		mm_dvfs->requested_mode = mm_dvfs->dvfs.user_requested_mode;
+	if (mm_dvfs->dvfs.is_dvfs_on == false) {
+		if (mm_dvfs->mm_common->mm_hw_is_on)
+			mm_dvfs->requested_mode = \
+				mm_dvfs->dvfs.user_requested_mode;
+		else
+			mm_dvfs->requested_mode = NORMAL;
 		pi_mgr_dfs_request_update(&(mm_dvfs->dev_dfs_node), \
 					mm_dvfs->requested_mode);
 		return;
@@ -224,23 +228,7 @@ void mm_dvfs_update_handler(struct work_struct *work)
 				pr_err("Enter 0/1 ");
 				break;
 				}
-			if (mm_dvfs->dvfs.is_dvfs_on != param) {
 				mm_dvfs->dvfs.is_dvfs_on = param;
-				if (param) {
-					mm_dvfs->mm_fmwk_notifier_blk.\
-					    notifier_call = \
-					    mm_dvfs_notification_handler;
-					atomic_notifier_chain_register( \
-					    &mm_dvfs->mm_common->notifier_head,\
-					    &mm_dvfs->mm_fmwk_notifier_blk);
-					}
-				else{
-					atomic_notifier_chain_unregister( \
-					    &mm_dvfs->mm_common->notifier_head,\
-					    &mm_dvfs->mm_fmwk_notifier_blk);
-					}
-				SCHEDULER_WORK(mm_dvfs, &(mm_dvfs->dvfs_work));
-				}
 			break;
 		case MM_DVFS_UPDATE_SUSPEND:
 			if (param > 1)
@@ -291,6 +279,7 @@ void mm_dvfs_update_handler(struct work_struct *work)
 			pr_err("Not Supported at this time");
 			break;
 		}
+		SCHEDULER_WORK(mm_dvfs, &(mm_dvfs->dvfs_work));
 	}
 	 else {
 		 switch (update->type) {
@@ -347,14 +336,14 @@ void *mm_dvfs_init(struct mm_common *mm_common, \
 	mm_dvfs->dvfs = *dvfs_params;
 	mm_dvfs->requested_mode = mm_dvfs->dvfs.user_requested_mode;
 
-	if (mm_dvfs->dvfs.is_dvfs_on) {
-		mm_dvfs->requested_mode = NORMAL;
-		mm_dvfs->mm_fmwk_notifier_blk.notifier_call \
-				= mm_dvfs_notification_handler;
-		atomic_notifier_chain_register(\
-			&mm_common->notifier_head, \
-			&mm_dvfs->mm_fmwk_notifier_blk);
-		}
+	mm_dvfs->requested_mode = NORMAL;
+
+	mm_dvfs->mm_fmwk_notifier_blk.notifier_call \
+			= mm_dvfs_notification_handler;
+	atomic_notifier_chain_register(\
+		&mm_common->notifier_head, \
+		&mm_dvfs->mm_fmwk_notifier_blk);
+
 	mm_dvfs->current_mode = mm_dvfs->requested_mode;
 
 	mm_dvfs->dvfs_dir = debugfs_create_dir("dvfs", \
