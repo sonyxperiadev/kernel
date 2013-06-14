@@ -38,6 +38,7 @@
 #include <linux/swap.h>
 #include <linux/rcupdate.h>
 #include <linux/notifier.h>
+#include <linux/lowmemorykiller.h>
 
 static uint32_t lowmem_debug_level = 1;
 static int lowmem_adj[6] = {
@@ -57,6 +58,9 @@ static int lowmem_minfree_size = 4;
 
 static unsigned long lowmem_deathpending_timeout;
 
+static LIST_HEAD(lmk_reg_list);
+static DECLARE_RWSEM(lmk_reg_rwsem);
+
 #define lowmem_print(level, x...)			\
 	do {						\
 		if (lowmem_debug_level >= (level))	\
@@ -69,6 +73,7 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 {
 	struct task_struct *tsk;
 	struct task_struct *selected = NULL;
+	struct reg_lmk *reg_lmk;
 	int rem = 0;
 	int tasksize;
 	int i;
@@ -132,6 +137,20 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 #ifdef CONFIG_CMA
 	rem += global_page_state(NR_CONTIG_PAGES);
 #endif
+
+	down_read(&lmk_reg_rwsem);
+	list_for_each_entry(reg_lmk, &lmk_reg_list, list) {
+		int ret;
+		struct lmk_op op = {
+			.op = 0,
+		};
+
+		ret = reg_lmk->cbk(reg_lmk, &op);
+		if (!WARN_ONCE(ret < 0, "invalid rem: %p, %d\n", reg_lmk, ret))
+			rem += ret;
+	}
+	up_read(&lmk_reg_rwsem);
+
 	if (sc->nr_to_scan <= 0 || min_score_adj == OOM_SCORE_ADJ_MAX + 1) {
 		lowmem_print(5, "lowmem_shrink %lu, %x, return %d\n",
 			     sc->nr_to_scan, sc->gfp_mask, rem);
@@ -233,6 +252,31 @@ static void __exit lowmem_exit(void)
 {
 	unregister_shrinker(&lowmem_shrinker);
 }
+
+/*
+ * Register callback to LMK.
+ * This may serve different purposes. But now it is used to get the
+ * pages mapped/used to/by user space, other than the kernel accounted
+ * anon and file pages. For example pages allocated by a memory allocator
+ * like ION. The register function and the callback will remain the same
+ * for other purposes too, and will differ only in the argument passed
+ * to the callbacks when invoked by LMK.
+ */
+void register_lmk(struct reg_lmk *reg_lmk)
+{
+	down_write(&lmk_reg_rwsem);
+	list_add_tail(&reg_lmk->list, &lmk_reg_list);
+	up_write(&lmk_reg_rwsem);
+}
+EXPORT_SYMBOL(register_lmk);
+
+void unregister_lmk(struct reg_lmk *reg_lmk)
+{
+	down_write(&lmk_reg_rwsem);
+	list_del(&reg_lmk->list);
+	up_write(&lmk_reg_rwsem);
+}
+EXPORT_SYMBOL(unregister_lmk);
 
 #ifdef CONFIG_ANDROID_LOW_MEMORY_KILLER_AUTODETECT_OOM_ADJ_VALUES
 static int lowmem_oom_adj_to_oom_score_adj(int oom_adj)
