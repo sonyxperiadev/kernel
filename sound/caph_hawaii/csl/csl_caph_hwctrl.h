@@ -649,6 +649,15 @@ void csl_ControlHWClock_2p4m(Boolean enable);
 
 /****************************************************************************
 *
+*  Function Name: csl_ControlHW_dmic_regulator
+*
+*  Description: control the digi-mic regulator
+*
+****************************************************************************/
+void csl_ControlHW_dmic_regulator(Boolean enable);
+
+/****************************************************************************
+*
 * Function Name: void csl_caph_QueryHWClock(Boolean enable)
 *
 * Description: This is to query if the CAPH clocks are enabled/disabled

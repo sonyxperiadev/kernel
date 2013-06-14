@@ -2695,6 +2695,12 @@ void AUDCTRL_EnableRecord(AUDIO_SOURCE_Enum_t source,
 			/*go ahead to take a new path */
 	}
 
+#if defined(CONFIG_MACH_HAWAII_GARNET) || defined(CONFIG_MACH_JAVA_GARNET)
+/*For garnet need to enable regulator to power on analog switch which
+selects IHF protection loopback or Analog Mic line to BB*/
+	if (source == AUDIO_SOURCE_ANALOG_MAIN)
+		csl_ControlHW_dmic_regulator(TRUE);
+#endif
 	if (source == AUDIO_SOURCE_SPEECH_DIGI) {
 		/* Not supported - One stream - two paths use case for record.
 		   Will be supported with one path itself */
@@ -2830,7 +2836,12 @@ void AUDCTRL_DisableRecord(AUDIO_SOURCE_Enum_t source,
 			__func__, config.pathID);
 		csl_caph_hwctrl_DisablePath(config);
 	}
-
+#if defined(CONFIG_MACH_HAWAII_GARNET) || defined(CONFIG_MACH_JAVA_GARNET)
+/*For garnet need to disable regulator to power off analog switch
+which selects IHF protection loopback or Analog Mic line to BB*/
+	if (source == AUDIO_SOURCE_ANALOG_MAIN)
+		csl_ControlHW_dmic_regulator(FALSE);
+#endif
 	if (audioPathResetPending && csl_caph_hwctrl_allPathsDisabled()) {
 		AUDDRV_CPResetCleanup();
 		csl_caph_hwctrl_init();
@@ -3281,6 +3292,14 @@ void AUDCTRL_SetAudioLoopback(Boolean enable_lpbk,
 					     48000, NULL);
 			return;
 		}
+
+#if defined(CONFIG_MACH_HAWAII_GARNET) || defined(CONFIG_MACH_JAVA_GARNET)
+/*For garnet need to enable regulator to power on analog switch which
+selects IHF protection loopback or Analog Mic line to BB*/
+		if (mic == AUDIO_SOURCE_ANALOG_MAIN)
+			csl_ControlHW_dmic_regulator(TRUE);
+#endif
+
 #if 0
 /*removed this to make fm radio work using xpft script */
 		if (src_dev == CSL_CAPH_DEV_FM_RADIO) {
@@ -3419,6 +3438,13 @@ void AUDCTRL_SetAudioLoopback(Boolean enable_lpbk,
 
 		/*clocks are disabled here, so no register access after this. */
 		(void)csl_caph_hwctrl_DisablePath(hwCtrlConfig);
+
+#if defined(CONFIG_MACH_HAWAII_GARNET) || defined(CONFIG_MACH_JAVA_GARNET)
+/*For garnet need to disable regulator to power off analog switch
+which selects IHF protection loopback or Analog Mic line to BB*/
+		if (mic == AUDIO_SOURCE_ANALOG_MAIN)
+			csl_ControlHW_dmic_regulator(FALSE);
+#endif
 
 		/*Enable PMU for headset/IHF */
 		if ((speaker == AUDIO_SINK_LOUDSPK)

@@ -420,6 +420,13 @@ void AUDDRV_Telephony_Init(AUDIO_SOURCE_Enum_t mic, AUDIO_SINK_Enum_t speaker,
 	currVoiceMic = mic;
 	currVoiceSpkr = speaker;
 
+#if defined(CONFIG_MACH_HAWAII_GARNET) || defined(CONFIG_MACH_JAVA_GARNET)
+/*For garnet need to enable regulator to power on analog switch which
+selects IHF protection loopback or Analog Mic line to BB*/
+	if (currVoiceMic == AUDIO_SOURCE_ANALOG_MAIN)
+		csl_ControlHW_dmic_regulator(TRUE);
+#endif
+
 #ifdef CONFIG_AUDIO_S2
 	/* use the main mic for handset mode,
 		and use sub mic for the loud speaker*/
@@ -698,6 +705,13 @@ void AUDDRV_Telephony_Deinit(void)
 					0, 0, 0, 0);
 		AUDDRV_Telephony_DeinitHW();
 	}
+
+#if defined(CONFIG_MACH_HAWAII_GARNET) || defined(CONFIG_MACH_JAVA_GARNET)
+/*For garnet need to disable regulator to power off analog switch
+which selects IHF protection loopback or Analog Mic line to BB*/
+	if (currVoiceMic == AUDIO_SOURCE_ANALOG_MAIN)
+		csl_ControlHW_dmic_regulator(FALSE);
+#endif
 
 	if (!inCallRateChange) {
 		currVoiceMic = AUDIO_SOURCE_UNDEFINED;

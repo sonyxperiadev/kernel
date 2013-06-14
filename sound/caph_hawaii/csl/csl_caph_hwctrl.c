@@ -2942,6 +2942,30 @@ static void csl_ssp_ControlHWClock(Boolean enable,
 	}
 #endif
 }
+/*Enable/Disable the 1.8v DMIC LDO*/
+void csl_ControlHW_dmic_regulator(Boolean enable)
+{
+	aTrace(LOG_AUDIO_CSL,
+		"%s: action = %d,", __func__, enable);
+/*Get and turn on the regulator MICLDO, if its not on*/
+	if (enable) {
+		if (!gMIC_regulator) {
+			gMIC_regulator = regulator_get(NULL, "micldo_uc");
+			if (IS_ERR(gMIC_regulator))
+				aError("MICLDO Regulator_get -FAIL\n");
+			if (gMIC_regulator)
+				regulator_enable(gMIC_regulator);
+			}
+	} else {
+	/* Turn off the regulator MICLDO*/
+		if (gMIC_regulator) {
+			regulator_disable(gMIC_regulator);
+			regulator_put(gMIC_regulator);
+			gMIC_regulator = NULL;
+			aTrace(LOG_AUDIO_CSL, "Disable MICLDO\n");
+		}
+	}
+}
 
 /* For digi-mic clock and power control*/
 void csl_ControlHWClock_2p4m(Boolean enable)
@@ -2953,27 +2977,14 @@ void csl_ControlHWClock_2p4m(Boolean enable)
 			clk_get(NULL, "audioh_2p4m_clk");
 		if (clkIDCAPH[CLK_2P4M]->use_cnt == 0)
 			clk_enable(clkIDCAPH[CLK_2P4M]);
-
-		/*Get and turn on the regulator MICLDO, if its not on*/
-		if (!gMIC_regulator) {
-			gMIC_regulator = regulator_get(NULL, "micldo_uc");
-			if (IS_ERR(gMIC_regulator))
-				aError("MICLDO Regulator_get -FAIL\n");
-		}
-		if (gMIC_regulator)
-			regulator_enable(gMIC_regulator);
+		/*Enable DMIC regulator*/
+		csl_ControlHW_dmic_regulator(TRUE);
 		enable2P4MClk = TRUE;
 	} else if (!enable && enable2P4MClk) {
 		clk_disable(clkIDCAPH[CLK_2P4M]);
 		clkIDCAPH[CLK_2P4M] = NULL;
-
-		/* Turn off the regulator MICLDO*/
-		if (gMIC_regulator) {
-			regulator_disable(gMIC_regulator);
-			regulator_put(gMIC_regulator);
-			gMIC_regulator = NULL;
-			aTrace(LOG_AUDIO_CSL, "Disable MICLDO\n");
-		}
+		/*Disable DMIC regulator*/
+		csl_ControlHW_dmic_regulator(FALSE);
 		enable2P4MClk = FALSE;
 	}
 
@@ -4226,9 +4237,6 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 		|| config.source == CSL_CAPH_DEV_EANC_DIGI_MIC
 		|| config.source == CSL_CAPH_DEV_EANC_DIGI_MIC_L
 		|| config.source == CSL_CAPH_DEV_EANC_DIGI_MIC_R
-#if defined(CONFIG_MACH_HAWAII_GARNET)
-		|| config.source == CSL_CAPH_DEV_ANALOG_MIC
-#endif
 		)
 		csl_ControlHWClock_2p4m(TRUE);
 
@@ -4369,9 +4377,6 @@ Result_t csl_caph_hwctrl_AddPath(CSL_CAPH_PathID pathID,
 		|| config.source == CSL_CAPH_DEV_EANC_DIGI_MIC
 		|| config.source == CSL_CAPH_DEV_EANC_DIGI_MIC_L
 		|| config.source == CSL_CAPH_DEV_EANC_DIGI_MIC_R
-#if defined(CONFIG_MACH_HAWAII_GARNET)
-		|| config.source == CSL_CAPH_DEV_ANALOG_MIC
-#endif
 		)
 		csl_ControlHWClock_2p4m(TRUE);
 
