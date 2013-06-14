@@ -86,4 +86,9 @@ extern struct platform_device ion_cma_device;
 #endif
 #endif
 
+#ifdef CONFIG_MOBICORE_DRIVER
+extern struct mobicore_data mobicore_plat_data;
+extern struct platform_device mobicore_device;
+#endif
+
 #endif /* __MACH_JAVA_DEVICE_H */
