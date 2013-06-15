@@ -753,19 +753,10 @@ module_exit(ion_exit);
  * selecting heap mask for allocation.
  **************************************************/
 #ifdef CONFIG_OF
-#define ION_CONFIG_OF_READ(_prop_) \
+#define ION_CONFIG_OF_READ_OPT(_prop_, _var_) \
 	do { \
-		if (of_property_read_u32(node, #_prop_, &val)) { \
-			pr_err("ERROR: Prop \"" #_prop_ "\" not found\n"); \
-			goto of_err; \
-		} \
-		pr_debug(#_prop_ " = %#x\n", val); \
-	} while (0)
-
-#define ION_CONFIG_OF_READ_OPT(_prop_) \
-	do { \
-		if (!of_property_read_u32(node, #_prop_, &val)) \
-			pr_debug(#_prop_ " = %#x\n", val); \
+		if (!of_property_read_u32(node, #_prop_, &_var_)) \
+			pr_debug(#_prop_ " = %#x\n", _var_); \
 	} while (0)
 #endif
 
@@ -789,17 +780,12 @@ static int bcm_ion_config_probe(struct platform_device *pdev)
 #ifdef CONFIG_OF
 	} else if (dev->of_node) {
 		struct device_node *node = dev->of_node;
-		u32 val;
 
 		pr_info("config: Probe: via DT framework\n");
-		ION_CONFIG_OF_READ_OPT(mask_secure);
-		data->mask_secure = val;
-		ION_CONFIG_OF_READ_OPT(mask_256M);
-		data->mask_256M = val;
-		ION_CONFIG_OF_READ_OPT(mask_fast);
-		data->mask_fast = val;
-		ION_CONFIG_OF_READ_OPT(mask_hwwr);
-		data->mask_hwwr = val;
+		ION_CONFIG_OF_READ_OPT(mask_secure, data->mask_secure);
+		ION_CONFIG_OF_READ_OPT(mask_256M, data->mask_256M);
+		ION_CONFIG_OF_READ_OPT(mask_fast, data->mask_fast);
+		ION_CONFIG_OF_READ_OPT(mask_hwwr, data->mask_hwwr);
 		data->version = BCM_ION_VERSION;
 #endif /* CONFIG_OF */
 	} else {
