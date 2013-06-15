@@ -71,10 +71,12 @@ struct opp_info __arm_opp_info[] = {
 	[1] = {
 		.freq_id = PROC_CCU_FREQ_ID_NRML,
 		.opp_id = PI_OPP_NORMAL,
+		.ctrl_prms = PROC_FREQ_NORMAL_DIV,
 	},
 	[2] = {
 		.freq_id = PROC_CCU_FREQ_ID_TURBO,
 		.opp_id = PI_OPP_TURBO,
+		.ctrl_prms = PROC_FREQ_TURBO_DIV,
 	},
 	[3] = {
 		.freq_id = PROC_CCU_FREQ_ID_SUPER_TURBO,

@@ -62,9 +62,13 @@
 				[0x5] =		init_val, \
 				[0x6] =		init_val,
 
+
+#define PROC_FREQ_NORMAL_DIV      4
+#define PROC_FREQ_TURBO_DIV       3
+
 #define PROC_CCU_FREQ_ID_XTAL		0
 #define PROC_CCU_FREQ_ID_ECO		4
-#define PROC_CCU_FREQ_ID_NRML		5
+#define PROC_CCU_FREQ_ID_NRML		6
 #define PROC_CCU_FREQ_ID_TURBO		6
 #define PROC_CCU_FREQ_ID_SUPER_TURBO	7
 

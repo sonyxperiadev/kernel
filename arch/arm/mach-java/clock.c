@@ -7950,15 +7950,61 @@ static int proc_ccu_clk_init(struct clk *clk)
 	return 0;
 }
 
-static int proc_ccu_set_freq_policy(struct ccu_clk *ccu_clk,
-	int policy_id, struct opp_info *opp_info)
+static void change_arm_pll_config(int mdiv)
 {
-	u32 reg;
+	u32 reg_val;
+	struct pll_chnl_clk *pll_chnl_clk;
+
+	pll_chnl_clk = &clk_a9_pll_chnl0;
+
+	reg_val = readl(CCU_REG_ADDR(pll_chnl_clk->ccu_clk,
+					pll_chnl_clk->cfg_reg_offset));
+	reg_val &= ~pll_chnl_clk->mdiv_mask;
+	reg_val |= mdiv << pll_chnl_clk->mdiv_shift;
+	writel(reg_val, CCU_REG_ADDR(pll_chnl_clk->ccu_clk,
+					pll_chnl_clk->cfg_reg_offset));
+
+	reg_val = readl(CCU_REG_ADDR(pll_chnl_clk->ccu_clk,
+				pll_chnl_clk->pll_load_ch_en_offset));
+	reg_val |= pll_chnl_clk->load_en_mask;
+	writel(reg_val, CCU_REG_ADDR(pll_chnl_clk->ccu_clk,
+				pll_chnl_clk->pll_load_ch_en_offset));
+}
+
+
+static int proc_ccu_set_freq_policy(struct ccu_clk *ccu_clk, int policy_id,
+				   struct opp_info *opp_info)
+{
+	u32 reg_val = 0;
+	u32 shift;
+	u32 target_volt;
+	int curr_opp;
 	clk_dbg("%s:policy = %d, freq = %d opp = %d prms = %d\n",
 			__func__, policy_id, opp_info->freq_id,
 			opp_info->opp_id, opp_info->ctrl_prms);
 
-	/*Disable A9 PLL auto power down before
+	if (opp_info->freq_id >= ccu_clk->freq_count)
+		return -EINVAL;
+	switch (policy_id) {
+	case CCU_POLICY0:
+		shift = CCU_FREQ_POLICY0_SHIFT;
+		break;
+	case CCU_POLICY1:
+		shift = CCU_FREQ_POLICY1_SHIFT;
+		break;
+	case CCU_POLICY2:
+		shift = CCU_FREQ_POLICY2_SHIFT;
+		break;
+	case CCU_POLICY3:
+		shift = CCU_FREQ_POLICY3_SHIFT;
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	ccu_write_access_enable(ccu_clk, true);
+#if 0
+	/*Disable A7 PLL auto power down before
 	changing freq - workaround for HWJAVA-218*/
 	reg = readl(ccu_clk->ccu_clk_mgr_base +
 		KPROC_CLK_MGR_REG_PLLARMA_OFFSET);
@@ -7966,10 +8012,39 @@ static int proc_ccu_set_freq_policy(struct ccu_clk *ccu_clk,
 		~KPROC_CLK_MGR_REG_PLLARMA_PLLARM_IDLE_PWRDWN_SW_OVRRIDE_MASK;
 	writel(reg, ccu_clk->ccu_clk_mgr_base +
 			KPROC_CLK_MGR_REG_PLLARMA_OFFSET);
+#endif
+	ccu_policy_engine_stop(ccu_clk);
+	if (opp_info->ctrl_prms != CCU_POLICY_FREQ_REG_INIT &&
+			(opp_info->opp_id == PI_OPP_NORMAL ||
+			opp_info->opp_id == PI_OPP_TURBO)) {
 
-	gen_ccu_ops.set_freq_policy(ccu_clk,
-		policy_id, opp_info);
+		target_volt = (opp_info->opp_id == PI_OPP_NORMAL) ?
+				VLT_ID_A9_NORMAL : VLT_ID_A9_TURBO;
+		curr_opp = pi_get_active_opp(ccu_clk->pi_id);
+		if (opp_info->opp_id > curr_opp) {
+			ccu_set_voltage(ccu_clk,
+				opp_info->freq_id, target_volt);
+			/*Resume engine for vlt change to take effect*/
+			ccu_policy_engine_resume(ccu_clk, ccu_clk->clk.flags &
+				CCU_TARGET_LOAD ?
+				CCU_LOAD_TARGET : CCU_LOAD_ACTIVE);
+			ccu_policy_engine_stop(ccu_clk);
+		}
+		change_arm_pll_config(opp_info->ctrl_prms);
+		if (opp_info->opp_id < curr_opp)
+			ccu_set_voltage(ccu_clk, opp_info->freq_id,
+				target_volt);
+	}
 
+	reg_val = readl(CCU_POLICY_FREQ_REG(ccu_clk));
+	reg_val &= ~(CCU_FREQ_POLICY_MASK << shift);
+	reg_val |= opp_info->freq_id << shift;
+
+	writel(reg_val, CCU_POLICY_FREQ_REG(ccu_clk));
+
+	ccu_policy_engine_resume(ccu_clk, ccu_clk->clk.flags &
+		CCU_TARGET_LOAD ? CCU_LOAD_TARGET : CCU_LOAD_ACTIVE);
+#if 0
 	/*re-enable PLL power down*/
 	reg = readl(ccu_clk->ccu_clk_mgr_base +
 		KPROC_CLK_MGR_REG_PLLARMA_OFFSET);
@@ -7977,7 +8052,9 @@ static int proc_ccu_set_freq_policy(struct ccu_clk *ccu_clk,
 		KPROC_CLK_MGR_REG_PLLARMA_PLLARM_IDLE_PWRDWN_SW_OVRRIDE_MASK;
 	writel(reg, ccu_clk->ccu_clk_mgr_base +
 			KPROC_CLK_MGR_REG_PLLARMA_OFFSET);
-
+#endif
+	ccu_write_access_enable(ccu_clk, false);
+	clk_dbg("%s:%s ccu OK\n", __func__, ccu_clk->clk.name);
 	return 0;
 }
 
