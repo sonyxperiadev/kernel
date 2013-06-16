@@ -14,6 +14,8 @@
  *
  */
 
+#define pr_fmt(fmt) "ion-system: " fmt
+
 #include <asm/page.h>
 #include <linux/dma-mapping.h>
 #include <linux/err.h>
@@ -27,6 +29,7 @@
 #include "ion_priv.h"
 #ifdef CONFIG_ION_BCM
 #include <linux/broadcom/bcm_ion.h>
+#include <linux/lowmemorykiller.h>
 #endif
 #ifdef CONFIG_BCM_IOVMM
 #include <plat/bcm_iommu.h>
@@ -57,6 +60,9 @@ static unsigned int order_to_size(int order)
 struct ion_system_heap {
 	struct ion_heap heap;
 	struct ion_page_pool **pools;
+#ifdef CONFIG_ION_BCM
+	struct reg_lmk reg_lmk;
+#endif
 };
 
 struct page_info {
@@ -390,6 +396,24 @@ static int ion_system_heap_debug_show(struct ion_heap *heap, struct seq_file *s,
 	return 0;
 }
 
+#ifdef CONFIG_ION_BCM
+int ion_system_heap_lmk_cbk(struct reg_lmk *reg_lmk, struct lmk_op *op)
+{
+	struct ion_system_heap *sys_heap = container_of(reg_lmk,
+							struct ion_system_heap,
+							reg_lmk);
+	int reclaimable = 0;
+	if (op->op == 0)
+		reclaimable = sys_heap->heap.used;
+	/* TODO: When ION_HEAP_FLAG_DEFER_FREE gets enabled,
+	 * the freelist_count needs to be decremented from reclaimable
+	 * because the freelist will be handled by a separate shrinker
+	 * and should not be duplicated here
+	 */
+	return reclaimable;
+}
+#endif
+
 struct ion_heap *ion_system_heap_create(struct ion_platform_heap *unused)
 {
 	struct ion_system_heap *heap;
@@ -421,6 +445,10 @@ struct ion_heap *ion_system_heap_create(struct ion_platform_heap *unused)
 		heap->pools[i] = pool;
 	}
 	heap->heap.debug_show = ion_system_heap_debug_show;
+#ifdef CONFIG_ION_BCM
+	heap->reg_lmk.cbk = ion_system_heap_lmk_cbk;
+	register_lmk(&heap->reg_lmk);
+#endif
 	return &heap->heap;
 err_create_pool:
 	for (i = 0; i < num_orders; i++)
@@ -439,6 +467,9 @@ void ion_system_heap_destroy(struct ion_heap *heap)
 							heap);
 	int i;
 
+#ifdef CONFIG_ION_BCM
+	unregister_lmk(&sys_heap->reg_lmk);
+#endif
 	for (i = 0; i < num_orders; i++)
 		ion_page_pool_destroy(sys_heap->pools[i]);
 	kfree(sys_heap->pools);
