@@ -1782,9 +1782,8 @@ static int focaltech_ft5306_probe(
 		Ft5306_Hw_Reset();
 #endif
 		INIT_WORK(&ts->work, focaltech_ft5306_work_func);
-
+		wake_lock_init(&update_wake_lock, WAKE_LOCK_SUSPEND, "touch");
 		if (auto_update_fw) {
-			wake_lock_init(&update_wake_lock, WAKE_LOCK_SUSPEND, "touch");
 			update_complete = 0;
 			INIT_DELAYED_WORK(&ft6x06_firmware_update, focaltech_fts_firmware_update_func);
 			wake_lock(&update_wake_lock);
