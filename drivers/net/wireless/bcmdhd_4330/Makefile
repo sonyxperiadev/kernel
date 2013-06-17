@@ -200,6 +200,10 @@ endif
 DHDCFLAGS += -include "dhd_sec_feature.h"
 ##############################################################
 
+ifeq ($(CONFIG_TARGET_LOCALE_CHN),y)
+  DHDCFLAGS += -DBCMWAPI_WPI -DBCMWAPI_WAI
+endif
+
 #########
 # Others
 #########
