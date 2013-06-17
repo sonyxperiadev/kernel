@@ -163,34 +163,36 @@ static int isDeskdockconnected;
 
 static int fsa9485_write_reg(struct i2c_client *client,        u8 reg, u8 data)
 {
-       int ret = 0;
-       u8 buf[2];
-       struct i2c_msg msg[1];
+	int ret = 0;
+	u8 buf[2];
+	struct i2c_msg msg[1];
 
-       buf[0] = reg;
-       buf[1] = data;
+	buf[0] = reg;
+	buf[1] = data;
 
-       msg[0].addr = client->addr;
-       msg[0].flags = 0;
-       msg[0].len = 2;
-       msg[0].buf = buf;
+	msg[0].addr = client->addr;
+	msg[0].flags = 0;
+	msg[0].len = 2;
+	msg[0].buf = buf;
 
-       ret = i2c_transfer(client->adapter, msg, 1);
-       if (ret != 1) {
-		printk("\n [fsa9485] i2c Write Failed (ret=%d) \n", ret);
+	ret = i2c_transfer(client->adapter, msg, 1);
+	if (ret != 1) {
+		printk(KERN_ERR
+			"\n [fsa9485] i2c Write Failed (ret=%d)\n",
+			ret);
 		return -1;
-       }
+	}
 
-       return ret;
+	return ret;
 }
 
 static int fsa9485_read_reg(struct i2c_client *client, u8 reg, u8 *data)
 {
-       int ret = 0;
-       u8 buf[1];
-       struct i2c_msg msg[2];
+	int ret = 0;
+	u8 buf[1];
+	struct i2c_msg msg[2];
 
-       buf[0] = reg;
+	buf[0] = reg;
 
 	msg[0].addr = client->addr;
 	msg[0].flags = 0;
@@ -202,24 +204,24 @@ static int fsa9485_read_reg(struct i2c_client *client, u8 reg, u8 *data)
 	msg[1].len = 1;
 	msg[1].buf = buf;
 
-       ret = i2c_transfer(client->adapter, msg, 2);
-       if (ret != 2) {
-		printk("\n [fsa9485] i2c Read Failed (ret=%d) \n", ret);
+	ret = i2c_transfer(client->adapter, msg, 2);
+	if (ret != 2) {
+		printk(KERN_ERR "\n [fsa9485] i2c Read Failed (ret=%d)\n", ret);
 		return -1;
-       }
-       *data = buf[0];
+	}
+	*data = buf[0];
 
-       return 0;
+	return 0;
 }
 
 static int fsa9485_read_word_reg(struct i2c_client *client, u8 reg, int *data)
 {
-       int ret = 0;
-       u8 buf[1];
-	   u8 data1, data2;
-       struct i2c_msg msg[2];
+	int ret = 0;
+	u8 buf[1];
+	u8 data1, data2;
+	struct i2c_msg msg[2];
 
-       buf[0] = reg;
+	buf[0] = reg;
 
 	msg[0].addr = client->addr;
 	msg[0].flags = 0;
@@ -231,15 +233,15 @@ static int fsa9485_read_word_reg(struct i2c_client *client, u8 reg, int *data)
 	msg[1].len = 1;
 	msg[1].buf = buf;
 
-       ret = i2c_transfer(client->adapter, msg, 2);
-       if (ret != 2) {
-		printk("\n [fsa9485] i2c Read Failed (ret=%d) \n", ret);
+	ret = i2c_transfer(client->adapter, msg, 2);
+	if (ret != 2) {
+		printk(KERN_ERR "\n [fsa9485] i2c Read Failed (ret=%d)\n", ret);
 		return -1;
-       }
+	}
 
 	data1 = buf[0];
 
-	  buf[0] = reg+1;
+	buf[0] = reg+1;
 
 	msg[0].addr = client->addr;
 	msg[0].flags = 0;
@@ -251,18 +253,18 @@ static int fsa9485_read_word_reg(struct i2c_client *client, u8 reg, int *data)
 	msg[1].len = 1;
 	msg[1].buf = buf;
 
-       ret = i2c_transfer(client->adapter, msg, 2);
-       if (ret != 2) {
-		printk("\n [fsa9485] i2c Read Failed (ret=%d) \n", ret);
+	ret = i2c_transfer(client->adapter, msg, 2);
+	if (ret != 2) {
+		printk(KERN_ERR "\n [fsa9485] i2c Read Failed (ret=%d)\n", ret);
 		return -1;
-       }
+	}
 
 	data2 = buf[0];
 
-       *data = (data2<<8) | data1;
+	*data = (data2<<8) | data1;
 
 
-       return 0;
+	return 0;
 }
 
 static void DisableFSA9480Interrupts(void)
@@ -353,7 +355,7 @@ u16 fsa9485_get_chrgr_type(void)
 	struct i2c_client *client = local_usbsw->client;
 	u16 value = 0;
 	fsa9485_read_word_reg(client, FSA9485_REG_DEV_T1, &value);
-	printk("%s chrgr type 0x%x\n", __func__, value);
+	printk(KERN_INFO "%s chrgr type 0x%x\n", __func__, value);
 	return value;
 }
 EXPORT_SYMBOL(fsa9485_get_chrgr_type);
@@ -364,7 +366,7 @@ int bcm_ext_bc_status(void)
 	return fsa9485_get_chrgr_type();
 }
 EXPORT_SYMBOL(bcm_ext_bc_status);
-
+/*
 enum bcmpmu_chrgr_type_t
 get_ext_charger_type(struct bcmpmu_accy *paccy, unsigned int bc_status)
 {
@@ -387,7 +389,7 @@ get_ext_charger_type(struct bcmpmu_accy *paccy, unsigned int bc_status)
 	return type;
 }
 EXPORT_SYMBOL(get_ext_charger_type);
-
+*/
 static void fsa945_sw_reset(struct fsa9485_usbsw *usbsw)
 {
 	struct i2c_client *client = usbsw->client;
@@ -508,7 +510,8 @@ static ssize_t fsa9485_reg_dump(struct device *dev,
 
 	for (i = 0; i <= 0x15; i++) {
 		fsa9485_read_reg(client, i, &value);
-		count += snprintf(&buf[count], 20, "reg[%02x]=%02x\n", i, value);
+		count += snprintf(&buf[count], 20,
+			"reg[%02x]=%02x\n", i, value);
 	}
 	printk(KERN_ALERT "count = %d\n", count);
 	return count;
@@ -608,9 +611,12 @@ static ssize_t fsa9485_set_manualsw(struct device *dev,
 	return count;
 }
 
-static DEVICE_ATTR(control, S_IRUGO | S_IWUSR, fsa9485_show_control, fsa9485_set_control);
-static DEVICE_ATTR(timing1, S_IRUGO | S_IWUSR, fsa9485_show_timing1, fsa9485_set_timing1);
-static DEVICE_ATTR(timing2, S_IRUGO | S_IWUSR, fsa9485_show_timing2, fsa9485_set_timing2);
+static DEVICE_ATTR(control, S_IRUGO | S_IWUSR,
+	fsa9485_show_control, fsa9485_set_control);
+static DEVICE_ATTR(timing1, S_IRUGO | S_IWUSR,
+	fsa9485_show_timing1, fsa9485_set_timing1);
+static DEVICE_ATTR(timing2, S_IRUGO | S_IWUSR,
+	fsa9485_show_timing2, fsa9485_set_timing2);
 static DEVICE_ATTR(device_type, S_IRUGO, fsa9485_show_device_type, NULL);
 static DEVICE_ATTR(switch, S_IRUGO | S_IWUSR,
 		fsa9485_show_manualsw, fsa9485_set_manualsw);
@@ -777,7 +783,8 @@ static void fsa9485_reg_init(struct fsa9485_usbsw *usbsw)
 
 	if (usbsw->mansw) {
 		ctrl &= ~CON_MANUAL_SW;	/* Manual Switching Mode */
-		printk(KERN_ALERT"%s Manual switching mode enabled\n", __func__);
+		printk(KERN_ALERT
+			"%s Manual switching mode enabled\n", __func__);
 	}
 
 	ret = fsa9485_write_reg(client, FSA9485_REG_CTRL, ctrl);
@@ -813,9 +820,13 @@ static void fsa9485_detect_dev(struct fsa9485_usbsw *usbsw)
 	val1 = device_type & 0xff;
 	val2 = device_type >> 8;
 
-	dev_info(&client->dev, "%s: dev1: 0x%x, dev2: 0x%x\n", __func__, val1, val2);
+	dev_info(&client->dev,
+		"%s: dev1: 0x%x, dev2: 0x%x\n",
+		__func__, val1, val2);
 	if (val1 == 0 && val2 == 0) {
-		dev_info(&client->dev, "%s: TSU seems malfunctioned, resetting\n", __func__);
+		dev_info(&client->dev,
+			"%s: TSU seems malfunctioned, resetting\n",
+			__func__);
 		fsa945_sw_reset(usbsw);
 	}
 
@@ -894,7 +905,9 @@ static void fsa9485_detect_dev(struct fsa9485_usbsw *usbsw)
 		} else if (usbsw->dev1 & DEV_T1_UART_MASK ||
 				usbsw->dev2 & DEV_T2_UART_MASK) {
 
-			dev_info(&client->dev, "%s: resetting TSU after UART detach\n", __func__);
+			dev_info(&client->dev,
+				"%s: resetting TSU after UART detach\n",
+				__func__);
 			fsa945_sw_reset(usbsw);
 			fsa9485_reg_init(usbsw);
 
@@ -1050,7 +1063,7 @@ static irqreturn_t fsa9485_irq_thread(int irq, void *data)
 	/* FSA9485 : Read interrupt -> Read Device
 	 FSA9485 : Read Device -> Read interrupt */
 
-	pr_info("fsa9485_irq_thread+ \n");
+	pr_info("fsa9485_irq_thread+\n");
 	device_type = fsa9485_check_dev(usbsw);
 
 	/* read and clear interrupt status bits */
@@ -1092,7 +1105,8 @@ static int fsa9485_irq_init(struct fsa9485_usbsw *usbsw)
 		gpio_set_debounce(irq_to_gpio(client->irq), 128000);
 
 		ret = request_threaded_irq(client->irq, NULL,
-			fsa9485_irq_thread, IRQF_TRIGGER_FALLING | IRQF_NO_SUSPEND,
+			fsa9485_irq_thread,
+			IRQF_TRIGGER_FALLING | IRQF_NO_SUSPEND,
 			"fsa9485 micro USB", usbsw);
 		if (ret) {
 			dev_err(&client->dev, "failed to reqeust IRQ\n");
@@ -1131,7 +1145,8 @@ static void fsa9485_init_detect(struct work_struct *work)
 	val1 = device_type & 0xff;
 	val2 = device_type >> 8;
 
-	dev_info(&client->dev, "$s: dev1: 0x%x, dev2: 0x%x\n", __func__, val1, val2);
+	dev_info(&client->dev, "$s: dev1: 0x%x, dev2: 0x%x\n",
+		__func__, val1, val2);
 	mutex_lock(&usbsw->mutex);
 	fsa9485_detect_dev(usbsw);
 	mutex_unlock(&usbsw->mutex);

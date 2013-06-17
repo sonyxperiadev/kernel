@@ -206,6 +206,7 @@ static struct regulator_init_data bcm59xxx_rfldo_data = {
 			.valid_ops_mask = REGULATOR_CHANGE_STATUS |
 			REGULATOR_CHANGE_VOLTAGE,
 			.always_on = 1,
+			.initial_mode = REGULATOR_MODE_STANDBY,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(rf_supply),
 	.consumer_supplies = rf_supply,
@@ -223,6 +224,7 @@ static struct regulator_init_data bcm59xxx_camldo1_data = {
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_MODE |
 			REGULATOR_CHANGE_VOLTAGE,
 			.always_on = 1,
+			.initial_mode = REGULATOR_MODE_IDLE,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(cam1_supply),
 	.consumer_supplies = cam1_supply,
@@ -240,6 +242,7 @@ static struct regulator_init_data bcm59xxx_camldo2_data = {
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_MODE |
 			REGULATOR_CHANGE_VOLTAGE,
 			.always_on = 1,
+			.initial_mode = REGULATOR_MODE_IDLE,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(cam2_supply),
 	.consumer_supplies = cam2_supply,
@@ -254,7 +257,11 @@ static struct regulator_init_data bcm59xxx_simldo1_data = {
 			.min_uV = 1300000,
 			.max_uV = 3300000,
 			.valid_ops_mask =
-			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
+				REGULATOR_CHANGE_STATUS |
+				REGULATOR_CHANGE_VOLTAGE |
+				REGULATOR_CHANGE_MODE,
+			.valid_modes_mask = REGULATOR_MODE_NORMAL |
+				REGULATOR_MODE_IDLE | REGULATOR_MODE_STANDBY,
 			.always_on = 0,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(sim1_supply),
@@ -270,7 +277,10 @@ static struct regulator_init_data bcm59xxx_simldo2_data = {
 			.min_uV = 1300000,
 			.max_uV = 3300000,
 			.valid_ops_mask =
-			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
+			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE |
+			REGULATOR_CHANGE_MODE,
+			.valid_modes_mask = REGULATOR_MODE_NORMAL |
+				REGULATOR_MODE_IDLE | REGULATOR_MODE_STANDBY,
 			.always_on = 0,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(sim2_supply),
@@ -361,6 +371,7 @@ static struct regulator_init_data bcm59xxx_audldo_data = {
 						REGULATOR_MODE_IDLE |
 						REGULATOR_MODE_STANDBY,
 			.always_on = 1,
+			.initial_mode = REGULATOR_MODE_STANDBY,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(aud_supply),
 	.consumer_supplies = aud_supply,
@@ -546,6 +557,7 @@ static struct regulator_init_data bcm59xxx_csr_data = {
 			.max_uV = 1440000,
 			.valid_ops_mask = REGULATOR_CHANGE_STATUS,
 			.always_on = 1,
+			.initial_mode = REGULATOR_MODE_STANDBY,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(csr_supply),
 	.consumer_supplies = csr_supply,
@@ -562,6 +574,7 @@ static struct regulator_init_data bcm59xxx_mmsr_data = {
 			.max_uV = 1800000,
 			.valid_ops_mask = REGULATOR_CHANGE_STATUS,
 			.always_on = 1,
+			.initial_mode = REGULATOR_MODE_IDLE,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(mmsr_supply),
 	.consumer_supplies = mmsr_supply,
@@ -578,6 +591,7 @@ static struct regulator_init_data bcm59xxx_sdsr1_data = {
 			.max_uV = 1800000,
 			.valid_ops_mask = REGULATOR_CHANGE_STATUS,
 			.always_on = 1,
+			.initial_mode = REGULATOR_MODE_IDLE,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(sdsr1_supply),
 	.consumer_supplies = sdsr1_supply,
@@ -594,6 +608,7 @@ static struct regulator_init_data bcm59xxx_sdsr2_data = {
 			.max_uV = 1800000,
 			.valid_ops_mask = REGULATOR_CHANGE_STATUS,
 			.always_on = 1,
+			.initial_mode = REGULATOR_MODE_IDLE,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(sdsr2_supply),
 	.consumer_supplies = sdsr2_supply,
@@ -610,6 +625,7 @@ static struct regulator_init_data bcm59xxx_iosr1_data = {
 			.max_uV = 1800000,
 			.valid_ops_mask = REGULATOR_CHANGE_STATUS,
 			.always_on = 1,
+			.initial_mode = REGULATOR_MODE_IDLE,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(iosr1_supply),
 	.consumer_supplies = iosr1_supply,
@@ -1229,6 +1245,11 @@ static struct bcmpmu_fg_pdata fg_pdata = {
 	.otp_cc_trim = 0x1F,
 };
 
+struct bcmpmu59xxx_accy_pdata accy_pdata = {
+	.flags = ACCY_USE_PM_QOS,
+	.qos_pi_id = PI_MGR_PI_ID_ARM_SUB_SYSTEM,
+};
+
 #ifdef CONFIG_CHARGER_BCMPMU_SPA
 struct bcmpmu59xxx_spa_pb_pdata spa_pb_pdata = {
 	.chrgr_name = "bcmpmu_charger",
@@ -1308,6 +1329,8 @@ static struct mfd_cell pmu59xxx_devs[] = {
 	{
 		.name = "bcmpmu_accy",
 		.id = -1,
+		.platform_data = &accy_pdata,
+		.pdata_size = sizeof(accy_pdata),
 	},
 	{
 		.name = "bcmpmu_adc",

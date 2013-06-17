@@ -223,7 +223,7 @@
 #ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
 #include "hawaii_wifi.h"
 
-void send_usb_insert_event(enum bcmpmu_event_t event, void *para);
+/* void send_usb_insert_event(enum bcmpmu_event_t event, void *para);*/
 void send_chrgr_insert_event(enum bcmpmu_event_t event, void *para);
 
 #include <linux/bmm050.h>
@@ -1501,6 +1501,13 @@ static void rt8973_wakelock_init(void)
 	pi_mgr_qos_add_request(&qos_node, "rt8973_jig_qos",
 		PI_MGR_PI_ID_ARM_SUB_SYSTEM, PI_MGR_QOS_DEFAULT_VALUE);
 #endif
+}
+
+extern int bcmpmu_accy_chrgr_type_notify(int chrgr_type);
+
+void send_chrgr_insert_event(enum bcmpmu_event_t event, void *para)
+{
+	bcmpmu_accy_chrgr_type_notify(*(u32 *)para);
 }
 
 static enum cable_type_t set_cable_status;

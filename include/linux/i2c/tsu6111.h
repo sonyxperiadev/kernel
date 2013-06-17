@@ -64,7 +64,10 @@ extern void fsa9485_otg_detach(void);
 extern void fsa9485_otg_set_autosw_pda(void);
 extern u16 fsa9485_get_chrgr_type(void);
 extern int bcm_ext_bc_status(void);
-extern enum bcmpmu_chrgr_type_t get_ext_charger_type(struct bcmpmu_accy *paccy, unsigned int bc_status);
+/*
+enum bcmpmu_chrgr_type_t
+get_ext_charger_type(struct bcmpmu_accy *paccy, unsigned int bc_status);
+*/
 
 extern struct class *sec_class;
 
