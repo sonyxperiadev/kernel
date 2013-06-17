@@ -541,7 +541,10 @@ void csl_caph_audioh_config(int path_id, void *p)
 
 		/* enable vin path interrupt */
 		chal_audio_vinpath_int_enable(handle, TRUE, FALSE);
-		chal_audio_vinpath_set_mono_stereo(handle, pcfg->sample_mode);
+		chal_audio_vinpath_set_mono_stereo(handle,
+						((pcfg->sample_mode ==
+						AUDIO_CHANNEL_STEREO) ?
+						FALSE : TRUE));
 
 		/*  add threshold at here  */
 
@@ -567,7 +570,10 @@ void csl_caph_audioh_config(int path_id, void *p)
 		chal_audio_nvinpath_int_enable(handle, TRUE, FALSE);
 
 		/* enable vin path interrupt */
-		chal_audio_nvinpath_set_mono_stereo(handle, pcfg->sample_mode);
+		chal_audio_nvinpath_set_mono_stereo(handle,
+						((pcfg->sample_mode ==
+						AUDIO_CHANNEL_STEREO) ?
+						FALSE : TRUE));
 
 		/*  add threshold at here  */
 		chal_audio_nvinpath_set_fifo_thres(handle, 0x2, 0x0);
