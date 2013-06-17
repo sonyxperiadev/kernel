@@ -38,6 +38,8 @@
 #include <linux/swap.h>
 #include <linux/rcupdate.h>
 #include <linux/notifier.h>
+#include <linux/debugfs.h>
+#include <linux/seq_file.h>
 #include <linux/lowmemorykiller.h>
 
 static uint32_t lowmem_debug_level = 1;
@@ -60,6 +62,17 @@ static unsigned long lowmem_deathpending_timeout;
 
 static LIST_HEAD(lmk_reg_list);
 static DECLARE_RWSEM(lmk_reg_rwsem);
+
+static struct dentry *lmk_debug_dir;
+
+/* Light weight accounting of LMK stats.
+ * At present, kill count alone.
+ */
+struct lmk_stat {
+	unsigned long kill_count;
+};
+
+DEFINE_PER_CPU(struct lmk_stat, lmk_stats);
 
 #define lowmem_print(level, x...)			\
 	do {						\
@@ -228,6 +241,7 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 #endif
 		lowmem_deathpending_timeout = jiffies + HZ;
 		send_sig(SIGKILL, selected, 0);
+		this_cpu_inc(lmk_stats.kill_count);
 		set_tsk_thread_flag(selected, TIF_MEMDIE);
 		rem -= selected_tasksize;
 	}
@@ -242,14 +256,56 @@ static struct shrinker lowmem_shrinker = {
 	.seeks = DEFAULT_SEEKS * 16
 };
 
+static int lmk_kill_count_show(struct seq_file *m, void *v)
+{
+	int cpu;
+	unsigned long sum = 0;
+
+	for_each_possible_cpu(cpu) {
+		struct lmk_stat *this = &per_cpu(lmk_stats, cpu);
+		sum += this->kill_count;
+		seq_printf(m, "%d:%lu\n", cpu, this->kill_count);
+	}
+
+	seq_printf(m, "%lu\n", sum);
+	return 0;
+}
+
+static int lmk_kill_count_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, lmk_kill_count_show, NULL);
+}
+
+static const struct file_operations lmk_kill_count_fops = {
+	.open           = lmk_kill_count_open,
+	.read           = seq_read,
+	.llseek         = seq_lseek,
+	.release        = single_release,
+};
+
 static int __init lowmem_init(void)
 {
+	struct dentry *fentry;
+
+	lmk_debug_dir = debugfs_create_dir("almk", NULL);
+	if (!lmk_debug_dir) {
+		pr_err("almk: failed to create debugfs dir\n");
+		goto skip;
+	}
+
+	fentry = debugfs_create_file("kill_count", S_IRUSR,
+			lmk_debug_dir, NULL,
+			&lmk_kill_count_fops);
+	if (!fentry)
+		pr_err("almk: failed to create debugfs file\n");
+skip:
 	register_shrinker(&lowmem_shrinker);
 	return 0;
 }
 
 static void __exit lowmem_exit(void)
 {
+	debugfs_remove_recursive(lmk_debug_dir);
 	unregister_shrinker(&lowmem_shrinker);
 }
 
