@@ -1504,16 +1504,16 @@ static void mobicore_reserve_memory(void)
 void __init hawaii_reserve(void)
 {
 
+#ifdef CONFIG_MOBICORE_DRIVER
+	mobicore_reserve_memory();
+#endif
+
 #ifdef CONFIG_ION
 	ion_reserve_memory();
 #endif /* CONFIG_ION */
 
 #ifdef CONFIG_ANDROID_PMEM
 	pmem_reserve_memory();
-#endif
-
-#ifdef CONFIG_MOBICORE_DRIVER
-	mobicore_reserve_memory();
 #endif
 
 }

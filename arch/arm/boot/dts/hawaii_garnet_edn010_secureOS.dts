@@ -213,7 +213,7 @@
 		type = <2>;
 		base  = <0x90000000>;
 		limit = <0xa0000000>;
-		size  = <0x04000000>;
+		size  = <0x03d00000>;
 		lmk_enable = <0>;
 		lmk_min_score_adj = <411>;
 		lmk_min_free = <32>;
