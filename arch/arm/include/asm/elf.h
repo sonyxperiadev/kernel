@@ -52,6 +52,11 @@ typedef struct user_fp elf_fpregset_t;
 #define R_ARM_ABS32		2
 #define R_ARM_CALL		28
 #define R_ARM_JUMP24		29
+
+#ifdef CONFIG_GCOV_KERNEL
+#define R_ARM_TARGET1		38
+#endif /*CONFIG_GCOV_KERNEL*/
+
 #define R_ARM_V4BX		40
 #define R_ARM_PREL31		42
 #define R_ARM_MOVW_ABS_NC	43

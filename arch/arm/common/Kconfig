@@ -1,6 +1,9 @@
 config ICST
 	bool
 
+config PL330
+	bool
+
 config SA1111
 	bool
 	select DMABOUNCE if !ARCH_PXA
@@ -67,3 +70,17 @@ config FIQ_DEBUGGER_CONSOLE_DEFAULT_ENABLE
 	help
 	  If enabled, this puts the fiq debugger into console mode by default.
 	  Otherwise, the fiq debugger will start out in debug mode.
+
+config BCM_KNLLOG_SUPPORT
+	bool "Kernel Log Support"
+	depends on ARCH_KONA
+	default n
+	help
+	  Enables Broadcom kernel log support.
+
+config BCM_KNLLOG_IRQ
+	bool "Kernel Log IRQ Debugging"
+	depends on BCM_KNLLOG_SUPPORT
+	default n
+	help
+	  Enables logging of IRQs, tasks, and tasklets in Broadcom kernel log.

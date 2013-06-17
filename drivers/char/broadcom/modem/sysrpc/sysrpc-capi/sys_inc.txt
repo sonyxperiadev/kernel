@@ -1,0 +1,39 @@
+#define UNDEF_SYS_GEN_MIDS
+#define DEFINE_SYS_GEN_MIDS_NEW
+
+#include "string.h"
+#include "mobcom_types.h"
+#include "resultcode.h"
+#include "taskmsgs.h"
+
+#include "ipcproperties.h"
+#include "rpc_global.h"
+#include "rpc_ipc.h"
+
+#include "xdr_porting_layer.h"
+#include "xdr.h"
+#include "rpc_api.h"
+#include "rpc_sync_api.h"
+
+#include "xdr.h"
+#include "audio_consts.h"
+#include "pmu.h"
+#include "hal_pmu.h"
+#include "rtc.h"
+#include "i2c_drv.h"
+#include "hal_pmu_glue.h"
+#include "cpps_control.h"
+#include "flash_api.h"
+#include "sys_usb_rpc.h"
+#include "sysparm.h"
+#include "sys_api.h"
+#include "capi2_cp_hal_api.h"
+
+#include "hal_adc.h"
+#include "hal_em_battmgr.h"
+#include "meas_mgr.h"
+#include "sys_common_rpc.h"
+#include "sys_gen_rpc.h"
+#include "log.h"
+#include "sys_rpc.h"
+#include "xassert.h"

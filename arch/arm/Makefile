@@ -116,8 +116,24 @@ AFLAGS_ISA	:=$(CFLAGS_ISA)
 endif
 
 # Need -Uarm for gcc < 3.x
-KBUILD_CFLAGS	+=$(CFLAGS_ABI) $(CFLAGS_ISA) $(arch-y) $(tune-y) $(call cc-option,-mshort-load-bytes,$(call cc-option,-malignment-traps,)) -msoft-float -Uarm
-KBUILD_AFLAGS	+=$(CFLAGS_ABI) $(AFLAGS_ISA) $(arch-y) $(tune-y) -include asm/unified.h -msoft-float
+KBUILD_CFLAGS	+=$(CFLAGS_ABI) $(CFLAGS_ISA) $(arch-y) $(tune-y) $(call cc-option,-mshort-load-bytes,$(call cc-option,-malignment-traps,)) -Uarm
+KBUILD_AFLAGS	+=$(CFLAGS_ABI) $(AFLAGS_ISA) $(arch-y) $(tune-y) -include asm/unified.h
+
+ifeq ($(CONFIG_VFP),y)
+ifeq ($(CONFIG_VFPv3),y)
+# v3 vfp
+KBUILD_CFLAGS	+=-mfpu=vfp3 -mfloat-abi=softfp
+KBUILD_AFLAGS	+=-mfpu=vfp3 -mfloat-abi=softfp 
+else
+#non-v3 vfp
+KBUILD_CFLAGS	+=-mfloat-abi=softfp
+KBUILD_AFLAGS	+=-mfloat-abi=softfp
+endif
+else
+#no vfp
+KBUILD_CFLAGS	+=-mfloat-abi=soft
+KBUILD_AFLAGS	+=-mfloat-abi=soft
+endif
 
 CHECKFLAGS	+= -D__arm__
 
@@ -197,6 +213,10 @@ machine-$(CONFIG_MACH_SPEAR600)		+= spear6xx
 machine-$(CONFIG_ARCH_VIRT)		+= virt
 machine-$(CONFIG_ARCH_ZYNQ)		+= zynq
 machine-$(CONFIG_ARCH_SUNXI)		+= sunxi
+machine-$(CONFIG_ARCH_RHEA)             := rhea
+machine-$(CONFIG_ARCH_HAWAII)           := hawaii
+machine-$(CONFIG_ARCH_JAVA)		:= java
+
 
 # Platform directory name.  This list is sorted alphanumerically
 # by CONFIG_* macro name.
@@ -209,6 +229,7 @@ plat-$(CONFIG_PLAT_S3C24XX)	+= samsung
 plat-$(CONFIG_PLAT_S5P)		+= samsung
 plat-$(CONFIG_PLAT_SPEAR)	+= spear
 plat-$(CONFIG_PLAT_VERSATILE)	+= versatile
+plat-$(CONFIG_ARCH_KONA)        := kona
 
 ifeq ($(CONFIG_ARCH_EBSA110),y)
 # This is what happens if you forget the IOCS16 line.
@@ -285,11 +306,25 @@ boot := arch/arm/boot
 
 archprepare:
 	$(Q)$(MAKE) $(build)=arch/arm/tools include/generated/mach-types.h
+ifeq ($(CONFIG_ARCH_RHEA_BX),y)
+	$(Q)echo "Creating rdb link for Rhea Bx (B1/B0)"; \
+	ln -fsn $(srctree)/arch/arm/mach-rhea/include/mach/rdb_Bx $(srctree)/arch/arm/mach-rhea/include/mach/rdb
+endif
+
+ifeq ($(CONFIG_ARCH_HAWAII),y)
+	$(Q)echo "Creating rdb link for Hawaii"; \
+	ln -fsn $(srctree)/arch/arm/mach-hawaii/include/mach/rdb_A0 $(srctree)/arch/arm/mach-hawaii/include/mach/rdb
+endif
+
+ifeq ($(CONFIG_ARCH_JAVA),y)
+	$(Q)echo "Creating rdb link for Java"; \
+	ln -fsn $(srctree)/arch/arm/mach-java/include/mach/rdb_A0 $(srctree)/arch/arm/mach-java/include/mach/rdb
+endif
 
 # Convert bzImage to zImage
 bzImage: zImage
 
-zImage Image xipImage bootpImage uImage: vmlinux
+zImage Image xipImage bootpImage uImage dt-blob: vmlinux
 	$(Q)$(MAKE) $(build)=$(boot) MACHINE=$(MACHINE) $(boot)/$@
 
 zinstall uinstall install: vmlinux
@@ -307,6 +342,25 @@ zImage-dtb: vmlinux scripts dtbs
 # We use MRPROPER_FILES and CLEAN_FILES now
 archclean:
 	$(Q)$(MAKE) $(clean)=$(boot)
+ifeq ($(CONFIG_ARCH_RHEA_BX),y)
+	$(Q)echo "Removing rdb link for Rhea"; \
+	if test -e $(srctree)/arch/arm/mach-rhea/include/mach/rdb; then \
+		rm $(srctree)/arch/arm/mach-rhea/include/mach/rdb; \
+	fi;
+endif
+ifeq ($(CONFIG_ARCH_HAWAII),y)
+	$(Q)echo "Removing rdb link for Hawaii"; \
+	if test -e $(srctree)/arch/arm/mach-hawaii/include/mach/rdb; then \
+		rm $(srctree)/arch/arm/mach-hawaii/include/mach/rdb; \
+	fi;
+endif
+
+ifeq ($(CONFIG_ARCH_JAVA),y)
+	$(Q)echo "Removing rdb link for Java"; \
+	if test -e $(srctree)/arch/arm/mach-java/include/mach/rdb; then \
+		rm $(srctree)/arch/arm/mach-java/include/mach/rdb; \
+	fi;
+endif
 
 # My testing targets (bypasses dependencies)
 bp:;	$(Q)$(MAKE) $(build)=$(boot) MACHINE=$(MACHINE) $(boot)/bootpImage

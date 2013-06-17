@@ -1,0 +1,3 @@
+# Licensor			Open/Proprietary	BRCM SLA	Header						Path
+	BRCM			Proprietary			yes			license_brcm_standard.txt	*
+

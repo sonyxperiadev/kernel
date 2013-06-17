@@ -15,6 +15,9 @@ obj-$(CONFIG_LOGO_SUPERH_MONO)		+= logo_superh_mono.o
 obj-$(CONFIG_LOGO_SUPERH_VGA16)		+= logo_superh_vga16.o
 obj-$(CONFIG_LOGO_SUPERH_CLUT224)	+= logo_superh_clut224.o
 obj-$(CONFIG_LOGO_M32R_CLUT224)		+= logo_m32r_clut224.o
+obj-$(CONFIG_LOGO_UNICOM_720PV_CLUT224)	+= logo_unicom_720pv_clut224.o
+obj-$(CONFIG_LOGO_UNICOM_480_854_CLUT224)	+= logo_unicom_480_854_clut224.o
+obj-$(CONFIG_LOGO_UNICOM_480_800_CLUT224)	+= logo_unicom_480_800_clut224.o
 
 obj-$(CONFIG_SPU_BASE)			+= logo_spe_clut224.o
 

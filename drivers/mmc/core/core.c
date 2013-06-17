@@ -1493,7 +1493,7 @@ static void mmc_power_up(struct mmc_host *host)
 	 * This delay should be sufficient to allow the power supply
 	 * to reach the minimum voltage.
 	 */
-	mmc_delay(10);
+	mmc_delay(15);
 
 	host->ios.clock = host->f_init;
 
@@ -1504,7 +1504,7 @@ static void mmc_power_up(struct mmc_host *host)
 	 * This delay must be at least 74 clock sizes, or 1 ms, or the
 	 * time required to reach a stable voltage.
 	 */
-	mmc_delay(10);
+	mmc_delay(15);
 
 	mmc_host_clk_release(host);
 }
@@ -1601,19 +1601,20 @@ int mmc_resume_bus(struct mmc_host *host)
 
 	printk("%s: Starting deferred resume\n", mmc_hostname(host));
 	spin_lock_irqsave(&host->lock, flags);
-	host->bus_resume_flags &= ~MMC_BUSRESUME_NEEDS_RESUME;
 	host->rescan_disable = 0;
+	host->bus_resume_flags &= ~MMC_BUSRESUME_NEEDS_RESUME;
 	spin_unlock_irqrestore(&host->lock, flags);
+
+	printk("%s: Starting deferred resume\n", mmc_hostname(host));
 
 	mmc_bus_get(host);
 	if (host->bus_ops && !host->bus_dead) {
 		mmc_power_up(host);
 		BUG_ON(!host->bus_ops->resume);
 		host->bus_ops->resume(host);
-	}
-
-	if (host->bus_ops->detect && !host->bus_dead)
+		if (host->bus_ops->detect)
 		host->bus_ops->detect(host);
+	}
 
 	mmc_bus_put(host);
 	printk("%s: Deferred resume completed\n", mmc_hostname(host));
@@ -2368,6 +2369,20 @@ EXPORT_SYMBOL(mmc_detect_card_removed);
 
 void mmc_rescan(struct work_struct *work)
 {
+#ifdef CONFIG_MMC_BCM_SD
+	/*
+	 * Some UHS-1 cards fails to switch to 1.8V signalling at 100KHz.
+	 * The SD spec defines 100KHz - 400KHz range for UHS-1 switch
+	 * sequence. When programmmed 100KHz, the clock variations below
+	 * 100KHz would cause a spec violation, and some UHS-1 cards
+	 * fails during voltage switch (CMD6).
+	 * Increasing the lowest freq to 128KHz to avoid clock variations
+	 * below <100KHz.
+	 */
+	static const unsigned freqs[] = { 400000, 300000, 200000, 128000 };
+#else
+	static const unsigned freqs[] = { 400000, 300000, 200000, 100000 };
+#endif
 	struct mmc_host *host =
 		container_of(work, struct mmc_host, detect.work);
 	int i;
@@ -2816,8 +2831,18 @@ int mmc_pm_notify(struct notifier_block *notify_block,
 		}
 		host->rescan_disable = 0;
 		spin_unlock_irqrestore(&host->lock, flags);
+		if (!host->card_detect_cap) {
 		mmc_detect_change(host, 0);
-
+			/* Add a flush here to make sure mmc_detect completes
+			* executing. In absence of this there is a race
+			* condition where multiple wakelocks could be taken
+			* by mmc_detect_change and the first unlock triggering
+			* the suspend (and a suspend  failure). This sort of
+			* loops in the same cycle and the system never enters
+			* suspend.
+			*/
+			mmc_flush_scheduled_work();
+		}
 	}
 
 	return 0;

@@ -98,6 +98,18 @@ config TOUCHSCREEN_ATMEL_MXT
 	  To compile this driver as a module, choose M here: the
 	  module will be called atmel_mxt_ts.
 
+config TOUCHSCREEN_ATMEL_MXT224S
+	tristate "Atmel mXT224S I2C Touchscreen"
+	depends on I2C
+	help
+	  Say Y here if you have Atmel mXT series I2C touchscreen,
+	  such as AT42QT602240/ATMXT224S, connected to your system.
+
+	  If unsure, say N.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called mxt224S.
+
 config TOUCHSCREEN_AUO_PIXCIR
 	tristate "AUO in-cell touchscreen using Pixcir ICs"
 	depends on I2C
@@ -110,6 +122,15 @@ config TOUCHSCREEN_AUO_PIXCIR
 
 	  To compile this driver as a module, choose M here: the
 	  module will be called auo-pixcir-ts.
+
+config TOUCHSCREEN_BCM15500
+	tristate "Broadcom 15500 touchscreen interface"
+	depends on I2C
+	help
+	  Say Y here to support BCM15500 touchscreen controller on a I2C bus
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called bcm915500.
 
 config TOUCHSCREEN_BU21013
 	tristate "BU21013 based touch panel controllers"
@@ -467,11 +488,109 @@ config TOUCHSCREEN_EDT_FT5X06
 	  Say Y here if you have an EDT "Polytouch" touchscreen based
 	  on the FocalTech FT5x06 family of controllers connected to
 	  your system.
-
 	  If unsure, say N.
 
 	  To compile this driver as a module, choose M here: the
 	  module will be called edt-ft5x06.
+
+config QT602240_BRCM_FIX
+	bool "T602240 I2C Touchscreen with BRCM RheaRay Board"
+	depends on TOUCHSCREEN_QT602240=y
+	help
+	  Say Y if you have the AT42QT602240/ATMXT224 I2C touchscreen
+	  connected to Broadcom RheaRay board
+
+	  If unsure, say N.
+
+config TOUCHSCREEN_MMS128_COOPERVE
+	tristate "QT602240 I2C Touchscreen"
+	depends on I2C
+	help
+	  Say Y here if you have the AT42QT602240/ATMXT224 I2C touchscreen
+	  connected to your system.
+
+	  If unsure, say N.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called qt602240_ts.
+
+config TOUCHSCREEN_TMA140_LUCAS
+	tristate "Cypress TMA140 i2c touchscreen"
+	depends on I2C
+	help
+	  This enables support for TMA140 driver over I2C based touchscreens.
+
+config TOUCHSCREEN_MMS128_TASSCOOPER
+	tristate "QT602240 I2C Touchscreen"
+	depends on I2C
+	help
+	  Say Y here if you have the AT42QT602240/ATMXT224 I2C touchscreen
+	  connected to your system.
+
+	  If unsure, say N.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called qt602240_ts.
+
+config TOUCHSCREEN_TMA340_COOPERVE
+	tristate "QT602240 I2C Touchscreen"
+	depends on I2C
+	help
+	  Say Y here if you have the AT42QT602240/ATMXT224 I2C touchscreen
+	  connected to your system.
+
+	  If unsure, say N.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called qt602240_ts.
+
+config TOUCHSCREEN_BT403_AMAZING
+	tristate "BT403 Touchscreen"
+	depends on I2C
+	help
+	  Say Y here if you have the BT403 touchscreen
+	  connected to your system.
+
+	  If unsure, say N.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called qt602240_ts.
+
+config TOUCHSCREEN_BT403_ZANIN
+	tristate "BT403 I2C Touchscreen"
+	depends on I2C
+	help
+	  Say Y here if you have the Zinitix  I2C touchscreen
+	  connected to your system.
+
+	  If unsure, say N.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called bt403_ts.
+
+config TOUCHSCREEN_BT432_LOGAN
+        tristate "BT432 I2C Touchscreen"
+        depends on I2C
+        help
+          Say Y here if you have the Zinitix  I2C touchscreen
+          connected to your system.
+
+          If unsure, say N.
+
+          To compile this driver as a module, choose M here: the
+          module will be called bt432_ts.
+
+config TOUCHSCREEN_F761
+        tristate "F761 I2C Touchscreen"
+        depends on I2C
+	help
+          Say Y here if you have the Silicon Labs I2C touchscreen
+          connected to your system.
+
+          If unsure, say N.
+
+          To compile this driver as a module, choose M here: the
+          module will be called F761_ts.
 
 config TOUCHSCREEN_MIGOR
 	tristate "Renesas MIGO-R touchscreen"
@@ -841,6 +960,19 @@ config TOUCHSCREEN_TSC2007
 	  To compile this driver as a module, choose M here: the
 	  module will be called tsc2007.
 
+config TOUCHSCREEN_TANGO
+   tristate "TANGO Capacitive Touchscreen"
+   depends on I2C
+   help
+     Say Y here if you have a Tango based touchscreen. If unsure, say N.
+
+config TOUCHSCREEN_FT5306
+   tristate "FT5306 Touchscreen"
+   depends on I2C
+   help
+     Say Y here if you have a Tango based touchscreen. If unsure, say N.
+
+
 config TOUCHSCREEN_W90X900
 	tristate "W90P910 touchscreen driver"
 	depends on HAVE_CLK
@@ -893,5 +1025,18 @@ config TOUCHSCREEN_TPS6507X
 
 	  To compile this driver as a module, choose M here: the
 	  module will be called tps6507x_ts.
+
+config TOUCHSCREEN_IST30XX
+        tristate "IST30XX I2C Touchscreen"
+        depends on I2C
+        help
+          Say Y here if you have the Imagis IST30XX I2C touchscreen
+          connected to your system.
+
+          If unsure, say N.
+
+          To compile this driver as a module, choose M here: the
+          module will be called ist30xx.
+source "drivers/input/touchscreen/coreriver_touchkey/Kconfig"
 
 endif

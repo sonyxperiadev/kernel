@@ -16,11 +16,12 @@
  * YOU _SHOULD_ CHANGE THIS LIST TO MATCH YOUR PRODUCT AND ITS TESTING!
  */
 
-static struct usb_device_id whitelist_table [] = {
+static struct usb_device_id whitelist_table[] = {
 
 /* hubs are optional in OTG, but very handy ... */
 { USB_DEVICE_INFO(USB_CLASS_HUB, 0, 0), },
 { USB_DEVICE_INFO(USB_CLASS_HUB, 0, 1), },
+{ USB_DEVICE_INFO(USB_CLASS_HUB, 0, 2), },
 
 #ifdef	CONFIG_USB_PRINTER		/* ignoring nonstatic linkage! */
 /* FIXME actually, printers are NOT supposed to use device classes;
@@ -42,6 +43,17 @@ static struct usb_device_id whitelist_table [] = {
 /* gadget zero, for testing */
 { USB_DEVICE(0x0525, 0xa4a0), },
 #endif
+
+/* OPT/PET Tester */
+{ USB_DEVICE(0x1a0a, 0x0101), }, /* TEST_SE0_NAK */
+{ USB_DEVICE(0x1a0a, 0x0102), }, /* Test_J */
+{ USB_DEVICE(0x1a0a, 0x0103), }, /* Test_K */
+{ USB_DEVICE(0x1a0a, 0x0104), }, /* Test_PACKET */
+{ USB_DEVICE(0x1a0a, 0x0105), }, /* Test_FORCE_ENABLE */
+{ USB_DEVICE(0x1a0a, 0x0106), }, /* HS_PORT_SUSPEND_RESUME  */
+{ USB_DEVICE(0x1a0a, 0x0107), }, /* SINGLE_STEP_GET_DESCRIPTOR setup */
+{ USB_DEVICE(0x1a0a, 0x0108), }, /* SINGLE_STEP_GET_DESCRIPTOR execute */
+{ USB_DEVICE(0x1a0a, 0x0200), }  /* OTG Test device */
 
 { }	/* Terminating entry */
 };

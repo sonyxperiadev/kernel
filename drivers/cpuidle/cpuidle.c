@@ -110,34 +110,6 @@ int cpuidle_enter_state(struct cpuidle_device *dev, struct cpuidle_driver *drv,
 }
 
 /**
- * cpuidle_enter_state - enter the state and update stats
- * @dev: cpuidle device for this cpu
- * @drv: cpuidle driver for this cpu
- * @next_state: index into drv->states of the state to enter
- */
-int cpuidle_enter_state(struct cpuidle_device *dev, struct cpuidle_driver *drv,
-		int next_state)
-{
-	int entered_state;
-
-	entered_state = cpuidle_enter_ops(dev, drv, next_state);
-
-	if (entered_state >= 0) {
-		/* Update cpuidle counters */
-		/* This can be moved to within driver enter routine
-		 * but that results in multiple copies of same code.
-		 */
-		dev->states_usage[entered_state].time +=
-				(unsigned long long)dev->last_residency;
-		dev->states_usage[entered_state].usage++;
-	} else {
-		dev->last_residency = 0;
-	}
-
-	return entered_state;
-}
-
-/**
  * cpuidle_idle_call - the main idle loop
  *
  * NOTE: no locks or semaphores should be used here
@@ -425,6 +397,9 @@ static int __cpuidle_register_device(struct cpuidle_device *dev)
 {
 	int ret;
 	struct cpuidle_driver *drv = cpuidle_get_cpu_driver(dev);
+
+	if (!drv)
+		return -EINVAL;
 
 	if (!try_module_get(drv->owner))
 		return -EINVAL;

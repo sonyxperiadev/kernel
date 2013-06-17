@@ -2721,4 +2721,6 @@ MODULE_PARM_DESC(send_implementation_id,
 		"Send implementation ID with NFSv4.1 exchange_id");
 MODULE_PARM_DESC(nfs4_unique_id, "nfs_client_id4 uniquifier string");
 
+MODULE_ALIAS("nfs4");
+
 #endif /* CONFIG_NFS_V4 */

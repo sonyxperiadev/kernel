@@ -59,6 +59,15 @@ struct evdev_client {
 static void __pass_event(struct evdev_client *client,
 			 const struct input_event *event)
 {
+	/* Having clkid always to MONOTONIC is a hack. This will be required
+	 * until an application would send the EVIOCSCLOCKID ioctl to set the
+	 * right clock being used. As this is not done currently on ICS, the
+	 * default clkid is 0 (which is real) would be chosen. Android currently
+	 * uses MONOTONIC and hence touch does not work.
+	 */
+#ifdef CONFIG_EVDEV_QUIRK_FORCE_MONOTONIC
+	client->clkid = CLOCK_MONOTONIC;
+#endif
 	client->buffer[client->head++] = *event;
 	client->head &= client->bufsize - 1;
 
@@ -685,35 +694,6 @@ static int evdev_handle_mt_request(struct input_dev *dev,
 		if (put_user(value, &ip[1 + i]))
 			return -EFAULT;
 	}
-
-	return 0;
-}
-
-static int evdev_enable_suspend_block(struct evdev *evdev,
-				      struct evdev_client *client)
-{
-	if (client->use_wake_lock)
-		return 0;
-
-	spin_lock_irq(&client->buffer_lock);
-	wake_lock_init(&client->wake_lock, WAKE_LOCK_SUSPEND, client->name);
-	client->use_wake_lock = true;
-	if (client->packet_head != client->tail)
-		wake_lock(&client->wake_lock);
-	spin_unlock_irq(&client->buffer_lock);
-	return 0;
-}
-
-static int evdev_disable_suspend_block(struct evdev *evdev,
-				       struct evdev_client *client)
-{
-	if (!client->use_wake_lock)
-		return 0;
-
-	spin_lock_irq(&client->buffer_lock);
-	client->use_wake_lock = false;
-	wake_lock_destroy(&client->wake_lock);
-	spin_unlock_irq(&client->buffer_lock);
 
 	return 0;
 }

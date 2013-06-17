@@ -20,10 +20,50 @@ DHDCFLAGS = -Wall -Wstrict-prototypes -Dlinux -DBCMDRIVER                     \
 	-DWL_CFG80211_VSDB_PRIORITIZE_SCAN_REQUEST -DESCAN_RESULT_PATCH       \
 	-Idrivers/net/wireless/bcmdhd -Idrivers/net/wireless/bcmdhd/include
 
+
+# For Static Buffer
+ifeq ($(CONFIG_BROADCOM_WIFI_RESERVED_MEM),y)
+DHDCFLAGS += -DCONFIG_DHD_USE_STATIC_BUF
+DHDCFLAGS += -DDHD_USE_STATIC_BUF
+endif
+
+
+ifeq ($(CONFIG_MACH_RHEA_BERRI_EDN40),y)
+# SW-OOB Interrupt
+DHDCFLAGS += -DOOB_INTR_ONLY -DCUSTOM_OOB_GPIO_NUM=74
+DHDCFLAGS += -DDHD_SELECTIVE_FW_43362
+endif
+
+ifeq ($(CONFIG_MACH_RHEA_STONE),y)
+# SW-OOB Interrupt
+DHDCFLAGS += -DOOB_INTR_ONLY -DCUSTOM_OOB_GPIO_NUM=74
+endif
+
+DHDCFLAGS += -DXTAL_PU_TIME_MOD
+
+ifeq ($(CONFIG_MACH_RHEA_STONE_EDN2X),y)
+# SW-OOB Interrupt
+DHDCFLAGS += -DOOB_INTR_ONLY -DCUSTOM_OOB_GPIO_NUM=74
+endif
+
+ifeq ($(CONFIG_MACH_RHEA_SS),y)
+# SW-OOB Interrupt
+DHDCFLAGS += -DOOB_INTR_ONLY -DCUSTOM_OOB_GPIO_NUM=89
+endif
+
+#ifneq ($(CONFIG_MACH_RHEA_BERRI_EDN40),y)
+#DHDCFLAGS += -DSDIO_ISR_THREAD                                                     
+#endif
+
+ifeq ($(CONFIG_MACH_RHEA_RAY_EDN2X),y)
+DHDCFLAGS += -DSDIO_ISR_THREAD                                                     
+endif
+
 DHDOFILES = aiutils.o bcmsdh_sdmmc_linux.o dhd_linux.o siutils.o bcmutils.o   \
-	dhd_linux_sched.o dhd_sdio.o bcmwifi_channels.o bcmevent.o hndpmu.o   \
+	dhd_linux_sched.o bcmwifi.o dhd_sdio.o bcmwifi_channels.o bcmevent.o hndpmu.o   \
 	bcmsdh.o dhd_cdc.o bcmsdh_linux.o dhd_common.o linux_osl.o            \
-	bcmsdh_sdmmc.o dhd_custom_gpio.o sbutils.o wldev_common.o wl_android.o
+	bcmsdh_sdmmc.o dhd_custom_gpio.o sbutils.o wldev_common.o wl_android.o \
+	dhd_cfg80211.o
 
 obj-$(CONFIG_BCMDHD) += bcmdhd.o
 bcmdhd-objs += $(DHDOFILES)

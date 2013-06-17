@@ -1,0 +1,34 @@
+#
+# MobiCore configuration
+#
+config MOBICORE_DRIVER
+	depends on ARM
+	tristate "MobiCore support"
+	help
+	  Enable Linux Kernel MobiCore Support
+	  This will create 2 device files used for MobiCore control and
+	  communication
+
+config MOBICORE_DEBUG
+	bool "MobiCore Module debug mode"
+	depends on MOBICORE_DRIVER
+	help
+	  Enable Debug mode in the MobiCore Driver.
+	  It enables printing information about mobicore operations
+
+config MOBICORE_VERBOSE
+	bool "MobiCore Module verbose debug mode"
+	depends on MOBICORE_DEBUG
+	help
+	  Enable Verbose Debug mode in the MobiCore Driver.
+	  It enables printing extra information about mobicore operations
+	  Beware: this is only useful for debuging deep in the driver because
+	  it prints too much logs
+
+
+config MOBICORE_API
+	tristate "MobiCore Kernel API"
+	depends on MOBICORE_DRIVER
+	help
+	  Enable Linux Kernel MobiCore API
+	  It provides the same client API from user space to kernel

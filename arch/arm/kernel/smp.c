@@ -45,6 +45,9 @@
 #include <asm/smp_plat.h>
 #include <asm/virt.h>
 #include <asm/mach/arch.h>
+#if defined(CONFIG_CDEBUGGER)
+#include <mach/cdebugger.h>
+#endif
 
 /*
  * as from 2.5, kernels no longer have an init_tasks structure
@@ -653,6 +656,13 @@ void handle_IPI(int ipinr, struct pt_regs *regs)
 		break;
 
 	case IPI_CPU_STOP:
+#if defined(CONFIG_CDEBUGGER)
+		/* save context */
+		cdebugger_save_pte((void *)regs, (int )current);
+		flush_cache_all();
+		outer_flush_all();
+		dmb();
+#endif
 		irq_enter();
 		ipi_cpu_stop(cpu);
 		irq_exit();

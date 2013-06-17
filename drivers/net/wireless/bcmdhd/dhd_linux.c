@@ -107,6 +107,11 @@ extern bool ap_cfg_running;
 extern bool ap_fw_loaded;
 #endif
 
+
+
+extern void Set_XTAL_PM_Delay(void);
+
+
 /* enable HOSTIP cache update from the host side when an eth0:N is up */
 #define AOE_IP_ALIAS_SUPPORT 1
 
@@ -286,9 +291,6 @@ typedef struct dhd_info {
 #endif /* DHDTHREAD */
 	bool dhd_tasklet_create;
 	tsk_ctl_t	thr_sysioc_ctl;
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 27))
-	struct work_struct work_hang;
-#endif
 
 	/* Wakelocks */
 #if defined(CONFIG_HAS_WAKELOCK) && (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 27))
@@ -3264,6 +3266,7 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 	char eventmask[WL_EVENTING_MASK_LEN];
 	char iovbuf[WL_EVENTING_MASK_LEN + 12];	/*  Room for "event_msgs" + '\0' + bitvec  */
 
+	uint power_mode = PM_OFF; /* PM_FAST */
 #if !defined(WL_CFG80211)
 	uint up = 0;
 #endif /* !defined(WL_CFG80211) */
@@ -3661,6 +3664,12 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 	}
 
 done:
+#ifdef XTAL_PU_TIME_MOD
+		printk("%s:***** CALL SET_PMY_DELAY\n", __FUNCTION__);
+		Set_XTAL_PM_Delay();
+		printk("%s:***** CALL DONE SET_PMY_DELAY\n", __FUNCTION__);
+#endif
+
 	return ret;
 }
 
@@ -4027,9 +4036,6 @@ void dhd_detach(dhd_pub_t *dhdp)
 	}
 #endif /* defined(CONFIG_HAS_EARLYSUSPEND) */
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 27))
-	cancel_work_sync(&dhd->work_hang);
-#endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 27))  */
 
 #if defined(CONFIG_WIRELESS_EXT)
 	if (dhd->dhd_state & DHD_ATTACH_STATE_WL_ATTACH) {

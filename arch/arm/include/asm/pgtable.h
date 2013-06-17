@@ -40,7 +40,9 @@
  */
 #define VMALLOC_OFFSET		(8*1024*1024)
 #define VMALLOC_START		(((unsigned long)high_memory + VMALLOC_OFFSET) & ~(VMALLOC_OFFSET-1))
+#ifndef VMALLOC_END
 #define VMALLOC_END		0xff000000UL
+#endif
 
 #define LIBRARY_TEXT_START	0x0c000000
 

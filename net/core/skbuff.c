@@ -74,6 +74,9 @@
 struct kmem_cache *skbuff_head_cache __read_mostly;
 static struct kmem_cache *skbuff_fclone_cache __read_mostly;
 
+extern unsigned short netpoll_skb_size(void);
+extern void netpoll_recycle_skbs(struct sk_buff *skb);
+
 static void sock_pipe_buf_release(struct pipe_inode_info *pipe,
 				  struct pipe_buffer *buf)
 {
@@ -280,6 +283,60 @@ nodata:
 }
 EXPORT_SYMBOL(__alloc_skb);
 
+#ifdef CONFIG_USB_ETH_SKB_ALLOC_OPTIMIZATION
+/**
+ *	alloc_skb_uether_rx	-	allocate a network buffer
+ *							with recycled skb data.
+ *	@size: size to allocate
+ *	@data: recycled skb data
+ *	@gfp_mask: allocation mask
+ *
+ *	Buffers may only be allocated from interrupts using a @gfp_mask of
+ *	%GFP_ATOMIC.
+ */
+struct sk_buff *alloc_skb_uether_rx(unsigned int size, unsigned char *data,
+		gfp_t gfp_mask)
+{
+	struct kmem_cache *cache;
+	struct skb_shared_info *shinfo;
+	struct sk_buff *skb;
+
+	cache = skbuff_head_cache;
+
+	/* Get the HEAD */
+	skb = kmem_cache_alloc_node(cache, gfp_mask & ~__GFP_DMA, NUMA_NO_NODE);
+	if (!skb) {
+		pr_err("can not allocate skb_buf in __alloc_skb_uther_rx");
+		return NULL;
+	}
+	prefetchw(skb);
+
+	/*
+	 * Only clear those fields we need to clear, not those that we will
+	 * actually initialise below. Hence, don't put any more fields after
+	 * the tail pointer in struct sk_buff!
+	 */
+	memset(skb, 0, offsetof(struct sk_buff, tail));
+	skb->truesize = size + sizeof(struct sk_buff);
+	atomic_set(&skb->users, 1);
+	skb->head = data;
+	skb->data = data;
+	skb_reset_tail_pointer(skb);
+	skb->end = skb->tail + size;
+#ifdef NET_SKBUFF_DATA_USES_OFFSET
+	skb->mac_header = ~0U;
+#endif
+
+	/* make sure we initialize shinfo sequentially */
+	shinfo = skb_shinfo(skb);
+	memset(shinfo, 0, offsetof(struct skb_shared_info, dataref));
+	atomic_set(&shinfo->dataref, 1);
+	kmemcheck_annotate_variable(shinfo->destructor_arg);
+	skb->signature = SKB_UETH_RX_THRESHOLD_SIG;
+	return skb;
+}
+EXPORT_SYMBOL(alloc_skb_uether_rx);
+#endif
 /**
  * build_skb - build a network buffer
  * @data: data buffer provided by caller
@@ -514,6 +571,13 @@ static void skb_release_data(struct sk_buff *skb)
 		if (skb_has_frag_list(skb))
 			skb_drop_fraglist(skb);
 
+#ifdef CONFIG_USB_ETH_SKB_ALLOC_OPTIMIZATION
+		if (skb->signature == SKB_UETH_RX_THRESHOLD_SIG) {
+			ueth_recycle_rx_skb_data(skb->head, GFP_ATOMIC);
+			skb->signature = 0;
+			return;
+		}
+#endif
 		skb_free_head(skb);
 	}
 }
@@ -588,6 +652,36 @@ static void skb_release_all(struct sk_buff *skb)
 }
 
 /**
+ *      recycle_skbs_process -  Process the skb which will be recycled.
+ *      @skb: buffer
+ *      @skb_size: minimum buffer size
+ *
+ */
+#ifdef CONFIG_BRCM_NETCONSOLE
+static void recycle_skbs_process(struct sk_buff *skb, int skb_size)
+{
+        struct skb_shared_info *shinfo;
+
+        skb_size = SKB_DATA_ALIGN(skb_size + NET_SKB_PAD);
+
+        skb_release_head_state(skb);
+        shinfo = skb_shinfo(skb);
+        atomic_set(&shinfo->dataref, 1);
+        shinfo->nr_frags = 0;
+        shinfo->gso_size = 0;
+        shinfo->gso_segs = 0;
+        shinfo->gso_type = 0;
+        shinfo->ip6_frag_id = 0;
+        shinfo->frag_list = NULL;
+
+        memset(skb, 0, offsetof(struct sk_buff, tail));
+        skb->data = skb->head + NET_SKB_PAD;
+        skb_reset_tail_pointer(skb);
+
+}
+#endif /* #ifdef CONFIG_BRCM_NETCONSOLE */
+
+/**
  *	__kfree_skb - private function
  *	@skb: buffer
  *
@@ -598,8 +692,19 @@ static void skb_release_all(struct sk_buff *skb)
 
 void __kfree_skb(struct sk_buff *skb)
 {
-	skb_release_all(skb);
-	kfree_skbmem(skb);
+#ifdef CONFIG_BRCM_NETCONSOLE
+	/* If the skb has the netpoll signature, we will recycle the skb buf to avoid running out of memory.*/
+	if (skb->signature == SKB_NETPOLL_SIGNATURE)
+	{
+		recycle_skbs_process(skb,  netpoll_skb_size());
+		netpoll_recycle_skbs(skb);
+
+	} else
+#endif	/* #ifdef CONFIG_BRCM_NETCONSOLE */
+	{
+		skb_release_all(skb);
+		kfree_skbmem(skb);
+	}
 }
 EXPORT_SYMBOL(__kfree_skb);
 
@@ -736,6 +841,9 @@ static struct sk_buff *__skb_clone(struct sk_buff *n, struct sk_buff *skb)
 	C(head_frag);
 	C(data);
 	C(truesize);
+#ifdef CONFIG_USB_ETH_SKB_ALLOC_OPTIMIZATION
+	C(signature);
+#endif
 	atomic_set(&n->users, 1);
 
 	atomic_inc(&(skb_shinfo(skb)->dataref));

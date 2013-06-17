@@ -374,6 +374,10 @@ struct mm_struct {
 	 */
 	struct mm_rss_stat rss_stat;
 
+#ifdef CONFIG_CMA
+	atomic_long_t cma_stat;
+#endif
+
 	struct linux_binfmt *binfmt;
 
 	cpumask_var_t cpu_vm_mask_var;

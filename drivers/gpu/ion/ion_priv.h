@@ -80,6 +80,12 @@ struct ion_buffer {
 	int handle_count;
 	char task_comm[TASK_COMM_LEN];
 	pid_t pid;
+#ifdef CONFIG_ION_BCM
+	unsigned int dma_addr;
+	unsigned int custom_flags;
+	int custom_update_count;
+	unsigned int align;
+#endif
 };
 
 /**
@@ -108,6 +114,13 @@ struct ion_heap_ops {
 	void (*unmap_kernel) (struct ion_heap *heap, struct ion_buffer *buffer);
 	int (*map_user) (struct ion_heap *mapper, struct ion_buffer *buffer,
 			 struct vm_area_struct *vma);
+#ifdef CONFIG_ION_BCM
+	int (*clean_cache) (struct ion_heap *heap, struct ion_buffer *buffer,
+			unsigned long offset, unsigned long len);
+	int (*invalidate_cache) (struct ion_heap *heap,
+			struct ion_buffer *buffer, unsigned long offset,
+			unsigned long len);
+#endif
 };
 
 /**
@@ -151,6 +164,22 @@ struct ion_heap {
 	wait_queue_head_t waitqueue;
 	struct task_struct *task;
 	int (*debug_show)(struct ion_heap *heap, struct seq_file *, void *);
+#ifdef CONFIG_ION_BCM
+	int used;
+	int (*free_size)(struct ion_heap *heap);
+#endif
+#ifdef CONFIG_ION_OOM_KILLER
+	int (*lmk_shrink_info) (struct ion_heap *heap, int *min_adj,
+			int *min_free);
+	int (*lmk_debugfs_add) (struct ion_heap *heap,
+			struct dentry *debug_root);
+#endif
+#ifdef CONFIG_IOMMU_API
+	struct device *device;
+#ifndef CONFIG_BCM_IOVMM
+	struct iommu_domain *domain;
+#endif
+#endif /* CONFIG_IOMMU_API */
 };
 
 /**
@@ -232,6 +261,28 @@ ion_phys_addr_t ion_carveout_allocate(struct ion_heap *heap, unsigned long size,
 				      unsigned long align);
 void ion_carveout_free(struct ion_heap *heap, ion_phys_addr_t addr,
 		       unsigned long size);
+
+#ifdef CONFIG_CMA
+struct ion_heap *ion_cma_heap_create(struct ion_platform_heap *);
+void ion_cma_heap_destroy(struct ion_heap *);
+#endif
+
+#ifdef CONFIG_ION_BCM
+extern struct ion_buffer *ion_lock_buffer(struct ion_client *client,
+		struct ion_handle *handle);
+extern void ion_unlock_buffer(struct ion_client *client,
+		struct ion_buffer *buffer);
+
+#define pgprot_writethrough(prot) \
+	__pgprot_modify(prot, L_PTE_MT_MASK, L_PTE_MT_WRITETHROUGH)
+
+#define pgprot_writeback(prot) \
+	__pgprot_modify(prot, L_PTE_MT_MASK, L_PTE_MT_WRITEBACK)
+
+#define ION_DMA_ADDR_FAIL (~0)
+
+#endif
+
 /**
  * The carveout heap returns physical addresses, since 0 may be a valid
  * physical address, this is used to indicate allocation failed

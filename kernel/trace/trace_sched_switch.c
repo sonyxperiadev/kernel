@@ -11,6 +11,9 @@
 #include <linux/uaccess.h>
 #include <linux/ftrace.h>
 #include <trace/events/sched.h>
+#ifdef CONFIG_STM_FTRACE
+#include <trace/stm.h>
+#endif
 
 #include "trace.h"
 
@@ -47,6 +50,11 @@ tracing_sched_switch_trace(struct trace_array *tr,
 
 	if (!filter_check_discard(call, entry, buffer, event))
 		trace_buffer_unlock_commit(buffer, event, flags, pc);
+#ifdef CONFIG_STM_CTX_SWITCH
+	stm_sched_switch(entry->prev_pid, entry->prev_prio, entry->prev_state,
+			entry->next_pid, entry->next_prio, entry->next_state,
+			entry->next_cpu);
+#endif
 }
 
 static void
@@ -103,6 +111,12 @@ tracing_sched_wakeup_trace(struct trace_array *tr,
 
 	if (!filter_check_discard(call, entry, buffer, event))
 		trace_buffer_unlock_commit(buffer, event, flags, pc);
+
+#ifdef CONFIG_STM_WAKEUP
+	stm_sched_wakeup(entry->prev_pid, entry->prev_prio, entry->prev_state,
+			entry->next_pid, entry->next_prio, entry->next_state,
+			entry->next_cpu);
+#endif
 }
 
 static void

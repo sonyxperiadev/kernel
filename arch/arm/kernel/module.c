@@ -89,6 +89,9 @@ apply_relocate(Elf32_Shdr *sechdrs, const char *strtab, unsigned int symindex,
 			break;
 
 		case R_ARM_ABS32:
+#ifdef CONFIG_GCOV_KERNEL
+        case R_ARM_TARGET1:
+#endif /*CONFIG_GCOV_KERNEL*/
 			*(u32 *)loc += sym->st_value;
 			break;
 

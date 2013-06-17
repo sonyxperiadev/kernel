@@ -349,6 +349,7 @@ typedef struct wl_extdscan_params {
 } wl_extdscan_params_t;
 
 #define WL_EXTDSCAN_PARAMS_FIXED_SIZE 	(sizeof(wl_extdscan_params_t) - sizeof(chan_scandata_t))
+#endif /* LINUX_POSTMOGRIFY_REMOVAL */
 
 #define WL_BSSTYPE_INFRA 1
 #define WL_BSSTYPE_INDEP 0
@@ -427,7 +428,6 @@ typedef struct wl_scan_results {
 	wl_bss_info_t bss_info[1];
 } wl_scan_results_t;
 
-#ifndef LINUX_POSTMOGRIFY_REMOVAL
 /* size of wl_scan_results not including variable length array */
 #define WL_SCAN_RESULTS_FIXED_SIZE (sizeof(wl_scan_results_t) - sizeof(wl_bss_info_t))
 
@@ -833,7 +833,6 @@ typedef enum sup_auth_status {
 	WLC_SUP_KEYXCHANGE_WAIT_G1,	/* Waiting to receive handshake msg G1 */
 	WLC_SUP_KEYXCHANGE_PREP_G2	/* Preparing to send handshake msg G2 */
 } sup_auth_status_t;
-#endif /* LINUX_POSTMOGRIFY_REMOVAL */
 
 /* Enumerate crypto algorithms */
 #define	CRYPTO_ALGO_OFF			0
@@ -844,20 +843,20 @@ typedef enum sup_auth_status {
 #define CRYPTO_ALGO_AES_OCB_MSDU	5
 #define CRYPTO_ALGO_AES_OCB_MPDU	6
 #define CRYPTO_ALGO_NALG		7
+#ifdef BCMWAPI_WPI
+#define CRYPTO_ALGO_SMS4		11
+#endif /* BCMWAPI_WPI */
 #define CRYPTO_ALGO_PMK			12	/* for 802.1x supp to set PMK before 4-way */
 
-#define WSEC_GEN_MIC_ERROR	0x0001
-#define WSEC_GEN_REPLAY		0x0002
-#define WSEC_GEN_ICV_ERROR	0x0004
-#define WSEC_GEN_MFP_ACT_ERROR	0x0008
-#define WSEC_GEN_MFP_DISASSOC_ERROR	0x0010
-#define WSEC_GEN_MFP_DEAUTH_ERROR	0x0020
+#define WSEC_GEN_MIC_ERROR  0x0001
+#define WSEC_GEN_REPLAY     0x0002
+#define WSEC_GEN_ICV_ERROR  0x0004
 
-#define WL_SOFT_KEY	(1 << 0)	/* Indicates this key is using soft encrypt */
-#define WL_PRIMARY_KEY	(1 << 1)	/* Indicates this key is the primary (ie tx) key */
-#define WL_KF_RES_4	(1 << 4)	/* Reserved for backward compat */
-#define WL_KF_RES_5	(1 << 5)	/* Reserved for backward compat */
-#define WL_IBSS_PEER_GROUP_KEY	(1 << 6)	/* Indicates a group key for a IBSS PEER */
+#define WL_SOFT_KEY (1 << 0)    
+#define WL_PRIMARY_KEY  (1 << 1)    
+#define WL_KF_RES_4 (1 << 4)    
+#define WL_KF_RES_5 (1 << 5)    
+#define WL_IBSS_PEER_GROUP_KEY  (1 << 6)    
 
 typedef struct wl_wsec_key {
 	uint32		index;		/* key index */
@@ -899,10 +898,11 @@ typedef struct {
 #define WSEC_SWFLAG		0x0008
 #define SES_OW_ENABLED		0x0040	/* to go into transition mode without setting wep */
 
-/* wsec macros for operating on the above definitions */
-#define WSEC_WEP_ENABLED(wsec)	((wsec) & WEP_ENABLED)
-#define WSEC_TKIP_ENABLED(wsec)	((wsec) & TKIP_ENABLED)
-#define WSEC_AES_ENABLED(wsec)	((wsec) & AES_ENABLED)
+#define WEP_ENABLED     0x0001
+#define TKIP_ENABLED        0x0002
+#define AES_ENABLED     0x0004
+#define WSEC_SWFLAG     0x0008
+#define SES_OW_ENABLED      0x0040  
 
 #define WSEC_ENABLED(wsec)	((wsec) & (WEP_ENABLED | TKIP_ENABLED | AES_ENABLED))
 #define WSEC_SES_OW_ENABLED(wsec)	((wsec) & SES_OW_ENABLED)
@@ -912,6 +912,10 @@ typedef struct {
 #define MFP_REQUIRED	0x0400
 #define MFP_SHA256		0x0800 /* a special configuration for STA for WIFI test tool */
 #endif /* MFP */
+
+#ifdef BCMWAPI_WPI
+#define SMS4_ENABLED		0x0100
+#endif /* BCMWAPI_WPI */
 
 /* WPA authentication mode bitvec */
 #define WPA_AUTH_DISABLED	0x0000	/* Legacy (i.e., non-WPA) */
@@ -928,8 +932,14 @@ typedef struct {
 #define WPA2_AUTH_FT		0x4000 	/* Fast Transition. */
 #define WPA_AUTH_PFN_ANY	0xffffffff	/* for PFN, match only ssid */
 
-/* pmkid */
-#define	MAXPMKID		16
+#ifdef BCMWAPI_WAI
+#define WPA_AUTH_WAPI           0x0400
+#define WAPI_AUTH_NONE		WPA_AUTH_NONE   /* none (IBSS) */
+#define WAPI_AUTH_UNSPECIFIED   0x0400  /* over AS */
+#define WAPI_AUTH_PSK		0x0800  /* Pre-shared key */
+#endif /* BCMWAPI_WAI */
+
+#define MAXPMKID        16
 
 typedef struct _pmkid {
 	struct ether_addr	BSSID;
@@ -1189,8 +1199,6 @@ typedef struct {
 #define WL_IOCTL_ACTION_MASK			0x7e
 #define WL_IOCTL_ACTION_OVL_SHIFT		1
 
-#endif /* LINUX_POSTMOGRIFY_REMOVAL */
-
 /* Linux network driver ioctl encoding */
 typedef struct wl_ioctl {
 	uint cmd;	/* common ioctl definition */
@@ -1267,7 +1275,6 @@ typedef struct wlc_iov_trx_s {
 #else
 #define WLC_IOCTL_VERSION	1
 #endif /* D11AC_IOTYPES */
-#endif /* LINUX_POSTMOGRIFY_REMOVAL */
 
 #define	WLC_IOCTL_MAXLEN		8192	/* max length ioctl buffer required */
 #define	WLC_IOCTL_SMLEN			256	/* "small" length ioctl buffer required */
@@ -1423,8 +1430,6 @@ typedef struct wlc_iov_trx_s {
 #define WLC_GET_LAZYWDS				138
 #define WLC_SET_LAZYWDS				139
 #define WLC_GET_BANDLIST			140
-
-#ifndef LINUX_POSTMOGRIFY_REMOVAL
 #define WLC_GET_BAND				141
 #define WLC_SET_BAND				142
 #define WLC_SCB_DEAUTHENTICATE			143
@@ -1464,9 +1469,7 @@ typedef struct wlc_iov_trx_s {
 /* #define WLC_DUMP_PHYREGS			177 */ /* no longer supported */
 #define WLC_GET_PROTECTION_CONTROL		178
 #define WLC_SET_PROTECTION_CONTROL		179
-#endif /* LINUX_POSTMOGRIFY_REMOVAL  */
 #define WLC_GET_PHYLIST				180
-#ifndef LINUX_POSTMOGRIFY_REMOVAL
 #define WLC_ENCRYPT_STRENGTH			181	/* ndis only */
 #define WLC_DECRYPT_STATUS			182	/* ndis only */
 #define WLC_GET_KEY_SEQ				183
@@ -1487,9 +1490,7 @@ typedef struct wlc_iov_trx_s {
 /* #define WLC_GET_GMODE_PROTECTION_CTS		198 */ /* no longer supported */
 /* #define WLC_SET_GMODE_PROTECTION_CTS		199 */ /* no longer supported */
 #define WLC_SET_WSEC_TEST			200
-#endif /* LINUX_POSTMOGRIFY_REMOVAL */
 #define WLC_SCB_DEAUTHENTICATE_FOR_REASON	201
-#ifndef LINUX_POSTMOGRIFY_REMOVAL
 #define WLC_TKIP_COUNTERMEASURES		202
 #define WLC_GET_PIOMODE				203
 #define WLC_SET_PIOMODE				204
@@ -1505,7 +1506,6 @@ typedef struct wlc_iov_trx_s {
 #define WLC_START_CHANNEL_QA			214
 #define WLC_GET_CHANNEL_SEL			215
 #define WLC_START_CHANNEL_SEL			216
-#endif /* LINUX_POSTMOGRIFY_REMOVAL */
 #define WLC_GET_VALID_CHANNELS			217
 #define WLC_GET_FAKEFRAG			218
 #define WLC_SET_FAKEFRAG			219
@@ -1526,9 +1526,6 @@ typedef struct wlc_iov_trx_s {
 /* #define WLC_GET_GLACIAL_TIMER		234 */ /* no longer supported */
 #define WLC_GET_KEY_PRIMARY			235
 #define WLC_SET_KEY_PRIMARY			236
-
-#ifndef LINUX_POSTMOGRIFY_REMOVAL
-
 /* #define WLC_DUMP_RADIOREGS			237 */ /* no longer supported */
 #define WLC_GET_ACI_ARGS			238
 #define WLC_SET_ACI_ARGS			239
@@ -1554,10 +1551,8 @@ typedef struct wlc_iov_trx_s {
 #define WLC_LEGACY_LINK_BEHAVIOR		259
 #define WLC_GET_CHANNELS_IN_COUNTRY		260
 #define WLC_GET_COUNTRY_LIST			261
-#endif /* LINUX_POSTMOGRIFY_REMOVAL */
 #define WLC_GET_VAR				262	/* get value of named variable */
 #define WLC_SET_VAR				263	/* set named variable to value */
-#ifndef LINUX_POSTMOGRIFY_REMOVAL
 #define WLC_NVRAM_GET				264	/* deprecated */
 #define WLC_NVRAM_SET				265
 #define WLC_NVRAM_DUMP				266
@@ -2050,12 +2045,86 @@ typedef struct {
 #error "WL_RSSI_ANT_MAX does not match"
 #endif
 
-/* RSSI per antenna */
-typedef struct {
-	uint32	version;		/* version field */
-	uint32	count;			/* number of valid antenna rssi */
-	int8 rssi_ant[WL_RSSI_ANT_MAX];	/* rssi per antenna */
-} wl_rssi_ant_t;
+#define WL_ERROR_VAL        0x00000001
+#define WL_TRACE_VAL        0x00000002
+#define WL_PRHDRS_VAL       0x00000004
+#define WL_PRPKT_VAL        0x00000008
+#define WL_INFORM_VAL       0x00000010
+#define WL_TMP_VAL      0x00000020
+#define WL_OID_VAL      0x00000040
+#define WL_RATE_VAL     0x00000080
+#define WL_ASSOC_VAL        0x00000100
+#define WL_PRUSR_VAL        0x00000200
+#define WL_PS_VAL       0x00000400
+#define WL_TXPWR_VAL        0x00000800  
+#define WL_PORT_VAL     0x00001000
+#define WL_DUAL_VAL     0x00002000
+#define WL_WSEC_VAL     0x00004000
+#define WL_WSEC_DUMP_VAL    0x00008000
+#define WL_LOG_VAL      0x00010000
+#define WL_NRSSI_VAL        0x00020000  
+#define WL_LOFT_VAL     0x00040000  
+#define WL_REGULATORY_VAL   0x00080000
+#define WL_PHYCAL_VAL       0x00100000  
+#define WL_RADAR_VAL        0x00200000  
+#define WL_MPC_VAL      0x00400000
+#define WL_APSTA_VAL        0x00800000
+#define WL_DFS_VAL      0x01000000
+#define WL_BA_VAL       0x02000000
+#define WL_ACI_VAL      0x04000000
+#define WL_MBSS_VAL     0x04000000
+#define WL_CAC_VAL      0x08000000
+#define WL_AMSDU_VAL        0x10000000
+#define WL_AMPDU_VAL        0x20000000
+#define WL_FFPLD_VAL        0x40000000
+
+
+#define WL_DPT_VAL      0x00000001
+#define WL_SCAN_VAL     0x00000002
+#define WL_WOWL_VAL     0x00000004
+#define WL_COEX_VAL     0x00000008
+#define WL_RTDC_VAL     0x00000010
+#define WL_PROTO_VAL        0x00000020
+#define WL_BTA_VAL      0x00000040
+#define WL_CHANINT_VAL      0x00000080
+#define WL_THERMAL_VAL      0x00000100  
+#define WL_P2P_VAL      0x00000200
+#define WL_TXRX_VAL		0x00000400
+#define WL_MCHAN_VAL            0x00000800
+
+
+#define WL_LED_NUMGPIO      16  
+
+
+#define WL_LED_OFF      0       
+#define WL_LED_ON       1       
+#define WL_LED_ACTIVITY     2       
+#define WL_LED_RADIO        3       
+#define WL_LED_ARADIO       4       
+#define WL_LED_BRADIO       5       
+#define WL_LED_BGMODE       6       
+#define WL_LED_WI1      7
+#define WL_LED_WI2      8
+#define WL_LED_WI3      9
+#define WL_LED_ASSOC        10      
+#define WL_LED_INACTIVE     11      
+#define WL_LED_ASSOCACT     12      
+#define WL_LED_WI4      13
+#define WL_LED_WI5      14
+#define WL_LED_BLINKSLOW    15      
+#define WL_LED_BLINKMED     16      
+#define WL_LED_BLINKFAST    17      
+#define WL_LED_BLINKCUSTOM  18      
+#define WL_LED_BLINKPERIODIC    19      
+#define WL_LED_ASSOC_WITH_SEC   20      
+						
+#define WL_LED_START_OFF    21      
+#define WL_LED_NUMBEHAVIOR  22
+
+
+#define WL_LED_BEH_MASK     0x7f        
+#define WL_LED_AL_MASK      0x80        
+
 
 /* dfs_status iovar-related defines */
 
@@ -3375,6 +3444,7 @@ typedef struct wl_mkeep_alive_pkt {
 #define WL_MKEEP_ALIVE_FIXED_LEN	OFFSETOF(wl_mkeep_alive_pkt_t, data)
 #define WL_MKEEP_ALIVE_PRECISION	500
 
+#ifndef LINUX_POSTMOGRIFY_REMOVAL
 #ifdef WLBA
 
 #define WLC_BA_CNT_VERSION  1   /* current version of wlc_ba_cnt_t */

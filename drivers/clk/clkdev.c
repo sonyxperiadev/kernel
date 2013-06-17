@@ -150,6 +150,7 @@ struct clk *clk_get_sys(const char *dev_id, const char *con_id)
 }
 EXPORT_SYMBOL(clk_get_sys);
 
+#ifndef CONFIG_MACH_BCM_FPGA
 struct clk *clk_get(struct device *dev, const char *con_id)
 {
 	const char *dev_id = dev ? dev_name(dev) : NULL;
@@ -170,7 +171,7 @@ void clk_put(struct clk *clk)
 	__clk_put(clk);
 }
 EXPORT_SYMBOL(clk_put);
-
+#endif
 void clkdev_add(struct clk_lookup *cl)
 {
 	mutex_lock(&clocks_mutex);
@@ -262,7 +263,7 @@ void clkdev_drop(struct clk_lookup *cl)
 	mutex_lock(&clocks_mutex);
 	list_del(&cl->node);
 	mutex_unlock(&clocks_mutex);
-	kfree(cl);
+	kfree(container_of(cl, struct clk_lookup_alloc, cl));
 }
 EXPORT_SYMBOL(clkdev_drop);
 

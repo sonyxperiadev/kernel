@@ -40,6 +40,7 @@ obj-$(CONFIG_USB_F_ACM)		+= f_acm.o
 f_ss_lb-y			:= f_loopback.o f_sourcesink.o
 obj-$(CONFIG_USB_F_SS_LB)	+= f_ss_lb.o
 obj-$(CONFIG_USB_U_SERIAL)	+= u_serial.o
+obj-$(CONFIG_USB_DWC_OTG)	+= dwc_otg/
 
 #
 # USB gadget drivers

@@ -463,6 +463,56 @@ config USB_EG20T
 	  ML7213/ML7831 is companion chip for Intel Atom E6xx series.
 	  ML7213/ML7831 is completely compatible for Intel EG20T PCH.
 
+config USB_CI13XXX_MSM
+	tristate "MIPS USB CI13xxx for MSM"
+	depends on ARCH_MSM
+	select USB_GADGET_DUALSPEED
+	select USB_MSM_OTG
+	help
+	  MSM SoC has chipidea USB controller.  This driver uses
+	  ci13xxx_udc core.
+	  This driver depends on OTG driver for PHY initialization,
+	  clock management, powering up VBUS, and power management.
+	  This driver is not supported on boards like trout which
+	  has an external PHY.
+
+	  Say "y" to link the driver statically, or "m" to build a
+	  dynamically linked module called "ci13xxx_msm" and force all
+	  gadget drivers to also be dynamically linked.
+
+
+config USB_GADGET_DWC_OTG
+	tristate "Synopsys DWC_OTG 2.91a"
+	depends on ARCH_KONA
+	help
+	   This driver provides USB Device Controller driver for DW_OTG
+
+	   Say "y" to link the driver statically, or "m" to build a
+	   dynamically linked module called "dwc_otg" and to force all
+	   gadget drivers to also be dynamically linked.
+
+config USB_DWC_OTG_HOST_MODE
+	boolean "Synopsys DWC_OTG host mode"
+	depends on USB_GADGET_DWC_OTG
+	default n
+	help
+	   Say "y" to enable host mode by default. Say "n" to enable
+	   device mode by default.
+
+config USB_DWC_OTG
+	tristate "Synopsys USB DWC OTG" 
+	depends on USB_GADGET_DWC_OTG
+	default USB_GADGET
+	select USB_GADGET_SELECTED
+	select USB_GADGET_DUALSPEED
+
+config USB_DELAYED_SUSPEND_POWER_SAVING
+	boolean "USB suspend state powering saving workaroudn"
+	depends on USB_DWC_OTG
+	default ARCH_KONA
+	help
+	    Say "n" to disable Kona suspend mode power saving workaround
+
 #
 # LAST -- dummy/emulated controller
 #
@@ -493,6 +543,36 @@ config USB_DUMMY_HCD
 # first and will be selected by default.
 
 endmenu
+
+config USB_GADGET_SNPS_DWC_OTG
+	boolean "Synopsys Driver for DWC_otg Controller"
+	depends on USB && EXPERIMENTAL
+	select USB_OTG
+	select USB_GADGET_DUALSPEED
+	help
+	   Selects the Synopsys Driver for the DWC_otg Controller.
+
+config USB_LPM
+	boolean "Enable LPM support"
+	depends on USB && EXPERIMENTAL
+	default n
+	help
+	   Enables LPM support.
+
+config USB_DWC_OTG_LPM
+	boolean "Enable LPM support in DWC OTG driver"
+	depends on USB && EXPERIMENTAL
+	select USB_LPM
+	default n
+	help
+	   Enables LPM support in DWC OTG driver.
+
+config USB_DWC_OTG_DEVICE_ONLY
+	boolean "DWC OTG Driver device only mode"
+	depends on USB_GADGET
+	default n
+	help
+	   Enables DWC OTG Driver device only mode
 
 #
 # USB Gadget Drivers
@@ -816,7 +896,7 @@ config USB_G_PRINTER
 	  which includes sample code for accessing the device file.
 
 config USB_G_ANDROID
-	boolean "Android Composite Gadget"
+	tristate "Android Composite Gadget"
 	select USB_LIBCOMPOSITE
 	help
 	  The Android Composite Gadget supports multiple USB
@@ -832,6 +912,41 @@ config USB_ANDROID_RNDIS_DWORD_ALIGNED
 		Provides dword aligned for DMA controller.
 
 if TTY
+config USB_MULTI_DISK_SUPPORT
+	boolean "Multiple disk support for android mass storage gadget"
+	depends on USB_G_ANDROID
+	default n
+	help
+	  The multi disk support is based on mass storage gadget,
+	  If you say "y" here, it provides a basic structure for functions
+	  like multiple u-disks, cdroms etc.
+	  If unsure, say "n".
+
+config USB_MASS_STORAGE_LUN_NUM
+	int "Number of LUNs"
+	depends on USB_MULTI_DISK_SUPPORT
+	default 2
+	help
+	  You must specify how many LUNs you want if you select
+	  USB_MULTI_DISK_SUPPORT, 2 is the default value, however,
+	  the number of LUNs should be less than 8 which is defined
+	  in driver code.
+
+config USE_WORKQ_PUSH
+	boolean "Use workqueue push"
+	depends on USB_G_ANDROID
+	help
+	 Provides workqueue option for push in USB serial driver.
+	 The default is using tasklet.
+
+config USB_ETH_SKB_ALLOC_OPTIMIZATION
+	bool "USB_ETH_SKB_ALLOC_OPTIMIZATION support"
+	depends on USB_G_ANDROID
+	help
+	   If you say "y" here, the Ethernet gadget driver will use the skb allocation
+	   optimization approach to optimize the skb allocation.
+
+	   If unsure, say "y".
 
 config USB_CDC_COMPOSITE
 	tristate "CDC Composite Device (Ethernet and ACM)"

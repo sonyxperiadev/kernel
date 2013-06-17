@@ -5,6 +5,11 @@
 # architecture-specific flags and dependencies.
 #
 
+# GCOV patch 
+ifeq ($(CONFIG_GCOV_KERNEL),y)
+GCOV_PROFILE	:= n
+endif
+
 LDFLAGS_bootp	:=-p --no-undefined -X \
 		 --defsym initrd_phys=$(INITRD_PHYS) \
 		 --defsym params_phys=$(PARAMS_PHYS) -T

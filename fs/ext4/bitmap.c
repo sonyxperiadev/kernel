@@ -100,3 +100,4 @@ void ext4_block_bitmap_csum_set(struct super_block *sb, ext4_group_t group,
 	if (sbi->s_desc_size >= EXT4_BG_BLOCK_BITMAP_CSUM_HI_END)
 		gdp->bg_block_bitmap_csum_hi = cpu_to_le16(csum >> 16);
 }
+

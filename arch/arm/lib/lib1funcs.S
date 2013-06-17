@@ -349,6 +349,36 @@ UNWIND(.save {r0, r1, ip, lr}	)
 UNWIND(.fnend)
 ENDPROC(__aeabi_idivmod)
 
+/* The following two routines (dealing with 64x64-bit division are too
+   heavyweight to be used in the kernel normally - I have added them here
+   because they are needed in the DWC OTG USB driver (for the multi-precision
+   integer arithmetic needed for RSA encryption)
+        grayg@broadcom.com
+*/
+ENTRY(__aeabi_ldivmod)
+
+        sub     sp, sp, #8
+        stmfd   sp!, {sp, lr}
+        bl      __gnu_ldivmod_helper
+        ldr     lr, [sp, #4]
+        add     sp, sp, #8
+        ldmfd   sp!, {r2, r3}
+        mov     pc, lr
+
+ENDPROC(__aeabi_ldivmod)
+        
+ENTRY(__aeabi_uldivmod)
+
+        sub     sp, sp, #8
+        stmfd   sp!, {sp, lr}
+        bl      __gnu_uldivmod_helper
+        ldr     lr, [sp, #4]
+        add     sp, sp, #8
+        ldmfd   sp!, {r2, r3}
+        mov     pc, lr
+        
+ENDPROC(__aeabi_uldivmod)
+
 #endif
 
 Ldiv0:

@@ -1,0 +1,37 @@
+menuconfig HAPTIC
+	bool "HAPTIC support"
+	help
+	  Say Y to enalbe haptic support. It enables the haptic and controlled
+	  from both userspace and kernel
+
+if HAPTIC
+
+config HAPTIC_CLASS
+	tristate "Haptic Class Support"
+	help
+	  This option enables the haptic sysfs class in /sys/class/haptic.
+
+comment "Haptic drivers"
+
+config HAPTIC_SAMSUNG_PWM
+	tristate "Haptic Support for SAMSUNG PWM-controlled motor (ISA1000)"
+	depends on HAPTIC_CLASS
+	help
+	  This options enables support for haptic connected to GPIO lines
+	  controlled by a PWM timer.
+
+config BCM_HAPTICS
+	tristate "HAPTICS driver"
+	default n
+	help
+	  This options enables support for Broadcom haptic driver, implemented
+	  using HALAUDIO interface
+
+config BCM_SS_VIBRA
+        bool "Samsung Platform Vibrator support"
+	default y
+        depends on MACH_RHEA_SS_COMMON
+        help
+          This option enables support for Vibrator on some Samsung phones.
+
+endif	# HAPTIC

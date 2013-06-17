@@ -103,8 +103,7 @@ u32 wl_dbg_level = WL_DBG_ERR;
 #define WL_CHANSPEC_CTL_SB_NONE WL_CHANSPEC_CTL_SB_LLL
 
 
-#define DNGL_FUNC(func, parameters) func parameters;
-#define COEX_DHCP
+#define WL_CHANSPEC_CTL_SB_NONE WL_CHANSPEC_CTL_SB_LLL
 
 /* This is to override regulatory domains defined in cfg80211 module (reg.c)
  * By default world regulatory domain defined in reg.c puts the flags NL80211_RRF_PASSIVE_SCAN
@@ -3355,7 +3354,7 @@ wl_cfg80211_set_power_mgmt(struct wiphy *wiphy, struct net_device *dev,
 		return err;
 	}
 
-	pm = enabled ? PM_FAST : PM_OFF;
+	pm = PM_OFF; /* enabled ? PM_FAST : PM_OFF; */
 	/* Do not enable the power save after assoc if it is p2p interface */
 	if (_net_info->pm_block || wl->vsdb_mode) {
 		WL_DBG(("Do not enable the power save\n"));
@@ -5779,6 +5778,7 @@ wl_notify_connect_status_ap(struct wl_priv *wl, struct net_device *ndev,
 		band = wiphy->bands[IEEE80211_BAND_2GHZ];
 	else
 		band = wiphy->bands[IEEE80211_BAND_5GHZ];
+
 	if (!band) {
 		WL_ERR(("No valid band"));
 		if (body)
@@ -7592,7 +7592,6 @@ s32 wl_cfg80211_attach_post(struct net_device *ndev)
 				wl->wdev->wiphy->interface_modes |=
 					(BIT(NL80211_IFTYPE_P2P_CLIENT)|
 					BIT(NL80211_IFTYPE_P2P_GO));
-#endif
 				if ((err = wl_cfgp2p_init_priv(wl)) != 0)
 					goto fail;
 
@@ -8311,7 +8310,7 @@ s32 wl_cfg80211_up(void *para)
 	dhd_pub_t *dhd;
 
 	(void)para;
-	WL_DBG(("In\n"));
+	WL_TRACE(("In\n"));
 	wl = wlcfg_drv_priv;
 
 	if ((err = wldev_ioctl(wl_to_prmry_ndev(wl), WLC_GET_VERSION, &val,

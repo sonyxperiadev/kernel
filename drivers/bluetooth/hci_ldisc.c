@@ -46,6 +46,13 @@
 
 #include "hci_uart.h"
 
+#if 0
+#ifndef CONFIG_BT_HCIUART_DEBUG
+#undef  BT_DBG
+#define BT_DBG( A... )
+#endif
+#endif
+
 #define VERSION "2.2"
 
 static struct hci_uart_proto *hup[HCI_UART_MAX_PROTO];
@@ -99,7 +106,7 @@ static inline void hci_uart_tx_complete(struct hci_uart *hu, int pkt_type)
 		break;
 
 	case HCI_SCODATA_PKT:
-		hdev->stat.sco_tx++;
+		hdev->stat.cmd_tx++;
 		break;
 	}
 }
@@ -207,7 +214,8 @@ static int hci_uart_flush(struct hci_dev *hdev)
 	BT_DBG("hdev %p tty %p", hdev, tty);
 
 	if (hu->tx_skb) {
-		kfree_skb(hu->tx_skb); hu->tx_skb = NULL;
+		kfree_skb(hu->tx_skb);
+		hu->tx_skb = NULL;
 	}
 
 	/* Flush any pending characters in the driver and discipline. */
@@ -237,6 +245,7 @@ static int hci_uart_close(struct hci_dev *hdev)
 static int hci_uart_send_frame(struct sk_buff *skb)
 {
 	struct hci_dev* hdev = (struct hci_dev *) skb->dev;
+	struct tty_struct *tty;
 	struct hci_uart *hu;
 
 	if (!hdev) {
@@ -248,8 +257,10 @@ static int hci_uart_send_frame(struct sk_buff *skb)
 		return -EBUSY;
 
 	hu = hci_get_drvdata(hdev);
+	tty = hu->tty;
 
-	BT_DBG("%s: type %d len %d", hdev->name, bt_cb(skb)->pkt_type, skb->len);
+	BT_DBG("%s: type %d len %d", hdev->name, bt_cb(skb)->pkt_type,
+	       skb->len);
 
 	hu->proto->enqueue(hu, skb);
 
@@ -376,7 +387,8 @@ static void hci_uart_tty_wakeup(struct tty_struct *tty)
  *     
  * Return Value:    None
  */
-static void hci_uart_tty_receive(struct tty_struct *tty, const u8 *data, char *flags, int count)
+static void hci_uart_tty_receive(struct tty_struct *tty, const u8 * data,
+				 char *flags, int count)
 {
 	struct hci_uart *hu = (void *)tty->disc_data;
 
@@ -494,17 +506,22 @@ static int hci_uart_tty_ioctl(struct tty_struct *tty, struct file * file,
 
 	switch (cmd) {
 	case HCIUARTSETPROTO:
+		BT_DBG("SETPROTO %lu hu %p", arg, hu);
 		if (!test_and_set_bit(HCI_UART_PROTO_SET, &hu->flags)) {
+			BT_DBG("called hci_uart_set_proto");
 			err = hci_uart_set_proto(hu, arg);
 			if (err) {
+				BT_DBG("error set proto");
 				clear_bit(HCI_UART_PROTO_SET, &hu->flags);
 				return err;
 			}
+			tty->low_latency = 1;
 		} else
 			return -EBUSY;
 		break;
 
 	case HCIUARTGETPROTO:
+		BT_DBG("GETPROTO");
 		if (test_bit(HCI_UART_PROTO_SET, &hu->flags))
 			return hu->proto->id;
 		return -EUNATCH;
@@ -557,7 +574,7 @@ static int __init hci_uart_init(void)
 	static struct tty_ldisc_ops hci_uart_ldisc;
 	int err;
 
-	BT_INFO("HCI UART driver ver %s", VERSION);
+	BT_INFO("HCI SAT UART driver ver %s", VERSION);
 
 	/* Register the tty discipline */
 
@@ -580,19 +597,21 @@ static int __init hci_uart_init(void)
 	}
 
 #ifdef CONFIG_BT_HCIUART_H4
-	h4_init();
+//      h4_init();
 #endif
 #ifdef CONFIG_BT_HCIUART_BCSP
-	bcsp_init();
+//      bcsp_init();
 #endif
 #ifdef CONFIG_BT_HCIUART_LL
-	ll_init();
+//      ll_init();
 #endif
 #ifdef CONFIG_BT_HCIUART_ATH3K
 	ath_init();
 #endif
 #ifdef CONFIG_BT_HCIUART_3WIRE
 	h5_init();
+#ifdef CONFIG_BT_HCIUART_BRCM
+	brcm_init();
 #endif
 
 	return 0;
@@ -603,16 +622,16 @@ static void __exit hci_uart_exit(void)
 	int err;
 
 #ifdef CONFIG_BT_HCIUART_H4
-	h4_deinit();
+//      h4_deinit();
 #endif
 #ifdef CONFIG_BT_HCIUART_BCSP
-	bcsp_deinit();
+//      bcsp_deinit();
 #endif
 #ifdef CONFIG_BT_HCIUART_LL
-	ll_deinit();
+//      ll_deinit();
 #endif
-#ifdef CONFIG_BT_HCIUART_ATH3K
-	ath_deinit();
+#ifdef CONFIG_BT_HCIUART_BRCM
+	brcm_deinit();
 #endif
 #ifdef CONFIG_BT_HCIUART_3WIRE
 	h5_deinit();

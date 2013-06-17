@@ -569,17 +569,9 @@ extern int bcm_format_ssid(char* buf, const uchar ssid[], uint ssid_len);
 	                                         & ~((boundary) - 1))
 #define	ISPOWEROF2(x)		((((x) - 1) & (x)) == 0)
 #define VALID_MASK(mask)	!((mask) & ((mask) + 1))
-
 #ifndef OFFSETOF
-#ifdef __ARMCC_VERSION
-
-#include <stddef.h>
-#define	OFFSETOF(type, member)	offsetof(type, member)
-#else
 #define	OFFSETOF(type, member)	((uint)(uintptr)&((type *)0)->member)
 #endif 
-#endif 
-
 #ifndef ARRAYSIZE
 #define ARRAYSIZE(a)		(sizeof(a) / sizeof(a[0]))
 #endif

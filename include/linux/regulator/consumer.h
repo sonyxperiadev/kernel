@@ -190,6 +190,8 @@ int regulator_unregister_notifier(struct regulator *regulator,
 void *regulator_get_drvdata(struct regulator *regulator);
 void regulator_set_drvdata(struct regulator *regulator, void *data);
 
+int irqsafe_is_regulator_enable(struct regulator *regulator);
+
 #else
 
 /*
@@ -363,6 +365,12 @@ static inline int regulator_count_voltages(struct regulator *regulator)
 {
 	return 0;
 }
+
+static inline int irqsafe_is_regulator_enable(struct regulator *regulator)
+{
+	return 0;
+}
+
 #endif
 
 static inline int regulator_set_voltage_tol(struct regulator *regulator,

@@ -33,6 +33,9 @@ static struct usb_gadget_strings **get_containers_gs(
 {
 	return (struct usb_gadget_strings **)uc->stash;
 }
+#define USB_PRE_CONFIG_CURRENT		100
+#define USB_OTG_PRE_CONFIG_CURRENT	2
+
 
 /**
  * next_ep_desc() - advance to the next EP descriptor
@@ -1543,6 +1546,10 @@ void composite_disconnect(struct usb_gadget *gadget)
 	if (cdev->driver->disconnect)
 		cdev->driver->disconnect(cdev);
 	spin_unlock_irqrestore(&cdev->lock, flags);
+
+	usb_gadget_vbus_draw(gadget,
+		gadget_is_otg(gadget) ? USB_OTG_PRE_CONFIG_CURRENT :
+		    USB_PRE_CONFIG_CURRENT);
 }
 
 /*-------------------------------------------------------------------------*/

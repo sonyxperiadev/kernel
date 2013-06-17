@@ -10,7 +10,7 @@
 
 #include <linux/interrupt.h>
 #include <linux/completion.h>
-
+#include <linux/fs.h>
 struct request;
 struct mmc_data;
 struct mmc_request;
@@ -205,4 +205,25 @@ static inline void mmc_claim_host(struct mmc_host *host)
 
 extern u32 mmc_vddrange_to_ocrmask(int vdd_min, int vdd_max);
 
-#endif /* LINUX_MMC_CORE_H */
+struct raw_hd_struct {
+	sector_t start_sect;
+	sector_t nr_sects;
+	int partno;
+	int major;
+	int first_minor;
+	/* index = first_minor >> MMC_SHIFT */
+};
+
+struct mmcpart_notifier {
+	void (*add)(struct raw_hd_struct *mmcpart);
+	void (*remove)(struct raw_hd_struct *mmcpart);
+	char partname[BDEVNAME_SIZE];
+	struct list_head list;
+};
+
+extern int get_mmcpart_by_name(char *part_name, char *dev_name);
+extern void get_mmcalias_by_id(char *buf, int major, int minor);
+
+extern void register_mmcpart_user(struct mmcpart_notifier *new);
+extern int unregister_mmcpart_user(struct mmcpart_notifier *old);
+#endif

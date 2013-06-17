@@ -1,0 +1,354 @@
+menu	"Rhea SoC based Machine types"
+	depends on ARCH_RHEA
+
+choice
+	prompt "Choose Rhea SOC Silicon Version"
+	default ARCH_RHEA_BX
+
+config  ARCH_RHEA_BX
+        bool "Rhea SOC Version - Bx [B1/B0]"
+
+
+endchoice
+
+choice
+	prompt "Rhea SoC based board type"
+	default MACH_RHEA_RAY
+
+config MACH_RHEA_RAY
+	bool "Support Broadcom Rhea Ray board"
+	help
+	  Support for the Broadcom Rhea Ray board.
+
+config MACH_RHEA_RAY_DEMO
+	bool "Support Broadcom Rhea Ray Demo board"
+	help
+	  Support for the Broadcom Rhea Ray Demo board.
+
+config MACH_RHEA_RAY_EDN1X
+	bool "Support Broadcom Rhea Ray EDN1X board"
+	help
+	  Support for the Broadcom Rhea Ray EDN1X board.
+
+config MACH_RHEA_RAY_EDN2X
+	bool "Support Broadcom Rhea Ray EDN2X board"
+	help
+	  Support for the Broadcom Rhea Ray EDN2X board.
+
+config MACH_RHEA_DALTON2_EB30
+	bool "Support Nokia Dalton2 EB30 board"
+	help
+	  Support for the Nokia Dalton2 EB30 board.
+
+config MACH_RHEA_SS_COMMON
+	bool "Support Broadcom Rhea SS project common option"
+	help
+		Support Broadcom Rhea SS project common option.
+
+config MACH_RHEA_FARADAY_EB10
+	bool "Support Nokia Faraday EB10 board"
+	select RHEALC_2093
+	help
+	  Support for the Nokia Faraday EB10 board.
+	  This will be based on RheaLC program and
+	  form one of the platforms for Nokia.
+	  Rhea plus delta RF modules.
+
+config MACH_RHEA_FARADAY_EB20
+       bool "Support Nokia Faraday EB20 board"
+       select RHEALC_2093
+       help
+         Support for the Nokia Faraday EB20 board.
+         This will be based on RheaLC program and
+         form one of the platforms for Nokia.
+         Rhea plus delta RF modules.
+
+config MACH_HERA_RAY
+        bool "Support Broadcom Hera Ray board"
+        help
+          Support for the Broadcom Hera Ray board.
+
+config MACH_RHEA_BERRI
+        bool "Support Broadcom Rhea Berri board"
+        help
+          Support for the Broadcom Rhea Berri board.
+
+config MACH_RHEA_BERRI_EDN40
+        bool "Support Broadcom Rhea Berri EDN40 board"
+        help
+          Support for the Broadcom Rhea Berri EDN40 board.
+
+config MACH_RHEALC_BERRI
+        bool "Support Broadcom RheaLC Berri board"
+	select RHEALC_2093
+        help
+          Support for the Broadcom RheaLC Berri board.
+
+config MACH_RHEA_STONE
+        bool "Support Broadcom Rhea Stone board"
+        help
+          Support for the Broadcom Rhea Stone board.
+
+config MACH_RHEA_STONE_EDN2X
+        bool "Support Broadcom Rhea Stone EDN2X board"
+        help
+          Support for the Broadcom Rhea Stone END2X board.
+endchoice
+
+
+choice
+	prompt "Rhea SS based board type"
+	depends on MACH_RHEA_SS_COMMON
+
+config MACH_RHEA_SS
+	bool "Support Broadcom Rhea SS board"
+	help
+	  Support Broadcom Rhea RheaCooper SS board.
+
+config MACH_RHEA_SS_LUCAS
+	bool "Support Broadcom Rhea SS Lucas board"
+	help
+		Support for the Broadcom Rhea SS Lucas board.
+
+config MACH_RHEA_SS_AMAZING
+	bool "Support Broadcom Rhea SS Amazing board"
+	help
+	  Support for the Broadcom Rhea SS Amazing board.
+
+config MACH_RHEA_SS_ZANIN
+	bool "Support Broadcom Rhea SS Zanin HW 0.3 board"
+	help
+	  Support for the Broadcom Rhea SS Zanin  HW 0.3 board.
+
+config MACH_RHEA_SS_ZANIN_02
+        bool "Support Broadcom Rhea SS Zanin HW 0.2 board"
+        help
+          Support for the Broadcom Rhea SS Zanin  HW 0.2 board.
+
+config MACH_RHEA_SS_ZANIN_04
+        bool "Support Broadcom Rhea SS Zanin HW 0.4 board"
+        help
+          Support for the Broadcom Rhea SS Zanin HW 0.4 board.
+
+config MACH_RHEA_SS_IVORY
+        bool "Support Broadcom Rhea SS Ivory board"
+        help
+          Support for the Broadcom Rhea SS Ivory board.
+
+endchoice
+
+config RHEA_IGNORE_DAP_POWERUP_REQ
+       bool "Ignore Powerup request from DAP"
+       depends on KONA_POWER_MGR
+       default n
+       help
+         Say Y to ignore powerup request from DAP. So, the power domains will
+	 continue to be in their state. If this is not set, on attaching JTAG
+	 PI policy will change to 7 always. This feature enables the system to
+	 retain the states as is, even after attaching JTAG.
+
+config RHEA_DORMANT_MODE
+       bool "Enable dormant mode support for Rhea platform"
+       default n
+       help
+         Say Y if you want to enable dormant mode support for Rhea platform
+
+config RHEA_L2X0_PREFETCH
+	bool "Enable L2 cache prefetching for Rhea platform"
+	default n
+	help
+		Say Y if you want to enable L2 cache prefetching
+		for the Rhea platform. This enables both, data and
+		instruction prefetching that have been shown to improve
+		performance especially in multimedia use cases.
+
+config ROM_SEC_DISPATCHER
+       bool "Enable secure calls to ROM"
+       default n
+       help
+         Say Y if you want to enable secure calls to boot ROM.
+
+choice
+	prompt "Choose secure dispatcher version"
+	depends on ROM_SEC_DISPATCHER
+	default ROM_SEC_DISPATCHER_SRC
+
+config ROM_SEC_DISPATCHER_LIB
+	bool "Secure API Library"
+	help
+	  Say Y here to enable secure rom code dispatcher library
+	   (.i file) to enable secure calls to rom.
+
+config ROM_SEC_DISPATCHER_SRC
+	bool "Secure API Source"
+	help
+	  Say Y here to enable the build of secure rom code dispatcher
+	  source for secure calls to rom.
+
+endchoice
+
+config RHEA_DELAYED_PM_INIT
+       depends on ARCH_RHEA
+       bool "Enable support for delayed PM init."
+       default n
+       help
+       Say Y if you want to enable support for delayed PM init. Android/user
+       space can complete the PM init by writing to sysfs. Once this trigger
+       is recieved, all the PIs start changing policies, arm can enter LPM and
+       arm dfs is allowed.
+
+config RHEA_AVS
+       depends on ARCH_RHEA
+       bool "Enable support for Rhea AVS driver"
+       default n
+       help
+       Say Y if you want to enable support for special AVS driver
+       defined for Rhea platform. Note that CONFIG_KONA_AVS should
+       be undefined if this config is enabled.
+
+
+config RHEA_PWRMGR_USE_DUMMY_SEQ
+       bool "Use dummy PWRMGR HW I2C sequencer"
+       default n
+       help
+       Say Y if you want to use dummy PWRMGR HW I2C sequencer
+
+config KONA_PMU_BSC_CLKPAD_CTRL
+	bool "Kona PMU_BSC CLKPAD Control feature"
+	depends on MFD_BCM_PWRMGR_SW_SEQUENCER
+	default y
+	help
+	   Enable to save the leakage current due to BSC CLKPAD. If enabled
+	   Sequencer will disable the PMU BSC CLK pad at the end of each
+	   i2c transaction which will save the leakage current on the pad pi
+
+config RHEA_WA_HWJIRA_2531
+	depends on ARCH_RHEA
+	bool "Enable workaround for RHEA JIRA 2531"
+	default y
+	help
+	 Say Y to enable RHEA JIRA 2531 workaround
+	 Refer JIRA DB for more info on this JIRA
+
+config RHEA_WA_HWJIRA_2301
+	depends on ARCH_RHEA
+	bool "Enable workaround for RHEA JIRA 2301"
+	default y
+	help
+	 Say Y to enable RHEA JIRA 2301 workaround
+	 Refer JIRA DB for more info on this JIRA
+
+config RHEA_WA_HWJIRA_2877
+	depends on ARCH_RHEA
+	bool "Enable workaround for RHEA JIRA 2877"
+	default y
+	help
+	 Say Y to enable RHEA JIRA 2301 workaround. Refer JIRA DB for more
+	 info on this JIRA. Memc will put dram in bad state if the xtal clock
+	 stops in the middle of say internally triggered ZQ cal or dev temp
+	 polling. This workaround will disable temperature polling in LPM.
+
+config RHEA_WA_HWJIRA_2221
+	depends on ARCH_RHEA
+	bool "Enable workaround for RHEA JIRA 2221"
+	default y
+	help
+	 Say Y to enable RHEA JIRA 2221 workaround
+	 Refer JIRA DB for more info on this JIRA
+
+config RHEA_WA_HWJIRA_2490
+	depends on ARCH_RHEA
+	bool "Enable workaround for RHEA JIRA 2490"
+	default y
+	help
+	 Say Y to enable RHEA JIRA 2490 workaround
+	 Refer JIRA DB for more info on this JIRA
+
+config RHEA_WA_HWJIRA_2276
+	depends on ARCH_RHEA && RHEA_DORMANT_MODE
+	bool "Enable workaround for RHEA JIRA 2276"
+	default y
+	help
+	 Say Y to enable RHEA JIRA 2276 workaround
+	 Refer JIRA DB for more info on this JIRA
+
+config RHEA_WA_HWJIRA_2045
+	depends on ARCH_RHEA
+	bool "Enable workaround for RHEA JIRA 2045"
+	default y
+	help
+	 Say Y to enable RHEA JIRA 2045 workaround
+	 Refer JIRA DB for more info on this JIRA
+
+config RHEA_WA_HWJIRA_2272
+	depends on ARCH_RHEA
+	bool "Enable workaround for RHEA JIRA 2272"
+	default y
+	help
+	 Say Y to enable RHEA JIRA 2272 workaround
+	 Refer JIRA DB for more info on this JIRA
+
+config RHEA_WA_HWJIRA_2348
+	depends on ARCH_RHEA
+	bool "Enable workaround for RHEA JIRA 2348"
+	default y
+	help
+	 Say Y to enable RHEA JIRA 2348 workaround
+	 Refer JIRA DB for more info on this JIRA
+
+config RHEA_WA_HWJIRA_2489
+	depends on ARCH_RHEA
+	bool "Enable workaround for RHEA JIRA 2489"
+	default y
+	help
+	 Say Y to enable RHEA JIRA 2489 workaround
+	 Refer JIRA DB for more info on this JIRA
+
+config RHEALC_2093
+	bool "Enable RheaLC&2093"
+	default n
+        help
+           Enable ReahLC&2093.
+
+config RHEA_PI_MGR_DISABLE_POLICY_CHANGE
+	bool "Enable debug flag to disable PI policy change by default"
+	depends on KONA_PI_MGR
+	default n
+	help
+	  Debug flag to diable PI policy change by default. All PI
+	  policy will be set to wakeup policy 7
+
+
+config CDEBUGGER
+	depends on ARCH_RHEA
+	bool "Enable Ramdump dump Feature on Rhea"
+	default n
+
+config RHEA_PANDA
+        bool "Enable PANDA features"
+        default n
+        help
+           For Rhea Panda Project.
+
+config RHEA_CLOVER_ICS
+        bool "Enable CloverICS features"
+        default n
+        help
+           For Rhea CloverICS Project.
+
+config 59055_SIM_EM_SHDWN
+	bool "Enable Emergency SIM shutdown"
+	default n
+	help
+	   For 59055 supported emergency sim shutdown
+
+config MACH_RHEA_SS_EMMC_EXTLDO
+	bool "Enable SS EMMC external LDO"
+	default y
+	help
+	   For SS EMMC memory external LDO
+
+endmenu
+
+
+

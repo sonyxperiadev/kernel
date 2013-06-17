@@ -13,6 +13,9 @@
  * GNU General Public License for more details.
  *
  */
+
+#define pr_fmt(fmt) "ion-carveout: " fmt
+
 #include <linux/spinlock.h>
 
 #include <linux/err.h>
@@ -23,7 +26,19 @@
 #include <linux/scatterlist.h>
 #include <linux/slab.h>
 #include <linux/vmalloc.h>
+#ifdef CONFIG_ION_BCM
+#include <linux/dma-direction.h>
+#include <asm/cacheflush.h>
+#include <linux/seq_file.h>
+#include <linux/debugfs.h>
+#endif
 #include "ion_priv.h"
+#ifdef CONFIG_IOMMU_API
+#include <linux/iommu.h>
+#endif
+#ifdef CONFIG_BCM_IOVMM
+#include <plat/bcm_iommu.h>
+#endif
 
 #include <asm/mach/map.h>
 
@@ -31,6 +46,15 @@ struct ion_carveout_heap {
 	struct ion_heap heap;
 	struct gen_pool *pool;
 	ion_phys_addr_t base;
+#ifdef CONFIG_ION_BCM
+	int size;
+#endif
+#ifdef CONFIG_ION_OOM_KILLER
+	int lmk_enable;
+	int lmk_min_score_adj;
+	int lmk_min_free;
+	struct dentry *lmk_debug_root;
+#endif
 };
 
 ion_phys_addr_t ion_carveout_allocate(struct ion_heap *heap,
@@ -80,9 +104,9 @@ static void ion_carveout_heap_free(struct ion_buffer *buffer)
 {
 	struct ion_heap *heap = buffer->heap;
 
-	ion_carveout_free(heap, buffer->priv_phys, buffer->size);
-	buffer->priv_phys = ION_CARVEOUT_ALLOCATE_FAIL;
-}
+		ion_carveout_free(heap, buffer->priv_phys, buffer->size);
+		buffer->priv_phys = ION_CARVEOUT_ALLOCATE_FAIL;
+	}
 
 struct sg_table *ion_carveout_heap_map_dma(struct ion_heap *heap,
 					      struct ion_buffer *buffer)
@@ -100,13 +124,53 @@ struct sg_table *ion_carveout_heap_map_dma(struct ion_heap *heap,
 	}
 	sg_set_page(table->sgl, phys_to_page(buffer->priv_phys), buffer->size,
 		    0);
+#ifdef CONFIG_ION_BCM
+	buffer->dma_addr = buffer->priv_phys;
+#ifdef CONFIG_IOMMU_API
+#ifdef CONFIG_BCM_IOVMM
+	buffer->dma_addr = arm_iommu_map_sgt(heap->device, table,
+			buffer->align);
+	if (buffer->dma_addr == DMA_ERROR_CODE) {
+		pr_err("%16s: Failed iommu map buffer(%p) da(%#x) pa(%#lx) size(%#x)\n",
+				heap->name, buffer, buffer->dma_addr,
+				buffer->priv_phys, buffer->size);
+		return ERR_PTR(-ENOMEM);
+	}
+#else
+	if (iommu_map(heap->domain, buffer->dma_addr, buffer->priv_phys,
+				buffer->size, 0)) {
+		pr_err("%16s: Failed iommu map buffer(%p) da(%#x) pa(%#lx) size(%#x)\n",
+				heap->name, buffer, buffer->dma_addr,
+				buffer->priv_phys, buffer->size);
+		return ERR_PTR(-ENOMEM);
+	}
+#endif /* CONFIG_BCM_IOVMM */
+	pr_debug("%16s: iommu map buffer(%p) da(%#x) pa(%#lx) size(%#x)\n",
+			heap->name, buffer, buffer->dma_addr, buffer->priv_phys,
+			buffer->size);
+#endif /* CONFIG_IOMMU_API */
+#endif /* CONFIG_ION_BCM */
 	return table;
 }
 
 void ion_carveout_heap_unmap_dma(struct ion_heap *heap,
 				 struct ion_buffer *buffer)
 {
+#ifdef CONFIG_ION_BCM
+#ifdef CONFIG_IOMMU_API
+#ifdef CONFIG_BCM_IOVMM
+	arm_iommu_unmap(heap->device, buffer->dma_addr, buffer->size);
+#else
+	iommu_unmap(heap->domain, buffer->dma_addr, buffer->size);
+#endif /* CONFIG_BCM_IOVMM */
+	pr_debug("%16s: iommu unmap buffer(%p) da(%#x) pa(%#lx) size(%#x)\n",
+			heap->name, buffer, buffer->dma_addr, buffer->priv_phys,
+			buffer->size);
+#endif /* CONFIG_IOMMU_API */
+	buffer->dma_addr = ION_DMA_ADDR_FAIL;
+#endif /* CONFIG_ION_BCM */
 	sg_free_table(buffer->sg_table);
+	kfree(buffer->sg_table);
 }
 
 void *ion_carveout_heap_map_kernel(struct ion_heap *heap,
@@ -132,11 +196,118 @@ void ion_carveout_heap_unmap_kernel(struct ion_heap *heap,
 int ion_carveout_heap_map_user(struct ion_heap *heap, struct ion_buffer *buffer,
 			       struct vm_area_struct *vma)
 {
+#ifdef CONFIG_ION_BCM
+	if (buffer->flags & ION_FLAG_WRITECOMBINE)
+		vma->vm_page_prot = pgprot_writecombine(vma->vm_page_prot);
+	else if (buffer->flags & ION_FLAG_WRITETHROUGH)
+		vma->vm_page_prot = pgprot_writethrough(vma->vm_page_prot);
+	else if (buffer->flags & ION_FLAG_WRITEBACK)
+		vma->vm_page_prot = pgprot_writeback(vma->vm_page_prot);
+	else
+		vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
+
 	return remap_pfn_range(vma, vma->vm_start,
-			       __phys_to_pfn(buffer->priv_phys) + vma->vm_pgoff,
-			       vma->vm_end - vma->vm_start,
+			__phys_to_pfn(buffer->priv_phys) + vma->vm_pgoff,
+			vma->vm_end - vma->vm_start,
+			vma->vm_page_prot);
+#else
+	return remap_pfn_range(vma, vma->vm_start,
+			__phys_to_pfn(buffer->priv_phys) + vma->vm_pgoff,
+			vma->vm_end - vma->vm_start,
 			       pgprot_noncached(vma->vm_page_prot));
+#endif
 }
+
+#ifdef CONFIG_ION_BCM
+int ion_carveout_heap_clean_cache(struct ion_heap *heap,
+		struct ion_buffer *buffer, unsigned long offset,
+		unsigned long len)
+{
+	int mtype = MT_MEMORY;
+	phys_addr_t pa;
+
+	pa = buffer->priv_phys;
+	pr_debug("clean: pa(%x) size(%x) off(%lx) len(%lx)\n",
+			pa, buffer->size, offset, len);
+
+	if (buffer->flags & ION_FLAG_WRITEBACK) {
+		/* Arm v7 arch onwards treats WT as uncached */
+		/* Mapping page by page to avoid vmalloc failure */
+		unsigned long curr_off, end_off;
+
+		end_off = offset + len;
+		for (curr_off = offset & ~(PAGE_SIZE - 1); curr_off < end_off;
+				curr_off += PAGE_SIZE) {
+			void *va;
+			unsigned long l_off, l_len;
+
+			va = __arm_ioremap(
+					(buffer->priv_phys + curr_off),
+					PAGE_SIZE, mtype);
+			if (va == NULL) {
+				pr_err("clean: __arm_ioremap failed phys(%lx)\n",
+						buffer->priv_phys + curr_off);
+				return -ENOMEM;
+			}
+			l_off = (offset > curr_off) ? (offset - curr_off) : 0;
+			l_len = min(end_off, (curr_off + PAGE_SIZE)) - l_off;
+			pr_debug("clean: va(%p) l_off(%lx) l_len(%lx) curr_off(%lx)\n",
+					va, l_off, l_len, curr_off);
+			dmac_map_area(va + l_off, l_len, DMA_BIDIRECTIONAL);
+			__arm_iounmap(va);
+		}
+	}
+
+	if (buffer->flags & (ION_FLAG_WRITETHROUGH | ION_FLAG_WRITEBACK))
+		outer_clean_range(pa + offset, pa + offset + len);
+
+	return 0;
+}
+
+int ion_carveout_heap_invalidate_cache(struct ion_heap *heap,
+		struct ion_buffer *buffer, unsigned long offset,
+		unsigned long len)
+{
+	int mtype = MT_MEMORY;
+	phys_addr_t pa;
+
+	pa = buffer->priv_phys;
+	pr_debug("inv: pa(%x) size(%x) off(%lx) len(%lx)\n",
+			pa, buffer->size, offset, len);
+
+	if (buffer->flags & (ION_FLAG_WRITETHROUGH | ION_FLAG_WRITEBACK))
+		outer_inv_range(pa + offset, pa + offset + len);
+
+	if (buffer->flags & ION_FLAG_WRITEBACK) {
+		/* Arm v7 arch onwards treats WT as uncached */
+		/* Mapping page by page to avoid vmalloc failure */
+		unsigned long curr_off, end_off;
+		end_off = offset + len;
+
+		for (curr_off = offset & ~(PAGE_SIZE - 1); curr_off < end_off;
+				curr_off += PAGE_SIZE) {
+			void *va;
+			unsigned long l_off, l_len;
+
+			va = __arm_ioremap(
+					(buffer->priv_phys + curr_off),
+					PAGE_SIZE, mtype);
+			if (va == NULL) {
+				pr_err("inv: __arm_ioremap failed phys(%lx)\n",
+						buffer->priv_phys + curr_off);
+				return -ENOMEM;
+			}
+			l_off = (offset > curr_off) ? (offset - curr_off) : 0;
+			l_len = min(end_off, (curr_off + PAGE_SIZE)) - l_off;
+			pr_debug("inv: va(%p) l_off(%lx) l_len(%lx) curr_off(%lx)\n",
+					va, l_off, l_len, curr_off);
+			dmac_unmap_area(va + l_off, l_len, DMA_BIDIRECTIONAL);
+			__arm_iounmap(va);
+		}
+	}
+	return 0;
+}
+#endif
 
 static struct ion_heap_ops carveout_heap_ops = {
 	.allocate = ion_carveout_heap_allocate,
@@ -147,7 +318,98 @@ static struct ion_heap_ops carveout_heap_ops = {
 	.map_user = ion_carveout_heap_map_user,
 	.map_kernel = ion_carveout_heap_map_kernel,
 	.unmap_kernel = ion_carveout_heap_unmap_kernel,
+#ifdef CONFIG_ION_BCM
+	.clean_cache = ion_carveout_heap_clean_cache,
+	.invalidate_cache = ion_carveout_heap_invalidate_cache,
+#endif
 };
+
+#ifdef CONFIG_ION_BCM
+static int ion_carveout_heap_free_size(struct ion_heap *heap)
+{
+	struct ion_carveout_heap *carveout_heap =
+		container_of(heap, struct ion_carveout_heap, heap);
+
+	return carveout_heap->size - heap->used;
+}
+
+#ifdef CONFIG_ION_OOM_KILLER
+static int ion_carveout_lmk_shrink_info(struct ion_heap *heap, int *min_adj,
+		int *min_free)
+{
+	struct ion_carveout_heap *carveout_heap =
+		container_of(heap, struct ion_carveout_heap, heap);
+	int lmk_min_free = carveout_heap->lmk_min_free;
+	int free_size = ion_carveout_heap_free_size(heap);
+
+	if (!carveout_heap->lmk_enable)
+		return 0;
+	if ((lmk_min_free < 0) || (lmk_min_free > 128)) {
+		pr_err("lmk_min_free(%d) should be in [0-128] range\n",
+				lmk_min_free);
+		return 0;
+	}
+	*min_free = ((carveout_heap->size / 128) * lmk_min_free) & PAGE_MASK;
+	*min_adj = carveout_heap->lmk_min_score_adj;
+	if (free_size >= *min_free)
+		return 0;
+
+	return 1;
+}
+
+static int ion_carveout_lmk_debugfs_add(struct ion_heap *heap,
+		struct dentry *debug_root)
+{
+	char debug_name[64];
+	struct ion_carveout_heap *carveout_heap =
+		container_of(heap, struct ion_carveout_heap, heap);
+
+	snprintf(debug_name, 64, "lmk_%s", heap->name);
+	carveout_heap->lmk_debug_root = debugfs_create_dir(debug_name,
+			debug_root);
+	debugfs_create_u32("enable", (S_IRUGO|S_IWUSR),
+			carveout_heap->lmk_debug_root,
+			(unsigned int *)&carveout_heap->lmk_enable);
+	debugfs_create_u32("oom_score_adj", (S_IRUGO|S_IWUSR),
+			carveout_heap->lmk_debug_root,
+			(unsigned int *)&carveout_heap->lmk_min_score_adj);
+	debugfs_create_u32("min_free", (S_IRUGO|S_IWUSR),
+			carveout_heap->lmk_debug_root,
+			(unsigned int *)&carveout_heap->lmk_min_free);
+	return 0;
+}
+#endif
+
+static int ion_carveout_heap_debug_show(struct ion_heap *heap,
+		struct seq_file *s, void *unused)
+{
+	struct ion_carveout_heap *carveout_heap =
+		container_of(heap, struct ion_carveout_heap, heap);
+
+	seq_printf(s, "%16.s: %6s(%s) %4s(%d) %6s(%u)KB %7s(%#08lx - %#08lx)\n",
+			"Carveout Heap", "Name", heap->name, "Id", heap->id,
+			"Size", (carveout_heap->size>>10), "Range",
+			carveout_heap->base,
+			(carveout_heap->base + carveout_heap->size));
+#ifdef CONFIG_ION_OOM_KILLER
+	if (carveout_heap->lmk_enable) {
+		int min_adj, min_free, free_size;
+
+		ion_carveout_lmk_shrink_info(heap, &min_adj, &min_free);
+		free_size = ion_carveout_heap_free_size(heap);
+
+		seq_printf(s, "Lowmemkiller Info:\n");
+		seq_printf(s, "%16.s %16.s %16.s\n%13u KB %13u KB %16u\n",
+				"free mem", "threshold", "min_adj",
+				free_size>>10, min_free>>10, min_adj);
+	} else {
+		seq_printf(s, "  Lowmemkiller disabled.\n");
+	}
+#endif
+	return 0;
+}
+
+#endif
 
 struct ion_heap *ion_carveout_heap_create(struct ion_platform_heap *heap_data)
 {
@@ -167,6 +429,18 @@ struct ion_heap *ion_carveout_heap_create(struct ion_platform_heap *heap_data)
 		     -1);
 	carveout_heap->heap.ops = &carveout_heap_ops;
 	carveout_heap->heap.type = ION_HEAP_TYPE_CARVEOUT;
+#ifdef CONFIG_ION_BCM
+	carveout_heap->size = heap_data->size;
+	carveout_heap->heap.debug_show = ion_carveout_heap_debug_show;
+	carveout_heap->heap.free_size = ion_carveout_heap_free_size;
+#endif
+#ifdef CONFIG_ION_OOM_KILLER
+	carveout_heap->lmk_enable = heap_data->lmk_enable;
+	carveout_heap->lmk_min_score_adj = heap_data->lmk_min_score_adj;
+	carveout_heap->lmk_min_free = heap_data->lmk_min_free;
+	carveout_heap->heap.lmk_shrink_info = ion_carveout_lmk_shrink_info;
+	carveout_heap->heap.lmk_debugfs_add = ion_carveout_lmk_debugfs_add;
+#endif
 
 	return &carveout_heap->heap;
 }

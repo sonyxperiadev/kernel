@@ -32,7 +32,10 @@ static void i2c_gpio_setsda_dir(void *data, int state)
 	if (state)
 		gpio_direction_input(pdata->sda_pin);
 	else
+	{
 		gpio_direction_output(pdata->sda_pin, 0);
+		gpio_set_value(pdata->sda_pin,0);
+	}
 }
 
 /*
@@ -54,8 +57,10 @@ static void i2c_gpio_setscl_dir(void *data, int state)
 
 	if (state)
 		gpio_direction_input(pdata->scl_pin);
-	else
+	else{
 		gpio_direction_output(pdata->scl_pin, 0);
+		gpio_set_value(pdata->scl_pin,0);
+	}
 }
 
 /*

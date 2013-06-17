@@ -31,11 +31,6 @@
 #include <wl_cfg80211.h>
 #include <dhd_cfg80211.h>
 
-#ifdef PKT_FILTER_SUPPORT
-#include <dngl_stats.h>
-#include <dhd.h>
-#endif
-
 extern struct wl_priv *wlcfg_drv_priv;
 
 #ifdef PKT_FILTER_SUPPORT
@@ -45,12 +40,6 @@ extern void dhd_pktfilter_offload_enable(dhd_pub_t * dhd, char *arg, int enable,
 #endif
 
 static int dhd_dongle_up = FALSE;
-
-#include <dngl_stats.h>
-#include <dhd.h>
-#include <dhdioctl.h>
-#include <wlioctl.h>
-#include <dhd_cfg80211.h>
 
 static s32 wl_dongle_up(struct net_device *ndev, u32 up);
 

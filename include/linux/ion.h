@@ -36,6 +36,7 @@ enum ion_heap_type {
 	ION_HEAP_TYPE_SYSTEM_CONTIG,
 	ION_HEAP_TYPE_CARVEOUT,
 	ION_HEAP_TYPE_CHUNK,
+	ION_HEAP_TYPE_DMA,
 	ION_HEAP_TYPE_CUSTOM, /* must be last so device specific heaps always
 				 are at the end of this enum */
 	ION_NUM_HEAPS = 16,
@@ -58,6 +59,10 @@ enum ion_heap_type {
 #define ION_FLAG_CACHED_NEEDS_SYNC 2	/* mappings of this buffer will created
 					   at mmap time, if this is set
 					   caches must be managed manually */
+
+#define ION_FLAG_WRITECOMBINE (1 << 16)
+#define ION_FLAG_WRITETHROUGH (2 << 16) /* Needs explicit cache invalidates */
+#define ION_FLAG_WRITEBACK    (4 << 16) /* Needs explicit cache flushes */
 
 #ifdef __KERNEL__
 struct ion_device;
@@ -94,6 +99,17 @@ struct ion_platform_heap {
 	size_t size;
 	ion_phys_addr_t align;
 	void *priv;
+#ifdef CONFIG_ION_BCM_NO_DT
+	ion_phys_addr_t limit;
+#endif
+#ifdef CONFIG_ION_OOM_KILLER
+	int lmk_enable;
+	int lmk_min_score_adj;
+	int lmk_min_free;
+#endif
+#ifdef CONFIG_IOMMU_API
+	struct device *device;
+#endif
 };
 
 /**
@@ -105,6 +121,12 @@ struct ion_platform_heap {
  */
 struct ion_platform_data {
 	int nr;
+#ifdef CONFIG_IOMMU_API
+	struct platform_device *pdev_iommu;
+#endif
+#ifdef CONFIG_BCM_IOVMM
+	struct platform_device *pdev_iovmm;
+#endif
 	struct ion_platform_heap heaps[];
 };
 

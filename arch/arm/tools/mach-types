@@ -1204,3 +1204,16 @@ baileys			MACH_BAILEYS		BAILEYS			4169
 familybox		MACH_FAMILYBOX		FAMILYBOX		4170
 ensemble_mx35		MACH_ENSEMBLE_MX35	ENSEMBLE_MX35		4171
 sc_sps_1		MACH_SC_SPS_1		SC_SPS_1		4172
+island                  ARCH_ISLAND             ISLAND                  2554
+rhea                    ARCH_RHEA               RHEA                    2701
+island_base             MACH_ISLAND_BASE        ISLAND_BASE             2701
+island_sv               MACH_ISLAND_SV          ISLAND_SV               2701
+island_tablet           MACH_ISLAND_TABLET      ISLAND_TABLET           2701
+bcm21455                ARCH_BCM21455           BCM21455                2702
+island_tablet_28160     MACH_ISLAND_TABLET_28160 ISLAND_TABLET_28160    2703
+island_sv_28160         MACH_ISLAND_SV_28160    ISLAND_SV_28160 2703
+island_tablet_cp        MACH_ISLAND_TABLET_CP   ISLAND_TABLET_CP        2701
+rhea_berri              MACH_RHEA_BERRI         RHEA_BERRI              2701
+rhea_stone              MACH_RHEA_STONE         RHEA_STONE              2701
+hawaii			ARCH_HAWAII		HAWAII			2701
+java			ARCH_JAVA		JAVA			2701

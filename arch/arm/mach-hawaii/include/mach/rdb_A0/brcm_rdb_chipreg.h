@@ -1,0 +1,1317 @@
+/************************************************************************************************/
+/*                                                                                              */
+/*  Copyright 2012  Broadcom Corporation                                                        */
+/*                                                                                              */
+/*     Unless you and Broadcom execute a separate written software license agreement governing  */
+/*     use of this software, this software is licensed to you under the terms of the GNU        */
+/*     General Public License version 2 (the GPL), available at                                 */
+/*                                                                                              */
+/*          http://www.broadcom.com/licenses/GPLv2.php                                          */
+/*                                                                                              */
+/*     with the following added to such license:                                                */
+/*                                                                                              */
+/*     As a special exception, the copyright holders of this software give you permission to    */
+/*     link this software with independent modules, and to copy and distribute the resulting    */
+/*     executable under terms of your choice, provided that you also meet, for each linked      */
+/*     independent module, the terms and conditions of the license of that module.              */
+/*     An independent module is a module which is not derived from this software.  The special  */
+/*     exception does not apply to any modifications of the software.                           */
+/*                                                                                              */
+/*     Notwithstanding the above, under no circumstances may you combine this software in any   */
+/*     way with any other Broadcom software provided under a license other than the GPL,        */
+/*     without Broadcom's express prior written consent.                                        */
+/*                                                                                              */
+/*     Date     : Generated on 9/25/2012 19:15:19                                             */
+/*     RDB file : //HAWAII/                                                                   */
+/************************************************************************************************/
+
+#ifndef __BRCM_RDB_CHIPREG_H__
+#define __BRCM_RDB_CHIPREG_H__
+
+#define CHIPREG_CHIPID_REVID_OFFSET                                       0x00000000
+#define CHIPREG_CHIPID_REVID_TYPE                                         UInt32
+#define CHIPREG_CHIPID_REVID_RESERVED_MASK                                0xFFFFF000
+#define    CHIPREG_CHIPID_REVID_PRODUCT_FAMILY_ID_SHIFT                   8
+#define    CHIPREG_CHIPID_REVID_PRODUCT_FAMILY_ID_MASK                    0x00000F00
+#define    CHIPREG_CHIPID_REVID_PRODUCT_ID_SHIFT                          4
+#define    CHIPREG_CHIPID_REVID_PRODUCT_ID_MASK                           0x000000F0
+#define    CHIPREG_CHIPID_REVID_REVID_SHIFT                               0
+#define    CHIPREG_CHIPID_REVID_REVID_MASK                                0x0000000F
+
+#define CHIPREG_SPARE_STATUS_OFFSET                                       0x00000004
+#define CHIPREG_SPARE_STATUS_TYPE                                         UInt32
+#define CHIPREG_SPARE_STATUS_RESERVED_MASK                                0x00000000
+#define    CHIPREG_SPARE_STATUS_SPARE_STATUS_SHIFT                        16
+#define    CHIPREG_SPARE_STATUS_SPARE_STATUS_MASK                         0xFFFF0000
+#define    CHIPREG_SPARE_STATUS_DEBUG_TESTPORT_SHIFT                      0
+#define    CHIPREG_SPARE_STATUS_DEBUG_TESTPORT_MASK                       0x0000FFFF
+
+#define CHIPREG_SPARE_CONTROL0_OFFSET                                     0x00000008
+#define CHIPREG_SPARE_CONTROL0_TYPE                                       UInt32
+#define CHIPREG_SPARE_CONTROL0_RESERVED_MASK                              0x00000000
+#define    CHIPREG_SPARE_CONTROL0_SPARE_CONTROL_SHIFT                     25
+#define    CHIPREG_SPARE_CONTROL0_SPARE_CONTROL_MASK                      0xFE000000
+#define    CHIPREG_SPARE_CONTROL0_DISABLE_CHIP_SOFT_RESET_FROM_TMON_SHIFT 24
+#define    CHIPREG_SPARE_CONTROL0_DISABLE_CHIP_SOFT_RESET_FROM_TMON_MASK  0x01000000
+#define    CHIPREG_SPARE_CONTROL0_PUP2_GPIO17_SHIFT                       23
+#define    CHIPREG_SPARE_CONTROL0_PUP2_GPIO17_MASK                        0x00800000
+#define    CHIPREG_SPARE_CONTROL0_PUP1_GPIO17_SHIFT                       22
+#define    CHIPREG_SPARE_CONTROL0_PUP1_GPIO17_MASK                        0x00400000
+#define    CHIPREG_SPARE_CONTROL0_PUP2_GPIO16_SHIFT                       21
+#define    CHIPREG_SPARE_CONTROL0_PUP2_GPIO16_MASK                        0x00200000
+#define    CHIPREG_SPARE_CONTROL0_PUP1_GPIO16_SHIFT                       20
+#define    CHIPREG_SPARE_CONTROL0_PUP1_GPIO16_MASK                        0x00100000
+#define    CHIPREG_SPARE_CONTROL0_PUP2_PMBSCDAT_SHIFT                     19
+#define    CHIPREG_SPARE_CONTROL0_PUP2_PMBSCDAT_MASK                      0x00080000
+#define    CHIPREG_SPARE_CONTROL0_PUP1_PMBSCDAT_SHIFT                     18
+#define    CHIPREG_SPARE_CONTROL0_PUP1_PMBSCDAT_MASK                      0x00040000
+#define    CHIPREG_SPARE_CONTROL0_PUP2_PMBSCCLK_SHIFT                     17
+#define    CHIPREG_SPARE_CONTROL0_PUP2_PMBSCCLK_MASK                      0x00020000
+#define    CHIPREG_SPARE_CONTROL0_PUP1_PMBSCCLK_SHIFT                     16
+#define    CHIPREG_SPARE_CONTROL0_PUP1_PMBSCCLK_MASK                      0x00010000
+#define    CHIPREG_SPARE_CONTROL0_PUP2_BSC1DAT_SHIFT                      15
+#define    CHIPREG_SPARE_CONTROL0_PUP2_BSC1DAT_MASK                       0x00008000
+#define    CHIPREG_SPARE_CONTROL0_PUP1_BSC1DAT_SHIFT                      14
+#define    CHIPREG_SPARE_CONTROL0_PUP1_BSC1DAT_MASK                       0x00004000
+#define    CHIPREG_SPARE_CONTROL0_PUP2_BSC1CLK_SHIFT                      13
+#define    CHIPREG_SPARE_CONTROL0_PUP2_BSC1CLK_MASK                       0x00002000
+#define    CHIPREG_SPARE_CONTROL0_PUP1_BSC1CLK_SHIFT                      12
+#define    CHIPREG_SPARE_CONTROL0_PUP1_BSC1CLK_MASK                       0x00001000
+#define    CHIPREG_SPARE_CONTROL0_VTMON_SELECT_SHIFT                      11
+#define    CHIPREG_SPARE_CONTROL0_VTMON_SELECT_MASK                       0x00000800
+#define    CHIPREG_SPARE_CONTROL0_DDRLDO_I_LDO_DISABLE_SHIFT              10
+#define    CHIPREG_SPARE_CONTROL0_DDRLDO_I_LDO_DISABLE_MASK               0x00000400
+#define    CHIPREG_SPARE_CONTROL0_DISABLE_LDO_ON_LOW_PWR_SHIFT            9
+#define    CHIPREG_SPARE_CONTROL0_DISABLE_LDO_ON_LOW_PWR_MASK             0x00000200
+#define    CHIPREG_SPARE_CONTROL0_LDO_VOL_CNTL_SEL_SHIFT                  8
+#define    CHIPREG_SPARE_CONTROL0_LDO_VOL_CNTL_SEL_MASK                   0x00000100
+#define    CHIPREG_SPARE_CONTROL0_LOWPOWERDDRLDOVOLTAGECONTROL_SHIFT      3
+#define    CHIPREG_SPARE_CONTROL0_LOWPOWERDDRLDOVOLTAGECONTROL_MASK       0x000000F8
+#define    CHIPREG_SPARE_CONTROL0_SPARE_CTL0_BIT2_SHIFT                   2
+#define    CHIPREG_SPARE_CONTROL0_SPARE_CTL0_BIT2_MASK                    0x00000004
+#define    CHIPREG_SPARE_CONTROL0_KONA_APB9_ATRST_SEL_SHIFT               1
+#define    CHIPREG_SPARE_CONTROL0_KONA_APB9_ATRST_SEL_MASK                0x00000002
+#define    CHIPREG_SPARE_CONTROL0_ETB_SRAM_SELECT_SHIFT                   0
+#define    CHIPREG_SPARE_CONTROL0_ETB_SRAM_SELECT_MASK                    0x00000001
+
+#define CHIPREG_HAWAII_STRAP_OFFSET                                       0x0000000C
+#define CHIPREG_HAWAII_STRAP_TYPE                                         UInt32
+#define CHIPREG_HAWAII_STRAP_RESERVED_MASK                                0xFFFFFF98
+#define    CHIPREG_HAWAII_STRAP_STRAP_VCO_BYPASS_SHIFT                    6
+#define    CHIPREG_HAWAII_STRAP_STRAP_VCO_BYPASS_MASK                     0x00000040
+#define    CHIPREG_HAWAII_STRAP_STRAP_5_SHIFT                             5
+#define    CHIPREG_HAWAII_STRAP_STRAP_5_MASK                              0x00000020
+#define    CHIPREG_HAWAII_STRAP_STRAP_2_SHIFT                             2
+#define    CHIPREG_HAWAII_STRAP_STRAP_2_MASK                              0x00000004
+#define    CHIPREG_HAWAII_STRAP_STRAP_1_SHIFT                             1
+#define    CHIPREG_HAWAII_STRAP_STRAP_1_MASK                              0x00000002
+#define    CHIPREG_HAWAII_STRAP_STRAP_0_SHIFT                             0
+#define    CHIPREG_HAWAII_STRAP_STRAP_0_MASK                              0x00000001
+
+#define CHIPREG_TXCONFIG_MAILBOX0_OFFSET                                  0x00000010
+#define CHIPREG_TXCONFIG_MAILBOX0_TYPE                                    UInt32
+#define CHIPREG_TXCONFIG_MAILBOX0_RESERVED_MASK                           0x00000000
+#define    CHIPREG_TXCONFIG_MAILBOX0_PROC_VERSION_SHIFT                   0
+#define    CHIPREG_TXCONFIG_MAILBOX0_PROC_VERSION_MASK                    0xFFFFFFFF
+
+#define CHIPREG_TXCONFIG_MAILBOX1_OFFSET                                  0x00000014
+#define CHIPREG_TXCONFIG_MAILBOX1_TYPE                                    UInt32
+#define CHIPREG_TXCONFIG_MAILBOX1_RESERVED_MASK                           0x00000000
+#define    CHIPREG_TXCONFIG_MAILBOX1_PROC_VERSION_SHIFT                   0
+#define    CHIPREG_TXCONFIG_MAILBOX1_PROC_VERSION_MASK                    0xFFFFFFFF
+
+#define CHIPREG_TMACT_DBG_EN_OFFSET                                       0x00000018
+#define CHIPREG_TMACT_DBG_EN_TYPE                                         UInt32
+#define CHIPREG_TMACT_DBG_EN_RESERVED_MASK                                0xFFFFFFFE
+#define    CHIPREG_TMACT_DBG_EN_TMACT_DBG_EN_SHIFT                        0
+#define    CHIPREG_TMACT_DBG_EN_TMACT_DBG_EN_MASK                         0x00000001
+
+#define CHIPREG_SPARE_CONTROL_HARD_RST0_OFFSET                            0x0000001C
+#define CHIPREG_SPARE_CONTROL_HARD_RST0_TYPE                              UInt32
+#define CHIPREG_SPARE_CONTROL_HARD_RST0_RESERVED_MASK                     0x00000000
+#define    CHIPREG_SPARE_CONTROL_HARD_RST0_SPARE_CONTROL_SHIFT            0
+#define    CHIPREG_SPARE_CONTROL_HARD_RST0_SPARE_CONTROL_MASK             0xFFFFFFFF
+
+#define CHIPREG_SPARE_CONTROL_HARD_RST1_OFFSET                            0x00000020
+#define CHIPREG_SPARE_CONTROL_HARD_RST1_TYPE                              UInt32
+#define CHIPREG_SPARE_CONTROL_HARD_RST1_RESERVED_MASK                     0x00000000
+#define    CHIPREG_SPARE_CONTROL_HARD_RST1_SPARE_CONTROL_SHIFT            0
+#define    CHIPREG_SPARE_CONTROL_HARD_RST1_SPARE_CONTROL_MASK             0xFFFFFFFF
+
+#define CHIPREG_SPARE_CONTROL_HARD_RST2_OFFSET                            0x00000024
+#define CHIPREG_SPARE_CONTROL_HARD_RST2_TYPE                              UInt32
+#define CHIPREG_SPARE_CONTROL_HARD_RST2_RESERVED_MASK                     0x00000000
+#define    CHIPREG_SPARE_CONTROL_HARD_RST2_SPARE_CONTROL_SHIFT            0
+#define    CHIPREG_SPARE_CONTROL_HARD_RST2_SPARE_CONTROL_MASK             0xFFFFFFFF
+
+#define CHIPREG_HSOTG_AFE_CONF_OFFSET                                     0x00000028
+#define CHIPREG_HSOTG_AFE_CONF_TYPE                                       UInt32
+#define CHIPREG_HSOTG_AFE_CONF_RESERVED_MASK                              0x00000000
+#define    CHIPREG_HSOTG_AFE_CONF_GENERIC_CTL_I_SHIFT                     0
+#define    CHIPREG_HSOTG_AFE_CONF_GENERIC_CTL_I_MASK                      0xFFFFFFFF
+
+#define CHIPREG_USB_PLL2_CONF_OFFSET                                      0x0000002C
+#define CHIPREG_USB_PLL2_CONF_TYPE                                        UInt32
+#define CHIPREG_USB_PLL2_CONF_RESERVED_MASK                               0x00000000
+#define    CHIPREG_USB_PLL2_CONF_GENERIC_CTL_I_SHIFT                      0
+#define    CHIPREG_USB_PLL2_CONF_GENERIC_CTL_I_MASK                       0xFFFFFFFF
+
+#define CHIPREG_PERIPH_SPARE_CONTROL0_OFFSET                              0x00000030
+#define CHIPREG_PERIPH_SPARE_CONTROL0_TYPE                                UInt32
+#define CHIPREG_PERIPH_SPARE_CONTROL0_RESERVED_MASK                       0x0000FE00
+#define    CHIPREG_PERIPH_SPARE_CONTROL0_CAPH_DEBUG_MUX_CONTROL_SHIFT     16
+#define    CHIPREG_PERIPH_SPARE_CONTROL0_CAPH_DEBUG_MUX_CONTROL_MASK      0xFFFF0000
+#define    CHIPREG_PERIPH_SPARE_CONTROL0_KEYPAD_DEBUG_MUX_CONTROL_MSB_SHIFT 8
+#define    CHIPREG_PERIPH_SPARE_CONTROL0_KEYPAD_DEBUG_MUX_CONTROL_MSB_MASK 0x00000100
+#define    CHIPREG_PERIPH_SPARE_CONTROL0_PM_DEBUG_MUX_CONTROL_SHIFT       4
+#define    CHIPREG_PERIPH_SPARE_CONTROL0_PM_DEBUG_MUX_CONTROL_MASK        0x000000F0
+#define    CHIPREG_PERIPH_SPARE_CONTROL0_KEYPAD_DEBUG_MUX_CONTROL_SHIFT   0
+#define    CHIPREG_PERIPH_SPARE_CONTROL0_KEYPAD_DEBUG_MUX_CONTROL_MASK    0x0000000F
+
+#define CHIPREG_PERIPH_SPARE_CONTROL1_OFFSET                              0x00000034
+#define CHIPREG_PERIPH_SPARE_CONTROL1_TYPE                                UInt32
+#define CHIPREG_PERIPH_SPARE_CONTROL1_RESERVED_MASK                       0x00000100
+#define    CHIPREG_PERIPH_SPARE_CONTROL1_SPARE_CONTROL_SHIFT              15
+#define    CHIPREG_PERIPH_SPARE_CONTROL1_SPARE_CONTROL_MASK               0xFFFF8000
+#define    CHIPREG_PERIPH_SPARE_CONTROL1_BMODEM_WDOG_CHIP_RST_SHIFT       14
+#define    CHIPREG_PERIPH_SPARE_CONTROL1_BMODEM_WDOG_CHIP_RST_MASK        0x00004000
+#define    CHIPREG_PERIPH_SPARE_CONTROL1_DISABLE_FORCE_UPDATE_SHIFT       13
+#define    CHIPREG_PERIPH_SPARE_CONTROL1_DISABLE_FORCE_UPDATE_MASK        0x00002000
+#define    CHIPREG_PERIPH_SPARE_CONTROL1_PMBSCCLK_PULLUP_SELECT_SHIFT     12
+#define    CHIPREG_PERIPH_SPARE_CONTROL1_PMBSCCLK_PULLUP_SELECT_MASK      0x00001000
+#define    CHIPREG_PERIPH_SPARE_CONTROL1_AFCPDM_REQ_ENABLE_SHIFT          11
+#define    CHIPREG_PERIPH_SPARE_CONTROL1_AFCPDM_REQ_ENABLE_MASK           0x00000800
+#define    CHIPREG_PERIPH_SPARE_CONTROL1_SDIO4_WU_EVENT_SEL_SHIFT         9
+#define    CHIPREG_PERIPH_SPARE_CONTROL1_SDIO4_WU_EVENT_SEL_MASK          0x00000600
+#define    CHIPREG_PERIPH_SPARE_CONTROL1_SPARE_CONTROL_7_3_SHIFT          3
+#define    CHIPREG_PERIPH_SPARE_CONTROL1_SPARE_CONTROL_7_3_MASK           0x000000F8
+#define    CHIPREG_PERIPH_SPARE_CONTROL1_PTI_CLK_IS_IDLE_SHIFT            2
+#define    CHIPREG_PERIPH_SPARE_CONTROL1_PTI_CLK_IS_IDLE_MASK             0x00000004
+#define    CHIPREG_PERIPH_SPARE_CONTROL1_TPIU_CLK_IS_IDLE_SHIFT           1
+#define    CHIPREG_PERIPH_SPARE_CONTROL1_TPIU_CLK_IS_IDLE_MASK            0x00000002
+#define    CHIPREG_PERIPH_SPARE_CONTROL1_DEBUG_HALT_REQ_SHIFT             0
+#define    CHIPREG_PERIPH_SPARE_CONTROL1_DEBUG_HALT_REQ_MASK              0x00000001
+
+#define CHIPREG_PERIPH_SPARE_CONTROL2_OFFSET                              0x00000038
+#define CHIPREG_PERIPH_SPARE_CONTROL2_TYPE                                UInt32
+#define CHIPREG_PERIPH_SPARE_CONTROL2_RESERVED_MASK                       0x00000000
+#define    CHIPREG_PERIPH_SPARE_CONTROL2_SPARE_CONTROL_31_28_SHIFT        28
+#define    CHIPREG_PERIPH_SPARE_CONTROL2_SPARE_CONTROL_31_28_MASK         0xF0000000
+#define    CHIPREG_PERIPH_SPARE_CONTROL2_SPARE_CONTROL_27_25_SHIFT        25
+#define    CHIPREG_PERIPH_SPARE_CONTROL2_SPARE_CONTROL_27_25_MASK         0x0E000000
+#define    CHIPREG_PERIPH_SPARE_CONTROL2_TRACE_RAM_PDA_SHIFT              24
+#define    CHIPREG_PERIPH_SPARE_CONTROL2_TRACE_RAM_PDA_MASK               0x01000000
+#define    CHIPREG_PERIPH_SPARE_CONTROL2_AXIPV_LINE_BUFF_PDA_SHIFT        23
+#define    CHIPREG_PERIPH_SPARE_CONTROL2_AXIPV_LINE_BUFF_PDA_MASK         0x00800000
+#define    CHIPREG_PERIPH_SPARE_CONTROL2_SPARE_CONTROL_22_6_SHIFT         6
+#define    CHIPREG_PERIPH_SPARE_CONTROL2_SPARE_CONTROL_22_6_MASK          0x007FFFC0
+#define    CHIPREG_PERIPH_SPARE_CONTROL2_PWRCTL1_BYPASS_SHIFT             5
+#define    CHIPREG_PERIPH_SPARE_CONTROL2_PWRCTL1_BYPASS_MASK              0x00000020
+#define    CHIPREG_PERIPH_SPARE_CONTROL2_PWRCTL0_BYPASS_SHIFT             4
+#define    CHIPREG_PERIPH_SPARE_CONTROL2_PWRCTL0_BYPASS_MASK              0x00000010
+#define    CHIPREG_PERIPH_SPARE_CONTROL2_SPARE_CONTROL_3_2_SHIFT          2
+#define    CHIPREG_PERIPH_SPARE_CONTROL2_SPARE_CONTROL_3_2_MASK           0x0000000C
+#define    CHIPREG_PERIPH_SPARE_CONTROL2_DISABLE_PWRCTL_BYPASS_SHIFT      1
+#define    CHIPREG_PERIPH_SPARE_CONTROL2_DISABLE_PWRCTL_BYPASS_MASK       0x00000002
+#define    CHIPREG_PERIPH_SPARE_CONTROL2_RAM_PM_DISABLE_SHIFT             0
+#define    CHIPREG_PERIPH_SPARE_CONTROL2_RAM_PM_DISABLE_MASK              0x00000001
+
+#define CHIPREG_MDIO_CTRL_ADDR_WRDATA_OFFSET                              0x0000003C
+#define CHIPREG_MDIO_CTRL_ADDR_WRDATA_TYPE                                UInt32
+#define CHIPREG_MDIO_CTRL_ADDR_WRDATA_RESERVED_MASK                       0x00E00000
+#define    CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_WRITE_START_SHIFT           31
+#define    CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_WRITE_START_MASK            0x80000000
+#define    CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_READ_START_SHIFT            30
+#define    CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_READ_START_MASK             0x40000000
+#define    CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_SM_SEL_SHIFT                29
+#define    CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_SM_SEL_MASK                 0x20000000
+#define    CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_ID_SHIFT                    24
+#define    CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_ID_MASK                     0x1F000000
+#define    CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_REG_ADDR_SHIFT              16
+#define    CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_REG_ADDR_MASK               0x001F0000
+#define    CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_REG_WR_DATA_SHIFT           0
+#define    CHIPREG_MDIO_CTRL_ADDR_WRDATA_MDIO_REG_WR_DATA_MASK            0x0000FFFF
+
+#define CHIPREG_MDIO_RDDATA_OFFSET                                        0x00000040
+#define CHIPREG_MDIO_RDDATA_TYPE                                          UInt32
+#define CHIPREG_MDIO_RDDATA_RESERVED_MASK                                 0xFFFF0000
+#define    CHIPREG_MDIO_RDDATA_MDIO_REG_RD_DATA_SHIFT                     0
+#define    CHIPREG_MDIO_RDDATA_MDIO_REG_RD_DATA_MASK                      0x0000FFFF
+
+#define CHIPREG_RAM_STBY_SW_CTRL_OFFSET                                   0x00000044
+#define CHIPREG_RAM_STBY_SW_CTRL_TYPE                                     UInt32
+#define CHIPREG_RAM_STBY_SW_CTRL_RESERVED_MASK                            0xC0000180
+#define    CHIPREG_RAM_STBY_SW_CTRL_MM_SPARE_STBY_SHIFT                   29
+#define    CHIPREG_RAM_STBY_SW_CTRL_MM_SPARE_STBY_MASK                    0x20000000
+#define    CHIPREG_RAM_STBY_SW_CTRL_MM_SMI_STBY_SHIFT                     28
+#define    CHIPREG_RAM_STBY_SW_CTRL_MM_SMI_STBY_MASK                      0x10000000
+#define    CHIPREG_RAM_STBY_SW_CTRL_MM_VCE_STBY_SHIFT                     26
+#define    CHIPREG_RAM_STBY_SW_CTRL_MM_VCE_STBY_MASK                      0x0C000000
+#define    CHIPREG_RAM_STBY_SW_CTRL_MM_ISP_STBY_SHIFT                     24
+#define    CHIPREG_RAM_STBY_SW_CTRL_MM_ISP_STBY_MASK                      0x03000000
+#define    CHIPREG_RAM_STBY_SW_CTRL_AUDIOH_STBY_SHIFT                     23
+#define    CHIPREG_RAM_STBY_SW_CTRL_AUDIOH_STBY_MASK                      0x00800000
+#define    CHIPREG_RAM_STBY_SW_CTRL_UARTB3_STBY_SHIFT                     22
+#define    CHIPREG_RAM_STBY_SW_CTRL_UARTB3_STBY_MASK                      0x00400000
+#define    CHIPREG_RAM_STBY_SW_CTRL_UARTB2_STBY_SHIFT                     21
+#define    CHIPREG_RAM_STBY_SW_CTRL_UARTB2_STBY_MASK                      0x00200000
+#define    CHIPREG_RAM_STBY_SW_CTRL_UARTB_STBY_SHIFT                      20
+#define    CHIPREG_RAM_STBY_SW_CTRL_UARTB_STBY_MASK                       0x00100000
+#define    CHIPREG_RAM_STBY_SW_CTRL_SSP1_STBY_SHIFT                       19
+#define    CHIPREG_RAM_STBY_SW_CTRL_SSP1_STBY_MASK                        0x00080000
+#define    CHIPREG_RAM_STBY_SW_CTRL_SSP0_STBY_SHIFT                       17
+#define    CHIPREG_RAM_STBY_SW_CTRL_SSP0_STBY_MASK                        0x00060000
+#define    CHIPREG_RAM_STBY_SW_CTRL_SPUM_UNSEC_STBY_SHIFT                 15
+#define    CHIPREG_RAM_STBY_SW_CTRL_SPUM_UNSEC_STBY_MASK                  0x00018000
+#define    CHIPREG_RAM_STBY_SW_CTRL_SPUM_SEC_STBY_SHIFT                   14
+#define    CHIPREG_RAM_STBY_SW_CTRL_SPUM_SEC_STBY_MASK                    0x00004000
+#define    CHIPREG_RAM_STBY_SW_CTRL_PKA_STBY_SHIFT                        13
+#define    CHIPREG_RAM_STBY_SW_CTRL_PKA_STBY_MASK                         0x00002000
+#define    CHIPREG_RAM_STBY_SW_CTRL_PROC_RAM_STBY_SHIFT                   11
+#define    CHIPREG_RAM_STBY_SW_CTRL_PROC_RAM_STBY_MASK                    0x00001800
+#define    CHIPREG_RAM_STBY_SW_CTRL_SCRATCHRAM_STBY_SHIFT                 9
+#define    CHIPREG_RAM_STBY_SW_CTRL_SCRATCHRAM_STBY_MASK                  0x00000600
+#define    CHIPREG_RAM_STBY_SW_CTRL_SDIO3_RF_STBY_SHIFT                   6
+#define    CHIPREG_RAM_STBY_SW_CTRL_SDIO3_RF_STBY_MASK                    0x00000040
+#define    CHIPREG_RAM_STBY_SW_CTRL_SDIO2_RF_STBY_SHIFT                   5
+#define    CHIPREG_RAM_STBY_SW_CTRL_SDIO2_RF_STBY_MASK                    0x00000020
+#define    CHIPREG_RAM_STBY_SW_CTRL_SDIO1_RF_STBY_SHIFT                   4
+#define    CHIPREG_RAM_STBY_SW_CTRL_SDIO1_RF_STBY_MASK                    0x00000010
+#define    CHIPREG_RAM_STBY_SW_CTRL_HSOTG_DFIFO_STBY_SHIFT                2
+#define    CHIPREG_RAM_STBY_SW_CTRL_HSOTG_DFIFO_STBY_MASK                 0x0000000C
+#define    CHIPREG_RAM_STBY_SW_CTRL_FSHOST_DFIFO_STBY_SHIFT               0
+#define    CHIPREG_RAM_STBY_SW_CTRL_FSHOST_DFIFO_STBY_MASK                0x00000003
+
+#define CHIPREG_RAM_STBY_RET_OVERRIDE_OFFSET                              0x00000048
+#define CHIPREG_RAM_STBY_RET_OVERRIDE_TYPE                                UInt32
+#define CHIPREG_RAM_STBY_RET_OVERRIDE_RESERVED_MASK                       0x000F7F80
+#define    CHIPREG_RAM_STBY_RET_OVERRIDE_SPARE1_HUB_RF_STBY_SHIFT         31
+#define    CHIPREG_RAM_STBY_RET_OVERRIDE_SPARE1_HUB_RF_STBY_MASK          0x80000000
+#define    CHIPREG_RAM_STBY_RET_OVERRIDE_SSP_HUB_RF_STBY_SHIFT            30
+#define    CHIPREG_RAM_STBY_RET_OVERRIDE_SSP_HUB_RF_STBY_MASK             0x40000000
+#define    CHIPREG_RAM_STBY_RET_OVERRIDE_SPARE1_PERIPH_RF_STBY_SHIFT      29
+#define    CHIPREG_RAM_STBY_RET_OVERRIDE_SPARE1_PERIPH_RF_STBY_MASK       0x20000000
+#define    CHIPREG_RAM_STBY_RET_OVERRIDE_SPARE0_PERIPH_RF_STBY_SHIFT      28
+#define    CHIPREG_RAM_STBY_RET_OVERRIDE_SPARE0_PERIPH_RF_STBY_MASK       0x10000000
+#define    CHIPREG_RAM_STBY_RET_OVERRIDE_SPARE1_MM_MEM_STBY_SHIFT         26
+#define    CHIPREG_RAM_STBY_RET_OVERRIDE_SPARE1_MM_MEM_STBY_MASK          0x0C000000
+#define    CHIPREG_RAM_STBY_RET_OVERRIDE_AXIPV_MM_PDMEM_STBY_SHIFT        24
+#define    CHIPREG_RAM_STBY_RET_OVERRIDE_AXIPV_MM_PDMEM_STBY_MASK         0x03000000
+#define    CHIPREG_RAM_STBY_RET_OVERRIDE_TRACE_RAM_STBY_SHIFT             22
+#define    CHIPREG_RAM_STBY_RET_OVERRIDE_TRACE_RAM_STBY_MASK              0x00C00000
+#define    CHIPREG_RAM_STBY_RET_OVERRIDE_CAPH_HUB_MEM_STBY_SHIFT          20
+#define    CHIPREG_RAM_STBY_RET_OVERRIDE_CAPH_HUB_MEM_STBY_MASK           0x00300000
+#define    CHIPREG_RAM_STBY_RET_OVERRIDE_ROM_STBY_SHIFT                   15
+#define    CHIPREG_RAM_STBY_RET_OVERRIDE_ROM_STBY_MASK                    0x00008000
+#define    CHIPREG_RAM_STBY_RET_OVERRIDE_ROM_STBY_OVERRIDE_MASK_SHIFT     6
+#define    CHIPREG_RAM_STBY_RET_OVERRIDE_ROM_STBY_OVERRIDE_MASK_MASK      0x00000040
+#define    CHIPREG_RAM_STBY_RET_OVERRIDE_RF_STBY_OVERRIDE_MASK_SHIFT      5
+#define    CHIPREG_RAM_STBY_RET_OVERRIDE_RF_STBY_OVERRIDE_MASK_MASK       0x00000020
+#define    CHIPREG_RAM_STBY_RET_OVERRIDE_SRAM_STBY_OVERRIDE_MASK_SHIFT    4
+#define    CHIPREG_RAM_STBY_RET_OVERRIDE_SRAM_STBY_OVERRIDE_MASK_MASK     0x00000010
+#define    CHIPREG_RAM_STBY_RET_OVERRIDE_ROM_STBY_OVERRIDE_SHIFT          3
+#define    CHIPREG_RAM_STBY_RET_OVERRIDE_ROM_STBY_OVERRIDE_MASK           0x00000008
+#define    CHIPREG_RAM_STBY_RET_OVERRIDE_REGFILE_STBY_OVERRIDE_SHIFT      2
+#define    CHIPREG_RAM_STBY_RET_OVERRIDE_REGFILE_STBY_OVERRIDE_MASK       0x00000004
+#define    CHIPREG_RAM_STBY_RET_OVERRIDE_RAM_STBY_OVERRIDE_SHIFT          0
+#define    CHIPREG_RAM_STBY_RET_OVERRIDE_RAM_STBY_OVERRIDE_MASK           0x00000003
+
+#define CHIPREG_RING_OSCILLATORS_CONTROL_OFFSET                           0x0000004C
+#define CHIPREG_RING_OSCILLATORS_CONTROL_TYPE                             UInt32
+#define CHIPREG_RING_OSCILLATORS_CONTROL_RESERVED_MASK                    0x0003F000
+#define    CHIPREG_RING_OSCILLATORS_CONTROL_IRD_CONTROL_SHIFT             20
+#define    CHIPREG_RING_OSCILLATORS_CONTROL_IRD_CONTROL_MASK              0xFFF00000
+#define    CHIPREG_RING_OSCILLATORS_CONTROL_VDDMM_IRDMON_OSC_OUT_EN_SHIFT 19
+#define    CHIPREG_RING_OSCILLATORS_CONTROL_VDDMM_IRDMON_OSC_OUT_EN_MASK  0x00080000
+#define    CHIPREG_RING_OSCILLATORS_CONTROL_VDDMM_IRDMON_EN_SHIFT         18
+#define    CHIPREG_RING_OSCILLATORS_CONTROL_VDDMM_IRDMON_EN_MASK          0x00040000
+#define    CHIPREG_RING_OSCILLATORS_CONTROL_VDDVAR_IRDMON_OSC_OUT_EN_SHIFT 11
+#define    CHIPREG_RING_OSCILLATORS_CONTROL_VDDVAR_IRDMON_OSC_OUT_EN_MASK 0x00000800
+#define    CHIPREG_RING_OSCILLATORS_CONTROL_VDDVAR_IRDMON_EN_SHIFT        10
+#define    CHIPREG_RING_OSCILLATORS_CONTROL_VDDVAR_IRDMON_EN_MASK         0x00000400
+#define    CHIPREG_RING_OSCILLATORS_CONTROL_VDDFIX_IRDMON_OSC_OUT_EN_SHIFT 9
+#define    CHIPREG_RING_OSCILLATORS_CONTROL_VDDFIX_IRDMON_OSC_OUT_EN_MASK 0x00000200
+#define    CHIPREG_RING_OSCILLATORS_CONTROL_VDDFIX_IRDMON_EN_SHIFT        8
+#define    CHIPREG_RING_OSCILLATORS_CONTROL_VDDFIX_IRDMON_EN_MASK         0x00000100
+#define    CHIPREG_RING_OSCILLATORS_CONTROL_OSC2_SELECT_SHIFT             6
+#define    CHIPREG_RING_OSCILLATORS_CONTROL_OSC2_SELECT_MASK              0x000000C0
+#define    CHIPREG_RING_OSCILLATORS_CONTROL_OSC2_ENABLE_SHIFT             5
+#define    CHIPREG_RING_OSCILLATORS_CONTROL_OSC2_ENABLE_MASK              0x00000020
+#define    CHIPREG_RING_OSCILLATORS_CONTROL_OSC2_POWER_ENABLE_SHIFT       4
+#define    CHIPREG_RING_OSCILLATORS_CONTROL_OSC2_POWER_ENABLE_MASK        0x00000010
+#define    CHIPREG_RING_OSCILLATORS_CONTROL_OSC1_SELECT_SHIFT             2
+#define    CHIPREG_RING_OSCILLATORS_CONTROL_OSC1_SELECT_MASK              0x0000000C
+#define    CHIPREG_RING_OSCILLATORS_CONTROL_OSC1_ENABLE_SHIFT             1
+#define    CHIPREG_RING_OSCILLATORS_CONTROL_OSC1_ENABLE_MASK              0x00000002
+#define    CHIPREG_RING_OSCILLATORS_CONTROL_OSC1_POWER_ENABLE_SHIFT       0
+#define    CHIPREG_RING_OSCILLATORS_CONTROL_OSC1_POWER_ENABLE_MASK        0x00000001
+
+#define CHIPREG_VDDVAR_VDDFIX_IRDMON_STATUS_OFFSET                        0x00000050
+#define CHIPREG_VDDVAR_VDDFIX_IRDMON_STATUS_TYPE                          UInt32
+#define CHIPREG_VDDVAR_VDDFIX_IRDMON_STATUS_RESERVED_MASK                 0xFC00FC00
+#define    CHIPREG_VDDVAR_VDDFIX_IRDMON_STATUS_IRD_STATUS1_SHIFT          16
+#define    CHIPREG_VDDVAR_VDDFIX_IRDMON_STATUS_IRD_STATUS1_MASK           0x03FF0000
+#define    CHIPREG_VDDVAR_VDDFIX_IRDMON_STATUS_IRD_STATUS0_SHIFT          0
+#define    CHIPREG_VDDVAR_VDDFIX_IRDMON_STATUS_IRD_STATUS0_MASK           0x000003FF
+
+#define CHIPREG_VDDMM_VDDPROC_IRDMON_STATUS_OFFSET                        0x00000054
+#define CHIPREG_VDDMM_VDDPROC_IRDMON_STATUS_TYPE                          UInt32
+#define CHIPREG_VDDMM_VDDPROC_IRDMON_STATUS_RESERVED_MASK                 0xFC00FFFF
+#define    CHIPREG_VDDMM_VDDPROC_IRDMON_STATUS_IRD_STATUS5_SHIFT          16
+#define    CHIPREG_VDDMM_VDDPROC_IRDMON_STATUS_IRD_STATUS5_MASK           0x03FF0000
+
+#define CHIPREG_RING_OSCSPARE_STATUS0_OFFSET                              0x0000005C
+#define CHIPREG_RING_OSCSPARE_STATUS0_TYPE                                UInt32
+#define CHIPREG_RING_OSCSPARE_STATUS0_RESERVED_MASK                       0xFFFFFFFF
+
+#define CHIPREG_RING_OSCSPARE_STATUS1_OFFSET                              0x00000060
+#define CHIPREG_RING_OSCSPARE_STATUS1_TYPE                                UInt32
+#define CHIPREG_RING_OSCSPARE_STATUS1_RESERVED_MASK                       0xFFFFFFFF
+
+#define CHIPREG_RING_OSCSPARE_STATUS2_OFFSET                              0x00000064
+#define CHIPREG_RING_OSCSPARE_STATUS2_TYPE                                UInt32
+#define CHIPREG_RING_OSCSPARE_STATUS2_RESERVED_MASK                       0xFFFFFFFF
+
+#define CHIPREG_RING_OSCSPARE_STATUS3_OFFSET                              0x00000068
+#define CHIPREG_RING_OSCSPARE_STATUS3_TYPE                                UInt32
+#define CHIPREG_RING_OSCSPARE_STATUS3_RESERVED_MASK                       0xFFFFFFFF
+
+#define CHIPREG_MDM_SW_INTR_SET_OFFSET                                    0x00000078
+#define CHIPREG_MDM_SW_INTR_SET_TYPE                                      UInt32
+#define CHIPREG_MDM_SW_INTR_SET_RESERVED_MASK                             0xFFFF0000
+#define    CHIPREG_MDM_SW_INTR_SET_MDM_SW_INTR_SET_SHIFT                  0
+#define    CHIPREG_MDM_SW_INTR_SET_MDM_SW_INTR_SET_MASK                   0x0000FFFF
+
+#define CHIPREG_MDM_SW_INTR_CLR_OFFSET                                    0x0000007C
+#define CHIPREG_MDM_SW_INTR_CLR_TYPE                                      UInt32
+#define CHIPREG_MDM_SW_INTR_CLR_RESERVED_MASK                             0xFFFF0000
+#define    CHIPREG_MDM_SW_INTR_CLR_MDM_SW_INTR_CLR_SHIFT                  0
+#define    CHIPREG_MDM_SW_INTR_CLR_MDM_SW_INTR_CLR_MASK                   0x0000FFFF
+
+#define CHIPREG_MDM_SW_INTR_SEL_OFFSET                                    0x00000080
+#define CHIPREG_MDM_SW_INTR_SEL_TYPE                                      UInt32
+#define CHIPREG_MDM_SW_INTR_SEL_RESERVED_MASK                             0xFFFF0000
+#define    CHIPREG_MDM_SW_INTR_SEL_MDM_SW_INTR_SEL_SHIFT                  0
+#define    CHIPREG_MDM_SW_INTR_SEL_MDM_SW_INTR_SEL_MASK                   0x0000FFFF
+
+#define CHIPREG_ENABLE_SET0_OFFSET                                        0x00000084
+#define CHIPREG_ENABLE_SET0_TYPE                                          UInt32
+#define CHIPREG_ENABLE_SET0_RESERVED_MASK                                 0x00000000
+#define    CHIPREG_ENABLE_SET0_ENABLE_SET_SHIFT                           0
+#define    CHIPREG_ENABLE_SET0_ENABLE_SET_MASK                            0xFFFFFFFF
+#define       CHIPREG_ENABLE_SET0_ENABLE_SET_CMD_ENABLE_SET_0             0x00000001
+#define       CHIPREG_ENABLE_SET0_ENABLE_SET_CMD_ENABLE_SET_1             0x00000002
+#define       CHIPREG_ENABLE_SET0_ENABLE_SET_CMD_ENABLE_SET_2             0x00000004
+#define       CHIPREG_ENABLE_SET0_ENABLE_SET_CMD_ENABLE_SET_3             0x00000008
+#define       CHIPREG_ENABLE_SET0_ENABLE_SET_CMD_ENABLE_SET_4             0x00000010
+#define       CHIPREG_ENABLE_SET0_ENABLE_SET_CMD_ENABLE_SET_5             0x00000020
+#define       CHIPREG_ENABLE_SET0_ENABLE_SET_CMD_ENABLE_SET_6             0x00000040
+#define       CHIPREG_ENABLE_SET0_ENABLE_SET_CMD_ENABLE_SET_7             0x00000080
+#define       CHIPREG_ENABLE_SET0_ENABLE_SET_CMD_ENABLE_SET_8             0x00000100
+#define       CHIPREG_ENABLE_SET0_ENABLE_SET_CMD_ENABLE_SET_9             0x00000200
+#define       CHIPREG_ENABLE_SET0_ENABLE_SET_CMD_ENABLE_SET_10            0x00000400
+#define       CHIPREG_ENABLE_SET0_ENABLE_SET_CMD_ENABLE_SET_11            0x00000800
+#define       CHIPREG_ENABLE_SET0_ENABLE_SET_CMD_ENABLE_SET_12            0x00001000
+#define       CHIPREG_ENABLE_SET0_ENABLE_SET_CMD_ENABLE_SET_13            0x00002000
+#define       CHIPREG_ENABLE_SET0_ENABLE_SET_CMD_ENABLE_SET_14            0x00004000
+#define       CHIPREG_ENABLE_SET0_ENABLE_SET_CMD_ENABLE_SET_15            0x00008000
+#define       CHIPREG_ENABLE_SET0_ENABLE_SET_CMD_ENABLE_SET_16            0x00010000
+#define       CHIPREG_ENABLE_SET0_ENABLE_SET_CMD_ENABLE_SET_17            0x00020000
+#define       CHIPREG_ENABLE_SET0_ENABLE_SET_CMD_ENABLE_SET_18            0x00040000
+#define       CHIPREG_ENABLE_SET0_ENABLE_SET_CMD_ENABLE_SET_19            0x00080000
+#define       CHIPREG_ENABLE_SET0_ENABLE_SET_CMD_ENABLE_SET_20            0x00100000
+#define       CHIPREG_ENABLE_SET0_ENABLE_SET_CMD_ENABLE_SET_21            0x00200000
+#define       CHIPREG_ENABLE_SET0_ENABLE_SET_CMD_ENABLE_SET_22            0x00400000
+#define       CHIPREG_ENABLE_SET0_ENABLE_SET_CMD_ENABLE_SET_23            0x00800000
+#define       CHIPREG_ENABLE_SET0_ENABLE_SET_CMD_ENABLE_SET_24            0x01000000
+#define       CHIPREG_ENABLE_SET0_ENABLE_SET_CMD_ENABLE_SET_25            0x02000000
+#define       CHIPREG_ENABLE_SET0_ENABLE_SET_CMD_ENABLE_SET_26            0x04000000
+#define       CHIPREG_ENABLE_SET0_ENABLE_SET_CMD_ENABLE_SET_27            0x08000000
+#define       CHIPREG_ENABLE_SET0_ENABLE_SET_CMD_ENABLE_SET_28            0x10000000
+#define       CHIPREG_ENABLE_SET0_ENABLE_SET_CMD_ENABLE_SET_29            0x20000000
+#define       CHIPREG_ENABLE_SET0_ENABLE_SET_CMD_ENABLE_SET_30            0x40000000
+#define       CHIPREG_ENABLE_SET0_ENABLE_SET_CMD_ENABLE_SET_31            0x80000000
+
+#define CHIPREG_ENABLE_SET1_OFFSET                                        0x00000088
+#define CHIPREG_ENABLE_SET1_TYPE                                          UInt32
+#define CHIPREG_ENABLE_SET1_RESERVED_MASK                                 0x00000000
+#define    CHIPREG_ENABLE_SET1_ENABLE_SET_SHIFT                           0
+#define    CHIPREG_ENABLE_SET1_ENABLE_SET_MASK                            0xFFFFFFFF
+#define       CHIPREG_ENABLE_SET1_ENABLE_SET_CMD_ENABLE_SET_0             0x00000001
+#define       CHIPREG_ENABLE_SET1_ENABLE_SET_CMD_ENABLE_SET_1             0x00000002
+#define       CHIPREG_ENABLE_SET1_ENABLE_SET_CMD_ENABLE_SET_2             0x00000004
+#define       CHIPREG_ENABLE_SET1_ENABLE_SET_CMD_ENABLE_SET_3             0x00000008
+#define       CHIPREG_ENABLE_SET1_ENABLE_SET_CMD_ENABLE_SET_4             0x00000010
+#define       CHIPREG_ENABLE_SET1_ENABLE_SET_CMD_ENABLE_SET_5             0x00000020
+#define       CHIPREG_ENABLE_SET1_ENABLE_SET_CMD_ENABLE_SET_6             0x00000040
+#define       CHIPREG_ENABLE_SET1_ENABLE_SET_CMD_ENABLE_SET_7             0x00000080
+#define       CHIPREG_ENABLE_SET1_ENABLE_SET_CMD_ENABLE_SET_8             0x00000100
+#define       CHIPREG_ENABLE_SET1_ENABLE_SET_CMD_ENABLE_SET_9             0x00000200
+#define       CHIPREG_ENABLE_SET1_ENABLE_SET_CMD_ENABLE_SET_10            0x00000400
+#define       CHIPREG_ENABLE_SET1_ENABLE_SET_CMD_ENABLE_SET_11            0x00000800
+#define       CHIPREG_ENABLE_SET1_ENABLE_SET_CMD_ENABLE_SET_12            0x00001000
+#define       CHIPREG_ENABLE_SET1_ENABLE_SET_CMD_ENABLE_SET_13            0x00002000
+#define       CHIPREG_ENABLE_SET1_ENABLE_SET_CMD_ENABLE_SET_14            0x00004000
+#define       CHIPREG_ENABLE_SET1_ENABLE_SET_CMD_ENABLE_SET_15            0x00008000
+#define       CHIPREG_ENABLE_SET1_ENABLE_SET_CMD_ENABLE_SET_16            0x00010000
+#define       CHIPREG_ENABLE_SET1_ENABLE_SET_CMD_ENABLE_SET_17            0x00020000
+#define       CHIPREG_ENABLE_SET1_ENABLE_SET_CMD_ENABLE_SET_18            0x00040000
+#define       CHIPREG_ENABLE_SET1_ENABLE_SET_CMD_ENABLE_SET_19            0x00080000
+#define       CHIPREG_ENABLE_SET1_ENABLE_SET_CMD_ENABLE_SET_20            0x00100000
+#define       CHIPREG_ENABLE_SET1_ENABLE_SET_CMD_ENABLE_SET_21            0x00200000
+#define       CHIPREG_ENABLE_SET1_ENABLE_SET_CMD_ENABLE_SET_22            0x00400000
+#define       CHIPREG_ENABLE_SET1_ENABLE_SET_CMD_ENABLE_SET_23            0x00800000
+#define       CHIPREG_ENABLE_SET1_ENABLE_SET_CMD_ENABLE_SET_24            0x01000000
+#define       CHIPREG_ENABLE_SET1_ENABLE_SET_CMD_ENABLE_SET_25            0x02000000
+#define       CHIPREG_ENABLE_SET1_ENABLE_SET_CMD_ENABLE_SET_26            0x04000000
+#define       CHIPREG_ENABLE_SET1_ENABLE_SET_CMD_ENABLE_SET_27            0x08000000
+#define       CHIPREG_ENABLE_SET1_ENABLE_SET_CMD_ENABLE_SET_28            0x10000000
+#define       CHIPREG_ENABLE_SET1_ENABLE_SET_CMD_ENABLE_SET_29            0x20000000
+#define       CHIPREG_ENABLE_SET1_ENABLE_SET_CMD_ENABLE_SET_30            0x40000000
+#define       CHIPREG_ENABLE_SET1_ENABLE_SET_CMD_ENABLE_SET_31            0x80000000
+
+#define CHIPREG_ENABLE_SET2_OFFSET                                        0x0000008C
+#define CHIPREG_ENABLE_SET2_TYPE                                          UInt32
+#define CHIPREG_ENABLE_SET2_RESERVED_MASK                                 0x00000000
+#define    CHIPREG_ENABLE_SET2_ENABLE_SET_SHIFT                           0
+#define    CHIPREG_ENABLE_SET2_ENABLE_SET_MASK                            0xFFFFFFFF
+#define       CHIPREG_ENABLE_SET2_ENABLE_SET_CMD_ENABLE_SET_0             0x00000001
+#define       CHIPREG_ENABLE_SET2_ENABLE_SET_CMD_ENABLE_SET_1             0x00000002
+#define       CHIPREG_ENABLE_SET2_ENABLE_SET_CMD_ENABLE_SET_2             0x00000004
+#define       CHIPREG_ENABLE_SET2_ENABLE_SET_CMD_ENABLE_SET_3             0x00000008
+#define       CHIPREG_ENABLE_SET2_ENABLE_SET_CMD_ENABLE_SET_4             0x00000010
+#define       CHIPREG_ENABLE_SET2_ENABLE_SET_CMD_ENABLE_SET_5             0x00000020
+#define       CHIPREG_ENABLE_SET2_ENABLE_SET_CMD_ENABLE_SET_6             0x00000040
+#define       CHIPREG_ENABLE_SET2_ENABLE_SET_CMD_ENABLE_SET_7             0x00000080
+#define       CHIPREG_ENABLE_SET2_ENABLE_SET_CMD_ENABLE_SET_8             0x00000100
+#define       CHIPREG_ENABLE_SET2_ENABLE_SET_CMD_ENABLE_SET_9             0x00000200
+#define       CHIPREG_ENABLE_SET2_ENABLE_SET_CMD_ENABLE_SET_10            0x00000400
+#define       CHIPREG_ENABLE_SET2_ENABLE_SET_CMD_ENABLE_SET_11            0x00000800
+#define       CHIPREG_ENABLE_SET2_ENABLE_SET_CMD_ENABLE_SET_12            0x00001000
+#define       CHIPREG_ENABLE_SET2_ENABLE_SET_CMD_ENABLE_SET_13            0x00002000
+#define       CHIPREG_ENABLE_SET2_ENABLE_SET_CMD_ENABLE_SET_14            0x00004000
+#define       CHIPREG_ENABLE_SET2_ENABLE_SET_CMD_ENABLE_SET_15            0x00008000
+#define       CHIPREG_ENABLE_SET2_ENABLE_SET_CMD_ENABLE_SET_16            0x00010000
+#define       CHIPREG_ENABLE_SET2_ENABLE_SET_CMD_ENABLE_SET_17            0x00020000
+#define       CHIPREG_ENABLE_SET2_ENABLE_SET_CMD_ENABLE_SET_18            0x00040000
+#define       CHIPREG_ENABLE_SET2_ENABLE_SET_CMD_ENABLE_SET_19            0x00080000
+#define       CHIPREG_ENABLE_SET2_ENABLE_SET_CMD_ENABLE_SET_20            0x00100000
+#define       CHIPREG_ENABLE_SET2_ENABLE_SET_CMD_ENABLE_SET_21            0x00200000
+#define       CHIPREG_ENABLE_SET2_ENABLE_SET_CMD_ENABLE_SET_22            0x00400000
+#define       CHIPREG_ENABLE_SET2_ENABLE_SET_CMD_ENABLE_SET_23            0x00800000
+#define       CHIPREG_ENABLE_SET2_ENABLE_SET_CMD_ENABLE_SET_24            0x01000000
+#define       CHIPREG_ENABLE_SET2_ENABLE_SET_CMD_ENABLE_SET_25            0x02000000
+#define       CHIPREG_ENABLE_SET2_ENABLE_SET_CMD_ENABLE_SET_26            0x04000000
+#define       CHIPREG_ENABLE_SET2_ENABLE_SET_CMD_ENABLE_SET_27            0x08000000
+#define       CHIPREG_ENABLE_SET2_ENABLE_SET_CMD_ENABLE_SET_28            0x10000000
+#define       CHIPREG_ENABLE_SET2_ENABLE_SET_CMD_ENABLE_SET_29            0x20000000
+#define       CHIPREG_ENABLE_SET2_ENABLE_SET_CMD_ENABLE_SET_30            0x40000000
+#define       CHIPREG_ENABLE_SET2_ENABLE_SET_CMD_ENABLE_SET_31            0x80000000
+
+#define CHIPREG_ENABLE_SET3_OFFSET                                        0x00000090
+#define CHIPREG_ENABLE_SET3_TYPE                                          UInt32
+#define CHIPREG_ENABLE_SET3_RESERVED_MASK                                 0x00000000
+#define    CHIPREG_ENABLE_SET3_ENABLE_SET_SHIFT                           0
+#define    CHIPREG_ENABLE_SET3_ENABLE_SET_MASK                            0xFFFFFFFF
+#define       CHIPREG_ENABLE_SET3_ENABLE_SET_CMD_ENABLE_SET_0             0x00000001
+#define       CHIPREG_ENABLE_SET3_ENABLE_SET_CMD_ENABLE_SET_1             0x00000002
+#define       CHIPREG_ENABLE_SET3_ENABLE_SET_CMD_ENABLE_SET_2             0x00000004
+#define       CHIPREG_ENABLE_SET3_ENABLE_SET_CMD_ENABLE_SET_3             0x00000008
+#define       CHIPREG_ENABLE_SET3_ENABLE_SET_CMD_ENABLE_SET_4             0x00000010
+#define       CHIPREG_ENABLE_SET3_ENABLE_SET_CMD_ENABLE_SET_5             0x00000020
+#define       CHIPREG_ENABLE_SET3_ENABLE_SET_CMD_ENABLE_SET_6             0x00000040
+#define       CHIPREG_ENABLE_SET3_ENABLE_SET_CMD_ENABLE_SET_7             0x00000080
+#define       CHIPREG_ENABLE_SET3_ENABLE_SET_CMD_ENABLE_SET_8             0x00000100
+#define       CHIPREG_ENABLE_SET3_ENABLE_SET_CMD_ENABLE_SET_9             0x00000200
+#define       CHIPREG_ENABLE_SET3_ENABLE_SET_CMD_ENABLE_SET_10            0x00000400
+#define       CHIPREG_ENABLE_SET3_ENABLE_SET_CMD_ENABLE_SET_11            0x00000800
+#define       CHIPREG_ENABLE_SET3_ENABLE_SET_CMD_ENABLE_SET_12            0x00001000
+#define       CHIPREG_ENABLE_SET3_ENABLE_SET_CMD_ENABLE_SET_13            0x00002000
+#define       CHIPREG_ENABLE_SET3_ENABLE_SET_CMD_ENABLE_SET_14            0x00004000
+#define       CHIPREG_ENABLE_SET3_ENABLE_SET_CMD_ENABLE_SET_15            0x00008000
+#define       CHIPREG_ENABLE_SET3_ENABLE_SET_CMD_ENABLE_SET_16            0x00010000
+#define       CHIPREG_ENABLE_SET3_ENABLE_SET_CMD_ENABLE_SET_17            0x00020000
+#define       CHIPREG_ENABLE_SET3_ENABLE_SET_CMD_ENABLE_SET_18            0x00040000
+#define       CHIPREG_ENABLE_SET3_ENABLE_SET_CMD_ENABLE_SET_19            0x00080000
+#define       CHIPREG_ENABLE_SET3_ENABLE_SET_CMD_ENABLE_SET_20            0x00100000
+#define       CHIPREG_ENABLE_SET3_ENABLE_SET_CMD_ENABLE_SET_21            0x00200000
+#define       CHIPREG_ENABLE_SET3_ENABLE_SET_CMD_ENABLE_SET_22            0x00400000
+#define       CHIPREG_ENABLE_SET3_ENABLE_SET_CMD_ENABLE_SET_23            0x00800000
+#define       CHIPREG_ENABLE_SET3_ENABLE_SET_CMD_ENABLE_SET_24            0x01000000
+#define       CHIPREG_ENABLE_SET3_ENABLE_SET_CMD_ENABLE_SET_25            0x02000000
+#define       CHIPREG_ENABLE_SET3_ENABLE_SET_CMD_ENABLE_SET_26            0x04000000
+#define       CHIPREG_ENABLE_SET3_ENABLE_SET_CMD_ENABLE_SET_27            0x08000000
+#define       CHIPREG_ENABLE_SET3_ENABLE_SET_CMD_ENABLE_SET_28            0x10000000
+#define       CHIPREG_ENABLE_SET3_ENABLE_SET_CMD_ENABLE_SET_29            0x20000000
+#define       CHIPREG_ENABLE_SET3_ENABLE_SET_CMD_ENABLE_SET_30            0x40000000
+#define       CHIPREG_ENABLE_SET3_ENABLE_SET_CMD_ENABLE_SET_31            0x80000000
+
+#define CHIPREG_ENABLE_SET4_OFFSET                                        0x00000094
+#define CHIPREG_ENABLE_SET4_TYPE                                          UInt32
+#define CHIPREG_ENABLE_SET4_RESERVED_MASK                                 0x00000000
+#define    CHIPREG_ENABLE_SET4_ENABLE_SET_SHIFT                           0
+#define    CHIPREG_ENABLE_SET4_ENABLE_SET_MASK                            0xFFFFFFFF
+#define       CHIPREG_ENABLE_SET4_ENABLE_SET_CMD_ENABLE_SET_0             0x00000001
+#define       CHIPREG_ENABLE_SET4_ENABLE_SET_CMD_ENABLE_SET_1             0x00000002
+#define       CHIPREG_ENABLE_SET4_ENABLE_SET_CMD_ENABLE_SET_2             0x00000004
+#define       CHIPREG_ENABLE_SET4_ENABLE_SET_CMD_ENABLE_SET_3             0x00000008
+#define       CHIPREG_ENABLE_SET4_ENABLE_SET_CMD_ENABLE_SET_4             0x00000010
+#define       CHIPREG_ENABLE_SET4_ENABLE_SET_CMD_ENABLE_SET_5             0x00000020
+#define       CHIPREG_ENABLE_SET4_ENABLE_SET_CMD_ENABLE_SET_6             0x00000040
+#define       CHIPREG_ENABLE_SET4_ENABLE_SET_CMD_ENABLE_SET_7             0x00000080
+#define       CHIPREG_ENABLE_SET4_ENABLE_SET_CMD_ENABLE_SET_8             0x00000100
+#define       CHIPREG_ENABLE_SET4_ENABLE_SET_CMD_ENABLE_SET_9             0x00000200
+#define       CHIPREG_ENABLE_SET4_ENABLE_SET_CMD_ENABLE_SET_10            0x00000400
+#define       CHIPREG_ENABLE_SET4_ENABLE_SET_CMD_ENABLE_SET_11            0x00000800
+#define       CHIPREG_ENABLE_SET4_ENABLE_SET_CMD_ENABLE_SET_12            0x00001000
+#define       CHIPREG_ENABLE_SET4_ENABLE_SET_CMD_ENABLE_SET_13            0x00002000
+#define       CHIPREG_ENABLE_SET4_ENABLE_SET_CMD_ENABLE_SET_14            0x00004000
+#define       CHIPREG_ENABLE_SET4_ENABLE_SET_CMD_ENABLE_SET_15            0x00008000
+#define       CHIPREG_ENABLE_SET4_ENABLE_SET_CMD_ENABLE_SET_16            0x00010000
+#define       CHIPREG_ENABLE_SET4_ENABLE_SET_CMD_ENABLE_SET_17            0x00020000
+#define       CHIPREG_ENABLE_SET4_ENABLE_SET_CMD_ENABLE_SET_18            0x00040000
+#define       CHIPREG_ENABLE_SET4_ENABLE_SET_CMD_ENABLE_SET_19            0x00080000
+#define       CHIPREG_ENABLE_SET4_ENABLE_SET_CMD_ENABLE_SET_20            0x00100000
+#define       CHIPREG_ENABLE_SET4_ENABLE_SET_CMD_ENABLE_SET_21            0x00200000
+#define       CHIPREG_ENABLE_SET4_ENABLE_SET_CMD_ENABLE_SET_22            0x00400000
+#define       CHIPREG_ENABLE_SET4_ENABLE_SET_CMD_ENABLE_SET_23            0x00800000
+#define       CHIPREG_ENABLE_SET4_ENABLE_SET_CMD_ENABLE_SET_24            0x01000000
+#define       CHIPREG_ENABLE_SET4_ENABLE_SET_CMD_ENABLE_SET_25            0x02000000
+#define       CHIPREG_ENABLE_SET4_ENABLE_SET_CMD_ENABLE_SET_26            0x04000000
+#define       CHIPREG_ENABLE_SET4_ENABLE_SET_CMD_ENABLE_SET_27            0x08000000
+#define       CHIPREG_ENABLE_SET4_ENABLE_SET_CMD_ENABLE_SET_28            0x10000000
+#define       CHIPREG_ENABLE_SET4_ENABLE_SET_CMD_ENABLE_SET_29            0x20000000
+#define       CHIPREG_ENABLE_SET4_ENABLE_SET_CMD_ENABLE_SET_30            0x40000000
+#define       CHIPREG_ENABLE_SET4_ENABLE_SET_CMD_ENABLE_SET_31            0x80000000
+
+#define CHIPREG_ENABLE_SET5_OFFSET                                        0x00000098
+#define CHIPREG_ENABLE_SET5_TYPE                                          UInt32
+#define CHIPREG_ENABLE_SET5_RESERVED_MASK                                 0x00000000
+#define    CHIPREG_ENABLE_SET5_ENABLE_SET_SHIFT                           0
+#define    CHIPREG_ENABLE_SET5_ENABLE_SET_MASK                            0xFFFFFFFF
+#define       CHIPREG_ENABLE_SET5_ENABLE_SET_CMD_ENABLE_SET_0             0x00000001
+#define       CHIPREG_ENABLE_SET5_ENABLE_SET_CMD_ENABLE_SET_1             0x00000002
+#define       CHIPREG_ENABLE_SET5_ENABLE_SET_CMD_ENABLE_SET_2             0x00000004
+#define       CHIPREG_ENABLE_SET5_ENABLE_SET_CMD_ENABLE_SET_3             0x00000008
+#define       CHIPREG_ENABLE_SET5_ENABLE_SET_CMD_ENABLE_SET_4             0x00000010
+#define       CHIPREG_ENABLE_SET5_ENABLE_SET_CMD_ENABLE_SET_5             0x00000020
+#define       CHIPREG_ENABLE_SET5_ENABLE_SET_CMD_ENABLE_SET_6             0x00000040
+#define       CHIPREG_ENABLE_SET5_ENABLE_SET_CMD_ENABLE_SET_7             0x00000080
+#define       CHIPREG_ENABLE_SET5_ENABLE_SET_CMD_ENABLE_SET_8             0x00000100
+#define       CHIPREG_ENABLE_SET5_ENABLE_SET_CMD_ENABLE_SET_9             0x00000200
+#define       CHIPREG_ENABLE_SET5_ENABLE_SET_CMD_ENABLE_SET_10            0x00000400
+#define       CHIPREG_ENABLE_SET5_ENABLE_SET_CMD_ENABLE_SET_11            0x00000800
+#define       CHIPREG_ENABLE_SET5_ENABLE_SET_CMD_ENABLE_SET_12            0x00001000
+#define       CHIPREG_ENABLE_SET5_ENABLE_SET_CMD_ENABLE_SET_13            0x00002000
+#define       CHIPREG_ENABLE_SET5_ENABLE_SET_CMD_ENABLE_SET_14            0x00004000
+#define       CHIPREG_ENABLE_SET5_ENABLE_SET_CMD_ENABLE_SET_15            0x00008000
+#define       CHIPREG_ENABLE_SET5_ENABLE_SET_CMD_ENABLE_SET_16            0x00010000
+#define       CHIPREG_ENABLE_SET5_ENABLE_SET_CMD_ENABLE_SET_17            0x00020000
+#define       CHIPREG_ENABLE_SET5_ENABLE_SET_CMD_ENABLE_SET_18            0x00040000
+#define       CHIPREG_ENABLE_SET5_ENABLE_SET_CMD_ENABLE_SET_19            0x00080000
+#define       CHIPREG_ENABLE_SET5_ENABLE_SET_CMD_ENABLE_SET_20            0x00100000
+#define       CHIPREG_ENABLE_SET5_ENABLE_SET_CMD_ENABLE_SET_21            0x00200000
+#define       CHIPREG_ENABLE_SET5_ENABLE_SET_CMD_ENABLE_SET_22            0x00400000
+#define       CHIPREG_ENABLE_SET5_ENABLE_SET_CMD_ENABLE_SET_23            0x00800000
+#define       CHIPREG_ENABLE_SET5_ENABLE_SET_CMD_ENABLE_SET_24            0x01000000
+#define       CHIPREG_ENABLE_SET5_ENABLE_SET_CMD_ENABLE_SET_25            0x02000000
+#define       CHIPREG_ENABLE_SET5_ENABLE_SET_CMD_ENABLE_SET_26            0x04000000
+#define       CHIPREG_ENABLE_SET5_ENABLE_SET_CMD_ENABLE_SET_27            0x08000000
+#define       CHIPREG_ENABLE_SET5_ENABLE_SET_CMD_ENABLE_SET_28            0x10000000
+#define       CHIPREG_ENABLE_SET5_ENABLE_SET_CMD_ENABLE_SET_29            0x20000000
+#define       CHIPREG_ENABLE_SET5_ENABLE_SET_CMD_ENABLE_SET_30            0x40000000
+#define       CHIPREG_ENABLE_SET5_ENABLE_SET_CMD_ENABLE_SET_31            0x80000000
+
+#define CHIPREG_ENABLE_SET6_OFFSET                                        0x0000009C
+#define CHIPREG_ENABLE_SET6_TYPE                                          UInt32
+#define CHIPREG_ENABLE_SET6_RESERVED_MASK                                 0x00000000
+#define    CHIPREG_ENABLE_SET6_ENABLE_SET_SHIFT                           0
+#define    CHIPREG_ENABLE_SET6_ENABLE_SET_MASK                            0xFFFFFFFF
+#define       CHIPREG_ENABLE_SET6_ENABLE_SET_CMD_ENABLE_SET_0             0x00000001
+#define       CHIPREG_ENABLE_SET6_ENABLE_SET_CMD_ENABLE_SET_1             0x00000002
+#define       CHIPREG_ENABLE_SET6_ENABLE_SET_CMD_ENABLE_SET_2             0x00000004
+#define       CHIPREG_ENABLE_SET6_ENABLE_SET_CMD_ENABLE_SET_3             0x00000008
+#define       CHIPREG_ENABLE_SET6_ENABLE_SET_CMD_ENABLE_SET_4             0x00000010
+#define       CHIPREG_ENABLE_SET6_ENABLE_SET_CMD_ENABLE_SET_5             0x00000020
+#define       CHIPREG_ENABLE_SET6_ENABLE_SET_CMD_ENABLE_SET_6             0x00000040
+#define       CHIPREG_ENABLE_SET6_ENABLE_SET_CMD_ENABLE_SET_7             0x00000080
+#define       CHIPREG_ENABLE_SET6_ENABLE_SET_CMD_ENABLE_SET_8             0x00000100
+#define       CHIPREG_ENABLE_SET6_ENABLE_SET_CMD_ENABLE_SET_9             0x00000200
+#define       CHIPREG_ENABLE_SET6_ENABLE_SET_CMD_ENABLE_SET_10            0x00000400
+#define       CHIPREG_ENABLE_SET6_ENABLE_SET_CMD_ENABLE_SET_11            0x00000800
+#define       CHIPREG_ENABLE_SET6_ENABLE_SET_CMD_ENABLE_SET_12            0x00001000
+#define       CHIPREG_ENABLE_SET6_ENABLE_SET_CMD_ENABLE_SET_13            0x00002000
+#define       CHIPREG_ENABLE_SET6_ENABLE_SET_CMD_ENABLE_SET_14            0x00004000
+#define       CHIPREG_ENABLE_SET6_ENABLE_SET_CMD_ENABLE_SET_15            0x00008000
+#define       CHIPREG_ENABLE_SET6_ENABLE_SET_CMD_ENABLE_SET_16            0x00010000
+#define       CHIPREG_ENABLE_SET6_ENABLE_SET_CMD_ENABLE_SET_17            0x00020000
+#define       CHIPREG_ENABLE_SET6_ENABLE_SET_CMD_ENABLE_SET_18            0x00040000
+#define       CHIPREG_ENABLE_SET6_ENABLE_SET_CMD_ENABLE_SET_19            0x00080000
+#define       CHIPREG_ENABLE_SET6_ENABLE_SET_CMD_ENABLE_SET_20            0x00100000
+#define       CHIPREG_ENABLE_SET6_ENABLE_SET_CMD_ENABLE_SET_21            0x00200000
+#define       CHIPREG_ENABLE_SET6_ENABLE_SET_CMD_ENABLE_SET_22            0x00400000
+#define       CHIPREG_ENABLE_SET6_ENABLE_SET_CMD_ENABLE_SET_23            0x00800000
+#define       CHIPREG_ENABLE_SET6_ENABLE_SET_CMD_ENABLE_SET_24            0x01000000
+#define       CHIPREG_ENABLE_SET6_ENABLE_SET_CMD_ENABLE_SET_25            0x02000000
+#define       CHIPREG_ENABLE_SET6_ENABLE_SET_CMD_ENABLE_SET_26            0x04000000
+#define       CHIPREG_ENABLE_SET6_ENABLE_SET_CMD_ENABLE_SET_27            0x08000000
+#define       CHIPREG_ENABLE_SET6_ENABLE_SET_CMD_ENABLE_SET_28            0x10000000
+#define       CHIPREG_ENABLE_SET6_ENABLE_SET_CMD_ENABLE_SET_29            0x20000000
+#define       CHIPREG_ENABLE_SET6_ENABLE_SET_CMD_ENABLE_SET_30            0x40000000
+#define       CHIPREG_ENABLE_SET6_ENABLE_SET_CMD_ENABLE_SET_31            0x80000000
+
+#define CHIPREG_ENABLE_CLR0_OFFSET                                        0x000000A0
+#define CHIPREG_ENABLE_CLR0_TYPE                                          UInt32
+#define CHIPREG_ENABLE_CLR0_RESERVED_MASK                                 0x00000000
+#define    CHIPREG_ENABLE_CLR0_ENABLE_CLR_SHIFT                           0
+#define    CHIPREG_ENABLE_CLR0_ENABLE_CLR_MASK                            0xFFFFFFFF
+#define       CHIPREG_ENABLE_CLR0_ENABLE_CLR_CMD_ENABLE_CLEAR_0           0x00000001
+#define       CHIPREG_ENABLE_CLR0_ENABLE_CLR_CMD_ENABLE_CLEAR_1           0x00000002
+#define       CHIPREG_ENABLE_CLR0_ENABLE_CLR_CMD_ENABLE_CLEAR_2           0x00000004
+#define       CHIPREG_ENABLE_CLR0_ENABLE_CLR_CMD_ENABLE_CLEAR_3           0x00000008
+#define       CHIPREG_ENABLE_CLR0_ENABLE_CLR_CMD_ENABLE_CLEAR_4           0x00000010
+#define       CHIPREG_ENABLE_CLR0_ENABLE_CLR_CMD_ENABLE_CLEAR_5           0x00000020
+#define       CHIPREG_ENABLE_CLR0_ENABLE_CLR_CMD_ENABLE_CLEAR_6           0x00000040
+#define       CHIPREG_ENABLE_CLR0_ENABLE_CLR_CMD_ENABLE_CLEAR_7           0x00000080
+#define       CHIPREG_ENABLE_CLR0_ENABLE_CLR_CMD_ENABLE_CLEAR_8           0x00000100
+#define       CHIPREG_ENABLE_CLR0_ENABLE_CLR_CMD_ENABLE_CLEAR_9           0x00000200
+#define       CHIPREG_ENABLE_CLR0_ENABLE_CLR_CMD_ENABLE_CLEAR_10          0x00000400
+#define       CHIPREG_ENABLE_CLR0_ENABLE_CLR_CMD_ENABLE_CLEAR_11          0x00000800
+#define       CHIPREG_ENABLE_CLR0_ENABLE_CLR_CMD_ENABLE_CLEAR_12          0x00001000
+#define       CHIPREG_ENABLE_CLR0_ENABLE_CLR_CMD_ENABLE_CLEAR_13          0x00002000
+#define       CHIPREG_ENABLE_CLR0_ENABLE_CLR_CMD_ENABLE_CLEAR_14          0x00004000
+#define       CHIPREG_ENABLE_CLR0_ENABLE_CLR_CMD_ENABLE_CLEAR_15          0x00008000
+#define       CHIPREG_ENABLE_CLR0_ENABLE_CLR_CMD_ENABLE_CLEAR_16          0x00010000
+#define       CHIPREG_ENABLE_CLR0_ENABLE_CLR_CMD_ENABLE_CLEAR_17          0x00020000
+#define       CHIPREG_ENABLE_CLR0_ENABLE_CLR_CMD_ENABLE_CLEAR_18          0x00040000
+#define       CHIPREG_ENABLE_CLR0_ENABLE_CLR_CMD_ENABLE_CLEAR_19          0x00080000
+#define       CHIPREG_ENABLE_CLR0_ENABLE_CLR_CMD_ENABLE_CLEAR_20          0x00100000
+#define       CHIPREG_ENABLE_CLR0_ENABLE_CLR_CMD_ENABLE_CLEAR_21          0x00200000
+#define       CHIPREG_ENABLE_CLR0_ENABLE_CLR_CMD_ENABLE_CLEAR_22          0x00400000
+#define       CHIPREG_ENABLE_CLR0_ENABLE_CLR_CMD_ENABLE_CLEAR_23          0x00800000
+#define       CHIPREG_ENABLE_CLR0_ENABLE_CLR_CMD_ENABLE_CLEAR_24          0x01000000
+#define       CHIPREG_ENABLE_CLR0_ENABLE_CLR_CMD_ENABLE_CLEAR_25          0x02000000
+#define       CHIPREG_ENABLE_CLR0_ENABLE_CLR_CMD_ENABLE_CLEAR_26          0x04000000
+#define       CHIPREG_ENABLE_CLR0_ENABLE_CLR_CMD_ENABLE_CLEAR_27          0x08000000
+#define       CHIPREG_ENABLE_CLR0_ENABLE_CLR_CMD_ENABLE_CLEAR_28          0x10000000
+#define       CHIPREG_ENABLE_CLR0_ENABLE_CLR_CMD_ENABLE_CLEAR_29          0x20000000
+#define       CHIPREG_ENABLE_CLR0_ENABLE_CLR_CMD_ENABLE_CLEAR_30          0x40000000
+#define       CHIPREG_ENABLE_CLR0_ENABLE_CLR_CMD_ENABLE_CLEAR_31          0x80000000
+
+#define CHIPREG_ENABLE_CLR1_OFFSET                                        0x000000A4
+#define CHIPREG_ENABLE_CLR1_TYPE                                          UInt32
+#define CHIPREG_ENABLE_CLR1_RESERVED_MASK                                 0x00000000
+#define    CHIPREG_ENABLE_CLR1_ENABLE_CLR_SHIFT                           0
+#define    CHIPREG_ENABLE_CLR1_ENABLE_CLR_MASK                            0xFFFFFFFF
+#define       CHIPREG_ENABLE_CLR1_ENABLE_CLR_CMD_ENABLE_CLEAR_0           0x00000001
+#define       CHIPREG_ENABLE_CLR1_ENABLE_CLR_CMD_ENABLE_CLEAR_1           0x00000002
+#define       CHIPREG_ENABLE_CLR1_ENABLE_CLR_CMD_ENABLE_CLEAR_2           0x00000004
+#define       CHIPREG_ENABLE_CLR1_ENABLE_CLR_CMD_ENABLE_CLEAR_3           0x00000008
+#define       CHIPREG_ENABLE_CLR1_ENABLE_CLR_CMD_ENABLE_CLEAR_4           0x00000010
+#define       CHIPREG_ENABLE_CLR1_ENABLE_CLR_CMD_ENABLE_CLEAR_5           0x00000020
+#define       CHIPREG_ENABLE_CLR1_ENABLE_CLR_CMD_ENABLE_CLEAR_6           0x00000040
+#define       CHIPREG_ENABLE_CLR1_ENABLE_CLR_CMD_ENABLE_CLEAR_7           0x00000080
+#define       CHIPREG_ENABLE_CLR1_ENABLE_CLR_CMD_ENABLE_CLEAR_8           0x00000100
+#define       CHIPREG_ENABLE_CLR1_ENABLE_CLR_CMD_ENABLE_CLEAR_9           0x00000200
+#define       CHIPREG_ENABLE_CLR1_ENABLE_CLR_CMD_ENABLE_CLEAR_10          0x00000400
+#define       CHIPREG_ENABLE_CLR1_ENABLE_CLR_CMD_ENABLE_CLEAR_11          0x00000800
+#define       CHIPREG_ENABLE_CLR1_ENABLE_CLR_CMD_ENABLE_CLEAR_12          0x00001000
+#define       CHIPREG_ENABLE_CLR1_ENABLE_CLR_CMD_ENABLE_CLEAR_13          0x00002000
+#define       CHIPREG_ENABLE_CLR1_ENABLE_CLR_CMD_ENABLE_CLEAR_14          0x00004000
+#define       CHIPREG_ENABLE_CLR1_ENABLE_CLR_CMD_ENABLE_CLEAR_15          0x00008000
+#define       CHIPREG_ENABLE_CLR1_ENABLE_CLR_CMD_ENABLE_CLEAR_16          0x00010000
+#define       CHIPREG_ENABLE_CLR1_ENABLE_CLR_CMD_ENABLE_CLEAR_17          0x00020000
+#define       CHIPREG_ENABLE_CLR1_ENABLE_CLR_CMD_ENABLE_CLEAR_18          0x00040000
+#define       CHIPREG_ENABLE_CLR1_ENABLE_CLR_CMD_ENABLE_CLEAR_19          0x00080000
+#define       CHIPREG_ENABLE_CLR1_ENABLE_CLR_CMD_ENABLE_CLEAR_20          0x00100000
+#define       CHIPREG_ENABLE_CLR1_ENABLE_CLR_CMD_ENABLE_CLEAR_21          0x00200000
+#define       CHIPREG_ENABLE_CLR1_ENABLE_CLR_CMD_ENABLE_CLEAR_22          0x00400000
+#define       CHIPREG_ENABLE_CLR1_ENABLE_CLR_CMD_ENABLE_CLEAR_23          0x00800000
+#define       CHIPREG_ENABLE_CLR1_ENABLE_CLR_CMD_ENABLE_CLEAR_24          0x01000000
+#define       CHIPREG_ENABLE_CLR1_ENABLE_CLR_CMD_ENABLE_CLEAR_25          0x02000000
+#define       CHIPREG_ENABLE_CLR1_ENABLE_CLR_CMD_ENABLE_CLEAR_26          0x04000000
+#define       CHIPREG_ENABLE_CLR1_ENABLE_CLR_CMD_ENABLE_CLEAR_27          0x08000000
+#define       CHIPREG_ENABLE_CLR1_ENABLE_CLR_CMD_ENABLE_CLEAR_28          0x10000000
+#define       CHIPREG_ENABLE_CLR1_ENABLE_CLR_CMD_ENABLE_CLEAR_29          0x20000000
+#define       CHIPREG_ENABLE_CLR1_ENABLE_CLR_CMD_ENABLE_CLEAR_30          0x40000000
+#define       CHIPREG_ENABLE_CLR1_ENABLE_CLR_CMD_ENABLE_CLEAR_31          0x80000000
+
+#define CHIPREG_ENABLE_CLR2_OFFSET                                        0x000000A8
+#define CHIPREG_ENABLE_CLR2_TYPE                                          UInt32
+#define CHIPREG_ENABLE_CLR2_RESERVED_MASK                                 0x00000000
+#define    CHIPREG_ENABLE_CLR2_ENABLE_CLR_SHIFT                           0
+#define    CHIPREG_ENABLE_CLR2_ENABLE_CLR_MASK                            0xFFFFFFFF
+#define       CHIPREG_ENABLE_CLR2_ENABLE_CLR_CMD_ENABLE_CLEAR_0           0x00000001
+#define       CHIPREG_ENABLE_CLR2_ENABLE_CLR_CMD_ENABLE_CLEAR_1           0x00000002
+#define       CHIPREG_ENABLE_CLR2_ENABLE_CLR_CMD_ENABLE_CLEAR_2           0x00000004
+#define       CHIPREG_ENABLE_CLR2_ENABLE_CLR_CMD_ENABLE_CLEAR_3           0x00000008
+#define       CHIPREG_ENABLE_CLR2_ENABLE_CLR_CMD_ENABLE_CLEAR_4           0x00000010
+#define       CHIPREG_ENABLE_CLR2_ENABLE_CLR_CMD_ENABLE_CLEAR_5           0x00000020
+#define       CHIPREG_ENABLE_CLR2_ENABLE_CLR_CMD_ENABLE_CLEAR_6           0x00000040
+#define       CHIPREG_ENABLE_CLR2_ENABLE_CLR_CMD_ENABLE_CLEAR_7           0x00000080
+#define       CHIPREG_ENABLE_CLR2_ENABLE_CLR_CMD_ENABLE_CLEAR_8           0x00000100
+#define       CHIPREG_ENABLE_CLR2_ENABLE_CLR_CMD_ENABLE_CLEAR_9           0x00000200
+#define       CHIPREG_ENABLE_CLR2_ENABLE_CLR_CMD_ENABLE_CLEAR_10          0x00000400
+#define       CHIPREG_ENABLE_CLR2_ENABLE_CLR_CMD_ENABLE_CLEAR_11          0x00000800
+#define       CHIPREG_ENABLE_CLR2_ENABLE_CLR_CMD_ENABLE_CLEAR_12          0x00001000
+#define       CHIPREG_ENABLE_CLR2_ENABLE_CLR_CMD_ENABLE_CLEAR_13          0x00002000
+#define       CHIPREG_ENABLE_CLR2_ENABLE_CLR_CMD_ENABLE_CLEAR_14          0x00004000
+#define       CHIPREG_ENABLE_CLR2_ENABLE_CLR_CMD_ENABLE_CLEAR_15          0x00008000
+#define       CHIPREG_ENABLE_CLR2_ENABLE_CLR_CMD_ENABLE_CLEAR_16          0x00010000
+#define       CHIPREG_ENABLE_CLR2_ENABLE_CLR_CMD_ENABLE_CLEAR_17          0x00020000
+#define       CHIPREG_ENABLE_CLR2_ENABLE_CLR_CMD_ENABLE_CLEAR_18          0x00040000
+#define       CHIPREG_ENABLE_CLR2_ENABLE_CLR_CMD_ENABLE_CLEAR_19          0x00080000
+#define       CHIPREG_ENABLE_CLR2_ENABLE_CLR_CMD_ENABLE_CLEAR_20          0x00100000
+#define       CHIPREG_ENABLE_CLR2_ENABLE_CLR_CMD_ENABLE_CLEAR_21          0x00200000
+#define       CHIPREG_ENABLE_CLR2_ENABLE_CLR_CMD_ENABLE_CLEAR_22          0x00400000
+#define       CHIPREG_ENABLE_CLR2_ENABLE_CLR_CMD_ENABLE_CLEAR_23          0x00800000
+#define       CHIPREG_ENABLE_CLR2_ENABLE_CLR_CMD_ENABLE_CLEAR_24          0x01000000
+#define       CHIPREG_ENABLE_CLR2_ENABLE_CLR_CMD_ENABLE_CLEAR_25          0x02000000
+#define       CHIPREG_ENABLE_CLR2_ENABLE_CLR_CMD_ENABLE_CLEAR_26          0x04000000
+#define       CHIPREG_ENABLE_CLR2_ENABLE_CLR_CMD_ENABLE_CLEAR_27          0x08000000
+#define       CHIPREG_ENABLE_CLR2_ENABLE_CLR_CMD_ENABLE_CLEAR_28          0x10000000
+#define       CHIPREG_ENABLE_CLR2_ENABLE_CLR_CMD_ENABLE_CLEAR_29          0x20000000
+#define       CHIPREG_ENABLE_CLR2_ENABLE_CLR_CMD_ENABLE_CLEAR_30          0x40000000
+#define       CHIPREG_ENABLE_CLR2_ENABLE_CLR_CMD_ENABLE_CLEAR_31          0x80000000
+
+#define CHIPREG_ENABLE_CLR3_OFFSET                                        0x000000AC
+#define CHIPREG_ENABLE_CLR3_TYPE                                          UInt32
+#define CHIPREG_ENABLE_CLR3_RESERVED_MASK                                 0x00000000
+#define    CHIPREG_ENABLE_CLR3_ENABLE_CLR_SHIFT                           0
+#define    CHIPREG_ENABLE_CLR3_ENABLE_CLR_MASK                            0xFFFFFFFF
+#define       CHIPREG_ENABLE_CLR3_ENABLE_CLR_CMD_ENABLE_CLEAR_0           0x00000001
+#define       CHIPREG_ENABLE_CLR3_ENABLE_CLR_CMD_ENABLE_CLEAR_1           0x00000002
+#define       CHIPREG_ENABLE_CLR3_ENABLE_CLR_CMD_ENABLE_CLEAR_2           0x00000004
+#define       CHIPREG_ENABLE_CLR3_ENABLE_CLR_CMD_ENABLE_CLEAR_3           0x00000008
+#define       CHIPREG_ENABLE_CLR3_ENABLE_CLR_CMD_ENABLE_CLEAR_4           0x00000010
+#define       CHIPREG_ENABLE_CLR3_ENABLE_CLR_CMD_ENABLE_CLEAR_5           0x00000020
+#define       CHIPREG_ENABLE_CLR3_ENABLE_CLR_CMD_ENABLE_CLEAR_6           0x00000040
+#define       CHIPREG_ENABLE_CLR3_ENABLE_CLR_CMD_ENABLE_CLEAR_7           0x00000080
+#define       CHIPREG_ENABLE_CLR3_ENABLE_CLR_CMD_ENABLE_CLEAR_8           0x00000100
+#define       CHIPREG_ENABLE_CLR3_ENABLE_CLR_CMD_ENABLE_CLEAR_9           0x00000200
+#define       CHIPREG_ENABLE_CLR3_ENABLE_CLR_CMD_ENABLE_CLEAR_10          0x00000400
+#define       CHIPREG_ENABLE_CLR3_ENABLE_CLR_CMD_ENABLE_CLEAR_11          0x00000800
+#define       CHIPREG_ENABLE_CLR3_ENABLE_CLR_CMD_ENABLE_CLEAR_12          0x00001000
+#define       CHIPREG_ENABLE_CLR3_ENABLE_CLR_CMD_ENABLE_CLEAR_13          0x00002000
+#define       CHIPREG_ENABLE_CLR3_ENABLE_CLR_CMD_ENABLE_CLEAR_14          0x00004000
+#define       CHIPREG_ENABLE_CLR3_ENABLE_CLR_CMD_ENABLE_CLEAR_15          0x00008000
+#define       CHIPREG_ENABLE_CLR3_ENABLE_CLR_CMD_ENABLE_CLEAR_16          0x00010000
+#define       CHIPREG_ENABLE_CLR3_ENABLE_CLR_CMD_ENABLE_CLEAR_17          0x00020000
+#define       CHIPREG_ENABLE_CLR3_ENABLE_CLR_CMD_ENABLE_CLEAR_18          0x00040000
+#define       CHIPREG_ENABLE_CLR3_ENABLE_CLR_CMD_ENABLE_CLEAR_19          0x00080000
+#define       CHIPREG_ENABLE_CLR3_ENABLE_CLR_CMD_ENABLE_CLEAR_20          0x00100000
+#define       CHIPREG_ENABLE_CLR3_ENABLE_CLR_CMD_ENABLE_CLEAR_21          0x00200000
+#define       CHIPREG_ENABLE_CLR3_ENABLE_CLR_CMD_ENABLE_CLEAR_22          0x00400000
+#define       CHIPREG_ENABLE_CLR3_ENABLE_CLR_CMD_ENABLE_CLEAR_23          0x00800000
+#define       CHIPREG_ENABLE_CLR3_ENABLE_CLR_CMD_ENABLE_CLEAR_24          0x01000000
+#define       CHIPREG_ENABLE_CLR3_ENABLE_CLR_CMD_ENABLE_CLEAR_25          0x02000000
+#define       CHIPREG_ENABLE_CLR3_ENABLE_CLR_CMD_ENABLE_CLEAR_26          0x04000000
+#define       CHIPREG_ENABLE_CLR3_ENABLE_CLR_CMD_ENABLE_CLEAR_27          0x08000000
+#define       CHIPREG_ENABLE_CLR3_ENABLE_CLR_CMD_ENABLE_CLEAR_28          0x10000000
+#define       CHIPREG_ENABLE_CLR3_ENABLE_CLR_CMD_ENABLE_CLEAR_29          0x20000000
+#define       CHIPREG_ENABLE_CLR3_ENABLE_CLR_CMD_ENABLE_CLEAR_30          0x40000000
+#define       CHIPREG_ENABLE_CLR3_ENABLE_CLR_CMD_ENABLE_CLEAR_31          0x80000000
+
+#define CHIPREG_ENABLE_CLR4_OFFSET                                        0x000000B0
+#define CHIPREG_ENABLE_CLR4_TYPE                                          UInt32
+#define CHIPREG_ENABLE_CLR4_RESERVED_MASK                                 0x00000000
+#define    CHIPREG_ENABLE_CLR4_ENABLE_CLR_SHIFT                           0
+#define    CHIPREG_ENABLE_CLR4_ENABLE_CLR_MASK                            0xFFFFFFFF
+#define       CHIPREG_ENABLE_CLR4_ENABLE_CLR_CMD_ENABLE_CLEAR_0           0x00000001
+#define       CHIPREG_ENABLE_CLR4_ENABLE_CLR_CMD_ENABLE_CLEAR_1           0x00000002
+#define       CHIPREG_ENABLE_CLR4_ENABLE_CLR_CMD_ENABLE_CLEAR_2           0x00000004
+#define       CHIPREG_ENABLE_CLR4_ENABLE_CLR_CMD_ENABLE_CLEAR_3           0x00000008
+#define       CHIPREG_ENABLE_CLR4_ENABLE_CLR_CMD_ENABLE_CLEAR_4           0x00000010
+#define       CHIPREG_ENABLE_CLR4_ENABLE_CLR_CMD_ENABLE_CLEAR_5           0x00000020
+#define       CHIPREG_ENABLE_CLR4_ENABLE_CLR_CMD_ENABLE_CLEAR_6           0x00000040
+#define       CHIPREG_ENABLE_CLR4_ENABLE_CLR_CMD_ENABLE_CLEAR_7           0x00000080
+#define       CHIPREG_ENABLE_CLR4_ENABLE_CLR_CMD_ENABLE_CLEAR_8           0x00000100
+#define       CHIPREG_ENABLE_CLR4_ENABLE_CLR_CMD_ENABLE_CLEAR_9           0x00000200
+#define       CHIPREG_ENABLE_CLR4_ENABLE_CLR_CMD_ENABLE_CLEAR_10          0x00000400
+#define       CHIPREG_ENABLE_CLR4_ENABLE_CLR_CMD_ENABLE_CLEAR_11          0x00000800
+#define       CHIPREG_ENABLE_CLR4_ENABLE_CLR_CMD_ENABLE_CLEAR_12          0x00001000
+#define       CHIPREG_ENABLE_CLR4_ENABLE_CLR_CMD_ENABLE_CLEAR_13          0x00002000
+#define       CHIPREG_ENABLE_CLR4_ENABLE_CLR_CMD_ENABLE_CLEAR_14          0x00004000
+#define       CHIPREG_ENABLE_CLR4_ENABLE_CLR_CMD_ENABLE_CLEAR_15          0x00008000
+#define       CHIPREG_ENABLE_CLR4_ENABLE_CLR_CMD_ENABLE_CLEAR_16          0x00010000
+#define       CHIPREG_ENABLE_CLR4_ENABLE_CLR_CMD_ENABLE_CLEAR_17          0x00020000
+#define       CHIPREG_ENABLE_CLR4_ENABLE_CLR_CMD_ENABLE_CLEAR_18          0x00040000
+#define       CHIPREG_ENABLE_CLR4_ENABLE_CLR_CMD_ENABLE_CLEAR_19          0x00080000
+#define       CHIPREG_ENABLE_CLR4_ENABLE_CLR_CMD_ENABLE_CLEAR_20          0x00100000
+#define       CHIPREG_ENABLE_CLR4_ENABLE_CLR_CMD_ENABLE_CLEAR_21          0x00200000
+#define       CHIPREG_ENABLE_CLR4_ENABLE_CLR_CMD_ENABLE_CLEAR_22          0x00400000
+#define       CHIPREG_ENABLE_CLR4_ENABLE_CLR_CMD_ENABLE_CLEAR_23          0x00800000
+#define       CHIPREG_ENABLE_CLR4_ENABLE_CLR_CMD_ENABLE_CLEAR_24          0x01000000
+#define       CHIPREG_ENABLE_CLR4_ENABLE_CLR_CMD_ENABLE_CLEAR_25          0x02000000
+#define       CHIPREG_ENABLE_CLR4_ENABLE_CLR_CMD_ENABLE_CLEAR_26          0x04000000
+#define       CHIPREG_ENABLE_CLR4_ENABLE_CLR_CMD_ENABLE_CLEAR_27          0x08000000
+#define       CHIPREG_ENABLE_CLR4_ENABLE_CLR_CMD_ENABLE_CLEAR_28          0x10000000
+#define       CHIPREG_ENABLE_CLR4_ENABLE_CLR_CMD_ENABLE_CLEAR_29          0x20000000
+#define       CHIPREG_ENABLE_CLR4_ENABLE_CLR_CMD_ENABLE_CLEAR_30          0x40000000
+#define       CHIPREG_ENABLE_CLR4_ENABLE_CLR_CMD_ENABLE_CLEAR_31          0x80000000
+
+#define CHIPREG_ENABLE_CLR5_OFFSET                                        0x000000B4
+#define CHIPREG_ENABLE_CLR5_TYPE                                          UInt32
+#define CHIPREG_ENABLE_CLR5_RESERVED_MASK                                 0x00000000
+#define    CHIPREG_ENABLE_CLR5_ENABLE_CLR_SHIFT                           0
+#define    CHIPREG_ENABLE_CLR5_ENABLE_CLR_MASK                            0xFFFFFFFF
+#define       CHIPREG_ENABLE_CLR5_ENABLE_CLR_CMD_ENABLE_CLEAR_0           0x00000001
+#define       CHIPREG_ENABLE_CLR5_ENABLE_CLR_CMD_ENABLE_CLEAR_1           0x00000002
+#define       CHIPREG_ENABLE_CLR5_ENABLE_CLR_CMD_ENABLE_CLEAR_2           0x00000004
+#define       CHIPREG_ENABLE_CLR5_ENABLE_CLR_CMD_ENABLE_CLEAR_3           0x00000008
+#define       CHIPREG_ENABLE_CLR5_ENABLE_CLR_CMD_ENABLE_CLEAR_4           0x00000010
+#define       CHIPREG_ENABLE_CLR5_ENABLE_CLR_CMD_ENABLE_CLEAR_5           0x00000020
+#define       CHIPREG_ENABLE_CLR5_ENABLE_CLR_CMD_ENABLE_CLEAR_6           0x00000040
+#define       CHIPREG_ENABLE_CLR5_ENABLE_CLR_CMD_ENABLE_CLEAR_7           0x00000080
+#define       CHIPREG_ENABLE_CLR5_ENABLE_CLR_CMD_ENABLE_CLEAR_8           0x00000100
+#define       CHIPREG_ENABLE_CLR5_ENABLE_CLR_CMD_ENABLE_CLEAR_9           0x00000200
+#define       CHIPREG_ENABLE_CLR5_ENABLE_CLR_CMD_ENABLE_CLEAR_10          0x00000400
+#define       CHIPREG_ENABLE_CLR5_ENABLE_CLR_CMD_ENABLE_CLEAR_11          0x00000800
+#define       CHIPREG_ENABLE_CLR5_ENABLE_CLR_CMD_ENABLE_CLEAR_12          0x00001000
+#define       CHIPREG_ENABLE_CLR5_ENABLE_CLR_CMD_ENABLE_CLEAR_13          0x00002000
+#define       CHIPREG_ENABLE_CLR5_ENABLE_CLR_CMD_ENABLE_CLEAR_14          0x00004000
+#define       CHIPREG_ENABLE_CLR5_ENABLE_CLR_CMD_ENABLE_CLEAR_15          0x00008000
+#define       CHIPREG_ENABLE_CLR5_ENABLE_CLR_CMD_ENABLE_CLEAR_16          0x00010000
+#define       CHIPREG_ENABLE_CLR5_ENABLE_CLR_CMD_ENABLE_CLEAR_17          0x00020000
+#define       CHIPREG_ENABLE_CLR5_ENABLE_CLR_CMD_ENABLE_CLEAR_18          0x00040000
+#define       CHIPREG_ENABLE_CLR5_ENABLE_CLR_CMD_ENABLE_CLEAR_19          0x00080000
+#define       CHIPREG_ENABLE_CLR5_ENABLE_CLR_CMD_ENABLE_CLEAR_20          0x00100000
+#define       CHIPREG_ENABLE_CLR5_ENABLE_CLR_CMD_ENABLE_CLEAR_21          0x00200000
+#define       CHIPREG_ENABLE_CLR5_ENABLE_CLR_CMD_ENABLE_CLEAR_22          0x00400000
+#define       CHIPREG_ENABLE_CLR5_ENABLE_CLR_CMD_ENABLE_CLEAR_23          0x00800000
+#define       CHIPREG_ENABLE_CLR5_ENABLE_CLR_CMD_ENABLE_CLEAR_24          0x01000000
+#define       CHIPREG_ENABLE_CLR5_ENABLE_CLR_CMD_ENABLE_CLEAR_25          0x02000000
+#define       CHIPREG_ENABLE_CLR5_ENABLE_CLR_CMD_ENABLE_CLEAR_26          0x04000000
+#define       CHIPREG_ENABLE_CLR5_ENABLE_CLR_CMD_ENABLE_CLEAR_27          0x08000000
+#define       CHIPREG_ENABLE_CLR5_ENABLE_CLR_CMD_ENABLE_CLEAR_28          0x10000000
+#define       CHIPREG_ENABLE_CLR5_ENABLE_CLR_CMD_ENABLE_CLEAR_29          0x20000000
+#define       CHIPREG_ENABLE_CLR5_ENABLE_CLR_CMD_ENABLE_CLEAR_30          0x40000000
+#define       CHIPREG_ENABLE_CLR5_ENABLE_CLR_CMD_ENABLE_CLEAR_31          0x80000000
+
+#define CHIPREG_ENABLE_CLR6_OFFSET                                        0x000000B8
+#define CHIPREG_ENABLE_CLR6_TYPE                                          UInt32
+#define CHIPREG_ENABLE_CLR6_RESERVED_MASK                                 0x00000000
+#define    CHIPREG_ENABLE_CLR6_ENABLE_CLR_SHIFT                           0
+#define    CHIPREG_ENABLE_CLR6_ENABLE_CLR_MASK                            0xFFFFFFFF
+#define       CHIPREG_ENABLE_CLR6_ENABLE_CLR_CMD_ENABLE_CLEAR_0           0x00000001
+#define       CHIPREG_ENABLE_CLR6_ENABLE_CLR_CMD_ENABLE_CLEAR_1           0x00000002
+#define       CHIPREG_ENABLE_CLR6_ENABLE_CLR_CMD_ENABLE_CLEAR_2           0x00000004
+#define       CHIPREG_ENABLE_CLR6_ENABLE_CLR_CMD_ENABLE_CLEAR_3           0x00000008
+#define       CHIPREG_ENABLE_CLR6_ENABLE_CLR_CMD_ENABLE_CLEAR_4           0x00000010
+#define       CHIPREG_ENABLE_CLR6_ENABLE_CLR_CMD_ENABLE_CLEAR_5           0x00000020
+#define       CHIPREG_ENABLE_CLR6_ENABLE_CLR_CMD_ENABLE_CLEAR_6           0x00000040
+#define       CHIPREG_ENABLE_CLR6_ENABLE_CLR_CMD_ENABLE_CLEAR_7           0x00000080
+#define       CHIPREG_ENABLE_CLR6_ENABLE_CLR_CMD_ENABLE_CLEAR_8           0x00000100
+#define       CHIPREG_ENABLE_CLR6_ENABLE_CLR_CMD_ENABLE_CLEAR_9           0x00000200
+#define       CHIPREG_ENABLE_CLR6_ENABLE_CLR_CMD_ENABLE_CLEAR_10          0x00000400
+#define       CHIPREG_ENABLE_CLR6_ENABLE_CLR_CMD_ENABLE_CLEAR_11          0x00000800
+#define       CHIPREG_ENABLE_CLR6_ENABLE_CLR_CMD_ENABLE_CLEAR_12          0x00001000
+#define       CHIPREG_ENABLE_CLR6_ENABLE_CLR_CMD_ENABLE_CLEAR_13          0x00002000
+#define       CHIPREG_ENABLE_CLR6_ENABLE_CLR_CMD_ENABLE_CLEAR_14          0x00004000
+#define       CHIPREG_ENABLE_CLR6_ENABLE_CLR_CMD_ENABLE_CLEAR_15          0x00008000
+#define       CHIPREG_ENABLE_CLR6_ENABLE_CLR_CMD_ENABLE_CLEAR_16          0x00010000
+#define       CHIPREG_ENABLE_CLR6_ENABLE_CLR_CMD_ENABLE_CLEAR_17          0x00020000
+#define       CHIPREG_ENABLE_CLR6_ENABLE_CLR_CMD_ENABLE_CLEAR_18          0x00040000
+#define       CHIPREG_ENABLE_CLR6_ENABLE_CLR_CMD_ENABLE_CLEAR_19          0x00080000
+#define       CHIPREG_ENABLE_CLR6_ENABLE_CLR_CMD_ENABLE_CLEAR_20          0x00100000
+#define       CHIPREG_ENABLE_CLR6_ENABLE_CLR_CMD_ENABLE_CLEAR_21          0x00200000
+#define       CHIPREG_ENABLE_CLR6_ENABLE_CLR_CMD_ENABLE_CLEAR_22          0x00400000
+#define       CHIPREG_ENABLE_CLR6_ENABLE_CLR_CMD_ENABLE_CLEAR_23          0x00800000
+#define       CHIPREG_ENABLE_CLR6_ENABLE_CLR_CMD_ENABLE_CLEAR_24          0x01000000
+#define       CHIPREG_ENABLE_CLR6_ENABLE_CLR_CMD_ENABLE_CLEAR_25          0x02000000
+#define       CHIPREG_ENABLE_CLR6_ENABLE_CLR_CMD_ENABLE_CLEAR_26          0x04000000
+#define       CHIPREG_ENABLE_CLR6_ENABLE_CLR_CMD_ENABLE_CLEAR_27          0x08000000
+#define       CHIPREG_ENABLE_CLR6_ENABLE_CLR_CMD_ENABLE_CLEAR_28          0x10000000
+#define       CHIPREG_ENABLE_CLR6_ENABLE_CLR_CMD_ENABLE_CLEAR_29          0x20000000
+#define       CHIPREG_ENABLE_CLR6_ENABLE_CLR_CMD_ENABLE_CLEAR_30          0x40000000
+#define       CHIPREG_ENABLE_CLR6_ENABLE_CLR_CMD_ENABLE_CLEAR_31          0x80000000
+
+#define CHIPREG_MDM_WAKEMODEMEVENT_OFFSET                                 0x000000C0
+#define CHIPREG_MDM_WAKEMODEMEVENT_TYPE                                   UInt32
+#define CHIPREG_MDM_WAKEMODEMEVENT_RESERVED_MASK                          0xFFFFFFFE
+#define    CHIPREG_MDM_WAKEMODEMEVENT_MDM_WAKEMODEMEVENT_SHIFT            0
+#define    CHIPREG_MDM_WAKEMODEMEVENT_MDM_WAKEMODEMEVENT_MASK             0x00000001
+
+#define CHIPREG_KONA_OPEN_HUB_DEV_STAT_OFFSET                             0x000000D0
+#define CHIPREG_KONA_OPEN_HUB_DEV_STAT_TYPE                               UInt32
+#define CHIPREG_KONA_OPEN_HUB_DEV_STAT_RESERVED_MASK                      0xFFFFFEF8
+#define    CHIPREG_KONA_OPEN_HUB_DEV_STAT_EMU_MODE_SHIFT                  8
+#define    CHIPREG_KONA_OPEN_HUB_DEV_STAT_EMU_MODE_MASK                   0x00000100
+#define    CHIPREG_KONA_OPEN_HUB_DEV_STAT_OTP_HSM_HW_DIS_SHIFT            2
+#define    CHIPREG_KONA_OPEN_HUB_DEV_STAT_OTP_HSM_HW_DIS_MASK             0x00000004
+#define    CHIPREG_KONA_OPEN_HUB_DEV_STAT_OTP_EMU_SHIFT                   1
+#define    CHIPREG_KONA_OPEN_HUB_DEV_STAT_OTP_EMU_MASK                    0x00000002
+#define    CHIPREG_KONA_OPEN_HUB_DEV_STAT_OTP_PROD_SHIFT                  0
+#define    CHIPREG_KONA_OPEN_HUB_DEV_STAT_OTP_PROD_MASK                   0x00000001
+
+#define CHIPREG_DDR_POP_DISCREET_OFFSET                                   0x000000D4
+#define CHIPREG_DDR_POP_DISCREET_TYPE                                     UInt32
+#define CHIPREG_DDR_POP_DISCREET_RESERVED_MASK                            0xFFFFFFFE
+#define    CHIPREG_DDR_POP_DISCREET_DDR_POP_DISCREET_SHIFT                0
+#define    CHIPREG_DDR_POP_DISCREET_DDR_POP_DISCREET_MASK                 0x00000001
+
+#define CHIPREG_MM_POWERSWITCH_CONTROL_STATUS_OFFSET                      0x000000E4
+#define CHIPREG_MM_POWERSWITCH_CONTROL_STATUS_TYPE                        UInt32
+#define CHIPREG_MM_POWERSWITCH_CONTROL_STATUS_RESERVED_MASK               0xFFFFE080
+#define    CHIPREG_MM_POWERSWITCH_CONTROL_STATUS_PWROK_STATUS_SHIFT       12
+#define    CHIPREG_MM_POWERSWITCH_CONTROL_STATUS_PWROK_STATUS_MASK        0x00001000
+#define    CHIPREG_MM_POWERSWITCH_CONTROL_STATUS_PWROK_MASK_SHIFT         8
+#define    CHIPREG_MM_POWERSWITCH_CONTROL_STATUS_PWROK_MASK_MASK          0x00000F00
+#define    CHIPREG_MM_POWERSWITCH_CONTROL_STATUS_PWROK_DELAY_SEL_SHIFT    4
+#define    CHIPREG_MM_POWERSWITCH_CONTROL_STATUS_PWROK_DELAY_SEL_MASK     0x00000070
+#define    CHIPREG_MM_POWERSWITCH_CONTROL_STATUS_PWROK_THRES_SEL_SHIFT    2
+#define    CHIPREG_MM_POWERSWITCH_CONTROL_STATUS_PWROK_THRES_SEL_MASK     0x0000000C
+#define    CHIPREG_MM_POWERSWITCH_CONTROL_STATUS_POWER_SWITCH_CTRL_SHIFT  0
+#define    CHIPREG_MM_POWERSWITCH_CONTROL_STATUS_POWER_SWITCH_CTRL_MASK   0x00000003
+
+#define CHIPREG_HUB_TIMER_WIDTH_OFFSET                                    0x000000E8
+#define CHIPREG_HUB_TIMER_WIDTH_TYPE                                      UInt32
+#define CHIPREG_HUB_TIMER_WIDTH_RESERVED_MASK                             0xFFFFFFFE
+#define    CHIPREG_HUB_TIMER_WIDTH_TIMER_WIDTH_SHIFT                      0
+#define    CHIPREG_HUB_TIMER_WIDTH_TIMER_WIDTH_MASK                       0x00000001
+
+#define CHIPREG_SLAVE_TIMER_WIDTH_OFFSET                                  0x000000EC
+#define CHIPREG_SLAVE_TIMER_WIDTH_TYPE                                    UInt32
+#define CHIPREG_SLAVE_TIMER_WIDTH_RESERVED_MASK                           0xFFFFFFFE
+#define    CHIPREG_SLAVE_TIMER_WIDTH_TIMER_WIDTH_SHIFT                    0
+#define    CHIPREG_SLAVE_TIMER_WIDTH_TIMER_WIDTH_MASK                     0x00000001
+
+#define CHIPREG_DDRLDO_CONTROL_OFFSET                                     0x000000F0
+#define CHIPREG_DDRLDO_CONTROL_TYPE                                       UInt32
+#define CHIPREG_DDRLDO_CONTROL_RESERVED_MASK                              0x00000000
+#define    CHIPREG_DDRLDO_CONTROL_LDO_I_LDO_CNTL_SHIFT                    16
+#define    CHIPREG_DDRLDO_CONTROL_LDO_I_LDO_CNTL_MASK                     0xFFFF0000
+#define    CHIPREG_DDRLDO_CONTROL_LDO_I_BG_CNTL_SHIFT                     0
+#define    CHIPREG_DDRLDO_CONTROL_LDO_I_BG_CNTL_MASK                      0x0000FFFF
+
+#define CHIPREG_DDRLDO_CONTROL_ENABLE_OFFSET                              0x000000F4
+#define CHIPREG_DDRLDO_CONTROL_ENABLE_TYPE                                UInt32
+#define CHIPREG_DDRLDO_CONTROL_ENABLE_RESERVED_MASK                       0xFFFFFFFD
+#define    CHIPREG_DDRLDO_CONTROL_ENABLE_LDO_I_CNTL_EN_SHIFT              1
+#define    CHIPREG_DDRLDO_CONTROL_ENABLE_LDO_I_CNTL_EN_MASK               0x00000002
+
+#define CHIPREG_JTAG_MUX_SEL_OFFSET                                       0x000000FC
+#define CHIPREG_JTAG_MUX_SEL_TYPE                                         UInt32
+#define CHIPREG_JTAG_MUX_SEL_RESERVED_MASK                                0xFFFFFFBC
+#define    CHIPREG_JTAG_MUX_SEL_SWD_MUX_SEL_SHIFT                         6
+#define    CHIPREG_JTAG_MUX_SEL_SWD_MUX_SEL_MASK                          0x00000040
+#define    CHIPREG_JTAG_MUX_SEL_DSP_JTAG_MUX_SEL_SHIFT                    0
+#define    CHIPREG_JTAG_MUX_SEL_DSP_JTAG_MUX_SEL_MASK                     0x00000003
+
+#define CHIPREG_OTP_CHIP_FEATURE_ID_OFFSET                                0x00000110
+#define CHIPREG_OTP_CHIP_FEATURE_ID_TYPE                                  UInt32
+#define CHIPREG_OTP_CHIP_FEATURE_ID_RESERVED_MASK                         0xFFFFFFF8
+#define    CHIPREG_OTP_CHIP_FEATURE_ID_CHIP_DIFF_OVERRIDE_SHIFT           2
+#define    CHIPREG_OTP_CHIP_FEATURE_ID_CHIP_DIFF_OVERRIDE_MASK            0x00000004
+#define    CHIPREG_OTP_CHIP_FEATURE_ID_CHIP_DIFF_ID_SHIFT                 0
+#define    CHIPREG_OTP_CHIP_FEATURE_ID_CHIP_DIFF_ID_MASK                  0x00000003
+
+#define CHIPREG_OTP_CONFIG_MISC_OFFSET                                    0x00000114
+#define CHIPREG_OTP_CONFIG_MISC_TYPE                                      UInt32
+#define CHIPREG_OTP_CONFIG_MISC_RESERVED_MASK                             0xFFFFF8E0
+#define    CHIPREG_OTP_CONFIG_MISC_CORTEX_A9_COUNT_SHIFT                  10
+#define    CHIPREG_OTP_CONFIG_MISC_CORTEX_A9_COUNT_MASK                   0x00000400
+#define    CHIPREG_OTP_CONFIG_MISC_CORTEX_A9_MAX_SPEED_SHIFT              8
+#define    CHIPREG_OTP_CONFIG_MISC_CORTEX_A9_MAX_SPEED_MASK               0x00000300
+#define    CHIPREG_OTP_CONFIG_MISC_PRISM_ENB_SHIFT                        4
+#define    CHIPREG_OTP_CONFIG_MISC_PRISM_ENB_MASK                         0x00000010
+#define    CHIPREG_OTP_CONFIG_MISC_HSDPA_ENB_SHIFT                        3
+#define    CHIPREG_OTP_CONFIG_MISC_HSDPA_ENB_MASK                         0x00000008
+#define    CHIPREG_OTP_CONFIG_MISC_HSDPA_CAT_SHIFT                        2
+#define    CHIPREG_OTP_CONFIG_MISC_HSDPA_CAT_MASK                         0x00000004
+#define    CHIPREG_OTP_CONFIG_MISC_HSUPA_ENB_SHIFT                        1
+#define    CHIPREG_OTP_CONFIG_MISC_HSUPA_ENB_MASK                         0x00000002
+#define    CHIPREG_OTP_CONFIG_MISC_HSUPA_CAT_SHIFT                        0
+#define    CHIPREG_OTP_CONFIG_MISC_HSUPA_CAT_MASK                         0x00000001
+
+#define CHIPREG_MDM_ISR0_OFFSET                                           0x00000118
+#define CHIPREG_MDM_ISR0_TYPE                                             UInt32
+#define CHIPREG_MDM_ISR0_RESERVED_MASK                                    0x00000000
+#define    CHIPREG_MDM_ISR0_MDM_ISR_SHIFT                                 0
+#define    CHIPREG_MDM_ISR0_MDM_ISR_MASK                                  0xFFFFFFFF
+
+#define CHIPREG_MDM_ISR1_OFFSET                                           0x0000011C
+#define CHIPREG_MDM_ISR1_TYPE                                             UInt32
+#define CHIPREG_MDM_ISR1_RESERVED_MASK                                    0x00000000
+#define    CHIPREG_MDM_ISR1_MDM_ISR_SHIFT                                 0
+#define    CHIPREG_MDM_ISR1_MDM_ISR_MASK                                  0xFFFFFFFF
+
+#define CHIPREG_MDM_ISR2_OFFSET                                           0x00000120
+#define CHIPREG_MDM_ISR2_TYPE                                             UInt32
+#define CHIPREG_MDM_ISR2_RESERVED_MASK                                    0x00000000
+#define    CHIPREG_MDM_ISR2_MDM_ISR_SHIFT                                 0
+#define    CHIPREG_MDM_ISR2_MDM_ISR_MASK                                  0xFFFFFFFF
+
+#define CHIPREG_MDM_ISR3_OFFSET                                           0x00000124
+#define CHIPREG_MDM_ISR3_TYPE                                             UInt32
+#define CHIPREG_MDM_ISR3_RESERVED_MASK                                    0x00000000
+#define    CHIPREG_MDM_ISR3_MDM_ISR_SHIFT                                 0
+#define    CHIPREG_MDM_ISR3_MDM_ISR_MASK                                  0xFFFFFFFF
+
+#define CHIPREG_MDM_ISR4_OFFSET                                           0x00000128
+#define CHIPREG_MDM_ISR4_TYPE                                             UInt32
+#define CHIPREG_MDM_ISR4_RESERVED_MASK                                    0x00000000
+#define    CHIPREG_MDM_ISR4_MDM_ISR_SHIFT                                 0
+#define    CHIPREG_MDM_ISR4_MDM_ISR_MASK                                  0xFFFFFFFF
+
+#define CHIPREG_MDM_ISR5_OFFSET                                           0x0000012C
+#define CHIPREG_MDM_ISR5_TYPE                                             UInt32
+#define CHIPREG_MDM_ISR5_RESERVED_MASK                                    0x00000000
+#define    CHIPREG_MDM_ISR5_MDM_ISR_SHIFT                                 0
+#define    CHIPREG_MDM_ISR5_MDM_ISR_MASK                                  0xFFFFFFFF
+
+#define CHIPREG_MDM_IMR0_OFFSET                                           0x00000134
+#define CHIPREG_MDM_IMR0_TYPE                                             UInt32
+#define CHIPREG_MDM_IMR0_RESERVED_MASK                                    0x00000000
+#define    CHIPREG_MDM_IMR0_MDM_IMR_SHIFT                                 0
+#define    CHIPREG_MDM_IMR0_MDM_IMR_MASK                                  0xFFFFFFFF
+
+#define CHIPREG_MDM_IMR1_OFFSET                                           0x00000138
+#define CHIPREG_MDM_IMR1_TYPE                                             UInt32
+#define CHIPREG_MDM_IMR1_RESERVED_MASK                                    0x00000000
+#define    CHIPREG_MDM_IMR1_MDM_IMR_SHIFT                                 0
+#define    CHIPREG_MDM_IMR1_MDM_IMR_MASK                                  0xFFFFFFFF
+
+#define CHIPREG_MDM_IMR2_OFFSET                                           0x0000013C
+#define CHIPREG_MDM_IMR2_TYPE                                             UInt32
+#define CHIPREG_MDM_IMR2_RESERVED_MASK                                    0x00000000
+#define    CHIPREG_MDM_IMR2_MDM_IMR_SHIFT                                 0
+#define    CHIPREG_MDM_IMR2_MDM_IMR_MASK                                  0xFFFFFFFF
+
+#define CHIPREG_MDM_IMR3_OFFSET                                           0x00000140
+#define CHIPREG_MDM_IMR3_TYPE                                             UInt32
+#define CHIPREG_MDM_IMR3_RESERVED_MASK                                    0x00000000
+#define    CHIPREG_MDM_IMR3_MDM_IMR_SHIFT                                 0
+#define    CHIPREG_MDM_IMR3_MDM_IMR_MASK                                  0xFFFFFFFF
+
+#define CHIPREG_MDM_IMR4_OFFSET                                           0x00000144
+#define CHIPREG_MDM_IMR4_TYPE                                             UInt32
+#define CHIPREG_MDM_IMR4_RESERVED_MASK                                    0x00000000
+#define    CHIPREG_MDM_IMR4_MDM_IMR_SHIFT                                 0
+#define    CHIPREG_MDM_IMR4_MDM_IMR_MASK                                  0xFFFFFFFF
+
+#define CHIPREG_MDM_IMR5_OFFSET                                           0x00000148
+#define CHIPREG_MDM_IMR5_TYPE                                             UInt32
+#define CHIPREG_MDM_IMR5_RESERVED_MASK                                    0x00000000
+#define    CHIPREG_MDM_IMR5_MDM_IMR_SHIFT                                 0
+#define    CHIPREG_MDM_IMR5_MDM_IMR_MASK                                  0xFFFFFFFF
+
+#define CHIPREG_MDM_IMSR0_OFFSET                                          0x00000150
+#define CHIPREG_MDM_IMSR0_TYPE                                            UInt32
+#define CHIPREG_MDM_IMSR0_RESERVED_MASK                                   0x00000000
+#define    CHIPREG_MDM_IMSR0_MDM_IMSR_SHIFT                               0
+#define    CHIPREG_MDM_IMSR0_MDM_IMSR_MASK                                0xFFFFFFFF
+
+#define CHIPREG_MDM_IMSR1_OFFSET                                          0x00000154
+#define CHIPREG_MDM_IMSR1_TYPE                                            UInt32
+#define CHIPREG_MDM_IMSR1_RESERVED_MASK                                   0x00000000
+#define    CHIPREG_MDM_IMSR1_MDM_IMSR_SHIFT                               0
+#define    CHIPREG_MDM_IMSR1_MDM_IMSR_MASK                                0xFFFFFFFF
+
+#define CHIPREG_MDM_IMSR2_OFFSET                                          0x00000158
+#define CHIPREG_MDM_IMSR2_TYPE                                            UInt32
+#define CHIPREG_MDM_IMSR2_RESERVED_MASK                                   0x00000000
+#define    CHIPREG_MDM_IMSR2_MDM_IMSR_SHIFT                               0
+#define    CHIPREG_MDM_IMSR2_MDM_IMSR_MASK                                0xFFFFFFFF
+
+#define CHIPREG_MDM_IMSR3_OFFSET                                          0x0000015C
+#define CHIPREG_MDM_IMSR3_TYPE                                            UInt32
+#define CHIPREG_MDM_IMSR3_RESERVED_MASK                                   0x00000000
+#define    CHIPREG_MDM_IMSR3_MDM_IMSR_SHIFT                               0
+#define    CHIPREG_MDM_IMSR3_MDM_IMSR_MASK                                0xFFFFFFFF
+
+#define CHIPREG_MDM_IMSR4_OFFSET                                          0x00000160
+#define CHIPREG_MDM_IMSR4_TYPE                                            UInt32
+#define CHIPREG_MDM_IMSR4_RESERVED_MASK                                   0x00000000
+#define    CHIPREG_MDM_IMSR4_MDM_IMSR_SHIFT                               0
+#define    CHIPREG_MDM_IMSR4_MDM_IMSR_MASK                                0xFFFFFFFF
+
+#define CHIPREG_MDM_IMSR5_OFFSET                                          0x00000164
+#define CHIPREG_MDM_IMSR5_TYPE                                            UInt32
+#define CHIPREG_MDM_IMSR5_RESERVED_MASK                                   0x00000000
+#define    CHIPREG_MDM_IMSR5_MDM_IMSR_SHIFT                               0
+#define    CHIPREG_MDM_IMSR5_MDM_IMSR_MASK                                0xFFFFFFFF
+
+#define CHIPREG_BOOT_2ND_ADDR_OFFSET                                      0x00000178
+#define CHIPREG_BOOT_2ND_ADDR_TYPE                                        UInt32
+#define CHIPREG_BOOT_2ND_ADDR_RESERVED_MASK                               0x00000000
+#define    CHIPREG_BOOT_2ND_ADDR_A9_CORE_BOOT_2ND_ADDR_SHIFT              2
+#define    CHIPREG_BOOT_2ND_ADDR_A9_CORE_BOOT_2ND_ADDR_MASK               0xFFFFFFFC
+#define    CHIPREG_BOOT_2ND_ADDR_A9_NON_PRIMARY_CORE_ENABLE_SHIFT         0
+#define    CHIPREG_BOOT_2ND_ADDR_A9_NON_PRIMARY_CORE_ENABLE_MASK          0x00000003
+
+#define CHIPREG_SW_SPARE_OFFSET                                           0x0000017C
+#define CHIPREG_SW_SPARE_TYPE                                             UInt32
+#define CHIPREG_SW_SPARE_RESERVED_MASK                                    0x00000000
+#define    CHIPREG_SW_SPARE_SPARE_CONTROL_SHIFT                           0
+#define    CHIPREG_SW_SPARE_SPARE_CONTROL_MASK                            0xFFFFFFFF
+
+#define CHIPREG_CORE0_SEMAPHORE_STATUS_OFFSET                             0x00000180
+#define CHIPREG_CORE0_SEMAPHORE_STATUS_TYPE                               UInt32
+#define CHIPREG_CORE0_SEMAPHORE_STATUS_RESERVED_MASK                      0x00000000
+#define    CHIPREG_CORE0_SEMAPHORE_STATUS_CORE_SEMAPHORE_STATUS_SHIFT     0
+#define    CHIPREG_CORE0_SEMAPHORE_STATUS_CORE_SEMAPHORE_STATUS_MASK      0xFFFFFFFF
+
+#define CHIPREG_CORE0_SEMAPHORE_LOCK_OFFSET                               0x00000184
+#define CHIPREG_CORE0_SEMAPHORE_LOCK_TYPE                                 UInt32
+#define CHIPREG_CORE0_SEMAPHORE_LOCK_RESERVED_MASK                        0x00000000
+#define    CHIPREG_CORE0_SEMAPHORE_LOCK_CORE_SEMAPHORE_LOCK_SHIFT         0
+#define    CHIPREG_CORE0_SEMAPHORE_LOCK_CORE_SEMAPHORE_LOCK_MASK          0xFFFFFFFF
+
+#define CHIPREG_CORE0_SEMAPHORE_UNLOCK_OFFSET                             0x00000188
+#define CHIPREG_CORE0_SEMAPHORE_UNLOCK_TYPE                               UInt32
+#define CHIPREG_CORE0_SEMAPHORE_UNLOCK_RESERVED_MASK                      0x00000000
+#define    CHIPREG_CORE0_SEMAPHORE_UNLOCK_CORE_SEMAPHORE_UNLOCK_SHIFT     0
+#define    CHIPREG_CORE0_SEMAPHORE_UNLOCK_CORE_SEMAPHORE_UNLOCK_MASK      0xFFFFFFFF
+
+#define CHIPREG_CORE0_RAW_SEMAPHORE_STATUS_OFFSET                         0x0000018C
+#define CHIPREG_CORE0_RAW_SEMAPHORE_STATUS_TYPE                           UInt32
+#define CHIPREG_CORE0_RAW_SEMAPHORE_STATUS_RESERVED_MASK                  0x00000000
+#define    CHIPREG_CORE0_RAW_SEMAPHORE_STATUS_UNMASKED_SEMAPHORE_STATUS_SHIFT 0
+#define    CHIPREG_CORE0_RAW_SEMAPHORE_STATUS_UNMASKED_SEMAPHORE_STATUS_MASK 0xFFFFFFFF
+
+#define CHIPREG_CORE1_SEMAPHORE_STATUS_OFFSET                             0x00000190
+#define CHIPREG_CORE1_SEMAPHORE_STATUS_TYPE                               UInt32
+#define CHIPREG_CORE1_SEMAPHORE_STATUS_RESERVED_MASK                      0x00000000
+#define    CHIPREG_CORE1_SEMAPHORE_STATUS_CORE_SEMAPHORE_STATUS_SHIFT     0
+#define    CHIPREG_CORE1_SEMAPHORE_STATUS_CORE_SEMAPHORE_STATUS_MASK      0xFFFFFFFF
+
+#define CHIPREG_CORE1_SEMAPHORE_LOCK_OFFSET                               0x00000194
+#define CHIPREG_CORE1_SEMAPHORE_LOCK_TYPE                                 UInt32
+#define CHIPREG_CORE1_SEMAPHORE_LOCK_RESERVED_MASK                        0x00000000
+#define    CHIPREG_CORE1_SEMAPHORE_LOCK_CORE_SEMAPHORE_LOCK_SHIFT         0
+#define    CHIPREG_CORE1_SEMAPHORE_LOCK_CORE_SEMAPHORE_LOCK_MASK          0xFFFFFFFF
+
+#define CHIPREG_CORE1_SEMAPHORE_UNLOCK_OFFSET                             0x00000198
+#define CHIPREG_CORE1_SEMAPHORE_UNLOCK_TYPE                               UInt32
+#define CHIPREG_CORE1_SEMAPHORE_UNLOCK_RESERVED_MASK                      0x00000000
+#define    CHIPREG_CORE1_SEMAPHORE_UNLOCK_CORE_SEMAPHORE_UNLOCK_SHIFT     0
+#define    CHIPREG_CORE1_SEMAPHORE_UNLOCK_CORE_SEMAPHORE_UNLOCK_MASK      0xFFFFFFFF
+
+#define CHIPREG_CORE1_RAW_SEMAPHORE_STATUS_OFFSET                         0x0000019C
+#define CHIPREG_CORE1_RAW_SEMAPHORE_STATUS_TYPE                           UInt32
+#define CHIPREG_CORE1_RAW_SEMAPHORE_STATUS_RESERVED_MASK                  0x00000000
+#define    CHIPREG_CORE1_RAW_SEMAPHORE_STATUS_UNMASKED_SEMAPHORE_STATUS_SHIFT 0
+#define    CHIPREG_CORE1_RAW_SEMAPHORE_STATUS_UNMASKED_SEMAPHORE_STATUS_MASK 0xFFFFFFFF
+
+#define CHIPREG_CORE2_SEMAPHORE_STATUS_OFFSET                             0x000001A0
+#define CHIPREG_CORE2_SEMAPHORE_STATUS_TYPE                               UInt32
+#define CHIPREG_CORE2_SEMAPHORE_STATUS_RESERVED_MASK                      0x00000000
+#define    CHIPREG_CORE2_SEMAPHORE_STATUS_CORE_SEMAPHORE_STATUS_SHIFT     0
+#define    CHIPREG_CORE2_SEMAPHORE_STATUS_CORE_SEMAPHORE_STATUS_MASK      0xFFFFFFFF
+
+#define CHIPREG_CORE2_SEMAPHORE_LOCK_OFFSET                               0x000001A4
+#define CHIPREG_CORE2_SEMAPHORE_LOCK_TYPE                                 UInt32
+#define CHIPREG_CORE2_SEMAPHORE_LOCK_RESERVED_MASK                        0x00000000
+#define    CHIPREG_CORE2_SEMAPHORE_LOCK_CORE_SEMAPHORE_LOCK_SHIFT         0
+#define    CHIPREG_CORE2_SEMAPHORE_LOCK_CORE_SEMAPHORE_LOCK_MASK          0xFFFFFFFF
+
+#define CHIPREG_CORE2_SEMAPHORE_UNLOCK_OFFSET                             0x000001A8
+#define CHIPREG_CORE2_SEMAPHORE_UNLOCK_TYPE                               UInt32
+#define CHIPREG_CORE2_SEMAPHORE_UNLOCK_RESERVED_MASK                      0x00000000
+#define    CHIPREG_CORE2_SEMAPHORE_UNLOCK_CORE_SEMAPHORE_UNLOCK_SHIFT     0
+#define    CHIPREG_CORE2_SEMAPHORE_UNLOCK_CORE_SEMAPHORE_UNLOCK_MASK      0xFFFFFFFF
+
+#define CHIPREG_CORE2_RAW_SEMAPHORE_STATUS_OFFSET                         0x000001AC
+#define CHIPREG_CORE2_RAW_SEMAPHORE_STATUS_TYPE                           UInt32
+#define CHIPREG_CORE2_RAW_SEMAPHORE_STATUS_RESERVED_MASK                  0x00000000
+#define    CHIPREG_CORE2_RAW_SEMAPHORE_STATUS_UNMASKED_SEMAPHORE_STATUS_SHIFT 0
+#define    CHIPREG_CORE2_RAW_SEMAPHORE_STATUS_UNMASKED_SEMAPHORE_STATUS_MASK 0xFFFFFFFF
+
+#define CHIPREG_CORE3_SEMAPHORE_STATUS_OFFSET                             0x000001B0
+#define CHIPREG_CORE3_SEMAPHORE_STATUS_TYPE                               UInt32
+#define CHIPREG_CORE3_SEMAPHORE_STATUS_RESERVED_MASK                      0x00000000
+#define    CHIPREG_CORE3_SEMAPHORE_STATUS_CORE_SEMAPHORE_STATUS_SHIFT     0
+#define    CHIPREG_CORE3_SEMAPHORE_STATUS_CORE_SEMAPHORE_STATUS_MASK      0xFFFFFFFF
+
+#define CHIPREG_CORE3_SEMAPHORE_LOCK_OFFSET                               0x000001B4
+#define CHIPREG_CORE3_SEMAPHORE_LOCK_TYPE                                 UInt32
+#define CHIPREG_CORE3_SEMAPHORE_LOCK_RESERVED_MASK                        0x00000000
+#define    CHIPREG_CORE3_SEMAPHORE_LOCK_CORE_SEMAPHORE_LOCK_SHIFT         0
+#define    CHIPREG_CORE3_SEMAPHORE_LOCK_CORE_SEMAPHORE_LOCK_MASK          0xFFFFFFFF
+
+#define CHIPREG_CORE3_SEMAPHORE_UNLOCK_OFFSET                             0x000001B8
+#define CHIPREG_CORE3_SEMAPHORE_UNLOCK_TYPE                               UInt32
+#define CHIPREG_CORE3_SEMAPHORE_UNLOCK_RESERVED_MASK                      0x00000000
+#define    CHIPREG_CORE3_SEMAPHORE_UNLOCK_CORE_SEMAPHORE_UNLOCK_SHIFT     0
+#define    CHIPREG_CORE3_SEMAPHORE_UNLOCK_CORE_SEMAPHORE_UNLOCK_MASK      0xFFFFFFFF
+
+#define CHIPREG_CORE3_RAW_SEMAPHORE_STATUS_OFFSET                         0x000001BC
+#define CHIPREG_CORE3_RAW_SEMAPHORE_STATUS_TYPE                           UInt32
+#define CHIPREG_CORE3_RAW_SEMAPHORE_STATUS_RESERVED_MASK                  0x00000000
+#define    CHIPREG_CORE3_RAW_SEMAPHORE_STATUS_UNMASKED_SEMAPHORE_STATUS_SHIFT 0
+#define    CHIPREG_CORE3_RAW_SEMAPHORE_STATUS_UNMASKED_SEMAPHORE_STATUS_MASK 0xFFFFFFFF
+
+#define CHIPREG_A9_DORMANT_BOOT_ADDR_REG0_OFFSET                          0x000001C0
+#define CHIPREG_A9_DORMANT_BOOT_ADDR_REG0_TYPE                            UInt32
+#define CHIPREG_A9_DORMANT_BOOT_ADDR_REG0_RESERVED_MASK                   0x00000000
+#define    CHIPREG_A9_DORMANT_BOOT_ADDR_REG0_A9_DORMANT_BOOT_ADDR_REG0_SHIFT 0
+#define    CHIPREG_A9_DORMANT_BOOT_ADDR_REG0_A9_DORMANT_BOOT_ADDR_REG0_MASK 0xFFFFFFFF
+
+#define CHIPREG_A9_DORMANT_BOOT_ADDR_REG1_OFFSET                          0x000001C4
+#define CHIPREG_A9_DORMANT_BOOT_ADDR_REG1_TYPE                            UInt32
+#define CHIPREG_A9_DORMANT_BOOT_ADDR_REG1_RESERVED_MASK                   0x00000000
+#define    CHIPREG_A9_DORMANT_BOOT_ADDR_REG1_A9_DORMANT_BOOT_ADDR_REG1_SHIFT 0
+#define    CHIPREG_A9_DORMANT_BOOT_ADDR_REG1_A9_DORMANT_BOOT_ADDR_REG1_MASK 0xFFFFFFFF
+
+#define CHIPREG_CLKOFF_BITS_FOR_APB1_APB2_PERIPHERALS_OFFSET              0x000001D0
+#define CHIPREG_CLKOFF_BITS_FOR_APB1_APB2_PERIPHERALS_TYPE                UInt32
+#define CHIPREG_CLKOFF_BITS_FOR_APB1_APB2_PERIPHERALS_RESERVED_MASK       0x00000000
+#define    CHIPREG_CLKOFF_BITS_FOR_APB1_APB2_PERIPHERALS_APB2_CLKOFF_SHIFT 16
+#define    CHIPREG_CLKOFF_BITS_FOR_APB1_APB2_PERIPHERALS_APB2_CLKOFF_MASK 0xFFFF0000
+#define    CHIPREG_CLKOFF_BITS_FOR_APB1_APB2_PERIPHERALS_APB1_CLKOFF_SHIFT 0
+#define    CHIPREG_CLKOFF_BITS_FOR_APB1_APB2_PERIPHERALS_APB1_CLKOFF_MASK 0x0000FFFF
+
+#define CHIPREG_CLKOFF_BITS_FOR_AHB1_APB3_PERIPHERALS_OFFSET              0x000001D4
+#define CHIPREG_CLKOFF_BITS_FOR_AHB1_APB3_PERIPHERALS_TYPE                UInt32
+#define CHIPREG_CLKOFF_BITS_FOR_AHB1_APB3_PERIPHERALS_RESERVED_MASK       0xFFFEFFF0
+#define    CHIPREG_CLKOFF_BITS_FOR_AHB1_APB3_PERIPHERALS_APB3_CLKOFF_SHIFT 16
+#define    CHIPREG_CLKOFF_BITS_FOR_AHB1_APB3_PERIPHERALS_APB3_CLKOFF_MASK 0x00010000
+#define    CHIPREG_CLKOFF_BITS_FOR_AHB1_APB3_PERIPHERALS_AHB1_CLKOFF_SHIFT 0
+#define    CHIPREG_CLKOFF_BITS_FOR_AHB1_APB3_PERIPHERALS_AHB1_CLKOFF_MASK 0x0000000F
+
+#define CHIPREG_CLKOFF_BITS_FOR_APB5_APB6_PERIPHERALS_OFFSET              0x000001D8
+#define CHIPREG_CLKOFF_BITS_FOR_APB5_APB6_PERIPHERALS_TYPE                UInt32
+#define CHIPREG_CLKOFF_BITS_FOR_APB5_APB6_PERIPHERALS_RESERVED_MASK       0x00000000
+#define    CHIPREG_CLKOFF_BITS_FOR_APB5_APB6_PERIPHERALS_APB6_CLKOFF_SHIFT 16
+#define    CHIPREG_CLKOFF_BITS_FOR_APB5_APB6_PERIPHERALS_APB6_CLKOFF_MASK 0xFFFF0000
+#define    CHIPREG_CLKOFF_BITS_FOR_APB5_APB6_PERIPHERALS_APB5_CLKOFF_SHIFT 0
+#define    CHIPREG_CLKOFF_BITS_FOR_APB5_APB6_PERIPHERALS_APB5_CLKOFF_MASK 0x0000FFFF
+
+#define CHIPREG_CLKOFF_BITS_FOR_APB9_PERIPHERALS_OFFSET                   0x000001DC
+#define CHIPREG_CLKOFF_BITS_FOR_APB9_PERIPHERALS_TYPE                     UInt32
+#define CHIPREG_CLKOFF_BITS_FOR_APB9_PERIPHERALS_RESERVED_MASK            0x00000000
+#define    CHIPREG_CLKOFF_BITS_FOR_APB9_PERIPHERALS_APB10_CLKOFF_SHIFT    16
+#define    CHIPREG_CLKOFF_BITS_FOR_APB9_PERIPHERALS_APB10_CLKOFF_MASK     0xFFFF0000
+#define    CHIPREG_CLKOFF_BITS_FOR_APB9_PERIPHERALS_APB9_CLKOFF_SHIFT     0
+#define    CHIPREG_CLKOFF_BITS_FOR_APB9_PERIPHERALS_APB9_CLKOFF_MASK      0x0000FFFF
+
+#define CHIPREG_CLKOFF_BITS_FOR_APB4_APB8_PERIPHERALS_OFFSET              0x000001E0
+#define CHIPREG_CLKOFF_BITS_FOR_APB4_APB8_PERIPHERALS_TYPE                UInt32
+#define CHIPREG_CLKOFF_BITS_FOR_APB4_APB8_PERIPHERALS_RESERVED_MASK       0x00000000
+#define    CHIPREG_CLKOFF_BITS_FOR_APB4_APB8_PERIPHERALS_APB8_CLKOFF_SHIFT 16
+#define    CHIPREG_CLKOFF_BITS_FOR_APB4_APB8_PERIPHERALS_APB8_CLKOFF_MASK 0xFFFF0000
+#define    CHIPREG_CLKOFF_BITS_FOR_APB4_APB8_PERIPHERALS_APB4_CLKOFF_SHIFT 0
+#define    CHIPREG_CLKOFF_BITS_FOR_APB4_APB8_PERIPHERALS_APB4_CLKOFF_MASK 0x0000FFFF
+
+#define CHIPREG_CLKOFF_BITS_FOR_APB12_PERIPHERALS_OFFSET                  0x000001E8
+#define CHIPREG_CLKOFF_BITS_FOR_APB12_PERIPHERALS_TYPE                    UInt32
+#define CHIPREG_CLKOFF_BITS_FOR_APB12_PERIPHERALS_RESERVED_MASK           0xFFFF0000
+#define    CHIPREG_CLKOFF_BITS_FOR_APB12_PERIPHERALS_APB12_CLKOFF_SHIFT   0
+#define    CHIPREG_CLKOFF_BITS_FOR_APB12_PERIPHERALS_APB12_CLKOFF_MASK    0x0000FFFF
+
+#define CHIPREG_CLKOFF_BITS_FOR_APB13_PERIPHERALS_OFFSET                  0x000001EC
+#define CHIPREG_CLKOFF_BITS_FOR_APB13_PERIPHERALS_TYPE                    UInt32
+#define CHIPREG_CLKOFF_BITS_FOR_APB13_PERIPHERALS_RESERVED_MASK           0xFFFF0000
+#define    CHIPREG_CLKOFF_BITS_FOR_APB13_PERIPHERALS_APB13_CLKOFF_SHIFT   0
+#define    CHIPREG_CLKOFF_BITS_FOR_APB13_PERIPHERALS_APB13_CLKOFF_MASK    0x0000FFFF
+
+#define CHIPREG_FINAL_DIV_FOR_CLKMON_OFFSET                               0x000001F0
+#define CHIPREG_FINAL_DIV_FOR_CLKMON_TYPE                                 UInt32
+#define CHIPREG_FINAL_DIV_FOR_CLKMON_RESERVED_MASK                        0xFFFFFFF8
+#define    CHIPREG_FINAL_DIV_FOR_CLKMON_CLKMON_DIV_SHIFT                  0
+#define    CHIPREG_FINAL_DIV_FOR_CLKMON_CLKMON_DIV_MASK                   0x00000007
+
+#endif /* __BRCM_RDB_CHIPREG_H__ */
+
+

@@ -37,6 +37,17 @@
 
 #include "signal.h"
 
+#ifdef CONFIG_BCM_KNLLOG_SUPPORT
+#include <linux/broadcom/knllog.h>
+
+static int __init logstart(void)
+{
+	knllog_init();
+	return 0;
+}
+subsys_initcall(logstart);
+#endif
+
 static const char *handler[]= { "prefetch abort", "data abort", "address exception", "interrupt" };
 
 void *vectors_page;
@@ -286,6 +297,10 @@ static unsigned long oops_begin(void)
 	die_owner = cpu;
 	console_verbose();
 	bust_spinlocks(1);
+#ifdef CONFIG_BCM_KNLLOG_SUPPORT
+	local_irq_disable();
+	knllog_dump();
+#endif
 	return flags;
 }
 
@@ -304,8 +319,9 @@ static void oops_end(unsigned long flags, struct pt_regs *regs, int signr)
 	raw_local_irq_restore(flags);
 	oops_exit();
 
-	if (in_interrupt())
+	if (in_interrupt()) {
 		panic("Fatal exception in interrupt");
+	}
 	if (panic_on_oops)
 		panic("Fatal exception");
 	if (signr)

@@ -82,4 +82,16 @@ config LOGO_M32R_CLUT224
 	depends on M32R
 	default y
 
+config LOGO_UNICOM_720PV_CLUT224
+	bool "224-color unicom Linux logo"
+	default n
+
+config LOGO_UNICOM_480_854_CLUT224
+	bool "224-color 480-854 unicom Linux logo"
+	default n
+
+config LOGO_UNICOM_480_800_CLUT224
+	bool "224-color 480-800 unicom Linux logo"
+	default n
+
 endif # LOGO

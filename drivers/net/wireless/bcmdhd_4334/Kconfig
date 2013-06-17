@@ -1,0 +1,23 @@
+config BCMDHD_4334
+	tristate "Broadcom 4334 wireless cards support"
+	depends on WLAN
+	---help---
+	  This module adds support for wireless adapters based on
+	  Broadcom 4334 chipset.
+	  This driver uses the kernel's wireless extensions subsystem.
+	  If you choose to build a module, it'll be called dhd. Say M if
+	  unsure.
+
+config BCMDHD_FW_PATH_4334
+	depends on BCMDHD_4334
+	string "Firmware path"
+	default "/system/vendor/firmware/fw_wifi_4334.bin"
+	---help---
+	  Path to the firmware file.
+
+config BCMDHD_NVRAM_PATH_4334
+	depends on BCMDHD_4334
+	string "NVRAM path"
+	default "/system/vendor/firmware/fw_wifi_nvram_4334.txt"
+	---help---
+	  Path to the calibration file.

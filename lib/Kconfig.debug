@@ -14,6 +14,23 @@ config PRINTK_TIME
 	  The behavior is also controlled by the kernel command line
 	  parameter printk.time=1. See Documentation/kernel-parameters.txt
 
+config PRINTK_CPU_ID
+        bool "Show cpu id on printks"
+        depends on PRINTK
+        help
+          Selecting this option causes current printk cpu id to be
+          included in printk output. Or add printk.cpu=1 at boot-time.
+          See Documentation/kernel-parameters.txt
+
+config PRINTK_PID
+        bool "Show pid on printks"
+        depends on PRINTK
+        help
+          Selecting this option causes current task's pid to be
+          included in printk output. Or add printk.pid=1 at boot-time.
+          This allows you to see the running process with kernel log.
+          See Documentation/kernel-parameters.txt
+
 config DEFAULT_MESSAGE_LOGLEVEL
 	int "Default message log level (1-7)"
 	range 1 7
@@ -1469,6 +1486,40 @@ config ASYNC_RAID6_TEST
 	  engine if one is available.
 
 	  If unsure, say N.
+
+config SDHCI_THROUGHPUT
+	bool "Enable sdhci throughput data dump over debugfs"
+	depends on DEBUG_FS
+	help
+		The interface is loacted at DEBUGFS/sdhci-throughput
+		A file is created inside the sdhci-throughput directory,
+		for each mmc interface. Wirte 1 to these files, to enable the
+		throuhput dump. Write 0 to disable them. The message dumped is
+		of the following format:
+
+		[access type]:[device] [time t2 sec],[time t2 usec],[time t1
+                   sec],[time t1 usec],[block size],[no of blocks],[access rate in bytes/sec]
+
+		eg: W:(mmc0) 946685911,510155,946685911,475456,512,1024,15109599
+
+		The above line can be interpreted as "A write of 1024 blocks,
+		each of size 512 bytes to mmc0, has taken ((946685911-946685910)*10^6 +
+		(510155-475456)) usecs i.e at a rate of 15109599 bytes/sec."
+
+		The speed dumped in bytes/sec need not be always accurate because of
+		the mismatch in resolution of timestamping and the speed of DMA access.
+
+config BRCM_DEBUG_RWSEM
+	bool "Debug RW Semaphore"
+	default n
+	help
+	  This option is added by BRCM to debug issues where the mm->mmap_sem
+	  is taken by a writer and its not released forever. This leads to
+	  deadlock in the system and we are unable to figure out who took this
+	  semaphore. This option adds a wr_owner field to the rw_semaphore
+	  structure. In all the path where write semaphore is acquired the
+	  owner is updated accordingly and on the path its release, its made
+	  NULL.
 
 source "samples/Kconfig"
 

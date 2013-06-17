@@ -62,11 +62,15 @@ source "drivers/pinctrl/Kconfig"
 
 source "drivers/gpio/Kconfig"
 
+source "drivers/pwm/Kconfig"
+
 source "drivers/w1/Kconfig"
 
 source "drivers/power/Kconfig"
 
 source "drivers/hwmon/Kconfig"
+
+source "drivers/haptic/Kconfig"
 
 source "drivers/thermal/Kconfig"
 
@@ -93,6 +97,8 @@ source "drivers/usb/Kconfig"
 source "drivers/uwb/Kconfig"
 
 source "drivers/mmc/Kconfig"
+
+source "drivers/mmc-poll/Kconfig"
 
 source "drivers/memstick/Kconfig"
 
@@ -163,5 +169,6 @@ source "drivers/pwm/Kconfig"
 source "drivers/irqchip/Kconfig"
 
 source "drivers/ipack/Kconfig"
+source "drivers/gud/Kconfig"
 
 endmenu

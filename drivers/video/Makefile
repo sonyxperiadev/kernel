@@ -12,6 +12,8 @@ fb-y                              := fbmem.o fbmon.o fbcmap.o fbsysfs.o \
                                      modedb.o fbcvt.o
 fb-objs                           := $(fb-y)
 
+obj-$(CONFIG_FRAMEBUFFER_FPS)	+= fb_fps.o
+
 obj-$(CONFIG_VT)		  += console/
 obj-$(CONFIG_LOGO)		  += logo/
 obj-y				  += backlight/
@@ -175,3 +177,5 @@ obj-$(CONFIG_DISPLAY_TIMING) += display_timing.o
 obj-$(CONFIG_OF_DISPLAY_TIMING) += of_display_timing.o
 obj-$(CONFIG_VIDEOMODE) += videomode.o
 obj-$(CONFIG_OF_VIDEOMODE) += of_videomode.o
+
+obj-$(CONFIG_FB_BRCM_KONA) += broadcom/

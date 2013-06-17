@@ -45,6 +45,8 @@ extern void __aeabi_lmul(void);
 extern void __aeabi_uidiv(void);
 extern void __aeabi_uidivmod(void);
 extern void __aeabi_ulcmp(void);
+extern void __aeabi_ldivmod(void);  // added for uldivmod in DWC OTG USB driver
+extern void __aeabi_uldivmod(void); // added for uldivmod in DWC OTG USB driver
 
 extern void fpundefinstr(void);
 
@@ -125,6 +127,8 @@ EXPORT_SYMBOL(__aeabi_lmul);
 EXPORT_SYMBOL(__aeabi_uidiv);
 EXPORT_SYMBOL(__aeabi_uidivmod);
 EXPORT_SYMBOL(__aeabi_ulcmp);
+EXPORT_SYMBOL(__aeabi_ldivmod);  // added for uldivmod in DWC OTG USB driver
+EXPORT_SYMBOL(__aeabi_uldivmod); // added for uldivmod in DWC OTG USB driver
 #endif
 
 	/* bitops */

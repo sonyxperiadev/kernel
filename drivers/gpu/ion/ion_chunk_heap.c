@@ -13,6 +13,7 @@
  * GNU General Public License for more details.
  *
  */
+#define pr_fmt(fmt) "ion-chunk: " fmt
 //#include <linux/spinlock.h>
 #include <linux/dma-mapping.h>
 #include <linux/err.h>

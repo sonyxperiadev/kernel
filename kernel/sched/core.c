@@ -89,6 +89,10 @@
 #define CREATE_TRACE_POINTS
 #include <trace/events/sched.h>
 
+#ifdef CONFIG_BCM_KNLLOG_IRQ
+#include <linux/broadcom/knllog.h>
+#endif
+
 void start_bandwidth_timer(struct hrtimer *period_timer, ktime_t period)
 {
 	unsigned long delta;
@@ -2926,6 +2930,10 @@ need_resched:
 	next = pick_next_task(rq);
 	clear_tsk_need_resched(prev);
 	rq->skip_clock_update = 0;
+
+#ifdef CONFIG_BCM_KNLLOG_IRQ
+	if (gKnllogIrqSchedEnable & KNLLOG_THREAD) KNLLOG("%d -> %d\n", (int)prev->pid, (int)next->pid);
+#endif
 
 	if (likely(prev != next)) {
 		rq->nr_switches++;
@@ -6422,6 +6430,8 @@ static int __sdt_alloc(const struct cpumask *cpu_map)
 
 			sg->next = sg;
 
+			sg->next = sg;
+
 			*per_cpu_ptr(sdd->sg, j) = sg;
 
 			sgp = kzalloc_node(sizeof(struct sched_group_power) + cpumask_size(),
@@ -6748,6 +6758,8 @@ match2:
 
 	mutex_unlock(&sched_domains_mutex);
 }
+
+static int num_cpus_frozen;	/* used to mark begin/end of suspend/resume */
 
 static int num_cpus_frozen;	/* used to mark begin/end of suspend/resume */
 

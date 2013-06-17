@@ -980,6 +980,25 @@ config ARCH_OMAP1
 	help
 	  Support for older TI OMAP1 (omap7xx, omap15xx or omap16xx)
 
+config ARCH_KONA
+        bool "Broadcom KONA Architecture"
+        depends on MMU
+        select CPU_V7
+        select HAVE_CLK
+        select COMMON_CLKDEV
+        select CLKDEV_LOOKUP
+        select ARM_GIC
+        select GENERIC_GPIO
+        select ARCH_REQUIRE_GPIOLIB
+        select GENERIC_TIME
+        select GENERIC_CLOCKEVENTS
+        select ARCH_HAS_CPUFREQ
+        select HAVE_SCHED_CLOCK
+		select TICK_ONESHOT
+		select ARM_AMBA
+        help
+          This enables support for system based on Broadcom KONA architecture
+
 endchoice
 
 menu "Multiple platform selection"
@@ -1086,6 +1105,11 @@ source "arch/arm/plat-omap/Kconfig"
 source "arch/arm/mach-omap1/Kconfig"
 
 source "arch/arm/mach-omap2/Kconfig"
+
+source "arch/arm/mach-hawaii/Kconfig"
+source "arch/arm/mach-java/Kconfig"
+source "arch/arm/plat-kona/Kconfig"
+source "arch/arm/mach-rhea/Kconfig"
 
 source "arch/arm/mach-orion5x/Kconfig"
 
@@ -1449,6 +1473,15 @@ config ARM_ERRATA_798181
 	  which sends an IPI to the CPUs that are running the same ASID
 	  as the one being invalidated.
 
+config ARM_ERRATA_782773
+	bool "ARM errata: Updating a translation entry might cause an unexpected translation fault"
+	depends on CPU_V7
+	help
+	 This option enables the workaround for the 782773 Cortex-A9 (all r0,
+	 r2 and r3 revisions) erratum. It might cause MMU exception in case
+	 page table walk happens just after updating the existing
+	 with setting page table in L1 data cache.
+
 endmenu
 
 source "arch/arm/common/Kconfig"
@@ -1656,7 +1689,7 @@ config LOCAL_TIMERS
 	bool "Use local timer interrupts"
 	depends on SMP
 	default y
-	select HAVE_ARM_TWD if (!ARCH_MSM_SCORPIONMP && !EXYNOS4_MCT)
+	select HAVE_ARM_TWD if (!ARCH_MSM_SCORPIONMP && !EXYNOS4_MCT && !ARCH_KONA)
 	help
 	  Enable support for local timers on SMP platforms, rather then the
 	  legacy IPI broadcast method.  Local timers allows the system
@@ -1785,6 +1818,17 @@ config ARCH_SELECT_MEMORY_MODEL
 
 config HAVE_ARCH_PFN_VALID
 	def_bool ARCH_HAS_HOLES_MEMORYMODEL || !SPARSEMEM
+
+config ARCH_ENABLE_MEMORY_HOTPLUG
+        def_bool y
+
+config ARCH_ENABLE_MEMORY_HOTREMOVE
+        def_bool y
+        depends on MEMORY_HOTPLUG
+
+config ARCH_MEMORY_PROBE
+        def_bool y
+        depends on MEMORY_HOTPLUG
 
 config HIGHMEM
 	bool "High Memory Support"

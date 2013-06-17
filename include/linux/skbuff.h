@@ -48,6 +48,16 @@
 #define SKB_MAX_HEAD(X)		(SKB_MAX_ORDER((X), 0))
 #define SKB_MAX_ALLOC		(SKB_MAX_ORDER(0, 2))
 
+#define SKB_NETPOLL_SIGNATURE				0x12345678
+#ifdef CONFIG_USB_ETH_SKB_ALLOC_OPTIMIZATION
+#define SKB_UETH_RX_PRE_ALLOC_MEM_SIG	0xfedcba98
+#define SKB_UETH_RX_THRESHOLD_SIG	0x789ABCDE
+
+extern unsigned short ueth_rx_skb_size(void);
+extern void ueth_recycle_rx_skb_data(unsigned char *data, gfp_t gfp_flags);
+extern struct sk_buff *alloc_skb_uether_rx(unsigned int size,
+		unsigned char *data, gfp_t gfp_mask);
+#endif
 /* return minimum truesize of one skb containing X bytes of data */
 #define SKB_TRUESIZE(X) ((X) +						\
 			 SKB_DATA_ALIGN(sizeof(struct sk_buff)) +	\
@@ -508,6 +518,7 @@ struct sk_buff {
 	sk_buff_data_t		transport_header;
 	sk_buff_data_t		network_header;
 	sk_buff_data_t		mac_header;
+	unsigned int			signature;
 	/* These elements must be at the end, see alloc_skb() for details.  */
 	sk_buff_data_t		tail;
 	sk_buff_data_t		end;
@@ -1731,6 +1742,12 @@ static inline int pskb_network_may_pull(struct sk_buff *skb, unsigned int len)
  * Since this trade off varies between architectures, we allow NET_IP_ALIGN
  * to be overridden.
  */
+#ifdef CONFIG_USB_ETH_SKB_ALLOC_OPTIMIZATION
+#ifdef NET_IP_ALIGN
+#undef NET_IP_ALIGN
+#endif
+#define NET_IP_ALIGN	0
+#endif
 #ifndef NET_IP_ALIGN
 #define NET_IP_ALIGN	2
 #endif

@@ -18,6 +18,7 @@ config USB_ARCH_HAS_OHCI
 	default y if ARCH_DAVINCI_DA8XX
 	default y if ARCH_CNS3XXX
 	default y if PLAT_SPEAR
+	default y if ARCH_ISLAND
 	default y if ARCH_EXYNOS
 	# PPC:
 	default y if STB03xxx
@@ -46,6 +47,7 @@ config USB_ARCH_HAS_EHCI
 	default y if ARCH_MSM
 	default y if MICROBLAZE
 	default y if SPARC_LEON
+	default y if ARCH_ISLAND
 	default y if ARCH_MMP
 	default y if MACH_LOONGSON1
 	default y if PLAT_ORION
@@ -184,7 +186,7 @@ source "drivers/usb/phy/Kconfig"
 
 source "drivers/usb/atm/Kconfig"
 
-source "drivers/usb/gadget/Kconfig"
+#source "drivers/usb/gadget/Kconfig"
 
 source "drivers/usb/otg/Kconfig"
 

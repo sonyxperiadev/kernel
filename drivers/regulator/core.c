@@ -3736,6 +3736,31 @@ void *regulator_get_init_drvdata(struct regulator_init_data *reg_init_data)
 }
 EXPORT_SYMBOL_GPL(regulator_get_init_drvdata);
 
+/*
+ * irqsafe_is_regulator_enable - irqsafe regulator
+ * info dumping
+ *
+ * Returns pointer to data if contents were available
+ *
+ * Note that this api just does mutex_trylock,
+ * and hence safe to use in soft  and had irq context.
+ */
+int irqsafe_is_regulator_enable(struct regulator *regulator)
+{
+	int ret = -EBUSY;
+
+	if (mutex_trylock(&regulator->rdev->mutex)) {
+		if (regulator->rdev->use_count > 0)
+			ret = 1;
+		else
+			ret = 0;
+		mutex_unlock(&regulator->rdev->mutex);
+	}
+
+	return ret;
+}
+EXPORT_SYMBOL_GPL(irqsafe_is_regulator_enable);
+
 #ifdef CONFIG_DEBUG_FS
 static ssize_t supply_map_read_file(struct file *file, char __user *user_buf,
 				    size_t count, loff_t *ppos)

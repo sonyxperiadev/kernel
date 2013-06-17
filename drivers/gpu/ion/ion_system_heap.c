@@ -25,10 +25,13 @@
 #include <linux/slab.h>
 #include <linux/vmalloc.h>
 #include "ion_priv.h"
+#ifdef CONFIG_BCM_IOVMM
+#include <plat/bcm_iommu.h>
+#endif
 
 static unsigned int high_order_gfp_flags = (GFP_HIGHUSER | __GFP_ZERO |
-					    __GFP_NOWARN | __GFP_NORETRY) &
-					   ~__GFP_WAIT;
+					    __GFP_NOWARN | __GFP_NORETRY |
+					    __GFP_NO_KSWAPD) & ~__GFP_WAIT;
 static unsigned int low_order_gfp_flags  = (GFP_HIGHUSER | __GFP_ZERO |
 					 __GFP_NOWARN);
 static const unsigned int orders[] = {8, 4, 0};
@@ -196,12 +199,36 @@ static int ion_system_heap_allocate(struct ion_heap *heap,
 		kfree(info);
 	}
 
+#ifdef CONFIG_ION_BCM
+	buffer->dma_addr = ION_DMA_ADDR_FAIL;
+#ifdef CONFIG_BCM_IOVMM
+	buffer->dma_addr = arm_iommu_map_sgt(heap->device, table, align);
+	if (buffer->dma_addr == DMA_ERROR_CODE) {
+		pr_err("%16s: Failed iommu buffer(%p) map da(%#x)  size(%#x)\n",
+				heap->name, buffer, buffer->dma_addr,
+				buffer->size);
+		goto err2;
+	}
+	pr_debug("%16s: iommu map buffer(%p) da(%#x) size(%#x)\n",
+			heap->name, buffer, buffer->dma_addr, buffer->size);
 	buffer->priv_virt = table;
 	return 0;
+#else
+	pr_err("%16s: map dma not supported without iommu\n",
+			heap->name);
+	goto err2;
+#endif /* CONFIG_BCM_IOVMM */
+#else /* CONFIG_ION_BCM */
+	buffer->priv_virt = table;
+	return 0;
+#endif /* CONFIG_ION_BCM */
+
+err2:
+	sg_free_table(table);
 err1:
 	kfree(table);
 err:
-	list_for_each_entry(info, &pages, list) {
+	list_for_each_entry_safe(info, tmp_info, &pages, list) {
 		free_buffer_page(sys_heap, buffer, info->page, info->order);
 		kfree(info);
 	}
@@ -225,6 +252,22 @@ void ion_system_heap_free(struct ion_buffer *buffer)
 	if (!cached)
 		ion_heap_buffer_zero(buffer);
 
+	/* uncached pages come from the page pools, zero them before returning
+	   for security purposes (other allocations are zerod at alloc time */
+	if (!cached)
+		ion_heap_buffer_zero(buffer);
+
+#ifdef CONFIG_ION_BCM
+#ifdef CONFIG_BCM_IOVMM
+	arm_iommu_unmap(heap->device, buffer->dma_addr, buffer->size);
+	pr_debug("%16s: iommu unmap buffer(%p) da(%#x) size(%#x)\n",
+			heap->name, buffer, buffer->dma_addr, buffer->size);
+#else
+	pr_err("%16s: Unmap not supported in contig mode\n",
+			heap->name);
+#endif /* CONFIG_BCM_IOVMM */
+	buffer->dma_addr = ION_DMA_ADDR_FAIL;
+#endif /* CONFIG_ION_BCM */
 	for_each_sg(table->sgl, sg, table->nents, i)
 		free_buffer_page(sys_heap, buffer, sg_page(sg),
 				get_order(sg_dma_len(sg)));
@@ -244,6 +287,69 @@ void ion_system_heap_unmap_dma(struct ion_heap *heap,
 	return;
 }
 
+#ifdef CONFIG_ION_BCM
+int ion_system_heap_clean_cache(struct ion_heap *heap,
+		struct ion_buffer *buffer, unsigned long offset,
+		unsigned long len)
+{
+#if 0
+	struct scatterlist *sg;
+	struct sg_table *table = buffer->sg_table;
+	int i;
+	unsigned long end, curr_offset = 0;
+
+	end = offset + len;
+	for_each_sg(table->sgl, sg, table->nents, i) {
+		struct page *page = sg_page(sg);
+		unsigned long sglen = sg_dma_len(sg);
+		unsigned long curr_end = curr_offset + sglen;
+
+		if ((curr_offset <= end) && (curr_end >= offset)) {
+			unsigned long l_off = max(offset, curr_offset);
+			unsigned long l_len = min(end, curr_end) - l_off;
+			__dma_page_cpu_to_dev(page, l_off, l_len,
+					DMA_BIDIRECTIONAL);
+			arm_dma_ops.sync_single_for_device(NULL,
+				pfn_to_dma(NULL, page_to_pfn(page)),
+				l_len, DMA_BIDIRECTIONAL);
+		}
+		curr_offset = curr_end;
+	}
+	pr_debug("clean: off(%ld) len(%ld)\n", offset, len);
+#endif
+	return 0;
+}
+
+int ion_system_heap_invalidate_cache(struct ion_heap *heap,
+		struct ion_buffer *buffer, unsigned long offset,
+		unsigned long len)
+{
+#if 0
+	struct scatterlist *sg;
+	struct sg_table *table = buffer->sg_table;
+	int i;
+	unsigned long end, curr_offset = 0;
+
+	end = offset + len;
+	for_each_sg(table->sgl, sg, table->nents, i) {
+		struct page *page = sg_page(sg);
+		unsigned long sglen = sg_dma_len(sg);
+		unsigned long curr_end = curr_offset + sglen;
+
+		if ((curr_offset <= end) && (curr_end >= offset)) {
+			unsigned long l_off = max(offset, curr_offset);
+			unsigned long l_len = min(end, curr_end) - l_off;
+			__dma_page_dev_to_cpu(page, l_off, l_len,
+					DMA_BIDIRECTIONAL);
+		}
+		curr_offset = curr_end;
+	}
+	pr_debug("inv: off(%ld) len(%ld)\n", offset, len);
+#endif
+	return 0;
+}
+#endif
+
 static struct ion_heap_ops system_heap_ops = {
 	.allocate = ion_system_heap_allocate,
 	.free = ion_system_heap_free,
@@ -252,6 +358,10 @@ static struct ion_heap_ops system_heap_ops = {
 	.map_kernel = ion_heap_map_kernel,
 	.unmap_kernel = ion_heap_unmap_kernel,
 	.map_user = ion_heap_map_user,
+#ifdef CONFIG_ION_BCM
+	.clean_cache = ion_system_heap_clean_cache,
+	.invalidate_cache = ion_system_heap_invalidate_cache,
+#endif
 };
 
 static int ion_system_heap_debug_show(struct ion_heap *heap, struct seq_file *s,
@@ -367,12 +477,18 @@ struct sg_table *ion_system_contig_heap_map_dma(struct ion_heap *heap,
 	}
 	sg_set_page(table->sgl, virt_to_page(buffer->priv_virt), buffer->size,
 		    0);
+#ifdef CONFIG_ION_BCM
+	buffer->dma_addr = virt_to_phys(buffer->priv_virt);
+#endif
 	return table;
 }
 
 void ion_system_contig_heap_unmap_dma(struct ion_heap *heap,
 				      struct ion_buffer *buffer)
 {
+#ifdef CONFIG_ION_BCM
+	buffer->dma_addr = ION_DMA_ADDR_FAIL;
+#endif
 	sg_free_table(buffer->sg_table);
 	kfree(buffer->sg_table);
 }

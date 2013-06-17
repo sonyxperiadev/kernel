@@ -437,28 +437,7 @@ BWL_PRE_PACKED_STRUCT struct dot11_extcap_ie {
 	uint8 cap[1];
 } BWL_POST_PACKED_STRUCT;
 typedef struct dot11_extcap_ie dot11_extcap_ie_t;
-
-#define DOT11_EXTCAP_LEN_MAX	7
-#define DOT11_EXTCAP_LEN_COEX	1
-#define DOT11_EXTCAP_LEN_BT	3
-#define DOT11_EXTCAP_LEN_IW	4
-#define DOT11_EXTCAP_LEN_SI	6
-
-#define DOT11_EXTCAP_LEN_TDLS	5
-BWL_PRE_PACKED_STRUCT struct dot11_extcap {
-	uint8 extcap[DOT11_EXTCAP_LEN_TDLS];
-} BWL_POST_PACKED_STRUCT;
-typedef struct dot11_extcap dot11_extcap_t;
-
-
-#define TDLS_CAP_TDLS			37		
-#define TDLS_CAP_PU_BUFFER_STA	28		
-#define TDLS_CAP_PEER_PSM		20		
-#define TDLS_CAP_CH_SW			30		
-#define TDLS_CAP_PROH			38		
-#define TDLS_CAP_CH_SW_PROH		39		
-
-#define TDLS_CAP_MAX_BIT		39		
+#define DOT11_EXTCAP_LEN    1
 
 
 
@@ -736,18 +715,9 @@ BWL_PRE_PACKED_STRUCT struct dot11_management_notification {
 #define DOT11_MGMT_NOTIFICATION_LEN 4	
 
 
-BWL_PRE_PACKED_STRUCT struct ti_ie {
-	uint8 ti_type;
-	uint32 ti_val;
-} BWL_POST_PACKED_STRUCT;
-typedef struct ti_ie ti_ie_t;
-#define TI_TYPE_REASSOC_DEADLINE	1
-#define TI_TYPE_KEY_LIFETIME		2
-
-
-#define WME_ADDTS_REQUEST	0	
-#define WME_ADDTS_RESPONSE	1	
-#define WME_DELTS_REQUEST	2	
+#define WME_ADDTS_REQUEST   0   
+#define WME_ADDTS_RESPONSE  1   
+#define WME_DELTS_REQUEST   2   
 
 
 #define WME_ADMISSION_ACCEPTED		0	
@@ -758,72 +728,73 @@ typedef struct ti_ie ti_ie_t;
 #define BCN_PRB_SSID(body) ((char*)(body) + DOT11_BCN_PRB_LEN)
 
 
-#define DOT11_OPEN_SYSTEM	0	
-#define DOT11_SHARED_KEY	1	
-#define DOT11_FAST_BSS		2	
-#define DOT11_CHALLENGE_LEN	128	
+#define DOT11_OPEN_SYSTEM   0   
+#define DOT11_SHARED_KEY    1   
+#define DOT11_FAST_BSS		3	
+#define DOT11_OPEN_SHARED	2	
+#define DOT11_CHALLENGE_LEN 128 
 
 
-#define FC_PVER_MASK		0x3	
-#define FC_PVER_SHIFT		0	
-#define FC_TYPE_MASK		0xC	
-#define FC_TYPE_SHIFT		2	
-#define FC_SUBTYPE_MASK		0xF0	
-#define FC_SUBTYPE_SHIFT	4	
-#define FC_TODS			0x100	
-#define FC_TODS_SHIFT		8	
-#define FC_FROMDS		0x200	
-#define FC_FROMDS_SHIFT		9	
-#define FC_MOREFRAG		0x400	
-#define FC_MOREFRAG_SHIFT	10	
-#define FC_RETRY		0x800	
-#define FC_RETRY_SHIFT		11	
-#define FC_PM			0x1000	
-#define FC_PM_SHIFT		12	
-#define FC_MOREDATA		0x2000	
-#define FC_MOREDATA_SHIFT	13	
-#define FC_WEP			0x4000	
-#define FC_WEP_SHIFT		14	
-#define FC_ORDER		0x8000	
-#define FC_ORDER_SHIFT		15	
+#define FC_PVER_MASK        0x3 
+#define FC_PVER_SHIFT       0   
+#define FC_TYPE_MASK        0xC 
+#define FC_TYPE_SHIFT       2   
+#define FC_SUBTYPE_MASK     0xF0    
+#define FC_SUBTYPE_SHIFT    4   
+#define FC_TODS         0x100   
+#define FC_TODS_SHIFT       8   
+#define FC_FROMDS       0x200   
+#define FC_FROMDS_SHIFT     9   
+#define FC_MOREFRAG     0x400   
+#define FC_MOREFRAG_SHIFT   10  
+#define FC_RETRY        0x800   
+#define FC_RETRY_SHIFT      11  
+#define FC_PM           0x1000  
+#define FC_PM_SHIFT     12  
+#define FC_MOREDATA     0x2000  
+#define FC_MOREDATA_SHIFT   13  
+#define FC_WEP          0x4000  
+#define FC_WEP_SHIFT        14  
+#define FC_ORDER        0x8000  
+#define FC_ORDER_SHIFT      15  
 
 
-#define SEQNUM_SHIFT		4	
-#define SEQNUM_MAX		0x1000	
-#define FRAGNUM_MASK		0xF	
+#define SEQNUM_SHIFT        4   
+#define SEQNUM_MAX      0x1000  
+#define FRAGNUM_MASK        0xF 
 
 
 
 
-#define FC_TYPE_MNG		0	
-#define FC_TYPE_CTL		1	
-#define FC_TYPE_DATA		2	
+#define FC_TYPE_MNG     0   
+#define FC_TYPE_CTL     1   
+#define FC_TYPE_DATA        2   
 
 
-#define FC_SUBTYPE_ASSOC_REQ		0	
-#define FC_SUBTYPE_ASSOC_RESP		1	
-#define FC_SUBTYPE_REASSOC_REQ		2	
-#define FC_SUBTYPE_REASSOC_RESP		3	
-#define FC_SUBTYPE_PROBE_REQ		4	
-#define FC_SUBTYPE_PROBE_RESP		5	
-#define FC_SUBTYPE_BEACON		8	
-#define FC_SUBTYPE_ATIM			9	
-#define FC_SUBTYPE_DISASSOC		10	
-#define FC_SUBTYPE_AUTH			11	
-#define FC_SUBTYPE_DEAUTH		12	
-#define FC_SUBTYPE_ACTION		13	
-#define FC_SUBTYPE_ACTION_NOACK		14	
+#define FC_SUBTYPE_ASSOC_REQ        0   
+#define FC_SUBTYPE_ASSOC_RESP       1   
+#define FC_SUBTYPE_REASSOC_REQ      2   
+#define FC_SUBTYPE_REASSOC_RESP     3   
+#define FC_SUBTYPE_PROBE_REQ        4   
+#define FC_SUBTYPE_PROBE_RESP       5   
+#define FC_SUBTYPE_BEACON       8   
+#define FC_SUBTYPE_ATIM         9   
+#define FC_SUBTYPE_DISASSOC     10  
+#define FC_SUBTYPE_AUTH         11  
+#define FC_SUBTYPE_DEAUTH       12  
+#define FC_SUBTYPE_ACTION       13  
+#define FC_SUBTYPE_ACTION_NOACK     14  
 
 
-#define FC_SUBTYPE_CTL_WRAPPER		7	
-#define FC_SUBTYPE_BLOCKACK_REQ		8	
-#define FC_SUBTYPE_BLOCKACK		9	
-#define FC_SUBTYPE_PS_POLL		10	
-#define FC_SUBTYPE_RTS			11	
-#define FC_SUBTYPE_CTS			12	
-#define FC_SUBTYPE_ACK			13	
-#define FC_SUBTYPE_CF_END		14	
-#define FC_SUBTYPE_CF_END_ACK		15	
+#define FC_SUBTYPE_CTL_WRAPPER      7   
+#define FC_SUBTYPE_BLOCKACK_REQ     8   
+#define FC_SUBTYPE_BLOCKACK     9   
+#define FC_SUBTYPE_PS_POLL      10  
+#define FC_SUBTYPE_RTS          11  
+#define FC_SUBTYPE_CTS          12  
+#define FC_SUBTYPE_ACK          13  
+#define FC_SUBTYPE_CF_END       14  
+#define FC_SUBTYPE_CF_END_ACK       15  
 
 
 #define FC_SUBTYPE_DATA			0	
@@ -1432,7 +1403,6 @@ typedef struct dot11_rrm_cap_ie dot11_rrm_cap_ie_t;
 #define DOT11_OP_CLASS_NONE			255
 
 
-
 #define DOT11_RM_ACTION_RM_REQ		0	
 #define DOT11_RM_ACTION_RM_REP		1	
 #define DOT11_RM_ACTION_LM_REQ		2	
@@ -1518,11 +1488,11 @@ typedef struct dot11_rmrep_bcn dot11_rmrep_bcn_t;
 #define DOT11_RMREQ_BCN_TABLE	2
 
 
-#define DOT11_RMREQ_BCN_SSID_ID	0
-#define DOT11_RMREQ_BCN_REPINFO_ID	1
-#define DOT11_RMREQ_BCN_REPDET_ID	2
-#define DOT11_RMREQ_BCN_REQUEST_ID	10
-#define DOT11_RMREQ_BCN_APCHREP_ID	51
+#define DOT11_RMREQ_BCN_SSID_ID 0
+#define DOT11_RMREQ_BCN_REPINFO_ID  1
+#define DOT11_RMREQ_BCN_REPDET_ID   2
+#define DOT11_RMREQ_BCN_REQUEST_ID  10
+#define DOT11_RMREQ_BCN_APCHREP_ID  51
 
 
 #define DOT11_RMREQ_BCN_REPDET_FIXED	0	
@@ -1539,7 +1509,6 @@ BWL_PRE_PACKED_STRUCT struct dot11_rmrep_nbr {
 	uint8 reg;
 	uint8 channel;
 	uint8 phytype;
-	uchar sub_elements[1]; 	
 } BWL_POST_PACKED_STRUCT;
 typedef struct dot11_rmrep_nbr dot11_rmrep_nbr_t;
 #define DOT11_RMREP_NBR_LEN	13
@@ -1968,7 +1937,6 @@ typedef struct vht_cap_ie vht_cap_ie_t;
 #define VHT_CAP_INFO_SUPP_CHAN_WIDTH_MASK       0x0000000c
 #define VHT_CAP_INFO_LDPC                       0x00000010
 #define VHT_CAP_INFO_SGI_80MHZ                  0x00000020
-
 #define VHT_CAP_INFO_SGI_160MHZ                 0x00000040
 #define VHT_CAP_INFO_TX_STBC                    0x00000080
 

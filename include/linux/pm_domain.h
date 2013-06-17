@@ -77,9 +77,9 @@ struct generic_pm_domain {
 	int (*power_on)(struct generic_pm_domain *domain);
 	s64 power_on_latency_ns;
 	struct gpd_dev_ops dev_ops;
+	s64 break_even_ns;	/* Power break even for the entire domain. */
 	s64 max_off_time_ns;	/* Maximum allowed "suspended" time. */
-	bool max_off_time_changed;
-	bool cached_power_down_ok;
+	ktime_t power_off_time;
 	struct device_node *of_node; /* Node in device tree */
 	struct gpd_cpu_data *cpu_data;
 };
@@ -101,9 +101,7 @@ struct gpd_timing_data {
 	s64 start_latency_ns;
 	s64 save_state_latency_ns;
 	s64 restore_state_latency_ns;
-	s64 effective_constraint_ns;
-	bool constraint_changed;
-	bool cached_stop_ok;
+	s64 break_even_ns;
 };
 
 struct generic_pm_domain_data {

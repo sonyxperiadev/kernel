@@ -1406,7 +1406,7 @@ static void if_tag_stat_update(const char *ifname, uid_t uid,
 	struct tag_stat *tag_stat_entry;
 	tag_t tag, acct_tag;
 	tag_t uid_tag;
-	struct data_counters *uid_tag_counters;
+	struct data_counters *uid_tag_counters = NULL;
 	struct sock_tag *sock_tag_entry;
 	struct iface_stat *iface_entry;
 	struct tag_stat *new_tag_stat = NULL;

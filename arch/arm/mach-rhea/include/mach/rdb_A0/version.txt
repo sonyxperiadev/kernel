@@ -1,0 +1,22 @@
+This file is the place holder that mentions what version of rdb was taken and
+put here
+
+Date		Version Info
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+31/Oct/2011  	snap_2011-05-17 (Copied over from existing rdb directory)	
+01/Nov/2011     Updated only the USB file brcm_rdb_hsotg_ctrl.h from snap_2011-10-28
+01/Nov/2011     Updated the file brcm_rdb_dsi1.h with the B0 version snap_2011-10-28
+		This is based on the inputs from Goran Gvozdenovic. 
+		The following are the reasons provided by him to do this
+		1) There are no functional differences in the DSI HW between A0 & B0
+		2) B0 rdb defines bits previously left undefined, we might use them down the road
+		3) A0 rdb file used so far, had a bug (wrong bit field
+		   size definition) that in turn exposed bug in our driver with
+		   introduction of B0 rdb ( thus changes in the driver )
+		4) Although committed changes do not brake A0 DSI
+		   functionality, in order not to complicate A0 support down the
+		   road, A0 rdb should be identical to B0 version
+		5) My recommendation is  to use B0.s DSI rdb for A0 as well
+14/Feb/2012	Adding brcm_rdb_bmdm_rst_mgr_reg.h from snap_2012-02-07
+
+

@@ -3,3 +3,4 @@
 
 header-y += video/
 header-y += scsi/
+header-y += trace/

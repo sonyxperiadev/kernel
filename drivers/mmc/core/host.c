@@ -459,8 +459,19 @@ struct mmc_host *mmc_alloc_host(int extra, struct device *dev)
 
 	spin_lock_init(&host->lock);
 	init_waitqueue_head(&host->wq);
+	host->detect_wake_lock_name = kasprintf(GFP_KERNEL,
+						"%s_detect",
+						mmc_hostname(host));
+
+	if (!host->detect_wake_lock_name)	{
+		pr_err("%s:could not allocate memory for kasprintf\n",
+						mmc_hostname(host));
+		goto error_path;
+	}
+	pr_debug("%s: init wake lock: %s\n", mmc_hostname(host),
+						host->detect_wake_lock_name);
 	wake_lock_init(&host->detect_wake_lock, WAKE_LOCK_SUSPEND,
-		kasprintf(GFP_KERNEL, "%s_detect", mmc_hostname(host)));
+				host->detect_wake_lock_name);
 	INIT_DELAYED_WORK(&host->detect, mmc_rescan);
 #ifdef CONFIG_PM
 	host->pm_notify.notifier_call = mmc_pm_notify;
@@ -478,6 +489,10 @@ struct mmc_host *mmc_alloc_host(int extra, struct device *dev)
 	host->max_blk_count = PAGE_CACHE_SIZE / 512;
 
 	return host;
+
+error_path:
+	mmc_host_clk_exit(host);
+	put_device(&host->class_dev);
 
 free:
 	kfree(host);
@@ -561,6 +576,8 @@ void mmc_free_host(struct mmc_host *host)
 	idr_remove(&mmc_host_idr, host->index);
 	spin_unlock(&mmc_host_lock);
 	wake_lock_destroy(&host->detect_wake_lock);
+	/* Free memory allocated by kasprintf */
+	kfree(host->detect_wake_lock_name);
 
 	put_device(&host->class_dev);
 }

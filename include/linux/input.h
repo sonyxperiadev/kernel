@@ -167,7 +167,8 @@ struct input_dev {
 	int (*open)(struct input_dev *dev);
 	void (*close)(struct input_dev *dev);
 	int (*flush)(struct input_dev *dev, struct file *file);
-	int (*event)(struct input_dev *dev, unsigned int type, unsigned int code, int value);
+	int (*event)(struct input_dev *dev,
+			unsigned int type, unsigned int code, int value);
 
 	struct input_handle __rcu *grab;
 

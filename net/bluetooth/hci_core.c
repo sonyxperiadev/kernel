@@ -291,7 +291,8 @@ struct hci_dev *hci_dev_get(int index)
 
 	read_lock(&hci_dev_list_lock);
 	list_for_each_entry(d, &hci_dev_list, list) {
-		if (d->id == index) {
+		if (!test_bit(HCI_UNREGISTER, &d->dev_flags) &&
+					d->id == index) {
 			hdev = hci_dev_hold(d);
 			break;
 		}
@@ -1763,6 +1764,8 @@ int hci_register_dev(struct hci_dev *hdev)
 	if (!hdev->open || !hdev->close)
 		return -EINVAL;
 
+	set_bit(HCI_UNREGISTER, &hdev->dev_flags);
+
 	/* Do not allow HCI_AMP devices to register at index 0,
 	 * so the index can be used as the AMP controller ID.
 	 */
@@ -1823,6 +1826,7 @@ int hci_register_dev(struct hci_dev *hdev)
 
 	if (hdev->dev_type != HCI_AMP)
 		set_bit(HCI_AUTO_OFF, &hdev->dev_flags);
+	clear_bit(HCI_UNREGISTER, &hdev->dev_flags);
 
 	hci_notify(hdev, HCI_DEV_REG);
 	hci_dev_hold(hdev);

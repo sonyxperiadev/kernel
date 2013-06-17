@@ -23,6 +23,7 @@
 
 #include <linux/list.h>
 #include <linux/videodev2.h>
+#include <linux/fs.h>
 
 /* forward references */
 struct file;

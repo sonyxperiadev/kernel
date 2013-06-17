@@ -14,6 +14,8 @@
  *
  */
 
+#define pr_fmt(fmt) "ion-page-pool: " fmt
+
 #include <linux/debugfs.h>
 #include <linux/dma-mapping.h>
 #include <linux/err.h>

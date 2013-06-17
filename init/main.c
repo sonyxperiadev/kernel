@@ -851,6 +851,7 @@ static int __ref kernel_init(void *unused)
 	if (!run_init_process("/sbin/init") ||
 	    !run_init_process("/etc/init") ||
 	    !run_init_process("/bin/init") ||
+	    !run_init_process("/bin/systemd") ||
 	    !run_init_process("/bin/sh"))
 		return 0;
 

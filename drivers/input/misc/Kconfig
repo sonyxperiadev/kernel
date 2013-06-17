@@ -643,4 +643,53 @@ config INPUT_XEN_KBDDEV_FRONTEND
 	  To compile this driver as a module, choose M here: the
 	  module will be called xen-kbdfront.
 
+config INPUT_SMB380
+	tristate "SMB380/BMA023 Triaxial acceleration sensor"
+	depends on I2C
+	help
+	Say Y here if you want to support Bosch SMB380/BMA023 connected via an I2C bus.
+	To compile this driver as a module, choose M here: the module will be called smb380.
+
+config INPUT_PONKEY_BCMPMU
+        bool "BCMPMU PowerOnKey input events"
+        depends on (MFD_BCMPMU || MFD_BCM_PMU59xxx || MFD_BCM_PMU59056)
+	default n
+        help
+          Say Y here if want to support BCMPMU PowerOnKey events.
+
+          To compile this driver as a module, choose M here.
+
+
+config INPUT_BCM59055_ONKEY
+        tristate "BCM BCM59055 PowerOnKey input events"
+        depends on MFD_BCM_PMU590XX
+        help
+          Say Y here if want to support BCM59055 PowerOnKey events.
+
+          To compile this driver as a module, choose M here.
+
+config INPUT_BCM2850_MIC_DETECT
+   tristate "BCM2850 microphone detection support"
+   depends on I2C
+   help
+     Say Y here if you want to support MIC/Headset dectection for BCM2850 based boards.
+
+     To compile this driver as a module, choose M here.
+
+choice
+	prompt "Broadcom Kona Headset drivers"
+	depends on ARCH_KONA
+	optional
+
+config KONA_HEADSET
+	tristate "Kona headset driver"
+        help
+          Activate Kona headset driver
+
+config KONA_HEADSET_MULTI_BUTTON
+	tristate "Kona headset driver with multi button support"
+        help
+          Activate Kona headset driver with multi button support
+endchoice
+
 endif

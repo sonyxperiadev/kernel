@@ -95,6 +95,7 @@ struct sdhci_host {
 /* The system physically doesn't support 1.8v, even if the host does */
 #define SDHCI_QUIRK2_NO_1_8_V				(1<<2)
 #define SDHCI_QUIRK2_PRESET_VALUE_BROKEN		(1<<3)
+#define SDHCI_QUIRK2_HOST_MASK_HS_BIT			(1<<4)
 
 	int irq;		/* Device IRQ */
 	void __iomem *ioaddr;	/* Mapped address */
@@ -140,6 +141,8 @@ struct sdhci_host {
 
 	bool runtime_suspended;	/* Host is runtime suspended */
 
+	struct work_struct wait_erase_work; /* work to wait for erase to finish */
+
 	struct mmc_request *mrq;	/* Current request */
 	struct mmc_command *cmd;	/* Current command */
 	struct mmc_data *data;	/* Current data request */
@@ -175,6 +178,11 @@ struct sdhci_host {
 	unsigned int		tuning_mode;	/* Re-tuning mode supported by host */
 #define SDHCI_TUNING_MODE_1	0
 	struct timer_list	tuning_timer;	/* Timer for tuning */
+
+#ifdef CONFIG_SDHCI_THROUGHPUT
+	u8 thrpt_dbgfs_enable;
+#endif
+	unsigned int detect_delay; /*Delay in msecs for detecting change*/
 
 	unsigned long private[0] ____cacheline_aligned;
 };

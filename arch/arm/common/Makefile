@@ -2,6 +2,7 @@
 # Makefile for the linux kernel.
 #
 
+obj-$(CONFIG_PL330)             += pl330.o
 obj-$(CONFIG_ICST)		+= icst.o
 obj-$(CONFIG_SA1111)		+= sa1111.o
 obj-$(CONFIG_PCI_HOST_VIA82C505) += via82c505.o
@@ -13,3 +14,4 @@ obj-$(CONFIG_PCI_HOST_ITE8152)  += it8152.o
 obj-$(CONFIG_ARM_TIMER_SP804)	+= timer-sp.o
 obj-$(CONFIG_FIQ_GLUE)		+= fiq_glue.o fiq_glue_setup.o
 obj-$(CONFIG_FIQ_DEBUGGER)	+= fiq_debugger.o
+obj-$(CONFIG_BCM_KNLLOG_SUPPORT) += knllog.o 
