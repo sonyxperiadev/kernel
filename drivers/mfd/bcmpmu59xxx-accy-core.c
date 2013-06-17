@@ -1260,7 +1260,7 @@ static int __devinit bcmpmu_accy_probe(struct platform_device *pdev)
 #endif
 
 #ifdef CONFIG_KONA_PI_MGR
-	if (pdata->flags & ACCY_USE_PM_QOS) {
+	if (pdata && (pdata->flags & ACCY_USE_PM_QOS)) {
 		ret = pi_mgr_qos_add_request(&di->qos_client, "accy_core",
 				pdata->qos_pi_id,
 				PI_MGR_QOS_DEFAULT_VALUE);

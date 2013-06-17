@@ -44,7 +44,8 @@
 #define ACT_ACCY_IN	1
 #define ACT_ACCY_RM	2
 
-#define ACD_DELAY msecs_to_jiffies(1000)
+#define ACD_DELAY msecs_to_jiffies(100)
+#define ACD_RETRY_DELAY msecs_to_jiffies(1000)
 /*
 static int debug_mask = BCMPMU_PRINT_ERROR |
 	BCMPMU_PRINT_INIT |  BCMPMU_PRINT_FLOW;
@@ -213,7 +214,7 @@ static void bcdldo_cycle_power(struct accy_det *accy_d)
 	 * is about 4ms. Hence a 5ms delay here to ensure proper
 	 * power cycle.
 	 */
-	usleep_range(10000, 15000);
+	msleep(30);
 	accy_d_set_ldo_bit(accy_d, 1);
 }
 
@@ -269,6 +270,7 @@ static int bcmpmu_accy_detect_func(struct accy_det *accy_d)
 
 	if (accy_d->retry_cnt >= BC_RETRIES) {
 		pr_acd(ERROR, "---No accy detected\n");
+		state = STATE_IDLE;
 		goto err;
 	}
 
@@ -324,7 +326,7 @@ void bcmpm_accy_setup_detection(struct accy_det *accy_d, bool en)
 	if ((accy_d->bc == BCMPMU_BC_BB_BC12) &&
 		(id_status == PMU_USB_ID_FLOAT)) {
 
-		if (en && (!accy_d->xceiv_start)) {
+		if (en) {
 			accy_d->xceiv_start = true;
 			pr_acd(FLOW, "=== %s ev send xceiv_start %d\n",
 					__func__, accy_d->xceiv_start);
@@ -426,7 +428,8 @@ static int bcmpmu_accy_event_handler(struct notifier_block *nb,
 		break;
 	}
 	if (!ret) {
-		if (!queue_delayed_work(accy_d->wq, &accy_d->d_work, 0)) {
+		if (!queue_delayed_work(accy_d->wq,
+				&accy_d->d_work, ACD_DELAY)) {
 			cancel_delayed_work_sync(&accy_d->d_work);
 			queue_delayed_work(accy_d->wq, &accy_d->d_work, 0);
 		}
@@ -484,7 +487,8 @@ static void bcmpmu_detect_wq(struct work_struct *work)
 
 exit:
 	if (accy_d->reschedule)
-		queue_delayed_work(accy_d->wq, &accy_d->d_work, ACD_DELAY);
+		queue_delayed_work(accy_d->wq,
+				&accy_d->d_work, ACD_RETRY_DELAY);
 }
 
 static int __devinit bcmpmu_accy_detect_probe(struct platform_device *pdev)
@@ -542,6 +546,7 @@ static int __devinit bcmpmu_accy_detect_probe(struct platform_device *pdev)
 #ifdef CONFIG_HAS_WAKELOCK
 	wake_lock_init(&accy_d->wake_lock, WAKE_LOCK_SUSPEND, "accy_detect");
 #endif
+	accy_d_set_ldo_bit(accy_d, 1);
 	bcmpmu_accy_set_pmu_BC12(accy_d->bcmpmu, 1);
 	bcmpmu_usb_get(bcmpmu,
 			BCMPMU_USB_CTRL_GET_SESSION_STATUS,
