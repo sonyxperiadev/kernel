@@ -63,7 +63,7 @@ int brcm_enable_smi_lcd_clocks(struct pi_mgr_dfs_node *dfs_node)
 	struct clk *smi_axi;
 	struct clk *smi;
 
-	if (pi_mgr_dfs_request_update(dfs_node, PI_OPP_NORMAL)) {
+	if (pi_mgr_dfs_request_update(dfs_node, PI_OPP_ECONOMY)) {
 		printk(KERN_ERR "Failed to update dfs request for SMI LCD at enable\n");
 		return  -EIO;
 	}
@@ -198,7 +198,7 @@ int brcm_enable_dsi_lcd_clocks(
 		printk(KERN_ERR "Skipping brcm_enable_dsi_lcd_clocks\n");
 		return 0;
 	}
-	if (pi_mgr_dfs_request_update(dfs_node, PI_OPP_NORMAL)) {
+	if (pi_mgr_dfs_request_update(dfs_node, PI_OPP_ECONOMY)) {
 		printk(KERN_ERR "Failed to update dfs request for DSI LCD\n");
 		return  -EIO;
 	}
@@ -361,7 +361,7 @@ int brcm_enable_dsi_lcd_clocks(
 {
 
 #ifndef CONFIG_MACH_BCM_FPGA
-	if (pi_mgr_dfs_request_update(dfs_node, PI_OPP_NORMAL))	{
+	if (pi_mgr_dfs_request_update(dfs_node, PI_OPP_ECONOMY)) {
 		printk(KERN_ERR "Failed to update dfs request for DSI LCD\n");
 		return  -EIO;
 	}
