@@ -140,7 +140,8 @@ __initdata DISPCTRL_REC_T nt35512_slp_out[] = {
 	{DISPCTRL_LIST_END, 0}
 };
 
-#if defined CONFIG_MACH_HAWAII_GARNET_C_A18
+#if defined CONFIG_MACH_HAWAII_GARNET_C_A18 || \
+	defined(CONFIG_MACH_JAVA_C_A18)
 __initdata DISPCTRL_REC_T nt35512_init_panel_vid[] = {
 	{DISPCTRL_WR_CMND, 0xF0},
 	{DISPCTRL_WR_DATA, 0x55},
