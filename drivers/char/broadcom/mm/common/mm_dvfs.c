@@ -56,7 +56,9 @@ int mm_dvfs_notification_handler(struct notifier_block *block, \
 		break;
 	case MM_FMWK_NOTIFY_CLK_ENABLE:
 		getnstimeofday(&mm_dvfs->ts1);
-		if (mm_dvfs->timer_state == false || !mm_dvfs->dvfs.is_dvfs_on)
+		pi_mgr_dfs_request_update(&(mm_dvfs->dev_dfs_node), \
+				mm_dvfs->requested_mode);
+		if (mm_dvfs->timer_state == false)
 			SCHEDULER_WORK(mm_dvfs, &(mm_dvfs->dvfs_work));
 		break;
 	case MM_FMWK_NOTIFY_CLK_DISABLE:
@@ -65,8 +67,7 @@ int mm_dvfs_notification_handler(struct notifier_block *block, \
 		mm_dvfs->hw_on_dur += timespec_to_ns(&diff);
 		pr_debug("dev stayed on for %llu nanoseconds", \
 			(unsigned long long)timespec_to_ns(&diff));
-		if (!mm_dvfs->dvfs.is_dvfs_on)
-			SCHEDULER_WORK(mm_dvfs, &(mm_dvfs->dvfs_work));
+		pi_mgr_dfs_request_update(&(mm_dvfs->dev_dfs_node), ECONOMY);
 		break;
 	case MM_FMWK_NOTIFY_INVALID:
 	default:
@@ -85,12 +86,18 @@ static void dvfs_start_timer(struct _mm_dvfs *mm_dvfs)
 {
 	mm_dvfs->jobs_done = 0;
 	mm_dvfs->hw_on_dur = 0;
-	if (mm_dvfs->current_mode == NORMAL)
-		mod_timer(&mm_dvfs->dvfs_timeout, \
-			jiffies+msecs_to_jiffies(mm_dvfs->dvfs.T1));
+	init_timer(&(mm_dvfs->dvfs_timeout));
+	setup_timer(&(mm_dvfs->dvfs_timeout),  \
+			dvfs_timeout_callback, \
+			(unsigned long)mm_dvfs);
 	if (mm_dvfs->current_mode == TURBO)
 		mod_timer(&mm_dvfs->dvfs_timeout, \
 			jiffies+msecs_to_jiffies(mm_dvfs->dvfs.T2));
+	else
+		mod_timer(&mm_dvfs->dvfs_timeout, \
+			jiffies+msecs_to_jiffies(mm_dvfs->dvfs.T1));
+	mm_dvfs->timer_state = true;
+
 }
 
 static void dvfs_work(struct work_struct *work)
@@ -102,42 +109,30 @@ static void dvfs_work(struct work_struct *work)
 					struct _mm_dvfs, \
 					dvfs_work);
 
-	if (mm_dvfs->suspend_requested)	{
-		mm_dvfs->requested_mode = NORMAL;
-		pi_mgr_dfs_request_update(&(mm_dvfs->dev_dfs_node), NORMAL);
-		/* the dvfs timer will be stopped in early suspend */
-		if (mm_dvfs->timer_state)
-			del_timer_sync(&mm_dvfs->dvfs_timeout);
-		mm_dvfs->timer_state = false;
-		return;
+	if (mm_dvfs->dvfs.is_dvfs_on == false) {
+		mm_dvfs->requested_mode = \
+			mm_dvfs->dvfs.user_requested_mode;
+		goto dvfs_work_end;
 		}
 
-	if (mm_dvfs->dvfs.is_dvfs_on == false) {
-		if (mm_dvfs->mm_common->mm_hw_is_on)
-			mm_dvfs->requested_mode = \
-				mm_dvfs->dvfs.user_requested_mode;
-		else
-			mm_dvfs->requested_mode = NORMAL;
-		pi_mgr_dfs_request_update(&(mm_dvfs->dev_dfs_node), \
-					mm_dvfs->requested_mode);
-		return;
+	if (mm_dvfs->suspend_requested)	{
+		mm_dvfs->requested_mode = ECONOMY;
+		/* the dvfs timer will be stopped in early suspend */
+		if (mm_dvfs->timer_state) {
+			del_timer_sync(&mm_dvfs->dvfs_timeout);
+			mm_dvfs->timer_state = false;
+			}
+		goto dvfs_work_end;
 		}
 
 	if (mm_dvfs->timer_state == false) {
 		mm_dvfs->jobs_done = 0;
 		mm_dvfs->hw_on_dur = 0;
 		getnstimeofday(&(mm_dvfs->dvfst1));
-		init_timer(&(mm_dvfs->dvfs_timeout));
-		setup_timer(&(mm_dvfs->dvfs_timeout),  \
-				dvfs_timeout_callback, \
-				(unsigned long)mm_dvfs);
 		mm_dvfs->requested_mode = NORMAL;
-		pi_mgr_dfs_request_update(&(mm_dvfs->dev_dfs_node), \
-					mm_dvfs->requested_mode);
 		dvfs_start_timer(mm_dvfs);
-		mm_dvfs->timer_state = true;
 		pr_debug("wake dvfs mode to normal..");
-		return;
+		goto dvfs_work_end;
 		}
 
 	getnstimeofday(&diff);
@@ -167,29 +162,27 @@ static void dvfs_work(struct work_struct *work)
 				mm_dvfs->hw_on_dur, temp, percnt);
 
 	if ((mm_dvfs->current_mode == NORMAL) &&
-		(percnt > (mm_dvfs->dvfs.P1*temp)) &&
-		(mm_dvfs->requested_mode != TURBO)) {
+		(percnt > (mm_dvfs->dvfs.P1*temp))) {
+		pr_debug("change dvfs mode to turbo..");
 		mm_dvfs->requested_mode = TURBO;
-		pi_mgr_dfs_request_update(&(mm_dvfs->dev_dfs_node), \
-					mm_dvfs->requested_mode);
 		}
 
 	if ((mm_dvfs->current_mode == TURBO) &&
-		(percnt < (mm_dvfs->dvfs.P2*temp)) &&
-		(mm_dvfs->requested_mode != NORMAL)) {
+		(percnt < (mm_dvfs->dvfs.P2*temp))) {
 		pr_debug("change dvfs mode to normal..");
 		mm_dvfs->requested_mode = NORMAL;
-		pi_mgr_dfs_request_update(&(mm_dvfs->dev_dfs_node), \
-					mm_dvfs->requested_mode);
 		}
 
+	del_timer_sync(&mm_dvfs->dvfs_timeout);
+	mm_dvfs->timer_state = false;
 	if (percnt != 0) {
 		dvfs_start_timer(mm_dvfs);
 		}
-	else {
-		del_timer_sync(&mm_dvfs->dvfs_timeout);
-		mm_dvfs->timer_state = false;
-		}
+dvfs_work_end:
+	if (mm_dvfs->mm_common->mm_hw_is_on)
+		pi_mgr_dfs_request_update(&(mm_dvfs->dev_dfs_node), \
+			mm_dvfs->requested_mode);
+
 }
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
@@ -224,30 +217,21 @@ void mm_dvfs_update_handler(struct work_struct *work)
 	 if (!update->is_read) {
 		switch (update->type) {
 		case MM_DVFS_UPDATE_ENABLE:
-			if (param > 1) {
-				pr_err("Enter 0/1 ");
-				break;
-				}
-				mm_dvfs->dvfs.is_dvfs_on = param;
+			mm_dvfs->dvfs.is_dvfs_on = (param > 0);
 			break;
 		case MM_DVFS_UPDATE_SUSPEND:
-			if (param > 1)
-				pr_err("Enter 0/1 ");
-			else
-				mm_dvfs->dvfs.enable_suspend_resume = param;
+			mm_dvfs->dvfs.enable_suspend_resume = (param > 0);
 			break;
 		case MM_DVFS_UPDATE_REQ_MODE:
-			if (param > 2)
-				pr_err("Enter 0/1/2 ");
-			else
-				mm_dvfs->dvfs.user_requested_mode = param;
+			if (param > TURBO)
+				pr_err("Enter 0/1/2... ");
+			mm_dvfs->dvfs.user_requested_mode = param;
 			break;
 		case MM_DVFS_UPDATE_T1:
 			max = mm_dvfs->dvfs.T2/4;
 			if (param > max)
 				pr_err("Enter value <= %u ", max);
-			else
-				mm_dvfs->dvfs.T1 = param;
+			mm_dvfs->dvfs.T1 = param;
 			break;
 		case MM_DVFS_UPDATE_P1:
 			max = 100;
@@ -255,31 +239,32 @@ void mm_dvfs_update_handler(struct work_struct *work)
 			if ((param > max) || (param < min))
 				pr_err("Enter value between %u and %u ", \
 								min, max);
-			else
-				mm_dvfs->dvfs.P1 = param;
+			mm_dvfs->dvfs.P1 = param;
 			break;
 		case MM_DVFS_UPDATE_T2:
 			min = mm_dvfs->dvfs.T1*4;
 			if (param < min)
 				pr_err("Enter value >= %u ", min);
-			else
-				mm_dvfs->dvfs.T2 = param;
+			mm_dvfs->dvfs.T2 = param;
 			break;
 		case MM_DVFS_UPDATE_P2:
-			min = 100*NORMAL_RATE/TURBO_RATE;
+			min = 0;
 			max = (mm_dvfs->dvfs.P1*NORMAL_RATE)/TURBO_RATE;
 			if ((param > max) || (param < min))
 				pr_err("Enter value between %u and %u ", \
 								min, max);
-			else
-				mm_dvfs->dvfs.P2 = param;
+			mm_dvfs->dvfs.P2 = param;
 			break;
 		case MM_DVFS_UPDATE_JOB_CNT:
 		default:
 			pr_err("Not Supported at this time");
 			break;
 		}
-		SCHEDULER_WORK(mm_dvfs, &(mm_dvfs->dvfs_work));
+		if (mm_dvfs->timer_state) {
+			del_timer_sync(&mm_dvfs->dvfs_timeout);
+			mm_dvfs->timer_state = false;
+			SCHEDULER_WORK(mm_dvfs, &(mm_dvfs->dvfs_work));
+			}
 	}
 	 else {
 		 switch (update->type) {
@@ -334,8 +319,6 @@ void *mm_dvfs_init(struct mm_common *mm_common, \
 
 	/* Init prof counters */
 	mm_dvfs->dvfs = *dvfs_params;
-	mm_dvfs->requested_mode = mm_dvfs->dvfs.user_requested_mode;
-
 	mm_dvfs->requested_mode = NORMAL;
 
 	mm_dvfs->mm_fmwk_notifier_blk.notifier_call \
@@ -367,8 +350,7 @@ void *mm_dvfs_init(struct mm_common *mm_common, \
 		pr_err("failed to register PI DFS request for %s", dev_name);
 		return NULL;
 		}
-	pi_mgr_dfs_request_update(&(mm_dvfs->dev_dfs_node), \
-				mm_dvfs->requested_mode);
+	pi_mgr_dfs_request_update(&(mm_dvfs->dev_dfs_node), ECONOMY);
 
 	mm_dvfs->mm_dfs_chg_notify_blk.notifier_call = mm_dfs_chg_notifier;
 	ret = pi_mgr_register_notifier(PI_MGR_PI_ID_MM,
