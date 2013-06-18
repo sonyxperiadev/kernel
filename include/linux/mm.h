@@ -1642,5 +1642,13 @@ static inline unsigned int debug_guardpage_minorder(void) { return 0; }
 static inline bool page_is_guard(struct page *page) { return false; }
 #endif /* CONFIG_DEBUG_PAGEALLOC */
 
+struct reg_show_mem {
+	void (*cbk)(struct reg_show_mem *reg_show_mem);
+	struct list_head list;
+};
+
+extern void register_show_mem(struct reg_show_mem *);
+extern void unregister_show_mem(struct reg_show_mem *);
+
 #endif /* __KERNEL__ */
 #endif /* _LINUX_MM_H */
