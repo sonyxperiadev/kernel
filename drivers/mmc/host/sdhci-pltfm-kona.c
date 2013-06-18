@@ -1020,7 +1020,8 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 
 	/* Don't issue SLEEP command to e.MMC device */
 	if (dev->devtype == SDIO_DEV_TYPE_EMMC)
-		host->mmc->caps2 |= MMC_CAP2_NO_SLEEP_CMD;
+		/*host->mmc->caps2 |= MMC_CAP2_NO_SLEEP_CMD;*/
+		host->mmc->pm_flags = MMC_PM_KEEP_POWER;
 
 	/*
 	 * This has to be done before sdhci_add_host.
@@ -1402,6 +1403,10 @@ static int sdhci_pltfm_resume(struct device *device)
 	}
 
 	dev->suspended = 0;
+
+	if (dev->devtype == SDIO_DEV_TYPE_EMMC)
+		host->mmc->pm_flags |= MMC_PM_KEEP_POWER;
+
 	return 0;
 }
 #else
