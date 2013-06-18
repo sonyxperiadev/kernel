@@ -399,7 +399,9 @@ void AUDCTRL_GetSrcSinkByMode(AudioMode_t mode, AUDIO_SOURCE_Enum_t *pMic,
 void AUDCTRL_EnablePlay(AUDIO_SOURCE_Enum_t source,
 			AUDIO_SINK_Enum_t sink,
 			AUDIO_NUM_OF_CHANNEL_t numCh,
-			AUDIO_SAMPLING_RATE_t sr, unsigned int *pPathID);
+			AUDIO_SAMPLING_RATE_t sr,
+			AUDIO_BITS_PER_SAMPLE_t bitsPerSample,
+			unsigned int *pPathID);
 
 /********************************************************************
 *  @brief  Disable a playback path

@@ -811,7 +811,8 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 				source,
 				param_start->pdev_prop->p[0].
 				sink, param_start->channels,
-				param_start->rate, &path);
+				param_start->rate,
+				param_start->bitsPerSample, &path);
 				pathID[param_start->stream] = path;
 
 			AUDIO_DRIVER_Ctrl(param_start->drv_handle,
@@ -958,6 +959,7 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 						param_resume->pdev_prop->
 						p[0].sink,
 						param_resume->channels,
+						param_resume->bits_per_sample,
 						param_resume->rate, &path);
 			pathID[param_resume->stream] = path;
 		}
@@ -1391,8 +1393,8 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 			AUDCTRL_EnablePlay(parm_FM->source,
 					   parm_FM->sink,
 					   AUDIO_CHANNEL_STEREO,
-					   AUDIO_SAMPLING_RATE_48000, &path);
-
+						AUDIO_SAMPLING_RATE_48000,
+						16, &path);
 			pathID[parm_FM->stream] = path;
 		}
 		break;

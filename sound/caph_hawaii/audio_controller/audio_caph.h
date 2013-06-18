@@ -120,6 +120,7 @@ struct __BRCM_AUDIO_Param_Start_t {
 	TIDChanOfDev *pdev_prop;
 	UInt32 channels; /* num_of_channel */
 	UInt32 rate;
+	UInt32 bitsPerSample;
 	Int32 vol[2];
 	Int32 mixMode;
 	Int32 callMode;
@@ -150,6 +151,7 @@ struct __BRCM_AUDIO_Param_Resume_t {
 	TIDChanOfDev *pdev_prop;
 	UInt32 channels;
 	UInt32 rate;
+	UInt32 bits_per_sample;
 	int stream;
 };
 #define BRCM_AUDIO_Param_Resume_t struct __BRCM_AUDIO_Param_Resume_t

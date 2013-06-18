@@ -1438,7 +1438,9 @@ void AUDCTRL_GetSrcSinkByMode(AudioMode_t mode, AUDIO_SOURCE_Enum_t *pMic,
 void AUDCTRL_EnablePlay(AUDIO_SOURCE_Enum_t source,
 			AUDIO_SINK_Enum_t sink,
 			AUDIO_NUM_OF_CHANNEL_t numCh,
-			AUDIO_SAMPLING_RATE_t sr, unsigned int *pPathID)
+			AUDIO_SAMPLING_RATE_t sr,
+			AUDIO_BITS_PER_SAMPLE_t bitsPerSample,
+			unsigned int *pPathID)
 {
 	CSL_CAPH_HWCTRL_CONFIG_t config;
 	CSL_CAPH_PathID pathID;
@@ -1465,7 +1467,7 @@ void AUDCTRL_EnablePlay(AUDIO_SOURCE_Enum_t source,
 	/* For playback, sample rate should be 48KHz. */
 	config.snk_sampleRate = AUDIO_SAMPLING_RATE_48000;
 	config.chnlNum = numCh;
-	config.bitPerSample = 16;
+	config.bitPerSample = bitsPerSample;
 
 	/*save audio for powerOnExternalAmp() to use. */
 	mode = GetAudioModeBySink(sink);
@@ -3286,8 +3288,9 @@ void AUDCTRL_SetAudioLoopback(Boolean enable_lpbk,
 			if (sink_dev == CSL_CAPH_DEV_BT_SPKR)
 				sinkTemp = AUDIO_SINK_BTM;
 
-			AUDCTRL_EnablePlay(srcTemp, speaker, AUDIO_CHANNEL_MONO,
-					   48000, NULL);
+			AUDCTRL_EnablePlay(srcTemp, speaker,
+				AUDIO_CHANNEL_MONO,
+				48000, 16, NULL);
 			AUDCTRL_EnableRecord(mic, sinkTemp, AUDIO_CHANNEL_MONO,
 					     48000, NULL);
 			return;
