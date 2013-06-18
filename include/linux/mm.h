@@ -1422,6 +1422,7 @@ extern int __meminit init_per_zone_wmark_min(void);
 extern void mem_init(void);
 extern void __init mmap_init(void);
 extern void show_mem(unsigned int flags);
+extern void show_mem_others(void);
 extern void si_meminfo(struct sysinfo * val);
 extern void si_meminfo_node(struct sysinfo *val, int nid);
 
@@ -1828,6 +1829,13 @@ void __init setup_nr_node_ids(void);
 #else
 static inline void setup_nr_node_ids(void) {}
 #endif
+struct reg_show_mem {
+	void (*cbk)(struct reg_show_mem *reg_show_mem);
+	struct list_head list;
+};
+
+extern void register_show_mem(struct reg_show_mem *);
+extern void unregister_show_mem(struct reg_show_mem *);
 
 #endif /* __KERNEL__ */
 #endif /* _LINUX_MM_H */

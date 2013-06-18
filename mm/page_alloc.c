@@ -113,6 +113,38 @@ unsigned long dirty_balance_reserve __read_mostly;
 int percpu_pagelist_fraction;
 gfp_t gfp_allowed_mask __read_mostly = GFP_BOOT_MASK;
 
+static LIST_HEAD(show_mem_list);
+static DEFINE_SPINLOCK(show_mem_spin_lock);
+
+void register_show_mem(struct reg_show_mem *reg_show_mem)
+{
+	spin_lock(&show_mem_spin_lock);
+	list_add_tail(&reg_show_mem->list, &show_mem_list);
+	spin_unlock(&show_mem_spin_lock);
+}
+EXPORT_SYMBOL(register_show_mem);
+
+void unregister_show_mem(struct reg_show_mem *reg_show_mem)
+{
+	spin_lock(&show_mem_spin_lock);
+	list_del(&reg_show_mem->list);
+	spin_unlock(&show_mem_spin_lock);
+}
+EXPORT_SYMBOL(unregister_show_mem);
+
+void show_mem_others(void)
+{
+	struct reg_show_mem *reg_show_mem;
+
+	spin_lock(&show_mem_spin_lock);
+
+	list_for_each_entry(reg_show_mem, &show_mem_list, list)
+		reg_show_mem->cbk(reg_show_mem);
+
+	spin_unlock(&show_mem_spin_lock);
+}
+EXPORT_SYMBOL(show_mem_others);
+
 #ifdef CONFIG_PM_SLEEP
 /*
  * The following functions are used by the suspend/hibernate code to temporarily
@@ -2061,6 +2093,8 @@ void warn_alloc_failed(gfp_t gfp_mask, int order, const char *fmt, ...)
 	dump_stack();
 	if (!should_suppress_show_mem())
 		show_mem(filter);
+
+	show_mem_others();
 }
 
 static inline int
