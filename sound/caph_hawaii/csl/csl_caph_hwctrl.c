@@ -1543,8 +1543,12 @@ static void csl_caph_obtain_blocks
 						break;
 				}
 			}
-		}
-		if (!src_found) {
+			if (!src_found) {
+				srcmIn = csl_caph_srcmixer_obtain_inchnl
+				(dataFormatTmp, pSrcmRoute->inSampleRate,
+								srOut);
+			}
+		} else {
 			srcmIn = csl_caph_srcmixer_obtain_inchnl
 			(dataFormatTmp, pSrcmRoute->inSampleRate, srOut);
 		}
