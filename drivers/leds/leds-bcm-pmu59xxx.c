@@ -128,7 +128,7 @@ static int bcmpmu_led_blink_set(struct led_classdev *led_cdev,
 }
 
 
-static int __devinit bcmpmu_led_probe(struct platform_device *pdev)
+static int bcmpmu_led_probe(struct platform_device *pdev)
 {
 	int ret = 0;
 	struct bcmpmu59xxx *bcmpmu = dev_get_drvdata(pdev->dev.parent);
@@ -165,7 +165,7 @@ static int __devinit bcmpmu_led_probe(struct platform_device *pdev)
 }
 
 
-static int __devexit bcmpmu_led_remove(struct platform_device *pdev)
+static int bcmpmu_led_remove(struct platform_device *pdev)
 {
 	struct bcmpmu59xxx_led_param *leddata;
 
@@ -185,7 +185,7 @@ static struct platform_driver bcmpmu_led_driver = {
 		.name = "bcmpmu59xxx-led",
 	},
 	.probe = bcmpmu_led_probe,
-	.remove = __devexit_p(bcmpmu_led_remove),
+	.remove = bcmpmu_led_remove,
 };
 
 

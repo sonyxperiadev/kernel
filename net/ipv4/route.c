@@ -144,6 +144,7 @@ static void		ipv4_dst_destroy(struct dst_entry *dst);
 static void ipv4_dst_ifdown(struct dst_entry *dst, struct net_device *dev,
 			    int how)
 {
+#if 0
 	struct rtable *rt = (struct rtable *) dst;
 
 	if (!how)
@@ -153,6 +154,7 @@ static void ipv4_dst_ifdown(struct dst_entry *dst, struct net_device *dev,
 		fib_info_put(rt->fi);
 		rt->fi = NULL;
 	}
+#endif
 }
 
 static u32 *ipv4_cow_metrics(struct dst_entry *dst, unsigned long old)
