@@ -1265,6 +1265,7 @@ void AUDDRV_SetAudioMode_Speaker(SetAudioMode_Sp_t param)
 	int gain_attack_thres, gain_attack_slope, gain_decay_slope;
 	CSL_CAPH_HWConfig_Table_t *path = NULL;
 	CSL_CAPH_MIXER_e outChnl = CSL_CAPH_SRCM_CH_NONE;
+	CSL_CAPH_MIXER_e outChnl1 = CSL_CAPH_SRCM_CH_NONE;
 
 	SysMultimediaAudioParm_t *p1;
 
@@ -1421,12 +1422,12 @@ void AUDDRV_SetAudioMode_Speaker(SetAudioMode_Sp_t param)
 					path->srcmRoute[i][j].sink
 					matches this speaker*/
 
-					outChnl = path->srcmRoute[i][j].outChnl;
-
-					aTrace(LOG_AUDIO_DRIVER,
-						"%s pathID %d found outChnl 0x%x inChnl 0x%x\n",
-						__func__, param.pathID, outChnl,
-						path->srcmRoute[i][j].inChnl);
+				outChnl1 = path->srcmRoute[i][j].outChnl;
+				aTrace(LOG_AUDIO_DRIVER,
+					"%s pathID %d found outChnl1 0x%x"
+					" inChnl 0x%x\n",
+					__func__, param.pathID, outChnl1,
+					path->srcmRoute[i][j].inChnl);
 
 					aTrace(LOG_AUDIO_DRIVER,
 						"mixInGain 0x%x, mixInGainR 0x%x\n",
@@ -1451,6 +1452,10 @@ void AUDDRV_SetAudioMode_Speaker(SetAudioMode_Sp_t param)
 			csl_srcmixer_setMixAllInGain(outChnl,
 				mixInGain, mixInGain);
 		*/
+	}
+
+	if (outChnl == CSL_CAPH_SRCM_CH_NONE) {
+		outChnl = outChnl1;
 	}
 
 	if (outChnl) {
