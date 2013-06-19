@@ -68,7 +68,7 @@ the GPL, without Broadcom's express prior written consent.
 #define	NUM_CAPTURE_SUBDEVICE	3
 
 /* limitation for RHEA - only two blocks */
-#define	PCM_MAX_PLAYBACK_BUF_BYTES			(64*1024)
+#define	PCM_MAX_PLAYBACK_BUF_BYTES			(128*1024)
 #define	PCM_MIN_PLAYBACK_PERIOD_BYTES		(256)
 #define	PCM_MAX_PLAYBACK_PERIOD_BYTES		(PCM_MAX_PLAYBACK_BUF_BYTES/2)
 
@@ -1023,7 +1023,10 @@ int PcmPlaybackCopy(struct snd_pcm_substream *substream, int channel,
 	/**
 	 * Set DMA engine ready bit according to pos and count
 	*/
-	periods_copied = bytes_to_copy/period_bytes;
+	periods_copied = 1;
+	if (bytes_to_copy > period_bytes)
+		periods_copied = bytes_to_copy/period_bytes;
+
 	while (periods_copied--) {
 		BRCM_AUDIO_Param_BufferReady_t param_bufferready;
 
