@@ -12,6 +12,8 @@
 *  consent.
 *
 *****************************************************************************/
+#ifndef __BCMPMU59xxx_FG_H_
+#define __BCMPMU59xxx_FG_H_
 struct batt_volt_cap_map {
 	u32 volt;
 	u32 cap;
@@ -59,7 +61,6 @@ struct bcmpmu_batt_property {
 	int min_volt; /* min volt in mV */
 	int max_volt; /* max volt in mV */
 	int full_cap; /* full capacity in milli amp seconds */
-	int one_c_rate;
 
 	/* lookup tables */
 	struct batt_volt_cap_map *volt_cap_lut;
@@ -157,15 +158,11 @@ struct bcmpmu_fg_pdata {
 	bool hw_maintenance_charging;
 	int poll_rate_low_batt;
 	int poll_rate_crit_batt;
-	int acld_vbus_margin;
-	int acld_vbus_thrs;
-	int acld_vbat_thrs;
-	int i_sat;
-	int i_def_dcp; /* Default DCP current */
-	int acld_cc_lmt;
-	int otp_cc_trim;
 };
-
 int bcmpmu_fg_set_sw_eoc_current(struct bcmpmu59xxx *bcmpmu, int eoc_current);
 int bcmpmu_fg_calibrate_battery(struct bcmpmu59xxx *bcmpmu);
 int bcmpmu_fg_get_current_capacity(struct bcmpmu59xxx *bcmpmu);
+int bcmpmu_fg_get_batt_volt(struct bcmpmu59xxx *bcmpmu);
+int bcmpmu_fg_get_avg_volt(struct bcmpmu59xxx *bcmpmu);
+int bcmpmu_fg_get_batt_curr(struct bcmpmu59xxx *bcmpmu, int *);
+#endif

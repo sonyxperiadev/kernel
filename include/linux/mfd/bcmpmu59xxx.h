@@ -395,6 +395,17 @@ enum bcmpmu_adc_timing_t {
 	PMU_ADC_TM_MAX,
 };
 
+struct bcmpmu_acld_pdata {
+	int acld_vbus_margin;
+	int acld_vbus_thrs;
+	int acld_vbat_thrs;
+	int i_sat;
+	int i_def_dcp; /* Default DCP current */
+	int acld_cc_lmt;
+	int otp_cc_trim;
+	int one_c_rate;
+};
+
 enum bcmpmu_chrgr_fc_curr_t {
 	PMU_CHRGR_CURR_50,
 	PMU_CHRGR_CURR_100,
@@ -857,6 +868,7 @@ struct bcmpmu59xxx {
 	void *adc;
 	void *rpcinfo;
 	void *fg;
+	void *acld;
 	void *spa_pb_info;
 	u32 flags; /*ctrl flags - copied from pdata*/
 	/* event notifier */
@@ -881,7 +893,6 @@ struct bcmpmu59xxx {
 	int (*mask_irq) (struct bcmpmu59xxx *bcmpmu, u32 irq);
 	int (*unmask_irq) (struct bcmpmu59xxx *bcmpmu, u32 irq);
 };
-
 
 int bcmpmu_get_pmu_mfd_cell(struct mfd_cell **);
 
@@ -925,6 +936,7 @@ int bcmpmu_adc_read(struct bcmpmu59xxx *bcmpmu, enum bcmpmu_adc_channel channel,
 		enum bcmpmu_adc_req req, struct bcmpmu_adc_result *result);
 int *bcmpmu59xxx_get_trim_table(struct bcmpmu59xxx *bcmpmu);
 int bcmpmu59xxx_rgltr_info_init(struct bcmpmu59xxx *bcmpmu);
+
 #ifdef CONFIG_CHARGER_BCMPMU_SPA
 int bcmpmu_post_spa_event_to_queue(struct bcmpmu59xxx *bcmpmu,
 	u32 event, u32 param);
