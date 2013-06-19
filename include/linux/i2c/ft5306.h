@@ -45,8 +45,10 @@ struct synaptics_rmi4 {
 	struct hrtimer diag_timer;
 	struct work_struct diag_work;
 #endif
-	struct early_suspend early_suspend;
 
+#ifdef CONFIG_HAS_EARLYSUSPEND
+	struct early_suspend early_suspend;
+#endif
 	__u8 data_reg;
 	__u8 data_length;
 	__u8 *data;
