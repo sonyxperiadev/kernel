@@ -183,6 +183,27 @@ config BCM_IOVMM
 	  Physical Memory allocators and drivers can use these APIs
 	  instead of using directly using the iommu APIs.
 
+if BCM_IOVMM
+
+config BCM_IOVMM_ALIGNMENT
+	int "Maximum PAGE_SIZE order of alignment for BCM IOMMU buffers"
+	range 4 9
+	default 8
+	help
+	  BCM IOVA allocation by default aligns all buffers to the smallest
+	  PAGE_SIZE order which is greater than or equal to the requested buffer
+	  size. This works well for buffers up to a few hundreds kilobytes, but
+	  for larger buffers it just a waste of address space. Drivers which has
+	  relatively small addressing window (like 64Mib) might run out of
+	  virtual space with just a few allocations.
+
+	  With this parameter you can specify the maximum PAGE_SIZE order for
+	  BCM IOMMU buffers. Larger buffers will be aligned only to this
+	  specified order. The order is expressed as a power of two multiplied
+	  by the PAGE_SIZE.
+
+endif
+
 config BCM_IOMMU_BROKEN_EXTRA_RW
 	bool "Workaround for broken v3d, H264 stack"
 	depends on BCM_IOMMU_M4U
@@ -193,12 +214,23 @@ config BCM_IOMMU_BROKEN_EXTRA_RW
 	  being accessed to a garbage page in the fault handler.
 
 config BCM_IOMMU_DEBUG
-	bool "Debugging log for Broadocm IOMMU"
+	bool "Debugging log for Broadcom IOMMU"
 	depends on BCM_IOMMU_M4U
+	default n
 	help
 	  Select this to enable debug hooks in Broadcom IOMMU drivers.
 	  IOMMU registers are exposed via debugfs. Prints while mapping
 	  and unmapping can be enabled via dynamic enabling of pr_debug.
 	  This will have an overhead and do not enable if not necessary.
+
+config BCM_IOVMM_DEBUG
+	bool "Debugging support for Broadcom IOVA management"
+	depends on BCM_IOVMM
+	default n
+	help
+	  Select this to enable debug hooks in Broadcom IOVA management
+	  code. Dumps the bitmap info when iova allocation fails. This
+	  should not have an impact on performance or memory if iova
+	  allocation does not fail.
 
 endif # IOMMU_SUPPORT
