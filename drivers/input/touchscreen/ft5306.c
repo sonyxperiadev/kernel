@@ -25,7 +25,6 @@
 #include <linux/i2c/ft5306.h>
 #include <linux/io.h>
 #include <linux/gpio.h>
-#include <linux/earlysuspend.h>
 #include <linux/delay.h>
 #include <linux/slab.h>
 #include <linux/regulator/consumer.h>
@@ -1913,7 +1912,10 @@ err_i2c_client_check:
 static int focaltech_ft5306_remove(struct i2c_client *client)
 {
 struct synaptics_rmi4 *ts = i2c_get_clientdata(client);
+
+#ifdef CONFIG_HAS_EARLYSUSPEND
 	unregister_early_suspend(&ts->early_suspend);
+#endif
 	if (ts->use_irq)
 		free_irq(client->irq, ts);
 
