@@ -1608,6 +1608,10 @@ static void reserve_secure_memory(void)
 
 void __init hawaii_reserve(void)
 {
+#ifdef CONFIG_MOBICORE_DRIVER
+	mobicore_reserve_memory();
+#endif
+	reserve_secure_memory();
 
 #ifdef CONFIG_ION
 	ion_reserve_memory();
@@ -1616,11 +1620,6 @@ void __init hawaii_reserve(void)
 #ifdef CONFIG_ANDROID_PMEM
 	pmem_reserve_memory();
 #endif
-
-#ifdef CONFIG_MOBICORE_DRIVER
-	mobicore_reserve_memory();
-#endif
-	reserve_secure_memory();
 }
 
 static int __init setup_board_version(char *p)
