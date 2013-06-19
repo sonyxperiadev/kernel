@@ -212,15 +212,21 @@
 	iovmm_mm: iovmm-mm {
 		compatible = "bcm,iovmm";
 		base = <0xc0000000>;
-		size = <0x20000000>;
+		size = <0x30000000>;
 		order = <0>;
 	};
 
 	iovmm_mm_256mb: iovmm-mm-256mb {
 		compatible = "bcm,iovmm";
-		base = <0xe0000000>;
-		size = <0x10000000>;
+		base = <0xf0000000>;
+		size = <0x0ff00000>;
 		order = <0>;
+	};
+
+	ion-config {
+		compatible = "bcm,ion-config";
+		/* No separate mask needed for hwwr if M4U is enabled */
+		mask_hwwr = <0>;
 	};
 
 	ion-system {
@@ -231,13 +237,21 @@
 		iovmm = <&iovmm_mm_256mb>;
 	};
 
+	ion-system-extra {
+		compatible = "bcm,ion";
+		id = <1>;
+		type = <0>;
+		iommu = <&iommu_mm>;
+		iovmm = <&iovmm_mm>;
+	};
+
 	ion-carveout {
 		compatible = "bcm,ion";
-		id = <3>;
+		id = <9>;
 		type = <2>;
 		base  = <0x90000000>;
 		limit = <0xa0000000>;
-		size  = <0x00d00000>;
+		size  = <0x01000000>;
 		lmk_enable = <0>;
 		lmk_min_score_adj = <411>;
 		lmk_min_free = <32>;
@@ -247,7 +261,7 @@
 
 	ion-cma {
 		compatible = "bcm,ion";
-		id = <2>;
+		id = <5>;
 		type = <4>;
 		base  = <0x90000000>;
 		limit = <0xa0000000>;
@@ -356,14 +370,13 @@
 		reg = <0x34008000 0x1000>;
 		interrupts = <0 183 4>;
 		chipreg_addr = <0x35004000 0x1000>;
-		thold_size = <4>; /*number of threshold levels*/
+		thold_size = <3>; /*number of threshold levels*/
 		poll_rate_ms = <30000>;
 		hysteresis = <0>;
 		flags = <1>;
 		interval_ms = <5>;
 		/*critical temp is 115*/
-		thold = <70 65 1
-			85 75 1
+		thold = <85 75 1
 			100 90 1
 			115 112 2>;
 		tmon_apb_clk = "tmon_apb";
