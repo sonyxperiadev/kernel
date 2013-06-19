@@ -15,7 +15,6 @@
 #ifndef _FT5306_H_
 #define _FT5306_H_
 #include <linux/i2c-kona.h>
-#include <linux/earlysuspend.h>
 #include <linux/semaphore.h>
 #include <linux/mutex.h>
 #include <linux/i2c.h>
