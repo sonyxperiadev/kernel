@@ -962,7 +962,7 @@ late_initcall(hawaii_pwr_mgr_late_init);
  * enabled
  */
 
-int __devinit mach_init_sequencer(void)
+int mach_init_sequencer(void)
 {
 
 #ifndef CONFIG_PWRMGR_DUMMY_SEQUENCER

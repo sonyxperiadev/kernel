@@ -177,6 +177,7 @@ dtb-$(CONFIG_ARCH_VT8500) += vt8500-bv07.dtb \
 dtb-$(CONFIG_ARCH_ZYNQ) += zynq-zc702.dtb
 dtb-$(CONFIG_ARCH_HAWAII) += hawaii_garnet_edn020.dtb \
 	hawaii_garnet_edn010.dtb
+dtb-$(CONFIG_ARCH_JAVA) += java_edn000.dtb
 
 DTB_NAMES := $(subst $\",,$(CONFIG_BUILD_ARM_APPENDED_DTB_IMAGE_NAMES))
 ifneq ($(DTB_NAMES),)

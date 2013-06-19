@@ -444,7 +444,7 @@ static struct resource hawaii_pmu_resource = {
 
 struct platform_device pmu_device = {
 	.name = "arm-pmu",
-	.id = ARM_PMU_DEVICE_CPU,
+	.id = -1,
 	.resource = &hawaii_pmu_resource,
 	.num_resources = 1,
 };

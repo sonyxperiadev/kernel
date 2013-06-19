@@ -64,7 +64,6 @@
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
 #include <asm/mach/map.h>
-#include <asm/hardware/gic.h>
 #include <mach/hardware.h>
 #include <mach/hardware.h>
 #include <mach/kona_headset_pd.h>
@@ -79,6 +78,7 @@
 #include <plat/chal/chal_trace.h>
 #include <plat/pi_mgr.h>
 #include <plat/spi_kona.h>
+#include <plat/kona_smp.h>
 
 #include <trace/stm.h>
 
@@ -191,6 +191,7 @@ extern int
 hawaii_wifi_status_register(void (*callback) (int card_present, void *dev_id),
 			    void *dev_id);
 #endif
+extern void java_timer_init(void);
 
 /* SD */
 #define SD_CARDDET_GPIO_PIN	91
@@ -1071,8 +1072,10 @@ static const struct of_dev_auxdata hawaii_auxdata_lookup[] __initconst = {
 	OF_DEV_AUXDATA("bcm,soc-camera", 0x36,
 		"soc-back-camera", &iclink_ov5648),
 #endif
+#ifdef CONFIG_SOC_CAMERA_OV7692
 	OF_DEV_AUXDATA("bcm,soc-camera", 0x3e,
 		"soc-front-camera", &iclink_ov7692),
+#endif
 	{},
 };
 
@@ -1366,10 +1369,10 @@ late_initcall(hawaii_add_lateinit_devices);
 
 static const char * const java_dt_compat[] = { "bcm,java", NULL, };
 DT_MACHINE_START(HAWAII, CONFIG_BRD_NAME)
+	.smp = smp_ops(kona_smp_ops),
 	.map_io = hawaii_map_io,
 	.init_irq = kona_init_irq,
-	.handle_irq = gic_handle_irq,
-	.timer = &kona_timer,
+	.init_time = java_timer_init,
 	.init_machine = java_init,
 	.reserve = hawaii_reserve,
 	.restart = hawaii_restart,

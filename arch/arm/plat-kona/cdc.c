@@ -558,14 +558,14 @@ static int cdc_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int __devexit cdc_remove(struct platform_device *pdev)
+static int cdc_remove(struct platform_device *pdev)
 {
 	return 0;
 }
 
 static struct platform_driver cdc_driver = {
 	.probe = cdc_probe,
-	.remove = __devexit_p(cdc_remove),
+	.remove = cdc_remove,
 	.driver = {.name = "brcm-cdc",},
 };
 

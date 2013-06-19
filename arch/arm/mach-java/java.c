@@ -140,7 +140,7 @@ static int __init hawaii_arch_init(void)
 
 arch_initcall(hawaii_arch_init);
 
-void __init hawaii_timer_init(void)
+void __init java_timer_init(void)
 {
 	struct gp_timer_setup gpt_setup;
 
@@ -173,10 +173,6 @@ void __init hawaii_timer_init(void)
 	gp_timer_init(&gpt_setup);
 	//profile_timer_init(IOMEM(KONA_PROFTMR_VA));
 }
-
-struct sys_timer kona_timer = {
-	.init = hawaii_timer_init,
-};
 
 #ifdef CONFIG_KONA_ATAG_DT
 /* hawaii has 4 banks of GPIO pins */

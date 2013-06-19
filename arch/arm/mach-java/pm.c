@@ -400,6 +400,13 @@ int pm_is_forced_sleep()
 	return !!pm_info.force_sleep;
 }
 
+struct kona_idle_state * kona_cpuidle_get_statedata(int index)
+{
+	if (index > pm_init.num_states)
+		return NULL;
+
+	return &idle_states[index];
+}
 
 int __init __pm_init(void)
 {

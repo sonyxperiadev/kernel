@@ -718,7 +718,7 @@ static ssize_t show_module_name(struct device_driver *driver, char *buf)
 static DRIVER_ATTR(module_name, S_IRUGO, show_module_name, NULL);
 
 
-static int __devinit bcm_wifi_pltfm_probe(struct platform_device *pdev)
+static int bcm_wifi_pltfm_probe(struct platform_device *pdev)
 {
 u32 readval;
 const char *prop;
@@ -807,7 +807,7 @@ static struct platform_driver bcm_wifi_pltfm_driver = {
 #endif
 		},
 	.probe = bcm_wifi_pltfm_probe,
-	.remove = __devexit_p(bcm_wifi_pltfm_remove),
+	.remove = bcm_wifi_pltfm_remove,
 };
 
 
