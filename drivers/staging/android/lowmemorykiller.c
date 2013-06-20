@@ -42,6 +42,9 @@
 #include <linux/seq_file.h>
 #include <linux/lowmemorykiller.h>
 
+#define CREATE_TRACE_POINTS
+#include <trace/events/almk.h>
+
 static uint32_t lowmem_debug_level = 1;
 static int lowmem_adj[6] = {
 	0,
@@ -88,9 +91,15 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 	struct task_struct *selected = NULL;
 	struct reg_lmk *reg_lmk;
 	int rem = 0;
+	int active_anon;
+	int inactive_anon;
+	int active_file;
+	int inactive_file;
+	int contig_pages;
 	int tasksize;
 	int i;
 	int min_score_adj = OOM_SCORE_ADJ_MAX + 1;
+	int minfree = INT_MAX;
 	int selected_tasksize = 0;
 	int selected_oom_score_adj;
 	int array_size = ARRAY_SIZE(lowmem_adj);
@@ -98,14 +107,14 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 	int other_file = global_page_state(NR_FILE_PAGES) -
 						global_page_state(NR_SHMEM);
 
+	int cma_free = INT_MAX;
+	int cma_file = INT_MAX;
 	/*
 	 * If CMA is enabled, then do not count free pages
 	 * from CMA region and also ignore CMA pages that are
 	 * allocated for files.
 	 */
 #ifdef CONFIG_CMA
-	int cma_free, cma_file;
-
 	cma_free = global_page_state(NR_FREE_CMA_PAGES);
 	cma_file = global_page_state(NR_CMA_INACTIVE_FILE)
 			+ global_page_state(NR_CMA_ACTIVE_FILE);
@@ -121,6 +130,7 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 		if (other_free < lowmem_minfree[i] &&
 		    other_file < lowmem_minfree[i]) {
 			min_score_adj = lowmem_adj[i];
+			minfree = lowmem_minfree[i];
 			break;
 		}
 	}
@@ -136,10 +146,12 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 				other_file, min_score_adj,
 				lowmem_oom_score_adj_to_oom_adj(min_score_adj));
 #endif
-	rem = global_page_state(NR_ACTIVE_ANON) +
-		global_page_state(NR_ACTIVE_FILE) +
-		global_page_state(NR_INACTIVE_ANON) +
-		global_page_state(NR_INACTIVE_FILE);
+	active_anon = global_page_state(NR_ACTIVE_ANON);
+	inactive_anon = global_page_state(NR_INACTIVE_ANON);
+	active_file = global_page_state(NR_ACTIVE_FILE);
+	inactive_file = global_page_state(NR_INACTIVE_FILE);
+	rem = active_anon + inactive_anon + active_file + inactive_file;
+
 	/*
 	 * If CMA is enabled, We will also free up contiguous
 	 * allocations done by processes (We cannot free up DMA
@@ -148,7 +160,8 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 	 * the total.
 	 */
 #ifdef CONFIG_CMA
-	rem += global_page_state(NR_CONTIG_PAGES);
+	contig_pages = global_page_state(NR_CONTIG_PAGES);
+	rem += contig_pages;
 #endif
 
 	down_read(&lmk_reg_rwsem);
@@ -163,6 +176,11 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 			rem += ret;
 	}
 	up_read(&lmk_reg_rwsem);
+
+	trace_almk_start(sc->nr_to_scan, sc->gfp_mask, current->comm,
+			min_score_adj, minfree, other_free, other_file,
+			cma_free, cma_file, active_anon, inactive_anon,
+			active_file, inactive_file, contig_pages, rem);
 
 	if (sc->nr_to_scan <= 0 || min_score_adj == OOM_SCORE_ADJ_MAX + 1) {
 		lowmem_print(5, "lowmem_shrink %lu, %x, return %d\n",
@@ -187,6 +205,9 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 		    time_before_eq(jiffies, lowmem_deathpending_timeout)) {
 			task_unlock(p);
 			rcu_read_unlock();
+			trace_almk_end(-2, 0, current->comm, minfree,
+					other_free, other_file, cma_free,
+					cma_file, sc->gfp_mask);
 			return 0;
 		}
 		oom_score_adj = p->signal->oom_score_adj;
@@ -244,7 +265,16 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 		this_cpu_inc(lmk_stats.kill_count);
 		set_tsk_thread_flag(selected, TIF_MEMDIE);
 		rem -= selected_tasksize;
+		trace_almk_end(selected_oom_score_adj, selected_tasksize,
+				current->comm, minfree, other_free,
+				other_file, cma_free,
+				cma_file, sc->gfp_mask);
+	} else {
+		trace_almk_end(-1, 0, current->comm, minfree,
+				other_free, other_file,
+				cma_free, cma_file, sc->gfp_mask);
 	}
+
 	lowmem_print(4, "lowmem_shrink %lu, %x, return %d\n",
 		     sc->nr_to_scan, sc->gfp_mask, rem);
 	rcu_read_unlock();
