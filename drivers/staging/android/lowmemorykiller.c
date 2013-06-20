@@ -42,6 +42,13 @@
 #include <linux/notifier.h>
 #include <linux/lowmemorykiller.h>
 
+/*
+ * See Documentation/trace/postprocess/trace-almk-postprocess.pl
+ * for decoding ALMK traces.
+ */
+#define CREATE_TRACE_POINTS
+#include <trace/events/almk.h>
+
 static uint32_t lowmem_debug_level = 1;
 static short lowmem_adj[6] = {
 	0,
@@ -75,6 +82,10 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 	struct task_struct *selected = NULL;
 	struct reg_lmk *reg_lmk;
 	int rem = 0;
+	int active_anon;
+	int inactive_anon;
+	int active_file;
+	int inactive_file;
 	int tasksize;
 	int i;
 	short min_score_adj = OOM_SCORE_ADJ_MAX + 1;
@@ -141,10 +152,11 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 		lowmem_print(3, "lowmem_shrink %lu, %x, ofree %d %d, ma %hd\n",
 				sc->nr_to_scan, sc->gfp_mask, other_free,
 				other_file, min_score_adj);
-	rem = global_page_state(NR_ACTIVE_ANON) +
-		global_page_state(NR_ACTIVE_FILE) +
-		global_page_state(NR_INACTIVE_ANON) +
-		global_page_state(NR_INACTIVE_FILE);
+	active_anon = global_page_state(NR_ACTIVE_ANON);
+	inactive_anon = global_page_state(NR_INACTIVE_ANON);
+	active_file = global_page_state(NR_ACTIVE_FILE);
+	inactive_file = global_page_state(NR_INACTIVE_FILE);
+	rem = active_anon + inactive_anon + active_file + inactive_file;
 
 	down_read(&lmk_reg_rwsem);
 	list_for_each_entry(reg_lmk, &lmk_reg_list, list) {
@@ -158,6 +170,11 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 			rem += ret;
 	}
 	up_read(&lmk_reg_rwsem);
+
+	trace_almk_start(sc->nr_to_scan, sc->gfp_mask, current->comm,
+			min_score_adj, minfree, other_free, other_file,
+			cma_free, cma_file, active_anon, inactive_anon,
+			active_file, inactive_file, rem);
 
 	if (sc->nr_to_scan <= 0 || min_score_adj == OOM_SCORE_ADJ_MAX + 1) {
 		lowmem_print(5, "lowmem_shrink %lu, %x, return %d\n",
@@ -182,6 +199,9 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 		    time_before_eq(jiffies, lowmem_deathpending_timeout)) {
 			task_unlock(p);
 			rcu_read_unlock();
+			trace_almk_end(-2, 0, current->comm, minfree,
+					other_free, other_file, cma_free,
+					cma_file, sc->gfp_mask);
 			return 0;
 		}
 		oom_score_adj = p->signal->oom_score_adj;
@@ -226,7 +246,16 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 		send_sig(SIGKILL, selected, 0);
 		set_tsk_thread_flag(selected, TIF_MEMDIE);
 		rem -= selected_tasksize;
+		trace_almk_end(selected_oom_score_adj, selected_tasksize,
+				current->comm, minfree, other_free,
+				other_file, cma_free,
+				cma_file, sc->gfp_mask);
+	} else {
+		trace_almk_end(-1, 0, current->comm, minfree,
+				other_free, other_file,
+				cma_free, cma_file, sc->gfp_mask);
 	}
+
 	lowmem_print(4, "lowmem_shrink %lu, %x, return %d\n",
 		     sc->nr_to_scan, sc->gfp_mask, rem);
 	rcu_read_unlock();
