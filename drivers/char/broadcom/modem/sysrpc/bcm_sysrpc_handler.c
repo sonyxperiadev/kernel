@@ -279,6 +279,10 @@ Result_t Handle_SYS_APSystemCmd(RPC_Msg_t *pReqMsg, UInt32 cmdType,
 				!rfldo_enabled) {
 				printk(KERN_INFO "Turn on RFLDO\n");
 				regulator_enable(reg_handle);
+				/*Set RFLDO mode to LPM in DSM*/
+				printk(KERN_INFO "Set mode RFLDO\n");
+				regulator_set_mode(reg_handle,
+						REGULATOR_MODE_IDLE);
 				rfldo_enabled = 1;
 			} else {
 				printk(KERN_INFO "RFLDO already in correct state\n");
