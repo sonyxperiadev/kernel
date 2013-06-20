@@ -3891,8 +3891,6 @@ static int32_t bcmtch_dev_suspend(
 
 		ret_val = bcmtch_dev_set_power_state(bcmtch_data_ptr,
 			BCMTCH_POWER_STATE_SLEEP);
-
-		bcmtch_dev_power_enable(bcmtch_data_ptr, false);
 	} else {
 		/* suspend */
 		ret_val = bcmtch_dev_request_power_mode(
@@ -3900,6 +3898,8 @@ static int32_t bcmtch_dev_suspend(
 					BCMTCH_POWER_MODE_NOWAKE,
 					TOFE_COMMAND_POWER_MODE_SUSPEND);
 	}
+
+	bcmtch_dev_power_enable(bcmtch_data_ptr, false);
 
 	/* clear events */
 	bcmtch_dev_reset_events(bcmtch_data_ptr);
@@ -3922,11 +3922,9 @@ static int32_t bcmtch_dev_resume(
 	/* lock */
 	mutex_lock(&bcmtch_data_ptr->mutex_work);
 
-	if (bcmtch_boot_flag & BCMTCH_BOOT_FLAG_SUSPEND_COLD_BOOT) {
+	ret_val = bcmtch_dev_power_enable(bcmtch_data_ptr, true);
 
-		ret_val = bcmtch_dev_power_enable(
-					bcmtch_data_ptr,
-					true);
+	if (bcmtch_boot_flag & BCMTCH_BOOT_FLAG_SUSPEND_COLD_BOOT) {
 
 		if (!ret_val)
 			ret_val = bcmtch_dev_init(bcmtch_data_ptr);
