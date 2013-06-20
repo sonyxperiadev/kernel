@@ -502,12 +502,12 @@ static int cdc_dbg_init(struct cdc *cdc_info)
 				&cdc_dbg_get_status_ops))
 			goto err;
 	}
-	if (!debugfs_create_u32("dbg_mask", S_IRUGO | S_IWUGO,
+	if (!debugfs_create_u32("dbg_mask", S_IRUSR | S_IWUSR,
 		cdc_info->cdc_dir, (u32 *)dbg_mask))
 			goto err;
 
 	if (!debugfs_create_file("dbg_bus",
-			S_IRUGO | S_IWUGO, cdc_info->cdc_dir, NULL,
+			S_IRUSR | S_IWUSR , cdc_info->cdc_dir, NULL,
 			&cdc_dbg_bus_ops))
 		goto err;
 	return 0;
