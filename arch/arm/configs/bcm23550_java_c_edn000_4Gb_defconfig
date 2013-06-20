@@ -483,6 +483,7 @@ CONFIG_ARM_CPU_TOPOLOGY=y
 CONFIG_SCHED_MC=y
 # CONFIG_SCHED_SMT is not set
 CONFIG_HAVE_ARM_SCU=y
+# CONFIG_HAVE_ARM_ARCH_TIMER is not set
 CONFIG_VMSPLIT_3G=y
 # CONFIG_VMSPLIT_2G is not set
 # CONFIG_VMSPLIT_1G is not set
@@ -1164,19 +1165,17 @@ CONFIG_ANDROID_PMEM_LOW_MEMORY_KILLER=y
 # CONFIG_BRCM_VIRTUAL_SENSOR is not set
 # CONFIG_ISL29003 is not set
 # CONFIG_ISL29020 is not set
-# CONFIG_ISL290XX is not set
+CONFIG_ISL290XX=y
 # CONFIG_SENSORS_TSL2550 is not set
-# CONFIG_SENSORS_BMA222 is not set
+CONFIG_SENSORS_BMA222=y
 # CONFIG_SENSORS_BH1780 is not set
 # CONFIG_SENSORS_BH1770 is not set
 # CONFIG_SENSORS_APDS990X is not set
 # CONFIG_HMC6352 is not set
 # CONFIG_AL3006 is not set
 # CONFIG_TMD2771X is not set
-CONFIG_TMD2771=y
-CONFIG_BMP18X=y
-CONFIG_BMP18X_I2C=y
-# CONFIG_BMP18X_SPI is not set
+# CONFIG_TMD2771 is not set
+# CONFIG_BMP18X is not set
 CONFIG_SENSORS_KIONIX_KXTIK=y
 # CONFIG_AMI306 is not set
 # CONFIG_SENSORS_AK8963 is not set
@@ -2721,139 +2720,7 @@ CONFIG_STAGING=y
 # CONFIG_TRANZPORT is not set
 # CONFIG_LINE6_USB is not set
 # CONFIG_VT6656 is not set
-CONFIG_IIO=y
-# CONFIG_IIO_ST_HWMON is not set
-CONFIG_IIO_BUFFER=y
-# CONFIG_IIO_SW_RING is not set
-CONFIG_IIO_KFIFO_BUF=y
-CONFIG_IIO_TRIGGER=y
-CONFIG_IIO_CONSUMERS_PER_TRIGGER=2
-
-#
-# Accelerometers
-#
-# CONFIG_ADIS16201 is not set
-# CONFIG_ADIS16203 is not set
-# CONFIG_ADIS16204 is not set
-# CONFIG_ADIS16209 is not set
-# CONFIG_ADIS16220 is not set
-# CONFIG_ADIS16240 is not set
-# CONFIG_KXSD9 is not set
-# CONFIG_LIS3L02DQ is not set
-# CONFIG_SCA3000 is not set
-
-#
-# Analog to digital converters
-#
-# CONFIG_AD7291 is not set
-# CONFIG_AD7298 is not set
-# CONFIG_AD7606 is not set
-# CONFIG_AD799X is not set
-# CONFIG_AD7476 is not set
-# CONFIG_AD7887 is not set
-# CONFIG_AD7780 is not set
-# CONFIG_AD7793 is not set
-# CONFIG_AD7816 is not set
-# CONFIG_AD7192 is not set
-# CONFIG_ADT7310 is not set
-# CONFIG_ADT7410 is not set
-# CONFIG_AD7280 is not set
-# CONFIG_MAX1363 is not set
-
-#
-# Analog digital bi-direction converters
-#
-# CONFIG_ADT7316 is not set
-
-#
-# Capacitance to digital converters
-#
-# CONFIG_AD7150 is not set
-# CONFIG_AD7152 is not set
-# CONFIG_AD7746 is not set
-
-#
-# Digital to analog converters
-#
-# CONFIG_AD5064 is not set
-# CONFIG_AD5360 is not set
-# CONFIG_AD5380 is not set
-# CONFIG_AD5421 is not set
-# CONFIG_AD5624R_SPI is not set
-# CONFIG_AD5446 is not set
-# CONFIG_AD5504 is not set
-# CONFIG_AD5764 is not set
-# CONFIG_AD5791 is not set
-# CONFIG_AD5686 is not set
-# CONFIG_MAX517 is not set
-
-#
-# Direct Digital Synthesis
-#
-# CONFIG_AD5930 is not set
-# CONFIG_AD9832 is not set
-# CONFIG_AD9834 is not set
-# CONFIG_AD9850 is not set
-# CONFIG_AD9852 is not set
-# CONFIG_AD9910 is not set
-# CONFIG_AD9951 is not set
-
-#
-# Digital gyroscope sensors
-#
-# CONFIG_ADIS16060 is not set
-# CONFIG_ADIS16080 is not set
-# CONFIG_ADIS16130 is not set
-# CONFIG_ADIS16260 is not set
-# CONFIG_ADXRS450 is not set
-
-#
-# Network Analyzer, Impedance Converters
-#
-# CONFIG_AD5933 is not set
-
-#
-# Inertial measurement units
-#
-# CONFIG_ADIS16400 is not set
-CONFIG_INV_MPU_IIO=y
-# CONFIG_INV_IIO_MPU3050_ACCEL_SLAVE_BMA250 is not set
-
-#
-# Light sensors
-#
-# CONFIG_SENSORS_ISL29018 is not set
-# CONFIG_SENSORS_TSL2563 is not set
-# CONFIG_TSL2583 is not set
-
-#
-# Magnetometer sensors
-#
-# CONFIG_SENSORS_HMC5843 is not set
-
-#
-# Active energy metering IC
-#
-# CONFIG_ADE7753 is not set
-# CONFIG_ADE7754 is not set
-# CONFIG_ADE7758 is not set
-# CONFIG_ADE7759 is not set
-# CONFIG_ADE7854 is not set
-
-#
-# Resolver to digital converters
-#
-# CONFIG_AD2S90 is not set
-# CONFIG_AD2S1200 is not set
-# CONFIG_AD2S1210 is not set
-
-#
-# Triggers - standalone
-#
-# CONFIG_IIO_PERIODIC_RTC_TRIGGER is not set
-# CONFIG_IIO_GPIO_TRIGGER is not set
-# CONFIG_IIO_SYSFS_TRIGGER is not set
-# CONFIG_IIO_SIMPLE_DUMMY is not set
+# CONFIG_IIO is not set
 # CONFIG_ZSMALLOC is not set
 # CONFIG_FB_SM7XX is not set
 # CONFIG_USB_ENESTORAGE is not set
