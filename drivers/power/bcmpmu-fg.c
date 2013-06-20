@@ -75,6 +75,11 @@
 
 #define CAPACITY_PERCENTAGE_FULL	100
 #define CAPACITY_PERCENTAGE_EMPTY	0
+#define CAPACITY_ZERO_ALIAS		0xFF
+
+/* Low Battery Calibration Macros */
+#define FG_LOW_BAT_CAP_DELTA_LIMIT	-30
+
 
 /**
  * FG scaling factor = 1024LSB = 1000mA
@@ -89,6 +94,8 @@
 #define FG_EOC_CAP_THRLD		98
 #define EOC_CAP_INC_CNT_THRLD		3
 #define FG_MAX_ADJ_FACTOR		50
+#define MAX_EOC_ADJ_FACTOR		100
+#define MIN_EOC_ADJ_FACTOR		-100
 
 #define BATT_LI_ION_MIN_VOLT		2100
 #define BATT_LI_ION_MAX_VOLT		4200
@@ -1266,9 +1273,18 @@ static int bcmpmu_fg_get_adj_factor(struct bcmpmu_fg_data *fg)
 				adj_factor = (((capacity_eoc - capacity) *
 							100) /
 						(capacity - 100));
+			/*If not in limits then set to Max/Min adj
+			 * factor allowed
+			 */
+			if (adj_factor > MAX_EOC_ADJ_FACTOR)
+				adj_factor = MAX_EOC_ADJ_FACTOR;
+			else if (adj_factor < MIN_EOC_ADJ_FACTOR)
+				adj_factor = MIN_EOC_ADJ_FACTOR;
+
+			fg->eoc_adj_fct = adj_factor;
+
 			pr_fg(FLOW, "EOC capacity: %d factor: %d\n",
 					capacity_eoc, adj_factor);
-			fg->eoc_adj_fct = adj_factor;
 		}
 	} else if (!charging) {
 		if (fg->high_cal_adj_fct)
@@ -1554,8 +1570,9 @@ EXPORT_SYMBOL(bcmpmu_fg_get_current_capacity);
 static int bcmpmu_fg_save_cap(struct bcmpmu_fg_data *fg, int cap_percentage)
 {
 	int ret;
-
-	BUG_ON((cap_percentage < 0) || (cap_percentage > 100));
+	/* if cap_percentage=0, then ignore BUG_ON since we writing 0xff */
+	if (cap_percentage != CAPACITY_ZERO_ALIAS)
+		BUG_ON((cap_percentage < 0) || (cap_percentage > 100));
 
 	ret = fg->bcmpmu->write_dev(fg->bcmpmu, FG_CAPACITY_SAVE_REG,
 			cap_percentage);
@@ -1982,7 +1999,6 @@ static void bcmpmu_fg_update_psy(struct bcmpmu_fg_data *fg,
 		pr_fg(VERBOSE, "Change in capacity.. Update power supply\n");
 		fg->capacity_info.prev_percentage =
 			fg->capacity_info.percentage;
-		bcmpmu_fg_save_cap(fg, fg->capacity_info.percentage);
 		update_psy = true;
 	}
 
@@ -1992,6 +2008,11 @@ static void bcmpmu_fg_update_psy(struct bcmpmu_fg_data *fg,
 	}
 
 	if (update_psy || force_update) {
+		if (fg->capacity_info.percentage == 0)
+			bcmpmu_fg_save_cap(fg, CAPACITY_ZERO_ALIAS);
+		else
+			bcmpmu_fg_save_cap(fg, fg->capacity_info.percentage);
+
 		if (fg->bcmpmu->flags & BCMPMU_SPA_EN)
 			bcmpmu_post_spa_event_to_queue(fg->bcmpmu,
 					PMU_FG_EVT_CAPACITY,
@@ -2027,11 +2048,12 @@ static int bcmpmu_fg_get_init_cap(struct bcmpmu_fg_data *fg)
 			((fg->capacity_info.max_design * full_charge_cap) /
 			 100);
 
-	pr_fg(VERBOSE, "saved full_charge: %d full_charge_cap: %d\n",
+	pr_fg(FLOW, "saved full_charge: %d full_charge_cap: %d\n",
 			full_charge_cap,
 			fg->capacity_info.full_charge);
-
-	if (saved_cap > 0) {
+	if (saved_cap == CAPACITY_ZERO_ALIAS)
+		cap_percentage = 0;
+	else if (saved_cap > 0) {
 		if (abs(saved_cap - init_cap) < FG_CAP_DELTA_THRLD)
 			cap_percentage = saved_cap;
 		else
@@ -2163,7 +2185,6 @@ static void bcmpmu_fg_cal_force_algo(struct bcmpmu_fg_data *fg)
 			fg->capacity_info.capacity);
 	fg->capacity_info.percentage =
 		fg->capacity_info.prev_percentage;
-	bcmpmu_fg_save_cap(fg, fg->capacity_info.prev_percentage);
 
 	pr_fg(FLOW, "force_cal_algo: prev capacity: %d new capacity: %d\n",
 			fg->capacity_info.prev_percentage,
@@ -2210,8 +2231,10 @@ static void bcmpmu_fg_cal_low_batt_algo(struct bcmpmu_fg_data *fg)
 	/* delta will be negative: current capacity should be higher
 	 * than OCV capacity
 	 */
+	/* Also delta should be in the range of -30 to -1 */
 
-	if ((cap_delta < 0) && fg->flags.fully_charged) {
+	if ((cap_delta < 0) && (cap_delta >= FG_LOW_BAT_CAP_DELTA_LIMIT)
+			&& fg->flags.fully_charged) {
 		cap_full_charge = (fg->capacity_info.full_charge *
 				(100 + (u64)cap_delta));
 		cap_full_charge = div_s64(cap_full_charge, 100);
@@ -2226,6 +2249,9 @@ static void bcmpmu_fg_cal_low_batt_algo(struct bcmpmu_fg_data *fg)
 				fg->capacity_info.percentage);
 		bcmpmu_fg_save_full_charge_cap(fg, (100 + cap_delta));
 		fg->flags.fully_charged = false;
+	} else if (fg->flags.fully_charged) {
+		fg->flags.fully_charged = false;
+		pr_fg(FLOW, "Low Battery Calib : cap_delta Limit Exceeds\n");
 	}
 	pr_fg(FLOW, "cap_delta: %d low_cal_fct: %d full_charge_cap: %d\n",
 			cap_delta, fg->low_cal_adj_fct,
@@ -2519,7 +2545,7 @@ static void bcmpmu_fg_periodic_work(struct work_struct *work)
 
 		fg->capacity_info.prev_percentage
 			= fg->capacity_info.percentage;
-		bcmpmu_fg_save_cap(fg, fg->capacity_info.prev_percentage);
+
 		if (fg->bcmpmu->flags & BCMPMU_SPA_EN)
 			bcmpmu_post_spa_event_to_queue(fg->bcmpmu,
 				PMU_FG_EVT_CAPACITY,
@@ -2538,7 +2564,7 @@ static void bcmpmu_fg_periodic_work(struct work_struct *work)
 				fg->capacity_info.capacity);
 		fg->capacity_info.percentage =
 			fg->capacity_info.prev_percentage;
-		bcmpmu_fg_save_cap(fg, fg->capacity_info.prev_percentage);
+
 		fg->flags.init_capacity = false;
 		pr_fg(FLOW, "Initial battery capacity %d\n",
 				fg->capacity_info.percentage);
@@ -2585,7 +2611,7 @@ static void bcmpmu_fg_periodic_work(struct work_struct *work)
 	if (fg->flags.calibration)
 		bcmpmu_fg_batt_cal_algo(fg);
 
-	pr_fg(VERBOSE, "flags: %d %d %d %d %d %d %d %d %d\n",
+	pr_fg(VERBOSE, "flags: %d %d %d %d %d %d %d %d %d %d\n",
 			flags.batt_status,
 			flags.prev_batt_status,
 			flags.chrgr_connected,
@@ -2594,7 +2620,8 @@ static void bcmpmu_fg_periodic_work(struct work_struct *work)
 			flags.fg_eoc,
 			flags.reschedule_work,
 			flags.eoc_chargr_en,
-			flags.calibration);
+			flags.calibration,
+			flags.fully_charged);
 }
 
 static int bcmpmu_fg_get_capacity_level(struct bcmpmu_fg_data *fg)
@@ -2642,7 +2669,7 @@ static int bcmpmu_fg_get_properties(struct power_supply *psy,
 			val->intval = CAPACITY_PERCENTAGE_FULL;
 		else
 			val->intval = fg->capacity_info.percentage;
-		pr_fg(VERBOSE, "POWER_SUPPLY_PROP_CAPACITY = %d\n",
+		pr_fg(FLOW, "POWER_SUPPLY_PROP_CAPACITY = %d\n",
 				val->intval);
 		BUG_ON(val->intval < 0);
 		break;
@@ -2651,7 +2678,7 @@ static int bcmpmu_fg_get_properties(struct power_supply *psy,
 			val->intval = POWER_SUPPLY_CAPACITY_LEVEL_UNKNOWN;
 		else
 			val->intval = bcmpmu_fg_get_capacity_level(fg);
-		pr_fg(VERBOSE, "POWER_SUPPLY_PROP_CAPACITY_LEVEL = %d\n",
+		pr_fg(FLOW, "POWER_SUPPLY_PROP_CAPACITY_LEVEL = %d\n",
 				val->intval);
 		break;
 	case POWER_SUPPLY_PROP_VOLTAGE_NOW:
