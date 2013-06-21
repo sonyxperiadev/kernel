@@ -251,53 +251,73 @@ Result_t Handle_CAPI2_SYS_SoftResetSystem(RPC_Msg_t *pReqMsg, UInt32 param)
 	return result;
 }
 
-Result_t Handle_SYS_APSystemCmd(RPC_Msg_t *pReqMsg, UInt32 cmdType,
+Result_t SetLDORegulator(enum SYS_LDO_Cmd_Type_t cmdType,
+	const char *name, int *state)
+{
+	Result_t result = RESULT_OK;
+	struct regulator *reg_handle;
+
+	printk(KERN_INFO "Excuting LDO %s cmd type=%d, state=%d\n",
+		name, (int)cmdType, (*state));
+	reg_handle = regulator_get(NULL, name);
+	if (reg_handle != NULL) {
+		if ((cmdType == SYS_LDO_OFF) &&
+				(*state)) {
+			printk(KERN_INFO "Turn off LDO\n");
+			regulator_disable(reg_handle);
+			*state = 0;
+		} else if ((cmdType == SYS_LDO_ON) &&
+				!(*state)) {
+			printk(KERN_INFO "Turn on LDO\n");
+			regulator_enable(reg_handle);
+			/*Set LDO mode to LPM in DSM*/
+			printk(KERN_INFO "Set mode LDO\n");
+			regulator_set_mode(reg_handle,
+					REGULATOR_MODE_IDLE);
+			*state = 1;
+		} else {
+			printk(KERN_INFO "LDO already in correct state\n");
+		}
+		regulator_put(reg_handle);
+	} else {
+		printk(KERN_INFO "LDO handle is not valid!\n");
+		result = RESULT_ERROR;
+	}
+
+	return result;
+}
+
+Result_t Handle_SYS_APSystemCmd(RPC_Msg_t *pReqMsg, UInt32 cmd,
 	UInt32 param1, UInt32 param2, UInt32 param3)
 {
 	Result_t result = RESULT_OK;
 	SYS_ReqRep_t data;
-	struct regulator *reg_handle;
-	static int rfldo_enabled;
+	static int rfldo_enabled, simldo_enabled;
 
 	memset(&data, 0, sizeof(SYS_ReqRep_t));
 
-	data.result = result;
-	Send_SYS_RspForRequest(pReqMsg, MSG_AP_SYS_CMD_RSP, &data);
-
-	switch (cmdType) {
+	switch (cmd) {
 	case AP_SYS_CMD_RFLDO:
-		printk(KERN_INFO "Excuting SYS_AP_CMD_RFLDO cmd=%d, state=%d\n",
+		printk(KERN_INFO "Excuting SYS_AP_CMD_RFLDO cmdType=%d, state=%d\n",
 			(int)param1, rfldo_enabled);
-		reg_handle = regulator_get(NULL, "rf");   /* handle for RFLDO */
-		if (reg_handle != NULL) {
-			if ((param1 == SYS_RFLDO_OFF) &&
-				rfldo_enabled) {
-				printk(KERN_INFO "Turn off RFLDO\n");
-				regulator_disable(reg_handle);
-				rfldo_enabled = 0;
-			} else if ((param1 == SYS_RFLDO_ON) &&
-				!rfldo_enabled) {
-				printk(KERN_INFO "Turn on RFLDO\n");
-				regulator_enable(reg_handle);
-				/*Set RFLDO mode to LPM in DSM*/
-				printk(KERN_INFO "Set mode RFLDO\n");
-				regulator_set_mode(reg_handle,
-						REGULATOR_MODE_IDLE);
-				rfldo_enabled = 1;
-			} else {
-				printk(KERN_INFO "RFLDO already in correct state\n");
-			}
-			regulator_put(reg_handle);
-		} else {
-			printk(KERN_INFO "RFLDO handle is not valid!\n");
-		}
+		result = SetLDORegulator((enum SYS_LDO_Cmd_Type_t)param1,
+				"rf", (int *)&rfldo_enabled);
 		break;
 
+	case AP_SYS_CMD_SIMLDO:
+		printk(KERN_INFO "Excuting SYS_AP_CMD_SIMLDO cmdType=%d, state=%d\n",
+			(int)param1, simldo_enabled);
+		result = SetLDORegulator((enum SYS_LDO_Cmd_Type_t)param1,
+				"sim_vcc", (int *)&simldo_enabled);
+		break;
 
 	default:
-		printk(KERN_INFO "Unhandled AP SYS CMD %d\n", (int)cmdType);
+		printk(KERN_INFO "Unhandled AP SYS CMD %d\n", (int)cmd);
 		break;
 	}
+
+	data.result = result;
+	Send_SYS_RspForRequest(pReqMsg, MSG_AP_SYS_CMD_RSP, &data);
 
 	return result;
 }

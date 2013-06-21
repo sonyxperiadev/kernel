@@ -145,14 +145,14 @@ typedef struct {
 **/
 enum SYS_APSysCmd_t {
 	AP_SYS_CMD_RFLDO,	/* Set RF LDO */
+	AP_SYS_CMD_SIMLDO,	/* Set SIM LDO */
 	AP_SYS_CMD_TOTAL	/* total number of AP system commands */
 };
 
-enum SYS_RFLDO_Cmd_t {
-	SYS_RFLDO_OFF,
-	SYS_RFLDO_ON
+enum SYS_LDO_Cmd_Type_t {
+	SYS_LDO_OFF,
+	SYS_LDO_ON
 };
-
 
 void SIMLOCKApi_SetStatus(ClientInfo_t *inClientInfoPtr,
 			  SYS_SIMLOCK_STATE_t *simlock_state);
