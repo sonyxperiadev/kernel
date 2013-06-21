@@ -1140,6 +1140,17 @@ config SCHED_AUTOGROUP
 	  desktop applications.  Task group autogeneration is currently based
 	  upon task session.
 
+config SCHED_PACKING_TASKS
+	bool "Automatic tasks packing"
+	depends on SMP && SCHED_MC
+	default n
+	help
+	  This option enable the packing mode of the scheduler.
+	  This mode ensures that the minimal number of CPUs will
+	  be used to handle the activty of the system. The CPUs
+	  are selected to minimized the number of power domain
+	  that must be kept on
+
 config MM_OWNER
 	bool
 
