@@ -238,7 +238,6 @@ ecryptfs_miscdev_read(struct file *file, char __user *buf, size_t count,
 	mutex_lock(&daemon->mux);
 	if (task_pid(current) != daemon->pid) {
 		mutex_unlock(&daemon->mux);
-		mutex_unlock(&ecryptfs_daemon_hash_mux);
 		return -EPERM;
 	}
 	if (daemon->flags & ECRYPTFS_DAEMON_ZOMBIE) {

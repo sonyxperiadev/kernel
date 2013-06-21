@@ -56,7 +56,4 @@ int alarm_poweron_set_alarm(struct timespec new_time);
 /* Provide way to access the rtc device being used by alarmtimers */
 struct rtc_device *alarmtimer_get_rtcdev(void);
 
-/* Provide way to access the rtc device being used by alarmtimers */
-struct rtc_device *alarmtimer_get_rtcdev(void);
-
 #endif

@@ -687,9 +687,6 @@ kgdb_handle_exception(int evector, int signo, int ecode, struct pt_regs *regs)
 	if (unlikely(signo != SIGTRAP && !break_on_exception))
 		return 1;
 
-	if (unlikely(signo != SIGTRAP && !break_on_exception))
-		return 1;
-
 	ks->cpu			= raw_smp_processor_id();
 	ks->ex_vector		= evector;
 	ks->signo		= signo;
