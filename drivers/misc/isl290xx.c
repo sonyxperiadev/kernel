@@ -527,6 +527,57 @@ static ssize_t prox_enable_store(struct device *dev,
 
 static DEVICE_ATTR(prox_enable, 0644, NULL, prox_enable_store);
 
+static ssize_t prox_cali_store(struct device *dev,
+			struct device_attribute *attr,
+			const char *buf, size_t count)
+{
+	int enable;
+	int ret;
+	ret = kstrtoint(buf, 0, &enable);
+	if (ret)
+		return ret;
+	if (enable)
+		prv_isl290xx_prox_cali();
+	return count;
+}
+static DEVICE_ATTR(prox_cali, 0644, NULL, prox_cali_store);
+
+#ifdef ISL290XX_USER_CALIBRATION
+static ssize_t isl290xx_get_offset(struct device *dev,
+			struct device_attribute *attr,
+			char *buf)
+{
+	return sprintf(buf, "%d\n", isl290xx_offset);
+}
+
+static ssize_t isl290xx_set_offset(struct device *dev,
+			struct device_attribute *attr,
+			const char *buf, size_t count)
+{
+	int x;
+	int hi;
+	int lo;
+	int err = -EINVAL;
+	err = sscanf(buf, "%d", &x);
+	if (err != 1) {
+		pr_err("invalid parameter number: %d\n", err);
+		return err;
+	}
+	isl290xx_offset = x;
+	hi = isl290xx_cfgp->prox_threshold_hi + isl290xx_offset;
+	lo = isl290xx_cfgp->prox_threshold_lo - isl290xx_offset;
+	if ((hi < lo) || (isl290xx_offset > 20) || ((hi - lo) > 20))
+		pr_isl(ERROR, "isl290xx sw cali failed\n");
+	else {
+		isl290xx_cfgp->prox_threshold_hi = hi;
+		isl290xx_cfgp->prox_threshold_lo = lo;
+	}
+	return count;
+}
+static DEVICE_ATTR(offset,  S_IRUGO | S_IWUSR | S_IWGRP | S_IWOTH,
+	isl290xx_get_offset, isl290xx_set_offset);
+#endif
+
 static struct attribute *isl290xx_ctrl_attr[] = {
 	&dev_attr_als_enable.attr,
 	&dev_attr_prox_enable.attr,
