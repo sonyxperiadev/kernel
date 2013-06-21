@@ -2983,8 +2983,6 @@ static int __init setup_logbuf_noncache(char *p)
 early_param("logbuf_nocache", setup_logbuf_noncache);
 
 static int __init non_cached_log_buf(void){
-
-#if 0
 	dma_addr_t p;
 	void *v;
 	if (logbuf_noncache) {
@@ -2994,7 +2992,7 @@ static int __init non_cached_log_buf(void){
 			BUG_ON(1);
 		}
 		log_buf = v;
-		memcpy(v, __log_buf, logged_chars);
+		memcpy(v, __log_buf, log_next_idx);
 		printk(KERN_INFO "Switched to non-cached __log_buf\n");
 	} else {
 		v = (void *)__get_free_pages(GFP_KERNEL,
@@ -3005,10 +3003,9 @@ static int __init non_cached_log_buf(void){
 			BUG_ON(1);
 		}
 		log_buf = v;
-		memcpy(v, __log_buf, logged_chars);
+		memcpy(v, __log_buf, log_next_idx);
 		printk(KERN_INFO "__log_buf cacheable\n");
 	}
-#endif
 	return 0;
 }
 arch_initcall(non_cached_log_buf);
