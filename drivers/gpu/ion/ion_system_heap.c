@@ -403,13 +403,15 @@ int ion_system_heap_lmk_cbk(struct reg_lmk *reg_lmk, struct lmk_op *op)
 							struct ion_system_heap,
 							reg_lmk);
 	int reclaimable = 0;
+
 	if (op->op == 0)
-		reclaimable = sys_heap->heap.used;
+		reclaimable = PAGE_ALIGN(sys_heap->heap.used) >> PAGE_SHIFT;
 	/* TODO: When ION_HEAP_FLAG_DEFER_FREE gets enabled,
 	 * the freelist_count needs to be decremented from reclaimable
 	 * because the freelist will be handled by a separate shrinker
 	 * and should not be duplicated here
 	 */
+
 	return reclaimable;
 }
 #endif
