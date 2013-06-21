@@ -831,10 +831,13 @@ void AUDDRV_EnableDSPInput(AUDIO_SOURCE_Enum_t source,
 	/*only in non-call mode, tell DSP to start UL*/
 	if (telephonyPathID.ulPathID)
 		return;
-
+#if defined(ENABLE_DMA_VOICE)
 	csl_dsp_caph_control_aadmac_set_samp_rate(sample_rate);
+#endif
 	if (sample_rate == AUDIO_SAMPLING_RATE_16000)
 		flag16k = 1;
+
+
 #if defined(ENABLE_DMA_VOICE)
 	dma_mic_spk =
 	    (UInt16) (DSP_AADMAC_PRI_MIC_EN) |
