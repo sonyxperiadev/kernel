@@ -241,6 +241,8 @@ static int _usb_host_en(struct bcmpmu_accy_data *di, int enable)
 	int ret;
 	u8 reg;
 
+	if (!charging_enable)
+		return 0;
 	pr_accy(FLOW, "%s:ENABLE %d\n", __func__, enable);
 
 	if (!atomic_read(&drv_init_done)) {
@@ -871,8 +873,6 @@ int bcmpmu_chrgr_usb_en(struct bcmpmu59xxx *bcmpmu, int enable)
 {
 	struct bcmpmu_accy_data *di = bcmpmu->accyinfo;
 
-	if (!charging_enable)
-		return 0;
 	return _usb_host_en(di, enable);
 }
 EXPORT_SYMBOL(bcmpmu_chrgr_usb_en);
