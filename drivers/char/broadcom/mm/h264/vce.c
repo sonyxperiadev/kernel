@@ -419,7 +419,7 @@ mm_job_status_e vce_start_job(void *device_id, mm_job_post_t *job,
 
 		/*Write the registers passed*/
 		vce_write(id, (VCE_REGISTERS_OFFSET+(1*4)), \
-			vce_info->data_addr_phys);
+			vce_info->data_upaddr_phys);
 		vce_write(id, (VCE_REGISTERS_OFFSET+(2*4)), \
 			vce_info->datasize);
 
