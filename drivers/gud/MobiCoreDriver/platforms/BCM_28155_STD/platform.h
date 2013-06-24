@@ -8,6 +8,7 @@
  * its internal structures and defines.
  *
  * <-- Copyright Giesecke & Devrient GmbH 2009-2012 -->
+ * <-- Copyright Trustonic Limited 2013 -->
  */
 
 #ifndef _MC_DRV_PLATFORM_H_
