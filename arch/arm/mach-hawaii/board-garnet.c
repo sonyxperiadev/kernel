@@ -1358,19 +1358,6 @@ static int __init hawaii_add_lateinit_devices(void)
 #ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
 	hawaii_wlan_init();
 #endif
-	void __iomem *vaddr;
-	u32 value;
-
-	vaddr = ioremap(0x3e01a000, SZ_4K);
-	if( vaddr == NULL) {
-		printk("%s error\n");
-		return 0;
-	}
-	value = readl(vaddr);
-	value &= (~0x0404);
-	printk("%s writing value = %x\n", __func__, value);
-	writel(value, vaddr);
-	iounmap(vaddr);
 	return 0;
 }
 
