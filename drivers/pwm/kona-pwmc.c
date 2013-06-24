@@ -39,7 +39,7 @@
 #include <linux/delay.h>
 #include <linux/platform_device.h>
 #include <linux/completion.h>
-#include <linux/pwm/pwm.h>
+#include <linux/pwm.h>
 #include <mach/rdb/brcm_rdb_pwm_top.h>
 
 #define KONA_PWM_CHANNEL_CNT 6
@@ -51,6 +51,7 @@ struct kona_pwmc {
 	void __iomem *iobase;
 	struct clk *clk;
 	int	pwm_started;
+	struct pwm_chip chip;
 };
 
 struct pwm_control {
@@ -414,7 +415,7 @@ static const struct pwm_device_ops kona_pwm_ops = {
 	.owner = THIS_MODULE,
 };
 
-static int __devinit kona_pwmc_probe(struct platform_device *pdev)
+static int kona_pwmc_probe(struct platform_device *pdev)
 {
 	struct kona_pwmc *ap;
 	struct resource *r = platform_get_resource(pdev, IORESOURCE_MEM, 0);
@@ -439,6 +440,11 @@ static int __devinit kona_pwmc_probe(struct platform_device *pdev)
 		ret = -ENODEV;
 		goto err_ioremap;
 	}
+
+	ap->chip.dev = &pdev->dev;
+	ap->chip.ops = &kona_pwm_ops;
+	ap->chip.base = -1;
+	ap>chip.npwm = KONA_PWM_CHANNEL_CNT;
 
 	for (chan = 0; chan < KONA_PWM_CHANNEL_CNT; chan++) {
 		ap->p[chan] = pwm_register(&kona_pwm_ops, &pdev->dev, "%s:%d",
@@ -470,7 +476,7 @@ err_kona_pwmc_alloc:
 	return ret;
 }
 
-static int __devexit kona_pwmc_remove(struct platform_device *pdev)
+static int kona_pwmc_remove(struct platform_device *pdev)
 {
 	struct kona_pwmc *ap = platform_get_drvdata(pdev);
 	int chan;
@@ -515,12 +521,12 @@ static struct platform_driver kona_pwmc_driver = {
 		.of_match_table = kona_pwmc_dt_ids,
 	},
 	.probe = kona_pwmc_probe,
-	.remove = __devexit_p(kona_pwmc_remove),
+	.remove = kona_pwmc_remove,
 	.suspend = kona_pwmc_suspend,
 	.resume = kona_pwmc_resume,
 };
 
-static const __devinitconst char gBanner[] =
+static const char gBanner[] =
     KERN_INFO "Broadcom Pulse Width Modulator Driver: 1.00\n";
 static int __init kona_pwmc_init(void)
 {

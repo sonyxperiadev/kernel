@@ -203,10 +203,12 @@ config PWM_VT8500
 	  To compile this driver as a module, choose M here: the module
 	  will be called pwm-vt8500.
 
-endif
-
 config KONA_PWMC
        tristate "KONA PWM"
-       depends on GENERIC_PWM && ARCH_KONA
+       depends on ARCH_KONA
        help
          When enabled, this feature supports PWM functionality for chip. If unsure, say N.
+
+endif
+
+
