@@ -384,6 +384,22 @@ config SENSORS_TSL2550
 	  This driver can also be built as a module.  If so, the module
 	  will be called tsl2550.
 
+ config SENSORS_MC3210
+	bool "mCube mc3210 support"
+	default n
+	help
+		If you say yes here you get support for mc3210 sensor
+
+		If you don't need this driver, choose n
+
+config SENSORS_BMA222
+        bool "Bosch bma222 support"
+        default n
+        help
+          If you say yes here you get support for BMA222 sensor
+
+          This driver adds Low Power mode support for Broadcom bluetooth
+
 config SENSORS_BH1780
 	tristate "ROHM BH1780GLI ambient light sensor"
 	depends on I2C && SYSFS
@@ -461,6 +477,34 @@ config TMD2771
         help
           Say yes here, if you want to include tmd2771 sensor driver.
           if you don't need this driver, say N.
+
+config STK31XX
+        bool "sensor proximity & light stk31xx driver"
+        depends on I2C
+        default n
+        help
+          Say yes here, if you want to
+	  include stk3171 sensor driver.
+          if you don't need this driver,
+	  say N.
+
+config HM8001
+        bool "sensor proximity & light hm8001 driver"
+        depends on I2C
+        default n
+        help
+          Say yes here, if you want to
+	  include hm8001 sensor driver.
+          if you don't need this driver,
+	  say N.
+
+config AP3216C
+	bool "sensor proximity & light ap3216c driver"
+	depends on I2C
+	default n
+	help
+		Say yes here, if you want to include tmd2771 sensor driver.
+		if you don't need this driver, say N.
 
 config BMP18X
 	tristate "BMP18X digital pressure sensor"
@@ -583,6 +627,16 @@ config INPUT_BMA2x2_ACC_ALERT_INT
 	help
 	  If you say yes here you get support for Bosch Sensortec's 
 	  acceleration sensors BMA255/BMA250E/BMA222E/BMA280.
+
+config MMC328XMA
+	tristate "Memsic MMC328XMA compass"
+	depends on I2C
+	help
+	This driver provides support for the MEMSIC MMC328XMA compass
+	which is a 3-axis magnetic sensor and provides an I2C digital
+	output.
+	To compile this driver as a module, choose M here: the
+	module will be called mmc328xma. If unsure, say N here.
 
 config EP93XX_PWM
 	tristate "EP93xx PWM support"
