@@ -1192,7 +1192,8 @@
 #define ENV2_P_UBPD_INT_SHIFT	2
 #define ENV2_P_UBPD_CHG         0x08
 #define ENV2_P_UBPD_CHG_SHIFT   3
-#define ENV2_USB_PORT_DISABLE	0x10
+#define ENV2_USB_PORT_DISABLED	0x10
+#define ENV2_USB_PORT_DISABLED_SHIFT	4
 #define ENV2_P_UBMBC            0x20
 #define ENV2_P_USBOV            0x40
 #define ENV2_USB_VALID		0x80
@@ -1202,7 +1203,8 @@
 #define ENV3_TRUE_TF            0x01
 #define	ENV3_P_MBC_CV		0x02
 #define ENV3_CV_TRIP		0x04
-#define CV_TMR_EXP		0x08
+#define ENV3_CV_TMR_EXP		0x08
+#define ENV3_CV_TMR_EXP_SHIFT	3
 #define ENV3_FG_EOC		0x10
 #define ENV3_HW_EOC		0x20
 #define ENV3_MB_EOC		0x40
@@ -1236,6 +1238,7 @@
 #define ENV6_SW_TMR_EXP		0x20
 #define ENV6_HW_TTR_EXP		0x40
 #define ENV6_HW_TCH_EXP		0x80
+#define ENV6_HW_TCH_EXP_SHIFT	7
 
 #define PMU_REG_ENV7		ENC_PMU_REG(FIFO_MODE, MAP0, 0x00EF)
 #define ENV7_STAT1_ENV		0x01

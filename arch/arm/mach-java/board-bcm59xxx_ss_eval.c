@@ -1217,15 +1217,13 @@ static struct bcmpmu_fg_pdata fg_pdata = {
 
 struct bcmpmu_acld_pdata acld_pdata = {
 	.acld_vbus_margin = 200,	/*mV*/
-	.acld_vbus_thrs = 6000,
-	.acld_vbat_thrs = 3000,
-
-	.one_c_rate = 1500,
-
+	.acld_vbus_thrs = 5950,
+	.acld_vbat_thrs = 3500,
 	/* CIG22H2R2MNE, rated current 1.6A  */
 	.i_sat = 1600,		/* saturation current in mA
 						for chrgr while using ACLD */
 	.i_def_dcp = 700,
+	.i_max_cc = 2200,
 	.acld_cc_lmt = 1500,
 	.otp_cc_trim = 0x1F,
 };

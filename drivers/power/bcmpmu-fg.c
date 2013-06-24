@@ -307,6 +307,7 @@ struct bcmpmu_fg_data {
 #endif /*CONFIG_WD_TAPPER*/
 	ktime_t last_sample_tm;
 	ktime_t last_curr_sample_tm;
+	int last_curr_sample;
 
 	enum bcmpmu_fg_cal_state cal_state;
 	enum bcmpmu_fg_cal_mode cal_mode;
@@ -1152,9 +1153,26 @@ static inline int bcmpmu_fg_get_batt_temp(struct bcmpmu_fg_data *fg)
 }
 static int bcmpmu_fg_get_curr_inst(struct bcmpmu_fg_data *fg)
 {
+	ktime_t t_now;
+	ktime_t t_diff;
+	u64 t_ms;
 	int ret = 0;
 	u8 reg;
 	u8 smpl_cal[2];
+
+	FG_LOCK(fg);
+	/**
+	 * Avoid reading instant current register earlier than
+	 * next sample available
+	 */
+	t_now = ktime_get();
+	t_diff = ktime_sub(t_now, fg->last_curr_sample_tm);
+	t_ms = ktime_to_ms(t_diff);
+
+	if (t_ms < bcmpmu_fg_sample_rate_to_time(fg->sample_rate))
+		msleep(fg->sample_rate);
+
+	fg->last_curr_sample_tm = t_now;
 
 	ret = fg->bcmpmu->read_dev(fg->bcmpmu, PMU_REG_FGCTRL2, &reg);
 
@@ -1169,9 +1187,23 @@ static int bcmpmu_fg_get_curr_inst(struct bcmpmu_fg_data *fg)
 			2);
 	BUG_ON(ret != 0);
 
-	return bcmpmu_fgsmpl_to_curr(fg, smpl_cal[1], smpl_cal[0]);
+	fg->last_curr_sample =
+		bcmpmu_fgsmpl_to_curr(fg, smpl_cal[1], smpl_cal[0]);
+	FG_UNLOCK(fg);
+	return fg->last_curr_sample;
 }
 
+int bcmpmu_fg_get_one_c_rate(struct bcmpmu59xxx *bcmpmu, int *one_c_rate)
+{
+	struct bcmpmu_fg_data *fg = (struct bcmpmu_fg_data *)bcmpmu->fg;
+
+	if (!fg)
+		return -EAGAIN;
+
+	*one_c_rate = fg->pdata->batt_prop->one_c_rate;
+
+	return 0;
+}
 /* bcmpmu_fg_get_batt_curr - Gives instantaneous battery current through FG
  * Returns 0 on Success, -EAGAIN on failure
  *
@@ -1181,8 +1213,6 @@ int bcmpmu_fg_get_batt_curr(struct bcmpmu59xxx *bcmpmu, int *curr)
 	struct bcmpmu_fg_data *fg = (struct bcmpmu_fg_data *)bcmpmu->fg;
 	int retries = ADC_READ_TRIES;
 
-	*curr = 0;
-
 	if (!fg)
 		return -EAGAIN;
 
@@ -1191,8 +1221,9 @@ int bcmpmu_fg_get_batt_curr(struct bcmpmu59xxx *bcmpmu, int *curr)
 		bcmpmu_fg_enable_coulb_counter(fg, true);
 		while (retries--) {
 			*curr = bcmpmu_fg_get_curr_inst(fg);
+			pr_fg(FLOW, "curr = %d retrie = %d\n", *curr, retries);
 			if ((*curr < FG_CURR_SAMPLE_MAX) &&
-				(*curr > 0))
+					(*curr > -FG_CURR_SAMPLE_MAX))
 				break;
 			msleep(bcmpmu_fg_sample_rate_to_time(
 						fg->sample_rate));
@@ -1201,7 +1232,7 @@ int bcmpmu_fg_get_batt_curr(struct bcmpmu59xxx *bcmpmu, int *curr)
 		if (retries <= 0)
 			return -EAGAIN;
 	} else
-		*curr = fg->adc_data.curr_inst;
+		*curr = bcmpmu_fg_get_curr_inst(fg);
 
 	return 0;
 }

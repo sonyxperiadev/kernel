@@ -109,6 +109,11 @@ struct bcmpmu_accy_data {
 	int usb_host_en;
 };
 
+struct trim_to_percentage {
+	int trim;
+	int perc;
+};
+
 static struct bcmpmu_accy_data *gp_accy_data;
 static atomic_t drv_init_done;
 static struct bcmpmu_accy_irq_evt_map accy_irq_evt_map[] = {
@@ -178,6 +183,40 @@ static u32 bcmpmu_pmu_curr_acld_table[] = {
 	1565,
 };
 
+static struct trim_to_percentage trim_to_per[] = {
+	{0x0, -3},
+	{0x1, 0},
+	{0x2, 3},
+	{0x3, 6},
+	{0x4, 9},
+	{0x5, 12},
+	{0x6, 16},
+	{0x7, 20},
+	{0x8, 24},
+	{0x9, 29},
+	{0xA, 33},
+	{0xB, 38},
+	{0xC, 44},
+	{0xD, 50},
+	{0xE, 56},
+	{0xF, 64},
+	{0x10, -32},
+	{0x11, -31},
+	{0x12, -29},
+	{0x13, -28},
+	{0x14, -27},
+	{0x15, -25},
+	{0x16, -23},
+	{0x17, -22},
+	{0x18, -20},
+	{0x19, -18},
+	{0x1A, -16},
+	{0x1B, -14},
+	{0x1C, -12},
+	{0x1D, -10},
+	{0x1E, -8},
+	{0x1F, -5},
+};
 static int charging_enable = 1;
 module_param_named(charging_enable, charging_enable, int,
 		S_IRUGO | S_IWUSR | S_IWGRP);
@@ -242,11 +281,8 @@ static int _usb_host_en(struct bcmpmu_accy_data *di, int enable)
 	int ret;
 	u8 reg;
 
-	di->usb_host_en = enable;
-
 	if (!charging_enable)
 		return 0;
-	pr_accy(FLOW, "%s:ENABLE %d\n", __func__, di->usb_host_en);
 
 	if (!atomic_read(&drv_init_done)) {
 		pr_accy(ERROR, "%s: accy driver not initialized\n", __func__);
@@ -257,7 +293,13 @@ static int _usb_host_en(struct bcmpmu_accy_data *di, int enable)
 	if (ret)
 		return ret;
 
-	if (di->usb_host_en)
+	/* If charging is already enabled/disabled just return */
+	if ((reg & MBCCTRL3_USB_HOSTEN_MASK) == enable) {
+		pr_accy(INIT, "USB host is already in the reqested state\n");
+		return ret;
+	}
+
+	if (enable)
 		reg |= MBCCTRL3_USB_HOSTEN_MASK;
 	else
 		reg &= ~MBCCTRL3_USB_HOSTEN_MASK;
@@ -267,6 +309,9 @@ static int _usb_host_en(struct bcmpmu_accy_data *di, int enable)
 		pr_accy(ERROR, "%s: PMU write failed\n", __func__);
 		return ret;
 	}
+
+	di->usb_host_en = enable;
+	pr_accy(FLOW, "%s:ENABLE %d\n", __func__, di->usb_host_en);
 	ret = bcmpmu_accy_queue_event(di, PMU_CHRGR_EVT_CHRG_STATUS,
 			&di->usb_host_en);
 	return ret;
@@ -833,6 +878,13 @@ int bcmpmu_usb_get(struct bcmpmu59xxx *bcmpmu,
 		val &= ENV2_P_UBPD_INT;
 		val = (val >> ENV2_P_UBPD_INT_SHIFT);
 		break;
+	case BCMPMU_USB_CTRL_GET_USB_PORT_DISABLED:
+		ret = bcmpmu->read_dev(bcmpmu,
+				PMU_REG_ENV2,
+				&val);
+		val &= ENV2_USB_PORT_DISABLED;
+		val = (val >> ENV2_USB_PORT_DISABLED_SHIFT);
+		break;
 	case BCMPMU_USB_CTRL_GET_SESSION_END_STATUS:
 		ret = bcmpmu->read_dev(bcmpmu,
 				PMU_REG_ENV7,
@@ -944,6 +996,35 @@ int bcmpmu_set_cc_trim(struct bcmpmu59xxx *bcmpmu, int cc_trim)
 }
 EXPORT_SYMBOL(bcmpmu_set_cc_trim);
 
+int bcmpmu_get_cc_trim(struct bcmpmu59xxx *bcmpmu)
+{
+	int ret = 0;
+	u8 reg = 0;
+
+	ret = bcmpmu->read_dev(bcmpmu, PMU_REG_MBCCTRL18, &reg);
+
+	if ((reg < PMU_USB_CC_TRIM_MIN) ||
+			(reg > PMU_USB_CC_TRIM_MAX)) {
+		pr_accy(INIT, "%s: cc_trim beyond limit\n", __func__);
+		BUG_ON(1);
+	}
+
+	return reg;
+}
+int  bcmpmu_get_trim_curr(struct bcmpmu59xxx *bcmpmu)
+{
+	int curr;
+	int icc_fc;
+	u8 trim = 0;
+
+	icc_fc = bcmpmu_get_icc_fc(bcmpmu);
+	trim = bcmpmu_get_cc_trim(bcmpmu);
+	curr = ((icc_fc * trim_to_per[trim].perc) / 100);
+	pr_accy(INIT, "icc_fc = %d trim_reg = %d curr = %d",
+			icc_fc, trim, curr);
+
+	return curr;
+}
 int bcmpmu_cc_trim_up(struct bcmpmu59xxx *bcmpmu)
 {
 	int ret = 0;
@@ -978,6 +1059,22 @@ int bcmpmu_cc_trim_down(struct bcmpmu59xxx *bcmpmu)
 }
 EXPORT_SYMBOL(bcmpmu_cc_trim_down);
 
+bool bcmpmu_get_mbc_faults(struct bcmpmu59xxx *bcmpmu)
+{
+	int ret = 0;
+	u8 reg;
+
+	ret = bcmpmu->read_dev(bcmpmu, PMU_REG_ENV3, &reg);
+	if (reg & ENV3_CV_TMR_EXP || (reg & ENV3_TRUE_TF))
+		return false;
+
+	ret = bcmpmu->read_dev(bcmpmu, PMU_REG_ENV6, &reg);
+	if ((reg & ENV6_HW_TCH_EXP) || (reg & ENV6_MBCERROR))
+		return false;
+
+	return true;
+
+}
 bool bcmpmu_is_usb_host_enabled(struct bcmpmu59xxx *bcmpmu)
 {
 	int ret = 0;
@@ -1185,6 +1282,16 @@ static int bcmpmu_accy_register_irqs(struct bcmpmu_accy_data *di)
 }
 
 #ifdef CONFIG_DEBUG_FS
+static int debugfs_usb_host_en(void *data, u64 enable)
+{
+	struct bcmpmu_accy_data *di = (struct bcmpmu_accy_data *)data;
+
+	bcmpmu_chrgr_usb_en(di->bcmpmu, (enable & MBCCTRL3_USB_HOSTEN_MASK));
+	return 0;
+}
+DEFINE_SIMPLE_ATTRIBUTE(usb_host_en_fops,
+		NULL, debugfs_usb_host_en, "%llu\n");
+
 static void bcmpmu_accy_debugfs_init(struct bcmpmu_accy_data *di)
 {
 	struct dentry *dentry_dir;
@@ -1209,6 +1316,10 @@ static void bcmpmu_accy_debugfs_init(struct bcmpmu_accy_data *di)
 	if (!dentry_file)
 		goto clean_debugfs;
 
+	dentry_file = debugfs_create_file("usb_host_en", DEBUG_FS_PERMISSIONS,
+			dentry_dir, di, &usb_host_en_fops);
+	if (!dentry_file)
+		goto clean_debugfs;
 	return;
 clean_debugfs:
 	debugfs_remove_recursive(dentry_dir);

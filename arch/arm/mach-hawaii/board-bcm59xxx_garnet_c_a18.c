@@ -1011,6 +1011,17 @@ struct bcmpmu_adc_pdata adc_pdata[PMU_ADC_CHANN_MAX] = {
 					.reg = PMU_REG_ADCCTRL25,
 	},
 };
+struct bcmpmu_acld_pdata acld_pdata = {
+	.acld_vbus_margin = 200,	/*mV*/
+	.acld_vbus_thrs = 5950,
+	.acld_vbat_thrs = 3500,
+	.i_sat = 3000,			/* saturation current in mA
+						for chrgr while using ACLD */
+	.i_def_dcp = 700,
+	.i_max_cc = 2200,
+	.acld_cc_lmt = 1100,
+	.otp_cc_trim = 0x1F,
+};
 
 static struct batt_volt_cap_map ys_05_volt_cap_lut[] = {
 	{4200, 100},
@@ -1147,6 +1158,7 @@ static struct bcmpmu_batt_property ys_05_props = {
 	.min_volt = 3000,
 	.max_volt = 4200,
 	.full_cap = 2800 * 3600,
+	.one_c_rate = 2800,
 	.volt_cap_lut = ys_05_volt_cap_lut,
 	.volt_cap_lut_sz = ARRAY_SIZE(ys_05_volt_cap_lut),
 	.esr_temp_lut = ys_05_esr_temp_lut,
@@ -1194,17 +1206,6 @@ static struct bcmpmu_fg_pdata fg_pdata = {
 	.fg_factor = 796,
 	.poll_rate_low_batt = 5000,	/* every 5 seconds */
 	.poll_rate_crit_batt = 2000,	/* every 2 Seconds */
-};
-struct bcmpmu_acld_pdata acld_pdata = {
-	.one_c_rate = 2800,
-	.acld_vbus_margin = 200,	/*mV*/
-	.acld_vbus_thrs = 5950,
-	.acld_vbat_thrs = 3500,
-	.i_sat = 3000,			/* saturation current in mA
-						for chrgr while using ACLD */
-	.i_def_dcp = 700,
-	.acld_cc_lmt = 1100,
-	.otp_cc_trim = 0x1F,
 };
 
 #if defined(CONFIG_LEDS_BCM_PMU59xxx)

@@ -82,6 +82,7 @@
 #define PMU_USB_FC_CC_OTP	400
 #define PMU_USB_CC_ZERO_TRIM	0
 #define PMU_DCP_DEF_CURR_LMT	700
+#define PMU_MAX_CC_CURR		2200
 #define PMU_OTP_CC_TRIM		0x1F
 #define PMU_TYP_SAT_CURR	1600 /*mA*/
 
@@ -401,6 +402,7 @@ struct bcmpmu_acld_pdata {
 	int acld_vbat_thrs;
 	int i_sat;
 	int i_def_dcp; /* Default DCP current */
+	int i_max_cc;
 	int acld_cc_lmt;
 	int otp_cc_trim;
 	int one_c_rate;
@@ -589,6 +591,7 @@ enum bcmpmu_usb_ctrl_t {
 	BCMPMU_USB_CTRL_GET_SESSION_STATUS,
 	BCMPMU_USB_CTRL_GET_USB_VALID,
 	BCMPMU_USB_CTRL_GET_UBPD_INT,
+	BCMPMU_USB_CTRL_GET_USB_PORT_DISABLED,
 	BCMPMU_USB_CTRL_GET_SESSION_END_STATUS,
 	BCMPMU_USB_CTRL_GET_ID_VALUE,
 	BCMPMU_USB_CTRL_GET_CHRGR_TYPE,
@@ -930,6 +933,8 @@ int bcmpmu_get_icc_fc(struct bcmpmu59xxx *bcmpmu);
 int bcmpmu_set_cc_trim(struct bcmpmu59xxx *bcmpmu, int cc_trim);
 int bcmpmu_cc_trim_up(struct bcmpmu59xxx *bcmpmu);
 int bcmpmu_cc_trim_down(struct bcmpmu59xxx *bcmpmu);
+bool bcmpmu_get_mbc_faults(struct bcmpmu59xxx *bcmpmu);
+int  bcmpmu_get_trim_curr(struct bcmpmu59xxx *bcmpmu);
 
 /* ADC */
 int bcmpmu_adc_read(struct bcmpmu59xxx *bcmpmu, enum bcmpmu_adc_channel channel,

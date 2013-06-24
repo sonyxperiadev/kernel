@@ -1016,14 +1016,14 @@ struct bcmpmu_adc_pdata adc_pdata[PMU_ADC_CHANN_MAX] = {
 
 struct bcmpmu_acld_pdata acld_pdata = {
 	.acld_vbus_margin = 200,	/*mV*/
-	.acld_vbus_thrs = 6000,
-	.acld_vbat_thrs = 3000,
+	.acld_vbus_thrs = 5950,
+	.acld_vbat_thrs = 3500,
 	.i_sat = 3000,			/* saturation current in mA
 						for chrgr while using ACLD */
 	.i_def_dcp = 700,
+	.i_max_cc = 2200,
 	.acld_cc_lmt = 1500,
 	.otp_cc_trim = 0x1F,
-	.one_c_rate = 1700,
 };
 
 static struct batt_volt_cap_map ys_05_volt_cap_lut[] = {
@@ -1161,6 +1161,7 @@ static struct bcmpmu_batt_property ys_05_props = {
 	.min_volt = 3000,
 	.max_volt = 4200,
 	.full_cap = 1700 * 3600,
+	.one_c_rate = 1700,
 	.volt_cap_lut = ys_05_volt_cap_lut,
 	.volt_cap_lut_sz = ARRAY_SIZE(ys_05_volt_cap_lut),
 	.esr_temp_lut = ys_05_esr_temp_lut,
@@ -1209,6 +1210,7 @@ static struct bcmpmu_fg_pdata fg_pdata = {
 	.poll_rate_low_batt = 5000,	/* every 5 seconds */
 	.poll_rate_crit_batt = 2000,	/* every 2 Seconds */
 };
+
 
 #if defined(CONFIG_LEDS_BCM_PMU59xxx)
 static struct bcmpmu59xxx_led_pdata led_pdata = {
@@ -1359,9 +1361,10 @@ static struct bcmpmu59xxx_platform_data bcmpmu_i2c_pdata = {
 	.i2c_pagesize = 256,
 	.bc = BCMPMU_BC_BB_BC12,
 #ifdef CONFIG_CHARGER_BCMPMU_SPA
-.flags = BCMPMU_SPA_EN,
+.flags = (BCMPMU_SPA_EN | BCMPMU_ACLD_EN),
+#else
+.flags = BCMPMU_ACLD_EN,
 #endif
-
 };
 
 static struct i2c_board_info __initdata bcmpmu_i2c_info[] = {

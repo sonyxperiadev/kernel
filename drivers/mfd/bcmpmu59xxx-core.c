@@ -688,13 +688,22 @@ static int __devinit bcmpmu59xxx_probe(struct platform_device *pdev)
 	/*Copy flags from pdata*/
 	bcmpmu->flags = bcmpmu->pdata->flags;
 
-	/* Enable ACLD for A1 PMU */
-	pr_pmucore(INIT, "bcmpmu->flags: %x\n", bcmpmu->flags);
-	if ((bcmpmu->rev_info.prj_id == BCMPMU_59054_ID) &&
-			(bcmpmu->rev_info.ana_rev >= BCMPMU_59054A1_ANA_REV)) {
-		bcmpmu->flags |= BCMPMU_ACLD_EN;
-		pr_pmucore(INIT, "set flag BCMPMU_ACLD_EN\n");
+	/* Check ACLD for A1 PMU */
+	if (bcmpmu->rev_info.prj_id == BCMPMU_59054_ID) {
+		if (bcmpmu->rev_info.ana_rev >= BCMPMU_59054A1_ANA_REV) {
+			if (bcmpmu->flags & BCMPMU_ACLD_EN)
+				pr_pmucore(INIT, "ACLD: Enabled");
+			else
+				pr_pmucore(INIT, "ACLD: Disabled!");
+		} else {
+			if (bcmpmu->flags & BCMPMU_ACLD_EN) {
+				pr_pmucore(INIT,
+						"No ACLD for 59054A0 ACLD");
+				bcmpmu->flags &= ~BCMPMU_ACLD_EN;
+			}
+		}
 	}
+	pr_pmucore(INIT, "bcmpmu->flags = 0x%x\n", bcmpmu->flags);
 
 	bcmpmu_gbl = bcmpmu;
 	mfd_add_devices(bcmpmu->dev, -1, irq_devs,

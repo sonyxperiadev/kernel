@@ -61,6 +61,7 @@ struct bcmpmu_batt_property {
 	int min_volt; /* min volt in mV */
 	int max_volt; /* max volt in mV */
 	int full_cap; /* full capacity in milli amp seconds */
+	int one_c_rate;
 
 	/* lookup tables */
 	struct batt_volt_cap_map *volt_cap_lut;
@@ -164,5 +165,6 @@ int bcmpmu_fg_calibrate_battery(struct bcmpmu59xxx *bcmpmu);
 int bcmpmu_fg_get_current_capacity(struct bcmpmu59xxx *bcmpmu);
 int bcmpmu_fg_get_batt_volt(struct bcmpmu59xxx *bcmpmu);
 int bcmpmu_fg_get_avg_volt(struct bcmpmu59xxx *bcmpmu);
-int bcmpmu_fg_get_batt_curr(struct bcmpmu59xxx *bcmpmu, int *);
+int bcmpmu_fg_get_batt_curr(struct bcmpmu59xxx *bcmpmu, int *curr);
+int bcmpmu_fg_get_one_c_rate(struct bcmpmu59xxx *bcmpmu, int *one_c_rate);
 #endif
