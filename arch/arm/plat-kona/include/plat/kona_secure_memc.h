@@ -37,10 +37,10 @@
 #include <plat/kona_secure_memc_settings.h>
 
 
-#define A7						"a7"
-#define COMMS						"comms"
-#define FABRIC						"fabric"
-#define MM						"mm"
+#define MASTER_A7					"a7"
+#define MASTER_COMMS					"comms"
+#define MASTER_FABRIC					"fabric"
+#define MASTER_MM					"mm"
 #define INVALID						"invalid"
 
 #define DELETE_MASTER					"del"
@@ -116,7 +116,7 @@ struct kona_memc_regions {
 		enum region_parms, u32);
 	int (*read_regionx)(struct kona_secure_memc*, u32);
 	struct kobject kobj;
-	struct list_head region;
+	struct list_head group_region_list;
 	struct kona_secure_memc *memc_dev;
 };
 
@@ -126,8 +126,14 @@ struct kona_memc_master {
 	struct list_head group_master_list;
 };
 
+
+struct access_control {
+	u32 region_access[NUM_OF_ALLOWED_MASTERS];
+};
+
 struct kona_memc_group {
 	u32 group_id;
+	struct access_control access;
 	struct list_head master_list;
 	struct list_head region_list;
 };
@@ -151,7 +157,6 @@ struct kona_memc_bitmaps {
 	u32 is_memc_activated;
 };
 
-
 struct kona_memc_logging {
 	char *memc_log;
 	u32 memc_log_index;
@@ -170,10 +175,13 @@ struct kona_secure_memc {
 	struct kona_memc_logging *logging;
 	struct kona_secure_memc_pdata *pdata;
 	struct kona_memc_bitmaps memc_config_status;
+	struct notifier_block sec_memc_panic_block;
+	struct notifier_block sec_memc_reboot_block;
 	struct delayed_work memc_work;
 	char **masters;
 	u32 memc_state;
-	int (*init_static_config_memc)(struct kona_secure_memc*, const char*);
+	u32 handle;
+	int (*init_static_config_memc)(struct kona_secure_memc *);
 };
 
 #endif /*__KONA_SECURE_MEMC_H__*/

@@ -1258,17 +1258,41 @@ struct kona_secure_memc_pdata k_s_memc_plat_data = {
 	.ddr_start = 0x80000000,
 	.ddr_end = 0xBFFFFFFF,
 	.masters = {
-		A7,
-		COMMS,
-		FABRIC,
-		MM,
+		MASTER_A7,
+		MASTER_COMMS,
+		MASTER_FABRIC,
+		MASTER_MM,
 	},
 	.default_master_map = {
-		FABRIC,
-		A7,
-		COMMS,
-		MM,
+		MASTER_FABRIC,
+		MASTER_A7,
+		MASTER_COMMS,
+		MASTER_MM,
 	},
+	/* following is static memc configuration.
+	 * be careful with the same if you need to
+	 * change.
+	 * set the groupmask carefully.
+	 * index of static_memc_master
+	 * acts as a group number. */
+	.static_memc_config = {
+		{"0x80000000", "0x801FFFFF",
+			"3", "0x03"},
+		{"0x80200000", "0x811FFFFF",
+			"3", "0x01"},
+		{"0x81200000", "0x81FFFFFF",
+			"3", "0x03"},
+		{"0x82000000", "0xBFFFFFFF",
+			"3", "0xFE"},
+	},
+	.static_memc_masters = {
+		"comms ",
+		"a7 ",
+	},
+	/* following enables user to
+	 * enable static configuration listed above.
+	 */
+	.static_config = 1,
 };
 #endif
 

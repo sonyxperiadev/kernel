@@ -26,40 +26,29 @@
 /*     written consent.                                                       */
 /*                                                                            */
 /******************************************************************************/
-#ifndef __KONA_SECURE_MEMC_SETTINGS_H__
-#define __KONA_SECURE_MEMC_SETTINGS_H__
+#ifndef __SECURE_MEMC_SHARED_H__
+#define __SECURE_MEMC_SHARED_H__
 
-#define NUM_OF_MEMC_PORTS		4
-#define NUM_OF_GROUPS			8
-#define NUM_OF_REGIONS			8
-#define NUM_OF_ALLOWED_MASTERS		4
+/* share following to all the masters,
+ * whoever needs grant or revocation.
+ * calling this interface will affect
+ * the region access pretection
+ * at MEMC level.
+ * */
 
-#define KONA_SECURE_MEMC_IRQ		92
-
-#define MEMC_DEFAULT_ROWS			4
-#define MEMC_DEFAULT_COLMNS			4
-#define MEMC_DEFAULT_MASTERS			2
-
-
-struct kona_secure_memc_pdata {
-	u32 kona_s_memc_base;
-	u32 num_of_memc_ports;
-	u32 num_of_groups;
-	u32 num_of_regions;
-	u32 cp_area_start;
-	u32 cp_area_end;
-	u32 ap_area_start;
-	u32 ap_area_end;
-	u32 ddr_start;
-	u32 ddr_end;
-	char *masters[NUM_OF_ALLOWED_MASTERS];
-	char *default_master_map[NUM_OF_MEMC_PORTS];
-	char *static_memc_config[MEMC_DEFAULT_ROWS][MEMC_DEFAULT_COLMNS];
-	char *static_memc_masters[MEMC_DEFAULT_MASTERS];
-	u32 static_config;
+enum memc_masters {
+	FABRIC = 0,
+	AP,
+	MM,
+	CP,
+	ALL,
 };
 
-#endif /*__KONA_SECURE_MEMC_SETTINGS_H__*/
+u32 *get_secure_memc_handle(void);
+int do_grant_region_access(u32*, enum memc_masters);
+int do_revoke_region_access(u32*, enum memc_masters);
+
+#endif /*__SECURE_MEMC_SHARED_H__ */
 
 
 

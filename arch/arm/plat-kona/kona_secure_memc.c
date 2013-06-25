@@ -40,16 +40,19 @@
 #include <linux/interrupt.h>
 #include <linux/time.h>
 #include <asm/page.h>
+#include <linux/broadcom/secure_memc_shared.h>
 
 
 /* default master's map, when we add more masters, update the same.  */
 static struct default_master_map memc_map[NUM_OF_ALLOWED_MASTERS + 1] = {
-	{FABRIC, 0x00, 0x00},
-	{A7, 0x00, 0x00},
-	{COMMS, 0x00, 0x00},
-	{MM, 0x00, 0x00},
+	{MASTER_FABRIC, 0x00, 0x00},
+	{MASTER_A7, 0x00, 0x00},
+	{MASTER_COMMS, 0x00, 0x00},
+	{MASTER_MM, 0x00, 0x00},
 	{INVALID, 0x1FFF, 0x1FFF},
 };
+
+u32 *memc_handle;
 
 
 void add_time_stamp(struct kona_memc_logging *logging)
@@ -341,8 +344,10 @@ static int validate_masters_for_port_clash(struct kona_memc_port *memc_port,
 		return 0;
 
 	invalid_master = kzalloc(strlen(buf), GFP_KERNEL);
-	if (!invalid_master)
+	if (!invalid_master) {
+		pr_err("could not allocate invalid_master\n");
 		return -ENOMEM;
+	}
 	strncpy(invalid_master, buf, strlen(buf)-1);
 	*(invalid_master + strlen(invalid_master)) = '\0';
 
@@ -389,8 +394,10 @@ static ssize_t align_memc_masters(struct kona_memc_port *memc_port,
 	}
 	if (match_the_existing_masters(memc_port->memc_dev, buf)) {
 		invalid_master = kzalloc(strlen(buf), GFP_KERNEL);
-		if (!invalid_master)
+		if (!invalid_master) {
+			pr_err("could not allocate invalid_master\n");
 			return -ENOMEM;
+		}
 		strncpy(invalid_master, buf, strlen(buf)-1);
 		*(invalid_master + strlen(invalid_master)) = '\0';
 
@@ -1134,9 +1141,39 @@ static void enable_regions(struct kona_secure_memc *memc_dev)
 {
 	struct kona_secure_memc_pdata *pdata = memc_dev->pdata;
 	struct kona_memc_regions **region = memc_dev->region;
+	struct kona_memc_port **port = memc_dev->port;
 	struct kona_memc_bitmaps *memc_bitmaps = &memc_dev->memc_config_status;
+	u32 port_num, group_num, region_num, configured_group_mask;
 
-	u32 region_num;
+	/* at this stage we are very sure that the
+	configuration is completely valid, and before
+	we enable the region; set the region access for groups.
+	so we will know while granting and revoking the
+	group accesses. */
+
+	/* find out all the masters which users have configured.  */
+	for (port_num = 0; port_num < pdata->num_of_memc_ports; port_num++) {
+		for (group_num = 0; group_num < pdata->num_of_groups;
+			group_num++) {
+			if (memc_bitmaps->port_map[port_num][group_num]) {
+				for (region_num = 0;
+				region_num < pdata->num_of_regions;
+				region_num++) {
+					configured_group_mask =
+					region[region_num]->group_mask;
+					if (((0x1 << region_num) &
+					memc_bitmaps->region_bitmap)
+					&& ((0x1 << group_num) &
+					configured_group_mask)) {
+						port[port_num]->group[group_num]
+						->access.region_access[port_num]
+						|= (0x1 << region_num);
+					}
+				}
+			}
+		}
+	}
+
 	for (region_num = 0; region_num < pdata->num_of_regions; region_num++) {
 		if ((0x1 << region_num) & memc_bitmaps->region_bitmap) {
 			region[region_num]->write_regionx(memc_dev, region_num,
@@ -1346,10 +1383,9 @@ static void show_current_configuration(struct kona_secure_memc *memc_dev)
 	log_this(logging, "\n<<current memc configuration >>\n");
 	log_this(logging, "-----------------------------------\n");
 
-	/* find out all the masters which users have configured
-	and erase them all.  */
+	/* find out all the masters which users have configured.  */
 	for (port_num = 0; port_num < pdata->num_of_memc_ports; port_num++) {
-		for (group_num = 0; group_num < pdata->num_of_memc_ports;
+		for (group_num = 0; group_num < pdata->num_of_groups;
 			group_num++) {
 			if (memc_bitmaps->port_map[port_num][group_num]) {
 				list_for_each(tmp,
@@ -1436,42 +1472,82 @@ static void erase_memc(struct kona_secure_memc *memc_dev)
 
 }
 
-static int initialize_memc(struct kona_secure_memc *memc_dev,
-							const char *master)
+
+int get_default_possible_port(char *master)
+{
+	u32 index;
+	for (index = 0; index < NUM_OF_ALLOWED_MASTERS; index++) {
+		if (!strncmp(master, memc_map[index].master,
+			strlen(memc_map[index].master)))
+				return index;
+	}
+	return -1;
+}
+
+static int initialize_memc(struct kona_secure_memc *memc_dev)
 {
 	struct kona_memc_port **port = memc_dev->port;
 	struct kona_memc_regions **region = memc_dev->region;
 	struct kona_memc_logging *logging = memc_dev->logging;
+	struct kona_secure_memc_pdata *pdata = memc_dev->pdata;
+	u32 ms, port_num, group_num, region_num;
+	u32 rgn, attr;
+	char *invalid_master;
 
-	if (!strcmp(master, "comms")) {
-		align_memc_masters(port[2], master, sizeof(master), 0);
-		align_memc_masters(port[1], "a7i", sizeof(master), 1);
+	for (ms = 0; ms < sizeof(pdata->static_memc_masters)/
+		sizeof(*pdata->static_memc_masters); ms++) {
+		if (match_the_existing_masters(memc_dev,
+			pdata->static_memc_masters[ms])) {
+			invalid_master = kzalloc
+			(strlen(pdata->static_memc_masters[ms]), GFP_KERNEL);
+			if (!invalid_master) {
+				pr_err("could not allocate invalid_master\n");
+				return -ENOMEM;
+			}
+			strncpy(invalid_master,
+			pdata->static_memc_masters[ms],
+			strlen(pdata->static_memc_masters[ms])-1);
+			*(invalid_master + strlen(invalid_master)) = '\0';
+			add_time_stamp(logging);
+			log_this(logging, invalid_master);
+			log_this(logging, " does not exist\n");
+			kfree(invalid_master);
+			log_this(logging,
+			"\n<< failed to initialize memc>>\n");
+			return -EINVAL;
+		}
+	}
 
-		write_memc_regions(region[0], "0x80000000", START_ADDR);
-		write_memc_regions(region[0], "0x801FFFFF", END_ADDR);
-		write_memc_regions(region[0], "3", MEM_TYPE);
-		write_memc_regions(region[0], "0x03", GROUP_MASK);
+	for (ms = 0; ms < sizeof(pdata->static_memc_masters)/
+		sizeof(*pdata->static_memc_masters); ms++) {
+		port_num =
+		get_default_possible_port(pdata->static_memc_masters[ms]);
+		if (port_num < 0)
+			return -EINVAL;
+		group_num =
+		get_first_empty(memc_dev->memc_config_status.group_bitmap);
+		align_memc_masters(port[port_num],
+		pdata->static_memc_masters[ms],
+		sizeof(pdata->static_memc_masters[ms]), group_num);
+	}
 
-		write_memc_regions(region[1], "0x80200000", START_ADDR);
-		write_memc_regions(region[1], "0x811FFFFF", END_ADDR);
-		write_memc_regions(region[1], "3", MEM_TYPE);
-		write_memc_regions(region[1], "0x01", GROUP_MASK);
+	for (rgn = 0;
+		rgn < sizeof(pdata->static_memc_config)/
+		sizeof(*pdata->static_memc_config); rgn++) {
+		region_num = get_first_empty
+		(memc_dev->memc_config_status.region_bitmap);
+		for (attr = 0; attr < sizeof(pdata->static_memc_config[0])/
+			sizeof(*pdata->static_memc_config[0]); attr++) {
+			write_memc_regions(region[region_num],
+			pdata->static_memc_config[rgn][attr], attr);
+		}
+	}
 
-		write_memc_regions(region[2], "0x81200000", START_ADDR);
-		write_memc_regions(region[2], "0x81FFFFFF", END_ADDR);
-		write_memc_regions(region[2], "3", MEM_TYPE);
-		write_memc_regions(region[2], "0x03", GROUP_MASK);
-
-		write_memc_regions(region[3], "0x82000000", START_ADDR);
-		write_memc_regions(region[3], "0xBFFFFFFF", END_ADDR);
-		write_memc_regions(region[3], "3", MEM_TYPE);
-		write_memc_regions(region[3], "0xFE", GROUP_MASK);
-
-		activate_memc(memc_dev);
-
+	if (!activate_memc(memc_dev)) {
 		add_time_stamp(logging);
 		log_this(logging, "<< memc activated successfully >>\n");
-	}
+	} else
+		return -1;
 
 	return 0;
 }
@@ -1708,7 +1784,8 @@ static ssize_t memc_violation_log_show(struct kona_memc_logging
 							0x06000000) >> 25;
 			if (type)
 				count = count + sprintf(buf+count,
-					"write access violation\n");
+					"write access violation @ port%u\n",
+					port_id);
 			else
 				count = count + sprintf(buf+count,
 				"read access violation @ port%u\n", port_id);
@@ -1883,6 +1960,7 @@ MEMC_CONFIG_ALLOC_FAILED:
 		kfree(memc->region[g]);
 	kfree(memc->port);
 	kfree(memc->region);
+
 return -ENOMEM;
 }
 
@@ -1958,6 +2036,8 @@ static int secure_memc_alloc_ports(struct kona_secure_memc *memc)
 				goto memc_groupx_alloc_failed;
 			}
 			group[group_num]->group_id = group_num;
+			memset((void *) &group[group_num]->access,
+				0x0, sizeof(struct access_control));
 		}
 
 	}
@@ -2030,7 +2110,6 @@ static int secure_memc_alloc_ports(struct kona_secure_memc *memc)
 	logging->memc_dev = memc;
 	memc->logging = logging;
 
-
 	return 0;
 
 memc_logging_alloc_failed:
@@ -2086,28 +2165,9 @@ memc_port_alloc_failed:
 }
 
 
-static irqreturn_t secure_sys_emii_handler(int irq, void *data)
+
+static void throw_violation(struct kona_secure_memc *memc_dev)
 {
-	struct kona_secure_memc_pdata *pdata =
-		(struct kona_secure_memc_pdata *) pdata;
-	unsigned long addr, info;
-
-	addr = readl(pdata->kona_s_memc_base + 0x90);
-	info = readl(pdata->kona_s_memc_base + 0x94);
-
-	printk(KERN_ALERT "************************************************\n");
-	printk(KERN_ALERT "violation @ addr:0x%lX, info:0x%lX\n", addr, info);
-	printk(KERN_ALERT "************************************************\n");
-
-	return IRQ_HANDLED;
-}
-
-
-static void memc_violation_info_work(struct work_struct *work)
-{
-	struct kona_secure_memc *memc_dev =
-		container_of(work, struct kona_secure_memc,
-				memc_work.work);
 	struct kona_secure_memc_pdata *pdata = memc_dev->pdata;
 	struct kona_memc_logging *logging = memc_dev->logging;
 
@@ -2117,18 +2177,218 @@ static void memc_violation_info_work(struct work_struct *work)
 	info = readl(pdata->kona_s_memc_base + 0x94);
 
 	if (addr || info) {
-		printk(KERN_ALERT
+		pr_warning(
 		"\n************************************************\n");
-		printk(KERN_ALERT
+		pr_warning(
 		"violation @ addr:0x%X, info:0x%X\n", addr, info);
-		printk(KERN_ALERT
-		"************************************************\n");
+		pr_warning(
+		"\n************************************************\n");
 		logging->violation_info[logging->violation_index++] = addr;
 		logging->violation_info[logging->violation_index++] = info;
 		logging->violation_index &= (VIOLATION_INFO_LEN - 1);
 	}
+}
+
+static irqreturn_t secure_sys_emi_handler(int irq, void *data)
+{
+	struct kona_secure_memc_pdata *pdata =
+		(struct kona_secure_memc_pdata *) data;
+	u32 addr, info;
+
+	addr = readl(pdata->kona_s_memc_base + 0x90);
+	info = readl(pdata->kona_s_memc_base + 0x94);
+
+	pr_warning("\n************************************************\n");
+	pr_warning("violation @ addr:0x%X, info:0x%X\n", addr, info);
+	pr_warning("\n************************************************\n");
+
+	return IRQ_HANDLED;
+}
+
+static void memc_violation_info_work(struct work_struct *work)
+{
+	struct kona_secure_memc *memc_dev =
+		container_of(work, struct kona_secure_memc,
+				memc_work.work);
+
+	throw_violation(memc_dev);
+
 	schedule_delayed_work(&memc_dev->memc_work,
 				msecs_to_jiffies(VIOLATION_POLL_DELAY));
+}
+
+u32 *get_secure_memc_handle()
+{
+	return memc_handle;
+}
+EXPORT_SYMBOL(get_secure_memc_handle);
+
+
+int do_grant_region_access(u32 *memc_handle, enum memc_masters to_who)
+{
+#define ALLOW_ALL_GID_MASK 0x00FF0000
+#define REGION_CTRL_OFFSET 0x10
+
+	struct kona_secure_memc *memc_dev =
+		container_of(memc_handle, struct kona_secure_memc,
+				handle);
+	unsigned int i, val, port_num, group_num;
+	struct kona_secure_memc_pdata *pdata = memc_dev->pdata;
+	struct kona_memc_bitmaps *memc_bitmaps = &memc_dev->memc_config_status;
+	unsigned int group_mask = 0;
+	unsigned int addr = pdata->kona_s_memc_base;
+	unsigned int offset  = REGION_CTRL_OFFSET;
+
+	if (ALL == to_who) {
+		group_mask = ALLOW_ALL_GID_MASK;
+		goto write_memc_regions;
+	} else if (FABRIC == to_who)
+		port_num = get_default_possible_port(MASTER_FABRIC);
+	else if (AP == to_who)
+		port_num = get_default_possible_port(MASTER_A7);
+	else if (MM == to_who)
+		port_num = get_default_possible_port(MASTER_MM);
+	else if (CP == to_who)
+		port_num = get_default_possible_port(MASTER_COMMS);
+	else
+		goto wrong_parameter;
+
+	if (port_num < 0)
+		goto wrong_parameter;
+
+	for (group_num = 0; group_num < pdata->num_of_groups;
+		group_num++) {
+		if (memc_bitmaps->port_map[port_num][group_num]) {
+			group_mask |= (u32) ((0x1 << group_num) <<
+				CONFIGURED_REGION_NUM_SHIFT);
+		}
+	}
+
+write_memc_regions:
+
+	/* Disable gid checking */
+	writel(0x00, pdata->kona_s_memc_base);
+
+	/* grant access to all the masters. */
+	for (i = 0; i < pdata->num_of_regions; i++) {
+		addr += offset;
+		val = readl(addr);
+		if (val & 0x1) {
+			val |= group_mask;
+			writel(val, addr);
+		}
+	}
+	return 0;
+
+wrong_parameter:
+	return -1;
+
+}
+EXPORT_SYMBOL(do_grant_region_access);
+
+
+int do_revoke_region_access(u32 *memc_handle, enum memc_masters to_who)
+{
+#define ALLOW_ALL_GID_MASK 0x00FF0000
+#define REGION_CTRL_OFFSET 0x10
+
+	struct kona_secure_memc *memc_dev =
+		container_of(memc_handle, struct kona_secure_memc,
+				handle);
+	unsigned int val, port_num, group_num, region_num, temp;
+	struct kona_secure_memc_pdata *pdata = memc_dev->pdata;
+	struct kona_memc_bitmaps *memc_bitmaps = &memc_dev->memc_config_status;
+	struct kona_memc_port **port = memc_dev->port;
+	unsigned int addr = pdata->kona_s_memc_base;
+	unsigned int offset  = REGION_CTRL_OFFSET;
+
+	if (FABRIC == to_who)
+		port_num = get_default_possible_port(MASTER_FABRIC);
+	else if (AP == to_who)
+		port_num = get_default_possible_port(MASTER_A7);
+	else if (MM == to_who)
+		port_num = get_default_possible_port(MASTER_MM);
+	else if (CP == to_who)
+		port_num = get_default_possible_port(MASTER_COMMS);
+	else
+		goto wrong_parameter;
+
+	if (port_num < 0)
+		goto wrong_parameter;
+
+	for (group_num = 0; group_num < pdata->num_of_groups;
+		group_num++) {
+		if (memc_bitmaps->port_map[port_num][group_num]) {
+			temp = port[port_num]->group[group_num]
+				->access.region_access[port_num];
+			addr = pdata->kona_s_memc_base;
+			for (region_num = 0; region_num < pdata->num_of_regions;
+				region_num++) {
+				addr += offset;
+				if (!(temp & 0x01)) {
+					val = readl(addr);
+					if (val & 0x1) {
+						val &= ~((0x1 << group_num) <<
+						CONFIGURED_REGION_NUM_SHIFT);
+						writel(val, addr);
+					}
+				}
+				temp = temp >> 1;
+			}
+		}
+	}
+
+	/* enable gid checking. */
+	writel(0x10, pdata->kona_s_memc_base);
+	return 0;
+
+wrong_parameter:
+	return -1;
+
+}
+EXPORT_SYMBOL(do_revoke_region_access);
+
+
+
+
+/* sec_memc_panic_event() is called by the panic handler.
+ * As soon as a panic occurs, and if there is one more violation
+ * within the time period of VIOLATION_POLL_DELAY,
+ * This function then collects violation info.
+ */
+static int sec_memc_panic_event(struct notifier_block *this,
+		unsigned long event, void *ptr)
+{
+	struct kona_secure_memc *memc_dev =
+			container_of(this, struct kona_secure_memc,
+					sec_memc_panic_block);
+
+	throw_violation(memc_dev);
+
+	/* ABI loads the loader at 0x80080000,
+	and it come through fabric, as it is ligitimate access,
+	we shall grant it here. */
+	do_grant_region_access(memc_handle, FABRIC);
+
+	return NOTIFY_DONE;
+}
+
+
+static int sec_memc_reboot_event(struct notifier_block *this,
+		unsigned long event, void *ptr)
+{
+	struct kona_secure_memc *memc_dev =
+			container_of(this, struct kona_secure_memc,
+					sec_memc_reboot_block);
+
+	throw_violation(memc_dev);
+
+	/* ABI loads the loader at 0x80080000,
+	and it come through fabric, as it is ligitimate access,
+	we shall grant it here. */
+	do_grant_region_access(memc_handle, FABRIC);
+
+	return NOTIFY_DONE;
 }
 
 static int kona_secure_memc_probe(struct platform_device *pdev)
@@ -2149,17 +2409,25 @@ static int kona_secure_memc_probe(struct platform_device *pdev)
 	memc_dev->memc_state = NOT_CONFIGURED;
 	memc_dev->init_static_config_memc = initialize_memc;
 
+	memc_handle = &memc_dev->handle;
+	/* some magic number. */
+	*memc_handle = 0x5A5A5A5A;
+
 	if (secure_memc_alloc_ports(memc_dev)) {
 		printk(KERN_INFO "kona_secure_memc_probe failed\n");
 		return -ENOMEM;
 	}
 
 	ret = secure_memc_sysfs_init(memc_dev);
-
-	ret = request_irq(KONA_SECURE_MEMC_IRQ, secure_sys_emii_handler,
-						0, NULL, memc_dev->pdata);
 	if (ret)
+		goto out;
+
+	ret = request_irq(KONA_SECURE_MEMC_IRQ, secure_sys_emi_handler,
+						0, NULL, memc_dev->pdata);
+	if (ret) {
 		printk(KERN_ALERT "could not register sys emi irq\n");
+		goto out;
+	}
 
 	enable_irq(KONA_SECURE_MEMC_IRQ);
 
@@ -2168,7 +2436,22 @@ static int kona_secure_memc_probe(struct platform_device *pdev)
 				msecs_to_jiffies(VIOLATION_POLL_DELAY));
 
 
-	memc_dev->init_static_config_memc(memc_dev, "comms");
+	memc_dev->sec_memc_panic_block.notifier_call = sec_memc_panic_event;
+	memc_dev->sec_memc_panic_block.priority	= INT_MIN,
+
+	memc_dev->sec_memc_reboot_block.notifier_call = sec_memc_reboot_event;
+	memc_dev->sec_memc_reboot_block.priority = INT_MIN,
+
+
+	atomic_notifier_chain_register(&panic_notifier_list,
+				&memc_dev->sec_memc_panic_block);
+	blocking_notifier_chain_register(&reboot_notifier_list,
+				&memc_dev->sec_memc_reboot_block);
+
+	if (pdata->static_config)
+		ret = memc_dev->init_static_config_memc(memc_dev);
+
+out:
 	return ret;
 }
 
