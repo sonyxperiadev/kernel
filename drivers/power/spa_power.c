@@ -51,12 +51,12 @@
 #define SPA_DBG_LOG_SIZE	(4096*100)
 
 /*Dual logging.*/
-#define pr_spa_dbg(lvl, args...)
-	do {
-		if (SPA_DBG_LEVEL_OUT >= SPA_DBG_##lvl)
-			pr_info(args);
-		if (SPA_DBG_LEVEL_INTERNAL >= SPA_DBG_##lvl)
-				spa_log_internal(args);
+#define pr_spa_dbg(lvl, args...) \
+	do { \
+		if (SPA_DBG_LEVEL_OUT >= SPA_DBG_##lvl) \
+			pr_info(args); \
+				if (SPA_DBG_LEVEL_INTERNAL >= SPA_DBG_##lvl) \
+					spa_log_internal(args); \
 	} while (0)
 
 static char spa_log_buffer[SPA_DBG_LOG_SIZE];
@@ -396,7 +396,7 @@ struct device_attribute *attr, char *buf)
 		break;
 	case SPA_POWER_PROP_BATT_VF:
 	{
-		count += scnprintf(buf+count, PAGE_SIZE-count
+		count += scnprintf(buf+count, PAGE_SIZE-count,
 			"batt_vf = %d\n",
 			spa_power_iter->batt_info.vf_status);
 	}

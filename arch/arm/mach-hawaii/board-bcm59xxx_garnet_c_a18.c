@@ -1001,6 +1001,15 @@ struct bcmpmu_adc_pdata adc_pdata[PMU_ADC_CHANN_MAX] = {
 					.name = "als",
 					.reg = PMU_REG_ADCCTRL23,
 	},
+	[PMU_ADC_CHANN_DIE_TEMP] = {
+					.flag = 0,
+					.volt_range = 1200,
+					.adc_offset = 0,
+					.lut = NULL,
+					.lut_len = 0,
+					.name = "dietemp",
+					.reg = PMU_REG_ADCCTRL25,
+	},
 };
 
 static struct batt_volt_cap_map ys_05_volt_cap_lut[] = {
@@ -1138,7 +1147,6 @@ static struct bcmpmu_batt_property ys_05_props = {
 	.min_volt = 3000,
 	.max_volt = 4200,
 	.full_cap = 2800 * 3600,
-	.one_c_rate = 2800,
 	.volt_cap_lut = ys_05_volt_cap_lut,
 	.volt_cap_lut_sz = ARRAY_SIZE(ys_05_volt_cap_lut),
 	.esr_temp_lut = ys_05_esr_temp_lut,
@@ -1186,7 +1194,12 @@ static struct bcmpmu_fg_pdata fg_pdata = {
 	.fg_factor = 796,
 	.poll_rate_low_batt = 5000,	/* every 5 seconds */
 	.poll_rate_crit_batt = 2000,	/* every 2 Seconds */
+};
+struct bcmpmu_acld_pdata acld_pdata = {
+	.one_c_rate = 2800,
 	.acld_vbus_margin = 200,	/*mV*/
+	.acld_vbus_thrs = 5950,
+	.acld_vbat_thrs = 3500,
 	.i_sat = 3000,			/* saturation current in mA
 						for chrgr while using ACLD */
 	.i_def_dcp = 700,
@@ -1232,6 +1245,12 @@ static struct mfd_cell pmu59xxx_devs[] = {
 		.id = -1,
 		.platform_data = &chrgr_pdata,
 		.pdata_size = sizeof(chrgr_pdata),
+	},
+	{
+		.name = "bcmpmu_acld",
+		.id = -1,
+		.platform_data = &acld_pdata,
+		.pdata_size = sizeof(acld_pdata),
 	},
 	{
 		.name = "bcmpmu59xxx-ponkey",

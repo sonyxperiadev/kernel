@@ -1213,13 +1213,20 @@ static struct bcmpmu_fg_pdata fg_pdata = {
 
 	.poll_rate_low_batt = 5000, /* every 5 seconds */
 	.poll_rate_crit_batt = 2000, /* every 2 Seconds */
+};
+
+struct bcmpmu_acld_pdata acld_pdata = {
 	.acld_vbus_margin = 200,	/*mV*/
+	.acld_vbus_thrs = 6000,
+	.acld_vbat_thrs = 3000,
+
+	.one_c_rate = 1500,
 
 	/* CIG22H2R2MNE, rated current 1.6A  */
 	.i_sat = 1600,		/* saturation current in mA
 						for chrgr while using ACLD */
 	.i_def_dcp = 700,
-	.acld_cc_lmt = 1800,
+	.acld_cc_lmt = 1500,
 	.otp_cc_trim = 0x1F,
 };
 

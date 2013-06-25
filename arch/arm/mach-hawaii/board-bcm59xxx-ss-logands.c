@@ -1003,6 +1003,21 @@ struct bcmpmu_adc_pdata adc_pdata[PMU_ADC_CHANN_MAX] = {
 	},
 };
 
+struct bcmpmu_acld_pdata acld_pdata = {
+	.acld_vbus_margin = 200,	/*mV*/
+	.acld_vbus_thrs = 6000,
+	.acld_vbat_thrs = 3000,
+
+	.one_c_rate = 1500,
+
+	/* CIG22H2R2MNE, rated current 1.6A  */
+	.i_sat = 1600,		/* saturation current in mA
+						for chrgr while using ACLD */
+	.i_def_dcp = 700,
+	.acld_cc_lmt = 1500,
+	.otp_cc_trim = 0x1F,
+};
+
 
 /* SS B100BE profile */
 /* Logan rev 02 battery profile CSP 626787 */
@@ -1176,7 +1191,6 @@ static struct bcmpmu_batt_property ss_logands_props = {
 #endif
 	.max_volt = 4350,
 	.full_cap = 1500 * 3600,
-	.one_c_rate = 1500,
 	.volt_cap_lut = ss_logands_volt_cap_lut,
 	.volt_cap_lut_sz = ARRAY_SIZE(ss_logands_volt_cap_lut),
 	.esr_temp_lut = ss_logands_esr_temp_lut,
@@ -1235,14 +1249,6 @@ static struct bcmpmu_fg_pdata fg_pdata = {
 
 	.poll_rate_low_batt =  120000, /* every 120 seconds */
 	.poll_rate_crit_batt = 5000, /* every 5 Seconds */
-	.acld_vbus_margin = 200,	/*mV*/
-
-	/* CIG22H2R2MNE, rated current 1.6A  */
-	.i_sat = 1600,		/* saturation current in mA
-						for chrgr while using ACLD */
-	.i_def_dcp = 700,
-	.acld_cc_lmt = 1800,
-	.otp_cc_trim = 0x1F,
 };
 
 struct bcmpmu59xxx_accy_pdata accy_pdata = {
