@@ -592,6 +592,10 @@ static void usb_handle_state(struct bcmpmu_accy *paccy)
 #ifdef CONFIG_HAS_WAKELOCK
 		if (wake_lock_active(&paccy->wake_lock))
 			wake_unlock(&paccy->wake_lock);
+		/* Make sure the app can process the
+		*  uevent of usb_disconnect
+		*/
+		wake_lock_timeout(&paccy->usb_plug_out_wake_lock, HZ * 2);
 #endif
 #ifdef CONFIG_KONA_PI_MGR
 		pi_mgr_qos_request_update(&paccy->qos,
@@ -1653,6 +1657,8 @@ static int __devinit bcmpmu_accy_probe(struct platform_device *pdev)
 
 #ifdef CONFIG_HAS_WAKELOCK
 	wake_lock_init(&paccy->wake_lock, WAKE_LOCK_SUSPEND, "usb_accy");
+	wake_lock_init(&paccy->usb_plug_out_wake_lock,
+				WAKE_LOCK_SUSPEND, "usb_accy_plug_out");
 #endif
 #ifdef CONFIG_KONA_PI_MGR
 	pi_mgr_qos_add_request(&paccy->qos, "usb_accy",
@@ -1772,6 +1778,7 @@ static int __devexit bcmpmu_accy_remove(struct platform_device *pdev)
 	cancel_work_sync(&paccy->adp_work);
 #ifdef CONFIG_HAS_WAKELOCK
 	wake_lock_destroy(&paccy->wake_lock);
+	wake_lock_destroy(&paccy->usb_plug_out_wake_lock);
 #endif
 #ifdef CONFIG_KONA_PI_MGR
 	pi_mgr_qos_request_remove(&paccy->qos);

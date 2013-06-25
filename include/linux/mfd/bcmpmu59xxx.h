@@ -666,6 +666,7 @@ struct bcmpmu59xxx_bus {
 struct mutex i2c_mutex;
 #ifdef CONFIG_HAS_WAKELOCK
 	struct wake_lock i2c_lock;
+	struct wake_lock usb_plug_out_wake_lock;
 	u32 ref_count;
 #endif
 };
