@@ -1217,12 +1217,6 @@ static struct bcmpmu59xxx_led_pdata led_pdata = {
 };
 #endif
 
-#if defined(CONFIG_LEDS_BCM_PMU59xxx)
-static struct bcmpmu59xxx_led_pdata led_pdata = {
-	.led_name = "red",
-};
-#endif
-
 #ifdef CONFIG_CHARGER_BCMPMU_SPA
 struct bcmpmu59xxx_spa_pb_pdata spa_pb_pdata = {
 	.chrgr_name = "bcmpmu_charger",
