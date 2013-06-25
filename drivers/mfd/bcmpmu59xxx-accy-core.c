@@ -106,6 +106,7 @@ struct bcmpmu_accy_data {
 	int adp_cal_done;
 	atomic_t usb_allow_bc_detect;
 	bool icc_host_ctrl;
+	int usb_host_en;
 };
 
 static struct bcmpmu_accy_data *gp_accy_data;
@@ -241,9 +242,11 @@ static int _usb_host_en(struct bcmpmu_accy_data *di, int enable)
 	int ret;
 	u8 reg;
 
+	di->usb_host_en = enable;
+
 	if (!charging_enable)
 		return 0;
-	pr_accy(FLOW, "%s:ENABLE %d\n", __func__, enable);
+	pr_accy(FLOW, "%s:ENABLE %d\n", __func__, di->usb_host_en);
 
 	if (!atomic_read(&drv_init_done)) {
 		pr_accy(ERROR, "%s: accy driver not initialized\n", __func__);
@@ -254,7 +257,7 @@ static int _usb_host_en(struct bcmpmu_accy_data *di, int enable)
 	if (ret)
 		return ret;
 
-	if (enable)
+	if (di->usb_host_en)
 		reg |= MBCCTRL3_USB_HOSTEN_MASK;
 	else
 		reg &= ~MBCCTRL3_USB_HOSTEN_MASK;
@@ -265,7 +268,7 @@ static int _usb_host_en(struct bcmpmu_accy_data *di, int enable)
 		return ret;
 	}
 	ret = bcmpmu_accy_queue_event(di, PMU_CHRGR_EVT_CHRG_STATUS,
-			&enable);
+			&di->usb_host_en);
 	return ret;
 }
 
