@@ -116,6 +116,10 @@ static void __init __pm_init_errata_flg(void)
 		pm_erratum_flg |= ERRATUM_MM_FREEZE_VAR500M;
 #endif
 
+#ifdef CONFIG_A7_PLL_PWRDWN_ERRATUM
+	if (chip_id <= KONA_CHIP_ID_JAVA_A0)
+		pm_erratum_flg |= ERRATUM_A7_PLL_PWRDWN;
+#endif
 }
 
 #define MHZ(x) ((x)*1000*1000)

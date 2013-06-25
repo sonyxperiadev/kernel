@@ -214,6 +214,17 @@ config MM_FREEZE_VAR500M_ERRATUM
 	 enabled erratum(HWHAWAII-73)
 	 Refer JIRA DB for more info
 
+config A7_PLL_PWRDWN_ERRATUM
+	bool "Disable A7 PLL pwrdwn while swicthing from A7 PLL to 312Mhz PLL"
+	default y
+	help
+	 Say Y to disable A7 pll pwrdwn during frequency switching.
+	 The work around is for avoiding freeze while switching from A7 PLL to
+	 the 312Mhz PLL. While s/w to 312Mhz, the A7 PLL gets auto powered down,
+	 before s/w process is complete, thereby resulting in a freeze.
+	 WA will disable pwrdwn while switching is in progress and enable later.
+	 Refer to JIRA DB for more information.
+
 config	HAWAIILC_2093
 	bool "Enable HawaiiLC&2093"
 	default n
