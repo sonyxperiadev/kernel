@@ -51,6 +51,20 @@
 #define CREATE_TRACE_POINTS
 #include <trace/events/printk.h>
 
+#if defined(CONFIG_PRINTK_CPU_ID)
+static bool printk_cpu_id = 1;
+#else
+static bool printk_cpu_id;
+#endif
+module_param_named(cpu, printk_cpu_id, bool, S_IRUGO | S_IWUSR);
+
+#if defined(CONFIG_PRINTK_PID)
+static bool printk_pid = 1;
+#else
+static bool printk_pid;
+#endif
+module_param_named(pid, printk_pid, bool, S_IRUGO | S_IWUSR);
+
 void (* BrcmLogString)(const char *inLogString,
 				unsigned short inSender) = 0;
 
@@ -219,6 +233,13 @@ struct log {
 	u16 len;		/* length of entire record */
 	u16 text_len;		/* length of text buffer */
 	u16 dict_len;		/* length of dictionary buffer */
+#ifdef CONFIG_PRINTK_CPU_ID
+	u8 cpu_id;		/* who is printing */
+#endif
+#ifdef CONFIG_PRINTK_PID
+	char comm[TASK_COMM_LEN];/* owner of the print */
+	u8 pid;			/* pid of the owner */
+#endif
 	u8 facility;		/* syslog facility */
 	u8 flags:5;		/* internal record flags */
 	u8 level:3;		/* syslog level */
@@ -330,7 +351,8 @@ static u32 log_next(u32 idx)
 static void log_store(int facility, int level,
 		      enum log_flags flags, u64 ts_nsec,
 		      const char *dict, u16 dict_len,
-		      const char *text, u16 text_len)
+		      const char *text, u16 text_len,
+		      u8 cpu_id, struct task_struct *owner)
 {
 	struct log *msg;
 	u32 size, pad_len;
@@ -375,6 +397,13 @@ static void log_store(int facility, int level,
 	msg->facility = facility;
 	msg->level = level & 7;
 	msg->flags = flags & 0x1f;
+#ifdef CONFIG_PRINTK_CPU_ID
+	msg->cpu_id = cpu_id;
+#endif
+#ifdef CONFIG_PRINTK_PID
+	msg->pid = owner->pid;
+	memcpy(msg->comm, owner->comm, TASK_COMM_LEN);
+#endif
 	if (ts_nsec > 0)
 		msg->ts_nsec = ts_nsec;
 	else
@@ -898,6 +927,35 @@ static size_t print_time(u64 ts, char *buf)
 		       (unsigned long)ts, rem_nsec / 1000);
 }
 
+#ifdef CONFIG_PRINTK_PID
+static size_t print_pid(const struct log *msg, char *buf)
+{
+	if (!printk_pid || !buf)
+		return 0;
+	return sprintf(buf, "[%15s, %d] ", msg->comm, msg->pid);
+}
+#else
+static size_t print_pid(const struct log *msg, char *buf)
+{
+	return 0;
+}
+#endif
+
+#ifdef CONFIG_PRINTK_CPU_ID
+static size_t print_cpuid(const struct log *msg, char *buf)
+{
+
+	if (!printk_cpu_id || !buf)
+		return 0;
+	return sprintf(buf, "C%d ", msg->cpu_id);
+}
+#else
+static size_t print_cpuid(const struct log *msg, char *buf)
+{
+	return 0;
+}
+#endif
+
 static size_t print_prefix(const struct log *msg, bool syslog, char *buf)
 {
 	size_t len = 0;
@@ -918,6 +976,8 @@ static size_t print_prefix(const struct log *msg, bool syslog, char *buf)
 	}
 
 	len += print_time(msg->ts_nsec, buf ? buf + len : NULL);
+	len += print_cpuid(msg, buf ? buf + len : NULL);
+	len += print_pid(msg, buf ? buf + len : NULL);
 	return len;
 }
 
@@ -1327,20 +1387,6 @@ static void zap_locks(void)
 	sema_init(&console_sem, 1);
 }
 
-#if defined(CONFIG_PRINTK_CPU_ID)
-static bool printk_cpu_id = 1;
-#else
-static bool printk_cpu_id = 0;
-#endif
-module_param_named(cpu, printk_cpu_id, bool, S_IRUGO | S_IWUSR);
-
-#if defined(CONFIG_PRINTK_PID)
-static bool printk_pid = 1;
-#else
-static bool printk_pid;
-#endif
-module_param_named(pid, printk_pid, bool, S_IRUGO | S_IWUSR);
-
 /* Check if we have any console registered that can be called early in boot. */
 static int have_callable_console(void)
 {
@@ -1500,6 +1546,7 @@ static struct cont {
 	u64 ts_nsec;			/* time of first print */
 	u8 level;			/* log level of first message */
 	u8 facility;			/* log level of first message */
+	u8 cpu_id;			/* Which cpu is printing */
 	enum log_flags flags;		/* prefix, newline flags */
 	bool flushed:1;			/* buffer sealed and committed */
 } cont;
@@ -1518,7 +1565,8 @@ static void cont_flush(enum log_flags flags)
 		 * line. LOG_NOCONS suppresses a duplicated output.
 		 */
 		log_store(cont.facility, cont.level, flags | LOG_NOCONS,
-			  cont.ts_nsec, NULL, 0, cont.buf, cont.len);
+			  cont.ts_nsec, NULL, 0, cont.buf, cont.len,
+			  cont.cpu_id, cont.owner);
 		cont.flags = flags;
 		cont.flushed = true;
 	} else {
@@ -1527,7 +1575,8 @@ static void cont_flush(enum log_flags flags)
 		 * just submit it to the store and free the buffer.
 		 */
 		log_store(cont.facility, cont.level, flags, 0,
-			  NULL, 0, cont.buf, cont.len);
+			  NULL, 0, cont.buf, cont.len,
+			  cont.cpu_id, cont.owner);
 		cont.len = 0;
 	}
 }
@@ -1640,7 +1689,8 @@ asmlinkage int vprintk_emit(int facility, int level,
 		printed_len += strlen(recursion_msg);
 		/* emit KERN_CRIT message */
 		log_store(0, 2, LOG_PREFIX|LOG_NEWLINE, 0,
-			  NULL, 0, recursion_msg, printed_len);
+			  NULL, 0, recursion_msg, printed_len,
+			  logbuf_cpu, current);
 	}
 
 	/*
@@ -1699,7 +1749,8 @@ if (bcmlog_mtt_on == 1 && bcmlog_log_ulogging_id > 0 && BrcmLogString)
 		/* buffer line if possible, otherwise store it right away */
 		if (!cont_add(facility, level, text, text_len))
 			log_store(facility, level, lflags | LOG_CONT, 0,
-				  dict, dictlen, text, text_len);
+				  dict, dictlen, text, text_len,
+				  logbuf_cpu, current);
 	} else {
 		bool stored = false;
 
@@ -1713,39 +1764,12 @@ if (bcmlog_mtt_on == 1 && bcmlog_log_ulogging_id > 0 && BrcmLogString)
 			if (!(lflags & LOG_PREFIX))
 				stored = cont_add(facility, level, text, text_len);
 			cont_flush(LOG_NEWLINE);
-#if 0
-                        if (printk_cpu_id) {
-				/* Add the cpu id */
-				char tbuf[10], *tp;
-				unsigned tlen;
-
-				tlen = sprintf(tbuf, "C%u ", printk_cpu);
-
-				for (tp = tbuf; tp < tbuf + tlen; tp++)
-					emit_log_char(*tp);
-				printed_len += tlen;
-			}
-
-			if (printk_pid) {
-				/* Add the current process id */
-				char tbuf[20], *tp;
-				unsigned tlen;
-
-				tlen = sprintf(tbuf, "[%15s] ", current->comm);
-
-				for (tp = tbuf; tp < tbuf + tlen; tp++)
-					emit_log_char(*tp);
-				printed_len += tlen;
-			}
-
-			if (!*p)
-				break;
-#endif
 		}
 
 		if (!stored)
 			log_store(facility, level, lflags, 0,
-				  dict, dictlen, text, text_len);
+				  dict, dictlen, text, text_len,
+				  logbuf_cpu, current);
 	}
 	printed_len += text_len;
 
