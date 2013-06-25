@@ -100,11 +100,9 @@ static int __kona_pm_enter_idle(struct cpuidle_device *dev,
 {
 	int mach_ret = -1;
 	int safe_state = drv->safe_state_index;
-	struct kona_idle_state *kona_state =
-#if 0
-			cpuidle_get_statedata(&dev->states_usage[index]);
-#endif
-			kona_cpuidle_get_statedata(index);
+	struct kona_idle_state *kona_state = &pm_prms.states[index];
+
+	BUG_ON(!kona_state);
 
 	if (pm_prms.idle_en) {
 
@@ -113,7 +111,6 @@ static int __kona_pm_enter_idle(struct cpuidle_device *dev,
 		if (has_wake_lock(WAKE_LOCK_IDLE))
 			kona_state = cpuidle_get_statedata
 					(&dev->states_usage[safe_state]);
-			kona_state = kona_cpuidle_get_statedata(index);
 #endif
 #endif
 		BUG_ON(kona_state == NULL);
@@ -347,10 +344,12 @@ int __init kona_pm_init(struct pm_init_param *ip)
 		state->name[CPUIDLE_NAME_LEN - 1] = 0;
 		strncpy(state->desc, ip->states[i].desc, CPUIDLE_DESC_LEN - 1);
 		state->desc[CPUIDLE_DESC_LEN - 1] = 0;
+		/**
+		 * if this CSTATE is disabled in mach, disable this for
+		 * all the CPUs
+		 */
 		if (ip->states[i].params & CTRL_PARAMS_CSTATE_DISABLED) {
-#if 0
-			state->disable = 1;
-#endif
+			state->disabled = 1;
 			ip->states[i].disable_cnt++;
 		}
 	}
@@ -365,12 +364,6 @@ int __init kona_pm_init(struct pm_init_param *ip)
 		dev = &per_cpu(kona_idle_dev, cpu);
 		dev->cpu = cpu;
 		dev->state_count = ip->num_states;
-#if 0
-		for (i = 0; i < ip->num_states; i++) {
-			cpuidle_set_statedata(&dev->states_usage[i],
-					&ip->states[i]);
-		}
-#endif
 		ret = cpuidle_register_device(dev);
 		if (ret) {
 			pr_err("CPU%u: CPUidle device registration failed\n",
@@ -415,10 +408,8 @@ static int disable_idle_state(struct cpuidle_state *idle_state,
 	spin_lock_irqsave(&pm_prms.cstate_lock, flag);
 
 	if (disable) {
-#if 0
 		if (!kona_idle->disable_cnt)
-			idle_state->disable = disable;
-#endif
+			idle_state->disabled = disable;
 		kona_idle->disable_cnt++;
 	} else {
 		if (!kona_idle->disable_cnt) {
@@ -426,15 +417,25 @@ static int disable_idle_state(struct cpuidle_state *idle_state,
 			return -EINVAL;
 		}
 		kona_idle->disable_cnt--;
-#if 0
 		if (!kona_idle->disable_cnt)
-			idle_state->disable = disable;
-#endif
+			idle_state->disabled = disable;
 	}
 	spin_unlock_irqrestore(&pm_prms.cstate_lock, flag);
 	return 0;
 }
 
+/**
+ * Disable idle state @state for all CPUs
+ * @state	CSTATE to disable for all CPUs
+ * @disable	true - disable, false - enable
+ *
+ * if @state is set to CSTATE_ALL, all the CSTATES
+ * will be disabled for all the possible CPUs
+ *
+ * if you want to disable this idle state @state
+ * for specific CPU, use kona_pm_disable_idle_state_cpu()
+ * API
+ */
 int kona_pm_disable_idle_state(int state, bool disable)
 {
 	struct cpuidle_state *idle_state = NULL;
@@ -466,6 +467,38 @@ int kona_pm_disable_idle_state(int state, bool disable)
 	return disable_idle_state(idle_state, kona_idle, disable);
 }
 EXPORT_SYMBOL(kona_pm_disable_idle_state);
+
+/**
+ * disable idle state @state for cpu @cpu
+ */
+
+int kona_pm_disable_idle_state_for_cpu(int cpu, int state, bool disable)
+{
+	struct cpuidle_device *dev;
+	int i;
+
+	if (cpu > CONFIG_NR_CPUS)
+		return -EINVAL;
+
+	dev = &per_cpu(kona_idle_dev, cpu);
+	if (state == CSTATE_ALL) {
+		for (i = 0; i < pm_prms.num_states; i++) {
+			if (i ==  kona_idle_driver.safe_state_index)
+				continue;
+			dev->states_usage[i].disable = 1;
+		}
+		return 0;
+	}
+
+	for (i = 0; i < pm_prms.num_states; i++) {
+		if (pm_prms.states[i].state == state)
+			dev->states_usage[i].disable = 1;
+	}
+	if (i >= pm_prms.num_states)
+		return -EINVAL;
+	return 0;
+}
+EXPORT_SYMBOL(kona_pm_disable_idle_state_for_cpu);
 
 int kona_pm_set_suspend_state(int state_inx)
 {
@@ -520,9 +553,7 @@ static int cstate_disable_get(void *data, u64 *val)
 {
 	struct cpuidle_state *idle_state = data;
 	BUG_ON(idle_state == NULL);
-#if 0
-	*val = idle_state->disable;
-#endif
+	*val = idle_state->disabled;
 	return 0;
 }
 
