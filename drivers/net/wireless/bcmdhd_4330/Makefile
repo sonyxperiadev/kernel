@@ -175,7 +175,8 @@ ifeq ($(GGSM_WIFI_5GHz_CHANNELS),true)
   DHDCFLAGS += -DCUSTOMER_SET_COUNTRY
 endif
 
-ifeq ($(CONFIG_ARCH_HAWAII),y)
+# Remove the MACH specific flag for compilation.
+# Since this code base is used for Hawaii and Java kind of variants.
 DHDCFLAGS += -UHW_OOB
 DHDCFLAGS += -DRDWR_MACADDR
 DHDCFLAGS += -DBCMHOST_XTAL_PU_TIME_MOD
@@ -183,7 +184,6 @@ DHDCFLAGS += -DBCMHOST_XTAL_PU_TIME_MOD
 DHDCFLAGS += -DENABLE_BCN_LI_DTIM
 DHDCFLAGS += -USUPPORT_MULTIPLE_REVISION
 DHDCFLAGS += -DSET_CUSTOM_NVRAM
-endif
 
 # Local defines to allow multiple module builds
 ifneq ($(CONFIG_BCMDHD_FW_PATH_4330),)
