@@ -32,7 +32,9 @@
 #include <linux/input.h>
 #include <linux/gpio.h>
 #include <linux/irq.h>
+#ifdef CONFIG_HAS_EARLYSUSPEND
 #include <linux/earlysuspend.h>
+#endif
 #include <linux/platform_device.h>
 #include <linux/uaccess.h>
 #include <linux/slab.h>
@@ -73,8 +75,11 @@ static ssize_t ap3212c_pls_store_suspend(struct device *cd,
 static ssize_t ap3212c_pls_show_version(struct device *cd,
 					struct device_attribute *attr,
 					char *buf);
+#ifdef CONFIG_HAS_EARLYSUSPEND
 static void ap3212c_pls_early_suspend(struct early_suspend *handler);
 static void ap3212c_pls_early_resume(struct early_suspend *handler);
+#endif
+
 static int ap3212c_pls_write_data(unsigned char addr, unsigned char data);
 static int ap3212c_pls_read_data(unsigned char addr, unsigned char *data);
 static int ap3212c_pls_enable(enum SENSOR_TYPE type);
@@ -84,7 +89,7 @@ static int ap3216c_range[4] = { 28152, 7038, 1760, 440 };
 
 
 int reg_num;
-int ap3212c_pls_irq_num;
+int ap3212c_pls_irq_num = 89;
 int cali = 100;
 
 static struct wake_lock pls_delayed_work_wake_lock;
@@ -144,7 +149,49 @@ static int ap3212c_set_pif(int mode)
 	return ret;
 }
 
+static int ap3212c_set_prox_sys_config(struct i2c_client *client)
+{
+	int ret;
+	struct ap3212c_pls_t *ap3212c_pls = i2c_get_clientdata(client);
+	ret = 0;
+	if (ap3212c_pls_write_data(AP3212C_PX_LTHL,
+		(ap3212c_pls->prox_threshold_lo&0x03)) < 0) {
+		pr_err("%s: I2C Write Config Failed at %d\n",
+			__func__, __LINE__);
+		ret = -1;
+	}
+	if (ap3212c_pls_write_data(AP3212C_PX_LTHH,
+		(ap3212c_pls->prox_threshold_lo&0x3FF)>>2) < 0) {
+		pr_err("%s: I2C Write Config Failed at %d\n",
+			__func__, __LINE__);
+		ret = -1;
+	}
+	if (ap3212c_pls_write_data(AP3212C_PX_HTHL,
+		(ap3212c_pls->prox_threshold_hi&0x03)) < 0) {
+		pr_err("%s: I2C Write Config Failed at %d\n",
+			__func__, __LINE__);
+		ret = -1;
+	}
+	if (ap3212c_pls_write_data(AP3212C_PX_HTHH,
+		(ap3212c_pls->prox_threshold_hi&0x3FF)>>2) < 0) {
+		pr_err("%s: I2C Write Config Failed at %d\n",
+			__func__, __LINE__);
+		ret = -1;
+	}
+	ret = ap3212c_pls_write_data(AP3212C_PX_LED,
+		ap3212c_pls->prox_pulse_cnt);
+	if (ret < 0)
+		pr_err("%s: I2C Write Config Failed at %d\n",
+			__func__, __LINE__);
+	ret = ap3212c_pls_write_data(AP3212C_PX_CONFIGURE,
+		 ap3212c_pls->prox_gain);
+	if (ret < 0)
+		pr_err("%s: I2C Write Config Failed at %d\n",
+			__func__, __LINE__);
+	ret = ap3212c_pls_write_data(0x10, 0x08);
+	return ret;
 
+}
 static int ap3212c_get_range(void)
 {
 	u8 idx = ap3212c_read_reg(AP3212C_RAN_COMMAND,
@@ -528,35 +575,11 @@ static int ap3212c_pls_reg_init(void)
 	}
 	ap3212c_set_aif(0x02);
 	ap3212c_set_pif(0x01);
-	if (ap3212c_pls_write_data(AP3212C_PX_LTHL, 0x00) < 0) {
-		pr_err("%s: I2C Write Config Failed\n", __func__);
-		ret = -1;
-	}
-	if (ap3212c_pls_write_data(AP3212C_PX_LTHH, 0x1E) < 0) {
-		pr_err("%s: I2C Write Config Failed\n", __func__);
-		ret = -1;
-	}
-	if (ap3212c_pls_write_data(AP3212C_PX_HTHL, 0x0) < 0) {
-		pr_err("%s: I2C Write Config Failed\n", __func__);
-		ret = -1;
-	}
-	if (ap3212c_pls_write_data(AP3212C_PX_HTHH, 0x64) < 0) {
-		pr_err("%s: I2C Write Config Failed\n", __func__);
-		ret = -1;
-	}
-	/* led turn 3 pulse , 100% */
-	ret = ap3212c_pls_write_data(AP3212C_PX_LED, 0x33);
-	/* ALS interrupt filter 0x01--. 4 TIMES */
-	ret = ap3212c_pls_write_data(0x10, 0x08);
-
-#if PLS_DEBUG
-	ap3212c_pls_reg_dump();
-#endif
 
 	return ret;
 }
 
-
+#ifdef CONFIG_HAS_EARLYSUSPEND
 /*******************************************************************************
 * Function    :  ap3212c_pls_early_suspend
 * Description :  cancel the delayed work and put ts to shutdown mode
@@ -579,7 +602,7 @@ static void ap3212c_pls_early_resume(struct early_suspend *handler)
 {
 	PLS_DBG("%s\n", __func__);
 }
-
+#endif
 
 /*******************************************************************************
 * Function    :  ap3212c_pls_report_dps
@@ -633,11 +656,11 @@ static void ap3212c_pls_work(struct work_struct *work)
 	ap3212c_pls_read_data(AP3212C_PX_LSB, &datal);
 	ap3212c_pls_read_data(AP3212C_PX_MSB, &datah);
 	pdata = ((datah & 0x3F) << 4) + (datal & 0x0F);
-	pobj = datah >> 7;
-
-	PLS_DBG("\033[33;1m %s:0x%x,0x%x,%d,%d,%d\033[m",
-	     __func__, enable, int_status, adata, pdata, pobj);
-
+	/*pobj = datah >> 7;*/
+	if (pdata < pls->prox_threshold_lo)
+		pobj = 1;
+	else if (pdata > pls->prox_threshold_hi)
+		pobj = 0;
 	switch (int_status & AP3212C_PLS_BOTH_ACTIVE) {
 	case AP3212C_PLS_PXY_ACTIVE:
 		ap3212c_pls_report_dps(pobj, pls->input);
@@ -756,12 +779,13 @@ static int ap3212c_pls_probe(struct i2c_client *client,
 	INIT_WORK(&ap3212c_pls->work, ap3212c_pls_work);
 	ap3212c_pls->ltr_work_queue =
 	    create_singlethread_workqueue(AP3212C_PLS_DEVICE);
-
+#ifdef CONFIG_HAS_EARLYSUSPEND
 	ap3212c_pls->ltr_early_suspend.level =
 	    EARLY_SUSPEND_LEVEL_BLANK_SCREEN + 1;
 	ap3212c_pls->ltr_early_suspend.suspend = ap3212c_pls_early_suspend;
 	ap3212c_pls->ltr_early_suspend.resume = ap3212c_pls_early_resume;
 	register_early_suspend(&ap3212c_pls->ltr_early_suspend);
+#endif
 	if (!this_client->dev.platform_data) {
 		np = this_client->dev.of_node;
 		ret = of_property_read_u32(np,
@@ -791,17 +815,25 @@ static int ap3212c_pls_probe(struct i2c_client *client,
 		ap3212c_pls_irq_num = val;
 
 	}
-	ap3212c_pls_irq = gpio_to_irq(ap3212c_pls_irq);
+	err = ap3212c_set_prox_sys_config(this_client);
+	if (err < 0) {
+		pr_err("ap321xc: prox config err");
+		goto err_read;
+	}
+#if PLS_DEBUG
+	ap3212c_pls_reg_dump();
+#endif
+	ap3212c_pls_irq = gpio_to_irq(ap3212c_pls_irq_num);
 	client->irq = ap3212c_pls_irq;
-	PLS_DBG("IRQ number is %d", client->irq);
+	PLS_DBG("ap321xc irq number is %d", ap3212c_pls_irq_num);
 	gpio_request(ap3212c_pls_irq_num, "ALS_PS_INT");
 	gpio_direction_input(ap3212c_pls_irq_num);
 
 	if (client->irq > 0) {
 		err =
 		    request_irq(client->irq, ap3212c_pls_irq_handler,
-				IRQF_TRIGGER_FALLING, client->name,
-				ap3212c_pls);
+				IRQF_TRIGGER_FALLING | IRQF_ONESHOT,
+				client->name, ap3212c_pls);
 		if (err < 0) {
 			pr_err("%s: IRQ setup failed %d\n", __func__, err);
 			goto irq_request_err;
@@ -813,7 +845,9 @@ static int ap3212c_pls_probe(struct i2c_client *client,
 	return 0;
 err_read:
 irq_request_err:
+#ifdef CONFIG_HAS_EARLYSUSPEND
 	unregister_early_suspend(&ap3212c_pls->ltr_early_suspend);
+#endif
 	destroy_workqueue(ap3212c_pls->ltr_work_queue);
 exit_input_register_failed:
 	input_free_device(input_dev);
@@ -838,8 +872,9 @@ static int ap3212c_pls_remove(struct i2c_client *client)
 
 	flush_workqueue(ap3212c_pls->ltr_work_queue);
 	destroy_workqueue(ap3212c_pls->ltr_work_queue);
-
+#if CONFIG_HAS_EARLYSUSPEND
 	unregister_early_suspend(&ap3212c_pls->ltr_early_suspend);
+#endif
 	misc_deregister(&ap3212c_pls_device);
 	input_unregister_device(ap3212c_pls->input);
 	input_free_device(ap3212c_pls->input);
