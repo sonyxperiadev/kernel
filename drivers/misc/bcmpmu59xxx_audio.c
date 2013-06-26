@@ -75,6 +75,8 @@ struct bcmpmu_audio {
 #endif
 	u32 pll_use_count;
 	int ihf_autoseq_dis;
+	struct delayed_work irq_work;
+	int event;
 };
 
 static struct bcmpmu_audio *pmu_audio;
@@ -921,34 +923,55 @@ void bcmpmu_audio_deinit(void)
 }
 EXPORT_SYMBOL(bcmpmu_audio_deinit);
 
-static void bcmpmu_audio_isr(enum bcmpmu59xxx_irq irq, void *data)
+static void bcmpmu_audio_sc_work(struct work_struct *work)
 {
-	struct bcmpmu59xxx *bcmpmu = ((struct bcmpmu_audio *)data)->bcmpmu;
+	struct bcmpmu_audio *bcmpmu_audio =
+		container_of(work, struct bcmpmu_audio, irq_work.work);
+	struct bcmpmu59xxx *bcmpmu = bcmpmu_audio->bcmpmu;
 	u8 val;
-	pr_audio(FLOW, "%s: Interrupt for %s\n", __func__,
-			(irq == PMU_IRQ_AUD_HSAB_SHCKT) ? "HS SC" : "IHF SC");
-	switch (irq) {
+	switch (bcmpmu_audio->event) {
 	case PMU_IRQ_AUD_HSAB_SHCKT:
+		mutex_lock(&bcmpmu_audio->lock);
 		bcmpmu->read_dev(bcmpmu, PMU_REG_IHF_HS_TST, &val);
-		val |= IHF_HS_SC_EDISABLE;
+		val |= HS_SC_EDISABLE;
 		bcmpmu->write_dev(bcmpmu, PMU_REG_IHF_HS_TST, val);
 		udelay(35);
-		val &= ~IHF_HS_SC_EDISABLE_MASK;
+		val &= ~HS_SC_EDISABLE_MASK;
 		bcmpmu->write_dev(bcmpmu, PMU_REG_IHF_HS_TST, val);
+		bcmpmu_hs_power(false);
+		udelay(60);
+		bcmpmu_hs_power(true);
+		mutex_unlock(&bcmpmu_audio->lock);
 		break;
 	case PMU_IRQ_AUD_IHFD_SHCKT:
+		mutex_lock(&bcmpmu_audio->lock);
 		bcmpmu->read_dev(bcmpmu, PMU_REG_IHF_HS_TST, &val);
 		val |= IHF_SC_EDISABLE_MASK;
 		bcmpmu->write_dev(bcmpmu, PMU_REG_IHF_HS_TST, val);
 		udelay(35);
 		val &= ~IHF_SC_EDISABLE_MASK;
 		bcmpmu->write_dev(bcmpmu, PMU_REG_IHF_HS_TST, val);
+		bcmpmu_ihf_power(false);
+		udelay(60);
+		bcmpmu_ihf_power(true);
+		mutex_unlock(&bcmpmu_audio->lock);
 		break;
 	default:
 		pr_info("%s: Wrong IRQ number\n", __func__);
 		break;
 	}
 }
+
+static void bcmpmu_audio_isr(enum bcmpmu59xxx_irq irq, void *data)
+{
+	struct bcmpmu_audio *paudio = data;
+	pr_audio(INIT, "%s: Interrupt for %s\n", __func__,
+			(irq == PMU_IRQ_AUD_HSAB_SHCKT) ? "HS SC" : "IHF SC");
+
+	paudio->event = irq;
+	schedule_delayed_work(&paudio->irq_work, 0);
+}
+
 
 #ifdef CONFIG_DEBUG_FS
 static int audio_hs_setgain(void *data, u64 val)
@@ -1010,13 +1033,8 @@ static int __devinit bcmpmu_audio_probe(struct platform_device *pdev)
 	pmu_audio->IHF_On = false;
 	pmu_audio->ihf_autoseq_dis = pdata->ihf_autoseq_dis;
 
-	/* temporarily disable HS short-circuitry as HS SC interrupt
-	 * is getting generated continuously on 59039 variants.
-	 * Remove this once fix has been found
-	 */
-#if defined(CONFIG_MFD_BCM59039) || defined(CONFIG_MFD_BCM_PMU59xxx)
+	INIT_DELAYED_WORK(&audio_data->irq_work, bcmpmu_audio_sc_work);
 	bcmpmu_hs_shortcircuit_dis(true);
-#endif
 
 	/* register for HS and IHF Shortcircuit INT */
 	bcmpmu->register_irq(bcmpmu, PMU_IRQ_AUD_HSAB_SHCKT, bcmpmu_audio_isr,
@@ -1025,6 +1043,9 @@ static int __devinit bcmpmu_audio_probe(struct platform_device *pdev)
 			pmu_audio);
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_AUD_HSAB_SHCKT);
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_AUD_IHFD_SHCKT);
+
+	bcmpmu_hs_shortcircuit_dis(false);
+
 #ifdef CONFIG_DEBUG_FS
 	if (!bcmpmu->dent_bcmpmu)
 		goto err;
