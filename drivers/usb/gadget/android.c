@@ -38,6 +38,7 @@
 #include "u_serial.c"
 #define USB_FACM_INCLUDED
 #include "f_acm.c"
+#include "f_adb.c"
 #include "f_mtp.c"
 #include "f_accessory.c"
 #define USB_ETH_RNDIS y
@@ -211,6 +212,103 @@ static void android_disable(struct android_dev *dev)
 
 /*-------------------------------------------------------------------------*/
 /* Supported functions initialization */
+
+
+
+struct adb_data {
+	bool opened;
+	bool enabled;
+};
+
+static int
+adb_function_init(struct android_usb_function *f,
+		struct usb_composite_dev *cdev)
+{
+	f->config = kzalloc(sizeof(struct adb_data), GFP_KERNEL);
+	if (!f->config)
+		return -ENOMEM;
+
+	return adb_setup();
+}
+
+static void adb_function_cleanup(struct android_usb_function *f)
+{
+	adb_cleanup();
+	kfree(f->config);
+}
+
+static int
+adb_function_bind_config(struct android_usb_function *f,
+		struct usb_configuration *c)
+{
+	return adb_bind_config(c);
+}
+
+static void adb_android_function_enable(struct android_usb_function *f)
+{
+/*	struct android_dev *dev = _android_dev; */
+	struct adb_data *data = f->config;
+
+	data->enabled = true;
+
+	/* Disable the gadget until adbd is ready */
+	/* Removed: can not pass USB CV test ....  */
+	/* if (!data->opened)
+		android_disable(dev); */
+}
+
+static void adb_android_function_disable(struct android_usb_function *f)
+{
+/*	struct android_dev *dev = _android_dev; */
+	struct adb_data *data = f->config;
+
+	data->enabled = false;
+
+	/* Balance the disable that was called in closed_callback */
+	/* Removed: can not pass USB CV test ....  */
+	/*if (!data->opened)
+		android_enable(dev); */
+}
+
+static struct android_usb_function adb_function = {
+	.name		= "adb",
+	.enable		= adb_android_function_enable,
+	.disable	= adb_android_function_disable,
+	.init		= adb_function_init,
+	.cleanup	= adb_function_cleanup,
+	.bind_config	= adb_function_bind_config,
+};
+
+static void adb_ready_callback(void)
+{
+	struct android_dev *dev = _android_dev;
+	struct adb_data *data = adb_function.config;
+
+	mutex_lock(&dev->mutex);
+
+	data->opened = true;
+	/* Removed: can not pass USB CV test ....  */
+	/*if (data->enabled)
+		android_enable(dev); */
+
+	mutex_unlock(&dev->mutex);
+}
+
+static void adb_closed_callback(void)
+{
+	struct android_dev *dev = _android_dev;
+	struct adb_data *data = adb_function.config;
+
+	mutex_lock(&dev->mutex);
+
+	data->opened = false;
+	/* Removed: can not pass USB CV test ....  */
+	/*if (data->enabled)
+		android_disable(dev);*/
+
+	mutex_unlock(&dev->mutex);
+}
+
 
 struct functionfs_config {
 	bool opened;
@@ -1105,6 +1203,7 @@ static struct android_usb_function audio_source_function = {
 #endif
 
 static struct android_usb_function *supported_functions[] = {
+	&adb_function,
 	&ffs_function,
 	&acm_function,
 	&mtp_function,
