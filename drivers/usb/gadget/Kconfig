@@ -896,7 +896,7 @@ config USB_G_PRINTER
 	  which includes sample code for accessing the device file.
 
 config USB_G_ANDROID
-	tristate "Android Composite Gadget"
+	boolean "Android Composite Gadget"
 	select USB_LIBCOMPOSITE
 	help
 	  The Android Composite Gadget supports multiple USB
@@ -905,13 +905,13 @@ config USB_G_ANDROID
 	  Each function can be configured and enabled/disabled
 	  dynamically from userspace through a sysfs interface.
 
+
 config USB_ANDROID_RNDIS_DWORD_ALIGNED
 	boolean "Use double word aligned"
 	depends on USB_G_ANDROID
 	help
 		Provides dword aligned for DMA controller.
 
-if TTY
 config USB_MULTI_DISK_SUPPORT
 	boolean "Multiple disk support for android mass storage gadget"
 	depends on USB_G_ANDROID
@@ -947,6 +947,8 @@ config USB_ETH_SKB_ALLOC_OPTIMIZATION
 	   optimization approach to optimize the skb allocation.
 
 	   If unsure, say "y".
+
+if TTY
 
 config USB_CDC_COMPOSITE
 	tristate "CDC Composite Device (Ethernet and ACM)"

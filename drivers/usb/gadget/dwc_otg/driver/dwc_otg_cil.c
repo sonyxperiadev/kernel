@@ -81,8 +81,13 @@ void dwc_otg_core_soft_disconnect(dwc_otg_core_if_t *core_if, bool en)
 		dwc_write_reg32(&core_if->dev_if->dev_global_regs->dctl,
 				dctl.d32);
 #ifdef CONFIG_USB_OTG_UTILS
-		if (core_if->xceiver->pullup_on && (!gotgctl.b.hnpreq))
-			core_if->xceiver->pullup_on(core_if->xceiver, !en);
+		if(en) {
+			if (core_if->xceiver->notify_disconnect && (!gotgctl.b.hnpreq))
+				core_if->xceiver->notify_disconnect(core_if->xceiver, USB_SPEED_HIGH);
+		}else {
+			if (core_if->xceiver->notify_connect && (!gotgctl.b.hnpreq))
+						core_if->xceiver->notify_connect(core_if->xceiver, USB_SPEED_HIGH);
+		}
 #endif
 	} else {
 		DWC_PRINTF("NOT SUPPORTED IN HOST MODE\n");
@@ -459,9 +464,9 @@ dwc_otg_core_if_t *dwc_otg_cil_init(const uint32_t *reg_base_addr)
 	/*
 	 * Get OTG transceiver driver.
 	 */
-	core_if->xceiver = usb_get_transceiver();
+	core_if->xceiver = usb_get_phy(USB_PHY_TYPE_USB2);
 	if (!core_if->xceiver) {
-		DWC_WARN("usb_get_transceiver failed\n");
+		DWC_WARN("usb_get_phy failed\n");
 		dwc_free(host_if);
 		dwc_free(dev_if);
 		DWC_WORKQ_FREE(core_if->wq_otg);
@@ -505,7 +510,7 @@ void dwc_otg_cil_remove(dwc_otg_core_if_t *core_if)
 	if (core_if->xceiver) {
 		usb_unregister_notifier(core_if->xceiver,
 					&core_if->otg_xceiv_nb);
-		usb_put_transceiver(core_if->xceiver);
+		usb_put_phy(core_if->xceiver);
 	}
 #endif
 
@@ -7122,8 +7127,8 @@ void dwc_otg_initiate_srp(dwc_otg_core_if_t *core_if)
 		return;
 	}
 #ifdef CONFIG_USB_OTG_UTILS
-	if (core_if->xceiver->pullup_on)
-		core_if->xceiver->pullup_on(core_if->xceiver, true);
+	if (core_if->xceiver->notify_connect)
+		core_if->xceiver->notify_connect(core_if->xceiver, USB_SPEED_HIGH);
 
 #endif
 

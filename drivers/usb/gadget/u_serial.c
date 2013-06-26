@@ -486,7 +486,7 @@ __acquires(&port->port_lock)
 #ifndef CONFIG_USE_WORKQ_PUSH
 static void gs_rx_push(unsigned long _port)
 {
-	struct gs_port	*port = (void *)_port;
+	struct gs_port		*port = (void *)_port;
 	struct list_head	*queue = &port->read_queue;
 #else
 static void gs_rx_push(struct work_struct *work)
@@ -957,7 +957,7 @@ static int gs_put_char(struct tty_struct *tty, unsigned char ch)
 	if (WARN_ON(!port))
 		return 0;
 
-	pr_vdebug("gs_put_char: (%d,%p) char=0x%x, called from %pf\n",
+	pr_vdebug("gs_put_char: (%d,%p) char=0x%x, called from %p\n",
 		port->port_num, tty, ch, __builtin_return_address(0));
 
 	spin_lock_irqsave(&port->port_lock, flags);
@@ -1136,7 +1136,11 @@ static int gs_closed(struct gs_port *port)
 
 static void gserial_free_port(struct gs_port *port)
 {
+#ifndef CONFIG_USE_WORKQ_PUSH
 	tasklet_kill(&port->push);
+#else
+	flush_work(&port->push);
+#endif
 	/* wait for old opens to finish */
 	wait_event(port->port.close_wait, gs_closed(port));
 	WARN_ON(port->port_usb != NULL);
@@ -1187,7 +1191,8 @@ int gserial_alloc_line(unsigned char *line_num)
 
 	/* ... and sysfs class devices, so mdev/udev make /dev/ttyGS* */
 
-	tty_dev = tty_register_device(gs_tty_driver, port_num, NULL);
+	tty_dev = tty_port_register_device(&ports[port_num].port->port,
+			gs_tty_driver, port_num, NULL);
 	if (IS_ERR(tty_dev)) {
 		struct gs_port	*port;
 		pr_err("%s: failed to register tty for port %d, err %ld\n",
@@ -1310,9 +1315,11 @@ void gserial_disconnect(struct gserial *gser)
 	if (!port)
 		return;
 
+#ifdef CONFIG_BRCM_FUSE_LOG
 	if (port->port_num == ACM_LOGGING_PORT)
 		if (acm_logging_cb->stop)
 			acm_logging_cb->stop();
+#endif
 
 	/* tell the TTY glue not to do I/O here any more */
 	spin_lock_irqsave(&port->port_lock, flags);
@@ -1368,6 +1375,7 @@ static int userial_init(void)
 	gs_tty_driver->subtype = SERIAL_TYPE_NORMAL;
 	gs_tty_driver->flags = TTY_DRIVER_REAL_RAW | TTY_DRIVER_DYNAMIC_DEV;
 	gs_tty_driver->init_termios = tty_std_termios;
+
 
 	/* 9600-8-N-1 ... matches defaults expected by "usbser.sys" on
 	 * MS-Windows.  Otherwise, most of these flags shouldn't affect

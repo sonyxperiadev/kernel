@@ -297,6 +297,8 @@ static struct usb_gadget_strings *acm_strings[] = {
 	NULL,
 };
 
+#ifdef CONFIG_BRCM_FUSE_LOG
+
 /**
 * This function is called to register the callback functions for logging modules.
 *
@@ -310,6 +312,7 @@ char acm_logging_register_callbacks(struct acm_logging_callbacks *_cb)
 	return 0;	/* logging is not ready to send */
 }
 EXPORT_SYMBOL(acm_logging_register_callbacks);
+#endif
 
 /*-------------------------------------------------------------------------*/
 
@@ -590,9 +593,12 @@ static void acm_connect(struct gserial *port)
 
 	acm->serial_state |= ACM_CTRL_DSR | ACM_CTRL_DCD;
 	acm_notify_serial_state(acm);
+
+#ifdef CONFIG_BRCM_FUSE_LOG
 	if (acm->port_num == ACM_LOGGING_PORT)
 		if (acm_logging_cb->start)
 			acm_logging_cb->start();
+#endif
 }
 
 static void acm_disconnect(struct gserial *port)
@@ -601,9 +607,12 @@ static void acm_disconnect(struct gserial *port)
 
 	pr_info("%s", __func__);
 
+#ifdef CONFIG_BRCM_FUSE_LOG
 	if (acm->port_num == ACM_LOGGING_PORT)
 		if (acm_logging_cb->stop)
 			acm_logging_cb->stop();
+#endif
+
 	acm->serial_state &= ~(ACM_CTRL_DSR | ACM_CTRL_DCD);
 	acm_notify_serial_state(acm);
 }

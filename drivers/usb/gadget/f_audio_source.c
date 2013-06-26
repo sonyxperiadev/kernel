@@ -142,11 +142,7 @@ static struct uac_format_type_i_discrete_descriptor_1 as_type_i_desc = {
 static struct usb_endpoint_descriptor hs_as_in_ep_desc  = {
 	.bLength =		USB_DT_ENDPOINT_AUDIO_SIZE,
 	.bDescriptorType =	USB_DT_ENDPOINT,
-<<<<<<< HEAD
 	.bEndpointAddress =	USB_DIR_IN,
-=======
-	.bEndpointAddress =	0x8C, /* USB_DIR_IN, */
->>>>>>> sdb-common-android-jb-4.2.2
 	.bmAttributes =		USB_ENDPOINT_SYNC_SYNC
 				| USB_ENDPOINT_XFER_ISOC,
 	.wMaxPacketSize =	__constant_cpu_to_le16(IN_EP_MAX_PACKET_SIZE),
@@ -157,11 +153,7 @@ static struct usb_endpoint_descriptor hs_as_in_ep_desc  = {
 static struct usb_endpoint_descriptor fs_as_in_ep_desc  = {
 	.bLength =		USB_DT_ENDPOINT_AUDIO_SIZE,
 	.bDescriptorType =	USB_DT_ENDPOINT,
-<<<<<<< HEAD
 	.bEndpointAddress =	USB_DIR_IN,
-=======
-	.bEndpointAddress =	0x8C, /* USB_DIR_IN | 12, */
->>>>>>> sdb-common-android-jb-4.2.2
 	.bmAttributes =		USB_ENDPOINT_SYNC_SYNC
 				| USB_ENDPOINT_XFER_ISOC,
 	.wMaxPacketSize =	__constant_cpu_to_le16(IN_EP_MAX_PACKET_SIZE),
@@ -251,10 +243,6 @@ struct audio_dev {
 
 	struct list_head		idle_reqs;
 	struct usb_ep			*in_ep;
-<<<<<<< HEAD
-=======
-	struct usb_endpoint_descriptor	*in_desc;
->>>>>>> sdb-common-android-jb-4.2.2
 
 	spinlock_t			lock;
 
@@ -423,11 +411,7 @@ static void audio_data_complete(struct usb_ep *ep, struct usb_request *req)
 
 	audio_req_put(audio, req);
 
-<<<<<<< HEAD
 	if (!audio->buffer_start || req->status)
-=======
-	if (!audio->buffer_start)
->>>>>>> sdb-common-android-jb-4.2.2
 		return;
 
 	audio->period_offset += req->actual;
@@ -542,19 +526,12 @@ static int audio_set_alt(struct usb_function *f, unsigned intf, unsigned alt)
 	struct usb_composite_dev *cdev = f->config->cdev;
 	int ret;
 
-<<<<<<< HEAD
 	pr_debug("audio_set_alt intf %d, alt %d\n", intf, alt);
 
-=======
->>>>>>> sdb-common-android-jb-4.2.2
 	ret = config_ep_by_speed(cdev->gadget, f, audio->in_ep);
 	if (ret)
 		return ret;
 
-<<<<<<< HEAD
-=======
-	pr_debug("audio_set_alt intf %d, alt %d\n", intf, alt);
->>>>>>> sdb-common-android-jb-4.2.2
 	usb_ep_enable(audio->in_ep);
 	return 0;
 }
@@ -622,11 +599,7 @@ audio_bind(struct usb_configuration *c, struct usb_function *f)
 		hs_as_in_ep_desc.bEndpointAddress =
 			fs_as_in_ep_desc.bEndpointAddress;
 
-<<<<<<< HEAD
 	f->fs_descriptors = fs_audio_desc;
-=======
-	f->descriptors = fs_audio_desc;
->>>>>>> sdb-common-android-jb-4.2.2
 	f->hs_descriptors = hs_audio_desc;
 
 	for (i = 0, status = 0; i < IN_EP_REQ_COUNT && status == 0; i++) {
@@ -653,14 +626,10 @@ audio_unbind(struct usb_configuration *c, struct usb_function *f)
 		audio_request_free(req, audio->in_ep);
 
 	snd_card_free_when_closed(audio->card);
-<<<<<<< HEAD
 	audio->card = NULL;
 	audio->pcm = NULL;
 	audio->substream = NULL;
 	audio->in_ep = NULL;
-=======
-	kfree(audio);
->>>>>>> sdb-common-android-jb-4.2.2
 }
 
 static void audio_pcm_playback_start(struct audio_dev *audio)
@@ -776,7 +745,6 @@ static int audio_pcm_playback_trigger(struct snd_pcm_substream *substream,
 	return ret;
 }
 
-<<<<<<< HEAD
 static struct audio_dev _audio_dev = {
 	.func = {
 		.name = "audio_source",
@@ -790,8 +758,6 @@ static struct audio_dev _audio_dev = {
 	.idle_reqs = LIST_HEAD_INIT(_audio_dev.idle_reqs),
 };
 
-=======
->>>>>>> sdb-common-android-jb-4.2.2
 static struct snd_pcm_ops audio_playback_ops = {
 	.open		= audio_pcm_open,
 	.close		= audio_pcm_close,
@@ -814,35 +780,12 @@ int audio_source_bind_config(struct usb_configuration *c,
 	config->card = -1;
 	config->device = -1;
 
-<<<<<<< HEAD
 	audio = &_audio_dev;
-=======
-	audio = kzalloc(sizeof *audio, GFP_KERNEL);
-	if (!audio)
-		return -ENOMEM;
-
-	audio->func.name = "audio_source";
-
-	spin_lock_init(&audio->lock);
-
-	audio->func.bind = audio_bind;
-	audio->func.unbind = audio_unbind;
-	audio->func.set_alt = audio_set_alt;
-	audio->func.setup = audio_setup;
-	audio->func.disable = audio_disable;
-	audio->in_desc = &fs_as_in_ep_desc;
-
-	INIT_LIST_HEAD(&audio->idle_reqs);
->>>>>>> sdb-common-android-jb-4.2.2
 
 	err = snd_card_create(SNDRV_DEFAULT_IDX1, SNDRV_DEFAULT_STR1,
 			THIS_MODULE, 0, &card);
 	if (err)
-<<<<<<< HEAD
 		return err;
-=======
-		goto snd_card_fail;
->>>>>>> sdb-common-android-jb-4.2.2
 
 	snd_card_set_dev(card, &c->cdev->gadget->dev);
 
@@ -881,10 +824,5 @@ add_fail:
 register_fail:
 pcm_fail:
 	snd_card_free(audio->card);
-<<<<<<< HEAD
-=======
-snd_card_fail:
-	kfree(audio);
->>>>>>> sdb-common-android-jb-4.2.2
 	return err;
 }

@@ -638,9 +638,6 @@ struct usb_device_info {
 	u_int8_t udi_protocol;
 	u_int8_t udi_config;
 	u_int8_t udi_speed;
-#define USB_SPEED_LOW  1
-#define USB_SPEED_FULL 2
-#define USB_SPEED_HIGH 3
 	int udi_power;		/* power consumption in mA, 0 if selfpowered */
 	int udi_nports;
 	char udi_devnames[USB_MAX_DEVNAMES][USB_MAX_DEVNAMELEN];

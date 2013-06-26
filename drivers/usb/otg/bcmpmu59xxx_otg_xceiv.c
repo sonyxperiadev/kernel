@@ -234,9 +234,8 @@ static int bcmpmu_otg_xceiv_set_otg_enable(struct usb_otg *otg,
 	xceiv_data->otg_enabled = enable;
 	return 0;
 }
-
-static int bcmpmu_otg_xceiv_pullup_on(struct usb_phy *phy,
-	bool on)
+static int bcmpmu_otg_xceiv_connect(struct usb_phy *phy,
+		enum usb_device_speed speed)
 {
 	struct bcmpmu_otg_xceiv_data *xceiv_data =
 		dev_get_drvdata(phy->dev);
@@ -244,20 +243,46 @@ static int bcmpmu_otg_xceiv_pullup_on(struct usb_phy *phy,
 	if (!xceiv_data)
 		return -EINVAL;
 
-	bcm_hsotgctrl_phy_set_non_driving(!on);
+	dev_dbg(phy->dev, "%s speed device has connected\n",
+		(speed == USB_SPEED_HIGH) ? "high" : "non-high");
+
+	if (speed == USB_SPEED_HIGH){
+		bcm_hsotgctrl_phy_set_non_driving(0);
+	}
 
 	return 0;
 }
 
-static void bcmpmu_otg_xceiv_suspend_core(void)
+static int bcmpmu_otg_xceiv_disconnect(struct usb_phy *phy,
+		enum usb_device_speed speed)
 {
-	atomic_notifier_call_chain(&usb_get_transceiver()->notifier,
+	struct bcmpmu_otg_xceiv_data *xceiv_data =
+		dev_get_drvdata(phy->dev);
+
+	if (!xceiv_data)
+		return -EINVAL;
+
+	dev_dbg(phy->dev, "%s speed device has disconnected\n",
+		(speed == USB_SPEED_HIGH) ? "high" : "non-high");
+
+	if (speed == USB_SPEED_HIGH){
+		bcm_hsotgctrl_phy_set_non_driving(1);
+	}
+
+	return 0;
+}
+
+
+
+static void bcmpmu_otg_xceiv_suspend_core(struct usb_phy *phy)
+{
+	atomic_notifier_call_chain(&phy->notifier,
 			USB_EVENT_SUSPEND_CORE, NULL);
 }
 
-static void bcmpmu_otg_xceiv_wakeup_core(void)
+static void bcmpmu_otg_xceiv_wakeup_core(struct usb_phy *phy)
 {
-	atomic_notifier_call_chain(&usb_get_transceiver()->notifier,
+	atomic_notifier_call_chain(&phy->notifier,
 			USB_EVENT_WAKEUP_CORE, NULL);
 }
 
@@ -270,10 +295,10 @@ static int bcmpmu_otg_xceiv_set_suspend(struct usb_phy *phy,
 	if (!xceiv_data)
 		return -EINVAL;
 
-	if (!xceiv_data->otg_enabled && suspend)
-		bcm_hsotgctrl_handle_bus_suspend(
-					bcmpmu_otg_xceiv_suspend_core,
-					bcmpmu_otg_xceiv_wakeup_core);
+	if (!xceiv_data->otg_enabled && suspend){
+		bcmpmu_otg_xceiv_suspend_core(phy);
+		bcm_hsotgctrl_handle_bus_suspend();
+	}
 
 	return 0;
 }
@@ -467,6 +492,8 @@ static int bcmpmu_otg_xceiv_set_vbus_power(struct usb_phy *phy,
 		(g_usb_charger_type == PMU_USB_TYPE_ACA))
 		return bcmpmu_usb_set(xceiv_data->bcmpmu,
 			   BCMPMU_USB_CTRL_CHRG_CURR_LMT, ma);
+
+	return -EINVAL;
 }
 
 static int bcmpmu_otg_xceiv_set_host(struct usb_otg *otg,
@@ -838,7 +865,7 @@ static void bcmpmu_otg_free_regulator(struct bcmpmu_otg_xceiv_data *xceiv_data)
 	}
 }
 
-static int __devinit bcmpmu_otg_xceiv_probe(struct platform_device *pdev)
+static int __init bcmpmu_otg_xceiv_probe(struct platform_device *pdev)
 {
 	int error = 0;
 	struct bcmpmu_otg_xceiv_data *xceiv_data;
@@ -908,6 +935,7 @@ static int __devinit bcmpmu_otg_xceiv_probe(struct platform_device *pdev)
 			  bcmpmu_otg_xceiv_delayed_adp_handler);
 
 	xceiv_data->otg_xceiver.phy.state = OTG_STATE_UNDEFINED;
+	xceiv_data->otg_xceiver.phy.type = USB_PHY_TYPE_UNDEFINED;
 	xceiv_data->otg_xceiver.phy.otg->set_vbus = bcmpmu_otg_xceiv_set_vbus;
 	xceiv_data->otg_xceiver.phy.otg->set_peripheral =
 	    bcmpmu_otg_xceiv_set_peripheral;
@@ -922,8 +950,9 @@ static int __devinit bcmpmu_otg_xceiv_probe(struct platform_device *pdev)
 	    bcmpmu_otg_xceiv_set_srp_reqd_handler;
 	xceiv_data->otg_xceiver.phy.otg->set_otg_enable =
 	    bcmpmu_otg_xceiv_set_otg_enable;
-	xceiv_data->otg_xceiver.phy.pullup_on =
-		bcmpmu_otg_xceiv_pullup_on;
+	xceiv_data->otg_xceiver.phy.notify_connect = bcmpmu_otg_xceiv_connect;
+	xceiv_data->otg_xceiver.phy.notify_disconnect = bcmpmu_otg_xceiv_disconnect; 
+
 	xceiv_data->otg_xceiver.phy.set_suspend =
 	    bcmpmu_otg_xceiv_set_suspend;
 
@@ -970,7 +999,7 @@ static int __devinit bcmpmu_otg_xceiv_probe(struct platform_device *pdev)
 		goto error_attr_host;
 #endif
 
-	usb_set_transceiver(&xceiv_data->otg_xceiver.phy);
+	usb_add_phy(&xceiv_data->otg_xceiver.phy, USB_PHY_TYPE_USB2);
 
 	platform_set_drvdata(pdev, xceiv_data);
 
@@ -1007,6 +1036,9 @@ static int __devinit bcmpmu_otg_xceiv_probe(struct platform_device *pdev)
 	bcmpmu_otg_xceiv_set_def_state(xceiv_data,
 		xceiv_data->otg_xceiver.phy.otg->default_a);
 
+	bcm_hsotgctrl_register_wakeup_cb((send_core_event_cb_t)bcmpmu_otg_xceiv_wakeup_core,
+									 (void*)&xceiv_data->otg_xceiver.phy);
+
 	pm_runtime_set_active(&pdev->dev);
 	pm_runtime_enable(&pdev->dev);
 	g_usb_charger_type = PMU_USB_TYPE_NONE;
@@ -1033,6 +1065,7 @@ static int __exit bcmpmu_otg_xceiv_remove(struct platform_device *pdev)
 {
 	struct bcmpmu_otg_xceiv_data *xceiv_data = platform_get_drvdata(pdev);
 
+	usb_remove_phy(&xceiv_data->otg_xceiver.phy);
 	xceiv_data->otg_xceiver.phy.state = OTG_STATE_UNDEFINED;
 	device_remove_file(xceiv_data->dev, &dev_attr_wake);
 	device_remove_file(xceiv_data->dev, &dev_attr_vbus);
@@ -1058,6 +1091,9 @@ static int __exit bcmpmu_otg_xceiv_remove(struct platform_device *pdev)
 	destroy_workqueue(xceiv_data->bcm_otg_work_queue);
 	bcmpmu_otg_free_regulator(xceiv_data);
 	kfree(xceiv_data);
+
+	bcm_hsotgctrl_unregister_wakeup_cb();
+
 	bcm_hsotgctrl_phy_deinit();
 
 	g_usb_charger_type = PMU_USB_TYPE_NONE;

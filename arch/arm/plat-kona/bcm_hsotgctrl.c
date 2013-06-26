@@ -65,10 +65,12 @@ struct bcm_hsotgctrl_drv_data {
 	bool irq_enabled;
 	bool allow_suspend;
 	bool usb_active;
+	send_core_event_cb_t wakeup_core_cb;
+	void *wakeup_arg;
 };
 
 static struct bcm_hsotgctrl_drv_data *local_hsotgctrl_handle;
-static send_core_event_cb_t local_wakeup_core_cb;
+
 
 static ssize_t dump_hsotgctrl(struct device *dev,
 	struct device_attribute *attr,
@@ -462,9 +464,8 @@ void bcm_hsotgctrl_wakeup_core(void)
 	/* Do MDIO init values after PHY is up */
 	bcm_hsotgctrl_phy_mdio_initialization();
 
-	if (local_wakeup_core_cb) {
-		local_wakeup_core_cb();
-		local_wakeup_core_cb = NULL;
+	if (local_hsotgctrl_handle->wakeup_core_cb) {
+		local_hsotgctrl_handle->wakeup_core_cb(local_hsotgctrl_handle->wakeup_arg);
 	}
 
 }
@@ -527,8 +528,7 @@ int bcm_hsotgctrl_get_clk_count(void)
 }
 EXPORT_SYMBOL_GPL(bcm_hsotgctrl_get_clk_count);
 
-int bcm_hsotgctrl_handle_bus_suspend(send_core_event_cb_t suspend_core_cb,
-		send_core_event_cb_t wakeup_core_cb)
+int bcm_hsotgctrl_handle_bus_suspend(void)
 {
 	struct bcm_hsotgctrl_drv_data *bcm_hsotgctrl_handle =
 		local_hsotgctrl_handle;
@@ -539,11 +539,6 @@ int bcm_hsotgctrl_handle_bus_suspend(send_core_event_cb_t suspend_core_cb,
 	if ((!bcm_hsotgctrl_handle->otg_clk) ||
 		  (!bcm_hsotgctrl_handle->dev))
 		return -EIO;
-
-	if (suspend_core_cb)
-		suspend_core_cb();
-	if (wakeup_core_cb)
-		local_wakeup_core_cb = wakeup_core_cb;
 
 	/* Enable software control of PHY-PM */
 	bcm_hsotgctrl_set_soft_ldo_pwrdn(true);
@@ -574,6 +569,24 @@ int bcm_hsotgctrl_handle_bus_suspend(send_core_event_cb_t suspend_core_cb,
 	return 0;
 }
 EXPORT_SYMBOL_GPL(bcm_hsotgctrl_handle_bus_suspend);
+
+int bcm_hsotgctrl_register_wakeup_cb(send_core_event_cb_t wakeup_core_cb, void* arg)
+{
+	local_hsotgctrl_handle->wakeup_core_cb = wakeup_core_cb;
+	local_hsotgctrl_handle->wakeup_arg = arg;
+	return 0;
+}
+EXPORT_SYMBOL_GPL(bcm_hsotgctrl_register_wakeup_cb);
+
+
+int bcm_hsotgctrl_unregister_wakeup_cb(void)
+{
+	local_hsotgctrl_handle->wakeup_core_cb = NULL;
+	local_hsotgctrl_handle->wakeup_arg = NULL;
+	return 0;
+}
+EXPORT_SYMBOL_GPL(bcm_hsotgctrl_unregister_wakeup_cb);
+
 
 static int bcm_hsotgctrl_probe(struct platform_device *pdev)
 {
@@ -742,7 +755,6 @@ static int bcm_hsotgctrl_probe(struct platform_device *pdev)
 		dev_warn(&pdev->dev, "Failed to request IRQ for wakeup\n");
 	}
 
-	local_wakeup_core_cb = NULL;
 	return 0;
 
 Error_bcm_hsotgctrl_probe:
@@ -767,7 +779,6 @@ static int bcm_hsotgctrl_remove(struct platform_device *pdev)
 	clk_put(hsotgctrl_drvdata->otg_clk);
 	clk_put(hsotgctrl_drvdata->mdio_master_clk);
 	local_hsotgctrl_handle = NULL;
-	local_wakeup_core_cb = NULL;
 	kfree(hsotgctrl_drvdata);
 
 	return 0;
