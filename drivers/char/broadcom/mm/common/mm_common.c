@@ -537,6 +537,17 @@ static int mm_file_write(struct file *filp, const char __user *buf,
 		}
 	size -= sizeof(mm_job_node->job.type);
 	buf += sizeof(mm_job_node->job.type);
+#ifdef CONFIG_ARCH_JAVA
+	if (mm_job_node->job.type & MM_DIRTY_JOB) {
+		mm_job_node->job.type &= ~MM_DIRTY_JOB;
+		mm_job_node->job.status = MM_JOB_STATUS_DIRTY;
+		}
+	else
+		mm_job_node->job.status = MM_JOB_STATUS_READY;
+#else
+	mm_job_node->job.type &= ~MM_DIRTY_JOB;
+	mm_job_node->job.status = MM_JOB_STATUS_READY;
+#endif
 	if (copy_from_user(&(mm_job_node->job.id), buf , \
 				sizeof(mm_job_node->job.id))) {
 		pr_err("copy_from_user failed for type");

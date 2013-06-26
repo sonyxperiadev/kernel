@@ -17,6 +17,9 @@ the GPL, without Broadcom's express prior written consent.
 #define MAX_HANDLES 4
 
 enum {
+	MM_CLEAN_JOB = 0x00000000,
+	MM_DIRTY_JOB = 0x00000100,
+
 	INTERLOCK_INVALID_JOB = 0x64000000,
 	INTERLOCK_WAITING_JOB,
 	INTERLOCK_LAST_JOB,
