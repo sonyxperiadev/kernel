@@ -657,7 +657,7 @@ static void sdhci_pltfm_runtime_pm_forbid(struct device *device)
 
 irqreturn_t cd_irq_handler(int irq, void *ptr)
 {
-	return IRQ_HANDLED;
+	return IRQ_WAKE_THREAD;
 }
 
 static int sdhci_pltfm_probe(struct platform_device *pdev)
