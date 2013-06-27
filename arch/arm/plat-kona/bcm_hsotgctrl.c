@@ -381,14 +381,13 @@ int bcm_hsotgctrl_bc_enable_sw_ovwr(void)
 	/*We need this key written for this register access*/
 	val |= (BCCFG_SW_OVERWRITE_KEY |
 			HSOTG_CTRL_BC_CFG_SW_OVWR_EN_MASK);
-	val &= (~HSOTG_CTRL_BC_CFG_BC_OVWR_KEY_MASK);
+
+	/*Enable SW overwrite*/
 	writel(val, bcm_hsotgctrl_handle->hsotg_ctrl_base +
-			HSOTG_CTRL_BC_CFG_OFFSET); /*Clear reset*/
+			HSOTG_CTRL_BC_CFG_OFFSET);
 
 	msleep_interruptible(BC_CONFIG_DELAY_MS);
 
-	val = readl(bcm_hsotgctrl_handle->hsotg_ctrl_base +
-			HSOTG_CTRL_BC_CFG_OFFSET);
 	if (!clk_cnt)
 		bcm_hsotgctrl_en_clock(false);
 	return 0;
