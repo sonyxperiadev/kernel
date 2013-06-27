@@ -795,13 +795,13 @@ static int __init dm_debug_init(void)
 			dm_root_dir, &fdm_attempt))
 		goto err;
 
-	if (!debugfs_create_u32("l2_off_en", S_IRUGO | S_IWUGO,
+	if (!debugfs_create_u32("l2_off_en", S_IRUGO | S_IWUSR,
 			dm_root_dir, &l2_off_en))
 		goto err;
-	if (!debugfs_create_u32("fdm_en", S_IRUGO | S_IWUGO,
+	if (!debugfs_create_u32("fdm_en", S_IRUGO | S_IWUSR,
 			dm_root_dir, &fdm_en))
 		goto err;
-	if (!debugfs_create_u32("dbg_log", S_IRUGO | S_IWUGO,
+	if (!debugfs_create_u32("dbg_log", S_IRUGO | S_IWUSR,
 			dm_root_dir, &dbg_log))
 		goto err;
 
