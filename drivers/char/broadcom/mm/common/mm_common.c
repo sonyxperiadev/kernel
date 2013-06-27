@@ -82,7 +82,7 @@ void mm_common_enable_clock(struct mm_common *common)
 				clk_reset(common->common_clk);
 			}
 		pr_debug("mm common clock turned on ");
-		atomic_notifier_call_chain(&common->notifier_head, \
+		raw_notifier_call_chain(&common->notifier_head, \
 				MM_FMWK_NOTIFY_CLK_ENABLE, NULL); \
 		}
 
@@ -100,7 +100,7 @@ void mm_common_disable_clock(struct mm_common *common)
 		if (common->common_clk)
 			clk_disable(common->common_clk);
 
-		atomic_notifier_call_chain(&common->notifier_head, \
+		raw_notifier_call_chain(&common->notifier_head, \
 				MM_FMWK_NOTIFY_CLK_DISABLE, NULL); \
 		}
 }
@@ -204,7 +204,7 @@ void mm_common_add_job(struct work_struct *work)
 	if (filp->interlock_count == 0)
 		mm_core_add_job(job, core_dev);
 	list_add_tail(&(job->file_list), &(filp->write_head));
-	atomic_notifier_call_chain(&common->notifier_head, \
+	raw_notifier_call_chain(&common->notifier_head, \
 				MM_FMWK_NOTIFY_JOB_ADD, NULL);
 	mutex_unlock(&mm_common_mutex);
 }
@@ -308,7 +308,7 @@ void mm_common_release_jobs(struct work_struct *work)
 		common->mm_core[(job->job.type&0xFF0000)>>16]);
 				mm_common_job_completion(job, \
 				common->mm_core[(job->job.type&0xFF0000)>>16]);
-				atomic_notifier_call_chain( \
+				raw_notifier_call_chain( \
 				&common->notifier_head, \
 				MM_FMWK_NOTIFY_JOB_REMOVE, NULL);
 				}
@@ -418,7 +418,7 @@ void mm_common_job_completion(struct dev_job_list *job, void *core)
 
 	list_del_init(&job->file_list);
 	mm_core_remove_job(job, core_dev);
-	atomic_notifier_call_chain(&common->notifier_head, \
+	raw_notifier_call_chain(&common->notifier_head, \
 	MM_FMWK_NOTIFY_JOB_COMPLETE, (void *) job->job.type);
 
 	if (filp->readable) {
@@ -796,7 +796,7 @@ void *mm_fmwk_register(const char *name, const char *clk_name,
 
 	INIT_LIST_HEAD(&common->device_list);
 	common->mm_hw_is_on = 0;
-	ATOMIC_INIT_NOTIFIER_HEAD(&common->notifier_head);
+	RAW_INIT_NOTIFIER_HEAD(&common->notifier_head);
 
 	/*get common clock*/
 	if (clk_name) {

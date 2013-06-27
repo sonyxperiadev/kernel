@@ -34,7 +34,7 @@ enum {
 };
 
 struct mm_common {
-	struct atomic_notifier_head notifier_head;
+	struct raw_notifier_head notifier_head;
 	struct miscdevice mdev;
 	struct list_head device_list;
 	/*Framework initializes the below parameters.

@@ -149,7 +149,7 @@ static void mm_fmwk_job_scheduler(struct work_struct *work)
 				is_hw_busy = true;
 				pr_debug("job posted ");
 
-				atomic_notifier_call_chain(\
+				raw_notifier_call_chain(\
 				&core_dev->mm_common->notifier_head, \
 				MM_FMWK_NOTIFY_JOB_STARTED, NULL);
 

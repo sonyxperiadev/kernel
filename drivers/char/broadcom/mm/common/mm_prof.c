@@ -66,7 +66,7 @@ static void prof_work(struct work_struct *work)
 	if (mm_prof->T1 == 0) {
 		if (mm_prof->timer_state == true) {
 			del_timer_sync(&mm_prof->prof_timeout);
-			atomic_notifier_chain_unregister(\
+			raw_notifier_chain_unregister(\
 				&mm_prof->mm_common->notifier_head, \
 				&mm_prof->mm_fmwk_notifier_blk);
 			mm_prof->timer_state = false;
@@ -83,7 +83,7 @@ static void prof_work(struct work_struct *work)
 		mm_prof->jobs_done_type[3] = 0;
 		mm_prof->mm_fmwk_notifier_blk.notifier_call = \
 					mm_prof_notification_handler;
-		atomic_notifier_chain_register(\
+		raw_notifier_chain_register(\
 					&mm_prof->mm_common->notifier_head, \
 					&mm_prof->mm_fmwk_notifier_blk);
 		getnstimeofday(&(mm_prof->proft1));

@@ -31,9 +31,6 @@ static void mm_dfs_notifier(struct work_struct *work)
 					struct _mm_dvfs, \
 					dvfs_notification);
 	mm_dvfs->current_mode = pi_get_active_opp(PI_MGR_PI_ID_MM);
-	atomic_notifier_call_chain(&mm_dvfs->mm_common->notifier_head, \
-					MM_FMWK_NOTIFY_DVFS_UPDATE, \
-					(void *)mm_dvfs->current_mode);
 }
 
 int mm_dvfs_notification_handler(struct notifier_block *block, \
@@ -90,12 +87,18 @@ static void dvfs_start_timer(struct _mm_dvfs *mm_dvfs)
 	setup_timer(&(mm_dvfs->dvfs_timeout),  \
 			dvfs_timeout_callback, \
 			(unsigned long)mm_dvfs);
-	if (mm_dvfs->current_mode == TURBO)
+
+	switch (mm_dvfs->requested_mode) {
+	case TURBO:
 		mod_timer(&mm_dvfs->dvfs_timeout, \
 			jiffies+msecs_to_jiffies(mm_dvfs->dvfs.T2));
-	else
+		break;
+	case NORMAL:
+	default:
 		mod_timer(&mm_dvfs->dvfs_timeout, \
 			jiffies+msecs_to_jiffies(mm_dvfs->dvfs.T1));
+		break;
+	}
 	mm_dvfs->timer_state = true;
 
 }
@@ -161,24 +164,34 @@ static void dvfs_work(struct work_struct *work)
 	pr_debug("dvfs_hw_on_dur %lld dvfs timeslot %d percnt %d", \
 				mm_dvfs->hw_on_dur, temp, percnt);
 
-	if ((mm_dvfs->current_mode == NORMAL) &&
-		(percnt > (mm_dvfs->dvfs.P1*temp))) {
-		pr_debug("change dvfs mode to turbo..");
-		mm_dvfs->requested_mode = TURBO;
+	switch (mm_dvfs->requested_mode) {
+	case TURBO:
+		if (percnt < (mm_dvfs->dvfs.P2*temp)) {
+			pr_debug("change dvfs mode to normal..");
+			mm_dvfs->requested_mode = NORMAL;
+			}
+		break;
+	case NORMAL:
+	default:
+		if (percnt > (mm_dvfs->dvfs.P1*temp)) {
+			pr_debug("change dvfs mode to turbo..");
+			mm_dvfs->requested_mode = TURBO;
+			}
+		break;
 		}
 
-	if ((mm_dvfs->current_mode == TURBO) &&
-		(percnt < (mm_dvfs->dvfs.P2*temp))) {
-		pr_debug("change dvfs mode to normal..");
-		mm_dvfs->requested_mode = NORMAL;
-		}
 
 	del_timer_sync(&mm_dvfs->dvfs_timeout);
 	mm_dvfs->timer_state = false;
-	if (percnt != 0) {
+	if (percnt != 0)
 		dvfs_start_timer(mm_dvfs);
-		}
+	else
+		mm_dvfs->requested_mode = ECONOMY;
+
 dvfs_work_end:
+	raw_notifier_call_chain(&mm_dvfs->mm_common->notifier_head, \
+					MM_FMWK_NOTIFY_DVFS_UPDATE, \
+					(void *)mm_dvfs->requested_mode);
 	if (mm_dvfs->mm_common->mm_hw_is_on)
 		pi_mgr_dfs_request_update(&(mm_dvfs->dev_dfs_node), \
 			mm_dvfs->requested_mode);
@@ -212,7 +225,6 @@ void mm_dvfs_update_handler(struct work_struct *work)
 					work);
 	 struct _mm_dvfs *mm_dvfs = update->mm_dvfs;
 	 unsigned int param = update->param;
-	 unsigned int max = 0, min = 0;
 
 	 if (!update->is_read) {
 		switch (update->type) {
@@ -228,31 +240,15 @@ void mm_dvfs_update_handler(struct work_struct *work)
 			mm_dvfs->dvfs.user_requested_mode = param;
 			break;
 		case MM_DVFS_UPDATE_T1:
-			max = mm_dvfs->dvfs.T2/4;
-			if (param > max)
-				pr_err("Enter value <= %u ", max);
 			mm_dvfs->dvfs.T1 = param;
 			break;
 		case MM_DVFS_UPDATE_P1:
-			max = 100;
-			min = (mm_dvfs->dvfs.P2*TURBO_RATE)/NORMAL_RATE;
-			if ((param > max) || (param < min))
-				pr_err("Enter value between %u and %u ", \
-								min, max);
 			mm_dvfs->dvfs.P1 = param;
 			break;
 		case MM_DVFS_UPDATE_T2:
-			min = mm_dvfs->dvfs.T1*4;
-			if (param < min)
-				pr_err("Enter value >= %u ", min);
 			mm_dvfs->dvfs.T2 = param;
 			break;
 		case MM_DVFS_UPDATE_P2:
-			min = 0;
-			max = (mm_dvfs->dvfs.P1*NORMAL_RATE)/TURBO_RATE;
-			if ((param > max) || (param < min))
-				pr_err("Enter value between %u and %u ", \
-								min, max);
 			mm_dvfs->dvfs.P2 = param;
 			break;
 		case MM_DVFS_UPDATE_JOB_CNT:
@@ -323,7 +319,7 @@ void *mm_dvfs_init(struct mm_common *mm_common, \
 
 	mm_dvfs->mm_fmwk_notifier_blk.notifier_call \
 			= mm_dvfs_notification_handler;
-	atomic_notifier_chain_register(\
+	raw_notifier_chain_register(\
 		&mm_common->notifier_head, \
 		&mm_dvfs->mm_fmwk_notifier_blk);
 
@@ -377,7 +373,7 @@ void *mm_dvfs_init(struct mm_common *mm_common, \
 void mm_dvfs_exit(void *dev_p)
 {
 	struct _mm_dvfs *mm_dvfs = (struct _mm_dvfs *)dev_p;
-	atomic_notifier_chain_unregister(\
+	raw_notifier_chain_unregister(\
 		&mm_dvfs->mm_common->notifier_head, \
 		&mm_dvfs->mm_fmwk_notifier_blk);
 	debugfs_remove_recursive(mm_dvfs->dvfs_dir);
