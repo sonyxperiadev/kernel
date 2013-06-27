@@ -150,8 +150,8 @@ defined(CONFIG_MACH_HAWAII_SS_LOGANDS_REV01)
 #define OPENCABLE_DETECT_LEVEL_MIN      1900
 #define OPENCABLE_DETECT_LEVEL_MAX      5000
 
-#define BASIC_HEADSET_DETECT_LEVEL_MIN  0
-#define BASIC_HEADSET_DETECT_LEVEL_MAX  200
+#define BASIC_HEADSET_DETECT_LEVEL_MIN  1000
+#define BASIC_HEADSET_DETECT_LEVEL_MAX  1800
 
 struct mic_t {
 	int gpio_irq;
@@ -411,6 +411,8 @@ static int config_adc_for_accessory_detection(int hst)
 		 * wait and turn it ON again. This is to ensure that if ADC
 		 * was in some improper state, this sequence would reset it.
 		 * The delay is based on recommendation from ASIC team.
+		 * Configure the ADC in full scale mode to measure upto
+		 * 2300mV
 		 */
 		chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
 				    CHAL_ACI_BLOCK_ACTION_DISABLE,
@@ -434,50 +436,23 @@ static int config_adc_for_accessory_detection(int hst)
 		break;
 
 	case OPEN_CABLE:
-
-		pr_debug(
-			"config_adc_for_accessory_detection: Configuring for open cable \r\n"
-		);
-
-		/* Powerup ADC */
-		chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
-				    CHAL_ACI_BLOCK_ACTION_DISABLE,
-				    CHAL_ACI_BLOCK_ADC);
-		usleep_range(1000, 1200);
-		chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
-				    CHAL_ACI_BLOCK_ACTION_ENABLE,
-				    CHAL_ACI_BLOCK_ADC);
-		usleep_range(1000, 1200);
-
-		chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
-				    CHAL_ACI_BLOCK_ACTION_ADC_RANGE,
-				    CHAL_ACI_BLOCK_ADC,
-				    CHAL_ACI_BLOCK_ADC_HIGH_VOLTAGE);
-
-		chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
-				    CHAL_ACI_BLOCK_ACTION_CONFIGURE_FILTER,
-				    CHAL_ACI_BLOCK_ADC, &aci_filter_adc_config);
-
-		time_to_settle = DET_OPEN_CABLE_SETTLE;
+		/*
+		 * The framework is avaiable to re-configure the ADC settings
+		 * specially for Open Cable case, but by default we power the
+		 * ADC and configure it to measure the Full Range i.e 2300mV
+		 * (as per RDB). Since this is already done in HEADPHONE case
+		 * just NOP.
+		 */
 		break;
 
 	case HEADSET:
-
-		pr_debug(
-			"config_adc_for_accessory_detection: Configuring for HEADSET \r\n"
-		);
-
-		/* Turn OFF MIC Bias */
-		aci_mic_bias.mode = CHAL_ACI_MIC_BIAS_GND;
-		chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
-				    CHAL_ACI_BLOCK_ACTION_MIC_BIAS,
-				    CHAL_ACI_BLOCK_GENERIC, &aci_mic_bias);
-
-		chal_aci_block_ctrl(mic_dev->aci_chal_hdl,
-			CHAL_ACI_BLOCK_ACTION_MIC_POWERDOWN_HIZ_IMPEDANCE,
-			CHAL_ACI_BLOCK_GENERIC, 0);
-
-		time_to_settle = DET_HEADSET_SETTLE;
+		/*
+		 * The framework is avaiable to re-configure the ADC settings
+		 * specially for Open Cable case, but by default we power the
+		 * ADC and configure it to measure the Full Range i.e 2300mV
+		 * (as per RDB). Since this is already done in HEADPHONE case
+		 * just NOP.
+		 */
 		break;
 
 	default:
