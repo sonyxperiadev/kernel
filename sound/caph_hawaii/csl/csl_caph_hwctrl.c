@@ -5322,6 +5322,7 @@ void csl_caph_hwctrl_ConfigSSP(CSL_SSP_PORT_e port, CSL_SSP_BUS_e bus,
 {
 	UInt32 addr;
 	CAPH_SWITCH_TRIGGER_e tx_trigger, rx_trigger;
+	Boolean bClk = csl_caph_QueryHWClock();
 
 	aTrace(LOG_AUDIO_CSL, "csl_caph_hwctrl_ConfigSSP::"
 		"fm %p, pcm %p, port %d, bus %d, lpbk %d:%d:%d\n",
@@ -5356,8 +5357,8 @@ void csl_caph_hwctrl_ConfigSSP(CSL_SSP_PORT_e port, CSL_SSP_BUS_e bus,
 	} else {
 		return;
 	}
-
-	csl_caph_ControlHWClock(TRUE);
+	if (!bClk)
+		csl_caph_ControlHWClock(TRUE);
 	if (bus == CSL_SSP_I2S) {
 		if (fmHandleSSP && fmHandleSSP != pcmHandleSSP)
 			csl_i2s_deinit(fmHandleSSP); /*deinit only if other
@@ -5417,7 +5418,8 @@ void csl_caph_hwctrl_ConfigSSP(CSL_SSP_PORT_e port, CSL_SSP_BUS_e bus,
 			(UInt32)caph_intc_handle);
 		fmHandleSSP = pcmHandleSSP;
 	}
-	csl_caph_ControlHWClock(FALSE);
+	if (!bClk)
+		csl_caph_ControlHWClock(FALSE);
 	aTrace(LOG_AUDIO_CSL, "csl_caph_hwctrl_ConfigSSP::"
 			       "new fmHandleSSP %p, pcmHandleSSP %p.\r\n",
 			       fmHandleSSP, pcmHandleSSP);
