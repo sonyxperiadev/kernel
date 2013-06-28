@@ -1398,7 +1398,8 @@ void AUDDRV_SetAudioMode_Speaker(SetAudioMode_Sp_t param)
 
 	} else {
 		aTrace(LOG_AUDIO_DRIVER,
-			"AUDDRV_SetAudioMode_Speaker path == NULL\n");
+			"AUDDRV_SetAudioMode_Speaker path == NULL, return.\n");
+		return;
 		/*do not know which mix input to apply gain on
 		if (outChnl)
 			csl_srcmixer_setMixAllInGain(outChnl,
