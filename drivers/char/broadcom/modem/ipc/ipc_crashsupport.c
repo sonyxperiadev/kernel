@@ -51,6 +51,11 @@
 
 #include <mach/ns_ioremap.h>
 
+#ifdef CONFIG_KONA_SECURE_MEMC
+#include <linux/broadcom/secure_memc_shared.h>
+#endif
+
+
 /* CP crash recovery action */
 #define   RECOVERY_ACTION_NONE                      0
 #define   RECOVERY_ACTION_SYSRESET                  1
@@ -300,6 +305,9 @@ void ResetCP(void)
 
 int HandleRestartCP(void *data)
 {
+#ifdef CONFIG_KONA_SECURE_MEMC
+	u32 *memc_handle;
+#endif
 	IPC_DEBUG(DBG_INFO, "enter\n");
 
 	IPC_DEBUG(DBG_INFO, "call local_irq_disable()\n");
@@ -337,6 +345,15 @@ int HandleRestartCP(void *data)
 	IPC_DEBUG(DBG_INFO, "notifying clients CP reset is complete\n");
 	HandleCPResetDone();
 	IPC_DEBUG(DBG_INFO, "notification done, exiting reset thread\n");
+
+#ifdef CONFIG_KONA_SECURE_MEMC
+	memc_handle = get_secure_memc_handle();
+
+	if (!memc_handle)
+		pr_err("Failed to get secure memc handle\n");
+	else if (do_revoke_region_access(memc_handle, AP))
+		pr_err("Failed to revoke access for AP\n");
+#endif
 
 	/* done with thread */
 	do_exit(0);
@@ -645,6 +662,33 @@ void ProcessCPCrashedDump(struct work_struct *work)
 	void __iomem *DumpVAddr;
 	int cpReset = SmLocalControl.SmControl->CrashCode ==
 	    IPC_CP_SILENT_RESET_READY;
+#ifdef CONFIG_KONA_SECURE_MEMC
+	u32 *memc_handle;
+
+	/* this is where any type of cp crash gets handled.
+	 * there could be a scenerio of silent-reboot of cp.
+	 * or there could be abrupt crash of cp.
+	 * either ap would be alive or ap will crash itself.
+	 * we protect cp area from following masters.
+	 * > ap
+	 * > mm
+	 * > fabric
+	 * in the event of ap/cp crash we need to give an ap
+	 * access back to the cp area for the dump.
+	 * and in the case of silent cp reset, ap will
+	 * be alive, in that case we grant an access to ap.
+	 * so that ap can load cp images and can take dump
+	 * if required.
+	 * and when cp comes up successfully and sync up with ap,
+	 * we revoke the access for ap somwhere in HandleRestartCP.
+	 */
+
+	memc_handle = get_secure_memc_handle();
+	if (!memc_handle)
+		pr_err("Failed to get secure memc handle\n");
+	if (do_grant_region_access(memc_handle, AP))
+		pr_err("Failed to grant access for AP\n");
+#endif
 
 #ifdef CONFIG_FB_BRCM_CP_CRASH_DUMP_IMAGE_SUPPORT
 if (!crash_dump_ui_on && !cpReset) {
