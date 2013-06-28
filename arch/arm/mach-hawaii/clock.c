@@ -881,10 +881,13 @@ static struct pll_cfg_ctrl_info a9_cfg_ctrl =
 };
 
 struct pll_desense a9_pll_des = {
-			/*A9 desense disabled*/
-	.flags = /*PLL_OFFSET_EN |*/PLL_OFFSET_NDIV_FRAC | PLL_OFFSET_NDIV,
+	.flags = PLL_OFFSET_EN | PLL_OFFSET_NDIV_FRAC | PLL_OFFSET_NDIV,
 	.pll_offset_offset = KPROC_CLK_MGR_REG_PLLARM_OFFSET_OFFSET,
-	.def_delta = 0,
+#ifdef CONFIG_PWRMGR_1P2GHZ_OPS_SET_SELECT
+	.def_delta = -14500000,
+#else
+	.def_delta = -12000000,
+#endif
 };
 
 static struct pll_clk CLK_NAME(a9_pll) = {
