@@ -1008,6 +1008,12 @@ config TOUCHSCREEN_IST30XX
 
           To compile this driver as a module, choose M here: the
           module will be called ist30xx.
+
+config TOUCHSCREEN_ICN83XX
+        tristate "Chipone touchscreen icn83xx"
+        depends on I2C
+        help
+          This enables support for Chipone touchscreens.
 source "drivers/input/touchscreen/coreriver_touchkey/Kconfig"
 
 endif

@@ -87,3 +87,6 @@ obj-$(CONFIG_TOUCHSCREEN_BT432_LOGAN)   += zinitix_touch.o sec-common.o
 obj-$(CONFIG_TOUCHSCREEN_F761)	+= silabs_f760.o bl_master.o
 obj-$(CONFIG_TOUCHSCREEN_IST30XX) += ist30xx_update.o ist30xx.o ist30xx_misc.o ist30xx_sys.o ist30xx_sec_test.o
 obj-$(CONFIG_KEYBOARD_TC360_TOUCHKEY)  += coreriver_touchkey/
+TARGET_MODULE := ctp_icn83xx
+obj-$(CONFIG_TOUCHSCREEN_ICN83XX) += $(TARGET_MODULE).o
+$(TARGET_MODULE)-objs := icn83xx.o flash.o

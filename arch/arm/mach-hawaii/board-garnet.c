@@ -308,6 +308,14 @@ struct ion_platform_data ion_cma_data = {
 #endif /* CONFIG_CMA */
 #endif /* CONFIG_ION_BCM_NO_DT */
 
+#ifdef CONFIG_TOUCHSCREEN_ICN83XX_MODULE
+static struct i2c_board_info icn83xx_info[] = {
+	{
+	 I2C_BOARD_INFO("chipone-ts", 0x40)
+	 },
+};
+#endif
+
 #ifdef CONFIG_VIDEO_ADP1653
 #define ADP1653_I2C_ADDR 0x60
 static struct i2c_board_info adp1653_flash[] = {
@@ -1273,8 +1281,9 @@ static void __init hawaii_add_i2c_devices(void)
 #ifdef CONFIG_VIDEO_AS3643
 	i2c_register_board_info(0, as3643_flash, ARRAY_SIZE(as3643_flash));
 #endif
-
-
+#ifdef CONFIG_TOUCHSCREEN_ICN83XX_MODULE
+	i2c_register_board_info(3, icn83xx_info, ARRAY_SIZE(icn83xx_info));
+#endif
 
 #if defined(CONFIG_TOUCHSCREEN_BCM15500) ||\
 defined(CONFIG_TOUCHSCREEN_BCM15500_MODULE)
