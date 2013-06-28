@@ -350,6 +350,12 @@ void blk_queue_logical_block_size(struct request_queue *q, unsigned short size)
 }
 EXPORT_SYMBOL(blk_queue_logical_block_size);
 
+void blk_queue_erase_size(struct request_queue *q, unsigned int size)
+{
+	q->limits.erase_size = size;
+}
+EXPORT_SYMBOL(blk_queue_erase_size);
+
 /**
  * blk_queue_physical_block_size - set physical block size for the queue
  * @q:  the request queue for the device

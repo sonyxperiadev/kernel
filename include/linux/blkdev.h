@@ -257,6 +257,7 @@ struct queue_limits {
 	unsigned int		max_discard_sectors;
 	unsigned int		discard_granularity;
 	unsigned int		discard_alignment;
+	unsigned int		erase_size;
 
 	unsigned short		logical_block_size;
 	unsigned short		max_segments;
@@ -831,6 +832,7 @@ extern void blk_queue_max_discard_sectors(struct request_queue *q,
 		unsigned int max_discard_sectors);
 extern void blk_queue_logical_block_size(struct request_queue *, unsigned short);
 extern void blk_queue_physical_block_size(struct request_queue *, unsigned int);
+extern void blk_queue_erase_size(struct request_queue *q, unsigned int size);
 extern void blk_queue_alignment_offset(struct request_queue *q,
 				       unsigned int alignment);
 extern void blk_limits_io_min(struct queue_limits *limits, unsigned int min);
@@ -1036,6 +1038,16 @@ static inline unsigned int queue_physical_block_size(struct request_queue *q)
 static inline unsigned int bdev_physical_block_size(struct block_device *bdev)
 {
 	return queue_physical_block_size(bdev_get_queue(bdev));
+}
+
+static inline unsigned int queue_erase_size(struct request_queue *q)
+{
+	return q->limits.erase_size;
+}
+
+static inline unsigned int bdev_erase_size(struct block_device *bdev)
+{
+	return queue_erase_size(bdev_get_queue(bdev));
 }
 
 static inline unsigned int queue_io_min(struct request_queue *q)

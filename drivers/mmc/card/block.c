@@ -1721,6 +1721,7 @@ static struct mmc_blk_data *mmc_blk_alloc_req(struct mmc_card *card,
 		 "mmcblk%d%s", md->name_idx, subname ? subname : "");
 
 	blk_queue_logical_block_size(md->queue.queue, 512);
+	blk_queue_erase_size(md->queue.queue, card->erase_size);
 	set_capacity(md->disk, size);
 
 	if (mmc_host_cmd23(card->host)) {
