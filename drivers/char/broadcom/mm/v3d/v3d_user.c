@@ -1,3 +1,4 @@
+
 /*******************************************************************************
 Copyright 2010 Broadcom Corporation.  All rights reserved.
 
@@ -48,6 +49,7 @@ static int v3d_user_reset(void *device_id)
 	pr_debug("v3d_user_reset:\n");
 	v3d_write(id, V3D_SRQCS_OFFSET, 1 | (1 << 8) | (1 << 16));
 	v3d_write(id, V3D_VPACNTL_OFFSET, 0);
+	v3d_write(id, V3D_SLCACTL_OFFSET, 0xf0f0f0f);
 	v3d_write(id, V3D_DBQITC_OFFSET, 0xffff);
 	v3d_write(id, V3D_DBQITE_OFFSET, 0xffff);
 
