@@ -659,6 +659,12 @@ config HEADSET_PERIODIC_CHECK
 	depends on KONA_HEADSET_MULTI_BUTTON
         help
           Activate Kona headset type periodic check support
+
+config KONA_HEADSET_DEFAULT_STATE
+	tristate "Kona headset set default state"
+	depends on KONA_HEADSET_MULTI_BUTTON
+        help
+          Activate Kona headset set default state support
 endchoice
 
 endif

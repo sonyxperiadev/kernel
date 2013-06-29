@@ -915,9 +915,7 @@ static struct kona_headset_pd hawaii_headset_data = {
 	/* GPIO state read is 0 on HS insert and 1 for
 	 * HS remove
 	 */
-
-#if defined(CONFIG_MACH_HAWAII_GARNET_C_A18) || defined(CONFIG_MACH_HAWAII_GARNET_C_W68)	\
-	|| defined(CONFIG_MACH_HAWAII_GARNET_C_M530)
+#ifdef CONFIG_KONA_HEADSET_DEFAULT_STATE
 	.hs_default_state = 1,
 #else
 	.hs_default_state = 0,
