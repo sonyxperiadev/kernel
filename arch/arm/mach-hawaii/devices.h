@@ -75,6 +75,7 @@ extern struct platform_device iovmm_mm_device;
 extern struct platform_device iovmm_mm_256mb_device;
 #endif
 extern struct platform_device ion_system_device;
+extern struct platform_device ion_system_extra_device;
 extern struct ion_platform_data ion_carveout_data;
 extern struct platform_device ion_carveout_device;
 #ifdef CONFIG_CMA

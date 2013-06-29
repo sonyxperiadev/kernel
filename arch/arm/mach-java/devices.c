@@ -197,6 +197,12 @@ struct platform_device ion_system_device = {
 	.num_resources = 0,
 };
 
+struct platform_device ion_system_extra_device = {
+	.name = "ion-bcm",
+	.id = 3,
+	.num_resources = 0,
+};
+
 struct platform_device ion_carveout_device = {
 	.name = "ion-bcm",
 	.id = 0,
