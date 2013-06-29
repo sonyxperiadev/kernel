@@ -45,6 +45,9 @@
 #include <linux/ion.h>
 #include <linux/broadcom/bcm_ion.h>
 #endif
+#ifdef CONFIG_IOMMU_API
+#include <plat/bcm_iommu.h>
+#endif
 #include <linux/serial_8250.h>
 #include <linux/i2c.h>
 #include <linux/i2c-kona.h>
@@ -321,6 +324,12 @@ struct android_pmem_platform_data android_pmem_data = {
 #ifdef CONFIG_ION_BCM_NO_DT
 struct ion_platform_data ion_system_data = {
 	.nr = 1,
+#ifdef CONFIG_IOMMU_API
+	.pdev_iommu = &iommu_mm_device,
+#endif
+#ifdef CONFIG_BCM_IOVMM
+	.pdev_iovmm = &iovmm_mm_256mb_device,
+#endif
 	.heaps = {
 		[0] = {
 			.id    = 0,
@@ -333,16 +342,42 @@ struct ion_platform_data ion_system_data = {
 	},
 };
 
+struct ion_platform_data ion_system_extra_data = {
+	.nr = 1,
+#ifdef CONFIG_IOMMU_API
+	.pdev_iommu = &iommu_mm_device,
+#endif
+#ifdef CONFIG_BCM_IOVMM
+	.pdev_iovmm = &iovmm_mm_device,
+#endif
+	.heaps = {
+		[0] = {
+			.id    = 1,
+			.type  = ION_HEAP_TYPE_SYSTEM,
+			.name  = "ion-system-extra",
+			.base  = 0,
+			.limit = 0,
+			.size  = 0,
+		},
+	},
+};
+
 struct ion_platform_data ion_carveout_data = {
 	.nr = 2,
+#ifdef CONFIG_IOMMU_API
+	.pdev_iommu = &iommu_mm_device,
+#endif
+#ifdef CONFIG_BCM_IOVMM
+	.pdev_iovmm = &iovmm_mm_256mb_device,
+#endif
 	.heaps = {
 		[0] = {
 			.id    = 3,
 			.type  = ION_HEAP_TYPE_CARVEOUT,
 			.name  = "ion-carveout",
-			.base  = 0xa0000000,
-			.limit = 0xb0000000,
-			.size  = (64 * SZ_1M),
+			.base  = 0x90000000,
+			.limit = 0xa0000000,
+			.size  = (20 * SZ_1M),
 #ifdef CONFIG_ION_OOM_KILLER
 			.lmk_enable = 0,
 			.lmk_min_score_adj = 411,
@@ -368,14 +403,20 @@ struct ion_platform_data ion_carveout_data = {
 #ifdef CONFIG_CMA
 struct ion_platform_data ion_cma_data = {
 	.nr = 2,
+#ifdef CONFIG_IOMMU_API
+	.pdev_iommu = &iommu_mm_device,
+#endif
+#ifdef CONFIG_BCM_IOVMM
+	.pdev_iovmm = &iovmm_mm_256mb_device,
+#endif
 	.heaps = {
 		[0] = {
 			.id = 2,
 			.type  = ION_HEAP_TYPE_DMA,
 			.name  = "ion-cma",
-			.base  = 0xa0000000,
-			.limit = 0xb0000000,
-			.size  = (192 * SZ_1M),
+			.base  = 0x90000000,
+			.limit = 0xa0000000,
+			.size  = (0 * SZ_1M),
 #ifdef CONFIG_ION_OOM_KILLER
 			.lmk_enable = 1,
 			.lmk_min_score_adj = 411,
@@ -2145,6 +2186,29 @@ static void __init hawaii_add_i2c_devices(void)
 
 }
 
+#ifdef CONFIG_IOMMU_API
+struct bcm_iommu_pdata iommu_mm_pdata = {
+	.name        = "iommu-mm",
+	.iova_begin  = 0x80000000,
+	.iova_size   = 0x80000000,
+	.errbuf_size = 0x1000,
+};
+#endif
+#ifdef CONFIG_BCM_IOVMM
+struct bcm_iovmm_pdata iovmm_mm_pdata = {
+	.name = "iovmm-mm",
+	.base = 0x80000000,
+	.size = 0x70000000,
+	.order = 0,
+};
+struct bcm_iovmm_pdata iovmm_mm_256mb_pdata = {
+	.name = "iovmm-mm-256mb",
+	.base = 0xf0000000,
+	.size = 0x0ff00000,
+	.order = 0,
+};
+#endif
+
 static void hawaii_add_pdata(void)
 {
 	hawaii_serial_device.dev.platform_data = &hawaii_uart_platform_data;
@@ -2172,6 +2236,15 @@ static void hawaii_add_pdata(void)
 	hawaii_usb_phy_platform_device.dev.platform_data
 		= &hsotgctrl_plat_data;
 #endif
+#ifdef CONFIG_IOMMU_API
+	iommu_mm_device.dev.platform_data = &iommu_mm_pdata;
+#endif
+#ifdef CONFIG_BCM_IOVMM
+	iovmm_mm_device.dev.platform_data = &iovmm_mm_pdata;
+	iovmm_mm_256mb_device.dev.platform_data = &iovmm_mm_256mb_pdata;
+	ion_system_device.dev.platform_data = &ion_system_data;
+	ion_system_extra_device.dev.platform_data = &ion_system_extra_data;
+#endif
 }
 
 void __init hawaii_add_common_devices(void)
@@ -2190,6 +2263,16 @@ static void __init hawaii_add_devices(void)
 	hawaii_add_pdata();
 
 #ifdef CONFIG_ION_BCM_NO_DT
+#ifdef CONFIG_IOMMU_API
+	platform_device_register(&iommu_mm_device);
+#endif
+#ifdef CONFIG_BCM_IOVMM
+	platform_device_register(&iovmm_mm_device);
+	platform_device_register(&iovmm_mm_256mb_device);
+	platform_device_register(&ion_system_device);
+	platform_device_register(&ion_system_extra_device);
+#endif
+
 	platform_device_register(&ion_carveout_device);
 #ifdef CONFIG_CMA
 	platform_device_register(&ion_cma_device);
@@ -2254,10 +2337,10 @@ struct kona_fb_platform_data konafb_devices[] __initdata = {
 		.hs_bps = 500000000,
 		.lp_bps = 5000000,
 #ifdef CONFIG_IOMMU_API
-		.pdev_iommu = &iovmm_mm_device,
+		.pdev_iommu = &iommu_mm_device,
 #endif
 #ifdef CONFIG_BCM_IOVMM
-		.pdev_iovmm = &iovmm_mm_256mb_device,
+		.pdev_iovmm = &iovmm_mm_device,
 #endif
 	},
 };
