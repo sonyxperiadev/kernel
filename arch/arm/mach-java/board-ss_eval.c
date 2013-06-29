@@ -1442,7 +1442,7 @@ static struct platform_device touchkeyled_device = {
 };
 #endif
 
-#if defined(CONFIG_TOUCHSCREEN_IST30XX)
+#if defined(CONFIG_TOUCHSCREEN_IST30XX) \
 	|| defined(CONFIG_TOUCHSCREEN_BT432_LOGAN)
 
 struct i2c_slave_platform_data bcmi2c_pdata = {
@@ -2041,8 +2041,8 @@ static void __init hawaii_add_i2c_devices(void)
 #ifdef CONFIG_TOUCHSCREEN_TANGO
 	i2c_register_board_info(3, tango_info, ARRAY_SIZE(tango_info));
 #endif
-#if defined(CONFIG_TOUCHSCREEN_IST30XX)
-		|| defined(CONFIG_TOUCHSCREEN_BT432_LOGAN)
+#if defined(CONFIG_TOUCHSCREEN_IST30XX) \
+	|| defined(CONFIG_TOUCHSCREEN_BT432_LOGAN)
 	i2c_register_board_info(3, zinitix_i2c_devices,
 		ARRAY_SIZE(zinitix_i2c_devices));
 #endif
