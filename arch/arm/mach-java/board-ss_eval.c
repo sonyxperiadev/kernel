@@ -1578,6 +1578,13 @@ static void rt8973_wakelock_init(void)
 #endif
 }
 
+extern int bcmpmu_accy_chrgr_type_notify(int chrgr_type);
+
+void send_chrgr_insert_event(enum bcmpmu_event_t event, void *para)
+{
+	bcmpmu_accy_chrgr_type_notify(*(u32 *)para);
+}
+
 static enum cable_type_t set_cable_status;
 
 static void usb_attach(uint8_t attached)
