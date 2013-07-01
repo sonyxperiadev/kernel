@@ -603,10 +603,6 @@ void isl290xx_poll_timer_func(unsigned long data)
 static void isl290xx_prox_poll_work_f(struct work_struct *work)
 {
 	int ret = 0;
-	struct delayed_work *dwork = container_of(work,
-					struct delayed_work, work);
-	struct isl290xx_data_t *dd = container_of(dwork,
-			struct isl290xx_data_t, prox_poll_work);
 	ret = prv_isl290xx_prox_poll(isl290xx_prox_cur_infop);
 	if (ret < 0)
 		pr_isl(ERROR, "get prox poll failed\n");
@@ -630,16 +626,20 @@ static void isl290xx_prox_poll_work_f(struct work_struct *work)
 static int isl290xx_suspend(struct i2c_client *client, pm_message_t mesg)
 {
 	int ret = 0;
-	ret = cancel_work_sync(&isl290xx_data_tp->isl290xx_work);
+	cancel_work_sync(&isl290xx_data_tp->isl290xx_work);
 #ifdef ISL290XX_POLL_MODE
-	ret = cancel_delayed_work_sync(&isl290xx_data_tp->prox_poll_work);
+	del_timer_sync(&prox_poll_timer);
+	cancel_delayed_work_sync(&isl290xx_data_tp->prox_poll_work);
 #endif
-	return 0;
+	return ret;
 }
 
 static int isl290xx_resume(struct i2c_client *client)
 {
 	int ret = 0;
+#ifdef ISL290XX_POLL_MODE
+	mod_timer(&prox_poll_timer, jiffies + HZ/1000);
+#endif
 	return ret;
 }
 
@@ -674,10 +674,10 @@ static int isl290xx_probe(struct i2c_client *clientp,
         light_on = 0;
         prox_on = 0;
 	isPsensorLocked = 0;
-        als_intr_threshold_hi_param = 0;
-        als_intr_threshold_lo_param = 0;
-        g_isl290xx_lux = 0;
-        device_released = 0;
+	als_intr_threshold_hi_param = 0;
+	als_intr_threshold_lo_param = 0x0fff;
+	g_isl290xx_lux = 0;
+	device_released = 0;
         sat_als = 0;
         sat_prox = 0;
 	ret = 0;
@@ -1120,6 +1120,8 @@ static int prv_isl290xx_ctrl_lp(int mask)
 	}
 	if (mask == 0x01) {	/*01 : prox on */
 		pr_isl(INFO, "prox on\n");
+		input_report_abs(proximity->input_dev, ABS_DISTANCE, -1);
+		input_sync(proximity->input_dev);
 		reg_val = i2c_smbus_read_byte_data(isl290xx_data_tp->client,
 			ISL290XX_INT_REG);
 		if (reg_val < 0) {
@@ -1174,6 +1176,21 @@ static int prv_isl290xx_ctrl_lp(int mask)
 			       __LINE__);
 			return ret;
 		}
+		ret = prv_isl290xx_prox_poll(isl290xx_prox_cur_infop);
+		if (ret < 0)
+			pr_isl(ERROR, "get prox poll failed\n");
+		if (isl290xx_prox_cur_infop->prox_data >
+			isl290xx_cfgp->prox_threshold_hi) {
+			ret =
+			i2c_smbus_write_byte_data(isl290xx_data_tp->client,
+				ISL290XX_PROX_TH_H, 0x01);
+			if (ret < 0)
+				pr_isl(ERROR, "i2c_smbus_write_byte fail\n");
+			isl290xx_prox_cur_infop->prox_event = 1;
+		} else if (isl290xx_prox_cur_infop->prox_data <
+			isl290xx_cfgp->prox_threshold_lo)
+			isl290xx_prox_cur_infop->prox_event = 0;
+		prv_isl290xx_report_value(1);
 	}
 	if (mask == 0x20) {	/*20 : light off */
 		reg_val = 0x00;
@@ -1271,11 +1288,11 @@ static int prv_isl290xx_ctrl_lp(int mask)
 static void prv_isl290xx_prox_cali(void)
 {
 	int prox_sum = 0, prox_mean = 0, prox_max = 0;
-	int ret = 0, i = 0;
-	u8 reg_val = 0;
-	u16 ratio;
-	struct isl290xx_prox_data_t *prox_pt;
-	prv_isl290xx_ctrl_lp(0x01);
+	int ret = 0, i = 0, prox_status = 0;
+	if (!prox_on) {
+		prv_isl290xx_ctrl_lp(0x01);
+		prox_status = 1;
+	}
 	mutex_lock(&isl290xx_data_tp->proximity_calibrating);
 	prox_sum = 0;
 	prox_max = 0;
