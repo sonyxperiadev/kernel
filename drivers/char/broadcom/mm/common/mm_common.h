@@ -54,6 +54,7 @@ struct mm_common {
 
     /* Used for exporting per-device information to debugfs */
 	struct dentry *debugfs_dir;
+	struct semaphore device_sem;
 };
 
 struct file_private_data {
@@ -68,6 +69,7 @@ struct file_private_data {
 	struct list_head file_head;
 	u8 *spl_data_ptr;
 	int spl_data_size;
+	u8 device_locked;
 };
 
 struct dev_job_list {

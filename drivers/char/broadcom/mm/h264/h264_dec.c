@@ -131,3 +131,36 @@ void decodeSlice(void *id, struct dec_info_t *dec_info)
 	}
 
 }
+
+void completeDecodeFrame(void *id)
+{
+	u32 j, temp;
+	/*Flush IL Context*/
+	h264_write(id, H264_REG_SINT_STRM_STAT_OFFSET, 0x20000);
+	for (j = 0; j < RESET_TRY; j++) {
+		temp = h264_read(id, H264_REG_SINT_STRM_STAT_OFFSET);
+		if ((temp & 0x800) == 0)
+			break;
+	}
+	/*Reset IL Context*/
+	h264_write(id, H264_REG_SINT_STRM_STAT_OFFSET, 0x10300);
+	for (j = 0; j < RESET_TRY; j++) {
+		temp = h264_read(id, H264_REG_SINT_STRM_STAT_OFFSET);
+		if ((temp & (0x1 << 16)) == 0)
+			break;
+	}
+	/*VC_CACHE_CTL Flush*/
+	temp = h264_read(id, H264_VCCACHECTL_OFFSET);
+	temp |= 0x1;
+	h264_write(id, H264_VCCACHECTL_OFFSET, temp);
+
+	/*Reset DecMn_RegMainctl*/
+	temp = h264_read(id, H264_REG_MAINCTL_OFFSET);
+	temp |= 0x1;
+	h264_write(id, H264_REG_MAINCTL_OFFSET, temp);
+	for (j = 0; j < RESET_TRY; j++) {
+		temp = h264_read(id, H264_REG_MAINCTL_OFFSET);
+		if ((temp & 0x1) == 0)
+			break;
+	}
+}

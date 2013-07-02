@@ -58,4 +58,6 @@ struct dec_info_t{
 
 void decodeSlice(void *id, struct dec_info_t *dec_info);
 
+void completeDecodeFrame(void *id);
+
 #endif /*_H264_DEC_H_*/

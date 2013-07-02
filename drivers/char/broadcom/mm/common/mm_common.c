@@ -60,23 +60,6 @@ void mm_common_enable_clock(struct mm_common *common)
 	if (common->mm_hw_is_on == 0) {
 		if (common->common_clk) {
 			clk_enable(common->common_clk);
-#ifdef CONFIG_ARCH_JAVA
-		if (strncmp(common->mm_name, "mm_h264", 7) == 0) {
-			/* Access to root reset manager register block. */
-			writel(0xa5a501, HW_IO_PHYS_TO_VIRT(0x35001f00));
-			usleep_range(10, 20);
-			/* Enable multimedia power domain. */
-			/* Test 0x3d should be sufficient for MM. */
-			writel(0xfd, HW_IO_PHYS_TO_VIRT(0x35001f08));
-			usleep_range(10, 20);
-			/* Enable H264 Slave interface control register. */
-			writel(0x00, HW_IO_PHYS_TO_VIRT(0x3C00F004));
-			usleep_range(10, 20);
-			/* Enable H264 Master interface control register. */
-			writel(0x00, HW_IO_PHYS_TO_VIRT(0x3C00F008));
-			usleep_range(10, 20);
-		}
-#endif
 			if (strncmp(common->mm_name, "mm_h264", 7))
 				clk_reset(common->common_clk);
 			}
@@ -449,6 +432,7 @@ static int mm_file_open(struct inode *inode, struct file *filp)
 	private->readable = ((filp->f_mode & FMODE_READ) == FMODE_READ);
 	private->spl_data_ptr = NULL;
 	private->spl_data_size = 0;
+	private->device_locked = 0;
 	init_waitqueue_head(&private->queue);
 
 	INIT_LIST_HEAD(&private->read_head);
@@ -473,6 +457,8 @@ static int mm_file_release(struct inode *inode, struct file *filp)
 	SCHEDULE_RELEASE_WORK(private);
 	if (private->spl_data_ptr != NULL)
 		kfree(private->spl_data_ptr);
+	if (private->device_locked == 1)
+		up(&common->device_sem);
 	kfree(private);
 	return 0;
 }
@@ -685,6 +671,7 @@ static long mm_file_ioctl(struct file *filp, \
 	struct file_private_data *private = filp->private_data;
 	struct mm_common *common = private->common;
 	int size = 0;
+	int core = 0;
 	mm_dev_spl_data_t dev_spl_d;
 
 	if ((_IOC_TYPE(cmd) != MM_DEV_MAGIC) || (_IOC_NR(cmd) > MM_CMD_LAST))
@@ -753,6 +740,38 @@ static long mm_file_ioctl(struct file *filp, \
 			ret = -EINVAL;
 		}
 	break;
+	case MM_IOCTL_DEVICE_TRYLOCK:
+		if (copy_from_user(&core, (void const *)arg, sizeof(int))) {
+			pr_err("copy_from_user failed");
+			ret = -EINVAL;
+			break;
+		}
+		if (down_trylock(&common->device_sem))
+			return -EINVAL;
+		BUG_ON(private->device_locked == 1);
+		private->device_locked = 1;
+	break;
+	case MM_IOCTL_DEVICE_LOCK:
+		if (copy_from_user(&core, (void const *)arg, sizeof(int))) {
+			pr_err("copy_from_user failed");
+			ret = -EINVAL;
+			break;
+		}
+		if (down_interruptible(&common->device_sem))
+			return -EINVAL;
+		BUG_ON(private->device_locked == 1);
+		private->device_locked = 1;
+	break;
+	case MM_IOCTL_DEVICE_UNLOCK:
+		if (copy_from_user(&core, (void const *)arg, sizeof(int))) {
+			pr_err("copy_from_user failed");
+			ret = -EINVAL;
+			break;
+		}
+		up(&common->device_sem);
+		BUG_ON(private->device_locked == 0);
+		private->device_locked = 0;
+	break;
 	default:
 		pr_err("cmd[0x%08x] not supported", cmd);
 		ret = -EINVAL;
@@ -799,6 +818,7 @@ void *mm_fmwk_register(const char *name, const char *clk_name,
 	INIT_LIST_HEAD(&common->device_list);
 	common->mm_hw_is_on = 0;
 	RAW_INIT_NOTIFIER_HEAD(&common->notifier_head);
+	sema_init(&common->device_sem, 1);
 
 	/*get common clock*/
 	if (clk_name) {

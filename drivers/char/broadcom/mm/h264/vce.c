@@ -237,6 +237,10 @@ mm_job_status_e vce_start_job(void *device_id, mm_job_post_t *job,
 		vce_info = (struct vce_launch_info_t *) \
 				(jp);
 		break;
+	case H264_VCE_RESET_CODEC_JOB:
+		completeDecodeFrame(id);
+		job->status = MM_JOB_STATUS_SUCCESS;
+		return MM_JOB_STATUS_SUCCESS;
 	default:
 		pr_err("unknown job type\n");
 		return MM_JOB_STATUS_ERROR;
