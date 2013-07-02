@@ -152,4 +152,5 @@ source "drivers/devfreq/Kconfig"
 
 source "drivers/gud/Kconfig"
 
+source "drivers/gator/Kconfig"
 endmenu
