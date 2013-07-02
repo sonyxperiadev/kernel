@@ -30,7 +30,6 @@ LIST_HEAD(mm_file_list);
 static struct workqueue_struct *single_wq;
 static char *single_wq_name = "mm_wq";
 wait_queue_head_t mm_queue;
-DEFINE_MUTEX(mm_common_mutex);
 
 /* MM Framework globals end*/
 static void _mm_common_cache_clean(struct work_struct *dummy)
@@ -199,14 +198,12 @@ void mm_common_add_job(struct work_struct *work)
 	struct mm_core *core_dev = common->mm_core[\
 				(job->job.type&0xFF0000)>>16];
 
-	mutex_lock(&mm_common_mutex);
 	job->job.spl_data_ptr = filp->spl_data_ptr;
 	if (filp->interlock_count == 0)
 		mm_core_add_job(job, core_dev);
 	list_add_tail(&(job->file_list), &(filp->write_head));
 	raw_notifier_call_chain(&common->notifier_head, \
 				MM_FMWK_NOTIFY_JOB_ADD, NULL);
-	mutex_unlock(&mm_common_mutex);
 }
 
 #define SCHEDULE_ADD_WORK(b)	SCHEDULE_JOB_WORK(job_list, \
@@ -222,14 +219,12 @@ void mm_common_wait_job(struct work_struct *work)
 	struct dev_status_list *status = maint_job->u.il.status;
 	struct file_private_data *to_filp = to->filp;
 
-	mutex_lock(&mm_common_mutex);
 	if (status) {
 		if (status->status.status == MM_JOB_STATUS_INVALID) {
 			list_add_tail(&status->wait_list, &to->wait_list);
 			}
 		else {
 			list_del_init(&status->wait_list);
-			mutex_unlock(&mm_common_mutex);
 			return;
 			}
 		}
@@ -244,15 +239,17 @@ void mm_common_wait_job(struct work_struct *work)
 
 	list_add_tail(&(to->file_list), &(to_filp->write_head));
 
-	if ((from == NULL) && list_is_singular(&to_filp->write_head)) {
+	if ((from == NULL) &&
+	(list_first_entry(&to_filp->write_head,\
+		struct dev_job_list, file_list) == to)) {
 		mm_common_interlock_completion(to);
 		}
 	else if (from != NULL) {
 		struct file_private_data *from_filp = from->filp;
-		if (list_is_singular(&from_filp->write_head))
+		if (list_first_entry(&from_filp->write_head,\
+			struct dev_job_list, file_list) == from)
 			mm_common_interlock_completion(from);
 		}
-	mutex_unlock(&mm_common_mutex);
 }
 
 #define SCHEDULE_INTERLOCK_WORK(b)	SCHEDULE_JOB_WORK(il, \
@@ -266,7 +263,6 @@ void mm_common_read_job(struct work_struct *work)
 	struct dev_job_list **job_list = maint_job->u.rd.job_list;
 	struct file_private_data *filp = maint_job->u.rd.filp;
 
-	mutex_lock(&mm_common_mutex);
 	if (filp->read_count > 0) {
 		struct dev_job_list *job =
 			list_first_entry(&(filp->read_head),\
@@ -278,7 +274,6 @@ void mm_common_read_job(struct work_struct *work)
 	else {
 			*job_list = NULL;
 		}
-	mutex_unlock(&mm_common_mutex);
 
 }
 #define SCHEDULE_READ_WORK(b)	SCHEDULE_JOB_WORK(rd, b, mm_common_read_job)
@@ -294,7 +289,6 @@ void mm_common_release_jobs(struct work_struct *work)
 	struct dev_job_list *temp = NULL;
 
 
-	mutex_lock(&mm_common_mutex);
 	list_for_each_entry_safe(job, temp, &(filp->write_head), file_list) {
 		pr_err("this  = %p[%x] next = %p, prev= %p", &job->file_list,\
 			 filp->prio, job->file_list.next, job->file_list.prev);
@@ -329,7 +323,6 @@ void mm_common_release_jobs(struct work_struct *work)
 	filp->read_count = -1;
 	pr_debug(" %p %d", filp, filp->read_count);
 	wake_up_all(&filp->queue);
-	mutex_unlock(&mm_common_mutex);
 }
 
 #define SCHEDULE_RELEASE_WORK(b)	SCHEDULE_JOB_WORK(filp, \
@@ -342,9 +335,7 @@ void mm_common_add_file(struct work_struct *work)
 					work);
 	struct file_private_data *filp = maint_job->u.filp;
 
-	mutex_lock(&mm_common_mutex);
 	list_add_tail(&filp->file_head, &mm_file_list);
-	mutex_unlock(&mm_common_mutex);
 }
 
 #define SCHEDULE_ADD_FILE_WORK(b)	SCHEDULE_JOB_WORK(filp, \
