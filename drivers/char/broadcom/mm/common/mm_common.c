@@ -746,9 +746,9 @@ static long mm_file_ioctl(struct file *filp, \
 			ret = -EINVAL;
 			break;
 		}
+		BUG_ON(private->device_locked == 1);
 		if (down_trylock(&common->device_sem))
 			return -EINVAL;
-		BUG_ON(private->device_locked == 1);
 		private->device_locked = 1;
 	break;
 	case MM_IOCTL_DEVICE_LOCK:
@@ -757,9 +757,9 @@ static long mm_file_ioctl(struct file *filp, \
 			ret = -EINVAL;
 			break;
 		}
+		BUG_ON(private->device_locked == 1);
 		if (down_interruptible(&common->device_sem))
 			return -EINVAL;
-		BUG_ON(private->device_locked == 1);
 		private->device_locked = 1;
 	break;
 	case MM_IOCTL_DEVICE_UNLOCK:
@@ -768,8 +768,8 @@ static long mm_file_ioctl(struct file *filp, \
 			ret = -EINVAL;
 			break;
 		}
-		up(&common->device_sem);
 		BUG_ON(private->device_locked == 0);
+		up(&common->device_sem);
 		private->device_locked = 0;
 	break;
 	default:
