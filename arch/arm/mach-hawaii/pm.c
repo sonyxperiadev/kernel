@@ -408,8 +408,11 @@ int disable_all_interrupts(void)
 
 u32 num_cpus(void)
 {
+#if 0
 	return (readl(KONA_SCU_VA + SCU_CONFIG_OFFSET) &
 		SCU_CONFIG_NUM_CPUS_MASK) + 1;
+#endif
+	return CONFIG_NR_CPUS;
 }
 
 static int enter_retention_state(struct kona_idle_state *state)
