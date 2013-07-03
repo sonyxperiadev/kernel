@@ -388,7 +388,7 @@ static int __init wd_tapper_init(void)
 	return platform_driver_register(&wd_tapper_pltfm_driver);
 }
 
-subsys_initcall(wd_tapper_init);
+arch_initcall_sync(wd_tapper_init);
 
 static void __exit wd_tapper_exit(void)
 {
