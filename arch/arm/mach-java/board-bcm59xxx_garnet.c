@@ -1211,8 +1211,8 @@ static struct bcmpmu_fg_pdata fg_pdata = {
 	.sleep_current_ua = 2000, /* floor during sleep */
 	.sleep_sample_rate = 32000,
 	.fg_factor = 976,
-	.poll_rate_low_batt = 5000,	/* every 5 seconds */
-	.poll_rate_crit_batt = 2000,	/* every 2 Seconds */
+	.poll_rate_low_batt = 20000,	/* every 20 seconds */
+	.poll_rate_crit_batt = 5000,	/* every 5 Seconds */
 };
 
 #if defined(CONFIG_LEDS_BCM_PMU59xxx)
