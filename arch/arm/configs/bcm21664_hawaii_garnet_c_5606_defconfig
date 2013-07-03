@@ -2954,6 +2954,11 @@ CONFIG_IOMMU_SUPPORT=y
 # CONFIG_MOBICORE_DRIVER is not set
 
 #
+# Gator driver for ARM DS-5 Profiling
+#
+CONFIG_GATOR=m
+
+#
 # File systems
 #
 # CONFIG_EXT2_FS is not set

@@ -2985,6 +2985,11 @@ CONFIG_MOBICORE_DEBUG=y
 CONFIG_MOBICORE_API=y
 
 #
+# Gator driver for ARM DS-5 Profiling
+#
+CONFIG_GATOR=m
+
+#
 # File systems
 #
 # CONFIG_EXT2_FS is not set
