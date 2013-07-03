@@ -91,6 +91,12 @@ static struct funnel_map trace19_funnel[] = {
 	{NULL}
 };
 
+static struct funnel_map trace20_funnel[] = {
+	AXI_FUNNEL(KONA_MM2_FUNNEL_VA, 1, 1),
+	AXI_FUNNEL(KONA_FIN_FUNNEL_VA, 3, 1),
+	{NULL}
+};
+
 static struct axi_master mm_masters[] = {
 	AXI_MASTER("CSI",	0),
 	AXI_MASTER("DMAC",	1),
@@ -121,6 +127,13 @@ static struct axi_master comms_masters[] = {
 	AXI_MASTER("R4",	3),
 	AXI_MASTER("Modem_Sw",	4),
 	AXI_MASTER("ALL",	4),
+	{NULL}
+};
+
+static struct axi_master axitrace20_masters[] = {
+	AXI_MASTER("ISP2",	1),
+	AXI_MASTER("JPEG",	2),
+	AXI_MASTER("ALL",	2),
 	{NULL}
 };
 
@@ -225,6 +238,13 @@ static struct resource axitrace19_resource = {
 	.flags	= IORESOURCE_MEM,
 };
 
+static struct resource axitrace20_resource = {
+	.start	= AXITRACE20_BASE_ADDR,
+	.end	= AXITRACE20_BASE_ADDR + SZ_4K,
+	.flags	= IORESOURCE_MEM,
+};
+
+
 static struct axitrace_source trace_sources[] = {
 	{	/* MM to SYS_EMI */
 		.name		= "axitrace17",
@@ -324,6 +344,18 @@ static struct axitrace_source trace_sources[] = {
 		.axi_id_mask	= 0x7,
 		.resource	= &axitrace19_resource,
 		.map		= trace19_funnel,
+	},
+	{
+		/* MM2 to SYS_EMI */
+		.name		= "axitrace20",
+		.cap		= AXITRACE_FULL_CAP,
+		.filters	= AXITRACE_ALL_FILTERS,
+		.filter_count	= 2,
+		.masters	= axitrace20_masters,
+		.slaves		= axitrace_all_slaves,
+		.axi_id_mask	= 0x3,
+		.resource	= &axitrace20_resource,
+		.map		= trace20_funnel,
 	},
 	{ NULL }, /* NULL Termination */
 };
