@@ -767,8 +767,10 @@ int unicam_videobuf_stop_streaming(struct vb2_queue *q)
 		spin_unlock_irqrestore(&unicam_dev->lock, flags);
 		ret = down_timeout(&unicam_dev->stop_sem,
 				msecs_to_jiffies(500));
-		if (ret == -ETIME)
+		if (ret == -ETIME) {
 			pr_err("Unicam: semaphore timed out waiting to STOP\n");
+			csl_cam_register_display(unicam_dev->cslCamHandle);
+		}
 	} else {
 		spin_unlock_irqrestore(&unicam_dev->lock, flags);
 	}
