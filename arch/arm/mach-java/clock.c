@@ -42,6 +42,7 @@
 #include <mach/rdb/brcm_rdb_kps_rst_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_mm_rst_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_mm2_rst_mgr_reg.h>
+#include <mach/rdb/brcm_rdb_asb.h>
 #include <mach/rdb/brcm_rdb_pwrmgr.h>
 #ifdef CONFIG_DEBUG_FS
 #include <mach/rdb/brcm_rdb_padctrlreg.h>
@@ -6648,6 +6649,22 @@ static struct bus_clk CLK_NAME(mm_dma_axi) = {
 /*
 Bus clock name H264_AXI
 */
+static int h264_axi_clk_enable(struct clk *clk, int enable)
+{
+	clk_dbg("%s: enable: %d\n", __func__, enable);
+
+	BUG_ON(clk->id != CLK_H264_AXI_BUS_CLK_ID);
+	if (enable) {
+		clk_dbg("%s: clear H264_S_CTRL\n", __func__);
+		writel(0x0, KONA_H264ASYNC_VA + ASB_H264_S_CTRL_OFFSET);
+		writel(0x0, KONA_H264ASYNC_VA + ASB_H264_M_CTRL_OFFSET);
+	} else
+		clk_dbg("%s: last disable\n", __func__);
+
+	return gen_bus_clk_ops.enable(clk, enable);
+}
+
+struct gen_clk_ops h264_axi_clk_ops;
 static struct bus_clk clk_h264_axi = {
 	.clk =	{
 		.flags = H264_AXI_BUS_CLK_FLAGS,
@@ -6655,7 +6672,7 @@ static struct bus_clk clk_h264_axi = {
 		.id = CLK_H264_AXI_BUS_CLK_ID,
 		.name = H264_AXI_BUS_CLK_NAME_STR,
 		.dep_clks = DEFINE_ARRAY_ARGS(NULL),
-		.ops = &gen_bus_clk_ops,
+		.ops = &h264_axi_clk_ops,
 	},
 	.ccu_clk = &CLK_NAME(mm),
 	.clk_gate_offset  = MM_CLK_MGR_REG_H264_CLKGATE_OFFSET,
@@ -8103,6 +8120,9 @@ int __init __clock_init(void)
 	en_8ph_pll1_ref_clk_ops.enable = en_8ph_pll1_clk_enable;
 
 	pixelv_clk_ops.enable = gen_peri_clk_ops.enable;
+
+	h264_axi_clk_ops = gen_bus_clk_ops;
+	h264_axi_clk_ops.enable = h264_axi_clk_enable;
 
 #ifdef CONFIG_MM_V3D_TIMEOUT_ERRATUM
 	if (is_pm_erratum(ERRATUM_MM_V3D_TIMEOUT))
