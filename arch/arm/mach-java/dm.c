@@ -380,6 +380,12 @@ static void restore_proc_clk_regs(void)
 static void local_secure_api(unsigned service_id,
 			     unsigned arg0, unsigned arg1, unsigned arg2)
 {
+
+
+#ifdef CONFIG_MOBICORE_DRIVER
+	/* Temporay block fastcall before mobicore is ready */
+	/* mobicore_smc(service_id,arg0,arg1,arg2); */
+#else
 	/* Set Up Registers to pass data to Secure Monitor */
 	register u32 r4 asm("r4");
 	register u32 r5 asm("r5");
@@ -410,6 +416,8 @@ static void local_secure_api(unsigned service_id,
 				:
 				: "r0", "r1", "r2", "r3", "r7", "r8", "r14");
 	} while (r12 != SEC_EXIT_NORMAL);
+#endif
+
 }
 
 /******************* Public Functions ***************/
@@ -432,6 +440,13 @@ void dormant_enter(u32 svc)
 	u32 cpu;
 	u32 insurance = 1000;
 	(*((u32 *)(&__get_cpu_var(cdm_attempts))))++;
+
+
+#ifdef CONFIG_MOBICORE_DRIVER
+	/* tempoary block dormant before mobicore is ready*/
+	return;
+#endif
+
 	cdc_resp = cdc_send_cmd(CDC_CMD_RED);
 	switch (cdc_resp) {
 
@@ -716,13 +731,20 @@ static int dormant_enter_continue(unsigned long svc)
  * to save and restore the L2 memory since it would not
  * be turned off.
  */
+
+#ifdef CONFIG_MOBICORE_DRIVER
+		u32 smc_cmd = SMC_CMD_SLEEP;
+#else
+		u32 smc_cmd = SSAPI_DORMANT_ENTRY_SERV;
+#endif
+
 		if (svc == FULL_DORMANT_L2_OFF) {
-			local_secure_api(SSAPI_DORMANT_ENTRY_SERV,
+			local_secure_api(smc_cmd,
 				 (u32)SEC_BUFFER_ADDR,
 				 (u32)SEC_BUFFER_ADDR +
 				 MAX_SECURE_BUFFER_SIZE, 3);
 		} else {
-			local_secure_api(SSAPI_DORMANT_ENTRY_SERV,
+			local_secure_api(smc_cmd,
 				 (u32)SEC_BUFFER_ADDR,
 				 (u32)SEC_BUFFER_ADDR +
 				 MAX_SECURE_BUFFER_SIZE, 2);
