@@ -312,6 +312,7 @@ int bcm_hsotgctrl_bc_reset(void)
 	int val;
 	struct bcm_hsotgctrl_drv_data *bcm_hsotgctrl_handle =
 		local_hsotgctrl_handle;
+	int clk_cnt ;
 
 	if (NULL == local_hsotgctrl_handle)
 		return -ENODEV;
@@ -319,6 +320,10 @@ int bcm_hsotgctrl_bc_reset(void)
 	if ((!bcm_hsotgctrl_handle->otg_clk) ||
 		  (!bcm_hsotgctrl_handle->dev))
 		return -EIO;
+
+	clk_cnt = clk_get_usage(bcm_hsotgctrl_handle->otg_clk);
+	if (!clk_cnt)
+		bcm_hsotgctrl_en_clock(true);
 
 	val = readl(bcm_hsotgctrl_handle->hsotg_ctrl_base +
 			HSOTG_CTRL_BC_CFG_OFFSET);
@@ -352,6 +357,8 @@ int bcm_hsotgctrl_bc_reset(void)
 
 	val = readl(bcm_hsotgctrl_handle->hsotg_ctrl_base +
 			HSOTG_CTRL_BC_CFG_OFFSET);
+	if (!clk_cnt)
+		bcm_hsotgctrl_en_clock(false);
 	return 0;
 }
 EXPORT_SYMBOL_GPL(bcm_hsotgctrl_bc_reset);
