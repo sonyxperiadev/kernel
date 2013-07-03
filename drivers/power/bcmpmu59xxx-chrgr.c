@@ -113,8 +113,8 @@ static int chrgr_curr_lmt_default[PMU_CHRGR_TYPE_MAX] = {
 	[PMU_CHRGR_TYPE_TYPE1] = 500,
 	[PMU_CHRGR_TYPE_TYPE2] = 700,
 	[PMU_CHRGR_TYPE_PS2] = 100,
-	[PMU_CHRGR_TYPE_ACA_DOCK] = 1000,
-	[PMU_CHRGR_TYPE_ACA] = 1000,
+	[PMU_CHRGR_TYPE_ACA_DOCK] = 700,
+	[PMU_CHRGR_TYPE_ACA] = 700,
 };
 
 char *supplies_to[] = {
