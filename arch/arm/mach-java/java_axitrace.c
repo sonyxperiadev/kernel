@@ -55,8 +55,8 @@ static struct funnel_map trace16_funnel[] = {
 	{NULL}
 };
 
-
 static struct funnel_map trace17_funnel[] = {
+	AXI_FUNNEL(KONA_MM2_FUNNEL_VA, 0, 1),
 	AXI_FUNNEL(KONA_FIN_FUNNEL_VA, 3, 1),
 	{NULL}
 };
