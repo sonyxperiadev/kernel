@@ -1638,7 +1638,7 @@ static void usb_attach(uint8_t attached)
 #if defined(CONFIG_SEC_CHARGING_FEATURE)
 	int spa_data = POWER_SUPPLY_TYPE_BATTERY;
 #endif
-	pr_info("%s: attached %d\n", __func__, attached);
+	pr_info("ftsu6111_usb_cb attached %d\n", attached);
 
 	set_cable_status = attached ? CABLE_TYPE_USB : CABLE_TYPE_NONE;
 
@@ -1670,11 +1670,7 @@ static void usb_attach(uint8_t attached)
 	pr_info("tsu6111_usb_cb attached %d\n", attached);
 }
 
-__weak int musb_info_handler(struct notifier_block *nb,
-	unsigned long event, void *para)
-{
-	return 0;
-}
+//extern int musb_info_handler(struct notifier_block *nb, unsigned long event, void *para);
 
 static void uart_attach(uint8_t attached)
 {
@@ -1691,7 +1687,7 @@ static void uart_attach(uint8_t attached)
 		pi_mgr_qos_request_update(&qos_node, 0);
 #endif
 #endif
-		musb_info_handler(NULL, 0, 1);
+		//musb_info_handler(NULL, 0, 1);
 	} else {
 #ifndef CONFIG_SEC_MAKE_LCD_TEST
 #ifdef CONFIG_HAS_WAKELOCK
@@ -1703,7 +1699,7 @@ static void uart_attach(uint8_t attached)
 			PI_MGR_QOS_DEFAULT_VALUE);
 #endif
 #endif
-		musb_info_handler(NULL, 0, 0);
+		//musb_info_handler(NULL, 0, 0);
 	}
 }
 
@@ -1885,131 +1881,216 @@ enum cable_type_t {
 };
 
 
-#define FSA9485_I2C_BUS_ID 8
-#define GPIO_USB_I2C_SDA 113
-#define GPIO_USB_I2C_SCL 114
-#define GPIO_USB_INT 56
-
 #ifdef CONFIG_HAS_WAKELOCK
-static struct wake_lock fsa9485_jig_wakelock;
+static struct wake_lock tsu6111_jig_wakelock;
 #endif
 #ifdef CONFIG_KONA_PI_MGR
 static struct pi_mgr_qos_node qos_node;
 #endif
 
-static void fsa9485_wakelock_init(void)
+static void tsu6111_wakelock_init(void)
 {
 #ifdef CONFIG_HAS_WAKELOCK
-	wake_lock_init(&fsa9485_jig_wakelock, WAKE_LOCK_SUSPEND,
-		"fsa9485_jig_wakelock");
+	wake_lock_init(&tsu6111_jig_wakelock, WAKE_LOCK_SUSPEND,
+		"tsu6111_jig_wakelock");
 #endif
 
 #ifdef CONFIG_KONA_PI_MGR
-	pi_mgr_qos_add_request(&qos_node, "fsa9485_jig_qos",
+	pi_mgr_qos_add_request(&qos_node, "tsu6111_jig_qos",
 		PI_MGR_PI_ID_ARM_SUB_SYSTEM, PI_MGR_QOS_DEFAULT_VALUE);
 #endif
 }
-static void fsa9485_usb_cb(bool attached)
+static enum cable_type_t set_cable_status;
+static void tsu6111_usb_cb(bool attached)
 {
-	pr_info("fsa9485_usb_cb attached %d\n", attached);
+	enum bcmpmu_chrgr_type_t chrgr_type;
+	enum bcmpmu_usb_type_t usb_type;
+
+	#if defined(CONFIG_SEC_CHARGING_FEATURE)
+	int spa_data=POWER_SUPPLY_TYPE_BATTERY;
+#endif
+	pr_info("ftsu6111_usb_cb attached %d\n", attached);
+
+	set_cable_status = attached ? CABLE_TYPE_USB : CABLE_TYPE_NONE;
+
+	switch (set_cable_status) {
+	case CABLE_TYPE_USB:
+			usb_type = PMU_USB_TYPE_SDP;
+			chrgr_type = PMU_CHRGR_TYPE_SDP;
+#if defined(CONFIG_SEC_CHARGING_FEATURE)
+		spa_data = POWER_SUPPLY_TYPE_USB_CDP;
+#endif
+			pr_info("%s USB attached\n",__func__);
+			//send_usb_insert_event(BCMPMU_USB_EVENT_USB_DETECTION, &usb_type);
+			break;
+		case CABLE_TYPE_NONE:
+			usb_type = PMU_USB_TYPE_NONE;
+			chrgr_type = PMU_CHRGR_TYPE_NONE;
+#if defined(CONFIG_SEC_CHARGING_FEATURE)
+			spa_data = POWER_SUPPLY_TYPE_BATTERY;
+#endif
+			pr_info("%s USB removed\n",__func__);
+			//set_usb_connection_status(&usb_type); // for unplug, we only set status, but not send event
+			break;
+
+	}
+	send_chrgr_insert_event(BCMPMU_CHRGR_EVENT_CHGR_DETECTION,&chrgr_type);
+#if defined(CONFIG_SEC_CHARGING_FEATURE)
+	spa_event_handler(SPA_EVT_CHARGER, spa_data);
+#endif
+	pr_info("tsu6111_usb_cb attached %d\n", attached);
 }
 
-static void fsa9485_charger_cb(bool attached)
+#if defined (CONFIG_TOUCHSCREEN_IST30XX)
+extern void ist30xx_set_ta_mode(bool charging);
+#endif
+
+static void tsu6111_charger_cb(bool attached)
 {
-	pr_info("fsa9480_charger_cb attached %d\n", attached);
+	enum bcmpmu_chrgr_type_t chrgr_type;
+	enum cable_type_t set_cable_status;
+#if defined(CONFIG_SEC_CHARGING_FEATURE)
+	int spa_data=POWER_SUPPLY_TYPE_BATTERY;
+#endif
+
+	pr_info("tsu6111_charger_cb attached %d\n", attached);
+
+	set_cable_status = attached ? CABLE_TYPE_AC : CABLE_TYPE_NONE;
+	switch (set_cable_status) {
+	case CABLE_TYPE_AC:
+			chrgr_type = PMU_CHRGR_TYPE_DCP;
+			pr_info("%s TA attached\n", __func__);
+			#if defined (CONFIG_TOUCHSCREEN_IST30XX)
+				ist30xx_set_ta_mode(1);
+			#endif
+#if defined(CONFIG_SEC_CHARGING_FEATURE)
+		spa_data = POWER_SUPPLY_TYPE_USB_DCP;
+#endif
+			break;
+		case CABLE_TYPE_NONE:
+			chrgr_type = PMU_CHRGR_TYPE_NONE;
+			pr_info("%s TA removed\n", __func__);
+			#if defined (CONFIG_TOUCHSCREEN_IST30XX)
+				ist30xx_set_ta_mode(0);
+			#endif
+			break;
+		default:
+			break;
+	}
+	send_chrgr_insert_event(BCMPMU_CHRGR_EVENT_CHGR_DETECTION,
+			&chrgr_type);
+#if defined(CONFIG_SEC_CHARGING_FEATURE)
+	spa_event_handler(SPA_EVT_CHARGER, spa_data);
+#endif
+	pr_info("tsu6111_charger_cb attached %d\n", attached);
 }
 
-static void fsa9485_jig_cb(bool attached)
+static void tsu6111_jig_cb(bool attached)
 {
-	pr_info("fsa9480_jig_cb attached %d\n", attached);
+	pr_info("tsu6111_jig_cb attached %d\n", attached);
 
 	if (attached) {
-		#ifdef CONFIG_HAS_WAKELOCK
-			if (!wake_lock_active(&fsa9485_jig_wakelock))
-				wake_lock(&fsa9485_jig_wakelock);
-		#endif
-		#ifdef CONFIG_KONA_PI_MGR
+#ifndef CONFIG_SEC_MAKE_LCD_TEST
+#ifdef CONFIG_HAS_WAKELOCK
+		if ( !wake_lock_active( &tsu6111_jig_wakelock ) )
+			wake_lock( &tsu6111_jig_wakelock );
+#endif
+#ifdef CONFIG_KONA_PI_MGR
 			pi_mgr_qos_request_update(&qos_node, 0);
-		#endif
+#endif
+#endif
 	} else {
-		#ifdef CONFIG_HAS_WAKELOCK
-			if (wake_lock_active(&fsa9485_jig_wakelock))
-				wake_unlock(&fsa9485_jig_wakelock);
-		#endif
-		#ifdef CONFIG_KONA_PI_MGR
+#ifndef CONFIG_SEC_MAKE_LCD_TEST
+#ifdef CONFIG_HAS_WAKELOCK
+		if ( wake_lock_active( &tsu6111_jig_wakelock ) )
+			wake_unlock( &tsu6111_jig_wakelock );
+#endif
+#ifdef CONFIG_KONA_PI_MGR
+		pi_mgr_qos_request_update(&qos_node,
+			PI_MGR_QOS_DEFAULT_VALUE);
+#endif
+#endif
+	}
+}
+//extern int musb_info_handler(struct notifier_block *nb, unsigned long event, void *para);
+static void tsu6111_uart_cb(bool attached)
+{
+	pr_info("%s attached %d\n",__func__, attached);
+		if (attached) {
+#ifndef CONFIG_SEC_MAKE_LCD_TEST
+#ifdef CONFIG_HAS_WAKELOCK
+			if ( !wake_lock_active( &tsu6111_jig_wakelock ) )
+			wake_lock( &tsu6111_jig_wakelock );
+#endif
+#ifdef CONFIG_KONA_PI_MGR
+			pi_mgr_qos_request_update(&qos_node, 0);
+#endif
+#endif
+			//musb_info_handler(NULL, 0, 1);
+	} else {
+#ifndef CONFIG_SEC_MAKE_LCD_TEST
+#ifdef CONFIG_HAS_WAKELOCK
+			if ( wake_lock_active( &tsu6111_jig_wakelock ) )
+			wake_unlock( &tsu6111_jig_wakelock );
+#endif
+#ifdef CONFIG_KONA_PI_MGR
 			pi_mgr_qos_request_update(&qos_node,
 				PI_MGR_QOS_DEFAULT_VALUE);
 #endif
-						   }
-			      }
-static void fsa9485_uart_cb(bool attached)
-{
-	pr_info("fsa9485_uart_cb attached %d\n", attached);
-	if (attached) {
-		#ifdef CONFIG_HAS_WAKELOCK
-		if (!wake_lock_active(&fsa9485_jig_wakelock))
-			wake_lock(&fsa9485_jig_wakelock);
-		#endif
-		#ifdef CONFIG_KONA_PI_MGR
-			pi_mgr_qos_request_update(&qos_node, 0);
-		#endif
-	} else {
-		#ifdef CONFIG_HAS_WAKELOCK
-		if (wake_lock_active(&fsa9485_jig_wakelock))
-			wake_unlock(&fsa9485_jig_wakelock);
-		#endif
-		#ifdef CONFIG_KONA_PI_MGR
-			pi_mgr_qos_request_update(&qos_node,
-				PI_MGR_QOS_DEFAULT_VALUE);
-		#endif
-	}
+#endif
+			//musb_info_handler(NULL, 0, 0);
+		}
 
 }
 
 void uas_jig_force_sleep(void)
 {
-	#ifdef CONFIG_HAS_WAKELOCK
-	if (wake_lock_active(&fsa9485_jig_wakelock)) {
-		wake_unlock(&fsa9485_jig_wakelock);
+#ifdef CONFIG_HAS_WAKELOCK
+	if(wake_lock_active(&tsu6111_jig_wakelock))
+	{
+		wake_unlock(&tsu6111_jig_wakelock);
 		pr_info("Force unlock jig_uart_wl\n");
-			      }
+	}
+#else
+	pr_info("Warning : %s - Empty function!!!\n", __func__);
 #endif
-	#ifdef CONFIG_KONA_PI_MGR
+#ifdef CONFIG_KONA_PI_MGR
 	pi_mgr_qos_request_update(&qos_node, PI_MGR_QOS_DEFAULT_VALUE);
 #endif
+	return;
 }
 
-static struct fsa9485_platform_data fsa9485_pdata = {
-	.usb_cb = fsa9485_usb_cb,
-	.charger_cb = fsa9485_charger_cb,
-	.jig_cb = fsa9485_jig_cb,
-	.uart_cb = fsa9485_uart_cb,
+static struct tsu6111_platform_data tsu6111_pdata = {
+        .usb_cb = tsu6111_usb_cb,
+        .charger_cb = tsu6111_charger_cb,
+        .jig_cb = tsu6111_jig_cb,
+        .uart_cb = tsu6111_uart_cb,
 };
 
 static struct i2c_board_info  __initdata micro_usb_i2c_devices_info[]  = {
-	{
-		I2C_BOARD_INFO("fsa9485", 0x4A >> 1),
-		.platform_data = &fsa9485_pdata,
-		.irq = gpio_to_irq(GPIO_USB_INT),
-	},
+        {
+				I2C_BOARD_INFO("tsu6111", 0x28 >> 1),
+                .platform_data = &tsu6111_pdata,
+                .irq = gpio_to_irq(GPIO_USB_INT),
+        },
 };
 
-static struct i2c_gpio_platform_data fsa_i2c_gpio_data = {
-	.sda_pin        = GPIO_USB_I2C_SDA,
-	.scl_pin = GPIO_USB_I2C_SCL,
-	.udelay                 = 2,
-	};
+static struct i2c_gpio_platform_data mUSB_i2c_gpio_data={
+        .sda_pin        = GPIO_USB_I2C_SDA,
+                .scl_pin= GPIO_USB_I2C_SCL,
+                .udelay                 = 2,
+        };
 
-static struct platform_device fsa_i2c_gpio_device = {
-	.name                   = "i2c-gpio",
-	.id                     = FSA9485_I2C_BUS_ID,
-	.dev = {
-	.platform_data  = &fsa_i2c_gpio_data,
-		},
+static struct platform_device mUSB_i2c_gpio_device = {
+        .name                   = "i2c-gpio",
+        .id                     = TSU6111_I2C_BUS_ID,
+        .dev                    ={
+                .platform_data  = &mUSB_i2c_gpio_data,
+        },
 };
 
 static struct platform_device *mUSB_i2c_devices[] __initdata = {
-	&fsa_i2c_gpio_device,
+        &mUSB_i2c_gpio_device,
 };
 
 #endif
@@ -2104,11 +2185,11 @@ static void __init hawaii_add_i2c_devices(void)
 #endif
 
 #ifdef CONFIG_USB_SWITCH_TSU6111
-	pr_info("tsu6111\n");
-#ifdef CONFIG_HAS_WAKELOCK
-	fsa9485_wakelock_init();
+        pr_info("tsu6111\n");
+#if defined( CONFIG_HAS_WAKELOCK ) || defined( CONFIG_KONA_PI_MGR )
+		tsu6111_wakelock_init();
 #endif
-	i2c_register_board_info(FSA9485_I2C_BUS_ID, micro_usb_i2c_devices_info,
+        i2c_register_board_info(TSU6111_I2C_BUS_ID, micro_usb_i2c_devices_info,
 		ARRAY_SIZE(micro_usb_i2c_devices_info));
 #endif
 

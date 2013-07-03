@@ -19,12 +19,12 @@
  *
  */
 
-#ifndef _FSA9485_H_
-#define _FSA9485_H_
+#ifndef _TSU6111_H_
+#define _TSU6111_H_
 
 enum {
-	FSA9485_DETACHED,
-	FSA9485_ATTACHED
+	TSU6111_DETACHED,
+	TSU6111_ATTACHED
 };
 
 #define UART_SEL_SW	    58
@@ -34,7 +34,12 @@ enum {
 #define JIG_BC_STS_DCP_MSK     (1<<6)
 #define JIG_BC_STS_CDP_MSK     (1<<5)
 
-struct fsa9485_platform_data {
+#define TSU6111_I2C_BUS_ID 8
+#define GPIO_USB_I2C_SDA 113
+#define GPIO_USB_I2C_SCL 114
+#define GPIO_USB_INT 56
+
+struct tsu6111_platform_data {
 	void (*cfg_gpio) (void);
 	void (*otg_cb) (bool attached);
 	void (*usb_cb) (bool attached);
@@ -59,10 +64,10 @@ enum {
 	SWITCH_PORT_ALL_OPEN,
 };
 
-extern void fsa9485_manual_switching(int path);
-extern void fsa9485_otg_detach(void);
-extern void fsa9485_otg_set_autosw_pda(void);
-extern u16 fsa9485_get_chrgr_type(void);
+extern void tsu6111_manual_switching(int path);
+extern void tsu6111_otg_detach(void);
+extern void tsu6111_otg_set_autosw_pda(void);
+extern u16 tsu6111_get_chrgr_type(void);
 extern int bcm_ext_bc_status(void);
 /*
 enum bcmpmu_chrgr_type_t
@@ -71,4 +76,4 @@ get_ext_charger_type(struct bcmpmu_accy *paccy, unsigned int bc_status);
 
 extern struct class *sec_class;
 
-#endif /* _FSA9485_H_ */
+#endif /* _TSU6111_H_ */

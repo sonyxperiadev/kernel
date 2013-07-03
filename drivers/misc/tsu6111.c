@@ -1,5 +1,5 @@
 /*
- * driver/misc/fsa9480.c - FSA9480 micro USB switch device driver
+ * driver/misc/tsu6111.c - TSU6111 micro USB switch device driver
  *
  * Copyright (C) 2010 Samsung Electronics
  * Minkyu Kang <mk7.kang@samsung.com>
@@ -37,30 +37,31 @@
 #include <linux/delay.h>
 #include <linux/regulator/consumer.h>
 #include <linux/input.h>
+#include <linux/power_supply.h>
 
-/* FSA9480 I2C registers */
-#define FSA9485_REG_DEVID		0x01
-#define FSA9485_REG_CTRL		0x02
-#define FSA9485_REG_INT1		0x03
-#define FSA9485_REG_INT2		0x04
-#define FSA9485_REG_INT1_MASK		0x05
-#define FSA9485_REG_INT2_MASK		0x06
-#define FSA9485_REG_ADC			0x07
-#define FSA9485_REG_TIMING1		0x08
-#define FSA9485_REG_TIMING2		0x09
-#define FSA9485_REG_DEV_T1		0x0a
-#define FSA9485_REG_DEV_T2		0x0b
-#define FSA9485_REG_BTN1		0x0c
-#define FSA9485_REG_BTN2		0x0d
-#define FSA9485_REG_CK			0x0e
-#define FSA9485_REG_CK_INT1		0x0f
-#define FSA9485_REG_CK_INT2		0x10
-#define FSA9485_REG_CK_INTMASK1		0x11
-#define FSA9485_REG_CK_INTMASK2		0x12
-#define FSA9485_REG_MANSW1		0x13
-#define FSA9485_REG_MANSW2		0x14
-#define FSA9485_REG_MANUAL_OVERRIDES1	0x1B
-#define FSA9485_REG_RESERVED_1D		0x20
+/* TSU6111 I2C registers */
+#define TSU6111_REG_DEVID		0x01
+#define TSU6111_REG_CTRL		0x02
+#define TSU6111_REG_INT1		0x03
+#define TSU6111_REG_INT2		0x04
+#define TSU6111_REG_INT1_MASK		0x05
+#define TSU6111_REG_INT2_MASK		0x06
+#define TSU6111_REG_ADC			0x07
+#define TSU6111_REG_TIMING1		0x08
+#define TSU6111_REG_TIMING2		0x09
+#define TSU6111_REG_DEV_T1		0x0a
+#define TSU6111_REG_DEV_T2		0x0b
+#define TSU6111_REG_BTN1		0x0c
+#define TSU6111_REG_BTN2		0x0d
+#define TSU6111_REG_CK			0x0e
+#define TSU6111_REG_CK_INT1		0x0f
+#define TSU6111_REG_CK_INT2		0x10
+#define TSU6111_REG_CK_INTMASK1		0x11
+#define TSU6111_REG_CK_INTMASK2		0x12
+#define TSU6111_REG_MANSW1		0x13
+#define TSU6111_REG_MANSW2		0x14
+#define TSU6111_REG_MANUAL_OVERRIDES1	0x1B
+#define TSU6111_REG_RESERVED_1D		0x20
 
 /* Control */
 #define CON_SWITCH_OPEN		(1 << 4)
@@ -130,9 +131,9 @@
 #define	ADC_CARDOCK		0x1d
 #define ADC_OPEN		0x1f
 
-struct fsa9485_usbsw {
+struct tsu6111_usbsw {
 	struct i2c_client		*client;
-	struct fsa9485_platform_data	*pdata;
+	struct tsu6111_platform_data	*pdata;
 	int				dev1;
 	int				dev2;
 	int				mansw;
@@ -153,19 +154,16 @@ enum {
 	DOCK_KEY_VOL_DOWN_RELEASED,
 };
 
-static struct fsa9485_usbsw *local_usbsw;
+extern int bcmpmu_check_vbus();
 
-#if defined(CONFIG_VIDEO_MHL_V1) || defined(CONFIG_VIDEO_MHL_V2)
-#define MHL_DEVICE 2
-static int isDeskdockconnected;
-#endif
+static struct tsu6111_usbsw *local_usbsw=NULL;
 
 
-static int fsa9485_write_reg(struct i2c_client *client,        u8 reg, u8 data)
+static int tsu6111_write_reg(struct i2c_client *client,        u8 reg, u8 data)
 {
-	int ret = 0;
-	u8 buf[2];
-	struct i2c_msg msg[1];
+       int ret;
+       u8 buf[2];
+       struct i2c_msg msg[1];
 
 	buf[0] = reg;
 	buf[1] = data;
@@ -175,89 +173,87 @@ static int fsa9485_write_reg(struct i2c_client *client,        u8 reg, u8 data)
 	msg[0].len = 2;
 	msg[0].buf = buf;
 
-	ret = i2c_transfer(client->adapter, msg, 1);
-	if (ret != 1) {
-		printk(KERN_ERR
-			"\n [fsa9485] i2c Write Failed (ret=%d)\n",
-			ret);
-		return -1;
-	}
+       ret = i2c_transfer(client->adapter, msg, 1);
+       if (ret != 1) {
+               printk("\n [tsu6111] i2c Write Failed (ret=%d) \n", ret);
+               return -1;
+       }
 
 	return ret;
 }
 
-static int fsa9485_read_reg(struct i2c_client *client, u8 reg, u8 *data)
+static int tsu6111_read_reg(struct i2c_client *client, u8 reg, u8 *data)
 {
-	int ret = 0;
-	u8 buf[1];
-	struct i2c_msg msg[2];
+       int ret;
+       u8 buf[1];
+       struct i2c_msg msg[2];
 
 	buf[0] = reg;
 
-	msg[0].addr = client->addr;
-	msg[0].flags = 0;
-	msg[0].len = 1;
-	msg[0].buf = buf;
+        msg[0].addr = client->addr;
+        msg[0].flags = 0;
+        msg[0].len = 1;
+        msg[0].buf = buf;
 
-	msg[1].addr = client->addr;
-	msg[1].flags = I2C_M_RD;
-	msg[1].len = 1;
-	msg[1].buf = buf;
+        msg[1].addr = client->addr;
+        msg[1].flags = I2C_M_RD;
+        msg[1].len = 1;
+        msg[1].buf = buf;
 
-	ret = i2c_transfer(client->adapter, msg, 2);
-	if (ret != 2) {
-		printk(KERN_ERR "\n [fsa9485] i2c Read Failed (ret=%d)\n", ret);
-		return -1;
-	}
-	*data = buf[0];
+       ret = i2c_transfer(client->adapter, msg, 2);
+       if (ret != 2) {
+               printk("\n [tsu6111] i2c Read Failed (ret=%d) \n", ret);
+               return -1;
+       }
+       *data = buf[0];
 
 	return 0;
 }
 
-static int fsa9485_read_word_reg(struct i2c_client *client, u8 reg, int *data)
+static int tsu6111_read_word_reg(struct i2c_client *client, u8 reg, int *data)
 {
-	int ret = 0;
-	u8 buf[1];
-	u8 data1, data2;
-	struct i2c_msg msg[2];
+       int ret;
+       u8 buf[1];
+	   u8 data1,data2;
+       struct i2c_msg msg[2];
 
 	buf[0] = reg;
 
-	msg[0].addr = client->addr;
-	msg[0].flags = 0;
-	msg[0].len = 1;
-	msg[0].buf = buf;
+        msg[0].addr = client->addr;
+        msg[0].flags = 0;
+        msg[0].len = 1;
+        msg[0].buf = buf;
 
-	msg[1].addr = client->addr;
-	msg[1].flags = I2C_M_RD;
-	msg[1].len = 1;
-	msg[1].buf = buf;
+        msg[1].addr = client->addr;
+        msg[1].flags = I2C_M_RD;
+        msg[1].len = 1;
+        msg[1].buf = buf;
 
-	ret = i2c_transfer(client->adapter, msg, 2);
-	if (ret != 2) {
-		printk(KERN_ERR "\n [fsa9485] i2c Read Failed (ret=%d)\n", ret);
-		return -1;
-	}
+       ret = i2c_transfer(client->adapter, msg, 2);
+       if (ret != 2) {
+               printk("\n [tsu6111] i2c Read Failed (ret=%d) \n", ret);
+               return -1;
+       }
 
 	data1 = buf[0];
 
 	buf[0] = reg+1;
 
-	msg[0].addr = client->addr;
-	msg[0].flags = 0;
-	msg[0].len = 1;
-	msg[0].buf = buf;
+        msg[0].addr = client->addr;
+        msg[0].flags = 0;
+        msg[0].len = 1;
+        msg[0].buf = buf;
 
-	msg[1].addr = client->addr;
-	msg[1].flags = I2C_M_RD;
-	msg[1].len = 1;
-	msg[1].buf = buf;
+        msg[1].addr = client->addr;
+        msg[1].flags = I2C_M_RD;
+        msg[1].len = 1;
+        msg[1].buf = buf;
 
-	ret = i2c_transfer(client->adapter, msg, 2);
-	if (ret != 2) {
-		printk(KERN_ERR "\n [fsa9485] i2c Read Failed (ret=%d)\n", ret);
-		return -1;
-	}
+       ret = i2c_transfer(client->adapter, msg, 2);
+       if (ret != 2) {
+               printk("\n [tsu6111] i2c Read Failed (ret=%d) \n", ret);
+               return -1;
+       }
 
 	data2 = buf[0];
 
@@ -266,107 +262,86 @@ static int fsa9485_read_word_reg(struct i2c_client *client, u8 reg, int *data)
 
 	return 0;
 }
-
-static void DisableFSA9480Interrupts(void)
+void musb_vbus_changed(int state)
 {
-	struct i2c_client *client = local_usbsw->client;
-	int value, ret;
-
-	fsa9485_read_reg(client, FSA9485_REG_CTRL, &value);
-	value |= 0x01;
-
-	ret = fsa9485_write_reg(client, FSA9485_REG_CTRL, value);
-
-	if (ret < 0)
-		dev_err(&client->dev, "%s: err %d\n", __func__, ret);
-
-}
-
-static void EnableFSA9480Interrupts(void)
-{
-	struct i2c_client *client = local_usbsw->client;
-	int value, ret;
-
-	fsa9485_read_reg(client, FSA9485_REG_INT1, &value);
-	fsa9485_read_reg(client, FSA9485_REG_INT1, &value);
-
-	fsa9485_read_reg(client, FSA9485_REG_CTRL, &value);
-	value &= 0xFE;
-
-	ret = fsa9485_write_reg(client, FSA9485_REG_CTRL, value);
-	if (ret < 0)
-		dev_err(&client->dev, "%s: err %d\n", __func__, ret);
-
-}
-
-void FSA9485_CheckAndHookAudioDock(int value)
-{
-	struct i2c_client *client = local_usbsw->client;
-	struct fsa9485_platform_data *pdata = local_usbsw->pdata;
-	int ret = 0;
-
-	if (value) {
-		pr_info("FSA9485_CheckAndHookAudioDock ON\n");
-			if (pdata->deskdock_cb)
-				pdata->deskdock_cb(FSA9485_ATTACHED);
-
-			ret = fsa9485_write_reg(client,
-					FSA9485_REG_MANSW1, SW_AUDIO);
-
-			if (ret < 0)
-				dev_err(&client->dev, "%s: err %d\n",
-							__func__, ret);
-			fsa9485_read_reg(client, FSA9485_REG_CTRL, &ret);
-
-			if (ret < 0)
-				dev_err(&client->dev, "%s: err %d\n",
-							__func__, ret);
-
-			ret = fsa9485_write_reg(client,
-					FSA9485_REG_CTRL,
-					ret & ~CON_MANUAL_SW & ~CON_RAW_DATA);
-			if (ret < 0)
-				dev_err(&client->dev,
-						"%s: err %d\n", __func__, ret);
-		} else {
-			dev_info(&client->dev,
-			"FSA9485_CheckAndHookAudioDock Off\n");
-
-			if (pdata->deskdock_cb)
-				pdata->deskdock_cb(FSA9485_DETACHED);
-
-			fsa9485_read_reg(client, FSA9485_REG_CTRL, &ret);
-
-			if (ret < 0)
-				dev_err(&client->dev,
-					"%s: err %d\n", __func__, ret);
-
-			ret = fsa9485_write_reg(client,
-					FSA9485_REG_CTRL,
-					ret | CON_MANUAL_SW | CON_RAW_DATA);
-			if (ret < 0)
-				dev_err(&client->dev,
-					"%s: err %d\n", __func__, ret);
+	if( !local_usbsw ){
+		printk("failed to allocate driver data\n");
+		return 0;
 	}
-}
 
-u16 fsa9485_get_chrgr_type(void)
+	struct tsu6111_usbsw *usbsw = local_usbsw;
+	struct tsu6111_platform_data *pdata = usbsw->pdata;
+
+	if(usbsw->dev2 & DEV_AV){
+		printk("%s:dock vbus is %s\n",__func__,(state?"enabled":"disabled"));
+
+		if(state){
+			if(bcmpmu_check_vbus())
+				if (pdata->charger_cb)
+					pdata->charger_cb(TSU6111_ATTACHED);
+		}else{
+			if (pdata->charger_cb)
+				pdata->charger_cb(TSU6111_DETACHED);
+		}
+	}
+
+}
+EXPORT_SYMBOL(musb_vbus_changed);
+
+unsigned int musb_get_charger_type(void)
 {
+	if( !local_usbsw ){
+		printk("failed to allocate driver data\n");
+		return POWER_SUPPLY_TYPE_BATTERY;
+	}
+
 	struct i2c_client *client = local_usbsw->client;
-	u16 value = 0;
-	fsa9485_read_word_reg(client, FSA9485_REG_DEV_T1, &value);
-	printk(KERN_INFO "%s chrgr type 0x%x\n", __func__, value);
+	int value = 0;
+
+	tsu6111_read_word_reg(client, TSU6111_REG_DEV_T1, &value);
+	printk("%s chrgr type 0x%x\n", __func__, value);
+
+	if(value & DEV_USB)
+	{
+		return POWER_SUPPLY_TYPE_USB_CDP;
+	}
+	else if(value & DEV_T1_CHARGER_MASK || (value >> 8) & DEV_AV)
+	{
+		return POWER_SUPPLY_TYPE_USB_DCP;
+	}
+	else if(1 == bcmpmu_check_vbus())
+	{
+		printk("%s chrgr type : 3rd party charger - only vbus!!!\n", __func__);
+		return POWER_SUPPLY_TYPE_USB_DCP;
+	}
+
+	return POWER_SUPPLY_TYPE_BATTERY;
+}
+EXPORT_SYMBOL(musb_get_charger_type);
+
+u16 tsu6111_get_chrgr_type(void)
+{
+	if( !local_usbsw ){
+		printk("failed to allocate driver data\n");
+		return 0;
+        }
+
+	struct i2c_client *client = local_usbsw->client;
+	int value = 0;
+
+	tsu6111_read_word_reg(client, TSU6111_REG_DEV_T1, &value);
+	printk("%s chrgr type 0x%x\n", __func__, value);
 	return value;
 }
-EXPORT_SYMBOL(fsa9485_get_chrgr_type);
+EXPORT_SYMBOL(tsu6111_get_chrgr_type);
 
 /* for external charger detection  apart from PMU/BB*/
 int bcm_ext_bc_status(void)
 {
-	return fsa9485_get_chrgr_type();
+	return tsu6111_get_chrgr_type();
 }
 EXPORT_SYMBOL(bcm_ext_bc_status);
-/*
+
 enum bcmpmu_chrgr_type_t
 get_ext_charger_type(struct bcmpmu_accy *paccy, unsigned int bc_status)
 {
@@ -389,163 +364,163 @@ get_ext_charger_type(struct bcmpmu_accy *paccy, unsigned int bc_status)
 	return type;
 }
 EXPORT_SYMBOL(get_ext_charger_type);
-*/
-static void fsa945_sw_reset(struct fsa9485_usbsw *usbsw)
+
+static void tsu6111_sw_reset(struct tsu6111_usbsw *usbsw)
 {
 	struct i2c_client *client = usbsw->client;
-	struct i2c_adapter *adapter = client->adapter;
-	struct i2c_algo_bit_data *algo_data = adapter->algo_data;
-	unsigned char value = 0;
 
-	algo_data->setscl(algo_data->data, 0);
-	algo_data->setsda(algo_data->data, 0);
+	disable_irq(client->irq);
 
-	msleep(50);
+	/*Hold SCL&SDA Low more than 30ms*/
+	gpio_direction_output(GPIO_USB_I2C_SDA,0);
+	gpio_direction_output(GPIO_USB_I2C_SCL,0);
+	msleep(31);
 
-	algo_data->setscl(algo_data->data, 1);
-	algo_data->setsda(algo_data->data, 1);
+	/*Make SCL&SDA High again*/
+	gpio_direction_output(GPIO_USB_I2C_SDA,1);
+	gpio_direction_output(GPIO_USB_I2C_SCL,1);
 
-	fsa9485_read_reg(client, FSA9485_REG_CTRL, &value);
-	value &= ~(CON_INT_MASK);
-	fsa9485_write_reg(client, FSA9485_REG_CTRL, value);
+	/*Write SOME Init register value again*/
+	enable_irq(client->irq);
+
+
 }
 
-static ssize_t fsa9485_show_timing2(struct device *dev,
+static ssize_t tsu6111_show_timing2(struct device *dev,
 				   struct device_attribute *attr,
 				   char *buf)
 {
-	struct fsa9485_usbsw *usbsw = dev_get_drvdata(dev);
+	struct tsu6111_usbsw *usbsw = dev_get_drvdata(dev);
 	struct i2c_client *client = usbsw->client;
 	unsigned char value = 0;
 
-	fsa9485_read_reg(client, FSA9485_REG_TIMING2, &value);
+	tsu6111_read_reg(client,TSU6111_REG_TIMING2,&value);
 
 	return snprintf(buf, 30, "TIMING2: %02x\n", value);
 }
 
 
-static ssize_t fsa9485_set_timing2(struct device *dev,
+static ssize_t tsu6111_set_timing2(struct device *dev,
 				    struct device_attribute *attr,
 				    const char *buf, size_t count)
 {
-	struct fsa9485_usbsw *usbsw = dev_get_drvdata(dev);
+	struct tsu6111_usbsw *usbsw = dev_get_drvdata(dev);
 	struct i2c_client *client = usbsw->client;
-	unsigned char value = 0;
+	unsigned char value;
 
-	value = (unsigned char) simple_strtoul(buf, NULL, 16);
+	value = (unsigned char) simple_strtoul(buf, NULL,16);
 	printk(KERN_ALERT "input value = %x\n", value);
 
-	fsa9485_write_reg(client, FSA9485_REG_TIMING2, value);
+	tsu6111_write_reg(client,TSU6111_REG_TIMING2,value);
 
 	return count;
 }
-static ssize_t fsa9485_show_timing1(struct device *dev,
+static ssize_t tsu6111_show_timing1(struct device *dev,
 				   struct device_attribute *attr,
 				   char *buf)
 {
-	struct fsa9485_usbsw *usbsw = dev_get_drvdata(dev);
+	struct tsu6111_usbsw *usbsw = dev_get_drvdata(dev);
 	struct i2c_client *client = usbsw->client;
 	unsigned char value = 0;
 
-	fsa9485_read_reg(client, FSA9485_REG_TIMING1, &value);
+	tsu6111_read_reg(client,TSU6111_REG_TIMING1,&value);
 
 	return snprintf(buf, 30, "TIMING1: %02x\n", value);
 }
 
 
-static ssize_t fsa9485_set_timing1(struct device *dev,
+static ssize_t tsu6111_set_timing1(struct device *dev,
 				    struct device_attribute *attr,
 				    const char *buf, size_t count)
 {
-	struct fsa9485_usbsw *usbsw = dev_get_drvdata(dev);
+	struct tsu6111_usbsw *usbsw = dev_get_drvdata(dev);
 	struct i2c_client *client = usbsw->client;
-	unsigned char value = 0;
+	unsigned char value;
 
-	value = (unsigned char) simple_strtoul(buf, NULL, 16);
+	value = (unsigned char) simple_strtoul(buf, NULL,16);
 	printk(KERN_ALERT "input value = %x\n", value);
 
-	fsa9485_write_reg(client, FSA9485_REG_TIMING1, value);
+	tsu6111_write_reg(client,TSU6111_REG_TIMING1,value);
 
 	return count;
 }
 
-static ssize_t fsa9485_show_control(struct device *dev,
+static ssize_t tsu6111_show_control(struct device *dev,
 				   struct device_attribute *attr,
 				   char *buf)
 {
-	struct fsa9485_usbsw *usbsw = dev_get_drvdata(dev);
+	struct tsu6111_usbsw *usbsw = dev_get_drvdata(dev);
 	struct i2c_client *client = usbsw->client;
 	unsigned char value = 0;
 
-	fsa9485_read_reg(client, FSA9485_REG_CTRL, &value);
+	tsu6111_read_reg(client,TSU6111_REG_CTRL,&value);
 
 	return snprintf(buf, 30, "CONTROL: %02x\n", value);
 }
 
 
-static ssize_t fsa9485_set_control(struct device *dev,
+static ssize_t tsu6111_set_control(struct device *dev,
 				    struct device_attribute *attr,
 				    const char *buf, size_t count)
 {
-	struct fsa9485_usbsw *usbsw = dev_get_drvdata(dev);
+	struct tsu6111_usbsw *usbsw = dev_get_drvdata(dev);
 	struct i2c_client *client = usbsw->client;
-	unsigned char value = 0;
+	unsigned char value;
 
-	value = (unsigned char) simple_strtoul(buf, NULL, 16);
+	value = (unsigned char) simple_strtoul(buf, NULL,16);
 	printk(KERN_ALERT "input value = %x\n", value);
 
-	fsa9485_write_reg(client, FSA9485_REG_CTRL, value);
+	tsu6111_write_reg(client,TSU6111_REG_CTRL,value);
 
 	return count;
 }
 
-static ssize_t fsa9485_reg_dump(struct device *dev,
+static ssize_t tsu6111_reg_dump(struct device *dev,
 				   struct device_attribute *attr,
 				   char *buf)
 {
-	struct fsa9485_usbsw *usbsw = dev_get_drvdata(dev);
+	struct tsu6111_usbsw *usbsw = dev_get_drvdata(dev);
 	struct i2c_client *client = usbsw->client;
 	unsigned char value = 0, i = 0;
 	unsigned char count = 0;
 
-	for (i = 0; i <= 0x15; i++) {
-		fsa9485_read_reg(client, i, &value);
-		count += snprintf(&buf[count], 20,
-			"reg[%02x]=%02x\n", i, value);
+	for (i=0; i <= 0x15; i++){
+		tsu6111_read_reg(client,i,&value);
+		count+=snprintf(&buf[count],20, "reg[%02x]=%02x\n",i,value);
 	}
 	printk(KERN_ALERT "count = %d\n", count);
 	return count;
 }
 
-static ssize_t fsa9485_show_device_type(struct device *dev,
+static ssize_t tsu6111_show_device_type(struct device *dev,
 				   struct device_attribute *attr,
 				   char *buf)
 {
-	struct fsa9485_usbsw *usbsw = dev_get_drvdata(dev);
+	struct tsu6111_usbsw *usbsw = dev_get_drvdata(dev);
 	struct i2c_client *client = usbsw->client;
 	unsigned char value = 0;
 
 	/* Checkout out i2c reads */
-	fsa9485_read_reg(client, FSA9485_REG_DEVID, &value);
+	tsu6111_read_reg(client,TSU6111_REG_DEVID,&value);
 	printk(KERN_ALERT "device id = %x\n", value);
 
-	fsa9485_read_reg(client, FSA9485_REG_DEV_T1, &value);
+	tsu6111_read_reg(client,TSU6111_REG_DEV_T1,&value);
 	printk(KERN_ALERT "device t1 = %x\n", value);
 
-	fsa9485_read_reg(client, FSA9485_REG_DEV_T2, &value);
+	tsu6111_read_reg(client,TSU6111_REG_DEV_T2,&value);
 	printk(KERN_ALERT "device t2 = %x\n", value);
 
 	return snprintf(buf, 30, "DEVICE_TYPE: %02x\n", value);
 }
 
-static ssize_t fsa9485_show_manualsw(struct device *dev,
+static ssize_t tsu6111_show_manualsw(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
-	struct fsa9485_usbsw *usbsw = dev_get_drvdata(dev);
+	struct tsu6111_usbsw *usbsw = dev_get_drvdata(dev);
 	struct i2c_client *client = usbsw->client;
 	unsigned char value = 0;
 
-	fsa9485_read_reg(client, FSA9485_REG_MANSW1, &value);
+	tsu6111_read_reg(client,TSU6111_REG_MANSW1,&value);
 	printk(KERN_ALERT "manual sw1 = %x\n", value);
 
 	if (value == SW_VAUDIO)
@@ -562,17 +537,17 @@ static ssize_t fsa9485_show_manualsw(struct device *dev,
 		return snprintf(buf, 15, "%x", value);
 }
 
-static ssize_t fsa9485_set_manualsw(struct device *dev,
+static ssize_t tsu6111_set_manualsw(struct device *dev,
 				    struct device_attribute *attr,
 				    const char *buf, size_t count)
 {
-	struct fsa9485_usbsw *usbsw = dev_get_drvdata(dev);
+	struct tsu6111_usbsw *usbsw = dev_get_drvdata(dev);
 	struct i2c_client *client = usbsw->client;
 	unsigned char value = 0;
 	unsigned int path = 0;
 	int ret;
 
-	fsa9485_read_reg(client, FSA9485_REG_CTRL, &value);
+	tsu6111_read_reg(client,TSU6111_REG_CTRL,&value);
 
 	if ((value & ~CON_MANUAL_SW) !=
 			(CON_SWITCH_OPEN | CON_RAW_DATA | CON_WAIT))
@@ -600,29 +575,26 @@ static ssize_t fsa9485_set_manualsw(struct device *dev,
 
 	usbsw->mansw = path;
 
-	ret = fsa9485_write_reg(client, FSA9485_REG_MANSW1, path);
+	ret = tsu6111_write_reg(client, TSU6111_REG_MANSW1, path);
 	if (ret < 0)
 		dev_err(&client->dev, "%s: err %d\n", __func__, ret);
 
-	ret = fsa9485_write_reg(client, FSA9485_REG_CTRL, value);
+	ret = tsu6111_write_reg(client, TSU6111_REG_CTRL, value);
 	if (ret < 0)
 		dev_err(&client->dev, "%s: err %d\n", __func__, ret);
 
 	return count;
 }
 
-static DEVICE_ATTR(control, S_IRUGO | S_IWUSR,
-	fsa9485_show_control, fsa9485_set_control);
-static DEVICE_ATTR(timing1, S_IRUGO | S_IWUSR,
-	fsa9485_show_timing1, fsa9485_set_timing1);
-static DEVICE_ATTR(timing2, S_IRUGO | S_IWUSR,
-	fsa9485_show_timing2, fsa9485_set_timing2);
-static DEVICE_ATTR(device_type, S_IRUGO, fsa9485_show_device_type, NULL);
+static DEVICE_ATTR(control, S_IRUGO | S_IWUSR, tsu6111_show_control, tsu6111_set_control);
+static DEVICE_ATTR(timing1, S_IRUGO | S_IWUSR, tsu6111_show_timing1, tsu6111_set_timing1);
+static DEVICE_ATTR(timing2, S_IRUGO | S_IWUSR, tsu6111_show_timing2, tsu6111_set_timing2);
+static DEVICE_ATTR(device_type, S_IRUGO, tsu6111_show_device_type, NULL);
 static DEVICE_ATTR(switch, S_IRUGO | S_IWUSR,
-		fsa9485_show_manualsw, fsa9485_set_manualsw);
-static DEVICE_ATTR(regdump, S_IRUGO, fsa9485_reg_dump, NULL);
+		tsu6111_show_manualsw, tsu6111_set_manualsw);
+static DEVICE_ATTR(regdump, S_IRUGO, tsu6111_reg_dump, NULL);
 
-static struct attribute *fsa9485_attributes[] = {
+static struct attribute *tsu6111_attributes[] = {
 	&dev_attr_control.attr,
 	&dev_attr_timing1.attr,
 	&dev_attr_timing2.attr,
@@ -632,52 +604,17 @@ static struct attribute *fsa9485_attributes[] = {
 	NULL
 };
 
-static const struct attribute_group fsa9485_group = {
-	.attrs = fsa9485_attributes,
+static const struct attribute_group tsu6111_group = {
+	.attrs = tsu6111_attributes,
 };
 
-void fsa9485_otg_set_autosw_pda(void)
-{
-	unsigned int data = 0;
-	int ret;
-	struct i2c_client *client = local_usbsw->client;
-	dev_info(&client->dev, "%s\n", __func__);
-	fsa9485_write_reg(client,
-						FSA9485_REG_CTRL, 0x1E);
-}
-EXPORT_SYMBOL(fsa9485_otg_set_autosw_pda);
-
-void fsa9485_otg_detach(void)
-{
-	unsigned int data = 0;
-	int ret;
-	struct i2c_client *client = local_usbsw->client;
-
-	data = 0x00;
-	ret = fsa9485_write_reg(client, FSA9485_REG_MANSW2, data);
-	if (ret < 0)
-		dev_info(&client->dev, "%s: err %d\n", __func__, ret);
-	data = SW_ALL_OPEN;
-	ret = fsa9485_write_reg(client, FSA9485_REG_MANSW1, data);
-	if (ret < 0)
-		dev_info(&client->dev, "%s: err %d\n", __func__, ret);
-
-	data = 0x1A;
-	ret = fsa9485_write_reg(client, FSA9485_REG_CTRL, data);
-	if (ret < 0)
-		dev_info(&client->dev, "%s: err %d\n", __func__, ret);
-}
-EXPORT_SYMBOL(fsa9485_otg_detach);
-
-
-void fsa9485_manual_switching(int path)
+void tsu6111_manual_switching(int path)
 {
 	struct i2c_client *client = local_usbsw->client;
-	unsigned int value;
-	unsigned int data = 0;
+	u8 value, data = 0;
 	int ret;
 
-	fsa9485_read_reg(client, FSA9485_REG_CTRL, &value);
+	tsu6111_read_reg(client,TSU6111_REG_CTRL,&value);
 	if (value < 0)
 		dev_err(&client->dev, "%s: err %d\n", __func__, value);
 
@@ -715,104 +652,108 @@ void fsa9485_manual_switching(int path)
 
 	/* path for FTM sleep */
 	if (path ==  SWITCH_PORT_ALL_OPEN) {
-		ret = fsa9485_write_reg(client,
-					FSA9485_REG_MANUAL_OVERRIDES1, 0x0a);
+		ret = tsu6111_write_reg(client,
+					TSU6111_REG_MANUAL_OVERRIDES1, 0x0a);
 		if (ret < 0)
 			dev_err(&client->dev, "%s: err %d\n", __func__, ret);
 
-		ret = fsa9485_write_reg(client,
-						FSA9485_REG_MANSW1, data);
+		ret = tsu6111_write_reg(client,
+						TSU6111_REG_MANSW1, data);
 		if (ret < 0)
 			dev_err(&client->dev, "%s: err %d\n", __func__, ret);
 
-		ret = fsa9485_write_reg(client,
-						FSA9485_REG_MANSW2, data);
+		ret = tsu6111_write_reg(client,
+						TSU6111_REG_MANSW2, data);
 		if (ret < 0)
 			dev_err(&client->dev, "%s: err %d\n", __func__, ret);
 
-		ret = fsa9485_write_reg(client,
-						FSA9485_REG_CTRL, value);
+		ret = tsu6111_write_reg(client,
+						TSU6111_REG_CTRL, value);
 		if (ret < 0)
 			dev_err(&client->dev, "%s: err %d\n", __func__, ret);
 	} else {
-		ret = fsa9485_write_reg(client,
-						FSA9485_REG_MANSW1, data);
+		ret = tsu6111_write_reg(client,
+						TSU6111_REG_MANSW1, data);
 		if (ret < 0)
 			dev_err(&client->dev, "%s: err %d\n", __func__, ret);
 
-		ret = fsa9485_write_reg(client,
-						FSA9485_REG_CTRL, value);
+		ret = tsu6111_write_reg(client,
+						TSU6111_REG_CTRL, value);
 		if (ret < 0)
 			dev_err(&client->dev, "%s: err %d\n", __func__, ret);
 	}
 
 }
-EXPORT_SYMBOL(fsa9485_manual_switching);
+EXPORT_SYMBOL(tsu6111_manual_switching);
 
 
-static void fsa9485_reg_init(struct fsa9485_usbsw *usbsw)
+static void tsu6111_reg_init(struct tsu6111_usbsw *usbsw)
 {
 	struct i2c_client *client = usbsw->client;
 	unsigned int ctrl = CON_MASK;
 	int ret;
+	u8 val;
 
-	pr_info("fsa9485_reg_init is called\n");
+	pr_info("tsu6111_reg_init is called\n");
+#if 1 //defined(CONFIG_MACH_HAWAII_SS_LOGAN_REV03) || defined(CONFIG_MACH_HAWAII_SS_LOGANDS_REV01)
+	tsu6111_read_reg(client, TSU6111_REG_CTRL, &val);
 
-	fsa9485_write_reg(client, FSA9485_REG_INT1_MASK, 0xfc);
-	fsa9485_write_reg(client, FSA9485_REG_INT2_MASK, 0x1a);
+	ctrl = val & (~0x1);
 
-	fsa9485_write_reg(client, FSA9485_REG_CK_INTMASK1, 0xff);
-	fsa9485_write_reg(client, FSA9485_REG_CK_INTMASK2, 0x07);
-
+	ret = tsu6111_write_reg(client, TSU6111_REG_CTRL, ctrl);
+	if (ret < 0)
+		dev_err(&client->dev, "%s: err %d\n", __func__, ret);
+#else
+	tsu6111_write_reg(client,TSU6111_REG_INT1_MASK,0xfc);
+	tsu6111_write_reg(client,TSU6111_REG_INT2_MASK,0xff);
 
 	/* ADC Detect Time: 500ms */
-	ret = fsa9485_write_reg(client, FSA9485_REG_TIMING1, /*0x6*/0x0);
+	ret = tsu6111_write_reg(client, TSU6111_REG_TIMING1, /*0x6*/0x0);
 	if (ret < 0)
 		dev_err(&client->dev, "%s: err %d\n", __func__, ret);
 
 	/* switching wait = 110ms */
-	ret = fsa9485_write_reg(client, FSA9485_REG_TIMING2, /*0x5*/0x0);
+	ret = tsu6111_write_reg(client, TSU6111_REG_TIMING2, /*0x5*/0x0);
 	if (ret < 0)
 		dev_err(&client->dev, "%s: err %d\n", __func__, ret);
 
-	fsa9485_read_reg(client, FSA9485_REG_MANSW1, &ret);
-	usbsw->mansw = ret;
+	tsu6111_read_reg(client,TSU6111_REG_MANSW1,&val);
+	usbsw->mansw = val;
 
 	if (usbsw->mansw < 0)
 		dev_err(&client->dev, "%s: err %d\n", __func__, usbsw->mansw);
 
-	if (usbsw->mansw) {
+	if (usbsw->mansw){
 		ctrl &= ~CON_MANUAL_SW;	/* Manual Switching Mode */
 		printk(KERN_ALERT
 			"%s Manual switching mode enabled\n", __func__);
 	}
 
-	ret = fsa9485_write_reg(client, FSA9485_REG_CTRL, ctrl);
+	ret = tsu6111_write_reg(client, TSU6111_REG_CTRL, ctrl);
 	if (ret < 0)
 		dev_err(&client->dev, "%s: err %d\n", __func__, ret);
 
-	ret = fsa9485_write_reg(client, FSA9485_REG_RESERVED_1D, 0x04);
+	ret = tsu6111_write_reg(client, TSU6111_REG_RESERVED_1D, 0x04);
 	if (ret < 0)
 		dev_err(&client->dev, "%s: err %d\n", __func__, ret);
 
-	fsa9485_read_reg(client, FSA9485_REG_DEVID, &ret);
-
+	ret = tsu6111_read_reg(client,TSU6111_REG_DEVID,&val);
 	if (ret < 0)
 		dev_err(&client->dev, "%s: err %d\n", __func__, ret);
 
-	dev_info(&client->dev, " fsa9485_reg_init dev ID: 0x%x\n", ret);
+	dev_info(&client->dev, " tsu6111_reg_init dev ID: 0x%x\n", val);
+#endif
 }
 
-static void fsa9485_detect_dev(struct fsa9485_usbsw *usbsw)
+static void tsu6111_detect_dev(struct tsu6111_usbsw *usbsw, u8 intr)
 {
-	int device_type, ret;
+	int device_type;
 	unsigned char val1, val2;
-	struct fsa9485_platform_data *pdata = usbsw->pdata;
+	struct tsu6111_platform_data *pdata = usbsw->pdata;
 	struct i2c_client *client = usbsw->client;
-#if defined(CONFIG_VIDEO_MHL_V1) || defined(CONFIG_VIDEO_MHL_V2)
-	u8 mhl_ret = 0;
-#endif
-	fsa9485_read_word_reg(client, FSA9485_REG_DEV_T1, &device_type);
+
+	msleep(50);
+	tsu6111_read_word_reg(client, TSU6111_REG_DEV_T1,&device_type);
 	if (device_type < 0) {
 		dev_err(&client->dev, "%s: err %d\n", __func__, device_type);
 		return;
@@ -820,27 +761,28 @@ static void fsa9485_detect_dev(struct fsa9485_usbsw *usbsw)
 	val1 = device_type & 0xff;
 	val2 = device_type >> 8;
 
-	dev_info(&client->dev,
-		"%s: dev1: 0x%x, dev2: 0x%x\n",
-		__func__, val1, val2);
-	if (val1 == 0 && val2 == 0) {
-		dev_info(&client->dev,
-			"%s: TSU seems malfunctioned, resetting\n",
-			__func__);
-		fsa945_sw_reset(usbsw);
+	dev_info(&client->dev, "dev1: 0x%x, dev2: 0x%x\n", val1, val2);
+
+	if( (intr == INT_ATTACH) && device_type ==0x0){
+		if(bcmpmu_check_vbus()){
+			dev_info(&client->dev, "forced VBUS charger\n");
+			val1 = DEV_T1_CHARGER_MASK;
+			dev_info(&client->dev, "dev1: 0x%x, dev2: 0x%x\n", val1, val2);
+		}
 	}
 
 	/* Attached */
 	if (val1 || val2) {
+		int ret;
 		/* USB */
 		if (val1 & DEV_USB || val2 & DEV_T2_USB_MASK) {
 			dev_info(&client->dev, "usb connect\n");
 
 			if (pdata->usb_cb)
-				pdata->usb_cb(FSA9485_ATTACHED);
+				pdata->usb_cb(TSU6111_ATTACHED);
 			if (usbsw->mansw) {
-				ret = fsa9485_write_reg(client,
-				FSA9485_REG_MANSW1, usbsw->mansw);
+				ret = tsu6111_write_reg(client,
+				TSU6111_REG_MANSW1, usbsw->mansw);
 
 				if (ret < 0)
 					dev_err(&client->dev,
@@ -851,11 +793,11 @@ static void fsa9485_detect_dev(struct fsa9485_usbsw *usbsw)
 
 			dev_info(&client->dev, "uart connect\n");
 			if (pdata->uart_cb)
-				pdata->uart_cb(FSA9485_ATTACHED);
+				pdata->uart_cb(TSU6111_ATTACHED);
 
 			if (usbsw->mansw) {
-				ret = fsa9485_write_reg(client,
-					FSA9485_REG_MANSW1, SW_UART);
+				ret = tsu6111_write_reg(client,
+					TSU6111_REG_MANSW1, SW_UART);
 
 				if (ret < 0)
 					dev_err(&client->dev,
@@ -864,9 +806,8 @@ static void fsa9485_detect_dev(struct fsa9485_usbsw *usbsw)
 		/* CHARGER */
 		} else if (val1 & DEV_T1_CHARGER_MASK) {
 			dev_info(&client->dev, "charger connect\n");
-
 			if (pdata->charger_cb)
-				pdata->charger_cb(FSA9485_ATTACHED);
+				pdata->charger_cb(TSU6111_ATTACHED);
 		/* for SAMSUNG OTG */
 		} else if (val1 & DEV_USB_OTG) {
 			dev_info(&client->dev, "otg connect\n");
@@ -875,344 +816,171 @@ static void fsa9485_detect_dev(struct fsa9485_usbsw *usbsw)
 			dev_info(&client->dev, "jig connect\n");
 
 			if (pdata->jig_cb)
-				pdata->jig_cb(FSA9485_ATTACHED);
+				pdata->jig_cb(TSU6111_ATTACHED);
 		/* Desk Dock */
-		} else if (val2 & DEV_AV) {
-			pr_info("FSA MHL Attach\n");
-		#if defined(CONFIG_VIDEO_MHL_V1) || defined(CONFIG_VIDEO_MHL_V2)
-			DisableFSA9480Interrupts();
-			if (!isDeskdockconnected)
-				mhl_ret = mhl_onoff_ex(1);
-
-			if (mhl_ret != MHL_DEVICE) {
-				FSA9485_CheckAndHookAudioDock(1);
-				isDeskdockconnected = 1;
+		} else if( val2 & DEV_AV){
+			dev_info(&client->dev, "dock connect\n");
+			if(bcmpmu_check_vbus())
+				if (pdata->charger_cb)
+					pdata->charger_cb(TSU6111_ATTACHED);
 			}
-			EnableFSA9480Interrupts();
-		#else
-			FSA9485_CheckAndHookAudioDock(1);
-		#endif
 
-		}
+
 	/* Detached */
 	} else {
 		/* USB */
 		if (usbsw->dev1 & DEV_USB ||
 				usbsw->dev2 & DEV_T2_USB_MASK) {
 			if (pdata->usb_cb)
-				pdata->usb_cb(FSA9485_DETACHED);
+				pdata->usb_cb(TSU6111_DETACHED);
 		/* UART */
 		} else if (usbsw->dev1 & DEV_T1_UART_MASK ||
 				usbsw->dev2 & DEV_T2_UART_MASK) {
 
-			dev_info(&client->dev,
-				"%s: resetting TSU after UART detach\n",
-				__func__);
-			fsa945_sw_reset(usbsw);
-			fsa9485_reg_init(usbsw);
+			tsu6111_sw_reset(usbsw);
+			tsu6111_reg_init(usbsw);
 
 			if (pdata->uart_cb)
-				pdata->uart_cb(FSA9485_DETACHED);
+				pdata->uart_cb(TSU6111_DETACHED);
 		/* CHARGER */
 		} else if (usbsw->dev1 & DEV_T1_CHARGER_MASK) {
 			if (pdata->charger_cb)
-				pdata->charger_cb(FSA9485_DETACHED);
+				pdata->charger_cb(TSU6111_DETACHED);
+
+			tsu6111_sw_reset(usbsw);
+			tsu6111_reg_init(usbsw);
 		/* for SAMSUNG OTG */
 		} else if (usbsw->dev1 & DEV_USB_OTG) {
-			fsa9485_write_reg(client,
-						FSA9485_REG_CTRL, 0x1E);
+			tsu6111_write_reg(client,
+						TSU6111_REG_CTRL, 0x1E);
 		/* JIG */
 		} else if (usbsw->dev2 & DEV_T2_JIG_MASK) {
 			if (pdata->jig_cb)
-				pdata->jig_cb(FSA9485_DETACHED);
+				pdata->jig_cb(TSU6111_DETACHED);
 		/* Desk Dock */
 		} else if (usbsw->dev2 & DEV_AV) {
+			if (pdata->charger_cb)
+				pdata->charger_cb(TSU6111_DETACHED);
 
-			pr_info("FSA MHL Detach\n");
-#if defined(CONFIG_VIDEO_MHL_V1) || defined(CONFIG_VIDEO_MHL_V2)
-			if (isDeskdockconnected)
-				FSA9485_CheckAndHookAudioDock(0);
-
-			isDeskdockconnected = 0;
-#else
-			FSA9485_CheckAndHookAudioDock(0);
-#endif
+			tsu6111_sw_reset(usbsw);
+			tsu6111_reg_init(usbsw);
 		}
+		else if( intr == INT_DETACH ) {
+            if (pdata->charger_cb)
+                pdata->charger_cb(TSU6111_DETACHED);
+
+            tsu6111_sw_reset(usbsw);
+            tsu6111_reg_init(usbsw);
+        }
 	}
 	usbsw->dev1 = val1;
 	usbsw->dev2 = val2;
 }
 
-
-static int fsa9485_check_dev(struct fsa9485_usbsw *usbsw)
+static irqreturn_t tsu6111_irq_thread(int irq, void *data)
 {
-	struct i2c_client *client = usbsw->client;
-	int device_type;
-	fsa9485_read_word_reg(client, FSA9485_REG_DEV_T1, &device_type);
-	if (device_type < 0) {
-		dev_err(&client->dev, "%s: err %d\n", __func__, device_type);
-		return 0;
-	}
-	return device_type;
-}
+	struct tsu6111_usbsw *usbsw = data;
 
-static int fsa9485_handle_dock_vol_key(struct fsa9485_usbsw *info, int adc)
-{
-	struct input_dev *input = info->input;
-	int pre_key = info->previous_key;
-	unsigned int code;
-	int state;
-
-	if (adc == ADC_OPEN) {
-		switch (pre_key) {
-		case DOCK_KEY_VOL_UP_PRESSED:
-			code = KEY_VOLUMEUP;
-			state = 0;
-			info->previous_key = DOCK_KEY_VOL_UP_RELEASED;
-			break;
-		case DOCK_KEY_VOL_DOWN_PRESSED:
-			code = KEY_VOLUMEDOWN;
-			state = 0;
-			info->previous_key = DOCK_KEY_VOL_DOWN_RELEASED;
-			break;
-		default:
-			return 0;
-		}
-		input_event(input, EV_KEY, code, state);
-		input_sync(input);
-		return 0;
-	}
-
-	if (pre_key == DOCK_KEY_NONE) {
-		if (adc != ADC_DOCK_VOL_UP && adc != ADC_DOCK_VOL_DN)
-			return 0;
-	}
-
-
-	switch (adc) {
-	case ADC_DOCK_VOL_UP:
-		code = KEY_VOLUMEUP;
-		state = 1;
-		info->previous_key = DOCK_KEY_VOL_UP_PRESSED;
-		break;
-	case ADC_DOCK_VOL_DN:
-		code = KEY_VOLUMEDOWN;
-		state = 1;
-		info->previous_key = DOCK_KEY_VOL_DOWN_PRESSED;
-		break;
-	case ADC_DESKDOCK:
-		if (pre_key == DOCK_KEY_VOL_UP_PRESSED) {
-			code = KEY_VOLUMEUP;
-			state = 0;
-			info->previous_key = DOCK_KEY_VOL_UP_RELEASED;
-		} else if (pre_key == DOCK_KEY_VOL_DOWN_PRESSED) {
-			code = KEY_VOLUMEDOWN;
-			state = 0;
-			info->previous_key = DOCK_KEY_VOL_DOWN_RELEASED;
-		} else {
-			return 0;
-		}
-		break;
-	default:
-		break;
-		return 0;
-	}
-
-	input_event(input, EV_KEY, code, state);
-	input_sync(input);
-
-	return 1;
-}
-
-static int fsa9485_Check_AVDock(struct fsa9485_usbsw *usbsw, int device_type)
-{
-	struct i2c_client *client = usbsw->client;
-	int intr2, adc_val = 0;
-	unsigned char val;
-
-	fsa9485_read_reg(client, FSA9485_REG_INT2, &intr2);
-	dev_info(&client->dev, "%s intr::: 0x%x\n", __func__, intr2);
-
-	if (intr2 & 0x4) { /* for adc change */
-
-		fsa9485_read_word_reg(client, FSA9485_REG_ADC, &adc_val);
-		fsa9485_handle_dock_vol_key(usbsw, adc_val);
-
-		dev_info(&client->dev,
-			"intr: 0x%x, adc_val: %d\n", intr2, adc_val);
-		return IRQ_NONE;
-	} else if (intr2 & 0x1) {  /* for av change (desk dock, hdmi) */
-		dev_info(&client->dev, "%s enter Av charing\n", __func__);
-		return IRQ_NONE;
-	}
-
-	/* for check Av charging during boot up
-	 when Mhl is recognized, usb interrupt occur */
-	val = device_type & 0xff;
-
-	return IRQ_HANDLED;
-}
-
-static irqreturn_t fsa9485_irq_thread(int irq, void *data)
-{
-	struct fsa9485_usbsw *usbsw = data;
-	struct i2c_client *client = usbsw->client;
-	int intr;
-	int device_type;
-
-	/* FSA9485 : Read interrupt -> Read Device
-	 FSA9485 : Read Device -> Read interrupt */
-
-	pr_info("fsa9485_irq_thread+\n");
-	device_type = fsa9485_check_dev(usbsw);
-
-	/* read and clear interrupt status bits */
-	fsa9485_read_word_reg(client, FSA9485_REG_INT1, &intr);
-	if (intr < 0) {
-		msleep(100);
-		dev_err(&client->dev, "%s: err %d\n", __func__, intr);
-		fsa9485_read_word_reg(client, FSA9485_REG_INT1, &intr);
-		if (intr < 0)
-			dev_err(&client->dev,
-				"%s: err at read %d\n", __func__, intr);
-		fsa9485_reg_init(usbsw);
-		return IRQ_HANDLED;
-	} else if (intr == 0) {
-		/* interrupt was fired, but no status bits were set,
-		so device was reset. In this case, the registers were
-		reset to defaults so they need to be reinitialised. */
-		fsa9485_reg_init(usbsw);
-	}
-
-
-	if (IRQ_NONE == fsa9485_Check_AVDock(usbsw, device_type))
-		return 0;
 	/* device detection */
 	mutex_lock(&usbsw->mutex);
-	schedule_delayed_work(&usbsw->detect_work,
-				msecs_to_jiffies(10));
+	schedule_delayed_work(&usbsw->detect_work,msecs_to_jiffies(10));
 	mutex_unlock(&usbsw->mutex);
 
 	return IRQ_HANDLED;
 }
 
-static int fsa9485_irq_init(struct fsa9485_usbsw *usbsw)
+static int tsu6111_irq_init(struct tsu6111_usbsw *usbsw)
 {
 	struct i2c_client *client = usbsw->client;
 	int ret;
 
 	if (client->irq) {
-		gpio_set_debounce(irq_to_gpio(client->irq), 128000);
 
 		ret = request_threaded_irq(client->irq, NULL,
-			fsa9485_irq_thread,
-			IRQF_TRIGGER_FALLING | IRQF_NO_SUSPEND,
-			"fsa9485 micro USB", usbsw);
+			tsu6111_irq_thread, IRQF_TRIGGER_FALLING |IRQF_ONESHOT |IRQF_NO_SUSPEND,
+			"tsu6111 micro USB", usbsw);
 		if (ret) {
 			dev_err(&client->dev, "failed to reqeust IRQ\n");
 			return ret;
 		}
-
-		ret = enable_irq_wake(client->irq);
-		if (ret < 0)
-			dev_err(&client->dev,
-				"failed to enable wakeup src %d\n", ret);
 	}
 
 	return 0;
 }
 
-static void fsa9485_init_detect(struct work_struct *work)
+static void tsu6111_init_detect(struct work_struct *work)
 {
-	struct fsa9485_usbsw *usbsw = container_of(work,
-			struct fsa9485_usbsw, init_work.work);
-	struct fsa9485_platform_data *pdata = usbsw->pdata;
-	int device_type, ret;
-	unsigned char val1, val2;
-	struct i2c_client *client = usbsw->client;
+	struct tsu6111_usbsw *usbsw = container_of(work,
+			struct tsu6111_usbsw, init_work.work);
+	int ret;
 
 	dev_info(&usbsw->client->dev, "%s\n", __func__);
 
-#if defined(CONFIG_VIDEO_MHL_V1) || defined(CONFIG_VIDEO_MHL_V2)
-	u8 mhl_ret = 0;
-#endif
-#if 0
-	fsa9485_read_word_reg(client, FSA9485_REG_DEV_T1, &device_type);
-	if (device_type < 0) {
-		dev_err(&client->dev, "%s: err %d\n", __func__, device_type);
-		return;
-	}
-	val1 = device_type & 0xff;
-	val2 = device_type >> 8;
-
-	dev_info(&client->dev, "$s: dev1: 0x%x, dev2: 0x%x\n",
-		__func__, val1, val2);
-	mutex_lock(&usbsw->mutex);
-	fsa9485_detect_dev(usbsw);
-	mutex_unlock(&usbsw->mutex);
-#endif
-
-	ret = fsa9485_irq_init(usbsw);
+	ret = tsu6111_irq_init(usbsw);
 	if (ret)
 		dev_info(&usbsw->client->dev,
 				"failed to enable  irq init %s\n", __func__);
 }
-static void fsa9485_detect_work(struct work_struct *work)
+static void tsu6111_detect_work(struct work_struct *work)
 {
-	struct fsa9485_usbsw *usbsw = container_of(work,
-			struct fsa9485_usbsw, detect_work.work);
-	int ret = 0;
+	struct tsu6111_usbsw *usbsw = container_of(work,
+			struct tsu6111_usbsw, detect_work.work);
+	struct i2c_client *client = usbsw->client;
+	int intr;
+	u8 int1,int2;
 
 	dev_info(&usbsw->client->dev, "%s\n", __func__);
 
+	/* read and clear interrupt status bits */
+	tsu6111_read_reg(client, TSU6111_REG_INT1,&int1);
+	tsu6111_read_reg(client, TSU6111_REG_INT2,&int2);
+	intr = (int2<<8) | int1;
+
+	dev_info(&usbsw->client->dev,"[TSU6111] %s: intr=0x%x, int1 = 0x%X, int2=0x%x \n",__func__,intr,int1, int2);
+
+	if (intr < 0) {
+		msleep(100);
+		dev_err(&client->dev, "%s: err %d\n", __func__, intr);
+		tsu6111_read_word_reg(client, TSU6111_REG_INT1,&intr);
+		if (intr < 0)
+			dev_err(&client->dev,
+				"%s: err at read %d\n", __func__, intr);
+		tsu6111_reg_init(usbsw);
+		return;
+	} else if (intr == 0) {
+		/* interrupt was fired, but no status bits were set,
+		so device was reset. In this case, the registers were
+		reset to defaults so they need to be reinitialised. */
+		tsu6111_reg_init(usbsw);
+		pr_err("tsu6111_irq_thread+: no status\n");
+	}
+
 	mutex_lock(&usbsw->mutex);
-	fsa9485_detect_dev(usbsw);
+	tsu6111_detect_dev(usbsw,int1);
 	mutex_unlock(&usbsw->mutex);
 
 }
 
 
-static int __devinit fsa9485_probe(struct i2c_client *client,
+static int __devinit tsu6111_probe(struct i2c_client *client,
 			 const struct i2c_device_id *id)
 {
 	struct i2c_adapter *adapter = to_i2c_adapter(client->dev.parent);
-	struct fsa9485_usbsw *usbsw;
+	struct tsu6111_usbsw *usbsw;
 	int ret = 0;
-	struct input_dev *input;
 
-	pr_info("fsa9485_probe\n");
+	pr_info("tsu6111_probe\n");
 
 	if (!i2c_check_functionality(adapter, I2C_FUNC_I2C))
 		return -EIO;
 
-	input = input_allocate_device();
-	usbsw = kzalloc(sizeof(struct fsa9485_usbsw), GFP_KERNEL);
-	if (!usbsw || !input) {
+	usbsw = kzalloc(sizeof(struct tsu6111_usbsw), GFP_KERNEL);
+	if (!usbsw) {
 		dev_err(&client->dev, "failed to allocate driver data\n");
 		kfree(usbsw);
 		return -ENOMEM;
 	}
 
-	usbsw->input = input;
-	input->name = client->name;
-	input->phys = "deskdock-key/input0";
-	input->dev.parent = &client->dev;
-	input->id.bustype = BUS_HOST;
-	input->id.vendor = 0x0001;
-	input->id.product = 0x0001;
-	input->id.version = 0x0001;
-
-	/* Enable auto repeat feature of Linux input subsystem */
-	__set_bit(EV_REP, input->evbit);
-
-	input_set_capability(input, EV_KEY, KEY_VOLUMEUP);
-	input_set_capability(input, EV_KEY, KEY_VOLUMEDOWN);
-
-	ret = input_register_device(input);
-	if (ret) {
-		dev_err(&client->dev,
-			"input_register_device %s: err %d\n", __func__, ret);
-	}
 	usbsw->client = client;
 	usbsw->pdata = client->dev.platform_data;
 	if (!usbsw->pdata)
@@ -1223,31 +991,23 @@ static int __devinit fsa9485_probe(struct i2c_client *client,
 
 	local_usbsw = usbsw;
 
-	if (usbsw->pdata->cfg_gpio)
-		usbsw->pdata->cfg_gpio();
-	fsa9485_reg_init(usbsw);
 
-	ret = sysfs_create_group(&client->dev.kobj, &fsa9485_group);
+	tsu6111_reg_init(usbsw);
+
+	ret = sysfs_create_group(&client->dev.kobj, &tsu6111_group);
 	if (ret) {
 		dev_err(&client->dev,
-				"failed to create fsa9485 attribute group\n");
+				"failed to create tsu6111 attribute group\n");
 		goto fail2;
 	}
 
-	if (usbsw->pdata->reset_cb)
-		usbsw->pdata->reset_cb();
-
-	/* set fsa9485 init flag. */
-	if (usbsw->pdata->set_init_flag)
-		usbsw->pdata->set_init_flag();
-
 	/* initial cable detection */
-	INIT_DELAYED_WORK(&usbsw->init_work, fsa9485_init_detect);
-	INIT_DELAYED_WORK(&usbsw->detect_work, fsa9485_detect_work);
+	INIT_DELAYED_WORK(&usbsw->init_work, tsu6111_init_detect);
+	INIT_DELAYED_WORK(&usbsw->detect_work, tsu6111_detect_work);
 	schedule_delayed_work(&usbsw->init_work, msecs_to_jiffies(5));
 	schedule_delayed_work(&usbsw->detect_work, msecs_to_jiffies(10));
 
-	pr_info("fsa9485_probe end.\n");
+	pr_info("tsu6111_probe end.\n");
 	return 0;
 
 fail2:
@@ -1257,77 +1017,62 @@ fail1:
 	mutex_destroy(&usbsw->mutex);
 	i2c_set_clientdata(client, NULL);
 	kfree(usbsw);
-	pr_info("fsa9485_probe failed .\n");
+	pr_info("tsu6111_probe failed .\n");
 	return ret;
 }
 
-static int __devexit fsa9485_remove(struct i2c_client *client)
+static int __devexit tsu6111_remove(struct i2c_client *client)
 {
-	struct fsa9485_usbsw *usbsw = i2c_get_clientdata(client);
+	struct tsu6111_usbsw *usbsw = i2c_get_clientdata(client);
 
 	cancel_delayed_work(&usbsw->detect_work);
 	cancel_delayed_work(&usbsw->init_work);
 	if (client->irq) {
-		disable_irq_wake(client->irq);
 		free_irq(client->irq, usbsw);
 	}
 	mutex_destroy(&usbsw->mutex);
 	i2c_set_clientdata(client, NULL);
 
-	sysfs_remove_group(&client->dev.kobj, &fsa9485_group);
+	sysfs_remove_group(&client->dev.kobj, &tsu6111_group);
 	kfree(usbsw);
 	return 0;
 }
 
-static int fsa9485_resume(struct i2c_client *client)
+static int tsu6111_resume(struct i2c_client *client)
 {
-#if 0
-	int value;
-	struct fsa9485_usbsw *usbsw = i2c_get_clientdata(client);
-
-/* add for fsa9485_irq_thread i2c error during wakeup */
-	fsa9485_check_dev(usbsw);
-
-	fsa9485_read_reg(client, FSA9485_REG_INT1, &value);
-
-	/* device detection */
-	mutex_lock(&usbsw->mutex);
-	fsa9485_detect_dev(usbsw);
-	mutex_unlock(&usbsw->mutex);
-#endif
 	return 0;
 }
 
 
-static const struct i2c_device_id fsa9485_id[] = {
-	{"fsa9485", 0},
+static const struct i2c_device_id tsu6111_id[] = {
+	{"tsu6111", 0},
 	{}
 };
-MODULE_DEVICE_TABLE(i2c, fsa9485_id);
+MODULE_DEVICE_TABLE(i2c, tsu6111_id);
 
-static struct i2c_driver fsa9485_i2c_driver = {
+static struct i2c_driver tsu6111_i2c_driver = {
 	.driver = {
 		.name = "tsu6111",
 	},
-	.probe = fsa9485_probe,
-	.remove = __devexit_p(fsa9485_remove),
-	.resume = fsa9485_resume,
-	.id_table = fsa9485_id,
+	.probe = tsu6111_probe,
+	.remove = __devexit_p(tsu6111_remove),
+	.resume = tsu6111_resume,
+	.id_table = tsu6111_id,
 };
 
-static int __init fsa9485_init(void)
+static int __init tsu6111_init(void)
 {
-	pr_info("fsa9485_init:tsu6111\n");
-	return i2c_add_driver(&fsa9485_i2c_driver);
+	pr_info("tsu6111_init:tsu6111\n");
+	return i2c_add_driver(&tsu6111_i2c_driver);
 }
-module_init(fsa9485_init);
+module_init(tsu6111_init);
 
-static void __exit fsa9485_exit(void)
+static void __exit tsu6111_exit(void)
 {
-	i2c_del_driver(&fsa9485_i2c_driver);
+	i2c_del_driver(&tsu6111_i2c_driver);
 }
-module_exit(fsa9485_exit);
+module_exit(tsu6111_exit);
 
 MODULE_AUTHOR("Minkyu Kang <mk7.kang@samsung.com>");
-MODULE_DESCRIPTION("FSA9485 USB Switch driver");
+MODULE_DESCRIPTION("TSU6111 USB Switch driver");
 MODULE_LICENSE("GPL");
