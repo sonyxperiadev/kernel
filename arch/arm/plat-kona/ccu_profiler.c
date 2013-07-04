@@ -57,7 +57,6 @@ char *get_prof_name(enum ccu_profiling_counter prof_type)
 static int ccu_prof_check_params(struct ccu_profiler *ccu_profiler)
 {
 	struct ccu_clk *ccu_clk;
-	struct clk *clk;
 	u32 reg;
 	u32 autogate_sel0 = 0;
 	u32 autogate_sel1 = 0;
@@ -67,12 +66,7 @@ static int ccu_prof_check_params(struct ccu_profiler *ccu_profiler)
 	enum ccu_profiling_counter cnt_type = CCU_PROF_NONE;
 	enum ccu_prof_policy_sel policy;
 
-	clk = clk_get(NULL, ccu_profiler->clk_dev_id);
-	if (IS_ERR_OR_NULL(clk)) {
-		profiler_dbg("%s: clk_get failed\n", __func__);
-		return -ENODEV;
-	}
-	ccu_clk = to_ccu_clk(clk);
+	ccu_clk = ccu_profiler->ccu_clk;
 	ccu_write_access_enable(ccu_clk, true);
 
 	reg = readl(CCU_REG_ADDR(ccu_clk, ccu_profiler->ctrl_offset));
@@ -133,7 +127,6 @@ static int ccu_prof_init(struct profiler *profiler)
 {
 	struct ccu_profiler *ccu_profiler = container_of(profiler,
 				struct ccu_profiler, profiler);
-	struct clk *clk;
 	struct ccu_clk *ccu_clk;
 	u32 reg;
 
@@ -141,12 +134,7 @@ static int ccu_prof_init(struct profiler *profiler)
 
 	if (!ccu_profiler)
 		return -EINVAL;
-	clk = clk_get(NULL, ccu_profiler->clk_dev_id);
-	if (IS_ERR_OR_NULL(clk)) {
-		profiler_dbg("%s: clk_get failed\n", __func__);
-		return -ENODEV;
-	}
-	ccu_clk = to_ccu_clk(clk);
+	ccu_clk = ccu_profiler->ccu_clk;
 	ccu_reset_write_access_enable(ccu_clk, true);
 	reg = readl(CCU_REG_ADDR(ccu_clk, ccu_profiler->ctrl_offset));
 	reg &= ~ccu_profiler->cntr_start_mask;
@@ -160,7 +148,6 @@ static int ccu_prof_start(struct profiler *profiler, int start)
 {
 	struct ccu_profiler *ccu_profiler = container_of(profiler,
 		struct ccu_profiler, profiler);
-	struct clk *clk;
 	struct ccu_clk *ccu_clk;
 	u32 reg;
 	int err = 0;
@@ -169,12 +156,7 @@ static int ccu_prof_start(struct profiler *profiler, int start)
 	if (!ccu_profiler)
 		return -EINVAL;
 
-	clk = clk_get(NULL, ccu_profiler->clk_dev_id);
-	if (IS_ERR_OR_NULL(clk)) {
-		profiler_dbg("%s: clk_get failed\n", __func__);
-		return -ENODEV;
-	}
-	ccu_clk = to_ccu_clk(clk);
+	ccu_clk = ccu_profiler->ccu_clk;
 	ccu_write_access_enable(ccu_clk, true);
 	reg = readl(CCU_REG_ADDR(ccu_clk, ccu_profiler->ctrl_offset));
 	if (start == 1) {
@@ -203,18 +185,12 @@ static int ccu_prof_status(struct profiler *profiler)
 {
 	struct ccu_profiler *ccu_profiler = container_of(profiler,
 		struct ccu_profiler, profiler);
-	struct clk *clk;
 	struct ccu_clk *ccu_clk;
 	u32 reg;
 
 	if (!ccu_profiler)
 		return -EINVAL;
-	clk = clk_get(NULL, ccu_profiler->clk_dev_id);
-	if (IS_ERR_OR_NULL(clk)) {
-		profiler_dbg("%s: clk_get failed\n", __func__);
-		return -ENODEV;
-	}
-	ccu_clk = to_ccu_clk(clk);
+	ccu_clk = ccu_profiler->ccu_clk;
 	ccu_write_access_enable(ccu_clk, true);
 	reg = readl(CCU_REG_ADDR(ccu_clk, ccu_profiler->ctrl_offset));
 	profiler_dbg("%s: reg %x\n", __func__, reg);
@@ -228,19 +204,13 @@ static int ccu_prof_get_counter(struct profiler *profiler,
 {
 	struct ccu_profiler *ccu_profiler = container_of(profiler,
 		struct ccu_profiler, profiler);
-	struct clk *clk;
 	struct ccu_clk *ccu_clk;
 	u32 reg;
 
 	if (!ccu_profiler)
 		return -EINVAL;
-	clk = clk_get(NULL, ccu_profiler->clk_dev_id);
-	if (IS_ERR_OR_NULL(clk)) {
-		profiler_dbg("%s: clk_get failed\n", __func__);
-		return -ENODEV;
-	}
 	*overflow = 0;
-	ccu_clk = to_ccu_clk(clk);
+	ccu_clk = ccu_profiler->ccu_clk;
 	ccu_write_access_enable(ccu_clk, true);
 	reg = readl(CCU_REG_ADDR(ccu_clk, ccu_profiler->counter_offset));
 	if (reg & CCU_CNT_OVERFLOW_MASK) {
@@ -283,7 +253,6 @@ static int ccu_prof_print(struct profiler *profiler)
 int ccu_prof_set_prof_type(struct ccu_profiler *ccu_profiler,
 		enum ccu_profiling_counter counter_type)
 {
-	struct clk *clk;
 	struct ccu_clk *ccu_clk;
 	u32 reg;
 
@@ -295,14 +264,9 @@ int ccu_prof_set_prof_type(struct ccu_profiler *ccu_profiler,
 		(counter_type > CCU_PROF_ALWAYS_ON))
 		return -EINVAL;
 
-	clk = clk_get(NULL, ccu_profiler->clk_dev_id);
-	if (IS_ERR_OR_NULL(clk)) {
-		profiler_dbg("%s: clk_get failed\n", __func__);
-		return -ENODEV;
-	}
 	profiler_dbg("set counter type %d\n", counter_type);
 
-	ccu_clk = to_ccu_clk(clk);
+	ccu_clk = ccu_profiler->ccu_clk;
 	ccu_write_access_enable(ccu_clk, true);
 	reg = readl(CCU_REG_ADDR(ccu_clk, ccu_profiler->ctrl_offset));
 	reg &= ~ccu_profiler->cntrl_counter_mask;
@@ -316,7 +280,6 @@ int ccu_prof_set_prof_type(struct ccu_profiler *ccu_profiler,
 
 int ccu_prof_get_prof_type(struct ccu_profiler *ccu_profiler)
 {
-	struct clk *clk;
 	struct ccu_clk *ccu_clk;
 	u32 reg;
 
@@ -325,12 +288,7 @@ int ccu_prof_get_prof_type(struct ccu_profiler *ccu_profiler)
 	if (!ccu_profiler)
 		return -EINVAL;
 
-	clk = clk_get(NULL, ccu_profiler->clk_dev_id);
-	if (IS_ERR_OR_NULL(clk)) {
-		profiler_dbg("%s: clk_get failed\n", __func__);
-		return -ENODEV;
-	}
-	ccu_clk = to_ccu_clk(clk);
+	ccu_clk = ccu_profiler->ccu_clk;
 	ccu_write_access_enable(ccu_clk, true);
 	reg = readl(CCU_REG_ADDR(ccu_clk, ccu_profiler->ctrl_offset));
 	reg = ((reg & ccu_profiler->cntrl_counter_mask)>>
@@ -342,7 +300,6 @@ int ccu_prof_get_prof_type(struct ccu_profiler *ccu_profiler)
 int ccu_prof_set_policy(struct ccu_profiler *ccu_profiler,
 				 enum ccu_prof_policy_sel policy)
 {
-	struct clk *clk;
 	struct ccu_clk *ccu_clk;
 	u32 reg;
 
@@ -356,14 +313,9 @@ int ccu_prof_set_policy(struct ccu_profiler *ccu_profiler,
 		CCU_PROF_POLICY_7)))
 		return -EINVAL;
 
-	clk = clk_get(NULL, ccu_profiler->clk_dev_id);
-	if (IS_ERR_OR_NULL(clk)) {
-		profiler_dbg("%s: clk_get failed\n", __func__);
-		return -ENODEV;
-	}
 	profiler_dbg("Set policy to %d\n", policy);
 
-	ccu_clk = to_ccu_clk(clk);
+	ccu_clk = ccu_profiler->ccu_clk;
 	ccu_write_access_enable(ccu_clk, true);
 	reg = readl(CCU_REG_ADDR(ccu_clk, ccu_profiler->policy_sel_offset));
 	reg &= ~ccu_profiler->policy_sel_mask;
@@ -377,7 +329,6 @@ int ccu_prof_set_policy(struct ccu_profiler *ccu_profiler,
 
 int ccu_prof_get_policy(struct ccu_profiler *ccu_profiler)
 {
-	struct clk *clk;
 	struct ccu_clk *ccu_clk;
 	u32 reg;
 
@@ -386,12 +337,7 @@ int ccu_prof_get_policy(struct ccu_profiler *ccu_profiler)
 	if (!ccu_profiler)
 		return -EINVAL;
 
-	clk = clk_get(NULL, ccu_profiler->clk_dev_id);
-	if (IS_ERR_OR_NULL(clk)) {
-		profiler_dbg("%s: clk_get failed\n", __func__);
-		return -ENODEV;
-	}
-	ccu_clk = to_ccu_clk(clk);
+	ccu_clk = ccu_profiler->ccu_clk;
 	ccu_write_access_enable(ccu_clk, true);
 	reg = readl(CCU_REG_ADDR(ccu_clk, ccu_profiler->policy_sel_offset));
 	reg = ((reg & ccu_profiler->policy_sel_mask)>>
@@ -403,7 +349,6 @@ int ccu_prof_get_policy(struct ccu_profiler *ccu_profiler)
 int ccu_prof_set_autogate_sel(struct ccu_profiler *ccu_profiler,
 					u32 select, u32 value)
 {
-	struct clk *clk;
 	struct ccu_clk *ccu_clk;
 	int err = 0;
 	u32 reg;
@@ -413,12 +358,7 @@ int ccu_prof_set_autogate_sel(struct ccu_profiler *ccu_profiler,
 	if (!ccu_profiler)
 		return -EINVAL;
 
-	clk = clk_get(NULL, ccu_profiler->clk_dev_id);
-	if (IS_ERR_OR_NULL(clk)) {
-		profiler_dbg("%s: clk_get failed\n", __func__);
-		return -ENODEV;
-	}
-	ccu_clk = to_ccu_clk(clk);
+	ccu_clk = ccu_profiler->ccu_clk;
 	ccu_write_access_enable(ccu_clk, true);
 	if (select == 0) {
 		reg = readl(CCU_REG_ADDR(ccu_clk,
@@ -451,7 +391,6 @@ out:
 int ccu_prof_get_autogate_sel(struct ccu_profiler *ccu_profiler,
 					u32 select, u32 *value)
 {
-	struct clk *clk;
 	struct ccu_clk *ccu_clk;
 	int err = 0;
 	u32 reg;
@@ -461,12 +400,7 @@ int ccu_prof_get_autogate_sel(struct ccu_profiler *ccu_profiler,
 	if (!ccu_profiler)
 		return -EINVAL;
 
-	clk = clk_get(NULL, ccu_profiler->clk_dev_id);
-	if (IS_ERR_OR_NULL(clk)) {
-		profiler_dbg("%s: clk_get failed\n", __func__);
-		return -ENODEV;
-	}
-	ccu_clk = to_ccu_clk(clk);
+	ccu_clk = ccu_profiler->ccu_clk;
 	ccu_write_access_enable(ccu_clk, true);
 	if (select == 0) {
 		reg = readl(CCU_REG_ADDR(ccu_clk,
@@ -493,7 +427,6 @@ out:
 int ccu_prof_set_clkreq_sel(struct ccu_profiler *ccu_profiler,
 				      u32 select, u32 value)
 {
-	struct clk *clk;
 	struct ccu_clk *ccu_clk;
 	int err = 0;
 	u32 reg;
@@ -503,12 +436,7 @@ int ccu_prof_set_clkreq_sel(struct ccu_profiler *ccu_profiler,
 	if (!ccu_profiler)
 		return -EINVAL;
 
-	clk = clk_get(NULL, ccu_profiler->clk_dev_id);
-	if (IS_ERR_OR_NULL(clk)) {
-		profiler_dbg("%s: clk_get failed\n", __func__);
-		return -ENODEV;
-	}
-	ccu_clk = to_ccu_clk(clk);
+	ccu_clk = ccu_profiler->ccu_clk;
 	ccu_write_access_enable(ccu_clk, true);
 	if (select == 0) {
 		reg = readl(CCU_REG_ADDR(ccu_clk,
@@ -541,7 +469,6 @@ out:
 int ccu_prof_get_clkreq_sel(struct ccu_profiler *ccu_profiler,
 				      u32 select, u32 *value)
 {
-	struct clk *clk;
 	struct ccu_clk *ccu_clk;
 	int err = 0;
 	u32 reg;
@@ -551,12 +478,7 @@ int ccu_prof_get_clkreq_sel(struct ccu_profiler *ccu_profiler,
 	if (!ccu_profiler)
 		return -EINVAL;
 
-	clk = clk_get(NULL, ccu_profiler->clk_dev_id);
-	if (IS_ERR_OR_NULL(clk)) {
-		profiler_dbg("%s: clk_get failed\n", __func__);
-		return -ENODEV;
-	}
-	ccu_clk = to_ccu_clk(clk);
+	ccu_clk = ccu_profiler->ccu_clk;
 	ccu_write_access_enable(ccu_clk, true);
 	if (select == 0) {
 		reg = readl(CCU_REG_ADDR(ccu_clk,

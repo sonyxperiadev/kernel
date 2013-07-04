@@ -115,7 +115,7 @@ struct ccu_profiler {
 	u32 clk_req_sel0_shift;
 	u32 clk_req_sel1_shift;
 	u32 counter_shift;
-
+	struct ccu_clk *ccu_clk;
 	struct gen_ccu_prof_ops *ccu_gen_prof_ops;
 };
 
