@@ -2238,6 +2238,7 @@ CHAL_CAM_STATUS_CODES chal_cam_rx_start(CHAL_HANDLE handle, CHAL_CAM_PARAM_st_t*
 
 // Disable Data Lane
     BRCM_WRITE_REG_FIELD(pCamDevice->baseAddr,CAM_ANA,DDL,1);
+	BRCM_WRITE_REG_FIELD(pCamDevice->baseAddr, CAM_ICTL, FCM, 1);
 // Power Up Analog
     BRCM_WRITE_REG_FIELD(pCamDevice->baseAddr,CAM_ANA,APD,0);
     BRCM_WRITE_REG_FIELD(pCamDevice->baseAddr,CAM_ANA,BPD,0);
