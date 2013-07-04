@@ -171,7 +171,7 @@
 
 #if defined(CONFIG_TOUCHSCREEN_BCM15500) || \
 defined(CONFIG_TOUCHSCREEN_BCM15500_MODULE)
-#include <linux/i2c/bcm15500_i2c_ts.h>
+#include <linux/i2c/bcmtch15xxx.h>
 #include <linux/i2c/bcm15500_settings.h>
 #endif
 

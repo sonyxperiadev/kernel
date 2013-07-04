@@ -196,7 +196,7 @@
 
 #if defined(CONFIG_TOUCHSCREEN_BCM915500)
 	|| defined(CONFIG_TOUCHSCREEN_BCM915500_MODULE)
-#include <linux/i2c/bcm15500_i2c_ts.h>
+#include <linux/i2c/bcmtch15xxx.h>
 #endif
 
 #ifdef CONFIG_USB_DWC_OTG
