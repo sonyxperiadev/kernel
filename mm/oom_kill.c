@@ -431,6 +431,7 @@ static void dump_header(struct task_struct *p, gfp_t gfp_mask, int order,
 	dump_stack();
 	mem_cgroup_print_oom_info(memcg, p);
 	show_mem(SHOW_MEM_FILTER_NODES);
+	show_mem_others();
 	if (sysctl_oom_dump_tasks)
 		dump_tasks(memcg, nodemask);
 }
