@@ -868,7 +868,7 @@ static int chrgr_curr_lmt[PMU_CHRGR_TYPE_MAX] = {
 	[PMU_CHRGR_TYPE_NONE] = 0,
 	[PMU_CHRGR_TYPE_SDP] = 500,
 	[PMU_CHRGR_TYPE_CDP] = 1500,
-	[PMU_CHRGR_TYPE_DCP] = 1500,
+	[PMU_CHRGR_TYPE_DCP] = 700,
 	[PMU_CHRGR_TYPE_TYPE1] = 700,
 	[PMU_CHRGR_TYPE_TYPE2] = 700,
 	[PMU_CHRGR_TYPE_PS2] = 100,
@@ -1026,7 +1026,9 @@ struct bcmpmu_acld_pdata acld_pdata = {
 						for chrgr while using ACLD */
 	.i_def_dcp = 700,
 	.i_max_cc = 2200,
-	.acld_cc_lmt = 1500,
+	.acld_cc_lmt = 1360,    /*In general this is 80% of 1C.
+				  If customer defines any other value
+				  chage accordingly*/
 	.otp_cc_trim = 0x1F,
 };
 

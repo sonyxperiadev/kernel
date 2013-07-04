@@ -406,6 +406,8 @@ struct bcmpmu_acld_pdata {
 	int acld_cc_lmt;
 	int otp_cc_trim;
 	int one_c_rate;
+	bool qa_required; /* Set this to true if
+			     Ibus is strictly limited to acld_cc_lmt */
 };
 
 enum bcmpmu_chrgr_fc_curr_t {
@@ -564,6 +566,7 @@ enum bcmpmu_event_t {
 	PMU_CHRGR_EVT_MBOV,
 	PMU_CHRGR_EVT_EOC,
 	PMU_CHRGR_EVT_CHRG_STATUS,
+	PMU_ACLD_EVT_ACLD_STATUS,
 	PMU_FG_EVT_CAPACITY,
 	PMU_FG_EVT_FGC,
 	PMU_JIG_EVT_USB,
@@ -931,11 +934,14 @@ int bcmpmu_set_icc_fc(struct bcmpmu59xxx *bcmpmu, int curr);
 int bcmpmu_icc_fc_step_down(struct bcmpmu59xxx *bcmpmu);
 int bcmpmu_icc_fc_step_up(struct bcmpmu59xxx *bcmpmu);
 int bcmpmu_get_icc_fc(struct bcmpmu59xxx *bcmpmu);
+int bcmpmu_get_next_icc_fc(struct bcmpmu59xxx *bcmpmu);
 int bcmpmu_set_cc_trim(struct bcmpmu59xxx *bcmpmu, int cc_trim);
 int bcmpmu_cc_trim_up(struct bcmpmu59xxx *bcmpmu);
 int bcmpmu_cc_trim_down(struct bcmpmu59xxx *bcmpmu);
 bool bcmpmu_get_mbc_faults(struct bcmpmu59xxx *bcmpmu);
 int  bcmpmu_get_trim_curr(struct bcmpmu59xxx *bcmpmu);
+
+bool bcmpmu_is_acld_enabled(struct bcmpmu59xxx *bcmpmu);
 
 /* ADC */
 int bcmpmu_adc_read(struct bcmpmu59xxx *bcmpmu, enum bcmpmu_adc_channel channel,

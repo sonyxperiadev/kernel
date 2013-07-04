@@ -294,7 +294,7 @@ static int _usb_host_en(struct bcmpmu_accy_data *di, int enable)
 		return ret;
 
 	/* If charging is already enabled/disabled just return */
-	if ((reg & MBCCTRL3_USB_HOSTEN_MASK) == enable) {
+	if ((reg & MBCCTRL3_USB_HOSTEN_MASK) == (!!enable)) {
 		pr_accy(INIT, "USB host is already in the reqested state\n");
 		return ret;
 	}
@@ -350,6 +350,40 @@ static int _curr_to_pmu_reg_idx(struct bcmpmu_accy_data *di, int curr)
 	return 0;
 }
 
+static int _get_next_icc_fc(struct bcmpmu_accy_data *di)
+{
+	struct bcmpmu59xxx *bcmpmu = di->bcmpmu;
+	int ret = 0;
+	u8 reg = 0;
+	bool acld_enabled = 0;
+	int curr;
+
+	if (!atomic_read(&drv_init_done)) {
+		pr_accy(ERROR, "%s: accy driver not initialized\n", __func__);
+		return -EAGAIN;
+	}
+
+	acld_enabled = bcmpmu_is_acld_enabled(bcmpmu);
+
+	ret = bcmpmu->read_dev(bcmpmu, PMU_REG_MBCCTRL10, &reg);
+	if (ret)
+		return -EINVAL;
+
+	if (reg >= PMU_USB_FC_CC_MAX)
+		reg = PMU_USB_FC_CC_MAX;
+	else
+		reg++;
+	/**
+	 * if ACLD is enable, we use typical CC values
+	 * from bcmpmu_pmu_curr_acld_table
+	 */
+	if (acld_enabled)
+		curr = bcmpmu_pmu_curr_acld_table[reg];
+	else
+		curr = bcmpmu_pmu_curr_table[reg];
+
+	return curr;
+}
 static int _get_icc_fc(struct bcmpmu_accy_data *di)
 {
 	struct bcmpmu59xxx *bcmpmu = di->bcmpmu;
@@ -363,15 +397,8 @@ static int _get_icc_fc(struct bcmpmu_accy_data *di)
 		return -EAGAIN;
 	}
 
-	if (bcmpmu->flags & BCMPMU_ACLD_EN) {
-		ret = bcmpmu->read_dev(bcmpmu, PMU_REG_OTG_BOOSTCTRL3, &reg);
-		if (ret)
-			return ret;
-		if (reg & ACLD_ENABLE_MASK)
-			acld_enabled = true;
-		else
-			acld_enabled = false;
-	}
+	acld_enabled = bcmpmu_is_acld_enabled(bcmpmu);
+
 	ret = bcmpmu->read_dev(bcmpmu, PMU_REG_MBCCTRL10, &reg);
 	if (ret)
 		return -EINVAL;
@@ -939,11 +966,17 @@ int bcmpmu_set_icc_fc(struct bcmpmu59xxx *bcmpmu, int curr)
 }
 EXPORT_SYMBOL(bcmpmu_set_icc_fc);
 
-int  bcmpmu_get_icc_fc(struct bcmpmu59xxx *bcmpmu)
+int bcmpmu_get_icc_fc(struct bcmpmu59xxx *bcmpmu)
 {
 	return _get_icc_fc(bcmpmu->accyinfo);
 }
 EXPORT_SYMBOL(bcmpmu_get_icc_fc);
+
+int bcmpmu_get_next_icc_fc(struct bcmpmu59xxx *bcmpmu)
+{
+	return _get_next_icc_fc(bcmpmu->accyinfo);
+}
+EXPORT_SYMBOL(bcmpmu_get_next_icc_fc);
 
 int bcmpmu_icc_fc_step_down(struct bcmpmu59xxx *bcmpmu)
 {
