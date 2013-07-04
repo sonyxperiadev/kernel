@@ -96,8 +96,16 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 	int cma_file = 0;
 	int array_size = ARRAY_SIZE(lowmem_adj);
 	int other_free = global_page_state(NR_FREE_PAGES) - totalreserve_pages;
+	/*
+	 * Swap cached pages are accounted as
+	 * FILE pages by the kernel. But as
+	 * they are not reclaimable unless LMK
+	 * runs, we should not consider them
+	 * as reclaimable pages.
+	 */
 	int other_file = global_page_state(NR_FILE_PAGES) -
-						global_page_state(NR_SHMEM);
+						global_page_state(NR_SHMEM) -
+						total_swapcache_pages();
 
 #ifdef CONFIG_CMA
 	/*
