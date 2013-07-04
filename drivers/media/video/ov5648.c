@@ -290,7 +290,7 @@ static const struct ov5648_reg ov5648_regtbl[OV5648_MODE_MAX][256] = {
 	{0x3814, 0x31},
 	{0x3815, 0x31},
 	{0x3817, 0x00},
-#ifdef CONFIG_MACH_HAWAII_GARNET_C_W68
+#ifdef CONFIG_MACH_JAVA_C_5606
 	{0x3820, 0x00},
 	{0x3821, 0x07},
 #else
@@ -436,7 +436,7 @@ static const struct ov5648_reg ov5648_regtbl[OV5648_MODE_MAX][256] = {
 	{0x3814, 0x31},
 	{0x3815, 0x31},
 	{0x3817, 0x00},
-#ifdef CONFIG_MACH_HAWAII_GARNET_C_W68
+#ifdef CONFIG_MACH_JAVA_C_5606
 	{0x3820, 0x00},
 	{0x3821, 0x07},
 #else
@@ -582,7 +582,7 @@ static const struct ov5648_reg ov5648_regtbl[OV5648_MODE_MAX][256] = {
 	{0x3814, 0x11},
 	{0x3815, 0x11},
 	{0x3817, 0x00},
-#ifdef CONFIG_MACH_HAWAII_GARNET_C_W68
+#ifdef CONFIG_MACH_JAVA_C_5606
 	{0x3820, 0x00},
 	{0x3821, 0x06},
 #else
@@ -681,7 +681,7 @@ static const struct ov5648_reg ov5648_regdif[OV5648_MODE_MAX][32] = {
 	{0x3813, 0x02},
 	{0x3814, 0x31},
 	{0x3815, 0x31},
-#ifdef CONFIG_MACH_HAWAII_GARNET_C_W68
+#ifdef CONFIG_MACH_JAVA_C_5606
 	{0x3820, 0x00},
 	{0x3821, 0x07},
 #else
@@ -721,7 +721,7 @@ static const struct ov5648_reg ov5648_regdif[OV5648_MODE_MAX][32] = {
 	{0x3813, 0x06},
 	{0x3814, 0x31},
 	{0x3815, 0x31},
-#ifdef CONFIG_MACH_HAWAII_GARNET_C_W68
+#ifdef CONFIG_MACH_JAVA_C_5606
 	{0x3820, 0x00},
 	{0x3821, 0x07},
 #else
@@ -761,7 +761,7 @@ static const struct ov5648_reg ov5648_regdif[OV5648_MODE_MAX][32] = {
 	{0x3813, 0x06},
 	{0x3814, 0x11},
 	{0x3815, 0x11},
-#ifdef CONFIG_MACH_HAWAII_GARNET_C_W68
+#ifdef CONFIG_MACH_JAVA_C_5606
 	{0x3820, 0x00},
 	{0x3821, 0x06},
 #else
