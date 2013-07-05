@@ -167,8 +167,8 @@
 		lv2  = "1", "lvldo2_uc", "0", "7", "2", "0", "0";
 		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, initial_mode = REGULATOR_MODE_STANDBY*/
 		vsr  = "1", "vsr_uc", "1", "7", "8", "0", "1630000";
-		/*pc_map = PMU_PC3, initial_mode = REGULATOR_MODE_IDLE*/
-		csr  = "1", "csr_uc", "1", "4", "4", "0", "0";
+		/*pc_map = PMU_PC3, initial_mode = REGULATOR_MODE_STANDBY*/
+		csr  = "1", "csr_uc", "1", "4", "8", "0", "0";
 		/*pc_map = PMU_PC2, initial_mode = REGULATOR_MODE_IDLE*/
 		mmsr = "1", "mmsr_uc", "1", "2", "4", "0", "0";
 		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, initial_mode = REGULATOR_MODE_IDLE*/

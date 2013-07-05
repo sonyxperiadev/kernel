@@ -43,6 +43,7 @@
 #endif
 #include "pm_params.h"
 #include "volt_tbl.h"
+#include <plat/cpu.h>
 
 #define BOARD_EDN010 "Hawaiistone EDN010"
 #define BOARD_EDN01x "Hawaiistone EDN01x"
@@ -1627,6 +1628,11 @@ int __init rgltr_init(void)
 			rgltr_pdata.bcmpmu_rgltr[i].req_volt = int_val;
 		}
 	}
+/* Workaround for VDDFIX leakage during deepsleep.
+   Will be fixed in Java A1 revision */
+	if (get_chip_id() <= KONA_CHIP_ID_JAVA_A0)
+		bcm59xxx_csr_data.constraints.initial_mode =
+			REGULATOR_MODE_IDLE;
 	return 0;
 }
 

@@ -43,6 +43,7 @@
 #endif
 #include "pm_params.h"
 #include "volt_tbl.h"
+#include <plat/cpu.h>
 
 #define PMU_DEVICE_I2C_ADDR	0x08
 #define PMU_DEVICE_I2C_ADDR1	0x0c
@@ -551,7 +552,7 @@ static struct regulator_init_data bcm59xxx_csr_data = {
 			.valid_ops_mask = REGULATOR_CHANGE_STATUS |
 			REGULATOR_CHANGE_MODE,
 			.always_on = 1,
-			.initial_mode = REGULATOR_MODE_IDLE,
+			.initial_mode = REGULATOR_MODE_STANDBY,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(csr_supply),
 	.consumer_supplies = csr_supply,
@@ -1509,6 +1510,11 @@ int __init board_bcm59xx_init(void)
 #if defined(CONFIG_SEC_CHARGING_FEATURE)
 	platform_add_devices(spa_devices, ARRAY_SIZE(spa_devices));
 #endif
+/* Workaround for VDDFIX leakage during deepsleep.
+   Will be fixed in Java A1 revision */
+	if (get_chip_id() <= KONA_CHIP_ID_JAVA_A0)
+		bcm59xxx_csr_data.constraints.initial_mode =
+			REGULATOR_MODE_IDLE;
 	return 0;
 exit:
 	return ret;
