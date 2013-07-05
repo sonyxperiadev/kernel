@@ -259,6 +259,13 @@ void ion_page_pool_destroy(struct ion_page_pool *pool)
 	kfree(pool);
 }
 
+#ifdef CONFIG_ION_BCM
+static struct reg_show_mem ion_page_pool_reg_show_mem;
+static void ion_page_pool_show_mem_cbk(struct reg_show_mem *reg_show_mem)
+{
+	pr_info("ion pp: (%d)\n", ion_page_pool_total(1));
+}
+#endif
 static int __init ion_page_pool_init(void)
 {
 	shrinker.shrink = ion_page_pool_shrink;
@@ -271,12 +278,19 @@ static int __init ion_page_pool_init(void)
 	debugfs_create_file("ion_pools_grow", 0644, NULL, NULL,
 			    &debug_grow_pools_fops);
 #endif
+#ifdef CONFIG_ION_BCM
+	ion_page_pool_reg_show_mem.cbk = ion_page_pool_show_mem_cbk;
+	register_show_mem(&ion_page_pool_reg_show_mem);
+#endif
 	return 0;
 }
 
 static void __exit ion_page_pool_exit(void)
 {
 	unregister_shrinker(&shrinker);
+#ifdef CONFIG_ION_BCM
+	unregister_show_mem(&ion_page_pool_reg_show_mem);
+#endif
 }
 
 module_init(ion_page_pool_init);
