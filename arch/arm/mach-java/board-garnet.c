@@ -954,7 +954,7 @@ static struct kona_headset_pd hawaii_headset_data = {
 	/*
 	 * Pass the board specific button detection range
 	 */
-	.button_adc_values_low = hawaii_button_adc_values,
+	.button_adc_values_low = 0,
 
 	/*
 	 * Pass the board specific button detection range
