@@ -261,7 +261,7 @@ enum {
 #define CONFIG_A9_PLL_2P8GHZ	3
 /*Wake up PM policy*/
 #define PM_WKP          7
-int mach_config_a9_pll(int turbo_val, int update_volt_tbl);
+int mach_config_arm_pll(int turbo_val, int update_volt_tbl);
 
 #endif	/*__PM_PARAMS_H__*/
 

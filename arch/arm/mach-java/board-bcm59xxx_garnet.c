@@ -1455,11 +1455,7 @@ int bcmpmu_init_sr_volt()
 #ifdef CONFIG_KONA_AVS
 	int msr_ret_vlt;
 	u8 sdsr_vlt = 0;
-	int adj_vlt;
-	u8 sdsr_ret_reg = 0;
-	int sdsr_vret;
 
-	pr_info("REG: pmu_init_platform_hw called\n");
 	BUG_ON(!pmu);
 	/* ADJUST MSR RETN VOLTAGE */
 	msr_ret_vlt = get_vddvar_retn_vlt_id();
@@ -1471,26 +1467,9 @@ int bcmpmu_init_sr_volt()
 	pmu->write_dev(pmu, PMU_REG_MMSRVOUT2, (u8)msr_ret_vlt);
 	/* ADJUST SDSR1 ACTIVE VOLTAGE */
 	pmu->read_dev(pmu, PMU_REG_SDSR1VOUT1, &sdsr_vlt);
-	adj_vlt = get_vddfix_vlt_adj(sdsr_vlt & PMU_SR_VOLTAGE_MASK);
-	if (adj_vlt < 0) {
-		pr_err("%s: Wrong Voltage val for SDSR active\n", __func__);
-		return -EINVAL;
-	}
-	sdsr_vlt &= ~PMU_SR_VOLTAGE_MASK;
-	sdsr_vlt |= adj_vlt << PMU_SR_VOLTAGE_SHIFT;
+	sdsr_vlt = get_vddfix_vlt(sdsr_vlt & PMU_SR_VOLTAGE_MASK);
 	pr_info("SDSR1 Active Voltage ID: 0x%x", sdsr_vlt);
 	pmu->write_dev(pmu, PMU_REG_SDSR1VOUT1, sdsr_vlt);
-	/* ADJUST SDSR1 RETN VOLTAGE */
-	pmu->read_dev(pmu, PMU_REG_SDSR1VOUT2, &sdsr_ret_reg);
-	sdsr_vret = get_vddfix_retn_vlt_id(sdsr_ret_reg & PMU_SR_VOLTAGE_MASK);
-	if (sdsr_vret < 0) {
-		pr_err("%s: Wrong Voltage val for SDSR retn\n", __func__);
-		return -EINVAL;
-	}
-	sdsr_ret_reg &= ~PMU_SR_VOLTAGE_MASK;
-	sdsr_ret_reg |= sdsr_vret << PMU_SR_VOLTAGE_SHIFT;
-	pr_info("SDSR1 Retn voltage ID: 0x%x\n", sdsr_ret_reg);
-	pmu->write_dev(pmu, PMU_REG_SDSR1VOUT2, sdsr_ret_reg);
 #endif
 	return 0;
 }
@@ -1503,7 +1482,7 @@ void bcmpmu_populate_volt_dbg_log(struct pmu_volt_dbg *dbg_log)
 		pmu->read_dev(pmu, PMU_REG_SDSR1VOUT2, &dbg_log->sdsr1[1]);
 		pmu->read_dev(pmu, PMU_REG_SDSR2VOUT1, &dbg_log->sdsr2[0]);
 		pmu->read_dev(pmu, PMU_REG_SDSR2VOUT2, &dbg_log->sdsr2[1]);
-		pr_info("Populated voltage settings for debug");
+		pr_info("Populated voltage settings for debug\n");
 	}
 }
 

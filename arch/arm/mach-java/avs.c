@@ -27,56 +27,16 @@
 #include <mach/memory.h>
 #include <linux/delay.h>
 #include <plat/pi_mgr.h>
-#include <linux/spinlock.h>
 #include <linux/regulator/consumer.h>
 #include <plat/kona_pm.h>
-#include <linux/clk.h>
-#include <plat/clock.h>
-#include <plat/pwr_mgr.h>
 #include "pm_params.h"
+#include "volt_tbl.h"
+#include <linux/mfd/bcmpmu59xxx.h>
 
-
-#define AVS_ATE_MONTH_MASK	(0xF)
-#define AVS_ATE_MONTH_SHIFT	(0)
-#define AVS_ATE_YEAR_MASK	(0xF)
-#define AVS_ATE_YEAR_SHIFT	(4)
-
-#define AVS_ATE_VAL_MASK	(0xF)
-#define AVS_ATE_VAL_SHIFT	(8)
-
-#define AVS_ATE_CRC_MASK	(0xF)
-#define AVS_ATE_CRC_SHIFT	(12)
-
-#define AVS_ATE_IRDROP_MASK	(0x3FF)
-#define AVS_ATE_IRDROP_SHIFT	(16)
-
-#define AVS_VDDFIX_VLT_ADJ_MASK		(0x1F)
-#define AVS_VDDFIX_VLT_ADJ_SHIFT	(0)
-
-#define AVS_VDDFIX_SPM_SHIFT	(0)
-#define AVS_VDDVAR_SPM_SHIFT	(8)
-#define AVS_SPM_MASK		(0xFF)
-
-#define AVS_VDDFIX_RET_MIN_SHIFT	(16)
-#define AVS_VDDVAR_RET_MIN_SHIFT	(20)
-#define AVS_VDDVAR_A9_MIN_SHIFT		(24)
-#define AVS_VDDVAR_MIN_SHIFT		(28)
-
-#define AVS_VLT_MIN_MASK		(0xF)
-
-#define AVS_FAB_SRC_MASK	(0x3)
-#define AVS_FAB_SRC_SHIFT	(0)
-
-#define AVS_FAB_SRC_NB	2
-#define AVS_MONTH_NB	4
-#define AVS_YEAR_NB	4
-#define AVS_ATE_VAL_NB	4
-#define AVS_CRC_NB	4
-#define AVS_IRDROP_NB	10
-#define AVS_SPM_NB	8
-#define AVS_VOLT_NB	4
-#define AVS_VLT_ADJ_NB	5
-#define AVS_RESERVED_NB	8
+#ifdef CONFIG_DEBUG_FS
+#include <linux/debugfs.h>
+#include <asm/uaccess.h>
+#endif
 
 #define avs_dbg(level, args...) \
 	do { \
@@ -84,11 +44,6 @@
 			pr_info(args); \
 		} \
 	} while (0)
-
-static char *silicon_type_names[] = {
-	"SLOW", "TYP SLOW", "TYPICAL", "TYP FAST", "FAST"
-};
-
 
 enum {
 	AVS_LOG_ERR  = 1 << 0,
@@ -98,359 +53,120 @@ enum {
 	AVS_LOG_INFO = 1 << 4,
 };
 
-struct row_val {
-	u32 val0;
-	u32 val1;
-};
 
 struct avs_info {
-	u32 avs_ate_val;
-	u32 ate_crc;
-	u32 year;
-	u32 month;
-	u32 irdrop;
-	u32 vddfix_vlt_adj;
-	u32 vddvar_spm;
-	u32 vddfix_spm;
-	u32 vddvar_ret_min;
-	u32 vddfix_ret_min;
-	u32 vddvar_min;
-	u32 vddvar_a9_min;
+	u32 csr_opp_volt[CSR_NUM_OPP];
+	u32 msr_opp_volt[MSR_NUM_OPP];
 	u32 fab_src;
 	struct avs_pdata *pdata;
-	u32 silicon_type;
-	u32 freq;
-	struct row_val row3_val;
-	struct row_val row5_val;
-	struct row_val row8_val;
-	spinlock_t lock;
+	struct avs_handshake *avs_handshake;
+	u32 handshake_version;
+	u32 kernel_freq_id;
 };
 
-static int irdrop_osc_check_en = 1;
-
-static int no_irdrop_check(char *str)
-{
-	pr_info("%s\n", __func__);
-	irdrop_osc_check_en = 0;
-	return 1;
-}
-__setup("no_irdrop_check", no_irdrop_check);
-
-
-static struct avs_info avs_info = {.silicon_type = SILICON_TYPE_SLOW, };
+struct avs_info avs_info = {
+	.handshake_version = AVS_HANDSHAKE_VERSION,
+	.kernel_freq_id = AVS_KERNEL_FREQ_ID,
+};
 
 static int debug_mask = AVS_LOG_ERR | AVS_LOG_WARN | AVS_LOG_INIT;
 
-module_param_named(silicon_type, avs_info.silicon_type, int, S_IRUGO);
-
-module_param_named(month, avs_info.month, int,
-			S_IRUGO | S_IWUSR | S_IWGRP);
-module_param_named(year, avs_info.year, int, S_IRUGO | S_IWUSR | S_IWGRP);
-
-module_param_named(avs_ate_val, avs_info.avs_ate_val, int,
-			S_IRUGO | S_IWUSR | S_IWGRP);
-module_param_named(freq_id, avs_info.freq, int, S_IRUGO);
-
-
-module_param_named(ate_crc, avs_info.ate_crc, int,
-			S_IRUGO | S_IWUSR | S_IWGRP);
-
-module_param_named(irdrop, avs_info.irdrop, int,
-			S_IRUGO | S_IWUSR | S_IWGRP);
-
-module_param_named(fab_src, avs_info.fab_src, int,
-			S_IRUGO | S_IWUSR | S_IWGRP);
-
-module_param_named(vddvar_a9_min, avs_info.vddvar_a9_min, int,
-			S_IRUGO | S_IWUSR | S_IWGRP);
-module_param_named(vddvar_min, avs_info.vddvar_min, int,
-			S_IRUGO | S_IWUSR | S_IWGRP);
-module_param_named(vddvar_ret_min, avs_info.vddvar_ret_min, int,
-			S_IRUGO | S_IWUSR | S_IWGRP);
-module_param_named(vddfix_ret_min, avs_info.vddfix_ret_min, int,
-			S_IRUGO | S_IWUSR | S_IWGRP);
-
-module_param_named(vddvar_spm, avs_info.vddvar_spm, int,
-			S_IRUGO | S_IWUSR | S_IWGRP);
-module_param_named(vddfix_spm, avs_info.vddfix_spm, int,
-			S_IRUGO | S_IWUSR | S_IWGRP);
-
-module_param_named(vddfix_vlt_adj, avs_info.vddfix_vlt_adj, int,
-			S_IRUGO | S_IWUSR | S_IWGRP);
-
-module_param_named(debug_mask, debug_mask, int,
-			S_IRUGO | S_IWUSR | S_IWGRP);
-
-struct trigger_avs {
+struct irdrop_count {
 	int dummy;
 };
 
-#define __param_check_trigger_avs(name, p, type) \
+static struct irdrop_count irdrop_count;
+
+#define __param_check_irdrop_count(name, p, type) \
 	static inline struct type *__check_##name(void) { return (p); }
+#define param_check_irdrop_count(name, p) \
+	__param_check_irdrop_count(name, p, irdrop_count)
 
-#define param_check_trigger_avs(name, p) \
-	__param_check_trigger_avs(name, p, trigger_avs)
+static int param_get_irdrop_count(char *buffer, const struct kernel_param *kp);
 
-static int param_set_trigger_avs(const char *val,
-			const struct kernel_param *kp);
-
-static struct kernel_param_ops param_ops_trigger_avs = {
-	.set = param_set_trigger_avs,
+static struct kernel_param_ops param_ops_irdrop_count = {
+	.get = param_get_irdrop_count,
 };
-
-static struct trigger_avs trigger_avs;
-module_param_named(trigger_avs, trigger_avs, trigger_avs,
-				S_IWUSR | S_IWGRP);
-
-struct irdrop_si_type {
-	int dummy;
-};
-
-static struct irdrop_si_type irdrop_si_type;
-
-#define __param_check_irdrop_si_type(name, p, type) \
-	static inline struct type *__check_##name(void) { return (p); }
-#define param_check_irdrop_si_type(name, p) \
-	__param_check_irdrop_si_type(name, p, irdrop_si_type)
-
-static int param_get_irdrop_si_type(char *buffer,
-	const struct kernel_param *kp);
-
-static struct kernel_param_ops param_ops_irdrop_si_type = {
-	.get = param_get_irdrop_si_type,
-};
-module_param_named(irdrop_si_type, irdrop_si_type, irdrop_si_type,
+module_param_named(irdrop_count, irdrop_count, irdrop_count,
 				S_IRUGO | S_IWGRP);
 
-
-u32 avs_get_silicon_type(void)
-{
-	BUG_ON(avs_info.pdata == NULL);
-	return avs_info.silicon_type;
-}
-EXPORT_SYMBOL(avs_get_silicon_type);
-
-u32 avs_get_ate_freq(void)
-{
-	BUG_ON(avs_info.pdata == NULL);
-	return avs_info.freq;
-}
-EXPORT_SYMBOL(avs_get_ate_freq);
-
-int avs_get_vddvar_aging_margin(u32 silicon_type, u32 freq)
+int avs_get_vddfix_voltage(void)
 {
 	if (!avs_info.pdata)
-		return -EAGAIN;
-	avs_dbg(AVS_LOG_INIT, "%s: silicon = %u, freq = %u",
-			__func__, silicon_type, freq);
-	BUG_ON(freq < A9_FREQ_1000_MHZ || freq >= A9_FREQ_1500_MHZ);
-	if (avs_info.pdata->vddvar_adj_lut)
-		return avs_info.pdata->vddvar_adj_lut[freq - 1][silicon_type];
-	return 0;
+		return -EPERM;
+	return avs_info.avs_handshake->vddfix;
 }
-EXPORT_SYMBOL(avs_get_vddvar_aging_margin);
+EXPORT_SYMBOL(avs_get_vddfix_voltage);
 
-int avs_get_vddfix_adj(void)
+static int avs_read_opp_info(struct avs_info *avs_inf_ptr)
 {
-	if (!avs_info.pdata)
-		return 0;
-	if (avs_info.pdata->flags & AVS_VDDFIX_ADJ_EN) {
-		BUG_ON(!avs_info.pdata->vddfix_adj_lut);
-		return avs_info.pdata->vddfix_adj_lut[avs_info.vddfix_vlt_adj];
-	}
-	return 0;
-}
-EXPORT_SYMBOL(avs_get_vddfix_adj);
-
-u32 avs_get_vddvar_ret_vlt_min(void)
-{
-	if (!avs_info.pdata)
-		return 0;
-	if (avs_info.pdata->flags & AVS_VDDVAR_MIN_EN) {
-		BUG_ON(!avs_info.pdata->vddvar_vret_lut);
-		return avs_info.pdata->vddvar_vret_lut[avs_info.vddvar_ret_min];
-	}
-	return 0;
-}
-EXPORT_SYMBOL(avs_get_vddvar_ret_vlt_min);
-
-u32 avs_get_vddfix_ret_vlt_min(void)
-{
-	if (!avs_info.pdata)
-		return 0;
-	if (avs_info.pdata->flags & AVS_VDDFIX_MIN_EN) {
-		BUG_ON(!avs_info.pdata->vddfix_vret_lut);
-		return avs_info.pdata->vddfix_vret_lut[avs_info.vddfix_ret_min];
-	}
-	return 0;
-
-}
-EXPORT_SYMBOL(avs_get_vddfix_ret_vlt_min);
-
-u32 avs_get_vddvar_vlt_min(void)
-{
-	if (!avs_info.pdata)
-		return 0;
-	if (avs_info.pdata->flags & AVS_VDDVAR_MIN_EN) {
-		BUG_ON(!avs_info.pdata->vddvar_vmin_lut);
-		return avs_info.pdata->vddvar_vmin_lut[avs_info.vddvar_min];
-	}
-	return 0;
-}
-EXPORT_SYMBOL(avs_get_vddvar_vlt_min);
-
-u32 avs_get_vddvar_a9_vlt_min(void)
-{
-	if (!avs_info.pdata)
-		return 0;
-	if (avs_info.pdata->flags & AVS_VDDVAR_A9_MIN_EN) {
-		BUG_ON(!avs_info.pdata->vddvar_a9_vmin_lut);
-		return avs_info.pdata->
-			vddvar_a9_vmin_lut[avs_info.vddvar_a9_min];
-	}
-	return 0;
-}
-EXPORT_SYMBOL(avs_get_vddvar_a9_vlt_min);
-
-/* converts interger to string radix 2 (binary number string) */
-static int int2bin(unsigned int num, char *str, int num_bits)
-{
-	int i;
-	u32 mask = 1 << (num_bits - 1);
-	BUG_ON(num_bits <= 0 || num_bits > 32);
-
-	for (i = 0; mask; mask >>= 1, i++)
-		str[i] = num & mask ? '1' : '0';
-	str[i] = 0; /*Add null terminator*/
-	return num_bits;
-}
-
-/*  4-bit Linear feeback shift register implementation  based on primitive
-polynomial x^4 + x + 1. bitstring should be null terminated */
-
-static void cal_crc(const char *bitstring, char *crc_res)
-{
-	char crc[4];
-	int i;
-	int len;
-	char do_invert;
-
-	memset(crc, 0x0, sizeof(crc));
-	len = strlen(bitstring);
-
-	for (i = 0; i < len; ++i) {
-		do_invert = ('1' == bitstring[i]) ^ crc[3];
-		crc[3] = crc[2];
-		crc[2] = crc[1];
-		crc[1] = crc[0] ^ do_invert;
-		crc[0] = do_invert;
-	}
-
-	for (i = 0; i < 4; ++i)
-		crc_res[3-i] = crc[i] ? '1' : '0';
-	crc_res[4] = 0; /* Null Terminated */
-}
-
-static int avs_read_otp(struct avs_info *avs_inf_ptr)
-{
-	void __iomem *mem_ptr;
-
 	avs_dbg(AVS_LOG_INIT, "%s: AVS_READ_MEM => mem adr = %x\n",
-				__func__, avs_inf_ptr->pdata->avs_addr_row3);
-	BUG_ON(avs_inf_ptr->pdata->avs_addr_row3 == 0);
+			__func__, avs_inf_ptr->pdata->avs_info_base_addr);
+	BUG_ON(avs_inf_ptr->pdata->avs_info_base_addr == 0);
+	avs_inf_ptr->avs_handshake = (struct avs_handshake *)(
+			avs_inf_ptr->pdata->avs_info_base_addr);
 
-	mem_ptr = ioremap_nocache(avs_inf_ptr->pdata->avs_addr_row3,
-				    sizeof(struct row_val));
-	avs_dbg(AVS_LOG_INIT, "%s: AVS_READ_MEM => virtual addr = %p\n",
-				__func__, mem_ptr);
-	BUG_ON(!mem_ptr);
-	memcpy(&avs_inf_ptr->row3_val, mem_ptr,
-				sizeof(struct row_val));
-	iounmap(mem_ptr);
+	avs_dbg(AVS_LOG_INIT, "CSR OPP VAL: 0x%x",
+			avs_inf_ptr->avs_handshake->csr_opp);
+	avs_dbg(AVS_LOG_INIT, "MSR OPP VAL: 0x%x",
+			avs_inf_ptr->avs_handshake->msr_opp);
+	avs_dbg(AVS_LOG_INIT, "Computed at %u Celsius. N/P1: %u, N/P2: %u\n",
+			avs_inf_ptr->avs_handshake->temperature,
+			avs_inf_ptr->avs_handshake->np_ratio_1,
+			avs_inf_ptr->avs_handshake->np_ratio_2);
+	avs_dbg(AVS_LOG_INIT, "IRDROP @ 1.2V: %u",
+			avs_inf_ptr->avs_handshake->irdrop_1v2);
+	avs_dbg(AVS_LOG_INIT, "Varspm 0:%u, 1:%u, 2:%u, 3:%u, 4:%u, 5:%u\n",
+			avs_info.avs_handshake->varspm0,
+			avs_info.avs_handshake->varspm1,
+			avs_info.avs_handshake->varspm2,
+			avs_info.avs_handshake->varspm3,
+			avs_info.avs_handshake->varspm4,
+			avs_info.avs_handshake->varspm5);
+	avs_dbg(AVS_LOG_INIT, "Spm 0:%u, 1:%u, 2:%u, 3:%u, 4:%u, 5:%u\n",
+			avs_info.avs_handshake->spm0,
+			avs_info.avs_handshake->spm1,
+			avs_info.avs_handshake->spm2,
+			avs_info.avs_handshake->spm3,
+			avs_info.avs_handshake->spm4,
+			avs_info.avs_handshake->spm5);
 
-	avs_dbg(AVS_LOG_INIT, "row3_val: 0x%x_%x", avs_inf_ptr->row3_val.val1,
-				avs_inf_ptr->row3_val.val0);
-	avs_dbg(AVS_LOG_INIT, "%s: AVS_READ_MEM => mem adr = %x\n",
-			__func__, avs_inf_ptr->pdata->avs_addr_row5);
-	BUG_ON(avs_inf_ptr->pdata->avs_addr_row5 == 0);
-
-	mem_ptr = ioremap_nocache(avs_inf_ptr->pdata->avs_addr_row5,
-				    sizeof(struct row_val));
-	avs_dbg(AVS_LOG_INIT, "%s: AVS_READ_MEM => virtual addr = %p\n",
-				__func__, mem_ptr);
-	BUG_ON(!mem_ptr);
-	memcpy(&avs_inf_ptr->row5_val, mem_ptr,
-				sizeof(struct row_val));
-	iounmap(mem_ptr);
-
-	avs_dbg(AVS_LOG_INIT, "row5_val: 0x%x_%x", avs_inf_ptr->row5_val.val1,
-				avs_inf_ptr->row5_val.val0);
-
-	/*all bits in ROW 8 are reserved. No need to read the same*/
-	memset(&avs_inf_ptr->row8_val, 0, sizeof(struct row_val));
-
+	avs_dbg(AVS_LOG_INIT, "VDDFIX voltage val: 0x%x",
+			avs_inf_ptr->avs_handshake->vddfix);
+	avs_dbg(AVS_LOG_INIT, "Silicon Type: %u",
+			avs_inf_ptr->avs_handshake->silicon_type);
+	avs_dbg(AVS_LOG_INIT, "Freq Id: %u",
+			avs_inf_ptr->avs_handshake->arm_freq);
+	avs_dbg(AVS_LOG_INIT, "Error Status: %x",
+			avs_inf_ptr->avs_handshake->error_status);
 	return 0;
 }
 
-static void avs_parse_otp_bits(struct avs_info *avs_inf_ptr)
+#define CSR_OPP_MASK	0xFF
+#define CSR_OPP1_SHIFT	0
+#define CSR_OPP2_SHIFT	8
+#define CSR_OPP3_SHIFT	16
+#define CSR_OPP4_SHIFT	24
+
+static void avs_parse_opp_info(struct avs_info *avs_inf_ptr)
 {
-	/*-----------ROW 5-----------*/
-	avs_inf_ptr->year = (avs_inf_ptr->row5_val.val0 >>
-				AVS_ATE_YEAR_SHIFT) & AVS_ATE_YEAR_MASK;
-	avs_inf_ptr->month = (avs_inf_ptr->row5_val.val0 >>
-				AVS_ATE_MONTH_SHIFT) & AVS_ATE_MONTH_MASK;
-	avs_inf_ptr->avs_ate_val = (avs_inf_ptr->row5_val.val0 >>
-					AVS_ATE_VAL_SHIFT) & AVS_ATE_VAL_MASK;
-	avs_inf_ptr->ate_crc = (avs_inf_ptr->row5_val.val0 >>
-			AVS_ATE_CRC_SHIFT) & AVS_ATE_CRC_MASK;
-	avs_inf_ptr->irdrop = (avs_inf_ptr->row5_val.val0 >>
-				AVS_ATE_IRDROP_SHIFT) & AVS_ATE_IRDROP_MASK;
+	avs_inf_ptr->csr_opp_volt[0] = (avs_inf_ptr->avs_handshake->
+			csr_opp >> CSR_OPP1_SHIFT) & CSR_OPP_MASK;
+	avs_inf_ptr->csr_opp_volt[1] = (avs_inf_ptr->avs_handshake->
+			csr_opp >> CSR_OPP2_SHIFT) & CSR_OPP_MASK;
+	avs_inf_ptr->csr_opp_volt[2] = (avs_inf_ptr->avs_handshake->
+			csr_opp >> CSR_OPP3_SHIFT) & CSR_OPP_MASK;
+	avs_inf_ptr->csr_opp_volt[3] = (avs_inf_ptr->avs_handshake->
+			csr_opp >> CSR_OPP4_SHIFT) & CSR_OPP_MASK;
 
-	avs_inf_ptr->vddfix_vlt_adj =
-				(avs_inf_ptr->row5_val.val1 >>
-				AVS_VDDFIX_VLT_ADJ_SHIFT) &
-				AVS_VDDFIX_VLT_ADJ_MASK;
-
-	avs_dbg(AVS_LOG_INIT, "ATE_AVS_BIN = %u, CRC = %u, IRDROP = %u,"\
-		" Year = %u, Month = %u, vddfix_vlt_adj = %u\n",
-		avs_inf_ptr->avs_ate_val, avs_inf_ptr->ate_crc,
-		avs_inf_ptr->irdrop, avs_inf_ptr->year,
-		avs_inf_ptr->month,
-		avs_inf_ptr->vddfix_vlt_adj);
-
-	/*-----------ROW 3-----------*/
-	avs_inf_ptr->vddfix_spm = (avs_inf_ptr->row3_val.val0 >>
-				AVS_VDDFIX_SPM_SHIFT) & AVS_SPM_MASK;
-	avs_inf_ptr->vddvar_spm = (avs_inf_ptr->row3_val.val0 >>
-			AVS_VDDVAR_SPM_SHIFT) & AVS_SPM_MASK;
-
-	avs_dbg(AVS_LOG_INIT, "VDDFIX spm: %u VDDVAR SPM: %u\n",
-				avs_inf_ptr->vddfix_spm,
-				avs_inf_ptr->vddvar_spm);
-
-	avs_inf_ptr->vddfix_ret_min = (avs_inf_ptr->row3_val.val0 >>
-				AVS_VDDFIX_RET_MIN_SHIFT) & AVS_VLT_MIN_MASK;
-	avs_inf_ptr->vddvar_ret_min = (avs_inf_ptr->row3_val.val0 >>
-			AVS_VDDVAR_RET_MIN_SHIFT) & AVS_VLT_MIN_MASK;
-	avs_inf_ptr->vddvar_a9_min = ((avs_inf_ptr->row3_val.val0 >>
-			AVS_VDDVAR_A9_MIN_SHIFT) & AVS_VLT_MIN_MASK);
-	avs_inf_ptr->vddvar_min = (avs_inf_ptr->row3_val.val0 >>
-			AVS_VDDVAR_MIN_SHIFT) & AVS_VLT_MIN_MASK;
-
-	avs_dbg(AVS_LOG_INIT, "VDDVAR_A9 min: %u\n",
-				avs_inf_ptr->vddvar_a9_min);
-	avs_dbg(AVS_LOG_INIT, "VDDVAR min: %u VDDVAR retn min: %u\n",
-				avs_inf_ptr->vddvar_min,
-				avs_inf_ptr->vddvar_ret_min);
-	avs_dbg(AVS_LOG_INIT, "VDDFix retn min: %u\n",
-				avs_inf_ptr->vddfix_ret_min);
-
-	avs_inf_ptr->fab_src = (avs_inf_ptr->row3_val.val1 >>
-			AVS_FAB_SRC_SHIFT) & AVS_FAB_SRC_MASK;
-
-
-	avs_dbg(AVS_LOG_INIT, "Fab source = %u\n",
-			avs_inf_ptr->fab_src);
+	avs_inf_ptr->msr_opp_volt[0] = (avs_inf_ptr->avs_handshake->
+			msr_opp >> CSR_OPP1_SHIFT) & CSR_OPP_MASK;
+	avs_inf_ptr->msr_opp_volt[1] = (avs_inf_ptr->avs_handshake->
+			msr_opp >> CSR_OPP2_SHIFT) & CSR_OPP_MASK;
+	avs_inf_ptr->msr_opp_volt[2] = (avs_inf_ptr->avs_handshake->
+			msr_opp >> CSR_OPP3_SHIFT) & CSR_OPP_MASK;
+	avs_inf_ptr->msr_opp_volt[3] = (avs_inf_ptr->avs_handshake->
+			msr_opp >> CSR_OPP4_SHIFT) & CSR_OPP_MASK;
 }
 
 static void avs_irdrop_osc_en(struct avs_info *avs_info_ptr, bool enable)
@@ -484,41 +200,15 @@ static u32 avs_irdrop_osc_get_count(struct avs_info *avs_info_ptr)
 	return count;
 }
 
-
-static u32 avs_get_type_frm_osc_count(struct avs_info *avs_info_ptr, u32 count)
+static u32 avs_get_irdrop_osc_count(struct avs_info *avs_info_ptr)
 {
-	int i;
-
-	struct avs_pdata *pdata = avs_info_ptr->pdata;
-	u32 silicon_type = SILICON_TYPE_SLOW;
-	for (i = 0; i < SILICON_TYPE_MAX; i++)
-		if (count >= pdata->irdrop_lut[i] &&
-			count < pdata->irdrop_lut[i+1]) {
-				silicon_type = (i + 1);
-				break;
-		}
-	return silicon_type;
-}
-
-
-static u32 avs_compute_type_from_irdrop(struct avs_info *avs_info_ptr,
-	bool force_freq_id)
-{
-	#define OSC_READ_COUNT 5
 	u32 min;
 	u32 max;
 	struct regulator *regl;
 	struct pi *pi;
-	struct ccu_clk *proc_ccu;
-	struct clk *clk;
-	u32 sil_type = SILICON_TYPE_SLOW;
-	u32 i;
 	int ret;
-	unsigned long flags;
-	u32 osc_cnt;
-	u32 osc_cnt_sum = 0;
-	struct opp_info opp_info;
-	u32 freq_id[MAX_CCU_POLICY_COUNT];
+	u32 osc_cnt = 0;
+	int tries = 2;
 
 	struct avs_pdata *pdata = avs_info_ptr->pdata;
 
@@ -528,7 +218,7 @@ static u32 avs_compute_type_from_irdrop(struct avs_info *avs_info_ptr,
 	if (IS_ERR_OR_NULL(regl)) {
 		avs_dbg(AVS_LOG_ERR, "%s: Unable to get regulator\n",
 			__func__);
-		return sil_type;
+		return 0;
 	}
 	/*Disable A9 LPM C states*/
 	kona_pm_disable_idle_state(CSTATE_ALL, 1);
@@ -538,233 +228,227 @@ static u32 avs_compute_type_from_irdrop(struct avs_info *avs_info_ptr,
 	max = pi_get_dfs_lmt(pi->id, true /*get max limit*/);
 	pi_mgr_set_dfs_opp_limit(pi->id, PI_OPP_ECONOMY,
 				PI_OPP_ECONOMY);
-	if (force_freq_id) {
-		clk = clk_get(NULL, KPROC_CCU_CLK_NAME_STR);
-		BUG_ON(IS_ERR_OR_NULL(clk));
-		proc_ccu = to_ccu_clk(clk);
-		/* enable write access */
-		ccu_write_access_enable(proc_ccu, true);
-		/*stop policy engine */
-		ccu_policy_engine_stop(proc_ccu);
-		opp_info.ctrl_prms = CCU_POLICY_FREQ_REG_INIT;
-		opp_info.freq_id = PROC_CCU_FREQ_ID_ECO;
-
-		for (i = 0; i < MAX_CCU_POLICY_COUNT; i++) {
-			freq_id[i] = ccu_get_freq_policy(proc_ccu, i);
-			ccu_set_freq_policy(proc_ccu,
-					i, &opp_info);
-		}
-		ccu_policy_engine_resume(proc_ccu, CCU_LOAD_ACTIVE);
-
-	}
 	ret = regulator_set_voltage(regl, pdata->irdrop_vreq,
 			pdata->irdrop_vreq);
 	if (ret) {
 		avs_dbg(AVS_LOG_ERR, "Unable to set voltage\n");
 		goto err;
 	}
-	spin_lock_irqsave(&avs_info_ptr->lock, flags);
-	for (i = 0; i < OSC_READ_COUNT; i++) {
+	while (tries) {
 		avs_irdrop_osc_en(avs_info_ptr, true);
 		mdelay(1);
-		osc_cnt = avs_irdrop_osc_get_count(avs_info_ptr);
-		avs_dbg(AVS_LOG_FLOW, "Reading IRDROP, try %d :%u\n",
-				i, osc_cnt);
-		osc_cnt_sum += osc_cnt;
+		osc_cnt += avs_irdrop_osc_get_count(avs_info_ptr);
 		avs_irdrop_osc_en(avs_info_ptr, false);
 	}
-	/*take average*/
-	osc_cnt = osc_cnt_sum/OSC_READ_COUNT;
-	sil_type = avs_get_type_frm_osc_count(avs_info_ptr, osc_cnt);
-	avs_dbg(AVS_LOG_INIT, "[IRDROP OSC] osc_cnt = %u, silicon type = %u\n",
-			osc_cnt, sil_type);
-
-	spin_unlock_irqrestore(&avs_info_ptr->lock, flags);
+	osc_cnt /= 2;
 err:
 	regulator_put(regl);
-	if (force_freq_id) {
-
-		/*stop policy engine */
-		ccu_policy_engine_stop(proc_ccu);
-		opp_info.ctrl_prms = CCU_POLICY_FREQ_REG_INIT;
-
-
-		for (i = 0; i < MAX_CCU_POLICY_COUNT; i++) {
-			opp_info.freq_id = freq_id[i];
-			ccu_get_freq_policy(proc_ccu, i);
-			ccu_set_freq_policy(proc_ccu,
-					i, &opp_info);
-		}
-		ccu_policy_engine_resume(proc_ccu, CCU_LOAD_ACTIVE);
-		ccu_write_access_enable(proc_ccu, false);
-	}
-	pi_mgr_set_dfs_opp_limit(pi->id, min,
-				max);
+	pi_mgr_set_dfs_opp_limit(pi->id, min, max);
 	kona_pm_disable_idle_state(CSTATE_ALL, 0);
 
-	return sil_type;
+	return osc_cnt;
 }
 
-static int param_get_irdrop_si_type(char *buffer, const struct kernel_param *kp)
+static int param_get_irdrop_count(char *buffer, const struct kernel_param *kp)
 {
-	static int tries;
-	static u32 si_type;
-	if (tries == 0) {
-		si_type = avs_compute_type_from_irdrop(&avs_info, true);
-		tries++;
-}
-	return snprintf(buffer, 10, "%s\n", silicon_type_names[si_type]);
+	return snprintf(buffer, 10, "%u", avs_get_irdrop_osc_count(&avs_info));
 }
 
-static void avs_pack_n_cpy(char **ptr, u32 val, u32 num_bits)
+static int avs_set_voltage_table(struct avs_info *avs_inf_ptr)
 {
-	char str[40];
-	int s = int2bin(val, str, num_bits);
-	memcpy(*ptr, str, s);
-	avs_dbg(AVS_LOG_FLOW, "%s: val = %u str = %s  &  %s\n",
-		__func__, val, *ptr, str);
-	*ptr += s;
-}
+	int i = 0;
 
-static long avs_compute_crc(struct avs_info *avs_inf_ptr)
-{
-#define BIT_PACK_SIZE 200
-	char pack[BIT_PACK_SIZE];
-	char crc[5];
-	char *ptr = pack;
-	int ret;
-	long crc_val;
-	memset(pack, 0, sizeof(pack));
+	for (i = 0; i < CSR_NUM_OPP; i++)
+		BUG_ON(avs_inf_ptr->csr_opp_volt[i] == 0);
+	for (i = 0; i < MSR_NUM_OPP; i++)
+		BUG_ON(avs_inf_ptr->msr_opp_volt[i] == 0);
 
-	/*Pack {Foundry[1:0], MSR_VMIN[7:4]:CSR_VMIN[3:0],
-	VRET_VAR[7:4]:VRET_FIX[3:0],MSR_SPM[7:0], SDSR1_SPM[7:0],
-	SDSR1_voltage_adjust[4:0], IRDROP[9:0],
-	CSR_ATE_AVS_BIN[3:0], Year[3:0]:Month[3:0], RSVD_FIELD4[7:0],
-	RSVD_FIELD3[7:0], RSVD_FIELD2[7:0], RSVD_FIELD1[7:0} */
-
-	avs_pack_n_cpy(&ptr, avs_inf_ptr->fab_src, AVS_FAB_SRC_NB);
-
-	avs_pack_n_cpy(&ptr, avs_inf_ptr->vddvar_min, AVS_VOLT_NB);
-	avs_pack_n_cpy(&ptr, avs_inf_ptr->vddvar_a9_min, AVS_VOLT_NB);
-	avs_pack_n_cpy(&ptr, avs_inf_ptr->vddvar_ret_min, AVS_VOLT_NB);
-	avs_pack_n_cpy(&ptr, avs_inf_ptr->vddfix_ret_min, AVS_VOLT_NB);
-
-	avs_pack_n_cpy(&ptr, avs_inf_ptr->vddvar_spm, AVS_SPM_NB);
-	avs_pack_n_cpy(&ptr, avs_inf_ptr->vddfix_spm, AVS_SPM_NB);
-
-	avs_pack_n_cpy(&ptr, avs_inf_ptr->vddfix_vlt_adj, AVS_VLT_ADJ_NB);
-	avs_pack_n_cpy(&ptr, avs_inf_ptr->irdrop, AVS_IRDROP_NB);
-
-	avs_pack_n_cpy(&ptr, avs_inf_ptr->avs_ate_val, AVS_ATE_VAL_NB);
-	avs_pack_n_cpy(&ptr, avs_inf_ptr->year, AVS_YEAR_NB);
-	avs_pack_n_cpy(&ptr, avs_inf_ptr->month, AVS_MONTH_NB);
-
-	/*pack reserved bits*/
-	avs_pack_n_cpy(&ptr, 0, AVS_RESERVED_NB);
-	avs_pack_n_cpy(&ptr, 0, AVS_RESERVED_NB);
-	avs_pack_n_cpy(&ptr, 0, AVS_RESERVED_NB);
-	avs_pack_n_cpy(&ptr, 0, AVS_RESERVED_NB);
-	ptr++;
-	*ptr = 0; /*add null*/
-	avs_dbg(AVS_LOG_FLOW, "bit pack -> %s\n", pack);
-	BUG_ON((ptr - pack) > BIT_PACK_SIZE);
-	cal_crc(pack, crc);
-	ret = kstrtol(crc, 2, &crc_val);
-	if (ret < 0) {
-		avs_dbg(AVS_LOG_INIT, "CRC calculation error !!\n");
-		return ret;
-	}
-	avs_dbg(AVS_LOG_INIT, "Calcualted ATE CRC value = %x\n", (u32)crc_val);
-	return crc_val;
-}
-
-static int avs_ate_get_silicon_type(struct avs_info *avs_inf_ptr)
-{
-	long crc;
-	struct avs_pdata *pdata = avs_inf_ptr->pdata;
-	crc = avs_compute_crc(avs_inf_ptr);
-
-	if (crc < 0)
-		return (int)crc;
-
-/*	If CRC fails, we will assume default silicon type (Slow silicon).
-	Frequency will be determined by the PLL configuration in fail case  */
-
-	if (avs_inf_ptr->ate_crc != (u32)crc) {
-		if (avs_inf_ptr->pdata->flags & AVS_IGNORE_CRC_ERR) {
-			avs_dbg(AVS_LOG_INIT, "CRC Error. Ignored\n");
-			avs_inf_ptr->silicon_type =
-				pdata->ate_lut[
-					avs_inf_ptr->avs_ate_val].silicon_type;
-			avs_inf_ptr->freq =
-				pdata->ate_lut[avs_inf_ptr->avs_ate_val].freq;
-		} else {
-			avs_dbg(AVS_LOG_ERR, "ATE CRC Failed\n");
-			avs_inf_ptr->silicon_type = pdata->ate_lut[0].
-								silicon_type;
-			avs_inf_ptr->freq = pdata->ate_lut[0].freq;
-		}
-	} else {
-		avs_inf_ptr->silicon_type =
-			 pdata->ate_lut[avs_inf_ptr->avs_ate_val].silicon_type;
-		avs_inf_ptr->freq =
-			 pdata->ate_lut[avs_inf_ptr->avs_ate_val].freq;
-	}
-	avs_dbg(AVS_LOG_INIT, "%s: return silicon type %d freq %d\n",
-			__func__, avs_inf_ptr->silicon_type, avs_inf_ptr->freq);
+	update_voltage_table(avs_inf_ptr->csr_opp_volt,
+			avs_inf_ptr->msr_opp_volt);
 	return 0;
 }
 
-static int avs_find_silicon_type(struct avs_info *avs_info_ptr)
+#ifdef CONFIG_DEBUG_FS
+static int avs_debug_open(struct inode *inode, struct file *file)
 {
-	struct avs_pdata *pdata = avs_info_ptr->pdata;
-	if (!pdata)
-		return -EPERM;
-
-	if (!avs_info_ptr->avs_ate_val &&
-		(AVS_USE_IRDROP_IF_NO_OTP & pdata->flags) &&
-		irdrop_osc_check_en) {
-		avs_dbg(AVS_LOG_INIT, "OTP bits are not programmed\n");
-		avs_dbg(AVS_LOG_INIT, "using IRDROP OSC to identify silicon type...\n");
-		avs_info_ptr->silicon_type =
-			avs_compute_type_from_irdrop(&avs_info, true);
-		avs_info_ptr->freq = A9_FREQ_UNKNOWN;
-
-		avs_dbg(AVS_LOG_INIT, "[IRDROP OSC] silicon type = %u\n",
-			avs_info_ptr->silicon_type);
-	} else
-		avs_ate_get_silicon_type(&avs_info);
-
-
-	if (pdata->silicon_type_notify)
-		pdata->silicon_type_notify(avs_info_ptr->silicon_type,
-				avs_info_ptr->freq);
-
-	avs_dbg(AVS_LOG_INIT, "%s: silicon type: %s\n",
-			__func__, silicon_type_names[avs_info.silicon_type]);
+	file->private_data = inode->i_private;
 	return 0;
 }
 
-static int param_set_trigger_avs(const char *val, const struct kernel_param *kp)
+static ssize_t avs_read_voltage_val(struct file *file, char __user
+		*user_buf, size_t count, loff_t *ppos)
 {
-	int trig;
+	int i;
+	char buf[1000];
+	u32 len = 0;
 
-	avs_dbg(AVS_LOG_FLOW, "%s\n", __func__);
-	if (!val)
-		return -EINVAL;
-	if (!avs_info.pdata) {
-		avs_dbg(AVS_LOG_ERR,
-				"%s : invalid paltform data !!\n", __func__);
-		return -EPERM;
-	}
+	len += snprintf(buf + len, sizeof(buf) - len,
+		"VDDFIX: 0x%x Val: %umV\n", avs_info.avs_handshake->vddfix,
+		bcmpmu_rgltr_get_volt_val(avs_info.avs_handshake->vddfix)/1000);
+
+	for (i = 0; i < CSR_NUM_OPP; i++)
+		len += snprintf(buf + len, sizeof(buf) - len,
+			"CSR OPP%u = 0x%x Val: %umV\n", i + 1, avs_info.
+			csr_opp_volt[i], bcmpmu_rgltr_get_volt_val(
+			avs_info.csr_opp_volt[i])/1000);
+
+	for (i = 0; i < MSR_NUM_OPP; i++)
+		len += snprintf(buf + len, sizeof(buf) - len,
+			"MSR OPP%u = 0x%x Val: %umV\n", i + 1,
+			avs_info.msr_opp_volt[i], bcmpmu_rgltr_get_volt_val(
+				avs_info.msr_opp_volt[i])/1000);
+
+	return simple_read_from_buffer(user_buf, count, ppos, buf, len);
+}
+
+static ssize_t avs_update_voltage_val(struct file *file, const char
+		__user *buf, size_t count, loff_t *offset)
+{
+	u32 len = 0;
+	u32 domain;
+	u32 opp;
+	u32 volt_val;
+	char input_str[10];
+	if (count > sizeof(input_str))
+		len = sizeof(input_str);
+	else
+		len = count;
+
+	if (copy_from_user(input_str, buf, len))
+		return -EFAULT;
 	/* coverity[secure_coding] */
-	sscanf(val, "%d", &trig);
-	avs_dbg(AVS_LOG_INFO, "%s, trig:%d\n", __func__, trig);
-	if (trig == 1)
-		avs_find_silicon_type(&avs_info);
+	sscanf(input_str, "%u%u%x", &domain, &opp, &volt_val);
+	if (domain >= AVS_DOMAIN_MAX) {
+		pr_err("Invalid domain ID\n");
+		return count;
+	}
 
+	if ((domain == AVS_DOMAIN_VDDVAR && opp > MSR_NUM_OPP) ||
+		(domain == AVS_DOMAIN_VDDVAR_A7 && opp > CSR_NUM_OPP)) {
+		pr_err("Invalid OPP ID\n");
+		return count;
+	}
+
+	if ((volt_val > ACTIVE_VOLT_MAX) || (volt_val < ACTIVE_VOLT_MIN)) {
+		pr_err("Invalid Voltage val\n");
+		return count;
+	}
+
+	if (domain == AVS_DOMAIN_VDDVAR_A7) {
+		avs_info.csr_opp_volt[opp - 1] = volt_val;
+		avs_dbg(AVS_LOG_INFO, "Updating CSR OPP %u with voltage %x",
+					opp, volt_val);
+	} else if (domain == AVS_DOMAIN_VDDVAR) {
+		avs_info.msr_opp_volt[opp - 1] = volt_val;
+		avs_dbg(AVS_LOG_INFO, "Updating MSR OPP %u with voltage %x",
+					opp, volt_val);
+	} else
+		avs_info.avs_handshake->vddfix = volt_val;
+
+	avs_set_voltage_table(&avs_info);
+	return count;
+}
+
+static const struct file_operations avs_voltage_tbl_fops = {
+	.open = avs_debug_open,
+	.read = avs_read_voltage_val,
+	.write = avs_update_voltage_val,
+};
+
+static ssize_t avs_debug_read_otp_info(struct file *file, char __user
+		*user_buf, size_t count, loff_t *ppos)
+{
+	char buf[1000];
+	u32 len = 0;
+
+	len += snprintf(buf + len, sizeof(buf) - len,
+		"Reading OTP info from row3 0x%x_%x\n",
+		avs_info.avs_handshake->row3_ext,
+		avs_info.avs_handshake->row3);
+	len += snprintf(buf + len, sizeof(buf) - len,
+		"Reading OTP info from row5 0x%x_%x\n",
+		avs_info.avs_handshake->row5_ext,
+		avs_info.avs_handshake->row5);
+	len += snprintf(buf + len, sizeof(buf) - len,
+		"Reading OTP info from row8 0x%x_%x\n",
+		avs_info.avs_handshake->row8_ext,
+		avs_info.avs_handshake->row8);
+	return simple_read_from_buffer(user_buf, count, ppos, buf, len);
+}
+
+static const struct file_operations avs_read_otp_val_fops = {
+	.open = avs_debug_open,
+	.read = avs_debug_read_otp_info,
+};
+
+static ssize_t avs_debug_read_spm_val(struct file *file, char __user
+		*user_buf, size_t count, loff_t *ppos)
+{
+	char buf[1000];
+	u32 len = 0;
+	len += snprintf(buf + len, sizeof(buf) - len,
+		"Computed at %u Celsius. N/P1: %u, N/P2: %u\n",
+		avs_info.avs_handshake->temperature,
+		avs_info.avs_handshake->np_ratio_1,
+		avs_info.avs_handshake->np_ratio_2);
+	len += snprintf(buf + len, sizeof(buf) - len,
+		"Varspm0: %u\n", avs_info.avs_handshake->varspm0);
+	len += snprintf(buf + len, sizeof(buf) - len,
+		"Varspm1: %u\n", avs_info.avs_handshake->varspm1);
+	len += snprintf(buf + len, sizeof(buf) - len,
+		"Varspm2: %u\n", avs_info.avs_handshake->varspm2);
+	len += snprintf(buf + len, sizeof(buf) - len,
+		"Varspm3: %u\n", avs_info.avs_handshake->varspm3);
+	len += snprintf(buf + len, sizeof(buf) - len,
+		"Varspm4: %u\n", avs_info.avs_handshake->varspm4);
+	len += snprintf(buf + len, sizeof(buf) - len,
+		"Varspm5: %u\n", avs_info.avs_handshake->varspm5);
+	len += snprintf(buf + len, sizeof(buf) - len,
+		"spm0: %u\n", avs_info.avs_handshake->spm0);
+	len += snprintf(buf + len, sizeof(buf) - len,
+		"spm1: %u\n", avs_info.avs_handshake->spm1);
+	len += snprintf(buf + len, sizeof(buf) - len,
+		"spm2: %u\n", avs_info.avs_handshake->spm2);
+	len += snprintf(buf + len, sizeof(buf) - len,
+		"spm3: %u\n", avs_info.avs_handshake->spm3);
+	len += snprintf(buf + len, sizeof(buf) - len,
+		"spm4: %u\n", avs_info.avs_handshake->spm4);
+	len += snprintf(buf + len, sizeof(buf) - len,
+		"spm5: %u\n", avs_info.avs_handshake->spm5);
+	len += snprintf(buf + len, sizeof(buf) - len,
+		"IRDROP: %u\n", avs_info.avs_handshake->irdrop_1v2);
+
+	return simple_read_from_buffer(user_buf, count, ppos, buf, len);
+}
+
+static const struct file_operations avs_read_spm_val_fops = {
+	.open = avs_debug_open,
+	.read = avs_debug_read_spm_val,
+};
+
+static int avs_debug_init(void)
+{
+	struct dentry *dent_vlt_root_dir = debugfs_create_dir("avs", 0);
+	if (!dent_vlt_root_dir)
+		return -ENOMEM;
+
+
+	if (!debugfs_create_file("voltage_val", S_IRUGO | S_IWUSR,
+			dent_vlt_root_dir, NULL, &avs_voltage_tbl_fops))
+		return -ENOMEM;
+
+	if (!debugfs_create_file("otp_info", S_IRUGO,
+			dent_vlt_root_dir, NULL, &avs_read_otp_val_fops))
+		return -ENOMEM;
+
+	if (!debugfs_create_file("spm_count", S_IRUGO,
+			dent_vlt_root_dir, NULL, &avs_read_spm_val_fops))
+		return -ENOMEM;
+
+	pr_info("AVS Debug Init Successs\n");
 	return 0;
 }
+#endif
 
 static int avs_drv_probe(struct platform_device *pdev)
 {
@@ -777,12 +461,17 @@ static int avs_drv_probe(struct platform_device *pdev)
 				__func__);
 		return -EPERM;
 	}
-	spin_lock_init(&avs_info.lock);
 	avs_info.pdata = pdata;
-	avs_read_otp(&avs_info);
-	avs_parse_otp_bits(&avs_info);
+	avs_read_opp_info(&avs_info);
+	avs_parse_opp_info(&avs_info);
 
-	avs_find_silicon_type(&avs_info);
+	BUG_ON(avs_info.handshake_version != avs_info.avs_handshake->version);
+	BUG_ON(avs_info.kernel_freq_id != avs_info.avs_handshake->arm_freq);
+
+	avs_set_voltage_table(&avs_info);
+#ifdef CONFIG_DEBUG_FS
+	avs_debug_init();
+#endif
 	return 0;
 }
 

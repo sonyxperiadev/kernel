@@ -29,6 +29,7 @@ obj-$(CONFIG_KONA_SECURE_MONITOR_CALL) += sec_api.o
 obj-$(CONFIG_KONA_PROFILER) += profiler.o
 obj-$(CONFIG_KONA_AXITRACE) += java_axitrace.o
 
+obj-$(CONFIG_KONA_AVS) += avs.o
 CFLAGS_sec_api.o :=$(call as-instr,.arch_extension sec,-DREQUIRES_SEC=1)
 
 obj-$(CONFIG_ARCH_JAVA) += java_bmdm_wd_monitor.o

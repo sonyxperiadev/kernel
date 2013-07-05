@@ -16,6 +16,14 @@
 #ifndef ___AVS___
 #define ___AVS___
 
+#define CSR_NUM_OPP	4
+#define MSR_NUM_OPP	4
+
+#define ACTIVE_VOLT_MAX	0x3A
+#define ACTIVE_VOLT_MIN	0x2
+
+#define AVS_HANDSHAKE_VERSION 1
+
 enum {
 	SILICON_TYPE_SLOW,
 	SILICON_TYPE_TYP_SLOW,
@@ -26,53 +34,65 @@ enum {
 };
 
 enum {
-	A9_FREQ_UNKNOWN,
-	A9_FREQ_1000_MHZ,
-	A9_FREQ_1200_MHZ,
-	A9_FREQ_1500_MHZ,
-	A9_FREQ_MAX,
+	ARM_FREQ_1000_MHZ,
+	ARM_FREQ_1200_MHZ,
+	ARM_FREQ_1400_MHZ,
+	ARM_FREQ_MAX,
 };
+
+#define AVS_KERNEL_FREQ_ID ARM_FREQ_1200_MHZ
 
 enum {
-	AVS_VDDVAR_A9_MIN_EN = 1,
-	AVS_VDDVAR_MIN_EN = 1 << 1,
-	AVS_VDDFIX_MIN_EN = 1 << 2,
-	AVS_VDDFIX_ADJ_EN = 1 << 3,
-	AVS_IGNORE_CRC_ERR = 1 << 4,
-	AVS_USE_IRDROP_IF_NO_OTP = 1 << 5,
+	AVS_DOMAIN_VDDVAR,
+	AVS_DOMAIN_VDDVAR_A7,
+	AVS_DOMAIN_VDDFIX,
+	AVS_DOMAIN_MAX,
 };
 
-struct avs_ate_lut_entry {
-	int freq;
-	int silicon_type;
+struct avs_handshake {
+	u32 version;
+	u32 csr_opp;
+	u32 csr_opp_ext;
+	u32 msr_opp;
+	u32 msr_opp_ext;
+	u32 vddfix;
+	u32 silicon_type;
+	u32 arm_freq;
+	u32 irdrop_1v2;
+	u8 temperature;
+	u8 np_ratio_1;
+	u8 np_ratio_2;
+	u8 rsvd1;
+	u32 error_status;
+	u32 row3;
+	u32 row3_ext;
+	u32 row5;
+	u32 row5_ext;
+	u32 row8;
+	u32 row8_ext;
+	u8 varspm0;
+	u8 varspm1;
+	u8 varspm2;
+	u8 varspm3;
+	u8 varspm4;
+	u8 varspm5;
+	u8 spm0;
+	u8 spm1;
+	u8 spm2;
+	u8 spm3;
+	u8 spm4;
+	u8 spm5;
+	u32 rsvd2[5];
 };
 
 struct avs_pdata {
 	u32 flags;
-	u32 avs_addr_row3;
-	u32 avs_addr_row5;
-	u32 avs_addr_row8;
-	int *vddfix_adj_lut;
-	u32 **vddvar_adj_lut;
-	void (*silicon_type_notify) (u32 silicon_type, u32 ate_freq);
-	struct avs_ate_lut_entry *ate_lut;
-	u32 *irdrop_lut;
+	u32 avs_info_base_addr;
 	u32 irdrop_vreq;
-	u32 *vddvar_vret_lut;
-	u32 *vddfix_vret_lut;
-	u32 *vddvar_vmin_lut;
-	u32 *vddvar_a9_vmin_lut;
 	char *a9_regl_id;
 	u32 pwrwdog_base;
 };
 
-u32 avs_get_vddvar_ret_vlt_min(void);
-u32 avs_get_vddfix_ret_vlt_min(void);
-u32 avs_get_vddvar_vlt_min(void);
-u32 avs_get_vddvar_a9_vlt_min(void);
-
 u32 avs_get_silicon_type(void);
-u32 avs_get_ate_freq(void);
-int avs_get_vddvar_aging_margin(u32 silicon_type, u32 freq);
-int avs_get_vddfix_adj(void);
+int avs_get_vddfix_voltage(void);
 #endif	  /*__KONA_AVS___*/

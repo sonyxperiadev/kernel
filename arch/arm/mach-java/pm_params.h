@@ -36,7 +36,8 @@
 #define VLT_ID_A9_SUPER_TURBO		0xE
 #define VLT_ID_OTHER_SUPER_TURBO	0xF
 
-#define ACTIVE_VOLTAGE_OFFSET	7
+#define CSR_ACTIVE_VOLTAGE_OFFSET	8
+#define MSR_ACTIVE_VOLTAGE_OFFSET	9
 
 #define PROC_FREQ_NORMAL_DIV      4
 #define PROC_FREQ_TURBO_DIV       3
@@ -267,15 +268,15 @@ extern struct pwrmgr_init_param pwrmgr_init_param;
 /*This API should be defined in appropriate PMU board file*/
 bool is_pm_erratum(u32 erratum);
 int __init pm_params_init(void);
-int pm_init_pmu_sr_vlt_map_table(u32 silicon_type, int freq_id);
+int pm_init_pmu_sr_vlt_map_table(void);
 extern int bcmpmu_init_sr_volt(void);
 
 #define CONFIG_A9_PLL_2GHZ	1
 #define CONFIG_A9_PLL_2P4GHZ	2
-#define CONFIG_A9_PLL_3GHZ	3
+#define CONFIG_A9_PLL_2P8GHZ	3
 /*Wake up PM policy*/
 #define PM_WKP          7
-int mach_config_a9_pll(int turbo_val, int update_volt_tbl);
+int mach_config_arm_pll(int turbo_val, int update_volt_tbl);
 
 #endif	/*__PM_PARAMS_H__*/
 

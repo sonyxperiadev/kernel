@@ -159,7 +159,7 @@ int __init pm_params_init(void)
 	return 0;
 }
 
-static int switch_a9_pll(int freq_id, int policy)
+static int switch_arm_pll(int freq_id, int policy)
 {
 	int ret = 0;
 	struct opp_info opp_info;
@@ -181,7 +181,7 @@ out:
 	return ret;
 }
 
-int mach_config_a9_pll(int turbo_val, int update_volt_tbl)
+int mach_config_arm_pll(int turbo_val, int update_volt_tbl)
 {
 	int ret = 0;
 	struct clk *clk;
@@ -191,7 +191,7 @@ int mach_config_a9_pll(int turbo_val, int update_volt_tbl)
 	clk = clk_get(NULL, A9_PLL_CLK_NAME_STR);
 	if (IS_ERR_OR_NULL(clk))
 		return -EINVAL;
-	ret = switch_a9_pll(PROC_CCU_FREQ_ID_ECO, PM_WKP); /*ECO => sys PLL*/
+	ret = switch_arm_pll(PROC_CCU_FREQ_ID_ECO, PM_WKP); /*ECO => sys PLL*/
 	if (ret)
 		return ret;
 
@@ -238,5 +238,5 @@ int mach_config_a9_pll(int turbo_val, int update_volt_tbl)
 		pr_err("%s: Unable to set a9_pll rate\n", __func__);
 		return ret;
 	}
-	return switch_a9_pll(PROC_CCU_FREQ_ID_SUPER_TURBO, PM_WKP);
+	return switch_arm_pll(PROC_CCU_FREQ_ID_SUPER_TURBO, PM_WKP);
 }

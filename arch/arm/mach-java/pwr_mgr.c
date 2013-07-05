@@ -735,11 +735,6 @@ struct pwr_mgr_info __pwr_mgr_info = {
 static int __init hawaii_pwr_mgr_init(void)
 {
 	struct pm_policy_cfg cfg;
-#ifdef CONFIG_KONA_AVS
-	int update_vlt_tbl = 0;
-#else
-	int update_vlt_tbl = 1;
-#endif
 	int i;
 	u32 reg_val;
 	int insurance = 1000;
@@ -894,9 +889,9 @@ static int __init hawaii_pwr_mgr_init(void)
 #if !defined(CONFIG_MACH_BCM_FPGA_E) && \
 	!defined(CONFIG_MACH_BCM_FPGA)
 #ifdef CONFIG_PWRMGR_1P2GHZ_OPS_SET_SELECT
-	mach_config_a9_pll(CONFIG_A9_PLL_2P4GHZ, update_vlt_tbl);
+	mach_config_arm_pll(CONFIG_A9_PLL_2P4GHZ, 0);
 #else
-	mach_config_a9_pll(CONFIG_A9_PLL_2GHZ, update_vlt_tbl);
+	mach_config_arm_pll(CONFIG_A9_PLL_2P8GHZ, 0);
 #endif
 #endif /*CONFIG_MACH_BCM_FPGA_E*/
 

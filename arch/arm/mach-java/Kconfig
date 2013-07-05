@@ -179,6 +179,16 @@ config	PWRMGR_1P2GHZ_OPS_SET_SELECT
 	  ops gets adjusted accordingly. If this is not selected,
 	  default OPP set is with Turbo at 1GHz.
 
+config KONA_AVS
+       bool "Enable AVS driver"
+       default y
+       help
+	Say Y if you want to enable AVS driver
+	AVS driver helps pick the correct voltage table
+	by identifying the silicon type thereby saving
+	power by giving only reqd voltage & not excess.
+
+
 config	PI_MGR_MM_STURBO_ENABLE
 	depends on ARCH_JAVA && KONA_PI_MGR
 	bool "Enable super turbo OPP for MM Power Island"
