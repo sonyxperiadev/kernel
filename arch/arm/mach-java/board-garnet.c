@@ -667,7 +667,11 @@ static int hawaii_camera_power_front(struct device *dev, int on)
 	if (on) {
 		if (pi_mgr_dfs_request_update(&unicam_dfs_node, PI_OPP_TURBO))
 			printk("DVFS for UNICAM failed\n");
+		#if defined(CONFIG_SOC_CAMERA_OV7695)
+		gpio_set_value(SENSOR_1_GPIO_PWRDN, 0);
+		#else
 		gpio_set_value(SENSOR_1_GPIO_PWRDN, 1);
+		#endif
 		usleep_range(5000, 5010);
 		regulator_enable(d_lvldo2_cam1_1v8);
 		usleep_range(1000, 1010);
@@ -737,10 +741,18 @@ static int hawaii_camera_power_front(struct device *dev, int on)
 			goto e_clk_set_clock;
 		}
 		usleep_range(10000, 10100);
+		#if defined(CONFIG_SOC_CAMERA_OV7695)
+		gpio_set_value(SENSOR_1_GPIO_PWRDN, 1);
+		#else
 		gpio_set_value(SENSOR_1_GPIO_PWRDN, 0);
+		#endif
 		msleep(30);
 	} else {
+		#if defined(CONFIG_SOC_CAMERA_OV7695)
+		gpio_set_value(SENSOR_1_GPIO_PWRDN, 0);
+		#else
 		gpio_set_value(SENSOR_1_GPIO_PWRDN, 1);
+		#endif
 		clk_disable(lp_clock_0);
 		clk_disable(lp_clock_1);
 		clk_disable(clock);
@@ -782,22 +794,15 @@ static int hawaii_camera_reset_front(struct device *dev)
 	return 0;
 }
 
-#ifdef CONFIG_SOC_CAMERA_OV5640
-static struct soc_camera_link iclink_ov5640 = {
+static struct soc_camera_link iclink_main = {
 	.power = &hawaii_camera_power,
 	.reset = &hawaii_camera_reset,
 };
-#endif
-#ifdef CONFIG_SOC_CAMERA_OV5648
-static struct soc_camera_link iclink_ov5648 = {
-	.power = &hawaii_camera_power,
-	.reset = &hawaii_camera_reset,
-};
-#endif
-static struct soc_camera_link iclink_ov7692 = {
+static struct soc_camera_link iclink_front = {
 	.power = &hawaii_camera_power_front,
 	.reset = &hawaii_camera_reset_front,
 };
+
 #endif /* CONFIG_VIDEO_UNICAM_CAMERA */
 
 static struct spi_kona_platform_data hawaii_ssp0_info = {
@@ -1070,14 +1075,19 @@ static const struct of_dev_auxdata hawaii_auxdata_lookup[] __initconst = {
 
 #ifdef CONFIG_SOC_CAMERA_OV5640
 	OF_DEV_AUXDATA("bcm,soc-camera", 0x3c,
-		"soc-back-camera", &iclink_ov5640),
+		"soc-back-camera", &iclink_main),
 #endif
 #ifdef CONFIG_SOC_CAMERA_OV5648
 	OF_DEV_AUXDATA("bcm,soc-camera", 0x36,
-		"soc-back-camera", &iclink_ov5648),
+		"soc-back-camera", &iclink_main),
 #endif
+#ifdef CONFIG_SOC_CAMERA_OV7695
+	OF_DEV_AUXDATA("bcm,soc-camera", 0x21,
+		"soc-front-camera", &iclink_front),
+#endif
+
 	OF_DEV_AUXDATA("bcm,soc-camera", 0x3e,
-		"soc-front-camera", &iclink_ov7692),
+		"soc-front-camera", &iclink_front),
 	{},
 };
 

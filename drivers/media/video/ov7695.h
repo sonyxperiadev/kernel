@@ -60,7 +60,9 @@ static const struct ov7695_reg ov7695_init_common[] = {
 	{0x3713, 0x0e},
 	{0x3012, 0x0a},
 	{0x3717, 0x19},
+#ifdef CONFIG_MACH_HAWAII_GARNET_C_W68TK
 	{0x0307, 0x76},
+#endif
 	{0x0309, 0x24}, /* DAC clk div by 4 */
 	{0x3820, 0x90},
 	{0x5100, 0x01}, /* lenc */
