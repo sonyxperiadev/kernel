@@ -1054,7 +1054,12 @@ static inline unsigned long notrace __get_counter(void __iomem *reg_base)
 	return readl(ktm->reg_base + KONA_GPTIMER_STCLO_OFFSET);
 #endif
 
+#ifdef CONFIG_ARCH_JAVA
+	if ((reg_base == IOMEM(KONA_TMR_HUB_VA)) ||
+	    (reg_base == IOMEM(KONA_CORETMR_VA))) {
+#else
 	if (reg_base == IOMEM(KONA_TMR_HUB_VA)) {
+#endif
 		prev = readl(reg_base + KONA_GPTIMER_STCLO_OFFSET);
 		do {
 			cur = readl(reg_base + KONA_GPTIMER_STCLO_OFFSET);
