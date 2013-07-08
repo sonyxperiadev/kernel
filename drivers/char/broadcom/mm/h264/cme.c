@@ -22,12 +22,13 @@ the GPL, without Broadcom's express prior written consent.
 #include <linux/broadcom/mm_fw_usr_ifc.h>
 #include "cme.h"
 
-#define MM_CME_BASE_ADDR (H264_BASE_ADDR+H264_CME_CURY_OFFSET)
-#define CME_HW_SIZE (4*1024)
+#define MM_CME_BASE_ADDR (H264_BASE_ADDR + H264_CME_CURY_OFFSET)
+#define CME_HW_SIZE 0x1000
 
 struct cme_device_t {
 	u32 cme_version;
 	void *vaddr;
+	void *clockaddr;
 };
 
 static inline void cme_write(struct cme_device_t *cme, u32 reg, u32 value)
@@ -104,9 +105,7 @@ static void print_regs(struct cme_device_t *cme)
 static void cme_reg_init(void *device_id)
 {
 	struct cme_device_t *id = (struct cme_device_t *)device_id;
-	pr_debug("cme_reg_init: cme_verion = 0x%x\n", id->cme_version);
 
-	id->cme_version = cme_read(id, H264_CME_VERSION_OFFSET);
 	cme_write(id, H264_CME_LOADCTRL_OFFSET, 0);
 	cme_write(id, H264_CME_SEARCHCTRL_OFFSET, 0);
 	cme_write(id, H264_CME_TOTSAD_OFFSET, 0);
@@ -123,7 +122,6 @@ static int cme_get_regs(void *device_id, MM_REG_VALUE *ptr, int count)
 static int cme_reset(void *device_id)
 {
 	struct cme_device_t *id = (struct cme_device_t *)device_id;
-	pr_debug("cme_reset:\n");
 
 	/*Reset the registers*/
 	cme_reg_init(id);
@@ -148,6 +146,34 @@ static int cme_abort(void *device_id, mm_job_post_t *job)
 	return 0;
 }
 
+static int cme_block_init(void *device_id)
+{
+	struct cme_device_t *id = (struct cme_device_t *)device_id;
+	u32 temp;
+
+	/*Enable CME block*/
+	temp = readl(id->clockaddr);
+	temp |= H264_VCODEC_GCKENAA_CME_MASK;
+	writel(temp, id->clockaddr);
+	id->cme_version = cme_read(id, H264_CME_VERSION_OFFSET);
+
+	/*Reset the registers*/
+	cme_reset(id);
+
+	return 0;
+}
+
+static int cme_block_deinit(void *device_id)
+{
+	struct cme_device_t *id = (struct cme_device_t *)device_id;
+	u32 temp;
+	/*Disable CME Block*/
+	temp = readl(id->clockaddr);
+	temp &= (~H264_VCODEC_GCKENAA_CME_MASK);
+	writel(temp, id->clockaddr);
+	return 0;
+}
+
 static mm_isr_type_e process_cme_irq(void *device_id)
 {
 	u32 flags;
@@ -169,7 +195,6 @@ static mm_isr_type_e process_cme_irq(void *device_id)
 bool get_cme_status(void *device_id)
 {
 	struct cme_device_t *id = (struct cme_device_t *)device_id;
-	pr_debug("get_cme_status:\n");
 
 	/*Read the status of AUTO SM and return based on the bit*/
 	if ((cme_read(id, H264_CME_AUTOSTATUS_OFFSET) >> 31)&(0x1))
@@ -204,8 +229,6 @@ mm_job_status_e cme_start_job(void *device_id,\
 
 	switch (job->status) {
 	case MM_JOB_STATUS_READY:
-		/*Reset CME*/
-		cme_reset(id);
 		/*Bound checks*/
 		if (!(jp->hradius_mb >= 1 && jp->hradius_mb <= 6 &&
 				jp->vradius_mb >= 1 && jp->vradius_mb <= 4)) {
@@ -312,7 +335,6 @@ struct cme_device_t *cme_device;
 
 void cme_update_virt(void *virt)
 {
-	pr_debug("cme_update_virt:\n");
 	cme_device->vaddr = virt;
 }
 
@@ -329,7 +351,15 @@ int cme_init(MM_CORE_HW_IFC *core_param)
 
 	cme_device->vaddr = NULL;
 	cme_device->cme_version = 0;
-	pr_debug("cme_init: -->\n");
+
+	cme_device->clockaddr = (void *)ioremap_nocache(\
+					H264_BASE_ADDR + \
+					H264_VCODEC_GCKENAA_OFFSET, \
+					0x1000);
+	if (cme_device->clockaddr == NULL) {
+		pr_err("cme_init: register mapping failed ");
+		goto err;
+	}
 
 	/*Do any device specific structure initialisation required.*/
 	core_param->mm_base_addr = MM_CME_BASE_ADDR;
@@ -342,8 +372,8 @@ int cme_init(MM_CORE_HW_IFC *core_param)
 	core_param->mm_get_status = get_cme_status;
 	core_param->mm_start_job = cme_start_job;
 	core_param->mm_process_irq = process_cme_irq;
-	core_param->mm_init = cme_reset;
-	core_param->mm_deinit = cme_reset;
+	core_param->mm_init = cme_block_init;
+	core_param->mm_deinit = cme_block_deinit;
 	core_param->mm_abort = cme_abort;
 	core_param->mm_get_regs = cme_get_regs;
 	core_param->mm_update_virt_addr = cme_update_virt;
@@ -359,6 +389,7 @@ err:
 
 void cme_deinit(void)
 {
-	pr_debug("cme_deinit:\n");
+	if (cme_device->clockaddr)
+		iounmap(cme_device->clockaddr);
 	kfree(cme_device);
 }

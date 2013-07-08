@@ -30,6 +30,7 @@ the GPL, without Broadcom's express prior written consent.
 
 struct ol_device_t {
 	void *vaddr;
+	void *clockaddr;
 };
 
 struct ol_device_t *ol_device;
@@ -46,50 +47,45 @@ u32 ol_read(u32 reg)
 			reg - (OL_BASE - VIDEOCODEC_BASE));
 }
 
-static void print_regs(struct ol_device_t *ol)
-{
-	pr_debug("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
-	pr_debug("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
-}
-
-static void ol_reg_init(void *device_id)
-{
-}
-
 static int ol_get_regs(void *device_id, MM_REG_VALUE *ptr, int count)
 {
-	struct ol_device_t *id = (struct ol_device_t *)device_id;
-	pr_debug("ol_get_regs:\n");
-	print_regs(id);
-	return 0;
-}
-
-static int ol_reset(void *device_id)
-{
-	struct ol_device_t *id = (struct ol_device_t *)device_id;
-	pr_debug("ol_reset:\n");
-
-	/*do reg init*/
-	ol_reg_init(id);
-
 	return 0;
 }
 
 static int ol_abort(void *device_id, mm_job_post_t *job)
 {
-	struct ol_device_t *id = (struct ol_device_t *)device_id;
+	return 0;
+}
 
-	pr_info("ol_abort:\n");
-	ol_reset(id);
+static int ol_block_init(void *device_id)
+{
+	struct ol_device_t *id = (struct ol_device_t *)device_id;
+	u32 temp;
+
+	/*Enable OL Block*/
+	temp = readl(id->clockaddr);
+	temp |= H264_VCODEC_GCKENAA_OL_MASK;
+	writel(temp, id->clockaddr);
+
+	return 0;
+}
+
+static int ol_block_deinit(void *device_id)
+{
+	struct ol_device_t *id = (struct ol_device_t *)device_id;
+	u32 temp;
+
+	/*Disable OL Block*/
+	temp = readl(id->clockaddr);
+	temp &= (~H264_VCODEC_GCKENAA_OL_MASK);
+	writel(temp, id->clockaddr);
 
 	return 0;
 }
 
 static mm_isr_type_e process_ol_irq(void *device_id)
 {
-	mm_isr_type_e irq_retval = MM_ISR_UNKNOWN;
-
-	return irq_retval;
+	return MM_ISR_SUCCESS;
 }
 
 bool get_ol_status(void *device_id)
@@ -100,7 +96,6 @@ bool get_ol_status(void *device_id)
 mm_job_status_e ol_start_job(void *device_id , mm_job_post_t *job,
 				 u32 profmask)
 {
-	struct ol_device_t *id = (struct ol_device_t *)device_id;
 	struct ol_job_info_t *jp = (struct ol_job_info_t *)job->data;
 	u8 *ptr = (u8 *) jp;
 	u8 *spl_ptr = (u8 *) job->spl_data_ptr;
@@ -119,9 +114,6 @@ mm_job_status_e ol_start_job(void *device_id , mm_job_post_t *job,
 
 	switch (job->status) {
 	case MM_JOB_STATUS_READY:
-		/*Reset OL*/
-		ol_reset(id);
-		/*Bound checks*/
 		/*Program OL*/
 		/*Setup*/
 		/*Attach*/
@@ -224,7 +216,6 @@ mm_job_status_e ol_start_job(void *device_id , mm_job_post_t *job,
 
 void h264_ol_update_virt(void *virt)
 {
-	pr_debug("ol_update_virt:\n");
 	ol_device->vaddr = virt;
 }
 
@@ -240,7 +231,15 @@ int h264_ol_init(MM_CORE_HW_IFC *core_param)
 	}
 
 	ol_device->vaddr = NULL;
-	pr_debug("h264_ol_init: -->\n");
+
+	ol_device->clockaddr = (void *)ioremap_nocache(\
+					H264_BASE_ADDR + \
+					H264_VCODEC_GCKENAA_OFFSET, \
+					0x1000);
+	if (ol_device->clockaddr == NULL) {
+		pr_err("register mapping failed ");
+		goto err;
+	}
 
 	/*Do any device specific structure initialisation required.*/
 	core_param->mm_base_addr = OL_BASE;
@@ -253,8 +252,8 @@ int h264_ol_init(MM_CORE_HW_IFC *core_param)
 	core_param->mm_get_status = get_ol_status;
 	core_param->mm_start_job = ol_start_job;
 	core_param->mm_process_irq = process_ol_irq;
-	core_param->mm_init = ol_reset;
-	core_param->mm_deinit = ol_reset;
+	core_param->mm_init = ol_block_init;
+	core_param->mm_deinit = ol_block_deinit;
 	core_param->mm_abort = ol_abort;
 	core_param->mm_get_regs = ol_get_regs;
 	core_param->mm_update_virt_addr = h264_ol_update_virt;
@@ -270,6 +269,7 @@ err:
 
 void h264_ol_deinit(void)
 {
-	pr_debug("h264_ol_deinit:\n");
+	if (ol_device->clockaddr)
+		iounmap(ol_device->clockaddr);
 	kfree(ol_device);
 }

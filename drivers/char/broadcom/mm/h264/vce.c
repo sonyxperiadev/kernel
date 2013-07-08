@@ -71,7 +71,7 @@ static u32 vce_read(struct vce_device_t *vce, u32 reg)
 			reg + (VCE_BASE - VIDEOCODEC_BASE_ADDRESS));
 }
 
-static void print_job_struct(void *job)
+/*static void print_job_struct(void *job)
 {
 	struct vce_launch_info_t *vce_info;
 	vce_info = (struct vce_launch_info_t *) ((u32 *)job);
@@ -85,7 +85,7 @@ static void print_job_struct(void *job)
 	pr_debug("endcode: 0x%x\n", vce_info->endcode);
 	pr_debug("stop_reason: 0x%x\n", vce_info->stop_reason);
 	pr_debug("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
-}
+}*/
 
 static void print_regs(struct vce_device_t *vce)
 {
@@ -101,10 +101,16 @@ static void print_regs(struct vce_device_t *vce)
 	pr_debug("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
 }
 
-static void vce_reg_init(void *device_id)
+static int vce_get_regs(void *device_id, MM_REG_VALUE *ptr, int count)
 {
 	struct vce_device_t *id = (struct vce_device_t *)device_id;
-	pr_debug("vce_reg_init:\n");
+	print_regs(id);
+	return 0;
+}
+
+static int vce_reset(void *device_id)
+{
+	struct vce_device_t *id = (struct vce_device_t *)device_id;
 
 	/* Initialise VCE Control register*/
 	vce_write(id, VCE_CONTROL_OFFSET, VCE_CONTROL_CLEAR_RUN);
@@ -118,22 +124,6 @@ static void vce_reg_init(void *device_id)
 
 	/*Clear VCE_BAD_ADDR_OFFSET*/
 	vce_write(id, VCE_BAD_ADDR_OFFSET, 0x0);
-}
-
-static int vce_get_regs(void *device_id, MM_REG_VALUE *ptr, int count)
-{
-	struct vce_device_t *id = (struct vce_device_t *)device_id;
-	print_regs(id);
-	return 0;
-}
-
-static int vce_reset(void *device_id)
-{
-	struct vce_device_t *id = (struct vce_device_t *)device_id;
-	pr_debug("vce_reset:\n");
-
-	/*do reg init*/
-	vce_reg_init(id);
 
 	while (vce_read(id, VCE_STATUS_OFFSET) & VCE_STATUS_BUSYBITS_MASK)
 		;
@@ -148,6 +138,23 @@ static int vce_abort(void *device_id, mm_job_post_t *job)
 	pr_info("vce_abort:\n");
 	vce_reset(id);
 
+	return 0;
+}
+
+static int vce_block_init(void *device_id)
+{
+	struct vce_device_t *id = (struct vce_device_t *)device_id;
+	/*Need to do clock gating Here*/
+
+	/*Reset the registers*/
+	vce_reset(id);
+
+	return 0;
+}
+
+static int vce_block_deinit(void *device_id)
+{
+	/*Need to do clock gating here*/
 	return 0;
 }
 
@@ -189,15 +196,11 @@ bool get_vce_status(void *device_id)
 		/*TODO: Add more checks if required*/
 		if (reason == VCE_REASON_END
 				/*Encode has reason 0*/
-				|| reason == 0) {
-			pr_debug("get_vce_status : reason VCE_REASON_END\n");
+				|| reason == 0)
 			return false;
-		}
-			pr_debug("get_vce_status : returns true\n");
-			return true;
-		}
+		return true;
+	}
 
-	pr_debug("get_vce_status : returns false\n");
 	return false;
 }
 
@@ -252,8 +255,6 @@ mm_job_status_e vce_start_job(void *device_id, mm_job_post_t *job,
 			encodeSlice(id, enc_info);
 		if (dec_info != NULL)
 			decodeSlice(id, dec_info);
-		print_regs(id);
-		print_job_struct(jp);
 		/*Reset VCE*/
 		vce_reset(id);
 		/*Bound checks*/
@@ -485,7 +486,6 @@ struct vce_device_t *vce_device;
 
 void h264_vce_update_virt(void *virt)
 {
-	pr_debug("vce_update_virt:\n");
 	vce_device->vaddr = virt;
 }
 
@@ -501,7 +501,6 @@ int h264_vce_init(MM_CORE_HW_IFC *core_param)
 	}
 
 	vce_device->vaddr = NULL;
-	pr_debug("h264_vce_init: -->\n");
 
 	/*Do any device specific structure initialisation required.*/
 	core_param->mm_base_addr = VIDEOCODEC_BASE_ADDRESS;
@@ -514,8 +513,8 @@ int h264_vce_init(MM_CORE_HW_IFC *core_param)
 	core_param->mm_get_status = get_vce_status;
 	core_param->mm_start_job = vce_start_job;
 	core_param->mm_process_irq = process_vce_irq;
-	core_param->mm_init = vce_reset;
-	core_param->mm_deinit = vce_reset;
+	core_param->mm_init = vce_block_init;
+	core_param->mm_deinit = vce_block_deinit;
 	core_param->mm_abort = vce_abort;
 	core_param->mm_get_regs = vce_get_regs;
 	core_param->mm_update_virt_addr = h264_vce_update_virt;
@@ -531,6 +530,5 @@ err:
 
 void h264_vce_deinit(void)
 {
-	pr_debug("h264_vce_deinit:\n");
 	kfree(vce_device);
 }
