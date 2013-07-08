@@ -120,6 +120,8 @@ static void __init __pm_init_errata_flg(void)
 	if (chip_id <= KONA_CHIP_ID_JAVA_A0)
 		pm_erratum_flg |= ERRATUM_A7_PLL_PWRDWN;
 #endif
+	if (chip_id <= KONA_CHIP_ID_JAVA_A0)
+		pm_erratum_flg |= ERRATUM_VDDFIX_LEAKAGE;
 }
 
 #define MHZ(x) ((x)*1000*1000)

@@ -1512,7 +1512,7 @@ int __init board_bcm59xx_init(void)
 #endif
 /* Workaround for VDDFIX leakage during deepsleep.
    Will be fixed in Java A1 revision */
-	if (get_chip_id() <= KONA_CHIP_ID_JAVA_A0)
+	if (is_pm_erratum(ERRATUM_VDDFIX_LEAKAGE))
 		bcm59xxx_csr_data.constraints.initial_mode =
 			REGULATOR_MODE_IDLE;
 	return 0;

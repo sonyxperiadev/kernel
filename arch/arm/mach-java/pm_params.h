@@ -194,6 +194,7 @@
 #define ERRATUM_PLL1_8PHASE_OFF		(1 << 2)
 #define ERRATUM_MM_FREEZE_VAR500M	(1 << 3)
 #define ERRATUM_A7_PLL_PWRDWN		(1 << 4)
+#define ERRATUM_VDDFIX_LEAKAGE		(1 << 5)
 
 #ifdef CONFIG_KONA_POWER_MGR
 struct pwrmgr_init_param {
