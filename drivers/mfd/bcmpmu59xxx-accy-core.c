@@ -129,6 +129,7 @@ static struct bcmpmu_accy_irq_evt_map accy_irq_evt_map[] = {
 	{PMU_IRQ_RESUME_VBUS, PMU_ACCY_EVT_OUT_CHRG_RESUME_VBUS},
 	{PMU_IRQ_USBOV, PMU_ACCY_EVT_OUT_USBOV},
 	{PMU_IRQ_USBOV_DIS, PMU_ACCY_EVT_OUT_USBOV_DIS},
+	{PMU_IRQ_CHGERRDIS, PMU_ACCY_EVT_OUT_CHGERRDIS},
 };
 #define NUM_ACCY_CORE_IRQS	ARRAY_SIZE(accy_irq_evt_map)
 
@@ -278,7 +279,7 @@ static bool _chrgr_type_usb(int chrgr_type)
 static int _usb_host_en(struct bcmpmu_accy_data *di, int enable)
 {
 	struct bcmpmu59xxx *bcmpmu = di->bcmpmu;
-	int ret;
+	int ret = 0;
 	u8 reg;
 
 	if (!charging_enable)
@@ -289,29 +290,29 @@ static int _usb_host_en(struct bcmpmu_accy_data *di, int enable)
 		return -EAGAIN;
 	}
 
-	ret = bcmpmu->read_dev(bcmpmu, PMU_REG_MBCCTRL3, &reg);
-	if (ret)
-		return ret;
-
 	/* If charging is already enabled/disabled just return */
-	if ((reg & MBCCTRL3_USB_HOSTEN_MASK) == (!!enable)) {
+	if (di->usb_host_en == enable) {
 		pr_accy(INIT, "USB host is already in the reqested state\n");
-		return ret;
+
+	} else {
+		ret = bcmpmu->read_dev(bcmpmu, PMU_REG_MBCCTRL3, &reg);
+		if (ret)
+			return ret;
+
+		if (enable)
+			reg |= MBCCTRL3_USB_HOSTEN_MASK;
+		else
+			reg &= ~MBCCTRL3_USB_HOSTEN_MASK;
+
+		ret = bcmpmu->write_dev(bcmpmu, PMU_REG_MBCCTRL3, reg);
+		if (ret) {
+			pr_accy(ERROR, "%s: PMU write failed\n", __func__);
+			return ret;
+		}
+
+		di->usb_host_en = enable;
+		pr_accy(FLOW, "%s:ENABLE %d\n", __func__, di->usb_host_en);
 	}
-
-	if (enable)
-		reg |= MBCCTRL3_USB_HOSTEN_MASK;
-	else
-		reg &= ~MBCCTRL3_USB_HOSTEN_MASK;
-
-	ret = bcmpmu->write_dev(bcmpmu, PMU_REG_MBCCTRL3, reg);
-	if (ret) {
-		pr_accy(ERROR, "%s: PMU write failed\n", __func__);
-		return ret;
-	}
-
-	di->usb_host_en = enable;
-	pr_accy(FLOW, "%s:ENABLE %d\n", __func__, di->usb_host_en);
 	ret = bcmpmu_accy_queue_event(di, PMU_CHRGR_EVT_CHRG_STATUS,
 			&di->usb_host_en);
 	return ret;
@@ -1265,6 +1266,7 @@ static void bcmpmu_accy_isr(enum bcmpmu59xxx_irq irq, void *data)
 	case PMU_IRQ_IDCHG:
 	case PMU_IRQ_USBOV:
 	case PMU_IRQ_USBOV_DIS:
+	case PMU_IRQ_CHGERRDIS:
 	case PMU_IRQ_RESUME_VBUS:
 		event = accy_irq_evt_map[idx].event;
 		break;

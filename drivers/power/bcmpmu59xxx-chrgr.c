@@ -39,7 +39,8 @@
 
 char *get_supply_type_str(int chrgr_type);
 static int icc_fcc;
-static int debug_mask = (BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT);
+static int debug_mask = (BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT |
+			BCMPMU_PRINT_FLOW);
 module_param_named(dbgmsk, debug_mask, int, S_IRUGO | S_IWUSR | S_IWGRP);
 #define pr_chrgr(debug_level, args...) \
 	do { \
@@ -72,6 +73,9 @@ struct bcmpmu_chrgr_data {
 	struct bcmpmu_chrgr_info usb_chrgr_info;
 	struct notifier_block chgr_detect;
 	struct notifier_block chgr_curr_lmt;
+	struct notifier_block usb_ov_dis;
+	struct notifier_block usb_chrgr_err_dis;
+	struct notifier_block usb_ov;
 	struct list_head event_pending_list;
 	struct list_head event_free_list;
 	struct bcmpmu_chrgr_event event_pool[MAX_EVENTS];
@@ -190,7 +194,7 @@ static int bcmpmu_chrgr_ac_get_property(struct power_supply *psy,
 	struct bcmpmu_chrgr_data *di = container_of(psy,
 			struct bcmpmu_chrgr_data, ac_psy);
 
-	pr_chrgr(FLOW, "%s: property %d\n", __func__, psp);
+	pr_chrgr(VERBOSE, "%s: property %d\n", __func__, psp);
 
 	switch (psp) {
 	case POWER_SUPPLY_PROP_ONLINE:
@@ -218,7 +222,7 @@ static int bcmpmu_chrgr_ac_set_property(struct power_supply *psy,
 			struct bcmpmu_chrgr_data, ac_psy);
 	struct bcmpmu59xxx *bcmpmu = di->bcmpmu;
 
-	pr_chrgr(FLOW, "%s: property %d\n", __func__, psp);
+	pr_chrgr(VERBOSE, "%s: property %d\n", __func__, psp);
 
 	switch (psp) {
 	case POWER_SUPPLY_PROP_ONLINE:
@@ -243,7 +247,7 @@ static int bcmpmu_chrgr_usb_get_property(struct power_supply *psy,
 	struct bcmpmu_chrgr_data *di = container_of(psy,
 			struct bcmpmu_chrgr_data, usb_psy);
 
-	pr_chrgr(FLOW, "%s: property %d\n", __func__, psp);
+	pr_chrgr(VERBOSE, "%s: property %d\n", __func__, psp);
 	switch (psp) {
 	case POWER_SUPPLY_PROP_ONLINE:
 		val->intval = di->usb_chrgr_info.online;
@@ -270,7 +274,7 @@ static int bcmpmu_chrgr_usb_set_property(struct power_supply *psy,
 			struct bcmpmu_chrgr_data, usb_psy);
 	struct bcmpmu59xxx *bcmpmu = di->bcmpmu;
 
-	pr_chrgr(FLOW, "%s: property %d\n", __func__, psp);
+	pr_chrgr(VERBOSE, "%s: property %d\n", __func__, psp);
 	switch (psp) {
 	case POWER_SUPPLY_PROP_ONLINE:
 		di->usb_chrgr_info.online = val->intval;
@@ -290,7 +294,7 @@ static int charger_event_handler(struct notifier_block *nb,
 		unsigned long event, void *para)
 {
 
-	struct bcmpmu_chrgr_data *di;
+	struct bcmpmu_chrgr_data *di = NULL;
 	struct bcmpmu59xxx *bcmpmu;
 	enum bcmpmu_chrgr_type_t chrgr_type;
 	int chrgr_curr = 0;
@@ -364,6 +368,33 @@ static int charger_event_handler(struct notifier_block *nb,
 			, __func__, chrgr_curr);
 		power_supply_changed(&di->ac_psy);
 		break;
+	case PMU_ACCY_EVT_OUT_USBOV:
+		di = container_of(nb, struct bcmpmu_chrgr_data,
+						usb_ov);
+		bcmpmu = di->bcmpmu;
+		bcmpmu_usb_get(bcmpmu,
+			BCMPMU_USB_CTRL_GET_CHRGR_TYPE, &chrgr_type);
+		pr_chrgr(FLOW, "****%s****,USB OV\n", __func__);
+		if ((chrgr_type < PMU_CHRGR_TYPE_MAX) &&
+				(chrgr_type > PMU_CHRGR_TYPE_NONE))
+			bcmpmu_chrgr_usb_en(bcmpmu, 0);
+		break;
+	case PMU_ACCY_EVT_OUT_CHGERRDIS:
+		di = container_of(nb, struct bcmpmu_chrgr_data,
+					usb_chrgr_err_dis);
+	case PMU_ACCY_EVT_OUT_USBOV_DIS:
+		if (!di)
+			di = container_of(nb, struct bcmpmu_chrgr_data,
+						usb_ov_dis);
+		bcmpmu = di->bcmpmu;
+		bcmpmu_usb_get(bcmpmu,
+			BCMPMU_USB_CTRL_GET_CHRGR_TYPE, &chrgr_type);
+		pr_chrgr(FLOW, "****%s****, Chrgr Err Dis\n", __func__);
+		if ((chrgr_type < PMU_CHRGR_TYPE_MAX) &&
+				(chrgr_type > PMU_CHRGR_TYPE_NONE))
+			bcmpmu_chrgr_usb_en(bcmpmu, 1);
+
+		break;
 	}
 	return 0;
 }
@@ -423,7 +454,7 @@ static int __devinit bcmpmu_chrgr_probe(struct platform_device *pdev)
 
 	bcmpmu_usb_get(bcmpmu,
 			BCMPMU_USB_CTRL_GET_CHRGR_TYPE, &chrgr_type);
-	pr_chrgr(FLOW, "<%s> chrgr_type %d\n", __func__, chrgr_type);
+	pr_chrgr(VERBOSE, "<%s> chrgr_type %d\n", __func__, chrgr_type);
 
 	if ((chrgr_type < PMU_CHRGR_TYPE_MAX) &&
 			(chrgr_type >  PMU_CHRGR_TYPE_NONE)) {
@@ -445,7 +476,7 @@ static int __devinit bcmpmu_chrgr_probe(struct platform_device *pdev)
 				chrgr_names[chrgr_type];
 			di->ac_chrgr_info.curr = chrgr_curr;
 		}
-		pr_chrgr(FLOW, "****<%s>****chrgr_name %s\n",
+		pr_chrgr(VERBOSE, "****<%s>****chrgr_name %s\n",
 			__func__, chrgr_names[chrgr_type]);
 	}
 
@@ -473,6 +504,33 @@ static int __devinit bcmpmu_chrgr_probe(struct platform_device *pdev)
 				__func__, ret);
 		goto unregister_usb_supply;
 	}
+	di->usb_ov_dis.notifier_call = charger_event_handler;
+	ret = bcmpmu_add_notifier(PMU_ACCY_EVT_OUT_USBOV_DIS,
+							&di->usb_ov_dis);
+	if (ret) {
+		pr_chrgr(INIT, "%s, failed on OV dis notifier, err=%d\n",
+				__func__, ret);
+		goto unregister_usb_supply;
+	}
+
+	di->usb_chrgr_err_dis.notifier_call = charger_event_handler;
+	ret = bcmpmu_add_notifier(PMU_ACCY_EVT_OUT_CHGERRDIS,
+							&di->usb_chrgr_err_dis);
+	if (ret) {
+		pr_chrgr(INIT, "%s, failed on CHRGR Err notifier, err=%d\n",
+				__func__, ret);
+		goto unregister_usb_supply;
+	}
+
+	di->usb_ov.notifier_call = charger_event_handler;
+	ret = bcmpmu_add_notifier(PMU_ACCY_EVT_OUT_USBOV,
+							&di->usb_ov);
+	if (ret) {
+		pr_chrgr(INIT, "%s, failed on USB OV, err=%d\n",
+				__func__, ret);
+		goto unregister_usb_supply;
+	}
+
 
 	atomic_set(&drv_init_done, 1);
 	dev_dbg(di->dev, "Probe success\n");
