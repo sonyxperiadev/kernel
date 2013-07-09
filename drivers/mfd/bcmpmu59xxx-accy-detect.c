@@ -491,6 +491,27 @@ exit:
 				&accy_d->d_work, ACD_RETRY_DELAY);
 }
 
+#if CONFIG_PM
+static int bcmpmu_accy_detect_resume(struct platform_device *pdev)
+{
+	return 0;
+}
+
+static int bcmpmu_accy_detect_suspend(struct platform_device *pdev,
+					pm_message_t state)
+{
+	struct bcmpmu59xxx *bcmpmu = dev_get_drvdata(pdev->dev.parent);
+	struct accy_det *accy_d;
+	accy_d = bcmpmu->accy_d;
+	flush_delayed_work_sync(&accy_d->d_work);
+	return 0;
+}
+
+#else
+#define bcmpmu_accy_detect_resume	NULL
+#define bcmpmu_accy_detect_suspend	NULL
+#endif
+
 static int __devinit bcmpmu_accy_detect_probe(struct platform_device *pdev)
 {
 	int ret = 0;
@@ -579,6 +600,8 @@ static struct platform_driver bcmpmu_accy_detect_driver = {
 	},
 	.probe = bcmpmu_accy_detect_probe,
 	.remove = __devexit_p(bcmpmu_accy_detect_remove),
+	.suspend = bcmpmu_accy_detect_suspend,
+	.resume = bcmpmu_accy_detect_resume,
 };
 
 static int __init bcmpmu_accy_detect_init(void)
