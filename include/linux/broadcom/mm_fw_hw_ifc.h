@@ -68,11 +68,10 @@ enum {
 
 enum {
 	ECONOMY = PI_OPP_ECONOMY,
-	NORMAL,
+	NORMAL = PI_OPP_NORMAL,
+	TURBO = PI_OPP_TURBO,
 #if defined(CONFIG_PI_MGR_MM_STURBO_ENABLE)
-	TURBO = PI_OPP_SUPER_TURBO,
-#else
-	TURBO,
+	SUPER_TURBO = PI_OPP_SUPER_TURBO,
 #endif
 };
 #define dvfs_mode_e unsigned int
@@ -84,18 +83,33 @@ struct mm_reg_value {
 #define MM_REG_VALUE struct mm_reg_value
 
 struct mm_dvfs_hw_ifc {
-	bool is_dvfs_on;
+	bool ON;
 	bool enable_suspend_resume;
-	dvfs_mode_e user_requested_mode; /* When DVFS is off,
+	dvfs_mode_e MODE; /* When DVFS is off,
 					this mode will be chosen */
 	unsigned int dvfs_bulk_job_cnt;
+
+	unsigned int T0; /* time in ms for DVFS profiling
+					when in Economy mode */
+	unsigned int P0; /* percentage (1~99) threshold at which framework
+			should request Normal mode for this device */
 
 	unsigned int T1; /* time in ms for DVFS profiling when in Normal mode */
 	unsigned int P1; /* percentage (1~99) threshold at which framework
 			should request Turbo mode for this device */
+	unsigned int P1L; /* percentage (1~99) threshold at which framework
+			should request Normal mode for this device */
+
 	unsigned int T2; /* time in ms for DVFS profiling when in Turbo mode */
 	unsigned int P2; /* percentage (1~99) threshold at which framework
+			should request to Super Turbo mode for this device */
+	unsigned int P2L; /* percentage (1~99) threshold at which framework
 			should fall back to Normal mode for this device */
+
+	unsigned int T3; /* time in ms for DVFS profiling
+					when in Super Turbo mode */
+	unsigned int P3L; /* percentage (1~99) threshold at which framework
+			should fall back to Turbo mode for this device */
 };
 #define MM_DVFS_HW_IFC struct mm_dvfs_hw_ifc
 

@@ -293,13 +293,19 @@ int __init mm_isp_init(void)
 	core_param.mm_device_id = (void *)isp_device;
 	core_param.mm_virt_addr = NULL;
 
-	dvfs_param.is_dvfs_on = 1;
-	dvfs_param.user_requested_mode = TURBO;
+	dvfs_param.ON = 1;
+	dvfs_param.MODE = TURBO;
 	dvfs_param.enable_suspend_resume = 0;
+	dvfs_param.T0 = 200;
+	dvfs_param.P0 = 90;
 	dvfs_param.T1 = 300;
-	dvfs_param.P1 = 80;
-	dvfs_param.T2 = 3000;
-	dvfs_param.P2 = 30;
+	dvfs_param.P1 = 90;
+	dvfs_param.P1L = 50;
+	dvfs_param.T2 = 300;
+	dvfs_param.P2 = 90;
+	dvfs_param.P2L = 60;
+	dvfs_param.T3 = 1000;
+	dvfs_param.P3L = 50;
 	dvfs_param.dvfs_bulk_job_cnt = 0;
 
 	isp_device->fmwk_handle = mm_fmwk_register(ISP_DEV_NAME,
