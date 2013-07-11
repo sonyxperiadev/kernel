@@ -38,6 +38,7 @@ extern unsigned ramdump_enable;
 #endif
 #include "lcd/nt35512.h"
 #include "lcd/nt35516.h"
+#include "lcd/nt35517.h"
 #include "lcd/otm1281a.h"
 #include "lcd/otm1283a.h"
 #include "lcd/otm8018b.h"
@@ -52,6 +53,7 @@ static struct lcd_config *cfgs[] __initdata = {
 	&nt35510_cfg,
 	&nt35512_cfg,
 	&nt35516_cfg,
+	&nt35517_cfg,
 	&s6e63m0x3_cfg,
 	&otm1281a_cfg,
 	&otm1283a_cfg,
