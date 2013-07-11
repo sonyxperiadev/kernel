@@ -1861,7 +1861,7 @@ void uas_jig_force_sleep(void)
 	#endif
 }
 
-static struct fsa9485_platform_data fsa9485_pdata = {
+static struct tsu6111_platform_data fsa9485_pdata = {
 	.usb_cb = fsa9485_usb_cb,
 	.charger_cb = fsa9485_charger_cb,
 	.jig_cb = fsa9485_jig_cb,
