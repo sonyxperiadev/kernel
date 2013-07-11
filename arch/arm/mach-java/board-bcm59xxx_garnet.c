@@ -35,6 +35,9 @@
 #ifdef CONFIG_CHARGER_BCMPMU_SPA
 #include <linux/spa_power.h>
 #endif
+#if defined(CONFIG_BCMPMU_THERMAL_THROTTLE)
+#include <linux/power/bcmpmu59xxx-thermal-throttle.h>
+#endif
 #include <linux/of_platform.h>
 #include <linux/of.h>
 #include <linux/of_fdt.h>
@@ -1084,6 +1087,13 @@ static struct batt_cutoff_cap_map ys_05_cutoff_cap_lut[] = {
 	{3350, 0},
 };
 
+#if defined(CONFIG_BCMPMU_THERMAL_THROTTLE)
+static struct batt_temp_curr_map ys_05_temp_curr_lut[] = {
+		{400, 510},
+		{500, 270},
+		{580,  0},
+};
+#endif
 
 static struct batt_esr_temp_lut ys_05_esr_temp_lut[] = {
 	{
@@ -1230,6 +1240,31 @@ static struct bcmpmu59xxx_led_pdata led_pdata = {
 };
 #endif
 
+#if defined(CONFIG_BCMPMU_THERMAL_THROTTLE)
+/* List down the Charger Registers that need to be backedup before
+  *  the throttling algo starts, those registers will be restored once the
+  * algo is finished.
+  */
+static u32 chrgr_backup_registers[] = {
+	PMU_REG_MBCCTRL18, /* CC Trim */
+	PMU_REG_MBCCTRL20, /* 500 Trim */
+};
+
+static struct bcmpmu_throttle_pdata throttle_pdata = {
+	.temp_curr_lut = ys_05_temp_curr_lut,
+	.temp_curr_lut_sz = ARRAY_SIZE(ys_05_temp_curr_lut),
+	/* ADC channel and mode selection */
+	.temp_adc_channel = PMU_ADC_CHANN_DIE_TEMP,
+	.temp_adc_req_mode = PMU_ADC_REQ_SAR_MODE,
+	/* Registers to store/restore while throttling*/
+	.throttle_backup_reg = chrgr_backup_registers,
+	.throttle_backup_reg_sz = ARRAY_SIZE(chrgr_backup_registers),
+	.throttle_poll_time = THROTTLE_WORK_POLL_TIME,
+	.hysteresis_temp = HYSTERESIS_DEFAULT_TEMP,
+};
+#endif
+
+
 #ifdef CONFIG_CHARGER_BCMPMU_SPA
 struct bcmpmu59xxx_spa_pb_pdata spa_pb_pdata = {
 	.chrgr_name = "bcmpmu_charger",
@@ -1345,6 +1380,14 @@ static struct mfd_cell pmu59xxx_devs[] = {
 		.id = -1,
 		.platform_data = &led_pdata,
 		.pdata_size = sizeof(led_pdata),
+	},
+#endif
+#if defined(CONFIG_BCMPMU_THERMAL_THROTTLE)
+	{
+		.name = "bcmpmu_thermal_throttle",
+		.id = -1,
+		.platform_data = &throttle_pdata,
+		.pdata_size = sizeof(throttle_pdata),
 	},
 #endif
 };

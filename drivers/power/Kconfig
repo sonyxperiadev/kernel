@@ -369,4 +369,11 @@ config SEC_CHARGING_FEATURE
 	help
 	 Say Y to enable Samsung charging drivers.
 
+config BCMPMU_THERMAL_THROTTLE
+	tristate "BCMPMU Thermal Throttling driver"
+	depends on MFD_BCM_PMU59xxx
+	default n
+	help
+	  Say Y to support Thermal Throttling.
+
 endif # POWER_SUPPLY

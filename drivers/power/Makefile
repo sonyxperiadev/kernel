@@ -69,3 +69,4 @@ obj-$(CONFIG_MFD_BCM_PMU59xxx)  += bcmpmu59xxx-acld.o
 obj-$(CONFIG_CHARGER_BCMPMU_SPA) += bcmpmu59xxx-spa-pb.o
 obj-$(CONFIG_BATTERY_ANDROID)	+= android_battery.o
 obj-$(CONFIG_SEC_CHARGING_FEATURE) +=spa_power.o spa_ps.o
+obj-$(CONFIG_BCMPMU_THERMAL_THROTTLE) +=bcmpmu59xxx-thermal-throttle.o

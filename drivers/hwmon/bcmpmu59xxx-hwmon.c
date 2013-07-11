@@ -124,10 +124,11 @@ static int bcmpmu_adc_convert(struct bcmpmu59xxx *bcmpmu,
 					BCMPMU_ADC_RESOLUTION +
 					(adc->pdata[channel].adc_offset);
 	} else {
-		/* temp = raw * 0.497 - 275.7 */
-		result->conv =
-				((result->raw * PMU_TEMP_MULTI_CONST) / 1000)
-								- KELVIN_CONST;
+		/* temp = raw * 0.497 - 275.7 C
+		 * But for better precision below formulae
+		 * gives the result in 10th multiple of Centigrade*/
+		result->conv = ((result->raw * PMU_TEMP_MULTI_CONST) -
+					(KELVIN_CONST * 1000)) / 100;
 	}
 
 	pr_hwmon(FLOW, "%s channel:%d raw = %x conv_formula = %d\n",

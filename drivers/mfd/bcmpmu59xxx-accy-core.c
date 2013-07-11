@@ -448,7 +448,7 @@ static int _set_icc_fc(struct bcmpmu_accy_data *di, int curr)
 		ret = _usb_host_en(di, 0);
 		di->icc_host_ctrl = false;
 	} else if ((!di->icc_host_ctrl) &&
-			(curr > bcmpmu_pmu_curr_table[0])) {
+			(curr >= bcmpmu_pmu_curr_table[0])) {
 		ret = _usb_host_en(di, 1);
 		di->icc_host_ctrl = true;
 	}
