@@ -139,6 +139,7 @@ struct avs_info {
 	struct avs_pdata *pdata;
 	u32 silicon_type;
 	u32 freq;
+	u32 crc_failed;
 	struct row_val row3_val;
 	struct row_val row5_val;
 	struct row_val row8_val;
@@ -270,6 +271,8 @@ int avs_get_vddvar_aging_margin(u32 silicon_type, u32 freq)
 		return -EAGAIN;
 	avs_dbg(AVS_LOG_FLOW, "%s: silicon = %u, freq = %u",
 			__func__, silicon_type, freq);
+	if (avs_info.crc_failed)
+		return -1;
 	BUG_ON(freq < A9_FREQ_1000_MHZ || freq >= A9_FREQ_1400_MHZ);
 	if (avs_info.pdata->vddvar_aging_lut)
 		return avs_info.pdata->vddvar_aging_lut[freq - 1][silicon_type];
@@ -281,6 +284,8 @@ int avs_get_vddfix_adj(u32 ddr_freq)
 {
 	int adj;
 	if (!avs_info.pdata)
+		return 0;
+	if (avs_info.crc_failed)
 		return 0;
 	if (avs_info.pdata->flags & AVS_VDDFIX_ADJ_EN) {
 		BUG_ON(!avs_info.pdata->vddfix_adj_lut || ddr_freq >=
@@ -770,7 +775,10 @@ static int avs_ate_get_silicon_type(struct avs_info *avs_inf_ptr)
 /* CRC failure in case of addnl ATE BIN values in row8 can be ignored */
 	if (avs_inf_ptr->ate_crc != (u32)crc) {
 		if ((avs_inf_ptr->pdata->flags & AVS_IGNORE_CRC_ERR) ||
-				(avs_inf_ptr->month >= 6)) {
+			((avs_inf_ptr->month <= 7) && (
+			 (avs_inf_ptr->avs_ate_val[0]) &&
+			 (avs_inf_ptr->avs_ate_val[1] ||
+			  avs_inf_ptr->avs_ate_val[2])))) {
 			avs_dbg(AVS_LOG_INIT, "CRC Error. Ignored\n");
 			avs_inf_ptr->silicon_type =
 				pdata->ate_lut[freq][avs_inf_ptr->
@@ -779,6 +787,7 @@ static int avs_ate_get_silicon_type(struct avs_info *avs_inf_ptr)
 					avs_ate_val[freq]].freq;
 		} else {
 			avs_dbg(AVS_LOG_ERR, "ATE CRC Failed\n");
+			avs_inf_ptr->crc_failed = 1;
 			avs_inf_ptr->silicon_type = pdata->ate_lut[0][0].
 							silicon_type;
 			avs_inf_ptr->freq = A9_FREQ_UNKNOWN;
