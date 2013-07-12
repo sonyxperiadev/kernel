@@ -104,6 +104,8 @@ static DEFINE_PER_CPU(u32, cdm_success);
 static DEFINE_PER_CPU(u32, cdm_failure);
 static DEFINE_PER_CPU(u32, cdm_attempts);
 
+static u8 svc_req[DRMT_SVC_MAX];
+
 static u32 fdm_success;
 static u32 fdm_short_success;
 static u32 fdm_attempt;
@@ -114,7 +116,7 @@ static u32 dbg_log;
 static int wr_enabled;
 static int pllarma_inx = -1;
 /* Data for the entire cluster */
-static DEFINE_SPINLOCK(dormant_entry_lock);
+static DEFINE_SPINLOCK(drmt_lock);
 
 
 /* un-cached memory for dormant stack */
@@ -230,6 +232,41 @@ enum DORMANT_LOG_TYPE {
 
 static struct secure_params_t *secure_params;
 static int dormant_enter_continue(unsigned long svc);
+
+
+static void set_svc_req(u32 svc)
+{
+	unsigned long flgs;
+	spin_lock_irqsave(&drmt_lock, flgs);
+	BUG_ON(svc >= DRMT_SVC_MAX ||
+	svc_req[svc] > CONFIG_NR_CPUS);
+	svc_req[svc]++;
+	spin_unlock_irqrestore(&drmt_lock, flgs);
+}
+
+static void clr_svc_req(u32 svc)
+{
+	unsigned long flgs;
+	spin_lock_irqsave(&drmt_lock, flgs);
+	BUG_ON(svc >= DRMT_SVC_MAX ||
+		svc_req[svc] == 0);
+	svc_req[svc]--;
+	spin_unlock_irqrestore(&drmt_lock, flgs);
+}
+
+static u32 get_svc(void)
+{
+	unsigned long flgs;
+	int i;
+	spin_lock_irqsave(&drmt_lock, flgs);
+	for (i = 0; i < DRMT_SVC_MAX; i++) {
+		if (svc_req[i])
+			break;
+	}
+	spin_unlock_irqrestore(&drmt_lock, flgs);
+	return i;
+}
+
 
 /*  PWRCTL1_bypass & PWRCTL0_bypass in Periph Spare Control2
  * registers holds CPU power mode. Boot ROM reads this register
@@ -438,14 +475,17 @@ void dormant_enter(u32 svc)
 	bool restore_gic = true;
 	bool retry;
 	u32 cpu;
+	u32 svc_max = CORE_DORMANT;
 	u32 insurance = 1000;
 	(*((u32 *)(&__get_cpu_var(cdm_attempts))))++;
-
 
 #ifdef CONFIG_MOBICORE_DRIVER
 	/* tempoary block dormant before mobicore is ready*/
 	return;
 #endif
+
+	/*vote for dormant svc..*/
+	set_svc_req(svc);
 
 	cdc_resp = cdc_send_cmd(CDC_CMD_RED);
 	switch (cdc_resp) {
@@ -454,7 +494,7 @@ void dormant_enter(u32 svc)
 		/*Some other core is entring dormant or an interrupt is pending.
 		Retry later*/
 		(*((u32 *)(&__get_cpu_var(cdm_failure))))++;
-		return;
+		goto ret;
 		break;
 
 	case CDC_STATUS_RFD:
@@ -462,14 +502,13 @@ void dormant_enter(u32 svc)
 		break;
 
 	case CDC_STATUS_RFDLC:
-		if (fdm_en && (FULL_DORMANT_L2_ON == svc ||
-			FULL_DORMANT_L2_OFF == svc)) {
+		svc_max = get_svc();
 
+		if (fdm_en && (FULL_DORMANT_L2_ON == svc_max ||
+			FULL_DORMANT_L2_OFF == svc_max)) {
 			fd_cmd = CDC_CMD_FDCE;
 			cdc_set_override(IS_IDLE_OVERRIDE, 0x1C0);
-
 		} else {
-
 			fd_cmd = CDC_CMD_CDCE;
 			cdc_set_override(IS_IDLE_OVERRIDE, 0x180);
 		}
@@ -512,12 +551,12 @@ void dormant_enter(u32 svc)
 		break;
 
 	case CDC_STATUS_FDCEOK:
-		spin_lock_irqsave(&dormant_entry_lock, flgs);
+		spin_lock_irqsave(&drmt_lock, flgs);
 		save_proc_clk_regs();
 		save_addnl_regs();
 		save_gic_distributor_shared((void *)gic_dist_shared_data,
 					    (u32)KONA_GICDIST_VA, false);
-		if (l2_off_en && svc == FULL_DORMANT_L2_OFF)
+		if (l2_off_en && svc_max == FULL_DORMANT_L2_OFF)
 			pwr_ctrl = CDC_PWR_DRMNT_L2_OFF;
 		else
 			pwr_ctrl = CDC_PWR_DRMNT_L2_ON;
@@ -533,11 +572,14 @@ void dormant_enter(u32 svc)
 		cdc_set_fsm_ctrl(FSM_CLR_ALL_STATUS);
 		cdc_set_override(WAIT_IDLE_TIMEOUT, 0xF);
 		fdm_attempt++;
-		spin_unlock_irqrestore(&dormant_entry_lock, flgs);
+		spin_unlock_irqrestore(&drmt_lock, flgs);
 
 		/*no break to continue to CEOK*/
 	case CDC_STATUS_CEOK:
-		drmt_status = cpu_suspend(svc, dormant_enter_continue);
+		/*dormant_enter_continue will turn OFF L2 mem only if
+			 - svc_max == FULL_DORMANT_L2_OFF and
+			 - CDC status == FDCEOK (last core entering dormant)*/
+		drmt_status = cpu_suspend(svc_max, dormant_enter_continue);
 		break;
 
 	default:
@@ -560,7 +602,7 @@ void dormant_enter(u32 svc)
 					  false);
 		restore_generic_timer((void *)__get_cpu_var(timer_data));
 		restore_performance_monitors((void *)__get_cpu_var(pmu_data));
-		return;
+		goto ret;
 	}
 
 
@@ -694,6 +736,9 @@ void dormant_enter(u32 svc)
 
 	restore_performance_monitors((void *)__get_cpu_var(pmu_data));
 
+ret:
+	/*Clr svc vote*/
+	clr_svc_req(svc);
 
 }
 
@@ -704,12 +749,16 @@ void dormant_enter(u32 svc)
 static int dormant_enter_continue(unsigned long svc)
 {
 	u32 cpu;
+	unsigned int arg2;
 	cpu = smp_processor_id();
 	if (svc == FULL_DORMANT_L2_OFF && l2_off_en &&
-		cdc_get_status_for_core(cpu) == CDC_STATUS_FDCEOK)
+		cdc_get_status_for_core(cpu) == CDC_STATUS_FDCEOK) {
+		arg2 = 3;  /*L2 mem OFF*/
 		disable_clean_inv_dcache_v7_all();
-	else
+	} else {
+		arg2 = 2;  /*L2 mem ON*/
 		disable_clean_inv_dcache_v7_l1();
+	}
 
 	write_actlr(read_actlr() & ~A15_SMP_BIT);
 
@@ -718,37 +767,21 @@ static int dormant_enter_continue(unsigned long svc)
  * and the return address.
  */
 	if (cpu == 0) {
-
+#ifdef CONFIG_MOBICORE_DRIVER
+		u32 smc_cmd = SMC_CMD_SLEEP;
+#else
+		u32 smc_cmd = SSAPI_DORMANT_ENTRY_SERV;
+#endif
 		secure_params->core0_reset_address = virt_to_phys(cpu_resume);
 
 		secure_params->core1_reset_address = virt_to_phys(cpu_resume);
 
 		secure_params->dram_log_buffer = drmt_buf_phy;
 
-/* Check if L2 memory is off  or if this is a fake dormant
- * if it is, do not bother saving/restoring L2 controlelr
- * in the secure side.  For fake dormant, we do not want
- * to save and restore the L2 memory since it would not
- * be turned off.
- */
-
-#ifdef CONFIG_MOBICORE_DRIVER
-		u32 smc_cmd = SMC_CMD_SLEEP;
-#else
-		u32 smc_cmd = SSAPI_DORMANT_ENTRY_SERV;
-#endif
-
-		if (svc == FULL_DORMANT_L2_OFF) {
-			local_secure_api(smc_cmd,
+		local_secure_api(smc_cmd,
 				 (u32)SEC_BUFFER_ADDR,
 				 (u32)SEC_BUFFER_ADDR +
-				 MAX_SECURE_BUFFER_SIZE, 3);
-		} else {
-			local_secure_api(smc_cmd,
-				 (u32)SEC_BUFFER_ADDR,
-				 (u32)SEC_BUFFER_ADDR +
-				 MAX_SECURE_BUFFER_SIZE, 2);
-		}
+				 MAX_SECURE_BUFFER_SIZE, arg2);
 	} else {
 		/* Write the address where we want other cores to boot */
 		writel_relaxed(virt_to_phys(cpu_resume),

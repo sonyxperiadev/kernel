@@ -287,7 +287,8 @@ int kona_pm_cpu_lowpower(void)
 	 * to DORMANT_CORE_DOWN.
 	 */
 	if (suspend->enter) {
-		suspend->enter(suspend, suspend->params);
+		suspend->enter(suspend,
+			suspend->params | CTRL_PARAMS_OFFLINE_CORE);
 	}
 	return 0;
 }
