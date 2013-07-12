@@ -3137,6 +3137,7 @@ static int bma2xx_probe(struct i2c_client *client,
 	}
 
 	data->input = dev;
+	data->input->dev.parent = &data->bma2xx_client->dev;
 
 	err = sysfs_create_group(&client->dev.kobj, &bma2xx_attribute_group);
 	if (err < 0)
