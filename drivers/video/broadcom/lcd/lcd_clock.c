@@ -56,6 +56,7 @@ struct
 #endif
 
 int en_disp_clks(void);
+int dis_disp_clks(void);
 
 int brcm_enable_smi_lcd_clocks(struct pi_mgr_dfs_node *dfs_node)
 {
@@ -163,26 +164,64 @@ int en_disp_clks()
 	if (!g_display_enabled)
 		return -1;
 
+	pr_err("Enabling display clocks\n");
 	dsi_axi	= clk_get(NULL, dsi_bus_clk[0].dsi_axi);
 	dsi_esc	= clk_get(NULL, dsi_bus_clk[0].dsi_esc);
 	BUG_ON(IS_ERR_OR_NULL(dsi_axi) || IS_ERR_OR_NULL(dsi_esc));
-	if (clk_enable(dsi_axi))
+	if (clk_enable(dsi_axi)) {
+		pr_err("Error while enabling DSI AXI clk\n");
 		return -1;
+	}
 
-	if (clk_enable(dsi_esc))
+	if (clk_enable(dsi_esc)) {
+		pr_err("Error while enabling DSI ESC clk\n");
 		return -1;
+	}
 
 	dsi_pll     = clk_get(NULL, "dsi_pll");
 	dsi_pll_ch  = clk_get(NULL, dsi_bus_clk[0].dsi_pll_ch);
 	BUG_ON(IS_ERR_OR_NULL(dsi_pll) || IS_ERR_OR_NULL(dsi_pll_ch));
-	if (clk_enable(dsi_pll))
+	if (clk_enable(dsi_pll)) {
+		pr_err("Error while enabling pll\n");
 		return -1;
+	}
 
-	if (clk_enable(dsi_pll_ch))
+	if (clk_enable(dsi_pll_ch)) {
+		pr_err("Error while enabling pll ch\n");
 		return -1;
+	}
 	return 0;
 }
-device_initcall(en_disp_clks);
+subsys_initcall(en_disp_clks);
+
+int dis_disp_clks()
+{
+	struct clk *dsi_axi;
+	struct clk *dsi_esc;
+	struct clk *dsi_pll;
+	struct clk *dsi_pll_ch;
+
+	if (!g_display_enabled)
+		return -1;
+
+	pr_err("Disabling display clocks\n");
+	dsi_axi	= clk_get(NULL, dsi_bus_clk[0].dsi_axi);
+	dsi_esc	= clk_get(NULL, dsi_bus_clk[0].dsi_esc);
+	BUG_ON(IS_ERR_OR_NULL(dsi_axi) || IS_ERR_OR_NULL(dsi_esc));
+	clk_disable(dsi_axi);
+	clk_disable(dsi_esc);
+
+	dsi_pll     = clk_get(NULL, "dsi_pll");
+	dsi_pll_ch  = clk_get(NULL, dsi_bus_clk[0].dsi_pll_ch);
+	BUG_ON(IS_ERR_OR_NULL(dsi_pll) || IS_ERR_OR_NULL(dsi_pll_ch));
+	clk_disable(dsi_pll);
+	clk_disable(dsi_pll_ch);
+
+	g_display_enabled = 0;
+	return 0;
+}
+late_initcall(dis_disp_clks);
+
 
 #ifdef __DSI_USE_CLK_API__
 int brcm_enable_dsi_lcd_clocks(
@@ -194,10 +233,6 @@ int brcm_enable_dsi_lcd_clocks(
 {
 #ifndef CONFIG_MACH_BCM_FPGA
 	
-	if (g_display_enabled) {
-		printk(KERN_ERR "Skipping brcm_enable_dsi_lcd_clocks\n");
-		return 0;
-	}
 	if (pi_mgr_dfs_request_update(dfs_node, PI_OPP_ECONOMY)) {
 		printk(KERN_ERR "Failed to update dfs request for DSI LCD\n");
 		return  -EIO;
@@ -229,18 +264,6 @@ int brcm_enable_dsi_pll_clocks(
 	dsi_pll = clk_get(NULL, "dsi_pll");
 	dsi_pll_ch = clk_get(NULL, dsi_bus_clk[dsi_bus].dsi_pll_ch);
 	BUG_ON(IS_ERR_OR_NULL(dsi_pll) || IS_ERR_OR_NULL(dsi_pll_ch));
-
-	if (g_display_enabled) {
-		printk(KERN_ERR "skipping brcm_enable_dsi_pll_clocks\n");
-		dsi_pll_desense_offset = dsi_pll_ch_desense_offset * dsi_pll_ch_div;
-		pr_err("Requesting desense offset = %d\n", dsi_pll_desense_offset);
-		if (pll_set_desense_offset(dsi_pll, dsi_pll_desense_offset)) {
-			pr_err("Failed to set desense offset to %dHz\n",
-			dsi_pll_desense_offset);
-			return -EIO;
-		}
-		return 0;
-	}
 
 	printk(KERN_INFO "brcm_enable_dsi_pll_clocks\n");
 	/* DSI timing is set-up in CSL/cHal using req. clock values */

@@ -876,7 +876,7 @@ void free_platform_data(struct device *dev)
 
 static int __init lcd_panel_setup(char *panel)
 {
-	if (panel) {
+	if (panel && strlen(panel)) {
 		pr_err("bootloader has initialised %s\n", panel);
 		strcpy(g_disp_str, panel);
 		g_display_enabled = 1;
@@ -1630,7 +1630,6 @@ static int __ref kona_fb_probe(struct platform_device *pdev)
 	fb->die_nb.notifier_call = kona_fb_die_cb;
 	register_die_notifier(&fb->die_nb);
 #endif
-	g_display_enabled = 0;
 	return 0;
 
 err_fb_register_failed:
@@ -1782,7 +1781,7 @@ static void __exit kona_fb_exit(void)
 	printk(KERN_INFO "BRCM Framebuffer exit OK\n");
 }
 
-late_initcall(kona_fb_init);
+module_init(kona_fb_init);
 module_exit(kona_fb_exit);
 
 MODULE_AUTHOR("Broadcom");

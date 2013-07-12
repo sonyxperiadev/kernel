@@ -678,7 +678,6 @@ Int32 DSI_Close(DISPDRV_HANDLE_T drvH)
 
 	pPanel->pwrState = STATE_PWR_OFF;
 	pPanel->drvState = DRV_STATE_INIT;
-	g_display_enabled = 0;
 	DSI_INFO("OK\n");
 
 	return res;
