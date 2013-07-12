@@ -58,12 +58,15 @@ struct mm_common {
 };
 
 struct file_private_data {
+	struct work_struct work;
+
 	struct mm_common *common;
 	int interlock_count;
 	int prio;
 	int read_count;
 	bool readable;
-	wait_queue_head_t queue;
+	wait_queue_head_t wait_queue;
+	wait_queue_head_t read_queue;
 	struct list_head read_head;
 	struct list_head write_head;
 	struct list_head file_head;
@@ -73,11 +76,13 @@ struct file_private_data {
 };
 
 struct dev_job_list {
+	struct work_struct work;
+
 	struct plist_node core_list;
 	bool added2core;
 
 	struct list_head file_list;
-	struct list_head wait_list;
+	bool *notify;
 
 	struct dev_job_list *successor;
 	struct dev_job_list *predecessor;
