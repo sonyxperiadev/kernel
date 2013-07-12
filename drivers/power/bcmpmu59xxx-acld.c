@@ -786,6 +786,7 @@ static void bcmpmu_acld_work(struct work_struct *work)
 		bcmpmu_check_battery_current_limit(acld);
 		if ((!bcmpmu_is_usb_valid(acld)) ||
 				(!bcmpmu_get_ubpd_int(acld))) {
+			bcmpmu_chrg_on_output(acld);
 			pr_acld(FLOW, "%s:USB Fault, start ACLD form scratch\n",
 					__func__);
 			bcmpmu_reset_acld_flags(acld);
