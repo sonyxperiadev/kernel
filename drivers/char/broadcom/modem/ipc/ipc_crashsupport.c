@@ -170,8 +170,8 @@ extern struct wake_lock ipc_wake_lock;
 #endif
 
 static struct timer_list cp_reset_timer;
-/* set CP reset timeout to 2 seconds for now */
-#define CP_RESET_TIMEOUT_MILLISEC	2000
+/* set CP reset timeout to 5 seconds for now */
+#define CP_RESET_TIMEOUT_MILLISEC	5000
 
 /* wait for 500ms, 20ms at a time, for CP to be ready to reset */
 #define WAIT_FOR_CP_RESET_READY_MILLISEC	20
