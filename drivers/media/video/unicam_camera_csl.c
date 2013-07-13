@@ -470,7 +470,7 @@ int unicam_videobuf_start_streaming(struct vb2_queue *q, unsigned int count)
 	CSL_CAM_FRAME_st_t cslCamFrame;
 
 	dprintk("-enter");
-	iprintk("enabling csi");
+	dprintk("enabling csi");
 
 	spin_lock_irqsave(&unicam_dev->lock, flags);
 		unicam_dev->stopping = false;
@@ -777,6 +777,10 @@ int unicam_videobuf_stop_streaming(struct vb2_queue *q)
 	usleep_range(50, 60); /*TODO: Need to double-check with ASIC team*/
 	spin_lock_irqsave(&unicam_dev->lock, flags);
 
+	unicam_dev->active = NULL;
+	unicam_dev->streaming = 0;
+	spin_unlock_irqrestore(&unicam_dev->lock, flags);
+
 	/* disable frame interrupts */
 	cslCamFrame.int_enable = CSL_CAM_INT_DISABLE;
 	cslCamFrame.int_line_count = 0;
@@ -805,11 +809,8 @@ int unicam_videobuf_stop_streaming(struct vb2_queue *q)
 		ret = -1;
 	}
 
-	unicam_dev->active = NULL;
-	unicam_dev->streaming = 0;
 out:
 	dprintk("-exit");
-	spin_unlock_irqrestore(&unicam_dev->lock, flags);
 	up(&unicam_dev->stop_processing_sem);
 
 	/* Stopping stream after stopping unicam */
@@ -1159,6 +1160,11 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 	struct v4l2_subdev *sd = soc_camera_to_subdev(unicam_dev->icd);
 
 	spin_lock_irqsave(&unicam_dev->lock, flags);
+	reg_status =
+	    csl_cam_get_rx_status(unicam_dev->cslCamHandle,
+				  (CSL_CAM_RX_STATUS_t *) &status);
+
+
 	if (!unicam_dev->streaming) {
 		pr_err("Interrupt triggered after stopping camera!\n");
 		spin_unlock_irqrestore(&unicam_dev->lock, flags);
@@ -1167,9 +1173,6 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 		spin_unlock_irqrestore(&unicam_dev->lock, flags);
 	}
 	/* has the interrupt occured for Channel 0? */
-	reg_status =
-	    csl_cam_get_rx_status(unicam_dev->cslCamHandle,
-				  (CSL_CAM_RX_STATUS_t *) &status);
 	dprintk("received unicam interrupt reg_status=0x%x status=0x%x\n",
 		reg_status, status);
 
