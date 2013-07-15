@@ -489,7 +489,7 @@
 	};
 
 	mobicore {
-                mobicore-base = <0x9fd00000>;
+                mobicore-base = <0x8fd00000>;
                 mobicore-size = <0x300000>;
 	};
 
