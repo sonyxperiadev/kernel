@@ -847,6 +847,8 @@ struct bcmpmu59xxx_audio_pdata audio_pdata = {
 
 struct bcmpmu59xxx_rpc_pdata rpc_pdata = {
 	.delay = 30000, /*rpc delay - 30 sec*/
+	.fw_delay = 5000, /* for fw_cnt use this */
+	.fw_cnt = 4,
 	.poll_time = 120000, /* 40c-60c 120 sec */
 	.htem_poll_time = 8000, /* > 60c 8 sec */
 	.mod_tem = 400, /* 40 C*/

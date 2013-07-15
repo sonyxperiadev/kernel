@@ -69,6 +69,8 @@ struct bcmpmu_rpc {
 	struct bcmpmu59xxx *bcmpmu;
 	struct delayed_work work;
 	u32 delay;
+	u32 fw_delay;
+	u32 fw_cnt;
 	u32 vbat;
 	u32 temp_pa;
 	u32 temp_32k;
@@ -135,6 +137,8 @@ static void bcmpmu_rpc_work(struct work_struct *work)
 	struct bcmpmu_adc_result result;
 	int tem, poll_time;
 	bool config_tapper = false;
+	ulong delay;
+	static int rpc_fw_cnt;
 	struct bcmpmu_rpc *bcmpmu_rpc =
 	    container_of(work, struct bcmpmu_rpc, work.work);
 	BUG_ON(!bcmpmu_rpc);
@@ -209,8 +213,14 @@ static void bcmpmu_rpc_work(struct work_struct *work)
 
 
 err:
-	schedule_delayed_work(&bcmpmu_rpc->work,
-			msecs_to_jiffies(bcmpmu_rpc->delay));
+	if (rpc_fw_cnt < bcmpmu_rpc->fw_cnt) {
+		delay =  msecs_to_jiffies(bcmpmu_rpc->fw_delay);
+		rpc_fw_cnt++;
+		pr_rpc(VERBOSE, "%s, rpc_fw_cnt %d\n", __func__, rpc_fw_cnt);
+	} else
+		delay =  msecs_to_jiffies(bcmpmu_rpc->delay);
+
+	schedule_delayed_work(&bcmpmu_rpc->work, delay);
 
 }
 
@@ -290,9 +300,10 @@ static int __devinit bcmpmu_rpc_probe(struct platform_device *pdev)
 		ret = -ENOMEM;
 		goto err;
 	}
-
 	bcmpmu_rpc->bcmpmu = bcmpmu;
 	bcmpmu_rpc->delay = pdata->delay;
+	bcmpmu_rpc->fw_delay = pdata->fw_delay;
+	bcmpmu_rpc->fw_cnt = pdata->fw_cnt;
 	bcmpmu_rpc->poll_time = pdata->poll_time;
 	bcmpmu_rpc->htem_poll_time = pdata->htem_poll_time;
 	bcmpmu_rpc->mod_tem = pdata->mod_tem;
@@ -310,14 +321,13 @@ static int __devinit bcmpmu_rpc_probe(struct platform_device *pdev)
 		ALARM_REALTIME, bcmpmu_rpc_alarm_callback);
 #endif /*CONFIG_WD_TAPPER*/
 
-
 	INIT_DELAYED_WORK(&bcmpmu_rpc->work, bcmpmu_rpc_work);
 
 #ifdef CONFIG_DEBUG_FS
 	bcmpmu_rpc_dbg_init(bcmpmu_rpc);
 #endif
 	schedule_delayed_work(&bcmpmu_rpc->work,
-			msecs_to_jiffies(bcmpmu_rpc->delay));
+			msecs_to_jiffies(bcmpmu_rpc->fw_delay));
 err:
 	return ret;
 #ifdef CONFIG_WD_TAPPER

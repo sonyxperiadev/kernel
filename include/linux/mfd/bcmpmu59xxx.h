@@ -807,6 +807,8 @@ struct bcmpmu59xxx_regulator_pdata {
 
 struct bcmpmu59xxx_rpc_pdata {
 	u32 delay;
+	u32 fw_delay;
+	u32 fw_cnt;
 	u32 poll_time;
 	u32 htem_poll_time;
 	u32 mod_tem;
