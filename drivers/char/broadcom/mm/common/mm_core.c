@@ -100,6 +100,7 @@ static void mm_fmwk_job_scheduler(struct work_struct *work)
 {
 	mm_job_status_e status = MM_JOB_STATUS_INVALID;
 	bool is_hw_busy = false;
+	struct dev_job_list *job_list_elem;
 
 	struct mm_core *core_dev = container_of(work, \
 					struct mm_core, \
@@ -110,7 +111,7 @@ static void mm_fmwk_job_scheduler(struct work_struct *work)
 		return;
 		}
 
-	struct dev_job_list *job_list_elem = plist_first_entry(\
+	job_list_elem = plist_first_entry(\
 			&(core_dev->job_list), \
 			struct dev_job_list, core_list);
 
@@ -198,7 +199,10 @@ mm_fmwk_job_scheduler_done:
 
 static int validate(MM_CORE_HW_IFC *core_params)
 {
-	return 0;
+	if (core_params && core_params->mm_start_job)
+		return 0;
+	else
+		return -1;
 }
 
 void *mm_core_init(struct mm_common *mm_common, \
@@ -208,7 +212,7 @@ void *mm_core_init(struct mm_common *mm_common, \
 	struct mm_core *core_dev = NULL;
 
 	if (validate(core_params))
-		goto err_register;
+		goto err_register2;
 
 	core_dev = kmalloc(sizeof(struct mm_core), GFP_KERNEL);
 	if (core_dev == NULL) {
@@ -254,6 +258,7 @@ err_register:
 	pr_err("Error in core_init for %s", mm_dev_name);
 	if (core_dev)
 		mm_core_exit(core_dev);
+err_register2:
 	return NULL;
 }
 

@@ -34,15 +34,23 @@ struct h264_device_t *h264_device;
 int __init mm_h264_init(void)
 {
 	int ret = 0;
-	MM_CORE_HW_IFC core_param[H264_SUBDEV_COUNT];
+	MM_CORE_HW_IFC *core_param;
 	MM_DVFS_HW_IFC dvfs_param;
 	MM_PROF_HW_IFC prof_param;
 	int i = 0;
 
 	pr_debug("h264_init: -->\n");
-	h264_device = kmalloc(sizeof(struct h264_device_t), GFP_KERNEL);
+	h264_device = kzalloc(sizeof(struct h264_device_t), GFP_KERNEL);
 	if (h264_device == NULL) {
-		pr_err("h264_init: kmalloc failed\n");
+		pr_err("h264_init: kzalloc failed\n");
+		ret = -ENOMEM;
+		goto err;
+	}
+	core_param = kzalloc(sizeof(MM_CORE_HW_IFC) * H264_SUBDEV_COUNT,
+			GFP_KERNEL);
+	if (core_param == NULL) {
+		pr_err("h264_init: kzalloc failed\n");
+		kfree(h264_device);
 		ret = -ENOMEM;
 		goto err;
 	}
@@ -62,13 +70,28 @@ int __init mm_h264_init(void)
 	h264_device->subdev_init[4] = &h264_ol_init;
 	h264_device->subdev_deinit[4] = &h264_ol_deinit;
 
+#if defined(CONFIG_MM_SECURE_DRIVER)
+
+	h264_device->subdev_init[9] = &mcin_secure_init;
+	h264_device->subdev_deinit[9] = &mcin_secure_deinit;
+
+	h264_device->subdev_init[10] = &cabac_secure_init;
+	h264_device->subdev_deinit[10] = &cabac_secure_deinit;
+
+	h264_device->subdev_init[11] = &h264_vce_secure_init;
+	h264_device->subdev_deinit[11] = &h264_vce_secure_deinit;
+
+	h264_device->subdev_init[12] = &h264_ol_secure_init;
+	h264_device->subdev_deinit[12] = &h264_ol_secure_deinit;
+
+#endif /* CONFIG_MM_SECURE_DRIVER */
+
 	/*Calling init on sub devices*/
 	for (i = 0; i < H264_SUBDEV_COUNT; i++) {
-		ret = h264_device->subdev_init[i](&core_param[i]);
-		if (ret != 0) {
-			pr_err("mm_h264_init: subdev init for " \
-				"%d returned error\n", i);
-			goto err1;
+		if (h264_device->subdev_init[i]) {
+			ret = h264_device->subdev_init[i](&core_param[i]);
+			if (ret != 0)
+				goto err1;
 		}
 	}
 
@@ -99,12 +122,14 @@ int __init mm_h264_init(void)
 		goto err1;
 	}
 
+	kfree(core_param);
 	pr_debug("h264_init: H264 driver Module Init over");
 	return ret;
 err1:
+	pr_err("h264_init: Error subdev init (%d)\n", i);
+	kfree(core_param);
 	kfree(h264_device);
 err:
-	pr_err("h264_init: H264 driver Module Init Error");
 	return ret;
 }
 

@@ -13,7 +13,15 @@ the GPL, without Broadcom's express prior written consent.
 #ifndef _H264_H_
 #define _H264_H_
 
+#if defined(CONFIG_MM_SECURE_DRIVER)
+
+#define H264_SUBDEV_COUNT 16
+
+#else /* CONFIG_MM_SECURE_DRIVER */
+
 #define H264_SUBDEV_COUNT 5
+
+#endif /* CONFIG_MM_SECURE_DRIVER */
 
 /*CME*/
 void cme_update_virt(void *virt);
@@ -39,4 +47,25 @@ void	h264_vce_deinit(void);
 void	h264_ol_update_virt(void *virt);
 int	h264_ol_init(MM_CORE_HW_IFC *core_param);
 void	h264_ol_deinit(void);
+
+#if defined(CONFIG_MM_SECURE_DRIVER)
+
+/*MCIN*/
+int	mcin_secure_init(MM_CORE_HW_IFC *core_param);
+void	mcin_secure_deinit(void);
+
+/*CABAC*/
+int	cabac_secure_init(MM_CORE_HW_IFC *core_param);
+void	cabac_secure_deinit(void);
+
+/*VCE*/
+int	h264_vce_secure_init(MM_CORE_HW_IFC *core_param);
+void	h264_vce_secure_deinit(void);
+
+/*OL*/
+int	h264_ol_secure_init(MM_CORE_HW_IFC *core_param);
+void	h264_ol_secure_deinit(void);
+
+#endif /* CONFIG_MM_SECURE_DRIVER */
+
 #endif

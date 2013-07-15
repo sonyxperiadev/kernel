@@ -50,7 +50,8 @@ the GPL, without Broadcom's express prior written consent.
 
 #include "mm_fw_usr_ifc.h"
 
-#define MAX_ASYMMETRIC_PROC (8)
+#define MAX_ASYMMETRIC_PROC (16)
+
 #define DEFAULT_MM_DEV_TIMER_MS (100)
 #if defined(CONFIG_MACH_BCM_FPGA_E) || defined(CONFIG_MACH_BCM_FPGA)
 #define DEFAULT_MM_DEV_TIMEOUT_MS (80000)
@@ -143,6 +144,12 @@ struct mm_core_hw_ifc {
 	int (*mm_abort)(void *device_id, mm_job_post_t *job);
 	int (*mm_get_regs)(void *device_id, MM_REG_VALUE *ptr, int max);
 	int (*mm_get_prof)(void *device_id, unsigned int *ptr);
+#if defined(CONFIG_MM_SECURE_DRIVER)
+	int (*mm_secure_job_wait)(void *device_id,
+			mm_secure_job_ptr p_secure_job);
+	int (*mm_secure_job_done)(void *device_id,
+			mm_secure_job_ptr p_secure_job);
+#endif /* CONFIG_MM_SECURE_DRIVER */
 
 };
 #define MM_CORE_HW_IFC struct mm_core_hw_ifc

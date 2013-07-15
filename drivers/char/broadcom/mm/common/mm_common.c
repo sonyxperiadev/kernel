@@ -124,9 +124,10 @@ void mm_common_add_job(struct work_struct *work)
 					work);
 	struct file_private_data *filp = job->filp;
 	struct mm_common *common = filp->common;
+	struct mm_core *core_dev;
+	int    core_id = (job->job.type & 0xFF0000) >> 16;
 
-	struct mm_core *core_dev = common->mm_core[\
-				(job->job.type&0xFF0000)>>16];
+	core_dev = common->mm_core[core_id];
 
 	job->job.spl_data_ptr = filp->spl_data_ptr;
 	if (filp->interlock_count == 0)
@@ -207,19 +208,21 @@ void mm_common_release_jobs(struct work_struct *work)
 	while (0 == list_empty(&filp->write_head)) {
 		job = list_first_entry(&filp->write_head, struct dev_job_list, \
 								file_list);
+
+
 		if (job->job.type != INTERLOCK_WAITING_JOB) {
-				mm_core_abort_job(job, \
-		common->mm_core[(job->job.type&0xFF0000)>>16]);
-				mm_common_job_completion(job, \
-				common->mm_core[(job->job.type&0xFF0000)>>16]);
-				raw_notifier_call_chain( \
-				&common->notifier_head, \
-				MM_FMWK_NOTIFY_JOB_REMOVE, NULL);
-				}
-			else {
-				mm_common_interlock_completion(job);
-				}
+			int    core_id = (job->job.type & 0xFF0000) >> 16;
+			mm_core_abort_job(job,
+					common->mm_core[core_id]);
+			mm_common_job_completion(job,
+					common->mm_core[core_id]);
+			raw_notifier_call_chain(
+					&common->notifier_head,
+					MM_FMWK_NOTIFY_JOB_REMOVE, NULL);
+		} else {
+			mm_common_interlock_completion(job);
 		}
+	}
 
 	list_for_each_entry_safe(job, temp, &(filp->read_head), file_list) {
 		list_del_init(&job->file_list);
@@ -275,9 +278,10 @@ void mm_common_interlock_completion(struct dev_job_list *job)
 		if (wait_job->job.type != INTERLOCK_WAITING_JOB) {
 			list_for_each_entry_safe(wait_job, temp_wait_job, \
 				&(job->filp->write_head), file_list) {
+				int core_id = (wait_job->job.type&0xFF0000)>>16;
 				if (wait_job->job.type != INTERLOCK_WAITING_JOB)
-					mm_core_add_job(wait_job, \
-			common->mm_core[(wait_job->job.type&0xFF0000)>>16]);
+					mm_core_add_job(wait_job,
+						common->mm_core[core_id]);
 				else
 					break;
 				}
@@ -411,6 +415,7 @@ static int mm_file_write(struct file *filp, const char __user *buf,
 	struct mm_common *common = private->common;
 	struct dev_job_list *mm_job_node = mm_common_alloc_job(private,\
 						mm_common_add_job);
+	int    core_id;
 
 	if (!mm_job_node)
 		return -ENOMEM;
@@ -437,6 +442,8 @@ static int mm_file_write(struct file *filp, const char __user *buf,
 	mm_job_node->job.type &= ~MM_DIRTY_JOB;
 	mm_job_node->job.status = MM_JOB_STATUS_READY;
 #endif
+
+	core_id = (mm_job_node->job.type & 0xFF0000) >> 16;
 	if (copy_from_user(&(mm_job_node->job.id), buf , \
 				sizeof(mm_job_node->job.id))) {
 		pr_err("copy_from_user failed for type");
@@ -461,10 +468,8 @@ static int mm_file_write(struct file *filp, const char __user *buf,
 					mm_job_node->job.type,
 					mm_job_node->job.id,
 					ptr[0], ptr[1], ptr[2], ptr[3]);
-		BUG_ON(((mm_job_node->job.type&0xFF0000)>>16) \
-					>= MAX_ASYMMETRIC_PROC);
-		BUG_ON(common->mm_core[(mm_job_node->job.type&0xFF0000)>>16] \
-								== NULL); \
+		BUG_ON(core_id >= MAX_ASYMMETRIC_PROC);
+		BUG_ON(common->mm_core[core_id] == NULL);
 		SCHEDULER_COMMON_WORK(common, &mm_job_node->work);
 		}
 	else {
@@ -571,6 +576,10 @@ static long mm_file_ioctl(struct file *filp, \
 	int size = 0;
 	int core = 0;
 	mm_dev_spl_data_t dev_spl_d;
+#if defined(CONFIG_MM_SECURE_DRIVER)
+	int                core_id;
+	mm_secure_job_t    secure_job;
+#endif /* CONFIG_MM_SECURE_DRIVER */
 
 	if ((_IOC_TYPE(cmd) != MM_DEV_MAGIC) || (_IOC_NR(cmd) > MM_CMD_LAST))
 		return -ENOTTY;
@@ -670,6 +679,46 @@ static long mm_file_ioctl(struct file *filp, \
 		up(&common->device_sem);
 		private->device_locked = 0;
 	break;
+#if defined(CONFIG_MM_SECURE_DRIVER)
+	case MM_IOCTL_SECURE_JOB_WAIT:
+		/* Copy job type from user side */
+		if (copy_from_user(&secure_job, (mm_secure_job_ptr)arg,
+					sizeof(mm_secure_job_t))) {
+			pr_err("copy_from_user failed");
+			ret = -EINVAL;
+			break;
+		}
+		/* Wait till a secure job gets posted */
+		core_id = (secure_job.type & 0xFF0000) >> 16;
+		ret = mm_core_secure_job_wait(common->mm_core[core_id],
+				&secure_job);
+		/* Copy back the job id and status of the secure job */
+		ret = copy_to_user((mm_secure_job_ptr)arg, &secure_job,
+					sizeof(mm_secure_job_t));
+	break;
+
+	case MM_IOCTL_SECURE_JOB_DONE:
+	{
+		struct secure_job_work_t secure_work;
+		/* Copy job type from user side */
+		if (copy_from_user(&secure_job, (mm_secure_job_ptr)arg,
+					sizeof(mm_secure_job_t))) {
+			pr_err("copy_from_user failed");
+			ret = -EINVAL;
+			break;
+		}
+		/* Wait till a secure job gets posted */
+		INIT_WORK(&secure_work.work, mm_core_secure_job_done);
+		core_id               = (secure_job.type & 0xFF0000) >> 16;
+		secure_work.core_dev  = common->mm_core[core_id];
+		secure_work.job       = &secure_job;
+		SCHEDULER_COMMON_WORK(common, &secure_work.work);
+		flush_work_sync(&secure_work.work);
+		ret                   = secure_work.ret;
+	}
+	break;
+
+#endif /* CONFIG_MM_SECURE_DRIVER */
 	default:
 		pr_err("cmd[0x%08x] not supported", cmd);
 		ret = -EINVAL;
@@ -704,7 +753,7 @@ void *mm_fmwk_register(const char *name, const char *clk_name,
 	int i = 0;
 	struct mm_common *common = NULL;
 
-	BUG_ON(count >= MAX_ASYMMETRIC_PROC);
+	BUG_ON(count > MAX_ASYMMETRIC_PROC);
 	if (name == NULL)
 		return NULL;
 
@@ -748,14 +797,8 @@ void *mm_fmwk_register(const char *name, const char *clk_name,
 		goto err_register;
 	}
 
-	for (i = 0; i < count; i++) {
+	for (i = 0; i < count; i++)
 		common->mm_core[i] = mm_core_init(common, name, &core_param[i]);
-		if (common->mm_core[i] == NULL) {
-			pr_err("Error creating Core instance for core-%d in %s",
-							   i, common->mm_name);
-			goto err_register;
-			}
-		}
 
 #ifdef CONFIG_KONA_PI_MGR
 	common->mm_dvfs = mm_dvfs_init(common, name, dvfs_param);

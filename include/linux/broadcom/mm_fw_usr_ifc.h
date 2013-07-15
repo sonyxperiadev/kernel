@@ -37,7 +37,9 @@ enum {
 	V3D_USER_JOB,
 	V3D_USER_LAST_JOB,
 
-	H264_CME_INVALID_JOB = 0x67000000,
+	H264_JOB_BASE = 0x67000000,
+	H264_SECURE_JOB_OFFSET = 0x00080000,
+	H264_CME_INVALID_JOB = H264_JOB_BASE,
 	H264_CME_EST_JOB,
 	H264_CME_LAST_JOB,
 
@@ -141,6 +143,8 @@ enum {
 	MM_CMD_DEVICE_TRYLOCK,
 	MM_CMD_DEVICE_LOCK,
 	MM_CMD_DEVICE_UNLOCK,
+	MM_CMD_SECURE_JOB_WAIT,
+	MM_CMD_SECURE_JOB_DONE,
 	MM_CMD_LAST
 };
 
@@ -162,6 +166,14 @@ struct MM_VERSION_INFO_T {
 	void *version_info_ptr;
 };
 
+struct mm_secure_job_t_ {
+	mm_job_type_e     type;
+	unsigned int      id;
+	mm_job_status_e   status;
+};
+#define mm_secure_job_t   struct mm_secure_job_t_
+#define mm_secure_job_ptr struct mm_secure_job_t_ *
+
 #define mm_version_info_t struct MM_VERSION_INFO_T
 
 #define mm_handle_status_t struct MM_HANDLE_STATUS_T
@@ -178,4 +190,12 @@ struct MM_VERSION_INFO_T {
 						unsigned int)
 #define MM_IOCTL_DEVICE_UNLOCK _IOWR(MM_DEV_MAGIC, MM_CMD_DEVICE_UNLOCK, \
 							unsigned int)
+
+#define MM_IOCTL_SECURE_JOB_WAIT _IOWR(MM_DEV_MAGIC, MM_CMD_SECURE_JOB_WAIT, \
+		mm_secure_job_t)
+
+#define MM_IOCTL_SECURE_JOB_DONE _IOWR(MM_DEV_MAGIC, MM_CMD_SECURE_JOB_DONE, \
+		mm_secure_job_t)
+
+
 #endif

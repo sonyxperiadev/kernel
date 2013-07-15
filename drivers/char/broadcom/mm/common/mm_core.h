@@ -36,8 +36,8 @@ struct mm_core {
 
 };
 
-static inline void mm_core_add_job(\
-			struct dev_job_list *job, \
+static inline void mm_core_add_job(
+			struct dev_job_list *job,
 			struct mm_core *core_dev)
 {
 	if (job->added2core)
@@ -52,8 +52,8 @@ static inline void mm_core_add_job(\
 		SCHEDULER_WORK(core_dev, &core_dev->job_scheduler);
 }
 
-static inline void mm_core_remove_job(\
-			struct dev_job_list *job, \
+static inline void mm_core_remove_job(
+			struct dev_job_list *job,
 			struct mm_core *core_dev)
 {
 	if (job->added2core == false)
@@ -62,8 +62,8 @@ static inline void mm_core_remove_job(\
 	job->added2core = false;
 }
 
-static inline void mm_core_move_job(struct dev_job_list *job, \
-				struct mm_core *core_dev, \
+static inline void mm_core_move_job(struct dev_job_list *job,
+				struct mm_core *core_dev,
 					int prio)
 {
 	if (job->added2core == false)
@@ -75,8 +75,8 @@ static inline void mm_core_move_job(struct dev_job_list *job, \
 		}
 }
 
-static inline void mm_core_abort_job(\
-			struct dev_job_list *job, \
+static inline void mm_core_abort_job(
+			struct dev_job_list *job,
 			struct mm_core *core_dev)
 {
 	MM_CORE_HW_IFC *hw_ifc = &core_dev->mm_device;
@@ -91,6 +91,60 @@ static inline void mm_core_abort_job(\
 		SCHEDULER_WORK(core_dev, &core_dev->job_scheduler);
 		}
 }
+
+#if defined(CONFIG_MM_SECURE_DRIVER)
+
+struct secure_job_work_t {
+	struct work_struct   work;
+	struct mm_core       *core_dev;
+	mm_secure_job_ptr    job;
+	int                  ret;
+};
+
+/* Function invoked from ioctl to wait till scheduling of a new secure job */
+static inline int mm_core_secure_job_wait(
+		struct mm_core *core_dev, mm_secure_job_ptr p_secure_job)
+{
+	MM_CORE_HW_IFC    *hw_ifc = &core_dev->mm_device;
+	struct mm_common  *common = core_dev->mm_common;
+	int               ret = -1;
+
+	pr_debug("Waiting for a new secure job %s\n",
+			common->mm_name);
+	if (hw_ifc->mm_secure_job_wait)
+		ret = hw_ifc->mm_secure_job_wait(hw_ifc->mm_device_id,
+				p_secure_job);
+	else
+		BUG();
+
+	return ret;
+}
+
+/* Work invoked from ioctl to signal completion of secure job */
+static inline void mm_core_secure_job_done(struct work_struct *p_work)
+{
+	struct secure_job_work_t *p_secure_work = container_of(p_work,
+					struct secure_job_work_t,
+					work);
+	struct mm_core    *core_dev    = p_secure_work->core_dev;
+	mm_secure_job_ptr p_secure_job = p_secure_work->job;
+	MM_CORE_HW_IFC    *hw_ifc      = &core_dev->mm_device;
+	struct mm_common  *common      = core_dev->mm_common;
+	int               ret          = -1;
+
+	pr_debug("Signaling completion of secure job %s\n",
+			common->mm_name);
+	if (hw_ifc->mm_secure_job_done)
+		ret = hw_ifc->mm_secure_job_done(
+				hw_ifc->mm_device_id, p_secure_job);
+	else
+		BUG();
+	SCHEDULER_WORK(core_dev, &core_dev->job_scheduler);
+
+	p_secure_work->ret = ret;
+}
+
+#endif /* CONFIG_MM_SECURE_DRIVER */
 /*
 static inline struct dev_job_list* mm_core_find_job(\
 			struct file_private_data* filp, \
@@ -109,8 +163,8 @@ static inline struct dev_job_list* mm_core_find_job(\
 	return NULL;
 }
 */
-void *mm_core_init(struct mm_common *mm_common, \
-		const char *mm_dev_name, \
+void *mm_core_init(struct mm_common *mm_common,
+		const char *mm_dev_name,
 		MM_CORE_HW_IFC *core_params);
 void mm_core_exit(void *mm_dvfs);
 
