@@ -2421,9 +2421,11 @@ static void csl_caph_config_mixer(CSL_CAPH_PathID
 
 	csl_caph_srcmixer_config_mix_route(path->srcmRoute[sinkNo][blockIdx]);
 
-	/*not for multicast*/
-	if (path->sinkCount <= 1)
-		csl_caph_srcmixer_enable_input(pSrcmRoute->inChnl, 0);
+	if (get_chip_id() < KONA_CHIP_ID_JAVA_A0) {
+		/*not for multicast*/
+		if (path->sinkCount <= 1)
+			csl_caph_srcmixer_enable_input(pSrcmRoute->inChnl, 0);
+	}
 
 	csl_caph_hwctrl_set_srcmixer_filter(path);
 
@@ -4264,8 +4266,10 @@ CSL_CAPH_PathID csl_caph_hwctrl_StartPath(CSL_CAPH_PathID pathID)
 	    path->source != CSL_CAPH_DEV_DSP)
 		csl_caph_audioh_start_ep();
 
-	/*enable mixer input channel last to avoid src junk*/
-	csl_caph_srcmixer_enable_input(path->srcmRoute[0][0].inChnl, 1);
+	if (get_chip_id() < KONA_CHIP_ID_JAVA_A0) {
+		/*enable mixer input channel last to avoid src junk*/
+		csl_caph_srcmixer_enable_input(path->srcmRoute[0][0].inChnl, 1);
+	}
 
 	return path->pathID;
 }
