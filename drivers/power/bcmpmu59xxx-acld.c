@@ -82,8 +82,8 @@ struct bcmpmu_acld {
 	enum bcmpmu_chrgr_type_t chrgr_type;
 	int acld_min_input;
 	int acld_rtry_cnt;
-	int acld_err_cnt;
 	int batt_curr_err_cnt;
+	int vbus_vbat_thrs_err_cnt;
 	int vbus_vbat_delta_deb;
 	int i_sys;
 	int acld_wrk_poll_time;
@@ -251,6 +251,7 @@ static void bcmpmu_chrg_on_output(struct bcmpmu_acld *acld)
 	bcmpmu_chrgr_usb_en(acld->bcmpmu, 1);
 	pr_acld(INIT, "ACLD disabled and charging on O/P\n");
 }
+
 static void bcmpmu_acld_get_min_input(struct bcmpmu_acld *acld)
 {
 	int one_c_rate = 0;
@@ -310,18 +311,18 @@ static void bcmpmu_check_battery_current_limit(struct bcmpmu_acld *acld)
 	 * */
 
 	if ((i_inst >= acld->acld_min_input) &&
-			(acld->acld_err_cnt++ > ACLD_ERR_CNT_THRLD_2)) {
+			(acld->batt_curr_err_cnt++ > ACLD_ERR_CNT_THRLD_2)) {
 		pr_acld(ERROR, "i_inst = %d\n", i_inst);
 		bcmpmu_chrg_on_output(acld);
 		pr_acld(ERROR, "%s: Re init ACLD\n", __func__);
 		acld->acld_re_init = true;
-		acld->acld_err_cnt = 0;
+		acld->batt_curr_err_cnt = 0;
 	} else if ((i_inst < acld->acld_min_input) &&
 			(acld->acld_en) &&
-			(acld->acld_err_cnt > 0)) {
+			(acld->batt_curr_err_cnt > 0)) {
 		pr_acld(ERROR, "ACLD Error Count:%d restarted\n",
-				acld->acld_err_cnt);
-		acld->acld_err_cnt = 0;
+				acld->batt_curr_err_cnt);
+		acld->batt_curr_err_cnt = 0;
 	}
 }
 static void bcmpmu_acld_re_init_check(struct bcmpmu_acld *acld)
@@ -444,13 +445,29 @@ static bool bcmpmu_is_usb_valid(struct bcmpmu_acld *acld)
 	return true;
 
 }
-static bool bcmpmu_is_vbus_vbat_valid(struct bcmpmu_acld *acld)
+static bool bcmpmu_is_avg_vbus_vbat_valid(struct bcmpmu_acld *acld)
 {
 	int vbus;
 	int vbat;
 
 	vbus = bcmpmu_get_avg_vbus(acld->bcmpmu);
 	vbat = bcmpmu_fg_get_avg_volt(acld->bcmpmu);
+	pr_acld(VERBOSE, "%s: vbus = %d vbat = %d\n", __func__, vbus, vbat);
+	if ((vbus > acld->pdata->acld_vbus_thrs) ||
+			(vbat < acld->pdata->acld_vbat_thrs))
+		return false;
+
+	return true;
+
+}
+
+static bool bcmpmu_is_vbus_vbat_valid(struct bcmpmu_acld *acld)
+{
+	int vbus;
+	int vbat;
+
+	vbus = bcmpmu_get_vbus(acld->bcmpmu);
+	vbat = bcmpmu_fg_get_batt_volt(acld->bcmpmu);
 	pr_acld(VERBOSE, "%s: vbus = %d vbat = %d\n", __func__, vbus, vbat);
 	if ((vbus > acld->pdata->acld_vbus_thrs) ||
 			(vbat < acld->pdata->acld_vbat_thrs))
@@ -702,7 +719,7 @@ chrgr_pre_chk:
 	/* charger presence check */
 	if ((!bcmpmu_is_usb_valid(acld)) ||
 			fault ||
-			(!bcmpmu_is_vbus_vbat_valid(acld)) ||
+			(!bcmpmu_is_avg_vbus_vbat_valid(acld)) ||
 			(!bcmpmu_is_acld_enabled(acld->bcmpmu))) {
 		bcmpmu_chrg_on_output(acld);
 		bcmpmu_post_acld_end_event(acld);
@@ -713,6 +730,36 @@ chrgr_pre_chk:
 	bcmpmu_post_acld_end_event(acld);
 	return 0;
 
+}
+static void bcmpmu_acld_periodic_monitor(struct bcmpmu_acld *acld)
+{
+	bool b_ret;
+
+	bcmpmu_check_battery_current_limit(acld);
+
+	if (acld->i_bus_abv_lmt)
+		bcmpmu_acld_re_init_check(acld);
+
+	b_ret = bcmpmu_is_vbus_vbat_valid(acld);
+	if ((!b_ret) && (acld->vbus_vbat_thrs_err_cnt++ >
+				ACLD_ERR_CNT_THRLD_2)) {
+		bcmpmu_chrg_on_output(acld);
+		pr_acld(FLOW, "%s:vbus/vbat thre err, start ACLD frm scratch\n",
+				__func__);
+		bcmpmu_reset_acld_flags(acld);
+	} else if ((b_ret) && acld->vbus_vbat_thrs_err_cnt) {
+		acld->vbus_vbat_thrs_err_cnt = 0;
+		pr_acld(FLOW, "%s: vbus_vbat_thrs_err_cnt cnt restarted\n",
+				__func__);
+	}
+
+	if ((!bcmpmu_is_usb_valid(acld)) ||
+			(!bcmpmu_get_ubpd_int(acld))) {
+		bcmpmu_chrg_on_output(acld);
+		pr_acld(FLOW, "%s:USB Fault, start ACLD from scratch\n",
+				__func__);
+		bcmpmu_reset_acld_flags(acld);
+	}
 }
 static void bcmpmu_acld_work(struct work_struct *work)
 {
@@ -745,7 +792,7 @@ static void bcmpmu_acld_work(struct work_struct *work)
 	}
 	if (!acld->volt_thrs_check) {
 		pr_acld(VERBOSE, "VBUS VBAT thresholds check\n");
-		if (!bcmpmu_is_vbus_vbat_valid(acld)) {
+		if (!bcmpmu_is_avg_vbus_vbat_valid(acld)) {
 			pr_acld(ERROR, "VBUS/VBAT crossed Thresholds\n");
 			if (!acld->v_flag) {
 				bcmpmu_chrg_on_output(acld);
@@ -779,23 +826,11 @@ static void bcmpmu_acld_work(struct work_struct *work)
 		goto q_work;
 	}
 
-	/* Periodic moniter */
+	/* Periodic monitor */
 	if ((acld->bcmpmu->flags & BCMPMU_ACLD_EN) &&
 			(acld->chrgr_type == PMU_CHRGR_TYPE_DCP) &&
-			(acld->acld_en)) {
-		bcmpmu_check_battery_current_limit(acld);
-		if ((!bcmpmu_is_usb_valid(acld)) ||
-				(!bcmpmu_get_ubpd_int(acld))) {
-			bcmpmu_chrg_on_output(acld);
-			pr_acld(FLOW, "%s:USB Fault, start ACLD form scratch\n",
-					__func__);
-			bcmpmu_reset_acld_flags(acld);
-			goto q_work;
-		}
-
-		if (acld->i_bus_abv_lmt)
-			bcmpmu_acld_re_init_check(acld);
-	}
+			(acld->acld_en))
+		bcmpmu_acld_periodic_monitor(acld);
 
 	pr_acld(INIT, "%d %d %d %d %d %d\n",
 			acld->usb_mbc_fault, acld->volt_thrs_check,
@@ -818,7 +853,7 @@ static int bcmpmu_reset_acld_flags(struct bcmpmu_acld *acld)
 	acld->v_flag = false;
 	acld->mbc_in_cv = false;
 	acld->batt_curr_err_cnt = 0;
-	acld->acld_err_cnt = 0;
+	acld->vbus_vbat_thrs_err_cnt = 0;
 
 	return 0;
 }
