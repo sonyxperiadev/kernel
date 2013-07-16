@@ -4419,14 +4419,6 @@ static int32_t bcmtch_init_input_device(
 				0,
 				0);
 
-			input_set_abs_params(
-				bcmtch_data_ptr->p_input_device,
-				ABS_MT_TOOL_TYPE,
-				0,
-				MT_TOOL_MAX,
-				0,
-				0);
-
 			if (bcmtch_event_flag &
 					BCMTCH_EVENT_FLAG_TOUCH_SIZE) {
 				input_set_abs_params(
