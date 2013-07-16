@@ -196,6 +196,49 @@ MIC_Mapping_Table[AUDIO_SOURCE_TOTAL_COUNT] = {
 	{AUDIO_SOURCE_DSP, CSL_CAPH_DEV_DSP}
 };
 
+struct AUDCTRL_SPKR_MIC_Mapping_t {
+	AUDIO_SINK_Enum_t spkr;
+	AUDIO_SOURCE_Enum_t pri_mic;
+	AUDIO_SOURCE_Enum_t sec_mic;
+};
+
+/* must match AUDIO_SINK_Enum_t */
+static struct AUDCTRL_SPKR_MIC_Mapping_t \
+SPKR_MIC_Mapping_Table[AUDIO_SINK_TOTAL_COUNT] = {
+	/* sink info            primary MIC ID             Secondary MIC ID */
+	[AUDIO_SINK_HANDSET] = {AUDIO_SINK_HANDSET,
+		AUDIO_SOURCE_ANALOG_MAIN, AUDIO_SOURCE_DIGI2},
+	[AUDIO_SINK_HEADSET] = {AUDIO_SINK_HEADSET,
+		AUDIO_SOURCE_ANALOG_AUX, AUDIO_SOURCE_DIGI2},
+	[AUDIO_SINK_HANDSFREE] = {AUDIO_SINK_HANDSFREE,
+		AUDIO_SOURCE_ANALOG_MAIN, AUDIO_SOURCE_DIGI2},
+	[AUDIO_SINK_BTM] = {AUDIO_SINK_BTM,
+		AUDIO_SOURCE_BTM, AUDIO_SOURCE_UNDEFINED},
+	[AUDIO_SINK_LOUDSPK] = {AUDIO_SINK_LOUDSPK,
+	AUDIO_SOURCE_ANALOG_MAIN, AUDIO_SOURCE_DIGI2},
+	[AUDIO_SINK_TTY] = {AUDIO_SINK_TTY,
+		AUDIO_SOURCE_ANALOG_AUX, AUDIO_SOURCE_DIGI2},
+	[AUDIO_SINK_HAC] = {AUDIO_SINK_HAC,
+		AUDIO_SOURCE_ANALOG_MAIN, AUDIO_SOURCE_DIGI2},
+	[AUDIO_SINK_USB] = {AUDIO_SINK_USB,
+		AUDIO_SOURCE_USB, AUDIO_SOURCE_UNDEFINED},
+	[AUDIO_SINK_BTS] = {AUDIO_SINK_BTS,
+		AUDIO_SOURCE_BTM, AUDIO_SOURCE_UNDEFINED},
+	[AUDIO_SINK_I2S] = {AUDIO_SINK_I2S,
+		AUDIO_SOURCE_UNDEFINED, AUDIO_SOURCE_UNDEFINED},
+	[AUDIO_SINK_VIBRA] = {AUDIO_SINK_VIBRA,
+		AUDIO_SOURCE_UNDEFINED, AUDIO_SOURCE_UNDEFINED},
+	[AUDIO_SINK_HEADPHONE] = {AUDIO_SINK_HEADPHONE,
+		AUDIO_SOURCE_ANALOG_MAIN, AUDIO_SOURCE_UNDEFINED},
+	[AUDIO_SINK_VALID_TOTAL] = {AUDIO_SINK_VALID_TOTAL,
+		AUDIO_SOURCE_UNDEFINED, AUDIO_SOURCE_UNDEFINED},
+	[AUDIO_SINK_MEM] = {AUDIO_SINK_MEM,
+		AUDIO_SOURCE_UNDEFINED, AUDIO_SOURCE_UNDEFINED},
+	[AUDIO_SINK_DSP] = {AUDIO_SINK_DSP,
+		AUDIO_SOURCE_UNDEFINED, AUDIO_SOURCE_UNDEFINED},
+	[AUDIO_SINK_UNDEFINED] = {AUDIO_SINK_UNDEFINED,
+		AUDIO_SOURCE_UNDEFINED, AUDIO_SOURCE_UNDEFINED}
+};
 /*=============================================================================
 // Private function prototypes
 //=============================================================================
@@ -467,6 +510,9 @@ selects IHF protection loopback or Analog Mic line to BB*/
 		dma_mic_spk = ((UInt16)(DSP_AADMAC_PRI_MIC_EN)) | ((UInt16)
 			(DSP_AADMAC_48KHZ_SPKR_EN)) |
 			((UInt16)DSP_AADMAC_RETIRE_DS_CMD);
+
+		if (bNeedDualMic)
+			dma_mic_spk |= (UInt16) (DSP_AADMAC_SEC_MIC_EN);
 
 		csl_dsp_caph_control_aadmac_enable_path(dma_mic_spk);
 #endif
@@ -1919,6 +1965,7 @@ static void AUDDRV_Telephony_InitHW(AUDIO_SOURCE_Enum_t mic,
 	AUDIO_BITS_PER_SAMPLE_t bits = 24;
 	CSL_CAPH_PathID pathID;
 	int dl_sink;
+	AUDIO_SOURCE_Enum_t sec_mic = AUDDRV_GetSecMicFromSpkr(speaker);
 
 #if defined(ENABLE_BT16)
 	if (speaker == AUDIO_SINK_BTM)
@@ -1937,6 +1984,7 @@ static void AUDDRV_Telephony_InitHW(AUDIO_SOURCE_Enum_t mic,
 	/* DL */
 	config.streamID = CSL_CAPH_STREAM_NONE;
 	config.pathID = 0;
+	config.secMic = FALSE;
 	config.source = CSL_CAPH_DEV_DSP;
 	config.sink = AUDDRV_GetDRVDeviceFromSpkr(speaker);
 	config.dmaCH = CSL_CAPH_DMA_NONE;
@@ -1984,7 +2032,8 @@ static void AUDDRV_Telephony_InitHW(AUDIO_SOURCE_Enum_t mic,
 	if (bNeedDualMic) {
 		config.streamID = CSL_CAPH_STREAM_NONE;
 		config.pathID = 0;
-		config.source = csl_caph_hwctrl_GetDualMic_NoiseRefMic();
+		config.secMic = TRUE;
+		config.source = AUDDRV_GetDRVDeviceFromMic(sec_mic);
 		config.sink = CSL_CAPH_DEV_DSP;
 		config.dmaCH = CSL_CAPH_DMA_NONE;
 		config.src_sampleRate = AUDIO_SAMPLING_RATE_48000;
@@ -1998,6 +2047,7 @@ static void AUDDRV_Telephony_InitHW(AUDIO_SOURCE_Enum_t mic,
 	/* Primary mic */
 	config.streamID = CSL_CAPH_STREAM_NONE;
 	config.pathID = 0;
+	config.secMic = FALSE;
 	config.source = AUDDRV_GetDRVDeviceFromMic(mic);
 	config.sink = CSL_CAPH_DEV_DSP;
 	config.dmaCH = CSL_CAPH_DMA_NONE;
@@ -2170,6 +2220,114 @@ CSL_CAPH_DEVICE_e AUDDRV_GetDRVDeviceFromSpkr(AUDIO_SINK_Enum_t spkr)
 		"AUDDRV_GetDRVDeviceFromSpkr::spkr %d:%d\n", spkr, dev);
 
 	return dev;
+}
+
+
+/*==========================================================================
+//
+// Function Name: AUDDRV_GetPrimaryMicFromSpkr
+//
+// Description: Get the primary mic based on the
+// speaker selection.
+//
+// =========================================================================
+*/
+
+AUDIO_SOURCE_Enum_t AUDDRV_GetPrimaryMicFromSpkr(AUDIO_SINK_Enum_t spkr)
+{
+	AUDIO_SOURCE_Enum_t pri_mic = SPKR_MIC_Mapping_Table[spkr].pri_mic;
+
+	aTrace(LOG_AUDIO_DRIVER,
+		"AUDDRV_GetPrimaryMicFromSpkr::spkr=%d, "
+		"pri mic=%d\n", spkr, pri_mic);
+
+	return pri_mic;
+}
+
+/*==========================================================================
+//
+// Function Name: AUDDRV_GetSecMicFromSpkr
+//
+// Description: Get the secondary MIC from the speaker selection.
+//
+// =========================================================================
+*/
+
+AUDIO_SOURCE_Enum_t AUDDRV_GetSecMicFromSpkr(AUDIO_SINK_Enum_t spkr)
+{
+	AUDIO_SOURCE_Enum_t sec_mic = SPKR_MIC_Mapping_Table[spkr].sec_mic;
+
+	aTrace(LOG_AUDIO_DRIVER,
+		"AUDDRV_GetSecMicFromSpkr::spkr=%d, "
+		"sec mic=%d\n", spkr, sec_mic);
+
+	return sec_mic;
+}
+
+/*==========================================================================
+//
+// Function Name: AUDDRV_SetPrimaryMicFromSpkr
+//
+// Description: Set the primary mic based on the
+// speaker selection.
+//
+// =========================================================================
+*/
+
+void AUDDRV_SetPrimaryMicFromSpkr(AUDIO_SINK_Enum_t spkr,
+		AUDIO_SOURCE_Enum_t mic)
+{
+	SPKR_MIC_Mapping_Table[spkr].pri_mic = mic;
+
+	aTrace(LOG_AUDIO_DRIVER,
+		"AUDDRV_SetPrimaryMicFromSpkr::spkr=%d, pri mic=%d\n",
+		   spkr, mic);
+}
+
+
+/*==========================================================================
+//
+// Function Name: AUDDRV_SetSecMicFromSpkr
+//
+// Description: Set the secondary mic based on the
+// speaker selection.
+//
+// =========================================================================
+*/
+
+void AUDDRV_SetSecMicFromSpkr(AUDIO_SINK_Enum_t spkr,
+		AUDIO_SOURCE_Enum_t mic)
+{
+	SPKR_MIC_Mapping_Table[spkr].sec_mic = mic;
+
+	aTrace(LOG_AUDIO_DRIVER,
+		"AUDDRV_SetSecMicFromSpkr::spkr=%d, sec mic=%d\n", spkr, mic);
+}
+
+/*==========================================================================
+// Function Name: AUDDRV_PrintAllMics
+//
+// Description: Print all primary and secondary mic selection for all sinks
+//
+// =========================================================================
+*/
+
+void AUDDRV_PrintAllMics(void)
+{
+	int i;
+	CSL_CAPH_HWConfig_Table_t *path;
+
+	aTrace(LOG_AUDIO_DRIVER,
+		   "AUDDRV_PrintAllMics:: print primary and secondary"
+		   " mics for each sink\n");
+
+	for (i = 0; i < AUDIO_SINK_VALID_TOTAL; i++) {
+		aTrace(LOG_AUDIO_DRIVER,
+			   "sink %d:: pri mic=%d, sec mic=%d\n",
+			   i,
+			   SPKR_MIC_Mapping_Table[i].pri_mic,
+			   SPKR_MIC_Mapping_Table[i].sec_mic);
+	}
 }
 
 static UInt32 *AUDIO_GetIHF48KHzBufferBaseAddress(void)

@@ -203,8 +203,7 @@ static CHAL_HANDLE lp_handle;
 static int en_lpbk_pcm, en_lpbk_i2s;
 static int rec_pre_call;
 static int dsp_path;
-/* the default ref mic used for dual mic operation (hardware dependent) */
-static CSL_CAPH_DEVICE_e dualmic_NoiseRefMic = CSL_CAPH_DEV_DIGI_MIC_L;
+
 
 static CAPH_BLOCK_t caph_block_list[LIST_NUM][MAX_PATH_LEN] = {
 	/*the order must match CAPH_LIST_t*/
@@ -1284,7 +1283,7 @@ static void csl_caph_obtain_blocks
 			"caph dsp spk buf@ %p\r\n", path->pBuf);
 #endif
 		} else if (path->sink[sinkNo] == CSL_CAPH_DEV_DSP) {
-			if (path->source == dualmic_NoiseRefMic) {
+			if (path->secMic == TRUE) {
 				dmaCH = CSL_CAPH_DMA_CH14;
 #if defined(ENABLE_DMA_VOICE)
 			path->pBuf = (void *)
@@ -1381,7 +1380,7 @@ static void csl_caph_obtain_blocks
 			aTrace(LOG_AUDIO_CSL,
 				"caph dsp spk cfifo# 0x%x\r\n", fifo);
 		} else if (path->sink[sinkNo] == CSL_CAPH_DEV_DSP) {
-			if (path->source == dualmic_NoiseRefMic) {
+			if (path->secMic == TRUE) {
 				fifo = csl_caph_cfifo_get_fifo_by_dma
 					(CSL_CAPH_DMA_CH14);
 				aTrace(LOG_AUDIO_CSL,
@@ -1439,7 +1438,7 @@ static void csl_caph_obtain_blocks
 		*/
 		if (path->sink[0] == CSL_CAPH_DEV_DSP
 			&& path->source != CSL_CAPH_ECHO_REF_MIC) {
-			if (path->source == dualmic_NoiseRefMic) {
+			if (path->secMic == TRUE) {
 				if (blockIdx == 0)
 					sw = CSL_CAPH_SWITCH_CH14;
 				else
@@ -1499,7 +1498,7 @@ static void csl_caph_obtain_blocks
 			srcmIn = CSL_CAPH_SRCM_MONO_CH1;
 			csl_caph_srcmixer_set_inchnl_status(srcmIn);
 		} else if (path->sink[sinkNo] == CSL_CAPH_DEV_DSP) {
-			if (path->source == dualmic_NoiseRefMic)
+			if (path->secMic == TRUE)
 				srcmIn = CSL_CAPH_SRCM_MONO_CH2;
 			else if (path->source == CSL_CAPH_ECHO_REF_MIC)
 				srcmIn = CSL_CAPH_SRCM_MONO_CH4;
@@ -1605,7 +1604,7 @@ static void csl_caph_obtain_blocks
 			srcmIn = CSL_CAPH_SRCM_MONO_CH1;
 			csl_caph_srcmixer_set_inchnl_status(srcmIn);
 		} else if (path->sink[sinkNo] == CSL_CAPH_DEV_DSP) {
-			if (path->source == dualmic_NoiseRefMic) {
+			if (path->secMic == TRUE) {
 				srcmIn = CSL_CAPH_SRCM_MONO_CH2;
 				csl_caph_srcmixer_set_inchnl_status(srcmIn);
 			} else {
@@ -3179,6 +3178,7 @@ static CSL_CAPH_PathID csl_caph_hwctrl_AddPathInTable(
 				config.snk_sampleRate;
 			HWConfig_Table[i].chnlNum = config.chnlNum;
 			HWConfig_Table[i].bitPerSample = config.bitPerSample;
+			HWConfig_Table[i].secMic = config.secMic;
 
 			return (CSL_CAPH_PathID)(i + 1);
 		}
@@ -5250,34 +5250,6 @@ void csl_caph_hwctrl_SetBTMode(int mode)
 	aTrace(LOG_AUDIO_CSL, "csl_caph_hwctrl_SetBTMode"
 			"from %d to %d\r\n", bt_mode, mode);
 	bt_mode = mode;
-}
-
-/****************************************************************************
-*
-*  Function Name: csl_caph_hwctrl_GetDualMic_NoiseRefMic
-*
-*  Description: Get the noise ref mic for dual mic operation
-*
-****************************************************************************/
-CSL_CAPH_DEVICE_e csl_caph_hwctrl_GetDualMic_NoiseRefMic(void)
-{
-	aTrace(LOG_AUDIO_CSL, "%s dualmic_NoiseRefMic=0x%x\r\n",
-		__func__, dualmic_NoiseRefMic);
-	return dualmic_NoiseRefMic;
-}
-
-/****************************************************************************
-*
-*  Function Name: csl_caph_hwctrl_SetDualMic_NoiseRefMic
-*
-*  Description: Set the noise ref mic for dual mic operation
-*
-****************************************************************************/
-void csl_caph_hwctrl_SetDualMic_NoiseRefMic(CSL_CAPH_DEVICE_e dev)
-{
-	aTrace(LOG_AUDIO_CSL, "%s dualmic_NoiseRefMic=0x%x\r\n",
-		__func__, dev);
-	dualmic_NoiseRefMic = dev;
 }
 
 /****************************************************************************

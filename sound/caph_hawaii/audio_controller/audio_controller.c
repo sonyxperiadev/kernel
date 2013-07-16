@@ -1398,23 +1398,23 @@ void AUDCTRL_GetSrcSinkByMode(AudioMode_t mode, AUDIO_SOURCE_Enum_t *pMic,
 	switch (mode) {
 	case AUDIO_MODE_HANDSET:
 	case AUDIO_MODE_HAC:
-		*pMic = AUDIO_SOURCE_ANALOG_MAIN;
+		*pMic = AUDDRV_GetPrimaryMicFromSpkr(AUDIO_SINK_HANDSET);
 		*pSpk = AUDIO_SINK_HANDSET;
 		break;
 
 	case AUDIO_MODE_HEADSET:
 	case AUDIO_MODE_TTY:
-		*pMic = AUDIO_SOURCE_ANALOG_AUX;
+		*pMic = AUDDRV_GetPrimaryMicFromSpkr(AUDIO_SINK_HEADSET);
 		*pSpk = AUDIO_SINK_HEADSET;
 		break;
 
 	case AUDIO_MODE_BLUETOOTH:
-		*pMic = AUDIO_SOURCE_BTM;
+		*pMic = AUDDRV_GetPrimaryMicFromSpkr(AUDIO_SINK_BTM);
 		*pSpk = AUDIO_SINK_BTM;
 		break;
 
 	case AUDIO_MODE_SPEAKERPHONE:
-		*pMic = AUDIO_SOURCE_ANALOG_MAIN;
+		*pMic = AUDDRV_GetPrimaryMicFromSpkr(AUDIO_SINK_LOUDSPK);
 		*pSpk = AUDIO_SINK_LOUDSPK;
 		break;
 
@@ -3732,7 +3732,10 @@ int AUDCTRL_HardwareControl(AUDCTRL_HW_ACCESS_TYPE_en_t access_type,
 		csl_audio_render_set_dma_size(arg1);
 		break;
 	case AUDCTRL_HW_CFG_DUALMIC_REFMIC:
-		csl_caph_hwctrl_SetDualMic_NoiseRefMic(getDeviceFromSrc(arg1));
+		AUDDRV_SetSecMicFromSpkr(arg1, arg2);
+		break;
+	case AUDCTRL_HW_CFG_PRIMARY_MIC:
+		AUDDRV_SetPrimaryMicFromSpkr(arg1, arg2);
 		break;
 	case AUDCTRL_HW_CFG_ECHO_REF_MIC:
 		AUDDRV_SetEchoRefMic(arg1);
@@ -3784,6 +3787,9 @@ int AUDCTRL_HardwareControl(AUDCTRL_HW_ACCESS_TYPE_en_t access_type,
 		break;
 	case AUDCTRL_HW_PRINT_PATH:
 		csl_caph_hwctrl_PrintAllPaths();
+		break;
+	case AUDCTRL_HW_PRINT_MICS:
+		AUDDRV_PrintAllMics();
 		break;
 	case AUDCTRL_HW_WRITE_GAIN:
 
