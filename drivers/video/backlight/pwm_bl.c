@@ -23,6 +23,7 @@
 #ifdef CONFIG_HAS_EARLYSUSPEND
 #include <linux/earlysuspend.h>
 #endif
+#include <mach/pinmux.h>
 
 struct pwm_bl_data {
 	struct pwm_device	*pwm;
@@ -39,6 +40,22 @@ struct pwm_bl_data {
 #endif
 	struct delayed_work bl_delay_on_work;
 };
+
+/*
+During soft reset, the PWM registers are reset but the pad
+control registers are not.
+So for a short duration (till loader sets 0x404 to PWM control
+register) the PWM output remains high.
+
+During hard reset this is not seen as both the pad control and
+the PWM registers are in reset state.
+
+Hence setting the function of pad cntrl register at 0x3500489C from
+PWM2 to GPIO24 on soft reset.
+*/
+static int pwm_pin = -1;
+static int pwm_pin_reboot_func = -1;
+
 
 static int pwm_backlight_update_status(struct backlight_device *bl)
 {
@@ -197,6 +214,18 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 		} else
 			bl_delay_on = val;
 
+		if (of_property_read_u32(pdev->dev.of_node,
+				"pwm_pin_name", &val)) {
+			pwm_pin = -1;
+		} else
+			pwm_pin = val;
+
+		if (of_property_read_u32(pdev->dev.of_node,
+				"pwm_pin_reboot_func", &val)) {
+			pwm_pin_reboot_func = -1;
+		} else
+			pwm_pin_reboot_func = val;
+
 		pdev->dev.platform_data = data;
 
 	}
@@ -286,7 +315,6 @@ static int pwm_backlight_remove(struct platform_device *pdev)
 	struct platform_pwm_backlight_data *data = pdev->dev.platform_data;
 	struct backlight_device *bl = platform_get_drvdata(pdev);
 	struct pwm_bl_data *pb = dev_get_drvdata(&bl->dev);
-
 	backlight_device_unregister(bl);
 	pwm_config(pb->pwm, 0, pb->period);
 	pwm_disable(pb->pwm);
@@ -298,6 +326,20 @@ static int pwm_backlight_remove(struct platform_device *pdev)
 		pdev->dev.platform_data = NULL;
 	}
 	return 0;
+}
+
+static void pwm_backlight_shutdown(struct platform_device *pdev)
+{
+	struct pin_config new_pin_config;
+
+	/*reset the pwm pin to GPIO function if defined in the kernel-dtb*/
+	if (pwm_pin >= 0 && pwm_pin_reboot_func >= 0) {
+		pr_info("reset the pwm pin to GPIO function\r\n");
+		new_pin_config.name = pwm_pin;
+		pinmux_get_pin_config(&new_pin_config);
+		new_pin_config.func = pwm_pin_reboot_func;
+		pinmux_set_pin_config(&new_pin_config);
+	}
 }
 
 #ifdef CONFIG_PM
@@ -339,6 +381,7 @@ static struct platform_driver pwm_backlight_driver = {
 	},
 	.probe		= pwm_backlight_probe,
 	.remove		= pwm_backlight_remove,
+	.shutdown	= pwm_backlight_shutdown,
 };
 
 module_platform_driver(pwm_backlight_driver);
