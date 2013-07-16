@@ -1243,6 +1243,12 @@ struct bcmpmu_acld_pdata acld_pdata = {
 	.otp_cc_trim = 0x1F,
 };
 
+
+struct bcmpmu59xxx_accy_pdata accy_pdata = {
+	.flags = ACCY_USE_PM_QOS,
+	.qos_pi_id = PI_MGR_PI_ID_ARM_SUB_SYSTEM,
+};
+
 #ifdef CONFIG_CHARGER_BCMPMU_SPA
 struct bcmpmu59xxx_spa_pb_pdata spa_pb_pdata = {
 	.chrgr_name = "bcmpmu_charger",
@@ -1322,6 +1328,8 @@ static struct mfd_cell pmu59xxx_devs[] = {
 	{
 		.name = "bcmpmu_accy",
 		.id = -1,
+		.platform_data = &accy_pdata,
+		.pdata_size = sizeof(accy_pdata),
 	},
 	{
 		.name = "bcmpmu_adc",
