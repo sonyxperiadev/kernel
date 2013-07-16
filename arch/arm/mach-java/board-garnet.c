@@ -621,6 +621,7 @@ static int hawaii_camera_power(struct device *dev, int on)
 		usleep_range(5000, 5100);
 		gpio_set_value(SENSOR_0_GPIO_RST, 1);
 #endif
+		msleep(30);
 
 		regulator_enable(d_3v0_mmc1_vcc);
 		usleep_range(1000, 1010);
@@ -632,7 +633,7 @@ static int hawaii_camera_power(struct device *dev, int on)
 #ifdef CONFIG_VIDEO_A3907
 		a3907_enable(1);
 #endif
-		msleep(30);
+
 	} else {
 #ifdef CONFIG_VIDEO_A3907
 		a3907_enable(0);
@@ -646,7 +647,10 @@ static int hawaii_camera_power(struct device *dev, int on)
 		gpio_set_value(SENSOR_0_GPIO_PWRDN, 1);
 #endif
 #ifdef CONFIG_SOC_CAMERA_OV5648
+		usleep_range(5000, 5100);
 		gpio_set_value(SENSOR_0_GPIO_PWRDN, 0);
+		usleep_range(1000, 1100);
+		gpio_set_value(SENSOR_0_GPIO_RST, 0);
 #endif
 		clk_disable(prediv_clock);
 		clk_disable(clock);
@@ -866,6 +870,8 @@ static int hawaii_camera_power_front(struct device *dev, int on)
 		regulator_disable(d_1v8_mmc1_vcc);
 		regulator_disable(d_gpsr_cam0_1v8);
 		regulator_disable(d_3v0_mmc1_vcc);
+		usleep_range(1000, 1010);
+		gpio_set_value(SENSOR_1_GPIO_PWRDN, 0);
 		if (pi_mgr_dfs_request_update
 		    (&unicam_dfs_node, PI_MGR_DFS_MIN_VALUE)) {
 			printk("Failed to set DVFS for unicam\n");
