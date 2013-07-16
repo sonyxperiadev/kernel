@@ -126,6 +126,7 @@ struct avs_info {
 	u32 year;
 	u32 month;
 	u32 irdrop;
+	u32 irdrop_si_type;
 	u32 vddfix_vlt_adj[DDR_FREQ_MAX];
 	u32 vddvar_spm;
 	u32 vddfix_spm;
@@ -680,12 +681,8 @@ err:
 
 static int param_get_irdrop_si_type(char *buffer, const struct kernel_param *kp)
 {
-	static int tries;
 	static u32 si_type;
-	if (tries == 0) {
-		si_type = avs_compute_type_from_irdrop(&avs_info, true);
-		tries++;
-	}
+	si_type = avs_compute_type_from_irdrop(&avs_info, true);
 	return snprintf(buffer, 10, "%s\n", silicon_type_names[si_type]);
 }
 
@@ -816,8 +813,7 @@ static int avs_find_silicon_type(struct avs_info *avs_info_ptr)
 			pdata->flags) && irdrop_osc_check_en) {
 		avs_dbg(AVS_LOG_INIT, "OTP bits are not programmed\n");
 		avs_dbg(AVS_LOG_INIT, "using IRDROP OSC to identify silicon type...\n");
-		avs_info_ptr->silicon_type =
-			avs_compute_type_from_irdrop(&avs_info, true);
+		avs_info_ptr->silicon_type = avs_info_ptr->irdrop_si_type;
 		avs_info_ptr->freq = A9_FREQ_UNKNOWN;
 
 		avs_dbg(AVS_LOG_INIT, "[IRDROP OSC] silicon type = %u\n",
@@ -871,7 +867,7 @@ static int avs_drv_probe(struct platform_device *pdev)
 	avs_info.pdata = pdata;
 	avs_read_otp(&avs_info);
 	avs_parse_otp_bits(&avs_info);
-
+	avs_info.irdrop_si_type = avs_compute_type_from_irdrop(&avs_info, true);
 	avs_find_silicon_type(&avs_info);
 	return 0;
 }
