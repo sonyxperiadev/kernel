@@ -75,6 +75,16 @@ series
 cscope.*
 ncscope.*
 
+# Gator Files
+tools/gator/daemon/*.d
+tools/gator/daemon/mxml/*.d
+tools/gator/daemon/libsensors/*.d
+tools/gator/daemon/configuration_xml.h
+tools/gator/daemon/escape
+tools/gator/daemon/events.xml
+tools/gator/daemon/events_xml.h
+tools/gator/daemon/gatord
+
 # gnu global files
 GPATH
 GRTAGS
