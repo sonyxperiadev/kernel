@@ -253,6 +253,13 @@ void ion_carveout_heap_destroy(struct ion_heap *);
 
 struct ion_heap *ion_chunk_heap_create(struct ion_platform_heap *);
 void ion_chunk_heap_destroy(struct ion_heap *);
+
+#if defined(CONFIG_MM_SECURE_DRIVER)
+struct ion_heap *ion_secure_heap_create(struct ion_platform_heap *);
+void ion_secure_heap_destroy(struct ion_heap *);
+#define ION_SECURE_ALLOCATE_FAIL -1
+#endif /* CONFIG_MM_SECURE_DRIVER */
+
 /**
  * kernel api to allocate/free from carveout -- used when carveout is
  * used to back an architecture specific custom heap

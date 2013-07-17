@@ -418,7 +418,8 @@ static struct ion_platform_heap *bcm_ion_parse_dt(struct device *dev)
 	ION_OF_READ(type);
 	ION_OF_READ(id);
 	if ((heap_data->type == ION_HEAP_TYPE_CARVEOUT) ||
-			(heap_data->type == ION_HEAP_TYPE_DMA)) {
+			(heap_data->type == ION_HEAP_TYPE_DMA) ||
+			(heap_data->type == ION_HEAP_TYPE_SECURE)) {
 		if (bcm_ion_get_heap_reserve_data(&heap_init_data,
 					heap_data->name)) {
 			pr_err("%16s: Memory was not reserved\n",
