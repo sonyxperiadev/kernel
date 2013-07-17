@@ -1211,8 +1211,14 @@ static struct bcmpmu_fg_pdata fg_pdata = {
 	.sleep_current_ua = 2000, /* floor during sleep */
 	.sleep_sample_rate = 32000,
 	.fg_factor = 820,
+#ifdef	CONFIG_WD_TAPPER
 	.poll_rate_low_batt = 5000,	/* every 5 seconds */
 	.poll_rate_crit_batt = 2000,	/* every 2 Seconds */
+#else
+	.poll_rate_low_batt = 20000, /* every 20 seconds */
+	.poll_rate_crit_batt = 5000,	/* every 5 Seconds */
+
+#endif /* CONFIG_WD_TAPPER */
 };
 
 

@@ -303,6 +303,7 @@ struct bcmpmu_fg_data {
 	struct wd_tapper_node wd_tap_node;
 #else
 	struct alarm alarm;
+	struct wake_lock fg_alarm_wake_lock;
 	int alarm_timeout;
 #endif /*CONFIG_WD_TAPPER*/
 	ktime_t last_sample_tm;
@@ -468,9 +469,11 @@ static void bcmpmu_fg_program_alarm(struct bcmpmu_fg_data *fg,
 static enum alarmtimer_restart bcmpmu_fg_alarm_callback(
 		struct alarm *alarm, ktime_t now)
 {
+	struct bcmpmu_fg_data *fg = to_bcmpmu_fg_data(alarm, alarm);
 	/*wanna do something here?*/
 	pr_fg(VERBOSE, "FG wakeup!\n");
-
+	wake_lock(&fg->fg_alarm_wake_lock);
+	queue_delayed_work(fg->fg_wq, &fg->fg_periodic_work, 0);
 	return ALARMTIMER_NORESTART;
 }
 #endif
@@ -2585,6 +2588,10 @@ static void bcmpmu_fg_periodic_work(struct work_struct *work)
 			bcmpmu_fg_update_psy(fg, false);
 		queue_delayed_work(fg->fg_wq, &fg->fg_periodic_work,
 				msecs_to_jiffies(FAKE_BATT_POLL_TIME_MS));
+#ifndef CONFIG_WD_TAPPER
+		if (wake_lock_active(&fg->fg_alarm_wake_lock))
+			wake_unlock(&fg->fg_alarm_wake_lock);
+#endif
 		return;
 	}
 
@@ -2653,6 +2660,10 @@ static void bcmpmu_fg_periodic_work(struct work_struct *work)
 			flags.eoc_chargr_en,
 			flags.calibration,
 			flags.fully_charged);
+#ifndef CONFIG_WD_TAPPER
+	if (wake_lock_active(&fg->fg_alarm_wake_lock))
+		wake_unlock(&fg->fg_alarm_wake_lock);
+#endif
 }
 
 static int bcmpmu_fg_get_capacity_level(struct bcmpmu_fg_data *fg)
@@ -3347,6 +3358,8 @@ static int __devinit bcmpmu_fg_probe(struct platform_device *pdev)
 #else
 	alarm_init(&fg->alarm, ALARM_REALTIME, bcmpmu_fg_alarm_callback);
 	fg->alarm_timeout = ALARM_DEFAULT_TIMEOUT;
+	wake_lock_init(&fg->fg_alarm_wake_lock,
+			WAKE_LOCK_SUSPEND, "fg_alarm_wakelock");
 #endif /*CONFIG_WD_TAPPER*/
 
 	fg->flags.batt_status = POWER_SUPPLY_STATUS_UNKNOWN;
