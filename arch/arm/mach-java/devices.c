@@ -225,6 +225,20 @@ struct platform_device ion_cma_device = {
 	.num_resources = 0,
 };
 #endif /* CONFIG_CMA */
+
+#if defined(CONFIG_MM_SECURE_DRIVER)
+
+struct platform_device ion_secure_device = {
+	.name = "ion-bcm",
+	.id = 4,
+	.dev = {
+		.platform_data = &ion_secure_data,
+	},
+	.num_resources = 0,
+};
+
+#endif /* CONFIG_MM_SECURE_DRIVER */
+
 #endif /* CONFIG_ION_BCM_NO_DT */
 
 struct platform_device hawaii_serial_device = {
@@ -1195,21 +1209,42 @@ static void __init pmem_reserve_memory(void)
 
 #ifdef CONFIG_ION
 
+enum {
+	ION_HEAP_RESERVE_CARVEOUT_E = 0,
+	ION_HEAP_RESERVE_CARVEOUT_EXTRA_E,
+#ifdef CONFIG_CMA
+	ION_HEAP_RESERVE_CMA_E,
+	ION_HEAP_RESERVE_CMA_EXTRA_E,
+#endif /* CONFIG_CMA */
+#if defined(CONFIG_MM_SECURE_DRIVER)
+	ION_HEAP_RESERVE_SECURE_E,
+	ION_HEAP_RESERVE_SECURE_EXTRA_E,
+#endif /* CONFIG_MM_SECURE_DRIVER */
+};
+
 static struct bcm_ion_heap_reserve_data ion_heap_reserve_datas[] = {
-	[0] = {
+	[ION_HEAP_RESERVE_CARVEOUT_E] = {
 		.name  = "ion-carveout",
 	},
-	[1] = {
+	[ION_HEAP_RESERVE_CARVEOUT_EXTRA_E] = {
 		.name  = "ion-carveout-extra",
 	},
 #ifdef CONFIG_CMA
-	[2] = {
+	[ION_HEAP_RESERVE_CMA_E] = {
 		.name  = "ion-cma",
 	},
-	[3] = {
+	[ION_HEAP_RESERVE_CMA_EXTRA_E] = {
 		.name  = "ion-cma-extra",
 	},
 #endif /* CONFIG_CMA */
+#if defined(CONFIG_MM_SECURE_DRIVER)
+	[ION_HEAP_RESERVE_SECURE_E] = {
+		.name  = "ion-secure",
+	},
+	[ION_HEAP_RESERVE_SECURE_EXTRA_E] = {
+		.name  = "ion-secure-extra",
+	},
+#endif /* CONFIG_MM_SECURE_DRIVER */
 };
 
 static int __init setup_ion_pages(char *str, int idx)
@@ -1230,29 +1265,47 @@ static int __init setup_ion_pages(char *str, int idx)
 
 static int __init setup_ion_carveout0_pages(char *str)
 {
-	return setup_ion_pages(str, 0);
+	return setup_ion_pages(str, ION_HEAP_RESERVE_CARVEOUT_E);
 }
 early_param("carveout0", setup_ion_carveout0_pages);
 
 static int __init setup_ion_carveout1_pages(char *str)
 {
-	return setup_ion_pages(str, 1);
+	return setup_ion_pages(str, ION_HEAP_RESERVE_CARVEOUT_EXTRA_E);
 }
 early_param("carveout1", setup_ion_carveout1_pages);
 
 #ifdef CONFIG_CMA
+
 static int __init setup_ion_cma0_pages(char *str)
 {
-	return setup_ion_pages(str, 2);
+	return setup_ion_pages(str, ION_HEAP_RESERVE_CMA_E);
 }
 early_param("cma0", setup_ion_cma0_pages);
 
 static int __init setup_ion_cma1_pages(char *str)
 {
-	return setup_ion_pages(str, 3);
+	return setup_ion_pages(str, ION_HEAP_RESERVE_CMA_EXTRA_E);
 }
 early_param("cma1", setup_ion_cma1_pages);
+
 #endif /* CONFIG_CMA */
+
+#if defined(CONFIG_MM_SECURE_DRIVER)
+
+static int __init setup_ion_secure0_pages(char *str)
+{
+	return setup_ion_pages(str, ION_HEAP_RESERVE_SECURE_E);
+}
+early_param("secure0", setup_ion_secure0_pages);
+
+static int __init setup_ion_secure1_pages(char *str)
+{
+	return setup_ion_pages(str, ION_HEAP_RESERVE_SECURE_EXTRA_E);
+}
+early_param("secure1", setup_ion_secure1_pages);
+
+#endif /* CONFIG_MM_SECURE_DRIVER */
 
 int bcm_ion_get_heap_reserve_data(struct bcm_ion_heap_reserve_data **data,
 		const char *name)
@@ -1317,6 +1370,25 @@ static int __init ion_scan_pdata(
 			return 1;
 	}
 #endif /* CONFIG_CMA */
+
+#if defined(CONFIG_MM_SECURE_DRIVER)
+	for (i = 0; i < ion_secure_data.nr; i++) {
+		heap = &ion_secure_data.heaps[i];
+		if (!reserve_data || !reserve_data->name ||
+				(strcmp(heap->name, reserve_data->name) != 0))
+			continue;
+
+		reserve_data->type = heap->type;
+		reserve_data->base = heap->base;
+		reserve_data->limit = heap->limit;
+		if (reserve_data->status != -1)
+			reserve_data->size = heap->size;
+		if (reserve_data->size == 0)
+			return 0;
+		else
+			return 1;
+	}
+#endif /* CONFIG_MM_SECURE_DRIVER */
 	return 0;
 }
 
@@ -1503,6 +1575,15 @@ static void __init ion_reserve_memory(void)
 				}
 			}
 #endif /* CONFIG_CMA */
+#if defined(CONFIG_MM_SECURE_DRIVER)
+			if (base && (reserve_data->type ==
+						ION_HEAP_TYPE_SECURE)) {
+				/* Carveout memory for ION */
+				memblock_remove(base, reserve_data->size);
+				reserve_data->base = base;
+				reserve_data->status = 0;
+			}
+#endif /* CONFIG_MM_SECURE_DRIVER */
 		}
 		if (!reserve_data->status)
 			pr_info("ion: Reserve %16s %3dMB (%08lx - %08lx) ***\n",

@@ -96,6 +96,10 @@ extern struct platform_device ion_carveout_device;
 extern struct ion_platform_data ion_cma_data;
 extern struct platform_device ion_cma_device;
 #endif /* CONFIG_CMA */
+#if defined(CONFIG_MM_SECURE_DRIVER)
+extern struct ion_platform_data ion_secure_data;
+extern struct platform_device ion_secure_device;
+#endif /* CONFIG_MM_SECURE_DRIVER */
 #endif /* CONFIG_ION_BCM_NO_DT */
 
 #ifdef CONFIG_MOBICORE_DRIVER
