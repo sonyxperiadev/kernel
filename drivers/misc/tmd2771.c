@@ -139,6 +139,37 @@ MODULE_PARM_DESC(debug,
 #define TAOS_SCALE_MILLILUX             2
 #define TAOS_FILTER_DEPTH               3
 #define CHIP_ID                         0x3d
+
+struct tmd2771x_reg {
+	const char *name;
+	u8 reg;
+} tmd2771x_regs[] = {
+	{"ENABLE", TAOS_TRITON_CNTRL},
+	{"ATIME", TAOS_TRITON_ALS_TIME},
+	{"PTIME", TAOS_TRITON_PRX_TIME},
+	{"WTIME", TAOS_TRITON_WAIT_TIME},
+	{"AILTL", TAOS_TRITON_ALS_MINTHRESHLO},
+	{"AILTH", TAOS_TRITON_ALS_MINTHRESHHI},
+	{"AIHTL", TAOS_TRITON_ALS_MAXTHRESHLO},
+	{"AIHTH", TAOS_TRITON_ALS_MAXTHRESHHI},
+	{"PILTL", TAOS_TRITON_PRX_MINTHRESHLO},
+	{"PILTH", TAOS_TRITON_PRX_MINTHRESHHI},
+	{"PIHTL", TAOS_TRITON_PRX_MAXTHRESHLO},
+	{"PIHTH", TAOS_TRITON_PRX_MAXTHRESHHI},
+	{"PERS", TAOS_TRITON_INTERRUPT},
+	{"CONFIG", TAOS_TRITON_PRX_CFG},
+	{"PPCOUNT", TAOS_TRITON_PRX_COUNT},
+	{"CONTROL", TAOS_TRITON_GAIN},
+	{"ID", TAOS_TRITON_CHIPID},
+	{"STATUS", TAOS_TRITON_STATUS},
+	{"C0DATA", TAOS_TRITON_ALS_CHAN0LO},
+	{"C0DATAH", TAOS_TRITON_ALS_CHAN0HI},
+	{"C1DATA", TAOS_TRITON_ALS_CHAN1LO},
+	{"C1DATAH", TAOS_TRITON_ALS_CHAN1HI},
+	{"PDATA", TAOS_TRITON_PRX_LO},
+	{"PDATAH", TAOS_TRITON_PRX_HI},
+};
+
 static const struct of_device_id tmd2771_of_match[] = {
 	{.compatible = "bcm,tmd2771",},
 	{},
@@ -909,53 +940,93 @@ static ssize_t taos_state_show(struct device *dev,
 		       PROX_STATE ? "no" : " ");
 }
 
+
+
 static ssize_t taos_reg_show(struct device *dev,
-			     struct device_attribute *attr, char *buf)
+			struct device_attribute *attr,
+			char *buf)
 {
-	u8 temp_buf[26] = { 0 };
-	int ret = 0;
-	int i = 0;
-	u8 reg = TAOS_TRITON_CNTRL;
-
-	pr_taos(INFO, "\n");
-	for (i = 0; i < 26; i++) {
-		ret = taos_i2c_read(taos_datap->client, reg + i, &temp_buf[i]);
-		if (ret < 0) {
-			pr_taos(ERROR, "read reg 0x%x error, err: %d\n",
-				reg + i, ret);
-
-			return ret;
-		}
-		pr_taos(INFO, "[0x%2x]0x%2x ", i, temp_buf[i]);
-		if (i % 5 == 4)
-			pr_taos(INFO, "\n");
+	unsigned i, n, reg_count;
+	u8 value;
+	reg_count = sizeof(tmd2771x_regs) / sizeof(tmd2771x_regs[0]);
+	for (i = 0, n = 0; i < reg_count; i++) {
+		taos_i2c_read(taos_datap->client, tmd2771x_regs[i].reg, &value);
+		n += scnprintf(buf + n, PAGE_SIZE - n,
+			"%-20s = 0x%02X\n",
+			tmd2771x_regs[i].name,
+			value);
 	}
-	pr_taos(INFO, "\n");
-
-	return 0;
+	return n;
 }
 
-/*eg: echo reg reg_val > reg_debug */
+
 static ssize_t taos_reg_store(struct device *dev,
-			      struct device_attribute *attr,
-			      const char *buf, size_t count)
+				struct device_attribute *attr,
+				const char *buf, size_t count)
 {
-	int ret = 0;
-	int reg, reg_val;
-
-	sscanf(buf, "%x%x", &reg, &reg_val);
-	pr_taos(INFO, "reg: 0x%x, reg_val:0x%x\n", reg, reg_val);
-
-	ret = i2c_smbus_write_byte_data(taos_datap->client,
-					reg | TAOS_TRITON_CMD_REG, reg_val);
-	if (ret < 0) {
-		pr_taos(ERROR, "write reg 0x%x error,err: %d\n", reg, ret);
-
-		return ret;
+	unsigned i, reg_count, value;
+	int ret;
+	u8 prox_lo;
+	u8 prox_hi;
+	char name[30];
+	prox_lo = 0;
+	prox_hi = 0;
+	if (count >= 30)
+		return -EFAULT;
+	if (sscanf(buf, "%30s %x", name, &value) != 2) {
+		pr_err("input invalid\n");
+		return -EFAULT;
 	}
-
-	return count;
+	reg_count = sizeof(tmd2771x_regs) / sizeof(tmd2771x_regs[0]);
+	for (i = 0; i < reg_count; i++) {
+		if (!strcmp(name, tmd2771x_regs[i].name)) {
+			switch (tmd2771x_regs[i].reg) {
+			case TAOS_TRITON_PRX_MINTHRESHLO:
+				taos_i2c_read(taos_datap->client,
+					TAOS_TRITON_PRX_MINTHRESHHI,
+					&prox_hi);
+				taos_cfgp->prox_threshold_lo = value
+					+ (prox_hi << 8);
+				break;
+			case TAOS_TRITON_PRX_MINTHRESHHI:
+				taos_i2c_read(taos_datap->client,
+					TAOS_TRITON_PRX_MINTHRESHLO, &prox_lo);
+				taos_cfgp->prox_threshold_lo = (value << 8)
+					+ prox_lo;
+				break;
+			case TAOS_TRITON_PRX_MAXTHRESHLO:
+				taos_i2c_read(taos_datap->client,
+					TAOS_TRITON_PRX_MAXTHRESHHI,
+					&prox_hi);
+				taos_cfgp->prox_threshold_hi = value
+					+ (prox_hi << 8);
+				break;
+			case TAOS_TRITON_PRX_MAXTHRESHHI:
+				taos_i2c_read(taos_datap->client,
+					TAOS_TRITON_PRX_MAXTHRESHLO,
+					&prox_lo);
+				taos_cfgp->prox_threshold_hi = (value << 8)
+					+ prox_lo;
+				break;
+			default:
+				break;
+			}
+			ret = i2c_smbus_write_byte_data(taos_datap->client,
+					tmd2771x_regs[i].reg
+					| TAOS_TRITON_CMD_REG, value);
+			if (ret) {
+				pr_taos(ERROR,
+					"Failed to write register %s\n",
+					name);
+				return -EFAULT;
+			}
+			return count;
+		}
+	}
+	pr_taos(INFO, "no such register %s\n", name);
+	return -EFAULT;
 }
+
 
 static DEVICE_ATTR(taos_power, 0444, taos_power_show, NULL);
 static DEVICE_ATTR(taos_state, 0444, taos_state_show, NULL);
@@ -1475,13 +1546,14 @@ static int taos_sensors_als_on(void)
 static long taos_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 {
 	struct taos_data *taos_datap;
+	u8 itime;
 	int prox_sum = 0, prox_mean = 0, prox_max = 0;
 	int lux_val = 0, ret = 0, i = 0, tmp = 0;
 	u8 reg_val = 0, reg_cntrl = 0;
 	int ret_check = 0;
 	int ret_m = 0;
 	u8 reg_val_temp = 0;
-	int itime = 0;
+	itime = 0;
 	taos_datap = container_of(file->f_dentry->d_inode->i_cdev,
 				  struct taos_data, cdev);
 	switch (cmd) {
