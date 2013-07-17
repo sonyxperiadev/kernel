@@ -145,7 +145,9 @@ typedef struct {
 **/
 enum SYS_APSysCmd_t {
 	AP_SYS_CMD_RFLDO,	/* Set RF LDO */
-	AP_SYS_CMD_SIMLDO,	/* Set SIM LDO */
+	AP_SYS_CMD_SIMLDO,	/* Set SIM LDO's */
+	AP_SYS_CMD_SIM1LDO,	/* Set SIM1 LDO */
+	AP_SYS_CMD_SIM2LDO,	/* Set SIM2 LDO */
 	AP_SYS_CMD_TOTAL	/* total number of AP system commands */
 };
 

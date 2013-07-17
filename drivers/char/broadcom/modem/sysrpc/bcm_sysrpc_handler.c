@@ -252,31 +252,27 @@ Result_t Handle_CAPI2_SYS_SoftResetSystem(RPC_Msg_t *pReqMsg, UInt32 param)
 }
 
 Result_t SetLDORegulator(enum SYS_LDO_Cmd_Type_t cmdType,
-	const char *name, int *state)
+	const char *name, unsigned int mode)
 {
 	Result_t result = RESULT_OK;
 	struct regulator *reg_handle;
 
-	printk(KERN_INFO "Excuting LDO %s cmd type=%d, state=%d\n",
-		name, (int)cmdType, (*state));
+	printk(KERN_INFO "Excuting LDO %s cmd type=%d\n",
+		name, (int)cmdType);
 	reg_handle = regulator_get(NULL, name);
 	if (reg_handle != NULL) {
-		if ((cmdType == SYS_LDO_OFF) &&
-				(*state)) {
+		if (cmdType == SYS_LDO_OFF) {
 			printk(KERN_INFO "Turn off LDO\n");
 			regulator_disable(reg_handle);
-			*state = 0;
-		} else if ((cmdType == SYS_LDO_ON) &&
-				!(*state)) {
+		} else if (cmdType == SYS_LDO_ON) {
 			printk(KERN_INFO "Turn on LDO\n");
 			regulator_enable(reg_handle);
-			/*Set LDO mode to LPM in DSM*/
+			/*Set LDO mode to LPM */
 			printk(KERN_INFO "Set mode LDO\n");
 			regulator_set_mode(reg_handle,
-					REGULATOR_MODE_IDLE);
-			*state = 1;
+				mode);
 		} else {
-			printk(KERN_INFO "LDO already in correct state\n");
+			printk(KERN_INFO "Invalid command type - not updated\n");
 		}
 		regulator_put(reg_handle);
 	} else {
@@ -292,23 +288,41 @@ Result_t Handle_SYS_APSystemCmd(RPC_Msg_t *pReqMsg, UInt32 cmd,
 {
 	Result_t result = RESULT_OK;
 	SYS_ReqRep_t data;
-	static int rfldo_enabled, simldo_enabled;
 
 	memset(&data, 0, sizeof(SYS_ReqRep_t));
 
 	switch (cmd) {
 	case AP_SYS_CMD_RFLDO:
-		printk(KERN_INFO "Excuting SYS_AP_CMD_RFLDO cmdType=%d, state=%d\n",
-			(int)param1, rfldo_enabled);
+		printk(KERN_INFO "Excuting SYS_AP_CMD_RFLDO cmdType=%d\n",
+			(int)param1);
 		result = SetLDORegulator((enum SYS_LDO_Cmd_Type_t)param1,
-				"rf", (int *)&rfldo_enabled);
+				"rf", REGULATOR_MODE_STANDBY);
 		break;
 
 	case AP_SYS_CMD_SIMLDO:
-		printk(KERN_INFO "Excuting SYS_AP_CMD_SIMLDO cmdType=%d, state=%d\n",
-			(int)param1, simldo_enabled);
+		printk(KERN_INFO "Excuting SYS_AP_CMD_SIMLDO cmdType=%d\n",
+			(int)param1);
+		if ((SetLDORegulator((enum SYS_LDO_Cmd_Type_t)param1,
+			"sim_vcc", REGULATOR_MODE_IDLE) == RESULT_ERROR) ||
+			(SetLDORegulator((enum SYS_LDO_Cmd_Type_t)param1,
+				"sim2_vcc", REGULATOR_MODE_IDLE) ==
+					RESULT_ERROR)) {
+			result = RESULT_ERROR;
+		}
+		break;
+
+	case AP_SYS_CMD_SIM1LDO:
+		printk(KERN_INFO "Excuting SYS_AP_CMD_SIMLDO cmdType=%d\n",
+			(int)param1);
 		result = SetLDORegulator((enum SYS_LDO_Cmd_Type_t)param1,
-				"sim_vcc", (int *)&simldo_enabled);
+			"sim_vcc", REGULATOR_MODE_IDLE);
+		break;
+
+	case AP_SYS_CMD_SIM2LDO:
+		printk(KERN_INFO "Excuting SYS_AP_CMD_SIMLDO cmdType=%d\n",
+			(int)param1);
+		result = SetLDORegulator((enum SYS_LDO_Cmd_Type_t)param1,
+			"sim2_vcc", REGULATOR_MODE_IDLE);
 		break;
 
 	default:
