@@ -439,6 +439,35 @@ struct ion_platform_data ion_cma_data = {
 	},
 };
 #endif /* CONFIG_CMA */
+#if defined(CONFIG_MM_SECURE_DRIVER)
+struct ion_platform_data ion_secure_data = {
+	.nr = 2,
+#ifdef CONFIG_IOMMU_API
+	.pdev_iommu = &iommu_mm_device,
+#endif
+#ifdef CONFIG_BCM_IOVMM
+	.pdev_iovmm = &iovmm_mm_device,
+#endif
+	.heaps = {
+		[0] = {
+			.id = 13,
+			.type  = ION_HEAP_TYPE_SECURE,
+			.name  = "ion-secure",
+			.base  = 0,
+			.limit = 0,
+			.size  = (16 * SZ_1M),
+		},
+		[1] = {
+			.id = 14,
+			.type  = ION_HEAP_TYPE_SECURE,
+			.name  = "ion-secure-extra",
+			.base  = 0,
+			.limit = 0,
+			.size  = (0 * SZ_1M),
+		},
+	},
+};
+#endif /* CONFIG_MM_SECURE_DRIVER */
 #endif /* CONFIG_ION_BCM_NO_DT */
 
 #ifdef CONFIG_VIDEO_UNICAM_CAMERA
@@ -2273,6 +2302,7 @@ struct bcm_iommu_pdata iommu_mm_pdata = {
 	.iova_begin  = 0x80000000,
 	.iova_size   = 0x80000000,
 	.errbuf_size = 0x1000,
+	.skip_enable = 1,
 };
 #endif
 #ifdef CONFIG_BCM_IOVMM
@@ -2285,7 +2315,7 @@ struct bcm_iovmm_pdata iovmm_mm_pdata = {
 struct bcm_iovmm_pdata iovmm_mm_256mb_pdata = {
 	.name = "iovmm-mm-256mb",
 	.base = 0xf0000000,
-	.size = 0x0ff00000,
+	.size = 0x0bf00000,
 	.order = 0,
 };
 #endif
@@ -2353,12 +2383,14 @@ static void __init hawaii_add_devices(void)
 	platform_device_register(&ion_system_device);
 	platform_device_register(&ion_system_extra_device);
 #endif
-
 	platform_device_register(&ion_carveout_device);
 #ifdef CONFIG_CMA
 	platform_device_register(&ion_cma_device);
 #endif
-#endif
+#if defined(CONFIG_MM_SECURE_DRIVER)
+	platform_device_register(&ion_secure_device);
+#endif /* CONFIG_MM_SECURE_DRIVER */
+#endif /* CONFIG_ION_BCM_NO_DT */
 
 #ifdef CONFIG_KEYBOARD_BCM
 	hawaii_kp_device.dev.platform_data = &hawaii_keypad_data;
