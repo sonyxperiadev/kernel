@@ -366,7 +366,9 @@ static long bcm_ion_custom_ioctl(struct ion_client *client,
 		} \
 	} while (0)
 
+#ifdef CONFIG_CMA
 static u64 ion_dmamask = DMA_BIT_MASK(32);
+#endif
 
 static void bcm_ion_free_data(struct device *dev)
 {
@@ -426,6 +428,7 @@ static struct ion_platform_heap *bcm_ion_parse_dt(struct device *dev)
 					heap_data->name);
 			goto of_err;
 		}
+#ifdef CONFIG_CMA
 		if (heap_data->type == ION_HEAP_TYPE_DMA) {
 			struct cma *cma;
 			dev->dma_mask = &ion_dmamask;
@@ -434,6 +437,7 @@ static struct ion_platform_heap *bcm_ion_parse_dt(struct device *dev)
 			dev_set_cma_area(dev, cma);
 			heap_data->priv = dev;
 		}
+#endif
 		heap_data->base = heap_init_data->base;
 		heap_data->size = heap_init_data->size;
 		ION_OF_READ_OPT(lmk_enable);
@@ -529,6 +533,7 @@ static struct ion_platform_heap *bcm_ion_parse_pdata(struct device *dev)
 				heap_data->id = ION_INVALID_HEAP_ID;
 				continue;
 			}
+#ifdef CONFIG_CMA
 			if (heap_data->type == ION_HEAP_TYPE_DMA) {
 				struct cma *cma;
 				cma = dev_get_cma_area(
@@ -536,6 +541,7 @@ static struct ion_platform_heap *bcm_ion_parse_pdata(struct device *dev)
 				dev_set_cma_area(dev, cma);
 				heap_data->priv = dev;
 			}
+#endif
 			heap_data->base = heap_init_data->base;
 			heap_data->size = heap_init_data->size;
 		}

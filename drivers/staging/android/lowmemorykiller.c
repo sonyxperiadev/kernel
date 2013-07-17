@@ -95,7 +95,7 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 	int inactive_anon;
 	int active_file;
 	int inactive_file;
-	int contig_pages;
+	int contig_pages = INT_MAX;
 	int tasksize;
 	int i;
 	int min_score_adj = OOM_SCORE_ADJ_MAX + 1;

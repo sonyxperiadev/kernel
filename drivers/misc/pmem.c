@@ -359,16 +359,9 @@ out:
 	down_write(&data->sem);
 	return answer;
 }
-
-#else
-
-static bool should_retry_allocation(int id, struct pmem_data *data)
-{
-	return false;
-}
-
 #endif /* CONFIG_ANDROID_PMEM_LOW_MEMORY_KILLER */
 
+#ifdef CONFIG_CMA
 /* Must have down_write(&data->sem) locked */
 static int pmem_cma_allocate(int id, unsigned long len, struct pmem_data *data)
 {
@@ -421,6 +414,7 @@ static int pmem_cma_allocate(int id, unsigned long len, struct pmem_data *data)
 out:
 	return ret;
 }
+#endif
 
 /* must be called with down_write(data->sem) */
 static int pmem_allocate(struct file *file, int id, struct pmem_data *data,
@@ -475,7 +469,7 @@ static int pmem_allocate(struct file *file, int id, struct pmem_data *data,
 		}
 		/* If we failed, fallback to CMA */
 	}
-
+#ifdef CONFIG_CMA
 	ret = pmem_cma_allocate(id, len, data);
 	if (ret == -ENOMEM) {
 		printk(KERN_ERR"%s:%d pmem: Alloc failed (%ldkB, %ld pages)\n",
@@ -495,6 +489,7 @@ static int pmem_allocate(struct file *file, int id, struct pmem_data *data,
 				 pmem[id].cma.total_alloc,
 				 pmem[id].cma.peak_alloc);
 	}
+#endif
 
 out_unlock:
 	up_write(&data->sem);
@@ -646,6 +641,7 @@ end:
 	up_read(&data->sem);
 }
 
+#ifdef CONFIG_CMA
 static int pmem_cma_free(int id, struct pmem_data *data)
 {
 	int ret;
@@ -683,6 +679,7 @@ static int pmem_cma_free(int id, struct pmem_data *data)
 
 	return 0;
 }
+#endif
 
 /* must have down_write on data->sem */
 static int pmem_free(struct file *file, int id, struct pmem_data *data)
@@ -722,9 +719,11 @@ static int pmem_free(struct file *file, int id, struct pmem_data *data)
 		gen_pool_free(pmem[id].pool, addr, data->size);
 		data->flags &= ~PMEM_FLAGS_CARVEOUT;
 		break;
+#ifdef CONFIG_CMA
 	case PMEM_FLAGS_CMA:
 		ret = pmem_cma_free(id, data);
 		break;
+#endif
 	default:
 		printk(KERN_ALERT "pmem: invalid allocation flags\n");
 		ret = -EINVAL;
@@ -739,6 +738,7 @@ out:
 	return ret;
 }
 
+#ifdef CONFIG_CMA
 /* pmem lowmemory killer */
 static void pmem_shrink(struct work_struct *work)
 {
@@ -840,6 +840,7 @@ out:
 	p_info->force_kill = 0;
 	wake_up_all(&p_info->deatheaters);
 }
+#endif
 
 static int pmem_open(struct inode *inode, struct file *file)
 {
@@ -1241,6 +1242,7 @@ static int pmem_setup(struct platform_device *pdev,
 
 	id_count++;
 
+#ifdef CONFIG_CMA
 	if (pdata->cmasize) {
 		get_dev_cma_info(&pdev->dev, &pmem[id].cma);
 		BUG_ON(pmem[id].cma.nr_pages != (pdata->cmasize >> PAGE_SHIFT));
@@ -1254,7 +1256,7 @@ static int pmem_setup(struct platform_device *pdev,
 	} else {
 		memset(&pmem[id].cma, 0, sizeof(pmem[id].cma));
 	}
-
+#endif
 	if (pdata->carveout_base && pdata->carveout_size) {
 		BUG_ON(pdata->carveout_size & (PAGE_SIZE - 1));
 		pmem[id].pool = gen_pool_create(12, -1);

@@ -1198,43 +1198,52 @@ static unsigned long isolate_lru_pages(unsigned long nr_to_scan,
 	unsigned long nr_lumpy_taken = 0;
 	unsigned long nr_lumpy_dirty = 0;
 	unsigned long nr_lumpy_failed = 0;
-	unsigned long nr_skipped = 0;
 	unsigned long scan;
-	int lru = LRU_BASE;
+#ifdef CONFIG_CMA
+	unsigned long nr_skipped = 0;
 	bool isolate_cma = ((mode & ISOLATE_CMA) == ISOLATE_CMA);
 	struct page *page;
 	struct list_head *prev = NULL;
-
 	mode &= ~(ISOLATE_CMA);
+#endif
+	int lru = LRU_BASE;
 	lruvec = mem_cgroup_zone_lruvec(mz->zone, mz->mem_cgroup);
 	if (active)
 		lru += LRU_ACTIVE;
 	if (file)
 		lru += LRU_FILE;
 	src = &lruvec->lists[lru];
-
+#ifdef CONFIG_CMA
 	page = lru_to_page(src);
+#endif
 
+#ifdef CONFIG_CMA
 	for (scan = 0; scan < (nr_to_scan + nr_skipped) &&
 			!list_empty(src) &&
 			prev != src;
 			scan++, page = list_entry(prev, struct page, lru)) {
-
+#else
+	for (scan = 0; scan < nr_to_scan && !list_empty(src); scan++) {
+		struct page *page;
+#endif
 		unsigned long pfn;
 		unsigned long end_pfn;
 		unsigned long page_pfn;
 		int zone_id;
-
+#ifdef CONFIG_CMA
 		prev = page->lru.prev;
+#else
+		page = lru_to_page(src);
+#endif
 		prefetchw_prev_lru_page(page, src, flags);
 		VM_BUG_ON(!PageLRU(page));
-
+#ifdef CONFIG_CMA
 		if (!isolate_cma && PageCma(page)) {
 			nr_skipped++;
 			if (nr_skipped > nr_to_scan)
 				continue;
 		}
-
+#endif
 		switch (__isolate_lru_page(page, mode, file)) {
 		case 0:
 			mem_cgroup_lru_del(page);
@@ -1296,10 +1305,10 @@ static unsigned long isolate_lru_pages(unsigned long nr_to_scan,
 			if (__isolate_lru_page(cursor_page, mode, file) == 0) {
 
 				unsigned int isolated_pages;
-
+#ifdef CONFIG_CMA
 				if (prev == &cursor_page->lru)
 					prev = cursor_page->lru.prev;
-
+#endif
 				mem_cgroup_lru_del(cursor_page);
 				list_move(&cursor_page->lru, dst);
 				isolated_pages = hpage_nr_pages(cursor_page);
@@ -1328,8 +1337,6 @@ static unsigned long isolate_lru_pages(unsigned long nr_to_scan,
 				break;
 			}
 		}
-
-
 
 		/* If we break out of the loop above, lumpy reclaim failed */
 		if (pfn < end_pfn)
@@ -1477,7 +1484,11 @@ update_isolated_counts(struct mem_cgroup_zone *mz,
 		       unsigned long *nr_file)
 {
 	struct zone *zone = mz->zone;
+#ifdef CONFIG_CMA
 	unsigned int count[NR_LRU_LISTS_CMA] = { 0, };
+#else
+	unsigned int count[NR_LRU_LISTS] = { 0, };
+#endif
 	unsigned long nr_active = 0;
 	struct page *page;
 	int lru;
@@ -1494,8 +1505,10 @@ update_isolated_counts(struct mem_cgroup_zone *mz,
 			nr_active += numpages;
 		}
 		count[lru] += numpages;
+#ifdef CONFIG_CMA
 		if (PageCma(page))
 			count[LRU_CMA_BASE + lru] += numpages;
+#endif
 	}
 
 	preempt_disable();
@@ -1509,6 +1522,7 @@ update_isolated_counts(struct mem_cgroup_zone *mz,
 			      -count[LRU_ACTIVE_ANON]);
 	__mod_zone_page_state(zone, NR_INACTIVE_ANON,
 			      -count[LRU_INACTIVE_ANON]);
+#ifdef CONFIG_CMA
 	if ((int) NR_LRU_LISTS_CMA != (int) NR_LRU_LISTS) {
 		__mod_zone_page_state(zone, NR_CMA_ACTIVE_FILE,
 			      -count[LRU_CMA_ACTIVE_FILE]);
@@ -1519,6 +1533,7 @@ update_isolated_counts(struct mem_cgroup_zone *mz,
 		__mod_zone_page_state(zone, NR_CMA_INACTIVE_ANON,
 			      -count[LRU_CMA_INACTIVE_ANON]);
 	}
+#endif
 
 	*nr_anon = count[LRU_ACTIVE_ANON] + count[LRU_INACTIVE_ANON];
 	*nr_file = count[LRU_ACTIVE_FILE] + count[LRU_INACTIVE_FILE];
@@ -1600,9 +1615,11 @@ shrink_inactive_list(unsigned long nr_to_scan, struct mem_cgroup_zone *mz,
 	set_reclaim_mode(priority, sc, false);
 	if (sc->reclaim_mode & RECLAIM_MODE_LUMPYRECLAIM)
 		isolate_mode |= ISOLATE_ACTIVE;
-	
+
+#ifdef CONFIG_CMA
 	if (sc->gfp_mask & __GFP_MOVABLE)
 		isolate_mode |= ISOLATE_CMA;
+#endif
 
 	lru_add_drain();
 
@@ -1779,11 +1796,6 @@ static unsigned long count_cma_pages(struct list_head *head)
 
 	return nr_cma;
 }
-#else
-static unsigned long count_cma_pages(struct list_head *head)
-{
-	return 0;
-}
 #endif
 
 static void shrink_active_list(unsigned long nr_to_scan,
@@ -1800,12 +1812,16 @@ static void shrink_active_list(unsigned long nr_to_scan,
 	struct page *page;
 	struct zone_reclaim_stat *reclaim_stat = get_reclaim_stat(mz);
 	unsigned long nr_rotated = 0;
+#ifdef CONFIG_CMA
 	unsigned long nr_cma_taken = 0;
+#endif
 	isolate_mode_t isolate_mode = ISOLATE_ACTIVE;
 	struct zone *zone = mz->zone;
 
+#ifdef CONFIG_CMA
 	if (sc->gfp_mask & __GFP_MOVABLE)
 		isolate_mode |= ISOLATE_CMA;
+#endif
 
 	lru_add_drain();
 
@@ -1826,14 +1842,19 @@ static void shrink_active_list(unsigned long nr_to_scan,
 	reclaim_stat->recent_scanned[file] += nr_taken;
 
 	__count_zone_vm_events(PGREFILL, zone, nr_scanned);
+#ifdef CONFIG_CMA
 	nr_cma_taken = count_cma_pages(&l_hold);
-
+#endif
 	if (file) {
 		__mod_zone_page_state(zone, NR_ACTIVE_FILE, -nr_taken);
+#ifdef CONFIG_CMA
 		__mod_zone_page_state(zone, NR_CMA_ACTIVE_FILE, -nr_cma_taken);
+#endif
 	} else {
 		__mod_zone_page_state(zone, NR_ACTIVE_ANON, -nr_taken);
+#ifdef CONFIG_CMA
 		__mod_zone_page_state(zone, NR_CMA_ACTIVE_ANON, -nr_cma_taken);
+#endif
 	}
 	__mod_zone_page_state(zone, NR_ISOLATED_ANON + file, nr_taken);
 	spin_unlock_irq(&zone->lru_lock);
@@ -2117,10 +2138,10 @@ static void get_scan_count(struct mem_cgroup_zone *mz, struct scan_control *sc,
 
 	if (global_reclaim(sc)) {
 		free  = zone_page_state(mz->zone, NR_FREE_PAGES);
-	
+#ifdef CONFIG_CMA
 	if (!(sc->gfp_mask & __GFP_MOVABLE))
 		free -= zone_page_state(mz->zone, NR_FREE_CMA_PAGES);
-
+#endif
 		/* If we have very few page cache pages,
 		   force-scan anon pages. */
 		if (unlikely(file + free <= high_wmark_pages(mz->zone))) {

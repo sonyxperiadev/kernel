@@ -691,14 +691,18 @@ static inline void __free_one_page(struct page *page,
 			clear_page_guard_flag(buddy);
 			set_page_private(page, 0);
 			__mod_zone_page_state(zone, NR_FREE_PAGES, 1 << order);
+#ifdef CONFIG_CMA
 			if (is_migrate_cma(migratetype))
 				__mod_zone_page_state(zone, NR_FREE_CMA_PAGES,
 						1 << order);
+#endif
 		} else {
 			list_del(&buddy->lru);
 			zone->free_area[order].nr_free--;
+#ifdef CONFIG_CMA
 			if (PageCma(page))
 				zone->nr_cma_free[order]--;
+#endif
 			rmv_page_order(buddy);
 		}
 		combined_idx = buddy_idx & page_idx;
@@ -731,9 +735,10 @@ static inline void __free_one_page(struct page *page,
 
 	list_add(&page->lru, &zone->free_area[order].free_list[migratetype]);
 out:
+#ifdef CONFIG_CMA
 	if (PageCma(page))
 		zone->nr_cma_free[order]++;
-
+#endif
 	zone->free_area[order].nr_free++;
 }
 
@@ -830,10 +835,12 @@ static void free_pcppages_bulk(struct zone *zone, int count,
 			__free_one_page(page, zone, 0, page_private(page));
 			if (likely(mt != MIGRATE_ISOLATE)) {
 				__mod_zone_page_state(zone, NR_FREE_PAGES, 1);
+#ifdef CONFIG_CMA
 				if (PageCma(page)) {
 					__mod_zone_page_state(zone,
 							NR_FREE_CMA_PAGES, 1);
 				}
+#endif
 			}
 			trace_mm_page_pcpu_drain(page, 0, page_private(page));
 		} while (--to_free && --batch_free && !list_empty(list));
@@ -851,11 +858,13 @@ static void free_one_page(struct zone *zone, struct page *page, int order,
 	__free_one_page(page, zone, order, migratetype);
 	if (unlikely(migratetype != MIGRATE_ISOLATE)) {
 		__mod_zone_page_state(zone, NR_FREE_PAGES, 1 << order);
+#ifdef CONFIG_CMA
 		if (PageCma(page)) {
 			__mod_zone_page_state(zone, NR_FREE_CMA_PAGES,
 						1 << order);
 			WARN_ON(verify_cma(0));
 		}
+#endif
 	}
 	spin_unlock(&zone->lock);
 }
@@ -987,17 +996,21 @@ static inline void expand(struct zone *zone, struct page *page,
 			/* Guard pages are not available for any usage */
 			__mod_zone_page_state(zone, NR_FREE_PAGES,
 					-(1 << high));
+#ifdef CONFIG_CMA
 			if (is_migrate_cma(migratetype))
 				__mod_zone_page_state(zone, NR_FREE_CMA_PAGES,
 						-(1 << high));
+#endif
 			continue;
 		}
 #endif
 		list_add(&page[size].lru, &area->free_list[migratetype]);
 		area->nr_free++;
 		set_page_order(&page[size], high);
+#ifdef CONFIG_CMA
 		if (PageCma(page))
 			zone->nr_cma_free[high]++;
+#endif
 	}
 }
 
@@ -1065,8 +1078,10 @@ struct page *__rmqueue_smallest(struct zone *zone, unsigned int order,
 		list_del(&page->lru);
 		rmv_page_order(page);
 		area->nr_free--;
+#ifdef CONFIG_CMA
 		if (PageCma(page))
 			zone->nr_cma_free[current_order]--;
+#endif
 		expand(zone, page, order, current_order, area, migratetype);
 		return page;
 	}
@@ -1212,10 +1227,10 @@ __rmqueue_fallback(struct zone *zone, int order, int start_migratetype)
 			page = list_entry(area->free_list[migratetype].next,
 					struct page, lru);
 			area->nr_free--;
-
+#ifdef CONFIG_CMA
 			if (PageCma(page))
 				zone->nr_cma_free[real_order]--;
-
+#endif
 			/*
 			 * If breaking a large block of pages, move all free
 			 * pages to the preferred allocation list. If falling
@@ -1335,9 +1350,11 @@ static int rmqueue_bulk(struct zone *zone, unsigned int order,
 #endif
 		set_page_private(page, mt);
 		list = &page->lru;
+#ifdef CONFIG_CMA
 		if (is_migrate_cma(mt))
 			__mod_zone_page_state(zone, NR_FREE_CMA_PAGES,
 					-(1 << order));
+#endif
 	}
 	__mod_zone_page_state(zone, NR_FREE_PAGES, -(i << order));
 	spin_unlock(&zone->lock);
@@ -1613,18 +1630,21 @@ int split_free_page(struct page *page)
 	/* Remove page from free list */
 	list_del(&page->lru);
 	zone->free_area[order].nr_free--;
+#ifdef CONFIG_CMA
 	if (PageCma(page))
 		zone->nr_cma_free[order]--;
+#endif
 	rmv_page_order(page);
 
 	if (unlikely(mt != MIGRATE_ISOLATE)) {
 		__mod_zone_page_state(zone, NR_FREE_PAGES, -(1UL << order));
-
+#ifdef CONFIG_CMA
 		if (PageCma(page)) {
 			__mod_zone_page_state(zone, NR_FREE_CMA_PAGES,
 							-(1UL << order));
 			WARN_ON(verify_cma(0));
 		}
+#endif
 	}
 
 	/* Split into individual pages */
@@ -1701,9 +1721,11 @@ again:
 		if (!page)
 			goto failed;
 		__mod_zone_page_state(zone, NR_FREE_PAGES, -(1 << order));
+#ifdef CONFIG_CMA
 		if (PageCma(page))
 			__mod_zone_page_state(zone, NR_FREE_CMA_PAGES,
 					-(1 << order));
+#endif
 	}
 
 	__count_zone_vm_events(PGALLOC, zone, 1 << order);
@@ -5361,11 +5383,11 @@ static void __setup_per_zone_wmarks(void)
 
 		zone->watermark[WMARK_LOW]  = min_wmark_pages(zone) + (tmp >> 2);
 		zone->watermark[WMARK_HIGH] = min_wmark_pages(zone) + (tmp >> 1);
-
+#ifdef CONFIG_CMA
 		zone->watermark[WMARK_MIN] += cma_wmark_pages(zone);
 		zone->watermark[WMARK_LOW] += cma_wmark_pages(zone);
 		zone->watermark[WMARK_HIGH] += cma_wmark_pages(zone);
-
+#endif
 		setup_zone_migrate_reserve(zone);
 		spin_unlock_irqrestore(&zone->lock, flags);
 	}
@@ -5879,15 +5901,18 @@ int set_migratetype_isolate(struct page *page)
 out:
 	if (!ret) {
 		unsigned long nr_pages;
+#ifdef CONFIG_CMA
 		int migratetype = get_pageblock_migratetype(page);
-
+#endif
 		set_pageblock_migratetype(page, MIGRATE_ISOLATE);
 		nr_pages = move_freepages_block(zone, page, MIGRATE_ISOLATE);
 
 		__mod_zone_page_state(zone, NR_FREE_PAGES, -nr_pages);
+#ifdef CONFIG_CMA
 		if (is_migrate_cma(migratetype))
 			__mod_zone_page_state(zone, NR_FREE_CMA_PAGES,
 					-nr_pages);
+#endif
 	}
 
 	spin_unlock_irqrestore(&zone->lock, flags);
@@ -5907,9 +5932,11 @@ void unset_migratetype_isolate(struct page *page, unsigned migratetype)
 	set_pageblock_migratetype(page, migratetype);
 	nr_pages = move_freepages_block(zone, page, migratetype);
 	__mod_zone_page_state(zone, NR_FREE_PAGES, nr_pages);
+#ifdef CONFIG_CMA
 	if (is_migrate_cma(migratetype))
 		__mod_zone_page_state(zone, NR_FREE_CMA_PAGES,
 				nr_pages);
+#endif
 out:
 	spin_unlock_irqrestore(&zone->lock, flags);
 }

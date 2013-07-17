@@ -54,10 +54,13 @@
 	 * MAX_ORDER_NR_PAGES should biggest page be bigger then
 	 * a single pageblock.
 	 */
-#define	MIGRATE_CMA	       4
-#endif
+#define	MIGRATE_CMA		4
 #define MIGRATE_ISOLATE       5 /* can't allocate from here */
 #define MIGRATE_TYPES         6
+#else
+#define MIGRATE_ISOLATE       4 /* can't allocate from here */
+#define MIGRATE_TYPES         5
+#endif
 
 #ifdef CONFIG_CMA
 #  define is_migrate_cma(migratetype) unlikely((migratetype) == MIGRATE_CMA)
