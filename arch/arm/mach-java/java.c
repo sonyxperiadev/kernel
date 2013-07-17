@@ -192,6 +192,8 @@ static void cpu_info_verbose(void)
 {
 	if (cpu_is_java_A0())
 		pr_info("Java CHIPID-A0\n");
+	if (cpu_is_java_A1())
+		pr_info("Java CHIPID-A1\n");
 }
 
 static void block_mm_access_to_hub(void)
