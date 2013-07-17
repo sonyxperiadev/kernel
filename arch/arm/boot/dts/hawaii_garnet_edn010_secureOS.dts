@@ -183,20 +183,38 @@
 		iova_begin  = <0x80000000>;
 		iova_size   = <0x80000000>;
 		errbuf_size = <0x00001000>;
+		skip_enable = <1>;
 	};
 
 	iovmm_mm: iovmm-mm {
 		compatible = "bcm,iovmm";
 		base = <0xc0000000>;
-		size = <0x20000000>;
+		size = <0x30000000>;
 		order = <0>;
 	};
 
 	iovmm_mm_256mb: iovmm-mm-256mb {
 		compatible = "bcm,iovmm";
-		base = <0xe0000000>;
-		size = <0x10000000>;
+		base = <0xf0000000>;
+		size = <0x0bf00000>;
 		order = <0>;
+	};
+
+	ion-config {
+		compatible = "bcm,ion-config";
+		/* No separate mask needed for hwwr if M4U is enabled */
+		mask_hwwr = <0>;
+	};
+
+	ion-secure {
+		compatible = "bcm,ion";
+		id = <13>;
+		type = <5>;
+		base  = <0x00000000>;
+		limit = <0x00000000>;
+		size  = <0x01000000>;
+		iommu = <&iommu_mm>;
+		iovmm = <&iovmm_mm>;
 	};
 
 	ion-system {
@@ -207,13 +225,21 @@
 		iovmm = <&iovmm_mm_256mb>;
 	};
 
+	ion-system-extra {
+		compatible = "bcm,ion";
+		id = <1>;
+		type = <0>;
+		iommu = <&iommu_mm>;
+		iovmm = <&iovmm_mm>;
+	};
+
 	ion-carveout {
 		compatible = "bcm,ion";
-		id = <3>;
+		id = <9>;
 		type = <2>;
 		base  = <0x90000000>;
 		limit = <0xa0000000>;
-		size  = <0x03d00000>;
+		size  = <0x01000000>;
 		lmk_enable = <0>;
 		lmk_min_score_adj = <411>;
 		lmk_min_free = <32>;
@@ -223,11 +249,11 @@
 
 	ion-cma {
 		compatible = "bcm,ion";
-		id = <2>;
+		id = <5>;
 		type = <4>;
 		base  = <0x90000000>;
 		limit = <0xa0000000>;
-		size  = <0x0c000000>;
+		size  = <0x00000000>;
 		lmk_enable = <1>;
 		lmk_min_score_adj = <411>;
 		lmk_min_free = <32>;

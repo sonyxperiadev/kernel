@@ -220,7 +220,7 @@
 	iovmm_mm_256mb: iovmm-mm-256mb {
 		compatible = "bcm,iovmm";
 		base = <0xf0000000>;
-		size = <0x0ff00000>;
+		size = <0x0bf00000>;
 		order = <0>;
 	};
 
@@ -228,6 +228,17 @@
 		compatible = "bcm,ion-config";
 		/* No separate mask needed for hwwr if M4U is enabled */
 		mask_hwwr = <0>;
+	};
+
+	ion-secure {
+		compatible = "bcm,ion";
+		id = <13>;
+		type = <5>;
+		base  = <0x00000000>;
+		limit = <0x00000000>;
+		size  = <0x01000000>;
+		iommu = <&iommu_mm>;
+		iovmm = <&iovmm_mm>;
 	};
 
 	ion-system {
