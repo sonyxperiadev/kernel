@@ -370,16 +370,17 @@ static int _get_next_icc_fc(struct bcmpmu_accy_data *di)
 	if (ret)
 		return -EINVAL;
 
-	if (reg >= PMU_USB_FC_CC_MAX)
-		reg = PMU_USB_FC_CC_MAX;
-	else
-		reg++;
 	/**
 	 * if ACLD is enable, we use typical CC values
 	 * from bcmpmu_pmu_curr_acld_table
 	 */
-	if (acld_enabled)
+	if (acld_enabled) {
+		if (reg >= PMU_USB_FC_CC_MAX)
+			reg = PMU_USB_FC_CC_MAX;
+		else
+			reg++;
 		curr = bcmpmu_pmu_curr_acld_table[reg];
+	}
 	else
 		curr = bcmpmu_pmu_curr_table[reg];
 
@@ -1037,12 +1038,10 @@ int bcmpmu_get_cc_trim(struct bcmpmu59xxx *bcmpmu)
 
 	ret = bcmpmu->read_dev(bcmpmu, PMU_REG_MBCCTRL18, &reg);
 
-	if ((reg < PMU_USB_CC_TRIM_MIN) ||
-			(reg > PMU_USB_CC_TRIM_MAX)) {
-		pr_accy(INIT, "%s: cc_trim beyond limit\n", __func__);
+	if (reg > PMU_USB_CC_TRIM_MAX) {
+		pr_accy(FLOW, "%s: cc_trim beyond limit\n", __func__);
 		BUG_ON(1);
 	}
-
 	return reg;
 }
 int  bcmpmu_get_trim_curr(struct bcmpmu59xxx *bcmpmu)
@@ -1054,7 +1053,7 @@ int  bcmpmu_get_trim_curr(struct bcmpmu59xxx *bcmpmu)
 	icc_fc = bcmpmu_get_icc_fc(bcmpmu);
 	trim = bcmpmu_get_cc_trim(bcmpmu);
 	curr = ((icc_fc * trim_to_per[trim].perc) / 100);
-	pr_accy(INIT, "icc_fc = %d trim_reg = %d curr = %d",
+	pr_accy(INIT, "icc_fc = %d trim_reg = 0x%x curr = %d",
 			icc_fc, trim, curr);
 
 	return curr;
