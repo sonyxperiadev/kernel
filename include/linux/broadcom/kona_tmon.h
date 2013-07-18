@@ -44,7 +44,8 @@
 /*flags*/
 enum {
 	TMON_NOTIFY = 1,
-	TMON_SHDWN = (1 << 1),
+	TMON_HW_SHDWN = (1 << 1),
+	TMON_SW_SHDWN = (1 << 2),
 };
 
 enum {

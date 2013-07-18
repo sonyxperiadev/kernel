@@ -64,6 +64,7 @@
 #include <linux/clk.h>
 #include <plat/pi_mgr.h>
 #include <mach/pi_mgr.h>
+#define CPUFREQ_1200MHz 12000000
 #endif
 
 #ifdef CONFIG_UNICAM
@@ -732,11 +733,17 @@ struct kona_freq_tbl kona_freq_tbl[] = {
 	FTBL_INIT(1000000, PI_OPP_SUPER_TURBO, 85),
 };
 
+int temp_lmt[2][ARRAY_SIZE(kona_freq_tbl)] = {
+	{TEMP_DONT_CARE, 100, TEMP_DONT_CARE, 85}, /*1GHz*/
+	{TEMP_DONT_CARE, 105, 95, 85}, /*1.2GHz*/
+};
+
 void hawaii_cpufreq_init(void)
 {
 	struct clk *a9_pll_chnl0;
 	struct clk *a9_pll_chnl1;
 	struct clk *a9_pll;
+	int i;
 
 	a9_pll = clk_get(NULL, A9_PLL_CLK_NAME_STR);
 	a9_pll_chnl0 = clk_get(NULL, A9_PLL_CHNL0_CLK_NAME_STR);
@@ -751,13 +758,20 @@ void hawaii_cpufreq_init(void)
 	kona_freq_tbl[2].cpu_freq = clk_get_rate(a9_pll) / (3 * 1000);
 	kona_freq_tbl[3].cpu_freq = clk_get_rate(a9_pll_chnl1) / 1000;
 
+	if (kona_freq_tbl[3].cpu_freq < CPUFREQ_1200MHz) {
+		for (i = 0 ; i < ARRAY_SIZE(kona_freq_tbl) ; i++)
+			kona_freq_tbl[i].max_temp = temp_lmt[0][i];
+	} else {
+		for (i = 0 ; i < ARRAY_SIZE(kona_freq_tbl) ; i++)
+			kona_freq_tbl[i].max_temp = temp_lmt[1][i];
+	}
+
 	pr_info("%s a9_pll_chnl0 OPP0_freq = %dkHz OPP1_freq = %dKhz a9_pll_chnl1 freq = %dKhz\n",
 		__func__, kona_freq_tbl[1].cpu_freq, kona_freq_tbl[2].cpu_freq,
 		kona_freq_tbl[3].cpu_freq);
 }
 
 struct kona_cpufreq_drv_pdata kona_cpufreq_drv_pdata = {
-
 	.freq_tbl = kona_freq_tbl,
 	.num_freqs = ARRAY_SIZE(kona_freq_tbl),
 	/*FIX ME: To be changed according to the cpu latency */
@@ -970,7 +984,7 @@ struct platform_device kona_memc_device = {
 struct tmon_state threshold_val[] = {
 	{.rising = 85, .falling = 75, .flags = TMON_NOTIFY,},
 	{.rising = 100, .falling = 90, .flags = TMON_NOTIFY,},
-	{.rising = 115, .falling = 112, .flags = TMON_SHDWN,},
+	{.rising = 115, .falling = 112, .flags = TMON_HW_SHDWN,},
 };
 struct kona_tmon_pdata tmon_plat_data = {
 	.base_addr = KONA_TMON_VA,

@@ -37,6 +37,7 @@
 #include <linux/sort.h>
 #include <mach/rdb/brcm_rdb_tmon.h>
 #include <mach/rdb/brcm_rdb_chipreg.h>
+#include <linux/reboot.h>
 
 #define CLR_INT 1
 #define INVALID_INX	0xFFFFFFFF
@@ -270,14 +271,13 @@ static int tmon_init_set_thold(struct kona_tmon *tmon)
 	tmon->thresh_inx = i;
 
 	writel(CLR_INT, pdata->base_addr + TMON_CFG_CLR_INT_OFFSET);
-	if (pdata->thold[tmon->thresh_inx].flags & TMON_SHDWN) {
+	if (pdata->thold[tmon->thresh_inx].flags & TMON_HW_SHDWN) {
 		tmon_set_int_thold(tmon, THOLD_VAL_MAX, RAW_VAL);
 		disable_irq_nosync(tmon->irq);
 		tmon->thresh_inx = INVALID_INX;
 	} else
 		tmon_set_int_thold(tmon,
 		pdata->thold[tmon->thresh_inx].rising, CELCIUS);
-
 	return 0;
 }
 
@@ -321,12 +321,18 @@ static void tmon_irq_work(struct work_struct *ws)
 {
 	struct kona_tmon *tmon = container_of(ws, struct kona_tmon, tmon_work);
 	struct kona_tmon_pdata *pdata = tmon->pdata;
-	if (tmon->poll_inx != INVALID_INX)
+
+	if (tmon->poll_inx != INVALID_INX) {
 		queue_delayed_work(tmon->wqueue, &tmon->poll_work,
 				msecs_to_jiffies(pdata->poll_rate_ms));
+		atomic_notifier_call_chain(&tmon->notifiers,
+				pdata->thold[tmon->poll_inx].rising, NULL);
 
-	atomic_notifier_call_chain(&tmon->notifiers,
-			pdata->thold[tmon->poll_inx].rising, NULL);
+		if (pdata->thold[tmon->poll_inx].flags & TMON_SW_SHDWN) {
+			pr_info("%s:reached Thermal SW shdwn temp\n", __func__);
+			kernel_halt();
+		}
+	}
 }
 
 static void tmon_init_work(struct work_struct *ws)
@@ -351,14 +357,16 @@ static irqreturn_t tmon_isr(int irq, void *drvdata)
 	/*Clear interrupt*/
 	writel(CLR_INT, pdata->base_addr + TMON_CFG_CLR_INT_OFFSET);
 	tmon->poll_inx = tmon->thresh_inx;
+
 	/*Find next rising thold*/
-	if ((tmon->thresh_inx < pdata->thold_size - 1) &&
-		 (pdata->thold[tmon->thresh_inx + 1].flags & TMON_NOTIFY)) {
+	if ((tmon->thresh_inx < pdata->thold_size - 1) && (
+		 (pdata->thold[tmon->thresh_inx + 1].flags & TMON_NOTIFY) ||
+		 (pdata->thold[tmon->thresh_inx + 1].flags & TMON_SW_SHDWN))) {
 		tmon->thresh_inx++;
 		tmon_set_int_thold(tmon, pdata->thold[tmon->thresh_inx].rising,
 				CELCIUS);
 	} else {
-		/*Set THOLD to max value*/
+		/*Set THOLD to max value for HW shdwn*/
 		tmon_set_int_thold(tmon, THOLD_VAL_MAX, RAW_VAL);
 		disable_irq_nosync(tmon->irq);
 		tmon->thresh_inx = INVALID_INX;
@@ -395,11 +403,11 @@ static int tmon_init(struct kona_tmon *tmon, int vtmon)
 	tmon_enable(tmon, 1);
 	tmon_set_interval(tmon, pdata->interval_ms);
 
-	/*setting the reset theshold value */
+	/*setting the HW shdwn theshold value */
 	for (i = 0; i < pdata->thold_size; i++) {
-		if (pdata->thold[i].flags & TMON_SHDWN) {
+		if (pdata->thold[i].flags & TMON_HW_SHDWN) {
 			rst_inx = i;
-			pr_info("%s: reset temperature is %d\n",
+			pr_info("%s: HW shdwn temperature is %d\n",
 					__func__, pdata->thold[rst_inx].rising);
 		}
 	}
