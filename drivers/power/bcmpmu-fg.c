@@ -2085,9 +2085,12 @@ static int bcmpmu_fg_get_init_cap(struct bcmpmu_fg_data *fg)
 	pr_fg(FLOW, "saved full_charge: %d full_charge_cap: %d\n",
 			full_charge_cap,
 			fg->capacity_info.full_charge);
-	if (saved_cap == CAPACITY_ZERO_ALIAS)
-		cap_percentage = 0;
-	else if (saved_cap > 0) {
+	if (saved_cap == CAPACITY_ZERO_ALIAS) {
+		if (init_cap >= FG_CAP_DELTA_THRLD)
+			cap_percentage = init_cap;
+		else
+			cap_percentage = 0;
+	} else if (saved_cap > 0) {
 		if (abs(saved_cap - init_cap) < FG_CAP_DELTA_THRLD)
 			cap_percentage = saved_cap;
 		else
