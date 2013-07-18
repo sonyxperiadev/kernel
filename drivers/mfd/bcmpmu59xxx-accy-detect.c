@@ -83,8 +83,9 @@ struct accy_det {
 	enum bcmpmu_bc_t bc;
 	enum accyd_state state;
 	u32 act;
-	bool xceiv_start;
+	u32 xceiv_start;
 	bool reschedule;
+	bool clock_en;
 };
 
 #define pr_acd(debug_level, args...) \
@@ -93,6 +94,14 @@ struct accy_det {
 			pr_info("[ACD]: "args); \
 		} \
 	} while (0)
+
+static void enable_bc_clock(struct accy_det *accy_d, bool en)
+{
+		bcm_hsotgctrl_en_clock(en);
+		accy_d->clock_en = en;
+		pr_acd(FLOW, "======<%s> paccy clock %x\n"
+			, __func__, accy_d->clock_en);
+}
 
 static void reset_bc(struct accy_det *accy_d)
 {
@@ -327,14 +336,14 @@ void bcmpm_accy_setup_detection(struct accy_det *accy_d, bool en)
 		(id_status == PMU_USB_ID_FLOAT)) {
 
 		if (en) {
-			accy_d->xceiv_start = true;
+			accy_d->xceiv_start = 1;
 			pr_acd(FLOW, "=== %s ev send xceiv_start %d\n",
 					__func__, accy_d->xceiv_start);
 			bcmpmu_call_notifier(accy_d->bcmpmu,
 					PMU_CHRGR_DET_EVT_OUT_XCVR,
 					&accy_d->xceiv_start);
 		} else if ((!en) & accy_d->xceiv_start) {
-			accy_d->xceiv_start = false;
+			accy_d->xceiv_start = 0;
 			pr_acd(FLOW, "=== %s ev send xceiv_start %d\n",
 					__func__, accy_d->xceiv_start);
 			bcmpmu_call_notifier(accy_d->bcmpmu,
@@ -343,16 +352,22 @@ void bcmpm_accy_setup_detection(struct accy_det *accy_d, bool en)
 		}
 
 	}
-#ifdef CONFIG_HAS_WAKELOCK
 	if (en) {
+		if (!accy_d->clock_en)
+			enable_bc_clock(accy_d, true);
+#ifdef CONFIG_HAS_WAKELOCK
 		if (!wake_lock_active
 				(&accy_d->wake_lock))
 			wake_lock(&accy_d->wake_lock);
+#endif
 	} else {
+		if (accy_d->clock_en)
+			enable_bc_clock(accy_d, false);
+#ifdef CONFIG_HAS_WAKELOCK
 		if (wake_lock_active(&accy_d->wake_lock))
 			wake_unlock(&accy_d->wake_lock);
-	}
 #endif
+	}
 
 }
 
@@ -471,7 +486,6 @@ static void bcmpmu_detect_wq(struct work_struct *work)
 			bcmpm_accy_setup_detection(accy_d, 0);
 			bcmpmu_accy_handle_state(accy_d);
 		} else {
-			bcdldo_cycle_power(accy_d);
 			reset_bc(accy_d);
 			accy_d->reschedule =  true;
 		}
@@ -569,6 +583,7 @@ static int __devinit bcmpmu_accy_detect_probe(struct platform_device *pdev)
 #endif
 	accy_d_set_ldo_bit(accy_d, 1);
 	bcmpmu_accy_set_pmu_BC12(accy_d->bcmpmu, 1);
+	reset_bc(accy_d);
 	bcmpmu_usb_get(bcmpmu,
 			BCMPMU_USB_CTRL_GET_SESSION_STATUS,
 			(void *)&vbus_status);

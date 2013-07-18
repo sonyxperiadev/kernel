@@ -405,6 +405,7 @@ EXPORT_SYMBOL_GPL(bcm_hsotgctrl_bc_enable_sw_ovwr);
 int bcm_hsotgctrl_bc_status(unsigned long *status)
 {
 	unsigned int val;
+	int clk_cnt;
 	struct bcm_hsotgctrl_drv_data *bcm_hsotgctrl_handle =
 		local_hsotgctrl_handle;
 
@@ -415,6 +416,8 @@ int bcm_hsotgctrl_bc_status(unsigned long *status)
 		  (!bcm_hsotgctrl_handle->dev) || !status)
 		return -EIO;
 
+	clk_cnt = clk_get_usage(bcm_hsotgctrl_handle->otg_clk);
+	dev_info(bcm_hsotgctrl_handle->dev, "clk cnt %d\n", clk_cnt);
 	val = readl(bcm_hsotgctrl_handle->hsotg_ctrl_base +
 			HSOTG_CTRL_BC_STATUS_OFFSET);
 	*status = val;
