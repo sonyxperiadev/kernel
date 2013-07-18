@@ -7190,10 +7190,10 @@ static int mm_ccu_set_freq_policy(struct ccu_clk *ccu_clk, int policy_id,
 	ccu_write_access_enable(ccu_clk,true);
 	ccu_policy_engine_stop(ccu_clk);
 
-	if (opp_info->freq_id < MM_CCU_FREQ_ID_SUPER_TURBO)
-		reg_val &= ~MM_CLK_MGR_REG_POLICY_FREQ_POLICY_BASE_312_MASK;
-	else
+	if (opp_info->ctrl_prms == MM_CLK_SRC_312M)
 		reg_val |= MM_CLK_MGR_REG_POLICY_FREQ_POLICY_BASE_312_MASK;
+	else
+		reg_val &= ~MM_CLK_MGR_REG_POLICY_FREQ_POLICY_BASE_312_MASK;
 	clk_dbg("%s: reg_val = %x\n", __func__, reg_val);
 	writel(reg_val, CCU_POLICY_FREQ_REG(ccu_clk));
 	ccu_policy_engine_resume(ccu_clk,
