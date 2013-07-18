@@ -512,7 +512,7 @@
 	};
 
 	secure_mem {
-		sec-mem-base = <0x8ff00000>;
+		sec-mem-base = <0x9d800000>;
 		sec-mem-size = <0x100000>;
 	};
 
