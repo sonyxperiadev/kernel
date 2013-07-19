@@ -39,15 +39,16 @@
 #include <mach/rdb/brcm_rdb_chipreg.h>
 #include <mach/rdb/brcm_rdb_aphy_csr.h>
 #include <linux/delay.h>
+#include <linux/interrupt.h>
 #ifdef CONFIG_DEBUG_FS
-#include <linux/uaccess.h>
 #include <linux/debugfs.h>
+#endif
+#include <linux/uaccess.h>
 #include <linux/seq_file.h>
 #include <linux/of.h>
 #include <linux/of_irq.h>
 #include <linux/of_platform.h>
-#endif
-
+#include <linux/reboot.h>
 #define MEMC0_APHY_REG(kmemc, off) ((kmemc)->memc0_aphy_base + (off))
 #define MEMC0_NS_REG(kmemc, off) ((kmemc)->memc0_ns_base + (off))
 #define CHIPREG_REG(kmemc, off) ((kmemc)->chipreg_base + (off))
@@ -327,6 +328,79 @@ int memc_enable_selfrefresh(struct kona_memc *kmemc, int enable)
 }
 EXPORT_SYMBOL(memc_enable_selfrefresh);
 
+static int memc_update_temp_period(struct kona_memc *kmemc, int period)
+{
+	u32 reg;
+
+	reg = readl(MEMC0_NS_REG(kmemc, CSR_LPDDR2_DEV_TEMP_PERIOD_OFFSET));
+	reg &= ~CSR_LPDDR2_DEV_TEMP_PERIOD_DEV_TEMP_PERIOD_MASK;
+	reg |= (period <<
+		CSR_LPDDR2_DEV_TEMP_PERIOD_DEV_TEMP_PERIOD_SHIFT) &
+		CSR_LPDDR2_DEV_TEMP_PERIOD_DEV_TEMP_PERIOD_MASK;
+	writel(reg, MEMC0_NS_REG(kmemc, CSR_LPDDR2_DEV_TEMP_PERIOD_OFFSET));
+	return 0;
+}
+
+static int memc_dev_temp_intr_handle(struct kona_memc *kmemc)
+{
+	int i;
+	struct kona_memc_pdata *pdata = kmemc->pdata;
+
+	/*checking if value of device temp reg has changed*/
+	if (kmemc->temp_intr == 0)
+		goto exit;
+
+	/* check device selected cs0/cs1 */
+	if ((!(pdata->flags & KONA_MEMC_CS0_DEV_TEMP) && !(kmemc->dev_sel)) ||
+		(!(pdata->flags & KONA_MEMC_CS1_DEV_TEMP) && kmemc->dev_sel)) {
+		pr_info("%s: wrong device selection\n", __func__);
+		goto exit;
+	}
+
+	/* check temperature staus*/
+	for (i = 0; i < pdata->num_thold; i++) {
+		if (kmemc->temp_sts == pdata->temp_tholds[i].mr4_sts) {
+			pr_info("%s:LPDDR2 temp lmt reached %d\n",
+					__func__, kmemc->temp_sts);
+			if (pdata->temp_tholds[i].action & SHDWN)
+				kernel_halt();
+		}
+	}
+exit:
+	return 0;
+}
+
+static void kmemc_irq_work(struct work_struct *ws)
+{
+	struct kona_memc *kmemc = container_of(ws, struct kona_memc, memc_work);
+
+	if (kmemc->dev_temp_en)
+		memc_dev_temp_intr_handle(kmemc);
+}
+
+static irqreturn_t kmemc_isr(int irq, void *drvdata)
+{
+	u32 reg;
+	struct kona_memc *kmemc =  drvdata;
+
+	if (kmemc->dev_temp_en) {
+		/* check if temperature interrupt */
+		reg = readl(MEMC0_NS_REG(kmemc,
+					CSR_LPDDR2_DEV_TEMP_STATUS_OFFSET));
+		kmemc->temp_intr = (reg &
+			CSR_LPDDR2_DEV_TEMP_STATUS_DEV_TEMP_INTR_MASK) >>
+			CSR_LPDDR2_DEV_TEMP_STATUS_DEV_TEMP_INTR_SHIFT;
+		kmemc->temp_sts = (reg &
+			CSR_LPDDR2_DEV_TEMP_STATUS_DEV_TEMP_STATUS_MASK) >>
+			CSR_LPDDR2_DEV_TEMP_STATUS_DEV_TEMP_STATUS_SHIFT;
+		kmemc->dev_sel =  (reg &
+			CSR_LPDDR2_DEV_TEMP_STATUS_DEVICE_SELECTED_MASK) >>
+			CSR_LPDDR2_DEV_TEMP_STATUS_DEVICE_SELECTED_SHIFT;
+	}
+	schedule_work(&kmemc->memc_work);
+	return IRQ_HANDLED;
+}
+
 unsigned long compute_ddr_clk_freq(struct kona_memc *kmemc)
 {
 	u32 reg_val = 0;
@@ -377,7 +451,47 @@ unsigned long compute_ddr_clk_freq(struct kona_memc *kmemc)
 	return (unsigned long)temp;
 }
 
-static int memc_init(struct kona_memc *kmemc)
+int memc_enable_thermal_mgmt(struct kona_memc *kmemc, char const *dev_name)
+{
+	u32 reg;
+	struct kona_memc_pdata *pdata = kmemc->pdata;
+
+	kmemc->dev_temp_en = 1;
+	if (pdata->flags & KONA_MEMC_CS0_DEV_TEMP) {
+		reg = readl(MEMC0_NS_REG(kmemc,
+					CSR_LPDDR2_DEV_TEMP_PERIOD_OFFSET));
+		reg |= CSR_LPDDR2_DEV_TEMP_PERIOD_ENABLE_DDR_CS0_DEV_TEMP_MASK;
+		writel(reg, MEMC0_NS_REG(kmemc,
+					CSR_LPDDR2_DEV_TEMP_PERIOD_OFFSET));
+	}
+	if (pdata->flags & KONA_MEMC_CS1_DEV_TEMP) {
+		reg = readl(MEMC0_NS_REG(kmemc,
+					CSR_LPDDR2_DEV_TEMP_PERIOD_OFFSET));
+		reg |= CSR_LPDDR2_DEV_TEMP_PERIOD_ENABLE_DDR_CS1_DEV_TEMP_MASK;
+		writel(reg, MEMC0_NS_REG(kmemc,
+					CSR_LPDDR2_DEV_TEMP_PERIOD_OFFSET));
+	}
+
+	memc_update_temp_period(kmemc, pdata->temp_period);
+
+	/*checking if the threshold level is already passed*/
+	reg = readl(MEMC0_NS_REG(kmemc,
+				CSR_LPDDR2_DEV_TEMP_STATUS_OFFSET));
+	kmemc->temp_intr = (reg &
+			CSR_LPDDR2_DEV_TEMP_STATUS_DEV_TEMP_INTR_MASK) >>
+		CSR_LPDDR2_DEV_TEMP_STATUS_DEV_TEMP_INTR_SHIFT;
+	kmemc->temp_sts = (reg &
+			CSR_LPDDR2_DEV_TEMP_STATUS_DEV_TEMP_STATUS_MASK) >>
+		CSR_LPDDR2_DEV_TEMP_STATUS_DEV_TEMP_STATUS_SHIFT;
+	kmemc->dev_sel =  (reg &
+			CSR_LPDDR2_DEV_TEMP_STATUS_DEVICE_SELECTED_MASK) >>
+		CSR_LPDDR2_DEV_TEMP_STATUS_DEVICE_SELECTED_SHIFT;
+
+	schedule_work(&kmemc->memc_work);
+	return 0;
+}
+
+static int memc_init(struct kona_memc *kmemc, char const *dev_name)
 {
 	u32 reg;
 	struct kona_memc_pdata *pdata = kmemc->pdata;
@@ -404,15 +518,33 @@ static int memc_init(struct kona_memc *kmemc)
 	writel(reg, MEMC0_NS_REG(kmemc, CSR_HW_FREQ_CHANGE_CNTRL_OFFSET));
 	/*Set AP min power state to 0 by default*/
 	memc_set_min_pwr(kmemc, 0, MEMC_AP_MIN_PWR);
+
+	INIT_WORK(&kmemc->memc_work, kmemc_irq_work);
+	if (pdata->flags & KONA_MEMC_ENABLE_DEV_TEMP)
+		memc_enable_thermal_mgmt(kmemc, dev_name);
+
+	/* Register interrupt handler */
+	kmemc->irq = pdata->irq;
+	if (kmemc->irq == -ENXIO)
+		return 0;
+
+	if (0 != request_irq(kmemc->irq, kmemc_isr,
+				IRQ_LEVEL | IRQF_DISABLED | IRQF_NO_SUSPEND,
+				dev_name, kmemc)) {
+		pr_info("unable to register isr\n");
+		return -EINVAL;
+	}
+
 	return 0;
 }
 
 static int kona_memc_probe(struct platform_device *pdev)
 {
 	u32 val, *addr;
-	int size, ret;
+	int size, ret, irq, i;
 	struct resource *iomem;
 	struct kona_memc_pdata *pdata;
+	int *temp_tholds;
 	spin_lock_init(&kona_memc.memc_lock);
 	plist_head_init(&kona_memc.min_pwr_list);
 	kona_memc.active_min_pwr = 0;
@@ -483,6 +615,51 @@ static int kona_memc_probe(struct platform_device *pdev)
 		}
 		pdata->max_pwr = val;
 
+		/* Get interrupt number */
+		irq = platform_get_irq(pdev, 0);
+		if (irq == -ENXIO)
+			pr_info("%s:no irq resource\n", __func__);
+		pdata->irq = irq;
+
+		if (pdata->flags & KONA_MEMC_ENABLE_DEV_TEMP) {
+
+			if (of_property_read_u32(pdev->dev.of_node,
+						"temp_period", &val)) {
+				kfree(pdata);
+				return -EINVAL;
+			}
+			pdata->temp_period = val;
+
+			if (of_property_read_u32(pdev->dev.of_node,
+						"num_thold", &val)) {
+				kfree(pdata);
+				return -EINVAL;
+			}
+			pdata->num_thold = val;
+
+			temp_tholds = (int *)of_get_property(pdev->dev.of_node,
+					"temp_tholds", &size);
+			if (!temp_tholds) {
+				kfree(pdata);
+				return -EINVAL;
+			}
+			pdata->temp_tholds =
+			kzalloc(sizeof(struct temp_thold)*pdata->num_thold,
+						GFP_KERNEL);
+			if (!pdata->temp_tholds) {
+				kfree(pdata);
+				return -EINVAL;
+			}
+
+			for (i = 0; i < pdata->num_thold; i++) {
+				pdata->temp_tholds[i].mr4_sts =
+					be32_to_cpu(*temp_tholds++);
+				pdata->temp_tholds[i].action =
+					be32_to_cpu(*temp_tholds++);
+			}
+			pr_info("%s:temp_period: %x, num_thold: %d\n", __func__,
+					pdata->temp_period, pdata->num_thold);
+		}
 	} else {
 		pr_info("%s: no platform data found\n", __func__);
 		return -EINVAL;
@@ -492,9 +669,10 @@ static int kona_memc_probe(struct platform_device *pdev)
 	kona_memc.memc0_ns_base = pdata->memc0_ns_base;
 	kona_memc.chipreg_base = pdata->chipreg_base;
 	kona_memc.memc0_aphy_base = pdata->memc0_aphy_base;
-	memc_init(&kona_memc);
+	memc_init(&kona_memc, pdev->name);
 	pr_info("%s: ddr freq = %lu\n", __func__,
 			compute_ddr_clk_freq(&kona_memc));
+
 	return 0;
 }
 
@@ -670,10 +848,84 @@ u32 kona_memc_get_ddr_clk_freq(void)
 	return compute_ddr_clk_freq(&kona_memc);
 }
 
+static int memc_dbg_get_dev_temp_state(void *data, u64 *val)
+{
+	struct kona_memc *kmemc = (struct kona_memc *)data;
+	BUG_ON(kmemc == NULL);
+
+	*val = kmemc->dev_temp_en;
+	return 0;
+}
+static int memc_dbg_dev_temp_en(void *data, u64 val)
+{
+	u32 mask0, mask1, reg;
+	struct kona_memc *kmemc = (struct kona_memc *)data;
+	struct kona_memc_pdata *pdata = kona_memc.pdata;
+
+	BUG_ON(kmemc == NULL);
+
+	if (kmemc->dev_temp_en == val)
+		return 0;
+	reg = readl(MEMC0_NS_REG(kmemc,
+				CSR_LPDDR2_DEV_TEMP_PERIOD_OFFSET));
+	if (pdata->flags & KONA_MEMC_CS0_DEV_TEMP)
+		mask0 = CSR_LPDDR2_DEV_TEMP_PERIOD_ENABLE_DDR_CS0_DEV_TEMP_MASK;
+	if (pdata->flags & KONA_MEMC_CS1_DEV_TEMP)
+		mask1 = CSR_LPDDR2_DEV_TEMP_PERIOD_ENABLE_DDR_CS1_DEV_TEMP_MASK;
+	if (val) {
+		if (mask0)
+			reg |= mask0;
+		if (mask1)
+			reg |= mask1;
+	} else {
+		if (mask0)
+			reg &= ~mask0;
+		if (mask1)
+			reg &= ~mask1;
+	}
+	writel(reg, MEMC0_NS_REG(kmemc,
+				CSR_LPDDR2_DEV_TEMP_PERIOD_OFFSET));
+	kmemc->dev_temp_en = val;
+	return 0;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(memc_dev_temp_en_ops,
+	memc_dbg_get_dev_temp_state,
+	memc_dbg_dev_temp_en, "%llu\n");
+
+static int memc_dbg_get_temp_period(void *data, u64 *val)
+{
+	int temp_period;
+	u32 reg;
+	struct kona_memc *kmemc = (struct kona_memc *)data;
+	BUG_ON(kmemc == NULL);
+
+	reg = readl(MEMC0_NS_REG(kmemc, CSR_LPDDR2_DEV_TEMP_PERIOD_OFFSET));
+	reg &= CSR_LPDDR2_DEV_TEMP_PERIOD_DEV_TEMP_PERIOD_MASK;
+
+	temp_period = (reg * 38) / 1000000; /*prints temp_period in ms*/
+	pr_info("in ms");
+	*val = temp_period;
+	return 0;
+}
+static int memc_dbg_set_temp_period(void *data, u64 val)
+{
+	struct kona_memc *kmemc = (struct kona_memc *)data;
+	BUG_ON(kmemc == NULL);
+
+	memc_update_temp_period(kmemc, val);
+	return 0;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(memc_temp_period_ops,
+	memc_dbg_get_temp_period,
+	memc_dbg_set_temp_period, "%llu\n");
+
 static struct dentry *dent_kona_memc_dir;
 
 static int kona_menc_init_debugfs(void)
 {
+	struct kona_memc_pdata *pdata = kona_memc.pdata;
 	dent_kona_memc_dir = debugfs_create_dir("kona_memc", 0);
 	if (!dent_kona_memc_dir)
 		return -ENOMEM;
@@ -710,6 +962,16 @@ static int kona_menc_init_debugfs(void)
 				 &memc_get_ddr_clk_freq_ops))
 		return -ENOMEM;
 
+	if (pdata->flags & KONA_MEMC_ENABLE_DEV_TEMP) {
+		if (!debugfs_create_file("dev_temp_en", S_IRUGO | S_IWUSR,
+					dent_kona_memc_dir, &kona_memc ,
+					&memc_dev_temp_en_ops))
+			return -ENOMEM;
+		if (!debugfs_create_file("temp_period", S_IRUGO | S_IWUSR,
+					dent_kona_memc_dir, &kona_memc ,
+					&memc_temp_period_ops))
+			return -ENOMEM;
+	}
 
 	return 0;
 }
