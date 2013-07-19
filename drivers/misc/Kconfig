@@ -384,11 +384,19 @@ config SENSORS_TSL2550
 	  This driver can also be built as a module.  If so, the module
 	  will be called tsl2550.
 
- config SENSORS_MC3210
+config SENSORS_MC3210
 	bool "mCube mc3210 support"
 	default n
 	help
 		If you say yes here you get support for mc3210 sensor
+
+		If you don't need this driver, choose n
+
+config SENSORS_MXC622X
+	bool "Memsic mxc622x accelerometer support"
+	default n
+	help
+		If you say yes here you get support for mxc622x sensor
 
 		If you don't need this driver, choose n
 

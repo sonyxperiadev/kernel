@@ -104,6 +104,7 @@ obj-$(CONFIG_BRCM_BTPORT_DRV)   += btport/
 obj-$(CONFIG_BRCM_EMMC_RPMB)	+= emmc_rpmb/
 obj-$(CONFIG_MMC328XMA)         += mmc328xma.o
 obj-$(CONFIG_SENSORS_MC3210)    += mc32x0.o
+obj-$(CONFIG_SENSORS_MXC622X)	+= mxc622x.o
 obj-$(CONFIG_SENSORS_BMA222)    += bma222.o
 obj-$(CONFIG_BOSCH_BMA2XX)	+= bma2xx.o
 ccflags-$(CONFIG_BOSCH_BMA2XX_ENABLE_INT1)   += -DBMA2XX_ENABLE_INT1
