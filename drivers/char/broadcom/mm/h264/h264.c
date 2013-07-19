@@ -100,10 +100,10 @@ int __init mm_h264_init(void)
 	dvfs_param.MODE = TURBO;
 	dvfs_param.enable_suspend_resume = 0;
 	dvfs_param.T0 = 200;
-	dvfs_param.P0 = 90;
+	dvfs_param.P0 = 70;
 	dvfs_param.T1 = 300;
 	dvfs_param.P1 = 90;
-	dvfs_param.P1L = 50;
+	dvfs_param.P1L = 30;
 	dvfs_param.T2 = 300;
 	dvfs_param.P2 = 90;
 	dvfs_param.P2L = 60;
