@@ -2004,6 +2004,9 @@ static void __init hawaii_add_i2c_devices(void)
 
 }
 
+/* The GPIO used to indicate accessory insertion in this board */
+#define HS_IRQ		gpio_to_irq(121)
+
 static void hawaii_add_pdata(void)
 {
 	hawaii_serial_device.dev.platform_data = &hawaii_uart_platform_data;
@@ -2019,6 +2022,12 @@ static void hawaii_add_pdata(void)
 	hawaii_ssp1_device.dev.platform_data = &hawaii_ssp1_info;
 	hawaii_stm_device.dev.platform_data = &hawaii_stm_pdata;
 	hawaii_headset_device.dev.platform_data = &hawaii_headset_data;
+	/* The resource in position 2 (starting from 0) is used to fill
+	 * the GPIO number. The driver file assumes this. So put the
+	 * board specific GPIO number here
+	 */
+	hawaii_headset_device.resource[2].start = HS_IRQ;
+	hawaii_headset_device.resource[2].end   = HS_IRQ;
 	hawaii_pl330_dmac_device.dev.platform_data = &hawaii_pl330_pdata;
 #ifdef CONFIG_BACKLIGHT_PWM
 	hawaii_backlight_device.dev.platform_data = &hawaii_backlight_data;

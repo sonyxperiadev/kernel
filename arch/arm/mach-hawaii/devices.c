@@ -377,14 +377,6 @@ struct platform_device hawaii_kp_device = {
 #endif
 
 #ifdef CONFIG_KONA_HEADSET_MULTI_BUTTON
-#if defined(CONFIG_MACH_HAWAII_SS_LOGAN_REV01) || \
-defined(CONFIG_MACH_HAWAII_SS_GOLDENVEN_REV01) || \
-defined(CONFIG_MACH_HAWAII_SS_LOGANDS_REV00) || \
-defined(CONFIG_MACH_HAWAII_SS_LOGANDS_REV01)
-#define HS_IRQ		gpio_to_irq(121)
-#else		/* CONFIG_MACH_HAWAII_SS_LOGAN */
-#define HS_IRQ		gpio_to_irq(92)
-#endif	/* CONFIG_MACH_HAWAII_SS_LOGAN */
 #define HSB_IRQ		BCM_INT_ID_AUXMIC_COMP2
 #define HSB_REL_IRQ	BCM_INT_ID_AUXMIC_COMP2_INV
 
@@ -399,9 +391,11 @@ static struct resource board_headset_resource[] = {
 		.end = ACI_BASE_ADDR + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
 	},
-	{	/* For Headset IRQ */
-		.start = HS_IRQ,
-		.end = HS_IRQ,
+	{	/* For Headset IRQ  - Note that this is board
+		 * specific, so don't fill the actual GPIO number
+		 * here, it will be done from the appropriate
+		 * board file. So this is just a place holder
+		 */
 		.flags = IORESOURCE_IRQ,
 	},
 	{	/* For Headset button  press IRQ */
