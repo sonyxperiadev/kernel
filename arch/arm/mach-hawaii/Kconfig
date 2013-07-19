@@ -425,15 +425,15 @@ config	MACH_HAWAII_SS_EMMC_EXTLDO
 	help
 	  For SS EMMC memory external LDO
 
-config 26MHZ_WFI
-	bool "Enable A9 26MHz WFI idle state"
+config CPU_SYSPLL_WFI_CSTATE
+	bool "Enable CPU WFI idle state using system PLL"
 	default n
 	help
-	 Option to enable A9 26MHz WFI cpuidle state. A9 frequency is reduced
-	 to 26MHz when all cores are in this C state. Latency is very less and
-	 VDDVAR_A9 voltage can be reduced to less than economy mode voltage
-	 for this state. Helps in redcuing current consumption of high CPU load
-	 use cases.
+	 Option to enable special ARM WFI cpuidle state.
+	 PROC policy is changed to use FID 0-4 which comes
+	 from system PLL when all the cores are in this
+	 state. This way, ARM internal PLL can be turned
+	 off to save power.
 
 config	A9_RETENTION_CSTATE
 	bool "Turn ON A9 retention state"

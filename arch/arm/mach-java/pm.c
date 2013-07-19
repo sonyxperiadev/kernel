@@ -47,7 +47,7 @@
 struct pm_info {
 	int keep_xtl_on;
 	int clk_dbg_dsm;
-	int wfi_26mhz_cnt;
+	int wfi_syspll_cnt;
 	int force_sleep;
 	u32 dormant_enable;
 	u32 log_mask;
@@ -59,7 +59,7 @@ struct pm_info {
 static struct pm_info pm_info = {
 	.keep_xtl_on = 0,
 	.clk_dbg_dsm = 0,
-	.wfi_26mhz_cnt = 0,
+	.wfi_syspll_cnt = 0,
 	.force_sleep = 0,
 	.dormant_enable = 0xf, /* Enable dormant for all 4 cores */
 	.log_mask = 0,
@@ -67,7 +67,7 @@ static struct pm_info pm_info = {
 
 module_param_named(keep_xtl_on, pm_info.keep_xtl_on, int,
 	S_IRUGO|S_IWUSR|S_IWGRP);
-module_param_named(wfi_26mhz_cnt, pm_info.wfi_26mhz_cnt, int,
+module_param_named(wfi_syspll_cnt, pm_info.wfi_syspll_cnt, int,
 	S_IRUGO | S_IWGRP);
 /**
  * Run time flag to debug the Rhea clocks preventing deepsleep
@@ -112,15 +112,14 @@ static struct kona_idle_state idle_states[] = {
 		.state = CSTATE_SIMPLE_WFI,
 		.enter = enter_wfi_state,
 	},
-#ifdef CONFIG_26MHZ_WFI
+#ifdef CONFIG_CPU_SYSPLL_WFI_CSTATE
 	{
 		.name = "C2",
-		.desc = "26Mhz-WFI", /*26MHz WFI*/
+		.desc = "wfi_syspll", /*syspll WFI*/
 		.flags = CPUIDLE_FLAG_TIME_VALID,
-		.params = CTRL_PARAMS_CSTATE_DISABLED,
-		.latency = EXIT_LAT_26MHZ_WFI,
-		.target_residency = TRGT_RESI_26MHZ_WFI,
-		.state = CSTATE_26MHZ_WFI,
+		.latency = EXIT_LAT_SYSPLL_WFI,
+		.target_residency = TRGT_RESI_SYSPLL_WFI,
+		.state = CSTATE_SYSPLL_WFI,
 		.enter = enter_wfi_state,
 	},
 #endif
@@ -211,28 +210,28 @@ ret:
 
 int enter_wfi_state(struct kona_idle_state *state, u32 ctrl_params)
 {
-#ifdef CONFIG_26MHZ_WFI
+#ifdef CONFIG_CPU_SYSPLL_WFI_CSTATE
 	static u32 freq_id = 0xFFFF;
 #endif
 
-#ifdef CONFIG_26MHZ_WFI
-	if (state->state == CSTATE_26MHZ_WFI) {
+#ifdef CONFIG_CPU_SYSPLL_WFI_CSTATE
+	if (state->state == CSTATE_SYSPLL_WFI) {
 		struct opp_info opp_info;
 		spin_lock(&pm_info.lock);
 		opp_info.ctrl_prms = CCU_POLICY_FREQ_REG_INIT;
-		opp_info.freq_id = PROC_CCU_FREQ_ID_XTAL;
+		opp_info.freq_id = CPU_FREQ_ID_SYSPLL_WFI;
 		state->num_cpu_in_state++;
 		BUG_ON(state->num_cpu_in_state > CONFIG_NR_CPUS);
-		instrument_lpm(LPM_TRACE_ENTER_26MWFI,
+		instrument_lpm(LPM_TRACE_ENTER_SYSPLL_WFI,
 				(u16)state->num_cpu_in_state);
 
 		if (state->num_cpu_in_state == CONFIG_NR_CPUS) {
-			pm_info.wfi_26mhz_cnt++;
+			pm_info.wfi_syspll_cnt++;
 			freq_id = ccu_get_freq_policy(pm_info.proc_ccu,
 				CCU_POLICY(PM_DFS));
 			ccu_set_freq_policy(pm_info.proc_ccu,
 				CCU_POLICY(PM_DFS), &opp_info);
-			instrument_lpm(LPM_TRACE_26MWFI_SET_FREQ,
+			instrument_lpm(LPM_TRACE_SYSPLL_WFI_SET_FREQ,
 				(u16)freq_id);
 
 
@@ -241,17 +240,17 @@ int enter_wfi_state(struct kona_idle_state *state, u32 ctrl_params)
 	} else {
 		instrument_lpm(LPM_TRACE_ENTER_WFI, 0);
 	}
-#endif /*CONFIG_26MHZ_WFI*/
+#endif /*CONFIG_CPU_SYSPLL_WFI_CSTATE*/
 
 	enter_wfi();
 
-#ifdef CONFIG_26MHZ_WFI
-	if (state->state == CSTATE_26MHZ_WFI) {
+#ifdef CONFIG_CPU_SYSPLL_WFI_CSTATE
+	if (state->state == CSTATE_SYSPLL_WFI) {
 		struct opp_info opp_info;
 		spin_lock(&pm_info.lock);
 		opp_info.ctrl_prms = CCU_POLICY_FREQ_REG_INIT;
 		BUG_ON(state->num_cpu_in_state == 0);
-		instrument_lpm(LPM_TRACE_EXIT_26MWFI,
+		instrument_lpm(LPM_TRACE_EXIT_SYSPLL_WFI,
 				(u16)state->num_cpu_in_state);
 
 		if (state->num_cpu_in_state == CONFIG_NR_CPUS) {
@@ -259,7 +258,7 @@ int enter_wfi_state(struct kona_idle_state *state, u32 ctrl_params)
 			opp_info.freq_id = freq_id;
 			ccu_set_freq_policy(pm_info.proc_ccu,
 				CCU_POLICY(PM_DFS), &opp_info);
-			instrument_lpm(LPM_TRACE_26MWFI_RES_FREQ,
+			instrument_lpm(LPM_TRACE_SYSPLL_WFI_RES_FREQ,
 				(u16)freq_id);
 
 			freq_id = 0xFFFF;
@@ -270,7 +269,7 @@ int enter_wfi_state(struct kona_idle_state *state, u32 ctrl_params)
 		instrument_lpm(LPM_TRACE_EXIT_WFI, 0);
 	}
 
-#endif /*CONFIG_26MHZ_WFI*/
+#endif /*CONFIG_CPU_SYSPLL_WFI_CSTATE*/
 
 	return -1;
 }
