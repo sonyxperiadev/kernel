@@ -407,7 +407,6 @@ struct platform_device kona_secure_memc_device = {
 
 
 #ifdef CONFIG_KONA_HEADSET_MULTI_BUTTON
-#define HS_IRQ		gpio_to_irq(92)
 #define HSB_IRQ		BCM_INT_ID_AUXMIC_COMP2
 #define HSB_REL_IRQ	BCM_INT_ID_AUXMIC_COMP2_INV
 
@@ -422,9 +421,11 @@ static struct resource board_headset_resource[] = {
 		.end = ACI_BASE_ADDR + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
 	},
-	{	/* For Headset IRQ */
-		.start = HS_IRQ,
-		.end = HS_IRQ,
+	{	/* For Headset IRQ  - Note that this is board
+		 * specific, so don't fill the actual GPIO number
+		 * here, it will be done from the appropriate
+		 * board file. So this is just a place holder
+		 */
 		.flags = IORESOURCE_IRQ,
 	},
 	{	/* For Headset button  press IRQ */

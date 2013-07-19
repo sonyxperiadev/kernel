@@ -1442,6 +1442,8 @@ struct bcm_iovmm_pdata iovmm_mm_256mb_pdata = {
 #endif
 #endif /* CONFIG_ION_BCM_NO_DT */
 
+#define HS_IRQ		gpio_to_irq(92)
+
 static void hawaii_add_pdata(void)
 {
 	hawaii_ssp0_device.dev.platform_data = &hawaii_ssp0_info;
@@ -1450,6 +1452,13 @@ static void hawaii_add_pdata(void)
 	hawaii_stm_device.dev.platform_data = &hawaii_stm_pdata;
 #endif
 	hawaii_headset_device.dev.platform_data = &hawaii_headset_data;
+	/* The resource in position 2 (starting from 0) is used to fill
+	 * the GPIO number. The driver file assumes this. So put the
+	 * board specific GPIO number here
+	 */
+	hawaii_headset_device.resource[2].start = HS_IRQ;
+	hawaii_headset_device.resource[2].end   = HS_IRQ;
+
 	hawaii_pl330_dmac_device.dev.platform_data = &hawaii_pl330_pdata;
 #ifdef CONFIG_USB_DWC_OTG
 	hawaii_hsotgctrl_platform_device.dev.platform_data =
