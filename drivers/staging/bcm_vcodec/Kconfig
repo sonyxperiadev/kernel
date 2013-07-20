@@ -1,0 +1,8 @@
+config BCM_VCODEC
+	bool "Broadcom Video Codec"
+	depends on ARCH_HAWAII || ARCH_BCM
+	default n
+	help
+	  Support for Broadcom video codec
+
+	  Say N if you are unsure if this should be enabled
