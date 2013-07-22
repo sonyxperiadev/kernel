@@ -484,6 +484,7 @@ void AUDCTRL_Telephony_RateChange(unsigned int sample_rate)
 		AUDCTRL_Telephony_HW_16K(mode);
 		AUDDRV_Telephony_RateChange(mode, app, bNeedDualMic,
 					    bmuteVoiceCall);
+		setExternAudioGain(mode, app);
 	}
 }
 
