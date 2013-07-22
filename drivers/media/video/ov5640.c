@@ -85,7 +85,6 @@ enum ov5640_size {
 	OV5640_SIZE_VGA,	/* 640 x 480 */
 	OV5640_SIZE_720P,
 	OV5640_SIZE_1280x960,	/* 1280 x 960  (1.2M) */
-	OV5640_SIZE_1080P,	/* 1920 x 1080 (2.1M) */
 	OV5640_SIZE_UXGA,	/* 1600 x 1200 (2M)   */
 	OV5640_SIZE_QXGA,	/* 2048 x 1536 (3M)   */
 	OV5640_SIZE_5MP,
@@ -107,7 +106,6 @@ static const struct v4l2_frmsize_discrete ov5640_frmsizes[OV5640_SIZE_LAST] = {
 	{640, 480},
 	{1280, 720},
 	{1280, 960},
-	{1920, 1080},
 	{1600, 1200},
 	{2048, 1536},
 	{2560, 1920},
@@ -119,7 +117,6 @@ static const struct ov5640_af_zone_scale af_zone_scale[OV5640_SIZE_LAST] = {
 	{8, 8},
 	{16, 12},
 	{16, 16},
-	{20, 20},
 	{20, 15},
 	{26, 26},
 	{32, 32},
@@ -326,38 +323,6 @@ static const struct ov5640_timing_cfg timing_cfg_yuv[OV5640_SIZE_LAST] = {
 				  .sclk_dividers = 0x01,
 				  .sys_mipi_clk = 0x11,
 				  },
-	[OV5640_SIZE_1080P] = {
-			      /* Timing control 1951x1091 --> 1920x1080 */
-			      .x_addr_start = 0,
-			      .y_addr_start = 0,
-			      .x_addr_end = 1951,
-			      .y_addr_end = 1091,
-			      /* Output image size */
-			      .h_output_size = 1920,
-			      .v_output_size = 1080,
-			      /* ISP Windowing size 2592x1944 --> 2560x1920 */
-			      .isp_h_offset = 16,
-			      .isp_v_offset = 6,
-			      /*  Total size (+blanking) */
-			      .h_total_size = 2172,
-			      .v_total_size = 1282,
-			      /* Sensor Read Binning Disabled */
-			      .h_odd_ss_inc = 1,
-			      .h_even_ss_inc = 1,
-			      .v_odd_ss_inc = 1,
-			      .v_even_ss_inc = 1,
-#ifdef CONFIG_MACH_HAWAII_GARNET
-#ifdef CONFIG_MACH_HAWAII_GARNET_C_A18
-				.out_mode_sel = 0x06,
-#else
-				.out_mode_sel = 0x00,
-#endif
-#else
-			      .out_mode_sel = 0x06,
-#endif
-			      .sclk_dividers = 0x01,
-			      .sys_mipi_clk = 0x11,
-			      },
 	[OV5640_SIZE_UXGA] = {
 			      /* Timing control  2624 x 1952 --> 2592 x 1944 */
 			      .x_addr_start = 16,
@@ -553,30 +518,6 @@ static const struct ov5640_timing_cfg timing_cfg_jpeg[OV5640_SIZE_LAST] = {
 				.sclk_dividers = 0x01,
 				.sys_mipi_clk = 0x12,
 				},
-	[OV5640_SIZE_1080P] = {
-			      /* Timing control 2624x1952 --> 2592x1944 */
-			      .x_addr_start = 16,
-			      .y_addr_start = 4,
-			      .x_addr_end = 2607,
-			      .y_addr_end = 1947,
-			      /* Output image size */
-			      .h_output_size = 1920,
-			      .v_output_size = 1080,
-			      /* ISP Windowing size 2592x1944 --> 2560x1920 */
-			      .isp_h_offset = 16,
-			      .isp_v_offset = 12,
-			      /* Total size (+blanking) */
-			      .h_total_size = 2844,
-			      .v_total_size = 1968,
-			      /* Sensor Read Binning Disabled */
-			      .h_odd_ss_inc = 1,
-			      .h_even_ss_inc = 1,
-			      .v_odd_ss_inc = 1,
-			      .v_even_ss_inc = 1,
-			      .out_mode_sel = 0x26,
-			      .sclk_dividers = 0x01,
-			      .sys_mipi_clk = 0x11,
-			      },
 	[OV5640_SIZE_UXGA] = {
 			      /* Timing control 2624x1952 --> 2592x1944 */
 			      .x_addr_start = 16,
@@ -683,12 +624,6 @@ static struct v4l2_subdev_sensor_serial_parms mipi_cfgs[OV5640_SIZE_LAST] = {
 				  .phy_rate = (336 * 2 * 1000000),
 				  .pix_clk = 21,	/* Revisit */
 				  },
-	[OV5640_SIZE_1080P] = {
-			       .lanes = 1,
-			       .channel = 0,
-			       .phy_rate = (336 * 2 * 1000000),
-			       .pix_clk = 21,	/* Revisit */
-			       },
 	[OV5640_SIZE_720P] = {
 			      .lanes = 1,
 			      .channel = 0,
@@ -1417,7 +1352,7 @@ out:
 }
 
 /* For capture routines */
-#define XVCLK 2400
+#define XVCLK 1300
 static int AE_Target = 44;
 static int AE_low, AE_high;
 static int preview_sysclk, preview_HTS;
@@ -1696,6 +1631,26 @@ static int ov5640_get_banding(struct v4l2_subdev *sd)
 	return banding;
 }
 
+static void ov5640_set_night_mode(struct v4l2_subdev *sd, int night)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	u8 val;
+	switch (night) {
+	case 0:		/*Off */
+		ov5640_reg_read(client, 0x3a00, &val);
+		val &= 0xFB;	/* night mode off, bit[2] = 0 */
+		ov5640_reg_write(client, 0x3a00, val);
+		break;
+	case 1:		/* On */
+		ov5640_reg_read(client, 0x3a00, &val);
+		val |= 0x04;	/* night mode on, bit[2] = 1 */
+		ov5640_reg_write(client, 0x3a00, val);
+		break;
+	default:
+		break;
+	}
+}
+
 static void ov5640_set_banding(struct v4l2_subdev *sd)
 {
 	int preview_VTS;
@@ -1753,26 +1708,6 @@ static void ov5640_set_banding(struct v4l2_subdev *sd)
 	printk(KERN_INFO
 	       "%s: band_step60:0x%x max_band60:0x%x  band_step50:0x%x max_band50:0x%x\n",
 	       __func__, band_step60, max_band60, band_step50, max_band50);
-}
-
-static void ov5640_set_night_mode(struct v4l2_subdev *sd, int night)
-{
-	struct i2c_client *client = v4l2_get_subdevdata(sd);
-	u8 val;
-	switch (night) {
-	case 0:		/*Off */
-		ov5640_reg_read(client, 0x3a00, &val);
-		val &= 0xFB;	/* night mode off, bit[2] = 0 */
-		ov5640_reg_write(client, 0x3a00, val);
-		break;
-	case 1:		/* On */
-		ov5640_reg_read(client, 0x3a00, &val);
-		val |= 0x04;	/* night mode on, bit[2] = 1 */
-		ov5640_reg_write(client, 0x3a00, val);
-		break;
-	default:
-		break;
-	}
 }
 
 static int ov5640_set_AE_target(struct v4l2_subdev *sd, int target)
@@ -3293,7 +3228,6 @@ static int ov5640_enum_frameintervals(struct v4l2_subdev *sd,
 	case OV5640_SIZE_VGA:
 	case OV5640_SIZE_QVGA:
 	case OV5640_SIZE_1280x960:
-	case OV5640_SIZE_1080P:
 	default:
 		interval->discrete.numerator = 1;
 		interval->discrete.denominator = 24;
@@ -3333,7 +3267,6 @@ static int ov5640_g_parm(struct v4l2_subdev *sd, struct v4l2_streamparm *param)
 		cparm->timeperframe.numerator = 1;
 		cparm->timeperframe.denominator = 15;
 		break;
-	case OV5640_SIZE_1080P:
 	case OV5640_SIZE_1280x960:
 	case OV5640_SIZE_720P:
 	case OV5640_SIZE_VGA:
@@ -3373,7 +3306,7 @@ static int ov5640_g_skip_frames(struct v4l2_subdev *sd, u32 *frames)
 {
 	/* Quantity of initial bad frames to skip. Revisit. */
 	/* Waiting for AWB stability, avoid green color issue */
-	*frames = 3;
+	*frames = 2;
 
 	return 0;
 }
