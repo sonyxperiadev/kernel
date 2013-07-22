@@ -1149,6 +1149,18 @@ config SOC_CAMERA_OV5648
           canceling. The OV5648 only supports
           raw Bayer output formats.
 
+config SOC_CAMERA_OV8825
+	tristate "ov8825 camera support"
+	depends on SOC_CAMERA && I2C
+	help
+	  Omnivision OV8825 camera driver.
+          The OV8825 is a 8Mpix image sensor
+          with a small, restricted set of SOC
+          camera features such as black level
+          correction and defective pixel
+          canceling. The OV8825 only supports
+          raw Bayer output formats.
+
 config SOC_CAMERA_OV7692
 	tristate "ov7692 camera support"
 	depends on SOC_CAMERA && I2C
