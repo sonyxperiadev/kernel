@@ -44,6 +44,7 @@
 #include <linux/of.h>
 #include <linux/of_irq.h>
 #include <linux/of_gpio.h>
+#include <linux/slab.h>
 
 #ifdef CONFIG_REGULATOR
 #include <linux/regulator/consumer.h>

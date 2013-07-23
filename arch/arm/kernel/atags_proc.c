@@ -9,26 +9,19 @@ struct buffer {
 	char data[];
 };
 
-static int
-read_buffer(char* page, char** start, off_t off, int count,
-	int* eof, void* data)
+static ssize_t atags_read(struct file *file, char __user *buf,
+			  size_t count, loff_t *ppos)
 {
-	struct buffer *buffer = (struct buffer *)data;
-
-	if (off >= buffer->size) {
-		*eof = 1;
-		return 0;
-	}
-
-	count = min((int) (buffer->size - off), count);
-
-	memcpy(page, &buffer->data[off], count);
-
-	return count;
+	struct buffer *b = PDE_DATA(file_inode(file));
+	return simple_read_from_buffer(buf, count, ppos, b->data, b->size);
 }
-/*This size need to be increased if size of the device Tree is furher increased 
-*/
-#define BOOT_PARAMS_SIZE 	3072
+
+static const struct file_operations atags_fops = {
+	.read = atags_read,
+	.llseek = default_llseek,
+};
+
+#define BOOT_PARAMS_SIZE 1536
 static char __initdata atags_copy[BOOT_PARAMS_SIZE];
 
 void __init save_atags(const struct tag *tags)
@@ -68,9 +61,7 @@ static int __init init_atags_procfs(void)
 	b->size = size;
 	memcpy(b->data, atags_copy, size);
 
-	tags_entry = create_proc_read_entry("atags", 0400,
-			NULL, read_buffer, b);
-
+	tags_entry = proc_create_data("atags", 0400, NULL, &atags_fops, b);
 	if (!tags_entry)
 		goto nomem;
 

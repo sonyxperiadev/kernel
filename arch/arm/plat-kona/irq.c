@@ -37,7 +37,6 @@
 #include <mach/irqs.h>
 #include <mach/io_map.h>
 
-//PARUN
 int gic_of_init(struct device_node *node, struct device_node *parent);
 
 #ifdef CONFIG_OF

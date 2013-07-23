@@ -18,6 +18,7 @@
 #include <linux/semaphore.h>
 #include <linux/device.h>
 #include <linux/proc_fs.h>
+#include <linux/slab.h>
 
 #include <linux/broadcom/bsc.h>
 
@@ -336,7 +337,7 @@ struct file_operations bsc_fops = {
 
 static int
 proc_register_write(struct file *file, const char __user *buffer,
-		    unsigned long count, void *data)
+		    size_t count, loff_t *data)
 {
 	int rc;
 	BSC_PARAM_T param;
@@ -390,7 +391,7 @@ proc_register_write(struct file *file, const char __user *buffer,
 
 static int
 proc_unregister_write(struct file *file, const char __user *buffer,
-		      unsigned long count, void *data)
+		      size_t count, loff_t *data)
 {
 	int rc;
 	char name[BSC_NAME_LEN];
@@ -421,7 +422,7 @@ proc_unregister_write(struct file *file, const char __user *buffer,
 
 static int
 proc_query_write(struct file *file, const char __user *buffer,
-		 unsigned long count, void *data)
+		 size_t count, loff_t *data)
 {
 	int rc;
 	BSC_PARAM_T param;
@@ -474,16 +475,13 @@ proc_query_write(struct file *file, const char __user *buffer,
 }
 
 static int
-proc_list_read(char *buffer, char **start, off_t off, int count,
-	       int *eof, void *data)
+proc_list_read(struct file *file, char __user *buffer,
+		 size_t count, loff_t *data)
 {
 	int rc;
 	unsigned int len = 0;
 	BSC_ENTRY_T *entry = NULL;
 	struct list_head *list = &gBscList;
-
-	if (off > 0)
-		return 0;
 
 	len +=
 	    sprintf(buffer + len,
@@ -503,6 +501,21 @@ proc_list_read(char *buffer, char **start, off_t off, int count,
 	return len;
 }
 
+static const struct file_operations proc_register_fops = {
+	.write =	proc_register_write,
+};
+
+static const struct file_operations proc_unregister_fops = {
+	.write	=	proc_unregister_write,
+};
+
+static const struct file_operations proc_query_fops = {
+	.write	=	proc_query_write,
+};
+
+static const struct file_operations proc_list_fops = {
+	.read 	=	proc_list_read,
+};
 /*
  * Initialize the proc entries
  */
@@ -517,44 +530,34 @@ static int proc_init(void)
 	gProc.parent_dir = proc_mkdir(PROC_PARENT_DIR, NULL);
 
 	proc_register =
-	    create_proc_entry(PROC_ENTRY_REGISTER, 0644, gProc.parent_dir);
+	    proc_create_data(PROC_ENTRY_REGISTER, 0644, gProc.parent_dir,
+				&proc_register_fops, NULL);
 	if (proc_register == NULL) {
 		rc = -ENOMEM;
 		goto proc_exit;
 	}
-	proc_register->read_proc = NULL;
-	proc_register->write_proc = proc_register_write;
-	proc_register->data = NULL;
-
 	proc_unregister =
-	    create_proc_entry(PROC_ENTRY_UNREGISTER, 0644, gProc.parent_dir);
+	    proc_create_data(PROC_ENTRY_UNREGISTER, 0644, gProc.parent_dir,
+				&proc_unregister_fops, NULL);
 	if (proc_unregister == NULL) {
 		rc = -ENOMEM;
 		goto proc_del_reg;
 	}
-	proc_unregister->read_proc = NULL;
-	proc_unregister->write_proc = proc_unregister_write;
-	proc_unregister->data = NULL;
 
 	proc_query =
-	    create_proc_entry(PROC_ENTRY_QUERY, 0644, gProc.parent_dir);
+	    proc_create_data(PROC_ENTRY_QUERY, 0644, gProc.parent_dir,
+				&proc_query_fops, NULL);
 	if (proc_query == NULL) {
 		rc = -ENOMEM;
 		goto proc_del_unreg;
 	}
-	proc_query->read_proc = NULL;
-	proc_query->write_proc = proc_query_write;
-	proc_query->data = NULL;
 
-	proc_list = create_proc_entry(PROC_ENTRY_LIST, 0644, gProc.parent_dir);
+	proc_list = proc_create_data(PROC_ENTRY_LIST, 0644, gProc.parent_dir,
+					&proc_list_fops, NULL);
 	if (proc_list == NULL) {
 		rc = -ENOMEM;
 		goto proc_del_query;
 	}
-	proc_list->read_proc = proc_list_read;
-	proc_list->write_proc = NULL;
-	proc_list->data = NULL;
-
 	return 0;
 
       proc_del_query:

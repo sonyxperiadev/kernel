@@ -26,10 +26,10 @@
 #include <linux/init.h>
 #include <linux/irq.h>
 #include <linux/interrupt.h>
+#include <linux/irqchip/chained_irq.h>
 
 #include <linux/io.h>
 #include <asm/gpio.h>
-#include <asm/mach/irq.h>
 #include <mach/gpio.h>
 #include <mach/rdb/brcm_rdb_gpio.h>
 #include <mach/io_map.h>

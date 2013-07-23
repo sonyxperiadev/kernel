@@ -31,7 +31,7 @@ tracing_sched_switch_trace(struct trace_array *tr,
 			   unsigned long flags, int pc)
 {
 	struct ftrace_event_call *call = &event_context_switch;
-	struct ring_buffer *buffer = tr->buffer;
+	struct ring_buffer *buffer = tr->trace_buffer.buffer;
 	struct ring_buffer_event *event;
 	struct ctx_switch_entry *entry;
 
@@ -77,7 +77,7 @@ probe_sched_switch(void *ignore, struct task_struct *prev, struct task_struct *n
 	pc = preempt_count();
 	local_irq_save(flags);
 	cpu = raw_smp_processor_id();
-	data = ctx_trace->data[cpu];
+	data = per_cpu_ptr(ctx_trace->trace_buffer.data, cpu);
 
 	if (likely(!atomic_read(&data->disabled)))
 		tracing_sched_switch_trace(ctx_trace, prev, next, flags, pc);
@@ -94,7 +94,7 @@ tracing_sched_wakeup_trace(struct trace_array *tr,
 	struct ftrace_event_call *call = &event_wakeup;
 	struct ring_buffer_event *event;
 	struct ctx_switch_entry *entry;
-	struct ring_buffer *buffer = tr->buffer;
+	struct ring_buffer *buffer = tr->trace_buffer.buffer;
 
 	event = trace_buffer_lock_reserve(buffer, TRACE_WAKE,
 					  sizeof(*entry), flags, pc);
@@ -137,7 +137,7 @@ probe_sched_wakeup(void *ignore, struct task_struct *wakee, int success)
 	pc = preempt_count();
 	local_irq_save(flags);
 	cpu = raw_smp_processor_id();
-	data = ctx_trace->data[cpu];
+	data = per_cpu_ptr(ctx_trace->trace_buffer.data, cpu);
 
 	if (likely(!atomic_read(&data->disabled)))
 		tracing_sched_wakeup_trace(ctx_trace, wakee, current,

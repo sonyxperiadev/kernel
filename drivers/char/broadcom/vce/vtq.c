@@ -293,8 +293,9 @@ struct jobinfo {
  */
 
 static int proc_debug_write(struct file *file,
-		const char *buf, unsigned long nbytes,
-		void *priv)
+		const char __user *buf, size_t nbytes,
+		loff_t *priv)
+
 {
 	struct vtq_global *g;
 	char request[100];
@@ -338,19 +339,20 @@ static void term_driverprocentries(struct vtq_global *g)
 	remove_proc_entry("debug", g->proc_dir);
 }
 
+static const struct file_operations proc_debug_fops = {
+	.write	=	proc_debug_write,
+};
+
 static int init_driverprocentries(struct vtq_global *g)
 {
-	g->proc_debug = create_proc_entry("debug",
+	g->proc_debug = proc_create_data("debug",
 			(S_IRUSR | S_IRGRP),
-			g->proc_dir);
+			g->proc_dir, &proc_debug_fops, g);
+
 	if (g->proc_debug == NULL) {
 		err_print("Failed to create vtq/debug proc entry\n");
 		goto err_procentry_debug;
 	}
-	g->proc_debug->write_proc = proc_debug_write;
-	g->proc_debug->data = (void *)g;
-
-	/* success */
 
 	return 0;
 
@@ -436,8 +438,8 @@ static void cleanup(struct work_struct *work);
  * Per-VCE /proc entries for Debug etc
  */
 
-static int proc_fifo_read(char *buffer, char **start, off_t offset,
-		int bytes, int *eof, void *priv)
+static int proc_fifo_read(struct file *file, char __user *buffer,
+		size_t bytes, loff_t *priv)
 {
 	struct vtq_vce *v;
 	uint32_t writeptr, readptr, ackptr;
@@ -475,11 +477,6 @@ static int proc_fifo_read(char *buffer, char **start, off_t offset,
 			writeptr - readptr, readptr - ackptr,
 			v->power_lock_count);
 
-	/* TODO: be a proper read_proc function */
-	(void)start;
-	(void)offset;
-	(void)eof;
-
 	ret = len;
 
 	BUG_ON(len > required_bytes - 1);
@@ -501,19 +498,21 @@ static void term_procentries(struct vtq_vce *v)
 	remove_proc_entry("fifo", v->proc_dir);
 }
 
+static const struct file_operations proc_fifo_fops = {
+	.read =		proc_fifo_read,
+};
+
 static int init_procentries(struct vtq_vce *v)
 {
-	v->proc_fifo = create_proc_entry("fifo",
+	v->proc_fifo = proc_create_data("fifo",
 			(S_IRUSR | S_IRGRP),
-			v->proc_dir);
+			v->proc_dir,
+			&proc_fifo_fops, v);
+
 	if (v->proc_fifo == NULL) {
 		err_print("Failed to create vtq/fifo proc entry\n");
 		goto err_procentry_fifo;
 	}
-	v->proc_fifo->read_proc = proc_fifo_read;
-	v->proc_fifo->data = (void *)v;
-
-	/* success */
 
 	return 0;
 

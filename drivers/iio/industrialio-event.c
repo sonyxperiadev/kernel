@@ -47,10 +47,11 @@ int iio_push_event(struct iio_dev *indio_dev, u64 ev_code, s64 timestamp)
 {
 	struct iio_event_interface *ev_int = indio_dev->event_interface;
 	struct iio_event_data ev;
+	unsigned long flags;
 	int copied;
 
 	/* Does anyone care? */
-	spin_lock(&ev_int->wait.lock);
+	spin_lock_irqsave(&ev_int->wait.lock, flags);
 	if (test_bit(IIO_BUSY_BIT_POS, &ev_int->flags)) {
 
 		ev.id = ev_code;
@@ -60,7 +61,7 @@ int iio_push_event(struct iio_dev *indio_dev, u64 ev_code, s64 timestamp)
 		if (copied != 0)
 			wake_up_locked_poll(&ev_int->wait, POLLIN);
 	}
-	spin_unlock(&ev_int->wait.lock);
+	spin_unlock_irqrestore(&ev_int->wait.lock, flags);
 
 	return 0;
 }
@@ -77,10 +78,10 @@ static unsigned int iio_event_poll(struct file *filep,
 
 	poll_wait(filep, &ev_int->wait, wait);
 
-	spin_lock(&ev_int->wait.lock);
+	spin_lock_irq(&ev_int->wait.lock);
 	if (!kfifo_is_empty(&ev_int->det_events))
 		events = POLLIN | POLLRDNORM;
-	spin_unlock(&ev_int->wait.lock);
+	spin_unlock_irq(&ev_int->wait.lock);
 
 	return events;
 }
@@ -125,7 +126,7 @@ static int iio_event_chrdev_release(struct inode *inode, struct file *filep)
 {
 	struct iio_event_interface *ev_int = filep->private_data;
 
-	spin_lock(&ev_int->wait.lock);
+	spin_lock_irq(&ev_int->wait.lock);
 	__clear_bit(IIO_BUSY_BIT_POS, &ev_int->flags);
 	/*
 	 * In order to maintain a clean state for reopening,
@@ -133,7 +134,7 @@ static int iio_event_chrdev_release(struct inode *inode, struct file *filep)
 	 * any new __iio_push_event calls running.
 	 */
 	kfifo_reset_out(&ev_int->det_events);
-	spin_unlock(&ev_int->wait.lock);
+	spin_unlock_irq(&ev_int->wait.lock);
 
 	return 0;
 }
@@ -154,18 +155,18 @@ int iio_event_getfd(struct iio_dev *indio_dev)
 	if (ev_int == NULL)
 		return -ENODEV;
 
-	spin_lock(&ev_int->wait.lock);
+	spin_lock_irq(&ev_int->wait.lock);
 	if (__test_and_set_bit(IIO_BUSY_BIT_POS, &ev_int->flags)) {
-		spin_unlock(&ev_int->wait.lock);
+		spin_unlock_irq(&ev_int->wait.lock);
 		return -EBUSY;
 	}
-	spin_unlock(&ev_int->wait.lock);
+	spin_unlock_irq(&ev_int->wait.lock);
 	fd = anon_inode_getfd("iio:event",
 				&iio_event_chrdev_fileops, ev_int, O_RDONLY);
 	if (fd < 0) {
-		spin_lock(&ev_int->wait.lock);
+		spin_lock_irq(&ev_int->wait.lock);
 		__clear_bit(IIO_BUSY_BIT_POS, &ev_int->flags);
-		spin_unlock(&ev_int->wait.lock);
+		spin_unlock_irq(&ev_int->wait.lock);
 	}
 	return fd;
 }

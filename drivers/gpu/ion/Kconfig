@@ -42,4 +42,3 @@ config ION_BCM_NO_DT
 	are read from platform data defined in board file and device
 	registration is done via platform_device_register() if this
 	macro is enabled.
-

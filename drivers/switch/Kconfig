@@ -8,7 +8,7 @@ if SWITCH
 
 config SWITCH_GPIO
 	tristate "GPIO Swith support"
-	depends on GENERIC_GPIO
+	depends on GPIOLIB
 	help
 	  Say Y here to enable GPIO based switch support.
 

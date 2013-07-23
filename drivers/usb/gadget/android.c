@@ -31,6 +31,7 @@
 #include "gadget_chips.h"
 
 #include "f_fs.c"
+<<<<<<< HEAD
 #ifdef CONFIG_SOUND
 #include "f_audio_source.c"
 #endif
@@ -39,12 +40,19 @@
 #define USB_FACM_INCLUDED
 #include "f_acm.c"
 #include "f_adb.c"
+=======
+#include "f_audio_source.c"
+#include "f_mass_storage.c"
+>>>>>>> linaro/experimental/android-3.10
 #include "f_mtp.c"
 #include "f_accessory.c"
 #define USB_ETH_RNDIS y
 #include "f_rndis.c"
 #include "rndis.c"
+<<<<<<< HEAD
 #include "f_ncm.c"
+=======
+>>>>>>> linaro/experimental/android-3.10
 #include "u_ether.c"
 
 MODULE_AUTHOR("Mike Lockwood");
@@ -213,6 +221,7 @@ static void android_disable(struct android_dev *dev)
 /*-------------------------------------------------------------------------*/
 /* Supported functions initialization */
 
+<<<<<<< HEAD
 
 
 struct adb_data {
@@ -310,6 +319,8 @@ static void adb_closed_callback(void)
 }
 
 
+=======
+>>>>>>> linaro/experimental/android-3.10
 struct functionfs_config {
 	bool opened;
 	bool enabled;
@@ -468,7 +479,13 @@ static void functionfs_release_dev_callback(struct ffs_data *ffs_data)
 #define MAX_ACM_INSTANCES 4
 struct acm_function_config {
 	int instances;
+<<<<<<< HEAD
 	unsigned char port_num[MAX_ACM_INSTANCES];
+=======
+	int instances_on;
+	struct usb_function *f_acm[MAX_ACM_INSTANCES];
+	struct usb_function_instance *f_acm_inst[MAX_ACM_INSTANCES];
+>>>>>>> linaro/experimental/android-3.10
 };
 
 static int
@@ -485,6 +502,7 @@ acm_function_init(struct android_usb_function *f,
 	f->config = config;
 
 	for (i = 0; i < MAX_ACM_INSTANCES; i++) {
+<<<<<<< HEAD
 		ret = gserial_alloc_line(&config->port_num[i]);
 		if (ret)
 			goto err_alloc_line;
@@ -493,6 +511,26 @@ acm_function_init(struct android_usb_function *f,
 err_alloc_line:
 	while (i-- > 0)
 		gserial_free_line(config->port_num[i]);
+=======
+		config->f_acm_inst[i] = usb_get_function_instance("acm");
+		if (IS_ERR(config->f_acm_inst[i])) {
+			ret = PTR_ERR(config->f_acm_inst[i]);
+			goto err_usb_get_function_instance;
+		}
+		config->f_acm[i] = usb_get_function(config->f_acm_inst[i]);
+		if (IS_ERR(config->f_acm[i])) {
+			ret = PTR_ERR(config->f_acm[i]);
+			goto err_usb_get_function;
+		}
+	}
+	return 0;
+err_usb_get_function_instance:
+	while (i-- > 0) {
+		usb_put_function(config->f_acm[i]);
+err_usb_get_function:
+		usb_put_function_instance(config->f_acm_inst[i]);
+	}
+>>>>>>> linaro/experimental/android-3.10
 	return ret;
 }
 
@@ -501,8 +539,15 @@ static void acm_function_cleanup(struct android_usb_function *f)
 	int i;
 	struct acm_function_config *config = f->config;
 
+<<<<<<< HEAD
 	for (i = 0; i < MAX_ACM_INSTANCES; i++)
 		gserial_free_line(config->port_num[i]);
+=======
+	for (i = 0; i < MAX_ACM_INSTANCES; i++) {
+		usb_put_function(config->f_acm[i]);
+		usb_put_function_instance(config->f_acm_inst[i]);
+	}
+>>>>>>> linaro/experimental/android-3.10
 	kfree(f->config);
 	f->config = NULL;
 }
@@ -515,6 +560,7 @@ acm_function_bind_config(struct android_usb_function *f,
 	int ret = 0;
 	struct acm_function_config *config = f->config;
 
+<<<<<<< HEAD
 	for (i = 0; i < config->instances; i++) {
 		ret = acm_bind_config(c, i);
 		if (ret) {
@@ -526,6 +572,35 @@ acm_function_bind_config(struct android_usb_function *f,
 	return ret;
 }
 
+=======
+	config->instances_on = config->instances;
+	for (i = 0; i < config->instances_on; i++) {
+		ret = usb_add_function(c, config->f_acm[i]);
+		if (ret) {
+			pr_err("Could not bind acm%u config\n", i);
+			goto err_usb_add_function;
+		}
+	}
+
+	return 0;
+
+err_usb_add_function:
+	while (i-- > 0)
+		usb_remove_function(c, config->f_acm[i]);
+	return ret;
+}
+
+static void acm_function_unbind_config(struct android_usb_function *f,
+				       struct usb_configuration *c)
+{
+	int i;
+	struct acm_function_config *config = f->config;
+
+	for (i = 0; i < config->instances_on; i++)
+		usb_remove_function(c, config->f_acm[i]);
+}
+
+>>>>>>> linaro/experimental/android-3.10
 static ssize_t acm_instances_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
@@ -560,6 +635,10 @@ static struct android_usb_function acm_function = {
 	.init		= acm_function_init,
 	.cleanup	= acm_function_cleanup,
 	.bind_config	= acm_function_bind_config,
+<<<<<<< HEAD
+=======
+	.unbind_config	= acm_function_unbind_config,
+>>>>>>> linaro/experimental/android-3.10
 	.attributes	= acm_function_attributes,
 };
 
@@ -633,6 +712,10 @@ struct rndis_function_config {
 	char	manufacturer[256];
 	/* "Wireless" RNDIS; auto-detected by Windows */
 	bool	wceis;
+<<<<<<< HEAD
+=======
+	struct eth_dev *dev;
+>>>>>>> linaro/experimental/android-3.10
 };
 
 static int
@@ -656,6 +739,10 @@ rndis_function_bind_config(struct android_usb_function *f,
 		struct usb_configuration *c)
 {
 	int ret;
+<<<<<<< HEAD
+=======
+	struct eth_dev *dev;
+>>>>>>> linaro/experimental/android-3.10
 	struct rndis_function_config *rndis = f->config;
 
 	if (!rndis) {
@@ -667,11 +754,21 @@ rndis_function_bind_config(struct android_usb_function *f,
 		rndis->ethaddr[0], rndis->ethaddr[1], rndis->ethaddr[2],
 		rndis->ethaddr[3], rndis->ethaddr[4], rndis->ethaddr[5]);
 
+<<<<<<< HEAD
 	ret = gether_setup_name(c->cdev->gadget, rndis->ethaddr, "rndis");
 	if (ret) {
 		pr_err("%s: gether_setup failed\n", __func__);
 		return ret;
 	}
+=======
+	dev = gether_setup_name(c->cdev->gadget, rndis->ethaddr, "rndis");
+	if (IS_ERR(dev)) {
+		ret = PTR_ERR(dev);
+		pr_err("%s: gether_setup failed\n", __func__);
+		return ret;
+	}
+	rndis->dev = dev;
+>>>>>>> linaro/experimental/android-3.10
 
 	if (rndis->wceis) {
 		/* "Wireless" RNDIS; auto-detected by Windows */
@@ -686,13 +783,22 @@ rndis_function_bind_config(struct android_usb_function *f,
 	}
 
 	return rndis_bind_config_vendor(c, rndis->ethaddr, rndis->vendorID,
+<<<<<<< HEAD
 					   rndis->manufacturer);
+=======
+					   rndis->manufacturer, rndis->dev);
+>>>>>>> linaro/experimental/android-3.10
 }
 
 static void rndis_function_unbind_config(struct android_usb_function *f,
 						struct usb_configuration *c)
 {
+<<<<<<< HEAD
 	gether_cleanup();
+=======
+	struct rndis_function_config *rndis = f->config;
+	gether_cleanup(rndis->dev);
+>>>>>>> linaro/experimental/android-3.10
 }
 
 static ssize_t rndis_manufacturer_show(struct device *dev,
@@ -813,6 +919,7 @@ static struct android_usb_function rndis_function = {
 	.attributes	= rndis_function_attributes,
 };
 
+<<<<<<< HEAD
 struct ncm_function_config {
 	u8      ethaddr[ETH_ALEN];
 	u32     vendorID;
@@ -986,6 +1093,8 @@ static struct android_usb_function ncm_function = {
 	.unbind_config	= ncm_function_unbind_config,
 	.attributes	= ncm_function_attributes,
 };
+=======
+>>>>>>> linaro/experimental/android-3.10
 
 struct mass_storage_function_config {
 	struct fsg_config fsg;
@@ -998,13 +1107,18 @@ static int mass_storage_function_init(struct android_usb_function *f,
 	struct mass_storage_function_config *config;
 	struct fsg_common *common;
 	int err;
+<<<<<<< HEAD
 #ifdef CONFIG_USB_MULTI_DISK_SUPPORT
 	int i, clear;
 #endif
+=======
+
+>>>>>>> linaro/experimental/android-3.10
 	config = kzalloc(sizeof(struct mass_storage_function_config),
 								GFP_KERNEL);
 	if (!config)
 		return -ENOMEM;
+<<<<<<< HEAD
 #ifdef CONFIG_USB_MULTI_DISK_SUPPORT
 	config->fsg.nluns = CONFIG_USB_MASS_STORAGE_LUN_NUM;
 	for (i = 0; i < config->fsg.nluns; i++)
@@ -1013,12 +1127,19 @@ static int mass_storage_function_init(struct android_usb_function *f,
 	config->fsg.nluns = 1;
 	config->fsg.luns[0].removable = 1;
 #endif
+=======
+
+	config->fsg.nluns = 1;
+	config->fsg.luns[0].removable = 1;
+
+>>>>>>> linaro/experimental/android-3.10
 	common = fsg_common_init(NULL, cdev, &config->fsg);
 	if (IS_ERR(common)) {
 		kfree(config);
 		return PTR_ERR(common);
 	}
 
+<<<<<<< HEAD
 #ifdef CONFIG_USB_MULTI_DISK_SUPPORT
 	for (i = 0; i < config->fsg.nluns; i++) {
 		char lun_name[8];
@@ -1042,6 +1163,8 @@ static int mass_storage_function_init(struct android_usb_function *f,
 		return err;
 	}
 #else
+=======
+>>>>>>> linaro/experimental/android-3.10
 	err = sysfs_create_link(&f->dev->kobj,
 				&common->luns[0].dev.kobj,
 				"lun");
@@ -1049,7 +1172,11 @@ static int mass_storage_function_init(struct android_usb_function *f,
 		kfree(config);
 		return err;
 	}
+<<<<<<< HEAD
 #endif
+=======
+
+>>>>>>> linaro/experimental/android-3.10
 	config->common = common;
 	f->config = config;
 	return 0;
@@ -1138,7 +1265,10 @@ static struct android_usb_function accessory_function = {
 	.ctrlrequest	= accessory_function_ctrlrequest,
 };
 
+<<<<<<< HEAD
 #ifdef CONFIG_SOUND
+=======
+>>>>>>> linaro/experimental/android-3.10
 static int audio_source_function_init(struct android_usb_function *f,
 			struct usb_composite_dev *cdev)
 {
@@ -1185,7 +1315,11 @@ static ssize_t audio_source_pcm_show(struct device *dev,
 	return sprintf(buf, "%d %d\n", config->card, config->device);
 }
 
+<<<<<<< HEAD
 static DEVICE_ATTR(pcm, S_IRUGO | S_IWUSR, audio_source_pcm_show, NULL);
+=======
+static DEVICE_ATTR(pcm, S_IRUGO, audio_source_pcm_show, NULL);
+>>>>>>> linaro/experimental/android-3.10
 
 static struct device_attribute *audio_source_function_attributes[] = {
 	&dev_attr_pcm,
@@ -1200,10 +1334,15 @@ static struct android_usb_function audio_source_function = {
 	.unbind_config	= audio_source_function_unbind_config,
 	.attributes	= audio_source_function_attributes,
 };
+<<<<<<< HEAD
 #endif
 
 static struct android_usb_function *supported_functions[] = {
 	&adb_function,
+=======
+
+static struct android_usb_function *supported_functions[] = {
+>>>>>>> linaro/experimental/android-3.10
 	&ffs_function,
 	&acm_function,
 	&mtp_function,
@@ -1211,10 +1350,14 @@ static struct android_usb_function *supported_functions[] = {
 	&rndis_function,
 	&mass_storage_function,
 	&accessory_function,
+<<<<<<< HEAD
 #ifdef CONFIG_SOUND
 	&audio_source_function,
 #endif
 	&ncm_function,
+=======
+	&audio_source_function,
+>>>>>>> linaro/experimental/android-3.10
 	NULL
 };
 
@@ -1532,6 +1675,7 @@ static DEVICE_ATTR(field, S_IRUGO | S_IWUSR, field ## _show, field ## _store);
 DESCRIPTOR_ATTR(idVendor, "%04x\n")
 DESCRIPTOR_ATTR(idProduct, "%04x\n")
 DESCRIPTOR_ATTR(bcdDevice, "%04x\n")
+<<<<<<< HEAD
 #if defined CONFIG_MACH_RHEA_SS \
 || defined CONFIG_MACH_RHEA_SS_ZANIN \
 || defined CONFIG_MACH_RHEA_SS_LUCAS \
@@ -1545,6 +1689,11 @@ DESCRIPTOR_ATTR(bDeviceClass, "%d\n")
 DESCRIPTOR_ATTR(bDeviceSubClass, "%d\n")
 DESCRIPTOR_ATTR(bDeviceProtocol, "%d\n")
 #endif
+=======
+DESCRIPTOR_ATTR(bDeviceClass, "%d\n")
+DESCRIPTOR_ATTR(bDeviceSubClass, "%d\n")
+DESCRIPTOR_ATTR(bDeviceProtocol, "%d\n")
+>>>>>>> linaro/experimental/android-3.10
 DESCRIPTOR_STRING_ATTR(iManufacturer, manufacturer_string)
 DESCRIPTOR_STRING_ATTR(iProduct, product_string)
 DESCRIPTOR_STRING_ATTR(iSerial, serial_string)

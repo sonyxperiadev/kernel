@@ -15,6 +15,7 @@ obj-$(CONFIG_CRYPTO_DEV_BRCM_SPUM_AES) += brcm_spum.o brcm_spum_aes.o
 
 obj-$(CONFIG_CRYPTO_DEV_OMAP_AES) += omap-aes.o
 obj-$(CONFIG_CRYPTO_DEV_PICOXCELL) += picoxcell_crypto.o
+obj-$(CONFIG_CRYPTO_DEV_SAHARA) += sahara.o
 obj-$(CONFIG_CRYPTO_DEV_S5P) += s5p-sss.o
 obj-$(CONFIG_CRYPTO_DEV_TEGRA_AES) += tegra-aes.o
 obj-$(CONFIG_CRYPTO_DEV_UX500) += ux500/

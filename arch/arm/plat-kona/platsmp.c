@@ -21,7 +21,6 @@
 #include <mach/memory.h>
 
 #include <asm/cacheflush.h>
-#include <linux/irqchip/arm-gic.h>
 #ifdef CONFIG_ARCH_HAWAII
 #include <asm/smp_scu.h>
 #endif
@@ -70,7 +69,6 @@ static void __cpuinit kona_platform_secondary_init(unsigned int cpu)
 	 * core (e.g. timer irq), then they will not have been enabled
 	 * for us: do so
 	 */
-	gic_secondary_init(0);
 
 	/*
 	 * let the primary processor know we're out of the

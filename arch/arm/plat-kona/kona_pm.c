@@ -106,6 +106,7 @@ static int __kona_pm_enter_idle(struct cpuidle_device *dev,
 
 	if (pm_prms.idle_en) {
 
+#warning "Porting hack: To be verified by PM team"
 #ifdef CONFIG_HAS_WAKELOCK
 #if 0
 		if (has_wake_lock(WAKE_LOCK_IDLE))
@@ -134,7 +135,12 @@ static int __kona_pm_enter_idle(struct cpuidle_device *dev,
 __weak int kona_pm_enter_idle(struct cpuidle_device *dev,
 				      struct cpuidle_driver *drv, int index)
 {
+#if 0
 	return cpuidle_wrap_enter(dev, drv, index, __kona_pm_enter_idle);
+#endif
+#warning "Porting hack: To be verified by PM team"
+	cpu_do_idle();
+	return index;
 }
 
 DEFINE_PER_CPU(struct cpuidle_device, kona_idle_dev);
@@ -355,6 +361,8 @@ int __init kona_pm_init(struct pm_init_param *ip)
 	}
 	kona_idle_driver.state_count = ip->num_states;
 	kona_idle_driver.safe_state_index = 0;
+#warning "Porting hack: To be verified by PM team"
+#if 0
 	ret = cpuidle_register_driver(&kona_idle_driver);
 	if (ret) {
 		pr_err("CPUidle driver registration failed\n");
@@ -372,6 +380,8 @@ int __init kona_pm_init(struct pm_init_param *ip)
 			return ret;
 		}
 	}
+#endif
+	ret = cpuidle_register(&kona_idle_driver, NULL);
 #endif /*CONFIG_CPU_IDLE */
 
 #ifdef CONFIG_SUSPEND
@@ -379,7 +389,7 @@ int __init kona_pm_init(struct pm_init_param *ip)
 	suspend_set_ops(&kona_pm_ops);
 #endif /*CONFIG_SUSPEND */
 
-	return 0;
+	return ret;
 }
 
 /*
@@ -471,7 +481,8 @@ EXPORT_SYMBOL(kona_pm_disable_idle_state);
 /**
  * disable idle state @state for cpu @cpu
  */
-
+#warning "Porting hack: To be verified by PM team"
+#if 0
 int kona_pm_disable_idle_state_for_cpu(int cpu, int state, bool disable)
 {
 	struct cpuidle_device *dev;
@@ -499,6 +510,7 @@ int kona_pm_disable_idle_state_for_cpu(int cpu, int state, bool disable)
 	return 0;
 }
 EXPORT_SYMBOL(kona_pm_disable_idle_state_for_cpu);
+#endif
 
 int kona_pm_set_suspend_state(int state_inx)
 {

@@ -44,14 +44,7 @@ struct usb_otg {
 	int	(*set_otg_enable)(struct usb_otg *otg, bool enable);
 };
 
-#ifdef CONFIG_USB_OTG_UTILS
-extern const char *otg_state_string(enum usb_otg_state state);
-#else
-static inline const char *otg_state_string(enum usb_otg_state state)
-{
-	return NULL;
-}
-#endif
+extern const char *usb_otg_state_string(enum usb_otg_state state);
 
 /* Context: can sleep */
 static inline int

@@ -1429,8 +1429,8 @@ static struct file_operations vce_fops = {
 	.unlocked_ioctl = vce_ioctl,
 };
 
-static int proc_version_read(char *buffer, char **start, off_t offset,
-			     int bytes, int *eof, void *context)
+static int proc_version_read(struct file *fp, char __user *buffer,
+			     size_t bytes, loff_t *context)
 {
 	int ret;
 	uint32_t vce_version, spec_revision, sub_revision;
@@ -1469,11 +1469,12 @@ static int proc_version_read(char *buffer, char **start, off_t offset,
 	len =
 	    sprintf(buffer, "h:%u.%u\nk:%u\n", spec_revision, sub_revision,
 		    DRIVER_VERSION);
-
+#if 0
 	/* Not using these and don't really know how to: */
 	(void)start;
 	(void)offset;
 	(void)eof;
+#endif
 
 	ret = len;
 
@@ -1489,9 +1490,8 @@ e0:
 	BUG_ON(ret >= 0);
 	return ret;
 }
-
-static int proc_status_read(char *buffer, char **start, off_t offset, int bytes,
-			    int *eof, void *context)
+static int proc_status_read(struct file *fp, char __user *buffer,
+				size_t bytes, loff_t *context)
 {
 	int ret;
 	uint32_t status;
@@ -1540,11 +1540,6 @@ static int proc_status_read(char *buffer, char **start, off_t offset, int bytes,
 	    sprintf(buffer, "%u %u %u %u %u\n", busybits, stoppage_reason,
 		    running, nanoflag, irq);
 
-	/* Not using these and don't really know how to: */
-	(void)start;
-	(void)offset;
-	(void)eof;
-
 	ret = len;
 
 	clock_off();
@@ -1563,8 +1558,8 @@ e0:
 	return ret;
 }
 
-static int proc_utilization_read(char *buffer, char **start, off_t offset,
-		int bytes, int *eof, void *priv)
+static int proc_utilization_read(struct file *file, char __user *buffer,
+		size_t bytes, loff_t *priv)
 {
 	struct vce *v;
 	int ret;
@@ -1576,7 +1571,7 @@ static int proc_utilization_read(char *buffer, char **start, off_t offset,
 
 	ret = 0;
 
-	v = (struct vce *)priv;
+	v = (struct vce *)PDE_DATA(file_inode(file));
 
 	trace_index = v->powertrace_idx;
 	current_jiffies = jiffies;
@@ -1618,11 +1613,6 @@ static int proc_utilization_read(char *buffer, char **start, off_t offset,
 		next_jiffies = v->powertrace[trace_index];
 		numsofar += 1;
 	}
-
-	/* TODO: be a proper read_proc function */
-	(void)start;
-	(void)offset;
-	(void)eof;
 
 	ret = written;
 
@@ -1723,6 +1713,18 @@ static struct notifier_block mm_pol_chg_notify_blk = {
 	.notifier_call = mm_pol_chg_notifier,
 };
 
+static const struct file_operations proc_version_fops = {
+	.read = proc_version_read,
+};
+
+static const struct file_operations proc_status_fops = {
+	.read	= proc_status_read,
+};
+
+static const struct file_operations proc_utilization_fops = {
+	.read = proc_utilization_read,
+};
+
 int __init vce_init(void)
 {
 	int ret;
@@ -1795,37 +1797,35 @@ int __init vce_init(void)
 		ret = -ENOENT;
 		goto err2;
 	}
-
-	vce_state.proc_version = create_proc_entry("version",
-						   (S_IRUSR | S_IRGRP),
-						   vce_state.proc_vcedir);
+	vce_state.proc_version = proc_create_data("version",
+						 (S_IRUSR | S_IRGRP),
+						vce_state.proc_vcedir,
+						&proc_version_fops, NULL);
 	if (vce_state.proc_version == NULL) {
 		err_print("Failed to create vce proc entry\n");
 		ret = -ENOENT;
 		goto err_proc_version;
 	}
-	vce_state.proc_version->read_proc = proc_version_read;
-
-	vce_state.proc_status = create_proc_entry("status",
-						  (S_IRUSR | S_IRGRP),
-						  vce_state.proc_vcedir);
+	vce_state.proc_status = proc_create_data("status",
+						(S_IRUSR | S_IRGRP),
+						vce_state.proc_vcedir,
+						&proc_status_fops, NULL);
 	if (vce_state.proc_status == NULL) {
 		err_print("Failed to create vce proc entry\n");
 		ret = -ENOENT;
 		goto err_proc_status;
 	}
-	vce_state.proc_status->read_proc = proc_status_read;
-
-	vce_state.proc_utilization = create_proc_entry("utilization",
+	vce_state.proc_utilization = proc_create_data("utilization",
 						   (S_IRUSR | S_IRGRP),
-						   vce_state.proc_vcedir);
+						   vce_state.proc_vcedir,
+						   &proc_utilization_fops,
+						   &vce_state);
+
 	if (vce_state.proc_utilization == NULL) {
 		err_print("Failed to create vce proc entry\n");
 		ret = -ENOENT;
 		goto err_proc_utilization;
 	}
-	vce_state.proc_utilization->data = &vce_state;
-	vce_state.proc_utilization->read_proc = proc_utilization_read;
 
 	/* We need a QOS node for the CPU in order to do the ACP keep alive thing (simple wfi) */
 	ret =

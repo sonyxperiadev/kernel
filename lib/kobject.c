@@ -528,7 +528,7 @@ struct kobject *kobject_get(struct kobject *kobj)
 	return kobj;
 }
 
-static struct kobject *kobject_get_unless_zero(struct kobject *kobj)
+static struct kobject * __must_check kobject_get_unless_zero(struct kobject *kobj)
 {
 	if (!kref_get_unless_zero(&kobj->kref))
 		kobj = NULL;

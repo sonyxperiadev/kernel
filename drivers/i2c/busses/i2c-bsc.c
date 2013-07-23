@@ -30,6 +30,7 @@
 #include <linux/clk.h>
 #include <linux/i2c-kona.h>
 #include <linux/of_i2c.h>
+#include <linux/slab.h>
 #include <mach/chip_pinmux.h>
 #include <mach/pinmux.h>
 
@@ -1529,6 +1530,9 @@ static int proc_init(struct platform_device *pdev)
 	struct proc_dir_entry *proc_debug, *proc_reset, *proc_tx_fifo,
 	    *proc_rx_fifo;
 
+return 0;
+#if 0
+
 	snprintf(proc->name, sizeof(proc->name), "%s%d",
 		 PROC_GLOBAL_PARENT_DIR, pdev->id);
 
@@ -1587,6 +1591,7 @@ static int proc_init(struct platform_device *pdev)
  err_del_parent:
 	remove_proc_entry(proc->name, gProcParent);
 	return rc;
+#endif
 }
 
 static int proc_term(struct platform_device *pdev)

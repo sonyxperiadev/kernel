@@ -159,7 +159,7 @@ void kona_fb_profile_record(struct timeval prev_timeval,
 
 static int
 proc_write_fb_test(struct file *file, const char __user *buffer,
-			unsigned long count, void *data)
+			size_t count, loff_t *data)
 {
 	int len, cnt, i, num;
 	char value[20];
@@ -1199,6 +1199,10 @@ static struct fb_ops kona_fb_ops = {
 	.fb_sync = kona_fb_sync,
 };
 
+static const struct file_operations proc_fops = {
+	.write = proc_write_fb_test,
+};
+
 static int __ref kona_fb_probe(struct platform_device *pdev)
 {
 	int ret = -ENXIO;
@@ -1522,16 +1526,10 @@ static int __ref kona_fb_probe(struct platform_device *pdev)
 	fb->early_suspend_level3.level = EARLY_SUSPEND_LEVEL_DISABLE_FB;
 	register_early_suspend(&fb->early_suspend_level3);
 #endif
-
-	fb->proc_entry = create_proc_entry("fb_debug", 0666, NULL);
-
+	fb->proc_entry = proc_create_data("fb_debug", 0666, NULL,
+						&proc_fops, NULL);
 	if (NULL == fb->proc_entry)
 		printk(KERN_ERR "%s: could not create proc entry.\n", __func__);
-	else {
-		fb->proc_entry->data = NULL;
-		fb->proc_entry->read_proc = NULL;
-		fb->proc_entry->write_proc = proc_write_fb_test;
-	}
 
 	fb->reboot_nb.notifier_call = kona_fb_reboot_cb;
 	register_reboot_notifier(&fb->reboot_nb);

@@ -1153,6 +1153,7 @@ restart_loop:
 				journal->j_average_commit_time*3) / 4;
 	else
 		journal->j_average_commit_time = commit_time;
+
 	write_unlock(&journal->j_state_lock);
 
 	if (journal->j_checkpoint_transactions == NULL) {
@@ -1179,6 +1180,7 @@ restart_loop:
 	trace_jbd2_end_commit(journal, commit_transaction);
 	jbd_debug(1, "JBD2: commit %d complete, head %d\n",
 		  journal->j_commit_sequence, journal->j_tail_sequence);
+
 	write_lock(&journal->j_state_lock);
 	spin_lock(&journal->j_list_lock);
 	commit_transaction->t_state = T_FINISHED;

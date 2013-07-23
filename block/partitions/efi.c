@@ -240,7 +240,7 @@ static gpt_entry *alloc_read_gpt_entries(struct parsed_partitions *state,
                 le32_to_cpu(gpt->sizeof_partition_entry);
 	if (!count)
 		return NULL;
-	pte = kzalloc(count, GFP_KERNEL);
+	pte = kmalloc(count, GFP_KERNEL);
 	if (!pte)
 		return NULL;
 
@@ -269,7 +269,7 @@ static gpt_header *alloc_read_gpt_header(struct parsed_partitions *state,
 	gpt_header *gpt;
 	unsigned ssz = bdev_logical_block_size(state->bdev);
 
-	gpt = kzalloc(ssz, GFP_KERNEL);
+	gpt = kmalloc(ssz, GFP_KERNEL);
 	if (!gpt)
 		return NULL;
 

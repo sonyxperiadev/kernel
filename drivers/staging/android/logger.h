@@ -47,7 +47,7 @@ struct user_logger_entry_compat {
 /**
  * struct logger_entry - defines a single entry that is given to a logger
  * @len:	The length of the payload
- * @hdr_size: 	sizeof(struct logger_entry_v2)
+ * @hdr_size:	sizeof(struct logger_entry_v2)
  * @pid:	The generating process' process ID
  * @tid:	The generating process' thread ID
  * @sec:	The number of seconds that have elapsed since the Epoch
@@ -61,12 +61,12 @@ struct user_logger_entry_compat {
  */
 struct logger_entry {
 	__u16		len;
-	__u16		hdr_size;	
+	__u16		hdr_size;
 	__s32		pid;
 	__s32		tid;
 	__s32		sec;
 	__s32		nsec;
-	uid_t		euid;
+	kuid_t		euid;
 	char		msg[0];
 };
 

@@ -35,6 +35,9 @@
 #include <linux/capability.h>
 #include <linux/compat.h>
 
+#define CREATE_TRACE_POINTS
+#include <trace/events/mmc.h>
+
 #include <linux/mmc/ioctl.h>
 #include <linux/mmc/card.h>
 #include <linux/mmc/host.h>
@@ -401,14 +404,13 @@ static int mmc_blk_open(struct block_device *bdev, fmode_t mode)
 	return ret;
 }
 
-static int mmc_blk_release(struct gendisk *disk, fmode_t mode)
+static void mmc_blk_release(struct gendisk *disk, fmode_t mode)
 {
 	struct mmc_blk_data *md = disk->private_data;
 
 	mutex_lock(&block_mutex);
 	mmc_blk_put(md);
 	mutex_unlock(&block_mutex);
-	return 0;
 }
 
 static int
@@ -1135,9 +1137,12 @@ retry:
 			goto out;
 	}
 
-	if (mmc_can_sanitize(card))
+	if (mmc_can_sanitize(card)) {
+		trace_mmc_blk_erase_start(EXT_CSD_SANITIZE_START, 0, 0);
 		err = mmc_switch(card, EXT_CSD_CMD_SET_NORMAL,
 				 EXT_CSD_SANITIZE_START, 1, 0);
+		trace_mmc_blk_erase_end(EXT_CSD_SANITIZE_START, 0, 0);
+	}
 out_retry:
 	if (err && !mmc_blk_reset(md, card->host, type))
 		goto retry;
@@ -2049,10 +2054,6 @@ static int mmc_blk_issue_rq(struct mmc_queue *mq, struct request *req)
 	struct mmc_host *host = card->host;
 	unsigned long flags;
 
-#ifdef CONFIG_MMC_BLOCK_DEFERRED_RESUME
-	if (mmc_bus_needs_resume(card->host))
-		mmc_resume_bus(card->host);
-#endif
 
 #ifdef CONFIG_MMC_BLOCK_DEFERRED_RESUME
 	if (mmc_bus_needs_resume(card->host)) {
@@ -2099,8 +2100,14 @@ static int mmc_blk_issue_rq(struct mmc_queue *mq, struct request *req)
 	}
 
 out:
-	if (!req && !(mq->flags & MMC_QUEUE_NEW_REQUEST))
-		/* release host only when there are no more requests */
+	if ((!req && !(mq->flags & MMC_QUEUE_NEW_REQUEST)) ||
+	     (req && (req->cmd_flags & MMC_REQ_SPECIAL_MASK)))
+		/*
+		 * Release host when there are no more requests
+		 * and after special request(discard, flush) is done.
+		 * In case sepecial request, there is no reentry to
+		 * the 'mmc_blk_issue_rq' with 'mqrq_prev->req'.
+		 */
 		mmc_release_host(card->host);
 	return ret;
 }

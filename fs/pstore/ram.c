@@ -160,9 +160,11 @@ static ssize_t ramoops_pstore_read(u64 *id, enum pstore_type_id *type,
 
 	/* ECC correction notice */
 	ecc_notice_size = persistent_ram_ecc_string(prz, NULL, 0);
+
 	*buf = kmalloc(size + ecc_notice_size + 1, GFP_KERNEL);
 	if (*buf == NULL)
 		return -ENOMEM;
+
 	memcpy(*buf, persistent_ram_old(prz), size);
 	persistent_ram_ecc_string(prz, *buf + size, ecc_notice_size + 1);
 
@@ -436,6 +438,7 @@ static int ramoops_probe(struct platform_device *pdev)
 		pr_err("memory size too small, minimum is %zu\n",
 			cxt->console_size + cxt->record_size +
 			cxt->ftrace_size);
+		err = -EINVAL;
 		goto fail_cnt;
 	}
 
@@ -453,6 +456,7 @@ static int ramoops_probe(struct platform_device *pdev)
 	spin_lock_init(&cxt->pstore.buf_lock);
 	if (!cxt->pstore.buf) {
 		pr_err("cannot allocate pstore buffer\n");
+		err = -ENOMEM;
 		goto fail_clear;
 	}
 

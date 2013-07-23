@@ -39,6 +39,7 @@
 #ifdef CONFIG_BCM_IOVMM
 #include <plat/bcm_iommu.h>
 #endif
+#include "ion_priv.h"
 
 #include <asm/mach/map.h>
 
@@ -104,9 +105,9 @@ static void ion_carveout_heap_free(struct ion_buffer *buffer)
 {
 	struct ion_heap *heap = buffer->heap;
 
-		ion_carveout_free(heap, buffer->priv_phys, buffer->size);
-		buffer->priv_phys = ION_CARVEOUT_ALLOCATE_FAIL;
-	}
+	ion_carveout_free(heap, buffer->priv_phys, buffer->size);
+	buffer->priv_phys = ION_CARVEOUT_ALLOCATE_FAIL;
+}
 
 struct sg_table *ion_carveout_heap_map_dma(struct ion_heap *heap,
 					      struct ion_buffer *buffer)

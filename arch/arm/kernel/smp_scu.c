@@ -31,6 +31,7 @@ unsigned int __init scu_get_core_count(void __iomem *scu_base)
 	unsigned int ncores = __raw_readl(scu_base + SCU_CONFIG);
 	return (ncores & 0x03) + 1;
 }
+EXPORT_SYMBOL(scu_get_core_count);
 
 /*
  * Enable the SCU
@@ -41,7 +42,7 @@ void scu_enable(void __iomem *scu_base)
 
 #ifdef CONFIG_ARM_ERRATA_764369
 	/* Cortex-A9 only */
-	if ((read_cpuid(CPUID_ID) & 0xff0ffff0) == 0x410fc090) {
+	if ((read_cpuid_id() & 0xff0ffff0) == 0x410fc090) {
 		scu_ctrl = __raw_readl(scu_base + 0x30);
 		if (!(scu_ctrl & 1))
 			__raw_writel(scu_ctrl | 0x1, scu_base + 0x30);
@@ -62,6 +63,7 @@ void scu_enable(void __iomem *scu_base)
 	 */
 	flush_cache_all();
 }
+EXPORT_SYMBOL(scu_enable);
 #endif
 
 /*

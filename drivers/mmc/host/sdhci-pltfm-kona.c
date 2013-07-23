@@ -378,6 +378,11 @@ proc_card_ctrl_write(struct file *file, const char __user * buffer,
 	return count;
 }
 
+static const struct file_operations proc_card_ctrl_fops = {
+	.read	=	proc_card_ctrl_read,
+	.write	=	proc_card_ctrl_write,
+};
+
 /*
  * Initialize the proc entries
  */
@@ -395,15 +400,13 @@ static int proc_init(struct platform_device *pdev)
 		return -ENOMEM;
 
 	proc_card_ctrl =
-	    create_proc_entry(PROC_ENTRY_CARD_CTRL, 0644, proc->parent);
+		proc_create_data(PROC_ENTRY_CARD_CTRL, 0644,  proc->parent,
+				&proc_card_ctrl_fops,
+				dev);
 	if (proc_card_ctrl == NULL) {
 		rc = -ENOMEM;
 		goto proc_exit;
 	}
-	proc_card_ctrl->read_proc = proc_card_ctrl_read;
-	proc_card_ctrl->write_proc = proc_card_ctrl_write;
-	proc_card_ctrl->data = dev;
-
 	return 0;
 proc_exit:
 	remove_proc_entry(proc->name, gProcParent);

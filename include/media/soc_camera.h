@@ -313,6 +313,7 @@ struct soc_camera_sense {
 	unsigned long pixel_clock;
 };
 
+<<<<<<< HEAD
 static inline struct v4l2_queryctrl const *soc_camera_find_qctrl(
 	struct soc_camera_ops *ops, int id)
 {
@@ -341,10 +342,24 @@ static inline struct v4l2_queryctrl const *soc_camera_find_qctrl(
 #define SOCAM_PCLK_SAMPLE_FALLING	(1 << 13)
 #define SOCAM_DATA_ACTIVE_HIGH		(1 << 14)
 #define SOCAM_DATA_ACTIVE_LOW		(1 << 15)
+=======
+#define SOCAM_DATAWIDTH(x)	BIT((x) - 1)
+#define SOCAM_DATAWIDTH_4	SOCAM_DATAWIDTH(4)
+#define SOCAM_DATAWIDTH_8	SOCAM_DATAWIDTH(8)
+#define SOCAM_DATAWIDTH_9	SOCAM_DATAWIDTH(9)
+#define SOCAM_DATAWIDTH_10	SOCAM_DATAWIDTH(10)
+#define SOCAM_DATAWIDTH_12	SOCAM_DATAWIDTH(12)
+#define SOCAM_DATAWIDTH_15	SOCAM_DATAWIDTH(15)
+#define SOCAM_DATAWIDTH_16	SOCAM_DATAWIDTH(16)
+#define SOCAM_DATAWIDTH_18	SOCAM_DATAWIDTH(18)
+#define SOCAM_DATAWIDTH_24	SOCAM_DATAWIDTH(24)
+>>>>>>> linaro/experimental/android-3.10
 
 #define SOCAM_DATAWIDTH_MASK (SOCAM_DATAWIDTH_4 | SOCAM_DATAWIDTH_8 | \
 			      SOCAM_DATAWIDTH_9 | SOCAM_DATAWIDTH_10 | \
-			      SOCAM_DATAWIDTH_15 | SOCAM_DATAWIDTH_16)
+			      SOCAM_DATAWIDTH_12 | SOCAM_DATAWIDTH_15 | \
+			      SOCAM_DATAWIDTH_16 | SOCAM_DATAWIDTH_18 | \
+			      SOCAM_DATAWIDTH_24)
 
 static inline unsigned long soc_camera_bus_param_compatible(
 			unsigned long camera_flags, unsigned long bus_flags)

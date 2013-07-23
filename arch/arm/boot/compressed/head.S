@@ -11,6 +11,7 @@
 #include <linux/linkage.h>
 #include <asm/assembler.h>
 
+	.arch	armv7-a
 /*
  * Debugging stuff
  *
@@ -868,17 +869,14 @@ call_cache_fn:	adr	r12, proc_types
 		.align	2
 		.type	proc_types,#object
 proc_types:
-#if !defined(CONFIG_CPU_V7)
-		/* This collides with some V7 IDs, preventing correct detection */
-		.word	0x00000000		@ old ARM ID
-		.word	0x0000f000
+		.word	0x41000000		@ old ARM ID
+		.word	0xff00f000
 		mov	pc, lr
  THUMB(		nop				)
 		mov	pc, lr
  THUMB(		nop				)
 		mov	pc, lr
  THUMB(		nop				)
-#endif
 
 		.word	0x41007000		@ ARM7/710
 		.word	0xfff8fe00
