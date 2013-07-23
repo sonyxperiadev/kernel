@@ -8,3 +8,10 @@ config BCM_VCODEC
 	  Say N if you are unsure if this should be enabled
 
 source "drivers/staging/bcm_vcodec/pwrctrl/Kconfig
+
+config BCM_HVA
+	tristate "Hardware Video Accelerator Driver"
+	depends on BCM_VCODEC
+	help
+	 This option enables the Hardware Video Accelerator driver. This
+	 assists in accelerating video decode and encode.
