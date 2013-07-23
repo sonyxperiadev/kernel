@@ -68,6 +68,7 @@ typedef signed int		FTS_BOOL;
 
 #define HAWAII_GARNET_FT5X06_VENDOR_ID 0x87
 #define G5_A18_FT5X06_VENDOR_ID 0x79
+#define G5_A21_FT5316_VENDOR_ID 0x98
 #define KTOUCH_W68_FT6X06_VENDOR_ID 0x5a
 #define KTOUCH_5606_FT6X06_VENDOR_ID 0x5a
 #define KTOUCH_W81_FT6X06_VENDOR_ID 0x51
@@ -1582,6 +1583,8 @@ static ssize_t ft5306_vendor_show(struct kobject *kobj,
 		return sprintf(buf, "%s\n", "FocalTech FT5X06 Hawaii Garnet");
 	else if  (vendor_id == G5_A18_FT5X06_VENDOR_ID)
 		return   sprintf(buf, "%s\n", "FocalTech FT5X06 G5 A18");
+	else if  (vendor_id == G5_A21_FT5316_VENDOR_ID)
+		return   sprintf(buf, "%s\n", "FocalTech FT5316 G5 A21");
 	else if  (vendor_id == KTOUCH_W68_FT6X06_VENDOR_ID)
 		return   sprintf(buf, "%s\n", "FocalTech FT6X06 Ktouch W68");
 	else
@@ -1762,6 +1765,7 @@ static int focaltech_ft5306_probe(
 		vendor_id = fts_ctpm_get_vendor_id();
 		if ((vendor_id != HAWAII_GARNET_FT5X06_VENDOR_ID)
 			&& (vendor_id != G5_A18_FT5X06_VENDOR_ID)
+			&& (vendor_id != G5_A21_FT5316_VENDOR_ID)
 			&& (vendor_id != KTOUCH_W81_FT6X06_VENDOR_ID)
 			&& (vendor_id != TCL_UP823_FT6206_VENDOR_ID)
 			&& (vendor_id != KTOUCH_5606_FT6X06_VENDOR_ID)
