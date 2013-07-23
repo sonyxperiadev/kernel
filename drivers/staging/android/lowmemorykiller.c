@@ -218,6 +218,7 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 
 	int cma_free = INT_MAX;
 	int cma_file = INT_MAX;
+	int anon_other = 0;
 	/*
 	 * If CMA is enabled, then do not count free pages
 	 * from CMA region and also ignore CMA pages that are
@@ -282,9 +283,11 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 
 		ret = reg_lmk->cbk(reg_lmk, &op);
 		if (!WARN_ONCE(ret < 0, "invalid rem: %p, %d\n", reg_lmk, ret))
-			rem += ret;
+			anon_other += ret;
 	}
 	up_read(&lmk_reg_rwsem);
+
+	rem += anon_other;
 
 	trace_almk_start(sc->nr_to_scan, sc->gfp_mask, current->comm,
 			min_score_adj, minfree, other_free, other_file,
@@ -409,21 +412,22 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 	if (selected) {
 #ifndef CONFIG_ANDROID_LOW_MEMORY_KILLER_AUTODETECT_OOM_ADJ_VALUES
 		lowmem_print(1, "send sigkill to %d (%s), adj %d, size %d"
-				" with ofree %d %d, cfree %d %d ma %d\n",
+				" with ofree %d %d, cfree %d %d "
+				"aoth %d ma %d\n",
 			     selected->pid, selected->comm,
 			     selected_oom_score_adj, selected_tasksize,
 			     other_free, other_file, cma_free, cma_file,
-			     min_score_adj);
+			     anon_other, min_score_adj);
 #else
 		lowmem_print(1, "send sigkill to %d (%s), score_adj %d,"
 				"adj %d, size %d with ofree %d %d, cfree %d %d"
-				" msa %d ma %d\n",
+				" aoth %d msa %d ma %d\n",
 		selected->pid, selected->comm,
 		selected_oom_score_adj,
 		lowmem_oom_score_adj_to_oom_adj(selected_oom_score_adj),
 		selected_tasksize,
 		other_free, other_file, cma_free, cma_file,
-		min_score_adj,
+		anon_other, min_score_adj,
 		lowmem_oom_score_adj_to_oom_adj(min_score_adj));
 #endif
 		lowmem_deathpending_timeout = jiffies + HZ;
@@ -449,22 +453,22 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 #ifndef CONFIG_ANDROID_LOW_MEMORY_KILLER_AUTODETECT_OOM_ADJ_VALUES
 			lowmem_print(1, "send sigkill to %d(%s),adj %d,size %d"
 					" with ofree %d %d,cfree %d %d "
-					"ma %d\n",
+					"aoth %d ma %d\n",
 				selected[i].task->pid, selected[i].task->comm,
 				selected[i].oom_score_adj, selected[i].tasksize,
 				other_free, other_file, cma_free, cma_file,
-				min_score_adj);
+				anon_other, min_score_adj);
 #else
 			lowmem_print(1, "send sigkill to %d (%s), score_adj %d,"
 					"adj %d, size %d with ofree %d %d, "
-					"cfree %d %d msa %d ma %d\n",
+					"cfree %d %d aoth %d msa %d ma %d\n",
 			selected[i].task->pid, selected[i].task->comm,
 			selected[i].oom_score_adj,
 			lowmem_oom_score_adj_to_oom_adj(
 			selected[i].oom_score_adj),
 			selected[i].tasksize,
 			other_free, other_file, cma_free, cma_file,
-			min_score_adj,
+			anon_other, min_score_adj,
 			lowmem_oom_score_adj_to_oom_adj(min_score_adj));
 #endif
 			lowmem_deathpending_timeout = jiffies + HZ;
