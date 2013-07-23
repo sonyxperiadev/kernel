@@ -83,7 +83,6 @@ struct akm8963_data {
 	char layout;
 	char outbit;
 	int irq;
-	int rstn;
 };
 
 static struct akm8963_data *s_akm;
@@ -241,9 +240,7 @@ static int AKECS_Reset(struct akm8963_data *akm, int hard)
 	int err = 0;
 	FUNCDBG("[akm8963]AKECS_Reset hard=%d\n", hard);
 	if (hard != 0) {
-		gpio_set_value(akm->rstn, 0);
 		udelay(5);
-		gpio_set_value(akm->rstn, 1);
 	} else {
 		/* Set measure mode */
 		buffer[0] = AK8963_REG_CNTL2;
@@ -539,9 +536,6 @@ static long AKECS_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		outbit = akm->outbit;
 		break;
 	case ECS_IOCTL_RESET:
-		ret = AKECS_Reset(akm, akm->rstn);
-		if (ret < 0)
-			return ret;
 		break;
 	case ECS_IOCTL_GET_ACCEL:
 		FUNCDBG("[akm8963] IOCTL_GET_ACCEL called.\n");
@@ -1316,13 +1310,12 @@ int akm8963_probe(struct i2c_client *client, const struct i2c_device_id *id)
 		FUNCDBG("[akm8963]Set layout information.\n");
 		s_akm->layout = pdata->layout;
 		s_akm->outbit = pdata->outbit;
-		s_akm->rstn = pdata->gpio_RST;
 	} else {
 		if (client->dev.of_node) {
 			np = client->dev.of_node;
-			if (of_property_read_u32(np, "gpio_RST", &val))
+			if (of_property_read_u32(np, "gpio-irq-pin", &val))
 				goto err_read;
-			s_akm->rstn = val;
+			s_akm->irq = gpio_to_irq(val);
 			if (of_property_read_u32(np, "layout", &val))
 				goto err_read;
 			if (of_property_read_u32(np, "outbit", &val))
@@ -1369,7 +1362,6 @@ int akm8963_probe(struct i2c_client *client, const struct i2c_device_id *id)
 		s_akm->delay[i] = -1;
 
 	/***** IRQ setup *****/
-	s_akm->irq = client->irq;
 	FUNCDBG("[akm8963] IRQ setup [irq]==%d.\n", s_akm->irq);
 	if (s_akm->irq == 0) {
 		FUNCDBG("[akm8963]%s: IRQ is not set.\n");
@@ -1457,9 +1449,9 @@ static const struct dev_pm_ops akm8963_pm_ops = {
 static const struct of_device_id akm8963_of_match[] = {
 	{.compatible = "bcm,akm8963",},
 	{},
-}
+};
 
-MODULE_DEVICE_TABLE(of, ami_of_match);
+MODULE_DEVICE_TABLE(of, akm8963_of_match);
 
 static struct i2c_driver akm8963_driver = {
 	.probe = akm8963_probe,
