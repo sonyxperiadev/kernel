@@ -374,6 +374,20 @@ static int check_nohz_packing(int cpu)
 
 	return false;
 }
+
+int sched_get_idle_load(int cpu)
+{
+	struct sched_pm *stat = &per_cpu(sched_stat, cpu);
+	int latency = atomic_read(&(stat->wake_latency));
+	/*
+	 * Transform the current wakeup latency into an idle load that will be
+	 * compared to task load to decide if it's worth to wake up the cpu.
+	 * The current formula is quite simple but give good approximation in
+	 * the range [0:10ms]
+	 */
+	return (latency * 21) >> 20;
+}
+
 #else /* CONFIG_SCHED_PACKING_TASKS */
 
 static inline bool is_packing_cpu(int cpu)
@@ -396,6 +410,10 @@ static inline int check_nohz_packing(int cpu)
 	return false;
 }
 
+static inline int sched_get_idle_load(int cpu)
+{
+	return 0;
+}
 
 #endif /* CONFIG_SCHED_PACKING_TASKS */
 #endif /* CONFIG_SMP */
@@ -3160,6 +3178,8 @@ static void dequeue_task_fair(struct rq *rq, struct task_struct *p, int flags)
 /* Used instead of source_load when we know the type == 0 */
 static unsigned long weighted_cpuload(const int cpu)
 {
+	if (idle_cpu(cpu))
+		return sched_get_idle_load(cpu);
 	return cpu_rq(cpu)->load.weight;
 }
 
@@ -3559,6 +3579,8 @@ static int select_idle_sibling(struct task_struct *p, int target)
 			for_each_cpu(i, sched_group_cpus(sg)) {
 				if (i == target || !idle_cpu(i)
 						|| !is_packing_cpu(i))
+					goto next;
+				if (weighted_cpuload(i) > p->se.avg.load_avg_contrib)
 					goto next;
 			}
 
