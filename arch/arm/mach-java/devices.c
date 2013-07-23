@@ -968,7 +968,7 @@ struct platform_device avs_device = {
 #ifdef CONFIG_KONA_MEMC
 struct kona_memc_pdata kmemc_plat_data = {
 	.flags = KONA_MEMC_ENABLE_SELFREFRESH | KONA_MEMC_DISABLE_DDRLDO |
-		KONA_MEMC_SET_SEQ_BUSY_CRITERIA | KONA_MEMC_DDR_PLL_PWRDN_EN |
+		KONA_MEMC_DDR_PLL_PWRDN_EN |
 		KONA_MEMC_HW_FREQ_CHANGE_EN,
 	.memc0_ns_base = KONA_MEMC0_NS_VA,
 	.chipreg_base = KONA_CHIPREG_VA,

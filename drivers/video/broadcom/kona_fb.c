@@ -885,6 +885,7 @@ static int __init lcd_panel_setup(char *panel)
 }
 __setup("lcd_panel=", lcd_panel_setup);
 
+#ifdef CONFIG_OF
 static struct kona_fb_platform_data * __init get_of_data(struct device_node *np)
 {
 	u32 val;
@@ -1041,6 +1042,7 @@ of_fail:
 alloc_failed:
 	return NULL;
 }
+#endif /* CONFIG_OF */
 
 static char *get_seq(DISPCTRL_REC_T *rec)
 {
@@ -1315,6 +1317,7 @@ static int __ref kona_fb_probe(struct platform_device *pdev)
 		goto fb_dfs_fail;
 	}
 
+#ifdef CONFIG_OF
 	if (pdev->dev.of_node) {
 		fb_data = get_of_data(pdev->dev.of_node);
 		if (!fb_data)
@@ -1322,12 +1325,15 @@ static int __ref kona_fb_probe(struct platform_device *pdev)
 		else /* Save the pointer needed in remove method */
 			pdev->dev.platform_data = fb_data;
 	} else {
+#endif
 		fb_data = pdev->dev.platform_data;
 		if (!fb_data) {
 			ret = -EINVAL;
 			goto fb_data_failed;
 		}
+#ifdef CONFIG_OF
 	}
+#endif
 
 	if (populate_dispdrv_cfg(fb, fb_data))
 		goto dispdrv_data_failed;

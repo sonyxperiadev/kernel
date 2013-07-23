@@ -19,9 +19,7 @@
 
 #include <linux/types.h>
 #include <linux/ion.h>
-#ifdef CONFIG_OF
 #include <linux/device.h>
-#endif /* CONFIG_OF */
 
 /****************************************************************
  * Heap IDs defined here should match the heaps registered in the

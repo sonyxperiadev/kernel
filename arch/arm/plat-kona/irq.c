@@ -36,6 +36,7 @@
 #include <mach/hardware.h>
 #include <mach/irqs.h>
 #include <mach/io_map.h>
+#include <linux/of.h>
 
 #ifdef CONFIG_OF
 static const struct of_device_id kona_dt_irq_match[] __initconst = {
