@@ -605,7 +605,9 @@ static int bcmpmu_rtc_resume(struct platform_device *pdev)
 	 * as android will take care of it now.
 	*/
 	pr_rtc(FLOW, "%s: ####\n", __func__);
+#ifndef CONFIG_BCM_RTC_ALARM_BOOT
 	bcmpmu_alarm_irq_enable(&pdev->dev, false);
+#endif
 	return 0;
 }
 
