@@ -47,6 +47,8 @@
 #define FLASH_EN (11)
 #endif
 
+#define OV5648_MCLK_26MHZ
+
 /* OV5648 has only one fixed colorspace per pixelcode */
 struct ov5648_datafmt {
 	enum v4l2_mbus_pixelcode code;
@@ -224,7 +226,7 @@ struct ov5648_reg {
 
 static const struct ov5648_reg ov5648_regtbl[OV5648_MODE_MAX][256] = {
 	{
-	/* 720P30 MCLK=24MHz:  PIX CLOCK=420MBs * 2 Lane 1864x1496 10 bits */
+	/* WxH=1280x720 HTSxVTS=1864x1496 BPP=10 bits */
 	{0x0100, 0x00},
 	{0x3001, 0x00},
 	{0x3002, 0x00},
@@ -233,7 +235,11 @@ static const struct ov5648_reg ov5648_regtbl[OV5648_MODE_MAX][256] = {
 	{0x3022, 0x00},
 	{0x3034, 0x1a},
 	{0x3035, 0x21},
-	{0x3036, 0x69},
+#ifdef OV5648_MCLK_26MHZ
+	{0x3036, 0x61}, /* MCLK=26MHz MIPI=420MBs*2 Lanes FPS=30 */
+#else
+	{0x3036, 0x69}, /* MCLK=24MHz MIPI=420MBs*2 Lanes FPS=30 */
+#endif
 	{0x3037, 0x03},
 	{0x3038, 0x00},
 	{0x3039, 0x00},
@@ -370,7 +376,7 @@ static const struct ov5648_reg ov5648_regtbl[OV5648_MODE_MAX][256] = {
 	{0xFFFF, 0x00}	/* end of the list */
 	},
 	{
-	/* 1280x960P30 MCLK=24MHz PIX CLOCK=420MBs * 2 Lane 1864x1496 10 bits */
+	/* WxH=1280x960 HTSxVTS=1864x1496 BPP=10 bits */
 	{0x0100, 0x00},
 	{0x3001, 0x00},
 	{0x3002, 0x00},
@@ -379,7 +385,11 @@ static const struct ov5648_reg ov5648_regtbl[OV5648_MODE_MAX][256] = {
 	{0x3022, 0x00},
 	{0x3034, 0x1a},
 	{0x3035, 0x21},
-	{0x3036, 0x69},
+#ifdef OV5648_MCLK_26MHZ
+	{0x3036, 0x61}, /* MCLK=26MHz MIPI=420MBs*2 Lanes FPS=30 */
+#else
+	{0x3036, 0x69}, /* MCLK=24MHz MIPI=420MBs*2 Lanes FPS=30*/
+#endif
 	{0x3037, 0x03},
 	{0x3038, 0x00},
 	{0x3039, 0x00},
@@ -516,7 +526,7 @@ static const struct ov5648_reg ov5648_regtbl[OV5648_MODE_MAX][256] = {
 	{ 0xFFFF, 0x00 }	/* end of the list */
 	},
 	{
-	/* 2592x1944 MCLK=24MHz PIX CLOCK=420MBs * 2 Lane 2844x1968 10 bits */
+	/* WxH=2592x1944  HTSxVTS=2844x1968 BPP=10 bits */
 	{0x0100, 0x00},
 	{0x3001, 0x00},
 	{0x3002, 0x00},
@@ -525,7 +535,11 @@ static const struct ov5648_reg ov5648_regtbl[OV5648_MODE_MAX][256] = {
 	{0x3022, 0x00},
 	{0x3034, 0x1a},
 	{0x3035, 0x21},
-	{0x3036, 0x69},
+#ifdef OV5648_MCLK_26MHZ
+	{0x3036, 0x60}, /* MCLK=26MHz MIPI=416MBs*2 Lanes FPS=14.8 */
+#else
+	{0x3036, 0x69}, /* MCLK=24MHz MIPI=420MBs*2 Lanes FPS=15 */
+#endif
 	{0x3037, 0x03},
 	{0x3038, 0x00},
 	{0x3039, 0x00},
