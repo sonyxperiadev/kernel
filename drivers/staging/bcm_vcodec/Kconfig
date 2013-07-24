@@ -15,3 +15,10 @@ config BCM_HVA
 	help
 	 This option enables the Hardware Video Accelerator driver. This
 	 assists in accelerating video decode and encode.
+
+config BCM_VCE
+	tristate "VCE Driver"
+	depends on BCM_VCODEC && BCM_HVA && ION_BCM
+	help
+	 This option enables the Video Control Engine driver. This accelerates
+	 video decode and encode, hence improves the system performance.

@@ -505,4 +505,12 @@
 	bcm-pdm-mm {
 		compatible = "bcm,pdm-mm";
 	};
+
+	brcm-vce@0x3d100000 {
+		compatible = "brcm,vce";
+		reg = <0x3d100000 0x340900
+		       0x3d000000 0x700000>;
+		interrupts = <0 176 0x4>;
+		mem-alias = <0x00000000>;
+	};
 };

@@ -4,3 +4,4 @@ obj-y += h264/
 
 obj-$(CONFIG_BCM_MM_PWRCTRL) += pwrctrl/
 obj-$(CONFIG_BCM_HVA) += hva/
+obj-$(CONFIG_BCM_VCE) += vce/
