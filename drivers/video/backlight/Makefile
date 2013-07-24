@@ -45,3 +45,5 @@ obj-$(CONFIG_BACKLIGHT_PCF50633)	+= pcf50633-backlight.o
 obj-$(CONFIG_BACKLIGHT_AAT2870) += aat2870_bl.o
 obj-$(CONFIG_BACKLIGHT_OT200) += ot200_bl.o
 obj-$(CONFIG_BACKLIGHT_SGM3727) += sgm3727_bl.o
+obj-$(CONFIG_TOUCHKEY_BACKLIGHT)	+= bcm_touchkey_led.o
+obj-$(CONFIG_BACKLIGHT_TPS61158) += tps61158_pwm_bl.o

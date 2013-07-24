@@ -18,6 +18,29 @@ config FB_BRCM_CP_CRASH_DUMP_IMAGE_SUPPORT
 	  This is used for LCD to show that cp goes into crahs dump state.
 	  If you do not know about this config, please just say 'N' here.
 
+config LCD_HX8369_SUPPORT
+        tristate "LCD Panel- HX8369 controller"
+        help
+	  WVGA LCD panel (HX8369 controller)
+
+config LCD_HX8369_CS02_SUPPORT
+        tristate "LCD Panel- HX8369 controller"
+        default N
+        help
+	  WVGA LCD panel (HX8369 controller)
+
+config LCD_SC7798_CS02_SUPPORT
+        tristate "LCD Panel- HX8369 controller"
+        default N
+        help
+	  WVGA LCD panel (HX8369 controller)
+
+config LCD_S6E63M0X_SUPPORT
+        tristate "LCD Panel- S6E63M0X controller"
+        default N
+        help
+	  WVGA LCD panel (S6E63M0X controller)
+
 config LCD_NT35510_SUPPORT
         tristate "LCD Panel- NT35510 controller"
         default N
@@ -29,4 +52,14 @@ config LCD_NT35512_SUPPORT
         default N
         help
 	  WVGA LCD panel (NT35512 controller)
+
+config FB_BRCM_LCD_EXIST_CHECK
+		bool "Enable LCD exist check code"
+	help
+	  Say Y here to enable LCD exist check code
+
+config LDI_MDNIE_SUPPORT
+	  tristate "LDI mDNIe Driver"
+	help
+		LDI mDNIe Driver
 

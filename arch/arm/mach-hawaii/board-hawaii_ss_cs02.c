@@ -160,6 +160,9 @@
 #include <linux/pwm_backlight.h>
 #endif
 
+#ifdef CONFIG_BACKLIGHT_TPS61158
+#include <linux/tps61158_pwm_bl.h>
+#endif
 #ifdef CONFIG_BACKLIGHT_KTD259B
 #include <linux/ktd259b_bl.h>
 #endif
@@ -1371,6 +1374,24 @@ static struct platform_pwm_backlight_data hawaii_backlight_data = {
 
 #endif /*CONFIG_BACKLIGHT_PWM */
 
+#ifdef CONFIG_BACKLIGHT_TPS61158
+
+static struct platform_tps61158_backlight_data bcm_tps61158_backlight_data = {
+	.max_brightness = 255,
+	.dft_brightness = 160,
+	.ctrl_pin = 24,
+};
+
+struct platform_device hawaii_backlight_device = {
+	.name           = "panel",
+	.id		= -1,
+	.dev	= {
+		.platform_data  =  &bcm_tps61158_backlight_data,
+	},
+};
+
+#endif /* CONFIG_BACKLIGHT_TPS61158 */
+
 #ifdef CONFIG_BACKLIGHT_KTD259B
 
 static struct platform_ktd259b_backlight_data bcm_ktd259b_backlight_data = {
@@ -1955,7 +1976,8 @@ static struct platform_device *hawaii_devices[] __initdata = {
 	&haptic_pwm_device,
 #endif
 
-#if	defined(CONFIG_BACKLIGHT_PWM) || defined(CONFIG_BACKLIGHT_KTD259B)
+#if	defined(CONFIG_BACKLIGHT_PWM) || defined(CONFIG_BACKLIGHT_KTD259B) \
+	|| defined(CONFIG_BACKLIGHT_TPS61158)
 	&hawaii_backlight_device,
 #endif
 
@@ -2249,6 +2271,48 @@ static void __init hawaii_add_sdio_devices(void)
  */
 struct kona_fb_platform_data konafb_devices[] __initdata = {
 	{
+#if defined(CONFIG_LCD_HX8369_CS02_SUPPORT) ||	\
+	defined(CONFIG_LCD_SC7798_CS02_SUPPORT)
+#ifdef CONFIG_LCD_HX8369_CS02_SUPPORT
+		.name = "HX8369",
+#endif
+#ifdef CONFIG_LCD_SC7798_CS02_SUPPORT
+		.name = "SC7798",
+#endif
+		.reg_name = "cam2",
+		.rst =  {
+			.gpio = 22,
+			.setup = 5,
+			.pulse = 20,
+			.hold = 10000,
+			.active = false,
+		},
+		.vmode = true,
+		.vburst = true,
+		.cmnd_LP = true,
+		.te_ctrl = false,
+		.col_mod_i = 2,  /*DISPDRV_FB_FORMAT_xRGB8888*/
+		.col_mod_o = 2, /*DISPDRV_FB_FORMAT_xRGB8888*/
+		.width = 480,
+		.height = 800,
+		.fps = 60,
+		.lanes = 2,
+#ifdef CONFIG_LCD_HX8369_CS02_SUPPORT
+		.hs_bps = 350000000,
+#endif
+#ifdef CONFIG_LCD_SC7798_CS02_SUPPORT
+		.hs_bps = 380000000,
+#endif
+		.lp_bps = 8000000,
+#ifdef CONFIG_IOMMU_API
+		.pdev_iommu = &iommu_mm_device,
+#endif
+#ifdef CONFIG_BCM_IOVMM
+		.pdev_iovmm = &iovmm_mm_256mb_device,
+#endif
+	},
+#else /*defined(CONFIG_LCD_HX8369_CS02_SUPPORT) ||	\
+	defined(CONFIG_LCD_SC7798_CS02_SUPPORT)*/
 		.name = "NT35510",
 		.reg_name = "cam2",
 		.rst =  {
@@ -2277,11 +2341,26 @@ struct kona_fb_platform_data konafb_devices[] __initdata = {
 		.pdev_iovmm = &iovmm_mm_256mb_device,
 #endif
 	},
+#endif /*defined(CONFIG_LCD_HX8369_CS02_SUPPORT) ||	\
+		defined(CONFIG_LCD_SC7798_CS02_SUPPORT)*/
 };
 
 #include "kona_fb_init.c"
 #endif /* #ifdef CONFIG_FB_BRCM_KONA */
 
+#ifdef CONFIG_LCD_HX8369_CS02_SUPPORT
+static struct platform_device hx8369_panel_device = {
+	.name = "HX8369",
+	.id = -1,
+};
+#endif
+
+#ifdef CONFIG_LCD_SC7798_CS02_SUPPORT
+static struct platform_device sc7798_panel_device = {
+	.name = "SC7798",
+	.id = -1,
+};
+#endif
 static void __init hawaii_init(void)
 {
 	hawaii_add_devices();
@@ -2290,6 +2369,14 @@ static void __init hawaii_init(void)
 #endif
 	hawaii_add_common_devices();
 
+
+#ifdef CONFIG_LCD_HX8369_CS02_SUPPORT
+	platform_device_register(&hx8369_panel_device);
+#endif
+
+#ifdef CONFIG_LCD_SC7798_CS02_SUPPORT
+	platform_device_register(&sc7798_panel_device);
+#endif
 	return;
 }
 
