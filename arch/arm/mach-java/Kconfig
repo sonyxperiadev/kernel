@@ -79,6 +79,19 @@ choice
 	help
 		Support for Java Garnet A18
 
+	config MACH_JAVA_C_LC1
+	bool "Java low cost platform 1"
+	help
+	  Support for Java low
+	  cost platform 1. Reference
+	  platform for China
+	  customers
+
+	config MACH_JAVA_C_LC2
+	bool "Java low cost platform 2"
+	help
+	  Support for Java low cost platform 2
+
 endchoice
 
 choice
