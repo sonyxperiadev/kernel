@@ -46,8 +46,7 @@ static struct regulator *VCAM_CORE_1_2_V;
 #if defined(CONFIG_MACH_HAWAII_SS_LOGAN_REV01) \
 	|| defined(CONFIG_MACH_HAWAII_SS_LOGAN_REV02) \
 	|| defined(CONFIG_MACH_HAWAII_SS_LOGANDS_REV00) \
-	|| defined(CONFIG_MACH_HAWAII_SS_LOGANDS_REV01) \
-	|| defined(CONFIG_MACH_HAWAII_SS_CS02_REV00)
+	|| defined(CONFIG_MACH_HAWAII_SS_LOGANDS_REV01)
 
 #define VCAM_A_2_8V_REGULATOR		"mmcldo1"
 #define VCAM_IO_1_8V_REGULATOR		"lvldo2"
@@ -65,6 +64,7 @@ static struct regulator *VCAM_CORE_1_2_V;
 #define VCAM0_IO_1_8V_REGULATOR		"lvldo1"
 #define VCAM_A_2_8V_REGULATOR_uV	2800000
 #define VCAM_IO_1_8V_REGULATOR_uV	1786000
+#define VCAM0_IO_1_8V_REGULATOR_uV	1786000
 #define CAM1_RESET			4
 #define CAM1_STNBY			5
 #define EXIF_MODEL			"GT-B7272"
@@ -81,7 +81,8 @@ static struct regulator *VCAM_CORE_1_2_V;
 #define EXIF_MODEL			"GT-B7272"
 
 #elif defined(CONFIG_MACH_HAWAII_SS_GOLDENVEN_REV01)\
-	|| defined(CONFIG_MACH_HAWAII_SS_CODINAN)
+	|| defined(CONFIG_MACH_HAWAII_SS_CODINAN)\
+	|| defined(CONFIG_MACH_HAWAII_SS_CS02_REV00)
 
 #define VCAM_A_2_8V_REGULATOR		"mmcldo1"
 #define VCAM_IO_1_8V_REGULATOR		"lvldo2"
@@ -89,9 +90,10 @@ static struct regulator *VCAM_CORE_1_2_V;
 #define VCAM0_IO_1_8V_REGULATOR		"lvldo1"
 #define VCAM_A_2_8V_REGULATOR_uV	2800000
 #define VCAM_IO_1_8V_REGULATOR_uV	1786000
-#define CAM1_RESET	004
-#define CAM1_STNBY	005
-#define EXIF_MODEL			"I-B7272"
+#define VCAM0_IO_1_8V_REGULATOR_uV	1786000
+#define CAM1_RESET			4
+#define CAM1_STNBY			5
+#define EXIF_MODEL			"GT-B7272"
 
 #else /* NEED TO REDEFINE FOR NEW VARIANT */
 #define VCAM_A_2_8V_REGULATOR		"mmcldo1"
@@ -746,10 +748,16 @@ static int camdrv_ss_sr030pc50_sensor_power(int on)
 	{
 		CAM_INFO_PRINTK("power on the sensor \n"); //@HW
 
-		regulator_set_voltage(VCAM_A_2_8_V, VCAM_A_2_8V_REGULATOR_uV, VCAM_A_2_8V_REGULATOR_uV);
-		regulator_set_voltage(VCAM_IO_1_8_V, VCAM_IO_1_8V_REGULATOR_uV, VCAM_IO_1_8V_REGULATOR_uV);
+		value = regulator_set_voltage(VCAM_A_2_8_V, VCAM_A_2_8V_REGULATOR_uV, VCAM_A_2_8V_REGULATOR_uV);
+		if (value)
+			CAM_ERROR_PRINTK("%s:regulator_set_voltage VCAM_A_2_8_V failed \n", __func__);
+		value = regulator_set_voltage(VCAM_IO_1_8_V, VCAM_IO_1_8V_REGULATOR_uV, VCAM_IO_1_8V_REGULATOR_uV);
+		if (value)
+			CAM_ERROR_PRINTK("%s:regulator_set_voltage VCAM_IO_1_8_V failed \n", __func__);
 #ifdef VCAM0_IO_1_8V_REGULATOR_NEEDED
-		regulator_set_voltage(VCAM0_IO_1_8_V, 1800000, 1800000);
+		value = regulator_set_voltage(VCAM0_IO_1_8_V, VCAM0_IO_1_8V_REGULATOR_uV, VCAM0_IO_1_8V_REGULATOR_uV);
+		if (value)
+			CAM_ERROR_PRINTK("%s:regulator_set_voltage VCAM0_IO_1_8_V failed \n", __func__);
 #endif
 
 #ifdef VCAM_CORE_1_2V_REGULATOR_NEEDED
@@ -874,12 +882,12 @@ static int camdrv_ss_sr030pc50_sensor_power(int on)
 
 		regulator_disable(VCAM_IO_1_8_V);
 		regulator_disable(VCAM_A_2_8_V);
-       #ifdef VCAM0_IO_1_8V_REGULATOR_NEEDED
-                regulator_disable(VCAM0_IO_1_8_V);
-       #endif
-	   #ifdef VCAM_CORE_1_2V_REGULATOR_NEEDED
-			regulator_disable(VCAM_CORE_1_2_V);
-	   #endif
+#ifdef VCAM0_IO_1_8V_REGULATOR_NEEDED
+		regulator_disable(VCAM0_IO_1_8_V);
+#endif
+#ifdef VCAM_CORE_1_2V_REGULATOR_NEEDED
+		regulator_disable(VCAM_CORE_1_2_V);
+#endif
 	}	
 	
 	return 0;
