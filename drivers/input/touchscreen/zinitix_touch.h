@@ -50,7 +50,7 @@ name = "zinitix_isp" , addr 0x50*/
 
 #define CHIP_OFF_DELAY			50	/*ms*/
 #define CHIP_ON_DELAY			15	/*ms*/
-#define FIRMWARE_ON_DELAY		30	/*ms*/
+#define FIRMWARE_ON_DELAY		40	/*ms : zft = 30, zmt = 40*/
 
 #define DELAY_FOR_SIGNAL_DELAY		30	/*us*/
 #define DELAY_FOR_TRANSCATION		50
@@ -60,7 +60,7 @@ name = "zinitix_isp" , addr 0x50*/
 enum _zinitix_power_control {
 	POWER_OFF,
 	POWER_ON,
-	POWER_ON_SEQUENCE,
+	POWER_ON_SEQUENCE,	
 };
 
 /* Button Enum */
@@ -74,15 +74,12 @@ enum _zinitix_button_event {
 /* ESD Protection */
 /*second : if 0, no use. if you have to use, 3 is recommended*/
 #define	ZINITIX_ESD_TIMER_INTERVAL	1
-#define ZINITIX_SCAN_RATE_HZ		80
-#define ZINITIX_CHECK_ESD_TIMER		2
+#define ZINITIX_SCAN_RATE_HZ		90
+#define ZINITIX_CHECK_ESD_TIMER		3
 
 
 /*Test Mode (Monitoring Raw Data) */
-#define SEC_TSP_FACTORY_TEST	1	/*for samsung*/
-
-#define	SEC_DND_N_COUNT		10
-#define	SEC_DND_FREQUENCY	110		/*300khz*/
+#define SEC_TSP_FACTORY_TEST	1	//for samsung
 
 #define MAX_FW_PATH 255
 #define TSP_FW_FILENAME "zinitix_fw.bin"
@@ -93,14 +90,14 @@ enum _zinitix_button_event {
 	(MAX_RAW_DATA_SZ + 4*MAX_SUPPORTED_FINGER_NUM + 2)
 /* preriod raw data interval*/
 
-#define RAWDATA_DELAY_FOR_HOST		100
+#define RAWDATA_DELAY_FOR_HOST		100		
 
 struct _raw_ioctl {
 	int	sz;
 	u8	*buf;
 };
 
-struct _reg_ioctl {
+struct _reg_ioctl{
 	int	addr;
 	int	*val;
 } ;
@@ -110,8 +107,8 @@ struct _reg_ioctl {
 #define TOUCH_REF_MODE		10
 #define TOUCH_NORMAL_MODE	5
 #define TOUCH_DELTA_MODE	3
-#define TOUCH_DND_MODE		6
-
+#define TOUCH_SDND_MODE		6
+#define TOUCH_DND_MODE		11
 
 
 /*  Other Things */
@@ -141,7 +138,7 @@ struct _reg_ioctl {
 #define	ZINITIX_I2C_CHECKSUM_RESULT	0x016c
 
 
-#define ZINITIX_DEBUG_REG		0x0115	/*0~7*/
+#define ZINITIX_DEBUG_REG		0x0115	//0~7
 
 #define ZINITIX_TOUCH_MODE		0x0010
 #define ZINITIX_CHIP_REVISION		0x0011
@@ -174,6 +171,8 @@ struct _reg_ioctl {
 
 #define ZINITIX_AFE_FREQUENCY		0x0100
 #define ZINITIX_DND_N_COUNT			0x0122
+#define ZINITIX_DND_U_COUNT			0x0135
+#define ZINITIX_N_SHIFT_COUNT			0x012b
 
 #define ZINITIX_RAWDATA_REG		0x0200
 
