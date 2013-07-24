@@ -6,3 +6,5 @@ config BCM_VCODEC
 	  Support for Broadcom video codec
 
 	  Say N if you are unsure if this should be enabled
+
+source "drivers/staging/bcm_vcodec/pwrctrl/Kconfig

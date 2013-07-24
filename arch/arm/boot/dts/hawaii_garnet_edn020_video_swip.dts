@@ -501,4 +501,8 @@
 			gpios = <&gpio 9 0>;
 		};
 	};
+
+	bcm-pdm-mm {
+		compatible = "bcm,pdm-mm";
+	};
 };
