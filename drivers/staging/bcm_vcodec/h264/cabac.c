@@ -115,11 +115,7 @@ static int cabac_abort(void *device_id, mm_job_post_t *job)
 	/*TODO: Any more procedure*/
 	cabac_write(id, H264_REGC2_REGCABAC2BINSCTL_OFFSET, 0x1);
 
-	/*Wait for RESET completion(system IDLE)*/
-	while (cabac_read(id, H264_REGC2_REGCABAC2BINSCTL_OFFSET) & 0X407 ||
-		cabac_read(id,
-		H264_REGC2_REGCABAC2BINSCOMMANDBUFFERCOUNT_OFFSET) & 0x7FF)
-		;
+	udelay(3);
 
 	return 0;
 }
@@ -132,14 +128,34 @@ static int cabac_reset(void *device_id)
 	/*Reset the registers*/
 	cabac_write(id, H264_REGC2_REGCABAC2BINSCTL_OFFSET, 0x1);
 
-	/*Wait for RESET completion(system IDLE)*/
-	while (cabac_read(id, H264_REGC2_REGCABAC2BINSCTL_OFFSET) & 0X407 ||
-		cabac_read(id,
-		H264_REGC2_REGCABAC2BINSCOMMANDBUFFERCOUNT_OFFSET) & 0x7FF)
-		;
+	udelay(3);
 
-	cabac_reg_init(id);
+	return 0;
+}
 
+static int cabac_block_init(void *device_id)
+{
+	struct cabac_device_t *id = (struct cabac_device_t *)device_id;
+	u32 temp;
+	/*Enable CABAC Block*/
+	temp = cabac_read(id, H264_VCODEC_GCKENAA_OFFSET);
+	temp |= H264_VCODEC_GCKENAA_CABAC_MASK;
+	cabac_write(id, H264_VCODEC_GCKENAA_OFFSET, temp);
+
+	/*Reset the registers*/
+	cabac_reset(id);
+
+	return 0;
+}
+
+static int cabac_block_deinit(void *device_id)
+{
+	struct cabac_device_t *id = (struct cabac_device_t *)device_id;
+	u32 temp;
+	/*Disable CABAC Block*/
+	temp = cabac_read(id, H264_VCODEC_GCKENAA_OFFSET);
+	temp &= (~H264_VCODEC_GCKENAA_CABAC_MASK);
+	cabac_write(id, H264_VCODEC_GCKENAA_OFFSET, temp);
 	return 0;
 }
 
@@ -206,8 +222,6 @@ mm_job_status_e cabac_start_job(void *device_id , mm_job_post_t *job,
 
 	switch (job->status) {
 	case MM_JOB_STATUS_READY:
-		/*Reset CABAC*/
-		cabac_reset(id);
 		/*Bound checks*/
 		if (jp->rd_ctxt_addr & 0xF) {
 			pr_err("cabac_start_job: " \
@@ -332,8 +346,8 @@ int cabac_init(MM_CORE_HW_IFC *core_param)
 	core_param->mm_get_status = get_cabac_status;
 	core_param->mm_start_job = cabac_start_job;
 	core_param->mm_process_irq = process_cabac_irq;
-	core_param->mm_init = cabac_reset;
-	core_param->mm_deinit = cabac_reset;
+	core_param->mm_init = cabac_block_init;
+	core_param->mm_deinit = cabac_block_deinit;
 	core_param->mm_abort = cabac_abort;
 	core_param->mm_get_regs = cabac_get_regs;
 	core_param->mm_update_virt_addr = cabac_update_virt;
