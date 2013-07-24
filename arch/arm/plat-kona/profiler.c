@@ -130,6 +130,7 @@ int start_profiler(char *name, void *data)
 int stop_profiler(char *name)
 {
 	struct profiler *profiler;
+	u64 duration;
 	profiler = get_profiler(name);
 	if (!profiler)
 		return -EINVAL;
@@ -141,22 +142,20 @@ int stop_profiler(char *name)
 	if (profiler->overflow) {
 		if (profiler->flags & PROFILER_OVERFLOW) {
 			if (((profiler->stop_time - profiler->start_time)
-					/33) < 330000)
+					/CLOCK_TICK_RATE) < 330)
 				profiler->overflow = 0;
 		} else if (((profiler->stop_time - profiler->start_time)
-					/33) < 330000)
+					/CLOCK_TICK_RATE) < 330)
 			profiler->overflow = 0;
 	}
-	printk(KERN_ALERT "Total Duration: %lums ", (profiler->stop_time -
-			profiler->start_time)/32);
-	printk(KERN_ALERT "Profiler_Running_Time: %lums %s",
-				profiler->running_time/3250,
-				profiler->overflow ? "*" : " ");
+	duration = (profiler->stop_time - profiler->start_time);
+	printk(KERN_ALERT "Total Duration: %llums ", (duration *
+				1000)/CLOCK_TICK_RATE);
 	if (profiler->ops->start(profiler, 0))
 		return -EBUSY;
 	if (profiler->overflow)
 		return OVERFLOW_VAL;
-	return profiler->running_time/3250;
+	return profiler->running_time/COUNTER_CLK_RATE;
 }
 
 static void log_counters(struct profiler_data *profiler_data,

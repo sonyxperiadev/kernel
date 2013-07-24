@@ -767,6 +767,35 @@ osl_pci_read_config(osl_t *osh, uint offset, uint size)
 	return (val);
 }
 
+/* XXX: Copied skb_pad() from skbuff.c and modified it accordingly.
+		Removied kfree_skb() from skb_pad().
+*/
+int osh_pktpadtailroom(osl_t *osh, struct sk_buff* skb, int pad)
+{
+	int err;
+	int ntail;
+
+	ntail = skb->data_len + pad - (skb->end - skb->tail);
+	if (likely(skb_cloned(skb) || ntail > 0)) {
+		err = pskb_expand_head(skb, 0, ntail, GFP_ATOMIC);
+		if (unlikely(err))
+			goto done;
+	}
+
+	/* FIXME: The use of this function with non-linear skb's really needs
+	 * to be audited.
+	 */
+	err = skb_linearize(skb);
+	if (unlikely(err))
+		goto done;
+
+	memset(skb->data + skb->len, 0, pad);
+
+done:
+	return err;
+}
+
+
 void
 osl_pci_write_config(osl_t *osh, uint offset, uint size, uint val)
 {

@@ -186,11 +186,13 @@ extern vd3_error_t PARSE_FN(h264_parse_pps)
  Specify through module include files or define specifically as extern.
 *******************************************************************************/
 
-//#include "h264_sps.h"
+#ifndef VC4_LINUX_PORT
+#include "h264_sps.h"
 #ifdef VD3_CONFIG_MVC
-//#include "h264_mvc_ssps.h"
+#include "h264_mvc_ssps.h"
 #endif
-//#include "h264_pps.h"
+#include "h264_pps.h"
+#endif
 #include "h264_parse_helper.h"
 
 /*******************************************************************************

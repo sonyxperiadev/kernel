@@ -69,6 +69,7 @@ the GPL, without Broadcom's express prior written consent.
 #define VCE_CONTROL_SET_RUN 1
 #define VCE_CONTROL_SINGLE_STEP 3
 #define VCE_BAD_ADDR_OFFSET 0x40030
+#define VCE_PC_ERR_OFFSET 0x40034
 #define VCE_SEMA_CLEAR_OFFSET 0x40024
 #define VCE_SEMA_SET_OFFSET 0x40028
 #define VCE_SEMA_COUNT 8

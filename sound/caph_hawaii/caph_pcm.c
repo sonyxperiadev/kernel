@@ -68,7 +68,7 @@ the GPL, without Broadcom's express prior written consent.
 #define	NUM_CAPTURE_SUBDEVICE	3
 
 /* limitation for RHEA - only two blocks */
-#define	PCM_MAX_PLAYBACK_BUF_BYTES			(64*1024)
+#define	PCM_MAX_PLAYBACK_BUF_BYTES			(128*1024)
 #define	PCM_MIN_PLAYBACK_PERIOD_BYTES		(256)
 #define	PCM_MAX_PLAYBACK_PERIOD_BYTES		(PCM_MAX_PLAYBACK_BUF_BYTES/2)
 
@@ -91,6 +91,7 @@ the GPL, without Broadcom's express prior written consent.
 #define	PCM_TOTAL_BUF_BYTES	\
 (PCM_MAX_CAPTURE_BUF_BYTES+PCM_MAX_VOICE_PLAYBACK_BUF_BYTES)
 
+#define SNDDRV_PCM_FORMAT(x) (1ULL << (x))
 static void AUDIO_DRIVER_InterruptPeriodCB(void *pPrivate);
 static void AUDIO_DRIVER_CaptInterruptPeriodCB(void *pPrivate);
 
@@ -119,7 +120,7 @@ static struct snd_pcm_hardware brcm_playback_hw = {
 	.info = (SNDRV_PCM_INFO_MMAP | SNDRV_PCM_INFO_INTERLEAVED |
 		 SNDRV_PCM_INFO_BLOCK_TRANSFER | SNDRV_PCM_INFO_MMAP_VALID |
 		 SNDRV_PCM_INFO_PAUSE),
-	.formats = SNDRV_PCM_FMTBIT_S16_LE,
+	.formats = SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S24_LE,
 	.rates =
 	    (SNDRV_PCM_RATE_8000 | SNDRV_PCM_RATE_16000 | SNDRV_PCM_RATE_44100 |
 	     SNDRV_PCM_RATE_48000),
@@ -388,7 +389,12 @@ static int PcmPlaybackPrepare(struct snd_pcm_substream *substream)
 
 	parm_prepare.drv_config.sample_rate = runtime->rate;
 	parm_prepare.drv_config.num_channel = runtime->channels;
-	parm_prepare.drv_config.bits_per_sample = 16;
+
+	if (SNDDRV_PCM_FORMAT(runtime->format) == SNDRV_PCM_FMTBIT_S24_LE)
+		parm_prepare.drv_config.bits_per_sample = 24;
+	else
+		parm_prepare.drv_config.bits_per_sample = 16;
+
 	parm_prepare.drv_config.instanceId = substream->number;
 	parm_prepare.drv_config.arm2sp_mixMode =
 	    chip->pi32SpeechMixOption[substream->number];
@@ -496,6 +502,11 @@ static int PcmPlaybackTrigger(struct snd_pcm_substream *substream, int cmd)
 			&chip->streamCtl[substream_number].dev_prop;
 		param_start.channels = runtime->channels;
 		param_start.rate = runtime->rate;
+		if (SNDDRV_PCM_FORMAT(runtime->format)
+				== SNDRV_PCM_FMTBIT_S24_LE)
+			param_start.bitsPerSample = 24;
+		else
+			param_start.bitsPerSample = 16;
 		param_start.vol[0] =
 			chip->streamCtl[substream_number].ctlLine[pSel[0]].
 			iVolume[0];
@@ -608,6 +619,11 @@ static int PcmPlaybackTrigger(struct snd_pcm_substream *substream, int cmd)
 			param_resume.channels = runtime->channels;
 			param_resume.rate = runtime->rate;
 			param_resume.stream = substream_number;
+			if (SNDDRV_PCM_FORMAT(runtime->format)
+					== SNDRV_PCM_FMTBIT_S24_LE)
+				param_resume.bits_per_sample = 24;
+			else
+				param_resume.bits_per_sample = 16;
 			AUDIO_Ctrl_Trigger(ACTION_AUD_ResumePlay, &param_resume,
 					   NULL, 0);
 
@@ -1007,7 +1023,10 @@ int PcmPlaybackCopy(struct snd_pcm_substream *substream, int channel,
 	/**
 	 * Set DMA engine ready bit according to pos and count
 	*/
-	periods_copied = bytes_to_copy/period_bytes;
+	periods_copied = 1;
+	if (bytes_to_copy > period_bytes)
+		periods_copied = bytes_to_copy/period_bytes;
+
 	while (periods_copied--) {
 		BRCM_AUDIO_Param_BufferReady_t param_bufferready;
 

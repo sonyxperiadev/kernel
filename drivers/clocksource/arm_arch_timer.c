@@ -68,7 +68,7 @@ static irqreturn_t arch_timer_handler_virt(int irq, void *dev_id)
 static irqreturn_t arch_timer_handler_phys(int irq, void *dev_id)
 {
 	struct clock_event_device *evt = dev_id;
-
+	BUG_ON(!dev_id);
 	return timer_handler(ARCH_TIMER_PHYS_ACCESS, evt);
 }
 
@@ -123,8 +123,12 @@ static int arch_timer_set_next_event_phys(unsigned long evt,
 	return 0;
 }
 
-static int __cpuinit arch_timer_setup(struct clock_event_device *clk)
+int __cpuinit arch_timer_setup(struct clock_event_device *clk)
 {
+
+	pr_info("###################### %d device %p\r\n",
+		smp_processor_id(), clk);
+
 	clk->features = CLOCK_EVT_FEAT_ONESHOT | CLOCK_EVT_FEAT_C3STOP;
 	clk->name = "arch_sys_timer";
 	clk->rating = 450;
@@ -229,7 +233,7 @@ struct timecounter *arch_timer_get_timecounter(void)
 	return &timecounter;
 }
 
-static void __cpuinit arch_timer_stop(struct clock_event_device *clk)
+void __cpuinit arch_timer_stop(struct clock_event_device *clk)
 {
 	pr_debug("arch_timer_teardown disable IRQ%d cpu #%d\n",
 		 clk->irq, smp_processor_id());
@@ -241,7 +245,6 @@ static void __cpuinit arch_timer_stop(struct clock_event_device *clk)
 		if (arch_timer_ppi[PHYS_NONSECURE_PPI])
 			disable_percpu_irq(arch_timer_ppi[PHYS_NONSECURE_PPI]);
 	}
-
 	clk->set_mode(CLOCK_EVT_MODE_UNUSED, clk);
 }
 
@@ -276,19 +279,43 @@ static int __init arch_timer_register(void)
 	err = arch_timer_available();
 	if (err)
 		goto out;
+/*
+ * Note that the broadcast implementation is in arch/arm/kernel/smp.c
+ * That is, handling IPI and sending it is done there. And the local
+ * timer implementation there assumes that the clock event context is
+ * allocated there. But the implementation here assumes its own
+ * context. Retain both implementaions
+ */
 
+#ifdef CONFIG_USE_ARCH_TIMER_AS_LOCAL_TIMER
+	smp_get_evt_context(&arch_timer_evt);
+	pr_info("===== smp_get_evt_context returned 0x%x \r\n",
+		arch_timer_evt);
+#else
 	arch_timer_evt = alloc_percpu(struct clock_event_device);
+#endif
 	if (!arch_timer_evt) {
 		err = -ENOMEM;
 		goto out;
 	}
 
+/* IMPORTANT NOTE:
+ * ---------------
+ * Not sure about the following. To my understanding the clock source should
+ * be always counting even when the CPU goes to C3 state. But on our platforms
+ * the architecture timer stops during Dormant. So using that as clock source
+ * was causing a freeze. That is wne the cores come out of dormant and try to
+ * update the wall clock using do_timer --> update_wall_time. When I switched
+ * to use the timer that is always ON as clock source this SW freeze was
+ * fixed.
+ */
+#if 0
 	clocksource_register_hz(&clocksource_counter, arch_timer_rate);
 	cyclecounter.mult = clocksource_counter.mult;
 	cyclecounter.shift = clocksource_counter.shift;
 	timecounter_init(&timecounter, &cyclecounter,
 			 arch_counter_get_cntpct());
-
+#endif
 	if (arch_timer_use_virtual) {
 		ppi = arch_timer_ppi[VIRT_PPI];
 		err = request_percpu_irq(ppi, arch_timer_handler_virt,
@@ -313,13 +340,26 @@ static int __init arch_timer_register(void)
 		goto out_free;
 	}
 
+/*
+ * If we use Arch timer as local timer, then the setup sequence is as follows
+ * Boot CPU
+ * kernel_init --> smp_prepare_cpus --> percpu_timer_setup --> local_timer_setup
+ * Other CPUs
+ * secondary_start_kernel --> percpu_timer_setup --> local_timer_setup
+ * The existing implementation relies on the CPU hot plug notification to
+ * do this. If we use local timer this is not needed.
+ *
+ * In future if we decided to do away with local timer framework, this code
+ * needs to be enabled.
+ */
+#ifndef CONFIG_USE_ARCH_TIMER_AS_LOCAL_TIMER
 	err = register_cpu_notifier(&arch_timer_cpu_nb);
 	if (err)
 		goto out_free_irq;
 
 	/* Immediately configure the timer on the boot CPU */
 	arch_timer_setup(this_cpu_ptr(arch_timer_evt));
-
+#endif
 	return 0;
 
 out_free_irq:
@@ -334,7 +374,9 @@ out_free_irq:
 	}
 
 out_free:
+#ifndef CONFIG_USE_ARCH_TIMER_AS_LOCAL_TIMER
 	free_percpu(arch_timer_evt);
+#endif
 out:
 	return err;
 }

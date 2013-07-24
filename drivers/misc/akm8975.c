@@ -40,7 +40,7 @@
 
 #define AKM_ACCEL_ITEMS 3
 /* Wait timeout in millisecond */
-#define AKM8975_DRDY_TIMEOUT	100
+#define AKM8975_DRDY_TIMEOUT	300
 
 struct akm8975_data {
 	struct i2c_client	*i2c;

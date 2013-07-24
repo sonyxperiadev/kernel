@@ -15,6 +15,7 @@
 #ifndef SEC_API_H
 #define SEC_API_H
 
+#include <linux/types.h>
 #define FLAGS	(SEC_ROM_ICACHE_ENABLE_MASK | SEC_ROM_DCACHE_ENABLE_MASK | \
 			SEC_ROM_IRQ_ENABLE_MASK | SEC_ROM_FIQ_ENABLE_MASK)
 
@@ -56,6 +57,11 @@
 #define SSAPI_ROW_AES			0x0E000006
 #define SSAPI_BRCM_START_VC_CORE	0x0E000008
 #define SSAPI_BRCM_SET_M4U		0x0E000012
+
+#ifdef CONFIG_MOBICORE_DRIVER
+u32 mobicore_smc(u32 cmd, u32 arg1, u32 arg2, u32 arg3);
+#define SMC_CMD_SLEEP		(-3)
+#endif
 
 #ifdef CONFIG_KONA_SECURE_MONITOR_CALL
 extern void secure_api_call_init(void);

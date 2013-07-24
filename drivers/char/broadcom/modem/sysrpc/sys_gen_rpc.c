@@ -113,6 +113,22 @@ bool_t xdr_CAPI2_FLASH_SaveImage_Rsp_t(void *xdrs,
 	    return _xdr_Boolean(xdrs, (u_char *)&rsp->val, "val");
 }
 
+bool_t xdr_SYS_APSystemCmd_Req_t(void *xdrs, struct SYS_APSystemCmd_Req_t *rsp)
+{
+	XDR_LOG(xdrs, "SYS_APSystemCmd_Req_t")
+
+	if (
+		xdr_UInt32(xdrs, &rsp->cmdType) &&
+		xdr_UInt32(xdrs, &rsp->param1) &&
+		xdr_UInt32(xdrs, &rsp->param2) &&
+		xdr_UInt32(xdrs, &rsp->param3) &&
+	1)
+		return TRUE;
+	else
+		return FALSE;
+}
+
+
 /***************** < 9 > **********************/
 
 bool_t xdr_SYS_AT_MTEST_Handler_Req_t(void *xdrs,
@@ -302,6 +318,7 @@ bool_t xdr_SYS_SimApi_GetCurrLockedSimlockTypeEx_Rsp_t(void *xdrs,
 	    return xdr_UInt32(xdrs, &rsp->val);
 }
 
+
 /***************** < 10 > **********************/
 
 Result_t SYS_GenCommsMsgHnd(RPC_Msg_t *pReqMsg, SYS_ReqRep_t *req)
@@ -396,6 +413,15 @@ Result_t SYS_GenCommsMsgHnd(RPC_Msg_t *pReqMsg, SYS_ReqRep_t *req)
 		result = Handle_CAPI2_SYS_SoftResetSystem(pReqMsg,
 			req->req_rep_u.CAPI2_SYS_SoftResetSystem_Req.param);
 		break;
+
+	case MSG_AP_SYS_CMD_REQ:
+		result = Handle_SYS_APSystemCmd(
+			pReqMsg, req->req_rep_u.SYS_APSystemCmd_Req.cmdType,
+			req->req_rep_u.SYS_APSystemCmd_Req.param1,
+			req->req_rep_u.SYS_APSystemCmd_Req.param2,
+			req->req_rep_u.SYS_APSystemCmd_Req.param3);
+		break;
+
 #endif
 
 	default:
@@ -463,6 +489,12 @@ void SYS_GenGetPayloadInfo(void *dataBuf, MsgType_t msgType, void **ppBuf,
 			*ppBuf = (void *)&(pVal->val);
 			break;
 		}
+	case MSG_AP_SYS_CMD_RSP:
+		{
+			*ppBuf = NULL;
+			break;
+		}
+
 	default:
 		xassert(0, msgType);
 		break;

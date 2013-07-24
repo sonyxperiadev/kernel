@@ -13,9 +13,11 @@
 #define __KONA_PM_H__
 
 /* Additional control parameters */
-#define CTRL_PARAMS_FLAG_XTAL_ON    (1 << 0)
+#define CTRL_PARAMS_FLAG_XTAL_ON	(1 << 0)
 #define CTRL_PARAMS_ENTER_SUSPEND	(1 << 1)
-#define CTRL_PARAMS_CSTATE_DISABLED	(1 << 2)
+#define CTRL_PARAMS_OFFLINE_CORE	(1 << 2)
+#define CTRL_PARAMS_CSTATE_DISABLED	(1 << 3)
+#define CTRL_PARAMS_CLUSTER_ACTIVE	(1 << 4)
 
 /* Additional dormant traces for idle and suspend */
 #define DORMANT_IDLE_PATH_ENTRY		0xA0A0

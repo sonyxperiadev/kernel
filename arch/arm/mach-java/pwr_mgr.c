@@ -293,6 +293,26 @@ static const struct event_table __event_table[] = {
 		.policy_hub     = PM_DFS,
 		.policy_mm      = PM_OFF,
 	},
+	{
+		.event_id       = COMMON_TIMER_3_EVENT,
+		.trig_type      = PM_TRIG_POS_EDGE,
+		.policy_modem   = PM_RET,
+		.policy_arm     = PM_DFS,
+		.policy_arm_sub = PM_DFS,
+		.policy_aon     = PM_DFS,
+		.policy_hub     = PM_DFS,
+		.policy_mm      = PM_OFF,
+	},
+	{
+		.event_id       = COMMON_TIMER_4_EVENT,
+		.trig_type      = PM_TRIG_POS_EDGE,
+		.policy_modem   = PM_RET,
+		.policy_arm     = PM_DFS,
+		.policy_arm_sub = PM_DFS,
+		.policy_aon     = PM_DFS,
+		.policy_hub     = PM_DFS,
+		.policy_mm      = PM_OFF,
+	},
 
 	{
 		.event_id	= UBRX_EVENT,
@@ -851,8 +871,17 @@ static int __init hawaii_pwr_mgr_init(void)
 		pwr_mgr_event_set_pi_policy(__event_table[i].event_id,
 					    PI_MGR_PI_ID_MM, &cfg);
 	}
-	/*Init all PIs */
+	/*Map core timer interrupts to COMMON_TIMER_3_EVENT and
+	*COMMON_TIMER_4_EVENT events.
+	*Set timer_wu_event_sel to 0x3 to map both slave and core timer
+	*interrupts to these events*/
+	reg_val = readl(KONA_CHIPREG_VA + CHIPREG_PERIPH_SPARE_CONTROL1_OFFSET);
+	reg_val |= 0x3 <<
+		CHIPREG_PERIPH_SPARE_CONTROL1_TIMER_WU_EVENT_SEL_SHIFT;
+	writel(reg_val,
+		KONA_CHIPREG_VA + CHIPREG_PERIPH_SPARE_CONTROL1_OFFSET);
 
+	/*Init all PIs */
 	for (i = 0; i < PI_MGR_PI_ID_MODEM; i++) {
 		pi = pi_mgr_get(i);
 		BUG_ON(pi == NULL);

@@ -103,6 +103,14 @@ typedef struct {
 	UInt32  param;
 } CAPI2_SYS_SoftResetSystem_Req_t;
 
+struct SYS_APSystemCmd_Req_t {
+	UInt32  cmdType;
+	UInt32  param1;
+	UInt32  param2;
+	UInt32  param3;
+};
+
+
 /****************** < 2 > **********************/
 
 bool_t xdr_CAPI2_CPPS_Control_Req_t(void *xdrs, CAPI2_CPPS_Control_Req_t *rsp);
@@ -141,6 +149,9 @@ bool_t xdr_SYS_SimApi_GetCurrLockedSimlockTypeEx_Rsp_t(void *xdrs,
 bool_t xdr_CAPI2_SYS_SoftResetSystem_Req_t(void *xdrs,
 	CAPI2_SYS_SoftResetSystem_Req_t *rsp);
 
+bool_t xdr_SYS_APSystemCmd_Req_t(void *xdrs, struct SYS_APSystemCmd_Req_t *rsp);
+
+
 /****************** < 3 > **********************/
 
 Result_t Handle_CAPI2_CPPS_Control(RPC_Msg_t *pReqMsg, UInt32 cmd,
@@ -164,6 +175,9 @@ Result_t Handle_SYS_SIMLOCKApi_SetStatusEx(RPC_Msg_t *pReqMsg, UInt8 simId,
 Result_t Handle_SYS_SimApi_GetCurrLockedSimlockTypeEx(RPC_Msg_t *pReqMsg,
 						      UInt8 simId);
 Result_t Handle_CAPI2_SYS_SoftResetSystem(RPC_Msg_t *pReqMsg, UInt32 param);
+Result_t Handle_SYS_APSystemCmd(RPC_Msg_t *pReqMsg, UInt32 cmdType,
+	UInt32 param1, UInt32 param2, UInt32 param3);
+
 
 /****************** < 12 > **********************/
 
@@ -280,6 +294,23 @@ void SYS_SimApi_GetCurrLockedSimlockTypeEx(UInt32 tid, UInt8 clientID,
 	@n Response to CP will be notified via ::MSG_SYS_SOFT_RESET_SYSTEM_RSP
 **/
 void CAPI2_SYS_SoftResetSystem(UInt32 tid, UInt8 clientID, UInt32 param);
+
+/******************************************************************************/
+/**
+	Function response for the SYS_APSystemCmd
+	@param		tid (in) Unique exchange/transaction id
+	@param		clientID (in) Client ID
+	@param		cmdType(in) param of type UInt32
+	@param		param1(in) param of type UInt32
+	@param		param2(in) param of type UInt32
+	@param		param3(in) param of type UInt32
+	@return		Not Applicable
+	@note
+	Payload: default_proc
+	@n Response to CP will be notified via ::MSG_AP_SYS_CMD_RSP
+**/
+void SYS_APSystemCmd(UInt32 tid, UInt8 clientID, UInt32 cmdType,
+	UInt32 param1, UInt32 param2, UInt32 param3);
 
 /****************** < 16 > **********************/
 

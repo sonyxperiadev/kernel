@@ -10,7 +10,7 @@
 	compatible = "bcm,hawaii";
 
 	chosen {
-		bootargs = "console=ttyS0,115200n8 mem=992M gpt vmalloc=136M androidboot.console=ttyS0 crash_ramdump=1 logbuf_nocache=1";
+		bootargs = "console=ttyS0,115200n8 mem=992M gpt androidboot.console=ttyS0 crash_ramdump=1 logbuf_nocache=1";
 	};
 
 	memory@82000000 {
@@ -331,7 +331,7 @@
 		thold_size = <4>; /*number of threshold levels*/
 		poll_rate_ms = <30000>;
 		hysteresis = <0>;
-		flags = <1>;
+		flags = <0>;
 		interval_ms = <5>;
 		/*critical temp is 115*/
 		thold = <70 65 1

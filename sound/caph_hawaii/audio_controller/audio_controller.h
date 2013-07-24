@@ -69,6 +69,7 @@ enum __AUDCTRL_HW_ACCESS_TYPE_en_t {
 	AUDCTRL_HW_CFG_ARM2SP,
 	AUDCTRL_HW_CFG_HUB,
 	AUDCTRL_HW_CFG_IHFDL,
+	AUDCTRL_HW_CFG_PRIMARY_MIC,
 	AUDCTRL_HW_CFG_ECHO_REF_MIC = 15,/*to be compatible with capri*/
 	/* below are for internal purposes */
 	AUDCTRL_HW_READ_GAIN = 20,
@@ -76,6 +77,7 @@ enum __AUDCTRL_HW_ACCESS_TYPE_en_t {
 	AUDCTRL_HW_READ_REG,
 	AUDCTRL_HW_WRITE_REG,
 	AUDCTRL_HW_PRINT_PATH,
+	AUDCTRL_HW_PRINT_MICS,
 	AUDCTRL_HW_ACCESS_TYPE_TOTAL
 };
 #define AUDCTRL_HW_ACCESS_TYPE_en_t enum __AUDCTRL_HW_ACCESS_TYPE_en_t
@@ -399,7 +401,9 @@ void AUDCTRL_GetSrcSinkByMode(AudioMode_t mode, AUDIO_SOURCE_Enum_t *pMic,
 void AUDCTRL_EnablePlay(AUDIO_SOURCE_Enum_t source,
 			AUDIO_SINK_Enum_t sink,
 			AUDIO_NUM_OF_CHANNEL_t numCh,
-			AUDIO_SAMPLING_RATE_t sr, unsigned int *pPathID);
+			AUDIO_SAMPLING_RATE_t sr,
+			AUDIO_BITS_PER_SAMPLE_t bitsPerSample,
+			unsigned int *pPathID);
 
 /********************************************************************
 *  @brief  Disable a playback path

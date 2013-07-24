@@ -61,12 +61,6 @@ enum {
 	APPS_MIN_PWR_MAX = APPS_MIN_PWR_STATE3
 };
 
-enum {
-	DDR_FREQ_400M,
-	DDR_FREQ_450M,
-	DDR_FREQ_MAX,
-};
-
 struct kona_memc_node {
 	char *name;
 	struct plist_node node;

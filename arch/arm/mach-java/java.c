@@ -143,6 +143,9 @@ arch_initcall(hawaii_arch_init);
 void __init java_timer_init(void)
 {
 	struct gp_timer_setup gpt_setup;
+	int cpu = smp_processor_id();
+
+	pr_info("@@@@@@@@@@@@@@ %s()  from CPU %d \r\n", __func__, cpu);
 
 	/*
 	 * IMPORTANT:
@@ -185,6 +188,8 @@ static void cpu_info_verbose(void)
 {
 	if (cpu_is_java_A0())
 		pr_info("Java CHIPID-A0\n");
+	if (cpu_is_java_A1())
+		pr_info("Java CHIPID-A1\n");
 }
 
 static void block_mm_access_to_hub(void)

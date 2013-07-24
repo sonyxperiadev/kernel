@@ -33,6 +33,7 @@ struct bcm_iommu_pdata {
 	u32 iova_begin;
 	u32 iova_size;
 	u32 errbuf_size;
+	u32 skip_enable;	/* Skip enabling of iommu during probe */
 };
 
 /* Platform data of iovmm - if device-tree not used */
@@ -54,6 +55,13 @@ int arm_iommu_attach_device(struct device *dev,
 int arm_iommu_map_sgt(struct device *dev, struct sg_table *sgt, u32 align);
 
 int arm_iommu_unmap(struct device *dev, dma_addr_t iova, size_t size);
+
+/* API to enable M4U if not already enabled during probe.
+ * This could be needed to enable display subsystem iommu if u-boot shows
+ *  splash screen in video mode and wants to continue without interruption
+ *  during kernel boot
+ **/
+int bcm_iommu_enable(struct device *dev);
 
 #endif /* _BCM_IOMMU_H_ */
 

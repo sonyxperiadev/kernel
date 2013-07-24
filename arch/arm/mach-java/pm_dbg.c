@@ -199,11 +199,7 @@ static void cmd_force_sleep(const char *p)
 {
 	/* coverity[secure_coding] */
 	sscanf(p, "%d", &force_sleep_state);
-	if (force_sleep_state < 0 || force_sleep_state > 4) {
-		pr_err("Invalid state: %d\n", force_sleep_state);
-		force_sleep_state = 2;
-		return;
-	}
+	force_sleep_state = CSTATE_DS_DRMT;
 
 	pr_info("%s: Forcing system to state: %d\n", __func__,
 			force_sleep_state);

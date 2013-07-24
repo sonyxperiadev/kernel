@@ -162,7 +162,7 @@ extern int rhea_wifi_status_register(
 #define SD_CARDDET_GPIO_PIN	38
 
 #if defined(CONFIG_TOUCHSCREEN_BCM915500) || defined(CONFIG_TOUCHSCREEN_BCM915500_MODULE)
-#include <linux/i2c/bcm15500_i2c_ts.h>
+#include <linux/i2c/bcmtch15xxx.h>
 #define HW_BCM915500_GPIO_RESET        70
 #define HW_BCM915500_GPIO_INTERRUPT    71
 #define HW_BCM915500_I2C_BUS_ID        1

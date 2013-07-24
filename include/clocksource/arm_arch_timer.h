@@ -17,6 +17,7 @@
 #define __CLKSOURCE_ARM_ARCH_TIMER_H
 
 #include <linux/clocksource.h>
+#include <linux/clockchips.h>
 #include <linux/types.h>
 
 #define ARCH_TIMER_CTRL_ENABLE		(1 << 0)
@@ -34,7 +35,11 @@
 extern u32 arch_timer_get_rate(void);
 extern u64 (*arch_timer_read_counter)(void);
 extern struct timecounter *arch_timer_get_timecounter(void);
-
+int  __cpuinit arch_timer_setup(struct clock_event_device *clk);
+void __cpuinit arch_timer_stop(struct clock_event_device *clk);
+#ifdef CONFIG_USE_ARCH_TIMER_AS_LOCAL_TIMER
+extern void smp_get_evt_context(struct clock_event_device **p_arch_timer_evt);
+#endif
 #else
 
 static inline u32 arch_timer_get_rate(void)

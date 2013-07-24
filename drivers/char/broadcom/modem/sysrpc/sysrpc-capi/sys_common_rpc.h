@@ -140,6 +140,22 @@ typedef struct {
 	UInt8 gid2_len;
 } SYS_SIMLOCK_SIM_DATA_t;
 
+/**
+	AP System command types, for use with MSG_AP_SYS_CMD_REQ
+**/
+enum SYS_APSysCmd_t {
+	AP_SYS_CMD_RFLDO,	/* Set RF LDO */
+	AP_SYS_CMD_SIMLDO,	/* Set SIM LDO's */
+	AP_SYS_CMD_SIM1LDO,	/* Set SIM1 LDO */
+	AP_SYS_CMD_SIM2LDO,	/* Set SIM2 LDO */
+	AP_SYS_CMD_TOTAL	/* total number of AP system commands */
+};
+
+enum SYS_LDO_Cmd_Type_t {
+	SYS_LDO_OFF,
+	SYS_LDO_ON
+};
+
 void SIMLOCKApi_SetStatus(ClientInfo_t *inClientInfoPtr,
 			  SYS_SIMLOCK_STATE_t *simlock_state);
 void SIMLOCKApi_SetStatusEx(UInt8 simId, SYS_SIMLOCK_STATE_t *simlock_state);

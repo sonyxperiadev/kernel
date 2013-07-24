@@ -67,7 +67,6 @@ extern void __flush_dcache_page(struct address_space *mapping, struct page *page
 /* consistent regions used by dma_alloc_attrs() */
 #define VM_ARM_DMA_CONSISTENT	0x20000000
 
-
 struct static_vm {
 	struct vm_struct vm;
 	struct list_head list;

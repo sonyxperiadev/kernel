@@ -63,6 +63,7 @@ struct bcmpmu_otg_xceiv_data {
 	struct notifier_block bcm_otg_adp_calib_done_notifier;
 	struct notifier_block bcm_otg_adp_change_done_notifier;
 	struct notifier_block bcm_otg_adp_sns_end_notifier;
+	struct notifier_block bcm_otg_xceive_state_notifier;
 
 	bool host;
 	bool vbus_enabled;

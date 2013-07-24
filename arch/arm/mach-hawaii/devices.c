@@ -64,6 +64,7 @@
 #include <linux/clk.h>
 #include <plat/pi_mgr.h>
 #include <mach/pi_mgr.h>
+#define CPUFREQ_1200MHz 12000000
 #endif
 
 #ifdef CONFIG_UNICAM
@@ -179,6 +180,12 @@ struct platform_device ion_system_device = {
 	.num_resources = 0,
 };
 
+struct platform_device ion_system_extra_device = {
+	.name = "ion-bcm",
+	.id = 3,
+	.num_resources = 0,
+};
+
 struct platform_device ion_carveout_device = {
 	.name = "ion-bcm",
 	.id = 0,
@@ -201,6 +208,20 @@ struct platform_device ion_cma_device = {
 	.num_resources = 0,
 };
 #endif /* CONFIG_CMA */
+
+#if defined(CONFIG_MM_SECURE_DRIVER)
+
+struct platform_device ion_secure_device = {
+	.name = "ion-bcm",
+	.id = 4,
+	.dev = {
+		.platform_data = &ion_secure_data,
+	},
+	.num_resources = 0,
+};
+
+#endif /* CONFIG_MM_SECURE_DRIVER */
+
 #endif /* CONFIG_ION_BCM_NO_DT */
 
 struct platform_device hawaii_serial_device = {
@@ -357,14 +378,6 @@ struct platform_device hawaii_kp_device = {
 #endif
 
 #ifdef CONFIG_KONA_HEADSET_MULTI_BUTTON
-#if defined(CONFIG_MACH_HAWAII_SS_LOGAN_REV01) || \
-defined(CONFIG_MACH_HAWAII_SS_GOLDENVEN_REV01) || \
-defined(CONFIG_MACH_HAWAII_SS_LOGANDS_REV00) || \
-defined(CONFIG_MACH_HAWAII_SS_LOGANDS_REV01)
-#define HS_IRQ		gpio_to_irq(121)
-#else		/* CONFIG_MACH_HAWAII_SS_LOGAN */
-#define HS_IRQ		gpio_to_irq(92)
-#endif	/* CONFIG_MACH_HAWAII_SS_LOGAN */
 #define HSB_IRQ		BCM_INT_ID_AUXMIC_COMP2
 #define HSB_REL_IRQ	BCM_INT_ID_AUXMIC_COMP2_INV
 
@@ -379,9 +392,11 @@ static struct resource board_headset_resource[] = {
 		.end = ACI_BASE_ADDR + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
 	},
-	{	/* For Headset IRQ */
-		.start = HS_IRQ,
-		.end = HS_IRQ,
+	{	/* For Headset IRQ  - Note that this is board
+		 * specific, so don't fill the actual GPIO number
+		 * here, it will be done from the appropriate
+		 * board file. So this is just a place holder
+		 */
 		.flags = IORESOURCE_IRQ,
 	},
 	{	/* For Headset button  press IRQ */
@@ -718,11 +733,17 @@ struct kona_freq_tbl kona_freq_tbl[] = {
 	FTBL_INIT(1000000, PI_OPP_SUPER_TURBO, 85),
 };
 
+int temp_lmt[2][ARRAY_SIZE(kona_freq_tbl)] = {
+	{TEMP_DONT_CARE, 100, TEMP_DONT_CARE, 85}, /*1GHz*/
+	{TEMP_DONT_CARE, 105, 95, 85}, /*1.2GHz*/
+};
+
 void hawaii_cpufreq_init(void)
 {
 	struct clk *a9_pll_chnl0;
 	struct clk *a9_pll_chnl1;
 	struct clk *a9_pll;
+	int i;
 
 	a9_pll = clk_get(NULL, A9_PLL_CLK_NAME_STR);
 	a9_pll_chnl0 = clk_get(NULL, A9_PLL_CHNL0_CLK_NAME_STR);
@@ -737,13 +758,20 @@ void hawaii_cpufreq_init(void)
 	kona_freq_tbl[2].cpu_freq = clk_get_rate(a9_pll) / (3 * 1000);
 	kona_freq_tbl[3].cpu_freq = clk_get_rate(a9_pll_chnl1) / 1000;
 
+	if (kona_freq_tbl[3].cpu_freq < CPUFREQ_1200MHz) {
+		for (i = 0 ; i < ARRAY_SIZE(kona_freq_tbl) ; i++)
+			kona_freq_tbl[i].max_temp = temp_lmt[0][i];
+	} else {
+		for (i = 0 ; i < ARRAY_SIZE(kona_freq_tbl) ; i++)
+			kona_freq_tbl[i].max_temp = temp_lmt[1][i];
+	}
+
 	pr_info("%s a9_pll_chnl0 OPP0_freq = %dkHz OPP1_freq = %dKhz a9_pll_chnl1 freq = %dKhz\n",
 		__func__, kona_freq_tbl[1].cpu_freq, kona_freq_tbl[2].cpu_freq,
 		kona_freq_tbl[3].cpu_freq);
 }
 
 struct kona_cpufreq_drv_pdata kona_cpufreq_drv_pdata = {
-
 	.freq_tbl = kona_freq_tbl,
 	.num_freqs = ARRAY_SIZE(kona_freq_tbl),
 	/*FIX ME: To be changed according to the cpu latency */
@@ -769,28 +797,29 @@ void avs_silicon_type_notify(u32 silicon_type, u32 ate_freq)
 	pr_info("%s : silicon type = %d freq_id = %d\n", __func__,
 			silicon_type, freq_id);
 
+	BUG_ON(silicon_type >= SILICON_TYPE_MAX);
 	switch (ate_freq) {
 	case A9_FREQ_UNKNOWN:
-		printk(KERN_ALERT "Unknown freqid. Set to max supported\n");
-		#ifdef CONFIG_PWRMGR_1P2GHZ_OPS_SET_SELECT
+	#ifdef CONFIG_PWRMGR_1P2GHZ_OPS_SET_SELECT
 		freq_id = A9_FREQ_1200_MHZ;
-		#else
+	#else
 		freq_id = A9_FREQ_1000_MHZ;
-		#endif
+	#endif
+		printk(KERN_ALERT "Unknown freqid. Set to max supported\n");
 		break;
 	case A9_FREQ_1000_MHZ:
-		#ifdef CONFIG_PWRMGR_1P2GHZ_OPS_SET_SELECT
+	#ifdef CONFIG_PWRMGR_1P2GHZ_OPS_SET_SELECT
 		printk(KERN_ALERT "AVS says 1 GHZ, system conf says 1.2 GHZ");
 		BUG();
-		#endif
+	#endif
 		break;
 	case A9_FREQ_1200_MHZ:
-		#ifndef CONFIG_PWRMGR_1P2GHZ_OPS_SET_SELECT
+	#ifndef CONFIG_PWRMGR_1P2GHZ_OPS_SET_SELECT
 		printk(KERN_ALERT "AVS says 1.2 GHZ, system conf for 1GHZ");
 		freq_id = A9_FREQ_1000_MHZ;
-		#endif
+	#endif
 		break;
-	case A9_FREQ_1500_MHZ:
+	case A9_FREQ_1400_MHZ:
 	default:
 		BUG();
 	}
@@ -827,7 +856,7 @@ u32 vddvar_a9_vmin_lut[] = {
 };
 
 
-static struct avs_ate_lut_entry ate_lut[] = {
+static struct avs_ate_lut_entry ate_1g_lut[] = {
 	{A9_FREQ_UNKNOWN, SILICON_TYPE_SLOW}, /* 0 - Default*/
 	{A9_FREQ_1000_MHZ, SILICON_TYPE_FAST},   /* 1 */
 	{A9_FREQ_1000_MHZ, SILICON_TYPE_TYP_FAST},/* 2 */
@@ -839,34 +868,67 @@ static struct avs_ate_lut_entry ate_lut[] = {
 	{A9_FREQ_1200_MHZ, SILICON_TYPE_TYPICAL},/* 8 */
 	{A9_FREQ_1200_MHZ, SILICON_TYPE_TYP_SLOW},/* 9 */
 	{A9_FREQ_1200_MHZ, SILICON_TYPE_SLOW},/* 10 */
-	{A9_FREQ_1500_MHZ, SILICON_TYPE_FAST},    /* 11 */
-	{A9_FREQ_1500_MHZ, SILICON_TYPE_TYP_FAST},/* 12 */
-	{A9_FREQ_1500_MHZ, SILICON_TYPE_TYPICAL},/* 13 */
-	{A9_FREQ_1500_MHZ, SILICON_TYPE_TYP_SLOW},/* 14 */
-	{A9_FREQ_1500_MHZ, SILICON_TYPE_SLOW},/* 15 */
+};
+
+static struct avs_ate_lut_entry ate_1p2_lut[] = {
+	{A9_FREQ_UNKNOWN, SILICON_TYPE_SLOW}, /* 0 - Default*/
+	{A9_FREQ_1200_MHZ, SILICON_TYPE_FAST},/* 1 */
+	{A9_FREQ_1200_MHZ, SILICON_TYPE_TYP_FAST},/* 2 */
+	{A9_FREQ_1200_MHZ, SILICON_TYPE_TYPICAL},/* 3 */
+	{A9_FREQ_1200_MHZ, SILICON_TYPE_TYP_SLOW},/* 4 */
+	{A9_FREQ_1200_MHZ, SILICON_TYPE_SLOW},/* 5 */
+};
+
+
+static struct avs_ate_lut_entry ate_1p4_lut[] = {
+	{A9_FREQ_UNKNOWN, SILICON_TYPE_SLOW}, /* 0 - Default*/
+	{A9_FREQ_1400_MHZ, SILICON_TYPE_FAST},    /* 1 */
+	{A9_FREQ_1400_MHZ, SILICON_TYPE_TYP_FAST},/* 2 */
+	{A9_FREQ_1400_MHZ, SILICON_TYPE_TYPICAL},/* 3 */
+	{A9_FREQ_1400_MHZ, SILICON_TYPE_TYP_SLOW},/* 4 */
+	{A9_FREQ_1400_MHZ, SILICON_TYPE_SLOW},/* 5 */
 };
 
 static u32 irdrop_lut[] = {459, 477, 506, 525, UINT_MAX};
 
-static u32 vddvar_adj_val_1g[] = {40, 40, 30, 30, 30};
-static u32 vddvar_adj_val_1200m[] = {50, 50, 40, 40, 30};
+static u32 vddvar_aging_val_1g[] = {40, 40, 30, 30, 30};
+static u32 vddvar_aging_val_1200m[] = {50, 50, 40, 40, 30};
 
-static u32 *vddvar_adj_lut[] = {vddvar_adj_val_1g, vddvar_adj_val_1200m};
+static u32 *vddvar_aging_lut[] = {vddvar_aging_val_1g, vddvar_aging_val_1200m};
 
-int vddfix_adj_lut[] = {
-	0, 10, 20, 30,
-	40, 50, 60, 70,
-	80, 90, 100, 110,
-	120, 130, 140, 150,
-	0, -10, -20, -30,
-	-40, -50, -60, -70,
-	-80, -90, -100, -110,
-	-120, -130, -140, -150
+int vddfix_adj_lut_400m[] = {
+	0, 10, 20, 30, 40, 50, 60, 70,
+	80, 90, 100, 110, 120, 130, 140, 150,
+	0, -10, -20, -30, -40, -50, -60, -70,
+	-80, -90, -100, -110, -120, -130, -140, -150,
 };
+
+int vddfix_adj_lut_450m[] = {
+	0, 10, 20, 30, 40, 50, 60, 70,
+	80, 90, 100, 110, 120, 130, 140, 150,
+	0, -10, -20, -30, -40, -50, -60, -70,
+	-80, -90, -100, -110, -120, -130, -140, -150,
+};
+
+int vddvar_adj_lut[] = {
+	0, 10, 20, 30, 40, 50, 60, 70,
+	0, -10, -20, -30, -40, -50, -60, -70,
+};
+
+int vddvar_a9_adj_lut[] = {
+	0, 10, 20, 30, 40, 50, 60, 70,
+	0, -10, -20, -30, -40, -50, -60, -70,
+};
+
+static struct avs_ate_lut_entry *ate_lut[] = {ate_1g_lut, ate_1p2_lut,
+	ate_1p4_lut};
+
+static int *vddfix_adj_lut[] = {vddfix_adj_lut_400m, vddfix_adj_lut_450m};
 
 static struct avs_pdata avs_pdata = {
 	.flags = AVS_VDDVAR_A9_MIN_EN | AVS_VDDVAR_MIN_EN | AVS_VDDFIX_MIN_EN |
-	AVS_VDDFIX_ADJ_EN | AVS_USE_IRDROP_IF_NO_OTP,
+		AVS_VDDFIX_ADJ_EN | AVS_USE_IRDROP_IF_NO_OTP |
+		AVS_VDDVAR_ADJ_EN | AVS_VDDVAR_A9_ADJ_EN,
 	/* Mem addr where OTP row 3 is copied by ABI*/
 	.avs_addr_row3 = 0x34051FB0,
 	/* Mem addr where OTP row 5 is copied by ABI*/
@@ -881,8 +943,10 @@ static struct avs_pdata avs_pdata = {
 	.vddvar_vmin_lut = vddvar_vmin_lut,
 	.vddvar_a9_vmin_lut = vddvar_a9_vmin_lut,
 	.silicon_type_notify = avs_silicon_type_notify,
-	.vddvar_adj_lut = vddvar_adj_lut,
+	.vddvar_aging_lut = vddvar_aging_lut,
 	.vddfix_adj_lut = vddfix_adj_lut,
+	.vddvar_adj_lut = vddvar_adj_lut,
+	.vddvar_a9_adj_lut = vddvar_a9_adj_lut,
 	.a9_regl_id = "csr_uc",
 	.pwrwdog_base = KONA_PWRWDOG_VA,
 };
@@ -920,7 +984,7 @@ struct platform_device kona_memc_device = {
 struct tmon_state threshold_val[] = {
 	{.rising = 85, .falling = 75, .flags = TMON_NOTIFY,},
 	{.rising = 100, .falling = 90, .flags = TMON_NOTIFY,},
-	{.rising = 115, .falling = 112, .flags = TMON_SHDWN,},
+	{.rising = 115, .falling = 112, .flags = TMON_HW_SHDWN,},
 };
 struct kona_tmon_pdata tmon_plat_data = {
 	.base_addr = KONA_TMON_VA,
@@ -1147,21 +1211,42 @@ static void __init pmem_reserve_memory(void)
 
 #ifdef CONFIG_ION
 
+enum {
+	ION_HEAP_RESERVE_CARVEOUT_E = 0,
+	ION_HEAP_RESERVE_CARVEOUT_EXTRA_E,
+#ifdef CONFIG_CMA
+	ION_HEAP_RESERVE_CMA_E,
+	ION_HEAP_RESERVE_CMA_EXTRA_E,
+#endif /* CONFIG_CMA */
+#if defined(CONFIG_MM_SECURE_DRIVER)
+	ION_HEAP_RESERVE_SECURE_E,
+	ION_HEAP_RESERVE_SECURE_EXTRA_E,
+#endif /* CONFIG_MM_SECURE_DRIVER */
+};
+
 static struct bcm_ion_heap_reserve_data ion_heap_reserve_datas[] = {
-	[0] = {
+	[ION_HEAP_RESERVE_CARVEOUT_E] = {
 		.name  = "ion-carveout",
 	},
-	[1] = {
+	[ION_HEAP_RESERVE_CARVEOUT_EXTRA_E] = {
 		.name  = "ion-carveout-extra",
 	},
 #ifdef CONFIG_CMA
-	[2] = {
+	[ION_HEAP_RESERVE_CMA_E] = {
 		.name  = "ion-cma",
 	},
-	[3] = {
+	[ION_HEAP_RESERVE_CMA_EXTRA_E] = {
 		.name  = "ion-cma-extra",
 	},
 #endif /* CONFIG_CMA */
+#if defined(CONFIG_MM_SECURE_DRIVER)
+	[ION_HEAP_RESERVE_SECURE_E] = {
+		.name  = "ion-secure",
+	},
+	[ION_HEAP_RESERVE_SECURE_EXTRA_E] = {
+		.name  = "ion-secure-extra",
+	},
+#endif /* CONFIG_MM_SECURE_DRIVER */
 };
 
 static int __init setup_ion_pages(char *str, int idx)
@@ -1182,29 +1267,47 @@ static int __init setup_ion_pages(char *str, int idx)
 
 static int __init setup_ion_carveout0_pages(char *str)
 {
-	return setup_ion_pages(str, 0);
+	return setup_ion_pages(str, ION_HEAP_RESERVE_CARVEOUT_E);
 }
 early_param("carveout0", setup_ion_carveout0_pages);
 
 static int __init setup_ion_carveout1_pages(char *str)
 {
-	return setup_ion_pages(str, 1);
+	return setup_ion_pages(str, ION_HEAP_RESERVE_CARVEOUT_EXTRA_E);
 }
 early_param("carveout1", setup_ion_carveout1_pages);
 
 #ifdef CONFIG_CMA
+
 static int __init setup_ion_cma0_pages(char *str)
 {
-	return setup_ion_pages(str, 2);
+	return setup_ion_pages(str, ION_HEAP_RESERVE_CMA_E);
 }
 early_param("cma0", setup_ion_cma0_pages);
 
 static int __init setup_ion_cma1_pages(char *str)
 {
-	return setup_ion_pages(str, 3);
+	return setup_ion_pages(str, ION_HEAP_RESERVE_CMA_EXTRA_E);
 }
 early_param("cma1", setup_ion_cma1_pages);
+
 #endif /* CONFIG_CMA */
+
+#if defined(CONFIG_MM_SECURE_DRIVER)
+
+static int __init setup_ion_secure0_pages(char *str)
+{
+	return setup_ion_pages(str, ION_HEAP_RESERVE_SECURE_E);
+}
+early_param("secure0", setup_ion_secure0_pages);
+
+static int __init setup_ion_secure1_pages(char *str)
+{
+	return setup_ion_pages(str, ION_HEAP_RESERVE_SECURE_EXTRA_E);
+}
+early_param("secure1", setup_ion_secure1_pages);
+
+#endif /* CONFIG_MM_SECURE_DRIVER */
 
 int bcm_ion_get_heap_reserve_data(struct bcm_ion_heap_reserve_data **data,
 		const char *name)
@@ -1269,6 +1372,25 @@ static int __init ion_scan_pdata(
 			return 1;
 	}
 #endif /* CONFIG_CMA */
+
+#if defined(CONFIG_MM_SECURE_DRIVER)
+	for (i = 0; i < ion_secure_data.nr; i++) {
+		heap = &ion_secure_data.heaps[i];
+		if (!reserve_data || !reserve_data->name ||
+				(strcmp(heap->name, reserve_data->name) != 0))
+			continue;
+
+		reserve_data->type = heap->type;
+		reserve_data->base = heap->base;
+		reserve_data->limit = heap->limit;
+		if (reserve_data->status != -1)
+			reserve_data->size = heap->size;
+		if (reserve_data->size == 0)
+			return 0;
+		else
+			return 1;
+	}
+#endif /* CONFIG_MM_SECURE_DRIVER */
 	return 0;
 }
 
@@ -1419,6 +1541,15 @@ static void __init ion_reserve_memory(void)
 				}
 			}
 #endif /* CONFIG_CMA */
+#if defined(CONFIG_MM_SECURE_DRIVER)
+			if (base && (reserve_data->type ==
+						ION_HEAP_TYPE_SECURE)) {
+				/* Carveout memory for ION */
+				memblock_remove(base, reserve_data->size);
+				reserve_data->base = base;
+				reserve_data->status = 0;
+			}
+#endif /* CONFIG_MM_SECURE_DRIVER */
 		}
 		if (!reserve_data->status)
 			pr_info("ion: Reserve %16s %3dMB (%08lx - %08lx) ***\n",
@@ -1504,16 +1635,16 @@ static void mobicore_reserve_memory(void)
 void __init hawaii_reserve(void)
 {
 
+#ifdef CONFIG_MOBICORE_DRIVER
+	mobicore_reserve_memory();
+#endif
+
 #ifdef CONFIG_ION
 	ion_reserve_memory();
 #endif /* CONFIG_ION */
 
 #ifdef CONFIG_ANDROID_PMEM
 	pmem_reserve_memory();
-#endif
-
-#ifdef CONFIG_MOBICORE_DRIVER
-	mobicore_reserve_memory();
 #endif
 
 }

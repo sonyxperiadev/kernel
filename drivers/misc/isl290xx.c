@@ -324,7 +324,7 @@ static void prv_isl290xx_work_func(struct work_struct *w)
 
 	if ((status & ISL290XX_INT_PROX_BIT) != 0) {
 		status = status & (~ISL290XX_INT_PROX_BIT);
-		pr_info("isl290xx: data %d, hi=%d, lo=%d\n",
+		pr_debug("isl290xx: data %d, hi=%d, lo=%d\n",
 			 isl290xx_prox_cur_infop->prox_data,
 			 isl290xx_cfgp->prox_threshold_hi,
 			 isl290xx_cfgp->prox_threshold_lo);

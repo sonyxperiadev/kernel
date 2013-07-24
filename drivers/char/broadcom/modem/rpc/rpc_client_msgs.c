@@ -52,7 +52,7 @@ static UInt32 **tableBase = NULL;
 #undef _DBG_
 #define _DBG_(a)
 
-static Boolean rpc_build_lookup_msgs(UInt16 *tbl, UInt16 table_size,
+static Boolean rpc_build_lookup_msgs(UInt16 *tbl, UInt32 table_size,
 			UInt32 mask)
 {
 	Boolean bRetVal = TRUE;
@@ -138,7 +138,7 @@ Boolean rpc_reset_client_msgs(UInt8 clientId)
 }
 
 Boolean rpc_register_client_msgs(UInt8 clientId, UInt16 *tbl,
-					UInt16 table_size)
+					UInt32 table_size)
 {
 	UInt32 mask = 1;
 

@@ -1,7 +1,7 @@
 /**********************************************************************
 *
 * @file profiler.c
-* RHEA Profiler modules
+* Hawaii Profiler modules
 *
 * Copyright 2012 Broadcom Corporation.  All rights reserved.
 *
@@ -417,10 +417,18 @@ static struct platform_device hawaii_profiler_device = {
 
 static int __init hawaii_profiler_init(void)
 {
+	struct clk *clk;
+	int idx;
+	for (idx = 0; idx < ARRAY_SIZE(__ccu_profiler_tbl); idx++) {
+		clk = clk_get(NULL, __ccu_profiler_tbl[idx]->clk_dev_id);
+		BUG_ON(clk == NULL);
+		__ccu_profiler_tbl[idx]->ccu_clk = to_ccu_clk(clk);
+	}
 	pr_info("%s\n", __func__);
 	return platform_device_register(&hawaii_profiler_device);
 }
 device_initcall(hawaii_profiler_init);
+
 static int __init hawaii_profiler_register(void)
 {
 	int idx;

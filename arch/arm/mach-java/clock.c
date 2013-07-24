@@ -42,6 +42,7 @@
 #include <mach/rdb/brcm_rdb_kps_rst_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_mm_rst_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_mm2_rst_mgr_reg.h>
+#include <mach/rdb/brcm_rdb_asb.h>
 #include <mach/rdb/brcm_rdb_pwrmgr.h>
 #ifdef CONFIG_DEBUG_FS
 #include <mach/rdb/brcm_rdb_padctrlreg.h>
@@ -828,6 +829,7 @@ static struct ccu_clk_ops proc_ccu_ops;
 /*
 CCU clock name PROC_CCU
 */
+
 static struct ccu_clk CLK_NAME(kproc) = {
 
 	.clk =	{
@@ -862,6 +864,7 @@ static struct ccu_clk CLK_NAME(kproc) = {
 	.freq_volt = PROC_CCU_FREQ_VOLT_TBL,
 	.freq_count = PROC_CCU_FREQ_VOLT_TBL_SZ,
 	.freq_policy = PROC_CCU_FREQ_POLICY_TBL,
+	.freq_tbl_size = 0,
 	.ccu_reset_mgr_base = HW_IO_PHYS_TO_VIRT(PROC_RST_BASE_ADDR),
 	.reset_wr_access_offset = KPROC_RST_MGR_REG_WR_ACCESS_OFFSET,
 };
@@ -884,6 +887,18 @@ static struct pll_cfg_ctrl_info a9_cfg_ctrl =
 	.pll_config_value= a9_cfg_val,
 	.thold_count = ARRAY_SIZE(a9_cfg_val),
 };
+
+struct pll_desense a7_pll_des = {
+	.flags = PLL_OFFSET_EN | PLL_OFFSET_NDIV_FRAC | PLL_OFFSET_NDIV,
+	.pll_offset_offset = KPROC_CLK_MGR_REG_PLLARM_OFFSET_OFFSET,
+#ifdef CONFIG_PWRMGR_1P2GHZ_OPS_SET_SELECT
+	.def_delta = -14500000,
+#else
+	.def_delta = -12000000,
+#endif
+};
+
+
 static struct pll_clk CLK_NAME(a9_pll) = {
 
 	.clk =	{
@@ -916,9 +931,7 @@ static struct pll_clk CLK_NAME(a9_pll) = {
 	.ndiv_frac_offset = KPROC_CLK_MGR_REG_PLLARMB_OFFSET,
 	.ndiv_frac_mask = KPROC_CLK_MGR_REG_PLLARMB_PLLARM_NDIV_FRAC_MASK,
 	.ndiv_frac_shift = KPROC_CLK_MGR_REG_PLLARMB_PLLARM_NDIV_FRAC_SHIFT,
-	.pll_offset_offset = KPROC_CLK_MGR_REG_PLLARM_OFFSET_OFFSET,
-	.pll_offset_cfg_val = PLLARM_OFFEST_CONFIG,
-
+	.desense = &a7_pll_des,
 	.cfg_ctrl_info = &a9_cfg_ctrl,
 };
 
@@ -1426,6 +1439,7 @@ static struct ccu_clk CLK_NAME(khub) = {
 	.volt_peri = DEFINE_ARRAY_ARGS(VLT_NORMAL_PERI,VLT_HIGH_PERI),
 	.freq_policy = HUB_CCU_FREQ_POLICY_TBL,
 	.freq_tbl = DEFINE_ARRAY_ARGS(khub_clk_freq_list0,khub_clk_freq_list1,khub_clk_freq_list2,khub_clk_freq_list3,khub_clk_freq_list4,khub_clk_freq_list5,khub_clk_freq_list6),
+	.freq_tbl_size = 7,
 	.ccu_reset_mgr_base = HW_IO_PHYS_TO_VIRT(HUB_RST_BASE_ADDR),
 	.reset_wr_access_offset = KHUB_RST_MGR_REG_WR_ACCESS_OFFSET,
 	.dbg_bus_offset = KHUB_CLK_MGR_REG_CLK_DEBUG_BUS_OFFSET,
@@ -2812,6 +2826,7 @@ static struct ccu_clk CLK_NAME(khubaon) = {
 	.volt_peri = DEFINE_ARRAY_ARGS(VLT_NORMAL_PERI,VLT_HIGH_PERI),
 	.freq_policy = AON_CCU_FREQ_POLICY_TBL,
 	.freq_tbl = DEFINE_ARRAY_ARGS(khubaon_clk_freq_list0,khubaon_clk_freq_list1,khubaon_clk_freq_list2,khubaon_clk_freq_list3,khubaon_clk_freq_list4),
+	.freq_tbl_size = 5,
 	.ccu_reset_mgr_base = HW_IO_PHYS_TO_VIRT(AON_RST_BASE_ADDR),
 	.reset_wr_access_offset = KHUBAON_RST_MGR_REG_WR_ACCESS_OFFSET,
 
@@ -3608,6 +3623,7 @@ static struct ccu_clk CLK_NAME(kpm) = {
 	.volt_peri = DEFINE_ARRAY_ARGS(VLT_NORMAL_PERI,VLT_HIGH_PERI),
 	.freq_policy = KPM_CCU_FREQ_POLICY_TBL,
 	.freq_tbl = DEFINE_ARRAY_ARGS(kpm_clk_freq_list0,kpm_clk_freq_list1,kpm_clk_freq_list2,kpm_clk_freq_list3,kpm_clk_freq_list4,kpm_clk_freq_list5,kpm_clk_freq_list6,kpm_clk_freq_list7),
+	.freq_tbl_size = 8,
 	.ccu_reset_mgr_base = HW_IO_PHYS_TO_VIRT(KONA_MST_RST_BASE_ADDR),
 	.reset_wr_access_offset = KPM_RST_MGR_REG_WR_ACCESS_OFFSET,
 	.dbg_bus_offset = KPM_CLK_MGR_REG_CLK_DEBUG_BUS_OFFSET,
@@ -4565,6 +4581,7 @@ static struct ccu_clk CLK_NAME(kps) = {
 	.volt_peri = DEFINE_ARRAY_ARGS(VLT_NORMAL_PERI,VLT_HIGH_PERI),
 	.freq_policy = KPS_CCU_FREQ_POLICY_TBL,
 	.freq_tbl = DEFINE_ARRAY_ARGS(kps_clk_freq_list0,kps_clk_freq_list1,kps_clk_freq_list2,kps_clk_freq_list3,kps_clk_freq_list4,kps_clk_freq_list5),
+	.freq_tbl_size = 6,
 	.ccu_reset_mgr_base = HW_IO_PHYS_TO_VIRT(KONA_SLV_RST_BASE_ADDR),
 	.reset_wr_access_offset = KPS_RST_MGR_REG_WR_ACCESS_OFFSET,
 	.dbg_bus_offset = KPS_CLK_MGR_REG_CLK_DEBUG_BUS_OFFSET,
@@ -5936,12 +5953,13 @@ CCU clock name MM
 
 static struct ccu_clk_ops mm_ccu_ops;
 /* CCU freq list */
-static u32 mm_clk_freq_list0[] = DEFINE_ARRAY_ARGS(26000000,26000000);
-static u32 mm_clk_freq_list1[] = DEFINE_ARRAY_ARGS(49920000,49920000);
-static u32 mm_clk_freq_list2[] = DEFINE_ARRAY_ARGS(83200000,83200000);
-static u32 mm_clk_freq_list3[] = DEFINE_ARRAY_ARGS(99840000,99840000);
-static u32 mm_clk_freq_list4[] = DEFINE_ARRAY_ARGS(166400000,166400000);
-static u32 mm_clk_freq_list5[] = DEFINE_ARRAY_ARGS(249600000,249600000);
+static u32 mm_clk_freq_list0[] = DEFINE_ARRAY_ARGS(26000000, 26000000);
+static u32 mm_clk_freq_list1[] = DEFINE_ARRAY_ARGS(49920000, 49920000);
+static u32 mm_clk_freq_list2[] = DEFINE_ARRAY_ARGS(83200000, 83200000);
+static u32 mm_clk_freq_list3[] = DEFINE_ARRAY_ARGS(99840000, 99840000);
+static u32 mm_clk_freq_list4[] = DEFINE_ARRAY_ARGS(166400000, 166400000);
+static u32 mm_clk_freq_list5[] = DEFINE_ARRAY_ARGS(249600000, 249600000);
+static u32 mm_clk_freq_list6[] = DEFINE_ARRAY_ARGS(312000000, 312000000);
 
 /*MM CCU state save register list*/
 static struct reg_save mm_reg_save[] =
@@ -6006,10 +6024,12 @@ static struct ccu_clk CLK_NAME(mm) = {
 	.freq_count = MM_CCU_FREQ_VOLT_TBL_SZ,
 	.volt_peri = DEFINE_ARRAY_ARGS(VLT_NORMAL_PERI,VLT_HIGH_PERI),
 	.freq_policy = MM_CCU_FREQ_POLICY_TBL,
-	.freq_tbl = DEFINE_ARRAY_ARGS(mm_clk_freq_list0,mm_clk_freq_list1,mm_clk_freq_list2,mm_clk_freq_list3,mm_clk_freq_list4,mm_clk_freq_list5),
+	.freq_tbl = DEFINE_ARRAY_ARGS(mm_clk_freq_list0, mm_clk_freq_list1,
+			mm_clk_freq_list2, mm_clk_freq_list3, mm_clk_freq_list4,
+			mm_clk_freq_list5, mm_clk_freq_list6),
+	.freq_tbl_size = 7,
 	.ccu_reset_mgr_base = HW_IO_PHYS_TO_VIRT(MM_RST_BASE_ADDR),
 	.reset_wr_access_offset = MM_RST_MGR_REG_WR_ACCESS_OFFSET,
-
 };
 
 /*
@@ -6028,6 +6048,13 @@ static struct pll_cfg_ctrl_info dsi_pll_cfg_ctrl =
 	.pll_config_value= dsi_cfg_val,
 	.thold_count = ARRAY_SIZE(dsi_vc0_thold),
 };
+
+struct pll_desense dsi_pll_des = {
+	.flags = PLL_OFFSET_EN | PLL_OFFSET_NDIV_FRAC,
+	.pll_offset_offset = MM_CLK_MGR_REG_PLLDSI_OFFSET_OFFSET,
+	.def_delta = 0,
+};
+
 
 static struct pll_clk CLK_NAME(dsi_pll) = {
 
@@ -6060,8 +6087,7 @@ static struct pll_clk CLK_NAME(dsi_pll) = {
 	.ndiv_frac_mask = MM_CLK_MGR_REG_PLLDSIB_PLLDSI_NDIV_FRAC_MASK,
 	.ndiv_frac_shift = MM_CLK_MGR_REG_PLLDSIB_PLLDSI_NDIV_FRAC_SHIFT,
 	.cfg_ctrl_info = &dsi_pll_cfg_ctrl,
-	.pll_offset_offset = MM_CLK_MGR_REG_PLLDSI_OFFSET_OFFSET,
-	.pll_offset_cfg_val = PLLDSI_OFFEST_CONFIG,
+	.desense = &dsi_pll_des,
 };
 
 /*dsi pll - channel 0*/
@@ -6627,6 +6653,22 @@ static struct bus_clk CLK_NAME(mm_dma_axi) = {
 /*
 Bus clock name H264_AXI
 */
+static int h264_axi_clk_enable(struct clk *clk, int enable)
+{
+	clk_dbg("%s: enable: %d\n", __func__, enable);
+
+	BUG_ON(clk->id != CLK_H264_AXI_BUS_CLK_ID);
+	if (enable) {
+		clk_dbg("%s: clear H264_S_CTRL\n", __func__);
+		writel(0x0, KONA_H264ASYNC_VA + ASB_H264_S_CTRL_OFFSET);
+		writel(0x0, KONA_H264ASYNC_VA + ASB_H264_M_CTRL_OFFSET);
+	} else
+		clk_dbg("%s: last disable\n", __func__);
+
+	return gen_bus_clk_ops.enable(clk, enable);
+}
+
+struct gen_clk_ops h264_axi_clk_ops;
 static struct bus_clk clk_h264_axi = {
 	.clk =	{
 		.flags = H264_AXI_BUS_CLK_FLAGS,
@@ -6634,7 +6676,7 @@ static struct bus_clk clk_h264_axi = {
 		.id = CLK_H264_AXI_BUS_CLK_ID,
 		.name = H264_AXI_BUS_CLK_NAME_STR,
 		.dep_clks = DEFINE_ARRAY_ARGS(NULL),
-		.ops = &gen_bus_clk_ops,
+		.ops = &h264_axi_clk_ops,
 	},
 	.ccu_clk = &CLK_NAME(mm),
 	.clk_gate_offset  = MM_CLK_MGR_REG_H264_CLKGATE_OFFSET,
@@ -7004,6 +7046,7 @@ static struct ccu_clk CLK_NAME(mm2) = {
 	.freq_tbl = DEFINE_ARRAY_ARGS(mm_clk_freq_list0, mm_clk_freq_list1,
 				mm_clk_freq_list2, mm_clk_freq_list3,
 				mm_clk_freq_list4, mm_clk_freq_list5),
+	.freq_tbl_size = 6,
 	.ccu_reset_mgr_base = HW_IO_PHYS_TO_VIRT(MM2_RST_BASE_ADDR),
 	.reset_wr_access_offset = MM2_RST_MGR_REG_WR_ACCESS_OFFSET,
 };
@@ -7373,10 +7416,10 @@ static int mm_ccu_set_freq_policy(struct ccu_clk *ccu_clk, int policy_id,
 	ccu_write_access_enable(ccu_clk,true);
 	ccu_policy_engine_stop(ccu_clk);
 
-	if (opp_info->freq_id < MM_CCU_FREQ_ID_SUPER_TURBO)
-		reg_val &= ~MM_CLK_MGR_REG_POLICY_FREQ_POLICY_BASE_312_MASK;
-	else
+	if (opp_info->ctrl_prms == MM_CLK_SRC_312M)
 		reg_val |= MM_CLK_MGR_REG_POLICY_FREQ_POLICY_BASE_312_MASK;
+	else
+		reg_val &= ~MM_CLK_MGR_REG_POLICY_FREQ_POLICY_BASE_312_MASK;
 	clk_dbg("%s: reg_val = %x\n", __func__, reg_val);
 	writel(reg_val, CCU_POLICY_FREQ_REG(ccu_clk));
 	ccu_policy_engine_resume(ccu_clk,
@@ -7928,34 +7971,123 @@ static int proc_ccu_clk_init(struct clk *clk)
 	return 0;
 }
 
-static int proc_ccu_set_freq_policy(struct ccu_clk *ccu_clk,
-	int policy_id, struct opp_info *opp_info)
+static void change_arm_pll_config(int mdiv)
 {
-	u32 reg;
+	u32 reg_val;
+	struct pll_chnl_clk *pll_chnl_clk;
+
+	pll_chnl_clk = &clk_a9_pll_chnl0;
+
+	reg_val = readl(CCU_REG_ADDR(pll_chnl_clk->ccu_clk,
+					pll_chnl_clk->cfg_reg_offset));
+	reg_val &= ~pll_chnl_clk->mdiv_mask;
+	reg_val |= mdiv << pll_chnl_clk->mdiv_shift;
+	writel(reg_val, CCU_REG_ADDR(pll_chnl_clk->ccu_clk,
+					pll_chnl_clk->cfg_reg_offset));
+
+	reg_val = readl(CCU_REG_ADDR(pll_chnl_clk->ccu_clk,
+				pll_chnl_clk->pll_load_ch_en_offset));
+	reg_val |= pll_chnl_clk->load_en_mask;
+	writel(reg_val, CCU_REG_ADDR(pll_chnl_clk->ccu_clk,
+				pll_chnl_clk->pll_load_ch_en_offset));
+}
+
+
+static int proc_ccu_set_freq_policy(struct ccu_clk *ccu_clk, int policy_id,
+				   struct opp_info *opp_info)
+{
+	u32 reg_val = 0;
+	u32 shift;
+	u32 target_volt;
+	int curr_opp;
+	u32 sw_freq_id;
 	clk_dbg("%s:policy = %d, freq = %d opp = %d prms = %d\n",
 			__func__, policy_id, opp_info->freq_id,
 			opp_info->opp_id, opp_info->ctrl_prms);
 
-	/*Disable A9 PLL auto power down before
-	changing freq - workaround for HWJAVA-218*/
-	reg = readl(ccu_clk->ccu_clk_mgr_base +
-		KPROC_CLK_MGR_REG_PLLARMA_OFFSET);
-	reg &=
+	if (opp_info->freq_id >= ccu_clk->freq_count)
+		return -EINVAL;
+	switch (policy_id) {
+	case CCU_POLICY0:
+		shift = CCU_FREQ_POLICY0_SHIFT;
+		break;
+	case CCU_POLICY1:
+		shift = CCU_FREQ_POLICY1_SHIFT;
+		break;
+	case CCU_POLICY2:
+		shift = CCU_FREQ_POLICY2_SHIFT;
+		break;
+	case CCU_POLICY3:
+		shift = CCU_FREQ_POLICY3_SHIFT;
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	ccu_write_access_enable(ccu_clk, true);
+/*Disable A7 PLL auto power down before changing freq.
+  workaround for HWJAVA-218*/
+	if (is_pm_erratum(ERRATUM_A7_PLL_PWRDWN)) {
+		reg_val = readl(ccu_clk->ccu_clk_mgr_base +
+				KPROC_CLK_MGR_REG_PLLARMA_OFFSET);
+		reg_val &=
 		~KPROC_CLK_MGR_REG_PLLARMA_PLLARM_IDLE_PWRDWN_SW_OVRRIDE_MASK;
-	writel(reg, ccu_clk->ccu_clk_mgr_base +
-			KPROC_CLK_MGR_REG_PLLARMA_OFFSET);
+		writel(reg_val, ccu_clk->ccu_clk_mgr_base +
+				KPROC_CLK_MGR_REG_PLLARMA_OFFSET);
+	}
 
-	gen_ccu_ops.set_freq_policy(ccu_clk,
-		policy_id, opp_info);
+	ccu_policy_engine_stop(ccu_clk);
+	if (opp_info->ctrl_prms != CCU_POLICY_FREQ_REG_INIT &&
+			(opp_info->opp_id == PI_OPP_NORMAL ||
+			opp_info->opp_id == PI_OPP_TURBO)) {
 
+		target_volt = (opp_info->opp_id == PI_OPP_NORMAL) ?
+				VLT_ID_A9_NORMAL : VLT_ID_A9_TURBO;
+		curr_opp = pi_get_active_opp(ccu_clk->pi_id);
+		if (curr_opp != PI_OPP_ECONOMY) {
+			sw_freq_id = PROC_CCU_FREQ_ID_ECO;
+/* Move economy volt id to that of target voltage to avoid extra seq txn */
+			ccu_set_voltage(ccu_clk, sw_freq_id, target_volt);
+/* Move to economy */
+			reg_val = readl(CCU_POLICY_FREQ_REG(ccu_clk));
+			reg_val &= ~(CCU_FREQ_POLICY_MASK << shift);
+			reg_val |= sw_freq_id << shift;
+			writel(reg_val, CCU_POLICY_FREQ_REG(ccu_clk));
+
+			ccu_policy_engine_resume(ccu_clk, ccu_clk->clk.flags &
+				CCU_TARGET_LOAD ?
+				CCU_LOAD_TARGET : CCU_LOAD_ACTIVE);
+			ccu_policy_engine_stop(ccu_clk);
+/* Put economy OPP voltage ID back to original value */
+			ccu_set_voltage(ccu_clk, sw_freq_id, VLT_ID_A9_ECO);
+		}
+		change_arm_pll_config(opp_info->ctrl_prms);
+		ccu_set_voltage(ccu_clk, opp_info->freq_id,
+				target_volt);
+	}
+
+	reg_val = readl(CCU_POLICY_FREQ_REG(ccu_clk));
+	reg_val &= ~(CCU_FREQ_POLICY_MASK << shift);
+	reg_val |= opp_info->freq_id << shift;
+
+	writel(reg_val, CCU_POLICY_FREQ_REG(ccu_clk));
+
+	ccu_policy_engine_resume(ccu_clk, ccu_clk->clk.flags &
+		CCU_TARGET_LOAD ? CCU_LOAD_TARGET : CCU_LOAD_ACTIVE);
 	/*re-enable PLL power down*/
-	reg = readl(ccu_clk->ccu_clk_mgr_base +
-		KPROC_CLK_MGR_REG_PLLARMA_OFFSET);
-	reg |=
+	if (is_pm_erratum(ERRATUM_A7_PLL_PWRDWN)) {
+		if (opp_info->freq_id == PROC_CCU_FREQ_ID_ECO) {
+			reg_val = readl(ccu_clk->ccu_clk_mgr_base +
+				KPROC_CLK_MGR_REG_PLLARMA_OFFSET);
+			reg_val |=
 		KPROC_CLK_MGR_REG_PLLARMA_PLLARM_IDLE_PWRDWN_SW_OVRRIDE_MASK;
-	writel(reg, ccu_clk->ccu_clk_mgr_base +
-			KPROC_CLK_MGR_REG_PLLARMA_OFFSET);
+			writel(reg_val, ccu_clk->ccu_clk_mgr_base +
+				KPROC_CLK_MGR_REG_PLLARMA_OFFSET);
+		}
+	}
 
+	ccu_write_access_enable(ccu_clk, false);
+	clk_dbg("%s:%s ccu OK\n", __func__, ccu_clk->clk.name);
 	return 0;
 }
 
@@ -8004,6 +8136,9 @@ int __init __clock_init(void)
 	en_8ph_pll1_ref_clk_ops.enable = en_8ph_pll1_clk_enable;
 
 	pixelv_clk_ops.enable = gen_peri_clk_ops.enable;
+
+	h264_axi_clk_ops = gen_bus_clk_ops;
+	h264_axi_clk_ops.enable = h264_axi_clk_enable;
 
 #ifdef CONFIG_MM_V3D_TIMEOUT_ERRATUM
 	if (is_pm_erratum(ERRATUM_MM_V3D_TIMEOUT))

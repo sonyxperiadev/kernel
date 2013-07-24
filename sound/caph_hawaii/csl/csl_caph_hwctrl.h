@@ -150,6 +150,7 @@ struct __CSL_CAPH_HWCTRL_CONFIG_t {
 	AUDIO_NUM_OF_CHANNEL_t chnlNum;
 	AUDIO_BITS_PER_SAMPLE_t bitPerSample;
 	Int32 sidetone_mode;
+	Boolean secMic;
 };
 #define CSL_CAPH_HWCTRL_CONFIG_t struct __CSL_CAPH_HWCTRL_CONFIG_t
 
@@ -274,6 +275,7 @@ struct __CSL_CAPH_HWConfig_Table_t {
 	UInt32 size;
 	CSL_CAPH_DMA_CALLBACK_p dmaCB;
 	Boolean status;
+	Boolean secMic;
 	UInt8 sinkCount;
 
 	/*for new api */
@@ -649,6 +651,15 @@ void csl_ControlHWClock_2p4m(Boolean enable);
 
 /****************************************************************************
 *
+*  Function Name: csl_ControlHW_dmic_regulator
+*
+*  Description: control the digi-mic regulator
+*
+****************************************************************************/
+void csl_ControlHW_dmic_regulator(Boolean enable);
+
+/****************************************************************************
+*
 * Function Name: void csl_caph_QueryHWClock(Boolean enable)
 *
 * Description: This is to query if the CAPH clocks are enabled/disabled
@@ -682,24 +693,6 @@ void csl_caph_hwctrl_SetHeadsetMode(Boolean mode);
 *
 ****************************************************************************/
 void csl_caph_hwctrl_SetBTMode(int mode);
-
-/****************************************************************************
-*
-*  Function Name: csl_caph_hwctrl_GetDualMic_NoiseRefMic
-*
-*  Description: Get the noise ref mic for dual mic operation
-*
-****************************************************************************/
-CSL_CAPH_DEVICE_e csl_caph_hwctrl_GetDualMic_NoiseRefMic(void);
-
-/****************************************************************************
-*
-*  Function Name: csl_caph_hwctrl_SetDualMic_NoiseRefMic
-*
-*  Description: Set the noise ref mic for dual mic operation
-*
-****************************************************************************/
-void csl_caph_hwctrl_SetDualMic_NoiseRefMic(CSL_CAPH_DEVICE_e dev);
 
 /****************************************************************************
 *

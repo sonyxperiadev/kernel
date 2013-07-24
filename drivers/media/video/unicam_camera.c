@@ -52,13 +52,14 @@
 #define UNICAM_CAM_DRV_NAME		"unicam-camera"
 
 #define UNICAM_CAPTURE_MODE		BUFFER_TRIGGER
+#define UNPACK_RAW10_TO_16BITS
 #define UC_TIMEOUT_MS			500
 #define UC_RETRY_CNT			3
 
 
 #define pixfmtstr(x) (x) & 0xff, ((x) >> 8) & 0xff, ((x) >> 16) & 0xff, \
 	((x) >> 24) & 0xff
-int only_once = 0;
+/* int only_once = 0; */
 
 struct unicam_camera_dev {
 	/* soc and vb3 rleated */
@@ -97,7 +98,7 @@ struct unicam_camera_dev {
 /*	atomic_t retry_count;
 	struct timer_list unicam_timer;
 	struct workqueue_struct *single_wq;
-	struct work_struct retry_work;*/
+	struct work_struct retry_work; */
 	struct v4l2_format active_fmt;
 };
 
@@ -108,7 +109,7 @@ struct unicam_camera_buffer {
 };
 int first = 0;
 static irqreturn_t unicam_camera_isr(int irq, void *arg);
-static int unicam_stop(void );
+static int unicam_stop(void);
 
 #ifdef UNICAM_DEBUG
 /* for debugging purpose */
@@ -143,8 +144,9 @@ static struct unicam_camera_buffer *to_unicam_camera_vb(struct vb2_buffer *vb)
 
 
 /* videobuf operations */
-static int unicam_videobuf_setup(struct vb2_queue *vq, const struct v4l2_format *fmt,
- 				 unsigned int *count, unsigned int *numplanes,
+static int unicam_videobuf_setup(struct vb2_queue *vq,
+				const struct v4l2_format *fmt,
+				unsigned int *count, unsigned int *numplanes,
 				unsigned int sizes[], void *alloc_ctxs[])
 {
 	struct soc_camera_device *icd = soc_camera_from_vb2q(vq);
@@ -237,7 +239,8 @@ static int unicam_camera_update_buf(struct unicam_camera_dev *unicam_dev)
 
 	/* stride is in bytes */
 	if (unicam_dev->icd->current_fmt->code != V4L2_MBUS_FMT_JPEG_1X8) {
-		if((unicam_dev->crop.c.top == 0) || (unicam_dev->crop.c.left == 0)){
+		if ((unicam_dev->crop.c.top == 0) ||
+			(unicam_dev->crop.c.left == 0)) {
 			/* Any one zero means no centering
 			   Reject all such crop attempts */
 			line_stride =
@@ -255,6 +258,7 @@ static int unicam_camera_update_buf(struct unicam_camera_dev *unicam_dev)
 		im0.start = (UInt32) phys_addr;
 		im0.ls = (UInt32) line_stride;
 		im0.size = line_stride * unicam_dev->icd->user_height;
+		im0.wrap_en = 1;
 
 		/* Coverity Fix: Dead Code */
 		/* if(unicam_dev->b_mode == BUFFER_DOUBLE && phys_addr1){ */
@@ -288,10 +292,11 @@ static int unicam_camera_update_buf(struct unicam_camera_dev *unicam_dev)
 			}
 			/* image 0 */
 			pix = &thumb_fmt.fmt.pix;
-        	        line_stride = unicam_dev->icd->user_width;
+			line_stride = unicam_dev->icd->user_width;
 			im0.start = (UInt32) phys_addr;
 			im0.ls = (UInt32) pix->bytesperline;
 			im0.size = pix->sizeimage;
+			im0.wrap_en = 1;
 
 			/* DAT0 to an address after THUMB */
 			dat0.start = (UInt32) ((char *)phys_addr + pix->sizeimage);
@@ -323,7 +328,7 @@ static int unicam_camera_capture(struct unicam_camera_dev *unicam_dev)
 		pr_debug("no active buffer");
 		return ret;
 	}
-	if(unicam_dev->b_mode != BUFFER_TRIGGER)
+	if (unicam_dev->b_mode != BUFFER_TRIGGER)
 		return 0;
 
 	/* enable frame Interrupts */
@@ -358,17 +363,17 @@ static void unicam_videobuf_queue(struct vb2_buffer *vb)
 	/* pr_info("Q 0x%x\n", vb2_plane_paddr(vb, 0)); */
 	spin_lock_irqsave(&unicam_dev->lock, flags);
 	list_add_tail(&buf->queue, &unicam_dev->capture);
-	if(unicam_dev->cap_mode && unicam_dev->cap_done){
-		pr_info("Cap mode and already captured\n");
+	if (unicam_dev->cap_mode && unicam_dev->cap_done) {
+		pr_info("Capture mode and already captured\n");
 		spin_unlock_irqrestore(&unicam_dev->lock, flags);
 		return;
 	}
-	if ((!unicam_dev->active)) {//  && (unicam_dev->if_params.if_mode == V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI1)) {
+	if ((!unicam_dev->active)) {
 		unicam_dev->active = vb;
 		unicam_camera_update_buf(unicam_dev);
 		if (atomic_read(&unicam_dev->streaming)) {
 			mm_csi0_start_rx();
-		/* set data capture */
+			/* set data capture */
 			if (unicam_dev->if_params.if_mode == V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2) {
 				idesc.fsi = 1;
 				idesc.fei = 1;
@@ -417,6 +422,7 @@ static void unicam_videobuf_release(struct vb2_buffer *vb)
 static int unicam_videobuf_init(struct vb2_buffer *vb)
 {
 	struct unicam_camera_buffer *buf = to_unicam_camera_vb(vb);
+
 	INIT_LIST_HEAD(&buf->queue);
 	buf->magic = UNICAM_BUF_MAGIC;
 	return 0;
@@ -436,12 +442,13 @@ static int unicam_videobuf_start_streaming_int(struct unicam_camera_dev \
 
 	enum afe_num afe;
 	enum host_mode hmode;
-        enum csi1ccp2_clock_mode ccp2_clock;
+	enum csi1ccp2_clock_mode ccp2_clock;
 	enum csi2_lanes lanes = CSI2_SINGLE_LANE;
 	int vc = 0;
 	int id = 0;
 	struct int_desc idesc;
 	struct lane_timing timing;
+
 	pr_debug("-enter");
 	pr_debug("enabling csi");
 	unicam_dev->panic_count = 0;
@@ -507,31 +514,38 @@ static int unicam_videobuf_start_streaming_int(struct unicam_camera_dev \
 		ccp2_clock = DATA_CLOCK;
 
 	}
-	unicam_dev->handle = get_mm_csi0_handle (hmode, afe, lanes );
-	if (unicam_dev->handle == NULL){
+	unicam_dev->handle = get_mm_csi0_handle(hmode, afe, lanes);
+	if (unicam_dev->handle == NULL) {
 		pr_err("Unable to get unicam handle\n");
 		return -EBUSY;
 	}
 	ret = mm_csi0_init();
-	if(ret){
+	if (ret) {
 		pr_err("Unable to get unicam handle\n");
-		mm_csi0_teardown ();
+		mm_csi0_teardown();
 		return -EINVAL;
 	}
 	mm_csi0_set_afe();
-	/* Compulsary to get these values from sensor for CSI2*/
+
+	/* Digital PHY Setup */
+	/* Compulsary to get these values from sensor for CSI2 */
 	/* Don't care for CCP2/CSI1 can send a struct with junk values
 	   Will not be read */
 	timing.hs_settle_time =
 		unicam_dev->if_params.parms.serial.hs_settle_time;
 	timing.hs_term_time = unicam_dev->if_params.parms.serial.hs_term_time;
+	pr_debug("HS: settle_t = %d, term_t = %d\n",
+			timing.hs_settle_time, timing.hs_term_time);
 	ret = mm_csi0_set_dig_phy(&timing);
-	if(ret){
+	if (ret) {
 		pr_err("Wrong digital timing\n");
-		mm_csi0_teardown ();
+		mm_csi0_teardown();
 		return -EINVAL;
 	}
+
+	/* Set Mode */
 	mm_csi0_set_mode(ccp2_clock);
+
 	/* set image identifier (CSI mode only) */
 
 	/* if thumbnail is supported we expect
@@ -542,24 +556,34 @@ static int unicam_videobuf_start_streaming_int(struct unicam_camera_dev \
 	 */
 
 	thumb = 0;
-	ret =
-	    v4l2_subdev_call(sd, core, ioctl, VIDIOC_THUMB_SUPPORTED,
-			     (void *)&thumb);
+	ret = v4l2_subdev_call(sd, core, ioctl, VIDIOC_THUMB_SUPPORTED,
+				(void *)&thumb);
 	if (ret < 0)
 		dev_warn(unicam_dev->dev,
 			 "sensor returns error(%d) for VIDIOC_THUMB_SUPPORTED\n",
 			 ret);
 
-	if ((icd->current_fmt->code == V4L2_MBUS_FMT_JPEG_1X8)
-	    && (thumb == 0)){
+	if ((icd->current_fmt->code == V4L2_MBUS_FMT_JPEG_1X8) && (thumb == 0))
 		id = 0;
-	}
-		/* thumbnail not supported */
-	else {
-		id = 0x1E;
-	}
 
-	if(icd->current_fmt->code == V4L2_MBUS_FMT_JPEG_1X8)
+	/* thumbnail not supported */
+	/* RAW10 */
+	else if ((icd->current_fmt->code == V4L2_MBUS_FMT_SBGGR10_1X10)
+		  || (icd->current_fmt->code == V4L2_MBUS_FMT_SGBRG10_1X10)
+		  || (icd->current_fmt->code == V4L2_MBUS_FMT_SGRBG10_1X10)
+		  || (icd->current_fmt->code == V4L2_MBUS_FMT_SRGGB10_1X10))
+		id = 0x2b;
+	/* RAW8 */
+	else if ((icd->current_fmt->code == V4L2_MBUS_FMT_SBGGR8_1X8)
+		  || (icd->current_fmt->code == V4L2_MBUS_FMT_SGBRG8_1X8)
+		  || (icd->current_fmt->code == V4L2_MBUS_FMT_SGRBG8_1X8)
+		  || (icd->current_fmt->code == V4L2_MBUS_FMT_SRGGB8_1X8))
+		id = 0x2a;
+	/* YUV422 */
+	else
+		id = 0x1e;
+
+	if (icd->current_fmt->code == V4L2_MBUS_FMT_JPEG_1X8)
 		pr_info("JPEG mode of capture !!!!\n");
 
 	if (unicam_dev->if_params.if_mode ==
@@ -567,14 +591,16 @@ static int unicam_videobuf_start_streaming_int(struct unicam_camera_dev \
 		id = 0;
 	}
 	ret = mm_csi0_cfg_image_id(vc, id);
-	if(ret){
+	if (ret) {
 		pr_err("Wrong Image IDs set for a given mode\n");
-		mm_csi0_teardown ();
+		mm_csi0_teardown();
 		return -EINVAL;
 	}
 	ret = 0;
+
 	/* pipelince decode */
-	if(unicam_dev->cap_mode){
+	/* Set vertical windowing */
+	if (unicam_dev->cap_mode) {
 		ret |=
 		mm_csi0_set_windowing_vertical(unicam_dev->crop.c.top,
 				(unicam_dev->crop.c.top
@@ -582,9 +608,24 @@ static int unicam_videobuf_start_streaming_int(struct unicam_camera_dev \
 	} else {
 		ret |= mm_csi0_set_windowing_vertical(0, 0);
 	}
-	ret |= mm_csi0_cfg_pipeline_unpack(PIX_UNPACK_NONE);
+
+	/* UNPACK */
+	if ((icd->current_fmt->code == V4L2_MBUS_FMT_SBGGR10_1X10)
+		  || (icd->current_fmt->code == V4L2_MBUS_FMT_SGBRG10_1X10)
+		  || (icd->current_fmt->code == V4L2_MBUS_FMT_SGRBG10_1X10)
+		  || (icd->current_fmt->code == V4L2_MBUS_FMT_SRGGB10_1X10)) {
+#ifdef UNPACK_RAW10_TO_16BITS
+		ret |= mm_csi0_cfg_pipeline_unpack(PIX_UNPACK_RAW10);
+#endif
+	} else {
+		ret |= mm_csi0_cfg_pipeline_unpack(PIX_UNPACK_NONE);
+	}
+
+	/* DPCM decode */
 	ret |= mm_csi0_cfg_pipeline_dpcm_dec(DPCM_DEC_NONE);
-	if(unicam_dev->cap_mode){
+
+	/* Set horizontal windowing */
+	if (unicam_dev->cap_mode) {
 		ret |=
 			mm_csi0_set_windowing_horizontal(
 					unicam_dev->crop.c.left,
@@ -593,20 +634,46 @@ static int unicam_videobuf_start_streaming_int(struct unicam_camera_dev \
 	} else {
 		ret |= mm_csi0_set_windowing_horizontal(0, 0);
 	}
+
+	/* DPCM encode */
 	ret |= mm_csi0_cfg_pipeline_dpcm_enc(DPCM_ENC_NONE);
-	ret |= mm_csi0_cfg_pipeline_pack(PIX_PACK_NONE);
+
+	/* PACK */
+	if ((icd->current_fmt->code == V4L2_MBUS_FMT_SBGGR10_1X10)
+		  || (icd->current_fmt->code == V4L2_MBUS_FMT_SGBRG10_1X10)
+		  || (icd->current_fmt->code == V4L2_MBUS_FMT_SGRBG10_1X10)
+		  || (icd->current_fmt->code == V4L2_MBUS_FMT_SRGGB10_1X10)) {
+#ifdef UNPACK_RAW10_TO_16BITS
+		ret |= mm_csi0_cfg_pipeline_pack(PIX_PACK_16);
+#endif
+	} else {
+		ret |= mm_csi0_cfg_pipeline_pack(PIX_PACK_NONE);
+	}
+
+	/* FSP encode */
 	ret |= mm_csi0_enable_fsp_ccp2();
 
-	if(ret){
+	if (ret) {
 		pr_err("Something wrong with pipeline config .. pl go check\n");
-		mm_csi0_teardown ();
+		mm_csi0_teardown();
 		return -EINVAL;
 	}
 
+	/* Output engine */
 	mm_csi0_buffering_mode(unicam_dev->b_mode);
 	mm_csi0_rx_burst();
-	if(unicam_dev->active){
-		//unicam_camera_update_buf(unicam_dev);
+
+	/* start sensor streaming */
+	ret = v4l2_subdev_call(sd, video, s_stream, 1);
+	if (ret < 0 && ret != -ENOIOCTLCMD) {
+		dev_err(unicam_dev->dev, "error on s_stream(%d)\n", ret);
+		return ret;
+	}
+
+	udelay(30);
+
+	if (unicam_dev->active) {
+		/* unicam_camera_update_buf(unicam_dev); */
 		mm_csi0_start_rx();
 		/* set data capture */
 		if (unicam_dev->if_params.if_mode == V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2) {
@@ -629,56 +696,51 @@ static int unicam_videobuf_start_streaming_int(struct unicam_camera_dev \
 
 		atomic_set(&unicam_dev->streaming, 1);
 
-		ret = v4l2_subdev_call(sd, video, s_stream, 1);
-		if (ret < 0 && ret != -ENOIOCTLCMD) {
-			dev_err(unicam_dev->dev, "error on s_stream(%d)\n", ret);
-			return ret;
-		}
-
-		udelay(30);
-
 		/* Error check code */
 		/* Check RX state for errors */
 		memset(&rx, 0x00, sizeof(struct rx_stat_list));
-		raw_rx = mm_csi0_get_rx_stat(&rx, 0);
-		pr_debug("raw_rx is 0x%x", raw_rx);
+		raw_rx = mm_csi0_get_rx_stat(&rx, 1);
+		pr_info("raw_rx is 0x%x", raw_rx);
 
 		if (unicam_dev->if_params.if_mode ==
 			V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI1){
-			if(raw_rx & RX_CCP2_ERROR_MASK){
+			if (raw_rx & RX_CCP2_ERROR_MASK) {
 				pr_info("Error seen pl check for CCP2 errors 0x%x\n",
 						raw_rx);
-				if(rx.ssc)
+				if (rx.ssc)
 					pr_info("Shifted sync code in CCP2\n");
 				if (rx.ofo || rx.ifo || rx.bfo || rx.dl)
 					pr_info("FIFO errors or data lost\n");
-				if(rx.crce)
+				if (rx.crce)
 					pr_info("CRC error\n");
 			}
 		} else {
-			if(raw_rx & RX_CSI2_ERROR_MASK){
+			if (raw_rx & RX_CSI2_ERROR_MASK) {
 				pr_info("Error seen pl check for CSI2 errors 0x%x\n",
 						raw_rx);
-				if(rx.sbe || rx.pbe || rx.hoe || rx.ple)
+				if (rx.sbe || rx.pbe || rx.hoe || rx.ple)
 					pr_info("Specific errors in CSI2\n");
 				if (rx.ofo || rx.ifo || rx.bfo || rx.dl)
 					pr_info("FIFO errors or data lost\n");
-				if(rx.crce)
+				if (rx.crce)
 					pr_info("CRC error\n");
 			}
 		}
 		/* Check lane transitions */
 		if (unicam_dev->if_params.if_mode ==
-			V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2){
+			V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2) {
 			lane_err = mm_csi0_get_trans();
-			if(lane_err){
+			if (lane_err) {
 				pr_err("Lane errors seen 0x%x\n", lane_err);
 				/* return -EFAULT;*/
 			}
 		}
 	}
 
-	unicam_reg_dump();
+#ifdef UNICAM_DEBUG
+	unicam_reg_dump_dbg();
+#endif
+
 /*	if (unicam_dev->active)
 		if (unicam_dev->if_params.if_mode == \
 				V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2)
@@ -714,16 +776,6 @@ static int unicam_videobuf_stop_streaming_int(struct unicam_camera_dev \
 	unsigned long flags;
 	struct rx_stat_list rx;
 
-	/*
-	 * stop streaming before grabing spin lock
-	 * since this function can sleep.
-	 * */
-
-	ret = v4l2_subdev_call(sd, video, s_stream, 0);
-	if (ret < 0 && ret != -ENOIOCTLCMD) {
-		pr_err("failed to stop sensor streaming\n");
-		ret = -1;
-	}
 	/* grab the lock */
 	spin_lock_irqsave(&unicam_dev->lock, flags);
 	pr_debug("-enter");
@@ -739,8 +791,12 @@ static int unicam_videobuf_stop_streaming_int(struct unicam_camera_dev \
 		ret = down_timeout(&unicam_dev->stop_sem,
 				msecs_to_jiffies(500));
 		atomic_set(&unicam_dev->stopping, 0);
-		if (ret == -ETIME)
+		if (ret == -ETIME) {
 			pr_err("Unicam: semaphore timed out waiting to STOP\n");
+			#ifdef UNICAM_DEBUG
+				unicam_reg_dump_dbg();
+			#endif
+		}
 	} else {
 		spin_unlock_irqrestore(&unicam_dev->lock, flags);
 	}
@@ -748,6 +804,7 @@ static int unicam_videobuf_stop_streaming_int(struct unicam_camera_dev \
 	spin_lock_irqsave(&unicam_dev->lock, flags);
 
 	unicam_stop();
+
 	/* Restart rx stat */
 	mm_csi0_get_rx_stat(&rx, 1);
 	/* Don't bother what values were returned */
@@ -762,6 +819,14 @@ out:
 	pr_debug("-exit");
 	atomic_set(&unicam_dev->cam_triggered, 0);
 	spin_unlock_irqrestore(&unicam_dev->lock, flags);
+
+	/* stop sensor streaming after UNICAM is disabled */
+	ret = v4l2_subdev_call(sd, video, s_stream, 0);
+	if (ret < 0 && ret != -ENOIOCTLCMD) {
+		pr_err("failed to stop sensor streaming\n");
+		ret = -1;
+	}
+
 	return ret;
 }
 
@@ -777,9 +842,9 @@ int unicam_videobuf_stop_streaming(struct vb2_queue *q)
 	else
 		pr_err("unicam_videobuf_start_streaming: already stopped\n");
 
-	/*atomic_set(&unicam_dev->retry_count, 0);
+/*	atomic_set(&unicam_dev->retry_count, 0);
 	del_timer_sync(&(unicam_dev->unicam_timer));
-	flush_work_sync(&unicam_dev->retry_work);*/
+	flush_work_sync(&unicam_dev->retry_work); */
 
 	return ret;
 }
@@ -837,7 +902,7 @@ static int unicam_camera_querycap(struct soc_camera_host *ici,
 	return 0;
 }
 
-static unsigned int unicam_camera_poll(struct file *file, poll_table * pt)
+static unsigned int unicam_camera_poll(struct file *file, poll_table *pt)
 {
 	struct soc_camera_device *icd = file->private_data;
 
@@ -856,7 +921,7 @@ static int unicam_camera_try_fmt(struct soc_camera_device *icd,
 	struct v4l2_format thumb_fmt;
 	struct v4l2_pix_format *thumb_pix;
 	__u32 pixfmt = pix->pixelformat;
-	int thumb=0;
+	int thumb = 0;
 	int ret;
 
 	pr_debug("-enter");
@@ -935,6 +1000,23 @@ static int unicam_camera_try_fmt(struct soc_camera_device *icd,
 	case V4L2_MBUS_FMT_UYVY8_2X8:
 		/* Above formats are supported */
 		break;
+	case V4L2_MBUS_FMT_SBGGR10_1X10:
+	case V4L2_MBUS_FMT_SGBRG10_1X10:
+	case V4L2_MBUS_FMT_SGRBG10_1X10:
+	case V4L2_MBUS_FMT_SRGGB10_1X10:
+		/* ISP needs 32 byte input boundary on line stride */
+		pix->bytesperline = ((((pix->width * 10) >> 3) + 31) & ~(31));
+#ifdef UNPACK_RAW10_TO_16BITS
+		pix->bytesperline = ((pix->width * 2) + 31) & ~(31);
+#endif
+		break;
+		/* ISP needs 32 byte input boundary on line stride */
+	case V4L2_MBUS_FMT_SBGGR8_1X8:
+	case V4L2_MBUS_FMT_SGBRG8_1X8:
+	case V4L2_MBUS_FMT_SGRBG8_1X8:
+	case V4L2_MBUS_FMT_SRGGB8_1X8:
+		pix->bytesperline = ((pix->width + 31) & ~(31));
+		break;
 	default:
 		dev_err(icd->dev.parent, "Sensor format code %d unsupported.\n",
 			mf.code);
@@ -950,7 +1032,8 @@ static int unicam_camera_try_fmt(struct soc_camera_device *icd,
 static int unicam_stop()
 {
 	struct int_desc idesc;
- 	mm_csi0_stop_rx();
+
+	mm_csi0_stop_rx();
 	memset(&idesc, 0x00, sizeof(struct int_desc));
 	mm_csi0_config_int(&idesc, IMAGE_BUFFER);
 	mm_csi0_config_int(&idesc, DATA_BUFFER);
@@ -963,41 +1046,45 @@ static int unicam_camera_s_ctrl(struct soc_camera_device *icd,
 	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
 	struct unicam_camera_dev *unicam_dev = ici->priv;
 	int ret = 0;
-	if(ctl == NULL){
+
+	if (ctl == NULL) {
 		pr_err("Wrong host ops s_ctrl\n");
 		return -EINVAL;
 	}
-	switch(ctl->id){
-		case V4L2_CID_CAM_CAPTURE:
+	switch (ctl->id) {
+	case V4L2_CID_CAM_CAPTURE:
 		pr_info("V4L2_CID_CAM_CAPTURE\n");
-			unicam_dev->cap_mode = 1;
-			unicam_dev->cap_done = 0;
-			/*for camera driver also invoke s_ctrl */
-			ret = -ENOIOCTLCMD;
+		unicam_dev->cap_mode = 1;
+		unicam_dev->cap_done = 0;
+
+		/*for camera driver also invoke s_ctrl */
+		ret = -ENOIOCTLCMD;
 		break;
-		case V4L2_CID_CAM_CAPTURE_DONE:
+	case V4L2_CID_CAM_CAPTURE_DONE:
 		pr_info("V4L2_CID_CAM_CAPTURE_DONE\n");
-			unicam_dev->cap_mode = 0;
-			/*for camera driver also invoke s_ctrl */
-			ret = -ENOIOCTLCMD;
+		unicam_dev->cap_mode = 1;
+
+		/*for camera driver also invoke s_ctrl */
+		ret = -ENOIOCTLCMD;
 		break;
-		default:
-			ret = -ENOIOCTLCMD;
+	default:
+		ret = -ENOIOCTLCMD;
 		break;
 	}
 	return ret;
 }
+
 /* This method shall be used only for unicam windowing
    for zoom use-case */
-
 static int unicam_camera_get_crop(struct soc_camera_device *icd,
 				 struct v4l2_crop *crop)
 {
 	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
 	struct unicam_camera_dev *unicam_dev = ici->priv;
-	if(crop != NULL){
+
+	if (crop != NULL)
 		*crop = unicam_dev->crop;
-	}
+
 	return 0;
 }
 static int unicam_camera_set_crop(struct soc_camera_device *icd,
@@ -1005,7 +1092,8 @@ static int unicam_camera_set_crop(struct soc_camera_device *icd,
 {
 	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
 	struct unicam_camera_dev *unicam_dev = ici->priv;
-	if(crop == NULL)
+
+	if (crop == NULL)
 		return -EINVAL;
 	unicam_dev->crop = *crop;
 	return 0;
@@ -1016,7 +1104,7 @@ static int unicam_camera_set_crop(struct soc_camera_device *icd,
 	 v4l2_subdev_call(sd, video, s_stream, 0);
 	spin_lock_irqsave(&unicam_dev->lock, flags);
 	unicam_dev->crop = *crop;
-	if(unicam_dev->streaming){
+	if (unicam_dev->streaming) {
 		pr_info("Stopping stream\n");
 		unicam_stop();
 	}
@@ -1106,8 +1194,8 @@ static int unicam_camera_set_fmt_int(struct unicam_camera_dev *unicam_dev)
 	unicam_dev->skip_frames = skip_frames;
 	unicam_dev->curr = 0;
 	first = 2;
-        unicam_dev->buff[0] = NULL;
-        unicam_dev->buff[1] = NULL;
+	unicam_dev->buff[0] = NULL;
+	unicam_dev->buff[1] = NULL;
 
 	pix->width = mf.width;
 	pix->height = mf.height;
@@ -1120,7 +1208,7 @@ static int unicam_camera_set_fmt_int(struct unicam_camera_dev *unicam_dev)
 	unicam_dev->crop.c.height = pix->height;
 	unicam_dev->crop.c.top = unicam_dev->crop.c.left = 0;
 
-	pr_debug("format set to %c%c%c%c res=%dx%d success=%d",
+	pr_info("format set to %c%c%c%c res=%dx%d success=%d",
 		pixfmtstr(pix->pixelformat), pix->width, pix->height, ret);
 	pr_debug("-exit");
 	return ret;
@@ -1132,8 +1220,8 @@ static int unicam_camera_set_fmt(struct soc_camera_device *icd,
 	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
 	struct unicam_camera_dev *unicam_dev = ici->priv;
 	int ret;
-	unicam_dev->active_fmt = *f;
 
+	unicam_dev->active_fmt = *f;
 	ret = unicam_camera_set_fmt_int(unicam_dev);
 	return ret;
 }
@@ -1200,6 +1288,7 @@ static int unicam_camera_add_device(struct soc_camera_device *icd)
 {
 	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
 	struct unicam_camera_dev *unicam_dev = ici->priv;
+	struct v4l2_subdev *sd = soc_camera_to_subdev(icd);
 	int err = 0;
 
 	if (unicam_dev->icd) {
@@ -1220,11 +1309,20 @@ static int unicam_camera_add_device(struct soc_camera_device *icd)
 		err = -ENODEV;
 		goto eirq;
 	}
+	err = v4l2_subdev_call(sd, core, s_power, 1);
+	if (err < 0 && err != -ENOIOCTLCMD && err != -ENODEV) {
+		dev_err(icd->dev.parent, "cound not power up subdevice\n");
+		return err;
+	} else {
+		err = 0;
+	}
+
 
 	unicam_dev->icd = icd;
 
 	dev_info(icd->dev.parent,
 		 "Unicam Camera driver attached to camera %d\n", icd->devnum);
+
 eirq:
 eicd:
 	return err;
@@ -1234,6 +1332,7 @@ static void unicam_camera_remove_device(struct soc_camera_device *icd)
 {
 	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
 	struct unicam_camera_dev *unicam_dev = ici->priv;
+	struct v4l2_subdev *sd = soc_camera_to_subdev(icd);
 
 	BUG_ON(icd != unicam_dev->icd);
 	pr_err("unicam_camera_remove_device\n");
@@ -1243,6 +1342,8 @@ static void unicam_camera_remove_device(struct soc_camera_device *icd)
 		/* we should call streamoff from queue operations */
 		unicam_videobuf_stop_streaming(&icd->vb2_vidq);
 	}
+
+	v4l2_subdev_call(sd, core, s_power, 0);
 
 	free_irq(unicam_dev->irq, unicam_dev);
 
@@ -1301,7 +1402,7 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 				pr_info("Panic at frame start\n");
 		}
 
-		if (idesc.fei || idesc.lci){
+		if (idesc.fei || idesc.lci) {
 			struct vb2_buffer *vb = unicam_dev->active;
 			/* FS and FE handling */
 			if (rx.ps)
@@ -1366,7 +1467,6 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 				}
 				spin_unlock_irqrestore(&unicam_dev->lock,
 					flags);
-
 				if (unicam_dev->cap_mode == 1) {
 					unicam_dev->cap_done = 1;
 					goto out;

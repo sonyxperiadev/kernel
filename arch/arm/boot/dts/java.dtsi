@@ -61,7 +61,6 @@
 
 	wd-tapper {
 		compatible = "bcm,wd-tapper";
-		status = "disabled";
 	};
 
 	kona_pwmc@3e01a000 {
@@ -155,6 +154,11 @@
 	};
 
 	kona-fb-2 {
+		compatible = "bcm,kona-fb";
+		reg = <0x3c200000 0x1000>;
+	};
+
+	kona-fb-3 {
 		compatible = "bcm,kona-fb";
 		reg = <0x3c200000 0x1000>;
 	};

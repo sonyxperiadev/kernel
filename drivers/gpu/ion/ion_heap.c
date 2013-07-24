@@ -26,6 +26,9 @@
 #include <linux/scatterlist.h>
 #include <linux/vmalloc.h>
 #include "ion_priv.h"
+#ifdef CONFIG_ION_BCM
+#include <linux/broadcom/bcm_ion.h>
+#endif
 
 void *ion_heap_map_kernel(struct ion_heap *heap,
 			  struct ion_buffer *buffer)
@@ -271,6 +274,11 @@ struct ion_heap *ion_heap_create(struct ion_platform_heap *heap_data)
 		heap = ion_cma_heap_create(heap_data);
 		break;
 #endif
+#if defined(CONFIG_MM_SECURE_DRIVER)
+	case ION_HEAP_TYPE_SECURE:
+		heap = ion_secure_heap_create(heap_data);
+		break;
+#endif /* CONFIG_MM_SECURE_DRIVER */
 	default:
 		pr_err("%s: Invalid heap type %d\n", __func__,
 		       heap_data->type);
@@ -315,6 +323,11 @@ void ion_heap_destroy(struct ion_heap *heap)
 		ion_cma_heap_destroy(heap);
 		break;
 #endif
+#if defined(CONFIG_MM_SECURE_DRIVER)
+	case ION_HEAP_TYPE_SECURE:
+		ion_secure_heap_destroy(heap);
+		break;
+#endif /* CONFIG_MM_SECURE_DRIVER */
 	default:
 		pr_err("%s: Invalid heap type %d\n", __func__,
 		       heap->type);

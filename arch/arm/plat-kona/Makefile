@@ -17,7 +17,7 @@ obj-$(CONFIG_ARCH_HAWAII) += scu.o profile_timer.o
 obj-$(CONFIG_SMP) += headsmp.o platsmp.o
 obj-$(CONFIG_HOTPLUG_CPU)  += hotplug.o
 obj-$(CONFIG_ARCH_REQUIRE_GPIOLIB)  += gpio.o
-obj-$(CONFIG_HAVE_CLK) += clock.o
+obj-$(CONFIG_HAVE_CLK) += clock.o clock_debug.o
 obj-$(CONFIG_MACH_RHEA_RAY) += chal/
 obj-$(CONFIG_MACH_RHEA_FARADAY_EB10) += chal/
 obj-$(CONFIG_MACH_RHEA_RAY_EDN1X) += chal/
@@ -86,5 +86,6 @@ obj-$(CONFIG_LOCAL_TIMERS)	+= localtimer.o
 #kona profiler
 obj-$(CONFIG_KONA_PROFILER) += profiler.o ccu_profiler.o pi_profiler.o
 obj-$(CONFIG_KONA_MEMC) += kona_memc.o
+obj-$(CONFIG_KONA_SECURE_MEMC) += kona_secure_memc.o
 obj-$(CONFIG_KONA_AXITRACE)	+= axitrace.o
 obj-$(CONFIG_BRCM_CDC)	+= cdc.o

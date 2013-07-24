@@ -122,6 +122,11 @@ static RPC_XdrInfo_t SYS_Prim_dscrm[] = {
 	 (xdrproc_t) xdr_SYS_SimApi_GetCurrLockedSimlockTypeEx_Rsp_t,
 	 sizeof(UInt32), 0},
 
+	{MSG_AP_SYS_CMD_REQ, _T("MSG_AP_SYS_CMD_REQ"),
+		(xdrproc_t) xdr_SYS_APSystemCmd_Req_t, 0, 0},
+	{MSG_AP_SYS_CMD_RSP, _T("MSG_AP_SYS_CMD_RSP"),
+		(xdrproc_t) xdr_default_proc, 0, 0},
+
 	{ MSG_SYS_SOFT_RESET_SYSTEM_REQ, _T("MSG_SYS_SOFT_RESET_SYSTEM_REQ"),
 	 (xdrproc_t) xdr_CAPI2_SYS_SoftResetSystem_Req_t, 0, 0},
 

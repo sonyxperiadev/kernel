@@ -12,13 +12,15 @@
 * consent.
 *****************************************************************************/
 
-#ifndef __HAWAII_CPU_H__
-#define __HAWAII_CPU_H__
+#ifndef __JAVA_CPU_H__
+#define __JAVA_CPU_H__
 
 #include <plat/cpu.h>
 
 
 #define cpu_is_java_A0() \
 			(get_chip_id() == KONA_CHIP_ID_JAVA_A0)
+#define cpu_is_java_A1() \
+			(get_chip_id() == KONA_CHIP_ID_JAVA_A1)
 
-#endif /*__HAWAII_CPU_H__*/
+#endif /*__JAVA_CPU_H__*/

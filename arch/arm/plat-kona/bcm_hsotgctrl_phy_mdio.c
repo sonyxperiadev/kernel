@@ -75,7 +75,7 @@ static int USB_MDIO[6] = {
 #else
 	0x0000,			/* MDIO Register 3 initial value 0x0000 */
 #endif
-	0x0000,			/* MDIO Register 4 initial value 0x0000 */
+	0x0020,			/* MDIO Register 4 initial value 0x0020 */
 	0x0000			/* MDIO Register 5 initial value 0x0000 */
 };
 

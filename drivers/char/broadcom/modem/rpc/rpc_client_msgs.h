@@ -18,7 +18,7 @@
 
 int rpc_is_registered_msg(UInt16 dscm, UInt8 clientId);
 Boolean rpc_register_client_msgs(UInt8 clientId, UInt16 *tbl,
-					UInt16 table_size);
+					UInt32 table_size);
 Boolean rpc_reset_client_msgs(UInt8 clientId);
 
 

@@ -45,6 +45,9 @@
 #include <linux/ion.h>
 #include <linux/broadcom/bcm_ion.h>
 #endif
+#ifdef CONFIG_IOMMU_API
+#include <plat/bcm_iommu.h>
+#endif
 #include <linux/serial_8250.h>
 #include <linux/i2c.h>
 #include <linux/i2c-kona.h>
@@ -171,7 +174,7 @@
 
 #if defined(CONFIG_TOUCHSCREEN_BCM15500) || \
 defined(CONFIG_TOUCHSCREEN_BCM15500_MODULE)
-#include <linux/i2c/bcm15500_i2c_ts.h>
+#include <linux/i2c/bcmtch15xxx.h>
 #include <linux/i2c/bcm15500_settings.h>
 #endif
 
@@ -182,6 +185,11 @@ defined(CONFIG_TOUCHSCREEN_BCM15500_MODULE)
 
 #if defined(CONFIG_TMD2771)
 #include <linux/i2c/taos_common.h>
+#endif
+
+#ifdef CONFIG_KONA_SECURE_MEMC
+#include <plat/kona_secure_memc.h>
+#include <plat/kona_secure_memc_settings.h>
 #endif
 
 #ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
@@ -208,16 +216,6 @@ extern void java_timer_init(void);
 
 #define TANGO_I2C_TS_DRIVER_NUM_BYTES_TO_READ	14
 
-int reset_pwm_padcntrl(void)
-{
-	struct pin_config new_pin_config;
-	int ret;
-	new_pin_config.name = PN_GPIO24;
-	new_pin_config.func = PF_GPIO24;
-	ret = pinmux_set_pin_config(&new_pin_config);
-	return ret;
-}
-
 #ifdef CONFIG_ANDROID_PMEM
 struct android_pmem_platform_data android_pmem_data = {
 	.name = "pmem",
@@ -230,6 +228,12 @@ struct android_pmem_platform_data android_pmem_data = {
 #ifdef CONFIG_ION_BCM_NO_DT
 struct ion_platform_data ion_system_data = {
 	.nr = 1,
+#ifdef CONFIG_IOMMU_API
+	.pdev_iommu = &iommu_mm_device,
+#endif
+#ifdef CONFIG_BCM_IOVMM
+	.pdev_iovmm = &iovmm_mm_256mb_device,
+#endif
 	.heaps = {
 		[0] = {
 			.id    = 0,
@@ -242,16 +246,42 @@ struct ion_platform_data ion_system_data = {
 	},
 };
 
-struct ion_platform_data ion_carveout_data = {
-	.nr = 2,
+struct ion_platform_data ion_system_extra_data = {
+	.nr = 1,
+#ifdef CONFIG_IOMMU_API
+	.pdev_iommu = &iommu_mm_device,
+#endif
+#ifdef CONFIG_BCM_IOVMM
+	.pdev_iovmm = &iovmm_mm_device,
+#endif
 	.heaps = {
 		[0] = {
-			.id    = 3,
+			.id    = 1,
+			.type  = ION_HEAP_TYPE_SYSTEM,
+			.name  = "ion-system-extra",
+			.base  = 0,
+			.limit = 0,
+			.size  = 0,
+		},
+	},
+};
+
+struct ion_platform_data ion_carveout_data = {
+	.nr = 2,
+#ifdef CONFIG_IOMMU_API
+	.pdev_iommu = &iommu_mm_device,
+#endif
+#ifdef CONFIG_BCM_IOVMM
+	.pdev_iovmm = &iovmm_mm_256mb_device,
+#endif
+	.heaps = {
+		[0] = {
+			.id    = 9,
 			.type  = ION_HEAP_TYPE_CARVEOUT,
 			.name  = "ion-carveout",
-			.base  = 0xa0000000,
-			.limit = 0xb0000000,
-			.size  = (8 * SZ_1M),
+			.base  = 0x90000000,
+			.limit = 0xa0000000,
+			.size  = (16 * SZ_1M),
 #ifdef CONFIG_ION_OOM_KILLER
 			.lmk_enable = 0,
 			.lmk_min_score_adj = 411,
@@ -259,11 +289,11 @@ struct ion_platform_data ion_carveout_data = {
 #endif
 		},
 		[1] = {
-			.id    = 1,
+			.id    = 10,
 			.type  = ION_HEAP_TYPE_CARVEOUT,
 			.name  = "ion-carveout-extra",
 			.base  = 0,
-			.limit = 0xa0000000,
+			.limit = 0,
 			.size  = (0 * SZ_1M),
 #ifdef CONFIG_ION_OOM_KILLER
 			.lmk_enable = 0,
@@ -277,13 +307,19 @@ struct ion_platform_data ion_carveout_data = {
 #ifdef CONFIG_CMA
 struct ion_platform_data ion_cma_data = {
 	.nr = 2,
+#ifdef CONFIG_IOMMU_API
+	.pdev_iommu = &iommu_mm_device,
+#endif
+#ifdef CONFIG_BCM_IOVMM
+	.pdev_iovmm = &iovmm_mm_256mb_device,
+#endif
 	.heaps = {
 		[0] = {
-			.id = 2,
+			.id = 5,
 			.type  = ION_HEAP_TYPE_DMA,
 			.name  = "ion-cma",
-			.base  = 0xa0000000,
-			.limit = 0xb0000000,
+			.base  = 0x90000000,
+			.limit = 0xa0000000,
 			.size  = (0 * SZ_1M),
 #ifdef CONFIG_ION_OOM_KILLER
 			.lmk_enable = 1,
@@ -292,11 +328,11 @@ struct ion_platform_data ion_cma_data = {
 #endif
 		},
 		[1] = {
-			.id = 0,
+			.id = 6,
 			.type  = ION_HEAP_TYPE_DMA,
 			.name  = "ion-cma-extra",
-			.base  = 0x00000000,
-			.limit = 0xa0000000,
+			.base  = 0,
+			.limit = 0,
 			.size  = (0 * SZ_1M),
 #ifdef CONFIG_ION_OOM_KILLER
 			.lmk_enable = 1,
@@ -307,6 +343,35 @@ struct ion_platform_data ion_cma_data = {
 	},
 };
 #endif /* CONFIG_CMA */
+#if defined(CONFIG_MM_SECURE_DRIVER)
+struct ion_platform_data ion_secure_data = {
+	.nr = 2,
+#ifdef CONFIG_IOMMU_API
+	.pdev_iommu = &iommu_mm_device,
+#endif
+#ifdef CONFIG_BCM_IOVMM
+	.pdev_iovmm = &iovmm_mm_device,
+#endif
+	.heaps = {
+		[0] = {
+			.id = 13,
+			.type  = ION_HEAP_TYPE_SECURE,
+			.name  = "ion-secure",
+			.base  = 0,
+			.limit = 0,
+			.size  = (16 * SZ_1M),
+		},
+		[1] = {
+			.id = 14,
+			.type  = ION_HEAP_TYPE_SECURE,
+			.name  = "ion-secure-extra",
+			.base  = 0,
+			.limit = 0,
+			.size  = (0 * SZ_1M),
+		},
+	},
+};
+#endif /* CONFIG_MM_SECURE_DRIVER */
 #endif /* CONFIG_ION_BCM_NO_DT */
 
 #ifdef CONFIG_VIDEO_ADP1653
@@ -362,6 +427,24 @@ static struct regulator *d_3v0_mmc1_vcc;
 
 #define SENSOR_1_GPIO_PWRDN             (005)
 
+#if defined(CONFIG_MACH_JAVA_C_5606)
+
+#define MAIN_CAM_AF_ENABLE			(33)
+#define TORCH_EN (10)
+#define FLASH_EN (11)
+
+void set_af_enable(int on)
+{
+
+	if (on) {
+		gpio_set_value(MAIN_CAM_AF_ENABLE, 1);
+		usleep_range(10000, 10010);
+		} else {
+		gpio_set_value(MAIN_CAM_AF_ENABLE, 0);
+		usleep_range(10000, 10010);
+		}
+}
+#endif
 
 static int hawaii_camera_power(struct device *dev, int on)
 {
@@ -394,6 +477,24 @@ static int hawaii_camera_power(struct device *dev, int on)
 			printk(KERN_ERR "Unable to get cam0 PWDN GPIO\n");
 			return -1;
 		}
+	#if defined(CONFIG_MACH_JAVA_C_5606)
+		if (gpio_request_one(MAIN_CAM_AF_ENABLE, GPIOF_DIR_OUT |
+				     GPIOF_INIT_LOW, "Cam0_af_enable")) {
+			printk(KERN_ERR "Unable to get cam0 af enable GPIO\n");
+			return -1;
+		}
+		if (gpio_request_one(TORCH_EN, GPIOF_DIR_OUT |
+				     GPIOF_INIT_LOW, "cam0_torch_enable")) {
+			printk(KERN_ERR "Unable to get cam0 torch enable GPIO\n");
+			return -1;
+		}
+
+		if (gpio_request_one(FLASH_EN, GPIOF_DIR_OUT |
+				     GPIOF_INIT_LOW, "cam0_flash_enable")) {
+			printk(KERN_ERR "Unable to get cam0 torch enable GPIO\n");
+			return -1;
+		}
+	#endif
 	#endif
 	#ifdef CONFIG_SOC_CAMERA_OV5640
 		if (gpio_request_one(SENSOR_0_GPIO_RST, GPIOF_DIR_OUT |
@@ -453,8 +554,6 @@ static int hawaii_camera_power(struct device *dev, int on)
 		if (pi_mgr_dfs_request_update(&unicam_dfs_node, PI_OPP_TURBO))
 			printk("DVFS for UNICAM failed\n");
 		regulator_enable(d_gpsr_cam0_1v8);
-		usleep_range(1000, 1010);
-		regulator_enable(d_3v0_mmc1_vcc);
 		usleep_range(1000, 1010);
 		regulator_enable(d_1v8_mmc1_vcc);
 		usleep_range(1000, 1010);
@@ -524,6 +623,13 @@ static int hawaii_camera_power(struct device *dev, int on)
 		gpio_set_value(SENSOR_0_GPIO_RST, 1);
 #endif
 
+		regulator_enable(d_3v0_mmc1_vcc);
+		usleep_range(1000, 1010);
+
+#ifdef CONFIG_MACH_JAVA_C_5606
+		set_af_enable(1);
+#endif
+
 #ifdef CONFIG_VIDEO_A3907
 		a3907_enable(1);
 #endif
@@ -531,6 +637,9 @@ static int hawaii_camera_power(struct device *dev, int on)
 	} else {
 #ifdef CONFIG_VIDEO_A3907
 		a3907_enable(0);
+#endif
+#ifdef CONFIG_MACH_JAVA_C_5606
+		set_af_enable(0);
 #endif
 #ifdef CONFIG_SOC_CAMERA_OV5640
 		gpio_set_value(SENSOR_0_GPIO_RST, 0);
@@ -663,7 +772,11 @@ static int hawaii_camera_power_front(struct device *dev, int on)
 	if (on) {
 		if (pi_mgr_dfs_request_update(&unicam_dfs_node, PI_OPP_TURBO))
 			printk("DVFS for UNICAM failed\n");
+		#if defined(CONFIG_SOC_CAMERA_OV7695)
+		gpio_set_value(SENSOR_1_GPIO_PWRDN, 0);
+		#else
 		gpio_set_value(SENSOR_1_GPIO_PWRDN, 1);
+		#endif
 		usleep_range(5000, 5010);
 		regulator_enable(d_lvldo2_cam1_1v8);
 		usleep_range(1000, 1010);
@@ -733,10 +846,18 @@ static int hawaii_camera_power_front(struct device *dev, int on)
 			goto e_clk_set_clock;
 		}
 		usleep_range(10000, 10100);
+		#if defined(CONFIG_SOC_CAMERA_OV7695)
+		gpio_set_value(SENSOR_1_GPIO_PWRDN, 1);
+		#else
 		gpio_set_value(SENSOR_1_GPIO_PWRDN, 0);
+		#endif
 		msleep(30);
 	} else {
+		#if defined(CONFIG_SOC_CAMERA_OV7695)
+		gpio_set_value(SENSOR_1_GPIO_PWRDN, 0);
+		#else
 		gpio_set_value(SENSOR_1_GPIO_PWRDN, 1);
+		#endif
 		clk_disable(lp_clock_0);
 		clk_disable(lp_clock_1);
 		clk_disable(clock);
@@ -778,22 +899,15 @@ static int hawaii_camera_reset_front(struct device *dev)
 	return 0;
 }
 
-#ifdef CONFIG_SOC_CAMERA_OV5640
-static struct soc_camera_link iclink_ov5640 = {
+static struct soc_camera_link iclink_main = {
 	.power = &hawaii_camera_power,
 	.reset = &hawaii_camera_reset,
 };
-#endif
-#ifdef CONFIG_SOC_CAMERA_OV5648
-static struct soc_camera_link iclink_ov5648 = {
-	.power = &hawaii_camera_power,
-	.reset = &hawaii_camera_reset,
-};
-#endif
-static struct soc_camera_link iclink_ov7692 = {
+static struct soc_camera_link iclink_front = {
 	.power = &hawaii_camera_power_front,
 	.reset = &hawaii_camera_reset_front,
 };
+
 #endif /* CONFIG_VIDEO_UNICAM_CAMERA */
 
 static struct spi_kona_platform_data hawaii_ssp0_info = {
@@ -887,7 +1001,10 @@ struct platform_device *hawaii_common_plat_devices[] __initdata = {
 	&caph_i2s_device,
 	&caph_pcm_device,
 	&spdif_dit_device,
+#endif
 
+#ifdef CONFIG_KONA_SECURE_MEMC
+	&kona_secure_memc_device,
 #endif
 };
 
@@ -919,10 +1036,7 @@ static struct kona_headset_pd hawaii_headset_data = {
 	/* GPIO state read is 0 on HS insert and 1 for
 	 * HS remove
 	 */
-
-#if defined(CONFIG_MACH_HAWAII_GARNET_C_A18) || \
-	defined(CONFIG_MACH_HAWAII_GARNET_C_W68) || \
-	defined(CONFIG_MACH_HAWAII_GARNET_C_M530)
+#ifdef CONFIG_KONA_HEADSET_DEFAULT_STATE
 	.hs_default_state = 1,
 #else
 	.hs_default_state = 0,
@@ -950,7 +1064,7 @@ static struct kona_headset_pd hawaii_headset_data = {
 	/*
 	 * Pass the board specific button detection range
 	 */
-	.button_adc_values_low = hawaii_button_adc_values,
+	.button_adc_values_low = 0,
 
 	/*
 	 * Pass the board specific button detection range
@@ -1066,11 +1180,15 @@ static const struct of_dev_auxdata hawaii_auxdata_lookup[] __initconst = {
 
 #ifdef CONFIG_SOC_CAMERA_OV5640
 	OF_DEV_AUXDATA("bcm,soc-camera", 0x3c,
-		"soc-back-camera", &iclink_ov5640),
+		"soc-back-camera", &iclink_main),
 #endif
 #ifdef CONFIG_SOC_CAMERA_OV5648
 	OF_DEV_AUXDATA("bcm,soc-camera", 0x36,
-		"soc-back-camera", &iclink_ov5648),
+		"soc-back-camera", &iclink_main),
+#endif
+#ifdef CONFIG_SOC_CAMERA_OV7695
+	OF_DEV_AUXDATA("bcm,soc-camera", 0x21,
+		"soc-front-camera", &iclink_front),
 #endif
 #ifdef CONFIG_SOC_CAMERA_OV7692
 	OF_DEV_AUXDATA("bcm,soc-camera", 0x3e,
@@ -1243,6 +1361,57 @@ static struct platform_device board_caph_device = {
 		},
 };
 
+#ifdef CONFIG_KONA_SECURE_MEMC
+struct kona_secure_memc_pdata k_s_memc_plat_data = {
+	.kona_s_memc_base = KONA_MEMC0_S_VA,
+	.num_of_memc_ports = NUM_OF_MEMC_PORTS,
+	.num_of_groups = NUM_OF_GROUPS,
+	.num_of_regions = NUM_OF_REGIONS,
+	.cp_area_start = 0x80000000,
+	.cp_area_end = 0x81FFFFFF,
+	.ap_area_start = 0x82000000,
+	.ap_area_end = 0xBFFFFFFF,
+	.ddr_start = 0x80000000,
+	.ddr_end = 0xBFFFFFFF,
+	.masters = {
+		MASTER_A7,
+		MASTER_COMMS,
+		MASTER_FABRIC,
+		MASTER_MM,
+	},
+	.default_master_map = {
+		MASTER_FABRIC,
+		MASTER_A7,
+		MASTER_COMMS,
+		MASTER_MM,
+	},
+	/* following is static memc configuration.
+	 * be careful with the same if you need to
+	 * change.
+	 * set the groupmask carefully.
+	 * index of static_memc_master
+	 * acts as a group number. */
+	.static_memc_config = {
+		{"0x80000000", "0x801FFFFF",
+			"3", "0x03"},
+		{"0x80200000", "0x811FFFFF",
+			"3", "0x01"},
+		{"0x81200000", "0x81FFFFFF",
+			"3", "0x03"},
+		{"0x82000000", "0xBFFFFFFF",
+			"3", "0xFE"},
+	},
+	.static_memc_masters = {
+		"comms ",
+		"a7 ",
+	},
+	/* following enables user to
+	 * enable static configuration listed above.
+	 */
+	.static_config = 1,
+};
+#endif
+
 #endif /* CONFIG_BCM_ALSA_SOUND */
 
 static struct platform_device *hawaii_devices[] __initdata = {
@@ -1293,6 +1462,34 @@ defined(CONFIG_TOUCHSCREEN_BCM15500_MODULE)
 #endif
 }
 
+#ifdef CONFIG_ION_BCM_NO_DT
+#ifdef CONFIG_IOMMU_API
+struct bcm_iommu_pdata iommu_mm_pdata = {
+	.name        = "iommu-mm",
+	.iova_begin  = 0x80000000,
+	.iova_size   = 0x80000000,
+	.errbuf_size = 0x1000,
+	.skip_enable = 1,
+};
+#endif
+#ifdef CONFIG_BCM_IOVMM
+struct bcm_iovmm_pdata iovmm_mm_pdata = {
+	.name = "iovmm-mm",
+	.base = 0xc0000000,
+	.size = 0x30000000,
+	.order = 0,
+};
+struct bcm_iovmm_pdata iovmm_mm_256mb_pdata = {
+	.name = "iovmm-mm-256mb",
+	.base = 0xf0000000,
+	.size = 0x0bf00000,
+	.order = 0,
+};
+#endif
+#endif /* CONFIG_ION_BCM_NO_DT */
+
+#define HS_IRQ		gpio_to_irq(92)
+
 static void hawaii_add_pdata(void)
 {
 	hawaii_ssp0_device.dev.platform_data = &hawaii_ssp0_info;
@@ -1301,6 +1498,13 @@ static void hawaii_add_pdata(void)
 	hawaii_stm_device.dev.platform_data = &hawaii_stm_pdata;
 #endif
 	hawaii_headset_device.dev.platform_data = &hawaii_headset_data;
+	/* The resource in position 2 (starting from 0) is used to fill
+	 * the GPIO number. The driver file assumes this. So put the
+	 * board specific GPIO number here
+	 */
+	hawaii_headset_device.resource[2].start = HS_IRQ;
+	hawaii_headset_device.resource[2].end   = HS_IRQ;
+
 	hawaii_pl330_dmac_device.dev.platform_data = &hawaii_pl330_pdata;
 #ifdef CONFIG_USB_DWC_OTG
 	hawaii_hsotgctrl_platform_device.dev.platform_data =
@@ -1308,6 +1512,17 @@ static void hawaii_add_pdata(void)
 	hawaii_usb_phy_platform_device.dev.platform_data =
 		&hsotgctrl_plat_data;
 #endif
+#ifdef CONFIG_ION_BCM_NO_DT
+#ifdef CONFIG_IOMMU_API
+	iommu_mm_device.dev.platform_data = &iommu_mm_pdata;
+#endif
+#ifdef CONFIG_BCM_IOVMM
+	iovmm_mm_device.dev.platform_data = &iovmm_mm_pdata;
+	iovmm_mm_256mb_device.dev.platform_data = &iovmm_mm_256mb_pdata;
+	ion_system_device.dev.platform_data = &ion_system_data;
+	ion_system_extra_device.dev.platform_data = &ion_system_extra_data;
+#endif
+#endif /* CONFIG_ION_BCM_NO_DT */
 }
 
 void __init hawaii_add_common_devices(void)
@@ -1326,11 +1541,23 @@ static void __init hawaii_add_devices(void)
 	hawaii_add_pdata();
 
 #ifdef CONFIG_ION_BCM_NO_DT
+#ifdef CONFIG_IOMMU_API
+	platform_device_register(&iommu_mm_device);
+#endif
+#ifdef CONFIG_BCM_IOVMM
+	platform_device_register(&iovmm_mm_device);
+	platform_device_register(&iovmm_mm_256mb_device);
+	platform_device_register(&ion_system_device);
+	platform_device_register(&ion_system_extra_device);
+#endif
 	platform_device_register(&ion_carveout_device);
 #ifdef CONFIG_CMA
 	platform_device_register(&ion_cma_device);
 #endif
-#endif
+#if defined(CONFIG_MM_SECURE_DRIVER)
+	platform_device_register(&ion_secure_device);
+#endif /* CONFIG_MM_SECURE_DRIVER */
+#endif /* CONFIG_ION_BCM_NO_DT */
 
 	platform_add_devices(hawaii_devices, ARRAY_SIZE(hawaii_devices));
 

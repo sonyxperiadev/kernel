@@ -314,6 +314,7 @@ int bcm_hsotgctrl_bc_reset(void)
 	int val;
 	struct bcm_hsotgctrl_drv_data *bcm_hsotgctrl_handle =
 		local_hsotgctrl_handle;
+	int clk_cnt ;
 
 	if (NULL == local_hsotgctrl_handle)
 		return -ENODEV;
@@ -321,6 +322,10 @@ int bcm_hsotgctrl_bc_reset(void)
 	if ((!bcm_hsotgctrl_handle->otg_clk) ||
 		  (!bcm_hsotgctrl_handle->dev))
 		return -EIO;
+
+	clk_cnt = clk_get_usage(bcm_hsotgctrl_handle->otg_clk);
+	if (!clk_cnt)
+		bcm_hsotgctrl_en_clock(true);
 
 	val = readl(bcm_hsotgctrl_handle->hsotg_ctrl_base +
 			HSOTG_CTRL_BC_CFG_OFFSET);
@@ -352,13 +357,57 @@ int bcm_hsotgctrl_bc_reset(void)
 	writel(val, bcm_hsotgctrl_handle->hsotg_ctrl_base +
 			HSOTG_CTRL_BC_CFG_OFFSET);
 
+	val = readl(bcm_hsotgctrl_handle->hsotg_ctrl_base +
+			HSOTG_CTRL_BC_CFG_OFFSET);
+	if (!clk_cnt)
+		bcm_hsotgctrl_en_clock(false);
 	return 0;
 }
 EXPORT_SYMBOL_GPL(bcm_hsotgctrl_bc_reset);
 
+int bcm_hsotgctrl_bc_enable_sw_ovwr(void)
+{
+	int val;
+	struct bcm_hsotgctrl_drv_data *bcm_hsotgctrl_handle =
+		local_hsotgctrl_handle;
+	int clk_cnt = clk_get_usage(bcm_hsotgctrl_handle->otg_clk);
+
+	if (NULL == local_hsotgctrl_handle) {
+		dev_warn(bcm_hsotgctrl_handle->dev,
+		  "%s: error invalid handle\n", __func__);
+		return -ENODEV;
+	}
+	if (!clk_cnt)
+		bcm_hsotgctrl_en_clock(true);
+
+	val = readl(bcm_hsotgctrl_handle->hsotg_ctrl_base +
+			HSOTG_CTRL_BC_CFG_OFFSET);
+
+	/* Clear overwrite key */
+	val &= ~(HSOTG_CTRL_BC_CFG_BC_OVWR_KEY_MASK |
+		HSOTG_CTRL_BC_CFG_SW_OVWR_EN_MASK);
+
+	/*We need this key written for this register access*/
+	val |= (BCCFG_SW_OVERWRITE_KEY |
+			HSOTG_CTRL_BC_CFG_SW_OVWR_EN_MASK);
+
+	/*Enable SW overwrite*/
+	writel(val, bcm_hsotgctrl_handle->hsotg_ctrl_base +
+			HSOTG_CTRL_BC_CFG_OFFSET);
+
+	msleep_interruptible(BC_CONFIG_DELAY_MS);
+
+	if (!clk_cnt)
+		bcm_hsotgctrl_en_clock(false);
+	return 0;
+}
+EXPORT_SYMBOL_GPL(bcm_hsotgctrl_bc_enable_sw_ovwr);
+
+
 int bcm_hsotgctrl_bc_status(unsigned long *status)
 {
 	unsigned int val;
+	int clk_cnt;
 	struct bcm_hsotgctrl_drv_data *bcm_hsotgctrl_handle =
 		local_hsotgctrl_handle;
 
@@ -369,6 +418,8 @@ int bcm_hsotgctrl_bc_status(unsigned long *status)
 		  (!bcm_hsotgctrl_handle->dev) || !status)
 		return -EIO;
 
+	clk_cnt = clk_get_usage(bcm_hsotgctrl_handle->otg_clk);
+	dev_info(bcm_hsotgctrl_handle->dev, "clk cnt %d\n", clk_cnt);
 	val = readl(bcm_hsotgctrl_handle->hsotg_ctrl_base +
 			HSOTG_CTRL_BC_STATUS_OFFSET);
 	*status = val;

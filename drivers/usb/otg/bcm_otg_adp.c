@@ -170,13 +170,13 @@ int bcm_otg_adp_init(struct bcmpmu_otg_xceiv_data *xceiv_data)
 	if (xceiv_data->bcm_otg_adp_change_done_notifier.notifier_call == NULL) {
 		xceiv_data->bcm_otg_adp_change_done_notifier.notifier_call =
 		    bcmpmu_otg_xceiv_adp_change_notif_handler;
-		bcmpmu_add_notifier(BCMPMU_USB_EVENT_ADP_CHANGE,
+		bcmpmu_add_notifier(PMU_ACCY_EVT_OUT_ADP_CHANGE,
 				    &xceiv_data->
 				    bcm_otg_adp_change_done_notifier);
 
 		xceiv_data->bcm_otg_adp_sns_end_notifier.notifier_call =
 		    bcmpmu_otg_xceiv_adp_sns_end_notif_handler;
-		bcmpmu_add_notifier(BCMPMU_USB_EVENT_ADP_SENSE_END,
+		bcmpmu_add_notifier(PMU_ACCY_EVT_OUT_ADP_SENSE_END,
 				    &xceiv_data->bcm_otg_adp_sns_end_notifier);
 	}
 

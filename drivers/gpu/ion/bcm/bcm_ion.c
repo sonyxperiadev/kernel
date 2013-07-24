@@ -49,6 +49,33 @@ struct bcm_ion_heap {
 static LIST_HEAD(bcm_heap_list);
 struct ion_device *idev;
 
+/**
+ * DOC: Default heap masks for broadcom heaps.
+ *
+ * Assumption of heap configuration is:
+ * Heap0 - System heap with dma address limited to 256 MB range
+ * Heap1 - System heap with unlimited dma address range
+ * Heap2 - Legacy (CMA heap with 256 MB dma address limit)
+ * Heap3 - Legacy (Carveout heap with 256 MB dma address limit)
+ *
+ * Heap4,7 - Reserved
+ * Heap5 - CMA heap with 256MB address limit
+ * Heap6 - CMA heap with unlimited dma address
+ *
+ * Heap8,11 - Reserved
+ * Heap9  - Carveout heap with 256MB address limit
+ * Heap10 - Carveout heap with unlimited dma address
+ *
+ * Heap12-14 - Secure heaps
+ */
+static struct ion_custom_config_data bcm_ion_config_data = {
+	.version = BCM_ION_VERSION,
+	.mask_secure = 0xF000,
+	.mask_256M = 0x22D,
+	.mask_fast = 0x608,
+	.mask_hwwr = 0x608,
+};
+
 unsigned int bcm_ion_map_dma(struct ion_client *client,
 		struct ion_handle *handle)
 {
@@ -169,6 +196,27 @@ static int bcm_ion_cache_invalidate(struct ion_client *client,
 	return ret;
 }
 
+unsigned int bcm_ion_get_heapmask(unsigned int flags)
+{
+	struct ion_custom_config_data *data = &bcm_ion_config_data;
+	unsigned int heap_mask;
+
+	if (flags & ION_FLAG_SECURE) {
+		heap_mask = data->mask_secure;
+	} else {
+		heap_mask = ION_DEFAULT_HEAP & ~(data->mask_secure)
+			& ~(data->mask_fast) & ~(data->mask_hwwr);
+		if (flags & ION_FLAG_FAST_ALLOC)
+			heap_mask |= data->mask_fast;
+		if (flags & ION_FLAG_HWWR)
+			heap_mask |= data->mask_hwwr;
+		if (flags & ION_FLAG_256M)
+			heap_mask &= data->mask_256M;
+	}
+	return heap_mask;
+}
+EXPORT_SYMBOL(bcm_ion_get_heapmask);
+
 static long bcm_ion_custom_ioctl(struct ion_client *client,
 				      unsigned int cmd,
 				      unsigned long arg)
@@ -278,6 +326,15 @@ static long bcm_ion_custom_ioctl(struct ion_client *client,
 			return -EFAULT;
 		break;
 	}
+	case ION_IOC_CUSTOM_GET_CONFIG:
+	{
+		pr_debug("ION_IOC_CUSTOM_GET_CONFIG client(%p)\n", client);
+
+		if (copy_to_user((void __user *)arg, &bcm_ion_config_data,
+					sizeof(bcm_ion_config_data)))
+			return -EFAULT;
+		break;
+	}
 	case ION_IOC_CUSTOM_TP:
 	{
 		pr_debug(" TP(%ld)\n", arg);
@@ -309,7 +366,9 @@ static long bcm_ion_custom_ioctl(struct ion_client *client,
 		} \
 	} while (0)
 
+#ifdef CONFIG_CMA
 static u64 ion_dmamask = DMA_BIT_MASK(32);
+#endif
 
 static void bcm_ion_free_data(struct device *dev)
 {
@@ -361,13 +420,15 @@ static struct ion_platform_heap *bcm_ion_parse_dt(struct device *dev)
 	ION_OF_READ(type);
 	ION_OF_READ(id);
 	if ((heap_data->type == ION_HEAP_TYPE_CARVEOUT) ||
-			(heap_data->type == ION_HEAP_TYPE_DMA)) {
+			(heap_data->type == ION_HEAP_TYPE_DMA) ||
+			(heap_data->type == ION_HEAP_TYPE_SECURE)) {
 		if (bcm_ion_get_heap_reserve_data(&heap_init_data,
 					heap_data->name)) {
 			pr_err("%16s: Memory was not reserved\n",
 					heap_data->name);
 			goto of_err;
 		}
+#ifdef CONFIG_CMA
 		if (heap_data->type == ION_HEAP_TYPE_DMA) {
 			struct cma *cma;
 			dev->dma_mask = &ion_dmamask;
@@ -376,6 +437,7 @@ static struct ion_platform_heap *bcm_ion_parse_dt(struct device *dev)
 			dev_set_cma_area(dev, cma);
 			heap_data->priv = dev;
 		}
+#endif
 		heap_data->base = heap_init_data->base;
 		heap_data->size = heap_init_data->size;
 		ION_OF_READ_OPT(lmk_enable);
@@ -471,6 +533,7 @@ static struct ion_platform_heap *bcm_ion_parse_pdata(struct device *dev)
 				heap_data->id = ION_INVALID_HEAP_ID;
 				continue;
 			}
+#ifdef CONFIG_CMA
 			if (heap_data->type == ION_HEAP_TYPE_DMA) {
 				struct cma *cma;
 				cma = dev_get_cma_area(
@@ -478,6 +541,7 @@ static struct ion_platform_heap *bcm_ion_parse_pdata(struct device *dev)
 				dev_set_cma_area(dev, cma);
 				heap_data->priv = dev;
 			}
+#endif
 			heap_data->base = heap_init_data->base;
 			heap_data->size = heap_init_data->size;
 		}
@@ -690,4 +754,95 @@ static void __exit ion_exit(void)
 
 module_init(ion_init);
 module_exit(ion_exit);
+
+/***************************************************
+ * Get the heap info to be shared with userspace for
+ * selecting heap mask for allocation.
+ **************************************************/
+#ifdef CONFIG_OF
+#define ION_CONFIG_OF_READ_OPT(_prop_, _var_) \
+	do { \
+		if (!of_property_read_u32(node, #_prop_, &_var_)) \
+			pr_debug(#_prop_ " = %#x\n", _var_); \
+	} while (0)
+#endif
+
+static int bcm_ion_config_probe(struct platform_device *pdev)
+{
+	struct device *dev = &pdev->dev;
+	struct ion_custom_config_data *data = &bcm_ion_config_data;
+
+	if (!pdev) {
+		pr_err("config: Unable to probe\n");
+		return -ENODEV;
+	}
+
+	/* Parse dtb or pdata to get ion config info */
+	if (dev_get_platdata(dev)) {
+		struct ion_custom_config_data *pdata = dev->platform_data;
+
+		pr_info("config: Probe: via pdata\n");
+		memcpy(data, pdata, sizeof(bcm_ion_config_data));
+		data->version = BCM_ION_VERSION;
+#ifdef CONFIG_OF
+	} else if (dev->of_node) {
+		struct device_node *node = dev->of_node;
+
+		pr_info("config: Probe: via DT framework\n");
+		ION_CONFIG_OF_READ_OPT(mask_secure, data->mask_secure);
+		ION_CONFIG_OF_READ_OPT(mask_256M, data->mask_256M);
+		ION_CONFIG_OF_READ_OPT(mask_fast, data->mask_fast);
+		ION_CONFIG_OF_READ_OPT(mask_hwwr, data->mask_hwwr);
+		data->version = BCM_ION_VERSION;
+#endif /* CONFIG_OF */
+	} else {
+		pr_err("config: Probe Fail: No platform_data, no DT\n");
+		return -EINVAL;
+	}
+	pr_info("config: version(%x) secure(%x) 256M(%x) fast(%x) hwwr(%x)\n",
+	       data->version, data->mask_secure, data->mask_256M,
+	       data->mask_fast, data->mask_hwwr);
+	return 0;
+}
+
+static int bcm_ion_config_remove(struct platform_device *pdev)
+{
+	pr_info("Broadcom ION config device remove\n");
+	return 0;
+}
+
+
+#ifdef CONFIG_OF
+static const struct of_device_id ion_config_of_match[] = {
+	{ .compatible = "bcm,ion-config", },
+	{},
+};
+#else
+#define ion_config_of_match NULL
+#endif /* CONFIG_OF */
+
+static struct platform_driver ion_config_driver = {
+	.probe = bcm_ion_config_probe,
+	.remove = bcm_ion_config_remove,
+	.driver = {
+		.name = "ion-config-bcm",
+		.owner = THIS_MODULE,
+		.of_match_table = ion_config_of_match,
+	},
+};
+
+static int __init ion_config_init(void)
+{
+	pr_info("Broadcom ION config driver init\n");
+	return platform_driver_register(&ion_config_driver);
+}
+
+static void __exit ion_config_exit(void)
+{
+	pr_info("Broadcom ION config driver exit\n");
+	platform_driver_unregister(&ion_config_driver);
+}
+
+module_init(ion_config_init);
+module_exit(ion_config_exit);
 

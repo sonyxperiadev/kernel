@@ -18,8 +18,8 @@
 		reg = <0x82000000 0x1e000000>; /* 480 MB */
 	};
 
-	wd-tapper {
-		count = <300>; /* Time in seconds */
+	rtc-kona {
+		compatible = "bcm,rtc-kona";
 		ch-num = <1>; /* Kona hub timer Channel number */
 		timer-name = "aon-timer";
 	};
@@ -105,23 +105,21 @@
 			gpio-irq-pin = <4>;
 			layout = <6>;
 		};
-
 		kxtik@0f {
-                        compatible = "bcm,kxtik";
-                        reg = <0x0f>;
-                        gpio-irq-pin = <1>;
-                        min_interval = <5>;
-                        poll_interval = <200>;
-                        axis_map_x = <0>;
-                        axis_map_y = <1>;
-                        axis_map_z = <2>;
-                        negate_x = <1>;
-                        negate_y = <0>;
-                        negate_z = <1>;
-                        res_12bit = <64>;
-                        g_range = <0>;
-                };
-
+			compatible = "bcm,kxtik";
+			reg = <0x0f>;
+			gpio-irq-pin = <1>;
+			min_interval = <5>;
+			poll_interval = <200>;
+			axis_map_x = <0>;
+			axis_map_y = <1>;
+			axis_map_z = <2>;
+			negate_x = <1>;
+			negate_y = <0>;
+			negate_z = <1>;
+			res_12bit = <64>;
+			g_range = <0>;
+		};
 		tmd2771@39 {
 			compatible = "bcm,tmd2771";
 			reg = <0x39>;
@@ -146,10 +144,9 @@
 			prox_gain_param = <34>;
 			prox_win_sw = <100>;
 		};
-
 		bmp18x@77 {
-                         compatible = "bcm,bmp18x";
-                         reg = <0x77>;
+			compatible = "bcm,bmp18x";
+			reg = <0x77>;
 		};
 	};
 
@@ -207,20 +204,27 @@
 		iova_begin  = <0x80000000>;
 		iova_size   = <0x80000000>;
 		errbuf_size = <0x00001000>;
+		skip_enable = <1>;
 	};
 
 	iovmm_mm: iovmm-mm {
 		compatible = "bcm,iovmm";
-		base = <0xc0000000>;
-		size = <0x20000000>;
+		base = <0x80000000>;
+		size = <0x70000000>;
 		order = <0>;
 	};
 
 	iovmm_mm_256mb: iovmm-mm-256mb {
 		compatible = "bcm,iovmm";
-		base = <0xe0000000>;
-		size = <0x10000000>;
+		base = <0xf0000000>;
+		size = <0x0ff00000>;
 		order = <0>;
+	};
+
+	ion-config {
+		compatible = "bcm,ion-config";
+		/* No separate mask needed for hwwr if M4U is enabled */
+		mask_hwwr = <0>;
 	};
 
 	ion-system {
@@ -231,9 +235,17 @@
 		iovmm = <&iovmm_mm_256mb>;
 	};
 
+	ion-system-extra {
+		compatible = "bcm,ion";
+		id = <1>;
+		type = <0>;
+		iommu = <&iommu_mm>;
+		iovmm = <&iovmm_mm>;
+	};
+
 	ion-carveout {
 		compatible = "bcm,ion";
-		id = <3>;
+		id = <9>;
 		type = <2>;
 		base  = <0x90000000>;
 		limit = <0xa0000000>;
@@ -247,7 +259,7 @@
 
 	ion-cma {
 		compatible = "bcm,ion";
-		id = <2>;
+		id = <5>;
 		type = <4>;
 		base  = <0x90000000>;
 		limit = <0xa0000000>;
@@ -317,7 +329,7 @@
 		fps = <60>;
 		lanes = <2>;
 		cmnd-LP;		/* Commands in LP mode*/
-		hs-bitrate = <440000000>;
+		hs-bitrate = <330000000>;
 		lp-bitrate = <8000000>;	/* 8mbps */
 		iommu = <&iommu_mm>;
 		iovmm = <&iovmm_mm>;
@@ -344,8 +356,35 @@
 		fps = <60>;
 		lanes = <2>;
 		cmnd-LP;		/* Commands in LP mode*/
-		hs-bitrate = <440000000>;
+		hs-bitrate = <330000000>;
 		lp-bitrate = <8000000>;	/* 8mbps */
+		iommu = <&iommu_mm>;
+		iovmm = <&iovmm_mm>;
+		rotation = <180>;
+	};
+
+	kona-fb-3 {
+		module-name = "OTM1281A";
+		reg-name = "cam2";
+		rst-gpio = <8>;
+		detect-gpio = <10>;
+		detect-gpio-val = <0>;
+		rst-setup = <5>;	/* 5us */
+		rst-pulse = <20>;	/* 20us */
+		rst-hold = <20000>;	/* 20ms */
+		/* rst-active-high */	/* Commented => Active Low */
+		vmode;		/* Commented => Command mode */
+		/* vburst = <0>; */	/* Non-burst mode */
+		cmnd-LP;		/* Commands in LP mode*/
+		/* te-ctrl; */		/* Tearing Effect Control disabled */
+		col-mod-i = <3>;
+		col-mod-o = <2>;
+		width = <720>;
+		height = <1280>;
+		fps = <60>;
+		lanes = <4>;
+		hs-bitrate = <400000000>;
+		lp-bitrate = <5000000>;	/* 5mbps */
 		iommu = <&iommu_mm>;
 		iovmm = <&iovmm_mm>;
 		rotation = <180>;
@@ -356,16 +395,17 @@
 		reg = <0x34008000 0x1000>;
 		interrupts = <0 183 4>;
 		chipreg_addr = <0x35004000 0x1000>;
-		thold_size = <4>; /*number of threshold levels*/
+		thold_size = <5>; /*number of threshold levels*/
 		poll_rate_ms = <30000>;
 		hysteresis = <0>;
-		flags = <1>;
+		flags = <0>;
 		interval_ms = <5>;
-		/*critical temp is 115*/
-		thold = <70 65 1
-			85 75 1
-			100 90 1
-			115 112 2>;
+		/*sw shdwn temp is 120*/
+		thold = <85 75 1
+			95 90 1
+			105 100 1
+			120 115 4
+			125 123 2>;
 		tmon_apb_clk = "tmon_apb";
 		tmon_1m_clk = "tmon_1m_clk";
 	};
@@ -472,6 +512,8 @@
 		pwm-period-ns = <99900>; /* ~10010 Hz */
 		pwm-request-label = "backlight";
 		bl-on-delay = <7000>;
+		pwm_pin_name = <39>;	/*GPIO24, enum PIN_NAME defined in chip_pinmux.h*/
+		pwm_pin_reboot_func = <25>;	/*GPIO24, enum PIN_FUNC defined in chip_pinmux.h*/
 	};
 
 	gpio-leds {

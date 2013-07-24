@@ -34,7 +34,7 @@ enum {
 };
 
 struct mm_common {
-	struct atomic_notifier_head notifier_head;
+	struct raw_notifier_head notifier_head;
 	struct miscdevice mdev;
 	struct list_head device_list;
 	/*Framework initializes the below parameters.
@@ -54,25 +54,35 @@ struct mm_common {
 
     /* Used for exporting per-device information to debugfs */
 	struct dentry *debugfs_dir;
+	struct semaphore device_sem;
 };
 
 struct file_private_data {
+	struct work_struct work;
+
 	struct mm_common *common;
 	int interlock_count;
 	int prio;
 	int read_count;
 	bool readable;
-	wait_queue_head_t queue;
+	wait_queue_head_t wait_queue;
+	wait_queue_head_t read_queue;
 	struct list_head read_head;
 	struct list_head write_head;
+	struct list_head file_head;
+	u8 *spl_data_ptr;
+	int spl_data_size;
+	u8 device_locked;
 };
 
 struct dev_job_list {
+	struct work_struct work;
+
 	struct plist_node core_list;
 	bool added2core;
 
 	struct list_head file_list;
-	struct list_head wait_list;
+	bool *notify;
 
 	struct dev_job_list *successor;
 	struct dev_job_list *predecessor;
@@ -87,6 +97,8 @@ struct dev_status_list {
 	struct file_private_data *filp;
 };
 
+extern void v7_clean_dcache_all(void);
+void mm_common_cache_clean(void);
 void mm_common_interlock_completion(struct dev_job_list *job);
 void mm_common_enable_clock(struct mm_common *common);
 void mm_common_disable_clock(struct mm_common *common);

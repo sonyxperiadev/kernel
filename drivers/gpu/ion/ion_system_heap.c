@@ -14,6 +14,8 @@
  *
  */
 
+#define pr_fmt(fmt) "ion-system: " fmt
+
 #include <asm/page.h>
 #include <linux/dma-mapping.h>
 #include <linux/err.h>
@@ -25,6 +27,10 @@
 #include <linux/slab.h>
 #include <linux/vmalloc.h>
 #include "ion_priv.h"
+#ifdef CONFIG_ION_BCM
+#include <linux/broadcom/bcm_ion.h>
+#include <linux/lowmemorykiller.h>
+#endif
 #ifdef CONFIG_BCM_IOVMM
 #include <plat/bcm_iommu.h>
 #endif
@@ -54,6 +60,9 @@ static unsigned int order_to_size(int order)
 struct ion_system_heap {
 	struct ion_heap heap;
 	struct ion_page_pool **pools;
+#ifdef CONFIG_ION_BCM
+	struct reg_lmk reg_lmk;
+#endif
 };
 
 struct page_info {
@@ -204,13 +213,13 @@ static int ion_system_heap_allocate(struct ion_heap *heap,
 #ifdef CONFIG_BCM_IOVMM
 	buffer->dma_addr = arm_iommu_map_sgt(heap->device, table, align);
 	if (buffer->dma_addr == DMA_ERROR_CODE) {
-		pr_err("%16s: Failed iommu buffer(%p) map da(%#x)  size(%#x)\n",
+		pr_err("%16s: Failed iommu buffer(%p) map da(%#x)  size(%#lx)\n",
 				heap->name, buffer, buffer->dma_addr,
-				buffer->size);
+				size);
 		goto err2;
 	}
-	pr_debug("%16s: iommu map buffer(%p) da(%#x) size(%#x)\n",
-			heap->name, buffer, buffer->dma_addr, buffer->size);
+	pr_debug("%16s: iommu map buffer(%p) da(%#x) size(%#lx)\n",
+			heap->name, buffer, buffer->dma_addr, size);
 	buffer->priv_virt = table;
 	return 0;
 #else
@@ -224,6 +233,9 @@ static int ion_system_heap_allocate(struct ion_heap *heap,
 #endif /* CONFIG_ION_BCM */
 
 err2:
+	for_each_sg(table->sgl, sg, table->nents, i)
+		free_buffer_page(sys_heap, buffer, sg_page(sg),
+				get_order(sg_dma_len(sg)));
 	sg_free_table(table);
 err1:
 	kfree(table);
@@ -288,6 +300,15 @@ void ion_system_heap_unmap_dma(struct ion_heap *heap,
 }
 
 #ifdef CONFIG_ION_BCM
+/* offset - offset from where clean/flush has to be done within buffer
+ * len - length in bytes which needs to be cleaned/flushed within buffer
+ *
+ * end_off - offset within buffer till which clean/flush has to be done
+ * curr_off - offset of start of each page in sglist from start of buffer
+ * curr_end - offset of end of each page in sglist from start of buffer
+ * l_off - offset within page from where clean/flush has to be done
+ * l_len - length in bytes within page which needs to be cleaned/flushed
+ **/
 int ion_system_heap_clean_cache(struct ion_heap *heap,
 		struct ion_buffer *buffer, unsigned long offset,
 		unsigned long len)
@@ -296,24 +317,25 @@ int ion_system_heap_clean_cache(struct ion_heap *heap,
 	struct scatterlist *sg;
 	struct sg_table *table = buffer->sg_table;
 	int i;
-	unsigned long end, curr_offset = 0;
+	unsigned long end_off, curr_off = 0;
 
-	end = offset + len;
+	end_off = offset + len;
 	for_each_sg(table->sgl, sg, table->nents, i) {
 		struct page *page = sg_page(sg);
 		unsigned long sglen = sg_dma_len(sg);
-		unsigned long curr_end = curr_offset + sglen;
+		unsigned long curr_end = curr_off + sglen;
 
-		if ((curr_offset <= end) && (curr_end >= offset)) {
-			unsigned long l_off = max(offset, curr_offset);
-			unsigned long l_len = min(end, curr_end) - l_off;
+		if ((curr_off < end_off) && (curr_end > offset)) {
+			unsigned long l_off = max(offset, curr_off);
+			unsigned long l_len = min(end_off, curr_end) - l_off;
+			l_off -= curr_off;
 			__dma_page_cpu_to_dev(page, l_off, l_len,
 					DMA_BIDIRECTIONAL);
 			arm_dma_ops.sync_single_for_device(NULL,
 				pfn_to_dma(NULL, page_to_pfn(page)),
 				l_len, DMA_BIDIRECTIONAL);
 		}
-		curr_offset = curr_end;
+		curr_off = curr_end;
 	}
 	pr_debug("clean: off(%ld) len(%ld)\n", offset, len);
 #endif
@@ -328,21 +350,22 @@ int ion_system_heap_invalidate_cache(struct ion_heap *heap,
 	struct scatterlist *sg;
 	struct sg_table *table = buffer->sg_table;
 	int i;
-	unsigned long end, curr_offset = 0;
+	unsigned long end_off, curr_off = 0;
 
-	end = offset + len;
+	end_off = offset + len;
 	for_each_sg(table->sgl, sg, table->nents, i) {
 		struct page *page = sg_page(sg);
 		unsigned long sglen = sg_dma_len(sg);
-		unsigned long curr_end = curr_offset + sglen;
+		unsigned long curr_end = curr_off + sglen;
 
-		if ((curr_offset <= end) && (curr_end >= offset)) {
-			unsigned long l_off = max(offset, curr_offset);
-			unsigned long l_len = min(end, curr_end) - l_off;
+		if ((curr_off < end_off) && (curr_end > offset)) {
+			unsigned long l_off = max(offset, curr_off);
+			unsigned long l_len = min(end_off, curr_end) - l_off;
+			l_off -= curr_off;
 			__dma_page_dev_to_cpu(page, l_off, l_len,
 					DMA_BIDIRECTIONAL);
 		}
-		curr_offset = curr_end;
+		curr_off = curr_end;
 	}
 	pr_debug("inv: off(%ld) len(%ld)\n", offset, len);
 #endif
@@ -428,6 +451,26 @@ static int ion_system_heap_debug_show(struct ion_heap *heap, struct seq_file *s,
 	return 0;
 }
 
+#ifdef CONFIG_ION_BCM
+int ion_system_heap_lmk_cbk(struct reg_lmk *reg_lmk, struct lmk_op *op)
+{
+	struct ion_system_heap *sys_heap = container_of(reg_lmk,
+							struct ion_system_heap,
+							reg_lmk);
+	int reclaimable = 0;
+
+	if (op->op == 0)
+		reclaimable = PAGE_ALIGN(sys_heap->heap.used) >> PAGE_SHIFT;
+	/* TODO: When ION_HEAP_FLAG_DEFER_FREE gets enabled,
+	 * the freelist_count needs to be decremented from reclaimable
+	 * because the freelist will be handled by a separate shrinker
+	 * and should not be duplicated here
+	 */
+
+	return reclaimable;
+}
+#endif
+
 struct ion_heap *ion_system_heap_create(struct ion_platform_heap *unused)
 {
 	struct ion_system_heap *heap;
@@ -438,7 +481,11 @@ struct ion_heap *ion_system_heap_create(struct ion_platform_heap *unused)
 		return ERR_PTR(-ENOMEM);
 	heap->heap.ops = &system_heap_ops;
 	heap->heap.type = ION_HEAP_TYPE_SYSTEM;
-	heap->heap.flags = ION_HEAP_FLAG_DEFER_FREE;
+	/**
+	 * TODO: Unaccounted leaks seen if asynchronous free is enabled
+	 * Disabling this feature till it is root-caused.
+	 **/
+	/* heap->heap.flags = ION_HEAP_FLAG_DEFER_FREE; */
 	heap->pools = kzalloc(sizeof(struct ion_page_pool *) * num_orders,
 			      GFP_KERNEL);
 	if (!heap->pools)

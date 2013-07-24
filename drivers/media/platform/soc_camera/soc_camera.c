@@ -290,7 +290,14 @@ static int soc_camera_reqbufs(struct file *file, void *priv,
 
 	WARN_ON(priv != file->private_data);
 
+<<<<<<< HEAD:drivers/media/platform/soc_camera/soc_camera.c
 	if (icd->streamer && icd->streamer != file)
+=======
+	dev_dbg(&icd->dev, "soc_camera_reqbufs\n");
+	if (icd->streamer && icd->streamer != file) {
+		dev_err(&icd->dev,
+			"icd->streamer is not a file, returning error\n");
+>>>>>>> sdb-common-android-jb-4.2.2:drivers/media/video/soc_camera.c
 		return -EBUSY;
 
 	if (ici->ops->init_videobuf) {
@@ -840,7 +847,15 @@ static int soc_camera_streamon(struct file *file, void *priv,
 
 	WARN_ON(priv != file->private_data);
 
+<<<<<<< HEAD:drivers/media/platform/soc_camera/soc_camera.c
 	if (i != V4L2_BUF_TYPE_VIDEO_CAPTURE)
+=======
+	dev_dbg(&icd->dev, "soc_camera_streamon\n");
+
+	if (i != V4L2_BUF_TYPE_VIDEO_CAPTURE) {
+		dev_err(&icd->dev,
+				"not V4L2_BUF_TYPE_VIDEO_CAPTURE, returning error\n");
+>>>>>>> sdb-common-android-jb-4.2.2:drivers/media/video/soc_camera.c
 		return -EINVAL;
 
 	if (icd->streamer != file)
@@ -867,7 +882,15 @@ static int soc_camera_streamoff(struct file *file, void *priv,
 
 	WARN_ON(priv != file->private_data);
 
+<<<<<<< HEAD:drivers/media/platform/soc_camera/soc_camera.c
 	if (i != V4L2_BUF_TYPE_VIDEO_CAPTURE)
+=======
+	dev_dbg(&icd->dev, "soc_camera_streamoff\n");
+
+	if (i != V4L2_BUF_TYPE_VIDEO_CAPTURE) {
+		dev_err(&icd->dev,
+			"not V4L2_BUF_TYPE_VIDEO_CAPTURE, returning error\n");
+>>>>>>> sdb-common-android-jb-4.2.2:drivers/media/video/soc_camera.c
 		return -EINVAL;
 
 	if (icd->streamer != file)
@@ -1149,7 +1172,16 @@ static int soc_camera_probe(struct soc_camera_device *icd)
 	struct v4l2_mbus_framefmt mf;
 	int ret;
 
+<<<<<<< HEAD:drivers/media/platform/soc_camera/soc_camera.c
 	dev_info(icd->pdev, "Probing %s\n", dev_name(icd->pdev));
+=======
+	dev_info(dev, "Probing %s\n", dev_name(dev));
+
+	ret = regulator_bulk_get(icd->pdev, icl->num_regulators,
+				 icl->regulators);
+	if (ret < 0)
+		goto ereg;
+>>>>>>> sdb-common-android-jb-4.2.2:drivers/media/video/soc_camera.c
 
 	/*
 	 * Currently the subdev with the largest number of controls (13) is

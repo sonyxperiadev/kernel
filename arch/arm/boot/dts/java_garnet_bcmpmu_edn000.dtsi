@@ -5,7 +5,7 @@
 	     /* Add  Val  Mask Map */
 		0x14 0x75 0xFF 0
 		/*  enable PC3 function */
-		0x15 0x0E 0xFF 0
+		0x15 0x0F 0xFF 0
 		/*Enable PASR_EN*/
 		0x16 0x2 0x2 0
 		/*Enable PASR_MODE*/
@@ -39,10 +39,10 @@
 		0x44 0x01 0x01 0
 		  /*  ICCMAX to 1500mA*/
 		0x47 0x0B 0xFF 0
-		  /* NTC Hot Temperature Comparator rising = 45C*/
-		0xCC 0x70 0xFF 1
-		  /* NTC Hot Temperature Comparator falling = 40C*/
-		0xCD 0x84 0xFF 1
+		  /* NTC Hot Temperature Comparator rising = 60C*/
+		0xCC 0x40 0xFF 1
+		  /* NTC Hot Temperature Comparator falling = 50C*/
+		0xCD 0x5C 0xFF 1
 		  /* NTC Cold Temperature Comparator rising = 0C*/
 		0xCE 0xF4 0xFF 1
 		  /* NTC Cold Temperature Comparator falling = 5C*/
@@ -125,7 +125,7 @@
 		compatible = "Broadcom,rgltr";
 		/*num_of_consumer_supp, consumer_supply, always_on, pc_map, initial_mode, boot_on req_volt(in uV)*/
 		/*pc_map = PMU_PC2, initial_mode = REGULATOR_MODE_STANDBY*/
-		rf   = "1", "rf", "1", "2", "8", "0", "0";
+		rf   = "1", "rf", "0", "2", "8", "0", "0";
 		/*pc_map = PMU_PC2|PMU_PC3, initial_mode = REGULATOR_MODE_IDLE*/
 		cam1 = "1", "cam1", "1", "6", "4", "0", "0";
 		/*pc_map = PMU_PC2|PMU_PC3, initial_mode = REGULATOR_MODE_IDLE*/
@@ -164,8 +164,8 @@
 		lv2  = "1", "lvldo2_uc", "0", "7", "2", "0", "0";
 		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, initial_mode = REGULATOR_MODE_STANDBY*/
 		vsr  = "1", "vsr_uc", "1", "7", "8", "0", "1630000";
-		/*pc_map = PMU_PC3, initial_mode = REGULATOR_MODE_IDLE*/
-		csr  = "1", "csr_uc", "1", "4", "4", "0", "0";
+		/*pc_map = PMU_PC3, initial_mode = REGULATOR_MODE_STANDBY*/
+		csr  = "1", "csr_uc", "1", "4", "8", "0", "0";
 		/*pc_map = PMU_PC2, initial_mode = REGULATOR_MODE_IDLE*/
 		mmsr = "1", "mmsr_uc", "1", "2", "4", "0", "0";
 		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, initial_mode = REGULATOR_MODE_IDLE*/

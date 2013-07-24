@@ -62,9 +62,13 @@
 				[0x5] =		init_val, \
 				[0x6] =		init_val,
 
+
+#define PROC_FREQ_NORMAL_DIV      4
+#define PROC_FREQ_TURBO_DIV       3
+
 #define PROC_CCU_FREQ_ID_XTAL		0
 #define PROC_CCU_FREQ_ID_ECO		4
-#define PROC_CCU_FREQ_ID_NRML		5
+#define PROC_CCU_FREQ_ID_NRML		6
 #define PROC_CCU_FREQ_ID_TURBO		6
 #define PROC_CCU_FREQ_ID_SUPER_TURBO	7
 
@@ -100,7 +104,7 @@
 #define PROC_CCU_FREQ_VOLT_TBL	\
 		ARRAY_LIST(VLT_ID_A9_26M_WFI, VLT_ID_A9_ECO,\
 			VLT_ID_A9_ECO, VLT_ID_A9_ECO, VLT_ID_A9_ECO,\
-			VLT_ID_A9_ECO, VLT_ID_A9_TURBO, VLT_ID_A9_SUPER_TURBO)
+		VLT_ID_A9_NORMAL, VLT_ID_A9_TURBO, VLT_ID_A9_SUPER_TURBO)
 #define PROC_CCU_FREQ_VOLT_TBL_SZ	8
 
 #define MM_CCU_FREQ_VOLT_TBL	\
@@ -184,18 +188,13 @@
 		ARRAY_LIST(KPS_CCU_FREQ_ID_ECO, KPS_CCU_FREQ_ID_ECO,\
 			KPS_CCU_FREQ_ID_ECO, KPS_CCU_FREQ_ID_NRML)
 
-/* PLL Offset config values for RF interference reduction
-*  as suggested by modem team */
-#define PLLARM_OFFEST_CONFIG    0x35589D9
-#define PLLDSI_OFFEST_CONFIG    0x0
-#define PLL1_OFFSET_CONFIG	0xBFFFF
-
-
 /*PM Eratta ids*/
 #define ERRATUM_MM_V3D_TIMEOUT		(1 << 0)
 #define ERRATUM_MM_POWER_OK		(1 << 1)
 #define ERRATUM_PLL1_8PHASE_OFF		(1 << 2)
 #define ERRATUM_MM_FREEZE_VAR500M	(1 << 3)
+#define ERRATUM_A7_PLL_PWRDWN		(1 << 4)
+#define ERRATUM_VDDFIX_LEAKAGE		(1 << 5)
 
 #ifdef CONFIG_KONA_POWER_MGR
 struct pwrmgr_init_param {

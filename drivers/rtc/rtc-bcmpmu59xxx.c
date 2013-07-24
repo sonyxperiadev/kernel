@@ -61,6 +61,9 @@ struct bcmpmu_rtc {
 	struct mutex lock;
 	int alarm_irq_enabled;
 	int update_irq_enabled;
+#ifdef CONFIG_BCM_RTC_ALARM_BOOT
+	struct work_struct work;
+#endif /*CONFIG_BCM_RTC_ALARM_BOOT*/
 };
 
 #ifdef CONFIG_BCM_RTC_CAL
@@ -71,6 +74,17 @@ extern void bcm_rtc_cal_init(struct bcmpmu_rtc *rdata);
 extern void bcm_rtc_cal_shutdown(void);
 #endif /* CONFIG_BCM_RTC_CAL*/
 
+#ifdef CONFIG_BCM_RTC_ALARM_BOOT
+static void bcmpmu_alarm_notify(struct work_struct *work)
+{
+	struct bcmpmu_rtc *rdata =
+		container_of(work, struct bcmpmu_rtc, work);
+
+	kobject_uevent(&rdata->rtc->dev.kobj, KOBJ_CHANGE);
+}
+#endif /*CONFIG_BCM_RTC_ALARM_BOOT*/
+
+
 static void bcmpmu_rtc_isr(enum bcmpmu59xxx_irq irq, void *data)
 {
 	struct bcmpmu_rtc *rdata = data;
@@ -79,6 +93,9 @@ static void bcmpmu_rtc_isr(enum bcmpmu59xxx_irq irq, void *data)
 	case PMU_IRQ_RTC_ALARM:
 		rtc_update_irq(rdata->rtc, 1, RTC_IRQF | RTC_AF);
 		pr_rtc(FLOW, "%s: RTC interrupt Alarm\n", __func__);
+#ifdef CONFIG_BCM_RTC_ALARM_BOOT
+		schedule_work(&rdata->work);
+#endif /*CONFIG_BCM_RTC_ALARM_BOOT*/
 		break;
 	case PMU_IRQ_RTC_SEC:
 		rtc_update_irq(rdata->rtc, 1, RTC_IRQF | RTC_UF);
@@ -507,6 +524,10 @@ static int bcmpmu_rtc_probe(struct platform_device *pdev)
 		goto err;
 	}
 
+#ifdef CONFIG_BCM_RTC_ALARM_BOOT
+	INIT_WORK(&rdata->work, bcmpmu_alarm_notify);
+#endif /*CONFIG_BCM_RTC_ALARM_BOOT*/
+
 	ret = bcmpmu->register_irq(bcmpmu, PMU_IRQ_RTC_ALARM,
 			bcmpmu_rtc_isr, rdata);
 	if (ret) {
@@ -539,6 +560,9 @@ static int bcmpmu_rtc_probe(struct platform_device *pdev)
 	}
 
 	ret = device_create_file(&rdata->rtc->dev, &dev_attr_dbgmask);
+#ifdef CONFIG_BCM_RTC_ALARM_BOOT
+	bcmpmu_alarm_irq_enable(&pdev->dev, 1);
+#endif /*CONFIG_BCM_RTC_ALARM_BOOT*/
 	return 0;
 
 err_irq_sec:

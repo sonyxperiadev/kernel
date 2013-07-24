@@ -1325,9 +1325,11 @@ static SEC_SimLock_Status_t SIMLockSetLockOneType(SimNumber_t SimId,
 				/* These two case shouldn't happen,
 				*  add for fixing compile warning.
 				*/
+				/* Coverity [dead_error_line] */
 				case SEC_SIMLOCK_PHONE_LOCK:
-				/* Coverity [DEADCODE] */
+				/* Coverity [dead_error_line] */
 				case SEC_SIMLOCK_INVALID_LOCK:
+				/* Coverity [dead_error_begin] */
 				default:
 					break;
 				}
@@ -2266,6 +2268,8 @@ UInt16 SIMLockGetLockCodeInform(SEC_SimLock_LockType_t lockType,
 					     maxUnlockAttempt -
 					     (*unlock_attempt) : 0);
 				} else {
+					/* Actually we should keep the check */
+					/* coverity[DEADCODE] */
 					remain_attempt =
 					    simlockFile->maxUnlockAttempt;
 				}
@@ -2332,6 +2336,7 @@ UInt16 SIMLockGetLockCodeInform(SEC_SimLock_LockType_t lockType,
 					     maxUnlockAttempt -
 					     (*unlock_attempt) : 0);
 				} else {
+					/* coverity[DEADCODE] */
 					remain_attempt =
 					    simlockFile->maxUnlockAttempt;
 				}
@@ -2404,6 +2409,7 @@ UInt16 SIMLockGetLockCodeInform(SEC_SimLock_LockType_t lockType,
 					     maxUnlockAttempt -
 					     (*unlock_attempt) : 0);
 				} else {
+					/* coverity[DEADCODE] */
 					remain_attempt =
 					    simlockFile->maxUnlockAttempt;
 				}
@@ -2470,6 +2476,7 @@ UInt16 SIMLockGetLockCodeInform(SEC_SimLock_LockType_t lockType,
 					     maxUnlockAttempt -
 					     (*unlock_attempt) : 0);
 				} else {
+					/* coverity[DEADCODE] */
 					remain_attempt =
 					    simlockFile->maxUnlockAttempt;
 				}

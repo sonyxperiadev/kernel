@@ -141,6 +141,8 @@ typedef struct {
 	UInt32 bus;
 	UInt32 init;
 	UInt32 initOnce;
+	UInt32 initPV;
+	UInt32 initAXIPV;
 	Boolean ulps;
 	UInt32 dsiCoreRegAddr;
 	UInt32 clients;
@@ -2445,7 +2447,6 @@ CSL_LCD_RES_T CSL_DSI_Init(const pCSL_DSI_CFG dsiCfg)
 #endif
 		.irq_cb = axipv_irq_cb,
 		.release_cb = axipv_release_cb,
-		.bypassPV = 0,
 	};
 	struct pv_init_t pv_init_data = {
 		.id = 0,
@@ -2479,62 +2480,6 @@ CSL_LCD_RES_T CSL_DSI_Init(const pCSL_DSI_CFG dsiCfg)
 
 		memset(dsiH, 0, sizeof(DSI_HANDLE_t));
 
-		dsiH->vsync_cb = dsiCfg->vsync_cb;
-		dsiH->dlCount = dsiCfg->dlCount;
-		dsiH->dispEngine = dsiCfg->dispEngine;
-		dsiH->pixTxporter = dsiCfg->pixTxporter;
-		dsiH->vmode = dsiCfg->vmode;
-		if(!dsiH->dispEngine && dsiH->pixTxporter) {
-			pr_err("Error:MMDMA cannot feed DE0! Default to DE1\n");
-			dsiH->dispEngine = 1;
-		}
-
-		if (0 == dsiH->pixTxporter) {
-			if (0 == dsiH->dispEngine) {
-				printk("Initialising PV\n");
-				ret = pv_init(&pv_init_data, &dsiH->pvCfg);
-				if ((ret < 0) || !dsiH->pvCfg) {
-					pr_err("pv_init failed with ret=%d\n",
-						ret);
-					return CSL_LCD_ERR;
-				}
-				dsiH->pvCfg->pclk_sel = DISP_CTRL_DSI;
-				if (dsiCfg->vmode) {
-					dsiH->pvCfg->cmd = false;
-					dsiH->pvCfg->cont = true;
-				} else {
-					dsiH->pvCfg->cmd = true;
-					dsiH->pvCfg->cont = false;
-				}
-				dsiH->pvCfg->vs = dsiCfg->vs;
-				dsiH->pvCfg->vbp = dsiCfg->vbp;
-				dsiH->pvCfg->vfp = dsiCfg->vfp;
-				dsiH->pvCfg->hs = dsiCfg->hs;
-				dsiH->pvCfg->hbp = dsiCfg->hbp;
-				dsiH->pvCfg->hfp = dsiCfg->hfp;
-				dsiH->pvCfg->interlaced = false;
-				dsiH->pvCfg->vsyncd = 0;
-				dsiH->pvCfg->pix_stretch = 0;
-				axipv_init_data.bypassPV = 0;
-			} else {
-				axipv_init_data.bypassPV = 1;
-			}
-			printk("Initialising AXIPV\n");
-			ret = axipv_init(&axipv_init_data, &dsiH->axipvCfg);
-			if ((ret < 0) || !dsiH->axipvCfg) {
-				pr_err("axipv_init failed with ret=%d\n", ret);
-				return CSL_LCD_ERR;
-			}
-			dsiH->axipvCfg->test = false;
-			if (dsiCfg->vmode) {
-				dsiH->axipvCfg->cmd = false;
-				dsiH->axipvCfg->async = true;
-			} else {
-				dsiH->axipvCfg->async = false;
-				dsiH->axipvCfg->cmd = true;
-			}
-		}
-
 		dsiH->bus = dsiCfg->bus;
 
 		if (dsiH->bus == 0) {
@@ -2554,6 +2499,70 @@ CSL_LCD_RES_T CSL_DSI_Init(const pCSL_DSI_CFG dsiCfg)
 			dsiH->initOnce = DSI_INITIALIZED;
 		}
 	}
+
+	dsiH->vsync_cb = dsiCfg->vsync_cb;
+	dsiH->dlCount = dsiCfg->dlCount;
+	dsiH->dispEngine = dsiCfg->dispEngine;
+	dsiH->pixTxporter = dsiCfg->pixTxporter;
+	dsiH->vmode = dsiCfg->vmode;
+	if (!dsiH->dispEngine && dsiH->pixTxporter) {
+		pr_err("Error:MMDMA cannot feed DE0! Default to DE1\n");
+		dsiH->dispEngine = 1;
+	}
+
+	if (0 == dsiH->pixTxporter) {
+		if (0 == dsiH->dispEngine) {
+			if (dsiH->initPV != DSI_INITIALIZED) {
+				printk(KERN_INFO"Initialising PV\n");
+				ret = pv_init(&pv_init_data, &dsiH->pvCfg);
+				if ((ret < 0) || !dsiH->pvCfg) {
+					pr_err("pv_init failed with ret = %d\n",
+						ret);
+					return CSL_LCD_ERR;
+				}
+				dsiH->initPV = DSI_INITIALIZED;
+			}
+
+			dsiH->pvCfg->pclk_sel = DISP_CTRL_DSI;
+			if (dsiCfg->vmode) {
+				dsiH->pvCfg->cmd = false;
+				dsiH->pvCfg->cont = true;
+			} else {
+				dsiH->pvCfg->cmd = true;
+				dsiH->pvCfg->cont = false;
+			}
+			dsiH->pvCfg->vs = dsiCfg->vs;
+			dsiH->pvCfg->vbp = dsiCfg->vbp;
+			dsiH->pvCfg->vfp = dsiCfg->vfp;
+			dsiH->pvCfg->hs = dsiCfg->hs;
+			dsiH->pvCfg->hbp = dsiCfg->hbp;
+			dsiH->pvCfg->hfp = dsiCfg->hfp;
+			dsiH->pvCfg->interlaced = false;
+			dsiH->pvCfg->vsyncd = 0;
+			dsiH->pvCfg->pix_stretch = 0;
+		}
+
+		if (dsiH->initAXIPV != DSI_INITIALIZED) {
+			printk(KERN_INFO"Initialising AXIPV\n");
+			ret = axipv_init(&axipv_init_data, &dsiH->axipvCfg);
+			if ((ret < 0) || !dsiH->axipvCfg) {
+				pr_err("axipv_init failed with ret=%d\n", ret);
+				return CSL_LCD_ERR;
+			}
+			dsiH->initAXIPV = DSI_INITIALIZED;
+		}
+		dsiH->axipvCfg->test = false;
+		if (dsiCfg->vmode) {
+			dsiH->axipvCfg->cmd = false;
+			dsiH->axipvCfg->async = true;
+			dsiH->axipvCfg->bypassPV = 0;
+		} else {
+			dsiH->axipvCfg->async = false;
+			dsiH->axipvCfg->cmd = true;
+			dsiH->axipvCfg->bypassPV = 1;
+		}
+	}
+
 	/* Init User Controlled Values */
 	chalInit.dlCount = dsiCfg->dlCount;
 	chalInit.clkContinuous = dsiCfg->enaContClock;

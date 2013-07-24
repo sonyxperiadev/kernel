@@ -33,7 +33,7 @@ ENTRY(__cpu_suspend)
 	ALT_SMP(mrc p15, 0, lr, c0, c0, 5)
 	ALT_UP(mov lr, #0)
 	and	lr, lr, #15
-	add	r3, r3, lr, lsl #2
+	add	r3, r3, lr, lsl #6
 #endif
 	bl	__cpu_suspend_save
 	adr	lr, BSYM(cpu_suspend_abort)
@@ -86,7 +86,7 @@ ENTRY(cpu_resume)
 	ALT_SMP(mrc p15, 0, r1, c0, c0, 5)
 	ALT_UP(mov r1, #0)
 	and	r1, r1, #15
-	ldr	r0, [r0, r1, lsl #2]	@ stack phys addr
+	ldr	r0, [r0, r1, lsl #6]	@ stack phys addr
 #else
 	ldr	r0, sleep_save_sp	@ stack phys addr
 #endif
@@ -98,7 +98,8 @@ THUMB(	mov	sp, r2			)
 THUMB(	bx	r3			)
 ENDPROC(cpu_resume)
 
+	.align 5
 sleep_save_sp:
 	.rept	CONFIG_NR_CPUS
-	.long	0				@ preserve stack phys ptr here
+	.space 64				@ preserve stack phys ptr here
 	.endr

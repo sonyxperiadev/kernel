@@ -103,6 +103,24 @@ struct dma_iommu_mapping *__iommu_get_mapping(struct device *dev)
 
 #endif /* LINUX_3_6_WAY */
 
+#ifdef CONFIG_BCM_IOVMM_DEBUG
+
+static void print_bitmap(struct dma_iommu_mapping *mapping)
+{
+	static char buf[32768];
+	ssize_t ret;
+
+	ret = bitmap_scnlistprintf(buf, sizeof(buf), mapping->bitmap,
+				mapping->bits);
+	buf[ret++] = '\n';
+	buf[ret] = '\0';
+	pr_info("=== IOMMU MAPPING: 0x%p: bitmap:0x%p bits:%d ===\n",
+			mapping, mapping->bitmap, mapping->bits);
+	pr_info(" %s\n", buf);
+	return;
+}
+#endif
+
 static inline dma_addr_t __alloc_iova(struct dma_iommu_mapping *mapping,
 				      size_t size)
 {
@@ -110,6 +128,9 @@ static inline dma_addr_t __alloc_iova(struct dma_iommu_mapping *mapping,
 	unsigned int align = 0;
 	unsigned int count, start;
 	unsigned long flags;
+
+	if (order > CONFIG_BCM_IOVMM_ALIGNMENT)
+		order = CONFIG_BCM_IOVMM_ALIGNMENT;
 
 	count = ((PAGE_ALIGN(size) >> PAGE_SHIFT) +
 		 (1 << mapping->order) - 1) >> mapping->order;
@@ -124,6 +145,9 @@ static inline dma_addr_t __alloc_iova(struct dma_iommu_mapping *mapping,
 		spin_unlock_irqrestore(&mapping->lock, flags);
 		pr_err("%s failed: mapping(%p) count(%d) align(%d)\n",
 				__func__, mapping, count, align);
+#ifdef CONFIG_BCM_IOVMM_DEBUG
+		print_bitmap(mapping);
+#endif
 		return DMA_ERROR_CODE;
 	}
 

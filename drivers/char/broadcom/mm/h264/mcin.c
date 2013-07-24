@@ -23,10 +23,11 @@ the GPL, without Broadcom's express prior written consent.
 #include "mcin.h"
 
 #define MM_MCIN_BASE_ADDR (H264_BASE_ADDR+H264_MCODEIN_CONTROL_OFFSET)
-#define MCIN_HW_SIZE (4*1024)
+#define MCIN_HW_SIZE 0x1000
 
 struct mcin_device_t {
 	void *vaddr;
+	void *clockaddr;
 };
 
 static void mcin_write(struct mcin_device_t *mcin, u32 reg, u32 value)
@@ -99,29 +100,9 @@ static void print_regs(struct mcin_device_t *mcin)
 	pr_debug("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
 }
 
-static void mcin_reg_init(void *device_id)
-{
-	struct mcin_device_t *id = (struct mcin_device_t *)device_id;
-	pr_debug("mcin_reg_init:\n");
-
-	/* Initialise MCIN internal state */
-	mcin_write(id, H264_MCODEIN_STATE0_OFFSET, 0x0);
-	mcin_write(id, H264_MCODEIN_STATE1_OFFSET, 0x0);
-	mcin_write(id, H264_MCODEIN_STATE2_OFFSET, 0x0);
-	mcin_write(id, H264_MCODEIN_STATE3_OFFSET, 0x0);
-	mcin_write(id, H264_MCODEIN_STATE4_OFFSET, 0x0);
-	mcin_write(id, H264_MCODEIN_STATE5_OFFSET, 0x0);
-	mcin_write(id, H264_MCODEIN_STATE6_OFFSET, 0x0);
-	mcin_write(id, H264_MCODEIN_USERDATA_OFFSET, 0x0);
-	mcin_write(id, H264_MCODEIN_OUTBASE_OFFSET, 0x0);
-	mcin_write(id, H264_MCODEIN_OUTSIZE_OFFSET, 0x0);
-	mcin_write(id, H264_MCODEIN_OUTMARKOFFSET_OFFSET, 0x0);
-}
-
 static int mcin_complete_sequence(struct mcin_device_t *id)
 {
 	u32 control;
-	pr_debug("mcin_complete_sequence:\n");
 
 	while (mcin_read(id, H264_MCODEIN_STATUS_OFFSET) & 0xef)
 		;
@@ -146,7 +127,6 @@ static int mcin_complete_sequence(struct mcin_device_t *id)
 static int mcin_get_regs(void *device_id, MM_REG_VALUE *ptr, int count)
 {
 	struct mcin_device_t *id = (struct mcin_device_t *)device_id;
-	pr_debug("mcin_get_regs:\n");
 	print_regs(id);
 	return 0;
 }
@@ -154,14 +134,11 @@ static int mcin_get_regs(void *device_id, MM_REG_VALUE *ptr, int count)
 static int mcin_reset(void *device_id)
 {
 	struct mcin_device_t *id = (struct mcin_device_t *)device_id;
-	pr_debug("mcin_reset:\n");
 
 	/*Reset the registers*/
 	mcin_write(id, H264_MCODEIN_CONTROL_OFFSET, 0x0);
 	mcin_write(id, H264_MCODEIN_CONTROL_EXTRA_OFFSET, 0x0);
 	mcin_write(id, H264_MCODEIN_STATUS_OFFSET, 1<<3);
-
-	mcin_reg_init(id);
 
 	while (mcin_read(id, H264_MCODEIN_STATUS_OFFSET) & 0xef)
 		;
@@ -176,6 +153,31 @@ static int mcin_abort(void *device_id, mm_job_post_t *job)
 	pr_info("mcin_abort:\n");
 	mcin_reset(id);
 
+	return 0;
+}
+
+static int mcin_block_init(void *device_id)
+{
+	struct mcin_device_t *id = (struct mcin_device_t *)device_id;
+	u32 temp;
+	/*Enable MCIN block*/
+	temp = readl(id->clockaddr);
+	temp |= H264_VCODEC_GCKENAA_MCIN_MASK;
+	writel(temp, id->clockaddr);
+	/*Reset the registers*/
+	mcin_reset(id);
+
+	return 0;
+}
+
+static int mcin_block_deinit(void *device_id)
+{
+	struct mcin_device_t *id = (struct mcin_device_t *)device_id;
+	u32 temp;
+	/*Disable MCIN block*/
+	temp = readl(id->clockaddr);
+	temp &= (~H264_VCODEC_GCKENAA_MCIN_MASK);
+	writel(temp, id->clockaddr);
 	return 0;
 }
 
@@ -200,7 +202,6 @@ static mm_isr_type_e process_mcin_irq(void *device_id)
 bool get_mcin_status(void *device_id)
 {
 	struct mcin_device_t *id = (struct mcin_device_t *)device_id;
-	pr_debug("get_mcin_status:\n");
 
 	/*Read the status to find Hardware status*/
 	if (mcin_read(id, H264_MCODEIN_STATUS_OFFSET) & 0xef)
@@ -233,8 +234,6 @@ mm_job_status_e mcin_start_job(void *device_id,
 
 	switch (job->status) {
 	case MM_JOB_STATUS_READY:
-		/*Reset MCIN*/
-		mcin_reset(id);
 		/*Bound checks*/
 		if (jp->mcin_config.start_mask == 0) {
 			pr_err("mcin_start_job: mcin_mask cant be zero\n");
@@ -367,7 +366,15 @@ int mcin_init(MM_CORE_HW_IFC *core_param)
 	}
 
 	mcin_device->vaddr = NULL;
-	pr_debug("mcin_init: -->\n");
+
+	mcin_device->clockaddr = (void *)ioremap_nocache(\
+					H264_BASE_ADDR + \
+					H264_VCODEC_GCKENAA_OFFSET, \
+					0x1000);
+	if (mcin_device->clockaddr == NULL) {
+		pr_err("register mapping failed ");
+		goto err;
+	}
 
 	/*Do any device specific structure initialisation required.*/
 	core_param->mm_base_addr = MM_MCIN_BASE_ADDR;
@@ -380,8 +387,8 @@ int mcin_init(MM_CORE_HW_IFC *core_param)
 	core_param->mm_get_status = get_mcin_status;
 	core_param->mm_start_job = mcin_start_job;
 	core_param->mm_process_irq = process_mcin_irq;
-	core_param->mm_init = mcin_reset;
-	core_param->mm_deinit = mcin_reset;
+	core_param->mm_init = mcin_block_init;
+	core_param->mm_deinit = mcin_block_deinit;
 	core_param->mm_abort = mcin_abort;
 	core_param->mm_get_regs = mcin_get_regs;
 	core_param->mm_update_virt_addr = mcin_update_virt;
@@ -397,6 +404,7 @@ err:
 
 void mcin_deinit(void)
 {
-	pr_debug("mcin_deinit:\n");
+	if (mcin_device->clockaddr)
+		iounmap(mcin_device->clockaddr);
 	kfree(mcin_device);
 }

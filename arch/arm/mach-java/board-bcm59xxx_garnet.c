@@ -35,6 +35,9 @@
 #ifdef CONFIG_CHARGER_BCMPMU_SPA
 #include <linux/spa_power.h>
 #endif
+#if defined(CONFIG_BCMPMU_THERMAL_THROTTLE)
+#include <linux/power/bcmpmu59xxx-thermal-throttle.h>
+#endif
 #include <linux/of_platform.h>
 #include <linux/of.h>
 #include <linux/of_fdt.h>
@@ -43,6 +46,7 @@
 #endif
 #include "pm_params.h"
 #include "volt_tbl.h"
+#include <plat/cpu.h>
 
 #define BOARD_EDN010 "Hawaiistone EDN010"
 #define BOARD_EDN01x "Hawaiistone EDN01x"
@@ -185,8 +189,12 @@ static struct regulator_init_data bcm59xxx_rfldo_data = {
 			.min_uV = 1300000,
 			.max_uV = 3300000,
 			.valid_ops_mask = REGULATOR_CHANGE_STATUS |
-					REGULATOR_CHANGE_VOLTAGE,
-			.always_on = 1,
+					REGULATOR_CHANGE_VOLTAGE |
+					REGULATOR_CHANGE_MODE,
+			.valid_modes_mask = REGULATOR_MODE_NORMAL |
+						REGULATOR_MODE_IDLE |
+						REGULATOR_MODE_STANDBY,
+			.always_on = 0,
 			.initial_mode = REGULATOR_MODE_STANDBY,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(rf_supply),
@@ -236,7 +244,11 @@ static struct regulator_init_data bcm59xxx_simldo1_data = {
 			.min_uV = 1300000,
 			.max_uV = 3300000,
 			.valid_ops_mask =
-			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
+			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE |
+			REGULATOR_CHANGE_MODE,
+			.valid_modes_mask = REGULATOR_MODE_NORMAL |
+						REGULATOR_MODE_IDLE |
+						REGULATOR_MODE_STANDBY,
 			.always_on = 0,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(sim1_supply),
@@ -848,6 +860,8 @@ struct bcmpmu59xxx_audio_pdata audio_pdata = {
 
 struct bcmpmu59xxx_rpc_pdata rpc_pdata = {
 	.delay = 30000, /*rpc delay - 30 sec*/
+	.fw_delay = 5000, /* for fw_cnt use this */
+	.fw_cnt = 4,
 	.poll_time = 120000, /* 40c-60c 120 sec */
 	.htem_poll_time = 8000, /* > 60c 8 sec */
 	.mod_tem = 400, /* 40 C*/
@@ -859,6 +873,28 @@ struct bcmpmu59xxx_regulator_pdata rgltr_pdata = {
 	.bcmpmu_rgltr = bcm59xxx_regulators,
 	.num_rgltr = ARRAY_SIZE(bcm59xxx_regulators),
 };
+
+static int chrgr_curr_lmt[PMU_CHRGR_TYPE_MAX] = {
+	[PMU_CHRGR_TYPE_NONE] = 0,
+	[PMU_CHRGR_TYPE_SDP] = 500,
+	[PMU_CHRGR_TYPE_CDP] = 1500,
+	[PMU_CHRGR_TYPE_DCP] = 700,
+	[PMU_CHRGR_TYPE_TYPE1] = 700,
+	[PMU_CHRGR_TYPE_TYPE2] = 700,
+	[PMU_CHRGR_TYPE_PS2] = 100,
+	[PMU_CHRGR_TYPE_ACA_DOCK] = 700,
+	[PMU_CHRGR_TYPE_ACA] = 700,
+};
+
+struct bcmpmu59xxx_accy_pdata accy_pdata = {
+	.flags = ACCY_USE_PM_QOS,
+	.qos_pi_id = PI_MGR_PI_ID_ARM_SUB_SYSTEM,
+};
+
+struct bcmpmu_chrgr_pdata chrgr_pdata = {
+	.chrgr_curr_lmt_tbl = chrgr_curr_lmt,
+};
+
 
 static struct bcmpmu_adc_lut batt_temp_map[] = {
 	{16, 1000},			/* 100 C */
@@ -992,6 +1028,19 @@ struct bcmpmu_adc_pdata adc_pdata[PMU_ADC_CHANN_MAX] = {
 					.reg = PMU_REG_ADCCTRL25,
 	},
 };
+struct bcmpmu_acld_pdata acld_pdata = {
+	.acld_vbus_margin = 200,	/*mV*/
+	.acld_vbus_thrs = 5950,
+	.acld_vbat_thrs = 3500,
+	.i_sat = 3000,			/* saturation current in mA
+						for chrgr while using ACLD */
+	.i_def_dcp = 700,
+	.i_max_cc = 2200,
+	.acld_cc_lmt = 1360,    /*In general this is 80% of 1C.
+				  If customer defines any other value
+				  chage accordingly*/
+	.otp_cc_trim = 0x1F,
+};
 
 static struct batt_volt_cap_map ys_05_volt_cap_lut[] = {
 	{4200, 100},
@@ -1038,6 +1087,13 @@ static struct batt_cutoff_cap_map ys_05_cutoff_cap_lut[] = {
 	{3350, 0},
 };
 
+#if defined(CONFIG_BCMPMU_THERMAL_THROTTLE)
+static struct batt_temp_curr_map ys_05_temp_curr_lut[] = {
+		{400, 510},
+		{500, 270},
+		{580,  0},
+};
+#endif
 
 static struct batt_esr_temp_lut ys_05_esr_temp_lut[] = {
 	{
@@ -1173,15 +1229,9 @@ static struct bcmpmu_fg_pdata fg_pdata = {
 	.hw_maintenance_charging = false, /* enable HW EOC of PMU */
 	.sleep_current_ua = 2000, /* floor during sleep */
 	.sleep_sample_rate = 32000,
-	.fg_factor = 820,
-	.poll_rate_low_batt = 5000,	/* every 5 seconds */
-	.poll_rate_crit_batt = 2000,	/* every 2 Seconds */
-	.acld_vbus_margin = 200,	/*mV*/
-	.i_sat = 3000,			/* saturation current in mA
-						for chrgr while using ACLD */
-	.i_def_dcp = 700,
-	.acld_cc_lmt = 1800,
-	.otp_cc_trim = 0x1F,
+	.fg_factor = 976,
+	.poll_rate_low_batt = 20000,	/* every 20 seconds */
+	.poll_rate_crit_batt = 5000,	/* every 5 Seconds */
 };
 
 #if defined(CONFIG_LEDS_BCM_PMU59xxx)
@@ -1190,11 +1240,30 @@ static struct bcmpmu59xxx_led_pdata led_pdata = {
 };
 #endif
 
-#if defined(CONFIG_LEDS_BCM_PMU59xxx)
-static struct bcmpmu59xxx_led_pdata led_pdata = {
-	.led_name = "red",
+#if defined(CONFIG_BCMPMU_THERMAL_THROTTLE)
+/* List down the Charger Registers that need to be backedup before
+  *  the throttling algo starts, those registers will be restored once the
+  * algo is finished.
+  */
+static u32 chrgr_backup_registers[] = {
+	PMU_REG_MBCCTRL18, /* CC Trim */
+	PMU_REG_MBCCTRL20, /* 500 Trim */
+};
+
+static struct bcmpmu_throttle_pdata throttle_pdata = {
+	.temp_curr_lut = ys_05_temp_curr_lut,
+	.temp_curr_lut_sz = ARRAY_SIZE(ys_05_temp_curr_lut),
+	/* ADC channel and mode selection */
+	.temp_adc_channel = PMU_ADC_CHANN_DIE_TEMP,
+	.temp_adc_req_mode = PMU_ADC_REQ_SAR_MODE,
+	/* Registers to store/restore while throttling*/
+	.throttle_backup_reg = chrgr_backup_registers,
+	.throttle_backup_reg_sz = ARRAY_SIZE(chrgr_backup_registers),
+	.throttle_poll_time = THROTTLE_WORK_POLL_TIME,
+	.hysteresis_temp = HYSTERESIS_DEFAULT_TEMP,
 };
 #endif
+
 
 #ifdef CONFIG_CHARGER_BCMPMU_SPA
 struct bcmpmu59xxx_spa_pb_pdata spa_pb_pdata = {
@@ -1226,6 +1295,14 @@ static struct mfd_cell pmu59xxx_devs[] = {
 	{
 		.name = "bcmpmu_charger",
 		.id = -1,
+		.platform_data = &chrgr_pdata,
+		.pdata_size = sizeof(chrgr_pdata),
+	},
+	{
+		.name = "bcmpmu_acld",
+		.id = -1,
+		.platform_data = &acld_pdata,
+		.pdata_size = sizeof(acld_pdata),
 	},
 	{
 		.name = "bcmpmu59xxx-ponkey",
@@ -1245,6 +1322,12 @@ static struct mfd_cell pmu59xxx_devs[] = {
 	},
 	{
 		.name = "bcmpmu_accy",
+		.id = -1,
+		.platform_data = &accy_pdata,
+		.pdata_size = sizeof(accy_pdata),
+	},
+	{
+		.name = "bcmpmu_accy_detect",
 		.id = -1,
 	},
 	{
@@ -1299,6 +1382,14 @@ static struct mfd_cell pmu59xxx_devs[] = {
 		.pdata_size = sizeof(led_pdata),
 	},
 #endif
+#if defined(CONFIG_BCMPMU_THERMAL_THROTTLE)
+	{
+		.name = "bcmpmu_thermal_throttle",
+		.id = -1,
+		.platform_data = &throttle_pdata,
+		.pdata_size = sizeof(throttle_pdata),
+	},
+#endif
 };
 
 static struct i2c_board_info pmu_i2c_companion_info[] = {
@@ -1325,9 +1416,10 @@ static struct bcmpmu59xxx_platform_data bcmpmu_i2c_pdata = {
 	.i2c_pagesize = 256,
 	.bc = BCMPMU_BC_BB_BC12,
 #ifdef CONFIG_CHARGER_BCMPMU_SPA
-.flags = BCMPMU_SPA_EN,
+.flags = (BCMPMU_SPA_EN | BCMPMU_ACLD_EN),
+#else
+.flags = BCMPMU_ACLD_EN,
 #endif
-
 };
 
 static struct i2c_board_info __initdata bcmpmu_i2c_info[] = {
@@ -1585,6 +1677,11 @@ int __init rgltr_init(void)
 			rgltr_pdata.bcmpmu_rgltr[i].req_volt = int_val;
 		}
 	}
+/* Workaround for VDDFIX leakage during deepsleep.
+   Will be fixed in Java A1 revision */
+	if (is_pm_erratum(ERRATUM_VDDFIX_LEAKAGE))
+		bcm59xxx_csr_data.constraints.initial_mode =
+			REGULATOR_MODE_IDLE;
 	return 0;
 }
 

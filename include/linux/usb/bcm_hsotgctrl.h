@@ -35,6 +35,7 @@ int bcm_hsotgctrl_phy_init(bool id_device);
 int bcm_hsotgctrl_phy_deinit(void);
 int bcm_hsotgctrl_en_clock(bool on);
 int bcm_hsotgctrl_bc_reset(void);
+int bcm_hsotgctrl_bc_enable_sw_ovwr(void);
 int bcm_hsotgctrl_bc_status(unsigned long *status);
 int bcm_hsotgctrl_bc_vdp_src_off(void);
 int bcm_hsotgctrl_reset_clk_domain(void);

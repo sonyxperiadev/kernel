@@ -125,6 +125,17 @@ config HAWAII_MM_H264
 	depends on HAWAII_MM
 	default n
 
+config MM_SECURE_DRIVER
+	bool "Multimedia - Driver for secure playback"
+	depends on HAWAII_MM
+	default n
+        help
+          Enable this option if secure multimedia jobs are expected.
+	  Bit 15 of the jobs will indicate whether job is secure of not.
+	  Two new ioctls and secure subdevices for all the subblocks
+	  will be added which will handover the secure job to userspace
+	  to get executed via secure OS.
+
 config BCM_AAA
     tristate "Android Amxr Audio ('AAA grade-beef') driver"
     default n

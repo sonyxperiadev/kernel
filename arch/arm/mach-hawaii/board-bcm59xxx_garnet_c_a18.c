@@ -184,8 +184,11 @@ static struct regulator_init_data bcm59xxx_rfldo_data = {
 			.min_uV = 1300000,
 			.max_uV = 3300000,
 			.valid_ops_mask = REGULATOR_CHANGE_STATUS |
-			REGULATOR_CHANGE_VOLTAGE,
-			.always_on = 1,
+			REGULATOR_CHANGE_VOLTAGE | REGULATOR_CHANGE_MODE,
+			.valid_modes_mask = REGULATOR_MODE_NORMAL |
+						REGULATOR_MODE_IDLE |
+						REGULATOR_MODE_STANDBY,
+			.always_on = 0,
 			.initial_mode = REGULATOR_MODE_STANDBY,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(rf_supply),
@@ -844,16 +847,38 @@ struct bcmpmu59xxx_audio_pdata audio_pdata = {
 
 struct bcmpmu59xxx_rpc_pdata rpc_pdata = {
 	.delay = 30000, /*rpc delay - 30 sec*/
+	.fw_delay = 5000, /* for fw_cnt use this */
+	.fw_cnt = 4,
 	.poll_time = 120000, /* 40c-60c 120 sec */
 	.htem_poll_time = 8000, /* > 60c 8 sec */
 	.mod_tem = 400, /* 40 C*/
 	.htem = 600, /* 60 C*/
 };
 
-
 struct bcmpmu59xxx_regulator_pdata rgltr_pdata = {
 	.bcmpmu_rgltr = bcm59xxx_regulators,
 	.num_rgltr = ARRAY_SIZE(bcm59xxx_regulators),
+};
+
+static int chrgr_curr_lmt[PMU_CHRGR_TYPE_MAX] = {
+	[PMU_CHRGR_TYPE_NONE] = 0,
+	[PMU_CHRGR_TYPE_SDP] = 500,
+	[PMU_CHRGR_TYPE_CDP] = 1500,
+	[PMU_CHRGR_TYPE_DCP] = 700,
+	[PMU_CHRGR_TYPE_TYPE1] = 700,
+	[PMU_CHRGR_TYPE_TYPE2] = 700,
+	[PMU_CHRGR_TYPE_PS2] = 100,
+	[PMU_CHRGR_TYPE_ACA_DOCK] = 700,
+	[PMU_CHRGR_TYPE_ACA] = 700,
+};
+
+struct bcmpmu59xxx_accy_pdata accy_pdata = {
+	.flags = ACCY_USE_PM_QOS,
+	.qos_pi_id = PI_MGR_PI_ID_ARM_SUB_SYSTEM,
+};
+
+struct bcmpmu_chrgr_pdata chrgr_pdata = {
+	.chrgr_curr_lmt_tbl = chrgr_curr_lmt,
 };
 
 static struct bcmpmu_adc_lut batt_temp_map[] = {
@@ -978,6 +1003,26 @@ struct bcmpmu_adc_pdata adc_pdata[PMU_ADC_CHANN_MAX] = {
 					.name = "als",
 					.reg = PMU_REG_ADCCTRL23,
 	},
+	[PMU_ADC_CHANN_DIE_TEMP] = {
+					.flag = 0,
+					.volt_range = 1200,
+					.adc_offset = 0,
+					.lut = NULL,
+					.lut_len = 0,
+					.name = "dietemp",
+					.reg = PMU_REG_ADCCTRL25,
+	},
+};
+struct bcmpmu_acld_pdata acld_pdata = {
+	.acld_vbus_margin = 200,	/*mV*/
+	.acld_vbus_thrs = 5950,
+	.acld_vbat_thrs = 3500,
+	.i_sat = 3000,			/* saturation current in mA
+						for chrgr while using ACLD */
+	.i_def_dcp = 700,
+	.i_max_cc = 2200,
+	.acld_cc_lmt = 1100,
+	.otp_cc_trim = 0x1F,
 };
 
 static struct batt_volt_cap_map ys_05_volt_cap_lut[] = {
@@ -1163,12 +1208,6 @@ static struct bcmpmu_fg_pdata fg_pdata = {
 	.fg_factor = 796,
 	.poll_rate_low_batt = 5000,	/* every 5 seconds */
 	.poll_rate_crit_batt = 2000,	/* every 2 Seconds */
-	.acld_vbus_margin = 200,	/*mV*/
-	.i_sat = 3000,			/* saturation current in mA
-						for chrgr while using ACLD */
-	.i_def_dcp = 700,
-	.acld_cc_lmt = 1000,
-	.otp_cc_trim = 0x1F,
 };
 
 #if defined(CONFIG_LEDS_BCM_PMU59xxx)
@@ -1207,6 +1246,14 @@ static struct mfd_cell pmu59xxx_devs[] = {
 	{
 		.name = "bcmpmu_charger",
 		.id = -1,
+		.platform_data = &chrgr_pdata,
+		.pdata_size = sizeof(chrgr_pdata),
+	},
+	{
+		.name = "bcmpmu_acld",
+		.id = -1,
+		.platform_data = &acld_pdata,
+		.pdata_size = sizeof(acld_pdata),
 	},
 	{
 		.name = "bcmpmu59xxx-ponkey",
@@ -1226,6 +1273,12 @@ static struct mfd_cell pmu59xxx_devs[] = {
 	},
 	{
 		.name = "bcmpmu_accy",
+		.id = -1,
+		.platform_data = &accy_pdata,
+		.pdata_size = sizeof(accy_pdata),
+	},
+	{
+		.name = "bcmpmu_accy_detect",
 		.id = -1,
 	},
 	{

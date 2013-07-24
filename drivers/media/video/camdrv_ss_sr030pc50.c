@@ -38,19 +38,35 @@ extern inline struct camdrv_ss_state *to_state(struct v4l2_subdev *sd);
 static struct regulator *VCAM_A_2_8_V;
 static struct regulator *VCAM_IO_1_8_V;
 static struct regulator *VCAM0_IO_1_8_V;
+static struct regulator *VCAM_CORE_1_2_V;
+
 
 /* individual configuration */
 #if defined(CONFIG_MACH_HAWAII_SS_LOGAN_REV01) \
 	|| defined(CONFIG_MACH_HAWAII_SS_LOGAN_REV02) \
 	|| defined(CONFIG_MACH_HAWAII_SS_LOGANDS_REV00) \
-	|| defined(CONFIG_MACH_HAWAII_SS_LOGANDS_REV01)
+	|| defined(CONFIG_MACH_HAWAII_SS_LOGANDS_REV01) \
+
 #define VCAM_A_2_8V_REGULATOR		"mmcldo1"
 #define VCAM_IO_1_8V_REGULATOR		"lvldo2"
 #define VCAM_A_2_8V_REGULATOR_uV	2800000
 #define VCAM_IO_1_8V_REGULATOR_uV	1786000
 #define CAM1_RESET			4
 #define CAM1_STNBY			5
-#define EXIF_MODEL			"GT-B7810"
+#define EXIF_MODEL			"GT-B7272"
+
+#elif defined(CONFIG_MACH_JAVA_SS_EVAL)
+
+#define VCAM_A_2_8V_REGULATOR		"mmcldo1"
+#define VCAM_IO_1_8V_REGULATOR		"lvldo2"
+#define VCAM0_IO_1_8V_REGULATOR_NEEDED
+#define VCAM0_IO_1_8V_REGULATOR		"lvldo1"
+#define VCAM_A_2_8V_REGULATOR_uV	2800000
+#define VCAM_IO_1_8V_REGULATOR_uV	1786000
+#define CAM1_RESET			4
+#define CAM1_STNBY			5
+#define EXIF_MODEL			"GT-B7272"
+
 
 #elif defined(CONFIG_MACH_HAWAII_SS_LOGAN_REV00)
 
@@ -60,7 +76,7 @@ static struct regulator *VCAM0_IO_1_8_V;
 #define VCAM_IO_1_8V_REGULATOR_uV	1800000
 #define CAM1_RESET			4
 #define CAM1_STNBY			5
-#define EXIF_MODEL			"GT-B7810"
+#define EXIF_MODEL			"GT-B7272"
 
 #elif defined(CONFIG_MACH_HAWAII_SS_GOLDENVEN_REV01)\
 	|| defined(CONFIG_MACH_HAWAII_SS_CODINAN)
@@ -73,7 +89,7 @@ static struct regulator *VCAM0_IO_1_8_V;
 #define VCAM_IO_1_8V_REGULATOR_uV	1786000
 #define CAM1_RESET	004
 #define CAM1_STNBY	005
-#define EXIF_MODEL			"I-8191N"
+#define EXIF_MODEL			"I-B7272"
 
 #else /* NEED TO REDEFINE FOR NEW VARIANT */
 #define VCAM_A_2_8V_REGULATOR		"mmcldo1"
@@ -88,6 +104,7 @@ static struct regulator *VCAM0_IO_1_8_V;
 /* H/W configuration - End                                 */
 /***********************************************************/
 
+extern int camera_antibanding_get(); //add anti-banding code
 
 static const struct camdrv_ss_framesize sr030pc50_supported_preview_framesize_list[] = {
 	{ PREVIEW_SIZE_VGA,	640,  480 },
@@ -284,6 +301,48 @@ static const struct v4l2_queryctrl sr030pc50_controls[] = {
 	},	
 };
 
+static int camdrv_ss_sr030pc50_copy_files_for_60hz(void)
+{
+
+#define COPY_FROM_60HZ_TABLE(TABLE_NAME, ANTI_BANDING_SETTING) \
+	memcpy (TABLE_NAME, TABLE_NAME##_##ANTI_BANDING_SETTING, \
+	sizeof(TABLE_NAME))
+	
+	CAM_INFO_PRINTK("%s: Enter \n",__func__);
+
+	COPY_FROM_60HZ_TABLE (sr030pc50_init_regs, 60hz);
+	COPY_FROM_60HZ_TABLE (sr030pc50_fps_5_regs, 60hz);
+	COPY_FROM_60HZ_TABLE (sr030pc50_fps_7_regs, 60hz);
+	COPY_FROM_60HZ_TABLE (sr030pc50_fps_10_regs, 60hz);
+	COPY_FROM_60HZ_TABLE (sr030pc50_fps_15_regs, 60hz);
+	COPY_FROM_60HZ_TABLE (sr030pc50_fps_20_regs, 60hz);
+	COPY_FROM_60HZ_TABLE (sr030pc50_fps_25_regs, 60hz);
+	COPY_FROM_60HZ_TABLE (sr030pc50_fps_30_regs, 60hz);
+	COPY_FROM_60HZ_TABLE (sr030pc50_vt_mode_regs, 60hz);
+	COPY_FROM_60HZ_TABLE (sr030pc50_init_regs_smart_stay, 60hz);
+
+	CAM_INFO_PRINTK("%s: copy done!\n", __func__);
+
+}
+static int camdrv_ss_sr030pc50_check_table_size_for_60hz(void)
+{
+#define IS_SAME_NUM_OF_ROWS(TABLE_NAME) \
+	(sizeof(TABLE_NAME) == sizeof(TABLE_NAME##_60hz))
+
+	if ( !IS_SAME_NUM_OF_ROWS(sr030pc50_init_regs) ) return (-1);
+	if ( !IS_SAME_NUM_OF_ROWS(sr030pc50_fps_5_regs) ) return (-2);
+	if ( !IS_SAME_NUM_OF_ROWS(sr030pc50_fps_7_regs) ) return (-3);
+	if ( !IS_SAME_NUM_OF_ROWS(sr030pc50_fps_10_regs) ) return (-4);
+	if ( !IS_SAME_NUM_OF_ROWS(sr030pc50_fps_15_regs) ) return (-5);
+	if ( !IS_SAME_NUM_OF_ROWS(sr030pc50_fps_20_regs) ) return (-6);
+	if ( !IS_SAME_NUM_OF_ROWS(sr030pc50_fps_25_regs) ) return (-7);
+	if ( !IS_SAME_NUM_OF_ROWS(sr030pc50_fps_30_regs) ) return (-8);
+	if ( !IS_SAME_NUM_OF_ROWS(sr030pc50_vt_mode_regs) ) return (-9);
+	if ( !IS_SAME_NUM_OF_ROWS(sr030pc50_init_regs_smart_stay) ) return (-10);
+
+	CAM_INFO_PRINTK("%s: Success !\n", __func__);
+	return 0;
+}
 
 static int camdrv_ss_sr030pc50_enum_frameintervals(struct v4l2_subdev *sd, struct v4l2_frmivalenum *fival)
 {
@@ -403,6 +462,9 @@ int camdrv_ss_sr030pc50_set_preview_start(struct v4l2_subdev *sd)
 	struct camdrv_ss_state *state = to_state(sd);
 	int err = 0;
 
+	unsigned int read_value1=0,read_value2=0,read_value3=0,read_value4=0,read_value5=0,read_value6=0;
+	int Exptime=0,Expmax=0;
+
 	CAM_INFO_PRINTK( "%s :\n", __func__);
 
 	if (!state->pix.width || !state->pix.height) {
@@ -416,7 +478,56 @@ int camdrv_ss_sr030pc50_set_preview_start(struct v4l2_subdev *sd)
 
 	if(state->mode_switch == CAMERA_PREVIEW_TO_CAMCORDER_PREVIEW)
 	{
+			if ( (ARRAY_SIZE(sr030pc50_fps_auto_normal_regs) != NULL ) ||(ARRAY_SIZE(sr030pc50_fps_auto_Dark_regs) != NULL))
+				{
+				camdrv_ss_i2c_write_2_bytes(client, 0x03, 0x20);
+				 camdrv_ss_i2c_write_2_bytes(client, 0x10, 0x1C);
+		 
+	    		 camdrv_ss_i2c_read_1_byte(client, 0x80, &read_value1);
+          	    	 camdrv_ss_i2c_read_1_byte(client, 0x81, &read_value2);
+               		camdrv_ss_i2c_read_1_byte(client, 0x82, &read_value3);
+		        Exptime = (read_value1) << 16 | (read_value2)<<8 | read_value3;
+	
+	        
+    			 camdrv_ss_i2c_read_1_byte(client, 0xA0, &read_value4);
+			 camdrv_ss_i2c_read_1_byte(client, 0xA1, &read_value5);
+    			 camdrv_ss_i2c_read_1_byte(client, 0xA2, &read_value6);	
+			 Expmax = (read_value4) << 16 |(read_value5)<<8 | read_value6; // 50 hz
+
+		if( Exptime <  Expmax )
+		{
+			err = camdrv_ss_i2c_set_config_register(client, sr030pc50_fps_auto_normal_regs, ARRAY_SIZE(sr030pc50_fps_auto_normal_regs), "fps_auto_normal_regs");
+		}		
+		else
+		{
+			err = camdrv_ss_i2c_set_config_register(client, sr030pc50_fps_auto_Dark_regs, ARRAY_SIZE(sr030pc50_fps_auto_Dark_regs), "fps_auto_Dark_regs");
+		}
+
+		//err = camdrv_ss_i2c_set_config_register(client, sr030pc50_fps_auto_regs, ARRAY_SIZE(sr030pc50_fps_auto_regs), "fps_auto_regs");
+		if (err < 0) {
+			CAM_ERROR_PRINTK( "%s :sr030pc50_fps_auto_regs IS FAILED\n",__func__);
+			return -EIO;
+		}
+				}
         // do nothing
+       		 /* Fixed FPS */
+//			if (ARRAY_SIZE(sr030pc50_fps_auto_regs)!= NULL)
+//				err = camdrv_ss_i2c_set_config_register(client, sr030pc50_fps_auto_regs, ARRAY_SIZE(sr030pc50_fps_auto_regs), "fps_auto_regs");			
+			else if (ARRAY_SIZE(sr030pc50_fps_30_regs) != NULL)
+				err = camdrv_ss_i2c_set_config_register(client, sr030pc50_fps_30_regs, ARRAY_SIZE(sr030pc50_fps_30_regs), "fps_30_regs");
+			else if (ARRAY_SIZE(sr030pc50_fps_25_regs) != NULL)
+				err = camdrv_ss_i2c_set_config_register(client, sr030pc50_fps_25_regs, ARRAY_SIZE(sr030pc50_fps_25_regs), "fps_25_regs");
+			else if (ARRAY_SIZE(sr030pc50_fps_20_regs) != NULL)
+				err = camdrv_ss_i2c_set_config_register(client, sr030pc50_fps_20_regs, ARRAY_SIZE(sr030pc50_fps_20_regs), "fps_20_regs");
+			else if (ARRAY_SIZE(sr030pc50_fps_15_regs) != NULL)
+				err = camdrv_ss_i2c_set_config_register(client, sr030pc50_fps_15_regs, ARRAY_SIZE(sr030pc50_fps_15_regs), "fps_15_regs");
+			else
+				CAM_ERROR_PRINTK("%s : Fixed FPS setting is not supported for 30,25,20,15 fps !!\n", __func__);
+
+			if (err < 0) {
+				CAM_ERROR_PRINTK("%s : Fixed FPS setting is FAILED !!\n", __func__);
+				return -EIO;
+			}
 	}
 	else if(state->mode_switch == INIT_DONE_TO_CAMCORDER_PREVIEW)
 	{
@@ -424,11 +535,36 @@ int camdrv_ss_sr030pc50_set_preview_start(struct v4l2_subdev *sd)
 	}
 	else if(state->mode_switch == CAMCORDER_PREVIEW_TO_CAMERA_PREVIEW)
 	{
-		err = camdrv_ss_i2c_set_config_register(client, sr030pc50_init_regs, ARRAY_SIZE(sr030pc50_init_regs), "init_regs");
+		camdrv_ss_i2c_write_2_bytes(client, 0x03, 0x20);
+		 camdrv_ss_i2c_write_2_bytes(client, 0x10, 0x1C);
+		 
+    		 camdrv_ss_i2c_read_1_byte(client, 0x80, &read_value1);
+               camdrv_ss_i2c_read_1_byte(client, 0x81, &read_value2);
+               camdrv_ss_i2c_read_1_byte(client, 0x82, &read_value3);
+	        Exptime = (read_value1) << 16 | (read_value2)<<8 | read_value3;
+	
+	        
+    		 camdrv_ss_i2c_read_1_byte(client, 0xA0, &read_value4);
+    		 camdrv_ss_i2c_read_1_byte(client, 0xA1, &read_value5);
+    		 camdrv_ss_i2c_read_1_byte(client, 0xA2, &read_value6);	
+		 Expmax = (read_value4) << 16 |(read_value5)<<8 | read_value6; // 50 hz
+
+		if( Exptime <  Expmax )
+		{
+			err = camdrv_ss_i2c_set_config_register(client, sr030pc50_fps_auto_normal_regs, ARRAY_SIZE(sr030pc50_fps_auto_normal_regs), "fps_auto_normal_regs");
+		}		
+		else
+		{
+			err = camdrv_ss_i2c_set_config_register(client, sr030pc50_fps_auto_Dark_regs, ARRAY_SIZE(sr030pc50_fps_auto_Dark_regs), "fps_auto_Dark_regs");
+		}
+
+		//err = camdrv_ss_i2c_set_config_register(client, sr030pc50_fps_auto_regs, ARRAY_SIZE(sr030pc50_fps_auto_regs), "fps_auto_regs");
 		if (err < 0) {
-			CAM_ERROR_PRINTK( "%s :sr030pc50_init_regs IS FAILED\n",__func__);
+			CAM_ERROR_PRINTK( "%s :sr030pc50_fps_auto_regs IS FAILED\n",__func__);
 			return -EIO;
 		}
+		
+		
 	}
 
 /*
@@ -586,6 +722,14 @@ static int camdrv_ss_sr030pc50_sensor_power(int on)
 		return -1;
 	}
 #endif
+#ifdef VCAM_CORE_1_2V_REGULATOR_NEEDED
+	VCAM_CORE_1_2_V = regulator_get(NULL, VCAM_CORE_1_2V_REGULATOR);
+	if(IS_ERR(VCAM_CORE_1_2_V))
+	{
+		CAM_ERROR_PRINTK("can not get VCAM_CORE_1_2_V\n");
+		return -1;
+	}	
+#endif
 	
 	CAM_INFO_PRINTK("set cam_rst cam_stnby  to low\n");
 		
@@ -604,6 +748,12 @@ static int camdrv_ss_sr030pc50_sensor_power(int on)
 		regulator_set_voltage(VCAM_IO_1_8_V, VCAM_IO_1_8V_REGULATOR_uV, VCAM_IO_1_8V_REGULATOR_uV);
 #ifdef VCAM0_IO_1_8V_REGULATOR_NEEDED
 		regulator_set_voltage(VCAM0_IO_1_8_V, 1800000, 1800000);
+#endif
+
+#ifdef VCAM_CORE_1_2V_REGULATOR_NEEDED
+		value = regulator_set_voltage(VCAM_CORE_1_2_V, VCAM_CORE_1_2V_REGULATOR_uV, VCAM_CORE_1_2V_REGULATOR_uV);
+		if (value)
+			CAM_ERROR_PRINTK("%s:regulator_set_voltage VCAM_CORE_1_2_V failed \n", __func__);
 #endif
 
 		if (mm_ccu_set_pll_select(CSI1_BYTE1_PLL, 8)) {
@@ -663,6 +813,10 @@ static int camdrv_ss_sr030pc50_sensor_power(int on)
 #ifdef VCAM0_IO_1_8V_REGULATOR_NEEDED
 		regulator_enable(VCAM0_IO_1_8_V);
 #endif
+#ifdef VCAM_CORE_1_2V_REGULATOR_NEEDED
+		regulator_enable(VCAM_CORE_1_2_V);
+#endif
+
 		/*msleep(5);*/
 
 		msleep(12); //changed by aska for delay MCLK on time
@@ -686,6 +840,15 @@ static int camdrv_ss_sr030pc50_sensor_power(int on)
 
 		gpio_set_value(CAM1_RESET,1);
 		msleep(50);
+
+		if (ANTI_BANDING_60HZ == camera_antibanding_get()) {
+			ret = camdrv_ss_sr030pc50_check_table_size_for_60hz();
+			if(ret != 0) {
+				CAM_ERROR_PRINTK("%s: Fail - the table num is %d \n", __func__, ret);
+				return -1;
+			}
+			camdrv_ss_sr030pc50_copy_files_for_60hz();
+		}
 	}
 	else
 	{
@@ -709,6 +872,12 @@ static int camdrv_ss_sr030pc50_sensor_power(int on)
 
 		regulator_disable(VCAM_IO_1_8_V);
 		regulator_disable(VCAM_A_2_8_V);
+       #ifdef VCAM0_IO_1_8V_REGULATOR_NEEDED
+                regulator_disable(VCAM0_IO_1_8_V);
+       #endif
+	   #ifdef VCAM_CORE_1_2V_REGULATOR_NEEDED
+			regulator_disable(VCAM_CORE_1_2_V);
+	   #endif
 	}	
 	
 	return 0;
@@ -806,11 +975,6 @@ void camdrv_ss_sr030pc50_smartStayChangeInitSetting(struct camdrv_ss_sensor_cap 
 	sensor->skip_frames 		= 0;
 	CAM_INFO_PRINTK("%s : skip_frames  =  %d \n",__func__,sensor->skip_frames);
 	
-}
-
-void camdrv_ss_sensor_sub_name(struct camdrv_ss_sensor_cap *sensor)
-{
-	strcpy(sensor->name, SR030PC50_NAME);
 }
 
 bool camdrv_ss_sensor_init_sub(bool bOn, struct camdrv_ss_sensor_cap *sensor)

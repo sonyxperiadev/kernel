@@ -24,8 +24,13 @@ definition, and have been migrated elsewhere; this file is kept for
 compatibility reasons.
 ********************************************************************************/
 
+#ifdef VC4_LINUX_PORT
 #include "codec_errors.h"      // ERROR_MAKE, severity, type
 #include "codec_modules.h"     // CODEC_MODULE_xxx
+#else
+#include "interface/codecs/codec_errors.h"      // ERROR_MAKE, severity, type
+#include "interface/codecs/codec_modules.h"     // CODEC_MODULE_xxx
+#endif
 
 #endif /* VD3_ERROR_TYPES_H */
 

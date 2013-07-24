@@ -86,6 +86,8 @@ typedef struct vd3_datastream_t {
    void*					 mOljobPtr;
    struct ol_job_info_t		 mOlJobInfo;
    uint32_t					 mAttachRequest;
+   uint32_t					 mSpsCurId;
+   uint32_t					 mPpsCurId;
 #endif
 }  VD3_DATASTREAM_T;
 

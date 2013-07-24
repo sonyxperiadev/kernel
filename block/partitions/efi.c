@@ -610,6 +610,39 @@ static unsigned long apanic_partition_start;
 static unsigned long apanic_partition_size;
 #endif
 
+static struct gpt_info {
+	struct parsed_partitions partitions;
+	int num_of_partitions;
+	int erase_size;
+} gpt_info;
+#warning "Porting hack: Tobe fixed"
+#if 0
+int emmc_partition_read_proc(char *page, char **start, off_t off,
+				int count, int *eof, void *data)
+#endif
+int emmc_partition_read_proc(struct file *file, char __user *p,
+				size_t count,  loff_t *data)
+{
+	int i;
+	char *page = p;
+
+	return 0;
+
+	p += sprintf(p, "dev:	     size	erasesize	name\n");
+	for (i = 0; i < gpt_info.num_of_partitions; i++) {
+		p += sprintf(p, "mmcblk0p%i: %08llx %08x \"%s\"\n", i + 1,
+				(u64)gpt_info.partitions.parts[i].size,
+				gpt_info.erase_size,
+				gpt_info.partitions.parts[i].info.volname);
+	}
+
+	return p - page;
+}
+
+static const struct file_operations emmc_partition_fops = {
+	.read	=	emmc_partition_read_proc,
+};
+
 /**
  * efi_partition(struct parsed_partitions *state)
  * @state
@@ -651,6 +684,10 @@ int efi_partition(struct parsed_partitions *state)
 
 	pr_debug("GUID Partition Table is valid!  Yea!\n");
 
+//	proc_create_data("emmc", 0666, NULL, &emmc_partition_fops, NULL);
+//	gpt_info.num_of_partitions = le32_to_cpu(gpt->num_partition_entries);
+//	gpt_info.erase_size = bdev_erase_size(state->bdev) * ssz;
+
 	for (i = 0; i < le32_to_cpu(gpt->num_partition_entries) && i < state->limit-1; i++) {
 		int partition_name_len;
 		struct partition_meta_info *info;
@@ -659,6 +696,8 @@ int efi_partition(struct parsed_partitions *state)
 		u64 start = le64_to_cpu(ptes[i].starting_lba);
 		u64 size = le64_to_cpu(ptes[i].ending_lba) -
 			   le64_to_cpu(ptes[i].starting_lba) + 1ULL;
+
+//		gpt_info.partitions.parts[i].size = size * ssz;
 
 		if (!is_pte_valid(&ptes[i], last_lba(state->bdev)))
 			continue;
@@ -698,6 +737,9 @@ int efi_partition(struct parsed_partitions *state)
 			if (c && !isprint(c))
 				c = '!';
 			info->volname[label_count] = c;
+//			if (label_count <= partition_name_len)
+//				gpt_info.partitions.parts[i].info.
+//					volname[label_count] = c;
 			label_count++;
 		}
 		state->parts[i + 1].has_info = true;

@@ -1,0 +1,11 @@
+
+menuconfig INPUT_YAS_SENSORS
+	bool "Sensors Support"
+	help
+	  Say Y to enable Sensors support.  This allows control of supported
+	  Sensors.
+
+if INPUT_YAS_SENSORS
+source "drivers/sensors/yas532/geomagnetic/Kconfig"
+source "drivers/sensors/yas532/orientation/Kconfig"
+endif # INPUT_YAS_SENSORS

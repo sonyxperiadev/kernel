@@ -162,114 +162,19 @@ static struct ov2675 *to_ov2675(const struct i2c_client *client)
 
 static const struct ov2675_timing_cfg timing_cfg_yuv[OV2675_SIZE_LAST] = {
 	[OV2675_SIZE_QVGA] = {
-			/*  Timing control  2624 x 1952 --> 2592 x 1944 */
-			      .x_addr_start = 16,
-			      .y_addr_start = 4,
-			      .x_addr_end = 2607,
-			      .y_addr_end = 1947,
-			/*  Output image size */
-			      .h_output_size = 320,
-			      .v_output_size = 240,
-			/*  ISP Windowing size 1296 x 972 --> 1280 x 960 */
-			      .isp_h_offset = 8,
-			      .isp_v_offset = 6,
-			/*  Total size (+blanking) */
-			      .h_total_size = 2200,
-			      .v_total_size = 1280,
-			/*  Sensor Read Binning Enabled */
-			      .h_odd_ss_inc = 3,
-			      .h_even_ss_inc = 1,
-			      .v_odd_ss_inc = 3,
-			      .v_even_ss_inc = 1,
-#ifdef CONFIG_MACH_HAWAII_GARNET
-				  .out_mode_sel = 0x01,
-#else
-			      .out_mode_sel = 0x07,
-#endif
 			      .sclk_dividers = 0x01,
 			      .sys_mipi_clk = 0x11,
 			       },
 	[OV2675_SIZE_VGA] = {
-			/*  Timing control  2624 x 1952 --> 2592 x 1944 */
-			      .x_addr_start = 16,
-			      .y_addr_start = 4,
-			      .x_addr_end = 2607,
-			      .y_addr_end = 1947,
-			/*  Output image size */
-			      .h_output_size = 640,
-			      .v_output_size = 480,
-			/*  ISP Windowing size  1296 x 972 --> 1280 x 960 */
-			      .isp_h_offset = 8,
-			      .isp_v_offset = 6,
-			/*  Total size (+blanking) */
-			      .h_total_size = 2200,
-			      .v_total_size = 1280,
-			/*  Sensor Read Binning Enabled */
-			      .h_odd_ss_inc = 3,
-			      .h_even_ss_inc = 1,
-			      .v_odd_ss_inc = 3,
-			      .v_even_ss_inc = 1,
-#ifdef CONFIG_MACH_HAWAII_GARNET
-				  .out_mode_sel = 0x01,
-#else
-			      .out_mode_sel = 0x07,
-#endif
+
 			      .sclk_dividers = 0x01,
 			      .sys_mipi_clk = 0x11,
 			       },
 	[OV2675_SIZE_1280x1024] = {
-			/*  Timing control  2624 x 1952 --> 2592 x 1944 */
-			      .x_addr_start = 16,
-			      .y_addr_start = 4,
-			      .x_addr_end = 2607,
-			      .y_addr_end = 1947,
-			/*  Output image size */
-			      .h_output_size = 1280,
-			      .v_output_size = 960,
-			/*  ISP Windowing size  1296 x 972 --> 1280 x 960 */
-			      .isp_h_offset = 8,
-			      .isp_v_offset = 6,
-			/*  Total size (+blanking) */
-			      .h_total_size = 2200,
-			      .v_total_size = 1280,
-			/*  Sensor Read Binning Enabled */
-			      .h_odd_ss_inc = 3,
-			      .h_even_ss_inc = 1,
-			      .v_odd_ss_inc = 3,
-			      .v_even_ss_inc = 1,
-#ifdef CONFIG_MACH_HAWAII_GARNET
-				  .out_mode_sel = 0x01,
-#else
-			      .out_mode_sel = 0x07,
-#endif
 			      .sclk_dividers = 0x01,
 			      .sys_mipi_clk = 0x11,
 			       },
 	[OV2675_SIZE_UXGA] = {
-			/*  Timing control  2624 x 1952 --> 2592 x 1944 */
-			      .x_addr_start = 16,
-			      .y_addr_start = 4,
-			      .x_addr_end = 2607,
-			      .y_addr_end = 1947,
-			/*  Output image size */
-			      .h_output_size = 1600,
-			      .v_output_size = 1200,
-			/*  ISP Windowing size	2592 x 1944 --> 2560 x 1920 */
-			      .isp_h_offset = 16,
-			      .isp_v_offset = 12,
-			/*  Total size (+blanking) */
-			      .h_total_size = 2844,
-			      .v_total_size = 1968,
-			/*  Sensor Read Binning Disabled */
-			      .h_odd_ss_inc = 1,
-			      .h_even_ss_inc = 1,
-			      .v_odd_ss_inc = 1,
-			      .v_even_ss_inc = 1,
-#ifdef CONFIG_MACH_HAWAII_GARNET
-				  .out_mode_sel = 0x00,
-#else
-			      .out_mode_sel = 0x06,
-#endif
 			      .sclk_dividers = 0x01,
 			      .sys_mipi_clk = 0x12,
 			      },
@@ -443,7 +348,7 @@ static int ov2675_reg_writes(struct i2c_client *client,
 	return 0;
 }
 
-#define XVCLK 2400
+#define XVCLK 2600
 static unsigned int m_iCombo_NightMode;
 static u8 ov2675_preview_R_gain;
 static u8 ov2675_preview_G_gain;
@@ -644,7 +549,7 @@ static int ov2675_get_shutter(struct v4l2_subdev *sd)
 
 	temp_reg = temp_reg + extra_exp_lines;
 
-/*printk(KERN_INFO "ov2675_get_shutter %d", temp_reg + extra_exp_lines);*/
+printk(KERN_INFO "ov2675_get_shutter %d", temp_reg);
 
 	if (temp_reg == 0)
 		temp_reg = 1;
@@ -693,6 +598,7 @@ static void ov2675_set_bandingfilter(struct v4l2_subdev *sd)
 	ov2675_preview_HTS = ov2675_get_HTS(sd);
 	preview_VTS = ov2675_get_VTS(sd);
 
+#if 0
 	/* calculate banding filter*/
 	/* 60Hz*/
 	band_step60 = ov2675_preview_sysclk * 100/ov2675_preview_HTS * 100/120;
@@ -714,9 +620,11 @@ static void ov2675_set_bandingfilter(struct v4l2_subdev *sd)
 
 	max_band50 = ((preview_VTS-4)/band_step50);
 	ov2675_reg_write(client, 0x301c, max_band50);
+
 	printk(KERN_INFO
 	       "%s: band_step60:0x%x max_band60:0x%x  band_step50:0x%x max_band50:0x%x\n",
 	       __func__, band_step60, max_band60, band_step50, max_band50);
+#endif
 
 }
 
@@ -792,7 +700,7 @@ static int ov2675_get_preview_exposure_gain(struct v4l2_subdev *sd)
 	ov2675_preview_binning = ov2675_get_binning(sd);
 
 	/* turn off night mode for capture*/
-	rc = ov2675_set_nightmode(sd, 0);
+	/*rc = ov2675_set_nightmode(sd, 0);*/
 	ov2675_dummyline = ov2675_get_dummyline(sd);
 
 	printk(KERN_INFO "ov2675_get_preview_exposure !!!");
@@ -815,10 +723,6 @@ static int ov2675_set_capture_exposure_gain(struct v4l2_subdev *sd)
 	u8 temp = 0;
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 
-	/* turn off AEC, AGC*/
-	ov2675_reg_read(client, 0x3013, &temp);
-	temp = temp & 0xfa;
-	ov2675_reg_write(client, 0x3013, temp);
 
 	capture_sysclk = ov2675_get_sysclk(sd);
 	capture_HTS = ov2675_get_HTS(sd);
@@ -837,7 +741,7 @@ static int ov2675_set_capture_exposure_gain(struct v4l2_subdev *sd)
 	/* calculate capture shutter*/
 	/* capture_shutter = ov2675_preview_shutter+ ov2675_dummyline;*/
 	capture_shutter = ov2675_preview_shutter;
-/*
+
 	printk(KERN_INFO "ov2675_set_capture_exposure !!!");
 
 	printk(KERN_INFO "ov2675_preview_gain16 %d", ov2675_preview_gain16);
@@ -846,7 +750,7 @@ static int ov2675_set_capture_exposure_gain(struct v4l2_subdev *sd)
 	printk(KERN_INFO "ov2675_preview_HTS %d", ov2675_preview_HTS);
 	printk(KERN_INFO "capture_HTS %d", capture_HTS);
 	printk(KERN_INFO "ov2675_preview_binning %d", ov2675_preview_binning);
-*/
+
 	capture_gain16 = ov2675_preview_gain16
 			* capture_sysclk/ov2675_preview_sysclk
 			* ov2675_preview_HTS/capture_HTS * ov2675_preview_binning;
@@ -876,7 +780,7 @@ static int ov2675_set_capture_exposure_gain(struct v4l2_subdev *sd)
 	if (capture_gain16 < 16)
 		capture_gain16 = 16;
 
-	/*printk(KERN_INFO "capture_gain16 set %d", capture_gain16);*/
+	printk(KERN_INFO "ov2675 capture_gain16 set %d", capture_gain16);
 
 	rc |= ov2675_set_gain(sd, capture_gain16);
 
@@ -886,7 +790,7 @@ static int ov2675_set_capture_exposure_gain(struct v4l2_subdev *sd)
 	}
 
 	ov2675_set_shutter(sd, capture_shutter);
-	/*printk(KERN_INFO "capture_shutter %d", capture_shutter);*/
+	printk(KERN_INFO "ov2675 capture_shutter %d", capture_shutter);
 
 	return rc;
 }
@@ -907,26 +811,30 @@ static int ov2675_config_preview(struct v4l2_subdev *sd)
 	int ret;
 	u8 val = 0;
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
-
-	ov2675_reg_writes(client, ov2675_streamoff);
+	printk(KERN_INFO "@+ov2675_config_preview!");
 
 	/* set OV2675 to preview mode*/
 	ret = ov2675_reg_writes(client, yuv422_init_common);
 
+	if (ov2675_preview_shutter != 0) {
+		ov2675_set_gain(sd, ov2675_preview_gain16);
+		ov2675_set_shutter(sd, ov2675_preview_shutter);
+	}
+	if (ov2675_preview_R_gain != 0) {
+		ov2675_reg_write(client, 0x3306, 0x02);
+		ov2675_reg_write(client, 0x3337, ov2675_preview_R_gain);
+		ov2675_reg_write(client, 0x3338, ov2675_preview_G_gain);
+		ov2675_reg_write(client, 0x3339, ov2675_preview_B_gain);
+	}
 	/* calculate banding filter*/
 	ov2675_set_bandingfilter(sd);
 
 	/* turn on AEC, AGC*/
-	ov2675_reg_read(client, 0x3013, &val);
-	val = val | 0x05;
-	ov2675_reg_write(client, 0x3013, val);
+	ov2675_reg_write(client, 0x3013, 0xf7);
+	/*awb enable*/
+	ov2675_reg_write(client, 0x3306, 0x00);
 
-	/*ov2675_set_preview_exposure_gain(sd);*/
-	/*ov2675_set_night_mode(sd, m_iCombo_NightMode);*/
-
-	ov2675_reg_writes(client, ov2675_streamon);
-
-	printk(KERN_INFO "ov2675_config_preview!");
+	printk(KERN_INFO "@-ov2675_config_preview!");
 
 	return ret;
 }
@@ -943,22 +851,35 @@ static int ov2675_config_capture(struct v4l2_subdev *sd)
 	unsigned long capture_gain16_shutter;
 	u8 temp = 0;
 
-	printk(KERN_INFO "ov2675_config_capture!");
+	printk(KERN_INFO "@+ov2675_config_capture!");
 
-	ov2675_reg_writes(client, ov2675_streamoff);
-
+	ov2675_reg_write(client, 0x3013, 0xf2);/*manualAEC&AGC*/
 	ov2675_get_preview_exposure_gain(sd);
+
+	ov2675_reg_write(client, 0x330c, 0x02);
+	ov2675_reg_read(client, 0x330f, &temp);
+	ov2675_preview_R_gain = temp;
+	ov2675_reg_write(client, 0x330c, 0x03);
+	ov2675_reg_read(client, 0x330f, &temp);
+	ov2675_preview_G_gain = temp;
+	ov2675_reg_write(client, 0x330c, 0x04);
+	ov2675_reg_read(client, 0x330f, &temp);
+	ov2675_preview_B_gain = temp;
+
+	printk(KERN_INFO "ov2675_preview_R_gain 0x%x", ov2675_preview_R_gain);
+	printk(KERN_INFO "ov2675_preview_G_gain 0x%x", ov2675_preview_G_gain);
+	printk(KERN_INFO "ov2675_preview_B_gain 0x%x", ov2675_preview_B_gain);
 
 	ov2675_capture_setting(sd);
 
-	ov2675_reg_read(client, 0x3012, &temp);
-	printk(KERN_INFO "capture 0x3012 0x%x", temp);
-
 	ov2675_set_capture_exposure_gain(sd);
 
-	ov2675_reg_writes(client, ov2675_streamon);
+	ov2675_reg_write(client, 0x3306, 0x02);
+	ov2675_reg_write(client, 0x3337, ov2675_preview_R_gain);
+	ov2675_reg_write(client, 0x3338, ov2675_preview_G_gain);
+	ov2675_reg_write(client, 0x3339, ov2675_preview_B_gain);
 
-	msleep(100);
+	printk(KERN_INFO "@-ov2675_config_capture!");
 
 	return ret;
 }
@@ -969,20 +890,20 @@ static int ov2675_s_stream(struct v4l2_subdev *sd, int enable)
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct ov2675 *ov2675 = to_ov2675(client);
 	int ret = 0;
-	printk(KERN_INFO "%s: enable:%d runmode:%d\n", __func__, enable,
-	       runmode);
+	printk(KERN_INFO "%s: enable:%d stream_mode:%d\n", __func__, enable,
+	       stream_mode);
 
 	if (enable == stream_mode)
 		return ret;
 
 	if (enable) {
 		/* Start Streaming */
-		ret = ov2675_reg_writes(client, ov2675_streamon);
+/*		ret = ov2675_reg_writes(client, ov2675_streamon);
 		msleep(50);
-
+*/
 	} else {
 		/* Stop Streaming, Power Down*/
-		ret = ov2675_reg_writes(client, ov2675_streamoff);
+/*		ret = ov2675_reg_writes(client, ov2675_streamoff);*/
 	}
 	stream_mode = enable;
 
@@ -1009,6 +930,7 @@ static unsigned long ov2675_query_bus_param(struct soc_camera_device *icd)
 	return flags;
 }
 
+static int initNeeded = -1;
 static int ov2675_enum_input(struct soc_camera_device *icd,
 			     struct v4l2_input *inp)
 {
@@ -1031,6 +953,9 @@ static int ov2675_enum_input(struct soc_camera_device *icd,
 			inp->status |= V4L2_IN_ST_BACK;
 
 	}
+	stream_mode = -1;
+	initNeeded = 1;
+
 	return 0;
 }
 
@@ -1081,9 +1006,9 @@ static int ov2675_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 	ov2675->i_fmt = ov2675_find_datafmt(mf->code);
 
 	/*To avoide reentry init sensor, remove from here	*/
-	/*ret =  ov2675_reg_writes(client,configscript_common1);*/
-	if (runmode == CAM_RUNNING_MODE_PREVIEW) {
+	if (initNeeded > 0) {
 		ret = ov2675_reg_writes(client, configscript_common1);
+		initNeeded = 0;
 		printk(KERN_INFO "ov2675 init configscript_common1!");
 	}
 
@@ -1107,9 +1032,10 @@ static int ov2675_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 		return ret;
 	}
 
-	if (CAM_RUNNING_MODE_PREVIEW == runmode)
+	if (CAM_RUNNING_MODE_PREVIEW == runmode) {
 		ov2675_config_preview(sd);
-
+		msleep(20);
+	}
 
 	return ret;
 }
@@ -1190,21 +1116,21 @@ static int ov2675_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 
 		switch (ov2675->brightness) {
 		case EV_MINUS_1:
-			ov2675_reg_write(client, 0x3018, 0x58);
-			ov2675_reg_write(client, 0x3019, 0x48);
-			ov2675_reg_write(client, 0x301a, 0x62);
+			ov2675_reg_write(client, 0x3018, 0x84);
+			ov2675_reg_write(client, 0x3019, 0x74);
+			ov2675_reg_write(client, 0x301a, 0xd4);
 
 			break;
 		case EV_PLUS_1:
-			ov2675_reg_write(client, 0x3018, 0x78);
-			ov2675_reg_write(client, 0x3019, 0x68);
-			ov2675_reg_write(client, 0x301a, 0x82);
+			ov2675_reg_write(client, 0x3018, 0x94);
+			ov2675_reg_write(client, 0x3019, 0x84);
+			ov2675_reg_write(client, 0x301a, 0xd4);
 
 			break;
 		default:
-			ov2675_reg_write(client, 0x3018, 0x68);
-			ov2675_reg_write(client, 0x3019, 0x58);
-			ov2675_reg_write(client, 0x301a, 0x62);
+			ov2675_reg_write(client, 0x3018, 0x8c);
+			ov2675_reg_write(client, 0x3019, 0x7c);
+			ov2675_reg_write(client, 0x301a, 0xd4);
 
 			break;
 		}
@@ -1357,7 +1283,7 @@ static int ov2675_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		switch (ov2675->whitebalance) {
 		case WHITE_BALANCE_FLUORESCENT:
 			ov2675_reg_write(client, 0x3306, ov_reg|0x02);
-			ov2675_reg_write(client, 0x3337, 0x5e);
+			ov2675_reg_write(client, 0x3337, 0x56);
 			ov2675_reg_write(client, 0x3338, 0x40);
 			ov2675_reg_write(client, 0x3339, 0x58);
 
@@ -1756,7 +1682,9 @@ static int ov2675_g_skip_frames(struct v4l2_subdev *sd, u32 *frames)
 {
 	/* Quantity of initial bad frames to skip. Revisit. */
 	/*Waitting for AWB stability,  avoid green color issue*/
-	*frames = 5;
+	*frames = 15;
+	if (runmode == CAM_RUNNING_MODE_CAPTURE)
+		*frames = 6;
 
 	return 0;
 }

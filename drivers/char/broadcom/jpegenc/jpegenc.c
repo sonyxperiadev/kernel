@@ -148,7 +148,9 @@ static int jpegenc_open(struct inode *inode, struct file *filp)
 	}
 	/* Ensure that only one CORE handles interrupt for the MM block. */
 	irq_set_affinity(IRQ_JPEGENC, cpumask_of(0));
-	disable_irq(IRQ_JPEGENC);
+	/*Since JPEG Enc and ISO share the same IRQ, dont disable after open
+	ISP Interrupts are not coming */
+	/*disable_irq(IRQ_JPEGENC);*/
 	return 0;
 
 

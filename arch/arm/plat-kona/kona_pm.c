@@ -34,13 +34,18 @@
 #include <plat/profiler.h>
 #include <mach/kona_timer.h>
 #endif /*CONFIG_KONA_PROFILER*/
+#include <mach/timex.h>
+
+#ifdef CONFIG_USE_ARCH_TIMER_AS_LOCAL_TIMER
+#include <linux/clockchips.h>
+#include <mach/pm.h>
+#endif
 
 #ifdef CONFIG_KONA_PROFILER
 int deepsleep_profiling;
 module_param_named(deepsleep_profiling, deepsleep_profiling, int,
 	S_IRUGO | S_IWUSR | S_IWGRP);
 #endif /*CONFIG_KONA_PROFILER*/
-
 
 enum {
 	KONA_PM_LOG_LVL_NONE = 0,
@@ -104,6 +109,8 @@ static int __kona_pm_enter_idle(struct cpuidle_device *dev,
 
 	BUG_ON(!kona_state);
 
+	int cpu_id = smp_processor_id();
+
 	if (pm_prms.idle_en) {
 
 #warning "Porting hack: To be verified by PM team"
@@ -119,11 +126,33 @@ static int __kona_pm_enter_idle(struct cpuidle_device *dev,
 		local_fiq_disable();
 		instrument_idle_entry();
 
+/*
+ * Note that we have to do this migration only during Dormant.
+ * When we enter into suspend, we don't care since the framework anyway
+ * migrates the pending timers and also cpu_die()s the given CPU.
+ * So doing this notification from mach-xxx/pm.c, function enter_idle_state
+ * would not be appropriate. Because enter_idle_state is called from "suspend"
+ * path. From idle path if we have to enter Dormant, this funciton is called.
+ * So take the decission here. But the flag CSTATE_DS_DRMT is defined in
+ * mach/pm.h, so we are including mach header file in plat file, this is the
+ * trade off.
+ */
+#ifdef CONFIG_USE_ARCH_TIMER_AS_LOCAL_TIMER
+		if (kona_state->state & CSTATE_DS_DRMT)
+			clockevents_notify(CLOCK_EVT_NOTIFY_BROADCAST_ENTER,
+				&cpu_id);
+#endif
 		if (kona_state->enter) {
 			mach_ret = kona_state->enter(kona_state,
 					kona_state->params);
 		} else
 			cpu_do_idle();
+
+#ifdef CONFIG_USE_ARCH_TIMER_AS_LOCAL_TIMER
+		if (kona_state->state & CSTATE_DS_DRMT)
+			clockevents_notify(CLOCK_EVT_NOTIFY_BROADCAST_EXIT,
+				&cpu_id);
+#endif
 		instrument_idle_exit();
 
 		local_irq_enable();
@@ -180,7 +209,7 @@ __weak int kona_mach_pm_enter(suspend_state_t state)
 	int ret = 0;
 #ifdef CONFIG_KONA_PROFILER
 	int err = 0;
-	long unsigned time_awake, time1, time2;
+	u64 time_awake, time1, time2, time_susp;
 	struct ccu_prof_parameter param = {
 		.count_type = CCU_PROF_ALWAYS_ON,
 	};
@@ -212,34 +241,28 @@ __weak int kona_mach_pm_enter(suspend_state_t state)
 #endif
 
 #ifdef CONFIG_KONA_PROFILER
-			if (deepsleep_profiling)
-				err = start_profiler("ccu_root",
+			err = start_profiler("ccu_root",
 						((void *)&param));
+#endif /*CONFIG_KONA_PROFILER*/
 
 			time1 = kona_hubtimer_get_counter();
-#endif /*CONFIG_KONA_PROFILER*/
-			time1 = kona_hubtimer_get_counter();
-					pr_info(" Timer value before suspend: %lu",
-						time1);
+			pr_info(" Timer value before suspend: %llu", time1);
 			suspend->enter(suspend,
 				suspend->params | CTRL_PARAMS_ENTER_SUSPEND);
 			time2 = kona_hubtimer_get_counter();
-					pr_info(" Timer value when resume: %lu",
-						time2);
-					pr_info("Approx Suspend Time: %lums",
-						(time2 - time1)/32);
+
+			pr_info(" Timer value when resume: %llu", time2);
+			time_susp = ((time2 - time1) * 1000)/CLOCK_TICK_RATE;
+			pr_info("Approx Suspend Time: %llums", time_susp);
+
 #ifdef CONFIG_KONA_PROFILER
-			time2 = kona_hubtimer_get_counter();
-			if (!err && deepsleep_profiling) {
+			if (!err) {
 				time_awake = stop_profiler("ccu_root");
 				if (time_awake == OVERFLOW_VAL)
 					printk(KERN_ALERT "counter overflow");
-				else if	(time_awake > 0) {
-					pr_info("Approx Suspend Time: %lums",
-						(time2 - time1)/32);
-					pr_info("System remained awake: %lums",
-						time_awake);
-				}
+				else if	(time_awake > 0)
+					pr_info("System in deepsleep: %llums",
+						time_susp - time_awake);
 			}
 #endif /*CONFIG_KONA_PROFILER*/
 
@@ -275,7 +298,8 @@ int kona_pm_cpu_lowpower(void)
 	 * to DORMANT_CORE_DOWN.
 	 */
 	if (suspend->enter) {
-		suspend->enter(suspend, suspend->params);
+		suspend->enter(suspend,
+			suspend->params | CTRL_PARAMS_OFFLINE_CORE);
 	}
 	return 0;
 }
@@ -307,6 +331,19 @@ static struct platform_suspend_ops kona_pm_ops = {
 };
 
 #endif /*CONFIG_SUSPEND */
+
+
+#ifdef CONFIG_USE_ARCH_TIMER_AS_LOCAL_TIMER
+/*
+ * setup the broadcast timer in order to migrae the timers for C3 state
+ *
+ */
+static void kona_setup_broadcast_timer(void *arg)
+{
+	int cpu = smp_processor_id();
+	clockevents_notify(CLOCK_EVT_NOTIFY_BROADCAST_ON, &cpu);
+}
+#endif
 
 /**
  * kona_pm_init - init function init Kona platform idle/suspend
@@ -361,6 +398,12 @@ int __init kona_pm_init(struct pm_init_param *ip)
 	}
 	kona_idle_driver.state_count = ip->num_states;
 	kona_idle_driver.safe_state_index = 0;
+
+#ifdef CONFIG_USE_ARCH_TIMER_AS_LOCAL_TIMER
+	/* Configure broadcast timer for each CPU */
+	on_each_cpu(kona_setup_broadcast_timer, NULL, 1);
+#endif
+
 #warning "Porting hack: To be verified by PM team"
 #if 0
 	ret = cpuidle_register_driver(&kona_idle_driver);

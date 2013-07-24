@@ -1,0 +1,20 @@
+
+menuconfig NEW_SENSORS
+	bool "Sensors Support"
+	help
+		Say Y to enable Sensors support. This allows control of supported
+		Sensors.
+
+if NEW_SENSORS
+config SENSORS_CORE
+         bool "sensors_core"
+         depends on I2C
+
+config YAS_532_ENABLE
+	bool "yas 532 sensor YAS 4.2.602"
+	depends on I2C
+	default n
+
+source "drivers/sensors/yas532/Kconfig"
+endif # NEW_SENSORS
+

@@ -2,6 +2,8 @@
 #ifndef __HAWAII_PI_MNGR_H__
 #define __HAWAII_PI_MNGR_H__
 
+#define MM_CLK_SRC_312M  1
+
 enum {
 	PI_MGR_PI_ID_MM,
 	PI_MGR_PI_ID_HUB_SWITCHABLE,

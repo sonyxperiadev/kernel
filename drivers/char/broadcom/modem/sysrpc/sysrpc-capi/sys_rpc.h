@@ -20,6 +20,7 @@ XDR_ENUM_DECLARE(PMU_SIMLDO_t)
 XDR_ENUM_DECLARE(PMU_SIMVolt_t)
 XDR_ENUM_DECLARE(Result_t)
 
+
 XDR_STRUCT_DECLARE(SYS_SIMLOCK_SIM_DATA_t)
 XDR_STRUCT_DECLARE(SYS_SIMLOCK_STATE_t)
  /**
@@ -89,6 +90,8 @@ typedef struct tag_SYS_ReqRep_t {
 		SYS_SimApi_GetCurrLockedSimlockTypeEx_Rsp_t
 		 SYS_SimApi_GetCurrLockedSimlockTypeEx_Rsp;
 		CAPI2_SYS_SoftResetSystem_Req_t   CAPI2_SYS_SoftResetSystem_Req;
+		struct SYS_APSystemCmd_Req_t
+			SYS_APSystemCmd_Req;
 #endif	/*DEVELOPMENT_SYSRPC_UNION_DECLARE */
 /*** _SYSRPC_CODE_GEN_END_ ***/
 

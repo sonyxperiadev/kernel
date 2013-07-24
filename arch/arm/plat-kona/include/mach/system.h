@@ -49,6 +49,8 @@
 #include <linux/broadcom/knllog.h>
 #endif
 
+#include <plat/cpu.h>
+
 #ifdef CONFIG_BCM_IDLE_PROFILER
 DECLARE_PER_CPU(u32, idle_count);
 #endif
@@ -83,7 +85,8 @@ static void kona_reset(char mode, const char *cmd)
 	unsigned int val;
 
 #ifdef CONFIG_DISABLE_USBBOOT_NEXTBOOT
-	__disable_usb_in_next_boot();
+	if (get_chip_id() < KONA_CHIP_ID_JAVA_A1)
+		__disable_usb_in_next_boot();
 #endif
 
 	/*

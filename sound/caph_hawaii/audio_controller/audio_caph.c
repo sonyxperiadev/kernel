@@ -54,6 +54,19 @@ the GPL, without Broadcom's express prior written consent.
 #include "caph_common.h"
 #include "audio_trace.h"
 
+#ifdef CONFIG_ARCH_JAVA
+#include <linux/slab.h>
+static struct workqueue_struct *pWorkqueue_AudioControl;
+#define TIMEOUT_STOP_REQ_MS 60000
+#ifdef CONFIG_SMP
+#define QUEUE_WORK(x, y) queue_work(x, \
+		(struct work_struct *)y);
+#else
+#define QUEUE_WORK(x, y) queue_work_on(0, x, \
+		(struct work_struct *)y);
+#endif
+#endif
+
 #define USE_HR_TIMER
 /* #define USE_HUBCLK_AUTOGATE_WORKAROUND */
 /* for unknown reason, aadmac autogate bit
@@ -76,6 +89,11 @@ static ktime_t ktime;
  *
  */
 struct _TMsgBrcmAudioCtrl {
+#ifdef CONFIG_ARCH_JAVA
+	struct work_struct mwork;
+	struct completion comp;
+	bool timeout;
+#endif
 	BRCM_AUDIO_ACTION_en_t action_code;
 	BRCM_AUDIO_Control_Params_un_t param;
 	void *pCallBack;
@@ -84,6 +102,7 @@ struct _TMsgBrcmAudioCtrl {
 };
 #define	TMsgAudioCtrl struct _TMsgBrcmAudioCtrl
 
+#ifndef CONFIG_ARCH_JAVA
 /**
  * The thread private data structure
  */
@@ -105,6 +124,7 @@ struct TAudioHalThreadData {
 	struct kfifo m_pkfifo_out;
 	spinlock_t m_lock_out;
 };
+#endif
 
 #if 0
 static char action_names[ACTION_AUD_TOTAL][40] = {
@@ -153,10 +173,15 @@ static char action_names[ACTION_AUD_TOTAL][40] = {
 #endif
 
 static unsigned int pathID[CTL_STREAM_PANEL_LAST];
+static int telephonyIsEnabled;
+
+#ifdef CONFIG_ARCH_JAVA
+static void AUDIO_Ctrl_Process(TMsgAudioCtrl *msgAudioCtrl);
+#else
 static unsigned int n_msg_in, n_msg_out, last_action;
 static struct completion complete_kfifo;
 static struct TAudioHalThreadData sgThreadData;
-static int telephonyIsEnabled;
+
 static DEFINE_MUTEX(mutexBlock);
 
 #define KFIFO_SIZE		2048
@@ -165,6 +190,8 @@ static DEFINE_MUTEX(mutexBlock);
 
 static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 			       void *arg_param, void *callback, int block);
+#endif
+
 #ifdef CONFIG_AUDIO_S2
 static unsigned int pcm_vibra_path_id;
 static AUDIO_DRIVER_HANDLE_t pcm_vibra_drv_handle;
@@ -213,6 +240,9 @@ void TimerCbStopVibrator(unsigned long priv)
  */
 static void AudioCtrlWorkThread(struct work_struct *work)
 {
+#ifdef CONFIG_ARCH_JAVA
+	TMsgAudioCtrl *msgAudioCtrl = container_of(work, TMsgAudioCtrl, mwork);
+#else
 	TMsgAudioCtrl msgAudioCtrl;
 	unsigned int len = 0;
 
@@ -243,17 +273,31 @@ static void AudioCtrlWorkThread(struct work_struct *work)
 
 		n_msg_in++;
 		last_action = msgAudioCtrl.action_code;
+#endif
 #if defined(CONFIG_BCM_MODEM)
 		if (is_dsp_timeout())
 			return;
 #endif
+#ifdef CONFIG_ARCH_JAVA
+	/* process the operation */
+	AUDIO_Ctrl_Process(msgAudioCtrl);
+
+	if ((msgAudioCtrl && msgAudioCtrl->block != 1)
+					|| (msgAudioCtrl->timeout)) {
+		kfree(msgAudioCtrl);
+		return;
+	}
+
+	if (msgAudioCtrl->block == 1)
+		complete(&msgAudioCtrl->comp);
+#else
 		/* process the operation */
 		AUDIO_Ctrl_Process(msgAudioCtrl.action_code,
 				   &msgAudioCtrl.param,
 				   msgAudioCtrl.pCallBack, msgAudioCtrl.block);
 		n_msg_out++;
 	}
-
+#endif
 	return;
 }
 
@@ -291,7 +335,9 @@ void caph_audio_init(void)
 {
 	AUDDRV_RegisterRateChangeCallback(AudioCodecIdHander);
 	AUDDRV_RegisterHandleCPResetCB(CPResetHandler);
+#ifndef CONFIG_ARCH_JAVA
 	init_completion(&complete_kfifo);
+#endif
 #if defined(CONFIG_BCM_MODEM)
 	set_flag_dsp_timeout(0);
 #endif
@@ -311,7 +357,12 @@ void caph_audio_init(void)
  */
 int LaunchAudioCtrlThread(void)
 {
-	int ret;
+	int ret = 0;
+#ifdef CONFIG_ARCH_JAVA
+	pWorkqueue_AudioControl = alloc_ordered_workqueue(
+			"AudioCtrlWq", WQ_MEM_RECLAIM);
+	if (!pWorkqueue_AudioControl) {
+#else
 	spin_lock_init(&sgThreadData.m_lock);
 	spin_lock_init(&sgThreadData.m_lock_out);
 
@@ -333,13 +384,19 @@ int LaunchAudioCtrlThread(void)
 	 * DEBUG("LaunchAudioCtrlThread KFIFO_SIZE= %d actual =%d\n",
 	 * KFIFO_SIZE,sgThreadData.m_pkfifo_out.size);
 	 */
+	sgThreadData.action_complete = OSSEMAPHORE_Create(0, 0);
+
 	INIT_WORK(&sgThreadData.mwork, AudioCtrlWorkThread);
 
 	sgThreadData.pWorkqueue_AudioControl = alloc_ordered_workqueue(
 		"AudioCtrlWq", WQ_MEM_RECLAIM);
-	if (!sgThreadData.pWorkqueue_AudioControl)
+
+	if (!sgThreadData.pWorkqueue_AudioControl) {
+#endif
 		aError("\n Error : Can not create work queue:AudioCtrlWq\n");
-	sgThreadData.action_complete = OSSEMAPHORE_Create(0, 0);
+		return -1;
+	}
+
 #ifndef USE_HR_TIMER
 	gpVibratorTimer = NULL;
 #endif
@@ -352,13 +409,19 @@ int LaunchAudioCtrlThread(void)
  */
 int TerminateAudioHalThread(void)
 {
-
+#ifdef CONFIG_ARCH_JAVA
+	if (pWorkqueue_AudioControl) {
+		flush_workqueue(pWorkqueue_AudioControl);
+		destroy_workqueue(pWorkqueue_AudioControl);
+	}
+#else
 	if (sgThreadData.pWorkqueue_AudioControl) {
 		flush_workqueue(sgThreadData.pWorkqueue_AudioControl);
 		destroy_workqueue(sgThreadData.pWorkqueue_AudioControl);
 	}
 	kfifo_free(&sgThreadData.m_pkfifo);
 	kfifo_free(&sgThreadData.m_pkfifo_out);
+#endif
 	return 0;
 }
 
@@ -505,6 +568,153 @@ static int AUDIO_Ctrl_Trigger_GetParamsSize(BRCM_AUDIO_ACTION_en_t action_code)
   *
   * Return 0 for success, non-zero for error code
   */
+
+#ifdef CONFIG_ARCH_JAVA
+Result_t AUDIO_Ctrl_Trigger(BRCM_AUDIO_ACTION_en_t action_code,
+		void *arg_param, void *callback, int block)
+{
+	TMsgAudioCtrl *msgAudioCtrl = NULL;
+	Result_t status = RESULT_OK;
+	static int record48K_in_call_is_blocked;
+	int params_size = 0;
+	long ret = 0;
+
+	if (is_dsp_timeout())
+		return RESULT_OK;
+
+	if (action_code < ACTION_AUD_OpenPlay
+				|| action_code >= ACTION_AUD_TOTAL) {
+		aWarn("AUDIO_Ctrl_Trigger: Not a Valid action code: %d",
+								action_code);
+		return RESULT_ERROR;
+	}
+	if (action_code == ACTION_AUD_StartPlay ||
+			action_code == ACTION_AUD_StopPlay ||
+			action_code == ACTION_AUD_PausePlay ||
+			action_code == ACTION_AUD_ResumePlay ||
+			action_code == ACTION_AUD_StartRecord ||
+			action_code == ACTION_AUD_StopRecord ||
+			action_code == ACTION_AUD_RateChange ||
+			action_code == ACTION_AUD_AddChannel ||
+			action_code ==  ACTION_AUD_RemoveChannel)
+		msgAudioCtrl = (TMsgAudioCtrl *)
+			kzalloc(sizeof(TMsgAudioCtrl), GFP_ATOMIC);
+	else
+		msgAudioCtrl = (TMsgAudioCtrl *)
+			kzalloc(sizeof(TMsgAudioCtrl), GFP_KERNEL);
+
+	if (!msgAudioCtrl) {
+		aError(
+				"Unable to allocate memory"
+				"for workqueue action_code = %d!!!\n",
+				action_code);
+		return RESULT_ERROR;
+	}
+
+	/** BEGIN: not support 48KHz recording during voice call */
+	if (action_code == ACTION_AUD_StartRecord) {
+
+		BRCM_AUDIO_Param_Start_t param_start;
+		memcpy((void *)&param_start, arg_param,
+				sizeof(BRCM_AUDIO_Param_Start_t));
+
+		if (param_start.callMode == MODEM_CALL
+				&& param_start.rate == AUDIO_SAMPLING_RATE_48000
+				&& param_start.pdev_prop->c.source !=
+				AUDIO_SOURCE_I2S
+				&& param_start.pdev_prop->c.drv_type
+				== AUDIO_DRIVER_CAPT_HQ
+				/*FM recording is supported*/
+				&& telephonyIsEnabled == TRUE) {
+
+			aError("StartRecord failed.	48KHz in call");
+			record48K_in_call_is_blocked = 1;
+			kfree((void *)msgAudioCtrl);
+			return RESULT_ERROR;
+		}
+	}
+
+	/** EDN: not support 48KHz recording during voice call.*/
+	if (action_code == ACTION_AUD_StopRecord) {
+
+		BRCM_AUDIO_Param_Stop_t param_stop;
+		memcpy((void *)&param_stop, arg_param,
+				sizeof(BRCM_AUDIO_Param_Stop_t));
+
+		if (param_stop.callMode == MODEM_CALL
+				&& param_stop.pdev_prop->c.source !=
+				AUDIO_SOURCE_I2S
+				&& param_stop.pdev_prop->c.drv_type
+				== AUDIO_DRIVER_CAPT_HQ
+				/*FM recording is supported*/
+				&& telephonyIsEnabled == TRUE
+				&& record48K_in_call_is_blocked == 1
+				/* if start recording from digi mic in
+				 * idle mode,then start voice call,
+				   when stop recording the path shall
+				   be disabled.
+				   */
+		   ) {
+
+			record48K_in_call_is_blocked = 0;
+			kfree((void *)msgAudioCtrl);
+			return RESULT_ERROR;
+		}
+	}
+
+	if (action_code == ACTION_AUD_DisableByPassVibra_CB)
+		action_code = ACTION_AUD_DisableByPassVibra;
+
+	params_size = AUDIO_Ctrl_Trigger_GetParamsSize(action_code);
+	msgAudioCtrl->action_code = action_code;
+
+	if (arg_param)
+		memcpy(&msgAudioCtrl->param, arg_param, params_size);
+	else
+		memset(&msgAudioCtrl->param, 0, params_size);
+
+	msgAudioCtrl->pCallBack = callback;
+	msgAudioCtrl->block = block;
+
+	INIT_WORK(&msgAudioCtrl->mwork , AudioCtrlWorkThread);
+
+	if (msgAudioCtrl->block == 1)
+		init_completion(&msgAudioCtrl->comp);
+
+	if (msgAudioCtrl && msgAudioCtrl->block == 1) {
+		QUEUE_WORK(pWorkqueue_AudioControl, msgAudioCtrl);
+		ret = wait_for_completion_interruptible_timeout(
+				&msgAudioCtrl->comp,
+				msecs_to_jiffies(TIMEOUT_STOP_REQ_MS));
+		if (ret <= 0) {
+			aError(
+					"ERROR timeout waiting for"
+					"STOP REQ.t=%d ret=%ld action_code=%d\n",
+					TIMEOUT_STOP_REQ_MS, ret, action_code);
+
+			if (work_pending(&msgAudioCtrl->mwork)) {
+				aWarn("Freeing pending work, action code=%d",
+						action_code);
+				cancel_work_sync(&msgAudioCtrl->mwork);
+				kfree(msgAudioCtrl);
+			} else
+				msgAudioCtrl->timeout = TRUE;
+
+			return RESULT_ERROR;
+		} else {
+			if (arg_param != NULL)
+				memcpy(arg_param, &msgAudioCtrl->param,
+								params_size);
+			else
+				memset(&msgAudioCtrl->param, 0, params_size);
+		}
+		kfree(msgAudioCtrl);
+	} else
+		QUEUE_WORK(pWorkqueue_AudioControl, msgAudioCtrl);
+
+	return status;
+}
+#else
 Result_t AUDIO_Ctrl_Trigger(BRCM_AUDIO_ACTION_en_t action_code,
 			    void *arg_param, void *callback, int block)
 {
@@ -737,14 +947,23 @@ AUDIO_Ctrl_Trigger_Wait:
 
 	return status;
 }
+#endif
 
+#ifdef CONFIG_ARCH_JAVA
+static void AUDIO_Ctrl_Process(TMsgAudioCtrl *msgAudioCtrl)
+{
+	BRCM_AUDIO_ACTION_en_t action_code = msgAudioCtrl->action_code;
+	void *arg_param = &msgAudioCtrl->param;
+	int block = msgAudioCtrl->block;
+#else
 static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 			       void *arg_param, void *callback, int block)
 {
 	TMsgAudioCtrl msgAudioCtrl;
 	unsigned int len;
-	int i;
-	unsigned int path;
+#endif
+	int i = 0;
+	unsigned int path = 0;
 
 #ifdef CHECK_AADMAC_AUTOGATE_STATUS
 	if (get_chip_id() < KONA_CHIP_ID_JAVA_A0) {
@@ -811,7 +1030,8 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 				source,
 				param_start->pdev_prop->p[0].
 				sink, param_start->channels,
-				param_start->rate, &path);
+				param_start->rate,
+				param_start->bitsPerSample, &path);
 				pathID[param_start->stream] = path;
 
 			AUDIO_DRIVER_Ctrl(param_start->drv_handle,
@@ -958,6 +1178,7 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 						param_resume->pdev_prop->
 						p[0].sink,
 						param_resume->channels,
+						param_resume->bits_per_sample,
 						param_resume->rate, &path);
 			pathID[param_resume->stream] = path;
 		}
@@ -1391,8 +1612,8 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 			AUDCTRL_EnablePlay(parm_FM->source,
 					   parm_FM->sink,
 					   AUDIO_CHANNEL_STEREO,
-					   AUDIO_SAMPLING_RATE_48000, &path);
-
+						AUDIO_SAMPLING_RATE_48000,
+						16, &path);
 			pathID[parm_FM->stream] = path;
 		}
 		break;
@@ -1738,6 +1959,13 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 		break;
 	}
 
+#ifdef CONFIG_ARCH_JAVA
+	if ((msgAudioCtrl->pCallBack != NULL) && (!msgAudioCtrl->timeout)) {
+		PFuncAudioCtrlCB pCB = (PFuncAudioCtrlCB)msgAudioCtrl->
+								pCallBack;
+		pCB(block);
+	}
+#else
 	if (block & 1) {
 		/* put the message in output fifo if waiting */
 		msgAudioCtrl.action_code = action_code;
@@ -1766,7 +1994,7 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 		PFuncAudioCtrlCB pCB = (PFuncAudioCtrlCB)callback;
 		pCB(block);
 	}
-
+#endif
 
 }
 

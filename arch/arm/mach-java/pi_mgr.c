@@ -71,10 +71,12 @@ struct opp_info __arm_opp_info[] = {
 	[1] = {
 		.freq_id = PROC_CCU_FREQ_ID_NRML,
 		.opp_id = PI_OPP_NORMAL,
+		.ctrl_prms = PROC_FREQ_NORMAL_DIV,
 	},
 	[2] = {
 		.freq_id = PROC_CCU_FREQ_ID_TURBO,
 		.opp_id = PI_OPP_TURBO,
+		.ctrl_prms = PROC_FREQ_TURBO_DIV,
 	},
 	[3] = {
 		.freq_id = PROC_CCU_FREQ_ID_SUPER_TURBO,
@@ -214,6 +216,7 @@ struct opp_info __mm_opp_info[] = {
 	[3] = {
 		.freq_id = MM_CCU_FREQ_ID_SUPER_TURBO,
 		.opp_id = PI_OPP_SUPER_TURBO,
+		.ctrl_prms = MM_CLK_SRC_312M,
 	},
 #endif
 };
@@ -240,7 +243,7 @@ struct opp_info __mm2_opp_info[] = {
 };
 
 struct opp_info *mm_opp_info[] = {__mm_opp_info, __mm2_opp_info};
-u32 mm_weightage[] = {35, 50, 0, 0};
+u32 mm_weightage[] = {0, 0, 0, 0};
 
 struct pi_opp mm_opp = {
 	.opp_info = mm_opp_info,

@@ -26,40 +26,46 @@ the GPL, without Broadcom's express prior written consent.
 
 DEFINE_MUTEX(mm_fmwk_mutex);
 LIST_HEAD(mm_dev_list);
+LIST_HEAD(mm_file_list);
 static struct workqueue_struct *single_wq;
 static char *single_wq_name = "mm_wq";
-wait_queue_head_t mm_queue;
-DEFINE_MUTEX(mm_common_mutex);
+
+#define SCHEDULER_COMMON_WORK(common, work) \
+		queue_work_on(0, common->single_wq, work)
 
 /* MM Framework globals end*/
+static void _mm_common_cache_clean(struct work_struct *dummy)
+{
+	v7_clean_dcache_all();
+	dmb();
+}
 
+void mm_common_cache_clean(void)
+{
+	struct file_private_data *this = NULL;
+	struct file_private_data *next = NULL;
+
+	list_for_each_entry_safe(this, next, &mm_file_list, file_head) {
+		struct dev_job_list *job = NULL;
+		struct dev_job_list *temp = NULL;
+		list_for_each_entry_safe(job, temp, &(this->write_head), \
+								file_list) {
+			if (job->job.status == MM_JOB_STATUS_DIRTY)
+				job->job.status = MM_JOB_STATUS_READY;
+		}
+	}
+
+	schedule_on_each_cpu(_mm_common_cache_clean);
+}
 void mm_common_enable_clock(struct mm_common *common)
 {
 	if (common->mm_hw_is_on == 0) {
 		if (common->common_clk) {
 			clk_enable(common->common_clk);
-#ifdef CONFIG_ARCH_JAVA
-		if (strncmp(common->mm_name, "mm_h264", 7) == 0) {
-			/* Access to root reset manager register block. */
-			writel(0xa5a501, HW_IO_PHYS_TO_VIRT(0x35001f00));
-			usleep_range(10, 20);
-			/* Enable multimedia power domain. */
-			/* Test 0x3d should be sufficient for MM. */
-			writel(0xfd, HW_IO_PHYS_TO_VIRT(0x35001f08));
-			usleep_range(10, 20);
-			/* Enable H264 Slave interface control register. */
-			writel(0x00, HW_IO_PHYS_TO_VIRT(0x3C00F004));
-			usleep_range(10, 20);
-			/* Enable H264 Master interface control register. */
-			writel(0x00, HW_IO_PHYS_TO_VIRT(0x3C00F008));
-			usleep_range(10, 20);
-		}
-#endif
 			if (strncmp(common->mm_name, "mm_h264", 7))
 				clk_reset(common->common_clk);
 			}
-		pr_debug("mm common clock turned on ");
-		atomic_notifier_call_chain(&common->notifier_head, \
+		raw_notifier_call_chain(&common->notifier_head, \
 				MM_FMWK_NOTIFY_CLK_ENABLE, NULL); \
 		}
 
@@ -73,16 +79,17 @@ void mm_common_disable_clock(struct mm_common *common)
 	common->mm_hw_is_on--;
 
 	if (common->mm_hw_is_on == 0) {
-		pr_debug("mm common clock turned off ");
 		if (common->common_clk)
 			clk_disable(common->common_clk);
-		atomic_notifier_call_chain(&common->notifier_head, \
+
+		raw_notifier_call_chain(&common->notifier_head, \
 				MM_FMWK_NOTIFY_CLK_DISABLE, NULL); \
 		}
 }
 
 static struct dev_job_list *mm_common_alloc_job(\
-			struct file_private_data *private)
+			struct file_private_data *private,\
+			void (*func)(struct work_struct *work))
 {
 	struct dev_job_list *job = kmalloc(sizeof(struct dev_job_list),\
 						GFP_KERNEL);
@@ -92,156 +99,87 @@ static struct dev_job_list *mm_common_alloc_job(\
 	job->filp = private;
 	job->job.size = 0;
 	job->added2core = false;
+	job->notify = NULL;
 	job->successor = NULL;
 	job->predecessor = NULL;
-	INIT_LIST_HEAD(&job->wait_list);
+	INIT_WORK(&(job->work), func);
 	INIT_LIST_HEAD(&job->file_list);
 	plist_node_init(&job->core_list, private->prio);
 	job->job.type = INTERLOCK_WAITING_JOB;
 	job->job.id = 0;
 	job->job.data = NULL;
 	job->job.size = 0;
+#ifdef CONFIG_ARCH_JAVA
+	job->job.status = MM_JOB_STATUS_DIRTY;
+#else
 	job->job.status = MM_JOB_STATUS_READY;
-
+#endif
 	return job;
-}
-
-void mm_common_priority_update(struct dev_job_list *to, int prio)
-{
-	struct dev_job_list *job = NULL;
-	struct dev_job_list *temp = NULL;
-
-	if (to == NULL)
-		return;
-	if (to->filp->prio <= prio)
-		return;
-
-	list_for_each_entry_safe(job, temp, &(to->filp->write_head), \
-							file_list) { \
-		if (job->job.type == INTERLOCK_WAITING_JOB)
-			mm_common_priority_update(job->predecessor, prio);
-		else
-			mm_core_move_job(job, \
-	job->filp->common->mm_core[(job->job.type&0xFF0000)>>16], prio); \
-
-		if (job == to)
-			break;
-		}
-}
-
-struct job_maint_work {
-	struct work_struct work;
-	struct file_private_data *filp;
-	struct mm_common *common;
-
-	union {
-		struct dev_job_list *job_list;
-		struct dev_status_list *job_status;
-		struct file_private_data *filp;
-		struct read {
-			struct dev_job_list **job_list;
-			struct file_private_data *filp;
-			} rd;
-		struct interlock {
-			struct dev_job_list *from;
-			struct dev_job_list *to;
-			struct dev_status_list *status;
-			} il;
-		} u;
-
-};
-
-#define SCHEDULE_JOB_WORK(a, b, c)				\
-{								\
-	struct job_maint_work _a;				\
-	INIT_WORK(&(_a.work), c);				\
-	_a.u.a = b;						\
-	queue_work_on(0, common->single_wq, &(_a.work));	\
-	flush_work(&(_a.work));				\
 }
 
 void mm_common_add_job(struct work_struct *work)
 {
-	struct job_maint_work *maint_job = container_of(work, \
-					struct job_maint_work,\
-					 work);
-	struct dev_job_list *job = maint_job->u.job_list;
+	struct dev_job_list *job = container_of(work, \
+					struct dev_job_list, \
+					work);
 	struct file_private_data *filp = job->filp;
 	struct mm_common *common = filp->common;
+	struct mm_core *core_dev;
+	int    core_id = (job->job.type & 0xFF0000) >> 16;
 
-	struct mm_core *core_dev = common->mm_core[\
-				(job->job.type&0xFF0000)>>16];
+	core_dev = common->mm_core[core_id];
 
-	mutex_lock(&mm_common_mutex);
-	job->job.status = MM_JOB_STATUS_READY;
+	job->job.spl_data_ptr = filp->spl_data_ptr;
 	if (filp->interlock_count == 0)
 		mm_core_add_job(job, core_dev);
 	list_add_tail(&(job->file_list), &(filp->write_head));
-	atomic_notifier_call_chain(&common->notifier_head, \
+	raw_notifier_call_chain(&common->notifier_head, \
 				MM_FMWK_NOTIFY_JOB_ADD, NULL);
-	mutex_unlock(&mm_common_mutex);
 }
 
-#define SCHEDULE_ADD_WORK(b)	SCHEDULE_JOB_WORK(job_list, \
-					b, mm_common_add_job)
-
-void mm_common_wait_job(struct work_struct *work)
+void mm_common_interlock_job(struct work_struct *work)
 {
-	struct job_maint_work *maint_job = container_of(work, \
-					struct job_maint_work, \
+	struct dev_job_list *to = container_of(work, \
+					struct dev_job_list, \
 					work);
-	struct dev_job_list *from = maint_job->u.il.from;
-	struct dev_job_list *to = maint_job->u.il.to;
-	struct dev_status_list *status = maint_job->u.il.status;
+	struct dev_job_list *from = to->predecessor;
 	struct file_private_data *to_filp = to->filp;
 
-	mutex_lock(&mm_common_mutex);
-	if (status) {
-		if (status->status.status == MM_JOB_STATUS_INVALID) {
-			list_add_tail(&status->wait_list, &to->wait_list);
-			}
-		else {
-			list_del_init(&status->wait_list);
-			mutex_unlock(&mm_common_mutex);
-			return;
-			}
-		}
 	if (from) {
 		struct file_private_data *from_filp = from->filp;
-		from->job.status = MM_JOB_STATUS_READY;
 		list_add_tail(&(from->file_list), &(from_filp->write_head));
-		from->successor = to;
-		to->predecessor = from;
 		to_filp->interlock_count++;
-		mm_common_priority_update(to->predecessor, to->filp->prio);
 		}
 
-	to->job.status = MM_JOB_STATUS_READY;
 	list_add_tail(&(to->file_list), &(to_filp->write_head));
 
-	if ((from == NULL) && list_is_singular(&to_filp->write_head)) {
+	if ((from == NULL) &&
+	(list_first_entry(&to_filp->write_head,\
+		struct dev_job_list, file_list) == to)) {
 		mm_common_interlock_completion(to);
 		}
 	else if (from != NULL) {
 		struct file_private_data *from_filp = from->filp;
-		if (list_is_singular(&from_filp->write_head))
+		if (list_first_entry(&from_filp->write_head,\
+			struct dev_job_list, file_list) == from)
 			mm_common_interlock_completion(from);
 		}
-	mutex_unlock(&mm_common_mutex);
 }
 
-#define SCHEDULE_INTERLOCK_WORK(b)	SCHEDULE_JOB_WORK(il, \
-					b, mm_common_wait_job)\
+struct job_read_work {
+	struct work_struct work;
+	struct file_private_data *filp;
+	struct dev_job_list **job_list;
+};
 
 void mm_common_read_job(struct work_struct *work)
 {
-	struct job_maint_work *maint_job = container_of(work, \
-					struct job_maint_work,\
+	struct job_read_work *read_job = container_of(work, \
+					struct job_read_work,\
 					work);
-	struct dev_job_list **job_list = maint_job->u.rd.job_list;
-	struct file_private_data *filp = maint_job->u.rd.filp;
+	struct dev_job_list **job_list = read_job->job_list;
+	struct file_private_data *filp = read_job->filp;
 
-	mutex_lock(&mm_common_mutex);
 	if (filp->read_count > 0) {
 		struct dev_job_list *job =
 			list_first_entry(&(filp->read_head),\
@@ -250,26 +188,18 @@ void mm_common_read_job(struct work_struct *work)
 		*job_list = job;
 		filp->read_count--;
 		}
-	else {
-			*job_list = NULL;
-		}
-	mutex_unlock(&mm_common_mutex);
-
 }
-#define SCHEDULE_READ_WORK(b)	SCHEDULE_JOB_WORK(rd, b, mm_common_read_job)
 
 void mm_common_release_jobs(struct work_struct *work)
 {
-	struct job_maint_work *maint_job = container_of(work, \
-					struct job_maint_work, \
+	struct file_private_data *filp = container_of(work, \
+					struct file_private_data, \
 					work);
-	struct file_private_data *filp = maint_job->u.filp;
 	struct mm_common *common = filp->common;
 	struct dev_job_list *job = NULL;
 	struct dev_job_list *temp = NULL;
 
 
-	mutex_lock(&mm_common_mutex);
 	list_for_each_entry_safe(job, temp, &(filp->write_head), file_list) {
 		pr_err("this  = %p[%x] next = %p, prev= %p", &job->file_list,\
 			 filp->prio, job->file_list.next, job->file_list.prev);
@@ -278,19 +208,21 @@ void mm_common_release_jobs(struct work_struct *work)
 	while (0 == list_empty(&filp->write_head)) {
 		job = list_first_entry(&filp->write_head, struct dev_job_list, \
 								file_list);
+
+
 		if (job->job.type != INTERLOCK_WAITING_JOB) {
-				mm_core_abort_job(job, \
-		common->mm_core[(job->job.type&0xFF0000)>>16]);
-				mm_common_job_completion(job, \
-				common->mm_core[(job->job.type&0xFF0000)>>16]);
-				atomic_notifier_call_chain( \
-				&common->notifier_head, \
-				MM_FMWK_NOTIFY_JOB_REMOVE, NULL);
-				}
-			else {
-				mm_common_interlock_completion(job);
-				}
+			int    core_id = (job->job.type & 0xFF0000) >> 16;
+			mm_core_abort_job(job,
+					common->mm_core[core_id]);
+			mm_common_job_completion(job,
+					common->mm_core[core_id]);
+			raw_notifier_call_chain(
+					&common->notifier_head,
+					MM_FMWK_NOTIFY_JOB_REMOVE, NULL);
+		} else {
+			mm_common_interlock_completion(job);
 		}
+	}
 
 	list_for_each_entry_safe(job, temp, &(filp->read_head), file_list) {
 		list_del_init(&job->file_list);
@@ -298,14 +230,21 @@ void mm_common_release_jobs(struct work_struct *work)
 		kfree(job);
 		job = NULL;
 		}
+
+	list_del_init(&filp->file_head);
+
 	filp->read_count = -1;
 	pr_debug(" %p %d", filp, filp->read_count);
-	wake_up_all(&filp->queue);
-	mutex_unlock(&mm_common_mutex);
+	wake_up(&filp->read_queue);
 }
 
-#define SCHEDULE_RELEASE_WORK(b)	SCHEDULE_JOB_WORK(filp, \
-					b, mm_common_release_jobs)
+void mm_common_add_file(struct work_struct *work)
+{
+	struct file_private_data *filp = container_of(work, \
+					struct file_private_data, \
+					work);
+	list_add_tail(&filp->file_head, &mm_file_list);
+}
 
 void mm_common_interlock_completion(struct dev_job_list *job)
 {
@@ -339,31 +278,19 @@ void mm_common_interlock_completion(struct dev_job_list *job)
 		if (wait_job->job.type != INTERLOCK_WAITING_JOB) {
 			list_for_each_entry_safe(wait_job, temp_wait_job, \
 				&(job->filp->write_head), file_list) {
+				int core_id = (wait_job->job.type&0xFF0000)>>16;
 				if (wait_job->job.type != INTERLOCK_WAITING_JOB)
-					mm_core_add_job(wait_job, \
-			common->mm_core[(wait_job->job.type&0xFF0000)>>16]);
+					mm_core_add_job(wait_job,
+						common->mm_core[core_id]);
 				else
 					break;
 				}
 			}
 		}
-	if (0 == list_empty(&job->wait_list)) {
-		struct dev_status_list *wait_list = NULL;
-		struct dev_status_list *temp_wait_list = NULL;
-		list_for_each_entry_safe(wait_list, \
-					temp_wait_list, \
-					&(job->wait_list), \
-					wait_list) {
-			/*pr_err("interlock completing job %x %x %x", \
-						job, \
-						wait_list, \
-						job->job.status);*/
-			list_del_init(&wait_list->wait_list);
-			wait_list->status.status = job->job.status;
-			}
-		wake_up_all(&mm_queue);
+	if (job->notify) {
+		*(job->notify) = true;
+		wake_up(&job->filp->wait_queue);
 		}
-
 	kfree(job);
 }
 
@@ -375,13 +302,13 @@ void mm_common_job_completion(struct dev_job_list *job, void *core)
 
 	list_del_init(&job->file_list);
 	mm_core_remove_job(job, core_dev);
-	atomic_notifier_call_chain(&common->notifier_head, \
+	raw_notifier_call_chain(&common->notifier_head, \
 	MM_FMWK_NOTIFY_JOB_COMPLETE, (void *) job->job.type);
 
 	if (filp->readable) {
 		filp->read_count++;
 		list_add_tail(&(job->file_list), &(filp->read_head));
-		wake_up_all(&filp->queue);
+		wake_up(&filp->read_queue);
 		}
 	else {
 		kfree(job->job.data);
@@ -408,18 +335,27 @@ static int mm_file_open(struct inode *inode, struct file *filp)
 	struct file_private_data *private = kmalloc( \
 			sizeof(struct file_private_data), GFP_KERNEL);
 
+	INIT_WORK(&(private->work), mm_common_add_file);
 	private->common = common;
 	private->interlock_count = 0;
 	private->prio = current->prio;
 	private->read_count = 0;
 	private->readable = ((filp->f_mode & FMODE_READ) == FMODE_READ);
-	init_waitqueue_head(&private->queue);
+	private->spl_data_ptr = NULL;
+	private->spl_data_size = 0;
+	private->device_locked = 0;
+	init_waitqueue_head(&private->wait_queue);
+	init_waitqueue_head(&private->read_queue);
 
 	INIT_LIST_HEAD(&private->read_head);
 	INIT_LIST_HEAD(&private->write_head);
+	INIT_LIST_HEAD(&private->file_head);
 	pr_debug(" %p ", private);
 
 	filp->private_data = private;
+
+	/* Add file to global file list */
+	SCHEDULER_COMMON_WORK(common, &private->work);
 
 	return 0;
 }
@@ -429,8 +365,16 @@ static int mm_file_release(struct inode *inode, struct file *filp)
 	struct file_private_data *private = filp->private_data;
 	struct mm_common *common = private->common;
 
+	flush_work_sync(&private->work);
+	INIT_WORK(&(private->work), mm_common_release_jobs);
+	SCHEDULER_COMMON_WORK(common, &private->work);
+	flush_work_sync(&private->work);
+
 	/* Free all jobs posted using this file */
-	SCHEDULE_RELEASE_WORK(private);
+	if (private->spl_data_ptr != NULL)
+		kfree(private->spl_data_ptr);
+	if (private->device_locked == 1)
+		up(&common->device_sem);
 	kfree(private);
 	return 0;
 }
@@ -449,19 +393,18 @@ static loff_t mm_file_lseek(struct file *filp, loff_t offset, int ignore)
 	}
 	if (is_validate_file(input)) {
 		struct file_private_data *in_private = input->private_data;
-		struct interlock il;
+		struct dev_job_list *to = mm_common_alloc_job(private,\
+						mm_common_interlock_job);
+		to->predecessor = mm_common_alloc_job(in_private,\
+						NULL);
+		to->predecessor->successor = to;
 
-		il.to = mm_common_alloc_job(private);
-		il.from = mm_common_alloc_job(in_private);
-		il.status = NULL;
-
-		SCHEDULE_INTERLOCK_WORK(il);
-
-		fput(input);
+		SCHEDULER_COMMON_WORK(common, &to->work);
 		}
 	else {
 		pr_err("unable to find file");
 		}
+	fput(input);
 	return 0;
 }
 
@@ -470,7 +413,9 @@ static int mm_file_write(struct file *filp, const char __user *buf,
 {
 	struct file_private_data *private = filp->private_data;
 	struct mm_common *common = private->common;
-	struct dev_job_list *mm_job_node = mm_common_alloc_job(private);
+	struct dev_job_list *mm_job_node = mm_common_alloc_job(private,\
+						mm_common_add_job);
+	int    core_id;
 
 	if (!mm_job_node)
 		return -ENOMEM;
@@ -486,6 +431,19 @@ static int mm_file_write(struct file *filp, const char __user *buf,
 		}
 	size -= sizeof(mm_job_node->job.type);
 	buf += sizeof(mm_job_node->job.type);
+#ifdef CONFIG_ARCH_JAVA
+	if (mm_job_node->job.type & MM_DIRTY_JOB) {
+		mm_job_node->job.type &= ~MM_DIRTY_JOB;
+		mm_job_node->job.status = MM_JOB_STATUS_DIRTY;
+		}
+	else
+		mm_job_node->job.status = MM_JOB_STATUS_READY;
+#else
+	mm_job_node->job.type &= ~MM_DIRTY_JOB;
+	mm_job_node->job.status = MM_JOB_STATUS_READY;
+#endif
+
+	core_id = (mm_job_node->job.type & 0xFF0000) >> 16;
 	if (copy_from_user(&(mm_job_node->job.id), buf , \
 				sizeof(mm_job_node->job.id))) {
 		pr_err("copy_from_user failed for type");
@@ -500,7 +458,7 @@ static int mm_file_write(struct file *filp, const char __user *buf,
 		mm_job_node->job.data = job_post;
 		ptr = (uint32_t *)job_post;
 		if (copy_from_user(job_post, buf, size)) {
-			pr_err("MM_IOCTL_POST_JOB data copy_from_user failed");
+			pr_err("mm_file_write: data copy_from_user failed");
 			kfree(job_post);
 			goto out;
 			}
@@ -510,11 +468,9 @@ static int mm_file_write(struct file *filp, const char __user *buf,
 					mm_job_node->job.type,
 					mm_job_node->job.id,
 					ptr[0], ptr[1], ptr[2], ptr[3]);
-		BUG_ON(((mm_job_node->job.type&0xFF0000)>>16) \
-					>= MAX_ASYMMETRIC_PROC);
-		BUG_ON(common->mm_core[(mm_job_node->job.type&0xFF0000)>>16] \
-								== NULL); \
-		SCHEDULE_ADD_WORK(mm_job_node);
+		BUG_ON(core_id >= MAX_ASYMMETRIC_PROC);
+		BUG_ON(common->mm_core[core_id] == NULL);
+		SCHEDULER_COMMON_WORK(common, &mm_job_node->work);
 		}
 	else {
 		pr_err("zero size write");
@@ -532,17 +488,20 @@ static int mm_file_read(struct file *filp, \
 			size_t size, \
 			loff_t *offset)
 {
+	size_t bytes_read = 0;
 	struct file_private_data *private = filp->private_data;
 	struct mm_common *common = private->common;
-	struct read rd;
 	struct dev_job_list *job = NULL;
-	size_t bytes_read = 0;
+	struct job_read_work read_job;
+	INIT_WORK(&(read_job.work), mm_common_read_job);
 
-	rd.job_list = &job;
-	rd.filp = private;
+	if (private->read_count == 0)
+		return 0;
+	read_job.job_list = &job;
+	read_job.filp = private;
 
-/*	pr_err("something");*/
-	SCHEDULE_READ_WORK(rd);
+	SCHEDULER_COMMON_WORK(common, &read_job.work);
+	flush_work_sync(&read_job.work);
 
 	if (job == NULL)
 		goto mm_file_read_end;
@@ -582,7 +541,7 @@ static unsigned int mm_file_poll(struct file *filp, \
 	struct file_private_data *private = filp->private_data;
 	struct mm_common *common = private->common;
 
-	poll_wait(filp, &private->queue, wait);
+	poll_wait(filp, &private->read_queue, wait);
 
 	if (private->read_count != 0) {
 		pr_debug(" %p %d", private, private->read_count);
@@ -596,31 +555,14 @@ int mm_file_fsync(struct file *filp, loff_t p1, loff_t p2, int datasync)
 {
 	struct file_private_data *private = filp->private_data;
 	struct mm_common *common = private->common;
-	struct interlock il;
-	struct dev_status_list job_status;
+	bool notify = false;
 
-	INIT_LIST_HEAD(&job_status.wait_list);
-	job_status.filp = private;
-	job_status.status.status = MM_JOB_STATUS_INVALID;
-	job_status.status.id = 0;
-	il.status = &job_status;
-	il.from = NULL;
-	il.to = mm_common_alloc_job(private);
-/*	pr_err("++ %d",current->pid);*/
-/*	pr_err("waiting job %x %x",il.to,il.status);*/
-	SCHEDULE_INTERLOCK_WORK(il);
+	struct dev_job_list *to = mm_common_alloc_job(private,\
+						mm_common_interlock_job);
+	to->notify = &notify;
+	SCHEDULER_COMMON_WORK(common, &to->work);
 
-#if 1
-	wait_event(mm_queue, job_status.status.status != MM_JOB_STATUS_INVALID);
-#else
-	if (wait_event_interruptible(mm_queue, job_status.status.status \
-					!= MM_JOB_STATUS_INVALID)) {
-		/*Task interrupted... Ensure to remove from the waitlist*/
-		pr_err("Task interrupted");
-		SCHEDULE_INTERLOCK_WORK(il);
-		}
-#endif
-/*	pr_err("-- %d",current->pid);*/
+	wait_event(private->wait_queue, notify != false);
 	return 0;
 }
 
@@ -631,6 +573,13 @@ static long mm_file_ioctl(struct file *filp, \
 	int ret = 0;
 	struct file_private_data *private = filp->private_data;
 	struct mm_common *common = private->common;
+	int size = 0;
+	int core = 0;
+	mm_dev_spl_data_t dev_spl_d;
+#if defined(CONFIG_MM_SECURE_DRIVER)
+	int                core_id;
+	mm_secure_job_t    secure_job;
+#endif /* CONFIG_MM_SECURE_DRIVER */
 
 	if ((_IOC_TYPE(cmd) != MM_DEV_MAGIC) || (_IOC_NR(cmd) > MM_CMD_LAST))
 		return -ENOTTY;
@@ -661,6 +610,115 @@ static long mm_file_ioctl(struct file *filp, \
 					common->version_info.size);
 		}
 	break;
+	case MM_IOCTL_ALLOC_SPL_DATA:
+		if (copy_from_user(&size, (void const *)arg, sizeof(int))) {
+			pr_err("copy_from_user failed");
+			ret = -EINVAL;
+			break;
+		}
+		private->spl_data_ptr = kmalloc(size, GFP_KERNEL);
+		if (private->spl_data_ptr == NULL) {
+			pr_err("%s: spl_data kmalloc failed with size = %d",\
+				__func__, size);
+			ret = -EINVAL;
+		} else {
+			private->spl_data_size = size;
+		}
+	break;
+	case MM_IOCTL_COPY_SPL_DATA:
+		if (copy_from_user(&dev_spl_d, (void const *)arg,\
+			sizeof(mm_dev_spl_data_t))) {
+			pr_err("copy_from_user failed");
+			ret = -EINVAL;
+			break;
+		}
+		if (private->spl_data_size < \
+			(dev_spl_d.offset + dev_spl_d.size)) {
+			pr_err("MM_IOCTL_COPY_SPL_DATA copy size " \
+				"exceeds allocated size");
+			ret = -EINVAL;
+			break;
+		}
+		if (copy_from_user((private->spl_data_ptr + \
+			dev_spl_d.offset), \
+				(void const *)dev_spl_d.buf, \
+				dev_spl_d.size)) {
+			pr_err("copy_from_user failed");
+			ret = -EINVAL;
+		}
+	break;
+	case MM_IOCTL_DEVICE_TRYLOCK:
+		if (copy_from_user(&core, (void const *)arg, sizeof(int))) {
+			pr_err("copy_from_user failed");
+			ret = -EINVAL;
+			break;
+		}
+		BUG_ON(private->device_locked == 1);
+		if (down_trylock(&common->device_sem))
+			return -EINVAL;
+		private->device_locked = 1;
+	break;
+	case MM_IOCTL_DEVICE_LOCK:
+		if (copy_from_user(&core, (void const *)arg, sizeof(int))) {
+			pr_err("copy_from_user failed");
+			ret = -EINVAL;
+			break;
+		}
+		BUG_ON(private->device_locked == 1);
+		if (down_interruptible(&common->device_sem))
+			return -EINVAL;
+		private->device_locked = 1;
+	break;
+	case MM_IOCTL_DEVICE_UNLOCK:
+		if (copy_from_user(&core, (void const *)arg, sizeof(int))) {
+			pr_err("copy_from_user failed");
+			ret = -EINVAL;
+			break;
+		}
+		BUG_ON(private->device_locked == 0);
+		up(&common->device_sem);
+		private->device_locked = 0;
+	break;
+#if defined(CONFIG_MM_SECURE_DRIVER)
+	case MM_IOCTL_SECURE_JOB_WAIT:
+		/* Copy job type from user side */
+		if (copy_from_user(&secure_job, (mm_secure_job_ptr)arg,
+					sizeof(mm_secure_job_t))) {
+			pr_err("copy_from_user failed");
+			ret = -EINVAL;
+			break;
+		}
+		/* Wait till a secure job gets posted */
+		core_id = (secure_job.type & 0xFF0000) >> 16;
+		ret = mm_core_secure_job_wait(common->mm_core[core_id],
+				&secure_job);
+		/* Copy back the job id and status of the secure job */
+		ret = copy_to_user((mm_secure_job_ptr)arg, &secure_job,
+					sizeof(mm_secure_job_t));
+	break;
+
+	case MM_IOCTL_SECURE_JOB_DONE:
+	{
+		struct secure_job_work_t secure_work;
+		/* Copy job type from user side */
+		if (copy_from_user(&secure_job, (mm_secure_job_ptr)arg,
+					sizeof(mm_secure_job_t))) {
+			pr_err("copy_from_user failed");
+			ret = -EINVAL;
+			break;
+		}
+		/* Wait till a secure job gets posted */
+		INIT_WORK(&secure_work.work, mm_core_secure_job_done);
+		core_id               = (secure_job.type & 0xFF0000) >> 16;
+		secure_work.core_dev  = common->mm_core[core_id];
+		secure_work.job       = &secure_job;
+		SCHEDULER_COMMON_WORK(common, &secure_work.work);
+		flush_work_sync(&secure_work.work);
+		ret                   = secure_work.ret;
+	}
+	break;
+
+#endif /* CONFIG_MM_SECURE_DRIVER */
 	default:
 		pr_err("cmd[0x%08x] not supported", cmd);
 		ret = -EINVAL;
@@ -695,7 +753,7 @@ void *mm_fmwk_register(const char *name, const char *clk_name,
 	int i = 0;
 	struct mm_common *common = NULL;
 
-	BUG_ON(count >= MAX_ASYMMETRIC_PROC);
+	BUG_ON(count > MAX_ASYMMETRIC_PROC);
 	if (name == NULL)
 		return NULL;
 
@@ -706,7 +764,8 @@ void *mm_fmwk_register(const char *name, const char *clk_name,
 
 	INIT_LIST_HEAD(&common->device_list);
 	common->mm_hw_is_on = 0;
-	ATOMIC_INIT_NOTIFIER_HEAD(&common->notifier_head);
+	RAW_INIT_NOTIFIER_HEAD(&common->notifier_head);
+	sema_init(&common->device_sem, 1);
 
 	/*get common clock*/
 	if (clk_name) {
@@ -738,14 +797,8 @@ void *mm_fmwk_register(const char *name, const char *clk_name,
 		goto err_register;
 	}
 
-	for (i = 0; i < count; i++) {
+	for (i = 0; i < count; i++)
 		common->mm_core[i] = mm_core_init(common, name, &core_param[i]);
-		if (common->mm_core[i] == NULL) {
-			pr_err("Error creating Core instance for core-%d in %s",
-							   i, common->mm_name);
-			goto err_register;
-			}
-		}
 
 #ifdef CONFIG_KONA_PI_MGR
 	common->mm_dvfs = mm_dvfs_init(common, name, dvfs_param);
@@ -756,7 +809,6 @@ void *mm_fmwk_register(const char *name, const char *clk_name,
 
 	mutex_lock(&mm_fmwk_mutex);
 	if (single_wq == NULL) {
-		init_waitqueue_head(&mm_queue);
 		single_wq = alloc_workqueue(single_wq_name,
 				WQ_NON_REENTRANT, 1);
 		if (single_wq == NULL) {

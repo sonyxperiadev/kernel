@@ -31,12 +31,12 @@ struct cabac_device_t {
 
 static void cabac_write(struct cabac_device_t *cabac, u32 reg, u32 value)
 {
-	mm_write_reg(cabac->vaddr, (reg-0), value);
+	mm_write_reg(cabac->vaddr, reg, value);
 }
 
 static u32 cabac_read(struct cabac_device_t *cabac, u32 reg)
 {
-	return mm_read_reg(cabac->vaddr, (reg-0));
+	return mm_read_reg(cabac->vaddr, reg);
 }
 
 /*static void print_job_struct(struct cabac_job_t *job)
@@ -84,20 +84,6 @@ static void print_regs(struct cabac_device_t *cabac)
 	pr_debug("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
 }
 
-static void cabac_reg_init(void *device_id)
-{
-	struct cabac_device_t *id = (struct cabac_device_t *)device_id;
-	pr_debug("cabac_reg_init:\n");
-	cabac_write(id, H264_REGCS_REGCABAC2BINSIMGCTXLAST_OFFSET, 0x1cb);
-	cabac_write(id, H264_REGCS_REGCABAC2BINSRDCONTEXTBASEADDR_OFFSET, 0);
-	cabac_write(id, H264_REGCS_REGCABAC2BINSWRCONTEXTBASEADDR_OFFSET, 0);
-	cabac_write(id,
-		H264_REGC2_REGCABAC2BINSCOMMANDBUFFERLOGSIZE_OFFSET,
-		10);
-	cabac_write(id, H264_REGC2_REGCABAC2BINSUPSTRIPEBASEADDR_OFFSET, 0);
-	cabac_write(id, H264_REGC2_REGCABAC2BINSCTL_OFFSET, 0x800);
-}
-
 static int cabac_get_regs(void *device_id, MM_REG_VALUE *ptr, int count)
 {
 	struct cabac_device_t *id = (struct cabac_device_t *)device_id;
@@ -115,11 +101,7 @@ static int cabac_abort(void *device_id, mm_job_post_t *job)
 	/*TODO: Any more procedure*/
 	cabac_write(id, H264_REGC2_REGCABAC2BINSCTL_OFFSET, 0x1);
 
-	/*Wait for RESET completion(system IDLE)*/
-	while (cabac_read(id, H264_REGC2_REGCABAC2BINSCTL_OFFSET) & 0X407 ||
-		cabac_read(id,
-		H264_REGC2_REGCABAC2BINSCOMMANDBUFFERCOUNT_OFFSET) & 0x7FF)
-		;
+	udelay(3);
 
 	return 0;
 }
@@ -127,19 +109,38 @@ static int cabac_abort(void *device_id, mm_job_post_t *job)
 static int cabac_reset(void *device_id)
 {
 	struct cabac_device_t *id = (struct cabac_device_t *)device_id;
-	pr_debug("cabac_reset:\n");
 
 	/*Reset the registers*/
 	cabac_write(id, H264_REGC2_REGCABAC2BINSCTL_OFFSET, 0x1);
 
-	/*Wait for RESET completion(system IDLE)*/
-	while (cabac_read(id, H264_REGC2_REGCABAC2BINSCTL_OFFSET) & 0X407 ||
-		cabac_read(id,
-		H264_REGC2_REGCABAC2BINSCOMMANDBUFFERCOUNT_OFFSET) & 0x7FF)
-		;
+	udelay(3);
 
-	cabac_reg_init(id);
+	return 0;
+}
 
+static int cabac_block_init(void *device_id)
+{
+	struct cabac_device_t *id = (struct cabac_device_t *)device_id;
+	u32 temp;
+	/*Enable CABAC Block*/
+	temp = cabac_read(id, H264_VCODEC_GCKENAA_OFFSET);
+	temp |= H264_VCODEC_GCKENAA_CABAC_MASK;
+	cabac_write(id, H264_VCODEC_GCKENAA_OFFSET, temp);
+
+	/*Reset the registers*/
+	cabac_reset(id);
+
+	return 0;
+}
+
+static int cabac_block_deinit(void *device_id)
+{
+	struct cabac_device_t *id = (struct cabac_device_t *)device_id;
+	u32 temp;
+	/*Disable CABAC Block*/
+	temp = cabac_read(id, H264_VCODEC_GCKENAA_OFFSET);
+	temp &= (~H264_VCODEC_GCKENAA_CABAC_MASK);
+	cabac_write(id, H264_VCODEC_GCKENAA_OFFSET, temp);
 	return 0;
 }
 
@@ -173,7 +174,6 @@ static mm_isr_type_e process_cabac_irq(void *device_id)
 bool get_cabac_status(void *device_id)
 {
 	struct cabac_device_t *id = (struct cabac_device_t *)device_id;
-	pr_debug("get_cabac_status:\n");
 
 	/*Read the status to find Hardware busy status*/
 	if (cabac_read(id, H264_REGC2_REGCABAC2BINSCTL_OFFSET) & 0x400)
@@ -206,8 +206,6 @@ mm_job_status_e cabac_start_job(void *device_id , mm_job_post_t *job,
 
 	switch (job->status) {
 	case MM_JOB_STATUS_READY:
-		/*Reset CABAC*/
-		cabac_reset(id);
 		/*Bound checks*/
 		if (jp->rd_ctxt_addr & 0xF) {
 			pr_err("cabac_start_job: " \
@@ -302,7 +300,6 @@ struct cabac_device_t *cabac_device;
 
 void cabac_update_virt(void *virt)
 {
-	pr_debug("cabac_update_virt:\n");
 	cabac_device->vaddr = virt;
 }
 
@@ -318,7 +315,6 @@ int cabac_init(MM_CORE_HW_IFC *core_param)
 	}
 
 	cabac_device->vaddr = NULL;
-	pr_debug("cabac_init: -->\n");
 
 	/*Do any device specific structure initialisation required.*/
 
@@ -332,8 +328,8 @@ int cabac_init(MM_CORE_HW_IFC *core_param)
 	core_param->mm_get_status = get_cabac_status;
 	core_param->mm_start_job = cabac_start_job;
 	core_param->mm_process_irq = process_cabac_irq;
-	core_param->mm_init = cabac_reset;
-	core_param->mm_deinit = cabac_reset;
+	core_param->mm_init = cabac_block_init;
+	core_param->mm_deinit = cabac_block_deinit;
 	core_param->mm_abort = cabac_abort;
 	core_param->mm_get_regs = cabac_get_regs;
 	core_param->mm_update_virt_addr = cabac_update_virt;
@@ -350,6 +346,5 @@ err:
 
 void cabac_deinit(void)
 {
-	pr_debug("cabac_exit:\n");
 	kfree(cabac_device);
 }

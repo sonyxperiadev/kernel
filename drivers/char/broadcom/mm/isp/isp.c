@@ -276,8 +276,10 @@ int __init mm_isp_init(void)
 	core_param.mm_hw_size = ISP_HW_SIZE;
 	core_param.mm_irq = IRQ_ISP;
 
-	core_param.mm_timer = DEFAULT_MM_DEV_TIMER_MS;
-	core_param.mm_timeout = DEFAULT_MM_DEV_TIMEOUT_MS;
+	/*core_param.mm_timer = DEFAULT_MM_DEV_TIMER_MS;*/
+	/*core_param.mm_timeout = DEFAULT_MM_DEV_TIMEOUT_MS;*/
+	core_param.mm_timer = 100;
+	core_param.mm_timeout = 100;
 
 	core_param.mm_get_status = get_isp_status;
 	core_param.mm_start_job = isp_start_job;
@@ -291,13 +293,19 @@ int __init mm_isp_init(void)
 	core_param.mm_device_id = (void *)isp_device;
 	core_param.mm_virt_addr = NULL;
 
-	dvfs_param.is_dvfs_on = 0;
-	dvfs_param.user_requested_mode = TURBO;
+	dvfs_param.ON = 1;
+	dvfs_param.MODE = TURBO;
 	dvfs_param.enable_suspend_resume = 0;
+	dvfs_param.T0 = 200;
+	dvfs_param.P0 = 90;
 	dvfs_param.T1 = 300;
-	dvfs_param.P1 = 80;
-	dvfs_param.T2 = 3000;
-	dvfs_param.P2 = 30;
+	dvfs_param.P1 = 90;
+	dvfs_param.P1L = 50;
+	dvfs_param.T2 = 300;
+	dvfs_param.P2 = 90;
+	dvfs_param.P2L = 60;
+	dvfs_param.T3 = 1000;
+	dvfs_param.P3L = 50;
 	dvfs_param.dvfs_bulk_job_cnt = 0;
 
 	isp_device->fmwk_handle = mm_fmwk_register(ISP_DEV_NAME,

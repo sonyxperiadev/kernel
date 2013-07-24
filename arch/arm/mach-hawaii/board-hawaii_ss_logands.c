@@ -207,7 +207,7 @@
 
 #if defined(CONFIG_TOUCHSCREEN_BCM915500)
 	|| defined(CONFIG_TOUCHSCREEN_BCM915500_MODULE)
-#include <linux/i2c/bcm15500_i2c_ts.h>
+#include <linux/i2c/bcmtch15xxx.h>
 #endif
 
 #ifdef CONFIG_USB_DWC_OTG
@@ -223,7 +223,7 @@
 #ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
 #include "hawaii_wifi.h"
 
-void send_usb_insert_event(enum bcmpmu_event_t event, void *para);
+/* void send_usb_insert_event(enum bcmpmu_event_t event, void *para);*/
 void send_chrgr_insert_event(enum bcmpmu_event_t event, void *para);
 
 #include <linux/bmm050.h>
@@ -1503,6 +1503,13 @@ static void rt8973_wakelock_init(void)
 #endif
 }
 
+extern int bcmpmu_accy_chrgr_type_notify(int chrgr_type);
+
+void send_chrgr_insert_event(enum bcmpmu_event_t event, void *para)
+{
+	bcmpmu_accy_chrgr_type_notify(*(u32 *)para);
+}
+
 static enum cable_type_t set_cable_status;
 
 static void usb_attach(uint8_t attached)
@@ -1854,7 +1861,7 @@ void uas_jig_force_sleep(void)
 	#endif
 }
 
-static struct fsa9485_platform_data fsa9485_pdata = {
+static struct tsu6111_platform_data fsa9485_pdata = {
 	.usb_cb = fsa9485_usb_cb,
 	.charger_cb = fsa9485_charger_cb,
 	.jig_cb = fsa9485_jig_cb,
@@ -2062,6 +2069,9 @@ static void __init hawaii_add_i2c_devices(void)
 
 }
 
+/* The GPIO used to indicate accessory insertion in this board */
+#define HS_IRQ		gpio_to_irq(121)
+
 static void hawaii_add_pdata(void)
 {
 	hawaii_serial_device.dev.platform_data = &hawaii_uart_platform_data;
@@ -2077,6 +2087,12 @@ static void hawaii_add_pdata(void)
 	hawaii_ssp1_device.dev.platform_data = &hawaii_ssp1_info;
 	hawaii_stm_device.dev.platform_data = &hawaii_stm_pdata;
 	hawaii_headset_device.dev.platform_data = &hawaii_headset_data;
+	/* The resource in position 2 (starting from 0) is used to fill
+	 * the GPIO number. The driver file assumes this. So put the
+	 * board specific GPIO number here
+	 */
+	hawaii_headset_device.resource[2].start = HS_IRQ;
+	hawaii_headset_device.resource[2].end   = HS_IRQ;
 	hawaii_pl330_dmac_device.dev.platform_data = &hawaii_pl330_pdata;
 #ifdef CONFIG_BACKLIGHT_PWM
 	hawaii_backlight_device.dev.platform_data = &hawaii_backlight_data;

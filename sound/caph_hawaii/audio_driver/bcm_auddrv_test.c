@@ -1222,7 +1222,8 @@ static int HandlePlayCommand()
 		AUDCTRL_EnablePlay(AUDIO_SOURCE_MEM,
 				spkr,
 				drv_config.num_channel,
-				drv_config.sample_rate, &testint);
+				drv_config.sample_rate,
+				16 , &testint);
 
 		AUDCTRL_SetPlayVolume(AUDIO_SOURCE_MEM, spkr,
 				AUDIO_GAIN_FORMAT_mB, 0x00, 0x00,

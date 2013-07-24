@@ -20,6 +20,9 @@
 #include <linux/log2.h>
 #include <linux/delay.h>
 #include <linux/module.h>
+#include <linux/io.h>
+#include <linux/gpio.h>
+#include <linux/gpio_keys.h>
 #include <linux/printk.h>
 
 #include <media/v4l2-subdev.h>
@@ -35,7 +38,14 @@
 #include "as3643.h"
 #endif
 
+#include <linux/init.h>
+#include <linux/module.h>
+#include <linux/timer.h>
 #define OV5648_DEBUG 0
+#if defined(CONFIG_MACH_JAVA_C_5606)
+#define TORCH_EN (10)
+#define FLASH_EN (11)
+#endif
 
 /* OV5648 has only one fixed colorspace per pixelcode */
 struct ov5648_datafmt {
@@ -290,8 +300,13 @@ static const struct ov5648_reg ov5648_regtbl[OV5648_MODE_MAX][256] = {
 	{0x3814, 0x31},
 	{0x3815, 0x31},
 	{0x3817, 0x00},
+#ifdef CONFIG_MACH_JAVA_C_5606
+	{0x3820, 0x00},
+	{0x3821, 0x07},
+#else
 	{0x3820, 0x0e},
 	{0x3821, 0x01},
+#endif
 	{0x3826, 0x03},
 	{0x3829, 0x00},
 	{0x382b, 0x0b},
@@ -431,8 +446,13 @@ static const struct ov5648_reg ov5648_regtbl[OV5648_MODE_MAX][256] = {
 	{0x3814, 0x31},
 	{0x3815, 0x31},
 	{0x3817, 0x00},
+#ifdef CONFIG_MACH_JAVA_C_5606
+	{0x3820, 0x00},
+	{0x3821, 0x07},
+#else
 	{0x3820, 0x0e},
 	{0x3821, 0x01},
+#endif
 	{0x3826, 0x03},
 	{0x3829, 0x00},
 	{0x382b, 0x0b},
@@ -572,8 +592,13 @@ static const struct ov5648_reg ov5648_regtbl[OV5648_MODE_MAX][256] = {
 	{0x3814, 0x11},
 	{0x3815, 0x11},
 	{0x3817, 0x00},
+#ifdef CONFIG_MACH_JAVA_C_5606
+	{0x3820, 0x00},
+	{0x3821, 0x06},
+#else
 	{0x3820, 0x06},
 	{0x3821, 0x00},
+#endif
 	{0x3826, 0x03},
 	{0x3829, 0x00},
 	{0x382b, 0x0b},
@@ -666,9 +691,15 @@ static const struct ov5648_reg ov5648_regdif[OV5648_MODE_MAX][32] = {
 	{0x3813, 0x02},
 	{0x3814, 0x31},
 	{0x3815, 0x31},
+#ifdef CONFIG_MACH_JAVA_C_5606
+	{0x3820, 0x00},
+	{0x3821, 0x07},
+#else
 	{0x3820, 0x0e},
 	{0x3821, 0x01},
+#endif
 	{0x4004, 0x02},
+	{0x4005, 0x1a},
 	{0x301a, 0xf0},
 
 	{0xFFFF, 0x00}
@@ -700,9 +731,15 @@ static const struct ov5648_reg ov5648_regdif[OV5648_MODE_MAX][32] = {
 	{0x3813, 0x06},
 	{0x3814, 0x31},
 	{0x3815, 0x31},
+#ifdef CONFIG_MACH_JAVA_C_5606
+	{0x3820, 0x00},
+	{0x3821, 0x07},
+#else
 	{0x3820, 0x0e},
 	{0x3821, 0x01},
+#endif
 	{0x4004, 0x02},
+	{0x4005, 0x1a},
 	{0x301a, 0xf0},
 
 	{0xFFFF, 0x00}
@@ -734,9 +771,15 @@ static const struct ov5648_reg ov5648_regdif[OV5648_MODE_MAX][32] = {
 	{0x3813, 0x06},
 	{0x3814, 0x11},
 	{0x3815, 0x11},
+#ifdef CONFIG_MACH_JAVA_C_5606
+	{0x3820, 0x00},
+	{0x3821, 0x06},
+#else
 	{0x3820, 0x06},
 	{0x3821, 0x00},
+#endif
 	{0x4004, 0x04},
+	{0x4005, 0x1a},
 	{0x301a, 0xf0},
 
 	{0xFFFF, 0x00}
@@ -761,6 +804,16 @@ static int ov5648_set_mode(struct i2c_client *client, int new_mode_idx);
 static int ov5648_set_state(struct i2c_client *client, int new_state);
 static int ov5648_init(struct i2c_client *client);
 
+/*add an timer to close the flash after two frames*/
+#if defined(CONFIG_MACH_JAVA_C_5606)
+static struct timer_list timer;
+static char *msg = "hello world";
+static void print_func(unsigned long lparam)
+{
+	gpio_set_value(TORCH_EN, 0);
+	gpio_set_value(FLASH_EN, 0);
+}
+#endif
 /*
  * Find a data format by a pixel code in an array
  */
@@ -959,6 +1012,10 @@ static const struct v4l2_queryctrl ov5648_controls[] = {
 #ifdef CONFIG_VIDEO_AS3643
 	 .name = "AS3643-flash",
 #endif
+
+#if defined(CONFIG_MACH_JAVA_C_5606)
+	 .name = "OCP8111-flash",
+#endif
 	 .minimum = FLASH_MODE_OFF,
 	 .maximum = (1 << FLASH_MODE_OFF) | (1 << FLASH_MODE_ON) |
 		(1 << FLASH_MODE_TORCH_OFF) | (1 << FLASH_MODE_TORCH_ON),
@@ -1123,6 +1180,37 @@ static void ov5648_otp_print(struct ov5648_otp *otp, int index)
 	pr_debug("ov5648: user_data = [0x%02X 0x%02X]\n",
 		 otp->user_data[0], otp->user_data[1]);
 }
+
+/**
+ * Read and print ov5648 OTP R/B channel gains.
+ *@client: i2c driver client structure.
+ */
+static void ov5648_rbgains_print(struct i2c_client *client)
+{
+	u8 val;
+	u16 gainr, gaing, gainb;
+	int i;
+	ov5648_reg_read(client, 0x5001, &val);
+	pr_debug("ov5648 0x%04X=0x%02X]\n", 0x5001, val);
+	ov5648_reg_read(client, 0x5002, &val);
+	pr_debug("ov5648 0x%04X=0x%02X]\n", 0x5002, val);
+	ov5648_reg_read(client, 0x5180, &val);
+	pr_debug("ov5648 0x%04X=0x%02X]\n", 0x5180, val);
+	ov5648_reg_read(client, 0x5186, &val);
+	gainr = val << 8;
+	ov5648_reg_read(client, 0x5187, &val);
+	gainr += val;
+	ov5648_reg_read(client, 0x5188, &val);
+	gaing = val << 8;
+	ov5648_reg_read(client, 0x5189, &val);
+	gaing += val;
+	ov5648_reg_read(client, 0x518a, &val);
+	gainb = val << 8;
+	ov5648_reg_read(client, 0x518b, &val);
+	gainb += val;
+	pr_debug("ov5648 rb gains readback = [%04X %04X %04X]\n",
+		 gainr, gaing, gainb);
+}
 #endif
 
 /**
@@ -1238,7 +1326,7 @@ static int ov5648_rbgains_update(struct i2c_client *client)
 #define RG_GOLDEN 0x145
 #define BG_GOLDEN 0x15e
 
-	u16 gainr, gaing, gainb;
+	u16 gainr, gaing, gainb, ggainb, ggainr;
 	int ret;
 	struct ov5648 *ov5648 = to_ov5648(client);
 	struct ov5648_otp *otp = &(ov5648->otp);
@@ -1246,22 +1334,57 @@ static int ov5648_rbgains_update(struct i2c_client *client)
 		pr_debug("ov5648_rbgains_update: OTP not initialized\n");
 		return -1;
 	}
+# if 0
 	gainr = 0x400 * RG_GOLDEN / otp->rg_ratio;
 	gaing = 0x400;
 	gainb = 0x400 * BG_GOLDEN / otp->bg_ratio;
-	ret  = ov5648_reg_write(client, 0x5186, gainr >> 8);
+#else
+	if (otp->bg_ratio < BG_GOLDEN) {
+		if (otp->rg_ratio < RG_GOLDEN) {
+			gaing = 0x400;
+			gainb = 0x400 * BG_GOLDEN / otp->bg_ratio;
+			gainr = 0x400 * RG_GOLDEN / otp->rg_ratio;
+		} else {
+			gainr = 0x400;
+			gaing = 0x400 * otp->rg_ratio / RG_GOLDEN;
+			gainb = gaing * BG_GOLDEN / otp->bg_ratio;
+		}
+	} else {
+		if (otp->rg_ratio < RG_GOLDEN) {
+			gainb = 0x400;
+			gaing = 0x400 * otp->bg_ratio / BG_GOLDEN;
+			gainr = gaing * RG_GOLDEN / otp->rg_ratio;
+		} else {
+			ggainb = 0x400 * otp->bg_ratio / BG_GOLDEN;
+			ggainr = 0x400 * otp->rg_ratio / RG_GOLDEN;
+			if (ggainb > ggainr) {
+				gainb = 0x400;
+				gaing = ggainb;
+				gainr = gaing * RG_GOLDEN / otp->rg_ratio;
+			} else {
+				gainr = 0x400;
+				gaing = ggainr;
+				gainb = gaing * BG_GOLDEN / otp->bg_ratio; }
+		}
+	}
+#endif
+	ret =  ov5648_reg_write(client, 0x5180, 1<<3);
+	ret |= ov5648_reg_write(client, 0x5186, gainr >> 8);
 	ret |= ov5648_reg_write(client, 0x5187, gainr & 0xff);
 	ret |= ov5648_reg_write(client, 0x5188, gaing >> 8);
 	ret |= ov5648_reg_write(client, 0x5189, gaing & 0xff);
 	ret |= ov5648_reg_write(client, 0x518a, gainb >> 8);
 	ret |= ov5648_reg_write(client, 0x518b, gainb & 0xff);
 	if (ret == 0) {
-		dev_info(&client->dev, "ov5648 sensor update for calibrated data g=[0x%04X, 0x%04X]\n",
-			 gainr, gainb);
+		dev_info(&client->dev, "ov5648 1 sensor update for calibrated data g=[0x%04X, 0x%04X, 0x%04X]\n",
+			 gainr, gaing, gainb);
+#if OV5648_DEBUG
+		ov5648_rbgains_print(client);
+#endif
 		return 0;
 	} else {
 		dev_info(&client->dev,
-			 "ov5648 sensor update for calibrated data failed\n");
+			 "ov5648 sensor 1 update for calibrated data failed\n");
 		return -1;
 	}
 }
@@ -1968,6 +2091,42 @@ int set_flash_mode(struct i2c_client *client, int mode)
 	}
 	ov5648->flashmode = mode;
 #endif
+
+#if defined(CONFIG_MACH_JAVA_C_5606)
+		if ((mode == FLASH_MODE_OFF)
+			|| (mode == FLASH_MODE_TORCH_OFF)) {
+			gpio_set_value(TORCH_EN, 0);
+			gpio_set_value(FLASH_EN, 0);
+		} else if (mode == FLASH_MODE_TORCH_ON) {
+			gpio_set_value(TORCH_EN, 1);
+			gpio_set_value(FLASH_EN, 0);
+		} else if (mode == FLASH_MODE_ON) {
+			ov5648->flash_timeout =
+				2 * (ov5648->vts * ov5648->line_length)/1000;
+			timer.data = (unsigned long) msg;
+			timer.expires = jiffies
+				+ (ov5648->flash_timeout*HZ)/1000000;
+			timer.function = print_func;
+			add_timer(&timer);
+			pr_debug("flash_timeout=%d", ov5648->flash_timeout);
+			gpio_set_value(TORCH_EN, 1);
+			gpio_set_value(FLASH_EN, 1);
+		} else if (mode == FLASH_MODE_AUTO) {
+			ov5648->flash_timeout =
+				2 * (ov5648->vts * ov5648->line_length)/1000;
+			timer.data = (unsigned long) msg;
+			timer.expires =
+				jiffies + (ov5648->flash_timeout*HZ)/1000000;
+			timer.function = print_func;
+			add_timer(&timer);
+			gpio_set_value(TORCH_EN, 1);
+			gpio_set_value(FLASH_EN, 1);
+		} else {
+			return -EINVAL;
+		}
+	ov5648->flashmode = mode;
+#endif
+
 	return 0;
 }
 
@@ -2093,6 +2252,10 @@ static int ov5648_init(struct i2c_client *client)
 	 *  Exposure should be DEFAULT_EXPO * line_length / 1000
 	 *  Since we don't have line_length yet, just estimate
 	 */
+#if defined(CONFIG_MACH_JAVA_C_5606)
+	init_timer(&timer);
+#endif
+
 	ov5648->exposure_current  = DEFAULT_EXPO * 22;
 	ov5648->aecpos_delay      = 1;
 	ov5648->lenspos_delay     = 0;

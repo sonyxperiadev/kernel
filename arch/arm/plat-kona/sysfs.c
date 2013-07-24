@@ -74,7 +74,7 @@ static void set_emu_reset_reason(unsigned int const emu, int val)
 	unsigned short soc0 = 0;
 
 	soc0 = *rst;
-	soc0 &= ~(0xf);
+	soc0 &= ~(RST_REASON_MASK);
 	soc0 |= val;
 	*rst = soc0;
 
@@ -90,7 +90,7 @@ static unsigned int get_emu_reset_reason(unsigned int const emu)
 
 	pr_debug("%s: reset_reason 0x%x\n", __func__, *reset_reason);
 
-	rst = (*reset_reason) & 0xf;
+	rst = (*reset_reason) & RST_REASON_MASK;
 
 	iounmap(reset_reason);
 
@@ -112,7 +112,7 @@ unsigned int is_charging_state(void)
 
 	state = get_emu_reset_reason(SRAM_RST_REASON_BASE);
 
-	state = state & 0xf;
+	state = state & RST_REASON_MASK;
 
 	pr_debug("%s\n reset reason = 0x%x", __func__, state);
 	return (state == CHARGING_STATE) ? 1 : 0;
@@ -153,12 +153,8 @@ EXPORT_SYMBOL(do_set_ap_only_boot);
 
 void do_clear_ap_only_boot(void)
 {
-	unsigned int rst;
-
-	rst = get_emu_reset_reason(SRAM_RST_REASON_BASE);
-	rst = (rst & 0xf) & ~(AP_ONLY_BOOT);
-
-	set_emu_reset_reason(SRAM_RST_REASON_BASE, rst);
+	pr_debug("%s\n", __func__);
+	do_clear_emu_reset_reason();
 }
 EXPORT_SYMBOL(do_clear_ap_only_boot);
 
@@ -182,7 +178,7 @@ unsigned int is_ap_only_boot(void)
 		rst = get_emu_reset_reason(SRAM_RST_REASON_BASE);
 	else
 		rst = AP_ONLY_BOOT;
-	rst = rst & 0xf;
+	rst = rst & RST_REASON_MASK;
 
 	pr_debug("%s\n reset_reason = 0x%x", __func__, rst);
 	return (rst == AP_ONLY_BOOT) ? 1 : 0;

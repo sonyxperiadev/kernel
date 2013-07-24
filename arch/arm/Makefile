@@ -314,7 +314,7 @@ endif
 
 ifeq ($(CONFIG_ARCH_JAVA),y)
 	$(Q)echo "Creating rdb link for Java"; \
-	ln -fsn $(srctree)/arch/arm/mach-java/include/mach/rdb_A0 $(srctree)/arch/arm/mach-java/include/mach/rdb
+	ln -fsn $(srctree)/arch/arm/mach-java/include/mach/rdb_A1 $(srctree)/arch/arm/mach-java/include/mach/rdb
 endif
 
 # Convert bzImage to zImage

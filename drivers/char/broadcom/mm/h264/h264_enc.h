@@ -14,7 +14,7 @@ the GPL, without Broadcom's express prior written consent.
 #define _H264_SYMGEN_H_
 
 #define MAX_NUM_REGS 100
-#define MAX_OUT_REGS 4
+#define MAX_OUT_REGS 5
 #define MAX_HEADER_LEN 256
 
 /* reg offset and corresponding val */

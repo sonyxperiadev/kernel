@@ -74,12 +74,57 @@ struct bcm_ion_heap_reserve_data {
 int bcm_ion_get_heap_reserve_data(struct bcm_ion_heap_reserve_data **data,
 		const char *name);
 
+/* Decode the flags and get the heap mask to be used in the platform
+ * for allocation
+ */
+unsigned int bcm_ion_get_heapmask(unsigned int flags);
+
 #endif
+
+/**
+ * DOC: Broadcom Ion Interface Version
+ */
+#define BCM_ION_VERSION		(0x00010000)
 
 /**
  * DOC: Broadcom Ion Heap Types for user space to select at alloc time
  */
 #define ION_DEFAULT_HEAP	(0xFFFF)
+
+/**
+ * DOC: Broadcom Ion custom flags
+ * Except the cache flags, other flag parameters are not handled directly by
+ *	ION. Instead, helper APIs are used to convert them to appropriate
+ *	heap masks as per heap configuration in the platform and standard
+ *	ION API is used.
+ * 31    : Heap mask selection from below flags
+ * 30    : Secure Buffer
+ * 29    : Address limit to 256 MB range
+ * 28    : Faster allocation
+ * 27-24 : Mapping
+ *	24 : User Map needed
+ *	25 : Kernel Map needed
+ * 23-20 : RW properties
+ *	20 : HW may write
+ * 19-16 : Custom Cache ops
+ *	16 : Writecombine mode
+ *	17 : Writethrough mode
+ *	18 : Writeback mode
+ */
+#define ION_FLAG_HEAP_SELECT  (1 << 31)
+#define ION_FLAG_SECURE       (1 << 30)
+#define ION_FLAG_256M         (1 << 29)
+#define ION_FLAG_FAST_ALLOC   (1 << 28)
+
+#define ION_FLAG_USER_MAP     (1 << 24)
+#define ION_FLAG_KMAP         (2 << 24)
+
+#define ION_FLAG_HWWR         (1 << 20) /* For buffers which may over-run */
+
+#define ION_FLAG_WRITECOMBINE (1 << 16)
+#define ION_FLAG_WRITETHROUGH (2 << 16) /* Needs explicit cache invalidates */
+#define ION_FLAG_WRITEBACK    (4 << 16) /* Needs explicit cache flushes */
+#define ION_FLAG_ACP          (8 << 16) /* ACP allocation(WB) requested */
 
 /**
  * DOC: Buffer property flags and masks
@@ -161,6 +206,50 @@ struct ion_custom_region_data {
 };
 
 /**
+ * struct ion_custom_config_data - metadata to be filled by kernel and
+ *	passed to userspace for getting interface version and heap
+ *	masks to be used for different requests
+ *
+ * @version: Version info of custom ioctls
+ * @mask_secure: Heap mask to be used for secure buffers. All other
+ *	heaps are ignored if secure buffer is requested.
+ * @mask_256M: Heap mask which limits the iova/pa address to 256M for
+ *	hardwares which has limitation of 28-bit addressing. It will
+ *	not fallback to another heap outside this heap mask for such
+ *	requests.
+ * @mask_fast: Heap mask which will be OR-ed only for fast allocation
+ *	requests. CMA heap allocation time is not predictable. For
+ *	critical use-cases, it may have a separate carveout area. If
+ *	allocation fails, it will fallback to slower heaps.
+ * @mask_hwwr: Heap mask which will be OR-ed only for buffers which
+ *	MM hardware may write (use carveout for non-iommu solution
+ *	if memory corruption may happen). This would be needed only
+ *	for non-iommu config to reduce possibility of  critical memory
+ *	getting corrupted. If allocation fails, it will fallback to
+ *	other heaps.
+ * @reserved1-3: Reserved for future expansion
+ *
+ * Carveouts, CMAs, System heaps are normal order as faster allocation
+ *	requests may want to try carveout first and dont want the
+ *	carveout heap to be used up by normal buffers. It would be
+ *	better to fill up carveout and cma before attempting system
+ *	heap. No 256MB limit heaps come before 256MB limited heaps
+ *	as requests with no limit can fallback to 256MB limited heap.
+ *
+ * Provided by userspace as an argument to the ioctl.
+ */
+struct ion_custom_config_data {
+	unsigned int version;
+	unsigned int mask_secure;
+	unsigned int mask_256M;
+	unsigned int mask_fast;
+	unsigned int mask_hwwr;
+	unsigned int reserved1;
+	unsigned int reserved2;
+	unsigned int reserved3;
+};
+
+/**
  * DOC: ION_IOC_CUSTOM_DMA_MAP - get dma mapped address
  *
  * Takes an ion_custom_dma_map_data struct with the handle field populated
@@ -223,6 +312,17 @@ struct ion_custom_region_data {
  */
 #define ION_IOC_CUSTOM_CACHE_INVALIDATE	(8)
 
+/**
+ * DOC: ION_IOC_CUSTOM_GET_CONFIG - Get platform configuration information
+ *
+ * Get interface version info and the heap ids configured in the platform.
+ * The heap info can be used to convert the buffer request to appropriate
+ * heap mask and passed to standard ION ioctl.
+ *
+ * Takes an ion_custom_config_data struct. The version and heap mask fields
+ * has to be populated.
+ */
+#define ION_IOC_CUSTOM_GET_CONFIG	(9)
 
 /**
  * DOC: ION_IOC_CUSTOM_TP - Do a kernel print - to trace the code

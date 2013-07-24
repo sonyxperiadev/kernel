@@ -53,6 +53,10 @@ extern struct platform_device kona_memc_device;
 #ifdef CONFIG_KONA_TMON
 extern struct platform_device kona_tmon_device;
 #endif
+#ifdef CONFIG_KONA_SECURE_MEMC
+extern struct platform_device kona_secure_memc_device;
+extern struct kona_secure_memc_pdata k_s_memc_plat_data;
+#endif
 #ifdef CONFIG_KONA_CPU_FREQ_DRV
 extern struct platform_device kona_cpufreq_device;
 #endif
@@ -76,14 +80,31 @@ extern struct platform_device caph_pcm_device;
 extern struct android_pmem_platform_data android_pmem_data;
 extern struct platform_device android_pmem;
 #endif
-#ifdef CONFIG_ION
+#ifdef CONFIG_ION_BCM_NO_DT
+#ifdef CONFIG_IOMMU_API
+extern struct platform_device iommu_mm_device;
+#endif
+#ifdef CONFIG_BCM_IOVMM
+extern struct platform_device iovmm_mm_device;
+extern struct platform_device iovmm_mm_256mb_device;
+#endif
 extern struct platform_device ion_system_device;
+extern struct platform_device ion_system_extra_device;
 extern struct ion_platform_data ion_carveout_data;
 extern struct platform_device ion_carveout_device;
 #ifdef CONFIG_CMA
 extern struct ion_platform_data ion_cma_data;
 extern struct platform_device ion_cma_device;
-#endif
+#endif /* CONFIG_CMA */
+#if defined(CONFIG_MM_SECURE_DRIVER)
+extern struct ion_platform_data ion_secure_data;
+extern struct platform_device ion_secure_device;
+#endif /* CONFIG_MM_SECURE_DRIVER */
+#endif /* CONFIG_ION_BCM_NO_DT */
+
+#ifdef CONFIG_MOBICORE_DRIVER
+extern struct mobicore_data mobicore_plat_data;
+extern struct platform_device mobicore_device;
 #endif
 
 #endif /* __MACH_JAVA_DEVICE_H */

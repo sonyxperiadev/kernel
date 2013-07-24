@@ -132,9 +132,9 @@ extern "C" {
 		uint8_t hs, hbp, hfp;
 		uint8_t vs, vbp, vfp;
 
-		/* how to do this? */
 		uint32_t hs_bps;
 		uint32_t lp_bps;
+		int desense_offset;
 		void (*vsync_cb)(void);
 		bool cont_clk;
 	} DISPDRV_INFO_T;

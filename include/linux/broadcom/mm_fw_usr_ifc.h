@@ -17,6 +17,9 @@ the GPL, without Broadcom's express prior written consent.
 #define MAX_HANDLES 4
 
 enum {
+	MM_CLEAN_JOB = 0x00000000,
+	MM_DIRTY_JOB = 0x00000100,
+
 	INTERLOCK_INVALID_JOB = 0x64000000,
 	INTERLOCK_WAITING_JOB,
 	INTERLOCK_LAST_JOB,
@@ -34,7 +37,9 @@ enum {
 	V3D_USER_JOB,
 	V3D_USER_LAST_JOB,
 
-	H264_CME_INVALID_JOB = 0x67000000,
+	H264_JOB_BASE = 0x67000000,
+	H264_SECURE_JOB_OFFSET = 0x00080000,
+	H264_CME_INVALID_JOB = H264_JOB_BASE,
 	H264_CME_EST_JOB,
 	H264_CME_LAST_JOB,
 
@@ -51,6 +56,7 @@ enum {
 	H264_VCE_LAUNCH_JOB,
 	H264_VCE_ENC_SLICE_JOB,
 	H264_VCE_DEC_SLICE_JOB,
+	H264_VCE_RESET_CODEC_JOB,
 	H264_VCE_LAST_JOB,
 
 	H264_OL_INVALID_JOB = 0x67040000,
@@ -84,6 +90,7 @@ enum {
 
 enum {
 	MM_JOB_STATUS_INVALID = 0,
+	MM_JOB_STATUS_DIRTY,
 	MM_JOB_STATUS_READY,
 	MM_JOB_STATUS_RUNNING,
 	MM_JOB_STATUS_RUNNING1,
@@ -106,12 +113,23 @@ struct MM_JOB_POST_T {
 	uint32_t handle;
 	uint32_t num_dep_handles;
 	uint32_t dep_handles[MAX_HANDLES];
+	void *spl_data_ptr;
 };
+
+struct MM_DEV_SPL_DATA_T {
+	unsigned char *buf;
+	unsigned int offset;
+	unsigned int size;
+};
+
+#define mm_dev_spl_data_t struct MM_DEV_SPL_DATA_T
+
 #define mm_job_post_t struct MM_JOB_POST_T
 
 #define INTERLOCK_DEV_NAME	"mm_interlock"
 #define V3D_DEV_NAME	"mm_v3d"
 #define ISP_DEV_NAME	"mm_isp"
+#define ISP2_DEV_NAME	"mm_isp2"
 #define H264_DEV_NAME	"mm_h264"
 #define MM_DEV_MAGIC	'M'
 
@@ -120,6 +138,13 @@ enum {
 	MM_CMD_POST_JOB,
 	MM_CMD_WAIT_JOB,
 	MM_CMD_WAIT_HANDLES,
+	MM_CMD_ALLOC_SPL_DATA,
+	MM_CMD_COPY_SPL_DATA,
+	MM_CMD_DEVICE_TRYLOCK,
+	MM_CMD_DEVICE_LOCK,
+	MM_CMD_DEVICE_UNLOCK,
+	MM_CMD_SECURE_JOB_WAIT,
+	MM_CMD_SECURE_JOB_DONE,
 	MM_CMD_LAST
 };
 
@@ -141,17 +166,36 @@ struct MM_VERSION_INFO_T {
 	void *version_info_ptr;
 };
 
+struct mm_secure_job_t_ {
+	mm_job_type_e     type;
+	unsigned int      id;
+	mm_job_status_e   status;
+};
+#define mm_secure_job_t   struct mm_secure_job_t_
+#define mm_secure_job_ptr struct mm_secure_job_t_ *
+
 #define mm_version_info_t struct MM_VERSION_INFO_T
 
 #define mm_handle_status_t struct MM_HANDLE_STATUS_T
 
-#define MM_IOCTL_POST_JOB     _IOWR(MM_DEV_MAGIC, MM_CMD_POST_JOB, \
-						mm_job_post_t)
 #define MM_IOCTL_VERSION_REQ  _IOWR(MM_DEV_MAGIC, MM_CMD_GET_VERSION, \
 						mm_version_info_t)
-#define MM_IOCTL_WAIT_JOB     _IOWR(MM_DEV_MAGIC, MM_CMD_WAIT_JOB, \
-						mm_job_status_t)
-#define MM_IOCTL_WAIT_HANDLES _IOWR(MM_DEV_MAGIC, MM_CMD_WAIT_HANDLES, \
-						mm_handle_status_t)
+#define MM_IOCTL_ALLOC_SPL_DATA _IOWR(MM_DEV_MAGIC, MM_CMD_ALLOC_SPL_DATA, \
+							unsigned int)
+#define MM_IOCTL_COPY_SPL_DATA _IOWR(MM_DEV_MAGIC, MM_CMD_COPY_SPL_DATA, \
+						mm_dev_spl_data_t)
+#define MM_IOCTL_DEVICE_TRYLOCK _IOWR(MM_DEV_MAGIC, MM_CMD_DEVICE_TRYLOCK, \
+							unsigned int)
+#define MM_IOCTL_DEVICE_LOCK _IOWR(MM_DEV_MAGIC, MM_CMD_DEVICE_LOCK, \
+						unsigned int)
+#define MM_IOCTL_DEVICE_UNLOCK _IOWR(MM_DEV_MAGIC, MM_CMD_DEVICE_UNLOCK, \
+							unsigned int)
+
+#define MM_IOCTL_SECURE_JOB_WAIT _IOWR(MM_DEV_MAGIC, MM_CMD_SECURE_JOB_WAIT, \
+		mm_secure_job_t)
+
+#define MM_IOCTL_SECURE_JOB_DONE _IOWR(MM_DEV_MAGIC, MM_CMD_SECURE_JOB_DONE, \
+		mm_secure_job_t)
+
 
 #endif

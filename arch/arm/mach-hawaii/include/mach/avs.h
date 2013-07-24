@@ -29,7 +29,7 @@ enum {
 	A9_FREQ_UNKNOWN,
 	A9_FREQ_1000_MHZ,
 	A9_FREQ_1200_MHZ,
-	A9_FREQ_1500_MHZ,
+	A9_FREQ_1400_MHZ,
 	A9_FREQ_MAX,
 };
 
@@ -40,6 +40,8 @@ enum {
 	AVS_VDDFIX_ADJ_EN = 1 << 3,
 	AVS_IGNORE_CRC_ERR = 1 << 4,
 	AVS_USE_IRDROP_IF_NO_OTP = 1 << 5,
+	AVS_VDDVAR_ADJ_EN = 1 << 6,
+	AVS_VDDVAR_A9_ADJ_EN = 1 << 7,
 };
 
 struct avs_ate_lut_entry {
@@ -52,16 +54,18 @@ struct avs_pdata {
 	u32 avs_addr_row3;
 	u32 avs_addr_row5;
 	u32 avs_addr_row8;
-	int *vddfix_adj_lut;
-	u32 **vddvar_adj_lut;
+	int **vddfix_adj_lut;
+	u32 **vddvar_aging_lut;
 	void (*silicon_type_notify) (u32 silicon_type, u32 ate_freq);
-	struct avs_ate_lut_entry *ate_lut;
+	struct avs_ate_lut_entry **ate_lut;
 	u32 *irdrop_lut;
 	u32 irdrop_vreq;
 	u32 *vddvar_vret_lut;
 	u32 *vddfix_vret_lut;
 	u32 *vddvar_vmin_lut;
 	u32 *vddvar_a9_vmin_lut;
+	int *vddvar_adj_lut;
+	int *vddvar_a9_adj_lut;
 	char *a9_regl_id;
 	u32 pwrwdog_base;
 };
@@ -74,5 +78,7 @@ u32 avs_get_vddvar_a9_vlt_min(void);
 u32 avs_get_silicon_type(void);
 u32 avs_get_ate_freq(void);
 int avs_get_vddvar_aging_margin(u32 silicon_type, u32 freq);
-int avs_get_vddfix_adj(void);
+int avs_get_vddfix_adj(u32 ddr_freq);
+int avs_get_vddvar_adj(void);
+int avs_get_vddvar_a9_adj(void);
 #endif	  /*__KONA_AVS___*/

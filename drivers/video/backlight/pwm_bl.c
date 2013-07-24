@@ -20,6 +20,7 @@
 #include <linux/pwm.h>
 #include <linux/pwm_backlight.h>
 #include <linux/slab.h>
+#include <mach/pinmux.h>
 
 struct pwm_bl_data {
 	struct pwm_device	*pwm;
@@ -35,6 +36,22 @@ struct pwm_bl_data {
 	void			(*exit)(struct device *);
 	struct delayed_work bl_delay_on_work;
 };
+
+/*
+During soft reset, the PWM registers are reset but the pad
+control registers are not.
+So for a short duration (till loader sets 0x404 to PWM control
+register) the PWM output remains high.
+
+During hard reset this is not seen as both the pad control and
+the PWM registers are in reset state.
+
+Hence setting the function of pad cntrl register at 0x3500489C from
+PWM2 to GPIO24 on soft reset.
+*/
+static int pwm_pin = -1;
+static int pwm_pin_reboot_func = -1;
+
 
 static int pwm_backlight_update_status(struct backlight_device *bl)
 {

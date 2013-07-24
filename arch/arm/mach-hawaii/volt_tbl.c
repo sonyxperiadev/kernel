@@ -279,7 +279,8 @@ u8 *get_sr_vlt_table(u32 silicon_type, int freq_id)
 	u32 *vlt_table;
 	int i;
 	int ret;
-	u32 vddvar_adj;
+	u32 aging_margin;
+	int vddvar_adj, vddvara9_adj;
 	u32 vlt;
 	u32 vddvar_a9_min = avs_get_vddvar_a9_vlt_min();
 	u32 vddvar_min = avs_get_vddvar_vlt_min();
@@ -300,13 +301,13 @@ u8 *get_sr_vlt_table(u32 silicon_type, int freq_id)
 	switch (freq_id) {
 	case A9_FREQ_1000_MHZ:
 			vlt_table = pmu_vlt_table_1g[silicon_type];
-			vddvar_adj = DEFAULT_AGING_MARGIN_1G;
+			aging_margin = DEFAULT_AGING_MARGIN_1G;
 			break;
 	case A9_FREQ_1200_MHZ:
 			vlt_table = pmu_vlt_table_1200m[silicon_type];
-			vddvar_adj = DEFAULT_AGING_MARGIN_1200M;
+			aging_margin = DEFAULT_AGING_MARGIN_1200M;
 			break;
-	case A9_FREQ_1500_MHZ:
+	case A9_FREQ_1400_MHZ:
 	/* Right now 1.5Ghz table hasn't been defined */
 	default:
 			BUG();
@@ -314,14 +315,20 @@ u8 *get_sr_vlt_table(u32 silicon_type, int freq_id)
 
 	ret = avs_get_vddvar_aging_margin(silicon_type, freq_id);
 	if (ret >= 0)
-		vddvar_adj = (u32)ret;
+		aging_margin = (u32)ret;
 	for (i = 0; i < ACTIVE_VOLTAGE_OFFSET; i++) {
 		vlt_id_table[i] = bcmpmu_rgltr_get_volt_id(vlt_table[i]);
 		volt_dbg_log.pwr_mgr_volt_tbl[i] = vlt_id_table[i];
 	}
-
+	vddvara9_adj = avs_get_vddvar_a9_adj();
+	vddvar_adj = avs_get_vddvar_adj();
+	pr_info("MSR adjust: %d, CSR adjust: %d", vddvar_adj, vddvara9_adj);
 	for (i = ACTIVE_VOLTAGE_OFFSET; i < SR_VLT_LUT_SIZE; i++) {
-		vlt = vlt_table[i] + vddvar_adj;
+		vlt = vlt_table[i] + aging_margin;
+		if ((i == ACTIVE_VOLTAGE_OFFSET) || (i % 2 == 0))
+			vlt += vddvara9_adj;
+		else
+			vlt += vddvar_adj;
 		vlt_id_table[i] = bcmpmu_rgltr_get_volt_id(max(vlt,
 							min_vlt_table[i]));
 		volt_dbg_log.pwr_mgr_volt_tbl[i] = vlt_id_table[i];
@@ -334,6 +341,7 @@ u8 *get_sr_vlt_table(u32 silicon_type, int freq_id)
 {
 	u32 *vlt_table;
 	int i;
+	u32 vlt_adj, temp;
 	pr_info("%s silicon_type = %d, freq_id = %d\n", __func__,
 		silicon_type, freq_id);
 	if (silicon_type > SILICON_TYPE_MAX || freq_id > A9_FREQ_MAX)
@@ -341,16 +349,19 @@ u8 *get_sr_vlt_table(u32 silicon_type, int freq_id)
 	switch (freq_id) {
 	case A9_FREQ_1000_MHZ:
 			vlt_table = pmu_vlt_table_1g[silicon_type];
+			vlt_adj = DEFAULT_AGING_MARGIN_1G;
 			break;
 	case A9_FREQ_1200_MHZ:
 			vlt_table = pmu_vlt_table_1200m[silicon_type];
+			vlt_adj = DEFAULT_AGING_MARGIN_1200M;
 			break;
-	case A9_FREQ_1500_MHZ:
+	case A9_FREQ_1400_MHZ:
 	default:
 			BUG();
 	}
 	for (i = 0; i < SR_VLT_LUT_SIZE; i++) {
-		vlt_id_table[i] = bcmpmu_rgltr_get_volt_id(vlt_table[i]);
+		temp = vlt_table[i] + vlt_adj;
+		vlt_id_table[i] = bcmpmu_rgltr_get_volt_id(temp);
 		volt_dbg_log.pwr_mgr_volt_tbl[i] = vlt_id_table[i];
 	}
 	volt_dbg_log.si_type = silicon_type;
@@ -408,7 +419,7 @@ int get_vddfix_vlt_adj(u32 vddfix_vlt)
 		ddr_freq_id = DDR_FREQ_450M;
 
 #ifdef CONFIG_KONA_AVS
-	adj_val = avs_get_vddfix_adj();
+	adj_val = avs_get_vddfix_adj(ddr_freq_id);
 	if (adj_val == 0) {
 		if (ddr_freq_id == DDR_FREQ_450M) {
 			silicon_type = avs_get_silicon_type();
@@ -555,7 +566,7 @@ static ssize_t read_volt_tbl(struct file *file, const char __user *buf,
 		return count;
 	}
 	/* Right now, 1.5Ghz voltage table hasn't been defined */
-	if (freq_id >= A9_FREQ_1500_MHZ) {
+	if (freq_id >= A9_FREQ_1400_MHZ) {
 		pr_err("%s: Invalid freq id\n", __func__);
 		return count;
 	}

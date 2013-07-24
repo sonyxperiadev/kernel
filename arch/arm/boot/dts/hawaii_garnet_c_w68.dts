@@ -155,15 +155,21 @@
 	iovmm_mm: iovmm-mm {
 		compatible = "bcm,iovmm";
 		base = <0xc0000000>;
-		size = <0x20000000>;
+		size = <0x30000000>;
 		order = <0>;
 	};
 
 	iovmm_mm_256mb: iovmm-mm-256mb {
 		compatible = "bcm,iovmm";
-		base = <0xe0000000>;
-		size = <0x10000000>;
+		base = <0xf0000000>;
+		size = <0x0ff00000>;
 		order = <0>;
+	};
+
+	ion-config {
+		compatible = "bcm,ion-config";
+		/* No separate mask needed for hwwr if M4U is enabled */
+		mask_hwwr = <0>;
 	};
 
 	ion-system {
@@ -174,9 +180,17 @@
 		iovmm = <&iovmm_mm_256mb>;
 	};
 
+	ion-system-extra {
+		compatible = "bcm,ion";
+		id = <1>;
+		type = <0>;
+		iommu = <&iommu_mm>;
+		iovmm = <&iovmm_mm>;
+	};
+
 	ion-carveout {
 		compatible = "bcm,ion";
-		id = <3>;
+		id = <9>;
 		type = <2>;
 		base  = <0x90000000>;
 		limit = <0xa0000000>;
@@ -190,7 +204,7 @@
 
 	ion-cma {
 		compatible = "bcm,ion";
-		id = <2>;
+		id = <5>;
 		type = <4>;
 		base  = <0x90000000>;
 		limit = <0xa0000000>;
@@ -204,17 +218,17 @@
 
 	soc-back-camera {
 		compatible = "bcm,soc-camera";
-		reg = <0x3c 0x0>;
+		reg = <0x36 0x0>;
 		bus-id = <0>;
-		i2c-type = "ov2675";	/* i2c_board_info type */
-		i2c-addr = <0x3c>;	/* i2c_board_info addr */
+		i2c-type = "ov5648";
+		i2c-addr = <0x36>;
 		i2c-adapter-id = <0>;
-		module-name = "ov2675";
-		if-type = <1>;		/* V4L2_SUBDEV_SENSOR_SERIAL */
-		if-mode = <3>;		/* V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2 */
-		orientation = <1>;	/* V4L2_SUBDEV_SENSOR_LANDSCAPE */
-		facing = <1>;		/* V4L2_SUBDEV_SENSOR_BACK */
-		lanes = <1>;
+		module-name = "ov5648";
+		if-type = <1>;
+		if-mode = <3>;
+		orientation = <1>;
+		facing = <1>;
+		lanes = <2>;
 		channel = <0>;
 		phy-rate = <0>;
 		pix-clk = <0>;
@@ -273,7 +287,7 @@
 		thold_size = <3>; /*number of threshold levels*/
 		poll_rate_ms = <30000>;
 		hysteresis = <0>;
-		flags = <1>;
+		flags = <0>;
 		interval_ms = <5>;
 		/*critical temp is 115*/
 		thold = <85 75 1

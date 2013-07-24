@@ -14,7 +14,6 @@ the GPL, without Broadcom's express prior written consent.
 #define pr_fmt(fmt) "<%s> " fmt "\n", core_dev->mm_common->mm_name
 
 #include "mm_core.h"
-extern struct mutex mm_common_mutex;
 void dev_timer_callback(unsigned long data)
 {
 	struct mm_core *core_dev = (struct mm_core *)data;
@@ -95,24 +94,24 @@ static void mm_core_disable_clock(struct mm_core *core_dev)
 		}
 }
 
+static unsigned int dirty_cnt;
+static unsigned int clean_cnt;
 static void mm_fmwk_job_scheduler(struct work_struct *work)
 {
 	mm_job_status_e status = MM_JOB_STATUS_INVALID;
 	bool is_hw_busy = false;
+	struct dev_job_list *job_list_elem;
 
 	struct mm_core *core_dev = container_of(work, \
 					struct mm_core, \
 					job_scheduler);
 	MM_CORE_HW_IFC *hw_ifc = &core_dev->mm_device;
 
-	mutex_lock(&mm_common_mutex);
-
 	if (plist_head_empty(&core_dev->job_list)) {
-		mutex_unlock(&mm_common_mutex);
 		return;
 		}
 
-	struct dev_job_list *job_list_elem = plist_first_entry(\
+	job_list_elem = plist_first_entry(\
 			&(core_dev->job_list), \
 			struct dev_job_list, core_list);
 
@@ -122,6 +121,18 @@ static void mm_fmwk_job_scheduler(struct work_struct *work)
 	is_hw_busy = hw_ifc->mm_get_status(hw_ifc->mm_device_id);
 	if (!is_hw_busy) {
 		if (job_list_elem->job.size) {
+
+			if (job_list_elem->job.status == MM_JOB_STATUS_READY)
+				clean_cnt++;
+
+			if (job_list_elem->job.status == MM_JOB_STATUS_DIRTY) {
+				mm_common_cache_clean();
+				dirty_cnt++;
+				if ((dirty_cnt % 1000) == 0)
+					pr_debug("mm jobs dirty=%d, clean=%d\n",
+					dirty_cnt, clean_cnt);
+			}
+
 			status	= hw_ifc->mm_start_job(\
 					hw_ifc->mm_device_id, \
 					&job_list_elem->job, 0);
@@ -135,7 +146,7 @@ static void mm_fmwk_job_scheduler(struct work_struct *work)
 				is_hw_busy = true;
 				pr_debug("job posted ");
 
-				atomic_notifier_call_chain(\
+				raw_notifier_call_chain(\
 				&core_dev->mm_common->notifier_head, \
 				MM_FMWK_NOTIFY_JOB_STARTED, NULL);
 
@@ -178,19 +189,20 @@ static void mm_fmwk_job_scheduler(struct work_struct *work)
 		pr_debug("mod_timer  %lx %lx", \
 				jiffies, \
 				msecs_to_jiffies(hw_ifc->mm_timer));
-		mutex_unlock(&mm_common_mutex);
 		return;
 		}
 
 mm_fmwk_job_scheduler_done:
 	mm_core_disable_clock(core_dev);
-	mutex_unlock(&mm_common_mutex);
 }
 
 
 static int validate(MM_CORE_HW_IFC *core_params)
 {
-	return 0;
+	if (core_params && core_params->mm_start_job)
+		return 0;
+	else
+		return -1;
 }
 
 void *mm_core_init(struct mm_common *mm_common, \
@@ -200,7 +212,7 @@ void *mm_core_init(struct mm_common *mm_common, \
 	struct mm_core *core_dev = NULL;
 
 	if (validate(core_params))
-		goto err_register;
+		goto err_register2;
 
 	core_dev = kmalloc(sizeof(struct mm_core), GFP_KERNEL);
 	if (core_dev == NULL) {
@@ -246,6 +258,7 @@ err_register:
 	pr_err("Error in core_init for %s", mm_dev_name);
 	if (core_dev)
 		mm_core_exit(core_dev);
+err_register2:
 	return NULL;
 }
 

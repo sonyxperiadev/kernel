@@ -7295,6 +7295,16 @@ typedef enum
 	/* <Payload type {::Boolean} */
 	MSG_FLASH_READIMAGE_RSP  = 0x4B4B,
 
+	/**
+	api is SYS_APSystemCmd
+	**/
+	/* Payload type {::SYS_APSystemCmd_Req_t} */
+	MSG_AP_SYS_CMD_REQ  = 0x4B4C,
+	 /**
+	payload is ::default_proc
+	**/
+	MSG_AP_SYS_CMD_RSP  = 0x4B4D,
+
 	//MSG_GEN_REQ_END = 0x4BFF
 
 #endif //DEFINE_SYS_GEN_MIDS

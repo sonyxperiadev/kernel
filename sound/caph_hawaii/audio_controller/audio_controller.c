@@ -1398,23 +1398,23 @@ void AUDCTRL_GetSrcSinkByMode(AudioMode_t mode, AUDIO_SOURCE_Enum_t *pMic,
 	switch (mode) {
 	case AUDIO_MODE_HANDSET:
 	case AUDIO_MODE_HAC:
-		*pMic = AUDIO_SOURCE_ANALOG_MAIN;
+		*pMic = AUDDRV_GetPrimaryMicFromSpkr(AUDIO_SINK_HANDSET);
 		*pSpk = AUDIO_SINK_HANDSET;
 		break;
 
 	case AUDIO_MODE_HEADSET:
 	case AUDIO_MODE_TTY:
-		*pMic = AUDIO_SOURCE_ANALOG_AUX;
+		*pMic = AUDDRV_GetPrimaryMicFromSpkr(AUDIO_SINK_HEADSET);
 		*pSpk = AUDIO_SINK_HEADSET;
 		break;
 
 	case AUDIO_MODE_BLUETOOTH:
-		*pMic = AUDIO_SOURCE_BTM;
+		*pMic = AUDDRV_GetPrimaryMicFromSpkr(AUDIO_SINK_BTM);
 		*pSpk = AUDIO_SINK_BTM;
 		break;
 
 	case AUDIO_MODE_SPEAKERPHONE:
-		*pMic = AUDIO_SOURCE_ANALOG_MAIN;
+		*pMic = AUDDRV_GetPrimaryMicFromSpkr(AUDIO_SINK_LOUDSPK);
 		*pSpk = AUDIO_SINK_LOUDSPK;
 		break;
 
@@ -1438,7 +1438,9 @@ void AUDCTRL_GetSrcSinkByMode(AudioMode_t mode, AUDIO_SOURCE_Enum_t *pMic,
 void AUDCTRL_EnablePlay(AUDIO_SOURCE_Enum_t source,
 			AUDIO_SINK_Enum_t sink,
 			AUDIO_NUM_OF_CHANNEL_t numCh,
-			AUDIO_SAMPLING_RATE_t sr, unsigned int *pPathID)
+			AUDIO_SAMPLING_RATE_t sr,
+			AUDIO_BITS_PER_SAMPLE_t bitsPerSample,
+			unsigned int *pPathID)
 {
 	CSL_CAPH_HWCTRL_CONFIG_t config;
 	CSL_CAPH_PathID pathID;
@@ -1465,7 +1467,7 @@ void AUDCTRL_EnablePlay(AUDIO_SOURCE_Enum_t source,
 	/* For playback, sample rate should be 48KHz. */
 	config.snk_sampleRate = AUDIO_SAMPLING_RATE_48000;
 	config.chnlNum = numCh;
-	config.bitPerSample = 16;
+	config.bitPerSample = bitsPerSample;
 
 	/*save audio for powerOnExternalAmp() to use. */
 	mode = GetAudioModeBySink(sink);
@@ -2695,6 +2697,12 @@ void AUDCTRL_EnableRecord(AUDIO_SOURCE_Enum_t source,
 			/*go ahead to take a new path */
 	}
 
+#if defined(CONFIG_MACH_HAWAII_GARNET) || defined(CONFIG_MACH_JAVA_GARNET)
+/*For garnet need to enable regulator to power on analog switch which
+selects IHF protection loopback or Analog Mic line to BB*/
+	if (source == AUDIO_SOURCE_ANALOG_MAIN)
+		csl_ControlHW_dmic_regulator(TRUE);
+#endif
 	if (source == AUDIO_SOURCE_SPEECH_DIGI) {
 		/* Not supported - One stream - two paths use case for record.
 		   Will be supported with one path itself */
@@ -2830,7 +2838,12 @@ void AUDCTRL_DisableRecord(AUDIO_SOURCE_Enum_t source,
 			__func__, config.pathID);
 		csl_caph_hwctrl_DisablePath(config);
 	}
-
+#if defined(CONFIG_MACH_HAWAII_GARNET) || defined(CONFIG_MACH_JAVA_GARNET)
+/*For garnet need to disable regulator to power off analog switch
+which selects IHF protection loopback or Analog Mic line to BB*/
+	if (source == AUDIO_SOURCE_ANALOG_MAIN)
+		csl_ControlHW_dmic_regulator(FALSE);
+#endif
 	if (audioPathResetPending && csl_caph_hwctrl_allPathsDisabled()) {
 		AUDDRV_CPResetCleanup();
 		csl_caph_hwctrl_init();
@@ -3275,12 +3288,21 @@ void AUDCTRL_SetAudioLoopback(Boolean enable_lpbk,
 			if (sink_dev == CSL_CAPH_DEV_BT_SPKR)
 				sinkTemp = AUDIO_SINK_BTM;
 
-			AUDCTRL_EnablePlay(srcTemp, speaker, AUDIO_CHANNEL_MONO,
-					   48000, NULL);
+			AUDCTRL_EnablePlay(srcTemp, speaker,
+				AUDIO_CHANNEL_MONO,
+				48000, 16, NULL);
 			AUDCTRL_EnableRecord(mic, sinkTemp, AUDIO_CHANNEL_MONO,
 					     48000, NULL);
 			return;
 		}
+
+#if defined(CONFIG_MACH_HAWAII_GARNET) || defined(CONFIG_MACH_JAVA_GARNET)
+/*For garnet need to enable regulator to power on analog switch which
+selects IHF protection loopback or Analog Mic line to BB*/
+		if (mic == AUDIO_SOURCE_ANALOG_MAIN)
+			csl_ControlHW_dmic_regulator(TRUE);
+#endif
+
 #if 0
 /*removed this to make fm radio work using xpft script */
 		if (src_dev == CSL_CAPH_DEV_FM_RADIO) {
@@ -3420,6 +3442,13 @@ void AUDCTRL_SetAudioLoopback(Boolean enable_lpbk,
 		/*clocks are disabled here, so no register access after this. */
 		(void)csl_caph_hwctrl_DisablePath(hwCtrlConfig);
 
+#if defined(CONFIG_MACH_HAWAII_GARNET) || defined(CONFIG_MACH_JAVA_GARNET)
+/*For garnet need to disable regulator to power off analog switch
+which selects IHF protection loopback or Analog Mic line to BB*/
+		if (mic == AUDIO_SOURCE_ANALOG_MAIN)
+			csl_ControlHW_dmic_regulator(FALSE);
+#endif
+
 		/*Enable PMU for headset/IHF */
 		if ((speaker == AUDIO_SINK_LOUDSPK)
 		    || (speaker == AUDIO_SINK_HEADSET)) {
@@ -3494,7 +3523,9 @@ void AUDCTRL_EnableBypassVibra(UInt32 Strength, int direction)
 
 		if (IS_ERR(vibra_reg))
 			aError("Failed to get LDO for Vibra\n");
-	}
+	} else
+		return ret;
+
 	if (vibra_reg) {
 		ret = regulator_enable(vibra_reg);
 		if (ret != 0)
@@ -3701,7 +3732,10 @@ int AUDCTRL_HardwareControl(AUDCTRL_HW_ACCESS_TYPE_en_t access_type,
 		csl_audio_render_set_dma_size(arg1);
 		break;
 	case AUDCTRL_HW_CFG_DUALMIC_REFMIC:
-		csl_caph_hwctrl_SetDualMic_NoiseRefMic(getDeviceFromSrc(arg1));
+		AUDDRV_SetSecMicFromSpkr(arg1, arg2);
+		break;
+	case AUDCTRL_HW_CFG_PRIMARY_MIC:
+		AUDDRV_SetPrimaryMicFromSpkr(arg1, arg2);
 		break;
 	case AUDCTRL_HW_CFG_ECHO_REF_MIC:
 		AUDDRV_SetEchoRefMic(arg1);
@@ -3753,6 +3787,9 @@ int AUDCTRL_HardwareControl(AUDCTRL_HW_ACCESS_TYPE_en_t access_type,
 		break;
 	case AUDCTRL_HW_PRINT_PATH:
 		csl_caph_hwctrl_PrintAllPaths();
+		break;
+	case AUDCTRL_HW_PRINT_MICS:
+		AUDDRV_PrintAllMics();
 		break;
 	case AUDCTRL_HW_WRITE_GAIN:
 

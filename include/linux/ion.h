@@ -37,6 +37,7 @@ enum ion_heap_type {
 	ION_HEAP_TYPE_CARVEOUT,
 	ION_HEAP_TYPE_CHUNK,
 	ION_HEAP_TYPE_DMA,
+	ION_HEAP_TYPE_SECURE,
 	ION_HEAP_TYPE_CUSTOM, /* must be last so device specific heaps always
 				 are at the end of this enum */
 	ION_NUM_HEAPS = 16,
@@ -59,10 +60,6 @@ enum ion_heap_type {
 #define ION_FLAG_CACHED_NEEDS_SYNC 2	/* mappings of this buffer will created
 					   at mmap time, if this is set
 					   caches must be managed manually */
-
-#define ION_FLAG_WRITECOMBINE (1 << 16)
-#define ION_FLAG_WRITETHROUGH (2 << 16) /* Needs explicit cache invalidates */
-#define ION_FLAG_WRITEBACK    (4 << 16) /* Needs explicit cache flushes */
 
 #ifdef __KERNEL__
 struct ion_device;
@@ -260,6 +257,18 @@ int ion_share_dma_buf_fd(struct ion_client *client, struct ion_handle *handle);
  * another exporter is passed in this function will return ERR_PTR(-EINVAL)
  */
 struct ion_handle *ion_import_dma_buf(struct ion_client *client, int fd);
+
+#ifdef CONFIG_ION_BCM
+/**
+ * Total memory (in bytes) to be freed asynchronously
+ */
+int ion_freelist_total(struct ion_device *dev);
+
+/**
+ * Total memory (in bytes) allocated from the heap type
+ */
+int ion_used_total(struct ion_device *dev, enum ion_heap_type heap_type);
+#endif
 
 #endif /* __KERNEL__ */
 

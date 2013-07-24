@@ -118,6 +118,26 @@ struct ion_handle {
 	unsigned int kmap_cnt;
 };
 
+#ifdef CONFIG_ION_BCM
+/**
+ * Memory (in bytes) to be freed asynchronously from this heap
+ */
+static int ion_debug_heap_freelist(struct ion_heap *heap);
+
+/**
+ * Memory (in bytes) held by the client from the heap
+ */
+static size_t ion_debug_heap_total(struct ion_client *client,
+		unsigned int id, size_t *shared);
+
+/**
+ * Print the status of all the heaps
+ */
+static void ion_debug_print_heap_status(struct ion_device *dev,
+		int heap_id_mask, char *msg);
+
+#endif
+
 bool ion_buffer_fault_user_mappings(struct ion_buffer *buffer)
 {
         return ((buffer->flags & ION_FLAG_CACHED) &&
@@ -437,14 +457,58 @@ static void ion_handle_add(struct ion_client *client, struct ion_handle *handle)
 }
 
 #ifdef CONFIG_ION_BCM
-static size_t ion_debug_heap_total(struct ion_client *client,
-				   unsigned int id, size_t *shared);
+static int ion_debug_heap_freelist(struct ion_heap *heap)
+{
+	struct ion_buffer *buffer;
+	int total = 0;
+
+	if (heap->flags == ION_HEAP_FLAG_DEFER_FREE) {
+		rt_mutex_lock(&heap->lock);
+		list_for_each_entry(buffer, &heap->free_list, list) {
+			total += buffer->size;
+		}
+		rt_mutex_unlock(&heap->lock);
+	}
+
+	return total;
+}
+
+int ion_freelist_total(struct ion_device *dev)
+{
+	struct ion_heap *heap;
+	int total = 0;
+
+	down_read(&dev->lock);
+	plist_for_each_entry(heap, &dev->heaps, node) {
+		total += ion_debug_heap_freelist(heap);
+	}
+	up_read(&dev->lock);
+
+	return total;
+}
+
+int ion_used_total(struct ion_device *dev, enum ion_heap_type heap_type)
+{
+	struct ion_heap *heap;
+	int total = 0;
+
+	down_read(&dev->lock);
+	plist_for_each_entry(heap, &dev->heaps, node) {
+		if (heap->type == heap_type)
+			total += heap->used;
+	}
+	up_read(&dev->lock);
+
+	return total;
+}
 
 static void ion_debug_print_per_heap(struct ion_heap *heap)
 {
 	struct ion_device *dev = heap->dev;
 	struct rb_node *n;
+	size_t total_size = 0;
 	size_t total_orphaned_size = 0;
+	size_t total_shared_size = 0;
 	int free_heap = 1;
 
 	pr_info("%16.s %16.s %16.s %16.s %16.s\n",
@@ -483,9 +547,8 @@ static void ion_debug_print_per_heap(struct ion_heap *heap)
 						     node);
 		if (buffer->heap->id != heap->id)
 			continue;
-		if (buffer->handle_count)
-			continue;
 		mutex_lock(&buffer->lock);
+		total_size += buffer->size;
 		if (!buffer->handle_count) {
 			pr_info("%16.s %16u %13u KB ref(%d)\n",
 					buffer->task_comm, buffer->pid,
@@ -493,22 +556,40 @@ static void ion_debug_print_per_heap(struct ion_heap *heap)
 					atomic_read(&buffer->ref.refcount));
 			total_orphaned_size += buffer->size;
 		}
+		if (buffer->handle_count > 1)
+			total_shared_size += buffer->size;
 		mutex_unlock(&buffer->lock);
 	}
 	mutex_unlock(&dev->buffer_lock);
 	if (!total_orphaned_size)
 		pr_info("  No memory leak.\n");
 	pr_info("----------------------------------------------------\n");
+	pr_info("Summary:\n");
+	pr_info("%16.s %16.s %16.s\n", "total used", "total shared",
+			"total orphaned");
+	pr_info("%13u KB %13u KB %13u KB\n", (total_size>>10),
+			(total_shared_size>>10), (total_orphaned_size>>10));
+	if (heap->flags == ION_HEAP_FLAG_DEFER_FREE)
+		pr_info("Deferred free list : %13u KB\n",
+				ion_debug_heap_freelist(heap));
+	pr_info("----------------------------------------------------\n");
 }
 
 static void ion_debug_print_heap_status(struct ion_device *dev,
-		int heap_id_mask)
+		int heap_id_mask, char *msg)
 {
 	struct ion_heap *heap;
 
+	pr_info("%16s: heap_mask(%#x)\n",
+			msg, heap_id_mask);
+
+#warning "Porting hack:Tobe fixed"
+#if 0
+	pr_info("Page pool total(%d)KB lowmem(%d)KB\n",
+			ion_page_pool_total(1) << 2,
+			ion_page_pool_total(0) << 2);
+#endif
 	plist_for_each_entry(heap, &dev->heaps, node) {
-		if (!((1 << heap->id) & heap_id_mask))
-			continue;
 		pr_info("Heap(%16.s) Used(%d)KB\n",
 				heap->name, heap->used>>10);
 		ion_debug_print_per_heap(heap);
@@ -517,9 +598,6 @@ static void ion_debug_print_heap_status(struct ion_device *dev,
 #endif
 
 #ifdef CONFIG_ION_OOM_KILLER
-static size_t ion_debug_heap_total(struct ion_client *client,
-				   unsigned int id, size_t *shared);
-
 static int ion_shrink(struct ion_device *dev, unsigned int heap_id_mask,
 		int min_oom_score_adj, int fail_size)
 {
@@ -624,8 +702,6 @@ struct ion_handle *ion_alloc(struct ion_client *client, size_t len,
 #endif
 
 #ifdef CONFIG_ION_BCM
-	/* HACK: Need to remove after fixing cache routines */
-	flags = ION_FLAG_WRITETHROUGH;
 	if (client->task) {
 		client_pid = task_pid_nr(client->task);
 		get_task_comm(client_name, client->task);
@@ -680,7 +756,7 @@ retry:
 		pr_err("(%16.s:%d) Fatal Alloc fail due to no mem for size(%d)KB mask(%#x) flags(%#x)\n",
 				client_name, client_pid, len>>10,
 				heap_id_mask, flags);
-		ion_debug_print_heap_status(dev, heap_id_mask);
+		ion_debug_print_heap_status(dev, heap_id_mask, "Fatal-No-OOM");
 #endif /* CONFIG_ION_OOM_KILLER */
 	} else if (!IS_ERR_OR_NULL(buffer)) {
 		heap_used->used += buffer->size;
@@ -711,7 +787,7 @@ retry:
 		pr_err("(%16.s:%d) Fatal Alloc fail for size(%d)KB mask(%#x) flags(%#x)\n",
 				client_name, client_pid, len>>10,
 				heap_id_mask, flags);
-		ion_debug_print_heap_status(dev, heap_id_mask);
+		ion_debug_print_heap_status(dev, heap_id_mask, "Fatal-unknown");
 	}
 #endif /* CONFIG_ION_BCM */
 	up_read(&dev->lock);
@@ -731,7 +807,7 @@ retry:
 				client_name, client_pid, len>>10,
 				heap_id_mask, flags);
 		down_read(&dev->lock);
-		ion_debug_print_heap_status(dev, heap_id_mask);
+		ion_debug_print_heap_status(dev, heap_id_mask, "Fatal-OOM");
 		up_read(&dev->lock);
 	}
 #endif /* CONFIG_ION_OOM_KILLER */
@@ -1596,6 +1672,9 @@ static int ion_debug_heap_show(struct seq_file *s, void *unused)
 			"total orphaned");
 	seq_printf(s, "%13u KB %13u KB %13u KB\n", (total_size>>10),
 			(total_shared_size>>10), (total_orphaned_size>>10));
+	if (heap->flags == ION_HEAP_FLAG_DEFER_FREE)
+		seq_printf(s, "Deferred free list : %13u KB\n",
+				ion_debug_heap_freelist(heap));
 	seq_printf(s, "----------------------------------------------------\n");
 	seq_printf(s, "\n\n");
 	return 0;

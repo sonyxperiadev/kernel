@@ -879,6 +879,17 @@ static struct pll_cfg_ctrl_info a9_cfg_ctrl =
 	.pll_config_value= a9_cfg_val,
 	.thold_count = ARRAY_SIZE(a9_cfg_val),
 };
+
+struct pll_desense a9_pll_des = {
+	.flags = PLL_OFFSET_EN | PLL_OFFSET_NDIV_FRAC | PLL_OFFSET_NDIV,
+	.pll_offset_offset = KPROC_CLK_MGR_REG_PLLARM_OFFSET_OFFSET,
+#ifdef CONFIG_PWRMGR_1P2GHZ_OPS_SET_SELECT
+	.def_delta = -14500000,
+#else
+	.def_delta = -12000000,
+#endif
+};
+
 static struct pll_clk CLK_NAME(a9_pll) = {
 
 	.clk =	{
@@ -911,9 +922,7 @@ static struct pll_clk CLK_NAME(a9_pll) = {
 	.ndiv_frac_offset = KPROC_CLK_MGR_REG_PLLARMB_OFFSET,
 	.ndiv_frac_mask = KPROC_CLK_MGR_REG_PLLARMB_PLLARM_NDIV_FRAC_MASK,
 	.ndiv_frac_shift = KPROC_CLK_MGR_REG_PLLARMB_PLLARM_NDIV_FRAC_SHIFT,
-	.pll_offset_offset = KPROC_CLK_MGR_REG_PLLARM_OFFSET_OFFSET,
-	.pll_offset_cfg_val = PLLARM_OFFEST_CONFIG,
-
+	.desense = &a9_pll_des,
 	.cfg_ctrl_info = &a9_cfg_ctrl,
 };
 
@@ -1424,6 +1433,7 @@ static struct ccu_clk CLK_NAME(khub) = {
 	.volt_peri = DEFINE_ARRAY_ARGS(VLT_NORMAL_PERI,VLT_HIGH_PERI),
 	.freq_policy = HUB_CCU_FREQ_POLICY_TBL,
 	.freq_tbl = DEFINE_ARRAY_ARGS(khub_clk_freq_list0,khub_clk_freq_list1,khub_clk_freq_list2,khub_clk_freq_list3,khub_clk_freq_list4,khub_clk_freq_list5,khub_clk_freq_list6),
+	.freq_tbl_size = 7,
 	.ccu_reset_mgr_base = HW_IO_PHYS_TO_VIRT(HUB_RST_BASE_ADDR),
 	.reset_wr_access_offset = KHUB_RST_MGR_REG_WR_ACCESS_OFFSET,
 	.dbg_bus_offset = KHUB_CLK_MGR_REG_CLK_DEBUG_BUS_OFFSET,
@@ -2810,6 +2820,7 @@ static struct ccu_clk CLK_NAME(khubaon) = {
 	.volt_peri = DEFINE_ARRAY_ARGS(VLT_NORMAL_PERI,VLT_HIGH_PERI),
 	.freq_policy = AON_CCU_FREQ_POLICY_TBL,
 	.freq_tbl = DEFINE_ARRAY_ARGS(khubaon_clk_freq_list0,khubaon_clk_freq_list1,khubaon_clk_freq_list2,khubaon_clk_freq_list3,khubaon_clk_freq_list4),
+	.freq_tbl_size = 5,
 	.ccu_reset_mgr_base = HW_IO_PHYS_TO_VIRT(AON_RST_BASE_ADDR),
 	.reset_wr_access_offset = KHUBAON_RST_MGR_REG_WR_ACCESS_OFFSET,
 
@@ -3606,6 +3617,7 @@ static struct ccu_clk CLK_NAME(kpm) = {
 	.volt_peri = DEFINE_ARRAY_ARGS(VLT_NORMAL_PERI,VLT_HIGH_PERI),
 	.freq_policy = KPM_CCU_FREQ_POLICY_TBL,
 	.freq_tbl = DEFINE_ARRAY_ARGS(kpm_clk_freq_list0,kpm_clk_freq_list1,kpm_clk_freq_list2,kpm_clk_freq_list3,kpm_clk_freq_list4,kpm_clk_freq_list5,kpm_clk_freq_list6,kpm_clk_freq_list7),
+	.freq_tbl_size = 8,
 	.ccu_reset_mgr_base = HW_IO_PHYS_TO_VIRT(KONA_MST_RST_BASE_ADDR),
 	.reset_wr_access_offset = KPM_RST_MGR_REG_WR_ACCESS_OFFSET,
 	.dbg_bus_offset = KPM_CLK_MGR_REG_CLK_DEBUG_BUS_OFFSET,
@@ -4563,6 +4575,7 @@ static struct ccu_clk CLK_NAME(kps) = {
 	.volt_peri = DEFINE_ARRAY_ARGS(VLT_NORMAL_PERI,VLT_HIGH_PERI),
 	.freq_policy = KPS_CCU_FREQ_POLICY_TBL,
 	.freq_tbl = DEFINE_ARRAY_ARGS(kps_clk_freq_list0,kps_clk_freq_list1,kps_clk_freq_list2,kps_clk_freq_list3,kps_clk_freq_list4,kps_clk_freq_list5),
+	.freq_tbl_size = 6,
 	.ccu_reset_mgr_base = HW_IO_PHYS_TO_VIRT(KONA_SLV_RST_BASE_ADDR),
 	.reset_wr_access_offset = KPS_RST_MGR_REG_WR_ACCESS_OFFSET,
 	.dbg_bus_offset = KPS_CLK_MGR_REG_CLK_DEBUG_BUS_OFFSET,
@@ -5920,6 +5933,7 @@ static u32 mm_clk_freq_list2[] = DEFINE_ARRAY_ARGS(83200000,83200000);
 static u32 mm_clk_freq_list3[] = DEFINE_ARRAY_ARGS(99840000,99840000);
 static u32 mm_clk_freq_list4[] = DEFINE_ARRAY_ARGS(166400000,166400000);
 static u32 mm_clk_freq_list5[] = DEFINE_ARRAY_ARGS(249600000,249600000);
+static u32 mm_clk_freq_list6[] = DEFINE_ARRAY_ARGS(312000000, 312000000);
 
 /*MM CCU state save register list*/
 static struct reg_save mm_reg_save[] =
@@ -5984,7 +5998,10 @@ static struct ccu_clk CLK_NAME(mm) = {
 	.freq_count = MM_CCU_FREQ_VOLT_TBL_SZ,
 	.volt_peri = DEFINE_ARRAY_ARGS(VLT_NORMAL_PERI,VLT_HIGH_PERI),
 	.freq_policy = MM_CCU_FREQ_POLICY_TBL,
-	.freq_tbl = DEFINE_ARRAY_ARGS(mm_clk_freq_list0,mm_clk_freq_list1,mm_clk_freq_list2,mm_clk_freq_list3,mm_clk_freq_list4,mm_clk_freq_list5),
+	.freq_tbl = DEFINE_ARRAY_ARGS(mm_clk_freq_list0, mm_clk_freq_list1,
+			mm_clk_freq_list2, mm_clk_freq_list3, mm_clk_freq_list4,
+			mm_clk_freq_list5, mm_clk_freq_list6),
+	.freq_tbl_size = 7,
 	.ccu_reset_mgr_base = HW_IO_PHYS_TO_VIRT(MM_RST_BASE_ADDR),
 	.reset_wr_access_offset = MM_RST_MGR_REG_WR_ACCESS_OFFSET,
 
@@ -6006,6 +6023,13 @@ static struct pll_cfg_ctrl_info dsi_pll_cfg_ctrl =
 	.pll_config_value= dsi_cfg_val,
 	.thold_count = ARRAY_SIZE(dsi_vc0_thold),
 };
+
+struct pll_desense dsi_pll_des = {
+	.flags = PLL_OFFSET_EN | PLL_OFFSET_NDIV_FRAC,
+	.pll_offset_offset = MM_CLK_MGR_REG_PLLDSI_OFFSET_OFFSET,
+	.def_delta = 0,
+};
+
 
 static struct pll_clk CLK_NAME(dsi_pll) = {
 
@@ -6037,9 +6061,8 @@ static struct pll_clk CLK_NAME(dsi_pll) = {
 	.ndiv_frac_offset = MM_CLK_MGR_REG_PLLDSIB_OFFSET,
 	.ndiv_frac_mask = MM_CLK_MGR_REG_PLLDSIB_PLLDSI_NDIV_FRAC_MASK,
 	.ndiv_frac_shift = MM_CLK_MGR_REG_PLLDSIB_PLLDSI_NDIV_FRAC_SHIFT,
+	.desense = &dsi_pll_des,
 	.cfg_ctrl_info = &dsi_pll_cfg_ctrl,
-	.pll_offset_offset = MM_CLK_MGR_REG_PLLDSI_OFFSET_OFFSET,
-	.pll_offset_cfg_val = PLLDSI_OFFEST_CONFIG,
 };
 
 /*dsi pll - channel 0*/
@@ -7167,10 +7190,10 @@ static int mm_ccu_set_freq_policy(struct ccu_clk *ccu_clk, int policy_id,
 	ccu_write_access_enable(ccu_clk,true);
 	ccu_policy_engine_stop(ccu_clk);
 
-	if (opp_info->freq_id < MM_CCU_FREQ_ID_SUPER_TURBO)
-		reg_val &= ~MM_CLK_MGR_REG_POLICY_FREQ_POLICY_BASE_312_MASK;
-	else
+	if (opp_info->ctrl_prms == MM_CLK_SRC_312M)
 		reg_val |= MM_CLK_MGR_REG_POLICY_FREQ_POLICY_BASE_312_MASK;
+	else
+		reg_val &= ~MM_CLK_MGR_REG_POLICY_FREQ_POLICY_BASE_312_MASK;
 	clk_dbg("%s: reg_val = %x\n", __func__, reg_val);
 	writel(reg_val, CCU_POLICY_FREQ_REG(ccu_clk));
 	ccu_policy_engine_resume(ccu_clk,
@@ -7743,6 +7766,7 @@ static int proc_ccu_set_freq_policy(struct ccu_clk *ccu_clk, int policy_id,
 	u32 shift;
 	u32 target_volt;
 	int curr_opp;
+	u32 sw_freq_id;
 	clk_dbg("%s:policy = %d, freq = %d opp = %d prms = %d\n",
 			__func__, policy_id, opp_info->freq_id,
 			opp_info->opp_id, opp_info->ctrl_prms);
@@ -7775,12 +7799,25 @@ static int proc_ccu_set_freq_policy(struct ccu_clk *ccu_clk, int policy_id,
 		target_volt = (opp_info->opp_id == PI_OPP_NORMAL) ?
 				VLT_ID_A9_NORMAL : VLT_ID_A9_TURBO;
 		curr_opp = pi_get_active_opp(ccu_clk->pi_id);
-		if (opp_info->opp_id > curr_opp)
-			ccu_set_voltage(ccu_clk,
-				opp_info->freq_id, target_volt);
+		if (curr_opp != PI_OPP_ECONOMY) {
+			sw_freq_id = PROC_CCU_FREQ_ID_ECO;
+/* Move economy volt id to that of target voltage to avoid extra seq txn */
+			ccu_set_voltage(ccu_clk, sw_freq_id, target_volt);
+/* Move to economy */
+			reg_val = readl(CCU_POLICY_FREQ_REG(ccu_clk));
+			reg_val &= ~(CCU_FREQ_POLICY_MASK << shift);
+			reg_val |= sw_freq_id << shift;
+			writel(reg_val, CCU_POLICY_FREQ_REG(ccu_clk));
+
+			ccu_policy_engine_resume(ccu_clk, ccu_clk->clk.flags &
+				CCU_TARGET_LOAD ?
+				CCU_LOAD_TARGET : CCU_LOAD_ACTIVE);
+			ccu_policy_engine_stop(ccu_clk);
+/* Put economy OPP voltage ID back to original value */
+			ccu_set_voltage(ccu_clk, sw_freq_id, VLT_ID_A9_ECO);
+		}
 		change_arm_pll_config(opp_info->ctrl_prms);
-		if (opp_info->opp_id < curr_opp)
-			ccu_set_voltage(ccu_clk, opp_info->freq_id,
+		ccu_set_voltage(ccu_clk, opp_info->freq_id,
 				target_volt);
 	}
 

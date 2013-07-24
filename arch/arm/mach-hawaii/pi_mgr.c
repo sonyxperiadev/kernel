@@ -215,6 +215,7 @@ struct opp_info __mm_opp_info[] = {
 	[3] = {
 		.freq_id = MM_CCU_FREQ_ID_SUPER_TURBO,
 		.opp_id = PI_OPP_SUPER_TURBO,
+		.ctrl_prms = MM_CLK_SRC_312M,
 	},
 #endif
 };

@@ -1,0 +1,47 @@
+#
+# Copyright (c) 2010 Yamaha Corporation
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301,
+# USA.
+#
+
+config INPUT_YAS_MAGNETOMETER
+         tristate "YAS Geomagnetic Sensor"
+         depends on I2C
+
+config YAS_MAG_DRIVER_YAS532
+	tristate "YAS Geomagnetic Sensor - yas532"
+	depends on I2C
+	help
+	  Say Y here if you want support for the yas532 sensor
+	  device.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called yas532.
+
+config INPUT_YAS_MAGNETOMETER_POSITION
+         int "YAS Geomagnetic Sensor Mounting Position on Board"
+         depends on INPUT_YAS_MAGNETOMETER
+         default "0"
+         help
+           Chip mounting position (pin 1).
+              0: top, upper-left
+              1: top, upper-right
+              2: top, lower-right
+              3: top, lower-left
+              4: bottom, upper-left
+              5: bottom, upper-right
+              6: bottom, lower-right
+              7: bottom, lower-left

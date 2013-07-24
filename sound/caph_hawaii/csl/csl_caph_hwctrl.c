@@ -203,8 +203,7 @@ static CHAL_HANDLE lp_handle;
 static int en_lpbk_pcm, en_lpbk_i2s;
 static int rec_pre_call;
 static int dsp_path;
-/* the default ref mic used for dual mic operation (hardware dependent) */
-static CSL_CAPH_DEVICE_e dualmic_NoiseRefMic = CSL_CAPH_DEV_DIGI_MIC_L;
+
 
 static CAPH_BLOCK_t caph_block_list[LIST_NUM][MAX_PATH_LEN] = {
 	/*the order must match CAPH_LIST_t*/
@@ -280,6 +279,7 @@ static void csl_ssp_ControlHWClock(Boolean enable, CSL_CAPH_DEVICE_e source,
 static Boolean csl_caph_hwctrl_ssp_running(void);
 static void csl_caph_hwctrl_tdm_config(
 			CSL_CAPH_HWConfig_Table_t *path, int sinkNo);
+static void csl_caph_hwctrl_pcm_stop_tx(CSL_CAPH_PathID pathID, UInt8 channel);
 
 /*static void csl_caph_hwctrl_SetDSPInterrupt(void);*/
 /******************************************************************************
@@ -1200,9 +1200,11 @@ static void csl_caph_obtain_blocks
 	AUDIO_SAMPLING_RATE_t srOut;
 	CSL_CAPH_SRCM_ROUTE_t *pSrcmRoute;
 	CSL_CAPH_DMA_CHNL_e dmaCH = CSL_CAPH_DMA_NONE;
-	int j;
+	int i, j, bt_path;
+	bool src_found = FALSE;
 	CSL_CAPH_DATAFORMAT_e dataFormatTmp;
-
+	CSL_CAPH_SRCM_ROUTE_t *pSrcmRoute2;
+	CSL_CAPH_HWConfig_Table_t *path2;
 	if (!pathID)
 		return;
 	path = &HWConfig_Table[pathID-1];
@@ -1281,7 +1283,7 @@ static void csl_caph_obtain_blocks
 			"caph dsp spk buf@ %p\r\n", path->pBuf);
 #endif
 		} else if (path->sink[sinkNo] == CSL_CAPH_DEV_DSP) {
-			if (path->source == dualmic_NoiseRefMic) {
+			if (path->secMic == TRUE) {
 				dmaCH = CSL_CAPH_DMA_CH14;
 #if defined(ENABLE_DMA_VOICE)
 			path->pBuf = (void *)
@@ -1378,7 +1380,7 @@ static void csl_caph_obtain_blocks
 			aTrace(LOG_AUDIO_CSL,
 				"caph dsp spk cfifo# 0x%x\r\n", fifo);
 		} else if (path->sink[sinkNo] == CSL_CAPH_DEV_DSP) {
-			if (path->source == dualmic_NoiseRefMic) {
+			if (path->secMic == TRUE) {
 				fifo = csl_caph_cfifo_get_fifo_by_dma
 					(CSL_CAPH_DMA_CH14);
 				aTrace(LOG_AUDIO_CSL,
@@ -1436,7 +1438,7 @@ static void csl_caph_obtain_blocks
 		*/
 		if (path->sink[0] == CSL_CAPH_DEV_DSP
 			&& path->source != CSL_CAPH_ECHO_REF_MIC) {
-			if (path->source == dualmic_NoiseRefMic) {
+			if (path->secMic == TRUE) {
 				if (blockIdx == 0)
 					sw = CSL_CAPH_SWITCH_CH14;
 				else
@@ -1496,7 +1498,7 @@ static void csl_caph_obtain_blocks
 			srcmIn = CSL_CAPH_SRCM_MONO_CH1;
 			csl_caph_srcmixer_set_inchnl_status(srcmIn);
 		} else if (path->sink[sinkNo] == CSL_CAPH_DEV_DSP) {
-			if (path->source == dualmic_NoiseRefMic)
+			if (path->secMic == TRUE)
 				srcmIn = CSL_CAPH_SRCM_MONO_CH2;
 			else if (path->source == CSL_CAPH_ECHO_REF_MIC)
 				srcmIn = CSL_CAPH_SRCM_MONO_CH4;
@@ -1519,7 +1521,33 @@ static void csl_caph_obtain_blocks
 						   */
 		} else
 #endif
-		{
+		if (path->sink[sinkNo] == CSL_CAPH_DEV_BT_SPKR) {
+			bt_path = csl_caph_hwctrl_readHWResource(
+					csl_pcm_get_tx0_fifo_data_port(
+						pcmHandleSSP), pathID);
+			if (bt_path) {
+				path2 =	&HWConfig_Table[bt_path-1];
+				for (j = 0; j < MAX_SINK_NUM; j++) {
+					for (i = 0; i < MAX_BLOCK_NUM; i++) {
+						pSrcmRoute2 = &path2->
+							srcmRoute[j][i];
+					if (pSrcmRoute2->tapOutChnl != 0) {
+							srcmIn = pSrcmRoute2->
+								inChnl;
+							src_found = TRUE;
+							break;
+						}
+					}
+					if (src_found)
+						break;
+				}
+			}
+			if (!src_found) {
+				srcmIn = csl_caph_srcmixer_obtain_inchnl
+				(dataFormatTmp, pSrcmRoute->inSampleRate,
+								srOut);
+			}
+		} else {
 			srcmIn = csl_caph_srcmixer_obtain_inchnl
 			(dataFormatTmp, pSrcmRoute->inSampleRate, srOut);
 		}
@@ -1576,7 +1604,7 @@ static void csl_caph_obtain_blocks
 			srcmIn = CSL_CAPH_SRCM_MONO_CH1;
 			csl_caph_srcmixer_set_inchnl_status(srcmIn);
 		} else if (path->sink[sinkNo] == CSL_CAPH_DEV_DSP) {
-			if (path->source == dualmic_NoiseRefMic) {
+			if (path->secMic == TRUE) {
 				srcmIn = CSL_CAPH_SRCM_MONO_CH2;
 				csl_caph_srcmixer_set_inchnl_status(srcmIn);
 			} else {
@@ -1625,7 +1653,7 @@ static void csl_caph_obtain_blocks
 			/* BT playback and BT 48k mono recording requires to
 			 * obtain an extra mixer output here.
 			 * No need for BT to EP/IHF loopback.*/
-#if defined(MIX_ARM2SP)
+#if 1
 			/*consider to use SRC tapout later*/
 			sink = CSL_CAPH_DEV_EP;
 #else
@@ -1897,8 +1925,8 @@ static void csl_caph_hwctrl_remove_blocks(CSL_CAPH_PathID pathID,
 		}
 		if (path->sink[sinkNo] == CSL_CAPH_DEV_BT_SPKR
 			&& pcmTxRunning) {
-			csl_pcm_stop_tx(pcmHandleSSP, CSL_PCM_CHAN_RX0);
-			pcmTxRunning = FALSE;
+			csl_caph_hwctrl_pcm_stop_tx(path->pathID,
+							CSL_PCM_CHAN_TX0);
 		}
 		if (!pcmRxRunning && !pcmTxRunning) {
 			if (sspTDM_enabled) {
@@ -2392,9 +2420,11 @@ static void csl_caph_config_mixer(CSL_CAPH_PathID
 
 	csl_caph_srcmixer_config_mix_route(path->srcmRoute[sinkNo][blockIdx]);
 
-	/*not for multicast*/
-	if (path->sinkCount <= 1)
-		csl_caph_srcmixer_enable_input(pSrcmRoute->inChnl, 0);
+	if (get_chip_id() < KONA_CHIP_ID_JAVA_A0) {
+		/*not for multicast*/
+		if (path->sinkCount <= 1)
+			csl_caph_srcmixer_enable_input(pSrcmRoute->inChnl, 0);
+	}
 
 	csl_caph_hwctrl_set_srcmixer_filter(path);
 
@@ -2409,10 +2439,12 @@ static void csl_caph_config_mixer(CSL_CAPH_PathID
 static void csl_caph_config_src
 (CSL_CAPH_PathID pathID, int sinkNo, int blockPathIdx)
 {
-	int blockIdx;
+	int blockIdx, src_path = 0;
 	CAPH_BLOCK_t block;
 	CSL_CAPH_HWConfig_Table_t *path;
-	/*CSL_CAPH_SRCM_ROUTE_t *pSrcmRoute;*/
+	CSL_CAPH_SRCM_ROUTE_t *pSrcmRoute;
+	UInt32 fifoAddr = 0x0;
+	CAPH_SRCMixer_FIFO_e chal_fifo = CAPH_CH_INFIFO_NONE;
 
 	if (!pathID)
 		return;
@@ -2422,10 +2454,14 @@ static void csl_caph_config_src
 		return;
 	blockIdx = path->blockIdx[sinkNo][blockPathIdx];
 
-	/*SrcmRoute = &path->srcmRoute[sinkNo][blockIdx];*/
-
-	csl_caph_srcmixer_config_src_route(path->srcmRoute[sinkNo][blockIdx]);
-	csl_caph_hwctrl_set_srcmixer_filter(path);
+	pSrcmRoute = &path->srcmRoute[sinkNo][blockIdx];
+	chal_fifo = csl_caph_srcmixer_get_inchnl_fifo(pSrcmRoute->inChnl);
+	fifoAddr = csl_caph_srcmixer_get_fifo_addr(chal_fifo);
+	src_path = csl_caph_hwctrl_readHWResource(fifoAddr, pathID);
+	if (src_path == 0) {
+		csl_caph_srcmixer_config_src_route(*pSrcmRoute);
+		csl_caph_hwctrl_set_srcmixer_filter(path);
+	}
 	/*wait for src to overflow, src output fifo size is 8 samples,
 	  1ms for 48-to-8 src*/
 	if (path->sink[0] == CSL_CAPH_DEV_DSP)
@@ -2942,6 +2978,30 @@ static void csl_ssp_ControlHWClock(Boolean enable,
 	}
 #endif
 }
+/*Enable/Disable the 1.8v DMIC LDO*/
+void csl_ControlHW_dmic_regulator(Boolean enable)
+{
+	aTrace(LOG_AUDIO_CSL,
+		"%s: action = %d,", __func__, enable);
+/*Get and turn on the regulator MICLDO, if its not on*/
+	if (enable) {
+		if (!gMIC_regulator) {
+			gMIC_regulator = regulator_get(NULL, "micldo_uc");
+			if (IS_ERR(gMIC_regulator))
+				aError("MICLDO Regulator_get -FAIL\n");
+			if (gMIC_regulator)
+				regulator_enable(gMIC_regulator);
+			}
+	} else {
+	/* Turn off the regulator MICLDO*/
+		if (gMIC_regulator) {
+			regulator_disable(gMIC_regulator);
+			regulator_put(gMIC_regulator);
+			gMIC_regulator = NULL;
+			aTrace(LOG_AUDIO_CSL, "Disable MICLDO\n");
+		}
+	}
+}
 
 /* For digi-mic clock and power control*/
 void csl_ControlHWClock_2p4m(Boolean enable)
@@ -2953,27 +3013,14 @@ void csl_ControlHWClock_2p4m(Boolean enable)
 			clk_get(NULL, "audioh_2p4m_clk");
 		if (clkIDCAPH[CLK_2P4M]->use_cnt == 0)
 			clk_enable(clkIDCAPH[CLK_2P4M]);
-
-		/*Get and turn on the regulator MICLDO, if its not on*/
-		if (!gMIC_regulator) {
-			gMIC_regulator = regulator_get(NULL, "micldo_uc");
-			if (IS_ERR(gMIC_regulator))
-				aError("MICLDO Regulator_get -FAIL\n");
-		}
-		if (gMIC_regulator)
-			regulator_enable(gMIC_regulator);
+		/*Enable DMIC regulator*/
+		csl_ControlHW_dmic_regulator(TRUE);
 		enable2P4MClk = TRUE;
 	} else if (!enable && enable2P4MClk) {
 		clk_disable(clkIDCAPH[CLK_2P4M]);
 		clkIDCAPH[CLK_2P4M] = NULL;
-
-		/* Turn off the regulator MICLDO*/
-		if (gMIC_regulator) {
-			regulator_disable(gMIC_regulator);
-			regulator_put(gMIC_regulator);
-			gMIC_regulator = NULL;
-			aTrace(LOG_AUDIO_CSL, "Disable MICLDO\n");
-		}
+		/*Disable DMIC regulator*/
+		csl_ControlHW_dmic_regulator(FALSE);
 		enable2P4MClk = FALSE;
 	}
 
@@ -3131,6 +3178,7 @@ static CSL_CAPH_PathID csl_caph_hwctrl_AddPathInTable(
 				config.snk_sampleRate;
 			HWConfig_Table[i].chnlNum = config.chnlNum;
 			HWConfig_Table[i].bitPerSample = config.bitPerSample;
+			HWConfig_Table[i].secMic = config.secMic;
 
 			return (CSL_CAPH_PathID)(i + 1);
 		}
@@ -3643,6 +3691,28 @@ static void csl_caph_hwctrl_closeAudioH(CSL_CAPH_DEVICE_e dev,
 
 	return;
 }
+
+/****************************************************************************
+*  Function Name: void csl_caph_hwctrl_pcm_stop_tx(
+*                   CSL_CAPH_PathID pathID, UInt8 channel)
+*  Description: Check whether to turn off BT TX path.
+****************************************************************************/
+static void csl_caph_hwctrl_pcm_stop_tx(CSL_CAPH_PathID pathID, UInt8 channel)
+{
+	UInt32 fifoAddr = 0x0;
+	if ((!pcmTxRunning) || (pathID == 0))
+		return;
+	aTrace(LOG_AUDIO_CSL,
+		"closepcmtx pathid %d, channel %d.\r\n", pathID, channel);
+	fifoAddr = csl_pcm_get_tx0_fifo_data_port(pcmHandleSSP);
+	csl_caph_hwctrl_removeHWResource(fifoAddr, pathID);
+	if (0 == csl_caph_hwctrl_readHWResource(fifoAddr, pathID)) {
+		csl_pcm_stop_tx(pcmHandleSSP, channel);
+		pcmTxRunning = FALSE;
+	}
+	return;
+}
+
 /****************************************************************************
  *  Function Name: void csl_caph_hwctrl_ACIControl()
  *
@@ -4196,8 +4266,10 @@ CSL_CAPH_PathID csl_caph_hwctrl_StartPath(CSL_CAPH_PathID pathID)
 	    path->source != CSL_CAPH_DEV_DSP)
 		csl_caph_audioh_start_ep();
 
-	/*enable mixer input channel last to avoid src junk*/
-	csl_caph_srcmixer_enable_input(path->srcmRoute[0][0].inChnl, 1);
+	if (get_chip_id() < KONA_CHIP_ID_JAVA_A0) {
+		/*enable mixer input channel last to avoid src junk*/
+		csl_caph_srcmixer_enable_input(path->srcmRoute[0][0].inChnl, 1);
+	}
 
 	return path->pathID;
 }
@@ -4226,9 +4298,6 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 		|| config.source == CSL_CAPH_DEV_EANC_DIGI_MIC
 		|| config.source == CSL_CAPH_DEV_EANC_DIGI_MIC_L
 		|| config.source == CSL_CAPH_DEV_EANC_DIGI_MIC_R
-#if defined(CONFIG_MACH_HAWAII_GARNET)
-		|| config.source == CSL_CAPH_DEV_ANALOG_MIC
-#endif
 		)
 		csl_ControlHWClock_2p4m(TRUE);
 
@@ -4369,9 +4438,6 @@ Result_t csl_caph_hwctrl_AddPath(CSL_CAPH_PathID pathID,
 		|| config.source == CSL_CAPH_DEV_EANC_DIGI_MIC
 		|| config.source == CSL_CAPH_DEV_EANC_DIGI_MIC_L
 		|| config.source == CSL_CAPH_DEV_EANC_DIGI_MIC_R
-#if defined(CONFIG_MACH_HAWAII_GARNET)
-		|| config.source == CSL_CAPH_DEV_ANALOG_MIC
-#endif
 		)
 		csl_ControlHWClock_2p4m(TRUE);
 
@@ -5188,34 +5254,6 @@ void csl_caph_hwctrl_SetBTMode(int mode)
 
 /****************************************************************************
 *
-*  Function Name: csl_caph_hwctrl_GetDualMic_NoiseRefMic
-*
-*  Description: Get the noise ref mic for dual mic operation
-*
-****************************************************************************/
-CSL_CAPH_DEVICE_e csl_caph_hwctrl_GetDualMic_NoiseRefMic(void)
-{
-	aTrace(LOG_AUDIO_CSL, "%s dualmic_NoiseRefMic=0x%x\r\n",
-		__func__, dualmic_NoiseRefMic);
-	return dualmic_NoiseRefMic;
-}
-
-/****************************************************************************
-*
-*  Function Name: csl_caph_hwctrl_SetDualMic_NoiseRefMic
-*
-*  Description: Set the noise ref mic for dual mic operation
-*
-****************************************************************************/
-void csl_caph_hwctrl_SetDualMic_NoiseRefMic(CSL_CAPH_DEVICE_e dev)
-{
-	aTrace(LOG_AUDIO_CSL, "%s dualmic_NoiseRefMic=0x%x\r\n",
-		__func__, dev);
-	dualmic_NoiseRefMic = dev;
-}
-
-/****************************************************************************
-*
 *  Function Name: csl_caph_hwctrl_obtainMixerOutChannelSink
 *
 *  Description: get mixer out channel sink IHF or EP, whichever is available
@@ -5260,6 +5298,7 @@ void csl_caph_hwctrl_ConfigSSP(CSL_SSP_PORT_e port, CSL_SSP_BUS_e bus,
 {
 	UInt32 addr;
 	CAPH_SWITCH_TRIGGER_e tx_trigger, rx_trigger;
+	Boolean bClk = csl_caph_QueryHWClock();
 
 	aTrace(LOG_AUDIO_CSL, "csl_caph_hwctrl_ConfigSSP::"
 		"fm %p, pcm %p, port %d, bus %d, lpbk %d:%d:%d\n",
@@ -5294,8 +5333,8 @@ void csl_caph_hwctrl_ConfigSSP(CSL_SSP_PORT_e port, CSL_SSP_BUS_e bus,
 	} else {
 		return;
 	}
-
-	csl_caph_ControlHWClock(TRUE);
+	if (!bClk)
+		csl_caph_ControlHWClock(TRUE);
 	if (bus == CSL_SSP_I2S) {
 		if (fmHandleSSP && fmHandleSSP != pcmHandleSSP)
 			csl_i2s_deinit(fmHandleSSP); /*deinit only if other
@@ -5355,7 +5394,8 @@ void csl_caph_hwctrl_ConfigSSP(CSL_SSP_PORT_e port, CSL_SSP_BUS_e bus,
 			(UInt32)caph_intc_handle);
 		fmHandleSSP = pcmHandleSSP;
 	}
-	csl_caph_ControlHWClock(FALSE);
+	if (!bClk)
+		csl_caph_ControlHWClock(FALSE);
 	aTrace(LOG_AUDIO_CSL, "csl_caph_hwctrl_ConfigSSP::"
 			       "new fmHandleSSP %p, pcmHandleSSP %p.\r\n",
 			       fmHandleSSP, pcmHandleSSP);

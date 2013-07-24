@@ -15,39 +15,39 @@ choice
 	prompt "Java SoC based board type"
 
 config	MACH_JAVA_FPGA
-	tristate "MACH_JAVA_FPGA"
+	bool "MACH_JAVA_FPGA"
         select MACH_BCM_FPGA
 	help
 	  "This config option will enable support
 	  for FPGA platform like Chip-it where CCU is absent."
 
 config	MACH_JAVA_FPGA_E
-	tristate "MACH_JAVA_FPGA_E"
+	bool "MACH_JAVA_FPGA_E"
         select MACH_BCM_FPGA_E
 	help
 	  "This config option will enable support for
 	  FPGA platform like Eve where CCU is present."
 
 config	MACH_JAVA_RAY
-	tristate "MACH_JAVA_RAY"
+	bool "MACH_JAVA_RAY"
 	select MACH_BCM_RAY
 	help
 	  Support for the Broadcom Hawaii Ray board.
 
 config	MACH_JAVA_STONE
-		tristate "MACH_JAVA_STONE"
+		bool "MACH_JAVA_STONE"
 	select MACH_BCM_STONE
 	help
 	  Support for the Broadcom Hawaii Stone board.
 
 config	MACH_JAVA_GARNET
-		tristate "MACH_JAVA_GARNET"
+		bool "MACH_JAVA_GARNET"
 	select MACH_BCM_GARNET
 	help
 	  Support for Broadcom Hawaii garnet board.
 
 config	MACH_JAVA_SS_EVAL
-		tristate "MACH_JAVA_SS_EVAL"
+		bool "MACH_JAVA_SS_EVAL"
 	select MACH_BCM_SS_EVAL
 	help
 	  Support for Broadcom Hawaii ss eval board.
@@ -68,6 +68,17 @@ choice
 	bool "GARNET CHINA EDN000"
 	help
 	  Support for Garnet china edn000
+
+	config MACH_JAVA_C_5606
+	bool "GARNET CHINA 5606"
+	help
+	  Support for Garnet china 5606
+
+	config MACH_JAVA_C_A18
+		bool "JAVA GARNET A18"
+	help
+		Support for Java Garnet A18
+
 endchoice
 
 choice
@@ -203,6 +214,17 @@ config MM_FREEZE_VAR500M_ERRATUM
 	 enabled erratum(HWHAWAII-73)
 	 Refer JIRA DB for more info
 
+config A7_PLL_PWRDWN_ERRATUM
+	bool "Disable A7 PLL pwrdwn while swicthing from A7 PLL to 312Mhz PLL"
+	default y
+	help
+	 Say Y to disable A7 pll pwrdwn during frequency switching.
+	 The work around is for avoiding freeze while switching from A7 PLL to
+	 the 312Mhz PLL. While s/w to 312Mhz, the A7 PLL gets auto powered down,
+	 before s/w process is complete, thereby resulting in a freeze.
+	 WA will disable pwrdwn while switching is in progress and enable later.
+	 Refer to JIRA DB for more information.
+
 config	HAWAIILC_2093
 	bool "Enable HawaiiLC&2093"
 	default n
@@ -269,6 +291,17 @@ config DISABLE_USBBOOT_NEXTBOOT
           This could be because the BIT 29 of usbotgcontrol register
           was wrongly set to 1. Until we root cuase this and fix it
           We can enable this workaround only for JAVA
+
+config USE_ARCH_TIMER_AS_LOCAL_TIMER
+	bool "Use Architecture Timer as Local Timer"
+	depends on ARCH_JAVA && ARM_ARCH_TIMER
+	default n
+	help
+	  Use the Architecture Timer as Local Timer. When the CPU enters
+	  C3 state, the event timer will be automatically migrated from
+	  local timer another event timer that ca be alive during C3 state
+	  as well. If you are not sure say N
+
 endmenu
 
 endif

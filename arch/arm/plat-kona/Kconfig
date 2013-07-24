@@ -267,6 +267,16 @@ config BRCM_CDC
 	 CPU state machine for CPU dormant and need
 	 to be enabled to enable dormant support
 
+config KONA_SECURE_MEMC
+       bool "Enable Kona secure MEMC driver"
+       help
+         Say Y to enable secure MEMC driver for BRCM
+         mobile platform. this drivers enable user to have
+	 static configuration and dynamic confoguration
+	 on the fly as well.
+	 it addresses htc requirement of static configuration.
+	 and, user could configure memc on the fly for debugging.
+
 config KONA_ATAG_DT
        bool "Enable ATAG-based DT support"
        select USE_OF

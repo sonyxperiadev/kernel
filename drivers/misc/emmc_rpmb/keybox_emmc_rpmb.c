@@ -300,22 +300,25 @@ static long handle_keybox_get_data(struct file *filp, unsigned int cmd,
 	char *rd_buff;
 	int ret;
 	bcm_keybox_ioc_param kb_param;
+	bcm_keybox_ioc_param *usr_kb_param = NULL;
 
 	if (open_state != 1) {
 		pr_err("keybox has not been opend yet\r\n");
 		return -1;
 	}
 
-	if (copy_from_user(&kb_param, (bcm_keybox_ioc_param *) arg,
-			   sizeof(bcm_keybox_ioc_param)) != 0) {
-		pr_err("handle_keybox_get_data: copy_from_user error\n");
-		return -EFAULT;
-	}
+	usr_kb_param = (bcm_keybox_ioc_param *) arg;
+	kb_param.len = usr_kb_param->len;
 
 	if (kb_param.len > MAX_KEYBOX_LEN) {
 		pr_err("keybox read count %d is over the limit 256\r\n",
 		       kb_param.len);
 		return -EINVAL;
+	}
+	if (copy_from_user(&kb_param.buf, &usr_kb_param->buf,
+			   sizeof(kb_param.buf)) != 0) {
+		pr_err("handle_keybox_get_data: copy_from_user error\n");
+		return -EFAULT;
 	}
 
 	pr_info("keybox data read count %d\n", kb_param.len);
@@ -348,22 +351,25 @@ static long handle_keybox_wr_data(struct file *filp, unsigned int cmd,
 	char *rd_buff;
 	int ret;
 	bcm_keybox_ioc_param kb_param;
+	bcm_keybox_ioc_param *usr_kb_param = NULL;
 
 	if (open_state != 1) {
 		pr_err("keybox has not been opend yet\r\n");
 		return -1;
 	}
-
-	if (copy_from_user(&kb_param, (bcm_keybox_ioc_param *) arg,
-			   sizeof(bcm_keybox_ioc_param)) != 0) {
-		pr_err("handle_keybox_wr_data: copy_from_user error\n");
-		return -EFAULT;
-	}
+	usr_kb_param = (bcm_keybox_ioc_param *) arg;
+	kb_param.len = usr_kb_param->len;
 
 	if (kb_param.len > MAX_KEYBOX_LEN) {
 		pr_err("keybox read count %d is over the limit 256\r\n",
 		       kb_param.len);
 		return -EINVAL;
+	}
+
+	if (copy_from_user(&kb_param.buf, &usr_kb_param->buf,
+			   sizeof(kb_param.buf)) != 0) {
+		pr_err("handle_keybox_wr_data buf: copy_from_user error\n");
+		return -EFAULT;
 	}
 
 	pr_info("keybox data write count %d\n", kb_param.len);

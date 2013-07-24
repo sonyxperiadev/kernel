@@ -200,7 +200,6 @@ static int as3643_enable(FLASHLAMP_MODE_T mode, const u8 intensity,
 		    as3643_reg_write(client1, REG_CURRENT_2, program_intensity);
 		/* External torch mode */
 		ret += as3643_reg_write(client1, REG_TX_MASK, 0x62);
-		as3643_gpio_toggle(1);
 		break;
 	default:
 		break;

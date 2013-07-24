@@ -45,6 +45,9 @@
 #include <linux/ion.h>
 #include <linux/broadcom/bcm_ion.h>
 #endif
+#ifdef CONFIG_IOMMU_API
+#include <plat/bcm_iommu.h>
+#endif
 #include <linux/serial_8250.h>
 #include <linux/i2c.h>
 #include <linux/i2c-kona.h>
@@ -204,6 +207,12 @@ struct android_pmem_platform_data android_pmem_data = {
 #ifdef CONFIG_ION_BCM_NO_DT
 struct ion_platform_data ion_system_data = {
 	.nr = 1,
+#ifdef CONFIG_IOMMU_API
+	.pdev_iommu = &iommu_mm_device,
+#endif
+#ifdef CONFIG_BCM_IOVMM
+	.pdev_iovmm = &iovmm_mm_256mb_device,
+#endif
 	.heaps = {
 		[0] = {
 			.id    = 0,
@@ -216,16 +225,42 @@ struct ion_platform_data ion_system_data = {
 	},
 };
 
-struct ion_platform_data ion_carveout_data = {
-	.nr = 2,
+struct ion_platform_data ion_system_extra_data = {
+	.nr = 1,
+#ifdef CONFIG_IOMMU_API
+	.pdev_iommu = &iommu_mm_device,
+#endif
+#ifdef CONFIG_BCM_IOVMM
+	.pdev_iovmm = &iovmm_mm_device,
+#endif
 	.heaps = {
 		[0] = {
-			.id    = 3,
+			.id    = 1,
+			.type  = ION_HEAP_TYPE_SYSTEM,
+			.name  = "ion-system-extra",
+			.base  = 0,
+			.limit = 0,
+			.size  = 0,
+		},
+	},
+};
+
+struct ion_platform_data ion_carveout_data = {
+	.nr = 2,
+#ifdef CONFIG_IOMMU_API
+	.pdev_iommu = &iommu_mm_device,
+#endif
+#ifdef CONFIG_BCM_IOVMM
+	.pdev_iovmm = &iovmm_mm_256mb_device,
+#endif
+	.heaps = {
+		[0] = {
+			.id    = 9,
 			.type  = ION_HEAP_TYPE_CARVEOUT,
 			.name  = "ion-carveout",
-			.base  = 0xa0000000,
-			.limit = 0xb0000000,
-			.size  = (64 * SZ_1M),
+			.base  = 0x90000000,
+			.limit = 0xa0000000,
+			.size  = (16 * SZ_1M),
 #ifdef CONFIG_ION_OOM_KILLER
 			.lmk_enable = 0,
 			.lmk_min_score_adj = 411,
@@ -233,11 +268,11 @@ struct ion_platform_data ion_carveout_data = {
 #endif
 		},
 		[1] = {
-			.id    = 1,
+			.id    = 10,
 			.type  = ION_HEAP_TYPE_CARVEOUT,
 			.name  = "ion-carveout-extra",
 			.base  = 0,
-			.limit = 0xa0000000,
+			.limit = 0,
 			.size  = (0 * SZ_1M),
 #ifdef CONFIG_ION_OOM_KILLER
 			.lmk_enable = 0,
@@ -251,14 +286,20 @@ struct ion_platform_data ion_carveout_data = {
 #ifdef CONFIG_CMA
 struct ion_platform_data ion_cma_data = {
 	.nr = 2,
+#ifdef CONFIG_IOMMU_API
+	.pdev_iommu = &iommu_mm_device,
+#endif
+#ifdef CONFIG_BCM_IOVMM
+	.pdev_iovmm = &iovmm_mm_256mb_device,
+#endif
 	.heaps = {
 		[0] = {
-			.id = 2,
+			.id = 5,
 			.type  = ION_HEAP_TYPE_DMA,
 			.name  = "ion-cma",
-			.base  = 0xa0000000,
-			.limit = 0xb0000000,
-			.size  = (192 * SZ_1M),
+			.base  = 0x90000000,
+			.limit = 0xa0000000,
+			.size  = (0 * SZ_1M),
 #ifdef CONFIG_ION_OOM_KILLER
 			.lmk_enable = 1,
 			.lmk_min_score_adj = 411,
@@ -266,11 +307,11 @@ struct ion_platform_data ion_cma_data = {
 #endif
 		},
 		[1] = {
-			.id = 0,
+			.id = 6,
 			.type  = ION_HEAP_TYPE_DMA,
 			.name  = "ion-cma-extra",
-			.base  = 0x00000000,
-			.limit = 0xa0000000,
+			.base  = 0,
+			.limit = 0,
 			.size  = (0 * SZ_1M),
 #ifdef CONFIG_ION_OOM_KILLER
 			.lmk_enable = 1,
@@ -281,7 +322,37 @@ struct ion_platform_data ion_cma_data = {
 	},
 };
 #endif /* CONFIG_CMA */
+#if defined(CONFIG_MM_SECURE_DRIVER)
+struct ion_platform_data ion_secure_data = {
+	.nr = 2,
+#ifdef CONFIG_IOMMU_API
+	.pdev_iommu = &iommu_mm_device,
+#endif
+#ifdef CONFIG_BCM_IOVMM
+	.pdev_iovmm = &iovmm_mm_device,
+#endif
+	.heaps = {
+		[0] = {
+			.id = 13,
+			.type  = ION_HEAP_TYPE_SECURE,
+			.name  = "ion-secure",
+			.base  = 0,
+			.limit = 0,
+			.size  = (16 * SZ_1M),
+		},
+		[1] = {
+			.id = 14,
+			.type  = ION_HEAP_TYPE_SECURE,
+			.name  = "ion-secure-extra",
+			.base  = 0,
+			.limit = 0,
+			.size  = (0 * SZ_1M),
+		},
+	},
+};
+#endif /* CONFIG_MM_SECURE_DRIVER */
 #endif /* CONFIG_ION_BCM_NO_DT */
+
 
 #ifdef CONFIG_VIDEO_ADP1653
 #define ADP1653_I2C_ADDR 0x60
@@ -1241,6 +1312,35 @@ static void __init hawaii_add_i2c_devices(void)
 
 }
 
+#ifdef CONFIG_ION_BCM_NO_DT
+#ifdef CONFIG_IOMMU_API
+struct bcm_iommu_pdata iommu_mm_pdata = {
+	.name        = "iommu-mm",
+	.iova_begin  = 0x80000000,
+	.iova_size   = 0x80000000,
+	.errbuf_size = 0x1000,
+	.skip_enable = 1,
+};
+#endif
+#ifdef CONFIG_BCM_IOVMM
+struct bcm_iovmm_pdata iovmm_mm_pdata = {
+	.name = "iovmm-mm",
+	.base = 0xc0000000,
+	.size = 0x30000000,
+	.order = 0,
+};
+struct bcm_iovmm_pdata iovmm_mm_256mb_pdata = {
+	.name = "iovmm-mm-256mb",
+	.base = 0xf0000000,
+	.size = 0x0bf00000,
+	.order = 0,
+};
+#endif
+#endif /* CONFIG_ION_BCM_NO_DT */
+
+/* The GPIO used to indicate accessory insertion in this board */
+#define HS_IRQ		gpio_to_irq(92)
+
 static void hawaii_add_pdata(void)
 {
 	hawaii_ssp0_device.dev.platform_data = &hawaii_ssp0_info;
@@ -1249,6 +1349,13 @@ static void hawaii_add_pdata(void)
 	hawaii_stm_device.dev.platform_data = &hawaii_stm_pdata;
 #endif
 	hawaii_headset_device.dev.platform_data = &hawaii_headset_data;
+	/* The resource in position 2 (starting from 0) is used to fill
+	 * the GPIO number. The driver file assumes this. So put the
+	 * board specific GPIO number here
+	 */
+	hawaii_headset_device.resource[2].start = HS_IRQ;
+	hawaii_headset_device.resource[2].end   = HS_IRQ;
+
 	hawaii_pl330_dmac_device.dev.platform_data = &hawaii_pl330_pdata;
 #ifdef CONFIG_USB_DWC_OTG
 	hawaii_hsotgctrl_platform_device.dev.platform_data =
@@ -1256,7 +1363,17 @@ static void hawaii_add_pdata(void)
 	hawaii_usb_phy_platform_device.dev.platform_data =
 		&hsotgctrl_plat_data;
 #endif
-
+#ifdef CONFIG_ION_BCM_NO_DT
+#ifdef CONFIG_IOMMU_API
+	iommu_mm_device.dev.platform_data = &iommu_mm_pdata;
+#endif
+#ifdef CONFIG_BCM_IOVMM
+	iovmm_mm_device.dev.platform_data = &iovmm_mm_pdata;
+	iovmm_mm_256mb_device.dev.platform_data = &iovmm_mm_256mb_pdata;
+	ion_system_device.dev.platform_data = &ion_system_data;
+	ion_system_extra_device.dev.platform_data = &ion_system_extra_data;
+#endif
+#endif /* CONFIG_ION_BCM_NO_DT */
 }
 
 void __init hawaii_add_common_devices(void)
@@ -1275,11 +1392,23 @@ static void __init hawaii_add_devices(void)
 	hawaii_add_pdata();
 
 #ifdef CONFIG_ION_BCM_NO_DT
+#ifdef CONFIG_IOMMU_API
+	platform_device_register(&iommu_mm_device);
+#endif
+#ifdef CONFIG_BCM_IOVMM
+	platform_device_register(&iovmm_mm_device);
+	platform_device_register(&iovmm_mm_256mb_device);
+	platform_device_register(&ion_system_device);
+	platform_device_register(&ion_system_extra_device);
+#endif
 	platform_device_register(&ion_carveout_device);
 #ifdef CONFIG_CMA
 	platform_device_register(&ion_cma_device);
 #endif
-#endif
+#if defined(CONFIG_MM_SECURE_DRIVER)
+	platform_device_register(&ion_secure_device);
+#endif /* CONFIG_MM_SECURE_DRIVER */
+#endif /* CONFIG_ION_BCM_NO_DT */
 
 	platform_add_devices(hawaii_devices, ARRAY_SIZE(hawaii_devices));
 

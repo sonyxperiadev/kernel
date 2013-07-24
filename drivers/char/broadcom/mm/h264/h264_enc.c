@@ -56,6 +56,11 @@ static void update_sg_regs(void *id, struct enc_info_t *enc_info)
 				val = h264_read(id, ENC_SG_BUF_BITS_WRITTEN);
 	enc_info->h264_enc_regs.out_reg_cnt++;
 
+	enc_info->h264_enc_regs.out_regs[enc_info->h264_enc_regs.out_reg_cnt].\
+					reg = ENC_SG_BUF_MARK_ADDR;
+	enc_info->h264_enc_regs.out_regs[enc_info->h264_enc_regs.out_reg_cnt].\
+				val = h264_read(id, ENC_SG_BUF_MARK_ADDR);
+	enc_info->h264_enc_regs.out_reg_cnt++;
 }
 
 static void writenbits(void *id, struct enc_info_t *enc_info)

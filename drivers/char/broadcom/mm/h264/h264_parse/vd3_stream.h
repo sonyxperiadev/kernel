@@ -13,6 +13,12 @@
 #ifndef VD3_STREAM_H
 #define VD3_STREAM_H
 
+#ifdef VC4_LINUX_PORT
+#include"vd3_utils.h"
+#include "vc4vcodec0.h"
+#else
+#include "hardware_vcodec.h"
+#endif
 /***************************************************************************//**
 \file
 Defines access functions for basic features in H.264 (and similar) bitstreams.
@@ -76,7 +82,7 @@ function (vd3_stream_detach() is provided.
 #ifdef VC4_LINUX_PORT
 #include"vd3_utils.h"
 #else
-#include "vcinclude/common.h"                   // Basic types
+#include "vcinclude/common.h"
 #endif
 #include "vd3_errors.h"
 
@@ -207,8 +213,7 @@ If defining OLSI or ILSI inline accessors, include chip register definitions.
 ********************************************************************************/
 #if defined(VD3_STREAM_DEFINE_OLSI) || defined(VD3_STREAM_DEFINE_ILSI)
 #ifndef VC4_LINUX_PORT
-#  include "vcinclude/vcodec.h"
-#  include "vcinclude/sv_chip_regmap.h"
+#include "vcinclude/vcodec.h"
 #endif
 #endif
 
@@ -216,78 +221,69 @@ If defining OLSI or ILSI inline accessors, include chip register definitions.
 /* Inline OLSI access functions */
 
 /***************************************************************************//**
+Peek ahead <code>0 < n <= 32</code> bits from the OLSI hardware
+********************************************************************************/
+_Inline static uint32_t vd3_olsi_SiPeek(unsigned int n)
+{
+   return VCD_REG_RD(INST, DEC_SINT_OLOOP_STRM_BITS) >> (32 - n);
+}
+
+/***************************************************************************//**
 Read <code>0 < n <= 32</code>bits from the OLSI hardware
 ********************************************************************************/
-#ifdef VC4_LINUX_PORT
-extern  uint32_t vd3_olsi_SiU(unsigned int n);
-#else
 _Inline static uint32_t vd3_olsi_SiU(unsigned int n)
 {
-   RegWt(DecSOp_DecSintGetSymb, (n & 0xff));
-   return RegRd(DecSOp_DecSintGetSymb);
+   vd3_wait_for_reads();
+   VCD_REG_WT(INST, DEC_SINT_OLOOP_GET_SYMB, (n & 0xff));
+   vd3_wait_for_writes();
+   return VCD_REG_RD(INST, DEC_SINT_OLOOP_GET_SYMB);
 }
-#endif
 
 /***************************************************************************//**
 Read a ue(v) syntax element from the OLSI hardware
 ********************************************************************************/
-#ifdef VC4_LINUX_PORT
-extern  uint32_t vd3_olsi_SiUE(void);
-#else
 _Inline static uint32_t vd3_olsi_SiUE(void)
 {
-   RegWt(DecSOp_DecSintGetSymb, (1 << 12));
-   return RegRd(DecSOp_DecSintGetSymb);
+   vd3_wait_for_reads();
+   VCD_REG_WT(INST, DEC_SINT_OLOOP_GET_SYMB, (1 << 12));
+   vd3_wait_for_writes();
+   return VCD_REG_RD(INST, DEC_SINT_OLOOP_GET_SYMB);
 }
-#endif
 
 /***************************************************************************//**
 Read a se(v) syntax element from the OLSI hardware
 ********************************************************************************/
-#ifdef VC4_LINUX_PORT
-extern  int32_t  vd3_olsi_SiSE(void);
-#else
 _Inline static int32_t  vd3_olsi_SiSE(void)
 {
-   RegWt(DecSOp_DecSintGetSymb, (1 << 12) | (1 << 8));
-   return RegRd(DecSOp_DecSintGetSymb);
+   vd3_wait_for_reads();
+   VCD_REG_WT(INST, DEC_SINT_OLOOP_GET_SYMB, (1 << 12) | (1 << 8));
+   vd3_wait_for_writes();
+   return VCD_REG_RD(INST, DEC_SINT_OLOOP_GET_SYMB);
 }
-#endif
 
-/***************************************************************************//**
-Peek ahead <code>0 < n <= 32</code> bits from the OLSI hardware
-********************************************************************************/
-#ifdef VC4_LINUX_PORT
-extern  uint32_t vd3_olsi_SiPeek(unsigned int n);
-#else
-_Inline static uint32_t vd3_olsi_SiPeek(unsigned int n)
-{
-   return RegRd(DecSOp_DecSintStrmBits) >> (32 - n);
-}
-#endif
+
+
 
 /***************************************************************************//**
 Read current position from the OLSI hardware
 ********************************************************************************/
-#ifdef VC4_LINUX_PORT
-extern  int32_t  vd3_olsi_Offset(void);
-#else
 _Inline static int32_t  vd3_olsi_Offset(void)
 {
    return VCD_REG_RD(INST, DEC_SINT_OLOOP_STRM_POS);
 }
-#endif
 
 #ifdef VC4_LINUX_PORT
 /***************************************************************************//**
 codec_specific_parse
 ********************************************************************************/
 
-extern uint32_t codec_specific_parse(uint32_t n);
-
-/***************************************************************************//**
-vc1_specific_parse
-********************************************************************************/
+_Inline static uint32_t vd3_olsi_specific_parse(uint32_t n)
+{
+   vd3_wait_for_reads();
+   VCD_REG_WT(INST, DEC_SINT_OLOOP_GET_SYMB, n);
+   vd3_wait_for_writes();
+   return VCD_REG_RD(INST, DEC_SINT_OLOOP_GET_SYMB);
+}
 
 #endif /*VC4_LINUX_PORT*/
 

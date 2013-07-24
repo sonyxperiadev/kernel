@@ -56,7 +56,7 @@ struct spa_ps
 	struct power_supply batt;
 	struct power_supply usb;
 	struct spa_batt_status state;
-	char model[SPA_MODEL_NAME_LEN];
+	char model[SPA_MODEL_NAME_LEN+1];
 };
 
 static enum power_supply_property spa_batt_props[] = {
@@ -319,12 +319,16 @@ int spa_ps_init(struct platform_device *pdev)
 	
 	struct spa_ps *spa_ps;
 
+	printk("%s : spa_ps start\n", __func__);
+
 	spa_ps = kzalloc(sizeof(struct spa_ps), GFP_KERNEL);
 	if(spa_ps == NULL)
 	{
 		printk("%s: Failed to allocate memory\n", __func__);
 		return -ENOMEM;
 	}
+
+	spa_ps->model[SPA_MODEL_NAME_LEN]=0;
 
 	spa_ps->batt.properties= spa_batt_props;
 	spa_ps->batt.num_properties = ARRAY_SIZE(spa_batt_props);
@@ -377,6 +381,7 @@ int spa_ps_init(struct platform_device *pdev)
 	spa_ps->state.present=1;
 	power_supply_changed(&spa_ps->batt);
 
+	printk("%s : spa_ps end\n", __func__);
 	goto LB_SPA_PS_PROBE_SUCCESS;
 
 LB_SPA_PS_PROBE_ERR_S1:

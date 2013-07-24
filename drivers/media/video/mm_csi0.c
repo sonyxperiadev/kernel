@@ -55,8 +55,8 @@ struct mm_csi0_generic {
 /* For now using local addresses */
 /* This will be changed once the same is
    available via platform driver */
-#define V_BASE HW_IO_PHYS_TO_VIRT(MM_CSI0_BASE)
-#define MM_CFG_BASE HW_IO_PHYS_TO_VIRT(0x3C004000)
+#define V_BASE		HW_IO_PHYS_TO_VIRT(MM_CSI0_BASE)
+#define MM_CFG_BASE	HW_IO_PHYS_TO_VIRT(0x3C004000)
 
 struct mm_csi0_generic cam_state = {
 	0,
@@ -145,9 +145,11 @@ void unicam_reg_dump_dbg(void)
 			BRCM_READ_REG(MM_CFG_BASE, MM_CFG_CSI0_LDO_CTL));
 }
 
-void * get_mm_csi0_handle (enum host_mode mode, enum afe_num afe, enum csi2_lanes lanes)
+void *get_mm_csi0_handle(enum host_mode mode, enum afe_num afe,
+			 enum csi2_lanes lanes)
 {
 	unsigned long flags;
+
 	spin_lock_init(&lock);
 	spin_lock_irqsave(&lock, flags);
 	if ((cam_state.devbusy == 1) || (cam_state.mode != INVALID)) {
@@ -180,10 +182,11 @@ out:
 	return NULL;
 }
 
-int mm_csi0_init ()
+int mm_csi0_init()
 {
 	u32 base = MM_CFG_BASE;
 	int ret = 0;
+
 	/* LDO Enable */
 	/* point base to mm_cfg base address */
 	if (cam_state.afe == AFE0) {
@@ -201,12 +204,13 @@ int mm_csi0_init ()
 
 }
 
-int mm_csi0_teardown ()
+int mm_csi0_teardown()
 {
 	u32 base = MM_CFG_BASE;
+	unsigned long flags;
+
 	/* LDO Disable */
 	/* point base to mm_cfg base address */
-	unsigned long flags;
 	spin_lock_irqsave(&lock, flags);
 	if (cam_state.afe == AFE0)
 		BRCM_WRITE_REG(base, MM_CFG_CSI0_LDO_CTL, 0x0);
@@ -222,20 +226,20 @@ int mm_csi0_teardown ()
 	pr_info("Teardown!!\n");
 	/* To check Enable all memories within mm_csi0*/
 	return 0;
-
 }
 
 /* Mostly AFE selection and clocks */
-int mm_csi0_set_afe ()
+int mm_csi0_set_afe()
 {
 	u32 base;
 	int term = 1;
+
 	/* Enable access ... need to check how or why ?? */
-	if (cam_state.afe == AFE0) {
+	if (cam_state.afe == AFE0)
 		BRCM_WRITE_REG(MM_CFG_BASE, MM_CFG_CSI0_LDO_CTL, 0x5A00000F);
-	} else {
+	else
 		BRCM_WRITE_REG(MM_CFG_BASE, MM_CFG_CSI1_LDO_CTL, 0x5A00000F);
-	}
+
 	/* CSI1 uses CSI0 clocks and dividers */
 
 	/* point base to mm_csi0 base */
@@ -298,10 +302,11 @@ int mm_csi0_set_afe ()
 }
 
 
-int mm_csi0_set_dig_phy (struct lane_timing *timing)
+int mm_csi0_set_dig_phy(struct lane_timing *timing)
 {
 	u32 base = V_BASE;
 	int term = 1;
+
 	if (timing == NULL)
 		return -EINVAL;
 	if (cam_state.mode == CSI2)
@@ -316,8 +321,11 @@ int mm_csi0_set_dig_phy (struct lane_timing *timing)
 		BRCM_WRITE_REG_FIELD(base, CAM_DLT, DLT3, 0x0);
 
 	} else {
-		BRCM_WRITE_REG_FIELD(base, CAM_CLT, CLT1, 0xA);
-		BRCM_WRITE_REG_FIELD(base, CAM_CLT, CLT2,  0x3C);
+	/*	BRCM_WRITE_REG_FIELD(base, CAM_CLT, CLT1, 0xA);
+		BRCM_WRITE_REG_FIELD(base, CAM_CLT, CLT2,  0x3C); */
+		/* timings based on CSL/CHAL */
+		BRCM_WRITE_REG_FIELD(base, CAM_CLT, CLT1, 0x0);
+		BRCM_WRITE_REG_FIELD(base, CAM_CLT, CLT2,  0x05);
 
 		BRCM_WRITE_REG_FIELD(base, CAM_DLT, DLT1, timing->hs_term_time);
 		BRCM_WRITE_REG_FIELD(base, CAM_DLT, DLT2,
@@ -330,7 +338,7 @@ int mm_csi0_set_dig_phy (struct lane_timing *timing)
 		/* DLT1 0x8 DLT2 and DLT3 = 0 */
 	}
 	/* The OV5640 driver to send the correct timings */
-	BRCM_WRITE_REG_FIELD(base, CAM_CLK, CLTRE, term);
+	BRCM_WRITE_REG_FIELD(base, CAM_CLK, CLTRE, 1);
 	BRCM_WRITE_REG_FIELD(base, CAM_DAT0, DLTREN, term);
 	if (cam_state.lanes == CSI2_DUAL_LANE)
 		BRCM_WRITE_REG_FIELD(base, CAM_DAT1, DLTREN, term);
@@ -343,9 +351,10 @@ int mm_csi0_set_dig_phy (struct lane_timing *timing)
 	return 0;
 }
 
-int mm_csi0_set_mode (enum csi1ccp2_clock_mode clk_mode)
+int mm_csi0_set_mode(enum csi1ccp2_clock_mode clk_mode)
 {
 	u32 base = V_BASE;
+
 	/* As per the recommended seq, we set the mode over here */
 	BRCM_WRITE_REG_FIELD(base, CAM_CTL, CPM, cam_state.mode);
 	if (cam_state.mode == CSI1CCP2) {
@@ -357,9 +366,10 @@ int mm_csi0_set_mode (enum csi1ccp2_clock_mode clk_mode)
 	return 0;
 }
 
-int mm_csi0_cfg_image_id (int vc, int id)
+int mm_csi0_cfg_image_id(int vc, int id)
 {
 	u32 base = V_BASE;
+
 	if (cam_state.mode == CSI1CCP2) {
 		if (id > 15) {
 			pr_info("Wrong CCP2 ID\n");
@@ -377,24 +387,27 @@ int mm_csi0_cfg_image_id (int vc, int id)
 	return 0;
 }
 
-int mm_csi0_set_windowing_vertical (int v_line_start, int v_line_end)
+int mm_csi0_set_windowing_vertical(int v_line_start, int v_line_end)
 {
 	u32 base = V_BASE;
+
 	BRCM_WRITE_REG(base, CAM_IVWIN, ((v_line_end << 16) | (v_line_start)));
 	return 0;
 }
 
-int mm_csi0_set_windowing_horizontal (int h_pix_start, int h_pix_end)
+int mm_csi0_set_windowing_horizontal(int h_pix_start, int h_pix_end)
 {
 	u32 base = V_BASE;
+
 	BRCM_WRITE_REG(base, CAM_IHWIN, ((h_pix_end << 16) | (h_pix_start)));
 	return 0;
 }
 
-int mm_csi0_enc_blk_length (int len)
+int mm_csi0_enc_blk_length(int len)
 {
 	u32 base = V_BASE;
 	u8 val;
+
 	if (len == 0)
 		BRCM_WRITE_REG_FIELD(base, CAM_IPIPE, DEBL, 0x0);
 	else {
@@ -408,9 +421,10 @@ int mm_csi0_enc_blk_length (int len)
 	return 0;
 }
 
-int mm_csi0_cfg_pipeline_dpcm_enc (enum dpcm_encode_mode enc)
+int mm_csi0_cfg_pipeline_dpcm_enc(enum dpcm_encode_mode enc)
 {
 	u32 base = V_BASE;
+
 	if ((enc & ~0x3) != 0) {
 		pr_info("Wrong DPCM encode mode\n");
 		return -EINVAL;
@@ -419,9 +433,10 @@ int mm_csi0_cfg_pipeline_dpcm_enc (enum dpcm_encode_mode enc)
 	return 0;
 }
 
-int mm_csi0_cfg_pipeline_dpcm_dec (enum dpcm_decode_mode dec)
+int mm_csi0_cfg_pipeline_dpcm_dec(enum dpcm_decode_mode dec)
 {
 	u32 base = V_BASE;
+
 	if ((dec < 0) || (dec > 11)) {
 		pr_info("Wrong DPCM decode mode\n");
 		return -EINVAL;
@@ -430,9 +445,10 @@ int mm_csi0_cfg_pipeline_dpcm_dec (enum dpcm_decode_mode dec)
 	return 0;
 }
 
-int mm_csi0_cfg_pipeline_pack (enum pix_pack_mode pack)
+int mm_csi0_cfg_pipeline_pack(enum pix_pack_mode pack)
 {
 	u32 base = V_BASE;
+
 	if ((pack & ~0x7) != 0) {
 		pr_info("Wrong pix pack mode\n");
 		return -EINVAL;
@@ -441,9 +457,10 @@ int mm_csi0_cfg_pipeline_pack (enum pix_pack_mode pack)
 	return 0;
 }
 
-int mm_csi0_cfg_pipeline_unpack (enum pix_unpack_mode unpack)
+int mm_csi0_cfg_pipeline_unpack(enum pix_unpack_mode unpack)
 {
 	u32 base = V_BASE;
+
 	if ((unpack & ~0x7) != 0) {
 		pr_info("Wrong pix unpack mode\n");
 		return -EINVAL;
@@ -452,20 +469,22 @@ int mm_csi0_cfg_pipeline_unpack (enum pix_unpack_mode unpack)
 	return 0;
 }
 
-int mm_csi0_enable_fsp_ccp2 (void)
+int mm_csi0_enable_fsp_ccp2(void)
 {
 	u32 base = V_BASE;
-	if (cam_state.mode == CSI1CCP2) {
+
+	if (cam_state.mode == CSI1CCP2)
 		BRCM_WRITE_REG_FIELD(base, CAM_DCS, FDE, 0x1);
-	} else {
+	else
 		BRCM_WRITE_REG_FIELD(base, CAM_DCS, FDE, 0x0);
-	}
+
 	return 0;
 }
 
-int mm_csi0_config_int (struct int_desc *desc, enum buffer_type type)
+int mm_csi0_config_int(struct int_desc *desc, enum buffer_type type)
 {
 	u32 base = V_BASE;
+
 	if (type == IMAGE_BUFFER) {
 		if (desc->fsi)
 			BRCM_WRITE_REG_FIELD(base, CAM_ICTL, FSIE, 0x1);
@@ -512,10 +531,11 @@ int mm_csi0_config_int (struct int_desc *desc, enum buffer_type type)
 	return 0;
 }
 
-int mm_csi0_get_int_stat (struct int_desc *desc, int ack)
+int mm_csi0_get_int_stat(struct int_desc *desc, int ack)
 {
 	u32 base = V_BASE;
 	u32 reg;
+
 	if (desc == NULL) {
 		pr_info("Null descriptor\n");
 		return -EINVAL;
@@ -532,9 +552,10 @@ int mm_csi0_get_int_stat (struct int_desc *desc, int ack)
 	return reg;
 }
 
-int mm_csi0_get_data_stat (struct int_desc *desc, int ack)
+int mm_csi0_get_data_stat(struct int_desc *desc, int ack)
 {
 	u32 base = V_BASE;
+
 	if (desc == NULL) {
 		pr_info("Null descriptor data\n");
 		return -EINVAL;
@@ -548,10 +569,11 @@ int mm_csi0_get_data_stat (struct int_desc *desc, int ack)
 	return 0;
 }
 
-u32 mm_csi0_get_rx_stat (struct rx_stat_list *list, int ack)
+u32 mm_csi0_get_rx_stat(struct rx_stat_list *list, int ack)
 {
 	u32 base = V_BASE;
 	u32 reg;
+
 	if (list == NULL) {
 		pr_info("Null descriptor for rx ack\n");
 		return 0;
@@ -592,10 +614,11 @@ u32 mm_csi0_get_rx_stat (struct rx_stat_list *list, int ack)
 		list->ps = 1;
 	if (reg & CAM_STA_IS_MASK)
 		list->is = 1;
+
 	return reg;
 }
 
-int mm_csi0_buffering_mode (enum buffer_mode bmode)
+int mm_csi0_buffering_mode(enum buffer_mode bmode)
 {
 	if (BUFFER_DOUBLE == bmode) {
 		cam_state.db_en = 1;
@@ -605,17 +628,18 @@ int mm_csi0_buffering_mode (enum buffer_mode bmode)
 		if (bmode == BUFFER_TRIGGER) {
 			pr_debug("Trigger Mode set");
 			cam_state.trigger = 1;
-		}
-		else
+		} else
 			cam_state.trigger = 0;
 	}
 	return 0;
 }
 
-int mm_csi0_update_addr (struct buffer_desc *im0, struct buffer_desc *im1, struct buffer_desc *dat0, struct buffer_desc *dat1)
+int mm_csi0_update_addr(struct buffer_desc *im0, struct buffer_desc *im1,
+			struct buffer_desc *dat0, struct buffer_desc *dat1)
 {
 	u32 base = V_BASE;
 	int data = 1;
+
 	if (im0 == NULL) {
 		pr_info("IMO is NULL\n");
 		return -EINVAL;
@@ -681,6 +705,11 @@ int mm_csi0_update_addr (struct buffer_desc *im0, struct buffer_desc *im1, struc
 		BRCM_WRITE_REG(base, CAM_IBSA, im0->start);
 		BRCM_WRITE_REG(base, CAM_IBEA, (im0->start + im0->size));
 		BRCM_WRITE_REG_FIELD(base, CAM_IBLS, IBLS, im0->ls);
+		if (im0->wrap_en == 1)
+			BRCM_WRITE_REG_FIELD(base, CAM_ICTL, IBOB, 1);
+		else
+			BRCM_WRITE_REG_FIELD(base, CAM_ICTL, IBOB, 0);
+
 	}
 	if (im1) {
 		BRCM_WRITE_REG(base, CAM_IBSA1, im1->start);
@@ -716,6 +745,7 @@ int mm_csi0_update_one(struct buffer_desc *im, int buf_num,
 		enum buffer_type type)
 {
 	u32 base = V_BASE;
+
 	if (im == NULL) {
 		pr_info("Null passed\n");
 		return -EINVAL;
@@ -767,11 +797,13 @@ int mm_csi0_update_one(struct buffer_desc *im, int buf_num,
 int mm_csi0_trigger_cap(void)
 {
 	u32 base = V_BASE;
+
 	if (cam_state.trigger) {
-		/*BRCM_WRITE_REG_FIELD(base, CAM_ICTL, FCM, 0x1);*/
+		BRCM_WRITE_REG_FIELD(base, CAM_ICTL, FCM, 0x1);
 		BRCM_WRITE_REG_FIELD(base, CAM_ICTL, TFC, 0x1);
 		return 0;
 	} else {
+		pr_err("unicam is not in trigger capture mode\n");
 		return -EINVAL;
 	}
 }
@@ -780,6 +812,7 @@ int mm_csi0_rx_burst()
 {
 	u32 base = MM_CFG_BASE;
 	u32 val_sw;
+
 	val_sw = readl((base + 0x444));
 	val_sw = val_sw | 1;
 	writel(val_sw, (base + 0x444));
@@ -797,7 +830,7 @@ int mm_csi0_rx_burst()
 
 static int rx_init_done;
 
-int mm_csi0_start_rx (void)
+int mm_csi0_start_rx(void)
 {
 	u32 base = V_BASE;
 
@@ -807,10 +840,11 @@ int mm_csi0_start_rx (void)
 	}
 	BRCM_WRITE_REG(base, CAM_ISTA, BRCM_READ_REG(base, CAM_ISTA));
 	BRCM_WRITE_REG(base, CAM_STA, BRCM_READ_REG(base, CAM_STA));
+/*
 	if (cam_state.trigger)
 		BRCM_WRITE_REG_FIELD(base, CAM_ICTL, FCM, 0x1);
 	else
-		BRCM_WRITE_REG_FIELD(base, CAM_ICTL, FCM, 0x0);
+		BRCM_WRITE_REG_FIELD(base, CAM_ICTL, FCM, 0x0); */
 	BRCM_WRITE_REG_FIELD(base, CAM_ANA, DDL, 1);
 
 	BRCM_WRITE_REG_FIELD(base, CAM_CLK, CLPD, 0);
@@ -828,7 +862,6 @@ int mm_csi0_start_rx (void)
 		BRCM_WRITE_REG_FIELD(base, CAM_DBCTL, BUF1_IE, 1);
 		BRCM_WRITE_REG_FIELD(base, CAM_MISC,  DIS_DB_IE, 0);
 	}
-	mm_csi0_rx_burst();
 	BRCM_WRITE_REG_FIELD(base, CAM_ICTL, LIP, 1);
 	BRCM_WRITE_REG_FIELD(base, CAM_DCS, LDP, 1);
 	BRCM_WRITE_REG_FIELD(base, CAM_DAT0, DLEN, 1);
@@ -839,10 +872,11 @@ int mm_csi0_start_rx (void)
 	BRCM_WRITE_REG_FIELD(base, CAM_ANA, DDL, 0);
 	udelay(5);
 	rx_init_done = 1;
+
 	return 0;
 }
 
-int mm_csi0_stop_rx (void)
+int mm_csi0_stop_rx(void)
 {
 	u32 base = V_BASE;
 	rx_init_done = 0;
@@ -860,6 +894,7 @@ int mm_csi0_stop_rx (void)
 	BRCM_WRITE_REG(base, CAM_IBEA, 0x0);
 	BRCM_WRITE_REG(base, CAM_IBLS, 0x0);
 	BRCM_WRITE_REG_FIELD(base, CAM_CTL, CPE, 0);
+
 	return 0;
 }
 
@@ -867,6 +902,7 @@ void mm_csi0_ibwp()
 {
 	u32 base = V_BASE;
 	u32 val, baseval;
+
 	val = BRCM_READ_REG(base, CAM_IBWP);
 	baseval = BRCM_READ_REG(base, CAM_IBSA);
 	pr_info("IBWP 0x%x\n", (val - baseval));
@@ -883,6 +919,7 @@ void mm_csi0_ibwp()
 enum packet_comp_cap mm_csi0_enable_packet_compare(struct packet_compare *compare)
 {
 	u32 base = V_BASE;
+
 	enum packet_comp_cap cur = COMP_CAP_INVALID;
 	if ((compare == NULL) || (compare->enable == 0)) {
 		pr_info("Wrong parameters for compare and capture\n");
@@ -913,13 +950,15 @@ enum packet_comp_cap mm_csi0_enable_packet_compare(struct packet_compare *compar
 	return cur;
 }
 
-enum packet_comp_cap mm_csi0_get_captured_packet (enum packet_comp_cap num, struct packet_capture *cap)
+enum packet_comp_cap mm_csi0_get_captured_packet(enum packet_comp_cap num,
+						struct packet_capture *cap)
 {
 	u32 base = V_BASE;
 	enum packet_comp_cap cur = COMP_CAP_INVALID;
-	if (cap == NULL) {
+
+	if (cap == NULL)
 		return COMP_CAP_INVALID;
-	}
+
 	if (num == COMP_CAP_0) {
 		if (BRCM_READ_REG_FIELD(base, CAM_CAP0, CPHV)) {
 			cap->valid = 1;
@@ -953,6 +992,7 @@ int mm_csi0_get_trans(void)
 {
 	u32 base = V_BASE;
 	u32 val;
+
 	if (cam_state.mode == CSI1CCP2) {
 		pr_info("Lane transitions not valid for CSI1CCP2\n");
 		return 0;
@@ -981,10 +1021,10 @@ int mm_csi0_get_trans(void)
 bool mm_csi0_get_panic_state()
 {
 	u32 base = V_BASE;
+
 	if (BRCM_READ_REG_FIELD(base, CAM_STA, PS)) {
 		BRCM_WRITE_REG_FIELD(base, CAM_STA, PS, 1);
 		return 1;
 	}
 	return 0;
 }
-

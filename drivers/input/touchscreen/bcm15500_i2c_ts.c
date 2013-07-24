@@ -3892,8 +3892,6 @@ static int32_t bcmtch_dev_suspend(
 
 		ret_val = bcmtch_dev_set_power_state(bcmtch_data_ptr,
 			BCMTCH_POWER_STATE_SLEEP);
-
-		bcmtch_dev_power_enable(bcmtch_data_ptr, false);
 	} else {
 		/* suspend */
 		ret_val = bcmtch_dev_request_power_mode(
@@ -3901,6 +3899,8 @@ static int32_t bcmtch_dev_suspend(
 					BCMTCH_POWER_MODE_NOWAKE,
 					TOFE_COMMAND_POWER_MODE_SUSPEND);
 	}
+
+	bcmtch_dev_power_enable(bcmtch_data_ptr, false);
 
 	/* clear events */
 	bcmtch_dev_reset_events(bcmtch_data_ptr);
@@ -3923,11 +3923,9 @@ static int32_t bcmtch_dev_resume(
 	/* lock */
 	mutex_lock(&bcmtch_data_ptr->mutex_work);
 
-	if (bcmtch_boot_flag & BCMTCH_BOOT_FLAG_SUSPEND_COLD_BOOT) {
+	ret_val = bcmtch_dev_power_enable(bcmtch_data_ptr, true);
 
-		ret_val = bcmtch_dev_power_enable(
-					bcmtch_data_ptr,
-					true);
+	if (bcmtch_boot_flag & BCMTCH_BOOT_FLAG_SUSPEND_COLD_BOOT) {
 
 		if (!ret_val)
 			ret_val = bcmtch_dev_init(bcmtch_data_ptr);
@@ -4107,15 +4105,18 @@ static int32_t bcmtch_dev_power_enable(
 		if (p_bcmtch_data->power_on_delay_ms)
 			msleep(p_bcmtch_data->power_on_delay_ms);
 	} else {
-		if (p_bcmtch_data->regulator_avdd33)
+		if (p_bcmtch_data->regulator_avdd33 &&
+				regulator_is_enabled(p_bcmtch_data->regulator_avdd33))
 			regulator_disable(
 				p_bcmtch_data->regulator_avdd33);
 
-		if (p_bcmtch_data->regulator_vddo)
+		if (p_bcmtch_data->regulator_vddo &&
+				regulator_is_enabled(p_bcmtch_data->regulator_vddo))
 			regulator_disable(
 				p_bcmtch_data->regulator_vddo);
 
-		if (p_bcmtch_data->regulator_avdd_adldo)
+		if (p_bcmtch_data->regulator_avdd_adldo &&
+				regulator_is_enabled(p_bcmtch_data->regulator_avdd_adldo))
 			regulator_disable(
 				p_bcmtch_data->regulator_avdd_adldo);
 	}
@@ -4416,14 +4417,6 @@ static int32_t bcmtch_init_input_device(
 				ABS_MT_POSITION_Y,
 				bcmtch_data_ptr->axis_y_min,
 				bcmtch_data_ptr->axis_y_max,
-				0,
-				0);
-
-			input_set_abs_params(
-				bcmtch_data_ptr->p_input_device,
-				ABS_MT_TOOL_TYPE,
-				0,
-				MT_TOOL_MAX,
 				0,
 				0);
 
@@ -5367,12 +5360,16 @@ static int32_t bcmtch_i2c_probe(
 	if (ret_val)
 		goto interrupt_error;
 
+	/** FIXME
+	 *  Calling mutex_unlock() moved before bcmtch_register_early_suspend to get rid DEADLOCK at (&bcmtch_data_ptr->mutex_work)
+	 *  See include/linux/earlysuspend.h.
+	 */
+	mutex_unlock(&bcmtch_data_ptr->mutex_work);
+
 #ifdef CONFIG_HAS_EARLYSUSPEND
 	bcmtch_register_early_suspend(bcmtch_data_ptr);
 #endif /* CONFIG_HAS_EARLYSUSPEND */
 	pr_info("BCMTCH: PROBE: success\n");
-
-	mutex_unlock(&bcmtch_data_ptr->mutex_work);
 
 	return 0;
 

@@ -103,12 +103,15 @@ __initdata struct DSI_COUNTER nt35512_timing[] = {
 };
 
 __initdata DISPCTRL_REC_T nt35512_scrn_on[] = {
+	{DISPCTRL_WR_CMND, 0x13},
 	{DISPCTRL_WR_CMND, NT35512_CMD_DISPON},
 	{DISPCTRL_LIST_END, 0}
 };
 
 __initdata DISPCTRL_REC_T nt35512_scrn_off[] = {
-	{DISPCTRL_WR_CMND, NT35512_CMD_DISPOFF},
+	{DISPCTRL_WR_CMND, 0x22},
+	/* Commenting this since it results in a white screen
+	{DISPCTRL_WR_CMND, NT35512_CMD_DISPOFF}, */
 	{DISPCTRL_LIST_END, 0}
 };
 
@@ -137,7 +140,8 @@ __initdata DISPCTRL_REC_T nt35512_slp_out[] = {
 	{DISPCTRL_LIST_END, 0}
 };
 
-#if defined CONFIG_MACH_HAWAII_GARNET_C_A18
+#if defined CONFIG_MACH_HAWAII_GARNET_C_A18 || \
+	defined(CONFIG_MACH_JAVA_C_A18)
 __initdata DISPCTRL_REC_T nt35512_init_panel_vid[] = {
 	{DISPCTRL_WR_CMND, 0xF0},
 	{DISPCTRL_WR_DATA, 0x55},
@@ -1286,15 +1290,15 @@ __initdata struct lcd_config nt35512_cfg = {
 	.verify_id = false,
 	.updt_win_fn = nt35512_winset,
 	.updt_win_seq_len = 0,
-	.vid_cmnds = true,
+	.vid_cmnds = false,
 	.vburst = true,
 	.cont_clk = false,
 	.hs = 10,
-	.hbp = 80,
-	.hfp = 80,
+	.hbp = 20,
+	.hfp = 20,
 	.vs = 2,
-	.vbp = 40,
-	.vfp = 40,
+	.vbp = 8,
+	.vfp = 8,
 };
 
 #endif

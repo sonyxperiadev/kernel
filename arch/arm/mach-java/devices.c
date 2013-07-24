@@ -112,6 +112,36 @@
 
 static int board_version = -1;
 
+#ifdef CONFIG_MOBICORE_DRIVER
+#include <linux/broadcom/mobicore.h>
+#endif
+
+#if defined(CONFIG_MOBICORE_DRIVER) && defined(CONFIG_OF)
+struct mobicore_data mobicore_init_data = {
+	.name = "mobicore",
+};
+#endif
+
+#ifdef CONFIG_MOBICORE_DRIVER
+struct platform_device mobicore_device = {
+	.name = "mobicore",
+	.id = 0,
+};
+#endif
+
+#include <linux/broadcom/secure_memory.h>
+
+#if defined(CONFIG_OF)
+struct secure_mem_data secure_mem_init_data = {
+	.name = "secure_mem",
+};
+#else /* CONFIG_OF */
+struct platform_device secure_mem_device = {
+	.name = "secure_mem",
+	.id = 0,
+};
+#endif /* CONFIG_OF */
+
 /* dynamic ETM support */
 unsigned int etm_on;
 EXPORT_SYMBOL(etm_on);
@@ -167,6 +197,12 @@ struct platform_device ion_system_device = {
 	.num_resources = 0,
 };
 
+struct platform_device ion_system_extra_device = {
+	.name = "ion-bcm",
+	.id = 3,
+	.num_resources = 0,
+};
+
 struct platform_device ion_carveout_device = {
 	.name = "ion-bcm",
 	.id = 0,
@@ -189,6 +225,20 @@ struct platform_device ion_cma_device = {
 	.num_resources = 0,
 };
 #endif /* CONFIG_CMA */
+
+#if defined(CONFIG_MM_SECURE_DRIVER)
+
+struct platform_device ion_secure_device = {
+	.name = "ion-bcm",
+	.id = 4,
+	.dev = {
+		.platform_data = &ion_secure_data,
+	},
+	.num_resources = 0,
+};
+
+#endif /* CONFIG_MM_SECURE_DRIVER */
+
 #endif /* CONFIG_ION_BCM_NO_DT */
 
 struct platform_device hawaii_serial_device = {
@@ -344,8 +394,19 @@ struct platform_device hawaii_kp_device = {
 };
 #endif
 
+
+#ifdef CONFIG_KONA_SECURE_MEMC
+struct platform_device kona_secure_memc_device = {
+	.name = "kona_secure_memc",
+	.id = -1,
+	.dev = {
+		.platform_data = &k_s_memc_plat_data,
+	},
+};
+#endif
+
+
 #ifdef CONFIG_KONA_HEADSET_MULTI_BUTTON
-#define HS_IRQ		gpio_to_irq(92)
 #define HSB_IRQ		BCM_INT_ID_AUXMIC_COMP2
 #define HSB_REL_IRQ	BCM_INT_ID_AUXMIC_COMP2_INV
 
@@ -360,9 +421,11 @@ static struct resource board_headset_resource[] = {
 		.end = ACI_BASE_ADDR + SZ_4K - 1,
 		.flags = IORESOURCE_MEM,
 	},
-	{	/* For Headset IRQ */
-		.start = HS_IRQ,
-		.end = HS_IRQ,
+	{	/* For Headset IRQ  - Note that this is board
+		 * specific, so don't fill the actual GPIO number
+		 * here, it will be done from the appropriate
+		 * board file. So this is just a place holder
+		 */
 		.flags = IORESOURCE_IRQ,
 	},
 	{	/* For Headset button  press IRQ */
@@ -719,8 +782,8 @@ struct platform_device hawaii_otg_platform_device = {
 #ifdef CONFIG_KONA_CPU_FREQ_DRV
 struct kona_freq_tbl kona_freq_tbl[] = {
 	FTBL_INIT(312000, PI_OPP_ECONOMY, TEMP_DONT_CARE),
-	FTBL_INIT(499999, PI_OPP_NORMAL, 100),
-	FTBL_INIT(666667, PI_OPP_TURBO, TEMP_DONT_CARE),
+	FTBL_INIT(499999, PI_OPP_NORMAL, 105),
+	FTBL_INIT(666667, PI_OPP_TURBO, 95),
 	FTBL_INIT(1000000, PI_OPP_SUPER_TURBO, 85),
 };
 
@@ -924,10 +987,11 @@ struct platform_device kona_memc_device = {
 
 #ifdef CONFIG_KONA_TMON
 struct tmon_state threshold_val[] = {
-	{.rising = 70, .falling = 65, .flags = TMON_NOTIFY,},
 	{.rising = 85, .falling = 75, .flags = TMON_NOTIFY,},
-	{.rising = 100, .falling = 90, .flags = TMON_NOTIFY,},
-	{.rising = 115, .falling = 112, .flags = TMON_SHDWN,},
+	{.rising = 95, .falling = 90, .flags = TMON_NOTIFY,},
+	{.rising = 105, .falling = 100, .flags = TMON_NOTIFY,},
+	{.rising = 120, .falling = 115, .flags = TMON_SW_SHDWN,},
+	{.rising = 125, .falling = 123, .flags = TMON_HW_SHDWN,},
 };
 struct kona_tmon_pdata tmon_plat_data = {
 	.base_addr = KONA_TMON_VA,
@@ -936,7 +1000,7 @@ struct kona_tmon_pdata tmon_plat_data = {
 	.thold_size = ARRAY_SIZE(threshold_val),
 	.poll_rate_ms = 30000,
 	.hysteresis = 0,
-	.flags = VTMON,
+	.flags = PVTMON,
 	.chipreg_addr = KONA_CHIPREG_VA,
 	.interval_ms = 5,
 	.tmon_apb_clk = "tmon_apb",
@@ -1147,21 +1211,42 @@ static void __init pmem_reserve_memory(void)
 
 #ifdef CONFIG_ION
 
+enum {
+	ION_HEAP_RESERVE_CARVEOUT_E = 0,
+	ION_HEAP_RESERVE_CARVEOUT_EXTRA_E,
+#ifdef CONFIG_CMA
+	ION_HEAP_RESERVE_CMA_E,
+	ION_HEAP_RESERVE_CMA_EXTRA_E,
+#endif /* CONFIG_CMA */
+#if defined(CONFIG_MM_SECURE_DRIVER)
+	ION_HEAP_RESERVE_SECURE_E,
+	ION_HEAP_RESERVE_SECURE_EXTRA_E,
+#endif /* CONFIG_MM_SECURE_DRIVER */
+};
+
 static struct bcm_ion_heap_reserve_data ion_heap_reserve_datas[] = {
-	[0] = {
+	[ION_HEAP_RESERVE_CARVEOUT_E] = {
 		.name  = "ion-carveout",
 	},
-	[1] = {
+	[ION_HEAP_RESERVE_CARVEOUT_EXTRA_E] = {
 		.name  = "ion-carveout-extra",
 	},
 #ifdef CONFIG_CMA
-	[2] = {
+	[ION_HEAP_RESERVE_CMA_E] = {
 		.name  = "ion-cma",
 	},
-	[3] = {
+	[ION_HEAP_RESERVE_CMA_EXTRA_E] = {
 		.name  = "ion-cma-extra",
 	},
 #endif /* CONFIG_CMA */
+#if defined(CONFIG_MM_SECURE_DRIVER)
+	[ION_HEAP_RESERVE_SECURE_E] = {
+		.name  = "ion-secure",
+	},
+	[ION_HEAP_RESERVE_SECURE_EXTRA_E] = {
+		.name  = "ion-secure-extra",
+	},
+#endif /* CONFIG_MM_SECURE_DRIVER */
 };
 
 static int __init setup_ion_pages(char *str, int idx)
@@ -1182,29 +1267,47 @@ static int __init setup_ion_pages(char *str, int idx)
 
 static int __init setup_ion_carveout0_pages(char *str)
 {
-	return setup_ion_pages(str, 0);
+	return setup_ion_pages(str, ION_HEAP_RESERVE_CARVEOUT_E);
 }
 early_param("carveout0", setup_ion_carveout0_pages);
 
 static int __init setup_ion_carveout1_pages(char *str)
 {
-	return setup_ion_pages(str, 1);
+	return setup_ion_pages(str, ION_HEAP_RESERVE_CARVEOUT_EXTRA_E);
 }
 early_param("carveout1", setup_ion_carveout1_pages);
 
 #ifdef CONFIG_CMA
+
 static int __init setup_ion_cma0_pages(char *str)
 {
-	return setup_ion_pages(str, 2);
+	return setup_ion_pages(str, ION_HEAP_RESERVE_CMA_E);
 }
 early_param("cma0", setup_ion_cma0_pages);
 
 static int __init setup_ion_cma1_pages(char *str)
 {
-	return setup_ion_pages(str, 3);
+	return setup_ion_pages(str, ION_HEAP_RESERVE_CMA_EXTRA_E);
 }
 early_param("cma1", setup_ion_cma1_pages);
+
 #endif /* CONFIG_CMA */
+
+#if defined(CONFIG_MM_SECURE_DRIVER)
+
+static int __init setup_ion_secure0_pages(char *str)
+{
+	return setup_ion_pages(str, ION_HEAP_RESERVE_SECURE_E);
+}
+early_param("secure0", setup_ion_secure0_pages);
+
+static int __init setup_ion_secure1_pages(char *str)
+{
+	return setup_ion_pages(str, ION_HEAP_RESERVE_SECURE_EXTRA_E);
+}
+early_param("secure1", setup_ion_secure1_pages);
+
+#endif /* CONFIG_MM_SECURE_DRIVER */
 
 int bcm_ion_get_heap_reserve_data(struct bcm_ion_heap_reserve_data **data,
 		const char *name)
@@ -1269,6 +1372,25 @@ static int __init ion_scan_pdata(
 			return 1;
 	}
 #endif /* CONFIG_CMA */
+
+#if defined(CONFIG_MM_SECURE_DRIVER)
+	for (i = 0; i < ion_secure_data.nr; i++) {
+		heap = &ion_secure_data.heaps[i];
+		if (!reserve_data || !reserve_data->name ||
+				(strcmp(heap->name, reserve_data->name) != 0))
+			continue;
+
+		reserve_data->type = heap->type;
+		reserve_data->base = heap->base;
+		reserve_data->limit = heap->limit;
+		if (reserve_data->status != -1)
+			reserve_data->size = heap->size;
+		if (reserve_data->size == 0)
+			return 0;
+		else
+			return 1;
+	}
+#endif /* CONFIG_MM_SECURE_DRIVER */
 	return 0;
 }
 
@@ -1310,6 +1432,78 @@ static int __init early_init_dt_scan_ion_data(unsigned long node,
 }
 
 #endif /* CONFIG_ION_BCM_NO_DT */
+
+#if defined(CONFIG_MOBICORE_DRIVER) && defined(CONFIG_OF)
+static int __init early_init_dt_scan_mobicore_data(unsigned long node,
+		const char *uname, int depth, void *data)
+{
+	struct mobicore_data *mobi_data;
+	__be32 *prop;
+	unsigned long len;
+
+	mobi_data = (struct mobicore_data *)data;
+	if (depth != 1 || !mobi_data || !mobi_data->name ||
+			(strcmp(uname, mobi_data->name) != 0))
+		return 0;
+
+	prop = of_get_flat_dt_prop(node, "mobicore-base", &len);
+	if ((prop != NULL) && (len > 0)) {
+		mobi_data->mobicore_base = of_read_ulong(prop, len/4);
+		pr_info("Mobicore: DT: mobicore-base: 0x%08x\n",
+				mobi_data->mobicore_base);
+	} else {
+		pr_err("Mobicore: Cannot read mobicore-base from DT\n");
+		return -1;
+	}
+
+	prop = of_get_flat_dt_prop(node, "mobicore-size", &len);
+	if ((prop != NULL) && (len > 0)) {
+		mobi_data->mobicore_size = of_read_ulong(prop, len/4);
+		pr_info("Mobicore: DT: mobicore-size: 0x%08lx\n",
+				mobi_data->mobicore_size);
+	} else {
+		pr_err("Mobicore: Cannot read mobicore-size from DT\n");
+		return -1;
+	}
+	return 1;
+}
+#endif
+
+#if defined(CONFIG_OF)
+static int __init early_init_dt_scan_secure_mem_data(unsigned long node,
+		const char *uname, int depth, void *data)
+{
+	struct secure_mem_data *sec_mem_data;
+	__be32 *prop;
+	unsigned long len;
+
+	sec_mem_data = (struct secure_mem_data *)data;
+	if (depth != 1 || !sec_mem_data || !sec_mem_data->name ||
+			(strcmp(uname, sec_mem_data->name) != 0))
+		return 0;
+
+	prop = of_get_flat_dt_prop(node, "sec-mem-base", &len);
+	if ((prop != NULL) && (len > 0)) {
+		sec_mem_data->mem_base = of_read_ulong(prop, len/4);
+		pr_info("secure-mem: DT: mem-base: 0x%08x\n",
+				sec_mem_data->mem_base);
+	} else {
+		pr_err("secure-mem: Cannot read sec-mem-base from DT\n");
+		return -1;
+	}
+
+	prop = of_get_flat_dt_prop(node, "sec-mem-size", &len);
+	if ((prop != NULL) && (len > 0)) {
+		sec_mem_data->mem_size = of_read_ulong(prop, len/4);
+		pr_info("secure-mem: DT: sec-mem-size: 0x%08lx\n",
+				sec_mem_data->mem_size);
+	} else {
+		pr_err("secure-mem: Cannot read sec-mem-size from DT\n");
+		return -1;
+	}
+	return 1;
+}
+#endif
 
 static phys_addr_t __init find_free_memory(phys_addr_t size, phys_addr_t base,
 		phys_addr_t limit)
@@ -1383,6 +1577,15 @@ static void __init ion_reserve_memory(void)
 				}
 			}
 #endif /* CONFIG_CMA */
+#if defined(CONFIG_MM_SECURE_DRIVER)
+			if (base && (reserve_data->type ==
+						ION_HEAP_TYPE_SECURE)) {
+				/* Carveout memory for ION */
+				memblock_remove(base, reserve_data->size);
+				reserve_data->base = base;
+				reserve_data->status = 0;
+			}
+#endif /* CONFIG_MM_SECURE_DRIVER */
 		}
 		if (!reserve_data->status)
 			pr_info("ion: Reserve %16s %3dMB (%08lx - %08lx) ***\n",
@@ -1395,8 +1598,121 @@ static void __init ion_reserve_memory(void)
 }
 #endif /* CONFIG_ION */
 
+static void mem_alloc_reserve(phys_addr_t mem_base,
+			unsigned long mem_size)
+{
+	phys_addr_t base;
+	int ret = 0;
+	base = memblock_alloc_from_range(mem_size,
+			SZ_1M, mem_base, mem_base + mem_size);
+
+	if (!base) {
+		pr_err("%s: Unable to reserve secure memory at 0x%x\n",
+			__func__, mem_base);
+		return;
+	}
+	if (base != mem_base) {
+		pr_err("%s: Requested memory block at 0x%x ,"
+			"but got at 0x%x\n", __func__, mem_base, base);
+		pr_err("%s: Failed to reserve secure memory\n", __func__);
+		return;
+	}
+	memblock_free(base, mem_size);
+	ret = memblock_remove(base, mem_size);
+	if (ret)
+		pr_err("%s: Failed to reserve secure memory\n", __func__);
+	else
+		pr_info("%s: Successfully reserved secure memory!!\n",
+			__func__);
+}
+
+#ifdef CONFIG_MOBICORE_DRIVER
+static void mobicore_reserve_memory(void)
+{
+	struct mobicore_data *reserve_data;
+#ifdef CONFIG_OF/*Get data from DT*/
+	int ret = 0;
+	reserve_data = &mobicore_init_data;
+
+	if (initial_boot_params) {
+		ret = of_scan_flat_dt(early_init_dt_scan_mobicore_data,
+			reserve_data);
+		if ((ret <= 0) || !reserve_data)
+			pr_err("MOBICORE: Failed to get DT values\n");
+		else {
+			pr_info("MOBICORE: From DT mobicore-base: 0x%08x\n",
+				reserve_data->mobicore_base);
+			pr_info("MOBICORE: From DT mobicore-size: 0x%08lx\n",
+				reserve_data->mobicore_size);
+
+			mem_alloc_reserve(reserve_data->mobicore_base,
+					reserve_data->mobicore_size);
+			return;
+		}
+	} else
+		pr_info("DT is not present\n");
+#else
+	if (!mobicore_device.dev.platform_data) {
+		pr_err("MOBICORE: ERROR! Platform data is NULL\n");
+		pr_err("MOBICORE: Memory reserve failed\n");
+		return;
+	}
+	reserve_data =
+		(struct mobicore_data *)mobicore_device.dev.platform_data;
+	pr_info("MOBICORE: from platform data mobicore_base: 0x%08x\n",
+		reserve_data->mobicore_base);
+	pr_info("MOBICORE: from platform data mobicore_size 0x%08lx\n",
+		reserve_data->mobicore_size);
+	mem_alloc_reserve(reserve_data->mobicore_base,
+		reserve_data->mobicore_size);
+#endif
+}
+#endif
+
+static void reserve_secure_memory(void)
+{
+	struct secure_mem_data *reserve_data;
+#ifdef CONFIG_OF /* Get data from DT */
+	int ret = 0;
+	reserve_data = &secure_mem_init_data;
+
+	ret = of_scan_flat_dt(early_init_dt_scan_secure_mem_data,
+		reserve_data);
+	if ((ret <= 0) || !reserve_data)
+		pr_err("%s: Failed to get DT values\n", __func__);
+	else {
+		pr_info("%s: From DT sec-mem-base: 0x%08x\n", __func__,
+			reserve_data->mem_base);
+		pr_info("%s: From DT sec-mem-size: 0x%08lx\n", __func__,
+			reserve_data->mem_size);
+
+		mem_alloc_reserve(reserve_data->mem_base,
+				reserve_data->mem_size);
+		return;
+	}
+#else /* CONFIG_OF */
+	if (!secure_mem_device.dev.platform_data) {
+		pr_err("%s: ERROR! Platform data is NULL\n", __func__);
+		pr_err("%s: Memory reserve failed\n", __func__);
+		return;
+	}
+	reserve_data =
+		(struct sec_mem_data *)secure_mem_device.dev.platform_data;
+	pr_info("%s: from platform data mem_base: 0x%08x\n", __func__,
+		reserve_data->mem_base);
+	pr_info("%s: from platform data mem_size 0x%08lx\n", __func__,
+		reserve_data->mem_size);
+	mem_alloc_reserve(reserve_data->mem_base,
+		reserve_data->mem_size);
+#endif /* CONFIG_OF */
+}
+
 void __init hawaii_reserve(void)
 {
+#ifdef CONFIG_MOBICORE_DRIVER
+	mobicore_reserve_memory();
+#endif
+	reserve_secure_memory();
 
 #ifdef CONFIG_ION
 	ion_reserve_memory();
@@ -1405,7 +1721,6 @@ void __init hawaii_reserve(void)
 #ifdef CONFIG_ANDROID_PMEM
 	pmem_reserve_memory();
 #endif
-
 }
 
 static int __init setup_board_version(char *p)

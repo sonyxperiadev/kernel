@@ -38,6 +38,9 @@
 #include <mach/irqs.h>
 #include <mach/memory.h>
 #include <mach/dormant.h>
+#ifdef CONFIG_USE_ARCH_TIMER_AS_LOCAL_TIMER
+#include <linux/clockchips.h>
+#endif
 
 #include "pm_params.h"
 
@@ -95,9 +98,9 @@ enum {
 	(KONA_CHIPREG_VA + CHIPREG_PERIPH_SPARE_CONTROL2_OFFSET)
 
 
-static int enter_idle_state(struct kona_idle_state *state, u32 ctrl_params);
-static int enter_suspend_state(struct kona_idle_state *state, u32 ctrl_params);
-static int enter_dormant_state(u32 ctrl_params);
+static int enter_drmt_state(struct kona_idle_state *state, u32 ctrl_params);
+static int enter_wfi_state(struct kona_idle_state *state, u32 ctrl_params);
+static int __enter_drmt(u32 ctrl_params);
 
 static struct kona_idle_state idle_states[] = {
 	{
@@ -107,7 +110,7 @@ static struct kona_idle_state idle_states[] = {
 		.latency = EXIT_LAT_SIMPLE_WFI,
 		.target_residency = TRGT_RESI_SIMPLE_WFI,
 		.state = CSTATE_SIMPLE_WFI,
-		.enter = enter_suspend_state,
+		.enter = enter_wfi_state,
 	},
 #ifdef CONFIG_26MHZ_WFI
 	{
@@ -118,19 +121,43 @@ static struct kona_idle_state idle_states[] = {
 		.latency = EXIT_LAT_26MHZ_WFI,
 		.target_residency = TRGT_RESI_26MHZ_WFI,
 		.state = CSTATE_26MHZ_WFI,
-		.enter = enter_suspend_state,
+		.enter = enter_wfi_state,
 	},
 #endif
 #ifdef CONFIG_DORMANT_MODE
 	{
 		.name = "C3",
+		.desc = "core-drmnt", /* core dormant - cluster ON*/
+		.flags = CPUIDLE_FLAG_TIME_VALID,
+		.params = CTRL_PARAMS_CLUSTER_ACTIVE,
+		.latency = EXIT_LAT_CORE_DRMT,
+		.target_residency = TRGT_RESI_CORE_DRMT,
+		.state = CSTATE_CORE_DRMT,
+		.enter = enter_drmt_state,
+	},
+	{
+		.name = "C4",
+		.desc = "suspnd-drmnt", /* suspennd-dormant(XTAL ON) */
+		.flags = CPUIDLE_FLAG_TIME_VALID,
+		.params = CTRL_PARAMS_FLAG_XTAL_ON,
+		.latency = EXIT_LAT_SUSPEND_DRMT,
+		.target_residency = TRGT_RESI_SUSPEND_DRMT,
+		.state = CSTATE_SUSPEND_DRMT,
+		.enter = enter_drmt_state,
+	},
+		{
+		.name = "C5",
 		.desc = "ds-drmnt", /* deepsleep-dormant(XTAL OFF) */
 		.flags = CPUIDLE_FLAG_TIME_VALID,
+#ifdef CONFIG_DSM_IN_SUSPEND_ONLY
+		.params = CTRL_PARAMS_CSTATE_DISABLED,
+#endif
 		.latency = EXIT_LAT_DS_DRMT,
 		.target_residency = TRGT_RESI_DS_DRMT,
 		.state = CSTATE_DS_DRMT,
-		.enter = enter_idle_state,
+		.enter = enter_drmt_state,
 	},
+
 #endif
 
 };
@@ -182,7 +209,7 @@ ret:
 	put_cpu();
 }
 
-int enter_suspend_state(struct kona_idle_state *state, u32 ctrl_params)
+int enter_wfi_state(struct kona_idle_state *state, u32 ctrl_params)
 {
 #ifdef CONFIG_26MHZ_WFI
 	static u32 freq_id = 0xFFFF;
@@ -248,7 +275,7 @@ int enter_suspend_state(struct kona_idle_state *state, u32 ctrl_params)
 	return -1;
 }
 
-int enter_dormant_state(u32 ctrl_params)
+int __enter_drmt(u32 ctrl_params)
 {
 	u32 cpu;
 	cpu = smp_processor_id();
@@ -256,8 +283,11 @@ int enter_dormant_state(u32 ctrl_params)
 #ifdef CONFIG_DORMANT_MODE
 	if (pm_info.dormant_enable & (0x1 << cpu)) {
 		u32 svc;
-		if (ctrl_params & CTRL_PARAMS_ENTER_SUSPEND)
+		if (ctrl_params & CTRL_PARAMS_ENTER_SUSPEND ||
+			ctrl_params & CTRL_PARAMS_OFFLINE_CORE)
 			svc = FULL_DORMANT_L2_OFF;
+		else if (ctrl_params & CTRL_PARAMS_CLUSTER_ACTIVE)
+			svc = CORE_DORMANT;
 		else
 			svc = FULL_DORMANT_L2_ON;
 
@@ -329,16 +359,24 @@ int force_sleep(suspend_state_t state)
 		}
 		disable_all_interrupts();
 
-		enter_idle_state(&s, s.params);
+		enter_drmt_state(&s, s.params);
 	}
 }
 
-int enter_idle_state(struct kona_idle_state *state, u32 ctrl_params)
+int enter_drmt_state(struct kona_idle_state *state, u32 ctrl_params)
 {
 	struct pi *pi = NULL;
 
 	BUG_ON(!state);
 
+#if 0
+#ifdef CONFIG_USE_ARCH_TIMER_AS_LOCAL_TIMER
+	if (state->state == CSTATE_DS_DRMT) {
+		int cpu_id = smp_processor_id();
+		clockevents_notify(CLOCK_EVT_NOTIFY_BROADCAST_ENTER, &cpu_id);
+	}
+#endif
+#endif
 	/*Clear all events except auto-clear & SW events*/
 	pwr_mgr_event_clear_events(LCDTE_EVENT, KEY_R7_EVENT);
 	pwr_mgr_event_clear_events(MISC_WKP_EVENT, BRIDGE_TO_MODEM_EVENT);
@@ -360,12 +398,7 @@ int enter_idle_state(struct kona_idle_state *state, u32 ctrl_params)
 			pwr_mgr_log_active_events();
 		}
 
-	switch (state->state) {
-	case CSTATE_SUSPEND_DRMT:
-	case CSTATE_DS_DRMT:
-		enter_dormant_state(ctrl_params);
-		break;
-	}
+	__enter_drmt(ctrl_params);
 
 	pm_dbg(LOG_SW2_STATUS,
 		"SW2 state: %d\n", pwr_mgr_is_event_active(SOFTWARE_2_EVENT));
@@ -377,15 +410,25 @@ int enter_idle_state(struct kona_idle_state *state, u32 ctrl_params)
 	pwr_mgr_process_events(MISC_WKP_EVENT, BRIDGE_TO_MODEM_EVENT, false);
 	pwr_mgr_process_events(USBOTG_EVENT, PHY_RESUME_EVENT, false);
 
-	if (ctrl_params & CTRL_PARAMS_ENTER_SUSPEND ||
-		(pm_info.log_mask & LOG_IDLE_INTR)) {
-		pr_info("Active Events at wakeup\n");
-		pm_log_wakeup_intr();
-		pwr_mgr_log_active_events();
+	if (pm_info.clk_dbg_dsm) {
+		if (ctrl_params & CTRL_PARAMS_ENTER_SUSPEND ||
+			(pm_info.log_mask & LOG_IDLE_INTR)) {
+			pr_info("Active Events at wakeup\n");
+			pm_log_wakeup_intr();
+			pwr_mgr_log_active_events();
+		}
 	}
 
 	if (ctrl_params & CTRL_PARAMS_FLAG_XTAL_ON || pm_info.keep_xtl_on)
 		clk_set_crystal_pwr_on_idle(true);
+#if 0
+#ifdef CONFIG_USE_ARCH_TIMER_AS_LOCAL_TIMER
+	if (state->state == CSTATE_DS_DRMT) {
+		int cpu_id = smp_processor_id();
+		clockevents_notify(CLOCK_EVT_NOTIFY_BROADCAST_EXIT, &cpu_id);
+	}
+#endif
+#endif
 	return -1;
 }
 

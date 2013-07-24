@@ -72,7 +72,6 @@ struct axipv_init_t {
 #ifdef AXIPV_HAS_CLK
 	char *clk_name;
 #endif
-	bool bypassPV;
 	void (*irq_cb)(int err);
 	void (*release_cb)(u32 free_buf);
 };
@@ -87,6 +86,7 @@ struct axipv_config_t {
 	bool cmd;
 	bool test;
 	bool async;
+	bool bypassPV;
 	u8 pix_fmt;
 };
 
