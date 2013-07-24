@@ -36,6 +36,13 @@ enum {
 	PI_OPP_MAX
 };
 
+#define OPP_XTAL_STRING		"XTAL"
+#define OPP_ECONOMY_STRING	"ECONOMY"
+#define OPP_NORMAL_STRING	"NORMAL"
+#define OPP_TURBO_STRING	"TURBO"
+#define OPP_SUPER_TURBO_STRING	"SUPER_TURBO"
+
+
 void hawaii_pi_mgr_init(void);
 
 #endif /*__HAWAII_PI_MNGR_H__*/

@@ -36,26 +36,11 @@
 
 #include "pm_params.h"
 
-#define RUN_POLICY PM_POLICY_5
-#define RETN_POLICY PM_POLICY_1
-#define SHTDWN_POLICY PM_POLICY_0
-
-#define OPP_XTAL_STRING		"XTAL"
-#define OPP_ECONOMY_STRING	"ECONOMY"
-#define OPP_NORMAL_STRING	"NORMAL"
-#define OPP_TURBO_STRING	"TURBO"
-#define OPP_SUPER_TURBO_STRING	"SUPER_TURBO"
-
 #define	ARM_PI_NUM_OPP			ARRAY_SIZE(__arm_opp_info)
 #define	MM_PI_NUM_OPP			ARRAY_SIZE(__mm_opp_info)
 #define	HUB_PI_NUM_OPP			ARRAY_SIZE(__hub_opp_info)
 #define	AON_PI_NUM_OPP			ARRAY_SIZE(__aon_opp_info)
 #define	SUB_SYS_PI_NUM_OPP		ARRAY_SIZE(kpm_opp_info)
-
-
-#define PI_STATE(state_id, policy, latency, flg) \
-		{.id = state_id, .state_policy = policy,\
-		.hw_wakeup_latency = latency, .flags = flg}
 
 #ifdef CONFIG_PLL1_8PHASE_OFF_ERRATUM
 static struct clk *ref_8ph_en_pll1_clk;
@@ -64,25 +49,13 @@ static struct clk *ref_8ph_en_pll1_clk;
 char *armc_core_ccu[] = { KPROC_CCU_CLK_NAME_STR };
 
 struct opp_info __arm_opp_info[] = {
-	[0] = {
-		.freq_id = PROC_CCU_FREQ_ID_ECO,
-		.opp_id = PI_OPP_ECONOMY,
-	},
-	[1] = {
-		.freq_id = PROC_CCU_FREQ_ID_NRML,
-		.opp_id = PI_OPP_NORMAL,
-		.ctrl_prms = A9_FREQ_NORMAL_DIV,
-	},
-	[2] = {
-		.freq_id = PROC_CCU_FREQ_ID_TURBO,
-		.opp_id = PI_OPP_TURBO,
-		.ctrl_prms = A9_FREQ_TURBO_DIV,
-	},
-	[3] = {
-		.freq_id = PROC_CCU_FREQ_ID_SUPER_TURBO,
-		.opp_id = PI_OPP_SUPER_TURBO,
-	},
-};
+	INIT_OPP_INFO(PROC_CCU_FREQ_ID_ECO, PI_OPP_ECONOMY, 0),
+	INIT_OPP_INFO(PROC_CCU_FREQ_ID_NRML, PI_OPP_NORMAL,
+			A9_FREQ_NORMAL_DIV),
+	INIT_OPP_INFO(PROC_CCU_FREQ_ID_TURBO, PI_OPP_TURBO,
+			A9_FREQ_TURBO_DIV),
+	INIT_OPP_INFO(PROC_CCU_FREQ_ID_SUPER_TURBO, PI_OPP_SUPER_TURBO, 0),
+	};
 
 struct opp_info *arm_opp_info[] = {__arm_opp_info};
 
@@ -199,29 +172,16 @@ static struct pi_ops mm_pi_ops;
 static char *mm_ccu[] = { MM_CCU_CLK_NAME_STR };
 
 struct opp_info __mm_opp_info[] = {
-	[0] = {
-		.freq_id = MM_CCU_FREQ_ID_ECO,
-		.opp_id = PI_OPP_ECONOMY,
-	},
-	[1] = {
-		.freq_id = MM_CCU_FREQ_ID_NRML,
-		.opp_id = PI_OPP_NORMAL,
-	},
-	[2] = {
-		.freq_id = MM_CCU_FREQ_ID_TURBO,
-		.opp_id = PI_OPP_TURBO,
-	},
+	INIT_OPP_INFO(MM_CCU_FREQ_ID_ECO, PI_OPP_ECONOMY, 0),
+	INIT_OPP_INFO(MM_CCU_FREQ_ID_NRML, PI_OPP_NORMAL, 0),
+	INIT_OPP_INFO(MM_CCU_FREQ_ID_TURBO, PI_OPP_TURBO, 0),
 #ifdef CONFIG_PI_MGR_MM_STURBO_ENABLE
-	[3] = {
-		.freq_id = MM_CCU_FREQ_ID_SUPER_TURBO,
-		.opp_id = PI_OPP_SUPER_TURBO,
-		.ctrl_prms = MM_CLK_SRC_312M,
-	},
+	INIT_OPP_INFO(MM_CCU_FREQ_ID_SUPER_TURBO, PI_OPP_SUPER_TURBO,
+			MM_CLK_SRC_312M),
 #endif
 };
 
 struct opp_info *mm_opp_info[] = {__mm_opp_info};
-u32 mm_weightage[] = {0, 0, 0, 0};
 
 struct pi_opp mm_opp = {
 	.opp_info = mm_opp_info,
@@ -231,7 +191,7 @@ struct pi_opp mm_opp = {
 		OPP_ID_MASK(PI_OPP_SUPER_TURBO) |
 #endif
 		OPP_ID_MASK(PI_OPP_TURBO),
-	.def_weightage = mm_weightage,
+	.def_weightage = NULL,
 };
 
 static struct pi_state mm_states[] = {
@@ -309,14 +269,8 @@ static struct pi mm_pi = {
 static char *hub_ccu[] = { KHUB_CCU_CLK_NAME_STR };
 
 struct opp_info __hub_opp_info[] = {
-	[0] = {
-		.freq_id = HUB_CCU_FREQ_ID_ECO, /* 0 */
-		.opp_id = PI_OPP_ECONOMY,
-	},
-	[1] = {
-		.freq_id = HUB_CCU_FREQ_ID_NRML,
-		.opp_id = PI_OPP_NORMAL,
-	},
+	INIT_OPP_INFO(HUB_CCU_FREQ_ID_ECO, PI_OPP_ECONOMY, 0),
+	INIT_OPP_INFO(HUB_CCU_FREQ_ID_NRML, PI_OPP_NORMAL, 0),
 };
 
 struct opp_info *hub_opp_info[] = {__hub_opp_info};
@@ -398,14 +352,8 @@ static struct pi hub_pi = {
 static char *aon_ccu[] = { KHUBAON_CCU_CLK_NAME_STR };
 
 struct opp_info __aon_opp_info[] = {
-	[0] = {
-		.freq_id = AON_CCU_FREQ_ID_ECO, /* 0 */
-		.opp_id = PI_OPP_ECONOMY,
-	},
-	[1] = {
-		.freq_id = AON_CCU_FREQ_ID_NRML,
-		.opp_id = PI_OPP_NORMAL,
-	},
+	INIT_OPP_INFO(AON_CCU_FREQ_ID_ECO, PI_OPP_ECONOMY, 0),
+	INIT_OPP_INFO(AON_CCU_FREQ_ID_NRML, PI_OPP_NORMAL, 0),
 };
 
 struct opp_info *aon_opp_info[] = {__aon_opp_info};
@@ -480,26 +428,13 @@ static char *sub_sys_ccu[] = { KPM_CCU_CLK_NAME_STR, KPS_CCU_CLK_NAME_STR };
 u32 sub_sys_weightage[] = {25, 0};
 
 struct opp_info kpm_opp_info[2] = {
-	/* KPM */
-	[0] = {
-	    .freq_id = KPM_CCU_FREQ_ID_ECO, /* 0 */
-	    .opp_id = PI_OPP_ECONOMY,
-	},
-	[1] = {
-	    .freq_id = KPM_CCU_FREQ_ID_NRML,
-	    .opp_id = PI_OPP_NORMAL,
-	},
+	INIT_OPP_INFO(KPM_CCU_FREQ_ID_ECO, PI_OPP_ECONOMY, 0),
+	INIT_OPP_INFO(KPM_CCU_FREQ_ID_NRML, PI_OPP_NORMAL, 0),
 };
+
 struct opp_info kps_opp_info[2] = {
-	/* KPS */
-	[0] = {
-	    .freq_id = KPS_CCU_FREQ_ID_ECO, /* 0 */
-	    .opp_id = PI_OPP_ECONOMY,
-	},
-	[1] = {
-	    .freq_id = KPS_CCU_FREQ_ID_NRML,
-	    .opp_id = PI_OPP_NORMAL,
-	},
+	INIT_OPP_INFO(KPS_CCU_FREQ_ID_ECO, PI_OPP_ECONOMY, 0),
+	INIT_OPP_INFO(KPS_CCU_FREQ_ID_NRML, PI_OPP_NORMAL, 0),
 };
 
 struct opp_info *sub_sys_opp_info[] = {kpm_opp_info, kps_opp_info};
