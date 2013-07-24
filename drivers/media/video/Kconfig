@@ -599,6 +599,17 @@ config VIDEO_AS3643
     ---help---
       This is a driver for the AS3643 flash controller.
 
+config GPIO_FLASH
+    tristate "gpio flash support"
+    depends on VIDEO_V4L2
+    ---help---
+      This is a driver for the gpio flash controller.
+      This is a flash driver ic.
+      This is a driver for the gpio flash controller.
+      This is a flash driver ic.
+      This is a driver for the gpio flash controller.
+      This is a flash driver ic.
+
 config VIDEO_A3907
     tristate "A3907 flash support"
     depends on I2C && VIDEO_V4L2

@@ -38,15 +38,11 @@
 #include "as3643.h"
 #endif
 
-#include <linux/init.h>
-#include <linux/module.h>
-#include <linux/timer.h>
-#define OV8825_DEBUG 1
-
-#if defined(CONFIG_MACH_JAVA_C_5606)
-#define TORCH_EN (10)
-#define FLASH_EN (11)
+#ifdef CONFIG_GPIO_FLASH
+#include "flash_gpio.h"
 #endif
+
+#define OV8825_DEBUG 1
 
 /* OV5648 has only one fixed colorspace per pixelcode */
 struct ov8825_datafmt {
@@ -99,20 +95,6 @@ struct sensor_mode {
 
 
 struct sensor_mode ov8825_mode[OV8825_MODE_MAX + 1] = {
-#if 0
-	{
-		.name           = "1632x1224_2lane_30Fps_tmp",
-		.height         = 1224,
-		.width          = 1632,
-		.hts            = 3516,
-		.vts            = 1264,
-		.vts_max        = 32767 - 6,
-		.line_length_ns = 26458,
-		.bayer          = BAYER_BGGR,
-		.bpp            = 10,
-		.fps            = F24p8(30.0),
-	},
-#endif
 	{
 		.name           = "1632x1224_2lane_30Fps",
 		.height         = 1224,
@@ -321,8 +303,8 @@ static const struct ov8825_reg ov8825_regtbl[OV8825_MODE_MAX][1024] = {
 	{0x3817, 0x40},
 	{0x3818, 0x00},
 	{0x3819, 0x40},
-	{0x3820, 0x81},
-	{0x3821, 0x17},
+	{0x3820, 0x87},
+	{0x3821, 0x11},
 	{0x3b1f, 0x00},
 	{0x3d00, 0x00},
 	{0x3d01, 0x00},
@@ -533,8 +515,8 @@ static const struct ov8825_reg ov8825_regtbl[OV8825_MODE_MAX][1024] = {
 	{0x3813, 0x04},
 	{0x3814, 0x31},
 	{0x3815, 0x31},
-	{0x3820, 0x81},
-	{0x3821, 0x17},
+	{0x3820, 0x87},
+	{0x3821, 0x11},
 	{0x3f00, 0x00},
 	{0x4005, 0x18},
 	{0x4601, 0x00},
@@ -643,8 +625,8 @@ static const struct ov8825_reg ov8825_regtbl[OV8825_MODE_MAX][1024] = {
 	{0x3817, 0x40},
 	{0x3818, 0x00},
 	{0x3819, 0x40},
-	{0x3820, 0x81},
-	{0x3821, 0x17},
+	{0x3820, 0x87},
+	{0x3821, 0x11},
 	{0x3b1f, 0x00},
 	{0x3d00, 0x00},
 	{0x3d01, 0x00},
@@ -856,8 +838,8 @@ static const struct ov8825_reg ov8825_regtbl[OV8825_MODE_MAX][1024] = {
 	{0x3813, 0x06},
 	{0x3814, 0x11},
 	{0x3815, 0x11},
-	{0x3820, 0x80},
-	{0x3821, 0x16},
+	{0x3820, 0x86},
+	{0x3821, 0x10},
 	{0x3f00, 0x02},
 	{0x4005, 0x1a},
 	{0x4601, 0x00},
@@ -915,8 +897,8 @@ static const struct ov8825_reg ov8825_regdif[OV8825_MODE_MAX][256] = {
 	{0x3813, 0x04},
 	{0x3814, 0x31},
 	{0x3815, 0x31},
-	{0x3820, 0x81},
-	{0x3821, 0x17},
+	{0x3820, 0x87},
+	{0x3821, 0x11},
 	{0x3f00, 0x00},
 	{0x4005, 0x18},
 	{0x4601, 0x00},
@@ -970,8 +952,8 @@ static const struct ov8825_reg ov8825_regdif[OV8825_MODE_MAX][256] = {
 	{0x3813, 0x06},
 	{0x3814, 0x11},
 	{0x3815, 0x11},
-	{0x3820, 0x80},
-	{0x3821, 0x16},
+	{0x3820, 0x86},
+	{0x3821, 0x10},
 	{0x3f00, 0x02},
 	{0x4005, 0x1a},
 	{0x4601, 0x00},
@@ -1215,8 +1197,8 @@ static const struct v4l2_queryctrl ov8825_controls[] = {
 	 .name = "AS3643-flash",
 #endif
 
-#if defined(CONFIG_MACH_JAVA_C_5606)
-	 .name = "OCP8111-flash",
+#ifdef CONFIG_GPIO_FLASH
+	 .name = "GPIO-flash",
 #endif
 	 .minimum = FLASH_MODE_OFF,
 	 .maximum = (1 << FLASH_MODE_OFF) | (1 << FLASH_MODE_ON) |
@@ -2249,13 +2231,6 @@ static int ov8825_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		ov8825->flash_timeout = ctrl->value;
 		break;
 
-	#if 0
-	case V4L2_CID_CAM_APERTURE:
-		if (ctrl->value > OV5648_APERTURE_MAX)
-			return -EINVAL;
-		ov5648_lens_set_aperture(client, ctrl->value);
-		break;
-	#endif
 	}
 
 	return ret;
@@ -2296,40 +2271,26 @@ int set_flash_mode(struct i2c_client *client, int mode)
 	ov8825->flashmode = mode;
 #endif
 
-#if defined(CONFIG_MACH_JAVA_C_5606)
+#ifdef CONFIG_GPIO_FLASH
 		if ((mode == FLASH_MODE_OFF)
 			|| (mode == FLASH_MODE_TORCH_OFF)) {
-			gpio_set_value(TORCH_EN, 0);
-			gpio_set_value(FLASH_EN, 0);
+			gpio_flash_torch_off();
 		} else if (mode == FLASH_MODE_TORCH_ON) {
-			gpio_set_value(TORCH_EN, 1);
-			gpio_set_value(FLASH_EN, 0);
+			gpio_flash_torch_on();
 		} else if (mode == FLASH_MODE_ON) {
 			ov8825->flash_timeout =
 				2 * (ov8825->vts * ov8825->line_length)/1000;
-			timer.data = (unsigned long) msg;
-			timer.expires = jiffies
-				+ (ov8825->flash_timeout*HZ)/1000000;
-			timer.function = print_func;
-			add_timer(&timer);
-			pr_debug("flash_timeout=%d", ov8825->flash_timeout);
-			gpio_set_value(TORCH_EN, 1);
-			gpio_set_value(FLASH_EN, 1);
+			gpio_flash_flash_on(ov8825->flash_timeout);
 		} else if (mode == FLASH_MODE_AUTO) {
 			ov8825->flash_timeout =
 				2 * (ov8825->vts * ov8825->line_length)/1000;
-			timer.data = (unsigned long) msg;
-			timer.expires =
-				jiffies + (ov8825->flash_timeout*HZ)/1000000;
-			timer.function = print_func;
-			add_timer(&timer);
-			gpio_set_value(TORCH_EN, 1);
-			gpio_set_value(FLASH_EN, 1);
+			gpio_flash_flash_on(ov8825->flash_timeout);
 		} else {
 			return -EINVAL;
 		}
 	ov8825->flashmode = mode;
 #endif
+
 
 	return 0;
 }
@@ -2456,9 +2417,6 @@ static int ov8825_init(struct i2c_client *client)
 	 *  Exposure should be DEFAULT_EXPO * line_length / 1000
 	 *  Since we don't have line_length yet, just estimate
 	 */
-#if defined(CONFIG_MACH_JAVA_C_5606)
-	init_timer(&timer);
-#endif
 
 	ov8825->exposure_current  = DEFAULT_EXPO * 22;
 	ov8825->aecpos_delay      = 1;
