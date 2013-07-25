@@ -400,9 +400,8 @@ static loff_t mm_file_lseek(struct file *filp, loff_t offset, int ignore)
 
 	struct file *input = fget(offset);
 
-	if (input == NULL) {
+	if (input == NULL)
 		return -EINVAL;
-	}
 	if (is_validate_file(input)) {
 		struct file_private_data *in_private = input->private_data;
 		struct dev_job_list *to = mm_common_alloc_job(private,\
