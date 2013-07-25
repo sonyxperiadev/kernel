@@ -294,7 +294,7 @@ static int bcmpmu_accy_detect_func(struct accy_det *accy_d)
 		goto err;
 	}
 
-	if (id_status == PMU_USB_ID_FLOAT) {
+	if ((id_status == PMU_USB_ID_FLOAT) && vbus_status) {
 		bc_status = get_bc_status(accy_d);
 		if (bc_status)
 			chrgr_type = get_chrgr_type(accy_d, bc_status);
@@ -420,6 +420,7 @@ static int bcmpmu_accy_event_handler(struct notifier_block *nb,
 {
 	int ret = 0;
 	struct accy_det *accy_d;
+	u32 id_status;
 	pr_acd(FLOW, "=== %s event %ld\n", __func__, event);
 	switch (event) {
 	case PMU_ACCY_EVT_OUT_CHGDET_LATCH:
@@ -434,8 +435,14 @@ static int bcmpmu_accy_event_handler(struct notifier_block *nb,
 		break;
 	case PMU_ACCY_EVT_OUT_ID_CHANGE:
 		accy_d = container_of(nb,
-			struct accy_det, id_change_event);
-		accy_d->act = ACT_ACCY_IN;
+				struct accy_det, id_change_event);
+		bcmpmu_usb_get(accy_d->bcmpmu,
+				BCMPMU_USB_CTRL_GET_ID_VALUE,
+				(void *)&id_status);
+		 if (id_status != PMU_USB_ID_FLOAT)
+			accy_d->act = ACT_ACCY_IN;
+		 else
+			ret = 1;
 		break;
 	default:
 		ret = -1;
