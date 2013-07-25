@@ -938,9 +938,12 @@ static void bcmpmu_audio_sc_work(struct work_struct *work)
 		udelay(35);
 		val &= ~HS_SC_EDISABLE_MASK;
 		bcmpmu->write_dev(bcmpmu, PMU_REG_IHF_HS_TST, val);
-		bcmpmu_hs_power(false);
+		bcmpmu->read_dev(bcmpmu, PMU_REG_HSPUP2, &val);
+		val &= ~(1 << HSPUP2_HS_PWRUP_SHIFT);
+		bcmpmu->write_dev(bcmpmu, PMU_REG_HSPUP2, val);
 		udelay(60);
-		bcmpmu_hs_power(true);
+		val |= (1 << HSPUP2_HS_PWRUP_SHIFT);
+		bcmpmu->write_dev(bcmpmu, PMU_REG_HSPUP2, val);
 		mutex_unlock(&bcmpmu_audio->lock);
 		break;
 	case PMU_IRQ_AUD_IHFD_SHCKT:
@@ -951,10 +954,10 @@ static void bcmpmu_audio_sc_work(struct work_struct *work)
 		udelay(35);
 		val &= ~IHF_SC_EDISABLE_MASK;
 		bcmpmu->write_dev(bcmpmu, PMU_REG_IHF_HS_TST, val);
+		mutex_unlock(&bcmpmu_audio->lock);
 		bcmpmu_ihf_power(false);
 		udelay(60);
 		bcmpmu_ihf_power(true);
-		mutex_unlock(&bcmpmu_audio->lock);
 		break;
 	default:
 		pr_info("%s: Wrong IRQ number\n", __func__);
@@ -965,7 +968,7 @@ static void bcmpmu_audio_sc_work(struct work_struct *work)
 static void bcmpmu_audio_isr(enum bcmpmu59xxx_irq irq, void *data)
 {
 	struct bcmpmu_audio *paudio = data;
-	pr_audio(INIT, "%s: Interrupt for %s\n", __func__,
+	pr_audio(INIT, "%s: Interrupt for === %s ===\n", __func__,
 			(irq == PMU_IRQ_AUD_HSAB_SHCKT) ? "HS SC" : "IHF SC");
 
 	paudio->event = irq;
