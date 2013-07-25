@@ -104,23 +104,11 @@ static int __kona_pm_enter_idle(struct cpuidle_device *dev,
 				      struct cpuidle_driver *drv, int index)
 {
 	int mach_ret = -1;
-	int safe_state = drv->safe_state_index;
 	struct kona_idle_state *kona_state = &pm_prms.states[index];
 
 	BUG_ON(!kona_state);
 
-	int cpu_id = smp_processor_id();
-
 	if (pm_prms.idle_en) {
-
-#warning "Porting hack: To be verified by PM team"
-#ifdef CONFIG_HAS_WAKELOCK
-#if 0
-		if (has_wake_lock(WAKE_LOCK_IDLE))
-			kona_state = cpuidle_get_statedata
-					(&dev->states_usage[safe_state]);
-#endif
-#endif
 		BUG_ON(kona_state == NULL);
 		local_irq_disable();
 		local_fiq_disable();
@@ -164,12 +152,7 @@ static int __kona_pm_enter_idle(struct cpuidle_device *dev,
 __weak int kona_pm_enter_idle(struct cpuidle_device *dev,
 				      struct cpuidle_driver *drv, int index)
 {
-#if 0
-	return cpuidle_wrap_enter(dev, drv, index, __kona_pm_enter_idle);
-#endif
-#warning "Porting hack: To be verified by PM team"
-	cpu_do_idle();
-	return index;
+	return __kona_pm_enter_idle(dev, drv, index);
 }
 
 DEFINE_PER_CPU(struct cpuidle_device, kona_idle_dev);
@@ -223,16 +206,6 @@ __weak int kona_mach_pm_enter(suspend_state_t state)
 	switch (state) {
 	case PM_SUSPEND_STANDBY:
 	case PM_SUSPEND_MEM:
-#ifdef CONFIG_HAS_WAKELOCK
-		/*Don't enter WFI if any wake lock is active
-		   Added to take care of wake locks that gets activiated
-		   just before interrupts are disabled during suspend */
-#if 0
-		if (has_wake_lock(WAKE_LOCK_SUSPEND) ||
-		    has_wake_lock(WAKE_LOCK_IDLE))
-#endif
-			break;
-#endif /*CONFIG_HAS_WAKELOCK */
 		if (suspend->enter) {
 			pr_info("--%s:suspend->enter--\n", __func__);
 
@@ -242,13 +215,14 @@ __weak int kona_mach_pm_enter(suspend_state_t state)
 
 #ifdef CONFIG_KONA_PROFILER
 			err = start_profiler("ccu_root",
-						((void *)&param));
+					((void *)&param));
 #endif /*CONFIG_KONA_PROFILER*/
 
 			time1 = kona_hubtimer_get_counter();
 			pr_info(" Timer value before suspend: %llu", time1);
 			suspend->enter(suspend,
-				suspend->params | CTRL_PARAMS_ENTER_SUSPEND);
+					suspend->params |
+					CTRL_PARAMS_ENTER_SUSPEND);
 			time2 = kona_hubtimer_get_counter();
 
 			pr_info(" Timer value when resume: %llu", time2);
@@ -262,7 +236,7 @@ __weak int kona_mach_pm_enter(suspend_state_t state)
 					printk(KERN_ALERT "counter overflow");
 				else if	(time_awake > 0)
 					pr_info("System in deepsleep: %llums",
-						time_susp - time_awake);
+							time_susp - time_awake);
 			}
 #endif /*CONFIG_KONA_PROFILER*/
 
@@ -354,8 +328,6 @@ int __init kona_pm_init(struct pm_init_param *ip)
 #ifdef CONFIG_CPU_IDLE
 	int i;
 	int ret;
-	u32 cpu;
-	struct cpuidle_device *dev;
 	struct cpuidle_state *state;
 
 	pr_info("--%s : registering cpu_ilde hanlders\n", __func__);
@@ -403,28 +375,11 @@ int __init kona_pm_init(struct pm_init_param *ip)
 	/* Configure broadcast timer for each CPU */
 	on_each_cpu(kona_setup_broadcast_timer, NULL, 1);
 #endif
-
-#warning "Porting hack: To be verified by PM team"
-#if 0
-	ret = cpuidle_register_driver(&kona_idle_driver);
+	ret = cpuidle_register(&kona_idle_driver, NULL);
 	if (ret) {
-		pr_err("CPUidle driver registration failed\n");
+		pr_info("%s: cpuidle_register failed\n", __func__);
 		return ret;
 	}
-	for_each_possible_cpu(cpu) {
-		dev = &per_cpu(kona_idle_dev, cpu);
-		dev->cpu = cpu;
-		dev->state_count = ip->num_states;
-		ret = cpuidle_register_device(dev);
-		if (ret) {
-			pr_err("CPU%u: CPUidle device registration failed\n",
-				cpu);
-			cpuidle_unregister_driver(&kona_idle_driver);
-			return ret;
-		}
-	}
-#endif
-	ret = cpuidle_register(&kona_idle_driver, NULL);
 #endif /*CONFIG_CPU_IDLE */
 
 #ifdef CONFIG_SUSPEND
@@ -524,8 +479,6 @@ EXPORT_SYMBOL(kona_pm_disable_idle_state);
 /**
  * disable idle state @state for cpu @cpu
  */
-#warning "Porting hack: To be verified by PM team"
-#if 0
 int kona_pm_disable_idle_state_for_cpu(int cpu, int state, bool disable)
 {
 	struct cpuidle_device *dev;
@@ -534,7 +487,7 @@ int kona_pm_disable_idle_state_for_cpu(int cpu, int state, bool disable)
 	if (cpu > CONFIG_NR_CPUS)
 		return -EINVAL;
 
-	dev = &per_cpu(kona_idle_dev, cpu);
+	dev = per_cpu(cpuidle_devices, cpu);
 	if (state == CSTATE_ALL) {
 		for (i = 0; i < pm_prms.num_states; i++) {
 			if (i ==  kona_idle_driver.safe_state_index)
@@ -553,7 +506,6 @@ int kona_pm_disable_idle_state_for_cpu(int cpu, int state, bool disable)
 	return 0;
 }
 EXPORT_SYMBOL(kona_pm_disable_idle_state_for_cpu);
-#endif
 
 int kona_pm_set_suspend_state(int state_inx)
 {
