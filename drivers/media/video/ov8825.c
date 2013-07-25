@@ -191,6 +191,14 @@ struct ov8825 {
 	int flash_timeout;
 	struct ov8825_otp otp;
 	int calibrated;
+
+	int powerdown;
+	int position;
+	int dac_code;
+	int timing_step_us;
+	int flying_time;
+	int flying_start_time;
+	int requested_position;
 };
 
 /**
@@ -252,10 +260,10 @@ static const struct ov8825_reg ov8825_regtbl[OV8825_MODE_MAX][1024] = {
 	{0x3615, 0x00},
 	{0x3616, 0x03},
 	{0x3617, 0xa1},
-	{0x3618, 0x00},
+	{0x3618, 0x0f},
 	{0x3619, 0x00},
-	{0x361a, 0x00},
-	{0x361b, 0x00},
+	{0x361a, 0x8a},
+	{0x361b, 0x02},
 	{0x3700, 0x20},
 	{0x3701, 0x44},
 	{0x3702, 0x50},
@@ -574,10 +582,10 @@ static const struct ov8825_reg ov8825_regtbl[OV8825_MODE_MAX][1024] = {
 	{0x3615, 0x00},
 	{0x3616, 0x03},
 	{0x3617, 0xa1},
-	{0x3618, 0x00},
+	{0x3618, 0x0f},
 	{0x3619, 0x00},
-	{0x361a, 0x00},
-	{0x361b, 0x00},
+	{0x361a, 0x8a},
+	{0x361b, 0x02},
 	{0x3700, 0x20},
 	{0x3701, 0x44},
 	{0x3702, 0x50},
@@ -1151,7 +1159,6 @@ static const struct v4l2_queryctrl ov8825_controls[] = {
 	 .step = 1,
 	 .default_value = FRAME_RATE_AUTO,
 	 },
-#if 0
 	{
 	 .id = V4L2_CID_CAMERA_FOCUS_MODE,
 	 .type = V4L2_CTRL_TYPE_INTEGER,
@@ -1162,7 +1169,6 @@ static const struct v4l2_queryctrl ov8825_controls[] = {
 	 .step = 1,
 	 .default_value = FOCUS_MODE_AUTO,
 	 },
-#endif
 	{
 	 .id = V4L2_CID_GAIN,
 	 .type = V4L2_CTRL_TYPE_INTEGER,
@@ -1574,6 +1580,100 @@ static int ov8825_rbgains_update(struct i2c_client *client)
 }
 #endif
 
+/* ov8825 use internal vcm driver, the same i2c client */
+#define OV8825_VCM_STEP_PERIOD_US       3200    /* in microseconds */
+#define OV8825_VCM_MAX_POSITION   1024
+#define OV8825_VCM_MIN_POSITION   0
+#define OV8825_DAC_A_VCM_LOW 0x3618
+#define OV8825_DAC_A_VCM_MID0 0x3619
+
+/*
+ * Input: lens position from 0 to 1024
+ * Output: DAC code
+ * DAC code is {3619[5:0],3618[7:4]}. 3618[3:0] is slew rate.
+ */
+static int ov8825_vcm_position_code(struct ov8825 *ov8825,
+		uint8_t *code1, uint8_t *code2)
+{
+	int  pos = ov8825->position;
+
+	*code1 = ((pos & 0xF)  << 4) | 0xF;
+	*code2 = (pos >> 4) & 0x3F;
+
+	return 0;
+}
+
+static int ov8825_vcm_lens_set_position(struct i2c_client *client,
+		int target_position)
+{
+	int ret = 0;
+	unsigned int diff;
+	int dac_code;
+	struct ov8825 *ov8825 = to_ov8825(client);
+	uint8_t code_3618, code_3619;
+	int step = 0;
+
+	ov8825->requested_position = target_position;
+	dac_code =  (OV8825_VCM_MAX_POSITION * (255 - target_position)) / 255;
+	dac_code = max(OV8825_VCM_MIN_POSITION,
+				min(dac_code, OV8825_VCM_MAX_POSITION));
+	diff = abs(dac_code - ov8825->position);
+	ov8825->position = dac_code;
+
+	pr_debug("ov8825_vcm_lens_set_position diff=%d", diff);
+
+	ov8825_vcm_position_code(ov8825, &code_3618, &code_3619);
+
+	/* Not exact, but close (off by <500us) */
+	while (diff) {
+		if (0 < diff <= 16) {
+			step++;
+			break;
+		} else if (16 < diff <= 128) {
+			step += diff / 16;
+		       diff = diff % 16;
+		} else if (diff > 128) {
+			step += diff / 64;
+		       diff = diff % 64;
+		}
+	}
+	pr_debug("ov8825_vcm_lens_set_position step=%d", step);
+
+	ov8825->flying_time = step * OV8825_VCM_STEP_PERIOD_US;
+	ov8825->flying_start_time = jiffies_to_usecs(jiffies);
+
+	ret =  ov8825_reg_write(client, OV8825_DAC_A_VCM_LOW, code_3618);
+	ret |=  ov8825_reg_write(client, OV8825_DAC_A_VCM_MID0, code_3619);
+
+	pr_debug("target_position=%d dac_code=%d", target_position, dac_code);
+	return ret;
+}
+
+/*
+ * Routine used to get the current lens position and/or the estimated
+ *time required to get to the requested destination (time in us).
+*/
+int ov8825_vcm_lens_get_position(struct i2c_client *client,
+		int *current_position, int *time_to_destination)
+{
+	struct ov8825 *ov8825 = to_ov8825(client);
+
+	*time_to_destination = (ov8825->flying_start_time +
+			ov8825->flying_time) - jiffies_to_usecs(jiffies);
+
+	if (*time_to_destination < 0 || !ov8825->flying_time ||
+		*time_to_destination > 70000) {
+		ov8825->flying_time = 0;
+		*current_position = ov8825->requested_position;
+	} else {
+		*current_position = -1;
+	}
+	pr_debug("current_position=%X(%d)",	(*current_position) & 0xffff,
+			(*current_position) & 0xffff);
+
+	return 0;
+}
+
 
 /*
  *Routine used to send lens to a traget position position and calculate
@@ -1584,14 +1684,8 @@ static int ov8825_lens_set_position(struct i2c_client *client,
 {
 	int ret = 0;
 
-#ifdef CONFIG_VIDEO_A3907
-	if (target_position & 0x80000000) {
-		int fine_target_position = target_position & ~0x80000000;
-		ret = a3907_lens_set_position_fine(fine_target_position);
-	} else {
-		ret = a3907_lens_set_position(target_position);
-	}
-#endif
+	ret = ov8825_vcm_lens_set_position(client, target_position);
+
 	return ret;
 }
 
@@ -1609,9 +1703,8 @@ static void ov8825_lens_get_position(struct i2c_client *client,
 	struct ov8825 *ov8825 = to_ov8825(client);
 
 	static int lens_read_buf[LENS_READ_DELAY];
-#ifdef CONFIG_VIDEO_A3907
-	ret = a3907_lens_get_position(current_position, time_to_destination);
-#endif
+	ret = ov8825_vcm_lens_get_position(client,
+			current_position, time_to_destination);
 
 	for (i = 0; i < ov8825->lenspos_delay; i++)
 		lens_read_buf[i] = lens_read_buf[i + 1];
@@ -2424,6 +2517,12 @@ static int ov8825_init(struct i2c_client *client)
 	ov8825->flashmode         = FLASH_MODE_OFF;
 	ov8825->flash_intensity   = OV8825_FLASH_INTENSITY_DEFAULT;
 	ov8825->flash_timeout     = OV8825_FLASH_TIMEOUT_DEFAULT;
+
+	ov8825->position = 0;
+	ov8825->dac_code = 0;
+	ov8825->position = 0;
+	ov8825->timing_step_us = 0xf;
+
 	dev_dbg(&client->dev, "Sensor initialized\n");
 	return ret;
 }
