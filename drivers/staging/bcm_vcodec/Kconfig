@@ -7,8 +7,6 @@ config BCM_VCODEC
 
 	  Say N if you are unsure if this should be enabled
 
-source "drivers/staging/bcm_vcodec/pwrctrl/Kconfig
-
 config BCM_HVA
 	tristate "Hardware Video Accelerator Driver"
 	depends on BCM_VCODEC
@@ -22,3 +20,14 @@ config BCM_VCE
 	help
 	 This option enables the Video Control Engine driver. This accelerates
 	 video decode and encode, hence improves the system performance.
+
+config BCM_MCI
+	tristate "MCI Driver"
+	depends on BCM_VCODEC
+	help
+	 This config enables the MCI driver. The Video Core
+	 MultiCodeIn is one of hardware video accelerator
+	 component accelerates the video codec engine and
+	 hence improves the system performance.
+
+source "drivers/staging/bcm_vcodec/pwrctrl/Kconfig"
