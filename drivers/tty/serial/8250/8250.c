@@ -1313,6 +1313,19 @@ static void serial8250_stop_tx(struct uart_port *port)
 #endif /* CONFIG_BRCM_UART_CHANGES */
 }
 
+static inline int xmit_fifo_available(struct uart_8250_port *up)
+{
+	int avail_txsz = up->tx_loadsz;
+#ifdef CONFIG_ARCH_KONA
+#define UART_KONA_TFL 0x20
+#define UART_KONA_USR 0x1F
+	int tx_entries = serial_in(up, UART_KONA_TFL) & 0xFF;
+	avail_txsz = (up->tx_loadsz < tx_entries) ? up->tx_loadsz :
+		(up->tx_loadsz-tx_entries);
+#endif
+	return avail_txsz;
+}
+
 static void serial8250_start_tx(struct uart_port *port)
 {
 	struct uart_8250_port *up =
@@ -1334,10 +1347,15 @@ static void serial8250_start_tx(struct uart_port *port)
 		if (up->bugs & UART_BUG_TXEN) {
 			unsigned char lsr;
 			lsr = serial_in(up, UART_LSR);
+
 			up->lsr_saved_flags |= lsr & LSR_SAVE_FLAGS;
+			/*  If there is a space available in TX FIFO
+			 *  call serial8250_tx_chars(). Other wise
+			 *  depend on serial8250_backup_timeout() */
 			if ((port->type == PORT_RM9000) ?
 				(lsr & UART_LSR_THRE) :
-				(lsr & UART_LSR_TEMT))
+				((lsr & UART_LSR_TEMT) ||
+				(xmit_fifo_available(up) > 0)))
 				serial8250_tx_chars(up);
 		}
 	}
@@ -1536,19 +1554,6 @@ ignore_char:
 	return lsr;
 }
 EXPORT_SYMBOL_GPL(serial8250_rx_chars);
-
-static inline int xmit_fifo_available(struct uart_8250_port *up)
-{
-	int avail_txsz = up->tx_loadsz;
-#ifdef CONFIG_ARCH_KONA
-#define UART_KONA_TFL 0x20
-#define UART_KONA_USR 0x1F
-	int tx_entries = serial_in(up, UART_KONA_TFL) & 0xFF;
-	avail_txsz = (up->tx_loadsz < tx_entries) ? up->tx_loadsz :
-		(up->tx_loadsz-tx_entries);
-#endif
-	return avail_txsz;
-}
 
 void serial8250_tx_chars(struct uart_8250_port *up)
 {
