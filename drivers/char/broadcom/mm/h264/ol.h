@@ -13,7 +13,7 @@ the GPL, without Broadcom's express prior written consent.
 #ifndef _OL_H_
 #define _OL_H_
 
-struct ol_job_info_t{
+struct ol_job_info_t {
 	unsigned int job_size;
 	unsigned int buffer_base_phys;
 	unsigned int buffer_end_phys;

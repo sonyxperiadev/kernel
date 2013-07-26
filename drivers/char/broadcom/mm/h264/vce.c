@@ -260,7 +260,7 @@ mm_job_status_e vce_start_job(void *device_id, mm_job_post_t *job,
 		/*Bound checks*/
 		/*vce_info->codesize is in words*/
 			if (vce_info->codesize > VCE_PROGRAM_MEM_SIZE) {
-			pr_err("vce_start_job: Error in CodeSize\n");
+				pr_err("vce_start_job: Error in CodeSize\n");
 			return MM_JOB_STATUS_ERROR;
 		}
 
@@ -268,11 +268,10 @@ mm_job_status_e vce_start_job(void *device_id, mm_job_post_t *job,
 		/*Program the arguments for prerun*/
 		lt_csize = vce_info->codesize - VCE_DMA_LIMIT;
 
-		if (lt_csize > 0) {
+		if (lt_csize > 0)
 			ft_csize = VCE_DMA_LIMIT;
-		} else {
+		else
 			ft_csize = vce_info->codesize;
-		}
 
 		vce_write(id, (VCE_REGISTERS_OFFSET+(1*4)), \
 			vce_info->code_addr_phys);
@@ -334,11 +333,10 @@ mm_job_status_e vce_start_job(void *device_id, mm_job_post_t *job,
 		/*Copy extra code*/
 		lt_csize = vce_info->codesize - VCE_DMA_LIMIT;
 
-		if (lt_csize > 0) {
+		if (lt_csize > 0)
 			ft_csize = VCE_DMA_LIMIT;
-		} else {
+		else
 			ft_csize = vce_info->codesize;
-		}
 
 		if (lt_csize > 0) {
 			char *va;

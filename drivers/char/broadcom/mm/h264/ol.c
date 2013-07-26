@@ -117,10 +117,13 @@ mm_job_status_e ol_start_job(void *device_id , mm_job_post_t *job,
 		/*Program OL*/
 		/*Setup*/
 		/*Attach*/
-		olsi_attach_ifc((u8 *) jp + sizeof(struct ol_job_info_t), jp->buffer_base_phys, jp->buffer_end_phys, jp->start_pos, jp->length);
-		if (jp->in_nal_bits) {
-			SiAdvanceS_ifc((u8 *) jp + sizeof(struct ol_job_info_t), jp->in_nal_bits);
-		}
+		olsi_attach_ifc((u8 *) jp + sizeof(struct ol_job_info_t),
+				jp->buffer_base_phys,
+				jp->buffer_end_phys,
+				jp->start_pos, jp->length);
+		if (jp->in_nal_bits)
+			SiAdvanceS_ifc((u8 *) jp +
+			 sizeof(struct ol_job_info_t), jp->in_nal_bits);
 		/*Job Pgm*/
 		switch (job->type) {
 		/*H264*/
@@ -134,10 +137,12 @@ mm_job_status_e ol_start_job(void *device_id , mm_job_post_t *job,
 			jp->error =  h264_parse_pps_ifc(ptr, spl_ptr);
 			break;
 		case H264_SLICE_HDR1_PARSE_TYPE:
-			jp->error =  h264_parse_slice_header_1_ifc(ptr, spl_ptr);
+			jp->error =
+			  h264_parse_slice_header_1_ifc(ptr, spl_ptr);
 			break;
 		case H264_SLICE_HDR2_PARSE_TYPE:
-			jp->error =  h264_parse_slice_header_2_ifc(ptr, spl_ptr);
+			jp->error =
+			  h264_parse_slice_header_2_ifc(ptr, spl_ptr);
 			break;
 		case H264_SPS_EXT_PARSE_TYPE:
 			jp->error =  h264_parse_sps_extension_ifc(ptr);
@@ -149,13 +154,15 @@ mm_job_status_e ol_start_job(void *device_id , mm_job_post_t *job,
 			jp->error =  h264_parse_au_delimiter_ifc(ptr);
 			break;
 		case H264_NAL_HDR_EXT_PARSE_TYPE:
-			jp->error =  h264_parse_nal_header_extension_ifc(ptr);
+			jp->error =
+			  h264_parse_nal_header_extension_ifc(ptr);
 			break;
 		case H264_SLICE_ID_PARSE_TYPE:
 			jp->error =  h264_parse_slice_id_ifc(ptr);
 			break;
 		case H264_SLICE_BC_PARTN_PARSE_TYPE:
-			jp->error =  h264_parse_slice_bc_partition_ifc(ptr, spl_ptr);
+			jp->error =
+		  h264_parse_slice_bc_partition_ifc(ptr, spl_ptr);
 			break;
 		case H264_PPS_SPSID_PARSE_TYPE:
 			jp->error =  h264_parse_pps_spsid_ifc(ptr);
@@ -190,13 +197,15 @@ mm_job_status_e ol_start_job(void *device_id , mm_job_post_t *job,
 			jp->error =  vc1_parse_slice_ifc(ptr);
 			break;
 		default:
-			pr_err("ol_start_job: Invalid Job Type \n");
+			pr_err("ol_start_job: Invalid Job Type\n");
 		}
 		/*detatch*/
 		if (jp->error) {
-			pr_err("%s: jp->error = 0x%x and job->type = 0x%x \n", __func__, jp->error, job->type);
+			pr_err("%s: jp->error = 0x%x and job->type = 0x%x\n",
+				 __func__, jp->error, job->type);
 		}
-		jp->end_pos = SiDetachS_ifc((u8 *) jp + sizeof(struct ol_job_info_t));
+		jp->end_pos = SiDetachS_ifc((u8 *) jp +
+					sizeof(struct ol_job_info_t));
 		jp->in_nal_bits = jp->end_pos;
 		job->status = MM_JOB_STATUS_SUCCESS;
 		return MM_JOB_STATUS_SUCCESS;
