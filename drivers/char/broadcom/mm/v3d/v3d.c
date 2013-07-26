@@ -22,12 +22,13 @@ the GPL, without Broadcom's express prior written consent.
 #include <linux/io.h>
 #include <linux/broadcom/mm_fw_hw_ifc.h>
 #include "v3d.h"
+#define v3d_device_t struct _v3d_device_t
 
-typedef struct {
+struct _v3d_device_t {
 	void	*fmwk_handle;
-	int		(*subdev_init[V3D_SUBDEV_COUNT])(MM_CORE_HW_IFC * core_param);
+	int	(*subdev_init[V3D_SUBDEV_COUNT])(MM_CORE_HW_IFC * core_param);
 	void	(*subdev_deinit[V3D_SUBDEV_COUNT])(void);
-} v3d_device_t;
+};
 
 v3d_device_t *v3d_device;
 
@@ -57,8 +58,8 @@ int __init mm_v3d_init(void)
 	for (i = 0; i < V3D_SUBDEV_COUNT; i++) {
 		ret = v3d_device->subdev_init[i](&core_param[i]);
 		if (ret != 0) {
-			pr_err("mm_v3d_init:"
-			"subdev init for %d returned error\n", i);
+			pr_err("mm_v3d_init:" \
+				"subdev init for %d returned error\n", i);
 			goto err1;
 		}
 	}

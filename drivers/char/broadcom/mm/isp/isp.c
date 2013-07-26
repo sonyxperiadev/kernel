@@ -198,10 +198,8 @@ int isp_program(struct isp_device_t *isp, struct isp_job_post_t *job_post)
 		return ret;
 	}
 	for (i = 0; i < job_post->num_regs; i++)
-	{
-		isp_write(job_post->isp_regs[i].offset, job_post->isp_regs[i].value);
-	}
-
+		isp_write(job_post->isp_regs[i].offset,
+				job_post->isp_regs[i].value);
 	return ret;
 }
 

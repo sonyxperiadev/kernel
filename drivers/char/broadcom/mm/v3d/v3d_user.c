@@ -28,12 +28,14 @@ the GPL, without Broadcom's express prior written consent.
 
 #define V3D_HW_SIZE (1024*4)
 #define IRQ_V3D	BCM_INT_ID_RESERVED148
+#define v3d_user_device_t struct _v3d_user_device_t
 
-typedef struct {
-	volatile void *vaddr;
-} v3d_user_device_t;
+struct _v3d_user_device_t {
+	void __iomem *vaddr;
+};
 
-static inline void v3d_write(v3d_user_device_t *v3d, unsigned int reg, unsigned int value)
+static inline void v3d_write(v3d_user_device_t *v3d,
+		unsigned int reg, unsigned int value)
 {
 	mm_write_reg((void *)v3d->vaddr, reg, value);
 }
@@ -78,7 +80,8 @@ static mm_isr_type_e process_v3d_user_irq(void *device_id)
 	flags_qpu = v3d_read(id, V3D_DBQITC_OFFSET);
 	if (flags_qpu) {
 		v3d_write(id, V3D_DBQITC_OFFSET, flags_qpu);
-		numCompletedJobs = (v3d_read(id, V3D_SRQCS_OFFSET) >> 16) & 0xff;
+		numCompletedJobs = (v3d_read(id, V3D_SRQCS_OFFSET)
+					>> 16) & 0xff;
 		if (numCompletedJobs == v3d_read(id, V3D_SCRATCH_OFFSET)) {
 			if ((v3d_read(id, V3D_PCS_OFFSET)&0xF) == 0)
 				v3d_write(id, V3D_VPMBASE_OFFSET, 0);
@@ -95,7 +98,8 @@ static mm_isr_type_e process_v3d_user_irq(void *device_id)
 	return MM_ISR_UNKNOWN;
 }
 
-mm_job_status_e v3d_user_start_job(void *device_id, mm_job_post_t *job, u32 profmask)
+mm_job_status_e v3d_user_start_job(void *device_id,
+		mm_job_post_t *job, u32 profmask)
 {
 	v3d_user_device_t *id = (v3d_user_device_t *)device_id;
 	v3d_user_job_t *job_params  = (v3d_user_job_t *)job->data;
@@ -112,25 +116,33 @@ mm_job_status_e v3d_user_start_job(void *device_id, mm_job_post_t *job, u32 prof
 				}
 			v3d_user_reset(id);
 			if (job->type == V3D_USER_JOB) {
-				if ((v3d_read(id, V3D_SRQCS_OFFSET) & 0x3F) == MAX_USER_JOBS) {
+				if ((v3d_read(id, V3D_SRQCS_OFFSET) & 0x3F) ==
+					MAX_USER_JOBS) {
 					job->status = MM_JOB_STATUS_ERROR;
 					pr_err("User job queue is full %08x",
 					v3d_read(id, V3D_SRQCS_OFFSET));
 					return MM_JOB_STATUS_ERROR;
 				}
-				if (job_params->numUserJobs <= 0 || job_params->numUserJobs > MAX_USER_JOBS) {
-					pr_err("Invalied number of user jobs passed, %d", job_params->numUserJobs);
+				if (job_params->numUserJobs <= 0 ||
+				job_params->numUserJobs > MAX_USER_JOBS) {
+					pr_err("Invalied number of user jobs passed, %d",
+						job_params->numUserJobs);
 					return MM_JOB_STATUS_ERROR;
 				}
-				v3d_write(id, V3D_SCRATCH_OFFSET, job_params->numUserJobs);
+				v3d_write(id, V3D_SCRATCH_OFFSET,
+					job_params->numUserJobs);
 				job->status = MM_JOB_STATUS_RUNNING;
 				for (i = 0; i < job_params->numUserJobs; i++) {
 					pr_debug("Submitting user job %x : %x (%x)\n",
-						job_params->v3d_srqpc[i], job_params->v3d_srqua[i],
+						job_params->v3d_srqpc[i],
+						job_params->v3d_srqua[i],
 						job_params->v3d_srqul[i]);
-					v3d_write(id, V3D_SRQUL_OFFSET, job_params->v3d_srqul[i]);
-					v3d_write(id, V3D_SRQUA_OFFSET, job_params->v3d_srqua[i]);
-					v3d_write(id, V3D_SRQPC_OFFSET, job_params->v3d_srqpc[i]);
+					v3d_write(id, V3D_SRQUL_OFFSET,
+						job_params->v3d_srqul[i]);
+					v3d_write(id, V3D_SRQUA_OFFSET,
+						job_params->v3d_srqua[i]);
+					v3d_write(id, V3D_SRQPC_OFFSET,
+						job_params->v3d_srqpc[i]);
 				}
 				return MM_JOB_STATUS_RUNNING;
 			}
@@ -146,7 +158,8 @@ mm_job_status_e v3d_user_start_job(void *device_id, mm_job_post_t *job, u32 prof
 		break;
 	}
 
-	pr_err("v3d_user_start_job :: job type = %x job status = %x \n", job->type, job->status);
+	pr_err("v3d_user_start_job :: job type = %x job status = %x\n",
+		job->type, job->status);
 	return MM_JOB_STATUS_ERROR;
 }
 
@@ -154,7 +167,7 @@ static v3d_user_device_t *v3d_user_device;
 
 void v3d_user_update_virt(void *virt)
 {
-	pr_debug("v3d_user_update_virt: \n");
+	pr_debug("v3d_user_update_virt:\n");
 	v3d_user_device->vaddr = virt;
 }
 

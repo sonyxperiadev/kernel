@@ -53,47 +53,47 @@ enum {
 #define ISP_IOCTL_RELEASE_IRQ _IOR(BCM_ISP_MAGIC, ISP_CMD_RELEASE_IRQ, \
 							unsigned int)
 
-#define ISP_CTRL_OFFSET                                                   0x00000000
-#define ISP_CTRL_TYPE                                                     UInt32
-#define ISP_CTRL_RESERVED_MASK                                            0xFFEEFE80
-#define    ISP_CTRL_FORCE_CLKEN_SHIFT                                     20
-#define    ISP_CTRL_FORCE_CLKEN_MASK                                      0x00100000
-#define    ISP_CTRL_TRANSFER_SHIFT                                        16
-#define    ISP_CTRL_TRANSFER_MASK                                         0x00010000
-#define    ISP_CTRL_STATS_IMASK_SHIFT                                     8
-#define    ISP_CTRL_STATS_IMASK_MASK                                      0x00000100
-#define    ISP_CTRL_SW_IMASK_SHIFT                                        6
-#define    ISP_CTRL_SW_IMASK_MASK                                         0x00000040
-#define    ISP_CTRL_EOD_IMASK_SHIFT                                       5
-#define    ISP_CTRL_EOD_IMASK_MASK                                        0x00000020
-#define    ISP_CTRL_EOT_IMASK_SHIFT                                       4
-#define    ISP_CTRL_EOT_IMASK_MASK                                        0x00000010
-#define    ISP_CTRL_ERROR_IMASK_SHIFT                                     3
-#define    ISP_CTRL_ERROR_IMASK_MASK                                      0x00000008
-#define    ISP_CTRL_CLR_STATS_SHIFT                                       2
-#define    ISP_CTRL_CLR_STATS_MASK                                        0x00000004
-#define    ISP_CTRL_FLUSH_SHIFT                                           1
-#define    ISP_CTRL_FLUSH_MASK                                            0x00000002
-#define    ISP_CTRL_ENABLE_SHIFT                                          0
-#define    ISP_CTRL_ENABLE_MASK                                           0x00000001
+#define ISP_CTRL_OFFSET                  0x00000000
+#define ISP_CTRL_TYPE			 UInt32
+#define ISP_CTRL_RESERVED_MASK           0xFFEEFE80
+#define    ISP_CTRL_FORCE_CLKEN_SHIFT	 20
+#define    ISP_CTRL_FORCE_CLKEN_MASK	 0x00100000
+#define    ISP_CTRL_TRANSFER_SHIFT	 16
+#define    ISP_CTRL_TRANSFER_MASK        0x00010000
+#define    ISP_CTRL_STATS_IMASK_SHIFT    8
+#define    ISP_CTRL_STATS_IMASK_MASK     0x00000100
+#define    ISP_CTRL_SW_IMASK_SHIFT       6
+#define    ISP_CTRL_SW_IMASK_MASK        0x00000040
+#define    ISP_CTRL_EOD_IMASK_SHIFT      5
+#define    ISP_CTRL_EOD_IMASK_MASK       0x00000020
+#define    ISP_CTRL_EOT_IMASK_SHIFT      4
+#define    ISP_CTRL_EOT_IMASK_MASK       0x00000010
+#define    ISP_CTRL_ERROR_IMASK_SHIFT    3
+#define    ISP_CTRL_ERROR_IMASK_MASK     0x00000008
+#define    ISP_CTRL_CLR_STATS_SHIFT      2
+#define    ISP_CTRL_CLR_STATS_MASK       0x00000004
+#define    ISP_CTRL_FLUSH_SHIFT          1
+#define    ISP_CTRL_FLUSH_MASK           0x00000002
+#define    ISP_CTRL_ENABLE_SHIFT         0
+#define    ISP_CTRL_ENABLE_MASK          0x00000001
 
-#define ISP_STATUS_OFFSET                                                 0x00000004
-#define ISP_STATUS_TYPE                                                   UInt32
-#define ISP_STATUS_RESERVED_MASK                                          0xFFFFFEC4
-#define    ISP_STATUS_STATS_INT_SHIFT                                     8
-#define    ISP_STATUS_STATS_INT_MASK                                      0x00000100
-#define    ISP_STATUS_EOD_INT_SHIFT                                       5
-#define    ISP_STATUS_EOD_INT_MASK                                        0x00000020
-#define    ISP_STATUS_EOT_INT_SHIFT                                       4
-#define    ISP_STATUS_EOT_INT_MASK                                        0x00000010
-#define    ISP_STATUS_ERROR_INT_SHIFT                                     3
-#define    ISP_STATUS_ERROR_INT_MASK                                      0x00000008
-#define    ISP_STATUS_STATE_SHIFT                                         0
-#define    ISP_STATUS_STATE_MASK                                          0x00000003
-#define       ISP_STATUS_STATE_INACTIVE                                   0
-#define       ISP_STATUS_STATE_ENABLED                                    1
-#define       ISP_STATUS_STATE_SUSPENDED                                  2
-#define       ISP_STATUS_STATE_SUSPENDING                                 3
+#define ISP_STATUS_OFFSET                0x00000004
+#define ISP_STATUS_TYPE                  UInt32
+#define ISP_STATUS_RESERVED_MASK         0xFFFFFEC4
+#define    ISP_STATUS_STATS_INT_SHIFT    8
+#define    ISP_STATUS_STATS_INT_MASK     0x00000100
+#define    ISP_STATUS_EOD_INT_SHIFT      5
+#define    ISP_STATUS_EOD_INT_MASK       0x00000020
+#define    ISP_STATUS_EOT_INT_SHIFT      4
+#define    ISP_STATUS_EOT_INT_MASK       0x00000010
+#define    ISP_STATUS_ERROR_INT_SHIFT    3
+#define    ISP_STATUS_ERROR_INT_MASK     0x00000008
+#define    ISP_STATUS_STATE_SHIFT        0
+#define    ISP_STATUS_STATE_MASK         0x00000003
+#define       ISP_STATUS_STATE_INACTIVE  0
+#define       ISP_STATUS_STATE_ENABLED   1
+#define       ISP_STATUS_STATE_SUSPENDED 2
+#define       ISP_STATUS_STATE_SUSPENDING 3
 
 
 #endif
