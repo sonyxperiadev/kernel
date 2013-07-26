@@ -38,7 +38,9 @@
 #include <linux/of.h>
 #include <linux/of_fdt.h>
 #include <mach/pinmux.h>
-
+#ifdef CONFIG_IOMMU_API
+#include <plat/bcm_iommu.h>
+#endif
 #ifdef CONFIG_ANDROID_PMEM
 #include <linux/android_pmem.h>
 #endif
@@ -316,6 +318,12 @@ struct android_pmem_platform_data android_pmem_data = {
 #ifdef CONFIG_ION_BCM_NO_DT
 struct ion_platform_data ion_system_data = {
 	.nr = 1,
+#ifdef CONFIG_IOMMU_API
+	.pdev_iommu = &iommu_mm_device,
+#endif
+#ifdef CONFIG_BCM_IOVMM
+	.pdev_iovmm = &iovmm_mm_256mb_device,
+#endif
 	.heaps = {
 		[0] = {
 			.id    = 0,
@@ -328,8 +336,35 @@ struct ion_platform_data ion_system_data = {
 	},
 };
 
+struct ion_platform_data ion_system_extra_data = {
+	.nr = 1,
+#ifdef CONFIG_IOMMU_API
+	.pdev_iommu = &iommu_mm_device,
+#endif
+#ifdef CONFIG_BCM_IOVMM
+	.pdev_iovmm = &iovmm_mm_device,
+#endif
+	.heaps = {
+		[0] = {
+			.id    = 1,
+			.type  = ION_HEAP_TYPE_SYSTEM,
+			.name  = "ion-system-extra",
+			.base  = 0,
+			.limit = 0,
+			.size  = 0,
+		},
+	},
+};
+
+
 struct ion_platform_data ion_carveout_data = {
 	.nr = 2,
+#ifdef CONFIG_IOMMU_API
+	.pdev_iommu = &iommu_mm_device,
+#endif
+#ifdef CONFIG_BCM_IOVMM
+	.pdev_iovmm = &iovmm_mm_256mb_device,
+#endif
 	.heaps = {
 		[0] = {
 			.id    = 3,
@@ -363,6 +398,12 @@ struct ion_platform_data ion_carveout_data = {
 #ifdef CONFIG_CMA
 struct ion_platform_data ion_cma_data = {
 	.nr = 2,
+#ifdef CONFIG_IOMMU_API
+	.pdev_iommu = &iommu_mm_device,
+#endif
+#ifdef CONFIG_BCM_IOVMM
+	.pdev_iovmm = &iovmm_mm_256mb_device,
+#endif
 	.heaps = {
 		[0] = {
 			.id = 2,
@@ -1759,8 +1800,6 @@ static struct platform_device *mUSB_i2c_devices[] __initdata = {
 };
 #endif
 
-
-
 #ifdef CONFIG_USB_SWITCH_TSU6111
 enum cable_type_t {
 		CABLE_TYPE_USB,
@@ -2076,6 +2115,29 @@ static void __init hawaii_add_i2c_devices(void)
 /* The GPIO used to indicate accessory insertion in this board */
 #define HS_IRQ         gpio_to_irq(121)
 
+#ifdef CONFIG_IOMMU_API
+struct bcm_iommu_pdata iommu_mm_pdata = {
+	.name        = "iommu-mm",
+	.iova_begin  = 0x80000000,
+	.iova_size   = 0x80000000,
+	.errbuf_size = 0x1000,
+};
+#endif
+#ifdef CONFIG_BCM_IOVMM
+struct bcm_iovmm_pdata iovmm_mm_pdata = {
+	.name = "iovmm-mm",
+	.base = 0xc0000000,
+	.size = 0x30000000,
+	.order = 0,
+};
+struct bcm_iovmm_pdata iovmm_mm_256mb_pdata = {
+	.name = "iovmm-mm-256mb",
+	.base = 0xf0000000,
+	.size = 0x0ff00000,
+	.order = 0,
+};
+#endif
+
 static void hawaii_add_pdata(void)
 {
 	hawaii_serial_device.dev.platform_data = &hawaii_uart_platform_data;
@@ -2108,6 +2170,16 @@ static void hawaii_add_pdata(void)
 	hawaii_usb_phy_platform_device.dev.platform_data
 		= &hsotgctrl_plat_data;
 #endif
+
+#ifdef CONFIG_IOMMU_API
+	iommu_mm_device.dev.platform_data = &iommu_mm_pdata;
+#endif
+#ifdef CONFIG_BCM_IOVMM
+	iovmm_mm_device.dev.platform_data = &iovmm_mm_pdata;
+	iovmm_mm_256mb_device.dev.platform_data = &iovmm_mm_256mb_pdata;
+	ion_system_device.dev.platform_data = &ion_system_data;
+	ion_system_extra_device.dev.platform_data = &ion_system_extra_data;
+#endif
 }
 
 void __init hawaii_add_common_devices(void)
@@ -2126,6 +2198,15 @@ static void __init hawaii_add_devices(void)
 	hawaii_add_pdata();
 
 #ifdef CONFIG_ION_BCM_NO_DT
+#ifdef CONFIG_IOMMU_API
+	platform_device_register(&iommu_mm_device);
+#endif
+#ifdef CONFIG_BCM_IOVMM
+	platform_device_register(&iovmm_mm_device);
+	platform_device_register(&iovmm_mm_256mb_device);
+	platform_device_register(&ion_system_device);
+	platform_device_register(&ion_system_extra_device);
+#endif
 	platform_device_register(&ion_carveout_device);
 #ifdef CONFIG_CMA
 	platform_device_register(&ion_cma_device);
