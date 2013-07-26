@@ -522,4 +522,10 @@
 		interrupts = <0 176 0x4>;
 		mem-alias = <0x00000000>;
 	};
+
+	bcm-cabac@0x3d000000 {
+		compatible = "bcm,cabac";
+		reg = <0x3d000000 0x601000>;
+		interrupts = <0 178 0x4>;
+	};
 };
