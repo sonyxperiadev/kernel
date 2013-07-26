@@ -1,0 +1,15 @@
+--- arch/arm/mach-msm/Kconfig
++++ arch/arm/mach-msm/Kconfig
+@@ -615,6 +616,12 @@
+ 	help
+ 	  This option enables a module which can notify user-space
+ 	  applications of modem subsystem power up/down event via uevent.
++
++config HAS_MACH_MEMUTILS
++	default n
++	bool "Motorola MSM memcpy enhancements"
++	help
++	Faster memcpy performance for Krait
+ endif
+ 
+ 
