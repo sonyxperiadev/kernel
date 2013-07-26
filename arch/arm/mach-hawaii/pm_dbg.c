@@ -26,6 +26,9 @@
 #include <plat/profiler.h>
 #endif
 
+#if defined(CONFIG_MACH_HAWAII_SS_COMMON)
+extern void uas_jig_force_sleep(void);
+#endif
 /*****************************************************************************
  *                        SLEEP STATE DEBUG INTERFACE                        *
  *****************************************************************************/
@@ -205,6 +208,9 @@ static void cmd_force_sleep(const char *p)
 
 	pr_info("%s: Forcing system to state: %d\n", __func__,
 			force_sleep_state);
+#if defined(CONFIG_MACH_HAWAII_SS_COMMON)
+	uas_jig_force_sleep();
+#endif
 	kona_pm_reg_pm_enter_handler(&hawaii_force_sleep);
 
 	request_suspend_state(PM_SUSPEND_MEM);
