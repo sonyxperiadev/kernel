@@ -215,7 +215,7 @@ struct __CSL_CAPH_HWResource_Table_t {
 #define CSL_CAPH_HWResource_Table_t struct __CSL_CAPH_HWResource_Table_t
 
 #define MAX_SSP_CLOCK_NUM 3
-#define MAX_CAPH_CLOCK_NUM 4
+#define MAX_CAPH_CLOCK_NUM 5
 #define MAX_SINK_NUM 3
 
 #define MAX_BLOCK_NUM	4	/*max number of same block in a path*/
