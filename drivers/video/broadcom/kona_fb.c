@@ -88,6 +88,13 @@ static struct pi_mgr_qos_node g_mm_qos_node;
 static DEFINE_SPINLOCK(g_fb_crash_spin_lock);
 #endif
 
+#ifndef CONFIG_HAS_EARLYSUSPEND
+enum lcd_state {
+	KONA_FB_UNBLANK,
+	KONA_FB_BLANK
+};
+#endif
+
 struct kona_fb {
 	spinlock_t lock;
 	struct mutex update_sem;
@@ -108,7 +115,9 @@ struct kona_fb {
 	struct pi_mgr_dfs_node dfs_node;
 	int g_stop_drawing;
 	struct proc_dir_entry *proc_entry;
-#ifdef CONFIG_HAS_EARLYSUSPEND
+#ifndef CONFIG_HAS_EARLYSUSPEND
+	enum lcd_state blank_state;
+#else
 	struct early_suspend early_suspend_level1;
 	struct early_suspend early_suspend_level2;
 	struct early_suspend early_suspend_level3;
@@ -720,7 +729,123 @@ static int kona_fb_ioctl(struct fb_info *info, unsigned int cmd,
 	return ret;
 }
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
+#ifndef CONFIG_HAS_EARLYSUSPEND
+static int kona_fb_blank(int blank_mode, struct fb_info *info)
+{
+	struct kona_fb *fb = container_of(info, struct kona_fb, fb);
+	int framesize;
+
+	switch (blank_mode) {
+	case FB_BLANK_POWERDOWN:
+	case FB_BLANK_HSYNC_SUSPEND:
+	case FB_BLANK_VSYNC_SUSPEND:
+	case FB_BLANK_NORMAL:
+		if (fb->blank_state == KONA_FB_BLANK) {
+			konafb_error("Display already in blank state\n");
+			break;
+		}
+		mutex_lock(&fb->update_sem);
+		fb->g_stop_drawing = 1;
+		/* In case of video mode, DSI commands can be sent out-of-sync
+		 * of buffers */
+		if (!fb->display_info->vmode) {
+			if (wait_for_completion_timeout(
+			&fb->prev_buf_done_sem,	msecs_to_jiffies(10000)) <= 0)
+				pr_err("%s:%d timed out waiting for completion",
+					__func__, __LINE__);
+			kona_clock_start(fb);
+			if (fb->display_ops->power_control(fb->display_hdl,
+					       CTRL_SCREEN_OFF))
+				konafb_error(
+				"Failed to blank this display device!\n");
+			kona_clock_stop(fb);
+			complete(&g_kona_fb->prev_buf_done_sem);
+		} else {
+			if (fb->display_ops->power_control(fb->display_hdl,
+					       CTRL_SCREEN_OFF))
+				konafb_error(
+				"Failed to blank this display device!\n");
+		}
+
+		/* screen goes to sleep mode */
+		disable_display(fb);
+		mutex_unlock(&fb->update_sem);
+		/* Ok for MM going to shutdown state */
+		pi_mgr_qos_request_update(&g_mm_qos_node,
+					  PI_MGR_QOS_DEFAULT_VALUE);
+
+		fb->blank_state = KONA_FB_BLANK;
+		break;
+
+	case FB_BLANK_UNBLANK:
+
+		if (fb->blank_state == KONA_FB_UNBLANK) {
+			konafb_error("Display already in unblank state\n");
+			break;
+		}
+		/* Ok for MM going to retention but not shutdown state */
+		pi_mgr_qos_request_update(&g_mm_qos_node, 10);
+		/* screen comes out of sleep */
+		if (enable_display(fb))
+			konafb_error("Failed to enable this display device\n");
+
+		framesize = fb->display_info->width * fb->display_info->height *
+			fb->display_info->Bpp * 2;
+		memset(fb->fb.screen_base, 0, framesize);
+		if (!fb->display_info->vmode) {
+			if (wait_for_completion_timeout(
+			&fb->prev_buf_done_sem,	msecs_to_jiffies(10000)) <= 0)
+				pr_err("%s:%d timed out waiting for completion",
+					__func__, __LINE__);
+
+			kona_clock_start(fb);
+		}
+		fb->display_ops->update(fb->display_hdl,
+				fb->fb.var.yoffset ? fb->buff1 : fb->buff0,
+				NULL,
+				(DISPDRV_CB_T)kona_display_done_cb);
+
+		if (fb->display_info->vmode) {
+			if (wait_for_completion_timeout(
+			&fb->prev_buf_done_sem,	msecs_to_jiffies(10000)) <= 0)
+				pr_err("%s:%d timed out waiting for completion",
+					__func__, __LINE__);
+		}
+
+		mutex_lock(&fb->update_sem);
+		fb->g_stop_drawing = 0;
+		mutex_unlock(&fb->update_sem);
+
+		if (!fb->display_info->vmode) {
+			kona_clock_start(fb);
+
+			if (fb->display_ops->
+			    power_control(fb->display_hdl, CTRL_SCREEN_ON))
+				konafb_error
+				("Failed to unblank this display device!\n");
+
+			kona_clock_stop(fb);
+		} else {
+			if (fb->display_ops->
+			    power_control(fb->display_hdl, CTRL_SCREEN_ON))
+				konafb_error
+				("Failed to unblank this display device!\n");
+		}
+#ifdef CONFIG_FB_BRCM_CP_CRASH_DUMP_IMAGE_SUPPORT
+		if (atomic_read(&g_kona_fb->force_update))
+			kona_display_crash_image(CP_CRASH_DUMP_START);
+#endif
+
+		fb->blank_state = KONA_FB_UNBLANK;
+		break;
+
+	default:
+		return 1;
+	}
+
+	return 0;
+}
+#else
 static void kona_fb_early_suspend(struct early_suspend *h)
 {
 	struct kona_fb *fb;
@@ -866,7 +991,7 @@ static void kona_fb_late_resume(struct early_suspend *h)
 	}
 
 }
-#endif
+#endif /* CONFIG_HAS_EARLYSUSPEND */
 
 void free_platform_data(struct device *dev)
 {
@@ -1267,6 +1392,9 @@ static struct fb_ops kona_fb_ops = {
 	.fb_imageblit = cfb_imageblit,
 	.fb_ioctl = kona_fb_ioctl,
 	.fb_sync = kona_fb_sync,
+#ifndef CONFIG_HAS_EARLYSUSPEND
+	.fb_blank = kona_fb_blank,
+#endif
 };
 
 static const struct file_operations proc_fops = {
@@ -1461,6 +1589,7 @@ static int __ref kona_fb_probe(struct platform_device *pdev)
 	fb->buff0 = (void *)dma_addr;
 	fb->buff1 =
 	    (void *)dma_addr + width * height * fb->display_info->Bpp;
+
 
 	fb->fb.fbops = &kona_fb_ops;
 	fb->fb.flags = FBINFO_FLAG_DEFAULT;
