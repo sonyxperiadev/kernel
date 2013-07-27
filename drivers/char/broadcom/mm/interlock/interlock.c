@@ -103,7 +103,6 @@ int __init interlock_init(void)
 
 	dvfs_param.ON = 0;
 	dvfs_param.MODE = ECONOMY;
-	dvfs_param.enable_suspend_resume = 0;
 	dvfs_param.T0 = 200;
 	dvfs_param.P0 = 90;
 	dvfs_param.T1 = 300;

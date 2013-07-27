@@ -98,7 +98,6 @@ int __init mm_h264_init(void)
 	/*Initialize generice params*/
 	dvfs_param.ON = 1;
 	dvfs_param.MODE = TURBO;
-	dvfs_param.enable_suspend_resume = 0;
 	dvfs_param.T0 = 200;
 	dvfs_param.P0 = 70;
 	dvfs_param.T1 = 300;

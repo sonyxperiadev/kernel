@@ -32,11 +32,7 @@ struct dvfs_update {
 			work); \
 	struct _mm_dvfs *mm_dvfs = update->mm_dvfs; \
 	mm_dvfs->dvfs.name = update->param; \
-	if (mm_dvfs->timer_state) { \
-		del_timer_sync(&mm_dvfs->dvfs_timeout); \
-		mm_dvfs->timer_state = false; \
-		SCHEDULER_WORK(mm_dvfs, &(mm_dvfs->dvfs_work)); \
-	} \
+	SCHEDULER_WORK(mm_dvfs, &(mm_dvfs->dvfs_work)); \
 } \
 static int mm_dvfs_debugfs_##name##_get(void *root, u64 *param) \
 { \
@@ -91,8 +87,6 @@ struct _mm_dvfs {
 	/* updated based on profiling and requested to Power Manger */
 	dvfs_mode_e current_mode;
 	/*updated in DVFS callback from Power Manager */
-	bool suspend_requested;
-	/* volatile flag updated in early-suspend/late-resume */
 	bool timer_state;
 	/* DVFS timer state (initialized/unintialized) */
 	MM_DVFS_HW_IFC dvfs;
@@ -107,11 +101,6 @@ struct _mm_dvfs {
 	s64 hw_on_dur;
 	unsigned int jobs_done;
 	unsigned int jobs_pend;
-
-	/* for PM notification callback */
-#ifdef CONFIG_HAS_EARLYSUSPEND
-	struct early_suspend early_suspend_desc;
-#endif
 };
 
 void *mm_dvfs_init(struct mm_common *mm_common,

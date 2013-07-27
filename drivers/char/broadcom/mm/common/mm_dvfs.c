@@ -106,16 +106,6 @@ static void dvfs_work(struct work_struct *work)
 		goto dvfs_work_end;
 		}
 
-	if (mm_dvfs->suspend_requested)	{
-		mm_dvfs->requested_mode = ECONOMY;
-		/* the dvfs timer will be stopped in early suspend */
-		if (mm_dvfs->timer_state) {
-			del_timer_sync(&mm_dvfs->dvfs_timeout);
-			mm_dvfs->timer_state = false;
-			}
-		goto dvfs_work_end;
-		}
-
 	if (mm_dvfs->timer_state == false) {
 		mm_dvfs->jobs_done = 0;
 		mm_dvfs->hw_on_dur = 0;
@@ -209,26 +199,6 @@ dvfs_work_end:
 
 }
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-static void dev_early_suspend(struct early_suspend *desc)
-{
-	struct _mm_dvfs *mm_dvfs = container_of(desc, \
-					struct _mm_dvfs, \
-					early_suspend_desc);
-	mm_dvfs->suspend_requested = true;
-	SCHEDULER_WORK(mm_dvfs, &(mm_dvfs->dvfs_work));
-}
-
-static void dev_late_resume(struct early_suspend *desc)
-{
-	struct _mm_dvfs *mm_dvfs = container_of(desc, \
-					struct _mm_dvfs, \
-					early_suspend_desc);
-	mm_dvfs->suspend_requested = false;
-	SCHEDULER_WORK(mm_dvfs, &(mm_dvfs->dvfs_work));
-}
-#endif
-
 DEFINE_DEBUGFS_HANDLER(ON);
 DEFINE_DEBUGFS_HANDLER(MODE);
 DEFINE_DEBUGFS_HANDLER(T0);
@@ -295,15 +265,6 @@ void *mm_dvfs_init(struct mm_common *mm_common, \
 	pi_mgr_dfs_request_update(&(mm_dvfs->dev_dfs_node), \
 				mm_dvfs->requested_mode);
 
-	if (mm_dvfs->dvfs.enable_suspend_resume) {
-#ifdef CONFIG_HAS_EARLYSUSPEND
-		mm_dvfs->early_suspend_desc.level \
-				= EARLY_SUSPEND_LEVEL_BLANK_SCREEN;
-		mm_dvfs->early_suspend_desc.suspend = dev_early_suspend;
-		mm_dvfs->early_suspend_desc.resume = dev_late_resume;
-		register_early_suspend(&mm_dvfs->early_suspend_desc);
-#endif
-	}
 	return mm_dvfs;
 }
 
@@ -318,10 +279,5 @@ void mm_dvfs_exit(void *dev_p)
 	pi_mgr_dfs_request_remove(&(mm_dvfs->dev_dfs_node));
 
 	mm_dvfs->dev_dfs_node.name = NULL;
-
-#ifdef CONFIG_HAS_EARLYSUSPEND
-	if (mm_dvfs->dvfs.enable_suspend_resume)
-		unregister_early_suspend(&mm_dvfs->early_suspend_desc);
-#endif
 	kfree(mm_dvfs);
 }

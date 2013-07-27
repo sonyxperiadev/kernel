@@ -293,7 +293,6 @@ int __init mm_isp2_init(void)
 
 	dvfs_param.ON = 1;
 	dvfs_param.MODE = PI_OPP_TURBO;
-	dvfs_param.enable_suspend_resume = 0;
 	dvfs_param.T0 = 200;
 	dvfs_param.P0 = 0;
 	dvfs_param.T1 = 300;

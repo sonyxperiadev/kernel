@@ -66,7 +66,6 @@ int __init mm_v3d_init(void)
 	/*Initialize generice params*/
 	dvfs_param.ON = 1;
 	dvfs_param.MODE = TURBO;
-	dvfs_param.enable_suspend_resume = 0;
 	dvfs_param.T0 = 200;
 	dvfs_param.P0 = 90;
 	dvfs_param.T1 = 300;
