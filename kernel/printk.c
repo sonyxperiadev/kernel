@@ -291,8 +291,8 @@ static char __log_buf[__LOG_BUF_LEN] __aligned(LOG_ALIGN);
  * dma_alloc_coherent. So this is a valid
  * reference. Thus __refdata.
  * */
-static char *log_buf __refdata = __log_buf;
-static u32 log_buf_len = __LOG_BUF_LEN;
+char *log_buf __refdata = __log_buf;
+u32 log_buf_len = __LOG_BUF_LEN;
 
 /* cpu currently holding logbuf_lock */
 static volatile unsigned int logbuf_cpu = UINT_MAX;

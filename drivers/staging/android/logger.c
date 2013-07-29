@@ -802,6 +802,46 @@ out_free_buffer:
 	return ret;
 }
 
+unsigned char *get_main_log_buf_addr(void)
+{
+	struct logger_log *log;
+
+	list_for_each_entry(log, &log_list, logs)
+		if (!strcmp(log->misc.name, LOGGER_LOG_MAIN))
+			return log->buffer;
+	return NULL;
+}
+
+unsigned char *get_radio_log_buf_addr(void)
+{
+	struct logger_log *log;
+
+	list_for_each_entry(log, &log_list, logs)
+		if (!strcmp(log->misc.name, LOGGER_LOG_RADIO))
+			return log->buffer;
+	return NULL;
+}
+
+unsigned char *get_events_log_buf_addr(void)
+{
+	struct logger_log *log;
+
+	list_for_each_entry(log, &log_list, logs)
+		if (!strcmp(log->misc.name, LOGGER_LOG_EVENTS))
+			return log->buffer;
+	return NULL;
+}
+
+unsigned char *get_system_log_buf_addr(void)
+{
+	struct logger_log *log;
+
+	list_for_each_entry(log, &log_list, logs)
+		if (!strcmp(log->misc.name, LOGGER_LOG_SYSTEM))
+			return log->buffer;
+	return NULL;
+}
+
 static int __init logger_init(void)
 {
 	int ret;
