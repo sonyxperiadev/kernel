@@ -432,6 +432,7 @@ static struct regulator *d_3v0_mmc1_vcc;
 #define SENSOR_1_CLK_FREQ               (26000000)
 
 #define SENSOR_1_GPIO_PWRDN             (005)
+#define SENSOR_1_GPIO_RST               (121)
 
 #if defined(CONFIG_MACH_JAVA_C_LC1)
 
@@ -759,6 +760,14 @@ static int hawaii_camera_power_front(struct device *dev, int on)
 			printk(KERN_ERR "Unable to get CAM1PWDN\n");
 			return -1;
 		}
+#if defined(CONFIG_SOC_CAMERA_GC2035)
+		if (gpio_request_one(SENSOR_1_GPIO_RST, GPIOF_DIR_OUT |
+				     GPIOF_INIT_LOW, "Cam1PWDN")) {
+			printk(KERN_ERR "Unable to get CAM1PWDN\n");
+			return -1;
+		}
+#endif
+
 		d_lvldo2_cam1_1v8 = regulator_get(NULL,
 			icl->regulators[0].supply);
 		if (IS_ERR_OR_NULL(d_lvldo2_cam1_1v8))
@@ -817,11 +826,16 @@ static int hawaii_camera_power_front(struct device *dev, int on)
 	if (on) {
 		if (pi_mgr_dfs_request_update(&unicam_dfs_node, PI_OPP_TURBO))
 			printk("DVFS for UNICAM failed\n");
-		#if defined(CONFIG_SOC_CAMERA_OV7695)
+		#if defined(CONFIG_SOC_CAMERA_OV7695) || \
+			defined(CONFIG_SOC_CAMERA_GC2035)
 		gpio_set_value(SENSOR_1_GPIO_PWRDN, 0);
 		#else
 		gpio_set_value(SENSOR_1_GPIO_PWRDN, 1);
 		#endif
+#if defined(CONFIG_SOC_CAMERA_GC2035)
+		gpio_set_value(SENSOR_1_GPIO_RST, 0);
+#endif
+
 		usleep_range(5000, 5010);
 		regulator_enable(d_lvldo2_cam1_1v8);
 		usleep_range(1000, 1010);
@@ -832,6 +846,10 @@ static int hawaii_camera_power_front(struct device *dev, int on)
 		usleep_range(1000, 1010);
 		regulator_enable(d_3v0_mmc1_vcc);
 		usleep_range(1000, 1010);
+
+#if defined(CONFIG_SOC_CAMERA_GC2035)
+		gpio_set_value(SENSOR_1_GPIO_RST, 1);
+#endif
 
 		if (mm_ccu_set_pll_select(CSI1_BYTE1_PLL, 8)) {
 			pr_err("failed to set BYTE1\n");
@@ -1248,6 +1266,10 @@ static const struct of_dev_auxdata hawaii_auxdata_lookup[] __initconst = {
 #ifdef CONFIG_SOC_CAMERA_OV8825
 	OF_DEV_AUXDATA("bcm,soc-camera", 0x36,
 		"soc-back-camera", &iclink_ov8825),
+#endif
+#ifdef CONFIG_SOC_CAMERA_GC2035
+	OF_DEV_AUXDATA("bcm,soc-camera", 0x3c,
+		"soc-front-camera", &iclink_front),
 #endif
 
 	OF_DEV_AUXDATA("bcm,soc-camera", 0x3e,
