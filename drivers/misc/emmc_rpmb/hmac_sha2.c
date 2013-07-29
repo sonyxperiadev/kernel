@@ -15,7 +15,7 @@
 * The below HMAC-SHA256 computation code was taken from-
 * http://www.ouah.org/ogay/hmac/
 * I've removed unnecesary code from the original source and fixed
-* checkpatc errors and warnings.
+* checkpatch errors and warnings.
 * I'm also retaining the original license header from the
 * original source which is below.
 *
