@@ -101,8 +101,6 @@ struct _mm_dvfs {
 		/* updated based on profiling and requested to Power Manger*/
 	dvfs_mode_e current_mode;
 		/*updated in DVFS callback from Power Manager*/
-	bool suspend_requested;
-		/* volatile flag updated in early-suspend/late-resume*/
 	bool timer_state;
 		/* DVFS timer state (initialized/unintialized)*/
 	MM_DVFS_HW_IFC dvfs;
@@ -117,11 +115,6 @@ struct _mm_dvfs {
 	s64 hw_on_dur;
 	unsigned int jobs_done;
 	unsigned int jobs_pend;
-
-	/* for PM notification callback*/
-#ifdef CONFIG_HAS_EARLYSUSPEND
-	struct early_suspend early_suspend_desc;
-#endif
 };
 
 void *mm_dvfs_init(struct mm_common *mm_common, \
