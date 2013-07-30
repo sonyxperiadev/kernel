@@ -391,16 +391,19 @@ static void cdebugger_save_core_reg(struct cdebugger_core_t *core_reg)
 	unsigned int *gic_dist = &core_reg->gic_dist.pending_set0;
 	unsigned int size = sizeof(struct cdebugger_gic_core) /
 				sizeof(unsigned int);
+	void __iomem *gicdist_ptr = IOMEM(KONA_GICDIST_VA);
+	void __iomem *kona_a9cpu0_ptr = IOMEM(KONA_A9CPU0_VA);
+
 #define A9CPU1_OFFSET 0x2000
 	for (i = 0; i < size; i++, offset += 4) {
-		*gic_dist = readl(KONA_GICDIST_VA +
+		*gic_dist = readl(gicdist_ptr +
 				GICDIST_PENDING_SET0_OFFSET +
 				offset);
 		gic_dist++;
 	}
 
-	core_reg->pcsr0 = readl(KONA_A9CPU0_VA + A9CPU_PCSR_OFFSET);
-	core_reg->pcsr1 = readl(KONA_A9CPU0_VA +
+	core_reg->pcsr0 = readl(kona_a9cpu0_ptr + A9CPU_PCSR_OFFSET);
+	core_reg->pcsr1 = readl(kona_a9cpu0_ptr +
 				A9CPU1_OFFSET +
 				A9CPU_PCSR_OFFSET);
 
@@ -758,6 +761,7 @@ static void setup_log_tx_param(void)
 static int __init crash_debugger_lateinit(void)
 {
 	setup_log_buffer_address();
+	return 0;
 }
 
 static int __init crash_debugger_init(void)
