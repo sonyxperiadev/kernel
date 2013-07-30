@@ -372,12 +372,12 @@
 	};
 
 	keypad {
-		row-num = <1>;
-		col-num = <3>;
+		row-num = <2>;
+		col-num = <2>;
 		row-col-count = <8>;
 		key-name = "Vol Down Key", "Vol Up Key", "unused", "unused",
 			"unused", "unused", "unused", "unused", "unused",
-			"unused", "unused", "unused", "unused", "unused",
+			"Home Key", "unused", "unused", "unused", "unused",
 			"unused", "unused", "unused", "unused", "unused",
 			"unused", "unused", "unused", "unused", "unused",
 			"unused", "unused", "unused", "unused", "unused",
@@ -389,7 +389,7 @@
 			"unused", "unused", "unused", "unused", "unused",
 			"unused", "unused", "unused", "unused", "unused";
 		key-code = <114 115 0 0 0 0 0 0
-			0 0 0 0 0 0 0 0
+			0 102 0 0 0 0 0 0
 			0 0 0 0 0 0 0 0
 			0 0 0 0 0 0 0 0
 			0 0 0 0 0 0 0 0
