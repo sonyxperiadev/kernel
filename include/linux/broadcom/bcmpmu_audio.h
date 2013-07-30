@@ -215,6 +215,27 @@ enum
 	PMU_HS_SINGLE_ENDED_AC_COUPLED
 };
 
+enum ihf_alc_thld {
+	ALC_THLD_1_PER = 0x0,
+	ALC_THLD_3_PER = 0x1,
+	ALC_THLD_5_PER = 0x2,
+	ALC_THLD_10_PER = 0x3,
+	ALC_THLD_0_1_PER = 0xF,
+};
+
+enum ihf_alc_ramp_up_ctrl {
+	ALC_RAMP_UP_20_MSEC,
+	ALC_RAMP_UP_200_MSEC,
+	ALC_RAMP_UP_1_SEC,
+	ALC_RAMP_UP_4_SEC,
+};
+
+enum ihf_alc_ramp_down_ctrl {
+	ALC_RAMP_DOWN_100_USEC,
+	ALC_RAMP_DOWN_500_USEC,
+	ALC_RAMP_DOWN_1_MSEC,
+};
+
 struct _bcmpmu_audio_param {
 	int hs_power;
 	int hs_gain_left;
@@ -244,5 +265,10 @@ extern int bcmpmu_hs_set_input_mode(int HSgain, int HSInputmode);
 extern void bcmpmu_ihf_bypass_en(bool enable);
 void bcmpmu_audio_hs_selftest_backup(bool Enable);
 void bcmpmu_audio_ihf_selftest_backup(bool Enable);
+extern void bcmpmu_enable_alc(bool on);
+extern void bcmpmu_ihf_alc_vbat_ref(bool on);
+extern void bcmpmu_ihf_alc_thld(enum ihf_alc_thld alc_thld);
+extern void bcmpmu_ihf_alc_rampup_ctrl(enum ihf_alc_ramp_up_ctrl ctrl);
+extern void bcmpmu_ihf_alc_ramp_down_ctrl(enum ihf_alc_ramp_down_ctrl ctrl);
 
 #endif
