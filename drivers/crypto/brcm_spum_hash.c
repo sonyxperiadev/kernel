@@ -1266,7 +1266,7 @@ err1:
 	return -EIO;
 }
 
-static int __devinit spum_hash_probe(struct platform_device *pdev)
+static int spum_hash_probe(struct platform_device *pdev)
 {
 	struct spum_hash_device *dd;
 	struct resource *res;
@@ -1361,7 +1361,7 @@ exit:
 	return ret;
 }
 
-static int __devexit spum_hash_remove(struct platform_device *pdev)
+static int spum_hash_remove(struct platform_device *pdev)
 {
 	struct spum_hash_device *dd;
 	int i;
