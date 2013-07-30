@@ -298,6 +298,7 @@ static inline void kona_clock_stop(struct kona_fb *fb)
 	fb->display_ops->stop(fb->display_hdl, &fb->dfs_node);
 }
 
+#ifdef CONFIG_IOMMU_API
 static int kona_fb_direct_map(struct kona_fb *fb, size_t framesize_alloc,
 			dma_addr_t phys_fbbase, dma_addr_t dma_addr)
 {
@@ -372,6 +373,7 @@ fail:
 	return ret;
 }
 
+#ifdef CONFIG_BCM_IOVMM
 static int kona_fb_iovmm_map(struct kona_fb *fb, size_t framesize_alloc,
 			dma_addr_t phys_fbbase, dma_addr_t *p_dma_addr)
 {
@@ -433,6 +435,8 @@ fail:
 	pr_err("%s failed ret = %d\n", __func__, ret);
 	return ret;
 }
+#endif
+#endif
 
 #ifdef CONFIG_FB_BRCM_CP_CRASH_DUMP_IMAGE_SUPPORT
 static void kona_fb_unpack_565rle(void *dst, void *src, uint32_t image_size,
@@ -1693,8 +1697,10 @@ static int __ref kona_fb_probe(struct platform_device *pdev)
 	if (need_map_switch) {
 		/* To switch to new buffer. TODO: checking frame update end */
 		usleep_range(16666, 16668);
+#ifdef CONFIG_IOMMU_API
 		/* unmap the uboot direct map */
 		kona_fb_direct_unmap(fb, framesize_alloc, direct_dma_addr);
+#endif
 	}
 
 	ret = register_framebuffer(&fb->fb);
