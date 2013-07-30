@@ -171,8 +171,6 @@ struct eth_dev {
 	u8			host_mac[ETH_ALEN];
 };
 
-static struct eth_dev *the_dev;
-
 #ifdef CONFIG_BRCM_NETCONSOLE
 
 static DEFINE_MUTEX(cleanup_netpoll_mutex);
@@ -253,15 +251,16 @@ static void defer_kevent(struct eth_dev *dev, int flag);
  * the new skb header.
  *
  */
-void ueth_recycle_rx_skb_data(unsigned char *skb_data, gfp_t gfp_flags)
+void ueth_recycle_rx_skb_data(unsigned char *skb_data, gfp_t gfp_flags, void  *dev_handle)
 {
 	struct sk_buff *skb;
+	struct eth_dev *dev = dev_handle;
 
 	skb = alloc_skb_uether_rx(max_skb_buf_sz, skb_data, gfp_flags);
 	if (!skb) {
 		pr_warn("retry: alloc ueth rx skb\n");
-		the_dev->skb_data = skb_data;
-		defer_kevent(the_dev, WORK_ALLOC_RX_SKB);
+		dev->skb_data = skb_data;
+		defer_kevent(dev, WORK_ALLOC_RX_SKB);
 	} else
 		refill_rx_skbs(skb);
 }
@@ -710,9 +709,7 @@ static int alloc_requests(struct eth_dev *dev, struct gether *link, unsigned n)
 	status = prealloc(&dev->tx_reqs, link->in_ep, n);
 	if (status < 0)
 		goto fail;
-
 	status = prealloc(&dev->rx_reqs, link->out_ep, n);
-
 	if (status < 0)
 		goto fail;
 	goto done;
@@ -730,7 +727,6 @@ static void rx_fill(struct eth_dev *dev, gfp_t gfp_flags)
 
 	/* fill unused rxq slots with some skb */
 	spin_lock_irqsave(&dev->req_lock, flags);
-
 	while (!list_empty(&dev->rx_reqs)) {
 		req = container_of(dev->rx_reqs.next,
 				struct usb_request, list);
@@ -741,11 +737,10 @@ static void rx_fill(struct eth_dev *dev, gfp_t gfp_flags)
 			defer_kevent(dev, WORK_RX_MEMORY);
 			return;
 		}
-		spin_lock_irqsave(&dev->req_lock, flags);
 
+		spin_lock_irqsave(&dev->req_lock, flags);
 	}
 	spin_unlock_irqrestore(&dev->req_lock, flags);
-
 }
 #ifdef CONFIG_BRCM_NETCONSOLE
 static void usb_test_work(struct work_struct *work)
@@ -797,7 +792,7 @@ static void eth_work(struct work_struct *work)
 	}
 
 	if (test_and_clear_bit(WORK_ALLOC_RX_SKB, &dev->todo))
-		ueth_recycle_rx_skb_data(dev->skb_data, GFP_KERNEL);
+		ueth_recycle_rx_skb_data(dev->skb_data, GFP_KERNEL, dev);
 #endif
 
 	if (dev->todo)
@@ -1015,7 +1010,6 @@ static netdev_tx_t eth_start_xmit(struct sk_buff *skb,
 drop:
 		dev->net->stats.tx_dropped++;
 		spin_lock_irqsave(&dev->req_lock, flags);
-
 		if (list_empty(&dev->tx_reqs))
 			netif_start_queue(net);
 		list_add(&req->list, &dev->tx_reqs);
@@ -1270,33 +1264,20 @@ struct eth_dev *gether_setup_name(struct usb_gadget *g, u8 ethaddr[ETH_ALEN],
  */
 void gether_cleanup(struct eth_dev *dev)
 {
-<<<<<<< HEAD
 	pr_info("%s\n", __func__);
 
-	if (!the_dev)
-		return;
-
-	unregister_netdev(the_dev->net);
-	flush_work(&the_dev->work);
-#ifdef CONFIG_USB_ETH_SKB_ALLOC_OPTIMIZATION
-	flush_workqueue(the_dev->rx_workqueue);
-	destroy_workqueue(the_dev->rx_workqueue);
-#endif
-	free_netdev(the_dev->net);
-	the_dev = NULL;
-
-}
-
-=======
 	if (!dev)
 		return;
 
 	unregister_netdev(dev->net);
 	flush_work(&dev->work);
+#ifdef CONFIG_USB_ETH_SKB_ALLOC_OPTIMIZATION
+	flush_workqueue(dev->rx_workqueue);
+	destroy_workqueue(dev->rx_workqueue);
+#endif
 	free_netdev(dev->net);
 }
 
->>>>>>> linaro/experimental/android-3.10
 /**
  * gether_connect - notify network layer that USB link is active
  * @link: the USB link, set up with endpoints, descriptors matching

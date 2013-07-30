@@ -93,14 +93,7 @@ static inline struct eth_dev *gether_setup(struct usb_gadget *g,
 	return gether_setup_name(g, ethaddr, "usb");
 }
 
-<<<<<<< HEAD
-void gether_cleanup(void);
-/* variant of gether_setup that allows customizing network device name */
-int gether_setup_name(struct usb_gadget *g, u8 ethaddr[ETH_ALEN],
-		const char *netname);
-=======
 void gether_cleanup(struct eth_dev *dev);
->>>>>>> linaro/experimental/android-3.10
 
 /* connect/disconnect is handled by individual functions */
 struct net_device *gether_connect(struct gether *);
@@ -138,13 +131,6 @@ int rndis_bind_config_vendor(struct usb_configuration *c, u8 ethaddr[ETH_ALEN],
 static inline int
 rndis_bind_config_vendor(struct usb_configuration *c, u8 ethaddr[ETH_ALEN],
 		u32 vendorID, const char *manufacturer, struct eth_dev *dev)
-{
-	return 0;
-}
-
-static inline int
-rndis_bind_config_vendor(struct usb_configuration *c, u8 ethaddr[ETH_ALEN],
-				u32 vendorID, const char *manufacturer)
 {
 	return 0;
 }

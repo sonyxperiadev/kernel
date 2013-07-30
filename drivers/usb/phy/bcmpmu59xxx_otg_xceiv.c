@@ -13,6 +13,7 @@
 *
 *****************************************************************************/
 
+
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/stat.h>
@@ -500,11 +501,7 @@ static int bcmpmu_otg_xceiv_set_vbus_power(struct usb_phy *phy,
 		return bcmpmu_usb_set(xceiv_data->bcmpmu,
 			   BCMPMU_USB_CTRL_CHRG_CURR_LMT, ma);
 
-<<<<<<< HEAD
 	return -EINVAL;
-=======
-	return 0;
->>>>>>> sdb-common-android-jb-4.2.2
 }
 
 static int bcmpmu_otg_xceiv_set_host(struct usb_otg *otg,

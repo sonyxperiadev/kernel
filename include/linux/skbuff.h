@@ -55,7 +55,7 @@
 #define SKB_UETH_RX_THRESHOLD_SIG	0x789ABCDE
 
 extern unsigned short ueth_rx_skb_size(void);
-extern void ueth_recycle_rx_skb_data(unsigned char *data, gfp_t gfp_flags);
+extern void ueth_recycle_rx_skb_data(unsigned char *data, gfp_t gfp_flags, void *dev);
 extern struct sk_buff *alloc_skb_uether_rx(unsigned int size,
 		unsigned char *data, gfp_t gfp_mask);
 #endif

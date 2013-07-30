@@ -840,11 +840,7 @@ static int acc_ctrlrequest(struct usb_composite_dev *cdev,
 			*((u16 *)cdev->req->buf) = PROTOCOL_VERSION;
 			value = sizeof(u16);
 
-<<<<<<< HEAD
-			/* clear strings left over from a previous session */
-=======
 			/* clear any string left over from a previous session */
->>>>>>> linaro/experimental/android-3.10
 			memset(dev->manufacturer, 0, sizeof(dev->manufacturer));
 			memset(dev->model, 0, sizeof(dev->model));
 			memset(dev->description, 0, sizeof(dev->description));

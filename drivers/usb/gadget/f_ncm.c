@@ -1301,12 +1301,8 @@ void ncm_ntb_out_size(u32 ntb_out_size)
  * Caller must have called @gether_setup().  Caller is also responsible
  * for calling @gether_cleanup() before module unload.
  */
-<<<<<<< HEAD
-int ncm_bind_config(struct usb_configuration *c, u8 ethaddr[ETH_ALEN])
-=======
 int __init ncm_bind_config(struct usb_configuration *c, u8 ethaddr[ETH_ALEN],
 		struct eth_dev *dev)
->>>>>>> linaro/experimental/android-3.10
 {
 	struct f_ncm	*ncm;
 	int		status;

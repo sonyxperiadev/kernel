@@ -371,7 +371,7 @@ static int bcmpmu_otg_xceiv_set_peripheral(struct usb_otg *otg,
 	int status = 0;
 	bool id_default_host = false;
 
-	printk(KERN_ERR "[murali] %s xceiv_data = %lx\n", __func__, (long unsigned int) xceiv_data);
+	printk(KERN_ERR "%s xceiv_data = %lx\n", __func__, (long unsigned int) xceiv_data);
 
 	dev_dbg(xceiv_data->dev, "Setting Peripheral\n");
 	otg->gadget = gadget;

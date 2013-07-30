@@ -593,7 +593,7 @@ static void skb_release_data(struct sk_buff *skb)
 
 #ifdef CONFIG_USB_ETH_SKB_ALLOC_OPTIMIZATION
 		if (skb->signature == SKB_UETH_RX_THRESHOLD_SIG) {
-			ueth_recycle_rx_skb_data(skb->head, GFP_ATOMIC);
+			ueth_recycle_rx_skb_data(skb->head, GFP_ATOMIC, netdev_priv(skb->dev));
 			skb->signature = 0;
 			return;
 		}
