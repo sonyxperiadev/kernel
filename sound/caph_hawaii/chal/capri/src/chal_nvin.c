@@ -209,7 +209,7 @@ void chal_audio_nvinpath_int_enable(CHAL_HANDLE handle, cUInt16 thr_int_enable, 
     }
 
     /* Set the required setting */
-    BRCM_WRITE_REG(base,  AUDIOH_AUDIO_INTC, reg_val);
+    /* BRCM_WRITE_REG(base,  AUDIOH_AUDIO_INTC, reg_val); */
 
     return;
 }
@@ -255,7 +255,7 @@ void chal_audio_nvinpath_left_int_enable(CHAL_HANDLE handle, cUInt16 thr_int_ena
     }
 
     /* Set the required setting */
-    BRCM_WRITE_REG(base,  AUDIOH_AUDIO_INTC, reg_val);
+    /* BRCM_WRITE_REG(base,  AUDIOH_AUDIO_INTC, reg_val); */
 
     return;
 }
