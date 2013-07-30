@@ -311,7 +311,8 @@ void *log_tx_param[] __aligned(8) = {
 	0,
 	(void *)6,	/* Debug information version number */
 	(void *)&cdebugger_fault_status,
-	0,
+	/*PN_ADDRESS_SELF_VERIFY */
+	(void *)__virt_to_phys((void *)log_tx_param),
 	0,
 	0,
 	0,
