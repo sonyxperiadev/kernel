@@ -322,8 +322,8 @@ static const struct v4l2_queryctrl ov7692_controls[] = {
 	 .id = V4L2_CID_CAMERA_CONTRAST,
 	 .type = V4L2_CTRL_TYPE_INTEGER,
 	 .name = "Contrast",
-	 .minimum = CONTRAST_MINUS_1,
-	 .maximum = CONTRAST_PLUS_1,
+	 .minimum = CONTRAST_MINUS_2,
+	 .maximum = CONTRAST_PLUS_2,
 	 .step = 1,
 	 .default_value = CONTRAST_DEFAULT,
 	 },
@@ -650,18 +650,26 @@ static int ov7692_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		break;
 	case V4L2_CID_CAMERA_CONTRAST:
 
-		if (ctrl->value > CONTRAST_PLUS_1)
+		if (ctrl->value > CONTRAST_PLUS_2)
 			return -EINVAL;
 
 		ov7692->contrast = ctrl->value;
 		switch (ov7692->contrast) {
+		case CONTRAST_MINUS_2:
+			ret = ov7692_write_smbuss(client,
+					ov7692_contrast_lv1_tbl);
+			break;
 		case CONTRAST_MINUS_1:
 			ret = ov7692_write_smbuss(client,
-					ov7692_contrast_lv5_tbl);
+					ov7692_contrast_lv2_tbl);
 			break;
 		case CONTRAST_PLUS_1:
 			ret = ov7692_write_smbuss(client,
-					ov7692_contrast_lv0_tbl);
+					ov7692_contrast_lv4_tbl);
+			break;
+		case CONTRAST_PLUS_2:
+			ret = ov7692_write_smbuss(client,
+					ov7692_contrast_lv5_tbl);
 			break;
 		default:
 			ret = ov7692_write_smbuss(client,
