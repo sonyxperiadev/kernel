@@ -42,7 +42,7 @@
 #include <linux/module.h>
 #include <linux/timer.h>
 #define OV5648_DEBUG 0
-#if defined(CONFIG_MACH_JAVA_C_5606)
+#if defined(CONFIG_MACH_JAVA_C_LC1)
 #define TORCH_EN (10)
 #define FLASH_EN (11)
 #endif
@@ -593,7 +593,7 @@ static int ov5648_set_state(struct i2c_client *client, int new_state);
 static int ov5648_init(struct i2c_client *client);
 
 /*add an timer to close the flash after two frames*/
-#if defined(CONFIG_MACH_JAVA_C_5606)
+#if defined(CONFIG_MACH_JAVA_C_LC1)
 static struct timer_list timer;
 static char *msg = "hello world";
 static void print_func(unsigned long lparam)
@@ -801,7 +801,7 @@ static const struct v4l2_queryctrl ov5648_controls[] = {
 	 .name = "AS3643-flash",
 #endif
 
-#if defined(CONFIG_MACH_JAVA_C_5606)
+#if defined(CONFIG_MACH_JAVA_C_LC1)
 	 .name = "OCP8111-flash",
 #endif
 	 .minimum = FLASH_MODE_OFF,
@@ -1881,7 +1881,7 @@ int set_flash_mode(struct i2c_client *client, int mode)
 	ov5648->flashmode = mode;
 #endif
 
-#if defined(CONFIG_MACH_JAVA_C_5606)
+#if defined(CONFIG_MACH_JAVA_C_LC1)
 		if ((mode == FLASH_MODE_OFF)
 			|| (mode == FLASH_MODE_TORCH_OFF)) {
 			gpio_set_value(TORCH_EN, 0);
@@ -2041,7 +2041,7 @@ static int ov5648_init(struct i2c_client *client)
 	 *  Exposure should be DEFAULT_EXPO * line_length / 1000
 	 *  Since we don't have line_length yet, just estimate
 	 */
-#if defined(CONFIG_MACH_JAVA_C_5606)
+#if defined(CONFIG_MACH_JAVA_C_LC1)
 	init_timer(&timer);
 #endif
 
