@@ -41,7 +41,7 @@ struct gen_pi_prof_ops {
  */
 struct pi_profiler {
 	struct profiler profiler;
-	u32 pi_prof_addr_base;
+	void __iomem *pi_prof_addr_base;
 	u32 pi_id;
 	u32 counter_offset;
 	u32 counter_clear_offset;

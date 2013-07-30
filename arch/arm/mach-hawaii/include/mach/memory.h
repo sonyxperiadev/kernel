@@ -27,6 +27,7 @@
 #define __PLAT_KONA_MEMORY_H
 
 #include <mach/vmalloc.h>
+#include <mach/io.h>
 
 #ifndef PHYS_OFFSET
 #define PHYS_OFFSET	(CONFIG_BCM_RAM_BASE+CONFIG_BCM_RAM_START_RESERVED_SIZE)
@@ -50,43 +51,43 @@
 
 /* APB5, APB9 and SRAM */
 #define IO_G1_PHYS		0x34000000
-#define IO_G1_VIRT		(IO_START_VA)
+#define IO_G1_VIRT		IOMEM(IO_START_VA)
 #define IO_G1_SIZE		(SZ_1M)
 
 /* APB6, PM, APB10*/
 #define IO_G2_PHYS		0x35000000
 #define IO_G2_VIRT		\
-	(IO_G1_VIRT + IO_G1_SIZE)
+	IOMEM(IO_G1_VIRT + IO_G1_SIZE)
 #define IO_G2_SIZE		(SZ_1M)
 
 /* APB13, AHB, APB15 */
 #define IO_G3_PHYS		0x3A000000
 #define IO_G3_VIRT		\
-	(IO_G2_VIRT + IO_G2_SIZE)
+	IOMEM(IO_G2_VIRT + IO_G2_SIZE)
 #define IO_G3_SIZE		(SZ_1M)
 
 /* MM, APB12 */
 #define IO_G4_PHYS		0x3C000000
 #define IO_G4_VIRT		\
-	(IO_G3_VIRT + IO_G3_SIZE)
+	IOMEM(IO_G3_VIRT + IO_G3_SIZE)
 #define IO_G4_SIZE		(SZ_4M)
 
 /* APB1, APB2, Apps, SECURITY */
 #define IO_G5_PHYS		0x3E000000
 #define IO_G5_VIRT		\
-	(IO_G4_VIRT + IO_G4_SIZE)
+	IOMEM(IO_G4_VIRT + IO_G4_SIZE)
 #define IO_G5_SIZE		(SZ_8M)
 
 /* APB4, APB8, AHB2 */
 #define IO_G6_PHYS		0x3F000000
 #define IO_G6_VIRT		\
-	(IO_G5_VIRT + IO_G5_SIZE)
+	IOMEM(IO_G5_VIRT + IO_G5_SIZE)
 #define IO_G6_SIZE		(SZ_2M)
 
 /* APB0, APB11, AP_PRIVATE */
 #define IO_G7_PHYS		0x3FE00000
 #define IO_G7_VIRT		\
-	(IO_G6_VIRT + IO_G6_SIZE)
+	IOMEM(IO_G6_VIRT + IO_G6_SIZE)
 #define IO_G7_SIZE		(SZ_2M)
 
 #define IO_START_PA		IO_G1_PHYS

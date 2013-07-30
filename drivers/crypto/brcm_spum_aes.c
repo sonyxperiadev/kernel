@@ -418,10 +418,10 @@ static int spum_aes_dma_xfer(struct spum_aes_device *dd)
 	    PERIPHERAL_FLUSHP_END | DMA_PERI_REQ_ALWAYS_BURST;
 
 	rx_fifo =
-		(u32)HW_IO_VIRT_TO_PHYS((u32)dd->io_axi_base) +
+		HW_IO_VIRT_TO_PHYS(dd->io_axi_base) +
 		SPUM_AXI_FIFO_IN_OFFSET;
 	tx_fifo =
-		(u32)HW_IO_VIRT_TO_PHYS((u32)dd->io_axi_base) +
+		HW_IO_VIRT_TO_PHYS(dd->io_axi_base) +
 		SPUM_AXI_FIFO_OUT_OFFSET;
 
 	INIT_LIST_HEAD(&head_in);
@@ -975,7 +975,7 @@ static int spum_aes_probe(struct platform_device *pdev)
 		goto exit;
 	}
 
-	dd->io_apb_base = (void __iomem *)HW_IO_PHYS_TO_VIRT(res->start);
+	dd->io_apb_base = HW_IO_PHYS_TO_VIRT(res->start);
 	if (!dd->io_apb_base) {
 		pr_err("%s: Ioremap failed.\n", __func__);
 		ret = -ENOMEM;
@@ -990,7 +990,7 @@ static int spum_aes_probe(struct platform_device *pdev)
 		goto exit;
 	}
 
-	dd->io_axi_base = (void __iomem *)HW_IO_PHYS_TO_VIRT(res->start);
+	dd->io_axi_base = HW_IO_PHYS_TO_VIRT(res->start);
 	if (!dd->io_axi_base) {
 		pr_err("%s: Ioremap failed.\n", __func__);
 		ret = -ENOMEM;

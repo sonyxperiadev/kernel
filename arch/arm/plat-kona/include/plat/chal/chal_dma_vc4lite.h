@@ -112,8 +112,8 @@ extern "C" {
 		cUInt32 dstAddrIncrement;	///< destination address increment
 		cUInt32 waitResponse;	///< wait for a write response
 		CHAL_DMA_VC4LITE_MODE_t xferMode;	///< transfer mode
-		cUInt32 srcAddr;	///< source address
-		cUInt32 dstAddr;	///< desitnation address
+		void __iomem *srcAddr;	///< source address
+		void __iomem *dstAddr;	///< desitnation address
 		ChalVc4liteDmaXferLength_t xferLength;	///< transfer length
 		cUInt16 srcStride;	///< source stride for 2D mode
 		cUInt16 dstStride;	///< destination stride for 2D mode
