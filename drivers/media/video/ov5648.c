@@ -34,6 +34,10 @@
 #include <media/a3907.h>
 #endif
 
+#ifdef CONFIG_VIDEO_DW9714
+#include <media/dw9714.h>
+#endif
+
 #ifdef CONFIG_VIDEO_AS3643
 #include "as3643.h"
 #endif
@@ -1420,6 +1424,15 @@ static int ov5648_lens_set_position(struct i2c_client *client,
 		ret = a3907_lens_set_position(target_position);
 	}
 #endif
+
+#ifdef CONFIG_VIDEO_DW9714
+	if (target_position & 0x80000000) {
+		int fine_target_position = target_position & ~0x80000000;
+		ret = dw9714_lens_set_position_fine(fine_target_position);
+	} else {
+		ret = dw9714_lens_set_position(target_position);
+	}
+#endif
 	return ret;
 }
 
@@ -1439,6 +1452,10 @@ static void ov5648_lens_get_position(struct i2c_client *client,
 	static int lens_read_buf[LENS_READ_DELAY];
 #ifdef CONFIG_VIDEO_A3907
 	ret = a3907_lens_get_position(current_position, time_to_destination);
+#endif
+
+#ifdef CONFIG_VIDEO_DW9714
+	ret = dw9714_lens_get_position(current_position, time_to_destination);
 #endif
 
 	for (i = 0; i < ov5648->lenspos_delay; i++)
@@ -2503,6 +2520,15 @@ static struct i2c_client *a3907_i2c_client;
 static struct i2c_adapter *a3907_i2c_adap;
 #endif
 
+#ifdef CONFIG_VIDEO_DW9714
+#define DW9714_I2C_ADDR 0x18
+static struct i2c_board_info dw9714_i2c_board_info = {
+	 I2C_BOARD_INFO("dw9714", (DW9714_I2C_ADDR >> 1))
+};
+static struct i2c_client *dw9714_i2c_client;
+static struct i2c_adapter *dw9714_i2c_adap;
+#endif
+
 static int ov5648_probe(struct i2c_client *client,
 			const struct i2c_device_id *did)
 {
@@ -2569,6 +2595,19 @@ static int ov5648_probe(struct i2c_client *client,
 	}
 #endif
 
+#ifdef CONFIG_VIDEO_DW9714
+		pr_debug("DW9714 i2c start");
+	dw9714_i2c_adap = i2c_get_adapter(0);
+	if (!dw9714_i2c_adap)
+		pr_debug("DW9714 i2c_get_adapter(0) FAILED");
+	if (dw9714_i2c_adap) {
+		dw9714_i2c_client = i2c_new_device(dw9714_i2c_adap,
+				&dw9714_i2c_board_info);
+		i2c_put_adapter(dw9714_i2c_adap);
+		pr_debug("DW9714 i2c_get_adapter(0) OK");
+	}
+#endif
+
 	return ret;
 }
 
@@ -2583,6 +2622,13 @@ static int ov5648_remove(struct i2c_client *client)
 	if (a3907_i2c_client)
 		i2c_unregister_device(a3907_i2c_client);
 #endif
+
+#ifdef CONFIG_VIDEO_DW9714
+	pr_debug("DW9714 i2c_unregister_device");
+	if (dw9714_i2c_client)
+		i2c_unregister_device(dw9714_i2c_client);
+#endif
+
 	icd->ops = NULL;
 	ov5648_video_remove(icd);
 	client->driver = NULL;

@@ -171,6 +171,10 @@
 #include <media/a3907.h>
 #endif
 
+#ifdef CONFIG_VIDEO_DW9714
+#include <media/dw9714.h>
+#endif
+
 #ifdef CONFIG_WD_TAPPER
 #include <linux/broadcom/wd-tapper.h>
 #endif
@@ -659,10 +663,19 @@ static int hawaii_camera_power(struct device *dev, int on)
 		a3907_enable(1);
 #endif
 
+#ifdef CONFIG_VIDEO_DW9714
+		dw9714_enable(1);
+#endif
+
 	} else {
 #ifdef CONFIG_VIDEO_A3907
 		a3907_enable(0);
 #endif
+
+#ifdef CONFIG_VIDEO_DW9714
+		dw9714_enable(0);
+#endif
+
 #ifdef CONFIG_MACH_JAVA_C_LC1
 		set_af_enable(0);
 #endif

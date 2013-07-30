@@ -84,6 +84,7 @@ obj-$(CONFIG_VIDEO_AS3643)      += as3643.o
 obj-$(CONFIG_GPIO_FLASH)      += flash_gpio.o
 obj-$(CONFIG_VIDEO_AS3645A)	+= as3645a.o
 obj-$(CONFIG_VIDEO_A3907)	+= a3907.o
+obj-$(CONFIG_VIDEO_DW9714)	+= dw9714.o
 
 obj-$(CONFIG_SOC_CAMERA_IMX074)		+= imx074.o
 obj-$(CONFIG_SOC_CAMERA_MT9M001)	+= mt9m001.o

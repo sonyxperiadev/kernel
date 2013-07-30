@@ -619,6 +619,15 @@ config VIDEO_A3907
       control of small form factor voice coil motors.
       It is used with the OV5648 as a camera focus motor.
 
+config VIDEO_DW9714
+    tristate "DW9714 flash support"
+    depends on I2C && VIDEO_V4L2
+    ---help---
+      This is a driver for the DW9714 controller.
+      The Allegro DW9714 is a coil motor driver for linear
+      control of small form factor voice coil motors.
+      It is used with the OV5648 as a camera focus motor.
+
 config VIDEO_AS3645A
 	tristate "AS3645A flash driver support"
 	depends on I2C && VIDEO_V4L2 && MEDIA_CONTROLLER
