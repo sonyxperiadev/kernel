@@ -46,6 +46,7 @@
 
 #define ACD_DELAY msecs_to_jiffies(100)
 #define ACD_RETRY_DELAY msecs_to_jiffies(1000)
+#define DISCONNECT_EVENT_TIME (HZ * 2)
 /*
 static int debug_mask = BCMPMU_PRINT_ERROR |
 	BCMPMU_PRINT_INIT |  BCMPMU_PRINT_FLOW;
@@ -76,6 +77,7 @@ struct accy_det {
 	struct notifier_block id_change_event;
 #ifdef CONFIG_HAS_WAKELOCK
 	struct wake_lock wake_lock;
+	struct wake_lock notify_wake_lock;
 #endif
 	int chrgr_type;
 	int retry_cnt;
@@ -404,6 +406,10 @@ static void bcmpmu_accy_handle_state(struct accy_det *accy_d)
 		accy_d->retry_cnt = 0;
 		accy_d->state = STATE_IDLE;
 		accy_d->chrgr_type = PMU_CHRGR_TYPE_NONE;
+#ifdef CONFIG_HAS_WAKELOCK
+		wake_lock_timeout(&accy_d->notify_wake_lock,
+				DISCONNECT_EVENT_TIME);
+#endif
 		bcmpmu_notify_charger_state(accy_d);
 		bcmpmu_accy_set_pmu_BC12(accy_d->bcmpmu, 1);
 		bcdldo_cycle_power(accy_d);
@@ -589,7 +595,10 @@ static int __devinit bcmpmu_accy_detect_probe(struct platform_device *pdev)
 	INIT_DELAYED_WORK(&accy_d->d_work, bcmpmu_detect_wq);
 
 #ifdef CONFIG_HAS_WAKELOCK
-	wake_lock_init(&accy_d->wake_lock, WAKE_LOCK_SUSPEND, "accy_detect");
+	wake_lock_init(&accy_d->wake_lock,
+		WAKE_LOCK_SUSPEND, "accy_detect");
+	wake_lock_init(&accy_d->notify_wake_lock,
+		WAKE_LOCK_SUSPEND, "notify_lock");
 #endif
 	accy_d_set_ldo_bit(accy_d, 1);
 	bcmpmu_accy_set_pmu_BC12(accy_d->bcmpmu, 1);
