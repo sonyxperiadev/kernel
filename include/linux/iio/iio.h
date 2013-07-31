@@ -19,6 +19,12 @@
  * Currently assumes nano seconds.
  */
 
+enum iio_data_type {
+	IIO_RAW,
+	IIO_PROCESSED,
+};
+
+/* Could add the raw attributes as well - allowing buffer only devices */
 enum iio_chan_info_enum {
 	IIO_CHAN_INFO_RAW = 0,
 	IIO_CHAN_INFO_PROCESSED,
@@ -37,6 +43,50 @@ enum iio_chan_info_enum {
 	IIO_CHAN_INFO_HARDWAREGAIN,
 	IIO_CHAN_INFO_HYSTERESIS,
 };
+
+#define IIO_CHAN_INFO_SHARED_BIT(type) BIT(type*2)
+#define IIO_CHAN_INFO_SEPARATE_BIT(type) BIT(type*2 + 1)
+
+#define IIO_CHAN_INFO_SCALE_SEPARATE_BIT		\
+	IIO_CHAN_INFO_SEPARATE_BIT(IIO_CHAN_INFO_SCALE)
+#define IIO_CHAN_INFO_SCALE_SHARED_BIT			\
+	IIO_CHAN_INFO_SHARED_BIT(IIO_CHAN_INFO_SCALE)
+#define IIO_CHAN_INFO_OFFSET_SEPARATE_BIT			\
+	IIO_CHAN_INFO_SEPARATE_BIT(IIO_CHAN_INFO_OFFSET)
+#define IIO_CHAN_INFO_OFFSET_SHARED_BIT			\
+	IIO_CHAN_INFO_SHARED_BIT(IIO_CHAN_INFO_OFFSET)
+#define IIO_CHAN_INFO_CALIBSCALE_SEPARATE_BIT			\
+	IIO_CHAN_INFO_SEPARATE_BIT(IIO_CHAN_INFO_CALIBSCALE)
+#define IIO_CHAN_INFO_CALIBSCALE_SHARED_BIT			\
+	IIO_CHAN_INFO_SHARED_BIT(IIO_CHAN_INFO_CALIBSCALE)
+#define IIO_CHAN_INFO_CALIBBIAS_SEPARATE_BIT			\
+	IIO_CHAN_INFO_SEPARATE_BIT(IIO_CHAN_INFO_CALIBBIAS)
+#define IIO_CHAN_INFO_CALIBBIAS_SHARED_BIT			\
+	IIO_CHAN_INFO_SHARED_BIT(IIO_CHAN_INFO_CALIBBIAS)
+#define IIO_CHAN_INFO_PEAK_SEPARATE_BIT			\
+	IIO_CHAN_INFO_SEPARATE_BIT(IIO_CHAN_INFO_PEAK)
+#define IIO_CHAN_INFO_PEAK_SHARED_BIT			\
+	IIO_CHAN_INFO_SHARED_BIT(IIO_CHAN_INFO_PEAK)
+#define IIO_CHAN_INFO_PEAKSCALE_SEPARATE_BIT			\
+	IIO_CHAN_INFO_SEPARATE_BIT(IIO_CHAN_INFO_PEAKSCALE)
+#define IIO_CHAN_INFO_PEAKSCALE_SHARED_BIT			\
+	IIO_CHAN_INFO_SHARED_BIT(IIO_CHAN_INFO_PEAKSCALE)
+#define IIO_CHAN_INFO_QUADRATURE_CORRECTION_RAW_SEPARATE_BIT	\
+	IIO_CHAN_INFO_SEPARATE_BIT(				\
+		IIO_CHAN_INFO_QUADRATURE_CORRECTION_RAW)
+#define IIO_CHAN_INFO_QUADRATURE_CORRECTION_RAW_SHARED_BIT	\
+	IIO_CHAN_INFO_SHARED_BIT(				\
+		IIO_CHAN_INFO_QUADRATURE_CORRECTION_RAW)
+#define IIO_CHAN_INFO_AVERAGE_RAW_SEPARATE_BIT			\
+	IIO_CHAN_INFO_SEPARATE_BIT(IIO_CHAN_INFO_AVERAGE_RAW)
+#define IIO_CHAN_INFO_AVERAGE_RAW_SHARED_BIT			\
+	IIO_CHAN_INFO_SHARED_BIT(IIO_CHAN_INFO_AVERAGE_RAW)
+#define IIO_CHAN_INFO_LOW_PASS_FILTER_3DB_FREQUENCY_SHARED_BIT \
+	IIO_CHAN_INFO_SHARED_BIT(			       \
+		IIO_CHAN_INFO_LOW_PASS_FILTER_3DB_FREQUENCY)
+#define IIO_CHAN_INFO_LOW_PASS_FILTER_3DB_FREQUENCY_SEPARATE_BIT \
+	IIO_CHAN_INFO_SEPARATE_BIT(			       \
+		IIO_CHAN_INFO_LOW_PASS_FILTER_3DB_FREQUENCY)
 
 enum iio_endian {
 	IIO_CPU,
@@ -193,6 +243,7 @@ struct iio_chan_spec {
 	const struct iio_chan_spec_ext_info *ext_info;
 	const char		*extend_name;
 	const char		*datasheet_name;
+	unsigned		processed_val:1;
 	unsigned		modified:1;
 	unsigned		indexed:1;
 	unsigned		output:1;
@@ -217,6 +268,23 @@ static inline bool iio_channel_has_info(const struct iio_chan_spec *chan,
 
 #define IIO_ST(si, rb, sb, sh)						\
 	{ .sign = si, .realbits = rb, .storagebits = sb, .shift = sh }
+
+/* Macro assumes input channels */
+#define IIO_CHAN(_type, _mod, _indexed, _proc, _name, _chan, _chan2, \
+		 _inf_mask, _address, _si, _stype, _event_mask)		\
+	{ .type = _type,						\
+	  .output = 0,							\
+	  .modified = _mod,						\
+	  .indexed = _indexed,						\
+	  .processed_val = _proc,					\
+	  .extend_name = _name,						\
+	  .channel = _chan,						\
+	  .channel2 = _chan2,						\
+	  .info_mask = _inf_mask,					\
+	  .address = _address,						\
+	  .scan_index = _si,						\
+	  .scan_type = _stype,						\
+	  .event_mask = _event_mask }
 
 #define IIO_CHAN_SOFT_TIMESTAMP(_si)					\
 	{ .type = IIO_TIMESTAMP, .channel = -1,				\
