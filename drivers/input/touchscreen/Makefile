@@ -63,6 +63,7 @@ obj-$(CONFIG_TOUCHSCREEN_TSC2005)	+= tsc2005.o
 obj-$(CONFIG_TOUCHSCREEN_TSC2007)	+= tsc2007.o
 obj-$(CONFIG_TOUCHSCREEN_TANGO)	+= tango_i2c_ts.o
 obj-$(CONFIG_TOUCHSCREEN_FT5306)	+= ft5306.o
+obj-$(CONFIG_TOUCHSCREEN_GT9xx) += gt9xx.o gt9xx_update.o goodix_tool.o
 obj-$(CONFIG_TOUCHSCREEN_UCB1400)	+= ucb1400_ts.o
 obj-$(CONFIG_TOUCHSCREEN_WACOM_W8001)	+= wacom_w8001.o
 obj-$(CONFIG_TOUCHSCREEN_WM831X)	+= wm831x-ts.o

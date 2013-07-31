@@ -74,6 +74,14 @@ choice
 	help
 	  Support for Garnet china 5606
 
+	config MACH_JAVA_C_5609A
+	bool "Java CHINA 5609A"
+	help
+	  Support for Java
+	  china 5609a. Platform
+	  for china
+	  customer
+
 	config MACH_JAVA_C_A18
 		bool "JAVA GARNET A18"
 	help

@@ -943,6 +943,11 @@ config TOUCHSCREEN_FT5306
    help
      Say Y here if you have a Tango based touchscreen. If unsure, say N.
 
+config TOUCHSCREEN_GT9xx
+   tristate "Goodix Capacitive Touchscreen GT9xx"
+   depends on I2C
+   help
+     Say Y here if you have a GT9xx based touchscreen. If unsure, say N.
 
 config TOUCHSCREEN_W90X900
 	tristate "W90P910 touchscreen driver"
