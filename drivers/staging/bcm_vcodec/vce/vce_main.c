@@ -11,8 +11,6 @@
 #define pr_fmt(fmt) "vce: %s: " fmt "\n", __func__
 #include <linux/atomic.h>
 #include <linux/bcm_pdm_mm.h>
-#include <linux/bcm_vcodec/hva.h>
-#include <linux/bcm_vcodec/vce.h>
 #include <linux/bitops.h>
 #include <linux/cdev.h>
 #include <linux/device.h>
@@ -35,6 +33,8 @@
 #include <linux/types.h>
 #include <linux/uaccess.h>
 #include <linux/wait.h>
+#include "hva.h"
+#include "vce.h"
 #include "vce_ion.h"
 #include "vce_rdb.h"
 
@@ -233,7 +233,7 @@ static struct vce_prog *vce_prog_alloc(size_t code_lo_size, size_t code_hi_size)
 		goto err;
 
 	ioc = vce_ion_get_client();
-	if (!ioc)
+	if (IS_ERR(ioc))
 		goto err;
 
 	handle = ion_alloc(ioc, code_lo_size, 0, VCE_ION_GET_HEAP_MASK(),
@@ -263,7 +263,7 @@ err:
 }
 
 /*
- * Free an program.
+ * Free a program.
  * N.B. Must have already been removed from the client list.
  */
 static void vce_prog_free(struct vce_prog *prog)
@@ -393,7 +393,7 @@ static void vce_client_release_prog(struct vce_client *client, u32 prog_id)
 	if (entry) {
 		vce_prog_release(*entry);
 
-		for ( ; entry < client->progs + client->nr_progs - 1; entry++)
+		for (; entry < client->progs + client->nr_progs - 1; entry++)
 			entry[0] = entry[1];
 
 		client->nr_progs--;
@@ -541,7 +541,7 @@ static void vce_release_jobs(struct vce_client *client)
 	while (!list_empty(&client->write_head)) {
 		job = list_first_entry(&client->write_head, struct vce_job,
 				       client_list);
-		pr_info("write list: id 0x%x", job->id);
+		pr_debug("write list: id 0x%x", job->id);
 
 		if (vce_job_is_active(job)) {
 			pr_err("release request -- abort hw");
@@ -554,7 +554,7 @@ static void vce_release_jobs(struct vce_client *client)
 	}
 
 	list_for_each_entry_safe(job, temp, &client->read_head, client_list) {
-		pr_info("read list: id 0x%x", job->id);
+		pr_debug("read list: id 0x%x", job->id);
 		list_del_init(&job->client_list);
 		vce_job_free(job);
 	}
@@ -1102,8 +1102,8 @@ static int vce_ioctl_register_prog(struct vce_client *client,
 	}
 
 	ioc = vce_ion_get_client();
-	if (!ioc) {
-		rc = -ENOMEM;
+	if (IS_ERR(ioc)) {
+		rc = PTR_ERR(ioc);
 		goto end;
 	}
 
@@ -1534,13 +1534,13 @@ static int vce_remove(struct platform_device *pdev)
 }
 
 static const struct of_device_id vce_of_match[] = {
-	{ .compatible = "brcm,vce" },
+	{ .compatible = "bcm,vce" },
 	{},
 };
 
 static struct platform_driver vce_driver = {
 	.driver = {
-		.name = "brcm-vce",
+		.name = "vce",
 		.owner = THIS_MODULE,
 		.of_match_table = vce_of_match,
 	},
@@ -1583,6 +1583,6 @@ static void __exit vce_exit(void)
 
 module_init(vce_init);
 module_exit(vce_exit);
-MODULE_LICENSE("GPL");
+MODULE_LICENSE("GPL v2");
 MODULE_AUTHOR("Broadcom Corporation");
 MODULE_DESCRIPTION("VCE device driver");

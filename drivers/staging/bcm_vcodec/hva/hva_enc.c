@@ -11,7 +11,7 @@
 #define pr_fmt(fmt) "hva: " fmt
 #include <linux/kernel.h>
 #include <linux/string.h>
-#include <linux/bcm_vcodec/hva.h>
+#include "hva.h"
 #include "hva_io.h"
 
 #define FLAG_CABAC		0x010000
@@ -69,7 +69,7 @@ static void update_sg_regs(struct hva *hva, struct hva_enc_info *enc)
 		 ENC_REG_ADDR(BUFMARKADDR));
 }
 
-static void writenbits(struct hva *hva, struct hva_enc_info *enc)
+static void write_n_bits(struct hva *hva, struct hva_enc_info *enc)
 {
 	int i = 0;
 
@@ -160,7 +160,7 @@ void hva_enc_slice(struct hva *hva, struct hva_enc_info *enc)
 	}
 
 	/* write slice header */
-	writenbits(hva, enc);
+	write_n_bits(hva, enc);
 
 	if (enc->flags & FLAG_CABAC)
 		entropy_flush(hva);

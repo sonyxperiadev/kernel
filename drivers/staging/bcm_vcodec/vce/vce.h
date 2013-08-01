@@ -17,7 +17,7 @@
 
 #include <linux/types.h>
 #include <linux/ioctl.h>
-#include <linux/bcm_vcodec/hva.h>
+#include "hva.h"
 
 #define VCE_DEV_NAME	    "vce"
 #define VCE_IOC_MAGIC	    ((('V' << 3) ^ ('C' << 1) ^ 'E') & _IOC_TYPEMASK)

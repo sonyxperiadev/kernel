@@ -11,10 +11,10 @@
 #define pr_fmt(fmt) "hva: " fmt
 #include <linux/kernel.h>
 #include <linux/slab.h>
-#include <linux/bcm_vcodec/hva.h>
+#include "hva.h"
 #include "hva_io.h"
 
-#define RESET_TRIES 500
+#define RESET_TRIES 10000
 #define STATUS_READY_TRIES 10000
 
 struct hva *hva_open(void __iomem *base, size_t size)
@@ -102,8 +102,9 @@ static void hva_dec_reg_write(struct hva *hva, struct hva_dec_reg *reg,
 			/* If client wants to wait for the reset, then do so */
 			if (hva_dec_reg_match_rd(next, offset))
 				for (j = 0; j < RESET_TRIES; j++)
-					if (HVA_REG_FIELD_TEST(hva, REG_MAINCTL,
-							       RST))
+					if (!HVA_REG_FIELD_TEST(hva,
+								REG_MAINCTL,
+								RST))
 						break;
 		} else {
 			HVA_REG_WT(hva, REG_MAINCTL, reg->value);
@@ -116,15 +117,15 @@ static void hva_dec_reg_write(struct hva *hva, struct hva_dec_reg *reg,
 		if (reg->value == HVA_FIELD_MASK(REG_SINT_STRM_STAT, FLUSHCTX)
 		    && hva_dec_reg_match_rd(next, offset))
 			for (j = 0; j < RESET_TRIES; j++)
-				if (HVA_REG_FIELD_TEST(hva, REG_SINT_STRM_STAT,
-						       CTXDMAACT))
+				if (!HVA_REG_FIELD_TEST(hva, REG_SINT_STRM_STAT,
+							CTXDMAACT))
 					break;
 		else if (reg->value & HVA_FIELD_MASK(REG_SINT_STRM_STAT, RST)
 			 && hva_dec_reg_match_rd(next, offset))
 			/* Client wants to wait for the reset */
 			for (j = 0; j < RESET_TRIES; j++)
-				if (HVA_REG_FIELD_GET(hva, REG_SINT_STRM_STAT,
-						      RST))
+				if (!HVA_REG_FIELD_GET(hva, REG_SINT_STRM_STAT,
+						       RST))
 					break;
 
 		break;
@@ -159,7 +160,7 @@ static void hva_dec_reset_hw(struct hva *hva)
 				     HVA_FIELD_MASK(REG_MAINCTL, RST));
 
 	for (j = 0; j < RESET_TRIES; j++)
-		if (HVA_REG_FIELD_TEST(hva, REG_MAINCTL, RST))
+		if (!HVA_REG_FIELD_TEST(hva, REG_MAINCTL, RST))
 			break;
 }
 
@@ -201,8 +202,8 @@ void hva_dec_slice(struct hva *hva, struct hva_dec_info *dec)
 	for (reg = first; reg <= last; reg++)
 		if (HVA_DR_IS_WRITE(reg))
 			hva_dec_reg_write(hva, reg,
-					   reg == first ? NULL : reg - 1,
-					   reg == last ? NULL : reg + 1);
+					  reg == first ? NULL : reg - 1,
+					  reg == last ? NULL : reg + 1);
 		else
 			hva_dec_reg_read(hva, reg);
 }

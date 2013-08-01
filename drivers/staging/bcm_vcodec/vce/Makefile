@@ -1,4 +1,4 @@
-ccflags-y += -Wall -Wstrict-prototypes -Werror
+ccflags-y += -Idrivers/staging/bcm_vcodec/hva
 
 obj-$(CONFIG_BCM_VCE) := vce.o
 

@@ -35,17 +35,17 @@ struct ion_client *vce_ion_get_client(void)
 	/* idev might not be initialised early enough to use __init */
 	mutex_lock(&vce_ion_mutex);
 
-	if (!vce_ion_client) {
+	client = vce_ion_client;
+	if (!client) {
 		BUG_ON(!idev);
 
-		vce_ion_client = ion_client_create(idev, "vce");
-		if (IS_ERR(vce_ion_client)) {
-			pr_warn("ion_client_create failed");
-			vce_ion_client = NULL;
-		}
+		client = ion_client_create(idev, "vce");
+		if (IS_ERR(client))
+			pr_warn("bcm_ion_client_create failed (errno %ld)",
+				PTR_ERR(client));
+		else
+			vce_ion_client = client;
 	}
-
-	client = vce_ion_client;
 
 	mutex_unlock(&vce_ion_mutex);
 
