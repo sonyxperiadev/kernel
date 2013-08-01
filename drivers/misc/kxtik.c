@@ -80,7 +80,7 @@
 /* I2C RETRY CONSTANT */
 #define KXTIK_I2C_RETRY_COUNT 10
 #define KXTIK_I2C_RETRY_TIMEOUT 1
-
+#define KXTIK_INTR_DISABLE 0x20
 /*
  * The following table lists the maximum appropriate poll interval for each
  * available output data rate (ODR). Adjust by commenting off the ODR entry
@@ -114,7 +114,7 @@ struct kxtik_data {
 	atomic_t acc_enabled;
 	atomic_t acc_input_event;
 	atomic_t acc_enable_resume;
-
+	struct timer_list timer;
 #ifdef CONFIG_HAS_EARLYSUSPEND
 	struct early_suspend early_suspend;
 #endif				/* CONFIG_HAS_EARLYSUSPEND */
@@ -153,13 +153,11 @@ static void kxtik_report_acceleration_data(struct kxtik_data *tik)
 	if (atomic_read(&tik->acc_enabled) > 0) {
 		if (atomic_read(&tik->acc_enable_resume) > 1) {
 			while (loop) {
-				mutex_lock(&input_dev->mutex);
 				err = kxtik_i2c_read(tik, XOUT_L,
 						     (u8 *) acc_data, 6);
-				mutex_unlock(&input_dev->mutex);
 				if (err < 0) {
 					loop--;
-					mdelay(KXTIK_I2C_RETRY_TIMEOUT);
+					msleep(KXTIK_I2C_RETRY_TIMEOUT);
 				} else
 					loop = 0;
 			}
@@ -209,6 +207,13 @@ static irqreturn_t kxtik_isr(int irq, void *dev)
 	return IRQ_HANDLED;
 }
 
+void kxtik1004_timer_func(unsigned long data)
+{
+	struct kxtik_data *tik = (struct kxtik_data *) data;
+	queue_work(tik->irq_workqueue, &tik->irq_work);
+	mod_timer(&tik->timer, jiffies+msecs_to_jiffies(tik->poll_interval));
+}
+
 static void kxtik_irq_work(struct work_struct *work)
 {
 	struct kxtik_data *tik = container_of(work, struct kxtik_data,
@@ -219,16 +224,18 @@ static void kxtik_irq_work(struct work_struct *work)
 	/* data ready is the only possible interrupt type */
 	kxtik_report_acceleration_data(tik);
 
-	while (loop) {
-		err = i2c_smbus_read_byte_data(tik->client, INT_REL);
-		if (err < 0) {
-			loop--;
-			mdelay(KXTIK_I2C_RETRY_TIMEOUT);
-		} else
-			loop = 0;
+	if (tik->client->irq) {
+		while (loop) {
+			err = i2c_smbus_read_byte_data(tik->client, INT_REL);
+			if (err < 0) {
+				loop--;
+				msleep(KXTIK_I2C_RETRY_TIMEOUT);
+			} else
+				loop = 0;
+		}
+		if (err < 0)
+			FUNCDBG("error clearing interrupt status: %d\n", err);
 	}
-	if (err < 0)
-		FUNCDBG("error clearing interrupt status: %d\n", err);
 }
 
 static int kxtik_power_on_init(struct kxtik_data *tik)
@@ -249,12 +256,10 @@ static int kxtik_power_on_init(struct kxtik_data *tik)
 		return err;
 
 	/* only write INT_CTRL_REG1 if in irq mode */
-	if (tik->client->irq) {
-		err = i2c_smbus_write_byte_data(tik->client, INT_CTRL1,
+	err = i2c_smbus_write_byte_data(tik->client, INT_CTRL1,
 						tik->int_ctrl);
-		if (err < 0)
-			return err;
-	}
+	if (err < 0)
+		return err;
 
 	if (atomic_read(&tik->acc_enabled) > 0) {
 		err = i2c_smbus_write_byte_data(tik->client, CTRL_REG1,
@@ -298,20 +303,23 @@ static int kxtik_irq_clear(struct kxtik_data *tik)
 {
 	int err;
 	int loop = KXTIK_I2C_RETRY_COUNT;
-	while (loop) {
-		err = i2c_smbus_read_byte_data(tik->client, INT_REL);
+	if (tik->client->irq) {
+		while (loop) {
+			err = i2c_smbus_read_byte_data(tik->client, INT_REL);
+			if (err < 0) {
+				loop--;
+				mdelay(KXTIK_I2C_RETRY_TIMEOUT);
+			} else
+				loop = 0;
+		}
 		if (err < 0) {
-			loop--;
-			mdelay(KXTIK_I2C_RETRY_TIMEOUT);
-		} else
-			loop = 0;
-	}
-	if (err < 0) {
-		FUNCDBG("error clearing interrupt status: %d\n", err);
+			FUNCDBG("error clearing interrupt status: %d\n", err);
+			return err;
+		}
+		FUNCDBG("kxtik clearing interrupt\n");
 		return err;
 	}
-	FUNCDBG("kxtik clearing interrupt\n");
-	return err;
+	return 0;
 }
 
 static int kxtik_update_odr(struct kxtik_data *tik, unsigned int poll_interval)
@@ -523,18 +531,19 @@ static ssize_t kxtik_set_poll(struct device *dev, struct device_attribute *attr,
 	error = kstrtouint(buf, 10, &interval);
 	if (error < 0)
 		return error;
-	mutex_lock(&input_dev->mutex);
 
-	disable_irq(client->irq);
+	if (client->irq)
+		disable_irq(client->irq);
 
 	tik->poll_interval = max(interval, tik->pdata.min_interval);
 	tik->poll_delay = msecs_to_jiffies(tik->poll_interval);
 
 	kxtik_update_odr(tik, tik->poll_interval);
-	enable_irq(client->irq);
+
+	if (client->irq)
+		enable_irq(client->irq);
 	kxtik_irq_clear(tik);
 
-	mutex_unlock(&input_dev->mutex);
 
 	return count;
 }
@@ -555,14 +564,12 @@ static ssize_t kxtik_set_enable(struct device *dev, struct device_attribute
 	FUNCDBG("kxtik_set_enable\n");
 
 	/* Lock the device to prevent races with open/close (and itself) */
-	mutex_lock(&input_dev->mutex);
 
 	if (enable)
 		kxtik_enable(tik);
 	else
 		kxtik_disable(tik);
 
-	mutex_unlock(&input_dev->mutex);
 
 	return count;
 }
@@ -642,8 +649,10 @@ void kxtik_earlysuspend_suspend(struct early_suspend *h)
 	struct kxtik_data *tik = container_of(h, struct kxtik_data,
 					      early_suspend);
 	int err;
-	printk(KERN_INFO "kxtik_earlysuspend_suspend\n");
+	pr_debug("kxtik_earlysuspend_suspend\n");
 
+	del_timer(&tik->timer);
+	cancel_work_sync(&tik->irq_work);
 	err = kxtik_standby(tik);
 	if (err < 0)
 		FUNCDBG("earlysuspend failed to suspend\n");
@@ -656,12 +665,17 @@ void kxtik_earlysuspend_resume(struct early_suspend *h)
 	struct kxtik_data *tik = container_of(h, struct kxtik_data,
 					      early_suspend);
 	int err;
-	printk(KERN_INFO "kxtik_earlysuspend_resume\n");
+	pr_debug("kxtik_earlysuspend_resume\n");
 
 	if (atomic_read(&tik->acc_enabled) > 0) {
 		err = kxtik_operate(tik);
 		if (err < 0)
 			FUNCDBG("earlysuspend failed to resume\n");
+		else {
+			setup_timer(&tik->timer, kxtik1004_timer_func, tik) ;
+			mod_timer(&tik->timer,
+			jiffies+msecs_to_jiffies(tik->poll_interval));
+		}
 	}
 
 	return;
@@ -770,17 +784,18 @@ static int __devinit kxtik_probe(struct i2c_client *client,
 		goto err_pdata_exit;
 	}
 
-	if (client->irq) {
-		err = kxtik_setup_input_device(tik);
-		if (err)
-			goto err_pdata_exit;
+	err = kxtik_setup_input_device(tik);
+	if (err)
+		goto err_pdata_exit;
 
-		tik->irq_workqueue = create_workqueue("KXTIK Workqueue");
-		INIT_WORK(&tik->irq_work, kxtik_irq_work);
+	tik->irq_workqueue = create_workqueue("KXTIK Workqueue");
+	INIT_WORK(&tik->irq_work, kxtik_irq_work);
+
+	if (client->irq) {
+		printk(KERN_ALERT "__kxtik is in irq mode__\n");
 		/* If in irq mode, populate INT_CTRL_REG1 and enable DRDY. */
 		tik->int_ctrl |= KXTIK_IEN | KXTIK_IEA;
 		tik->ctrl_reg1 |= DRDYE;
-
 		err = request_threaded_irq(gpio_to_irq(client->irq), NULL,
 					   kxtik_isr,
 					   IRQF_TRIGGER_RISING | IRQF_ONESHOT,
@@ -789,24 +804,26 @@ static int __devinit kxtik_probe(struct i2c_client *client,
 			FUNCDBG("request irq failed: %d\n", err);
 			goto err_destroy_input;
 		}
-
-		err = kxtik_power_on_init(tik);
-		if (err) {
-			FUNCDBG("power on init failed: %d\n", err);
-			goto err_free_irq;
-		}
-
-		err = sysfs_create_group(&client->dev.kobj,
-					 &kxtik_attribute_group);
-		if (err) {
-			FUNCDBG("sysfs create failed: %d\n", err);
-			goto err_free_irq;
-		}
-
 	} else {
-		FUNCDBG("irq not defined\n");
+		printk(KERN_ALERT "__kxtik is in polling mode__\n");
+		setup_timer(&tik->timer, kxtik1004_timer_func, tik);
+		mod_timer(&tik->timer,
+		jiffies+msecs_to_jiffies(tik->poll_interval));
+		tik->int_ctrl = 0x10; /* reset value, no interrupt support. */
+	}
 
-		goto err_pdata_exit;
+
+	err = kxtik_power_on_init(tik);
+	if (err) {
+		FUNCDBG("power on init failed: %d\n", err);
+		goto err_free_irq;
+	}
+
+	err = sysfs_create_group(&client->dev.kobj,
+				 &kxtik_attribute_group);
+	if (err) {
+		FUNCDBG("sysfs create failed: %d\n", err);
+		goto err_free_irq;
 	}
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
@@ -820,11 +837,9 @@ static int __devinit kxtik_probe(struct i2c_client *client,
 err_read:
 err_free_irq:
 	FUNCDBG("error :err_free_irq\n");
-
-	if (client->irq) {
+	destroy_workqueue(tik->irq_workqueue);
+	if (client->irq)
 		free_irq(client->irq, tik);
-		destroy_workqueue(tik->irq_workqueue);
-	}
 err_destroy_input:
 	FUNCDBG("error :err_destroy_input\n");
 	input_unregister_device(tik->input_dev);
