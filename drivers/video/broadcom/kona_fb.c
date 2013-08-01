@@ -75,8 +75,6 @@
 #endif
 #ifdef CONFIG_IOMMU_API
 #include <linux/iommu.h>
-#endif
-#ifdef CONFIG_BCM_IOVMM
 #include <plat/bcm_iommu.h>
 #endif
 
