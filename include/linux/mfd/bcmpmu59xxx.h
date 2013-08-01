@@ -349,7 +349,7 @@ enum bcmpmu_adc_flag {
  * conv : converted value
  */
 struct bcmpmu_adc_result {
-	unsigned int raw;
+	int raw;
 	int conv;
 };
 
@@ -568,6 +568,7 @@ enum bcmpmu_event_t {
 	PMU_CHRGR_EVT_EOC,
 	PMU_CHRGR_EVT_CHRG_STATUS,
 	PMU_ACLD_EVT_ACLD_STATUS,
+	PMU_THEMAL_THROTTLE_STATUS,
 	PMU_FG_EVT_CAPACITY,
 	PMU_FG_EVT_FGC,
 	PMU_JIG_EVT_USB,

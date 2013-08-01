@@ -292,15 +292,18 @@ static int _usb_host_en(struct bcmpmu_accy_data *di, int enable)
 		return -EAGAIN;
 	}
 
+	ret = bcmpmu->read_dev(bcmpmu, PMU_REG_MBCCTRL3, &reg);
+	if (ret) {
+		pr_accy(ERROR, "%s: PMU read failed\n", __func__);
+		return ret;
+	}
+
 	/* If charging is already enabled/disabled just return */
-	if (di->usb_host_en == enable) {
+	if ((di->usb_host_en == enable) &&
+			((reg & MBCCTRL3_USB_HOSTEN_MASK) == enable)) {
 		pr_accy(INIT, "USB host is already in the reqested state\n");
 
-	} else {
-		ret = bcmpmu->read_dev(bcmpmu, PMU_REG_MBCCTRL3, &reg);
-		if (ret)
-			return ret;
-
+	} else if (((reg & MBCCTRL3_USB_HOSTEN_MASK) != enable)) {
 		if (enable)
 			reg |= MBCCTRL3_USB_HOSTEN_MASK;
 		else
@@ -311,12 +314,17 @@ static int _usb_host_en(struct bcmpmu_accy_data *di, int enable)
 			pr_accy(ERROR, "%s: PMU write failed\n", __func__);
 			return ret;
 		}
-
 		di->usb_host_en = enable;
-		pr_accy(FLOW, "%s:ENABLE %d\n", __func__, di->usb_host_en);
-	}
-	ret = bcmpmu_accy_queue_event(di, PMU_CHRGR_EVT_CHRG_STATUS,
+		ret = bcmpmu_accy_queue_event(di, PMU_CHRGR_EVT_CHRG_STATUS,
 			&di->usb_host_en);
+	} else {
+		di->usb_host_en = enable;
+		ret = bcmpmu_accy_queue_event(di, PMU_CHRGR_EVT_CHRG_STATUS,
+			&di->usb_host_en);
+	}
+
+	pr_accy(FLOW, "%s:ENABLE %d\n", __func__, di->usb_host_en);
+
 	return ret;
 }
 
