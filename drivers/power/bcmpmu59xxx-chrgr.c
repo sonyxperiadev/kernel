@@ -76,12 +76,17 @@ struct bcmpmu_chrgr_data {
 	struct notifier_block usb_ov_dis;
 	struct notifier_block usb_chrgr_err_dis;
 	struct notifier_block usb_ov;
+	struct notifier_block charging_status;
 	struct list_head event_pending_list;
 	struct list_head event_free_list;
 	struct bcmpmu_chrgr_event event_pool[MAX_EVENTS];
 	spinlock_t chrgr_lock;
 	bool icc_host_ctrl;
 	int *chrgr_curr_tbl;
+	int tch_expr_cnt;
+	unsigned int pflags;
+	unsigned int tch_base;
+	unsigned int tch_multiplier;
 };
 
 struct bcmpmu_chrgr_data *gbl_di;
@@ -124,6 +129,11 @@ static int chrgr_curr_lmt_default[PMU_CHRGR_TYPE_MAX] = {
 char *supplies_to[] = {
 	"battery",
 };
+
+static inline int tch_ext_timer_enabled(unsigned int flags)
+{
+	return flags & BCMPMU_CHRGR_TCH_EXT_TIMER;
+}
 
 static int set_icc_fcc(const char *val, const struct kernel_param *kp)
 {
@@ -185,6 +195,111 @@ char *get_supply_type_str(int chrgr_type)
 	return NULL;
 }
 EXPORT_SYMBOL_GPL(get_supply_type_str);
+
+/**
+ * TCH timer will be disabled if @tch_timer value
+ * passed is TCH_HW_TIMER_MAX
+ */
+static int bcmpmu_chrgr_enable_tch_timer(struct bcmpmu_chrgr_data *di,
+		unsigned int tch_timer, bool enable)
+{
+	u8 reg;
+	int ret;
+
+	ret = di->bcmpmu->read_dev(di->bcmpmu, PMU_REG_MBCCTRL1, &reg);
+	if (ret) {
+		pr_chrgr(ERROR, "read read PMU_REG_MBCCTRL1 failed\n");
+		return ret;
+	}
+	reg &= ~MBCCTRL1_TCH_2_0_MASK;
+
+	if (enable)
+		reg |= tch_timer << MBCCTRL1_TCH_2_0_SHIFT;
+	else
+		reg |= TCH_HW_TIMER_MAX << MBCCTRL1_TCH_2_0_SHIFT;
+
+	pr_chrgr(FLOW, "%s: tch_timer= %d reg_value = 0x%x\n",
+			__func__, tch_timer, reg);
+
+	ret = di->bcmpmu->write_dev(di->bcmpmu, PMU_REG_MBCCTRL1, reg);
+	return ret;
+}
+
+static void bcmpmu_chrgr_irq_handler(u32 irq, void *data)
+{
+	struct bcmpmu_chrgr_data *di = data;
+
+	BUG_ON(!data);
+
+	switch (irq) {
+	case PMU_IRQ_CHG_TCH_1MIN_BF_EXP:
+		if (++di->tch_expr_cnt < di->tch_multiplier) {
+			/**
+			 * restart timer
+			 */
+			pr_chrgr(FLOW, "%s: restart timer\n", __func__);
+			bcmpmu_chrgr_enable_tch_timer(di, di->tch_base, false);
+			bcmpmu_chrgr_enable_tch_timer(di, di->tch_base, true);
+		}
+		break;
+	case PMU_IRQ_CHG_HW_TCH_EXP:
+		pr_chrgr(FLOW, "%s: HW_TCH_TIMER expired\n", __func__);
+		break;
+	}
+}
+
+/**
+ * Enable extended TCH timer support -
+ * 59054 PMU supports only upto 9 hours of
+ * HW TCH timer, to suport more than 9 hours,
+ * we use this mechanism:
+ * 1. Enable TCH timer for @tch_base
+ * 2. Wait for  TCH_1min_bf_exp interrupt and count
+ * 3. Disable TCH timer
+ * 4. if count is less than @tch_multiplier, goto step 1
+ */
+static int bcmpmu_chrgr_config_tch_timer(struct bcmpmu_chrgr_data *di,
+		unsigned int tch_base, unsigned int tch_multiplier)
+{
+	int ret;
+	struct bcmpmu59xxx *bcmpmu = di->bcmpmu;
+
+	BUG_ON((tch_base < TCH_HW_TIMER_3HR) ||
+			(tch_base > TCH_HW_TIMER_MAX));
+
+	di->tch_base = tch_base;
+	di->tch_multiplier = tch_multiplier;
+	di->tch_expr_cnt = 0;
+
+	ret = bcmpmu->register_irq(bcmpmu, PMU_IRQ_CHG_TCH_1MIN_BF_EXP,
+			bcmpmu_chrgr_irq_handler, di);
+	if (ret)
+		return ret;
+
+	ret = bcmpmu->register_irq(bcmpmu, PMU_IRQ_CHG_HW_TCH_EXP,
+			bcmpmu_chrgr_irq_handler, di);
+	if (ret)
+		goto unregister_irqs;
+
+	pr_chrgr(FLOW, "%s: tch_base = %d tch_multiplier = %d\n",
+			__func__,
+			di->tch_base,
+			di->tch_multiplier);
+
+	ret = bcmpmu_chrgr_enable_tch_timer(di, tch_base, true);
+
+	if (ret)
+		goto unregister_irqs;
+
+	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_CHG_TCH_1MIN_BF_EXP);
+	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_CHG_HW_TCH_EXP);
+
+	return 0;
+unregister_irqs:
+	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_CHG_TCH_1MIN_BF_EXP);
+	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_CHG_HW_TCH_EXP);
+	return ret;
+}
 
 static int bcmpmu_chrgr_ac_get_property(struct power_supply *psy,
 		enum power_supply_property psp,
@@ -298,6 +413,7 @@ static int charger_event_handler(struct notifier_block *nb,
 	struct bcmpmu59xxx *bcmpmu;
 	enum bcmpmu_chrgr_type_t chrgr_type;
 	int chrgr_curr = 0;
+	int charging;
 
 	switch (event) {
 	case PMU_ACCY_EVT_OUT_CHRGR_TYPE:
@@ -344,6 +460,8 @@ static int charger_event_handler(struct notifier_block *nb,
 				di->usb_chrgr_info.online = 0 ;
 				power_supply_changed(&di->usb_psy);
 			}
+			if (tch_ext_timer_enabled(di->pflags))
+				di->tch_expr_cnt = 0;
 		}
 		break;
 	case PMU_ACCY_EVT_OUT_CHRG_CURR:
@@ -395,8 +513,71 @@ static int charger_event_handler(struct notifier_block *nb,
 			bcmpmu_chrgr_usb_en(bcmpmu, 1);
 
 		break;
+	case PMU_CHRGR_EVT_CHRG_STATUS:
+		di = container_of(nb, struct bcmpmu_chrgr_data,
+				charging_status);
+		charging = *(int *)para;
+		if (!charging && tch_ext_timer_enabled(di->pflags))
+			di->tch_expr_cnt = 0;
+		break;
+
 	}
 	return 0;
+}
+
+static int __init bcmpmu_chrgr_add_notifiers(struct bcmpmu_chrgr_data *di)
+{
+	int ret = 0;
+
+	di->chgr_detect.notifier_call = charger_event_handler;
+	ret = bcmpmu_add_notifier(PMU_ACCY_EVT_OUT_CHRGR_TYPE,
+			&di->chgr_detect);
+	if (ret)
+		return ret;
+
+	di->chgr_curr_lmt.notifier_call = charger_event_handler;
+	ret = bcmpmu_add_notifier(PMU_ACCY_EVT_OUT_CHRG_CURR,
+			&di->chgr_curr_lmt);
+	if (ret)
+		goto unregister_notifier;
+
+	di->usb_ov_dis.notifier_call = charger_event_handler;
+	ret = bcmpmu_add_notifier(PMU_ACCY_EVT_OUT_USBOV_DIS,
+			&di->usb_ov_dis);
+	if (ret)
+		goto unregister_notifier;
+
+	di->usb_chrgr_err_dis.notifier_call = charger_event_handler;
+	ret = bcmpmu_add_notifier(PMU_ACCY_EVT_OUT_CHGERRDIS,
+			&di->usb_chrgr_err_dis);
+	if (ret)
+		goto unregister_notifier;
+
+	di->usb_ov.notifier_call = charger_event_handler;
+	ret = bcmpmu_add_notifier(PMU_ACCY_EVT_OUT_USBOV,
+			&di->usb_ov);
+	if (ret)
+		goto unregister_notifier;
+
+	di->charging_status.notifier_call = charger_event_handler;
+	ret = bcmpmu_add_notifier(PMU_CHRGR_EVT_CHRG_STATUS,
+			&di->charging_status);
+	if (ret)
+		goto unregister_notifier;
+
+	return 0;
+
+unregister_notifier:
+	/** safe to call remove_notifier() even if its not registered
+	 */
+	pr_chrgr(FLOW, "%s: failed\n", __func__);
+	bcmpmu_remove_notifier(PMU_ACCY_EVT_OUT_CHRG_CURR, &di->chgr_curr_lmt);
+	bcmpmu_remove_notifier(PMU_ACCY_EVT_OUT_USBOV_DIS, &di->usb_ov_dis);
+	bcmpmu_remove_notifier(PMU_ACCY_EVT_OUT_CHGERRDIS,
+			&di->usb_chrgr_err_dis);
+	bcmpmu_remove_notifier(PMU_ACCY_EVT_OUT_USBOV, &di->usb_ov);
+	bcmpmu_remove_notifier(PMU_CHRGR_EVT_CHRG_STATUS, &di->charging_status);
+	return ret;
 }
 
 static int __devinit bcmpmu_chrgr_probe(struct platform_device *pdev)
@@ -433,6 +614,8 @@ static int __devinit bcmpmu_chrgr_probe(struct platform_device *pdev)
 		di->chrgr_curr_tbl = pdata->chrgr_curr_lmt_tbl;
 	else
 		di->chrgr_curr_tbl = chrgr_curr_lmt_default;
+
+	di->pflags = pdata->flags;
 
 	di->ac_psy.name = "bcmpmu_ac";
 	di->ac_psy.type = POWER_SUPPLY_TYPE_MAINS;
@@ -488,50 +671,16 @@ static int __devinit bcmpmu_chrgr_probe(struct platform_device *pdev)
 	if (ret)
 		goto unregister_ac_supply;
 
-	di->chgr_detect.notifier_call = charger_event_handler;
-	ret = bcmpmu_add_notifier(PMU_ACCY_EVT_OUT_CHRGR_TYPE,
-							&di->chgr_detect);
-	if (ret) {
-		pr_chrgr(INIT, "%s, failed on chrgr det notifier, err=%d\n",
-				__func__, ret);
+	ret = bcmpmu_chrgr_add_notifiers(di);
+	if (ret)
 		goto unregister_usb_supply;
-	}
-	di->chgr_curr_lmt.notifier_call = charger_event_handler;
-	ret = bcmpmu_add_notifier(PMU_ACCY_EVT_OUT_CHRG_CURR,
-							&di->chgr_curr_lmt);
-	if (ret) {
-		pr_chrgr(INIT, "%s,failed on chrgr curr lmt notifier,err=%d\n",
-				__func__, ret);
-		goto unregister_usb_supply;
-	}
-	di->usb_ov_dis.notifier_call = charger_event_handler;
-	ret = bcmpmu_add_notifier(PMU_ACCY_EVT_OUT_USBOV_DIS,
-							&di->usb_ov_dis);
-	if (ret) {
-		pr_chrgr(INIT, "%s, failed on OV dis notifier, err=%d\n",
-				__func__, ret);
-		goto unregister_usb_supply;
-	}
 
-	di->usb_chrgr_err_dis.notifier_call = charger_event_handler;
-	ret = bcmpmu_add_notifier(PMU_ACCY_EVT_OUT_CHGERRDIS,
-							&di->usb_chrgr_err_dis);
-	if (ret) {
-		pr_chrgr(INIT, "%s, failed on CHRGR Err notifier, err=%d\n",
-				__func__, ret);
-		goto unregister_usb_supply;
+	if (tch_ext_timer_enabled(pdata->flags)) {
+		ret = bcmpmu_chrgr_config_tch_timer(di, pdata->tch_base,
+				pdata->tch_multiplier);
+		if (ret)
+			goto unregister_usb_supply;
 	}
-
-	di->usb_ov.notifier_call = charger_event_handler;
-	ret = bcmpmu_add_notifier(PMU_ACCY_EVT_OUT_USBOV,
-							&di->usb_ov);
-	if (ret) {
-		pr_chrgr(INIT, "%s, failed on USB OV, err=%d\n",
-				__func__, ret);
-		goto unregister_usb_supply;
-	}
-
-
 	atomic_set(&drv_init_done, 1);
 	dev_dbg(di->dev, "Probe success\n");
 	return 0;

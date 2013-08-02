@@ -761,6 +761,18 @@ enum {
 	PKEY_RESTART_DLY_MAX
 };
 
+#define TIME_3HR	(3)
+
+enum {
+	TCH_HW_TIMER_3HR,
+	TCH_HW_TIMER_4HR,
+	TCH_HW_TIMER_5HR,
+	TCH_HW_TIMER_6HR,
+	TCH_HW_TIMER_7HR,
+	TCH_HW_TIMER_8HR,
+	TCH_HW_TIMER_9HR,
+	TCH_HW_TIMER_MAX,
+};
 
 /*PONKEY T1/T2/T3 action config*/
 struct pkey_timer_act {
@@ -826,9 +838,25 @@ struct bcmpmu59xxx_accy_pdata {
 	int qos_pi_id;
 };
 
+/* charger pdata data flags */
+enum {
+	/**
+	 * support for extented TCH timer feature
+	 */
+	BCMPMU_CHRGR_TCH_EXT_TIMER = 0x1 << 0,
+};
+
+/**
+ * @tch_base : TCH timer base to use (see enum TCH_HW_TIMER_XX)
+ * @tch_multiplier : mutliplier to use with @tch_base
+ */
 struct bcmpmu_chrgr_pdata {
 	int *chrgr_curr_lmt_tbl;
+	unsigned int flags;
+	unsigned int tch_base;
+	unsigned int tch_multiplier;
 };
+
 #if defined(CONFIG_LEDS_BCM_PMU59xxx)
 struct bcmpmu59xxx_led_pdata {
 	char *led_name;
