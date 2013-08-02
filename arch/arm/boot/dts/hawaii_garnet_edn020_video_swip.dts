@@ -376,12 +376,15 @@
 		hysteresis = <0>;
 		flags = <1>;
 		interval_ms = <5>;
-		/*critical temp is 115*/
-		thold = <85 75 1
-			100 90 1
-			115 112 2>;
+		/*sw shdwn temp is 120*/
+		thold = <85 1
+			95 1
+			105 1
+			120 4
+			125 2>;
 		tmon_apb_clk = "tmon_apb";
 		tmon_1m_clk = "tmon_1m_clk";
+		falling = <5>;
 	};
 
 	memc@35008000 {

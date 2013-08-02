@@ -319,18 +319,20 @@
 		reg = <0x34008000 0x1000>;
 		interrupts = <0 183 4>;
 		chipreg_addr = <0x35004000 0x1000>;
-		thold_size = <4>; /*number of threshold levels*/
+		thold_size = <5>; /*number of threshold levels*/
 		poll_rate_ms = <30000>;
 		hysteresis = <0>;
 		flags = <1>;
 		interval_ms = <5>;
-		/*critical temp is 115*/
-		thold = <70 65 1
-			85 75 1
-			100 90 1
-			115 112 2>;
+		/*sw shdwn temp is 120*/
+		thold = <85 1
+			95 1
+			105 1
+			120 4
+			125 2>;
 		tmon_apb_clk = "tmon_apb";
 		tmon_1m_clk = "tmon_1m_clk";
+		falling = <5>; /*fall back temperature offset*/
 	};
 
 	memc@35008000 {

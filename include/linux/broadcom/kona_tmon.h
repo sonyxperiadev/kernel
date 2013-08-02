@@ -59,7 +59,6 @@ enum {
 };
 struct tmon_state {
 	int rising;
-	int falling;
 	int flags;
 };
 
@@ -75,6 +74,7 @@ struct kona_tmon_pdata {
 	int flags;
 	char const *tmon_apb_clk;
 	char const *tmon_1m_clk;
+	int falling; /* fall back temperarure offset*/
 };
 
 int tmon_register_notifier(struct notifier_block *notifier);

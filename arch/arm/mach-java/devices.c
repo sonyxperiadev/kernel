@@ -871,11 +871,11 @@ struct platform_device kona_memc_device = {
 
 #ifdef CONFIG_KONA_TMON
 struct tmon_state threshold_val[] = {
-	{.rising = 85, .falling = 75, .flags = TMON_NOTIFY,},
-	{.rising = 95, .falling = 90, .flags = TMON_NOTIFY,},
-	{.rising = 105, .falling = 100, .flags = TMON_NOTIFY,},
-	{.rising = 120, .falling = 115, .flags = TMON_SW_SHDWN,},
-	{.rising = 125, .falling = 123, .flags = TMON_HW_SHDWN,},
+	{.rising = 85, .flags = TMON_NOTIFY,},
+	{.rising = 95, .flags = TMON_NOTIFY,},
+	{.rising = 105, .flags = TMON_NOTIFY,},
+	{.rising = 120, .flags = TMON_SW_SHDWN,},
+	{.rising = 125, .flags = TMON_HW_SHDWN,},
 };
 struct kona_tmon_pdata tmon_plat_data = {
 	.base_addr = KONA_TMON_VA,
@@ -889,6 +889,7 @@ struct kona_tmon_pdata tmon_plat_data = {
 	.interval_ms = 5,
 	.tmon_apb_clk = "tmon_apb",
 	.tmon_1m_clk = "tmon_1m_clk",
+	.falling = 5,
 };
 struct platform_device kona_tmon_device = {
 	.name = "kona_tmon",
