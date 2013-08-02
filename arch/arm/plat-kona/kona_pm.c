@@ -18,7 +18,7 @@
 #include <linux/list.h>
 #include <linux/fs.h>
 #include <linux/debugfs.h>
-
+#include <linux/ktime.h>
 #include <plat/kona_pm.h>
 #include <plat/pwr_mgr.h>
 #ifdef CONFIG_HAS_WAKELOCK
@@ -103,6 +103,8 @@ __weak void instrument_idle_exit(void)
 static int __kona_pm_enter_idle(struct cpuidle_device *dev,
 				      struct cpuidle_driver *drv, int index)
 {
+	ktime_t time_start, time_end;
+	s64 diff;
 	int mach_ret = -1;
 	struct kona_idle_state *kona_state = &pm_prms.states[index];
 
@@ -112,6 +114,7 @@ static int __kona_pm_enter_idle(struct cpuidle_device *dev,
 		BUG_ON(kona_state == NULL);
 		local_irq_disable();
 		local_fiq_disable();
+		time_start = ktime_get();
 		instrument_idle_entry();
 
 /*
@@ -141,8 +144,13 @@ static int __kona_pm_enter_idle(struct cpuidle_device *dev,
 			clockevents_notify(CLOCK_EVT_NOTIFY_BROADCAST_EXIT,
 				&cpu_id);
 #endif
-		instrument_idle_exit();
+		time_end = ktime_get();
+		diff = ktime_to_us(ktime_sub(time_end, time_start));
+		if (diff > INT_MAX)
+			diff = INT_MAX;
+		dev->last_residency = (int) diff;
 
+		instrument_idle_exit();
 		local_irq_enable();
 		local_fiq_enable();
 	}
