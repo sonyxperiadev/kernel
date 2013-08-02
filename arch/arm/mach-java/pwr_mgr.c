@@ -237,9 +237,9 @@ static const struct event_table __event_table[] = {
 		.trig_type	= PM_TRIG_BOTH_EDGE,
 		.policy_modem	= PM_RET,
 		.policy_arm	= PM_DFS,
-		.policy_arm_sub	= PM_ECO,
-		.policy_aon	= PM_ECO,
-		.policy_hub	= PM_ECO,
+		.policy_arm_sub	= PM_POLICY_6,
+		.policy_aon	= PM_POLICY_6,
+		.policy_hub	= PM_POLICY_6,
 		.policy_mm	= PM_OFF,
 	},
 
@@ -249,8 +249,8 @@ static const struct event_table __event_table[] = {
 		.policy_modem	= PM_DFS,
 		.policy_arm	= PM_OFF,
 		.policy_arm_sub	= PM_RET,
-		.policy_aon	= PM_DFS,
-		.policy_hub	= PM_DFS,
+		.policy_aon	= PM_POLICY_6,
+		.policy_hub	= PM_POLICY_6,
 		.policy_mm	= PM_OFF,
 	},
 	{
