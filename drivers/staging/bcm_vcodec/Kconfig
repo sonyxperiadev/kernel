@@ -39,3 +39,12 @@ config BCM_CABAC
 	  encode/decode and improves the system performance.
 
 source "drivers/staging/bcm_vcodec/pwrctrl/Kconfig"
+
+config BCM_CME
+	tristate "MCI Driver"
+	depends on BCM_VCODEC
+	help
+	 This config enables the CME driver. The Video Core
+	 Coarse Motion Estimation is one of hardware video
+	 accelerator components that accelerates the video
+	 codec engine and hence improves the system performance.

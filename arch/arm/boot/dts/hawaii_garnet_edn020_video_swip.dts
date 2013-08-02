@@ -528,4 +528,9 @@
 		reg = <0x3d000000 0x601000>;
 		interrupts = <0 178 0x4>;
 	};
+	cme: cme@0x3d400300 {
+		compatible = "bcm,cme";
+		reg = <0x3d400300 0x1000>;
+		interrupts = <0x0 177 0x4>;
+	};
 };
