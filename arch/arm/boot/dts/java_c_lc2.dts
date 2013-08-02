@@ -125,8 +125,8 @@
 			filter_history_param = <3>;
 			filter_count_param = <1>;
 			gain_param = <2>;
-			prox_threshold_hi_param = <646>;
-			prox_threshold_lo_param = <638>;
+			prox_threshold_hi_param = <350>;
+			prox_threshold_lo_param = <180>;
 			als_threshold_hi_param = <1>;
 			als_threshold_lo_param = <0>;
 			prox_int_time_param = <238>;
@@ -134,9 +134,9 @@
 			prox_wait_time_param = <238>;
 			prox_intr_filter_param = <17>;
 			prox_config_param = <0>;
-			prox_pulse_cnt_param = <96>;
-			prox_gain_param = <34>;
-			prox_win_sw = <100>;
+			prox_pulse_cnt_param = <0x08>;
+			prox_gain_param = <0x20>;
+			prox_win_sw = <0>;
 		};
 
 	};
