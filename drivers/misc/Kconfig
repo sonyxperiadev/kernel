@@ -374,6 +374,15 @@ config ISL290XX
           This driver can also be built as a module.  If so, the module
           will be called isl290xx.
 
+config INTERSIL_ISL29147
+	tristate "insertil isl29147 ambient proximity support"
+	depends on ISL290XX && I2C
+	help
+		If you say yes here you get isl29147 support for intersil
+		ambient proxmity sensors
+		This option will make isl29147 individual registers can be
+		accessed.
+
 config SENSORS_TSL2550
 	tristate "Taos TSL2550 ambient light sensor"
 	depends on I2C && SYSFS

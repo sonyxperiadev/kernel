@@ -42,6 +42,7 @@ obj-$(CONFIG_BMP18X_I2C) += bmp18x-i2c.o
 obj-$(CONFIG_BMP18X_SPI) += bmp18x-spi.o
 obj-$(CONFIG_AL3006) += al3006.o
 obj-$(CONFIG_ISL290XX) += isl290xx.o
+ccflags-$(CONFIG_INTERSIL_ISL29147)   += -DISL29147_ENABLE
 obj-$(CONFIG_TMD2771) += tmd2771.o
 obj-$(CONFIG_STK31XX) += stk31xx.o
 obj-$(CONFIG_HM8001) += hm8001_ls.o

@@ -38,6 +38,10 @@ struct isl290xx_cfg_s {
 	u8 prox_threshold_hi_def;
 	u8 prox_threshold_lo_def;
 	u8 aps_config;
+#ifdef ISL29147_ENABLE
+	u8 aps_config1;
+	u8 aps_config2;
+#endif
 	u8 aps_intr;
 	u8 prox_offset;
 	u8 prox_boot_cali;

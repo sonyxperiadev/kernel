@@ -68,6 +68,7 @@ MODULE_PARM_DESC(debug,
 } while (0)
 
 #define ISL290XX_POLL_MODE 1
+#define ISL290XX_USER_CALIBRATION 1
 #define ISL290XX_INT_GPIO 89
 #define ISL290XX_TAG        "[ISL290XX]"
 
@@ -78,7 +79,45 @@ MODULE_PARM_DESC(debug,
 #define ISL290XX_MAX_NUM_DEVICES		3
 #define ISL290XX_MAX_DEVICE_REGS		10
 
-#define ISL290XX_CFG_REG		0x1
+#define ISL290XX_RESERVE_REG	0x0
+#define ISL290XX_CFG_REG	0x1
+
+#ifdef ISL29147_ENABLE
+#define ISL290XX_PROX_EN_BIT    0x20 /*[5]*/
+#define ISL290XX_PROX_SLP_BIT   0x1c /*[4:2]*/
+#define ISL290XX_PROX_DR_BIT    0x03/*[1:0]*/
+/*config 1*/
+#define ISL290XX_CFG1_REG 0x02
+#define ISL290XX_INT_ALG 0x80 /*[7]*/
+#define ISL290XX_PROX_OFFSET 0x78 /*[6:3]*/
+#define ISL290XX_ALS_EN_BIT     0x04 /*[2]*/
+#define ISL290XX_ALS_RANGE_BIT  0x03 /*[1:0]*/
+/*config 2*/
+#define ISL290XX_CFG2_REG 0x03
+#define ISL290XX_ALSIRCOMP 0x10
+/*INT config*/
+#define ISL290XX_INT_REG	0x4
+#define ISL290XX_INT_PROX_BIT      0x80
+#define ISL290XX_INT_PROX_PRST_BIT 0x60
+#define ISL290XX_INT_ALS_BIT       0x08
+#define ISL290XX_INT_ALS_PRST_BIT  0x06
+#define ISL290XX_INT_CTRL_BIT      0x01
+#define ISL290XX_INT_PWR_FAIL	0x10
+
+#define ISL290XX_PROX_TH_L	0x5
+#define ISL290XX_PROX_TH_H	0x6
+
+#define ISL290XX_ALSIR_TH_L	0x7
+#define ISL290XX_ALSIR_TH_HL	0x8
+#define ISL290XX_ALSIR_TH_H	0x9
+
+#define ISL290XX_PROX_DATA	0xa
+
+#define ISL290XX_ALSIR_DATA_L	0xc
+#define ISL290XX_ALSIR_DATA_H	0xb
+
+#define ISL290XX_PROX_AMBIR	0x0d
+#else
 #define ISL290XX_PROX_EN_BIT    0x80
 #define ISL290XX_PROX_SLP_BIT   0x70
 #define ISL290XX_PROX_DR_BIT    0x08
@@ -116,6 +155,7 @@ MODULE_PARM_DESC(debug,
 
 #define ISL290XX_ALSIR_DATA_L	0x9
 #define ISL290XX_ALSIR_DATA_H	0xa
+#endif
 #define ISL290XX_TEST1		0x0e
 #define ISL290XX_TEST2		0x0f
 
@@ -126,6 +166,9 @@ MODULE_PARM_DESC(debug,
 #define	ISL290XX_MAX_LUX	65535000
 #define ISL290XX_FILTER_DEPTH		3
 #define THRES_LO_TO_HI_RATIO  (4/5)
+#ifdef ISL290XX_USER_CALIBRATION
+static int isl290xx_offset;
+#endif
 
 static const struct of_device_id isl290xx_of_match[] = {
 	{.compatible = "bcm,isl290xx",},
@@ -155,20 +198,17 @@ static void isl290xx_late_resume(struct early_suspend *handler);
 #endif
 static int prv_isl290xx_set_bit(u8 reg, u8 bit_mask, u8 value);
 static int prv_isl290xx_get_lux(void);
-static int prv_isl290xx_device_name(unsigned char *bufp, char **device_name);
 static int prv_isl290xx_prox_poll(struct isl290xx_prox_info_s *prxp);
+#ifdef ISL290XX_USER_CALIBRATION
 static void prv_isl290xx_prox_cali(void);
+#endif
 static void prv_isl290xx_work_func(struct work_struct *w);
 static void prv_isl290xx_report_value(int mask);
 static int prv_isl290xx_calc_distance(int value);
 static int prv_isl290xx_ctrl_lp(int mask);
+static void prv_isl290xx_reset(void);
 static int light_on;
 static int prox_on;
-
-enum isl290xx_chip_type_e {
-	TSL29026 = 0,
-	TMD2771,
-};
 
 struct isl290xx_alsprox_data_s {
 	struct input_dev *input_dev;
@@ -223,7 +263,6 @@ struct isl290xx_data_t {
 #ifdef CONFIG_HAS_EARLYSUSPEND
 	struct early_suspend	early_suspend;
 #endif
-	enum isl290xx_chip_type_e chip_type;
 	struct mutex proximity_calibrating;
 } *isl290xx_data_tp;
 
@@ -239,6 +278,7 @@ static const struct file_operations ISL_fops = {
 };
 
 struct isl290xx_cfg_s *isl290xx_cfgp;
+
 static u16 als_intr_threshold_hi_param;
 static u16 als_intr_threshold_lo_param;
 int g_isl290xx_lux;
@@ -259,7 +299,14 @@ struct isl290xx_reg {
 	u8 reg;
 
 } isl290xx_regs[] = {
-	{"CONFIGURE",		ISL290XX_CFG_REG},
+#ifdef ISL29147_ENABLE
+	{"DEVICEID",	ISL290XX_RESERVE_REG},
+	{"CONFIG0",	ISL290XX_CFG_REG},
+	{"CONFIG1",	ISL290XX_CFG1_REG},
+	{"CONFIG2",	ISL290XX_CFG2_REG},
+#else
+	{"CONFIGURE",	ISL290XX_CFG_REG},
+#endif
 	{"INTERRUPT",		ISL290XX_INT_REG},
 	{"PROX_LT",		ISL290XX_PROX_TH_L},
 	{"PROX_HT",		ISL290XX_PROX_TH_H},
@@ -269,8 +316,13 @@ struct isl290xx_reg {
 	{"PROX_DATA",		ISL290XX_PROX_DATA},
 	{"ALS_IR_DT1",		ISL290XX_ALSIR_DATA_L},
 	{"ALS_IR_DT2",		ISL290XX_ALSIR_DATA_H},
-	{"TEST1",		ISL290XX_TEST1},
+#ifdef ISL29147_ENABLE
+	{"PROX_AMBIR",	ISL290XX_PROX_AMBIR},
+	{"CONFIG3",	ISL290XX_TEST2},
+#else
+	{"TEST1",	ISL290XX_TEST1},
 	{"TEST2",		ISL290XX_TEST2},
+#endif
 };
 
 struct time_scale_factor {
@@ -526,6 +578,7 @@ static ssize_t prox_enable_store(struct device *dev,
 
 static DEVICE_ATTR(prox_enable, 0644, NULL, prox_enable_store);
 
+#ifdef ISL290XX_USER_CALIBRATION
 static ssize_t prox_cali_store(struct device *dev,
 			struct device_attribute *attr,
 			const char *buf, size_t count)
@@ -541,7 +594,6 @@ static ssize_t prox_cali_store(struct device *dev,
 }
 static DEVICE_ATTR(prox_cali, 0644, NULL, prox_cali_store);
 
-#ifdef ISL290XX_USER_CALIBRATION
 static ssize_t isl290xx_get_offset(struct device *dev,
 			struct device_attribute *attr,
 			char *buf)
@@ -568,6 +620,9 @@ static ssize_t isl290xx_set_offset(struct device *dev,
 			- isl290xx_cfgp->prox_offset;
 	lo = isl290xx_cfgp->prox_threshold_lo_def + isl290xx_offset
 			- isl290xx_cfgp->prox_offset;
+	pr_isl(INFO,
+		"isl290xx_offset=%d,prox_offset=%d, hi =%d, lo=%d\n",
+		isl290xx_offset, isl290xx_cfgp->prox_offset, hi, lo);
 	if (hi > 0xfe || lo > 0xfe ||
 		(isl290xx_offset-isl290xx_cfgp->prox_offset) < 0) {
 		isl290xx_offset = 0;
@@ -668,8 +723,8 @@ static DEVICE_ATTR(registers, 0644, isl290xx_registers_show,
 static struct attribute *isl290xx_ctrl_attr[] = {
 	&dev_attr_als_enable.attr,
 	&dev_attr_prox_enable.attr,
-	&dev_attr_prox_cali.attr,
 #ifdef ISL290XX_USER_CALIBRATION
+	&dev_attr_prox_cali.attr,
 	&dev_attr_offset.attr,
 #endif
 	&dev_attr_registers.attr,
@@ -761,8 +816,11 @@ static int isl290xx_probe(struct i2c_client *clientp,
 	int i;
 	struct device_node *np;
 	unsigned char buf[ISL290XX_MAX_DEVICE_REGS];
-	char *device_name;
-	u32 val = 0;
+	u32 val;
+#ifdef ISL290XX_USER_CALIBRATION
+	isl290xx_offset = 0;
+#endif
+	val = 0;
         light_on = 0;
         prox_on = 0;
 	isPsensorLocked = 0;
@@ -794,17 +852,6 @@ static int isl290xx_probe(struct i2c_client *clientp,
 
 	for (i = 1; i < ISL290XX_MAX_DEVICE_REGS; i++)
 		buf[i] = i2c_smbus_read_byte_data(isl290xx_data_tp->client, i);
-	ret = prv_isl290xx_device_name(buf, &device_name);
-	if (ret  == 0)
-		pr_isl(ERROR,
-		       "chip id that was read found mismatched)\n");
-	if (strcmp(device_name, ISL290XX_DEVICE_ID))
-		pr_isl(ERROR,
-		       "chip id that was read does not match expected\n");
-	else
-		pr_isl(ERROR,
-		       "%s that was read matches expected id\n",
-		       device_name);
 	wake_lock_init(&isl290xx_data_tp->isl290xx_wake_lock,
 			WAKE_LOCK_SUSPEND, "isl290xx-wake-lock");
 
@@ -833,6 +880,31 @@ static int isl290xx_probe(struct i2c_client *clientp,
 		       " control reg failed in isl290xx_probe()\n");
 		return ret;
 	}
+#ifdef ISL29147_ENABLE
+	ret = i2c_smbus_write_byte_data(isl290xx_data_tp->client,
+		ISL290XX_CFG_REG,
+		0);
+	if (ret < 0) {
+		pr_isl(ERROR,
+		       "control reg failed in isl290xx_probe()\n");
+		return ret;
+	}
+	ret = i2c_smbus_write_byte_data(isl290xx_data_tp->client,
+		ISL290XX_CFG1_REG, 0);
+	if (ret < 0) {
+		pr_isl(ERROR, "control reg failed in isl290xx_probe()\n");
+		return ret;
+	}
+
+	ret = i2c_smbus_write_byte_data(isl290xx_data_tp->client,
+			ISL290XX_INT_REG, 0x10);
+	if (ret  < 0) {
+		pr_isl(ERROR,
+		       "control reg failed in isl290xx_probe()\n");
+		return ret;
+	}
+
+#else
 	ret = i2c_smbus_write_byte_data(isl290xx_data_tp->client,
 		ISL290XX_CFG_REG,
 		ISL290XX_SENSOR_ALL_OFF);
@@ -849,7 +921,7 @@ static int isl290xx_probe(struct i2c_client *clientp,
 		       "control reg failed in isl290xx_probe()\n");
 		return ret;
 	}
-
+#endif
 	INIT_WORK(&isl290xx_data_tp->isl290xx_work, prv_isl290xx_work_func);
 	mutex_init(&isl290xx_data_tp->proximity_calibrating);
 	if (!clientp->dev.platform_data) {
@@ -859,12 +931,6 @@ static int isl290xx_probe(struct i2c_client *clientp,
 		isl290xx_pls_irq_num = val;
 	}
 	pr_isl(INFO, "ISL290XX use gpio %d\n", clientp->irq);
-#if 0
-	ret =
-	    request_irq(gpio_to_irq(clientp->irq), isl290xx_interrupt,
-			IRQF_TRIGGER_FALLING, isl290xx_data_tp->isl290xx_name,
-			isl290xx_prox_cur_infop);
-#endif
 	ret = request_threaded_irq(gpio_to_irq(clientp->irq),
 			NULL, &isl290xx_interrupt,
 			IRQF_TRIGGER_FALLING | IRQF_ONESHOT,
@@ -900,17 +966,25 @@ static int isl290xx_probe(struct i2c_client *clientp,
 		ret = of_property_read_u32(np,
 			"aps_config_param", &val);
 		isl290xx_cfgp->aps_config = val;
+#ifdef ISL29147_ENABLE
+		ret = of_property_read_u32(np,
+			"aps_config1_param", &val);
+		isl290xx_cfgp->aps_config1 = val;
+		ret = of_property_read_u32(np,
+			"aps_config2_param", &val);
+		isl290xx_cfgp->aps_config2 = val;
+#endif
 		ret = of_property_read_u32(np,
 			"aps_intr_param", &val);
 		isl290xx_cfgp->aps_intr = val;
-#ifdef ISL290xx_USER_CALIBRATION
+#ifdef ISL290XX_USER_CALIBRATION
 		ret = of_property_read_u32(np,
 			"prox_offset_param", &val);
 		isl290xx_cfgp->prox_offset = val;
-#endif
 		ret = of_property_read_u32(np,
 			"prox_boot_cali", &val);
 		isl290xx_cfgp->prox_boot_cali = val;
+#endif
 	}
 	light = kzalloc(sizeof(struct isl290xx_alsprox_data_s), GFP_KERNEL);
 	if (!light) {
@@ -1138,7 +1212,42 @@ static loff_t isl290xx_llseek(struct file *file, loff_t offset, int orig)
 	file->f_pos = new_pos;
 	return new_pos;
 }
+#ifdef ISL29147_ENABLE
+static void prv_isl290xx_reset(void)
+{
+	int ret = 0;
+	ret = i2c_smbus_write_byte_data(isl290xx_data_tp->client,
+		ISL290XX_TEST1, 0x38);
+	if (ret < 0)
+		pr_isl(ERROR, "write test2 register failed in reset\n");
+	ret = i2c_smbus_write_byte_data(isl290xx_data_tp->client,
+		ISL290XX_TEST1, 0x00);
+	if (ret < 0)
+		pr_isl(ERROR, "s/w reset error\n");
+}
+#else
+static void prv_isl290xx_reset(void)
+{
+	int ret = 0;
+	ret = i2c_smbus_write_byte_data(isl290xx_data_tp->client,
+		ISL290XX_CFG_REG, 0x00);
+	if (ret < 0)
+		pr_isl(ERROR, "write cfg register failed in reset");
+	ret = i2c_smbus_write_byte_data(isl290xx_data_tp->client,
+		ISL290XX_TEST2, 0x29);
+	if (ret < 0)
+		pr_isl(ERROR, "write test2 register failed in reset");
+	ret = i2c_smbus_write_byte_data(isl290xx_data_tp->client,
+		ISL290XX_TEST1, 0x00);
+	if (ret < 0)
+		pr_isl(ERROR, "write test1 register failed in reset");
+	ret = i2c_smbus_write_byte_data(isl290xx_data_tp->client,
+		ISL290XX_TEST2, 0x00);
+	if (ret < 0)
+		pr_isl(ERROR, "write test2 register failed in reset");
 
+}
+#endif
 static int prv_isl290xx_set_bit(u8 reg, u8 bit_mask, u8 value)
 {
 	int ret = 0;
@@ -1166,17 +1275,237 @@ static int prv_isl290xx_set_bit(u8 reg, u8 bit_mask, u8 value)
 	return ret;
 }
 
+#ifdef ISL29147_ENABLE
+static int isl290xx_set_bits(u8 reg, u8 bit_mask, u8 value)
+{
+	int ret;
+	u8 init_val;
+	u8 new_val;
+	ret = 0;
+	init_val = i2c_smbus_read_byte_data(isl290xx_data_tp->client, reg);
+	if (ret < 0) {
+		pr_err("[isl290xx]: fail to read reg 0x%x\n", reg);
+		return ret;
+	}
+	new_val = (bit_mask&value) | ((~bit_mask)&init_val);
+	ret = i2c_smbus_write_byte_data(isl290xx_data_tp->client,
+			reg, new_val);
+	if (ret < 0) {
+		pr_err("[isl290xx]: fail to write reg 0x%x\n", reg);
+		return ret;
+	}
+	return ret;
+
+}
+#endif
 /*prv_isl290xx_ctrl_lp, mask values' indication*/
 /*10 : light on*/
 /*01 : prox on*/
 /*20 : light off*/
 /*02 : prox off*/
+#ifdef ISL29147_ENABLE
 static int prv_isl290xx_ctrl_lp(int mask)
 {
 	u8 ret = 0, reg_val = 0;
 	mutex_lock(&isl290xx_data_tp->update_lock);
 	if (mask == 0x10) {	/*10 : light on */
 		pr_isl(INFO, "light on\n");
+		prv_isl290xx_reset();
+		input_report_abs(light->input_dev, ABS_MISC, -1);
+		input_sync(light->input_dev);
+		ret = isl290xx_set_bits(ISL290XX_INT_REG,
+			ISL290XX_INT_ALS_PRST_BIT,
+			isl290xx_cfgp->aps_intr);
+		if (ret < 0)
+			goto out;
+		ret = prv_isl290xx_set_bit(ISL290XX_INT_REG,
+			ISL290XX_INT_CTRL_BIT, 0);
+		if (ret < 0)
+			goto out;
+		ret = prv_isl290xx_set_bit(ISL290XX_INT_REG,
+			ISL290XX_INT_ALS_BIT, 0);
+		if (ret < 0)
+			goto out;
+
+		reg_val = als_intr_threshold_lo_param & 0x00FF;
+		ret = i2c_smbus_write_byte_data(isl290xx_data_tp->client,
+			ISL290XX_ALSIR_TH_L, reg_val);
+		if (ret < 0) {
+			pr_isl(ERROR,
+			       "[isl290xx] prv_isl290xx_ctrl_lp i2c err%d\n",
+			       __LINE__);
+
+			goto out;
+		}
+		reg_val =
+		    ((als_intr_threshold_lo_param >> 8) & 0x000F) |
+		    ((als_intr_threshold_hi_param << 4) & 0x00F0);
+		ret = i2c_smbus_write_byte_data(isl290xx_data_tp->client,
+			ISL290XX_ALSIR_TH_HL, reg_val);
+		if (ret < 0) {
+			pr_isl(ERROR,
+			       "[isl290xx] prv_isl290xx_ctrl_lp i2c err%d\n",
+			       __LINE__);
+
+			goto out;
+		}
+		reg_val = (als_intr_threshold_hi_param >> 4) & 0x00FF;
+		ret = i2c_smbus_write_byte_data(isl290xx_data_tp->client,
+			ISL290XX_ALSIR_TH_H, reg_val);
+		if (ret < 0) {
+			pr_isl(ERROR,
+			       "[isl290xx] prv_isl290xx_ctrl_lp i2c err%d\n",
+			       __LINE__);
+
+			goto out;
+		}
+		ret = isl290xx_set_bits(ISL290XX_CFG1_REG,
+			ISL290XX_ALS_RANGE_BIT,
+			isl290xx_cfgp->aps_config1&ISL290XX_ALS_RANGE_BIT);
+		if (ret < 0)
+			goto out;
+		ret = isl290xx_set_bits(ISL290XX_CFG1_REG,
+			ISL290XX_INT_ALG,
+			isl290xx_cfgp->aps_config1&ISL290XX_INT_ALG);
+		if (ret < 0)
+			goto out;
+		ret = isl290xx_set_bits(ISL290XX_CFG1_REG,
+			ISL290XX_ALS_EN_BIT, 1);
+		if (ret < 0)
+			goto out;
+		mdelay(5);
+		g_isl290xx_lux = prv_isl290xx_get_lux();
+		prv_isl290xx_report_value(0);
+
+	}
+	if (mask == 0x01) {	/*01 : prox on */
+		pr_isl(INFO, "prox on\n");
+		input_report_abs(proximity->input_dev, ABS_DISTANCE, -1);
+		input_sync(proximity->input_dev);
+		ret = isl290xx_set_bits(ISL290XX_INT_REG,
+			ISL290XX_INT_PROX_PRST_BIT,
+			isl290xx_cfgp->aps_intr&ISL290XX_INT_PROX_PRST_BIT);
+		if (ret < 0)
+			goto out;
+		ret = prv_isl290xx_set_bit(ISL290XX_INT_REG,
+			ISL290XX_INT_PROX_BIT, 0);
+		if (ret < 0)
+			goto out;
+		ret = prv_isl290xx_set_bit(ISL290XX_INT_REG,
+				ISL290XX_INT_ALS_BIT, 0);
+		if (ret < 0)
+			pr_isl(ERROR,
+				"isl290xx: cannot write unused bit\n");
+		reg_val = isl290xx_cfgp->prox_threshold_lo & 0x00FF;
+		ret = i2c_smbus_write_byte_data(isl290xx_data_tp->client,
+			ISL290XX_PROX_TH_L, reg_val);
+		if (ret < 0) {
+			pr_isl(ERROR,
+			       "[isl290xx] prv_isl290xx_ctrl_lp i2c err%d\n",
+			       __LINE__);
+			goto out;
+		}
+		reg_val = isl290xx_cfgp->prox_threshold_hi & 0x00FF;
+		ret = i2c_smbus_write_byte_data(isl290xx_data_tp->client,
+			ISL290XX_PROX_TH_H, reg_val);
+		if (ret < 0) {
+			pr_isl(ERROR,
+			       "[isl290xx] prv_isl290xx_ctrl_lp i2c err%d\n",
+			       __LINE__);
+			goto out;
+		}
+		ret = isl290xx_set_bits(ISL290XX_CFG_REG,
+			ISL290XX_PROX_SLP_BIT,
+			isl290xx_cfgp->aps_config&ISL290XX_PROX_SLP_BIT);
+		if (ret < 0)
+			goto out;
+		ret = prv_isl290xx_set_bit(ISL290XX_CFG_REG,
+			ISL290XX_PROX_DR_BIT,
+			isl290xx_cfgp->aps_config&ISL290XX_PROX_DR_BIT);
+		if (ret < 0)
+			goto out;
+		ret = prv_isl290xx_set_bit(ISL290XX_CFG_REG,
+			ISL290XX_PROX_EN_BIT, 1);
+		if (ret < 0)
+			goto out;
+		ret = prv_isl290xx_prox_poll(isl290xx_prox_cur_infop);
+		mdelay(5);
+		if (ret < 0)
+			pr_isl(ERROR, "get prox poll failed\n");
+		if (isl290xx_prox_cur_infop->prox_data >
+			isl290xx_cfgp->prox_threshold_hi) {
+			isl290xx_prox_cur_infop->prox_event = 1;
+		} else if (isl290xx_prox_cur_infop->prox_data <
+			isl290xx_cfgp->prox_threshold_lo)
+			isl290xx_prox_cur_infop->prox_event = 0;
+		prv_isl290xx_report_value(1);
+	}
+	if (mask == 0x20) {	/*20 : light off */
+		reg_val = 0xff;
+		ret = i2c_smbus_write_byte_data(isl290xx_data_tp->client,
+			ISL290XX_ALSIR_TH_L, reg_val);
+		if (ret < 0) {
+			pr_isl(ERROR,
+			       "[isl290xx] prv_isl290xx_ctrl_lp i2c err%d\n",
+			       __LINE__);
+			goto out;
+		}
+		reg_val = 0x0f;
+		ret = i2c_smbus_write_byte_data(isl290xx_data_tp->client,
+			ISL290XX_ALSIR_TH_HL, reg_val);
+		if (ret < 0) {
+			pr_isl(ERROR,
+			       "i2c_smbus_write_byte_data failed\n");
+			goto out;
+		}
+		reg_val = 0x0;
+		ret = i2c_smbus_write_byte_data(isl290xx_data_tp->client,
+			ISL290XX_ALSIR_TH_H, reg_val);
+		if (ret < 0) {
+			pr_isl(ERROR,
+			       "i2c_smbus_write_byte_data failed\n");
+			goto out;
+		}
+		reg_val = i2c_smbus_read_byte_data(isl290xx_data_tp->client,
+			ISL290XX_INT_REG);
+		if (reg_val < 0) {
+			pr_isl(ERROR,
+			       "i2c_smbus_read_byte_data failed\n");
+			mutex_unlock(&isl290xx_data_tp->update_lock);
+			return reg_val;
+		}
+		reg_val = (reg_val & (~ISL290XX_ALS_EN_BIT));
+		ret = i2c_smbus_write_byte_data(isl290xx_data_tp->client,
+			ISL290XX_CFG1_REG, reg_val);
+		if (ret < 0) {
+			pr_isl(ERROR,
+			       "i2c_smbus_write_byte_data failed\n");
+			goto out;
+		}
+	}
+	if (mask == 0x02) {	/*02 : prox off */
+		ret = prv_isl290xx_set_bit(ISL290XX_CFG_REG,
+				ISL290XX_PROX_EN_BIT, 0);
+		if (ret != 0)
+			goto out;
+		ret = isl290xx_set_bits(ISL290XX_CFG_REG,
+				ISL290XX_PROX_DR_BIT, 0);
+		if (ret != 0)
+			goto out;
+	}
+out:
+	mutex_unlock(&isl290xx_data_tp->update_lock);
+	return ret;
+}
+
+#else
+static int prv_isl290xx_ctrl_lp(int mask)
+{
+	u8 ret = 0, reg_val = 0;
+	mutex_lock(&isl290xx_data_tp->update_lock);
+	if (mask == 0x10) {	/*10 : light on */
+		pr_isl(INFO, "light on\n");
+		prv_isl290xx_reset();
 		input_report_abs(light->input_dev, ABS_MISC, -1);
 		input_sync(light->input_dev);
 		ret = prv_isl290xx_set_bit(ISL290XX_INT_REG,
@@ -1422,7 +1751,9 @@ out:
 	mutex_unlock(&isl290xx_data_tp->update_lock);
 	return ret;
 }
+#endif
 
+#ifdef ISL290XX_USER_CALIBRATION
 static void prv_isl290xx_prox_cali(void)
 {
 	int prox_sum = 0, prox_mean = 0, prox_max = 0;
@@ -1474,6 +1805,10 @@ static void prv_isl290xx_prox_boot_cali(void)
 			- isl290xx_cfgp->prox_offset;
 	lo = isl290xx_cfgp->prox_threshold_lo_def + isl290xx_offset
 			- isl290xx_cfgp->prox_offset;
+	pr_isl(INFO,
+		"isl290xx_offset=%d,prox_offset=%d, hi =%d, lo=%d\n",
+		isl290xx_offset, isl290xx_cfgp->prox_offset, hi, lo);
+
 	if (hi > 0xfe || lo > 0xfe ||
 		(isl290xx_offset-isl290xx_cfgp->prox_offset) < 0) {
 		isl290xx_offset = 0;
@@ -1497,6 +1832,7 @@ static void prv_isl290xx_prox_boot_cali(void)
 		}
 	}
 }
+#endif
 
 static long isl290xx_ioctl(struct file *file, unsigned int cmd,
 			   unsigned long arg)
@@ -1542,8 +1878,10 @@ static long isl290xx_ioctl(struct file *file, unsigned int cmd,
 		break;
 
 	case ISL290XX_IOCTL_CONFIG_GET:
+#ifdef ISL290XX_USER_CALIBRATION
 		if (isl290xx_cfgp->prox_boot_cali)
 			prv_isl290xx_prox_boot_cali();
+#endif
 		ret =
 		    copy_to_user((struct isl290xx_cfg_s *)arg, isl290xx_cfgp,
 				 sizeof(struct isl290xx_cfg_s));
@@ -1701,15 +2039,25 @@ static int prv_isl290xx_get_lux(void)
 	switch_range = 0;
 	mutex_lock(&isl290xx_data_tp->lock);
 	for (i = 0; i < 2; i++)
+#ifdef ISL29147_ENABLE
+		chdata[i] =
+		    i2c_smbus_read_byte_data(isl290xx_data_tp->client,
+					     ISL290XX_ALSIR_DATA_H + i);
+
+	raw_clear = ((chdata[0]&0xf) << 8) + chdata[1];
+#else
 		chdata[i] =
 		    i2c_smbus_read_byte_data(isl290xx_data_tp->client,
 					     ISL290XX_ALSIR_DATA_L + i);
 
 	raw_clear = ((chdata[1] & 0xF) << 8) | chdata[0];
+#endif
 	/*zone_size = raw_clear >> 3;*/
 	als_intr_threshold_lo_param = ((raw_clear > zone_size) ? \
 						raw_clear-zone_size : 0);
-	if (raw_clear < 0xfff) {
+	if (raw_clear <= zone_size)
+		als_intr_threshold_hi_param = 0;
+	else if (raw_clear < 0xfff && raw_clear > zone_size) {
 		als_intr_threshold_hi_param = raw_clear + zone_size;
 		als_intr_threshold_hi_param =
 				((als_intr_threshold_hi_param > 0xffe) ? \
@@ -1750,13 +2098,6 @@ static int prv_isl290xx_get_lux(void)
 	lux = raw_clear;
 	mutex_unlock(&isl290xx_data_tp->lock);
 	return lux;
-}
-
-static int prv_isl290xx_device_name(unsigned char *bufp, char **device_name)
-{
-	isl290xx_data_tp->chip_type = TMD2771;
-	*device_name = "isl29026";
-	return 1;
 }
 
 static int prv_isl290xx_prox_poll(struct isl290xx_prox_info_s *prxp)
