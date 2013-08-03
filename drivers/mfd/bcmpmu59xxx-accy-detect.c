@@ -291,6 +291,7 @@ static int bcmpmu_accy_detect_func(struct accy_det *accy_d)
 			__func__, id_status, id_check);
 	if (!id_check) {
 		pr_acd(ERROR, "---Err id_check nt valid\n");
+		state = STATE_IDLE;
 		goto err;
 	}
 
@@ -342,6 +343,9 @@ void bcmpm_accy_setup_detection(struct accy_det *accy_d, bool en)
 			bcmpmu_call_notifier(accy_d->bcmpmu,
 					PMU_CHRGR_DET_EVT_OUT_XCVR,
 					&accy_d->xceiv_start);
+			if (!accy_d->clock_en)
+				enable_bc_clock(accy_d, true);
+
 		} else if ((!en) & accy_d->xceiv_start) {
 			accy_d->xceiv_start = 0;
 			pr_acd(FLOW, "=== %s ev send xceiv_start %d\n",
@@ -349,20 +353,19 @@ void bcmpm_accy_setup_detection(struct accy_det *accy_d, bool en)
 			bcmpmu_call_notifier(accy_d->bcmpmu,
 					PMU_CHRGR_DET_EVT_OUT_XCVR,
 					&accy_d->xceiv_start);
+			if (accy_d->clock_en)
+				enable_bc_clock(accy_d, false);
+
 		}
 
 	}
 	if (en) {
-		if (!accy_d->clock_en)
-			enable_bc_clock(accy_d, true);
 #ifdef CONFIG_HAS_WAKELOCK
 		if (!wake_lock_active
 				(&accy_d->wake_lock))
 			wake_lock(&accy_d->wake_lock);
 #endif
 	} else {
-		if (accy_d->clock_en)
-			enable_bc_clock(accy_d, false);
 #ifdef CONFIG_HAS_WAKELOCK
 		if (wake_lock_active(&accy_d->wake_lock))
 			wake_unlock(&accy_d->wake_lock);
@@ -439,9 +442,9 @@ static int bcmpmu_accy_event_handler(struct notifier_block *nb,
 		bcmpmu_usb_get(accy_d->bcmpmu,
 				BCMPMU_USB_CTRL_GET_ID_VALUE,
 				(void *)&id_status);
-		 if (id_status != PMU_USB_ID_FLOAT)
+		if (id_status != PMU_USB_ID_FLOAT)
 			accy_d->act = ACT_ACCY_IN;
-		 else
+		else
 			ret = 1;
 		break;
 	default:
