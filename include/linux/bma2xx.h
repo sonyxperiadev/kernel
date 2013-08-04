@@ -681,5 +681,6 @@ enum bma_orientation {
 	BMA_ORI_100_0f0_00f,
 	BMA_ORI_010_f00_00f,
 	BMA_ORI_0f0_100_00f,
+	BMA_ORI_0f0_100_001,
 };
 #endif

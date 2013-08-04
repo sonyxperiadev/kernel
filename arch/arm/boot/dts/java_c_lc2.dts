@@ -104,14 +104,14 @@
 			reg = <0x0c>;
 			gpio-irq-pin = <4>;
 			outbit = <1>;
-			layout = <1>;
+			layout = <3>;
 		};
 
 		bma2xx@18 {
                         compatible = "bcm,bma2xx";
                         reg = <0x18>;
                         gpio-irq-pin = <1>;
-			orientation = <11>;
+			orientation = <12>;
 		};
 
 		tmd2771@39 {

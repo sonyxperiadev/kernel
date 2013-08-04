@@ -83,6 +83,7 @@ struct akm8963_data {
 	char layout;
 	char outbit;
 	int irq;
+	int rstn;
 };
 
 static struct akm8963_data *s_akm;
@@ -240,7 +241,9 @@ static int AKECS_Reset(struct akm8963_data *akm, int hard)
 	int err = 0;
 	FUNCDBG("[akm8963]AKECS_Reset hard=%d\n", hard);
 	if (hard != 0) {
+		gpio_set_value(akm->rstn, 0);
 		udelay(5);
+		gpio_set_value(akm->rstn, 1);
 	} else {
 		/* Set measure mode */
 		buffer[0] = AK8963_REG_CNTL2;
@@ -343,14 +346,12 @@ static void AKECS_SetYPR(struct akm8963_data *akm, int *rbuf)
 	mutex_unlock(&akm->val_mutex);
 
 	/* Report acceleration sensor information */
-	/*
 	   if (ready & ACC_DATA_READY) {
 	   input_report_abs(akm->input, ABS_X, rbuf[1]);
 	   input_report_abs(akm->input, ABS_Y, rbuf[2]);
 	   input_report_abs(akm->input, ABS_Z, rbuf[3]);
 	   input_report_abs(akm->input, ABS_THROTTLE, rbuf[4]);
 	   }
-	 */
 	/* Report magnetic vector information */
 	if (ready & MAG_DATA_READY) {
 		input_report_abs(akm->input, ABS_RX, rbuf[5]);
@@ -536,6 +537,9 @@ static long AKECS_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		outbit = akm->outbit;
 		break;
 	case ECS_IOCTL_RESET:
+		ret = AKECS_Reset(akm, akm->rstn);
+		if (ret < 0)
+			return ret;
 		break;
 	case ECS_IOCTL_GET_ACCEL:
 		FUNCDBG("[akm8963] IOCTL_GET_ACCEL called.\n");
@@ -1307,20 +1311,39 @@ int akm8963_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	}
 	pdata = client->dev.platform_data;
 	if (pdata) {
-		FUNCDBG("[akm8963]Set layout information.\n");
+		pr_info("[akm8963]Set layout information.\n");
 		s_akm->layout = pdata->layout;
 		s_akm->outbit = pdata->outbit;
+		s_akm->rstn = pdata->gpio_RST;
 	} else {
 		if (client->dev.of_node) {
 			np = client->dev.of_node;
-			if (of_property_read_u32(np, "gpio-irq-pin", &val))
+			if (of_property_read_u32(np, "gpio-irq-pin", &val)) {
+				pr_err("akm8963: irq is not set in dts\n");
 				goto err_read;
+			}
 			s_akm->irq = gpio_to_irq(val);
-			if (of_property_read_u32(np, "layout", &val))
-				goto err_read;
-			if (of_property_read_u32(np, "outbit", &val))
-				goto err_read;
-			s_akm->outbit = val;
+			if (of_property_read_u32(np, "gpio_RST", &val)) {
+				pr_info("akm8963: rst is not set in dts\n");
+				s_akm->rstn = 0;
+			} else {
+				pr_info("akm8963: rst:%d\n", val);
+				s_akm->rstn = val;
+			}
+			if (of_property_read_u32(np, "layout", &val)) {
+				pr_info("akm8963: layout is not set in dts\n");
+				s_akm->layout = 1;
+			} else {
+				pr_info("akm8963: layout:%d\n", val);
+				s_akm->layout = val;
+			}
+			if (of_property_read_u32(np, "outbit", &val)) {
+				pr_info("akm8963: no loutbit config\n");
+				s_akm->outbit = 1;
+			} else {
+				pr_info("akm8963: outbit:%d\n", val);
+				s_akm->outbit = val;
+			}
 		} else
 			FUNCDBG("[akm8963]Set layout fail!!!\n");
 	}
@@ -1362,7 +1385,7 @@ int akm8963_probe(struct i2c_client *client, const struct i2c_device_id *id)
 		s_akm->delay[i] = -1;
 
 	/***** IRQ setup *****/
-	FUNCDBG("[akm8963] IRQ setup [irq]==%d.\n", s_akm->irq);
+	pr_info("[akm8963] IRQ setup [irq]==%d.\n", s_akm->irq);
 	if (s_akm->irq == 0) {
 		FUNCDBG("[akm8963]%s: IRQ is not set.\n");
 		/* Use timer to notify measurement end */
