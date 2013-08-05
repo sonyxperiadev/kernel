@@ -662,6 +662,7 @@ static int unicam_videobuf_start_streaming_int(struct unicam_camera_dev \
 	/* Output engine */
 	mm_csi0_buffering_mode(unicam_dev->b_mode);
 	mm_csi0_rx_burst();
+	mm_csi0_enable_unicam();
 
 	/* start sensor streaming */
 	ret = v4l2_subdev_call(sd, video, s_stream, 1);
@@ -675,6 +676,7 @@ static int unicam_videobuf_start_streaming_int(struct unicam_camera_dev \
 	if (unicam_dev->active) {
 		/* unicam_camera_update_buf(unicam_dev); */
 		mm_csi0_start_rx();
+
 		/* set data capture */
 		if (unicam_dev->if_params.if_mode == V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2) {
 			idesc.fsi = 1;

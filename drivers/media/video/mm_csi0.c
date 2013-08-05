@@ -828,16 +828,17 @@ int mm_csi0_rx_burst()
 	return 0;
 }
 
-static int rx_init_done;
+static int enable_done;
 
-int mm_csi0_start_rx(void)
+int mm_csi0_enable_unicam(void)
 {
 	u32 base = V_BASE;
 
-	if (rx_init_done) {
+	if (enable_done) {
 		pr_debug("Skipping %s\n", __func__);
 		return 0;
 	}
+
 	BRCM_WRITE_REG(base, CAM_ISTA, BRCM_READ_REG(base, CAM_ISTA));
 	BRCM_WRITE_REG(base, CAM_STA, BRCM_READ_REG(base, CAM_STA));
 /*
@@ -852,6 +853,22 @@ int mm_csi0_start_rx(void)
 	/* analog reset */
 	BRCM_WRITE_REG_FIELD(base, CAM_ANA, AR, 1);
 	BRCM_WRITE_REG_FIELD(base, CAM_CTL, CPE, 1);
+
+	enable_done = 1;
+
+	return 0;
+}
+
+static int rx_init_done;
+
+int mm_csi0_start_rx(void)
+{
+	u32 base = V_BASE;
+
+	if (rx_init_done) {
+		pr_debug("Skipping %s\n", __func__);
+		return 0;
+	}
 
 	BRCM_WRITE_REG_FIELD(base, CAM_CTL, CPR, 1);
 	udelay(1);
@@ -879,6 +896,8 @@ int mm_csi0_start_rx(void)
 int mm_csi0_stop_rx(void)
 {
 	u32 base = V_BASE;
+
+	enable_done = 0;
 	rx_init_done = 0;
 	BRCM_WRITE_REG_FIELD(base, CAM_ANA, AR, 1);
 
