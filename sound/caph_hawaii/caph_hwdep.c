@@ -894,6 +894,45 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file,
 			eq = NULL;
 		}
 		break;
+
+	case Ctrl_Ioctl_FDMBCParm:
+		aTrace(LOG_ALSA_INTERFACE,
+			"ALSA-CAPH hwdep_ioctl Ctrl_Ioctl_FDMBCParm");
+		if (dataptr == NULL)
+			dataptr = kzalloc(sizeof(UserCtrl_data_t), GFP_KERNEL);
+		else
+			memset(dataptr, 0, sizeof(UserCtrl_data_t));
+
+		if (dataptr == NULL) {
+			aError("UserCtrl_data_t mem alloc failed");
+			return -ENOMEM;
+		}
+
+		/* get the sysparm from driver */
+		if (copy_from_user
+		    (dataptr, (int __user *)arg, sizeof(UserCtrl_data_t)))
+			return -EFAULT;
+
+		size = dataptr->data[0];
+		ret = AUDDRV_Get_FDMBCParm((void *)(&dataptr->data[1]), size);
+
+		if (!ret) {
+			if (copy_to_user((void __user *)arg, dataptr,
+			sizeof(UserCtrl_data_t))) {
+				if (dataptr != NULL) {
+					kfree(dataptr);
+					dataptr = NULL;
+				}
+				return -EFAULT;
+			}
+		}
+
+		if (dataptr != NULL) {
+			kfree(dataptr);
+			dataptr = NULL;
+		}
+		break;
+
 	default:
 		ret = -ENOTTY;
 		break;

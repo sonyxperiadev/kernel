@@ -2524,3 +2524,34 @@ int AUDDRV_GetEchoRefMic(void)
 		"%s::echo_ref_mic=%d\n", __func__, echo_ref_mic);
 	return echo_ref_mic;
 }
+
+/*==========================================================================
+//
+// Function Name: AUDDRV_Get_FDMBCParm
+//
+// Description: Get the FDMBC tuning params from CP
+//
+// =========================================================================
+*/
+int AUDDRV_Get_FDMBCParm(void *param, int size)
+{
+#ifndef CONFIG_BCM_MODEM
+	return -EINVAL;
+#else
+#ifdef CONFIG_ARCH_JAVA
+	SysIndMultimediaAudioParm_t *p;
+
+	if (param == NULL)
+		return -EINVAL;
+
+	p = APSYSPARM_GetIndMultimediaAudioParmAccessPtr();
+	if (p == NULL) {
+		aError("%s cannot read MBC param", __func__);
+		return -EINVAL;
+	}
+
+	memcpy(param, &((p+AUDIO_MODE_SPEAKERPHONE)->mbc_cr[0]), size);
+#endif
+	return 0;
+#endif
+}
