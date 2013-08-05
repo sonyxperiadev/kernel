@@ -529,6 +529,11 @@ static int hawaii_camera_power(struct device *dev, int on)
 		}
 	#endif
 
+		if (gpio_request_one(SENSOR_1_GPIO_PWRDN, GPIOF_DIR_OUT |
+				 GPIOF_INIT_LOW, "Cam1PWDN")) {
+			printk(KERN_ERR "Unable to get CAM1PWDN\n");
+			return -1;
+		}
 
 		/*MMC1 VCC */
 		d_1v8_mmc1_vcc = regulator_get(NULL, icl->regulators[1].supply);
@@ -643,23 +648,27 @@ static int hawaii_camera_power(struct device *dev, int on)
 		usleep_range(5000, 5100);
 		gpio_set_value(SENSOR_0_GPIO_RST, 1);
 #endif
-		msleep(30);
-
-		regulator_enable(d_3v0_mmc1_vcc);
-		usleep_range(1000, 1010);
-
-#ifdef CONFIG_MACH_JAVA_C_LC1
-		set_af_enable(1);
-#endif
-
 #ifdef CONFIG_SOC_CAMERA_OV8825
 		gpio_set_value(SENSOR_0_GPIO_PWRDN, 1);
 		usleep_range(5000, 5100);
 		gpio_set_value(SENSOR_0_GPIO_RST, 1);
 #endif
+		msleep(30);
 
 		regulator_enable(d_3v0_mmc1_vcc);
 		usleep_range(1000, 1010);
+
+#if defined(CONFIG_SOC_CAMERA_OV7695)
+		gpio_set_value(SENSOR_1_GPIO_PWRDN, 0);
+#else
+		gpio_set_value(SENSOR_1_GPIO_PWRDN, 1);/*disable front camera*/
+#endif
+
+
+#ifdef CONFIG_MACH_JAVA_C_LC1
+		set_af_enable(1);
+#endif
+
 #ifdef CONFIG_VIDEO_A3907
 		a3907_enable(1);
 #endif
@@ -695,6 +704,9 @@ static int hawaii_camera_power(struct device *dev, int on)
 #ifdef CONFIG_SOC_CAMERA_OV8825
 		gpio_set_value(SENSOR_0_GPIO_PWRDN, 0);
 #endif
+
+		gpio_set_value(SENSOR_1_GPIO_PWRDN, 0);/*disable front camera*/
+
 		clk_disable(prediv_clock);
 		clk_disable(clock);
 		clk_disable(lp_clock);
