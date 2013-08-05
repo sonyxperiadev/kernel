@@ -2,7 +2,7 @@
 
 /dts-v1/;
 
-/include/ "java_c_a21.dtsi"
+/include/ "java.dtsi"
 /include/ "java_bcmpmu_c_a21.dtsi"
 
 / {
@@ -18,8 +18,8 @@
 		reg = <0x82000000 0x1e000000>; /* 480 MB */
 	};
 
-	wd-tapper {
-		count = <300>; /* Time in seconds */
+	rtc-kona {
+		compatible = "bcm,rtc-kona";
 		ch-num = <1>; /* Kona hub timer Channel number */
 		timer-name = "aon-timer";
 	};
@@ -95,21 +95,23 @@
 			gpio-irq-pin = <33>;
 			int-config = <0x10>;
 			level-shifter = <0>;
-			orientation = <0 0xFFFFFFFF 0
-					0xFFFFFFFF 0 0
-					0 0 0xFFFFFFFF>;
+			orientation = <0 1 0
+					1 0 0
+					0 0 1>;
 		};
 		akm8963@0c {
 			compatible = "bcm,akm8963";
 			reg = <0x0c>;
 			gpio-irq-pin = <4>;
-			layout = <6>;
+			outbit = <1>;
+			layout = <1>;
 		};
 
 		bma2xx@18 {
                         compatible = "bcm,bma2xx";
                         reg = <0x18>;
                         gpio-irq-pin = <1>;
+			orientation = <11>;
 		};
 
 		tmd2771@39 {
@@ -123,8 +125,8 @@
 			filter_history_param = <3>;
 			filter_count_param = <1>;
 			gain_param = <2>;
-			prox_threshold_hi_param = <646>;
-			prox_threshold_lo_param = <638>;
+			prox_threshold_hi_param = <350>;
+			prox_threshold_lo_param = <180>;
 			als_threshold_hi_param = <1>;
 			als_threshold_lo_param = <0>;
 			prox_int_time_param = <238>;
@@ -132,9 +134,9 @@
 			prox_wait_time_param = <238>;
 			prox_intr_filter_param = <17>;
 			prox_config_param = <0>;
-			prox_pulse_cnt_param = <96>;
-			prox_gain_param = <34>;
-			prox_win_sw = <100>;
+			prox_pulse_cnt_param = <0x08>;
+			prox_gain_param = <0x20>;
+			prox_win_sw = <0>;
 		};
 
 	};
@@ -259,6 +261,25 @@
 		lmk_min_free = <32>;
 		iommu = <&iommu_mm>;
 		iovmm = <&iovmm_mm_256mb>;
+	};
+
+	soc-back-camera {
+		compatible = "bcm,soc-camera";
+		reg = <0x36 0x0>;
+		bus-id = <0>;
+		i2c-type = "ov8825";
+		i2c-addr = <0x36>;
+		i2c-adapter-id = <0>;
+		module-name = "ov8825";
+		if-type = <1>;
+		if-mode = <3>;
+		orientation = <1>;
+		facing = <1>;
+		lanes = <2>;
+		channel = <0>;
+		phy-rate = <0>;
+		pix-clk = <0>;
+		regulators = "lvldo1_uc", "mmc1_vcc", "mmc2_vcc", "lvldo2_uc";
 	};
 
 	soc-front-camera {
@@ -421,12 +442,12 @@
 	pwm-backlight {
 		compatible = "bcm,pwm-backlight";
 		reg = <0x0 0x0>;
-		pwm-id = <2>;
+		backlight-gpio = <24>;
 		max-brightness = <32>;	/* Android calibrates to 32 levels */
-		dft-brightness = <32>;
-		polarity = <1>;		/* Inverted polarity */
-		pwm-period-ns = <99900>; /* ~10010 Hz */
-		pwm-request-label = "backlight";
+		dft-brightness = <32>;	/* default brightness*/
+		shutdown-time = <3500>;	/* unit us */
+		ready-time = <150>;		/* unit us */
+		interval-time = <550>;	/* unit ns */
 		bl-on-delay = <7000>;
 	};
 
@@ -434,13 +455,13 @@
 		compatible = "gpio-leds";
 
 		blue {
-			label = "blue";
+			label = "red";
 			gpios = <&gpio 22 0>;
 		};
 
 		green {
 			label = "green";
-			gpios = <&gpio 9 0>;
+			gpios = <&gpio 30 0>;
 		};
 	};
 };

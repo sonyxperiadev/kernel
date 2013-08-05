@@ -2,7 +2,7 @@
 
 /dts-v1/;
 
-/include/ "java_c_a18.dtsi"
+/include/ "java.dtsi"
 /include/ "java_garnet_bcmpmu_c_a18.dtsi"
 
 / {

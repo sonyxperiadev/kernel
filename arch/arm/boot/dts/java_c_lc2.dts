@@ -2,7 +2,7 @@
 
 /dts-v1/;
 
-/include/ "java_c_a21.dtsi"
+/include/ "java.dtsi"
 /include/ "java_bcmpmu_c_a21.dtsi"
 
 / {
@@ -10,7 +10,7 @@
 	compatible = "bcm,java";
 
 	chosen {
-		bootargs = "console=ttyS0,115200n8 mem=992M gpt vmalloc=136M androidboot.console=ttyS0 crash_ramdump=1 logbuf_nocache=1";
+		bootargs = "console=ttyS0,115200n8 mem=992M gpt androidboot.console=ttyS0 crash_ramdump=1 logbuf_nocache=1";
 	};
 
 	memory@82000000 {
@@ -18,8 +18,8 @@
 		reg = <0x82000000 0x2e000000>; /* 736 MB */
 	};
 
-	wd-tapper {
-		count = <300>; /* Time in seconds */
+	rtc-kona {
+		compatible = "bcm,rtc-kona";
 		ch-num = <1>; /* Kona hub timer Channel number */
 		timer-name = "aon-timer";
 	};
@@ -44,7 +44,6 @@
 		* PADCTRL_UBRTSN from UART3_RTSN to
 		* UBRTSN (Debug UART) when GPS is inactive.*/
 		power-save-enable = <1>;
-
 	};
 
 	i2c0: i2c@3e016000 {
@@ -442,12 +441,12 @@
 	pwm-backlight {
 		compatible = "bcm,pwm-backlight";
 		reg = <0x0 0x0>;
-		pwm-id = <2>;
+		backlight-gpio = <24>;
 		max-brightness = <32>;	/* Android calibrates to 32 levels */
-		dft-brightness = <32>;
-		polarity = <1>;		/* Inverted polarity */
-		pwm-period-ns = <99900>; /* ~10010 Hz */
-		pwm-request-label = "backlight";
+		dft-brightness = <32>;	/* default brightness*/
+		shutdown-time = <3500>;	/* unit us */
+		ready-time = <150>;		/* unit us */
+		interval-time = <550>;	/* unit ns */
 		bl-on-delay = <7000>;
 	};
 
