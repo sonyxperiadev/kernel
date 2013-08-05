@@ -629,8 +629,19 @@ static const struct ov7692_reg ov7692_fps_25[] = {
         {0xff, 0xff},  
 };*/
 
+static const struct ov7692_reg ov7692_fps_10[] = {
+	{0x31, 0x8b},
+	{0xff, 0xff},
+};
+
+static const struct ov7692_reg ov7692_fps_15[] = {
+	{0x31, 0x87},
+	{0xff, 0xff},
+};
+
 static const struct ov7692_reg ov7692_fps_30[] = {
-        {0xff, 0xff},  
+	{0x31, 0x83},
+	{0xff, 0xff},
 };
 
 

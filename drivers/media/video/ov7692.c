@@ -360,7 +360,8 @@ static const struct v4l2_queryctrl ov7692_controls[] = {
 	 .type = V4L2_CTRL_TYPE_INTEGER,
 	 .name = "Framerate control",
 	 .minimum = FRAME_RATE_AUTO,
-	 .maximum = (1 << FRAME_RATE_AUTO | 1 << FRAME_RATE_30),
+	 .maximum = (1 << FRAME_RATE_AUTO |
+			1 << FRAME_RATE_10 | 1 << FRAME_RATE_30),
 	 .step = 1,
 	 .default_value = FRAME_RATE_AUTO,
 	 },
@@ -862,6 +863,14 @@ static int ov7692_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			ret = ov7692_write_smbuss(client,
 					ov7692_fps_25);
 			break;*/
+		case FRAME_RATE_10:
+			ret = ov7692_write_smbuss(client,
+					ov7692_fps_10);
+			break;
+		case FRAME_RATE_15:
+			ret = ov7692_write_smbuss(client,
+					ov7692_fps_15);
+			break;
 		case FRAME_RATE_30:
 		case FRAME_RATE_AUTO:
 		default:
