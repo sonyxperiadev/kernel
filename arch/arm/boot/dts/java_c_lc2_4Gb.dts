@@ -261,6 +261,24 @@
 		iovmm = <&iovmm_mm_256mb>;
 	};
 
+	soc-front-camera {
+		compatible = "bcm,soc-camera";
+		reg = <0x3c 0x0>;
+		bus-id = <0>;
+		i2c-type = "gc2035";	/* i2c_board_info type */
+		i2c-addr = <0x3c>;	/* i2c_board_info addr */
+		i2c-adapter-id = <0>;
+		module-name = "gc2035";
+		if-type = <1>;		/* V4L2_SUBDEV_SENSOR_SERIAL */
+		if-mode = <3>;		/* V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2 */
+		orientation = <1>;	/* V4L2_SUBDEV_SENSOR_LANDSCAPE */
+		facing = <0>;		/* V4L2_SUBDEV_SENSOR_FRONT */
+		lanes = <1>;
+		channel = <1>;
+		phy-rate = <0>;
+		pix-clk = <0>;
+		regulators = "lvldo2_uc", "mmc1_vcc", "mmc2_vcc", "lvldo1_uc";
+	};
 
 	kona-fb {
 		module-name = "OTM1283A";
