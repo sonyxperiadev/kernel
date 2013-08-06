@@ -30,7 +30,6 @@
 #include <linux/clk.h>
 #include <linux/i2c-kona.h>
 #include <linux/of_i2c.h>
-#include <linux/pm_runtime.h>
 #include <mach/chip_pinmux.h>
 #include <mach/pinmux.h>
 
@@ -49,7 +48,6 @@
 #include <plat/cpu.h>
 #include "i2c-bsc.h"
 
-#define KONA_I2C_PM_TIMEOUT      500	/* 500 ms*/
 #define DEFAULT_I2C_BUS_SPEED    BSC_BUS_SPEED_50K
 #define CMDBUSY_DELAY            100
 #define SES_TIMEOUT              (msecs_to_jiffies(100))
@@ -1169,12 +1167,9 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[], int num)
 #ifdef CONFIG_KONA_PMU_BSC_USE_PMGR_HW_SEM
 	bool rel_hw_sem = false;
 #endif
+
 	mutex_lock(&dev->dev_lock);
-
-	rc = pm_runtime_get_sync(dev->device);
-	if (IS_ERR_VALUE(rc))
-		return rc;
-
+	bsc_enable_clk(dev);
 	bsc_enable_pad_output((uint32_t)dev->virt_base, true);
 	hw_cfg = (struct bsc_adap_cfg *)dev->device->platform_data;
 
@@ -1319,8 +1314,7 @@ out:
 	client_fifo_configure(adapter, msgs[0].addr, false);
 out1:
 	bsc_enable_pad_output((uint32_t)dev->virt_base, false);
-	pm_runtime_mark_last_busy(dev->device);
-	pm_runtime_put_autosuspend(dev->device);
+	bsc_disable_clk(dev);
 	mutex_unlock(&dev->dev_lock);
 	return rc;
 }
@@ -1898,6 +1892,11 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 		dev->bsc_apb_clk = NULL;
 	}
 
+	/* Enable the bsc clocks */
+	rc = bsc_enable_clk(dev);
+	if (rc < 0)
+		goto err_free_clk;
+
 	/* Initialize the error flag */
 	dev->err_flag = 0;
 
@@ -1932,13 +1931,6 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 
 	/* Set the platform data */
 	platform_set_drvdata(pdev, dev);
-
-	pm_runtime_enable(dev->device);
-	pm_runtime_set_autosuspend_delay(dev->device, KONA_I2C_PM_TIMEOUT);
-	pm_runtime_use_autosuspend(dev->device);
-	rc = pm_runtime_get_sync(dev->device);
-	if (IS_ERR_VALUE(rc))
-		goto err_free_clk;
 
 	/*
 	 * Configure BSC timing registers
@@ -2089,8 +2081,7 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 	bsc_enable_pad_output((uint32_t)dev->virt_base, false);
 
 	/* Disable the BSC clocks before returning */
-	pm_runtime_mark_last_busy(dev->device);
-	pm_runtime_put_autosuspend(dev->device);
+	bsc_disable_clk(dev);
 
 	if (pdev->dev.of_node)
 		of_i2c_register_devices(adap);
@@ -2236,31 +2227,6 @@ static int bsc_resume(struct platform_device *pdev)
 #define bsc_resume     NULL
 #endif
 
-#ifdef CONFIG_PM_RUNTIME
-static int bsc_i2c_runtime_suspend(struct device *dev)
-{
-	struct bsc_i2c_dev *i2c_dev = dev_get_drvdata(dev);
-
-	bsc_enable_pad_output((uint32_t)i2c_dev->virt_base, false);
-	bsc_disable_clk(i2c_dev);
-	return 0;
-}
-
-static int bsc_i2c_runtime_resume(struct device *dev)
-{
-	struct bsc_i2c_dev *i2c_dev = dev_get_drvdata(dev);
-
-	bsc_enable_clk(i2c_dev);
-	bsc_enable_pad_output((uint32_t)i2c_dev->virt_base, true);
-	return 0;
-}
-#endif
-static const struct dev_pm_ops bsc_i2c_pm_ops = {
-	SET_RUNTIME_PM_OPS(bsc_i2c_runtime_suspend,
-		bsc_i2c_runtime_resume, NULL)
-};
-#define BSC_I2C_PM_OPS (&bsc_i2c_pm_ops)
-
 static const struct of_device_id bsc_i2c_of_match[] = {
 	{ .compatible = "bcm,bsc-i2c", },
 	{},
@@ -2273,7 +2239,6 @@ static struct platform_driver bsc_driver = {
 		   .name = "bsc-i2c",
 		   .owner = THIS_MODULE,
 		   .of_match_table = bsc_i2c_of_match,
-		   .pm		= BSC_I2C_PM_OPS,
 		   },
 	.probe = bsc_probe,
 	.remove = __devexit_p(bsc_remove),
