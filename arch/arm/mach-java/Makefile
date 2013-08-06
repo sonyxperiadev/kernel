@@ -44,7 +44,11 @@ obj-y += board-bcm59056.o
 endif
 ifeq ($(CONFIG_MFD_BCM_PMU59xxx), y)
 ifeq ($(CONFIG_MACH_JAVA_GARNET), y)
+ifeq ($(CONFIG_MACH_JAVA_C_LC1), y)
+obj-y += board-bcm59xxx_garnet_c_lc1.o
+else
 obj-y += board-bcm59xxx_garnet.o
+endif
 else
 ifeq ($(CONFIG_MACH_JAVA_SS_EVAL), y)
 obj-y += board-bcm59xxx_ss_eval.o
