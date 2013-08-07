@@ -158,21 +158,20 @@ static void bld_device_status_str(char *buf,
 	/**
 	 *	proc read handler
 	 **/
-static int proc_read(char *page, char **start,
-		     off_t offset, int count, int *eof, void *data)
+static ssize_t proc_read(struct file *file, char __user *buf, size_t  count,
+				loff_t *pos)
 {
-	*page = 0;
-	bld_device_status_str(page, count, "  BMTT logging",
+	*buf = 0;
+	bld_device_status_str(buf, count, "  BMTT logging",
 			      g_config.runlog.dev,
 			      g_config.file_max, g_config.runlog.lock);
-	bld_device_status_str(page, count, "  AP crash dump",
+	bld_device_status_str(buf, count, "  AP crash dump",
 			      g_config.ap_crashlog.dev, 0,
 			      g_config.ap_crashlog.lock);
-	bld_device_status_str(page, count, "  CP crash dump",
+	bld_device_status_str(buf, count, "  CP crash dump",
 			      g_config.cp_crashlog.dev, 0,
 			      g_config.cp_crashlog.lock);
-	*eof = 1;
-	return 1 + strlen(page);
+	return 1 + strlen(buf);
 }
 
 /**
@@ -195,7 +194,7 @@ static int proc_read(char *page, char **start,
  *		s -  both BMTT and CP crash dump -> STM
  **/
 static ssize_t proc_write(struct file *file, const char __user *buffer,
-			  unsigned long count, void *data)
+			  size_t count, loff_t *pos)
 {
 	int rc;
 	int val;
@@ -567,6 +566,11 @@ char *BCMLOG_GetAcmDev(void)
 	return g_config.acm_dev;
 }
 
+static const struct file_operations g_proc_dir_fops = {
+	.read	=	proc_read,
+	.write	=	proc_write,
+};
+
 /**
  *	Initialize logging configuration.  Schedules a work thread to
  *	load the configuration file once the file system is readable.
@@ -590,16 +594,12 @@ void BCMLOG_InitConfig(void *h)
 	 *      create the procfs entry
 	 */
 	g_proc_dir_entry =
-	    create_proc_entry(BCMLOG_CONFIG_PROC_FILE,
-			      S_IRWXU | S_IRWXG | S_IRWXO, NULL);
+	    proc_create_data(BCMLOG_CONFIG_PROC_FILE,
+			      S_IRWXU | S_IRWXG | S_IRWXO, NULL,
+				&g_proc_dir_fops, NULL);
 
 	if (g_proc_dir_entry == NULL) {
 		remove_proc_entry(BCMLOG_CONFIG_PROC_FILE, NULL);
-	}
-
-	else {
-		g_proc_dir_entry->read_proc = proc_read;
-		g_proc_dir_entry->write_proc = proc_write;
 	}
 
 	strncpy(g_config.file_base, BCMLOG_DEFAULT_FILE_BASE, MAX_STR_NAME);

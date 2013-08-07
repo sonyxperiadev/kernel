@@ -266,7 +266,12 @@ Result_t SetLDORegulator(enum SYS_LDO_Cmd_Type_t cmdType,
 			regulator_disable(reg_handle);
 		} else if (cmdType == SYS_LDO_ON) {
 			printk(KERN_INFO "Turn on LDO\n");
-			regulator_enable(reg_handle);
+			if(regulator_enable(reg_handle)) {
+				pr_err("%s: regulator enable failed\n",
+						__func__);
+				result = RESULT_ERROR;
+				goto out;
+			}
 			/*Set LDO mode to LPM */
 			printk(KERN_INFO "Set mode LDO\n");
 			regulator_set_mode(reg_handle,
@@ -279,7 +284,9 @@ Result_t SetLDORegulator(enum SYS_LDO_Cmd_Type_t cmdType,
 		printk(KERN_INFO "LDO handle is not valid!\n");
 		result = RESULT_ERROR;
 	}
-
+	return result;
+out:
+	regulator_put(reg_handle);
 	return result;
 }
 

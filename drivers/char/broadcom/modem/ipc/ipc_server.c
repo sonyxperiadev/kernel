@@ -589,15 +589,10 @@ struct device *ipcs_get_drvdata(void)
 {
 	return g_ipc_info.drvdata;
 }
-
-static int ipcs_read_proc(char *page, char **start, off_t off, int count,
-			  int *eof, void *data)
+static int ipcs_read_proc(struct file *file, char __user *buf, size_t count,
+				loff_t *pos)
 {
-	int len = IPC_DumpStatus(page, count);
-	if (len <= off + count)
-		*eof = 1;
-	*start = page + off;
-	len -= off;
+	int len = IPC_DumpStatus(buf, count);
 	if (len > count)
 		len = count;
 	if (len < 0)
@@ -605,6 +600,9 @@ static int ipcs_read_proc(char *page, char **start, off_t off, int count,
 	return len;
 }
 
+static const struct file_operations ipc_proc_fops = {
+	.read	=	ipcs_read_proc,
+};
 
 static int __init ipcs_module_init(void)
 {
@@ -614,9 +612,8 @@ static int __init ipcs_module_init(void)
 	if (ipc_crashsupport_init())
 		goto out;
 
-	dir =
-	    create_proc_read_entry("driver/bcmipc", 0, NULL, ipcs_read_proc,
-				   NULL);
+	dir = proc_create_data("driver/bcmipc", 0, NULL, &ipc_proc_fops,
+			NULL);
 	if (dir == NULL) {
 		IPC_DEBUG(DBG_ERROR,
 			  "ipcs_module_init: can't create /proc/driver/bcmipc\n");
