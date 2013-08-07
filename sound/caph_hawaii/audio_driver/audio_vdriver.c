@@ -2320,8 +2320,6 @@ void AUDDRV_SetSecMicFromSpkr(AUDIO_SINK_Enum_t spkr,
 void AUDDRV_PrintAllMics(void)
 {
 	int i;
-	CSL_CAPH_HWConfig_Table_t *path;
-
 	aTrace(LOG_AUDIO_DRIVER,
 		   "AUDDRV_PrintAllMics:: print primary and secondary"
 		   " mics for each sink\n");

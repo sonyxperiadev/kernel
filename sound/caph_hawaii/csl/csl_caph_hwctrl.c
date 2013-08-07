@@ -79,7 +79,9 @@
 #include <linux/regulator/driver.h>
 #include <mach/memory.h>
 
-static struct regulator *gAUD_regulator;
+/* gAUD_regulator is being used in the commented part of code hence
+commenting it's declaration to avoid warning*/
+/*static struct regulator *gAUD_regulator;*/
 static struct regulator *gMIC_regulator;
 
 /*#define CONFIG_VOICE_LOOPBACK_TEST */
@@ -1193,7 +1195,8 @@ static void csl_caph_obtain_blocks
 	CSL_CAPH_HWConfig_Table_t *path;
 	CSL_CAPH_CFIFO_FIFO_e fifo;
 	CSL_CAPH_SWITCH_CHNL_e sw;
-	CSL_CAPH_SRCM_INCHNL_e srcmIn;
+	/* Initialized to remove warning */
+	CSL_CAPH_SRCM_INCHNL_e srcmIn = CSL_CAPH_SRCM_INCHNL_NONE;
 	CSL_CAPH_MIXER_e srcmOut;
 	CSL_CAPH_SRCM_SRC_OUTCHNL_e srcmTap;
 	CSL_CAPH_DATAFORMAT_e dataFormat;
@@ -3059,7 +3062,6 @@ void csl_ControlHWClock_156m(Boolean enable)
  */
 void csl_caph_ControlHWClock(Boolean enable)
 {
-	int ret = 0;
 	if (enable == TRUE) {
 		if (sClkCurEnabled == FALSE) {
 			sClkCurEnabled = TRUE;
