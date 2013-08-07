@@ -404,8 +404,9 @@ static int ion_system_heap_shrink(struct shrinker *shrinker,
 
 	/* shrink the free list first, no point in zeroing the memory if
 	   we're just going to reclaim it */
-	nr_freed += ion_heap_freelist_drain(heap, sc->nr_to_scan * PAGE_SIZE) /
-		PAGE_SIZE;
+	if (sys_heap->heap.flags & ION_HEAP_FLAG_DEFER_FREE)
+		nr_freed += ion_heap_freelist_drain(heap,
+					sc->nr_to_scan * PAGE_SIZE) / PAGE_SIZE;
 
 	if (nr_freed >= sc->nr_to_scan)
 		goto end;
@@ -426,7 +427,8 @@ end:
 		struct ion_page_pool *pool = sys_heap->pools[i];
 		nr_total += ion_page_pool_shrink(pool, sc->gfp_mask, 0);
 	}
-	nr_total += ion_heap_freelist_size(heap) / PAGE_SIZE;
+	if (sys_heap->heap.flags & ION_HEAP_FLAG_DEFER_FREE)
+		nr_total += ion_heap_freelist_size(heap) / PAGE_SIZE;
 	return nr_total;
 
 }
