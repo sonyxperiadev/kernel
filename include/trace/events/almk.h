@@ -23,7 +23,6 @@ TRACE_EVENT(almk_start,
 		int inactive_anon,
 		int active_file,
 		int inactive_file,
-		int contig_pages,
 		int rem),
 
 	TP_ARGS(nr_to_scan, gfp_mask, comm,
@@ -32,7 +31,7 @@ TRACE_EVENT(almk_start,
 		cma_free, cma_file,
 		active_anon, inactive_anon,
 		active_file, inactive_file,
-		contig_pages, rem),
+		rem),
 
 	TP_STRUCT__entry(
 		__field(unsigned long, nr_to_scan)
@@ -48,7 +47,6 @@ TRACE_EVENT(almk_start,
 		__field(int, inactive_anon)
 		__field(int, active_file)
 		__field(int, inactive_file)
-		__field(int, contig_pages)
 		__field(int, rem)
 	),
 
@@ -66,18 +64,17 @@ TRACE_EVENT(almk_start,
 		__entry->inactive_anon	= inactive_anon;
 		__entry->active_file	= active_file;
 		__entry->inactive_file	= inactive_file;
-		__entry->contig_pages	= contig_pages;
 		__entry->rem		= rem;
 	),
 
-	TP_printk("%s:%lu:0x%x:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d",
+	TP_printk("%s:%lu:0x%x:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d:%d",
 			__entry->comm, __entry->nr_to_scan,
 			__entry->gfp_mask, __entry->min_score_adj,
 			__entry->minfree, __entry->other_free,
 			__entry->other_file, __entry->cma_free,
 			__entry->cma_file, __entry->active_anon,
 			__entry->inactive_anon, __entry->active_file,
-			__entry->inactive_file, __entry->contig_pages,
+			__entry->inactive_file,
 			__entry->rem)
 );
 

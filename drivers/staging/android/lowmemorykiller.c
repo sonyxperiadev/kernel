@@ -198,7 +198,6 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 	int inactive_anon;
 	int active_file;
 	int inactive_file;
-	int contig_pages = INT_MAX;
 	int tasksize;
 	int i;
 	int min_score_adj = OOM_SCORE_ADJ_MAX + 1;
@@ -262,18 +261,6 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 	inactive_file = global_page_state(NR_INACTIVE_FILE);
 	rem = active_anon + inactive_anon + active_file + inactive_file;
 
-	/*
-	 * If CMA is enabled, We will also free up contiguous
-	 * allocations done by processes (We cannot free up DMA
-	 * allocations that go from CMA region, but we can't count
-	 * DMA and PMEM allocations separately right now, so we take
-	 * the total.
-	 */
-#ifdef CONFIG_CMA
-	contig_pages = global_page_state(NR_CONTIG_PAGES);
-	rem += contig_pages;
-#endif
-
 	down_read(&lmk_reg_rwsem);
 	list_for_each_entry(reg_lmk, &lmk_reg_list, list) {
 		int ret;
@@ -292,7 +279,7 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 	trace_almk_start(sc->nr_to_scan, sc->gfp_mask, current->comm,
 			min_score_adj, minfree, other_free, other_file,
 			cma_free, cma_file, active_anon, inactive_anon,
-			active_file, inactive_file, contig_pages, rem);
+			active_file, inactive_file, rem);
 
 	if (sc->nr_to_scan <= 0 || min_score_adj == OOM_SCORE_ADJ_MAX + 1) {
 		lowmem_print(5, "lowmem_shrink %lu, %x, return %d\n",
