@@ -64,7 +64,7 @@
 #include <linux/clk.h>
 #include <plat/pi_mgr.h>
 #include <mach/pi_mgr.h>
-#define CPUFREQ_1200MHz 12000000
+#define CPUFREQ_1200MHz 1200000
 #endif
 
 #ifdef CONFIG_UNICAM
