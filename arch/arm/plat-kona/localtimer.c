@@ -142,7 +142,7 @@ int __cpuinit local_timer_setup(struct clock_event_device *evt)
 			kona_td.kona_timer = get_timer_ptr(TICK_TIMER_NAME,
 					TICK_TIMER_OFFSET + cpu);
 			if (!kona_td.kona_timer) {
-				pr_err("%s: Failed to allocate %s channel %d",
+				pr_err("%s: Failed to allocate %s channel %d"
 					"as CPU %d local tick device\n",
 					__func__,
 				       TICK_TIMER_NAME,
