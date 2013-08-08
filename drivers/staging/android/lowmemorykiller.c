@@ -222,6 +222,7 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 	int select_index = 0;
 	int session_kill_count = 0;
 #endif
+	int anon_other = 0;
 	int array_size = ARRAY_SIZE(lowmem_adj);
 	int other_free = global_page_state(NR_FREE_PAGES) - totalreserve_pages;
 	/*
@@ -303,9 +304,11 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 
 		ret = reg_lmk->cbk(reg_lmk, &op);
 		if (!WARN_ONCE(ret < 0, "invalid rem: %p, %d\n", reg_lmk, ret))
-			rem += ret;
+			anon_other += ret;
 	}
 	up_read(&lmk_reg_rwsem);
+
+	rem += anon_other;
 
 	trace_almk_start(sc->nr_to_scan, sc->gfp_mask, current->comm,
 			min_score_adj, minfree, other_free, other_file,
@@ -407,7 +410,8 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 				"   to free %ldkB on behalf of '%s' (%d) because\n" \
 				"   cache %ldkB is below limit %ldkB for oom_score_adj %hd\n" \
 				"   Free memory is %ldkB above reserved\n" \
-				"   cma free: %ldkB, cma file: %ldkB\n",
+				"   cma free: %ldkB, cma file: %ldkB, "
+				"anon: %ldkB, aoth: %ldkB\n",
 			     selected->comm, selected->pid,
 			     selected_oom_score_adj,
 			     selected_tasksize * (long)(PAGE_SIZE / 1024),
@@ -417,7 +421,10 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 			     min_score_adj,
 			     other_free * (long)(PAGE_SIZE / 1024),
 			     cma_free * (long)(PAGE_SIZE / 1024),
-			     cma_file * (long)(PAGE_SIZE / 1024));
+			     cma_file * (long)(PAGE_SIZE / 1024),
+			     (active_anon + inactive_anon) *
+			     (long)(PAGE_SIZE / 1024),
+			     anon_other * (long)(PAGE_SIZE / 1024));
 		lowmem_deathpending_timeout = jiffies + HZ;
 		send_sig(SIGKILL, selected, 0);
 		this_cpu_inc(lmk_stats.kill_count);
@@ -442,7 +449,8 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 			"   cache %ldkB is below limit %ldkB "
 			"for oom_score_adj %hd\n"
 			"   Free memory is %ldkB above reserved\n"
-			"   cma free: %ldkB, cma file: %ldkB\n",
+			"   cma free: %ldkB, cma file: %ldkB, "
+			"anon: %ldkB, aoth: %ldkB\n",
 				selected[i].task->comm, selected[i].task->pid,
 				selected[i].oom_score_adj,
 				selected[i].tasksize * (long)(PAGE_SIZE / 1024),
@@ -452,7 +460,10 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 				min_score_adj,
 				other_free * (long)(PAGE_SIZE / 1024),
 				cma_free * (long)(PAGE_SIZE / 1024),
-				cma_file * (long)(PAGE_SIZE / 1024));
+				cma_file * (long)(PAGE_SIZE / 1024),
+				(active_anon + inactive_anon) *
+				(long)(PAGE_SIZE / 1024),
+				anon_other * (long)(PAGE_SIZE / 1024));
 
 			lowmem_deathpending_timeout = jiffies + HZ;
 			send_sig(SIGKILL, selected[i].task, 0);
