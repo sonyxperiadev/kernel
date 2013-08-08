@@ -1477,8 +1477,7 @@ static int __ref kona_fb_probe(struct platform_device *pdev)
 	}
 
 	framesize = fb->display_info->width * fb->display_info->height *
-	    fb->display_info->Bpp;
-	framesize = PAGE_ALIGN(framesize) * 2;
+	    fb->display_info->Bpp * 2;
 	/* Workaround: One page extra allocated and mapped via m4u to avoid
 	 * v3d write faulting in m4u doing extra access */
 	framesize_alloc = PAGE_ALIGN(framesize + 4096);
@@ -1530,7 +1529,8 @@ static int __ref kona_fb_probe(struct platform_device *pdev)
 	width = fb->display_info->width;
 	height = fb->display_info->height;
 	fb->buff0 = (void *)dma_addr;
-	fb->buff1 = (void *)dma_addr + framesize / 2;
+	fb->buff1 =
+	    (void *)dma_addr + width * height * fb->display_info->Bpp;
 
 	fb->fb.fbops = &kona_fb_ops;
 	fb->fb.flags = FBINFO_FLAG_DEFAULT;
@@ -1566,6 +1566,7 @@ static int __ref kona_fb_probe(struct platform_device *pdev)
 		fb->fb.var.green.length = 6;
 		fb->fb.var.blue.offset = 0;
 		fb->fb.var.blue.length = 5;
+		framesize = width * height * 2 * 2;
 		break;
 
 	case DISPDRV_FB_FORMAT_xRGB8888:
@@ -1577,6 +1578,7 @@ static int __ref kona_fb_probe(struct platform_device *pdev)
 		fb->fb.var.green.length = 8;
 		fb->fb.var.blue.offset = 0;
 		fb->fb.var.blue.length = 8;
+		framesize = width * height * 4 * 2;
 		break;
 
 	case DISPDRV_FB_FORMAT_xBGR8888:
@@ -1588,6 +1590,7 @@ static int __ref kona_fb_probe(struct platform_device *pdev)
 		fb->fb.var.green.length = 8;
 		fb->fb.var.red.offset = 0;
 		fb->fb.var.red.length = 8;
+		framesize = width * height * 4 * 2;
 		break;
 
 	default:
