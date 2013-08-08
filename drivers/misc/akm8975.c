@@ -37,7 +37,7 @@
 
 #define AKM8975_DEBUG_IF	0
 #define AKM8975_DEBUG_DATA	0
-
+#define I2C_RETRY_DELAY		5
 #define AKM_ACCEL_ITEMS 3
 /* Wait timeout in millisecond */
 #define AKM8975_DRDY_TIMEOUT	300
@@ -133,14 +133,20 @@ static int akm8975_i2c_check_device(
 {
 	unsigned char buffer[2];
 	int err;
-
+	int i;
+	err = 0;
 	/* Set measure mode */
 	buffer[0] = AK8975_REG_WIA;
-	err = akm8975_i2c_rxdata(client, buffer, 1);
-	if (err < 0) {
-		dev_err(&client->dev,
-			"%s: Can not read WIA.", __func__);
-		return err;
+	for (i = 0; i < 20; i++) {
+		err = akm8975_i2c_rxdata(client, buffer, 1);
+		if (err < 0) {
+			dev_err(&client->dev,
+				"%s: Can not read WIA.", __func__);
+			msleep_interruptible(I2C_RETRY_DELAY);
+		} else {
+			pr_info("[akm8975] read WIA with tries %d\n", i);
+			break;
+		}
 	}
 
 	/* Check read data */

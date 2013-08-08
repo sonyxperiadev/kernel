@@ -38,6 +38,7 @@
 #ifdef CONFIG_HAS_EARLYSUSPEND
 #include <linux/earlysuspend.h>
 #endif
+#define I2C_RETRY_DELAY 5
 #define AKM8963_DEBUG     0
 
 #if AKM8963_DEBUG
@@ -141,16 +142,21 @@ static int akm8963_i2c_check_device(struct i2c_client *client)
 {
 	unsigned char buffer[2];
 	int err;
-
+	int i;
+	err = 0;
 	/* Set measure mode */
 	buffer[0] = AK8963_REG_WIA;
-	err = akm8963_i2c_rxdata(client, buffer, 1);
-	if (err < 0) {
-		dev_err(&client->dev,
-			"[akm8963]%s: Can not read WIA.\n", __func__);
-		return err;
+	for (i = 0; i < 20; i++) {
+		err = akm8963_i2c_rxdata(client, buffer, 1);
+		if (err < 0) {
+			dev_err(&client->dev,
+				"[akm8963]%s: Can not read WIA.\n", __func__);
+			msleep_interruptible(I2C_RETRY_DELAY);
+		} else {
+			pr_info("[akm8963] read WIA with tries %d\n", i);
+			break;
+		}
 	}
-
 	/* Check read data */
 	if (buffer[0] != 0x48) {
 		dev_err(&client->dev,
