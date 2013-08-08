@@ -76,10 +76,50 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 	int minfree = 0;
 	int selected_tasksize = 0;
 	short selected_oom_score_adj;
+	int cma_free = 0;
+	int cma_file = 0;
 	int array_size = ARRAY_SIZE(lowmem_adj);
 	int other_free = global_page_state(NR_FREE_PAGES) - totalreserve_pages;
 	int other_file = global_page_state(NR_FILE_PAGES) -
 						global_page_state(NR_SHMEM);
+
+#ifdef CONFIG_CMA
+	/*
+	 * We can't count CMA free pages as free pages
+	 * because CMA area can't serve unmovable
+	 * allocations. Consider a situation where CMA size is
+	 * considerable and device enters a state
+	 * where we have a lot of CMA free pages and less
+	 * "non-cma" free pages. LMK will trigger but
+	 * will not kill any task. This finally leads to
+	 * unmovable page allocation failures.
+	 * At the same time we can't put a condition here to
+	 * consider cma free depending on the allocation type
+	 * (whether MIGRATE_MOVABLE or not).
+	 * Because that will again lead to unmovable allocation
+	 * failure in a scenario like:
+	 * 1) A series of movable allocations.
+	 * 2) Not much of CMA allocations, i.e.
+	 *    there are CMA free pages.
+	 * 3) LMK does not trigger, as all are movable
+	 *    allocations, and there are CMA pages >
+	 *    LMK threshold.
+	 * 4) This results in pages for unmovable
+	 *    allocations reducing in number.
+	 * 5) Being in this situation when an unmovable
+	 *    allocation comes in, it fails and the LMK
+	 *    fails to kill at rate, to be at par with
+	 *    memory drain.
+	 *
+	 * Tests show that this works well when the CMA
+	 * size is not huge compared to available memory.
+	 */
+	cma_free = global_page_state(NR_FREE_CMA_PAGES);
+	cma_file = global_page_state(NR_CMA_INACTIVE_FILE)
+		+ global_page_state(NR_CMA_ACTIVE_FILE);
+	other_free -= cma_free;
+	other_file -= cma_file;
+#endif
 
 	if (lowmem_adj_size < array_size)
 		array_size = lowmem_adj_size;
@@ -151,7 +191,8 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 		lowmem_print(1, "Killing '%s' (%d), adj %hd,\n" \
 				"   to free %ldkB on behalf of '%s' (%d) because\n" \
 				"   cache %ldkB is below limit %ldkB for oom_score_adj %hd\n" \
-				"   Free memory is %ldkB above reserved\n",
+				"   Free memory is %ldkB above reserved\n" \
+				"   cma free: %ldkB, cma file: %ldkB\n",
 			     selected->comm, selected->pid,
 			     selected_oom_score_adj,
 			     selected_tasksize * (long)(PAGE_SIZE / 1024),
@@ -159,7 +200,9 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 			     other_file * (long)(PAGE_SIZE / 1024),
 			     minfree * (long)(PAGE_SIZE / 1024),
 			     min_score_adj,
-			     other_free * (long)(PAGE_SIZE / 1024));
+			     other_free * (long)(PAGE_SIZE / 1024),
+			     cma_free * (long)(PAGE_SIZE / 1024),
+			     cma_file * (long)(PAGE_SIZE / 1024));
 		lowmem_deathpending_timeout = jiffies + HZ;
 		send_sig(SIGKILL, selected, 0);
 		set_tsk_thread_flag(selected, TIF_MEMDIE);
