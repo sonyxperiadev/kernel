@@ -1534,16 +1534,6 @@ end_restore_irqs:
 	preempt_enable();
 	return 0;
 }
-#else
-/* Unified logging */
-int bcmlog_mtt_on;
-unsigned short bcmlog_log_ulogging_id;
-/* ------------------------------------------------------------ */
-int brcm_retrive_early_printk(void)
-{
-	return 0;
-}
-
 #endif
 
 /*
@@ -1747,7 +1737,7 @@ asmlinkage int vprintk_emit(int facility, int level,
 		level = default_message_loglevel;
 #ifdef CONFIG_BRCM_UNIFIED_LOGGING
 if (bcmlog_mtt_on == 1 && bcmlog_log_ulogging_id > 0 && BrcmLogString)
-	BrcmLogString(textbuf, bcmlog_log_ulogging_id);
+	BrcmLogString(printk_buf, bcmlog_log_ulogging_id);
 #endif
 	if (dict)
 		lflags |= LOG_PREFIX|LOG_NEWLINE;

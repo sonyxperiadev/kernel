@@ -111,8 +111,9 @@ static struct proc_dir_entry *bcm_fuse_net_config_proc_entry;
 /**
  * Write function for bcm_fuse_net proc entry
  */
-static ssize_t bcm_fuse_net_proc_write(struct file *procFp, const char __user * ubuff,
-					size_t len, loff_t *pos)
+static ssize_t bcm_fuse_net_proc_write(struct file *procFp,
+				       const char __user *ubuff,
+				       unsigned long len, void *data)
 {
 	char uStr[BCM_FUSE_NET_PROC_MAX_STR_LEN];
 	bool error = TRUE;
@@ -158,8 +159,8 @@ static ssize_t bcm_fuse_net_proc_write(struct file *procFp, const char __user * 
 /**
 	Read function for bcm_fuse_net proc entry
 */
-static ssize_t bcm_fuse_net_proc_read(struct file *file, char __user *ubuff,
-				size_t count, loff_t *pos)
+static int bcm_fuse_net_proc_read(char *ubuff, char **start, off_t off,
+				  int count, int *eof, void *data)
 {
 	int len = 0;
 	int i;
@@ -893,11 +894,6 @@ FOUND_ENTRY:
 }
 #endif /*#ifdef INCLUDE_UNUSED_CODE */
 
-static const struct file_operations bcm_fuse_net_config_fops = {
-	.read	=	bcm_fuse_net_proc_read,
-	.write	=	bcm_fuse_net_proc_write,
-};
-
 static int __init bcm_fuse_net_init_module(void)
 {
 	unsigned int i = 0;
@@ -919,8 +915,7 @@ static int __init bcm_fuse_net_init_module(void)
 
 	/* proc entry for net config settings */
 	bcm_fuse_net_config_proc_entry =
-		proc_create_data("bcm_fuse_net_config", 0666, NULL,
-				&bcm_fuse_net_config_fops, NULL);
+	    create_proc_entry("bcm_fuse_net_config", 0666, NULL);
 	if (bcm_fuse_net_config_proc_entry == NULL) {
 		BNET_DEBUG(DBG_INFO,
 		   "%s: Couldn't create bcm_fuse_net_config_proc_entry!\n",
@@ -929,6 +924,10 @@ static int __init bcm_fuse_net_init_module(void)
 		BNET_DEBUG(DBG_INFO,
 		   "%s: bcm_fuse_net_config_proc_entry created\n",
 		   __FUNCTION__);
+		bcm_fuse_net_config_proc_entry->write_proc =
+		    bcm_fuse_net_proc_write;
+		bcm_fuse_net_config_proc_entry->read_proc =
+		    bcm_fuse_net_proc_read;
 	}
 
 	return 0;

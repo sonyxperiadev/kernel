@@ -357,15 +357,15 @@ config VMXNET3
 source "drivers/net/hyperv/Kconfig"
 
 config BRCM_NETCONSOLE
-        tristate "Broadcom Network console logging support"
-        depends on (USB_ETH_RNDIS || USB_G_ANDROID)
+        tristate "Broadcom Network console logging support (EXPERIMENTAL)"
+        depends on EXPERIMENTAL && (USB_ETH_RNDIS || USB_G_ANDROID)
         ---help---
         If you want to log kernel messages over the network, enable this.
         See <file:Documentation/networking/netconsole.txt> for details.
 
 config BRCM_NETCONSOLE_DYNAMIC
-        bool "Broadcom Dynamic reconfiguration of logging targets"
-        depends on BRCM_NETCONSOLE && SYSFS
+        bool "Broadcom Dynamic reconfiguration of logging targets (EXPERIMENTAL)"
+        depends on BRCM_NETCONSOLE && SYSFS && EXPERIMENTAL
         #select CONFIGFS_FS
         help
           This option enables the ability to dynamically reconfigure target
