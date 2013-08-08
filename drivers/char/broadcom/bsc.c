@@ -363,7 +363,7 @@ proc_register_write(struct file *file, const char __user *buffer,
 
 	tmp = tmp + strlen(param.name);
 
-	if (kstrtol(tmp, 10, &param.len) < 0)
+	if (kstrtol(tmp, 10, (long *)&param.len) < 0)
 		return -EINVAL;
 
 	if (param.len <= 0) {
@@ -447,7 +447,7 @@ proc_query_write(struct file *file, const char __user *buffer,
 	tmp[count] = '\0';
 	tmp = tmp + strlen(param.name);
 
-	if (kstrtol(tmp, 10, &param.len) < 0)
+	if (kstrtol(tmp, 10, (long *)&param.len) < 0)
 		return -EINVAL;
 
 	if (param.len <= 0) {
