@@ -593,7 +593,7 @@ int kona_timer_free(struct kona_timer *kt)
 		clk = clk_get(NULL, ktm->clk_name);
 		if (IS_ERR_OR_NULL(clk))
 			pr_err
-			    ("timer_free: clk_get failed, so clock manager",
+			    ("timer_free: clk_get failed, so clock manager"
 			     "is not up use local calls\n");
 		else
 			clk_disable(clk);
@@ -793,7 +793,7 @@ static int __config_slave_timer_clock(struct kona_timer_module *pktm,
 	clk = clk_get(NULL, pktm->clk_name);
 	if (IS_ERR_OR_NULL(clk)) {
 		pr_err
-		    ("clk_get failed, so clock manager is not up use",
+		    ("clk_get failed, so clock manager is not up use"
 		    " local calls\n");
 		goto local_clk_cfg;
 	}
@@ -1128,7 +1128,6 @@ static irqreturn_t kona_timer_isr(int irq, void *dev_id)
 	struct kona_timer_module *ktm;
 	struct kona_timer *kt;
 	int ch_num;
-	void __iomem *match_reg;
 	unsigned long flags;
 	unsigned long reg;
 
