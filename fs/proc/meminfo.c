@@ -105,6 +105,15 @@ static int meminfo_proc_show(struct seq_file *m, void *v)
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 		"AnonHugePages:  %8lu kB\n"
 #endif
+#ifdef CONFIG_CMA
+		"CmaFree:        %8lu kB\n"
+		"CmaA(active):   %8lu kB\n"
+		"CmaA(inactive): %8lu kB\n"
+		"CmaF(active):   %8lu kB\n"
+		"CmaF(inactive): %8lu kB\n"
+		"CmaUnevictable: %8lu kB\n"
+		"ContigAlloc:    %8lu kB\n"
+#endif
 		,
 		K(i.totalram),
 		K(i.freeram),
@@ -164,6 +173,15 @@ static int meminfo_proc_show(struct seq_file *m, void *v)
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 		,K(global_page_state(NR_ANON_TRANSPARENT_HUGEPAGES) *
 		   HPAGE_PMD_NR)
+#endif
+#ifdef CONFIG_CMA
+		, K(global_page_state(NR_FREE_CMA_PAGES))
+		, K(global_page_state(NR_CMA_ACTIVE_ANON))
+		, K(global_page_state(NR_CMA_INACTIVE_ANON))
+		, K(global_page_state(NR_CMA_ACTIVE_FILE))
+		, K(global_page_state(NR_CMA_INACTIVE_FILE))
+		, K(global_page_state(NR_CMA_UNEVICTABLE))
+		, K(global_page_state(NR_CMA_CONTIG_PAGES))
 #endif
 		);
 

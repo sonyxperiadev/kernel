@@ -777,6 +777,7 @@ void __init init_cma_reserved_pageblock(struct page *page)
 	do {
 		__ClearPageReserved(p);
 		set_page_count(p, 0);
+		SetPageCma(p);
 	} while (++p, --i);
 
 	set_page_refcounted(page);
@@ -6209,6 +6210,9 @@ static const struct trace_print_flags pageflag_names[] = {
 #endif
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 	{1UL << PG_compound_lock,	"compound_lock"	},
+#endif
+#ifdef CONFIG_CMA
+	{1UL << PG_cma,			"cma"		},
 #endif
 };
 
