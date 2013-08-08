@@ -1369,7 +1369,9 @@ static void sdhci_request(struct mmc_host *mmc, struct mmc_request *mrq)
 		else
 			sdhci_send_command(host, mrq->cmd);
 	}
+#ifdef CONFIG_MMC_BCM_NON_SECURE_ERASE
 out:
+#endif
 	mmiowb();
 	spin_unlock_irqrestore(&host->lock, flags);
 }
