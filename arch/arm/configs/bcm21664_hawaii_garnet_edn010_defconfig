@@ -1085,7 +1085,15 @@ CONFIG_RFKILL_LEDS=y
 # CONFIG_NET_9P is not set
 # CONFIG_CAIF is not set
 # CONFIG_CEPH_LIB is not set
-# CONFIG_NFC is not set
+CONFIG_NFC=y
+# CONFIG_NFC_NCI is not set
+# CONFIG_NFC_HCI is not set
+
+#
+# Near Field Communication (NFC) devices
+#
+# CONFIG_PN544_NFC is not set
+CONFIG_BCMI2CNFC=y
 CONFIG_HAVE_BPF_JIT=y
 
 #

@@ -598,7 +598,7 @@ static int bcmi2cnfc_probe(struct i2c_client *client,
 	bcmi2cnfc_dev->irq_enabled = FALSE;
 
 #ifdef CONFIG_HAS_WAKELOCK
-	wake_lock_init(&nfc_wake_lock, WAKE_LOCK_IDLE, "NFCWAKE");
+	wake_lock_init(&nfc_wake_lock, WAKE_LOCK_SUSPEND, "NFCWAKE");
 #endif
 
 	bcmi2cnfc_dev->original_address = client->addr;
