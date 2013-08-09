@@ -33,6 +33,7 @@
 #include <linux/notifier.h>
 #include <linux/i2c/ft6x06_ex_fun.h>
 #include <linux/wakelock.h>
+#include <linux/vmalloc.h>
 
 #define GPIO_TO_IRQ gpio_to_irq
 
@@ -44,6 +45,7 @@ static int ts_y_max_value=0;
 static const char *tp_power;
 static const char *vkey_scope;
 static bool have_vkey = false;
+static char firmware_str[50];
 
 /*******************************/
 typedef unsigned char	FTS_BYTE;
@@ -1267,6 +1269,11 @@ static int ft6x06_ReadFirmware(char *firmware_name,
 	loff_t pos;
 	mm_segment_t old_fs;
 
+	if (!firmware_buf) {
+		pr_err("%s--firmware buffer NULL!\n", __func__);
+		return -EIO;
+	}
+
 	memset(filepath, 0, sizeof(filepath));
 	sprintf(filepath, "%s", firmware_name);
 	if (NULL == pfile)
@@ -1307,6 +1314,11 @@ static int focaltec_fts_ctpm_fw_upgrade(struct i2c_client *client, u8 *pbt_buf,
 		printk(KERN_ERR "firmware size is too short, invalid.\n");
 		return -1;
 	}
+	if (!pbt_buf) {
+		printk(KERN_ERR "firmware buffer is null!\n");
+		return -1;
+	}
+
 	for (i = 0; i < FTS_UPGRADE_LOOP; i++) {
 		/*********Step 1:Reset  CTPM *****/
 		/*write 0xaa to register 0xbc */
@@ -1479,11 +1491,16 @@ int fts_ctpm_fw_upgrade_with_app_file(struct i2c_client *client,
 	}
 
 	/*=========FW upgrade========================*/
-	pbt_buf = kmalloc(fwsize + 1, GFP_ATOMIC);
+	pbt_buf = vmalloc(fwsize + 1);
+	if (!pbt_buf) {
+		dev_err(&client->dev, "%s() - ERROR: memory allocate failed\n",
+					__func__);
+		return -EIO;
+	}
 	if (ft6x06_ReadFirmware(firmware_name, pbt_buf)) {
 		dev_err(&client->dev, "%s() - ERROR: request_firmware failed\n",
 					__func__);
-		kfree(pbt_buf);
+		vfree(pbt_buf);
 		return -EIO;
 	}
 	/*call the upgrade function */
@@ -1497,8 +1514,7 @@ int fts_ctpm_fw_upgrade_with_app_file(struct i2c_client *client,
 			fts_ctpm_auto_clb();
 		printk(KERN_INFO "[FTS] upgrade successfully.\n");
 	}
-	kfree(pbt_buf);
-
+	vfree(pbt_buf);
 	return i_ret;
 }
 
