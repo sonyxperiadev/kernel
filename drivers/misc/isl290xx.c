@@ -1370,7 +1370,7 @@ static int prv_isl290xx_ctrl_lp(int mask)
 		if (ret < 0)
 			goto out;
 		ret = isl290xx_set_bits(ISL290XX_CFG1_REG,
-			ISL290XX_ALS_EN_BIT, 1);
+			ISL290XX_ALS_EN_BIT, 0x4);
 		if (ret < 0)
 			goto out;
 		mdelay(5);
