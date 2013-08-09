@@ -334,6 +334,7 @@
 		lanes = <4>;
 		hs-bitrate = <400000000>;
 		lp-bitrate = <5000000>;	/* 5mbps */
+		desense-offset = <2400000>;  /* +2.4Mbps */
 		iommu = <&iommu_mm>;
 		iovmm = <&iovmm_mm>;
 		rotation = <180>;
@@ -361,6 +362,7 @@
 		cmnd-LP;		/* Commands in LP mode*/
 		hs-bitrate = <330000000>;
 		lp-bitrate = <8000000>;	/* 8mbps */
+		desense-offset = <2400000>;  /* +2.4Mbps */
 		iommu = <&iommu_mm>;
 		iovmm = <&iovmm_mm>;
 		rotation = <180>;
