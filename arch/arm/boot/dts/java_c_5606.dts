@@ -258,7 +258,7 @@
 	};
 
 	kona-fb {
-		module-name = "HX8389B";
+		module-name = "HX8379_HSD";
 		reg-name = "cam2";
 		rst-gpio = <22>;
 		rst-setup = <700>;	/* 700us */
@@ -266,8 +266,8 @@
 		rst-hold = <10000>;	/* 2ms */
 		col-mod-i = <3>;
 		col-mod-o = <2>;
-		width = <540>;
-		height = <960>;
+		width = <480>;
+		height = <854>;
 		/* rst-active-high */	/* Commented => Active Low */
 		vmode;
 		/* vburst */	/* Non-burst mode */
@@ -275,12 +275,37 @@
 		fps = <60>;
 		lanes = <2>;
 		cmnd-LP;		/* Commands in LP mode*/
-		hs-bitrate = <420000000>;
+		hs-bitrate = <352000000>;
 		lp-bitrate = <5000000>;	/* 5mbps */
 		iommu = <&iommu_mm>;
 		iovmm = <&iovmm_mm>;
 		rotation = <0>;
 		ulps;
+	};
+
+	kona-fb-2 {
+		module-name = "NT35512_GP";
+		reg-name = "cam2";
+		rst-gpio = <22>;
+		rst-setup = <700>;	/* 700us */
+		rst-pulse = <20>;	/* 10us */
+		rst-hold = <10000>;	/* 2ms */
+		col-mod-i = <3>;
+		col-mod-o = <2>;
+		width = <480>;
+		height = <854>;
+		/* rst-active-high */	/* Commented => Active Low */
+		vmode;
+		/* vburst */	/* Non-burst mode */
+		/* te-ctrl; */		/* Tearing Effect Control disabled */
+		fps = <60>;
+		lanes = <2>;
+		cmnd-LP;		/* Commands in LP mode*/
+		hs-bitrate = <330000000>;
+		lp-bitrate = <8000000>;	/* 5mbps */
+		iommu = <&iommu_mm>;
+		iovmm = <&iovmm_mm>;
+		rotation = <0>;
 	};
 
 	tmon@0x34008000 {
