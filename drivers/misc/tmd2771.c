@@ -51,7 +51,8 @@
 #ifdef CONFIG_HAS_EARLYSUSPEND
 #include <linux/earlysuspend.h>
 #endif
-
+#define I2C_RETRY_DELAY		5
+#define I2C_RETRY_COUNTS	20
 #define LOG_LEVEL_ERROR		(1U<<0)
 #define LOG_LEVEL_INFO		(1U<<0)
 #define LOG_LEVEL_DEBUG		(1U<<1)
@@ -177,6 +178,10 @@ static const struct of_device_id tmd2771_of_match[] = {
 
 MODULE_DEVICE_TABLE(of, tmd2771_of_match);
 
+#ifdef TMD2771_USER_CALIBRATION
+static int tmd2771_offset;
+#endif
+
 #define TAOS_INPUT_NAME_ALS  "TAOS_ALS_SENSOR"
 #define TAOS_INPUT_NAME_PROX  "TAOS_PROX_SENSOR"
 int isPsensorLocked;
@@ -209,7 +214,6 @@ static int prox_calibrate(void);
 static int taos_sensors_als_on(void);
 
 DECLARE_WAIT_QUEUE_HEAD(waitqueue_read);
-
 #define ALS_PROX_DEBUG
 unsigned int ReadEnable;
 struct ReadData {
@@ -782,7 +786,10 @@ static int prox_calibrate(void)
 		taos_cfgp->prox_threshold_hi = 200;
 		taos_cfgp->prox_threshold_lo = 150;
 	}
-
+#ifdef TMD2771_USER_CALIBRATION
+	tmd2771_offset = prox_mean;
+	pr_taos(INFO, "prox calibrate tmd2771_offset=%d\n", tmd2771_offset);
+#endif
 	pr_taos(DEBUG, "----------- taos_cfgp->prox_threshold_hi = %d\n",
 		taos_cfgp->prox_threshold_hi);
 	pr_taos(DEBUG, "----------- taos_cfgp->prox_threshold_lo = %d\n",
@@ -925,7 +932,78 @@ static int taos_i2c_read(struct i2c_client *client, u8 reg, u8 *val)
 smbus_write_err:
 	return err;
 }
+#ifdef TMD2771_USER_CALIBRATION
+static ssize_t prox_cali_store(struct device *dev,
+			struct device_attribute *attr,
+			const char *buf, size_t count)
+{
+	int enable;
+	int ret;
+	ret = kstrtoint(buf, 0, &enable);
+	if (ret)
+		return ret;
+	if (enable)
+		prox_calibrate();
+	return count;
+}
+static DEVICE_ATTR(prox_cali, 0644, NULL, prox_cali_store);
 
+static ssize_t tmd2771_get_offset(struct device *dev,
+			struct device_attribute *attr,
+			char *buf)
+{
+	return sprintf(buf, "%d\n", tmd2771_offset);
+}
+
+static ssize_t tmd2771_set_offset(struct device *dev,
+			struct device_attribute *attr,
+			const char *buf, size_t count)
+{
+	int x;
+	int hi;
+	int lo;
+	int i;
+	int err = -EINVAL;
+	err = sscanf(buf, "%d", &x);
+	if (err != 1) {
+		pr_err("invalid parameter number: %d\n", err);
+		return err;
+	}
+	tmd2771_offset = x;
+	hi = taos_cfgp->prox_threshold_hi_def + tmd2771_offset
+			- taos_cfgp->prox_offset;
+	lo = taos_cfgp->prox_threshold_lo_def + tmd2771_offset
+			- taos_cfgp->prox_offset;
+	pr_taos(INFO,
+		"tmd2771_offset=%d,prox_offset=%d, hi =%d, lo=%d\n",
+		tmd2771_offset, taos_cfgp->prox_offset, hi, lo);
+	if (hi > 0xfffe || lo > 0xfffe ||
+		(tmd2771_offset-taos_cfgp->prox_offset) < 0) {
+		tmd2771_offset = 0;
+		pr_taos(ERROR, "isl290xx sw cali failed\n");
+	} else {
+		if (lo > tmd2771_offset) {
+			taos_cfgp->prox_threshold_hi = hi;
+			taos_cfgp->prox_threshold_lo = lo;
+		} else {
+			for (i = 0; i < 100; i++) {
+				hi++;
+				lo++;
+				if (lo > tmd2771_offset) {
+					taos_cfgp->prox_threshold_hi
+						= hi + 1;
+					taos_cfgp->prox_threshold_lo
+						= lo + 1;
+					break;
+				}
+			}
+		}
+	}
+	return count;
+}
+static DEVICE_ATTR(offset,  S_IRUGO | S_IWUSR | S_IWGRP | S_IWOTH,
+	tmd2771_get_offset, tmd2771_set_offset);
+#endif
 static ssize_t taos_power_show(struct device *dev,
 			       struct device_attribute *attr, char *buf)
 {
@@ -1027,7 +1105,92 @@ static ssize_t taos_reg_store(struct device *dev,
 	return -EFAULT;
 }
 
+static ssize_t prox_enable_store(struct device *dev,
+				 struct device_attribute *attr,
+				 const char *buf, size_t count)
+{
 
+	int enable;
+	int ret;
+	u8 reg_cntrl;
+
+	ret = kstrtoint(buf, 0, &enable);
+	if (ret)
+		return ret;
+	if (enable) {
+		if (PROX_ON) {
+			pr_taos(INFO, "prox_enable: prox already on.\n");
+			return 0;
+		}
+		ret = i2c_smbus_write_byte_data(taos_datap->client,
+						TAOS_TRITON_CMD_REG | 0x01,
+						taos_cfgp->prox_int_time);
+		if (ret < 0)
+			return ret;
+		ret = i2c_smbus_write_byte_data(taos_datap->client,
+						TAOS_TRITON_CMD_REG | 0x02,
+						taos_cfgp->prox_adc_time);
+		if (ret < 0)
+			return ret;
+		ret = i2c_smbus_write_byte_data(taos_datap->client,
+						TAOS_TRITON_CMD_REG | 0x03,
+						taos_cfgp->prox_wait_time);
+		if (ret < 0)
+			return ret;
+		ret = i2c_smbus_write_byte_data(taos_datap->client,
+						TAOS_TRITON_CMD_REG | 0x0C,
+						taos_cfgp->prox_intr_filter);
+		if (ret < 0)
+			return ret;
+		ret = i2c_smbus_write_byte_data(taos_datap->client,
+						TAOS_TRITON_CMD_REG | 0x0D,
+						taos_cfgp->prox_config);
+		if (ret < 0)
+			return ret;
+		ret = i2c_smbus_write_byte_data(taos_datap->client,
+						TAOS_TRITON_CMD_REG | 0x0E,
+						taos_cfgp->prox_pulse_cnt);
+		if (ret < 0)
+			return ret;
+		ret = i2c_smbus_write_byte_data(taos_datap->client,
+						TAOS_TRITON_CMD_REG | 0x0F,
+						taos_cfgp->prox_gain);
+		if (ret < 0)
+			return ret;
+
+		/* enable the irq of als when prox on */
+		reg_cntrl = TAOS_TRITON_CNTL_PROX_DET_ENBL |
+		    TAOS_TRITON_CNTL_PWRON |
+		    TAOS_TRITON_CNTL_PROX_INT_ENBL |
+		    TAOS_TRITON_CNTL_ADC_ENBL |
+		    TAOS_TRITON_CNTL_WAIT_TMR_ENBL |
+		    TAOS_TRITON_CNTL_ALS_INT_ENBL;
+
+		ret = i2c_smbus_write_byte_data(taos_datap->client,
+						TAOS_TRITON_CMD_REG |
+						TAOS_TRITON_CNTRL, reg_cntrl);
+		if (ret < 0)
+			return ret;
+		PROX_ON = 1;
+	} else {
+		if (PROX_ON == 0) {
+			pr_taos(INFO,
+				"prox_on: prox already off.\n");
+			return 0;
+		}
+		ret = i2c_smbus_write_byte_data(taos_datap->client,
+					TAOS_TRITON_CMD_REG |
+					TAOS_TRITON_CNTRL, 0x00);
+		if (ret < 0)
+			return ret;
+		if (ALS_ON == 1)
+			taos_sensors_als_on();
+		PROX_ON = 0;
+	}
+	return count;
+}
+
+static DEVICE_ATTR(prox_enable, 0644, NULL, prox_enable_store);
 static DEVICE_ATTR(taos_power, 0444, taos_power_show, NULL);
 static DEVICE_ATTR(taos_state, 0444, taos_state_show, NULL);
 static DEVICE_ATTR(taos_reg, 0644, taos_reg_show, taos_reg_store);
@@ -1036,6 +1199,11 @@ static struct attribute *taos_prox_attr[] = {
 	&dev_attr_taos_power.attr,
 	&dev_attr_taos_state.attr,
 	&dev_attr_taos_reg.attr,
+#ifdef TMD2771_USER_CALIBRATION
+	&dev_attr_prox_cali.attr,
+	&dev_attr_offset.attr,
+#endif
+	&dev_attr_prox_enable.attr,
 	NULL,
 };
 
@@ -1043,6 +1211,46 @@ static struct attribute_group taos_prox_attr_grp = {
 	.attrs = taos_prox_attr,
 };
 
+
+#ifdef TMD2771_USER_CALIBRATION
+static void tmd2771_prox_boot_cali(void)
+{
+	int hi;
+	int lo;
+	int i;
+	pr_taos(INFO, "prox. auto calibration in progress\n");
+	prox_calibrate();
+	hi =  taos_cfgp->prox_threshold_hi_def + tmd2771_offset
+			- taos_cfgp->prox_offset;
+	lo = taos_cfgp->prox_threshold_lo_def + tmd2771_offset
+			- taos_cfgp->prox_offset;
+	pr_taos(INFO, "tmd2771_offset=%d,prox_offset=%d, hi =%d, lo=%d\n",
+		tmd2771_offset, taos_cfgp->prox_offset, hi, lo);
+
+	if (hi > 0xfffe || lo > 0xfffe ||
+		(tmd2771_offset-taos_cfgp->prox_offset) < 0) {
+		tmd2771_offset = 0;
+		pr_taos(ERROR, "tmd2771 boot cali failed\n");
+	} else {
+		if (lo > tmd2771_offset) {
+			taos_cfgp->prox_threshold_hi = hi;
+			taos_cfgp->prox_threshold_lo = lo;
+		} else {
+			for (i = 0; i < 60; i++) {
+				hi += 2;
+				lo += 2;
+				if (lo > tmd2771_offset) {
+					taos_cfgp->prox_threshold_hi
+						= hi + 1;
+					taos_cfgp->prox_threshold_lo
+						= lo + 1;
+					break;
+				}
+			}
+		}
+	}
+}
+#endif
 static int taos_probe(struct i2c_client *clientp,
 		      const struct i2c_device_id *idp)
 {
@@ -1054,6 +1262,9 @@ static int taos_probe(struct i2c_client *clientp,
 	struct tmd2771_platform_data *pdata = NULL;
 	struct device_node *np;
 	u32 val = 0;
+#ifdef TMD2771_USER_CALIBRATION
+	tmd2771_offset = 0;
+#endif
 	if (!i2c_check_functionality(clientp->adapter,
 				     I2C_FUNC_SMBUS_BYTE_DATA)) {
 		pr_taos(ERROR, "i2c smbus byte data functions unsupported\n");
@@ -1071,16 +1282,24 @@ static int taos_probe(struct i2c_client *clientp,
 		pr_taos(ERROR,
 			"TAOS: taos_probe() - i2c smbus block data functions unsupported\n");
 	}
-
-	chip_id = i2c_smbus_read_byte_data(clientp,
-					   (TAOS_TRITON_CMD_REG |
-					    (TAOS_TRITON_CNTRL + 0x12)));
-	if (chip_id < 0) {
-		pr_taos(ERROR, "get chip id fail, please check i2c\n");
-		ret = -ENODEV;
-		goto err_i2c_check_function;
+	for (i = 0; i < I2C_RETRY_COUNTS; i++) {
+		chip_id = i2c_smbus_read_byte_data(clientp,
+					(TAOS_TRITON_CMD_REG |
+					(TAOS_TRITON_CNTRL + 0x12)));
+		if (chip_id < 0) {
+			pr_taos(ERROR, "get chip id fail with tries %d\n",
+				i);
+			msleep_interruptible(I2C_RETRY_DELAY);
+			if (i == (I2C_RETRY_DELAY-1)) {
+				ret = -ENODEV;
+				goto err_i2c_check_function;
+			}
+		} else {
+			pr_taos(INFO,
+				"get chip id sucessfully with tries %d", i);
+			break;
+		}
 	}
-
 	taos_datap->client = clientp;
 	i2c_set_clientdata(clientp, taos_datap);
 	INIT_WORK(&(taos_datap->work), taos_work_func);
@@ -1220,11 +1439,17 @@ static int taos_probe(struct i2c_client *clientp,
 			if (ret)
 				goto err_read;
 			taos_cfgp->prox_threshold_hi = val;
+#ifdef TMD2771_USER_CALIBRATION
+			taos_cfgp->prox_threshold_hi_def = val;
+#endif
 			ret = of_property_read_u32(np,
 				"prox_threshold_lo_param", &val);
 			if (ret)
 				goto err_read;
 			taos_cfgp->prox_threshold_lo = val;
+#ifdef TMD2771_USER_CALIBRATION
+			taos_cfgp->prox_threshold_lo_def = val;
+#endif
 			ret = of_property_read_u32(np,
 				"als_threshold_hi_param", &val);
 			if (ret)
@@ -1279,6 +1504,20 @@ static int taos_probe(struct i2c_client *clientp,
 				"gpio-irq-pin", &val);
 			if (ret)
 				goto err_read;
+#ifdef TMD2771_USER_CALIBRATION
+		ret = of_property_read_u32(np,
+			"prox_offset_param", &val);
+		if (ret)
+			taos_cfgp->prox_offset = 0;
+		else
+			taos_cfgp->prox_offset = val;
+		ret = of_property_read_u32(np,
+			"prox_boot_cali", &val);
+		if (ret)
+			taos_cfgp->prox_boot_cali = 0;
+		else
+			taos_cfgp->prox_boot_cali = val;
+#endif
 		}
 		als_ps_int = gpio_to_irq(val);
 		als_ps_gpio_inr = val;
@@ -1828,7 +2067,10 @@ static long taos_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 
 	case TAOS_IOCTL_CONFIG_GET:
 		pr_taos(DEBUG, "ioctl: TAOS_IOCTL_CONFIG_GET\n");
-		prox_calibrate();
+#ifdef TMD2771_USER_CALIBRATION
+		if (taos_cfgp->prox_boot_cali)
+			tmd2771_prox_boot_cali();
+#endif
 		ret = copy_to_user((struct taos_cfg *)arg, taos_cfgp,
 				   sizeof(struct taos_cfg));
 		if (ret)
