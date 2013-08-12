@@ -1107,29 +1107,95 @@ config SOC_CAMERA_OV2640
 	help
 	  This is a ov2640 camera driver
 
-config SOC_CAMERA_S5K4ECGX
-	tristate "s5k4ecgx camera support"
+config SOC_CAMERA_MAIN_S5K4ECGX
+	tristate "s5k4ecgx main camera support"
 	depends on SOC_CAMERA && I2C
 	help
-	  This is a s5k4ecgx camera driver
+	  This is a s5k4ecgx main camera driver.
+	  5MP Camera interfaced to camera host driver.
+	  I2C controlled. Data out over the
+	  MIPI Lanes.
 
-config SOC_CAMERA_SR300PC20
-	tristate "sr300pc20 camera support"
+config SOC_CAMERA_SUB_S5K4ECGX
+	tristate "s5k4ecgx sub camera support"
 	depends on SOC_CAMERA && I2C
 	help
-	  This is a sr300pc20 camera driver
+	  This is a s5k4ecgx sub camera driver.
+	  5MP Camera interfaced to camera host driver.
+	  I2C controlled. Data out over the
+	  MIPI Lanes.
 
-config SOC_CAMERA_SR030PC50
-	tristate "sr030pc50 camera support"
+config SOC_CAMERA_MAIN_SR300PC20
+	tristate "sr300pc20 main camera support"
 	depends on SOC_CAMERA && I2C
 	help
-	  This is a sr030pc50 camera driver
+	  This is a sr300pc20 main camera driver.
+	  3MP Camera interfaced to camera host driver.
+	  I2C controlled. Data out over the
+	  MIPI Lanes.
 
-config SOC_CAMERA_SR200PC20M
-	tristate "sr200pc20m camera support"
+config SOC_CAMERA_SUB_SR300PC20
+	tristate "sr300pc20 sub camera support"
 	depends on SOC_CAMERA && I2C
 	help
-	  This is a sr200pc20m camera driver
+	  This is a sr300pc20 sub camera driver.
+	  3MP Camera interfaced to camera host driver.
+	  I2C controlled. Data out over the
+	  MIPI Lanes.
+
+config SOC_CAMERA_MAIN_SR030PC50
+	tristate "sr030pc50 main camera support"
+	depends on SOC_CAMERA && I2C
+	help
+	  This is a sr030pc50 main camera driver.
+	  VGA Camera interfaced to camera host driver.
+	  I2C controlled. Data out over the
+	  MIPI Lanes.
+
+config SOC_CAMERA_SUB_SR030PC50
+	tristate "sr030pc50 sub camera support"
+	depends on SOC_CAMERA && I2C
+	help
+	  This is a sr030pc50 sub camera driver.
+	  VGA Camera interfaced to camera host driver.
+	  I2C controlled. Data out over the
+	  MIPI Lanes.
+
+config SOC_CAMERA_MAIN_SR200PC20M
+	tristate "sr200pc20m main camera support"
+	depends on SOC_CAMERA && I2C
+	help
+	  This is a sr200pc20m main camera driver.
+	  VGA Camera interfaced to camera host driver.
+	  I2C controlled. Data out over the
+	  MIPI Lanes.
+
+config SOC_CAMERA_SUB_SR200PC20M
+	tristate "sr200pc20m sub camera support"
+	depends on SOC_CAMERA && I2C
+	help
+	  This is a sr200pc20m sub camera driver.
+	  VGA Camera interfaced to camera host driver.
+	  I2C controlled. Data out over the
+	  MIPI Lanes.
+
+config SOC_CAMERA_MAIN_SR352
+	tristate "sr352 main camera support"
+	depends on SOC_CAMERA && I2C
+	help
+	  This is a sr352 main camera driver
+	  3MP Camera interfaced to camera host driver.
+	  I2C controlled. Data out over the
+	  MIPI Lanes.
+
+config SOC_CAMERA_SUB_SR352
+	tristate "sr352 sub camera support"
+	depends on SOC_CAMERA && I2C
+	help
+	  This is a sr352 sub camera driver
+	  3MP Camera interfaced to camera host driver.
+	  I2C controlled. Data out over the
+	  MIPI Lanes.
 
 config SOC_CAMERA_POWER_USE_ASR
 	bool "Support Broadcom Rhea SS Lucas 03 Ivory 02 board"

@@ -16,6 +16,7 @@
 #include <mach/clock.h>
 #include <camdrv_ss.h>
 #include <camdrv_ss_sr030pc50.h>
+#include <linux/module.h>
 
 
 #define SR030PC50_NAME	"sr030pc50"
@@ -977,7 +978,7 @@ void camdrv_ss_sr030pc50_smartStayChangeInitSetting(struct camdrv_ss_sensor_cap 
 	
 }
 
-bool camdrv_ss_sensor_init_sub(bool bOn, struct camdrv_ss_sensor_cap *sensor)
+bool camdrv_ss_sensor_functions_sr030pc50(struct camdrv_ss_sensor_cap *sensor)
 {
 	strcpy(sensor->name, SR030PC50_NAME);
 	sensor->supported_preview_framesize_list  = sr030pc50_supported_preview_framesize_list;
@@ -1172,3 +1173,38 @@ bool camdrv_ss_sensor_init_sub(bool bOn, struct camdrv_ss_sensor_cap *sensor)
 
 	return true;
 }
+
+int camdrv_ss_read_device_id_sr030pc50(
+		struct i2c_client *client, char *device_id)
+{
+	int ret = -1;
+	/* NEED to WRITE THE I2c REad code to read the deviceid */
+	return 0;
+}
+
+static int __init camdrv_ss_sr030pc50_mod_init(void)
+{
+	struct camdrv_ss_sensor_reg sens;
+
+	strncpy(sens.name, SR030PC50_NAME, sizeof(SR030PC50_NAME));
+	sens.sensor_functions = camdrv_ss_sensor_functions_sr030pc50;
+	sens.sensor_power = camdrv_ss_sr030pc50_sensor_power;
+	sens.read_device_id = camdrv_ss_read_device_id_sr030pc50;
+#ifdef CONFIG_SOC_CAMERA_MAIN_SR030PC50
+	sens.isMainSensor = 1;
+#endif
+
+#ifdef CONFIG_SOC_CAMERA_SUB_SR030PC50
+	sens.isMainSensor = 0;
+#endif
+	camdrv_ss_sensors_register(&sens);
+
+}
+module_init(camdrv_ss_sr030pc50_mod_init);
+
+MODULE_DESCRIPTION("SAMSUNG CAMERA SENSOR SR030PC50 ");
+MODULE_AUTHOR("Samsung");
+MODULE_LICENSE("GPL");
+
+
+

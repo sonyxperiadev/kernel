@@ -107,6 +107,14 @@ enum camdrv_ss_capture_mode_state {
 	CAMDRV_SS_CAPTURE_MODE_READ_FAILED
 };
 
+struct camdrv_ss_sensor_reg {
+	bool isMainSensor;
+	bool (*sensor_functions)(struct camdrv_ss_sensor_cap *sensor);
+	int (*sensor_power)(int on);
+	int (*read_device_id)(struct i2c_client *client, char *device_id);
+	char name[50];
+};
+
 struct camdrv_ss_state {
 	struct camera_platform_data *platform_data;
 	struct v4l2_subdev sd;
@@ -725,10 +733,8 @@ struct camdrv_ss_sensor_cap {
 /************************/
 /* EXTERN */
 /************************/
-extern bool camdrv_ss_sensor_init_main(bool bOn, struct camdrv_ss_sensor_cap *sensor);
-#if defined(CONFIG_SOC_SUB_CAMERA)
-extern bool camdrv_ss_sensor_init_sub(bool bOn, struct camdrv_ss_sensor_cap *sensor);
-#endif
+extern int camdrv_ss_sensors_register(struct camdrv_ss_sensor_reg *sens);
+
 
 extern unsigned int HWREV;
 

@@ -79,6 +79,12 @@ static char camdrv_ss_main_name[50];
 static char camdrv_ss_sub_name[50];
 
 char camdrv_rear_camera_vendorid[10]; 
+static struct camdrv_ss_sensor_reg sensors_registered[6];
+static int sensors_reg_main_count;
+static int sensors_reg_sub_count;
+static int sensors_reg_total_count;
+static bool (*camdrv_ss_sensor_init_main)(struct camdrv_ss_sensor_cap *sensor);
+static bool (*camdrv_ss_sensor_init_sub)(struct camdrv_ss_sensor_cap *sensor);
 
 bool camdrv_ss_power(int cam_id, int bOn);
 
@@ -5198,11 +5204,16 @@ bool camdrv_ss_power(int cam_id, int bOn)
 		}
 
 		memset(&sensor, 0, sizeof(struct camdrv_ss_sensor_cap));
-		CAM_INFO_PRINTK("%s : cam_id = %d powering ON ..\n", __func__, cam_id);
+		CAM_INFO_PRINTK("%s : cam_id = %d powering ON ..\n",
+				 __func__, cam_id);
 
 		if (camera_id == CAMDRV_SS_CAM_ID_MAIN) {
-			camdrv_ss_sensor_init_main(bOn, &sensor);
-			strcpy(camdrv_ss_main_name, sensor.name);
+			if (camdrv_ss_sensor_init_main == NULL) {
+				CAM_INFO_PRINTK("%s: First time main" \
+					"camera call. return\n", __func__);
+				return true;
+			}
+			camdrv_ss_sensor_init_main(&sensor);
 			camdrv_ss_generic_flash_control	= sensor.flash_control;
 			if (!camdrv_ss_generic_flash_control)
 				CAM_ERROR_PRINTK(
@@ -5220,8 +5231,12 @@ bool camdrv_ss_power(int cam_id, int bOn)
 
 #ifdef CONFIG_SOC_SUB_CAMERA
 		else if (camera_id == CAMDRV_SS_CAM_ID_SUB) {
-			camdrv_ss_sensor_init_sub(bOn, &sensor);
-			strcpy(camdrv_ss_sub_name, sensor.name);
+			if (camdrv_ss_sensor_init_sub == NULL) {
+				CAM_INFO_PRINTK("%s: First time sub camera" \
+					"call. return\n", __func__);
+				return true;
+			}
+			camdrv_ss_sensor_init_sub(&sensor);
 		}
 #endif
 
@@ -5312,7 +5327,10 @@ static int camdrv_ss_probe(struct i2c_client *client, const struct i2c_device_id
 	struct v4l2_subdev *sd;
 	struct soc_camera_device *icd = client->dev.platform_data;
 	struct soc_camera_link *icl = NULL;
+	char device_id[50];
 	int ret;
+	int i;
+
 	CAM_INFO_PRINTK("%s %s :\n", __func__, sensor.name);
 
 	if (!icd) {
@@ -5357,6 +5375,129 @@ static int camdrv_ss_probe(struct i2c_client *client, const struct i2c_device_id
 	/* Registering sd */
 	v4l2_i2c_subdev_init(sd, client, &camdrv_ss_subdev_ops);
 	icd->ops		= &camdrv_ss_ops;
+
+
+
+/* NEED TO FIND OUT THE MOUNTED SENSOR FROM REGISTERED SENSORS */
+	if (strcmp(icl->module_name, "camdrv_ss") == 0) {
+		camdrv_ss_sensor_init_main = NULL;
+
+		if (sensors_reg_main_count == 1) {
+			for (i = 0; i < sensors_reg_total_count; i++)
+				if (sensors_registered[i].isMainSensor) {
+					camdrv_ss_sensor_init_main =
+					sensors_registered[i].sensor_functions;
+					CAM_INFO_PRINTK("%s:" \
+					"Mounted main sensor = %s\n",
+					__func__, sensors_registered[i].name);
+					strcpy(camdrv_ss_main_name,
+						sensors_registered[i].name);
+					break;
+				}
+		}
+		if (sensors_reg_main_count > 1) {
+			for (i = 0; i < sensors_reg_total_count; i++)
+				if (sensors_registered[i].isMainSensor) {
+					CAM_INFO_PRINTK("%s: " \
+					"Checking whether mounted sensor" \
+					"is = %s\n", __func__,
+					sensors_registered[i].name);
+					if ((sensors_registered[i].\
+						sensor_power(1)
+						>= 0) &&
+						(sensors_registered[i].\
+						read_device_id(
+						client, device_id) >= 0)) {
+						CAM_INFO_PRINTK("%s:"\
+						"Mounted Main"\
+						"sensor name = %s,"\
+						"device_id =%s\n",
+						__func__,
+						sensors_registered[i].name,
+						device_id);
+						camdrv_ss_sensor_init_main =
+						sensors_registered[i].\
+						sensor_functions;
+						strcpy(camdrv_ss_main_name,
+						sensors_registered[i].name);
+						sensors_registered[i].\
+						sensor_power(0);
+						break;
+					} else {
+						sensors_registered[i].\
+						sensor_power(0);
+					}
+				}
+		}
+		if (camdrv_ss_sensor_init_main == NULL) {
+			CAM_ERROR_PRINTK("%s: No single main camera mounted"\
+			"return error\n", __func__);
+			return -1;
+		} else {
+			camdrv_ss_sensor_init_main(&sensor);
+		}
+	}
+
+	if (strcmp(icl->module_name, "camdrv_ss_sub") == 0) {
+		camdrv_ss_sensor_init_sub = NULL;
+
+		if (sensors_reg_sub_count == 1) {
+			for (i = 0; i < sensors_reg_total_count; i++)
+				if (!sensors_registered[i].isMainSensor) {
+					camdrv_ss_sensor_init_sub =
+					sensors_registered[i].sensor_functions;
+					CAM_INFO_PRINTK("%s: " \
+					"Mounted sub sensor = %s\n",
+					__func__,
+					sensors_registered[i].name);
+					strcpy(camdrv_ss_sub_name,
+					sensors_registered[i].name);
+					break;
+				}
+		} else if (sensors_reg_sub_count > 1) {
+			for (i = 0; i < sensors_reg_total_count; i++)
+				if (!sensors_registered[i].isMainSensor) {
+					if ((sensors_registered[i].\
+						sensor_power(1)
+						>= 0) &&
+						(sensors_registered[i].\
+						read_device_id(client,
+						device_id) >= 0)) {
+
+						CAM_INFO_PRINTK("%s: " \
+						"Mounted sub"\
+						"sensor name = %s, "\
+						"device_id =%s\n",
+						__func__,
+						sensors_registered[i].name,
+						device_id);
+
+						camdrv_ss_sensor_init_sub =
+						sensors_registered[i].\
+						sensor_functions;
+						strcpy(camdrv_ss_sub_name,
+						sensors_registered[i].\
+						name);
+						sensors_registered[i].\
+						sensor_power(0);
+						break;
+					} else {
+						sensors_registered[i].\
+						sensor_power(0);
+					}
+
+				}
+		}
+
+		if (camdrv_ss_sensor_init_sub == NULL) {
+			CAM_ERROR_PRINTK("%s: No single sub camera mounted." \
+					"return error.\n", __func__);
+			return -1;
+		} else {
+			camdrv_ss_sensor_init_sub(&sensor);
+		}
+
+	}
 
 #ifdef FACTORY_CHECK
 	if (cam_class_init == false) {
@@ -5537,6 +5678,32 @@ static void __exit camdrv_ss_mod_exit(void)
 	i2c_del_driver(&camdrv_ss_i2c_driver);
 }
 
+int camdrv_ss_sensors_register(struct camdrv_ss_sensor_reg *sens)
+{
+	sensors_registered[sensors_reg_total_count].sensor_functions
+			= sens->sensor_functions;
+	sensors_registered[sensors_reg_total_count].sensor_power
+			= sens->sensor_power;
+	sensors_registered[sensors_reg_total_count].read_device_id
+			= sens->read_device_id;
+	sensors_registered[sensors_reg_total_count].isMainSensor
+			= sens->isMainSensor;
+	strncpy(sensors_registered[sensors_reg_total_count].name,
+		sens->name, sizeof(sens->name));
+
+	if (sens->isMainSensor)	{
+		CAM_INFO_PRINTK("%s: Main sensor registered. Name = %s\n",
+				__func__, sens->name);
+		sensors_reg_main_count++;
+	} else {
+		CAM_INFO_PRINTK("%s: Sub sensor registered. Name = %s\n",
+				__func__, sens->name);
+		sensors_reg_sub_count++;
+	}
+
+	sensors_reg_total_count++;
+}
+EXPORT_SYMBOL(camdrv_ss_sensors_register);
 
 module_init(camdrv_ss_mod_init);
 module_exit(camdrv_ss_mod_exit);
