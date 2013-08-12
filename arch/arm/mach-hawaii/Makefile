@@ -22,6 +22,7 @@ obj-$(CONFIG_MACH_HAWAII_SS_LOGAN_REV00) += hawaii.o board-hawaii_ss_logan.o haw
 obj-$(CONFIG_MACH_HAWAII_SS_LOGAN_REV01) += hawaii.o board-hawaii_ss_logan.o hawaii_ss_logan_wifi.o board-bcm59xxx-ss-logan.o
 obj-$(CONFIG_MACH_HAWAII_SS_LOGAN_REV02) += hawaii.o board-hawaii_ss_logan.o hawaii_ss_logan_wifi.o board-bcm59xxx-ss-logan.o
 obj-$(CONFIG_MACH_HAWAII_SS_LOGANDS) += hawaii.o board-hawaii_ss_logands.o hawaii_wifi.o board-bcm59xxx-ss-logands.o
+obj-$(CONFIG_MACH_HAWAII_SS_CS02_REV00) += hawaii.o board-hawaii_ss_cs02.o hawaii_ss_cs02_wifi.o board-bcm59xxx-ss-cs02.o
 obj-$(CONFIG_MACH_HAWAII_SS_LOGANDS_REV00_POWER) += hawaii.o board-hawaii_ss_logands.o hawaii_ss_logands_wifi.o board-bcm59xxx-ss-logands.o
 obj-$(CONFIG_MACH_HAWAII_SS_LOGANDS_COMBINED) += hawaii.o board-hawaii_ss_logands.o hawaii_ss_logands_wifi.o board-bcm59xxx-ss-logands.o
 obj-$(CONFIG_MACH_HAWAII_SS_GOLDENVEN_REV01) += hawaii.o board-hawaii_ss_goldenven.o hawaii_wifi.o board-bcm59xxx-ss-goldenven.o board-tsp-mxt224s.o

@@ -86,6 +86,7 @@ static struct regulator *VCAM_AF_2_8V;
 #if defined(CONFIG_MACH_HAWAII_SS_LOGAN_REV02) \
 	|| defined(CONFIG_MACH_HAWAII_SS_LOGANDS_REV00) \
 	|| defined(CONFIG_MACH_HAWAII_SS_LOGANDS_REV01) \
+	|| defined(CONFIG_MACH_HAWAII_SS_CS02_REV00) \
 	|| defined(CONFIG_MACH_JAVA_SS_EVAL)
 #define VCAM_A_2_8V_REGULATOR		"mmcldo1"
 #define VCAM_IO_1_8V_REGULATOR		"lvldo1"
@@ -3717,8 +3718,11 @@ bool camdrv_ss_sensor_functions_s5k4ecgx(struct camdrv_ss_sensor_cap *sensor)
 	sensor->rows_num_vt_mode_regs     = ARRAY_SIZE(s5k4ecgx_vt_mode_regs);
         sensor->main_flash_off_regs    =       s5k4ecgx_Main_Flash_End_EVT1;
         sensor->rows_num_main_flash_off_regs  = ARRAY_SIZE(s5k4ecgx_Main_Flash_End_EVT1);
-#if defined(CONFIG_MACH_HAWAII_SS_LOGAN) || defined(CONFIG_MACH_HAWAII_SS_LOGANDS) || defined(CONFIG_MACH_HAWAII_SS_GOLDENVEN)        
-  sensor->Pre_Flash_Start_EVT1 = s5k4ecgx_Pre_Flash_Start_EVT1;
+#if defined(CONFIG_MACH_HAWAII_SS_LOGAN) || \
+defined(CONFIG_MACH_HAWAII_SS_LOGANDS) || \
+defined(CONFIG_MACH_HAWAII_SS_CS02) || \
+defined(CONFIG_MACH_HAWAII_SS_GOLDENVEN)
+	sensor->Pre_Flash_Start_EVT1 = s5k4ecgx_Pre_Flash_Start_EVT1;
 	sensor->rows_num_Pre_Flash_Start_EVT1     = ARRAY_SIZE(s5k4ecgx_Pre_Flash_Start_EVT1);
 	sensor->Pre_Flash_End_EVT1 = s5k4ecgx_Pre_Flash_End_EVT1;
 	sensor->rows_num_Pre_Flash_End_EVT1     = ARRAY_SIZE(s5k4ecgx_Pre_Flash_End_EVT1);

@@ -106,6 +106,12 @@ config	MACH_HAWAII_SS_LOGANDS_REV01
 	  keyboard, flash, and band selects.
 	  Assumes that MACH_HAWAII_SS_LOGAN is also set.
 
+config  MACH_HAWAII_SS_CS02_REV00
+	bool "Support Broadcom Hawaii SS cs02 board"
+	help
+	  Support for the Broadcom Hawaii SS cs02 board.
+	  Assumes that MACH_HAWAII_SS_CS02 is also set.
+
 config	MACH_HAWAII_SS_LOGANDS_COMBINED
 	bool "Support Broadcom Hawaii SS logands COMBINED board"
 	help
@@ -293,6 +299,12 @@ config  MACH_HAWAII_SS_LOGANDS
 	default n
         help
           Support for the Broadcom Hawaii Samsung Logan DS board.
+
+config  MACH_HAWAII_SS_CS02
+        bool "Support Broadcom Hawaii Samsung CS02 board"
+        default n
+        help
+          Support for the Broadcom Hawaii Samsung CS02 board.
 
 config	IGNORE_DAP_POWERUP_REQ
 	bool "Ignore Powerup request from DAP"

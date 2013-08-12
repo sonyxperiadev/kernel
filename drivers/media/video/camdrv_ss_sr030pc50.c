@@ -47,6 +47,7 @@ static struct regulator *VCAM_CORE_1_2_V;
 	|| defined(CONFIG_MACH_HAWAII_SS_LOGAN_REV02) \
 	|| defined(CONFIG_MACH_HAWAII_SS_LOGANDS_REV00) \
 	|| defined(CONFIG_MACH_HAWAII_SS_LOGANDS_REV01) \
+	|| defined(CONFIG_MACH_HAWAII_SS_CS02_REV00)
 
 #define VCAM_A_2_8V_REGULATOR		"mmcldo1"
 #define VCAM_IO_1_8V_REGULATOR		"lvldo2"

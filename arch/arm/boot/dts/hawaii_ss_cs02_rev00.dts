@@ -1,0 +1,245 @@
+/* Hawaii_ss_cs02_rev00 Dts file */
+
+/dts-v1/;
+
+/include/ "bcm_21664.dtsi"
+/include/ "hawaii_bcmpmu_ss_cs02_rev00.dtsi"
+
+/ {
+	model = "Hawaii SS cs02 Rev00";
+	compatible = "bcm,hawaii";
+
+	chosen {
+		bootargs = "console=ttyS2,115200n8 mem=736M gpt pmem=200M carveout=32M androidboot.console=ttyS2 crash_ramdump=1 logbuf_nocache=1";
+	};
+
+	memory@82000000 {
+		device_type = "memory";
+		reg = <0x82000000 0x2e000000>; /* 736 MB */
+	};
+
+	wd-tapper {
+		count = <300>; /* Time in seconds */
+		ch-num = <1>; /* Kona hub timer Channel number */
+		timer-name = "aon-timer";
+	};
+
+	uart@3e000000 {
+		clock-frequency = <48000000>;
+		port-name = "bluetooth";
+		clk-name = "uartb_clk";
+	};
+
+	uart@3e001000 {
+		clock-frequency = <26000000>;
+		port-name = "gps";
+		clk-name = "uartb2_clk";
+	};
+
+	uart@3e002000 {
+		clock-frequency = <26000000>;
+		port-name = "console";
+		clk-name = "uartb3_clk";
+	};
+
+	i2c0: i2c@3e016000 {
+		speed = <5>; /* BSC_BUS_SPEED_400 K */
+		dynamic-speed = <1>;
+			bsc-clk = "bsc1_clk";
+		bsc-apb-clk = "bsc1_apb_clk";
+		retries = <1>;
+		is-pmu-i2c = <0>;
+		fs-ref-frequency = <13000000>;
+		hs-ref-frequency = <104000000>;
+	};
+
+	i2c1: i2c@3e017000 {
+		speed = <5>; /* BSC_BUS_SPEED_400 K */
+		dynamic-speed = <1>;
+		bsc-clk = "bsc2_clk";
+		bsc-apb-clk = "bsc2_apb_clk";
+		retries = <3>;
+		is-pmu-i2c = <0>;
+		fs-ref-frequency = <13000000>;
+		hs-ref-frequency = <104000000>;
+	};
+
+	i2c2: i2c@3e018000 {
+		speed = <5>; /* BSC_BUS_SPEED_400 K */
+		dynamic-speed = <1>;
+		bsc-clk = "bsc3_clk";
+		bsc-apb-clk = "bsc3_apb_clk";
+		retries = <1>;
+		is-pmu-i2c = <0>;
+		fs-ref-frequency = <13000000>;
+		hs-ref-frequency = <104000000>;
+	};
+
+	i2c3: i2c@3e01c000 {
+		speed = <5>; /* BSC_BUS_SPEED_400 K */
+		dynamic-speed = <1>;
+		bsc-clk = "bsc4_clk";
+		bsc-apb-clk = "bsc4_apb_clk";
+		retries = <1>;
+		is-pmu-i2c = <0>;
+		fs-ref-frequency = <13000000>;
+		hs-ref-frequency = <104000000>;
+	};
+
+	i2c4: i2c@3500d000 {
+		speed = <7>; /* BSC_BUS_SPEED_HS */
+		dynamic-speed = <0>;
+		bsc-clk = "pmu_bsc_clk";
+		bsc-apb-clk = "pmu_bsc_apb";
+		retries = <5>;
+		is-pmu-i2c = <1>;
+		fs-ref-frequency = <13000000>;
+		hs-ref-frequency = <26000000>;
+	};
+
+	bluetooth-btlpm {
+		compatible = "bcm,btlpm";
+		bt-wake-gpio = <32>;
+		host-wake-gpio = <72>;
+		bt-uart-port = <0>;
+	};
+
+	bcmbt-rfkill {
+		compatible = "bcm,bcmbt-rfkill";
+		verg-gpio = <28>;
+		n-reset-gpio = <71>;
+		aux0-gpio = <0xFFFFFFFF>; /* CLK32 */
+		aux1-gpio = <0xFFFFFFFF>; /* UARTB_SEL,probably not required */
+	};
+
+	soc-back-camera {
+		compatible = "bcm,soc-camera";
+		reg = <0x56 0x0>;
+		bus-id = <0>;
+		i2c-type = "camdrv_ss";	/* i2c_board_info type */
+		i2c-addr = <0x56>;	/* i2c_board_info addr */
+		i2c-adapter-id = <0>;
+		module-name = "camdrv_ss";
+		if-type = <1>;		/* V4L2_SUBDEV_SENSOR_SERIAL */
+		if-mode = <3>;		/* V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2 */
+		orientation = <1>;	/* V4L2_SUBDEV_SENSOR_PORTRAIT */
+		facing = <1>;		/* V4L2_SUBDEV_SENSOR_BACK */
+		lanes = <2>;
+		channel = <0>;
+		phy-rate = <0>;
+		pix-clk = <0>;
+		hs_term_time = <7>;
+		hs_settle_time = <0>;
+	};
+
+	soc-front-camera {
+		compatible = "bcm,soc-camera";
+		reg = <0x30 0x0>;
+		bus-id = <0>;
+		i2c-type = "camdrv_ss_sub";	/* i2c_board_info type */
+		i2c-addr = <0x30>;	/* i2c_board_info addr */
+		i2c-adapter-id = <0>;
+		module-name = "camdrv_ss_sub";
+		if-type = <1>;		/* V4L2_SUBDEV_SENSOR_SERIAL */
+		if-mode = <3>;		/* V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2 */
+		orientation = <3>;	/* V4L2_SUBDEV_SENSOR_PORTRAIT */
+		facing = <0>;		/* V4L2_SUBDEV_SENSOR_FRONT */
+		lanes = <1>;
+		channel = <1>;
+		phy-rate = <0>;
+		pix-clk = <0>;
+		hs_term_time = <7>;
+		hs_settle_time = <0>;
+	};
+
+	kona-fb {
+		compatible = "bcm,kona-fb";
+		reg = <0x3c200000 0x1000>;
+		module-name = "NT35510";
+		boot-mode = <0>;
+		bus-type = <2>;
+		bus-no = <1>;
+		bus-ch = <1>;
+		bus-width = <3>;
+		te-input = <2>;
+		col-mod-i = <1>;
+		col-mod-o = <4>;
+		api-rev = <0x10>;
+		rst = <22>;
+	};
+
+	tmon@0x34008000 {
+		compatible = "bcm,tmon";
+		reg = <0x34008000 0x1000>;
+		interrupts = <0 183 4>;
+		chipreg_addr = <0x35004000 0x1000>;
+		thold_size = <4>; /*number of threshold levels*/
+		poll_rate_ms = <30000>;
+		hysteresis = <0>;
+		flags = <1>;
+		interval_ms = <5>;
+		thold = <70 65 1
+			80 75 1
+			90 85 1
+			100 95 2>;
+		tmon_apb_clk = "tmon_apb";
+		tmon_1m_clk = "tmon_1m_clk";
+	};
+
+	memc@35008000 {
+		compatible = "bcm,memc";
+		reg = <0x35008000 0x1000>;
+		flags = <0x3B>;
+		chipreg_base = <0x35004000 0x1000>;
+		memc0_aphy_base = <0x35008400 0x1000>;
+		seq_busy_val = <2>;
+		max_pwr = <3>;
+	};
+
+	sdio1 {
+		compatible = "bcm,sdhci";
+		reg = <0x3F190000 10000>;
+		interrupts = <0 76 0x04>;
+		id = <1>;
+		data-pullup = <0>;
+		is-8bit = <1>;
+		devtype = <2>;		/*SDIO_DEV_TYPE_EMMC*/
+		flags = <1>;		/*KONA_SDIO_FLAGS_DEVICE_NON_REMOVABLE*/
+		peri-clk-name = "sdio2_clk";
+		ahb-clk-name = "sdio2_ahb_clk";
+		sleep-clk-name = "sdio2_sleep_clk";
+		peri-clk-rate = <52000000>;
+	};
+
+	sdio2 {
+		compatible = "bcm,sdhci";
+		reg = <0x3F1A0000 10000>;
+		interrupts = <0 74 0x04>;
+		id = <2>;
+		data-pullup = <0>;
+		devtype = <1>;		/*SDIO_DEV_TYPE_WIFI*/
+		flags = <0>;		/*KONA_SDIO_FLAGS_DEVICE_REMOVABLE*/
+		peri-clk-name = "sdio3_clk";
+		ahb-clk-name = "sdio3_ahb_clk";
+		sleep-clk-name = "sdio3_sleep_clk";
+		peri-clk-rate = <48000000>;
+	};
+
+	sdio0 {
+		compatible = "bcm,sdhci";
+		reg = <0x3F180000 10000>;
+		interrupts = <0 77 0x04>;
+		id = <0>;
+		data-pullup = <0>;
+		cd-gpio = <91>;		/*SD_CARDDET_GPIO_PIN*/
+		devtype = <0>;		/*SDIO_DEV_TYPE_SDMMC*/
+		flags = <0>;		/*KONA_SDIO_FLAGS_DEVICE_REMOVABLE*/
+		peri-clk-name = "sdio1_clk";
+		ahb-clk-name = "sdio1_ahb_clk";
+		sleep-clk-name = "sdio1_sleep_clk";
+		peri-clk-rate = <48000000>;
+		vddo-regulator-name = "vdd_sdio";
+		vddsdxc-regulator-name = "vdd_sdxc";
+	};
+
+};

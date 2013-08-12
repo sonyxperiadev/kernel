@@ -575,6 +575,7 @@ CONFIG_BLK_DEV=y
 # CONFIG_BLK_DEV_RAM is not set
 # CONFIG_CDROM_PKTCDVD is not set
 # CONFIG_ATA_OVER_ETH is not set
+# CONFIG_NEW_SENSORS is not set
 
 #
 # Misc devices
@@ -584,6 +585,8 @@ CONFIG_ANDROID_PMEM=y
 # CONFIG_ATMEL_PWM is not set
 # CONFIG_ENCLOSURE_SERVICES is not set
 # CONFIG_BRCM_VIRTUAL_SENSOR is not set
+# CONFIG_SENSORS_MC3210 is not set
+# CONFIG_SENSORS_MXC622X is not set
 # CONFIG_SENSORS_BMA222 is not set
 # CONFIG_UID_STAT is not set
 # CONFIG_INTER_PROCESSOR_COMM is not set
@@ -784,9 +787,14 @@ CONFIG_BCMA_POSSIBLE=y
 # Console display driver support
 #
 CONFIG_DUMMY_CONSOLE=y
+# CONFIG_LCD_HX8369_SUPPORT is not set
+# CONFIG_LCD_HX8369_CS02_SUPPORT is not set
+# CONFIG_LCD_SC7798_CS02_SUPPORT is not set
+# CONFIG_LCD_S6E63M0X_SUPPORT is not set
 # CONFIG_LCD_NT35510_SUPPORT is not set
 # CONFIG_LCD_NT35512_SUPPORT is not set
-# CONFIG_BL_SPLASH_SCREEN is not set
+# CONFIG_FB_BRCM_LCD_EXIST_CHECK is not set
+# CONFIG_LDI_MDNIE_SUPPORT is not set
 # CONFIG_SOUND is not set
 # CONFIG_HID_SUPPORT is not set
 # CONFIG_USB_ARCH_HAS_OHCI is not set
@@ -833,6 +841,10 @@ CONFIG_IOMMU_SUPPORT=y
 # CONFIG_VIRT_DRIVERS is not set
 # CONFIG_PM_DEVFREQ is not set
 # CONFIG_MOBICORE_DRIVER is not set
+
+#
+# Gator driver for ARM DS-5 Profiling
+#
 
 #
 # File systems
