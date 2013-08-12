@@ -140,7 +140,6 @@ module_param_named(cnt_failure, cnt_failure, int, S_IRUGO | S_IWUSR | S_IWGRP);
  */
 DEFINE_PER_CPU(u8[PMU_DATA_SIZE], pmu_data);
 DEFINE_PER_CPU(u8[TIMER_DATA_SIZE], timer_data);
-DEFINE_PER_CPU(u8[GLOBAL_TIMER_DATA_SIZE], global_timer_data);
 DEFINE_PER_CPU(u8[VFP_DATA_SIZE], vfp_data);
 DEFINE_PER_CPU(u8[GIC_INTERFACE_DATA_SIZE], gic_interface_data);
 DEFINE_PER_CPU(u8[GIC_DIST_PRIVATE_DATA_SIZE], gic_dist_private_data);
@@ -159,6 +158,7 @@ static DEFINE_SPINLOCK(dormant_entry_lock);
  */
 static volatile u32 num_cores_in_dormant;
 
+u8 global_timer_data[GLOBAL_TIMER_DATA_SIZE];
 u8 gic_dist_shared_data[GIC_DIST_SHARED_DATA_SIZE];
 u32 serv;
 
@@ -585,9 +585,6 @@ void dormant_enter(u32 service)
 
 	save_a9_timers((void *)__get_cpu_var(timer_data), (u32)KONA_SCU_VA);
 
-	save_a9_global_timer((void *)__get_cpu_var(global_timer_data),
-			     (u32)KONA_SCU_VA);
-
 	save_vfp((void *)__get_cpu_var(vfp_data));
 
 	save_gic_interface((void *)__get_cpu_var(gic_interface_data),
@@ -670,6 +667,10 @@ void dormant_enter(u32 service)
 		 * while (readl(KONA_L2C_VA + PL310_C_I_INDEX_WAY_OFFSET) &
 		 * PL310_C_I_INDEX_WAY_C_5_MASK);
 		 */
+
+		/* Global timer saved only on last core down */
+		save_a9_global_timer((void *)global_timer_data,
+				(u32)KONA_SCU_VA);
 	}
 	spin_unlock_irqrestore(&dormant_entry_lock, flgs);
 
@@ -720,6 +721,10 @@ void dormant_enter(u32 service)
 	instrument_lpm(LPM_TRACE_DRMNT_RS1,
 		(u16)num_cores_in_dormant);
 	if (num_cores_in_dormant == num_cpus()) {
+		restore_a9_global_timer((void *)
+				global_timer_data,
+				(u32)KONA_SCU_VA);
+
 		/* This is the first core trying to come out of dormant */
 		/* Did we enter retention or dormant */
 		if (!pwr_mgr_is_event_active(SOFTWARE_2_EVENT)) {
@@ -785,7 +790,6 @@ void dormant_enter(u32 service)
 						       false);
 
 			gic_distributor_set_enabled(true, (u32)KONA_GICDIST_VA);
-
 		}
 
 
@@ -809,10 +813,6 @@ void dormant_enter(u32 service)
 
 		restore_a9_timers((void *)__get_cpu_var(timer_data),
 				  (u32)KONA_SCU_VA);
-
-		restore_a9_global_timer((void *)
-					__get_cpu_var(global_timer_data),
-					(u32)KONA_SCU_VA);
 
 		restore_performance_monitors((void *)__get_cpu_var(pmu_data));
 
