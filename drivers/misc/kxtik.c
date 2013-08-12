@@ -43,7 +43,8 @@
 #define FUNCDBG(format, arg...)
 #endif
 
-#define KXTIK_WHO_AM_I_ID   0x05
+#define KXTIK_WAI_1004_ID	0x05
+#define KXTIK_WAI_1009_ID	0x09
 
 #define G_MAX			8096
 /* OUTPUT REGISTERS */
@@ -637,7 +638,10 @@ static int __devinit kxtik_verify(struct kxtik_data *tik)
 		FUNCDBG("error reading WHO_AM_I register!\n");
 	else {
 		FUNCDBG("who_am_i id = %d\n", retval);
-		retval = retval != KXTIK_WHO_AM_I_ID ? -EIO : 0;
+		if (KXTIK_WAI_1004_ID == retval || KXTIK_WAI_1009_ID == retval)
+			retval = 0;
+		else
+			retval = -EIO;
 	}
 
 	return retval;
