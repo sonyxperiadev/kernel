@@ -2585,12 +2585,11 @@ static struct file_operations my_file_ops = {
 
 int log_proc_init(void)
 {
-	struct proc_dir_entry *myproc = create_proc_entry("bcmrpclog", 0667, 0);
+	struct proc_dir_entry *myproc = proc_create_data("bcmrpclog", 0667, 0,
+					 &my_file_ops, NULL);
 
 	if (myproc == NULL)
 		return -ENOMEM;
-
-	myproc->proc_fops = &my_file_ops;
 
 	return 0;
 }
