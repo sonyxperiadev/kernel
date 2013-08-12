@@ -101,22 +101,13 @@ static struct cpufreq_lmt_node usr_max_lmt_node = {
 };
 
 #ifdef CONFIG_KONA_TMON
-static void cpufreq_tmon_init_work(struct work_struct *ws)
+static int cpufreq_set_init_thold_freq(struct kona_cpufreq *kona_cpufreq)
 {
 	int i, j;
 	long max_temp, curr_temp;
 	struct kona_cpufreq_drv_pdata *pdata;
-	struct kona_cpufreq *kona_cpufreq;
-
-	kona_cpufreq = container_of((struct delayed_work *)ws,
-			struct kona_cpufreq, init_work);
 	pdata = kona_cpufreq->pdata;
 
-	if (cpufreq_add_lmt_req(&kona_cpufreq->tmon_node,
-			"tmon", DEFAULT_LIMIT, MAX_LIMIT)) {
-		printk(KERN_ALERT "TMON REGN CPUFREQ FAILED\n");
-		goto out;
-	}
 	curr_temp = tmon_get_current_temp(CELCIUS, true);
 
 	for (i = pdata->num_freqs - 1; i > 0; i--) {
@@ -147,6 +138,24 @@ static void cpufreq_tmon_init_work(struct work_struct *ws)
 			break;
 		}
 	}
+	return 0;
+}
+
+static void cpufreq_tmon_init_work(struct work_struct *ws)
+{
+	struct kona_cpufreq_drv_pdata *pdata;
+	struct kona_cpufreq *kona_cpufreq;
+
+	kona_cpufreq = container_of((struct delayed_work *)ws,
+			struct kona_cpufreq, init_work);
+	pdata = kona_cpufreq->pdata;
+
+	if (cpufreq_add_lmt_req(&kona_cpufreq->tmon_node,
+			"tmon", DEFAULT_LIMIT, MAX_LIMIT)) {
+		printk(KERN_ALERT "TMON REGN CPUFREQ FAILED\n");
+		goto out;
+	}
+	cpufreq_set_init_thold_freq(kona_cpufreq);
 	tmon_register_notifier(&kona_cpufreq->tmon_nb);
 out:
 	kona_cpufreq = NULL;
@@ -1094,6 +1103,85 @@ static const struct file_operations cpu_config_set_ops_fops = {
 };
 #endif
 
+#ifdef CONFIG_KONA_TMON
+static ssize_t cpufreq_get_temp_tholds(struct file *file,
+	char __user *user_buf, size_t count, loff_t *ppos)
+{
+	u32 len = 0;
+	int i;
+	char out_str[200];
+	struct kona_cpufreq_drv_pdata *pdata = kona_cpufreq->pdata;
+
+	memset(out_str, 0, sizeof(out_str));
+	len += snprintf(out_str + len, sizeof(out_str) - len,
+			"Level\t\tLimit CPUFREQ\tThreshold\n");
+	for (i = 0; i < pdata->num_freqs; i++)
+		len += snprintf(out_str + len, sizeof(out_str) - len,
+		"Level%d:\t\t%d\t\t%ld\n", i,
+		pdata->freq_tbl[i].cpu_freq, pdata->freq_tbl[i].max_temp);
+
+	return simple_read_from_buffer(user_buf, count, ppos,
+			out_str, len);
+}
+
+static ssize_t cpufreq_set_temp_tholds(struct file *file,
+	  char const __user *buf, size_t count, loff_t *offset)
+{
+	u32 len = 0;
+	char input_str[20];
+	struct kona_cpufreq_drv_pdata *pdata = kona_cpufreq->pdata;
+	int num_freqs = pdata->num_freqs;
+	int next, prev, inx, thold;
+
+	memset(input_str, 0, ARRAY_SIZE(input_str));
+	if (count > ARRAY_SIZE(input_str))
+		len = ARRAY_SIZE(input_str);
+	else
+		len = count;
+
+	if (copy_from_user(input_str, buf, len))
+		return -EFAULT;
+
+	sscanf(&input_str[0], "%d%d", &inx, &thold);
+
+	/*check if inx is valid*/
+	if (inx < 0 || inx >= num_freqs)
+		goto exit;
+
+	if (thold == TEMP_DONT_CARE)
+		goto set_thold;
+
+	/*checking if thold is in descending order*/
+	prev = inx - 1;
+	next = inx + 1;
+
+	if ((inx > 0) && (pdata->freq_tbl[prev].max_temp != TEMP_DONT_CARE)) {
+		if (thold > pdata->freq_tbl[prev].max_temp)
+			goto exit;
+	}
+	if ((inx < num_freqs - 1) &&
+			(pdata->freq_tbl[next].max_temp != TEMP_DONT_CARE)) {
+		if (thold < pdata->freq_tbl[next].max_temp)
+			goto exit;
+	}
+set_thold:
+	pdata->freq_tbl[inx].max_temp = thold;
+	cpufreq_set_init_thold_freq(kona_cpufreq);
+	return count;
+exit:
+	pr_info("USAGE:\necho inx thold > temp_tholds\n");
+	pr_info("inx range: [0-%d]\ntholds shd be in descending order\n",
+			num_freqs - 1);
+	return count;
+}
+
+static const struct file_operations kcf_temp_tholds_ops = {
+	.open = cpufreq_debugfs_open,
+	.write = cpufreq_set_temp_tholds,
+	.read = cpufreq_get_temp_tholds,
+};
+#endif
+
 static struct dentry *dent_kcf_root_dir;
 int __init kona_cpufreq_debug_init(void)
 {
@@ -1114,11 +1202,14 @@ int __init kona_cpufreq_debug_init(void)
 	if (!debugfs_create_file
 	    ("config_ops_set", S_IRUSR, dent_kcf_root_dir, NULL,
 						&cpu_config_set_ops_fops))
-#endif
 		return -ENOMEM;
-
+#endif
+#ifdef CONFIG_KONA_TMON
+	if (!debugfs_create_file("temp_tholds",  S_IRUSR | S_IWUSR,
+			dent_kcf_root_dir, kona_cpufreq, &kcf_temp_tholds_ops))
+		return -ENOMEM;
+#endif
 	return 0;
-
 }
 
 late_initcall(kona_cpufreq_debug_init);
