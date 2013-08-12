@@ -232,7 +232,7 @@ struct log {
 #endif
 #ifdef CONFIG_PRINTK_PID
 	char comm[TASK_COMM_LEN];/* owner of the print */
-	u8 pid;			/* pid of the owner */
+	pid_t pid;		/* pid of the owner */
 #endif
 	u8 facility;		/* syslog facility */
 	u8 flags:5;		/* internal record flags */
