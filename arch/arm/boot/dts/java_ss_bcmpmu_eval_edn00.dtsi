@@ -77,8 +77,8 @@
 		 0xD8 0x40 0x7F 1
 		 /* EN_SESS_VALID  enable ID detection */
 		 0x40 0x18 0xFF 1
-		 /* MMSR LPM voltage - 0.88V */
-		 0xCA 0x04 0x3F 0
+		 /* MMSR LPM voltage - 0.80V */
+		 0xCA 0x01 0x3F 0
 		 /* SDSR1 NM1 voltage - 1.24V*/
 		 0xCC 0x28 0x3F 0
 		 /* SDSR1 LPM voltage - 0.9V*/

@@ -15,7 +15,7 @@ struct pmu_volt_dbg {
 u8 *get_sr_vlt_table(void);
 int get_vddvar_retn_vlt_id(void);
 int get_vddfix_vlt(u32 vddfix_vlt);
-int get_vddfix_retn_vlt_id(u32 reg_val);
+int get_vddfix_retn_vlt_id(void);
 void populate_pmu_voltage_log(void);
 void update_voltage_table(u32 *csr_opp_val, u32 *msr_opp_val);
 extern void bcmpmu_populate_volt_dbg_log(struct pmu_volt_dbg

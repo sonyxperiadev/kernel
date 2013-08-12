@@ -33,23 +33,22 @@
 static struct dentry *dent_vlt_root_dir;
 #endif
 
-u8 vlt_id_table[SR_VLT_LUT_SIZE];
 static struct pmu_volt_dbg volt_dbg_log;
 
 
-#define MSR_RETN_VAL			880
-#define SDSR1_RETN_VAL			900
+#define MSR_RETN_VAL			0x1
+#define SDSR1_RETN_VAL			0x6
 
-#define CSR_XTAL_1200M_SS		880
-#define CSR_ECO_1200M_SS		990
-#define CSR_NM_1200M_SS			1070
-#define CSR_TURBO_1200M_SS		1170
-#define CSR_SUPER_TURBO_1200M_SS	1350
+#define CSR_XTAL_1200M_SS		0x4
+#define CSR_ECO_1200M_SS		0xF
+#define CSR_NM_1200M_SS			0x17
+#define CSR_TURBO_1200M_SS		0x21
+#define CSR_SUPER_TURBO_1200M_SS	0x33
 
-#define MSR_ECO_1200M_SS		950
-#define MSR_NM_1200M_SS			1090
-#define MSR_TURBO_1200M_SS		1220
-#define MSR_SUPER_TURBO_1200M_SS	1310
+#define MSR_ECO_1200M_SS		0xB
+#define MSR_NM_1200M_SS			0x19
+#define MSR_TURBO_1200M_SS		0x26
+#define MSR_SUPER_TURBO_1200M_SS	0x2F
 
 #define PMU_VLT_TBL_1200M_SS ARRAY_LIST(\
 		INIT_A9_VLT_TABLE(CSR_XTAL_1200M_SS,\
@@ -60,7 +59,7 @@ static struct pmu_volt_dbg volt_dbg_log;
 		INIT_LPM_VLT_IDS(MSR_RETN_VAL, MSR_RETN_VAL, MSR_RETN_VAL),\
 		INIT_UNUSED_VLT_IDS(MSR_RETN_VAL))
 
-u32 pmu_vlt_table[SR_VLT_LUT_SIZE] = PMU_VLT_TBL_1200M_SS;
+u8 pmu_vlt_table[SR_VLT_LUT_SIZE] = PMU_VLT_TBL_1200M_SS;
 
 void update_voltage_table(u32 *csr_opp_val, u32 *msr_opp_val)
 {
@@ -69,14 +68,12 @@ void update_voltage_table(u32 *csr_opp_val, u32 *msr_opp_val)
 	pr_info("%s called", __func__);
 
 	for (i = CSR_ACTIVE_VOLTAGE_OFFSET; i < SR_VLT_LUT_SIZE; i += 2) {
-		pmu_vlt_table[i] = bcmpmu_rgltr_get_volt_val(csr_opp_val
-					[opp_inx])/1000;
+		pmu_vlt_table[i] = csr_opp_val[opp_inx];
 		opp_inx++;
 	}
 	opp_inx = 0;
 	for (i = MSR_ACTIVE_VOLTAGE_OFFSET; i < SR_VLT_LUT_SIZE; i += 2) {
-		pmu_vlt_table[i] = bcmpmu_rgltr_get_volt_val(msr_opp_val
-					[opp_inx])/1000;
+		pmu_vlt_table[i] = msr_opp_val[opp_inx];
 		opp_inx++;
 	}
 	pm_init_pmu_sr_vlt_map_table();
@@ -84,23 +81,12 @@ void update_voltage_table(u32 *csr_opp_val, u32 *msr_opp_val)
 
 u8 *get_sr_vlt_table(void)
 {
-	u32 *vlt_table = pmu_vlt_table;
+	u8 *vlt_table = pmu_vlt_table;
 	int i;
-	for (i = 0; i < SR_VLT_LUT_SIZE; i++) {
-		vlt_id_table[i] = bcmpmu_rgltr_get_volt_id(vlt_table[i]);
-		volt_dbg_log.pwr_mgr_volt_tbl[i] = vlt_id_table[i];
-	}
-	return vlt_id_table;
-}
+	for (i = 0; i < SR_VLT_LUT_SIZE; i++)
+		volt_dbg_log.pwr_mgr_volt_tbl[i] = vlt_table[i];
 
-int get_vddvar_retn_vlt_id(void)
-{
-	u32 ret_vlt = MSR_RETN_VAL;
-/*	Right now the retn value is same for all the silicon types
-	In case tomorrow if it changes, we will modify the retn value
-	returned accordingly
-*/
-	return bcmpmu_rgltr_get_volt_id(ret_vlt);
+	return vlt_table;
 }
 
 int get_vddfix_vlt(u32 vddfix_vlt)
@@ -110,6 +96,24 @@ int get_vddfix_vlt(u32 vddfix_vlt)
 	voltage = avs_get_vddfix_voltage();
 #endif
 	return voltage;
+}
+
+int get_vddfix_retn_vlt_id(void)
+{
+	int ret_vlt = SDSR1_RETN_VAL;
+#ifdef CONFIG_KONA_AVS
+	ret_vlt = avs_get_vddfix_retn_vlt();
+#endif
+	return ret_vlt;
+}
+
+int get_vddvar_retn_vlt_id(void)
+{
+	u32 ret_vlt = MSR_RETN_VAL;
+#ifdef CONFIG_KONA_AVS
+	ret_vlt = avs_get_vddvar_retn_vlt();
+#endif
+	return ret_vlt;
 }
 
 void populate_pmu_voltage_log(void)

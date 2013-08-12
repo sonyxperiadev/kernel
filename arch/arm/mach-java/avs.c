@@ -96,7 +96,20 @@ int avs_get_vddfix_voltage(void)
 		return -EPERM;
 	return avs_info.avs_handshake->vddfix;
 }
-EXPORT_SYMBOL(avs_get_vddfix_voltage);
+
+int avs_get_vddvar_retn_vlt(void)
+{
+	if (!avs_info.pdata)
+		return -EPERM;
+	return avs_info.avs_handshake->vddvar_ret;
+}
+
+int avs_get_vddfix_retn_vlt(void)
+{
+	if (!avs_info.pdata)
+		return -EPERM;
+	return avs_info.avs_handshake->vddfix_ret;
+}
 
 static int avs_read_opp_info(struct avs_info *avs_inf_ptr)
 {
@@ -133,6 +146,9 @@ static int avs_read_opp_info(struct avs_info *avs_inf_ptr)
 
 	avs_dbg(AVS_LOG_INIT, "VDDFIX voltage val: 0x%x",
 			avs_inf_ptr->avs_handshake->vddfix);
+	avs_dbg(AVS_LOG_INIT, "VDDVAR Retn: 0x%x, VDDFIX Retn: 0x%x",
+			avs_info.avs_handshake->vddvar_ret,
+			avs_info.avs_handshake->vddfix_ret);
 	avs_dbg(AVS_LOG_INIT, "Silicon Type: %u",
 			avs_inf_ptr->avs_handshake->silicon_type);
 	avs_dbg(AVS_LOG_INIT, "Freq Id: %u",

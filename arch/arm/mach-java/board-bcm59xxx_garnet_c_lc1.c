@@ -150,8 +150,8 @@ static struct bcmpmu59xxx_rw_data __initdata register_init_data[] = {
 	{.addr = PMU_REG_OTGCTRL1 , .val = 0x18, .mask = 0xFF},
 
 
-	/* MMSR LPM voltage - 0.88V */
-	{.addr = PMU_REG_MMSRVOUT2 , .val = 0x4, .mask = 0x3F},
+	/* MMSR LPM voltage - 0.80V */
+	{.addr = PMU_REG_MMSRVOUT2 , .val = 0x1, .mask = 0x3F},
 	/* SDSR1 NM1 voltage - 1.28V */
 	{.addr = PMU_REG_SDSR1VOUT1 , .val = 0x2C, .mask = 0x3F},
 	/* SDSR1 LPM voltage - 0.97V */
@@ -1453,23 +1453,41 @@ static struct bcmpmu59xxx *pmu;
 int bcmpmu_init_sr_volt()
 {
 #ifdef CONFIG_KONA_AVS
-	int msr_ret_vlt;
-	u8 sdsr_vlt = 0;
+	int msr_vret;
+	int sdsr_vlt = 0;
+	int sdsr_vret;
+	u8 reg_val = 0;
 
 	BUG_ON(!pmu);
-	/* ADJUST MSR RETN VOLTAGE */
-	msr_ret_vlt = get_vddvar_retn_vlt_id();
-	if (msr_ret_vlt < 0) {
-		pr_err("%s: Wrong retn voltage value\n", __func__);
+/* ADJUST MSR RETN VOLTAGE */
+	msr_vret = get_vddvar_retn_vlt_id();
+	if (msr_vret < 0) {
+		pr_err("Wrong MSR retn voltage %d", msr_vret);
 		return -EINVAL;
 	}
-	pr_info("MSR Retn Voltage ID: 0x%x", msr_ret_vlt);
-	pmu->write_dev(pmu, PMU_REG_MMSRVOUT2, (u8)msr_ret_vlt);
-	/* ADJUST SDSR1 ACTIVE VOLTAGE */
-	pmu->read_dev(pmu, PMU_REG_SDSR1VOUT1, &sdsr_vlt);
-	sdsr_vlt = get_vddfix_vlt(sdsr_vlt & PMU_SR_VOLTAGE_MASK);
+	pr_info("MSR Retn Voltage ID: 0x%x", msr_vret);
+	pmu->write_dev(pmu, PMU_REG_MMSRVOUT2, (u8)msr_vret);
+
+/* ADJUST SDSR1 ACTIVE VOLTAGE */
+	pmu->read_dev(pmu, PMU_REG_SDSR1VOUT1, &reg_val);
+	sdsr_vlt = get_vddfix_vlt(reg_val & PMU_SR_VOLTAGE_MASK);
+	if (sdsr_vlt < 0) {
+		pr_err("Wrong SDSR active voltage %d", sdsr_vlt);
+		return -EINVAL;
+	}
 	pr_info("SDSR1 Active Voltage ID: 0x%x", sdsr_vlt);
-	pmu->write_dev(pmu, PMU_REG_SDSR1VOUT1, sdsr_vlt);
+	reg_val &= ~PMU_SR_VOLTAGE_MASK;
+	reg_val |= sdsr_vlt;
+	pmu->write_dev(pmu, PMU_REG_SDSR1VOUT1, reg_val);
+
+/* ADJUST SDSR1 RETN VOLTAGE */
+	sdsr_vret = get_vddfix_retn_vlt_id();
+	if (sdsr_vret < 0) {
+		pr_err("Wrong SDSR retn voltage %d", sdsr_vret);
+		return -EINVAL;
+	}
+	pr_info("SDSR1 Retn voltage ID: 0x%x\n", sdsr_vret);
+	pmu->write_dev(pmu, PMU_REG_SDSR1VOUT2, (u8)sdsr_vret);
 #endif
 	return 0;
 }
