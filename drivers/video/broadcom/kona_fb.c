@@ -730,6 +730,8 @@ static int kona_fb_sync(struct fb_info *info)
 #endif
 static void konafb_vsync_cb(void)
 {
+	if (g_kona_fb && g_kona_fb->display_info->vmode)
+		complete(&vsync_event);
 }
 
 static void vsync_work_smart(struct work_struct *work)
@@ -764,8 +766,8 @@ static int enable_display(struct kona_fb *fb)
 		goto fail_to_power_control;
 	}
 	INIT_DELAYED_WORK(&fb->vsync_smart, vsync_work_smart);
-	schedule_delayed_work(&fb->vsync_smart, 0);
 	if (!fb->display_info->vmode) {
+		schedule_delayed_work(&fb->vsync_smart, 0);
 		kona_clock_stop(fb);
 	}
 
