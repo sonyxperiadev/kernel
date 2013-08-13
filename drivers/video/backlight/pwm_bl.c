@@ -236,36 +236,6 @@ static int pwm_backlight_parse_dt(struct device *dev,
 }
 #endif
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-static void backlight_driver_early_suspend(struct early_suspend *h)
-{
-	struct pwm_bl_data *pb = container_of(h, struct pwm_bl_data, bd_early_suspend);
-	struct platform_device *pdev = container_of(pb->dev, struct platform_device, dev);
-	struct backlight_device *bl = dev_get_drvdata(&pdev->dev);
-
-	if( bl->props.brightness) {
-		pwm_config(pb->pwm, 0, pb->period);
-		pwm_disable(pb->pwm);
-	}
-}
-
-static void backlight_driver_late_resume(struct early_suspend *h)
-{
-	struct pwm_bl_data *pb = container_of(h, struct pwm_bl_data, bd_early_suspend);
-	struct platform_device *pdev = container_of(pb->dev, struct platform_device, dev);
-	struct backlight_device *bl = dev_get_drvdata(&pdev->dev);
-	int brightness = bl->props.brightness;
-
-	if (brightness) {
-		brightness = pb->lth_brightness +
-			(brightness * (pb->period - pb->lth_brightness) /
-			bl->props.max_brightness);
-		pwm_config(pb->pwm, brightness, pb->period);
-		pwm_enable(pb->pwm);
-	}
-}
-#endif
-
 static int pwm_backlight_probe(struct platform_device *pdev)
 {
 	struct platform_pwm_backlight_data *data = pdev->dev.platform_data;
