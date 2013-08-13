@@ -16,17 +16,12 @@ the GPL, without Broadcom's express prior written consent.
 
 #include <linux/types.h>
 
-#define MCI_IOC_MAGIC 'M'
 #define MCI_MAX_MCODEIN_STATES 7
 
 enum mci_job_type {
-	INTERLOCK_MCI_INVALID_JOB = 0x64000000,
-	INTERLOCK_MCI_WAITING_JOB,
-	INTERLOCK_MCI_LAST_JOB,
-
 	H264_MCI_INVALID_JOB = 0x67040000,
 	H264_MCI_EPR_JOB,
-	H264_MCI_LAST_JOB,
+	H264_MCI_LAST_JOB
 };
 
 enum mci_job_status_type {
@@ -71,11 +66,4 @@ struct mci_job {
 	struct mci_out_param out_params;
 };
 
-struct mci_version_info {
-	size_t size;
-	void *version_info_ptr;
-};
-
-#define MCI_IOCTL_VERSION_REQ \
-	_IOWR(MCI_IOC_MAGIC, 1, struct mci_version_info)
 #endif

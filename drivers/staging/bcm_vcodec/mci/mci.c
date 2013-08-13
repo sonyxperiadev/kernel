@@ -30,117 +30,42 @@ the GPL, without Broadcom's express prior written consent.
 
 #define H264_MCODEIN_CONTROL_OFFSET                             0x00001000
 #define    H264_MCODEIN_CONTROL_EMUL_SHIFT                      24
-#define    H264_MCODEIN_CONTROL_EMUL_MASK                       0xff000000
 #define    H264_MCODEIN_CONTROL_MASK_SHIFT                      16
 #define    H264_MCODEIN_CONTROL_MASK_MASK                       0x00ff0000
 #define    H264_MCODEIN_CONTROL_CODE_SHIFT                      8
-#define    H264_MCODEIN_CONTROL_CODE_MASK                       0x0000ff00
-#define    H264_MCODEIN_CONTROL_AVSMODE_SHIFT                   7
 #define    H264_MCODEIN_CONTROL_AVSMODE_MASK                    0x00000080
-#define    H264_MCODEIN_CONTROL_WRITEBACK_SHIFT                 6
 #define    H264_MCODEIN_CONTROL_WRITEBACK_MASK                  0x00000040
-#define    H264_MCODEIN_CONTROL_SENDSTART_SHIFT                 5
 #define    H264_MCODEIN_CONTROL_SENDSTART_MASK                  0x00000020
-#define    H264_MCODEIN_CONTROL_COMPLETE_SHIFT                  4
 #define    H264_MCODEIN_CONTROL_COMPLETE_MASK                   0x00000010
-#define    H264_MCODEIN_CONTROL_STARTBYTE_SHIFT                 3
 #define    H264_MCODEIN_CONTROL_STARTBYTE_MASK                  0x00000008
-#define    H264_MCODEIN_CONTROL_NO_OUTPUT_SHIFT                 2
-#define    H264_MCODEIN_CONTROL_NO_OUTPUT_MASK                  0x00000004
-#define    H264_MCODEIN_CONTROL_STRIP_SHIFT                     1
 #define    H264_MCODEIN_CONTROL_STRIP_MASK                      0x00000002
-#define    H264_MCODEIN_CONTROL_INTENABLE_SHIFT                 0
 #define    H264_MCODEIN_CONTROL_INTENABLE_MASK                  0x00000001
-
 #define H264_MCODEIN_CONTROL_EXTRA_OFFSET                       0x00001004
-#define    H264_MCODEIN_CONTROL_EXTRA_EMUL_DISABLE_SHIFT        12
 #define    H264_MCODEIN_CONTROL_EXTRA_EMUL_DISABLE_MASK         0x00001000
 #define    H264_MCODEIN_CONTROL_EXTRA_ZEROBITS_SHIFT            1
-#define    H264_MCODEIN_CONTROL_EXTRA_ZEROBITS_MASK             0x000001fe
-#define    H264_MCODEIN_CONTROL_EXTRA_MEMCPY_SHIFT              0
 #define    H264_MCODEIN_CONTROL_EXTRA_MEMCPY_MASK               0x00000001
-
 #define H264_MCODEIN_STATUS_OFFSET                              0x00001008
-#define    H264_MCODEIN_STATUS_WR_REQ_SHIFT                     7
 #define    H264_MCODEIN_STATUS_WR_REQ_MASK                      0x00000080
-#define    H264_MCODEIN_STATUS_RD_REQ_SHIFT                     6
 #define    H264_MCODEIN_STATUS_RD_REQ_MASK                      0x00000040
-#define    H264_MCODEIN_STATUS_SD_REQ_SHIFT                     5
 #define    H264_MCODEIN_STATUS_SD_REQ_MASK                      0x00000020
-#define    H264_MCODEIN_STATUS_AT_MARK_SHIFT                    4
-#define    H264_MCODEIN_STATUS_AT_MARK_MASK                     0x00000010
 #define    H264_MCODEIN_STATUS_INT_DONE_SHIFT                   3
 #define    H264_MCODEIN_STATUS_INT_DONE_MASK                    0x00000008
-#define    H264_MCODEIN_STATUS_OUT_ACTIVE_SHIFT                 2
 #define    H264_MCODEIN_STATUS_OUT_ACTIVE_MASK                  0x00000004
-#define    H264_MCODEIN_STATUS_PROCESS_ACTIVE_SHIFT             1
 #define    H264_MCODEIN_STATUS_PROCESS_ACTIVE_MASK              0x00000002
-#define    H264_MCODEIN_STATUS_IN_ACTIVE_SHIFT                  0
 #define    H264_MCODEIN_STATUS_IN_ACTIVE_MASK                   0x00000001
-
 #define H264_MCODEIN_USERDATA_OFFSET                            0x0000100C
-#define    H264_MCODEIN_USERDATA_VALUE_SHIFT                    0
-#define    H264_MCODEIN_USERDATA_VALUE_MASK                     0xffffffff
-
 #define H264_MCODEIN_INADDR_OFFSET                              0x00001014
-#define    H264_MCODEIN_INADDR_RADDR_SHIFT                      0
-#define    H264_MCODEIN_INADDR_RADDR_MASK                       0xffffffff
-
 #define H264_MCODEIN_LENGTH_OFFSET                              0x00001018
-#define    H264_MCODEIN_LENGTH_LENGTH_SHIFT                     0
-#define    H264_MCODEIN_LENGTH_LENGTH_MASK                      0xffffffff
-
 #define H264_MCODEIN_OUTBASE_OFFSET                             0x0000101c
-#define    H264_MCODEIN_OUTBASE_BASE_SHIFT                      12
-#define    H264_MCODEIN_OUTBASE_BASE_MASK                       0xfffff000
-#define    H264_MCODEIN_OUTBASE_LOW_BITS_SHIFT                  0
-#define    H264_MCODEIN_OUTBASE_LOW_BITS_MASK                   0x00000fff
-
 #define H264_MCODEIN_OUTSIZE_OFFSET                             0x00001020
-#define    H264_MCODEIN_OUTSIZE_SIZE_SHIFT                      12
-#define    H264_MCODEIN_OUTSIZE_SIZE_MASK                       0xfffff000
-#define    H264_MCODEIN_OUTSIZE_LOW_BITS_SHIFT                  0
-#define    H264_MCODEIN_OUTSIZE_LOW_BITS_MASK                   0x00000fff
-
 #define H264_MCODEIN_OUTMARKOFFSET_OFFSET                       0x00001024
-#define    H264_MCODEIN_OUTMARKOFFSET_MARK_SHIFT                12
-#define    H264_MCODEIN_OUTMARKOFFSET_MARK_MASK                 0xfffff000
-#define    H264_MCODEIN_OUTMARKOFFSET_LOW_BITS_SHIFT            0
-#define    H264_MCODEIN_OUTMARKOFFSET_LOW_BITS_MASK             0x00000fff
-
 #define H264_MCODEIN_STATE0_OFFSET                              0x00001028
-#define    H264_MCODEIN_STATE0_MATCH_SHIFT                      31
-#define    H264_MCODEIN_STATE0_MATCH_MASK                       0x80000000
-#define    H264_MCODEIN_STATE0_NUMZERO_SHIFT                    29
-#define    H264_MCODEIN_STATE0_NUMZERO_MASK                     0x60000000
-#define    H264_MCODEIN_STATE0_GOT_NALU_SHIFT                   28
-#define    H264_MCODEIN_STATE0_GOT_NALU_MASK                    0x10000000
-#define    H264_MCODEIN_STATE0_NALU_COUNT_SHIFT                 0
-#define    H264_MCODEIN_STATE0_NALU_COUNT_MASK                  0x0fffffff
-
 #define H264_MCODEIN_STATE1_OFFSET                              0x0000102c
-#define    H264_MCODEIN_STATE1_DATA_SHIFT                       0
-#define    H264_MCODEIN_STATE1_DATA_MASK                        0xffffffff
-
 #define H264_MCODEIN_STATE2_OFFSET                              0x00001030
-#define    H264_MCODEIN_STATE2_DATA_SHIFT                       0
-#define    H264_MCODEIN_STATE2_DATA_MASK                        0xffffffff
-
 #define H264_MCODEIN_STATE3_OFFSET                              0x00001034
-#define    H264_MCODEIN_STATE3_DATA_SHIFT                       0
-#define    H264_MCODEIN_STATE3_DATA_MASK                        0xffffffff
-
 #define H264_MCODEIN_STATE4_OFFSET                              0x00001038
-#define    H264_MCODEIN_STATE4_DATA_SHIFT                       0
-#define    H264_MCODEIN_STATE4_DATA_MASK                        0xffffffff
-
 #define H264_MCODEIN_STATE5_OFFSET                              0x0000103c
-#define    H264_MCODEIN_STATE5_DATA_SHIFT                       0
-#define    H264_MCODEIN_STATE5_DATA_MASK                        0xffffffff
-
 #define H264_MCODEIN_STATE6_OFFSET                              0x00001040
-#define    H264_MCODEIN_STATE6_DATA_SHIFT                       0
-#define    H264_MCODEIN_STATE6_DATA_MASK                        0xffffffff
 
 #define MCI_DEV_NAME "mci"
 #define MCI_STATUS_BUSYBITS_MASK (H264_MCODEIN_STATUS_WR_REQ_MASK |\
@@ -155,30 +80,26 @@ the GPL, without Broadcom's express prior written consent.
 #define MCI_MCODEIN_REG_CLEAR 0
 #define MCI_TIMER_MS 100 /*timer value is set based on trial-and-error */
 #define MCI_TIMEOUT_MS 1000 /*timer value is set based on trial-and-error */
-#define MCI_MAX_ASYMMETRIC_PROC 1
 #define MCI_REG_ADDR(x) (x-H264_MCODEIN_CONTROL_OFFSET)
 
 /* TODO: Queue work on core 0 is only required for
    Hawaii due to hw issue. Need to use queue_work()
    for platform other than Hawaii */
-#define MCI_SCHEDULER_WORK(core, work) \
-		queue_work_on(0, core->mci_common->single_wq, work)
+#define MCI_SCHEDULER_WORK(mci_dev, work) \
+		queue_work_on(0, mci_dev->single_wq, work)
 
 struct mci_device {
-	struct mci_common *mci_common;
-	struct mci_hw_config *mci_hw_cfg;
-};
-
-struct mci_hw_config {
+	struct miscdevice mdev;
 	int irq;
 	void __iomem *reg_base;
-};
-
-enum mci_isr_type {
-	MCI_ISR_UNKNOWN = 0,
-	MCI_ISR_SUCCESS,
-	MCI_ISR_ERROR,
-	MCI_ISR_PROCESSED
+	bool mci_is_on; /* power + irq on */
+	bool mci_hw_idle; /* mci hw is not processing job */
+	unsigned long sched_time; /* jiffies timeout */
+	struct work_struct job_scheduler;
+	struct timer_list mci_timer;
+	struct plist_head job_list;
+	struct workqueue_struct *single_wq;
+	struct bcm_pdm_mm_qos_req *pwr_req;
 };
 
 struct mci_job_post {
@@ -189,14 +110,16 @@ struct mci_job_post {
 	void *data;
 };
 
-struct mci_job_status {
-	u32 id;
-	enum mci_job_status_type status;
+struct mci_job_list {
+	struct plist_node dev_dev;
+	bool added2list;
+	struct list_head file_list;
+	struct mci_job_post job;
+	struct file_private_data *filp;
 };
 
 struct file_private_data {
-	struct mci_common *common;
-	unsigned int interlock_count;
+	struct mci_device *mci_dev;
 	int prio;
 	unsigned int read_count;
 	bool readable;
@@ -206,62 +129,8 @@ struct file_private_data {
 	struct bcm_pdm_mm_qos_req *freq_req;
 };
 
-struct mci_job_list {
-	struct plist_node core_list;
-	bool added2list;
-
-	struct list_head file_list;
-	struct list_head wait_list;
-
-	struct mci_job_list *successor;
-	struct mci_job_list *predecessor;
-
-	struct mci_job_post job;
-	struct file_private_data *filp;
-};
-
-struct dev_status_list {
-	struct mci_job_status status;
-	struct list_head wait_list;
-	struct file_private_data *filp;
-};
-
-struct mci_core {
-	struct mci_device *mci_dev;
-	struct mci_common *mci_common;
-	unsigned long sched_time; /* jiffies timeout */
-	struct work_struct job_scheduler;
-	bool mci_is_on;
-	struct timer_list mci_timer;
-	struct plist_head job_list;
-	u32 mci_job_id;
-};
-
-struct mci_common {
-	struct miscdevice mdev;
-	struct list_head device_list;
-	struct workqueue_struct *single_wq;
-	struct mci_version_info version_info;
-
-	/*HW status*/
-	struct bcm_pdm_mm_qos_req *pwr_req;
-	struct mci_core *mci_core;
-};
-
-struct read {
-	struct mci_job_list **job_list;
-	struct file_private_data *filp;
-};
-
-struct interlock {
-	struct mci_job_list *from;
-	struct mci_job_list *to;
-	struct dev_status_list *status;
-};
-
 static unsigned long mci_timer_jiffies;
 static unsigned long mci_timeout_jiffies;
-static wait_queue_head_t mci_queue;
 static DEFINE_MUTEX(mci_mutex);
 
 static u32 mci_read(struct mci_device *mci, u32 reg);
@@ -269,42 +138,29 @@ static void mci_write(struct mci_device *mci, u32 reg, u32 value);
 static bool mci_hw_is_busy(struct mci_device *mci);
 static void mci_reset(struct mci_device *mci);
 static void mci_complete_sequence(struct mci_device *mci);
-static void mci_interlock_completion(struct mci_job_list *job);
-static void mci_job_completion(struct mci_job_list *job, void *core);
-static int mci_enable(struct mci_core *core);
-static void mci_disable(struct mci_core *core);
+static void mci_job_completion(struct mci_job_list *job,
+				struct mci_device *dev);
+static int mci_enable(struct mci_device *dev);
+static void mci_disable(struct mci_device *dev);
 
 static void add_job(struct mci_job_list *job,
-			struct mci_core *core_dev)
+			struct mci_device *mci_dev)
 {
 	if (job->added2list)
 		return;
-	job->job.status = MCI_JOB_STATUS_READY;
-	plist_add(&job->core_list, &core_dev->job_list);
+	plist_add(&job->dev_dev, &mci_dev->job_list);
 	job->added2list = true;
-	MCI_SCHEDULER_WORK(core_dev, &core_dev->job_scheduler);
+	if (mci_dev->mci_hw_idle)
+		MCI_SCHEDULER_WORK(mci_dev, &mci_dev->job_scheduler);
 }
 
 static void remove_job(struct mci_job_list *job,
-			struct mci_core *core_dev)
+			struct mci_device *mci_dev)
 {
 	if (!job->added2list)
 		return;
-	plist_del(&job->core_list, &core_dev->job_list);
+	plist_del(&job->dev_dev, &mci_dev->job_list);
 	job->added2list = false;
-}
-
-static void move_job(struct mci_job_list *job,
-			struct mci_core *core_dev,
-			int prio)
-{
-	if (job->added2list) {
-		plist_del(&job->core_list, &core_dev->job_list);
-		plist_node_init(&job->core_list, prio);
-		plist_add(&job->core_list, &core_dev->job_list);
-	} else {
-		plist_node_init(&job->core_list, prio);
-	}
 }
 
 static struct mci_job_list *mci_alloc_job(
@@ -315,131 +171,56 @@ static struct mci_job_list *mci_alloc_job(
 		return NULL;
 
 	job->filp = fpdata;
-	INIT_LIST_HEAD(&job->wait_list);
 	INIT_LIST_HEAD(&job->file_list);
-	plist_node_init(&job->core_list, fpdata->prio);
-	job->job.type = INTERLOCK_MCI_WAITING_JOB;
+	plist_node_init(&job->dev_dev, fpdata->prio);
 	job->job.status = MCI_JOB_STATUS_READY;
 
 	return job;
 }
 
-static void mci_priority_update(struct mci_job_list *to, int prio)
-{
-	struct mci_job_list *job;
-	struct mci_job_list *temp;
-
-	if (to == NULL)
-		return;
-	if (to->filp->prio <= prio)
-		return;
-
-	list_for_each_entry_safe(job, temp, &to->filp->write_head,
-						file_list) {
-		if (job->job.type == INTERLOCK_MCI_WAITING_JOB)
-			mci_priority_update(job->predecessor, prio);
-		else
-			move_job(job, job->filp->common->mci_core, prio);
-	}
-}
-
 static void mci_add_job(struct mci_job_list *job)
 {
 	struct file_private_data *filp = job->filp;
-	struct mci_common *common = filp->common;
-	struct mci_core *core_dev = common->mci_core;
+	struct mci_device *mci_dev = filp->mci_dev;
 
 	mutex_lock(&mci_mutex);
 	job->job.status = MCI_JOB_STATUS_READY;
-	if (filp->interlock_count == 0)
-		add_job(job, core_dev);
+	add_job(job, mci_dev);
 	list_add_tail(&job->file_list, &filp->write_head);
 	mutex_unlock(&mci_mutex);
 }
 
-static void mci_wait_job(struct interlock *il)
+static struct mci_job_list *mci_read_job(struct file_private_data *filp)
 {
-	struct mci_job_list *from = il->from;
-	struct mci_job_list *to = il->to;
-	struct dev_status_list *status = il->status;
-
-	struct file_private_data *to_filp;
-	struct file_private_data *from_filp;
-
-	if (!to) {
-		pr_err("mci_job_list to is NULL pointer\n");
-		return;
-	}
-
-	to_filp = to->filp;
-
-	if (from)
-		from_filp = from->filp;
-
-	mutex_lock(&mci_mutex);
-	if (status) {
-		if (status->status.status == MCI_JOB_STATUS_INVALID) {
-			list_add_tail(&status->wait_list, &to->wait_list);
-		} else {
-			list_del_init(&status->wait_list);
-			mutex_unlock(&mci_mutex);
-			return;
-		}
-	}
-	if (from) {
-		from->job.status = MCI_JOB_STATUS_READY;
-		list_add_tail(&from->file_list, &from_filp->write_head);
-		from->successor = to;
-		to->predecessor = from;
-		to_filp->interlock_count++;
-		mci_priority_update(to->predecessor, to->filp->prio);
-	}
-
-	to->job.status = MCI_JOB_STATUS_READY;
-	list_add_tail(&to->file_list, &to_filp->write_head);
-
-	if ((from == NULL) && list_is_singular(&to_filp->write_head))
-		mci_interlock_completion(to);
-	else if (from && list_is_singular(&from_filp->write_head))
-		mci_interlock_completion(from);
-
-	mutex_unlock(&mci_mutex);
-}
-
-static void mci_read_job(struct read *rd)
-{
-	struct mci_job_list **job_list = rd->job_list;
-	struct file_private_data *filp = rd->filp;
+	struct mci_job_list *job_list;
 
 	mutex_lock(&mci_mutex);
 	if (filp->read_count) {
-		struct mci_job_list *job =
-			list_first_entry(&filp->read_head,
-				struct mci_job_list, file_list);
+		struct mci_job_list *job = list_first_entry(&filp->read_head,
+					struct mci_job_list, file_list);
 		list_del_init(&job->file_list);
-		*job_list = job;
+		job_list = job;
 		filp->read_count--;
 	} else {
-		*job_list = NULL;
+		job_list = NULL;
 	}
 	mutex_unlock(&mci_mutex);
+
+	return job_list;
 }
 
-static void mci_abort_job(
-			struct mci_job_list *job,
-			struct mci_core *core_dev)
+static void mci_abort_job(struct mci_job_list *job, struct mci_device *mci_dev)
 {
 	if (job->job.status == MCI_JOB_STATUS_RUNNING) {
-		pr_err("aborting hw in release for mci\n");
-		/* reset once in release */
-		mci_reset(core_dev->mci_dev);
-		MCI_SCHEDULER_WORK(core_dev, &core_dev->job_scheduler);
+		mci_reset(mci_dev);
+		mci_dev->mci_hw_idle = true;
+		MCI_SCHEDULER_WORK(mci_dev, &mci_dev->job_scheduler);
 	}
 }
 
 static void mci_release_jobs(struct file_private_data *filp)
 {
-	struct mci_common *common = filp->common;
+	struct mci_device *mci_dev = filp->mci_dev;
 	struct mci_job_list *job;
 	struct mci_job_list *temp;
 
@@ -451,12 +232,8 @@ static void mci_release_jobs(struct file_private_data *filp)
 				&job->file_list, filp->prio,
 				job->file_list.next, job->file_list.prev);
 
-		if (job->job.type != INTERLOCK_MCI_WAITING_JOB) {
-			mci_abort_job(job, common->mci_core);
-			mci_job_completion(job, common->mci_core);
-		} else {
-			mci_interlock_completion(job);
-		}
+		mci_abort_job(job, mci_dev);
+		mci_job_completion(job, mci_dev);
 	}
 
 	list_for_each_entry_safe(job, temp, &filp->read_head, file_list) {
@@ -471,70 +248,16 @@ static void mci_release_jobs(struct file_private_data *filp)
 	mutex_unlock(&mci_mutex);
 }
 
-/* This function frees the job */
-static void mci_interlock_completion(struct mci_job_list *job)
+static void mci_job_completion(struct mci_job_list *job,
+				struct mci_device *mci_dev)
 {
 	struct file_private_data *filp = job->filp;
-	struct mci_common *common = filp->common;
 
-	BUG_ON(job->job.type != INTERLOCK_MCI_WAITING_JOB);
-
-	list_del_init(&job->file_list);
-
-	if (job->predecessor) {
-		BUG_ON(job->filp->interlock_count == 0);
-		job->filp->interlock_count--;
-		job->predecessor->successor = NULL;
-		job->predecessor = NULL;
-	}
-	if (job->successor)
-		mci_interlock_completion(job->successor);
-
-	if (!list_empty(&filp->write_head)) {
-		struct mci_job_list *temp_wait_job;
-		struct mci_job_list *wait_job = list_first_entry(
-					&filp->write_head,
-					struct mci_job_list, file_list);
-
-		if ((wait_job->job.type == INTERLOCK_MCI_WAITING_JOB) &&
-				(wait_job->predecessor == NULL)) {
-			mci_interlock_completion(wait_job);
-		}
-		if (wait_job->job.type != INTERLOCK_MCI_WAITING_JOB) {
-			list_for_each_entry_safe(wait_job, temp_wait_job,
-					&job->filp->write_head, file_list) {
-				if (wait_job->job.type
-						== INTERLOCK_MCI_WAITING_JOB)
-					break;
-				add_job(wait_job, common->mci_core);
-			}
-		}
-	}
-
-	if (!list_empty(&job->wait_list)) {
-		struct dev_status_list *wait_list;
-		struct dev_status_list *temp_wait_list;
-		list_for_each_entry_safe(wait_list,
-					temp_wait_list,
-					&job->wait_list,
-					wait_list)
-		{
-			list_del_init(&wait_list->wait_list);
-			wait_list->status.status = job->job.status;
-		}
-		wake_up_all(&mci_queue);
-	}
-
-	kfree(job);
-}
-
-static void mci_job_completion(struct mci_job_list *job, void *core)
-{
-	struct file_private_data *filp = job->filp;
-	struct mci_core *core_dev = core;
+	if (job->job.status < MCI_JOB_STATUS_SUCCESS)
+		job->job.status = MCI_JOB_STATUS_ERROR;
 
 	list_del_init(&job->file_list);
-	remove_job(job, core_dev);
+	remove_job(job, mci_dev);
 
 	if (filp->readable) {
 		filp->read_count++;
@@ -543,16 +266,6 @@ static void mci_job_completion(struct mci_job_list *job, void *core)
 	} else {
 		kfree(job->job.data);
 		kfree(job);
-	}
-
-	if (!list_empty(&filp->write_head)) {
-		struct mci_job_list *wait_job = list_first_entry(
-		&filp->write_head,
-		struct mci_job_list, file_list);
-		if ((wait_job->job.type == INTERLOCK_MCI_WAITING_JOB) &&
-				(wait_job->predecessor == NULL)) {
-			mci_interlock_completion(wait_job);
-		}
 	}
 }
 
@@ -623,7 +336,7 @@ static void program_mci(struct mci_device *mci, struct mci_job *jp)
 }
 
 static enum mci_job_status_type mci_start_job(struct mci_device *mci,
-				struct mci_job_post *job, u32 profmask)
+				struct mci_job_post *job)
 {
 	struct mci_job *jp = job->data;
 
@@ -631,14 +344,10 @@ static enum mci_job_status_type mci_start_job(struct mci_device *mci,
 		pr_err("mci_start_job: jp is null\n");
 		return MCI_JOB_STATUS_ERROR;
 	}
-	if (job->size != sizeof(struct mci_job)) {
+	if (job->size != sizeof(*jp)) {
 		pr_err("mci_start_job: mismatch job size %d struct size %d\n",
-				job->size, sizeof(struct mci_job));
-		return MCI_JOB_STATUS_ERROR;
-	}
-	if (job->type != H264_MCI_EPR_JOB) {
-		pr_err("mcin_start_job: invalid job type %d\n", job->type);
-		return MCI_JOB_STATUS_ERROR;
+				job->size, sizeof(*jp));
+		goto err_status;
 	}
 
 	switch (job->status) {
@@ -647,7 +356,7 @@ static enum mci_job_status_type mci_start_job(struct mci_device *mci,
 		/* Bound checks */
 		if (jp->mci_config.start_mask == 0) {
 			pr_err("mci_start_job: mci_mask cant be zero\n");
-			return MCI_JOB_STATUS_ERROR;
+			goto err_status;
 		}
 
 		program_mci(mci, jp);
@@ -678,97 +387,91 @@ static enum mci_job_status_type mci_start_job(struct mci_device *mci,
 		jp->out_params.user_data = mci_read(mci,
 					H264_MCODEIN_USERDATA_OFFSET);
 		job->status = MCI_JOB_STATUS_SUCCESS;
-			return MCI_JOB_STATUS_SUCCESS;
+		return MCI_JOB_STATUS_SUCCESS;
 
 	default:
 		pr_err("start job unexpected job status %d\n", job->status);
+		break;
 	}
 
+err_status:
+	job->status = MCI_JOB_STATUS_ERROR;
 	return MCI_JOB_STATUS_ERROR;
 }
 
 static void mci_job_scheduler(struct work_struct *work)
 {
-	enum mci_job_status_type status = MCI_JOB_STATUS_INVALID;
-	bool hw_is_busy = false;
+	bool hw_is_busy;
 	struct mci_job_list *job_list_elem;
 
-	struct mci_core *core_dev = container_of(work,
-					struct mci_core,
+	struct mci_device *mci_dev = container_of(work,
+					struct mci_device,
 					job_scheduler);
 
 	mutex_lock(&mci_mutex);
 
-	if (plist_head_empty(&core_dev->job_list))
+	if (plist_head_empty(&mci_dev->job_list))
 		goto unlock_mci_mutex;
 
-	job_list_elem = plist_first_entry(
-				&core_dev->job_list,
-				struct mci_job_list, core_list);
+	job_list_elem = plist_first_entry(&mci_dev->job_list,
+				struct mci_job_list, dev_dev);
 
-	if (mci_enable(core_dev))
-		goto disable_mci;
+	if (mci_enable(mci_dev))
+		goto unlock_mci_mutex;
 
-	hw_is_busy = mci_hw_is_busy(core_dev->mci_dev);
+	hw_is_busy = mci_hw_is_busy(mci_dev);
 	if (hw_is_busy) {
-		if (time_is_before_jiffies(core_dev->sched_time)) {
+		if (time_is_before_jiffies(mci_dev->sched_time)) {
 			pr_err("abort hw\n");
-			mci_reset(core_dev->mci_dev);
+			mci_reset(mci_dev);
 			hw_is_busy = false;
-			MCI_SCHEDULER_WORK(core_dev,
-					&core_dev->job_scheduler);
+			mci_dev->mci_hw_idle = true;
+			mci_job_completion(job_list_elem, mci_dev);
+			MCI_SCHEDULER_WORK(mci_dev,
+					&mci_dev->job_scheduler);
 		}
 	} else {
-		if (job_list_elem->job.size) {
-			status	= mci_start_job(
-					core_dev->mci_dev,
-					&job_list_elem->job, 0);
-			if (status < MCI_JOB_STATUS_SUCCESS) {
-				core_dev->sched_time = jiffies
-						+ mci_timeout_jiffies;
-
-				hw_is_busy = true;
-				pr_debug("job posted\n");
-			} else {
-				job_list_elem->job.status
-						= MCI_JOB_STATUS_SUCCESS;
-				mci_job_completion(
-						job_list_elem, core_dev);
-				MCI_SCHEDULER_WORK(core_dev,
-						&core_dev->job_scheduler);
-			}
-		} else {
-			job_list_elem->job.status
-						= MCI_JOB_STATUS_SUCCESS;
-			mci_job_completion(job_list_elem, core_dev);
-			MCI_SCHEDULER_WORK(core_dev,
-					&core_dev->job_scheduler);
+		switch (mci_start_job(mci_dev,
+					&job_list_elem->job)) {
+		case MCI_JOB_STATUS_RUNNING:
+			mci_dev->sched_time = jiffies
+					+ mci_timeout_jiffies;
+			hw_is_busy = true;
+			mci_dev->mci_hw_idle = false;
+			pr_debug("job posted\n");
+			break;
+		case MCI_JOB_STATUS_ERROR:
+			pr_err("reset mci on status error\n");
+			mci_reset(mci_dev);
+			/* fall through */
+		default:
+			mci_dev->mci_hw_idle = true;
+			mci_job_completion(job_list_elem, mci_dev);
+			MCI_SCHEDULER_WORK(mci_dev,
+					&mci_dev->job_scheduler);
+			break;
 		}
 	}
 
 	if (hw_is_busy) {
-		mod_timer(&core_dev->mci_timer,
-				jiffies + mci_timer_jiffies);
-		pr_debug("mod_timer  %lx %lx\n",
-				jiffies,
-				mci_timer_jiffies);
-		goto unlock_mci_mutex;
+		mod_timer(&mci_dev->mci_timer, jiffies + mci_timer_jiffies);
+		pr_debug("mod_timer  %lx %lx\n", jiffies, mci_timer_jiffies);
+	} else {
+		mci_disable(mci_dev);
 	}
 
-disable_mci:
-	mci_disable(core_dev);
 unlock_mci_mutex:
 	mutex_unlock(&mci_mutex);
 }
 
 static u32 mci_read(struct mci_device *mci, u32 reg)
 {
-	return readl(mci->mci_hw_cfg->reg_base + MCI_REG_ADDR(reg));
+	return readl(mci->reg_base + MCI_REG_ADDR(reg));
 }
 
 static void mci_write(struct mci_device *mci, u32 reg, u32 value)
 {
-	writel(value, mci->mci_hw_cfg->reg_base + MCI_REG_ADDR(reg));
+	writel(value, mci->reg_base + MCI_REG_ADDR(reg));
 }
 
 static bool mci_hw_is_busy(struct mci_device *mci)
@@ -856,85 +559,84 @@ static bool mci_process_irq(struct mci_device *mci)
 
 static irqreturn_t mci_isr(int irq, void *data)
 {
-	struct mci_core *core_dev = data;
+	struct mci_device *mci_dev = data;
 	int ret = 0;
 
-	if (mci_process_irq(core_dev->mci_dev)) {
-		MCI_SCHEDULER_WORK(core_dev, &core_dev->job_scheduler);
+	if (mci_process_irq(mci_dev)) {
+		MCI_SCHEDULER_WORK(mci_dev, &mci_dev->job_scheduler);
 		ret = 1;
 	}
 	return IRQ_RETVAL(ret);
 }
 
-static int mci_power_on(struct mci_common *common)
+static int mci_power_on(struct mci_device *mci_dev)
 {
-	int rc = bcm_pdm_mm_qos_req_enable(common->pwr_req);
+	int rc = bcm_pdm_mm_qos_req_enable(mci_dev->pwr_req);
 	if (rc)
-		pr_err("fail to enable power\n");
+		pr_err("fail to enable power (%d)\n", rc);
 
 	return rc;
 }
 
-static void mci_power_off(struct mci_common *common)
+static void mci_power_off(struct mci_device *mci_dev)
 {
-	int rc = bcm_pdm_mm_qos_req_disable(common->pwr_req);
+	int rc = bcm_pdm_mm_qos_req_disable(mci_dev->pwr_req);
 	if (rc)
-		pr_err("fail to disable power\n");
+		pr_err("fail to disable power (%d)\n", rc);
 }
 
 static void mci_timer_callback(unsigned long data)
 {
-	struct mci_core *core_dev = (struct mci_core *)data;
-
-	MCI_SCHEDULER_WORK(core_dev, &core_dev->job_scheduler);
+	struct mci_device *mci_dev = (struct mci_device *)data;
+	MCI_SCHEDULER_WORK(mci_dev, &mci_dev->job_scheduler);
 }
 
-static int mci_enable(struct mci_core *core_dev)
+static int mci_enable(struct mci_device *mci_dev)
 {
 	int ret = 0;
 
-	if (!core_dev->mci_is_on) {
-		ret = mci_power_on(core_dev->mci_common);
+	if (!mci_dev->mci_is_on) {
+		ret = mci_power_on(mci_dev);
 		if (ret)
 			goto err_power;
 		pr_debug("mci turned on\n");
 
-		mci_reset(core_dev->mci_dev);
+		mci_reset(mci_dev);
 
-		ret = request_irq(core_dev->mci_dev->mci_hw_cfg->irq,
+		ret = request_irq(mci_dev->irq,
 				mci_isr,
 				IRQF_SHARED,
 				MCI_DEV_NAME,
-				core_dev);
+				mci_dev);
 		if (ret) {
 			pr_err("request_irq failed (%d)\n", ret);
 			goto err_irq;
 		}
 
-		init_timer(&core_dev->mci_timer);
-		setup_timer(&core_dev->mci_timer,
+		init_timer(&mci_dev->mci_timer);
+		setup_timer(&mci_dev->mci_timer,
 				mci_timer_callback,
-				(unsigned long)core_dev);
+				(unsigned long)mci_dev);
 
-		core_dev->mci_is_on = true;
+		mci_dev->mci_is_on = true;
 	}
 
 	return ret;
 
 err_irq:
-	mci_power_off(core_dev->mci_common);
+	mci_power_off(mci_dev);
 err_power:
 	return ret;
 }
 
-static void mci_disable(struct mci_core *core_dev)
+static void mci_disable(struct mci_device *mci_dev)
 {
-	if (core_dev->mci_is_on) {
-		del_timer_sync(&core_dev->mci_timer);
-		free_irq(core_dev->mci_dev->mci_hw_cfg->irq, core_dev);
-		mci_reset(core_dev->mci_dev);
-		mci_power_off(core_dev->mci_common);
-		core_dev->mci_is_on = false;
+	if (mci_dev->mci_is_on) {
+		del_timer_sync(&mci_dev->mci_timer);
+		free_irq(mci_dev->irq, mci_dev);
+		mci_reset(mci_dev);
+		mci_power_off(mci_dev);
+		mci_dev->mci_is_on = false;
 		pr_debug("mci turned off\n");
 	}
 }
@@ -942,8 +644,8 @@ static void mci_disable(struct mci_core *core_dev)
 static int mci_file_open(struct inode *inode, struct file *filp)
 {
 	struct miscdevice *miscdev = filp->private_data;
-	struct mci_common *common = container_of(miscdev,
-					struct mci_common, mdev);
+	struct mci_device *mci_dev = container_of(miscdev,
+					struct mci_device, mdev);
 	struct file_private_data *file_data;
 	int ret;
 
@@ -968,8 +670,7 @@ static int mci_file_open(struct inode *inode, struct file *filp)
 		return ret;
 	}
 
-	file_data->common = common;
-	file_data->interlock_count = 0;
+	file_data->mci_dev = mci_dev;
 	file_data->prio = current->prio;
 	file_data->read_count = 0;
 	file_data->readable = ((filp->f_mode & FMODE_READ) == FMODE_READ);
@@ -1008,16 +709,16 @@ static int mci_file_write(struct file *filp, const char __user *buf,
 			size_t size, loff_t *offset)
 {
 	struct file_private_data *file_data = filp->private_data;
-	struct mci_common *common = file_data->common;
 	struct mci_job_list *mci_job_node = mci_alloc_job(file_data);
 	ssize_t buf_size;
+	void *job_post;
 
 	if (!mci_job_node)
 		return -ENOMEM;
 
 	buf_size = size - sizeof(mci_job_node->job.type)
 				- sizeof(mci_job_node->job.id);
-	if (buf_size < 0)
+	if (buf_size <= 0)
 		goto out;
 
 	mci_job_node->job.size = buf_size;
@@ -1036,30 +737,27 @@ static int mci_file_write(struct file *filp, const char __user *buf,
 	}
 	buf += sizeof(mci_job_node->job.id);
 
-	if (mci_job_node->job.size > 0) {
-		void *job_post = kmalloc(mci_job_node->job.size, GFP_KERNEL);
-		if (job_post == NULL) {
-			kfree(mci_job_node);
-			return -ENOMEM;
-		}
-
-		mci_job_node->job.data = job_post;
-		if (copy_from_user(job_post, buf, mci_job_node->job.size)) {
-			pr_err("file write data copy_from_user failed\n");
-			kfree(job_post);
-			goto out;
-		}
-
-		if (mci_job_node->job.type != H264_MCI_EPR_JOB) {
-			pr_err("mci_file_write invalid job type %d\n",
-				mci_job_node->job.type);
-			kfree(job_post);
-			goto out;
-		}
-
-		BUG_ON(common->mci_core == NULL);
-		mci_add_job(mci_job_node);
+	job_post = kmalloc(mci_job_node->job.size, GFP_KERNEL);
+	if (job_post == NULL) {
+		kfree(mci_job_node);
+		return -ENOMEM;
 	}
+
+	mci_job_node->job.data = job_post;
+	if (copy_from_user(job_post, buf, mci_job_node->job.size)) {
+		pr_err("file write data copy_from_user failed\n");
+		kfree(job_post);
+		goto out;
+	}
+
+	if (mci_job_node->job.type != H264_MCI_EPR_JOB) {
+		pr_err("mci_file_write invalid job type %d\n",
+			mci_job_node->job.type);
+		kfree(job_post);
+		goto out;
+	}
+
+	mci_add_job(mci_job_node);
 	return size;
 out:
 	kfree(mci_job_node);
@@ -1072,14 +770,10 @@ static int mci_file_read(struct file *filp,
 				loff_t *offset)
 {
 	struct file_private_data *file_data = filp->private_data;
-	struct read rd;
 	struct mci_job_list *job = NULL;
 	size_t bytes_read = 0;
 
-	rd.job_list = &job;
-	rd.filp = file_data;
-	mci_read_job(&rd);
-
+	job = mci_read_job(file_data);
 	if (job == NULL)
 		goto mci_file_read_end;
 
@@ -1134,69 +828,10 @@ static int mci_file_fsync(struct file *filp, loff_t p1,
 				loff_t p2, int datasync)
 {
 	struct file_private_data *file_data = filp->private_data;
-	struct interlock il;
-	struct dev_status_list job_status;
 
-	INIT_LIST_HEAD(&job_status.wait_list);
-	job_status.filp = file_data;
-	job_status.status.status = MCI_JOB_STATUS_INVALID;
-	job_status.status.id = 0;
-	il.status = &job_status;
-	il.from = NULL;
-	il.to = mci_alloc_job(file_data);
-	mci_wait_job(&il);
-
-	wait_event(mci_queue, job_status.status.status
-				!= MCI_JOB_STATUS_INVALID);
+	return wait_event_interruptible(file_data->queue,
+			list_empty(&file_data->write_head));
 	return 0;
-}
-
-static long mci_file_ioctl(struct file *filp,
-				unsigned int cmd,
-				unsigned long arg)
-{
-	int ret = 0;
-	struct file_private_data *file_data = filp->private_data;
-	struct mci_common *common = file_data->common;
-
-	pr_debug("mci_file_ioctl: cmd %d\n", cmd);
-
-	if (_IOC_TYPE(cmd) != MCI_IOC_MAGIC)
-		return -ENOTTY;
-
-	if (_IOC_DIR(cmd) & _IOC_READ)
-		ret = !access_ok(VERIFY_WRITE, (void *)arg, _IOC_SIZE(cmd));
-
-	if (_IOC_DIR(cmd) & _IOC_WRITE)
-		ret |= !access_ok(VERIFY_READ, (void *)arg, _IOC_SIZE(cmd));
-
-	if (ret) {
-		pr_err("ioctl[0x%08x] failed[%d]\n", cmd, ret);
-		return -EFAULT;
-	}
-
-	switch (cmd) {
-	case MCI_IOCTL_VERSION_REQ:
-		if (common->version_info.version_info_ptr != NULL) {
-			struct mci_version_info *user_version_info =
-						(struct mci_version_info *)arg;
-			if (user_version_info->size <
-						common->version_info.size)
-				ret = -EINVAL;
-			else
-				ret = copy_to_user(
-					user_version_info->version_info_ptr,
-					common->version_info.version_info_ptr,
-					common->version_info.size);
-		}
-		break;
-	default:
-		pr_err("cmd[0x%08x] not supported\n", cmd);
-		ret = -EINVAL;
-		break;
-	}
-
-	return ret;
 }
 
 static const struct file_operations mci_fops = {
@@ -1207,15 +842,12 @@ static const struct file_operations mci_fops = {
 	.read = mci_file_read,
 	.poll = mci_file_poll,
 	.fsync = mci_file_fsync,
-	.unlocked_ioctl = mci_file_ioctl
 };
 
 static int mci_probe(struct platform_device *pdev)
 {
 	int ret = 0;
 	struct mci_device *mci;
-	struct mci_common *common;
-	struct mci_core *core = NULL;
 	struct resource *mem;
 	const char *single_wq_name = "mci_wq";
 
@@ -1225,16 +857,11 @@ static int mci_probe(struct platform_device *pdev)
 	if (!mci)
 		return -ENOMEM;
 
-	mci->mci_hw_cfg = devm_kzalloc(&pdev->dev,
-			sizeof(*mci->mci_hw_cfg), GFP_KERNEL);
-	if (!mci->mci_hw_cfg)
-		return -ENOMEM;
-
 	/* obtain IRQ */
-	mci->mci_hw_cfg->irq = platform_get_irq(pdev, 0);
-	if (mci->mci_hw_cfg->irq < 0) {
+	mci->irq = platform_get_irq(pdev, 0);
+	if (mci->irq < 0) {
 		pr_err("Missing IRQ resource\n");
-		return mci->mci_hw_cfg->irq;
+		return mci->irq;
 	}
 
 	/* obtain I/O resource */
@@ -1244,66 +871,41 @@ static int mci_probe(struct platform_device *pdev)
 		return -ENODEV;
 	}
 
-	if (!request_mem_region(mem->start,
-			resource_size(mem), pdev->name)) {
-		pr_err("failed to reserve mci mem region\n");
+	mci->reg_base =	ioremap_nocache(mem->start, resource_size(mem));
+	if (!mci->reg_base) {
+		pr_err("mci register mapping failed\n");
 		return -EBUSY;
 	}
 
-	mci->mci_hw_cfg->reg_base =
-			ioremap_nocache(mem->start, resource_size(mem));
-	if (!mci->mci_hw_cfg->reg_base) {
-		pr_err("mci register mapping failed\n");
-		ret = -EBUSY;
-		goto err_ioremap;
-	}
-
-	mci->mci_common = devm_kzalloc(&pdev->dev,
-			sizeof(*mci->mci_common), GFP_KERNEL);
-	if (!mci->mci_common) {
-		ret = -ENOMEM;
-		goto err_alloc_comm;
-	}
-
-	common = mci->mci_common;
-
 	/* get power resource */
-	ret = bcm_pdm_mm_qos_req_create(&common->pwr_req, MCI_DEV_NAME,
+	ret = bcm_pdm_mm_qos_req_create(&mci->pwr_req, MCI_DEV_NAME,
 		"mm_qos_res_h264_on");
 	if (ret) {
 		pr_err("fail to get power res for %s", MCI_DEV_NAME);
 		goto err_get_pwr;
 	}
 
-	common->mdev.minor = MISC_DYNAMIC_MINOR;
-	common->mdev.name = MCI_DEV_NAME;
-	common->mdev.fops = &mci_fops;
-	common->mdev.parent = NULL;
+	mci->mdev.minor = MISC_DYNAMIC_MINOR;
+	mci->mdev.name = MCI_DEV_NAME;
+	mci->mdev.fops = &mci_fops;
+	mci->mdev.parent = NULL;
 
 	/* register device */
-	ret = misc_register(&common->mdev);
+	ret = misc_register(&mci->mdev);
 	if (ret) {
 		pr_err("failed to register mci misc device\n");
 		goto err_misc_register;
 	}
 
-	core = devm_kzalloc(&pdev->dev, sizeof(*core), GFP_KERNEL);
-	if (!core)
-		goto err_mci_core;
-
 	/* init structure */
-	INIT_WORK(&core->job_scheduler, mci_job_scheduler);
-	plist_head_init(&core->job_list);
-	core->mci_job_id = 1;
-	core->mci_common = common;
-	core->mci_dev = mci;
-	common->mci_core = core;
+	INIT_WORK(&mci->job_scheduler, mci_job_scheduler);
+	plist_head_init(&mci->job_list);
+	mci->mci_hw_idle = true;
 
 	/* work queue */
-	init_waitqueue_head(&mci_queue);
-	common->single_wq = alloc_workqueue(single_wq_name,
+	mci->single_wq = alloc_workqueue(single_wq_name,
 			WQ_NON_REENTRANT, 1);
-	if (common->single_wq == NULL) {
+	if (mci->single_wq == NULL) {
 		pr_err("error alloc single_wq\n");
 		goto err_wq;
 	}
@@ -1317,39 +919,29 @@ static int mci_probe(struct platform_device *pdev)
 	return 0;
 
 err_wq:
-err_mci_core:
-	misc_deregister(&common->mdev);
+	misc_deregister(&mci->mdev);
 err_misc_register:
-	bcm_pdm_mm_qos_req_destroy(common->pwr_req);
+	bcm_pdm_mm_qos_req_destroy(mci->pwr_req);
 err_get_pwr:
-err_alloc_comm:
-	iounmap(mci->mci_hw_cfg->reg_base);
-err_ioremap:
-	release_mem_region(mem->start, resource_size(mem));
-
+	iounmap(mci->reg_base);
 	return ret;
 }
 
 static int mci_remove(struct platform_device *pdev)
 {
 	struct mci_device *mci;
-	struct resource *mem;
-	struct mci_common *common;
 
 	pr_info("mci_remove\n");
-
 	mci = platform_get_drvdata(pdev);
 	if (mci) {
-		common = mci->mci_common;
-		destroy_workqueue(common->single_wq);
-		misc_deregister(&common->mdev);
-		bcm_pdm_mm_qos_req_destroy(common->pwr_req);
-		iounmap(mci->mci_hw_cfg->reg_base);
-		mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-		release_mem_region(mem->start, resource_size(mem));
+		destroy_workqueue(mci->single_wq);
+		misc_deregister(&mci->mdev);
+		bcm_pdm_mm_qos_req_destroy(mci->pwr_req);
+		iounmap(mci->reg_base);
 	}
 
 	platform_set_drvdata(pdev, NULL);
+
 	pr_info("mci_remove: end\n");
 	return 0;
 }
@@ -1369,19 +961,8 @@ static struct platform_driver mci_driver = {
 	.remove = mci_remove,
 };
 
-static int __init mci_init(void)
-{
-	return platform_driver_register(&mci_driver);
-}
-
-static void __exit mci_exit(void)
-{
-	platform_driver_unregister(&mci_driver);
-}
-
-module_init(mci_init);
-module_exit(mci_exit);
+module_platform_driver(mci_driver);
 
 MODULE_AUTHOR("Broadcom Corporation");
-MODULE_DESCRIPTION("BCM_MCI device driver");
-MODULE_LICENSE("GPL");
+MODULE_DESCRIPTION("Broadcom MCI Device Driver");
+MODULE_LICENSE("GPL v2");
