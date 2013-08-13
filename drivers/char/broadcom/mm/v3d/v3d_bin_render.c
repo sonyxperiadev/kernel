@@ -268,8 +268,9 @@ bool get_v3d_bin_render_status(void *device_id)
 			}
 		}
 
-	if ((v3d_read(id, V3D_CT0CS_OFFSET)) |
-		(v3d_read(id, V3D_CT1CS_OFFSET))|(v3d_read(id, V3D_PCS_OFFSET)))
+	if ((v3d_read(id, V3D_CT0CS_OFFSET)&(0x20)) ||
+		(v3d_read(id, V3D_CT1CS_OFFSET)&(0x20)) ||
+		(v3d_read(id, V3D_PCS_OFFSET)))
 		return true;
 	return false;
 }
@@ -329,6 +330,29 @@ mm_job_status_e v3d_bin_render_start_job(void *device_id,
 			job_va[2] = 0;
 			job_va[3] = 0;
 			job_va[4] = 0;
+			if ((v3d_read(id, V3D_CT0CA_OFFSET) !=
+				v3d_read(id, V3D_CT0EA_OFFSET)) ||
+				(v3d_read(id, V3D_CT1CA_OFFSET) !=
+				v3d_read(id, V3D_CT1EA_OFFSET))) {
+				pr_err("v3d job [%x %x], [%x %x]\n",
+				job_params->v3d_ct0ca,
+				job_params->v3d_ct0ea, job_params->v3d_ct1ca,
+				job_params->v3d_ct1ea);
+
+				pr_err("regs:(0x%08x 0x%08x 0x%08x 0x%08x) "\
+					"(0x%08x 0x%08x 0x%08x 0x%08x) (0x%08x 0x%08x 0x%08x)",
+				v3d_read(id, V3D_CT0CS_OFFSET),
+				v3d_read(id, V3D_CT00RA0_OFFSET),
+				v3d_read(id, V3D_CT0CA_OFFSET),
+				v3d_read(id, V3D_CT0EA_OFFSET),
+				v3d_read(id, V3D_CT1CS_OFFSET),
+				v3d_read(id, V3D_CT01RA0_OFFSET),
+				v3d_read(id, V3D_CT1CA_OFFSET),
+				v3d_read(id, V3D_CT1EA_OFFSET),
+				v3d_read(id, V3D_BPOA_OFFSET),
+				v3d_read(id, V3D_BPOS_OFFSET),
+				v3d_read(id, V3D_PCS_OFFSET));
+				}
 			job->status = MM_JOB_STATUS_SUCCESS;
 			return MM_JOB_STATUS_SUCCESS;
 		}
