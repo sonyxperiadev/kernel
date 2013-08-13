@@ -20,6 +20,10 @@
 #include <linux/i2c.h>
 #include <linux/notifier.h>
 
+#ifdef CONFIG_HAS_EARLYSUSPEND
+#include <linux/earlysuspend.h>
+#endif
+
 #undef	I2C_TS_DRIVER_NAME
 #define I2C_TS_DRIVER_NAME			"FocalTech-Ft5306"
 

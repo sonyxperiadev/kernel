@@ -33,6 +33,10 @@
 #include <linux/i2c/ft6x06_ex_fun.h>
 #include <linux/wakelock.h>
 
+#ifdef CONFIG_HAS_EARLYSUSPEND
+#include <linux/earlysuspend.h>
+#endif
+
 #define GPIO_TO_IRQ gpio_to_irq
 
 static int ts_gpio_irq_pin=0;
