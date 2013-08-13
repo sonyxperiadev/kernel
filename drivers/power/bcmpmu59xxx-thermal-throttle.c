@@ -220,7 +220,7 @@ static void bcmpmu_throttle_algo(struct bcmpmu_throttle_data *tdata)
 		pr_throttle(FLOW,
 			"Temp(%d) reached higher cut-off=%d\n",
 			temp, temp_curr_lut[lut_sz-1].temp);
-		pr_throttle(FLOW, "HW might disable the charging\n");
+		pr_throttle(VERBOSE, "HW might disable the charging\n");
 		index = lut_sz - 1;
 	} else {
 		for (index = 0; index < lut_sz; index++) {
@@ -369,9 +369,12 @@ static int bcmpmu_throttle_event_handler(struct notifier_block *nb,
 		if (tdata->chrgr_type == PMU_CHRGR_TYPE_NONE) {
 			pr_throttle(FLOW,
 				"Charger Removed, Disabling Thermal Throttling\n");
+			if (tdata->throttle_algo_enabled) {
+				bcmpmu_throttle_restore_charger_state(tdata);
+				tdata->temp_algo_running = false;
+			}
 			bcmpmu_throttle_restore_charger_state(tdata);
 			cancel_delayed_work_sync(&tdata->throttle_work);
-			tdata->temp_algo_running = false;
 			tdata->acld_algo_finished = false;
 			tdata->throttle_scheduled = false;
 			tdata->acld_wait_count = 0;
@@ -417,9 +420,11 @@ static int bcmpmu_throttle_event_handler(struct notifier_block *nb,
 		} else if ((!enable) && tdata->throttle_scheduled) {
 			pr_throttle(FLOW,
 				"Chargering Disabled, Disabling Thermal Throttling\n");
-			bcmpmu_throttle_restore_charger_state(tdata);
+			if (tdata->throttle_algo_enabled) {
+				bcmpmu_throttle_restore_charger_state(tdata);
+				tdata->temp_algo_running = false;
+			}
 			cancel_delayed_work_sync(&tdata->throttle_work);
-			tdata->temp_algo_running = false;
 			tdata->acld_algo_finished = false;
 			tdata->throttle_scheduled = false;
 			tdata->acld_wait_count = 0;
