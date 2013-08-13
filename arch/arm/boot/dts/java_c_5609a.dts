@@ -369,7 +369,7 @@
 		col-num = <2>;
 		row-col-count = <8>;
 		key-name = "Vol Down Key", "Vol Up Key", "unused", "unused",
-			"unused", "unused", "unused", "unused", "Key menu",
+			"unused", "unused", "unused", "unused", "Key home",
 			"unused", "unused", "unused", "unused", "unused",
 			"unused", "unused", "unused", "unused", "unused",
 			"unused", "unused", "unused", "unused", "unused",
@@ -382,7 +382,7 @@
 			"unused", "unused", "unused", "unused", "unused",
 			"unused", "unused", "unused", "unused", "unused";
 		key-code = <114 115 0 0 0 0 0 0
-			139 0 0 0 0 0 0 0
+			102 0 0 0 0 0 0 0
 			0 0 0 0 0 0 0 0
 			0 0 0 0 0 0 0 0
 			0 0 0 0 0 0 0 0
