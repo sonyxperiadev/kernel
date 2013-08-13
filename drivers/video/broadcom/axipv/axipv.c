@@ -98,6 +98,7 @@ struct axipv_dev {
 	struct work_struct release_work;
 	void (*irq_cb)(int err);
 	void (*release_cb)(u32 free_buf);
+	void (*vsync_cb)(void);
 };
 
 #ifdef AXIPV_HAS_CLK
@@ -307,6 +308,7 @@ int axipv_init(struct axipv_init_t *init, struct axipv_config_t **config)
 	dev->base_addr = init->base_addr;
 	dev->irq_cb = init->irq_cb;
 	dev->release_cb = init->release_cb;
+	dev->vsync_cb = init->vsync_cb;
 	INIT_WORK(&dev->irq_work, process_irq);
 	INIT_WORK(&dev->release_work, process_release);
 	for (i = 0; i < AXIPV_MAX_DISP_BUFF_SUPP; i++)
@@ -557,6 +559,11 @@ static irqreturn_t axipv_isr(int err, void *dev_id)
 		ctrl = ctrl & ~(1 << 8);
 		ctrl = ctrl & ~(1 << 29);
 		writel(ctrl, axipv_base + REG_CTRL);
+	}
+	if ((irq_stat & TE_INT) && dev->vsync_cb) {
+		dev->vsync_cb();
+		writel(TE_INT, axipv_base + REG_INTR_CLR);
+		irq_stat &= ~TE_INT;
 	}
 
 	if (irq_stat) {

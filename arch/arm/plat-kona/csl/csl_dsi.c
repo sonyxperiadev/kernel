@@ -2500,7 +2500,11 @@ CSL_LCD_RES_T CSL_DSI_Init(const pCSL_DSI_CFG dsiCfg)
 		}
 	}
 
-	dsiH->vsync_cb = dsiCfg->vsync_cb;
+	/* Let vsync events be signalled in ISR context by AXIPV */
+	/* dsiH->vsync_cb = dsiCfg->vsync_cb; */
+	dsiH->vsync_cb = NULL;
+	axipv_init_data.vsync_cb = dsiCfg->vsync_cb,
+
 	dsiH->dlCount = dsiCfg->dlCount;
 	dsiH->dispEngine = dsiCfg->dispEngine;
 	dsiH->pixTxporter = dsiCfg->pixTxporter;
