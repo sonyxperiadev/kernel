@@ -331,7 +331,7 @@
 		height = <1280>;
 		fps = <60>;
 		lanes = <4>;
-		hs-bitrate = <330000000>;	/* 330mbps */
+		hs-bitrate = <333000000>;
 		lp-bitrate = <5000000>;	/* 5mbps */
 		iommu = <&iommu_mm>;
 		iovmm = <&iovmm_mm>;

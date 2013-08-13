@@ -319,7 +319,7 @@
 		fps = <60>;
 		lanes = <2>;
 		cmnd-LP;		/* Commands in LP mode*/
-		hs-bitrate = <330000000>;
+		hs-bitrate = <333000000>;
 		lp-bitrate = <7000000>;	/* 7mbps */
 		iommu = <&iommu_mm>;
 		iovmm = <&iovmm_mm>;
@@ -346,7 +346,7 @@
 		fps = <60>;
 		lanes = <2>;
 		cmnd-LP;		/* Commands in LP mode*/
-		hs-bitrate = <330000000>;
+		hs-bitrate = <333000000>;
 		lp-bitrate = <8000000>;	/* 8mbps */
 		iommu = <&iommu_mm>;
 		iovmm = <&iovmm_mm>;
