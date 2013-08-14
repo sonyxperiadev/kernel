@@ -57,6 +57,9 @@ obj-$(CONFIG_KONA_WATCHDOG) += kona_wdt.o
 obj-$(CONFIG_BCM59055_WATCHDOG) += bcm59055-wd.o
 obj-$(CONFIG_BCMPMU_WATCHDOG) += bcmpmu-wd.o
 obj-$(CONFIG_WD_TAPPER) += wd-tapper.o
+obj-$(CONFIG_BRCM_SECURE_WATCHDOG) += kona-sec-wd.o
+
+CFLAGS_kona-sec-wd.o :=$(call as-instr,.arch_extension sec,-DSMC_INSTR=1)
 
 # AVR32 Architecture
 obj-$(CONFIG_AT32AP700X_WDT) += at32ap700x_wdt.o

@@ -380,6 +380,14 @@ config WD_TAPPER
 	help
 	  Say Y here if to enable the WD petter for BCM59055
 
+config BRCM_SECURE_WATCHDOG
+       tristate "secure watchdog"
+       ---help---
+       Secure watchdog, detect
+       task or interrupt hung.
+       fiq based.
+       say Y to enable
+
 # AVR32 Architecture
 
 config AT32AP700X_WDT

@@ -46,6 +46,10 @@
 
 #include "pm_params.h"
 
+#ifdef CONFIG_BRCM_SECURE_WATCHDOG
+#include <linux/sec-wd.h>
+#endif
+
 /* DM log masks */
 enum {
 
@@ -610,6 +614,15 @@ void dormant_enter(u32 svc)
 	before restoring context*/
 	cpu = smp_processor_id();
 
+	#ifdef CONFIG_BRCM_SECURE_WATCHDOG
+	/*WD is disabled during suspend. FULL_DORMANT_L2_OFF is used
+	only during suspend and use the same to enable/disable WD*/
+	if (svc_max == FULL_DORMANT_L2_OFF && cpu == 0) {
+		pr_info("%s: enabling sec watchdog\n", __func__);
+		sec_wd_enable();
+	}
+	#endif
+
 	cdc_resp = cdc_get_status_for_core(cpu);
 	do {
 		retry = false;
@@ -753,6 +766,16 @@ static int dormant_enter_continue(unsigned long svc)
 	u32 cpu;
 	unsigned int arg2;
 	cpu = smp_processor_id();
+
+	#ifdef CONFIG_BRCM_SECURE_WATCHDOG
+	/*WD is disabled during suspend. FULL_DORMANT_L2_OFF is used
+	only during suspend and use the same to enable/disable WD*/
+	if (svc == FULL_DORMANT_L2_OFF && cpu == 0) {
+		pr_info("%s: disable sec watchdog\n", __func__);
+		sec_wd_disable();
+	}
+	#endif
+
 	if (svc == FULL_DORMANT_L2_OFF && l2_off_en &&
 		cdc_get_status_for_core(cpu) == CDC_STATUS_FDCEOK) {
 		arg2 = 3;  /*L2 mem OFF*/
