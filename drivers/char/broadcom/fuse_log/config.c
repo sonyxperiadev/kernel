@@ -26,6 +26,7 @@
 #include <trace/stm.h>
 
 #include "config.h"
+#include "output.h"
 
 #define MAX_PROC_BUF_SIZE     32
 #define MIN_MTT_SD_SIZE       10
@@ -484,6 +485,20 @@ static ssize_t bcmlog_file_max_store(struct device *dev,
 	return size;
 }
 
+static ssize_t bcmlog_file_last_show(struct device *dev,
+				    struct device_attribute *attr, char *buf)
+{
+	int ret;
+	unsigned long irql;
+
+	irql = AcquireOutputLock();
+	ret = snprintf(buf, BCMLOG_OUTPUT_MAX_LOG_PATHNAME + 1,
+			"%s\n", Get_SDCARD_LastFile());
+	ReleaseOutputLock(irql);
+
+	return ret;
+}
+
 static ssize_t bcmlog_uart_dev_show(struct device *dev,
 				    struct device_attribute *attr, char *buf)
 {
@@ -545,6 +560,9 @@ static DEVICE_ATTR(file_base, S_IRUGO | S_IWUSR, bcmlog_file_base_show,
 
 static DEVICE_ATTR(file_max, S_IRUGO | S_IWUSR, bcmlog_file_max_show,
 						 bcmlog_file_max_store);
+
+static DEVICE_ATTR(file_last, S_IRUGO, bcmlog_file_last_show,
+						 NULL);
 
 static DEVICE_ATTR(uart_dev, S_IRUGO | S_IWUSR, bcmlog_uart_dev_show,
 						 bcmlog_uart_dev_store);
@@ -637,6 +655,10 @@ void BCMLOG_InitConfig(void *h)
 	if (value < 0)
 		pr_err
 	    ("BCMLOG Init failed to create bcmlog file max attribute\n");
+	value = device_create_file(dev, &dev_attr_file_last);
+	if (value < 0)
+		pr_err
+	    ("BCMLOG Init failed to create bcmlog file last attribute\n");
 	value = device_create_file(dev, &dev_attr_uart_dev);
 	if (value < 0)
 		pr_err

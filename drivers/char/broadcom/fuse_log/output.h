@@ -17,6 +17,8 @@
 #ifndef __BCMLOG_OUTPUT_H__
 #define __BCMLOG_OUTPUT_H__
 
+#include "fifo.h"
+
 /*#define BCMLOG_DEBUG_FLAG 1 */
 
 /**
@@ -25,6 +27,8 @@
  **/
 #define BCMLOG_OUTPUT_XFER_MAXBYTES		8192
 #define BCMLOG_OUTPUT_XFER_MINBYTES		  64
+
+#define BCMLOG_OUTPUT_MAX_LOG_PATHNAME    64
 
 #define FUSE_LOG_CHANNEL	8
 
@@ -45,5 +49,6 @@ void BCMLOG_Output(unsigned char *pUserBuf, unsigned long userBufSz,
  **/
 BCMLOG_Fifo_t *BCMLOG_OutputInit(unsigned char *buffer, int buffer_size);
 int Get_SDCARD_Available(void);
+char *Get_SDCARD_LastFile(void);
 
 #endif /* __BCMLOG_OUTPUT_H__ */
