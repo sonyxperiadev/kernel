@@ -67,9 +67,6 @@ int __init mm_h264_init(void)
 	h264_device->subdev_init[3] = &h264_vce_init;
 	h264_device->subdev_deinit[3] = &h264_vce_deinit;
 
-	h264_device->subdev_init[4] = &h264_ol_init;
-	h264_device->subdev_deinit[4] = &h264_ol_deinit;
-
 #if defined(CONFIG_MM_SECURE_DRIVER)
 
 	h264_device->subdev_init[9] = &mcin_secure_init;
