@@ -542,7 +542,7 @@ debugfs_clean:
 		debugfs_remove_recursive(dentry_throttle_dir);
 }
 
-static int __devinit bcmpmu_throttle_probe(struct platform_device *pdev)
+static int bcmpmu_throttle_probe(struct platform_device *pdev)
 {
 	int ret = 0;
 	struct bcmpmu59xxx *bcmpmu = dev_get_drvdata(pdev->dev.parent);
@@ -613,7 +613,7 @@ error:
 }
 
 
-static int __devexit bcmpmu_throttle_remove(struct platform_device *pdev)
+static int bcmpmu_throttle_remove(struct platform_device *pdev)
 {
 	pr_throttle(FLOW, "%s\n", __func__);
 	return 0;
@@ -624,7 +624,7 @@ static struct platform_driver bcmpmu_throttle_drv = {
 		.name = "bcmpmu_thermal_throttle",
 	},
 	.probe = bcmpmu_throttle_probe,
-	.remove = __devexit_p(bcmpmu_throttle_remove),
+	.remove = bcmpmu_throttle_remove,
 };
 
 static int __init bcmpmu_throttle_init(void)

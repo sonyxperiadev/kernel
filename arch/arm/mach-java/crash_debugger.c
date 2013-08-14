@@ -254,7 +254,7 @@ struct TLV_android {
 static struct TLV_android main_log = {
 	.type = LOG_BUFFER,
 	.name = "android_main_log",
-	.length = 512 * 1024,
+	.length = 256 * 1024,
 };
 
 static struct TLV_android radio_log = {
@@ -597,12 +597,19 @@ static void cdebugger_hw_reset(void)
 	machine_restart("upload");
 }
 
+unsigned char *get_main_log_buf_addr(void);
+unsigned char *get_radio_log_buf_addr(void);
+unsigned char *get_events_log_buf_addr(void);
+unsigned char *get_system_log_buf_addr(void);
+
 static void setup_log_buffer_address(void)
 {
-	main_log.buf = (void *)virt_to_phys((void *)_buf_log_main);
-	radio_log.buf = (void *)virt_to_phys((void *)_buf_log_radio);
-	events_log.buf = (void *)virt_to_phys((void *)_buf_log_events);
-	system_log.buf = (void *)virt_to_phys((void *)_buf_log_system);
+	main_log.buf = (void *)virt_to_phys((void *)get_main_log_buf_addr());
+	radio_log.buf = (void *)virt_to_phys((void *)get_radio_log_buf_addr());
+	events_log.buf =
+		(void *)virt_to_phys((void *)get_events_log_buf_addr());
+	system_log.buf =
+		(void *)virt_to_phys((void *)get_system_log_buf_addr());
 }
 
 static int cdebugger_panic_handler(struct notifier_block *nb,
@@ -719,7 +726,6 @@ static struct notifier_block panic_block = {
 static void setup_log_tx_param(void)
 {
 	ramdump_list[0].mem_size = (num_physpages << PAGE_SHIFT);
-	setup_log_buffer_address();
 
 	log_tx_param[2] = (void *)virt_to_phys((void *)log_buf);
 	log_tx_param[3] = (void *)log_buf_len;
@@ -747,6 +753,12 @@ static void setup_log_tx_param(void)
 
 }
 
+static int __init crash_debugger_lateinit(void)
+{
+	setup_log_buffer_address();
+	return 0;
+}
+
 static int __init crash_debugger_init(void)
 {
 	cdebugger_memory_init();
@@ -764,4 +776,5 @@ static void crash_debugger_exit(void)
 }
 
 device_initcall(crash_debugger_init);
+late_initcall(crash_debugger_lateinit);
 module_exit(crash_debugger_exit);
