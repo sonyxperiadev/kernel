@@ -240,6 +240,14 @@ void send_chrgr_insert_event(enum bcmpmu_event_t event, void *para);
 #include <linux/gp2ap002_dev.h>
 #include <linux/gp2ap002.h>
 
+#ifdef CONFIG_MOBICORE_DRIVER
+struct mobicore_data mobicore_plat_data = {
+	.name = "mobicore",
+	.mobicore_base = 0x9d800000,
+	.mobicore_size = 0x00300000,
+};
+#endif
+
 extern int hawaii_wifi_status_register(
 		void (*callback)(int card_present, void *dev_id),
 			    void *dev_id);

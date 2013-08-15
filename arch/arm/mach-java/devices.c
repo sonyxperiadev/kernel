@@ -139,6 +139,11 @@ struct secure_mem_data secure_mem_init_data = {
 struct platform_device secure_mem_device = {
 	.name = "secure_mem",
 	.id = 0,
+#ifdef CONFIG_MOBICORE_DRIVER
+	.dev = {
+		.platform_data = &mobicore_plat_data,
+	},
+#endif
 };
 #endif /* CONFIG_OF */
 
