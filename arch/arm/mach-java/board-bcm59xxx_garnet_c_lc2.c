@@ -1032,15 +1032,14 @@ struct bcmpmu_acld_pdata acld_pdata = {
 	.acld_vbus_margin = 200,	/*mV*/
 	.acld_vbus_thrs = 5950,
 	.acld_vbat_thrs = 3500,
-	.i_sat = 1850,		/* saturation current in mA
+	.i_sat = 1850,			/* saturation current in mA
 						for chrgr while using ACLD */
 	.i_def_dcp = 700,
 	.i_max_cc = 2200,
-	.acld_cc_lmt = 1000,	/*In general this is 80% of 1C.
-					If customer defines any other value
-					chage accordingly*/
+	.acld_cc_lmt = 1360,    /*In general this is 80% of 1C.
+				  If customer defines any other value
+				  chage accordingly*/
 	.otp_cc_trim = 0x1F,
-	.qa_required = 1,
 };
 
 static struct batt_volt_cap_map ys_05_volt_cap_lut[] = {
@@ -1246,9 +1245,10 @@ static struct bcmpmu59xxx_led_pdata led_pdata = {
   *  the throttling algo starts, those registers will be restored once the
   * algo is finished.
   */
-static u32 chrgr_backup_registers[] = {
-	PMU_REG_MBCCTRL18, /* CC Trim */
-	PMU_REG_MBCCTRL20, /* 500 Trim */
+static struct chrgr_def_trim_reg_data chrgr_def_trim_reg_lut[] = {
+	{.addr = PMU_REG_MBCCTRL18, .val = 0x00},
+	{.addr = PMU_REG_MBCCTRL19, .val = 0x03},
+	{.addr = PMU_REG_MBCCTRL20, .val = 0x02},
 };
 
 static struct bcmpmu_throttle_pdata throttle_pdata = {
@@ -1258,8 +1258,8 @@ static struct bcmpmu_throttle_pdata throttle_pdata = {
 	.temp_adc_channel = PMU_ADC_CHANN_DIE_TEMP,
 	.temp_adc_req_mode = PMU_ADC_REQ_SAR_MODE,
 	/* Registers to store/restore while throttling*/
-	.throttle_backup_reg = chrgr_backup_registers,
-	.throttle_backup_reg_sz = ARRAY_SIZE(chrgr_backup_registers),
+	.chrgr_trim_reg_lut = chrgr_def_trim_reg_lut,
+	.chrgr_trim_reg_lut_sz = ARRAY_SIZE(chrgr_def_trim_reg_lut),
 	.throttle_poll_time = THROTTLE_WORK_POLL_TIME,
 	.hysteresis_temp = HYSTERESIS_DEFAULT_TEMP,
 };
