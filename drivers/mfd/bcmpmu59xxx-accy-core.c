@@ -98,6 +98,8 @@ struct bcmpmu_accy_data {
 #endif
 	enum bcmpmu_chrgr_type_t chrgr_type;
 	enum bcmpmu_chrgr_type_t chrgr_type_prev;
+	enum bcmpmu_usb_id_lvl_t pmu_usb_id;
+	bool pmu_session_a;
 	int charging_curr;
 	int otg_block_enabled;
 	int adp_block_enabled;
@@ -290,15 +292,18 @@ static int _usb_host_en(struct bcmpmu_accy_data *di, int enable)
 		return -EAGAIN;
 	}
 
+	ret = bcmpmu->read_dev(bcmpmu, PMU_REG_MBCCTRL3, &reg);
+	if (ret) {
+		pr_accy(ERROR, "%s: PMU read failed\n", __func__);
+		return ret;
+	}
+
 	/* If charging is already enabled/disabled just return */
-	if (di->usb_host_en == enable) {
+	if ((di->usb_host_en == enable) &&
+			((reg & MBCCTRL3_USB_HOSTEN_MASK) == enable)) {
 		pr_accy(INIT, "USB host is already in the reqested state\n");
 
-	} else {
-		ret = bcmpmu->read_dev(bcmpmu, PMU_REG_MBCCTRL3, &reg);
-		if (ret)
-			return ret;
-
+	} else if (((reg & MBCCTRL3_USB_HOSTEN_MASK) != enable)) {
 		if (enable)
 			reg |= MBCCTRL3_USB_HOSTEN_MASK;
 		else
@@ -309,12 +314,17 @@ static int _usb_host_en(struct bcmpmu_accy_data *di, int enable)
 			pr_accy(ERROR, "%s: PMU write failed\n", __func__);
 			return ret;
 		}
-
 		di->usb_host_en = enable;
-		pr_accy(FLOW, "%s:ENABLE %d\n", __func__, di->usb_host_en);
-	}
-	ret = bcmpmu_accy_queue_event(di, PMU_CHRGR_EVT_CHRG_STATUS,
+		ret = bcmpmu_accy_queue_event(di, PMU_CHRGR_EVT_CHRG_STATUS,
 			&di->usb_host_en);
+	} else {
+		di->usb_host_en = enable;
+		ret = bcmpmu_accy_queue_event(di, PMU_CHRGR_EVT_CHRG_STATUS,
+			&di->usb_host_en);
+	}
+
+	pr_accy(FLOW, "%s:ENABLE %d\n", __func__, di->usb_host_en);
+
 	return ret;
 }
 
@@ -1241,10 +1251,16 @@ static void bcmpmu_accy_isr(enum bcmpmu59xxx_irq irq, void *data)
 		di->chrgr_type_prev = PMU_CHRGR_TYPE_NONE;
 		event = accy_irq_evt_map[idx].event;
 		spin_unlock_irqrestore(&gp_accy_data->accy_lock, flags);
+		pr_accy(VERBOSE, "PMU_IRQ_OTG_SESS_VALID_F\n");
 		if (chrgr_is_usb) {
 			pr_accy(VERBOSE,
 				"posting event PMU_IRQ_OTG_SESS_VALID_F\n");
 			event = accy_irq_evt_map[idx].event;
+		} else if (di->pmu_session_a) {
+			pr_accy(VERBOSE,
+				"posting event PMU_IRQ_OTG_SESS_VALID_F\n");
+			event = accy_irq_evt_map[idx].event;
+			di->pmu_session_a = false;
 		} else {
 			event = -1;
 		}
@@ -1258,11 +1274,21 @@ static void bcmpmu_accy_isr(enum bcmpmu59xxx_irq irq, void *data)
 			event = -1;
 		}
 		break;
+	case PMU_IRQ_IDCHG:
+		bcmpmu_usb_get(di->bcmpmu,
+			BCMPMU_USB_CTRL_GET_ID_VALUE, &di->pmu_usb_id);
+
+		if ((di->pmu_usb_id == PMU_USB_ID_RID_A) ||
+				(di->pmu_usb_id == PMU_USB_ID_GROUND))
+			di->pmu_session_a = true;
+
+		event = accy_irq_evt_map[idx].event;
+		pr_accy(VERBOSE, " ==== pmu_id %d\n", di->pmu_usb_id);
+		break;
 	case PMU_IRQ_USBRM:
 	case PMU_IRQ_CHGDET_LATCH:
 	case PMU_IRQ_VA_SESS_VALID_R:
 	case PMU_IRQ_VBUS_VALID_R:
-	case PMU_IRQ_IDCHG:
 	case PMU_IRQ_USBOV:
 	case PMU_IRQ_USBOV_DIS:
 	case PMU_IRQ_CHGERRDIS:

@@ -9,28 +9,28 @@ http://www.gnu.org/copyleft/gpl.html (the "GPL").
 Notwithstanding the above, under no circumstances may you combine this software
 in any way with any other Broadcom software provided under a license other than
 the GPL, without Broadcom's express prior written consent.
- *******************************************************************************/
+ ******************************************************************************/
 #ifndef _H264_DEC_H_
 #define _H264_DEC_H_
 
 /*Decoder internals start*/
 #define REG_STATUS			0x00000110
 
-#define STATUS_MOCOMP_RDY  	(1 << 2)
-#define STATUS_MOCOMP_DONE 	(1 << 3)
-#define STATUS_SPAT_RDY		(1 << 4)
-#define STATUS_SPAT_DONE   	(1 << 5)
-#define STATUS_XFM_RDY     	(1 << 6)
-#define STATUS_XFM_DONE    	(1 << 7)
-#define STATUS_RECON_RDY   	(1 << 8)
-#define STATUS_RECON_DONE  	(1 << 9)
-#define STATUS_DBLK_RDY    	(1 << 10)
-#define STATUS_DBLK_DONE   	(1 << 11)
+#define STATUS_MOCOMP_RDY	(1 << 2)
+#define STATUS_MOCOMP_DONE	(1 << 3)
+#define STATUS_SPAT_RDY	(1 << 4)
+#define STATUS_SPAT_DONE	(1 << 5)
+#define STATUS_XFM_RDY	(1 << 6)
+#define STATUS_XFM_DONE	(1 << 7)
+#define STATUS_RECON_RDY	(1 << 8)
+#define STATUS_RECON_DONE	(1 << 9)
+#define STATUS_DBLK_RDY	(1 << 10)
+#define STATUS_DBLK_DONE	(1 << 11)
 
 /*Updated bits for new status register*/
 #define STATUS_FLUSHCTX		(1<<17)
-#define STATUS_RESET 		(1<<16)
-#define STATUS_CTXDMAACT 	(1<<11)
+#define STATUS_RESET	(1<<16)
+#define STATUS_CTXDMAACT	(1<<11)
 
 #define STATUS_ALL_RDY (STATUS_MOCOMP_RDY | STATUS_SPAT_RDY | \
 		STATUS_XFM_RDY    | STATUS_RECON_RDY | \
@@ -46,12 +46,12 @@ the GPL, without Broadcom's express prior written consent.
 #define NUM_DECODER_REGRW 1000
 
 /*Decoder internals end*/
-struct decoder_regs_t{
+struct decoder_regs_t {
 	unsigned int offset;
 	unsigned int value;
 };
 
-struct dec_info_t{
+struct dec_info_t {
 	unsigned int num_dec_regs;
 	struct decoder_regs_t dec_regs;
 };
@@ -59,5 +59,9 @@ struct dec_info_t{
 void decodeSlice(void *id, struct dec_info_t *dec_info);
 
 void completeDecodeFrame(void *id);
+
+void h264_write(void *id, u32 reg, u32 value);
+
+u32 h264_read(void *id, u32 reg);
 
 #endif /*_H264_DEC_H_*/

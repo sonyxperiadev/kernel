@@ -340,4 +340,5 @@ void AUDDRV_SetEchoRefMic(int arg1);
 int AUDDRV_GetEchoRefMic(void);
 void set_flag_dsp_timeout(int flag_val);
 int is_dsp_timeout(void);
+int AUDDRV_Get_FDMBCParm(void *param, int size);
 #endif				/* __AUDIO_VDRIVER_H__ */

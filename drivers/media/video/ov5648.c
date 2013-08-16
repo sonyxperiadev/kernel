@@ -34,6 +34,10 @@
 #include <media/a3907.h>
 #endif
 
+#ifdef CONFIG_VIDEO_DW9714
+#include <media/dw9714.h>
+#endif
+
 #ifdef CONFIG_VIDEO_AS3643
 #include "as3643.h"
 #endif
@@ -42,10 +46,12 @@
 #include <linux/module.h>
 #include <linux/timer.h>
 #define OV5648_DEBUG 0
-#if defined(CONFIG_MACH_JAVA_C_5606)
+#if defined(CONFIG_MACH_JAVA_C_LC1)
 #define TORCH_EN (10)
 #define FLASH_EN (11)
 #endif
+
+#define OV5648_MCLK_26MHZ
 
 /* OV5648 has only one fixed colorspace per pixelcode */
 struct ov5648_datafmt {
@@ -224,7 +230,7 @@ struct ov5648_reg {
 
 static const struct ov5648_reg ov5648_regtbl[OV5648_MODE_MAX][256] = {
 	{
-	/* 720P30 MCLK=24MHz:  PIX CLOCK=420MBs * 2 Lane 1864x1496 10 bits */
+	/* WxH=1280x720 HTSxVTS=1864x1496 BPP=10 bits */
 	{0x0100, 0x00},
 	{0x3001, 0x00},
 	{0x3002, 0x00},
@@ -233,7 +239,11 @@ static const struct ov5648_reg ov5648_regtbl[OV5648_MODE_MAX][256] = {
 	{0x3022, 0x00},
 	{0x3034, 0x1a},
 	{0x3035, 0x21},
-	{0x3036, 0x69},
+#ifdef OV5648_MCLK_26MHZ
+	{0x3036, 0x61}, /* MCLK=26MHz MIPI=420MBs*2 Lanes FPS=30 */
+#else
+	{0x3036, 0x69}, /* MCLK=24MHz MIPI=420MBs*2 Lanes FPS=30 */
+#endif
 	{0x3037, 0x03},
 	{0x3038, 0x00},
 	{0x3039, 0x00},
@@ -370,7 +380,7 @@ static const struct ov5648_reg ov5648_regtbl[OV5648_MODE_MAX][256] = {
 	{0xFFFF, 0x00}	/* end of the list */
 	},
 	{
-	/* 1280x960P30 MCLK=24MHz PIX CLOCK=420MBs * 2 Lane 1864x1496 10 bits */
+	/* WxH=1280x960 HTSxVTS=1864x1496 BPP=10 bits */
 	{0x0100, 0x00},
 	{0x3001, 0x00},
 	{0x3002, 0x00},
@@ -379,7 +389,11 @@ static const struct ov5648_reg ov5648_regtbl[OV5648_MODE_MAX][256] = {
 	{0x3022, 0x00},
 	{0x3034, 0x1a},
 	{0x3035, 0x21},
-	{0x3036, 0x69},
+#ifdef OV5648_MCLK_26MHZ
+	{0x3036, 0x61}, /* MCLK=26MHz MIPI=420MBs*2 Lanes FPS=30 */
+#else
+	{0x3036, 0x69}, /* MCLK=24MHz MIPI=420MBs*2 Lanes FPS=30*/
+#endif
 	{0x3037, 0x03},
 	{0x3038, 0x00},
 	{0x3039, 0x00},
@@ -516,7 +530,7 @@ static const struct ov5648_reg ov5648_regtbl[OV5648_MODE_MAX][256] = {
 	{ 0xFFFF, 0x00 }	/* end of the list */
 	},
 	{
-	/* 2592x1944 MCLK=24MHz PIX CLOCK=420MBs * 2 Lane 2844x1968 10 bits */
+	/* WxH=2592x1944  HTSxVTS=2844x1968 BPP=10 bits */
 	{0x0100, 0x00},
 	{0x3001, 0x00},
 	{0x3002, 0x00},
@@ -525,7 +539,11 @@ static const struct ov5648_reg ov5648_regtbl[OV5648_MODE_MAX][256] = {
 	{0x3022, 0x00},
 	{0x3034, 0x1a},
 	{0x3035, 0x21},
-	{0x3036, 0x69},
+#ifdef OV5648_MCLK_26MHZ
+	{0x3036, 0x60}, /* MCLK=26MHz MIPI=416MBs*2 Lanes FPS=14.8 */
+#else
+	{0x3036, 0x69}, /* MCLK=24MHz MIPI=420MBs*2 Lanes FPS=15 */
+#endif
 	{0x3037, 0x03},
 	{0x3038, 0x00},
 	{0x3039, 0x00},
@@ -805,7 +823,7 @@ static int ov5648_set_state(struct i2c_client *client, int new_state);
 static int ov5648_init(struct i2c_client *client);
 
 /*add an timer to close the flash after two frames*/
-#if defined(CONFIG_MACH_JAVA_C_5606)
+#if defined(CONFIG_MACH_JAVA_C_LC1)
 static struct timer_list timer;
 static char *msg = "hello world";
 static void print_func(unsigned long lparam)
@@ -1013,7 +1031,7 @@ static const struct v4l2_queryctrl ov5648_controls[] = {
 	 .name = "AS3643-flash",
 #endif
 
-#if defined(CONFIG_MACH_JAVA_C_5606)
+#if defined(CONFIG_MACH_JAVA_C_LC1)
 	 .name = "OCP8111-flash",
 #endif
 	 .minimum = FLASH_MODE_OFF,
@@ -1406,6 +1424,15 @@ static int ov5648_lens_set_position(struct i2c_client *client,
 		ret = a3907_lens_set_position(target_position);
 	}
 #endif
+
+#ifdef CONFIG_VIDEO_DW9714
+	if (target_position & 0x80000000) {
+		int fine_target_position = target_position & ~0x80000000;
+		ret = dw9714_lens_set_position_fine(fine_target_position);
+	} else {
+		ret = dw9714_lens_set_position(target_position);
+	}
+#endif
 	return ret;
 }
 
@@ -1425,6 +1452,10 @@ static void ov5648_lens_get_position(struct i2c_client *client,
 	static int lens_read_buf[LENS_READ_DELAY];
 #ifdef CONFIG_VIDEO_A3907
 	ret = a3907_lens_get_position(current_position, time_to_destination);
+#endif
+
+#ifdef CONFIG_VIDEO_DW9714
+	ret = dw9714_lens_get_position(current_position, time_to_destination);
 #endif
 
 	for (i = 0; i < ov5648->lenspos_delay; i++)
@@ -2092,7 +2123,7 @@ int set_flash_mode(struct i2c_client *client, int mode)
 	ov5648->flashmode = mode;
 #endif
 
-#if defined(CONFIG_MACH_JAVA_C_5606)
+#if defined(CONFIG_MACH_JAVA_C_LC1)
 		if ((mode == FLASH_MODE_OFF)
 			|| (mode == FLASH_MODE_TORCH_OFF)) {
 			gpio_set_value(TORCH_EN, 0);
@@ -2252,7 +2283,7 @@ static int ov5648_init(struct i2c_client *client)
 	 *  Exposure should be DEFAULT_EXPO * line_length / 1000
 	 *  Since we don't have line_length yet, just estimate
 	 */
-#if defined(CONFIG_MACH_JAVA_C_5606)
+#if defined(CONFIG_MACH_JAVA_C_LC1)
 	init_timer(&timer);
 #endif
 
@@ -2489,6 +2520,15 @@ static struct i2c_client *a3907_i2c_client;
 static struct i2c_adapter *a3907_i2c_adap;
 #endif
 
+#ifdef CONFIG_VIDEO_DW9714
+#define DW9714_I2C_ADDR 0x18
+static struct i2c_board_info dw9714_i2c_board_info = {
+	 I2C_BOARD_INFO("dw9714", (DW9714_I2C_ADDR >> 1))
+};
+static struct i2c_client *dw9714_i2c_client;
+static struct i2c_adapter *dw9714_i2c_adap;
+#endif
+
 static int ov5648_probe(struct i2c_client *client,
 			const struct i2c_device_id *did)
 {
@@ -2555,6 +2595,19 @@ static int ov5648_probe(struct i2c_client *client,
 	}
 #endif
 
+#ifdef CONFIG_VIDEO_DW9714
+		pr_debug("DW9714 i2c start");
+	dw9714_i2c_adap = i2c_get_adapter(0);
+	if (!dw9714_i2c_adap)
+		pr_debug("DW9714 i2c_get_adapter(0) FAILED");
+	if (dw9714_i2c_adap) {
+		dw9714_i2c_client = i2c_new_device(dw9714_i2c_adap,
+				&dw9714_i2c_board_info);
+		i2c_put_adapter(dw9714_i2c_adap);
+		pr_debug("DW9714 i2c_get_adapter(0) OK");
+	}
+#endif
+
 	return ret;
 }
 
@@ -2569,6 +2622,13 @@ static int ov5648_remove(struct i2c_client *client)
 	if (a3907_i2c_client)
 		i2c_unregister_device(a3907_i2c_client);
 #endif
+
+#ifdef CONFIG_VIDEO_DW9714
+	pr_debug("DW9714 i2c_unregister_device");
+	if (dw9714_i2c_client)
+		i2c_unregister_device(dw9714_i2c_client);
+#endif
+
 	icd->ops = NULL;
 	ov5648_video_remove(icd);
 	client->driver = NULL;

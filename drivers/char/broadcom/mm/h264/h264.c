@@ -67,9 +67,6 @@ int __init mm_h264_init(void)
 	h264_device->subdev_init[3] = &h264_vce_init;
 	h264_device->subdev_deinit[3] = &h264_vce_deinit;
 
-	h264_device->subdev_init[4] = &h264_ol_init;
-	h264_device->subdev_deinit[4] = &h264_ol_deinit;
-
 #if defined(CONFIG_MM_SECURE_DRIVER)
 
 	h264_device->subdev_init[9] = &mcin_secure_init;
@@ -98,17 +95,16 @@ int __init mm_h264_init(void)
 	/*Initialize generice params*/
 	dvfs_param.ON = 1;
 	dvfs_param.MODE = TURBO;
-	dvfs_param.enable_suspend_resume = 0;
-	dvfs_param.T0 = 200;
-	dvfs_param.P0 = 70;
+	dvfs_param.T0 = 0;
+	dvfs_param.P0 = 0;
 	dvfs_param.T1 = 300;
-	dvfs_param.P1 = 90;
-	dvfs_param.P1L = 30;
-	dvfs_param.T2 = 300;
-	dvfs_param.P2 = 90;
-	dvfs_param.P2L = 60;
+	dvfs_param.P1 = 80;
+	dvfs_param.P1L = 0;
+	dvfs_param.T2 = 500;
+	dvfs_param.P2 = 80;
+	dvfs_param.P2L = 45;
 	dvfs_param.T3 = 1000;
-	dvfs_param.P3L = 50;
+	dvfs_param.P3L = 45;
 	dvfs_param.dvfs_bulk_job_cnt = 0;
 
 	h264_device->fmwk_handle = mm_fmwk_register(H264_DEV_NAME,

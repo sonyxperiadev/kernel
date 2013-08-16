@@ -91,6 +91,12 @@
 			compatible = "bcm,isl290xx";
 			reg = <0x44>;
 			gpio-irq-pin = <89>;
+			prox_threshold_hi_param = <80>;
+			prox_threshold_lo_param = <60>;
+			aps_config = <0xec>;
+			aps_intr = <0x20>;
+			prox_offset_param = <0>;
+			prox_boot_cali = <0>;
 		};
 
 	};
@@ -275,13 +281,13 @@
 		hysteresis = <0>;
 		flags = <0>;
 		interval_ms = <5>;
-		/*critical temp is 115*/
-		thold = <70 65 1
-			85 75 1
-			100 90 1
-			115 112 2>;
+		/* critical temp is 115*/
+		thold = <85 1
+			100 1
+			115 2>;
 		tmon_apb_clk = "tmon_apb";
 		tmon_1m_clk = "tmon_1m_clk";
+		falling = <5>;
 	};
 
 	memc@35008000 {

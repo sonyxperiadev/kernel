@@ -9,16 +9,16 @@ http://www.gnu.org/copyleft/gpl.html (the "GPL").
 Notwithstanding the above, under no circumstances may you combine this software
 in any way with any other Broadcom software provided under a license other than
 the GPL, without Broadcom's express prior written consent.
- *******************************************************************************/
+ ******************************************************************************/
 #ifndef _VCE_REG_H_
 #define _VCE_REG_H_
 
 /*From hardware_video_codec.h*/
 #define HW_REGISTER_RW(x) (x)
 
-#define INTERRUPT_CODEC0               (INTERRUPT_HW_OFFSET + 4 )
-#define INTERRUPT_CODEC1               (INTERRUPT_HW_OFFSET + 5 )
-#define INTERRUPT_CODEC2               (INTERRUPT_HW_OFFSET + 6 )
+#define INTERRUPT_CODEC0               (INTERRUPT_HW_OFFSET + 4)
+#define INTERRUPT_CODEC1               (INTERRUPT_HW_OFFSET + 5)
+#define INTERRUPT_CODEC2               (INTERRUPT_HW_OFFSET + 6)
 #define VIDEOCODEC_BASE_ADDRESS        0x3d000000
 /*---------------------------------------------------------------------------*/
 /* Video Codec */
@@ -29,11 +29,11 @@ the GPL, without Broadcom's express prior written consent.
 #define VCINTMASK1          HW_REGISTER_RW(VIDEOCODEC_BASE_ADDRESS + 0x4408c0)
 
 #ifndef VCODEC_VERSION
-// Set default to old A0 version
+/* Set default to old A0 version */
 #define VCODEC_VERSION 821
 #endif
 
-#if (VCODEC_VERSION>=800)
+#if (VCODEC_VERSION >= 800)
 
 #define VCE_BASE 0x3d100000
 #define VCE_DATA_MEM_OFFSET 0
@@ -47,7 +47,8 @@ the GPL, without Broadcom's express prior written consent.
 #define VCE_STATUS_REASON_POS 16
 #define VCE_STATUS_REASON_MASK 0x1f
 #define VCE_BUSY_BKPT 0x00
-#define VCE_BUSY_USER 0x01 // up to 0x07 inclusive
+/* up to 0x07 inclusive */
+#define VCE_BUSY_USER 0x01
 #define VCE_BUSY_DMAIN 0x08
 #define VCE_BUSY_DMAOUT 0x09
 #define VCE_BUSY_MEMSYNC 0x0a
@@ -75,20 +76,20 @@ the GPL, without Broadcom's express prior written consent.
 #define VCE_SEMA_COUNT 8
 #define VCE_SIM_DEBUG_OPTIONS_OFFSET 0x40100
 
-#define VCE_DATA_MEM_BASE      HW_REGISTER_RW(VIDEOCODEC_BASE_ADDRESS + 0x100000)
-#define VCE_PROGRAM_MEM_BASE   HW_REGISTER_RW(VIDEOCODEC_BASE_ADDRESS + 0x110000)
-#define VCE_REGISTERS_BASE     HW_REGISTER_RW(VIDEOCODEC_BASE_ADDRESS + 0x120000)
-#define VCE_STATUS             HW_REGISTER_RW(VIDEOCODEC_BASE_ADDRESS + 0x140000)
-#define VCE_VERSION            HW_REGISTER_RW(VIDEOCODEC_BASE_ADDRESS + 0x140004)
-#define VCE_PC_PF0             HW_REGISTER_RW(VIDEOCODEC_BASE_ADDRESS + 0x140008)
-#define VCE_PC_IF0             HW_REGISTER_RW(VIDEOCODEC_BASE_ADDRESS + 0x14000C)
-#define VCE_PC_RD0             HW_REGISTER_RW(VIDEOCODEC_BASE_ADDRESS + 0x140010)
-#define VCE_PC_EX0             HW_REGISTER_RW(VIDEOCODEC_BASE_ADDRESS + 0x140014)
-#define VCE_CONTROL            HW_REGISTER_RW(VIDEOCODEC_BASE_ADDRESS + 0x140020)
-#define VCE_SEMA_CLEAR         HW_REGISTER_RW(VIDEOCODEC_BASE_ADDRESS + 0x140024)
-#define VCE_SEMA_SET           HW_REGISTER_RW(VIDEOCODEC_BASE_ADDRESS + 0x140028)
-#define VCE_BAD_ADDR           HW_REGISTER_RW(VIDEOCODEC_BASE_ADDRESS + 0x140030)
-#define VCE_SIM_DEBUG_OPTIONS  HW_REGISTER_RW(VIDEOCODEC_BASE_ADDRESS + 0x140100)
+#define VCE_DATA_MEM_BASE     HW_REGISTER_RW(VIDEOCODEC_BASE_ADDRESS + 0x100000)
+#define VCE_PROGRAM_MEM_BASE  HW_REGISTER_RW(VIDEOCODEC_BASE_ADDRESS + 0x110000)
+#define VCE_REGISTERS_BASE    HW_REGISTER_RW(VIDEOCODEC_BASE_ADDRESS + 0x120000)
+#define VCE_STATUS            HW_REGISTER_RW(VIDEOCODEC_BASE_ADDRESS + 0x140000)
+#define VCE_VERSION           HW_REGISTER_RW(VIDEOCODEC_BASE_ADDRESS + 0x140004)
+#define VCE_PC_PF0            HW_REGISTER_RW(VIDEOCODEC_BASE_ADDRESS + 0x140008)
+#define VCE_PC_IF0            HW_REGISTER_RW(VIDEOCODEC_BASE_ADDRESS + 0x14000C)
+#define VCE_PC_RD0            HW_REGISTER_RW(VIDEOCODEC_BASE_ADDRESS + 0x140010)
+#define VCE_PC_EX0            HW_REGISTER_RW(VIDEOCODEC_BASE_ADDRESS + 0x140014)
+#define VCE_CONTROL           HW_REGISTER_RW(VIDEOCODEC_BASE_ADDRESS + 0x140020)
+#define VCE_SEMA_CLEAR        HW_REGISTER_RW(VIDEOCODEC_BASE_ADDRESS + 0x140024)
+#define VCE_SEMA_SET          HW_REGISTER_RW(VIDEOCODEC_BASE_ADDRESS + 0x140028)
+#define VCE_BAD_ADDR          HW_REGISTER_RW(VIDEOCODEC_BASE_ADDRESS + 0x140030)
+#define VCE_SIM_DEBUG_OPTIONS HW_REGISTER_RW(VIDEOCODEC_BASE_ADDRESS + 0x140100)
 
 #else
 #define PP_PC               HW_REGISTER_RW(VIDEOCODEC_BASE_ADDRESS + 0x110000)

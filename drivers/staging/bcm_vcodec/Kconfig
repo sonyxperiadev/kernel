@@ -1,0 +1,41 @@
+config BCM_VCODEC
+	bool "Broadcom Video Codec"
+	depends on ARCH_HAWAII || ARCH_BCM
+	default n
+	help
+	  Support for Broadcom video codec
+
+	  Say N if you are unsure if this should be enabled
+
+config BCM_HVA
+	tristate "Hardware Video Accelerator Driver"
+	depends on BCM_VCODEC
+	help
+	 This option enables the Hardware Video Accelerator driver. This
+	 assists in accelerating video decode and encode.
+
+config BCM_VCE
+	tristate "VCE Driver"
+	depends on BCM_VCODEC && BCM_HVA && ION_BCM
+	help
+	 This option enables the Video Control Engine driver. This accelerates
+	 video decode and encode, hence improves the system performance.
+
+config BCM_MCI
+	tristate "MCI Driver"
+	depends on BCM_VCODEC
+	help
+	 This config enables the MCI driver. The Video Core
+	 MultiCodeIn is one of hardware video accelerator
+	 component accelerates the video codec engine and
+	 hence improves the system performance.
+
+config BCM_CABAC
+	tristate "CABAC Driver"
+	depends on BCM_VCODEC
+	help
+	  This config enables the CABAC driver. This driver
+	  accelerates Context-Adaptive Binary Arithmetic Coding for video
+	  encode/decode and improves the system performance.
+
+source "drivers/staging/bcm_vcodec/pwrctrl/Kconfig"

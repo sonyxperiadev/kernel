@@ -507,10 +507,8 @@ void dormant_enter(u32 svc)
 		if (fdm_en && (FULL_DORMANT_L2_ON == svc_max ||
 			FULL_DORMANT_L2_OFF == svc_max)) {
 			fd_cmd = CDC_CMD_FDCE;
-			cdc_set_override(IS_IDLE_OVERRIDE, 0x1C0);
 		} else {
 			fd_cmd = CDC_CMD_CDCE;
-			cdc_set_override(IS_IDLE_OVERRIDE, 0x180);
 		}
 		break;
 
@@ -551,6 +549,8 @@ void dormant_enter(u32 svc)
 		break;
 
 	case CDC_STATUS_FDCEOK:
+		cdc_master_clk_gating_en(false);
+		cdc_set_override(IS_IDLE_OVERRIDE, 0x1C0);
 		spin_lock_irqsave(&drmt_lock, flgs);
 		save_proc_clk_regs();
 		save_addnl_regs();
@@ -671,11 +671,13 @@ void dormant_enter(u32 svc)
 				CDC_STATUS_CORE_DORMANT;
 			cdc_enable_isolation_in_state(cdc_states);
 
-			cdc_set_override(IS_IDLE_OVERRIDE, 0x1C0);
 			cdc_set_switch_counter(WEAK_SWITCH_TIMER, 0x0C);
 			cdc_set_switch_counter(STRONG_SWITCH_TIMER, 0x0C);
 
 			cdc_resp = cdc_send_cmd_for_core(CDC_CMD_MDEC, cpu);
+	                cdc_set_override(IS_IDLE_OVERRIDE, 0x180);
+			cdc_master_clk_gating_en(true);
+
 			fd = true;
 			break;
 
@@ -934,8 +936,7 @@ static int __init dm_init(void)
 		CDC_STATUS_CORE_DORMANT;
 	cdc_enable_isolation_in_state(cdc_states);
 	/*TBD - keep master clock gating disabled for time being*/
-	cdc_master_clk_gating_en(false);
-	cdc_set_override(IS_IDLE_OVERRIDE, 0x1C0);
+	cdc_master_clk_gating_en(true);
 	cdc_set_switch_counter(WEAK_SWITCH_TIMER, 0x0C);
 	cdc_set_switch_counter(STRONG_SWITCH_TIMER, 0x0C);
 

@@ -24,9 +24,9 @@ the GPL, without Broadcom's express prior written consent.
 #include <linux/mutex.h>
 #include <mach/irqs.h>
 #include <mach/clock.h>
-#include <asm/io.h>
+#include <linux/io.h>
 #include <linux/clk.h>
-#include <asm/uaccess.h>
+#include <linux/uaccess.h>
 #include <linux/vmalloc.h>
 #include <linux/mm.h>
 #include <linux/bootmem.h>
@@ -48,32 +48,41 @@ the GPL, without Broadcom's express prior written consent.
 #define IRQ_V3D	BCM_INT_ID_RESERVED148
 #define V3D_BIN_OOM_SIZE (1024*1024)
 
-typedef struct {
+
+#define v3d_boom_t struct _v3d_boom_t
+
+
+struct _v3d_boom_t {
 	struct list_head node;
 	struct ion_handle *v3d_bin_oom_handle;
 	int v3d_bin_oom_block;
 	int v3d_bin_oom_size ;
-} v3d_boom_t;
+};
 
 unsigned int *job_va;
 unsigned int job_pa;
 
-typedef struct {
+struct _v3d_bin_render_device_t {
 #ifdef CONFIG_ION
 	struct ion_client *v3d_bin_oom_client;
 	v3d_boom_t *mem_block;
 	v3d_boom_t *client_block;
 	struct list_head mem_head;
 #endif
-	volatile void *vaddr;
-} v3d_bin_render_device_t;
+	void __iomem *vaddr;
+};
 
-static inline void v3d_write(v3d_bin_render_device_t *v3d, unsigned int reg, unsigned int value)
+
+#define v3d_bin_render_device_t struct _v3d_bin_render_device_t
+
+static inline void v3d_write(v3d_bin_render_device_t *v3d,
+				unsigned int reg, unsigned int value)
 {
 	mm_write_reg((void *)v3d->vaddr, reg, value);
 }
 
-static inline unsigned int v3d_read(v3d_bin_render_device_t *v3d, unsigned int reg)
+static inline unsigned int v3d_read(v3d_bin_render_device_t *v3d,
+					unsigned int reg)
 {
 	return mm_read_reg((void *)v3d->vaddr, reg);
 }
@@ -81,7 +90,8 @@ static inline unsigned int v3d_read(v3d_bin_render_device_t *v3d, unsigned int r
 static v3d_boom_t *v3d_alloc_boom(void *device_id)
 {
 	v3d_bin_render_device_t *id = (v3d_bin_render_device_t *)device_id;
-	v3d_boom_t *block = (v3d_boom_t *) kzalloc(sizeof(v3d_boom_t), GFP_KERNEL);
+	v3d_boom_t *block = kzalloc(sizeof(v3d_boom_t),
+				GFP_KERNEL);
 	unsigned int heap_mask;
 
 	if (!block)
@@ -105,25 +115,28 @@ static v3d_boom_t *v3d_alloc_boom(void *device_id)
 	INIT_LIST_HEAD(&block->node);
 	list_add_tail(&block->node, &id->mem_head);
 
-	pr_debug("v3d_alloc_boom %x %x\n", block->v3d_bin_oom_block, block->v3d_bin_oom_size);
+	pr_debug("v3d_alloc_boom %x %x\n",
+		block->v3d_bin_oom_block, block->v3d_bin_oom_size);
 	return block;
 
 err:
 	if (block->v3d_bin_oom_handle)
 		ion_free(id->v3d_bin_oom_client, block->v3d_bin_oom_handle);
-	if (block)
+
 		kfree(block);
 	return NULL;
 }
 
-static void v3d_free_boom (void *device_id, v3d_boom_t *block)
+static void v3d_free_boom(void *device_id, v3d_boom_t *block)
 {
 	v3d_bin_render_device_t *id = (v3d_bin_render_device_t *)device_id;
 	if (block) {
 		list_del_init(&block->node);
-		pr_debug("v3d_free_boom %x %x\n", block->v3d_bin_oom_block, block->v3d_bin_oom_size);
+		pr_debug("v3d_free_boom %x %x\n",
+			block->v3d_bin_oom_block, block->v3d_bin_oom_size);
 		if (block->v3d_bin_oom_handle)
-			ion_free(id->v3d_bin_oom_client, block->v3d_bin_oom_handle);
+			ion_free(id->v3d_bin_oom_client,
+			block->v3d_bin_oom_handle);
 		kfree(block);
 		}
 }
@@ -163,12 +176,20 @@ static int v3d_bin_render_abort(void *device_id, mm_job_post_t *job)
 	v3d_bin_render_device_t *id = (v3d_bin_render_device_t *)device_id;
 	v3d_job_t *job_params = (v3d_job_t *)job->data;
 
-	pr_err("v3d job [%x %x], [%x %x]\n", job_params->v3d_ct0ca, job_params->v3d_ct0ea, job_params->v3d_ct1ca, job_params->v3d_ct1ea);
+	pr_err("v3d job [%x %x], [%x %x]\n", job_params->v3d_ct0ca,
+	job_params->v3d_ct0ea, job_params->v3d_ct1ca, job_params->v3d_ct1ea);
 
 	pr_err("regs:(0x%08x 0x%08x 0x%08x 0x%08x) (0x%08x 0x%08x 0x%08x 0x%08x) (0x%08x 0x%08x 0x%08x)",
-		v3d_read(id, V3D_CT0CS_OFFSET), v3d_read(id, V3D_CT00RA0_OFFSET), v3d_read(id, V3D_CT0CA_OFFSET), v3d_read(id, V3D_CT0EA_OFFSET),
-		v3d_read(id, V3D_CT1CS_OFFSET), v3d_read(id, V3D_CT01RA0_OFFSET), v3d_read(id, V3D_CT1CA_OFFSET), v3d_read(id, V3D_CT1EA_OFFSET),
-		v3d_read(id, V3D_BPOA_OFFSET), v3d_read(id, V3D_BPOS_OFFSET), v3d_read(id, V3D_PCS_OFFSET));
+		v3d_read(id, V3D_CT0CS_OFFSET),
+		v3d_read(id, V3D_CT00RA0_OFFSET),
+		v3d_read(id, V3D_CT0CA_OFFSET),
+		v3d_read(id, V3D_CT0EA_OFFSET),
+		v3d_read(id, V3D_CT1CS_OFFSET),
+		v3d_read(id, V3D_CT01RA0_OFFSET),
+		v3d_read(id, V3D_CT1CA_OFFSET), v3d_read(id, V3D_CT1EA_OFFSET),
+		v3d_read(id, V3D_BPOA_OFFSET), v3d_read(id, V3D_BPOS_OFFSET),
+		v3d_read(id, V3D_PCS_OFFSET));
+
 	v3d_write(id, V3D_CT0CS_OFFSET, 0x20);
 	v3d_write(id, V3D_CT1CS_OFFSET, 0x20);
 	v3d_write(id, V3D_CT0CA_OFFSET, 0);
@@ -196,19 +217,16 @@ static mm_isr_type_e process_v3d_bin_render_irq(void *device_id)
 	/* Clear interrupts isr is going to handle */
 	tmp = flags & v3d_read(id, V3D_INTENA_OFFSET);
 	v3d_write(id, V3D_INTCTL_OFFSET, tmp);
-	if (flags_qpu) {
+	if (flags_qpu)
 		v3d_write(id, V3D_DBQITC_OFFSET, flags_qpu);
-	}
 
 	/* Handle Binning Interrupt*/
-	if (flags & 2) {
+	if (flags & 2)
 		irq_retval = MM_ISR_PROCESSED;
-	}
 
 	/* Handle Rendering Interrupt*/
-	if (flags & 1) {
+	if (flags & 1)
 		irq_retval = MM_ISR_SUCCESS;
-	}
 
 	/* Handle oom case */
 	if (flags & (1 << 2)) {
@@ -229,9 +247,11 @@ bool get_v3d_bin_render_status(void *device_id)
 
 	/* Handle oom case */
 	if (flags & (1 << 2)) {
-		v3d_boom_t *block = v3d_alloc_boom (id);
+		v3d_boom_t *block =
+		v3d_alloc_boom(id);
 		if (block) {
-			v3d_write(id, V3D_BPOA_OFFSET, block->v3d_bin_oom_block);
+			v3d_write(id, V3D_BPOA_OFFSET,
+			block->v3d_bin_oom_block);
 			v3d_write(id, V3D_BPOS_OFFSET, block->v3d_bin_oom_size);
 			v3d_write(id, V3D_INTCTL_OFFSET, 1 << 2);
 			v3d_write(id, V3D_INTENA_OFFSET, 1 << 2);
@@ -248,13 +268,15 @@ bool get_v3d_bin_render_status(void *device_id)
 			}
 		}
 
-	if ((v3d_read(id, V3D_CT0CS_OFFSET)) | (v3d_read(id, V3D_CT1CS_OFFSET)) | (v3d_read(id, V3D_PCS_OFFSET))) {
+	if ((v3d_read(id, V3D_CT0CS_OFFSET)&(0x20)) ||
+		(v3d_read(id, V3D_CT1CS_OFFSET)&(0x20)) ||
+		(v3d_read(id, V3D_PCS_OFFSET)))
 		return true;
-		}
 	return false;
 }
 
-mm_job_status_e v3d_bin_render_start_job(void *device_id, mm_job_post_t *job, unsigned int profmask)
+mm_job_status_e v3d_bin_render_start_job(void *device_id,
+		mm_job_post_t *job, unsigned int profmask)
 {
 	v3d_bin_render_device_t *id = (v3d_bin_render_device_t *)device_id;
 	v3d_job_t *job_params = (v3d_job_t *)job->data;
@@ -270,18 +292,30 @@ mm_job_status_e v3d_bin_render_start_job(void *device_id, mm_job_post_t *job, un
 			job_va[4] = job_params->v3d_ct1ea;
 			if (job->type == V3D_REND_JOB) {
 				job->status = MM_JOB_STATUS_RUNNING;
-				v3d_write(id, V3D_CT1CA_OFFSET, job_params->v3d_ct1ca);
-				v3d_write(id, V3D_CT1EA_OFFSET, job_params->v3d_ct1ea);
+				v3d_write(id, V3D_CT1CA_OFFSET,
+				job_params->v3d_ct1ca);
+				v3d_write(id, V3D_CT1EA_OFFSET,
+				job_params->v3d_ct1ea);
 				return MM_JOB_STATUS_RUNNING;
 			} else if (job->type == V3D_BIN_REND_JOB) {
 				job->status = MM_JOB_STATUS_RUNNING;
-				if (job_params->v3d_ct0ca != job_params->v3d_ct0ea) {
-					v3d_write(id, V3D_CT0CA_OFFSET, job_params->v3d_ct0ca);
-					v3d_write(id, V3D_CT0EA_OFFSET, job_params->v3d_ct0ea);
+				if (job_params->v3d_ct0ca !=
+					job_params->v3d_ct0ea) {
+					v3d_write(id, V3D_CT0CA_OFFSET,
+					job_params->v3d_ct0ca);
+					v3d_write(id, V3D_CT0EA_OFFSET,
+					job_params->v3d_ct0ea);
 					}
-				v3d_write(id, V3D_CT1CA_OFFSET, job_params->v3d_ct1ca);
-				v3d_write(id, V3D_CT1EA_OFFSET, job_params->v3d_ct1ea);
-				pr_debug("v3d_ct0ca = %x, v3d_ct0ea = %x, v3d_ct1ca = %x, v3d_ct1ea = %x", job_params->v3d_ct0ca, job_params->v3d_ct0ea, job_params->v3d_ct1ca, job_params->v3d_ct1ea);
+				v3d_write(id, V3D_CT1CA_OFFSET,
+				job_params->v3d_ct1ca);
+				v3d_write(id, V3D_CT1EA_OFFSET,
+				job_params->v3d_ct1ea);
+				pr_debug("v3d_ct0ca = %x," \
+					"v3d_ct0ea = %x, v3d_ct1ca = %x," \
+					"v3d_ct1ea = %x", job_params->v3d_ct0ca,
+					job_params->v3d_ct0ea,
+					job_params->v3d_ct1ca,
+					job_params->v3d_ct1ea);
 				pr_debug("supply boom from v3d_start_job %x %x\n",
 					id->mem_block->v3d_bin_oom_block,
 					id->mem_block->v3d_bin_oom_size);
@@ -296,6 +330,29 @@ mm_job_status_e v3d_bin_render_start_job(void *device_id, mm_job_post_t *job, un
 			job_va[2] = 0;
 			job_va[3] = 0;
 			job_va[4] = 0;
+			if ((v3d_read(id, V3D_CT0CA_OFFSET) !=
+				v3d_read(id, V3D_CT0EA_OFFSET)) ||
+				(v3d_read(id, V3D_CT1CA_OFFSET) !=
+				v3d_read(id, V3D_CT1EA_OFFSET))) {
+				pr_err("v3d job [%x %x], [%x %x]\n",
+				job_params->v3d_ct0ca,
+				job_params->v3d_ct0ea, job_params->v3d_ct1ca,
+				job_params->v3d_ct1ea);
+
+				pr_err("regs:(0x%08x 0x%08x 0x%08x 0x%08x) "\
+					"(0x%08x 0x%08x 0x%08x 0x%08x) (0x%08x 0x%08x 0x%08x)",
+				v3d_read(id, V3D_CT0CS_OFFSET),
+				v3d_read(id, V3D_CT00RA0_OFFSET),
+				v3d_read(id, V3D_CT0CA_OFFSET),
+				v3d_read(id, V3D_CT0EA_OFFSET),
+				v3d_read(id, V3D_CT1CS_OFFSET),
+				v3d_read(id, V3D_CT01RA0_OFFSET),
+				v3d_read(id, V3D_CT1CA_OFFSET),
+				v3d_read(id, V3D_CT1EA_OFFSET),
+				v3d_read(id, V3D_BPOA_OFFSET),
+				v3d_read(id, V3D_BPOS_OFFSET),
+				v3d_read(id, V3D_PCS_OFFSET));
+				}
 			job->status = MM_JOB_STATUS_SUCCESS;
 			return MM_JOB_STATUS_SUCCESS;
 		}
@@ -303,7 +360,9 @@ mm_job_status_e v3d_bin_render_start_job(void *device_id, mm_job_post_t *job, un
 	default:
 		break;
 	}
-	pr_err("v3d_bin_render_start_job :: job type = %x job status = %x \n", job->type, job->status);
+
+pr_err("v3d_bin_render_start_job :: job type = %x job status = %x\n",
+job->type, job->status);
 	return MM_JOB_STATUS_ERROR;
 }
 
@@ -311,7 +370,7 @@ static v3d_bin_render_device_t *v3d_device;
 
 void v3d_bin_render_update_virt(void *virt)
 {
-	pr_debug("v3d_bin_render_update_virt: \n");
+pr_debug("v3d_bin_render_update_virt:\n");
 	v3d_device->vaddr = virt;
 }
 

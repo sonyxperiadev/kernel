@@ -106,6 +106,12 @@ config	MACH_HAWAII_SS_LOGANDS_REV01
 	  keyboard, flash, and band selects.
 	  Assumes that MACH_HAWAII_SS_LOGAN is also set.
 
+config  MACH_HAWAII_SS_CS02_REV00
+	bool "Support Broadcom Hawaii SS cs02 board"
+	help
+	  Support for the Broadcom Hawaii SS cs02 board.
+	  Assumes that MACH_HAWAII_SS_CS02 is also set.
+
 config	MACH_HAWAII_SS_LOGANDS_COMBINED
 	bool "Support Broadcom Hawaii SS logands COMBINED board"
 	help
@@ -294,6 +300,12 @@ config  MACH_HAWAII_SS_LOGANDS
         help
           Support for the Broadcom Hawaii Samsung Logan DS board.
 
+config  MACH_HAWAII_SS_CS02
+        bool "Support Broadcom Hawaii Samsung CS02 board"
+        default n
+        help
+          Support for the Broadcom Hawaii Samsung CS02 board.
+
 config	IGNORE_DAP_POWERUP_REQ
 	bool "Ignore Powerup request from DAP"
 	depends on KONA_POWER_MGR
@@ -425,15 +437,15 @@ config	MACH_HAWAII_SS_EMMC_EXTLDO
 	help
 	  For SS EMMC memory external LDO
 
-config 26MHZ_WFI
-	bool "Enable A9 26MHz WFI idle state"
+config CPU_SYSPLL_WFI_CSTATE
+	bool "Enable CPU WFI idle state using system PLL"
 	default n
 	help
-	 Option to enable A9 26MHz WFI cpuidle state. A9 frequency is reduced
-	 to 26MHz when all cores are in this C state. Latency is very less and
-	 VDDVAR_A9 voltage can be reduced to less than economy mode voltage
-	 for this state. Helps in redcuing current consumption of high CPU load
-	 use cases.
+	 Option to enable special ARM WFI cpuidle state.
+	 PROC policy is changed to use FID 0-4 which comes
+	 from system PLL when all the cores are in this
+	 state. This way, ARM internal PLL can be turned
+	 off to save power.
 
 config	A9_RETENTION_CSTATE
 	bool "Turn ON A9 retention state"

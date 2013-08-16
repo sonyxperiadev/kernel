@@ -172,8 +172,8 @@ void mm_prof_update_handler(struct work_struct *work)
 DEFINE_DEBUGFS_HANDLER(TIME, MM_PROF_UPDATE_TIME);
 
 void *mm_prof_init(struct mm_common *mm_common, \
-			const char *dev_name, \
-			MM_PROF_HW_IFC * prof_params)
+			const char *dev_name,
+MM_PROF_HW_IFC *prof_params)
 {
 	int ret = 0;
 	struct _mm_prof *mm_prof = kmalloc(sizeof(struct _mm_prof), GFP_KERNEL);

@@ -1027,7 +1027,7 @@ static ssize_t cpufreq_get_ops_set(struct file *file,
 			out_str, len);
 }
 
-__weak int mach_config_a9_pll(int turbo_val, int update_volt_tbl)
+__weak int mach_config_arm_pll(int turbo_val, int update_volt_tbl)
 {
 	printk(KERN_ALERT "%s : function not found\n", __func__);
 	return -1;
@@ -1062,7 +1062,7 @@ static ssize_t cpufreq_set_ops_set(struct file *file,
 	if (ret)
 		kcf_dbg("%s: dfs remove request failed\n", __func__);
 
-	ret = mach_config_a9_pll(pll_val, 1);
+	ret = mach_config_arm_pll(pll_val, 1);
 	if (ret) {
 		printk(KERN_ALERT "Unsuccesful Operation\n");
 		return 0;

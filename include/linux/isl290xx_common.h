@@ -33,27 +33,23 @@
 #define u8  unsigned char
 
 struct isl290xx_cfg_s {
-	u32 calibrate_target;
-	u16 als_time;
-	u16 scale_factor;
-	u16 gain_trim;
-	u8 filter_history;
-	u8 filter_count;
-	u8 gain;
-	u16 prox_threshold_hi;
-	u16 prox_threshold_lo;
-	u8 prox_int_time;
-	u8 prox_adc_time;
-	u8 prox_wait_time;
-	u8 prox_intr_filter;
-	u8 prox_config;
-	u8 prox_pulse_cnt;
-	u8 prox_gain;
+	u8 prox_threshold_hi;
+	u8 prox_threshold_lo;
+	u8 prox_threshold_hi_def;
+	u8 prox_threshold_lo_def;
+	u8 aps_config;
+#ifdef ISL29147_ENABLE
+	u8 aps_config1;
+	u8 aps_config2;
+#endif
+	u8 aps_intr;
+	u8 prox_offset;
+	u8 prox_boot_cali;
 };
 
 struct isl290xx_prox_info_s {
-	u16 prox_clear;
-	u16 prox_data;
+	u8 prox_clear;
+	u8 prox_data;
 	int prox_event;
 };
 

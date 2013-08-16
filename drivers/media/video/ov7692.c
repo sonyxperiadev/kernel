@@ -322,8 +322,8 @@ static const struct v4l2_queryctrl ov7692_controls[] = {
 	 .id = V4L2_CID_CAMERA_CONTRAST,
 	 .type = V4L2_CTRL_TYPE_INTEGER,
 	 .name = "Contrast",
-	 .minimum = CONTRAST_MINUS_1,
-	 .maximum = CONTRAST_PLUS_1,
+	 .minimum = CONTRAST_MINUS_2,
+	 .maximum = CONTRAST_PLUS_2,
 	 .step = 1,
 	 .default_value = CONTRAST_DEFAULT,
 	 },
@@ -359,10 +359,11 @@ static const struct v4l2_queryctrl ov7692_controls[] = {
 	 .id = V4L2_CID_CAMERA_FRAME_RATE,
 	 .type = V4L2_CTRL_TYPE_INTEGER,
 	 .name = "Framerate control",
-	 .minimum = FRAME_RATE_30,
-	 .maximum = (1 << FRAME_RATE_30),
+	 .minimum = FRAME_RATE_AUTO,
+	 .maximum = (1 << FRAME_RATE_AUTO |
+			1 << FRAME_RATE_10 | 1 << FRAME_RATE_30),
 	 .step = 1,
-	 .default_value = FRAME_RATE_30,
+	 .default_value = FRAME_RATE_AUTO,
 	 },
 
 };
@@ -650,18 +651,26 @@ static int ov7692_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		break;
 	case V4L2_CID_CAMERA_CONTRAST:
 
-		if (ctrl->value > CONTRAST_PLUS_1)
+		if (ctrl->value > CONTRAST_PLUS_2)
 			return -EINVAL;
 
 		ov7692->contrast = ctrl->value;
 		switch (ov7692->contrast) {
+		case CONTRAST_MINUS_2:
+			ret = ov7692_write_smbuss(client,
+					ov7692_contrast_lv1_tbl);
+			break;
 		case CONTRAST_MINUS_1:
 			ret = ov7692_write_smbuss(client,
-					ov7692_contrast_lv5_tbl);
+					ov7692_contrast_lv2_tbl);
 			break;
 		case CONTRAST_PLUS_1:
 			ret = ov7692_write_smbuss(client,
-					ov7692_contrast_lv0_tbl);
+					ov7692_contrast_lv4_tbl);
+			break;
+		case CONTRAST_PLUS_2:
+			ret = ov7692_write_smbuss(client,
+					ov7692_contrast_lv5_tbl);
 			break;
 		default:
 			ret = ov7692_write_smbuss(client,
@@ -854,6 +863,14 @@ static int ov7692_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			ret = ov7692_write_smbuss(client,
 					ov7692_fps_25);
 			break;*/
+		case FRAME_RATE_10:
+			ret = ov7692_write_smbuss(client,
+					ov7692_fps_10);
+			break;
+		case FRAME_RATE_15:
+			ret = ov7692_write_smbuss(client,
+					ov7692_fps_15);
+			break;
 		case FRAME_RATE_30:
 		case FRAME_RATE_AUTO:
 		default:

@@ -37,7 +37,7 @@
 
 #define AKM8975_DEBUG_IF	0
 #define AKM8975_DEBUG_DATA	0
-
+#define I2C_RETRY_DELAY		5
 #define AKM_ACCEL_ITEMS 3
 /* Wait timeout in millisecond */
 #define AKM8975_DRDY_TIMEOUT	300
@@ -133,14 +133,20 @@ static int akm8975_i2c_check_device(
 {
 	unsigned char buffer[2];
 	int err;
-
+	int i;
+	err = 0;
 	/* Set measure mode */
 	buffer[0] = AK8975_REG_WIA;
-	err = akm8975_i2c_rxdata(client, buffer, 1);
-	if (err < 0) {
-		dev_err(&client->dev,
-			"%s: Can not read WIA.", __func__);
-		return err;
+	for (i = 0; i < 20; i++) {
+		err = akm8975_i2c_rxdata(client, buffer, 1);
+		if (err < 0) {
+			dev_err(&client->dev,
+				"%s: Can not read WIA.", __func__);
+			msleep_interruptible(I2C_RETRY_DELAY);
+		} else {
+			pr_info("[akm8975] read WIA with tries %d\n", i);
+			break;
+		}
 	}
 
 	/* Check read data */
@@ -282,7 +288,6 @@ static int AKECS_GetData(
 			"%s: DRDY is not set.", __func__);
 		return -1;
 	}
-
 	mutex_lock(&akm->sensor_mutex);
 	memcpy(rbuf, akm->sense_data, size);
 	atomic_set(&akm->drdy, 0);
@@ -374,6 +379,9 @@ AKECS_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	/* NOTE: In this function the size of "char" should be 1-byte. */
 	char i2c_buf[RWBUF_SIZE];		/* for READ/WRITE */
 	int8_t sensor_buf[SENSOR_DATA_SIZE];/* for GETDATA */
+#ifdef AKM8963_SMT
+	int16_t hdata[4];
+#endif
 	int32_t ypr_buf[YPR_DATA_SIZE];	/* for SET_YPR */
 	int16_t acc_buf[3];				/* for GET_ACCEL */
 	int64_t delay[AKM_NUM_SENSORS];	/* for GET_DELAY */
@@ -462,6 +470,35 @@ AKECS_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		ret = AKECS_GetData(akm, sensor_buf, SENSOR_DATA_SIZE);
 		if (ret < 0)
 			return ret;
+#ifdef AKM8963_SMT
+		if ((sensor_buf[7]&0x10) == 0x10) {
+			hdata[0] = (s16)(((((u16)(sensor_buf[2]))<<8) \
+						+ (u16)(sensor_buf[1]))>>1);
+			hdata[1] = (s16)(((((u16)(sensor_buf[4]))<<8) \
+						+ (u16)(sensor_buf[3]))>>1);
+			hdata[2] = (s16)(((((u16)(sensor_buf[6]))<<8) \
+						+ (u16)(sensor_buf[5]))>>1);
+			sensor_buf[1] = hdata[0] & 0xff;
+			sensor_buf[2] = (hdata[0]>>8) & 0xff;
+			sensor_buf[3] = hdata[1] & 0xff;
+			sensor_buf[4] = (hdata[1]>>8) & 0xff;
+			sensor_buf[5] = hdata[2] & 0xff;
+			sensor_buf[6] = (hdata[2]>>8) & 0xff;
+		} else {
+			hdata[0] = (s16)(((((u16)(sensor_buf[2]))<<8) \
+						+ (u16)(sensor_buf[1]))<<1);
+			hdata[1] = (s16)(((((u16)(sensor_buf[4]))<<8) \
+						+ (u16)(sensor_buf[3]))<<1);
+			hdata[2] = (s16)(((((u16)(sensor_buf[6]))<<8) \
+						+ (u16)(sensor_buf[5]))<<1);
+			sensor_buf[1] = hdata[0] & 0xff;
+			sensor_buf[2] = (hdata[0]>>8) & 0xff;
+			sensor_buf[3] = hdata[1] & 0xff;
+			sensor_buf[4] = (hdata[1]>>8) & 0xff;
+			sensor_buf[5] = hdata[2] & 0xff;
+			sensor_buf[6] = (hdata[2]>>8) & 0xff;
+		}
+#endif
 		break;
 	case ECS_IOCTL_SET_YPR:
 		dev_vdbg(&akm->i2c->dev, "IOCTL_SET_YPR called.");
@@ -1163,10 +1200,8 @@ static int akm8975_input_init(
 			-5760, 5760, 0, 0);
 	input_set_abs_params(*input, ABS_HAT1Y,
 			0, 3, 0, 0);
-
 	/* Set name */
 	(*input)->name = "compass";
-
 	/* Register */
 	err = input_register_device(*input);
 	if (err) {
@@ -1197,7 +1232,6 @@ static irqreturn_t akm8975_irq(int irq, void *handle)
 		dev_err(&akm->i2c->dev, "%s ST is not set.", __func__);
 		goto work_func_end;
 	}
-
 	mutex_lock(&akm->sensor_mutex);
 	memcpy(akm->sense_data, buffer, SENSOR_DATA_SIZE);
 	mutex_unlock(&akm->sensor_mutex);

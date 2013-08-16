@@ -1268,6 +1268,7 @@ void AUDDRV_SetAudioMode_Speaker(SetAudioMode_Sp_t param)
 	int gain_attack_thres, gain_attack_slope, gain_decay_slope;
 	CSL_CAPH_HWConfig_Table_t *path = NULL;
 	CSL_CAPH_MIXER_e outChnl = CSL_CAPH_SRCM_CH_NONE;
+	CSL_CAPH_MIXER_e outChnl1 = CSL_CAPH_SRCM_CH_NONE;
 
 	SysMultimediaAudioParm_t *p1;
 
@@ -1424,12 +1425,12 @@ void AUDDRV_SetAudioMode_Speaker(SetAudioMode_Sp_t param)
 					path->srcmRoute[i][j].sink
 					matches this speaker*/
 
-					outChnl = path->srcmRoute[i][j].outChnl;
-
-					aTrace(LOG_AUDIO_DRIVER,
-						"%s pathID %d found outChnl 0x%x inChnl 0x%x\n",
-						__func__, param.pathID, outChnl,
-						path->srcmRoute[i][j].inChnl);
+				outChnl1 = path->srcmRoute[i][j].outChnl;
+				aTrace(LOG_AUDIO_DRIVER,
+					"%s pathID %d found outChnl1 0x%x"
+					" inChnl 0x%x\n",
+					__func__, param.pathID, outChnl1,
+					path->srcmRoute[i][j].inChnl);
 
 					aTrace(LOG_AUDIO_DRIVER,
 						"mixInGain 0x%x, mixInGainR 0x%x\n",
@@ -1454,6 +1455,10 @@ void AUDDRV_SetAudioMode_Speaker(SetAudioMode_Sp_t param)
 			csl_srcmixer_setMixAllInGain(outChnl,
 				mixInGain, mixInGain);
 		*/
+	}
+
+	if (outChnl == CSL_CAPH_SRCM_CH_NONE) {
+		outChnl = outChnl1;
 	}
 
 	if (outChnl) {
@@ -2318,8 +2323,6 @@ void AUDDRV_SetSecMicFromSpkr(AUDIO_SINK_Enum_t spkr,
 void AUDDRV_PrintAllMics(void)
 {
 	int i;
-	CSL_CAPH_HWConfig_Table_t *path;
-
 	aTrace(LOG_AUDIO_DRIVER,
 		   "AUDDRV_PrintAllMics:: print primary and secondary"
 		   " mics for each sink\n");
@@ -2521,4 +2524,35 @@ int AUDDRV_GetEchoRefMic(void)
 	aTrace(LOG_AUDIO_DRIVER,
 		"%s::echo_ref_mic=%d\n", __func__, echo_ref_mic);
 	return echo_ref_mic;
+}
+
+/*==========================================================================
+//
+// Function Name: AUDDRV_Get_FDMBCParm
+//
+// Description: Get the FDMBC tuning params from CP
+//
+// =========================================================================
+*/
+int AUDDRV_Get_FDMBCParm(void *param, int size)
+{
+#ifndef CONFIG_BCM_MODEM
+	return -EINVAL;
+#else
+#ifdef CONFIG_ARCH_JAVA
+	SysIndMultimediaAudioParm_t *p;
+
+	if (param == NULL)
+		return -EINVAL;
+
+	p = APSYSPARM_GetIndMultimediaAudioParmAccessPtr();
+	if (p == NULL) {
+		aError("%s cannot read MBC param", __func__);
+		return -EINVAL;
+	}
+
+	memcpy(param, &((p+AUDIO_MODE_SPEAKERPHONE)->mbc_cr[0]), size);
+#endif
+	return 0;
+#endif
 }

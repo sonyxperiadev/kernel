@@ -1204,29 +1204,12 @@ static int gc2035_g_interface_parms(struct v4l2_subdev *sd,
 	parms->parms = gc2035->plat_parms->parms;
 
 	/* set the hs term time */
-		sclk_dividers = timing_cfg_yuv[gc2035->i_size].sclk_dividers;
-
-	if (sclk_dividers == 0x01)
-		parms->parms.serial.hs_term_time = 0x01;
-	else
-		parms->parms.serial.hs_term_time = 0x08;
-
-	switch (gc2035->framerate) {
-	case FRAME_RATE_5:
-		parms->parms.serial.hs_settle_time = 9;
-		break;
-	case FRAME_RATE_7:
-		parms->parms.serial.hs_settle_time = 6;
-		break;
-	case FRAME_RATE_10:
-	case FRAME_RATE_15:
-	case FRAME_RATE_25:
-	case FRAME_RATE_30:
-	case FRAME_RATE_AUTO:
-	default:
-		parms->parms.serial.hs_settle_time = 2;
-		break;
-	}
+	parms->parms.serial.hs_term_time = 0x08;
+	parms->parms.serial.hs_settle_time = 2;
+	/*
+	parms->parms.serial.hs_settle_time = 9;
+	parms->parms.serial.hs_settle_time = 6;
+	*/
 
 	return 0;
 }

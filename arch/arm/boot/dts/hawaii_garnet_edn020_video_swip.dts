@@ -359,7 +359,7 @@
 		fps = <60>;
 		lanes = <2>;
 		cmnd-LP;		/* Commands in LP mode*/
-		hs-bitrate = <330000000>;
+		hs-bitrate = <333000000>;
 		lp-bitrate = <8000000>;	/* 8mbps */
 		iommu = <&iommu_mm>;
 		iovmm = <&iovmm_mm>;
@@ -376,12 +376,15 @@
 		hysteresis = <0>;
 		flags = <1>;
 		interval_ms = <5>;
-		/*critical temp is 115*/
-		thold = <85 75 1
-			100 90 1
-			115 112 2>;
+		/*sw shdwn temp is 120*/
+		thold = <85 1
+			95 1
+			105 1
+			120 4
+			125 2>;
 		tmon_apb_clk = "tmon_apb";
 		tmon_1m_clk = "tmon_1m_clk";
+		falling = <5>;
 	};
 
 	memc@35008000 {
@@ -500,5 +503,29 @@
 			label = "green";
 			gpios = <&gpio 9 0>;
 		};
+	};
+
+	mci: mci@0x3d001000 {
+		compatible = "brcm,mci";
+		reg = <0x3d001000 0x1000>;
+		interrupts = <0x0 178 0x4>;
+	};
+
+	bcm-pdm-mm {
+		compatible = "bcm,pdm-mm";
+	};
+
+	vce@0x3d100000 {
+		compatible = "bcm,vce";
+		reg = <0x3d100000 0x340900
+		       0x3d000000 0x700000>;
+		interrupts = <0 176 0x4>;
+		mem-alias = <0x00000000>;
+	};
+
+	bcm-cabac@0x3d000000 {
+		compatible = "bcm,cabac";
+		reg = <0x3d000000 0x601000>;
+		interrupts = <0 178 0x4>;
 	};
 };

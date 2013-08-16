@@ -50,4 +50,8 @@ obj-$(CONFIG_BACKLIGHT_SAHARA)		+= kb3886_bl.o
 obj-$(CONFIG_BACKLIGHT_TOSA)		+= tosa_bl.o
 obj-$(CONFIG_BACKLIGHT_TPS65217)	+= tps65217_bl.o
 obj-$(CONFIG_BACKLIGHT_WM831X)		+= wm831x_bl.o
-
+obj-$(CONFIG_BACKLIGHT_AAT2870) += aat2870_bl.o
+obj-$(CONFIG_BACKLIGHT_OT200) += ot200_bl.o
+obj-$(CONFIG_BACKLIGHT_SGM3727) += sgm3727_bl.o
+obj-$(CONFIG_TOUCHKEY_BACKLIGHT)	+= bcm_touchkey_led.o
+obj-$(CONFIG_BACKLIGHT_TPS61158) += tps61158_pwm_bl.o

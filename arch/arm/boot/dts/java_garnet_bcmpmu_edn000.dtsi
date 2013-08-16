@@ -139,7 +139,7 @@
 		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, initial_mode = REGULATOR_MODE_NORMAL*/
 		sdx  = "4", "sdxldo_uc", "vddo", "vdd_sdxc", "sddat_debug_bus","0","7", "2", "0", "0";
 		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, initial_mode = REGULATOR_MODE_NORMAL*/
-		mmc1 = "1", "mmc1_vcc","0","7", "2", "0", "0";
+		mmc1 = "1", "mmc1_vcc","0","7", "0", "0", "0";
 		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, initial_mode = REGULATOR_MODE_NORMAL*/
 		mmc2 = "1", "mmc2_vcc", "0", "7", "2", "0", "0";
 		/*pc_map = PMU_PC2|PMU_PC3, initial_mode = REGULATOR_MODE_STANDBY*/
@@ -159,9 +159,9 @@
 		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, initial_mode = REGULATOR_MODE_STANDBY*/
 		tcx  = "1", "tcxldo_uc", "1", "7", "8", "0", "0";
 		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, initial_mode = REGULATOR_MODE_NORMAL*/
-		lv1  = "1", "lvldo1_uc", "0", "7", "2", "0", "0";
+		lv1  = "1", "lvldo1_uc", "0", "7", "0", "0", "0";
 		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, initial_mode = REGULATOR_MODE_NORMAL*/
-		lv2  = "1", "lvldo2_uc", "0", "7", "2", "0", "0";
+		lv2  = "1", "lvldo2_uc", "0", "7", "0", "0", "0";
 		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, initial_mode = REGULATOR_MODE_STANDBY*/
 		vsr  = "1", "vsr_uc", "1", "7", "8", "0", "1630000";
 		/*pc_map = PMU_PC3, initial_mode = REGULATOR_MODE_STANDBY*/

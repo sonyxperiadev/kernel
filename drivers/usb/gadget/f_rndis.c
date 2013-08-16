@@ -455,13 +455,21 @@ static void rndis_response_complete(struct usb_ep *ep, struct usb_request *req)
 static void rndis_command_complete(struct usb_ep *ep, struct usb_request *req)
 {
 	struct f_rndis			*rndis = req->context;
+	struct usb_composite_dev	*cdev = NULL;
 	int				status;
+
+	/* In usb plug in/out regression tests, port.func.config */
+	/* may be NULL pointer.*/
+	if (rndis->port.func.config != NULL)
+		cdev = rndis->port.func.config->cdev;
+	else
+		printk(KERN_ERR "rndis gadget driver is removed.\n");
 
 	/* received RNDIS command from USB_CDC_SEND_ENCAPSULATED_COMMAND */
 //	spin_lock(&dev->lock);
 	status = rndis_msg_parser(rndis->config, (u8 *) req->buf);
-	if (status < 0)
-		pr_err("RNDIS command error %d, %d/%d\n",
+	if ((status < 0) && (cdev != NULL))
+		ERROR(cdev, "RNDIS command error %d, %d/%d\n",
 			status, req->actual, req->length);
 //	spin_unlock(&dev->lock);
 }

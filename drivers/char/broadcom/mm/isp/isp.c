@@ -198,10 +198,8 @@ int isp_program(struct isp_device_t *isp, struct isp_job_post_t *job_post)
 		return ret;
 	}
 	for (i = 0; i < job_post->num_regs; i++)
-	{
-		isp_write(job_post->isp_regs[i].offset, job_post->isp_regs[i].value);
-	}
-
+		isp_write(job_post->isp_regs[i].offset,
+				job_post->isp_regs[i].value);
 	return ret;
 }
 
@@ -295,17 +293,16 @@ int __init mm_isp_init(void)
 
 	dvfs_param.ON = 1;
 	dvfs_param.MODE = TURBO;
-	dvfs_param.enable_suspend_resume = 0;
-	dvfs_param.T0 = 200;
-	dvfs_param.P0 = 90;
+	dvfs_param.T0 = 0;
+	dvfs_param.P0 = 0;
 	dvfs_param.T1 = 300;
-	dvfs_param.P1 = 90;
-	dvfs_param.P1L = 50;
-	dvfs_param.T2 = 300;
-	dvfs_param.P2 = 90;
-	dvfs_param.P2L = 60;
+	dvfs_param.P1 = 80;
+	dvfs_param.P1L = 0;
+	dvfs_param.T2 = 500;
+	dvfs_param.P2 = 80;
+	dvfs_param.P2L = 45;
 	dvfs_param.T3 = 1000;
-	dvfs_param.P3L = 50;
+	dvfs_param.P3L = 45;
 	dvfs_param.dvfs_bulk_job_cnt = 0;
 
 	isp_device->fmwk_handle = mm_fmwk_register(ISP_DEV_NAME,

@@ -13,14 +13,14 @@ the GPL, without Broadcom's express prior written consent.
 
 #ifndef __BIN_RENDER_H__
 #define __BIN_RENDER_H__
+#define v3d_job_t struct _v3d_job_t
 
-
-typedef struct {
+struct _v3d_job_t {
 	uint32_t v3d_ct0ca;
 	uint32_t v3d_ct0ea;
 	uint32_t v3d_ct1ca;
 	uint32_t v3d_ct1ea;
-} v3d_job_t;
+};
 
 enum tlb_buffer_size_t {
 	TLB_QUARTER_BUFFER_SIZE,

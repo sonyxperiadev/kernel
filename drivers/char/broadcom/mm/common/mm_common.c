@@ -246,52 +246,64 @@ void mm_common_add_file(struct work_struct *work)
 	list_add_tail(&filp->file_head, &mm_file_list);
 }
 
-void mm_common_interlock_completion(struct dev_job_list *job)
+void mm_common_interlock_completion(struct dev_job_list *il_job)
 {
-	struct file_private_data *filp = job->filp;
-	struct mm_common *common = filp->common;
+	LIST_HEAD(head);
+	list_del_init(&il_job->file_list);
+	list_add_tail(&il_job->file_list, &head);
 
-	BUG_ON(job->job.type != INTERLOCK_WAITING_JOB);
-	job->job.type = 0;
+	while (!list_empty(&head)) {
+		struct dev_job_list *job = list_first_entry(&head,
+						struct dev_job_list, file_list);
+		struct file_private_data *filp = job->filp;
+		struct mm_common *common = filp->common;
 
-	list_del_init(&job->file_list);
+		BUG_ON(job->job.type != INTERLOCK_WAITING_JOB);
+		job->job.type = 0;
+		list_del_init(&job->file_list);
 
-	if (job->predecessor) {
-		BUG_ON(job->filp->interlock_count == 0);
-		job->filp->interlock_count--;
-		job->predecessor->successor = NULL;
-		job->predecessor = NULL;
-		}
-	if (job->successor)
-		mm_common_interlock_completion(job->successor);
+		if (job->successor) {
+			BUG_ON(job->successor->filp->interlock_count == 0);
+			job->successor->filp->interlock_count--;
+			job->successor->predecessor = NULL;
+			list_del_init(&job->successor->file_list);
+			list_add_tail(&job->successor->file_list, &head);
+			job->successor = NULL;
+			}
 
-	if (0 == list_empty(&filp->write_head)) {
-		struct dev_job_list *temp_wait_job = NULL;
-		struct dev_job_list *wait_job = list_first_entry( \
+		if (0 == list_empty(&filp->write_head)) {
+			struct dev_job_list *temp_wait_job = NULL;
+			struct dev_job_list *wait_job = list_first_entry( \
 						&(filp->write_head), \
 						struct dev_job_list, file_list);
 
-		if ((wait_job->job.type == INTERLOCK_WAITING_JOB) &&
-			(wait_job->predecessor == NULL)) {
-				mm_common_interlock_completion(wait_job);
-				}
-		if (wait_job->job.type != INTERLOCK_WAITING_JOB) {
-			list_for_each_entry_safe(wait_job, temp_wait_job, \
-				&(job->filp->write_head), file_list) {
-				int core_id = (wait_job->job.type&0xFF0000)>>16;
-				if (wait_job->job.type != INTERLOCK_WAITING_JOB)
-					mm_core_add_job(wait_job,
+			if ((wait_job->job.type == INTERLOCK_WAITING_JOB) &&
+				(wait_job->predecessor == NULL)) {
+					list_del_init(&wait_job->file_list);
+					list_add_tail(&wait_job->file_list, \
+						&head);
+					}
+			if (wait_job->job.type != INTERLOCK_WAITING_JOB) {
+				list_for_each_entry_safe(wait_job, \
+					temp_wait_job, \
+					&(job->filp->write_head), file_list) {
+					int core_id = (wait_job->job.type & \
+								0xFF0000)>>16;
+					if (wait_job->job.type !=
+						INTERLOCK_WAITING_JOB)
+						mm_core_add_job(wait_job,
 						common->mm_core[core_id]);
-				else
-					break;
+					else
+						break;
+					}
 				}
 			}
-		}
-	if (job->notify) {
-		*(job->notify) = true;
-		wake_up(&job->filp->wait_queue);
-		}
-	kfree(job);
+		if (job->notify) {
+			*(job->notify) = true;
+			wake_up(&job->filp->wait_queue);
+			}
+		kfree(job);
+	}
 }
 
 void mm_common_job_completion(struct dev_job_list *job, void *core)
@@ -388,9 +400,8 @@ static loff_t mm_file_lseek(struct file *filp, loff_t offset, int ignore)
 
 	struct file *input = fget(offset);
 
-	if (input == NULL) {
+	if (input == NULL)
 		return -EINVAL;
-	}
 	if (is_validate_file(input)) {
 		struct file_private_data *in_private = input->private_data;
 		struct dev_job_list *to = mm_common_alloc_job(private,\

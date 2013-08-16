@@ -180,14 +180,14 @@ void w_shutdown_core(void *p)
 			dwc_otg_start_stop_phy_clk(core_if, true);
 			cil_pcd_stop(core_if);
 			dwc_otg_start_stop_phy_clk(core_if, false);
+		}
 
+	}
 #ifdef CONFIG_USB_OTG_UTILS
 		if (core_if->xceiver->shutdown)
 			usb_phy_shutdown(core_if->xceiver);
 #endif
-		}
 	core_if->xceiver->state = OTG_STATE_UNDEFINED;
-	}
 }
 
 void w_vbus_draw(void *p)

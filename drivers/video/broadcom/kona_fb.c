@@ -40,6 +40,10 @@
 #include <video/kona_fb.h>
 #include <mach/io.h>
 #include <linux/delay.h>
+#include <mach/memory.h>
+#include <mach/io_map.h>
+#include <plat/reg_axipv.h>
+#include <asm/io.h>
 #ifdef CONFIG_FRAMEBUFFER_FPS
 #include <linux/fb_fps.h>
 #endif
@@ -68,8 +72,6 @@
 #endif
 #ifdef CONFIG_IOMMU_API
 #include <linux/iommu.h>
-#endif
-#ifdef CONFIG_BCM_IOVMM
 #include <plat/bcm_iommu.h>
 #endif
 
@@ -119,6 +121,10 @@ struct kona_fb {
 	struct notifier_block die_nb;
 #endif
 	struct delayed_work vsync_smart;
+
+	struct iommu_domain *direct_domain;
+	struct kona_fb_platform_data *fb_data;
+	struct platform_device *pdev;
 };
 
 static struct completion vsync_event;
@@ -288,6 +294,145 @@ static inline void kona_clock_stop(struct kona_fb *fb)
 	fb->display_ops->stop(fb->display_hdl, &fb->dfs_node);
 }
 
+#ifdef CONFIG_IOMMU_API
+static int kona_fb_direct_map(struct kona_fb *fb, size_t framesize_alloc,
+			dma_addr_t phys_fbbase, dma_addr_t dma_addr)
+{
+	struct iommu_domain *domain = NULL;
+	int ret = -ENXIO;
+	struct kona_fb_platform_data *fb_data = fb->fb_data;
+	struct platform_device *pdev = fb->pdev;
+
+	/* 1-to-1 mapping */
+	domain = iommu_domain_alloc(&platform_bus_type);
+	if (NULL == domain)
+		goto fail_alloc;
+
+	if (iommu_attach_device(domain, &pdev->dev)) {
+		ret = -EINVAL;
+		pr_err("%s Attaching dev(%p) to iommu dev(%p) failed\n",
+				"framebuffer", &pdev->dev,
+				&fb_data->pdev_iommu->dev);
+		goto fail_attach;
+	}
+
+	if (iommu_map(domain, dma_addr, phys_fbbase, framesize_alloc,
+				0)) {
+		ret = -EINVAL;
+		pr_err("%s iommu mapping domain(%p) da(%#x) to pa(%#x) size(%#08x) failed\n",
+				"framebuffer", domain, dma_addr,
+				phys_fbbase, framesize_alloc);
+		goto fail_map;
+	}
+
+	fb->direct_domain = domain;
+	pr_info("%s succ\n", __func__);
+	return 0;
+
+fail_map:
+	iommu_detach_device(domain, &pdev->dev);
+fail_attach:
+	iommu_domain_free(domain);
+fail_alloc:
+	pr_err("%s failed ret = %d\n", __func__, ret);
+	return ret;
+}
+
+static int kona_fb_direct_unmap(struct kona_fb *fb,
+			size_t framesize_alloc, dma_addr_t dma_addr)
+{
+	struct iommu_domain *domain = fb->direct_domain;
+	int ret = -ENXIO;
+	struct platform_device *pdev = fb->pdev;
+
+	if (NULL == domain) {
+		pr_err("%s fail, direct_domain NULL\n", __func__);
+		return -EIO;
+	}
+
+	if (iommu_unmap(domain, dma_addr, framesize_alloc) < 0) {
+		ret = -EINVAL;
+		pr_err("kona_fb_direct_unmap fail\n");
+		goto fail;
+	}
+
+	iommu_detach_device(domain, &pdev->dev);
+
+	iommu_domain_free(domain);
+
+	fb->direct_domain = NULL;
+	pr_info("%s succ\n", __func__);
+	return 0;
+
+fail:
+	pr_err("%s failed ret = %d\n", __func__, ret);
+	return ret;
+}
+
+#ifdef CONFIG_BCM_IOVMM
+static int kona_fb_iovmm_map(struct kona_fb *fb, size_t framesize_alloc,
+			dma_addr_t phys_fbbase, dma_addr_t *p_dma_addr)
+{
+	int n_pages, i;
+	struct scatterlist *sg;
+	struct sg_table *table;
+	int ret = -ENXIO;
+	struct dma_iommu_mapping *mapping = NULL;
+	struct kona_fb_platform_data *fb_data = fb->fb_data;
+	struct platform_device *pdev = fb->pdev;
+	dma_addr_t dma_addr;
+
+	if (!fb_data->pdev_iovmm) {
+		ret = -EINVAL;
+		pr_err("%s: iovmm device not set\n", "framebuffer");
+		goto fail;
+	}
+	mapping = platform_get_drvdata(fb_data->pdev_iovmm);
+	arm_iommu_attach_device(&pdev->dev, mapping);
+	pr_info("%s iommu-mapping(%p)\n", "framebuffer", mapping);
+
+	table = kmalloc(sizeof(struct sg_table), GFP_KERNEL);
+	if (!table) {
+		ret = -ENOMEM;
+		pr_err("Unable to allocate fb sgtable\n");
+		goto fail;
+	}
+	n_pages = framesize_alloc >> PAGE_SHIFT;
+
+	i = sg_alloc_table(table, 1, GFP_KERNEL);
+	if (i) {
+		ret = -ENOMEM;
+		pr_err("sg_alloc_table failed\n");
+		goto fail_sg_alloc;
+	}
+	for_each_sg(table->sgl, sg, table->nents, i) {
+		struct page *page =
+			phys_to_page(phys_fbbase);
+		sg_set_page(sg, page, PAGE_SIZE * n_pages, 0);
+	}
+	dma_addr = arm_iommu_map_sgt(&pdev->dev, table, 0);
+	if (dma_addr == DMA_ERROR_CODE) {
+		ret = -EINVAL;
+		pr_err("%16s: Failed iommu map da(%#x) pa(%#x) size(%#x)\n",
+				"framebuffer", dma_addr, phys_fbbase,
+				framesize_alloc);
+		goto fail_map_sgt;
+	}
+
+	*p_dma_addr = dma_addr;
+	pr_info("%s succ\n", __func__);
+	return 0;
+
+fail_map_sgt:
+	sg_free_table(table);
+fail_sg_alloc:
+	kfree(table);
+fail:
+	pr_err("%s failed ret = %d\n", __func__, ret);
+	return ret;
+}
+#endif
+#endif
 
 #ifdef CONFIG_FB_BRCM_CP_CRASH_DUMP_IMAGE_SUPPORT
 static void kona_fb_unpack_565rle(void *dst, void *src, uint32_t image_size,
@@ -851,6 +996,7 @@ static int __init lcd_panel_setup(char *panel)
 }
 __setup("lcd_panel=", lcd_panel_setup);
 
+#ifdef CONFIG_OF
 static struct kona_fb_platform_data * __init get_of_data(struct device_node *np)
 {
 	u32 val;
@@ -1007,6 +1153,7 @@ of_fail:
 alloc_failed:
 	return NULL;
 }
+#endif /* CONFIG_OF */
 
 static char *get_seq(DISPCTRL_REC_T *rec)
 {
@@ -1248,18 +1395,14 @@ static int __ref kona_fb_probe(struct platform_device *pdev)
 	uint32_t width, height;
 	int ret_val = -1;
 	struct kona_fb_platform_data *fb_data;
-	dma_addr_t phys_fbbase, dma_addr;
+	dma_addr_t phys_fbbase, dma_addr, direct_dma_addr;
 	uint64_t pixclock_64;
-#ifdef CONFIG_IOMMU_API
-#ifdef CONFIG_BCM_IOVMM
-	struct dma_iommu_mapping *mapping;
-#else
-	struct iommu_domain *domain;
-#endif /* CONFIG_BCM_IOVMM */
-#endif /* CONFIG_IOMMU_API */
 #ifdef CONFIG_LOGO
 	int logo_rotate;
 #endif
+	uint32_t uboot_phys;
+	void *uboot_kvirt = NULL;
+	int need_map_switch = 0;
 
 	konafb_info("start\n");
 	if (g_kona_fb && (g_kona_fb->is_display_found == 1)) {
@@ -1286,6 +1429,7 @@ static int __ref kona_fb_probe(struct platform_device *pdev)
 		goto fb_dfs_fail;
 	}
 
+#ifdef CONFIG_OF
 	if (pdev->dev.of_node) {
 		fb_data = get_of_data(pdev->dev.of_node);
 		if (!fb_data)
@@ -1293,12 +1437,15 @@ static int __ref kona_fb_probe(struct platform_device *pdev)
 		else /* Save the pointer needed in remove method */
 			pdev->dev.platform_data = fb_data;
 	} else {
+#endif
 		fb_data = pdev->dev.platform_data;
 		if (!fb_data) {
 			ret = -EINVAL;
 			goto fb_data_failed;
 		}
+#ifdef CONFIG_OF
 	}
+#endif
 
 	if (populate_dispdrv_cfg(fb, fb_data))
 		goto dispdrv_data_failed;
@@ -1309,6 +1456,8 @@ static int __ref kona_fb_probe(struct platform_device *pdev)
 
 	spin_lock_init(&fb->lock);
 	platform_set_drvdata(pdev, fb);
+	fb->fb_data = fb_data;
+	fb->pdev = pdev;
 
 	mutex_init(&fb->update_sem);
 	atomic_set(&fb->buff_idx, 0);
@@ -1347,80 +1496,34 @@ static int __ref kona_fb_probe(struct platform_device *pdev)
 		goto err_fbmem_alloc_failed;
 	}
 	dma_addr = phys_fbbase;
+	direct_dma_addr = dma_addr;
 
 #ifdef CONFIG_IOMMU_API
 	pdev->dev.archdata.iommu = &fb_data->pdev_iommu->dev;
 	pr_info("%s iommu-device(%p)\n", "framebuffer",
 			pdev->dev.archdata.iommu);
 #ifdef CONFIG_BCM_IOVMM
-	{
-		int n_pages, i;
-		struct scatterlist *sg;
-		struct sg_table *table;
-
-		if (!fb_data->pdev_iovmm) {
-			ret = -EINVAL;
-			pr_err("%s: iovmm device not set\n", "framebuffer");
-			goto err_set_var_failed;
-		}
-		mapping = platform_get_drvdata(fb_data->pdev_iovmm);
-		arm_iommu_attach_device(&pdev->dev, mapping);
-		pr_info("%s iommu-mapping(%p)\n", "framebuffer", mapping);
-
-		table = kmalloc(sizeof(struct sg_table), GFP_KERNEL);
-		if (!table) {
-			ret = -ENOMEM;
-			pr_err("Unable to allocate fb sgtable\n");
-			goto err_set_var_failed;
-		}
-		n_pages = framesize_alloc >> PAGE_SHIFT;
-
-		i = sg_alloc_table(table, 1, GFP_KERNEL);
-		if (i) {
-			ret = -ENOMEM;
-			pr_err("sg_alloc_table failed\n");
-			kfree(table);
-			goto err_set_var_failed;
-		}
-		for_each_sg(table->sgl, sg, table->nents, i) {
-			struct page *page =
-				phys_to_page(phys_fbbase);
-			sg_set_page(sg, page, PAGE_SIZE * n_pages, 0);
-		}
-		dma_addr = arm_iommu_map_sgt(&pdev->dev, table, 0);
-		if (dma_addr == DMA_ERROR_CODE) {
-			ret = -EINVAL;
-			pr_err("%16s: Failed iommu map da(%#x) pa(%#x) size(%#x)\n",
-					"framebuffer", dma_addr, phys_fbbase,
-					framesize_alloc);
-			sg_free_table(table);
-			kfree(table);
+	need_map_switch = g_display_enabled && fb->display_info->vmode;
+	if (need_map_switch) {
+		/* 1:1 map for uboot logo */
+		ret = kona_fb_direct_map(fb,
+				framesize_alloc, phys_fbbase, direct_dma_addr);
+		if (ret < 0) {
+			pr_err("kona_fb_direct_map failed\n");
 			goto err_set_var_failed;
 		}
 	}
+	ret = kona_fb_iovmm_map(fb, framesize_alloc, phys_fbbase, &dma_addr);
 #else
-	{
-		/* 1-to-1 mapping */
-		domain = iommu_domain_alloc(&platform_bus_type);
-		if (iommu_attach_device(domain, &pdev->dev)) {
-			ret = -EINVAL;
-			pr_err("%s Attaching dev(%p) to iommu dev(%p) failed\n",
-					"framebuffer", &pdev->dev,
-					&fb_data->pdev_iommu->dev);
-			goto err_set_var_failed;
-		}
-		if (iommu_map(domain, dma_addr, phys_fbbase, framesize_alloc,
-					0)) {
-			ret = -EINVAL;
-			pr_err("%s iommu mapping domain(%p) da(%#x) to pa(%#x) size(%#08x) failed\n",
-					"framebuffer", domain, dma_addr,
-					phys_fbbase, framesize_alloc);
-			goto err_set_var_failed;
-		}
-	}
+	ret = kona_fb_direct_map(fb,
+			framesize_alloc, phys_fbbase, direct_dma_addr);
 #endif /* CONFIG_BCM_IOVMM */
 	pr_info("%16s: iommu map da(%#x) pa(%#x) size(%#x)\n",
 			"framebuffer", dma_addr, phys_fbbase, framesize_alloc);
+	if (ret < 0) {
+		pr_err("kona_fb_iommu_mapping failed\n");
+		goto err_set_var_failed;
+	}
 #endif /* CONFIG_IOMMU_API */
 
 	/* Now we should get correct width and height for this display .. */
@@ -1506,18 +1609,48 @@ static int __ref kona_fb_probe(struct platform_device *pdev)
 		goto err_set_var_failed;
 	}
 
-	if (g_display_enabled)
-		fb->display_ops->power_control(fb->display_hdl,
-						CTRL_SCREEN_OFF);
+	if (need_map_switch) {
+		uboot_phys = readl(KONA_AXIPV_VA + REG_CUR_FRAME);
+		uboot_kvirt = ioremap_nocache(uboot_phys, framesize / 2);
+		pr_info("Copy uboot logo to fb, phys 0x%x kvirt 0x%x\n",
+				uboot_phys, (uint32_t)uboot_kvirt);
+		if (uboot_kvirt) {
+			/* memcopy uboot buffer to kernel's buff1 */
+			memcpy(fb->fb.screen_base + (framesize / 2),
+				uboot_kvirt, framesize / 2);
+			iounmap(uboot_kvirt);
+			/* update display with 1:1 map */
+			if (!fb->display_info->vmode)
+				kona_clock_start(fb);
+			ret = fb->display_ops->update(fb->display_hdl,
+				(void *)phys_fbbase +
+				(framesize / 2), NULL, NULL);
+			if (!fb->display_info->vmode)
+				kona_clock_stop(fb);
+			if (ret) {
+				konafb_error("Can not enable the LCD!\n");
+				goto err_fb_register_failed;
+			}
+			/* Wait new buffer. TODO: checking frame end */
+			usleep_range(16666, 16668);
+		}
+	}
 
 #ifdef CONFIG_IOMMU_API
 	if (bcm_iommu_enable(&pdev->dev) < 0)
 		konafb_error("bcm_iommu_enable failed\n");
 #endif
-	/* Paint it black (assuming default fb contents are all zero) */
+
 	if (!fb->display_info->vmode)
 		kona_clock_start(fb);
-	ret = fb->display_ops->update(fb->display_hdl, fb->buff1, NULL, NULL);
+	/* Paint it black (assuming default fb contents are all zero) */
+	/* Or Paint it with the logo uboot has initliased */
+	if (g_display_enabled && !fb->display_info->vmode) {
+		/* Keep the boot display for command display */
+	} else {
+		ret = fb->display_ops->update(fb->display_hdl,
+				fb->buff1, NULL, NULL);
+	}
 	if (ret) {
 		konafb_error("Can not enable the LCD!\n");
 		/* Stop esc_clock in cmd mode since disable_display
@@ -1527,14 +1660,19 @@ static int __ref kona_fb_probe(struct platform_device *pdev)
 		goto err_fb_register_failed;
 	}
 
-	if (g_display_enabled) {
-		usleep_range(16666, 16668); /* To switch to new buffer */
-		usleep_range(16666, 16668); /* To transfer 1 full buffer */
-	}
 	/* Display on after painted blank */
 	fb->display_ops->power_control(fb->display_hdl, CTRL_SCREEN_ON);
 	if (!fb->display_info->vmode)
 		kona_clock_stop(fb);
+
+	if (need_map_switch) {
+		/* To switch to new buffer. TODO: checking frame update end */
+		usleep_range(16666, 16668);
+#ifdef CONFIG_IOMMU_API
+		/* unmap the uboot direct map */
+		kona_fb_direct_unmap(fb, framesize_alloc, direct_dma_addr);
+#endif
+	}
 
 	ret = register_framebuffer(&fb->fb);
 	if (ret) {

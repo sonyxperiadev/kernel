@@ -602,10 +602,10 @@ static int hawaii_camera_power(struct device *dev, int on)
 
 		regulator_enable(d_3v0_mmc1_vcc);
 		usleep_range(1000, 1010);
+		msleep(30);
 #ifdef CONFIG_VIDEO_A3907
 		a3907_enable(1);
 #endif
-		msleep(30);
 	} else {
 #ifdef CONFIG_VIDEO_A3907
 		a3907_enable(0);
@@ -616,6 +616,7 @@ static int hawaii_camera_power(struct device *dev, int on)
 		gpio_set_value(SENSOR_0_GPIO_RST, 0);
 #endif
 #ifdef CONFIG_SOC_CAMERA_OV5648
+		usleep_range(5000, 5100);
 		gpio_set_value(SENSOR_0_GPIO_PWRDN, 0);
 		usleep_range(5000, 5100);
 		gpio_set_value(SENSOR_0_GPIO_RST, 0);

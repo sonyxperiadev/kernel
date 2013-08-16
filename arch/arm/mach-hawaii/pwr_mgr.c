@@ -866,9 +866,9 @@ static int __init hawaii_pwr_mgr_init(void)
 	__clock_init();
 
 #ifdef CONFIG_PWRMGR_1P2GHZ_OPS_SET_SELECT
-	mach_config_a9_pll(CONFIG_A9_PLL_2P4GHZ, update_vlt_tbl);
+	mach_config_arm_pll(CONFIG_A9_PLL_2P4GHZ, update_vlt_tbl);
 #else
-	mach_config_a9_pll(CONFIG_A9_PLL_2GHZ, update_vlt_tbl);
+	mach_config_arm_pll(CONFIG_A9_PLL_2GHZ, update_vlt_tbl);
 #endif
 
 	return 0;

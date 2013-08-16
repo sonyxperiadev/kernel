@@ -336,6 +336,11 @@ config BACKLIGHT_ADP8860
 	  To compile this driver as a module, choose M here: the module will
 	  be called adp8860_bl.
 
+ config TOUCHKEY_BACKLIGHT
+	tristate "backlight driver"
+	help
+        backlight driver.
+
 config BACKLIGHT_ADP8870
 	tristate "Backlight Driver for ADP8870 using WLED"
 	depends on BACKLIGHT_CLASS_DEVICE && I2C
@@ -352,6 +357,11 @@ config BACKLIGHT_KTD259B
         tristate "backlight driver"
         depends on y
         default n
+        help
+        backlight driver
+
+config BACKLIGHT_TPS61158
+        tristate "backlight driver"
         help
         backlight driver
 

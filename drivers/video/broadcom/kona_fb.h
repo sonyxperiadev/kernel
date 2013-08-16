@@ -33,30 +33,65 @@ extern unsigned ramdump_enable;
 #if defined(CONFIG_MACH_HAWAII_SS_LOGANDS) ||	\
 	defined(CONFIG_MACH_HAWAII_SS_LOGAN)
 #include "lcd/logan_nt35510.h"
-#else
-#include "lcd/nt35510.h"
 #endif
+#ifdef CONFIG_LCD_HX8369_CS02_SUPPORT
+#include "lcd/hx8369_cs02.h"
+#endif
+#ifdef CONFIG_LCD_SC7798_CS02_SUPPORT
+#include "lcd/sc7798_cs02.h"
+#endif
+#ifdef CONFIG_LCD_HX8369_SUPPORT
+#include "lcd/hx8369.h"
+#endif
+#ifdef CONFIG_LCD_S6E63M0X_SUPPORT
+#include "lcd/s6e63m0x3.h"
+#endif
+
+#include "lcd/nt35510.h"
 #include "lcd/nt35512.h"
 #include "lcd/nt35516.h"
+#include "lcd/nt35517.h"
 #include "lcd/otm1281a.h"
+#include "lcd/otm1283a.h"
 #include "lcd/otm8018b.h"
 #include "lcd/otm8009a.h"
 #include "lcd/ili9806c.h"
 #include "lcd/hx8389b.h"
+#include "lcd/hx8389_tm.h"
+#include "lcd/hx8379_tm.h"
+#include "lcd/hx8379_hsd.h"
+#include "lcd/nt35512_gp.h"
 #include "lcd/simulator.h"
 #include "lcd/s6e63m0x3.h"
 
-
 static struct lcd_config *cfgs[] __initdata = {
-	&nt35510_cfg,
+#ifdef CONFIG_LCD_HX8369_SUPPORT
+	&hx8369_cfg,
+#endif
+#ifdef CONFIG_LCD_HX8369_CS02_SUPPORT
+	&hx8369_cfg,
+#endif
+#ifdef CONFIG_LCD_SC7798_CS02_SUPPORT
+	&sc7798_cfg,
+#endif
 	&nt35512_cfg,
 	&nt35516_cfg,
+#ifdef CONFIG_LCD_S6E63M0X_SUPPORT
 	&s6e63m0x3_cfg,
+#endif
+
+	&nt35510_cfg,
+	&nt35517_cfg,
 	&otm1281a_cfg,
+	&otm1283a_cfg,
 	&otm8018b_cfg,
 	&otm8009a_cfg,
 	&ili9806c_cfg,
 	&hx8389b_cfg,
+	&hx8389_tm_cfg,
+	&hx8379_tm_cfg,
+	&hx8379_hsd_cfg,
+	&nt35512_gp_cfg,
 	&simulator_cfg,
 };
 

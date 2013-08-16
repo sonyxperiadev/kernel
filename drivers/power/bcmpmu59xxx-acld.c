@@ -753,9 +753,13 @@ static void bcmpmu_acld_periodic_monitor(struct bcmpmu_acld *acld)
 				__func__);
 	}
 
-	if ((!bcmpmu_is_usb_valid(acld)) ||
+	if ((bcmpmu_is_usb_host_enabled(acld->bcmpmu)) &&
+			(!bcmpmu_is_usb_valid(acld)) ||
 			(!bcmpmu_get_ubpd_int(acld))) {
-		bcmpmu_chrg_on_output(acld);
+		bcmpmu_acld_enable(acld, false);
+		acld->acld_en = false;
+		bcmpmu_restore_cc_trim_otp(acld);
+		bcmpmu_set_icc_fc(acld->bcmpmu, acld->pdata->i_def_dcp);
 		pr_acld(FLOW, "%s:USB Fault, start ACLD from scratch\n",
 				__func__);
 		bcmpmu_reset_acld_flags(acld);

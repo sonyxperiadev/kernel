@@ -113,7 +113,8 @@ enum {
 	DSPCtrl_Ioctl_SPSetVar = _IOW('H', 0x31, UserCtrl_data_t),
 	DSPCtrl_Ioctl_SPQuery = _IOR('H', 0x32, UserCtrl_data_t),
 	DSPCtrl_Ioctl_EQCtrl = _IOW('H', 0x33, UserCtrl_data_t),
-	Ctrl_Ioctl_SWEQParm = _IOR('H', 0x34, struct treq_sysparm_t)
+	Ctrl_Ioctl_SWEQParm = _IOR('H', 0x34, struct treq_sysparm_t),
+	Ctrl_Ioctl_FDMBCParm = _IOR('H', 0x35, UserCtrl_data_t)
 };
 
 /*

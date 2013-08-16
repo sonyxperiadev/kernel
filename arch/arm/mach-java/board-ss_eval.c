@@ -2320,7 +2320,7 @@ struct bcm_iovmm_pdata iovmm_mm_256mb_pdata = {
 };
 #endif
 
-#define HS_IRQ		gpio_to_irq(92)
+#define HS_IRQ		gpio_to_irq(121)
 
 static void hawaii_add_pdata(void)
 {

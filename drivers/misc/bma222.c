@@ -1010,7 +1010,7 @@ static int __devinit bma222_accl_probe(struct i2c_client *client,
 	dd->ip_dev->id.vendor = ACCL_VENDORID;
 	dd->ip_dev->id.product = 1;
 	dd->ip_dev->id.version = 1;
-
+	dd->ip_dev->dev.parent = &dd->i2c->dev;
 	set_bit(EV_REL, dd->ip_dev->evbit);
 	/* 32768 == 1g, range -4g ~ +4g */
 	/* acceleration x-axis */

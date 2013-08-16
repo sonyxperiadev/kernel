@@ -169,7 +169,7 @@ void chal_audio_vibra_int_enable(CHAL_HANDLE handle, cUInt16 thr_int_enable, cUI
     }
 
     /* Set the required setting */
-    BRCM_WRITE_REG(base,  AUDIOH_AUDIO_INTC, reg_val);
+    /* BRCM_WRITE_REG(base,  AUDIOH_AUDIO_INTC, reg_val); */
 
     return;
 }

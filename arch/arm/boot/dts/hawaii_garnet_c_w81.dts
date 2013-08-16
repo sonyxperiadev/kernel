@@ -91,6 +91,12 @@
 			compatible = "bcm,isl290xx";
 			reg = <0x44>;
 			gpio-irq-pin = <89>;
+			prox_threshold_hi_param = <97>;
+			prox_threshold_lo_param = <84>;
+			aps_config = <0xd6>;
+			aps_intr = <0x20>;
+			prox_offset_param = <70>;
+			prox_boot_cali = <1>;
 		};
 
 	};
@@ -258,7 +264,7 @@
 		fps = <60>;
 		lanes = <2>;
 		cmnd-LP;		/* Commands in LP mode*/
-		hs-bitrate = <330000000>;
+		hs-bitrate = <333000000>;
 		lp-bitrate = <5000000>;	/* 5mbps */
 		iommu = <&iommu_mm>;
 		iovmm = <&iovmm_mm>;
@@ -276,12 +282,13 @@
 		flags = <0>;
 		interval_ms = <5>;
 		/*critical temp is 115*/
-		thold = <70 65 1
-			85 75 1
-			100 90 1
-			115 112 2>;
+		thold = <70 1
+			85 1
+			100 1
+			115 2>;
 		tmon_apb_clk = "tmon_apb";
 		tmon_1m_clk = "tmon_1m_clk";
+		falling = <5>;
 	};
 
 	memc@35008000 {

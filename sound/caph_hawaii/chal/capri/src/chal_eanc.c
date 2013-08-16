@@ -143,7 +143,7 @@ void chal_audio_eancpath_int_enable(CHAL_HANDLE handle, cUInt16 fifo_int_enable,
     }
 
     /* Set the required setting */
-    BRCM_WRITE_REG(base,  AUDIOH_AUDIO_INTC, reg_val);
+    /* BRCM_WRITE_REG(base,  AUDIOH_AUDIO_INTC, reg_val); */
 
     return;
 }

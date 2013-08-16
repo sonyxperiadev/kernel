@@ -22,12 +22,13 @@ the GPL, without Broadcom's express prior written consent.
 #include <linux/io.h>
 #include <linux/broadcom/mm_fw_hw_ifc.h>
 #include "v3d.h"
+#define v3d_device_t struct _v3d_device_t
 
-typedef struct {
+struct _v3d_device_t {
 	void	*fmwk_handle;
-	int		(*subdev_init[V3D_SUBDEV_COUNT])(MM_CORE_HW_IFC * core_param);
+	int	(*subdev_init[V3D_SUBDEV_COUNT])(MM_CORE_HW_IFC * core_param);
 	void	(*subdev_deinit[V3D_SUBDEV_COUNT])(void);
-} v3d_device_t;
+};
 
 v3d_device_t *v3d_device;
 
@@ -57,8 +58,8 @@ int __init mm_v3d_init(void)
 	for (i = 0; i < V3D_SUBDEV_COUNT; i++) {
 		ret = v3d_device->subdev_init[i](&core_param[i]);
 		if (ret != 0) {
-			pr_err("mm_v3d_init:"
-			"subdev init for %d returned error\n", i);
+			pr_err("mm_v3d_init:" \
+				"subdev init for %d returned error\n", i);
 			goto err1;
 		}
 	}
@@ -66,17 +67,16 @@ int __init mm_v3d_init(void)
 	/*Initialize generice params*/
 	dvfs_param.ON = 1;
 	dvfs_param.MODE = TURBO;
-	dvfs_param.enable_suspend_resume = 0;
-	dvfs_param.T0 = 200;
-	dvfs_param.P0 = 90;
+	dvfs_param.T0 = 0;
+	dvfs_param.P0 = 0;
 	dvfs_param.T1 = 300;
-	dvfs_param.P1 = 90;
-	dvfs_param.P1L = 50;
-	dvfs_param.T2 = 300;
-	dvfs_param.P2 = 90;
-	dvfs_param.P2L = 60;
+	dvfs_param.P1 = 80;
+	dvfs_param.P1L = 0;
+	dvfs_param.T2 = 500;
+	dvfs_param.P2 = 80;
+	dvfs_param.P2L = 45;
 	dvfs_param.T3 = 1000;
-	dvfs_param.P3L = 50;
+	dvfs_param.P3L = 45;
 	dvfs_param.dvfs_bulk_job_cnt = 0;
 	v3d_device->fmwk_handle =
 	mm_fmwk_register(V3D_DEV_NAME,

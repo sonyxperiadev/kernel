@@ -13,7 +13,7 @@
 *
 *****************************************************************************/
 #define MAX_CHARGER_REGISTERS		10
-#define THROTTLE_WORK_POLL_TIME		5000 /* 5 Seconds */
+#define THROTTLE_WORK_POLL_TIME		15000 /* 15 Seconds */
 #define HYSTERESIS_DEFAULT_TEMP		30 /* 3C */
 
 
@@ -23,13 +23,18 @@ struct batt_temp_curr_map {
 	int curr;
 };
 
+struct chrgr_def_trim_reg_data {
+	u32 addr;
+	u8 val;
+};
+
 struct bcmpmu_throttle_pdata {
 	struct batt_temp_curr_map *temp_curr_lut;
 	u32 temp_curr_lut_sz;
 	u8 temp_adc_channel;
 	u8 temp_adc_req_mode;
-	u32 *throttle_backup_reg;
-	u8 throttle_backup_reg_sz;
+	struct chrgr_def_trim_reg_data *chrgr_trim_reg_lut;
+	u32 chrgr_trim_reg_lut_sz;
 	u32 throttle_poll_time;
 	u32 hysteresis_temp;
 };

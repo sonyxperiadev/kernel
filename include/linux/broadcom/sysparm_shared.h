@@ -375,6 +375,16 @@ typedef struct
 	UInt32 treq_gain[NUM_OF_SPEAKER_EQ_BIQUAD*2];
 	UInt32 treq_outbit_sel[2];
 	UInt32 treq_output_gain;
+#ifdef CONFIG_ARCH_JAVA
+	Int16  mbc_cr[3];
+	Int16  mbc_th_adj[3];
+	Int16  fbc_cr[3];
+	Int16  ale_gain[3];
+	Int16  ale_th[3];
+	Int16  ale_scale[3];
+	Int16  hpf_fq[3];
+	Int16  scale;
+#endif
 } SysIndMultimediaAudioParm_t;
 
 #endif /*_SYSPARM_SHARED_H_*/

@@ -292,6 +292,7 @@ int read_sar_adc(struct bcmpmu59xxx *bcmpmu, enum bcmpmu_adc_channel channel,
 	|| defined(CONFIG_MACH_HAWAII_SS_LOGAN_REV02) \
 	|| defined(CONFIG_MACH_HAWAII_SS_LOGANDS_REV00) \
 	|| defined(CONFIG_MACH_HAWAII_SS_LOGANDS_REV01) \
+	|| defined(CONFIG_MACH_HAWAII_SS_CS02_REV00) \
 	|| defined(CONFIG_MACH_HAWAII_SS_GOLDENVE_REV01) \
 	|| defined(CONFIG_MACH_HAWAII_SS_GOLDENVE_REV02) \
 	|| defined(CONFIG_MACH_HAWAII_SS_GOLDENVEN_REV01) \

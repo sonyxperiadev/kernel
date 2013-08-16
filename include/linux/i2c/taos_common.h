@@ -24,6 +24,7 @@
 #define TAOS_IOCTL_SENSOR_CHECK	_IO(TAOS_IOCTL_MAGIC, 15)
 #define TAOS_IOCTL_SENSOR_test	_IO(TAOS_IOCTL_MAGIC, 16)
 
+#define TMD2771_USER_CALIBRATION
 struct taos_cfg {
 	u32 calibrate_target;
 	u16 als_time;
@@ -34,6 +35,10 @@ struct taos_cfg {
 	u8 gain;
 	u16 prox_threshold_hi;
 	u16 prox_threshold_lo;
+#ifdef TMD2771_USER_CALIBRATION
+	u16 prox_threshold_hi_def;
+	u16 prox_threshold_lo_def;
+#endif
 	u16 als_threshold_hi;
 	u16 als_threshold_lo;
 	u8 prox_int_time;
@@ -44,6 +49,11 @@ struct taos_cfg {
 	u8 prox_pulse_cnt;
 	u8 prox_gain;
 	u32 prox_win_sw;
+#ifdef TMD2771_USER_CALIBRATION
+	u16 prox_offset;
+	u16 prox_boot_cali;
+#endif
+
 };
 
 struct taos_prox_info {

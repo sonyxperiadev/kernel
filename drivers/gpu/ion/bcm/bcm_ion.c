@@ -30,9 +30,9 @@
 #include <linux/of_platform.h>
 #ifdef CONFIG_OF
 #include <linux/of.h>
+#endif /* CONFIG_OF */
 #include <asm/dma-contiguous.h>
 #include <linux/dma-mapping.h>
-#endif /* CONFIG_OF */
 #ifdef CONFIG_IOMMU_API
 #include <linux/iommu.h>
 #endif

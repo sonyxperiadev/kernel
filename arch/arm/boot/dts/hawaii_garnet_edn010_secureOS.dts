@@ -319,7 +319,7 @@
 		fps = <60>;
 		lanes = <2>;
 		cmnd-LP;		/* Commands in LP mode*/
-		hs-bitrate = <330000000>;
+		hs-bitrate = <333000000>;
 		lp-bitrate = <7000000>;	/* 7mbps */
 		iommu = <&iommu_mm>;
 		iovmm = <&iovmm_mm>;
@@ -346,7 +346,7 @@
 		fps = <60>;
 		lanes = <2>;
 		cmnd-LP;		/* Commands in LP mode*/
-		hs-bitrate = <330000000>;
+		hs-bitrate = <333000000>;
 		lp-bitrate = <8000000>;	/* 8mbps */
 		iommu = <&iommu_mm>;
 		iovmm = <&iovmm_mm>;
@@ -363,11 +363,13 @@
 		hysteresis = <0>;
 		flags = <0>;
 		interval_ms = <5>;
-		thold = <80 75 1
-			90 85 1
-			100 95 2>;
+		/*critical temp is 115*/
+		thold = <85 1
+			100 1
+			115 2>;
 		tmon_apb_clk = "tmon_apb";
 		tmon_1m_clk = "tmon_1m_clk";
+		falling = <5>;
 	};
 
 	memc@35008000 {
@@ -475,7 +477,7 @@
 	};
 
 	mobicore {
-                mobicore-base = <0x8fd00000>;
+                mobicore-base = <0x9d800000>;
                 mobicore-size = <0x300000>;
         };
 

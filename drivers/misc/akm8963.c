@@ -38,6 +38,7 @@
 #ifdef CONFIG_HAS_EARLYSUSPEND
 #include <linux/earlysuspend.h>
 #endif
+#define I2C_RETRY_DELAY 5
 #define AKM8963_DEBUG     0
 
 #if AKM8963_DEBUG
@@ -141,16 +142,21 @@ static int akm8963_i2c_check_device(struct i2c_client *client)
 {
 	unsigned char buffer[2];
 	int err;
-
+	int i;
+	err = 0;
 	/* Set measure mode */
 	buffer[0] = AK8963_REG_WIA;
-	err = akm8963_i2c_rxdata(client, buffer, 1);
-	if (err < 0) {
-		dev_err(&client->dev,
-			"[akm8963]%s: Can not read WIA.\n", __func__);
-		return err;
+	for (i = 0; i < 20; i++) {
+		err = akm8963_i2c_rxdata(client, buffer, 1);
+		if (err < 0) {
+			dev_err(&client->dev,
+				"[akm8963]%s: Can not read WIA.\n", __func__);
+			msleep_interruptible(I2C_RETRY_DELAY);
+		} else {
+			pr_info("[akm8963] read WIA with tries %d\n", i);
+			break;
+		}
 	}
-
 	/* Check read data */
 	if (buffer[0] != 0x48) {
 		dev_err(&client->dev,
@@ -346,14 +352,12 @@ static void AKECS_SetYPR(struct akm8963_data *akm, int *rbuf)
 	mutex_unlock(&akm->val_mutex);
 
 	/* Report acceleration sensor information */
-	/*
 	   if (ready & ACC_DATA_READY) {
 	   input_report_abs(akm->input, ABS_X, rbuf[1]);
 	   input_report_abs(akm->input, ABS_Y, rbuf[2]);
 	   input_report_abs(akm->input, ABS_Z, rbuf[3]);
 	   input_report_abs(akm->input, ABS_THROTTLE, rbuf[4]);
 	   }
-	 */
 	/* Report magnetic vector information */
 	if (ready & MAG_DATA_READY) {
 		input_report_abs(akm->input, ABS_RX, rbuf[5]);
@@ -1313,21 +1317,39 @@ int akm8963_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	}
 	pdata = client->dev.platform_data;
 	if (pdata) {
-		FUNCDBG("[akm8963]Set layout information.\n");
+		pr_info("[akm8963]Set layout information.\n");
 		s_akm->layout = pdata->layout;
 		s_akm->outbit = pdata->outbit;
 		s_akm->rstn = pdata->gpio_RST;
 	} else {
 		if (client->dev.of_node) {
 			np = client->dev.of_node;
-			if (of_property_read_u32(np, "gpio_RST", &val))
+			if (of_property_read_u32(np, "gpio-irq-pin", &val)) {
+				pr_err("akm8963: irq is not set in dts\n");
 				goto err_read;
-			s_akm->rstn = val;
-			if (of_property_read_u32(np, "layout", &val))
-				goto err_read;
-			if (of_property_read_u32(np, "outbit", &val))
-				goto err_read;
-			s_akm->outbit = val;
+			}
+			s_akm->irq = gpio_to_irq(val);
+			if (of_property_read_u32(np, "gpio_RST", &val)) {
+				pr_info("akm8963: rst is not set in dts\n");
+				s_akm->rstn = 0;
+			} else {
+				pr_info("akm8963: rst:%d\n", val);
+				s_akm->rstn = val;
+			}
+			if (of_property_read_u32(np, "layout", &val)) {
+				pr_info("akm8963: layout is not set in dts\n");
+				s_akm->layout = 1;
+			} else {
+				pr_info("akm8963: layout:%d\n", val);
+				s_akm->layout = val;
+			}
+			if (of_property_read_u32(np, "outbit", &val)) {
+				pr_info("akm8963: no loutbit config\n");
+				s_akm->outbit = 1;
+			} else {
+				pr_info("akm8963: outbit:%d\n", val);
+				s_akm->outbit = val;
+			}
 		} else
 			FUNCDBG("[akm8963]Set layout fail!!!\n");
 	}
@@ -1369,8 +1391,7 @@ int akm8963_probe(struct i2c_client *client, const struct i2c_device_id *id)
 		s_akm->delay[i] = -1;
 
 	/***** IRQ setup *****/
-	s_akm->irq = client->irq;
-	FUNCDBG("[akm8963] IRQ setup [irq]==%d.\n", s_akm->irq);
+	pr_info("[akm8963] IRQ setup [irq]==%d.\n", s_akm->irq);
 	if (s_akm->irq == 0) {
 		FUNCDBG("[akm8963]%s: IRQ is not set.\n");
 		/* Use timer to notify measurement end */
@@ -1457,9 +1478,9 @@ static const struct dev_pm_ops akm8963_pm_ops = {
 static const struct of_device_id akm8963_of_match[] = {
 	{.compatible = "bcm,akm8963",},
 	{},
-}
+};
 
-MODULE_DEVICE_TABLE(of, ami_of_match);
+MODULE_DEVICE_TABLE(of, akm8963_of_match);
 
 static struct i2c_driver akm8963_driver = {
 	.probe = akm8963_probe,

@@ -468,7 +468,8 @@ MODULE_PARM_DESC(channel_flag, "Channels allowed bit-fields [L|C/R|T]");
 #define BCMTCH_EVENT_FLAG_ORIENTATION		0x00000008
 
 static int bcmtch_event_flag = BCMTCH_EVENT_FLAG_TOUCH_SIZE
-		| BCMTCH_EVENT_FLAG_ORIENTATION;
+		| BCMTCH_EVENT_FLAG_ORIENTATION
+		| BCMTCH_EVENT_FLAG_PRESSURE;
 
 module_param_named(event_flag, bcmtch_event_flag, int, S_IRUGO);
 MODULE_PARM_DESC(event_flag, "Extension events bit-fields [ORIEN|PRESSURE|TOOL_SIZE|TOUCH_SIZE]");

@@ -178,12 +178,13 @@
 		hysteresis = <0>;
 		flags = <1>;
 		interval_ms = <5>;
-		thold = <70 65 1
-			80 75 1
-			90 85 1
-			100 95 2>;
+		thold = <70 1
+			80 1
+			90 1
+			100 2>;
 		tmon_apb_clk = "tmon_apb";
 		tmon_1m_clk = "tmon_1m_clk";
+		falling = <5>;
 	};
 
 	memc@35008000 {

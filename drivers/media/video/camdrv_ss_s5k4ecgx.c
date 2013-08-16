@@ -26,6 +26,7 @@
 #include <mach/clock.h>
 #include <camdrv_ss.h>
 #include <camdrv_ss_s5k4ecgx.h>           
+#include <linux/module.h>
 
 #define S5K4ECGX_NAME	"s5k4ecgx"
 #define SENSOR_ID 2
@@ -85,6 +86,7 @@ static struct regulator *VCAM_AF_2_8V;
 #if defined(CONFIG_MACH_HAWAII_SS_LOGAN_REV02) \
 	|| defined(CONFIG_MACH_HAWAII_SS_LOGANDS_REV00) \
 	|| defined(CONFIG_MACH_HAWAII_SS_LOGANDS_REV01) \
+	|| defined(CONFIG_MACH_HAWAII_SS_CS02_REV00) \
 	|| defined(CONFIG_MACH_JAVA_SS_EVAL)
 #define VCAM_A_2_8V_REGULATOR		"mmcldo1"
 #define VCAM_IO_1_8V_REGULATOR		"lvldo1"
@@ -3148,7 +3150,7 @@ void  camdrv_ss_s5k4ecgx_set_camera_vendorid (char *rear_camera_vendorid)
 }
 
 //END code
-bool camdrv_ss_sensor_init_main(bool bOn, struct camdrv_ss_sensor_cap *sensor)
+bool camdrv_ss_sensor_functions_s5k4ecgx(struct camdrv_ss_sensor_cap *sensor)
 {
 
 	strcpy(sensor->name,S5K4ECGX_NAME);
@@ -3716,8 +3718,11 @@ bool camdrv_ss_sensor_init_main(bool bOn, struct camdrv_ss_sensor_cap *sensor)
 	sensor->rows_num_vt_mode_regs     = ARRAY_SIZE(s5k4ecgx_vt_mode_regs);
         sensor->main_flash_off_regs    =       s5k4ecgx_Main_Flash_End_EVT1;
         sensor->rows_num_main_flash_off_regs  = ARRAY_SIZE(s5k4ecgx_Main_Flash_End_EVT1);
-#if defined(CONFIG_MACH_HAWAII_SS_LOGAN) || defined(CONFIG_MACH_HAWAII_SS_LOGANDS) || defined(CONFIG_MACH_HAWAII_SS_GOLDENVEN)        
-  sensor->Pre_Flash_Start_EVT1 = s5k4ecgx_Pre_Flash_Start_EVT1;
+#if defined(CONFIG_MACH_HAWAII_SS_LOGAN) || \
+defined(CONFIG_MACH_HAWAII_SS_LOGANDS) || \
+defined(CONFIG_MACH_HAWAII_SS_CS02) || \
+defined(CONFIG_MACH_HAWAII_SS_GOLDENVEN)
+	sensor->Pre_Flash_Start_EVT1 = s5k4ecgx_Pre_Flash_Start_EVT1;
 	sensor->rows_num_Pre_Flash_Start_EVT1     = ARRAY_SIZE(s5k4ecgx_Pre_Flash_Start_EVT1);
 	sensor->Pre_Flash_End_EVT1 = s5k4ecgx_Pre_Flash_End_EVT1;
 	sensor->rows_num_Pre_Flash_End_EVT1     = ARRAY_SIZE(s5k4ecgx_Pre_Flash_End_EVT1);
@@ -3748,3 +3753,38 @@ bool camdrv_ss_sensor_init_main(bool bOn, struct camdrv_ss_sensor_cap *sensor)
 
 	return true;
 };
+
+int camdrv_ss_read_device_id_s5k4ecgx(
+		struct i2c_client *client, char *device_id)
+{
+	int ret = -1;
+	/* NEED to WRITE THE I2c REad code to read the deviceid */
+	return 0;
+}
+
+static int __init camdrv_ss_s5k4ecgx_mod_init(void)
+{
+	struct camdrv_ss_sensor_reg sens;
+
+	strncpy(sens.name, S5K4ECGX_NAME, sizeof(S5K4ECGX_NAME));
+	sens.sensor_functions = camdrv_ss_sensor_functions_s5k4ecgx;
+	sens.sensor_power = camdrv_ss_s5k4ecgx_sensor_power;
+	sens.read_device_id = camdrv_ss_read_device_id_s5k4ecgx;
+#ifdef CONFIG_SOC_CAMERA_MAIN_S5K4ECGX
+	sens.isMainSensor = 1;
+#endif
+
+#ifdef CONFIG_SOC_CAMERA_SUB_S5K4ECGX
+	sens.isMainSensor = 0;
+#endif
+	camdrv_ss_sensors_register(&sens);
+
+}
+
+module_init(camdrv_ss_s5k4ecgx_mod_init);
+
+MODULE_DESCRIPTION("SAMSUNG CAMERA SENSOR S5K4ECGX ");
+MODULE_AUTHOR("Samsung");
+MODULE_LICENSE("GPL");
+
+

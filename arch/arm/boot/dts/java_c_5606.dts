@@ -113,12 +113,12 @@
 			gpio-irq-pin = <73>;
 			gpio-reset-pin = <70>;
 			gpio-wakeup-pin = <70>;
-			x-max-value = <540>;
-			y-max-value = <960>;
+			x-max-value = <480>;
+			y-max-value = <854>;
 			use-irq = <1>;
 			power = "camldo2";
 			auto_update_fw = <0>;
-			vkey_scope = "0x01:139:120:1010:160:80:0x01:102:240:1010:160:80:0x01:158:360:1010:160:80\n";
+			vkey_scope = "0x01:139:80:900:160:80:0x01:102:240:900:160:80:0x01:158:400:900:160:80\n";
 		};
 	};
 
@@ -172,7 +172,7 @@
 	ion-config {
 		compatible = "bcm,ion-config";
 		/* No separate mask needed for hwwr if M4U is enabled */
-		mask_hwwr = <0>;
+		/* mask_hwwr = <0>; */
 	};
 
 	ion-system {
@@ -258,7 +258,7 @@
 	};
 
 	kona-fb {
-		module-name = "HX8389B";
+		module-name = "HX8379_HSD";
 		reg-name = "cam2";
 		rst-gpio = <22>;
 		rst-setup = <700>;	/* 700us */
@@ -266,8 +266,8 @@
 		rst-hold = <10000>;	/* 2ms */
 		col-mod-i = <3>;
 		col-mod-o = <2>;
-		width = <540>;
-		height = <960>;
+		width = <480>;
+		height = <854>;
 		/* rst-active-high */	/* Commented => Active Low */
 		vmode;
 		/* vburst */	/* Non-burst mode */
@@ -275,12 +275,37 @@
 		fps = <60>;
 		lanes = <2>;
 		cmnd-LP;		/* Commands in LP mode*/
-		hs-bitrate = <420000000>;
+		hs-bitrate = <352000000>;
 		lp-bitrate = <5000000>;	/* 5mbps */
 		iommu = <&iommu_mm>;
 		iovmm = <&iovmm_mm>;
 		rotation = <0>;
 		ulps;
+	};
+
+	kona-fb-2 {
+		module-name = "NT35512_GP";
+		reg-name = "cam2";
+		rst-gpio = <22>;
+		rst-setup = <700>;	/* 700us */
+		rst-pulse = <20>;	/* 10us */
+		rst-hold = <10000>;	/* 2ms */
+		col-mod-i = <3>;
+		col-mod-o = <2>;
+		width = <480>;
+		height = <854>;
+		/* rst-active-high */	/* Commented => Active Low */
+		vmode;
+		/* vburst */	/* Non-burst mode */
+		/* te-ctrl; */		/* Tearing Effect Control disabled */
+		fps = <60>;
+		lanes = <2>;
+		cmnd-LP;		/* Commands in LP mode*/
+		hs-bitrate = <333000000>;
+		lp-bitrate = <8000000>;	/* 5mbps */
+		iommu = <&iommu_mm>;
+		iovmm = <&iovmm_mm>;
+		rotation = <0>;
 	};
 
 	tmon@0x34008000 {
@@ -294,13 +319,14 @@
 		flags = <0>;
 		interval_ms = <5>;
 		/*sw shdwn temp is 120*/
-		thold = <85 75 1
-			95 90 1
-			105 100 1
-			120 115 4
-			125 123 2>;
+		thold = <85 1
+			95 1
+			105 1
+			120 4
+			125 2>;
 		tmon_apb_clk = "tmon_apb";
 		tmon_1m_clk = "tmon_1m_clk";
+		falling = <5>; /*fall back temperature offset*/
 	};
 
 	memc@35008000 {

@@ -344,7 +344,7 @@ static SSPI_hw_status_t SSPI_hw_i2s_init(CSL_HANDLE handle,
 {
 	uint32_t frmMask = 1;
 	CHAL_SSPI_PROT_t prot;
-	uint32_t dword_sz, sample_len, seq_idx, div;
+	uint32_t dword_sz, sample_len, seq_idx;
 
 	if (config->prot == SSPI_HW_I2S_MODE1)
 		prot = SSPI_PROT_I2S_MODE1;

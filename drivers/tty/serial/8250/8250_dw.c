@@ -419,6 +419,7 @@ static int dw8250_probe(struct platform_device *pdev)
 	struct dw8250_data *data;
 	int err;
 
+#ifdef CONFIG_OF
 	if (!regs || !irq) {
 		dev_err(&pdev->dev, "no registers/irq defined\n");
 		return -EINVAL;
@@ -492,6 +493,16 @@ static int dw8250_probe(struct platform_device *pdev)
 		return data->line;
 
 	platform_set_drvdata(pdev, data);
+#else /* CONFIG_OF is not defined */
+	/*
+	 * The control comes here, if CONFIG_OF i.e
+	 * Device Tree is not used and also platform data is
+	 * NULL. This is an error condition.
+	 */
+	pr_err("%s(): No DT and platform Data is NULL, can't proceed \r\n",
+		__func__);
+	return -EINVAL;
+#endif /* CONFIG_OF */
 
 	pm_runtime_set_active(&pdev->dev);
 	pm_runtime_enable(&pdev->dev);

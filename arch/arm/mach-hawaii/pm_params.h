@@ -26,7 +26,7 @@
 #define VLT_ID_OFF		0x0
 #define VLT_ID_RETN		0x1
 #define VLT_ID_WAKEUP		0x2
-#define VLT_ID_A9_26M_WFI	0x7
+#define VLT_ID_A9_SYSPLL_WFI	0x7
 #define VLT_ID_A9_ECO		0x8
 #define VLT_ID_OTHER_ECO	0x9
 #define VLT_ID_A9_NORMAL	0xA
@@ -38,38 +38,18 @@
 
 #define ACTIVE_VOLTAGE_OFFSET	7
 
-#define INIT_A9_VLT_TABLE(WFI, ECO, NM, TURBO, STURBO) \
-				[VLT_ID_A9_26M_WFI] = WFI,\
-				[VLT_ID_A9_ECO] = ECO, \
-				[VLT_ID_A9_NORMAL] = NM, \
-				[VLT_ID_A9_TURBO] = TURBO, \
-				[VLT_ID_A9_SUPER_TURBO] = STURBO
-
-#define INIT_OTHER_VLT_TABLE(ECO, NM, TURBO, STURBO) \
-				[VLT_ID_OTHER_ECO] = ECO, \
-				[VLT_ID_OTHER_NORMAL] = NM, \
-				[VLT_ID_OTHER_TURBO] = TURBO, \
-				[VLT_ID_OTHER_SUPER_TURBO] = STURBO
-
-#define INIT_LPM_VLT_IDS(off, ret, wakeup) \
-				[VLT_ID_OFF]	= off, \
-				[VLT_ID_RETN]	= ret, \
-				[VLT_ID_WAKEUP]	= wakeup
-
-#define INIT_UNUSED_VLT_IDS(init_val) \
-				[0x3] =		init_val, \
-				[0x4] =		init_val, \
-				[0x5] =		init_val, \
-				[0x6] =		init_val,
-
 #define A9_FREQ_NORMAL_DIV	4
 #define A9_FREQ_TURBO_DIV	3
 
 #define PROC_CCU_FREQ_ID_XTAL		0
+#define PROC_CCU_FREQ_ID_52MHZ		1
+#define PROC_CCU_FREQ_ID_156MHZ		2
 #define PROC_CCU_FREQ_ID_ECO		4
 #define PROC_CCU_FREQ_ID_NRML		6
 #define PROC_CCU_FREQ_ID_TURBO		6
 #define PROC_CCU_FREQ_ID_SUPER_TURBO	7
+
+#define CPU_FREQ_ID_SYSPLL_WFI		PROC_CCU_FREQ_ID_ECO
 
 #define MM_CCU_FREQ_ID_ECO		2
 #define MM_CCU_FREQ_ID_NRML		4
@@ -94,11 +74,68 @@
 #define VLT_NORMAL_PERI_MDM	VLT_ID_OTHER_ECO
 #define VLT_HIGH_PERI_MDM	VLT_ID_OTHER_NORMAL
 
+#if (CPU_FREQ_ID_SYSPLL_WFI < PROC_CCU_FREQ_ID_ECO)
+#define INIT_A9_VLT_TABLE(WFI, ECO, NM, TURBO, STURBO) \
+				[VLT_ID_A9_SYSPLL_WFI] = WFI,\
+				[VLT_ID_A9_ECO] = ECO, \
+				[VLT_ID_A9_NORMAL] = NM, \
+				[VLT_ID_A9_TURBO] = TURBO, \
+				[VLT_ID_A9_SUPER_TURBO] = STURBO
+#else
+#define INIT_A9_VLT_TABLE(WFI, ECO, NM, TURBO, STURBO) \
+				[VLT_ID_A9_SYSPLL_WFI] = ECO,\
+				[VLT_ID_A9_ECO] = ECO, \
+				[VLT_ID_A9_NORMAL] = NM, \
+				[VLT_ID_A9_TURBO] = TURBO, \
+				[VLT_ID_A9_SUPER_TURBO] = STURBO
+#endif
 
+#define INIT_OTHER_VLT_TABLE(ECO, NM, TURBO, STURBO) \
+				[VLT_ID_OTHER_ECO] = ECO, \
+				[VLT_ID_OTHER_NORMAL] = NM, \
+				[VLT_ID_OTHER_TURBO] = TURBO, \
+				[VLT_ID_OTHER_SUPER_TURBO] = STURBO
+
+#define INIT_LPM_VLT_IDS(off, ret, wakeup) \
+				[VLT_ID_OFF]	= off, \
+				[VLT_ID_RETN]	= ret, \
+				[VLT_ID_WAKEUP]	= wakeup
+
+#define INIT_UNUSED_VLT_IDS(init_val) \
+				[0x3] =		init_val, \
+				[0x4] =		init_val, \
+				[0x5] =		init_val, \
+				[0x6] =		init_val,
+
+#ifdef CONFIG_CPU_SYSPLL_WFI_CSTATE
+#if (CPU_FREQ_ID_SYSPLL_WFI == PROC_CCU_FREQ_ID_XTAL)
 #define PROC_CCU_FREQ_VOLT_TBL	\
-		ARRAY_LIST(VLT_ID_A9_26M_WFI, VLT_ID_A9_ECO,\
+		ARRAY_LIST(VLT_ID_A9_SYSPLL_WFI, VLT_ID_A9_ECO,\
 			VLT_ID_A9_ECO, VLT_ID_A9_ECO, VLT_ID_A9_ECO,\
 			VLT_ID_A9_ECO, VLT_ID_A9_TURBO, VLT_ID_A9_SUPER_TURBO)
+#elif (CPU_FREQ_ID_SYSPLL_WFI == PROC_CCU_FREQ_ID_52MHZ)
+#define PROC_CCU_FREQ_VOLT_TBL	\
+		ARRAY_LIST(VLT_ID_A9_ECO, VLT_ID_A9_SYSPLL_WFI,\
+			VLT_ID_A9_ECO, VLT_ID_A9_ECO, VLT_ID_A9_ECO,\
+			VLT_ID_A9_ECO, VLT_ID_A9_TURBO, VLT_ID_A9_SUPER_TURBO)
+#elif (CPU_FREQ_ID_SYSPLL_WFI == PROC_CCU_FREQ_ID_156MHZ)
+#define PROC_CCU_FREQ_VOLT_TBL	\
+		ARRAY_LIST(VLT_ID_A9_ECO, VLT_ID_A9_ECO,\
+			VLT_ID_A9_SYSPLL_WFI, VLT_ID_A9_ECO, VLT_ID_A9_ECO,\
+			VLT_ID_A9_ECO, VLT_ID_A9_TURBO, VLT_ID_A9_SUPER_TURBO)
+#elif (CPU_FREQ_ID_SYSPLL_WFI == PROC_CCU_FREQ_ID_ECO)
+#define PROC_CCU_FREQ_VOLT_TBL	\
+		ARRAY_LIST(VLT_ID_A9_ECO, VLT_ID_A9_ECO,\
+			VLT_ID_A9_ECO, VLT_ID_A9_ECO, VLT_ID_A9_ECO,\
+			VLT_ID_A9_ECO, VLT_ID_A9_TURBO, VLT_ID_A9_SUPER_TURBO)
+#endif /* CPU_FREQ_ID_SYSPLL_WFI */
+#else /* !defined(CONFIG_CPU_SYSPLL_WFI_CSTATE) */
+#define PROC_CCU_FREQ_VOLT_TBL	\
+		ARRAY_LIST(VLT_ID_A9_ECO, VLT_ID_A9_ECO,\
+			VLT_ID_A9_ECO, VLT_ID_A9_ECO, VLT_ID_A9_ECO,\
+			VLT_ID_A9_ECO, VLT_ID_A9_TURBO, VLT_ID_A9_SUPER_TURBO)
+#endif /* CONFIG_CPU_SYSPLL_WFI_CSTATE */
+
 #define PROC_CCU_FREQ_VOLT_TBL_SZ	8
 
 #define MM_CCU_FREQ_VOLT_TBL	\
@@ -224,7 +261,7 @@ enum {
 #define CONFIG_A9_PLL_2P8GHZ	3
 /*Wake up PM policy*/
 #define PM_WKP          7
-int mach_config_a9_pll(int turbo_val, int update_volt_tbl);
+int mach_config_arm_pll(int turbo_val, int update_volt_tbl);
 
 #endif	/*__PM_PARAMS_H__*/
 

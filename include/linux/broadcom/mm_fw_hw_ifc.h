@@ -44,10 +44,6 @@ the GPL, without Broadcom's express prior written consent.
 #include <plat/clock.h>
 #include <linux/workqueue.h>
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-#include <linux/earlysuspend.h>
-#endif
-
 #include "mm_fw_usr_ifc.h"
 
 #define MAX_ASYMMETRIC_PROC (16)
@@ -85,7 +81,6 @@ struct mm_reg_value {
 
 struct mm_dvfs_hw_ifc {
 	bool ON;
-	bool enable_suspend_resume;
 	dvfs_mode_e MODE; /* When DVFS is off,
 					this mode will be chosen */
 	unsigned int dvfs_bulk_job_cnt;

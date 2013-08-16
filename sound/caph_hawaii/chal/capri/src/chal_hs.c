@@ -163,7 +163,7 @@ void chal_audio_hspath_int_enable(CHAL_HANDLE handle, cUInt16 thr_int_enable,
 		reg_val &= ~AUDIOH_AUDIO_INTC_STEREO_FIFO_ERRINT_EN_MASK;
 
 	/* Set the required setting */
-	BRCM_WRITE_REG(base,  AUDIOH_AUDIO_INTC, reg_val);
+	/* BRCM_WRITE_REG(base,  AUDIOH_AUDIO_INTC, reg_val); */
 
 	return;
 }

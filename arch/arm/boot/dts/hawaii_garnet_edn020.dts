@@ -334,6 +334,7 @@
 		lanes = <4>;
 		hs-bitrate = <400000000>;
 		lp-bitrate = <5000000>;	/* 5mbps */
+		desense-offset = <2400000>;  /* +2.4Mbps */
 		iommu = <&iommu_mm>;
 		iovmm = <&iovmm_mm>;
 		rotation = <180>;
@@ -359,8 +360,9 @@
 		fps = <60>;
 		lanes = <2>;
 		cmnd-LP;		/* Commands in LP mode*/
-		hs-bitrate = <330000000>;
+		hs-bitrate = <333000000>;
 		lp-bitrate = <8000000>;	/* 8mbps */
+		desense-offset = <2400000>;  /* +2.4Mbps */
 		iommu = <&iommu_mm>;
 		iovmm = <&iovmm_mm>;
 		rotation = <180>;
@@ -377,13 +379,14 @@
 		flags = <0>;
 		interval_ms = <5>;
 		/*sw shdwn temp is 120*/
-		thold = <85 75 1
-			95 90 1
-			105 100 1
-			120 115 4
-			125 123 2>;
+		thold = <85 1
+			95 1
+			105 1
+			120 4
+			125 2>;
 		tmon_apb_clk = "tmon_apb";
 		tmon_1m_clk = "tmon_1m_clk";
+		falling = <5>;
 	};
 
 	memc@35008000 {

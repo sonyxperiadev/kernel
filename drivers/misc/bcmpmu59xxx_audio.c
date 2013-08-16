@@ -590,6 +590,116 @@ static void bcmpmu_ihf_manual_power(bool on)
 	mutex_unlock(&pmu_audio->lock);
 }
 
+void bcmpmu_enable_alc(bool on)
+{
+	struct bcmpmu59xxx *bcmpmu;
+	u8 reg;
+	if (!pmu_audio)
+		return;
+	bcmpmu = pmu_audio->bcmpmu;
+	pr_audio(FLOW, "%s: ON = %d\n", __func__, on);
+	mutex_lock(&pmu_audio->lock);
+	bcmpmu->read_dev(bcmpmu, PMU_REG_IHFALC1, &reg);
+	if (on) {
+		reg |= IHF_ALC_PUP_MASK;
+		reg &= ~IHFALC1_IHFALC_BYP;
+	} else {
+		reg &= ~IHF_ALC_PUP_MASK;
+		reg |=  IHFALC1_IHFALC_BYP;
+	}
+	bcmpmu->write_dev(bcmpmu, PMU_REG_IHFALC1, reg);
+	mutex_unlock(&pmu_audio->lock);
+}
+EXPORT_SYMBOL(bcmpmu_enable_alc);
+
+void bcmpmu_ihf_alc_vbat_ref(bool on)
+{
+	struct bcmpmu59xxx *bcmpmu;
+	u8 reg;
+	if (!pmu_audio)
+		return;
+	bcmpmu = pmu_audio->bcmpmu;
+	pr_audio(FLOW, "%s: ON = %d\n", __func__, on);
+	mutex_lock(&pmu_audio->lock);
+	bcmpmu->read_dev(bcmpmu, PMU_REG_IHFALC1, &reg);
+	if (on)
+		reg |= IHF_ALC_VBAT_REF_MASK;
+	else
+		reg &= ~IHF_ALC_VBAT_REF_MASK;
+	bcmpmu->write_dev(bcmpmu, PMU_REG_IHFALC1, reg);
+	mutex_unlock(&pmu_audio->lock);
+}
+EXPORT_SYMBOL(bcmpmu_ihf_alc_vbat_ref);
+
+void bcmpmu_ihf_alc_thld(enum ihf_alc_thld alc_thld)
+{
+	struct bcmpmu59xxx *bcmpmu;
+	u8 reg;
+	if (!pmu_audio)
+		return;
+	bcmpmu = pmu_audio->bcmpmu;
+	pr_audio(FLOW, "%s: param %d\n", __func__, alc_thld);
+	if ((alc_thld << IHFALC2_THLD_SHIFT) >
+		IHFALC2_THLD_MASK) {
+		pr_audio(ERROR, "%s: Invalid param %d\n",
+			__func__, alc_thld);
+	} else {
+		mutex_lock(&pmu_audio->lock);
+		bcmpmu->read_dev(bcmpmu, PMU_REG_IHFALC2, &reg);
+		reg &= ~IHFALC2_THLD_MASK;
+		reg |= (alc_thld << IHFALC2_THLD_SHIFT);
+		bcmpmu->write_dev(bcmpmu, PMU_REG_IHFALC2, reg);
+		mutex_unlock(&pmu_audio->lock);
+	}
+}
+EXPORT_SYMBOL(bcmpmu_ihf_alc_thld);
+
+void bcmpmu_ihf_alc_rampup_ctrl(enum ihf_alc_ramp_up_ctrl ctrl)
+{
+	struct bcmpmu59xxx *bcmpmu;
+	u8 reg;
+	if (!pmu_audio)
+		return;
+	bcmpmu = pmu_audio->bcmpmu;
+	pr_audio(FLOW, "%s: param %d\n", __func__, ctrl);
+	if ((ctrl << IHFALC2_RAMP_UP_CTRL_SHIFT) >
+		IHFALC2_RAMP_UP_CTRL_MASK) {
+		pr_audio(ERROR, "%s: param %d\n",
+				__func__, ctrl);
+	} else {
+		mutex_lock(&pmu_audio->lock);
+		bcmpmu->read_dev(bcmpmu, PMU_REG_IHFALC2, &reg);
+		reg &= ~IHFALC2_RAMP_UP_CTRL_MASK;
+		reg |= (ctrl << IHFALC2_RAMP_UP_CTRL_SHIFT);
+		bcmpmu->write_dev(bcmpmu, PMU_REG_IHFALC2, reg);
+		mutex_unlock(&pmu_audio->lock);
+	}
+}
+EXPORT_SYMBOL(bcmpmu_ihf_alc_rampup_ctrl);
+
+void bcmpmu_ihf_alc_ramp_down_ctrl(enum ihf_alc_ramp_down_ctrl ctrl)
+{
+	struct bcmpmu59xxx *bcmpmu;
+	u8 reg;
+	if (!pmu_audio)
+		return;
+	bcmpmu = pmu_audio->bcmpmu;
+	pr_audio(FLOW, "%s: param %d\n", __func__, ctrl);
+	if ((ctrl << IHFALC2_RAMP_DOWN_CTRL_SHIFT) >
+		IHFALC2_RAMP_DOWN_CTRL_MASK) {
+		pr_audio(ERROR, "%s: Invalid param %d\n",
+			__func__, ctrl);
+	} else {
+		mutex_lock(&pmu_audio->lock);
+		bcmpmu->read_dev(bcmpmu, PMU_REG_IHFALC2, &reg);
+		reg &= ~IHFALC2_RAMP_DOWN_CTRL_MASK;
+		reg |= (ctrl << IHFALC2_RAMP_DOWN_CTRL_SHIFT);
+		bcmpmu->write_dev(bcmpmu, PMU_REG_IHFALC2, reg);
+		mutex_unlock(&pmu_audio->lock);
+	}
+}
+EXPORT_SYMBOL(bcmpmu_ihf_alc_ramp_down_ctrl);
+
 /* callee of this API need to put 65ms delay to
  * make sure power up seq done properly by h/w
  * if ihf_autoseq_dis is not set
@@ -653,9 +763,9 @@ void bcmpmu_ihf_power(bool on)
 		bcmpmu->read_dev(bcmpmu, PMU_REG_IHFPOP, &temp);
 		temp &= ~IHFAUTO_SEQ;
 		bcmpmu->write_dev(bcmpmu, PMU_REG_IHFPOP, temp);
-
 	}
 	mutex_unlock(&pmu_audio->lock);
+
 }
 EXPORT_SYMBOL(bcmpmu_ihf_power);
 
@@ -938,9 +1048,12 @@ static void bcmpmu_audio_sc_work(struct work_struct *work)
 		udelay(35);
 		val &= ~HS_SC_EDISABLE_MASK;
 		bcmpmu->write_dev(bcmpmu, PMU_REG_IHF_HS_TST, val);
-		bcmpmu_hs_power(false);
+		bcmpmu->read_dev(bcmpmu, PMU_REG_HSPUP2, &val);
+		val &= ~(1 << HSPUP2_HS_PWRUP_SHIFT);
+		bcmpmu->write_dev(bcmpmu, PMU_REG_HSPUP2, val);
 		udelay(60);
-		bcmpmu_hs_power(true);
+		val |= (1 << HSPUP2_HS_PWRUP_SHIFT);
+		bcmpmu->write_dev(bcmpmu, PMU_REG_HSPUP2, val);
 		mutex_unlock(&bcmpmu_audio->lock);
 		break;
 	case PMU_IRQ_AUD_IHFD_SHCKT:
@@ -951,10 +1064,10 @@ static void bcmpmu_audio_sc_work(struct work_struct *work)
 		udelay(35);
 		val &= ~IHF_SC_EDISABLE_MASK;
 		bcmpmu->write_dev(bcmpmu, PMU_REG_IHF_HS_TST, val);
+		mutex_unlock(&bcmpmu_audio->lock);
 		bcmpmu_ihf_power(false);
 		udelay(60);
 		bcmpmu_ihf_power(true);
-		mutex_unlock(&bcmpmu_audio->lock);
 		break;
 	default:
 		pr_info("%s: Wrong IRQ number\n", __func__);
@@ -965,7 +1078,7 @@ static void bcmpmu_audio_sc_work(struct work_struct *work)
 static void bcmpmu_audio_isr(enum bcmpmu59xxx_irq irq, void *data)
 {
 	struct bcmpmu_audio *paudio = data;
-	pr_audio(INIT, "%s: Interrupt for %s\n", __func__,
+	pr_audio(INIT, "%s: Interrupt for === %s ===\n", __func__,
 			(irq == PMU_IRQ_AUD_HSAB_SHCKT) ? "HS SC" : "IHF SC");
 
 	paudio->event = irq;

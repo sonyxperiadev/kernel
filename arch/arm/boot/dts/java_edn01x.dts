@@ -225,13 +225,14 @@
 		flags = <0>;
 		interval_ms = <5>;
 		/*sw shdwn temp is 120*/
-		thold = <85 75 1
-			95 90 1
-			105 100 1
-			120 115 4
-			125 123 2>;
+		thold = <85 1
+			95 1
+			105 1
+			120 4
+			125 2>;
 		tmon_apb_clk = "tmon_apb";
 		tmon_1m_clk = "tmon_1m_clk";
+		falling = <5>; /*fall back temperature offset*/
 		status = "disabled";
 	};
 

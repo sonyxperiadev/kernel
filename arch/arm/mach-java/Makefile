@@ -29,6 +29,7 @@ obj-$(CONFIG_KONA_SECURE_MONITOR_CALL) += sec_api.o
 obj-$(CONFIG_KONA_PROFILER) += profiler.o
 obj-$(CONFIG_KONA_AXITRACE) += java_axitrace.o
 
+obj-$(CONFIG_KONA_AVS) += avs.o
 CFLAGS_sec_api.o :=$(call as-instr,.arch_extension sec,-DREQUIRES_SEC=1)
 
 obj-$(CONFIG_ARCH_JAVA) += java_bmdm_wd_monitor.o
@@ -43,7 +44,13 @@ obj-y += board-bcm59056.o
 endif
 ifeq ($(CONFIG_MFD_BCM_PMU59xxx), y)
 ifeq ($(CONFIG_MACH_JAVA_GARNET), y)
+ifeq ($(CONFIG_MACH_JAVA_C_LC1), y)
+obj-y += board-bcm59xxx_garnet_c_lc1.o
+else ifeq ($(CONFIG_MACH_JAVA_C_LC2), y)
+obj-y += board-bcm59xxx_garnet_c_lc2.o
+else
 obj-y += board-bcm59xxx_garnet.o
+endif
 else
 ifeq ($(CONFIG_MACH_JAVA_SS_EVAL), y)
 obj-y += board-bcm59xxx_ss_eval.o

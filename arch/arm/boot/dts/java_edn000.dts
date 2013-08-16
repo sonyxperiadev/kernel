@@ -109,7 +109,7 @@
 		kxtik@0f {
                         compatible = "bcm,kxtik";
                         reg = <0x0f>;
-                        gpio-irq-pin = <1>;
+                        gpio-irq-pin = <0>;
                         min_interval = <5>;
                         poll_interval = <200>;
                         axis_map_x = <0>;
@@ -332,7 +332,7 @@
 		fps = <60>;
 		lanes = <2>;
 		cmnd-LP;		/* Commands in LP mode*/
-		hs-bitrate = <330000000>;
+		hs-bitrate = <333000000>;
 		lp-bitrate = <8000000>;	/* 8mbps */
 		iommu = <&iommu_mm>;
 		iovmm = <&iovmm_mm>;
@@ -359,7 +359,7 @@
 		fps = <60>;
 		lanes = <2>;
 		cmnd-LP;		/* Commands in LP mode*/
-		hs-bitrate = <330000000>;
+		hs-bitrate = <333000000>;
 		lp-bitrate = <8000000>;	/* 8mbps */
 		iommu = <&iommu_mm>;
 		iovmm = <&iovmm_mm>;
@@ -377,13 +377,14 @@
 		flags = <0>;
 		interval_ms = <5>;
 		/*sw shdwn temp is 120*/
-		thold = <85 75 1
-			95 90 1
-			105 100 1
-			120 115 4
-			125 123 2>;
+		thold = <85 1
+			95 1
+			105 1
+			120 4
+			125 2>;
 		tmon_apb_clk = "tmon_apb";
 		tmon_1m_clk = "tmon_1m_clk";
+		falling = <5>; /*fall back temperature offset*/
 	};
 
 	memc@35008000 {

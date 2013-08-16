@@ -642,7 +642,7 @@ EXPORT_SYMBOL_GPL(bcm_hsotgctrl_unregister_wakeup_cb);
 static int bcm_hsotgctrl_probe(struct platform_device *pdev)
 {
 	int error = 0;
-	int val;
+	unsigned int val;
 	struct bcm_hsotgctrl_drv_data *hsotgctrl_drvdata;
 	struct bcm_hsotgctrl_platform_data *plat_data =
 	  (struct bcm_hsotgctrl_platform_data *)pdev->dev.platform_data;
@@ -794,6 +794,17 @@ static int bcm_hsotgctrl_probe(struct platform_device *pdev)
 	INIT_DELAYED_WORK(&hsotgctrl_drvdata->wakeup_work,
 			  bcm_hsotgctrl_delayed_wakeup_handler);
 
+	/* disable Bvalid interrupt bit
+	 * This interrupt is not currently used as the STAT2 detection
+	 * happens from the PMU side. Beacsue of not clearing this bit
+	 * Master clock gating feature was not working in Java. This
+	 * is not a issue in case of Hawaii
+	 * */
+	val = readl(hsotgctrl_drvdata->hsotg_ctrl_base +
+				HSOTG_CTRL_USBOTGCONTROL_OFFSET);
+	val |= 1 << HSOTG_CTRL_USBOTGCONTROL_BVALID_CLR_SHIFT;
+	writel(val, hsotgctrl_drvdata->hsotg_ctrl_base +
+			HSOTG_CTRL_USBOTGCONTROL_OFFSET);
 	/* request_irq enables irq */
 	hsotgctrl_drvdata->irq_enabled = true;
 	error = request_irq(hsotgctrl_drvdata->hsotgctrl_irq,

@@ -59,6 +59,7 @@ struct bma2xx_data {
 	struct early_suspend early_suspend;
 #endif
 	int IRQ;
+	u32 orientation;
 };
 
 #ifdef BMA2XX_SW_CALIBRATION
@@ -1499,11 +1500,79 @@ static void bma2xx_work_func(struct work_struct *work)
 	static struct bma2xxacc acc;
 	int X, Y, Z;
 	unsigned long delay = msecs_to_jiffies(atomic_read(&bma2xx->delay));
-
+	X = 0;
+	Y = 0;
+	Z = 0;
 	bma2xx_read_accel_xyz(bma2xx->bma2xx_client, &acc);
-	X = -acc.x;
-	Y = acc.y;
-	Z = -acc.z;
+	switch (bma2xx->orientation) {
+	case BMA_ORI_100_010_001:
+		X = acc.x;
+		Y = acc.y;
+		Z = acc.z;
+		break;
+	case BMA_ORI_010_100_001:
+		X = acc.y;
+		Y = acc.x;
+		Z = acc.z;
+		break;
+	case BMA_ORI_f00_010_001:
+		X = -acc.x;
+		Y = acc.y;
+		Z = acc.z;
+		break;
+	case BMA_ORI_f00_0f0_001:
+		X = -acc.x;
+		Y = -acc.y;
+		Z = acc.z;
+		break;
+	case BMA_ORI_100_0f0_001:
+		X = acc.x;
+		Y = -acc.y;
+		Z = acc.z;
+		break;
+	case BMA_ORI_100_010_00f:
+		X = acc.x;
+		Y = acc.y;
+		Z = -acc.z;
+		break;
+	case BMA_ORI_010_100_00f:
+		X = acc.y;
+		Y = acc.x;
+		Z = -acc.z;
+		break;
+	case BMA_ORI_f00_010_00f:
+		X = -acc.x;
+		Y = acc.y;
+		Z = -acc.z;
+		break;
+	case BMA_ORI_f00_0f0_00f:
+		X = -acc.x;
+		Y = -acc.y;
+		Z = -acc.z;
+		break;
+	case BMA_ORI_100_0f0_00f:
+		X = acc.x;
+		Y = -acc.y;
+		Z = -acc.z;
+		break;
+	case BMA_ORI_010_f00_00f:
+		X = acc.y;
+		Y = -acc.x;
+		Z = -acc.z;
+		break;
+	case BMA_ORI_0f0_100_00f:
+		X = -acc.y;
+		Y = acc.x;
+		Z = -acc.z;
+		break;
+	case BMA_ORI_0f0_100_001:
+		X = -acc.y;
+		Y = acc.x;
+		Z = acc.z;
+		break;
+	default:
+		break;
+	}
 #ifdef BMA2XX_SW_CALIBRATION
 	input_report_abs(bma2xx->input, ABS_X, X-bma2xx_offset[0]);
 	input_report_abs(bma2xx->input, ABS_Y, Y-bma2xx_offset[1]);
@@ -1785,7 +1854,7 @@ static ssize_t bma2xx_int_mode_store(struct device *dev,
 				     struct device_attribute *attr,
 				     const char *buf, size_t count)
 {
-	unsigned char data;
+	unsigned long data;
 	struct i2c_client *client = to_i2c_client(dev);
 	struct bma2xx_data *bma2xx = i2c_get_clientdata(client);
 
@@ -3025,6 +3094,11 @@ static int bma2xx_probe(struct i2c_client *client,
 		if (of_property_read_u32(np, "gpio-irq-pin", &val))
 			goto err_read;
 		client->irq = val;
+		if (of_property_read_u32(np, "orientation", &val))
+			data->orientation = 11;
+		else
+			data->orientation = val;
+		client->irq = val;
 	}
 #if defined(BMA2XXX_ENABLE_INT1) || defined(BMA2XXX_ENABLE_INT2)
 	data->IRQ = gpio_to_irq(client->irq);
@@ -3070,6 +3144,7 @@ static int bma2xx_probe(struct i2c_client *client,
 	}
 
 	data->input = dev;
+	data->input->dev.parent = &data->bma2xx_client->dev;
 
 	err = sysfs_create_group(&client->dev.kobj, &bma2xx_attribute_group);
 	if (err < 0)

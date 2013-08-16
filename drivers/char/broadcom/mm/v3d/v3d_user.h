@@ -15,13 +15,13 @@ the GPL, without Broadcom's express prior written consent.
 #define __V3D_USER_H__
 
 #define MAX_USER_JOBS 16
+#define v3d_user_job_t struct _v3d_user_job_t
 
-typedef struct{
+struct _v3d_user_job_t {
 	uint32_t numUserJobs;
 	uint32_t v3d_vpm_size[MAX_USER_JOBS];
 	uint32_t v3d_srqpc[MAX_USER_JOBS];
 	uint32_t v3d_srqua[MAX_USER_JOBS];
 	uint32_t v3d_srqul[MAX_USER_JOBS];
-} v3d_user_job_t;
-
+};
 #endif

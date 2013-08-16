@@ -64,7 +64,7 @@
 #include <linux/clk.h>
 #include <plat/pi_mgr.h>
 #include <mach/pi_mgr.h>
-#define CPUFREQ_1200MHz 12000000
+#define CPUFREQ_1200MHz 1200000
 #endif
 
 #ifdef CONFIG_UNICAM
@@ -982,9 +982,9 @@ struct platform_device kona_memc_device = {
 
 #ifdef CONFIG_KONA_TMON
 struct tmon_state threshold_val[] = {
-	{.rising = 85, .falling = 75, .flags = TMON_NOTIFY,},
-	{.rising = 100, .falling = 90, .flags = TMON_NOTIFY,},
-	{.rising = 115, .falling = 112, .flags = TMON_HW_SHDWN,},
+	{.rising = 85, .flags = TMON_NOTIFY,},
+	{.rising = 100, .flags = TMON_NOTIFY,},
+	{.rising = 115, .flags = TMON_HW_SHDWN,},
 };
 struct kona_tmon_pdata tmon_plat_data = {
 	.base_addr = KONA_TMON_VA,
@@ -998,6 +998,7 @@ struct kona_tmon_pdata tmon_plat_data = {
 	.interval_ms = 5,
 	.tmon_apb_clk = "tmon_apb",
 	.tmon_1m_clk = "tmon_1m_clk",
+	.falling = 5,
 };
 struct platform_device kona_tmon_device = {
 	.name = "kona_tmon",

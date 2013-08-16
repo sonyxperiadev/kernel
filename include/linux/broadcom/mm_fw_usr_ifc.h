@@ -84,6 +84,9 @@ enum {
 	VC1_PICTURE_PARSE_TYPE,
 	VC1_PICTURE_PARSE_2_TYPE,
 	VC1_SLICE_PARSE_TYPE,
+	/* H264 access protect/unprotect*/
+	HWCODEC_PROTECT,
+	HWCODEC_UNPROTECT,
 	H264_OL_LAST_JOB
 };
 #define mm_job_type_e unsigned int

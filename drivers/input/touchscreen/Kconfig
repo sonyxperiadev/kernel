@@ -966,6 +966,11 @@ config TOUCHSCREEN_FT5306
    help
      Say Y here if you have a Tango based touchscreen. If unsure, say N.
 
+config TOUCHSCREEN_GT9xx
+   tristate "Goodix Capacitive Touchscreen GT9xx"
+   depends on I2C
+   help
+     Say Y here if you have a GT9xx based touchscreen. If unsure, say N.
 
 config TOUCHSCREEN_W90X900
 	tristate "W90P910 touchscreen driver"
@@ -1019,6 +1024,18 @@ config TOUCHSCREEN_TPS6507X
 
 	  To compile this driver as a module, choose M here: the
 	  module will be called tps6507x_ts.
+
+config TOUCHSCREEN_MMS134S
+        tristate "MMS134S I2C Touchscreen"
+        depends on I2C
+        help
+          Say Y here if you have the Melfas MMS134S I2C touchscreen
+          connected to your system.
+
+          If unsure, say N.
+
+          To compile this driver as a module, choose M here: the
+          module will be called mms134s_ts.
 
 config TOUCHSCREEN_IST30XX
         tristate "IST30XX I2C Touchscreen"

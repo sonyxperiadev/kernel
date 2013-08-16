@@ -32,6 +32,7 @@
 #include <linux/notifier.h>
 #include <linux/i2c/ft6x06_ex_fun.h>
 #include <linux/wakelock.h>
+#include <linux/vmalloc.h>
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
 #include <linux/earlysuspend.h>
@@ -47,6 +48,7 @@ static int ts_y_max_value=0;
 static const char *tp_power;
 static const char *vkey_scope;
 static bool have_vkey = false;
+static char firmware_str[50];
 
 /*******************************/
 typedef unsigned char	FTS_BYTE;
@@ -71,6 +73,7 @@ typedef signed int		FTS_BOOL;
 
 #define HAWAII_GARNET_FT5X06_VENDOR_ID 0x87
 #define G5_A18_FT5X06_VENDOR_ID 0x79
+#define G5_A21_FT5316_VENDOR_ID 0x98
 #define KTOUCH_W68_FT6X06_VENDOR_ID 0x5a
 #define KTOUCH_5606_FT6X06_VENDOR_ID 0x5a
 #define KTOUCH_W81_FT6X06_VENDOR_ID 0x51
@@ -1269,6 +1272,11 @@ static int ft6x06_ReadFirmware(char *firmware_name,
 	loff_t pos;
 	mm_segment_t old_fs;
 
+	if (!firmware_buf) {
+		pr_err("%s--firmware buffer NULL!\n", __func__);
+		return -EIO;
+	}
+
 	memset(filepath, 0, sizeof(filepath));
 	sprintf(filepath, "%s", firmware_name);
 	if (NULL == pfile)
@@ -1309,6 +1317,11 @@ static int focaltec_fts_ctpm_fw_upgrade(struct i2c_client *client, u8 *pbt_buf,
 		printk(KERN_ERR "firmware size is too short, invalid.\n");
 		return -1;
 	}
+	if (!pbt_buf) {
+		printk(KERN_ERR "firmware buffer is null!\n");
+		return -1;
+	}
+
 	for (i = 0; i < FTS_UPGRADE_LOOP; i++) {
 		/*********Step 1:Reset  CTPM *****/
 		/*write 0xaa to register 0xbc */
@@ -1481,11 +1494,16 @@ int fts_ctpm_fw_upgrade_with_app_file(struct i2c_client *client,
 	}
 
 	/*=========FW upgrade========================*/
-	pbt_buf = kmalloc(fwsize + 1, GFP_ATOMIC);
+	pbt_buf = vmalloc(fwsize + 1);
+	if (!pbt_buf) {
+		dev_err(&client->dev, "%s() - ERROR: memory allocate failed\n",
+					__func__);
+		return -EIO;
+	}
 	if (ft6x06_ReadFirmware(firmware_name, pbt_buf)) {
 		dev_err(&client->dev, "%s() - ERROR: request_firmware failed\n",
 					__func__);
-		kfree(pbt_buf);
+		vfree(pbt_buf);
 		return -EIO;
 	}
 	/*call the upgrade function */
@@ -1499,8 +1517,7 @@ int fts_ctpm_fw_upgrade_with_app_file(struct i2c_client *client,
 			fts_ctpm_auto_clb();
 		printk(KERN_INFO "[FTS] upgrade successfully.\n");
 	}
-	kfree(pbt_buf);
-
+	vfree(pbt_buf);
 	return i_ret;
 }
 
@@ -1585,6 +1602,8 @@ static ssize_t ft5306_vendor_show(struct kobject *kobj,
 		return sprintf(buf, "%s\n", "FocalTech FT5X06 Hawaii Garnet");
 	else if  (vendor_id == G5_A18_FT5X06_VENDOR_ID)
 		return   sprintf(buf, "%s\n", "FocalTech FT5X06 G5 A18");
+	else if  (vendor_id == G5_A21_FT5316_VENDOR_ID)
+		return   sprintf(buf, "%s\n", "FocalTech FT5316 G5 A21");
 	else if  (vendor_id == KTOUCH_W68_FT6X06_VENDOR_ID)
 		return   sprintf(buf, "%s\n", "FocalTech FT6X06 Ktouch W68");
 	else
@@ -1765,6 +1784,7 @@ static int focaltech_ft5306_probe(
 		vendor_id = fts_ctpm_get_vendor_id();
 		if ((vendor_id != HAWAII_GARNET_FT5X06_VENDOR_ID)
 			&& (vendor_id != G5_A18_FT5X06_VENDOR_ID)
+			&& (vendor_id != G5_A21_FT5316_VENDOR_ID)
 			&& (vendor_id != KTOUCH_W81_FT6X06_VENDOR_ID)
 			&& (vendor_id != TCL_UP823_FT6206_VENDOR_ID)
 			&& (vendor_id != KTOUCH_5606_FT6X06_VENDOR_ID)

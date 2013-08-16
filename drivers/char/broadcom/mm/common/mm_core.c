@@ -107,9 +107,8 @@ static void mm_fmwk_job_scheduler(struct work_struct *work)
 					job_scheduler);
 	MM_CORE_HW_IFC *hw_ifc = &core_dev->mm_device;
 
-	if (plist_head_empty(&core_dev->job_list)) {
+	if (plist_head_empty(&core_dev->job_list))
 		return;
-		}
 
 	job_list_elem = plist_first_entry(\
 			&(core_dev->job_list), \

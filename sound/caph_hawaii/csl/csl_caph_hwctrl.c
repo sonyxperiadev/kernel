@@ -79,7 +79,9 @@
 #include <linux/regulator/driver.h>
 #include <mach/memory.h>
 
-static struct regulator *gAUD_regulator;
+/* gAUD_regulator is being used in the commented part of code hence
+commenting it's declaration to avoid warning*/
+/*static struct regulator *gAUD_regulator;*/
 static struct regulator *gMIC_regulator;
 
 /*#define CONFIG_VOICE_LOOPBACK_TEST */
@@ -166,6 +168,7 @@ enum CAPH_CLK_ID {
 	CLK_2P4M, /* KHUB_AUDIOH_2P4M_CLK */
 	CLK_APB, /* KHUB_AUDIOH_APB_CLK */
 	CLK_156M, /* KHUB_AUDIOH_156M_CLK */
+	CLK_26M, /* KHUB_AUDIOH_26M_CLK*/
 };
 
 /****************************************************************************
@@ -1192,7 +1195,8 @@ static void csl_caph_obtain_blocks
 	CSL_CAPH_HWConfig_Table_t *path;
 	CSL_CAPH_CFIFO_FIFO_e fifo;
 	CSL_CAPH_SWITCH_CHNL_e sw;
-	CSL_CAPH_SRCM_INCHNL_e srcmIn;
+	/* Initialized to remove warning */
+	CSL_CAPH_SRCM_INCHNL_e srcmIn = CSL_CAPH_SRCM_INCHNL_NONE;
 	CSL_CAPH_MIXER_e srcmOut;
 	CSL_CAPH_SRCM_SRC_OUTCHNL_e srcmTap;
 	CSL_CAPH_DATAFORMAT_e dataFormat;
@@ -3058,7 +3062,6 @@ void csl_ControlHWClock_156m(Boolean enable)
  */
 void csl_caph_ControlHWClock(Boolean enable)
 {
-	int ret = 0;
 	if (enable == TRUE) {
 		if (sClkCurEnabled == FALSE) {
 			sClkCurEnabled = TRUE;
@@ -3084,9 +3087,17 @@ void csl_caph_ControlHWClock(Boolean enable)
 			clk_enable(clkIDCAPH[CLK_SRCMIXER]);
 			/* control the audioh_apb will turn on audioh_26m,
 			by clock manager, but not the other way. */
-			/*clkIDCAPH[2] = clk_get(NULL, "audioh_26m_clk");*/
+			/* audioh_26m clock is sourced from crystal for Hawaii
+			and ref_26m for Java,It is recommended to set
+			audioh_26m trigger by calling the clk_set_rate
+			for audioh_26m to source the clock properly */
+
+			clkIDCAPH[CLK_26M] = clk_get(NULL, "audioh_26m");
+			if (IS_ERR_OR_NULL(clkIDCAPH[CLK_26M]))
+				aError("Could not get audioh_26m clock\r\n");
 			clkIDCAPH[CLK_APB] = clk_get(NULL, "audioh_apb_clk");
 			clk_enable(clkIDCAPH[CLK_APB]);
+			clk_set_rate(clkIDCAPH[CLK_26M], 26000000);
 		}
 #if 0 /* Not required to call the Audio LDO API from Audio Driver */
 		/*Get and turn on the regulator AUDLDO, if its not on*/

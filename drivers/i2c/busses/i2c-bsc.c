@@ -1177,14 +1177,10 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[], int num)
 #ifdef CONFIG_KONA_PMU_BSC_USE_PMGR_HW_SEM
 	if (hw_cfg && hw_cfg->is_pmu_i2c) {
 		rc = pwr_mgr_pm_i2c_sem_lock();
-		if (rc) {
-			bsc_enable_pad_output((uint32_t)dev->virt_base, false);
-			bsc_disable_clk(dev);
-			mutex_unlock(&dev->dev_lock);
-			return rc;
-		} else {
+		if (rc)
+			goto out1;
+		else
 			rel_hw_sem = true;
-		}
 	}
 #endif
 	/* Enable the fifos based on the client requirement */
@@ -1207,7 +1203,7 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[], int num)
 		rc = bsc_xfer_start(adapter);
 		if (rc < 0) {
 			dev_err(dev->device, "start command failed\n");
-			goto err_ret;
+			goto out;
 		}
 	}
 
@@ -1215,7 +1211,7 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[], int num)
 	if (dev->high_speed_mode && hw_cfg && !hw_cfg->is_pmu_i2c) {
 		rc = start_high_speed_mode(adapter);
 		if (rc < 0)
-			goto err_ret;
+			goto out;
 	}
 
 	/* send the restart command in high-speed */
@@ -1292,17 +1288,8 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[], int num)
 	else
 		bsc_set_autosense((uint32_t)dev->virt_base, 0, 0);
 
-	/* Disable the fifos if previously enabled */
-	client_fifo_configure(adapter, msgs[0].addr, false);
-
-	bsc_enable_pad_output((uint32_t)dev->virt_base, false);
-	bsc_disable_clk(dev);
-#ifdef CONFIG_KONA_PMU_BSC_USE_PMGR_HW_SEM
-	if (rel_hw_sem)
-		pwr_mgr_pm_i2c_sem_unlock();
-#endif
-	mutex_unlock(&dev->dev_lock);
-	return (rc < 0) ? rc : num;
+	rc = (rc < 0) ? rc : num;
+	goto out;
 
  hs_ret:
 
@@ -1319,16 +1306,16 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[], int num)
 	else
 		bsc_set_autosense((uint32_t)dev->virt_base, 0, 0);
 
- err_ret:
-	/* Disable the fifos if previously enabled */
-	client_fifo_configure(adapter, msgs[0].addr, false);
-
-	bsc_enable_pad_output((uint32_t)dev->virt_base, false);
-	bsc_disable_clk(dev);
+out:
 #ifdef CONFIG_KONA_PMU_BSC_USE_PMGR_HW_SEM
 	if (rel_hw_sem)
 		pwr_mgr_pm_i2c_sem_unlock();
 #endif
+	/* Disable the fifos if previously enabled */
+	client_fifo_configure(adapter, msgs[0].addr, false);
+out1:
+	bsc_enable_pad_output((uint32_t)dev->virt_base, false);
+	bsc_disable_clk(dev);
 	mutex_unlock(&dev->dev_lock);
 	return rc;
 }
@@ -1816,10 +1803,6 @@ static int bsc_probe(struct platform_device *pdev)
 		else
 			clk_set_rate(dev->bsc_clk, hw_cfg->fs_ref);
 
-		/* Enable the bsc clocks */
-		rc = bsc_enable_clk(dev);
-		if (rc)
-			goto err_free_clk;
 	} else if (pdev->dev.of_node) {
 		const char *prop;
 		u32 val;
@@ -1906,10 +1889,6 @@ static int bsc_probe(struct platform_device *pdev)
 		else
 			clk_set_rate(dev->bsc_clk, hw_cfg->fs_ref);
 
-		/* Enable the bsc clocks */
-		rc = bsc_enable_clk(dev);
-		if (rc)
-			goto err_free_clk;
 	} else {
 		/* use default speed */
 		dev->speed = DEFAULT_I2C_BUS_SPEED;
@@ -1917,6 +1896,11 @@ static int bsc_probe(struct platform_device *pdev)
 		dev->bsc_clk = NULL;
 		dev->bsc_apb_clk = NULL;
 	}
+
+	/* Enable the bsc clocks */
+	rc = bsc_enable_clk(dev);
+	if (rc < 0)
+		goto err_free_clk;
 
 	/* Initialize the error flag */
 	dev->err_flag = 0;

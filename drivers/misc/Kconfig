@@ -363,6 +363,15 @@ config ISL290XX
           This driver can also be built as a module.  If so, the module
           will be called isl290xx.
 
+config INTERSIL_ISL29147
+	tristate "insertil isl29147 ambient proximity support"
+	depends on ISL290XX && I2C
+	help
+		If you say yes here you get isl29147 support for intersil
+		ambient proxmity sensors
+		This option will make isl29147 individual registers can be
+		accessed.
+
 config SENSORS_TSL2550
 	tristate "Taos TSL2550 ambient light sensor"
 	depends on I2C && SYSFS
@@ -373,13 +382,29 @@ config SENSORS_TSL2550
 	  This driver can also be built as a module.  If so, the module
 	  will be called tsl2550.
 
- config SENSORS_MC3210
+config SENSORS_MC3210
 	bool "mCube mc3210 support"
 	default n
 	help
 		If you say yes here you get support for mc3210 sensor
 
 		If you don't need this driver, choose n
+
+config SENSORS_MXC622X
+	bool "Memsic mxc622x accelerometer support"
+	default n
+	help
+		If you say yes here you get support for mxc622x sensor
+
+		If you don't need this driver, choose n
+
+config SENSORS_LIS3DH
+	bool "STMicroelectronics Lis3dh accelerometer support"
+	default n
+	depends on I2C && SYSFS
+	help
+		If you say yes here you get support for Lis3dh accelerometer
+		sensor, if you don't need this driver, choose n
 
 config SENSORS_BMA222
         bool "Bosch bma222 support"

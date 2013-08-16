@@ -211,16 +211,22 @@
 
 	iovmm_mm: iovmm-mm {
 		compatible = "bcm,iovmm";
-		base = <0xc0000000>;
-		size = <0x20000000>;
+		base = <0x80000000>;
+		size = <0x70000000>;
 		order = <0>;
 	};
 
 	iovmm_mm_256mb: iovmm-mm-256mb {
 		compatible = "bcm,iovmm";
-		base = <0xe0000000>;
-		size = <0x10000000>;
+		base = <0xf0000000>;
+		size = <0x0ff00000>;
 		order = <0>;
+	};
+
+	ion-config {
+		compatible = "bcm,ion-config";
+		/* No separate mask needed for hwwr if M4U is enabled */
+		mask_hwwr = <0>;
 	};
 
 	ion-system {
@@ -231,9 +237,17 @@
 		iovmm = <&iovmm_mm_256mb>;
 	};
 
+	ion-system-extra {
+		compatible = "bcm,ion";
+		id = <1>;
+		type = <0>;
+		iommu = <&iommu_mm>;
+		iovmm = <&iovmm_mm>;
+	};
+
 	ion-carveout {
 		compatible = "bcm,ion";
-		id = <3>;
+		id = <9>;
 		type = <2>;
 		base  = <0x90000000>;
 		limit = <0xa0000000>;
@@ -247,7 +261,7 @@
 
 	ion-cma {
 		compatible = "bcm,ion";
-		id = <2>;
+		id = <5>;
 		type = <4>;
 		base  = <0x90000000>;
 		limit = <0xa0000000>;
@@ -317,7 +331,7 @@
 		fps = <60>;
 		lanes = <2>;
 		cmnd-LP;		/* Commands in LP mode*/
-		hs-bitrate = <330000000>;
+		hs-bitrate = <333000000>;
 		lp-bitrate = <8000000>;	/* 8mbps */
 		iommu = <&iommu_mm>;
 		iovmm = <&iovmm_mm>;
@@ -344,7 +358,7 @@
 		fps = <60>;
 		lanes = <2>;
 		cmnd-LP;		/* Commands in LP mode*/
-		hs-bitrate = <330000000>;
+		hs-bitrate = <333000000>;
 		lp-bitrate = <8000000>;	/* 8mbps */
 		iommu = <&iommu_mm>;
 		iovmm = <&iovmm_mm>;
@@ -362,13 +376,14 @@
 		flags = <0>;
 		interval_ms = <5>;
 		/*sw shdwn temp is 120*/
-		thold = <85 75 1
-			95 90 1
-			105 100 1
-			120 115 4
-			125 123 2>;
+		thold = <85 1
+			95 1
+			105 1
+			120 4
+			125 2>;
 		tmon_apb_clk = "tmon_apb";
 		tmon_1m_clk = "tmon_1m_clk";
+		falling = <5>; /*fall back temperature offset*/
 	};
 
 	memc@35008000 {

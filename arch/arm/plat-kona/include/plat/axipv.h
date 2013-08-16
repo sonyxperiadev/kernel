@@ -74,6 +74,7 @@ struct axipv_init_t {
 #endif
 	void (*irq_cb)(int err);
 	void (*release_cb)(u32 free_buf);
+	void (*vsync_cb)(void);
 };
 
 struct axipv_config_t {

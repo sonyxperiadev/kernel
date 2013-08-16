@@ -59,6 +59,8 @@ struct kona_tmon {
 	int thresh_inx;
 	int poll_inx;
 	int vtmon_sel;
+	int hysteresis;
+	int falling;
 	int init;
 	atomic_t suspend;
 };
@@ -80,6 +82,7 @@ enum {
 	INT_THRESH_CELCIUS,
 	CRIT_THRESH_RAW,
 	CRIT_THRESH_CELCIUS,
+	SW_SHDWN_TEMP,
 };
 
 static long raw_to_celcius(long raw)
@@ -263,7 +266,7 @@ static int tmon_init_set_thold(struct kona_tmon *tmon)
 	curr = tmon_get_current_temp(CELCIUS, true);
 	pr_info("%s: current temperature is %ld\n", __func__, curr);
 	for (i = pdata->thold_size - 1; i > 0; i--) {
-		if (curr >= pdata->thold[i].rising) {
+		if (curr >= (pdata->thold[i].rising - tmon->hysteresis)) {
 			tmon->poll_inx = i - 1;
 			break;
 		}
@@ -284,7 +287,7 @@ static int tmon_init_set_thold(struct kona_tmon *tmon)
 static void tmon_poll_work(struct work_struct *ws)
 {
 	long curr_temp;
-	int poll_inx;
+	int poll_inx, falling;
 	int intr_en = 0;
 	struct kona_tmon *tmon = container_of((struct delayed_work *)ws,
 			struct kona_tmon, poll_work);
@@ -293,17 +296,15 @@ static void tmon_poll_work(struct work_struct *ws)
 	BUG_ON(tmon->poll_inx == INVALID_INX);
 	curr_temp = tmon_get_current_temp(CELCIUS, true);
 	poll_inx = tmon->poll_inx;
-	if (curr_temp <= (pdata->thold[poll_inx].falling +
-			pdata->hysteresis)) {
-		pr_info("%s: reached the polling temp %d\n", __func__,
-				pdata->thold[poll_inx].falling);
+	falling = pdata->thold[poll_inx].rising - kona_tmon->falling;
+	if (curr_temp <= (falling + kona_tmon->hysteresis)) {
+		pr_info("%s: reached the polling temp %d\n", __func__, falling);
 		/* updating threshold value and indexes*/
 		tmon_set_int_thold(tmon, pdata->thold[poll_inx].rising,
 				CELCIUS);
 		if (tmon->thresh_inx == INVALID_INX)
 			intr_en = 1;
-		atomic_notifier_call_chain(&tmon->notifiers,
-				pdata->thold[poll_inx].falling, NULL);
+		atomic_notifier_call_chain(&tmon->notifiers, falling, NULL);
 		tmon->thresh_inx = poll_inx;
 		tmon->poll_inx = poll_inx ? (poll_inx - 1)
 			: INVALID_INX;
@@ -450,8 +451,9 @@ struct device_attribute *devattr, char *buf)
 static ssize_t tmon_get_val(struct device *dev,
 struct device_attribute *devattr, char *buf)
 {
-	int raw, celcius = 0;
+	int i, raw, celcius = 0;
 	struct sensor_device_attribute *attr = to_sensor_dev_attr(devattr);
+	 struct kona_tmon_pdata *pdata = kona_tmon->pdata;
 
 	switch (attr->index) {
 	case TEMP_RAW:
@@ -472,9 +474,27 @@ struct device_attribute *devattr, char *buf)
 	case CRIT_THRESH_CELCIUS:
 		celcius = tmon_get_critical_thold(kona_tmon, CELCIUS);
 		return snprintf(buf, 10, "%d\n", celcius);
+	case SW_SHDWN_TEMP:
+		for (i = pdata->thold_size; i > 0; i--) {
+			if (pdata->thold[i].flags & TMON_SW_SHDWN)
+				return snprintf(buf, 10, "%d\n",
+					pdata->thold[i].rising);
+		}
 	default:
 		return -EINVAL;
 	}
+}
+
+static ssize_t tmon_get_threshold_levels(struct device *dev,
+struct device_attribute *devattr, char *buf)
+{
+	int i;
+	struct kona_tmon_pdata *pdata = kona_tmon->pdata;
+
+	for (i = 0; i < pdata->thold_size; i++)
+		pr_info("threshold level %d: %d\n", i, pdata->thold[i].rising);
+
+	return i;
 }
 
 static ssize_t tmon_set_raw_val(struct device *dev,
@@ -576,6 +596,35 @@ static ssize_t tmon_get_dbg_mask(struct device *dev,
 	return snprintf(buf, 10, "%d\n", tmon_dbg_mask);
 }
 
+static ssize_t tmon_set_hysteresis(struct device *dev,
+		struct device_attribute *devattr, const char *buf, size_t count)
+{
+	int val;
+	sscanf(buf, "%d", &val);
+	kona_tmon->hysteresis = val;
+	return count;
+}
+
+static ssize_t tmon_get_hysteresis(struct device *dev,
+		struct device_attribute *devattr, char *buf)
+{
+	return snprintf(buf, 10, "%d\n", kona_tmon->hysteresis);
+}
+
+static ssize_t tmon_set_falling_offset(struct device *dev,
+		struct device_attribute *devattr, const char *buf, size_t count)
+{
+	int val;
+	sscanf(buf, "%d", &val);
+	kona_tmon->falling = val;
+	return count;
+}
+
+static ssize_t tmon_get_falling_offset(struct device *dev,
+		struct device_attribute *devattr, char *buf)
+{
+	return snprintf(buf, 10, "%d\n", kona_tmon->falling);
+}
 static struct sensor_device_attribute kona_attrs[] = {
 SENSOR_ATTR(name, S_IRUGO, tmon_get_name, NULL, 0),
 SENSOR_ATTR(interval, S_IWUSR | S_IRUGO, kona_tmon_get_interval,
@@ -591,10 +640,18 @@ SENSOR_ATTR(critical_raw, S_IWUSR | S_IRUGO, tmon_get_val,
 		tmon_set_raw_val, CRIT_THRESH_RAW),
 SENSOR_ATTR(critical_celcius, S_IWUSR | S_IRUGO, tmon_get_val,
 		tmon_set_celcius_val, CRIT_THRESH_CELCIUS),
+SENSOR_ATTR(sw_shdwn_temp, S_IRUGO, tmon_get_val,
+		NULL, SW_SHDWN_TEMP),
+SENSOR_ATTR(threshold_levels, S_IWUSR | S_IRUGO, tmon_get_threshold_levels,
+		NULL, 0),
 SENSOR_ATTR(vtmon, S_IWUSR | S_IRUGO, tmon_get_vtmon,
 		tmon_vtmon_sel, 0),
 SENSOR_ATTR(tmon_dbg_mask, S_IWUSR | S_IRUGO, tmon_get_dbg_mask,
 		tmon_set_dbg_mask, 0),
+SENSOR_ATTR(hysteresis, S_IWUSR | S_IRUGO, tmon_get_hysteresis,
+		tmon_set_hysteresis, 0),
+SENSOR_ATTR(falling, S_IWUSR | S_IRUGO, tmon_get_falling_offset,
+		tmon_set_falling_offset, 0),
 };
 
 static int kona_tmon_suspend(struct platform_device *pdev, pm_message_t state)
@@ -625,7 +682,6 @@ static int kona_tmon_probe(struct platform_device *pdev)
 	int size, i, irq;
 	int rc = 0;
 	struct resource *iomem;
-	long rising, falling;
 	struct kona_tmon_pdata *pdata;
 	int ret;
 	int *thold;
@@ -733,6 +789,14 @@ static int kona_tmon_probe(struct platform_device *pdev)
 		}
 		pdata->tmon_1m_clk = clk_name;
 
+		if (of_property_read_u32(pdev->dev.of_node,
+					"falling", &val)) {
+			rc = -EINVAL;
+			kfree(pdata);
+			goto err_free_dev_mem;
+		}
+		pdata->falling = val;
+
 		thold = (int *)of_get_property(pdev->dev.of_node,
 				"thold", &size);
 		if (!thold) {
@@ -752,8 +816,6 @@ static int kona_tmon_probe(struct platform_device *pdev)
 		for (i = 0; i < pdata->thold_size; i++) {
 			pdata->thold[i].rising =
 				be32_to_cpu(*thold++);
-			pdata->thold[i].falling =
-				be32_to_cpu(*thold++);
 			pdata->thold[i].flags = be32_to_cpu(*thold++);
 		}
 	} else {
@@ -763,17 +825,6 @@ static int kona_tmon_probe(struct platform_device *pdev)
 	}
 
 	kona_tmon->pdata = pdata;
-
-	/*checking for input threshold temperature and reset threshold*/
-	for (i = 0; i < pdata->thold_size; i++) {
-		rising = pdata->thold[i].rising;
-		falling = pdata->thold[i].falling;
-		if (rising < falling) {
-			BUG();
-			rc = -EINVAL;
-			goto err_free_dev_mem;
-		}
-	}
 
 	/* Enable clocks */
 	kona_tmon->tmon_apb_clk = clk_get(NULL, pdata->tmon_apb_clk);
@@ -803,6 +854,8 @@ static int kona_tmon_probe(struct platform_device *pdev)
 			goto err_remove_files;
 
 	kona_tmon->vtmon_sel = pdata->flags & VTMON;
+	kona_tmon->hysteresis = pdata->hysteresis;
+	kona_tmon->falling = pdata->falling;
 
 	INIT_WORK(&kona_tmon->tmon_work, tmon_irq_work);
 	kona_tmon->wqueue = create_workqueue("tmon_polling_wq");

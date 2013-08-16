@@ -1368,7 +1368,8 @@ static void if_tag_stat_update(const char *ifname, uid_t uid,
 		 */
 		BUG_ON(!new_tag_stat);
 	}
-	tag_stat_update(new_tag_stat, direction, proto, bytes);
+	if (new_tag_stat)
+		tag_stat_update(new_tag_stat, direction, proto, bytes);
 unlock:
 	spin_unlock_bh(&iface_entry->tag_stat_list_lock);
 }

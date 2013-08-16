@@ -308,9 +308,10 @@ void bcmbt_lpm_start(void)
 			__func__, priv_g->plpm->host_irq);
 
 		init_timer(&priv_g->plpm->hw_timer);
-		priv_g->plpm->hw_timer.function = hw_timer_expire;
+		priv_g->plpm->hw_timer.function =
+			(void (*) (unsigned long))hw_timer_expire;
 		priv_g->plpm->hw_timer_st = IDLE;
-		priv_g->plpm->hw_timer.data = priv_g;
+		priv_g->plpm->hw_timer.data = (unsigned long)priv_g;
 
 		rc = request_irq(
 			priv_g->plpm->host_irq, bcmbt_lpm_host_wake_isr,
@@ -347,7 +348,7 @@ static int bcmbt_get_bt_wake_state(unsigned long arg)
 
 	tmp = gpio_get_value(priv_g->pdata->bt_wake_gpio);
 
-	pr_info("bcmbt_get_bt_wake_state(bt_wake:%d), gpio_get_value(tmp:%d)\n",
+	pr_info("bcmbt_get_bt_wake_state(bt_wake:%d), gpio_get_value(tmp:%lu)\n",
 		priv_g->pdata->bt_wake_gpio, tmp);
 
 	if (copy_to_user(uarg, &tmp, sizeof(*uarg)))
@@ -545,7 +546,6 @@ static int bcmbt_lpm_probe(struct platform_device *pdev)
 clean_data:
 	kfree(priv_g->pdata);
 	kfree(priv_g->plpm);
-clean_struct:
 	kfree(priv_g);
 	pr_debug("%s BLUETOOTH:Exiting after cleaning.\n", __func__);
 	return rc;

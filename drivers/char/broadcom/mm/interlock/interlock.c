@@ -103,17 +103,16 @@ int __init interlock_init(void)
 
 	dvfs_param.ON = 0;
 	dvfs_param.MODE = ECONOMY;
-	dvfs_param.enable_suspend_resume = 0;
-	dvfs_param.T0 = 200;
-	dvfs_param.P0 = 90;
+	dvfs_param.T0 = 0;
+	dvfs_param.P0 = 0;
 	dvfs_param.T1 = 300;
-	dvfs_param.P1 = 90;
-	dvfs_param.P1L = 50;
-	dvfs_param.T2 = 300;
-	dvfs_param.P2 = 90;
-	dvfs_param.P2L = 60;
+	dvfs_param.P1 = 80;
+	dvfs_param.P1L = 0;
+	dvfs_param.T2 = 500;
+	dvfs_param.P2 = 80;
+	dvfs_param.P2L = 45;
 	dvfs_param.T3 = 1000;
-	dvfs_param.P3L = 50;
+	dvfs_param.P3L = 45;
 	dvfs_param.dvfs_bulk_job_cnt = 0;
 
 	interlock_device->fmwk_handle = mm_fmwk_register(INTERLOCK_DEV_NAME,

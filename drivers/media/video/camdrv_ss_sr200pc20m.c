@@ -25,6 +25,7 @@
 #include <linux/videodev2_brcm.h>
 #include "camdrv_ss.h"
 #include "camdrv_ss_sr200pc20m.h"           
+#include <linux/module.h>
 
 
 #define SR200PC20M_NAME	"sr200pc20m"
@@ -1838,7 +1839,7 @@ bool camdrv_ss_sr200pc20m_get_esd_status(struct v4l2_subdev *sd)
 }
 
 
-bool camdrv_ss_sensor_init_main(bool bOn, struct camdrv_ss_sensor_cap *sensor)
+bool camdrv_ss_sensor_functions_sr200pc20m(struct camdrv_ss_sensor_cap *sensor)
 {
 
 	strcpy(sensor->name,SR200PC20M_NAME);
@@ -2343,4 +2344,36 @@ bool camdrv_ss_sensor_init_main(bool bOn, struct camdrv_ss_sensor_cap *sensor)
 
 	return true;
 };
+
+int camdrv_ss_read_device_id_sr200pc20m(
+		struct i2c_client *client, char *device_id)
+{
+	int ret = -1;
+	/* NEED to WRITE THE I2c REad code to read the deviceid */
+	return 0;
+}
+
+static int __init camdrv_ss_sr200pc20m_mod_init(void)
+{
+	struct camdrv_ss_sensor_reg sens;
+
+	strncpy(sens.name, SR200PC20M_NAME, sizeof(SR200PC20M_NAME));
+	sens.sensor_functions = camdrv_ss_sensor_functions_sr200pc20m;
+	sens.sensor_power = camdrv_ss_sr200pc20m_sensor_power;
+	sens.read_device_id = camdrv_ss_read_device_id_sr200pc20m;
+#ifdef CONFIG_SOC_CAMERA_MAIN_SR200PC20M
+	sens.isMainSensor = 1;
+#endif
+
+#ifdef CONFIG_SOC_CAMERA_SUB_SR200PC20M
+	sens.isMainSensor = 0;
+#endif
+	camdrv_ss_sensors_register(&sens);
+
+}
+module_init(camdrv_ss_sr200pc20m_mod_init);
+
+MODULE_DESCRIPTION("SAMSUNG CAMERA SENSOR SR200PC20M ");
+MODULE_AUTHOR("Samsung");
+MODULE_LICENSE("GPL");
 
