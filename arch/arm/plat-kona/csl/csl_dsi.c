@@ -1129,9 +1129,12 @@ exit_err:
 #define WAIT_FOR_FIFO_FLUSH_US 10
 #define WAIT_GENERAL_US 10
 #define WAIT_FOR_RETRY_CNT 20
+#define WAIT_FOR_RX_PKT_CNT 50
 #define PKT1_STAT_MASK (CHAL_DSI_STAT_TXPKT1_END	\
 			| CHAL_DSI_STAT_TXPKT1_DONE	\
 			| CHAL_DSI_STAT_TXPKT1_BUSY)
+#define PKT_RX_STAT_MASK (CHAL_DSI_STAT_RX1_PKT | CHAL_DSI_STAT_RX2_PKT)
+
 /*
  *
  * Function Name:  CSL_DSI_SendPacket
@@ -1365,12 +1368,23 @@ start_tx:
 			pr_err("status not cleared %d\n", __LINE__);
 			chal_dsi_clr_status(dsiH->chalH, PKT1_STAT_MASK);
 		}
+		/* Packet transfer is complete */
+		if (txPkt.endWithBta) {
+			/* wait for 50 * 10 = 500us to receive the pkt */
+			cnt2 = WAIT_FOR_RX_PKT_CNT;
+			do {
+				udelay(WAIT_GENERAL_US);
+				stat = chal_dsi_get_status(dsiH->chalH);
+			} while (!(stat & PKT_RX_STAT_MASK) && --cnt2);
+			if (!cnt2)
+				pr_err("CSL_DSI: No pkt was received!\n");
+		}
+
 		chal_dsi_de0_enable(dsiH->chalH, TRUE);
 		udelay(WAIT_GENERAL_US);
 		pv_change_state(PV_RESUME_STREAM, dsiH->pvCfg);
 		local_irq_restore(pkt_flags);
 		if (txPkt.endWithBta) {
-			stat = chal_dsi_get_status(dsiH->chalH);
 			chalRes = chal_dsi_read_reply(dsiH->chalH, stat,
 						      (pCHAL_DSI_REPLY)
 						      command->reply);
