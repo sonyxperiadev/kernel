@@ -135,6 +135,9 @@ struct gc2035 {
 	int whitebalance;
 	int framerate;
 	int flashmode;
+	short runmode;
+	short stream_status;
+	int initNeeded;
 };
 
 static struct gc2035 *to_gc2035(const struct i2c_client *client)
@@ -412,14 +415,11 @@ static int gc2035_config_preview(struct v4l2_subdev *sd)
 	u8 val = 0;
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 
-	gc2035_reg_writes(client, gc2035_streamoff);
-
-	/* set GC2035 to preview mode*/
 	ret = gc2035_reg_writes(client, yuv422_init_common);
-
-
-
-	gc2035_reg_writes(client, gc2035_streamon);
+	/* enable AEC/AGC */
+	/* set to page 0 */
+	gc2035_reg_write(client, 0xfe, 0x00);
+	gc2035_reg_write(client, 0xb6, 0x03);
 
 	printk(KERN_INFO "gc2035_config_preview!");
 
@@ -430,35 +430,49 @@ static int gc2035_config_capture(struct v4l2_subdev *sd)
 {
 	int ret = 0;
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
-
-
+	uint8_t regVal = 0;
+	uint16_t previewClockDiv, previewShutter;
+	uint16_t captureClockDiv, captureShutter;
 
 	printk(KERN_INFO "gc2035_config_capture!");
 
-	gc2035_reg_writes(client, gc2035_streamoff);
+	/* disable AEC/AGC */
+	gc2035_reg_write(client, 0xfe, 0x00);
+	gc2035_reg_write(client, 0xb6, 0x00);
+	/* read preview div/shutter val */
+	gc2035_read_smbus(client, 0xfa, &regVal);
+	previewClockDiv = ((regVal & 0xf0)>>4) + 1;
+	gc2035_read_smbus(client, 0x03, &regVal);
+	previewShutter = regVal;
+	gc2035_read_smbus(client, 0x04, &regVal);
+	previewShutter = (previewShutter << 8) | regVal;
 
-
+	/* download capture settings */
 	gc2035_capture_setting(sd);
 
-
-	gc2035_reg_writes(client, gc2035_streamon);
-
-	msleep(100);
+	/* read capture clock div */
+	/* set to page 0 */
+	gc2035_reg_write(client, 0xfe, 0x00);
+	gc2035_read_smbus(client, 0xfa, &regVal);
+	captureClockDiv = ((regVal & 0xf0)>>4) + 1;
+	/* calc capture shutter */
+	captureShutter = previewClockDiv * previewShutter / captureClockDiv;
+	gc2035_reg_write(client, 0x03, (captureShutter & 0xFF00)>>8);
+	gc2035_reg_write(client, 0x04, (captureShutter & 0x00FF));
 
 	return ret;
 }
 
 
-static int stream_mode = -1;
 static int gc2035_s_stream(struct v4l2_subdev *sd, int enable)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct gc2035 *gc2035 = to_gc2035(client);
 	int ret = 0;
 	printk(KERN_INFO "%s: enable:%d runmode:%d\n", __func__, enable,
-	       runmode);
+	       gc2035->runmode);
 
-	if (enable == stream_mode)
+	if (enable == gc2035->stream_status)
 		return ret;
 
 	if (enable) {
@@ -470,7 +484,7 @@ static int gc2035_s_stream(struct v4l2_subdev *sd, int enable)
 		/* Stop Streaming, Power Down*/
 		ret = gc2035_reg_writes(client, gc2035_streamoff);
 	}
-	stream_mode = enable;
+	gc2035->stream_status = enable;
 
 	return ret;
 }
@@ -517,6 +531,13 @@ static int gc2035_enum_input(struct soc_camera_device *icd,
 			inp->status |= V4L2_IN_ST_BACK;
 
 	}
+	struct v4l2_subdev *sd = soc_camera_to_subdev(icd);
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	struct gc2035 *gc2035 = to_gc2035(client);
+	gc2035->initNeeded = 1;
+	gc2035->stream_status = -1;
+	gc2035->runmode = CAM_RUNNING_MODE_NOTREADY;
+
 	return 0;
 }
 
@@ -568,9 +589,10 @@ static int gc2035_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 
 	/*To avoide reentry init sensor, remove from here	*/
 	/*ret =  gc2035_reg_writes(client,configscript_common1);*/
-	if (runmode == CAM_RUNNING_MODE_PREVIEW) {
+	if (gc2035->initNeeded) {
 		ret = gc2035_reg_writes(client, configscript_common1);
 		printk(KERN_INFO "gc2035 init configscript_common1!");
+		gc2035->initNeeded = 0;
 	}
 
 	if (ret) {
@@ -593,9 +615,8 @@ static int gc2035_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 		return ret;
 	}
 
-	if (CAM_RUNNING_MODE_PREVIEW == runmode)
+	if (CAM_RUNNING_MODE_PREVIEW == gc2035->runmode)
 		gc2035_config_preview(sd);
-
 
 	return ret;
 }
@@ -871,22 +892,22 @@ static int gc2035_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	{
 			printk(KERN_INFO
 				"gc2035 PREVIEW_ONOFF:%d runmode = %d\n",
-				ctrl->value, runmode);
+				ctrl->value, gc2035->runmode);
 		if (ctrl->value)
-			runmode = CAM_RUNNING_MODE_PREVIEW;
+			gc2035->runmode = CAM_RUNNING_MODE_PREVIEW;
 		else
-			runmode = CAM_RUNNING_MODE_NOTREADY;
+			gc2035->runmode = CAM_RUNNING_MODE_NOTREADY;
 
 		break;
 	}
 
 	case V4L2_CID_CAM_CAPTURE:
-		runmode = CAM_RUNNING_MODE_CAPTURE;
+		gc2035->runmode = CAM_RUNNING_MODE_CAPTURE;
 		gc2035_config_capture(sd);
 		break;
 
 	case V4L2_CID_CAM_CAPTURE_DONE:
-		runmode = CAM_RUNNING_MODE_CAPTURE_DONE;
+		gc2035->runmode = CAM_RUNNING_MODE_CAPTURE_DONE;
 		break;
 
 	}
@@ -986,17 +1007,6 @@ static int gc2035_init(struct i2c_client *client)
 	struct gc2035 *gc2035 = to_gc2035(client);
 	int ret = 0;
 	printk(KERN_ERR "gc2035_init\n");
-	ret = gc2035_reg_writes(client, configscript_common1);
-	if (ret)
-		goto out;
-
-	/* Power Up, Start Streaming for AF Init*/
-	ret = gc2035_reg_writes(client, gc2035_streamon);
-	if (ret)
-		goto out;
-	/* Delay for sensor streaming*/
-	msleep(20);
-
 
 	/* default brightness and contrast */
 	gc2035->brightness = EV_DEFAULT;
@@ -1005,6 +1015,8 @@ static int gc2035_init(struct i2c_client *client)
 	gc2035->antibanding = ANTI_BANDING_AUTO;
 	gc2035->whitebalance = WHITE_BALANCE_AUTO;
 	gc2035->framerate = FRAME_RATE_AUTO;
+	gc2035->runmode = CAM_RUNNING_MODE_NOTREADY;
+	gc2035->stream_status = -1;
 
 	dev_dbg(&client->dev, "Sensor initialized\n");
 
@@ -1183,7 +1195,7 @@ static int gc2035_g_skip_frames(struct v4l2_subdev *sd, u32 *frames)
 {
 	/* Quantity of initial bad frames to skip. Revisit. */
 	/*Waitting for AWB stability,  avoid green color issue*/
-	*frames = 5;
+	*frames = 2;
 
 	return 0;
 }
