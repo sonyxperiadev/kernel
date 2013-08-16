@@ -610,6 +610,7 @@ debugfs_clean:
 	if (!IS_ERR_OR_NULL(dentry_throttle_dir))
 		debugfs_remove_recursive(dentry_throttle_dir);
 }
+
 static int bcmpmu_throttle_probe(struct platform_device *pdev)
 {
 	int ret = 0;

@@ -475,14 +475,14 @@ static int avs_drv_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int __devexit avs_drv_remove(struct platform_device *pdev)
+static int avs_drv_remove(struct platform_device *pdev)
 {
 	return 0;
 }
 
 static struct platform_driver avs_driver = {
 	.probe = avs_drv_probe,
-	.remove = __devexit_p(avs_drv_remove),
+	.remove = avs_drv_remove,
 	.driver = {.name = "avs",},
 };
 

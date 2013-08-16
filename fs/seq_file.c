@@ -471,7 +471,8 @@ int seq_path(struct seq_file *m, const struct path *path, const char *esc)
 			char *end = mangle_path(buf, p, esc);
 			if (end)
 				res = end - buf;
-		}
+		} else
+			return PTR_ERR(p);
 	}
 	seq_commit(m, res);
 

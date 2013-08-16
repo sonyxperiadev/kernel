@@ -590,8 +590,8 @@ static int hawaii_wifi_get_mac_addr(unsigned char *buf)
 	uint rand_mac;
 
 	if ((hawaii_mac_addr[4] == 0) && (hawaii_mac_addr[5] == 0)) {
-		srandom32((uint) jiffies);
-		rand_mac = random32();
+		prandom_seed((uint) jiffies);
+		rand_mac = prandom_u32();
 		hawaii_mac_addr[3] = (unsigned char)rand_mac;
 		hawaii_mac_addr[4] = (unsigned char)(rand_mac >> 8);
 		hawaii_mac_addr[5] = (unsigned char)(rand_mac >> 16);
