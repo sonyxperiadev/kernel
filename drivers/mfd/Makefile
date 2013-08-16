@@ -123,4 +123,6 @@ obj-$(CONFIG_MFD_BCMPMU)        += bcmpmu-i2c.o bcmpmu-core.o bcmpmu-irq.o bcmpm
 obj-$(CONFIG_MFD_BCM59055)      += bcmpmu-bcm59055-map.o
 obj-$(CONFIG_MFD_BCM59039)      += bcmpmu-bcm59039-map.o
 obj-$(CONFIG_MFD_BCM59042)      += bcmpmu-bcm59042-map.o
+obj-$(CONFIG_IHF_EXT_PA_TPA2026D2)  += tpa2026d2.o
+
 

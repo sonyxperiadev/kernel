@@ -83,6 +83,9 @@
 
 #include <linux/err.h>
 #include <linux/regulator/consumer.h>
+#if defined(CONFIG_IHF_EXT_PA_TPA2026D2)
+#include <linux/mfd/tpa2026d2.h>
+#endif
 #define VIBRA_LDO_REGULATOR "vibldo_uc"
 /**There are two loopback paths available in AudioH.
 One is 6.5MHz analog microphone loopback path. It does not support digital mics.
@@ -4084,7 +4087,9 @@ static void powerOnExternalAmp(AUDIO_SINK_Enum_t speaker,
 	if (force == TRUE) {
 		if (use == FALSE) {
 			if (IHF_IsOn == TRUE)
-#if defined(CONFIG_IHF_TWO_EXT_AMPLIFIER)
+#if defined(CONFIG_IHF_EXT_PA_TPA2026D2)
+				tpa2026d2_spk_power(0, 0);
+#elif defined(CONFIG_IHF_TWO_EXT_AMPLIFIER)
 				extern_ihf_two_external_amplifier_off(bInVoiceCall);
 #else
 				extern_ihf_off();
@@ -4095,7 +4100,12 @@ static void powerOnExternalAmp(AUDIO_SINK_Enum_t speaker,
 		}
 		if (use == TRUE) {
 			if (IHF_IsOn == TRUE) {
-#if defined(CONFIG_IHF_TWO_EXT_AMPLIFIER)
+#if defined(CONFIG_IHF_EXT_PA_TPA2026D2)
+				if (bInVoiceCall)
+					tpa2026d2_spk_power(1, 0);
+				else
+					tpa2026d2_spk_power(1, 1);
+#elif defined(CONFIG_IHF_TWO_EXT_AMPLIFIER)
 				extern_ihf_two_external_amplifier_on(bInVoiceCall);
 #else
 				extern_ihf_on();
@@ -4216,7 +4226,9 @@ static void powerOnExternalAmp(AUDIO_SINK_Enum_t speaker,
 	    && (fmUseIHF == FALSE) && (audio2UseIHF == FALSE)) {
 		if (IHF_IsOn != FALSE) {
 			aTrace(LOG_AUDIO_CNTLR, "power OFF pmu IHF amp\n");
-#if defined(CONFIG_IHF_TWO_EXT_AMPLIFIER)
+#if defined(CONFIG_IHF_EXT_PA_TPA2026D2)
+			tpa2026d2_spk_power(0, 0);
+#elif defined(CONFIG_IHF_TWO_EXT_AMPLIFIER)
 			extern_ihf_two_external_amplifier_off(bInVoiceCall);
 #else
 			extern_ihf_off();
@@ -4229,7 +4241,12 @@ static void powerOnExternalAmp(AUDIO_SINK_Enum_t speaker,
 			aTrace(LOG_AUDIO_CNTLR,
 			       "powerOnExternalAmp power on IHF");
 			audioh_start_ihf();
-#if defined(CONFIG_IHF_TWO_EXT_AMPLIFIER)
+#if defined(CONFIG_IHF_EXT_PA_TPA2026D2)
+			if (bInVoiceCall)
+				tpa2026d2_spk_power(1, 0);
+			else
+				tpa2026d2_spk_power(1, 1);
+#elif defined(CONFIG_IHF_TWO_EXT_AMPLIFIER)
 			extern_ihf_two_external_amplifier_on(bInVoiceCall);
 #else
 			extern_ihf_on();

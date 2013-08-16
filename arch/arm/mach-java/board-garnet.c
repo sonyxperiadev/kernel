@@ -204,6 +204,10 @@ hawaii_wifi_status_register(void (*callback) (int card_present, void *dev_id),
 			    void *dev_id);
 #endif
 
+#if defined(CONFIG_IHF_EXT_PA_TPA2026D2)
+#include <linux/mfd/tpa2026d2.h>
+#endif
+
 /* SD */
 #define SD_CARDDET_GPIO_PIN	91
 
@@ -1508,6 +1512,21 @@ static struct platform_device *hawaii_devices[] __initdata = {
 
 };
 
+#ifdef CONFIG_IHF_EXT_PA_TPA2026D2
+static struct tpa2026d2_platform_data tpa2026d2_i2c_platform_data = {
+	.i2c_bus_id = 1,
+	.shutdown_gpio = 91
+};
+
+static struct i2c_board_info tpa2026d2_i2c_boardinfo[] = {
+	{
+		I2C_BOARD_INFO("tpa2026d2", (TPA2026D2_I2C_ADDR >> 1)),
+		.platform_data = &tpa2026d2_i2c_platform_data
+	},
+};
+#endif
+
+
 static void __init hawaii_add_i2c_devices(void)
 {
 
@@ -1525,6 +1544,12 @@ defined(CONFIG_TOUCHSCREEN_BCM15500_MODULE)
 	i2c_register_board_info(bcm15500_i2c_platform_data.i2c_bus_id,
 		bcm15500_i2c_boardinfo,
 		ARRAY_SIZE(bcm15500_i2c_boardinfo));
+#endif
+
+#ifdef CONFIG_IHF_EXT_PA_TPA2026D2
+	i2c_register_board_info(tpa2026d2_i2c_platform_data.i2c_bus_id,
+		tpa2026d2_i2c_boardinfo,
+		ARRAY_SIZE(tpa2026d2_i2c_boardinfo));
 #endif
 }
 

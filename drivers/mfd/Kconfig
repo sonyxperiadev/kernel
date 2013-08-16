@@ -958,6 +958,14 @@ config MFD_ANATOP
 	  MFD controller. This controller embeds regulator and
 	  thermal devices for Freescale i.MX platforms.
 
+config IHF_EXT_PA_TPA2026D2
+	bool "Define if TPA2026D2 is used for IHF"
+	depends on I2C=y && GPIOLIB
+	default n
+	help
+		Say Y here to enable TPA2026D2 as the stereo external
+		Audio Loud Speaker PA.
+
 endmenu
 endif
 
