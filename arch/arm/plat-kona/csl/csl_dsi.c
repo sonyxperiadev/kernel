@@ -270,12 +270,13 @@ static CSL_LCD_RES_T cslDsiAxipvStart(DSI_UPD_REQ_MSG_T *updMsg)
 		pr_err("axipvCfg is NULL\n");
 		return CSL_LCD_BAD_HANDLE;
 	}
-	axipvCfg->width = (updMsg->updReq.lineLenP +
-				updMsg->updReq.xStrideB) * 4;
+	axipvCfg->width = (updMsg->updReq.lineLenP + updMsg->updReq.xStrideB)
+				* updMsg->updReq.buffBpp;
 	axipvCfg->height = updMsg->updReq.lineCount;
 
 	axipvCfg->buff.sync.addr = (u32) updMsg->updReq.buff;
-	axipvCfg->buff.sync.xlen = updMsg->updReq.lineLenP * 4;
+	axipvCfg->buff.sync.xlen = updMsg->updReq.lineLenP *
+					updMsg->updReq.buffBpp;
 	axipvCfg->buff.sync.ylen = updMsg->updReq.lineCount;
 
 	axipv_change_state(AXIPV_CONFIG, axipvCfg);
