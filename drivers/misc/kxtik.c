@@ -155,7 +155,8 @@ static void kxtik_report_acceleration_data(struct kxtik_data *tik)
 	if (atomic_read(&tik->acc_enabled) > 0) {
 		if (atomic_read(&tik->acc_enable_resume) > 1) {
 			while (loop) {
-				mutex_lock(&tik->data_mutex);
+				if (mutex_trylock(&tik->data_mutex) == 0)
+					return -ERESTARTSYS;
 				err = kxtik_i2c_read(tik, XOUT_L,
 						     (u8 *) acc_data, 6);
 				mutex_unlock(&tik->data_mutex);
@@ -565,6 +566,7 @@ static ssize_t kxtik_set_enable(struct device *dev, struct device_attribute
 	error = kstrtouint(buf, 10, &enable);
 	if (error < 0)
 		return error;
+	mutex_lock(&tik->data_mutex);
 	FUNCDBG("kxtik_set_enable\n");
 
 	/* Lock the device to prevent races with open/close (and itself) */
@@ -573,7 +575,7 @@ static ssize_t kxtik_set_enable(struct device *dev, struct device_attribute
 		kxtik_enable(tik);
 	else
 		kxtik_disable(tik);
-
+	mutex_unlock(&tik->data_mutex);
 
 	return count;
 }
