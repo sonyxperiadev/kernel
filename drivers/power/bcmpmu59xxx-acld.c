@@ -78,6 +78,7 @@ struct bcmpmu_acld {
 	struct workqueue_struct *acld_wq;
 	struct delayed_work acld_work;
 	struct notifier_block usb_det_nb;
+	struct notifier_block tml_trtle_nb;
 	ktime_t last_sample_tm;
 	enum bcmpmu_chrgr_type_t chrgr_type;
 	int acld_min_input;
@@ -96,6 +97,7 @@ struct bcmpmu_acld {
 	bool v_flag;
 	bool acld_start;
 	bool mbc_in_cv;
+	bool tml_trtle_stat;
 };
 
 static bool bcmpmu_usb_mbc_fault_check(struct bcmpmu_acld *acld);
@@ -753,8 +755,8 @@ static void bcmpmu_acld_periodic_monitor(struct bcmpmu_acld *acld)
 				__func__);
 	}
 
-	if ((bcmpmu_is_usb_host_enabled(acld->bcmpmu)) &&
-			(!bcmpmu_is_usb_valid(acld)) ||
+	if (((bcmpmu_is_usb_host_enabled(acld->bcmpmu)) &&
+			(!bcmpmu_is_usb_valid(acld))) ||
 			(!bcmpmu_get_ubpd_int(acld))) {
 		bcmpmu_acld_enable(acld, false);
 		acld->acld_en = false;
@@ -882,6 +884,20 @@ static int bcmpmu_acld_event_handler(struct notifier_block *nb,
 			bcmpmu_reset_acld_flags(acld);
 			queue_delayed_work(acld->acld_wq, &acld->acld_work, 0);
 		}
+		break;
+	case PMU_THEMAL_THROTTLE_STATUS:
+		acld = to_bcmpmu_acld_data(nb, tml_trtle_nb);
+		acld->tml_trtle_stat = *(bool *)data;
+		pr_acld(FLOW, "PMU_THEMAL_THROTTLE_STATUS:%d\n",
+				acld->tml_trtle_stat);
+		if (acld->tml_trtle_stat == true) {
+			pr_acld(FLOW, "cancel ACLD work\n");
+			cancel_delayed_work_sync(&acld->acld_work);
+		} else {
+			pr_acld(FLOW, "start ACLD work\n");
+			queue_delayed_work(acld->acld_wq, &acld->acld_work, 0);
+		}
+		break;
 	}
 
 	return 0;
@@ -898,10 +914,12 @@ static int debug_pmu_acld_ctrl(void *data, u64 acld_ctrl)
 		if (acld_ctrl) {
 			bcmpmu->flags |= BCMPMU_ACLD_EN;
 			bcmpmu_acld_enable(acld, true);
+			queue_delayed_work(acld->acld_wq, &acld->acld_work, 0);
 			pr_acld(INIT, "ACLD Enabled\n");
 		} else {
-			bcmpmu->flags &= ~BCMPMU_ACLD_EN;
+			cancel_delayed_work_sync(&acld->acld_work);
 			bcmpmu_acld_enable(acld, false);
+			bcmpmu->flags &= ~BCMPMU_ACLD_EN;
 			pr_acld(INIT, "ACLD Disabled\n");
 		}
 
@@ -1019,7 +1037,7 @@ static int __devinit bcmpmu_acld_probe(struct platform_device *pdev)
 	if (IS_ERR_OR_NULL(acld->acld_wq)) {
 		ret = PTR_ERR(acld->acld_wq);
 		pr_acld(ERROR, "%s Failed to create WQ\n", __func__);
-		goto unreg_usb_det_nb;
+		goto error;
 	}
 
 	INIT_DELAYED_WORK(&acld->acld_work, bcmpmu_acld_work);
@@ -1028,8 +1046,17 @@ static int __devinit bcmpmu_acld_probe(struct platform_device *pdev)
 	ret = bcmpmu_add_notifier(PMU_ACCY_EVT_OUT_CHRGR_TYPE,
 			&acld->usb_det_nb);
 	if (ret) {
-		pr_acld(ERROR, "%s Failed to add notifier\n", __func__);
+		pr_acld(ERROR, "%s Failed to add notifier:%d\n",
+				__func__, __LINE__);
 		goto error;
+	}
+	acld->tml_trtle_nb.notifier_call = bcmpmu_acld_event_handler;
+	ret = bcmpmu_add_notifier(PMU_THEMAL_THROTTLE_STATUS,
+			&acld->tml_trtle_nb);
+	if (ret) {
+		pr_acld(ERROR, "%s Failed to add notifier:%d\n",
+				__func__, __LINE__);
+		goto unreg_usb_det_nb;
 	}
 #ifdef CONFIG_DEBUG_FS
 	bcmpmu_acld_debugfs_init(acld);
