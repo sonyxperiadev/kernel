@@ -21,7 +21,7 @@
 
 #include <linux/bma150.h>
 
-#if CONFIG_BRCM_VIRTUAL_SENSOR
+#if CONFIG_SENSORS_BRCM_VIRTUAL
 #include <linux/brvsens_driver.h>
 #endif
 
@@ -314,7 +314,7 @@ static int activate(struct i2c_client *client, unsigned char flag)
 	
 	struct bma150_data* bma150 = i2c_get_clientdata(client);
 
-#ifndef CONFIG_BRCM_VIRTUAL_SENSOR
+#ifndef CONFIG_SENSORS_BRCM_VIRTUAL
 	/* if we are activated */
 	if(flag)
 	{
@@ -449,7 +449,7 @@ static int bma150_read_accel_xyz(struct i2c_client *client, struct bma150acc *ac
 	return 0;
 }
 
-#ifndef CONFIG_BRCM_VIRTUAL_SENSOR
+#ifndef CONFIG_SENSORS_BRCM_VIRTUAL
 static void bma150_work_func(struct work_struct* work)
 {
 	struct bma150_data* bma150 = container_of((struct delayed_work*)work,
@@ -745,7 +745,7 @@ static int bma150_probe(struct i2c_client *client,
 		goto kfree_exit;
 	}
 
-#ifndef CONFIG_BRCM_VIRTUAL_SENSOR
+#ifndef CONFIG_SENSORS_BRCM_VIRTUAL
 	INIT_DELAYED_WORK(&data->work, bma150_work_func);
 	atomic_set(&data->delay, BMA150_MAX_DELAY);
 #endif
@@ -760,7 +760,7 @@ static int bma150_probe(struct i2c_client *client,
 	if (err < 0)
 		goto error_sysfs;
 
-#if CONFIG_BRCM_VIRTUAL_SENSOR
+#if CONFIG_SENSORS_BRCM_VIRTUAL
 	// register accelerometer with BRVSENS device
 	brvsens_register(SENSOR_HANDLE_ACCELEROMETER,      // sensor UID
 			 BMA150_DRIVER_NAME,               // human readable name

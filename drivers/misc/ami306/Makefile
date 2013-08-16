@@ -2,7 +2,7 @@
 # Kernel makefile for ami306
 #
 #
-obj-$(CONFIG_AMI306)	:= ami306.o
+obj-$(CONFIG_SENSORS_AMI306)	:= ami306.o
 
 ami306-y := 	ami306_km_brcm.o	\
 		ami306_cmd.o \
