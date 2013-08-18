@@ -62,7 +62,7 @@ static const struct ov8825_datafmt ov8825_fmts[] = {
 };
 
 enum ov8825_mode {
-	OV8825_MODE_1632x1224P30  = 0,
+	OV8825_MODE_1280x960P30  = 0,
 	OV8825_MODE_3264x2448P15 = 1,
 	OV8825_MODE_MAX          = 2,
 };
@@ -91,21 +91,23 @@ struct sensor_mode {
 	enum bayer_order	bayer;
 	int			bpp;
 	int			fps;
+	int                  binning_factor;
 };
 
 
 struct sensor_mode ov8825_mode[OV8825_MODE_MAX + 1] = {
 	{
-		.name           = "1632x1224_2lane_30Fps",
-		.height         = 1224,
-		.width          = 1632,
+		.name           = "1280x960_2lane_30Fps",
+		.height         = 960,
+		.width          = 1280,
 		.hts            = 3516,
-		.vts            = 1264,
+		.vts            = 1274,
 		.vts_max        = 32767 - 6,
 		.line_length_ns = 26458,
 		.bayer          = BAYER_BGGR,
 		.bpp            = 10,
 		.fps            = F24p8(30.0),
+		.binning_factor = 1,
 	},
 	{
 		.name           = "3264x2448_2lane_15Fps",
@@ -118,6 +120,7 @@ struct sensor_mode ov8825_mode[OV8825_MODE_MAX + 1] = {
 		.bayer          = BAYER_BGGR,
 		.bpp            = 10,
 		.fps            = F24p8(15.0),
+		.binning_factor = 2,
 	},
 	{
 		.name           = "STOPPED",
@@ -507,18 +510,22 @@ static const struct ov8825_reg ov8825_regtbl[OV8825_MODE_MAX][1024] = {
 	{0x3725, 0x92},
 	{0x3726, 0x01},
 	{0x3727, 0xc7},
+	{0x3800, 0x00},
+	{0x3801, 0x00},
 	{0x3802, 0x00},
 	{0x3803, 0x00},
+	{0x3804, 0x0c},
+	{0x3805, 0xdf},
 	{0x3806, 0x09},
 	{0x3807, 0x9b},
-	{0x3808, 0x06},
-	{0x3809, 0x60},
-	{0x380a, 0x04},
-	{0x380b, 0xc8},
+	{0x3808, 0x05},
+	{0x3809, 0x00},
+	{0x380a, 0x03},
+	{0x380b, 0xc0},
 	{0x380c, 0x0d},
 	{0x380d, 0xbc},
 	{0x380e, 0x04},
-	{0x380f, 0xf0},
+	{0x380f, 0xfa},
 	{0x3811, 0x08},
 	{0x3813, 0x04},
 	{0x3814, 0x31},
@@ -530,8 +537,8 @@ static const struct ov8825_reg ov8825_regtbl[OV8825_MODE_MAX][1024] = {
 	{0x4601, 0x00},
 	{0x4602, 0x30},
 	{0x4837, 0x16},
-	{0x5068, 0x00},
-	{0x506a, 0x00},
+	{0x5068, 0x5a},
+	{0x506a, 0x5a},
 
 	{0x0100, 0x01},
 	{0x301c, 0xf0},
@@ -807,59 +814,6 @@ static const struct ov8825_reg ov8825_regtbl[OV8825_MODE_MAX][1024] = {
 	{0x301a, 0x71},
 	{0x301c, 0xf4},
 	{0x0100, 0x01},
-	{0x0100, 0x00},
-	{0x3003, 0xcc},
-	{0x3004, 0xd8},
-	{0x3006, 0x10},
-	{0x3007, 0x49},
-	{0x3020, 0x81},
-	{0x3501, 0x9a},
-	{0x3502, 0xa0},
-	{0x3700, 0x10},
-	{0x3702, 0x28},
-	{0x3703, 0x6c},
-	{0x3704, 0x40},
-	{0x3705, 0x19},
-	{0x3706, 0x27},
-	{0x3708, 0x48},
-	{0x3709, 0x20},
-	{0x370a, 0x31},
-	{0x3711, 0x07},
-	{0x3712, 0x4e},
-	{0x3724, 0x00},
-	{0x3725, 0xd4},
-	{0x3726, 0x00},
-	{0x3727, 0xf0},
-	{0x3802, 0x00},
-	{0x3803, 0x00},
-	{0x3806, 0x09},
-	{0x3807, 0x9b},
-	{0x3808, 0x0c},
-	{0x3809, 0xc0},
-	{0x380a, 0x09},
-	{0x380b, 0x90},
-	{0x380c, 0x0e},
-	{0x380d, 0x00},
-	{0x380e, 0x09},
-	{0x380f, 0xb0},
-	{0x3811, 0x10},
-	{0x3813, 0x06},
-	{0x3814, 0x11},
-	{0x3815, 0x11},
-	{0x3820, 0x86},
-	{0x3821, 0x10},
-	{0x3f00, 0x02},
-	{0x4005, 0x1a},
-	{0x4601, 0x00},
-	{0x4602, 0x20},
-	{0x4837, 0x16},
-	{0x5068, 0x00},
-	{0x506a, 0x00},
-
-	{0x0100, 0x01},
-	{0x301c, 0xf0},
-	{0x301a, 0x70},
-
 	{0xFFFF, 0x00}
 	}
 };
@@ -869,6 +823,7 @@ static const struct ov8825_reg ov8825_regdif[OV8825_MODE_MAX][256] = {
 	{0x0100, 0x00},
 	{0x3003, 0xcc},
 	{0x3004, 0xd8},
+	{0x3005, 0x00},
 	{0x3006, 0x10},
 	{0x3007, 0x49},
 	{0x3020, 0x01},
@@ -893,14 +848,14 @@ static const struct ov8825_reg ov8825_regdif[OV8825_MODE_MAX][256] = {
 	{0x3803, 0x00},
 	{0x3806, 0x09},
 	{0x3807, 0x9b},
-	{0x3808, 0x06},
-	{0x3809, 0x60},
-	{0x380a, 0x04},
-	{0x380b, 0xc8},
+	{0x3808, 0x05},
+	{0x3809, 0x00},
+	{0x380a, 0x03},
+	{0x380b, 0xc0},
 	{0x380c, 0x0d},
 	{0x380d, 0xbc},
 	{0x380e, 0x04},
-	{0x380f, 0xf0},
+	{0x380f, 0xfa},
 	{0x3811, 0x08},
 	{0x3813, 0x04},
 	{0x3814, 0x31},
@@ -912,18 +867,20 @@ static const struct ov8825_reg ov8825_regdif[OV8825_MODE_MAX][256] = {
 	{0x4601, 0x00},
 	{0x4602, 0x30},
 	{0x4837, 0x16},
-	{0x5068, 0x00},
-	{0x506a, 0x00},
+	{0x5068, 0x5a},
+	{0x506a, 0x5a},
 
 	{0x0100, 0x01},
 	{0x301c, 0xf0},
 	{0x301a, 0x70},
 	{0xFFFF, 0x00}
 	},
+
 	{
 	{0x0100, 0x00},
 	{0x3003, 0xcc},
 	{0x3004, 0xd8},
+	{0x3005, 0x00},
 	{0x3006, 0x10},
 	{0x3007, 0x49},
 	{0x3020, 0x81},
@@ -1879,8 +1836,10 @@ static int ov8825_calc_exposure(struct i2c_client *client,
 	struct ov8825 *ov8825 = to_ov8825(client);
 	unsigned int integration_lines;
 	int vts = ov8825_mode[ov8825->mode_idx].vts;
+	int binning_factor = ov8825_mode[ov8825->mode_idx].binning_factor;
 
 	integration_lines = (1000 * exposure_value) / ov8825->line_length;
+	integration_lines = integration_lines * binning_factor;
 	if (integration_lines < INTEGRATION_MIN)
 		integration_lines = INTEGRATION_MIN;
 	else if (integration_lines > (unsigned int)
@@ -2512,7 +2471,7 @@ static int ov8825_init(struct i2c_client *client)
 	 */
 
 	ov8825->exposure_current  = DEFAULT_EXPO * 22;
-	ov8825->aecpos_delay      = 1;
+	ov8825->aecpos_delay      = 2;
 	ov8825->lenspos_delay     = 0;
 	ov8825->flashmode         = FLASH_MODE_OFF;
 	ov8825->flash_intensity   = OV8825_FLASH_INTENSITY_DEFAULT;
@@ -2640,7 +2599,7 @@ static int ov8825_enum_frameintervals(struct v4l2_subdev *sd,
 		interval->discrete.numerator = 1;
 		interval->discrete.denominator = 15;
 		break;
-	case OV8825_MODE_1632x1224P30:
+	case OV8825_MODE_1280x960P30:
 	default:
 		interval->discrete.numerator = 1;
 		interval->discrete.denominator = 30;
@@ -2670,7 +2629,7 @@ static int ov8825_g_parm(struct v4l2_subdev *sd, struct v4l2_streamparm *param)
 		cparm->timeperframe.numerator = 1;
 		cparm->timeperframe.denominator = 15;
 		break;
-	case OV8825_MODE_1632x1224P30:
+	case OV8825_MODE_1280x960P30:
 	default:
 		cparm->timeperframe.numerator = 1;
 		cparm->timeperframe.denominator = 30;
