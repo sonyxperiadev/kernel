@@ -283,19 +283,14 @@ static int kona_cpufreq_set_speed(struct cpufreq_policy *policy,
 	}
 	freqs.old = kona_cpufreq_get_speed(policy->cpu);
 	freqs.new = kona_cpufreq->kona_freqs_table[index].frequency;
-#warning "Porting hack: To be verified by PM team"
-//	freqs.cpu = policy->cpu;
+	freqs.cpu = policy->cpu;
 
 	if (freqs.old == freqs.new)
 		return 0;
 
 	kcf_dbg("%s: cpu freq change: %u --> %u\n", __func__, freqs.old,
 		freqs.new);
-#warning "Porting hack: To be verified by PM team"
-#if 0
-	for_each_online_cpu(freqs.cpu)
-	    cpufreq_notify_transition(&freqs, CPUFREQ_PRECHANGE);
-#endif
+
 	cpufreq_notify_transition(policy, &freqs, CPUFREQ_PRECHANGE);
 	local_irq_disable();
 
@@ -323,11 +318,6 @@ static int kona_cpufreq_set_speed(struct cpufreq_policy *policy,
 					  freqs.new);
 		}
 	}
-#endif
-#warning "Porting hack: To be verified by PM team"
-#if 0
-	for_each_online_cpu(freqs.cpu)
-	    cpufreq_notify_transition(&freqs, CPUFREQ_POSTCHANGE);
 #endif
 	cpufreq_notify_transition(policy, &freqs, CPUFREQ_POSTCHANGE);
 
