@@ -370,7 +370,6 @@ static void bma222_accl_getdata(struct drv_data *dd)
 	int Z = 0;
 	struct bma222_accl_platform_data *pdata = pdata =
 	    bma222_accl_client->dev.platform_data;
-	mutex_lock(&bma222_accl_wrk_lock);
 #ifndef BMA222_ACCL_IRQ_MODE
 	if (!atomic_read(&bma_on)) {
 		bma222_accl_power_up(dd);
@@ -379,7 +378,9 @@ static void bma222_accl_getdata(struct drv_data *dd)
 		msleep(2);
 	}
 #endif
+	mutex_lock(&bma222_accl_wrk_lock);
 	bma222_read_accel_xyz(&acc);
+	mutex_unlock(&bma222_accl_wrk_lock);
 
 	switch (pdata->orientation) {
 	case BMA_ORI_NOSWITCH_NOINVERSE:
@@ -474,7 +475,6 @@ static void bma222_accl_getdata(struct drv_data *dd)
 	newacc.y = Y;
 	newacc.z = Z;
 
-	mutex_unlock(&bma222_accl_wrk_lock);
 	return;
 
 }
@@ -946,11 +946,11 @@ static ssize_t bma222_set_offset(struct device *dev,
 		pr_err("invalid parameter number: %d\n", err);
 		return err;
 	}
-	mutex_lock(&input_dev->mutex);
+	mutex_lock(&bma222_accl_wrk_lock);
 	bma222_offset[0] = x;
 	bma222_offset[1] = y;
 	bma222_offset[2] = z;
-	mutex_unlock(&input_dev->mutex);
+	mutex_unlock(&bma222_accl_wrk_lock);
 	return count;
 }
 static DEVICE_ATTR(offset, 00664, bma222_get_offset, bma222_set_offset);
