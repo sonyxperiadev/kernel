@@ -365,7 +365,9 @@ static int bma222_read_accel_xyz(struct bma_acc_t *acc)
 static void bma222_accl_getdata(struct drv_data *dd)
 {
 	struct bma_acc_t acc;
-	int X, Y, Z;
+	int X = 0;
+	int Y = 0;
+	int Z = 0;
 	struct bma222_accl_platform_data *pdata = pdata =
 	    bma222_accl_client->dev.platform_data;
 	mutex_lock(&bma222_accl_wrk_lock);
@@ -380,38 +382,82 @@ static void bma222_accl_getdata(struct drv_data *dd)
 	bma222_read_accel_xyz(&acc);
 
 	switch (pdata->orientation) {
-	case BMA_ROT_90:
-		X = -acc.y;
+	case BMA_ORI_NOSWITCH_NOINVERSE:
+		X = acc.x;
+		Y = acc.y;
+		Z = acc.z;
+		break;
+	case BMA_ORI_XYSWITCH_NOINVERSE:
+		X = acc.y;
 		Y = acc.x;
 		Z = acc.z;
 		break;
-	case BMA_ROT_180:
+	case BMA_ORI_NOSWITCH_XINVERSE:
+		X = -acc.x;
+		Y = acc.y;
+		Z = acc.z;
+		break;
+	case BMA_ORI_NOSWITCH_XYINVERSE:
 		X = -acc.x;
 		Y = -acc.y;
 		Z = acc.z;
 		break;
-	case BMA_ROT_270:
+	case BMA_ORI_NOSWITCH_YINVERSE:
+		X = acc.x;
+		Y = -acc.y;
+		Z = acc.z;
+		break;
+	case BMA_ORI_NOSWITCH_ZINVERSE:
+		X = acc.x;
+		Y = acc.y;
+		Z = -acc.z;
+		break;
+	case BMA_ORI_XYSWITCH_ZINVERSE:
 		X = acc.y;
 		Y = acc.x;
 		Z = -acc.z;
 		break;
-	case BMA_ROT_010_f00_001:
+	case BMA_ORI_NOSWITCH_XZINVERSE:
+		X = -acc.x;
+		Y = acc.y;
+		Z = -acc.z;
+		break;
+	case BMA_ORI_NOSWITCH_XYZINVERSE:
+		X = -acc.x;
+		Y = -acc.y;
+		Z = -acc.z;
+		break;
+	case BMA_ORI_NOSWITCH_YZINVERSE:
+		X = acc.x;
+		Y = -acc.y;
+		Z = -acc.z;
+		break;
+	case BMA_ORI_XYSWITCH_YZINVERSE:
 		X = acc.y;
 		Y = -acc.x;
+		Z = -acc.z;
+		break;
+	case BMA_ORI_XYSWITCH_XZINVERSE:
+		X = -acc.y;
+		Y = acc.x;
+		Z = -acc.z;
+		break;
+	case BMA_ORI_XYSWITCH_XINVERSE:
+		X = -acc.y;
+		Y = acc.x;
 		Z = acc.z;
 		break;
+	case BMA_ORI_XYSWITCH_XYZINVERSE:
+		X = -acc.y;
+		Y = -acc.x;
+		Z = -acc.z;
 	default:
-		pr_err("bma222_accl: invalid orientation specified\n");
-	case BMA_NO_ROT:
 		X = acc.x;
 		Y = acc.y;
 		Z = acc.z;
 		break;
 	}
-	if (pdata->invert) {
-		X = -X;
-		Z = -Z;
-	}
+
 #ifdef BMA222_INPUT_DEVICE
 #ifdef BMA222_SW_CALIBRATION
 	input_report_rel(dd->ip_dev, REL_X, X-bma222_offset[0]);
@@ -983,12 +1029,6 @@ static int __devinit bma222_accl_probe(struct i2c_client *client,
 			goto err_read;
 		}
 		pdata->orientation = val;
-		rc = of_property_read_u32(np, "invert", &val);
-		if (rc) {
-			printk(KERN_ERR "BMA222: invert doesnot exisit\n");
-			goto err_read;
-		}
-		pdata->invert = val;
 	}
 
 	if (tempvalue == BMA222_CHIP_ID)

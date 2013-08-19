@@ -83,7 +83,6 @@
                         reg = <0x18>;
                         gpio-irq-pin = <0xFFFFFFFF>;
 			orientation  = <3>;
-                        invert = <1>;
 
                 };
 

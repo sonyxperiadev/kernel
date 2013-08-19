@@ -82,8 +82,7 @@
                         compatible = "bcm,bma222_accl";
                         reg = <0x18>;
                         gpio-irq-pin = <0xFFFFFFFF>;
-			orientation  = <1>;
-                        invert = <1>;
+			orientation  = <6>;
 
                 };
 
