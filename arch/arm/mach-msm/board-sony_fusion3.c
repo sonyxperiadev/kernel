@@ -209,6 +209,8 @@
 #include "board-sony_fusion3_pollux.h"
 #elif defined(CONFIG_MACH_SONY_ODIN)
 #include "board-sony_fusion3_odin.h"
+#elif defined(CONFIG_MACH_SONY_DOGO)
+#include "board-sony_fusion3_dogo.h"
 #else
 #error "ERROR: Unknown machine!"
 #endif
@@ -4414,6 +4416,7 @@ static void __init apq8064_common_init(void)
 	case HW_YUGA:
 	case HW_POLLUX:
 	case HW_POLLUX_MAKI:
+	case HW_DOGO:
 		nfc_vreg_low_power_mode();
 	}
 }

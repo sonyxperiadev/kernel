@@ -871,6 +871,10 @@ choice
 	  bool
 	    prompt "100k pull-up"
 
+	config SENSORS_PM8XXX_PULLUP_68K_BLTHERM
+	  bool
+	    prompt "68k pull-up"
+
 	config SENSORS_PM8XXX_PULLUP_DEFAULT_BLTHERM
 	  bool
 	    prompt "default"

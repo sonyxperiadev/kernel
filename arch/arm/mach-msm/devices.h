@@ -55,6 +55,9 @@ extern struct platform_device msm_device_uart_dm12;
 extern struct platform_device *msm_device_uart_gsbi9;
 extern struct platform_device msm_device_uart_dm6;
 extern struct platform_device msm_device_uart_dm8;
+#ifdef CONFIG_MSM_GSBI7_UART
+extern struct platform_device apq8064_device_uart_gsbi7;
+#endif
 extern struct platform_device msm_device_uart_dm9;
 extern struct platform_device mpq8064_device_uartdm_gsbi6;
 

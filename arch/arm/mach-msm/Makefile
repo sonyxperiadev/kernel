@@ -303,6 +303,12 @@ obj-$(CONFIG_ARCH_MPQ8092) += board-8092.o board-8092-gpiomux.o
 
 board-sony_fusion3-all-objs += board-sony_fusion3.o board-sony_fusion3-storage.o board-sony_fusion3-display.o board-8064-gpu.o board-sony_fusion3-hwrev.o
 
+obj-$(CONFIG_MACH_SONY_DOGO) += board-sony_fusion3.o board-sony_fusion3-storage.o board-8064-gpu.o board-sony_fusion3-hwrev.o
+obj-$(CONFIG_MACH_SONY_DOGO) += board-sony_fusion3_dogo.o
+obj-$(CONFIG_MACH_SONY_DOGO) += board-sony_dogo-camera.o board-sony_dogo-pmic.o board-sony_dogo-gpiomux.o board-sony_dogo-regulator.o board-sony_dogo-touch.o
+obj-$(CONFIG_MACH_SONY_DOGO) += board-sony_dogo-mpu.o gyro-semc_common.o bms-batterydata-loka.o
+obj-$(CONFIG_MACH_SONY_DOGO) += board-sony_dogo-display.o
+
 obj-$(CONFIG_MACH_SONY_YUGA) += board-sony_fusion3-all.o board-sony_fusion3_yuga.o
 obj-$(CONFIG_MACH_SONY_YUGA) += board-sony_yuga-camera.o board-sony_yuga-pmic.o board-sony_yuga-gpiomux.o board-sony_yuga-regulator.o board-sony_yuga-touch.o
 obj-$(CONFIG_MACH_SONY_YUGA) += board-sony_yuga-mpu.o gyro-semc_common.o bms-batterydata-lucius.o

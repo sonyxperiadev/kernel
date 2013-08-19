@@ -97,6 +97,10 @@ static struct msm_panel_info default_pinfo = {
 	.mipi.tx_eot_append = TRUE,
 	.mipi.t_clk_post = 0x04,
 	.mipi.t_clk_pre = 0x1B,
+#if defined(CONFIG_FB_MSM_MIPI_R63306_JDC_MDZ50) || \
+		defined(CONFIG_FB_MSM_MIPI_R63306_SHARP_LS046K3SX01)
+	.mipi.esc_byte_ratio = 4,
+#endif
 	.mipi.stream = 0,
 	.mipi.mdp_trigger = DSI_CMD_TRIGGER_SW,
 	.mipi.dma_trigger = DSI_CMD_TRIGGER_SW,

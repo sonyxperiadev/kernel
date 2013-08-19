@@ -922,6 +922,12 @@ config MACH_SONY_FUSION3
 	help
 	  Support for the Sony Mobile Fusion3 devices.
 
+config MACH_SONY_DOGO
+	depends on MACH_SONY_FUSION3
+	bool "Sony Mobile Dogo"
+	help
+	  Support for the Sony Mobile Dogo device.
+
 config MACH_SONY_YUGA
 	depends on MACH_SONY_FUSION3
 	bool "Sony Mobile Yuga"
