@@ -202,6 +202,10 @@ static int prv_isl290xx_prox_poll(struct isl290xx_prox_info_s *prxp);
 #ifdef ISL290XX_USER_CALIBRATION
 static void prv_isl290xx_prox_cali(void);
 #endif
+
+#ifdef ISL29147_ENABLE
+static int isl290xx_set_bits(u8 reg, u8 bit_mask, u8 value);
+#endif
 static void prv_isl290xx_work_func(struct work_struct *w);
 static void prv_isl290xx_report_value(int mask);
 static int prv_isl290xx_calc_distance(int value);
@@ -254,6 +258,7 @@ struct isl290xx_data_t {
 	char isl290xx_name[ISL290XX_ID_NAME_SIZE];
 	struct mutex update_lock;
 	struct mutex lock;
+	struct mutex prox_lock;
 	struct wake_lock isl290xx_wake_lock;
 #ifdef ISL290XX_POLL_MODE
 	struct delayed_work prox_poll_work;
@@ -432,7 +437,7 @@ static void prv_isl290xx_report_value(int mask)
 	struct isl290xx_prox_info_s *val = isl290xx_prox_cur_infop;
 	int lux_val = g_isl290xx_lux;
 	int dist;
-
+	mutex_lock(&isl290xx_data_tp->prox_lock);
 	if (mask == 0) {
 		input_report_abs(light->input_dev, ABS_MISC, lux_val);
 		input_sync(light->input_dev);
@@ -443,6 +448,7 @@ static void prv_isl290xx_report_value(int mask)
 		input_report_abs(proximity->input_dev, ABS_DISTANCE, dist);
 		input_sync(proximity->input_dev);
 	}
+	mutex_unlock(&isl290xx_data_tp->prox_lock);
 }
 
 static int __init isl290xx_init(void)
@@ -488,6 +494,7 @@ static void __exit isl290xx_exit(void)
 	mutex_destroy(&isl290xx_data_tp->proximity_calibrating);
 	mutex_destroy(&isl290xx_data_tp->update_lock);
 	mutex_destroy(&isl290xx_data_tp->lock);
+	mutex_destroy(&isl290xx_data_tp->prox_lock);
 	kfree(isl290xx_data_tp);
 }
 
@@ -781,6 +788,7 @@ static int isl290xx_suspend(struct i2c_client *client, pm_message_t mesg)
 
 static int isl290xx_resume(struct i2c_client *client)
 {
+
 	int ret = 0;
 #if 0
 #ifdef ISL290XX_POLL_MODE
@@ -947,6 +955,7 @@ static int isl290xx_probe(struct i2c_client *clientp,
 
 	mutex_init(&isl290xx_data_tp->update_lock);
 	mutex_init(&isl290xx_data_tp->lock);
+	mutex_init(&isl290xx_data_tp->prox_lock);
 	isl290xx_cfgp =
 	     kmalloc(sizeof(struct isl290xx_cfg_s), GFP_KERNEL);
 	if (!isl290xx_cfgp) {
