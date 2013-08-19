@@ -7926,9 +7926,6 @@ static int proc_ccu_set_freq_policy(struct ccu_clk *ccu_clk, int policy_id,
 		curr_opp = pi_get_active_opp(ccu_clk->pi_id);
 		if (curr_opp != PI_OPP_ECONOMY) {
 			sw_freq_id = PROC_CCU_FREQ_ID_ECO;
-/* Move economy volt id to that of target voltage to avoid extra seq txn */
-			ccu_set_voltage(ccu_clk, sw_freq_id, target_volt);
-/* Move to economy */
 			reg_val = readl(CCU_POLICY_FREQ_REG(ccu_clk));
 			reg_val &= ~(CCU_FREQ_POLICY_MASK << shift);
 			reg_val |= sw_freq_id << shift;
@@ -7938,8 +7935,6 @@ static int proc_ccu_set_freq_policy(struct ccu_clk *ccu_clk, int policy_id,
 				CCU_TARGET_LOAD ?
 				CCU_LOAD_TARGET : CCU_LOAD_ACTIVE);
 			ccu_policy_engine_stop(ccu_clk);
-/* Put economy OPP voltage ID back to original value */
-			ccu_set_voltage(ccu_clk, sw_freq_id, VLT_ID_A9_ECO);
 		}
 		change_arm_pll_config(opp_info->ctrl_prms);
 		ccu_set_voltage(ccu_clk, opp_info->freq_id,
