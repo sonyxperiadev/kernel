@@ -180,6 +180,14 @@ choice
 		Garnet
 		c_edn020
 
+	config MACH_HAWAII_GARNET_C_EDN020_SOC
+	bool "GARNET C_EDN020_SOC"
+	help
+	  Support for
+		Hawaii based
+		Garnet
+		c_edn020_soc
+
 	config MACH_HAWAII_GARNET_EDN020_SINGLESIM
 	bool "GARNET EDN020 SingleSime"
 	help
