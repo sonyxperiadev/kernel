@@ -826,24 +826,22 @@ void dormant_enter(u32 service)
 			 * Here we got out of idle do we let the core-0
 			 * continue to run
 			 */
-			 /*boot secondary CPU if its not offlined*/
-			if (cpu_online(SECONDARY_CORE)) {
 
-				boot_2nd_addr =
-				    readl_relaxed(KONA_CHIPREG_VA +
-						  CHIPREG_BOOT_2ND_ADDR_OFFSET);
-				boot_2nd_addr |= 1;
-				writel_relaxed(boot_2nd_addr,
-					       KONA_CHIPREG_VA +
-					       CHIPREG_BOOT_2ND_ADDR_OFFSET);
-				dsb_sev();
-				/* Wait for core-0 to acknowledge the wake-up */
-				instrument_lpm(LPM_TRACE_DRMNT_CPU_WAIT1, 0);
-				do {
-					boot_2nd_addr =
-					    readl_relaxed(KONA_CHIPREG_VA +
+			boot_2nd_addr =
+				readl_relaxed(KONA_CHIPREG_VA +
 						CHIPREG_BOOT_2ND_ADDR_OFFSET);
-				} while (boot_2nd_addr & 1);
+			boot_2nd_addr |= 1;
+			writel_relaxed(boot_2nd_addr,
+					KONA_CHIPREG_VA +
+					CHIPREG_BOOT_2ND_ADDR_OFFSET);
+			dsb_sev();
+			/* Wait for core-0 to acknowledge the wake-up */
+			instrument_lpm(LPM_TRACE_DRMNT_CPU_WAIT1, 0);
+			do {
+				boot_2nd_addr =
+					readl_relaxed(KONA_CHIPREG_VA +
+						CHIPREG_BOOT_2ND_ADDR_OFFSET);
+			} while (boot_2nd_addr & 1);
 
 			/* Wait for core-1 to reach non-secure side.
 			 * Workaround added to avoid mm_stuct count mismatch
@@ -852,7 +850,6 @@ void dormant_enter(u32 service)
 			instrument_lpm(LPM_TRACE_DRMNT_CPU_WAIT2, 0);
 			while (num_cores_in_dormant)
 				udelay(1);
-			} /* core down */
 		} /* Master core */
 #endif
 
