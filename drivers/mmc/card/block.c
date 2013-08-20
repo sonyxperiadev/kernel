@@ -72,7 +72,6 @@ static int perdev_minors = CONFIG_MMC_BLOCK_MINORS;
  * limited to 256 / number of minors per device.
  */
 static int max_devices;
-
 #ifdef CONFIG_MMC_BCM_SD
 #define SDHCI_CMD_DROP_RETRY 5
 #else
@@ -895,9 +894,15 @@ static int mmc_blk_cmd_recovery(struct mmc_card *card, struct request *req,
 	}
 
 	/* Check for set block count errors */
-	if (brq->sbc.error)
+	if (brq->sbc.error) {
+		if (status & R1_ILLEGAL_COMMAND) {
+			card->quirks |= MMC_QUIRK_BLK_NO_CMD23;
+			pr_warning("%s:SET_BLOCK_COUNT error, CMD23 is not supported.\n",
+				req->rq_disk->disk_name);
+		}
 		return mmc_blk_cmd_error(req, "SET_BLOCK_COUNT", brq->sbc.error,
 				prev_cmd_status_valid, status);
+	}
 
 	/* Check for r/w command errors */
 	if (brq->cmd.error)
@@ -1284,7 +1289,6 @@ static void mmc_blk_rw_rq_prep(struct mmc_queue_req *mqrq,
 	 */
 	if (brq->data.blocks > card->host->max_blk_count)
 		brq->data.blocks = card->host->max_blk_count;
-
 	if (brq->data.blocks > 1) {
 		/*
 		 * After a read error, we redo the request one sector
@@ -1940,6 +1944,8 @@ force_ro_fail:
 #define CID_MANFID_TOSHIBA	0x11
 #define CID_MANFID_MICRON	0x13
 #define CID_MANFID_SAMSUNG	0x15
+#define CID_MANFID_KINGSTONE 0x41
+#define CID_OEMID_KINGSTONE  0x3432
 
 static const struct mmc_fixup blk_fixups[] =
 {
@@ -1962,6 +1968,8 @@ static const struct mmc_fixup blk_fixups[] =
 	 *
 	 * N.B. This doesn't affect SD cards.
 	 */
+	MMC_FIXUP("SD16G", CID_MANFID_KINGSTONE, CID_OEMID_KINGSTONE, add_quirk,
+		  MMC_QUIRK_BLK_NO_CMD23),
 	MMC_FIXUP("MMC08G", CID_MANFID_TOSHIBA, CID_OEMID_ANY, add_quirk_mmc,
 		  MMC_QUIRK_BLK_NO_CMD23),
 	MMC_FIXUP("MMC16G", CID_MANFID_TOSHIBA, CID_OEMID_ANY, add_quirk_mmc,
