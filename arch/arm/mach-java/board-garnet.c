@@ -449,7 +449,7 @@ static struct regulator *d_3v0_mmc1_vcc;
 #define cam_pin_inactive(pin)   (0x01&(~(pin##_ACTIVE)))
 /* end of cameras RST/PWDN polarity defines*/
 
-#if defined(CONFIG_MACH_JAVA_C_LC1)
+#if defined(CONFIG_MACH_JAVA_C_LC1) || defined(CONFIG_MACH_JAVA_C_5609A)
 
 #define MAIN_CAM_AF_ENABLE			(33)
 #define TORCH_EN (10)
@@ -501,7 +501,7 @@ static int hawaii_camera_power(struct device *dev, int on)
 			printk(KERN_ERR "Unable to get cam0 PWDN GPIO\n");
 			return -1;
 		}
-	#if defined(CONFIG_MACH_JAVA_C_LC1)
+	#if defined(CONFIG_MACH_JAVA_C_LC1) || defined(CONFIG_MACH_JAVA_C_5609A)
 		if (gpio_request_one(MAIN_CAM_AF_ENABLE, GPIOF_DIR_OUT |
 				     GPIOF_INIT_LOW, "Cam0_af_enable")) {
 			printk(KERN_ERR "Unable to get cam0 af enable GPIO\n");
@@ -634,7 +634,7 @@ static int hawaii_camera_power(struct device *dev, int on)
 		regulator_enable(d_3v0_mmc1_vcc);
 		usleep_range(1000, 1010);
 
-#ifdef CONFIG_MACH_JAVA_C_LC1
+#if defined(CONFIG_MACH_JAVA_C_LC1) || defined(CONFIG_MACH_JAVA_C_5609A)
 		set_af_enable(1);
 #endif
 
@@ -655,7 +655,7 @@ static int hawaii_camera_power(struct device *dev, int on)
 		dw9714_enable(0);
 #endif
 
-#ifdef CONFIG_MACH_JAVA_C_LC1
+#if defined(CONFIG_MACH_JAVA_C_LC1) || defined(CONFIG_MACH_JAVA_C_5609A)
 		set_af_enable(0);
 #endif
 		usleep_range(5000, 5100);
