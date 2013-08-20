@@ -196,6 +196,14 @@ choice
 		Garnet
 		edn020
 
+	config MACH_HAWAII_GARNET_C_EDN020_SIMHOTSWAP
+	bool "GARNET C_EDN020_SIMHOTSWAP"
+	help
+	  Support for
+		Hawaii based
+		Garnet
+		c_edn020_simhotswap
+
 	config MACH_HAWAII_GARNET_C_A18
 	bool "GARNET A18"
 	help
