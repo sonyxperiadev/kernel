@@ -471,6 +471,8 @@ int msdos_partition(struct parsed_partitions *state)
 				&& fat_valid_media(fb->media)) {
 				strlcat(state->pp_buf, "\n", PAGE_SIZE);
 				put_dev_sector(sect);
+				put_partition(state, slot, 0,
+					get_capacity(state->bdev->bd_disk) * sector_size);
 				return 1;
 			} else {
 				put_dev_sector(sect);
