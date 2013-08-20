@@ -171,6 +171,17 @@ static struct pi_ops mm_pi_ops;
 
 static char *mm_ccu[] = { MM_CCU_CLK_NAME_STR };
 
+#ifdef CONFIG_MM_312M_SOURCE_CLK
+struct opp_info __mm_opp_info[] = {
+	INIT_OPP_INFO(MM_CCU_FREQ_ID_ECO, PI_OPP_ECONOMY, MM_CLK_SRC_312M),
+	INIT_OPP_INFO(MM_CCU_FREQ_ID_NRML, PI_OPP_NORMAL, MM_CLK_SRC_312M),
+	INIT_OPP_INFO(MM_CCU_FREQ_ID_TURBO, PI_OPP_TURBO, MM_CLK_SRC_312M),
+#ifdef CONFIG_PI_MGR_MM_STURBO_ENABLE
+	INIT_OPP_INFO(MM_CCU_FREQ_ID_SUPER_TURBO, PI_OPP_SUPER_TURBO,
+			MM_CLK_SRC_312M),
+#endif
+};
+#else
 struct opp_info __mm_opp_info[] = {
 	INIT_OPP_INFO(MM_CCU_FREQ_ID_ECO, PI_OPP_ECONOMY, 0),
 	INIT_OPP_INFO(MM_CCU_FREQ_ID_NRML, PI_OPP_NORMAL, 0),
@@ -180,7 +191,7 @@ struct opp_info __mm_opp_info[] = {
 			MM_CLK_SRC_312M),
 #endif
 };
-
+#endif
 struct opp_info *mm_opp_info[] = {__mm_opp_info};
 
 struct pi_opp mm_opp = {

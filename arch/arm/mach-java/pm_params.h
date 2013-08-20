@@ -52,12 +52,20 @@
 
 #define CPU_FREQ_ID_SYSPLL_WFI		PROC_CCU_FREQ_ID_ECO
 
+#ifdef CONFIG_MM_312M_SOURCE_CLK
+#define MM_CCU_FREQ_ID_ECO		3
+#else
 #define MM_CCU_FREQ_ID_ECO		2
+#endif
 #define MM_CCU_FREQ_ID_NRML		4
 #define MM_CCU_FREQ_ID_TURBO		5
 #define MM_CCU_FREQ_ID_SUPER_TURBO	6
 
+#ifdef CONFIG_MM_312M_SOURCE_CLK
+#define MM2_CCU_FREQ_ID_ECO		3
+#else
 #define MM2_CCU_FREQ_ID_ECO		2
+#endif
 #define MM2_CCU_FREQ_ID_NRML		4
 #define MM2_CCU_FREQ_ID_TURBO		5
 #define MM2_CCU_FREQ_ID_SUPER_TURBO	5 /*MM2 does not support 312M*/

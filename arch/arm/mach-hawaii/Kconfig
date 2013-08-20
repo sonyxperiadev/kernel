@@ -369,6 +369,16 @@ config	PI_MGR_MM_STURBO_ENABLE
 	  MM super turbo OPP frequency is set to 312MHz. Total 4
 	  OPPs will be defined for MM if the support is enabled
 
+config	MM_312M_SOURCE_CLK
+	depends on ARCH_HAWAII && KONA_PI_MGR
+	bool "Derive MM AXI clock from 312MHz"
+	default n
+	help
+	  Say Y to switch MM AXI source clock to 312MHz
+	  OPPs will be 104, 156, 208, 312Mhz
+	  500MHz clock source will be used otherwise
+	  OPPs will be 83, 166, 250, 312Mhz
+
 config	PWRMGR_DUMMY_SEQUENCER
 	bool "Use dummy PWRMGR HW I2C sequencer"
 	default n
