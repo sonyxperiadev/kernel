@@ -1771,8 +1771,8 @@ static int bcmpmu_fg_set_eoc_thrd(struct bcmpmu_fg_data *fg, int curr)
 	return ret;
 }
 
-#if 0
-static int bcmpmu_fg_set_sw_eoc_condition(struct bcmpmu_fg_data *fg)
+static int bcmpmu_fg_set_sw_eoc_condition(struct bcmpmu_fg_data *fg,
+					  bool sw_eoc)
 {
 	int ret;
 	u8 reg;
@@ -1780,12 +1780,19 @@ static int bcmpmu_fg_set_sw_eoc_condition(struct bcmpmu_fg_data *fg)
 	ret = fg->bcmpmu->read_dev(fg->bcmpmu, PMU_REG_MBCCTRL9, &reg);
 	if (ret)
 		return ret;
-	reg |= MBCCTRL9_SW_EOC_MASK;
+	if (sw_eoc)
+		reg |= MBCCTRL9_SW_EOC_MASK;
+	else
+		reg &= ~MBCCTRL9_SW_EOC_MASK;
 
 	ret = fg->bcmpmu->write_dev(fg->bcmpmu, PMU_REG_MBCCTRL9, reg);
+
+	ret = fg->bcmpmu->read_dev(fg->bcmpmu, PMU_REG_MBCCTRL9, &reg);
+
+	pr_fg(FLOW, "PMU_MBC_MBCCTRL9: %x\n", reg);
+
 	return ret;
 }
-#endif
 
 static int bcmpmu_fg_set_maintenance_chrgr_mode(struct bcmpmu_fg_data *fg,
 		enum maintenance_chrgr_mode mode)
@@ -2141,10 +2148,12 @@ static int bcmpmu_fg_sw_maint_charging_algo(struct bcmpmu_fg_data *fg)
 		if ((fg->bcmpmu->flags & BCMPMU_SPA_EN) &&
 				(flags->eoc_chargr_en)) {
 			pr_fg(FLOW, "sw_maint_chrgr: SPA SW EOC cleared\n");
+			bcmpmu_fg_set_sw_eoc_condition(fg, false);
 			flags->fg_eoc = false;
 		} else if (!(fg->bcmpmu->flags & BCMPMU_SPA_EN) &&
 				(volt < volt_thrld)) {
 			pr_fg(FLOW, "sw_maint_chrgr: SW EOC cleared\n");
+			bcmpmu_fg_set_sw_eoc_condition(fg, false);
 			flags->prev_batt_status = flags->batt_status;
 			flags->batt_status = POWER_SUPPLY_STATUS_CHARGING;
 			flags->fg_eoc = false;
@@ -2195,6 +2204,12 @@ static int bcmpmu_fg_sw_maint_charging_algo(struct bcmpmu_fg_data *fg)
 		flags->fully_charged = true;
 		flags->prev_batt_status = flags->batt_status;
 		flags->batt_status = POWER_SUPPLY_STATUS_FULL;
+		/**
+		 * Tell PMU that EOC condition has happened
+		 * so that safetly timers can be cleared
+		 */
+		bcmpmu_fg_set_sw_eoc_condition(fg, true);
+
 		if (fg->bcmpmu->flags & BCMPMU_SPA_EN) {
 			bcmpmu_post_spa_event_to_queue(fg->bcmpmu,
 					PMU_CHRGR_EVT_EOC, 0);
@@ -2204,7 +2219,6 @@ static int bcmpmu_fg_sw_maint_charging_algo(struct bcmpmu_fg_data *fg)
 			bcmpmu_chrgr_usb_en(fg->bcmpmu, 0);
 			bcmpmu_fg_update_psy(fg, false);
 		}
-
 	}
 exit:
 	return 0;
