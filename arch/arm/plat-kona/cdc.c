@@ -535,6 +535,29 @@ err:
 
 #endif /*CONFIG_DEBUG_FS*/
 
+static int cdc_panic_handler(struct notifier_block *this, unsigned long event,
+		void *ptr)
+{
+
+	static int has_panicked;
+	if (has_panicked)
+		return 0;
+
+	has_panicked = 1;
+	pr_err("CDC Status Regrs: CPU0: %x, CPU1: %x, CPU2: %x, CPU3: %x\n",
+			readl(cdc->base + CDC_CMD_STATUS_REG_OFFSET(0)),
+			readl(cdc->base + CDC_CMD_STATUS_REG_OFFSET(1)),
+			readl(cdc->base + CDC_CMD_STATUS_REG_OFFSET(2)),
+			readl(cdc->base + CDC_CMD_STATUS_REG_OFFSET(3)));
+	return 0;
+}
+
+static struct notifier_block cdc_panic_block = {
+	.notifier_call	= cdc_panic_handler,
+	.next		= NULL,
+	.priority	= 250	/* priority: INT_MAX >= x >= 0 */
+};
+
 static int cdc_probe(struct platform_device *pdev)
 {
 	int i;
@@ -572,6 +595,7 @@ static int cdc_probe(struct platform_device *pdev)
 #ifdef CONFIG_DEBUG_FS
 	cdc_dbg_init(cdc);
 #endif
+	atomic_notifier_chain_register(&panic_notifier_list, &cdc_panic_block);
 	return 0;
 }
 
