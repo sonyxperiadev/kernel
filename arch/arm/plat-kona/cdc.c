@@ -363,6 +363,23 @@ int cdc_enable_isolation_in_state(u32 states)
 	return 0;
 }
 
+int cdc_assert_cdcbusy_in_state(u32 states)
+{
+	u32 reg;
+	if (!cdc)
+		return -EINVAL;
+
+	spin_lock(&cdc->lock);
+	reg = readl_relaxed(cdc->base +
+		CDC_CDCBUSY_STATE_ENABLE_OFFSET);
+	reg |= states;
+	writel_relaxed(states,
+		cdc->base + CDC_CDCBUSY_STATE_ENABLE_OFFSET);
+	spin_unlock(&cdc->lock);
+
+	return 0;
+}
+
 int cdc_set_reset_counter(int type, u32 val)
 {
 	u32 reg;
