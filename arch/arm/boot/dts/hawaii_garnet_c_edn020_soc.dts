@@ -276,12 +276,12 @@
 
 	soc-back-camera {
 		compatible = "bcm,soc-camera";
-		reg = <0x36 0x0>;
+		reg = <0x3c 0x0>;
 		bus-id = <0>;
-		i2c-type = "ov5648";
-		i2c-addr = <0x36>;
+		i2c-type = "ov5640";
+		i2c-addr = <0x3c>;
 		i2c-adapter-id = <0>;
-		module-name = "ov5648";
+		module-name = "ov5640";
 		if-type = <1>;
 		if-mode = <3>;
 		orientation = <1>;
