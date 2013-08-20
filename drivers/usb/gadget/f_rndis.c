@@ -416,8 +416,16 @@ static void rndis_response_available(void *_rndis)
 static void rndis_response_complete(struct usb_ep *ep, struct usb_request *req)
 {
 	struct f_rndis			*rndis = req->context;
-	struct usb_composite_dev	*cdev = rndis->port.func.config->cdev;
+	struct usb_composite_dev	*cdev = NULL;
 	int				status = req->status;
+
+	/* In usb plug in/out and tetherring on/off
+	 * regression tests, port.func.config */
+	/* may be NULL pointer.*/
+	if (rndis->port.func.config != NULL)
+		cdev = rndis->port.func.config->cdev;
+	else
+		printk(KERN_ERR "rndis gadget driver is removed.\n");
 
 	/* after TX:
 	 *  - USB_CDC_GET_ENCAPSULATED_RESPONSE (ep0/control)
@@ -430,7 +438,8 @@ static void rndis_response_complete(struct usb_ep *ep, struct usb_request *req)
 		atomic_set(&rndis->notify_count, 0);
 		break;
 	default:
-		DBG(cdev, "RNDIS %s response error %d, %d/%d\n",
+		if (cdev != NULL)
+			DBG(cdev, "RNDIS %s response error %d, %d/%d\n",
 			ep->name, status,
 			req->actual, req->length);
 		/* FALLTHROUGH */
@@ -446,7 +455,8 @@ static void rndis_response_complete(struct usb_ep *ep, struct usb_request *req)
 		status = usb_ep_queue(rndis->notify, req, GFP_ATOMIC);
 		if (status) {
 			atomic_dec(&rndis->notify_count);
-			DBG(cdev, "notify/1 --> %d\n", status);
+			if (cdev != NULL)
+				DBG(cdev, "notify/1 --> %d\n", status);
 		}
 		break;
 	}
