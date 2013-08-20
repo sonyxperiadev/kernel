@@ -84,7 +84,6 @@ static unsigned int carrier_timeout = 4;
 module_param(carrier_timeout, uint, 0644);
 
 static DEFINE_SPINLOCK(txq_lock);
-static struct workqueue_struct *brcm_tx_work_q;
 #define np_info(np, fmt, ...)				\
 	pr_info("%s: " fmt, np->name, ##__VA_ARGS__)
 #define np_err(np, fmt, ...)				\
@@ -121,8 +120,7 @@ static void queue_process(struct work_struct *work)
 			__netif_tx_unlock(txq);
 			local_irq_restore(flags);
 			spin_unlock(&txq_lock);
-			queue_delayed_work(brcm_tx_work_q,
-				&npinfo->tx_work, 0);
+			schedule_delayed_work(&npinfo->tx_work, HZ/10);
 			return;
 		}
 		__netif_tx_unlock(txq);
@@ -509,7 +507,7 @@ void netpoll_send_skb_on_dev(struct netpoll *np, struct sk_buff *skb,
 	if (status != NETDEV_TX_OK) {
 		skb_queue_tail(&npinfo->txq, skb);
 		if (!spin_is_locked(&txq_lock))
-			queue_delayed_work(brcm_tx_work_q, &npinfo->tx_work, 0);
+			schedule_delayed_work(&npinfo->tx_work,0);
 
 	}
 }
@@ -1166,11 +1164,7 @@ int __netpoll_setup(struct netpoll *np, struct net_device *ndev, gfp_t gfp)
 		skb_queue_head_init(&npinfo->neigh_tx);
 		skb_queue_head_init(&npinfo->txq);
 		INIT_DELAYED_WORK(&npinfo->tx_work, queue_process);
-		brcm_tx_work_q = create_workqueue("netpoll-txq");
-
-		if (brcm_tx_work_q == NULL)
-			pr_err("brcm_tx_work_q is failed to be created!");
-
+	
 		atomic_set(&npinfo->refcnt, 1);
 
 		ops = np->dev->netdev_ops;
@@ -1347,8 +1341,6 @@ static void rcu_cleanup_netpoll_info(struct rcu_head *rcu_head)
 
 	/* we can't call cancel_delayed_work_sync here, as we are in softirq */
 	cancel_delayed_work(&npinfo->tx_work);
-	flush_workqueue(brcm_tx_work_q);
-	destroy_workqueue(brcm_tx_work_q);
 
 	/* clean after last, unfinished work */
 	__skb_queue_purge(&npinfo->txq);
