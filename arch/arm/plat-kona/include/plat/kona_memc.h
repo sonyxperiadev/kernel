@@ -48,9 +48,9 @@ struct kona_memc_pdata {
 	u32 flags;
 	u32 seq_busy_val;
 	u32 max_pwr;
-	u32 memc0_ns_base;
-	u32 chipreg_base;
-	u32 memc0_aphy_base;
+	void __iomem *memc0_ns_base;
+	void __iomem *chipreg_base;
+	void __iomem *memc0_aphy_base;
 };
 
 enum {
