@@ -473,9 +473,26 @@ void AUDIO_DRIVER_Close(AUDIO_DRIVER_HANDLE_t drv_handle)
 	case AUDIO_DRIVER_PLAY_AUDIO:
 	case AUDIO_DRIVER_PLAY_EPT:
 	case AUDIO_DRIVER_PLAY_RINGER:
+		{
+			spin_lock_irqsave(&audio_render_driver[aud_drv->
+						stream_id].audio_lock, flags);
+			audio_render_driver[aud_drv->stream_id].aud_drv_p =
+									NULL;
+			spin_unlock_irqrestore(&audio_render_driver[aud_drv->
+						stream_id].audio_lock, flags);
+		}
+		break;
 	case AUDIO_DRIVER_CAPT_HQ:
 	case AUDIO_DRIVER_CAPT_EPT:
 	case AUDIO_DRIVER_CAPT_VOICE:
+		{
+			spin_lock_irqsave(&audio_capture_driver.audio_lock,
+									flags);
+			audio_capture_driver.aud_drv_p = NULL;
+			spin_unlock_irqrestore(&audio_capture_driver.
+							audio_lock, flags);
+		}
+		break;
 	case AUDIO_DRIVER_VOIF:
 		break;
 	case AUDIO_DRIVER_VOIP:
@@ -508,6 +525,7 @@ void AUDIO_DRIVER_Close(AUDIO_DRIVER_HANDLE_t drv_handle)
 	}
 	/* free the driver structure */
 	kfree(aud_drv);
+	aud_drv = NULL;
 	return;
 }
 
