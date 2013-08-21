@@ -2359,10 +2359,20 @@ static void bcmpmu_fg_batt_cal_algo(struct bcmpmu_fg_data *fg)
 	queue_delayed_work(fg->fg_wq, &fg->fg_periodic_work, 0);
 }
 
+static bool bcmpmu_fg_ntc_update(struct bcmpmu_fg_data *fg)
+{
+	bool update_psy = false;
+	struct bcmpmu_fg_pdata *pdata = fg->pdata;
+
+	if (fg->adc_data.temp >= pdata->ntc_high_temp)
+			update_psy = true;
+	return	update_psy;
+}
 
 static void bcmpmu_fg_charging_algo(struct bcmpmu_fg_data *fg)
 {
 	int poll_time = CHARG_ALGO_POLL_TIME_MS;
+	bool psy_update = false;
 
 	pr_fg(FLOW, "%s\n", __func__);
 
@@ -2406,7 +2416,8 @@ static void bcmpmu_fg_charging_algo(struct bcmpmu_fg_data *fg)
 				fg->capacity_info.percentage);
 	}
 
-	bcmpmu_fg_update_psy(fg, false);
+	psy_update = bcmpmu_fg_ntc_update(fg);
+	bcmpmu_fg_update_psy(fg, psy_update);
 
 	FG_LOCK(fg);
 	if (fg->flags.reschedule_work)
@@ -2553,6 +2564,7 @@ static void bcmpmu_fg_discharging_algo(struct bcmpmu_fg_data *fg)
 	bcmpmu_fg_program_alarm(fg, fg->alarm_timeout);
 #endif /*CONFIG_WD_TAPPER*/
 
+	force_update_psy = bcmpmu_fg_ntc_update(fg);
 	bcmpmu_fg_update_psy(fg, force_update_psy);
 
 	FG_LOCK(fg);

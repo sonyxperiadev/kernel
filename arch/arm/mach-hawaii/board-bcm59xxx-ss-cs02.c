@@ -1255,6 +1255,7 @@ static struct bcmpmu_fg_pdata fg_pdata = {
 
 	.poll_rate_low_batt =  120000, /* every 120 seconds */
 	.poll_rate_crit_batt = 5000, /* every 5 Seconds */
+	.ntc_high_temp = 680, /*battery too hot shdwn temp*/
 };
 
 struct bcmpmu59xxx_accy_pdata accy_pdata = {
