@@ -1051,7 +1051,7 @@ static struct kona_pl330_data hawaii_pl330_pdata = {
 };
 #endif
 
-#ifdef CONFIG_BCM_BT_LPM
+#if defined(CONFIG_BCM_BT_LPM) && !defined(CONFIG_OF_DEVICE)
 #define GPIO_BT_WAKE	32
 #define GPIO_HOST_WAKE	72
 
