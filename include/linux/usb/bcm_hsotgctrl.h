@@ -18,8 +18,8 @@
 #define BCM_HSOTGCTRL_WAKEUP_PROCESSING_DELAY 5
 
 struct bcm_hsotgctrl_platform_data {
-	unsigned long hsotgctrl_virtual_mem_base;
-	unsigned long chipreg_virtual_mem_base;
+	void __iomem *hsotgctrl_virtual_mem_base;
+	void __iomem *chipreg_virtual_mem_base;
 	int irq;
 	const unsigned char *usb_ahb_clk_name;
 	const unsigned char *mdio_mstr_clk_name;
