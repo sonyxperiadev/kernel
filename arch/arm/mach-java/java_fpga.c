@@ -29,9 +29,6 @@
 #include <linux/platform_device.h>
 #include <linux/interrupt.h>
 #include <linux/irq.h>
-#ifdef CONFIG_ANDROID_PMEM
-#include <linux/android_pmem.h>
-#endif
 #include <linux/kernel_stat.h>
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
@@ -112,15 +109,6 @@
 	.clk_name = clk,	\
 	.port_name = uart_name,			\
 }
-
-#ifdef CONFIG_ANDROID_PMEM
-struct android_pmem_platform_data android_pmem_data = {
-	.name = "pmem",
-	.cmasize = 0,
-	.carveout_base = 0,
-	.carveout_size = 0,
-};
-#endif
 
 static struct spi_kona_platform_data sspi_spi0_info = {
 #ifdef CONFIG_DMAC_PL330
@@ -284,10 +272,6 @@ static void hawaii_ray_add_pdata(void)
 
 void __init hawaii_add_common_devices(void)
 {
-#ifdef CONFIG_ANDROID_PMEM
-	platform_device_register(&android_pmem);
-#endif
-
 }
 
 /* All Hawaii Ray specific devices */

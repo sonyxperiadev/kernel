@@ -51,28 +51,6 @@ config AD525X_DPOT_SPI
 	  To compile this driver as a module, choose M here: the
 	  module will be called ad525x_dpot-spi.
 
-config ANDROID_PMEM
-	bool "Android pmem allocator"
-	default y
-	select GENERIC_ALLOCATOR
-	help
-	  Say Y here if you want Android PMEM driver. The pmem driver is
-	  used to provide the ability to allocate physically contiguous
-	  memory for application. Pmem can be used with CMA/carverou/
-	  kmalloc as backend
-
-config ANDROID_PMEM_LOW_MEMORY_KILLER
-	bool "Low Memory killer for CMA region managed by Pmem driver"
-	default y
-	depends on ANDROID_PMEM && CMA
-	help
-	  Say Y here if you want Android PMEM low memory killer. This
-	  feature heavily depends on the application manager changing
-	  the "oom_adj" values of application processes according to
-	  their importance w.r.t user interaction. Android Activity
-	  Manager does this and so this feature should only ever be
-	  enabled if you are using the kernel with Android.
-
 config ATMEL_PWM
 	tristate "Atmel AT32/AT91 PWM support"
 	depends on HAVE_CLK
