@@ -582,7 +582,7 @@ err:
 #endif
 static int __devexit bcmpmu_adc_remove(struct platform_device *pdev)
 {
-	hwmon_device_register(&pdev->dev);
+	hwmon_device_unregister(&pdev->dev);
 	sysfs_remove_group(&pdev->dev.kobj, &bcmpmu_hwmon_attr_group);
 #ifdef CONFIG_DEBUG_FS
 	debugfs_remove(debugfs_adc_dir);

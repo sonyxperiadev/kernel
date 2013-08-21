@@ -406,6 +406,8 @@ struct bcmpmu_acld_pdata {
 	int acld_cc_lmt;
 	int otp_cc_trim;
 	int one_c_rate;
+	int *acld_chrgrs;
+	int acld_chrgrs_list_size;
 	bool qa_required; /* Set this to true if
 			     Ibus is strictly limited to acld_cc_lmt */
 };
@@ -972,6 +974,8 @@ int bcmpmu_cc_trim_up(struct bcmpmu59xxx *bcmpmu);
 int bcmpmu_cc_trim_down(struct bcmpmu59xxx *bcmpmu);
 bool bcmpmu_get_mbc_faults(struct bcmpmu59xxx *bcmpmu);
 int  bcmpmu_get_trim_curr(struct bcmpmu59xxx *bcmpmu);
+int bcmpmu_set_chrgr_def_current(struct bcmpmu59xxx *bcmpmu,
+		enum bcmpmu_chrgr_type_t chrgr_type);
 
 bool bcmpmu_is_acld_enabled(struct bcmpmu59xxx *bcmpmu);
 
