@@ -1323,21 +1323,6 @@ static void sdhci_request(struct mmc_host *mmc, struct mmc_request *mrq)
 		present = sdhci_readl(host, SDHCI_PRESENT_STATE) &
 				SDHCI_CARD_PRESENT;
 
-#ifdef CONFIG_MMC_BCM_NON_SECURE_ERASE
-	if (host->mrq->cmd->opcode == MMC_ERASE) {
-
-		if (host->mrq->cmd->arg == MMC_SECURE_TRIM1_ARG) {
-			tasklet_schedule(&host->finish_tasklet);
-			goto out;
-		}
-
-		if ((host->mrq->cmd->arg == MMC_SECURE_TRIM2_ARG))
-			host->mrq->cmd->arg = MMC_TRIM_ARGS;
-		else
-			host->mrq->cmd->arg = MMC_ERASE_ARG;
-	}
-#endif
-
 	if (!present || host->flags & SDHCI_DEVICE_DEAD) {
 		host->mrq->cmd->error = -ENOMEDIUM;
 		tasklet_schedule(&host->finish_tasklet);
@@ -1369,9 +1354,6 @@ static void sdhci_request(struct mmc_host *mmc, struct mmc_request *mrq)
 		else
 			sdhci_send_command(host, mrq->cmd);
 	}
-#ifdef CONFIG_MMC_BCM_NON_SECURE_ERASE
-out:
-#endif
 	mmiowb();
 	spin_unlock_irqrestore(&host->lock, flags);
 }
