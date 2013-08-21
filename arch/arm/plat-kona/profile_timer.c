@@ -7,6 +7,7 @@
 
 #include <mach/profile_timer.h>
 #include <mach/rdb/brcm_rdb_glbtmr.h>
+#include <mach/clock.h>
 
 static void __iomem *proftmr_regbase = NULL;
 
@@ -69,8 +70,8 @@ timer_tick_rate_t timer_get_tick_rate(void)
 	prescaler &= GLBTMR_GLOB_CTRL_PRESCALER_G_MASK;
 	prescaler >>= GLBTMR_GLOB_CTRL_PRESCALER_G_SHIFT;
 
-	return ((clk_get_rate(clk_get(NULL, "arm_clk"))) /
-		((1 + prescaler) * 2));
+	return clk_get_rate(clk_get(NULL, ARM_CORE_CLK_NAME_STR)) /
+		((1 + prescaler) * 2);
 }
 
 timer_tick_count_t timer_get_tick_count(void)
