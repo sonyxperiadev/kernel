@@ -46,7 +46,9 @@
 #include <linux/module.h>
 #include <linux/timer.h>
 #define OV5648_DEBUG 0
-#if defined(CONFIG_MACH_JAVA_C_LC1) || defined(CONFIG_MACH_JAVA_C_5609A)
+
+#if defined(CONFIG_MACH_JAVA_C_LC1) || defined(CONFIG_MACH_JAVA_C_5609A) \
+	|| defined(CONFIG_MACH_JAVA_C_5606)
 #define TORCH_EN (10)
 #define FLASH_EN (11)
 #endif
@@ -597,7 +599,8 @@ static int ov5648_set_state(struct i2c_client *client, int new_state);
 static int ov5648_init(struct i2c_client *client);
 
 /*add an timer to close the flash after two frames*/
-#if defined(CONFIG_MACH_JAVA_C_LC1) || defined(CONFIG_MACH_JAVA_C_5609A)
+#if defined(CONFIG_MACH_JAVA_C_LC1) || defined(CONFIG_MACH_JAVA_C_5609A) \
+	|| defined(CONFIG_MACH_JAVA_C_5606)
 static struct timer_list timer;
 static char *msg = "hello world";
 static void print_func(unsigned long lparam)
@@ -805,7 +808,8 @@ static const struct v4l2_queryctrl ov5648_controls[] = {
 	 .name = "AS3643-flash",
 #endif
 
-#if defined(CONFIG_MACH_JAVA_C_LC1) || defined(CONFIG_MACH_JAVA_C_5609A)
+#if defined(CONFIG_MACH_JAVA_C_LC1) || defined(CONFIG_MACH_JAVA_C_5609A) \
+	|| defined(CONFIG_MACH_JAVA_C_5606)
 	 .name = "OCP8111-flash",
 #endif
 	 .minimum = FLASH_MODE_OFF,
@@ -1189,7 +1193,7 @@ static int ov5648_lens_set_position(struct i2c_client *client,
 				    int target_position)
 {
 	int ret = 0;
-
+	/* printk("ov5648_lens_set_position: target=%d\n",target_position); */
 #ifdef CONFIG_VIDEO_A3907
 	if (target_position & 0x80000000) {
 		int fine_target_position = target_position & ~0x80000000;
@@ -1323,7 +1327,7 @@ static int ov5648_set_gain(struct i2c_client *client, int gain_value)
 	gain_value = gain_value / GAIN_HIST_MAX;
 #endif
 	gain_actual = ov5648_calc_gain(client, gain_value, &gain_code_analog);
-	pr_debug("ov5648_set_gain: cur=%u req=%u act=%u cod=%u",
+	printk(KERN_INFO "ov5648_set_gain: cur=%u req=%u act=%u cod=%u\n",
 		 ov5648->gain_current, gain_value,
 		 gain_actual, gain_code_analog);
 	if (gain_actual == ov5648->gain_current)
@@ -1455,7 +1459,7 @@ static void ov5648_set_exposure(struct i2c_client *client, int exp_value)
 
 	actual_exposure = ov5648_calc_exposure(client, exp_value,
 			&vts, &coarse_int_lines);
-	pr_debug("ov5648_set_exposure: cur=%d req=%d act=%d coarse=%d vts=%d",
+	printk(KERN_INFO "ov5648_set_exposure: cur=%d req=%d act=%d coarse=%d vts=%d\n",
 			ov5648->exposure_current, exp_value, actual_exposure,
 			coarse_int_lines, vts);
 	ov5648->vts = vts;
@@ -1568,21 +1572,21 @@ static int ov5648_set_mode(struct i2c_client *client, int new_mode_idx)
 	int ret = 0;
 
 	if (ov5648->mode_idx == new_mode_idx) {
-		pr_debug("ov5648_set_mode: skip init from mode[%d]=%s to mode[%d]=%s",
+		printk(KERN_INFO "ov5648_set_mode: skip init from mode[%d]=%s to mode[%d]=%s\n",
 			ov5648->mode_idx, ov5648_mode[ov5648->mode_idx].name,
 			new_mode_idx, ov5648_mode[new_mode_idx].name);
 		return ret;
 	}
 
 	if (ov5648->mode_idx == OV5648_MODE_MAX) {
-		pr_debug("ov5648_set_mode: full init from mode[%d]=%s to mode[%d]=%s",
+		printk(KERN_INFO "ov5648_set_mode: full init from mode[%d]=%s to mode[%d]=%s\n",
 		ov5648->mode_idx, ov5648_mode[ov5648->mode_idx].name,
 		new_mode_idx, ov5648_mode[new_mode_idx].name);
 		ov5648_init(client);
 		ret = ov5648_reg_writes(client, ov5648_reginit);
 		ret = ov5648_reg_writes(client, ov5648_regdif[new_mode_idx]);
 	} else {
-		pr_debug("ov5648_set_mode: diff init from mode[%d]=%s to mode[%d]=%s",
+		printk(KERN_INFO "ov5648_set_mode: diff init from mode[%d]=%s to mode[%d]=%s\n",
 			ov5648->mode_idx, ov5648_mode[ov5648->mode_idx].name,
 			new_mode_idx, ov5648_mode[new_mode_idx].name);
 		ret = ov5648_reg_writes(client, ov5648_regdif[new_mode_idx]);
@@ -1607,8 +1611,8 @@ static int ov5648_set_state(struct i2c_client *client, int new_state)
 	struct ov5648 *ov5648 = to_ov5648(client);
 	int ret = 0;
 
-	pr_debug("ov5648_set_state: %d (%s) -> %d (%s)", ov5648->state,
-		 ov5648->state ? "strm" : "stop",
+	printk(KERN_INFO "ov5648_set_state: %d (%s) -> %d (%s)\n",\
+	    ov5648->state, ov5648->state ? "strm" : "stop",\
 		 new_state, new_state ? "strm" : "stop");
 
 	if (ov5648->state != new_state) {
@@ -1898,7 +1902,8 @@ int set_flash_mode(struct i2c_client *client, int mode)
 	ov5648->flashmode = mode;
 #endif
 
-#if defined(CONFIG_MACH_JAVA_C_LC1) || defined(CONFIG_MACH_JAVA_C_5609A)
+#if defined(CONFIG_MACH_JAVA_C_LC1) || defined(CONFIG_MACH_JAVA_C_5609A) \
+	|| defined(CONFIG_MACH_JAVA_C_5606)
 		if ((mode == FLASH_MODE_OFF)
 			|| (mode == FLASH_MODE_TORCH_OFF)) {
 			gpio_set_value(TORCH_EN, 0);
@@ -2058,7 +2063,8 @@ static int ov5648_init(struct i2c_client *client)
 	 *  Exposure should be DEFAULT_EXPO * line_length / 1000
 	 *  Since we don't have line_length yet, just estimate
 	 */
-#if defined(CONFIG_MACH_JAVA_C_LC1) || defined(CONFIG_MACH_JAVA_C_5609A)
+#if defined(CONFIG_MACH_JAVA_C_LC1) || defined(CONFIG_MACH_JAVA_C_5609A) \
+	|| defined(CONFIG_MACH_JAVA_C_5606)
 	init_timer(&timer);
 #endif
 
