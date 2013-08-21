@@ -67,7 +67,7 @@ struct avs_pdata {
 	int *vddvar_adj_lut;
 	int *vddvar_a9_adj_lut;
 	char *a9_regl_id;
-	u32 pwrwdog_base;
+	void __iomem *pwrwdog_base;
 };
 
 u32 avs_get_vddvar_ret_vlt_min(void);
