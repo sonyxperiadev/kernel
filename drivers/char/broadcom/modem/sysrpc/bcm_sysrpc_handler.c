@@ -288,15 +288,20 @@ Result_t Handle_SYS_APSystemCmd(RPC_Msg_t *pReqMsg, UInt32 cmd,
 {
 	Result_t result = RESULT_OK;
 	SYS_ReqRep_t data;
+	static int rfldo_prev_state = -1;
 
 	memset(&data, 0, sizeof(SYS_ReqRep_t));
 
 	switch (cmd) {
 	case AP_SYS_CMD_RFLDO:
-		printk(KERN_INFO "Excuting SYS_AP_CMD_RFLDO cmdType=%d\n",
-			(int)param1);
-		result = SetLDORegulator((enum SYS_LDO_Cmd_Type_t)param1,
-				"rf", REGULATOR_MODE_STANDBY);
+		if (param1 != rfldo_prev_state) {
+			printk(KERN_INFO "Excuting SYS_AP_CMD_RFLDO cmdType=%d\n",
+				(int)param1);
+			result = SetLDORegulator(
+					(enum SYS_LDO_Cmd_Type_t)param1,
+					"rf", REGULATOR_MODE_STANDBY);
+			rfldo_prev_state = param1;
+		}
 		break;
 
 	case AP_SYS_CMD_SIMLDO:
