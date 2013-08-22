@@ -202,4 +202,59 @@ void extern_audio_platform_cfg_set(void *cfg);
 ****************************************************************************/
 void extern_dock_audio_route(int gpio_val);
 
+/* PMU ALC support */
+/********************************************************************
+*  @brief  enable or disable PMU ALC
+*
+*  @param  on      1 - enable, 0 - disable
+*  @return  none
+*
+****************************************************************************/
+void extern_ihf_set_alc_enable(int on);
+
+/********************************************************************
+*  @brief  set ALC reference from VBAT or from VLDO
+*
+*  @param  on      1 - VBAT, 0 - VLDO
+*  @return  none
+*
+****************************************************************************/
+void extern_ihf_set_alc_vbat_ref(int on);
+
+/********************************************************************
+*  @brief  set ALC threshold at comparator input (and THD at the load)
+*
+*  @param  thld      0 - 1% THD
+*                    1 - 3% THD
+*                    2 - 5% THD
+*                    3 - 10% THD
+*                    0xF - 0.1% THD
+*  @return  none
+*
+****************************************************************************/
+void extern_ihf_set_alc_thld(int thld);
+
+/********************************************************************
+*  @brief  control ALC ramp up time
+*
+*  @param  ctrl      0 - 20 ms
+*                    1 - 200 ms
+*                    2 - 1 s
+*                    3 - 4 s
+*  @return  none
+*
+****************************************************************************/
+void extern_ihf_set_alc_ramp_up_ctrl(int ctrl);
+
+/********************************************************************
+*  @brief  control ALC ramp down time
+*
+*  @param  ctrl      0 - 100 us
+*                    1 - 500 us
+*                    2 - 1 ms
+*  @return  none
+*
+****************************************************************************/
+void extern_ihf_set_alc_ramp_down_ctrl(int ctrl);
+
 #endif

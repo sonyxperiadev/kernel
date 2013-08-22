@@ -603,9 +603,11 @@ void bcmpmu_enable_alc(bool on)
 	if (on) {
 		reg |= IHF_ALC_PUP_MASK;
 		reg &= ~IHFALC1_IHFALC_BYP;
+		reg |= IHF_ALC_HISPEED;
 	} else {
 		reg &= ~IHF_ALC_PUP_MASK;
 		reg |=  IHFALC1_IHFALC_BYP;
+		reg &= ~IHF_ALC_HISPEED;
 	}
 	bcmpmu->write_dev(bcmpmu, PMU_REG_IHFALC1, reg);
 	mutex_unlock(&pmu_audio->lock);
@@ -742,9 +744,15 @@ void bcmpmu_ihf_power(bool on)
 		/* Bypass IHF ALC/APS, so that IHF gain can be
 		 * controlled manually
 		 */
+		/* Do not bypass ALC by default.
+		 * audio controller will call bcmpmu_enable_alc
+		 * according to sysparm configuration
+		 */
+		/*
 		bcmpmu->read_dev(bcmpmu, PMU_REG_IHFALC1, &temp);
 		temp |= IHFALC1_IHFALC_BYP;
 		bcmpmu->write_dev(bcmpmu, PMU_REG_IHFALC1, temp);
+		*/
 
 		/* Toggle i_IHFpop_pup from 1 to 0. */
 		bcmpmu->read_dev(bcmpmu, PMU_REG_IHFPOP, &temp);
@@ -970,9 +978,15 @@ void bcmpmu_audio_init(void)
 		/* Bypass IHF ALC/APS, so that IHF gain can
 		 * be controlled manually
 		 */
+		/* Do not bypass ALC by default.
+		 * audio controller will call bcmpmu_enable_alc
+		 * according to sysparm configuration
+		 */
+		/*
 		bcmpmu->read_dev(bcmpmu, PMU_REG_IHFALC1, &val);
 		val |= IHFALC1_BYP_MASK;
 		bcmpmu->write_dev(bcmpmu, PMU_REG_IHFALC1, val);
+		*/
 
 		/* set IHF pop ramp time */
 		bcmpmu->read_dev(bcmpmu, PMU_REG_IHFPOP, &val);
@@ -1019,9 +1033,15 @@ void bcmpmu_audio_deinit(void)
 		bcmpmu->write_dev(bcmpmu, PMU_REG_IHFTOP, val);
 
 		/* Enable IHF ALC/APS */
+		/* Do not bypass ALC by default.
+		 * audio controller will call bcmpmu_enable_alc
+		 * according to sysparm configuration
+		 */
+		/*
 		bcmpmu->read_dev(bcmpmu, PMU_REG_IHFALC1, &val);
 		val |= IHFALC1_IHFALC_BYP;
 		bcmpmu->write_dev(bcmpmu, PMU_REG_IHFALC1, val);
+		*/
 
 		bcmpmu->read_dev(bcmpmu, PMU_REG_PLLCTRL, &val);
 		val &= ~(PLLCTRL_PLLEN | PLLCTRL_AUDIO_EN | PLLCTRL_ENCLK26M);

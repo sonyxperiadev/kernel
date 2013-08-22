@@ -51,6 +51,12 @@
 #define AUDIO_PMU_DEINIT() NULL
 #define AUDIO_PMU_HS_HI_GAIN_MODE_EN(a, b) NULL
 #define AUDIO_PMU_IHF_HI_GAIN_MODE_EN(a) NULL
+/* PMU ALC support */
+#define AUDIO_PMU_IHF_ALC_EN(a) NULL
+#define AUDIO_PMU_IHF_ALC_VBAT_REF(a) NULL
+#define AUDIO_PMU_IHF_ALC_THLD(a) NULL
+#define AUDIO_PMU_IHF_ALC_RAMP_UP_CTRL(a) NULL
+#define AUDIO_PMU_IHF_ALC_RAMP_DOWN_CTRL(a) NULL
 
 #else
 
@@ -65,6 +71,12 @@
 #define AUDIO_PMU_DEINIT bcm59055_audio_deinit
 #define AUDIO_PMU_HS_HI_GAIN_MODE_EN NULL
 #define AUDIO_PMU_IHF_HI_GAIN_MODE_EN NULL
+/* PMU ALC support */
+#define AUDIO_PMU_IHF_ALC_EN NULL
+#define AUDIO_PMU_IHF_ALC_VBAT_REF NULL
+#define AUDIO_PMU_IHF_ALC_THLD NULL
+#define AUDIO_PMU_IHF_ALC_RAMP_UP_CTRL NULL
+#define AUDIO_PMU_IHF_ALC_RAMP_DOWN_CTRL NULL
 
 #else
 
@@ -77,7 +89,12 @@
 #define AUDIO_PMU_DEINIT bcmpmu_audio_deinit
 #define AUDIO_PMU_HS_HI_GAIN_MODE_EN bcmpmu_hi_gain_mode_hs_en
 #define AUDIO_PMU_IHF_HI_GAIN_MODE_EN bcmpmu_hi_gain_mode_en
-
+/* PMU ALC support */
+#define AUDIO_PMU_IHF_ALC_EN bcmpmu_enable_alc
+#define AUDIO_PMU_IHF_ALC_VBAT_REF bcmpmu_ihf_alc_vbat_ref
+#define AUDIO_PMU_IHF_ALC_THLD bcmpmu_ihf_alc_thld
+#define AUDIO_PMU_IHF_ALC_RAMP_UP_CTRL bcmpmu_ihf_alc_rampup_ctrl
+#define AUDIO_PMU_IHF_ALC_RAMP_DOWN_CTRL bcmpmu_ihf_alc_ramp_down_ctrl
 #endif
 #endif
 
@@ -743,3 +760,84 @@ void extern_dock_audio_route(int gpio_val)
 		audio_gpio_output("AUDIO_DOCK_ROUTE",
 			ext_aud_plat_cfg.dock_aud_route_gpio, gpio_val);
 }
+
+/* PMU ALC support */
+/********************************************************************
+*  @brief  enable or disable PMU ALC
+*
+*  @param  on      1 - enable, 0 - disable
+*  @return  none
+*
+****************************************************************************/
+void extern_ihf_set_alc_enable(int on)
+{
+	aTrace(LOG_AUDIO_CNTLR, "%s on=%d\n", __func__, on);
+
+	AUDIO_PMU_IHF_ALC_EN((bool)on);
+}
+
+/********************************************************************
+*  @brief  set ALC reference from VBAT or from VLDO
+*
+*  @param  on      1 - VBAT, 0 - VLDO
+*  @return  none
+*
+****************************************************************************/
+void extern_ihf_set_alc_vbat_ref(int on)
+{
+	aTrace(LOG_AUDIO_CNTLR, "%s on=%d\n", __func__, on);
+
+	AUDIO_PMU_IHF_ALC_VBAT_REF((bool)on);
+}
+
+/********************************************************************
+*  @brief  set ALC threshold at comparator input (and THD at the load)
+*
+*  @param  thld      0 - 1% THD
+*                    1 - 3% THD
+*                    2 - 5% THD
+*                    3 - 10% THD
+*                    0xF - 0.1% THD
+*  @return  none
+*
+****************************************************************************/
+void extern_ihf_set_alc_thld(int thld)
+{
+	aTrace(LOG_AUDIO_CNTLR, "%s thld=%d\n", __func__, thld);
+
+	AUDIO_PMU_IHF_ALC_THLD((enum ihf_alc_thld)thld);
+}
+
+/********************************************************************
+*  @brief  control ALC ramp up time
+*
+*  @param  ctrl      0 - 20 ms
+*                    1 - 200 ms
+*                    2 - 1 s
+*                    3 - 4 s
+*  @return  none
+*
+****************************************************************************/
+void extern_ihf_set_alc_ramp_up_ctrl(int ctrl)
+{
+	aTrace(LOG_AUDIO_CNTLR, "%s ctrl=%d\n", __func__, ctrl);
+
+	AUDIO_PMU_IHF_ALC_RAMP_UP_CTRL((enum ihf_alc_ramp_up_ctrl)ctrl);
+}
+
+/********************************************************************
+*  @brief  control ALC ramp down time
+*
+*  @param  ctrl      0 - 100 us
+*                    1 - 500 us
+*                    2 - 1 ms
+*  @return  none
+*
+****************************************************************************/
+void extern_ihf_set_alc_ramp_down_ctrl(int ctrl)
+{
+	aTrace(LOG_AUDIO_CNTLR, "%s ctrl=%d\n", __func__, ctrl);
+
+	AUDIO_PMU_IHF_ALC_RAMP_DOWN_CTRL((enum ihf_alc_ramp_down_ctrl)ctrl);
+}
+

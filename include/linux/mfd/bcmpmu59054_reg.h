@@ -836,6 +836,8 @@
 #define IHF_ALC_PUP_MASK	0x1
 #define IHF_ALC_PUP_SHIFT	0
 
+#define IHF_ALC_HISPEED         0x2
+
 #define IHF_ALC_VBAT_REF_MASK	0x8
 #define IHF_ALC_VBAT_REF_SHIFT	3
 
