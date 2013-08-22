@@ -25,13 +25,13 @@
 #include <linux/io.h>
 #include <linux/delay.h>
 #include <linux/rfkill.h>
-#include <linux/gpio.h>
 #include <linux/module.h>
 #include <linux/broadcom/bcmbt_rfkill.h>
 #include <linux/slab.h>
 
 #include <linux/of.h>
 #include <linux/of_irq.h>
+#include <linux/gpio.h>
 #include <linux/of_platform.h>
 
 

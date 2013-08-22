@@ -15,8 +15,8 @@
 
 #include <linux/module.h>
 #include <linux/init.h>
-#include <linux/gpio.h>
 #include <mach/gpio.h>
+#include <linux/gpio.h>
 #include <linux/broadcom/bcmbt_lpm.h>
 #include <linux/platform_device.h>
 #include <linux/sched.h>

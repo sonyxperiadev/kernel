@@ -29,7 +29,6 @@
 #include <linux/kernel.h>
 #include <linux/delay.h>
 #include <linux/errno.h>
-#include <linux/gpio.h>
 #include <linux/slab.h>
 #include <linux/i2c.h>
 #include <linux/init.h>
@@ -38,6 +37,7 @@
 #include <linux/of_device.h>
 #include <linux/completion.h>
 #include <linux/hardirq.h>
+#include <linux/gpio.h>
 #include <linux/irqflags.h>
 #include <linux/rwsem.h>
 #include <linux/pm_runtime.h>

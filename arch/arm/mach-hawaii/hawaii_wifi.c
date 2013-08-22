@@ -20,7 +20,6 @@
 #include <linux/err.h>
 #include <linux/module.h>
 #include <asm/mach-types.h>
-#include <asm/gpio.h>
 #include <asm/io.h>
 #include <asm/setup.h>
 #include <linux/if.h>
@@ -28,6 +27,7 @@
 #include <linux/wlan_plat.h>
 #include <linux/pm_runtime.h>
 #include <linux/regulator/machine.h>
+#include <asm/gpio.h>
 #include <linux/regulator/driver.h>
 #include <linux/regulator/fixed.h>
 #include <asm/mach/mmc.h>
