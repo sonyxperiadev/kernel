@@ -47,7 +47,7 @@
 
 /* DMUX device */
 struct kona_dmux_dev {
-	unsigned long base_addr;
+	void __iomem *base_addr;
 	struct clk *dmux_clk;
 };
 
