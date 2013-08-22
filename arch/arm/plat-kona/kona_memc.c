@@ -49,6 +49,7 @@
 #include <linux/of_irq.h>
 #include <linux/of_platform.h>
 #include <linux/reboot.h>
+#include <linux/irq.h>
 #define MEMC0_APHY_REG(kmemc, off) ((kmemc)->memc0_aphy_base + (off))
 #define MEMC0_NS_REG(kmemc, off) ((kmemc)->memc0_ns_base + (off))
 #define CHIPREG_REG(kmemc, off) ((kmemc)->chipreg_base + (off))
