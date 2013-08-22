@@ -4257,6 +4257,11 @@ static void setExternAudioGain(AudioMode_t mode, AudioApp_t app)
 {
 	int pmu_gain = 0;
 	SysMultimediaAudioParm_t *p1 = NULL;
+	UInt16 alc_enable = 0;
+	UInt16 alc_vbat_ref;
+	UInt16 alc_thld;
+	UInt16 alc_ramp_up_ctrl;
+	UInt16 alc_ramp_down_ctrl;
 
 #if defined(CONFIG_BCM_MODEM) && (!defined(JAVA_ZEBU_TEST))
 	SysAudioParm_t *p = NULL;
@@ -4334,6 +4339,30 @@ static void setExternAudioGain(AudioMode_t mode, AudioApp_t app)
 		break;
 
 	case AUDIO_MODE_SPEAKERPHONE:
+		/* PMU ALC support */
+#if defined(USE_NEW_AUDIO_MM_PARAM)
+		if (app >= AUDIO_APP_NUMBER) {
+			alc_enable = p1->alc_enable;
+			alc_vbat_ref = p1->alc_vbat_ref;
+			alc_thld = p1->alc_thld;
+			alc_ramp_up_ctrl = p1->alc_ramp_up_ctrl;
+			alc_ramp_down_ctrl = p1->alc_ramp_down_ctrl;
+		} else {
+#endif
+			alc_enable = p->alc_enable;
+			alc_vbat_ref = p->alc_vbat_ref;
+			alc_thld = p->alc_thld;
+			alc_ramp_up_ctrl = p->alc_ramp_up_ctrl;
+			alc_ramp_down_ctrl = p->alc_ramp_down_ctrl;
+#if defined(USE_NEW_AUDIO_MM_PARAM)
+		}
+#endif
+		extern_ihf_set_alc_enable((int)alc_enable);
+		extern_ihf_set_alc_vbat_ref((int)alc_vbat_ref);
+		extern_ihf_set_alc_thld((int)alc_thld);
+		extern_ihf_set_alc_ramp_up_ctrl((int)alc_ramp_up_ctrl);
+		extern_ihf_set_alc_ramp_down_ctrl((int)alc_ramp_down_ctrl);
+
 		if (app >= AUDIO_APP_NUMBER)
 #ifndef JAVA_ZEBU_TEST
 			/* Q13p2 dB */

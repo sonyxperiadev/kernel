@@ -325,6 +325,12 @@ typedef struct
 	UInt16 mic2_eq_enable;
 	UInt16 speaker_eq_enable;
 
+	/* PMU ALC support */
+	UInt16 alc_enable;
+	UInt16 alc_vbat_ref;
+	UInt16 alc_thld;
+	UInt16 alc_ramp_up_ctrl;
+	UInt16 alc_ramp_down_ctrl;
 } SysAudioParm_t;
 
 typedef struct
@@ -365,6 +371,13 @@ typedef struct
 	UInt32 mpm_gain_decay_slope;
 	UInt16 mpm_gain_attack_thre;
 	UInt16 ihf_protection_enable;
+
+	/* PMU ALC support */
+	UInt16 alc_enable;
+	UInt16 alc_vbat_ref;
+	UInt16 alc_thld;
+	UInt16 alc_ramp_up_ctrl;
+	UInt16 alc_ramp_down_ctrl;
 } SysMultimediaAudioParm_t;
 
 
