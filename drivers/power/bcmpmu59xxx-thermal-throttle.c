@@ -106,6 +106,192 @@ int bcmpmu_throttle_get_temp(struct bcmpmu_throttle_data *tdata, u8 channel,
 		"PMU Die Temp %d\n", result.conv);
 	return result.conv;
 }
+static int bcmpmu_throttle_get_ntcct(struct bcmpmu_throttle_data *tdata,
+		int *temp_rise, int *temp_fall)
+{
+	struct bcmpmu_adc_result result;
+	int ret;
+	int rise_7_0, rise_9_8, fall_7_0, fall_9_8;
+	u8 reg;
+
+	ret = tdata->bcmpmu->read_dev(tdata->bcmpmu, PMU_REG_CMPCTRL9, &reg);
+	if (ret)
+		return ret;
+	rise_9_8 = (reg & NTCCT_RISE_9_8_MASK) >> NTCCT_RISE_9_8_SHIFT;
+	fall_9_8 = (reg & NTCCT_FALL_9_8_MASK) >> NTCCT_FALL_9_8_SHIFT;
+
+	ret = tdata->bcmpmu->read_dev(tdata->bcmpmu, PMU_REG_CMPCTRL7, &reg);
+	if (ret)
+		return ret;
+
+	rise_7_0 = reg & NTCCT_RISE_7_0_MASK;
+	result.raw = rise_7_0 | (rise_9_8 << 8);
+
+	ret = bcmpmu_adc_convert(tdata->bcmpmu, PMU_ADC_CHANN_NTC, &result,
+			false);
+	if (ret)
+		return ret;
+	*temp_rise = result.conv;
+
+	ret = tdata->bcmpmu->read_dev(tdata->bcmpmu, PMU_REG_CMPCTRL8, &reg);
+	if (ret)
+		return ret;
+
+	fall_7_0 = reg & NTCCT_FALL_7_0_MASK;
+	result.raw = fall_7_0 | (fall_9_8 << 8);
+
+	ret = bcmpmu_adc_convert(tdata->bcmpmu, PMU_ADC_CHANN_NTC, &result,
+			false);
+	if (ret)
+		return ret;
+	*temp_fall = result.conv;
+	return 0;
+}
+
+static int bcmpmu_throttle_set_ntcct(struct bcmpmu_throttle_data *tdata,
+		int temp_rise, int temp_fall)
+{
+	struct bcmpmu_adc_result result;
+	int ret;
+	int rise_7_0, rise_9_8, fall_7_0, fall_9_8;
+	u8 reg;
+
+	result.conv = temp_rise * 10;
+	ret = bcmpmu_adc_convert(tdata->bcmpmu, PMU_ADC_CHANN_NTC, &result,
+			true);
+	if (ret)
+		return ret;
+
+	pr_throttle(FLOW, "NTC temp->raw: %d\n", result.raw);
+
+	rise_7_0 = result.raw & NTCCT_RISE_7_0_MASK;
+	rise_9_8 = ((result.raw >> 8) & 0x3) << NTCCT_RISE_9_8_SHIFT;
+
+	tdata->bcmpmu->read_dev(tdata->bcmpmu, PMU_REG_CMPCTRL9, &reg);
+	reg &= ~NTCCT_RISE_9_8_MASK;
+	tdata->bcmpmu->write_dev(tdata->bcmpmu, PMU_REG_CMPCTRL9, reg);
+	reg |= rise_9_8;
+	tdata->bcmpmu->write_dev(tdata->bcmpmu, PMU_REG_CMPCTRL9, reg);
+
+	reg = rise_7_0;
+	tdata->bcmpmu->write_dev(tdata->bcmpmu, PMU_REG_CMPCTRL7, reg);
+
+	result.conv = temp_fall * 10;
+	ret = bcmpmu_adc_convert(tdata->bcmpmu, PMU_ADC_CHANN_NTC, &result,
+			true);
+	if (ret)
+		return ret;
+
+	pr_throttle(FLOW, "NTC temp->raw: %d\n", result.raw);
+
+	fall_7_0 = result.raw & NTCCT_FALL_7_0_MASK;
+	fall_9_8 = ((result.raw >> 8) & 0x3) << NTCCT_FALL_9_8_SHIFT;
+
+	tdata->bcmpmu->read_dev(tdata->bcmpmu, PMU_REG_CMPCTRL9, &reg);
+	reg &= ~NTCCT_FALL_9_8_MASK;
+	tdata->bcmpmu->write_dev(tdata->bcmpmu, PMU_REG_CMPCTRL9, reg);
+	reg |= fall_9_8;
+	tdata->bcmpmu->write_dev(tdata->bcmpmu, PMU_REG_CMPCTRL9, reg);
+
+	reg = fall_7_0;
+	tdata->bcmpmu->write_dev(tdata->bcmpmu, PMU_REG_CMPCTRL8, reg);
+
+	return 0;
+}
+
+static int bcmpmu_throttle_get_ntcht(struct bcmpmu_throttle_data *tdata,
+		int *temp_rise, int *temp_fall)
+{
+	struct bcmpmu_adc_result result;
+	int ret;
+	int rise_7_0, rise_9_8, fall_7_0, fall_9_8;
+	u8 reg;
+
+	ret = tdata->bcmpmu->read_dev(tdata->bcmpmu, PMU_REG_CMPCTRL9, &reg);
+	if (ret)
+		return ret;
+	rise_9_8 = (reg & NTCHT_RISE_9_8_MASK) >> NTCHT_RISE_9_8_SHIFT;
+	fall_9_8 = (reg & NTCHT_FALL_9_8_MASK) >> NTCHT_FALL_9_8_SHIFT;
+
+	ret = tdata->bcmpmu->read_dev(tdata->bcmpmu, PMU_REG_CMPCTRL5, &reg);
+	if (ret)
+		return ret;
+
+	rise_7_0 = reg & NTCHT_RISE_7_0_MASK;
+	result.raw = rise_7_0 | (rise_9_8 << 8);
+
+	ret = bcmpmu_adc_convert(tdata->bcmpmu, PMU_ADC_CHANN_NTC, &result,
+			false);
+	if (ret)
+		return ret;
+	*temp_rise = result.conv;
+
+	ret = tdata->bcmpmu->read_dev(tdata->bcmpmu, PMU_REG_CMPCTRL6, &reg);
+	if (ret)
+		return ret;
+
+	fall_7_0 = reg & NTCHT_FALL_7_0_MASK;
+	result.raw = fall_7_0 | (fall_9_8 << 8);
+
+	ret = bcmpmu_adc_convert(tdata->bcmpmu, PMU_ADC_CHANN_NTC, &result,
+			false);
+	if (ret)
+		return ret;
+	*temp_fall = result.conv;
+	return 0;
+}
+
+static int bcmpmu_throttle_set_ntcht(struct bcmpmu_throttle_data *tdata,
+		int temp_rise, int temp_fall)
+{
+	struct bcmpmu_adc_result result;
+	int ret;
+	int rise_7_0, rise_9_8, fall_7_0, fall_9_8;
+	u8 reg;
+
+	result.conv = temp_rise * 10;
+	ret = bcmpmu_adc_convert(tdata->bcmpmu, PMU_ADC_CHANN_NTC, &result,
+			true);
+	if (ret)
+		return ret;
+
+	pr_throttle(FLOW, "NTC temp->raw: %d\n", result.raw);
+
+	rise_7_0 = result.raw & NTCHT_RISE_7_0_MASK;
+	rise_9_8 = ((result.raw >> 8) & 0x3) << NTCHT_RISE_9_8_SHIFT;
+
+	tdata->bcmpmu->read_dev(tdata->bcmpmu, PMU_REG_CMPCTRL9, &reg);
+	reg &= ~NTCHT_RISE_9_8_MASK;
+	tdata->bcmpmu->write_dev(tdata->bcmpmu, PMU_REG_CMPCTRL9, reg);
+	reg |= rise_9_8;
+	tdata->bcmpmu->write_dev(tdata->bcmpmu, PMU_REG_CMPCTRL9, reg);
+
+	reg = rise_7_0;
+	tdata->bcmpmu->write_dev(tdata->bcmpmu, PMU_REG_CMPCTRL5, reg);
+
+	result.conv = temp_fall * 10;
+	ret = bcmpmu_adc_convert(tdata->bcmpmu, PMU_ADC_CHANN_NTC, &result,
+			true);
+	if (ret)
+		return ret;
+
+	pr_throttle(FLOW, "NTC temp->raw: %d\n", result.raw);
+
+	fall_7_0 = result.raw & NTCHT_FALL_7_0_MASK;
+	fall_9_8 = ((result.raw >> 8) & 0x3) << NTCHT_FALL_9_8_SHIFT;
+
+	tdata->bcmpmu->read_dev(tdata->bcmpmu, PMU_REG_CMPCTRL9, &reg);
+	reg &= ~NTCHT_FALL_9_8_MASK;
+	tdata->bcmpmu->write_dev(tdata->bcmpmu, PMU_REG_CMPCTRL9, reg);
+	reg |= fall_9_8;
+	tdata->bcmpmu->write_dev(tdata->bcmpmu, PMU_REG_CMPCTRL9, reg);
+
+	reg = fall_7_0;
+	tdata->bcmpmu->write_dev(tdata->bcmpmu, PMU_REG_CMPCTRL6, reg);
+
+	return 0;
+}
+
 
 static void bcmpmu_throttle_restore_charger_state
 	(struct bcmpmu_throttle_data *tdata)
@@ -470,7 +656,7 @@ static int bcmpmu_throttle_debugfs_ctrl(void *data, u64 throttle_ctrl)
 DEFINE_SIMPLE_ATTRIBUTE(throttle_ctrl_fops,
 		NULL, bcmpmu_throttle_debugfs_ctrl, "%llu\n");
 
-static int bcmpmu_throttle_debugfs_lut_open(struct inode *inode,
+static int bcmpmu_throttle_debugfs_open(struct inode *inode,
 				struct file *file)
 {
 	file->private_data = inode->i_private;
@@ -559,9 +745,136 @@ static ssize_t bcmpmu_throttle_debugfs_get_lut(struct file *file,
 }
 
 static const struct file_operations temp_curr_lut_fops = {
-	.open = bcmpmu_throttle_debugfs_lut_open,
+	.open = bcmpmu_throttle_debugfs_open,
 	.write = bcmpmu_throttle_debugfs_set_lut,
 	.read = bcmpmu_throttle_debugfs_get_lut,
+};
+
+static ssize_t bcmpmu_throttle_debugfs_set_ntcht(struct file *file,
+				char const __user *buf,
+				size_t count, loff_t *offset)
+{
+	struct bcmpmu_throttle_data *tdata = file->private_data;
+	int ntcht_rise;
+	int ntcht_fall;
+	int ret;
+	int len;
+	char input_str[100];
+
+	if (count > 100)
+		len = 100;
+	else
+		len = count;
+
+	memset(input_str, 0, 100);
+
+	if (copy_from_user(input_str, buf, len))
+		return -EFAULT;
+
+	sscanf(input_str, "%d %d\n", &ntcht_rise, &ntcht_fall);
+
+	pr_throttle(FLOW, "NTCHT_rise= %d NTCHT_fall= %d,",
+			ntcht_rise, ntcht_fall);
+
+	if ((ntcht_rise <= ntcht_fall) ||
+			(ntcht_rise < 0) ||
+			(ntcht_fall < 0)) {
+		pr_throttle(ERROR, "Invalide parameters\n");
+		return -EINVAL;
+	}
+	ret = bcmpmu_throttle_set_ntcht(tdata, ntcht_rise, ntcht_fall);
+	if (ret)
+		return ret;
+	return count;
+}
+
+static ssize_t bcmpmu_throttle_debugfs_get_ntcht(struct file *file,
+					char __user *user_buf,
+				size_t count, loff_t *ppos)
+{
+	struct bcmpmu_throttle_data *tdata = file->private_data;
+	int temp_rise, temp_fall;
+	char out_str[100];
+	int len = 0;
+	int ret;
+
+	memset(out_str, 0, sizeof(out_str));
+	ret = bcmpmu_throttle_get_ntcht(tdata, &temp_rise, &temp_fall);
+	if (ret)
+		return ret;
+
+	len += snprintf(out_str, sizeof(out_str) - 1, "%s %d %s %d\n",
+			"NTCHT_RISE:", temp_rise / 10,
+			"NTCHT_FALL:", temp_fall / 10);
+	return simple_read_from_buffer(user_buf, count, ppos,
+			out_str, len);
+}
+
+static const struct file_operations pmu_ntcht_fops = {
+	.open = bcmpmu_throttle_debugfs_open,
+	.write = bcmpmu_throttle_debugfs_set_ntcht,
+	.read = bcmpmu_throttle_debugfs_get_ntcht,
+};
+
+static ssize_t bcmpmu_throttle_debugfs_set_ntcct(struct file *file,
+				char const __user *buf,
+				size_t count, loff_t *offset)
+{
+	struct bcmpmu_throttle_data *tdata = file->private_data;
+	int ntcct_rise;
+	int ntcct_fall;
+	int ret;
+	int len;
+	char input_str[100];
+
+	if (count > 100)
+		len = 100;
+	else
+		len = count;
+
+	memset(input_str, 0, 100);
+
+	if (copy_from_user(input_str, buf, len))
+		return -EFAULT;
+
+	sscanf(input_str, "%d %d\n", &ntcct_rise, &ntcct_fall);
+
+	pr_throttle(FLOW, "NTCCT_rise= %d NTCCT_fall= %d,",
+			ntcct_rise, ntcct_fall);
+
+	ret = bcmpmu_throttle_set_ntcct(tdata, ntcct_rise, ntcct_fall);
+	if (ret)
+		return ret;
+
+	return count;
+}
+
+static ssize_t bcmpmu_throttle_debugfs_get_ntcct(struct file *file,
+					char __user *user_buf,
+				size_t count, loff_t *ppos)
+{
+	struct bcmpmu_throttle_data *tdata = file->private_data;
+	int temp_rise, temp_fall;
+	char out_str[100];
+	int len = 0;
+	int ret;
+
+	memset(out_str, 0, sizeof(out_str));
+	ret = bcmpmu_throttle_get_ntcct(tdata, &temp_rise, &temp_fall);
+	if (ret)
+		return ret;
+
+	len += snprintf(out_str, sizeof(out_str) - 1, "%s %d %s %d\n",
+			"NTCCT_RISE:", temp_rise / 10,
+			"NTCCT_FALL:", temp_fall / 10);
+	return simple_read_from_buffer(user_buf, count, ppos,
+			out_str, len);
+}
+
+static const struct file_operations pmu_ntcct_fops = {
+	.open = bcmpmu_throttle_debugfs_open,
+	.write = bcmpmu_throttle_debugfs_set_ntcct,
+	.read = bcmpmu_throttle_debugfs_get_ntcct,
 };
 
 static void bcmpmu_throttle_debugfs_init(struct bcmpmu_throttle_data *tdata)
@@ -583,6 +896,18 @@ static void bcmpmu_throttle_debugfs_init(struct bcmpmu_throttle_data *tdata)
 	dentry_throttle_file = debugfs_create_file("throttle_ctrl",
 			S_IWUSR | S_IRUSR, dentry_throttle_dir, tdata,
 			&throttle_ctrl_fops);
+	if (IS_ERR_OR_NULL(dentry_throttle_file))
+		goto debugfs_clean;
+
+	dentry_throttle_file = debugfs_create_file("ntcht",
+			S_IWUSR | S_IRUSR, dentry_throttle_dir, tdata,
+			&pmu_ntcht_fops);
+	if (IS_ERR_OR_NULL(dentry_throttle_file))
+		goto debugfs_clean;
+
+	dentry_throttle_file = debugfs_create_file("ntcct",
+			S_IWUSR | S_IRUSR, dentry_throttle_dir, tdata,
+			&pmu_ntcct_fops);
 	if (IS_ERR_OR_NULL(dentry_throttle_file))
 		goto debugfs_clean;
 
