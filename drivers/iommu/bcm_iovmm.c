@@ -283,7 +283,7 @@ arm_iommu_create_mapping(struct bus_type *bus, dma_addr_t base, size_t size,
 
 	mapping = kzalloc(sizeof(struct dma_iommu_mapping), GFP_KERNEL);
 	if (!mapping)
-		goto err;
+		return ERR_PTR(-ENOMEM);
 
 	mapping->bitmap = kzalloc(bitmap_size, GFP_KERNEL);
 	if (!mapping->bitmap)
