@@ -85,7 +85,8 @@ static const struct ov7695_reg ov7695_init_common[] = {
 	{0x4300, 0x30}, /* format: UYVY */
 	/* OV7695_ISP */
 #if defined(CONFIG_MACH_HAWAII_GARNET_C_W68TK) ||\
-	defined(CONFIG_MACH_JAVA_C_LC1)
+	defined(CONFIG_MACH_JAVA_C_LC1) ||\
+	defined(CONFIG_MACH_JAVA_C_5609A)
 	{0x0101, 0x02}, /* mirror off, flip on */
 #else
 	{0x0101, 0x01}, /* mirror on, flip off */
