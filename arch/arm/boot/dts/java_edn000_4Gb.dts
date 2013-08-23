@@ -390,7 +390,7 @@
 		compatible = "bcm,memc";
 		reg = <0x35008000 0x1000>;
 		interrupts = <0 61 4>;
-		flags = <0x1F3>;
+		flags = <0xF3>;
 		chipreg_base = <0x35004000 0x1000>;
 		memc0_aphy_base = <0x35008400 0x1000>;
 		seq_busy_val = <2>;
