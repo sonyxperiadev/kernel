@@ -2072,7 +2072,7 @@ static void AUDIO_DRIVER_RenderDmaCallback(UInt32 stream_id, UInt32 buffer_idx)
 				"Spurious call back\n");
 		return;
 	}
-	if (pAudDrv->pCallback != NULL) {
+	if (pAudDrv->pCallback != NULL && pAudDrv->pCBPrivate != NULL) {
 #ifdef CONFIG_MAP_VOIP
 		if (pAudDrv->drv_type == AUDIO_DRIVER_PLAY_EPT)	{
 			AUDIO_DRIVER_Stats_t *p = (AUDIO_DRIVER_Stats_t *)
@@ -2087,7 +2087,7 @@ static void AUDIO_DRIVER_RenderDmaCallback(UInt32 stream_id, UInt32 buffer_idx)
 	} else
 		aWarn(
 				"AUDIO_DRIVER_RenderDmaCallback::"
-				"No callback registerd\n");
+				"No callback registerd or invalid pCBPrivate\n");
 
 	spin_unlock_irqrestore(
 		&audio_render_driver[stream_id].audio_lock, flags);
