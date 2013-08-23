@@ -457,14 +457,9 @@
 	gpio-leds {
 		compatible = "gpio-leds";
 
-		blue {
-			label = "blue";
-			gpios = <&gpio 22 0>;
-		};
-
 		green {
 			label = "green";
-			gpios = <&gpio 30 0>;
+			gpios = <&gpio 22 0>;
 		};
 	};
 };
