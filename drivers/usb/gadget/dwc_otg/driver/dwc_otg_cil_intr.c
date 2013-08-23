@@ -437,6 +437,19 @@ void w_peri_suspend_powersaving(void *p)
 	dwc_otg_core_if_t *core_if = (dwc_otg_core_if_t *)p;
 
 	if (core_if) {
+		/* Clear DWC Core interrupts before PHY suspend,
+		   this is because to prevent DWC core Hangs while 
+		   accessing some registers with PHY suspended if at
+		   all we get some core interrupts when phy in suspend*/
+
+		/* Clear any pending OTG Interrupts */
+		dwc_write_reg32(&core_if->core_global_regs->gotgint, 0xFFFFFFFF);
+
+		/* Clear any pending interrupts */
+		dwc_write_reg32(&core_if->core_global_regs->gintsts, 0xFFFFFFFF);
+
+		dwc_otg_disable_global_interrupts(core_if);		
+
 		/* Suspend trasceiver */
 		usb_phy_set_suspend(core_if->xceiver, 1);
 	}
@@ -1184,6 +1197,18 @@ int32_t dwc_otg_handle_usb_suspend_intr(dwc_otg_core_if_t *core_if)
 		DWC_TIMER_SCHEDULE(core_if->suspend_power_saving_timer,
 			T_USB_SUSPEND_POWER_SAVING_DELAY_IN_MS);
 #else
+		/* Clear DWC Core interrupts before PHY suspend,
+		   this is because to prevent DWC core Hangs while 
+		   accessing some registers with PHY suspended if at
+		   all we get some core interrupts when phy in suspend*/
+
+		/* Clear any pending OTG Interrupts */
+		dwc_write_reg32(&core_if->core_global_regs->gotgint, 0xFFFFFFFF);
+		/* Clear any pending interrupts */
+		dwc_write_reg32(&core_if->core_global_regs->gintsts, 0xFFFFFFFF);
+	
+		dwc_otg_disable_global_interrupts(core_if); 	
+
 		/* Suspend trasceiver */
 		usb_phy_set_suspend(core_if->xceiver, 1);
 #endif
