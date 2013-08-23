@@ -1333,11 +1333,11 @@ static struct i2c_algorithm bsc_algo = {
 	.functionality = bsc_functionality,
 };
 
-static int
-proc_debug_write(struct file *file, const char __user *buffer,
-		 unsigned long count, void *data)
+static int proc_debug_write(struct file *file, const char __user *buffer,
+		 size_t count, loff_t *offs)
 {
-	struct bsc_i2c_dev *dev = (struct bsc_i2c_dev *)data;
+	struct seq_file *m = file->private_data;
+	struct bsc_i2c_dev *dev = (struct bsc_i2c_dev *)m->private;
 	int rc;
 	unsigned int debug;
 	unsigned char kbuf[MAX_PROC_BUF_SIZE];
@@ -1364,27 +1364,10 @@ proc_debug_write(struct file *file, const char __user *buffer,
 	return count;
 }
 
-static int
-proc_debug_read(char *buffer, char **start, off_t off, int count,
-		int *eof, void *data)
+static int proc_reset_write(struct file *file, const char __user *buffer,
+		 size_t count, loff_t *off)
 {
-	unsigned int len = 0;
-	struct bsc_i2c_dev *dev = (struct bsc_i2c_dev *)data;
-
-	if (off > 0)
-		return 0;
-
-	len += sprintf(buffer + len, "Debug print is %s\n",
-		       dev->debug ? "enabled" : "disabled");
-
-	return len;
-}
-
-static int
-proc_reset_write(struct file *file, const char __user *buffer,
-		 unsigned long count, void *data)
-{
-	struct bsc_i2c_dev *dev = (struct bsc_i2c_dev *)data;
+	struct bsc_i2c_dev *dev = (struct bsc_i2c_dev *)file->private_data;
 	int rc;
 	unsigned int reset;
 	unsigned char kbuf[MAX_PROC_BUF_SIZE];
@@ -1412,11 +1395,10 @@ proc_reset_write(struct file *file, const char __user *buffer,
 	return count;
 }
 
-static int
-proc_tx_fifo_write(struct file *file, const char __user *buffer,
-		   unsigned long count, void *data)
+static int proc_tx_fifo_write(struct file *file, const char __user *buffer,
+		   size_t count, loff_t *off)
 {
-	struct bsc_i2c_dev *dev = (struct bsc_i2c_dev *)data;
+	struct bsc_i2c_dev *dev = (struct bsc_i2c_dev *)file->private_data;
 	int rc;
 	unsigned int enable;
 	unsigned char kbuf[MAX_PROC_BUF_SIZE];
@@ -1444,27 +1426,26 @@ proc_tx_fifo_write(struct file *file, const char __user *buffer,
 	return count;
 }
 
-static int
-proc_tx_fifo_read(char *buffer, char **start, off_t off, int count,
-		  int *eof, void *data)
+static int proc_tx_fifo_read(struct file *file, char __user *buffer,
+			size_t count, loff_t *off)
 {
 	unsigned int len = 0;
-	struct bsc_i2c_dev *dev = (struct bsc_i2c_dev *)data;
+	struct bsc_i2c_dev *dev = (struct bsc_i2c_dev *)file->private_data;
 
-	if (off > 0)
+	if (*off > 0)
 		return 0;
 
 	len += sprintf(buffer + len, "TX FIFO is %s\n",
 		       atomic_read(&dev->rx_fifo_support) ? "enabled" :
 		       "disabled");
+	*off += len;
 	return len;
 }
 
-static int
-proc_rx_fifo_write(struct file *file, const char __user *buffer,
-		   unsigned long count, void *data)
+static int proc_rx_fifo_write(struct file *file, const char __user *buffer,
+		   size_t count, loff_t *off)
 {
-	struct bsc_i2c_dev *dev = (struct bsc_i2c_dev *)data;
+	struct bsc_i2c_dev *dev = (struct bsc_i2c_dev *)file->private_data;
 	int rc;
 	unsigned int enable;
 	unsigned char kbuf[MAX_PROC_BUF_SIZE];
@@ -1492,22 +1473,69 @@ proc_rx_fifo_write(struct file *file, const char __user *buffer,
 	return count;
 }
 
-static int
-proc_rx_fifo_read(char *buffer, char **start, off_t off, int count,
-		  int *eof, void *data)
+static int proc_rx_fifo_read(struct file *file, char __user *buffer,
+			size_t count, loff_t *off)
 {
 	unsigned int len = 0;
-	struct bsc_i2c_dev *dev = (struct bsc_i2c_dev *)data;
+	struct bsc_i2c_dev *dev = (struct bsc_i2c_dev *)file->private_data;
 
-	if (off > 0)
+	if (*off > 0)
 		return 0;
 
 	len += sprintf(buffer + len, "RX FIFO is %s\n",
 		       atomic_read(&dev->rx_fifo_support) ? "enabled" :
 		       "disabled");
 
+	*off += len;
 	return len;
 }
+
+static int proc_debug_show(struct seq_file *m, void *data)
+{
+	struct bsc_i2c_dev *dev = (struct bsc_i2c_dev *)m->private;
+	seq_printf(m, "Debug print is %s\n",
+		       dev->debug ? "enabled" : "disabled");
+	return 0;
+}
+
+static int proc_debug_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, proc_debug_show, PDE_DATA(inode));
+}
+
+static int proc_open(struct inode *inode, struct file *file)
+{
+	file->private_data = PDE_DATA(inode);
+	return 0;
+}
+
+static const struct file_operations proc_debug_fops = {
+	.owner	= THIS_MODULE,
+	.open	= proc_debug_open,
+	.read	= seq_read,
+	.write	= proc_debug_write,
+	.release = single_release,
+};
+
+static const struct file_operations proc_reset_fops = {
+	.owner	= THIS_MODULE,
+	.open	= proc_open,
+	.write	= proc_reset_write,
+};
+
+static const struct file_operations proc_tx_fifo_fops = {
+	.owner	= THIS_MODULE,
+	.open	= proc_open,
+	.read	= proc_tx_fifo_read,
+	.write	= proc_tx_fifo_write,
+};
+
+static const struct file_operations proc_rx_fifo_fops = {
+	.owner	= THIS_MODULE,
+	.open	= proc_open,
+	.read	= proc_rx_fifo_read,
+	.write	= proc_rx_fifo_write,
+};
 
 static int proc_init(struct platform_device *pdev)
 {
@@ -1517,9 +1545,6 @@ static int proc_init(struct platform_device *pdev)
 	struct proc_dir_entry *proc_debug, *proc_reset, *proc_tx_fifo,
 	    *proc_rx_fifo;
 
-return 0;
-#if 0
-
 	snprintf(proc->name, sizeof(proc->name), "%s%d",
 		 PROC_GLOBAL_PARENT_DIR, pdev->id);
 
@@ -1527,43 +1552,34 @@ return 0;
 	if (proc->parent == NULL)
 		return -ENOMEM;
 
-	proc_debug = create_proc_entry(PROC_ENTRY_DEBUG, 0644, proc->parent);
+	proc_debug = proc_create_data(PROC_ENTRY_DEBUG, 0644, proc->parent,
+					&proc_debug_fops, dev);
 	if (proc_debug == NULL) {
 		rc = -ENOMEM;
 		goto err_del_parent;
 	}
-	proc_debug->read_proc = proc_debug_read;
-	proc_debug->write_proc = proc_debug_write;
-	proc_debug->data = dev;
 
-	proc_reset = create_proc_entry(PROC_ENTRY_RESET, 0644, proc->parent);
+	proc_reset = proc_create_data(PROC_ENTRY_RESET, 0644, proc->parent,
+					&proc_reset_fops, dev);
 	if (proc_reset == NULL) {
 		rc = -ENOMEM;
 		goto err_del_debug;
 	}
-	proc_reset->write_proc = proc_reset_write;
-	proc_reset->data = dev;
 
-	proc_tx_fifo =
-	    create_proc_entry(PROC_ENTRY_TX_FIFO, 0644, proc->parent);
+	proc_tx_fifo = proc_create_data(PROC_ENTRY_TX_FIFO, 0644, proc->parent,
+					&proc_tx_fifo_fops, dev);
+
 	if (proc_tx_fifo == NULL) {
 		rc = -ENOMEM;
 		goto err_del_reset;
 	}
-	proc_tx_fifo->write_proc = proc_tx_fifo_write;
-	proc_tx_fifo->read_proc = proc_tx_fifo_read;
-	proc_tx_fifo->data = dev;
 
-	proc_rx_fifo =
-	    create_proc_entry(PROC_ENTRY_RX_FIFO, 0644, proc->parent);
+	proc_rx_fifo = proc_create_data(PROC_ENTRY_RX_FIFO, 0644, proc->parent,
+					&proc_rx_fifo_fops, dev);
 	if (proc_rx_fifo == NULL) {
 		rc = -ENOMEM;
 		goto err_del_tx_fifo;
 	}
-	proc_rx_fifo->write_proc = proc_rx_fifo_write;
-	proc_rx_fifo->read_proc = proc_rx_fifo_read;
-	proc_rx_fifo->data = dev;
-
 	return 0;
 
  err_del_tx_fifo:
@@ -1578,7 +1594,6 @@ return 0;
  err_del_parent:
 	remove_proc_entry(proc->name, gProcParent);
 	return rc;
-#endif
 }
 
 static int proc_term(struct platform_device *pdev)
