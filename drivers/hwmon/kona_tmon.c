@@ -530,8 +530,8 @@ static ssize_t tmon_set_threshold_levels(struct device *dev,
 	/*checking if thold is in ascending order*/
 	prev = inx - 1;
 	next = inx + 1;
-	if (((inx > 0) && (thold < pdata->thold[prev].rising)) ||
-		((inx <= max) && (thold > pdata->thold[next].rising)))
+	if (((inx > 0) && (thold <= pdata->thold[prev].rising)) ||
+		((inx <= max) && (thold >= pdata->thold[next].rising)))
 		goto exit;
 
 	pdata->thold[inx].rising = thold;

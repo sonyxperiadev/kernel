@@ -1115,9 +1115,9 @@ static ssize_t cpufreq_get_temp_tholds(struct file *file,
 	memset(out_str, 0, sizeof(out_str));
 	len += snprintf(out_str + len, sizeof(out_str) - len,
 			"Level\t\tLimit CPUFREQ\tThreshold\n");
-	for (i = 0; i < pdata->num_freqs; i++)
+	for (i = pdata->num_freqs - 1; i >= 0; i--)
 		len += snprintf(out_str + len, sizeof(out_str) - len,
-		"Level%d:\t\t%d\t\t%ld\n", i,
+		"Level%d:\t\t%d\t\t%ld\n", pdata->num_freqs - 1 - i,
 		pdata->freq_tbl[i].cpu_freq, pdata->freq_tbl[i].max_temp);
 
 	return simple_read_from_buffer(user_buf, count, ppos,
@@ -1144,6 +1144,7 @@ static ssize_t cpufreq_set_temp_tholds(struct file *file,
 
 	sscanf(&input_str[0], "%d%d", &inx, &thold);
 
+	inx = num_freqs - 1 - inx;
 	/*check if inx is valid*/
 	if (inx < 0 || inx >= num_freqs)
 		goto exit;
@@ -1151,17 +1152,17 @@ static ssize_t cpufreq_set_temp_tholds(struct file *file,
 	if (thold == TEMP_DONT_CARE)
 		goto set_thold;
 
-	/*checking if thold is in descending order*/
+	/*checking if thold is in ascending order*/
 	prev = inx - 1;
 	next = inx + 1;
 
 	if ((inx > 0) && (pdata->freq_tbl[prev].max_temp != TEMP_DONT_CARE)) {
-		if (thold > pdata->freq_tbl[prev].max_temp)
+		if (thold >= pdata->freq_tbl[prev].max_temp)
 			goto exit;
 	}
 	if ((inx < num_freqs - 1) &&
 			(pdata->freq_tbl[next].max_temp != TEMP_DONT_CARE)) {
-		if (thold < pdata->freq_tbl[next].max_temp)
+		if (thold <= pdata->freq_tbl[next].max_temp)
 			goto exit;
 	}
 set_thold:
@@ -1170,7 +1171,7 @@ set_thold:
 	return count;
 exit:
 	pr_info("USAGE:\necho inx thold > temp_tholds\n");
-	pr_info("inx range: [0-%d]\ntholds shd be in descending order\n",
+	pr_info("inx range: [0-%d]\ntholds shd be in ascending order\n",
 			num_freqs - 1);
 	return count;
 }
