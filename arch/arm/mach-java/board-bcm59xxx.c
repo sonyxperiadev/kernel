@@ -38,11 +38,7 @@
 #include <linux/of_platform.h>
 #include <linux/of.h>
 #include <linux/of_fdt.h>
-#ifdef CONFIG_KONA_AVS
-#include <mach/avs.h>
-#endif
 #include "pm_params.h"
-#include "volt_tbl.h"
 
 #define BOARD_EDN010 "Hawaiistone EDN010"
 #define BOARD_EDN01x "Hawaiistone EDN01x"
@@ -66,8 +62,6 @@ static struct bcmpmu59xxx_rw_data __initdata register_init_data[] = {
 	{.addr = PMU_REG_GPIOCTRL1, .val = 0x75, .mask = 0xFF},
 	/*  enable PC3 function */
 	{.addr = PMU_REG_GPIOCTRL2, .val = 0x0E, .mask = 0xFF},
-	/* Selecting 0.87V */
-	{.addr = PMU_REG_MMSRVOUT1, .val = 0x30, .mask = 0xFF},
 	/* Mask Interrupt */
 	{.addr = PMU_REG_INT1MSK, .val = 0xFF, .mask = 0xFF},
 	{.addr = PMU_REG_INT2MSK, .val = 0xFF, .mask = 0xFF},
@@ -144,14 +138,6 @@ static struct bcmpmu59xxx_rw_data __initdata register_init_data[] = {
 	{.addr =  PMU_REG_ADCCTRL1, .val = 0x08, .mask = 0x08},
 	/* EN_SESS_VALID  enable ID detection */
 	{.addr = PMU_REG_OTGCTRL1 , .val = 0x18, .mask = 0xFF},
-
-
-	/* MMSR LPM voltage - 0.80V */
-	{.addr = PMU_REG_MMSRVOUT2 , .val = 0x1, .mask = 0x3F},
-	/* SDSR1 NM1 voltage - 1.28V */
-	{.addr = PMU_REG_SDSR1VOUT1 , .val = 0x2C, .mask = 0x3F},
-	/* SDSR1 LPM voltage - 0.97V */
-	{.addr = PMU_REG_SDSR1VOUT2 , .val = 0xD, .mask = 0x3F},
 	/* SDSR2 NM1 voltage - 1.24 */
 	{.addr = PMU_REG_SDSR2VOUT1 , .val = 0x28, .mask = 0x3F},
 	/* SDSR2 LPM voltage - 1.24V */

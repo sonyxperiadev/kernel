@@ -19,10 +19,8 @@
 #define CSR_NUM_OPP	4
 #define MSR_NUM_OPP	4
 
-#define ACTIVE_VOLT_MAX	0x3A
-#define ACTIVE_VOLT_MIN	0x2
-
-#define AVS_HANDSHAKE_VERSION 1
+#define AVS_HANDSHAKE_VERSION 2
+#define AVS_SW_VERSION	2
 
 enum {
 	SILICON_TYPE_SLOW,
@@ -40,8 +38,6 @@ enum {
 	ARM_FREQ_MAX,
 };
 
-#define AVS_KERNEL_FREQ_ID ARM_FREQ_1200_MHZ
-
 enum {
 	AVS_DOMAIN_VDDVAR,
 	AVS_DOMAIN_VDDVAR_A7,
@@ -54,22 +50,25 @@ struct avs_handshake {
 	u32 csr_opp;
 	u32 csr_opp_ext;
 	u32 msr_opp;
-	u32 msr_opp_ext;
-	u32 vddfix;
-	u32 silicon_type;
-	u32 arm_freq;
+	u32 msr_opp_ext;	/* 5 */
+	u8 vddfix;
+	u8 vddfix_ret;
+	u8 vddvar_ret;
+	u8 silicon_type;	/* 6 */
 	u32 irdrop_1v2;
+	u32 arm_freq;
 	s8 temperature;
 	u8 np_ratio_1;
 	u8 np_ratio_2;
-	u8 rsvd1;
-	u32 error_status;
+	u8 rsvd_1;		/* 9 */
 	u32 row3;
 	u32 row3_ext;
+	u32 row4;
+	u32 row4_ext;
 	u32 row5;
 	u32 row5_ext;
 	u32 row8;
-	u32 row8_ext;
+	u32 row8_ext;		/* 17 */
 	u8 varspm0;
 	u8 varspm1;
 	u8 varspm2;
@@ -81,11 +80,10 @@ struct avs_handshake {
 	u8 spm2;
 	u8 spm3;
 	u8 spm4;
-	u8 spm5;
-	u8 vddvar_ret;
-	u8 vddfix_ret;
-	u8 rsvd2[2];
-	u32 rsvd3[4];
+	u8 spm5;		/* 20 */
+	u32 error_status;	/* 21 */
+	u32 abi_version;
+	u32 rsvd_2[3];		/* 25 */
 };
 
 struct avs_pdata {
@@ -96,8 +94,4 @@ struct avs_pdata {
 	u32 pwrwdog_base;
 };
 
-u32 avs_get_silicon_type(void);
-int avs_get_vddfix_voltage(void);
-int avs_get_vddvar_retn_vlt(void);
-int avs_get_vddfix_retn_vlt(void);
 #endif	  /*__KONA_AVS___*/
