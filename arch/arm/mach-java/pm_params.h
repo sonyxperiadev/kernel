@@ -89,39 +89,6 @@
 #define VLT_NORMAL_PERI_MDM	VLT_ID_OTHER_ECO
 #define VLT_HIGH_PERI_MDM	VLT_ID_OTHER_NORMAL
 
-#if (CPU_FREQ_ID_SYSPLL_WFI < PROC_CCU_FREQ_ID_ECO)
-#define INIT_A9_VLT_TABLE(WFI, ECO, NM, TURBO, STURBO) \
-				[VLT_ID_A9_SYSPLL_WFI] = WFI,\
-				[VLT_ID_A9_ECO] = ECO, \
-				[VLT_ID_A9_NORMAL] = NM, \
-				[VLT_ID_A9_TURBO] = TURBO, \
-				[VLT_ID_A9_SUPER_TURBO] = STURBO
-#else
-#define INIT_A9_VLT_TABLE(WFI, ECO, NM, TURBO, STURBO) \
-				[VLT_ID_A9_SYSPLL_WFI] = ECO,\
-				[VLT_ID_A9_ECO] = ECO, \
-				[VLT_ID_A9_NORMAL] = NM, \
-				[VLT_ID_A9_TURBO] = TURBO, \
-				[VLT_ID_A9_SUPER_TURBO] = STURBO
-#endif
-
-#define INIT_OTHER_VLT_TABLE(ECO, NM, TURBO, STURBO) \
-				[VLT_ID_OTHER_ECO] = ECO, \
-				[VLT_ID_OTHER_NORMAL] = NM, \
-				[VLT_ID_OTHER_TURBO] = TURBO, \
-				[VLT_ID_OTHER_SUPER_TURBO] = STURBO
-
-#define INIT_LPM_VLT_IDS(off, ret, wakeup) \
-				[VLT_ID_OFF]	= off, \
-				[VLT_ID_RETN]	= ret, \
-				[VLT_ID_WAKEUP]	= wakeup
-
-#define INIT_UNUSED_VLT_IDS(init_val) \
-				[0x3] =		init_val, \
-				[0x4] =		init_val, \
-				[0x5] =		init_val, \
-				[0x6] =		init_val,
-
 /* Freq ID 4 in Java requires more voltage than normal.
    So, initialize voltage for FID4 with TURBO */
 
@@ -280,8 +247,6 @@ extern struct pwrmgr_init_param pwrmgr_init_param;
 /*This API should be defined in appropriate PMU board file*/
 bool is_pm_erratum(u32 erratum);
 int __init pm_params_init(void);
-int pm_init_pmu_sr_vlt_map_table(void);
-extern int bcmpmu_init_sr_volt(void);
 
 #define CONFIG_A9_PLL_2GHZ	1
 #define CONFIG_A9_PLL_2P4GHZ	2

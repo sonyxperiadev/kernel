@@ -30,8 +30,6 @@
 #include <linux/module.h>
 #include "pm_params.h"
 #include "sequencer_ucode.h"
-#include <mach/avs.h>
-#include "volt_tbl.h"
 
 /*sysfs interface to read PMU vlt table*/
 static u32 sr_vlt_table[SR_VLT_LUT_SIZE];
@@ -130,40 +128,14 @@ bool is_pm_erratum(u32 erratum)
 	return !!(pm_erratum_flg & erratum);
 }
 
-#if defined(CONFIG_MACH_BCM_FPGA_E) || \
-	defined(CONFIG_MACH_BCM_FPGA) || \
-	!defined(CONFIG_KONA_POWER_MGR)
-int pm_init_pmu_sr_vlt_map_table()
-{
-	return 0;
-}
-#else
-int pm_init_pmu_sr_vlt_map_table()
-{
-	int inx;
-	int ret;
-	u8 *vlt_table;
-	vlt_table = (u8 *) get_sr_vlt_table();
-	for (inx = 0; inx < SR_VLT_LUT_SIZE; inx++)
-		sr_vlt_table[inx] = vlt_table[inx];
-
-#ifdef CONFIG_MFD_BCM_PMU59xxx
-	ret = bcmpmu_init_sr_volt();
-	WARN_ON(ret);
-#endif
-	populate_pmu_voltage_log();
-	return pwr_mgr_pm_i2c_var_data_write(vlt_table, SR_VLT_LUT_SIZE);
-}
-#endif
-
 int __init pm_params_init(void)
 {
 	__pm_init_errata_flg();
 #ifdef CONFIG_KONA_POWER_MGR
 	pwrmgr_init_param.cmd_buf = i2c_cmd_buf;
 	pwrmgr_init_param.cmd_buf_size = cmd_buf_sz;
-	pwrmgr_init_param.def_vlt_tbl = (u8 *) get_sr_vlt_table();
-	pwrmgr_init_param.vlt_tbl_size = SR_VLT_LUT_SIZE;
+	pwrmgr_init_param.def_vlt_tbl = NULL;
+	pwrmgr_init_param.vlt_tbl_size = 0;
 #endif
 	return 0;
 }
@@ -190,7 +162,6 @@ int mach_config_arm_pll(int turbo_val, int update_volt_tbl)
 {
 	int ret = 0;
 	struct clk *clk;
-	u32 freq_id;
 	u32 vco_rate;
 	clk = clk_get(NULL, A9_PLL_CLK_NAME_STR);
 	if (IS_ERR_OR_NULL(clk))
@@ -201,12 +172,10 @@ int mach_config_arm_pll(int turbo_val, int update_volt_tbl)
 
 	switch (turbo_val) {
 	case CONFIG_A9_PLL_2P4GHZ:
-		freq_id = ARM_FREQ_1200_MHZ;
 		vco_rate = 2400000000UL;
 		break;
 
 	case CONFIG_A9_PLL_2P8GHZ:
-		freq_id = ARM_FREQ_1400_MHZ;
 		vco_rate = 2800000000UL;
 		break;
 
