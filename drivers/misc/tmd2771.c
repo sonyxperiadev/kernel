@@ -1063,7 +1063,7 @@ static ssize_t tmd2771_set_offset(struct device *dev,
 	}
 	return count;
 }
-static DEVICE_ATTR(offset,  S_IRUGO | S_IWUSR | S_IWGRP | S_IWOTH,
+static DEVICE_ATTR(offset,  S_IRUGO | S_IWUSR | S_IWGRP,
 	tmd2771_get_offset, tmd2771_set_offset);
 #endif
 static ssize_t taos_power_show(struct device *dev,
