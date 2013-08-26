@@ -287,7 +287,7 @@
 		thold_size = <5>; /*number of threshold levels*/
 		poll_rate_ms = <30000>;
 		hysteresis = <0>;
-		flags = <1>;
+		flags = <0>;
 		interval_ms = <5>;
 		/*sw shdwn temp is 120*/
 		thold = <85 1
@@ -303,11 +303,15 @@
 	memc@35008000 {
 		compatible = "bcm,memc";
 		reg = <0x35008000 0x1000>;
-		flags = <0x33>;
+		interrupts = <0 61 4>;
+		flags = <0x1F3>;
 		chipreg_base = <0x35004000 0x1000>;
 		memc0_aphy_base = <0x35008400 0x1000>;
 		seq_busy_val = <2>;
 		max_pwr = <3>;
+		temp_period = <0xA09E6C>; /*400ms*/
+		temp_tholds = <7 1>;
+		num_thold = <1>;
 	};
 
 	sdio1 {

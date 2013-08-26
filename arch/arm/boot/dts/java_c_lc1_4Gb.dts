@@ -321,7 +321,7 @@
 		thold_size = <5>; /*number of threshold levels*/
 		poll_rate_ms = <30000>;
 		hysteresis = <0>;
-		flags = <1>;
+		flags = <0>;
 		interval_ms = <5>;
 		/*sw shdwn temp is 120*/
 		thold = <85 1
@@ -440,6 +440,8 @@
 		pwm-period-ns = <50000>; /* ~20000 Hz */
 		pwm-request-label = "backlight";
 		bl-on-delay = <7000>;
+		pwm_pin_name = <39>;	/*GPIO24, enum PIN_NAME defined in chip_pinmux.h*/
+		pwm_pin_reboot_func = <25>;	/*GPIO24, enum PIN_FUNC defined in chip_pinmux.h*/
 	};
 
 	gpio-leds {

@@ -18,8 +18,8 @@
 		reg = <0x82000000 0x1e000000>; /* 480 MB */
 	};
 
-	wd-tapper {
-		count = <300>; /* Time in seconds */
+	rtc-kona {
+		compatible = "bcm,rtc-kona";
 		ch-num = <1>; /* Kona hub timer Channel number */
 		timer-name = "aon-timer";
 	};
@@ -152,6 +152,7 @@
 		iova_begin  = <0x80000000>;
 		iova_size   = <0x80000000>;
 		errbuf_size = <0x00001000>;
+		skip_enable = <1>;
 	};
 
 	iovmm_mm: iovmm-mm {
@@ -196,7 +197,7 @@
 		type = <2>;
 		base  = <0x90000000>;
 		limit = <0xa0000000>;
-		size  = <0x00000000>;
+		size  = <0x01000000>;
 		lmk_enable = <0>;
 		lmk_min_score_adj = <411>;
 		lmk_min_free = <32>;
@@ -279,7 +280,6 @@
 		iommu = <&iommu_mm>;
 		iovmm = <&iovmm_mm>;
 		rotation = <0>;
-		ulps;
 	};
 
 	kona-fb-2 {
