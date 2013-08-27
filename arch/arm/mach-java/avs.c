@@ -104,7 +104,7 @@ static int avs_read_opp_info(struct avs_info *avs_inf_ptr)
 			avs_inf_ptr->avs_handshake->csr_opp);
 	avs_dbg(AVS_LOG_INIT, "MSR OPP VAL: 0x%x",
 			avs_inf_ptr->avs_handshake->msr_opp);
-	avs_dbg(AVS_LOG_INIT, "Computed at %u Celsius. N/P1: %u, N/P2: %u\n",
+	avs_dbg(AVS_LOG_INIT, "Computed at %d Celsius. N/P1: %u, N/P2: %u\n",
 			avs_inf_ptr->avs_handshake->temperature,
 			avs_inf_ptr->avs_handshake->np_ratio_1,
 			avs_inf_ptr->avs_handshake->np_ratio_2);
@@ -397,7 +397,7 @@ static ssize_t avs_debug_read_spm_val(struct file *file, char __user
 	char buf[1000];
 	u32 len = 0;
 	len += snprintf(buf + len, sizeof(buf) - len,
-		"Computed at %u Celsius. N/P1: %u, N/P2: %u\n",
+		"Computed at %d Celsius. N/P1: %u, N/P2: %u\n",
 		avs_info.avs_handshake->temperature,
 		avs_info.avs_handshake->np_ratio_1,
 		avs_info.avs_handshake->np_ratio_2);

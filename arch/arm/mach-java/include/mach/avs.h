@@ -59,7 +59,7 @@ struct avs_handshake {
 	u32 silicon_type;
 	u32 arm_freq;
 	u32 irdrop_1v2;
-	u8 temperature;
+	s8 temperature;
 	u8 np_ratio_1;
 	u8 np_ratio_2;
 	u8 rsvd1;
