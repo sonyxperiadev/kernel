@@ -154,7 +154,8 @@ static s32 bmp18x_update_raw_temperature(struct bmp18x_data* data)
 	u16 tmp;
 	s32 status;
 
-	mutex_lock(&data->lock);
+	if (!mutex_trylock(&data->lock))
+		return -EAGAIN;
 	status = data->data_bus.bops->write_byte(data->data_bus.client,
 				BMP18X_CTRL_REG, BMP18X_TEMP_MEASUREMENT);
 
@@ -196,7 +197,8 @@ static s32 bmp18x_update_raw_pressure(struct bmp18x_data* data)
 	u32 tmp = 0;
 	s32 status;
 
-	mutex_lock(&data->lock);
+	if (!mutex_trylock(&data->lock))
+		return -EAGAIN;
 	status = data->data_bus.bops->write_byte(data->data_bus.client,
 		BMP18X_CTRL_REG, BMP18X_PRESSURE_MEASUREMENT +
 		(data->oversampling_setting<<6));
