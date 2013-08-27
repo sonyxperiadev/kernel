@@ -66,7 +66,6 @@ static const struct gc2035_datafmt gc2035_fmts[] = {
 enum gc2035_size {
 	GC2035_SIZE_QVGA,	/*  320 x 240 */
 	GC2035_SIZE_VGA,	/*  640 x 480 */
-	GC2035_SIZE_1280x1024,	/*  1280 x 960 (1.2M) */
 	GC2035_SIZE_UXGA,	/*  1600 x 1200 (2M) */
 	GC2035_SIZE_LAST,
 	GC2035_SIZE_MAX
@@ -84,7 +83,6 @@ enum  cam_running_mode runmode;
 static const struct v4l2_frmsize_discrete gc2035_frmsizes[GC2035_SIZE_LAST] = {
 	{320, 240},
 	{640, 480},
-	{1280, 1024},
 	{1600, 1200},
 };
 
@@ -184,34 +182,6 @@ static const struct gc2035_timing_cfg timing_cfg_yuv[GC2035_SIZE_LAST] = {
 			/*  Output image size */
 			      .h_output_size = 640,
 			      .v_output_size = 480,
-			/*  ISP Windowing size  1296 x 972 --> 1280 x 960 */
-			      .isp_h_offset = 8,
-			      .isp_v_offset = 6,
-			/*  Total size (+blanking) */
-			      .h_total_size = 2200,
-			      .v_total_size = 1280,
-			/*  Sensor Read Binning Enabled */
-			      .h_odd_ss_inc = 3,
-			      .h_even_ss_inc = 1,
-			      .v_odd_ss_inc = 3,
-			      .v_even_ss_inc = 1,
-#ifdef CONFIG_MACH_HAWAII_GARNET
-				  .out_mode_sel = 0x01,
-#else
-			      .out_mode_sel = 0x07,
-#endif
-			      .sclk_dividers = 0x01,
-			      .sys_mipi_clk = 0x11,
-			       },
-	[GC2035_SIZE_1280x1024] = {
-			/*  Timing control  2624 x 1952 --> 2592 x 1944 */
-			      .x_addr_start = 16,
-			      .y_addr_start = 4,
-			      .x_addr_end = 2607,
-			      .y_addr_end = 1947,
-			/*  Output image size */
-			      .h_output_size = 1280,
-			      .v_output_size = 960,
 			/*  ISP Windowing size  1296 x 972 --> 1280 x 960 */
 			      .isp_h_offset = 8,
 			      .isp_v_offset = 6,
@@ -840,6 +810,52 @@ static int gc2035_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			return -EINVAL;
 
 		gc2035->whitebalance = ctrl->value;
+		switch (gc2035->whitebalance) {
+		case WHITE_BALANCE_FLUORESCENT:
+			gc2035_reg_write(client, 0xfe, 0x00);
+			gc2035_reg_write(client, 0x82, 0xfc); /*turn off awb*/
+
+			gc2035_reg_write(client, 0xb3, 0x72);
+			gc2035_reg_write(client, 0xb4, 0x40);
+			gc2035_reg_write(client, 0xb5, 0x5b);
+			break;
+		case WHITE_BALANCE_SUNNY:
+			gc2035_reg_write(client, 0xfe, 0x00);
+			gc2035_reg_write(client, 0x82, 0xfc); /*turn off awb*/
+
+			gc2035_reg_write(client, 0xb3, 0x70);
+			gc2035_reg_write(client, 0xb4, 0x40);
+			gc2035_reg_write(client, 0xb5, 0x50);
+			break;
+		case WHITE_BALANCE_CLOUDY:
+			gc2035_reg_write(client, 0xfe, 0x00);
+			gc2035_reg_write(client, 0x82, 0xfc); /*turn off awb*/
+
+			gc2035_reg_write(client, 0xb3, 0x58);
+			gc2035_reg_write(client, 0xb4, 0x40);
+			gc2035_reg_write(client, 0xb5, 0x50);
+			break;
+		case WHITE_BALANCE_TUNGSTEN:
+			gc2035_reg_write(client, 0xfe, 0x00);
+			gc2035_reg_write(client, 0x82, 0xfc); /*turn off awb*/
+
+			gc2035_reg_write(client, 0xb3, 0xa0);
+			gc2035_reg_write(client, 0xb4, 0x45);
+			gc2035_reg_write(client, 0xb5, 0x40);
+			break;
+		default:    /*AWB*/
+			gc2035_reg_write(client, 0xb3, 0x61);
+			gc2035_reg_write(client, 0xb4, 0x40);
+			gc2035_reg_write(client, 0xb5, 0x61);
+
+			gc2035_reg_write(client, 0xfe, 0x00);
+			gc2035_reg_write(client, 0x82, 0xfe); /*turn on awb*/
+			break;
+		}
+		if (ret) {
+			printk(KERN_ERR "Some error in AWB\n");
+			return ret;
+		}
 		break;
 
 	case V4L2_CID_CAMERA_FRAME_RATE:
