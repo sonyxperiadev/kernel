@@ -3071,7 +3071,7 @@ int debugfs_fg_flags_init(struct bcmpmu_fg_data *fg, struct dentry *flags_dir)
 	return 0;
 }
 
-int debugfs_get_curr_open(struct inode *inode, struct file *file)
+int debugfs_fg_open(struct inode *inode, struct file *file)
 {
 	file->private_data = inode->i_private;
 	return 0;
@@ -3094,7 +3094,7 @@ int debugfs_get_curr_read(struct file *file, char __user *buf, size_t len,
 }
 
 static const struct file_operations fg_current_fops = {
-	.open = debugfs_get_curr_open,
+	.open = debugfs_fg_open,
 	.read = debugfs_get_curr_read,
 };
 
@@ -3107,15 +3107,26 @@ static int debugfs_get_batt_volt(void *data, u64 *volt)
 DEFINE_SIMPLE_ATTRIBUTE(fg_volt_fops,
 	debugfs_get_batt_volt, NULL, "%llu\n");
 
-static int debugfs_get_batt_temp(void *data, u64 *temp)
+int debugfs_get_batt_temp(struct file *file, char __user *buf, size_t len,
+		loff_t *ppos)
 {
-	struct bcmpmu_fg_data *fg = data;
-	*temp = bcmpmu_fg_get_batt_temp(fg);
-	return 0;
-}
-DEFINE_SIMPLE_ATTRIBUTE(fg_temp_fops,
-	debugfs_get_batt_temp, NULL, "%llu\n");
+	struct bcmpmu_fg_data *fg = file->private_data;
+	int temp;
+	int count;
+	char buff[50];
 
+	temp = bcmpmu_fg_get_batt_temp(fg);
+
+	count = snprintf(buff, 50, "%s=%d\n", "ntc", temp);
+
+	return simple_read_from_buffer(buf, len, ppos, buff,
+		strlen(buff));
+}
+
+static const struct file_operations fg_temp_fops = {
+	.open = debugfs_fg_open,
+	.read = debugfs_get_batt_temp,
+};
 
 static int debugfs_get_fg_factor(void *data, u64 *factor)
 {
