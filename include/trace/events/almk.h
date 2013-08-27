@@ -51,7 +51,7 @@ TRACE_EVENT(almk_start,
 	),
 
 	TP_fast_assign(
-		strncpy(__entry->comm, comm, TASK_COMM_LEN);
+		strlcpy(__entry->comm, comm, TASK_COMM_LEN);
 		__entry->nr_to_scan     = nr_to_scan;
 		__entry->gfp_mask	= gfp_mask;
 		__entry->min_score_adj	= min_score_adj;
@@ -109,7 +109,7 @@ TRACE_EVENT(almk_end,
 	),
 
 	TP_fast_assign(
-		strncpy(__entry->comm, comm, TASK_COMM_LEN);
+		strlcpy(__entry->comm, comm, TASK_COMM_LEN);
 		__entry->selected_oom_score_adj	= selected_oom_score_adj;
 		__entry->gfp_mask		= gfp_mask;
 		__entry->selected_tasksize	= selected_tasksize;
