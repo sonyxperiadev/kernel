@@ -863,25 +863,6 @@ static int ov5648_reg_writes(struct i2c_client *client,
 	return 0;
 }
 
-#ifdef OV5648_DEBUG
-static int ov5648_reglist_compare(struct i2c_client *client,
-			const struct ov5648_reg reglist[])
-{
-	int err = 0;
-	u8 reg, i;
-
-	for (i = 0; ((reglist[i].reg != 0xFFFF) && (err == 0)); i++) {
-		if (reglist[i].reg != 0xFFFE) {
-			err |= ov5648_reg_read(client, reglist[i].reg, &reg);
-			pr_debug("ov5648_reglist_compare: [0x%04x]=0x%02x",
-				 reglist[i].reg, reg);
-		} else {
-			msleep(reglist[i].val);
-		}
-	}
-	return 0;
-}
-#endif
 
 /**
  * Write an array of data to ov5648 sensor device.
