@@ -66,6 +66,17 @@
 		is-pmu-i2c = <0>;
 		fs-ref-frequency = <13000000>;
 		hs-ref-frequency = <104000000>;
+
+		broadcom_nfc@77 {
+			compatible = "bcm,nfc-i2c";
+			reg = <0x77>;
+			wake_gpio = <25>;
+			en_gpio = <100>;
+			irq_gpio = <90>;
+			enable_txfifo = <1>;
+			enable_rxfifo = <1>;
+		};
+
 	};
 
 	i2c2: i2c@3e018000 {
