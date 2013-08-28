@@ -39,14 +39,16 @@ enum {
 	KONA_MEMC_SET_SEQ_BUSY_CRITERIA = (1 << 3),
 	KONA_MEMC_HW_FREQ_CHANGE_EN = (1 << 4),
 	KONA_MEMC_DDR_PLL_PWRDN_EN = (1 << 5),
-	KONA_MEMC_ENABLE_DEV_TEMP = (1 << 6),
-	KONA_MEMC_CS0_DEV_TEMP = (1 << 7),
-	KONA_MEMC_CS1_DEV_TEMP = (1 << 8),
+#ifdef CONFIG_LPDDR_DEV_TEMP
+	KONA_MEMC_CS0_DEV_TEMP = (1 << 6),
+	KONA_MEMC_CS1_DEV_TEMP = (1 << 7),
+#endif
 };
 
 #define MEMC_SEQ_BUSY_CRITERIA_MAX	3
 #define MEMC_MAX_PWR_MAX			3
 
+#ifdef CONFIG_LPDDR_DEV_TEMP
 enum {
 	SHDWN = 1,
 };
@@ -55,6 +57,7 @@ struct temp_thold {
 	int mr4_sts;
 	int action;
 };
+#endif
 
 struct kona_memc_pdata {
 	u32 flags;
@@ -63,10 +66,12 @@ struct kona_memc_pdata {
 	u32 memc0_ns_base;
 	u32 chipreg_base;
 	u32 memc0_aphy_base;
+#ifdef CONFIG_LPDDR_DEV_TEMP
 	int irq;
 	int temp_period; /*number of cycles on XTAL clk*/
 	struct temp_thold *temp_tholds;
 	int num_thold; /*number of temperature limits*/
+#endif
 };
 
 enum {
@@ -92,12 +97,14 @@ struct kona_memc {
 	u32 active_min_pwr;
 	u32 memc0_aphy_base;
 	struct kona_memc_pdata *pdata;
+#ifdef CONFIG_LPDDR_DEV_TEMP
 	int irq;
 	struct work_struct memc_work;
 	int temp_intr;
 	int temp_sts;
 	int dev_sel;
 	int dev_temp_en;
+#endif
 };
 
 int memc_add_min_pwr_req(struct kona_memc_node *memc_node,

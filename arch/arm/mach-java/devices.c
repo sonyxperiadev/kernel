@@ -842,23 +842,29 @@ struct platform_device avs_device = {
 #endif
 
 #ifdef CONFIG_KONA_MEMC
+#ifdef CONFIG_LPDDR_DEV_TEMP
 struct temp_thold temp_tholds[] = {
 	{.mr4_sts = 7, .action = SHDWN,},
 };
-
+#endif
 struct kona_memc_pdata kmemc_plat_data = {
 	.flags = KONA_MEMC_ENABLE_SELFREFRESH | KONA_MEMC_DISABLE_DDRLDO |
-		KONA_MEMC_DDR_PLL_PWRDN_EN | KONA_MEMC_HW_FREQ_CHANGE_EN |
-		KONA_MEMC_CS0_DEV_TEMP | KONA_MEMC_CS1_DEV_TEMP,
+		KONA_MEMC_DDR_PLL_PWRDN_EN | KONA_MEMC_HW_FREQ_CHANGE_EN
+#ifdef CONFIG_LPDDR_DEV_TEMP
+		| KONA_MEMC_CS0_DEV_TEMP | KONA_MEMC_CS1_DEV_TEMP
+#endif
+		,
 	.memc0_ns_base = KONA_MEMC0_NS_VA,
 	.chipreg_base = KONA_CHIPREG_VA,
 	.memc0_aphy_base = KONA_MEMC0_APHY_VA,
 	.seq_busy_val = 2,
 	.max_pwr = 3,
+#ifdef CONFIG_LPDDR_DEV_TEMP
 	.irq = BCM_INT_ID_SYS_EMI_OPEN,
 	.temp_period = 0xA09E6C, /*cycles on XTAL (26MHz) clock, period=400ms*/
 	.temp_tholds = temp_tholds,
 	.num_thold = ARRAY_SIZE(temp_tholds),
+#endif
 };
 struct platform_device kona_memc_device = {
 	.name = "kona_memc",

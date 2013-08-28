@@ -372,4 +372,13 @@ config KONA_AXITRACE
         help
           Say Y here to enable axitrace sources on hawaii.
 
+config LPDDR_DEV_TEMP
+	bool "enable LPDDR device temperature mgmt"
+	depends on KONA_MEMC
+	default n
+	help
+	 Say Y to enable LPDDR device temperature.
+	 device will be shutdowm after LPDDR device
+	 temperature status reaches 0x7.
+
 endmenu
