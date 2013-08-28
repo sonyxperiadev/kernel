@@ -2161,6 +2161,7 @@ void AUDCTRL_SetPlayMute(AUDIO_SOURCE_Enum_t source,
 				if (source == AUDIO_SOURCE_I2S) {
 					mixInGain = users_gain[AUDPATH_FM].L;
 					mixInGainR = users_gain[AUDPATH_FM].R;
+					setExternAudioGain(mode, app);
 				} else {
 					if (app >= AUDIO_APP_NUMBER) {
 #ifndef JAVA_ZEBU_TEST
