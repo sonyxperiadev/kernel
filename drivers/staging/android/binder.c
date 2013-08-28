@@ -33,6 +33,7 @@
 #include <linux/uaccess.h>
 #include <linux/vmalloc.h>
 #include <linux/slab.h>
+#include <linux/ratelimit.h>
 
 #include "binder.h"
 #include "binder_trace.h"
@@ -125,13 +126,13 @@ module_param_call(stop_on_user_error, binder_set_stop_on_user_error,
 #define binder_debug(mask, x...) \
 	do { \
 		if (binder_debug_mask & mask) \
-			printk(KERN_INFO x); \
+			printk_ratelimited(KERN_INFO x); \
 	} while (0)
 
 #define binder_user_error(x...) \
 	do { \
 		if (binder_debug_mask & BINDER_DEBUG_USER_ERROR) \
-			printk(KERN_INFO x); \
+			printk_ratelimited(KERN_INFO x); \
 		if (binder_stop_on_user_error) \
 			binder_stop_on_user_error = 2; \
 	} while (0)
