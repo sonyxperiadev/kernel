@@ -107,9 +107,9 @@ static int __kona_pm_enter_idle(struct cpuidle_device *dev,
 	int safe_state = drv->safe_state_index;
 	struct kona_idle_state *kona_state =
 			cpuidle_get_statedata(&dev->states_usage[index]);
-
+#ifdef CONFIG_USE_ARCH_TIMER_AS_LOCAL_TIMER
 	int cpu_id = smp_processor_id();
-
+#endif
 	if (pm_prms.idle_en) {
 
 #ifdef CONFIG_HAS_WAKELOCK
