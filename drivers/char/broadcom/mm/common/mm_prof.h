@@ -16,7 +16,7 @@ the GPL, without Broadcom's express prior written consent.
 
 #include "mm_common.h"
 #include "mm_dvfs.h"
-
+#define BUFFSIZE 8
 enum mm_prof_update {
 	MM_PROF_UPDATE_UNKNOWN = 0,
 	MM_PROF_UPDATE_TIME,
@@ -77,6 +77,15 @@ void mm_prof_update_handler(struct work_struct *work);
 				dir, root, &mm_prof_debugfs_##name); }
 
 #define MAX_JOB_TYPE 4
+
+struct mm_buff {
+	struct timespec print_time;
+	int percent;
+	unsigned int jobs_done;
+	unsigned int jobs_done_type[MAX_JOB_TYPE];
+	unsigned int T1;
+	dvfs_mode_e current_mode;
+};
 struct _mm_prof {
 
 	struct mm_common *mm_common;
@@ -88,7 +97,7 @@ struct _mm_prof {
 	struct dentry *TIME;
 	struct dentry *JOB;
 	struct dentry *HW;
-
+	struct dentry *Buffer;
 	/* for prof */
 	dvfs_mode_e current_mode;
 		/*updated in PROF callback from Power Manager*/
@@ -109,6 +118,8 @@ struct _mm_prof {
 	unsigned int jobs_done;
 	unsigned int jobs_done_type[MAX_JOB_TYPE];
 
+	struct mm_buff buff[BUFFSIZE];
+	int write_ptr;
 };
 
 void *mm_prof_init(struct mm_common *mm_common, \
