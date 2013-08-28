@@ -1199,6 +1199,7 @@ static unsigned long isolate_lru_pages(unsigned long nr_to_scan,
 	unsigned long nr_lumpy_dirty = 0;
 	unsigned long nr_lumpy_failed = 0;
 	unsigned long scan;
+	int lru = LRU_BASE;
 #ifdef CONFIG_CMA
 	unsigned long nr_skipped = 0;
 	bool isolate_cma = ((mode & ISOLATE_CMA) == ISOLATE_CMA);
@@ -1206,7 +1207,6 @@ static unsigned long isolate_lru_pages(unsigned long nr_to_scan,
 	struct list_head *prev = NULL;
 	mode &= ~(ISOLATE_CMA);
 #endif
-	int lru = LRU_BASE;
 	lruvec = mem_cgroup_zone_lruvec(mz->zone, mz->mem_cgroup);
 	if (active)
 		lru += LRU_ACTIVE;
