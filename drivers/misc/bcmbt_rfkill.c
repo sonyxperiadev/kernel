@@ -82,7 +82,7 @@ static int bcmbt_rfkill_probe(struct platform_device *pdev)
 {
 	int rc = 0;
 	u32 val;
-	struct bcmbt_rfkill_platform_data *pdata;
+	struct bcmbt_rfkill_platform_data *pdata=NULL;
 
 	if (pdev->dev.platform_data)
 		pdata	= pdev->dev.platform_data;
@@ -167,7 +167,8 @@ static int bcmbt_rfkill_probe(struct platform_device *pdev)
 		rfkill_destroy(pdata->rfkill);
 		if (pdev->dev.of_node) {
 			pdev->dev.platform_data = NULL;
-			kfree(pdata);
+			if(pdata!=NULL)
+				kfree(pdata);
 		}
 
 	}
