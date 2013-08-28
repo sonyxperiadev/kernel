@@ -38,14 +38,15 @@
 #define GPIO_TO_IRQ gpio_to_irq
 
 static int ts_gpio_irq_pin=0;
+#if (TP_CNTRL_PIN_TYPE == TP_CNTRL_PIN_RESET)
 static int ts_gpio_reset_pin=0;
+#endif
 static int ts_gpio_wakeup_pin=0;
 static int ts_x_max_value=0;
 static int ts_y_max_value=0;
 static const char *tp_power;
 static const char *vkey_scope;
 static bool have_vkey = false;
-static char firmware_str[50];
 
 /*******************************/
 typedef unsigned char	FTS_BYTE;
@@ -330,7 +331,7 @@ static unsigned char ft520x_read_fw_ver(void)
 	return ver;
 }
 
-static int ft520x_shutdown()
+static int ft520x_shutdown(void)
 {
 	int ret;
 	ret = ft520x_write_reg(FT520X_REG_PMODE, PMODE_HIBERNATE);
@@ -339,6 +340,7 @@ static int ft520x_shutdown()
 	return ret;
 }
 
+#if 0
 static int ft520x_turnon()
 {
 	int ret;
@@ -347,6 +349,7 @@ static int ft520x_turnon()
 		printk(KERN_INFO" --- ft520x_turnon -- error!\r\n");
 	return ret;
 }
+#endif
 
 #define CONFIG_SUPPORT_FTS_CTP_UPG
 
@@ -655,7 +658,6 @@ FTS_BYTE bt_parser_std(FTS_BYTE* pbt_buf, FTS_BYTE bt_len, ST_TOUCH_INFO* pst_to
 	FTS_WORD high_byte	= 0;
 	FTS_BYTE point_num	= 0;
 	FTS_BYTE i			= 0;
-	FTS_BYTE ecc		= 0;
 
 	/*check the pointer*/
 
@@ -666,7 +668,7 @@ FTS_BYTE bt_parser_std(FTS_BYTE* pbt_buf, FTS_BYTE bt_len, ST_TOUCH_INFO* pst_to
 	pst_touch_info->bt_tp_num= 0;
 
 	/* Device Mode[2:0] == 0 :Normal operating Mode*/
-	if(pbt_buf[0] & 0x70 != 0) {
+	if ((pbt_buf[0] & 0x70) != 0) {
 		printk(KERN_ERR "[tp] mode: %x", pbt_buf[0]);
 		return CTPM_ERR_PROTOCOL;
 	}
@@ -732,13 +734,13 @@ void DumpFtsRegContext(FTS_BYTE *buf, int size)
 
 FTS_BYTE fts_ctpm_get_touch_info(struct synaptics_rmi4 *ts, ST_TOUCH_INFO* pst_touch_info)
 {
-	FTS_BYTE *p_data_buf = FTS_NULL;
+	FTS_BYTE *p_data_buf;
 	FTS_BYTE data_buf[33] = {0};
 
 	POINTER_CHECK(pst_touch_info);
 	POINTER_CHECK(pst_touch_info->pst_point_info);
 
-	p_data_buf = &data_buf;
+	p_data_buf = &data_buf[0];
 
 	/*Sent device to active*/
 	ft5306_i2c_client = ts->client;
@@ -983,6 +985,7 @@ void ReportFingers(struct synaptics_rmi4 *ts, ST_TOUCH_INFO *touch_info)
 	}
 }
 
+#if 0
 static void DebugTpStatus(void)
 {
 	int i;
@@ -995,16 +998,16 @@ static void DebugTpStatus(void)
 			                                                 ft5306_touch_info.pst_point_info[i].w_tp_y);
 	}
 }
+#endif
 
 #define UNEXPECT_POINT_MAX_TEST 5
 static void focaltech_ft5306_work_func(struct work_struct *work)
 {
-	static int failCount=0;
 	int ret = 0;
 	struct synaptics_rmi4 *ts = container_of(work,
 					struct synaptics_rmi4, work);
 
-	ft5306_touch_info.pst_point_info = &ft5306_touch_point;
+	ft5306_touch_info.pst_point_info = ft5306_touch_point;
 	ret = fts_ctpm_get_touch_info(ts, &ft5306_touch_info);
 	//printk(KERN_INFO "get_touch_info ret: %x", ret);
 	if (ret == CTPM_ERR_I2C) {
@@ -1128,7 +1131,9 @@ static ssize_t ft5306_min_gap_show(struct kobject *kobj,
 ssize_t ft5306_min_gap_store(struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t count)
 {
 	long set = 0;
-	strict_strtol(buf, 0, &set);
+	if ((strict_strtol(buf, 0, &set)) < 0)
+		printk(KERN_WARNING "gap_store:error strict_strtol\n");
+
 	min_gap = set ;
 	return count;
 }
@@ -1155,7 +1160,9 @@ ssize_t ft5306_sensitivity_store(struct kobject *kobj, struct kobj_attribute *at
 	uint8_t sensitivity = 8;
 	long set = 0;
 
-	strict_strtol(buf, 0, &set);
+	if ((strict_strtol(buf, 0, &set)) < 0)
+		printk(KERN_WARNING "senstivity:error strict_strtol\n");
+
 	if ( (set >= 4) && (set <= 8) ) {
 		sensitivity = set ;
 	}
@@ -1862,7 +1869,7 @@ static int focaltech_ft5306_probe(
 	}
 #endif
 
-	ft5306_touch_info.pst_point_info = &ft5306_touch_point;
+	ft5306_touch_info.pst_point_info = ft5306_touch_point;
 
 	ts->input_dev->name = "FocalTech-Ft5306";
 	ts->input_dev->phys = client->name;
@@ -1949,10 +1956,8 @@ static int focaltech_ft5306_probe(
 
 err_input_register_device_failed:
 	input_free_device(ts->input_dev);
-
 err_chip_not_exist:
 err_alloc_dev_failed:
-err_pdt_read_failed:
 err_check_functionality_failed:
 err_i2c_client_check:
 
