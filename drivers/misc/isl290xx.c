@@ -293,7 +293,7 @@ struct isl290xx_prox_info_s isl290xx_prox_cur_info;
 struct isl290xx_prox_info_s *isl290xx_prox_cur_infop = &isl290xx_prox_cur_info;
 
 static int device_released;
-int isPsensorLocked;
+static int isPsensorLocked;
 
 #ifdef ISL290XX_POLL_MODE
 static int prox_poll_count = 1;

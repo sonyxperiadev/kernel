@@ -184,9 +184,9 @@ static int tmd2771_offset;
 
 #define TAOS_INPUT_NAME_ALS  "TAOS_ALS_SENSOR"
 #define TAOS_INPUT_NAME_PROX  "TAOS_PROX_SENSOR"
-int isPsensorLocked;
-int als_ps_int;
-int als_ps_gpio_inr;
+static int isPsensorLocked;
+static int als_ps_int;
+static int als_ps_gpio_inr;
 
 /* forward declarations */
 static int taos_probe(struct i2c_client *clientp,
