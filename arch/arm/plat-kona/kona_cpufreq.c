@@ -266,6 +266,10 @@ static int kona_cpufreq_verify_speed(struct cpufreq_policy *policy)
 		ret = cpufreq_frequency_table_verify(policy,
 						     kona_cpufreq->
 						     kona_freqs_table);
+	if (policy->max > kona_cpufreq->active_max_lmt)
+		policy->max = kona_cpufreq->active_max_lmt;
+	else if (policy->min < kona_cpufreq->active_min_lmt)
+		policy->min = kona_cpufreq->active_min_lmt;
 
 	kcf_dbg("%s: after cpufreq verify: min:%d->max:%d kHz\n",
 		__func__, policy->min, policy->max);
