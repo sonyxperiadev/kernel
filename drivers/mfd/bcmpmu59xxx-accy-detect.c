@@ -396,7 +396,8 @@ static void bcmpmu_accy_handle_state(struct accy_det *accy_d)
 	case STATE_CONNECTED:
 		pr_acd(FLOW, "*** Charger Connected event\n");
 		accy_d->retry_cnt = 0;
-		bcm_hsotgctrl_bc_enable_sw_ovwr();
+		if (accy_d->chrgr_type != PMU_CHRGR_TYPE_DCP)
+			bcm_hsotgctrl_bc_enable_sw_ovwr();
 		bcmpmu_accy_set_pmu_BC12(accy_d->bcmpmu, 0);
 		bcmpmu_notify_charger_state(accy_d);
 		break;
