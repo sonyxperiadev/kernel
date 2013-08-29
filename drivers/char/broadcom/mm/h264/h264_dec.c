@@ -124,6 +124,7 @@ void decodeSlice(void *id, struct dec_info_t *dec_info)
 					if ((temp & STATUS_ALL_RDY_DONE) == STATUS_ALL_RDY_DONE)
 						break;
 				}
+				break;
 			default:
 				dec_regs[i].value = h264_read(id, GET_OFFSET(i));
 			}
