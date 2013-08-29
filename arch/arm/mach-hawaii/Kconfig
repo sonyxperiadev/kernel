@@ -166,6 +166,7 @@ choice
 
 	config MACH_HAWAII_GARNET_EDN020
 	bool "GARNET EDN020"
+	select RESERVED_MEM_SPEC1
 	help
 	  Support for
 		Hawaii based
@@ -522,6 +523,15 @@ config HAWAII_PTM
 	select OC_ETM
 	help
 	  Say Y here to enable PTM hardware on hawaii.
+
+config RESERVED_MEM_SPEC1
+	bool "platform shared spec 1"
+	default n
+	help
+	  There can be different memory arrangements
+	  and this deatil has to be shared between AP
+	  and CP. Select this option to define spec 1
+	  category of arrangement.
 
 config BRD_NAME
 	string "customer board name"
