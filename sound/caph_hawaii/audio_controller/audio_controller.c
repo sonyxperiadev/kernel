@@ -190,6 +190,7 @@ static int wait_ihfpmu_on = 50*1000;
 static int wait_pmu_off = 2*1000;
 
 static BRCM_AUDIO_Param_Second_Dev_t second_dev_info;
+static Boolean voice_app_updated = FALSE;
 
 static int needDualMic(AudioMode_t mode, AudioApp_t app);
 static AudioMode_t GetAudioModeFromCaptureDev(CSL_CAPH_DEVICE_e source);
@@ -651,7 +652,8 @@ void AUDCTRL_SetTelephonyMicSpkr(AUDIO_SOURCE_Enum_t source,
 	if (cpReset == TRUE)
 		return;
 
-	if (voiceCallMic == source && voiceCallSpkr == sink && force == false)
+	if (voiceCallMic == source && voiceCallSpkr == sink && force == false
+	    && voice_app_updated == FALSE)
 		return;
 
 	if (source == AUDIO_SOURCE_USB || sink == AUDIO_SINK_USB)
@@ -720,10 +722,13 @@ void AUDCTRL_SetTelephonyMicSpkr(AUDIO_SOURCE_Enum_t source,
 	AUDDRV_Telephony_Init(source, sink, mode, app, bNeedDualMic,
 							bmuteVoiceCall);
 	/* retain the mute flag */
-	if (voiceCallSpkr != sink)
+	if (voiceCallSpkr != sink || voice_app_updated == TRUE)
 		powerOnExternalAmp(sink, TelephonyUse, TRUE, FALSE);
 	voiceCallSpkr = sink;
 	voiceCallMic = source;
+
+	if (voice_app_updated == TRUE)
+		voice_app_updated = FALSE;
 }
 
 /****************************************************************************
@@ -976,6 +981,8 @@ void AUDCTRL_SaveAudioApp(AudioApp_t app)
 	if (AUDCTRL_InVoiceCall())
 		if (app > AUDIO_APP_VOIP_INCOMM)
 			return;
+		else
+			voice_app_updated = TRUE;
 
 	AUDCTRL_RemoveVoiceApp(currApp);
 	AUDCTRL_RemoveRecApp(currApp);
