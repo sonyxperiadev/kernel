@@ -19,6 +19,15 @@
                                 core0: core@0 {
                                         reg = <0>;
                                 };
+                                core1: core@1 {
+                                        reg = <1>;
+                                };
+                                core2: core@2 {
+                                        reg = <2>;
+                                };
+                                core3: core@3 {
+                                        reg = <3>;
+                                };
                         };
                 };
         };
@@ -35,6 +44,37 @@
                         cluster = <&cluster0>;
                         core = <&core0>;
                         clock-frequency = <1000000000>;
+			power-gate = <1>;
+                };
+
+                cpu1: cpu@1 {
+                        device_type = "cpu";
+                        compatible = "arm,cortex-a7";
+                        reg = <1>;
+                        cluster = <&cluster0>;
+                        core = <&core1>;
+                        clock-frequency = <1000000000>;
+			power-gate = <1>;
+                };
+
+                cpu2: cpu@2 {
+                        device_type = "cpu";
+                        compatible = "arm,cortex-a7";
+                        reg = <2>;
+                        cluster = <&cluster0>;
+                        core = <&core2>;
+                        clock-frequency = <1000000000>;
+			power-gate = <1>;
+                };
+
+                cpu3: cpu@3 {
+                        device_type = "cpu";
+                        compatible = "arm,cortex-a7";
+                        reg = <3>;
+                        cluster = <&cluster0>;
+                        core = <&core3>;
+                        clock-frequency = <1000000000>;
+			power-gate = <1>;
                 };
 
         };
