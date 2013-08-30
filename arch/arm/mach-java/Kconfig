@@ -100,10 +100,10 @@ choice
 	help
 	  Support for Java low cost platform 2
 
-	config MACH_JAVA_C_LC2
-	bool "Java low cost platform 2"
+	config MACH_JAVA_C_AMETHYST
+	bool "Java Amethyst platform"
 	help
-	  Support for Java low cost platform 2
+	  Support for Java Amethyst platform
 
 endchoice
 

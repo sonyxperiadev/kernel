@@ -3,10 +3,10 @@
 /dts-v1/;
 
 /include/ "java.dtsi"
-/include/ "java_garnet_bcmpmu_edn000.dtsi"
+/include/ "java_bcmpmu_c_amethyst.dtsi"
 
 / {
-	model = "Javagarnet EDN000";
+	model = "Java Amethyst EDN000";
 	compatible = "bcm,java";
 
 	chosen {
@@ -507,6 +507,12 @@
 		green {
 			label = "green";
 			gpios = <&gpio 9 0>;
+		};
+
+		button-backlight {
+			label = "button-backlight";
+			gpios = <&gpio 95 0>;
+			linux,default-trigger = "kpbl";
 		};
 	};
 };
