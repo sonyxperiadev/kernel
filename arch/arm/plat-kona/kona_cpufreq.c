@@ -258,18 +258,30 @@ static unsigned int kona_cpufreq_get_speed(unsigned int cpu)
 	return 0;
 }
 
+static int get_cpufreq_lmt(int max)
+{
+	if (max && !plist_head_empty(&kona_cpufreq->max_lmt_list))
+		return plist_first(&kona_cpufreq->max_lmt_list)->prio;
+	else if (!max && !plist_head_empty(&kona_cpufreq->min_lmt_list))
+		return plist_last(&kona_cpufreq->min_lmt_list)->prio;
+	return 0;
+}
+
 static int kona_cpufreq_verify_speed(struct cpufreq_policy *policy)
 {
 	int ret = -EINVAL;
+	int max_lmt, min_lmt;
 
 	if (kona_cpufreq->kona_freqs_table)
 		ret = cpufreq_frequency_table_verify(policy,
 						     kona_cpufreq->
 						     kona_freqs_table);
-	if (policy->max > kona_cpufreq->active_max_lmt)
-		policy->max = kona_cpufreq->active_max_lmt;
-	else if (policy->min < kona_cpufreq->active_min_lmt)
-		policy->min = kona_cpufreq->active_min_lmt;
+	min_lmt = get_cpufreq_lmt(0);
+	max_lmt = get_cpufreq_lmt(1);
+	if (max_lmt && policy->max > max_lmt)
+		policy->max = max_lmt;
+	else if (min_lmt && policy->min < min_lmt)
+		policy->min = min_lmt;
 
 	kcf_dbg("%s: after cpufreq verify: min:%d->max:%d kHz\n",
 		__func__, policy->min, policy->max);
