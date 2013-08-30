@@ -1067,12 +1067,21 @@ void AUDDRV_SetAudioMode_Multicast(SetAudioMode_Sp_t param)
 	AudioSysParm_t *p = NULL;
 #endif
 /*For SS multicast case always load params from mode AUDIO_MODE_SPEAKERPHONE*/
-	if (param.app >= AUDIO_APP_NUMBER)
+	if (param.app >= AUDIO_APP_NUMBER) {
 		p1 = &(MMAudParmP()[AUDIO_MODE_SPEAKERPHONE
 			+ (param.app - AUDIO_APP_NUMBER) * AUDIO_MODE_NUMBER]);
-	else
+		if (p1 == NULL) {
+			aError("Multimedia sysparm pointer is NULL\n");
+			return;
+		}
+	} else {
 		p = &(AudParmP()[AUDIO_MODE_SPEAKERPHONE
 			+ param.app * AUDIO_MODE_NUMBER]);
+		if (p == NULL) {
+			aError("Audio sysparm pointer is NULL\n");
+			return;
+		}
+	}
 
 	aTrace(LOG_AUDIO_DRIVER,  "%s mode=%d, app %d, pathID %d\n",
 			__func__, param.mode, param.app, param.pathID);
@@ -1278,11 +1287,20 @@ void AUDDRV_SetAudioMode_Speaker(SetAudioMode_Sp_t param)
 	/* Make sure p is NULL, because later the code will
 	 * access p->hw_sidetone_enable*/
 	p = NULL;
-	if (param.app >= AUDIO_APP_NUMBER)
+	if (param.app >= AUDIO_APP_NUMBER) {
 		p1 = &(MMAudParmP()[param.mode
 			+ (param.app - AUDIO_APP_NUMBER) * AUDIO_MODE_NUMBER]);
-	else
+		if (p1 == NULL) {
+			aError("Multimedia sysparm pointer is NULL\n");
+			return;
+		}
+	} else {
 		p = &(AudParmP()[param.mode + param.app * AUDIO_MODE_NUMBER]);
+		if (p == NULL) {
+			aError("Audio sysparm pointer is NULL\n");
+			return;
+		}
+	}
 
 	aTrace(LOG_AUDIO_DRIVER,  "%s mode=%d, app %d, pathID %d\n",
 			__func__, param.mode, param.app, param.pathID);
@@ -1659,11 +1677,20 @@ void AUDDRV_SetAudioMode_Mic(AudioMode_t audio_mode,
 	AudioSysParm_t *p;
 #endif
 
-	if (app >= AUDIO_APP_NUMBER)
+	if (app >= AUDIO_APP_NUMBER) {
 		p1 = &(MMAudParmP()[audio_mode
 			+ (app - AUDIO_APP_NUMBER) * AUDIO_MODE_NUMBER]);
-	else
+		if (p1 == NULL) {
+			aError("Multimedia sysparm pointer is NULL\n");
+			return;
+		}
+	} else {
 		p = &(AudParmP()[audio_mode + app * AUDIO_MODE_NUMBER]);
+		if (p == NULL) {
+			aError("Audio sysparm pointer is NULL\n");
+			return;
+		}
+	}
 
 	/* Load the mic gains from sysparm. */
 
