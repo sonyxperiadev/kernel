@@ -400,22 +400,29 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 #ifndef CONFIG_ANDROID_LOW_MEMORY_KILLER_AUTODETECT_OOM_ADJ_VALUES
 		lowmem_print(1, "send sigkill to %d (%s), adj %d, size %d"
 				" with ofree %d %d, cfree %d %d "
-				"aoth %d ma %d\n",
+				"aoth %d ma %d "
+				"aanon %d ianon %d "
+				"afile %d ifile %d\n",
 			     selected->pid, selected->comm,
 			     selected_oom_score_adj, selected_tasksize,
 			     other_free, other_file, cma_free, cma_file,
-			     anon_other, min_score_adj);
+			     anon_other, min_score_adj, active_anon,
+			     inactive_anon, active_file, inactive_file);
 #else
 		lowmem_print(1, "send sigkill to %d (%s), score_adj %d,"
 				"adj %d, size %d with ofree %d %d, cfree %d %d"
-				" aoth %d msa %d ma %d\n",
+				" aoth %d msa %d ma %d "
+				"aanon %d ianon %d "
+				"afile %d ifile %d\n",
 		selected->pid, selected->comm,
 		selected_oom_score_adj,
 		lowmem_oom_score_adj_to_oom_adj(selected_oom_score_adj),
 		selected_tasksize,
 		other_free, other_file, cma_free, cma_file,
 		anon_other, min_score_adj,
-		lowmem_oom_score_adj_to_oom_adj(min_score_adj));
+		lowmem_oom_score_adj_to_oom_adj(min_score_adj),
+		active_anon, inactive_anon, active_file,
+		inactive_file);
 #endif
 		lowmem_deathpending_timeout = jiffies + HZ;
 		send_sig(SIGKILL, selected, 0);
@@ -440,15 +447,21 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 #ifndef CONFIG_ANDROID_LOW_MEMORY_KILLER_AUTODETECT_OOM_ADJ_VALUES
 			lowmem_print(1, "send sigkill to %d(%s),adj %d,size %d"
 					" with ofree %d %d,cfree %d %d "
-					"aoth %d ma %d\n",
+					"aoth %d ma %d "
+					"aanon %d ianon %d "
+					"afile %d ifile %d\n",
 				selected[i].task->pid, selected[i].task->comm,
 				selected[i].oom_score_adj, selected[i].tasksize,
 				other_free, other_file, cma_free, cma_file,
-				anon_other, min_score_adj);
+				anon_other, min_score_adj,
+				active_anon, inactive_anon, active_file,
+				inactive_file);
 #else
 			lowmem_print(1, "send sigkill to %d (%s), score_adj %d,"
 					"adj %d, size %d with ofree %d %d, "
-					"cfree %d %d aoth %d msa %d ma %d\n",
+					"cfree %d %d aoth %d msa %d ma %d "
+					"aanon %d ianon %d "
+					"afile %d ifile %d\n",
 			selected[i].task->pid, selected[i].task->comm,
 			selected[i].oom_score_adj,
 			lowmem_oom_score_adj_to_oom_adj(
@@ -456,7 +469,9 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 			selected[i].tasksize,
 			other_free, other_file, cma_free, cma_file,
 			anon_other, min_score_adj,
-			lowmem_oom_score_adj_to_oom_adj(min_score_adj));
+			lowmem_oom_score_adj_to_oom_adj(min_score_adj),
+			active_anon, inactive_anon, active_file,
+			inactive_file);
 #endif
 			lowmem_deathpending_timeout = jiffies + HZ;
 			send_sig(SIGKILL, selected[i].task, 0);
