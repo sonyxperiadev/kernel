@@ -990,9 +990,10 @@ config BCM_BT_LPM
 	bool "BCM BT Low Power support"
 	default n
 	help
-	  This driver adds LPM tty ldisc support for Broadcom bluetooth BT chips.
-	  If your platform uses a BCMxxxx chip for BT, FM or GPS connectivity
-	  and requires N_BRCM_HCI line discpline, say Y.
+	  This driver adds Bluetooth low power mode line discipline
+	  support for Broadcom Bluetooth chips. By default it should
+	  be set as N. Say Y if you want to enable Low power mode
+	  functionality.
 	  If not sure, say N.
 
 config BCM_BT_GPS_SELFTEST
