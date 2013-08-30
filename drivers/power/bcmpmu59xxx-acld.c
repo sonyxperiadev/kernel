@@ -53,6 +53,8 @@ static u32 debug_mask = 0xFF; /* BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT | \
  * */
 #define safe_one_c_rate(one_c) ((one_c * 80) / 100)
 
+#define ACLD_USE_PMU_FG_EOC_SIGNAL	0
+
 #define BATT_ONE_C_RATE_DEF		1500
 #define ACLD_WORK_POLL_5S		5000
 #define ACLD_WORK_POLL_2M		120000
@@ -66,11 +68,13 @@ static u32 debug_mask = 0xFF; /* BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT | \
 #define ACLD_VBUS_ON_LOW_THRLD		4400
 #define ACLD_ERR_CNT_THRLD_2		2
 #define ACLD_ERR_CNT_THRLD_10		10
+#define ACLD_MBC_CV_CLR_THRLD		2
 #define ADC_VBUS_AVG_SAMPLES		8
 #define ADC_READ_TRIES			10
 #define ADC_RETRY_DELAY			20 /* 20ms */
 #define CHRGR_EFFICIENCY		85
 #define VBUS_VBAT_DELTA			1000 /* mV */
+
 struct bcmpmu_acld {
 	struct bcmpmu59xxx *bcmpmu;
 	struct mutex mutex;
@@ -79,6 +83,7 @@ struct bcmpmu_acld {
 	struct delayed_work acld_work;
 	struct notifier_block usb_det_nb;
 	struct notifier_block tml_trtle_nb;
+	struct notifier_block fg_eoc_nb;
 	ktime_t last_sample_tm;
 	enum bcmpmu_chrgr_type_t chrgr_type;
 	int acld_min_input;
@@ -86,6 +91,7 @@ struct bcmpmu_acld {
 	int batt_curr_err_cnt;
 	int vbus_vbat_thrs_err_cnt;
 	int vbus_vbat_delta_deb;
+	int mbc_cv_clr_cnt;
 	int i_sys;
 	int acld_wrk_poll_time;
 	bool i_bus_abv_lmt;
@@ -98,6 +104,7 @@ struct bcmpmu_acld {
 	bool acld_start;
 	bool mbc_in_cv;
 	bool tml_trtle_stat;
+	bool fg_eoc;
 };
 
 static bool bcmpmu_usb_mbc_fault_check(struct bcmpmu_acld *acld);
@@ -232,6 +239,21 @@ static bool bcmpmu_get_mbc_cv_status(struct bcmpmu_acld *acld)
 
 	return false;
 }
+
+static bool bcmpmu_get_fg_eoc_status(struct bcmpmu_acld *acld)
+{
+	bool eoc_status;
+#if (ACLD_USE_PMU_FG_EOC_SIGNAL == 1)
+	u8 reg;
+	acld->bcmpmu->read_dev(acld->bcmpmu, PMU_REG_MBCCTRL9, &reg);
+	pr_acld(FLOW, "PMU_REG_MBCCTRL9: %x\n", reg);
+	eoc_status = reg & MBCCTRL9_FG_EOC_MASK;
+#else
+	eoc_status = acld->fg_eoc;
+#endif
+	return eoc_status;
+}
+
 void bcmpmu_restore_cc_trim_otp(struct bcmpmu_acld *acld)
 {
 	int ret = 0;
@@ -771,8 +793,10 @@ static void bcmpmu_acld_work(struct work_struct *work)
 {
 	struct bcmpmu_acld *acld = to_bcmpmu_acld_data(work, acld_work.work);
 	int ret;
+	bool eoc_status;
 
-	if (acld->chrgr_type != PMU_CHRGR_TYPE_DCP)
+	if ((acld->chrgr_type != PMU_CHRGR_TYPE_DCP) ||
+		(acld->fg_eoc))
 		return;
 
 	if (!acld->acld_min_input)
@@ -811,7 +835,7 @@ static void bcmpmu_acld_work(struct work_struct *work)
 	}
 
 
-	if (!acld->acld_init || acld->acld_re_init) {
+	if ((!acld->acld_init || acld->acld_re_init) && !acld->fg_eoc) {
 		pr_acld(VERBOSE, "Run ACLD algo\n");
 		ret = bcmpmu_acld_algo(acld);
 		if (ret == -EAGAIN) {
@@ -824,11 +848,18 @@ static void bcmpmu_acld_work(struct work_struct *work)
 
 	if (acld->mbc_in_cv) {
 		if (!bcmpmu_get_mbc_cv_status(acld)) {
-			pr_acld(FLOW, "MBC CV mode cleared, Re Init ACLD\n");
-			acld->mbc_in_cv = false;
-			acld->acld_re_init = true;
+			eoc_status = bcmpmu_get_fg_eoc_status(acld);
+			if (!eoc_status && (acld->mbc_cv_clr_cnt++ >
+						ACLD_MBC_CV_CLR_THRLD)) {
+				pr_acld(FLOW, "CV mode cleared, ReInit ACLD\n");
+				acld->mbc_in_cv = false;
+				acld->acld_re_init = true;
+				acld->mbc_cv_clr_cnt = 0;
+			} else if (eoc_status && (acld->mbc_cv_clr_cnt > 0)) {
+				pr_acld(FLOW, "clear mbc_cv_clr_cnt\n");
+				acld->mbc_cv_clr_cnt = 0;
+			}
 		}
-
 		goto q_work;
 	}
 
@@ -858,9 +889,9 @@ static int bcmpmu_reset_acld_flags(struct bcmpmu_acld *acld)
 	acld->acld_re_init = false;
 	acld->v_flag = false;
 	acld->mbc_in_cv = false;
+	acld->fg_eoc = false;
 	acld->batt_curr_err_cnt = 0;
 	acld->vbus_vbat_thrs_err_cnt = 0;
-
 	return 0;
 }
 
@@ -898,8 +929,19 @@ static int bcmpmu_acld_event_handler(struct notifier_block *nb,
 			queue_delayed_work(acld->acld_wq, &acld->acld_work, 0);
 		}
 		break;
+	case PMU_FG_EVT_EOC:
+		acld = to_bcmpmu_acld_data(nb, fg_eoc_nb);
+		acld->fg_eoc = *(bool *)data;
+		pr_acld(FLOW, "PMU_FG_EVT_EOC\n");
+		if (acld->fg_eoc) {
+			pr_acld(FLOW, "cancel ACLD work\n");
+			cancel_delayed_work_sync(&acld->acld_work);
+		} else {
+			pr_acld(FLOW, "start ACLD work\n");
+			queue_delayed_work(acld->acld_wq, &acld->acld_work, 0);
+		}
+		break;
 	}
-
 	return 0;
 }
 #ifdef CONFIG_DEBUG_FS
@@ -1058,6 +1100,14 @@ static int __devinit bcmpmu_acld_probe(struct platform_device *pdev)
 				__func__, __LINE__);
 		goto unreg_usb_det_nb;
 	}
+	acld->fg_eoc_nb.notifier_call = bcmpmu_acld_event_handler;
+	ret = bcmpmu_add_notifier(PMU_FG_EVT_EOC,
+			&acld->fg_eoc_nb);
+	if (ret) {
+		pr_acld(ERROR, "%s Failed to add notifier:%d\n",
+				__func__, __LINE__);
+		goto unreg_thermal_nb;
+	}
 #ifdef CONFIG_DEBUG_FS
 	bcmpmu_acld_debugfs_init(acld);
 #endif
@@ -1070,6 +1120,9 @@ static int __devinit bcmpmu_acld_probe(struct platform_device *pdev)
 
 	return 0;
 
+unreg_thermal_nb:
+	bcmpmu_remove_notifier(PMU_THEMAL_THROTTLE_STATUS,
+			&acld->tml_trtle_nb);
 unreg_usb_det_nb:
 	bcmpmu_remove_notifier(PMU_ACCY_EVT_OUT_CHRGR_TYPE,
 			&acld->usb_det_nb);

@@ -1786,10 +1786,10 @@ static int bcmpmu_fg_set_sw_eoc_condition(struct bcmpmu_fg_data *fg,
 		reg &= ~MBCCTRL9_SW_EOC_MASK;
 
 	ret = fg->bcmpmu->write_dev(fg->bcmpmu, PMU_REG_MBCCTRL9, reg);
-
-	ret = fg->bcmpmu->read_dev(fg->bcmpmu, PMU_REG_MBCCTRL9, &reg);
-
-	pr_fg(FLOW, "PMU_MBC_MBCCTRL9: %x\n", reg);
+	/**
+	 * Post EOC event to all registered notifiers
+	 */
+	bcmpmu_call_notifier(fg->bcmpmu, PMU_FG_EVT_EOC, &fg->flags.fg_eoc);
 
 	return ret;
 }
@@ -2153,10 +2153,10 @@ static int bcmpmu_fg_sw_maint_charging_algo(struct bcmpmu_fg_data *fg)
 		} else if (!(fg->bcmpmu->flags & BCMPMU_SPA_EN) &&
 				(volt < volt_thrld)) {
 			pr_fg(FLOW, "sw_maint_chrgr: SW EOC cleared\n");
-			bcmpmu_fg_set_sw_eoc_condition(fg, false);
 			flags->prev_batt_status = flags->batt_status;
 			flags->batt_status = POWER_SUPPLY_STATUS_CHARGING;
 			flags->fg_eoc = false;
+			bcmpmu_fg_set_sw_eoc_condition(fg, false);
 			bcmpmu_chrgr_usb_en(fg->bcmpmu, 1);
 		}
 	} else if ((!flags->fg_eoc) &&
