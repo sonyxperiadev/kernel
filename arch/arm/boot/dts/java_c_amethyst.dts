@@ -312,7 +312,7 @@
 	};
 
 	kona-fb {
-		module-name = "NT35512";
+		module-name = "NT35596";
 		reg-name = "cam2";
 		rst-gpio = <8>;
 		detect-gpio = <10>;
@@ -322,20 +322,20 @@
 		rst-hold = <100000>;	/* 100ms */
 		col-mod-i = <3>;
 		col-mod-o = <2>;
-		width = <480>;
-		height = <854>;
+		width = <1080>;
+		height = <1920>;
 		/* rst-active-high */	/* Commented => Active Low */
 		vmode;
 		/* vburst */	/* Non-burst mode */
 		/* te-ctrl; */		/* Tearing Effect Control disabled */
 		fps = <60>;
-		lanes = <2>;
+		lanes = <4>;
 		cmnd-LP;		/* Commands in LP mode*/
-		hs-bitrate = <333000000>;
+		hs-bitrate = <400000000>;
 		lp-bitrate = <8000000>;	/* 8mbps */
 		iommu = <&iommu_mm>;
 		iovmm = <&iovmm_mm>;
-		rotation = <180>;
+		rotation = <0>;
 	};
 
 	kona-fb-2 {
