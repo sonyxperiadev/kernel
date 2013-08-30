@@ -124,7 +124,9 @@ struct kona_fb {
 #endif
 	struct delayed_work vsync_smart;
 
+	size_t framesize_alloc;
 	struct iommu_domain *direct_domain;
+	struct sg_table *iovmm_table;
 	struct kona_fb_platform_data *fb_data;
 	struct platform_device *pdev;
 };
@@ -344,7 +346,6 @@ static int kona_fb_direct_unmap(struct kona_fb *fb,
 			size_t framesize_alloc, dma_addr_t dma_addr)
 {
 	struct iommu_domain *domain = fb->direct_domain;
-	int ret = -ENXIO;
 	struct platform_device *pdev = fb->pdev;
 
 	if (NULL == domain) {
@@ -352,11 +353,7 @@ static int kona_fb_direct_unmap(struct kona_fb *fb,
 		return -EIO;
 	}
 
-	if (iommu_unmap(domain, dma_addr, framesize_alloc) < 0) {
-		ret = -EINVAL;
-		pr_err("kona_fb_direct_unmap fail\n");
-		goto fail;
-	}
+	iommu_unmap(domain, dma_addr, framesize_alloc);
 
 	iommu_detach_device(domain, &pdev->dev);
 
@@ -365,10 +362,6 @@ static int kona_fb_direct_unmap(struct kona_fb *fb,
 	fb->direct_domain = NULL;
 	pr_info("%s succ\n", __func__);
 	return 0;
-
-fail:
-	pr_err("%s failed ret = %d\n", __func__, ret);
-	return ret;
 }
 
 #ifdef CONFIG_BCM_IOVMM
@@ -421,6 +414,7 @@ static int kona_fb_iovmm_map(struct kona_fb *fb, size_t framesize_alloc,
 		goto fail_map_sgt;
 	}
 
+	fb->iovmm_table = table;
 	*p_dma_addr = dma_addr;
 	pr_info("%s succ\n", __func__);
 	return 0;
@@ -432,6 +426,23 @@ fail_sg_alloc:
 fail:
 	pr_err("%s failed ret = %d\n", __func__, ret);
 	return ret;
+}
+
+static int kona_fb_iovmm_unmap(struct kona_fb *fb,
+			size_t framesize_alloc, dma_addr_t dma_addr)
+{
+	struct platform_device *pdev = fb->pdev;
+
+	arm_iommu_unmap(&pdev->dev, dma_addr, framesize_alloc);
+
+	if (fb->iovmm_table) {
+		sg_free_table(fb->iovmm_table);
+		kfree(fb->iovmm_table);
+		fb->iovmm_table = NULL;
+	}
+
+	pr_info("%s succ\n", __func__);
+	return 0;
 }
 #endif
 #endif
@@ -1511,6 +1522,7 @@ static int __ref kona_fb_probe(struct platform_device *pdev)
 	/* Workaround: One page extra allocated and mapped via m4u to avoid
 	 * v3d write faulting in m4u doing extra access */
 	framesize_alloc = PAGE_ALIGN(framesize + 4096);
+	fb->framesize_alloc = framesize_alloc;
 
 	fb->fb.screen_base = dma_alloc_writecombine(&pdev->dev,
 			framesize_alloc,
@@ -1861,6 +1873,13 @@ static int __devexit kona_fb_remove(struct platform_device *pdev)
 #endif
 	unregister_framebuffer(&fb->fb);
 	disable_display(fb);
+#ifdef CONFIG_IOMMU_API
+#ifdef CONFIG_BCM_IOVMM
+	kona_fb_iovmm_unmap(fb, fb->framesize_alloc, (dma_addr_t)fb->buff0);
+#else
+	kona_fb_direct_unmap(fb, fb->framesize_alloc, (dma_addr_t)fb->buff0);
+#endif
+#endif
 	if (pdev->dev.of_node) {
 		kfree(pdata);
 		pdev->dev.platform_data = NULL;
