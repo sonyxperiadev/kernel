@@ -277,10 +277,10 @@
 		compatible = "bcm,soc-camera";
 		reg = <0x36 0x0>;
 		bus-id = <0>;
-		i2c-type = "ov5648";
+		i2c-type = "ov8825";
 		i2c-addr = <0x36>;
 		i2c-adapter-id = <0>;
-		module-name = "ov5648";
+		module-name = "ov8825";
 		if-type = <1>;
 		if-mode = <3>;
 		orientation = <1>;
