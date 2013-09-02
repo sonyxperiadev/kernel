@@ -795,14 +795,17 @@ void hawaii_cpufreq_init(void)
 				|| IS_ERR_OR_NULL(a9_pll_chnl1));
 
 	/*Update DVFS freq table based on PLL settings done by the loader */
-	/*For B0 and above, ECONOMY:0 NORMAL:1 TURBO:2 */
-	kona_freq_tbl[1].cpu_freq = clk_get_rate(a9_pll) / (4 * 1000);
-	kona_freq_tbl[2].cpu_freq = clk_get_rate(a9_pll) / (3 * 1000);
+	kona_freq_tbl[0].cpu_freq = clk_get_rate(a9_pll)/
+					(PROC_FREQ_ECO_DIV * 1000);
+	kona_freq_tbl[1].cpu_freq = clk_get_rate(a9_pll)/
+					(PROC_FREQ_NORMAL_DIV * 1000);
+	kona_freq_tbl[2].cpu_freq = clk_get_rate(a9_pll)/
+					(PROC_FREQ_TURBO_DIV * 1000);
 	kona_freq_tbl[3].cpu_freq = clk_get_rate(a9_pll_chnl1) / 1000;
 
-	pr_info("%s a9_pll_chnl0 OPP0_freq = %dkHz OPP1_freq = %dKhz a9_pll_chnl1 freq = %dKhz\n",
-		__func__, kona_freq_tbl[1].cpu_freq, kona_freq_tbl[2].cpu_freq,
-		kona_freq_tbl[3].cpu_freq);
+	pr_info("%s ARM Eco: %u, Normal: %u, Turbo: %u, Super Turbo: %u\n",
+		__func__, kona_freq_tbl[0].cpu_freq, kona_freq_tbl[1].cpu_freq,
+		kona_freq_tbl[2].cpu_freq, kona_freq_tbl[3].cpu_freq);
 }
 
 struct kona_cpufreq_drv_pdata kona_cpufreq_drv_pdata = {

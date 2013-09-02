@@ -108,6 +108,13 @@ static DEFINE_PER_CPU(u32, cdm_attempts);
 
 static u8 svc_req[DRMT_SVC_MAX];
 
+static u32 fdm_abort;
+
+bool is_fdm_abort()
+{
+	return fdm_abort ? true : false;
+}
+
 static u32 fdm_success;
 static u32 fdm_short_success;
 static u32 fdm_attempt;
@@ -571,7 +578,7 @@ void dormant_enter(u32 svc)
 		cdc_set_fsm_ctrl(FSM_CLR_ALL_STATUS);
 		cdc_set_override(WAIT_IDLE_TIMEOUT, 0xF);
 		fdm_attempt++;
-
+		fdm_abort = 0;
 		/*no break to continue to CEOK*/
 	case CDC_STATUS_CEOK:
 		/*dormant_enter_continue will turn OFF L2 mem only if
@@ -635,6 +642,7 @@ void dormant_enter(u32 svc)
 			/*clear TIMEOUT_INT FDM_SHORT*/
 			cdc_set_fsm_ctrl(FSM_CLR_TIMEOUT_INT);
 			fdm_short_success++;
+			fdm_abort = 1;
 			/*No break continue...*/
 		case CDC_STATUS_RESFDM:
 			(*((u32 *)(&__get_cpu_var(cdm_success))))++;

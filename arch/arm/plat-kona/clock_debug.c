@@ -893,7 +893,7 @@ int __init clock_debug_init(void)
 
 int __init clock_debug_add_ccu(struct clk *c, bool is_root_ccu)
 {
-	#define DENT_COUNT 7
+	#define DENT_COUNT 8
 	struct ccu_clk *ccu_clk;
 	int i = 0;
 	struct dentry *dentry[DENT_COUNT] = {NULL};
@@ -967,7 +967,7 @@ int __init clock_debug_add_ccu(struct clk *c, bool is_root_ccu)
 		if (!debugfs_create_file("clk_idle_debug", S_IRUSR | S_IWUSR,
 					ccu_clk->dent_ccu_dir, NULL,
 					&clock_idle_debug_fops))
-			return -ENOMEM;
+			goto err;
 	}
 
 	return 0;

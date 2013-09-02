@@ -945,6 +945,19 @@ struct pll_desense a7_pll_des = {
 #endif
 };
 
+static int arm_pll_clk_init(struct clk *clk)
+{
+/*Disable A7 PLL auto power down before changing freq.
+  workaround for HWJAVA-218*/
+	BUG_ON(clk->clk_type != CLK_TYPE_PLL);
+	if (is_pm_erratum(ERRATUM_A7_PLL_PWRDWN)) {
+		clk->flags &= ~AUTO_GATE;
+		pr_info("A7 PLL Auto Powerdown disabled for A0\n");
+	}
+	return gen_pll_clk_ops.init(clk);
+}
+
+static struct gen_clk_ops arm_pll_clk_ops;
 
 static struct pll_clk CLK_NAME(a9_pll) = {
 
@@ -953,7 +966,7 @@ static struct pll_clk CLK_NAME(a9_pll) = {
 				.id	= CLK_A9_PLL_CLK_ID,
 				.name = A9_PLL_CLK_NAME_STR,
 				.clk_type = CLK_TYPE_PLL,
-				.ops = &gen_pll_clk_ops,
+				.ops = &arm_pll_clk_ops,
 		},
 	.ccu_clk = &CLK_NAME(kproc),
 	.pll_ctrl_offset = KPROC_CLK_MGR_REG_PLLARMA_OFFSET,
@@ -7864,9 +7877,7 @@ static int proc_ccu_clk_init(struct clk *clk)
 static void change_arm_pll_config(int mdiv)
 {
 	u32 reg_val;
-	struct pll_chnl_clk *pll_chnl_clk;
-
-	pll_chnl_clk = &clk_a9_pll_chnl0;
+	struct pll_chnl_clk *pll_chnl_clk = &clk_a9_pll_chnl0;
 
 	reg_val = readl(CCU_REG_ADDR(pll_chnl_clk->ccu_clk,
 					pll_chnl_clk->cfg_reg_offset));
@@ -7882,6 +7893,14 @@ static void change_arm_pll_config(int mdiv)
 				pll_chnl_clk->pll_load_ch_en_offset));
 }
 
+static int get_arm_pll_div(void)
+{
+	struct pll_chnl_clk *pll_chnl_clk = &clk_a9_pll_chnl0;
+
+	return (readl(CCU_REG_ADDR(pll_chnl_clk->ccu_clk,
+		pll_chnl_clk->cfg_reg_offset)) >> pll_chnl_clk->mdiv_shift)
+		& pll_chnl_clk->mdiv_mask;
+}
 
 static int proc_ccu_set_freq_policy(struct ccu_clk *ccu_clk, int policy_id,
 				   struct opp_info *opp_info)
@@ -7889,7 +7908,6 @@ static int proc_ccu_set_freq_policy(struct ccu_clk *ccu_clk, int policy_id,
 	u32 reg_val = 0;
 	u32 shift;
 	u32 target_volt;
-	int curr_opp;
 	u32 sw_freq_id;
 	clk_dbg("%s:policy = %d, freq = %d opp = %d prms = %d\n",
 			__func__, policy_id, opp_info->freq_id,
@@ -7915,40 +7933,36 @@ static int proc_ccu_set_freq_policy(struct ccu_clk *ccu_clk, int policy_id,
 	}
 
 	ccu_write_access_enable(ccu_clk, true);
-/*Disable A7 PLL auto power down before changing freq.
-  workaround for HWJAVA-218*/
-	if (is_pm_erratum(ERRATUM_A7_PLL_PWRDWN)) {
-		reg_val = readl(ccu_clk->ccu_clk_mgr_base +
-				KPROC_CLK_MGR_REG_PLLARMA_OFFSET);
-		reg_val &=
-		~KPROC_CLK_MGR_REG_PLLARMA_PLLARM_IDLE_PWRDWN_SW_OVRRIDE_MASK;
-		writel(reg_val, ccu_clk->ccu_clk_mgr_base +
-				KPROC_CLK_MGR_REG_PLLARMA_OFFSET);
-	}
-
 	ccu_policy_engine_stop(ccu_clk);
-	if (opp_info->ctrl_prms != CCU_POLICY_FREQ_REG_INIT &&
-			(opp_info->opp_id == PI_OPP_NORMAL ||
-			opp_info->opp_id == PI_OPP_TURBO)) {
+	if (opp_info->ctrl_prms != CCU_POLICY_FREQ_REG_INIT && (
+		(opp_info->opp_id == PI_OPP_NORMAL) || (opp_info->opp_id ==
+		 PI_OPP_TURBO) || (opp_info->opp_id == PI_OPP_ECONOMY))) {
 
-		target_volt = (opp_info->opp_id == PI_OPP_NORMAL) ?
-				VLT_ID_A9_NORMAL : VLT_ID_A9_TURBO;
-		curr_opp = pi_get_active_opp(ccu_clk->pi_id);
-		if (curr_opp != PI_OPP_ECONOMY) {
-			sw_freq_id = PROC_CCU_FREQ_ID_ECO;
+		if (get_arm_pll_div() != opp_info->ctrl_prms) {
+			target_volt = opp_info->opp_id == PI_OPP_NORMAL ?
+				VLT_ID_A9_NORMAL : (opp_info->opp_id ==
+				PI_OPP_TURBO ? VLT_ID_A9_TURBO : VLT_ID_A9_ECO);
+			sw_freq_id = is_fdm_abort() ? PROC_CCU_FREQ_ID_312MHZ :
+				PROC_CCU_FREQ_ID_156MHZ;
+			if (sw_freq_id == PROC_CCU_FREQ_ID_156MHZ)
+				ccu_set_voltage(ccu_clk, sw_freq_id,
+					target_volt);
 			reg_val = readl(CCU_POLICY_FREQ_REG(ccu_clk));
 			reg_val &= ~(CCU_FREQ_POLICY_MASK << shift);
 			reg_val |= sw_freq_id << shift;
 			writel(reg_val, CCU_POLICY_FREQ_REG(ccu_clk));
 
 			ccu_policy_engine_resume(ccu_clk, ccu_clk->clk.flags &
-				CCU_TARGET_LOAD ?
-				CCU_LOAD_TARGET : CCU_LOAD_ACTIVE);
+					CCU_TARGET_LOAD ? CCU_LOAD_TARGET :
+					CCU_LOAD_ACTIVE);
 			ccu_policy_engine_stop(ccu_clk);
+			if (sw_freq_id == PROC_CCU_FREQ_ID_156MHZ)
+				ccu_set_voltage(ccu_clk, sw_freq_id,
+					VLT_ID_A9_ECO);
+			change_arm_pll_config(opp_info->ctrl_prms);
+			ccu_set_voltage(ccu_clk, opp_info->freq_id,
+					target_volt);
 		}
-		change_arm_pll_config(opp_info->ctrl_prms);
-		ccu_set_voltage(ccu_clk, opp_info->freq_id,
-				target_volt);
 	}
 
 	reg_val = readl(CCU_POLICY_FREQ_REG(ccu_clk));
@@ -7959,18 +7973,6 @@ static int proc_ccu_set_freq_policy(struct ccu_clk *ccu_clk, int policy_id,
 
 	ccu_policy_engine_resume(ccu_clk, ccu_clk->clk.flags &
 		CCU_TARGET_LOAD ? CCU_LOAD_TARGET : CCU_LOAD_ACTIVE);
-	/*re-enable PLL power down*/
-	if (is_pm_erratum(ERRATUM_A7_PLL_PWRDWN)) {
-		if (opp_info->freq_id == PROC_CCU_FREQ_ID_ECO) {
-			reg_val = readl(ccu_clk->ccu_clk_mgr_base +
-				KPROC_CLK_MGR_REG_PLLARMA_OFFSET);
-			reg_val |=
-		KPROC_CLK_MGR_REG_PLLARMA_PLLARM_IDLE_PWRDWN_SW_OVRRIDE_MASK;
-			writel(reg_val, ccu_clk->ccu_clk_mgr_base +
-				KPROC_CLK_MGR_REG_PLLARMA_OFFSET);
-		}
-	}
-
 	ccu_write_access_enable(ccu_clk, false);
 	clk_dbg("%s:%s ccu OK\n", __func__, ccu_clk->clk.name);
 	return 0;
@@ -7996,6 +7998,8 @@ int __init __clock_init(void)
 	proc_ccu_clk_ops.init = proc_ccu_clk_init;
 	proc_ccu_ops = gen_ccu_ops;
 	proc_ccu_ops.set_freq_policy = proc_ccu_set_freq_policy;
+	arm_pll_clk_ops = gen_pll_clk_ops;
+	arm_pll_clk_ops.init = arm_pll_clk_init;
 
 	mm_ccu_ops = gen_ccu_ops;
 	mm_ccu_ops.set_freq_policy = mm_ccu_set_freq_policy;

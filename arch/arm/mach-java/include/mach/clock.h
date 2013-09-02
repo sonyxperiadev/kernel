@@ -761,6 +761,7 @@ int clk_set_crystal_pwr_on_idle(int enable);
 int __clock_init(void);
 int __clock_print_act_clks(void);
 int chip_reset(void);
+extern bool is_fdm_abort(void);
 #ifdef CONFIG_DEBUG_FS
 int debug_bus_mux_sel(int mux_sel, int mux_param, u32 dbg_bit_sel);
 int set_clk_idle_debug_mon(int clk_idle, int db_sel, u32 dbg_bit_sel);
