@@ -47,11 +47,9 @@
 #define ACD_DELAY msecs_to_jiffies(100)
 #define ACD_RETRY_DELAY msecs_to_jiffies(1000)
 #define DISCONNECT_EVENT_TIME (HZ * 2)
-/*
+
 static int debug_mask = BCMPMU_PRINT_ERROR |
 	BCMPMU_PRINT_INIT |  BCMPMU_PRINT_FLOW;
-*/
-static int debug_mask = 0xF;
 
 /*
  *Possible State MC
@@ -101,7 +99,7 @@ static void enable_bc_clock(struct accy_det *accy_d, bool en)
 {
 		bcm_hsotgctrl_en_clock(en);
 		accy_d->clock_en = en;
-		pr_acd(FLOW, "======<%s> paccy clock %x\n"
+		pr_acd(VERBOSE, "======<%s> paccy clock %x\n"
 			, __func__, accy_d->clock_en);
 }
 
@@ -136,12 +134,12 @@ static unsigned int get_bc_status(struct accy_det *accy_d)
 	if (accy_d->bc == BCMPMU_BC_PMU_BC12) {
 		bcmpmu->read_dev(bcmpmu,
 				PMU_REG_MBCCTRL5, (u8 *)&status);
-		pr_acd(FLOW, " MBCCTRL5 %x\n", status);
+		pr_acd(VERBOSE, " MBCCTRL5 %x\n", status);
 		status &= MBCCTRL5_CHP_TYP_MASK;
 		pr_acd(FLOW, "MBCCTRL5 %x  mask %x\n",
 				status, MBCCTRL5_CHP_TYP_MASK);
 		status = status >> MBCCTRL5_CHP_TYP_SHIFT;
-		pr_acd(FLOW, " MBCCTRL5 %x shift % d\n",
+		pr_acd(VERBOSE, " MBCCTRL5 %x shift % d\n",
 				status, MBCCTRL5_CHP_TYP_SHIFT);
 		return status;
 	} else if (accy_d->bc == BCMPMU_BC_BB_BC12) {
@@ -202,14 +200,14 @@ static void accy_d_set_ldo_bit(struct accy_det *accy_d, int val)
 		status &= ~USB_DET_LDO_EN_MASK;
 	accy_d->bcmpmu->write_dev(accy_d->bcmpmu,
 			PMU_REG_MBCCTRL5, status);
-	pr_acd(FLOW, "###<%s> MBCCTRL5 %x\n", __func__, status);
+	pr_acd(VERBOSE, "###<%s> MBCCTRL5 %x\n", __func__, status);
 }
 
 static void bcmpmu_accy_set_pmu_BC12(struct bcmpmu59xxx *bcmpmu, int val)
 {
 	u8 reg;
 	bcmpmu->read_dev(bcmpmu, PMU_REG_MBCCTRL5, &reg);
-	pr_acd(FLOW, "###<%s> MBCCTRL5 %x\n", __func__, reg);
+	pr_acd(VERBOSE, "###<%s> MBCCTRL5 %x\n", __func__, reg);
 	if (val)
 		reg |= MBCCTRL5_BC12_EN_MASK;
 	else
@@ -271,7 +269,7 @@ static int bcmpmu_accy_detect_func(struct accy_det *accy_d)
 	int state = -1;
 	static u8 type2;
 
-	pr_acd(FLOW, "=== %s try %d\n",
+	pr_acd(VERBOSE, "=== %s try %d\n",
 			__func__, accy_d->retry_cnt);
 	bcmpmu_usb_get(bcmpmu,
 			BCMPMU_USB_CTRL_GET_SESSION_STATUS,
@@ -289,10 +287,10 @@ static int bcmpmu_accy_detect_func(struct accy_det *accy_d)
 			BCMPMU_USB_CTRL_GET_ID_VALUE,
 			(void *)&id_status);
 	id_check = bcmpmu_supported_chrgr_usbid(accy_d, id_status);
-	pr_acd(FLOW, "%s, id %d id_check %d\n",
+	pr_acd(VERBOSE, "%s, id %d id_check %d\n",
 			__func__, id_status, id_check);
 	if (!id_check) {
-		pr_acd(ERROR, "---Err id_check nt valid\n");
+		pr_acd(ERROR, "---Err id_check nt valid id = %d\n", id_status);
 		state = STATE_IDLE;
 		goto err;
 	}
@@ -340,7 +338,7 @@ void bcmpm_accy_setup_detection(struct accy_det *accy_d, bool en)
 
 		if (en) {
 			accy_d->xceiv_start = 1;
-			pr_acd(FLOW, "=== %s ev send xceiv_start %d\n",
+			pr_acd(VERBOSE, "=== %s ev send xceiv_start %d\n",
 					__func__, accy_d->xceiv_start);
 			bcmpmu_call_notifier(accy_d->bcmpmu,
 					PMU_CHRGR_DET_EVT_OUT_XCVR,
@@ -350,7 +348,7 @@ void bcmpm_accy_setup_detection(struct accy_det *accy_d, bool en)
 
 		} else if ((!en) & accy_d->xceiv_start) {
 			accy_d->xceiv_start = 0;
-			pr_acd(FLOW, "=== %s ev send xceiv_start %d\n",
+			pr_acd(VERBOSE, "=== %s ev send xceiv_start %d\n",
 					__func__, accy_d->xceiv_start);
 			bcmpmu_call_notifier(accy_d->bcmpmu,
 					PMU_CHRGR_DET_EVT_OUT_XCVR,
@@ -378,13 +376,13 @@ void bcmpm_accy_setup_detection(struct accy_det *accy_d, bool en)
 
 static void bcmpmu_notify_charger_state(struct accy_det *accy_d)
 {
-	pr_acd(FLOW, "===chrgr_type %d\n", accy_d->chrgr_type);
+	pr_acd(VERBOSE, "===chrgr_type %d\n", accy_d->chrgr_type);
 	bcmpmu_accy_chrgr_type_notify(accy_d->chrgr_type);
 }
 
 static void bcmpmu_accy_handle_state(struct accy_det *accy_d)
 {
-	pr_acd(FLOW, "=== %s state %d\n", __func__, accy_d->state);
+	pr_acd(VERBOSE, "=== %s state %d\n", __func__, accy_d->state);
 	switch (accy_d->state) {
 
 	case STATE_IDLE:
@@ -461,7 +459,7 @@ static int bcmpmu_accy_event_handler(struct notifier_block *nb,
 	}
 	if (!ret) {
 		if (!queue_delayed_work(accy_d->wq,
-				&accy_d->d_work, ACD_DELAY)) {
+				&accy_d->d_work, 0)) {
 			cancel_delayed_work_sync(&accy_d->d_work);
 			queue_delayed_work(accy_d->wq, &accy_d->d_work, 0);
 		}
@@ -477,7 +475,7 @@ static void bcmpmu_detect_wq(struct work_struct *work)
 		container_of(work, struct accy_det, d_work.work);
 	struct bcmpmu59xxx *bcmpmu = accy_d->bcmpmu;
 
-	pr_acd(FLOW, "=== %s\n", __func__);
+	pr_acd(VERBOSE, "=== %s\n", __func__);
 
 	accy_d->reschedule = false;
 
@@ -498,7 +496,7 @@ static void bcmpmu_detect_wq(struct work_struct *work)
 
 		if (state >= 0) {
 			accy_d->state = state;
-			pr_acd(FLOW, "*** accy updated state %d\n",
+			pr_acd(VERBOSE, "*** accy updated state %d\n",
 					accy_d->state);
 			bcmpm_accy_setup_detection(accy_d, 0);
 			bcmpmu_accy_handle_state(accy_d);
