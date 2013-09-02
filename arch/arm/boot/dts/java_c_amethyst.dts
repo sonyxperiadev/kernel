@@ -169,10 +169,12 @@
 			gpio-irq-pin = <73>;
 			gpio-reset-pin = <70>;
 			gpio-wakeup-pin = <70>;
-			x-max-value = <720>;
-			y-max-value = <1280>;
+			x-max-value = <1080>;
+			y-max-value = <1920>;
 			use-irq = <1>;
 			power = "camldo2";
+			vkey_scope = "0x01:139:180:2000:180:160:0x01:102:540:2000:180:160:0x01:158:900:2000:180:160\n";
+			chip_id = <0x14>; /* FT5336 */
 		};
 	};
 

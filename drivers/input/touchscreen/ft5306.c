@@ -623,6 +623,14 @@ unsigned char fts_ctpm_get_vendor_id(void)
 	printk("tp vendor id: %x", vendor_id);
 	return vendor_id;
 }
+unsigned char fts_ctpm_get_chip_id(void)
+{
+	u8 chip_id = 0;
+	ft520x_read_reg(0xA3, &chip_id);
+	printk("Focaltech tp chip id: %x", chip_id);
+	return chip_id;
+}
+
 #endif
 
 int focaltec_fts_upgrade_firmware(void)
@@ -1693,7 +1701,10 @@ static int focaltech_ft5306_probe(
 {
 	int ret = 0;
 	u32 val;
+	int detect_fail = 0;
 	unsigned char vendor_id = 0;
+	unsigned char chip_id = 0;
+	unsigned char chip_id2 = 0;
 	struct synaptics_rmi4 *ts;
 	struct Synaptics_ts_platform_data *pdata;
 	struct device_node *np;
@@ -1749,6 +1760,9 @@ static int focaltech_ft5306_probe(
 			auto_update_fw = val;
 		if (!of_property_read_u32(np, "pressure_support", &val))
 			pressure_support = val;
+		val = 0;
+		if (!of_property_read_u32(np, "chip_id", &val))
+			chip_id2 = val;
 		of_property_read_string(np, "power", &tp_power);
 		if (of_property_read_string(np, "vkey_scope", &vkey_scope)) {
 			have_vkey = false;
@@ -1778,14 +1792,24 @@ static int focaltech_ft5306_probe(
 			mdelay(10);
 		}
 		/*read chip ID to detect if the chip exists*/
-		vendor_id = fts_ctpm_get_vendor_id();
-		if ((vendor_id != HAWAII_GARNET_FT5X06_VENDOR_ID)
-			&& (vendor_id != G5_A18_FT5X06_VENDOR_ID)
-			&& (vendor_id != G5_A21_FT5316_VENDOR_ID)
-			&& (vendor_id != KTOUCH_W81_FT6X06_VENDOR_ID)
-			&& (vendor_id != TCL_UP823_FT6206_VENDOR_ID)
-			&& (vendor_id != KTOUCH_5606_FT6X06_VENDOR_ID)
-			&& (vendor_id != KTOUCH_W68_FT6X06_VENDOR_ID)) {
+		if (chip_id2 > 0) {
+			chip_id = fts_ctpm_get_chip_id();
+			if (chip_id != chip_id2)
+				detect_fail = 1;
+		} else {
+			vendor_id = fts_ctpm_get_vendor_id();
+
+			if ((vendor_id != HAWAII_GARNET_FT5X06_VENDOR_ID)
+				&& (vendor_id != G5_A18_FT5X06_VENDOR_ID)
+				&& (vendor_id != G5_A21_FT5316_VENDOR_ID)
+				&& (vendor_id != KTOUCH_W81_FT6X06_VENDOR_ID)
+				&& (vendor_id != TCL_UP823_FT6206_VENDOR_ID)
+				&& (vendor_id != KTOUCH_5606_FT6X06_VENDOR_ID)
+				&& (vendor_id != KTOUCH_W68_FT6X06_VENDOR_ID))
+				detect_fail = 1;
+		}
+
+		if (detect_fail) {
 			if (ts->power) {
 				ts->power(TS_OFF);
 				mdelay(10);
@@ -1794,9 +1818,10 @@ static int focaltech_ft5306_probe(
 			kfree(ts);
 			ret = -ENODEV;
 			i2c_probe_failed = 1;
-			printk(KERN_ERR "FT5306 not exist!\r\n");
+			printk(KERN_ERR "Focaltech tp not exist!\r\n");
 			goto  err_chip_not_exist ;
 		}
+
 
 #if (TP_CNTRL_PIN_TYPE == TP_CNTRL_PIN_RESET)
 		Ft5306_Hw_Reset();
