@@ -109,7 +109,7 @@
 		kxtik@0f {
                         compatible = "bcm,kxtik";
                         reg = <0x0f>;
-                        gpio-irq-pin = <1>;
+                        gpio-irq-pin = <0>;
                         min_interval = <5>;
                         poll_interval = <200>;
                         axis_map_x = <0>;
