@@ -874,11 +874,13 @@ static int ov2675_config_capture(struct v4l2_subdev *sd)
 
 	ov2675_set_capture_exposure_gain(sd);
 
-	ov2675_reg_write(client, 0x3306, 0x02);
-	ov2675_reg_write(client, 0x3337, ov2675_preview_R_gain);
-	ov2675_reg_write(client, 0x3338, ov2675_preview_G_gain);
-	ov2675_reg_write(client, 0x3339, ov2675_preview_B_gain);
-
+	ret = ov2675_reg_read(client, 0x3306, &temp);
+	if (temp == 0x00) {
+		ov2675_reg_write(client, 0x3306, 0x02);
+		ov2675_reg_write(client, 0x3337, ov2675_preview_R_gain);
+		ov2675_reg_write(client, 0x3338, ov2675_preview_G_gain);
+		ov2675_reg_write(client, 0x3339, ov2675_preview_B_gain);
+	}
 	printk(KERN_INFO "@-ov2675_config_capture!");
 
 	return ret;
