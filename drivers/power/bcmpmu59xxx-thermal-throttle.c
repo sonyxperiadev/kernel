@@ -471,8 +471,8 @@ static void bcmpmu_throttle_algo(struct bcmpmu_throttle_data *tdata)
 	if (index == -1) {
 		pr_throttle(FLOW,
 			"Normal Temp Zone, Throttling will be Stopped\n");
-		bcmpmu_throttle_restore_charger_state(tdata);
 		if (tdata->temp_algo_running) {
+			bcmpmu_throttle_restore_charger_state(tdata);
 			tdata->temp_algo_running = false;
 			bcmpmu_throttle_post_event(tdata);
 		}
@@ -555,11 +555,10 @@ static int bcmpmu_throttle_event_handler(struct notifier_block *nb,
 		if (tdata->chrgr_type == PMU_CHRGR_TYPE_NONE) {
 			pr_throttle(FLOW,
 				"Charger Removed, Disabling Thermal Throttling\n");
-			if (tdata->throttle_algo_enabled) {
+			if (tdata->temp_algo_running) {
 				bcmpmu_throttle_restore_charger_state(tdata);
 				tdata->temp_algo_running = false;
 			}
-			bcmpmu_throttle_restore_charger_state(tdata);
 			cancel_delayed_work_sync(&tdata->throttle_work);
 			tdata->acld_algo_finished = false;
 			tdata->throttle_scheduled = false;
@@ -606,10 +605,8 @@ static int bcmpmu_throttle_event_handler(struct notifier_block *nb,
 		} else if ((!enable) && tdata->throttle_scheduled) {
 			pr_throttle(FLOW,
 				"Chargering Disabled, Disabling Thermal Throttling\n");
-			if (tdata->throttle_algo_enabled) {
-				bcmpmu_throttle_restore_charger_state(tdata);
+			if (tdata->temp_algo_running)
 				tdata->temp_algo_running = false;
-			}
 			cancel_delayed_work_sync(&tdata->throttle_work);
 			tdata->acld_algo_finished = false;
 			tdata->throttle_scheduled = false;
@@ -640,12 +637,14 @@ static int bcmpmu_throttle_debugfs_ctrl(void *data, u64 throttle_ctrl)
 			pr_throttle(FLOW, "Throttling Already Enabled\n");
 	} else {
 		if (tdata->throttle_algo_enabled) {
-			if (tdata->temp_algo_running)
+			if (tdata->temp_algo_running) {
 				bcmpmu_throttle_restore_charger_state(tdata);
+				bcmpmu_throttle_post_event(tdata);
+				tdata->temp_algo_running = false;
+			}
 			if (tdata->chrgr_type != PMU_CHRGR_TYPE_NONE)
 				cancel_delayed_work_sync(&tdata->throttle_work);
 			tdata->throttle_algo_enabled = false;
-			tdata->temp_algo_running = false;
 			pr_throttle(FLOW, "Thermal Throttling Disabled\n");
 		} else
 			pr_throttle(FLOW, "Throttling Already Disabled\n");
