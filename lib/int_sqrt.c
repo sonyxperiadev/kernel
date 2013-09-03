@@ -16,30 +16,32 @@
  */
 inline unsigned long int_sqrt(unsigned long x)
 {
-	register unsigned long tmp;
-	register unsigned long place;
-	register unsigned long root = 0;
+	unsigned long tmp;
+	unsigned long place;
+	unsigned long root;
+	unsigned long remainder;
 
 	if (x <= 1)
 		return x;
 
+	root = 0;
+	remainder = x;
 	place = 1UL << (BITS_PER_LONG - 2);
-
-	do{
+	
+	while (place > remainder)  
 		place >>= 2;
-	}while(place > x);
 
-	do {
+	while (place != 0) {
 		tmp = root + place;
-		root >>= 1;
 
-		if (x >= tmp)
+		if (remainder >= tmp) 
 		{
-			x -= tmp;
-			root += place;
+			remainder -= tmp;
+			root += (place << 1);
 		}
+		root >>= 1;
 		place >>= 2;
-	}while (place != 0);
+	}
 
 	return root;
 }
