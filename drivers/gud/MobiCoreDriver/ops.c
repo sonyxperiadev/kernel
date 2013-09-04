@@ -46,6 +46,7 @@ static inline long smc(union fc_generic *fc)
 	return _smc(fc);
 }
 
+#define MC_FASTCALL_WORKER_THREAD
 #ifdef MC_FASTCALL_WORKER_THREAD
 
 static struct task_struct *fastcall_thread;

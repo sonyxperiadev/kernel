@@ -1,1 +1,2 @@
-#define MOBICORE_COMPONENT_BUILD_TAG "*** t-base-202-BRCM-21664-Android-V001 ###"
+#define MOBICORE_COMPONENT_BUILD_TAG \
+	"*** jenkins-Generic_integration_build-281 ###"

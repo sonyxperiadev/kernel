@@ -424,8 +424,7 @@ static void local_secure_api(unsigned service_id,
 
 
 #ifdef CONFIG_MOBICORE_DRIVER
-	/* Temporay block fastcall before mobicore is ready */
-	/* mobicore_smc(service_id,arg0,arg1,arg2); */
+	mobicore_smc(service_id, arg0, arg1, arg2);
 #else
 	/* Set Up Registers to pass data to Secure Monitor */
 	register u32 r4 asm("r4");
@@ -482,11 +481,6 @@ void dormant_enter(u32 svc)
 	u32 svc_max = CORE_DORMANT;
 	u32 insurance = 1000;
 	(*((u32 *)(&__get_cpu_var(cdm_attempts))))++;
-
-#ifdef CONFIG_MOBICORE_DRIVER
-	/* tempoary block dormant before mobicore is ready*/
-	return;
-#endif
 
 	/*vote for dormant svc..*/
 	set_svc_req(svc);
@@ -702,7 +696,7 @@ void dormant_enter(u32 svc)
 			cdc_set_switch_counter(STRONG_SWITCH_TIMER, 0x0C);
 
 			cdc_resp = cdc_send_cmd_for_core(CDC_CMD_MDEC, cpu);
-	                cdc_set_override(IS_IDLE_OVERRIDE, 0x180);
+			cdc_set_override(IS_IDLE_OVERRIDE, 0x180);
 			cdc_master_clk_gating_en(true);
 
 			fd = true;
@@ -793,13 +787,19 @@ static int dormant_enter_continue(unsigned long svc)
 	if (svc == FULL_DORMANT_L2_OFF && l2_off_en &&
 		cdc_get_status_for_core(cpu) == CDC_STATUS_FDCEOK) {
 		arg2 = 3;  /*L2 mem OFF*/
+#ifndef CONFIG_MOBICORE_DRIVER
 		disable_clean_inv_dcache_v7_all();
+#endif
 	} else {
 		arg2 = 2;  /*L2 mem ON*/
+#ifndef CONFIG_MOBICORE_DRIVER
 		disable_clean_inv_dcache_v7_l1();
+#endif
 	}
 
+#ifndef CONFIG_MOBICORE_DRIVER
 	write_actlr(read_actlr() & ~A15_SMP_BIT);
+#endif
 
 /* Inform Secure Core (core 0) that we are entering dormant.
  * so that Secure core( core 0) will save secure world context
@@ -834,7 +834,14 @@ static int dormant_enter_continue(unsigned long svc)
 				CHIPREG_A9_DORMANT_BOOT_ADDR_REG1_OFFSET);
 		/* Directly execute WFI for non core-0 cores */
 	}
+#ifdef CONFIG_MOBICORE_DRIVER
+	if (arg2 == 3)
+		disable_clean_inv_dcache_v7_all();
+	else
+		disable_clean_inv_dcache_v7_l1();
 
+	write_actlr(read_actlr() & ~A15_SMP_BIT);
+#endif
 	instrument_lpm(LPM_TRACE_DRMNT_CNTNUE,
 						0);
 	wfi();
