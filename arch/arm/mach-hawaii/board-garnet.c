@@ -1230,11 +1230,6 @@ late_initcall(hawaii_camera_init);
 
 #if defined(CONFIG_TOUCHSCREEN_BCM15500) ||\
 defined(CONFIG_TOUCHSCREEN_BCM15500_MODULE)
-static int BCMTCH_TSP_PowerOnOff(bool on)
-{
-	/* PLACE TOUCH CONTROLLER REGULATOR CODE HERE . SEE STEP 6 */
-	return 0;
-}
 
 static struct bcmtch_platform_data bcm15500_i2c_platform_data = {
 	.i2c_bus_id       = BCMTCH_HW_I2C_BUS_ID,
@@ -1255,8 +1250,6 @@ static struct bcmtch_platform_data bcm15500_i2c_platform_data = {
 		((BCMTCH_HW_AXIS_REVERSE_X << BCMTCH_AXIS_FLAG_X_BIT_POS)
 		|(BCMTCH_HW_AXIS_REVERSE_Y << BCMTCH_AXIS_FLAG_Y_BIT_POS)
 		|(BCMTCH_HW_AXIS_SWAP_X_Y << BCMTCH_AXIS_FLAG_X_Y_BIT_POS)),
-
-	.bcmtch_on = BCMTCH_TSP_PowerOnOff,
 };
 
 static struct i2c_board_info __initdata bcm15500_i2c_boardinfo[] = {
