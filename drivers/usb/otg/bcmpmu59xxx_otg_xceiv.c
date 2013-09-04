@@ -828,7 +828,8 @@ static void bcmpmu_otg_xceiv_chg_detect_handler(struct work_struct *work)
 
 		id_default_host =
 			bcmpmu_otg_xceiv_check_id_gnd(xceiv_data) ||
-			bcmpmu_otg_xceiv_check_id_rid_a(xceiv_data);
+			bcmpmu_otg_xceiv_check_id_rid_a(xceiv_data) ||
+			bcmpmu_otg_xceiv_check_id_rid_b(xceiv_data);
 
 		if (!id_default_host && xceiv_data->otg_xceiver.phy.otg->gadget)
 			atomic_notifier_call_chain(&xceiv_data->otg_xceiver.
