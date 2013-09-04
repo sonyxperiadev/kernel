@@ -81,6 +81,10 @@ struct sdio_platform_cfg {
 	 */
 	enum kona_sdio_plat_flags flags;
 
+	/* quirks and quirks2 of platform */
+	unsigned int quirks;
+	unsigned int quirks2;
+
 	/* clocks */
 	char *peri_clk_name;
 	char *ahb_clk_name;
