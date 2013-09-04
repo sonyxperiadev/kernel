@@ -526,4 +526,14 @@ config HAWAII_PTM
 config BRD_NAME
 	string "customer board name"
 	default "hawaii"
+
+config BCM_HWCAPRI_1605_A2
+	bool "Enable HWCAPRI_1605 workaround"
+	default n
+	help
+	  Enable HWCAPRI_1605 workaround
+	  to set L2 divider to 2 for normal
+	  case should be 3 wait for ASIC fix
+	  Refer JIRA DB for more infor on this
+	  JIRA
 endmenu

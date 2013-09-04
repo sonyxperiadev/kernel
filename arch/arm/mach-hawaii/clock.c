@@ -66,6 +66,17 @@
 #define SDDAT_DBG_PINS 4
 #endif
 
+#if defined(CONFIG_BCM_HWCAPRI_1605_A2)
+/* Non-turbo platforms run a 1GHz frequency but
+ * we cannot expect an exact 1GHz rate. Adding a
+ * an extra 1000Hz as a safegaurd.
+ */
+#define MAX_A9_FREQ 1000001000
+
+static u32 cur_freq_id;
+static u32 max_a9_rate;
+#endif
+
 static const char *const ccu_clks[] = {
 	KPROC_CCU_CLK_NAME_STR,
 	ROOT_CCU_CLK_NAME_STR,
@@ -7768,6 +7779,27 @@ static void change_arm_pll_config(int mdiv)
 				pll_chnl_clk->pll_load_ch_en_offset));
 }
 
+#if defined(CONFIG_BCM_HWCAPRI_1605_A2)
+static inline void proc_ccu_set_pl310_trigger(struct ccu_clk *ccu_clk,
+					      u32 target_freq_id)
+{
+	/* Do not override settings for non-turbo platforms */
+	if (max_a9_rate <= MAX_A9_FREQ)
+		return;
+
+	if (cur_freq_id <= PROC_CCU_FREQ_ID_TURBO &&
+	    target_freq_id == PROC_CCU_FREQ_ID_SUPER_TURBO)
+		writel(0x1, CCU_REG_ADDR(ccu_clk,
+			KPROC_CLK_MGR_REG_PL310_TRIGGER_OFFSET));
+	else if (cur_freq_id == PROC_CCU_FREQ_ID_SUPER_TURBO &&
+		 target_freq_id <= PROC_CCU_FREQ_ID_TURBO)
+		writel(0x0, CCU_REG_ADDR(ccu_clk,
+			KPROC_CLK_MGR_REG_PL310_TRIGGER_OFFSET));
+
+	cur_freq_id = target_freq_id;
+}
+#endif
+
 static int proc_ccu_set_freq_policy(struct ccu_clk *ccu_clk, int policy_id,
 				   struct opp_info *opp_info)
 {
@@ -7776,6 +7808,11 @@ static int proc_ccu_set_freq_policy(struct ccu_clk *ccu_clk, int policy_id,
 	u32 target_volt;
 	int curr_opp;
 	u32 sw_freq_id;
+#if defined(CONFIG_BCM_HWCAPRI_1605_A2)
+	int saved_pllarma = 0;
+	int saved_pll_debug = 0;
+#endif
+
 	clk_dbg("%s:policy = %d, freq = %d opp = %d prms = %d\n",
 			__func__, policy_id, opp_info->freq_id,
 			opp_info->opp_id, opp_info->ctrl_prms);
@@ -7801,6 +7838,23 @@ static int proc_ccu_set_freq_policy(struct ccu_clk *ccu_clk, int policy_id,
 
 	ccu_write_access_enable(ccu_clk, true);
 	ccu_policy_engine_stop(ccu_clk);
+#if defined(CONFIG_BCM_HWCAPRI_1605_A2)
+	/* Change PLL settings to avoid glitches */
+	reg_val = readl(CCU_REG_ADDR(ccu_clk,
+			KPROC_CLK_MGR_REG_PLLARMA_OFFSET));
+	saved_pllarma = reg_val;
+	reg_val &=
+	    ~KPROC_CLK_MGR_REG_PLLARMA_PLLARM_IDLE_PWRDWN_SW_OVRRIDE_MASK;
+	writel(reg_val,
+	       CCU_REG_ADDR(ccu_clk, KPROC_CLK_MGR_REG_PLLARMA_OFFSET));
+
+	reg_val = readl(CCU_REG_ADDR(ccu_clk,
+			KPROC_CLK_MGR_REG_PLL_DEBUG_OFFSET));
+	saved_pll_debug = reg_val;
+	reg_val |= KPROC_CLK_MGR_REG_PLL_DEBUG_PLLARM_TIMER_LOCK_EN_MASK;
+	writel(reg_val,
+	       CCU_REG_ADDR(ccu_clk, KPROC_CLK_MGR_REG_PLL_DEBUG_OFFSET));
+#endif
 	if (opp_info->ctrl_prms != CCU_POLICY_FREQ_REG_INIT &&
 			(opp_info->opp_id == PI_OPP_NORMAL ||
 			opp_info->opp_id == PI_OPP_TURBO)) {
@@ -7810,9 +7864,17 @@ static int proc_ccu_set_freq_policy(struct ccu_clk *ccu_clk, int policy_id,
 		curr_opp = pi_get_active_opp(ccu_clk->pi_id);
 		if (curr_opp != PI_OPP_ECONOMY) {
 			sw_freq_id = PROC_CCU_FREQ_ID_ECO;
+
 /* Move economy volt id to that of target voltage to avoid extra seq txn */
 			ccu_set_voltage(ccu_clk, sw_freq_id, target_volt);
 /* Move to economy */
+#if defined(CONFIG_BCM_HWCAPRI_1605_A2)
+			/*
+			 * Set the PL310 trigger value based on freq_id
+			 * transition
+			 */
+			proc_ccu_set_pl310_trigger(ccu_clk, sw_freq_id);
+#endif
 			reg_val = readl(CCU_POLICY_FREQ_REG(ccu_clk));
 			reg_val &= ~(CCU_FREQ_POLICY_MASK << shift);
 			reg_val |= sw_freq_id << shift;
@@ -7830,12 +7892,24 @@ static int proc_ccu_set_freq_policy(struct ccu_clk *ccu_clk, int policy_id,
 				target_volt);
 	}
 
+#if defined(CONFIG_BCM_HWCAPRI_1605_A2)
+	/* Set the PL310 trigger value based on freq_id transition */
+	proc_ccu_set_pl310_trigger(ccu_clk, opp_info->freq_id);
+#endif
+
 	reg_val = readl(CCU_POLICY_FREQ_REG(ccu_clk));
 	reg_val &= ~(CCU_FREQ_POLICY_MASK << shift);
 	reg_val |= opp_info->freq_id << shift;
 
 	writel(reg_val, CCU_POLICY_FREQ_REG(ccu_clk));
 
+#if defined(CONFIG_BCM_HWCAPRI_1605_A2)
+	/* Restore saved PLL settings */
+	writel(saved_pllarma,
+	       CCU_REG_ADDR(ccu_clk, KPROC_CLK_MGR_REG_PLLARMA_OFFSET));
+	writel(saved_pll_debug,
+	       CCU_REG_ADDR(ccu_clk, KPROC_CLK_MGR_REG_PLL_DEBUG_OFFSET));
+#endif
 	ccu_policy_engine_resume(ccu_clk, ccu_clk->clk.flags &
 		CCU_TARGET_LOAD ? CCU_LOAD_TARGET : CCU_LOAD_ACTIVE);
 	ccu_write_access_enable(ccu_clk, false);
@@ -7845,10 +7919,18 @@ static int proc_ccu_set_freq_policy(struct ccu_clk *ccu_clk, int policy_id,
 
 int __init __clock_init(void)
 {
+#if defined(CONFIG_BCM_HWCAPRI_1605_A2)
+	struct clk *a9_pll;
+#endif
 
 #ifndef CONFIG_KONA_POWER_MGR
 	set_mm_override();
 #endif
+
+#if defined(CONFIG_BCM_HWCAPRI_1605_A2)
+	cur_freq_id = 0;
+#endif
+
 	/*overrride callback functions b4 registering the clks*/
 
 /*only clk mgr write_access and reset mgr access functions is needed for root ccu*/
@@ -7904,6 +7986,13 @@ int __init __clock_init(void)
 
 	if (clk_register(hawaii_clk_tbl, ARRAY_SIZE(hawaii_clk_tbl)))
 		printk(KERN_INFO "%s clk_register failed !!!!\n", __func__);
+
+#if defined(CONFIG_BCM_HWCAPRI_1605_A2)
+	a9_pll = clk_get(NULL, A9_PLL_CLK_NAME_STR);
+	BUG_ON(IS_ERR_OR_NULL(a9_pll));
+	max_a9_rate = clk_get_rate(a9_pll) / 2;
+	clk_put(a9_pll);
+#endif
 
     return 0;
 }

@@ -397,7 +397,7 @@ static void restore_proc_clk_regs(void)
 		       PROC_CLK_REG_ADDR(POLICY_CTL));
 
 	/* Wait until the new frequency takes effect */
-	insurance = 10000
+	insurance = 10000;
 	do {
 		udelay(1);
 		insurance--;
