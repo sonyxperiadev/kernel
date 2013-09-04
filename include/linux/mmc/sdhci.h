@@ -91,6 +91,8 @@ struct sdhci_host {
 	unsigned int quirks2;	/* More deviations from spec. */
 
 #define SDHCI_QUIRK2_HOST_OFF_CARD_ON			(1<<0)
+/* Disable the DDR capability for the host */
+#define SDHCI_QUIRK2_HOST_DISABLE_DDR			(1<<1)
 #define SDHCI_QUIRK2_HOST_MASK_HS_BIT			(1<<3)
 
 	int irq;		/* Device IRQ */
