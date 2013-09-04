@@ -79,6 +79,14 @@ enum config_state {
 				 */
 };
 
+enum timer_module {
+	HUB_TIMER = 0,
+	SLAVE_TIMER,
+#ifdef CONFIG_ARCH_JAVA
+	CORE_TIMER,
+#endif
+};
+
 struct kona_timer_module {
 	struct kona_timer *pkt;
 	spinlock_t lock;
@@ -688,6 +696,20 @@ unsigned long kona_hubtimer_get_counter(void)
 }
 EXPORT_SYMBOL(kona_hubtimer_get_counter);
 
+#ifdef CONFIG_ARCH_JAVA
+unsigned long kona_coretimer_get_counter(void)
+{
+	unsigned long flags, counter;
+
+	local_irq_save(flags);
+	counter = __get_counter(timer_module_list[CORE_TIMER].reg_base);
+	local_irq_restore(flags);
+
+	return counter;
+}
+EXPORT_SYMBOL(kona_coretimer_get_counter);
+#endif
+
 /* Capture the current state of hub timer */
 struct kona_timer_regs {
 	int stcs;
@@ -698,47 +720,72 @@ struct kona_timer_regs {
 	int stcm2;
 	int stcm3;
 };
-static struct kona_timer_regs kona_timer_state;
-void kona_hubtimer_save_state(bool print_state)
+
+#ifdef CONFIG_ARCH_JAVA
+static struct kona_timer_regs kona_timer_state[3];
+#endif
+
+#ifdef CONFIG_ARCH_HAWAII
+static struct kona_timer_regs kona_timer_state[2];
+#endif
+
+static void kona_dbg_get_timer_state(int context)
 {
 	unsigned long flags;
-	struct kona_timer_module *ktm = &timer_module_list[0];
+	struct kona_timer_module *ktm = &timer_module_list[context];
 
 	spin_lock_irqsave(&ktm->lock, flags);
-	kona_timer_state.stcs = readl(ktm->reg_base +
+	kona_timer_state[context].stcs = readl(ktm->reg_base +
 		KONA_GPTIMER_STCS_OFFSET);
-	kona_timer_state.stclo = readl(ktm->reg_base +
+	kona_timer_state[context].stclo = readl(ktm->reg_base +
 		KONA_GPTIMER_STCLO_OFFSET);
-	kona_timer_state.stchi = readl(ktm->reg_base +
+	kona_timer_state[context].stchi = readl(ktm->reg_base +
 		KONA_GPTIMER_STCHI_OFFSET);
-	kona_timer_state.stcm0 = readl(ktm->reg_base +
+	kona_timer_state[context].stcm0 = readl(ktm->reg_base +
 		KONA_GPTIMER_STCM0_OFFSET);
-	kona_timer_state.stcm1 = readl(ktm->reg_base +
+	kona_timer_state[context].stcm1 = readl(ktm->reg_base +
 		KONA_GPTIMER_STCM1_OFFSET);
-	kona_timer_state.stcm2 = readl(ktm->reg_base +
+	kona_timer_state[context].stcm2 = readl(ktm->reg_base +
 		KONA_GPTIMER_STCM2_OFFSET);
-	kona_timer_state.stcm3 = readl(ktm->reg_base +
+	kona_timer_state[context].stcm3 = readl(ktm->reg_base +
 		KONA_GPTIMER_STCM3_OFFSET);
 	spin_unlock_irqrestore(&ktm->lock, flags);
+}
 
+void kona_dump_timer_regs(bool print_state, int context)
+{
 	if (print_state) {
-		printk(KERN_ERR "Kona Timer: STCS =%08x\n",
-				kona_timer_state.stcs);
-		printk(KERN_ERR "Kona Timer: STCLO=%08x\n",
-				kona_timer_state.stclo);
-		printk(KERN_ERR "Kona Timer: STCHI=%08x\n",
-				kona_timer_state.stchi);
-		printk(KERN_ERR "Kona Timer: STCM0=%08x\n",
-				kona_timer_state.stcm0);
-		printk(KERN_ERR "Kona Timer: STCM1=%08x\n",
-				kona_timer_state.stcm1);
-		printk(KERN_ERR "Kona Timer: STCM2=%08x\n",
-				kona_timer_state.stcm2);
-		printk(KERN_ERR "Kona Timer: STCM3=%08x\n",
-				kona_timer_state.stcm3);
+		printk(KERN_ERR "Kona Timer[%d]: STCS =%08x\n", context,
+				kona_timer_state[context].stcs);
+		printk(KERN_ERR "Kona Timer[%d]: STCLO=%08x\n", context,
+				kona_timer_state[context].stclo);
+		printk(KERN_ERR "Kona Timer[%d]: STCHI=%08x\n", context,
+				kona_timer_state[context].stchi);
+		printk(KERN_ERR "Kona Timer[%d]: STCM0=%08x\n", context,
+				kona_timer_state[context].stcm0);
+		printk(KERN_ERR "Kona Timer[%d]: STCM1=%08x\n", context,
+				kona_timer_state[context].stcm1);
+		printk(KERN_ERR "Kona Timer[%d]: STCM2=%08x\n", context,
+				kona_timer_state[context].stcm2);
+		printk(KERN_ERR "Kona Timer[%d]: STCM3=%08x\n", context,
+				kona_timer_state[context].stcm3);
 	}
 }
-EXPORT_SYMBOL(kona_hubtimer_save_state);
+
+void kona_timer_save_state(bool print_state)
+{
+
+	kona_dbg_get_timer_state(HUB_TIMER);
+	kona_dbg_get_timer_state(SLAVE_TIMER);
+#ifdef CONFIG_ARCH_JAVA
+	kona_dbg_get_timer_state(CORE_TIMER);
+#endif
+	kona_dump_timer_regs(print_state, HUB_TIMER);
+#ifdef CONFIG_ARCH_JAVA
+	kona_dump_timer_regs(print_state, CORE_TIMER);
+#endif
+}
+EXPORT_SYMBOL(kona_timer_save_state);
 
 
 /* Return the counter value of slave timer */

@@ -777,7 +777,7 @@ static void print_other_cpu_stall(struct rcu_state *rsp)
 	printk(KERN_CONT "(detected by %d, t=%ld jiffies)\n",
 	       smp_processor_id(), (long)(jiffies - rsp->gp_start));
 #ifdef CONFIG_ARCH_KONA
-	kona_hubtimer_save_state(true);
+	kona_timer_save_state(true);
 #endif
 
 	if (ndetected == 0)
@@ -808,7 +808,7 @@ static void print_cpu_stall(struct rcu_state *rsp)
 	print_cpu_stall_info_end();
 	printk(KERN_CONT " (t=%lu jiffies)\n", jiffies - rsp->gp_start);
 #ifdef CONFIG_ARCH_KONA
-	kona_hubtimer_save_state(true);
+	kona_timer_save_state(true);
 #endif
 	if (!trigger_all_cpu_backtrace())
 		dump_stack();
