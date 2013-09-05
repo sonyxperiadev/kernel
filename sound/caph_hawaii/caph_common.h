@@ -54,6 +54,11 @@ the GPL, without Broadcom's express prior written consent.
 #include <linux/wakelock.h>
 #include <linux/completion.h>
 
+#ifdef CAPH_TINYALSA
+#include <linux/cdev.h>
+#endif
+
+
 #endif /*__KERNEL__*/
 
 
@@ -173,7 +178,10 @@ extern int gAudioDebugLevel;
 #define	MIN_GAIN_mB				0
 #define	MAX_GAIN_mB				4450
 
-
+#ifdef CAPH_TINYALSA
+/* /////////////change ?????????????????????????????? */
+#define CAPTURE
+#endif
 
 struct _TCtrl_Line {
 	s8 strName[CAPH_MIXER_NAME_LENGTH];
@@ -219,6 +227,13 @@ enum	CTL_STREAM_PANEL_t {
 	CTL_STREAM_PANEL_LAST
 };
 
+#ifdef CAPH_TINYALSA
+struct brcm_pcm_device {
+	struct snd_pcm *pcm;
+	unsigned int stream_number;
+	struct brcm_alsa_chip *chip;
+};
+#endif
 
 struct brcm_alsa_chip {
 	struct snd_card *card;
@@ -264,13 +279,59 @@ struct brcm_alsa_chip {
 	s32	i32CurAmpState;
 	s32	iCallMode;
 	voip_data_t	voip_data;
+#ifdef CAPH_TINYALSA
+	struct brcm_pcm_device device_playback[2];
+#ifdef CAPTURE
+	struct brcm_pcm_device device_capture[2];
+#endif
+#endif
 };
 
+#ifdef CAPH_TINYALSA
+struct voipdev_t {
+	int number;
+	struct snd_card *card;
+	struct cdev voipcdev;
+	struct __bcm_caph_hwdep_voip *pVoIP;
+};
+#endif
+
+
 #define	brcm_alsa_chip_t struct brcm_alsa_chip
+#ifdef CAPH_TINYALSA
+#define	brcm_pcm_device_t struct brcm_pcm_device
+#define	voipdev struct voipdev_t
+#endif
+
 void caphassert(const char *fcn, int line, const char *expr);
 #define CAPH_ASSERT(e)   ((e) ? (void) 0 : caphassert(__func__, __LINE__, #e))
 
-
+#ifdef CAPH_TINYALSA
+enum	CTL_FUNCTION_t {
+	CTL_FUNCTION_VOL = 1,
+	CTL_FUNCTION_MUTE,
+	CTL_FUNCTION_LOOPBACK_TEST,
+	CTL_FUNCTION_PHONE_ENABLE,
+	CTL_FUNCTION_PHONE_CALL_MIC_MUTE,
+	CTL_FUNCTION_PHONE_ECNS_ENABLE,
+	CTL_FUNCTION_SPEECH_MIXING_OPTION,
+	CTL_FUNCTION_FM_ENABLE,
+	CTL_FUNCTION_FM_FORMAT,
+	CTL_FUNCTION_AT_AUDIO,
+	CTL_FUNCTION_BYPASS_VIBRA,
+	CTL_FUNCTION_BT_TEST,
+	CTL_FUNCTION_CFG_SSP,
+	CTL_FUNCTION_CFG_IHF,
+	CTL_FUNCTION_SINK_CHG_ADD,
+	CTL_FUNCTION_SINK_CHG_REM,
+	CTL_FUNCTION_HW_CTL,
+	CTL_FUNCTION_APP_SEL,
+	CTL_FUNCTION_APP_RMV,
+	CTL_FUNCTION_AMP_CTL,
+	CTL_FUNCTION_CALL_MODE,
+	CTL_FUNCTION_COMMIT_AUD_PROFILE
+};
+#else
 enum	CTL_FUNCTION_t {
 	CTL_FUNCTION_VOL = 1,
 	CTL_FUNCTION_MUTE,
@@ -294,6 +355,7 @@ enum	CTL_FUNCTION_t {
 	CTL_FUNCTION_CALL_MODE,
 	CTL_FUNCTION_COMMIT_AUD_PROFILE
 };
+#endif
 
 enum	AT_AUD_Ctl_t {
 	AT_AUD_CTL_INDEX,
@@ -320,6 +382,9 @@ enum	AT_AUD_Handler_t {
 
 
 /* functions */
+#ifdef CAPH_TINYALSA
+extern int voipDeviceCreate(voipdev *voipchrdevPvtData);
+#endif
 extern int __devinit PcmDeviceNew(struct snd_card *card);
 extern int __devinit ControlDeviceNew(struct snd_card *card);
 int __devinit HwdepDeviceNew(struct snd_card *card);

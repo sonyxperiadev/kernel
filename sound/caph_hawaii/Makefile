@@ -78,10 +78,19 @@ subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./arch/arm/plat-kona/include/plat/c
 subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./arch/arm/plat-kona/include/plat/osabstract/
 subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -I./drivers/char/broadcom/modem/public/
 
+ifdef CONFIG_CAPH_TINYALSA
+obj-$(CONFIG_BCM_ALSA_SOUND) += caph_module_tinyalsa.o
+obj-$(CONFIG_BCM_ALSA_SOUND) += caph_ctl_tinyalsa.o
+obj-$(CONFIG_BCM_ALSA_SOUND) += caph_pcm_tinyalsa.o
+obj-$(CONFIG_BCM_ALSA_SOUND) += caph_hwdep_tinyalsa.o
+subdir-ccflags-$(CONFIG_BCM_ALSA_SOUND) += -DCAPH_TINYALSA
+endif
+ifndef CONFIG_CAPH_TINYALSA
 obj-$(CONFIG_BCM_ALSA_SOUND) += caph_module.o
 obj-$(CONFIG_BCM_ALSA_SOUND) += caph_ctl.o
 obj-$(CONFIG_BCM_ALSA_SOUND) += caph_pcm.o
 obj-$(CONFIG_BCM_ALSA_SOUND) += caph_hwdep.o
+endif
 obj-$(CONFIG_BCM_ALSA_SOUND) += caph_ptt_hwdep.o
 obj-$(CONFIG_BCM_ALSA_SOUND) += audio_controller/ audio_driver/
 
