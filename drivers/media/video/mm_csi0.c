@@ -191,10 +191,10 @@ int mm_csi0_init()
 	/* point base to mm_cfg base address */
 	if (cam_state.afe == AFE0) {
 		BRCM_WRITE_REG_FIELD(base, MM_CFG_CSI0_PHY_CTRL, CSI_PHY_SEL, 0);
-		BRCM_WRITE_REG(base, MM_CFG_CSI0_LDO_CTL, 0x5A00000F);
+		BRCM_WRITE_REG(base, MM_CFG_CSI0_LDO_CTL, 0x5A00000D);
 	} else if (cam_state.afe == AFE1) {
 		BRCM_WRITE_REG_FIELD(base, MM_CFG_CSI0_PHY_CTRL, CSI_PHY_SEL, 1);
-		BRCM_WRITE_REG(base, MM_CFG_CSI1_LDO_CTL, 0x5A00000F);
+		BRCM_WRITE_REG(base, MM_CFG_CSI1_LDO_CTL, 0x5A00000D);
 	} else {
 		pr_info("Wrong AFE specified in Enable\n");
 		ret = -EINVAL;
@@ -236,9 +236,9 @@ int mm_csi0_set_afe()
 
 	/* Enable access ... need to check how or why ?? */
 	if (cam_state.afe == AFE0)
-		BRCM_WRITE_REG(MM_CFG_BASE, MM_CFG_CSI0_LDO_CTL, 0x5A00000F);
+		BRCM_WRITE_REG(MM_CFG_BASE, MM_CFG_CSI0_LDO_CTL, 0x5A00000D);
 	else
-		BRCM_WRITE_REG(MM_CFG_BASE, MM_CFG_CSI1_LDO_CTL, 0x5A00000F);
+		BRCM_WRITE_REG(MM_CFG_BASE, MM_CFG_CSI1_LDO_CTL, 0x5A00000D);
 
 	/* CSI1 uses CSI0 clocks and dividers */
 
