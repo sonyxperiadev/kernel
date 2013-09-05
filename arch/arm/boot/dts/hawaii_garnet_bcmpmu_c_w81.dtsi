@@ -135,7 +135,7 @@
 		/*pc_map = PMU_PC2|PMU_PC3, dsm_mode = BCMPMU_REGL_OFF_IN_DSM*/
 		aud  = "1", "audldo_uc", "1", "6", "2", "0", "0";
 		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, dsm_mode = BCMPMU_REGL_ON_IN_DSM*/
-		usb  = "1", "usb_vcc", "0", "7", "0", "0", "0";
+		usb  = "2", "usb_vcc", "bc_vcc", "0", "7", "0", "0", "0";
 		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, dsm_mode = BCMPMU_REGL_ON_IN_DSM*/
 		mic  = "1", "micldo_uc", "0","7", "0", "0", "0";
 		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, dsm_mode = BCMPMU_REGL_ON_IN_DSM*/
