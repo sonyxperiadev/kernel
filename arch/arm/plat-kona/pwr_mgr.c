@@ -38,6 +38,9 @@
 #include <mach/pm.h>
 #include <mach/memory.h>
 #include <plat/kona_pm.h>
+#if defined(CONFIG_ARCH_JAVA)
+#include <plat/cdc.h>
+#endif
 #include <mach/io_map.h>
 #if defined (CONFIG_ARCH_HAWAII)
 #include <mach/rdb/brcm_rdb_a9cpu.h>
@@ -979,7 +982,11 @@ int pwr_mgr_pm_i2c_sem_lock()
 		}
 #endif
 #if defined(CONFIG_KONA_CPU_PM_HANDLER)
+#if defined(CONFIG_ARCH_JAVA)
+		cdc_disable_cluster_dormant(1);
+#else
 		kona_pm_disable_idle_state(CSTATE_ALL, 1);
+#endif
 #endif
 	}
 	spin_lock_irqsave(&pwr_mgr_lock, flgs);
@@ -1024,7 +1031,11 @@ int pwr_mgr_pm_i2c_sem_unlock()
 			cpufreq_update_lmt_req(&frq_min_lmt_node, cpu_freq);
 #endif
 #if defined(CONFIG_KONA_CPU_PM_HANDLER)
+#if defined(CONFIG_ARCH_JAVA)
+		cdc_disable_cluster_dormant(0);
+#else
 		kona_pm_disable_idle_state(CSTATE_ALL, 0);
+#endif
 #endif
 	}
 	return 0;
@@ -2246,7 +2257,11 @@ int pwr_mgr_pmu_reg_read(u8 reg_addr, u8 slave_id, u8 *reg_val)
 		return -EINVAL;
 	mutex_lock(&seq_mutex);
 #if defined(CONFIG_KONA_CPU_PM_HANDLER)
-	kona_pm_disable_idle_state(CSTATE_ALL, 1);
+#if defined(CONFIG_ARCH_JAVA)
+		cdc_disable_cluster_dormant(1);
+#else
+		kona_pm_disable_idle_state(CSTATE_ALL, 1);
+#endif
 #endif
 	pwr_mgr_seq_log_buf_put(SEQ_LOG_READ_BYTE,
 			SEQ_LOG_PACK_U24(0 , slave_id, reg_addr));
@@ -2310,7 +2325,11 @@ out_unlock:
 	pwr_mgr_seq_log_buf_put(SEQ_LOG_READ_BYTE,
 			SEQ_LOG_PACK_U24(slave_id, reg_addr, *reg_val));
 #if defined(CONFIG_KONA_CPU_PM_HANDLER)
-	kona_pm_disable_idle_state(CSTATE_ALL, 0);
+#if defined(CONFIG_ARCH_JAVA)
+		cdc_disable_cluster_dormant(0);
+#else
+		kona_pm_disable_idle_state(CSTATE_ALL, 0);
+#endif
 #endif
 	mutex_unlock(&seq_mutex);
 	pwr_dbg(PWR_LOG_SEQ, "%s : ret = %d\n", __func__, ret);
@@ -2334,7 +2353,11 @@ int pwr_mgr_pmu_reg_write(u8 reg_addr, u8 slave_id, u8 reg_val)
 
 	mutex_lock(&seq_mutex);
 #if defined(CONFIG_KONA_CPU_PM_HANDLER)
-	kona_pm_disable_idle_state(CSTATE_ALL, 1);
+#if defined(CONFIG_ARCH_JAVA)
+		cdc_disable_cluster_dormant(1);
+#else
+		kona_pm_disable_idle_state(CSTATE_ALL, 1);
+#endif
 #endif
 
 	pwr_mgr_seq_log_buf_put(SEQ_LOG_WRITE_BYTE,
@@ -2374,7 +2397,11 @@ int pwr_mgr_pmu_reg_write(u8 reg_addr, u8 slave_id, u8 reg_val)
 	pwr_mgr_seq_log_buf_put(SEQ_LOG_WRITE_BYTE,
 			SEQ_LOG_PACK_U24(slave_id, reg_addr, reg_val));
 #if defined(CONFIG_KONA_CPU_PM_HANDLER)
-	kona_pm_disable_idle_state(CSTATE_ALL, 0);
+#if defined(CONFIG_ARCH_JAVA)
+		cdc_disable_cluster_dormant(0);
+#else
+		kona_pm_disable_idle_state(CSTATE_ALL, 0);
+#endif
 #endif
 	mutex_unlock(&seq_mutex);
 	pwr_dbg(PWR_LOG_SEQ,

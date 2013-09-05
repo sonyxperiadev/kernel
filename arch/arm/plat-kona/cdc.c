@@ -78,6 +78,7 @@ struct cdc {
 	spinlock_t lock;
 	bool acp_active;
 	bool timer_active;
+	int cluster_dormant_disable;
 #ifdef CONFIG_DEBUG_FS
 	struct dentry *cdc_dir;
 #endif
@@ -473,7 +474,30 @@ int cdc_master_clk_gating_en(bool en)
 	return 0;
 }
 
+int cdc_disable_cluster_dormant(bool disable)
+{
+	if (!cdc)
+		return -EINVAL;
+	spin_lock(&cdc->lock);
+	if (disable) {
+		if (cdc->cluster_dormant_disable == 0)
+			writel_relaxed(1, cdc->base +
+					CDC_CORE_TIMER_IN_USE_OFFSET);
+		cdc->cluster_dormant_disable++;
+	} else {
+		if (!cdc->cluster_dormant_disable) {
+			spin_unlock(&cdc->lock);
+			return -EINVAL;
+		}
 
+		cdc->cluster_dormant_disable--;
+		if (cdc->cluster_dormant_disable == 0)
+			writel_relaxed(0, cdc->base +
+					CDC_CORE_TIMER_IN_USE_OFFSET);
+	}
+	spin_unlock(&cdc->lock);
+	return 0;
+}
 
 #ifdef CONFIG_DEBUG_FS
 
