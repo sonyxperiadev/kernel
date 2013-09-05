@@ -863,13 +863,13 @@ struct bcmpmu59xxx_regulator_pdata rgltr_pdata = {
 static int chrgr_curr_lmt[PMU_CHRGR_TYPE_MAX] = {
 	[PMU_CHRGR_TYPE_NONE] = 0,
 	[PMU_CHRGR_TYPE_SDP] = 500,
-	[PMU_CHRGR_TYPE_CDP] = 1500,
+	[PMU_CHRGR_TYPE_CDP] = 1000,
 	[PMU_CHRGR_TYPE_DCP] = 1000,
-	[PMU_CHRGR_TYPE_TYPE1] = 700,
-	[PMU_CHRGR_TYPE_TYPE2] = 700,
+	[PMU_CHRGR_TYPE_TYPE1] = 1000,
+	[PMU_CHRGR_TYPE_TYPE2] = 1000,
 	[PMU_CHRGR_TYPE_PS2] = 100,
-	[PMU_CHRGR_TYPE_ACA_DOCK] = 700,
-	[PMU_CHRGR_TYPE_ACA] = 700,
+	[PMU_CHRGR_TYPE_ACA_DOCK] = 1000,
+	[PMU_CHRGR_TYPE_ACA] = 1000,
 };
 
 struct bcmpmu59xxx_accy_pdata accy_pdata = {
@@ -1020,9 +1020,9 @@ struct bcmpmu_acld_pdata acld_pdata = {
 	.acld_vbat_thrs = 3500,
 	.i_sat = 1850,			/* saturation current in mA
 						for chrgr while using ACLD */
-	.i_def_dcp = 700,
+	.i_def_dcp = 1000,
 	.i_max_cc = 2200,
-	.acld_cc_lmt = 1360,    /*In general this is 80% of 1C.
+	.acld_cc_lmt = 1051,    /*In general this is 80% of 1C.
 				  If customer defines any other value
 				  chage accordingly*/
 	.otp_cc_trim = 0x1F,
