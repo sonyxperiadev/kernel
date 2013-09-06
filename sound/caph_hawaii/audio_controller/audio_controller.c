@@ -2957,7 +2957,7 @@ void AUDCTRL_SetRecordGain(AUDIO_SOURCE_Enum_t source,
 	if (gainFormat == AUDIO_GAIN_FORMAT_mB) {
 		/*switch( mic )  why not this. simply see mic.
 		   does audio_caph.c pass down correct mic param? */
-		switch (path->source) {
+		switch (source) {
 		case AUDIO_SOURCE_ANALOG_MAIN:
 		case AUDIO_SOURCE_ANALOG_AUX:
 			outGain =
