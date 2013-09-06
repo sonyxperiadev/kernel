@@ -447,4 +447,10 @@
 			linux,default-trigger = "kpbl";
 		};
 	};
+
+	secure_mem {
+		sec-mem-base = <0x9d800000>;
+		sec-mem-size = <0x100000>;
+	};
+
 };
