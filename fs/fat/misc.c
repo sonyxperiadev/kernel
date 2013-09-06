@@ -10,6 +10,7 @@
 #include <linux/fs.h>
 #include <linux/buffer_head.h>
 #include <linux/time.h>
+#include <linux/ratelimit.h>
 #include "fat.h"
 
 /*
@@ -56,7 +57,7 @@ void fat_msg(struct super_block *sb, const char *level, const char *fmt, ...)
 	va_start(args, fmt);
 	vaf.fmt = fmt;
 	vaf.va = &args;
-	printk("%sFAT-fs (%s): %pV\n", level, sb->s_id, &vaf);
+	printk_ratelimited("%sFAT-fs (%s): %pV\n", level, sb->s_id, &vaf);
 	va_end(args);
 }
 
