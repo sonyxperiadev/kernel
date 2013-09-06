@@ -1856,20 +1856,28 @@ void AUDCTRL_SetPlayVolume(AUDIO_SOURCE_Enum_t source,
 		   the FM's actual pathID is alloc'ed when enable FM,
 		   and could be non 0. */
 
+		if (vol_left < 0 ||
+		    vol_left >= NUM_OF_ENTRY_IN_FM_RADIO_DIGITAL_VOLUME) {
+			aWarn("%s FM volume %d out of range 0 - %d\n",
+				__func__, vol_left,
+				NUM_OF_ENTRY_IN_FM_RADIO_DIGITAL_VOLUME);
+			return;
+		}
+
 		users_gain[AUDPATH_FM].valid = TRUE;
 
 		if (app >= AUDIO_APP_NUMBER) {
 			users_gain[AUDPATH_FM].L
-			    = p1->fm_radio_digital_vol[vol_left];
+				= p1->fm_radio_digital_vol[vol_left];
 
-			/*users_gain[AUDPATH_FM].R =
-			   p1->fm_radio_digital_vol[vol_right]; */
-			/*vol_right is always 0. need to fix it in caph_ctl.c */
+			/*
+			 * vol_right is always 0.
+			 * Need to fix it in caph_ctl.c
+			 */
 			users_gain[AUDPATH_FM].R
-			    = p1->fm_radio_digital_vol[vol_left];
-		} else {
-			aWarn("audio_app < AUDIO_APP_NUMBER, nothing done!\n");
-		}
+				= p1->fm_radio_digital_vol[vol_left];
+		} else
+			aWarn("audio_app < AUDIO_APP_NUMBER, do nothing!\n");
 
 		/*if ( fmPlayStarted == FALSE ) */
 		/*if ( path->status != PATH_OCCUPIED ) */
