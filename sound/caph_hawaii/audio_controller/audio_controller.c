@@ -80,6 +80,8 @@
 #include "xdr_porting_layer.h"
 #include "xdr.h"
 #include "rpc_api.h"
+#include "audio_caph.h"
+
 
 #include <linux/err.h>
 #include <linux/regulator/consumer.h>
@@ -3593,16 +3595,17 @@ void AUDCTRL_EnableBypassVibra(UInt32 Strength, int direction)
 void AUDCTRL_DisableBypassVibra(void)
 {
 	int ret;
+	BRCM_AUDIO_Control_Params_un_t ctl_parm;
 	aTrace(LOG_AUDIO_CNTLR, "AUDCTRL_DisableBypassVibra");
 	csl_caph_hwctrl_vibrator(AUDDRV_VIBRATOR_BYPASS_MODE, FALSE);
 
-	if (vibra_reg) {
-		ret = regulator_disable(vibra_reg);
-		if (ret != 0)
-			aError("Failed to disable LDO for Vibra: %d\n", ret);
-		regulator_put(vibra_reg);
-		vibra_reg = NULL;
-	}
+	ctl_parm.parm_hwCtl.access_type = AUDCTRL_HW_DISABLE_CLK;
+	ctl_parm.parm_hwCtl.arg1 = 0;
+	ctl_parm.parm_hwCtl.arg2 = 0;
+	ctl_parm.parm_hwCtl.arg3 = 0;
+	ctl_parm.parm_hwCtl.arg4 = 0;
+
+	AUDIO_Ctrl_Trigger(ACTION_AUD_HwCtl, &ctl_parm.parm_hwCtl, NULL, 0);
 }
 
 /****************************************************************************
@@ -3735,7 +3738,7 @@ int AUDCTRL_HardwareControl(AUDCTRL_HW_ACCESS_TYPE_en_t access_type,
 			    int arg1, int arg2, int arg3, int arg4)
 {
 	CSL_CAPH_MIXER_e outChnl = CSL_CAPH_SRCM_CH_NONE;
-	Boolean bClk = csl_caph_QueryHWClock();
+	Boolean  bClk = csl_caph_QueryHWClock();
 
 	aTrace(LOG_AUDIO_CNTLR,
 	       "AUDCTRL_HardwareControl::type %d,"
@@ -3748,6 +3751,26 @@ int AUDCTRL_HardwareControl(AUDCTRL_HW_ACCESS_TYPE_en_t access_type,
 	hw_control[access_type][1] = arg2;
 	hw_control[access_type][2] = arg3;
 	hw_control[access_type][3] = arg4;
+
+	if (access_type == AUDCTRL_HW_DISABLE_CLK) {
+		if (csl_caph_hwctrl_allPathsDisabled() == TRUE)
+			csl_caph_ControlHWClock(FALSE);
+
+		aTrace(LOG_AUDIO_CNTLR,
+			       "Disable clock after vibra\n");
+
+		if (vibra_reg) {
+			int ret;
+			ret = regulator_disable(vibra_reg);
+			if (ret != 0)
+				aError("Failed to disable LDO for Vibra: %d\n",
+					ret);
+			regulator_put(vibra_reg);
+			vibra_reg = NULL;
+		}
+
+		return 0;
+	}
 
 	/* Need to set SRC clock mode before enable clock */
 	if (access_type == AUDCTRL_HW_CFG_CLK) {

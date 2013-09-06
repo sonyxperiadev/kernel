@@ -207,16 +207,8 @@ static void PCM_Vibra_Gen_Stop(void);
 #ifdef USE_HR_TIMER
 static enum hrtimer_restart TimerCbStopVibrator(struct hrtimer *timer)
 {
-	Result_t status = AUDIO_Ctrl_Trigger(ACTION_AUD_DisableByPassVibra_CB,
-					     NULL, NULL, 0);
 
-	if (status != RESULT_OK) {
-		/*recur after 100ms */
-		hrtimer_forward_now(timer, ktime_set(0, (100 * 1000000)));
-		return HRTIMER_RESTART;
-	} else
-		aTrace(LOG_AUDIO_CNTLR, "Disable Vib from HR Timer cb\n");
-
+	AUDCTRL_DisableBypassVibra();
 	return HRTIMER_NORESTART;
 }
 
