@@ -94,6 +94,11 @@ static struct bcmpmu59xxx_rw_data __initdata register_init_data[] = {
 	/*  ICCMAX to 1500mA*/
 	{.addr = PMU_REG_MBCCTRL8, .val = 0x0B, .mask = 0xFF},
 
+	/*  TCXCTRL*/
+	{.addr = PMU_REG_TCXLDOCTRL, .val = 0xB8, .mask = 0xFF},
+
+	/* set USBOV to 8V */
+	{.addr = PMU_REG_CMPCTRL4, .val = 0x21, .mask = 0xFF},
 	/* NTC Hot Temperature Comparator*/
 	{.addr = PMU_REG_CMPCTRL5, .val = 0x01, .mask = 0xFF},
 	/* NTC Hot Temperature Comparator*/
@@ -122,8 +127,13 @@ static struct bcmpmu59xxx_rw_data __initdata register_init_data[] = {
 /* TODO regulator */
 	{.addr = PMU_REG_FG_EOC_TH, .val = 0x64, .mask = 0xFF},
 
+#if defined(CONFIG_MACH_HAWAII_SS_LOGANDS_REV01)
+	/* Logan rev01 Xtal RTC = 18pF shows 32768.12Hz */
+	{.addr = PMU_REG_RTC_C2C1_XOTRIM, .val = 0x99, .mask = 0xFF},
+#else
 	/* Logan rev02 Xtal RTC = 13pF shows 32767.93Hz */
-	{.addr = PMU_REG_RTC_C2C1_XOTRIM, .val = 0x22, .mask = 0xFF},
+	{.addr = PMU_REG_RTC_C2C1_XOTRIM, .val = 0x00, .mask = 0xFF},
+#endif
 	{.addr = PMU_REG_FGOCICCTRL, .val = 0x02, .mask = 0xFF},
 	 /* FG power down */
 	{.addr = PMU_REG_FGCTRL1, .val = 0x00, .mask = 0xFF},
@@ -469,8 +479,8 @@ static struct regulator_init_data bcm59xxx_gpldo3_data = {
 			.min_uV = 1200000,
 			.max_uV = 3300000,
 			.valid_ops_mask =
-			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE \
-				| REGULATOR_CHANGE_MODE,
+			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE |
+			REGULATOR_CHANGE_MODE,
 			.always_on = 0,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(gpldo3_supply),
@@ -521,7 +531,7 @@ static struct regulator_init_data bcm59xxx_lvldo2_data = {
 			.min_uV = 1000000,
 			.max_uV = 1800000,
 			.valid_ops_mask =
-			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE|
+			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE |
 			REGULATOR_CHANGE_MODE ,
 			.always_on = 0,
 			},
@@ -538,8 +548,8 @@ static struct regulator_init_data bcm59xxx_vsr_data = {
 			.min_uV = 860000,
 			.max_uV = 1800000,
 			.valid_ops_mask =
-			REGULATOR_CHANGE_MODE | REGULATOR_CHANGE_VOLTAGE \
-				| REGULATOR_CHANGE_STATUS,
+			REGULATOR_CHANGE_MODE | REGULATOR_CHANGE_VOLTAGE |
+			REGULATOR_CHANGE_STATUS,
 			.always_on = 0,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(vsr_supply),
@@ -914,11 +924,11 @@ static struct bcmpmu_adc_lut batt_temp_map[] = {
 	{36, 750},			/* 75 C */
 	{44, 700},			/* 70 C */
 	{52, 650},			/* 65 C */
-	{64, 600},			/* 60 C */
+	{66, 600},			/* 60 C */
 	{76, 550},			/* 55 C */
 	{92, 500},			/* 50 C */
 	{112, 450},			/* 45 C */
-	{132, 400},			/* 40 C */
+	{138, 400},			/* 40 C */
 	{160, 350},			/* 35 C */
 	{192, 300},			/* 30 C */
 	{228, 250},			/* 25 C */
@@ -926,8 +936,8 @@ static struct bcmpmu_adc_lut batt_temp_map[] = {
 	{324, 150},			/* 15 C */
 	{376, 100},			/* 10 C */
 	{440, 50},			/* 5 C */
-	{500, 0},			/* 0 C */
-	{568, -50},			/* -5 C */
+	{508, 0},			/* 0 C */
+	{577, -50},			/* -5 C */
 	{636, -100},			/* -10 C */
 	{704, -150},			/* -15 C */
 	{760, -200},			/* -20 C */
@@ -1053,19 +1063,11 @@ static struct batt_volt_cap_map ss_logands_volt_cap_lut[] = {
 	{3599, 5},
 	{3578, 4},
 	{3552, 3},
-	{3517, 2},
-	{3466, 1},
-	{3400, 0},
 
-#if defined(PMU_BATT_B100AE_CUTOFF_EXTENDED)
 	{3400, 2},
 	{3360, 1},
 	{3300, 0},
-#else
-	{3517, 2},
-	{3466, 1},
-	{3400, 0},
-#endif
+
 };
 
 static struct batt_eoc_curr_cap_map ss_logands_eoc_cap_lut[] = {
@@ -1207,7 +1209,7 @@ static struct bcmpmu_batt_property ss_logands_props = {
 };
 
 static struct bcmpmu_batt_cap_levels ss_logands_cap_levels = {
-	.critical = 5,
+	.critical = 2,
 	.low = 15,
 	.normal = 75,
 	.high = 95,
@@ -1231,7 +1233,7 @@ static struct bcmpmu_batt_volt_levels ss_logands_volt_levels = {
 
 static struct bcmpmu_batt_cal_data ss_logands_cal_data = {
 	.volt_low = 3550,
-	.cap_low = 5,  /* lower entering low calibration */
+	.cap_low = 2,
 };
 
 static struct bcmpmu_fg_pdata fg_pdata = {
@@ -1249,10 +1251,10 @@ static struct bcmpmu_fg_pdata fg_pdata = {
 	.sleep_current_ua = 1460,
 	.sleep_sample_rate = 32000,
 
-	/* Logan01 board : Apr 24 2013, tot_cap=1459.87, max_err=1.19% */
-	.fg_factor = 989,
+	/* Logan02DS BA100E: May 16 2013 Test.. 989 min err -2.75852 */
+	.fg_factor = 972,
 
-	.poll_rate_low_batt =  120000, /* every 120 seconds */
+	.poll_rate_low_batt =  30000, /* every 30 seconds */
 	.poll_rate_crit_batt = 5000, /* every 5 Seconds */
 };
 
@@ -1512,13 +1514,13 @@ int __init board_bcm59xx_init(void)
 	bcmpmu_set_pullup_reg();
 	ret = gpio_request(PMU_DEVICE_INT_GPIO, "bcmpmu59xxx-irq");
 	if (ret < 0) {
-		printk(KERN_ERR "<%s> failed at gpio_request\n", __func__);
+		pr_err("<%s> failed at gpio_request\n", __func__);
 		goto exit;
 	}
 	ret = gpio_direction_input(PMU_DEVICE_INT_GPIO);
 	if (ret < 0) {
 
-		printk(KERN_ERR "%s filed at gpio_direction_input.\n",
+		pr_err("%s filed at gpio_direction_input.\n",
 				__func__);
 		goto exit;
 	}

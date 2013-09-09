@@ -16,6 +16,9 @@
 #ifndef __IST30XX_H__
 #define __IST30XX_H__
 
+#ifdef CONFIG_HAS_EARLYSUSPEND
+#include <linux/earlysuspend.h>
+#endif
 /*
  * Support F/W ver : IST3000 v2.2~v3.2.1 (included tag)
  * Release : 2013.02.05 by Ian
@@ -160,11 +163,13 @@ struct ist30xx_tags {
 	char	magic2[8];
 };
 
-#include <linux/earlysuspend.h>
+//#include <linux/earlysuspend.h>
 struct ist30xx_data {
 	struct i2c_client *client;
 	struct input_dev *input_dev;
+#ifdef CONFIG_HAS_EARLYSUSPEND
 	struct early_suspend	early_suspend;
+#endif
 	struct ist30xx_status	status;
 	struct ist30xx_fw	fw;
 	struct ist30xx_tags	tags;
@@ -217,6 +222,6 @@ int ist30xx_internal_suspend(struct ist30xx_data *data);
 int ist30xx_internal_resume(struct ist30xx_data *data);
 void ts_power_enable(int en);
 int ist30xx_sec_sysfs(void);
-int __devinit ist30xx_init_system(void);
+int ist30xx_init_system(void);
 
 #endif  /*__IST30XX_H__*/

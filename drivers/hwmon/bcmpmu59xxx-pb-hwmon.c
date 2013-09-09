@@ -537,7 +537,7 @@ static void bcmpmu_adc_debug_init(struct bcmpmu59xxx *bcmpmu)
 
 	if (!debugfs_create_u32("dbg_mask", S_IWUSR | S_IRUSR,
 				debugfs_adc_dir, &debug_mask))
-		goto err ;
+		goto err;
 
 	return;
 err:
@@ -545,7 +545,7 @@ err:
 }
 
 #endif
-static int __devexit bcmpmu_adc_remove(struct platform_device *pdev)
+static int bcmpmu_adc_remove(struct platform_device *pdev)
 {
 	hwmon_device_register(&pdev->dev);
 	sysfs_remove_group(&pdev->dev.kobj, &bcmpmu_hwmon_attr_group);
@@ -556,13 +556,13 @@ static int __devexit bcmpmu_adc_remove(struct platform_device *pdev)
 	return 0;
 }
 
-static int __devinit bcmpmu_adc_probe(struct platform_device *pdev)
+static int bcmpmu_adc_probe(struct platform_device *pdev)
 {
 	struct bcmpmu59xxx *bcmpmu = dev_get_drvdata(pdev->dev.parent);
 	struct bcmpmu_adc	*adc;
 	int i, ret = 0;
 
-	printk(KERN_DEBUG "%s: called\n", __func__);
+	pr_info("%s: called\n", __func__);
 
 	gbcmpmu = bcmpmu;
 	adc = kzalloc(sizeof(struct bcmpmu_adc), GFP_KERNEL);
@@ -614,7 +614,7 @@ static struct platform_driver bcmpmu_adc_driver = {
 		.name = "bcmpmu_adc",
 	},
 	.probe = bcmpmu_adc_probe,
-	.remove = __devexit_p(bcmpmu_adc_remove),
+	.remove = bcmpmu_adc_remove,
 };
 
 static int __init bcmpmu_adc_init(void)

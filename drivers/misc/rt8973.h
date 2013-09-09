@@ -31,17 +31,23 @@
 #define RT8973_INT_CHGDET_MASK     0x04
 #define RT8973_INT_DCDTIMEOUT_MASK 0x08
 #define RT8973_INT_ADCCHG_MASK     0x40
-#if 1 /* modify for Samsung ivory (AP does not support TRIGGER_LOW) */
+
+#define RT8973_DEV2_UNKNOWN_ACC	0x80
+
+#define RT8973_INTM_ADC_CHG		1<<6
+
+#if 1 // modify for Samsung ivory (AP does not support TRIGGER_LOW)
 #define RT8973_IRQF_MODE (IRQF_TRIGGER_FALLING)
 #else
 #define RT8973_IRQF_MODE (IRQF_TRIGGER_LOW)
 #endif
 #define RTMUSC_DRIVER_VER "1.1.2"
 
-struct rt8973_data {
+struct rt8973_data
+{
     struct i2c_client *client;
-    int32_t usbid_adc; /* 5 bits */
-    int32_t factory_mode; /* 0~3 */
+    int32_t usbid_adc; // 5 bits
+    int32_t factory_mode; // 0~3
     int32_t operating_mode;
     int32_t chip_id;
     int32_t accessory_id;

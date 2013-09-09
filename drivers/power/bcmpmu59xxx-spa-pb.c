@@ -544,7 +544,7 @@ err:
 }
 #endif
 
-static int __devinit bcmpmu_spa_pb_probe(struct platform_device *pdev)
+static int bcmpmu_spa_pb_probe(struct platform_device *pdev)
 {
 	int ret = 0;
 	struct bcmpmu_spa_pb *bcmpmu_spa_pb;
@@ -626,7 +626,7 @@ cghr_err:
 	return ret;
 }
 
-static int __devexit bcmpmu_spa_pb_remove(struct platform_device *pdev)
+static int bcmpmu_spa_pb_remove(struct platform_device *pdev)
 {
 	struct bcmpmu59xxx *bcmpmu = dev_get_drvdata(pdev->dev.parent);
 	struct bcmpmu_spa_pb *bcmpmu_spa_pb = bcmpmu->spa_pb_info;
@@ -653,7 +653,7 @@ static struct platform_driver bcmpmu_spa_pb_drv = {
 		.name = "bcmpmu_spa_pb",
 	},
 	.probe = bcmpmu_spa_pb_probe,
-	.remove = __devexit_p(bcmpmu_spa_pb_remove),
+	.remove = bcmpmu_spa_pb_remove,
 };
 
 static int __init bcmpmu_spa_pb_init(void)

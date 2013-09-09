@@ -38,7 +38,9 @@
 #include <linux/of.h>
 #include <linux/of_fdt.h>
 #include <mach/pinmux.h>
-
+#ifdef CONFIG_IOMMU_API
+#include <plat/bcm_iommu.h>
+#endif
 #ifdef CONFIG_ANDROID_PMEM
 #include <linux/android_pmem.h>
 #endif
@@ -63,7 +65,6 @@
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
 #include <asm/mach/map.h>
-#include <asm/hardware/gic.h>
 #include <mach/hardware.h>
 #include <mach/hardware.h>
 #include <mach/kona_headset_pd.h>
@@ -78,6 +79,7 @@
 #include <plat/chal/chal_trace.h>
 #include <plat/pi_mgr.h>
 #include <plat/spi_kona.h>
+#include <plat/kona_smp.h>
 
 #include <trace/stm.h>
 
@@ -236,6 +238,7 @@ extern int hawaii_wifi_status_register(
 		void (*callback)(int card_present, void *dev_id),
 		void *dev_id);
 #endif
+extern void  hawaii_timer_init(void);
 
 /* SD */
 #define SD_CARDDET_GPIO_PIN	91
@@ -316,6 +319,12 @@ struct android_pmem_platform_data android_pmem_data = {
 #ifdef CONFIG_ION_BCM_NO_DT
 struct ion_platform_data ion_system_data = {
 	.nr = 1,
+#ifdef CONFIG_IOMMU_API
+	.pdev_iommu = &iommu_mm_device,
+#endif
+#ifdef CONFIG_BCM_IOVMM
+	.pdev_iovmm = &iovmm_mm_256mb_device,
+#endif
 	.heaps = {
 		[0] = {
 			.id    = 0,
@@ -328,8 +337,34 @@ struct ion_platform_data ion_system_data = {
 	},
 };
 
+struct ion_platform_data ion_system_extra_data = {
+	.nr = 1,
+#ifdef CONFIG_IOMMU_API
+	.pdev_iommu = &iommu_mm_device,
+#endif
+#ifdef CONFIG_BCM_IOVMM
+	.pdev_iovmm = &iovmm_mm_device,
+#endif
+	.heaps = {
+		[0] = {
+			.id    = 1,
+			.type  = ION_HEAP_TYPE_SYSTEM,
+			.name  = "ion-system-extra",
+			.base  = 0,
+			.limit = 0,
+			.size  = 0,
+		},
+	},
+};
+
 struct ion_platform_data ion_carveout_data = {
 	.nr = 2,
+#ifdef CONFIG_IOMMU_API
+	.pdev_iommu = &iommu_mm_device,
+#endif
+#ifdef CONFIG_BCM_IOVMM
+	.pdev_iovmm = &iovmm_mm_256mb_device,
+#endif
 	.heaps = {
 		[0] = {
 			.id    = 3,
@@ -363,6 +398,12 @@ struct ion_platform_data ion_carveout_data = {
 #ifdef CONFIG_CMA
 struct ion_platform_data ion_cma_data = {
 	.nr = 2,
+#ifdef CONFIG_IOMMU_API
+	.pdev_iommu = &iommu_mm_device,
+#endif
+#ifdef CONFIG_BCM_IOVMM
+	.pdev_iovmm = &iovmm_mm_256mb_device,
+#endif
 	.heaps = {
 		[0] = {
 			.id = 2,
@@ -397,8 +438,8 @@ struct ion_platform_data ion_cma_data = {
 
 #ifdef CONFIG_VIDEO_UNICAM_CAMERA
 
-#define CAMDRV_SS_MAIN_I2C_ADDRESS (0xAC>>1)
-#define CAMDRV_SS_SUB_I2C_ADDRESS (0x60>>1)
+#define S5K4ECGX_I2C_ADDRESS (0xAC>>1)
+#define SR030PC50_I2C_ADDRESS (0x60>>1)
 
 
 #define SENSOR_0_GPIO_PWRDN             (002)
@@ -413,10 +454,10 @@ struct ion_platform_data ion_cma_data = {
 
 static struct i2c_board_info hawaii_i2c_camera[] = {
 	{
-		I2C_BOARD_INFO("camdrv_ss", CAMDRV_SS_MAIN_I2C_ADDRESS),
+		I2C_BOARD_INFO("camdrv_ss", S5K4ECGX_I2C_ADDRESS),
 	},
 	{
-		I2C_BOARD_INFO("camdrv_ss_sub", CAMDRV_SS_SUB_I2C_ADDRESS),
+		I2C_BOARD_INFO("camdrv_ss_sub", SR030PC50_I2C_ADDRESS),
 	},
 };
 
@@ -425,7 +466,7 @@ static int hawaii_camera_power(struct device *dev, int on)
 	static struct pi_mgr_dfs_node unicam_dfs_node;
 	int ret;
 
-	printk(KERN_INFO "%s:camera power %s, %d\n", __func__,
+	pr_err("%s:camera power %s, %d\n", __func__,
 		(on ? "on" : "off"), unicam_dfs_node.valid);
 
 	if (!unicam_dfs_node.valid) {
@@ -433,8 +474,7 @@ static int hawaii_camera_power(struct device *dev, int on)
 						PI_MGR_PI_ID_MM,
 						PI_MGR_DFS_MIN_VALUE);
 		if (ret) {
-			printk(
-			KERN_ERR "%s: failed to register PI DFS request\n",
+			pr_err("%s: failed to register PI DFS request\n",
 			__func__
 			);
 			return -1;
@@ -443,8 +483,7 @@ static int hawaii_camera_power(struct device *dev, int on)
 
 	if (on) {
 		if (pi_mgr_dfs_request_update(&unicam_dfs_node, PI_OPP_TURBO)) {
-			printk(
-			KERN_ERR "%s:failed to update dfs request for unicam\n",
+			pr_err("%s:failed to update dfs request for unicam\n",
 			__func__
 			);
 			return -1;
@@ -452,8 +491,7 @@ static int hawaii_camera_power(struct device *dev, int on)
 	}
 
 	if (!camdrv_ss_power(0, (bool)on)) {
-		printk(
-		KERN_ERR "%s,camdrv_ss_power failed for MAIN CAM!!\n",
+		pr_err("%s,camdrv_ss_power failed for MAIN CAM!!\n",
 		__func__
 		);
 		return -1;
@@ -462,8 +500,7 @@ static int hawaii_camera_power(struct device *dev, int on)
 	if (!on) {
 		if (pi_mgr_dfs_request_update(&unicam_dfs_node,
 						PI_MGR_DFS_MIN_VALUE)) {
-			printk(
-			KERN_ERR"%s: failed to update dfs request for unicam\n",
+			pr_err("%s: failed to update dfs request for unicam\n",
 			__func__);
 		}
 	}
@@ -473,7 +510,7 @@ static int hawaii_camera_power(struct device *dev, int on)
 static int hawaii_camera_reset(struct device *dev)
 {
 	/* reset the camera gpio */
-	printk(KERN_INFO "%s:camera reset\n", __func__);
+	pr_info("%s:camera reset\n", __func__);
 	return 0;
 }
 
@@ -482,7 +519,7 @@ static int hawaii_camera_power_sub(struct device *dev, int on)
 	static struct pi_mgr_dfs_node unicam_dfs_node;
 	int ret;
 
-	printk(KERN_INFO "%s:camera power %s, %d\n", __func__,
+	pr_info("%s:camera power %s, %d\n", __func__,
 		(on ? "on" : "off"), unicam_dfs_node.valid);
 
 	if (!unicam_dfs_node.valid) {
@@ -490,8 +527,7 @@ static int hawaii_camera_power_sub(struct device *dev, int on)
 						PI_MGR_PI_ID_MM,
 						PI_MGR_DFS_MIN_VALUE);
 		if (ret) {
-			printk(
-			KERN_ERR "%s: failed to register PI DFS request\n",
+			pr_err("%s: failed to register PI DFS request\n",
 			__func__
 			);
 			return -1;
@@ -500,8 +536,7 @@ static int hawaii_camera_power_sub(struct device *dev, int on)
 
 	if (on) {
 		if (pi_mgr_dfs_request_update(&unicam_dfs_node, PI_OPP_TURBO)) {
-			printk(
-			KERN_ERR "%s:failed to update dfs request for unicam\n",
+			pr_err("%s:failed to update dfs request for unicam\n",
 			 __func__
 			);
 			return -1;
@@ -509,7 +544,7 @@ static int hawaii_camera_power_sub(struct device *dev, int on)
 	}
 
 	if (!camdrv_ss_power(1, (bool)on)) {
-		printk(KERN_ERR "%s, camdrv_ss_power failed for SUB CAM!!\n",
+		pr_err("%s, camdrv_ss_power failed for SUB CAM!!\n",
 		__func__);
 		return -1;
 	}
@@ -517,8 +552,7 @@ static int hawaii_camera_power_sub(struct device *dev, int on)
 	if (!on) {
 		if (pi_mgr_dfs_request_update(&unicam_dfs_node,
 						PI_MGR_DFS_MIN_VALUE)) {
-			printk(
-			KERN_ERR"%s: failed to update dfs request for unicam\n",
+			pr_err("%s: failed to update dfs request for unicam\n",
 			__func__);
 		}
 	}
@@ -530,12 +564,12 @@ static int hawaii_camera_power_sub(struct device *dev, int on)
 static int hawaii_camera_reset_sub(struct device *dev)
 {
 	/* reset the camera gpio */
-	printk(KERN_INFO "%s:camera reset\n", __func__);
+	pr_info("%s:camera reset\n", __func__);
 	return 0;
 
 }
 
-static struct v4l2_subdev_sensor_interface_parms camdrv_ss_main_if_params = {
+static struct v4l2_subdev_sensor_interface_parms s5k4ecgx_if_params = {
 	.if_type = V4L2_SUBDEV_SENSOR_SERIAL,
 	.if_mode = V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2,
 	.orientation = V4L2_SUBDEV_SENSOR_ORIENT_90,
@@ -549,25 +583,25 @@ static struct v4l2_subdev_sensor_interface_parms camdrv_ss_main_if_params = {
 	},
 };
 
-static struct soc_camera_link iclink_camdrv_ss_main = {
+static struct soc_camera_link iclink_s5k4ecgx = {
 	.bus_id = 0,
 	.board_info = &hawaii_i2c_camera[0],
 	.i2c_adapter_id = 0,
 	.module_name = "camdrv_ss",
 	.power = &hawaii_camera_power,
 	.reset = &hawaii_camera_reset,
-	.priv =  &camdrv_ss_main_if_params,
+	.priv =  &s5k4ecgx_if_params,
 };
 
 static struct platform_device hawaii_camera = {
 	.name = "soc-camera-pdrv",
 	 .id = 0,
 	 .dev = {
-		 .platform_data = &iclink_camdrv_ss_main,
+		 .platform_data = &iclink_s5k4ecgx,
 	 },
 };
 
-static struct v4l2_subdev_sensor_interface_parms camdrv_ss_sub_if_params = {
+static struct v4l2_subdev_sensor_interface_parms sr030pc50_if_params = {
 	.if_type = V4L2_SUBDEV_SENSOR_SERIAL,
 	.if_mode = V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2,
 	.orientation = V4L2_SUBDEV_SENSOR_ORIENT_270,
@@ -580,21 +614,21 @@ static struct v4l2_subdev_sensor_interface_parms camdrv_ss_sub_if_params = {
 		.hs_term_time = 0x7
 	},
 };
-static struct soc_camera_link iclink_camdrv_ss_sub = {
+static struct soc_camera_link iclink_sr030pc50 = {
 	.bus_id		= 0,
 	.board_info	= &hawaii_i2c_camera[1],
 	.i2c_adapter_id	= 0,
 	.module_name	= "camdrv_ss_sub",
 	.power		= &hawaii_camera_power_sub,
 	.reset		= &hawaii_camera_reset_sub,
-	.priv		= &camdrv_ss_sub_if_params,
+	.priv		= &sr030pc50_if_params,
 };
 
 static struct platform_device hawaii_camera_sub = {
 	.name	= "soc-camera-pdrv",
 	.id		= 1,
 	.dev	= {
-		.platform_data = &iclink_camdrv_ss_sub,
+		.platform_data = &iclink_sr030pc50,
 	},
 };
 #endif /* CONFIG_VIDEO_UNICAM_CAMERA */
@@ -722,8 +756,8 @@ static struct stm_platform_data hawaii_stm_pdata = {
 
 #if defined(CONFIG_USB_DWC_OTG)
 static struct bcm_hsotgctrl_platform_data hsotgctrl_plat_data = {
-	.hsotgctrl_virtual_mem_base = KONA_USB_HSOTG_CTRL_VA,
-	.chipreg_virtual_mem_base = KONA_CHIPREG_VA,
+	.hsotgctrl_virtual_mem_base = (u32)KONA_USB_HSOTG_CTRL_VA,
+	.chipreg_virtual_mem_base = (u32)KONA_CHIPREG_VA,
 	.irq = BCM_INT_ID_HSOTG_WAKEUP,
 	.usb_ahb_clk_name = USB_OTG_AHB_BUS_CLK_NAME_STR,
 	.mdio_mstr_clk_name = MDIOMASTER_PERI_CLK_NAME_STR,
@@ -795,6 +829,9 @@ struct platform_device *hawaii_common_plat_devices[] __initdata = {
 
 #ifdef CONFIG_KONA_MEMC
 	&kona_memc_device,
+#endif
+#ifdef CONFIG_KONA_TMON
+	&kona_tmon_device,
 #endif
 };
 
@@ -1125,9 +1162,9 @@ static struct kona_headset_pd hawaii_headset_data = {
 #ifdef CONFIG_DMAC_PL330
 static struct kona_pl330_data hawaii_pl330_pdata =	{
 	/* Non Secure DMAC virtual base address */
-	.dmac_ns_base = KONA_DMAC_NS_VA,
+	.dmac_ns_base = (u32) KONA_DMAC_NS_VA,
 	/* Secure DMAC virtual base address */
-	.dmac_s_base = KONA_DMAC_S_VA,
+	.dmac_s_base = (u32)KONA_DMAC_S_VA,
 	/* # of PL330 dmac channels 'configurable' */
 	.num_pl330_chans = 8,
 	/* irq number to use */
@@ -1516,12 +1553,12 @@ static void usb_attach(uint8_t attached)
 {
 	enum bcmpmu_chrgr_type_t chrgr_type;
 	enum bcmpmu_usb_type_t usb_type;
-
+	#if defined(CONFIG_SEC_CHARGING_FEATURE)
+	int spa_data = POWER_SUPPLY_TYPE_BATTERY;
+	#endif
 	printk(attached ? "USB attached\n" : "USB detached\n");
 
-#if defined(CONFIG_SEC_CHARGING_FEATURE)
-	int spa_data = POWER_SUPPLY_TYPE_BATTERY;
-#endif
+
 	pr_info("%s: attached %d\n", __func__, attached);
 
 	set_cable_status = attached ? CABLE_TYPE_USB : CABLE_TYPE_NONE;
@@ -1544,10 +1581,12 @@ static void usb_attach(uint8_t attached)
 		pr_info("%s USB removed\n", __func__);
 		/* set_usb_connection_status(&usb_type);  // only set status */
 		break;
+	default:
+		pr_info("%s other cases\n", __func__);
 	}
 	send_chrgr_insert_event(BCMPMU_CHRGR_EVENT_CHGR_DETECTION, &chrgr_type);
 #if defined(CONFIG_SEC_CHARGING_FEATURE)
-	spa_event_handler(SPA_EVT_CHARGER, spa_data);
+	spa_event_handler(SPA_EVT_CHARGER, (u32 *)spa_data);
 #endif
 	pr_info("tsu6111_usb_cb attached %d\n", attached);
 }
@@ -1598,11 +1637,12 @@ static void charger_attach(uint8_t attached)
 	enum bcmpmu_chrgr_type_t chrgr_type;
 	enum cable_type_t set_cable_status;
 
-	printk(attached ? "Charger attached\n" : "Charger detached\n");
+
 
 #if defined(CONFIG_SEC_CHARGING_FEATURE)
 	int spa_data = POWER_SUPPLY_TYPE_BATTERY;
 #endif
+	printk(attached ? "Charger attached\n" : "Charger detached\n");
 
 	pr_info("tsu6111_charger_cb attached %d\n", attached);
 
@@ -1632,7 +1672,7 @@ static void charger_attach(uint8_t attached)
 	send_chrgr_insert_event(BCMPMU_CHRGR_EVENT_CHGR_DETECTION,
 		&chrgr_type);
 #if defined(CONFIG_SEC_CHARGING_FEATURE)
-	spa_event_handler(SPA_EVT_CHARGER, spa_data);
+	spa_event_handler(SPA_EVT_CHARGER, (u32 *)spa_data);
 #endif
 	pr_info("tsu6111_charger_cb attached %d\n", attached);
 }
@@ -1641,16 +1681,16 @@ static void jig_attach(uint8_t attached, uint8_t factory_mode)
 {
 	switch (factory_mode) {
 	case RTMUSC_FM_BOOT_OFF_UART:
-		printk(KERN_INFO "JIG BOOT OFF UART\n");
+		pr_info("JIG BOOT OFF UART\n");
 		break;
 	case RTMUSC_FM_BOOT_OFF_USB:
-		printk(KERN_INFO "JIG BOOT OFF USB\n");
+		pr_info("JIG BOOT OFF USB\n");
 		break;
 	case RTMUSC_FM_BOOT_ON_UART:
-		printk(KERN_INFO "JIG BOOT ON UART\n");
+		pr_info("JIG BOOT ON UART\n");
 		break;
 	case RTMUSC_FM_BOOT_ON_USB:
-		printk(KERN_INFO "JIG BOOT ON USB\n");
+		pr_info("JIG BOOT ON USB\n");
 		break;
 	default:
 		break;
@@ -1683,13 +1723,13 @@ static void jig_attach(uint8_t attached, uint8_t factory_mode)
 
 static void over_temperature(uint8_t detected)
 {
-	printk(KERN_INFO "over temperature detected = %d!\n", detected);
+	pr_info("over temperature detected = %d!\n", detected);
 }
 
 static void over_voltage(uint8_t detected)
 {
-	printk(KERN_INFO "over voltage = %d\n", (int32_t)detected);
-	printk(KERN_INFO "OVP triggered by musb - %d\n", detected);
+	pr_info("over voltage = %d\n", (int32_t)detected);
+	pr_info("OVP triggered by musb - %d\n", detected);
 	spa_event_handler(SPA_EVT_OVP, detected);
 }
 static void set_usb_power(uint8_t on)
@@ -2069,6 +2109,29 @@ static void __init hawaii_add_i2c_devices(void)
 
 }
 
+#ifdef CONFIG_IOMMU_API
+struct bcm_iommu_pdata iommu_mm_pdata = {
+	.name        = "iommu-mm",
+	.iova_begin  = 0x80000000,
+	.iova_size   = 0x80000000,
+	.errbuf_size = 0x1000,
+};
+#endif
+#ifdef CONFIG_BCM_IOVMM
+struct bcm_iovmm_pdata iovmm_mm_pdata = {
+	.name = "iovmm-mm",
+	.base = 0xc0000000,
+	.size = 0x30000000,
+	.order = 0,
+};
+struct bcm_iovmm_pdata iovmm_mm_256mb_pdata = {
+	.name = "iovmm-mm-256mb",
+	.base = 0xf0000000,
+	.size = 0x0ff00000,
+	.order = 0,
+};
+#endif
+
 /* The GPIO used to indicate accessory insertion in this board */
 #define HS_IRQ		gpio_to_irq(121)
 
@@ -2104,6 +2167,16 @@ static void hawaii_add_pdata(void)
 	hawaii_usb_phy_platform_device.dev.platform_data
 		= &hsotgctrl_plat_data;
 #endif
+
+#ifdef CONFIG_IOMMU_API
+	iommu_mm_device.dev.platform_data = &iommu_mm_pdata;
+#endif
+#ifdef CONFIG_BCM_IOVMM
+	iovmm_mm_device.dev.platform_data = &iovmm_mm_pdata;
+	iovmm_mm_256mb_device.dev.platform_data = &iovmm_mm_256mb_pdata;
+	ion_system_device.dev.platform_data = &ion_system_data;
+	ion_system_extra_device.dev.platform_data = &ion_system_extra_data;
+#endif
 }
 
 void __init hawaii_add_common_devices(void)
@@ -2122,6 +2195,15 @@ static void __init hawaii_add_devices(void)
 	hawaii_add_pdata();
 
 #ifdef CONFIG_ION_BCM_NO_DT
+#ifdef CONFIG_IOMMU_API
+	platform_device_register(&iommu_mm_device);
+#endif
+#ifdef CONFIG_BCM_IOVMM
+	platform_device_register(&iovmm_mm_device);
+	platform_device_register(&iovmm_mm_256mb_device);
+	platform_device_register(&ion_system_device);
+	platform_device_register(&ion_system_extra_device);
+#endif
 	platform_device_register(&ion_carveout_device);
 #ifdef CONFIG_CMA
 	platform_device_register(&ion_cma_device);
@@ -2186,7 +2268,7 @@ struct kona_fb_platform_data konafb_devices[] __initdata = {
 		.hs_bps = 500000000,
 		.lp_bps = 5000000,
 #ifdef CONFIG_IOMMU_API
-		.pdev_iommu = &iovmm_mm_device,
+		.pdev_iommu = &iommu_mm_device,
 #endif
 #ifdef CONFIG_BCM_IOVMM
 		.pdev_iovmm = &iovmm_mm_256mb_device,
@@ -2197,6 +2279,13 @@ struct kona_fb_platform_data konafb_devices[] __initdata = {
 #include "kona_fb_init.c"
 #endif /* #ifdef CONFIG_FB_BRCM_KONA */
 
+#ifdef CONFIG_LCD_NT35510_SUPPORT
+static struct platform_device nt35510_panel_device = {
+	.name = "NT35510",
+	.id = -1,
+};
+#endif
+
 static void __init hawaii_init(void)
 {
 	hawaii_add_devices();
@@ -2205,6 +2294,14 @@ static void __init hawaii_init(void)
 #endif
 	hawaii_add_common_devices();
 
+
+#ifdef CONFIG_LCD_HX8369_CS02_SUPPORT
+	platform_device_register(&hx8369_panel_device);
+#endif
+
+#ifdef CONFIG_LCD_NT35510_SUPPORT
+	platform_device_register(&nt35510_panel_device);
+#endif
 	return;
 }
 
@@ -2222,10 +2319,10 @@ late_initcall(hawaii_add_lateinit_devices);
 
 MACHINE_START(HAWAII, "hawaii_ss_logands")
 	.atag_offset = 0x100,
+	.smp = smp_ops(kona_smp_ops),
 	.map_io = hawaii_map_io,
 	.init_irq = kona_init_irq,
-	.handle_irq = gic_handle_irq,
-	.timer = &kona_timer,
+	.init_time = hawaii_timer_init,
 	.init_machine = hawaii_init,
 #ifdef CONFIG_MOBICORE_OS
 	.reserve = hawaii_mem_reserve,

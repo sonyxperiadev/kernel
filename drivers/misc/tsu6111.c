@@ -962,7 +962,7 @@ static void tsu6111_detect_work(struct work_struct *work)
 }
 
 
-static int __devinit tsu6111_probe(struct i2c_client *client,
+static int tsu6111_probe(struct i2c_client *client,
 			 const struct i2c_device_id *id)
 {
 	struct i2c_adapter *adapter = to_i2c_adapter(client->dev.parent);
@@ -1021,7 +1021,7 @@ fail1:
 	return ret;
 }
 
-static int __devexit tsu6111_remove(struct i2c_client *client)
+static int tsu6111_remove(struct i2c_client *client)
 {
 	struct tsu6111_usbsw *usbsw = i2c_get_clientdata(client);
 
@@ -1055,7 +1055,7 @@ static struct i2c_driver tsu6111_i2c_driver = {
 		.name = "tsu6111",
 	},
 	.probe = tsu6111_probe,
-	.remove = __devexit_p(tsu6111_remove),
+	.remove = tsu6111_remove,
 	.resume = tsu6111_resume,
 	.id_table = tsu6111_id,
 };

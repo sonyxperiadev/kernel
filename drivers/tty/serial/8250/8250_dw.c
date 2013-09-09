@@ -26,7 +26,7 @@
  * Notwithstanding the above, under no circumstances may you combine this
  * software in any way with any other Broadcom software provided under a
  * license other than the GPL, without Broadcom's express prior written consent.
- * *******************************************************************************/
+ * ***************************************************************************/
 
 #include <linux/device.h>
 #include <linux/init.h>
@@ -255,6 +255,105 @@ void dw8250_do_pm(struct uart_port *port, unsigned int state,
 	}
 }
 
+#ifdef CONFIG_BRCM_UART_CHANGES
+/* We can optimize this functions. Filling Some of the
+ * Uart_port Sturcture members again here. */
+static int dw8250_probe_platform_data(struct platform_device *pdev)
+{
+	struct uart_8250_port uart = {};
+	struct uart_port *port = &uart.port;
+	struct plat_serial8250_port *p = pdev->dev.platform_data;
+	int i, irqflag = 0, ret = 0;
+	struct dw8250_data *data = port->private_data;
+
+	if (p) {
+		for (i = 0; p && p->flags != 0; p++, i++) {
+			data = devm_kzalloc(&pdev->dev, sizeof(*data),
+				GFP_KERNEL);
+			if (!data)
+				return -ENOMEM;
+			if (p->private_data) {
+				data->power_save_enable = 1;
+				if (p->irq == BCM_INT_ID_UART2) {
+					ret = gpio_request(GPIO_PIN47,
+						"serial_pin_47");
+					if (ret) {
+						pr_err("UART: GPIO %d",
+							GPIO_PIN47);
+						pr_err("gpio_request ");
+						pr_err("failed\n");
+					}
+				} else if (p->irq == BCM_INT_ID_UART1) {
+					ret = gpio_request(GPIO_PIN20,
+						"serial_pin_20");
+					if (ret) {
+						pr_err("UART: GPIO %d",
+							GPIO_PIN20);
+						pr_err("gpio_request ");
+						pr_err("failed\n");
+					}
+				}
+			}
+
+			port->private_data = data;
+
+			port->iobase             = p->iobase;
+			port->membase            = p->membase;
+			port->irq                = p->irq;
+			port->irqflags           = p->irqflags;
+			port->uartclk            = p->uartclk;
+			port->regshift           = p->regshift;
+			port->iotype             = p->iotype;
+			port->flags              = p->flags;
+			port->mapbase            = p->mapbase;
+			port->hub6               = p->hub6;
+			port->type               = p->type;
+			port->serial_in          = dw8250_serial_in;
+			port->serial_out         = dw8250_serial_out;
+			if (!(p->handle_irq)) {
+				/* Default 8250_dw handler */
+				port->handle_irq = dw8250_handle_irq;
+				if (p->port_name) {
+					if (!strcmp(p->port_name, "bluetooth"))
+						port->handle_irq =
+							bt_dw8250_handle_irq;
+				}
+			}
+
+			port->set_termios	= p->set_termios;
+			port->irqflags          |= irqflag;
+			port->pm                 = dw8250_do_pm;
+			port->dev                = &pdev->dev;
+			port->irqflags           |= irqflag;
+
+			pdev->dev.platform_data = p;
+
+#ifndef CONFIG_MACH_BCM_FPGA
+			data->clk = clk_get(port->dev, p->clk_name);
+			if (IS_ERR(data->clk))
+				return PTR_ERR(data->clk);
+
+			clk_disable(data->clk);
+			clk_set_rate(data->clk, port->uartclk);
+			clk_enable(data->clk);
+
+			port->uartclk = clk_get_rate(data->clk);
+#endif
+			data->line = serial8250_register_8250_port(&uart);
+			if (data->line < 0)
+				return data->line;
+
+			platform_set_drvdata(pdev, data);
+
+			pm_runtime_set_active(&pdev->dev);
+			pm_runtime_enable(&pdev->dev);
+		}
+	}
+	return 0;
+
+}
+#endif
+
 static int dw8250_probe_of(struct uart_port *p)
 {
 	struct device_node	*np = p->dev->of_node;
@@ -417,9 +516,14 @@ static int dw8250_probe(struct platform_device *pdev)
 	struct resource *regs = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	struct resource *irq = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
 	struct dw8250_data *data;
-	int err;
+	int err = 0;
 
-#ifdef CONFIG_OF
+	/* If platform_data do everything in dw8250_probe_platform_data()
+	 * and return */
+	if (pdev->dev.platform_data) {
+		err = dw8250_probe_platform_data(pdev);
+		return err;
+	}
 	if (!regs || !irq) {
 		dev_err(&pdev->dev, "no registers/irq defined\n");
 		return -EINVAL;
@@ -480,10 +584,6 @@ static int dw8250_probe(struct platform_device *pdev)
 		err = dw8250_probe_acpi(&uart);
 		if (err)
 			return err;
-#ifdef CONFIG_BRCM_UART_CHANGES
-	} else if (pdev->dev.platform_data) {
-		/* TODO Implement for the Platformdata */
-#endif
 	} else {
 		return -ENODEV;
 	}
@@ -493,16 +593,6 @@ static int dw8250_probe(struct platform_device *pdev)
 		return data->line;
 
 	platform_set_drvdata(pdev, data);
-#else /* CONFIG_OF is not defined */
-	/*
-	 * The control comes here, if CONFIG_OF i.e
-	 * Device Tree is not used and also platform data is
-	 * NULL. This is an error condition.
-	 */
-	pr_err("%s(): No DT and platform Data is NULL, can't proceed \r\n",
-		__func__);
-	return -EINVAL;
-#endif /* CONFIG_OF */
 
 	pm_runtime_set_active(&pdev->dev);
 	pm_runtime_enable(&pdev->dev);

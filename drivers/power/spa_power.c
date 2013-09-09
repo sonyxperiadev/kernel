@@ -24,7 +24,8 @@
 #include <linux/wakelock.h>
 #include <linux/power_supply.h>
 #include <linux/sched.h>
-
+#include <linux/mm.h>
+#include <linux/slab.h>
 #define SPA_DEBUG_FEATURE 1
 /*#define SPA_TEMPERATURE_INT 1*/
 #define BATT_TYPE "SDI_SDI"
@@ -2100,7 +2101,7 @@ label_SPA_POWER_PROBE_SUCCESS:
 	return 0;
 }
 
-static void __devexit spa_power_remove(struct platform_device *pdev)
+static void spa_power_remove(struct platform_device *pdev)
 {
 	struct spa_power_desc *spa_power_iter = platform_get_drvdata(pdev);
 

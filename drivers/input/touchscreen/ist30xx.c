@@ -28,7 +28,9 @@
 #include <linux/regulator/consumer.h>
 #include <linux/firmware.h>
 #include <linux/string.h>
-
+#ifdef CONFIG_HAS_EARLYSUSPEND
+#include <linux/earlysuspend.h>
+#endif
 #include "ist30xx.h"
 #include "ist30xx_update.h"
 
@@ -1067,7 +1069,7 @@ int Ist30xx_ts_check(void)
 }
 
 
-static int __devinit ist30xx_probe(struct i2c_client *client,
+static int ist30xx_probe(struct i2c_client *client,
 				   const struct i2c_device_id *id)
 {
 	int i, ret;
@@ -1104,7 +1106,7 @@ static int __devinit ist30xx_probe(struct i2c_client *client,
 	data->input_dev = input_dev;
 	i2c_set_clientdata(client, data);
 
-	input_mt_init_slots(input_dev, IST30XX_MAX_MT_FINGERS);
+	input_mt_init_slots(input_dev, IST30XX_MAX_MT_FINGERS,0);
 
 	input_dev->name = "ist30xx_ts_input";
 	input_dev->id.bustype = BUS_I2C;
@@ -1295,7 +1297,7 @@ err_alloc_dev:
 }
 
 
-static int __devexit ist30xx_remove(struct i2c_client *client)
+static int ist30xx_remove(struct i2c_client *client)
 {
 	struct ist30xx_data *data = i2c_get_clientdata(client);
 
@@ -1332,7 +1334,7 @@ static const struct dev_pm_ops ist30xx_pm_ops = {
 static struct i2c_driver ist30xx_i2c_driver = {
 	.id_table	= ist30xx_idtable,
 	.probe		= ist30xx_probe,
-	.remove		= __devexit_p(ist30xx_remove),
+	.remove		= ist30xx_remove,
 	.driver		= {
 		.owner	= THIS_MODULE,
 		.name	= IST30XX_DEV_NAME,
