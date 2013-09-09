@@ -52,6 +52,8 @@ else ifeq ($(CONFIG_MACH_JAVA_C_5609A), y)
 obj-y += board-bcm59xxx_garnet_c_5609a.o
 else ifeq ($(CONFIG_MACH_JAVA_C_5606), y)
 obj-y += board-bcm59xxx_garnet_c_5606.o
+else ifeq ($(CONFIG_MACH_JAVA_C_AMETHYST), y)
+obj-y += board-bcm59xxx_garnet_c_amethyst.o
 else
 obj-y += board-bcm59xxx_garnet.o
 endif
