@@ -162,6 +162,20 @@ config BCM_MODEM
         help
           Broadcom Modem IPC drivers
 
+config  BCM_NET_WHITELIST_SUPPORT
+	boolean "White list support"
+	depends on BCM_MODEM
+	default N
+	---help---
+		White list support
+
+config  BCM_NET_WHITELIST_DEBUG_SUPPORT
+	boolean "White list support debug"
+	depends on BCM_MODEM
+	default N
+	---help---
+		White list support debug
+
 config BRCM_CP_CRASH_DUMP_EMMC
 	bool "cp crash dump to eMMC"
 	depends on BCM_MODEM && APANIC_ON_MMC

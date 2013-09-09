@@ -55,4 +55,5 @@ typedef struct {
 	uint data_len;		/* length of user buffer */
 } bcm_fuse_net_config_t;
 
+extern void bcm_net_add_or_remove_port(struct socket *sock, bool add);
 #endif /* _LINUX_BCM_FUSE_NET_IF_H */
