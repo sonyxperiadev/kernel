@@ -441,11 +441,12 @@ static unsigned char CTPM_FW[]=
 {
 #if defined(CONFIG_TOUCHSCREEN_HAWAII_GARNET_FT5306_FW)
 	#include "45HD_FT5306_U82_LCID0x87_ver0x10_20130320_app.i"
+#elif defined(CONFIG_TOUCHSCREEN_JAVA_AMETHYST_FT5336_FW)
+	#include "Java_amethyst_050914_FT5336_20130910_V10_app.i"
 #else
 0
 #endif
 };
-
 
 FTS_DWRD fts_ctpm_auto_clb(void)
 {

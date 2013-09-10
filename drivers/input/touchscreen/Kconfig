@@ -1031,6 +1031,16 @@ config TOUCHSCREEN_ICN83XX
         depends on I2C
         help
           This enables support for Chipone touchscreens.
+
+config TOUCHSCREEN_JAVA_AMETHYST_FT5336_FW
+	bool "FT5306 Touchscreen for hawaii garnet"
+	depends on TOUCHSCREEN_FT5306
+	help
+	  Say Y here if you have
+	  a ft5336 based
+	  touchscreen for hawaii garnet.
+	  If unsure, say N.
+
 source "drivers/input/touchscreen/coreriver_touchkey/Kconfig"
 
 endif
