@@ -46,15 +46,6 @@
 		} \
 	} while (0)
 
-enum {
-	AVS_LOG_ERR  = 1 << 0,
-	AVS_LOG_WARN = 1 << 1,
-	AVS_LOG_INIT = 1 << 2,
-	AVS_LOG_FLOW = 1 << 3,
-	AVS_LOG_INFO = 1 << 4,
-};
-
-
 struct avs_info {
 	u32 csr_opp_volt[CSR_NUM_OPP];
 	u32 msr_opp_volt[MSR_NUM_OPP];
@@ -180,31 +171,48 @@ static u32 avs_irdrop_osc_get_count(struct avs_info *avs_info_ptr)
 		PWRWDOG_IRDROP_CNT_OFFSET);
 	count &= PWRWDOG_IRDROP_CNT_IRDROP_CNT_MASK;
 	count >>= PWRWDOG_IRDROP_CNT_IRDROP_CNT_SHIFT;
-
 	return count;
 }
 
-static u32 avs_get_irdrop_osc_count(struct avs_info *avs_info_ptr)
+static int read_osc_debounce(struct avs_info *avs_info_ptr)
+{
+	u32 i, old, new;
+	avs_irdrop_osc_en(avs_info_ptr, true);
+	mdelay(1);
+	old = avs_irdrop_osc_get_count(avs_info_ptr);
+	for (i = 0; i < AVS_INSURANCE; i++) {
+		new = avs_irdrop_osc_get_count(avs_info_ptr);
+		if (new == old)
+			break;
+		old = new;
+		mdelay(AVS_INSURANCE_DELAY_MS);
+	}
+
+	if (i == AVS_INSURANCE)
+		return -EINVAL;
+	new = (new << 10)/1000; /* Scaling for 32Khz ATE clock */
+	return new;
+}
+
+static int avs_get_irdrop_osc_count(struct avs_info *avs_info_ptr)
 {
 	u32 min;
 	u32 max;
 	struct regulator *regl;
 	struct pi *pi;
-	int ret;
-	u32 osc_cnt = 0;
-	int tries = 2;
+	int osc_cnt = -EINVAL;
 
 	struct avs_pdata *pdata = avs_info_ptr->pdata;
 
 	avs_dbg(AVS_LOG_FLOW, "%s\n", __func__);
-	BUG_ON(pdata->a9_regl_id == NULL);
-	regl = regulator_get(NULL, pdata->a9_regl_id);
+	BUG_ON(pdata->a7_regl_name == NULL);
+	regl = regulator_get(NULL, pdata->a7_regl_name);
 	if (IS_ERR_OR_NULL(regl)) {
 		avs_dbg(AVS_LOG_ERR, "%s: Unable to get regulator\n",
 			__func__);
-		return 0;
+		return -EINVAL;
 	}
-	/*Disable A9 LPM C states*/
+	/*Disable A7 LPM to avoid changes in CSR*/
 	kona_pm_disable_idle_state(CSTATE_ALL, 1);
 	pi = pi_mgr_get(PI_MGR_PI_ID_ARM_CORE);
 	BUG_ON(!pi);
@@ -212,20 +220,12 @@ static u32 avs_get_irdrop_osc_count(struct avs_info *avs_info_ptr)
 	max = pi_get_dfs_lmt(pi->id, true /*get max limit*/);
 	pi_mgr_set_dfs_opp_limit(pi->id, PI_OPP_ECONOMY,
 				PI_OPP_ECONOMY);
-	ret = regulator_set_voltage(regl, pdata->irdrop_vreq,
-			pdata->irdrop_vreq);
-	if (ret) {
+	if (regulator_set_voltage(regl, pdata->irdrop_vreq,
+		pdata->irdrop_vreq)) {
 		avs_dbg(AVS_LOG_ERR, "Unable to set voltage\n");
 		goto err;
 	}
-	while (tries) {
-		avs_irdrop_osc_en(avs_info_ptr, true);
-		mdelay(1);
-		osc_cnt += avs_irdrop_osc_get_count(avs_info_ptr);
-		avs_irdrop_osc_en(avs_info_ptr, false);
-		tries--;
-	}
-	osc_cnt /= 2;
+	osc_cnt = read_osc_debounce(avs_info_ptr);
 err:
 	regulator_put(regl);
 	pi_mgr_set_dfs_opp_limit(pi->id, min, max);
@@ -288,9 +288,13 @@ static ssize_t avs_debug_read_irdrop(struct file *file, char __user
 {
 	char buf[1000];
 	u32 len = 0;
-	len += snprintf(buf + len, sizeof(buf) - len,
-		"Reading IRDROP Osc count now:%u\n",
-		avs_get_irdrop_osc_count(&avs_info));
+	int irdrop_count = avs_get_irdrop_osc_count(&avs_info);
+	if (irdrop_count > 0)
+		len += snprintf(buf + len, sizeof(buf) - len,
+			"Reading IRDROP Osc count now:%d\n", irdrop_count);
+	else
+		len += snprintf(buf + len, sizeof(buf) - len,
+			"error reading the register\n");
 
 	return simple_read_from_buffer(user_buf, count, ppos, buf, len);
 }

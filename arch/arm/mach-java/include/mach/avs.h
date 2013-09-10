@@ -20,7 +20,10 @@
 #define MSR_NUM_OPP	4
 
 #define AVS_HANDSHAKE_VERSION 2
-#define AVS_SW_VERSION	2
+#define AVS_SW_VERSION	3
+
+#define AVS_INSURANCE	5
+#define AVS_INSURANCE_DELAY_MS	1
 
 enum {
 	SILICON_TYPE_SLOW,
@@ -43,6 +46,14 @@ enum {
 	AVS_DOMAIN_VDDVAR_A7,
 	AVS_DOMAIN_VDDFIX,
 	AVS_DOMAIN_MAX,
+};
+
+enum {
+	AVS_LOG_ERR  = 1 << 0,
+	AVS_LOG_WARN = 1 << 1,
+	AVS_LOG_INIT = 1 << 2,
+	AVS_LOG_FLOW = 1 << 3,
+	AVS_LOG_INFO = 1 << 4,
 };
 
 struct avs_handshake {
@@ -90,7 +101,7 @@ struct avs_pdata {
 	u32 flags;
 	u32 avs_info_base_addr;
 	u32 irdrop_vreq;
-	char *a9_regl_id;
+	char *a7_regl_name;
 	u32 pwrwdog_base;
 };
 
