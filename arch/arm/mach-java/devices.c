@@ -827,7 +827,7 @@ struct platform_device kona_cpufreq_device = {
 
 static struct avs_pdata avs_pdata = {
 	.avs_info_base_addr = HW_IO_PHYS_TO_VIRT(0x3404E39C),
-	.a9_regl_id = "csr_uc",
+	.a7_regl_name = "csr_uc",
 	.pwrwdog_base = KONA_PWRWDOG_VA,
 	.irdrop_vreq = 1200000,
 };
