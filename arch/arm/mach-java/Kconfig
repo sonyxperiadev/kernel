@@ -52,6 +52,12 @@ config	MACH_JAVA_SS_EVAL
 	help
 	  Support for Broadcom Hawaii ss eval board.
 
+config	MACH_JAVA_SS_BAFFINLITE
+		bool "MACH_JAVA_SS_BAFFINLITE"
+	select MACH_BCM_SS_BAFFINLITE
+	help
+	  Support for Broadcom Hawaii ss baffinlite board.
+
 endchoice
 
 choice
@@ -116,6 +122,18 @@ choice
 	bool "SS EVAL REV00"
 	help
 	  Support for SS Eval Rev00
+
+endchoice
+
+choice
+	prompt "Java SS BAFFINLITE type"
+	depends on MACH_JAVA_SS_BAFFINLITE
+	default MACH_JAVA_SS_BAFFINLITE_REV00
+
+	config MACH_JAVA_SS_BAFFINLITE_REV00
+	bool "SS BAFFINLITE REV00"
+	help
+	  Support for SS Baffinlite Rev00
 
 endchoice
 
