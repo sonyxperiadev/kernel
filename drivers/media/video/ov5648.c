@@ -1308,7 +1308,7 @@ static int ov5648_set_gain(struct i2c_client *client, int gain_value)
 	gain_value = gain_value / GAIN_HIST_MAX;
 #endif
 	gain_actual = ov5648_calc_gain(client, gain_value, &gain_code_analog);
-	printk(KERN_INFO "ov5648_set_gain: cur=%u req=%u act=%u cod=%u\n",
+	pr_debug("ov5648_set_gain: cur=%u req=%u act=%u cod=%u\n",
 		 ov5648->gain_current, gain_value,
 		 gain_actual, gain_code_analog);
 	if (gain_actual == ov5648->gain_current)
@@ -1440,7 +1440,7 @@ static void ov5648_set_exposure(struct i2c_client *client, int exp_value)
 
 	actual_exposure = ov5648_calc_exposure(client, exp_value,
 			&vts, &coarse_int_lines);
-	printk(KERN_INFO "ov5648_set_exposure: cur=%d req=%d act=%d coarse=%d vts=%d\n",
+	pr_debug("ov5648_set_exposure: cur=%d req=%d act=%d coarse=%d vts=%d\n",
 			ov5648->exposure_current, exp_value, actual_exposure,
 			coarse_int_lines, vts);
 	ov5648->vts = vts;
@@ -1553,21 +1553,21 @@ static int ov5648_set_mode(struct i2c_client *client, int new_mode_idx)
 	int ret = 0;
 
 	if (ov5648->mode_idx == new_mode_idx) {
-		printk(KERN_INFO "ov5648_set_mode: skip init from mode[%d]=%s to mode[%d]=%s\n",
+		pr_debug("ov5648_set_mode: skip init from mode[%d]=%s to mode[%d]=%s\n",
 			ov5648->mode_idx, ov5648_mode[ov5648->mode_idx].name,
 			new_mode_idx, ov5648_mode[new_mode_idx].name);
 		return ret;
 	}
 
 	if (ov5648->mode_idx == OV5648_MODE_MAX) {
-		printk(KERN_INFO "ov5648_set_mode: full init from mode[%d]=%s to mode[%d]=%s\n",
+		pr_debug("ov5648_set_mode: full init from mode[%d]=%s to mode[%d]=%s\n",
 		ov5648->mode_idx, ov5648_mode[ov5648->mode_idx].name,
 		new_mode_idx, ov5648_mode[new_mode_idx].name);
 		ov5648_init(client);
 		ret = ov5648_reg_writes(client, ov5648_reginit);
 		ret = ov5648_reg_writes(client, ov5648_regdif[new_mode_idx]);
 	} else {
-		printk(KERN_INFO "ov5648_set_mode: diff init from mode[%d]=%s to mode[%d]=%s\n",
+		pr_debug("ov5648_set_mode: diff init from mode[%d]=%s to mode[%d]=%s\n",
 			ov5648->mode_idx, ov5648_mode[ov5648->mode_idx].name,
 			new_mode_idx, ov5648_mode[new_mode_idx].name);
 		ret = ov5648_reg_writes(client, ov5648_regdif[new_mode_idx]);
@@ -1592,7 +1592,7 @@ static int ov5648_set_state(struct i2c_client *client, int new_state)
 	struct ov5648 *ov5648 = to_ov5648(client);
 	int ret = 0;
 
-	printk(KERN_INFO "ov5648_set_state: %d (%s) -> %d (%s)\n",\
+	pr_debug("ov5648_set_state: %d (%s) -> %d (%s)\n",\
 	    ov5648->state, ov5648->state ? "strm" : "stop",\
 		 new_state, new_state ? "strm" : "stop");
 
