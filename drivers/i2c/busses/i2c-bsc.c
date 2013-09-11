@@ -121,6 +121,9 @@ struct bsc_i2c_dev {
 	atomic_t rx_fifo_support;
 	atomic_t tx_fifo_support;
 
+	/* flag for POLLING mode */
+	atomic_t polling_mode;
+
 	/* the 8-bit master code (0000 1XXX, 0x08) used for high speed mode */
 	unsigned char mastercode;
 
@@ -310,6 +313,27 @@ static int bsc_wait_cmdbusy(struct bsc_i2c_dev *dev)
 	return 0;
 }
 
+static int bsc_poll_for_sesdone(struct bsc_i2c_dev *dev)
+{
+	unsigned long time = 0, limit;
+	unsigned int status;
+
+	/* wait for SESSION DONE */
+	limit = (loops_per_jiffy * msecs_to_jiffies(CMDBUSY_DELAY));
+	while (((bsc_read_intr_status((uint32_t)dev->virt_base) &
+		I2C_MM_HS_ISR_SES_DONE_MASK) == 0) && (time++ < limit))
+		udelay(10);
+
+	if (time >= limit) {
+		dev_err(dev->device, "SES done timeout\n");
+		return -ETIMEDOUT;
+	}
+
+	status = bsc_read_intr_status((uint32_t)dev->virt_base);
+	bsc_clear_intr_status((uint32_t)dev->virt_base, status);
+	return 0;
+}
+
 static int bsc_send_cmd(struct bsc_i2c_dev *dev, BSC_CMD_t cmd)
 {
 	int rc;
@@ -320,39 +344,49 @@ static int bsc_send_cmd(struct bsc_i2c_dev *dev, BSC_CMD_t cmd)
 	if (rc < 0)
 		return rc;
 
-	/* enable the session done (SES) interrupt */
-	bsc_enable_intr((uint32_t)dev->virt_base,
-			I2C_MM_HS_IER_I2C_INT_EN_MASK);
+	if (!(atomic_read(&dev->polling_mode))) {
+		/* enable the session done (SES) interrupt */
+		bsc_enable_intr((uint32_t)dev->virt_base,
+				I2C_MM_HS_IER_I2C_INT_EN_MASK);
 
-	/* mark as incomplete before sending the command */
-	INIT_COMPLETION(dev->ses_done);
+		/* mark as incomplete before sending the command */
+		INIT_COMPLETION(dev->ses_done);
+	}
 
 	/* send the command */
 	isl_bsc_send_cmd((uint32_t)dev->virt_base, cmd);
 
-	/*
-	 * Block waiting for the transaction to finish. When it's finished we'll
-	 *be signaled by the interrupt
-	 */
-	time_left = wait_for_completion_timeout(&dev->ses_done, SES_TIMEOUT);
-	bsc_disable_intr((uint32_t)dev->virt_base,
-			 I2C_MM_HS_IER_I2C_INT_EN_MASK);
-	/* Check if there was a bus error seen */
-	if (time_left == 0 || (dev->err_flag & I2C_MM_HS_ISR_ERR_MASK)) {
-		dev_err(dev->device, "controller timed out\n");
+	if (atomic_read(&dev->polling_mode)) {
+		rc = bsc_poll_for_sesdone(dev);
+		if (rc < 0)
+			return rc;
+	} else {
+		/* Interrupt mode */
+		/*
+		 * Block waiting for the transaction to finish. When it's
+		 * finished we'll be signaled by the interrupt
+		 */
+		time_left = wait_for_completion_timeout(&dev->ses_done,
+							SES_TIMEOUT);
+		bsc_disable_intr((uint32_t)dev->virt_base,
+				 I2C_MM_HS_IER_I2C_INT_EN_MASK);
+		/* Check if there was a bus error seen */
+		if (time_left == 0 ||
+		   (dev->err_flag & I2C_MM_HS_ISR_ERR_MASK)) {
+			dev_err(dev->device, "controller timed out\n");
 
-		/* Reset the error flag */
-		dev->err_flag &= ~(dev->err_flag);
+			/* Reset the error flag */
+			dev->err_flag &= ~(dev->err_flag);
 
-		/* clear command */
-		isl_bsc_send_cmd((uint32_t)dev->virt_base, BSC_CMD_NOACTION);
-
-		return -ETIMEDOUT;
+			/* clear command */
+			isl_bsc_send_cmd((uint32_t)dev->virt_base,
+						BSC_CMD_NOACTION);
+			return -ETIMEDOUT;
+		}
 	}
 
 	/* clear command */
 	isl_bsc_send_cmd((uint32_t)dev->virt_base, BSC_CMD_NOACTION);
-
 	return 0;
 }
 
@@ -557,37 +591,47 @@ static int bsc_xfer_write_byte(struct bsc_i2c_dev *dev, unsigned int nak_ok,
 	if (rc < 0)
 		return rc;
 
-	/* enable the session done (SES) interrupt */
-	bsc_enable_intr((uint32_t)dev->virt_base,
-			I2C_MM_HS_IER_I2C_INT_EN_MASK);
+	if (!(atomic_read(&dev->polling_mode))) {
+		/* enable the session done (SES) interrupt */
+		bsc_enable_intr((uint32_t)dev->virt_base,
+				I2C_MM_HS_IER_I2C_INT_EN_MASK);
 
-	/* mark as incomplete before sending the data */
-	INIT_COMPLETION(dev->ses_done);
+		/* mark as incomplete before sending the command */
+		INIT_COMPLETION(dev->ses_done);
+	}
 
 	/* send data */
 	bsc_write_data((uint32_t)dev->virt_base, data, 1);
 
-	/*
-	 * Block waiting for the transaction to finish. When it's finished we'll
-	 *be signaled by the interrupt
-	 */
-	time_left = wait_for_completion_timeout(&dev->ses_done, SES_TIMEOUT);
-	bsc_disable_intr((uint32_t)dev->virt_base,
-			 I2C_MM_HS_IER_I2C_INT_EN_MASK);
-	if (time_left == 0 || dev->err_flag) {
-		/* Check if there was a NACK and it was un-expected */
-		if ((dev->err_flag & I2C_MM_HS_ISR_NOACK_MASK) && nak_ok == 0) {
-			dev_err(dev->device, "unexpected NAK\n");
-			return -EREMOTEIO;
-		/* Check if there was a bus error */
-		} else if (dev->err_flag & I2C_MM_HS_ISR_ERR_MASK) {
-			dev_err(dev->device, "controller timed out\n");
-			return -ETIMEDOUT;
+	if (atomic_read(&dev->polling_mode)) {
+		rc = bsc_poll_for_sesdone(dev);
+		if (rc < 0)
+			return rc;
+	} else {
+		/* Interrupt mode */
+		/*
+		 * Block waiting for the transaction to finish. When it's
+		 * finished we'll be signaled by the interrupt
+		 */
+		time_left = wait_for_completion_timeout(&dev->ses_done,
+							SES_TIMEOUT);
+		bsc_disable_intr((uint32_t)dev->virt_base,
+				 I2C_MM_HS_IER_I2C_INT_EN_MASK);
+		if (time_left == 0 || dev->err_flag) {
+			/* Check if there was a NACK and it was un-expected */
+			if ((dev->err_flag & I2C_MM_HS_ISR_NOACK_MASK) &&
+							nak_ok == 0) {
+				dev_err(dev->device, "unexpected NAK\n");
+				return -EREMOTEIO;
+			/* Check if there was a bus error */
+			} else if (dev->err_flag & I2C_MM_HS_ISR_ERR_MASK) {
+				dev_err(dev->device, "controller timed out\n");
+				return -ETIMEDOUT;
+			}
+			/* Reset the error flag */
+			dev->err_flag &= ~(dev->err_flag);
 		}
-		/* Reset the error flag */
-		dev->err_flag &= ~(dev->err_flag);
 	}
-
 	return 0;
 }
 
@@ -1128,6 +1172,14 @@ static void client_fifo_configure(struct i2c_adapter *adapter,
 					dev_dbg(dev->device,
 						"Enabled the TX FIFO\n");
 				}
+
+				/* Polling mode */
+				if (enable_polling_mode(pd)) {
+					atomic_set(&dev->polling_mode, 1);
+					dev_dbg(dev->device,
+						"Enabled i2c polling mode\n");
+				}
+
 			} else {
 				/* For the RX FIFO */
 				if (enable_rx_fifo(pd)) {
@@ -1143,6 +1195,12 @@ static void client_fifo_configure(struct i2c_adapter *adapter,
 						"Disabled the TX FIFO\n");
 				}
 
+				/* Polling mode */
+				if (enable_polling_mode(pd)) {
+					atomic_set(&dev->polling_mode, 0);
+					dev_dbg(dev->device,
+						"Disabled i2c polling mode\n");
+				}
 			}
 		} else {
 			dev_dbg(dev->device,
