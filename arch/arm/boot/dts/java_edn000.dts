@@ -399,6 +399,8 @@
 		temp_period = <0xA09E6C>; /*400ms*/
 		temp_tholds = <7 1>;
 		num_thold = <1>;
+		pll_freq = <0x3D 0 1 0
+				0x50 0 1 0>;
 	};
 
 	sdio1 {

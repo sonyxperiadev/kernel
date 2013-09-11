@@ -259,6 +259,13 @@ config KONA_MEMC
 	 MEMC config params (self refresh, DDRLDO state etc)
 	 can be set through driver platform data.
 
+config MEMC_DFS
+	bool "Enable DFS for Kona MEMC"
+	depends on KONA_MEMC
+	help
+	 Say Y to enable Kona MEMC DFS. MEMC max frequency is
+	 set based on request if MEMC DFS is enabled.
+
 config BRCM_CDC
 	bool "Enable Broadcom CDC driver"
 	help
