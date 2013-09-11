@@ -57,25 +57,32 @@
 #else
 #define KONA_UART0_PA UARTB_BASE_ADDR
 #endif
+static inline unsigned char uart_read(int offset)
+{
+	return *(volatile unsigned char *)(KONA_UART0_PA + offset);
+}
+static inline void uart_write(unsigned char val, int offset)
+{
+	*(volatile unsigned char *)(KONA_UART0_PA + offset) = val;
+}
 
 static inline void putc(int c)
 {
 	/* data should be written to THR register only if\
 	THRE (LSR bit5) is set) */
-	while (0 == (__raw_readl(KONA_UART0_PA + UARTB_LSR_OFFSET) &
-		UARTB_LSR_THRE_MASK)) {
-	}
+	while (0 == (uart_read(UARTB_LSR_OFFSET) &
+		UARTB_LSR_THRE_MASK))
+		;
+	uart_write((unsigned char)c, UARTB_RBR_THR_DLL_OFFSET);
 
-	__raw_writel((unsigned long)c,
-		     KONA_UART0_PA + UARTB_RBR_THR_DLL_OFFSET);
 }
 
 static inline void flush(void)
 {
 	/* Wait for the tx fifo to be empty and last char to be sent */
-	while (0 == (__raw_readl(KONA_UART0_PA + UARTB_LSR_OFFSET) &
-		UARTB_LSR_TEMT_MASK)) {
-	}
+	while (0 == (uart_read(UARTB_LSR_OFFSET) &
+		UARTB_LSR_TEMT_MASK))
+		;
 }
 
 #define arch_decomp_setup()
