@@ -78,8 +78,7 @@ static int kona_tick_set_next_event(unsigned long cycles,
 
 	kona_td = (struct kona_td *)&__get_cpu_var(percpu_kona_td);
 
-	if (likely(cpu_online(smp_processor_id())))
-		ret = kona_timer_set_match_start(kona_td->kona_timer, cycles);
+	ret = kona_timer_set_match_start(kona_td->kona_timer, cycles);
 
 	return ret;
 }
