@@ -359,7 +359,7 @@ extern "C" {
 *
 *  @return CHAL_HANDLE
 ****************************************************************************/
-	CHAL_HANDLE chal_aci_init(cUInt32 baseAddr);
+	CHAL_HANDLE chal_aci_init(void __iomem *baseAddr);
 
 /**
 *

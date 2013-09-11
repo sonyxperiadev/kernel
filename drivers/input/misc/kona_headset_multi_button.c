@@ -161,8 +161,8 @@ struct mic_t {
 	int comp2_irq;
 	int comp2_inv_irq;
 	int comp1_irq;
-	int auxmic_base;
-	int aci_base;
+	void __iomem *auxmic_base;
+	void __iomem *aci_base;
 	CHAL_HANDLE aci_chal_hdl;
 	struct kona_headset_pd *headset_pd;
 #ifdef CONFIG_SWITCH
@@ -360,19 +360,19 @@ static void dump_hw_regs(struct mic_t *p)
 
 	pr_info("\r\n Dumping MIC BIAS registers \r\n");
 	for (i = 0x0; i <= 0x28; i += 0x04) {
-		pr_info("Addr: 0x%x  OFFSET: 0x%x  Value:0x%x \r\n",
+		pr_info("Addr: 0x%p  OFFSET: 0x%x  Value:0x%x \r\n",
 		       p->auxmic_base + i, i, readl(p->auxmic_base + i));
 	}
 
 	pr_info("\r\n \r\n");
 	pr_info("Dumping ACI registers \r\n");
 	for (i = 0x30; i <= 0xD8; i += 0x04) {
-		pr_info("Addr: 0x%x  OFFSET: 0x%x  Value:0x%x \r\n",
+		pr_info("Addr: 0x%p  OFFSET: 0x%x  Value:0x%x \r\n",
 		       p->aci_base + i, i, readl(p->aci_base + i));
 	}
 
 	for (i = 0x400; i <= 0x420; i += 0x04) {
-		pr_info("Addr: 0x%x  OFFSET: 0x%x Value:0x%x \r\n",
+		pr_info("Addr: 0x%p  OFFSET: 0x%x Value:0x%x \r\n",
 		       p->aci_base + i, i, readl(p->aci_base + i));
 	}
 	pr_info("\r\n \r\n");
@@ -2330,7 +2330,7 @@ defined(CONFIG_MACH_HAWAII_SS_CS02_REV00)
 	}
 	mic->auxmic_base = HW_IO_PHYS_TO_VIRT(mem_resource->start);
 
-	pr_info("auxmic base is 0x%x\n", mic->auxmic_base);
+	pr_info("auxmic base is 0x%p\n", mic->auxmic_base);
 
 	mem_resource = platform_get_resource(pdev, IORESOURCE_MEM, 1);
 	if (!mem_resource) {
@@ -2339,7 +2339,7 @@ defined(CONFIG_MACH_HAWAII_SS_CS02_REV00)
 	}
 	mic->aci_base = HW_IO_PHYS_TO_VIRT(mem_resource->start);
 
-	pr_info("aci base is 0x%x\n", mic->aci_base);
+	pr_info("aci base is 0x%p\n", mic->aci_base);
 
 	/* Perform CHAL initialization */
 	mic->aci_chal_hdl = chal_aci_init(mic->aci_base);
@@ -2529,7 +2529,7 @@ hs_regwrite_func(struct device *dev, struct device_attribute *attr,
 		);
 		return n;
 	}
-	pr_info("Writing 0x%x to Address 0x%x \r\n", val,
+	pr_info("Writing 0x%x to Address 0x%p \r\n", val,
 	       mic_dev->aci_base + reg_off);
 	writel(val, mic_dev->aci_base + reg_off);
 	return n;

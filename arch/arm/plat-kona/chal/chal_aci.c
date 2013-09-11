@@ -150,7 +150,7 @@ static struct clk *audioh_apb_clk;
 *             CHAL handle for this ACI Accessory instance
 *
 */
-CHAL_HANDLE chal_aci_init(cUInt32 baseAddr_NotUsed)
+CHAL_HANDLE chal_aci_init(void __iomem *baseAddr_NotUsed)
 {
 	base_addr = (cUInt8 *)KONA_ACI_VA;
 	chal_aci_init_aci((cUInt32)base_addr);
