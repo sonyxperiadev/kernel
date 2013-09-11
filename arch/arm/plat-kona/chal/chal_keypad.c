@@ -35,7 +35,7 @@
 /******************************************************************************/
 
 typedef struct {
-	cUInt32 baseAddr;
+	void __iomem *baseAddr;
 	Boolean pullUpMode;
 	cUInt32 imr0Val;
 	cUInt32 imr1Val;
@@ -153,7 +153,7 @@ cUInt8 chal_keypad_calculate_pin_mask(cUInt8 n)
  *        as requested and key interrupts are enabled.
  *
 *******************************************************************************/
-CHAL_HANDLE chal_keypad_init(cUInt32 baseAddr)
+CHAL_HANDLE chal_keypad_init(void __iomem *baseAddr)
 {
 
 	KeypadDev.baseAddr = baseAddr;

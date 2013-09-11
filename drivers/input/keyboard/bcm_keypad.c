@@ -486,7 +486,7 @@ static int bcm_keypad_probe(struct platform_device *pdev)
 	hwConfig.interruptEdge = CHAL_KEYPAD_INTERRUPT_BOTH_EDGES;
 	hwConfig.debounceTime = CHAL_KEYPAD_DEBOUNCE_32_ms;
 
-	keypadHandle = chal_keypad_init((cUInt32) bcm_keypad_base_addr);
+	keypadHandle = chal_keypad_init(bcm_keypad_base_addr);
 	// disable all key interrupts
 	chal_keypad_disable_interrupts(keypadHandle);
 	// clear any old interrupts

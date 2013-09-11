@@ -129,7 +129,7 @@ extern "C" {
 *  @return none
 *
 ****************************************************************************/
-	CHAL_HANDLE chal_keypad_init(cUInt32 baseAddr);
+	CHAL_HANDLE chal_keypad_init(void __iomem *baseAddr);
 
 /**
 *
