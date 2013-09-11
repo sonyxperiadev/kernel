@@ -776,7 +776,7 @@ static int kona_tmon_probe(struct platform_device *pdev)
 			kfree(pdata);
 			goto err_free_dev_mem;
 		}
-		pdata->base_addr = (u32)ioremap(iomem->start,
+		pdata->base_addr = ioremap(iomem->start,
 					resource_size(iomem));
 		if (!pdata->base_addr) {
 			tmon_dbg(TMON_LOG_ERR, "unable to map in registers\n");
@@ -803,7 +803,7 @@ static int kona_tmon_probe(struct platform_device *pdev)
 			goto err_free_dev_mem;
 		}
 		val = *(addr + 1);
-		pdata->chipreg_addr = (u32)ioremap(be32_to_cpu(*addr),
+		pdata->chipreg_addr = ioremap(be32_to_cpu(*addr),
 				be32_to_cpu(val));
 
 		ret = of_property_read_u32(pdev->dev.of_node,
