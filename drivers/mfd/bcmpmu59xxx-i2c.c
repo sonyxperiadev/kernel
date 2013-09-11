@@ -98,6 +98,12 @@ static void bcmpmu_i2c_log(u32 *buf_v, char rdwr, u8 slave, u8 reg, u8 val)
 
 static inline void bcmpmu_i2c_lock(struct bcmpmu59xxx *bcmpmu)
 {
+	/**
+	 * This mechanism creates a problem in 3.10 kernel
+	 * during suspend (dpm sees this a active wakeup source)
+	 * Disable this for time being
+	 */
+#if 0
 #ifdef CONFIG_HAS_WAKELOCK
 	/*Any thread can lock/unlock a wake lock.
 	   Since PMU I2C APIs can be invoked from mutiple threads,
@@ -110,18 +116,21 @@ static inline void bcmpmu_i2c_lock(struct bcmpmu59xxx *bcmpmu)
 		wake_lock(&bcmpmu->pmu_bus->i2c_lock);
 	spin_unlock(&wl_lock);
 #endif
+#endif
 	mutex_lock(&bcmpmu->pmu_bus->i2c_mutex);
 }
 
 static inline void bcmpmu_i2c_unlock(struct bcmpmu59xxx *bcmpmu)
 {
 	mutex_unlock(&bcmpmu->pmu_bus->i2c_mutex);
+#if 0
 #ifdef CONFIG_HAS_WAKELOCK
 	spin_lock(&wl_lock);
 	BUG_ON(bcmpmu->pmu_bus->ref_count == 0);
 	if (--bcmpmu->pmu_bus->ref_count == 0)
 		wake_unlock(&bcmpmu->pmu_bus->i2c_lock);
 	spin_unlock(&wl_lock);
+#endif
 #endif
 }
 
