@@ -2533,7 +2533,7 @@ static int ccu_clk_set_peri_voltage(struct ccu_clk *ccu_clk, int peri_volt_id,
 static int ccu_clk_set_voltage(struct ccu_clk *ccu_clk, int volt_id, u8 voltage)
 {
 	u32 shift, reg_val;
-	u32 reg_addr;
+	void __iomem *reg_addr;
 
 	if (volt_id >= ccu_clk->freq_count)
 		return -EINVAL;
@@ -2587,7 +2587,7 @@ static int ccu_clk_set_voltage(struct ccu_clk *ccu_clk, int volt_id, u8 voltage)
 static int ccu_clk_get_voltage(struct ccu_clk *ccu_clk, int freq_id)
 {
 	u32 shift, reg_val;
-	u32 reg_addr;
+	 void __iomem *reg_addr;
 	int volt_id;
 
 	/*Ideally we should compare against ccu_clk->freq_count,
@@ -2996,7 +2996,7 @@ int peri_clk_set_policy_mask(struct peri_clk *peri_clk, int policy_id, int mask)
 		    RESET_BIT_USING_MASK(reg_val, peri_clk->policy_bit_mask);
 
 	clk_dbg("%s writing %08x to %08x\n", __func__, reg_val,
-		peri_clk->ccu_clk->ccu_clk_mgr_base + policy_offset);
+		(u32) peri_clk->ccu_clk->ccu_clk_mgr_base + policy_offset);
 	writel(reg_val, CCU_REG_ADDR(peri_clk->ccu_clk, policy_offset));
 
 	return 0;
@@ -3842,7 +3842,7 @@ static int peri_clk_reset(struct clk *clk)
 	    readl(peri_clk->ccu_clk->ccu_reset_mgr_base +
 		  peri_clk->soft_reset_offset);
 	clk_dbg("reset offset: %08x, reg_val: %08x\n",
-		(peri_clk->ccu_clk->ccu_reset_mgr_base +
+		(u32) (peri_clk->ccu_clk->ccu_reset_mgr_base +
 		 peri_clk->soft_reset_offset), reg_val);
 	reg_val = reg_val & ~peri_clk->clk_reset_mask;
 	clk_dbg("writing reset value: %08x\n", reg_val);
@@ -4012,7 +4012,7 @@ static int bus_clk_enable(struct clk *clk, int enable)
 	else
 		reg_val = reg_val & ~bus_clk->clk_en_mask;
 	clk_dbg("%s, writing %08x to clk_gate reg %08x\n", __func__, reg_val,
-		(bus_clk->ccu_clk->ccu_clk_mgr_base +
+		(u32) (bus_clk->ccu_clk->ccu_clk_mgr_base +
 		 bus_clk->clk_gate_offset));
 	writel(reg_val,
 	       CCU_REG_ADDR(bus_clk->ccu_clk, bus_clk->clk_gate_offset));
@@ -4197,7 +4197,7 @@ static int bus_clk_reset(struct clk *clk)
 		  bus_clk->soft_reset_offset);
 
 	clk_dbg("reset offset: %08x, reg_val: %08x\n",
-		(bus_clk->ccu_clk->ccu_clk_mgr_base +
+		(u32) (bus_clk->ccu_clk->ccu_clk_mgr_base +
 		 bus_clk->soft_reset_offset), reg_val);
 	reg_val = reg_val & ~bus_clk->clk_reset_mask;
 	clk_dbg("writing reset val: %08x\n", reg_val);
@@ -4547,7 +4547,7 @@ int __pll_set_desense_offset(struct clk *clk, int offset)
 		goto ret;
 	}
 	clk_dbg("%s %x written to %x\n", __func__, reg,
-		CCU_REG_ADDR(pll_clk->ccu_clk, des->pll_offset_offset));
+		(u32) CCU_REG_ADDR(pll_clk->ccu_clk, des->pll_offset_offset));
 	writel(reg, CCU_REG_ADDR(pll_clk->ccu_clk, des->pll_offset_offset));
 ret:
 	ccu_write_access_enable(pll_clk->ccu_clk, false);
@@ -5463,7 +5463,7 @@ static int core_clk_reset(struct clk *clk)
 	    readl(core_clk->ccu_clk->ccu_reset_mgr_base +
 		  core_clk->soft_reset_offset);
 	clk_dbg("reset offset: %08x, reg_val: %08x\n",
-		(core_clk->ccu_clk->ccu_reset_mgr_base +
+		(u32) (core_clk->ccu_clk->ccu_reset_mgr_base +
 		 core_clk->soft_reset_offset), reg_val);
 	reg_val = reg_val & ~core_clk->clk_reset_mask;
 	clk_dbg("writing reset value: %08x\n", reg_val);

@@ -242,7 +242,7 @@ struct v0x_spec_i2c_cmd_ptr {
 struct pwr_mgr_info {
 	u32 flags;
 	u16 num_pi;
-	u32 base_addr;
+	void __iomem *base_addr;
 	struct i2c_cmd *i2c_cmds;
 	u32 num_i2c_cmds;
 	u8 *i2c_var_data;
@@ -332,7 +332,7 @@ int pwr_mgr_pmu_reg_write_mul(u8 reg_addr_start, u8 slave_id,
 int pwr_mgr_set_i2c_mode(int poll);
 
 #ifdef CONFIG_DEBUG_FS
-int pwr_mgr_debug_init(u32 bmdm_pwr_base);
+int pwr_mgr_debug_init(void __iomem *bmdm_pwr_base);
 #endif
 
 void pwr_mgr_log_active_events(void);

@@ -122,7 +122,7 @@
 
 #define CCU_POLICY_MASK_ENABLE_ALL_MASK	0x7FFFFFFF
 
-#define CCU_REG_ADDR(ccu,offset)	((u32)(ccu->ccu_clk_mgr_base + offset))
+#define CCU_REG_ADDR(ccu, offset)	(ccu->ccu_clk_mgr_base + offset)
 #define CCU_WR_ACCESS_REG(ccu)		CCU_REG_ADDR(ccu, ccu->wr_access_offset)
 #define CCU_LVM_EN_REG(ccu)		CCU_REG_ADDR(ccu, ccu->lvm_en_offset)
 #define CCU_POLICY_FREQ_REG(ccu)	CCU_REG_ADDR(ccu, ccu->policy_freq_offset)
@@ -493,8 +493,8 @@ struct ccu_clk {
 	u32 pol_engine_dis_cnt;
 	u32 write_access_en_count;
 
-	u32 ccu_clk_mgr_base;
-	u32 ccu_reset_mgr_base;
+	void __iomem *ccu_clk_mgr_base;
+	void __iomem *ccu_reset_mgr_base;
 	u32 reset_wr_access_offset;
 	u32 rst_write_access_en_count;
 

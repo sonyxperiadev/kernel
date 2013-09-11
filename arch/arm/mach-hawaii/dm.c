@@ -170,8 +170,8 @@ dma_addr_t drmt_buf_phy;
 u32 addnl_regs_v, proc_regs_v;
 dma_addr_t addnl_regs_p, proc_regs_p;
 
-#define PROC_CLK_REG_ADDR(reg_name)		((u32)(KONA_PROC_CLK_VA + \
-		(KPROC_CLK_MGR_REG_##reg_name##_OFFSET)))
+#define PROC_CLK_REG_ADDR(reg_name)		(KONA_PROC_CLK_VA + \
+		(KPROC_CLK_MGR_REG_##reg_name##_OFFSET))
 
 #define PROC_CLK_ITEM_DEFINE(reg_name)	PROC_CLK_REG_ADDR(reg_name)
 #define ADDNL_REG_DEFINE(base, offset)	((base) + (offset))
@@ -184,7 +184,7 @@ dma_addr_t addnl_regs_p, proc_regs_p;
 /* PROC ccu registers that are lost. Be careful
  * when changing the order etc.
  */
-static u32 proc_clk_regs[] = {
+static void __iomem *proc_clk_regs[] = {
 	PROC_CLK_ITEM_DEFINE(PL310_DIV),
 	PROC_CLK_ITEM_DEFINE(ARM_SWITCH_DIV),
 	PROC_CLK_ITEM_DEFINE(APB_DIV),
@@ -235,7 +235,7 @@ static u32 proc_clk_regs[] = {
 
 /*List of additional registers that needs to
 be saved/restored during A9 dormant*/
-static u32 addnl_regs[] = {
+static void __iomem *addnl_regs[] = {
 	ADDNL_REG_DEFINE(KONA_FUNNEL_VA, CSTF_FUNNEL_CONTROL_OFFSET),
 	ADDNL_REG_DEFINE(KONA_SWSTM_VA, SWSTM_R_CONFIG_OFFSET),
 	ADDNL_REG_DEFINE(KONA_SWSTM_ST_VA, SWSTM_R_CONFIG_OFFSET),
@@ -244,7 +244,7 @@ static u32 addnl_regs[] = {
 };
 
 struct reg_list {
-	u32 addr;
+	void __iomem *addr;
 	u32 val;
 	u32 stored;
 };

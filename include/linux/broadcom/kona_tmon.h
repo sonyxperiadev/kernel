@@ -63,13 +63,13 @@ struct tmon_state {
 };
 
 struct kona_tmon_pdata {
-	u32 base_addr;
+	void __iomem *base_addr;
 	int irq;
 	struct tmon_state *thold;
 	int thold_size;
 	int poll_rate_ms;
 	int hysteresis;
-	u32 chipreg_addr;
+	void __iomem *chipreg_addr;
 	u32 interval_ms;
 	int flags;
 	char const *tmon_apb_clk;

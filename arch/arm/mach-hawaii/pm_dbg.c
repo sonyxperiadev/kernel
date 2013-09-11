@@ -49,10 +49,10 @@ extern void uas_jig_force_sleep(void);
 /* No check for gpio number to speed up the API */
 void dbg_gpio_set(u32 gpio)
 {
-	u32 reg, bit;
+	u32 bit;
+	void __iomem *reg;
 
-	reg = gpio / 32;
-	reg = GPIO_GPORS_BASE_VIRT + reg * 4;
+	reg = GPIO_GPORS_BASE_VIRT + (gpio / 32) * 4;
 	bit = 1 << (gpio % 32);
 
 	__raw_writel(bit, reg);
@@ -62,10 +62,9 @@ EXPORT_SYMBOL_GPL(dbg_gpio_set);
 /* No check for gpio number to speed up the API */
 void dbg_gpio_clr(u32 gpio)
 {
-	u32 reg, bit;
-
-	reg = gpio / 32;
-	reg = GPIO_GPORC_BASE_VIRT + reg * 4;
+	u32 bit;
+	void __iomem *reg;
+	reg = GPIO_GPORC_BASE_VIRT + (gpio / 32) * 4;
 	bit = 1 << (gpio % 32);
 
 	__raw_writel(bit, reg);
@@ -138,7 +137,7 @@ static void dormant_profile_config(u32 on, u32 ns, u32 sec, u32 ref)
 #endif /* DORMANT_PROFILE && CONFIG_A9_DORMANT_MODE */
 u32 dorm_profile_enable;
 
-static u32 lpm_trace_buf[CONFIG_NR_CPUS];
+static void __iomem *lpm_trace_buf[CONFIG_NR_CPUS];
 
 struct debug {
 	int dummy;
@@ -421,7 +420,7 @@ int __init __pmdbg_init(void)
 		return -ENOMEM;
 	}
 	for (i = 0; i < CONFIG_NR_CPUS; i++)
-		lpm_trace_buf[i] = (u32)&trace_v[i*LPM_TRACE_PER_CORE_BUF_SIZE];
+		lpm_trace_buf[i] = &trace_v[i*LPM_TRACE_PER_CORE_BUF_SIZE];
 	return 0;
 }
 

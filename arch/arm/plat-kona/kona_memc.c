@@ -432,7 +432,7 @@ static int kona_memc_probe(struct platform_device *pdev)
 			kfree(pdata);
 			return -ENODEV;
 		}
-		pdata->memc0_ns_base = (u32)ioremap(iomem->start,
+		pdata->memc0_ns_base = ioremap(iomem->start,
 				resource_size(iomem));
 		if (!pdata->memc0_ns_base) {
 			pr_info("unable to map in registers\n");
@@ -447,7 +447,7 @@ static int kona_memc_probe(struct platform_device *pdev)
 			return -EINVAL;
 		}
 		val = *(addr + 1);
-		pdata->chipreg_base = (u32)ioremap(be32_to_cpu(*addr),
+		pdata->chipreg_base = ioremap(be32_to_cpu(*addr),
 				be32_to_cpu(val));
 
 		addr = (u32 *)of_get_property(pdev->dev.of_node,
@@ -457,7 +457,7 @@ static int kona_memc_probe(struct platform_device *pdev)
 			return -EINVAL;
 		}
 		val = *(addr + 1);
-		pdata->memc0_aphy_base = (u32)ioremap(be32_to_cpu(*addr),
+		pdata->memc0_aphy_base = ioremap(be32_to_cpu(*addr),
 				be32_to_cpu(val));
 
 

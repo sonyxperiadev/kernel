@@ -310,7 +310,7 @@ int pwr_mgr_event_trg_enable(int event_id, int event_trg_type)
 
 	writel(reg_val, PWR_MGR_REG_ADDR(reg_offset));
 	pwr_dbg(PWR_LOG_EVENT, "%s:reg_addr:%x value = %x\n", __func__,
-		PWR_MGR_REG_ADDR(reg_offset), reg_val);
+		(u32) PWR_MGR_REG_ADDR(reg_offset), reg_val);
 	spin_unlock_irqrestore(&pwr_mgr_lock, flgs);
 
 	return 0;
@@ -516,7 +516,7 @@ int pwr_mgr_event_set_pi_policy(int event_id, int pi_id,
 	pwr_pi_dbg(pi_id, PWR_LOG_PI,
 		"%s:reg val %08x written to register: %08x\n", __func__,
 		reg_val,
-		PWR_MGR_PI_EVENT_POLICY_ADDR(policy_reg_offset, event_id * 4));
+	(u32) PWR_MGR_PI_EVENT_POLICY_ADDR(policy_reg_offset, event_id * 4));
 
 	spin_unlock_irqrestore(&pwr_mgr_lock, flgs);
 
@@ -1154,7 +1154,7 @@ EXPORT_SYMBOL(pwr_mgr_pm_i2c_sem_unlock);
 
 #endif /* CONFIG_KONA_PWRMGR_ENABLE_HW_SEM_WORKAROUND */
 
-static inline u32 pwr_mgr_pm_i2c_get_cmd_bank_base(int bank)
+static inline void __iomem *pwr_mgr_pm_i2c_get_cmd_bank_base(int bank)
 {
 	u32 bank_off;
 
@@ -1282,10 +1282,10 @@ int pwr_mgr_set_v0x_specific_i2c_cmd_ptr(int v0x,
 	writel(reg_val, PWR_MGR_REG_ADDR(offset_addl));
 #endif
 	pwr_dbg(PWR_LOG_CONFIG, "%s: %x set to %x register\n", __func__,
-			reg_val, PWR_MGR_REG_ADDR(offset));
+			reg_val, (u32) PWR_MGR_REG_ADDR(offset));
 #ifdef CONFIG_KONA_PWRMGR_REV2
 	pwr_dbg(PWR_LOG_CONFIG, "%s: %x set to %x register\n", __func__,
-			reg_val, PWR_MGR_REG_ADDR(offset_addl));
+			reg_val, (u32) PWR_MGR_REG_ADDR(offset_addl));
 #endif
 	spin_unlock_irqrestore(&pwr_mgr_lock, flgs);
 	return 0;
@@ -1299,7 +1299,7 @@ int pwr_mgr_pm_i2c_cmd_write(const struct i2c_cmd *i2c_cmd, u32 num_cmds)
 	u8 cmd0, cmd1;
 	u8 cmd0_data, cmd1_data;
 	unsigned long flgs;
-	u32 cmd_reg_base;
+	void __iomem *cmd_reg_base;
 	u32 reg_offset;
 	int bank;
 
@@ -1349,7 +1349,7 @@ int pwr_mgr_pm_i2c_cmd_write(const struct i2c_cmd *i2c_cmd, u32 num_cmds)
 		reg_val = I2C_COMMAND_WORD(cmd1, cmd1_data, cmd0, cmd0_data);
 		writel(reg_val, cmd_reg_base + reg_offset);
 		pwr_dbg(PWR_LOG_CONFIG, "inx [%d] bank %d %x set to %x register\n",
-				inx, bank, reg_val, cmd_reg_base + reg_offset);
+			inx, bank, reg_val, (u32) (cmd_reg_base + reg_offset));
 	}
 
 	spin_unlock_irqrestore(&pwr_mgr_lock, flgs);
@@ -1409,8 +1409,8 @@ int pwr_mgr_pm_i2c_var_data_write(const u8 *var_data, int count)
 		       (PWRMGR_POWER_MANAGER_I2C_VARIABLE_DATA_LOCATION_01_OFFSET
 			+ inx * 4));
 		pwr_dbg(PWR_LOG_CONFIG, "%s: %x set to %x register\n",
-				__func__, reg_val, PWR_MGR_REG_ADDR
-			(PWRMGR_POWER_MANAGER_I2C_VARIABLE_DATA_LOCATION_01_OFFSET
+				__func__, reg_val, (u32) PWR_MGR_REG_ADDR
+		(PWRMGR_POWER_MANAGER_I2C_VARIABLE_DATA_LOCATION_01_OFFSET
 			 + inx * 4));
 	}
 
@@ -1796,7 +1796,7 @@ static irqreturn_t pwr_mgr_irq_handler(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-static u32 pwr_mgr_i2c_cmd_off_to_reg(int cmd_offset)
+static void __iomem *pwr_mgr_i2c_cmd_off_to_reg(int cmd_offset)
 {
 	u32 offset;
 	int bank;
@@ -2710,7 +2710,7 @@ static int pwr_mgr_pm_i2c_var_data_modify(u8 index, u8 val)
 
 	spin_unlock_irqrestore(&pwr_mgr_lock, flgs);
 	pwr_dbg(PWR_LOG_CONFIG, "%s: %x set to %x register\n", __func__,
-		reg_val, PWR_MGR_REG_ADDR
+		reg_val, (u32) PWR_MGR_REG_ADDR
 		(PWRMGR_POWER_MANAGER_I2C_VARIABLE_DATA_LOCATION_01_OFFSET
 		+ reg_inx * 4));
 
@@ -2835,7 +2835,8 @@ static ssize_t get_pm_mgr_dbg_bus(struct file *file,
 	u32 len = 0;
 	char out_str[20];
 	u32 bus_val;
-	u32 reg = PWR_MGR_REG_ADDR(PWRMGR_POWER_MANAGER_I2C_ENABLE_OFFSET);
+	void __iomem *reg =
+		PWR_MGR_REG_ADDR(PWRMGR_POWER_MANAGER_I2C_ENABLE_OFFSET);
 
 	memset(out_str, 0, sizeof(out_str));
 	bus_val = readl(reg) &
@@ -2868,7 +2869,7 @@ static ssize_t set_bmdm_mgr_dbg_bus(struct file *file, char const __user *buf,
 	u32 dbg_bit_sel  = 0;
 	char input_str[100];
 	u32 reg_val;
-	u32 reg_addr = (u32)file->private_data +
+	void __iomem *reg_addr = file->private_data +
 				BMDM_PWRMGR_DEBUG_AND_COUNTER_CONTROL_OFFSET;
 	if (count > 100)
 		len = 100;
@@ -2902,7 +2903,7 @@ static ssize_t get_bmdm_mgr_dbg_bus(struct file *file,
 	u32 len = 0;
 	char out_str[20];
 	u32 bus_val;
-	u32 reg = (u32)file->private_data +
+	void __iomem *reg = file->private_data +
 				BMDM_PWRMGR_DEBUG_AND_COUNTER_CONTROL_OFFSET;
 
 	memset(out_str, 0, sizeof(out_str));
@@ -3232,7 +3233,7 @@ static struct file_operations set_pmu_volt_inx_tbl_fops = {
 
 struct dentry *dent_pwr_root_dir = NULL;
 #ifdef CONFIG_DELAYED_PM_INIT
-int pwr_mgr_debug_init(u32 bmdm_pwr_base)
+int pwr_mgr_debug_init(void __iomem *bmdm_pwr_base)
 #else
 int __init pwr_mgr_debug_init(u32 bmdm_pwr_base)
 #endif

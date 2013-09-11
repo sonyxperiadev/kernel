@@ -842,7 +842,7 @@ static int pi_reset(struct pi *pi, int sub_domain)
 	reg_val = readl(ccu_clk->ccu_reset_mgr_base +
 			pi->pi_info.pd_soft_reset_offset);
 	pi_dbg(pi->id, PI_LOG_RESET, "reset offset: %08x, reg_val: %08x\n",
-	       (ccu_clk->ccu_reset_mgr_base +
+	       (u32) (ccu_clk->ccu_reset_mgr_base +
 		pi->pi_info.pd_soft_reset_offset), reg_val);
 
 	switch (sub_domain) {

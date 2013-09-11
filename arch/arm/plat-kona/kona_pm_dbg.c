@@ -64,8 +64,8 @@ static u32 handle_simple_parm(struct snapshot *s);
 static u32 handle_clk_parm(struct snapshot *s);
 static u32 handle_ahb_reg_parm(struct snapshot *s);
 static u32 handle_user_defined_parm(struct snapshot *s);
-static void snapshot_add_reg(u32 reg, u32 mask, u32 good);
-static void snapshot_del_reg(u32 reg);
+static void snapshot_add_reg(void __iomem *reg, u32 mask, u32 good);
+static void snapshot_del_reg(void __iomem *reg);
 static void snapshot_show_list(void);
 
 /*****************************************************************************
@@ -133,11 +133,11 @@ static void handle_snapshot_list(const char *p)
 	if (cmd == 'a') {
 		/* coverity[secure_coding] */
 		sscanf(p, "%x %x %x", &reg, &mask, &good);
-		snapshot_add_reg(reg, mask, good);
+		snapshot_add_reg((void __iomem *) reg, mask, good);
 	} else if (cmd == 'r') {
 		/* coverity[secure_coding] */
 		sscanf(p, "%x", &reg);
-		snapshot_del_reg(reg);
+		snapshot_del_reg((void __iomem *) reg);
 	} else {
 		snapshot_show_list();
 	}
@@ -235,11 +235,12 @@ static DEFINE_MUTEX(snapshot_list_lck);
  *                        DYNAMIC SNAPSHOT LIST HANDLING                     *
  *****************************************************************************/
 
-static void snapshot_add_reg(u32 reg, u32 mask, u32 good)
+static void snapshot_add_reg(void __iomem *reg, u32 mask, u32 good)
 {
 	struct snapshot *s = NULL;
 
-	pr_info("Adding: reg:0x%x mask:0x%x good:0x%x\n", reg, mask, good);
+	pr_info("Adding: reg:0x%x mask:0x%x good:0x%x\n",
+					(u32) reg, mask, good);
 
 	mutex_lock(&snapshot_list_lck);
 	list_for_each_entry(s, &snapshot_list, node) {
@@ -266,10 +267,10 @@ static void snapshot_add_reg(u32 reg, u32 mask, u32 good)
 	mutex_unlock(&snapshot_list_lck);
 }
 
-static void snapshot_del_reg(u32 reg)
+static void snapshot_del_reg(void __iomem *reg)
 {
 	struct snapshot *s = NULL;
-	pr_info("Removing: 0x%x\n", reg);
+	pr_info("Removing: 0x%x\n", (u32) reg);
 
 	mutex_lock(&snapshot_list_lck);
 	list_for_each_entry(s, &snapshot_list, node) {
@@ -288,11 +289,11 @@ static void snapshot_show_list(void)
 	int i;
 
 	for (i = 0; i < snapshot_len; i++)
-		pr_info("0x%08x\n", snapshot[i].reg);
+		pr_info("0x%08x\n", (u32) snapshot[i].reg);
 
 	mutex_lock(&snapshot_list_lck);
 	list_for_each_entry(s, &snapshot_list, node)
-		pr_info("0x%08x\n", s->reg);
+		pr_info("0x%08x\n", (u32) s->reg);
 	mutex_unlock(&snapshot_list_lck);
 }
 
@@ -419,8 +420,8 @@ void snapshot_show(void)
 
 	list_for_each_entry(s, &snapshot_list, node) {
 		if (s->curr != s->good)
-			pr_info("[%d]: expected:0x%08x mismatch:0x%08x\n",
-				s->reg, s->good, s->curr);
+			pr_info("[%x]: expected:0x%08x mismatch:0x%08x\n",
+				(u32) s->reg, s->good, s->curr);
 	}
 }
 EXPORT_SYMBOL(snapshot_show);

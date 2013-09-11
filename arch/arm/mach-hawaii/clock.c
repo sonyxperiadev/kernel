@@ -7259,7 +7259,7 @@ static int mm_ccu_get_freq_policy(struct ccu_clk * ccu_clk, int policy_id)
 static int mm_ccu_clk_set_voltage(struct ccu_clk * ccu_clk, int volt_id, u8 voltage)
 {
 	u32 shift, reg_val;
-	u32 reg_addr;
+	void __iomem *reg_addr;
 
 	if(volt_id >= ccu_clk->freq_count)
 		return -EINVAL;
@@ -7313,7 +7313,7 @@ static int mm_ccu_clk_set_voltage(struct ccu_clk * ccu_clk, int volt_id, u8 volt
 static int mm_ccu_clk_get_voltage(struct ccu_clk * ccu_clk, int freq_id)
 {
 	u32 shift, reg_val;
-	u32 reg_addr;
+	void __iomem *reg_addr;
 	int volt_id;
 
 	/*Ideally we should compare against ccu_clk->freq_count,but anyways
@@ -7995,7 +7995,12 @@ int debug_bus_mux_sel(int mux_sel, int mux_param, u32 dbg_bit_sel)
 
 	} else if (mux_sel == 1) {  /*SDDATA*/
 		if (!IS_ERR_OR_NULL(rgltr) && !reg_enabled) {
-			regulator_enable(rgltr);
+			if (regulator_enable(rgltr)) {
+				regulator_put(rgltr);
+				rgltr = NULL;
+				pr_err("regulator_enable failed\n");
+				return -1;
+			}
 			reg_enabled = 1;
 		}
 		i = 0;

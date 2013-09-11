@@ -25,7 +25,7 @@ enum {
 struct snapshot {
 	void *data;		/* data for snapshot handler        */
 	u32 type;		/* snapshot type                    */
-	u32 reg;		/* register to be read              */
+	void __iomem *reg;	/* register to be read              */
 	u32 mask;		/* mask for data of interest        */
 	u32 good;		/* expected value for sleep entry   */
 	char *name;
