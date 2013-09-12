@@ -1851,6 +1851,7 @@ static int ov5648_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 int set_flash_mode(struct i2c_client *client, int mode)
 {
 	struct ov5648 *ov5648 = to_ov5648(client);
+	int ret = 0;
 	if (ov5648->flashmode == mode)
 		return 0;
 #ifdef CONFIG_VIDEO_AS3643
@@ -1887,6 +1888,7 @@ int set_flash_mode(struct i2c_client *client, int mode)
 	|| defined(CONFIG_MACH_JAVA_C_5606)
 		if ((mode == FLASH_MODE_OFF)
 			|| (mode == FLASH_MODE_TORCH_OFF)) {
+			ret = del_timer(&timer);
 			gpio_set_value(TORCH_EN, 0);
 			gpio_set_value(FLASH_EN, 0);
 		} else if (mode == FLASH_MODE_TORCH_ON) {

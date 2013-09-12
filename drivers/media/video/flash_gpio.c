@@ -44,7 +44,8 @@ void gpio_flash_torch_off(void);
 void gpio_flash_flash_on(unsigned long timeout);
 void gpio_flash_flash_off(void);
 */
-
+static struct timer_list timer;
+static char *msg = "hello world";
 void gpio_flash_torch_on(void)
 {
 	gpio_set_value(GPIO_TORCH_SEL, 0);
@@ -56,6 +57,7 @@ void gpio_flash_torch_off(void)
 {
 	gpio_set_value(GPIO_TORCH_SEL, 0);
 	gpio_set_value(GPIO_FLASH_EN, 0);
+	del_timer(&timer);
 	pr_debug(KERN_ERR "gpio flash torch off\n");
 }
 
@@ -66,8 +68,7 @@ void gpio_flash_flash_off(void)
 	pr_debug(KERN_ERR "gpio flash flash off\n");
 }
 
-static struct timer_list timer;
-static char *msg = "hello world";
+
 static void timeout_func(unsigned long lparam)
 {
 	gpio_flash_torch_off();
