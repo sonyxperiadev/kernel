@@ -31,9 +31,9 @@
  */
 struct kona_pl330_data {
 	/* Non Secure DMAC virtual base address */
-	unsigned int dmac_ns_base;
+	void __iomem *dmac_ns_base;
 	/* Secure DMAC virtual base address */
-	unsigned int dmac_s_base;
+	void __iomem *dmac_s_base;
 	/* # of PL330 dmac channels 'configurable' */
 	unsigned int num_pl330_chans;
 	/* DMAC irq number, connected to GIC */

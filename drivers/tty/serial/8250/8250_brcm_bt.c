@@ -25,7 +25,6 @@ static unsigned char
 bt_serial8250_rx_chars(struct uart_8250_port *up, unsigned char lsr)
 {
 	struct uart_port *port = &up->port;
-	struct tty_struct *tty = port->state->port.tty;
 	unsigned char ch;
 	int max_count = 256;
 	char flag;

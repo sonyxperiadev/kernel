@@ -19,10 +19,10 @@
 #include <linux/interrupt.h>
 #include <linux/workqueue.h>
 #include <linux/mutex.h>
-#include <linux/gpio.h>
 #include <linux/moduleparam.h>
 #include <linux/uaccess.h>
 #include <mach/gpio.h>
+#include <linux/gpio.h>
 #ifdef CONFIG_DEBUG_FS
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>

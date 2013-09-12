@@ -183,18 +183,20 @@ extern "C" {
 		cUInt32 HUBOCP2ATB_base;
 #endif				/*_HERA_ */
 		/* GIC Trace (Apps_Subsystem.Processor.APB0) */
-		cUInt32 GICTR_base;
-		cUInt32 CHIPREGS_base;	/* CHIPREGS Block  */
-		cUInt32 PWRMGR_base;	/* PWRMGR Block  (Hub.Power_Manager) */
-		cUInt32 FUNNEL_base[CHAL_TRACE_MAX_FUNNEL];
-		cUInt32 AXITRACE_base[CHAL_TRACE_MAX_AXITRACE];
-		cUInt32 CTI_base[CHAL_TRACE_MAX_CTI];
-		cUInt32 ETB_base;
-		cUInt32 ETB2AXI_base;
-		cUInt32 GLOBPERF_base;	/* Global Counters Registers */
-		cUInt32 ATB_STM_base;	/* ATB_STM register block (Hub.APB9) */
+		void __iomem *GICTR_base;
+		void __iomem *CHIPREGS_base;	/* CHIPREGS Block  */
+		/* PWRMGR Block  (Hub.Power_Manager) */
+		void __iomem *PWRMGR_base;
+		void __iomem *FUNNEL_base[CHAL_TRACE_MAX_FUNNEL];
+		void __iomem *AXITRACE_base[CHAL_TRACE_MAX_AXITRACE];
+		void __iomem *CTI_base[CHAL_TRACE_MAX_CTI];
+		void __iomem *ETB_base;
+		void __iomem *ETB2AXI_base;
+		void __iomem *GLOBPERF_base;	/* Global Counters Registers */
+		/* ATB_STM register block (Hub.APB9) */
+		void __iomem *ATB_STM_base;
 		/* SWSTM register block (Apps_Subsystem.Processor.APB0) */
-		cUInt32 SW_STM_base[CHAL_TRACE_MAX_SWSTM];
+		void __iomem *SW_STM_base[CHAL_TRACE_MAX_SWSTM];
 	} CHAL_TRACE_DEV_t;
 
 /**

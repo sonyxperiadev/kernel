@@ -109,8 +109,8 @@
 #include <linux/broadcom/bcm_bzhw.h>
 #endif
 
-#ifdef CONFIG_BCM_BT_LPM
-#include <linux/broadcom/bcmbt_lpm.h>
+#if defined(CONFIG_BCM_BT_LPM)
+#include <linux/broadcom/bcm-bt-lpm.h>
 #endif
 
 #if defined(CONFIG_BCMI2CNFC)
@@ -1203,7 +1203,7 @@ static struct kona_pl330_data hawaii_pl330_pdata = {
 };
 #endif
 
-#ifdef CONFIG_BCM_BT_LPM
+#if defined(CONFIG_BCM_BT_LPM) && !defined(CONFIG_OF_DEVICE)
 #define GPIO_BT_WAKE	32
 #define GPIO_HOST_WAKE	72
 
@@ -1502,7 +1502,7 @@ static struct platform_device *hawaii_devices[] __initdata = {
 	&hawaii_backlight_device,
 #endif
 
-#ifdef CONFIG_BCM_BT_LPM
+#if defined(CONFIG_BCM_BT_LPM) && !defined(CONFIG_OF_DEVICE)
 	&board_bcmbt_lpm_device,
 #endif
 

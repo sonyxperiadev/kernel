@@ -113,7 +113,7 @@ void read_new(struct gps_irq *ac_data)
 
 	while (1) {
 		ret = i2c_master_recv(ac_data->client,
-			&ac_data->rd_buffer[ac_data->rbuffer_wp],
+			(char *)&ac_data->rd_buffer[ac_data->rbuffer_wp],
 			1); /*lets read 1 byte first */
 
 		plen = ac_data->rd_buffer[ac_data->rbuffer_wp][0];
@@ -123,7 +123,7 @@ void read_new(struct gps_irq *ac_data)
 		/* printk(KERN_INFO "read %d %",plen); */
 
 		ret = i2c_master_recv(ac_data->client,
-			&ac_data->rd_buffer[ac_data->rbuffer_wp],
+			(char *)&ac_data->rd_buffer[ac_data->rbuffer_wp],
 			plen+1);
 		/* now get rid of the length byte */
 		for (i = 0; i < plen; ++i)
@@ -160,16 +160,16 @@ void read_workqueue(struct work_struct *work)
 {
 	/* printk(KERN_INFO "read_workqueue 1\n"); */
 	int i;
-	struct gps_irq *ac_data =
+	int counter, ret;
+	int kk;
+
+struct gps_irq *ac_data =
 		container_of(work, struct gps_irq, read_task);
 	--cnt;
 
 #if defined(CONFIG_NEW_GPSCHIP_I2C)
 	read_new(ac_data);
 #else
-	int counter, ret;
-	int kk;
-
 	kk = 0;
 	counter = 0;
 	i = __gpio_get_value(ac_data->host_req_pin);
@@ -178,7 +178,7 @@ void read_workqueue(struct work_struct *work)
 
 	do	{
 		ret = i2c_master_recv(ac_data->client,
-			&ac_data->rd_buffer[ac_data->rbuffer_wp],
+			(char *)&ac_data->rd_buffer[ac_data->rbuffer_wp],
 			I2C_PACKET_SIZE);
 
 		if (ret != I2C_PACKET_SIZE) {
@@ -228,9 +228,6 @@ static int gps_irq_open(struct inode *inode, struct file *filp)
 {
 	int ret = 0;
 	/* This packet enables host req pin */
-	unsigned char test[] = {
-		0xfe, 0x00, 0xfd, 0xc0, 0x4c, 0x01, 0x00, 0x00, 0x00, 0xfc};
-
 	struct gps_irq *ac_data = container_of(filp->private_data,
 							   struct gps_irq,
 							   misc);
@@ -261,9 +258,7 @@ static int gps_irq_open(struct inode *inode, struct file *filp)
 
 static int gps_irq_release(struct inode *inode, struct file *filp)
 {
-	struct gps_irq *ac_data = container_of(filp->private_data,
-							   struct gps_irq,
-							   misc);
+
 #ifdef POLLING
 	if ((int)poll_thread_task != -ENOMEM)
 		kthread_stop(poll_thread_task);

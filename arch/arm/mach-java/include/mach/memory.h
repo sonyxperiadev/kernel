@@ -27,6 +27,7 @@
 #define __PLAT_KONA_MEMORY_H
 
 #include <mach/vmalloc.h>
+#include <mach/io.h>
 
 #ifndef PHYS_OFFSET
 #define PHYS_OFFSET	(CONFIG_BCM_RAM_BASE+CONFIG_BCM_RAM_START_RESERVED_SIZE)
@@ -50,7 +51,7 @@
 
 /* APB5, APB9 and SRAM */
 #define IO_G1_PHYS		0x34000000
-#define IO_G1_VIRT		(IO_START_VA)
+#define IO_G1_VIRT		IOMEM(IO_START_VA)
 #define IO_G1_SIZE		(SZ_1M)
 
 /* APB6, PM, APB10*/

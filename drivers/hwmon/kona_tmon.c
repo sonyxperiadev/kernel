@@ -658,7 +658,7 @@ static int kona_tmon_suspend(struct platform_device *pdev, pm_message_t state)
 {
 	atomic_set(&kona_tmon->suspend, 1);
 	if (kona_tmon->poll_inx != INVALID_INX) {
-		flush_delayed_work_sync(&kona_tmon->poll_work);
+		flush_delayed_work(&kona_tmon->poll_work);
 		tmon_dbg(TMON_LOG_DBG, "%s: cancelling work queue\n", __func__);
 	}
 	return 0;

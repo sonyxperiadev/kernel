@@ -199,7 +199,7 @@ int kona_trace_set_sw_stm(int on)
 static int kona_trace_init(void)
 {
 	int status = -EIO;
-	int base;
+	void __iomem *base;
 
 	kona_trace_handle = NULL;
 	base = HW_IO_PHYS_TO_VIRT(PAD_CTRL_BASE_ADDR);

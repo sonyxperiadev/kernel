@@ -976,24 +976,24 @@ config RECOVERY
 	depends on ARCH_KONA && MMC_BLOCK
 	default n
 
-config BCM_RFKILL
-	bool "BCM RFKILL driver support for Bluetooth"
+config BCM_BT_RFKILL
+	bool "BCM BT RFKILL driver support for Bluetooth"
 	depends on RFKILL
 	default n
 	help
-	  This driver adds RFKILL support for Broadcom bluetooth chips
-	  If your platform uses a BCMxxx chip for BT, FM or GPS connectivity
-	  say Y.
-
-	  If unsure, say N.
+	  This driver adds RFKILL support for Broadcom
+	  Bluetooth. By default it should be set as N.
+	  Say Y here if you want to enable Broadcom
+	  Bluetooth RFKILL.
 
 config BCM_BT_LPM
 	bool "BCM BT Low Power support"
 	default n
 	help
-	  This driver adds LPM tty ldisc support for Broadcom bluetooth BT chips.
-	  If your platform uses a BCMxxxx chip for BT, FM or GPS connectivity
-	  and requires N_BRCM_HCI line discpline, say Y.
+	  This driver adds Bluetooth low power mode line discipline
+	  support for Broadcom Bluetooth chips. By default it should
+	  be set as N. Say Y if you want to enable Low power mode
+	  functionality.
 	  If not sure, say N.
 
 config BCM_BT_GPS_SELFTEST
