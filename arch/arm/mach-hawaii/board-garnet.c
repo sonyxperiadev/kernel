@@ -105,20 +105,18 @@
 #include <linux/haptic.h>
 #endif
 
-#if (defined(CONFIG_BCM_RFKILL) || defined(CONFIG_BCM_RFKILL_MODULE))
-#include <linux/broadcom/bcmbt_rfkill.h>
+#if ((defined(CONFIG_BCM_RFKILL) || defined(CONFIG_BCM_RFKILL_MODULE)) && \
+	!defined(CONFIG_OF_DEVICE))
+#include <linux/broadcom/bcm-bt-rfkill.h>
 #endif
 
 #ifdef CONFIG_BCM_BZHW
 #include <linux/broadcom/bcm_bzhw.h>
 #endif
 
-#ifdef CONFIG_BCM_BT_LPM
-#include <linux/broadcom/bcmbt_lpm.h>
+#if defined(CONFIG_BCM_BT_LPM) && !defined(CONFIG_OF_DEVICE)
+#include <linux/broadcom/bcm-bt-lpm.h>
 #endif
-
-
-
 
 #if defined(CONFIG_BMP18X) || defined(CONFIG_BMP18X_I2C) || defined(CONFIG_BMP18X_I2C_MODULE)
 #include <linux/bmp18x.h>
@@ -1051,14 +1049,14 @@ static struct kona_pl330_data hawaii_pl330_pdata = {
 };
 #endif
 
-#ifdef CONFIG_BCM_BT_LPM
+#if defined(CONFIG_BCM_BT_LPM) && !defined(CONFIG_OF_DEVICE)
+
 #define GPIO_BT_WAKE	32
 #define GPIO_HOST_WAKE	72
 
-static struct bcmbt_platform_data brcm_bt_lpm_data = {
+static struct bcm_bt_lpm_platform_data brcm_bt_lpm_data = {
 	.bt_wake_gpio = GPIO_BT_WAKE,
 	.host_wake_gpio = GPIO_HOST_WAKE,
-	.bt_uart_port = 1,
 };
 
 static struct platform_device board_bcmbt_lpm_device = {
@@ -1334,7 +1332,6 @@ static struct platform_device *hawaii_devices[] __initdata = {
 #if defined(CONFIG_BCM_BT_LPM) && !defined (CONFIG_OF_DEVICE)
 	&board_bcmbt_lpm_device,
 #endif
-
 
 #ifdef CONFIG_VIDEO_KONA
 	&hawaii_unicam_device,
