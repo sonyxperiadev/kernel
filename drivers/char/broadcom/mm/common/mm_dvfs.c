@@ -194,8 +194,10 @@ dvfs_work_end:
 	raw_notifier_call_chain(&mm_dvfs->mm_common->notifier_head, \
 					MM_FMWK_NOTIFY_DVFS_UPDATE, \
 					(void *)mm_dvfs->requested_mode);
-	pi_mgr_dfs_request_update(&(mm_dvfs->dev_dfs_node), \
-			mm_dvfs->requested_mode);
+	if (pi_mgr_dfs_request_update(&(mm_dvfs->dev_dfs_node), \
+			mm_dvfs->requested_mode)) {
+		pr_err("%s: failed to update dfs request\n", __func__);
+	}
 
 }
 
@@ -262,8 +264,10 @@ void *mm_dvfs_init(struct mm_common *mm_common, \
 		pr_err("failed to register PI DFS request for %s", dev_name);
 		return NULL;
 		}
-	pi_mgr_dfs_request_update(&(mm_dvfs->dev_dfs_node), \
-				mm_dvfs->requested_mode);
+	if (pi_mgr_dfs_request_update(&(mm_dvfs->dev_dfs_node), \
+				mm_dvfs->requested_mode)) {
+		pr_err("%s: failed to update dfs request\n", __func__);
+	}
 
 	return mm_dvfs;
 }

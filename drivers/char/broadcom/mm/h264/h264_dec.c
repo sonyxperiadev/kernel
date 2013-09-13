@@ -52,13 +52,11 @@ void decodeSlice(void *id, struct dec_info_t *dec_info)
 					}
 					h264_write(id, GET_OFFSET(i), dec_regs[i].value);
 					/*Trying to see the client is planning to wait for the reset*/
-					if ((GET_OFFSET(i+1) == H264_REG_MAINCTL_OFFSET) &&
-						(IS_WRITE(i+1) == 0)) {
-						for (j = 0; j < RESET_TRY; j++) {
-							temp = h264_read(id, GET_OFFSET(i));
-							if ((temp & 0x1) == 0)
-								break;
-						}
+					for (j = 0; j < RESET_TRY; j++) {
+						temp = h264_read(id, \
+								GET_OFFSET(i));
+					if ((temp & 0x1) == 0)
+							break;
 					}
 				} else {
 					h264_write(id, GET_OFFSET(i), dec_regs[i].value);
