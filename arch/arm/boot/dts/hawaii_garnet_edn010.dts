@@ -187,19 +187,15 @@
 		hs-ref-frequency = <26000000>;
 	};
 
-	bluetooth-btlpm {
-		compatible = "bcm,btlpm";
-		bt-wake-gpio = <32>;
-		host-wake-gpio = <72>;
-		bt-uart-port = <1>;
+	bcm-bt-btlpm {
+		compatible = "bcm,bcm-bt-lpm";
+		bt-wake-gpio = <&gpio 32 0>;
+		host-wake-gpio = <&gpio 72 0>;
 	};
 
-	bcmbt-rfkill {
-		compatible = "bcm,bcmbt-rfkill";
-		verg-gpio = <28>;
-		n-reset-gpio = <0xFFFFFFFF>;
-		aux0-gpio = <0xFFFFFFFF>; /* CLK32 */
-		aux1-gpio = <0xFFFFFFFF>; /* UARTB_SEL,probably not required */
+	bcm-bt-rfkill {
+		compatible = "bcm,bcm-bt-rfkill";
+		bcm-bt-rfkill-vreg-gpio = <&gpio 28 0>;
 	};
 
 	iommu_mm: iommu-mm {

@@ -99,7 +99,7 @@
 #include <linux/haptic.h>
 #endif
 
-#if ((defined(CONFIG_BCM_RFKILL) || defined(CONFIG_BCM_RFKILL_MODULE)) && \
+#if ((defined(CONFIG_BCM_BT_RFKILL) || defined(CONFIG_BCM_RFKILL_MODULE)) && \
 	!defined(CONFIG_OF_DEVICE))
 #include <linux/broadcom/bcm-bt-rfkill.h>
 #endif
