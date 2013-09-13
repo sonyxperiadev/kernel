@@ -55,6 +55,9 @@
 
 #define OV5648_MCLK_26MHZ
 
+static int Is_SnapToPrev_expo;
+static int Is_SnapToPrev_gain;
+
 /* OV5648 has only one fixed colorspace per pixelcode */
 struct ov5648_datafmt {
 	enum v4l2_mbus_pixelcode code;
@@ -1334,6 +1337,11 @@ static int ov5648_get_gain(struct i2c_client *client,
 	ov5648_reg_read_multi(client, OV5648_REG_AGC_HI, gain_buf, 2);
 	gain_code = ((gain_buf[0] & 0x3f) << 8) + gain_buf[1];
 
+	if (Is_SnapToPrev_gain == 1) {
+		gain_code = ov5648->gain_read_buf[0];
+		Is_SnapToPrev_gain = 0;
+		}
+
 	if (ov5648->aecpos_delay > 0) {
 		ov5648->gain_read_buf[ov5648->aecpos_delay] = gain_code;
 		gain_code = ov5648->gain_read_buf[0];
@@ -1363,6 +1371,11 @@ static int ov5648_get_exposure(struct i2c_client *client,
 		((exp_buf[0] & 0xf) << 16) +
 		((exp_buf[1] & 0xff) << 8) +
 		(exp_buf[2] & 0xf0);
+
+	if (Is_SnapToPrev_expo == 1) {
+		exp_code = ov5648->exp_read_buf[0];
+		Is_SnapToPrev_expo = 0;
+		}
 
 	if (ov5648->aecpos_delay > 0) {
 		ov5648->exp_read_buf[ov5648->aecpos_delay] = exp_code;
@@ -1574,6 +1587,11 @@ static int ov5648_set_mode(struct i2c_client *client, int new_mode_idx)
 	}
 	if (ret)
 		return ret;
+
+	if (new_mode_idx == OV5648_MODE_2592x1944P15) {
+		Is_SnapToPrev_expo = 1;
+		Is_SnapToPrev_gain = 1;
+		}
 
 	ov5648->mode_idx = new_mode_idx;
 	ov5648->line_length  = ov5648_mode[new_mode_idx].line_length_ns;
@@ -2057,6 +2075,7 @@ static int ov5648_init(struct i2c_client *client)
 	ov5648->flashmode         = FLASH_MODE_OFF;
 	ov5648->flash_intensity   = OV5648_FLASH_INTENSITY_DEFAULT;
 	ov5648->flash_timeout     = OV5648_FLASH_TIMEOUT_DEFAULT;
+
 	dev_dbg(&client->dev, "Sensor initialized\n");
 	return ret;
 }
