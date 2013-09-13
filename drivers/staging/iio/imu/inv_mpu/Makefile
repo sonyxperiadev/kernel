@@ -2,7 +2,7 @@
 # Makefile for Invensense inv-mpu-iio device.
 #
 
-obj-$(CONFIG_INV_MPU_IIO) += inv-mpu-iio.o
+obj-$(CONFIG_SENSORS_MPU3050_IIO) += inv-mpu-iio.o
 
 inv-mpu-iio-objs := inv_mpu_core.o
 inv-mpu-iio-objs += inv_mpu_ring.o

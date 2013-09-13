@@ -38,9 +38,6 @@
 #include <linux/of_fdt.h>
 #include <mach/pinmux.h>
 
-#ifdef CONFIG_ANDROID_PMEM
-#include <linux/android_pmem.h>
-#endif
 #ifdef CONFIG_ION_BCM_NO_DT
 #include <linux/ion.h>
 #include <linux/broadcom/bcm_ion.h>
@@ -240,6 +237,14 @@ void send_chrgr_insert_event(enum bcmpmu_event_t event, void *para);
 #include <linux/gp2ap002_dev.h>
 #include <linux/gp2ap002.h>
 
+#ifdef CONFIG_MOBICORE_DRIVER
+struct mobicore_data mobicore_plat_data = {
+	.name = "mobicore",
+	.mobicore_base = 0x9d800000,
+	.mobicore_size = 0x00300000,
+};
+#endif
+
 extern int hawaii_wifi_status_register(
 		void (*callback)(int card_present, void *dev_id),
 			    void *dev_id);
@@ -311,15 +316,6 @@ int reset_pwm_padcntrl(void)
 	ret = pinmux_set_pin_config(&new_pin_config);
 	return ret;
 }
-
-#ifdef CONFIG_ANDROID_PMEM
-struct android_pmem_platform_data android_pmem_data = {
-	.name = "pmem",
-	.cmasize = 0,
-	.carveout_base = 0,
-	.carveout_size = 0,
-};
-#endif
 
 #ifdef CONFIG_ION_BCM_NO_DT
 struct ion_platform_data ion_system_data = {
@@ -2368,10 +2364,6 @@ static void hawaii_add_pdata(void)
 
 void __init hawaii_add_common_devices(void)
 {
-#ifdef CONFIG_ANDROID_PMEM
-	platform_device_register(&android_pmem);
-#endif
-
 	platform_add_devices(hawaii_common_plat_devices,
 			     ARRAY_SIZE(hawaii_common_plat_devices));
 }

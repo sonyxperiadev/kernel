@@ -116,6 +116,7 @@ struct kxtik_data {
 	atomic_t acc_input_event;
 	atomic_t acc_enable_resume;
 	struct timer_list timer;
+	struct mutex data_mutex;
 #ifdef CONFIG_HAS_EARLYSUSPEND
 	struct early_suspend early_suspend;
 #endif				/* CONFIG_HAS_EARLYSUSPEND */
@@ -154,8 +155,11 @@ static void kxtik_report_acceleration_data(struct kxtik_data *tik)
 	if (atomic_read(&tik->acc_enabled) > 0) {
 		if (atomic_read(&tik->acc_enable_resume) > 1) {
 			while (loop) {
+				if (mutex_trylock(&tik->data_mutex) == 0)
+					return -ERESTARTSYS;
 				err = kxtik_i2c_read(tik, XOUT_L,
 						     (u8 *) acc_data, 6);
+				mutex_unlock(&tik->data_mutex);
 				if (err < 0) {
 					loop--;
 					msleep(KXTIK_I2C_RETRY_TIMEOUT);
@@ -532,7 +536,7 @@ static ssize_t kxtik_set_poll(struct device *dev, struct device_attribute *attr,
 	error = kstrtouint(buf, 10, &interval);
 	if (error < 0)
 		return error;
-
+	mutex_lock(&tik->data_mutex);
 	if (client->irq)
 		disable_irq(client->irq);
 
@@ -544,7 +548,7 @@ static ssize_t kxtik_set_poll(struct device *dev, struct device_attribute *attr,
 	if (client->irq)
 		enable_irq(client->irq);
 	kxtik_irq_clear(tik);
-
+	mutex_unlock(&tik->data_mutex);
 
 	return count;
 }
@@ -562,6 +566,7 @@ static ssize_t kxtik_set_enable(struct device *dev, struct device_attribute
 	error = kstrtouint(buf, 10, &enable);
 	if (error < 0)
 		return error;
+	mutex_lock(&tik->data_mutex);
 	FUNCDBG("kxtik_set_enable\n");
 
 	/* Lock the device to prevent races with open/close (and itself) */
@@ -570,7 +575,7 @@ static ssize_t kxtik_set_enable(struct device *dev, struct device_attribute
 		kxtik_enable(tik);
 	else
 		kxtik_disable(tik);
-
+	mutex_unlock(&tik->data_mutex);
 
 	return count;
 }
@@ -599,11 +604,11 @@ static ssize_t kxtik_set_offset(struct device *dev,
 		return err;
 	}
 
-	mutex_lock(&input_dev->mutex);
+	mutex_lock(&tik->data_mutex);
 	kxtik_offset[0] = x;
 	kxtik_offset[1] = y;
 	kxtik_offset[2] = z;
-	mutex_unlock(&input_dev->mutex);
+	mutex_unlock(&tik->data_mutex);
 
 	return count;
 }
@@ -628,8 +633,8 @@ static int kxtik_verify(struct kxtik_data *tik)
 	int retval;
 	int i;
 	FUNCDBG("kxtik_verify\n");
-	for (i = 0; i < 5; i++) {
-		mdelay(10);
+	for (i = 0; i < 20; i++) {
+		msleep_interruptible(5);
 		retval = i2c_smbus_read_byte_data(tik->client, WHO_AM_I);
 		if (retval >= 0)
 			break;
@@ -794,7 +799,7 @@ static int kxtik_probe(struct i2c_client *client,
 
 	tik->irq_workqueue = create_workqueue("KXTIK Workqueue");
 	INIT_WORK(&tik->irq_work, kxtik_irq_work);
-
+	mutex_init(&tik->data_mutex);
 	if (client->irq) {
 		printk(KERN_ALERT "__kxtik is in irq mode__\n");
 		/* If in irq mode, populate INT_CTRL_REG1 and enable DRDY. */
@@ -858,6 +863,7 @@ err_pdata_power_off:
 	kxtik_device_power_off(tik);
 err_free_mem:
 	FUNCDBG("error :err_free_mem\n");
+	mutex_destroy(&tik->data_mutex);
 	kfree(tik);
 	return err;
 }
@@ -879,6 +885,7 @@ static int kxtik_remove(struct i2c_client *client)
 	if (tik->pdata.exit)
 		tik->pdata.exit();
 	kxtik_device_power_off(tik);
+	mutex_destroy(&tik->data_mutex);
 	kfree(tik);
 
 	return 0;

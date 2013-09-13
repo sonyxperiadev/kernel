@@ -39,16 +39,16 @@
 		0x44 0x01 0x01 0
 		  /*  ICCMAX to 1500mA*/
 		0x47 0x0B 0xFF 0
-		  /* NTC Hot Temperature Comparator rising = 45C*/
-		0xCC 0x70 0xFF 1
-		  /* NTC Hot Temperature Comparator falling = 40C*/
-		0xCD 0x84 0xFF 1
-		  /* NTC Cold Temperature Comparator rising = 0C*/
-		0xCE 0xF4 0xFF 1
-		  /* NTC Cold Temperature Comparator falling = 5C*/
-		0xCF 0xB8 0xFF 1
+		  /* NTC Hot Temperature Comparator rising = 57C*/
+		0xCC 0x50 0xFF 1
+		  /* NTC Hot Temperature Comparator falling = 53C*/
+		0xCD 0x5B 0xFF 1
+		  /* NTC Cold Temperature Comparator rising = -17C*/
+		0xCE 0x69 0xFF 1
+		  /* NTC Cold Temperature Comparator falling = -13C*/
+		0xCF 0x39 0xFF 1
 		  /* NTC Hot Temperature Comparator bit 9,8 */
-		0xD0 0x05 0xFF 1
+		0xD0 0x0A 0xFF 1
 		 /*MBCCTRL11*/
 		0x4A 0x0F 0xff 0
 		 /* ID detection ,current source Trimming */
@@ -62,7 +62,7 @@
 		/*FG EOC CURR TH*/
 		0xBF 0x64 0xFF 1
 		/*RTC_C2C1_XOTRIM*/
-		0xEF 0xEE 0xFF 1
+		0xEF 0xFF 0xFF 1
 		/* PWMLEDCTRL1 */
 		0x00 0x23 0xFF 1
 		/* HSCP3*/
@@ -77,8 +77,8 @@
 		 0xD8 0x40 0x7F 1
 		 /* EN_SESS_VALID  enable ID detection */
 		 0x40 0x18 0xFF 1
-		 /* MMSR LPM voltage - 0.88V */
-		 0xCA 0x04 0x3F 0
+		 /* MMSR LPM voltage - 0.80V */
+		 0xCA 0x01 0x3F 0
 		 /* SDSR1 NM1 voltage - 1.28V*/
 		 0xCC 0x2C 0x3F 0
 		 /* SDSR1 LPM voltage - 0.9V*/

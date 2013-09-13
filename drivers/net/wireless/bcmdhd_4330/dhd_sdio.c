@@ -1100,7 +1100,11 @@ dhdsdio_htclk(dhd_bus_t *bus, bool on, bool pendok)
 		pendok = FALSE;
 #endif /* defined(OOB_INTR_ONLY) || defined(BCMSPI_ANDROID) */
 	clkctl = 0;
+	if (!bus)
+		return BCME_ERROR;
 	sdh = bus->sdh;
+	if (!sdh)
+		return BCME_ERROR;
 
 
 	if (!KSO_ENAB(bus))

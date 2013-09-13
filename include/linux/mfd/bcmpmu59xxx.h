@@ -354,8 +354,8 @@ struct bcmpmu_adc_result {
 };
 
 struct bcmpmu_adc_lut {
-	unsigned int raw;
-	unsigned int map; /* temp, volt, etc map value in table */
+	int raw;
+	int map; /* temp, volt, etc map value in table */
 };
 
 /**
@@ -570,7 +570,7 @@ enum bcmpmu_event_t {
 	PMU_ACLD_EVT_ACLD_STATUS,
 	PMU_THEMAL_THROTTLE_STATUS,
 	PMU_FG_EVT_CAPACITY,
-	PMU_FG_EVT_FGC,
+	PMU_FG_EVT_EOC,
 	PMU_JIG_EVT_USB,
 	PMU_JIG_EVT_UART,
 	PMU_EVENT_MAX,
@@ -978,6 +978,11 @@ bool bcmpmu_is_acld_enabled(struct bcmpmu59xxx *bcmpmu);
 /* ADC */
 int bcmpmu_adc_read(struct bcmpmu59xxx *bcmpmu, enum bcmpmu_adc_channel channel,
 		enum bcmpmu_adc_req req, struct bcmpmu_adc_result *result);
+int bcmpmu_adc_convert(struct bcmpmu59xxx *bcmpmu,
+		enum bcmpmu_adc_channel channel,
+		struct bcmpmu_adc_result *result,
+		bool to_raw);
+
 int *bcmpmu59xxx_get_trim_table(struct bcmpmu59xxx *bcmpmu);
 int bcmpmu59xxx_rgltr_info_init(struct bcmpmu59xxx *bcmpmu);
 

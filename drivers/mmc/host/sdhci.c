@@ -1400,21 +1400,6 @@ static void sdhci_request(struct mmc_host *mmc, struct mmc_request *mrq)
 					SDHCI_CARD_PRESENT;
 	}
 
-#ifdef CONFIG_MMC_BCM_NON_SECURE_ERASE
-	if (host->mrq->cmd->opcode == MMC_ERASE) {
-
-		if (host->mrq->cmd->arg == MMC_SECURE_TRIM1_ARG) {
-			tasklet_schedule(&host->finish_tasklet);
-			goto out;
-		}
-
-		if ((host->mrq->cmd->arg == MMC_SECURE_TRIM2_ARG))
-			host->mrq->cmd->arg = MMC_TRIM_ARGS;
-		else
-			host->mrq->cmd->arg = MMC_ERASE_ARG;
-	}
-#endif
-
 	if (!present || host->flags & SDHCI_DEVICE_DEAD) {
 		host->mrq->cmd->error = -ENOMEDIUM;
 		tasklet_schedule(&host->finish_tasklet);
@@ -1453,9 +1438,6 @@ static void sdhci_request(struct mmc_host *mmc, struct mmc_request *mrq)
 		else
 			sdhci_send_command(host, mrq->cmd);
 	}
-#ifdef CONFIG_MMC_BCM_NON_SECURE_ERASE
-out:
-#endif
 	mmiowb();
 	spin_unlock_irqrestore(&host->lock, flags);
 }
@@ -2440,8 +2422,8 @@ static void sdhci_work_wait_for_busy(struct work_struct *work)
 	int wait_cnt = 0;
 
 	/*
-	 * According to Arasan, when DTOERR  occured while CMD38/CMD6,
-	 * which is not treated as normal, not an error by the Host,
+	 * According to Arasan, when DTOERR occured while CMD38/CMD6,
+	 * which is not treated as normal and as an error by the Host,
 	 * host driver should reset CMD & DATA Lines for SDHC internal state.
 	 */
 	pr_info("Resetting CMD & DATA Lines at once\n");
@@ -3468,7 +3450,12 @@ int sdhci_add_host(struct sdhci_host *host)
 	if (host->quirks & SDHCI_QUIRK_DATA_TIMEOUT_USES_SDCLK)
 		host->timeout_clk = mmc->f_max / 1000;
 
-	mmc->max_discard_to = (1 << 27) / host->timeout_clk;
+	/* max_discard_to is set to zero to speed up the secure erase operation
+	* during factory reset. Work sdhci_work_wait_for_busy was already added
+	* to wait for the busy signalling of ERASE operation to finish.
+	*/
+	mmc->max_discard_to = 0;
+
 
 	mmc->caps |= MMC_CAP_SDIO_IRQ | MMC_CAP_ERASE | MMC_CAP_CMD23;
 

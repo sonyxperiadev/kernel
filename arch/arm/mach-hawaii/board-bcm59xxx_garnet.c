@@ -1229,6 +1229,7 @@ static struct bcmpmu_fg_pdata fg_pdata = {
 	.poll_rate_crit_batt = 5000,	/* every 5 Seconds */
 
 #endif /* CONFIG_WD_TAPPER */
+	.ntc_high_temp = 680, /*battery too hot shdwn temp*/
 };
 
 

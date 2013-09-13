@@ -806,7 +806,7 @@ static int iommu_m4u_parse_dt(struct device *dev, struct m4u_drvdata *mdata)
 		goto err;
 	}
 	pr_info("Parsing DT node(%s)\n", name);
-	mdata->name = kzalloc(strlen(name), GFP_KERNEL);
+	mdata->name = kzalloc(strlen(name) + 1, GFP_KERNEL);
 	if (!mdata->name) {
 		pr_err("ERROR: Couldn't allocate memory for iommu_name");
 		ret = -ENOMEM;

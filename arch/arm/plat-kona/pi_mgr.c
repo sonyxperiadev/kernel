@@ -2683,60 +2683,10 @@ static const struct file_operations all_req_fops = {
 	.read = read_file_all_req,
 };
 
-static ssize_t read_file_pi_count(struct file *file, char __user *user_buf,
-				  size_t count, loff_t *ppos)
-{
-	int i, counter = 0;
-	u32 len = 0;
-	struct pi *pi;
-	bool overflow;
-	ktime_t _time;
-	s64 ms;
-
-	_time = ktime_get();
-	ms = ktime_to_ms(_time);
-	for (i = 0; i < PI_MGR_PI_ID_MAX; i++) {
-		pi = pi_mgr.pi_list[i];
-		if (pi == NULL)
-			continue;
-
-		counter = pwr_mgr_pi_counter_read(pi->id, &overflow);
-		if (counter < 0)
-			return -ENOMEM;
-		len += snprintf(debug_fs_buf + len, sizeof(debug_fs_buf) - len,
-				"%8s(%1d): counter:0x%08X, overflow:%d, "
-				"systime:%16ld mS\n",
-				pi->name, pi->id, counter, overflow,
-				(long int)ms);
-	}
-
-	return simple_read_from_buffer(user_buf, count,
-				       ppos, debug_fs_buf, len);
-}
-
-static const struct file_operations pi_debug_count_fops = {
-	.open = pi_debugfs_open,
-	.read = read_file_pi_count,
-};
-
-static int pi_debug_count_clear(void *data, u64 val)
-{
-	if (val == 1) {
-		pm_mgr_pi_count_clear(true);
-		pm_mgr_pi_count_clear(false);
-	} else
-		pi_dbg(0, PI_LOG_ERR, "Invalid parm\n");
-	return 0;
-}
-
-DEFINE_SIMPLE_ATTRIBUTE(pi_debug_count_clr_fops, NULL, pi_debug_count_clear,
-			"%llu\n");
-
 static struct dentry *dent_pi_root_dir;
 int __init pi_debug_init(void)
 {
 	struct dentry *dent_all_requests = 0, *dent_chip_reset = 0;
-	struct dentry *dent_pi_count = 0, *dent_pi_count_clr = 0;
 	dent_pi_root_dir = debugfs_create_dir("power_domains", 0);
 	if (!dent_pi_root_dir)
 		return -ENOMEM;
@@ -2757,21 +2707,6 @@ int __init pi_debug_init(void)
 	if (!dent_chip_reset)
 		pi_dbg(0, PI_LOG_ERR,
 		       "Error registering all_requests with debugfs\n");
-
-	dent_pi_count = debugfs_create_file("pi_count", S_IRUSR,
-					    dent_pi_root_dir, NULL,
-					    &pi_debug_count_fops);
-	if (!dent_pi_count)
-		pi_dbg(0, PI_LOG_ERR,
-		       "Error registering pi_count with debugfs\n");
-
-	dent_pi_count_clr = debugfs_create_file("pi_count_clear",
-						S_IRUSR | S_IWUSR,
-						dent_pi_root_dir, NULL,
-						&pi_debug_count_clr_fops);
-	if (!dent_pi_count_clr)
-		pi_dbg(0, PI_LOG_ERR,
-		       "Error registering pi_count_clear with debugfs\n");
 
 	return 0;
 

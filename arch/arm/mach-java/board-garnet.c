@@ -38,9 +38,6 @@
 #include <linux/of_fdt.h>
 #include <mach/pinmux.h>
 
-#ifdef CONFIG_ANDROID_PMEM
-#include <linux/android_pmem.h>
-#endif
 #ifdef CONFIG_ION_BCM_NO_DT
 #include <linux/ion.h>
 #include <linux/broadcom/bcm_ion.h>
@@ -205,6 +202,10 @@ hawaii_wifi_status_register(void (*callback) (int card_present, void *dev_id),
 #endif
 extern void java_timer_init(void);
 
+#if defined(CONFIG_IHF_EXT_PA_TPA2026D2)
+#include <linux/mfd/tpa2026d2.h>
+#endif
+
 /* SD */
 #define SD_CARDDET_GPIO_PIN	91
 
@@ -219,15 +220,6 @@ extern void java_timer_init(void);
 #define TSC_GPIO_WAKEUP_PIN         70
 
 #define TANGO_I2C_TS_DRIVER_NUM_BYTES_TO_READ	14
-
-#ifdef CONFIG_ANDROID_PMEM
-struct android_pmem_platform_data android_pmem_data = {
-	.name = "pmem",
-	.cmasize = 0,
-	.carveout_base = 0x9e000000,
-	.carveout_size = 0,
-};
-#endif
 
 #ifdef CONFIG_ION_BCM_NO_DT
 struct ion_platform_data ion_system_data = {
@@ -407,55 +399,51 @@ static struct regulator *d_3v0_mmc1_vcc;
    the rate requirements of all digital
    channel clocks in use. */
 #define SENSOR_PREDIV_CLK               "dig_prediv_clk"
+#define SENSOR_0_CLK                    "dig_ch0_clk"	/*DCLK1 */
+#define SENSOR_1_CLK                    "dig_ch0_clk"	/* DCLK1 */
 
 #define SENSOR_0_GPIO_PWRDN             (002)
 #define SENSOR_0_GPIO_RST               (111)
-#define SENSOR_0_CLK                    "dig_ch0_clk"	/*DCLK1 */
-#if defined(CONFIG_SOC_CAMERA_OV2675) || defined(CONFIG_SOC_CAMERA_GC2035)
-#define SENSOR_PREDIV_CLK_FREQ         (312000000)
-#define SENSOR_0_CLK_FREQ               (26000000)
-#elif defined(CONFIG_SOC_CAMERA_OV5648)
-#define SENSOR_PREDIV_CLK_FREQ         (312000000)
-#define SENSOR_0_CLK_FREQ               (24000000)
-#elif defined(CONFIG_SOC_CAMERA_OV5640) || defined(CONFIG_SOC_CAMERA_OV8825)
-#define SENSOR_PREDIV_CLK_FREQ          (26000000)
-#define SENSOR_0_CLK_FREQ               (13000000)
-#else
-#error "SENSOR_0_CLK_FREQ not defined"
-#endif
-#define CSI0_LP_FREQ			(100000000)
-#define CSI1_LP_FREQ			(100000000)
-
-#define SENSOR_1_CLK                    "dig_ch0_clk"	/* DCLK1 */
-#define SENSOR_1_CLK_FREQ               (26000000)
-
 #define SENSOR_1_GPIO_PWRDN             (005)
 #define SENSOR_1_GPIO_RST               (121)
 
-/* define PWDN_RST active polarity */
-/* rear cameras */
-#if defined(CONFIG_SOC_CAMERA_OV5648) || \
-	defined(CONFIG_SOC_CAMERA_OV8825)
-	#define SENSOR_0_GPIO_RST_ACTIVE    0
-	#define SENSOR_0_GPIO_PWRDN_ACTIVE  0
-#elif defined(CONFIG_SOC_CAMERA_OV5640)
-	#define SENSOR_0_GPIO_RST_ACTIVE    0
-	#define SENSOR_0_GPIO_PWRDN_ACTIVE  1
-#endif
-/* front cameras */
-#if defined(CONFIG_SOC_CAMERA_OV7692) || \
-	defined(CONFIG_SOC_CAMERA_GC2035)
-	#define SENSOR_1_GPIO_RST_ACTIVE    0
-	#define SENSOR_1_GPIO_PWRDN_ACTIVE  1
-#elif defined(CONFIG_SOC_CAMERA_OV7695)
-	#define SENSOR_1_GPIO_RST_ACTIVE    0
-	#define SENSOR_1_GPIO_PWRDN_ACTIVE  0
-#endif
-#define cam_pin_active(pin)     (pin##_ACTIVE)
-#define cam_pin_inactive(pin)   (0x01&(~(pin##_ACTIVE)))
-/* end of cameras RST/PWDN polarity defines*/
+#define CSI0_LP_FREQ					(100000000)
+#define CSI1_LP_FREQ					(100000000)
 
-#if defined(CONFIG_MACH_JAVA_C_LC1)
+struct cameraCfg_s {
+	char *name;
+	unsigned int prediv_clk;
+	unsigned int clk;
+	unsigned short pwdn_active;
+	unsigned short rst_active;
+};
+
+const static struct cameraCfg_s cameras[] = {
+	{"ov5640", 26000000, 13000000, 1, 0},
+	{"ov5648", 26000000, 26000000, 0, 0},
+	{"ov2675", 312000000, 26000000, 1, 0},
+	{"ov7692", 26000000, 26000000, 1, 0},
+	{"ov7695", 26000000, 26000000, 0, 0},
+	{"ov8825", 26000000, 13000000, 0, 0},
+	{"gc2035", 312000000, 26000000, 1, 0},
+	{"sp0a28", 26000000, 26000000, 1, 0},
+	{},
+};
+
+static struct cameraCfg_s *getCameraCfg(const char *cameraName)
+{
+	struct cameraCfg_s *pCamera = &cameras[0];
+	while (pCamera->name && cameraName) {
+		if (0 == strcmp(cameraName, pCamera->name))
+			return pCamera;
+		else
+			pCamera++;
+	}
+	return NULL;
+}
+
+#if defined(CONFIG_MACH_JAVA_C_LC1) || defined(CONFIG_MACH_JAVA_C_5609A) \
+	|| defined(CONFIG_MACH_JAVA_C_5606)
 
 #define MAIN_CAM_AF_ENABLE			(33)
 #define TORCH_EN (10)
@@ -487,6 +475,13 @@ static int hawaii_camera_power(struct device *dev, int on)
 	struct soc_camera_link *icl = to_soc_camera_link(icd);
 
 	printk(KERN_INFO "%s:camera power %s\n", __func__, (on ? "on" : "off"));
+
+	struct cameraCfg_s *thisCfg = getCameraCfg(icl->module_name);
+	if (NULL == thisCfg) {
+		printk(KERN_ERR "No cfg for [%s]\n", icl->module_name);
+		return -1;
+	}
+
 	if (!unicam_dfs_node.valid) {
 		ret = pi_mgr_dfs_add_request(&unicam_dfs_node, "unicam",
 					     PI_MGR_PI_ID_MM,
@@ -496,18 +491,18 @@ static int hawaii_camera_power(struct device *dev, int on)
 		}
 
 		if (gpio_request_one(SENSOR_0_GPIO_RST, GPIOF_DIR_OUT |
-	cam_pin_active(SENSOR_0_GPIO_RST) ? GPIOF_INIT_HIGH : GPIOF_INIT_LOW,
-				 "Cam0Rst")) {
+				(thisCfg->rst_active<<1), "Cam0Rst")) {
 			printk(KERN_ERR "Unable to get cam0 RST GPIO\n");
 			return -1;
 		}
 		if (gpio_request_one(SENSOR_0_GPIO_PWRDN, GPIOF_DIR_OUT |
-	cam_pin_active(SENSOR_0_GPIO_PWRDN) ? GPIOF_INIT_HIGH : GPIOF_INIT_LOW,
-				  "Cam0PWDN")) {
+				(thisCfg->pwdn_active<<1), "Cam0PWDN")) {
 			printk(KERN_ERR "Unable to get cam0 PWDN GPIO\n");
 			return -1;
 		}
-	#if defined(CONFIG_MACH_JAVA_C_LC1)
+	#if defined(CONFIG_MACH_JAVA_C_LC1) \
+	|| defined(CONFIG_MACH_JAVA_C_5609A) \
+	|| defined(CONFIG_MACH_JAVA_C_5606)
 		if (gpio_request_one(MAIN_CAM_AF_ENABLE, GPIOF_DIR_OUT |
 				     GPIOF_INIT_LOW, "Cam0_af_enable")) {
 			printk(KERN_ERR "Unable to get cam0 af enable GPIO\n");
@@ -616,31 +611,32 @@ static int hawaii_camera_power(struct device *dev, int on)
 			pr_err("Failed to enable sensor 0 clock\n");
 			goto e_clk_sensor;
 		}
-		value = clk_set_rate(prediv_clock, SENSOR_PREDIV_CLK_FREQ);
+		value = clk_set_rate(prediv_clock, thisCfg->prediv_clk);
 		if (value) {
 			pr_err("Failed to set prediv clock\n");
 			goto e_clk_set_prediv;
 		}
-		value = clk_set_rate(clock, SENSOR_0_CLK_FREQ);
+		value = clk_set_rate(clock, thisCfg->clk);
 		if (value) {
 			pr_err("Failed to set sensor0 clock\n");
 			goto e_clk_set_sensor;
 		}
 		usleep_range(10000, 10100);
-		gpio_set_value(SENSOR_0_GPIO_RST,
-			cam_pin_active(SENSOR_0_GPIO_RST));
+		gpio_set_value(SENSOR_0_GPIO_RST, thisCfg->rst_active);
 		usleep_range(10000, 10100);
 		gpio_set_value(SENSOR_0_GPIO_PWRDN,
-			cam_pin_inactive(SENSOR_0_GPIO_PWRDN));
+			thisCfg->pwdn_active ? 0 : 1);
 		usleep_range(5000, 5100);
 		gpio_set_value(SENSOR_0_GPIO_RST,
-			cam_pin_inactive(SENSOR_0_GPIO_RST));
+			thisCfg->rst_active ? 0 : 1);
 		msleep(30);
 
 		regulator_enable(d_3v0_mmc1_vcc);
 		usleep_range(1000, 1010);
 
-#ifdef CONFIG_MACH_JAVA_C_LC1
+
+#if defined(CONFIG_MACH_JAVA_C_LC1) || defined(CONFIG_MACH_JAVA_C_5609A) \
+	|| defined(CONFIG_MACH_JAVA_C_5606)
 		set_af_enable(1);
 #endif
 
@@ -661,15 +657,14 @@ static int hawaii_camera_power(struct device *dev, int on)
 		dw9714_enable(0);
 #endif
 
-#ifdef CONFIG_MACH_JAVA_C_LC1
+#if defined(CONFIG_MACH_JAVA_C_LC1) || defined(CONFIG_MACH_JAVA_C_5609A) \
+	|| defined(CONFIG_MACH_JAVA_C_5606)
 		set_af_enable(0);
 #endif
 		usleep_range(5000, 5100);
-		gpio_set_value(SENSOR_0_GPIO_PWRDN,
-			cam_pin_active(SENSOR_0_GPIO_PWRDN));
+		gpio_set_value(SENSOR_0_GPIO_PWRDN, thisCfg->pwdn_active);
 		usleep_range(1000, 1100);
-		gpio_set_value(SENSOR_0_GPIO_RST,
-			cam_pin_active(SENSOR_0_GPIO_RST));
+		gpio_set_value(SENSOR_0_GPIO_RST, thisCfg->rst_active);
 
 		clk_disable(prediv_clock);
 		clk_disable(clock);
@@ -724,6 +719,13 @@ static int hawaii_camera_power_front(struct device *dev, int on)
 
 
 	printk(KERN_INFO "%s:camera power %s\n", __func__, (on ? "on" : "off"));
+
+	struct cameraCfg_s *thisCfg = getCameraCfg(icl->module_name);
+	if (NULL == thisCfg) {
+		printk(KERN_ERR "No cfg for [%s]\n", icl->module_name);
+		 return -1;
+	}
+
 	if (!unicam_dfs_node.valid) {
 		ret = pi_mgr_dfs_add_request(&unicam_dfs_node, "unicam",
 					     PI_MGR_PI_ID_MM,
@@ -732,14 +734,12 @@ static int hawaii_camera_power_front(struct device *dev, int on)
 			return -1;
 		}
 		if (gpio_request_one(SENSOR_1_GPIO_PWRDN, GPIOF_DIR_OUT |
-	cam_pin_active(SENSOR_1_GPIO_PWRDN) ? GPIOF_INIT_HIGH : GPIOF_INIT_LOW,
-				  "Cam1PWDN")) {
+				(thisCfg->pwdn_active<<1), "Cam1PWDN")) {
 			printk(KERN_ERR "Unable to get CAM1PWDN\n");
 			return -1;
 		}
 		if (gpio_request_one(SENSOR_1_GPIO_RST, GPIOF_DIR_OUT |
-	cam_pin_active(SENSOR_1_GPIO_RST) ? GPIOF_INIT_HIGH : GPIOF_INIT_LOW,
-				  "Cam1RST")) {
+					(thisCfg->rst_active<<1), "Cam1RST")) {
 			printk(KERN_ERR "Unable to get Cam1RST\n");
 			return -1;
 		}
@@ -802,10 +802,8 @@ static int hawaii_camera_power_front(struct device *dev, int on)
 	if (on) {
 		if (pi_mgr_dfs_request_update(&unicam_dfs_node, PI_OPP_TURBO))
 			printk("DVFS for UNICAM failed\n");
-		gpio_set_value(SENSOR_1_GPIO_PWRDN,
-			cam_pin_active(SENSOR_1_GPIO_PWRDN));
-		gpio_set_value(SENSOR_1_GPIO_RST,
-			cam_pin_active(SENSOR_1_GPIO_RST));
+		gpio_set_value(SENSOR_1_GPIO_PWRDN, thisCfg->pwdn_active);
+		gpio_set_value(SENSOR_1_GPIO_RST, thisCfg->rst_active);
 
 		usleep_range(5000, 5010);
 		regulator_enable(d_lvldo2_cam1_1v8);
@@ -819,7 +817,7 @@ static int hawaii_camera_power_front(struct device *dev, int on)
 		usleep_range(1000, 1010);
 
 		gpio_set_value(SENSOR_1_GPIO_RST,
-			cam_pin_inactive(SENSOR_1_GPIO_RST));
+			thisCfg->rst_active ? 0 : 1);
 
 		if (mm_ccu_set_pll_select(CSI1_BYTE1_PLL, 8)) {
 			pr_err("failed to set BYTE1\n");
@@ -873,21 +871,19 @@ static int hawaii_camera_power_front(struct device *dev, int on)
 			printk("Failed to enable sensor 1 clock\n");
 			goto e_clk_clock;
 		}
-		value = clk_set_rate(clock, SENSOR_1_CLK_FREQ);
+		value = clk_set_rate(clock, thisCfg->clk);
 		if (value) {
 			printk("Failed to set sensor 1 clock\n");
 			goto e_clk_set_clock;
 		}
 		usleep_range(10000, 10100);
 		gpio_set_value(SENSOR_1_GPIO_PWRDN,
-			cam_pin_inactive(SENSOR_1_GPIO_PWRDN));
+			thisCfg->pwdn_active ? 0 : 1);
 		msleep(30);
 	} else {
-		gpio_set_value(SENSOR_1_GPIO_PWRDN,
-			cam_pin_active(SENSOR_1_GPIO_PWRDN));
+		gpio_set_value(SENSOR_1_GPIO_PWRDN, thisCfg->pwdn_active);
 		usleep_range(1000, 1010);
-		gpio_set_value(SENSOR_1_GPIO_RST,
-			cam_pin_active(SENSOR_1_GPIO_RST));
+		gpio_set_value(SENSOR_1_GPIO_RST, thisCfg->rst_active);
 
 		clk_disable(lp_clock_0);
 		clk_disable(lp_clock_1);
@@ -1519,6 +1515,21 @@ static struct platform_device *hawaii_devices[] __initdata = {
 
 };
 
+#ifdef CONFIG_IHF_EXT_PA_TPA2026D2
+static struct tpa2026d2_platform_data tpa2026d2_i2c_platform_data = {
+	.i2c_bus_id = 1,
+	.shutdown_gpio = 91
+};
+
+static struct i2c_board_info tpa2026d2_i2c_boardinfo[] = {
+	{
+		I2C_BOARD_INFO("tpa2026d2", (TPA2026D2_I2C_ADDR >> 1)),
+		.platform_data = &tpa2026d2_i2c_platform_data
+	},
+};
+#endif
+
+
 static void __init hawaii_add_i2c_devices(void)
 {
 
@@ -1536,6 +1547,12 @@ defined(CONFIG_TOUCHSCREEN_BCM15500_MODULE)
 	i2c_register_board_info(bcm15500_i2c_platform_data.i2c_bus_id,
 		bcm15500_i2c_boardinfo,
 		ARRAY_SIZE(bcm15500_i2c_boardinfo));
+#endif
+
+#ifdef CONFIG_IHF_EXT_PA_TPA2026D2
+	i2c_register_board_info(tpa2026d2_i2c_platform_data.i2c_bus_id,
+		tpa2026d2_i2c_boardinfo,
+		ARRAY_SIZE(tpa2026d2_i2c_boardinfo));
 #endif
 }
 
@@ -1604,10 +1621,6 @@ static void hawaii_add_pdata(void)
 
 void __init hawaii_add_common_devices(void)
 {
-#ifdef CONFIG_ANDROID_PMEM
-	platform_device_register(&android_pmem);
-#endif
-
 	platform_add_devices(hawaii_common_plat_devices,
 			     ARRAY_SIZE(hawaii_common_plat_devices));
 }

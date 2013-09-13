@@ -1204,7 +1204,7 @@ static struct bcmpmu_fg_pdata fg_pdata = {
 	.i_def_dcp = 700,
 	.acld_cc_lmt = 1800,
 	.otp_cc_trim = 0x1F,
-
+	.ntc_high_temp = 680, /*battery too hot shdwn temp*/
 };
 
 #ifdef CONFIG_CHARGER_BCMPMU_SPA

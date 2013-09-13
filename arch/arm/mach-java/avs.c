@@ -71,32 +71,26 @@ struct avs_info avs_info = {
 
 static int debug_mask = AVS_LOG_ERR | AVS_LOG_WARN | AVS_LOG_INIT;
 
-struct irdrop_count {
-	int dummy;
-};
-
-static struct irdrop_count irdrop_count;
-
-#define __param_check_irdrop_count(name, p, type) \
-	static inline struct type *__check_##name(void) { return (p); }
-#define param_check_irdrop_count(name, p) \
-	__param_check_irdrop_count(name, p, irdrop_count)
-
-static int param_get_irdrop_count(char *buffer, const struct kernel_param *kp);
-
-static struct kernel_param_ops param_ops_irdrop_count = {
-	.get = param_get_irdrop_count,
-};
-module_param_named(irdrop_count, irdrop_count, irdrop_count,
-				S_IRUGO | S_IWGRP);
-
 int avs_get_vddfix_voltage(void)
 {
 	if (!avs_info.pdata)
 		return -EPERM;
 	return avs_info.avs_handshake->vddfix;
 }
-EXPORT_SYMBOL(avs_get_vddfix_voltage);
+
+int avs_get_vddvar_retn_vlt(void)
+{
+	if (!avs_info.pdata)
+		return -EPERM;
+	return avs_info.avs_handshake->vddvar_ret;
+}
+
+int avs_get_vddfix_retn_vlt(void)
+{
+	if (!avs_info.pdata)
+		return -EPERM;
+	return avs_info.avs_handshake->vddfix_ret;
+}
 
 static int avs_read_opp_info(struct avs_info *avs_inf_ptr)
 {
@@ -110,7 +104,7 @@ static int avs_read_opp_info(struct avs_info *avs_inf_ptr)
 			avs_inf_ptr->avs_handshake->csr_opp);
 	avs_dbg(AVS_LOG_INIT, "MSR OPP VAL: 0x%x",
 			avs_inf_ptr->avs_handshake->msr_opp);
-	avs_dbg(AVS_LOG_INIT, "Computed at %u Celsius. N/P1: %u, N/P2: %u\n",
+	avs_dbg(AVS_LOG_INIT, "Computed at %d Celsius. N/P1: %u, N/P2: %u\n",
 			avs_inf_ptr->avs_handshake->temperature,
 			avs_inf_ptr->avs_handshake->np_ratio_1,
 			avs_inf_ptr->avs_handshake->np_ratio_2);
@@ -133,6 +127,9 @@ static int avs_read_opp_info(struct avs_info *avs_inf_ptr)
 
 	avs_dbg(AVS_LOG_INIT, "VDDFIX voltage val: 0x%x",
 			avs_inf_ptr->avs_handshake->vddfix);
+	avs_dbg(AVS_LOG_INIT, "VDDVAR Retn: 0x%x, VDDFIX Retn: 0x%x",
+			avs_info.avs_handshake->vddvar_ret,
+			avs_info.avs_handshake->vddfix_ret);
 	avs_dbg(AVS_LOG_INIT, "Silicon Type: %u",
 			avs_inf_ptr->avs_handshake->silicon_type);
 	avs_dbg(AVS_LOG_INIT, "Freq Id: %u",
@@ -239,6 +236,7 @@ static u32 avs_get_irdrop_osc_count(struct avs_info *avs_info_ptr)
 		mdelay(1);
 		osc_cnt += avs_irdrop_osc_get_count(avs_info_ptr);
 		avs_irdrop_osc_en(avs_info_ptr, false);
+		tries--;
 	}
 	osc_cnt /= 2;
 err:
@@ -247,11 +245,6 @@ err:
 	kona_pm_disable_idle_state(CSTATE_ALL, 0);
 
 	return osc_cnt;
-}
-
-static int param_get_irdrop_count(char *buffer, const struct kernel_param *kp)
-{
-	return snprintf(buffer, 10, "%u", avs_get_irdrop_osc_count(&avs_info));
 }
 
 static int avs_set_voltage_table(struct avs_info *avs_inf_ptr)
@@ -355,6 +348,23 @@ static const struct file_operations avs_voltage_tbl_fops = {
 	.write = avs_update_voltage_val,
 };
 
+static ssize_t avs_debug_read_irdrop(struct file *file, char __user
+		*user_buf, size_t count, loff_t *ppos)
+{
+	char buf[1000];
+	u32 len = 0;
+	len += snprintf(buf + len, sizeof(buf) - len,
+		"Reading IRDROP Osc count now:%u\n",
+		avs_get_irdrop_osc_count(&avs_info));
+
+	return simple_read_from_buffer(user_buf, count, ppos, buf, len);
+}
+
+static const struct file_operations avs_read_irdrop_fops = {
+	.open = avs_debug_open,
+	.read = avs_debug_read_irdrop,
+};
+
 static ssize_t avs_debug_read_otp_info(struct file *file, char __user
 		*user_buf, size_t count, loff_t *ppos)
 {
@@ -387,7 +397,7 @@ static ssize_t avs_debug_read_spm_val(struct file *file, char __user
 	char buf[1000];
 	u32 len = 0;
 	len += snprintf(buf + len, sizeof(buf) - len,
-		"Computed at %u Celsius. N/P1: %u, N/P2: %u\n",
+		"Computed at %d Celsius. N/P1: %u, N/P2: %u\n",
 		avs_info.avs_handshake->temperature,
 		avs_info.avs_handshake->np_ratio_1,
 		avs_info.avs_handshake->np_ratio_2);
@@ -441,8 +451,12 @@ static int avs_debug_init(void)
 			dent_vlt_root_dir, NULL, &avs_read_otp_val_fops))
 		return -ENOMEM;
 
-	if (!debugfs_create_file("spm_count", S_IRUGO,
+	if (!debugfs_create_file("osc_counts", S_IRUGO,
 			dent_vlt_root_dir, NULL, &avs_read_spm_val_fops))
+		return -ENOMEM;
+
+	if (!debugfs_create_file("read_irdrop", S_IRUGO,
+			dent_vlt_root_dir, NULL, &avs_read_irdrop_fops))
 		return -ENOMEM;
 
 	pr_info("AVS Debug Init Successs\n");

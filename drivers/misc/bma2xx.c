@@ -2720,11 +2720,11 @@ static ssize_t bma2xx_set_offset(struct device *dev,
 		pr_err("invalid parameter number: %d\n", err);
 		return err;
 	}
-	mutex_lock(&input_dev->mutex);
+	mutex_lock(&dd->value_mutex);
 	bma2xx_offset[0] = x;
 	bma2xx_offset[1] = y;
 	bma2xx_offset[2] = z;
-	mutex_unlock(&input_dev->mutex);
+	mutex_unlock(&dd->value_mutex);
 	return count;
 }
 static DEVICE_ATTR(offset,  S_IRUGO | S_IWUSR | S_IWGRP | S_IWOTH,

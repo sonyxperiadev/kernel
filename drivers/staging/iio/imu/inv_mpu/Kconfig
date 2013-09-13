@@ -2,7 +2,7 @@
 # inv-mpu-iio driver for Invensense MPU devices and combos
 #
 
-config INV_MPU_IIO
+config SENSORS_MPU3050_IIO
 	tristate "Invensense MPU devices"
 	depends on I2C && SYSFS && IIO && IIO_KFIFO_BUF && IIO_TRIGGER && !INV_MPU
 	default n
@@ -14,7 +14,7 @@ config INV_MPU_IIO
 
 config INV_IIO_MPU3050_ACCEL_SLAVE_BMA250
 	bool  "Invensense MPU3050 slave accelerometer device for bma250"
-	depends on INV_MPU_IIO
+	depends on SENSORS_MPU3050_IIO
 	default n
 	help
 	  This is slave device enable MPU3050 accelerometer slave device.

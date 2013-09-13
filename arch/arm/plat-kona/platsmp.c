@@ -1,5 +1,5 @@
 /*****************************************************************************
-* Copyright 2003 - 2008 Broadcom Corporation.  All rights reserved.
+* Copyright 2003 - 2013 Broadcom Corporation.  All rights reserved.
 *
 * Unless you and Broadcom execute a separate written software license
 * agreement governing use of this software, this software is licensed to you
@@ -24,6 +24,7 @@
 #ifdef CONFIG_ARCH_HAWAII
 #include <asm/smp_scu.h>
 #endif
+#include <asm/smp_plat.h>
 #include <asm/io.h>
 #ifdef CONFIG_BRCM_CDC
 #include <plat/cdc.h>
@@ -37,6 +38,19 @@
 /* SCU base address */
 static void __iomem *scu_base = (void __iomem *)(KONA_SCU_VA);
 #endif
+
+/*
+ * Write pen_release in a way that is guaranteed to be visible to all
+ * observers, irrespective of whether they're taking part in coherency
+ * or not.  This is necessary for the hotplug code to work reliably.
+ */
+static void write_pen_release(int val)
+{
+	pen_release = val;
+	smp_wmb();
+	__cpuc_flush_dcache_area((void *)&pen_release, sizeof(pen_release));
+	outer_clean_range(__pa(&pen_release), __pa(&pen_release + 1));
+}
 
 /*
  * Initialise the CPU possible map early - this describes the CPUs
@@ -74,8 +88,7 @@ static void __cpuinit kona_platform_secondary_init(unsigned int cpu)
 	 * let the primary processor know we're out of the
 	 * pen, then head off into the C entry point
 	 */
-	pen_release = -1;
-	smp_wmb();
+	write_pen_release(-1);
 
 	/*
 	 * Synchronise with the boot thread.
@@ -87,12 +100,12 @@ static void __cpuinit kona_platform_secondary_init(unsigned int cpu)
 static void __init wakeup_secondary(void)
 {
 
-	void __iomem *chipRegBase;
+	void __iomem *chip_reg_base;
 
-	chipRegBase = IOMEM(KONA_CHIPREG_VA);
+	chip_reg_base = IOMEM(KONA_CHIPREG_VA);
 
 	writel(virt_to_phys(kona_secondary_startup),
-			chipRegBase + CHIPREG_BOOT_2ND_ADDR_OFFSET);
+			chip_reg_base + CHIPREG_BOOT_2ND_ADDR_OFFSET);
 
 	smp_wmb();
 
@@ -111,7 +124,6 @@ static int __cpuinit kona_boot_secondary(unsigned int cpu, struct task_struct *i
 	unsigned long timeout;
 
 	/*
-
 	 * Set synchronisation state between this boot processor
 	 * and the secondary one
 	 */
@@ -125,8 +137,8 @@ static int __cpuinit kona_boot_secondary(unsigned int cpu, struct task_struct *i
 	 * Note that "pen_release" is the hardware CPU ID, whereas
 	 * "cpu" is Linux's internal ID.
 	 */
-	pen_release = cpu;
-	smp_wmb();
+	write_pen_release(cpu_logical_map(cpu));
+
 	flush_cache_all();
 #ifdef CONFIG_OUTER_CACHE
 	outer_flush_all();
@@ -137,7 +149,7 @@ static int __cpuinit kona_boot_secondary(unsigned int cpu, struct task_struct *i
 		readl_relaxed(KONA_CHIPREG_VA+CHIPREG_BOOT_2ND_ADDR_OFFSET);
 
 	boot_2nd_addr &= ~0x3; /* Clear the CPU ID bits */
-	boot_2nd_addr |= cpu; /* Set CPU number in CPU ID bits */
+	boot_2nd_addr |= cpu;  /* Set CPU number in CPU ID bits */
 	writel_relaxed(boot_2nd_addr,
 			KONA_CHIPREG_VA+CHIPREG_BOOT_2ND_ADDR_OFFSET);
 
@@ -146,11 +158,6 @@ static int __cpuinit kona_boot_secondary(unsigned int cpu, struct task_struct *i
 	 * wake it up in case the secondary CPU is in WFI state.
 	 */
 	arch_send_wakeup_ipi_mask(cpumask_of(cpu));
-
-	/* Sample code to wait till the second core acknowledges
-	 * while ( readl_relaxed(KONA_CHIPREG_VA+CHIPREG_BOOT_2ND_ADDR_OFFSET)
-	 *		& 1 );
-	 */
 
 	timeout = jiffies + (1 * HZ);
 	while (time_before(jiffies, timeout)) {
@@ -170,8 +177,6 @@ static int __cpuinit kona_boot_secondary(unsigned int cpu, struct task_struct *i
 
 	return pen_release != -1 ? -ENOSYS : 0;
 }
-
-
 
 static void __init kona_platform_smp_prepare_cpus(unsigned int max_cpus)
 {

@@ -59,7 +59,7 @@ struct avs_handshake {
 	u32 silicon_type;
 	u32 arm_freq;
 	u32 irdrop_1v2;
-	u8 temperature;
+	s8 temperature;
 	u8 np_ratio_1;
 	u8 np_ratio_2;
 	u8 rsvd1;
@@ -82,7 +82,10 @@ struct avs_handshake {
 	u8 spm3;
 	u8 spm4;
 	u8 spm5;
-	u32 rsvd2[5];
+	u8 vddvar_ret;
+	u8 vddfix_ret;
+	u8 rsvd2[2];
+	u32 rsvd3[4];
 };
 
 struct avs_pdata {
@@ -95,4 +98,6 @@ struct avs_pdata {
 
 u32 avs_get_silicon_type(void);
 int avs_get_vddfix_voltage(void);
+int avs_get_vddvar_retn_vlt(void);
+int avs_get_vddfix_retn_vlt(void);
 #endif	  /*__KONA_AVS___*/

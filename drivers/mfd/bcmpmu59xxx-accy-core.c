@@ -224,11 +224,8 @@ static int charging_enable = 1;
 module_param_named(charging_enable, charging_enable, int,
 		S_IRUGO | S_IWUSR | S_IWGRP);
 
-#if 0
 static int debug_mask = BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT | \
 			BCMPMU_PRINT_FLOW;
-#endif
-static int debug_mask = 0xff;
 
 #define pr_accy(debug_level, args...) \
 	do { \

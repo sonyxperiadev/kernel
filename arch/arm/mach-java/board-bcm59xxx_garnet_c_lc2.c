@@ -1225,13 +1225,14 @@ static struct bcmpmu_fg_pdata fg_pdata = {
 	.cal_data = &ys_05_cal_data,
 	.sns_resist = 10,
 	.sys_impedence = 33,
-	.eoc_current = 85, /* End of charge current in mA */
+	.eoc_current = 125, /* End of charge current in mA */
 	.hw_maintenance_charging = false, /* enable HW EOC of PMU */
 	.sleep_current_ua = 2000, /* floor during sleep */
 	.sleep_sample_rate = 32000,
 	.fg_factor = 663,
 	.poll_rate_low_batt = 20000,	/* every 20 seconds */
 	.poll_rate_crit_batt = 5000,	/* every 5 Seconds */
+	.ntc_high_temp = 680, /*battery too hot shdwn temp*/
 };
 
 #if defined(CONFIG_LEDS_BCM_PMU59xxx)

@@ -100,10 +100,10 @@ choice
 	help
 	  Support for Java low cost platform 2
 
-	config MACH_JAVA_C_LC2
-	bool "Java low cost platform 2"
+	config MACH_JAVA_C_AMETHYST
+	bool "Java Amethyst platform"
 	help
-	  Support for Java low cost platform 2
+	  Support for Java Amethyst platform
 
 endchoice
 
@@ -205,6 +205,16 @@ config	PI_MGR_MM_STURBO_ENABLE
 	  Say Y to enable super turbo DFS OPP for MM power Island
 	  MM super turbo OPP frequency is set to 312MHz. Total 4
 	  OPPs will be defined for MM if the support is enabled
+
+config	MM_312M_SOURCE_CLK
+	depends on ARCH_JAVA && KONA_PI_MGR
+	bool "Derive MM AXI clock from 312MHz"
+	default n
+	help
+	  Say Y to switch MM AXI source clock to 312MHz
+	  OPPs will be 104, 156, 208, 312Mhz
+	  500MHz clock source will be used otherwise
+	  OPPs will be 83, 166, 250, 312Mhz
 
 config	PWRMGR_DUMMY_SEQUENCER
 	bool "Use dummy PWRMGR HW I2C sequencer"

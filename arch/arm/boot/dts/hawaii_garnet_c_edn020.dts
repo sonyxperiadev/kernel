@@ -10,7 +10,7 @@
 	compatible = "bcm,hawaii";
 
 	chosen {
-		bootargs = "console=ttyS0,115200n8 mem=992M gpt androidboot.console=ttyS0 crash_ramdump=1 logbuf_nocache=1";
+		bootargs = "console=ttyS0,115200n8 mem=992M gpt androidboot.console=ttyS0 quiet crash_ramdump=1 logbuf_nocache=1";
 	};
 
 	memory@82000000 {

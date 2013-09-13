@@ -118,7 +118,7 @@
 #define ALS_PS_INT	gpio_to_irq(TAOS_INT_GPIO)
 #define TAOS_INPUT_NAME_ALS  "TAOS_ALS_SENSOR"
 #define TAOS_INPUT_NAME_PROX  "TAOS_PROX_SENSOR"
-int isPsensorLocked;
+static int isPsensorLocked;
 
 /* forward declarations */
 static int taos_probe(struct i2c_client *clientp,

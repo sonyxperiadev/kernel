@@ -95,11 +95,14 @@ static irqreturn_t jpegenc_isr(int irq, void *dev_id)
 	dev->jpegenc_status.status = reg_read(jpegenc_base, JP_ICST_OFFSET);
 	spin_unlock_irqrestore(&dev->lock, flags);
 
-	reg_write(jpegenc_base, JP_ICST_OFFSET, dev->jpegenc_status.status);
-
-	complete(&dev->irq_sem);
-
-	return IRQ_RETVAL(1);
+	if (dev->jpegenc_status.status) {
+		reg_write(jpegenc_base, JP_ICST_OFFSET,
+				dev->jpegenc_status.status);
+		complete(&dev->irq_sem);
+		return IRQ_RETVAL(1);
+	} else {
+		return IRQ_NONE;
+	}
 }
 
 static int jpegenc_open(struct inode *inode, struct file *filp)

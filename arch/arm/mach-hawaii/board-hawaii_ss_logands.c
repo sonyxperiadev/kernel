@@ -307,15 +307,6 @@ int reset_pwm_padcntrl(void)
 	return ret;
 }
 
-#ifdef CONFIG_ANDROID_PMEM
-struct android_pmem_platform_data android_pmem_data = {
-	.name = "pmem",
-	.cmasize = 0,
-	.carveout_base = 0,
-	.carveout_size = 0,
-};
-#endif
-
 #ifdef CONFIG_ION_BCM_NO_DT
 struct ion_platform_data ion_system_data = {
 	.nr = 1,
@@ -2181,10 +2172,6 @@ static void hawaii_add_pdata(void)
 
 void __init hawaii_add_common_devices(void)
 {
-#ifdef CONFIG_ANDROID_PMEM
-	platform_device_register(&android_pmem);
-#endif
-
 	platform_add_devices(hawaii_common_plat_devices,
 			ARRAY_SIZE(hawaii_common_plat_devices));
 }

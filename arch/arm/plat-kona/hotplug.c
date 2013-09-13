@@ -18,6 +18,7 @@
 #if defined(CONFIG_A9_DORMANT_MODE) || defined(CONFIG_DORMANT_MODE)
 #include <mach/dormant.h>
 #endif
+#include <asm/smp_plat.h>
 
 static inline void cpu_enter_lowpower(void)
 {
@@ -56,7 +57,7 @@ static inline void cpu_leave_lowpower(void)
 	  : "cc");
 }
 
-static inline void platform_do_lowpower(unsigned int cpu)
+static inline void platform_do_lowpower(unsigned int cpu, int *spurious)
 {
 	/*
 	 * there is no power-control hardware on this platform, so all
@@ -68,22 +69,22 @@ static inline void platform_do_lowpower(unsigned int cpu)
 		 * here's the WFI
 		 */
 #if defined(CONFIG_A9_DORMANT_MODE)
-				kona_pm_cpu_lowpower();
+		kona_pm_cpu_lowpower();
 #elif defined(CONFIG_DORMANT_MODE)
-				if (is_dormant_enabled())
-					kona_pm_cpu_lowpower();
-				else
-					asm(".word	0xe320f003\n"
-						:
-						:
-						: "memory", "cc");
+		if (is_dormant_enabled())
+			kona_pm_cpu_lowpower();
+		else
+			asm(".word	0xe320f003\n"
+				:
+				:
+				: "memory", "cc");
 #else
-				asm(".word	0xe320f003\n"
-					:
-					:
-					: "memory", "cc");
+		asm(".word	0xe320f003\n"
+			:
+			:
+			: "memory", "cc");
 #endif
-		if (pen_release == cpu) {
+		if (pen_release == cpu_logical_map(cpu)) {
 			/*
 			 * OK, proper wakeup, we're done
 			 */
@@ -91,14 +92,13 @@ static inline void platform_do_lowpower(unsigned int cpu)
 		}
 
 		/*
-		 * getting here, means that we have come out of WFI without
+		 * Getting here, means that we have come out of WFI without
 		 * having been woken up - this shouldn't happen
 		 *
-		 * The trouble is, letting people know about this is not really
-		 * possible, since we are currently running incoherently, and
-		 * therefore cannot safely call printk() or anything else
+		 * Just note it happening - when we're woken, we can report
+		 * its occurrence.
 		 */
-		pr_debug("CPU%u: spurious wakeup call\n", cpu);
+		(*spurious)++;
 	}
 }
 
@@ -114,6 +114,7 @@ int platform_cpu_kill(unsigned int cpu)
  */
 void kona_platform_cpu_die(unsigned int cpu)
 {
+	int spurious = 0;
 #ifdef DEBUG
 	unsigned int this_cpu = hard_smp_processor_id();
 
@@ -128,14 +129,14 @@ void kona_platform_cpu_die(unsigned int cpu)
 
 #if defined(CONFIG_A9_DORMANT_MODE) || defined(CONFIG_DORMANT_MODE)
 	if (is_dormant_enabled())
-		platform_do_lowpower(cpu);
+		platform_do_lowpower(cpu, &spurious);
 	else {
 #endif
 	/*
 	 * we're ready for shutdown now, so do it
 	 */
 	cpu_enter_lowpower();
-	platform_do_lowpower(cpu);
+	platform_do_lowpower(cpu, &spurious);
 
 	/*
 	 * bring this CPU back into the world of cache
@@ -145,4 +146,7 @@ void kona_platform_cpu_die(unsigned int cpu)
 #if defined(CONFIG_A9_DORMANT_MODE) || defined(CONFIG_DORMANT_MODE)
 	}
 #endif
+
+	if (spurious)
+		pr_warn("CPU%u: %u spurious wakeup calls\n", cpu, spurious);
 }

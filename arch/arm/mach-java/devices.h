@@ -68,10 +68,6 @@ extern struct platform_device hawaii_camera_device;
 extern struct platform_device caph_i2s_device;
 extern struct platform_device caph_pcm_device;
 #endif
-#ifdef CONFIG_ANDROID_PMEM
-extern struct android_pmem_platform_data android_pmem_data;
-extern struct platform_device android_pmem;
-#endif
 #ifdef CONFIG_ION_BCM_NO_DT
 #ifdef CONFIG_IOMMU_API
 extern struct platform_device iommu_mm_device;

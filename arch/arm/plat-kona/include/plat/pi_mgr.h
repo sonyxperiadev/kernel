@@ -58,6 +58,20 @@ extern int pi_debug;
 	} while(0)
 #endif
 
+#define PI_STATE(state_id, policy, latency, flg) \
+		{.id = state_id, .state_policy = policy,\
+		.hw_wakeup_latency = latency, .flags = flg}
+
+#define INIT_OPP_INFO(f, opp, prms) {\
+	.freq_id = f,\
+	.opp_id = opp,\
+	.ctrl_prms = prms,\
+}
+
+#define RUN_POLICY PM_POLICY_5
+#define RETN_POLICY PM_POLICY_1
+#define SHTDWN_POLICY PM_POLICY_0
+
 struct clk;
 struct pi_ops;
 struct pi_mgr_qos_node;

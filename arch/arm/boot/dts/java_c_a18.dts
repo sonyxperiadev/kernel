@@ -44,7 +44,6 @@
 		* PADCTRL_UBRTSN from UART3_RTSN to
 		* UBRTSN (Debug UART) when GPS is inactive.*/
 		power-save-enable = <1>;
-
 	};
 
 	i2c0: i2c@3e016000 {
@@ -168,6 +167,7 @@
 		iova_begin  = <0x80000000>;
 		iova_size   = <0x80000000>;
 		errbuf_size = <0x00001000>;
+		skip_enable = <1>;
 	};
 
 	iovmm_mm: iovmm-mm {
@@ -187,7 +187,7 @@
 	ion-config {
 		compatible = "bcm,ion-config";
 		/* No separate mask needed for hwwr if M4U is enabled */
-		mask_hwwr = <0>;
+		/* mask_hwwr = <0>; */
 	};
 
 	ion-system {
@@ -321,11 +321,15 @@
 	memc@35008000 {
 		compatible = "bcm,memc";
 		reg = <0x35008000 0x1000>;
-		flags = <0x33>;
+		interrupts = <0 61 4>;
+		flags = <0x73>;
 		chipreg_base = <0x35004000 0x1000>;
 		memc0_aphy_base = <0x35008400 0x1000>;
 		seq_busy_val = <2>;
 		max_pwr = <3>;
+		temp_period = <0xA09E6C>; /*400ms*/
+		temp_tholds = <7 1>;
+		num_thold = <1>;
 	};
 
 	sdio1 {

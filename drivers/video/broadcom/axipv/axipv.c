@@ -353,27 +353,41 @@ static inline int axipv_config(struct axipv_config_t *config)
 	u32 axipv_base;
 	u32 tx_size;
 	int buff_index;
+	u32 arcache = AXIPV_ARCACHE;
+	struct axipv_sync_buf_t *buff;
+	u32 align_chk;
 
 	if (!config)
 		return -EINVAL;
 
+	buff = &config->buff.sync;
+	/* Buffer address, line-stride and bytes-per-line have to be
+	 * 8 or 16 byte aligned */
+	align_chk = buff->addr | buff->xlen | config->width;
+	if (unlikely(align_chk & 0x7)) {
+		axipv_err("Unaligned addr=0x%x xlen=0x%x width=0x%x\n",
+				buff->addr, buff->xlen, config->width);
+		return -EINVAL;
+	}
+	/* If any of buffer address, line-stride or bytes-per-line is not
+	 * 16byte aligned, then ARCACHE has to be set to 0 */
+	if (unlikely(align_chk & 0xf))
+		arcache = 0;
+
 	dev = container_of(config, struct axipv_dev, config);
 	axipv_base = dev->base_addr;
 
-	writel_relaxed(config->buff.sync.xlen, axipv_base + REG_BYTES_PER_LINE);
-	writel_relaxed(config->buff.sync.ylen,
-			axipv_base + REG_LINES_PER_FRAME);
-	writel_relaxed(config->buff.sync.addr, axipv_base + REG_NXT_FRAME);
-	axipv_debug("posting %p\n", (void *) config->buff.sync.addr);
-	g_nxt = config->buff.sync.addr;
-	g_curr = config->buff.sync.addr;
+	writel_relaxed(buff->xlen, axipv_base + REG_BYTES_PER_LINE);
+	writel_relaxed(buff->ylen, axipv_base + REG_LINES_PER_FRAME);
+	writel_relaxed(buff->addr, axipv_base + REG_NXT_FRAME);
+	axipv_debug("posting %p\n", (void *) buff->addr);
+	g_nxt = buff->addr;
+	g_curr = buff->addr;
 	buff_index = axipv_get_free_buff_index(dev->buff);
-	if (buff_index >= AXIPV_MAX_DISP_BUFF_SUPP) {
+	if (buff_index >= AXIPV_MAX_DISP_BUFF_SUPP)
 		axipv_err("Couldn't get free buff index\n");
-	} else {
-		axipv_add_new_buff_info(dev->buff, buff_index,
-					config->buff.sync.addr);
-	}
+	else
+		axipv_add_new_buff_info(dev->buff, buff_index, buff->addr);
 
 	writel_relaxed(config->width, axipv_base + REG_LINE_STRIDE);
 	writel_relaxed(AXIPV_BURST_LEN, axipv_base + REG_BURST_LEN);
@@ -388,14 +402,14 @@ static inline int axipv_config(struct axipv_config_t *config)
 
 	ctrl =  SFT_RSTN_DONE | (config->cmd ? AXIPV_CMD_MODE : 0)
 		| NUM_OUTSTDG_XFERS_8 | AXI_ID_SYS_DUAL | AXIPV_ARPROT
-		| AXIPV_ARCACHE	| (config->test ? AXIPV_TESTMODE : 0);
+		| arcache | (config->test ? AXIPV_TESTMODE : 0);
 
 	if (config->bypassPV)
 		ctrl = ctrl | (1 << 8) | (1 << 29);
 
 	ctrl |= (config->pix_fmt << PIXEL_FORMAT_SHIFT);
 
-	tx_size = config->buff.sync.xlen * config->buff.sync.ylen;
+	tx_size = buff->xlen * buff->ylen;
 	if ((AXIPV_PIXEL_FORMAT_24BPP_RGB == config->pix_fmt)
 		|| (AXIPV_PIXEL_FORMAT_24BPP_BGR == config->pix_fmt))
 		tx_size *= 4;

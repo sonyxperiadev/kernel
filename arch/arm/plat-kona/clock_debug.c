@@ -739,13 +739,6 @@ static ssize_t ccu_volt_id_display(struct file *file, char __user *buf,
 	struct ccu_clk *ccu_clk;
 	BUG_ON(clk == NULL);
 	ccu_clk = to_ccu_clk(clk);
-	/* This is to avoid the read getting called again and again. This is
-	 * useful only if we have large chunk of data greater than PAGE_SIZE. we
-	 * have only small chunk of data */
-	if (total_len > 0) {
-		total_len = 0;
-		return 0;
-	}
 
 	memset(volt_tbl, 0, sizeof(volt_tbl));
 	memset(out_str, 0, sizeof(out_str));

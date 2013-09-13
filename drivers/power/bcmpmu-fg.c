@@ -1771,8 +1771,8 @@ static int bcmpmu_fg_set_eoc_thrd(struct bcmpmu_fg_data *fg, int curr)
 	return ret;
 }
 
-#if 0
-static int bcmpmu_fg_set_sw_eoc_condition(struct bcmpmu_fg_data *fg)
+static int bcmpmu_fg_set_sw_eoc_condition(struct bcmpmu_fg_data *fg,
+					  bool sw_eoc)
 {
 	int ret;
 	u8 reg;
@@ -1780,12 +1780,19 @@ static int bcmpmu_fg_set_sw_eoc_condition(struct bcmpmu_fg_data *fg)
 	ret = fg->bcmpmu->read_dev(fg->bcmpmu, PMU_REG_MBCCTRL9, &reg);
 	if (ret)
 		return ret;
-	reg |= MBCCTRL9_SW_EOC_MASK;
+	if (sw_eoc)
+		reg |= MBCCTRL9_SW_EOC_MASK;
+	else
+		reg &= ~MBCCTRL9_SW_EOC_MASK;
 
 	ret = fg->bcmpmu->write_dev(fg->bcmpmu, PMU_REG_MBCCTRL9, reg);
+	/**
+	 * Post EOC event to all registered notifiers
+	 */
+	bcmpmu_call_notifier(fg->bcmpmu, PMU_FG_EVT_EOC, &fg->flags.fg_eoc);
+
 	return ret;
 }
-#endif
 
 static int bcmpmu_fg_set_maintenance_chrgr_mode(struct bcmpmu_fg_data *fg,
 		enum maintenance_chrgr_mode mode)
@@ -2141,6 +2148,7 @@ static int bcmpmu_fg_sw_maint_charging_algo(struct bcmpmu_fg_data *fg)
 		if ((fg->bcmpmu->flags & BCMPMU_SPA_EN) &&
 				(flags->eoc_chargr_en)) {
 			pr_fg(FLOW, "sw_maint_chrgr: SPA SW EOC cleared\n");
+			bcmpmu_fg_set_sw_eoc_condition(fg, false);
 			flags->fg_eoc = false;
 		} else if (!(fg->bcmpmu->flags & BCMPMU_SPA_EN) &&
 				(volt < volt_thrld)) {
@@ -2148,6 +2156,7 @@ static int bcmpmu_fg_sw_maint_charging_algo(struct bcmpmu_fg_data *fg)
 			flags->prev_batt_status = flags->batt_status;
 			flags->batt_status = POWER_SUPPLY_STATUS_CHARGING;
 			flags->fg_eoc = false;
+			bcmpmu_fg_set_sw_eoc_condition(fg, false);
 			bcmpmu_chrgr_usb_en(fg->bcmpmu, 1);
 		}
 	} else if ((!flags->fg_eoc) &&
@@ -2195,6 +2204,12 @@ static int bcmpmu_fg_sw_maint_charging_algo(struct bcmpmu_fg_data *fg)
 		flags->fully_charged = true;
 		flags->prev_batt_status = flags->batt_status;
 		flags->batt_status = POWER_SUPPLY_STATUS_FULL;
+		/**
+		 * Tell PMU that EOC condition has happened
+		 * so that safetly timers can be cleared
+		 */
+		bcmpmu_fg_set_sw_eoc_condition(fg, true);
+
 		if (fg->bcmpmu->flags & BCMPMU_SPA_EN) {
 			bcmpmu_post_spa_event_to_queue(fg->bcmpmu,
 					PMU_CHRGR_EVT_EOC, 0);
@@ -2204,7 +2219,6 @@ static int bcmpmu_fg_sw_maint_charging_algo(struct bcmpmu_fg_data *fg)
 			bcmpmu_chrgr_usb_en(fg->bcmpmu, 0);
 			bcmpmu_fg_update_psy(fg, false);
 		}
-
 	}
 exit:
 	return 0;
@@ -2345,10 +2359,20 @@ static void bcmpmu_fg_batt_cal_algo(struct bcmpmu_fg_data *fg)
 	queue_delayed_work(fg->fg_wq, &fg->fg_periodic_work, 0);
 }
 
+static bool bcmpmu_fg_ntc_update(struct bcmpmu_fg_data *fg)
+{
+	bool update_psy = false;
+	struct bcmpmu_fg_pdata *pdata = fg->pdata;
+
+	if (fg->adc_data.temp >= pdata->ntc_high_temp)
+			update_psy = true;
+	return	update_psy;
+}
 
 static void bcmpmu_fg_charging_algo(struct bcmpmu_fg_data *fg)
 {
 	int poll_time = CHARG_ALGO_POLL_TIME_MS;
+	bool psy_update = false;
 
 	pr_fg(FLOW, "%s\n", __func__);
 
@@ -2392,7 +2416,8 @@ static void bcmpmu_fg_charging_algo(struct bcmpmu_fg_data *fg)
 				fg->capacity_info.percentage);
 	}
 
-	bcmpmu_fg_update_psy(fg, false);
+	psy_update = bcmpmu_fg_ntc_update(fg);
+	bcmpmu_fg_update_psy(fg, psy_update);
 
 	FG_LOCK(fg);
 	if (fg->flags.reschedule_work)
@@ -2539,6 +2564,7 @@ static void bcmpmu_fg_discharging_algo(struct bcmpmu_fg_data *fg)
 	bcmpmu_fg_program_alarm(fg, fg->alarm_timeout);
 #endif /*CONFIG_WD_TAPPER*/
 
+	force_update_psy = bcmpmu_fg_ntc_update(fg);
 	bcmpmu_fg_update_psy(fg, force_update_psy);
 
 	FG_LOCK(fg);
@@ -3045,7 +3071,7 @@ int debugfs_fg_flags_init(struct bcmpmu_fg_data *fg, struct dentry *flags_dir)
 	return 0;
 }
 
-int debugfs_get_curr_open(struct inode *inode, struct file *file)
+int debugfs_fg_open(struct inode *inode, struct file *file)
 {
 	file->private_data = inode->i_private;
 	return 0;
@@ -3068,7 +3094,7 @@ int debugfs_get_curr_read(struct file *file, char __user *buf, size_t len,
 }
 
 static const struct file_operations fg_current_fops = {
-	.open = debugfs_get_curr_open,
+	.open = debugfs_fg_open,
 	.read = debugfs_get_curr_read,
 };
 
@@ -3081,15 +3107,26 @@ static int debugfs_get_batt_volt(void *data, u64 *volt)
 DEFINE_SIMPLE_ATTRIBUTE(fg_volt_fops,
 	debugfs_get_batt_volt, NULL, "%llu\n");
 
-static int debugfs_get_batt_temp(void *data, u64 *temp)
+int debugfs_get_batt_temp(struct file *file, char __user *buf, size_t len,
+		loff_t *ppos)
 {
-	struct bcmpmu_fg_data *fg = data;
-	*temp = bcmpmu_fg_get_batt_temp(fg);
-	return 0;
-}
-DEFINE_SIMPLE_ATTRIBUTE(fg_temp_fops,
-	debugfs_get_batt_temp, NULL, "%llu\n");
+	struct bcmpmu_fg_data *fg = file->private_data;
+	int temp;
+	int count;
+	char buff[50];
 
+	temp = bcmpmu_fg_get_batt_temp(fg);
+
+	count = snprintf(buff, 50, "%s=%d\n", "ntc", temp);
+
+	return simple_read_from_buffer(buf, len, ppos, buff,
+		strlen(buff));
+}
+
+static const struct file_operations fg_temp_fops = {
+	.open = debugfs_fg_open,
+	.read = debugfs_get_batt_temp,
+};
 
 static int debugfs_get_fg_factor(void *data, u64 *factor)
 {

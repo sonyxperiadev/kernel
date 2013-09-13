@@ -208,8 +208,6 @@ void mm_common_release_jobs(struct work_struct *work)
 	while (0 == list_empty(&filp->write_head)) {
 		job = list_first_entry(&filp->write_head, struct dev_job_list, \
 								file_list);
-
-
 		if (job->job.type != INTERLOCK_WAITING_JOB) {
 			int    core_id = (job->job.type & 0xFF0000) >> 16;
 			mm_core_abort_job(job,
@@ -220,6 +218,10 @@ void mm_common_release_jobs(struct work_struct *work)
 					&common->notifier_head,
 					MM_FMWK_NOTIFY_JOB_REMOVE, NULL);
 		} else {
+			if (job->predecessor) {
+				job->predecessor->successor = NULL;
+				job->predecessor = NULL;
+				}
 			mm_common_interlock_completion(job);
 		}
 	}

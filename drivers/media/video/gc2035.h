@@ -654,6 +654,7 @@ static const struct gc2035_reg yuv422_init_common[] = {
 	{0x17, 0x17},/*0x14*/
 	{0xfa, 0x00},
 	{0xb6, 0x03},
+	{0xfffe, 200},
 	{0xc8, 0x15},
 
 	{0x90, 0x01},
@@ -668,18 +669,13 @@ static const struct gc2035_reg yuv422_init_common[] = {
 	{0x04, 0x90},
 	{0x05, 0x00},
 	{0xfe, 0x00},
-	{0xfffe , 300},
 
 	{0xFFFF, 0x00}
 };
 
 static const struct gc2035_reg capture_init_common[] = {
-#if defined(_MAXCLK_104_)
-	{0xfa, 0x11},
-#else
-	{0xfa, 0x11},
-#endif
 	{0x17, 0x17},/*0x14*/
+	{0xfa, 0x11},
 	{0xb6, 0x00},
 	{0xc8, 0x00},
 
@@ -718,22 +714,26 @@ static const struct gc2035_reg gc2035_power_down[] = {
 /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /*EFFECT */
 static const struct gc2035_reg gc2035_effect_normal_tbl[] = {
-
+	{0xfe, 0x00},
+	{0x83, 0xe0},
 	{0xFFFF, 0x00}
 };
 
 static const struct gc2035_reg gc2035_effect_bw_tbl[] = {
-
+	{0xfe, 0x00},
+	{0x83, 0x12},
 	{0xFFFF, 0x00}
 };
 
 static const struct gc2035_reg gc2035_effect_sepia_tbl[] = {
-
+	{0xfe, 0x00},
+	{0x83, 0x82},
 	{0xFFFF, 0x00}
 };
 
 static const struct gc2035_reg gc2035_effect_negative_tbl[] = {
-
+	{0xfe, 0x00},
+	{0x83, 0x01},
 	{0xFFFF, 0x00}
 };
 

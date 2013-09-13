@@ -124,6 +124,7 @@ int cdc_set_reset_counter(int type, u32 val);
 int cdc_set_switch_counter(int type, u32 val);
 int cdc_master_clk_gating_en(bool en);
 int cdc_assert_reset_in_state(u32 states);
+int cdc_assert_cdcbusy_in_state(u32 states);
 int cdc_enable_isolation_in_state(u32 states);
 
 #endif /*__CDC_H__*/

@@ -95,11 +95,14 @@ static irqreturn_t isp2_isr(int irq, void *dev_id)
 	dev->isp2_status.status = reg_read(isp2_base, ISP2_STATUS_OFFSET);
 	spin_unlock_irqrestore(&dev->lock, flags);
 
-	reg_write(isp2_base, ISP2_STATUS_OFFSET, dev->isp2_status.status);
-
-	complete(&dev->irq_sem);
-
-	return IRQ_RETVAL(1);
+	if (dev->isp2_status.status) {
+		reg_write(isp2_base, ISP2_STATUS_OFFSET,
+				dev->isp2_status.status);
+		complete(&dev->irq_sem);
+		return IRQ_RETVAL(1);
+	} else {
+		return IRQ_NONE;
+	}
 }
 
 static int isp2_open(struct inode *inode, struct file *filp)

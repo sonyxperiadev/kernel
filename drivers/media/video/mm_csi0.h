@@ -288,6 +288,7 @@ int mm_csi0_update_one(struct buffer_desc *im, int buf_num,
 int mm_csi0_trigger_cap(void);
 
 /* Final level APIs to start and stop RX */
+int mm_csi0_enable_unicam(void);
 int mm_csi0_start_rx(void);
 int mm_csi0_stop_rx(void);
 

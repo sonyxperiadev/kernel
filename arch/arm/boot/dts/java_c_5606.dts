@@ -18,8 +18,8 @@
 		reg = <0x82000000 0x1e000000>; /* 480 MB */
 	};
 
-	wd-tapper {
-		count = <300>; /* Time in seconds */
+	rtc-kona {
+		compatible = "bcm,rtc-kona";
 		ch-num = <1>; /* Kona hub timer Channel number */
 		timer-name = "aon-timer";
 	};
@@ -82,8 +82,7 @@
                         compatible = "bcm,bma222_accl";
                         reg = <0x18>;
                         gpio-irq-pin = <0xFFFFFFFF>;
-			orientation  = <3>;
-                        invert = <1>;
+			orientation  = <12>;
 
                 };
 
@@ -153,6 +152,7 @@
 		iova_begin  = <0x80000000>;
 		iova_size   = <0x80000000>;
 		errbuf_size = <0x00001000>;
+		skip_enable = <1>;
 	};
 
 	iovmm_mm: iovmm-mm {
@@ -197,7 +197,7 @@
 		type = <2>;
 		base  = <0x90000000>;
 		limit = <0xa0000000>;
-		size  = <0x00000000>;
+		size  = <0x01000000>;
 		lmk_enable = <0>;
 		lmk_min_score_adj = <411>;
 		lmk_min_free = <32>;
@@ -280,7 +280,6 @@
 		iommu = <&iommu_mm>;
 		iovmm = <&iovmm_mm>;
 		rotation = <0>;
-		ulps;
 	};
 
 	kona-fb-2 {
@@ -332,11 +331,15 @@
 	memc@35008000 {
 		compatible = "bcm,memc";
 		reg = <0x35008000 0x1000>;
-		flags = <0x33>;
+		interrupts = <0 61 4>;
+		flags = <0x73>;
 		chipreg_base = <0x35004000 0x1000>;
 		memc0_aphy_base = <0x35008400 0x1000>;
 		seq_busy_val = <2>;
 		max_pwr = <3>;
+		temp_period = <0xA09E6C>; /*400ms*/
+		temp_tholds = <7 1>;
+		num_thold = <1>;
 	};
 
 	sdio1 {

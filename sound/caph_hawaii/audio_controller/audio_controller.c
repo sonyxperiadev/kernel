@@ -83,6 +83,9 @@
 
 #include <linux/err.h>
 #include <linux/regulator/consumer.h>
+#if defined(CONFIG_IHF_EXT_PA_TPA2026D2)
+#include <linux/mfd/tpa2026d2.h>
+#endif
 #define VIBRA_LDO_REGULATOR "vibldo_uc"
 /**There are two loopback paths available in AudioH.
 One is 6.5MHz analog microphone loopback path. It does not support digital mics.
@@ -187,6 +190,7 @@ static int wait_ihfpmu_on = 50*1000;
 static int wait_pmu_off = 2*1000;
 
 static BRCM_AUDIO_Param_Second_Dev_t second_dev_info;
+static Boolean voice_app_updated = FALSE;
 
 static int needDualMic(AudioMode_t mode, AudioApp_t app);
 static AudioMode_t GetAudioModeFromCaptureDev(CSL_CAPH_DEVICE_e source);
@@ -648,7 +652,8 @@ void AUDCTRL_SetTelephonyMicSpkr(AUDIO_SOURCE_Enum_t source,
 	if (cpReset == TRUE)
 		return;
 
-	if (voiceCallMic == source && voiceCallSpkr == sink && force == false)
+	if (voiceCallMic == source && voiceCallSpkr == sink && force == false
+	    && voice_app_updated == FALSE)
 		return;
 
 	if (source == AUDIO_SOURCE_USB || sink == AUDIO_SINK_USB)
@@ -717,10 +722,13 @@ void AUDCTRL_SetTelephonyMicSpkr(AUDIO_SOURCE_Enum_t source,
 	AUDDRV_Telephony_Init(source, sink, mode, app, bNeedDualMic,
 							bmuteVoiceCall);
 	/* retain the mute flag */
-	if (voiceCallSpkr != sink)
+	if (voiceCallSpkr != sink || voice_app_updated == TRUE)
 		powerOnExternalAmp(sink, TelephonyUse, TRUE, FALSE);
 	voiceCallSpkr = sink;
 	voiceCallMic = source;
+
+	if (voice_app_updated == TRUE)
+		voice_app_updated = FALSE;
 }
 
 /****************************************************************************
@@ -973,6 +981,8 @@ void AUDCTRL_SaveAudioApp(AudioApp_t app)
 	if (AUDCTRL_InVoiceCall())
 		if (app > AUDIO_APP_VOIP_INCOMM)
 			return;
+		else
+			voice_app_updated = TRUE;
 
 	AUDCTRL_RemoveVoiceApp(currApp);
 	AUDCTRL_RemoveRecApp(currApp);
@@ -4084,7 +4094,9 @@ static void powerOnExternalAmp(AUDIO_SINK_Enum_t speaker,
 	if (force == TRUE) {
 		if (use == FALSE) {
 			if (IHF_IsOn == TRUE)
-#if defined(CONFIG_IHF_TWO_EXT_AMPLIFIER)
+#if defined(CONFIG_IHF_EXT_PA_TPA2026D2)
+				tpa2026d2_spk_power(0, 0);
+#elif defined(CONFIG_IHF_TWO_EXT_AMPLIFIER)
 				extern_ihf_two_external_amplifier_off(bInVoiceCall);
 #else
 				extern_ihf_off();
@@ -4095,7 +4107,12 @@ static void powerOnExternalAmp(AUDIO_SINK_Enum_t speaker,
 		}
 		if (use == TRUE) {
 			if (IHF_IsOn == TRUE) {
-#if defined(CONFIG_IHF_TWO_EXT_AMPLIFIER)
+#if defined(CONFIG_IHF_EXT_PA_TPA2026D2)
+				if (bInVoiceCall)
+					tpa2026d2_spk_power(1, 0);
+				else
+					tpa2026d2_spk_power(1, 1);
+#elif defined(CONFIG_IHF_TWO_EXT_AMPLIFIER)
 				extern_ihf_two_external_amplifier_on(bInVoiceCall);
 #else
 				extern_ihf_on();
@@ -4216,7 +4233,9 @@ static void powerOnExternalAmp(AUDIO_SINK_Enum_t speaker,
 	    && (fmUseIHF == FALSE) && (audio2UseIHF == FALSE)) {
 		if (IHF_IsOn != FALSE) {
 			aTrace(LOG_AUDIO_CNTLR, "power OFF pmu IHF amp\n");
-#if defined(CONFIG_IHF_TWO_EXT_AMPLIFIER)
+#if defined(CONFIG_IHF_EXT_PA_TPA2026D2)
+			tpa2026d2_spk_power(0, 0);
+#elif defined(CONFIG_IHF_TWO_EXT_AMPLIFIER)
 			extern_ihf_two_external_amplifier_off(bInVoiceCall);
 #else
 			extern_ihf_off();
@@ -4229,7 +4248,12 @@ static void powerOnExternalAmp(AUDIO_SINK_Enum_t speaker,
 			aTrace(LOG_AUDIO_CNTLR,
 			       "powerOnExternalAmp power on IHF");
 			audioh_start_ihf();
-#if defined(CONFIG_IHF_TWO_EXT_AMPLIFIER)
+#if defined(CONFIG_IHF_EXT_PA_TPA2026D2)
+			if (bInVoiceCall)
+				tpa2026d2_spk_power(1, 0);
+			else
+				tpa2026d2_spk_power(1, 1);
+#elif defined(CONFIG_IHF_TWO_EXT_AMPLIFIER)
 			extern_ihf_two_external_amplifier_on(bInVoiceCall);
 #else
 			extern_ihf_on();

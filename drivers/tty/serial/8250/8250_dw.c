@@ -221,6 +221,12 @@ void dw8250_do_pm(struct uart_port *port, unsigned int state,
 
 	switch (state) {
 	case UART_RESUME:
+		if (port->handle_irq == bt_dw8250_handle_irq) {
+			clk_disable(private_data->clk);
+			clk_set_rate(private_data->clk, port->uartclk);
+			clk_enable(private_data->clk);
+			port->uartclk = clk_get_rate(private_data->clk);
+		}
 			/*Resume sequence*/
 		pm_runtime_get_sync(port->dev);
 		if ((private_data->power_save_enable) &&
@@ -248,6 +254,14 @@ void dw8250_do_pm(struct uart_port *port, unsigned int state,
 		}
 		serial8250_do_pm(port, state, old_state);
 		pm_runtime_put_sync_suspend(port->dev);
+		/* Set the BT clock to 26Mhz if not in use.
+		 * This is causing the increase in power numbers in
+		 * MP3 use case */
+		if (port->handle_irq == bt_dw8250_handle_irq) {
+			clk_disable(private_data->clk);
+			clk_set_rate(private_data->clk, 26000000);
+			clk_enable(private_data->clk);
+		}
 		break;
 	default:
 		serial8250_do_pm(port, state, old_state);

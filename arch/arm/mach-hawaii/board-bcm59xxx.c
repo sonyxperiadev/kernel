@@ -1159,7 +1159,7 @@ static struct bcmpmu_fg_pdata fg_pdata = {
 	.fg_factor = 976,
 	.poll_rate_low_batt = 5000, /* every 5 seconds */
 	.poll_rate_crit_batt = 2000, /* every 2 Seconds */
-
+	.ntc_high_temp = 680, /*battery too hot shdwn temp*/
 };
 
 #ifdef CONFIG_CHARGER_BCMPMU_SPA

@@ -46,6 +46,10 @@
 
 #include "pm_params.h"
 
+#ifdef CONFIG_BRCM_SECURE_WATCHDOG
+#include <linux/sec-wd.h>
+#endif
+
 /* DM log masks */
 enum {
 
@@ -610,6 +614,15 @@ void dormant_enter(u32 svc)
 	before restoring context*/
 	cpu = smp_processor_id();
 
+	#ifdef CONFIG_BRCM_SECURE_WATCHDOG
+	/*WD is disabled during suspend. FULL_DORMANT_L2_OFF is used
+	only during suspend and use the same to enable/disable WD*/
+	if (svc_max == FULL_DORMANT_L2_OFF && cpu == 0) {
+		pr_info("%s: enabling sec watchdog\n", __func__);
+		sec_wd_enable();
+	}
+	#endif
+
 	cdc_resp = cdc_get_status_for_core(cpu);
 	do {
 		retry = false;
@@ -670,6 +683,20 @@ void dormant_enter(u32 svc)
 				CDC_STATUS_CLUSTER_DORMANT |
 				CDC_STATUS_CORE_DORMANT;
 			cdc_enable_isolation_in_state(cdc_states);
+			cdc_states = CDC_STATUS_RFD |
+				CDC_STATUS_CENE |
+				CDC_STATUS_RFDLC |
+				CDC_STATUS_CEOK |
+				CDC_STATUS_FDCEOK |
+				CDC_STATUS_RESFDM_SHORT |
+				CDC_STATUS_WAIT_CD_POK_STRONG |
+				CDC_STATUS_WAIT_CD_POK_WEAK |
+				CDC_STATUS_RESDFS_SHORT |
+				CDC_STATUS_CD_CLAMP_ASSERT |
+				CDC_STATUS_CLUSTER_WAIT_IDLE |
+				CDC_STATUS_CLUSTER_DORMANT |
+				CDC_STATUS_RESFD_SHORT_WAIT;
+			cdc_assert_cdcbusy_in_state(cdc_states);
 
 			cdc_set_switch_counter(WEAK_SWITCH_TIMER, 0x0C);
 			cdc_set_switch_counter(STRONG_SWITCH_TIMER, 0x0C);
@@ -753,6 +780,16 @@ static int dormant_enter_continue(unsigned long svc)
 	u32 cpu;
 	unsigned int arg2;
 	cpu = smp_processor_id();
+
+	#ifdef CONFIG_BRCM_SECURE_WATCHDOG
+	/*WD is disabled during suspend. FULL_DORMANT_L2_OFF is used
+	only during suspend and use the same to enable/disable WD*/
+	if (svc == FULL_DORMANT_L2_OFF && cpu == 0) {
+		pr_info("%s: disable sec watchdog\n", __func__);
+		sec_wd_disable();
+	}
+	#endif
+
 	if (svc == FULL_DORMANT_L2_OFF && l2_off_en &&
 		cdc_get_status_for_core(cpu) == CDC_STATUS_FDCEOK) {
 		arg2 = 3;  /*L2 mem OFF*/
@@ -924,7 +961,6 @@ static int __init dm_init(void)
 			CDC_STATUS_CLUSTER_DORMANT |
 			CDC_STATUS_CORE_DORMANT;
 	cdc_assert_reset_in_state(cdc_states);
-
 	cdc_states = CDC_STATUS_POR |
 		CDC_STATUS_RESCDWAIT |
 		CDC_STATUS_WAIT_CD_POK_STRONG |
@@ -935,7 +971,21 @@ static int __init dm_init(void)
 		CDC_STATUS_CLUSTER_DORMANT |
 		CDC_STATUS_CORE_DORMANT;
 	cdc_enable_isolation_in_state(cdc_states);
-	/*TBD - keep master clock gating disabled for time being*/
+	cdc_states = CDC_STATUS_RFD |
+		CDC_STATUS_CENE |
+		CDC_STATUS_RFDLC |
+		CDC_STATUS_CEOK |
+		CDC_STATUS_FDCEOK |
+		CDC_STATUS_RESFDM_SHORT |
+		CDC_STATUS_WAIT_CD_POK_STRONG |
+		CDC_STATUS_WAIT_CD_POK_WEAK |
+		CDC_STATUS_RESDFS_SHORT |
+		CDC_STATUS_CD_CLAMP_ASSERT |
+		CDC_STATUS_CLUSTER_WAIT_IDLE |
+		CDC_STATUS_CLUSTER_DORMANT |
+		CDC_STATUS_RESFD_SHORT_WAIT;
+	cdc_assert_cdcbusy_in_state(cdc_states);
+
 	cdc_master_clk_gating_en(true);
 	cdc_set_switch_counter(WEAK_SWITCH_TIMER, 0x0C);
 	cdc_set_switch_counter(STRONG_SWITCH_TIMER, 0x0C);

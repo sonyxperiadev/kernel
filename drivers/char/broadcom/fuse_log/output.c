@@ -72,6 +72,9 @@ static char g_acm_on;
 /*output fifo */
 static BCMLOG_Fifo_t g_fifo;
 
+/* keep track of the last log file name */
+char g_last_log_fname[BCMLOG_OUTPUT_MAX_LOG_PATHNAME];
+
 /**
  *	frame counter
  **/
@@ -191,7 +194,6 @@ static void GetLogFileName(char *buf, char *rootdev, int size)
 }
 
 #define MAX_FS_WRITE_SIZE 16384
-#define MAX_LOG_PATHNAME     64
 
 /*
  *	Return available SD card size (bytes)
@@ -219,13 +221,18 @@ out:
 	return ret;
 }
 
+char *Get_SDCARD_LastFile(void)
+{
+	return g_last_log_fname;
+}
+
 /*
  *	Write log to file system
  */
 static void WriteToLogDev_SDCARD(void)
 {
 	mm_segment_t oldfs;
-	char fname[MAX_LOG_PATHNAME];
+	char fname[BCMLOG_OUTPUT_MAX_LOG_PATHNAME];
 
 	oldfs = get_fs();
 	set_fs(KERNEL_DS);
@@ -242,8 +249,17 @@ static void WriteToLogDev_SDCARD(void)
 			    filp_open(fname, O_WRONLY | O_TRUNC | O_CREAT,
 				      0666);
 
-			if (IS_ERR(g_devWrParms.file))
+			if (IS_ERR(g_devWrParms.file)) {
 				g_devWrParms.file = 0;
+			} else {
+				unsigned long irql;
+
+				/* record the latest SD log file name */
+				irql = AcquireOutputLock();
+				memcpy(g_last_log_fname, fname,
+					BCMLOG_OUTPUT_MAX_LOG_PATHNAME);
+				ReleaseOutputLock(irql);
+			}
 		} else if ((Get_SDCARD_Available()) > 0) {
 			g_devWrParms.outdev = BCMLOG_OUTDEV_NONE;
 			BCMLOG_SetRunlogDevice(BCMLOG_OUTDEV_NONE);

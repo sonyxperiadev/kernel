@@ -77,8 +77,7 @@
 			compatible = "bcm,bma222_accl";
 			reg = <0x18>;
 			gpio-irq-pin = <0xFFFFFFFF>;
-			orientation  = <4>;
-			invert = <1>;
+			orientation  = <13>;
 		};
 		akm8975@0c {
 			compatible = "bcm,akm8975";

@@ -13,7 +13,6 @@ the GPL, without Broadcom's express prior written consent.
 #define pr_fmt(fmt) "<%s> %s:" fmt "\n", mm_prof->mm_common->mm_name, __func__
 
 #include "mm_prof.h"
-
 int mm_prof_notification_handler(struct notifier_block *block, \
 				unsigned long param, \
 				void *data)
@@ -55,6 +54,93 @@ static void prof_timeout_callback(unsigned long data)
 	SCHEDULER_WORK(mm_prof, &(mm_prof->prof_work));
 }
 
+static struct mm_buff_fop {
+
+	struct _mm_prof *mm_prof;
+	int read_pointer;
+	char *cpy_buffer;
+};
+
+static int mm_prof_buffread(struct file *filp, char __user *buf, \
+				size_t size, loff_t *offset)
+{
+	int numread = 0;
+	struct mm_buff_fop *private = (struct mm_buff_fop *)filp->private_data;
+
+	struct _mm_prof *mm_prof = private->mm_prof;
+	char *copy_buffer = private->cpy_buffer;
+	int *write_pointer = &(mm_prof->write_ptr);
+	int read_pointer = private->read_pointer ;
+
+	if (read_pointer != *write_pointer) {
+
+		sprintf(copy_buffer, "%s TIME :%ld hw_usage:ON: %d%% [DVFS:%d]"\
+				"JOBS: %d [%d , %d ,%d ,%d] in %d secs\n",
+			mm_prof->mm_common->mm_name,
+			mm_prof->buff[read_pointer].print_time.tv_nsec,
+			mm_prof->buff[read_pointer].percent,
+			mm_prof->buff[read_pointer].current_mode,
+			mm_prof->buff[read_pointer].jobs_done,
+			mm_prof->buff[read_pointer].jobs_done_type[0],
+			mm_prof->buff[read_pointer].jobs_done_type[1],
+			mm_prof->buff[read_pointer].jobs_done_type[2],
+			mm_prof->buff[read_pointer].jobs_done_type[3],
+			mm_prof->buff[read_pointer].T1);
+		if (copy_to_user(buf, copy_buffer, strlen(copy_buffer))) {
+			pr_err("Copy to User failed");
+			goto read_end;
+			}
+		numread += strlen(copy_buffer);
+		read_pointer++;
+		read_pointer = (read_pointer) & (BUFFSIZE - 1);
+		private->read_pointer = read_pointer;
+		return numread;
+
+		}
+
+read_end:
+	return 0;
+
+}
+
+
+static int mm_prof_buffopen(struct inode *i_node , struct file *filp)
+{
+	struct mm_buff_fop *private = kmalloc((sizeof(struct mm_buff_fop)),
+							GFP_KERNEL);
+	if (private != NULL) {
+		struct _mm_prof *mm_prof = private->mm_prof;
+		private->mm_prof = (struct _mm_prof *)(i_node->i_private);
+		private->read_pointer = 0;
+		private->cpy_buffer = kmalloc((sizeof(char)*256), GFP_KERNEL);
+		if (private->cpy_buffer == NULL) {
+			pr_err("Error creating copy buffer");
+			kfree(private);
+			return -ENOMEM;
+			}
+
+		filp->private_data = private;
+		return 0;
+	}
+
+	return -ENOMEM;
+}
+
+static int mm_prof_buffrelease(struct inode *i_node, struct file *filp)
+{
+	struct mm_buff_fop *private = filp->private_data;
+	kfree(private->cpy_buffer);
+	kfree(private);
+	return 0;
+}
+static const struct file_operations mm_prof_debugfs_Buffer = {
+	.owner = THIS_MODULE,
+	.read = mm_prof_buffread,
+	.open = mm_prof_buffopen,
+	.release = mm_prof_buffrelease,
+};
+
+
 static void prof_work(struct work_struct *work)
 {
 	struct timespec diff;
@@ -62,6 +148,7 @@ static void prof_work(struct work_struct *work)
 	struct _mm_prof *mm_prof = container_of(work, \
 					struct _mm_prof, \
 					prof_work);
+	int write_ptr = mm_prof->write_ptr;
 
 	if (mm_prof->T1 == 0) {
 		if (mm_prof->timer_state == true) {
@@ -113,13 +200,21 @@ static void prof_work(struct work_struct *work)
 	temp = (timespec_to_ns(&diff)>>12);
 	percnt = percnt/temp;
 
-	pr_err("hw_usage: ON : %d%% [DVFS:%d] JOBS : %d [%d %d %d %d] in %d secs ",
-				percnt, mm_prof->current_mode,
-				mm_prof->jobs_done, mm_prof->jobs_done_type[0],
-				mm_prof->jobs_done_type[1], \
-				mm_prof->jobs_done_type[2], \
-				mm_prof->jobs_done_type[3], \
-				mm_prof->T1);
+
+	mm_prof->buff[write_ptr].jobs_done = mm_prof->jobs_done;
+	mm_prof->buff[write_ptr].T1 = mm_prof->T1;
+	mm_prof->buff[write_ptr].current_mode = mm_prof->current_mode;
+	mm_prof->buff[write_ptr].jobs_done_type[0] = mm_prof->jobs_done_type[0];
+	mm_prof->buff[write_ptr].jobs_done_type[1] = mm_prof->jobs_done_type[1];
+	mm_prof->buff[write_ptr].jobs_done_type[2] = mm_prof->jobs_done_type[2];
+	mm_prof->buff[write_ptr].jobs_done_type[3] = mm_prof->jobs_done_type[3];
+	mm_prof->buff[write_ptr].current_mode = mm_prof->current_mode;
+	mm_prof->buff[write_ptr].percent = percnt;
+	mm_prof->buff[write_ptr].print_time = mm_prof->proft1;
+
+	++(write_ptr) ;
+	write_ptr = write_ptr & (BUFFSIZE - 1);
+	mm_prof->write_ptr = write_ptr;
 
 	mm_prof->hw_on_dur = 0;
 	mm_prof->jobs_done = 0;
@@ -129,6 +224,7 @@ static void prof_work(struct work_struct *work)
 	mm_prof->jobs_done_type[3] = 0;
 	mod_timer(&mm_prof->prof_timeout, \
 		jiffies+msecs_to_jiffies(mm_prof->T1*1000));
+
 }
 
 void mm_prof_update_handler(struct work_struct *work)
@@ -185,7 +281,7 @@ MM_PROF_HW_IFC *prof_params)
 	/* Init prof counters */
 	mm_prof->prof = *prof_params;
 	mm_prof->current_mode = ECONOMY;
-
+	mm_prof->write_ptr = 0;
 	mm_prof->prof_dir = \
 		debugfs_create_dir("prof", mm_prof->mm_common->debugfs_dir);
 	if (mm_prof->prof_dir == NULL) {
@@ -196,9 +292,11 @@ MM_PROF_HW_IFC *prof_params)
 		}
 
 	CREATE_DEBUGFS_FILE(mm_prof, TIME, mm_prof->prof_dir);
-
+	CREATE_DEBUGFS_FILE(mm_prof, Buffer, mm_prof->prof_dir);
 	return mm_prof;
 }
+
+
 
 
 void mm_prof_exit(void *dev_p)

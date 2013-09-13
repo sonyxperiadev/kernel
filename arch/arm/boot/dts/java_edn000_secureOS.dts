@@ -109,7 +109,7 @@
 		kxtik@0f {
                         compatible = "bcm,kxtik";
                         reg = <0x0f>;
-                        gpio-irq-pin = <1>;
+                        gpio-irq-pin = <0>;
                         min_interval = <5>;
                         poll_interval = <200>;
                         axis_map_x = <0>;
@@ -234,8 +234,8 @@
 		compatible = "bcm,ion";
 		id = <13>;
 		type = <5>;
-		base  = <0x00000000>;
-		limit = <0x00000000>;
+		base  = <0xaf000000>;
+		limit = <0xb0000000>;
 		size  = <0x01000000>;
 		iommu = <&iommu_mm>;
 		iovmm = <&iovmm_mm>;
@@ -401,11 +401,15 @@
 	memc@35008000 {
 		compatible = "bcm,memc";
 		reg = <0x35008000 0x1000>;
-		flags = <0x33>;
+		interrupts = <0 61 4>;
+		flags = <0xF3>;
 		chipreg_base = <0x35004000 0x1000>;
 		memc0_aphy_base = <0x35008400 0x1000>;
 		seq_busy_val = <2>;
 		max_pwr = <3>;
+		temp_period = <0xA09E6C>; /*400ms*/
+		temp_tholds = <7 1>;
+		num_thold = <1>;
 	};
 
 	sdio1 {

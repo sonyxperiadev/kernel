@@ -34,7 +34,9 @@
 #include <linux/of.h>
 #include <linux/of_fdt.h>
 #include <linux/of_platform.h>
-
+#ifdef CONFIG_HAS_EARLYSUSPEND
+#include <linux/earlysuspend.h>
+#endif
 #define AKM8975_DEBUG_IF	0
 #define AKM8975_DEBUG_DATA	0
 #define I2C_RETRY_DELAY		5
@@ -65,6 +67,10 @@ struct akm8975_data {
 	atomic_t	is_busy;
 	atomic_t	drdy;
 	atomic_t	suspend;
+
+#ifdef CONFIG_HAS_EARLYSUSPEND
+	struct early_suspend akm_early_suspend;
+#endif
 
 	char layout;
 	int	irq;
@@ -1252,6 +1258,32 @@ static void akm8975_delayed_work(struct work_struct *work)
 	akm8975_irq(akm->irq, akm);
 }
 
+
+#ifdef CONFIG_HAS_EARLYSUSPEND
+static void akm8975_early_suspend(struct early_suspend *handler)
+{
+	int err;
+	printk(KERN_INFO "akm8975_early_suspend\n");
+	/* Power down the device during early suspend */
+	atomic_set(&s_akm->suspend, 1);
+	atomic_set(&s_akm->active, 0);
+	/* get the current state */
+	err = AKECS_SetMode(s_akm, AK8975_MODE_POWERDOWN);
+	if (err < 0)
+		printk(KERN_INFO "AKECS_SetMode returned %d", err);
+	wake_up(&s_akm->open_wq);
+	if (s_akm->irq == 0)
+		cancel_delayed_work_sync(&s_akm->work);
+}
+
+static void akm8975_late_resume(struct early_suspend *handler)
+{
+	printk(KERN_INFO "akm8975_late_resume\n");
+	atomic_set(&s_akm->suspend, 0);
+	wake_up(&s_akm->open_wq);
+}
+#endif
+
 static int akm8975_suspend(struct device *dev)
 {
 	struct akm8975_data *akm = dev_get_drvdata(dev);
@@ -1419,6 +1451,13 @@ int akm8975_probe(struct i2c_client *client, const struct i2c_device_id *id)
 			"%s: create sysfs failed.", __func__);
 		goto exit6;
 	}
+#ifdef CONFIG_HAS_EARLYSUSPEND
+	s_akm->akm_early_suspend.level =
+			EARLY_SUSPEND_LEVEL_BLANK_SCREEN + 1;
+	s_akm->akm_early_suspend.suspend = akm8975_early_suspend;
+	s_akm->akm_early_suspend.resume = akm8975_late_resume;
+	register_early_suspend(&s_akm->akm_early_suspend);
+#endif
 
 	dev_info(&client->dev, "successfully probed.");
 	return 0;
@@ -1429,6 +1468,9 @@ exit5:
 	if (s_akm->irq)
 		free_irq(s_akm->irq, s_akm);
 exit4:
+#if CONFIG_HAS_EARLYSUSPEND
+	unregister_early_suspend(&s_akm->akm_early_suspend);
+#endif
 	input_unregister_device(s_akm->input);
 
 gpio_dir_err:
@@ -1454,6 +1496,9 @@ static int akm8975_remove(struct i2c_client *client)
 		free_irq(client->irq, akm);
 		gpio_free(akm->irq);
 	}
+#if CONFIG_HAS_EARLYSUSPEND
+	unregister_early_suspend(&s_akm->akm_early_suspend);
+#endif
 	input_unregister_device(akm->input);
 	kfree(akm);
 	dev_info(&client->dev, "successfully removed.");
@@ -1474,7 +1519,7 @@ static const struct of_device_id akm8975_of_match[] = {
 	{.compatible = "bcm,akm8975",},
 	{},
 }
-MODULE_DEVICE_TABLE(of, ami_of_match);
+MODULE_DEVICE_TABLE(of, akm8975_of_match);
 
 static struct i2c_driver akm8975_driver = {
 	.probe = akm8975_probe,

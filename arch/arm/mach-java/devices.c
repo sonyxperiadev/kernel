@@ -36,9 +36,6 @@
 #include <linux/of.h>
 #include <linux/of_fdt.h>
 #endif
-#ifdef CONFIG_ANDROID_PMEM
-#include <linux/android_pmem.h>
-#endif
 #include <linux/kernel_stat.h>
 #include <linux/broadcom/ipcinterface.h>
 #include <linux/memblock.h>
@@ -139,22 +136,17 @@ struct secure_mem_data secure_mem_init_data = {
 struct platform_device secure_mem_device = {
 	.name = "secure_mem",
 	.id = 0,
+#ifdef CONFIG_MOBICORE_DRIVER
+	.dev = {
+		.platform_data = &mobicore_plat_data,
+	},
+#endif
 };
 #endif /* CONFIG_OF */
 
 /* dynamic ETM support */
 unsigned int etm_on;
 EXPORT_SYMBOL(etm_on);
-
-#ifdef CONFIG_ANDROID_PMEM
-struct platform_device android_pmem = {
-	.name = "android_pmem",
-	.id = 0,
-	.dev = {
-		.platform_data = &android_pmem_data,
-	},
-};
-#endif
 
 #ifdef CONFIG_ION_BCM_NO_DT
 #ifdef CONFIG_IOMMU_API
@@ -850,15 +842,29 @@ struct platform_device avs_device = {
 #endif
 
 #ifdef CONFIG_KONA_MEMC
+#ifdef CONFIG_LPDDR_DEV_TEMP
+struct temp_thold temp_tholds[] = {
+	{.mr4_sts = 7, .action = SHDWN,},
+};
+#endif
 struct kona_memc_pdata kmemc_plat_data = {
 	.flags = KONA_MEMC_ENABLE_SELFREFRESH | KONA_MEMC_DISABLE_DDRLDO |
-		KONA_MEMC_DDR_PLL_PWRDN_EN |
-		KONA_MEMC_HW_FREQ_CHANGE_EN,
+		KONA_MEMC_DDR_PLL_PWRDN_EN | KONA_MEMC_HW_FREQ_CHANGE_EN
+#ifdef CONFIG_LPDDR_DEV_TEMP
+		| KONA_MEMC_CS0_DEV_TEMP | KONA_MEMC_CS1_DEV_TEMP
+#endif
+		,
 	.memc0_ns_base = KONA_MEMC0_NS_VA,
 	.chipreg_base = KONA_CHIPREG_VA,
 	.memc0_aphy_base = KONA_MEMC0_APHY_VA,
 	.seq_busy_val = 2,
 	.max_pwr = 3,
+#ifdef CONFIG_LPDDR_DEV_TEMP
+	.irq = BCM_INT_ID_SYS_EMI_OPEN,
+	.temp_period = 0xA09E6C, /*cycles on XTAL (26MHz) clock, period=400ms*/
+	.temp_tholds = temp_tholds,
+	.num_thold = ARRAY_SIZE(temp_tholds),
+#endif
 };
 struct platform_device kona_memc_device = {
 	.name = "kona_memc",
@@ -1001,98 +1007,6 @@ static int __init setup_etm(char *p)
 	return 1;
 }
 early_param("etm_on", setup_etm);
-
-
-#ifdef CONFIG_ANDROID_PMEM
-static int __init setup_pmem_pages(char *str)
-{
-	char *endp = NULL;
-	if (str) {
-		android_pmem_data.cmasize = memparse((const char *)str, &endp);
-		printk(KERN_INFO "PMEM size is 0x%08x Bytes\n",
-		       (unsigned int)android_pmem_data.cmasize);
-	} else {
-		printk(KERN_EMERG "\"pmem=\" option is not set!!!\n");
-		printk(KERN_EMERG "Unable to determine the memory region for pmem!!!\n");
-	}
-	return 0;
-}
-early_param("pmem", setup_pmem_pages);
-
-static int __init setup_pmem_carveout_pages(char *str)
-{
-	char *endp = NULL;
-	phys_addr_t carveout_size = 0;
-	if (str) {
-		carveout_size = memparse((const char *)str, &endp);
-		if (carveout_size & (PAGE_SIZE - 1)) {
-			printk(KERN_INFO"carveout size is not aligned to 0x%08x\n",
-					(1 << MAX_ORDER));
-			carveout_size = ALIGN(carveout_size, PAGE_SIZE);
-			printk(KERN_INFO"Aligned carveout size is 0x%08x\n",
-					carveout_size);
-		}
-		printk(KERN_INFO"PMEM: Carveout Mem (0x%08x)\n", carveout_size);
-	} else {
-		printk(KERN_EMERG"PMEM: Invalid \"carveout=\" value.\n");
-	}
-
-	if (carveout_size)
-		android_pmem_data.carveout_size = carveout_size;
-
-	return 0;
-}
-early_param("carveout", setup_pmem_carveout_pages);
-
-static void __init pmem_reserve_memory(void)
-{
-	int err;
-	phys_addr_t carveout_size, carveout_base;
-	unsigned long cmasize;
-
-	carveout_size = android_pmem_data.carveout_size;
-	cmasize = android_pmem_data.cmasize;
-	carveout_base = android_pmem_data.carveout_base;
-
-	if (carveout_size) {
-		do {
-			carveout_base = memblock_alloc_from_range(
-				carveout_size, SZ_16M, carveout_base,
-			carveout_base + carveout_size);
-
-			if (!carveout_base) {
-				pr_err("FATAL: PMEM: unable to");
-				pr_err(" carveout at 0x%x\n",
-					android_pmem_data.carveout_base);
-				break;
-			}
-
-			if (carveout_base !=
-				android_pmem_data.carveout_base) {
-				pr_err("PMEM: Requested block at 0x%x,",
-					android_pmem_data.carveout_base);
-				pr_err(" but got 0x%x", carveout_base);
-			}
-
-			memblock_free(carveout_base, carveout_size);
-			err = memblock_remove(carveout_base, carveout_size);
-			if (!err) {
-				printk(KERN_INFO"PMEM: Carve memory from (%08x-%08x)\n",
-						carveout_base,
-						carveout_base + carveout_size);
-				android_pmem_data.carveout_base = carveout_base;
-			} else {
-				printk(KERN_INFO"PMEM: Carve out memory failed\n");
-			}
-		} while (0);
-	}
-
-	if (dma_declare_contiguous(&android_pmem.dev, cmasize, 0, 0)) {
-		printk(KERN_ERR"PMEM: Failed to reserve CMA region\n");
-		android_pmem_data.cmasize = 0;
-	}
-}
-#endif
 
 #ifdef CONFIG_ION
 
@@ -1602,10 +1516,6 @@ void __init hawaii_reserve(void)
 #ifdef CONFIG_ION
 	ion_reserve_memory();
 #endif /* CONFIG_ION */
-
-#ifdef CONFIG_ANDROID_PMEM
-	pmem_reserve_memory();
-#endif
 }
 
 static int __init setup_board_version(char *p)
