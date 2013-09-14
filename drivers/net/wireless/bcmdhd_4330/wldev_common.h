@@ -1,7 +1,7 @@
 /*
  * Common function shared by Linux WEXT, cfg80211 and p2p drivers
  *
- * Copyright (C) 1999-2012, Broadcom Corporation
+ * Copyright (C) 1999-2013, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -84,9 +84,10 @@ s32 wldev_iovar_setint_bsscfg(
 	struct net_device *dev, s8 *iovar, s32 val, s32 bssidx);
 
 extern void get_customized_country_code(char *country_iso_code, wl_country_t *cspec);
-extern void dhd_bus_country_set(struct net_device *dev, wl_country_t *cspec);
+extern void dhd_bus_country_set(struct net_device *dev, wl_country_t *cspec, bool notify);
 extern void dhd_bus_band_set(struct net_device *dev, uint band);
-extern int wldev_set_country(struct net_device *dev, char *country_code);
+extern int wldev_set_country(struct net_device *dev, char *country_code, bool notify,
+	bool user_enforced);
 extern int net_os_wake_lock(struct net_device *dev);
 extern int net_os_wake_unlock(struct net_device *dev);
 extern int net_os_wake_lock_timeout(struct net_device *dev);

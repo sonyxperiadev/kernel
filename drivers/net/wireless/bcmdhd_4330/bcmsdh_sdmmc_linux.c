@@ -196,8 +196,7 @@ static int bcmsdh_sdmmc_suspend(struct device *pdev)
 	if (func->num != 2)
 		return 0;
 
-	sd_trace_hw4(("%s Enter\n", __FUNCTION__));
-
+	printk(("%s Enter\n", __FUNCTION__));
 	if (dhd_os_check_wakelock(bcmsdh_get_drvdata()))
 		return -EBUSY;
 
@@ -236,8 +235,8 @@ static int bcmsdh_sdmmc_resume(struct device *pdev)
 	struct sdio_func *func = dev_to_sdio_func(pdev);
 #endif /* defined(OOB_INTR_ONLY) */
 #endif /* defined(CUSTOMER_HW4) */
-	sd_trace_hw4(("%s Enter\n", __FUNCTION__));
 
+	printk(("%s Enter\n", __FUNCTION__));
 	dhd_mmc_suspend = FALSE;
 #if !defined(CUSTOMER_HW4)
 #if defined(OOB_INTR_ONLY)

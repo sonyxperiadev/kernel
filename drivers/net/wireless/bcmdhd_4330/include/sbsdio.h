@@ -4,7 +4,7 @@
  *
  * SDIO core support 1bit, 4 bit SDIO mode as well as SPI mode.
  *
- * Copyright (C) 1999-2012, Broadcom Corporation
+ * Copyright (C) 1999-2013, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -24,7 +24,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: sbsdio.h 361940 2012-10-10 08:32:12Z $
+ * $Id: sbsdio.h 383835 2013-02-07 23:32:39Z $
  */
 
 #ifndef	_SBSDIO_H
@@ -101,6 +101,7 @@
  * => busy signal is asserted between data blocks.
 */
 #define SBSDIO_MESBUSYCTRL_MASK		0x7f
+#define SBSDIO_MESBUSYCTRL_ENAB		0x80		/* Enable busy capability for MES access */
 
 /* SBSDIO_DEVICE_CTL */
 #define SBSDIO_DEVCTL_SETBUSY		0x01		/* 1: device will assert busy signal when
@@ -116,12 +117,9 @@
 							 * external pads in tri-state; requires
 							 * sdio bus power cycle to clear (rev 9)
 							 */
-#define SBSDIO_DEVCTL_SB_RST_CTL	0x30		/* Force SD->SB reset mapping (rev 11) */
-#define SBSDIO_DEVCTL_RST_CORECTL	0x00		/*   Determined by CoreControl bit */
-#define SBSDIO_DEVCTL_RST_BPRESET	0x10		/*   Force backplane reset */
-#define SBSDIO_DEVCTL_RST_NOBPRESET	0x20		/*   Force no backplane reset */
 #define SBSDIO_DEVCTL_EN_F2_BLK_WATERMARK 0x10  /* Enable function 2 tx for each block */
-
+#define SBSDIO_DEVCTL_F2WM_ENAB		0x10		/* Enable F2 Watermark */
+#define SBSDIO_DEVCTL_NONDAT_PADS_ISO 	0x20		/* Isolate sdio clk and cmd (non-data) */
 
 /* SBSDIO_FUNC1_CHIPCLKCSR */
 #define SBSDIO_FORCE_ALP		0x01		/* Force ALP request to backplane */
@@ -165,11 +163,7 @@
 
 /* direct(mapped) cis space */
 #define SBSDIO_CIS_BASE_COMMON		0x1000		/* MAPPED common CIS address */
-#ifdef BCMSPI
-#define SBSDIO_CIS_SIZE_LIMIT		0x100		/* maximum bytes in one spi CIS */
-#else
 #define SBSDIO_CIS_SIZE_LIMIT		0x200		/* maximum bytes in one CIS */
-#endif /* !BCMSPI */
 #define SBSDIO_OTP_CIS_SIZE_LIMIT       0x078           /* maximum bytes OTP CIS */
 
 #define SBSDIO_CIS_OFT_ADDR_MASK	0x1FFFF		/* cis offset addr is < 17 bits */
