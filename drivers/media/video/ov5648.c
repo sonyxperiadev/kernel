@@ -2044,6 +2044,7 @@ static int ov5648_init(struct i2c_client *client)
 {
 	struct ov5648 *ov5648 = to_ov5648(client);
 	int ret = 0;
+	int i = 0;
 
 	/* reset */
 	ov5648_reg_write(client, 0x0103, 0x01);
@@ -2069,13 +2070,17 @@ static int ov5648_init(struct i2c_client *client)
 	init_timer(&timer);
 #endif
 
-	ov5648->exposure_current  = DEFAULT_EXPO * 22;
+	ov5648->exposure_current  = DEFAULT_EXPO * 312;
 	ov5648->aecpos_delay      = 1;
 	ov5648->lenspos_delay     = 0;
 	ov5648->flashmode         = FLASH_MODE_OFF;
 	ov5648->flash_intensity   = OV5648_FLASH_INTENSITY_DEFAULT;
 	ov5648->flash_timeout     = OV5648_FLASH_TIMEOUT_DEFAULT;
-
+	for (i = 0; i < ov5648->aecpos_delay; i++) {
+		ov5648->exp_read_buf[i] = \
+		(ov5648->exposure_current * 1000 / ov5648->line_length) << 4;
+		ov5648->gain_read_buf[i] = ov5648->gain_current >> 4;
+	}
 	dev_dbg(&client->dev, "Sensor initialized\n");
 	return ret;
 }
