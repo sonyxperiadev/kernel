@@ -1363,6 +1363,7 @@ static int spi_kona_probe(struct platform_device *pdev)
 	status = spi_register_master(master);
 	if (status != 0) {
 		dev_err(&pdev->dev, "problem registering spi master\n");
+		destroy_workqueue(spi_kona->workqueue);
 		goto out_clk_put;
 	}
 
