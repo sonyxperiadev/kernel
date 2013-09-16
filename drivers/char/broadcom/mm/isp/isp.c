@@ -319,6 +319,7 @@ int __init mm_isp_init(void)
 	return ret;
 
 err:
+	kfree(isp_device);
 	pr_err("ISP driver Module Init Error");
 	return ret;
 }

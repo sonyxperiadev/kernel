@@ -96,6 +96,8 @@ int __init mm_v3d_init(void)
 	pr_debug("v3d_init: H264 driver Module Init over");
 	return ret;
 err1:
+	while (--i >= 0)
+		v3d_device->subdev_deinit[i]();
 	kfree(v3d_device);
 err:
 	pr_err("v3d_init: V3D driver Module Init Error");
