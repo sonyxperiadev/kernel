@@ -68,6 +68,7 @@ struct pv_config_t {
 	u16 hbp; /* Horizontal Back Porch width */
 	u16 hact; /* Horizontal ACTive width */
 	u16 hfp; /* Horizontal Front Porch wdith*/
+	u16 hbllp; /* Horizontal BLLP wdith*/
 };
 
 enum {

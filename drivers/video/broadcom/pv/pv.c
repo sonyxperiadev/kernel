@@ -299,7 +299,8 @@ static int pv_vid_config(struct pv_config_t *vid_config)
 	writel(UINT_MAX, pv_base + REG_PV_INTSTAT); /*Ack previous interrupts*/
 	writel_relaxed(vid_config->hs | (vid_config->hbp << HBP_SHIFT),
 			pv_base + REG_PV_HORZA);
-	writel_relaxed(vid_config->hact | (vid_config->hfp << HFP_SHIFT),
+	writel_relaxed((vid_config->hact + vid_config->hbllp) |
+			(vid_config->hfp << HFP_SHIFT),
 			pv_base + REG_PV_HORZB);
 	writel_relaxed((vid_config->hact), pv_base + REG_PV_DSI_HACT_ACT);
 	writel_relaxed((vid_config->vs + 1) |

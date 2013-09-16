@@ -77,7 +77,7 @@ extern "C" {
 		Boolean enaLpTxEotPkt;	///< enable TX of EOT during LP mode
 		Boolean enaLpRxEotPkt;	///< enable RX of EOT during LP mode
 		Boolean vmode;		/* 1 = Video Mode, 0 = Command Mode */
-		uint8_t hs, hbp, hfp;
+		uint8_t hs, hbp, hfp, hbllp;
 		uint8_t vs, vbp, vfp;
 		UInt32 dispEngine;	/* Display Engine- 0=DE0 via Pixel Valve
 						/ 1=DE1 via TXPKT_PIXD_FIFO

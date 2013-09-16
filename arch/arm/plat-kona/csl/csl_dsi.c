@@ -2556,6 +2556,7 @@ CSL_LCD_RES_T CSL_DSI_Init(const pCSL_DSI_CFG dsiCfg)
 			dsiH->pvCfg->hs = dsiCfg->hs;
 			dsiH->pvCfg->hbp = dsiCfg->hbp;
 			dsiH->pvCfg->hfp = dsiCfg->hfp;
+			dsiH->pvCfg->hbllp = dsiCfg->hbllp;
 			dsiH->pvCfg->interlaced = false;
 			dsiH->pvCfg->vsyncd = 0;
 			dsiH->pvCfg->pix_stretch = 0;
