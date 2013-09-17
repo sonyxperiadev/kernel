@@ -997,7 +997,7 @@ static int __devinit bcmpmu_throttle_probe(struct platform_device *pdev)
 			&tdata->usb_det_nb);
 	if (ret) {
 		pr_throttle(FLOW, "%s Failed to add notifier\n", __func__);
-		goto error;
+		goto destroy_workq;
 	}
 
 	tdata->acld_nb.notifier_call = bcmpmu_throttle_event_handler;
@@ -1034,7 +1034,8 @@ unreg_usb_det_nb:
 unreg_acld_nb:
 	bcmpmu_remove_notifier(PMU_ACLD_EVT_ACLD_STATUS,
 				&tdata->usb_det_nb);
-
+destroy_workq:
+	destroy_workqueue(tdata->throttle_wq);
 error:
 	kfree(tdata);
 	return 0;

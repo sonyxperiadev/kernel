@@ -1090,7 +1090,7 @@ static int __devinit bcmpmu_acld_probe(struct platform_device *pdev)
 	if (ret) {
 		pr_acld(ERROR, "%s Failed to add notifier:%d\n",
 				__func__, __LINE__);
-		goto error;
+		goto destroy_workq;
 	}
 	acld->tml_trtle_nb.notifier_call = bcmpmu_acld_event_handler;
 	ret = bcmpmu_add_notifier(PMU_THEMAL_THROTTLE_STATUS,
@@ -1126,6 +1126,8 @@ unreg_thermal_nb:
 unreg_usb_det_nb:
 	bcmpmu_remove_notifier(PMU_ACCY_EVT_OUT_CHRGR_TYPE,
 			&acld->usb_det_nb);
+destroy_workq:
+	destroy_workqueue(acld->acld_wq);
 error:
 	kfree(acld);
 	return 0;

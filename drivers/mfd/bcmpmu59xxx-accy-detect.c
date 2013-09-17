@@ -90,6 +90,7 @@ struct accy_det {
 	bool clock_en;
 	bool rgl_en;
 };
+static atomic_t drv_init_done;
 
 #define pr_acd(debug_level, args...) \
 	do { \
@@ -428,6 +429,12 @@ static int bcmpmu_accy_event_handler(struct notifier_block *nb,
 	struct accy_det *accy_d;
 	u32 id_status;
 	pr_acd(FLOW, "=== %s event %ld\n", __func__, event);
+
+	if (!atomic_read(&drv_init_done)) {
+		pr_acd(ERROR, "%s: Driver not initialized yet\n", __func__);
+		return -ENOMEM;
+	}
+
 	switch (event) {
 	case PMU_ACCY_EVT_OUT_CHGDET_LATCH:
 		accy_d = container_of(nb,
@@ -606,6 +613,8 @@ static int __devinit bcmpmu_accy_detect_probe(struct platform_device *pdev)
 	pr_acd(INIT, "%s vbus_status %d\n", __func__, vbus_status);
 	if (vbus_status)
 		queue_delayed_work(accy_d->wq, &accy_d->d_work, ACD_DELAY);
+
+	atomic_set(&drv_init_done, 1);
 	return ret;
 err:
 	kfree(accy_d);
