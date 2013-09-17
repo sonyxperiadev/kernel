@@ -263,7 +263,7 @@ bcm_hsotg_mdio0_show(struct device *dev, struct device_attribute *attr,
 
 	pr_info("USB PHY MDIO Register 0 ==%x\n", val);
 
-	return sprintf(buf, "USB PHY MDIO Register 0 ==%x\n", val);
+	return scnprintf(buf, PAGE_SIZE, "USB PHY MDIO Register 0 ==%x\n", val);
 }
 
 static ssize_t
@@ -291,7 +291,7 @@ bcm_hsotg_mdio1_show(struct device *dev, struct device_attribute *attr,
 
 	pr_info("USB PHY MDIO Register 1 ==%x\n", val);
 
-	return sprintf(buf, "USB PHY MDIO Register 1 ==%x\n", val);
+	return scnprintf(buf, PAGE_SIZE, "USB PHY MDIO Register 1 ==%x\n", val);
 }
 
 static ssize_t
@@ -318,7 +318,7 @@ bcm_hsotg_mdio2_show(struct device *dev, struct device_attribute *attr,
 
 	pr_info("USB PHY MDIO Register 2 ==%x\n", val);
 
-	return sprintf(buf, "USB PHY MDIO Register 2 ==%x\n", val);
+	return scnprintf(buf, PAGE_SIZE, "USB PHY MDIO Register 2 ==%x\n", val);
 }
 
 static ssize_t
@@ -345,7 +345,7 @@ bcm_hsotg_mdio3_show(struct device *dev, struct device_attribute *attr,
 
 	pr_info("USB PHY MDIO Register 3 ==%x\n", val);
 
-	return sprintf(buf, "USB PHY MDIO Register 3 ==%x\n", val);
+	return scnprintf(buf, PAGE_SIZE, "USB PHY MDIO Register 3 ==%x\n", val);
 }
 
 static ssize_t
@@ -372,7 +372,7 @@ bcm_hsotg_mdio4_show(struct device *dev, struct device_attribute *attr,
 
 	pr_info("USB PHY MDIO Register 45 ==%x\n", val);
 
-	return sprintf(buf, "USB PHY MDIO Register 4 ==%x\n", val);
+	return scnprintf(buf, PAGE_SIZE, "USB PHY MDIO Register 4 ==%x\n", val);
 }
 
 static ssize_t
@@ -399,7 +399,7 @@ bcm_hsotg_mdio5_show(struct device *dev, struct device_attribute *attr,
 
 	pr_info("USB PHY MDIO Register 5 ==%x\n", val);
 
-	return sprintf(buf, "USB PHY MDIO Register 5 ==%x\n", val);
+	return scnprintf(buf, PAGE_SIZE, "USB PHY MDIO Register 5 ==%x\n", val);
 }
 
 static ssize_t
