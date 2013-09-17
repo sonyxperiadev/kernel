@@ -337,7 +337,7 @@ proc_card_ctrl_read(char *buffer, char **start, off_t off, int count,
 	if (off > 0)
 		return 0;
 
-	len += sprintf(buffer + len, "SD/MMC card is %s\n",
+	len += scnprintf(buffer + len, PAGE_SIZE, "SD/MMC card is %s\n",
 		       sdhci_readl(host,
 				   KONA_SDHOST_CORESTAT) & KONA_SDHOST_CD_SW ?
 		       "INSERTED" : "NOT INSERTED");
