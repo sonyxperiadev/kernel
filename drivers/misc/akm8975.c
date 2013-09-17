@@ -782,7 +782,7 @@ static ssize_t akm8975_sysfs_enable_show(
 	flag = ((akm->enable_flag >> pos) & 1);
 	mutex_unlock(&akm->val_mutex);
 
-	return sprintf(buf, "%d\n", flag);
+	return snprintf(buf, PAGE_SIZE, "%d\n", flag);
 }
 
 static ssize_t akm8975_sysfs_enable_store(
@@ -866,7 +866,7 @@ static ssize_t akm8975_sysfs_delay_show(
 	val = akm->delay[pos];
 	mutex_unlock(&akm->val_mutex);
 
-	return sprintf(buf, "%lld\n", val);
+	return snprintf(buf, PAGE_SIZE, "%lld\n", val);
 }
 
 static ssize_t akm8975_sysfs_delay_store(
@@ -1000,7 +1000,7 @@ static ssize_t akm8975_bdata_show(
 	memcpy(&rbuf, akm->sense_data, sizeof(rbuf));
 	mutex_unlock(&akm->sensor_mutex);
 
-	return sprintf(buf,
+	return snprintf(buf, PAGE_SIZE,
 		"0x%02X,0x%02X,0x%02X,0x%02X,"
 		"0x%02X,0x%02X,0x%02X,0x%02X\n",
 		rbuf[0], rbuf[1], rbuf[2], rbuf[3],
@@ -1027,7 +1027,7 @@ static ssize_t akm8975_asa_show(
 	if (err < 0)
 		return err;
 
-	return sprintf(buf, "0x%02X,0x%02X,0x%02X\n",
+	return snprintf(buf, PAGE_SIZE, "0x%02X,0x%02X,0x%02X\n",
 		asa[0], asa[1], asa[2]);
 }
 #endif
