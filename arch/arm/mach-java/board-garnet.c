@@ -142,7 +142,7 @@
 #include <mach/caph_platform.h>
 #include <mach/caph_settings.h>
 #endif
-#ifdef CONFIG_VIDEO_UNICAM_CAMERA
+#ifdef CONFIG_UNICAM_CAMERA
 #include <media/soc_camera.h>
 #endif
 
@@ -387,7 +387,7 @@ static struct i2c_board_info as3643_flash[] = {
 	 },
 };
 #endif
-#ifdef CONFIG_VIDEO_UNICAM_CAMERA
+#ifdef CONFIG_UNICAM_CAMERA
 
 
 static struct regulator *d_gpsr_cam0_1v8;
@@ -471,8 +471,12 @@ static int hawaii_camera_power(struct device *dev, int on)
 	struct clk *lp_clock;
 	struct clk *axi_clk;
 	static struct pi_mgr_dfs_node unicam_dfs_node;
+#if 0
 	struct soc_camera_device *icd = to_soc_camera_dev(dev);
 	struct soc_camera_link *icl = to_soc_camera_link(icd);
+#else
+	struct soc_camera_link *icl = dev->platform_data;
+#endif
 
 	printk(KERN_INFO "%s:camera power %s\n", __func__, (on ? "on" : "off"));
 
@@ -714,9 +718,12 @@ static int hawaii_camera_power_front(struct device *dev, int on)
 	struct clk *lp_clock_0;
 	struct clk *lp_clock_1;
 	static struct pi_mgr_dfs_node unicam_dfs_node;
+#if 0
 	struct soc_camera_device *icd = to_soc_camera_dev(dev);
 	struct soc_camera_link *icl = to_soc_camera_link(icd);
-
+#else
+	struct soc_camera_link *icl = dev->platform_data;
+#endif
 
 	printk(KERN_INFO "%s:camera power %s\n", __func__, (on ? "on" : "off"));
 
@@ -944,7 +951,7 @@ static struct soc_camera_link iclink_ov8825 = {
 };
 #endif
 
-#endif /* CONFIG_VIDEO_UNICAM_CAMERA */
+#endif /* CONFIG_UNICAM_CAMERA */
 
 static struct spi_kona_platform_data hawaii_ssp0_info = {
 #ifdef CONFIG_DMAC_PL330
@@ -1028,7 +1035,7 @@ struct platform_device *hawaii_common_plat_devices[] __initdata = {
 #ifdef CONFIG_UNICAM
 	&hawaii_unicam_device,
 #endif
-#ifdef CONFIG_VIDEO_UNICAM_CAMERA
+#ifdef CONFIG_UNICAM_CAMERA
 	&hawaii_camera_device,
 #endif
 

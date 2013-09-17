@@ -172,7 +172,7 @@
 #include <mach/caph_platform.h>
 #include <mach/caph_settings.h>
 #endif
-#ifdef CONFIG_VIDEO_UNICAM_CAMERA
+#ifdef CONFIG_UNICAM_CAMERA
 #include <media/soc_camera.h>
 #include "../../../drivers/media/video/camdrv_ss.h"
 #endif
@@ -427,7 +427,7 @@ struct ion_platform_data ion_cma_data = {
 #endif /* CONFIG_CMA */
 #endif /* CONFIG_ION_BCM_NO_DT */
 
-#ifdef CONFIG_VIDEO_UNICAM_CAMERA
+#ifdef CONFIG_UNICAM_CAMERA
 
 #define CAMDRV_SS_MAIN_I2C_ADDRESS (0xAC>>1)
 #define CAMDRV_SS_SUB_I2C_ADDRESS (0x60>>1)
@@ -629,7 +629,7 @@ static struct platform_device hawaii_camera_sub = {
 		.platform_data = &iclink_camdrv_ss_sub,
 	},
 };
-#endif /* CONFIG_VIDEO_UNICAM_CAMERA */
+#endif /* CONFIG_UNICAM_CAMERA */
 
 
 
@@ -811,7 +811,7 @@ struct platform_device *hawaii_common_plat_devices[] __initdata = {
 	&hawaii_unicam_device,
 #endif
 
-#ifdef CONFIG_VIDEO_UNICAM_CAMERA
+#ifdef CONFIG_UNICAM_CAMERA
 	&hawaii_camera_device,
 	&hawaii_camera,
 	&hawaii_camera_sub,

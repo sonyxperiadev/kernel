@@ -53,7 +53,7 @@ extern struct platform_device hawaii_spum_aes_device;
 #ifdef CONFIG_UNICAM
 extern struct platform_device hawaii_unicam_device;
 #endif
-#ifdef CONFIG_VIDEO_UNICAM_CAMERA
+#ifdef CONFIG_UNICAM_CAMERA
 extern struct platform_device hawaii_camera_device;
 #endif
 #ifdef CONFIG_SND_BCM_SOC

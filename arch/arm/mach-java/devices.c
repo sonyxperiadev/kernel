@@ -968,7 +968,7 @@ struct platform_device hawaii_unicam_device = {
 };
 #endif
 
-#ifdef CONFIG_VIDEO_UNICAM_CAMERA
+#ifdef CONFIG_UNICAM_CAMERA
 static u64 unicam_camera_dma_mask = DMA_BIT_MASK(32);
 
 static struct resource hawaii_unicam_resource[] = {

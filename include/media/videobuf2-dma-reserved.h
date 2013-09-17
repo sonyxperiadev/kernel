@@ -34,10 +34,12 @@ vb2_dma_reserved_plane_dma_addr(struct vb2_buffer *vb, unsigned int plane_no)
 		return 0;
 	}
 
+#if 0
 	if ((vb->v4l2_buf.flags & V4L2_BUF_FLAG_DMA_RESERVED) == 0) {
 		pr_err("ERROR: Driver uses dma-reserved. v4l2_buffer flags mismatch\n");
 		return 0;
 	}
+#endif
 
 	return vb->v4l2_buf.reserved;
 }

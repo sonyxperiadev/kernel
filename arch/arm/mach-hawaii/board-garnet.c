@@ -143,7 +143,7 @@
 #include <mach/caph_platform.h>
 #include <mach/caph_settings.h>
 #endif
-#ifdef CONFIG_VIDEO_UNICAM_CAMERA
+#ifdef CONFIG_UNICAM_CAMERA
 #include <media/soc_camera.h>
 #endif
 
@@ -390,7 +390,7 @@ static struct i2c_board_info as3643_flash[] = {
 	 },
 };
 #endif
-#ifdef CONFIG_VIDEO_UNICAM_CAMERA
+#ifdef CONFIG_UNICAM_CAMERA
 
 
 static struct regulator *d_gpsr_cam0_1v8;
@@ -405,6 +405,8 @@ static struct regulator *d_3v0_mmc1_vcc;
 #define SENSOR_0_CLK                    "dig_ch0_clk"	/*DCLK1 */
 #define SENSOR_1_CLK                    "dig_ch0_clk"	/* DCLK1 */
 
+#define OV5640_I2C_ADDRESS		(0x3C)
+#define OV7692_I2C_ADDRESS              (0x3e)
 #define SENSOR_0_GPIO_PWRDN             (002)
 #define SENSOR_0_GPIO_RST               (111)
 #define SENSOR_1_GPIO_PWRDN             (005)
@@ -443,6 +445,24 @@ static struct cameraCfg_s *getCameraCfg(const char *cameraName)
 	return NULL;
 }
 
+#if defined(CONFIG_SOC_CAMERA_OV5640)
+static struct regulator_bulk_data ov5640_regulator_data[] = {
+	[0] = {
+		.supply = "lvldo1_uc",
+	},
+	[1] = {
+		.supply = "mmc1_vcc",
+	},
+	[2] = {
+		.supply = "mmc2_vcc",
+	},
+	[3] = {
+		.supply = "lvldo2_uc",
+	},
+};
+#endif
+
+
 static int hawaii_camera_power(struct device *dev, int on)
 {
 	unsigned int value;
@@ -452,8 +472,16 @@ static int hawaii_camera_power(struct device *dev, int on)
 	struct clk *lp_clock;
 	struct clk *axi_clk;
 	static struct pi_mgr_dfs_node unicam_dfs_node;
-	struct soc_camera_device *icd = to_soc_camera_dev(dev);
-	struct soc_camera_link *icl = to_soc_camera_link(icd);
+	static int sensor_on = 0;
+	struct soc_camera_subdev_desc *ssd = dev->platform_data;
+
+	if (sensor_on == on) {
+		printk("hawaii_camera_power already in same state: %s\n",
+						(on ? "on" : "off"));
+		return 0;
+	}
+
+	sensor_on = on;
 
 	printk(KERN_INFO "%s:camera power %s\n", __func__, (on ? "on" : "off"));
 
@@ -481,20 +509,25 @@ static int hawaii_camera_power(struct device *dev, int on)
 			return -1;
 		}
 
+		printk("%s\n", ov5640_regulator_data[0].supply);
+		printk("%s\n", ov5640_regulator_data[1].supply);
+		printk("%s\n", ov5640_regulator_data[2].supply);
+		printk("%s\n", ov5640_regulator_data[3].supply);
+
 		/*MMC1 VCC */
-		d_1v8_mmc1_vcc = regulator_get(NULL, icl->regulators[1].supply);
+		d_1v8_mmc1_vcc = regulator_get(NULL, ov5640_regulator_data[1].supply);
 		if (IS_ERR_OR_NULL(d_1v8_mmc1_vcc))
 			printk(KERN_ERR "Failed to  get d_1v8_mmc1_vcc\n");
-		d_3v0_mmc1_vcc = regulator_get(NULL, icl->regulators[2].supply);
+		d_3v0_mmc1_vcc = regulator_get(NULL, ov5640_regulator_data[2].supply);
 		if (IS_ERR_OR_NULL(d_3v0_mmc1_vcc))
 			printk(KERN_ERR "Failed to  get d_3v0_mmc1_vcc\n");
 		d_gpsr_cam0_1v8 = regulator_get(NULL,
-			icl->regulators[0].supply);
+			ov5640_regulator_data[0].supply);
 		if (IS_ERR_OR_NULL(d_gpsr_cam0_1v8))
 			printk(KERN_ERR "Failed to  get d_gpsr_cam0_1v8\n");
 		if (d_lvldo2_cam1_1v8 == NULL) {
 			d_lvldo2_cam1_1v8 = regulator_get(NULL,
-			icl->regulators[3].supply);
+			ov5640_regulator_data[3].supply);
 			if (IS_ERR_OR_NULL(d_lvldo2_cam1_1v8))
 				printk(KERN_ERR "Fd_lvldo2_cam1_1v8 cam\n");
 		}
@@ -653,8 +686,7 @@ static int hawaii_camera_power_front(struct device *dev, int on)
 	struct clk *lp_clock_0;
 	struct clk *lp_clock_1;
 	static struct pi_mgr_dfs_node unicam_dfs_node;
-	struct soc_camera_device *icd = to_soc_camera_dev(dev);
-	struct soc_camera_link *icl = to_soc_camera_link(icd);
+	struct soc_camera_subdev_desc *ssd = dev->platform_data;
 
 	printk(KERN_INFO "%s:camera power %s\n", __func__, (on ? "on" : "off"));
 
@@ -677,24 +709,24 @@ static int hawaii_camera_power_front(struct device *dev, int on)
 			return -1;
 		}
 		d_lvldo2_cam1_1v8 = regulator_get(NULL,
-			icl->regulators[0].supply);
+			ssd->regulators[0].supply);
 		if (IS_ERR_OR_NULL(d_lvldo2_cam1_1v8))
 			printk(KERN_ERR "Failed to get d_lvldo2_cam1_1v8\n");
 		if (d_1v8_mmc1_vcc == NULL) {
 			d_1v8_mmc1_vcc = regulator_get(NULL,
-				icl->regulators[1].supply);
+				ssd->regulators[1].supply);
 			if (IS_ERR_OR_NULL(d_1v8_mmc1_vcc))
 				printk(KERN_ERR "Err d_1v8_mmc1_vcc\n");
 		}
 		if (d_3v0_mmc1_vcc == NULL) {
 			d_3v0_mmc1_vcc = regulator_get(NULL,
-			icl->regulators[2].supply);
+			ssd->regulators[2].supply);
 			if (IS_ERR_OR_NULL(d_3v0_mmc1_vcc))
 				printk(KERN_ERR "d_3v0_mmc1_vcc");
 		}
 		if (d_gpsr_cam0_1v8 == NULL) {
 			d_gpsr_cam0_1v8 = regulator_get(NULL,
-			icl->regulators[3].supply);
+			ssd->regulators[3].supply);
 			if (IS_ERR_OR_NULL(d_gpsr_cam0_1v8))
 				printk(KERN_ERR "Fl d_gpsr_cam0_1v8 get	fail");
 		}
@@ -850,24 +882,89 @@ static int hawaii_camera_reset_front(struct device *dev)
 	return 0;
 }
 
+static struct v4l2_subdev_sensor_interface_parms ov5640_if_params = {
+	.if_type = V4L2_SUBDEV_SENSOR_SERIAL,
+	.if_mode = V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2,
+	.orientation = V4L2_SUBDEV_SENSOR_PORTRAIT,
+	.facing = V4L2_SUBDEV_SENSOR_BACK,
+	.parms.serial = {
+			.lanes = 2,
+			.channel = 0,
+			.phy_rate = 0,
+			.pix_clk = 0,
+	},
+};
+
+
 #ifdef CONFIG_SOC_CAMERA_OV5640
-static struct soc_camera_link iclink_ov5640 = {
-	.power = &hawaii_camera_power,
-	.reset = &hawaii_camera_reset,
+static struct soc_camera_desc iclink_ov5640 = {
+	.host_desc = {
+		.bus_id = 0,
+		.board_info = &hawaii_i2c_camera[0],
+		.i2c_adapter_id = 0,
+		.module_name = "ov5640",
+	},
+	.subdev_desc = {
+		.power = &hawaii_camera_power,
+		.reset = &hawaii_camera_reset,
+		.drv_priv = &ov5640_if_params,
+#if 0
+		.regulators = ov5640_regulator_data,
+		.num_regulators = 4,
+#endif
+	},
+};
+
+static struct platform_device hawaii_camera_back = {
+	.name = "soc-camera-pdrv",
+	.id = 0,
+	.dev = {
+		.platform_data = &iclink_ov5640,
+	},
 };
 #endif
 #ifdef CONFIG_SOC_CAMERA_OV5648
-static struct soc_camera_link iclink_ov5648 = {
+static struct soc_camera_desc iclink_ov5648 = {
 	.power = &hawaii_camera_power,
 	.reset = &hawaii_camera_reset,
 };
 #endif
-static struct soc_camera_link iclink_ov7692 = {
-	.power = &hawaii_camera_power_front,
-	.reset = &hawaii_camera_reset_front,
-};
-#endif /* CONFIG_VIDEO_UNICAM_CAMERA */
 
+static struct v4l2_subdev_sensor_interface_parms ov7692_if_parms = {
+	.if_type = V4L2_SUBDEV_SENSOR_SERIAL,
+	.if_mode = V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2,
+	.orientation = V4L2_SUBDEV_SENSOR_PORTRAIT,
+	.facing = V4L2_SUBDEV_SENSOR_FRONT,
+	.parms.serial = {
+			.lanes = 1,
+			.channel = 1,
+			.phy_rate = 0,
+			.pix_clk = 0,
+	},
+};
+static struct soc_camera_desc iclink_ov7692 = {
+	.host_desc = {
+		.bus_id = 0,
+		.board_info = &hawaii_i2c_camera[1],
+		.i2c_adapter_id = 0,
+		.module_name = "ov7692",
+	},
+	.subdev_desc = {
+		.power = &hawaii_camera_power_front,
+		.reset = &hawaii_camera_reset_front,
+		.drv_priv = &ov7692_if_parms,
+	},
+};
+
+static struct platform_device hawaii_camera_front = {
+	.name = "soc-camera-pdrv",
+	.id = 1,
+	.dev = {
+		.platform_data = &iclink_ov7692,
+	},
+};
+#endif /* CONFIG_UNICAM_CAMERA */
+ 
 static struct spi_kona_platform_data hawaii_ssp0_info = {
 #ifdef CONFIG_DMAC_PL330
 	.enable_dma = 1,
@@ -945,8 +1042,10 @@ struct platform_device *hawaii_common_plat_devices[] __initdata = {
 #ifdef CONFIG_UNICAM
 	&hawaii_unicam_device,
 #endif
-#ifdef CONFIG_VIDEO_UNICAM_CAMERA
+#ifdef CONFIG_UNICAM_CAMERA
 	&hawaii_camera_device,
+	&hawaii_camera_back,
+//	&hawaii_camera_front,
 #endif
 
 #ifdef CONFIG_SND_BCM_SOC
@@ -958,6 +1057,14 @@ struct platform_device *hawaii_common_plat_devices[] __initdata = {
 #endif
 };
 
+static struct i2c_board_info hawaii_i2c_camera[] = {
+	{
+		I2C_BOARD_INFO("ov5640", OV5640_I2C_ADDRESS)
+	},
+	{
+		I2C_BOARD_INFO("ov7692", OV7692_I2C_ADDRESS)
+	},
+};
 
 
 #ifdef CONFIG_KONA_HEADSET_MULTI_BUTTON
@@ -1126,18 +1233,21 @@ static const struct of_dev_auxdata hawaii_auxdata_lookup[] __initconst = {
 
 	OF_DEV_AUXDATA("bcm,sdhci", 0x3F180000,
 		"sdhci.0", &hawaii_sdio0_param),
-
+#if 0
 #ifdef CONFIG_SOC_CAMERA_OV5640
 	OF_DEV_AUXDATA("bcm,soc-camera", 0x3c,
 		"soc-back-camera", &iclink_ov5640),
+#endif
 #endif
 #ifdef CONFIG_SOC_CAMERA_OV5648
 	OF_DEV_AUXDATA("bcm,soc-camera", 0x36,
 		"soc-back-camera", &iclink_ov5648),
 #endif
+#if 0
 #ifdef CONFIG_SOC_CAMERA_OV7692
 	OF_DEV_AUXDATA("bcm,soc-camera", 0x3e,
 		"soc-front-camera", &iclink_ov7692),
+#endif
 #endif
 	{},
 };

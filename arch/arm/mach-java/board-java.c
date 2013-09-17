@@ -163,7 +163,7 @@
 #include <mach/caph_settings.h>
 #endif
 
-#ifdef CONFIG_VIDEO_UNICAM_CAMERA
+#ifdef CONFIG_UNICAM_CAMERA
 #include <media/soc_camera.h>
 #endif
 
@@ -386,7 +386,7 @@ static struct i2c_board_info adp1653_flash[] = {
 };
 #endif
 
-#ifdef CONFIG_VIDEO_UNICAM_CAMERA
+#ifdef CONFIG_UNICAM_CAMERA
 
 static struct regulator *d_gpsr_cam0_1v8;
 static struct regulator *d_lvldo2_cam1_1v8;
@@ -738,7 +738,7 @@ static struct soc_camera_link iclink_ov7692 = {
 	.reset = &hawaii_camera_reset_front,
 };
 
-#endif /* CONFIG_VIDEO_UNICAM_CAMERA */
+#endif /* CONFIG_UNICAM_CAMERA */
 static const struct of_dev_auxdata hawaii_auxdata_lookup[] __initconst = {
 	OF_DEV_AUXDATA("bcm,soc-camera", 0x3c,
 		"soc-back-camera", &iclink_ov5640),
@@ -830,7 +830,7 @@ struct platform_device *hawaii_common_plat_devices[] __initdata = {
 	&hawaii_unicam_device,
 #endif
 
-#ifdef CONFIG_VIDEO_UNICAM_CAMERA
+#ifdef CONFIG_UNICAM_CAMERA
 	&hawaii_camera_device,
 #endif
 
