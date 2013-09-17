@@ -120,7 +120,7 @@ static ssize_t dump_hsotgctrl(struct device *dev,
 	if (!clk_cnt)
 		bcm_hsotgctrl_en_clock(false);
 
-	return sprintf(buf, "hsotgctrl register dump\n");
+	return scnprintf(buf, PAGE_SIZE, "hsotgctrl register dump\n");
 }
 static DEVICE_ATTR(hsotgctrldump, S_IRUGO, dump_hsotgctrl, NULL);
 
