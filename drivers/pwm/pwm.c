@@ -107,7 +107,7 @@ struct pwm_device *pwm_request(int pwm_id, const char *label)
 	struct pwm_device *p;
 	int ret;
 
-	sprintf(name, "kona_pwmc:%d", pwm_id);
+	snprintf(name, sizeof(name), "kona_pwmc:%d", pwm_id);
 	d = class_find_device(&pwm_class, NULL, (char *)name, pwm_match_name);
 	if (!d)
 		return ERR_PTR(-EINVAL);
