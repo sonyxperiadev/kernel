@@ -54,6 +54,9 @@ the GPL, without Broadcom's express prior written consent.
 #include <linux/wakelock.h>
 #include <linux/completion.h>
 
+#include <linux/cdev.h>
+
+
 #endif /*__KERNEL__*/
 
 
@@ -173,7 +176,8 @@ extern int gAudioDebugLevel;
 #define	MIN_GAIN_mB				0
 #define	MAX_GAIN_mB				4450
 
-
+/* /////////////change ?????????????????????????????? */
+#define CAPTURE
 
 struct _TCtrl_Line {
 	s8 strName[CAPH_MIXER_NAME_LENGTH];
@@ -219,6 +223,11 @@ enum	CTL_STREAM_PANEL_t {
 	CTL_STREAM_PANEL_LAST
 };
 
+struct brcm_pcm_device {
+	struct snd_pcm *pcm;
+	unsigned int stream_number;
+	struct brcm_alsa_chip *chip;
+};
 
 struct brcm_alsa_chip {
 	struct snd_card *card;
@@ -264,12 +273,26 @@ struct brcm_alsa_chip {
 	s32	i32CurAmpState;
 	s32	iCallMode;
 	voip_data_t	voip_data;
+	struct brcm_pcm_device device_playback[2];
+#ifdef CAPTURE
+	struct brcm_pcm_device device_capture[2];
+#endif
 };
 
+struct voipdev_t {
+	int number;
+	struct snd_card *card;
+	struct cdev voipcdev;
+	struct __bcm_caph_hwdep_voip *pvoip;
+};
+
+
 #define	brcm_alsa_chip_t struct brcm_alsa_chip
+#define	brcm_pcm_device_t struct brcm_pcm_device
+#define	voipdev struct voipdev_t
+
 void caphassert(const char *fcn, int line, const char *expr);
 #define CAPH_ASSERT(e)   ((e) ? (void) 0 : caphassert(__func__, __LINE__, #e))
-
 
 enum	CTL_FUNCTION_t {
 	CTL_FUNCTION_VOL = 1,
@@ -286,7 +309,8 @@ enum	CTL_FUNCTION_t {
 	CTL_FUNCTION_BT_TEST,
 	CTL_FUNCTION_CFG_SSP,
 	CTL_FUNCTION_CFG_IHF,
-	CTL_FUNCTION_SINK_CHG,
+	CTL_FUNCTION_SINK_CHG_ADD,
+	CTL_FUNCTION_SINK_CHG_REM,
 	CTL_FUNCTION_HW_CTL,
 	CTL_FUNCTION_APP_SEL,
 	CTL_FUNCTION_APP_RMV,
@@ -319,6 +343,7 @@ enum	AT_AUD_Handler_t {
 
 
 
+extern int voipdevicecreate(voipdev *voipchrdevpvtdata);
 /* functions */
 extern int PcmDeviceNew(struct snd_card *card);
 extern int ControlDeviceNew(struct snd_card *card);

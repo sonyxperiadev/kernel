@@ -195,13 +195,13 @@ static int PcmHwParams(struct snd_pcm_substream *substream,
 /*DEBUG("\n %lx:hw_params %d\n",jiffies,(int)substream->stream);
  */
 
-	aTrace
+	/*aTrace
 	    (LOG_ALSA_INTERFACE, "ALSA-CAPH params_access=%d params_format=%d,"
 	     "params_subformat=%d params_channels=%d,"
 	     "params_rate=%d, buffer bytes=%d\n",
 	     params_access(hw_params), params_format(hw_params),
 	     params_subformat(hw_params), params_channels(hw_params),
-	     params_rate(hw_params), params_buffer_bytes(hw_params));
+	     params_rate(hw_params), params_buffer_bytes(hw_params));*/
 
 	return snd_pcm_lib_malloc_pages(substream,
 					params_buffer_bytes(hw_params));
@@ -218,8 +218,11 @@ static int PcmHwParams(struct snd_pcm_substream *substream,
 static int PcmHwFree(struct snd_pcm_substream *substream)
 {
 	int res;
-	brcm_alsa_chip_t *chip = snd_pcm_substream_chip(substream);
-	int substream_number = substream->number;
+	/* brcm_alsa_chip_t *chip = snd_pcm_substream_chip(substream); */
+	/* int substream_number = substream->number; */
+	brcm_pcm_device_t *pcm_device = snd_pcm_substream_chip(substream);
+	brcm_alsa_chip_t *chip = pcm_device->chip;
+	int substream_number = pcm_device->stream_number;
 	struct completion *compl_ptr;
 #if defined(CONFIG_BCM_MODEM)
 	if (is_dsp_timeout()) {
@@ -241,7 +244,7 @@ static int PcmHwFree(struct snd_pcm_substream *substream)
 	/* flush_scheduled_work(); */
 	aTrace(LOG_ALSA_INTERFACE, "PcmHwFree:completion %p stream #%d\n",
 		chip->streamCtl[substream_number].pStopCompletion,
-		substream->number);
+		substream_number);
 	compl_ptr = chip->streamCtl[substream_number].pStopCompletion;
 	if (compl_ptr) {
 		long ret;
@@ -251,8 +254,8 @@ static int PcmHwFree(struct snd_pcm_substream *substream)
 		/* The return value is -ERESTARTSYS if interrupted,      */
 		/* 0 if timed out, positive (at least 1, or number of jiffies*/
 		/* left till timeout) if completed.                         */
-		WARN(ret <= 0, "ERROR timeout waiting for STOP REQ."
-				"t=%d ret=%ld\n", TIMEOUT_STOP_REQ_MS, ret);
+		/*WARN(ret <= 0, "ERROR timeout waiting for STOP REQ."
+				"t=%d ret=%ld\n", TIMEOUT_STOP_REQ_MS, ret); */
 		if (ret > 0) {
 			chip->streamCtl[substream_number].pStopCompletion
 				= NULL;
@@ -278,18 +281,21 @@ static int PcmPlaybackOpen(struct snd_pcm_substream *substream)
 
 	AUDIO_DRIVER_HANDLE_t drv_handle;
 	BRCM_AUDIO_Param_Open_t param_open;
-	brcm_alsa_chip_t *chip = snd_pcm_substream_chip(substream);
+	/* brcm_alsa_chip_t *chip = snd_pcm_substream_chip(substream); */
+	brcm_pcm_device_t *pcm_device = snd_pcm_substream_chip(substream);
+	brcm_alsa_chip_t *chip = pcm_device->chip;
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	int err = 0;
-	int substream_number = substream->number;
+/*	int substream_number = substream->number; */
+	int substream_number = pcm_device->stream_number;
 
-	aTrace
+/*	aTrace
 	    (LOG_ALSA_INTERFACE, "ALSA-CAPH %lx:playback_open stream=%d,"
 	     "PCM_TOTAL_BUF_BYTES=%d chip->iEnablePhoneCall=%d,"
 	     "speaker=%d\n",
 	     jiffies, substream_number, PCM_TOTAL_BUF_BYTES,
 	     (unsigned int)chip->iEnablePhoneCall,
-	     chip->streamCtl[substream_number].iLineSelect[0]);
+	     chip->streamCtl[substream_number].iLineSelect[0]);*/
 
 	param_open.drv_handle = NULL;
 	param_open.pdev_prop = &chip->streamCtl[substream_number].dev_prop;
@@ -329,20 +335,23 @@ static int PcmPlaybackOpen(struct snd_pcm_substream *substream)
 static int PcmPlaybackClose(struct snd_pcm_substream *substream)
 {
 	BRCM_AUDIO_Param_Close_t param_close;
-	brcm_alsa_chip_t *chip = snd_pcm_substream_chip(substream);
+/*	brcm_alsa_chip_t *chip = snd_pcm_substream_chip(substream); */
+	brcm_pcm_device_t *pcm_device = snd_pcm_substream_chip(substream);
+	brcm_alsa_chip_t *chip = pcm_device->chip;
+	int substream_number = pcm_device->stream_number;
 
 	aTrace(LOG_ALSA_INTERFACE,
 	       "ALSA-CAPH %lx:playback_close stream=%d\n", jiffies,
-	       substream->number);
+	       substream_number);
 
 	param_close.drv_handle = substream->runtime->private_data;
-	param_close.stream = substream->number;
+	param_close.stream = substream_number;
 
 	/*close the driver */
 	AUDIO_Ctrl_Trigger(ACTION_AUD_ClosePlay, &param_close, NULL, 1);
 
 	substream->runtime->private_data = NULL;
-	chip->streamCtl[substream->number].pSubStream = NULL;
+	chip->streamCtl[substream_number].pSubStream = NULL;
 
 	return 0;
 }
@@ -358,19 +367,22 @@ static int PcmPlaybackClose(struct snd_pcm_substream *substream)
 static int PcmPlaybackPrepare(struct snd_pcm_substream *substream)
 {
 	struct snd_pcm_runtime *runtime = substream->runtime;
-	brcm_alsa_chip_t *chip = snd_pcm_substream_chip(substream);
+/*	brcm_alsa_chip_t *chip = snd_pcm_substream_chip(substream); */
+	brcm_pcm_device_t *pcm_device = snd_pcm_substream_chip(substream);
+	brcm_alsa_chip_t *chip = pcm_device->chip;
+	int substream_number = pcm_device->stream_number;
 	BRCM_AUDIO_Param_Prepare_t parm_prepare;
 
-	aTrace(LOG_ALSA_INTERFACE, "ALSA-CAPH playback_prepare "
+/*	aTrace(LOG_ALSA_INTERFACE, "ALSA-CAPH playback_prepare "
 		"stream=%d period=%d period_size=%d,"
 		"bufsize=%d start_threshold=%ld stop_threshold=%ld"
 		" frame_bits %d rate=%d ch=%d\n",
-		substream->number, (int)runtime->periods,
+		substream_number, (int)runtime->periods,
 		(int)runtime->period_size, (int)runtime->buffer_size,
 		runtime->start_threshold, runtime->stop_threshold,
-		runtime->frame_bits, runtime->rate, runtime->channels);
+		runtime->frame_bits, runtime->rate, runtime->channels); */
 
-	chip->streamCtl[substream->number].stream_hw_ptr = 0;
+	chip->streamCtl[substream_number].stream_hw_ptr = 0;
 	parm_prepare.drv_handle = substream->runtime->private_data;
 	parm_prepare.cbParams.pfCallBack = AUDIO_DRIVER_InterruptPeriodCB;
 	parm_prepare.cbParams.pPrivateData = (void *)substream;
@@ -395,10 +407,10 @@ static int PcmPlaybackPrepare(struct snd_pcm_substream *substream)
 	else
 		parm_prepare.drv_config.bits_per_sample = 16;
 
-	parm_prepare.drv_config.instanceId = substream->number;
+	parm_prepare.drv_config.instanceId = substream_number;
 	parm_prepare.drv_config.arm2sp_mixMode =
-	    chip->pi32SpeechMixOption[substream->number];
-	parm_prepare.stream = substream->number;
+	    chip->pi32SpeechMixOption[substream_number];
+	parm_prepare.stream = substream_number;
 
 	AUDIO_Ctrl_Trigger(ACTION_AUD_SetPrePareParameters, &parm_prepare, NULL,
 			   0);
@@ -429,9 +441,12 @@ static void CtrlStopCB(int priv)
 static int PcmPlaybackTrigger(struct snd_pcm_substream *substream, int cmd)
 {
 	int ret = 0;
-	brcm_alsa_chip_t *chip = snd_pcm_substream_chip(substream);
+/*	brcm_alsa_chip_t *chip = snd_pcm_substream_chip(substream); */
 	AUDIO_DRIVER_HANDLE_t drv_handle;
-	int substream_number = substream->number;
+/*	int substream_number = substream->number; */
+	brcm_pcm_device_t *pcm_device = snd_pcm_substream_chip(substream);
+	brcm_alsa_chip_t *chip = pcm_device->chip;
+	int substream_number = pcm_device->stream_number;
 	s32 *pSel;
 	int i, count = 0;
 
@@ -476,8 +491,6 @@ static int PcmPlaybackTrigger(struct snd_pcm_substream *substream, int cmd)
 				 * return error
 				 */
 				if (++count == MAX_PLAYBACK_DEV) {
-					aError("No device selected by"
-					       " the user ?\n");
 					return -EINVAL;
 				} else
 					chip->streamCtl[substream_number].
@@ -649,11 +662,14 @@ static snd_pcm_uframes_t PcmPlaybackPointer(struct snd_pcm_substream *substream)
 {
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	snd_pcm_uframes_t pos = 0;
-	brcm_alsa_chip_t *chip = snd_pcm_substream_chip(substream);
+	/*brcm_alsa_chip_t *chip = snd_pcm_substream_chip(substream); */
+	brcm_pcm_device_t *pcm_device = snd_pcm_substream_chip(substream);
+	brcm_alsa_chip_t *chip = pcm_device->chip;
+	int substream_number = pcm_device->stream_number;
 	UInt16 dmaPointer = 0;
 
 	pos =
-	    chip->streamCtl[substream->number].stream_hw_ptr +
+	    chip->streamCtl[substream_number].stream_hw_ptr +
 	    bytes_to_frames(runtime, dmaPointer);
 	pos %= runtime->buffer_size;
 	/*
@@ -678,11 +694,22 @@ static int PcmCaptureOpen(struct snd_pcm_substream *substream)
 {
 	AUDIO_DRIVER_HANDLE_t drv_handle;
 	BRCM_AUDIO_Param_Open_t param_open;
+#ifdef CAPTURE
+	brcm_pcm_device_t *pcm_device = snd_pcm_substream_chip(substream);
+	brcm_alsa_chip_t *chip = pcm_device->chip;
+#else
 	brcm_alsa_chip_t *chip = snd_pcm_substream_chip(substream);
+#endif
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	int err = 0;
 	/* for indexing */
-	int substream_number = substream->number + CTL_STREAM_PANEL_PCMIN - 1;
+#ifdef CAPTURE
+	int substream_number = pcm_device->stream_number
+		+ CTL_STREAM_PANEL_PCMIN - 1;
+#else
+	int substream_number = substream->number
+		+ CTL_STREAM_PANEL_PCMIN - 1;
+#endif
 
 	aTrace(LOG_ALSA_INTERFACE,
 	       "ALSA-CAPH PcmCaptureOpen stream=%d\n", substream_number);
@@ -691,6 +718,7 @@ static int PcmCaptureOpen(struct snd_pcm_substream *substream)
 
 	if (((substream_number + 1) == CTL_STREAM_PANEL_PCMIN)
 		|| ((substream_number + 1) == CTL_STREAM_PANEL_PCM_IN)) {
+		aError("Inside HQ capture init\n");
 		chip->streamCtl[substream_number].dev_prop.c.drv_type =
 		    AUDIO_DRIVER_CAPT_HQ;
 		runtime->hw = brcm_capture_hw;
@@ -704,6 +732,7 @@ static int PcmCaptureOpen(struct snd_pcm_substream *substream)
 		if (err < 0)
 			return err;
 	} else if ((substream_number + 1) == CTL_STREAM_PANEL_SPEECHIN) {
+		aError("Inside speecin init\n");
 		chip->streamCtl[substream_number].dev_prop.c.drv_type =
 		    AUDIO_DRIVER_CAPT_VOICE;
 		runtime->hw = brcm_voice_capture_hw;
@@ -755,9 +784,16 @@ static int PcmCaptureOpen(struct snd_pcm_substream *substream)
 static int PcmCaptureClose(struct snd_pcm_substream *substream)
 {
 	BRCM_AUDIO_Param_Close_t param_close;
+#ifdef CAPTURE
+	brcm_pcm_device_t *pcm_device = snd_pcm_substream_chip(substream);
+	brcm_alsa_chip_t *chip = pcm_device->chip;
+	int substream_number = pcm_device->stream_number
+		+ CTL_STREAM_PANEL_PCMIN - 1;
+#else
 	brcm_alsa_chip_t *chip = snd_pcm_substream_chip(substream);
-	int substream_number = substream->number + CTL_STREAM_PANEL_PCMIN - 1;
-
+	int substream_number = substream->number
+		+ CTL_STREAM_PANEL_PCMIN - 1;
+#endif
 	param_close.drv_handle = substream->runtime->private_data;
 	param_close.stream = substream_number;
 	/*close the driver */
@@ -784,8 +820,16 @@ static int PcmCaptureClose(struct snd_pcm_substream *substream)
 static int PcmCapturePrepare(struct snd_pcm_substream *substream)
 {
 	struct snd_pcm_runtime *runtime = substream->runtime;
+#ifdef CAPTURE
+	brcm_pcm_device_t *pcm_device = snd_pcm_substream_chip(substream);
+	brcm_alsa_chip_t *chip = pcm_device->chip;
+	int substream_number = pcm_device->stream_number
+		+ CTL_STREAM_PANEL_PCMIN - 1;
+#else
 	brcm_alsa_chip_t *chip = snd_pcm_substream_chip(substream);
-	int substream_number = substream->number + CTL_STREAM_PANEL_PCMIN - 1;
+	int substream_number = substream->number
+		+ CTL_STREAM_PANEL_PCMIN - 1;
+#endif
 	BRCM_AUDIO_Param_Prepare_t parm_prepare;
 
 	aTrace(LOG_ALSA_INTERFACE,
@@ -841,10 +885,18 @@ static int PcmCapturePrepare(struct snd_pcm_substream *substream)
 static int PcmCaptureTrigger(struct snd_pcm_substream *substream,
 			     int cmd /*commands to handle */)
 {
+#ifdef CAPTURE
+	brcm_pcm_device_t *pcm_device = snd_pcm_substream_chip(substream);
+	brcm_alsa_chip_t *chip = pcm_device->chip;
+	int substream_number = pcm_device->stream_number
+		+ CTL_STREAM_PANEL_PCMIN - 1;
+#else
 	brcm_alsa_chip_t *chip = snd_pcm_substream_chip(substream);
+	int substream_number = substream->number
+		+ CTL_STREAM_PANEL_PCMIN - 1;
+#endif
 	AUDIO_DRIVER_HANDLE_t drv_handle;
 	s32 *pSel;
-	int substream_number = substream->number + CTL_STREAM_PANEL_PCMIN - 1;
 	int ret;
 
 	aTrace(LOG_ALSA_INTERFACE,
@@ -859,9 +911,9 @@ static int PcmCaptureTrigger(struct snd_pcm_substream *substream,
 	    && pSel[0] < AUDIO_SOURCE_VALID_TOTAL) {
 		chip->streamCtl[substream_number].dev_prop.c.source = pSel[0];
 	} else {
-		aError
+		/*aError
 		    ("Error!! No valid device selected by the user,"
-		     " pSel[0]=%d\n", pSel[0]);
+		     " pSel[0]=%d\n", pSel[0]); */
 		return -EINVAL;
 	}
 	switch (cmd) {
@@ -903,9 +955,9 @@ static int PcmCaptureTrigger(struct snd_pcm_substream *substream,
 		    chip->streamCtl[substream_number].ctlLine[pSel[0]].
 		    iVolume[1];
 
-		aTrace(LOG_ALSA_INTERFACE, "ACTION_AUD_StartRecord,"
+/*		aTrace(LOG_ALSA_INTERFACE, "ACTION_AUD_StartRecord,"
 		       "stream=%d, mixMode %ld\n",
-		       param_start.stream, param_start.mixMode);
+		       param_start.stream, param_start.mixMode); */
 
 		ret = AUDIO_Ctrl_Trigger(ACTION_AUD_StartRecord, &param_start,
 					   NULL, 0);
@@ -939,9 +991,9 @@ static int PcmCaptureTrigger(struct snd_pcm_substream *substream,
 
 		param_stop.callMode = callMode;
 
-		aTrace(LOG_ALSA_INTERFACE, "ACTION_AUD_StopRecord,"
+/*		aTrace(LOG_ALSA_INTERFACE, "ACTION_AUD_StopRecord,"
 		       "stream=%d, callMode %ld\n",
-		       param_stop.stream, param_stop.callMode);
+		       param_stop.stream, param_stop.callMode); */
 
 		compl_ptr = &chip->streamCtl[substream_number]
 			.stopCompletion;
@@ -978,8 +1030,16 @@ static snd_pcm_uframes_t PcmCapturePointer(struct snd_pcm_substream *substream)
 {
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	snd_pcm_uframes_t pos;
+#ifdef CAPTURE
+	brcm_pcm_device_t *pcm_device = snd_pcm_substream_chip(substream);
+	brcm_alsa_chip_t *chip = pcm_device->chip;
+	int substream_number = pcm_device->stream_number
+		+ CTL_STREAM_PANEL_PCMIN - 1;
+#else
 	brcm_alsa_chip_t *chip = snd_pcm_substream_chip(substream);
-	int substream_number = substream->number + CTL_STREAM_PANEL_PCMIN - 1;
+	int substream_number = substream->number
+		+ CTL_STREAM_PANEL_PCMIN - 1;
+#endif
 
 	pos =
 	    chip->streamCtl[substream_number].stream_hw_ptr %
@@ -1000,6 +1060,8 @@ int PcmPlaybackCopy(struct snd_pcm_substream *substream, int channel,
 {
 	int periods_copied;
 	struct snd_pcm_runtime *runtime = substream->runtime;
+	brcm_pcm_device_t *pcm_device = snd_pcm_substream_chip(substream);
+	int substream_number = pcm_device->stream_number;
 	AUDIO_DRIVER_HANDLE_t drv_handle = substream->runtime->private_data;
 	char *buf_start = runtime->dma_area;
 	int period_bytes = frames_to_bytes(runtime, runtime->period_size);
@@ -1009,15 +1071,15 @@ int PcmPlaybackCopy(struct snd_pcm_substream *substream, int channel,
 	char *new_hwbuf = hwbuf + (bytes_to_copy - not_copied);
 
 	if (not_copied) {
-		aError("%s: why didn't copy all the bytes?"
+		/*aError("%s: why didn't copy all the bytes?"
 			" not_copied = %d, to_copy = %d\n",
 			__func__, not_copied, bytes_to_copy);
 		aTrace(LOG_ALSA_INTERFACE, "%s: stream = %d,"
 		" buf_start = %p, hwbuf = %p, "
 		"new_hwbuf = %p,period_bytes = %d,"
 		" bytes_to_copy = %d, not_copied = %d\n",
-		__func__, substream->number, buf_start, hwbuf,
-		new_hwbuf, period_bytes, bytes_to_copy, not_copied);
+		__func__, substream_number, buf_start, hwbuf,
+		new_hwbuf, period_bytes, bytes_to_copy, not_copied); */
 	}
 
 	/**
@@ -1031,7 +1093,7 @@ int PcmPlaybackCopy(struct snd_pcm_substream *substream, int channel,
 		BRCM_AUDIO_Param_BufferReady_t param_bufferready;
 
 		param_bufferready.drv_handle = drv_handle;
-		param_bufferready.stream = substream->number;
+		param_bufferready.stream = substream_number;
 
 		/*aTrace(LOG_ALSA_INTERFACE, "%s: stream = %d, "
 			"ACTION_AUD_BufferReady\n",
@@ -1048,6 +1110,8 @@ int PcmPlaybackSilence(struct snd_pcm_substream *substream, int channel,
 	       snd_pcm_uframes_t pos, snd_pcm_uframes_t count)
 {
 	struct snd_pcm_runtime *runtime = substream->runtime;
+	brcm_pcm_device_t *pcm_device = snd_pcm_substream_chip(substream);
+	int substream_number = pcm_device->stream_number;
 	char *hwbuf = runtime->dma_area + frames_to_bytes(runtime, pos);
 	snd_pcm_format_set_silence(runtime->format, hwbuf,
 		count * runtime->channels);
@@ -1056,7 +1120,7 @@ int PcmPlaybackSilence(struct snd_pcm_substream *substream, int channel,
 	 */
 
 	aTrace(LOG_ALSA_INTERFACE, "%s: stream = %d, Called\n",
-			__func__, substream->number);
+			__func__, substream_number);
 
 	return 0;
 }
@@ -1104,14 +1168,25 @@ static void AUDIO_DRIVER_CaptInterruptPeriodCB(void *pPrivate)
 	AUDIO_DRIVER_TYPE_t drv_type;
 	struct snd_pcm_runtime *runtime;
 	brcm_alsa_chip_t *pChip = NULL;
+#ifdef CAPTURE
+	brcm_pcm_device_t *pcm_device;
+#endif
 	int substream_number;
 
 	if (!substream) {
 		aError("Invalid substream 0x%p\n", substream);
 		return;
 	}
-	substream_number = substream->number + CTL_STREAM_PANEL_PCMIN - 1;
+#ifdef CAPTURE
+	pcm_device = snd_pcm_substream_chip(substream);
+	pChip = pcm_device->chip;
+	substream_number = pcm_device->stream_number
+		+ CTL_STREAM_PANEL_PCMIN - 1;
+#else
+	substream_number = substream->number
+		+ CTL_STREAM_PANEL_PCMIN - 1;
 	pChip = snd_pcm_substream_chip(substream);
+#endif
 	runtime = substream->runtime;
 	if (!runtime) {
 		aError("CaptInterruptPeriodCBInvalid stream=%d runtime 0x%p\n",
@@ -1172,12 +1247,17 @@ static void AUDIO_DRIVER_InterruptPeriodCB(void *pPrivate)
 	AUDIO_DRIVER_TYPE_t drv_type;
 	struct snd_pcm_runtime *runtime;
 	brcm_alsa_chip_t *pChip = NULL;
+	brcm_pcm_device_t *pcm_device;
+	int substream_number;
 
 	if (!substream) {
 		aError("Invalid substream 0x%p\n", substream);
 		return;
 	}
-	pChip = snd_pcm_substream_chip(substream);
+/*	pChip = snd_pcm_substream_chip(substream); */
+	pcm_device = snd_pcm_substream_chip(substream);
+	pChip = pcm_device->chip;
+	substream_number = pcm_device->stream_number;
 
 	runtime = substream->runtime;
 	if (!runtime) {
@@ -1196,22 +1276,22 @@ static void AUDIO_DRIVER_InterruptPeriodCB(void *pPrivate)
 		{
 			/*update the PCM read pointer by period size */
 
-			pChip->streamCtl[substream->number].stream_hw_ptr +=
+			pChip->streamCtl[substream_number].stream_hw_ptr +=
 			    runtime->period_size;
-			if (pChip->streamCtl[substream->number].stream_hw_ptr
+			if (pChip->streamCtl[substream_number].stream_hw_ptr
 				> runtime->boundary)
-				pChip->streamCtl[substream->number].
+				pChip->streamCtl[substream_number].
 				stream_hw_ptr -= runtime->boundary;
 
 			if (runtime->status->state ==
 			    SNDRV_PCM_STATE_DRAINING)
 				/* No more user space data is coming */
-			    if (pChip->streamCtl[substream->number].
+			    if (pChip->streamCtl[substream_number].
 				stream_hw_ptr <
 				runtime->control->appl_ptr) {
 				snd_pcm_uframes_t validFrames =
 				runtime->control->appl_ptr
-				- pChip->streamCtl[substream->number].
+				- pChip->streamCtl[substream_number].
 				stream_hw_ptr;
 				snd_pcm_uframes_t framesToClean =
 				runtime->buffer_size - validFrames;
@@ -1264,29 +1344,88 @@ static void AUDIO_DRIVER_InterruptPeriodCB(void *pPrivate)
 int PcmDeviceNew(struct snd_card *card)
 {
 	struct snd_pcm *pcm;
+	struct snd_pcm *pcm_playback_pcmout1;
+	struct snd_pcm *pcm_playback_pcmout2;
+	brcm_pcm_device_t *pcm_device;
 	int err = 0;
 	brcm_alsa_chip_t *pChip;
 	struct snd_pcm_substream *substream;
 
+#ifdef CAPTURE_NEW
+	struct snd_pcm *pcm_capture_speechin;
+#endif
 	callMode = CALL_MODE_NONE;
 	err =
-	    snd_pcm_new(card, "Broadcom CAPH", 0, NUM_PLAYBACK_SUBDEVICE,
-			NUM_CAPTURE_SUBDEVICE, &pcm);
+		snd_pcm_new(card, "Broadcom CAPH", 0, 1,
+		1, &pcm_playback_pcmout1);
 	if (err < 0)
 		return err;
 
-	pcm->private_data = card->private_data;
-	strncpy(pcm->name, "Broadcom CAPH PCM", 18);
+	/* pcm->private_data = card->private_data; */
+	/* strncpy(pcm->name, "Broadcom CAPH PCM", 18); */
 
-	snd_pcm_set_ops(pcm, SNDRV_PCM_STREAM_PLAYBACK,
+	pChip = (brcm_alsa_chip_t *) card->private_data;
+	pcm_device = &pChip->device_playback[0];
+	strcpy(pcm_playback_pcmout1->name, "PCMOUT1 playback");
+	pcm_playback_pcmout1->private_data = pcm_device;
+	snd_pcm_set_ops(pcm_playback_pcmout1, SNDRV_PCM_STREAM_PLAYBACK,
 			&brcm_alsa_omx_pcm_playback_ops);
-	snd_pcm_set_ops(pcm, SNDRV_PCM_STREAM_CAPTURE,
+	snd_pcm_set_ops(pcm_playback_pcmout1, SNDRV_PCM_STREAM_CAPTURE,
 			&brcm_alsa_omx_pcm_capture_ops);
 
-	pcm->info_flags = 0;
+/*	pcm->info_flags = 0; */
 
+	pcm_device->pcm = pcm_playback_pcmout1;
+	pcm_device->chip = pChip;
+	pcm_device->stream_number = 0;
+	pcm_playback_pcmout1->info_flags = 0;
 	/*pre-allocate memory for playback device */
-	substream = pcm->streams[0].substream;
+	/* substream = pcm->streams[0].substream; */
+	substream = pcm_playback_pcmout1->streams[0].substream;
+	for (; substream; substream = substream->next) {
+		err =
+		    snd_pcm_lib_preallocate_pages(substream, SNDRV_DMA_TYPE_DEV,
+						  0,
+						  (IS_PCM_MEM_PREALLOCATED) ?
+						  PCM_MAX_PLAYBACK_BUF_BYTES :
+						  0,
+						PCM_MAX_PLAYBACK_BUF_BYTES);
+		if (err)
+				aError
+				("Error in allocate memory err = %d\n", err);
+	}
+	substream = pcm_playback_pcmout1->streams[1].substream;
+	pcm_playback_pcmout1->info_flags |= 0x10000000;
+	for (; substream; substream = substream->next) {
+		err =
+		    snd_pcm_lib_preallocate_pages(substream, SNDRV_DMA_TYPE_DEV,
+						  0,
+						  (IS_PCM_MEM_PREALLOCATED) ?
+						  PCM_MAX_CAPTURE_BUF_BYTES :
+						  0,
+						  PCM_MAX_CAPTURE_BUF_BYTES);
+		if (err)
+				aError
+			    ("\n Error in allocate memory err=%d\n", err);
+	}
+	err =
+	    snd_pcm_new(card, "Broadcom CAPH", 1, 1,
+			1, &pcm_playback_pcmout2);
+	if (err < 0)
+		return err;
+	pChip = (brcm_alsa_chip_t *) card->private_data;
+	pcm_device = &pChip->device_playback[1];
+	strcpy(pcm_playback_pcmout2->name, "PCMOUT2 playback");
+	pcm_playback_pcmout2->private_data = pcm_device;
+	snd_pcm_set_ops(pcm_playback_pcmout2, SNDRV_PCM_STREAM_PLAYBACK,
+			&brcm_alsa_omx_pcm_playback_ops);
+	snd_pcm_set_ops(pcm_playback_pcmout2, SNDRV_PCM_STREAM_CAPTURE,
+			&brcm_alsa_omx_pcm_capture_ops);
+	pcm_device->pcm = pcm_playback_pcmout2;
+	pcm_device->chip = pChip;
+	pcm_device->stream_number = 1;
+	pcm_playback_pcmout2->info_flags = 0;
+	substream = pcm_playback_pcmout2->streams[0].substream;
 	for (; substream; substream = substream->next) {
 
 		err =
@@ -1298,10 +1437,71 @@ int PcmDeviceNew(struct snd_card *card)
 						  PCM_MAX_PLAYBACK_BUF_BYTES);
 		if (err)
 			aError
-			    ("\n Error : Error when allocate memory for"
-			     " playback device err=%d\n", err);
+			("Error in allocate memory err=%d\n", err);
 	}
 
+	substream = pcm_playback_pcmout2->streams[1].substream;
+	pcm_playback_pcmout2->info_flags |= 0x10000000;
+	for (; substream; substream = substream->next) {
+		err =
+		    snd_pcm_lib_preallocate_pages(substream, SNDRV_DMA_TYPE_DEV,
+						  0,
+						  (IS_PCM_MEM_PREALLOCATED) ?
+					  PCM_MAX_VOICE_CAPTURE_BUF_BYTES :
+					  0,
+					  PCM_MAX_VOICE_CAPTURE_BUF_BYTES);
+		if (err)
+			aError
+			("Error in allocate memory err=%d\n", err);
+	}
+#ifdef CAPTURE_NEW
+
+	err =
+		snd_pcm_new(card, "Broadcom CAPH", 0, 1,
+			1, &pcm_capture_speechin);
+
+	pChip = (brcm_alsa_chip_t *) card->private_data;
+
+	pcm_device = &pChip->device_capture[0];
+
+	pcm_capture_speechin->private_data = pcm_device;
+
+	strcpy(pcm_capture_speechin->name, "C1 capture");
+
+	pcm_device->pcm = pcm_capture_speechin;
+
+	pcm_device->chip = pChip;
+
+	pcm_device->stream_number = 0;
+
+	pcm_capture_speechin->info_flags = 0;
+
+	snd_pcm_set_ops(pcm_capture_speechin, SNDRV_PCM_STREAM_CAPTURE,
+			&brcm_alsa_omx_pcm_capture_ops);
+
+	/*pre-allocate memory for playback device */
+	substream = pcm_capture_speechin->streams[0].substream;
+	for (; substream; substream = substream->next) {
+
+		err =
+		    snd_pcm_lib_preallocate_pages(substream, SNDRV_DMA_TYPE_DEV,
+					  0,
+					  (IS_PCM_MEM_PREALLOCATED) ?
+					  PCM_MAX_VOICE_CAPTURE_BUF_BYTES :
+					  0,
+					  PCM_MAX_VOICE_CAPTURE_BUF_BYTES);
+		if (err)
+			aError
+			("Error in allocate memory err=%d\n", err);
+	}
+
+
+
+#endif
+
+
+
+#if 0
 	/*pre-allocate memory for capture device */
 	substream = pcm->streams[1].substream;
 	for (; substream; substream = substream->next) {
@@ -1313,11 +1513,11 @@ int PcmDeviceNew(struct snd_card *card)
 						  PCM_MAX_CAPTURE_BUF_BYTES);
 		if (err)
 			aError
-			    ("\n Error : Error when allocate memory for"
-			     " capture device err=%d\n", err);
+			("Error in allocate memory err=%d\n", err);
 	}
+#endif
 
-	pChip = (brcm_alsa_chip_t *) card->private_data;
+/*	pChip = (brcm_alsa_chip_t *) card->private_data; */
 
 	/* Initialize the audio controller */
 	aTrace(LOG_ALSA_INTERFACE, "ALSA-CAPH PcmDeviceNew:call AUDIO_Init\n");

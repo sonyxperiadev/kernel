@@ -66,6 +66,7 @@ the GPL, without Broadcom's express prior written consent.
 #include "audio_trace.h"
 #include "bcmlog.h"
 
+#include "../../drivers/staging/android/timed_output.h"
 #ifdef CONFIG_BCM_MODEM
 #include "csl_log.h"
 #endif
@@ -85,12 +86,15 @@ MODULE_LICENSE("GPL");
 #define LOG_BUF_SIZE (128*1024)
 
 /* turn off audio debug traces by default */
+
 int gAudioDebugLevel;
 module_param(gAudioDebugLevel, int, 0);
 
 static brcm_alsa_chip_t *sgpCaph_chip;
 
 static struct caph_platform_cfg sgCaphPlatInfo;
+static struct timed_output_dev vibra_timed_dev;
+
 
 /* AUDIO LOGGING */
 
@@ -127,14 +131,18 @@ int logpoint_buffer_idx;
  *
  * Returns 0 for success.
  */
+voipdev voipchrdevpvtdata;
 static int DriverProbe(struct platform_device *pdev)
 {
 	struct snd_card *card;
 	int err;
 
 	aTrace(LOG_ALSA_INTERFACE, "ALSA-CAPH Driver Probe:\n");
+	aError("ALSA-CAPH Driver Probe:\n");
 
 	aTrace(LOG_ALSA_INTERFACE, "\n %lx:DriverProbe\n", jiffies);
+	aError("\n %lx:DriverProbe\n", jiffies);
+
 
 	if (pdev->dev.platform_data != NULL) {
 		/* Copy over platform specific data */
@@ -144,14 +152,19 @@ static int DriverProbe(struct platform_device *pdev)
 		/* Set the platform configuration data */
 		AUDCTRL_PlatCfgSet(&sgCaphPlatInfo.aud_ctrl_plat_cfg);
 	}
+	aError("After platfor_data != NULL CHECK");
 
 	err = -ENODEV;
 	err = -ENOMEM;
 	err = snd_card_create(SNDRV_DEFAULT_IDX1, SNDRV_DEFAULT_STR1,
 			      THIS_MODULE, sizeof(brcm_alsa_chip_t), &card);
 
-	if (!card)
+	aError("After snd_card_create");
+
+	if (!card) {
+		aError("card is not created!!!!!!!!");
 		goto err;
+		}
 
 	sgpCaph_chip = (brcm_alsa_chip_t *) card->private_data;
 	sgpCaph_chip->card = card;
@@ -160,18 +173,35 @@ static int DriverProbe(struct platform_device *pdev)
 	strncpy(card->driver, pdev->dev.driver->name, sizeof(card->driver) - 1);
 	/* add Null terminating character */
 	card->driver[sizeof(card->driver) - 1] = '\0';
+	aError("Before PcmDeviceNew");
 	/* PCM interface */
 	err = PcmDeviceNew(card);
-	if (err)
+	if (err) {
+		aError("failed PcmDeviceNew");
 		goto err;
+		}
 	/* CTRL interface */
+	aError("Before ControlDeviceNew");
 	err = ControlDeviceNew(card);
-	if (err)
+	if (err) {
+		aError("failed ControlDeviceNew");
 		goto err;
+		}
 	/* HWDEP interface */
-	err = HwdepDeviceNew(card);
-	if (err)
+	/*err = HwdepDeviceNew(card);*/
+
+	voipchrdevpvtdata.card = card;
+
+	/*aError("M:caphmod:card = 0x%x ,&voipchrdevpvtdata = 0x%x,"
+		"voipchrdevpvtdata.card = 0x%x\n",
+		(unsigned int)card, (unsigned int)&voipchrdevpvtdata,
+		(unsigned int)voipchrdevpvtdata.card); */
+
+	err = voipdevicecreate(&voipchrdevpvtdata);
+	if (err) {
+		aError("voipDeviceCreate faileddddddddddddddd");
 		goto err;
+		}
 	/* HWDEP PTT interface */
 	err = HwdepPttDeviceNew(card);
 	if (err) {
@@ -190,13 +220,11 @@ static int DriverProbe(struct platform_device *pdev)
 
 		ret = BrcmCreateAuddrv_testSysFs(card);
 		if (ret != 0)
-			aError("ALSA DriverProbe Error to create "
-			"sysfs for Auddrv test ret = %d\n", ret);
+			aError("ALSA DriverProbe Error ret= %d\n", ret);
 #ifdef CONFIG_BCM_AUDIO_SELFTEST
 		ret = BrcmCreateAuddrv_selftestSysFs(card);
 		if (ret != 0)
-			aError("ALSA DriverProbe Error to create sysfs"
-			" for Auddrv selftest ret = %d\n", ret);
+			aError("DriverProbe sysfs err ret = %d\n", ret);
 #endif
 
 		return 0;
@@ -972,6 +1000,44 @@ static const struct file_operations bcmlog_fops = {
 	.release = BCMAudLOG_release,
 };
 
+static void vibra_enable_set_timeout(struct timed_output_dev *sdev,
+	int timeout)
+{
+	aError("Vibrator: Set duration: %dms\n", timeout);
+	BRCM_AUDIO_Param_Vibra_t parm_vibra;
+	parm_vibra.strength = 100;   /* Strength*/
+	parm_vibra.direction = 0;     /* Direction*/
+	parm_vibra.duration = timeout; /* timeout_ms; */
+	if (timeout != 0) {
+		aError("enable vibra");
+		AUDIO_Ctrl_Trigger(ACTION_AUD_EnableByPassVibra,
+		&parm_vibra, NULL, 0);
+	} else {
+		aError("disable vibra");
+		AUDIO_Ctrl_Trigger(ACTION_AUD_DisableByPassVibra,
+		&parm_vibra, NULL, 0);
+	}
+	return;
+}
+
+static int vibra_get_remaining_time(struct timed_output_dev *sdev)
+{
+	return 0;
+}
+int vibra_init()
+{
+	int ret;
+	aError("vibra_enable");
+	vibra_timed_dev.name = "vibrator";
+	vibra_timed_dev.enable = vibra_enable_set_timeout;
+	vibra_timed_dev.get_time = vibra_get_remaining_time;
+	ret = timed_output_dev_register(&vibra_timed_dev);
+	if (ret < 0)
+		aError("Vibra timed_output dev reg failed\n");
+	return 0;
+}
+
+
 /**
  * ModuleInit: Module initialization
  *
@@ -991,6 +1057,7 @@ static int ALSAModuleInit(void)
 
 	sgPlatformDriver.probe = DriverProbe;
 	err = platform_driver_register(&sgPlatformDriver);
+	vibra_init();
 	aTrace(LOG_ALSA_INTERFACE, "\n %lx:driver register done %d\n"
 			, jiffies, err);
 	if (err)
@@ -1034,6 +1101,7 @@ static void ALSAModuleExit(void)
 	snd_card_free(sgpCaph_chip->card);
 
 	platform_driver_unregister(&sgPlatformDriver);
+	timed_output_dev_unregister(&vibra_timed_dev);
 	TerminateAudioHalThread();
 
 	aTrace(LOG_ALSA_INTERFACE, "\n %lx:exit done\n", jiffies);
