@@ -1373,7 +1373,7 @@ proc_debug_read(char *buffer, char **start, off_t off, int count,
 	if (off > 0)
 		return 0;
 
-	len += sprintf(buffer + len, "Debug print is %s\n",
+	len += scnprintf(buffer + len, PAGE_SIZE, "Debug print is %s\n",
 		       dev->debug ? "enabled" : "disabled");
 
 	return len;
@@ -1453,7 +1453,7 @@ proc_tx_fifo_read(char *buffer, char **start, off_t off, int count,
 	if (off > 0)
 		return 0;
 
-	len += sprintf(buffer + len, "TX FIFO is %s\n",
+	len += scnprintf(buffer + len, PAGE_SIZE, "TX FIFO is %s\n",
 		       atomic_read(&dev->rx_fifo_support) ? "enabled" :
 		       "disabled");
 	return len;
@@ -1501,7 +1501,7 @@ proc_rx_fifo_read(char *buffer, char **start, off_t off, int count,
 	if (off > 0)
 		return 0;
 
-	len += sprintf(buffer + len, "RX FIFO is %s\n",
+	len += scnprintf(buffer + len, PAGE_SIZE, "RX FIFO is %s\n",
 		       atomic_read(&dev->rx_fifo_support) ? "enabled" :
 		       "disabled");
 
