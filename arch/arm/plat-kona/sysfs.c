@@ -218,7 +218,7 @@ reset_reason_show(struct device *dev, struct device_attribute *attr, char *buf)
 	}
 
 	pr_debug("%s: reset reason index %d\n", __func__, index);
-	sprintf(buf, "%s\n", str_reset_reason[index]);
+	snprintf(buf, PAGE_SIZE, "%s\n", str_reset_reason[index]);
 
 	return strlen(str_reset_reason[index]) + 1;
 }
@@ -274,7 +274,7 @@ static ssize_t
 hard_reset_show(struct device *dev, struct device_attribute *attr,
 		   char *buf)
 {
-	return sprintf(buf, "%d\n", hard_reset_reason);
+	return snprintf(buf, PAGE_SIZE, "%d\n", hard_reset_reason);
 }
 
 
