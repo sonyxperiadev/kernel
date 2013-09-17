@@ -46,6 +46,7 @@ obj-$(CONFIG_SENSORS_TMD2771)	+= tmd2771.o
 obj-$(CONFIG_SENSORS_STK31XX)	+= stk31xx.o
 obj-$(CONFIG_SENSORS_HM8001)	+= hm8001_ls.o
 obj-$(CONFIG_SENSORS_AP3216C)	+= ap3212c_pls.o
+obj-$(CONFIG_SENSORS_CM36XX) += cm36xx/
 obj-$(CONFIG_EP93XX_PWM)	+= ep93xx_pwm.o
 obj-$(CONFIG_DS1682)		+= ds1682.o
 obj-$(CONFIG_TI_DAC7512)	+= ti_dac7512.o
