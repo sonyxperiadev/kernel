@@ -980,6 +980,7 @@ static int __init dormant_init(void)
 				  &proc_regs_p, GFP_ATOMIC);
 	if (proc == NULL) {
 		pr_info("%s: proc regs alloc failed\n", __func__);
+		dma_free_coherent(NULL, SZ_4K, vptr, drmt_buf_phy);
 		return -ENOMEM;
 	}
 	pr_info("%s: proc clock registers buffer; proc = 0x%x",
@@ -994,6 +995,8 @@ static int __init dormant_init(void)
 				  &addnl_regs_p, GFP_ATOMIC);
 	if (addnl == NULL) {
 		pr_info("%s: addnl regs alloc failed\n", __func__);
+		dma_free_coherent(NULL, SZ_4K, proc, proc_regs_p);
+		dma_free_coherent(NULL, SZ_4K, vptr, drmt_buf_phy);
 		return -ENOMEM;
 	}
 	pr_info("%s: addnl registers buffer; addnl = 0x%x",
@@ -1008,3 +1011,13 @@ static int __init dormant_init(void)
 }
 
 module_init(dormant_init);
+
+static void __exit dormant_exit(void)
+{
+	dma_free_coherent(NULL, SZ_4K, (void *) addnl_regs_v, addnl_regs_p);
+	dma_free_coherent(NULL, SZ_4K, (void *) proc_regs_v, proc_regs_p);
+	dma_free_coherent(NULL, SZ_4K, (void *) un_cached_stack_ptr,
+								drmt_buf_phy);
+}
+
+module_exit(dormant_exit);
