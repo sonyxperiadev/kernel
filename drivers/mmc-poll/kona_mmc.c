@@ -763,7 +763,7 @@ int kona_mmc_init(int dev_index)
 
 	mmc = &mmc_dev[dev_index];
 
-	sprintf(mmc->name, "KONA SD/MMC");
+	snprintf(mmc->name, sizeof(mmc->name), "KONA SD/MMC");
 	mmc->priv = &mmc_host[dev_index];
 	mmc->send_cmd = kona_mmc_send_cmd;
 	mmc->set_ios = kona_mmc_set_ios;
