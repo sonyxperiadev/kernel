@@ -207,7 +207,9 @@ static char debugfs_cma_file[MAX_CMA_AREAS][6];
 static void cma_debugfs_create_file(struct cma *cma)
 {
 	BUG_ON(unlikely(region_count >= MAX_CMA_AREAS));
-	sprintf(&debugfs_cma_file[region_count][0], "cma%d", region_count);
+	snprintf(&debugfs_cma_file[region_count][0],
+		sizeof(debugfs_cma_file[region_count]), "cma%d",
+		region_count);
 	debugfs_create_file(&debugfs_cma_file[region_count][0],
 			    S_IRUSR, NULL, cma, &cma_debugfs_fops);
 	region_count++;
