@@ -13,13 +13,15 @@
  * GNU General Public License for more details.
  */
 
-#include <linux/videodev2.h>
+#include <uapi/linux/time.h>
+#include <uapi/linux/videodev2.h>
 #include <linux/slab.h>
 #include <linux/i2c.h>
 #include <linux/log2.h>
 #include <linux/delay.h>
 #include <linux/module.h>
 
+#include <media/v4l2-ctrls.h>
 #include <media/v4l2-subdev.h>
 #include <media/v4l2-chip-ident.h>
 #include <media/soc_camera.h>
@@ -159,6 +161,7 @@ static int ov5640_find_framesize(u32 width, u32 height)
 struct ov5640 {
 	struct v4l2_subdev subdev;
 	struct v4l2_subdev_sensor_interface_parms *plat_parms;
+	struct v4l2_ctrl_handler hdl;
 	int i_size;
 	int i_fmt;
 	int brightness;
@@ -191,6 +194,7 @@ static int flash_gpio_strobe(int);
 
 static struct ov5640 *to_ov5640(const struct i2c_client *client)
 {
+
 	return container_of(i2c_get_clientdata(client), struct ov5640, subdev);
 }
 
@@ -592,58 +596,6 @@ static const struct ov5640_timing_cfg timing_cfg_jpeg[OV5640_SIZE_LAST] = {
 			     },
 };
 
-#if 0
-static struct v4l2_subdev_sensor_serial_parms mipi_cfgs[OV5640_SIZE_LAST] = {
-	[OV5640_SIZE_QVGA] = {
-			      .lanes = 1,
-			      .channel = 0,
-			      .phy_rate = (336 * 2 * 1000000),
-			      .pix_clk = 21,	/* Revisit */
-			      },
-	[OV5640_SIZE_VGA] = {
-			     .lanes = 1,
-			     .channel = 0,
-			     .phy_rate = (336 * 2 * 1000000),
-			     .pix_clk = 21,	/* Revisit */
-			     },
-	[OV5640_SIZE_XGA] = {
-			     .lanes = 1,
-			     .channel = 0,
-			     .phy_rate = (336 * 2 * 1000000),
-			     .pix_clk = 21,	/* Revisit */
-			     },
-	[OV5640_SIZE_UXGA] = {
-			      .lanes = 1,
-			      .channel = 0,
-			      .phy_rate = (336 * 2 * 1000000),
-			      .pix_clk = 21,	/* Revisit */
-			      },
-	[OV5640_SIZE_1280x960] = {
-				  .lanes = 1,
-				  .channel = 0,
-				  .phy_rate = (336 * 2 * 1000000),
-				  .pix_clk = 21,	/* Revisit */
-				  },
-	[OV5640_SIZE_720P] = {
-			      .lanes = 1,
-			      .channel = 0,
-			      .phy_rate = (336 * 2 * 1000000),
-			      .pix_clk = 21,	/* Revisit */
-			      },
-	[OV5640_SIZE_QXGA] = {
-			      .lanes = 1,
-			      .channel = 0,
-			      .phy_rate = (336 * 2 * 1000000),
-			      .pix_clk = 21,	/* Revisit */
-			      },
-	[OV5640_SIZE_5MP] = {
-			     .lanes = 1,
-			     .channel = 0,
-			     .phy_rate = (336 * 2 * 1000000),
-			     .pix_clk = 21,	/* Revisit */
-			     },
-};
-#endif
 
 static int ov5640_config_timing(struct i2c_client *client);
 
@@ -659,6 +611,7 @@ static int ov5640_config_timing(struct i2c_client *client);
  */
 static int ov5640_reg_read(struct i2c_client *client, u16 reg, u8 *val)
 {
+
 	int ret;
 	u8 data[2] = { 0 };
 	struct i2c_msg msg = {
@@ -698,6 +651,7 @@ err:
  */
 static int ov5640_reg_write(struct i2c_client *client, u16 reg, u8 val)
 {
+
 	int ret;
 	unsigned char data[3] = { (u8) (reg >> 8), (u8) (reg & 0xff), val };
 	struct i2c_msg msg = {
@@ -716,108 +670,59 @@ static int ov5640_reg_write(struct i2c_client *client, u16 reg, u8 val)
 	return 0;
 }
 
-static const struct v4l2_queryctrl ov5640_controls[] = {
+static int ov5640_s_ctrl(struct v4l2_ctrl *ctrl);
+
+static const struct v4l2_ctrl_ops ov5640_ctrl_ops = {
+	.s_ctrl = ov5640_s_ctrl,
+};
+
+static const struct v4l2_ctrl_config ov5640_controls[] = {
 	{
-	 .id = V4L2_CID_CAMERA_BRIGHTNESS,
+	 .ops = &ov5640_ctrl_ops,
+	 .id = V4L2_CID_CAM_PREVIEW_ONOFF,
 	 .type = V4L2_CTRL_TYPE_INTEGER,
-	 .name = "Brightness",
-	 .minimum = EV_MINUS_2,
-	 .maximum = EV_PLUS_2,
+	 .name = "Preview_on_off",
+	 .min = 0,
+	 .max = 1,
 	 .step = 1,
-	 .default_value = EV_DEFAULT,
+	 .def = 0,
+	 .flags = 0,
 	 },
 	{
-	 .id = V4L2_CID_CAMERA_CONTRAST,
-	 .type = V4L2_CTRL_TYPE_INTEGER,
-	 .name = "Contrast",
-	 .minimum = CONTRAST_MINUS_1,
-	 .maximum = CONTRAST_PLUS_1,
-	 .step = 1,
-	 .default_value = CONTRAST_DEFAULT,
-	 },
-	{
-	 .id = V4L2_CID_CAMERA_FLASH_MODE,
-	 .type = V4L2_CTRL_TYPE_INTEGER,
-#ifdef CONFIG_VIDEO_AS3643
-	 .name = "AS3643-flash",
-#else
-	 .name = "ADP1653-flash",
-#endif
-	 .minimum = FLASH_MODE_OFF,
-	 .maximum = (1 << FLASH_MODE_OFF) |
-	 (1 << FLASH_MODE_ON) |
-	 (1 << FLASH_MODE_TORCH_OFF) | (1 << FLASH_MODE_TORCH_ON),
-	 .step = 1,
-	 .default_value = FLASH_MODE_OFF,
-	 },
-	{
-	 .id = V4L2_CID_CAMERA_EFFECT,
-	 .type = V4L2_CTRL_TYPE_INTEGER,
-	 .name = "Color Effects",
-	 .minimum = IMAGE_EFFECT_NONE,
-	 .maximum = (1 << IMAGE_EFFECT_NONE | 1 << IMAGE_EFFECT_SEPIA |
-		     1 << IMAGE_EFFECT_BNW | 1 << IMAGE_EFFECT_NEGATIVE),
-	 .step = 1,
-	 .default_value = IMAGE_EFFECT_NONE,
-	 },
-	{
-	 .id = V4L2_CID_CAMERA_ANTI_BANDING,
-	 .type = V4L2_CTRL_TYPE_INTEGER,
-	 .name = "Anti Banding",
-	 .minimum = ANTI_BANDING_AUTO,
-	 .maximum = ANTI_BANDING_60HZ,
-	 .step = 1,
-	 .default_value = ANTI_BANDING_AUTO,
-	 },
-	{
-	 .id = V4L2_CID_CAMERA_WHITE_BALANCE,
-	 .type = V4L2_CTRL_TYPE_INTEGER,
-	 .name = "White Balance",
-	 .minimum = WHITE_BALANCE_AUTO,
-	 .maximum = WHITE_BALANCE_FLUORESCENT,
-	 .step = 1,
-	 .default_value = WHITE_BALANCE_AUTO,
-	 },
-	{
+	 .ops = &ov5640_ctrl_ops,
 	 .id = V4L2_CID_CAMERA_FRAME_RATE,
 	 .type = V4L2_CTRL_TYPE_INTEGER,
 	 .name = "Framerate control",
-	 .minimum = FRAME_RATE_AUTO,
-	 .maximum = (1 << FRAME_RATE_AUTO | 1 << FRAME_RATE_5 |
+	 .min = FRAME_RATE_AUTO,
+	 .max = (1 << FRAME_RATE_AUTO | 1 << FRAME_RATE_5 |
 		     1 << FRAME_RATE_10 | 1 << FRAME_RATE_15 |
 		     1 << FRAME_RATE_25 | 1 << FRAME_RATE_30),
 	 .step = 1,
-	 .default_value = FRAME_RATE_AUTO,
+	 .def = FRAME_RATE_AUTO,
+	 .flags = 0,
 	 },
 	{
-	 .id = V4L2_CID_CAMERA_FOCUS_MODE,
-	 .type = V4L2_CTRL_TYPE_INTEGER,
-	 .name = "Focus Modes",
-	 .minimum = FOCUS_MODE_AUTO,
-	 .maximum = (1 << FOCUS_MODE_AUTO | 1 << FOCUS_MODE_MACRO
-		     | 1 << FOCUS_MODE_INFINITY),
-	 .step = 1,
-	 .default_value = FOCUS_MODE_AUTO,
-	 },
-	{
+	 .ops = &ov5640_ctrl_ops,
 	 .id = V4L2_CID_CAMERA_SET_AUTO_FOCUS,
 	 .type = V4L2_CTRL_TYPE_INTEGER,
 	 .name = "AF start/stop",
-	 .minimum = AUTO_FOCUS_OFF,
-	 .maximum = AUTO_FOCUS_ON,
+	 .min = AUTO_FOCUS_OFF,
+	 .max = AUTO_FOCUS_ON,
 	 .step = 1,
-	 .default_value = AUTO_FOCUS_OFF,
+	 .def = AUTO_FOCUS_OFF,
+	 .flags = 0,
 	 },
 	{
+	 .ops = &ov5640_ctrl_ops,
 	 .id = V4L2_CID_CAMERA_TOUCH_AF_AREA,
 	 .type = V4L2_CTRL_TYPE_INTEGER,
 	 .name = "Touch focus areas",
-	 .minimum = 0,
-	 .maximum = OV5640_MAX_FOCUS_AREAS,
+	 .min = 0,
+	 .max = OV5640_MAX_FOCUS_AREAS,
 	 .step = 1,
-	 .default_value = 1,
+	 .def = 1,
+	 .flags = 0,
 	 },
-
 };
 
 /**
@@ -830,6 +735,7 @@ static const struct v4l2_queryctrl ov5640_controls[] = {
 static int ov5640_reg_writes(struct i2c_client *client,
 			     const struct ov5640_reg reglist[])
 {
+
 	int err = 0, index;
 
 	for (index = 0; ((reglist[index].reg != 0xFFFF) && (err == 0)); index++) {
@@ -846,10 +752,11 @@ static int ov5640_reg_writes(struct i2c_client *client,
 	return 0;
 }
 
-#ifdef OV5640_DEBUG
 static int ov5640_reglist_compare(struct i2c_client *client,
 				  const struct ov5640_reg reglist[])
 {
+#ifdef OV5640_DEBUG
+
 	int err = 0, index;
 	u8 reg;
 
@@ -866,9 +773,9 @@ static int ov5640_reglist_compare(struct i2c_client *client,
 			index += 1;
 		}
 	}
+#endif
 	return 0;
 }
-#endif
 
 /**
  * Write an array of data to ov5640 sensor device.
@@ -881,6 +788,7 @@ static int ov5640_reglist_compare(struct i2c_client *client,
 static int ov5640_array_write(struct i2c_client *client,
 			      const u8 *data, u16 size)
 {
+
 	int ret;
 	struct i2c_msg msg = {
 		.addr = client->addr,
@@ -1669,21 +1577,6 @@ static void ov5640_set_banding(struct v4l2_subdev *sd)
 	printk(KERN_INFO "%s: preview_HTS=0x%x, VTS: 0x%x preview_sysclk=%ul\n",
 	       __func__, preview_HTS, preview_VTS, preview_sysclk);
 
-#if 0
-	ov5640_reg_read(client, 0x3034, &val);
-	printk("%s: [3034]=0x%x", __func__, val);
-	ov5640_reg_read(client, 0x3035, &val);
-	printk("  [3035]=0x%x", val);
-	ov5640_reg_read(client, 0x3036, &val);
-	printk("  [3036]=0x%x", val);
-	ov5640_reg_read(client, 0x3037, &val);
-	printk("  [3037]=0x%x", val);
-	ov5640_reg_read(client, 0x3824, &val);
-	printk("  [3824]=0x%x", val);
-	ov5640_reg_read(client, 0x4837, &val);
-	printk("  [4837]=0x%x\n", val);
-#endif
-
 	ov5640_reg_write(client, 0x3a02, (preview_VTS >> 8));
 	ov5640_reg_write(client, 0x3a03, (preview_VTS & 0xff));
 	ov5640_reg_write(client, 0x3a14, (preview_VTS >> 8));
@@ -1820,12 +1713,10 @@ static int ov5640_config_capture(struct v4l2_subdev *sd)
 	    preview_gain16 * preview_shutter * capture_sysclk;
 	if (average > AE_low && average < AE_high) {
 		/* in stable range */
-		/* printk("average0\n"); */
 		capture_gain16_shutter =
 		    capture_gain16_shutter / preview_sysclk * preview_HTS /
 		    capture_HTS * AE_Target / average;
 	} else {
-		/* printk("average1\n"); */
 		capture_gain16_shutter =
 		    capture_gain16_shutter / preview_sysclk * preview_HTS /
 		    capture_HTS;
@@ -1834,22 +1725,18 @@ static int ov5640_config_capture(struct v4l2_subdev *sd)
 	/* gain to shutter */
 	if (capture_gain16_shutter < (capture_bandingfilter * 16)) {
 		/* shutter < 1/100 */
-		/* printk("gain0\n"); */
 		capture_shutter = capture_gain16_shutter / 16;
 		if (capture_shutter < 1)
 			capture_shutter = 1;
 
 		capture_gain16 = capture_gain16_shutter / capture_shutter;
 		if (capture_gain16 < 16) {
-			/* printk("gain00\n"); */
 			capture_gain16 = 16;
 		}
 	} else {
-		/* printk("gain1\n"); */
 		if (capture_gain16_shutter >
 		    (capture_bandingfilter * capture_max_band * 16)) {
 			/* exposure reach max */
-			/* printk("gain10\n"); */
 			capture_shutter =
 			    capture_bandingfilter * capture_max_band;
 			capture_gain16 =
@@ -1857,7 +1744,6 @@ static int ov5640_config_capture(struct v4l2_subdev *sd)
 		} else {
 			/* 1/100 < capture_shutter =< max,
 			 * capture_shutter = n/100 */
-			/* printk("gain11\n"); */
 			capture_shutter =
 				(int)(capture_gain16_shutter / 16 /
 					capture_bandingfilter) *
@@ -1868,14 +1754,6 @@ static int ov5640_config_capture(struct v4l2_subdev *sd)
 	}
 
 	/* write capture gain */
-	#if 0
-	red_gain16 = red_gain16 * 94 / 100;
-	green_gain16 = green_gain16 * 100 / 100;
-	blue_gain16 = blue_gain16 * 96 / 100;
-	ov5640_set_red_gain16(sd, red_gain16);
-	ov5640_set_green_gain16(sd, green_gain16);
-	ov5640_set_blue_gain16(sd, blue_gain16);
-	#endif
 	ov5640_set_gain16(sd, capture_gain16);
 
 	/* write capture shutter */
@@ -1982,6 +1860,7 @@ static int ov5640_pre_flash(struct i2c_client *client)
 
 static int ov5640_af_start(struct i2c_client *client)
 {
+
 	int ret = 0;
 	struct ov5640 *ov5640 = to_ov5640(client);
 
@@ -2020,6 +1899,7 @@ static int ov5640_config_timing(struct i2c_client *client)
 	struct ov5640 *ov5640 = to_ov5640(client);
 	int ret, i = ov5640->i_size;
 	const struct ov5640_timing_cfg *timing_cfg;
+	u8 val;
 
 	printk(KERN_INFO "%s: code[0x%x] i:%d\n", __func__,
 	       ov5640_fmts[ov5640->i_fmt].code, i);
@@ -2088,6 +1968,7 @@ static int ov5640_config_timing(struct i2c_client *client)
 			       0x380B, timing_cfg->v_output_size & 0xFF);
 	if (ret)
 		return ret;
+
 
 	ret = ov5640_reg_write(client,
 			       0x380C,
@@ -2164,6 +2045,7 @@ static int ov5640_config_timing(struct i2c_client *client)
 static int stream_mode = -1;
 static int ov5640_s_stream(struct v4l2_subdev *sd, int enable)
 {
+
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct ov5640 *ov5640 = to_ov5640(client);
 	int ret = 0;
@@ -2175,6 +2057,8 @@ static int ov5640_s_stream(struct v4l2_subdev *sd, int enable)
 		return ret;
 
 	if (enable) {
+		runmode = CAM_RUNNING_MODE_PREVIEW;
+		ov5640_config_preview(sd);
 		int delayMs = 50;
 		if (CAM_RUNNING_MODE_PREVIEW == runmode) {
 			/* need more delay to get stable
@@ -2187,8 +2071,13 @@ static int ov5640_s_stream(struct v4l2_subdev *sd, int enable)
 		/* ret = ov5640_reg_writes(client, ov5640_stream); */
 		/* use MIPI on/off as OVT suggested on AppNote */
 		ov5640_reg_write(client, 0x4202, 0x00);
+
+#ifdef TEST_PATTERN
+		ov5640_reg_write(client, 0x503D, 0x80);
+#endif
 		msleep(delayMs);
 	} else {
+		runmode = CAM_RUNNING_MODE_NOTREADY;
 		/* Stop Streaming, Power Down */
 		/* ret = ov5640_reg_writes(client, ov5640_power_down); */
 		ov5640_reg_write(client, 0x4202, 0x0f);
@@ -2201,56 +2090,16 @@ static int ov5640_s_stream(struct v4l2_subdev *sd, int enable)
 static int ov5640_set_bus_param(struct soc_camera_device *icd,
 				unsigned long flags)
 {
+
 	/* TODO: Do the right thing here, and validate bus params */
 	return 0;
 }
-
-static unsigned long ov5640_query_bus_param(struct soc_camera_device *icd)
-{
-	unsigned long flags = SOCAM_PCLK_SAMPLE_FALLING |
-	    SOCAM_HSYNC_ACTIVE_HIGH | SOCAM_VSYNC_ACTIVE_HIGH |
-	    SOCAM_DATA_ACTIVE_HIGH | SOCAM_MASTER;
-
-	/* TODO: Do the right thing here, and validate bus params */
-
-	flags |= SOCAM_DATAWIDTH_10;
-
-	return flags;
-}
-
 static int afFWLoaded = -1;
 static int initNeeded = -1;
-static int ov5640_enum_input(struct soc_camera_device *icd,
-			     struct v4l2_input *inp)
-{
-	struct soc_camera_link *icl = to_soc_camera_link(icd);
-	struct v4l2_subdev_sensor_interface_parms *plat_parms;
-
-	inp->type = V4L2_INPUT_TYPE_CAMERA;
-	inp->std = V4L2_STD_UNKNOWN;
-	strcpy(inp->name, "ov5640");
-
-	if (icl && icl->priv) {
-
-		plat_parms = icl->priv;
-		inp->status = 0;
-
-		if (plat_parms->orientation == V4L2_SUBDEV_SENSOR_PORTRAIT)
-			inp->status |= V4L2_IN_ST_HFLIP;
-
-		if (plat_parms->facing == V4L2_SUBDEV_SENSOR_BACK)
-			inp->status |= V4L2_IN_ST_BACK;
-
-	}
-	stream_mode = -1;
-	afFWLoaded = -1;
-	initNeeded = 1;
-
-	return 0;
-}
 
 static int ov5640_g_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 {
+
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct ov5640 *ov5640 = to_ov5640(client);
 
@@ -2265,6 +2114,7 @@ static int ov5640_g_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 
 static int ov5640_try_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 {
+
 	int i_fmt;
 	int i_size;
 
@@ -2284,6 +2134,7 @@ static int ov5640_try_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 
 static int ov5640_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 {
+
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct ov5640 *ov5640 = to_ov5640(client);
 	int ret = 0;
@@ -2304,8 +2155,6 @@ static int ov5640_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 		printk(KERN_ERR "Error configuring configscript_common1\n");
 		return ret;
 	}
-	printk(KERN_INFO "%s: code:0x%x fmt[%d]\n", __func__,
-	       ov5640_fmts[ov5640->i_fmt].code, ov5640->i_size);
 
 	switch ((u32) ov5640_fmts[ov5640->i_fmt].code) {
 	case V4L2_MBUS_FMT_UYVY8_2X8:
@@ -2380,17 +2229,18 @@ static int ov5640_get_af_status(struct i2c_client *client, int num_trys)
 		 * in videodev2_brcm
 		 */
 		switch (ret) {
-		case OV5640_AF_SUCCESS:
+		case V4L2_AUTO_FOCUS_STATUS_REACHED:
 			ret = CAMERA_AF_STATUS_FOCUSED;
 			break;
-		case OV5640_AF_PENDING:
+		case V4L2_AUTO_FOCUS_STATUS_BUSY:
 			ret = CAMERA_AF_STATUS_SEARCHING;
 			break;
-		case OV5640_AF_FAIL:
+		case V4L2_AUTO_FOCUS_STATUS_FAILED:
 			ret = CAMERA_AF_STATUS_FAILED;
 			break;
+		case V4L2_AUTO_FOCUS_STATUS_IDLE:
 		default:
-			ret = CAMERA_AF_STATUS_SEARCHING;
+			ret = CAMERA_AF_STATUS_CANCELLED;
 			break;
 		}
 	}
@@ -2413,13 +2263,13 @@ static int ov5640_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	dev_dbg(&client->dev, "ov5640_g_ctrl\n");
 
 	switch (ctrl->id) {
-	case V4L2_CID_CAMERA_BRIGHTNESS:
+	case V4L2_CID_BRIGHTNESS:
 		ctrl->value = ov5640->brightness;
 		break;
-	case V4L2_CID_CAMERA_CONTRAST:
+	case V4L2_CID_CONTRAST:
 		ctrl->value = ov5640->contrast;
 		break;
-	case V4L2_CID_CAMERA_EFFECT:
+	case V4L2_CID_COLORFX:
 		ctrl->value = ov5640->colorlevel;
 		break;
 	case V4L2_CID_SATURATION:
@@ -2428,29 +2278,29 @@ static int ov5640_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	case V4L2_CID_SHARPNESS:
 		ctrl->value = ov5640->sharpness;
 		break;
-	case V4L2_CID_CAMERA_ANTI_BANDING:
+	case V4L2_CID_POWER_LINE_FREQUENCY:
 		ctrl->value = ov5640->antibanding;
 		break;
-	case V4L2_CID_CAMERA_WHITE_BALANCE:
+	case V4L2_CID_AUTO_N_PRESET_WHITE_BALANCE:
 		ctrl->value = ov5640->whitebalance;
 		break;
 	case V4L2_CID_CAMERA_FRAME_RATE:
 		ctrl->value = ov5640->framerate;
 		break;
-	case V4L2_CID_CAMERA_FOCUS_MODE:
+	case V4L2_CID_AUTO_FOCUS_RANGE:
 		ctrl->value = ov5640->focus_mode;
 		break;
 	case V4L2_CID_CAMERA_TOUCH_AF_AREA:
 		ctrl->value = ov5640->touch_focus;
 		break;
-	case V4L2_CID_CAMERA_AUTO_FOCUS_RESULT:
+	case V4L2_CID_AUTO_FOCUS_STATUS:
 		/*
 		 * this is called from another thread to read AF status
 		 */
 		ctrl->value = ov5640_get_af_status(client, 100);
 		ov5640->touch_focus = 0;
 		break;
-	case V4L2_CID_CAMERA_FLASH_MODE:
+	case V4L2_CID_FLASH_LED_MODE:
 		ctrl->value = ov5640->flashmode;
 		break;
 	}
@@ -2458,22 +2308,25 @@ static int ov5640_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	return 0;
 }
 
-static int ov5640_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
+static int ov5640_s_ctrl(struct v4l2_ctrl *ctrl)
 {
+
+	struct ov5640 *ov5640 = container_of(ctrl->handler,
+					       struct ov5640, hdl);
+
+	struct v4l2_subdev *sd = &ov5640->subdev;
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
-	struct ov5640 *ov5640 = to_ov5640(client);
 	u8 ov_reg;
 	int ret = 0;
 
-	dev_dbg(&client->dev, "ov5640_s_ctrl\n");
-
 	switch (ctrl->id) {
 	case V4L2_CID_CAMERA_BRIGHTNESS:
+	case V4L2_CID_BRIGHTNESS:
 
-		if (ctrl->value > EV_PLUS_2)
+		if (ctrl->val > EV_PLUS_2)
 			return -EINVAL;
 
-		ov5640->brightness = ctrl->value;
+		ov5640->brightness = ctrl->val;
 		switch (ov5640->brightness) {
 		case EV_MINUS_2:
 			ret = ov5640_reg_writes(client,
@@ -2499,12 +2352,12 @@ static int ov5640_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		if (ret)
 			return ret;
 		break;
-	case V4L2_CID_CAMERA_CONTRAST:
+	case V4L2_CID_CONTRAST:
 
-		if (ctrl->value > CONTRAST_PLUS_1)
+		if (ctrl->val > CONTRAST_PLUS_1)
 			return -EINVAL;
 
-		ov5640->contrast = ctrl->value;
+		ov5640->contrast = ctrl->val;
 		switch (ov5640->contrast) {
 		case CONTRAST_MINUS_1:
 			ret = ov5640_reg_writes(client,
@@ -2522,26 +2375,27 @@ static int ov5640_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		if (ret)
 			return ret;
 		break;
-	case V4L2_CID_CAMERA_EFFECT:
+	case V4L2_CID_COLORFX:
 
-		if (ctrl->value > IMAGE_EFFECT_BNW)
+		if (ctrl->val > IMAGE_EFFECT_BNW)
 			return -EINVAL;
 
-		ov5640->colorlevel = ctrl->value;
+		ov5640->colorlevel = ctrl->val;
 
 		switch (ov5640->colorlevel) {
-		case IMAGE_EFFECT_BNW:
+		case V4L2_COLORFX_BW:
 			ret = ov5640_reg_writes(client, ov5640_effect_bw_tbl);
 			break;
-		case IMAGE_EFFECT_SEPIA:
+		case V4L2_COLORFX_SEPIA:
 			ret = ov5640_reg_writes(client,
 						ov5640_effect_sepia_tbl);
 			break;
-		case IMAGE_EFFECT_NEGATIVE:
+		case V4L2_COLORFX_NEGATIVE:
 			ret = ov5640_reg_writes(client,
 						ov5640_effect_negative_tbl);
 			break;
 		default:
+		case V4L2_COLORFX_NONE:
 			ret = ov5640_reg_writes(client,
 						ov5640_effect_normal_tbl);
 			break;
@@ -2551,10 +2405,10 @@ static int ov5640_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		break;
 	case V4L2_CID_SATURATION:
 
-		if (ctrl->value > OV5640_SATURATION_MAX)
+		if (ctrl->val > OV5640_SATURATION_MAX)
 			return -EINVAL;
 
-		ov5640->saturation = ctrl->value;
+		ov5640->saturation = ctrl->val;
 		switch (ov5640->saturation) {
 		case OV5640_SATURATION_MIN:
 			ret = ov5640_reg_writes(client,
@@ -2574,10 +2428,10 @@ static int ov5640_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		break;
 	case V4L2_CID_SHARPNESS:
 
-		if (ctrl->value > OV5640_SHARPNESS_MAX)
+		if (ctrl->val > OV5640_SHARPNESS_MAX)
 			return -EINVAL;
 
-		ov5640->sharpness = ctrl->value;
+		ov5640->sharpness = ctrl->val;
 		switch (ov5640->sharpness) {
 		case OV5640_SHARPNESS_MIN:
 			ret = ov5640_reg_writes(client,
@@ -2596,22 +2450,25 @@ static int ov5640_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			return ret;
 		break;
 
-	case V4L2_CID_CAMERA_ANTI_BANDING:
+	case V4L2_CID_POWER_LINE_FREQUENCY:
 
-		if (ctrl->value > ANTI_BANDING_60HZ)
+		if (ctrl->val > ANTI_BANDING_60HZ)
 			return -EINVAL;
 
-		ov5640->antibanding = ctrl->value;
+		ov5640->antibanding = ctrl->val;
 
 		switch (ov5640->antibanding) {
-		case ANTI_BANDING_50HZ:
+		case V4L2_CID_POWER_LINE_FREQUENCY_DISABLED:
+			break;
+		case V4L2_CID_POWER_LINE_FREQUENCY_50HZ:
 			ret = ov5640_reg_writes(client,
 						ov5640_antibanding_50z_tbl);
 			break;
-		case ANTI_BANDING_60HZ:
+		case V4L2_CID_POWER_LINE_FREQUENCY_60HZ:
 			ret = ov5640_reg_writes(client,
 						ov5640_antibanding_60z_tbl);
 			break;
+		case V4L2_CID_POWER_LINE_FREQUENCY_AUTO:
 		default:
 			ret = ov5640_reg_writes(client,
 						ov5640_antibanding_auto_tbl);
@@ -2621,39 +2478,42 @@ static int ov5640_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			return ret;
 		break;
 
-	case V4L2_CID_CAMERA_WHITE_BALANCE:
+	case V4L2_CID_AUTO_N_PRESET_WHITE_BALANCE:
 
-		if (ctrl->value > WHITE_BALANCE_FLUORESCENT)
+		if (ctrl->val > WHITE_BALANCE_FLUORESCENT)
 			return -EINVAL;
 
-		ov5640->whitebalance = ctrl->value;
+		ov5640->whitebalance = ctrl->val;
 
 		ret = ov5640_reg_read(client, 0x3406, &ov_reg);
 		if (ret)
 			return ret;
 
 		switch (ov5640->whitebalance) {
-		case WHITE_BALANCE_FLUORESCENT:
+		case V4L2_WHITE_BALANCE_FLUORESCENT:
 			ov_reg |= 0x01;
 			ret = ov5640_reg_write(client, 0x3406, ov_reg);
 			ret = ov5640_reg_writes(client, ov5640_wb_fluorescent);
 			break;
-		case WHITE_BALANCE_SUNNY:
+		case V4L2_WHITE_BALANCE_DAYLIGHT:
 			ov_reg |= 0x01;
 			ret = ov5640_reg_write(client, 0x3406, ov_reg);
 			ret = ov5640_reg_writes(client, ov5640_wb_daylight);
 			break;
-		case WHITE_BALANCE_CLOUDY:
+		case V4L2_WHITE_BALANCE_CLOUDY:
 			ov_reg |= 0x01;
 			ret = ov5640_reg_write(client, 0x3406, ov_reg);
 			ret = ov5640_reg_writes(client, ov5640_wb_cloudy);
 			break;
-		case WHITE_BALANCE_TUNGSTEN:
+		case V4L2_WHITE_BALANCE_INCANDESCENT:
 			ov_reg |= 0x01;
 			ret = ov5640_reg_write(client, 0x3406, ov_reg);
 			ret = ov5640_reg_writes(client, ov5640_wb_tungsten);
 			break;
+		case V4L2_WHITE_BALANCE_MANUAL:
+			break;
 		default:
+		case V4L2_WHITE_BALANCE_AUTO:
 			ov_reg &= ~(0x01);
 			ret = ov5640_reg_write(client, 0x3406, ov_reg);
 			ret = ov5640_reg_writes(client, ov5640_wb_def);
@@ -2667,19 +2527,19 @@ static int ov5640_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 
 	case V4L2_CID_CAMERA_FRAME_RATE:
 
-		if (ctrl->value > FRAME_RATE_30)
+		if (ctrl->val > FRAME_RATE_30)
 			return -EINVAL;
 
 		if ((ov5640->i_size < OV5640_SIZE_QVGA) ||
 		    (ov5640->i_size > OV5640_SIZE_1280x960)) {
-			if (ctrl->value == FRAME_RATE_30 ||
-			    ctrl->value == FRAME_RATE_AUTO)
+			if (ctrl->val == FRAME_RATE_30 ||
+			    ctrl->val == FRAME_RATE_AUTO)
 				return 0;
 			else
 				return -EINVAL;
 		}
 
-		ov5640->framerate = ctrl->value;
+		ov5640->framerate = ctrl->val;
 		iprintk("framerate = %d\n", ov5640->framerate);
 
 		switch (ov5640->framerate) {
@@ -2711,12 +2571,12 @@ static int ov5640_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			return ret;
 		break;
 
-	case V4L2_CID_CAMERA_FOCUS_MODE:
+	case V4L2_CID_AUTO_FOCUS_RANGE:
 
-		if (ctrl->value > FOCUS_MODE_INFINITY)
+		if (ctrl->val > FOCUS_MODE_INFINITY)
 			return -EINVAL;
 
-		ov5640->focus_mode = ctrl->value;
+		ov5640->focus_mode = ctrl->val;
 
 		/*
 		 * Donot start the AF cycle here
@@ -2728,12 +2588,12 @@ static int ov5640_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		 * and then set the focus mode.
 		 */
 		switch (ov5640->focus_mode) {
-		case FOCUS_MODE_MACRO:
+		case V4L2_AUTO_FOCUS_RANGE_MACRO:
 			/*
 			 * set the table for macro mode
 			 */
 			break;
-		case FOCUS_MODE_INFINITY:
+		case V4L2_AUTO_FOCUS_RANGE_INFINITY:
 			/*
 			 * set the table for infinity
 			 */
@@ -2753,7 +2613,7 @@ static int ov5640_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		if (ov5640->touch_focus < OV5640_MAX_FOCUS_AREAS) {
 			v4l2_touch_area touch_area;
 			if (copy_from_user(&touch_area,
-					   (v4l2_touch_area *) ctrl->value,
+					   (v4l2_touch_area *) ctrl->val,
 					   sizeof(v4l2_touch_area)))
 				return -EINVAL;
 
@@ -2776,11 +2636,11 @@ static int ov5640_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 
 	case V4L2_CID_CAMERA_SET_AUTO_FOCUS:
 
-		if (ctrl->value > AUTO_FOCUS_ON)
+		if (ctrl->val > AUTO_FOCUS_ON)
 			return -EINVAL;
 
 		/* start and stop af cycle here */
-		switch (ctrl->value) {
+		switch (ctrl->val) {
 
 		case AUTO_FOCUS_OFF:
 
@@ -2812,16 +2672,16 @@ static int ov5640_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		if (ret)
 			return ret;
 		break;
-	case V4L2_CID_CAMERA_FLASH_MODE:
-		ov5640_set_flash_mode(ctrl->value, client);
+	case V4L2_CID_FLASH_LED_MODE:
+		ov5640_set_flash_mode(ctrl->val, client);
 		break;
 
 	case V4L2_CID_CAM_PREVIEW_ONOFF:
 		{
 			printk(KERN_INFO
 			       "ov5640 PREVIEW_ONOFF:%d runmode = %d\n",
-			       ctrl->value, runmode);
-			if (ctrl->value)
+			       ctrl->val, runmode);
+			if (ctrl->val)
 				runmode = CAM_RUNNING_MODE_PREVIEW;
 			else
 				runmode = CAM_RUNNING_MODE_NOTREADY;
@@ -2830,7 +2690,6 @@ static int ov5640_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		}
 
 	case V4L2_CID_CAM_CAPTURE:
-		printk(KERN_INFO "ov5640 runmode = capture\n");
 		runmode = CAM_RUNNING_MODE_CAPTURE;
 		if (ov5640->fireflash) {
 			ov5640_flash_control(client, FLASH_MODE_ON);
@@ -2942,17 +2801,13 @@ static int ov5640_set_flash_mode(int mode, struct i2c_client *client)
 	struct ov5640 *ov5640 = to_ov5640(client);
 
 	switch (mode) {
-	case FLASH_MODE_ON:
+	case V4L2_FLASH_LED_MODE_FLASH:
 		ov5640->flashmode = mode;
 		break;
-	case FLASH_MODE_AUTO:
-		ov5640->flashmode = mode;
-		break;
-	case FLASH_MODE_TORCH_ON:
-	case FLASH_MODE_TORCH_OFF:
+	case V4L2_FLASH_LED_MODE_TORCH:
 		ov5640_flash_control(client, mode);
 		break;
-	case FLASH_MODE_OFF:
+	case V4L2_FLASH_LED_MODE_NONE:
 	default:
 		ov5640_flash_control(client, mode);
 		ov5640->flashmode = mode;
@@ -3050,15 +2905,6 @@ static int ov5640_s_register(struct v4l2_subdev *sd,
 	return 0;
 }
 #endif
-
-static struct soc_camera_ops ov5640_ops = {
-	.set_bus_param = ov5640_set_bus_param,
-	.query_bus_param = ov5640_query_bus_param,
-	.enum_input = ov5640_enum_input,
-	.controls = ov5640_controls,
-	.num_controls = ARRAY_SIZE(ov5640_controls),
-};
-
 static int ov5640_init(struct i2c_client *client)
 {
 	struct ov5640 *ov5640 = to_ov5640(client);
@@ -3116,24 +2962,29 @@ out:
 	return ret;
 }
 
+static int ov5640_s_power(struct v4l2_subdev *sd, int on)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	struct soc_camera_subdev_desc *ssdd = soc_camera_i2c_to_desc(client);
+	struct ov5640 *ov5640 = to_ov5640(client);
+	int ret = 0;
+
+	if (!on)
+		return soc_camera_power_off(&client->dev, ssdd);
+	initNeeded = 1;
+	return soc_camera_power_on(&client->dev, ssdd);
+}
+
 /*
  * Interface active, can use i2c. If it fails, it can indeed mean, that
  *this wasn't our capture interface, so, we wait for the right one
  */
-static int ov5640_video_probe(struct soc_camera_device *icd,
-			      struct i2c_client *client)
+static int ov5640_video_probe(struct i2c_client *client)
 {
 	unsigned long flags;
 	int ret = 0;
 	u8 id_high, id_low, revision = 0;
 
-	/*
-	 * We must have a parent by now. And it cannot be a wrong one.
-	 * So this entire test is completely redundant.
-	 */
-	if (!icd->dev.parent ||
-	    to_soc_camera_host(icd->dev.parent)->nr != icd->iface)
-		return -ENODEV;
 
 	ret = ov5640_reg_read(client, OV5640_CHIP_ID_HIGH, &id_high);
 	ret += ov5640_reg_read(client, OV5640_CHIP_ID_LOW, &id_low);
@@ -3142,16 +2993,11 @@ static int ov5640_video_probe(struct soc_camera_device *icd,
 		dev_err(&client->dev, "Failure to detect OV5640 chip\n");
 		goto out;
 	}
-	printk(KERN_ERR "OV5640 value read=%x\n", revision);
 
 	revision &= 0xF;
-
 	flags = SOCAM_DATAWIDTH_8;
-
 	dev_info(&client->dev, "Detected a OV5640 chip, revision %x\n",
 		 revision);
-
-	/* TODO: Do something like ov5640_init */
 
 out:
 	return ret;
@@ -3159,14 +3005,16 @@ out:
 
 static void ov5640_video_remove(struct soc_camera_device *icd)
 {
-	dev_dbg(&icd->dev, "Video removed: %p, %p\n",
-		icd->dev.parent, icd->vdev);
+
+	dev_dbg(icd->control, "Video removed: %p, %p\n",
+		icd->parent, icd->vdev);
 }
+
 
 static struct v4l2_subdev_core_ops ov5640_subdev_core_ops = {
 	.g_chip_ident = ov5640_g_chip_ident,
 	.g_ctrl = ov5640_g_ctrl,
-	.s_ctrl = ov5640_s_ctrl,
+	.s_power	= ov5640_s_power,
 	.ioctl = ov5640_ioctl,
 #ifdef CONFIG_VIDEO_ADV_DEBUG
 	.g_register = ov5640_g_register,
@@ -3177,6 +3025,7 @@ static struct v4l2_subdev_core_ops ov5640_subdev_core_ops = {
 static int ov5640_enum_fmt(struct v4l2_subdev *sd, unsigned int index,
 			   enum v4l2_mbus_pixelcode *code)
 {
+
 	if (index >= ARRAY_SIZE(ov5640_fmts))
 		return -EINVAL;
 
@@ -3187,6 +3036,7 @@ static int ov5640_enum_fmt(struct v4l2_subdev *sd, unsigned int index,
 static int ov5640_enum_framesizes(struct v4l2_subdev *sd,
 				  struct v4l2_frmsizeenum *fsize)
 {
+
 	if (fsize->index >= OV5640_SIZE_LAST)
 		return -EINVAL;
 
@@ -3233,11 +3083,6 @@ static int ov5640_enum_frameintervals(struct v4l2_subdev *sd,
 		interval->discrete.denominator = 24;
 		break;
 	}
-/*	printk(KERN_ERR"%s: width=%d height=%d fi=%d/%d\n", __func__,
-			interval->width,
-			interval->height, interval->discrete.numerator,
-			interval->discrete.denominator);
-			*/
 	return 0;
 }
 
@@ -3282,6 +3127,7 @@ static int ov5640_g_parm(struct v4l2_subdev *sd, struct v4l2_streamparm *param)
 
 static int ov5640_s_parm(struct v4l2_subdev *sd, struct v4l2_streamparm *param)
 {
+
 	/*
 	 * FIXME: This just enforces the hardcoded framerates until this is
 	 * flexible enough.
@@ -3304,6 +3150,7 @@ static struct v4l2_subdev_video_ops ov5640_subdev_video_ops = {
 
 static int ov5640_g_skip_frames(struct v4l2_subdev *sd, u32 *frames)
 {
+
 	/* Quantity of initial bad frames to skip. Revisit. */
 	/* Waiting for AWB stability, avoid green color issue */
 	*frames = 2;
@@ -3374,23 +3221,19 @@ static struct v4l2_subdev_ops ov5640_subdev_ops = {
 static int ov5640_probe(struct i2c_client *client,
 			const struct i2c_device_id *did)
 {
+	unsigned int i;
 	struct ov5640 *ov5640;
-	struct soc_camera_device *icd = client->dev.platform_data;
-	struct soc_camera_link *icl;
+	struct soc_camera_subdev_desc *ssd = client->dev.platform_data;
+	struct soc_camera_desc *sdesc = container_of(ssd, struct soc_camera_desc, subdev_desc);
+	struct soc_camera_device *icd;
 	int ret;
 
-	if (!icd) {
-		dev_err(&client->dev, "OV5640: missing soc-camera data!\n");
-		return -EINVAL;
-	}
-
-	icl = to_soc_camera_link(icd);
-	if (!icl) {
+	if (!ssd) {
 		dev_err(&client->dev, "OV5640 driver needs platform data\n");
 		return -EINVAL;
 	}
 
-	if (!icl->priv) {
+	if (!ssd->drv_priv) {
 		dev_err(&client->dev,
 			"OV5640 driver needs i/f platform data\n");
 		return -EINVAL;
@@ -3402,27 +3245,119 @@ static int ov5640_probe(struct i2c_client *client,
 
 	v4l2_i2c_subdev_init(&ov5640->subdev, client, &ov5640_subdev_ops);
 
-	/* Second stage probe - when a capture adapter is there */
-	icd->ops = &ov5640_ops;
-
-	ov5640->i_size = OV5640_SIZE_VGA;
+	ov5640->i_size = OV5640_SIZE_1280x960;
 	ov5640->i_fmt = 0;	/* First format in the list */
-	ov5640->plat_parms = icl->priv;
+	ov5640->plat_parms = ssd->drv_priv;
 
-	ret = ov5640_video_probe(icd, client);
-	if (ret) {
-		icd->ops = NULL;
-		kfree(ov5640);
+	struct v4l2_subdev *subdev = i2c_get_clientdata(client); // change this to &ov5640->subdev
+
+
+	v4l2_i2c_subdev_init(&ov5640->subdev, client, &ov5640_subdev_ops);
+
+	v4l2_ctrl_handler_init(&ov5640->hdl, ARRAY_SIZE(ov5640_controls) + 10);
+	if (ov5640->hdl.error)
+		dev_dbg(&client->dev, "Error set during init itself! %d\n",
+			ov5640->hdl.error);
+
+	/* register standard controls */
+	v4l2_ctrl_new_std(&ov5640->hdl, &ov5640_ctrl_ops,
+		V4L2_CID_BRIGHTNESS, 0, 4, 1, 2);
+
+	v4l2_ctrl_new_std(&ov5640->hdl, &ov5640_ctrl_ops,
+		V4L2_CID_CONTRAST, 0, 4, 1, 0);
+
+	v4l2_ctrl_new_std(&ov5640->hdl, &ov5640_ctrl_ops,
+		V4L2_CID_SATURATION, 0, 4, 1, 0);
+
+	v4l2_ctrl_new_std(&ov5640->hdl, &ov5640_ctrl_ops,
+		V4L2_CID_SHARPNESS, 0, 4, 1, 0);
+
+	v4l2_ctrl_new_std(&ov5640->hdl, &ov5640_ctrl_ops,
+			V4L2_CID_AUTO_FOCUS_STATUS, 0,
+			(V4L2_AUTO_FOCUS_STATUS_BUSY |
+			V4L2_AUTO_FOCUS_STATUS_REACHED |
+			V4L2_AUTO_FOCUS_STATUS_FAILED),
+			0, V4L2_AUTO_FOCUS_STATUS_IDLE);
+
+	if (ov5640->hdl.error) {
+		dev_err(&client->dev,
+			"Standard controls initialization error %d\n",
+			ov5640->hdl.error);
+		ret = ov5640->hdl.error;
+		goto ctrl_hdl_err;
+	}
+
+	/* register standard menu controls */
+	v4l2_ctrl_new_std_menu(&ov5640->hdl, &ov5640_ctrl_ops,
+		V4L2_CID_COLORFX, V4L2_COLORFX_SOLARIZATION, 0,
+		V4L2_COLORFX_NONE);
+
+	v4l2_ctrl_new_std_menu(&ov5640->hdl, &ov5640_ctrl_ops,
+		V4L2_CID_POWER_LINE_FREQUENCY,
+		V4L2_CID_POWER_LINE_FREQUENCY_AUTO, 0,
+		V4L2_CID_POWER_LINE_FREQUENCY_50HZ);
+
+	v4l2_ctrl_new_std_menu(&ov5640->hdl, &ov5640_ctrl_ops,
+		V4L2_CID_AUTO_N_PRESET_WHITE_BALANCE,
+		V4L2_WHITE_BALANCE_CLOUDY, 0,
+		V4L2_WHITE_BALANCE_AUTO);
+
+	v4l2_ctrl_new_std_menu(&ov5640->hdl, &ov5640_ctrl_ops,
+		V4L2_CID_AUTO_FOCUS_RANGE,
+		V4L2_AUTO_FOCUS_RANGE_INFINITY, 0,
+		V4L2_AUTO_FOCUS_RANGE_AUTO);
+
+	v4l2_ctrl_new_std_menu(&ov5640->hdl, &ov5640_ctrl_ops,
+		V4L2_CID_FLASH_LED_MODE,
+		V4L2_FLASH_LED_MODE_TORCH, 0,
+		V4L2_FLASH_LED_MODE_FLASH);
+
+	if (ov5640->hdl.error) {
+		dev_err(&client->dev,
+			"Standard menu controls initialization error %d\n",
+			ov5640->hdl.error);
+		ret = ov5640->hdl.error;
+		goto ctrl_hdl_err;
+	}
+
+	/* register custom controls */
+	for (i = 0; i < ARRAY_SIZE(ov5640_controls); ++i)
+		v4l2_ctrl_new_custom(&ov5640->hdl, &ov5640_controls[0], NULL);
+
+	ov5640->subdev.ctrl_handler = &ov5640->hdl;
+	if (ov5640->hdl.error) {
+		dev_err(&client->dev,
+			"Custom controls initialization error %d\n",
+			ov5640->hdl.error);
+		ret = ov5640->hdl.error;
+		goto ctrl_hdl_err;
+	}
+
+	ret = ov5640_s_power(subdev, 1);
+	if (ret < 0)
 		return ret;
+
+	ret = ov5640_video_probe(client);
+	if (ret) {
+		pr_err("ov5640_probe: failed to probe the sensor\n");
+		goto vid_probe_fail;
 	}
 
 	/* init the sensor here */
 	ret = ov5640_init(client);
 	if (ret) {
 		dev_err(&client->dev, "Failed to initialize sensor\n");
-		ret = -EINVAL;
+		goto init_fail;
 	}
 
+	return ret;
+
+ctrl_hdl_err:
+init_fail:
+vid_probe_fail:
+	v4l2_ctrl_handler_free(&ov5640->hdl);
+	kfree(ov5640);
+	pr_err("ov5640_probe failed with ret = %d\n", ret);
 	return ret;
 }
 
@@ -3430,8 +3365,7 @@ static int ov5640_remove(struct i2c_client *client)
 {
 	struct ov5640 *ov5640 = to_ov5640(client);
 	struct soc_camera_device *icd = client->dev.platform_data;
-
-	icd->ops = NULL;
+	v4l2_ctrl_handler_free(&ov5640->hdl);
 	ov5640_video_remove(icd);
 	client->driver = NULL;
 	kfree(ov5640);
@@ -3457,15 +3391,17 @@ static struct i2c_driver ov5640_i2c_driver = {
 
 static int __init ov5640_mod_init(void)
 {
+
 	return i2c_add_driver(&ov5640_i2c_driver);
 }
 
 static void __exit ov5640_mod_exit(void)
 {
+
 	i2c_del_driver(&ov5640_i2c_driver);
 }
 
-module_init(ov5640_mod_init);
+late_initcall(ov5640_mod_init);
 module_exit(ov5640_mod_exit);
 
 MODULE_DESCRIPTION("OmniVision OV5640 Camera driver");

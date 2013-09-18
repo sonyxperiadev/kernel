@@ -392,7 +392,6 @@ static struct i2c_board_info as3643_flash[] = {
 #endif
 #ifdef CONFIG_UNICAM_CAMERA
 
-
 static struct regulator *d_gpsr_cam0_1v8;
 static struct regulator *d_lvldo2_cam1_1v8;
 static struct regulator *d_1v8_mmc1_vcc;
@@ -431,6 +430,15 @@ const static struct cameraCfg_s cameras[] = {
 	{"gc2035", 312000000, 26000000, 1, 0},
 	{"sp0a28", 26000000, 26000000, 1, 0},
 	{},
+};
+
+static struct i2c_board_info hawaii_i2c_camera[] = {
+	{
+		I2C_BOARD_INFO("ov5640", OV5640_I2C_ADDRESS)
+	},
+	{
+		I2C_BOARD_INFO("ov7692", OV7692_I2C_ADDRESS)
+	},
 };
 
 static struct cameraCfg_s *getCameraCfg(const char *cameraName)
@@ -485,9 +493,11 @@ static int hawaii_camera_power(struct device *dev, int on)
 
 	printk(KERN_INFO "%s:camera power %s\n", __func__, (on ? "on" : "off"));
 
-	struct cameraCfg_s *thisCfg = getCameraCfg(icl->module_name);
+	/* for bringup purpose */
+	char module[] = "ov5640";
+	struct cameraCfg_s *thisCfg = getCameraCfg(module);
 	if (NULL == thisCfg) {
-		printk(KERN_ERR "No cfg for [%s]\n", icl->module_name);
+		printk(KERN_ERR "No cfg for [%s]\n", module);
 		return -1;
 	}
 
@@ -508,11 +518,6 @@ static int hawaii_camera_power(struct device *dev, int on)
 			printk(KERN_ERR "Unable to get cam0 PWDN GPIO\n");
 			return -1;
 		}
-
-		printk("%s\n", ov5640_regulator_data[0].supply);
-		printk("%s\n", ov5640_regulator_data[1].supply);
-		printk("%s\n", ov5640_regulator_data[2].supply);
-		printk("%s\n", ov5640_regulator_data[3].supply);
 
 		/*MMC1 VCC */
 		d_1v8_mmc1_vcc = regulator_get(NULL, ov5640_regulator_data[1].supply);
@@ -690,9 +695,10 @@ static int hawaii_camera_power_front(struct device *dev, int on)
 
 	printk(KERN_INFO "%s:camera power %s\n", __func__, (on ? "on" : "off"));
 
-	struct cameraCfg_s *thisCfg = getCameraCfg(icl->module_name);
+	char module[] = "ov5648";
+	struct cameraCfg_s *thisCfg = getCameraCfg(module);
 	if (NULL == thisCfg) {
-		printk(KERN_ERR "No cfg for [%s]\n", icl->module_name);
+		printk(KERN_ERR "No cfg for [%s]\n", module);
 	    return -1;
 	}
 
@@ -1056,16 +1062,6 @@ struct platform_device *hawaii_common_plat_devices[] __initdata = {
 
 #endif
 };
-
-static struct i2c_board_info hawaii_i2c_camera[] = {
-	{
-		I2C_BOARD_INFO("ov5640", OV5640_I2C_ADDRESS)
-	},
-	{
-		I2C_BOARD_INFO("ov7692", OV7692_I2C_ADDRESS)
-	},
-};
-
 
 #ifdef CONFIG_KONA_HEADSET_MULTI_BUTTON
 

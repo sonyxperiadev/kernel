@@ -95,10 +95,6 @@ struct unicam_camera_dev {
 	int cap_done;
 	u32 panic_count;
 	atomic_t cam_triggered;
-/*	atomic_t retry_count;
-	struct timer_list unicam_timer;
-	struct workqueue_struct *single_wq;
-	struct work_struct retry_work; */
 	struct v4l2_format active_fmt;
 };
 
@@ -115,6 +111,7 @@ static int unicam_stop(void);
 /* for debugging purpose */
 static void dump_file(char *filename, void *src, int size)
 {
+
 	mm_segment_t old_fs;
 	int fd = 0, nbytes = 0;
 
@@ -139,6 +136,7 @@ out:
 
 static struct unicam_camera_buffer *to_unicam_camera_vb(struct vb2_buffer *vb)
 {
+
 	return container_of(vb, struct unicam_camera_buffer, vb);
 }
 
@@ -149,8 +147,9 @@ static int unicam_videobuf_setup(struct vb2_queue *vq,
 				unsigned int *count, unsigned int *numplanes,
 				unsigned int sizes[], void *alloc_ctxs[])
 {
+
 	struct soc_camera_device *icd = soc_camera_from_vb2q(vq);
-	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
+	struct soc_camera_host *ici = to_soc_camera_host(icd->parent);
 	struct unicam_camera_dev *unicam_dev =
 	    (struct unicam_camera_dev *)ici->priv;
 	int bytes_per_line = soc_mbus_bytes_per_line(icd->user_width,
@@ -182,6 +181,7 @@ static int unicam_videobuf_setup(struct vb2_queue *vq,
 
 static int unicam_videobuf_prepare(struct vb2_buffer *vb)
 {
+
 	struct soc_camera_device *icd = soc_camera_from_vb2q(vb->vb2_queue);
 	int bytes_per_line = soc_mbus_bytes_per_line(icd->user_width,
 						     icd->
@@ -199,7 +199,7 @@ static int unicam_videobuf_prepare(struct vb2_buffer *vb)
 	size = icd->user_height * bytes_per_line;
 
 	if (vb2_plane_size(vb, 0) < size) {
-		dev_err(icd->dev.parent, "Buffer too small (%lu < %lu)\n",
+		dev_err(icd->parent, "Buffer too small (%lu < %lu)\n",
 			vb2_plane_size(vb, 0), size);
 		return -ENOBUFS;
 	}
@@ -212,6 +212,7 @@ static int unicam_videobuf_prepare(struct vb2_buffer *vb)
 /* should be called with unicam_dev->lock held */
 static int unicam_camera_update_buf(struct unicam_camera_dev *unicam_dev)
 {
+
 
 	struct v4l2_subdev *sd = soc_camera_to_subdev(unicam_dev->icd);
 	struct buffer_desc im0, dat0;
@@ -320,6 +321,7 @@ static int unicam_camera_update_buf(struct unicam_camera_dev *unicam_dev)
 /* should be called with unicam_dev->lock held */
 static int unicam_camera_capture(struct unicam_camera_dev *unicam_dev)
 {
+
 	int ret = 0;
 	struct int_desc i_desc;
 	pr_debug("-enter");
@@ -349,8 +351,9 @@ static int unicam_camera_capture(struct unicam_camera_dev *unicam_dev)
 
 static void unicam_videobuf_queue(struct vb2_buffer *vb)
 {
+
 	struct soc_camera_device *icd = soc_camera_from_vb2q(vb->vb2_queue);
-	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
+	struct soc_camera_host *ici = to_soc_camera_host(icd->parent);
 	struct unicam_camera_dev *unicam_dev = ici->priv;
 	struct unicam_camera_buffer *buf = to_unicam_camera_vb(vb);
 	unsigned long flags;
@@ -399,8 +402,9 @@ static void unicam_videobuf_queue(struct vb2_buffer *vb)
 
 static void unicam_videobuf_release(struct vb2_buffer *vb)
 {
+
 	struct soc_camera_device *icd = soc_camera_from_vb2q(vb->vb2_queue);
-	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
+	struct soc_camera_host *ici = to_soc_camera_host(icd->parent);
 	struct unicam_camera_dev *unicam_dev = ici->priv;
 	struct unicam_camera_buffer *buf = to_unicam_camera_vb(vb);
 	unsigned long flags;
@@ -421,6 +425,7 @@ static void unicam_videobuf_release(struct vb2_buffer *vb)
 
 static int unicam_videobuf_init(struct vb2_buffer *vb)
 {
+
 	struct unicam_camera_buffer *buf = to_unicam_camera_vb(vb);
 
 	INIT_LIST_HEAD(&buf->queue);
@@ -431,6 +436,7 @@ static int unicam_videobuf_init(struct vb2_buffer *vb)
 static int unicam_videobuf_start_streaming_int(struct unicam_camera_dev \
 						*unicam_dev, unsigned int count)
 {
+
 	struct soc_camera_device *icd = unicam_dev->icd;
 	struct v4l2_subdev_sensor_interface_parms if_params;
 	struct v4l2_subdev *sd = soc_camera_to_subdev(icd);
@@ -662,7 +668,6 @@ static int unicam_videobuf_start_streaming_int(struct unicam_camera_dev \
 	/* Output engine */
 	mm_csi0_buffering_mode(unicam_dev->b_mode);
 	mm_csi0_rx_burst();
-	mm_csi0_enable_unicam();
 
 	/* start sensor streaming */
 	ret = v4l2_subdev_call(sd, video, s_stream, 1);
@@ -676,7 +681,6 @@ static int unicam_videobuf_start_streaming_int(struct unicam_camera_dev \
 	if (unicam_dev->active) {
 		/* unicam_camera_update_buf(unicam_dev); */
 		mm_csi0_start_rx();
-
 		/* set data capture */
 		if (unicam_dev->if_params.if_mode == V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2) {
 			idesc.fsi = 1;
@@ -755,12 +759,12 @@ static int unicam_videobuf_start_streaming_int(struct unicam_camera_dev \
 
 int unicam_videobuf_start_streaming(struct vb2_queue *q, unsigned int count)
 {
+
 	struct soc_camera_device *icd = soc_camera_from_vb2q(q);
-	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
+	struct soc_camera_host *ici = to_soc_camera_host(icd->parent);
 	struct unicam_camera_dev *unicam_dev = ici->priv;
 	int ret = 0;
 
-	/*atomic_set(&unicam_dev->retry_count, 0);*/
 	if (!atomic_read(&unicam_dev->streaming))
 		ret = unicam_videobuf_start_streaming_int(unicam_dev, count);
 	else
@@ -772,6 +776,7 @@ int unicam_videobuf_start_streaming(struct vb2_queue *q, unsigned int count)
 static int unicam_videobuf_stop_streaming_int(struct unicam_camera_dev \
 				*unicam_dev)
 {
+
 	struct soc_camera_device *icd = unicam_dev->icd;
 	struct v4l2_subdev *sd = soc_camera_to_subdev(icd);
 	int ret = 0;
@@ -795,9 +800,9 @@ static int unicam_videobuf_stop_streaming_int(struct unicam_camera_dev \
 		atomic_set(&unicam_dev->stopping, 0);
 		if (ret == -ETIME) {
 			pr_err("Unicam: semaphore timed out waiting to STOP\n");
-			#ifdef UNICAM_DEBUG
-				unicam_reg_dump_dbg();
-			#endif
+#ifdef UNICAM_DEBUG
+			unicam_reg_dump_dbg();
+#endif
 		}
 	} else {
 		spin_unlock_irqrestore(&unicam_dev->lock, flags);
@@ -834,8 +839,9 @@ out:
 
 int unicam_videobuf_stop_streaming(struct vb2_queue *q)
 {
+
 	struct soc_camera_device *icd = soc_camera_from_vb2q(q);
-	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
+	struct soc_camera_host *ici = to_soc_camera_host(icd->parent);
 	struct unicam_camera_dev *unicam_dev = ici->priv;
 	int ret = 0;
 
@@ -843,10 +849,6 @@ int unicam_videobuf_stop_streaming(struct vb2_queue *q)
 		ret = unicam_videobuf_stop_streaming_int(unicam_dev);
 	else
 		pr_err("unicam_videobuf_start_streaming: already stopped\n");
-
-/*	atomic_set(&unicam_dev->retry_count, 0);
-	del_timer_sync(&(unicam_dev->unicam_timer));
-	flush_work_sync(&unicam_dev->retry_work); */
 
 	return ret;
 }
@@ -866,6 +868,7 @@ static struct vb2_ops unicam_videobuf_ops = {
 static int unicam_camera_init_videobuf(struct vb2_queue *q,
 				       struct soc_camera_device *icd)
 {
+
 	pr_debug("-enter");
 	q->type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 	q->io_modes = VB2_MMAP | VB2_USERPTR | VB2_READ;
@@ -879,13 +882,14 @@ static int unicam_camera_init_videobuf(struct vb2_queue *q,
 	q->mem_ops = &vb2_dma_contig_memops;
 #endif
 	q->buf_struct_size = sizeof(struct unicam_camera_buffer);
+	q->timestamp_type = V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC;
 	pr_debug("-exit");
 	return vb2_queue_init(q);
 }
 
-static int unicam_camera_set_bus_param(struct soc_camera_device *icd,
-				       __u32 pixfmt)
+static int unicam_camera_set_bus_param(struct soc_camera_device *icd)
 {
+
 	pr_debug("-enter");
 	pr_debug("-exit");
 	return 0;
@@ -894,6 +898,7 @@ static int unicam_camera_set_bus_param(struct soc_camera_device *icd,
 static int unicam_camera_querycap(struct soc_camera_host *ici,
 				  struct v4l2_capability *cap)
 {
+
 	pr_debug("-enter");
 	/* cap->name is set by the firendly caller:-> */
 	strlcpy(cap->card, "Unicam Camera", sizeof(cap->card));
@@ -906,6 +911,7 @@ static int unicam_camera_querycap(struct soc_camera_host *ici,
 
 static unsigned int unicam_camera_poll(struct file *file, poll_table *pt)
 {
+
 	struct soc_camera_device *icd = file->private_data;
 
 	pr_debug("-enter");
@@ -916,6 +922,7 @@ static unsigned int unicam_camera_poll(struct file *file, poll_table *pt)
 static int unicam_camera_try_fmt(struct soc_camera_device *icd,
 				 struct v4l2_format *f)
 {
+
 	struct v4l2_subdev *sd = soc_camera_to_subdev(icd);
 	const struct soc_camera_format_xlate *xlate;
 	struct v4l2_pix_format *pix = &f->fmt.pix;
@@ -929,7 +936,7 @@ static int unicam_camera_try_fmt(struct soc_camera_device *icd,
 	pr_debug("-enter");
 	xlate = soc_camera_xlate_by_fourcc(icd, pixfmt);
 	if (!xlate) {
-		dev_warn(icd->dev.parent, "Format %x not found\n", pixfmt);
+		dev_warn(icd->parent, "Format %x not found\n", pixfmt);
 		return -EINVAL;
 	}
 
@@ -956,7 +963,7 @@ static int unicam_camera_try_fmt(struct soc_camera_device *icd,
 		pix->field = V4L2_FIELD_NONE;
 		break;
 	default:
-		dev_err(icd->dev.parent, "Field type %d unsupported.\n",
+		dev_err(icd->parent, "Field type %d unsupported.\n",
 			mf.field);
 		return -EINVAL;
 	}
@@ -975,7 +982,7 @@ static int unicam_camera_try_fmt(struct soc_camera_device *icd,
 					     VIDIOC_THUMB_G_FMT,
 					     (void *)&thumb_fmt);
 			if (ret < 0) {
-				dev_err(icd->dev.parent,
+				dev_err(icd->parent,
 					"sensor driver should report thumbnail format\n");
 				return -EINVAL;
 			}
@@ -988,7 +995,7 @@ static int unicam_camera_try_fmt(struct soc_camera_device *icd,
 				     pixfmtstr(thumb_pix->pixelformat));
 				break;
 			default:
-				dev_err(icd->dev.parent,
+				dev_err(icd->parent,
 					"sensor thumbnail format %c%c%c%c not supported\n",
 					pixfmtstr(thumb_pix->pixelformat));
 				return -EINVAL;
@@ -1020,7 +1027,7 @@ static int unicam_camera_try_fmt(struct soc_camera_device *icd,
 		pix->bytesperline = ((pix->width + 31) & ~(31));
 		break;
 	default:
-		dev_err(icd->dev.parent, "Sensor format code %d unsupported.\n",
+		dev_err(icd->parent, "Sensor format code %d unsupported.\n",
 			mf.code);
 		return -EINVAL;
 	}
@@ -1033,6 +1040,7 @@ static int unicam_camera_try_fmt(struct soc_camera_device *icd,
 
 static int unicam_stop()
 {
+
 	struct int_desc idesc;
 
 	mm_csi0_stop_rx();
@@ -1045,7 +1053,8 @@ static int unicam_stop()
 static int unicam_camera_s_ctrl(struct soc_camera_device *icd,
 				 struct v4l2_control *ctl)
 {
-	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
+
+	struct soc_camera_host *ici = to_soc_camera_host(icd->parent);
 	struct unicam_camera_dev *unicam_dev = ici->priv;
 	int ret = 0;
 
@@ -1081,7 +1090,8 @@ static int unicam_camera_s_ctrl(struct soc_camera_device *icd,
 static int unicam_camera_get_crop(struct soc_camera_device *icd,
 				 struct v4l2_crop *crop)
 {
-	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
+
+	struct soc_camera_host *ici = to_soc_camera_host(icd->parent);
 	struct unicam_camera_dev *unicam_dev = ici->priv;
 
 	if (crop != NULL)
@@ -1090,67 +1100,22 @@ static int unicam_camera_get_crop(struct soc_camera_device *icd,
 	return 0;
 }
 static int unicam_camera_set_crop(struct soc_camera_device *icd,
-				struct v4l2_crop *crop)
+				const struct v4l2_crop *crop)
 {
-	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
+
+	struct soc_camera_host *ici = to_soc_camera_host(icd->parent);
 	struct unicam_camera_dev *unicam_dev = ici->priv;
 
 	if (crop == NULL)
 		return -EINVAL;
 	unicam_dev->crop = *crop;
 	return 0;
-#if 0
-	struct v4l2_subdev *sd = soc_camera_to_subdev(icd);
-	pr_info("Configuring crop to %d %d\n", crop->c.width, crop->c.height);
-	pr_info("Configuring top left to %d %d\n", crop->c.top, crop->c.left);
-	 v4l2_subdev_call(sd, video, s_stream, 0);
-	spin_lock_irqsave(&unicam_dev->lock, flags);
-	unicam_dev->crop = *crop;
-	if (unicam_dev->streaming) {
-		pr_info("Stopping stream\n");
-		unicam_stop();
-	}
-	/* Configure new crop parameters */
-	mm_csi0_set_windowing_vertical(unicam_dev->crop.c.top,
-			(unicam_dev->crop.c.top + unicam_dev->crop.c.height));
-	mm_csi0_cfg_pipeline_unpack(PIX_UNPACK_NONE);
-	mm_csi0_cfg_pipeline_dpcm_dec(DPCM_DEC_NONE);
-	mm_csi0_set_windowing_horizontal(unicam_dev->crop.c.left,
-			(unicam_dev->crop.c.left + unicam_dev->crop.c.width));
-	mm_csi0_cfg_pipeline_dpcm_enc(DPCM_ENC_NONE);
-	mm_csi0_cfg_pipeline_pack(PIX_PACK_NONE);
-	mm_csi0_start_rx();
-
-	/* Re-configure buffer parameters */
-	unicam_camera_update_buf(unicam_dev);
-	/* set data capture */
-	if (unicam_dev->if_params.if_mode == V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2) {
-		idesc.fsi = 1;
-		idesc.fei = 1;
-		idesc.lci = 0;
-		idesc.die = 1;
-		idesc.dataline = 2;
-		mm_csi0_config_int(&idesc, IMAGE_BUFFER);
-		mm_csi0_config_int(&idesc, DATA_BUFFER);
-		unicam_camera_capture(unicam_dev);
-	} else {
-		idesc.fsi = 0;
-		idesc.fei = 0;
-		idesc.lci = unicam_dev->icd->user_height;
-		idesc.die = 0;
-		idesc.dataline = 0;
-		mm_csi0_config_int(&idesc, IMAGE_BUFFER);
-	}
-
-	spin_unlock_irqrestore(&unicam_dev->lock, flags);
-	 v4l2_subdev_call(sd, video, s_stream, 1);
-	return 0;
-#endif
 }
 static int unicam_camera_set_fmt_int(struct unicam_camera_dev *unicam_dev)
 {
+
 	struct soc_camera_device *icd = unicam_dev->icd;
-	struct device *dev = icd->dev.parent;
+	struct device *dev = icd->parent;
 	struct v4l2_subdev *sd = soc_camera_to_subdev(icd);
 	const struct soc_camera_format_xlate *xlate = NULL;
 	struct v4l2_format *f = &(unicam_dev->active_fmt);
@@ -1159,6 +1124,7 @@ static int unicam_camera_set_fmt_int(struct unicam_camera_dev *unicam_dev)
 	int ret;
 	u32 skip_frames = 0;
 
+	printk("%s\n", __func__);
 	pr_debug("-enter");
 	xlate = soc_camera_xlate_by_fourcc(icd, pix->pixelformat);
 	if (!xlate) {
@@ -1219,7 +1185,8 @@ static int unicam_camera_set_fmt_int(struct unicam_camera_dev *unicam_dev)
 static int unicam_camera_set_fmt(struct soc_camera_device *icd,
 				 struct v4l2_format *f)
 {
-	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
+
+	struct soc_camera_host *ici = to_soc_camera_host(icd->parent);
 	struct unicam_camera_dev *unicam_dev = ici->priv;
 	int ret;
 
@@ -1227,74 +1194,17 @@ static int unicam_camera_set_fmt(struct soc_camera_device *icd,
 	ret = unicam_camera_set_fmt_int(unicam_dev);
 	return ret;
 }
-#if 0
-static void unicam_reset_retry(struct unicam_camera_dev *unicam_dev)
-{
-	struct vb2_buffer *active_bkup = unicam_dev->active;
-	int ret = 0;
-	pr_info("unicam_reset_retry: stop\n");
 
-	if (atomic_read(&unicam_dev->streaming) == 0)
-		return;
-
-	ret = unicam_videobuf_stop_streaming_int(unicam_dev);
-	if (ret != 0)
-		pr_err("unicam_reset_retry: stop failed\n");
-
-	/*Reconfigure*/
-	unicam_camera_set_fmt_int(unicam_dev);
-
-	unicam_dev->active = active_bkup;
-	pr_info("unicam_reset_retry: start\n");
-
-	ret = unicam_videobuf_start_streaming_int(unicam_dev, 0);
-	if (ret != 0)
-		pr_err("unicam_reset_retry: start failed\n");
-
-	pr_info("unicam_reset_retry: exit\n");
-}
-
-static void unicam_retry_work(struct work_struct *work)
-{
-	struct unicam_camera_dev *unicam_dev = container_of(work, \
-					struct unicam_camera_dev, \
-					retry_work);
-	del_timer_sync(&(unicam_dev->unicam_timer));
-	pr_debug("unicam_retry_work: got Scheduled\n");
-	if (atomic_read(&unicam_dev->retry_count) > UC_RETRY_CNT) {
-		pr_debug("unicam_retry_work: No more retry ..\n");
-		atomic_set(&unicam_dev->retry_count, 0);
-		return;
-	}
-	unicam_reg_dump_dbg();
-	/*unicam_reset_retry(unicam_dev);*/
-}
-
-static void unicam_timer_callback(unsigned long data)
-{
-	struct unicam_camera_dev *unicam_dev =
-			(struct unicam_camera_dev *)(data);
-	if (atomic_read(&unicam_dev->cam_triggered) == 0) {
-		pr_info("***Retry Timer Ignore***\n");
-		return;
-	}
-	pr_info("***Retry(%d) Timer***\n", \
-		atomic_read(&unicam_dev->retry_count));
-	atomic_add(1, &unicam_dev->retry_count);
-
-	queue_work_on(0, unicam_dev->single_wq, \
-		&unicam_dev->retry_work);
-}
-#endif
 static int unicam_camera_add_device(struct soc_camera_device *icd)
 {
-	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
+
+	struct soc_camera_host *ici = to_soc_camera_host(icd->parent);
 	struct unicam_camera_dev *unicam_dev = ici->priv;
 	struct v4l2_subdev *sd = soc_camera_to_subdev(icd);
 	int err = 0;
 
 	if (unicam_dev->icd) {
-		dev_warn(icd->dev.parent,
+		dev_warn(icd->parent,
 			 "Unicam camera driver already attached to another client\n");
 		err = -EBUSY;
 		goto eicd;
@@ -1306,14 +1216,14 @@ static int unicam_camera_add_device(struct soc_camera_device *icd)
 			IRQF_DISABLED | IRQF_SHARED, UNICAM_CAM_DRV_NAME,
 			unicam_dev);
 	if (err) {
-		dev_err(icd->dev.parent, "cound not install irq %d\n",
+		dev_err(icd->parent, "cound not install irq %d\n",
 			unicam_dev->irq);
 		err = -ENODEV;
 		goto eirq;
 	}
 	err = v4l2_subdev_call(sd, core, s_power, 1);
 	if (err < 0 && err != -ENOIOCTLCMD && err != -ENODEV) {
-		dev_err(icd->dev.parent, "cound not power up subdevice\n");
+		dev_err(icd->parent, "cound not power up subdevice\n");
 		return err;
 	} else {
 		err = 0;
@@ -1322,7 +1232,7 @@ static int unicam_camera_add_device(struct soc_camera_device *icd)
 
 	unicam_dev->icd = icd;
 
-	dev_info(icd->dev.parent,
+	dev_info(icd->parent,
 		 "Unicam Camera driver attached to camera %d\n", icd->devnum);
 
 eirq:
@@ -1332,7 +1242,8 @@ eicd:
 
 static void unicam_camera_remove_device(struct soc_camera_device *icd)
 {
-	struct soc_camera_host *ici = to_soc_camera_host(icd->dev.parent);
+
+	struct soc_camera_host *ici = to_soc_camera_host(icd->parent);
 	struct unicam_camera_dev *unicam_dev = ici->priv;
 	struct v4l2_subdev *sd = soc_camera_to_subdev(icd);
 
@@ -1351,7 +1262,7 @@ static void unicam_camera_remove_device(struct soc_camera_device *icd)
 
 	unicam_dev->icd = NULL;
 
-	dev_info(icd->dev.parent,
+	dev_info(icd->parent,
 		 "Unicam Camera driver detached from camera %d\n", icd->devnum);
 }
 
@@ -1368,15 +1279,13 @@ static struct soc_camera_host_ops unicam_soc_camera_host_ops = {
 	.set_livecrop = unicam_camera_set_crop,
 	.set_crop = unicam_camera_set_crop,
 	.get_crop = unicam_camera_get_crop,
-	.set_ctrl = unicam_camera_s_ctrl,
 };
+
 
 static irqreturn_t unicam_camera_isr(int irq, void *arg)
 {
 	struct unicam_camera_dev *unicam_dev = (struct unicam_camera_dev *)arg;
-#if 1
 	struct v4l2_subdev *sd = soc_camera_to_subdev(unicam_dev->icd);
-#endif
 	int ret;
 	struct int_desc idesc;
 	struct rx_stat_list rx;
@@ -1508,8 +1417,9 @@ out:
 	return IRQ_HANDLED;
 }
 
-static int __devinit unicam_camera_probe(struct platform_device *pdev)
+static int unicam_camera_probe(struct platform_device *pdev)
 {
+
 	struct unicam_camera_dev *unicam_dev;
 	struct soc_camera_host *soc_host;
 	int irq;
@@ -1554,20 +1464,6 @@ static int __devinit unicam_camera_probe(struct platform_device *pdev)
 	err = soc_camera_host_register(soc_host);
 	if (err)
 		goto ecamhostreg;
-#if 0
-	/*Init retry related methods*/
-	unicam_dev->single_wq = alloc_workqueue("uc_work",
-					WQ_NON_REENTRANT, 1);
-	if (unicam_dev->single_wq == NULL) {
-		pr_err("alloc_workqueue failed\n");
-		goto ecamhostreg;
-	}
-	INIT_WORK(&(unicam_dev->retry_work), unicam_retry_work);
-	init_timer(&(unicam_dev->unicam_timer));
-	setup_timer(&(unicam_dev->unicam_timer), \
-			unicam_timer_callback, \
-			(unsigned long)unicam_dev);
-#endif
 	return 0;
 
 ecamhostreg:
@@ -1581,8 +1477,9 @@ edev:
 	return err;
 }
 
-static int __devexit unicam_camera_remove(struct platform_device *pdev)
+static int unicam_camera_remove(struct platform_device *pdev)
 {
+
 	/*TODO */
 	return 0;
 }
@@ -1592,21 +1489,24 @@ static struct platform_driver unicam_camera_driver = {
 		   .name = UNICAM_CAM_DRV_NAME,
 		   },
 	.probe = unicam_camera_probe,
-	.remove = __devexit_p(unicam_camera_remove),
+	.remove = unicam_camera_remove,
 };
 
 static int __init unicam_camera_init(void)
 {
+
 	return platform_driver_register(&unicam_camera_driver);
 }
 
 static void __exit unicam_camera_exit(void)
 {
+
 	platform_driver_unregister(&unicam_camera_driver);
 }
 
-module_init(unicam_camera_init);
+late_initcall(unicam_camera_init);
 module_exit(unicam_camera_exit);
 
 MODULE_DESCRIPTION("Unicam Camera Host driver");
+MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Pradeep Sawlani <spradeep@broadcom.com>");

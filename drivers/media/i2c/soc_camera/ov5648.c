@@ -46,9 +46,7 @@
 #include <linux/module.h>
 #include <linux/timer.h>
 #define OV5648_DEBUG 0
-
-#if defined(CONFIG_MACH_JAVA_C_LC1) || defined(CONFIG_MACH_JAVA_C_5609A) \
-	|| defined(CONFIG_MACH_JAVA_C_5606)
+#if defined(CONFIG_MACH_JAVA_C_LC1)
 #define TORCH_EN (10)
 #define FLASH_EN (11)
 #endif
@@ -75,14 +73,8 @@ static const struct ov5648_datafmt ov5648_fmts[] = {
 enum ov5648_mode {
 	OV5648_MODE_1280x720P30  = 0,
 	OV5648_MODE_1280x960P30  = 1,
-#ifdef CONFIG_ARCH_JAVA
-	OV5648_MODE_1920x1080P30 = 2,
-	OV5648_MODE_2592x1944P15 = 3,
-	OV5648_MODE_MAX          = 4,
-#else
 	OV5648_MODE_2592x1944P15 = 2,
 	OV5648_MODE_MAX          = 3,
-#endif
 };
 
 enum ov5648_state {
@@ -136,20 +128,6 @@ struct sensor_mode ov5648_mode[OV5648_MODE_MAX + 1] = {
 		.bpp            = 10,
 		.fps            = F24p8(30.0),
 	},
-#ifdef CONFIG_ARCH_JAVA
-	{
-		.name           = "1920x1080P30",
-		.height         = 1080,
-		.width          = 1920,
-		.hts            = 2500,
-		.vts            = 1120,
-		.vts_max        = 32767 - 6,
-		.line_length_ns = 29762,
-		.bayer          = BAYER_BGGR,
-		.bpp            = 10,
-		.fps            = F24p8(30.0),
-	},
-#endif
 	{
 		.name           = "2592x1944P15",
 		.height         = 1944,
@@ -193,7 +171,7 @@ struct ov5648_otp {
 struct ov5648 {
 	struct v4l2_subdev subdev;
 	struct v4l2_subdev_sensor_interface_parms *plat_parms;
-	struct soc_camera_device *icd;
+	struct soc_camera_device *ssdd;
 	int state;
 	int mode_idx;
 	int i_fmt;
@@ -250,14 +228,14 @@ struct ov5648_reg {
 	u8	pad;
 };
 
-static const struct ov5648_reg ov5648_reginit[256] = {
-	{0x0103, 0x01},
+static const struct ov5648_reg ov5648_regtbl[OV5648_MODE_MAX][256] = {
+	{
+	/* WxH=1280x720 HTSxVTS=1864x1496 BPP=10 bits */
+	{0x0100, 0x00},
 	{0x3001, 0x00},
 	{0x3002, 0x00},
 	{0x3011, 0x02},
-	{0x3017, 0x05},
 	{0x3018, 0x4c},
-	{0x301c, 0xd2},
 	{0x3022, 0x00},
 	{0x3034, 0x1a},
 	{0x3035, 0x21},
@@ -287,12 +265,6 @@ static const struct ov5648_reg ov5648_reginit[256] = {
 	{0x330e, 0x03},
 	{0x330f, 0x20},
 	{0x3300, 0x00},
-	{0x3500, 0x00},
-	{0x3501, 0x7b},
-	{0x3502, 0x00},
-	{0x3503, 0x07},
-	{0x350a, 0x00},
-	{0x350b, 0x40},
 	{0x3601, 0x33},
 	{0x3602, 0x00},
 	{0x3611, 0x0e},
@@ -305,7 +277,306 @@ static const struct ov5648_reg ov5648_reginit[256] = {
 	{0x3632, 0x94},
 	{0x3633, 0x17},
 	{0x3634, 0x14},
-	{0x3704, 0xc0},
+	{0x3705, 0x2a},
+	{0x3708, 0x66},
+	{0x3709, 0x52},
+	{0x370b, 0x23},
+	{0x370c, 0xc3},
+	{0x370d, 0x00},
+	{0x370e, 0x00},
+	{0x371c, 0x07},
+	{0x3739, 0xd2},
+	{0x373c, 0x00},
+	{0x3800, 0x00},
+	{0x3801, 0x10},
+	{0x3802, 0x00},
+	{0x3803, 0xfe},
+	{0x3804, 0x0a},
+	{0x3805, 0x2f},
+	{0x3806, 0x06},
+	{0x3807, 0xa5},
+	{0x3808, 0x05},
+	{0x3809, 0x00},
+	{0x380a, 0x02},
+	{0x380b, 0xd0},
+	{0x380c, 0x07},
+	{0x380d, 0x48},
+	{0x380e, 0x05},
+	{0x380f, 0xd8},
+	{0x3810, 0x00},
+	{0x3811, 0x08},
+	{0x3812, 0x00},
+	{0x3813, 0x02},
+	{0x3814, 0x31},
+	{0x3815, 0x31},
+	{0x3817, 0x00},
+#ifdef CONFIG_MACH_JAVA_C_5606
+	{0x3820, 0x00},
+	{0x3821, 0x07},
+#else
+	{0x3820, 0x0e},
+	{0x3821, 0x01},
+#endif
+	{0x3826, 0x03},
+	{0x3829, 0x00},
+	{0x382b, 0x0b},
+	{0x3830, 0x00},
+	{0x3836, 0x00},
+	{0x3837, 0x00},
+	{0x3838, 0x00},
+	{0x3839, 0x04},
+	{0x383a, 0x00},
+	{0x383b, 0x01},
+	{0x3b00, 0x00},
+	{0x3b02, 0x08},
+	{0x3b03, 0x00},
+	{0x3b04, 0x04},
+	{0x3b05, 0x00},
+	{0x3b06, 0x04},
+	{0x3b07, 0x08},
+	{0x3b08, 0x00},
+	{0x3b09, 0x02},
+	{0x3b0a, 0x04},
+	{0x3b0b, 0x00},
+	{0x3b0c, 0x3d},
+	{0x3f01, 0x0d},
+	{0x3f0f, 0xf5},
+	{0x4000, 0x89},
+	{0x4001, 0x02},
+	{0x4002, 0x45},
+	{0x4004, 0x02},
+	{0x4005, 0x1a},
+	{0x4006, 0x08},
+	{0x4007, 0x10},
+	{0x4008, 0x00},
+	{0x4050, 0x6e},
+	{0x4051, 0x8f},
+	{0x4300, 0xf8},
+	{0x4303, 0xff},
+	{0x4304, 0x00},
+	{0x4307, 0xff},
+	{0x4520, 0x00},
+	{0x4521, 0x00},
+	{0x4511, 0x22},
+	{0x481f, 0x3c},
+	{0x4826, 0x00},
+	{0x4837, 0x18},
+	{0x4b00, 0x06},
+	{0x4b01, 0x0a},
+	{0x5043, 0x00},
+	{0x5013, 0x00},
+	{0x501f, 0x03},
+	{0x503d, 0x00},
+	{0x5a00, 0x08},
+	{0x5b00, 0x01},
+	{0x5b01, 0x40},
+	{0x5b02, 0x00},
+	{0x5b03, 0xf0},
+	{0x4800, 0x24},
+	{0x3503, 0x03},
+	{0x5000, 0Xff},
+	{0x5001, 0X00},
+
+	{0xFFFF, 0x00}	/* end of the list */
+	},
+	{
+	/* WxH=1280x960 HTSxVTS=1864x1496 BPP=10 bits */
+	{0x0100, 0x00},
+	{0x3001, 0x00},
+	{0x3002, 0x00},
+	{0x3011, 0x02},
+	{0x3018, 0x4c},
+	{0x3022, 0x00},
+	{0x3034, 0x1a},
+	{0x3035, 0x21},
+#ifdef OV5648_MCLK_26MHZ
+	{0x3036, 0x61}, /* MCLK=26MHz MIPI=420MBs*2 Lanes FPS=30 */
+#else
+	{0x3036, 0x69}, /* MCLK=24MHz MIPI=420MBs*2 Lanes FPS=30*/
+#endif
+	{0x3037, 0x03},
+	{0x3038, 0x00},
+	{0x3039, 0x00},
+	{0x303a, 0x00},
+	{0x303b, 0x19},
+	{0x303c, 0x11},
+	{0x303d, 0x30},
+	{0x3105, 0x11},
+	{0x3106, 0x05},
+	{0x3304, 0x28},
+	{0x3305, 0x41},
+	{0x3306, 0x30},
+	{0x3308, 0x00},
+	{0x3309, 0xc8},
+	{0x330a, 0x01},
+	{0x330b, 0x90},
+	{0x330c, 0x02},
+	{0x330d, 0x58},
+	{0x330e, 0x03},
+	{0x330f, 0x20},
+	{0x3300, 0x00},
+	{0x3601, 0x33},
+	{0x3602, 0x00},
+	{0x3611, 0x0e},
+	{0x3612, 0x2b},
+	{0x3614, 0x50},
+	{0x3620, 0x33},
+	{0x3622, 0x00},
+	{0x3630, 0xad},
+	{0x3631, 0x00},
+	{0x3632, 0x94},
+	{0x3633, 0x17},
+	{0x3634, 0x14},
+	{0x3705, 0x2a},
+	{0x3708, 0x66},
+	{0x3709, 0x52},
+	{0x370b, 0x23},
+	{0x370c, 0xc3},
+	{0x370d, 0x00},
+	{0x370e, 0x00},
+	{0x371c, 0x07},
+	{0x3739, 0xd2},
+	{0x373c, 0x00},
+	{0x3800, 0x00},
+	{0x3801, 0x10},
+	{0x3802, 0x00},
+	{0x3803, 0x06},
+	{0x3804, 0x0a},
+	{0x3805, 0x2f},
+	{0x3806, 0x07},
+	{0x3807, 0x9d},
+	{0x3808, 0x05},
+	{0x3809, 0x00},
+	{0x380a, 0x03},
+	{0x380b, 0xc0},
+	{0x380c, 0x07},
+	{0x380d, 0x48},
+	{0x380e, 0x05},
+	{0x380f, 0xd8},
+	{0x3810, 0x00},
+	{0x3811, 0x08},
+	{0x3812, 0x00},
+	{0x3813, 0x06},
+	{0x3814, 0x31},
+	{0x3815, 0x31},
+	{0x3817, 0x00},
+#ifdef CONFIG_MACH_JAVA_C_5606
+	{0x3820, 0x00},
+	{0x3821, 0x07},
+#else
+	{0x3820, 0x0e},
+	{0x3821, 0x01},
+#endif
+	{0x3826, 0x03},
+	{0x3829, 0x00},
+	{0x382b, 0x0b},
+	{0x3830, 0x00},
+	{0x3836, 0x00},
+	{0x3837, 0x00},
+	{0x3838, 0x00},
+	{0x3839, 0x04},
+	{0x383a, 0x00},
+	{0x383b, 0x01},
+	{0x3b00, 0x00},
+	{0x3b02, 0x08},
+	{0x3b03, 0x00},
+	{0x3b04, 0x04},
+	{0x3b05, 0x00},
+	{0x3b06, 0x04},
+	{0x3b07, 0x08},
+	{0x3b08, 0x00},
+	{0x3b09, 0x02},
+	{0x3b0a, 0x04},
+	{0x3b0b, 0x00},
+	{0x3b0c, 0x3d},
+	{0x3f01, 0x0d},
+	{0x3f0f, 0xf5},
+	{0x4000, 0x89},
+	{0x4001, 0x02},
+	{0x4002, 0x45},
+	{0x4004, 0x02},
+	{0x4005, 0x1a},
+	{0x4006, 0x08},
+	{0x4007, 0x10},
+	{0x4008, 0x00},
+	{0x4050, 0x6e},
+	{0x4051, 0x8f},
+	{0x4300, 0xf8},
+	{0x4303, 0xff},
+	{0x4304, 0x00},
+	{0x4307, 0xff},
+	{0x4520, 0x00},
+	{0x4521, 0x00},
+	{0x4511, 0x22},
+	{0x481f, 0x3c},
+	{0x4826, 0x00},
+	{0x4837, 0x18},
+	{0x4b00, 0x06},
+	{0x4b01, 0x0a},
+	{0x5043, 0x00},
+	{0x5013, 0x00},
+	{0x501f, 0x03},
+	{0x503d, 0x00},
+	{0x5a00, 0x08},
+	{0x5b00, 0x01},
+	{0x5b01, 0x40},
+	{0x5b02, 0x00},
+	{0x5b03, 0xf0},
+	{0x4800, 0x24},
+	{0x3503, 0x03},
+	{0x5000, 0Xff},
+	{0x5001, 0X00},
+
+	{ 0xFFFF, 0x00 }	/* end of the list */
+	},
+	{
+	/* WxH=2592x1944  HTSxVTS=2844x1968 BPP=10 bits */
+	{0x0100, 0x00},
+	{0x3001, 0x00},
+	{0x3002, 0x00},
+	{0x3011, 0x02},
+	{0x3018, 0x4c},
+	{0x3022, 0x00},
+	{0x3034, 0x1a},
+	{0x3035, 0x21},
+#ifdef OV5648_MCLK_26MHZ
+	{0x3036, 0x60}, /* MCLK=26MHz MIPI=416MBs*2 Lanes FPS=14.8 */
+#else
+	{0x3036, 0x69}, /* MCLK=24MHz MIPI=420MBs*2 Lanes FPS=15 */
+#endif
+	{0x3037, 0x03},
+	{0x3038, 0x00},
+	{0x3039, 0x00},
+	{0x303a, 0x00},
+	{0x303b, 0x19},
+	{0x303c, 0x11},
+	{0x303d, 0x30},
+	{0x3105, 0x11},
+	{0x3106, 0x05},
+	{0x3304, 0x28},
+	{0x3305, 0x41},
+	{0x3306, 0x30},
+	{0x3308, 0x00},
+	{0x3309, 0xc8},
+	{0x330a, 0x01},
+	{0x330b, 0x90},
+	{0x330c, 0x02},
+	{0x330d, 0x58},
+	{0x330e, 0x03},
+	{0x330f, 0x20},
+	{0x3300, 0x00},
+	{0x3601, 0x33},
+	{0x3602, 0x00},
+	{0x3611, 0x0e},
+	{0x3612, 0x2b},
+	{0x3614, 0x50},
+	{0x3620, 0x33},
+	{0x3622, 0x00},
+	{0x3630, 0xad},
+	{0x3631, 0x00},
+	{0x3632, 0x94},
+	{0x3633, 0x17},
+	{0x3634, 0x14},
 	{0x3705, 0x2a},
 	{0x3708, 0x63},
 	{0x3709, 0x12},
@@ -329,9 +600,9 @@ static const struct ov5648_reg ov5648_reginit[256] = {
 	{0x380a, 0x07},
 	{0x380b, 0x98},
 	{0x380c, 0x0b},
-	{0x380d, 0x00},
+	{0x380d, 0x1c},
 	{0x380e, 0x07},
-	{0x380f, 0xc0},
+	{0x380f, 0xb0},
 	{0x3810, 0x00},
 	{0x3811, 0x10},
 	{0x3812, 0x00},
@@ -339,8 +610,13 @@ static const struct ov5648_reg ov5648_reginit[256] = {
 	{0x3814, 0x11},
 	{0x3815, 0x11},
 	{0x3817, 0x00},
-	{0x3820, 0x40},
+#ifdef CONFIG_MACH_JAVA_C_5606
+	{0x3820, 0x00},
 	{0x3821, 0x06},
+#else
+	{0x3820, 0x06},
+	{0x3821, 0x00},
+#endif
 	{0x3826, 0x03},
 	{0x3829, 0x00},
 	{0x382b, 0x0b},
@@ -369,7 +645,7 @@ static const struct ov5648_reg ov5648_reginit[256] = {
 	{0x4001, 0x02},
 	{0x4002, 0x45},
 	{0x4004, 0x04},
-	{0x4005, 0x18},
+	{0x4005, 0x1a},
 	{0x4006, 0x08},
 	{0x4007, 0x10},
 	{0x4008, 0x00},
@@ -382,22 +658,11 @@ static const struct ov5648_reg ov5648_reginit[256] = {
 	{0x4520, 0x00},
 	{0x4521, 0x00},
 	{0x4511, 0x22},
-	{0x4801, 0x0f},
-	{0x4814, 0x2a},
 	{0x481f, 0x3c},
-	{0x4823, 0x3c},
 	{0x4826, 0x00},
-	{0x481b, 0x3c},
-	{0x4827, 0x32},
 	{0x4837, 0x18},
 	{0x4b00, 0x06},
 	{0x4b01, 0x0a},
-	{0x4b04, 0x10},
-	{0x5000, 0xff},
-	{0x5001, 0x00},
-	{0x5002, 0x41},
-	{0x5003, 0x0a},
-	{0x5004, 0x00},
 	{0x5043, 0x00},
 	{0x5013, 0x00},
 	{0x501f, 0x03},
@@ -407,8 +672,13 @@ static const struct ov5648_reg ov5648_reginit[256] = {
 	{0x5b01, 0x40},
 	{0x5b02, 0x00},
 	{0x5b03, 0xf0},
-	{0x0100, 0x01},
-	{0xFFFF, 0x00}	/* end of the list */
+	{0x4800, 0x24},
+	{0x3503, 0x03},
+	{0x5000, 0Xff},
+	{0x5001, 0X00},
+
+	{0xFFFF, 0x00}
+	}
 };
 
 static const struct ov5648_reg ov5648_regdif[OV5648_MODE_MAX][32] = {
@@ -418,7 +688,6 @@ static const struct ov5648_reg ov5648_regdif[OV5648_MODE_MAX][32] = {
 	{0x3708, 0x66},
 	{0x3709, 0x52},
 	{0x370c, 0xc3},
-	{0x3800, 0x00},
 	{0x3801, 0x10},
 	{0x3802, 0x00},
 	{0x3803, 0xfe},
@@ -440,7 +709,7 @@ static const struct ov5648_reg ov5648_regdif[OV5648_MODE_MAX][32] = {
 	{0x3813, 0x02},
 	{0x3814, 0x31},
 	{0x3815, 0x31},
-#if defined(CONFIG_MACH_JAVA_C_5606) || defined(CONFIG_MACH_JAVA_C_5609A)
+#ifdef CONFIG_MACH_JAVA_C_5606
 	{0x3820, 0x00},
 	{0x3821, 0x07},
 #else
@@ -459,7 +728,6 @@ static const struct ov5648_reg ov5648_regdif[OV5648_MODE_MAX][32] = {
 	{0x3708, 0x66},
 	{0x3709, 0x52},
 	{0x370c, 0xc3},
-	{0x3800, 0x00},
 	{0x3801, 0x10},
 	{0x3802, 0x00},
 	{0x3803, 0x06},
@@ -481,7 +749,7 @@ static const struct ov5648_reg ov5648_regdif[OV5648_MODE_MAX][32] = {
 	{0x3813, 0x06},
 	{0x3814, 0x31},
 	{0x3815, 0x31},
-#if defined(CONFIG_MACH_JAVA_C_5606) || defined(CONFIG_MACH_JAVA_C_5609A)
+#ifdef CONFIG_MACH_JAVA_C_5606
 	{0x3820, 0x00},
 	{0x3821, 0x07},
 #else
@@ -494,56 +762,12 @@ static const struct ov5648_reg ov5648_regdif[OV5648_MODE_MAX][32] = {
 
 	{0xFFFF, 0x00}
 	},
-#ifdef CONFIG_ARCH_JAVA
-	{
-	/* to 1920x1080P30 */
-	{0x301a, 0xf1},
-	{0x3708, 0x63},
-	{0x3709, 0x12},
-	{0x370c, 0xc0},
-	{0x3800, 0x01},
-	{0x3801, 0x50},
-	{0x3802, 0x01},
-	{0x3803, 0xb2},
-	{0x3804, 0x08},
-	{0x3805, 0xef},
-	{0x3806, 0x05},
-	{0x3807, 0xf1},
-	{0x3808, 0x07},
-	{0x3809, 0x80},
-	{0x380a, 0x04},
-	{0x380b, 0x38},
-	{0x380c, 0x09},
-	{0x380d, 0xc4},
-	{0x380e, 0x04},
-	{0x380f, 0x60},
-	{0x3810, 0x00},
-	{0x3811, 0x10},
-	{0x3812, 0x00},
-	{0x3813, 0x04},
-	{0x3814, 0x11},
-	{0x3815, 0x11},
-#if defined(CONFIG_MACH_JAVA_C_5606) || defined(CONFIG_MACH_JAVA_C_5609A)
-	{0x3820, 0x00},
-	{0x3821, 0x07},
-#else
-	{0x3820, 0x46},
-	{0x3821, 0x00},
-#endif
-	{0x4004, 0x04},
-	{0x4005, 0x18},
-	{0x301a, 0xf0},
-
-	{0xFFFF, 0x00}
-	},
-#endif
 	{
 	/* to 2592x1944P15       */
 	{0x301a, 0xf1},
 	{0x3708, 0x63},
 	{0x3709, 0x12},
 	{0x370c, 0xc0},
-	{0x3800, 0x00},
 	{0x3801, 0x00},
 	{0x3802, 0x00},
 	{0x3803, 0x00},
@@ -565,7 +789,7 @@ static const struct ov5648_reg ov5648_regdif[OV5648_MODE_MAX][32] = {
 	{0x3813, 0x06},
 	{0x3814, 0x11},
 	{0x3815, 0x11},
-#if defined(CONFIG_MACH_JAVA_C_5606) || defined(CONFIG_MACH_JAVA_C_5609A)
+#ifdef CONFIG_MACH_JAVA_C_5606
 	{0x3820, 0x00},
 	{0x3821, 0x06},
 #else
@@ -577,7 +801,7 @@ static const struct ov5648_reg ov5648_regdif[OV5648_MODE_MAX][32] = {
 	{0x301a, 0xf0},
 
 	{0xFFFF, 0x00}
-	}
+	},
 };
 
 static const struct ov5648_reg ov5648_reg_state[OV5648_STATE_MAX][3] = {
@@ -599,8 +823,7 @@ static int ov5648_set_state(struct i2c_client *client, int new_state);
 static int ov5648_init(struct i2c_client *client);
 
 /*add an timer to close the flash after two frames*/
-#if defined(CONFIG_MACH_JAVA_C_LC1) || defined(CONFIG_MACH_JAVA_C_5609A) \
-	|| defined(CONFIG_MACH_JAVA_C_5606)
+#if defined(CONFIG_MACH_JAVA_C_LC1)
 static struct timer_list timer;
 static char *msg = "hello world";
 static void print_func(unsigned long lparam)
@@ -808,8 +1031,7 @@ static const struct v4l2_queryctrl ov5648_controls[] = {
 	 .name = "AS3643-flash",
 #endif
 
-#if defined(CONFIG_MACH_JAVA_C_LC1) || defined(CONFIG_MACH_JAVA_C_5609A) \
-	|| defined(CONFIG_MACH_JAVA_C_5606)
+#if defined(CONFIG_MACH_JAVA_C_LC1)
 	 .name = "OCP8111-flash",
 #endif
 	 .minimum = FLASH_MODE_OFF,
@@ -1193,7 +1415,7 @@ static int ov5648_lens_set_position(struct i2c_client *client,
 				    int target_position)
 {
 	int ret = 0;
-	/* printk("ov5648_lens_set_position: target=%d\n",target_position); */
+
 #ifdef CONFIG_VIDEO_A3907
 	if (target_position & 0x80000000) {
 		int fine_target_position = target_position & ~0x80000000;
@@ -1327,7 +1549,7 @@ static int ov5648_set_gain(struct i2c_client *client, int gain_value)
 	gain_value = gain_value / GAIN_HIST_MAX;
 #endif
 	gain_actual = ov5648_calc_gain(client, gain_value, &gain_code_analog);
-	printk(KERN_INFO "ov5648_set_gain: cur=%u req=%u act=%u cod=%u\n",
+	pr_debug("ov5648_set_gain: cur=%u req=%u act=%u cod=%u",
 		 ov5648->gain_current, gain_value,
 		 gain_actual, gain_code_analog);
 	if (gain_actual == ov5648->gain_current)
@@ -1459,7 +1681,7 @@ static void ov5648_set_exposure(struct i2c_client *client, int exp_value)
 
 	actual_exposure = ov5648_calc_exposure(client, exp_value,
 			&vts, &coarse_int_lines);
-	printk(KERN_INFO "ov5648_set_exposure: cur=%d req=%d act=%d coarse=%d vts=%d\n",
+	pr_debug("ov5648_set_exposure: cur=%d req=%d act=%d coarse=%d vts=%d",
 			ov5648->exposure_current, exp_value, actual_exposure,
 			coarse_int_lines, vts);
 	ov5648->vts = vts;
@@ -1489,14 +1711,14 @@ static int ov5648_s_stream(struct v4l2_subdev *sd, int enable)
 	return ret;
 }
 
-static int ov5648_set_bus_param(struct soc_camera_device *icd,
+static int ov5648_set_bus_param(struct soc_camera_device *ssdd,
 				unsigned long flags)
 {
 	/* TODO: Do the right thing here, and validate bus params */
 	return 0;
 }
 
-static unsigned long ov5648_query_bus_param(struct soc_camera_device *icd)
+static unsigned long ov5648_query_bus_param(struct soc_camera_device *ssdd)
 {
 	unsigned long flags = SOCAM_PCLK_SAMPLE_FALLING |
 		SOCAM_HSYNC_ACTIVE_HIGH | SOCAM_VSYNC_ACTIVE_HIGH |
@@ -1509,18 +1731,18 @@ static unsigned long ov5648_query_bus_param(struct soc_camera_device *icd)
 	return flags;
 }
 
-static int ov5648_enum_input(struct soc_camera_device *icd,
+static int ov5648_enum_input(struct soc_camera_device *ssdd,
 			     struct v4l2_input *inp)
 {
-	struct soc_camera_link *icl = to_soc_camera_link(icd);
+	struct soc_camera_subdev_desc *ssdd = to_soc_camera_link(ssdd);
 	struct v4l2_subdev_sensor_interface_parms *plat_parms;
 
 	inp->type = V4L2_INPUT_TYPE_CAMERA;
 	inp->std = V4L2_STD_UNKNOWN;
 	strcpy(inp->name, "ov5648");
 
-	if (icl && icl->priv) {
-		plat_parms = icl->priv;
+	if (ssdd && ssdd->priv) {
+		plat_parms = ssdd->priv;
 		inp->status = 0;
 
 		if (plat_parms->orientation == V4L2_SUBDEV_SENSOR_PORTRAIT)
@@ -1572,21 +1794,20 @@ static int ov5648_set_mode(struct i2c_client *client, int new_mode_idx)
 	int ret = 0;
 
 	if (ov5648->mode_idx == new_mode_idx) {
-		printk(KERN_INFO "ov5648_set_mode: skip init from mode[%d]=%s to mode[%d]=%s\n",
+		pr_debug("ov5648_set_mode: skip init from mode[%d]=%s to mode[%d]=%s",
 			ov5648->mode_idx, ov5648_mode[ov5648->mode_idx].name,
 			new_mode_idx, ov5648_mode[new_mode_idx].name);
 		return ret;
 	}
 
 	if (ov5648->mode_idx == OV5648_MODE_MAX) {
-		printk(KERN_INFO "ov5648_set_mode: full init from mode[%d]=%s to mode[%d]=%s\n",
+		pr_debug("ov5648_set_mode: full init from mode[%d]=%s to mode[%d]=%s",
 		ov5648->mode_idx, ov5648_mode[ov5648->mode_idx].name,
 		new_mode_idx, ov5648_mode[new_mode_idx].name);
 		ov5648_init(client);
-		ret = ov5648_reg_writes(client, ov5648_reginit);
-		ret = ov5648_reg_writes(client, ov5648_regdif[new_mode_idx]);
+		ret  = ov5648_reg_writes(client, ov5648_regtbl[new_mode_idx]);
 	} else {
-		printk(KERN_INFO "ov5648_set_mode: diff init from mode[%d]=%s to mode[%d]=%s\n",
+		pr_debug("ov5648_set_mode: diff init from mode[%d]=%s to mode[%d]=%s",
 			ov5648->mode_idx, ov5648_mode[ov5648->mode_idx].name,
 			new_mode_idx, ov5648_mode[new_mode_idx].name);
 		ret = ov5648_reg_writes(client, ov5648_regdif[new_mode_idx]);
@@ -1611,8 +1832,8 @@ static int ov5648_set_state(struct i2c_client *client, int new_state)
 	struct ov5648 *ov5648 = to_ov5648(client);
 	int ret = 0;
 
-	printk(KERN_INFO "ov5648_set_state: %d (%s) -> %d (%s)\n",\
-	    ov5648->state, ov5648->state ? "strm" : "stop",\
+	pr_debug("ov5648_set_state: %d (%s) -> %d (%s)", ov5648->state,
+		 ov5648->state ? "strm" : "stop",
 		 new_state, new_state ? "strm" : "stop");
 
 	if (ov5648->state != new_state) {
@@ -1902,8 +2123,7 @@ int set_flash_mode(struct i2c_client *client, int mode)
 	ov5648->flashmode = mode;
 #endif
 
-#if defined(CONFIG_MACH_JAVA_C_LC1) || defined(CONFIG_MACH_JAVA_C_5609A) \
-	|| defined(CONFIG_MACH_JAVA_C_5606)
+#if defined(CONFIG_MACH_JAVA_C_LC1)
 		if ((mode == FLASH_MODE_OFF)
 			|| (mode == FLASH_MODE_TORCH_OFF)) {
 			gpio_set_value(TORCH_EN, 0);
@@ -2063,8 +2283,7 @@ static int ov5648_init(struct i2c_client *client)
 	 *  Exposure should be DEFAULT_EXPO * line_length / 1000
 	 *  Since we don't have line_length yet, just estimate
 	 */
-#if defined(CONFIG_MACH_JAVA_C_LC1) || defined(CONFIG_MACH_JAVA_C_5609A) \
-	|| defined(CONFIG_MACH_JAVA_C_5606)
+#if defined(CONFIG_MACH_JAVA_C_LC1)
 	init_timer(&timer);
 #endif
 
@@ -2082,7 +2301,7 @@ static int ov5648_init(struct i2c_client *client)
  * Interface active, can use i2c. If it fails, it can indeed mean, that
  * this wasn't our capture interface, so, we wait for the right one
  */
-static int ov5648_video_probe(struct soc_camera_device *icd,
+static int ov5648_video_probe(struct soc_camera_device *ssdd,
 			      struct i2c_client *client)
 {
 	unsigned long flags;
@@ -2094,8 +2313,8 @@ static int ov5648_video_probe(struct soc_camera_device *icd,
 	 * We must have a parent by now. And it cannot be a wrong one.
 	 * So this entire test is completely redundant.
 	 */
-	if (!icd->dev.parent ||
-	    to_soc_camera_host(icd->dev.parent)->nr != icd->iface)
+	if (!ssdd->dev.parent ||
+	    to_soc_camera_host(ssdd->dev.parent)->nr != ssdd->iface)
 		return -ENODEV;
 
 	ret = ov5648_reg_read(client, 0x302A, &revision);
@@ -2129,12 +2348,6 @@ static int ov5648_video_probe(struct soc_camera_device *icd,
 
 out:
 	return ret;
-}
-
-static void ov5648_video_remove(struct soc_camera_device *icd)
-{
-	dev_dbg(&icd->dev, "Video removed: %p, %p\n",
-		icd->dev.parent, icd->vdev);
 }
 
 static struct v4l2_subdev_core_ops ov5648_subdev_core_ops = {
@@ -2193,9 +2406,6 @@ static int ov5648_enum_frameintervals(struct v4l2_subdev *sd,
 		break;
 	case OV5648_MODE_1280x720P30:
 	case OV5648_MODE_1280x960P30:
-#ifdef CONFIG_ARCH_JAVA
-	case OV5648_MODE_1920x1080P30:
-#endif
 	default:
 		interval->discrete.numerator = 1;
 		interval->discrete.denominator = 30;
@@ -2227,9 +2437,6 @@ static int ov5648_g_parm(struct v4l2_subdev *sd, struct v4l2_streamparm *param)
 		break;
 	case OV5648_MODE_1280x720P30:
 	case OV5648_MODE_1280x960P30:
-#ifdef CONFIG_ARCH_JAVA
-	case OV5648_MODE_1920x1080P30:
-#endif
 	default:
 		cparm->timeperframe.numerator = 1;
 		cparm->timeperframe.denominator = 30;
@@ -2320,24 +2527,11 @@ static int ov5648_probe(struct i2c_client *client,
 			const struct i2c_device_id *did)
 {
 	struct ov5648 *ov5648;
-	struct soc_camera_device *icd = client->dev.platform_data;
-	struct soc_camera_link *icl;
+	struct soc_camera_subdev_desc *ssdd = soc_camera_i2c_to_desc(client);
 	int ret;
 
-	if (!icd) {
-		dev_err(&client->dev, "OV5648: missing soc-camera data!\n");
-		return -EINVAL;
-	}
-
-	icl = to_soc_camera_link(icd);
-	if (!icl) {
-		dev_err(&client->dev, "OV5648 driver needs platform data\n");
-		return -EINVAL;
-	}
-
-	if (!icl->priv) {
-		dev_err(&client->dev,
-			"OV5648 driver needs i/f platform data\n");
+	if (!ssdd) {
+		dev_err(&client->dev, "OV5648: missing platform data!\n");
 		return -EINVAL;
 	}
 
@@ -2348,16 +2542,16 @@ static int ov5648_probe(struct i2c_client *client,
 	v4l2_i2c_subdev_init(&ov5648->subdev, client, &ov5648_subdev_ops);
 
 	/* Second stage probe - when a capture adapter is there */
-	icd->ops = &ov5648_ops;
+	ssdd->ops = &ov5648_ops;
 
 	ov5648->mode_idx = OV5648_MODE_MAX;
 	ov5648->i_fmt = 0;	/* First format in the list */
-	ov5648->plat_parms = icl->priv;
-	ov5648->icd = icd;
+	ov5648->plat_parms = ssdd->priv;
+	ov5648->ssdd = ssdd;
 
-	ret = ov5648_video_probe(icd, client);
+	ret = ov5648_video_probe(client);
 	if (ret) {
-		icd->ops = NULL;
+		ssdd->ops = NULL;
 		kfree(ov5648);
 		return ret;
 	}
@@ -2370,7 +2564,7 @@ static int ov5648_probe(struct i2c_client *client,
 	}
 
 #ifdef CONFIG_VIDEO_A3907
-		pr_debug("A3907 i2c start");
+	pr_debug("A3907 i2c start");
 	a3907_i2c_adap = i2c_get_adapter(0);
 	if (!a3907_i2c_adap)
 		pr_debug("A3907 i2c_get_adapter(0) FAILED");
@@ -2383,7 +2577,7 @@ static int ov5648_probe(struct i2c_client *client,
 #endif
 
 #ifdef CONFIG_VIDEO_DW9714
-		pr_debug("DW9714 i2c start");
+	pr_debug("DW9714 i2c start");
 	dw9714_i2c_adap = i2c_get_adapter(0);
 	if (!dw9714_i2c_adap)
 		pr_debug("DW9714 i2c_get_adapter(0) FAILED");
@@ -2401,9 +2595,9 @@ static int ov5648_probe(struct i2c_client *client,
 static int ov5648_remove(struct i2c_client *client)
 {
 	struct ov5648 *ov5648 = to_ov5648(client);
-	struct soc_camera_device *icd = client->dev.platform_data;
 
 	pr_debug(" remove");
+	v4l2_device_unregister_subdev(&ov5648->subdev);
 #ifdef CONFIG_VIDEO_A3907
 	pr_debug("A3907 i2c_unregister_device");
 	if (a3907_i2c_client)
@@ -2416,8 +2610,6 @@ static int ov5648_remove(struct i2c_client *client)
 		i2c_unregister_device(dw9714_i2c_client);
 #endif
 
-	icd->ops = NULL;
-	ov5648_video_remove(icd);
 	client->driver = NULL;
 	kfree(ov5648);
 
