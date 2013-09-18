@@ -39,5 +39,7 @@ void mc_pm_clock_finalize(void);
 int mc_pm_clock_enable(void);
 /* Disable secure crypto clocks */
 void mc_pm_clock_disable(void);
+/* Test if sleep is possible */
+bool mc_pm_sleep_ready(void);
 
 #endif /* _MC_PM_H_ */

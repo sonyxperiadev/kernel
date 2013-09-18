@@ -117,3 +117,14 @@ int mobicore_release(struct mc_instance *instance)
 }
 EXPORT_SYMBOL(mobicore_release);
 
+/*
+ * Test if mobicore can sleep
+ *
+ * @return true if mobicore can sleep, false if it can't sleep
+ */
+bool mobicore_sleep_ready(void)
+{
+	return mc_sleep_ready();
+}
+EXPORT_SYMBOL(mobicore_sleep_ready);
+

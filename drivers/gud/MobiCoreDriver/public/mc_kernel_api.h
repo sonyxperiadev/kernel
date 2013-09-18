@@ -74,4 +74,12 @@ int mobicore_map_vmem(struct mc_instance *instance, void *addr,
  */
 int mobicore_unmap_vmem(struct mc_instance *instance, uint32_t handle);
 
+/*
+ * mobicore_unmap_vmem() - Test if mobicore can sleep
+ *
+ * Returns true if mobicore can sleep, false if it can't sleep
+ */
+bool mobicore_sleep_ready(void);
+
+
 #endif /* _MC_KERNEL_API_H_ */
