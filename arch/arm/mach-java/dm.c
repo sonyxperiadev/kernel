@@ -46,10 +46,6 @@
 
 #include "pm_params.h"
 
-#ifdef CONFIG_BRCM_SECURE_WATCHDOG
-#include <linux/sec-wd.h>
-#endif
-
 /* DM log masks */
 enum {
 
@@ -484,7 +480,7 @@ void dormant_enter(u32 svc)
 
 	/*vote for dormant svc..*/
 	set_svc_req(svc);
-
+	instrument_lpm(LPM_TRACE_ENTER_DRMNT, svc);
 	cdc_resp = cdc_send_cmd(CDC_CMD_RED);
 	switch (cdc_resp) {
 
@@ -578,6 +574,7 @@ void dormant_enter(u32 svc)
 			 - svc_max == FULL_DORMANT_L2_OFF and
 			 - CDC status == FDCEOK (last core entering dormant)*/
 		drmt_status = cpu_suspend(svc_max, dormant_enter_continue);
+		instrument_lpm(LPM_TRACE_DRMNT_WAKEUP, drmt_status);
 		break;
 
 	default:
@@ -608,16 +605,9 @@ void dormant_enter(u32 svc)
 	before restoring context*/
 	cpu = smp_processor_id();
 
-	#ifdef CONFIG_BRCM_SECURE_WATCHDOG
-	/*WD is disabled during suspend. FULL_DORMANT_L2_OFF is used
-	only during suspend and use the same to enable/disable WD*/
-	if (svc_max == FULL_DORMANT_L2_OFF && cpu == 0) {
-		pr_info("%s: enabling sec watchdog\n", __func__);
-		sec_wd_enable();
-	}
-	#endif
-
 	cdc_resp = cdc_get_status_for_core(cpu);
+	instrument_lpm(LPM_TRACE_EXIT_DRMNT,
+						cdc_resp);
 	do {
 		retry = false;
 		insurance--;
@@ -654,6 +644,7 @@ void dormant_enter(u32 svc)
 				if (cdc_get_pwr_status() ==
 					CDC_PWR_DRMNT_L2_OFF)
 					l2_off_cnt++;
+				instrument_lpm(LPM_TRACE_DRMNT_RS_ADDNL, 0);
 			}
 			clear_wakeup_interrupts();
 			set_spare_power_status(CDC_PWR_NORMAL);
@@ -763,6 +754,7 @@ ret:
 	/*Clr svc vote*/
 	clr_svc_req(svc);
 
+	instrument_lpm(LPM_TRACE_EXIT_DRMNT, 0);
 }
 
 /*
@@ -774,15 +766,6 @@ static int dormant_enter_continue(unsigned long svc)
 	u32 cpu;
 	unsigned int arg2;
 	cpu = smp_processor_id();
-
-	#ifdef CONFIG_BRCM_SECURE_WATCHDOG
-	/*WD is disabled during suspend. FULL_DORMANT_L2_OFF is used
-	only during suspend and use the same to enable/disable WD*/
-	if (svc == FULL_DORMANT_L2_OFF && cpu == 0) {
-		pr_info("%s: disable sec watchdog\n", __func__);
-		sec_wd_disable();
-	}
-	#endif
 
 	if (svc == FULL_DORMANT_L2_OFF && l2_off_en &&
 		cdc_get_status_for_core(cpu) == CDC_STATUS_FDCEOK) {
@@ -842,8 +825,7 @@ static int dormant_enter_continue(unsigned long svc)
 
 	write_actlr(read_actlr() & ~A15_SMP_BIT);
 #endif
-	instrument_lpm(LPM_TRACE_DRMNT_CNTNUE,
-						0);
+	instrument_lpm(LPM_TRACE_DRMNT_CNTNUE, arg2);
 	wfi();
 	return 1;
 }

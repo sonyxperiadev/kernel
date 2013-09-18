@@ -61,7 +61,7 @@ static struct pm_info pm_info = {
 	.clk_dbg_dsm = 0,
 	.wfi_syspll_cnt = 0,
 	.force_sleep = 0,
-	.dormant_enable = 0xf, /* Enable dormant for all 4 cores */
+	.dormant_enable = 0x0, /* Enable dormant for all 4 cores */
 	.log_mask = 0,
 };
 
@@ -460,12 +460,37 @@ u32 is_dormant_enabled(void)
 	return pm_info.dormant_enable;
 }
 
+static void smp_dormant_enable_callback(void *core_mask)
+{
+	int cpu;
+	cpu = smp_processor_id();
+	if ((*(u32 *)core_mask) & (0x1 << cpu))
+		pr_info("dormant enabled for core-%d\n", cpu);
+	else
+		pr_info("dormant disabled for core-%d\n", cpu);
+}
+
+void enable_dormant(u32 core_mask)
+{
+	int cpu;
+	cpu = get_cpu();
+	pm_info.dormant_enable = core_mask;
+	put_cpu();
+	smp_call_function(smp_dormant_enable_callback, (void *)&core_mask, 1);
+
+	if (core_mask & (0x1 << cpu))
+		pr_info("dormant enabled for core-%d\n", cpu);
+	else
+		pr_info("dormant disabled for core-%d\n", cpu);
+}
+EXPORT_SYMBOL(enable_dormant);
+
 #ifdef CONFIG_DEBUG_FS
 
 /* Disable/enable dormant mode at runtime */
 static int dormant_enable_set(void *data, u64 val)
 {
-	pm_info.dormant_enable = val;
+	enable_dormant(val);
 	return 0;
 }
 
