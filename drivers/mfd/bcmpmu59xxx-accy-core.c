@@ -89,6 +89,7 @@ struct bcmpmu_accy_data {
 	struct bcmpmu_accy_event event_pool[MAX_EVENTS];
 	struct list_head event_pending_list;
 	struct list_head event_free_list;
+	struct mutex accy_mutex;
 	spinlock_t accy_lock;
 #ifdef CONFIG_HAS_WAKELOCK
 	struct wake_lock accy_wake_lock;
@@ -441,7 +442,6 @@ static int _set_icc_fc(struct bcmpmu_accy_data *di, int curr)
 	ret = bcmpmu->write_dev(bcmpmu, PMU_REG_MBCCTRL10, (val & 0xF));
 	if (ret)
 		return ret;
-
 	di->charging_curr = val;
 	bcmpmu_accy_queue_event(di, PMU_ACCY_EVT_OUT_CHRG_CURR,
 			&di->charging_curr);
@@ -595,8 +595,11 @@ int bcmpmu_usb_set(struct bcmpmu59xxx *bcmpmu,
 
 	switch (ctrl) {
 	case BCMPMU_USB_CTRL_CHRG_CURR_LMT:
-		if (!is_charging_state())
+		if (!is_charging_state()) {
+			mutex_lock(&di->accy_mutex);
 			_set_icc_fc(di, data);
+			mutex_unlock(&di->accy_mutex);
+		}
 		break;
 	case BCMPMU_USB_CTRL_VBUS_ON_OFF:
 		ret = bcmpmu_usb_otg_bost_en(bcmpmu, !!data);
@@ -963,15 +966,22 @@ EXPORT_SYMBOL_GPL(bcmpmu_usb_get);
 int bcmpmu_chrgr_usb_en(struct bcmpmu59xxx *bcmpmu, int enable)
 {
 	struct bcmpmu_accy_data *di = bcmpmu->accyinfo;
-
-	return _usb_host_en(di, enable);
+	int ret;
+	mutex_lock(&di->accy_mutex);
+	ret =  _usb_host_en(di, enable);
+	mutex_unlock(&di->accy_mutex);
+	return ret;
 }
 EXPORT_SYMBOL(bcmpmu_chrgr_usb_en);
 
 int bcmpmu_set_icc_fc(struct bcmpmu59xxx *bcmpmu, int curr)
 {
+	int ret;
 	struct bcmpmu_accy_data *di = bcmpmu->accyinfo;
-	return _set_icc_fc(di, curr);
+	mutex_lock(&di->accy_mutex);
+	ret = _set_icc_fc(di, curr);
+	mutex_unlock(&di->accy_mutex);
+	return ret;
 }
 EXPORT_SYMBOL(bcmpmu_set_icc_fc);
 
@@ -1444,6 +1454,7 @@ static int __devinit bcmpmu_accy_probe(struct platform_device *pdev)
 			bcmpmu_accy_evt_notify_work);
 
 	spin_lock_init(&di->accy_lock);
+	mutex_init(&di->accy_mutex);
 	bcmpmu_accy_eventq_init(di);
 
 #ifdef CONFIG_HAS_WAKELOCK
