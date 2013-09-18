@@ -603,14 +603,17 @@ static int bcmpmu_throttle_event_handler(struct notifier_block *nb,
 			pr_throttle(FLOW,
 				"Charger Connected, Enabling Thermal Throttling\n");
 		} else if ((!enable) && tdata->throttle_scheduled) {
-			pr_throttle(FLOW,
-				"Chargering Disabled, Disabling Thermal Throttling\n");
-			if (tdata->temp_algo_running)
-				tdata->temp_algo_running = false;
-			cancel_delayed_work_sync(&tdata->throttle_work);
-			tdata->acld_algo_finished = false;
-			tdata->throttle_scheduled = false;
-			tdata->acld_wait_count = 0;
+			if (tdata->zone_index !=
+				(tdata->pdata->temp_curr_lut_sz - 1)) {
+				pr_throttle(FLOW,
+					"Chargering Disabled, Disabling Thermal Throttling\n");
+				if (tdata->temp_algo_running)
+					tdata->temp_algo_running = false;
+				cancel_delayed_work_sync(&tdata->throttle_work);
+				tdata->acld_algo_finished = false;
+				tdata->throttle_scheduled = false;
+				tdata->acld_wait_count = 0;
+			}
 		}
 		break;
 
