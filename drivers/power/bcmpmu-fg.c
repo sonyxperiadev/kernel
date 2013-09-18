@@ -226,6 +226,7 @@ static enum power_supply_property bcmpmu_fg_props[] = {
 	POWER_SUPPLY_PROP_VOLTAGE_NOW,
 	POWER_SUPPLY_PROP_TEMP,
 	POWER_SUPPLY_PROP_HEALTH,
+	POWER_SUPPLY_PROP_FULL_BAT,
 	POWER_SUPPLY_PROP_MODEL_NAME,
 };
 
@@ -2767,6 +2768,9 @@ static int bcmpmu_fg_get_properties(struct power_supply *psy,
 			val->intval = POWER_SUPPLY_HEALTH_UNKNOWN;
 		else
 			val->intval = POWER_SUPPLY_HEALTH_GOOD;
+		break;
+	case POWER_SUPPLY_PROP_FULL_BAT:
+		val->intval =  fg->capacity_info.max_design;
 		break;
 	case POWER_SUPPLY_PROP_MODEL_NAME:
 		if (fg->pdata->batt_prop->model)
