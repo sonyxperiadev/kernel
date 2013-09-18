@@ -489,7 +489,9 @@ static int bcmbt_lpm_probe(struct platform_device *pdev)
 	spin_lock_init(&priv_g->plpm->bcmbt_lpm_lock);
 
 	/* Initialize clocks once */
-	bcmbt_lpm_init_clock(priv_g);
+	rc = bcmbt_lpm_init_clock(priv_g);
+	if (rc < 0)
+		goto clean_data;
 
 	if (pdev->dev.platform_data) {
 		pdata = pdev->dev.platform_data;
