@@ -92,3 +92,4 @@ obj-$(CONFIG_KEYBOARD_TC360_TOUCHKEY)  += coreriver_touchkey/
 TARGET_MODULE := ctp_icn83xx
 obj-$(CONFIG_TOUCHSCREEN_ICN83XX) += $(TARGET_MODULE).o
 $(TARGET_MODULE)-objs := icn83xx.o flash.o
+obj-$(CONFIG_TOUCHSCREEN_MSG21XX)	+= msg_21xx_selfcap.o

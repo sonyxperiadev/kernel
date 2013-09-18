@@ -34,6 +34,7 @@
 #include <linux/i2c/ft6x06_ex_fun.h>
 #include <linux/wakelock.h>
 #include <linux/vmalloc.h>
+#include <linux/leds.h>
 
 #define GPIO_TO_IRQ gpio_to_irq
 
@@ -222,12 +223,12 @@ enum ft520x_ts_regs {
 #define PMODE_STANDBY       0x02
 #define PMODE_HIBERNATE     0x03
 
-int register_touch_key_notifier(struct notifier_block *n)
+static int register_touch_key_notifier(struct notifier_block *n)
 {
 	return blocking_notifier_chain_register(&touch_key_notifier, n);
 }
 
-int unregister_touch_key_notifier(struct notifier_block *n)
+static int unregister_touch_key_notifier(struct notifier_block *n)
 {
 	return blocking_notifier_chain_unregister(&touch_key_notifier, n);
 }
@@ -1950,6 +1951,10 @@ static int focaltech_ft5306_probe(
 	ts->early_suspend.resume = focaltech_ft5306_late_resume;
 	register_early_suspend(&ts->early_suspend);
 	#endif
+#ifdef CONFIG_LEDS_TRIGGER_KPBL
+	led_kpbl_register(&register_touch_key_notifier);
+	led_kpbl_unregister(&unregister_touch_key_notifier);
+#endif
 
 	printk("Tp Probe Done!!!");
 

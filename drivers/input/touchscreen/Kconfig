@@ -1041,6 +1041,17 @@ config TOUCHSCREEN_JAVA_AMETHYST_FT5336_FW
 	  touchscreen for hawaii garnet.
 	  If unsure, say N.
 
+config TOUCHSCREEN_MSG21XX
+        tristate "MSG21XX I2C Touchscreen"
+        depends on I2C
+        help
+          Say Y here if you have the Imagis MSG21XX I2C touchscreen
+          connected to your system.
+
+          If unsure, say N.
+
+          To compile this driver as a module, choose M here: the
+          module will be called MSG21XX.
 source "drivers/input/touchscreen/coreriver_touchkey/Kconfig"
 
 endif

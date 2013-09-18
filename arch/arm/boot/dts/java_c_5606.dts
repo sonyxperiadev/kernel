@@ -120,6 +120,21 @@
 			auto_update_fw = <0>;
 			vkey_scope = "0x01:139:80:900:160:80:0x01:102:240:900:160:80:0x01:158:400:900:160:80\n";
 		};
+		ms-msg21xx@26 {
+			compatible = "bcm,ms-msg21xx";
+			reg = <0x26>;
+			gpio-irq-pin = <73>;
+			gpio-reset-pin = <70>;
+			x-max-value = <480>;
+			y-max-value = <854>;
+			max_finger = <2>;
+			axis-orientation-flag = <0>;
+			vkey_scope = "0x01:139:80:900:160:80:0x01:102:240:900:160:80:0x01:158:400:900:160:80\n";
+			/* Enable I2C autosense but disable timeout */
+			client_func_magic = <0x666C6167>;
+			client_func_map = <1>;
+
+		};
 	};
 
 	i2c4: i2c@3500d000 {
