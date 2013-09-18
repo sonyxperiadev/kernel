@@ -103,7 +103,7 @@ struct unicam_camera_buffer {
 	struct list_head queue;
 	unsigned int magic;
 };
-int first = 0;
+int first = -1;
 static irqreturn_t unicam_camera_isr(int irq, void *arg);
 static int unicam_stop(void);
 
@@ -1124,7 +1124,6 @@ static int unicam_camera_set_fmt_int(struct unicam_camera_dev *unicam_dev)
 	int ret;
 	u32 skip_frames = 0;
 
-	printk("%s\n", __func__);
 	pr_debug("-enter");
 	xlate = soc_camera_xlate_by_fourcc(icd, pix->pixelformat);
 	if (!xlate) {
