@@ -171,6 +171,7 @@ static int bcmbt_rfkill_probe(struct platform_device *pdev)
 				kfree(pdata);
 		}
 
+		return rc;
 	}
 
 	return 0;
