@@ -15,10 +15,16 @@ the GPL, without Broadcom's express prior written consent.
 #define _MM_FW_H_
 
 #include "mm_common.h"
+#include "mm_prof.h"
 
+#undef SCHEDULER_WORK
+#define SCHEDULER_WORK(core, work)\
+		queue_work_on(0, core->mm_common_ifc.single_wq,\
+									work);
 struct mm_core {
+	struct _mm_common_ifc mm_common_ifc;
+	struct _mm_prof *mm_prof;
 	struct mm_common *mm_common;
-
 	/*Job Scheduling and Waiting.
 	Should be modified to an array for SMP*/
 	struct timespec sched_time;
@@ -26,14 +32,11 @@ struct mm_core {
 	void __iomem *dev_base;
 	MM_CORE_HW_IFC mm_device;
 	bool mm_core_idle;
-
-	bool mm_core_is_on;
-
 	/* job list. will be Unique for SMP*/
 	struct timer_list dev_timer;
 	struct plist_head job_list;
 	uint32_t device_job_id;
-
+	struct notifier_block notifier_block;
 };
 
 static inline void mm_core_add_job(
@@ -50,6 +53,8 @@ static inline void mm_core_add_job(
 	job->added2core = true;
 	if (core_dev->mm_core_idle)
 		SCHEDULER_WORK(core_dev, &core_dev->job_scheduler);
+	raw_notifier_call_chain(&core_dev->mm_common_ifc.notifier_head,
+					MM_FMWK_NOTIFY_JOB_ADD, NULL);
 }
 
 static inline void mm_core_remove_job(
@@ -62,19 +67,6 @@ static inline void mm_core_remove_job(
 	job->added2core = false;
 }
 
-static inline void mm_core_move_job(struct dev_job_list *job,
-				struct mm_core *core_dev,
-					int prio)
-{
-	if (job->added2core == false)
-		plist_node_init(&(job->core_list), prio);
-	else {
-		plist_del(&job->core_list, &(core_dev->job_list));
-		plist_node_init(&(job->core_list), prio);
-		plist_add(&(job->core_list), &(core_dev->job_list));
-		}
-}
-
 static inline void mm_core_abort_job(
 			struct dev_job_list *job,
 			struct mm_core *core_dev)
@@ -85,11 +77,11 @@ static inline void mm_core_abort_job(
 		(job->job.status < MM_JOB_STATUS_SUCCESS)) {
 		/* reset once in release */
 		pr_err("aborting hw in release for common %s\n",\
-				common->mm_name);
+				common->mm_common_ifc.mm_name);
 		hw_ifc->mm_abort(hw_ifc->mm_device_id, &job->job);
 		core_dev->mm_core_idle = true;
 		SCHEDULER_WORK(core_dev, &core_dev->job_scheduler);
-		}
+	}
 }
 
 #if defined(CONFIG_MM_SECURE_DRIVER)
@@ -110,7 +102,7 @@ static inline int mm_core_secure_job_wait(
 	int               ret = -1;
 
 	pr_debug("Waiting for a new secure job %s\n",
-			common->mm_name);
+			common->mm_common_ifc.mm_name);
 	if (hw_ifc->mm_secure_job_wait)
 		ret = hw_ifc->mm_secure_job_wait(hw_ifc->mm_device_id,
 				p_secure_job);
@@ -133,7 +125,7 @@ static inline void mm_core_secure_job_done(struct work_struct *p_work)
 	int               ret          = -1;
 
 	pr_debug("Signaling completion of secure job %s\n",
-			common->mm_name);
+			common->mm_common_ifc.mm_name);
 	if (hw_ifc->mm_secure_job_done)
 		ret = hw_ifc->mm_secure_job_done(
 				hw_ifc->mm_device_id, p_secure_job);

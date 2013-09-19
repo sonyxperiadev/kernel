@@ -67,6 +67,10 @@ int __init mm_h264_init(void)
 	h264_device->subdev_init[3] = &h264_vce_init;
 	h264_device->subdev_deinit[3] = &h264_vce_deinit;
 
+	core_param[0].core_name = "CME";
+	core_param[1].core_name = "MCIN";
+	core_param[2].core_name = "CABAC";
+	core_param[3].core_name = "H264_VCE";
 #if defined(CONFIG_MM_SECURE_DRIVER)
 
 	h264_device->subdev_init[9] = &mcin_secure_init;
@@ -80,6 +84,11 @@ int __init mm_h264_init(void)
 
 	h264_device->subdev_init[12] = &h264_ol_secure_init;
 	h264_device->subdev_deinit[12] = &h264_ol_secure_deinit;
+
+	core_param[9].core_name = "MCIN_SECURE";
+	core_param[10].core_name = "CABAC_SECURE";
+	core_param[11].core_name = "H264_VCE_SECURE";
+	core_param[12].core_name = "H264_OL_SECURE";
 
 #endif /* CONFIG_MM_SECURE_DRIVER */
 

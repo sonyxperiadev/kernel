@@ -23,7 +23,9 @@ struct dvfs_update {
 	u64 param;
 	struct _mm_dvfs *mm_dvfs;
 };
-
+#undef SCHEDULER_WORK
+#define SCHEDULER_WORK(core, work)\
+	queue_work_on(0, core->mm_common_ifc->single_wq, work);
 #define DEFINE_DEBUGFS_HANDLER(name) \
 	static void mm_dvfs_update_##name(struct work_struct *work) \
 { \
@@ -62,8 +64,7 @@ DEFINE_SIMPLE_ATTRIBUTE(mm_dvfs_debugfs_##name, \
 		root->dvfs_dir, root, &mm_dvfs_debugfs_##name); } \
 
 struct _mm_dvfs {
-	struct mm_common *mm_common;
-
+	struct _mm_common_ifc *mm_common_ifc;
 	struct notifier_block mm_fmwk_notifier_blk;
 
 	/* for job based profiling, 'n' jobs take how many microsecs */
@@ -103,7 +104,7 @@ struct _mm_dvfs {
 	unsigned int jobs_pend;
 };
 
-void *mm_dvfs_init(struct mm_common *mm_common,
+void *mm_dvfs_init(struct _mm_common_ifc *mm_common_ifc,
 		const char *mm_dev_name, MM_DVFS_HW_IFC *dvfs_params);
 void mm_dvfs_exit(void *mm_dvfs);
 

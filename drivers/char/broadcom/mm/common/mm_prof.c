@@ -10,7 +10,8 @@ Notwithstanding the above, under no circumstances may you combine this software
 in any way with any other Broadcom software provided under a license other than
 the GPL, without Broadcom's express prior written consent.
 *******************************************************************************/
-#define pr_fmt(fmt) "<%s> %s:" fmt "\n", mm_prof->mm_common->mm_name, __func__
+#define pr_fmt(fmt) "<%s> %s:" fmt "\n", mm_prof->mm_common_ifc->mm_name,\
+								__func__
 
 #include "mm_prof.h"
 int mm_prof_notification_handler(struct notifier_block *block, \
@@ -23,7 +24,6 @@ int mm_prof_notification_handler(struct notifier_block *block, \
 
 	switch (param) {
 	case MM_FMWK_NOTIFY_JOB_COMPLETE:
-	case MM_FMWK_NOTIFY_JOB_REMOVE:
 		mm_prof->jobs_done++;
 		mm_prof->jobs_done_type\
 		[(unsigned int)data & (MAX_JOB_TYPE-1)]++;
@@ -73,11 +73,9 @@ static int mm_prof_buffread(struct file *filp, char __user *buf, \
 	int read_pointer = private->read_pointer ;
 
 	if (read_pointer != *write_pointer) {
-
-		sprintf(copy_buffer, "%s TIME :%ld hw_usage:ON: %d%% [DVFS:%d]"\
+		sprintf(copy_buffer, "%s usage:ON: %d%% [DVFS:%d]"\
 				"JOBS: %d [%d , %d ,%d ,%d] in %d secs\n",
-			mm_prof->mm_common->mm_name,
-			mm_prof->buff[read_pointer].print_time.tv_nsec,
+			mm_prof->mm_common_ifc->mm_name,
 			mm_prof->buff[read_pointer].percent,
 			mm_prof->buff[read_pointer].current_mode,
 			mm_prof->buff[read_pointer].jobs_done,
@@ -133,7 +131,7 @@ static int mm_prof_buffrelease(struct inode *i_node, struct file *filp)
 	kfree(private);
 	return 0;
 }
-static const struct file_operations mm_prof_debugfs_Buffer = {
+static const struct file_operations mm_prof_debugfs_BUFFER = {
 	.owner = THIS_MODULE,
 	.read = mm_prof_buffread,
 	.open = mm_prof_buffopen,
@@ -154,7 +152,7 @@ static void prof_work(struct work_struct *work)
 		if (mm_prof->timer_state == true) {
 			del_timer_sync(&mm_prof->prof_timeout);
 			raw_notifier_chain_unregister(\
-				&mm_prof->mm_common->notifier_head, \
+				&mm_prof->mm_common_ifc->notifier_head, \
 				&mm_prof->mm_fmwk_notifier_blk);
 			mm_prof->timer_state = false;
 			}
@@ -171,8 +169,8 @@ static void prof_work(struct work_struct *work)
 		mm_prof->mm_fmwk_notifier_blk.notifier_call = \
 					mm_prof_notification_handler;
 		raw_notifier_chain_register(\
-					&mm_prof->mm_common->notifier_head, \
-					&mm_prof->mm_fmwk_notifier_blk);
+				&mm_prof->mm_common_ifc->notifier_head, \
+				&mm_prof->mm_fmwk_notifier_blk);
 		getnstimeofday(&(mm_prof->proft1));
 		init_timer(&(mm_prof->prof_timeout));
 		setup_timer(&(mm_prof->prof_timeout), \
@@ -186,7 +184,8 @@ static void prof_work(struct work_struct *work)
 		}
 
 	getnstimeofday(&diff);
-	if (mm_prof->mm_common->mm_hw_is_on) {
+
+	if (mm_prof->mm_common_ifc->mm_hw_is_on) {
 		struct timespec diff2 = timespec_sub(diff, mm_prof->ts1);
 		mm_prof->hw_on_dur += timespec_to_ns(&diff2);
 		getnstimeofday(&mm_prof->ts1);
@@ -210,7 +209,6 @@ static void prof_work(struct work_struct *work)
 	mm_prof->buff[write_ptr].jobs_done_type[3] = mm_prof->jobs_done_type[3];
 	mm_prof->buff[write_ptr].current_mode = mm_prof->current_mode;
 	mm_prof->buff[write_ptr].percent = percnt;
-	mm_prof->buff[write_ptr].print_time = mm_prof->proft1;
 
 	++(write_ptr) ;
 	write_ptr = write_ptr & (BUFFSIZE - 1);
@@ -267,32 +265,34 @@ void mm_prof_update_handler(struct work_struct *work)
 
 DEFINE_DEBUGFS_HANDLER(TIME, MM_PROF_UPDATE_TIME);
 
-void *mm_prof_init(struct mm_common *mm_common, \
+void *mm_prof_init(struct _mm_common_ifc *mm_common_ifc, \
 			const char *dev_name,
+
 MM_PROF_HW_IFC *prof_params)
 {
 	int ret = 0;
 	struct _mm_prof *mm_prof = kmalloc(sizeof(struct _mm_prof), GFP_KERNEL);
 	memset(mm_prof, 0, sizeof(struct _mm_prof));
 
-	mm_prof->mm_common = mm_common;
+	mm_prof->mm_common_ifc = mm_common_ifc;
 	INIT_WORK(&(mm_prof->prof_work), prof_work);
 
 	/* Init prof counters */
-	mm_prof->prof = *prof_params;
+	if (prof_params != NULL)
+		mm_prof->prof = *prof_params;
 	mm_prof->current_mode = ECONOMY;
 	mm_prof->write_ptr = 0;
-	mm_prof->prof_dir = \
-		debugfs_create_dir("prof", mm_prof->mm_common->debugfs_dir);
+	mm_prof->prof_dir = mm_common_ifc->debugfs_dir;
 	if (mm_prof->prof_dir == NULL) {
 		pr_err("Error %ld creating prof dir for %s", \
 					PTR_ERR(mm_prof->prof_dir), \
 					dev_name);
 		ret = -ENOENT;
-		}
+	}
 
 	CREATE_DEBUGFS_FILE(mm_prof, TIME, mm_prof->prof_dir);
-	CREATE_DEBUGFS_FILE(mm_prof, Buffer, mm_prof->prof_dir);
+	CREATE_DEBUGFS_FILE(mm_prof, BUFFER, mm_prof->prof_dir);
+
 	return mm_prof;
 }
 
@@ -302,7 +302,6 @@ MM_PROF_HW_IFC *prof_params)
 void mm_prof_exit(void *dev_p)
 {
 	struct _mm_prof *mm_prof = (struct _mm_prof *)dev_p;
-
 	if (mm_prof->prof_dir)
 		debugfs_remove_recursive(mm_prof->prof_dir);
 

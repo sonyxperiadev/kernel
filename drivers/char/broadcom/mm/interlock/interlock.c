@@ -100,7 +100,7 @@ int __init interlock_init(void)
 	core_param.mm_version_init = NULL;
 	core_param.mm_device_id = (void *)interlock_device;
 	core_param.mm_virt_addr = NULL;
-
+	core_param.core_name = "INTERLOCK";
 	dvfs_param.ON = 0;
 	dvfs_param.MODE = ECONOMY;
 	dvfs_param.T0 = 0;
