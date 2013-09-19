@@ -896,23 +896,41 @@ int mm_csi0_start_rx(void)
 int mm_csi0_stop_rx(void)
 {
 	u32 base = V_BASE;
+	u32 val;
+	unsigned int i;
 
 	enable_done = 0;
 	rx_init_done = 0;
-	BRCM_WRITE_REG_FIELD(base, CAM_ANA, AR, 1);
-
-	BRCM_WRITE_REG_FIELD(base, CAM_CTL, CPR, 1);
-	udelay(1);
-	BRCM_WRITE_REG_FIELD(base, CAM_CTL, CPR, 0);
 
 	BRCM_WRITE_REG_FIELD(base, CAM_ANA, DDL, 1);
 	BRCM_WRITE_REG_FIELD(base, CAM_DAT0, DLEN, 0);
 	BRCM_WRITE_REG_FIELD(base, CAM_DAT1, DLEN, 0);
+
+	BRCM_WRITE_REG_FIELD(base, CAM_CTL, SOE, 1);
+	val = 0;
+	i = 0;
+	while ((val & CAM_STA_OES_MASK) == 0) {
+		val = BRCM_READ_REG(base, CAM_STA);
+		/* wait for OES = 1 */
+		udelay(10);
+		if (++i  == 10) {
+			pr_devel("error in unicam shutdown:STA = 0x%x\n", val);
+			break;
+		}
+	}
+
+	BRCM_WRITE_REG_FIELD(base, CAM_CTL, SOE, 0);
+
+	BRCM_WRITE_REG_FIELD(base, CAM_CTL, CPR, 1);
+	udelay(10);
+	BRCM_WRITE_REG_FIELD(base, CAM_CTL, CPR, 0);
+
 	BRCM_WRITE_REG(base, CAM_DCS, 0x0);
 	BRCM_WRITE_REG(base, CAM_IBSA, 0x0);
 	BRCM_WRITE_REG(base, CAM_IBEA, 0x0);
 	BRCM_WRITE_REG(base, CAM_IBLS, 0x0);
 	BRCM_WRITE_REG_FIELD(base, CAM_CTL, CPE, 0);
+	BRCM_WRITE_REG_FIELD(base, CAM_ANA, AR, 1);
 
 	return 0;
 }
