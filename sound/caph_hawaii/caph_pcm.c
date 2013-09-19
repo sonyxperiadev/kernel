@@ -383,6 +383,8 @@ static int PcmPlaybackPrepare(struct snd_pcm_substream *substream)
 	/* physical address */
 	parm_prepare.buf_param.phy_addr = (UInt32) (runtime->dma_addr);
 
+	AUDCTRL_SetRestartPlaybackFlag(FALSE);
+
 	aTrace(LOG_ALSA_INTERFACE, "buf_size = %d pBuf=0x%lx phy_addr=0x%x\n",
 	       runtime->dma_bytes, (UInt32) runtime->dma_area,
 	       runtime->dma_addr);
@@ -651,7 +653,12 @@ static snd_pcm_uframes_t PcmPlaybackPointer(struct snd_pcm_substream *substream)
 	snd_pcm_uframes_t pos = 0;
 	brcm_alsa_chip_t *chip = snd_pcm_substream_chip(substream);
 	UInt16 dmaPointer = 0;
+	Boolean restartflag = AUDCTRL_GetRestartPlaybackFlag();
 
+	if (restartflag == TRUE) {
+		AUDCTRL_SetRestartPlaybackFlag(FALSE);
+		return SNDRV_PCM_POS_XRUN;
+	}
 	pos =
 	    chip->streamCtl[substream->number].stream_hw_ptr +
 	    bytes_to_frames(runtime, dmaPointer);
