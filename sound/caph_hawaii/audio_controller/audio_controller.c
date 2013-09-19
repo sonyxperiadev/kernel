@@ -132,6 +132,7 @@ static Boolean isFmMuted = FALSE;
 static unsigned int recordGainL[ AUDIO_SOURCE_TOTAL_COUNT ] = {0};
 static unsigned int recordGainR[ AUDIO_SOURCE_TOTAL_COUNT ] = {0};
 */
+static Boolean restart_playback = FALSE;
 
 enum AUDPATH_en_t {
 	AUDPATH_NONE,
@@ -492,11 +493,45 @@ void AUDCTRL_Telephony_RateChange(unsigned int sample_rate)
 		AUDCTRL_Telephony_HW_16K(mode);
 		AUDDRV_Telephony_RateChange(mode, app, bNeedDualMic,
 					    bmuteVoiceCall);
+
+		AUDCTRL_SetRestartPlaybackFlag(TRUE);
+
 		setExternAudioGain(mode, app);
 	}
 }
 
-/**
+/****************************************************************************
+*  @brief  the Set/Reset flag for ratechange during call
+*
+*  @param  flag		(in) True/False
+*
+*  @return none
+*
+****************************************************************************/
+
+void AUDCTRL_SetRestartPlaybackFlag(Boolean flag)
+{
+	aTrace(LOG_AUDIO_CNTLR, "%s flag %d\n", __func__, flag);
+	restart_playback = flag;
+}
+
+/****************************************************************************
+
+*  @brief  get Restart playback flag value
+*
+*  @param  none
+*
+*  @return whether Ratechange happened during VC or not
+*
+****************************************************************************/
+
+Boolean AUDCTRL_GetRestartPlaybackFlag()
+{
+	return restart_playback ;
+}
+
+/****************************************************************************
+
 *  @brief  the rate change request function called by CAPI message listener
 *
 *  @param  codecID		(in) voice call speech codec ID
@@ -515,7 +550,8 @@ void AUDCTRL_Telephony_RequestRateChange(UInt8 codecID)
 	}
 }
 
-/**
+/****************************************************************************
+
 *  @brief  Handle CP reset
 *
 *  @param  cp_reset

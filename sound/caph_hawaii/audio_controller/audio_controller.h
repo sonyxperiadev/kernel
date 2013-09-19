@@ -189,6 +189,27 @@ void AUDCTRL_DisableTelephony(void);
 void AUDCTRL_Telephony_RateChange(unsigned int sample_rate);
 
 /**
+*  @brief  the Set/Reset flag for Restarting Playback
+*
+*  @param  flag		(in) True/False
+*
+*  @return none
+*
+****************************************************************************/
+
+void AUDCTRL_SetRestartPlaybackFlag(Boolean flag);
+
+/**
+*  @brief  get the flag for restarting playback
+*
+*  @param  none
+*
+*  @return whether Playback has to be restarted
+*
+****************************************************************************/
+Boolean AUDCTRL_GetRestartPlaybackFlag(void);
+
+/**
 *  @brief  the rate change request function called by CAPI message listener
 *
 *  @param  codecID		(in) voice call speech codec ID
