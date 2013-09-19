@@ -827,7 +827,8 @@ void *mm_fmwk_register(const char *name, const char *clk_name,
 		common->mm_core[i] = mm_core_init(common, name, &core_param[i]);
 
 #ifdef CONFIG_KONA_PI_MGR
-	common->mm_dvfs = mm_dvfs_init(common, name, dvfs_param);
+	common->mm_dvfs = mm_dvfs_init(&(common->mm_common_ifc), name,
+								dvfs_param);
 #else
 	common->mm_dvfs = NULL;
 #endif
