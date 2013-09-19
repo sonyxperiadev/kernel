@@ -321,11 +321,8 @@ int mm_csi0_set_dig_phy(struct lane_timing *timing)
 		BRCM_WRITE_REG_FIELD(base, CAM_DLT, DLT3, 0x0);
 
 	} else {
-	/*	BRCM_WRITE_REG_FIELD(base, CAM_CLT, CLT1, 0xA);
-		BRCM_WRITE_REG_FIELD(base, CAM_CLT, CLT2,  0x3C); */
-		/* timings based on CSL/CHAL */
-		BRCM_WRITE_REG_FIELD(base, CAM_CLT, CLT1, 0x0);
-		BRCM_WRITE_REG_FIELD(base, CAM_CLT, CLT2,  0x05);
+		BRCM_WRITE_REG_FIELD(base, CAM_CLT, CLT1, 0xA);
+		BRCM_WRITE_REG_FIELD(base, CAM_CLT, CLT2,  0x3C);
 
 		BRCM_WRITE_REG_FIELD(base, CAM_DLT, DLT1, timing->hs_term_time);
 		BRCM_WRITE_REG_FIELD(base, CAM_DLT, DLT2,
@@ -560,7 +557,7 @@ int mm_csi0_get_data_stat(struct int_desc *desc, int ack)
 		pr_info("Null descriptor data\n");
 		return -EINVAL;
 	}
-	if ((BRCM_READ_REG_FIELD(base, CAM_DCS, DI)) & (CAM_DCS_DI_MASK)) {
+	if (BRCM_READ_REG_FIELD(base, CAM_DCS, DI)) {
 		if (ack)
 			BRCM_WRITE_REG_FIELD(base, CAM_DCS, DI, 0x1);
 		desc->die = 1;
@@ -690,13 +687,13 @@ int mm_csi0_update_addr(struct buffer_desc *im0, struct buffer_desc *im1,
 	BRCM_WRITE_REG_FIELD(base, CAM_DBCTL, BUF0_IE, 0);
 	BRCM_WRITE_REG_FIELD(base, CAM_DBCTL, BUF1_IE, 0);
 	BRCM_WRITE_REG_FIELD(base, CAM_MISC,  DIS_DB_IE, 1);
-/*	if (cam_state.trigger) {
+	if (cam_state.trigger) {
 		pr_info("%d\n ", __LINE__);
 		BRCM_WRITE_REG_FIELD(base, CAM_ICTL, FCM, 0x1);
 	}
 	else
 		BRCM_WRITE_REG_FIELD(base, CAM_ICTL, FCM, 0x0);
-*/
+
 	/* Check the logic above again */
 	/* register prog start */
 	if (cam_state.db_en)
@@ -799,7 +796,7 @@ int mm_csi0_trigger_cap(void)
 	u32 base = V_BASE;
 
 	if (cam_state.trigger) {
-		BRCM_WRITE_REG_FIELD(base, CAM_ICTL, FCM, 0x1);
+		/* BRCM_WRITE_REG_FIELD(base, CAM_ICTL, FCM, 0x1); */
 		BRCM_WRITE_REG_FIELD(base, CAM_ICTL, TFC, 0x1);
 		return 0;
 	} else {
