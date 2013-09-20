@@ -157,8 +157,8 @@ No support for I2S on Island */
 */
 /* 156M is for eanc, off by default */
 static Boolean enable156MClk = FALSE;
-static struct clk *clkIDCAPH[MAX_CAPH_CLOCK_NUM] = {NULL, NULL, NULL, NULL};
-static struct clk *clkIDSSP[MAX_SSP_CLOCK_NUM] = {NULL, NULL, NULL};
+static struct clk *clkIDCAPH[MAX_CAPH_CLOCK_NUM];
+static struct clk *clkIDSSP[MAX_SSP_CLOCK_NUM];
 static int audio_tuning_flag;
 enum SSP_CLK_ID {
 	CLK_SSP3_AUDIO, /* KHUB_SSP3_AUDIO_CLK */
@@ -2936,8 +2936,9 @@ static void csl_ssp_ControlHWClock(Boolean enable,
 			enable, ssp3, ssp4);
 	if (ssp3) {
 		clkIDSSP[CLK_SSP3_AUDIO] = clk_get(NULL, "ssp3_audio_clk");
-		if (IS_ERR_OR_NULL(clkIDSSP[CLK_SSP3_AUDIO])) {
-			aError("Could not get ssp3_audio_clk\r\n");
+		if (IS_ERR(clkIDSSP[CLK_SSP3_AUDIO])) {
+			aError("Could not get ssp3_audio_clk - %ld\n",
+				PTR_ERR(clkIDSSP[CLK_SSP3_AUDIO]));
 			return;
 		}
 		if (enable) {
@@ -2954,8 +2955,9 @@ static void csl_ssp_ControlHWClock(Boolean enable,
 #if !defined(CONFIG_ARCH_ISLAND)
 	if (ssp4) {
 		clkIDSSP[CLK_SSP4_AUDIO] = clk_get(NULL, "ssp4_audio_clk");
-		if (IS_ERR_OR_NULL(clkIDSSP[CLK_SSP4_AUDIO])) {
-			aError("Could not get ssp4_audio_clk\r\n");
+		if (IS_ERR(clkIDSSP[CLK_SSP4_AUDIO])) {
+			aError("Could not get ssp4_audio_clk - %ld\n",
+				PTR_ERR(clkIDSSP[CLK_SSP4_AUDIO]));
 			return;
 		}
 
@@ -2977,8 +2979,9 @@ static void csl_ssp_ControlHWClock(Boolean enable,
 #if 0
 	if (ssp6) {
 		clkIDSSP[CLK_SSP6_AUDIO] = clk_get(NULL, "ssp6_audio_clk");
-		if (IS_ERR_OR_NULL(clkIDSSP[CLK_SSP6_AUDIO])) {
-			aError("Could not get ssp6_audio_clk\r\n");
+		if (IS_ERR(clkIDSSP[CLK_SSP6_AUDIO])) {
+			aError("Could not get ssp6_audio_clk - %ld\n",
+				PTR_ERR(clkIDSSP[CLK_SSP6_AUDIO]));
 			return;
 		}
 		if (enable) {
@@ -3028,15 +3031,20 @@ void csl_ControlHWClock_2p4m(Boolean enable)
 {
 	if (enable) {
 		/* use DMIC*/
-		if (clkIDCAPH[CLK_2P4M] == NULL)
-			clkIDCAPH[CLK_2P4M] =
-			clk_get(NULL, "audioh_2p4m_clk");
+		if (IS_ERR(clkIDCAPH[CLK_2P4M]))
+			clkIDCAPH[CLK_2P4M] = clk_get(NULL, "audioh_2p4m_clk");
+		if (IS_ERR(clkIDCAPH[CLK_2P4M])) {
+			aError("Could not get audioh_2p4m_clk clock - %ld\n",
+				PTR_ERR(clkIDCAPH[CLK_2P4M]));
+			return;
+		}
 		clk_enable(clkIDCAPH[CLK_2P4M]);
 		/*Enable DMIC regulator*/
 		csl_ControlHW_dmic_regulator(TRUE);
 	} else {
 		clk_disable(clkIDCAPH[CLK_2P4M]);
-		clkIDCAPH[CLK_2P4M] = NULL;
+		clk_put(clkIDCAPH[CLK_2P4M]);
+		clkIDCAPH[CLK_2P4M] = ERR_PTR(-ENODEV);
 		/*Disable DMIC regulator*/
 		csl_ControlHW_dmic_regulator(FALSE);
 	}
@@ -3048,14 +3056,19 @@ void csl_ControlHWClock_2p4m(Boolean enable)
 void csl_ControlHWClock_156m(Boolean enable)
 {
 	if (enable && !enable156MClk) {
-		if (clkIDCAPH[CLK_156M] == NULL)
-			clkIDCAPH[CLK_156M] =
-			clk_get(NULL, "audioh_156m_clk");
+		if (IS_ERR(clkIDCAPH[CLK_156M]))
+			clkIDCAPH[CLK_156M] = clk_get(NULL, "audioh_156m_clk");
+		if (IS_ERR(clkIDCAPH[CLK_156M])) {
+			aError("Could not get audioh_156m_clk clock - %ld\n",
+				PTR_ERR(clkIDCAPH[CLK_156M]));
+			return;
+		}
 		clk_enable(clkIDCAPH[CLK_156M]);
 		enable156MClk = TRUE;
 	} else if (!enable && enable156MClk) {
 		clk_disable(clkIDCAPH[CLK_156M]);
-		clkIDCAPH[CLK_156M] = NULL;
+		clk_put(clkIDCAPH[CLK_156M]);
+		clkIDCAPH[CLK_156M] = ERR_PTR(-ENODEV);
 		enable156MClk = FALSE;
 	}
 
@@ -3078,6 +3091,11 @@ void csl_caph_ControlHWClock(Boolean enable)
 			/*Enable CAPH clock.*/
 			clkIDCAPH[CLK_SRCMIXER] =
 				clk_get(NULL, "caph_srcmixer_clk");
+			if (IS_ERR(clkIDCAPH[CLK_SRCMIXER])) {
+				aError("Could not get caph_srcmixer_clk clock - %ld\n",
+					PTR_ERR(clkIDCAPH[CLK_SRCMIXER]));
+				return;
+			}
 
 			/* island srcmixer is not set correctly.
 			This is a workaround before a solution from clock */
@@ -3103,9 +3121,17 @@ void csl_caph_ControlHWClock(Boolean enable)
 			for audioh_26m to source the clock properly */
 
 			clkIDCAPH[CLK_26M] = clk_get(NULL, "audioh_26m");
-			if (IS_ERR_OR_NULL(clkIDCAPH[CLK_26M]))
-				aError("Could not get audioh_26m clock\r\n");
+			if (IS_ERR(clkIDCAPH[CLK_26M])) {
+				aError("Could not get audioh_26m clock - %ld\n",
+					PTR_ERR(clkIDCAPH[CLK_26M]));
+				goto err_get_26m_clk;
+			}
 			clkIDCAPH[CLK_APB] = clk_get(NULL, "audioh_apb_clk");
+			if (IS_ERR(clkIDCAPH[CLK_APB])) {
+				aError("Could not get audioh_apb_clk clock - %ld\n",
+					PTR_ERR(clkIDCAPH[CLK_APB]));
+				goto err_get_apb_clk;
+			}
 			clk_enable(clkIDCAPH[CLK_APB]);
 			clk_set_rate(clkIDCAPH[CLK_26M], 26000000);
 		}
@@ -3133,11 +3159,12 @@ void csl_caph_ControlHWClock(Boolean enable)
 	} else if (enable == FALSE && sClkCurEnabled == TRUE && dsp_path == 0) {
 		sClkCurEnabled = FALSE;
 		/*disable only CAPH clocks*/
-		/* this api will check the null pointer */
 		clk_disable(clkIDCAPH[CLK_SRCMIXER]);
-		clkIDCAPH[CLK_SRCMIXER] = NULL;
+		clk_put(clkIDCAPH[CLK_SRCMIXER]);
+		clkIDCAPH[CLK_SRCMIXER] = ERR_PTR(-ENODEV);
 		clk_disable(clkIDCAPH[CLK_APB]);
-		clkIDCAPH[CLK_APB] = NULL;
+		clk_put(clkIDCAPH[CLK_APB]);
+		clkIDCAPH[CLK_APB] = ERR_PTR(-ENODEV);
 
 #if 0
 		/* Turn off the regulator AUDLDO*/
@@ -3163,6 +3190,14 @@ void csl_caph_ControlHWClock(Boolean enable)
 		"result = %d\r\n", __func__, enable, sClkCurEnabled);
 
 	return;
+
+err_get_apb_clk:
+	clk_put(clkIDCAPH[CLK_26M]);
+	clkIDCAPH[CLK_26M] = ERR_PTR(-ENODEV);
+err_get_26m_clk:
+	clk_disable(clkIDCAPH[CLK_SRCMIXER]);
+	clk_put(clkIDCAPH[CLK_SRCMIXER]);
+	clkIDCAPH[CLK_SRCMIXER] = ERR_PTR(-ENODEV);
 }
 
 /****************************************************************************
@@ -3780,6 +3815,12 @@ Boolean csl_caph_hwctrl_allPathsDisabled(void)
 void csl_caph_hwctrl_init(void)
 {
 	struct CSL_CAPH_HWCTRL_BASE_ADDR_t addr;
+	int i;
+
+	for (i = 0; i < MAX_CAPH_CLOCK_NUM; i++)
+		clkIDCAPH[i] = ERR_PTR(-ENODEV);
+	for (i = 0; i < MAX_SSP_CLOCK_NUM; i++)
+		clkIDSSP[i] = ERR_PTR(-ENODEV);
 
 	csl_caph_ControlHWClock(TRUE);
 
@@ -3925,45 +3966,55 @@ void csl_caph_hwctrl_deinit(void)
 void csl_caph_hwctrl_toggle_caphclk(void)
 {
 	int i;
-	struct clk *clkID[5] = {NULL, NULL, NULL,
-						NULL, NULL};
+	struct clk *clkID[5] = {ERR_PTR(-ENODEV),
+				ERR_PTR(-ENODEV),
+				ERR_PTR(-ENODEV),
+				ERR_PTR(-ENODEV),
+				ERR_PTR(-ENODEV)};
 
 	/*Toggle srcmixer clk*/
 	clkID[0] = clk_get(NULL, CAPH_SRCMIXER_PERI_CLK_NAME_STR);
-	if (IS_ERR_OR_NULL(clkID[0]))
-		aError("%s failed to get clk srcmixer\n", __func__);
+	if (IS_ERR(clkID[0]))
+		aError("%s failed to get clk srcmixer - %ld\n", __func__,
+			PTR_ERR(clkID[0]));
 	else
 		clk_enable(clkID[0]);
 
 	/*Toggle AudioH clks*/
 	clkID[1] = clk_get(NULL, AUDIOH_APB_BUS_CLK_NAME_STR);
-	if (IS_ERR_OR_NULL(clkID[1]))
-		aError("%s failed to get clk audioh_apb\n", __func__);
+	if (IS_ERR(clkID[1]))
+		aError("%s failed to get clk audioh_apb - %ld\n", __func__,
+			PTR_ERR(clkID[1]));
 	else
 		clk_enable(clkID[1]);
 
 	clkID[2] = clk_get(NULL, AUDIOH_2P4M_PERI_CLK_NAME_STR);
-	if (IS_ERR_OR_NULL(clkID[2]))
-		aError("%s failed to get clk audioh_2p4m\n", __func__);
+	if (IS_ERR(clkID[2]))
+		aError("%s failed to get clk audioh_2p4m - %ld\n", __func__,
+			PTR_ERR(clkID[2]));
 	else
 		clk_enable(clkID[2]);
 
 	clkID[3] = clk_get(NULL, AUDIOH_156M_PERI_CLK_NAME_STR);
-	if (IS_ERR_OR_NULL(clkID[3]))
-		aError("%s failed to get clk audioh_156m\n", __func__);
+	if (IS_ERR(clkID[3]))
+		aError("%s failed to get clk audioh_156m - %ld\n", __func__,
+			PTR_ERR(clkID[3]));
 	else
 		clk_enable(clkID[3]);
 
 	clkID[4] = clk_get(NULL, AUDIOH_26M_PERI_CLK_NAME_STR);
-	if (IS_ERR_OR_NULL(clkID[4]))
-		aError("%s failed to get clk audioh_26m\n", __func__);
+	if (IS_ERR(clkID[4]))
+		aError("%s failed to get clk audioh_26m - %ld\n", __func__,
+			PTR_ERR(clkID[4]));
 	else
 		clk_enable(clkID[4]);
 
 	/*Disable the clks*/
 	for (i = 0; i < 5; i++) {
-		if (0 == IS_ERR_OR_NULL(clkID[i]))
+		if (!IS_ERR(clkID[i])) {
 			clk_disable(clkID[i]);
+			clk_put(clkID[i]);
+		}
 	}
 	aTrace(LOG_AUDIO_CSL, "%s ,Toggle SRCMIX/AUDIOH clk Done\n",
 		__func__);
