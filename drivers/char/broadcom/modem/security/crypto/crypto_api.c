@@ -12,7 +12,6 @@
 * other than the GPL, without Broadcom's express prior written consent.
 ***************************************************************************/
 #include <linux/slab.h>
-#include <plat/clock.h>
 #include <mach/clock.h>
 #include <linux/dma-mapping.h>
 #include "crypto_api.h"

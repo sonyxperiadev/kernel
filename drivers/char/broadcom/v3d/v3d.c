@@ -39,7 +39,6 @@ the GPL, without Broadcom's express prior written consent.
 #include <mach/gpio.h>
 #include <plat/pi_mgr.h>
 #include <plat/scu.h>
-#include <plat/clock.h>
 #include <linux/dma-mapping.h>
 #include <linux/kthread.h>
 #include <mach/io_map.h>
