@@ -155,7 +155,6 @@ No support for I2S on Island */
 /* static Interrupt_t AUDDRV_HISR_HANDLE; */
 /* static CLIENT_ID id[MAX_AUDIO_CLOCK_NUM] = {0, 0, 0, 0, 0, 0};
 */
-static Boolean use26MClk = FALSE;
 /* 156M is for eanc, off by default */
 static Boolean enable156MClk = FALSE;
 static struct clk *clkIDCAPH[MAX_CAPH_CLOCK_NUM] = {NULL, NULL, NULL, NULL};
@@ -5802,18 +5801,6 @@ CSL_CAPH_PathID csl_caph_FindPathID(CSL_CAPH_DEVICE_e sink_dev,
 	aTrace(LOG_AUDIO_CSL, "%s sink %d src %d skip_path %d, pathID %d\n",
 		__func__, sink_dev, src_dev, skip_path, pathID);
 	return pathID;
-}
-
-/****************************************************************************
-*
-*  Function Name: csl_caph_SetSRC26MClk
-*
-*  Description: Set SRCMixer clock rate to use 26MHz
-*
-*****************************************************************************/
-void csl_caph_SetSRC26MClk(Boolean is26M)
-{
-	use26MClk = is26M;
 }
 
 /****************************************************************************

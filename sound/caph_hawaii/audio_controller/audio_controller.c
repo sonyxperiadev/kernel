@@ -118,7 +118,6 @@ static int IsBTM_WB = FALSE;	/*Bluetooth headset is WB(16KHz voice) */
 static int bInVoiceCall = FALSE;
 static int bmuteVoiceCall = FALSE;
 static Boolean isMFD = FALSE;
-static Boolean is26MClk = FALSE;
 static Boolean muteInPlay = FALSE;
 /* for CP reset */
 static Boolean cpReset = FALSE;
@@ -3828,11 +3827,6 @@ int AUDCTRL_HardwareControl(AUDCTRL_HW_ACCESS_TYPE_en_t access_type,
 	hw_control[access_type][2] = arg3;
 	hw_control[access_type][3] = arg4;
 
-	/* Need to set SRC clock mode before enable clock */
-	if (access_type == AUDCTRL_HW_CFG_CLK) {
-		is26MClk = arg1 ? TRUE : FALSE;
-		csl_caph_SetSRC26MClk(is26MClk);
-	}
 	if (!bClk)
 		csl_caph_ControlHWClock(TRUE);
 
@@ -4554,19 +4548,6 @@ static void setExternAudioGain(AudioMode_t mode, AudioApp_t app)
 Boolean AUDCTRL_GetMFDMode(void)
 {
 	return isMFD;
-}
-
-/********************************************************************
-*  @brief  Get SRCMixer Clock rate
-*
-*  @param  none
-*
-*  @return  TRUE to use 26M clock; FALSE not (78M)
-*
-****************************************************************************/
-Boolean AUDCTRL_GetSRCClock(void)
-{
-	return is26MClk;
 }
 
 static void fillUserVolSetting(AudioMode_t mode, AudioApp_t app)
