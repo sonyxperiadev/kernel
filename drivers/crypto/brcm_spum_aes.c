@@ -23,7 +23,6 @@
 #include <linux/io.h>
 #include <linux/clk.h>
 #include <linux/delay.h>
-#include <plat/clock.h>
 #include <asm/cacheflush.h>
 #include <asm/sizes.h>
 #include <linux/broadcom/mobcom_types.h>
@@ -48,6 +47,8 @@ static void hexdump(unsigned char *buf, unsigned int len)
 		       8, 4, buf, len, false);
 }
 #endif
+
+#define FREQ_MHZ(x) ((x)*1000*1000)
 
 #define DWORD_ALIGNED	__attribute__((aligned(sizeof(u64))))
 
