@@ -158,8 +158,6 @@ No support for I2S on Island */
 static Boolean use26MClk = FALSE;
 /* 156M is for eanc, off by default */
 static Boolean enable156MClk = FALSE;
-/* 2P4M is for dmic, off by default */
-static Boolean enable2P4MClk = FALSE;
 static struct clk *clkIDCAPH[MAX_CAPH_CLOCK_NUM] = {NULL, NULL, NULL, NULL};
 static struct clk *clkIDSSP[MAX_SSP_CLOCK_NUM] = {NULL, NULL, NULL};
 static int audio_tuning_flag;
@@ -3029,7 +3027,7 @@ void csl_ControlHW_dmic_regulator(Boolean enable)
 /* For digi-mic clock and power control*/
 void csl_ControlHWClock_2p4m(Boolean enable)
 {
-	if (enable && !enable2P4MClk) {
+	if (enable) {
 		/* use DMIC*/
 		if (clkIDCAPH[CLK_2P4M] == NULL)
 			clkIDCAPH[CLK_2P4M] =
@@ -3037,18 +3035,14 @@ void csl_ControlHWClock_2p4m(Boolean enable)
 		clk_enable(clkIDCAPH[CLK_2P4M]);
 		/*Enable DMIC regulator*/
 		csl_ControlHW_dmic_regulator(TRUE);
-		enable2P4MClk = TRUE;
-	} else if (!enable && enable2P4MClk) {
+	} else {
 		clk_disable(clkIDCAPH[CLK_2P4M]);
 		clkIDCAPH[CLK_2P4M] = NULL;
 		/*Disable DMIC regulator*/
 		csl_ControlHW_dmic_regulator(FALSE);
-		enable2P4MClk = FALSE;
 	}
 
-	aTrace(LOG_AUDIO_CSL,
-		"%s: action = %d,"
-		"result = %d\r\n", __func__, enable, enable2P4MClk);
+	aTrace(LOG_AUDIO_CSL, "%s: action = %d\n", __func__, enable);
 }
 
 /* For eanc clock control*/
