@@ -70,6 +70,7 @@ struct kona_memc_node {
 
 #ifdef CONFIG_MEMC_DFS
 enum {
+	MEMC_OPP_ECO,
 	MEMC_OPP_NORMAL,
 	MEMC_OPP_TURBO,
 	MEMC_OPP_MAX,
@@ -123,6 +124,7 @@ struct kona_memc {
 	struct plist_head dfs_list;
 	struct list_head usr_dfs_list;
 	u32 active_dfs_opp;
+	u32 pll_rate;
 #endif
 	spinlock_t memc_lock;
 	u32 memc0_ns_base;

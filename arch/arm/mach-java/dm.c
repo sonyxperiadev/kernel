@@ -43,6 +43,8 @@
 #else
 #error "CDC not enabled !!"
 #endif
+#include <mach/rdb/brcm_rdb_csr.h>
+#include <plat/kona_memc.h>
 
 #include "pm_params.h"
 
@@ -115,9 +117,13 @@ static u32 fdm_en = 1; /* Enable full dormant */
 static u32 dbg_log;
 static int wr_enabled;
 static int pllarma_inx = -1;
+
 /* Data for the entire cluster */
 static DEFINE_SPINLOCK(drmt_lock);
 
+#ifdef CONFIG_MEMC_FORCE_156M_IN_SUSPEND
+static struct kona_memc_node memc_dfs_node;
+#endif /*CONFIG_MEMC_FORCE_156M_IN_SUSPEND*/
 
 /* un-cached memory for dormant stack */
 u32 un_cached_stack_ptr;
@@ -635,7 +641,11 @@ void dormant_enter(u32 svc)
 			/*No break continue...*/
 		case CDC_STATUS_RESFDM:
 			(*((u32 *)(&__get_cpu_var(cdm_success))))++;
-
+#ifdef CONFIG_MEMC_FORCE_156M_IN_SUSPEND
+			if (svc_max == FULL_DORMANT_L2_OFF)
+				memc_update_dfs_req(&memc_dfs_node,
+					MEMC_OPP_NORMAL);
+#endif /*CONFIG_MEMC_FORCE_156M_IN_SUSPEND*/
 			if (CDC_STATUS_RESFDM == cdc_resp) {
 				fdm_success++;
 				restore_gic = true;
@@ -767,12 +777,19 @@ static int dormant_enter_continue(unsigned long svc)
 	unsigned int arg2;
 	cpu = smp_processor_id();
 
-	if (svc == FULL_DORMANT_L2_OFF && l2_off_en &&
+	if (svc == FULL_DORMANT_L2_OFF &&
 		cdc_get_status_for_core(cpu) == CDC_STATUS_FDCEOK) {
-		arg2 = 3;  /*L2 mem OFF*/
-#ifndef CONFIG_MOBICORE_DRIVER
-		disable_clean_inv_dcache_v7_all();
+#ifdef CONFIG_MEMC_FORCE_156M_IN_SUSPEND
+		memc_update_dfs_req(&memc_dfs_node, MEMC_OPP_ECO);
 #endif
+
+		if (l2_off_en) {
+			arg2 = 3;  /*L2 mem OFF*/
+#ifndef CONFIG_MOBICORE_DRIVER
+			disable_clean_inv_dcache_v7_all();
+#endif
+		}
+
 	} else {
 		arg2 = 2;  /*L2 mem ON*/
 #ifndef CONFIG_MOBICORE_DRIVER
@@ -986,6 +1003,10 @@ static int __init dm_init(void)
 			break;
 		}
 	}
+
+#ifdef CONFIG_MEMC_FORCE_156M_IN_SUSPEND
+	memc_add_dfs_req(&memc_dfs_node, "dm", MEMC_OPP_NORMAL);
+#endif
 
 #ifdef CONFIG_DEBUG_FS
 	dm_debug_init();

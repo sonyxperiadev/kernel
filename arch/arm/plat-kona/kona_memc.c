@@ -361,15 +361,14 @@ static void memc_wait_for_state_change(struct kona_memc *kmemc)
 	BUG_ON(ins == 0);
 }
 
-static int memc_config_ddr_pll_freq(struct kona_memc *kmemc, u32 new_opp)
+static int memc_config_ddr_pll_freq(struct kona_memc *kmemc,
+	struct memc_dfs_pll_freq *pll_freq)
 {
-	struct memc_dfs_pll_freq *pll_freq;
 	u32 reg;
 	u32 max_pwr;
 	int ins = 10000;
 
-	BUG_ON(!kmemc->pdata || new_opp >= MEMC_OPP_MAX);
-	pll_freq = &kmemc->pdata->pll_freq[new_opp];
+	BUG_ON(!kmemc->pdata);
 	/*  power state change pending  ? */
 	reg = readl_relaxed(MEMC0_NS_REG(kmemc,
 		CSR_MEMC_PWR_STATE_PENDING_OFFSET));
@@ -461,6 +460,8 @@ static int memc_dfs_update(struct kona_memc *kmemc,
 {
 	u32 new_val;
 	int ret = 0;
+	struct memc_dfs_pll_freq *pll_freq;
+
 	spin_lock(&kmemc->memc_lock);
 	switch (action) {
 	case MEMC_NODE_ADD:
@@ -481,9 +482,28 @@ static int memc_dfs_update(struct kona_memc *kmemc,
 	}
 	new_val = memc_dfs_get_max_req(kmemc);
 	if (new_val != kmemc->active_dfs_opp) {
-		ret = memc_config_ddr_pll_freq(kmemc, new_val);
-		if (!ret)
-			kmemc->active_dfs_opp = new_val;
+		switch (new_val) {
+		case MEMC_OPP_ECO:
+			/*Set max power to 2 - 156MHz*/
+			memc_set_max_pwr(kmemc, MEMC_PWR_STATE2);
+			break;
+
+		case MEMC_OPP_NORMAL:
+		case MEMC_OPP_TURBO:
+			if (kmemc->active_dfs_opp == MEMC_OPP_ECO)
+				memc_set_max_pwr(kmemc, MEMC_PWR_STATE3);
+			if (kmemc->pll_rate != new_val) {
+				pll_freq = &kmemc->pdata->pll_freq[new_val];
+				memc_config_ddr_pll_freq(kmemc, pll_freq);
+			}
+			kmemc->pll_rate = new_val;
+			break;
+
+		default:
+			BUG();
+			break;
+		}
+		kmemc->active_dfs_opp = new_val;
 	}
 	spin_unlock(&kmemc->memc_lock);
 	return ret;
@@ -644,8 +664,13 @@ static ssize_t dfs_init_store(struct kobject *kobj,
 	if (!usr_node)
 		return -EINVAL;
 
+#ifdef CONFIG_MEMC_FORCE_156M_IN_SUSPEND
 	pr_info("MEMC DFS Del req:%s\n", BOOT_DFS_REQ_CLIENT);
 	memc_del_usr_dfs_req(&kona_memc, usr_node);
+#else
+	pr_info("MEMC DFS update req:%s\n", BOOT_DFS_REQ_CLIENT);
+	memc_update_usr_dfs_req(usr_node, MEMC_OPP_NORMAL);
+#endif
 	return n;
 }
 
@@ -907,6 +932,7 @@ static int kona_memc_probe(struct platform_device *pdev)
 	kona_memc.active_min_pwr = 0;
 #ifdef CONFIG_MEMC_DFS
 	kona_memc.active_dfs_opp = MEMC_OPP_NORMAL;
+	kona_memc.pll_rate = MEMC_OPP_ECO; /*init to min*/
 	 INIT_LIST_HEAD(&kona_memc.usr_dfs_list);
 	 plist_head_init(&kona_memc.dfs_list);
 	ret = sysfs_create_group(power_kobj, &kmemc_attr_group);
