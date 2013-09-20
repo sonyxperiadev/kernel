@@ -155,8 +155,6 @@ No support for I2S on Island */
 /* static Interrupt_t AUDDRV_HISR_HANDLE; */
 /* static CLIENT_ID id[MAX_AUDIO_CLOCK_NUM] = {0, 0, 0, 0, 0, 0};
 */
-/* 156M is for eanc, off by default */
-static Boolean enable156MClk = FALSE;
 static struct clk *clkIDCAPH[MAX_CAPH_CLOCK_NUM];
 static struct clk *clkIDSSP[MAX_SSP_CLOCK_NUM];
 static int audio_tuning_flag;
@@ -3055,7 +3053,7 @@ void csl_ControlHWClock_2p4m(Boolean enable)
 /* For eanc clock control*/
 void csl_ControlHWClock_156m(Boolean enable)
 {
-	if (enable && !enable156MClk) {
+	if (enable) {
 		if (IS_ERR(clkIDCAPH[CLK_156M]))
 			clkIDCAPH[CLK_156M] = clk_get(NULL, "audioh_156m_clk");
 		if (IS_ERR(clkIDCAPH[CLK_156M])) {
@@ -3064,17 +3062,13 @@ void csl_ControlHWClock_156m(Boolean enable)
 			return;
 		}
 		clk_enable(clkIDCAPH[CLK_156M]);
-		enable156MClk = TRUE;
-	} else if (!enable && enable156MClk) {
+	} else {
 		clk_disable(clkIDCAPH[CLK_156M]);
 		clk_put(clkIDCAPH[CLK_156M]);
 		clkIDCAPH[CLK_156M] = ERR_PTR(-ENODEV);
-		enable156MClk = FALSE;
 	}
 
-	aTrace(LOG_AUDIO_CSL,
-		"%s: action = %d,"
-		"result = %d\r\n", __func__, enable, enable156MClk);
+	aTrace(LOG_AUDIO_CSL, "%s: action = %d\n", __func__, enable);
 }
 
 /*
