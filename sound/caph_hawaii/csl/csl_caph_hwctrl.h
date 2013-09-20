@@ -806,16 +806,6 @@ CSL_CAPH_PathID csl_caph_FindPathID(CSL_CAPH_DEVICE_e sink_dev,
 	CSL_CAPH_DEVICE_e src_dev, CSL_CAPH_PathID skip_path);
 
 /****************************************************************************
-*  @brief  Set SRCMixer clock rate to use 26MHz
-*
-*  @param   is26M
-*
-*  @return none
-*
-*****************************************************************************/
-void csl_caph_SetSRC26MClk(Boolean is26M);
-
-/****************************************************************************
 *  @brief  Check HW path status
 *
 *  @param  none
