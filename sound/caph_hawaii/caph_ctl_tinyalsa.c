@@ -490,6 +490,9 @@ static int SelCtrlPut(struct snd_kcontrol *kcontrol,
 	pSel[0] = ucontrol->value.integer.value[0];
 	pSel[1] = ucontrol->value.integer.value[1];
 
+	if (stream != CTL_STREAM_PANEL_VOICECALL)
+		pSel[1] = pSel[0];
+
 #if defined(CONFIG_MAP_VOIP)
 	/* for voip out/in stream, value[0] used for control,
 	   such as sel/add/desel/remove actions */
@@ -1008,13 +1011,18 @@ static int MiscCtrlInfo(struct snd_kcontrol *kcontrol,
 		break;
 	case CTL_FUNCTION_AT_AUDIO:
 		uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
+#ifndef CAPH_TINYALSA
 		uinfo->count = 7;
+#else
+		uinfo->count = 8;
+#endif
 		uinfo->value.integer.min = 0x80000000;
 		uinfo->value.integer.max = 0x7FFFFFFF;
 		/*
 		 * val[0] is at command handler,
 		 * val[1] is 1st parameter of the AT command parameters
 		 */
+#ifndef CAPH_TINYALSA
 		if (kcontrol->id.index == 1) {
 			uinfo->count = 1;
 			uinfo->value.integer.min = 0x0;
@@ -1024,6 +1032,7 @@ static int MiscCtrlInfo(struct snd_kcontrol *kcontrol,
 			 */
 			uinfo->value.integer.max = 0x7FFFFFFF;
 		}
+#endif
 		break;
 	case CTL_FUNCTION_BYPASS_VIBRA:
 		uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
@@ -1176,7 +1185,12 @@ static int MiscCtrlGet(struct snd_kcontrol *kcontrol,
 		    AtAudCtlHandler_get(kcontrol->id.index, pChip, info.count,
 					ucontrol->value.integer.value);*/
 		memset(&parm_atctl, 0, sizeof(parm_atctl));
+#ifndef CAPH_TINYALSA
 		parm_atctl.cmdIndex = kcontrol->id.index;
+#else
+		int index = ucontrol->value.integer.value[info.count-1];
+		parm_atctl.cmdIndex = index;
+#endif
 		parm_atctl.pChip = pChip;
 		parm_atctl.ParamCount = info.count;
 		parm_atctl.isGet = 1;
@@ -1306,17 +1320,6 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 	       ucontrol->value.integer.value[2],
 	       ucontrol->value.integer.value[3]);*/
 #endif
-	/*aError("ALSA-CAPH %s"
-	       " stream=%d, function %d, index %d, value %ld %ld %ld %ld
-	       and ucontrol->id.index = %d\n",
-	       __func__, stream - 1, function,
-	       kcontrol->id.index,
-	       ucontrol->value.integer.value[0],
-	       ucontrol->value.integer.value[1],
-	       ucontrol->value.integer.value[2],
-	       ucontrol->value.integer.value[3],
-	       ucontrol->id.index);*/
-
 	switch (function) {
 	case CTL_FUNCTION_LOOPBACK_TEST:
 		ctl_parm.parm_loop.parm = pChip->pi32LoopBackTestParam[0] =
@@ -1526,7 +1529,12 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 		    AtAudCtlHandler_put(kcontrol->id.index, pChip, info.count,
 					ucontrol->value.integer.value);*/
 		memset(&parm_atctl, 0, sizeof(parm_atctl));
+#ifndef CAPH_TINYALSA
 		parm_atctl.cmdIndex = kcontrol->id.index;
+#else
+		parm_atctl.cmdIndex =
+			ucontrol->value.integer.value[info.count-1];
+#endif
 		/*this pointer would not released, so no need to pass the
 		  whole structure*/
 		parm_atctl.pChip = pChip;

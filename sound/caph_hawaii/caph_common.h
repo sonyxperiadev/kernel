@@ -292,7 +292,7 @@ struct voipdev_t {
 	int number;
 	struct snd_card *card;
 	struct cdev voipcdev;
-	struct __bcm_caph_hwdep_voip *pVoIP;
+	struct __bcm_caph_hwdep_voip *pvoip;
 };
 #endif
 
@@ -383,7 +383,7 @@ enum	AT_AUD_Handler_t {
 
 /* functions */
 #ifdef CAPH_TINYALSA
-extern int voipDeviceCreate(voipdev *voipchrdevPvtData);
+extern int voipdevicecreate(voipdev *voipchrdevpvtdata);
 #endif
 extern int __devinit PcmDeviceNew(struct snd_card *card);
 extern int __devinit ControlDeviceNew(struct snd_card *card);

@@ -131,7 +131,7 @@ int logpoint_buffer_idx;
  *
  * Returns 0 for success.
  */
-voipdev voipchrdevPvtData;
+voipdev voipchrdevpvtdata;
 static int DriverProbe(struct platform_device *pdev)
 {
 	struct snd_card *card;
@@ -190,14 +190,14 @@ static int DriverProbe(struct platform_device *pdev)
 	/* HWDEP interface */
 	/*err = HwdepDeviceNew(card);*/
 
-	voipchrdevPvtData.card = card;
+	voipchrdevpvtdata.card = card;
 
-	/*aError("M:caphmod:card = 0x%x ,&voipchrdevPvtData = 0x%x,"
-		"voipchrdevPvtData.card = 0x%x\n",
-		(unsigned int)card, (unsigned int)&voipchrdevPvtData,
-		(unsigned int)voipchrdevPvtData.card); */
+	/*aError("M:caphmod:card = 0x%x ,&voipchrdevpvtdata = 0x%x,"
+		"voipchrdevpvtdata.card = 0x%x\n",
+		(unsigned int)card, (unsigned int)&voipchrdevpvtdata,
+		(unsigned int)voipchrdevpvtdata.card); */
 
-	err = voipDeviceCreate(&voipchrdevPvtData);
+	err = voipdevicecreate(&voipchrdevpvtdata);
 	if (err) {
 		aError("voipDeviceCreate faileddddddddddddddd");
 		goto err;
@@ -1000,6 +1000,44 @@ static const struct file_operations bcmlog_fops = {
 	.release = BCMAudLOG_release,
 };
 
+static void vibra_enable_set_timeout(struct timed_output_dev *sdev,
+	int timeout)
+{
+	aError("Vibrator: Set duration: %dms\n", timeout);
+	BRCM_AUDIO_Param_Vibra_t parm_vibra;
+	parm_vibra.strength = 100;   /* Strength*/
+	parm_vibra.direction = 0;     /* Direction*/
+	parm_vibra.duration = timeout; /* timeout_ms; */
+	if (timeout != 0) {
+		aError("enable vibra");
+		AUDIO_Ctrl_Trigger(ACTION_AUD_EnableByPassVibra,
+		&parm_vibra, NULL, 0);
+	} else {
+		aError("disable vibra");
+		AUDIO_Ctrl_Trigger(ACTION_AUD_DisableByPassVibra,
+		&parm_vibra, NULL, 0);
+	}
+	return;
+}
+
+static int vibra_get_remaining_time(struct timed_output_dev *sdev)
+{
+	return 0;
+}
+int vibra_init()
+{
+	int ret;
+	aError("vibra_enable");
+	vibra_timed_dev.name = "vibrator";
+	vibra_timed_dev.enable = vibra_enable_set_timeout;
+	vibra_timed_dev.get_time = vibra_get_remaining_time;
+	ret = timed_output_dev_register(&vibra_timed_dev);
+	if (ret < 0)
+		aError("Vibra timed_output dev reg failed\n");
+	return 0;
+}
+
+
 /**
  * ModuleInit: Module initialization
  *
@@ -1019,6 +1057,7 @@ static int ALSAModuleInit(void)
 
 	sgPlatformDriver.probe = DriverProbe;
 	err = platform_driver_register(&sgPlatformDriver);
+	vibra_init();
 	aTrace(LOG_ALSA_INTERFACE, "\n %lx:driver register done %d\n"
 			, jiffies, err);
 	if (err)
@@ -1062,6 +1101,7 @@ static void ALSAModuleExit(void)
 	snd_card_free(sgpCaph_chip->card);
 
 	platform_driver_unregister(&sgPlatformDriver);
+	timed_output_dev_unregister(&vibra_timed_dev);
 	TerminateAudioHalThread();
 
 	aTrace(LOG_ALSA_INTERFACE, "\n %lx:exit done\n", jiffies);
