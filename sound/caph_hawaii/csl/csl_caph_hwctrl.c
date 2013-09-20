@@ -32,7 +32,10 @@
  *  @brief  csl layer driver for caph render
  *
  ****************************************************************************/
+#include <linux/clk.h>
+#include <linux/err.h>
 #include <linux/io.h>
+#include <linux/slab.h>
 #include "resultcode.h"
 #include "mobcom_types.h"
 #include "msconsts.h"
@@ -57,8 +60,10 @@
 #include "csl_audio_capture.h"
 
 #include <mach/io_map.h>
+#ifdef CONFIG_ARCH_ISLAND
 #include "clock.h"
-#include "clk.h"
+#endif
+#include <mach/clock.h>
 #include <mach/cpu.h>
 #if defined(ENABLE_DMA_VOICE)
 #include "csl_dsp_caph_control_api.h"
@@ -2938,15 +2943,16 @@ static void csl_ssp_ControlHWClock(Boolean enable,
 			aError("Could not get ssp3_audio_clk\r\n");
 			return;
 		}
-		if (enable && !clkIDSSP[CLK_SSP3_AUDIO]->use_cnt) {
+		if (enable) {
 			clk_enable(clkIDSSP[CLK_SSP3_AUDIO]);
 			/* The clock is used as SSP master clock. its rate
 			 * need to be 2 times of the I2S bit clock rate
 			 */
 			clk_set_rate(clkIDSSP[CLK_SSP3_AUDIO],
 				SSP_I2S_SAMPLE_RATE * SSP_I2S_SAMPLE_LEN * 2);
-		} else if (!enable && clkIDSSP[CLK_SSP3_AUDIO]->use_cnt)
+		} else {
 			clk_disable(clkIDSSP[CLK_SSP3_AUDIO]);
+		}
 	}
 #if !defined(CONFIG_ARCH_ISLAND)
 	if (ssp4) {
@@ -2956,7 +2962,7 @@ static void csl_ssp_ControlHWClock(Boolean enable,
 			return;
 		}
 
-		if (enable && !clkIDSSP[1]->use_cnt) {
+		if (enable) {
 			clk_enable(clkIDSSP[CLK_SSP4_AUDIO]);
 			/* The clock is used as SSP master clock. its rate
 			 * need to be 2 times of the I2S bit clock rate
@@ -2966,7 +2972,7 @@ static void csl_ssp_ControlHWClock(Boolean enable,
 					SSP_I2S_SAMPLE_LEN * 2);
 			clk_set_rate(clkIDSSP[CLK_SSP4_AUDIO],
 				ssp4_clk);
-		} else if (!enable && clkIDSSP[CLK_SSP4_AUDIO]->use_cnt) {
+		} else {
 			clk_disable(clkIDSSP[CLK_SSP4_AUDIO]);
 		}
 	}
@@ -2978,14 +2984,14 @@ static void csl_ssp_ControlHWClock(Boolean enable,
 			aError("Could not get ssp6_audio_clk\r\n");
 			return;
 		}
-		if (enable && !clkIDSSP[CLK_SSP6_AUDIO]->use_cnt) {
+		if (enable) {
 			clk_enable(clkIDSSP[CLK_SSP6_AUDIO]);
 			/* The clock is used as SSP master clock. its rate
 			 * need to be 2 times of the I2S bit clock rate
 			 */
 			clk_set_rate(clkIDSSP[CLK_SSP6_AUDIO],
 				SSP_I2S_SAMPLE_RATE * SSP_I2S_SAMPLE_LEN * 2);
-		} else if (!enable && clkIDSSP[CLK_SSP6_AUDIO]->use_cnt)
+		} else
 			clk_disable(clkIDSSP[CLK_SSP6_AUDIO]);
 	}
 #endif
@@ -3028,8 +3034,7 @@ void csl_ControlHWClock_2p4m(Boolean enable)
 		if (clkIDCAPH[CLK_2P4M] == NULL)
 			clkIDCAPH[CLK_2P4M] =
 			clk_get(NULL, "audioh_2p4m_clk");
-		if (clkIDCAPH[CLK_2P4M]->use_cnt == 0)
-			clk_enable(clkIDCAPH[CLK_2P4M]);
+		clk_enable(clkIDCAPH[CLK_2P4M]);
 		/*Enable DMIC regulator*/
 		csl_ControlHW_dmic_regulator(TRUE);
 		enable2P4MClk = TRUE;
@@ -3053,8 +3058,7 @@ void csl_ControlHWClock_156m(Boolean enable)
 		if (clkIDCAPH[CLK_156M] == NULL)
 			clkIDCAPH[CLK_156M] =
 			clk_get(NULL, "audioh_156m_clk");
-		if (clkIDCAPH[CLK_156M]->use_cnt == 0)
-			clk_enable(clkIDCAPH[CLK_156M]);
+		clk_enable(clkIDCAPH[CLK_156M]);
 		enable156MClk = TRUE;
 	} else if (!enable && enable156MClk) {
 		clk_disable(clkIDCAPH[CLK_156M]);
