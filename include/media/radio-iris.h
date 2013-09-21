@@ -872,6 +872,8 @@ int hci_def_data_write(struct hci_fm_def_data_wr_req *arg,
 	struct radio_hci_dev *hdev);
 int hci_fm_do_calibration(__u8 *arg, struct radio_hci_dev *hdev);
 int hci_fm_do_calibration(__u8 *arg, struct radio_hci_dev *hdev);
+int hci_fm_smd_register(void);
+void hci_fm_smd_deregister(void);
 
 static inline int is_valid_tone(int tone)
 {
