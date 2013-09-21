@@ -197,7 +197,7 @@ static void radio_hci_smd_deregister(void)
 	hs.fm_channel = 0;
 }
 
-static int radio_hci_smd_init(void)
+static int __init radio_hci_smd_init(void)
 {
 	return radio_hci_smd_register_dev(&hs);
 }
