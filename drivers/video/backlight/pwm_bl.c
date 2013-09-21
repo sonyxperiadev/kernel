@@ -24,6 +24,14 @@
 #include <linux/earlysuspend.h>
 #endif
 #include <mach/pinmux.h>
+#ifdef CONFIG_KONA_TMON
+#include <linux/broadcom/kona_tmon.h>
+#endif
+#ifdef CONFIG_DEBUG_FS
+#include <linux/debugfs.h>
+#include <linux/uaccess.h>
+#endif
+
 
 struct pwm_bl_data {
 	struct pwm_device	*pwm;
@@ -39,7 +47,15 @@ struct pwm_bl_data {
 	struct early_suspend bd_early_suspend;
 #endif
 	struct delayed_work bl_delay_on_work;
+#ifdef CONFIG_KONA_TMON
+	struct notifier_block tmon_nb;
+	int max_brightness;
+#endif
 };
+static struct pwm_bl_data *pwm_bl_data;
+#ifdef CONFIG_DEBUG_FS
+static struct dentry *dent_pb_root_dir;
+#endif
 
 /*
 During soft reset, the PWM registers are reset but the pad
@@ -76,6 +92,10 @@ static int pwm_backlight_update_status(struct backlight_device *bl)
 		pwm_config(pb->pwm, 0, pb->period);
 		pwm_disable(pb->pwm);
 	} else {
+#ifdef CONFIG_KONA_TMON
+		if (brightness > pb->max_brightness)
+			brightness = pb->max_brightness;
+#endif
 		brightness = pb->lth_brightness +
 			(brightness * (pb->period - pb->lth_brightness) / max);
 		pwm_config(pb->pwm, brightness, pb->period);
@@ -148,12 +168,80 @@ static void backlight_driver_late_resume(struct early_suspend *h)
 }
 #endif
 
+#ifdef CONFIG_KONA_TMON
+static void pb_update_max_brightness(unsigned long curr_temp,
+				struct pwm_bl_data *pb)
+{
+	struct platform_device *pdev;
+	struct platform_pwm_backlight_data *data;
+	struct backlight_device *bl;
+	int i;
+
+	pdev = container_of(pb->dev, struct platform_device, dev);
+	data = pdev->dev.platform_data;
+	bl = platform_get_drvdata(pdev);
+
+	pb->max_brightness = data->max_brightness;
+
+	if (!data->pb_enable_adapt_bright)
+		goto update_status;
+
+	for (i = data->temp_comp_size - 1; i >= 0; i--) {
+		if (curr_temp >= data->temp_comp_tbl[i].trigger_temp) {
+			pb->max_brightness =
+					data->temp_comp_tbl[i].max_brightness;
+			break;
+		}
+	}
+	dev_dbg(&pdev->dev,
+		"pb_update_max_brightness: max_brightness=%d\n",
+		pb->max_brightness);
+
+update_status:
+	backlight_update_status(bl);
+}
+
+static void pb_tmon_nb_init(struct pwm_bl_data *pb)
+{
+	unsigned long curr_temp;
+
+	curr_temp = (unsigned long)tmon_get_current_temp(true, true);
+	pb_update_max_brightness(curr_temp, pb);
+	tmon_register_notifier(&pb->tmon_nb);
+}
+
+static void pb_tmon_nb_remove(struct pwm_bl_data *pb, bool update_bright)
+{
+	unsigned long curr_temp;
+
+	tmon_unregister_notifier(&pb->tmon_nb);
+	if (update_bright) {
+		curr_temp = (unsigned long)tmon_get_current_temp(true, true);
+		pb_update_max_brightness(curr_temp, pb);
+	}
+}
+
+static int pb_tmon_notify_handler(struct notifier_block *nb,
+				unsigned long curr_temp, void *dev)
+{
+	struct pwm_bl_data *pb = container_of(nb, struct pwm_bl_data, tmon_nb);
+	pb_update_max_brightness(curr_temp, pb);
+
+	return 0;
+}
+#endif /* CONFIG_KONA_TMON */
+
 static int pwm_backlight_probe(struct platform_device *pdev)
 {
 	struct backlight_properties props;
 	struct platform_pwm_backlight_data *data = NULL;
 	struct backlight_device *bl;
 	struct pwm_bl_data *pb;
+#ifdef CONFIG_KONA_TMON
+	int size, i;
+	unsigned long *temp_comp_tbl;
+	int *int_ptr;
+#endif
 	const char *pwm_request_label = NULL;
 	int ret;
 	int bl_delay_on = 0;
@@ -201,6 +289,41 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 			goto err_read;
 		}
 		data->pwm_period_ns = val;
+
+#ifdef CONFIG_KONA_TMON
+		/* Adaptive brightness off by default */
+		data->pb_enable_adapt_bright = false;
+
+		if (!of_property_read_u32(pdev->dev.of_node,
+				"temp_comp_size", &val))
+			data->temp_comp_size = val;
+
+		if (data->temp_comp_size > 0) {
+			temp_comp_tbl = (unsigned long *)of_get_property(
+					pdev->dev.of_node,
+					"temp_comp_tbl", &size);
+			if (!temp_comp_tbl) {
+				ret = -EINVAL;
+				goto err_read;
+			}
+			data->temp_comp_tbl = kzalloc(sizeof(
+					struct pb_temp_comp)*
+					data->temp_comp_size, GFP_KERNEL);
+			if (!data->temp_comp_tbl) {
+				ret = -EINVAL;
+				goto err_alloc;
+			}
+
+			for (i = 0; i < data->temp_comp_size; i++) {
+				data->temp_comp_tbl[i].trigger_temp =
+					be32_to_cpu(*temp_comp_tbl++);
+				int_ptr = (int *) temp_comp_tbl;
+				data->temp_comp_tbl[i].max_brightness =
+					be32_to_cpu(*int_ptr++);
+				temp_comp_tbl = (unsigned long *) int_ptr;
+			}
+		}
+#endif
 
 		if (of_property_read_string(pdev->dev.of_node,
 			"pwm-request-label", &pwm_request_label)) {
@@ -297,6 +420,15 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 	pb->bd_early_suspend.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN;
 	register_early_suspend(&pb->bd_early_suspend);
 #endif
+
+#ifdef CONFIG_KONA_TMON
+	pb->max_brightness = data->max_brightness;
+
+	if (data->temp_comp_size > 0)
+		pb->tmon_nb.notifier_call = pb_tmon_notify_handler;
+#endif
+	pwm_bl_data = pb;
+
 	return 0;
 
 err_bl:
@@ -304,6 +436,9 @@ err_bl:
 err_alloc:
 	if (data->exit)
 		data->exit(&pdev->dev);
+#ifdef CONFIG_KONA_TMON
+	kfree(data->temp_comp_tbl);
+#endif
 err_read:
 	if (pdev->dev.of_node)
 		kfree(data);
@@ -315,6 +450,17 @@ static int pwm_backlight_remove(struct platform_device *pdev)
 	struct platform_pwm_backlight_data *data = pdev->dev.platform_data;
 	struct backlight_device *bl = platform_get_drvdata(pdev);
 	struct pwm_bl_data *pb = dev_get_drvdata(&bl->dev);
+
+#ifdef CONFIG_KONA_TMON
+	if (data->temp_comp_size > 0 && data->pb_enable_adapt_bright)
+		pb_tmon_nb_remove(pb, false);
+	kfree(data->temp_comp_tbl);
+#endif
+#ifdef CONFIG_DEBUG_FS
+	if (dent_pb_root_dir)
+		debugfs_remove_recursive(dent_pb_root_dir);
+#endif
+
 	backlight_device_unregister(bl);
 	pwm_config(pb->pwm, 0, pb->period);
 	pwm_disable(pb->pwm);
@@ -383,6 +529,184 @@ static struct platform_driver pwm_backlight_driver = {
 	.remove		= pwm_backlight_remove,
 	.shutdown	= pwm_backlight_shutdown,
 };
+
+#ifdef CONFIG_DEBUG_FS
+#ifdef CONFIG_KONA_TMON
+static ssize_t pb_get_adapt_bright(struct file *file,
+	char __user *user_buf, size_t count, loff_t *ppos)
+{
+	struct platform_device *pdev;
+	struct platform_pwm_backlight_data *data;
+
+	if (!pwm_bl_data)
+		return -EINVAL;
+
+	pdev = container_of(pwm_bl_data->dev, struct platform_device, dev);
+	data = pdev->dev.platform_data;
+
+	return simple_read_from_buffer(user_buf, count, ppos,
+			data->pb_enable_adapt_bright ? "1\n" : "0\n", 2);
+}
+
+static ssize_t pb_set_adapt_bright(struct file *file,
+	char const __user *buf, size_t count, loff_t *offset)
+{
+	u32 len = 0;
+	char input_str[5];
+	int input;
+	bool old, new;
+	struct platform_device *pdev;
+	struct platform_pwm_backlight_data *data;
+
+	memset(input_str, 0, ARRAY_SIZE(input_str));
+	if (count > ARRAY_SIZE(input_str))
+		len = ARRAY_SIZE(input_str);
+	else
+		len = count;
+
+	if (copy_from_user(input_str, buf, len))
+		return -EFAULT;
+
+	sscanf(&input_str[0], "%d", &input);
+
+	/* Check if input is valid */
+	if (input == 0)
+		new = false;
+	else if (input == 1)
+		new = true;
+	else
+		goto exit;
+
+	if (!pwm_bl_data)
+		return -EINVAL;
+
+	pdev = container_of(pwm_bl_data->dev, struct platform_device, dev);
+	data = pdev->dev.platform_data;
+	old = data->pb_enable_adapt_bright;
+
+	if (!pwm_bl_data)
+		return -EINVAL;
+
+	/* Check if we are enabling or disabling */
+	if (old == false && new == true) {
+		data->pb_enable_adapt_bright = true;
+		pb_tmon_nb_init(pwm_bl_data);
+	} else if (old == true && new == false) {
+		data->pb_enable_adapt_bright = false;
+		pb_tmon_nb_remove(pwm_bl_data, true);
+	}
+
+	return count;
+exit:
+	pr_info("USAGE:\necho <enable> > enable_adapt_bright\n");
+	pr_info("where <enable> is 0 or 1\n");
+	return count;
+}
+
+static const struct file_operations pb_enable_adapt_bright_ops = {
+	.write = pb_set_adapt_bright,
+	.read = pb_get_adapt_bright,
+};
+
+static ssize_t pb_get_temp_tholds(struct file *file,
+	char __user *user_buf, size_t count, loff_t *ppos)
+{
+	u32 len = 0;
+	int i;
+	char out_str[200];
+	struct platform_device *pdev;
+	struct platform_pwm_backlight_data *data;
+
+	memset(out_str, 0, sizeof(out_str));
+	len += snprintf(out_str + len, sizeof(out_str) - len,
+			"Level\t\tLimit Brightness\tThreshold\n");
+	if (!pwm_bl_data)
+		return -EINVAL;
+	pdev = container_of(pwm_bl_data->dev, struct platform_device, dev);
+	data = pdev->dev.platform_data;
+	for (i = 0; i < data->temp_comp_size; i++)
+		len += snprintf(out_str + len, sizeof(out_str) - len,
+		"Level%d:\t\t%d\t\t\t%lu\n", i,
+		data->temp_comp_tbl[i].max_brightness,
+		data->temp_comp_tbl[i].trigger_temp);
+
+	return simple_read_from_buffer(user_buf, count, ppos,
+			out_str, len);
+}
+
+static ssize_t pb_set_temp_tholds(struct file *file,
+	char const __user *buf, size_t count, loff_t *offset)
+{
+	u32 len = 0;
+	char input_str[20];
+	unsigned int num_bright;
+	int next, prev, i, thold;
+	struct platform_device *pdev;
+	struct platform_pwm_backlight_data *data;
+
+	memset(input_str, 0, ARRAY_SIZE(input_str));
+	if (count > ARRAY_SIZE(input_str))
+		len = ARRAY_SIZE(input_str);
+	else
+		len = count;
+
+	if (copy_from_user(input_str, buf, len))
+		return -EFAULT;
+
+	sscanf(&input_str[0], "%d%d", &i, &thold);
+
+	/* Check if index is valid */
+	if (!pwm_bl_data)
+		return -EINVAL;
+	pdev = container_of(pwm_bl_data->dev, struct platform_device, dev);
+	data = pdev->dev.platform_data;
+	num_bright = data->temp_comp_size;
+	if (i < 0 || i >= num_bright)
+		goto exit;
+
+	/* Check if thold is in ascending order */
+	prev = i - 1;
+	next = i + 1;
+
+	if (i > 0)
+		if (thold <= data->temp_comp_tbl[prev].trigger_temp)
+			goto exit;
+	if (i < num_bright - 1)
+		if (thold >= data->temp_comp_tbl[next].trigger_temp)
+			goto exit;
+
+	data->temp_comp_tbl[i].trigger_temp = thold;
+	return count;
+exit:
+	pr_info("USAGE:\necho index thold > temp_tholds\n");
+	pr_info("index range: [0-%d]\ntholds should be in ascending order\n",
+			num_bright - 1);
+	return count;
+}
+
+static const struct file_operations pb_temp_tholds_ops = {
+	.write = pb_set_temp_tholds,
+	.read = pb_get_temp_tholds,
+};
+#endif /* CONFIG_KONA_TMON */
+
+int __init bl_debug_init(void)
+{
+	dent_pb_root_dir = debugfs_create_dir("pwm_bl", NULL);
+#ifdef CONFIG_KONA_TMON
+	if (!debugfs_create_file("enable_adapt_bright",  S_IRUSR | S_IWUSR,
+			dent_pb_root_dir, NULL, &pb_enable_adapt_bright_ops))
+		return -ENOMEM;
+	if (!debugfs_create_file("temp_tholds",  S_IRUSR | S_IWUSR,
+			dent_pb_root_dir, NULL, &pb_temp_tholds_ops))
+		return -ENOMEM;
+#endif
+	return 0;
+}
+
+late_initcall(bl_debug_init);
+
+#endif /* CONFIG_DEBUG_FS */
 
 module_platform_driver(pwm_backlight_driver);
 
