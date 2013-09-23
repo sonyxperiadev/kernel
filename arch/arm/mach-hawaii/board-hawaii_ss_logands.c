@@ -114,8 +114,8 @@
 #include <linux/broadcom/bcm_bzhw.h>
 #endif
 
-#ifdef CONFIG_BCM_BT_LPM
-#include <linux/broadcom/bcmbt_lpm.h>
+#if defined(CONFIG_BCM_BT_LPM)
+#include <linux/broadcom/bcm-bt-lpm.h>
 #endif
 
 #if defined(CONFIG_BCMI2CNFC)
@@ -1209,10 +1209,9 @@ static struct platform_device hawaii_bcm_bzhw_device = {
 #define GPIO_BT_WAKE	32
 #define GPIO_HOST_WAKE	72
 
-static struct bcmbt_platform_data brcm_bt_lpm_data = {
+static struct bcm_bt_lpm_platform_data brcm_bt_lpm_data = {
 	.bt_wake_gpio = GPIO_BT_WAKE,
 	.host_wake_gpio = GPIO_HOST_WAKE,
-	.bt_uart_port = 0,
 };
 
 static struct platform_device board_bcmbt_lpm_device = {

@@ -112,8 +112,8 @@
 #include <linux/broadcom/bcm_bzhw.h>
 #endif
 
-#ifdef CONFIG_BCM_BT_LPM
-#include <linux/broadcom/bcmbt_lpm.h>
+#if defined(CONFIG_BCM_BT_LPM)
+#include <linux/broadcom/bcm-bt-lpm.h>
 #endif
 
 #if defined(CONFIG_BCMI2CNFC)

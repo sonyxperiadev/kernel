@@ -89,9 +89,9 @@ static int return_index(const struct bcmpmu_adc_lut *slist,
  *
  * If there is a lut, we will do linear interpolation to convert a value
  */
-static int bcmpmu_adc_convert(struct bcmpmu59xxx *bcmpmu,
-				enum bcmpmu_adc_channel channel,
-					struct bcmpmu_adc_result *result)
+int bcmpmu_adc_convert(struct bcmpmu59xxx *bcmpmu,
+	enum bcmpmu_adc_channel channel,
+	struct bcmpmu_adc_result *result, bool to_raw)
 {
 	struct bcmpmu_adc *adc = (struct bcmpmu_adc *)bcmpmu->adc;
 	struct bcmpmu_adc_lut *lut;
@@ -430,7 +430,7 @@ int bcmpmu_adc_read(struct bcmpmu59xxx *bcmpmu, enum bcmpmu_adc_channel channel,
 			return -EAGAIN;
 	}
 
-	bcmpmu_adc_convert(bcmpmu, channel, result);
+	bcmpmu_adc_convert(bcmpmu, channel, result, 0);
 
 	return 0;
 }
