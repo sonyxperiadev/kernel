@@ -796,7 +796,7 @@ int mm_csi0_trigger_cap(void)
 	u32 base = V_BASE;
 
 	if (cam_state.trigger) {
-		/* BRCM_WRITE_REG_FIELD(base, CAM_ICTL, FCM, 0x1); */
+		BRCM_WRITE_REG_FIELD(base, CAM_ICTL, FCM, 0x1);
 		BRCM_WRITE_REG_FIELD(base, CAM_ICTL, TFC, 0x1);
 		return 0;
 	} else {
