@@ -994,9 +994,7 @@ static int isl290xx_probe(struct i2c_client *clientp,
 			"prox_boot_cali", &val);
 		isl290xx_cfgp->prox_boot_cali = val;
 #endif
-		ret = of_property_read_u32(np,
-			"scale_factor", &val);
-		if (0 != ret)
+		if (!of_property_read_u32(np, "scale_factor", &val))
 			isl290xx_cfgp->scale_factor = val;
 		else
 			isl290xx_cfgp->scale_factor = 100;

@@ -98,6 +98,7 @@
 			aps_intr_param = <0x20>;
 			prox_offset_param = <0>;
 			prox_boot_cali = <0>;
+			scale_factor = <1000>;
 		};
 
 	};
