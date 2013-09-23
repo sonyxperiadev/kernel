@@ -489,6 +489,9 @@ static int SelCtrlPut(struct snd_kcontrol *kcontrol,
 
 	pSel[0] = ucontrol->value.integer.value[0];
 	pSel[1] = ucontrol->value.integer.value[1];
+	if (stream != CTL_STREAM_PANEL_VOICECALL)
+		pSel[1] = pSel[0];
+
 
 #if defined(CONFIG_MAP_VOIP)
 	/* for voip out/in stream, value[0] used for control,
