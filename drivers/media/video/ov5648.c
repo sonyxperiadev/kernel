@@ -2361,6 +2361,7 @@ static int ov5648_probe(struct i2c_client *client,
 	ov5648->i_fmt = 0;	/* First format in the list */
 	ov5648->plat_parms = icl->priv;
 	ov5648->icd = icd;
+	ov5648->line_length = ov5648_mode[ov5648->mode_idx].line_length_ns;
 
 	ret = ov5648_video_probe(icd, client);
 	if (ret) {
