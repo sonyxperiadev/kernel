@@ -13,7 +13,7 @@
 #include <linux/io.h>
 #include <linux/list.h>
 #include <linux/mutex.h>
-#include <plat/clock.h>
+#include <linux/slab.h>
 #include <plat/kona_pm_dbg.h>
 #include <linux/dma-mapping.h>
 
@@ -61,7 +61,6 @@ static DEFINE_SPINLOCK(pm_logbuf_lock);
 
 /* Snapshot handlers */
 static u32 handle_simple_parm(struct snapshot *s);
-static u32 handle_clk_parm(struct snapshot *s);
 static u32 handle_ahb_reg_parm(struct snapshot *s);
 static u32 handle_user_defined_parm(struct snapshot *s);
 static void snapshot_add_reg(u32 reg, u32 mask, u32 good);
@@ -310,25 +309,6 @@ static u32 handle_simple_parm(struct snapshot *s)
 
 	return ret;
 }
-/* Returns the current use count of the clk */
-static u32 handle_clk_parm(struct snapshot *s)
-{
-	struct clk *clk;
-	u32 ret = 0;
-
-	if (!s)
-		goto err;
-
-	clk = clk_get(NULL, (char *)s->data);
-	if (IS_ERR_OR_NULL(clk))
-		goto err;
-
-	ret = clk_get_usage(clk);
-	clk_put(clk);
-
-err:
-	return ret;
-}
 
 /* Returns the current masked value of the specified register */
 static u32 handle_ahb_reg_parm(struct snapshot *s)
@@ -340,7 +320,7 @@ static u32 handle_ahb_reg_parm(struct snapshot *s)
 		goto err;
 
 	clk = clk_get(NULL, (char *)s->data);
-	if (IS_ERR_OR_NULL(clk))
+	if (IS_ERR(clk))
 		goto err;
 
 	clk_enable(clk);
@@ -436,9 +416,6 @@ void snapshot_table_register(struct snapshot *table, size_t len)
 		switch (snapshot[i].type) {
 		case SNAPSHOT_SIMPLE:
 			snapshot[i].handler = handle_simple_parm;
-			break;
-		case SNAPSHOT_CLK:
-			snapshot[i].handler = handle_clk_parm;
 			break;
 		case SNAPSHOT_AHB_REG:
 			snapshot[i].handler = handle_ahb_reg_parm;

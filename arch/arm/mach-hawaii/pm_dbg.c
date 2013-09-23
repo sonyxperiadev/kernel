@@ -353,13 +353,6 @@ static struct snapshot snapshot[] = {
 	SIMPLE_PARM(HW_FREQ_CHANGE_CNTRL, DDR_PLL_PWRDN_BIT, DDR_PLL_PWRDN_BIT),
 
 	/*
-	 * List of clocks that prevent entry to low power state
-	 */
-	CLK_PARM("dig_ch0_clk"),
-	CLK_PARM("tpiu_clk"),
-	CLK_PARM("pti_clk"),
-
-	/*
 	 * AHB register parms (needs AHB clk enabled before register read)
 	 */
 	AHB_REG_PARM(USB_OTG_P1CTL, 0, (1 << 30), "usb_otg_clk"),
