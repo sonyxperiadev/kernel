@@ -361,7 +361,7 @@ static const struct v4l2_queryctrl ov7692_controls[] = {
 	 .name = "Framerate control",
 	 .minimum = FRAME_RATE_AUTO,
 	 .maximum = (1 << FRAME_RATE_AUTO |
-			1 << FRAME_RATE_10 | 1 << FRAME_RATE_30),
+			1 << FRAME_RATE_30),
 	 .step = 1,
 	 .default_value = FRAME_RATE_AUTO,
 	 },

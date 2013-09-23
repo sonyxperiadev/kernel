@@ -263,7 +263,7 @@ static const struct ov7692_reg hawaii_init_common[] = {
 	{0x7c, 0x00},
 
 	{0x31, 0x83},		/* 15fps=0x87, 7.5fps=0x8f */
-	{0x15, 0xb4},		/* qiuchangping add @20120808 */
+	{0x15, 0x00},		/* qiuchangping add @20120808 */
 	{0x11, 0x00},		/* clock pre-scaler */
 	{0x20, 0x00},		/* max_band_50_h/max_band_60_h */
 	{0x21, 0x57},		/* max_band_50/max_band_B60 */
