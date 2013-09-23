@@ -1695,6 +1695,12 @@ struct pi *pi_mgr_get(int pi_id)
 }
 EXPORT_SYMBOL(pi_mgr_get);
 
+int pi_mgr_initialized(void)
+{
+	return pi_mgr.init;
+}
+EXPORT_SYMBOL(pi_mgr_initialized);
+
 int pi_mgr_init()
 {
 	memset(&pi_mgr, 0, sizeof(pi_mgr));
