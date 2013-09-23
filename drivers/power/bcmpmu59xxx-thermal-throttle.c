@@ -515,7 +515,7 @@ static void bcmpmu_throttle_work(struct work_struct *work)
 	pr_throttle(VERBOSE, "%s called, charger type = %d\n",
 		__func__, tdata->chrgr_type);
 	tdata->throttle_scheduled = true;
-	if (tdata->chrgr_type == PMU_CHRGR_TYPE_DCP) {
+	if (bcmpmu_is_acld_supported(tdata->bcmpmu, tdata->chrgr_type)) {
 		if (tdata->acld_algo_finished) {
 			bcmpmu_throttle_algo(tdata);
 		} else {

@@ -61,7 +61,7 @@ static u32 debug_mask = 0xFF; /* BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT | \
 #define ACLD_DELAY_500			500
 #define ACLD_DELAY_1000			1000
 #define ACLD_DELAY_20			20
-#define ACLD_RETRIES			10
+#define ACLD_RETRIES			100
 #define ACLD_VBUS_MARGIN		200 /* 200mV */
 #define ACLD_VBUS_THRS			5950
 #define ACLD_VBAT_THRS			3500
@@ -116,8 +116,6 @@ static int acld_chargers[] = {
 };
 static bool bcmpmu_usb_mbc_fault_check(struct bcmpmu_acld *acld);
 static int bcmpmu_reset_acld_flags(struct bcmpmu_acld *acld);
-static bool bcmpmu_is_acld_supported(struct bcmpmu_acld *acld,
-		enum bcmpmu_chrgr_type_t chrgr_type);
 static int cmp(const void *a, const void *b)
 {
 	if (*((int *)a) < *((int *)b))
@@ -327,7 +325,6 @@ static void bcmpmu_chrg_on_output(struct bcmpmu_acld *acld)
 	}
 	if (retries <= 0)
 		BUG_ON(1);
-	bcmpmu_set_icc_fc(acld->bcmpmu, acld->pdata->i_def_dcp);
 	bcmpmu_chrgr_usb_en(acld->bcmpmu, 1);
 	pr_acld(INIT, "ACLD disabled and charging on O/P\n");
 }
@@ -623,6 +620,7 @@ static int bcmpmu_acld_algo(struct bcmpmu_acld *acld)
 	bcmpmu_clr_sw_ctrl_chrgr_timer(acld);
 	bcmpmu_post_acld_start_event(acld);
 
+
 	/* Return from ACLD if,
 	 * Charger is quickly removed after insertion.
 	 * */
@@ -649,6 +647,7 @@ static int bcmpmu_acld_algo(struct bcmpmu_acld *acld)
 		pr_acld(ERROR, "System load is +ve, though charging is off\n");
 
 	bcmpmu_acld_enable(acld, true);
+
 	/* set USB_FC_CC at OTP and USB_CC_TRIM at 0*/
 	bcmpmu_set_cc_trim(acld->bcmpmu, PMU_USB_CC_ZERO_TRIM);
 	bcmpmu_set_icc_fc(acld->bcmpmu, PMU_USB_FC_CC_OTP);
@@ -866,7 +865,7 @@ static void bcmpmu_acld_work(struct work_struct *work)
 	bool mbc_cv_stat;
 	bool eoc_status;
 
-	if ((!bcmpmu_is_acld_supported(acld, acld->chrgr_type)) ||
+	if ((!bcmpmu_is_acld_supported(acld->bcmpmu, acld->chrgr_type)) ||
 		(acld->fg_eoc))
 		return;
 	bcmpmu_clr_sw_ctrl_chrgr_timer(acld);
@@ -876,25 +875,14 @@ static void bcmpmu_acld_work(struct work_struct *work)
 		bcmpmu_acld_get_min_input(acld);
 
 	if (!acld->usb_mbc_fault) {
-		/* If the charger driver is not yet ready, retry */
-		ret = bcmpmu_chrgr_usb_en(acld->bcmpmu, 0);
-		if (ret) {
-			pr_acld(ERROR, "Resched ACLD, chrgr driver isn't up\n");
-			if (acld->acld_rtry_cnt++ > ACLD_RETRIES)
-				BUG_ON(1);
-			goto q_work;
-		}
-		acld->acld_rtry_cnt = 0;
-
 		pr_acld(VERBOSE, "USB/MBC Fault check\n");
 		if (!bcmpmu_usb_mbc_fault_check(acld)) {
 			pr_acld(ERROR, "USB/MBC charger fault occured\n");
 			goto q_work;
 		}
-
-		bcmpmu_chrgr_usb_en(acld->bcmpmu, 1);
 		acld->usb_mbc_fault = true;
 	}
+
 	if (!acld->volt_thrs_check) {
 		pr_acld(VERBOSE, "VBUS VBAT thresholds check\n");
 		if (!bcmpmu_is_avg_vbus_vbat_valid(acld)) {
@@ -909,6 +897,21 @@ static void bcmpmu_acld_work(struct work_struct *work)
 		}
 
 		acld->volt_thrs_check = true;
+	}
+
+	if (acld->chrgr_type == PMU_CHRGR_TYPE_SDP) {
+		bcmpmu_post_acld_start_event(acld);
+		if (bcmpmu_is_usb_valid(acld)) {
+			bcmpmu_acld_enable(acld, true);
+			pr_acld(FLOW, "MBC_TURBO enabled for SDP\n");
+		} else if (acld->acld_rtry_cnt++ < ACLD_RETRIES) {
+			pr_acld(FLOW, "acld_rtry_cnt = %d\n",
+					acld->acld_rtry_cnt);
+			goto q_work;
+
+		}
+		bcmpmu_post_acld_end_event(acld);
+		return;
 	}
 
 	if ((!acld->acld_init || acld->acld_re_init) && !acld->fg_eoc) {
@@ -945,7 +948,8 @@ static void bcmpmu_acld_work(struct work_struct *work)
 
 	/* Periodic monitor */
 	if ((acld->bcmpmu->flags & BCMPMU_ACLD_EN) &&
-			(bcmpmu_is_acld_supported(acld, acld->chrgr_type)) &&
+			(bcmpmu_is_acld_supported(acld->bcmpmu,
+						  acld->chrgr_type)) &&
 			(acld->acld_en))
 		bcmpmu_acld_periodic_monitor(acld);
 
@@ -977,11 +981,15 @@ static int bcmpmu_reset_acld_flags(struct bcmpmu_acld *acld)
 	return 0;
 }
 
-static bool bcmpmu_is_acld_supported(struct bcmpmu_acld *acld,
+bool bcmpmu_is_acld_supported(struct bcmpmu59xxx *bcmpmu,
 		enum bcmpmu_chrgr_type_t chrgr_type)
 {
+	struct bcmpmu_acld *acld = (struct bcmpmu_acld *)bcmpmu->acld;
 	int *acld_chrgrs = acld->pdata->acld_chrgrs;
 	int i;
+
+	if (!(acld->bcmpmu->flags & BCMPMU_ACLD_EN))
+		return false;
 
 	for (i = 0; i < acld->pdata->acld_chrgrs_list_size; i++) {
 		if (acld_chrgrs[i] == chrgr_type)
@@ -989,6 +997,7 @@ static bool bcmpmu_is_acld_supported(struct bcmpmu_acld *acld,
 	}
 	return false;
 }
+EXPORT_SYMBOL(bcmpmu_is_acld_supported);
 
 static int bcmpmu_acld_event_handler(struct notifier_block *nb,
 		unsigned long event, void *data)
@@ -1007,7 +1016,7 @@ static int bcmpmu_acld_event_handler(struct notifier_block *nb,
 			bcmpmu_en_sw_ctrl_chrgr_timer(acld, false);
 			bcmpmu_restore_cc_trim_otp(acld);
 		} else if ((acld->bcmpmu->flags & BCMPMU_ACLD_EN) &&
-				(bcmpmu_is_acld_supported(acld,
+				(bcmpmu_is_acld_supported(acld->bcmpmu,
 							  acld->chrgr_type))) {
 			bcmpmu_reset_acld_flags(acld);
 			bcmpmu_en_sw_ctrl_chrgr_timer(acld, true);
@@ -1024,7 +1033,7 @@ static int bcmpmu_acld_event_handler(struct notifier_block *nb,
 			cancel_delayed_work_sync(&acld->acld_work);
 			bcmpmu_en_sw_ctrl_chrgr_timer(acld, false);
 		} else if ((acld->bcmpmu->flags & BCMPMU_ACLD_EN) &&
-				(bcmpmu_is_acld_supported(acld,
+				(bcmpmu_is_acld_supported(acld->bcmpmu,
 							  acld->chrgr_type))) {
 			pr_acld(FLOW, "start ACLD work\n");
 			bcmpmu_en_sw_ctrl_chrgr_timer(acld, true);
@@ -1040,7 +1049,7 @@ static int bcmpmu_acld_event_handler(struct notifier_block *nb,
 			cancel_delayed_work_sync(&acld->acld_work);
 			bcmpmu_en_sw_ctrl_chrgr_timer(acld, false);
 		} else if ((acld->bcmpmu->flags & BCMPMU_ACLD_EN) &&
-				(bcmpmu_is_acld_supported(acld,
+				(bcmpmu_is_acld_supported(acld->bcmpmu,
 							  acld->chrgr_type))) {
 			pr_acld(FLOW, "start ACLD work\n");
 			bcmpmu_en_sw_ctrl_chrgr_timer(acld, true);
@@ -1306,7 +1315,7 @@ static int __devinit bcmpmu_acld_probe(struct platform_device *pdev)
 	/* If the event is missed */
 	bcmpmu_usb_get(bcmpmu, BCMPMU_USB_CTRL_GET_CHRGR_TYPE, &ret);
 	acld->chrgr_type = (enum bcmpmu_chrgr_type_t)ret;
-	if (bcmpmu_is_acld_supported(acld, acld->chrgr_type)) {
+	if (bcmpmu_is_acld_supported(acld->bcmpmu, acld->chrgr_type)) {
 		pr_acld(INIT, "charger inserted, scheduling ACLD work:%s\n",
 				__func__);
 		bcmpmu_en_sw_ctrl_chrgr_timer(acld, true);
@@ -1323,7 +1332,6 @@ unreg_usb_det_nb:
 			&acld->usb_det_nb);
 destroy_workq:
 	destroy_workqueue(acld->acld_wq);
-error:
 	kfree(acld);
 	return 0;
 }

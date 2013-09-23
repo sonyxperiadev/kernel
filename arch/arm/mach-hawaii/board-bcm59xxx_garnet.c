@@ -1021,6 +1021,8 @@ struct bcmpmu_adc_pdata adc_pdata[PMU_ADC_CHANN_MAX] = {
 
 int bcmpmu_acld_chargers[] = {
 	PMU_CHRGR_TYPE_DCP,
+	PMU_CHRGR_TYPE_SDP,
+	PMU_CHRGR_TYPE_TYPE2,
 };
 
 struct bcmpmu_acld_pdata acld_pdata = {

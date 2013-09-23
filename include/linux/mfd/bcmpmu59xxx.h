@@ -979,6 +979,8 @@ int bcmpmu_set_chrgr_def_current(struct bcmpmu59xxx *bcmpmu,
 
 bool bcmpmu_is_acld_enabled(struct bcmpmu59xxx *bcmpmu);
 
+bool bcmpmu_is_acld_supported(struct bcmpmu59xxx *bcmpmu,
+		enum bcmpmu_chrgr_type_t chrgr_type);
 /* ADC */
 int bcmpmu_adc_read(struct bcmpmu59xxx *bcmpmu, enum bcmpmu_adc_channel channel,
 		enum bcmpmu_adc_req req, struct bcmpmu_adc_result *result);
