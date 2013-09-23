@@ -15,6 +15,7 @@ the GPL, without Broadcom's express prior written consent.
 #define pr_fmt(fmt) "v3d_user: " fmt
 
 #include <linux/kernel.h>
+#include <linux/slab.h>
 #include <mach/irqs.h>
 #include <mach/clock.h>
 #include <mach/rdb/brcm_rdb_sysmap.h>

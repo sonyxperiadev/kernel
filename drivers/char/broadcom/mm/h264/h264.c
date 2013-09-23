@@ -20,7 +20,9 @@ the GPL, without Broadcom's express prior written consent.
 #include <linux/mm.h>
 #include <linux/fs.h>
 #include <linux/io.h>
+#include <linux/slab.h>
 #include <linux/broadcom/mm_fw_hw_ifc.h>
+#include <mach/clock.h>
 #include "h264.h"
 
 struct h264_device_t {

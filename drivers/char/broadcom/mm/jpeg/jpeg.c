@@ -13,6 +13,7 @@ the GPL,  without Broadcom's express prior written consent.
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/mm.h>
+#include <linux/slab.h>
 #include <linux/fs.h>
 #include <linux/io.h>
 #include <mach/irqs.h>

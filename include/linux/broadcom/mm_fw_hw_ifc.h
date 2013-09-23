@@ -41,7 +41,6 @@ the GPL, without Broadcom's express prior written consent.
 #include <linux/miscdevice.h>
 #include <linux/sched.h>
 
-#include <plat/clock.h>
 #include <linux/workqueue.h>
 
 #include "mm_fw_usr_ifc.h"

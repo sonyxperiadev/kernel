@@ -14,11 +14,13 @@ the GPL, without Broadcom's express prior written consent.
 #define pr_fmt(fmt) "<%s::%s::%d> " fmt "\n", common->mm_common_ifc.mm_name,\
 				 __func__, __LINE__ \
 
+#include <linux/slab.h>
 #include "mm_common.h"
 #include "mm_core.h"
 #include "mm_dvfs.h"
 #include "mm_prof.h"
 #include <mach/memory.h>
+#include <plat/clock.h> /* for clk_reset() */
 
 
 /* The following varliables in this block shall

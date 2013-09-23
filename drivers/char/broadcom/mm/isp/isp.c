@@ -30,6 +30,7 @@ the GPL, without Broadcom's express prior written consent.
 #include <linux/mm.h>
 #include <linux/bootmem.h>
 #include <linux/dma-mapping.h>
+#include <linux/slab.h>
 
 #include "mm_isp.h"
 #include <mach/rdb/brcm_rdb_sysmap.h>

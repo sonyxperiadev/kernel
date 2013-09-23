@@ -18,9 +18,11 @@ the GPL, without Broadcom's express prior written consent.
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/mm.h>
+#include <linux/slab.h>
 #include <linux/fs.h>
 #include <linux/io.h>
 #include <linux/broadcom/mm_fw_hw_ifc.h>
+#include <mach/clock.h>
 #include "v3d.h"
 #define v3d_device_t struct _v3d_device_t
 

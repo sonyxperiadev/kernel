@@ -26,6 +26,7 @@ the GPL, without Broadcom's express prior written consent.
 #include <mach/clock.h>
 #include <linux/io.h>
 #include <linux/clk.h>
+#include <linux/slab.h>
 #include <linux/uaccess.h>
 #include <linux/vmalloc.h>
 #include <linux/mm.h>
