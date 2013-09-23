@@ -80,6 +80,9 @@
 
 #include <plat/chal/chal_aci.h>
 #include <plat/kona_mic_bias.h>
+
+#include <linux/suspend.h>
+
 /*
  * The gpio_set_debounce expects the debounce argument in micro seconds
  * Previously the kona implementation which is called from gpio_set_debounce
@@ -210,6 +213,8 @@ struct mic_t {
 #ifdef CONFIG_HEADSET_PERIODIC_CHECK
 	struct delayed_work headset_check_work;
 #endif
+	struct notifier_block pm_nb;
+	atomic_t hs_suspended;
 };
 
 static struct mic_t *mic_dev;
@@ -791,6 +796,22 @@ static void button_work_func(struct work_struct *work)
 					goto out;
 				/* Notify the same to input sub-system */
 				p->button_state = BUTTON_PRESSED;
+
+
+		/*
+		* Only send the key down event once the input device
+		* resume is finished. Otherwise, the long press hook key
+		* may not work in sleep mode.
+		* The long press headset hook key is detected as a short press.
+		* The root cause is after the key down event sent, the
+		* input_reset_device will send a key up event in the device
+		* resume process.
+		* Only send key down event after input device resume finished.
+		* So no key up event will be sent in the input_reset_device.
+		*/
+				while (atomic_read(&p->hs_suspended))
+					msleep(30);
+
 				pr_info(" Sending Key Press\r\n");
 				pr_info("\n Button pressed =%d\n", button_name);
 				input_report_key(p->headset_button_idev,
@@ -1189,6 +1210,25 @@ static void headset_check_work_func(struct work_struct *work)
 #endif
 }
 #endif
+
+
+static int hs_pm_notify(struct notifier_block *nb,
+			       unsigned long mode, void *_unused)
+{
+	struct mic_t *p = container_of(nb, struct mic_t, pm_nb);
+
+	switch (mode) {
+	case PM_SUSPEND_PREPARE:
+		atomic_set(&p->hs_suspended, 1);
+		break;
+	case PM_POST_SUSPEND:
+		atomic_set(&p->hs_suspended, 0);
+		break;
+	}
+
+	return 0;
+}
+
 
 static void __handle_accessory_inserted(struct mic_t *p)
 {
@@ -2457,6 +2497,10 @@ defined(CONFIG_MACH_HAWAII_SS_CS02_REV00)
 goto err1;
 		}
 	}
+
+	atomic_set(&mic->hs_suspended, 0);
+	mic->pm_nb.notifier_call = hs_pm_notify;
+	register_pm_notifier(&mic->pm_nb);
 
 #ifdef DEBUG
 	dump_hw_regs(mic);
