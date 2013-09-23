@@ -32,7 +32,6 @@
 #include <mach/rdb/brcm_rdb_chipreg.h>
 #include <mach/memory.h>
 #include <plat/pi_mgr.h>
-#include <plat/clock.h>
 #include <linux/usb/bcm_hsotgctrl.h>
 #include <linux/usb/bcm_hsotgctrl_phy_mdio.h>
 #include <linux/of.h>
@@ -530,21 +529,6 @@ static irqreturn_t bcm_hsotgctrl_wake_irq(int irq, void *dev)
 
 	return IRQ_HANDLED;
 }
-
-int bcm_hsotgctrl_get_clk_count(void)
-{
-	struct bcm_hsotgctrl_drv_data *bcm_hsotgctrl_handle =
-		local_hsotgctrl_handle;
-
-	if (NULL == local_hsotgctrl_handle)
-		return -ENODEV;
-
-	if (!bcm_hsotgctrl_handle->dev)
-		return -EIO;
-
-	return clk_get_usage(bcm_hsotgctrl_handle->otg_clk);
-}
-EXPORT_SYMBOL_GPL(bcm_hsotgctrl_get_clk_count);
 
 int bcm_hsotgctrl_handle_bus_suspend(void)
 {
