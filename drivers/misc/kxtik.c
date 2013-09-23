@@ -115,13 +115,13 @@ struct kxtik_data {
 	atomic_t acc_enabled;
 	atomic_t acc_input_event;
 	atomic_t acc_enable_resume;
-	struct timer_list timer;
 	struct mutex data_mutex;
 #ifdef CONFIG_HAS_EARLYSUSPEND
 	struct early_suspend early_suspend;
 #endif				/* CONFIG_HAS_EARLYSUSPEND */
 };
 
+static struct timer_list kxtik_wakeup_timer;
 static int kxtik_offset[3];
 
 static int kxtik_i2c_read(struct kxtik_data *tik, u8 addr, u8 * data, int len)
@@ -217,7 +217,8 @@ void kxtik1004_timer_func(unsigned long data)
 {
 	struct kxtik_data *tik = (struct kxtik_data *) data;
 	queue_work(tik->irq_workqueue, &tik->irq_work);
-	mod_timer(&tik->timer, jiffies+msecs_to_jiffies(tik->poll_interval));
+	mod_timer(&kxtik_wakeup_timer,
+		jiffies+msecs_to_jiffies(tik->poll_interval));
 }
 
 static void kxtik_irq_work(struct work_struct *work)
@@ -570,8 +571,12 @@ static ssize_t kxtik_set_enable(struct device *dev, struct device_attribute
 
 	/* Lock the device to prevent races with open/close (and itself) */
 
-	if (enable)
+	if (enable) {
 		kxtik_enable(tik);
+		if (!client->irq)
+			mod_timer(&kxtik_wakeup_timer,
+				jiffies+msecs_to_jiffies(tik->poll_interval));
+	}
 	else
 		kxtik_disable(tik);
 	mutex_unlock(&tik->data_mutex);
@@ -657,8 +662,8 @@ void kxtik_earlysuspend_suspend(struct early_suspend *h)
 					      early_suspend);
 	int err;
 	pr_debug("kxtik_earlysuspend_suspend\n");
-
-	del_timer(&tik->timer);
+	if (!tik->client->irq)
+		del_timer_sync(&kxtik_wakeup_timer);
 	cancel_work_sync(&tik->irq_work);
 	err = kxtik_standby(tik);
 	if (err < 0)
@@ -678,11 +683,9 @@ void kxtik_earlysuspend_resume(struct early_suspend *h)
 		err = kxtik_operate(tik);
 		if (err < 0)
 			FUNCDBG("earlysuspend failed to resume\n");
-		else {
-			setup_timer(&tik->timer, kxtik1004_timer_func, (unsigned long)tik) ;
-			mod_timer(&tik->timer,
-			jiffies+msecs_to_jiffies(tik->poll_interval));
-		}
+		else if (!tik->client->irq)
+			mod_timer(&kxtik_wakeup_timer,
+				jiffies+msecs_to_jiffies(tik->poll_interval));
 	}
 
 	return;
@@ -813,9 +816,10 @@ static int __devinit kxtik_probe(struct i2c_client *client,
 		}
 	} else {
 		printk(KERN_ALERT "__kxtik is in polling mode__\n");
-		setup_timer(&tik->timer, kxtik1004_timer_func, (unsigned long)tik);
-		mod_timer(&tik->timer,
-		jiffies+msecs_to_jiffies(tik->poll_interval));
+		setup_timer(&kxtik_wakeup_timer,
+			kxtik1004_timer_func, (unsigned long)tik);
+		mod_timer(&kxtik_wakeup_timer,
+			jiffies+msecs_to_jiffies(tik->poll_interval));
 		tik->int_ctrl = 0x10; /* reset value, no interrupt support. */
 	}
 
