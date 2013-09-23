@@ -1470,7 +1470,7 @@ exit5:
 	if (s_akm->irq)
 		free_irq(s_akm->irq, s_akm);
 exit4:
-#if CONFIG_HAS_EARLYSUSPEND
+#ifdef CONFIG_HAS_EARLYSUSPEND
 	unregister_early_suspend(&s_akm->akm_early_suspend);
 #endif
 	input_unregister_device(s_akm->input);
@@ -1498,7 +1498,7 @@ static int akm8975_remove(struct i2c_client *client)
 		free_irq(client->irq, akm);
 		gpio_free(akm->irq);
 	}
-#if CONFIG_HAS_EARLYSUSPEND
+#ifdef CONFIG_HAS_EARLYSUSPEND
 	unregister_early_suspend(&s_akm->akm_early_suspend);
 #endif
 	input_unregister_device(akm->input);
