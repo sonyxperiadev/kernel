@@ -1,4 +1,4 @@
-/* Java_c_edn000_4Gb Dts file */
+/* Java_garnet_edn000_4Gb Dts file */
 
 /dts-v1/;
 
@@ -109,7 +109,7 @@
 		kxtik@0f {
                         compatible = "bcm,kxtik";
                         reg = <0x0f>;
-                        gpio-irq-pin = <1>;
+                        gpio-irq-pin = <0>;
                         min_interval = <5>;
                         poll_interval = <200>;
                         axis_map_x = <0>;
@@ -207,6 +207,7 @@
 		iova_begin  = <0x80000000>;
 		iova_size   = <0x80000000>;
 		errbuf_size = <0x00001000>;
+		skip_enable = <1>;
 	};
 
 	iovmm_mm: iovmm-mm {
@@ -251,7 +252,7 @@
 		type = <2>;
 		base  = <0x90000000>;
 		limit = <0xa0000000>;
-		size  = <0x00000000>;
+		size  = <0x01000000>;
 		lmk_enable = <0>;
 		lmk_min_score_adj = <411>;
 		lmk_min_free = <32>;
@@ -390,7 +391,7 @@
 		compatible = "bcm,memc";
 		reg = <0x35008000 0x1000>;
 		interrupts = <0 61 4>;
-		flags = <0x73>;
+		flags = <0xF3>;
 		chipreg_base = <0x35004000 0x1000>;
 		memc0_aphy_base = <0x35008400 0x1000>;
 		seq_busy_val = <2>;
@@ -445,6 +446,12 @@
 		peri-clk-rate = <48000000>;
 		vddo-regulator-name = "vdd_sdio";
 		vddsdxc-regulator-name = "vdd_sdxc";
+	};
+
+	timer {
+		compatible = "arm,armv7-timer";
+		interrupts = <1 13 0xf08>,
+					<1 14 0xf08>;
 	};
 
 	wifi-driver {
@@ -509,4 +516,10 @@
 			gpios = <&gpio 9 0>;
 		};
 	};
+
+	secure_mem {
+		sec-mem-base = <0x9d800000>;
+		sec-mem-size = <0x100000>;
+	};
+
 };
