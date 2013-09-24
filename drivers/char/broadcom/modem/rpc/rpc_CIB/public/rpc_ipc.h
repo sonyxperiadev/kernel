@@ -217,6 +217,9 @@ typedef enum {
 
 	RPC_PROP_AUDIO_MODE,
 
+	/* 32bit Grip sensor status */
+	RPC_PROP_GRIP_SENSOR_STAT,
+
 	RPC_PROP_END_AP = IPC_PROPERTY_END_AP,
 
 	/* ( CP is Read/Write, AP is Read only ) */
