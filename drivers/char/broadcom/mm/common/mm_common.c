@@ -62,7 +62,7 @@ void mm_common_cache_clean(void)
 void mm_common_enable_clock(struct mm_common *common)
 {
 	if (common->mm_common_ifc.mm_hw_is_on == 0) {
-		if (common->common_clk) {
+		if (!IS_ERR(common->common_clk)) {
 			clk_enable(common->common_clk);
 			if (strncmp(common->mm_common_ifc.mm_name,
 							"mm_h264", 7))
@@ -82,7 +82,7 @@ void mm_common_disable_clock(struct mm_common *common)
 	common->mm_common_ifc.mm_hw_is_on--;
 
 	if (common->mm_common_ifc.mm_hw_is_on == 0) {
-		if (common->common_clk)
+		if (!IS_ERR(common->common_clk))
 			clk_disable(common->common_clk);
 
 		raw_notifier_call_chain(&common->mm_common_ifc.notifier_head, \
@@ -780,14 +780,16 @@ void *mm_fmwk_register(const char *name, const char *clk_name,
 	RAW_INIT_NOTIFIER_HEAD(&(common->mm_common_ifc.notifier_head));
 	sema_init(&common->device_sem, 1);
 
+	common->common_clk = ERR_PTR(-ENODEV);
+
 	/*get common clock*/
 	if (clk_name) {
 		common->common_clk = clk_get(NULL, clk_name);
-		if (!common->common_clk) {
+		if (IS_ERR(common->common_clk)) {
 			pr_err("error get clock %s for %s dev", clk_name, name);
-			ret = -EIO;
-			}
+			ret = PTR_ERR(common->common_clk);
 		}
+	}
 
 	common->mm_common_ifc.mm_name = kmalloc(strlen(name)+1, GFP_KERNEL);
 	strncpy(common->mm_common_ifc.mm_name, name, strlen(name) + 1);

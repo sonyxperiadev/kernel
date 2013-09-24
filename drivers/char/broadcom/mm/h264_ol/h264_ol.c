@@ -99,7 +99,7 @@ int __init h264_ol_separate_init(void)
 	mdev.parent = NULL;
 
 	h264_clk = clk_get(NULL, "h264_axi_clk");
-	if (h264_clk == NULL)
+	if (IS_ERR(h264_clk))
 		return -1;
 
 	/* Map the H264 registers */
