@@ -114,8 +114,9 @@
 #include <linux/broadcom/bcmbt_lpm.h>
 #endif
 
-
-
+#ifdef CONFIG_MOBICORE_DRIVER
+#include <linux/broadcom/mobicore.h>
+#endif
 
 #if defined(CONFIG_BMP18X) || defined(CONFIG_BMP18X_I2C) || defined(CONFIG_BMP18X_I2C_MODULE)
 #include <linux/bmp18x.h>
@@ -222,6 +223,14 @@ hawaii_wifi_status_register(void (*callback) (int card_present, void *dev_id),
 #define TSC_GPIO_WAKEUP_PIN         70
 
 #define TANGO_I2C_TS_DRIVER_NUM_BYTES_TO_READ	14
+
+#ifdef CONFIG_MOBICORE_DRIVER
+struct mobicore_data mobicore_plat_data = {
+	.name = "mobicore",
+	.mobicore_base = 0x9d900000,
+	.mobicore_size = 0x00300000,
+};
+#endif
 
 #ifdef CONFIG_ION_BCM_NO_DT
 struct ion_platform_data ion_system_data = {
