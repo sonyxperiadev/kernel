@@ -38,6 +38,9 @@
 #include <mach/irqs.h>
 #include <mach/memory.h>
 #include <mach/dormant.h>
+#ifdef CONFIG_MOBICORE_DRIVER
+#include <mach/sec_api.h>
+#endif
 #ifdef CONFIG_USE_ARCH_TIMER_AS_LOCAL_TIMER
 #include <linux/clockchips.h>
 #endif
@@ -289,7 +292,10 @@ int __enter_drmt(u32 ctrl_params)
 			svc = CORE_DORMANT;
 		else
 			svc = FULL_DORMANT_L2_ON;
-
+#ifdef CONFIG_MOBICORE_DRIVER
+	if ((cpu == 0) && !mobicore_sleep_ready())
+		return 0;
+#endif
 		dormant_enter(svc);
 	} else
 		enter_wfi();

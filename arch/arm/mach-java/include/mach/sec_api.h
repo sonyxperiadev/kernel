@@ -60,6 +60,7 @@
 
 #ifdef CONFIG_MOBICORE_DRIVER
 u32 mobicore_smc(u32 cmd, u32 arg1, u32 arg2, u32 arg3);
+extern bool mobicore_sleep_ready(void);
 #define SMC_CMD_SLEEP		(-3)
 #endif
 
