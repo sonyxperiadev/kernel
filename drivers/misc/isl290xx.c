@@ -655,7 +655,7 @@ static ssize_t isl290xx_set_offset(struct device *dev,
 	}
 	return count;
 }
-static DEVICE_ATTR(offset,  S_IRUGO | S_IWUSR | S_IWGRP | S_IWOTH,
+static DEVICE_ATTR(offset,  S_IRUGO | S_IWUSR | S_IWGRP ,
 	isl290xx_get_offset, isl290xx_set_offset);
 #endif
 
