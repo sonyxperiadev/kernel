@@ -215,7 +215,8 @@ dtb-$(CONFIG_ARCH_HAWAII) += hawaii_garnet_edn020.dtb \
 	hawaii_garnet_edn020_4Gb.dtb \
 	hawaii_garnet_edn020_soc_4Gb.dtb \
 	hawaii_garnet_edn020_soc_2Gb.dtb
-dtb-$(CONFIG_ARCH_JAVA) += java_edn000.dtb
+dtb-$(CONFIG_ARCH_JAVA) += java_edn000.dtb \
+	java_edn000_4Gb.dtb
 
 DTB_NAMES := $(subst $\",,$(CONFIG_BUILD_ARM_APPENDED_DTB_IMAGE_NAMES))
 ifneq ($(DTB_NAMES),)
