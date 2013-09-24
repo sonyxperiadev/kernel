@@ -178,8 +178,6 @@ static ssize_t bcm_fuse_net_proc_write(struct file *procFp,
 	int proc_c_id;
 	int proc_sim_id;
 
-	BNET_DEBUG(DBG_INFO, "%s: New user settings %s\n", __FUNCTION__, ubuff);
-
 	if (len > BCM_FUSE_NET_PROC_MAX_STR_LEN) {
 		BNET_DEBUG(DBG_INFO, "%s: New settings string is too long!\n",
 			   __FUNCTION__);
@@ -1129,8 +1127,6 @@ static ssize_t bcm_fuse_net_wl_proc_write(struct file *procFp,
 	char uStr[BCM_FUSE_NET_PROC_MAX_STR_LEN];
 	int length = len;
 
-	BNET_DEBUG(DBG_INFO, "%s: enable - %s\n", __func__, ubuff);
-
 	if (len > BCM_FUSE_NET_PROC_MAX_STR_LEN) {
 		BNET_DEBUG(DBG_INFO, "%s: input string is too long!\n",
 		__func__);
@@ -1143,6 +1139,9 @@ static ssize_t bcm_fuse_net_wl_proc_write(struct file *procFp,
 			"%s: Failed to get flag from input string!\n",
 			__func__);
 	} else {
+		BNET_DEBUG(DBG_INFO, "%s: enable - %d\n",
+			__func__, whitelist_info.ui_enabled);
+
 		if (whitelist_info.ui_enabled &&
 			(!whitelist_info.tcp_list_full))
 			set_ipc_property_wl_flag(1);
