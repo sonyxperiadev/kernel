@@ -2751,7 +2751,7 @@ static int bcmpmu_fg_get_properties(struct power_supply *psy,
 			val->intval = POWER_SUPPLY_HEALTH_GOOD;
 		break;
 	case POWER_SUPPLY_PROP_FULL_BAT:
-		val->intval =  fg->capacity_info.max_design;
+		val->intval =  fg->pdata->batt_prop->one_c_rate;
 		break;
 	case POWER_SUPPLY_PROP_MODEL_NAME:
 		if (fg->pdata->batt_prop->model)
