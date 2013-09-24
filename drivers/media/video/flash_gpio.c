@@ -77,7 +77,7 @@ static void timeout_func(unsigned long lparam)
 void gpio_flash_flash_on(unsigned long timeout)
 {
 	timer.data = (unsigned long) msg;
-	timer.expires = jiffies + (timeout)/1000000;
+	timer.expires = jiffies + (timeout * HZ)/1000000;
 	timer.function = timeout_func;
 	add_timer(&timer);
 

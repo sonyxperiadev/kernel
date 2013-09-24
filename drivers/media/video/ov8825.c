@@ -1545,7 +1545,7 @@ static int ov8825_rbgains_update(struct i2c_client *client)
 /* ov8825 use internal vcm driver, the same i2c client */
 #define OV8825_VCM_STEP_PERIOD_US       800    /* in microseconds */
 #define OV8825_VCM_MAX_POSITION   1023
-#define OV8825_VCM_START_POINT 200
+#define OV8825_VCM_START_POINT 0
 #define OV8825_VCM_MIN_POSITION   0
 #define OV8825_DAC_A_VCM_LOW 0x3618
 #define OV8825_DAC_A_VCM_MID0 0x3619
@@ -2358,11 +2358,11 @@ int set_flash_mode(struct i2c_client *client, int mode)
 			gpio_flash_torch_on();
 		} else if (mode == FLASH_MODE_ON) {
 			ov8825->flash_timeout =
-				5 * (ov8825->vts * ov8825->line_length)/1000;
+				3 * (ov8825->vts * ov8825->line_length)/1000;
 			gpio_flash_flash_on(ov8825->flash_timeout);
 		} else if (mode == FLASH_MODE_AUTO) {
 			ov8825->flash_timeout =
-				5 * (ov8825->vts * ov8825->line_length)/1000;
+				3 * (ov8825->vts * ov8825->line_length)/1000;
 			gpio_flash_flash_on(ov8825->flash_timeout);
 		} else {
 			return -EINVAL;
@@ -2500,8 +2500,8 @@ static int ov8825_init(struct i2c_client *client)
 	ov8825->exposure_current  = 10000;
 	ov8825->exp_read_buf[0] = 6032;
 	ov8825->exp_read_buf[1] = 6032;
-	ov8825->gain_read_buf[0] = 31;
-	ov8825->gain_read_buf[1] = 31;
+	ov8825->gain_read_buf[0] =  (ov8825->gain_current  & 0x3fff) >> 4;
+	ov8825->gain_read_buf[1] =  (ov8825->gain_current  & 0x3fff) >> 4;
 	ov8825->aecpos_delay      = 2;
 	ov8825->lenspos_delay     = 0;
 	ov8825->flashmode         = FLASH_MODE_OFF;
