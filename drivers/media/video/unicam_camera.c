@@ -1442,7 +1442,10 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 				}
 			}
 			if (likely(unicam_dev->skip_frames <= 0)) {
+				spin_lock_irqsave(&unicam_dev->lock, flags);
 				list_del_init(&to_unicam_camera_vb(vb)->queue);
+				spin_unlock_irqrestore(&unicam_dev->lock,
+								flags);
 				do_gettimeofday(&vb->v4l2_buf.timestamp);
 				vb->v4l2_planes[0].bytesused = 0;
 
