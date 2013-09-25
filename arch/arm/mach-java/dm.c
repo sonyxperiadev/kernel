@@ -476,7 +476,6 @@ void dormant_enter(u32 svc)
 	u32 cdc_states;
 	int cdc_resp;
 	u32 drmt_status = DORMANT_ENTRY_FAILURE;
-	bool fd = false;
 	bool restore_gic = true;
 	bool retry;
 	u32 cpu;
@@ -630,7 +629,6 @@ void dormant_enter(u32 svc)
 			/*No break continue...*/
 		case CDC_STATUS_RESDFS_SHORT:
 		(*((u32 *)(&__get_cpu_var(cdm_success))))++;
-			fd = false;
 			cdc_resp = cdc_send_cmd_for_core(CDC_CMD_SDEC, cpu);
 			break;
 
@@ -651,6 +649,16 @@ void dormant_enter(u32 svc)
 				restore_gic = true;
 				restore_proc_clk_regs();
 				restore_addnl_regs();
+				/*restore GIC shared reg*/
+				gic_distributor_set_enabled(false,
+						    (u32)KONA_GICDIST_VA);
+				restore_gic_distributor_shared((void *)
+						       gic_dist_shared_data,
+						       (u32)KONA_GICDIST_VA,
+						       false);
+				gic_distributor_set_enabled(true,
+					(u32)KONA_GICDIST_VA);
+
 				if (cdc_get_pwr_status() ==
 					CDC_PWR_DRMNT_L2_OFF)
 					l2_off_cnt++;
@@ -699,8 +707,6 @@ void dormant_enter(u32 svc)
 			cdc_resp = cdc_send_cmd_for_core(CDC_CMD_MDEC, cpu);
 			cdc_set_override(IS_IDLE_OVERRIDE, 0x180);
 			cdc_master_clk_gating_en(true);
-
-			fd = true;
 			break;
 
 		case CDC_STATUS_RESFD_SHORT_WAIT:
@@ -724,17 +730,6 @@ void dormant_enter(u32 svc)
 	restore_control_registers((void *)__get_cpu_var(control_data),
 					  false);
 	restore_v7_debug((void *)__get_cpu_var(debug_data));
-
-	if (fd) {
-		gic_distributor_set_enabled(false,
-						    (u32)KONA_GICDIST_VA);
-		restore_gic_distributor_shared((void *)
-						       gic_dist_shared_data,
-						       (u32)KONA_GICDIST_VA,
-						       false);
-		gic_distributor_set_enabled(true, (u32)KONA_GICDIST_VA);
-
-	}
 
 	/*For Java, GIC gets powered down only during
 	cluster dormant.
