@@ -169,10 +169,10 @@
 #include <linux/broadcom/wd-tapper.h>
 #endif
 
-#if defined(CONFIG_TOUCHSCREEN_BCMTCH15XXX)		|| \
-defined(CONFIG_TOUCHSCREEN_BCMTCH15XXX_MODULE)
+#if defined(CONFIG_TOUCHSCREEN_BCM15500) || \
+defined(CONFIG_TOUCHSCREEN_BCM15500_MODULE)
 #include <linux/i2c/bcmtch15xxx.h>
-#include <linux/i2c/bcmtch15xxx_settings.h>
+#include <linux/i2c/bcm15500_settings.h>
 #endif
 
 #ifdef CONFIG_USB_DWC_OTG
@@ -1225,42 +1225,36 @@ late_initcall(hawaii_camera_init);
 /* Remove this comment when camera data for Hawaii is updated */
 
 
-#if defined(CONFIG_TOUCHSCREEN_BCMTCH15XXX)		|| \
-defined(CONFIG_TOUCHSCREEN_BCMTCH15XXX_MODULE)
-static int BCMTCH_TSP_PowerOnOff(bool on)
-{
-	/* PLACE TOUCH CONTROLLER REGULATOR CODE HERE . SEE STEP 6 */
-	return 0;
-}
 
-static struct bcmtch_platform_data bcmtch15xxx_i2c_platform_data = {
-	.i2c_bus_id		= BCMTCH_HW_I2C_BUS_ID,
-	.i2c_addr_spm		= BCMTCH_HW_I2C_ADDR_SPM,
-	.i2c_addr_sys		= BCMTCH_HW_I2C_ADDR_SYS,
+#if defined(CONFIG_TOUCHSCREEN_BCM15500) ||\
+defined(CONFIG_TOUCHSCREEN_BCM15500_MODULE)
 
-	.gpio_interrupt_pin	= BCMTCH_HW_GPIO_INTERRUPT_PIN,
-	.gpio_interrupt_trigger	= BCMTCH_HW_GPIO_INTERRUPT_TRIGGER,
+static struct bcmtch_platform_data bcm15500_i2c_platform_data = {
+	.i2c_bus_id       = BCMTCH_HW_I2C_BUS_ID,
+	.i2c_addr_spm = BCMTCH_HW_I2C_ADDR_SPM,
+	.i2c_addr_sys   = BCMTCH_HW_I2C_ADDR_SYS,
 
-	.gpio_reset_pin		= BCMTCH_HW_GPIO_RESET_PIN,
-	.gpio_reset_polarity	= BCMTCH_HW_GPIO_RESET_POLARITY,
-	.gpio_reset_time_ms	= BCMTCH_HW_GPIO_RESET_TIME_MS,
+	.gpio_interrupt_pin       = BCMTCH_HW_GPIO_INTERRUPT_PIN,
+	.gpio_interrupt_trigger = BCMTCH_HW_GPIO_INTERRUPT_TRIGGER,
 
-	.ext_button_count	= BCMTCH_HW_BUTTON_COUNT,
-	.ext_button_map		= bcmtch_hw_button_map,
+	.gpio_reset_pin           = BCMTCH_HW_GPIO_RESET_PIN,
+	.gpio_reset_polarity   = BCMTCH_HW_GPIO_RESET_POLARITY,
+	.gpio_reset_time_ms = BCMTCH_HW_GPIO_RESET_TIME_MS,
 
-	.axis_orientation_flag	=
+	.ext_button_count = BCMTCH_HW_BUTTON_COUNT,
+	.ext_button_map   = bcmtch_hw_button_map,
+
+	.axis_orientation_flag =
 		((BCMTCH_HW_AXIS_REVERSE_X << BCMTCH_AXIS_FLAG_X_BIT_POS)
 		|(BCMTCH_HW_AXIS_REVERSE_Y << BCMTCH_AXIS_FLAG_Y_BIT_POS)
 		|(BCMTCH_HW_AXIS_SWAP_X_Y << BCMTCH_AXIS_FLAG_X_Y_BIT_POS)),
-	.bcmtch_on = BCMTCH_TSP_PowerOnOff,
-
 };
 
-static struct i2c_board_info __initdata bcmtch15xxx_i2c_boardinfo[] = {
+static struct i2c_board_info __initdata bcm15500_i2c_boardinfo[] = {
 	{
 		I2C_BOARD_INFO(BCMTCH15XXX_NAME, BCMTCH_HW_I2C_ADDR_SPM),
-		.platform_data	= &bcmtch15xxx_i2c_platform_data,
-		.irq		= gpio_to_irq(BCMTCH_HW_GPIO_INTERRUPT_PIN),
+		.platform_data  = &bcm15500_i2c_platform_data,
+		.irq	= gpio_to_irq(BCMTCH_HW_GPIO_INTERRUPT_PIN),
 	},
 };
 #endif
@@ -1346,13 +1340,12 @@ static void __init hawaii_add_i2c_devices(void)
 	i2c_register_board_info(3, icn83xx_info, ARRAY_SIZE(icn83xx_info));
 #endif
 
-#if defined(CONFIG_TOUCHSCREEN_BCMTCH15XXX)	|| \
-defined(CONFIG_TOUCHSCREEN_BCMTCH15XXX_MODULE)
-	i2c_register_board_info(bcmtch15xxx_i2c_platform_data.i2c_bus_id,
-		bcmtch15xxx_i2c_boardinfo,
-		ARRAY_SIZE(bcmtch15xxx_i2c_boardinfo));
+#if defined(CONFIG_TOUCHSCREEN_BCM15500) ||\
+defined(CONFIG_TOUCHSCREEN_BCM15500_MODULE)
+	i2c_register_board_info(bcm15500_i2c_platform_data.i2c_bus_id,
+		bcm15500_i2c_boardinfo,
+		ARRAY_SIZE(bcm15500_i2c_boardinfo));
 #endif
-
 }
 
 #ifdef CONFIG_ION_BCM_NO_DT

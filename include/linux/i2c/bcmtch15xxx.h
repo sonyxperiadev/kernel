@@ -35,8 +35,7 @@
 /* chip constants */
 #define	BCMTCH_HW_BCM15200A0		0x015200a0
 #define	BCMTCH_HW_BCM15500A0		0x015500a0
-#define	BCMTCH_HW_BCM15500A1		0x015500a1
-
+#define	BCMTCH_HW_BCM15200A1		0x015200a1
 
 #define BCMTCH_AXIS_FLAG_X_BIT_POS			0
 #define BCMTCH_AXIS_FLAG_Y_BIT_POS			1
@@ -47,8 +46,6 @@
 #define BCMTCH_AXIS_FLAG_X_Y_SWAPPED_MASK	0x04
 
 #define BCMTCH_MAX_BUTTON_COUNT				16
-
-
 typedef int (*bcmtch_power_on_t)(bool);
 
 /* structure for BCM Touch Controller platform hardware configuration */
@@ -62,10 +59,10 @@ struct bcmtch_platform_data {
 	int gpio_reset_polarity;
 	int gpio_reset_time_ms;
 	int axis_orientation_flag;
-	int ext_button_count;
-	const int *ext_button_map;
-	int touch_irq;
 	bcmtch_power_on_t bcmtch_on;
+	int ext_button_count;
+	const int *ext_button_map;	
+	int touch_irq;
 };
 
 #endif
