@@ -43,6 +43,10 @@
 
 
 #define OV5640_FLASH_THRESHHOLD		32
+#define OV5640_HFLIP_MASK		0x06
+#define OV5640_VFLIP_MASK		0x03
+#define OV5640_TIMING_REG20		0x3820
+#define OV5640_TIMING_REG21		0x3821
 
 /* OV5640 has only one fixed colorspace per pixelcode */
 struct ov5640_datafmt {
@@ -171,6 +175,8 @@ struct ov5640 {
 	int saturation;
 	int antibanding;
 	int whitebalance;
+	int hflip;
+	int vflip;
 	int framerate;
 	int focus_mode;
 	/*
@@ -2303,6 +2309,12 @@ static int ov5640_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	case V4L2_CID_FLASH_LED_MODE:
 		ctrl->value = ov5640->flashmode;
 		break;
+	case V4L2_CID_HFLIP:
+		ctrl->value = ov5640->hflip;
+		break;
+	case V4L2_CID_VFLIP:
+		ctrl->value = ov5640->vflip;
+		break;
 	}
 
 	return 0;
@@ -2703,6 +2715,37 @@ static int ov5640_s_ctrl(struct v4l2_ctrl *ctrl)
 		runmode = CAM_RUNNING_MODE_CAPTURE_DONE;
 		break;
 
+	case V4L2_CID_HFLIP:
+		if (ctrl->val != ov5640->hflip) {
+			ov5640_reg_read(client, OV5640_TIMING_REG21, &ov_reg);
+			if (ctrl->val)
+				ov_reg |= OV5640_HFLIP_MASK;
+			else
+				ov_reg &= ~(OV5640_HFLIP_MASK);
+
+			ret = ov5640_reg_write(client, OV5640_TIMING_REG21,
+						ov_reg);
+			if (ret)
+				return ret;
+			ov5640->hflip = ctrl->val;
+		}
+		break;
+
+	case V4L2_CID_VFLIP:
+		if (ctrl->val != ov5640->vflip) {
+			ov5640_reg_read(client, OV5640_TIMING_REG21, &ov_reg);
+			if (ctrl->val)
+				ov_reg |= OV5640_VFLIP_MASK;
+			else
+				ov_reg &= ~(OV5640_VFLIP_MASK);
+
+			ret = ov5640_reg_write(client, OV5640_TIMING_REG20,
+						ov_reg);
+			if (ret)
+				return ret;
+			ov5640->vflip = ctrl->val;
+		}
+		break;
 	}
 
 	return ret;
@@ -3278,6 +3321,12 @@ static int ov5640_probe(struct i2c_client *client,
 			V4L2_AUTO_FOCUS_STATUS_REACHED |
 			V4L2_AUTO_FOCUS_STATUS_FAILED),
 			0, V4L2_AUTO_FOCUS_STATUS_IDLE);
+
+	v4l2_ctrl_new_std(&ov5640->hdl, &ov5640_ctrl_ops,
+		V4L2_CID_HFLIP, 0, 1, 1, 0);
+
+	v4l2_ctrl_new_std(&ov5640->hdl, &ov5640_ctrl_ops,
+		V4L2_CID_VFLIP, 0, 1, 1, 0);
 
 	if (ov5640->hdl.error) {
 		dev_err(&client->dev,
