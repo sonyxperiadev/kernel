@@ -343,14 +343,16 @@ static void ion_buffer_remove_from_handle(struct ion_buffer *buffer)
 	 * is in the system
 	 */
 	mutex_lock(&buffer->lock);
-	buffer->handle_count--;
-	BUG_ON(buffer->handle_count < 0);
-	if (!buffer->handle_count) {
-		struct task_struct *task;
+	WARN_ON(buffer->handle_count <= 0);
+	if (buffer->handle_count > 0) {
+		buffer->handle_count--;
+		if (!buffer->handle_count) {
+			struct task_struct *task;
 
-		task = current->group_leader;
-		get_task_comm(buffer->task_comm, task);
-		buffer->pid = task_pid_nr(task);
+			task = current->group_leader;
+			get_task_comm(buffer->task_comm, task);
+			buffer->pid = task_pid_nr(task);
+		}
 	}
 	mutex_unlock(&buffer->lock);
 }
