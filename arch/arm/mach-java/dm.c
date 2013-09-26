@@ -470,7 +470,6 @@ static void local_secure_api(unsigned service_id,
  */
 void dormant_enter(u32 svc)
 {
-	unsigned long flgs;
 	u32 fd_cmd = CDC_CMD_CDCE;
 	u32 pwr_ctrl;
 	u32 cdc_states;
@@ -550,7 +549,6 @@ void dormant_enter(u32 svc)
 	case CDC_STATUS_FDCEOK:
 		cdc_master_clk_gating_en(false);
 		cdc_set_override(IS_IDLE_OVERRIDE, 0x1C0);
-		spin_lock_irqsave(&drmt_lock, flgs);
 		save_proc_clk_regs();
 		save_addnl_regs();
 		save_gic_distributor_shared((void *)gic_dist_shared_data,
@@ -571,7 +569,6 @@ void dormant_enter(u32 svc)
 		cdc_set_fsm_ctrl(FSM_CLR_ALL_STATUS);
 		cdc_set_override(WAIT_IDLE_TIMEOUT, 0xF);
 		fdm_attempt++;
-		spin_unlock_irqrestore(&drmt_lock, flgs);
 
 		/*no break to continue to CEOK*/
 	case CDC_STATUS_CEOK:
