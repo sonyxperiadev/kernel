@@ -353,6 +353,14 @@ void AUDCTRL_SaveAudioMode(AudioMode_t mode);
 *      @return         none
 **********************************************************************/
 void AUDCTRL_SetAudioMode(AudioMode_t mode, AudioApp_t app);
+/*********************************************************************
+*   Set (voice call) audio mode
+*      @param          mode            (voice call) audio mode
+*      @param          app             (voice call) audio app
+*      @return         none
+**********************************************************************/
+void AUDCTRL_SetAudioModeBT(AudioMode_t mode, AudioApp_t app);
+
 
 /**
 *   Set audio mode for music playback. (no DSP voice)

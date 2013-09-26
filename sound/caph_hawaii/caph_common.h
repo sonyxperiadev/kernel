@@ -276,6 +276,7 @@ struct brcm_alsa_chip {
 	 */
 	s32	i32CfgSSP[3];
 	s32	i32CurApp;
+	s32 i32CurMode;
 	s32	i32CurAmpState;
 	s32	iCallMode;
 	voip_data_t	voip_data;
@@ -350,6 +351,7 @@ enum	CTL_FUNCTION_t {
 	CTL_FUNCTION_SINK_CHG,
 	CTL_FUNCTION_HW_CTL,
 	CTL_FUNCTION_APP_SEL,
+	CTL_FUNCTION_MODE_SEL,
 	CTL_FUNCTION_APP_RMV,
 	CTL_FUNCTION_AMP_CTL,
 	CTL_FUNCTION_CALL_MODE,

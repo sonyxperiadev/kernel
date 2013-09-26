@@ -496,10 +496,10 @@ static int AUDIO_Ctrl_Trigger_GetParamsSize(BRCM_AUDIO_ACTION_en_t action_code)
 	case ACTION_AUD_SetHWLoopback:
 		size = sizeof(BRCM_AUDIO_Param_Loopback_t);
 		break;
-		/*
-		 * case ACTION_AUD_SetAudioMode:
-		 *      break;
-		 */
+	case ACTION_AUD_SetAudioMode:
+		size = sizeof(BRCM_AUDIO_Param_SetMode_t);
+	      break;
+
 	case ACTION_AUD_EnableFMPlay:
 	case ACTION_AUD_DisableFMPlay:
 	case ACTION_AUD_SetARM2SPInst:
@@ -1546,16 +1546,16 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 
 	case ACTION_AUD_SetAudioMode:
 		{
-			BRCM_AUDIO_Param_Call_t *parm_call =
-			    (BRCM_AUDIO_Param_Call_t *) arg_param;
+			BRCM_AUDIO_Param_SetMode_t *parm_setmode =
+				(BRCM_AUDIO_Param_SetMode_t *) arg_param;
 			AudioMode_t tempMode =
-			    (AudioMode_t) parm_call->new_spkr;
+			    (AudioMode_t) parm_setmode->aud_mode;
 
 			aTrace(LOG_AUDIO_CNTLR,
-			    "AUDIO_Ctrl_Process ACTION_AUD_SetAudioMode:new_spkr=%d\n",
-			    parm_call->new_spkr);
+			    "AUDIO_Ctrl_Process ACTION_AUD_SetAudioMode:new_mode=%d\n",
+			    parm_setmode->aud_mode);
 
-			AUDCTRL_SetAudioMode(tempMode, AUDCTRL_GetAudioApp());
+			AUDCTRL_SetAudioModeBT(tempMode, AUDCTRL_GetAudioApp());
 		}
 		break;
 

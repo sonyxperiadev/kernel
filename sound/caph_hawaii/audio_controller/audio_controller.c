@@ -952,6 +952,10 @@ AudioApp_t AUDCTRL_GetAudioApp(void)
 		currAudioApp = AUDIO_APP_LOOPBACK;
 	else if (sAudioAppStates[AUDIO_APP_VOICE_CALL])
 		currAudioApp = AUDIO_APP_VOICE_CALL;
+	else if (sAudioAppStates[AUDIO_APP_NREC_ON])
+		currAudioApp = AUDIO_APP_NREC_ON;
+	else if (sAudioAppStates[AUDIO_APP_NREC_OFF])
+		currAudioApp = AUDIO_APP_NREC_OFF;
 	else if (sAudioAppStates[AUDIO_APP_VOICE_CALL_WB])
 		currAudioApp = AUDIO_APP_VOICE_CALL_WB;
 	else if (sAudioAppStates[AUDIO_APP_VT_CALL])
@@ -1112,6 +1116,43 @@ void AUDCTRL_SetAudioMode(AudioMode_t mode, AudioApp_t app)
 	if (!bClk)
 		csl_caph_ControlHWClock(FALSE);
 }
+
+/*********************************************************************
+*	Set (voice call) audio mode
+*	@param		  mode			(voice call) audio mode
+*	@param		  app	 (voice call) audio app
+*	@return		 none
+*
+*	This function set gains of mic and spk based on the mode
+*	and app which is based on the BT device paried. It is called
+*	during configuring of the voice call path.
+**********************************************************************/
+void AUDCTRL_SetAudioModeBT(AudioMode_t mode, AudioApp_t app)
+{
+	Boolean bClk = csl_caph_QueryHWClock();
+
+	aTrace(LOG_AUDIO_CNTLR, "SetAudioModeBT: mode %d app %d", mode, app);
+
+	if (AUDCTRL_InVoiceCall())
+		if (app > AUDIO_APP_VOIP_INCOMM)
+			return;
+
+	AUDCTRL_SaveAudioMode(mode);
+
+	if (!bClk)
+		csl_caph_ControlHWClock(TRUE);
+	/*enable clock if it is not enabled. */
+
+	/* Here may need to consider for other apps like vt and voip etc */
+	/*need pathID to find mixer input */
+	AUDDRV_SetAudioModeBT(mode, app, 0, 0, 0);
+
+	/*disable clock if it is enabled by this function */
+	if (!bClk)
+		csl_caph_ControlHWClock(FALSE);
+}
+
+
 
 /*********************************************************************
 *	Set audio mode for music playback

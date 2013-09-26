@@ -1061,6 +1061,12 @@ static int MiscCtrlInfo(struct snd_kcontrol *kcontrol,
 		 */
 		uinfo->value.integer.max = 0x7FFFFFFF;
 		break;
+	case CTL_FUNCTION_MODE_SEL:
+		uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
+		uinfo->count = 1;
+		uinfo->value.integer.min = 0;
+		uinfo->value.integer.max = 8;
+		break;
 	case CTL_FUNCTION_APP_SEL:
 	case CTL_FUNCTION_APP_RMV:
 		uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
@@ -1209,6 +1215,9 @@ static int MiscCtrlGet(struct snd_kcontrol *kcontrol,
 		break;
 	case CTL_FUNCTION_APP_SEL:
 		ucontrol->value.integer.value[0] = pChip->i32CurApp;
+		break;
+	case CTL_FUNCTION_MODE_SEL:
+		ucontrol->value.integer.value[0] = pChip->i32CurMode;
 		break;
 	case CTL_FUNCTION_APP_RMV:
 		/* don't need to do anything */
@@ -1766,6 +1775,23 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 			&ctl_parm.parm_setapp,
 			NULL, 0);
 		break;
+
+	case CTL_FUNCTION_MODE_SEL:
+		aTrace(LOG_ALSA_INTERFACE,
+		       "CTL_FUNCTION_MODE_SEL newMode=%d",
+		       (int)ucontrol->value.integer.value[0]);
+
+		pChip->i32CurMode =
+			ucontrol->value.integer.value[0];
+
+		ctl_parm.parm_setmode.aud_mode =
+			(int)ucontrol->value.integer.value[0];
+		/*set audio mode from values from user space*/
+		AUDIO_Ctrl_Trigger(ACTION_AUD_SetAudioMode,
+			&ctl_parm.parm_setmode,
+			NULL, 0);
+		break;
+
 	case CTL_FUNCTION_APP_RMV:
 		aTrace(LOG_ALSA_INTERFACE,
 		       "CTL_FUNCTION_APP_RMV rmApp=%d",
@@ -2152,6 +2178,9 @@ static struct snd_kcontrol_new sgSndCtrls[] __devinitdata = {
 	BRCM_MIXER_CTRL_MISC(0, 0, "APP-SEL", 0,
 			     CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_MISC, 1,
 				 CTL_FUNCTION_APP_SEL)),
+	BRCM_MIXER_CTRL_MISC(0, 0, "MODE-SEL", 0,
+			     CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_MISC, 1,
+				 CTL_FUNCTION_MODE_SEL)),
 	BRCM_MIXER_CTRL_MISC(0, 0, "APP-RMV", 0,
 			     CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_MISC, 1,
 				 CTL_FUNCTION_APP_RMV)),

@@ -266,6 +266,12 @@ struct __BRCM_AUDIO_Param_SetApp_t {
 };
 #define BRCM_AUDIO_Param_SetApp_t struct __BRCM_AUDIO_Param_SetApp_t
 
+struct __BRCM_AUDIO_Param_SetMode_t {
+	int aud_mode;
+
+};
+#define BRCM_AUDIO_Param_SetMode_t struct __BRCM_AUDIO_Param_SetMode_t
+
 struct __BRCM_AUDIO_Param_CallMode_t {
 	UInt32 callMode;
 
@@ -334,6 +340,7 @@ union __BRCM_AUDIO_Control_Params_un_t {
 	BRCM_AUDIO_Param_FM_t parm_FM;
 	BRCM_AUDIO_Param_Prepare_t parm_prepare;
 	BRCM_AUDIO_Param_SetApp_t parm_setapp;
+	BRCM_AUDIO_Param_SetMode_t parm_setmode;
 	BRCM_AUDIO_Param_SetApp_t parm_rmapp;
 	BRCM_AUDIO_Param_CallMode_t parm_callmode;
 	BRCM_AUDIO_Param_ECNS_t parm_ecns;
