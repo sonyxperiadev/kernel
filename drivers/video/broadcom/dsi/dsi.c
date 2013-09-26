@@ -592,6 +592,10 @@ Int32 DSI_Open(DISPDRV_HANDLE_T drvH)
 			DSI_ERR("Failed to get disp_reg\n");
 			goto err_reg_init;
 		}
+		if (g_display_enabled) {
+			/* Increase the ref_count, disp_reg power on already */
+			regulator_enable(disp_reg);
+		}
 	}
 	res = gpio_request(pPanel->disp_info->rst->gpio, "LCD_RST");
 	if (res < 0) {
