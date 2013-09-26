@@ -19,8 +19,8 @@
 #define CSR_NUM_OPP	4
 #define MSR_NUM_OPP	4
 
-#define AVS_HANDSHAKE_VERSION 2
-#define AVS_SW_VERSION	3
+#define AVS_HANDSHAKE_VERSION 3
+#define AVS_SW_VERSION	4
 
 #define AVS_INSURANCE	5
 #define AVS_INSURANCE_DELAY_MS	1
@@ -58,32 +58,29 @@ enum {
 
 struct avs_handshake {
 	u32 version;
-	u32 csr_opp;
-	u32 csr_opp_ext;
-	u32 msr_opp;
-	u32 msr_opp_ext;	/* 5 */
+	u8 csr_opp[CSR_NUM_OPP];
+	u8 msr_opp[MSR_NUM_OPP];
 	u8 vddfix;
 	u8 vddfix_ret;
 	u8 vddvar_ret;
-	u8 silicon_type;	/* 6 */
-	u32 irdrop_1v2;
-	u32 arm_freq;
+	u8 silicon_type;
+	u32 irdrop_1v2;			/* 5 */
 	s8 temperature;
 	u8 np_ratio_1;
 	u8 np_ratio_2;
-	u8 rsvd_1;		/* 9 */
+	u8 arm_freq;
 	u32 row3;
 	u32 row3_ext;
 	u32 row4;
-	u32 row4_ext;
+	u32 row4_ext;			/* 10 */
 	u32 row5;
 	u32 row5_ext;
 	u32 row8;
-	u32 row8_ext;		/* 17 */
+	u32 row8_ext;
 	u8 varspm0;
 	u8 varspm1;
 	u8 varspm2;
-	u8 varspm3;
+	u8 varspm3;			/* 15 */
 	u8 varspm4;
 	u8 varspm5;
 	u8 spm0;
@@ -91,10 +88,12 @@ struct avs_handshake {
 	u8 spm2;
 	u8 spm3;
 	u8 spm4;
-	u8 spm5;		/* 20 */
-	u32 error_status;	/* 21 */
+	u8 spm5;
+	u32 error_status;
 	u32 abi_version;
-	u32 rsvd_2[3];		/* 25 */
+	u16 csr_targets[CSR_NUM_OPP];	/* 21 */
+	u8 msr_targets[MSR_NUM_OPP];	/* 22 */
+	u32 rsvd[3];			/* 25 */
 };
 
 struct avs_pdata {

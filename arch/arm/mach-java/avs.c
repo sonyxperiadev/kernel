@@ -49,6 +49,8 @@
 struct avs_info {
 	u32 csr_opp_volt[CSR_NUM_OPP];
 	u32 msr_opp_volt[MSR_NUM_OPP];
+	u32 csr_opp_trgt[CSR_NUM_OPP];
+	u32 msr_opp_trgt[MSR_NUM_OPP];
 	u32 fab_src;
 	struct avs_pdata *pdata;
 	struct avs_handshake *avs_handshake;
@@ -65,7 +67,7 @@ static int debug_mask = AVS_LOG_ERR | AVS_LOG_WARN | AVS_LOG_INIT;
 
 static int avs_read_opp_info(struct avs_info *avs_inf_ptr)
 {
-	avs_dbg(AVS_LOG_INIT, "%s: AVS_READ_MEM => mem adr = %x\n",
+	avs_dbg(AVS_LOG_INIT, "%s: AVS_READ_MEM => mem adr = 0x%08x\n",
 			__func__, avs_inf_ptr->pdata->avs_info_base_addr);
 	BUG_ON(avs_inf_ptr->pdata->avs_info_base_addr == 0);
 	avs_inf_ptr->avs_handshake = (struct avs_handshake *)(
@@ -74,14 +76,16 @@ static int avs_read_opp_info(struct avs_info *avs_inf_ptr)
 	BUG_ON(avs_info.handshake_version != avs_info.avs_handshake->version);
 	BUG_ON(avs_info.kernel_freq_id != avs_info.avs_handshake->arm_freq);
 
-	avs_dbg(AVS_LOG_INIT, "CSR OPP VAL: 0x%x",
-			avs_inf_ptr->avs_handshake->csr_opp);
-	avs_dbg(AVS_LOG_INIT, "MSR OPP VAL: 0x%x",
-			avs_inf_ptr->avs_handshake->msr_opp);
-	avs_dbg(AVS_LOG_INIT, "Computed at %d Celsius. N/P1: %u, N/P2: %u\n",
-			avs_inf_ptr->avs_handshake->temperature,
-			avs_inf_ptr->avs_handshake->np_ratio_1,
-			avs_inf_ptr->avs_handshake->np_ratio_2);
+	avs_dbg(AVS_LOG_INIT, "AVS: ABI version: %u, Kernel version: %u\n",
+			avs_info.avs_handshake->abi_version, AVS_SW_VERSION);
+
+	avs_dbg(AVS_LOG_INIT, "Computed at %d Celsius.\n",
+			avs_inf_ptr->avs_handshake->temperature);
+	avs_dbg(AVS_LOG_INIT, "N/P ratio 1: %d.%02d, N/P ratio 2: %d.%02d\n",
+			(avs_inf_ptr->avs_handshake->np_ratio_1)/100,
+			(avs_inf_ptr->avs_handshake->np_ratio_1)%100,
+			(avs_inf_ptr->avs_handshake->np_ratio_2)/100,
+			(avs_inf_ptr->avs_handshake->np_ratio_2)%100);
 	avs_dbg(AVS_LOG_INIT, "IRDROP @ 1.2V: %u",
 			avs_inf_ptr->avs_handshake->irdrop_1v2);
 	avs_dbg(AVS_LOG_INIT, "Varspm 0:%u, 1:%u, 2:%u, 3:%u, 4:%u, 5:%u\n",
@@ -91,57 +95,58 @@ static int avs_read_opp_info(struct avs_info *avs_inf_ptr)
 			avs_info.avs_handshake->varspm3,
 			avs_info.avs_handshake->varspm4,
 			avs_info.avs_handshake->varspm5);
-	avs_dbg(AVS_LOG_INIT, "Spm 0:%u, 1:%u, 2:%u, 3:%u, 4:%u, 5:%u\n",
+	avs_dbg(AVS_LOG_INIT, "Spm    0:%u, 1:%u, 2:%u, 3:%u, 4:%u, 5:%u\n",
 			avs_info.avs_handshake->spm0,
 			avs_info.avs_handshake->spm1,
 			avs_info.avs_handshake->spm2,
 			avs_info.avs_handshake->spm3,
 			avs_info.avs_handshake->spm4,
 			avs_info.avs_handshake->spm5);
-
-	avs_dbg(AVS_LOG_INIT, "VDDFIX voltage val: 0x%x\n",
+	avs_dbg(AVS_LOG_INIT, "VDDFIX voltage val: 0x%02x\n",
 			avs_inf_ptr->avs_handshake->vddfix);
-	avs_dbg(AVS_LOG_INIT, "VDDVAR Retn: 0x%x, VDDFIX Retn: 0x%x\n",
+	avs_dbg(AVS_LOG_INIT, "VDDVAR Retn: 0x%02x, VDDFIX Retn: 0x%02x\n",
 			avs_info.avs_handshake->vddvar_ret,
 			avs_info.avs_handshake->vddfix_ret);
 	avs_dbg(AVS_LOG_INIT, "Silicon Type: %u\n",
 			avs_inf_ptr->avs_handshake->silicon_type);
 	avs_dbg(AVS_LOG_INIT, "Freq Id: %u\n",
 			avs_inf_ptr->avs_handshake->arm_freq);
-	avs_dbg(AVS_LOG_INIT, "Error Status: %x\n",
+	avs_dbg(AVS_LOG_INIT, "Error Status: 0x%08x\n",
 			avs_inf_ptr->avs_handshake->error_status);
-	avs_dbg(AVS_LOG_INIT, "Root Reset Reason: %x\n",
+	avs_dbg(AVS_LOG_INIT, "Root Reset Reason: 0x%08x\n",
 		readl(KONA_ROOT_RST_VA + ROOT_RST_MGR_REG_RSTSTS_OFFSET));
-	avs_dbg(AVS_LOG_INIT, "AVS: ABI version: %u, Kernel version: %u\n",
-			avs_info.avs_handshake->abi_version, AVS_SW_VERSION);
 	return 0;
 }
 
-#define CSR_OPP_MASK	0xFF
-#define CSR_OPP1_SHIFT	0
-#define CSR_OPP2_SHIFT	8
-#define CSR_OPP3_SHIFT	16
-#define CSR_OPP4_SHIFT	24
-
 static void avs_parse_opp_info(struct avs_info *avs_inf_ptr)
 {
-	avs_inf_ptr->csr_opp_volt[0] = (avs_inf_ptr->avs_handshake->
-			csr_opp >> CSR_OPP1_SHIFT) & CSR_OPP_MASK;
-	avs_inf_ptr->csr_opp_volt[1] = (avs_inf_ptr->avs_handshake->
-			csr_opp >> CSR_OPP2_SHIFT) & CSR_OPP_MASK;
-	avs_inf_ptr->csr_opp_volt[2] = (avs_inf_ptr->avs_handshake->
-			csr_opp >> CSR_OPP3_SHIFT) & CSR_OPP_MASK;
-	avs_inf_ptr->csr_opp_volt[3] = (avs_inf_ptr->avs_handshake->
-			csr_opp >> CSR_OPP4_SHIFT) & CSR_OPP_MASK;
+	int i;
 
-	avs_inf_ptr->msr_opp_volt[0] = (avs_inf_ptr->avs_handshake->
-			msr_opp >> CSR_OPP1_SHIFT) & CSR_OPP_MASK;
-	avs_inf_ptr->msr_opp_volt[1] = (avs_inf_ptr->avs_handshake->
-			msr_opp >> CSR_OPP2_SHIFT) & CSR_OPP_MASK;
-	avs_inf_ptr->msr_opp_volt[2] = (avs_inf_ptr->avs_handshake->
-			msr_opp >> CSR_OPP3_SHIFT) & CSR_OPP_MASK;
-	avs_inf_ptr->msr_opp_volt[3] = (avs_inf_ptr->avs_handshake->
-			msr_opp >> CSR_OPP4_SHIFT) & CSR_OPP_MASK;
+	for (i = 0; i < CSR_NUM_OPP; i++) {
+		avs_inf_ptr->csr_opp_volt[i] =
+			avs_inf_ptr->avs_handshake->csr_opp[i];
+		avs_inf_ptr->csr_opp_trgt[i] =
+			avs_inf_ptr->avs_handshake->csr_targets[i];
+		avs_dbg(AVS_LOG_INIT,
+				"CSR OPP%u Target : %3u, Voltage: 0x%02x\n",
+				i + 1, avs_inf_ptr->csr_opp_trgt[i],
+				avs_inf_ptr->csr_opp_volt[i]);
+	}
+
+	for (i = 0; i < MSR_NUM_OPP; i++) {
+		avs_inf_ptr->msr_opp_volt[i] =
+			avs_inf_ptr->avs_handshake->msr_opp[i];
+		avs_inf_ptr->msr_opp_trgt[i] =
+			avs_inf_ptr->avs_handshake->msr_targets[i];
+		avs_dbg(AVS_LOG_INIT,
+				"MSR OPP%u Target : %3u, Voltage: 0x%02x\n",
+				i + 1, avs_inf_ptr->msr_opp_trgt[i],
+				avs_inf_ptr->msr_opp_volt[i]);
+	}
+
+	avs_dbg(AVS_LOG_INIT,
+		"--------------------------------------------------\n");
+
 }
 
 static void avs_irdrop_osc_en(struct avs_info *avs_info_ptr, bool enable)
@@ -379,6 +384,30 @@ static const struct file_operations avs_read_spm_val_fops = {
 	.read = avs_debug_read_spm_val,
 };
 
+static ssize_t avs_debug_read_osc_targets(struct file *file, char __user
+		*user_buf, size_t count, loff_t *ppos)
+{
+	char buf[1000];
+	u32 len = 0;
+	int i;
+
+	for (i = 0; i < CSR_NUM_OPP; i++)
+		len += snprintf(buf + len, sizeof(buf) - len,
+				"CSR OPP%u Target %u\n", i + 1,
+				avs_info.csr_opp_trgt[i]);
+	for (i = 0; i < MSR_NUM_OPP; i++)
+		len += snprintf(buf + len, sizeof(buf) - len,
+				"MSR OPP%u Target %u\n", i + 1,
+				avs_info.msr_opp_trgt[i]);
+
+	return simple_read_from_buffer(user_buf, count, ppos, buf, len);
+}
+
+static const struct file_operations avs_read_osc_target_fops = {
+	.open = avs_debug_open,
+	.read = avs_debug_read_osc_targets,
+};
+
 static int avs_debug_init(void)
 {
 	struct dentry *dent_vlt_root_dir = debugfs_create_dir("avs", 0);
@@ -400,6 +429,10 @@ static int avs_debug_init(void)
 
 	if (!debugfs_create_file("read_irdrop", S_IRUGO,
 			dent_vlt_root_dir, NULL, &avs_read_irdrop_fops))
+		return -ENOMEM;
+
+	if (!debugfs_create_file("opp_targets", S_IRUGO,
+			dent_vlt_root_dir, NULL, &avs_read_osc_target_fops))
 		return -ENOMEM;
 
 	pr_info("AVS Debug Init Successs\n");
@@ -449,6 +482,12 @@ static int avs_drv_probe(struct platform_device *pdev)
 {
 	struct avs_pdata *pdata = pdev->dev.platform_data;
 
+	avs_dbg(AVS_LOG_INIT,
+		"--------------------------------------------------\n");
+	avs_dbg(AVS_LOG_INIT,
+		"              AVS related information\n");
+	avs_dbg(AVS_LOG_INIT,
+		"--------------------------------------------------\n");
 	avs_dbg(AVS_LOG_INIT, "%s\n", __func__);
 
 	if (!pdata) {
