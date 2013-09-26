@@ -683,7 +683,7 @@ Result_t AUDIO_Ctrl_Trigger(BRCM_AUDIO_ACTION_en_t action_code,
 
 	if (msgAudioCtrl && msgAudioCtrl->block == 1) {
 		QUEUE_WORK(pWorkqueue_AudioControl, msgAudioCtrl);
-		ret = wait_for_completion_interruptible_timeout(
+		ret = wait_for_completion_timeout(
 				&msgAudioCtrl->comp,
 				msecs_to_jiffies(TIMEOUT_STOP_REQ_MS));
 		if (ret <= 0) {
