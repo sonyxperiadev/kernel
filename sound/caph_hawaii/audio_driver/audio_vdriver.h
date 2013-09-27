@@ -164,6 +164,13 @@ struct _AudioSysParm_t {
 	Int32 hw_sidetone_eq[8 * 16];
 	Int32 dsp_voice_vol_tbl[NUM_OF_ENTRY_IN_DSP_VOICE_VOLUME_TABLE];
 	Int32 fm_radio_digital_vol[NUM_OF_ENTRY_IN_FM_RADIO_DIGITAL_VOLUME];
+
+	/* PMU ALC support */
+	UInt16 alc_enable;
+	UInt16 alc_vbat_ref;
+	UInt16 alc_thld;
+	UInt16 alc_ramp_up_ctrl;
+	UInt16 alc_ramp_down_ctrl;
 };
 #define AudioSysParm_t struct _AudioSysParm_t
 

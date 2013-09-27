@@ -941,8 +941,9 @@ void AUDCTRL_SetTelephonyMicMute(AUDIO_SOURCE_Enum_t mic, Boolean mute)
 ****************************************************************************/
 AudioApp_t AUDCTRL_GetAudioApp(void)
 {
-	static AudioApp_t currAudioApp = AUDIO_APP_DEFAULT;
 #ifdef CONFIG_BCM_MODEM
+	static AudioApp_t currAudioApp = AUDIO_APP_DEFAULT;
+
 	/*Get the app to access sysparm by priority */
 	if (sForcedApp != AUDIO_APP_DEFAULT)
 		currAudioApp = sForcedApp;
@@ -1022,11 +1023,12 @@ void AUDCTRL_SaveAudioApp(AudioApp_t app)
 	if (currApp == app || app >= AUDIO_APP_TOTAL)
 		return;
 
-	if (AUDCTRL_InVoiceCall())
+	if (AUDCTRL_InVoiceCall()) {
 		if (app > AUDIO_APP_VOIP_INCOMM)
 			return;
 		else
 			voice_app_updated = TRUE;
+	}
 
 	AUDCTRL_RemoveVoiceApp(currApp);
 	AUDCTRL_RemoveRecApp(currApp);

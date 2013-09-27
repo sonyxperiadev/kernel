@@ -355,8 +355,12 @@ static void AUDDRV_HW_SetFilter(AUDDRV_HWCTRL_FILTER_e filter,
 				       void *coeff);
 static void AUDDRV_HW_EnableSideTone(AudioMode_t audio_mode);
 static void AUDDRV_HW_DisableSideTone(AudioMode_t audio_mode);
+
+#ifdef CONFIG_BCM_MODEM
 static void AP_ProcessAudioEnableDone(UInt16 enabled_path);
 static void AP_ProcessArm2spHqDLInitDone(void);
+#endif
+
 /*=============================================================================
 // Functions
 //=============================================================================
@@ -879,7 +883,9 @@ void AUDDRV_DisableDSPOutput(void)
 void AUDDRV_EnableDSPInput(AUDIO_SOURCE_Enum_t source,
 			   AUDIO_SAMPLING_RATE_t sample_rate)
 {
+#if defined(ENABLE_DMA_VOICE)
 	UInt16 dma_mic_spk;
+#endif
 	UInt32 flag16k = 0;
 
 	aTrace(LOG_AUDIO_DRIVER,  "%s source %d voiceRecOn %d, ulPath %d\n",
@@ -891,8 +897,10 @@ void AUDDRV_EnableDSPInput(AUDIO_SOURCE_Enum_t source,
 	/*only in non-call mode, tell DSP to start UL*/
 	if (telephonyPathID.ulPathID)
 		return;
-#if defined(ENABLE_DMA_VOICE)
+
+#ifdef CONFIG_BCM_MODEM
 	csl_dsp_caph_control_aadmac_set_samp_rate(sample_rate);
+
 #endif
 	if (sample_rate == AUDIO_SAMPLING_RATE_16000)
 		flag16k = 1;
@@ -938,7 +946,9 @@ For now, when voice record is started, UMUTE UL command will be sent */
 */
 void AUDDRV_DisableDSPInput(int stop)
 {
+#if defined(ENABLE_DMA_VOICE)
 	UInt16 dma_mic_spk;
+#endif
 
 	aTrace(LOG_AUDIO_DRIVER,  "%s stop %d, voiceRecOn %d, ulPath %d\n",
 		__func__, stop, voiceRecOn, telephonyPathID.ulPathID);
@@ -2446,6 +2456,7 @@ static UInt32 *AUDIO_GetIHF48KHzBufferBaseAddress(void)
 
 }
 
+#ifdef CONFIG_BCM_MODEM
 static void AP_ProcessAudioEnableDone(UInt16 enabled_path)
 {
 	aTrace(LOG_AUDIO_DRIVER,
@@ -2474,6 +2485,7 @@ static void AP_ProcessArm2spHqDLInitDone()
 
 	/*aError("i_f");*/
 }
+#endif
 
 /****************************************************************************
 *
