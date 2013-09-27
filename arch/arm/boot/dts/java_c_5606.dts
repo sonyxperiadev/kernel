@@ -90,6 +90,8 @@
 			compatible = "bcm,isl290xx";
 			reg = <0x44>;
 			gpio-irq-pin = <89>;
+			prox_threshold_hi_param = <80>;
+			prox_threshold_lo_param = <60>;
 			scale_factor = <52>;
 			prox_threshold_hi_param = <65>;
 			prox_threshold_lo_param = <35>;
