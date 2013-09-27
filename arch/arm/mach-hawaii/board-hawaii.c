@@ -99,8 +99,7 @@
 #include <linux/haptic.h>
 #endif
 
-#if ((defined(CONFIG_BCM_BT_RFKILL) || defined(CONFIG_BCM_RFKILL_MODULE)) && \
-	!defined(CONFIG_OF_DEVICE))
+#if defined(CONFIG_BCM_BT_RFKILL) && !defined(CONFIG_OF_DEVICE)
 #include <linux/broadcom/bcm-bt-rfkill.h>
 #endif
 
@@ -993,6 +992,24 @@ static struct kona_pl330_data hawaii_pl330_pdata = {
 };
 #endif
 
+#if defined(CONFIG_BCM_BT_RFKILL) && !defined(CONFIG_OF_DEVICE)
+#define BCMBT_VREG_GPIO		28
+#define BCMBT_N_RESET_GPIO	-1
+
+static struct bcm_bt_rfkill_platform_data brcm_bt_rfkill_data = {
+	.vreg_gpio = BCMBT_VREG_GPIO,
+	.n_reset_gpio = BCMBT_N_RESET_GPIO,
+};
+
+static struct platform_device board_bcmbt_rfkill_device = {
+	.name = "bcm-bt-rfkill",
+	.id = -1,
+	.dev =  {
+		.platform_data = &brcm_bt_rfkill_data,
+	},
+};
+#endif
+
 #if defined(CONFIG_BCM_BT_LPM) && !defined(CONFIG_OF_DEVICE)
 #define GPIO_BT_WAKE	32
 #define GPIO_HOST_WAKE	72
@@ -1003,7 +1020,7 @@ static struct bcm_bt_lpm_platform_data brcm_bt_lpm_data = {
 };
 
 static struct platform_device board_bcmbt_lpm_device = {
-	.name = "bcmbt-lpm",
+	.name = "bcm-bt-lpm",
 	.id = -1,
 	.dev = {
 		.platform_data = &brcm_bt_lpm_data,
@@ -1246,6 +1263,10 @@ static struct platform_device *hawaii_devices[] __initdata = {
 
 #ifdef CONFIG_HAPTIC_SAMSUNG_PWM
 	&haptic_pwm_device,
+#endif
+
+#if defined(CONFIG_BCM_BT_RFKILL) && !defined(CONFIG_OF_DEVICE)
+	&board_bcmbt_rfkill_device,
 #endif
 
 #if defined(CONFIG_BCM_BT_LPM) && !defined(CONFIG_OF_DEVICE)

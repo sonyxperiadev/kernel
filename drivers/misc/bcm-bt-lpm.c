@@ -122,6 +122,7 @@ static int bcm_bt_lpm_init_bt_wake(
 	int rc = 0;
 
 	pr_debug("%s BLUETOOTH:Enter.\n", __func__);
+
 	if (priv->pdata->bt_wake_gpio < 0) {
 		pr_err("%s: Exiting => invalid bt-wake-gpio=%d\n",
 		__func__, priv->pdata->bt_wake_gpio);
@@ -131,6 +132,10 @@ static int bcm_bt_lpm_init_bt_wake(
 			priv->pdata->bt_wake_gpio,
 			GPIOF_OUT_INIT_LOW,
 			"bt_wake_gpio");
+
+	pr_debug("%s: BT_WAKE GPIO: %ld\n", __func__,
+			priv->pdata->bt_wake_gpio);
+
 	if (rc) {
 		pr_err
 	("%s: failed to init bt_wake: bt_wake_gpio request err%d\n",
@@ -166,6 +171,8 @@ static void bcm_bt_lpm_clean_bt_wake(
 {
 	if (priv->pdata->bt_wake_gpio < 0)
 		return;
+
+	gpio_free((unsigned)priv->pdata->bt_wake_gpio);
 
 	if (b_tty)
 		bcm_bt_lpm_tty_cleanup();
@@ -215,6 +222,10 @@ static int bcm_bt_lpm_init_hostwake(struct bcm_bt_lpm_entry_struct *priv)
 				priv->pdata->host_wake_gpio,
 				GPIOF_OUT_INIT_LOW,
 				"host_wake_gpio");
+
+	pr_debug("%s: HOST_WAKE GPIO: %ld\n", __func__,
+		priv->pdata->host_wake_gpio);
+
 	if (rc) {
 		pr_err
 	    ("%s: failed to configure host-wake-gpio err=%d\n",
@@ -237,6 +248,8 @@ static void bcm_bt_lpm_clean_host_wake(
 			__func__);
 		return;
 	}
+
+	gpio_free((unsigned)priv->pdata->host_wake_gpio);
 
 	free_irq(priv->plpm->host_irq, priv_g);
 	pr_debug("%s BLUETOOTH:Exiting.\n", __func__);
@@ -453,15 +466,17 @@ MODULE_DEVICE_TABLE(of, bcm_bt_lpm_of_match);
 static int bcm_bt_lpm_probe(struct platform_device *pdev)
 {
 	int rc = -EINVAL;
-	const struct of_device_id *match = NULL;
 	struct bcm_bt_lpm_platform_data *pdata = NULL;
 
+#ifdef CONFIG_OF_DEVICE
+	const struct of_device_id *match = NULL;
 	match = of_match_device(bcm_bt_lpm_of_match, &pdev->dev);
 	if (!match) {
 		pr_err("%s: **ERROR** No matcing device found\n",
 							__func__);
 		return -ENODEV;
 	}
+#endif
 
 	priv_g = devm_kzalloc(&pdev->dev,
 			sizeof(*priv_g),
@@ -493,6 +508,7 @@ static int bcm_bt_lpm_probe(struct platform_device *pdev)
 	if (priv_g->bt_wake_ws == NULL)
 		return -ENOMEM;
 
+
 	priv_g->host_wake_ws = devm_kzalloc(&pdev->dev,
 			sizeof(struct wakeup_source),
 			GFP_KERNEL);
@@ -502,11 +518,18 @@ static int bcm_bt_lpm_probe(struct platform_device *pdev)
 
 	spin_lock_init(&priv_g->plpm->bcm_bt_lpm_lock);
 
+#ifndef CONFIG_OF_DEVICE
 	if (pdev->dev.platform_data) {
 		pdata = pdev->dev.platform_data;
 		priv_g->pdata->bt_wake_gpio   = pdata->bt_wake_gpio;
 		priv_g->pdata->host_wake_gpio = pdata->host_wake_gpio;
-	} else if (pdev->dev.of_node) {
+	} else {
+		pr_err("%s: **ERROR** NO platform data available\n", __func__);
+		rc = -ENODEV;
+		goto out;
+	}
+#else
+	if (pdev->dev.of_node) {
 		priv_g->pdata->bt_wake_gpio =
 					of_get_named_gpio(
 					pdev->dev.of_node,
@@ -538,11 +561,8 @@ static int bcm_bt_lpm_probe(struct platform_device *pdev)
 		rc = -ENODEV;
 		goto out;
 	}
-	pr_err("%s: bt_wake_gpio=%d, host-wake-gpio=%d.\n",
-		__func__,
-		priv_g->pdata->bt_wake_gpio,
-		priv_g->pdata->host_wake_gpio);
 
+#endif
 	priv_g->pdev = pdev;
 
 	pr_info("%s: bt_wake_gpio=%d, host_wake_gpio=%d\n",

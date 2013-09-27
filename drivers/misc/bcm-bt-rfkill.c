@@ -46,7 +46,8 @@ static int bcm_bt_rfkill_set_power(void *data, bool blocked)
 			"Low [POWER_OFF]");
 
 	if (blocked == false) {	/* Transmitter ON (Unblocked) */
-		gpio_set_value(vreg_gpio, BCM_BT_RFKILL_VREG_ON);
+		if (vreg_gpio > 0)
+			gpio_set_value(vreg_gpio, BCM_BT_RFKILL_VREG_ON);
 		if (n_reset_gpio > 0)
 			gpio_set_value(n_reset_gpio,
 					BCM_BT_RFKILL_N_RESET_ON);
@@ -54,10 +55,11 @@ static int bcm_bt_rfkill_set_power(void *data, bool blocked)
 			gpio_get_value(vreg_gpio) ? "High [POWER ON]" :
 			"Low [POWER_OFF]");
 	} else {		/* Transmitter OFF (Blocked) */
-		gpio_set_value(vreg_gpio, BCM_BT_RFKILL_VREG_OFF);
 		if (n_reset_gpio > 0)
 			gpio_set_value(n_reset_gpio,
 					BCM_BT_RFKILL_N_RESET_OFF);
+		if (vreg_gpio > 0)
+			gpio_set_value(vreg_gpio, BCM_BT_RFKILL_VREG_OFF);
 
 		pr_debug("bcm_bt_rfkill_setpower: blocked %s\n",
 			gpio_get_value(vreg_gpio) ? "High [POWER ON]" :
@@ -80,20 +82,40 @@ static int bcm_bt_rfkill_probe(struct platform_device *pdev)
 {
 	int rc = -EINVAL;
 	struct bcm_bt_rfkill_platform_data *pdata = NULL;
-	const struct of_device_id *match = NULL;
+	struct bcm_bt_rfkill_platform_data *pdata1 = NULL;
 
+#ifdef CONFIG_OF_DEVICE
+	const struct of_device_id *match = NULL;
 	match = of_match_device(bcm_bt_rfkill_of_match, &pdev->dev);
 	if (!match) {
 		pr_err("%s: **ERROR** No matcing device found\n", __func__);
 		return -ENODEV;
 	}
+#endif
 
+	pdata = devm_kzalloc(&pdev->dev,
+		sizeof(struct bcm_bt_rfkill_platform_data), GFP_KERNEL);
+
+	if (pdata == NULL)
+		return -ENOMEM;
+
+#ifndef CONFIG_OF_DEVICE
+	if (pdev->dev.platform_data) {
+		pdata1 = pdev->dev.platform_data;
+		pdata->bcm_bt_rfkill_vreg_gpio =
+				pdata1->bcm_bt_rfkill_vreg_gpio;
+		pdata->bcm_bt_rfkill_n_reset_gpio =
+				pdata1->bcm_bt_rfkill_n_reset_gpio;
+		pr_debug("%s: %d %d\n", __func__,
+			pdata->bcm_bt_rfkill_vreg_gpio,
+			pdata->bcm_bt_rfkill_n_reset_gpio);
+	} else {
+		pr_err("%s: **ERROR** NO platform data available\n", __func__);
+		rc = -ENODEV;
+		goto out;
+	}
+#else
 	if (pdev->dev.of_node) {
-		pdata = devm_kzalloc(&pdev->dev,
-				sizeof(struct bcm_bt_rfkill_platform_data),
-				GFP_KERNEL);
-		if (pdata == NULL)
-			return -ENOMEM;
 		pdata->bcm_bt_rfkill_vreg_gpio =
 					of_get_named_gpio(pdev->dev.of_node,
 						"bcm-bt-rfkill-vreg-gpio", 0);
@@ -113,10 +135,11 @@ static int bcm_bt_rfkill_probe(struct platform_device *pdev)
 		}
 		pdev->dev.platform_data = pdata;
 	} else {
-		pr_err("%s: **ERROR** NO platform data available\n", __func__);
+		pr_err("%s: **ERROR** No platformdata/devicetree\n", __func__);
 		rc = -ENODEV;
 		goto out;
 	}
+#endif
 
 	rc = devm_gpio_request_one(&pdev->dev,
 				pdata->bcm_bt_rfkill_vreg_gpio,
@@ -145,6 +168,7 @@ static int bcm_bt_rfkill_probe(struct platform_device *pdev)
 			"%s:ERROR bcm_bt_rfkill_n_reset_gpio request failed\n",
 					__func__);
 		}
+		gpio_export(pdata->bcm_bt_rfkill_n_reset_gpio, false);
 		gpio_direction_output(pdata->bcm_bt_rfkill_n_reset_gpio,
 						BCM_BT_RFKILL_N_RESET_ON);
 		pr_debug("bcm_bt_rfkill_probe: bcm_bt_rfkill_n_reset_gpio: %s\n",
