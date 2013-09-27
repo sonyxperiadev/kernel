@@ -190,6 +190,8 @@ static inline u32 axipv_set_buff_status(struct axipv_buff *buff,
 			default:
 				ret = 3;
 			}
+			if (!ret)
+				break;
 		}
 	}
 	/*
