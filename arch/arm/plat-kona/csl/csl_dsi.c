@@ -1175,7 +1175,14 @@ CSL_LCD_RES_T CSL_DSI_SendPacket(CSL_LCD_HANDLE client,
 	}
 
 	if (!clientH->hasLock) {
-		OSSEMAPHORE_Obtain(dsiH->semaDsi, TICKS_FOREVER);
+		OSStatus_t osRes = OSSEMAPHORE_Obtain(dsiH->semaDsi,
+				TICKS_IN_MILLISECONDS(1000));
+		if (osRes != OSSTATUS_SUCCESS) {
+			LCD_DBG(LCD_DBG_ERR_ID,
+				"[CSL DSI][%d] %s: ERR, semaDsi timeout\n",
+				dsiH->bus, __func__);
+			return CSL_LCD_API_ERR;
+		}
 	}
 
 	if (dsiH->ulps) {
@@ -1321,6 +1328,7 @@ CSL_LCD_RES_T CSL_DSI_SendPacket(CSL_LCD_HANDLE client,
 	if (pkt_to_be_enabled) {
 		u32 cnt2 = 0;
 		u32 dsi_stat, int_status, int_en_mask;
+		int retry;
 		unsigned long pkt_flags;
 		pv_change_state(PV_PAUSE_STREAM_SYNC, dsiH->pvCfg);
 		local_irq_save(pkt_flags);
@@ -1357,10 +1365,14 @@ start_tx:
 			chal_dsi_tx_start(dsiH->chalH, TX_PKT_ENG_1, TRUE);
 			goto start_tx;
 		}
-		while (dsi_stat & CHAL_DSI_STAT_TXPKT1_BUSY) {
+		retry = 10*1000; /* 100ms */
+		while (dsi_stat & CHAL_DSI_STAT_TXPKT1_BUSY && retry > 0) {
+			retry--;
 			udelay(WAIT_GENERAL_US);
 			dsi_stat = chal_dsi_get_status(dsiH->chalH);
 		}
+		if (retry <= 0)
+			pr_err("CHAL_DSI_STAT_TXPKT1_BUSY timeout\n");
 		if (!(dsi_stat & PKT1_STAT_MASK))
 			pr_err("something fishy\n");
 		chal_dsi_clr_status(dsiH->chalH, PKT1_STAT_MASK);

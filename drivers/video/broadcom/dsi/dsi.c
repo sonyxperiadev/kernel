@@ -37,11 +37,17 @@
 
 #define DSI_ERR(fmt, args...) \
 	printk(KERN_ERR "%s:%d " fmt, __func__, __LINE__, ##args)
-#if 0
+#if 1
 #define DSI_INFO(fmt, args...) \
-	printk(KERN_INFO "%s:%d " fmt, __func__, __LINE__, ##args)
+	printk(KERN_DEBUG "%s:%d " fmt, __func__, __LINE__, ##args)
 #else
 #define DSI_INFO(fmt, args...)
+#endif
+#if 0
+#define DSI_DBG(fmt, args...) \
+	printk(KERN_DEBUG "%s:%d " fmt, __func__, __LINE__, ##args)
+#else
+#define DSI_DBG(fmt, args...)
 #endif
 
 typedef struct {
@@ -872,6 +878,7 @@ Int32 DSI_PowerControl(
 	DispDrv_PANEL_t *pPanel = (DispDrv_PANEL_t *)drvH;
 	DISPDRV_INFO_T *info = pPanel->disp_info;
 
+	DSI_INFO("state %d pwrState %d\n", state, pPanel->pwrState);
 	switch (state) {
 	case CTRL_PWR_ON:
 		switch (pPanel->pwrState) {
@@ -1046,7 +1053,7 @@ static void DSI_Cb(CSL_LCD_RES_T cslRes, pCSL_LCD_CB_REC pCbRec)
 {
 	DISPDRV_CB_RES_T apiRes;
 
-	DSI_INFO("+\n");
+	DSI_DBG("+\n");
 
 	if (pCbRec->dispDrvApiCb != NULL) {
 		switch (cslRes)	{
@@ -1061,7 +1068,7 @@ static void DSI_Cb(CSL_LCD_RES_T cslRes, pCSL_LCD_CB_REC pCbRec)
 		((DISPDRV_CB_T)pCbRec->dispDrvApiCb)(apiRes);
 	}
 
-	DSI_INFO("-\n");
+	DSI_DBG("-\n");
 }
 
 
@@ -1083,7 +1090,7 @@ Int32 DSI_Update(
 	Int32 res  = 0;
 	uint32_t offset;
 
-	DSI_INFO("+\n");
+	DSI_DBG("+\n");
 	if (pPanel->pwrState ==	STATE_PWR_OFF) {
 		DSI_ERR("Skip Due To Power State\n");
 		return -1;
@@ -1091,7 +1098,7 @@ Int32 DSI_Update(
 	if (p_win == NULL)
 		p_win =	&pPanel->win_dim;
 
-	DSI_INFO("%d %d %d %d\n", p_win->l,
+	DSI_DBG("%d %d %d %d\n", p_win->l,
 			p_win->r, p_win->t, p_win->b);
 
 	DSI_WinSet(drvH, TRUE, p_win);
@@ -1111,7 +1118,7 @@ Int32 DSI_Update(
 	req.cslLcdCbRec.dispDrvApiCb	= (void	*) apiCb;
 	req.cslLcdCbRec.dispDrvApiCbP1	= NULL;
 
-	DSI_INFO("buf=%08x, linelenp = %lu, linecnt =%lu\n",
+	DSI_DBG("buf=%08x, linelenp = %lu, linecnt =%lu\n",
 		(u32)req.buff, req.lineLenP, req.lineCount);
 
 	if (apiCb != NULL)
@@ -1130,7 +1137,7 @@ Int32 DSI_Update(
 		DSI_Cb(res, &req.cslLcdCbRec);
 	}
 
-	DSI_INFO("-\n");
+	DSI_DBG("-\n");
 
 	return res;
 }
@@ -1151,7 +1158,7 @@ Int32 DSI_Atomic_Update(
 	CSL_LCD_UPD_REQ_T req;
 	Int32 res  = 0;
 
-	DSI_INFO("+\n");
+	DSI_DBG("+\n");
 
 	if (pPanel->pwrState ==	STATE_PWR_OFF) {
 		DSI_ERR("Skip Due To Power State\n");
@@ -1181,7 +1188,7 @@ Int32 DSI_Atomic_Update(
 	req.cslLcdCbRec.dispDrvApiCbP1	= NULL;
 	req.cslLcdCb = NULL;
 
-	DSI_INFO("buf=%08x, linelenp = %lu, linecnt =%lu\n",
+	DSI_DBG("buf=%08x, linelenp = %lu, linecnt =%lu\n",
 		(u32)req.buff, req.lineLenP, req.lineCount);
 
 	if (pPanel->disp_info->vmode)
@@ -1194,7 +1201,7 @@ Int32 DSI_Atomic_Update(
 		res = -1;
 	}
 
-	DSI_INFO("-\n");
+	DSI_DBG("-\n");
 
 	csl_dma_unlock();
 

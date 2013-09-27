@@ -427,12 +427,16 @@ int pv_change_state(int event, struct pv_config_t *vid_config)
 		/* In case of !cont mode, PV would be in stopping state */
 		if (PV_STOPPING == dev->state) {
 			unsigned long flags;
-			while (1) {
+			int retry = 1000; /*50ms */
+			while (retry > 0) {
 				if (readl(pv_base + REG_PV_STAT)
 					& VID_IDLE_STAT)
 					break;
 				usleep_range(50, 60);
+				retry--;
 			}
+			if (retry <= 0)
+				pv_err("PV_PAUSE_STREAM_SYNC fail in PV_STOPPING\n");
 
 			spin_lock_irqsave(&lock, flags);
 			dev->state = PV_STOPPED;
