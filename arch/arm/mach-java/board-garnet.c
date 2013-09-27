@@ -814,8 +814,9 @@ static int hawaii_camera_power_front(struct device *dev, int on)
 		if (pi_mgr_dfs_request_update(&unicam_dfs_node, PI_OPP_TURBO))
 			printk("DVFS for UNICAM failed\n");
 		gpio_set_value(SENSOR_1_GPIO_PWRDN, thisCfg->pwdn_active);
+		usleep_range(1000, 1010);
 		gpio_set_value(SENSOR_1_GPIO_RST, thisCfg->rst_active);
-
+#ifndef CONFIG_SOC_CAMERA_GC2035
 		usleep_range(5000, 5010);
 		regulator_enable(d_lvldo2_cam1_1v8);
 		usleep_range(1000, 1010);
@@ -829,7 +830,18 @@ static int hawaii_camera_power_front(struct device *dev, int on)
 
 		gpio_set_value(SENSOR_1_GPIO_RST,
 			thisCfg->rst_active ? 0 : 1);
-
+#else
+		usleep_range(5000, 5010);
+		regulator_enable(d_lvldo2_cam1_1v8);
+		usleep_range(50000, 50010);
+		regulator_enable(d_gpsr_cam0_1v8);
+		usleep_range(10000, 10100);
+		/* Secondary cam addition */
+		regulator_enable(d_1v8_mmc1_vcc);
+		usleep_range(1000, 1010);
+		regulator_enable(d_3v0_mmc1_vcc);
+		usleep_range(1000, 1010);
+#endif
 		if (mm_ccu_set_pll_select(CSI1_BYTE1_PLL, 8)) {
 			pr_err("failed to set BYTE1\n");
 			goto e_clk_pll;
@@ -891,6 +903,10 @@ static int hawaii_camera_power_front(struct device *dev, int on)
 		gpio_set_value(SENSOR_1_GPIO_PWRDN,
 			thisCfg->pwdn_active ? 0 : 1);
 		msleep(30);
+	#ifdef CONFIG_SOC_CAMERA_GC2035
+		gpio_set_value(SENSOR_1_GPIO_RST,
+			thisCfg->rst_active ? 0 : 1);
+	#endif
 	} else {
 		gpio_set_value(SENSOR_1_GPIO_PWRDN, thisCfg->pwdn_active);
 		usleep_range(1000, 1010);
@@ -901,11 +917,19 @@ static int hawaii_camera_power_front(struct device *dev, int on)
 		clk_disable(clock);
 		clk_disable(axi_clk);
 		clk_disable(axi_clk_0);
+	#ifndef CONFIG_SOC_CAMERA_GC2035
 		regulator_disable(d_lvldo2_cam1_1v8);
 		regulator_disable(d_1v8_mmc1_vcc);
 		regulator_disable(d_gpsr_cam0_1v8);
 		regulator_disable(d_3v0_mmc1_vcc);
-
+	#else
+		regulator_disable(d_1v8_mmc1_vcc);
+		usleep_range(10000, 10100);
+		regulator_disable(d_gpsr_cam0_1v8);
+		usleep_range(50000, 50100);
+		regulator_disable(d_lvldo2_cam1_1v8);
+		regulator_disable(d_3v0_mmc1_vcc);
+	#endif
 		if (pi_mgr_dfs_request_update
 		    (&unicam_dfs_node, PI_MGR_DFS_MIN_VALUE)) {
 			printk("Failed to set DVFS for unicam\n");
