@@ -31,6 +31,8 @@
 #include <linux/proc_fs.h>
 #include <asm/uaccess.h>
 #include <linux/if_arp.h>
+#include <linux/netlink.h>
+
 #define CSL_TYPES_H
 #include <linux/broadcom/bcm_fuse_net_if.h>
 
@@ -54,6 +56,9 @@
 #include <linux/earlysuspend.h>
 #endif
 
+#if defined(CONFIG_BCM_MMS_BLOCK)
+#include "bcm_fuse_net.h"
+#endif
 
 static int __init bcm_fuse_net_init_module(void);
 static void __exit bcm_fuse_net_exit_module(void);
@@ -511,9 +516,80 @@ static int bcm_fuse_net_stop(struct net_device *dev)
 		}
 	}
 	netif_stop_queue(dev);
+	return 0;
+}
+
+#if defined(CONFIG_BCM_MMS_BLOCK)
+void send_event_to_security_center(struct mms_event *pevent)
+{
+	struct sk_buff *skb;
+	struct nlmsghdr *nlh;
+	u8 *data;
+	struct sock *sk = NULL;
+
+	skb = nlmsg_new(sizeof(struct mms_event), GFP_KERNEL);
+	if (skb == NULL) {
+		BNET_DEBUG(DBG_ERROR, "Error:skb == null\n");
+		return;
+	}
+
+	nlh = __nlmsg_put(skb, 0, 0, 0, sizeof(struct mms_event), 0);
+	NETLINK_CB(skb).pid = 0;
+	NETLINK_CB(skb).dst_group = 0;
+	data = nlmsg_data(nlh);
+	memcpy(data, pevent, sizeof(struct mms_event));
+
+	sk = netlink_kernel_create(&init_net, NETLINK_USERSOCK, 0,
+			NULL, NULL, THIS_MODULE);
+	if (sk == NULL) {
+		BNET_DEBUG(DBG_ERROR, "Error:sk == null\n");
+		return;
+	}
+
+	netlink_unicast(sk, skb, get_com_pid(), MSG_DONTWAIT);
+	netlink_kernel_release(sk);
+}
+
+int check_if_block_mms(struct sk_buff *skb, struct net_device *dev)
+{
+	struct iphdr *nh;
+	struct mms_event mmsevent;
+	struct tcphdr *tcp_hedaer_ptr;
+	unsigned char *tcp_payload = NULL;
+	const struct file *filp;
+	uid_t sock_uid = 0;
+
+	nh = ip_hdr(skb);
+	if (nh->protocol != IPPROTO_TCP)
+		return 0;
+
+	tcp_hedaer_ptr = (struct tcphdr *)skb->transport_header;
+	tcp_payload = (unsigned char *)tcp_hedaer_ptr + tcp_hedaer_ptr->doff*4;
+
+	if ((unsigned int)tcp_payload+4 > (unsigned int)skb->end)
+		return 0;
+
+	if (strnicmp(tcp_payload, "POST", 4) != 0)
+		return 0;
+
+	if (strnstr(tcp_payload,
+			"Content-Type: application/vnd.wap.mms-message", 300)) {
+		if (skb->sk != NULL && skb->sk->sk_socket != NULL) {
+			filp = skb->sk->sk_socket->file;
+			if (filp != NULL)
+				sock_uid = filp->f_cred->fsuid;
+		}
+		if (is_uid_in_white_list(sock_uid) == 1)
+			return 0;
+
+		mmsevent.uid = sock_uid;
+		send_event_to_security_center(&mmsevent);
+		return 1;
+	}
 
 	return 0;
 }
+#endif
 
 static int bcm_fuse_net_tx(struct sk_buff *skb, struct net_device *dev)
 {
@@ -524,6 +600,13 @@ static int bcm_fuse_net_tx(struct sk_buff *skb, struct net_device *dev)
 	static int sim_id;
 	net_drvr_info_t *t_ndrvr_info_ptr = NULL;
 	int i;
+
+#if defined(CONFIG_BCM_MMS_BLOCK)
+	if (check_if_block_mms(skb, dev) == 1) {
+		dev_kfree_skb(skb);
+		return 0; /* Pretend to be sent, don't return -1 */
+	}
+#endif
 
 	for (i = 0; i < BCM_NET_MAX_PDP_CNTXS; i++) {
 		if (g_net_dev_tbl[i].dev_ptr == dev) {
