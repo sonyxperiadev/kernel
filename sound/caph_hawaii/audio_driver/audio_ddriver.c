@@ -175,7 +175,6 @@ static int index = 1;
 static Boolean endOfBuffer = FALSE;
 static const UInt16 sVoIPDataLen[] = { 0, 322, 160, 38, 166, 642, 70 };
 static CSL_VP_Mode_AMR_t prev_amr_mode = (CSL_VP_Mode_AMR_t) 0xffff;
-static Boolean telephony_amr_if2;
 static int wait_cnt, waitcnt_thold = 2;
 static UInt32 isDTXEnabled = 0;
 
@@ -183,8 +182,13 @@ static struct work_struct voip_work;
 static struct workqueue_struct *voip_workqueue; /* init to NULL */
 static DJB_InputFrame *djbBuf; /* init to NULL */
 static Boolean inVoLTECall = FALSE;
+
+#if defined(CONFIG_BCM_MODEM)
+static Boolean telephony_amr_if2;
 static AUDDRV_VOIF_t voifDrv = { 0 };
 static Boolean voif_enabled; /* init to 0 */
+#endif
+
 
 /* Private function prototypes */
 
@@ -220,12 +224,14 @@ static Result_t AUDIO_DRIVER_ProcessCaptureVoiceCmd(AUDIO_DDRIVER_t *aud_drv,
 						    AUDIO_DRIVER_CTRL_t
 						    ctrl_cmd,
 						    void *pCtrlStruct);
+#if defined(CONFIG_BCM_MODEM)
 static Result_t ARM2SP_play_start(AUDIO_DDRIVER_t *aud_drv,
 				  UInt32 numFramesPerInterrupt);
 
 static Result_t ARM2SP_play_resume(AUDIO_DDRIVER_t *aud_drv);
 
 static Result_t VPU_record_start(VOCAPTURE_start_t capt_start);
+#endif
 
 /*static Boolean VoIP_StartTelephony(
 	VOIPDumpFramesCB_t telephony_dump_cb,
@@ -235,6 +241,7 @@ static Boolean VoIP_StartTelephony(void);
 
 static Boolean VoIP_StopTelephony(void);
 
+#if defined(CONFIG_BCM_MODEM)
 /**
  * decode_amr_mode : for decoding next speech frame
  * pBuf : buffer carrying the AMR speech data to be decoded
@@ -250,6 +257,7 @@ static void VoIP_StartMainAMRDecodeEncode(
 	Boolean dtx_mode,
 	UInt32 dl_timestamp
 );
+#endif
 static void AUDIO_DRIVER_RenderDmaCallback(
 	UInt32 stream_id,
 	UInt32 buffer_idx);
@@ -258,12 +266,16 @@ static void AUDIO_DRIVER_CaptureDmaCallback(
 	UInt32 stream_id,
 	UInt32 buffer_idx);
 
+#if defined(CONFIG_BCM_MODEM)
 static Boolean VOIP_DumpUL_CB(
 	UInt8 *pSrc,	/* pointer to start of speech data */
 	UInt32 amrMode	/* AMR codec mode of speech data */
 );
+#endif
+
 static Boolean VOIP_FillDL_CB(UInt32 nFrames);
 
+#if defined(CONFIG_BCM_MODEM)
 static void Ptt_FillDL_CB(UInt32 buf_index, UInt32 ptt_flag, UInt32 int_rate);
 
 static Boolean VoLTE_WriteDLData(
@@ -271,12 +283,16 @@ static Boolean VoLTE_WriteDLData(
 	UInt16 *pBuf,
 	UInt32 dl_timestamp);
 
-static enum hrtimer_restart TimerCbSendSilence(struct hrtimer *timer);
 static void setKtime(UInt16 speechMode, UInt16 framesPerInt);
+
 static UInt8 getRFCFrameType(UInt16 frame_type,
 		UInt16 amr_codec_mode, Boolean isAMRWB);
 
 static Boolean getAMRBandwidth(UInt16 codec_mode);
+#endif
+
+static enum hrtimer_restart TimerCbSendSilence(struct hrtimer *timer);
+
 /* Functions */
 
 UInt32 StreamIdOfDriver(AUDIO_DRIVER_HANDLE_t h)
@@ -1325,7 +1341,7 @@ static Result_t AUDIO_DRIVER_ProcessPttCmd(AUDIO_DDRIVER_t *aud_drv,
 	case AUDIO_DRIVER_GET_PTT_BUFFER:
 	{
 		UInt32 buf_index;
-		Int16  *buf_ptr;
+		Int16  *buf_ptr = NULL;
 		if (pCtrlStruct == NULL) {
 			aError(
 				"AUDIO_DRIVER_ProcessPttCmd::Invalid Ptr\n");
@@ -1333,11 +1349,16 @@ static Result_t AUDIO_DRIVER_ProcessPttCmd(AUDIO_DDRIVER_t *aud_drv,
 		}
 		/* get the buffer pointer */
 		buf_index = *((UInt32 *)pCtrlStruct);
+
 #ifdef CONFIG_BCM_MODEM
 		buf_ptr = CSL_GetULPTTBuffer(buf_index);
-#endif
 		*((UInt32 *)pCtrlStruct) = (UInt32) buf_ptr;
 		result_code = RESULT_OK;
+#else
+		*((UInt32 *)pCtrlStruct) = (UInt32) buf_ptr;
+		aError("AUDIO_DRIVER_ProcessPttCmd:: Modem not configured\n");
+		return result_code;
+#endif
 	}
 	break;
 	default:
@@ -1756,6 +1777,7 @@ static Result_t AUDIO_DRIVER_ProcessCommonCmd(AUDIO_DDRIVER_t *aud_drv,
 	return result_code;
 }
 
+#if defined(CONFIG_BCM_MODEM)
 /**
  *
  * Function Name: ARM2SP_play_start
@@ -1874,7 +1896,9 @@ static Result_t ARM2SP_play_resume(AUDIO_DDRIVER_t *aud_drv)
 #endif
 	return RESULT_OK;
 }
+#endif
 
+#if defined(CONFIG_BCM_MODEM)
 /**
  *
  * Function Name: VPU_record_start
@@ -1923,6 +1947,7 @@ static Result_t VPU_record_start(VOCAPTURE_start_t capt_start)
 #endif
 	return RESULT_OK;
 }
+#endif
 
 /* DSP interrupt handlers */
 
@@ -2103,11 +2128,15 @@ static void AUDIO_DRIVER_RenderDmaCallback(UInt32 stream_id, UInt32 buffer_idx)
  ***************************************************************************/
 void ARM2SP_Render_Request(UInt16 buf_index)
 {
-	Boolean in48K = FALSE;
 	AUDIO_DDRIVER_t *pAudDrv;
 	UInt8 *pSrc = NULL;
-	UInt32 srcIndex, copied_bytes;
+	UInt32 srcIndex;
 	unsigned long flags;
+
+#if defined(CONFIG_BCM_MODEM)
+	Boolean in48K = FALSE;
+	UInt32 copied_bytes;
+#endif
 
 	spin_lock_irqsave(
 		&audio_voice_driver[VORENDER_ARM2SP_INSTANCE1]
@@ -2169,11 +2198,15 @@ void ARM2SP_Render_Request(UInt16 buf_index)
  ***************************************************************************/
 void ARM2SP2_Render_Request(UInt16 buf_index)
 {
-	Boolean in48K = FALSE;
 	AUDIO_DDRIVER_t *pAudDrv;
 	UInt8 *pSrc = NULL;
-	UInt32 srcIndex, copied_bytes;
+	UInt32 srcIndex;
 	unsigned long flags;
+
+#if defined(CONFIG_BCM_MODEM)
+	Boolean in48K = FALSE;
+	UInt32 copied_bytes;
+#endif
 
 	spin_lock_irqsave(
 		&audio_voice_driver[VORENDER_ARM2SP_INSTANCE2]
@@ -2278,9 +2311,12 @@ void VPU_Capture_Request(UInt16 buf_index)
 {
 	Int32 dest_index, num_bytes_to_copy;
 	UInt8 *pdest_buf;
-	UInt32 recv_size;
 	AUDIO_DDRIVER_t *aud_drv;
 	unsigned long flags;
+
+#if defined(CONFIG_BCM_MODEM)
+	UInt32 recv_size;
+#endif
 
 	if (hrtimer_active(&hr_timer)) /* CP reset */
 		return;
@@ -2347,6 +2383,7 @@ void VPU_Capture_Request(UInt16 buf_index)
 	return;
 }
 
+#if defined(CONFIG_BCM_MODEM)
 /**
  *
  * Function Name:  VoIP_StartMainAMRDecodeEncode()
@@ -2376,7 +2413,6 @@ static void VoIP_StartMainAMRDecodeEncode(
 )
 {
 	/* decode the next downlink AMR speech data from application */
-#if defined(CONFIG_BCM_MODEM)
 	if (inVoLTECall) {
 		encode_amr_mode |= VOLTECALLENABLE;
 		if (dtx_mode == TRUE)
@@ -2402,8 +2438,8 @@ static void VoIP_StartMainAMRDecodeEncode(
 		VPRIPCMDQ_DSP_AMR_RUN((UInt16) encode_amr_mode,
 				      telephony_amr_if2, FALSE);
 	}
-#endif
 }
+#endif
 
 /**
  *
@@ -2441,6 +2477,7 @@ void AP_ProcessStatusMainAMRDone(UInt16 codecType)
 #endif
 }
 
+#if defined(CONFIG_BCM_MODEM)
 /**
  *
  * Function Name: VOIP_DumpUL_CB
@@ -2552,6 +2589,7 @@ static Boolean VOIP_DumpUL_CB(UInt8 *pSrc, UInt32 amrMode)
 	spin_unlock_irqrestore(&audio_voip_driver.audio_lock, flags);
 	return TRUE;
 };
+#endif
 
 /**
  *
@@ -2627,6 +2665,7 @@ void VOLTE_ProcessDLData(void)
 	VOIP_FillDL_CB(1);
 }
 
+#if defined(CONFIG_BCM_MODEM)
  /**
   *
   * Function Name: VoLTE_WriteDLData
@@ -2714,15 +2753,16 @@ static void Ptt_FillDL_CB(UInt32 buf_index, UInt32 ptt_flag, UInt32 int_rate)
 		return;
 	}
 	aTrace(LOG_AUDIO_DRIVER, "Int rate-%ld\n", int_rate);
-#ifdef CONFIG_BCM_MODEM
+
 	buf_ptr = CSL_GetULPTTBuffer(buf_index);
-#endif
+
 	audio_ptt_driver.aud_drv_p->ptt_config.pPttDLCallback(
 		audio_ptt_driver.aud_drv_p->ptt_config.pPttCBPrivate , buf_ptr,
 		PTT_FRAME_SIZE);
 	spin_unlock_irqrestore(&audio_ptt_driver.audio_lock, flags);
 	return;
 }
+#endif
 
 static enum hrtimer_restart TimerCbSendSilence(struct hrtimer *timer)
 {
@@ -2782,6 +2822,7 @@ static enum hrtimer_restart TimerCbSendSilence(struct hrtimer *timer)
 	return HRTIMER_RESTART;
 }
 
+#if defined(CONFIG_BCM_MODEM)
 static void setKtime(UInt16 speechMode, UInt16 framesPerInt)
 {
 	UInt32 ktime_ms;
@@ -2798,8 +2839,6 @@ static void setKtime(UInt16 speechMode, UInt16 framesPerInt)
 			"ktime_ms = %d\n", (int) ktime_ms);
 	ktime = ktime_set(0, MS_TO_NS(ktime_ms));
 }
-
-
 
 static UInt8 getRFCFrameType(UInt16 frame_type,
 		UInt16 amr_codec_mode, Boolean isAMRWB)
@@ -2823,6 +2862,7 @@ static UInt8 getRFCFrameType(UInt16 frame_type,
 
 	return RFC_FrameType;
 }
+
 static Boolean getAMRBandwidth(UInt16 codec_mode)
 {
 	Boolean isAMRWB = FALSE;
@@ -2836,3 +2876,5 @@ static Boolean getAMRBandwidth(UInt16 codec_mode)
 	}
 	return isAMRWB;
 }
+#endif
+

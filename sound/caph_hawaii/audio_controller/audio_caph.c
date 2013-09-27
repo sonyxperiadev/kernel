@@ -571,8 +571,10 @@ Result_t AUDIO_Ctrl_Trigger(BRCM_AUDIO_ACTION_en_t action_code,
 	int params_size = 0;
 	long ret = 0;
 
+#if defined(CONFIG_BCM_MODEM)
 	if (is_dsp_timeout())
 		return RESULT_OK;
+#endif
 
 	if (action_code < ACTION_AUD_OpenPlay
 				|| action_code >= ACTION_AUD_TOTAL) {
