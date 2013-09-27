@@ -137,7 +137,9 @@ __initdata DISPCTRL_REC_T otm8018b_slp_out[] = {
 	{DISPCTRL_LIST_END, 0}
 };
 
-#ifdef CONFIG_MACH_HAWAII_GARNET_C_W81
+#if defined(CONFIG_MACH_HAWAII_GARNET_C_W81) || \
+	defined(CONFIG_MACH_JAVA_C_5606) || \
+	defined(CONFIG_MACH_JAVA_C_5611)
 __initdata DISPCTRL_REC_T otm8018b_init_panel_vid[] = {
 	{DISPCTRL_WR_CMND, 0x00},
 	{DISPCTRL_WR_DATA, 0x00},
