@@ -88,7 +88,12 @@ enum {
 	/* H264 access protect/unprotect*/
 	HWCODEC_PROTECT,
 	HWCODEC_UNPROTECT,
-	H264_OL_LAST_JOB
+	H264_OL_LAST_JOB,
+
+	/*JPEG */
+	JPEG_INVALID_JOB = 0x68000000,
+	JPEG_ENC_JOB,
+	JPEG_LAST_JOB
 };
 #define mm_job_type_e unsigned int
 
@@ -135,6 +140,7 @@ struct MM_DEV_SPL_DATA_T {
 #define ISP_DEV_NAME	"mm_isp"
 #define ISP2_DEV_NAME	"mm_isp2"
 #define H264_DEV_NAME	"mm_h264"
+#define JPEG_DEV_NMAE	"mm_jpeg"
 #define MM_DEV_MAGIC	'M'
 
 enum {
