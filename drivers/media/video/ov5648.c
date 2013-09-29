@@ -2078,6 +2078,8 @@ static int ov5648_init(struct i2c_client *client)
 	ov5648->flashmode         = FLASH_MODE_OFF;
 	ov5648->flash_intensity   = OV5648_FLASH_INTENSITY_DEFAULT;
 	ov5648->flash_timeout     = OV5648_FLASH_TIMEOUT_DEFAULT;
+	ov5648->line_length =
+		ov5648_mode[OV5648_MODE_1280x960P30].line_length_ns;
 	for (i = 0; i < ov5648->aecpos_delay; i++) {
 		ov5648->exp_read_buf[i] = \
 		(ov5648->exposure_current * 1000 / ov5648->line_length) << 4;
@@ -2363,7 +2365,6 @@ static int ov5648_probe(struct i2c_client *client,
 	ov5648->i_fmt = 0;	/* First format in the list */
 	ov5648->plat_parms = icl->priv;
 	ov5648->icd = icd;
-	ov5648->line_length = ov5648_mode[ov5648->mode_idx].line_length_ns;
 
 	ret = ov5648_video_probe(icd, client);
 	if (ret) {
