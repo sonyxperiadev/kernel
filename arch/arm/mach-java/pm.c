@@ -23,6 +23,7 @@
 #include <linux/debugfs.h>
 #include <linux/clk.h>
 #include <linux/io.h>
+#include <linux/interrupt.h>
 #include <plat/kona_pm.h>
 #include <plat/pwr_mgr.h>
 #include <plat/pi_mgr.h>
@@ -104,6 +105,8 @@ enum {
 static int enter_drmt_state(struct kona_idle_state *state, u32 ctrl_params);
 static int enter_wfi_state(struct kona_idle_state *state, u32 ctrl_params);
 static int __enter_drmt(u32 ctrl_params);
+
+static int timer_ch1_ch0_event, timer_ch3_ch2_event;
 
 static struct kona_idle_state idle_states[] = {
 	{
@@ -368,9 +371,46 @@ int force_sleep(suspend_state_t state)
 	}
 }
 
+static void disable_system_timer_interrupts(void)
+{
+#if defined(SYSTEM_TIMER_CORE)
+	disable_irq(BCM_INT_ID_CORE_TIMERS1);
+	disable_irq(BCM_INT_ID_CORE_TIMERS2);
+	disable_irq(BCM_INT_ID_CORE_TIMERS3);
+	disable_irq(BCM_INT_ID_CORE_TIMERS4);
+#elif defined(SYSTEM_TIMER_HUB)
+	disable_irq(BCM_INT_ID_HUB_TIMERS1);
+	disable_irq(BCM_INT_ID_HUB_TIMERS2);
+	disable_irq(BCM_INT_ID_HUB_TIMERS3);
+	disable_irq(BCM_INT_ID_HUB_TIMERS4);
+#else
+#error "System timer not defined!";
+#endif
+}
+
+static void enable_system_timer_interrupts(void)
+{
+#if defined(SYSTEM_TIMER_CORE)
+	enable_irq(BCM_INT_ID_CORE_TIMERS1);
+	enable_irq(BCM_INT_ID_CORE_TIMERS2);
+	enable_irq(BCM_INT_ID_CORE_TIMERS3);
+	enable_irq(BCM_INT_ID_CORE_TIMERS4);
+#elif defined(SYSTEM_TIMER_HUB)
+	enable_irq(BCM_INT_ID_HUB_TIMERS1);
+	enable_irq(BCM_INT_ID_HUB_TIMERS2);
+	enable_irq(BCM_INT_ID_HUB_TIMERS3);
+	enable_irq(BCM_INT_ID_HUB_TIMERS4);
+#else
+#error "System timer not defined!";
+#endif
+}
+
 int enter_drmt_state(struct kona_idle_state *state, u32 ctrl_params)
 {
 	struct pi *pi = NULL;
+	u32 gic_mem_base;
+	int trigger_type_ch1_ch0, trigger_type_ch3_ch2;
+	int cpu;
 
 	BUG_ON(!state);
 
@@ -382,12 +422,12 @@ int enter_drmt_state(struct kona_idle_state *state, u32 ctrl_params)
 	}
 #endif
 #endif
-	/*Clear all events except auto-clear & SW events*/
+	/* Clear all events except auto-clear & SW events */
 	pwr_mgr_event_clear_events(LCDTE_EVENT, KEY_R7_EVENT);
 	pwr_mgr_event_clear_events(MISC_WKP_EVENT, BRIDGE_TO_MODEM_EVENT);
 	pwr_mgr_event_clear_events(USBOTG_EVENT, MODEMBUS_ACTIVE_EVENT);
 
-		/*Turn off XTAL only for deep sleep state*/
+	/* Turn off XTAL only for deep sleep state */
 	if (ctrl_params & CTRL_PARAMS_FLAG_XTAL_ON || pm_info.keep_xtl_on)
 		clk_set_crystal_pwr_on_idle(false);
 
@@ -403,7 +443,32 @@ int enter_drmt_state(struct kona_idle_state *state, u32 ctrl_params)
 			pwr_mgr_log_active_events();
 		}
 
+	/* Saving and disabling the trigger type and disabling the system
+	 * timer interrupts. */
+	if (ctrl_params & CTRL_PARAMS_ENTER_SUSPEND) {
+		disable_system_timer_interrupts();
+
+		trigger_type_ch1_ch0 =
+			pwr_mgr_get_event_trg_type(timer_ch1_ch0_event);
+		trigger_type_ch3_ch2 =
+			pwr_mgr_get_event_trg_type(timer_ch3_ch2_event);
+
+		pwr_mgr_event_trg_enable(timer_ch1_ch0_event, 0);
+		pwr_mgr_event_trg_enable(timer_ch3_ch2_event, 0);
+	}
+
 	__enter_drmt(ctrl_params);
+
+	/* Restoring the trigger type and enabling the system timer
+	 * interrupts. */
+	if (ctrl_params & CTRL_PARAMS_ENTER_SUSPEND) {
+		pwr_mgr_event_trg_enable(timer_ch1_ch0_event,
+						trigger_type_ch1_ch0);
+		pwr_mgr_event_trg_enable(timer_ch3_ch2_event,
+						trigger_type_ch3_ch2);
+
+		enable_system_timer_interrupts();
+	}
 
 	pm_dbg(LOG_SW2_STATUS,
 		"SW2 state: %d\n", pwr_mgr_is_event_active(SOFTWARE_2_EVENT));
@@ -448,7 +513,6 @@ int pm_is_forced_sleep()
 	return !!pm_info.force_sleep;
 }
 
-
 int __init __pm_init(void)
 {
 	struct clk *clk;
@@ -457,6 +521,17 @@ int __init __pm_init(void)
 	BUG_ON(IS_ERR_OR_NULL(clk));
 	pm_info.proc_ccu = to_ccu_clk(clk);
 	pm_config_deep_sleep();
+
+#if defined(SYSTEM_TIMER_CORE)
+	timer_ch1_ch0_event = COMMON_TIMER_3_EVENT;
+	timer_ch3_ch2_event = COMMON_TIMER_4_EVENT;
+#elif defined(SYSTEM_TIMER_HUB)
+	timer_ch1_ch0_event = COMMON_TIMER_1_EVENT;
+	timer_ch3_ch2_event = COMMON_TIMER_2_EVENT;
+#else
+#error "System timer not defined!";
+#endif
+
 	return kona_pm_init(&pm_init);
 }
 device_initcall(__pm_init);

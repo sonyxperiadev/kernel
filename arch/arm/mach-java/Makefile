@@ -23,6 +23,13 @@ obj-$(CONFIG_MACH_JAVA_FPGA_E) += java_fpga.o
 obj-$(CONFIG_CDEBUGGER) += crash_debugger.o
 obj-$(CONFIG_KONA_POWER_MGR) += pwr_mgr.o
 obj-$(CONFIG_KONA_PI_MGR) += pi_mgr.o
+
+ifeq ($(CONFIG_ARCH_HAWAII), y)
+KBUILD_CFLAGS += -DSYSTEM_TIMER_HUB
+else
+KBUILD_CFLAGS += -DSYSTEM_TIMER_CORE
+endif
+
 obj-$(CONFIG_KONA_CPU_PM_HANDLER) += pm.o sleep.o pm_dbg.o
 obj-$(CONFIG_KONA_SECURE_MONITOR_CALL) += sec_api.o
 # obj-$(CONFIG_HAWAII_PTM) += coresight.o
