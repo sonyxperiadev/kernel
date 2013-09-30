@@ -27,6 +27,7 @@
 #include <chal/chal_audio_int.h>
 #include <mach/rdb/brcm_rdb_audioh.h>
 #include <chal/chal_util.h>
+#include <mach/cpu.h>
 
 /*
  * ****************************************************************************
@@ -805,10 +806,14 @@ void chal_audio_earpath_set_dac_pwr(CHAL_HANDLE handle, cUInt16 enable)
 		BRCM_WRITE_REG(base, AUDIOH_HS_PWR, reg_value);
 
 		/* Not only HS but also IHF. This should be fixed in A1 */
-		reg_value = BRCM_READ_REG(base, AUDIOH_IHF_PWR);
-		reg_value &= ~(AUDIOH_IHF_PWR_AUDIOTX_IHF_DACR_PD_MASK);
-		reg_value &= ~(AUDIOH_IHF_PWR_AUDIOTX_IHF_DACL_PD_MASK);
-		BRCM_WRITE_REG(base, AUDIOH_IHF_PWR, reg_value);
+		/* Don't set DAC PD for Java H/W */
+		if (get_chip_id() < KONA_CHIP_ID_JAVA_A0) {
+			reg_value = BRCM_READ_REG(base, AUDIOH_IHF_PWR);
+			reg_value &= ~(AUDIOH_IHF_PWR_AUDIOTX_IHF_DACR_PD_MASK);
+			reg_value &= ~(AUDIOH_IHF_PWR_AUDIOTX_IHF_DACL_PD_MASK);
+			BRCM_WRITE_REG(base, AUDIOH_IHF_PWR, reg_value);
+		}
+
 	} else {
 
 		/* the following note is from Rhea A0:
@@ -833,10 +838,13 @@ void chal_audio_earpath_set_dac_pwr(CHAL_HANDLE handle, cUInt16 enable)
 		}
 
 		/* Not only HS but also IHF. This should be fixed in A1 */
-		reg_value = BRCM_READ_REG(base, AUDIOH_IHF_PWR);
-		reg_value |= AUDIOH_IHF_PWR_AUDIOTX_IHF_DACR_PD_MASK;
-		reg_value |= AUDIOH_IHF_PWR_AUDIOTX_IHF_DACL_PD_MASK;
-		BRCM_WRITE_REG(base, AUDIOH_IHF_PWR, reg_value);
+		/* Don't clear DAC PD for Java H/W */
+		if (get_chip_id() < KONA_CHIP_ID_JAVA_A0) {
+			reg_value = BRCM_READ_REG(base, AUDIOH_IHF_PWR);
+			reg_value |= AUDIOH_IHF_PWR_AUDIOTX_IHF_DACR_PD_MASK;
+			reg_value |= AUDIOH_IHF_PWR_AUDIOTX_IHF_DACL_PD_MASK;
+			BRCM_WRITE_REG(base, AUDIOH_IHF_PWR, reg_value);
+		}
 	}
 	return;
 }
