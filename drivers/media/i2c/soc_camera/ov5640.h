@@ -150,17 +150,6 @@ static const struct ov5640_reg configscript_common1[] = {
 	{0x3c0a, 0x9c},
 	{0x3c0b, 0x40},
 
-	/* Sensor Read */
-
-#ifdef CONFIG_MACH_HAWAII_GARNET
-#ifdef CONFIG_MACH_HAWAII_GARNET_C_A18
-	{0x3820, 0x40},
-#else
-	{0x3820, 0x46},		/*vflip */
-#endif
-#else
-	{0x3820, 0x40},		/*vflip */
-#endif
 	{0x3814, 0x11},		/*X incr */
 	{0x3815, 0x11},		/*Y incr */
 	/* Sensor Timing control  2624 x 1952 --> 2560 x 1920 */
@@ -475,17 +464,6 @@ static const struct ov5640_reg hawaii_common_init[] = {
 	{0x3c09, 0x1c},		// light meter 2 threshold low
 	{0x3c0a, 0x9c},		// sample number high
 	{0x3c0b, 0x40},		// sample number low
-
-#ifdef CONFIG_MACH_HAWAII_GARNET
-#ifdef CONFIG_MACH_HAWAII_GARNET_C_A18
-	{0x3820, 0x40},
-#else
-	{0x3820, 0x46},		/*vflip */
-#endif
-#else
-	{0x3820, 0x40},		/*vflip */
-#endif
-	{0x3821, 0x00},		// ISP mirror off, sensor mirror off
 
 	// timing
 	{0x3800, 0x00},

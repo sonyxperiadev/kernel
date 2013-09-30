@@ -44,7 +44,7 @@
 
 #define OV5640_FLASH_THRESHHOLD		32
 #define OV5640_HFLIP_MASK		0x06
-#define OV5640_VFLIP_MASK		0x03
+#define OV5640_VFLIP_MASK		0x06
 #define OV5640_TIMING_REG20		0x3820
 #define OV5640_TIMING_REG21		0x3821
 
@@ -225,15 +225,7 @@ static const struct ov5640_timing_cfg timing_cfg_yuv[OV5640_SIZE_LAST] = {
 			      .h_even_ss_inc = 1,
 			      .v_odd_ss_inc = 3,
 			      .v_even_ss_inc = 1,
-#ifdef CONFIG_MACH_HAWAII_GARNET
-#ifdef CONFIG_MACH_HAWAII_GARNET_C_A18
-			      .out_mode_sel = 0x07,
-#else
 			      .out_mode_sel = 0x01,
-#endif
-#else
-			      .out_mode_sel = 0x07,
-#endif
 			      .sclk_dividers = 0x01,
 			      .sys_mipi_clk = 0x11,
 			      },
@@ -257,15 +249,7 @@ static const struct ov5640_timing_cfg timing_cfg_yuv[OV5640_SIZE_LAST] = {
 			     .h_even_ss_inc = 1,
 			     .v_odd_ss_inc = 3,
 			     .v_even_ss_inc = 1,
-#ifdef CONFIG_MACH_HAWAII_GARNET
-#ifdef CONFIG_MACH_HAWAII_GARNET_C_A18
-			     .out_mode_sel = 0x07,
-#else
 			     .out_mode_sel = 0x01,
-#endif
-#else
-			     .out_mode_sel = 0x07,
-#endif
 			     .sclk_dividers = 0x01,
 			     .sys_mipi_clk = 0x11,
 			     },
@@ -289,15 +273,7 @@ static const struct ov5640_timing_cfg timing_cfg_yuv[OV5640_SIZE_LAST] = {
 			      .h_even_ss_inc = 1,
 			      .v_odd_ss_inc = 3,
 			      .v_even_ss_inc = 1,
-#ifdef CONFIG_MACH_HAWAII_GARNET
-#ifdef CONFIG_MACH_HAWAII_GARNET_C_A18
-			      .out_mode_sel = 0x07,
-#else
 			      .out_mode_sel = 0x01,
-#endif
-#else
-			      .out_mode_sel = 0x07,
-#endif
 			      .sclk_dividers = 0x01,
 			      .sys_mipi_clk = 0x11,
 			      },
@@ -321,15 +297,7 @@ static const struct ov5640_timing_cfg timing_cfg_yuv[OV5640_SIZE_LAST] = {
 				  .h_even_ss_inc = 1,
 				  .v_odd_ss_inc = 3,
 				  .v_even_ss_inc = 1,
-#ifdef CONFIG_MACH_HAWAII_GARNET
-#ifdef CONFIG_MACH_HAWAII_GARNET_C_A18
-				  .out_mode_sel = 0x07,
-#else
 				  .out_mode_sel = 0x01,
-#endif
-#else
-				  .out_mode_sel = 0x07,
-#endif
 				  .sclk_dividers = 0x01,
 				  .sys_mipi_clk = 0x11,
 				  },
@@ -353,15 +321,7 @@ static const struct ov5640_timing_cfg timing_cfg_yuv[OV5640_SIZE_LAST] = {
 			      .h_even_ss_inc = 1,
 			      .v_odd_ss_inc = 1,
 			      .v_even_ss_inc = 1,
-#ifdef CONFIG_MACH_HAWAII_GARNET
-#ifdef CONFIG_MACH_HAWAII_GARNET_C_A18
-			      .out_mode_sel = 0x06,
-#else
 			      .out_mode_sel = 0x00,
-#endif
-#else
-			      .out_mode_sel = 0x06,
-#endif
 			      .sclk_dividers = 0x02,
 			      .sys_mipi_clk = 0x12,
 			      },
@@ -385,15 +345,7 @@ static const struct ov5640_timing_cfg timing_cfg_yuv[OV5640_SIZE_LAST] = {
 			      .h_even_ss_inc = 1,
 			      .v_odd_ss_inc = 1,
 			      .v_even_ss_inc = 1,
-#ifdef CONFIG_MACH_HAWAII_GARNET
-#ifdef CONFIG_MACH_HAWAII_GARNET_C_A18
-			      .out_mode_sel = 0x06,
-#else
 			      .out_mode_sel = 0x00,
-#endif
-#else
-			      .out_mode_sel = 0x06,
-#endif
 			      .sclk_dividers = 0x02,
 			      .sys_mipi_clk = 0x12,
 			      },
@@ -417,15 +369,7 @@ static const struct ov5640_timing_cfg timing_cfg_yuv[OV5640_SIZE_LAST] = {
 			     .h_even_ss_inc = 1,
 			     .v_odd_ss_inc = 1,
 			     .v_even_ss_inc = 1,
-#ifdef CONFIG_MACH_HAWAII_GARNET
-#ifdef CONFIG_MACH_HAWAII_GARNET_C_A18
-			     .out_mode_sel = 0x06,
-#else
 			     .out_mode_sel = 0x00,
-#endif
-#else
-			     .out_mode_sel = 0x06,
-#endif
 			     .sclk_dividers = 0x02,
 			     .sys_mipi_clk = 0x12,
 			     },
@@ -452,7 +396,7 @@ static const struct ov5640_timing_cfg timing_cfg_jpeg[OV5640_SIZE_LAST] = {
 			      .h_even_ss_inc = 1,
 			      .v_odd_ss_inc = 1,
 			      .v_even_ss_inc = 1,
-			      .out_mode_sel = 0x26,
+			      .out_mode_sel = 0x20,
 			      .sclk_dividers = 0x01,
 			      .sys_mipi_clk = 0x12,
 			      },
@@ -476,7 +420,7 @@ static const struct ov5640_timing_cfg timing_cfg_jpeg[OV5640_SIZE_LAST] = {
 			     .h_even_ss_inc = 1,
 			     .v_odd_ss_inc = 1,
 			     .v_even_ss_inc = 1,
-			     .out_mode_sel = 0x26,
+			     .out_mode_sel = 0x20,
 			     .sclk_dividers = 0x01,
 			     .sys_mipi_clk = 0x12,
 			     },
@@ -500,7 +444,7 @@ static const struct ov5640_timing_cfg timing_cfg_jpeg[OV5640_SIZE_LAST] = {
 			      .h_even_ss_inc = 1,
 			      .v_odd_ss_inc = 1,
 			      .v_even_ss_inc = 1,
-			      .out_mode_sel = 0x26,
+			      .out_mode_sel = 0x20,
 			      .sclk_dividers = 0x01,
 			      .sys_mipi_clk = 0x12,
 			      },
@@ -524,7 +468,7 @@ static const struct ov5640_timing_cfg timing_cfg_jpeg[OV5640_SIZE_LAST] = {
 				.h_even_ss_inc = 1,
 				.v_odd_ss_inc = 1,
 				.v_even_ss_inc = 1,
-				.out_mode_sel = 0x26,
+				.out_mode_sel = 0x20,
 				.sclk_dividers = 0x01,
 				.sys_mipi_clk = 0x12,
 				},
@@ -548,7 +492,7 @@ static const struct ov5640_timing_cfg timing_cfg_jpeg[OV5640_SIZE_LAST] = {
 			      .h_even_ss_inc = 1,
 			      .v_odd_ss_inc = 1,
 			      .v_even_ss_inc = 1,
-			      .out_mode_sel = 0x26,
+			      .out_mode_sel = 0x20,
 			      .sclk_dividers = 0x01,
 			      .sys_mipi_clk = 0x12,
 			      },
@@ -572,7 +516,7 @@ static const struct ov5640_timing_cfg timing_cfg_jpeg[OV5640_SIZE_LAST] = {
 			      .h_even_ss_inc = 1,
 			      .v_odd_ss_inc = 1,
 			      .v_even_ss_inc = 1,
-			      .out_mode_sel = 0x26,
+			      .out_mode_sel = 0x20,
 			      .sclk_dividers = 0x01,
 			      .sys_mipi_clk = 0x12,
 			      },
@@ -596,7 +540,7 @@ static const struct ov5640_timing_cfg timing_cfg_jpeg[OV5640_SIZE_LAST] = {
 			     .h_even_ss_inc = 1,
 			     .v_odd_ss_inc = 1,
 			     .v_even_ss_inc = 1,
-			     .out_mode_sel = 0x26,
+			     .out_mode_sel = 0x20,
 			     .sclk_dividers = 0x01,
 			     .sys_mipi_clk = 0x12,
 			     },
