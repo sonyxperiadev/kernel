@@ -606,10 +606,6 @@ int bcm_hsotgctrl_handle_bus_suspend(send_core_event_cb_t suspend_core_cb,
 	/* Power down ALDO */
 	bcm_hsotgctrl_set_aldo_pdn(false);
 
-	/* Remove PHY isolation */
-	bcm_hsotgctrl_set_phy_iso(false);
-	mdelay(PHY_PM_DELAY_IN_MS);
-
 	/* Clear PHY clock request */
 	bcm_hsotgctrl_set_phy_clk_request(false);
 
