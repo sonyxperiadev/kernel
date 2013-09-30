@@ -27,7 +27,6 @@
 #include <linux/poll.h>
 #include <linux/power_supply.h>
 #include <linux/ktime.h>
-#include <linux/sort.h>
 #include <linux/wakelock.h>
 #ifdef CONFIG_DEBUG_FS
 #include <linux/debugfs.h>
@@ -116,37 +115,7 @@ static int acld_chargers[] = {
 };
 static bool bcmpmu_usb_mbc_fault_check(struct bcmpmu_acld *acld);
 static int bcmpmu_reset_acld_flags(struct bcmpmu_acld *acld);
-static int cmp(const void *a, const void *b)
-{
-	if (*((int *)a) < *((int *)b))
-		return -1;
-	if (*((int *)a) > *((int *)b))
-		return 1;
-	return 0;
-}
-/**
- * calculates interquartile mean of the integer data set @data
- * @size is the number of samples. It is assumed that
- * @size is divisible by 4 to ease the calculations
- */
 
-static int interquartile_mean(int *data, int num)
-{
-	int i, j;
-	int avg = 0;
-
-	sort(data, num, sizeof(int), cmp, NULL);
-
-	i = num / 4;
-	j = num - i;
-
-	for ( ; i < j; i++)
-		avg += data[i];
-
-	avg = avg / (j - (num / 4));
-
-	return avg;
-}
 int bcmpmu_get_vbus(struct bcmpmu59xxx *bcmpmu)
 {
 	struct bcmpmu_adc_result result;

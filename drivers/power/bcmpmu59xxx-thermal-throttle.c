@@ -54,6 +54,8 @@ static u32 debug_mask = BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT | \
 #define ADC_RETRY_DELAY				20 /* 20ms */
 #define TEMP_READ_DEBOUNCE			3
 #define ACLD_MAX_WAIT_COUNT			10
+#define TEMP_OFFSET				50
+#define ADC_DIE_TEMP_SAMPLES			8
 
 struct bcmpmu_chrgr_trim_reg {
 	u32 addr;
@@ -87,25 +89,46 @@ struct bcmpmu_throttle_data {
 };
 
 int bcmpmu_throttle_get_temp(struct bcmpmu_throttle_data *tdata, u8 channel,
-				u8 mode)
+		u8 mode)
 {
+	int temp_samples[ADC_DIE_TEMP_SAMPLES] = {0};
 	struct bcmpmu_adc_result result;
-	int ret = 0;
 	int retries = ADC_READ_TRIES;
+	static int temp_prev;
+	int ret = 0, i = 0;
+	bool mean = true;
 
-	while (retries--) {
-		ret = bcmpmu_adc_read(tdata->bcmpmu, channel,
-			mode, &result);
-		if (!ret)
+	do {
+		while (retries--) {
+			ret = bcmpmu_adc_read(tdata->bcmpmu, channel,
+					mode, &result);
+			if (!ret)
+				break;
+			msleep(ADC_RETRY_DELAY);
+		}
+		BUG_ON(retries <= 0);
+
+		if ((result.conv < (temp_prev + TEMP_OFFSET) ||
+				result.conv > (temp_prev - TEMP_OFFSET))) {
+			temp_prev = result.conv;
+			mean = false;
 			break;
+		}
+		temp_samples[i] = result.conv;
 		msleep(ADC_RETRY_DELAY);
-	}
-	BUG_ON(retries <= 0);
+		i++;
 
+	} while (i < ADC_DIE_TEMP_SAMPLES);
+
+	if (mean)
+		temp_prev = interquartile_mean(temp_samples, i);
 	pr_throttle(FLOW,
-		"PMU Die Temp %d\n", result.conv);
-	return result.conv;
+			"PMU Die Temp %d\n", temp_prev);
+
+	return temp_prev;
+
 }
+
 static int bcmpmu_throttle_get_ntcct(struct bcmpmu_throttle_data *tdata,
 		int *temp_rise, int *temp_fall)
 {
@@ -383,6 +406,7 @@ static void bcmpmu_throttle_algo(struct bcmpmu_throttle_data *tdata)
 	int lut_sz = tdata->pdata->temp_curr_lut_sz;
 	int temp, index;
 	int cc_curr;
+	bool cooling = false;
 
 	temp_curr_lut = tdata->pdata->temp_curr_lut;
 	temp = bcmpmu_throttle_get_temp(tdata, tdata->pdata->temp_adc_channel,
@@ -462,6 +486,7 @@ static void bcmpmu_throttle_algo(struct bcmpmu_throttle_data *tdata)
 				tdata->temp_db_cnt);
 			return;
 		}
+		cooling = true;
 	}
 
 	tdata->zone_index = index;
@@ -493,7 +518,9 @@ static void bcmpmu_throttle_algo(struct bcmpmu_throttle_data *tdata)
 
 	bcmpmu_set_chrgr_trim_default(tdata);
 	cc_curr = bcmpmu_get_icc_fc(tdata->bcmpmu);
-	if (cc_curr > temp_curr_lut[index].curr)
+	if (cooling)
+		bcmpmu_set_icc_fc(bcmpmu, temp_curr_lut[index].curr);
+	else if (cc_curr > temp_curr_lut[index].curr)
 		bcmpmu_set_icc_fc(bcmpmu, temp_curr_lut[index].curr);
 	else
 		pr_throttle(FLOW, "Already charging ar lower current\n");

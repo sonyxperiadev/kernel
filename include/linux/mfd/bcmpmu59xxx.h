@@ -28,6 +28,7 @@
 #include <linux/platform_device.h>
 #include <linux/regulator/machine.h>
 #include <linux/i2c-kona.h>
+#include <linux/sort.h>
 
 #define BCMPMU_DUMMY_CLIENTS 1
 #define REG_READ_COUNT_MAX	20
@@ -934,6 +935,51 @@ struct bcmpmu59xxx {
 	int (*mask_irq) (struct bcmpmu59xxx *bcmpmu, u32 irq);
 	int (*unmask_irq) (struct bcmpmu59xxx *bcmpmu, u32 irq);
 };
+
+static inline int cmp(const void *a, const void *b)
+{
+	if (*((int *)a) < *((int *)b))
+		return -1;
+	if (*((int *)a) > *((int *)b))
+		return 1;
+	return 0;
+}
+
+static inline int average(int *data, int samples)
+{
+	int i;
+	int sum = 0;
+
+	for (i = 0; i < samples; i++)
+		sum += data[i];
+
+	return sum/i;
+}
+
+/**
+ * calculates interquartile mean of the integer data set @data
+ * @size is the number of samples. It is assumed that
+ * @size is divisible by 4 to ease the calculations
+ */
+
+static inline int interquartile_mean(int *data, int num)
+{
+	int i, j;
+	int avg = 0;
+
+	sort(data, num, sizeof(int), cmp, NULL);
+
+	i = num / 4;
+	j = num - i;
+
+	for ( ; i < j; i++)
+		avg += data[i];
+
+	avg = avg / (j - (num / 4));
+
+	return avg;
+}
+
 
 int bcmpmu_get_pmu_mfd_cell(struct mfd_cell **);
 
