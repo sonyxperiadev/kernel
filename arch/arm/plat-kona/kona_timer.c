@@ -458,6 +458,63 @@ int kona_timer_config(struct kona_timer *kt, struct timer_ch_cfg *pcfg)
 }
 EXPORT_SYMBOL(kona_timer_config);
 
+#ifdef CONFIG_GP_TIMER_COMPARATOR_LOAD_DELAY
+/*
+ * Wait for the new comparator value to be loaded
+ */
+static inline void __wait_for_compare_val_sync(void __iomem *reg_base,
+		int ch_num)
+{
+	/*
+	 * Wait for new compare value to be loaded within the timer. After an
+	 * update to the timer compare value, one needs to wait for this bit
+	 * to clear before enabling; otherwise the old value will be used
+	 *
+	 * Sync time is ~ 3 32KHz clock cycles
+	 */
+	while (readl(reg_base + KONA_GPTIMER_STCS_OFFSET) &
+		(1 << (KONA_GPTIMER_STCS_STCM0_SYNC_SHIFT + ch_num)))
+		;
+}
+
+/*
+ * Wait for compare enable to be synced into the timer clock domain
+ */
+static inline int __wait_for_compare_enable_sync(void __iomem *reg_base,
+		int ch_num)
+{
+	int enabled;
+
+	if (readl(reg_base + KONA_GPTIMER_STCS_OFFSET) &
+		(1 << (ch_num + KONA_GPTIMER_STCS_COMPARE_ENABLE_SHIFT))) {
+		/*
+		 * NOTE: compare enable sync bit, wait for the sync bit
+		 * until it's changed from low to high. It's going to take
+		 * 2 clock edge (30us ~ 60us on 32khz).
+		 * Default value on POR is 0.
+		 */
+		while (!(readl(reg_base + KONA_GPTIMER_STCS_OFFSET) &
+			(1 << (KONA_GPTIMER_STCS_COMPARE_ENABLE_SYNC_SHIFT +
+			ch_num))))
+			;
+
+		enabled = 1;
+	} else {
+		/*
+		 * NOTE: compare enable sync bit is changed from high to low
+		 * after 2 clock edge when compare enable bit is disabled.
+		 */
+		while (readl(reg_base + KONA_GPTIMER_STCS_OFFSET) &
+			(1 << (KONA_GPTIMER_STCS_COMPARE_ENABLE_SYNC_SHIFT +
+			ch_num)))
+			;
+		enabled = 0;
+	}
+
+	return enabled;
+}
+#endif
+
 /*
  * kona_timer_set_match_start - Set the match register for the timer and start
  * counting
@@ -472,12 +529,17 @@ int kona_timer_set_match_start(struct kona_timer *kt, unsigned long load)
 {
 	struct kona_timer_module *ktm;
 	unsigned long flags;
-	unsigned long reg, lsw, temp = 0;
+	unsigned long reg, lsw;
 
 	if (NULL == kt)
 		return -1;
 
 	ktm = kt->ktm;
+
+	/* guarantee the minimum requested time */
+	if (load < MIN_KONA_DELTA_CLOCK)
+		load = MIN_KONA_DELTA_CLOCK;
+
 	spin_lock_irqsave(&ktm->lock, flags);
 
 	__disable_channel(ktm->reg_base, kt->ch_num);
@@ -495,9 +557,10 @@ int kona_timer_set_match_start(struct kona_timer *kt, unsigned long load)
 
 	/* First read the existing counter */
 	lsw = __get_counter(ktm->reg_base);
+	kt->expire = lsw + load;
 
 	/* Load the match register */
-	writel(load + lsw,
+	writel(kt->expire,
 	       ktm->reg_base + KONA_GPTIMER_STCM0_OFFSET + (kt->ch_num * 4));
 
 #ifdef CONFIG_GP_TIMER_COMPARATOR_LOAD_DELAY
@@ -506,10 +569,7 @@ int kona_timer_set_match_start(struct kona_timer *kt, unsigned long load)
 	 * (taking 3 32KHz clock cycles) before enabling compare (taking
 	 *  2 32KHz clock cycles).
 	 */
-	do {
-		temp = readl(ktm->reg_base + KONA_GPTIMER_STCS_OFFSET) &
-	       (1 << (KONA_GPTIMER_STCS_STCM0_SYNC_SHIFT + kt->ch_num)) ;
-		} while (temp);
+	__wait_for_compare_val_sync(ktm->reg_base, kt->ch_num);
 #endif
 
 	/* Enable compare */
@@ -521,6 +581,7 @@ int kona_timer_set_match_start(struct kona_timer *kt, unsigned long load)
 	 * So do this for only the required channel.
 	 */
 	reg &= ~KONA_GPTIMER_STCS_TIMER_MATCH_MASK;
+	reg |= 1 << (kt->ch_num + KONA_GPTIMER_STCS_TIMER_MATCH_SHIFT);
 	reg |= (1 << (kt->ch_num + KONA_GPTIMER_STCS_COMPARE_ENABLE_SHIFT));
 	writel(reg, ktm->reg_base + KONA_GPTIMER_STCS_OFFSET);
 
@@ -1083,17 +1144,29 @@ static inline void __disable_all_channels(void __iomem *reg_base)
 static inline void __disable_channel(void __iomem *reg_base, int ch_num)
 {
 	int reg;
+
+#ifdef CONFIG_GP_TIMER_COMPARATOR_LOAD_DELAY
+	/* if already disabled, do nothing */
+	if (!__wait_for_compare_enable_sync(reg_base, ch_num))
+		return;
+#endif
+
 	reg = readl(reg_base + KONA_GPTIMER_STCS_OFFSET);
 	reg &= ~KONA_GPTIMER_STCS_TIMER_MATCH_MASK;
 	reg |= 1 << (ch_num + KONA_GPTIMER_STCS_TIMER_MATCH_SHIFT);
 	reg &= ~(1 << (ch_num + KONA_GPTIMER_STCS_COMPARE_ENABLE_SHIFT));
 	writel(reg, reg_base + KONA_GPTIMER_STCS_OFFSET);
+
+#ifdef CONFIG_GP_TIMER_COMPARATOR_LOAD_DELAY
+	__wait_for_compare_enable_sync(reg_base, ch_num);
+#endif
 }
 
 static inline unsigned long notrace __get_counter(void __iomem *reg_base)
 {
+#define KONA_MAX_REPEAT_TIMES 100
 	unsigned long prev;
-	unsigned long cur;
+	unsigned long cur, read_count;
 
 #ifdef CONFIG_MACH_BCM_FPGA_E
 	if (ktm == NULL)
@@ -1107,6 +1180,7 @@ static inline unsigned long notrace __get_counter(void __iomem *reg_base)
 #else
 	if (reg_base == IOMEM(KONA_TMR_HUB_VA)) {
 #endif
+		read_count = 0;
 		prev = readl(reg_base + KONA_GPTIMER_STCLO_OFFSET);
 		do {
 			cur = readl(reg_base + KONA_GPTIMER_STCLO_OFFSET);
@@ -1114,7 +1188,12 @@ static inline unsigned long notrace __get_counter(void __iomem *reg_base)
 				prev = cur;
 			else
 				break;
+
+			if (read_count++ > KONA_MAX_REPEAT_TIMES)
+				break;
 		} while (1);
+
+		BUG_ON(read_count > KONA_MAX_REPEAT_TIMES);
 		return cur;
 	} else {
 		return readl(reg_base + KONA_GPTIMER_STCLO_OFFSET);
@@ -1176,7 +1255,10 @@ static irqreturn_t kona_timer_isr(int irq, void *dev_id)
 	struct kona_timer *kt;
 	int ch_num;
 	unsigned long flags;
-	unsigned long reg;
+	unsigned long reg, now;
+#ifdef CONFIG_KONA_TIMER_DEBUG
+	unsigned long delta;
+#endif
 
 	ktm = (struct kona_timer_module *)dev_id;
 	ch_num = irq_to_ch(irq);
@@ -1190,7 +1272,53 @@ static irqreturn_t kona_timer_isr(int irq, void *dev_id)
 
 	kt = ktm->pkt + ch_num;
 
-	/* First clear and disable the interrupt */
+	/* make sure that we do not service a wrong interrupt */
+	reg = readl(ktm->reg_base + KONA_GPTIMER_STCS_OFFSET);
+	if (!(reg &
+		(1 << (kt->ch_num + KONA_GPTIMER_STCS_TIMER_MATCH_SHIFT)))) {
+#ifdef CONFIG_KONA_TIMER_DEBUG
+		kt->nr_wrong_interrupt++;
+#endif
+		spin_unlock_irqrestore(&ktm->lock, flags);
+		goto ret;
+	}
+
+	now = __get_counter(ktm->reg_base);
+
+	/* early expire */
+	if (time_before(now, kt->expire)) {
+#ifdef CONFIG_KONA_TIMER_DEBUG
+		kt->nr_early_expire++;
+#endif
+		/*
+		 * Recover once early timer expiration occurs. It's rare case
+		 * and add workaround to improve timer performance by removing
+		 * disabling channel in re-programming timer value
+		 */
+		__disable_channel(ktm->reg_base, kt->ch_num);
+		spin_unlock_irqrestore(&ktm->lock, flags);
+		kona_timer_set_match_start(kt, kt->expire - now);
+		goto ret;
+	}
+#ifdef CONFIG_KONA_TIMER_DEBUG
+	else {
+		delta = now - kt->expire;
+		if (delta <= 5)
+			kt->nr_5++;
+		else if (delta <= 10)
+			kt->nr_10++;
+		else if (delta <= 50)
+			kt->nr_50++;
+		else if (delta <= 100)
+			kt->nr_100++;
+		else if (delta <= 500)
+			kt->nr_500++;
+		else
+			kt->nr_500_plus++;
+	}
+#endif
+
+	/* clear and disable the interrupt */
 	reg = readl(ktm->reg_base + KONA_GPTIMER_STCS_OFFSET);
 	/*
 	 * Clean up the Match field (3..0), writing 1 to this bit
@@ -1222,6 +1350,6 @@ cb_ret:
 	/* Invoke the call back, if any */
 	if (kt->cfg.cb != NULL)
 		(*kt->cfg.cb) (kt->cfg.arg);
-
+ret:
 	return IRQ_HANDLED;
 }
