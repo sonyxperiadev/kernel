@@ -26,9 +26,9 @@
 #ifndef __PLAT_KONA_TIMER_H
 #define __PLAT_KONA_TIMER_H
 
-/* There is 5 clock cycles delay in HUB Timer by ASIC limitation.
+/* There is 6 clock cycles delay in HUB Timer by ASIC limitation.
  */
-#define MIN_KONA_DELTA_CLOCK     5
+#define MIN_KONA_DELTA_CLOCK     6
 
 /* On 32-bit mod timer, using large or max value 0xffffffff may trigger early
  * timer interrupt. It has to be limited to avoid timer misbehavior.
@@ -61,6 +61,17 @@ struct kona_timer {
 	struct timer_ch_cfg cfg;
 	int irq;
 	struct kona_timer_module *ktm;
+	unsigned long expire;
+#ifdef CONFIG_KONA_TIMER_DEBUG
+	unsigned long nr_5;
+	unsigned long nr_10;
+	unsigned long nr_50;
+	unsigned long nr_100;
+	unsigned long nr_500;
+	unsigned long nr_500_plus;
+	unsigned long nr_early_expire;
+	unsigned long nr_wrong_interrupt;
+#endif
 };
 
 #ifdef CONFIG_ARCH_JAVA
