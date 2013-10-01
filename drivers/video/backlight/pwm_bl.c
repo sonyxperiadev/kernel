@@ -26,6 +26,7 @@
 #include <mach/pinmux.h>
 #ifdef CONFIG_KONA_TMON
 #include <linux/broadcom/kona_tmon.h>
+#define TMON_NB_INIT_WORK_DELAY 10000
 #endif
 #ifdef CONFIG_DEBUG_FS
 #include <linux/debugfs.h>
@@ -48,11 +49,16 @@ struct pwm_bl_data {
 #endif
 	struct delayed_work bl_delay_on_work;
 #ifdef CONFIG_KONA_TMON
+	struct delayed_work tmon_nb_init_work;
 	struct notifier_block tmon_nb;
 	int max_brightness;
 #endif
 };
 static struct pwm_bl_data *pwm_bl_data;
+#ifdef CONFIG_KONA_TMON
+/* Adaptive brightness on by default */
+static bool pb_enable_adapt_bright = true;
+#endif
 #ifdef CONFIG_DEBUG_FS
 static struct dentry *dent_pb_root_dir;
 #endif
@@ -183,7 +189,7 @@ static void pb_update_max_brightness(unsigned long curr_temp,
 
 	pb->max_brightness = data->max_brightness;
 
-	if (!data->pb_enable_adapt_bright)
+	if (!pb_enable_adapt_bright)
 		goto update_status;
 
 	for (i = data->temp_comp_size - 1; i >= 0; i--) {
@@ -208,6 +214,14 @@ static void pb_tmon_nb_init(struct pwm_bl_data *pb)
 	curr_temp = (unsigned long)tmon_get_current_temp(true, true);
 	pb_update_max_brightness(curr_temp, pb);
 	tmon_register_notifier(&pb->tmon_nb);
+}
+
+static void pb_tmon_nb_init_work(struct work_struct *ws)
+{
+	struct pwm_bl_data *pb = container_of((struct delayed_work *)ws,
+				struct pwm_bl_data, tmon_nb_init_work);
+
+	pb_tmon_nb_init(pb);
 }
 
 static void pb_tmon_nb_remove(struct pwm_bl_data *pb, bool update_bright)
@@ -291,9 +305,6 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 		data->pwm_period_ns = val;
 
 #ifdef CONFIG_KONA_TMON
-		/* Adaptive brightness off by default */
-		data->pb_enable_adapt_bright = false;
-
 		if (!of_property_read_u32(pdev->dev.of_node,
 				"temp_comp_size", &val))
 			data->temp_comp_size = val;
@@ -424,8 +435,15 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 #ifdef CONFIG_KONA_TMON
 	pb->max_brightness = data->max_brightness;
 
-	if (data->temp_comp_size > 0)
+	if (data->temp_comp_size > 0) {
+		if (pb_enable_adapt_bright) {
+			INIT_DELAYED_WORK(&pb->tmon_nb_init_work,
+					pb_tmon_nb_init_work);
+			schedule_delayed_work(&pb->tmon_nb_init_work,
+				msecs_to_jiffies(TMON_NB_INIT_WORK_DELAY));
+		}
 		pb->tmon_nb.notifier_call = pb_tmon_notify_handler;
+	}
 #endif
 	pwm_bl_data = pb;
 
@@ -452,7 +470,7 @@ static int pwm_backlight_remove(struct platform_device *pdev)
 	struct pwm_bl_data *pb = dev_get_drvdata(&bl->dev);
 
 #ifdef CONFIG_KONA_TMON
-	if (data->temp_comp_size > 0 && data->pb_enable_adapt_bright)
+	if (data->temp_comp_size > 0 && pb_enable_adapt_bright)
 		pb_tmon_nb_remove(pb, false);
 	kfree(data->temp_comp_tbl);
 #endif
@@ -535,17 +553,8 @@ static struct platform_driver pwm_backlight_driver = {
 static ssize_t pb_get_adapt_bright(struct file *file,
 	char __user *user_buf, size_t count, loff_t *ppos)
 {
-	struct platform_device *pdev;
-	struct platform_pwm_backlight_data *data;
-
-	if (!pwm_bl_data)
-		return -EINVAL;
-
-	pdev = container_of(pwm_bl_data->dev, struct platform_device, dev);
-	data = pdev->dev.platform_data;
-
 	return simple_read_from_buffer(user_buf, count, ppos,
-			data->pb_enable_adapt_bright ? "1\n" : "0\n", 2);
+			pb_enable_adapt_bright ? "1\n" : "0\n", 2);
 }
 
 static ssize_t pb_set_adapt_bright(struct file *file,
@@ -555,8 +564,6 @@ static ssize_t pb_set_adapt_bright(struct file *file,
 	char input_str[5];
 	int input;
 	bool old, new;
-	struct platform_device *pdev;
-	struct platform_pwm_backlight_data *data;
 
 	memset(input_str, 0, ARRAY_SIZE(input_str));
 	if (count > ARRAY_SIZE(input_str))
@@ -580,19 +587,17 @@ static ssize_t pb_set_adapt_bright(struct file *file,
 	if (!pwm_bl_data)
 		return -EINVAL;
 
-	pdev = container_of(pwm_bl_data->dev, struct platform_device, dev);
-	data = pdev->dev.platform_data;
-	old = data->pb_enable_adapt_bright;
+	old = pb_enable_adapt_bright;
 
 	if (!pwm_bl_data)
 		return -EINVAL;
 
 	/* Check if we are enabling or disabling */
 	if (old == false && new == true) {
-		data->pb_enable_adapt_bright = true;
+		pb_enable_adapt_bright = true;
 		pb_tmon_nb_init(pwm_bl_data);
 	} else if (old == true && new == false) {
-		data->pb_enable_adapt_bright = false;
+		pb_enable_adapt_bright = false;
 		pb_tmon_nb_remove(pwm_bl_data, true);
 	}
 
