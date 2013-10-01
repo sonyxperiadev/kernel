@@ -1004,9 +1004,18 @@ static int __init dm_init(void)
 #endif
 
 #ifdef CONFIG_DEBUG_FS
-	dm_debug_init();
+	if (dm_debug_init() != 0) {
+		dma_free_coherent(NULL, SZ_4K, vptr, drmt_buf_phy);
+		return -ENOMEM;
+	}
 #endif
 	return 0;
 }
 module_init(dm_init);
 
+static void __exit dm_exit(void)
+{
+	dma_free_coherent(NULL, SZ_4K, (void *) un_cached_stack_ptr,
+							drmt_buf_phy);
+}
+module_exit(dm_exit);
