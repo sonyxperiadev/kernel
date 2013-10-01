@@ -1125,6 +1125,42 @@ config SOC_CAMERA_SUB_S5K4ECGX
 	  I2C controlled. Data out over the
 	  MIPI Lanes.
 
+config SOC_CAMERA_MAIN_DB8V61M
+	tristate "db8v61m main camera support"
+	depends on SOC_CAMERA && I2C
+	help
+	  This is a db8v61m main camera driver.
+	  3MP Camera interfaced to camera host driver.
+	  I2C controlled. Data out over the
+	  MIPI Lanes.
+
+config SOC_CAMERA_SUB_DB8V61M
+	tristate "db8v61m sub camera support"
+	depends on SOC_CAMERA && I2C
+	help
+	  This is a db8v61m sub camera driver.
+	  3MP Camera interfaced to camera host driver.
+	  I2C controlled. Data out over the
+	  MIPI Lanes.
+
+config SOC_CAMERA_MAIN_SR130
+	tristate "sr130 main camera support"
+	depends on SOC_CAMERA && I2C
+	help
+	  This is a sr130 main camera driver.
+	  1.3MP Camera interfaced to camera host driver.
+	  I2C controlled. Data out over the
+	  MIPI Lanes.
+
+config SOC_CAMERA_SUB_SR130
+	tristate "sr130 sub camera support"
+	depends on SOC_CAMERA && I2C
+	help
+	  This is a sr130 sub camera driver.
+	  1.3MP Camera interfaced to camera host driver.
+	  I2C controlled. Data out over the
+	  MIPI Lanes.
+
 config SOC_CAMERA_MAIN_SR300PC20
 	tristate "sr300pc20 main camera support"
 	depends on SOC_CAMERA && I2C

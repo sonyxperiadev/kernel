@@ -119,8 +119,12 @@ obj-$(CONFIG_SOC_CAMERA_MAIN_SR300PC20)	+= camdrv_ss.o  camdrv_ss_sr300pc20.o
 obj-$(CONFIG_SOC_CAMERA_SUB_SR300PC20)	+= camdrv_ss.o  camdrv_ss_sr300pc20.o
 obj-$(CONFIG_SOC_CAMERA_MAIN_SR030PC50)	+= camdrv_ss.o  camdrv_ss_sr030pc50.o
 obj-$(CONFIG_SOC_CAMERA_SUB_SR030PC50)	+= camdrv_ss.o camdrv_ss_sr030pc50.o
-#obj-$(CONFIG_SOC_CAMERA_MAIN_SR352)	+= camdrv_ss.o camdrv_ss_sr352.o
+obj-$(CONFIG_SOC_CAMERA_MAIN_SR352)	+= camdrv_ss.o camdrv_ss_sr352.o
 obj-$(CONFIG_SOC_CAMERA_SUB_SR352)	+= camdrv_ss.o camdrv_ss_sr352.o
+obj-$(CONFIG_SOC_CAMERA_MAIN_DB8V61M) += camdrv_ss.o camdrv_ss_db8v61m.o
+obj-$(CONFIG_SOC_CAMERA_SUB_DB8V61M) += camdrv_ss.o camdrv_ss_db8v61m.o
+obj-$(CONFIG_SOC_CAMERA_MAIN_SR130)	+= camdrv_ss.o camdrv_ss_sr130pc20.o
+obj-$(CONFIG_SOC_CAMERA_SUB_SR130)	+= camdrv_ss.o camdrv_ss_sr130pc20.o
 
 obj-$(CONFIG_SOC_CAMERA_TCM9001)        += tcm9001.o
 obj-$(CONFIG_SOC_CAMERA_GC0313)		+= gc0313.o
