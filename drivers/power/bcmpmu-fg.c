@@ -1097,7 +1097,7 @@ static inline int bcmpmu_fg_get_batt_temp(struct bcmpmu_fg_data *fg)
 {
 	int temp_samples[ADC_NTC_AVG_SAMPLES] = {0};
 	struct bcmpmu_adc_result result;
-	int retries = ADC_READ_TRIES;
+	int retries;
 	static int temp_prev;
 	int ret = 0, i = 0;
 	bool mean = true;
@@ -1106,6 +1106,7 @@ static inline int bcmpmu_fg_get_batt_temp(struct bcmpmu_fg_data *fg)
 		return NTC_ROOM_TEMP;
 
 	do {
+		retries = ADC_READ_TRIES;
 		while (retries--) {
 			ret = bcmpmu_adc_read(fg->bcmpmu, PMU_ADC_CHANN_NTC,
 					PMU_ADC_REQ_SAR_MODE, &result);

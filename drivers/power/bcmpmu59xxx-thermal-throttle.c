@@ -93,12 +93,13 @@ int bcmpmu_throttle_get_temp(struct bcmpmu_throttle_data *tdata, u8 channel,
 {
 	int temp_samples[ADC_DIE_TEMP_SAMPLES] = {0};
 	struct bcmpmu_adc_result result;
-	int retries = ADC_READ_TRIES;
+	int retries;
 	static int temp_prev;
 	int ret = 0, i = 0;
 	bool mean = true;
 
 	do {
+		retries = ADC_READ_TRIES;
 		while (retries--) {
 			ret = bcmpmu_adc_read(tdata->bcmpmu, channel,
 					mode, &result);
