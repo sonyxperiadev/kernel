@@ -45,18 +45,6 @@ __weak u32 get_misc_dbg_bus(void)
 	return 0;
 }
 
-static int ccu_policy_dbg_get_act_freqid(struct ccu_clk *ccu_clk)
-{
-	u32 reg_val;
-
-	reg_val = readl(ccu_clk->ccu_clk_mgr_base + ccu_clk->policy_dbg_offset);
-	reg_val =
-	    (reg_val >> ccu_clk->
-	     policy_dbg_act_freq_shift) & CCU_POLICY_DBG_FREQ_MASK;
-
-	return (int)reg_val;
-}
-
 static int clk_debugfs_open(struct inode *inode, struct file *file)
 {
 	file->private_data = inode->i_private;

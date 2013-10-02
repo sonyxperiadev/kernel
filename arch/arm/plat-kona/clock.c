@@ -41,6 +41,12 @@ static DEFINE_SPINLOCK(gen_access_lock);
 
 int clk_debug = 0;
 u32 gen_lock_flag;
+
+/* Added for panic handler to know AP CCU information */
+struct ccu_clk *ccu_clk_list[MAX_CCU_COUNT];
+/* num_ccu is used because mach can override the max_ccu_count */
+static u32 num_ccu;
+
 /*clk_dfs_request_update -  action*/
 enum {
 	CLK_STATE_CHANGE,	/*param = 1 => enable. param =0 => disable */
@@ -1884,6 +1890,42 @@ int ccu_init_state_save_buf(struct ccu_clk *ccu_clk)
 	return ret;
 }
 
+static int clock_panic_event(struct notifier_block *this, unsigned long event,
+		void *ptr)
+{
+	static int has_panicked;
+	struct ccu_clk *ccu_clk;
+	struct pi *pi;
+	int i;
+	if (has_panicked)
+		return 0;
+
+	pr_info("CCU panic handler\n-----------------\n");
+	for (i = 0; i < num_ccu; i++) {
+		ccu_clk = ccu_clk_list[i];
+		if (ccu_clk_list[i]->clk.flags & CCU_ACCESS_ENABLE) {
+			pi = pi_mgr_get(ccu_clk->pi_id);
+			if (!pi->usg_cnt)
+				continue;
+		}
+		pr_info("%s information\n", ccu_clk->clk.name);
+		pr_info("Policy: %d, FID: %d, VLT0-3: 0x%08x, VLT4-7: 0x%08x\n",
+			ccu_policy_dbg_get_act_policy(ccu_clk),
+			ccu_policy_dbg_get_act_freqid(ccu_clk),
+			readl(CCU_VLT0_3_REG(ccu_clk)),
+			readl(CCU_VLT4_7_REG(ccu_clk)));
+	}
+	has_panicked = 1;
+	return 0;
+}
+
+static struct notifier_block panic_block = {
+	.notifier_call	= clock_panic_event,
+	.next		= NULL,
+	.priority	= 200	/* priority: INT_MAX >= x >= 0 */
+};
+
+
 int clk_register(struct clk_lookup *clk_lkup, int num_clks)
 {
 	int ret = 0;
@@ -1899,12 +1941,18 @@ int clk_register(struct clk_lookup *clk_lkup, int num_clks)
 			struct ccu_clk *ccu_clk = to_ccu_clk(clk_lkup[i].clk);
 			spin_lock_init(&ccu_clk->clk_lock);
 			spin_lock_init(&ccu_clk->access_lock);
+			if (ccu_clk->pi_id != -1) {
+				ccu_clk_list[num_ccu] = ccu_clk;
+				num_ccu++;
+				BUG_ON(num_ccu > MAX_CCU_COUNT);
+			}
 		}
 		ret |= clk_init(clk_lkup[i].clk);
 		if (ret)
 			pr_info("%s: clk %s init failed !!!\n", __func__,
 				clk_lkup[i].clk->name);
 	}
+	atomic_notifier_chain_register(&panic_notifier_list, &panic_block);
 	return ret;
 }
 
@@ -2635,6 +2683,18 @@ static int ccu_clk_get_voltage(struct ccu_clk *ccu_clk, int freq_id)
 	volt_id = (reg_val & (CCU_VLT_MASK << shift)) >> shift;
 
 	return volt_id;
+}
+
+int ccu_policy_dbg_get_act_freqid(struct ccu_clk *ccu_clk)
+{
+	u32 reg_val;
+
+	reg_val = readl(ccu_clk->ccu_clk_mgr_base + ccu_clk->policy_dbg_offset);
+	reg_val =
+	    (reg_val >> ccu_clk->
+	     policy_dbg_act_freq_shift) & CCU_POLICY_DBG_FREQ_MASK;
+
+	return (int)reg_val;
 }
 
 int ccu_policy_dbg_get_act_policy(struct ccu_clk *ccu_clk)

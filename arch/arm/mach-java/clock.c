@@ -901,11 +901,11 @@ static struct ccu_clk CLK_NAME(kproc) = {
 	.lvm0_3_offset = KPROC_CLK_MGR_REG_LVM0_3_OFFSET,
 	.vlt0_3_offset = KPROC_CLK_MGR_REG_VLT0_3_OFFSET,
 	.vlt4_7_offset = KPROC_CLK_MGR_REG_VLT4_7_OFFSET,
-#ifdef CONFIG_DEBUG_FS
 	.policy_dbg_offset = KPROC_CLK_MGR_REG_POLICY_DBG_OFFSET,
 	.policy_dbg_act_freq_shift = KPROC_CLK_MGR_REG_POLICY_DBG_ACT_FREQ_SHIFT,
 	.policy_dbg_act_policy_shift =
 		KPROC_CLK_MGR_REG_POLICY_DBG_ACT_POLICY_SHIFT,
+#ifdef CONFIG_DEBUG_FS
 	.clk_mon_offset = KPROC_CLK_MGR_REG_CLKMON_OFFSET,
 #endif
 	.freq_volt = PROC_CCU_FREQ_VOLT_TBL,
@@ -1475,10 +1475,10 @@ static struct ccu_clk CLK_NAME(khub) = {
 	.lvm0_3_offset = KHUB_CLK_MGR_REG_LVM0_3_OFFSET,
 	.vlt0_3_offset = KHUB_CLK_MGR_REG_VLT0_3_OFFSET,
 	.vlt4_7_offset = KHUB_CLK_MGR_REG_VLT4_7_OFFSET,
-#ifdef CONFIG_DEBUG_FS
 	.policy_dbg_offset = KHUB_CLK_MGR_REG_POLICY_DBG_OFFSET,
 	.policy_dbg_act_freq_shift = KHUB_CLK_MGR_REG_POLICY_DBG_ACT_FREQ_SHIFT,
 	.policy_dbg_act_policy_shift = KHUB_CLK_MGR_REG_POLICY_DBG_ACT_POLICY_SHIFT,
+#ifdef CONFIG_DEBUG_FS
 	.clk_mon_offset = KHUB_CLK_MGR_REG_CLKMON_OFFSET,
 #endif
 	.freq_volt = HUB_CCU_FREQ_VOLT_TBL,
@@ -2862,10 +2862,10 @@ static struct ccu_clk CLK_NAME(khubaon) = {
 	.lvm0_3_offset = KHUBAON_CLK_MGR_REG_LVM0_3_OFFSET,
 	.vlt0_3_offset = KHUBAON_CLK_MGR_REG_VLT0_3_OFFSET,
 	.vlt4_7_offset = KHUBAON_CLK_MGR_REG_VLT4_7_OFFSET,
-#ifdef CONFIG_DEBUG_FS
 	.policy_dbg_offset = KHUBAON_CLK_MGR_REG_POLICY_DBG_OFFSET,
 	.policy_dbg_act_freq_shift = KHUBAON_CLK_MGR_REG_POLICY_DBG_ACT_FREQ_SHIFT,
 	.policy_dbg_act_policy_shift = KHUBAON_CLK_MGR_REG_POLICY_DBG_ACT_POLICY_SHIFT,
+#ifdef CONFIG_DEBUG_FS
 	.clk_mon_offset = KHUBAON_CLK_MGR_REG_CLKMON_OFFSET,
 #endif
 	.freq_volt = AON_CCU_FREQ_VOLT_TBL,
@@ -3659,10 +3659,10 @@ static struct ccu_clk CLK_NAME(kpm) = {
 	.lvm0_3_offset = KPM_CLK_MGR_REG_LVM0_3_OFFSET,
 	.vlt0_3_offset = KPM_CLK_MGR_REG_VLT0_3_OFFSET,
 	.vlt4_7_offset = KPM_CLK_MGR_REG_VLT4_7_OFFSET,
-#ifdef CONFIG_DEBUG_FS
 	.policy_dbg_offset = KPM_CLK_MGR_REG_POLICY_DBG_OFFSET,
 	.policy_dbg_act_freq_shift = KPM_CLK_MGR_REG_POLICY_DBG_ACT_FREQ_SHIFT,
 	.policy_dbg_act_policy_shift = KPM_CLK_MGR_REG_POLICY_DBG_ACT_POLICY_SHIFT,
+#ifdef CONFIG_DEBUG_FS
 	.clk_mon_offset = KPM_CLK_MGR_REG_CLKMON_OFFSET,
 #endif
 	.freq_volt = KPM_CCU_FREQ_VOLT_TBL,
@@ -4518,10 +4518,10 @@ static struct ccu_clk CLK_NAME(kps) = {
 	.lvm0_3_offset = KPS_CLK_MGR_REG_LVM0_3_OFFSET,
 	.vlt0_3_offset = KPS_CLK_MGR_REG_VLT0_3_OFFSET,
 	.vlt4_7_offset = KPS_CLK_MGR_REG_VLT4_7_OFFSET,
-#ifdef CONFIG_DEBUG_FS
 	.policy_dbg_offset = KPS_CLK_MGR_REG_POLICY_DBG_OFFSET,
 	.policy_dbg_act_freq_shift = KPS_CLK_MGR_REG_POLICY_DBG_ACT_FREQ_SHIFT,
 	.policy_dbg_act_policy_shift = KPS_CLK_MGR_REG_POLICY_DBG_ACT_POLICY_SHIFT,
+#ifdef CONFIG_DEBUG_FS
 	.clk_mon_offset = KPS_CLK_MGR_REG_CLKMON_OFFSET,
 #endif
 	.freq_volt = KPS_CCU_FREQ_VOLT_TBL,
@@ -5902,10 +5902,10 @@ static struct ccu_clk CLK_NAME(mm) = {
 	.lvm0_3_offset = MM_CLK_MGR_REG_LVM0_3_OFFSET,
 	.vlt0_3_offset = MM_CLK_MGR_REG_VLT0_3_OFFSET,
 	.vlt4_7_offset = MM_CLK_MGR_REG_VLT4_7_OFFSET,
-#ifdef CONFIG_DEBUG_FS
 	.policy_dbg_offset = MM_CLK_MGR_REG_POLICY_DBG_OFFSET,
 	.policy_dbg_act_freq_shift = MM_CLK_MGR_REG_POLICY_DBG_ACT_FREQ_SHIFT,
 	.policy_dbg_act_policy_shift = MM_CLK_MGR_REG_POLICY_DBG_ACT_POLICY_SHIFT,
+#ifdef CONFIG_DEBUG_FS
 	.clk_mon_offset = MM_CLK_MGR_REG_CLKMON_OFFSET,
 #endif
 	.freq_volt = MM_CCU_FREQ_VOLT_TBL,
@@ -6920,11 +6920,11 @@ static struct ccu_clk CLK_NAME(mm2) = {
 	.lvm0_3_offset = MM2_CLK_MGR_REG_LVM0_3_OFFSET,
 	.vlt0_3_offset = MM2_CLK_MGR_REG_VLT0_3_OFFSET,
 	.vlt4_7_offset = MM2_CLK_MGR_REG_VLT4_7_OFFSET,
-#ifdef CONFIG_DEBUG_FS
 	.policy_dbg_offset = MM2_CLK_MGR_REG_POLICY_DBG_OFFSET,
 	.policy_dbg_act_freq_shift = MM2_CLK_MGR_REG_POLICY_DBG_ACT_FREQ_SHIFT,
 	.policy_dbg_act_policy_shift =
 		MM2_CLK_MGR_REG_POLICY_DBG_ACT_POLICY_SHIFT,
+#ifdef CONFIG_DEBUG_FS
 	.clk_mon_offset = MM2_CLK_MGR_REG_CLKMON_OFFSET,
 #endif
 	.freq_volt = MM2_CCU_FREQ_VOLT_TBL,

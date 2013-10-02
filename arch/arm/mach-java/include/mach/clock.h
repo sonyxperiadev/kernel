@@ -711,6 +711,8 @@ enum {
 
 #define PLL1_OFFSET_CONFIG	0xBFFFF
 
+#define MAX_CCU_COUNT 7
+
 enum {
 	CSI0_CAMPIX_PLL,
 	CSI1_CAMPIX_PLL,
