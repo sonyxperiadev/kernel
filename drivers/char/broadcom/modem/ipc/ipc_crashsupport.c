@@ -129,6 +129,7 @@ struct T_CP_IMGS {
 
 #define CP_IMAGE_SIZE_OFFSET     0x24
 #define LINKER_FLAG_OFFSET_VALUE 0x4b4e494c
+#define LINKER_FLAG_OFFSET_ADDR  (RESERVED_HEADER + 0x48)
 
 /* from msp/cboot/bootldr/loader/capri/loader.h: */
 #define CP_RUN_ADDR                 CP_RO_RAM_ADDR
@@ -176,6 +177,9 @@ static struct timer_list cp_reset_timer;
 /* wait for 500ms, 20ms at a time, for CP to be ready to reset */
 #define WAIT_FOR_CP_RESET_READY_MILLISEC	20
 #define WAIT_FOR_CP_RESET_READY_ITERATIONS	25
+
+/* grab virtual memory in 1M chunks */
+#define VIRTUAL_MEM_CHUNK_SIZE	(1024*1024)
 
 /* flag indicating that all cp reset clients have acked */
 static int cp_reset_clients_acked;
@@ -447,19 +451,34 @@ static int DownloadFirmware(uint32_t len, const uint8_t *p_data, uint32_t addr)
 {
 	void __iomem *virtAddr;
 	int ret = 0;
+	int count;
+	int chunk_size;
 
 	IPC_DEBUG(DBG_INFO, "Downloading %d bytes from %p to address %p\n",
 		len, (void *)p_data, (void *)addr);
 
-	virtAddr = ioremap_nocache(addr, len);
-	if (NULL == virtAddr) {
-		IPC_DEBUG(DBG_ERROR, "*** ERROR: ioremap_nocache failed\n");
-		ret = -1;
-	} else {
-		IPC_DEBUG(DBG_INFO, "copying to virtual addr %p\n",
-			(void *)virtAddr);
-		memcpy(virtAddr, p_data, len);
-		iounmap(virtAddr);
+	chunk_size = (VIRTUAL_MEM_CHUNK_SIZE > len) ? len
+					: VIRTUAL_MEM_CHUNK_SIZE;
+	for (count = 0; count < len; count += chunk_size) {
+		if (count + chunk_size > len) {
+			/* chunk size is too large for last segment */
+			chunk_size = len - count;
+			IPC_DEBUG(DBG_INFO,
+				"*** chunk_size: truncated to %d\n",
+				chunk_size);
+		}
+		virtAddr = ioremap_nocache(addr + count, chunk_size);
+		if (NULL == virtAddr) {
+			IPC_DEBUG(DBG_ERROR,
+				"*** ERROR: ioremap_nocache failed\n");
+			ret = -1;
+			break;
+		} else {
+			IPC_DEBUG(DBG_INFO, "[%d] copying to virtual addr %p\n",
+				count, (void *)virtAddr);
+			memcpy(virtAddr, p_data + count, chunk_size);
+			iounmap(virtAddr);
+		}
 	}
 
 	return ret;
@@ -540,21 +559,21 @@ static int32_t LoadFirmware(struct device *p_device, const char *p_name,
 	if (expectedSize == 0) {
 		void __iomem *virtAddr;
 
-		virtAddr = ioremap_nocache(addr, fw->size);
+		/* map only the header of the CP image
+			that's needed for validation */
+		int chunk_size = LINKER_FLAG_OFFSET_ADDR + 1;
+
+		virtAddr = ioremap_nocache(addr, chunk_size);
 		if (virtAddr) {
-			int retval;
 			/* This is the main CP image */
 			if (IsCommsImageValid(virtAddr))
 				IPC_DEBUG(DBG_INFO,
-				"verified CP image @ %p\n",
-				(void *)addr);
+					"verified CP image @ %p\n",
+					(void *)addr);
 			else
 				IPC_DEBUG(DBG_ERROR,
 					"failed to verify main image @ %p\n",
 					(void *)addr);
-			retval = memcmp(fw->data, virtAddr, imgSize);
-			IPC_DEBUG(DBG_INFO, "memcmp(%p, %p, 0x%x) = %d\n",
-				(void *)fw->data, virtAddr, imgSize, retval);
 			iounmap(virtAddr);
 		} else {
 			IPC_DEBUG(DBG_ERROR,
@@ -616,7 +635,7 @@ static UInt32 IsCommsImageValid(const UInt8 *ram_addr)
 		RO_BASE + RESERVED_HEADER + 0x48
 	*/
 	linkerFlagOffset =
-		*((UInt32 *)((UInt8 *)ram_addr + RESERVED_HEADER + 0x48));
+		*((UInt32 *)((UInt8 *)ram_addr + LINKER_FLAG_OFFSET_ADDR));
 	if (linkerFlagOffset != LINKER_FLAG_OFFSET_VALUE) {
 		IPC_DEBUG(DBG_ERROR,
 			"bad linker flag offset value 0x%x [addr=%p]\r\n",
