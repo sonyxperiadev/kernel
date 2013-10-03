@@ -33,6 +33,7 @@
 #include <linux/regulator/consumer.h>
 #include <plat/kona_pm.h>
 #include <linux/mfd/bcmpmu59xxx.h>
+#include <linux/broadcom/kona_tmon.h>
 
 #ifdef CONFIG_DEBUG_FS
 #include <linux/debugfs.h>
@@ -47,10 +48,6 @@
 	} while (0)
 
 struct avs_info {
-	u32 csr_opp_volt[CSR_NUM_OPP];
-	u32 msr_opp_volt[MSR_NUM_OPP];
-	u32 csr_opp_trgt[CSR_NUM_OPP];
-	u32 msr_opp_trgt[MSR_NUM_OPP];
 	u32 fab_src;
 	struct avs_pdata *pdata;
 	struct avs_handshake *avs_handshake;
@@ -61,23 +58,28 @@ struct avs_info {
 struct avs_info avs_info = {
 	.handshake_version = AVS_HANDSHAKE_VERSION,
 	.kernel_freq_id = ARM_FREQ_1200_MHZ,
+	.avs_handshake = NULL,
 };
 
 static int debug_mask = AVS_LOG_ERR | AVS_LOG_WARN | AVS_LOG_INIT;
 
-static int avs_read_opp_info(struct avs_info *avs_inf_ptr)
+static int avs_print_opp_info(struct avs_info *avs_inf_ptr)
 {
-	avs_dbg(AVS_LOG_INIT, "%s: AVS_READ_MEM => mem adr = 0x%08x\n",
-			__func__, avs_inf_ptr->pdata->avs_info_base_addr);
-	BUG_ON(avs_inf_ptr->pdata->avs_info_base_addr == 0);
-	avs_inf_ptr->avs_handshake = (struct avs_handshake *)(
+	int i;
+	if (!avs_inf_ptr || !avs_inf_ptr->avs_handshake)
+		return -EINVAL;
+
+	avs_dbg(AVS_LOG_INIT,
+		"--------------------------------------------------\n");
+	avs_dbg(AVS_LOG_INIT,
+		"              AVS related information\n");
+	avs_dbg(AVS_LOG_INIT,
+		"--------------------------------------------------\n");
+
+	avs_dbg(AVS_LOG_INIT, "Reading handshake info from 0x%08x\n",
 			avs_inf_ptr->pdata->avs_info_base_addr);
-
-	BUG_ON(avs_info.handshake_version != avs_info.avs_handshake->version);
-	BUG_ON(avs_info.kernel_freq_id != avs_info.avs_handshake->arm_freq);
-
-	avs_dbg(AVS_LOG_INIT, "AVS: ABI version: %u, Kernel version: %u\n",
-			avs_info.avs_handshake->abi_version, AVS_SW_VERSION);
+	avs_dbg(AVS_LOG_INIT, "AVS ABI SW version: %u, Kernel SW version: %u\n",
+		avs_inf_ptr->avs_handshake->abi_version, AVS_SW_VERSION);
 
 	avs_dbg(AVS_LOG_INIT, "Computed at %d Celsius.\n",
 			avs_inf_ptr->avs_handshake->temperature);
@@ -86,67 +88,49 @@ static int avs_read_opp_info(struct avs_info *avs_inf_ptr)
 			(avs_inf_ptr->avs_handshake->np_ratio_1)%100,
 			(avs_inf_ptr->avs_handshake->np_ratio_2)/100,
 			(avs_inf_ptr->avs_handshake->np_ratio_2)%100);
+	avs_dbg(AVS_LOG_INIT, "Varspm 0:%u, 1:%u, 2:%u, 3:%u, 4:%u, 5:%u\n",
+			avs_inf_ptr->avs_handshake->varspm0,
+			avs_inf_ptr->avs_handshake->varspm1,
+			avs_inf_ptr->avs_handshake->varspm2,
+			avs_inf_ptr->avs_handshake->varspm3,
+			avs_inf_ptr->avs_handshake->varspm4,
+			avs_inf_ptr->avs_handshake->varspm5);
+	avs_dbg(AVS_LOG_INIT, "Spm 0:%u, 1:%u, 2:%u, 3:%u, 4:%u, 5:%u\n",
+			avs_inf_ptr->avs_handshake->spm0,
+			avs_inf_ptr->avs_handshake->spm1,
+			avs_inf_ptr->avs_handshake->spm2,
+			avs_inf_ptr->avs_handshake->spm3,
+			avs_inf_ptr->avs_handshake->spm4,
+			avs_inf_ptr->avs_handshake->spm5);
+	if (avs_inf_ptr->avs_handshake->error_status)
+		avs_dbg(AVS_LOG_INIT, "Error Status: 0x%08x\n",
+			avs_inf_ptr->avs_handshake->error_status);
+	avs_dbg(AVS_LOG_INIT, "Root Reset Reason: 0x%08x\n",
+		readl(KONA_ROOT_RST_VA + ROOT_RST_MGR_REG_RSTSTS_OFFSET));
+
 	avs_dbg(AVS_LOG_INIT, "IRDROP @ 1.2V: %u",
 			avs_inf_ptr->avs_handshake->irdrop_1v2);
-	avs_dbg(AVS_LOG_INIT, "Varspm 0:%u, 1:%u, 2:%u, 3:%u, 4:%u, 5:%u\n",
-			avs_info.avs_handshake->varspm0,
-			avs_info.avs_handshake->varspm1,
-			avs_info.avs_handshake->varspm2,
-			avs_info.avs_handshake->varspm3,
-			avs_info.avs_handshake->varspm4,
-			avs_info.avs_handshake->varspm5);
-	avs_dbg(AVS_LOG_INIT, "Spm    0:%u, 1:%u, 2:%u, 3:%u, 4:%u, 5:%u\n",
-			avs_info.avs_handshake->spm0,
-			avs_info.avs_handshake->spm1,
-			avs_info.avs_handshake->spm2,
-			avs_info.avs_handshake->spm3,
-			avs_info.avs_handshake->spm4,
-			avs_info.avs_handshake->spm5);
-	avs_dbg(AVS_LOG_INIT, "VDDFIX voltage val: 0x%02x\n",
-			avs_inf_ptr->avs_handshake->vddfix);
-	avs_dbg(AVS_LOG_INIT, "VDDVAR Retn: 0x%02x, VDDFIX Retn: 0x%02x\n",
-			avs_info.avs_handshake->vddvar_ret,
-			avs_info.avs_handshake->vddfix_ret);
 	avs_dbg(AVS_LOG_INIT, "Silicon Type: %u\n",
 			avs_inf_ptr->avs_handshake->silicon_type);
 	avs_dbg(AVS_LOG_INIT, "Freq Id: %u\n",
 			avs_inf_ptr->avs_handshake->arm_freq);
-	avs_dbg(AVS_LOG_INIT, "Error Status: 0x%08x\n",
-			avs_inf_ptr->avs_handshake->error_status);
-	avs_dbg(AVS_LOG_INIT, "Root Reset Reason: 0x%08x\n",
-		readl(KONA_ROOT_RST_VA + ROOT_RST_MGR_REG_RSTSTS_OFFSET));
-	return 0;
-}
-
-static void avs_parse_opp_info(struct avs_info *avs_inf_ptr)
-{
-	int i;
-
 	for (i = 0; i < CSR_NUM_OPP; i++) {
-		avs_inf_ptr->csr_opp_volt[i] =
-			avs_inf_ptr->avs_handshake->csr_opp[i];
-		avs_inf_ptr->csr_opp_trgt[i] =
-			avs_inf_ptr->avs_handshake->csr_targets[i];
-		avs_dbg(AVS_LOG_INIT,
-				"CSR OPP%u Target : %3u, Voltage: 0x%02x\n",
-				i + 1, avs_inf_ptr->csr_opp_trgt[i],
-				avs_inf_ptr->csr_opp_volt[i]);
+		avs_dbg(AVS_LOG_INIT, "CSR OPP%u Trgt: %3u, Voltage: 0x%02x\n",
+			i + 1, avs_inf_ptr->avs_handshake->csr_targets[i],
+			avs_inf_ptr->avs_handshake->csr_opp[i]);
 	}
-
 	for (i = 0; i < MSR_NUM_OPP; i++) {
-		avs_inf_ptr->msr_opp_volt[i] =
-			avs_inf_ptr->avs_handshake->msr_opp[i];
-		avs_inf_ptr->msr_opp_trgt[i] =
-			avs_inf_ptr->avs_handshake->msr_targets[i];
-		avs_dbg(AVS_LOG_INIT,
-				"MSR OPP%u Target : %3u, Voltage: 0x%02x\n",
-				i + 1, avs_inf_ptr->msr_opp_trgt[i],
-				avs_inf_ptr->msr_opp_volt[i]);
+		avs_dbg(AVS_LOG_INIT, "MSR OPP%u Trgt: %3u, Voltage: 0x%02x\n",
+			i + 1, avs_inf_ptr->avs_handshake->msr_targets[i],
+			avs_inf_ptr->avs_handshake->msr_opp[i]);
 	}
-
-	avs_dbg(AVS_LOG_INIT,
-		"--------------------------------------------------\n");
-
+	avs_dbg(AVS_LOG_INIT, "VDDFIX voltage val: 0x%02x\n",
+			avs_inf_ptr->avs_handshake->vddfix);
+	avs_dbg(AVS_LOG_INIT, "VDDVAR Retn: 0x%02x, VDDFIX Retn: 0x%02x\n",
+			avs_inf_ptr->avs_handshake->vddvar_ret,
+			avs_inf_ptr->avs_handshake->vddfix_ret);
+	avs_dbg(AVS_LOG_INIT, "---------------------------------\n");
+	return 0;
 }
 
 static void avs_irdrop_osc_en(struct avs_info *avs_info_ptr, bool enable)
@@ -256,14 +240,14 @@ static ssize_t avs_read_voltage_val(struct file *file, char __user
 	for (i = 0; i < CSR_NUM_OPP; i++)
 		len += snprintf(buf + len, sizeof(buf) - len,
 			"CSR OPP%u = 0x%x Val: %umV\n", i + 1, avs_info.
-			csr_opp_volt[i], bcmpmu_rgltr_get_volt_val(
-			avs_info.csr_opp_volt[i])/1000);
+			avs_handshake->csr_opp[i], bcmpmu_rgltr_get_volt_val(
+			avs_info.avs_handshake->csr_opp[i])/1000);
 
 	for (i = 0; i < MSR_NUM_OPP; i++)
 		len += snprintf(buf + len, sizeof(buf) - len,
-			"MSR OPP%u = 0x%x Val: %umV\n", i + 1,
-			avs_info.msr_opp_volt[i], bcmpmu_rgltr_get_volt_val(
-				avs_info.msr_opp_volt[i])/1000);
+			"MSR OPP%u = 0x%x Val: %umV\n", i + 1, avs_info.
+			avs_handshake->msr_opp[i], bcmpmu_rgltr_get_volt_val(
+			avs_info.avs_handshake->msr_opp[i])/1000);
 
 	len += snprintf(buf + len, sizeof(buf) - len,
 		"VDDFIX: 0x%x Val: %umV\n",
@@ -294,9 +278,11 @@ static ssize_t avs_debug_read_irdrop(struct file *file, char __user
 	char buf[1000];
 	u32 len = 0;
 	int irdrop_count = avs_get_irdrop_osc_count(&avs_info);
+	/* Temperature in raw/celcius, instantaneous/avg */
 	if (irdrop_count > 0)
 		len += snprintf(buf + len, sizeof(buf) - len,
-			"Reading IRDROP Osc count now:%d\n", irdrop_count);
+			"Reading IRDROP Osc count now @ %ld Celcius: %d\n",
+			tmon_get_current_temp(true, false), irdrop_count);
 	else
 		len += snprintf(buf + len, sizeof(buf) - len,
 			"error reading the register\n");
@@ -394,11 +380,11 @@ static ssize_t avs_debug_read_osc_targets(struct file *file, char __user
 	for (i = 0; i < CSR_NUM_OPP; i++)
 		len += snprintf(buf + len, sizeof(buf) - len,
 				"CSR OPP%u Target %u\n", i + 1,
-				avs_info.csr_opp_trgt[i]);
+				avs_info.avs_handshake->csr_targets[i]);
 	for (i = 0; i < MSR_NUM_OPP; i++)
 		len += snprintf(buf + len, sizeof(buf) - len,
 				"MSR OPP%u Target %u\n", i + 1,
-				avs_info.msr_opp_trgt[i]);
+				avs_info.avs_handshake->msr_targets[i]);
 
 	return simple_read_from_buffer(user_buf, count, ppos, buf, len);
 }
@@ -445,29 +431,10 @@ static int panic_event(struct notifier_block *this, unsigned long event,
 {
 
 	static int has_panicked;
-	int i;
-	if (has_panicked || !avs_info.avs_handshake)
+	if (has_panicked)
 		return 0;
-
-	for (i = 0; i < CSR_NUM_OPP; i++)
-		pr_info("CSR OPP%u = 0x%x Val: %umV\n", i + 1, avs_info.
-			csr_opp_volt[i], bcmpmu_rgltr_get_volt_val(
-			avs_info.csr_opp_volt[i])/1000);
-
-	for (i = 0; i < MSR_NUM_OPP; i++)
-		pr_info("MSR OPP%u = 0x%x Val: %umV\n", i + 1,
-			avs_info.msr_opp_volt[i], bcmpmu_rgltr_get_volt_val(
-				avs_info.msr_opp_volt[i])/1000);
-	pr_info("VDDVAR Retn: 0x%x Val: %umV",
-		avs_info.avs_handshake->vddvar_ret, bcmpmu_rgltr_get_volt_val(
-		avs_info.avs_handshake->vddvar_ret)/1000);
-	pr_info("VDDFIX: 0x%x Val: %umV\n",
-		avs_info.avs_handshake->vddfix, bcmpmu_rgltr_get_volt_val(
-		avs_info.avs_handshake->vddfix)/1000);
-	pr_info("VDDFIX Retn: 0x%x Val: %umV",
-		avs_info.avs_handshake->vddfix_ret, bcmpmu_rgltr_get_volt_val(
-		avs_info.avs_handshake->vddfix_ret)/1000);
-
+	avs_print_opp_info(&avs_info);
+	pr_info("ARM Cur OPP: %u", pi_get_active_opp(PI_MGR_PI_ID_ARM_CORE));
 	has_panicked = 1;
 	return 0;
 }
@@ -482,23 +449,20 @@ static int avs_drv_probe(struct platform_device *pdev)
 {
 	struct avs_pdata *pdata = pdev->dev.platform_data;
 
-	avs_dbg(AVS_LOG_INIT,
-		"--------------------------------------------------\n");
-	avs_dbg(AVS_LOG_INIT,
-		"              AVS related information\n");
-	avs_dbg(AVS_LOG_INIT,
-		"--------------------------------------------------\n");
-	avs_dbg(AVS_LOG_INIT, "%s\n", __func__);
-
 	if (!pdata) {
 		avs_dbg(AVS_LOG_ERR, "%s : invalid paltform data !!\n",
 				__func__);
 		return -EPERM;
 	}
 	avs_info.pdata = pdata;
-	avs_read_opp_info(&avs_info);
-	avs_parse_opp_info(&avs_info);
+	BUG_ON(pdata->avs_info_base_addr == 0);
+	avs_info.avs_handshake = (struct avs_handshake *)(
+			pdata->avs_info_base_addr);
 
+	BUG_ON(avs_info.handshake_version != avs_info.avs_handshake->version);
+	BUG_ON(avs_info.kernel_freq_id != avs_info.avs_handshake->arm_freq);
+
+	avs_print_opp_info(&avs_info);
 	atomic_notifier_chain_register(&panic_notifier_list, &panic_block);
 
 #ifdef CONFIG_DEBUG_FS
