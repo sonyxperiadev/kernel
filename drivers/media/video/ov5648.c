@@ -167,6 +167,7 @@ struct sensor_mode ov5648_mode[OV5648_MODE_MAX + 1] = {
 	},
 	{
 		.name           = "STOPPED",
+		.line_length_ns = 22190,
 	}
 };
 
