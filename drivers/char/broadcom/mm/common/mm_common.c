@@ -36,8 +36,10 @@ static char *single_wq_name = "mm_wq";
 /* MM Framework globals end*/
 static void _mm_common_cache_clean(struct work_struct *dummy)
 {
+	local_irq_disable();
 	v7_clean_dcache_all();
 	dmb();
+	local_irq_enable();
 }
 
 void mm_common_cache_clean(void)
