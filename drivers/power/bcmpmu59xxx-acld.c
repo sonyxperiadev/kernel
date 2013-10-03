@@ -206,6 +206,8 @@ static void bcmpmu_en_sw_ctrl_chrgr_timer(struct bcmpmu_acld *acld, bool enable)
 	int ret;
 	u8 reg;
 
+	if (acld->chrgr_type == PMU_CHRGR_TYPE_SDP)
+		return;
 	pr_acld(FLOW, "%s: enable = %d\n", __func__, enable);
 
 	ret = acld->bcmpmu->read_dev(acld->bcmpmu, PMU_REG_MBCCTRL2, &reg);
@@ -226,6 +228,8 @@ static void bcmpmu_clr_sw_ctrl_chrgr_timer(struct bcmpmu_acld *acld)
 	int ret;
 	u8 reg;
 
+	if (acld->chrgr_type == PMU_CHRGR_TYPE_SDP)
+		return;
 	ret = acld->bcmpmu->read_dev(acld->bcmpmu, PMU_REG_MBCCTRL2, &reg);
 	if (ret)
 		BUG_ON(1);
@@ -953,12 +957,15 @@ static int bcmpmu_reset_acld_flags(struct bcmpmu_acld *acld)
 bool bcmpmu_is_acld_supported(struct bcmpmu59xxx *bcmpmu,
 		enum bcmpmu_chrgr_type_t chrgr_type)
 {
-	struct bcmpmu_acld *acld = (struct bcmpmu_acld *)bcmpmu->acld;
-	int *acld_chrgrs = acld->pdata->acld_chrgrs;
+	struct bcmpmu_acld *acld;
+	int *acld_chrgrs;
 	int i;
 
-	if (!(acld->bcmpmu->flags & BCMPMU_ACLD_EN))
+	if (!(bcmpmu->flags & BCMPMU_ACLD_EN))
 		return false;
+
+	acld = (struct bcmpmu_acld *)bcmpmu->acld;
+	acld_chrgrs = acld->pdata->acld_chrgrs;
 
 	for (i = 0; i < acld->pdata->acld_chrgrs_list_size; i++) {
 		if (acld_chrgrs[i] == chrgr_type)
