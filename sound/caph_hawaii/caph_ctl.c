@@ -1055,7 +1055,7 @@ static int MiscCtrlInfo(struct snd_kcontrol *kcontrol,
 		break;
 	case CTL_FUNCTION_CFG_SSP:
 		uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
-		uinfo->count = 1;
+		uinfo->count = 2;
 		uinfo->value.integer.min = 0;
 		uinfo->value.integer.max = 3;
 		break;
@@ -1081,7 +1081,7 @@ static int MiscCtrlInfo(struct snd_kcontrol *kcontrol,
 		break;
 	case CTL_FUNCTION_HW_CTL:
 		uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
-		uinfo->count = 4;
+		uinfo->count = 5;
 		uinfo->value.integer.min = 0x80000000;
 		/*
 		 * get the correct range, keep it to MAX for now as it
@@ -1143,6 +1143,8 @@ static int MiscCtrlGet(struct snd_kcontrol *kcontrol,
 	int rtn = 0, chn = 0;
 	struct snd_ctl_elem_info info;
 	BRCM_AUDIO_Param_AtCtl_t parm_atctl;
+	int ssp_index;
+	int hwctl_index;
 
 	switch (function) {
 	case CTL_FUNCTION_LOOPBACK_TEST:
@@ -1215,8 +1217,10 @@ static int MiscCtrlGet(struct snd_kcontrol *kcontrol,
 		ucontrol->value.integer.value[1] = pChip->pi32CfgIHF[1];
 		break;
 	case CTL_FUNCTION_CFG_SSP:
+		/* TINYALSATOCHECK */
+		ssp_index = ucontrol->value.integer.value[1];
 		ucontrol->value.integer.value[0] =
-		    pChip->i32CfgSSP[kcontrol->id.index];
+		    pChip->i32CfgSSP[ssp_index];
 		break;
 	case CTL_FUNCTION_VOL:
 		/*
@@ -1236,7 +1240,10 @@ static int MiscCtrlGet(struct snd_kcontrol *kcontrol,
 /*		ucontrol->value.integer.value[1] = 0; */
 		break;
 	case CTL_FUNCTION_HW_CTL:
-		AUDCTRL_GetHardwareControl(kcontrol->id.index,
+		/* TINYALSATOCHECK */
+		hwctl_index = (int)ucontrol->value.integer.
+					   value[4];
+		AUDCTRL_GetHardwareControl(hwctl_index,
 					   (void *)ucontrol->value.integer.
 					   value);
 		break;
@@ -1634,9 +1641,14 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 				&ctl_parm.parm_cfg_ssp,
 				NULL, 0);
 		} else {
-			ctl_parm.parm_cfg_ssp.mode = kcontrol->id.index + 1;
+			int index = (int)ucontrol->value.integer.value[1];
+			aTrace(LOG_ALSA_INTERFACE,
+				"MiscCtrlPut CTL_FUNCTION_CFG_SSP "
+				"index = %d\n",
+				index);
+			ctl_parm.parm_cfg_ssp.mode = index + 1;
 			ctl_parm.parm_cfg_ssp.bus =
-			pChip->i32CfgSSP[kcontrol->id.index] =
+			pChip->i32CfgSSP[index] =
 			    ucontrol->value.integer.value[0];
 			ctl_parm.parm_cfg_ssp.en_lpbk = 0;
 			/*
@@ -1820,7 +1832,14 @@ static int MiscCtrlPut(struct snd_kcontrol *kcontrol,
 
 		break;
 	case CTL_FUNCTION_HW_CTL:
-		ctl_parm.parm_hwCtl.access_type = kcontrol->id.index;
+		/* ADDED FOR TINYALSA */
+		ctl_parm.parm_hwCtl.access_type	 =
+				(int)ucontrol->value.integer.value[4];
+		aTrace(LOG_ALSA_INTERFACE,
+			"ucontrol->value.integer.value[4] = %d ,"
+			"kcontrol->id.index =%d",
+			(int)ucontrol->value.integer.value[4],
+			(int)kcontrol->id.index);
 		ctl_parm.parm_hwCtl.arg1 =
 			(int)ucontrol->value.integer.value[0];
 		ctl_parm.parm_hwCtl.arg2 =
