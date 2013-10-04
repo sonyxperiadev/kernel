@@ -176,7 +176,7 @@
 #include <mach/caph_platform.h>
 #include <mach/caph_settings.h>
 #endif
-#ifdef CONFIG_VIDEO_UNICAM_CAMERA
+#ifdef CONFIG_SOC_CAMERA
 #include <media/soc_camera.h>
 #include "../../../drivers/media/video/camdrv_ss.h"
 #endif
@@ -477,31 +477,13 @@ struct ion_platform_data ion_secure_data = {
 #endif /* CONFIG_MM_SECURE_DRIVER */
 #endif /* CONFIG_ION_BCM_NO_DT */
 
-#ifdef CONFIG_VIDEO_UNICAM_CAMERA
+#ifdef CONFIG_SOC_MAIN_CAMERA
+#define CAMDRV_SS_MAIN_I2C_ADDRESS (0xAC>>1)
 
-#define S5K4ECGX_I2C_ADDRESS (0xAC>>1)
-#define SR030PC50_I2C_ADDRESS (0x60>>1)
+static struct i2c_board_info hawaii_i2c_camera = {
+	I2C_BOARD_INFO("camdrv_ss", CAMDRV_SS_MAIN_I2C_ADDRESS),
 
-
-#define SENSOR_0_GPIO_PWRDN             (002)
-#define SENSOR_0_GPIO_RST               (111)
-#define SENSOR_0_CLK                    "dig_ch0_clk"	/*DCLK1 */
-#define SENSOR_0_CLK_FREQ               (13000000)
-
-#define SENSOR_1_CLK                    "dig_ch0_clk"	/* DCLK1 */
-#define SENSOR_1_CLK_FREQ               (26000000)
-
-#define SENSOR_1_GPIO_PWRDN             (005)
-
-static struct i2c_board_info hawaii_i2c_camera[] = {
-	{
-		I2C_BOARD_INFO("camdrv_ss", S5K4ECGX_I2C_ADDRESS),
-	},
-	{
-		I2C_BOARD_INFO("camdrv_ss_sub", SR030PC50_I2C_ADDRESS),
-	},
 };
-
 static int hawaii_camera_power(struct device *dev, int on)
 {
 	static struct pi_mgr_dfs_node unicam_dfs_node;
@@ -552,13 +534,51 @@ static int hawaii_camera_power(struct device *dev, int on)
 
 	return 0;
 }
-
 static int hawaii_camera_reset(struct device *dev)
 {
 	/* reset the camera gpio */
 	printk(KERN_INFO "%s:camera reset\n", __func__);
 	return 0;
 }
+static struct v4l2_subdev_sensor_interface_parms camdrv_ss_main_if_params = {
+	.if_type = V4L2_SUBDEV_SENSOR_SERIAL,
+	.if_mode = V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2,
+	.orientation = V4L2_SUBDEV_SENSOR_ORIENT_90,
+	.facing = V4L2_SUBDEV_SENSOR_BACK,
+	.parms.serial = {
+		 .lanes = 2,
+		 .channel = 0,
+		 .phy_rate = 0,
+		 .pix_clk = 0,
+		 .hs_term_time = 0x7
+	},
+};
+
+static struct soc_camera_link iclink_camdrv_ss_main = {
+	.bus_id = 0,
+	.board_info = &hawaii_i2c_camera,
+	.i2c_adapter_id = 0,
+	.module_name = "camdrv_ss",
+	.power = &hawaii_camera_power,
+	.reset = &hawaii_camera_reset,
+	.priv =  &camdrv_ss_main_if_params,
+};
+
+static struct platform_device hawaii_camera = {
+	.name = "soc-camera-pdrv",
+	 .id = 0,
+	 .dev = {
+		 .platform_data = &iclink_camdrv_ss_main,
+	 },
+};
+#endif /*CONFIG_SOC_MAIN_CAMERA*/
+
+
+#ifdef CONFIG_SOC_SUB_CAMERA
+#define CAMDRV_SS_SUB_I2C_ADDRESS (0x60>>1)
+static struct i2c_board_info hawaii_i2c_camera_sub = {
+	I2C_BOARD_INFO("camdrv_ss_sub", CAMDRV_SS_SUB_I2C_ADDRESS),
+};
 
 static int hawaii_camera_power_sub(struct device *dev, int on)
 {
@@ -605,50 +625,19 @@ static int hawaii_camera_power_sub(struct device *dev, int on)
 			__func__);
 		}
 	}
+
 	return 0;
 }
-
 
 static int hawaii_camera_reset_sub(struct device *dev)
 {
 	/* reset the camera gpio */
 	printk(KERN_INFO "%s:camera reset\n", __func__);
 	return 0;
+
 }
 
-static struct v4l2_subdev_sensor_interface_parms s5k4ecgx_if_params = {
-	.if_type = V4L2_SUBDEV_SENSOR_SERIAL,
-	.if_mode = V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2,
-	.orientation = V4L2_SUBDEV_SENSOR_ORIENT_90,
-	.facing = V4L2_SUBDEV_SENSOR_BACK,
-	.parms.serial = {
-		 .lanes = 2,
-		 .channel = 0,
-		 .phy_rate = 0,
-		 .pix_clk = 0,
-		 .hs_term_time = 0x7
-	},
-};
-
-static struct soc_camera_link iclink_s5k4ecgx = {
-	.bus_id = 0,
-	.board_info = &hawaii_i2c_camera[0],
-	.i2c_adapter_id = 0,
-	.module_name = "camdrv_ss",
-	.power = &hawaii_camera_power,
-	.reset = &hawaii_camera_reset,
-	.priv =  &s5k4ecgx_if_params,
-};
-
-static struct platform_device hawaii_camera = {
-	.name = "soc-camera-pdrv",
-	 .id = 0,
-	 .dev = {
-		 .platform_data = &iclink_s5k4ecgx,
-	 },
-};
-
-static struct v4l2_subdev_sensor_interface_parms sr030pc50_if_params = {
+static struct v4l2_subdev_sensor_interface_parms camdrv_ss_sub_if_params = {
 	.if_type = V4L2_SUBDEV_SENSOR_SERIAL,
 	.if_mode = V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2,
 	.orientation = V4L2_SUBDEV_SENSOR_ORIENT_270,
@@ -661,24 +650,24 @@ static struct v4l2_subdev_sensor_interface_parms sr030pc50_if_params = {
 		.hs_term_time = 0x7
 	},
 };
-static struct soc_camera_link iclink_sr030pc50 = {
+static struct soc_camera_link iclink_camdrv_ss_sub = {
 	.bus_id		= 0,
-	.board_info	= &hawaii_i2c_camera[1],
+	.board_info	= &hawaii_i2c_camera_sub,
 	.i2c_adapter_id	= 0,
 	.module_name	= "camdrv_ss_sub",
 	.power		= &hawaii_camera_power_sub,
 	.reset		= &hawaii_camera_reset_sub,
-	.priv		= &sr030pc50_if_params,
+	.priv		= &camdrv_ss_sub_if_params,
 };
 
 static struct platform_device hawaii_camera_sub = {
 	.name	= "soc-camera-pdrv",
 	.id		= 1,
 	.dev	= {
-		.platform_data = &iclink_sr030pc50,
+		.platform_data = &iclink_camdrv_ss_sub,
 	},
 };
-#endif /* CONFIG_VIDEO_UNICAM_CAMERA */
+#endif /* CONFIG_SOC_SUB_CAMERA */
 
 
 
@@ -869,9 +858,14 @@ struct platform_device *hawaii_common_plat_devices[] __initdata = {
 #ifdef CONFIG_UNICAM
 	&hawaii_unicam_device,
 #endif
+
 #ifdef CONFIG_VIDEO_UNICAM_CAMERA
 	&hawaii_camera_device,
+#endif
+#ifdef CONFIG_SOC_MAIN_CAMERA
 	&hawaii_camera,
+#endif
+#ifdef CONFIG_SOC_SUB_CAMERA
 	&hawaii_camera_sub,
 #endif
 

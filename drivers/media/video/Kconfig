@@ -1057,6 +1057,15 @@ config SOC_CAMERA_MT9M111
 	  This driver supports MT9M111, MT9M112 and MT9M131 cameras from
 	  Micron/Aptina
 
+config SOC_MAIN_CAMERA
+	tristate "Main camera enabled"
+	depends on SOC_CAMERA && I2C
+	help
+	  This enables main camera. Board file needs
+	  to specify if it has a main camera.
+	  To enable this SOC_CAMERA needs to be enabled.
+	  Main camera can be treated as back camera.
+
 config SOC_SUB_CAMERA
 	tristate "sub camera enabled"
 	depends on SOC_CAMERA && I2C
