@@ -213,7 +213,14 @@
 	iovmm_mm: iovmm-mm {
 		compatible = "bcm,iovmm";
 		base = <0x80000000>;
-		size = <0x70000000>;
+		size = <0x30000000>;
+		order = <0>;
+	};
+
+	iovmm_mm_hwwr: iovmm-mm-hwwr {
+		compatible = "bcm,iovmm";
+		base = <0xb0000000>;
+		size = <0x40000000>;
 		order = <0>;
 	};
 
@@ -226,8 +233,9 @@
 
 	ion-config {
 		compatible = "bcm,ion-config";
-		/* No separate mask needed for hwwr if M4U is enabled */
-		mask_hwwr = <0>;
+		/* Workaround: Use a separate iova pool for hwwr buffers */
+		mask_hwwr = <0x4>;
+		mask_256M = <0x221>;
 	};
 
 	ion-system {
@@ -244,6 +252,14 @@
 		type = <0>;
 		iommu = <&iommu_mm>;
 		iovmm = <&iovmm_mm>;
+	};
+
+	ion-system-hwwr {
+		compatible = "bcm,ion";
+		id = <2>;
+		type = <0>;
+		iommu = <&iommu_mm>;
+		iovmm = <&iovmm_mm_hwwr>;
 	};
 
 	ion-carveout {
