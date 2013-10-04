@@ -184,7 +184,7 @@
 /* development and test */
 #define	BCMPFX	"BCMTCH:"
 
-#define	BCMTCH_USE_PRINTK	1
+#define	BCMTCH_USE_PRINTK	0
 
 #if BCMTCH_USE_PRINTK
 #define	BCMTCH_INFO(fmt, arg...)	printk(BCMPFX fmt, ##arg)
@@ -493,9 +493,9 @@ static int bcmtch_boot_flag =
 	| BCMTCH_BF_SUSPEND_COLD_BOOT
 	| BCMTCH_BF_FW_RESET_ON_WD
 #if BCMTCH_STATE_PROTOCOL
-	| BCMTCH_BF_STATE_SHORT_SLOT
 	| BCMTCH_BF_STATE_SYNC_MODE
 #endif
+	| BCMTCH_BF_VERIFY_CHIP
 	);
 
 module_param_named(boot_flag, bcmtch_boot_flag, int, S_IRUGO);
@@ -521,7 +521,8 @@ MODULE_PARM_DESC(channel_flag, "Channels allowed bit-fields [L|C/R|T]");
 #define BCMTCH_EVENT_FLAG_ORIENTATION		0x00000008
 
 static int bcmtch_event_flag = BCMTCH_EVENT_FLAG_TOUCH_SIZE
-		| BCMTCH_EVENT_FLAG_ORIENTATION;
+		| BCMTCH_EVENT_FLAG_ORIENTATION
+		| BCMTCH_EVENT_FLAG_PRESSURE;
 
 module_param_named(event_flag, bcmtch_event_flag, int, S_IRUGO);
 MODULE_PARM_DESC(event_flag, "Extension events bit-fields [ORIEN|PRESSURE|TOOL_SIZE|TOUCH_SIZE]");
@@ -647,16 +648,24 @@ static const struct firmware_load_info_t BCMTCH_BINARIES[] = {
 	* ADD CHIP SPECIFIC BINARIES HERE
 	*/
 
-	/*
-	** CHIP ID specific
-	*{0x15200, BCMTCHWC, "bcmtch15200_bin", 0, BCMTCH_FIRMWARE_FLAGS_COMBI},
-	*/
+	/* CHIP ID specific */
+	{0x15200,
+		BCMTCHWC,
+		"bcmtchfw15200_bin",
+		0,
+		BCMTCH_FIRMWARE_FLAGS_COMBI},
+
+	{0x15300,
+		BCMTCHWC,
+		"bcmtchfw15300_bin",
+		0,
+		BCMTCH_FIRMWARE_FLAGS_COMBI},
 
 	/*
 	** CHIP ID & CHIP REV specific
-	*{0x15200, 0xa0, "bcmtch15200a1_bin", 0, BCMTCH_FIRMWARE_FLAGS_COMBI},
 	*
 	*/
+
 };
 
 
@@ -2808,6 +2817,7 @@ static int32_t bcmtch_dev_parse_response_data(
 					<< BCMTCH_AXIS_SHIFT_BITS;
 			}
 
+
 			/* axis reverse adjust */
 			if (ao_flag & BCMTCH_AXIS_FLAG_X_REVERSED_MASK)
 				touch_ptr->x =
@@ -2823,6 +2833,12 @@ static int32_t bcmtch_dev_parse_response_data(
 				tmp_axis = touch_ptr->x;
 				touch_ptr->x = touch_ptr->y;
 				touch_ptr->y = tmp_axis;
+			}
+
+			if (bcmtch_data_ptr->chip_id == 0x015200) {
+				touch_ptr->y =
+					bcmtch_data_ptr->axis_y_max
+					- touch_ptr->y;
 			}
 
 			touch_ptr->status = BCMTCH_TOUCH_STATUS_MOVING;
@@ -3218,7 +3234,9 @@ static int32_t bcmtch_dev_process_event_touch(
 			p_touch_event->x =
 				bcmtch_data_ptr->axis_x_max - p_touch_event->x;
 
-		if (axis_orientation_flag & BCMTCH_AXIS_FLAG_Y_REVERSED_MASK)
+		if ((axis_orientation_flag & BCMTCH_AXIS_FLAG_Y_REVERSED_MASK)
+			||
+			(bcmtch_data_ptr->chip_id == 0x015200))
 			p_touch_event->y =
 				bcmtch_data_ptr->axis_y_max - p_touch_event->y;
 
@@ -3808,6 +3826,7 @@ static int32_t bcmtch_dev_download_firmware(
 			BCMTCH_DF_INFO,
 			"INFO: FIRMWARE: %s\n",
 			fw_name);
+
 		BCMTCH_DBG(
 			BCMTCH_DF_PB,
 			"PB:f/w size= 0x%x\n",
@@ -6213,6 +6232,14 @@ static int32_t bcmtch_init_input_device(
 				0,
 				0);
 
+/*			input_set_abs_params(
+				bcmtch_data_ptr->p_input_device,
+				ABS_MT_TOOL_TYPE,
+				0,
+				MT_TOOL_MAX,
+				0,
+				0);
+*/
 			if (bcmtch_event_flag &
 					BCMTCH_EVENT_FLAG_TOUCH_SIZE) {
 				input_set_abs_params(
