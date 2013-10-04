@@ -41,6 +41,7 @@
 #include <linux/bio.h>
 #include <linux/mmc-poll/mmc_poll.h>
 #include <linux/mmc-poll/mmc_poll_stack.h>
+#include <linux/kmsg_dump.h>
 #include "apanic_mmc.h"
 #ifdef CONFIG_FB_BRCM_CP_CRASH_DUMP_IMAGE_SUPPORT
 #include <video/kona_fb_image_dump.h>
@@ -105,8 +106,8 @@ static void mmc_bio_complete(struct bio *bio, int err)
 	complete((struct completion *)bio->bi_private);
 }
 
-static int apanic_proc_read(char *buffer, char **start, off_t offset,
-				int count, int *peof, void *dat)
+static ssize_t apanic_proc_read(struct file *file, char __user *buffer,
+				size_t count, loff_t *ppos)
 {
 	int i, index = 0;
 	int err;
@@ -120,6 +121,8 @@ static int apanic_proc_read(char *buffer, char **start, off_t offset,
 	struct bio_vec bio_vec;
 	struct completion complete;
 	struct page *page;
+	off_t offset = *ppos;
+	void *dat = PDE_DATA(file_inode(file));
 
 	if (!count)
 		return 0;
@@ -197,8 +200,9 @@ static int apanic_proc_read(char *buffer, char **start, off_t offset,
 
 		if ((i == start_sect) && ((file_offset + offset) % 512 != 0)) {
 			/* first sect, may be the only sect */
-			memcpy(buffer, ctx->bounce + (file_offset + offset)
-				% 512, min((unsigned long)count,
+			err = copy_to_user(buffer,
+				ctx->bounce + (file_offset + offset) % 512,
+				min((unsigned long)count,
 				(unsigned long)
 				(512 - (file_offset + offset) % 512)));
 			index += min((unsigned long)count, (unsigned long)
@@ -206,19 +210,16 @@ static int apanic_proc_read(char *buffer, char **start, off_t offset,
 		} else if ((i == end_sect) && ((file_offset + offset + count)
 			% 512 != 0)) {
 			/* last sect */
-			memcpy(buffer + index, ctx->bounce, (file_offset +
-				offset + count) % 512);
+			err = copy_to_user(buffer + index, ctx->bounce,
+				(file_offset + offset + count) % 512);
 		} else {
 			/* middle sect */
-			memcpy(buffer + index, ctx->bounce, 512);
+			err = copy_to_user(buffer + index, ctx->bounce, 512);
 			index += 512;
 		}
 	}
 
-	*start = (char *)count;
-
-	if ((offset + count) == file_length)
-		*peof = 1;
+	*ppos += count;
 
 	err = count;
 
@@ -299,14 +300,48 @@ static void apanic_remove_proc_work(struct work_struct *work)
 	mutex_unlock(&drv_mutex);
 }
 
-static int apanic_proc_write(struct file *file, const char __user *buffer,
-				unsigned long count, void *data)
+static ssize_t apanic_proc_write(struct file *file, const char __user *buffer,
+				size_t count, loff_t *offset)
 {
 	queue_work(apanic_wq, &proc_removal_work);
 	return count;
 }
 
 static int in_panic;
+
+/*
+ * Copy a range of characters from the log buffer.
+ */
+static int log_buf_copy(char *dest, struct kmsg_dumper *dumper, size_t len)
+{
+	static char buf[1024]; /* static to keep left-overs for next pass */
+	size_t n; /* Number of bytes requested */
+	static size_t r; /* Number of bytes received */
+	int total = 0;
+
+	if (!dest || !dumper || len < 0)
+		return -1;
+
+	do {
+		/* Eat left-overs first */
+		while (r) {
+			n = min(r, len);
+			memcpy(dest, buf, n);
+			dest += n;
+			len -= n;
+			total += n;
+			r -= n;
+			if (!len) {
+				/* Move left-overs (if any) to &buf[0] */
+				if (r)
+					memmove(buf, &buf[n], r);
+				return total;
+			}
+		}
+		/* Get new data into the buffer */
+	} while (kmsg_dump_get_line_nolock(dumper, true, buf, sizeof(buf), &r));
+	return total;
+}
 
 /*
  * Writes the contents of the console to the specified offset in flash.
@@ -317,13 +352,15 @@ static int apanic_write_console_mmc(unsigned long off)
 	struct apanic_data *ctx = &drv_ctx;
 	int saved_oip;
 	int idx = 0;
-	int rc, rc2;
+	size_t rc;
+	int rc2;
 	unsigned int last_chunk = 0;
-	unsigned long num = 0;
 	unsigned long start;
 	unsigned long partition_end = get_apanic_end_address();
+	struct kmsg_dumper dumper = { .active = true };
 
 	start = off;
+	kmsg_dump_rewind_nolock(&dumper);
 	while (!last_chunk) {
 		saved_oip = oops_in_progress;
 		oops_in_progress = 1;
@@ -333,7 +370,7 @@ static int apanic_write_console_mmc(unsigned long off)
 		 * Now copy 'writable' amount of data from __log_buf
 		 * to the bounce buffer
 		 */
-		rc = log_buf_copy(ctx->bounce, idx, ctx->mmc->write_bl_len);
+		rc = log_buf_copy(ctx->bounce, &dumper, ctx->mmc->write_bl_len);
 		if (rc < 0)
 			break;
 
@@ -363,7 +400,6 @@ static int apanic_write_console_mmc(unsigned long off)
 			return idx;
 		}
 
-		++num;
 		/* idx is a byte offset used to copy from log buf */
 		if (!last_chunk)
 			idx += (rc2 * ctx->mmc->write_bl_len);
@@ -380,10 +416,10 @@ static int apanic_write_console_mmc(unsigned long off)
 		off += rc2;
 	}
 
-	pr_debug("%s: wrote %ld pages from %ld returned %ld\r\n",
-		__func__, num, start, off);
+	pr_debug("%s: wrote %d bytes from %ld returned %ld\r\n",
+		__func__, idx, start, off);
 
-	return num;
+	return idx;
 }
 
 static int apanic(struct notifier_block *this, unsigned long event,
@@ -393,9 +429,11 @@ static int apanic(struct notifier_block *this, unsigned long event,
 	struct panic_header *hdr = (struct panic_header *) ctx->bounce;
 	int console_offset = 0;
 	int console_len = 0;
+	int console_len_bytes = 0;
 #ifndef CONFIG_CDEBUGGER
 	int threads_offset = 0;
 	int threads_len = 0;
+	int threads_len_bytes = 0;
 #endif
 	int rc;
 	unsigned long blk;
@@ -436,12 +474,14 @@ static int apanic(struct notifier_block *this, unsigned long event,
 
 	pr_debug("Log Buff is stored from block number %d \r\n",
 		console_offset);
-	console_len = apanic_write_console_mmc(console_offset);
-	if (console_len <= 0) {
+	console_len_bytes = apanic_write_console_mmc(console_offset);
+	if (console_len_bytes <= 0) {
 		printk(KERN_EMERG "Error writing log but to panic log! (%d)\n",
-			console_len);
-		console_len = 0;
+			console_len_bytes);
+		console_len_bytes = 0;
 	}
+	console_len = (console_len_bytes+ctx->mmc->write_bl_len-1) /
+		      ctx->mmc->write_bl_len;
 
 #ifndef CONFIG_CDEBUGGER
 	/*
@@ -456,12 +496,14 @@ static int apanic(struct notifier_block *this, unsigned long event,
 	log_buf_clear();
 	show_state_filter(0);
 
-	threads_len = apanic_write_console_mmc(threads_offset);
-	if (threads_len <= 0) {
+	threads_len_bytes = apanic_write_console_mmc(threads_offset);
+	if (threads_len_bytes <= 0) {
 		printk(KERN_EMERG "Error writing threads to panic log! (%d)\n",
-		       threads_len);
-		threads_len = 0;
+		       threads_len_bytes);
+		threads_len_bytes = 0;
 	}
+	threads_len = (threads_len_bytes+ctx->mmc->write_bl_len-1) /
+		      ctx->mmc->write_bl_len;
 #endif
 	/*
 	 * Finally write the panic header at the first block of the partition
@@ -483,7 +525,7 @@ static int apanic(struct notifier_block *this, unsigned long event,
 	 * thread info it has to simply 'lseek' as many bytes.
 	 */
 	hdr->console_offset = (console_offset-blk)*ctx->mmc->write_bl_len;
-	hdr->console_length = (console_len)*ctx->mmc->write_bl_len;
+	hdr->console_length = console_len_bytes;
 
 #ifndef CONFIG_CDEBUGGER
 	hdr->threads_offset = (threads_offset-blk)*ctx->mmc->write_bl_len;
@@ -535,8 +577,14 @@ static int panic_dbg_set(void *data, u64 val)
 
 DEFINE_SIMPLE_ATTRIBUTE(panic_dbg_fops, panic_dbg_get, panic_dbg_set, "%llu\n");
 
-static int apanic_trigger_check(struct file *file, const char __user *devpath,
-				unsigned long count, void *data)
+static const struct file_operations proc_apanic_fops = {
+	.read		= apanic_proc_read,
+	.write		= apanic_proc_write,
+};
+
+static ssize_t apanic_trigger_check(struct file *file,
+				    const char __user *devpath,
+				    size_t count, loff_t *ppos)
 {
 	struct apanic_data *ctx = &drv_ctx;
 	struct panic_header *hdr = ctx->bounce;
@@ -648,30 +696,26 @@ static int apanic_trigger_check(struct file *file, const char __user *devpath,
 	       hdr->threads_offset, hdr->threads_length);
 
 	if (hdr->console_length) {
-		ctx->apanic_console = create_proc_entry("apanic_console",
-						      S_IFREG | S_IRUGO, NULL);
+		ctx->apanic_console = proc_create_data("apanic_console",
+						      S_IFREG | S_IRUGO, NULL,
+						      &proc_apanic_fops,
+						      (void *)1);
 		if (!ctx->apanic_console)
 			printk(KERN_ERR DRVNAME "failed creating procfile\n");
-		else {
-			ctx->apanic_console->read_proc = apanic_proc_read;
-			ctx->apanic_console->write_proc = apanic_proc_write;
-			ctx->apanic_console->size = hdr->console_length;
-			ctx->apanic_console->data = (void *)1;
-		}
+		else
+			proc_set_size(ctx->apanic_console, hdr->console_length);
 	}
 
 #ifndef CONFIG_CDEBUGGER
 	if (hdr->threads_length) {
-		ctx->apanic_threads = create_proc_entry("apanic_threads",
-						       S_IFREG | S_IRUGO, NULL);
+		ctx->apanic_threads = proc_create_data("apanic_threads",
+						       S_IFREG | S_IRUGO, NULL,
+						       &proc_apanic_fops,
+						       (void *)2);
 		if (!ctx->apanic_threads)
 			printk(KERN_ERR DRVNAME "failed creating procfile\n");
-		else {
-			ctx->apanic_threads->read_proc = apanic_proc_read;
-			ctx->apanic_threads->write_proc = apanic_proc_write;
-			ctx->apanic_threads->size = hdr->threads_length;
-			ctx->apanic_threads->data = (void *)2;
-		}
+		else
+			proc_set_size(ctx->apanic_threads, hdr->threads_length);
 	}
 #endif
 
@@ -681,6 +725,11 @@ out:
 		kfree(user_dev_path);
 	return ret;
 }
+
+static const struct file_operations proc_apanic_trigger_fops = {
+	.write		= apanic_trigger_check,
+	.llseek		= noop_llseek,
+};
 
 int __init apanic_init(void)
 {
@@ -696,16 +745,13 @@ int __init apanic_init(void)
 	drv_ctx.bounce = (void *) __get_free_page(GFP_KERNEL);
 	INIT_WORK(&proc_removal_work, apanic_remove_proc_work);
 
-	drv_ctx.apanic_trigger = create_proc_entry("apanic",
-						   S_IFREG | S_IRUGO, NULL);
+	drv_ctx.apanic_trigger = proc_create("apanic",
+						   S_IWUSR | S_IWGRP, NULL,
+						   &proc_apanic_trigger_fops);
 	if (!drv_ctx.apanic_trigger)
 		printk(KERN_ERR "%s: failed creating procfile\n", __func__);
-	else {
-		drv_ctx.apanic_trigger->read_proc = NULL;
-		drv_ctx.apanic_trigger->write_proc = apanic_trigger_check;
-		drv_ctx.apanic_trigger->size = 1;
-		drv_ctx.apanic_trigger->data = NULL;
-	}
+	else
+		proc_set_size(drv_ctx.apanic_trigger, 1);
 
 	printk(KERN_INFO "Android kernel panic handler initialized (bind=%s)\n",
 	       CONFIG_APANIC_PLABEL);

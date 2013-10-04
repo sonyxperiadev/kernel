@@ -30,7 +30,6 @@
 extern "C" {
 #endif
 
-extern int log_buf_copy(char *dest, int idx, int len);
 extern void log_buf_clear(void);
 extern void ram_console_enable_console(int);
 extern unsigned long get_apanic_start_address(void);
