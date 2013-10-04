@@ -235,7 +235,7 @@ static void bcmpmu_set_gain(struct gain_ramp *ramp, u32 reg, u8 new_gain)
 */
 void bcmpmu_hs_power(bool on)
 {
-	u8 val;
+	u8 val1, val2, val3;
 	struct bcmpmu59xxx *bcmpmu;
 	if (!pmu_audio)
 		return;
@@ -243,15 +243,26 @@ void bcmpmu_hs_power(bool on)
 	pr_audio(FLOW, "%s: ON = %d\n", __func__, on);
 	mutex_lock(&pmu_audio->lock);
 
-	bcmpmu->read_dev(bcmpmu, PMU_REG_HSPUP2, &val);
-	if (on)
-		val |= (1 << HSPUP2_HS_PWRUP_SHIFT);
-	else
-		val &= ~(1 << HSPUP2_HS_PWRUP_SHIFT);
-
+	bcmpmu->read_dev(bcmpmu, PMU_REG_HSPGA3, &val3);
+	bcmpmu->read_dev(bcmpmu, PMU_REG_HSPUP1, &val1);
+	bcmpmu->read_dev(bcmpmu, PMU_REG_HSPUP2, &val2);
+	if (on) {
+		val1 &= ~HSPUP1_IDDQ_PWRDN;
+		val2 |= HSPUP2_HS_PWRUP;
+		val3 |= HSPGA3_RAMUP_DIS;
+	} else {
+		val1 |= HSPUP1_IDDQ_PWRDN;
+		val2 &= ~(1 << HSPUP2_HS_PWRUP_SHIFT);
+		val3 &= ~HSPGA3_RAMUP_DIS;
+	}
 	pmu_audio->HS_On = on;
-	bcmpmu->write_dev(bcmpmu, PMU_REG_HSPUP2, val);
+	bcmpmu->write_dev(bcmpmu, PMU_REG_HSPGA3, val3);
+	bcmpmu->write_dev(bcmpmu, PMU_REG_HSPUP1, val1);
+	bcmpmu->write_dev(bcmpmu, PMU_REG_HSPUP2, val2);
 
+	bcmpmu->read_dev(bcmpmu, PMU_REG_HSPGA3, &val3);
+	pr_audio(FLOW, "%s: PMU_REG_HSPGA3 %x\n",
+			__func__, val3);
 	mutex_unlock(&pmu_audio->lock);
 }
 EXPORT_SYMBOL(bcmpmu_hs_power);
