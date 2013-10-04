@@ -892,7 +892,7 @@ static int hawaii_camera_reset_front(struct device *dev)
 static struct v4l2_subdev_sensor_interface_parms ov5640_if_params = {
 	.if_type = V4L2_SUBDEV_SENSOR_SERIAL,
 	.if_mode = V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2,
-	.orientation = V4L2_SUBDEV_SENSOR_PORTRAIT,
+	.orientation = V4L2_SUBDEV_SENSOR_LANDSCAPE,
 	.facing = V4L2_SUBDEV_SENSOR_BACK,
 	.parms.serial = {
 			.lanes = 2,
@@ -940,7 +940,7 @@ static struct soc_camera_desc iclink_ov5648 = {
 static struct v4l2_subdev_sensor_interface_parms ov7692_if_parms = {
 	.if_type = V4L2_SUBDEV_SENSOR_SERIAL,
 	.if_mode = V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2,
-	.orientation = V4L2_SUBDEV_SENSOR_PORTRAIT,
+	.orientation = V4L2_SUBDEV_SENSOR_LANDSCAPE,
 	.facing = V4L2_SUBDEV_SENSOR_FRONT,
 	.parms.serial = {
 			.lanes = 1,
