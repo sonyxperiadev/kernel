@@ -11,6 +11,10 @@
 #include <linux/kernel.h>
 #include <linux/errno.h>
 #include <linux/smp.h>
+#include <linux/cpu.h>
+#include <asm/cpu.h>
+#include <asm/cputype.h>
+#include <linux/sched.h>
 #include <linux/completion.h>
 #include <asm/cp15.h>
 #include <asm/cacheflush.h>
@@ -59,11 +63,14 @@ static inline void cpu_leave_lowpower(void)
 
 static inline void platform_do_lowpower(unsigned int cpu, int *spurious)
 {
+	struct task_struct *idle;
+
 	/*
 	 * there is no power-control hardware on this platform, so all
 	 * we can do is put the core into WFI; this is safe as the calling
 	 * code will have already disabled interrupts
 	 */
+	local_irq_disable();
 	for (;;) {
 		/*
 		 * here's the WFI
@@ -100,6 +107,29 @@ static inline void platform_do_lowpower(unsigned int cpu, int *spurious)
 		 */
 		(*spurious)++;
 	}
+
+	idle = idle_task(cpu);
+	BUG_ON(!idle);
+	/*
+	For Hawaii and Java, all cores are reset on exit from full dormant.
+	An offlined core may exit dormant while in offlined
+	state due to full dormant reset (dormant driver push the core back
+	to dormant in this case). When an offlined core is brought back to
+	online state, init_idle() function invoked by the core that's
+	powering up the offlined core will set preempt_count of offlined core's
+	idle task to zero. init_idle() is not using any access protection while
+	updating preempt_count.
+
+	preempt_count may get corrupted if the offlined core is active due to
+	full dormant rest and is also updating  preempt_count through spin_lock
+	or other kernel API calls
+
+	Workaround is to force preempt_count to zero before offlined core exits
+	to online state.
+	*/
+	task_thread_info(idle)->preempt_count = 0;
+
+	local_irq_enable();
 }
 
 int platform_cpu_kill(unsigned int cpu)
