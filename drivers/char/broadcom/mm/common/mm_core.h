@@ -20,7 +20,11 @@ the GPL, without Broadcom's express prior written consent.
 #undef SCHEDULER_WORK
 #define SCHEDULER_WORK(core, work)\
 		queue_work_on(0, core->mm_common_ifc.single_wq,\
-									work);
+								work);
+#define SCHEDULER_DELAYED_WORK(core, work)\
+		queue_delayed_work_on(0, core->mm_common_ifc.single_wq,\
+					work, msecs_to_jiffies(3));
+
 struct mm_core {
 	struct _mm_common_ifc mm_common_ifc;
 	struct _mm_prof *mm_prof;
@@ -37,6 +41,7 @@ struct mm_core {
 	struct plist_head job_list;
 	uint32_t device_job_id;
 	struct notifier_block notifier_block;
+	struct delayed_work clk_dis_work;
 };
 
 static inline void mm_core_add_job(
