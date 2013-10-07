@@ -206,19 +206,16 @@ static int v3d_bin_render_abort(void *device_id, mm_job_post_t *job)
 
 static mm_isr_type_e process_v3d_bin_render_irq(void *device_id)
 {
-	u32 flags, flags_qpu, tmp;
+	u32 flags, tmp;
 	mm_isr_type_e irq_retval = MM_ISR_UNKNOWN;
 	v3d_bin_render_device_t *id = (v3d_bin_render_device_t *)device_id;
 
 	/* Read the interrupt status registers */
 	flags = v3d_read(id, V3D_INTCTL_OFFSET);
-	flags_qpu = v3d_read(id, V3D_DBQITC_OFFSET);
 
 	/* Clear interrupts isr is going to handle */
 	tmp = flags & v3d_read(id, V3D_INTENA_OFFSET);
 	v3d_write(id, V3D_INTCTL_OFFSET, tmp);
-	if (flags_qpu)
-		v3d_write(id, V3D_DBQITC_OFFSET, flags_qpu);
 
 	/* Handle Binning Interrupt*/
 	if (flags & 2)
