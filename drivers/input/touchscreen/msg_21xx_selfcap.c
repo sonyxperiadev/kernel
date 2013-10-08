@@ -1587,10 +1587,9 @@ static void msg21xx_chip_init(void)
 	gpio_request(ts_gpio_reset_pin, "reset");
 	gpio_direction_output(ts_gpio_reset_pin, 0);
 	gpio_set_value(ts_gpio_reset_pin, 0);
-	mdelay(200);
-	gpio_direction_input(ts_gpio_reset_pin);
+	mdelay(20);/*min value is 10ms */
 	gpio_set_value(ts_gpio_reset_pin, 1);
-	mdelay(500);
+	mdelay(80);/*min value is 50ms*/
 	gpio_free(ts_gpio_reset_pin);
 }
 
