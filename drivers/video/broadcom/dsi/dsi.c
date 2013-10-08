@@ -484,6 +484,7 @@ Int32 DSI_Init(DISPDRV_INFO_T *info, DISPDRV_HANDLE_T *handle)
 		DispDrv_dsiCfg.hbllp = info->hbllp;
 		DispDrv_dsiCfg.vsync_cb = info->vsync_cb;
 		DispDrv_dsiCfg.enaContClock = info->cont_clk;
+		DispDrv_dsiCfg.enaStEnd = info->sync_pulses;
 
 		pPanel->disp_info = info;
 		pPanel->isTE = info->vmode ? false : info->te_ctrl;

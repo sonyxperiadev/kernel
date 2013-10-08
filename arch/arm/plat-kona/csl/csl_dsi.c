@@ -173,6 +173,7 @@ typedef struct {
 					:Corresponds to the module which
 					fetches pixels and feeds DSI*/
 	UInt32 dlCount;		/* No. of data lanes*/
+	Boolean stEnd;		/* control transfer of end SYNC events */
 	void (*vsync_cb)(void);	/* Function pointer for vsync events */
 } DSI_HANDLE_t, *DSI_HANDLE;
 
@@ -1816,6 +1817,7 @@ CSL_LCD_RES_T CSL_DSI_UpdateVmVc(CSL_LCD_HANDLE vcH,
 		chal_dsi_clr_status(dsiH->chalH, 0xffffffff);
 		chal_dsi_de0_set_cm(dsiH->chalH, dsiChH->cm);
 		chal_dsi_de0_set_mode(dsiH->chalH, DE0_MODE_VID);
+		chal_dsi_de0_st_end(dsiH->chalH, dsiH->stEnd);
 		/* Set pix clk divider to bits per pixel for non-burst mode */
 		chal_dsi_de0_set_pix_clk_div(dsiH->chalH,
 			(dsiChH->bpp_wire << 3) / dsiH->dlCount);
@@ -2533,6 +2535,7 @@ CSL_LCD_RES_T CSL_DSI_Init(const pCSL_DSI_CFG dsiCfg)
 	axipv_init_data.vsync_cb = dsiCfg->vsync_cb,
 
 	dsiH->dlCount = dsiCfg->dlCount;
+	dsiH->stEnd = dsiCfg->enaStEnd;
 	dsiH->dispEngine = dsiCfg->dispEngine;
 	dsiH->pixTxporter = dsiCfg->pixTxporter;
 	dsiH->vmode = dsiCfg->vmode;

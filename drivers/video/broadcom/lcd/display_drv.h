@@ -138,6 +138,7 @@ extern "C" {
 		int desense_offset;
 		void (*vsync_cb)(void);
 		bool cont_clk;
+		bool sync_pulses;
 	} DISPDRV_INFO_T;
 
 

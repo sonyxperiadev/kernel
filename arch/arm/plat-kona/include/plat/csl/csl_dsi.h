@@ -71,6 +71,7 @@ extern "C" {
 		DSI_CLK_T hsBitClk;	///< HS  Clk Configuration
 		UInt32 lpBitRate_Mbps;	///< LP Data Bit Rate, MAX=10[Mbps]
 		Boolean enaContClock;	///< enable Continous Clock
+		Boolean enaStEnd;	/* enable ST_END */
 		Boolean enaRxCrc;	///< enable RX CRC
 		Boolean enaRxEcc;	///< enable RX ECC
 		Boolean enaHsTxEotPkt;	///< enable TX of EOT during HS mode

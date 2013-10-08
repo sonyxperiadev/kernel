@@ -64,6 +64,7 @@ struct lcd_config {
 	bool vid_cmnds; /* TURN_ON SHUT_DOWN*/
 	bool vburst;
 	bool cont_clk;
+	bool sync_pulses; /* Non burst mode with sync pulses or events */
 	uint8_t hs, hbp, hfp, hbllp;
 	uint8_t vs, vbp, vfp;
 };

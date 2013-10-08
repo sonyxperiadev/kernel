@@ -1399,3 +1399,22 @@ cVoid chal_dsi_de0_set_mode(CHAL_HANDLE handle, CHAL_DSI_DE0_MODE_t mode)
 	BRCM_WRITE_REG_FIELD(pDev->baseAddr, DSI1_DISP0_CTRL, MODE, mode);
 }
 
+/*
+ *
+ *  Function Name:  chal_dsi_de0_st_end
+ *
+ *  Description:
+ *
+ */
+cVoid chal_dsi_de0_st_end(CHAL_HANDLE handle, cBool ena)
+{
+	struct CHAL_DSI *pDev = (struct CHAL_DSI *)handle;
+
+	if (ena)
+		BRCM_WRITE_REG_FIELD(pDev->baseAddr,
+					DSI1_DISP0_CTRL, ST_END, 1);
+	else
+		BRCM_WRITE_REG_FIELD(pDev->baseAddr,
+					DSI1_DISP0_CTRL, ST_END, 0);
+}
+

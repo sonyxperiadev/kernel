@@ -1380,6 +1380,7 @@ static int __init populate_dispdrv_cfg(struct kona_fb *fb,
 
 	info->vsync_cb = (info->vmode) ? konafb_vsync_cb : NULL;
 	info->cont_clk = cfg->cont_clk;
+	info->sync_pulses = cfg->sync_pulses;
 	info->init_fn = cfg->init_fn;
 	fb->display_info = info;
 	return 0;
