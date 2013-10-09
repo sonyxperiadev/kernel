@@ -32,8 +32,8 @@
 *
 ****************************************************************************/
 
+#include <linux/delay.h>
 #include "mobcom_types.h"
-
 #include <plat/chal/chal_types.h>
 #include <mach/kona_headset_pd.h>
 #include "chal_caph.h"
@@ -68,6 +68,7 @@
 static CSL_CAPH_AUDIOH_Path_t path[AUDDRV_PATH_TOTAL];
 static CHAL_HANDLE handle = 0x0;
 static Boolean isSTIHF = FALSE;
+static int wait_dmic_on = 150*1000;
 
 /*-
 //Microphone status:
@@ -909,6 +910,7 @@ void csl_caph_audioh_start(int path_id)
 		chal_audio_dmic1_pwrctrl(handle, TRUE);
 		/* Enable the digital microphone */
 		chal_audio_vinpath_digi_mic_enable(handle, chnl_enable);
+		usleep_range(wait_dmic_on, wait_dmic_on+20000);
 		micStatus |= 0x3;
 		break;
 
@@ -918,6 +920,7 @@ void csl_caph_audioh_start(int path_id)
 		chal_audio_dmic1_pwrctrl(handle, TRUE);
 		/* Enable the digital microphone */
 		chal_audio_vinpath_digi_mic_enable(handle, chnl_enable);
+		usleep_range(wait_dmic_on, wait_dmic_on+20000);
 		micStatus |= 0x1;
 		break;
 
@@ -927,6 +930,7 @@ void csl_caph_audioh_start(int path_id)
 		chal_audio_dmic1_pwrctrl(handle, TRUE);
 		/* Enable the digital microphone */
 		chal_audio_vinpath_digi_mic_enable(handle, chnl_enable);
+		usleep_range(wait_dmic_on, wait_dmic_on+20000);
 		micStatus |= 0x2;
 		break;
 
@@ -937,6 +941,7 @@ void csl_caph_audioh_start(int path_id)
 		chal_audio_dmic2_pwrctrl(handle, TRUE);
 		/* Enable the digital microphone */
 		chal_audio_nvinpath_digi_mic_enable(handle, chnl_enable);
+		usleep_range(wait_dmic_on, wait_dmic_on+20000);
 		micStatus |= 0xC;
 		break;
 
@@ -946,6 +951,7 @@ void csl_caph_audioh_start(int path_id)
 		chal_audio_dmic2_pwrctrl(handle, TRUE);
 		/* Enable the digital microphone */
 		chal_audio_nvinpath_digi_mic_enable(handle, chnl_enable);
+		usleep_range(wait_dmic_on, wait_dmic_on+20000);
 		micStatus |= 0x4;
 		break;
 
@@ -955,6 +961,7 @@ void csl_caph_audioh_start(int path_id)
 		chal_audio_dmic2_pwrctrl(handle, TRUE);
 		/* Enable the digital microphone  */
 		chal_audio_nvinpath_digi_mic_enable(handle, chnl_enable);
+		usleep_range(wait_dmic_on, wait_dmic_on+20000);
 		micStatus |= 0x8;
 		break;
 
