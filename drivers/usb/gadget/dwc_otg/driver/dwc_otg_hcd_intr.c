@@ -1268,6 +1268,9 @@ static int32_t handle_hc_nak_intr(dwc_otg_hcd_t *hcd,
 		goto handle_nak_done;
 	}
 
+	if ((qtd == NULL) || (qtd->urb == NULL))
+		goto handle_nak_done;
+
 	switch (dwc_otg_hcd_get_pipe_type(&qtd->urb->pipe_info)) {
 	case UE_CONTROL:
 	case UE_BULK:
