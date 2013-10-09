@@ -46,6 +46,14 @@ config	MACH_JAVA_GARNET
 	help
 	  Support for Broadcom Hawaii garnet board.
 
+config	MACH_JAVA_KIVU
+		bool "MACH_JAVA_KIVU"
+	select MACH_BCM_KIVU
+	help
+	  "This config option will enable support for
+	  Java Kivu platform"
+
+
 config	MACH_JAVA_SS_EVAL
 		bool "MACH_JAVA_SS_EVAL"
 	select MACH_BCM_SS_EVAL
@@ -134,6 +142,18 @@ choice
 	bool "SS BAFFINLITE REV00"
 	help
 	  Support for SS Baffinlite Rev00
+
+endchoice
+
+choice
+	prompt "Java Kivu type"
+	depends on MACH_JAVA_KIVU
+	default MACH_JAVA_KIVU1DOT0
+
+	config MACH_JAVA_KIVU1DOT0
+	bool "JAVA KIVU 1DOT0"
+	help
+	  Support for Java Kivu1.0
 
 endchoice
 
