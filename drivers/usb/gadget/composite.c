@@ -1229,6 +1229,7 @@ composite_setup(struct usb_gadget *gadget, const struct usb_ctrlrequest *ctrl)
 	u16				w_length = le16_to_cpu(ctrl->wLength);
 	struct usb_function		*f = NULL;
 	u8				endp;
+	struct usb_otg_descriptor*	potgdesc;
 
 	/* partial re-init of the response message; the function or the
 	 * gadget might need to intercept e.g. a control-OUT completion
@@ -1264,6 +1265,17 @@ composite_setup(struct usb_gadget *gadget, const struct usb_ctrlrequest *ctrl)
 			value = min(w_length, (u16) sizeof cdev->desc);
 			memcpy(req->buf, &cdev->desc, value);
 			break;
+
+		case USB_DT_OTG:
+			value = min(w_length, (u16) sizeof(struct usb_otg_descriptor));
+			potgdesc = (struct usb_otg_descriptor* )req->buf;
+			potgdesc->bLength = (u16) sizeof(struct usb_otg_descriptor);
+			potgdesc->bDescriptorType = USB_DT_OTG;
+			potgdesc->bmAttributes = 0;
+			potgdesc->bcdOTG = __constant_cpu_to_le16(0x0200);
+
+			break;
+
 		case USB_DT_DEVICE_QUALIFIER:
 			if (!gadget_is_dualspeed(gadget) ||
 			    gadget->speed >= USB_SPEED_SUPER)

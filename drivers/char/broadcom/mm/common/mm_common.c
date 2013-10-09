@@ -11,7 +11,7 @@ in any way with any other Broadcom software provided under a license other than
 the GPL, without Broadcom's express prior written consent.
 *******************************************************************************/
 
-#define pr_fmt(fmt) "<%s::%s::%d> " fmt "\n", common->mm_name,\
+#define pr_fmt(fmt) "<%s::%s::%d> " fmt "\n", common->mm_common_ifc.mm_name,\
 				 __func__, __LINE__ \
 
 #include "mm_common.h"
@@ -31,7 +31,7 @@ static struct workqueue_struct *single_wq;
 static char *single_wq_name = "mm_wq";
 
 #define SCHEDULER_COMMON_WORK(common, work) \
-		queue_work_on(0, common->single_wq, work)
+		queue_work_on(0, common->mm_common_ifc.single_wq, work)
 
 /* MM Framework globals end*/
 static void _mm_common_cache_clean(struct work_struct *dummy)
@@ -59,30 +59,31 @@ void mm_common_cache_clean(void)
 }
 void mm_common_enable_clock(struct mm_common *common)
 {
-	if (common->mm_hw_is_on == 0) {
+	if (common->mm_common_ifc.mm_hw_is_on == 0) {
 		if (common->common_clk) {
 			clk_enable(common->common_clk);
-			if (strncmp(common->mm_name, "mm_h264", 7))
+			if (strncmp(common->mm_common_ifc.mm_name,
+							"mm_h264", 7))
 				clk_reset(common->common_clk);
 			}
-		raw_notifier_call_chain(&common->notifier_head, \
+		raw_notifier_call_chain(&common->mm_common_ifc.notifier_head, \
 				MM_FMWK_NOTIFY_CLK_ENABLE, NULL); \
 		}
 
-	common->mm_hw_is_on++;
+	common->mm_common_ifc.mm_hw_is_on++;
 }
 
 void mm_common_disable_clock(struct mm_common *common)
 {
-	BUG_ON(common->mm_hw_is_on == 0);
+	BUG_ON(common->mm_common_ifc.mm_hw_is_on == 0);
 
-	common->mm_hw_is_on--;
+	common->mm_common_ifc.mm_hw_is_on--;
 
-	if (common->mm_hw_is_on == 0) {
+	if (common->mm_common_ifc.mm_hw_is_on == 0) {
 		if (common->common_clk)
 			clk_disable(common->common_clk);
 
-		raw_notifier_call_chain(&common->notifier_head, \
+		raw_notifier_call_chain(&common->mm_common_ifc.notifier_head, \
 				MM_FMWK_NOTIFY_CLK_DISABLE, NULL); \
 		}
 }
@@ -133,7 +134,7 @@ void mm_common_add_job(struct work_struct *work)
 	if (filp->interlock_count == 0)
 		mm_core_add_job(job, core_dev);
 	list_add_tail(&(job->file_list), &(filp->write_head));
-	raw_notifier_call_chain(&common->notifier_head, \
+	raw_notifier_call_chain(&common->mm_common_ifc.notifier_head, \
 				MM_FMWK_NOTIFY_JOB_ADD, NULL);
 }
 
@@ -214,9 +215,6 @@ void mm_common_release_jobs(struct work_struct *work)
 					common->mm_core[core_id]);
 			mm_common_job_completion(job,
 					common->mm_core[core_id]);
-			raw_notifier_call_chain(
-					&common->notifier_head,
-					MM_FMWK_NOTIFY_JOB_REMOVE, NULL);
 		} else {
 			if (job->predecessor) {
 				job->predecessor->successor = NULL;
@@ -316,7 +314,7 @@ void mm_common_job_completion(struct dev_job_list *job, void *core)
 
 	list_del_init(&job->file_list);
 	mm_core_remove_job(job, core_dev);
-	raw_notifier_call_chain(&common->notifier_head, \
+	raw_notifier_call_chain(&common->mm_common_ifc.notifier_head, \
 	MM_FMWK_NOTIFY_JOB_COMPLETE, (void *) job->job.type);
 
 	if (filp->readable) {
@@ -776,8 +774,8 @@ void *mm_fmwk_register(const char *name, const char *clk_name,
 	memset(common, 0, sizeof(struct mm_common));
 
 	INIT_LIST_HEAD(&common->device_list);
-	common->mm_hw_is_on = 0;
-	RAW_INIT_NOTIFIER_HEAD(&common->notifier_head);
+	common->mm_common_ifc.mm_hw_is_on = 0;
+	RAW_INIT_NOTIFIER_HEAD(&(common->mm_common_ifc.notifier_head));
 	sema_init(&common->device_sem, 1);
 
 	/*get common clock*/
@@ -789,11 +787,11 @@ void *mm_fmwk_register(const char *name, const char *clk_name,
 			}
 		}
 
-	common->mm_name = kmalloc(strlen(name)+1, GFP_KERNEL);
-	strncpy(common->mm_name, name, strlen(name) + 1);
+	common->mm_common_ifc.mm_name = kmalloc(strlen(name)+1, GFP_KERNEL);
+	strncpy(common->mm_common_ifc.mm_name, name, strlen(name) + 1);
 
 	common->mdev.minor = MISC_DYNAMIC_MINOR;
-	common->mdev.name = common->mm_name;
+	common->mdev.name = common->mm_common_ifc.mm_name;
 	common->mdev.fops = &mm_fops;
 	common->mdev.parent = NULL;
 
@@ -803,22 +801,14 @@ void *mm_fmwk_register(const char *name, const char *clk_name,
 		goto err_register;
 	}
 
-	common->debugfs_dir = debugfs_create_dir(common->mm_name, NULL);
-	if (!common->debugfs_dir) {
-		pr_err("Error %ld creating debugfs dir for %s",
-		PTR_ERR(common->debugfs_dir), common->mm_name);
+	common->mm_common_ifc.debugfs_dir =
+			debugfs_create_dir(common->mm_common_ifc.mm_name, NULL);
+		if (!common->mm_common_ifc.debugfs_dir) {
+			pr_err("Error %ld creating debugfs dir for %s",
+			PTR_ERR(common->mm_common_ifc.debugfs_dir),
+					common->mm_common_ifc.mm_name);
 		goto err_register;
 	}
-
-	for (i = 0; i < count; i++)
-		common->mm_core[i] = mm_core_init(common, name, &core_param[i]);
-
-#ifdef CONFIG_KONA_PI_MGR
-	common->mm_dvfs = mm_dvfs_init(common, name, dvfs_param);
-#else
-	common->mm_dvfs = NULL;
-#endif
-	common->mm_prof = mm_prof_init(common, name, prof_param);
 
 	mutex_lock(&mm_fmwk_mutex);
 	if (single_wq == NULL) {
@@ -829,9 +819,22 @@ void *mm_fmwk_register(const char *name, const char *clk_name,
 			goto err_register;
 			}
 		}
-	common->single_wq = single_wq;
+	common->mm_common_ifc.single_wq = single_wq;
 	list_add_tail(&common->device_list, &mm_dev_list);
 	mutex_unlock(&mm_fmwk_mutex);
+
+	for (i = 0; i < count; i++)
+		common->mm_core[i] = mm_core_init(common, name, &core_param[i]);
+
+#ifdef CONFIG_KONA_PI_MGR
+	common->mm_dvfs = mm_dvfs_init(&(common->mm_common_ifc), name,
+								dvfs_param);
+#else
+	common->mm_dvfs = NULL;
+#endif
+	common->mm_prof = mm_prof_init(&(common->mm_common_ifc), name,\
+						prof_param);
+
 
 	return common;
 
@@ -870,12 +873,12 @@ void mm_fmwk_unregister(void *dev_name)
 		(i < MAX_ASYMMETRIC_PROC) && (common->mm_core[i] != NULL); \
 		i++)
 		mm_core_exit(common->mm_core[i]);
-	if (common->debugfs_dir)
-		debugfs_remove_recursive(common->debugfs_dir);
+	if (common->mm_common_ifc.debugfs_dir)
+		debugfs_remove_recursive(common->mm_common_ifc.debugfs_dir);
 
 	misc_deregister(&common->mdev);
 
-	common->single_wq = NULL;
-		kfree(common->mm_name);
+	common->mm_common_ifc.single_wq = NULL;
+		kfree(common->mm_common_ifc.mm_name);
 		kfree(common);
 }

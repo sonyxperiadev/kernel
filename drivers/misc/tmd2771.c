@@ -40,7 +40,7 @@
 #include <linux/irq.h>
 #include <linux/interrupt.h>
 #include <linux/slab.h>
-#include <mach/gpio.h>
+#include <asm/gpio.h>
 #include <linux/poll.h>
 #include <linux/wakelock.h>
 #include <linux/input.h>
@@ -377,7 +377,7 @@ static int taos_get_data(void)
 	} else if ((status & 0x10) == 0x10) {
 		ReadEnable = 1;
 		taos_als_threshold_set();
-		taos_als_get_data();
+		ret = taos_als_get_data();
 	}
 	mutex_unlock(&taos_datap->update_lock);
 	return ret;
@@ -398,8 +398,16 @@ static int taos_interrupts_clear(void)
 
 static void taos_work_func(struct work_struct *work)
 {
+	int ret;
+	int gpio_level;
+	ret = 0;
 	taos_get_data();
-	taos_interrupts_clear();
+	ret = taos_interrupts_clear();
+	gpio_level = gpio_get_value(als_ps_gpio_inr);
+	if (ret < 0 || gpio_level == 0) {
+		pr_err("tmd2771x: clear interrupts error\n");
+		taos_interrupts_clear();
+	}
 }
 
 static void taos_calib_work_func(struct work_struct *work)
@@ -482,6 +490,7 @@ static int taos_als_get_data(void)
 	    (TAOS_TRITON_CNTL_ADC_ENBL | TAOS_TRITON_CNTL_PWRON)) {
 		pr_taos(ERROR, "TAOS: taos_als_get_data  reg_val === %0x\n",
 			reg_val);
+		taos_interrupts_clear();
 		return -ENODATA;
 	}
 
@@ -497,6 +506,7 @@ static int taos_als_get_data(void)
 	    TAOS_TRITON_STATUS_ADCVALID) {
 		pr_taos(ERROR, "TAOS: taos_als_get_data  reg_val === %0x\n",
 			reg_val);
+		taos_interrupts_clear();
 		return -ENODATA;
 	}
 

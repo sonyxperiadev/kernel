@@ -53,6 +53,9 @@
 
 #define OV5648_MCLK_26MHZ
 
+static int Is_SnapToPrev_expo;
+static int Is_SnapToPrev_gain;
+
 /* OV5648 has only one fixed colorspace per pixelcode */
 struct ov5648_datafmt {
 	enum v4l2_mbus_pixelcode code;
@@ -1085,25 +1088,6 @@ static int ov5648_reg_writes(struct i2c_client *client,
 	return 0;
 }
 
-#ifdef OV5648_DEBUG
-static int ov5648_reglist_compare(struct i2c_client *client,
-			const struct ov5648_reg reglist[])
-{
-	int err = 0;
-	u8 reg, i;
-
-	for (i = 0; ((reglist[i].reg != 0xFFFF) && (err == 0)); i++) {
-		if (reglist[i].reg != 0xFFFE) {
-			err |= ov5648_reg_read(client, reglist[i].reg, &reg);
-			pr_debug("ov5648_reglist_compare: [0x%04x]=0x%02x",
-				 reglist[i].reg, reg);
-		} else {
-			msleep(reglist[i].val);
-		}
-	}
-	return 0;
-}
-#endif
 
 /**
  * Write an array of data to ov5648 sensor device.
@@ -1549,7 +1533,7 @@ static int ov5648_set_gain(struct i2c_client *client, int gain_value)
 	gain_value = gain_value / GAIN_HIST_MAX;
 #endif
 	gain_actual = ov5648_calc_gain(client, gain_value, &gain_code_analog);
-	pr_debug("ov5648_set_gain: cur=%u req=%u act=%u cod=%u",
+	pr_debug("ov5648_set_gain: cur=%u req=%u act=%u cod=%u\n",
 		 ov5648->gain_current, gain_value,
 		 gain_actual, gain_code_analog);
 	if (gain_actual == ov5648->gain_current)
@@ -1573,7 +1557,13 @@ static int ov5648_get_gain(struct i2c_client *client,
 	int i;
 
 	ov5648_reg_read_multi(client, OV5648_REG_AGC_HI, gain_buf, 2);
-	gain_code = ((gain_buf[0] & 0x3f) << 8) + gain_buf[1];
+	/*gain_code = ((gain_buf[0] & 0x3f) << 8) + gain_buf[1];*/
+	gain_code = ov5648->gain_current >> 4;
+
+	if (Is_SnapToPrev_gain == 1) {
+		gain_code = ov5648->gain_read_buf[0];
+		Is_SnapToPrev_gain = 0;
+		}
 
 	if (ov5648->aecpos_delay > 0) {
 		ov5648->gain_read_buf[ov5648->aecpos_delay] = gain_code;
@@ -1600,10 +1590,16 @@ static int ov5648_get_exposure(struct i2c_client *client,
 	u8 exp_buf[3];
 
 	ov5648_reg_read_multi(client, OV5648_REG_EXP_HI, exp_buf, 3);
-	exp_code =
+	/*exp_code =
 		((exp_buf[0] & 0xf) << 16) +
 		((exp_buf[1] & 0xff) << 8) +
-		(exp_buf[2] & 0xf0);
+		(exp_buf[2] & 0xf0);*/
+	exp_code = (ov5648->exposure_current * 1000 / ov5648->line_length) << 4;
+
+	if (Is_SnapToPrev_expo == 1) {
+		exp_code = ov5648->exp_read_buf[0];
+		Is_SnapToPrev_expo = 0;
+		}
 
 	if (ov5648->aecpos_delay > 0) {
 		ov5648->exp_read_buf[ov5648->aecpos_delay] = exp_code;
@@ -1681,7 +1677,7 @@ static void ov5648_set_exposure(struct i2c_client *client, int exp_value)
 
 	actual_exposure = ov5648_calc_exposure(client, exp_value,
 			&vts, &coarse_int_lines);
-	pr_debug("ov5648_set_exposure: cur=%d req=%d act=%d coarse=%d vts=%d",
+	pr_debug("ov5648_set_exposure: cur=%d req=%d act=%d coarse=%d vts=%d\n",
 			ov5648->exposure_current, exp_value, actual_exposure,
 			coarse_int_lines, vts);
 	ov5648->vts = vts;
@@ -1794,26 +1790,31 @@ static int ov5648_set_mode(struct i2c_client *client, int new_mode_idx)
 	int ret = 0;
 
 	if (ov5648->mode_idx == new_mode_idx) {
-		pr_debug("ov5648_set_mode: skip init from mode[%d]=%s to mode[%d]=%s",
+		pr_debug("ov5648_set_mode: skip init from mode[%d]=%s to mode[%d]=%s\n",
 			ov5648->mode_idx, ov5648_mode[ov5648->mode_idx].name,
 			new_mode_idx, ov5648_mode[new_mode_idx].name);
 		return ret;
 	}
 
 	if (ov5648->mode_idx == OV5648_MODE_MAX) {
-		pr_debug("ov5648_set_mode: full init from mode[%d]=%s to mode[%d]=%s",
+		pr_debug("ov5648_set_mode: full init from mode[%d]=%s to mode[%d]=%s\n",
 		ov5648->mode_idx, ov5648_mode[ov5648->mode_idx].name,
 		new_mode_idx, ov5648_mode[new_mode_idx].name);
 		ov5648_init(client);
 		ret  = ov5648_reg_writes(client, ov5648_regtbl[new_mode_idx]);
 	} else {
-		pr_debug("ov5648_set_mode: diff init from mode[%d]=%s to mode[%d]=%s",
+		pr_debug("ov5648_set_mode: diff init from mode[%d]=%s to mode[%d]=%s\n",
 			ov5648->mode_idx, ov5648_mode[ov5648->mode_idx].name,
 			new_mode_idx, ov5648_mode[new_mode_idx].name);
 		ret = ov5648_reg_writes(client, ov5648_regdif[new_mode_idx]);
 	}
 	if (ret)
 		return ret;
+
+	if (new_mode_idx == OV5648_MODE_2592x1944P15) {
+		Is_SnapToPrev_expo = 1;
+		Is_SnapToPrev_gain = 1;
+		}
 
 	ov5648->mode_idx = new_mode_idx;
 	ov5648->line_length  = ov5648_mode[new_mode_idx].line_length_ns;
@@ -1832,8 +1833,8 @@ static int ov5648_set_state(struct i2c_client *client, int new_state)
 	struct ov5648 *ov5648 = to_ov5648(client);
 	int ret = 0;
 
-	pr_debug("ov5648_set_state: %d (%s) -> %d (%s)", ov5648->state,
-		 ov5648->state ? "strm" : "stop",
+	pr_debug("ov5648_set_state: %d (%s) -> %d (%s)\n",\
+	    ov5648->state, ov5648->state ? "strm" : "stop",\
 		 new_state, new_state ? "strm" : "stop");
 
 	if (ov5648->state != new_state) {
@@ -2091,6 +2092,7 @@ static int ov5648_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 int set_flash_mode(struct i2c_client *client, int mode)
 {
 	struct ov5648 *ov5648 = to_ov5648(client);
+	int ret = 0;
 	if (ov5648->flashmode == mode)
 		return 0;
 #ifdef CONFIG_VIDEO_AS3643
@@ -2126,6 +2128,7 @@ int set_flash_mode(struct i2c_client *client, int mode)
 #if defined(CONFIG_MACH_JAVA_C_LC1)
 		if ((mode == FLASH_MODE_OFF)
 			|| (mode == FLASH_MODE_TORCH_OFF)) {
+			ret = del_timer(&timer);
 			gpio_set_value(TORCH_EN, 0);
 			gpio_set_value(FLASH_EN, 0);
 		} else if (mode == FLASH_MODE_TORCH_ON) {
@@ -2263,6 +2266,7 @@ static int ov5648_init(struct i2c_client *client)
 {
 	struct ov5648 *ov5648 = to_ov5648(client);
 	int ret = 0;
+	int i = 0;
 
 	/* reset */
 	ov5648_reg_write(client, 0x0103, 0x01);
@@ -2287,12 +2291,17 @@ static int ov5648_init(struct i2c_client *client)
 	init_timer(&timer);
 #endif
 
-	ov5648->exposure_current  = DEFAULT_EXPO * 22;
+	ov5648->exposure_current  = DEFAULT_EXPO * 312;
 	ov5648->aecpos_delay      = 1;
 	ov5648->lenspos_delay     = 0;
 	ov5648->flashmode         = FLASH_MODE_OFF;
 	ov5648->flash_intensity   = OV5648_FLASH_INTENSITY_DEFAULT;
 	ov5648->flash_timeout     = OV5648_FLASH_TIMEOUT_DEFAULT;
+	for (i = 0; i < ov5648->aecpos_delay; i++) {
+		ov5648->exp_read_buf[i] = \
+		(ov5648->exposure_current * 1000 / ov5648->line_length) << 4;
+		ov5648->gain_read_buf[i] = ov5648->gain_current >> 4;
+	}
 	dev_dbg(&client->dev, "Sensor initialized\n");
 	return ret;
 }

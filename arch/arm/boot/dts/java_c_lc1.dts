@@ -10,7 +10,7 @@
 	compatible = "bcm,java";
 
 	chosen {
-		bootargs = "console=ttyS0,115200n8 mem=992M gpt androidboot.console=ttyS0 crash_ramdump=1 logbuf_nocache=1";
+		bootargs = "console=ttyS0,115200n8 mem=992M gpt androidboot.console=ttyS0 crash_ramdump=1 logbuf_nocache=1                                                  ";
 	};
 
 	memory@82000000 {
@@ -453,4 +453,10 @@
 			linux,default-trigger = "kpbl";
 		};
 	};
+
+	secure_mem {
+		sec-mem-base = <0x9d800000>;
+		sec-mem-size = <0x100000>;
+	};
+
 };

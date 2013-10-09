@@ -236,14 +236,25 @@ void send_chrgr_insert_event(enum bcmpmu_event_t event, void *para);
 
 #include <linux/gp2ap002_dev.h>
 #include <linux/gp2ap002.h>
+#include <linux/broadcom/secure_memory.h>
 
 #ifdef CONFIG_MOBICORE_DRIVER
 struct mobicore_data mobicore_plat_data = {
 	.name = "mobicore",
-	.mobicore_base = 0x9d800000,
+	.mobicore_base = 0x9d900000,
 	.mobicore_size = 0x00300000,
 };
 #endif
+
+
+
+struct secure_mem_data secure_mem_plat_data = {
+	.name = "secure_mem",
+	.mem_base = 0x9d800000,
+	.mem_size = 0x100000,
+};
+
+
 
 extern int hawaii_wifi_status_register(
 		void (*callback)(int card_present, void *dev_id),
@@ -2412,10 +2423,16 @@ static void __init hawaii_add_devices(void)
 static void hawaii_mem_reserve(void)
 {
 	mobicore_device.dev.platform_data = &mobicore_plat_data;
+	secure_mem_device.dev.platform_data = &secure_mem_plat_data;
 	hawaii_reserve();
 }
 #endif
 
+static void hawaii_sec_mem_reserve(void)
+{
+	secure_mem_device.dev.platform_data = &secure_mem_plat_data;
+	hawaii_reserve();
+}
 static void __init hawaii_add_sdio_devices(void)
 {
 	platform_add_devices(hawaii_sdio_devices,
@@ -2494,7 +2511,7 @@ MACHINE_START(HAWAII, CONFIG_BRD_NAME)
 #ifdef CONFIG_MOBICORE_OS
 	.reserve = hawaii_mem_reserve,
 #else
-	.reserve = hawaii_reserve,
+	.reserve = hawaii_sec_mem_reserve,
 #endif
 	.restart = hawaii_restart,
 MACHINE_END

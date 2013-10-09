@@ -50,6 +50,7 @@ struct lcd_config {
 	uint32_t max_lp_bps;
 	uint8_t phys_width;
 	uint8_t phys_height;
+	void (*init_fn)(void);
 	DISPCTRL_REC_T *init_cmd_seq;
 	DISPCTRL_REC_T *init_vid_seq;
 	DISPCTRL_REC_T *slp_in_seq;
@@ -63,7 +64,7 @@ struct lcd_config {
 	bool vid_cmnds; /* TURN_ON SHUT_DOWN*/
 	bool vburst;
 	bool cont_clk;
-	uint8_t hs, hbp, hfp;
+	uint8_t hs, hbp, hfp, hbllp;
 	uint8_t vs, vbp, vfp;
 };
 

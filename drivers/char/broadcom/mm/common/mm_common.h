@@ -23,8 +23,6 @@ the GPL, without Broadcom's express prior written consent.
 enum {
 	MM_FMWK_NOTIFY_INVALID = 0,
 	MM_FMWK_NOTIFY_JOB_ADD,
-	MM_FMWK_NOTIFY_JOB_REMOVE,
-	MM_FMWK_NOTIFY_JOB_STARTED,
 	MM_FMWK_NOTIFY_JOB_COMPLETE,
 
 	MM_FMWK_NOTIFY_CLK_ENABLE,
@@ -33,19 +31,23 @@ enum {
 	MM_FMWK_NOTIFY_DVFS_UPDATE
 };
 
-struct mm_common {
+struct _mm_common_ifc {
 	struct raw_notifier_head notifier_head;
+	struct workqueue_struct *single_wq;
+	char *mm_name;
+	struct dentry *debugfs_dir;
+	unsigned int mm_hw_is_on;
+};
+
+struct mm_common {
+	struct _mm_common_ifc mm_common_ifc;
 	struct miscdevice mdev;
 	struct list_head device_list;
 	/*Framework initializes the below parameters.
 	Do not edit in other files*/
-	struct workqueue_struct *single_wq;
-	char *mm_name;
 
 	mm_version_info_t version_info;
 
-	/*HW status*/
-	unsigned int mm_hw_is_on;
 	struct clk *common_clk;
 
 	void *mm_core[MAX_ASYMMETRIC_PROC];
@@ -53,7 +55,6 @@ struct mm_common {
 	void *mm_prof;
 
     /* Used for exporting per-device information to debugfs */
-	struct dentry *debugfs_dir;
 	struct semaphore device_sem;
 };
 
@@ -105,7 +106,7 @@ void mm_common_disable_clock(struct mm_common *common);
 void mm_common_job_completion(struct dev_job_list *job, void *core);
 
 #define SCHEDULER_WORK(core, work) \
-		queue_work_on(0, core->mm_common->single_wq, work)
+		queue_work_on(0, core->mm_common->mm_common_ifc.single_wq, work)
 #define SET_IRQ_AFFINITY irq_set_affinity(hw_ifc->mm_irq, cpumask_of(0))
 
 

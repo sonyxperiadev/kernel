@@ -1015,6 +1015,13 @@ struct bcmpmu_adc_pdata adc_pdata[PMU_ADC_CHANN_MAX] = {
 					.reg = PMU_REG_ADCCTRL25,
 	},
 };
+
+int bcmpmu_acld_chargers[] = {
+	PMU_CHRGR_TYPE_DCP,
+	PMU_CHRGR_TYPE_SDP,
+	PMU_CHRGR_TYPE_TYPE2,
+};
+
 struct bcmpmu_acld_pdata acld_pdata = {
 	.acld_vbus_margin = 200,	/*mV*/
 	.acld_vbus_thrs = 5950,
@@ -1027,6 +1034,8 @@ struct bcmpmu_acld_pdata acld_pdata = {
 				  If customer defines any other value
 				  chage accordingly*/
 	.otp_cc_trim = 0x1F,
+	.acld_chrgrs = bcmpmu_acld_chargers,
+	.acld_chrgrs_list_size = ARRAY_SIZE(bcmpmu_acld_chargers),
 };
 
 static struct batt_volt_cap_map ys_05_volt_cap_lut[] = {
@@ -1076,9 +1085,9 @@ static struct batt_cutoff_cap_map ys_05_cutoff_cap_lut[] = {
 
 #if defined(CONFIG_BCMPMU_THERMAL_THROTTLE)
 static struct batt_temp_curr_map ys_05_temp_curr_lut[] = {
-		{400, 510},
-		{500, 270},
-		{580,  0},
+		{540, 510},
+		{580, 270},
+		{630,  0},
 };
 #endif
 

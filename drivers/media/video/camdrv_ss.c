@@ -5375,9 +5375,6 @@ static int camdrv_ss_probe(struct i2c_client *client, const struct i2c_device_id
 	/* Registering sd */
 	v4l2_i2c_subdev_init(sd, client, &camdrv_ss_subdev_ops);
 	icd->ops		= &camdrv_ss_ops;
-
-
-
 /* NEED TO FIND OUT THE MOUNTED SENSOR FROM REGISTERED SENSORS */
 	if (strcmp(icl->module_name, "camdrv_ss") == 0) {
 		camdrv_ss_sensor_init_main = NULL;

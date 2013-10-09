@@ -828,7 +828,7 @@ struct bcmpmu59xxx_regulator_init_data
 struct pkey_timer_act pkey_t3_action = {
 	.flags = PKEY_SMART_RST_PWR_EN,
 	.action = PKEY_ACTION_SMART_RESET,
-	.timer_dly = PKEY_ACT_DELAY_7S,
+	.timer_dly = PKEY_ACT_DELAY_50MS,
 	.timer_deb = PKEY_ACT_DEB_1S,
 	.ctrl_params = PKEY_SR_DLY_30MS,
 };
@@ -863,13 +863,13 @@ struct bcmpmu59xxx_regulator_pdata rgltr_pdata = {
 static int chrgr_curr_lmt[PMU_CHRGR_TYPE_MAX] = {
 	[PMU_CHRGR_TYPE_NONE] = 0,
 	[PMU_CHRGR_TYPE_SDP] = 500,
-	[PMU_CHRGR_TYPE_CDP] = 1500,
+	[PMU_CHRGR_TYPE_CDP] = 1000,
 	[PMU_CHRGR_TYPE_DCP] = 1000,
-	[PMU_CHRGR_TYPE_TYPE1] = 700,
-	[PMU_CHRGR_TYPE_TYPE2] = 700,
+	[PMU_CHRGR_TYPE_TYPE1] = 1000,
+	[PMU_CHRGR_TYPE_TYPE2] = 1000,
 	[PMU_CHRGR_TYPE_PS2] = 100,
-	[PMU_CHRGR_TYPE_ACA_DOCK] = 700,
-	[PMU_CHRGR_TYPE_ACA] = 700,
+	[PMU_CHRGR_TYPE_ACA_DOCK] = 1000,
+	[PMU_CHRGR_TYPE_ACA] = 1000,
 };
 
 struct bcmpmu59xxx_accy_pdata accy_pdata = {
@@ -883,35 +883,35 @@ struct bcmpmu_chrgr_pdata chrgr_pdata = {
 
 
 static struct bcmpmu_adc_lut batt_temp_map[] = {
-	{16, 1000},			/* 100 C */
-	{20, 950},			/* 95 C */
-	{24, 900},			/* 90 C */
-	{28, 850},			/* 85 C */
-	{32, 800},			/* 80 C */
-	{36, 750},			/* 75 C */
-	{44, 700},			/* 70 C */
-	{52, 650},			/* 65 C */
-	{64, 600},			/* 60 C */
-	{76, 550},			/* 55 C */
-	{92, 500},			/* 50 C */
-	{112, 450},			/* 45 C */
-	{132, 400},			/* 40 C */
-	{160, 350},			/* 35 C */
-	{192, 300},			/* 30 C */
-	{228, 250},			/* 25 C */
-	{272, 200},			/* 20 C */
-	{324, 150},			/* 15 C */
-	{376, 100},			/* 10 C */
-	{440, 50},			/* 5 C */
-	{500, 0},			/* 0 C */
-	{568, -50},			/* -5 C */
-	{636, -100},			/* -10 C */
-	{704, -150},			/* -15 C */
-	{760, -200},			/* -20 C */
-	{816, -250},			/* -25 C */
-	{860, -300},			/* -30 C */
-	{900, -350},			/* -35 C */
-	{932, -400},			/* -40 C */
+	{25, 1000},			/* 100 C */
+	{28, 950},			/* 95 C */
+	{32, 900},			/* 90 C */
+	{37, 850},			/* 85 C */
+	{42, 800},			/* 80 C */
+	{48, 750},			/* 75 C */
+	{55, 700},			/* 70 C */
+	{64, 650},			/* 65 C */
+	{73, 600},			/* 60 C */
+	{85, 550},			/* 55 C */
+	{99, 500},			/* 50 C */
+	{115, 450},			/* 45 C */
+	{133, 400},			/* 40 C */
+	{155, 350},			/* 35 C */
+	{180, 300},			/* 30 C */
+	{209, 250},			/* 25 C */
+	{242, 200},			/* 20 C */
+	{280, 150},			/* 15 C */
+	{322, 100},			/* 10 C */
+	{369, 50},			/* 5 C */
+	{420, 0},			/* 0 C */
+	{476, -50},			/* -5 C */
+	{534, -100},			/* -10 C */
+	{592, -150},			/* -15 C */
+	{651, -200},			/* -20 C */
+	{708, -250},			/* -25 C */
+	{761, -300},			/* -30 C */
+	{810, -350},			/* -35 C */
+	{853, -400},			/* -40 C */
 };
 struct bcmpmu_adc_pdata adc_pdata[PMU_ADC_CHANN_MAX] = {
 	[PMU_ADC_CHANN_VMBATT] = {
@@ -1020,9 +1020,9 @@ struct bcmpmu_acld_pdata acld_pdata = {
 	.acld_vbat_thrs = 3500,
 	.i_sat = 1850,			/* saturation current in mA
 						for chrgr while using ACLD */
-	.i_def_dcp = 700,
+	.i_def_dcp = 1000,
 	.i_max_cc = 2200,
-	.acld_cc_lmt = 1360,    /*In general this is 80% of 1C.
+	.acld_cc_lmt = 1051,    /*In general this is 80% of 1C.
 				  If customer defines any other value
 				  chage accordingly*/
 	.otp_cc_trim = 0x1F,
@@ -1215,7 +1215,7 @@ static struct bcmpmu_fg_pdata fg_pdata = {
 	.hw_maintenance_charging = false, /* enable HW EOC of PMU */
 	.sleep_current_ua = 2000, /* floor during sleep */
 	.sleep_sample_rate = 32000,
-	.fg_factor = 663,
+	.fg_factor = 873,
 	.poll_rate_low_batt = 20000,	/* every 20 seconds */
 	.poll_rate_crit_batt = 5000,	/* every 5 Seconds */
 	.ntc_high_temp = 680, /*battery too hot shdwn temp*/

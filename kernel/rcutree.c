@@ -902,7 +902,7 @@ static void print_other_cpu_stall(struct rcu_state *rsp)
 	       smp_processor_id(), (long)(jiffies - rsp->gp_start),
 	       rsp->gpnum, rsp->completed, totqlen);
 #ifdef CONFIG_ARCH_KONA
-	kona_hubtimer_save_state(true);
+	kona_timer_save_state(true);
 #endif
 	if (ndetected == 0)
 		printk(KERN_ERR "INFO: Stall ended before state dump start\n");
@@ -935,7 +935,7 @@ static void print_cpu_stall(struct rcu_state *rsp)
 	for_each_possible_cpu(cpu)
 		totqlen += per_cpu_ptr(rsp->rda, cpu)->qlen;
 #ifdef CONFIG_ARCH_KONA
-	kona_hubtimer_save_state(true);
+	kona_timer_save_state(true);
 #endif
 	pr_cont(" (t=%lu jiffies g=%lu c=%lu q=%lu)\n",
 		jiffies - rsp->gp_start, rsp->gpnum, rsp->completed, totqlen);

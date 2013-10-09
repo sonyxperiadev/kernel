@@ -1408,6 +1408,15 @@ static void __exit mobicore_exit(void)
 	MCDRV_DBG_VERBOSE(mcd, "exit");
 }
 
+bool mc_sleep_ready(void)
+{
+#ifdef MC_PM_RUNTIME
+	return mc_pm_sleep_ready();
+#else
+	return true;
+#endif
+}
+
 /* Linux Driver Module Macros */
 module_init(mobicore_init);
 module_exit(mobicore_exit);

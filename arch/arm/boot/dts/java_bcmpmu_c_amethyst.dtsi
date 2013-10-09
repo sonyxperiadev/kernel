@@ -40,15 +40,15 @@
 		  /*  ICCMAX to 1500mA*/
 		0x47 0x0B 0xFF 0
 		  /* NTC Hot Temperature Comparator rising = 60C*/
-		0xCC 0x40 0xFF 1
+		0xCC 0x13 0xFF 1
 		  /* NTC Hot Temperature Comparator falling = 50C*/
-		0xCD 0x5C 0xFF 1
+		0xCD 0x1A 0xFF 1
 		  /* NTC Cold Temperature Comparator rising = 0C*/
-		0xCE 0xF4 0xFF 1
+		0xCE 0x95 0xFF 1
 		  /* NTC Cold Temperature Comparator falling = 5C*/
-		0xCF 0xB8 0xFF 1
+		0xCF 0x7C 0xFF 1
 		  /* NTC Hot Temperature Comparator bit 9,8 */
-		0xD0 0x05 0xFF 1
+		0xD0 0x00 0xFF 1
 		 /*MBCCTRL11*/
 		0x4A 0x0F 0xff 0
 		 /* ID detection ,current source Trimming */
@@ -145,7 +145,7 @@
 		/*pc_map = PMU_PC2|PMU_PC3, initial_mode = REGULATOR_MODE_STANDBY*/
 		aud  = "1", "audldo_uc", "1", "6", "8", "0", "0";
 		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, initial_mode = REGULATOR_MODE_NORMAL*/
-		usb  = "1", "usb_vcc", "0", "7", "2", "0", "0";
+		usb  = "2", "usb_vcc", "bc_vcc", "0", "7", "2", "0", "0";
 		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, initial_mode = REGULATOR_MODE_NORMAL*/
 		mic  = "1", "micldo_uc", "0","7", "2", "0", "0";
 		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, initial_mode = REGULATOR_MODE_NORMAL*/

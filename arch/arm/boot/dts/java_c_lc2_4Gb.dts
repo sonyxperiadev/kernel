@@ -10,7 +10,7 @@
 	compatible = "bcm,java";
 
 	chosen {
-		bootargs = "console=ttyS0,115200n8 mem=480M gpt androidboot.console=ttyS0 crash_ramdump=1 logbuf_nocache=1";
+		bootargs = "console=ttyS0,115200n8 mem=480M gpt androidboot.console=ttyS0 crash_ramdump=1 logbuf_nocache=1                                                  ";
 	};
 
 	memory@82000000 {
@@ -400,6 +400,7 @@
 		cd-gpio = <0xFFFFFFFF>;		/*SD_CARDDET_GPIO_PIN*/
 		devtype = <0>;		/*SDIO_DEV_TYPE_SDMMC*/
 		flags = <0>;		/*KONA_SDIO_FLAGS_DEVICE_REMOVABLE*/
+		quirks2 = <2>; 		/* SDHCI_QUIRK2_HOST_DISABLE_DDR */
 		peri-clk-name = "sdio1_clk";
 		ahb-clk-name = "sdio1_ahb_clk";
 		sleep-clk-name = "sdio1_sleep_clk";
@@ -463,4 +464,10 @@
 			gpios = <&gpio 22 0>;
 		};
 	};
+
+	secure_mem {
+		sec-mem-base = <0x9d800000>;
+		sec-mem-size = <0x100000>;
+	};
+
 };

@@ -400,8 +400,8 @@ static int get_master_info(struct per_trace_info *trace_info, char *buf)
 	struct axi_master *masters = trace_info->p_source_info->masters;
 
 	for (i = 0 ; masters[i].name != NULL ; i++) {
-		retval += sprintf(buf + retval, " %2d %s\n",
-				count++, masters[i].name);
+		retval += scnprintf(buf + retval, (PAGE_SIZE - retval),
+				" %2d %s\n", count++, masters[i].name);
 	}
 	return retval;
 }
@@ -423,8 +423,8 @@ static int get_slave_info(struct per_trace_info *trace_info, char *buf)
 	int count = 1;
 
 	for (i = 0 ; slaves[i].name != NULL ; i++)
-		retval += sprintf(buf + retval, " %2d %s\n",
-					count++, slaves[i].name);
+		retval += scnprintf(buf + retval, (PAGE_SIZE - retval),
+				" %2d %s\n", count++, slaves[i].name);
 	return retval;
 }
 
@@ -558,8 +558,8 @@ static ssize_t counter_show(struct kobject *kobj, struct kobj_attribute *attr,
 
 	for (temp = counters ; temp->offset != 0 ; temp++)
 		if (trace_info->state.cap_state & temp->depends)
-			retval += sprintf(buf + retval, "%s: %x\n",
-				temp->description,
+			retval += scnprintf(buf + retval, (PAGE_SIZE - retval),
+				"%s: %x\n", temp->description,
 				readl(trace_info->trace_regs + temp->offset));
 
 	return retval;
@@ -642,8 +642,8 @@ static ssize_t filter_axi_id_show(struct kobject *kobj,
 	int filter_index;
 
 	filter_index = find_filter_index(kobj, filter_name_prefix);
-	return  sprintf(buf, "%d\n", get_fls_state(FLS_ID, filter_index,
-								trace_info));
+	return  scnprintf(buf, PAGE_SIZE, "%d\n",
+			get_fls_state(FLS_ID, filter_index, trace_info));
 }
 
 static ssize_t filter_id_mask_store(struct kobject *kobj,
@@ -675,8 +675,8 @@ static ssize_t filter_id_mask_show(struct kobject *kobj,
 	int filter_index;
 
 	filter_index = find_filter_index(kobj, filter_name_prefix);
-	return  sprintf(buf, "%d\n", get_fls_state(FLS_ID_MASK, filter_index,
-								trace_info));
+	return  scnprintf(buf, PAGE_SIZE, "%d\n", get_fls_state(FLS_ID_MASK,
+			filter_index, trace_info));
 }
 
 static ssize_t filter_master_store(struct kobject *kobj,
@@ -859,8 +859,8 @@ static ssize_t filter_open_show(struct kobject *kobj,
 	int filter_index;
 
 	filter_index = find_filter_index(kobj, filter_name_prefix);
-	return  sprintf(buf, "%d\n", get_fls_state(FLS_OPEN, filter_index,
-			trace_info));
+	return scnprintf(buf, PAGE_SIZE, "%d\n", get_fls_state(FLS_OPEN,
+			filter_index, trace_info));
 }
 
 static ssize_t filter_secure_store(struct kobject *kobj,
@@ -893,8 +893,8 @@ static ssize_t filter_secure_show(struct kobject *kobj,
 	int filter_index;
 
 	filter_index = find_filter_index(kobj, filter_name_prefix);
-	return  sprintf(buf, "%d\n", get_fls_state(FLS_SECURE, filter_index,
-			trace_info));
+	return scnprintf(buf, PAGE_SIZE, "%d\n", get_fls_state(FLS_SECURE,
+			filter_index, trace_info));
 }
 
 static ssize_t filter_read_store(struct kobject *kobj,
@@ -927,8 +927,8 @@ static ssize_t filter_read_show(struct kobject *kobj,
 	int filter_index;
 
 	filter_index = find_filter_index(kobj, filter_name_prefix);
-	return  sprintf(buf, "%d\n", get_fls_state(FLS_READ, filter_index,
-			trace_info));
+	return scnprintf(buf, PAGE_SIZE, "%d\n", get_fls_state(FLS_READ,
+			filter_index, trace_info));
 }
 
 static ssize_t filter_write_store(struct kobject *kobj,
@@ -961,8 +961,8 @@ static ssize_t filter_write_show(struct kobject *kobj,
 	int filter_index;
 
 	filter_index = find_filter_index(kobj, filter_name_prefix);
-	return  sprintf(buf, "%d\n", get_fls_state(FLS_WRITE, filter_index,
-			trace_info));
+	return scnprintf(buf, PAGE_SIZE, "%d\n", get_fls_state(FLS_WRITE,
+			filter_index, trace_info));
 }
 static char filter_name[20];
 
@@ -1089,7 +1089,8 @@ static int axitrace_probe(struct amba_device *dev,
 		for (j = 0 ; j < sources[i].filter_count ; j++) {
 
 			/* create filter directory with name filter0, fitler1.*/
-			sprintf(filter_name, "%s%d", filter_name_prefix, j);
+			snprintf(filter_name, sizeof(filter_name), "%s%d",
+				filter_name_prefix, j);
 
 			t->per_trace[i].filterdir_kobj[j] =
 				kobject_create_and_add(filter_name,

@@ -142,8 +142,7 @@ static void secure_api_call_shim(void *info)
 	/*printk(KERN_NOTICE "About to trap into Secure Monitor on CPU %d\n",
 		raw_smp_processor_id());*/
 #ifdef CONFIG_MOBICORE_DRIVER
-	/* Temporaly block fastcall before Mobicore is ready */
-	/*mobicore_smc(data->service_id, data->arg0, data->arg1, data->arg2);*/
+	mobicore_smc(data->service_id, data->arg0, data->arg1, data->arg2);
 #else
 	/* Trap into Secure Monitor */
 	smc(data);

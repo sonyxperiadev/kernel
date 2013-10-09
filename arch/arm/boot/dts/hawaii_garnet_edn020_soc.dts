@@ -10,12 +10,12 @@
 	compatible = "bcm,hawaii";
 
 	chosen {
-		bootargs = "console=ttyS0,115200n8 mem=992M gpt androidboot.console=ttyS0 crash_ramdump=1 logbuf_nocache=1";
+		bootargs = "console=ttyS0,115200n8 mem=994M gpt androidboot.console=ttyS0 crash_ramdump=1 logbuf_nocache=1";
 	};
 
-	memory@82000000 {
+	memory@81E00000 {
 		device_type = "memory";
-		reg = <0x82000000 0x2e000000>; /* 736 MB */
+		reg = <0x81E00000 0x3E200000>; /* 994 MB */
 	};
 
 	wd-tapper {

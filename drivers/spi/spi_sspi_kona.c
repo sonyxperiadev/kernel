@@ -178,14 +178,22 @@ SPI_KONA_BUF_TX(u32, l)
 #endif
 static void spi_kona_tx_data(struct spi_kona_data *spi_kona)
 {
-	while (spi_kona->rxpend < (SSPI_FIFO_SIZE / spi_kona->bytes_per_word)) {
-		if (!spi_kona->count)
-			break;
+	while (spi_kona->count)
 		spi_kona->tx(spi_kona);
-		spi_kona->rxpend++;
-	}
 }
 
+static void spi_kona_rx_data(struct spi_kona_data *spi_kona)
+{
+	uint16_t fifo_level = 0;
+
+	chal_sspi_get_fifo_level(spi_kona->chandle, SSPI_FIFO_ID_RX0,
+				 &fifo_level);
+	while (fifo_level) {
+		spi_kona->rx(spi_kona);
+		chal_sspi_get_fifo_level(spi_kona->chandle,
+					 SSPI_FIFO_ID_RX0, &fifo_level);
+	}
+}
 /*
  * The data flow is designed with the following conditions:
  *
@@ -215,21 +223,12 @@ static irqreturn_t spi_kona_isr(int irq, void *dev_id)
 				 &fifo_level);
 	while (fifo_level) {
 		spi_kona->rx(spi_kona);
-		spi_kona->rxpend--;
 		chal_sspi_get_fifo_level(spi_kona->chandle,
 					 SSPI_FIFO_ID_RX0, &fifo_level);
 	}
 
-	if (spi_kona->count > 0) {
+	if ((spi_kona->tx_buf) && (spi_kona->count > 0)) {
 		spi_kona_tx_data(spi_kona);
-
-		return IRQ_HANDLED;
-	}
-
-	if (spi_kona->rxpend && spi_kona->rx_buf) {
-		/* No data left to Tx, but still waiting for rx data */
-		/* No need to re-enable Rx interrupt */
-
 		return IRQ_HANDLED;
 	}
 	/* Disable all Interrupt */
@@ -583,10 +582,6 @@ static int spi_kona_dma_xfer_tx(struct spi_kona_data *spi_kona)
 		goto err1;
 	}
 
-	/* Enable Overrun interrupt */
-	chal_sspi_enable_intr(chandle,
-		SSPIL_INTERRUPT_ENABLE_FIFO_UNDERRUN_INTERRUPT_ENB_MASK);
-
 	/* Trigger TX FIFO DMA */
 	chal_sspi_enable_dma(chandle, SSPI_DMA_CHAN_SEL_CHAN_TX0,
 			     SSPI_FIFO_ID_TX0, 1);
@@ -770,26 +765,11 @@ static int spi_kona_txrxfer_bufs(struct spi_device *spi,
 					       SSPI_FIFO_THRESHOLD));
 	if (ret < 0)
 		return ret;
-
-#if !defined(CONFIG_ARCH_HAWAII) && !defined(CONFIG_ARCH_JAVA)
-	/* Check if 8-byte unalligned address buffer was passed */
-	if (transfer->rx_buf != NULL && ((int)(transfer->rx_buf) % 8) != 0) {
-		pr_err("8-byte unalligned access seen for RX buffer\n");
-		return -EINVAL;
-	}
-
-	if (transfer->tx_buf != NULL && ((int)(transfer->tx_buf) % 8) != 0) {
-		pr_err("8-byte unalligned access seen for TX buffer\n");
-		return -EINVAL;
-	}
-#endif
-
 	spi_kona->rx_buf = transfer->rx_buf;
 	spi_kona->tx_buf = transfer->tx_buf;
 
 	/* bytes to be transfered in PIO */
 	unaligned = transfer->len % FIFO_BURST_ALIGNMENT;
-	spi_kona->rxpend = 0;
 	init_completion(&spi_kona->xfer_done);
 	spi_kona->count = transfer->len - unaligned;
 
@@ -797,6 +777,17 @@ static int spi_kona_txrxfer_bufs(struct spi_device *spi,
 
 	/* Use DMA mode transfer */
 	if (spi_kona->enable_dma && spi_kona->count) {
+		/* Check if 8-byte unalligned address buffer was passed */
+		if (transfer->rx_buf != NULL &&
+				((int)(transfer->rx_buf) % 8) != 0) {
+			pr_err("8-byte unalligned access seen for RX buffer\n");
+			return -EINVAL;
+		}
+
+	if (transfer->tx_buf != NULL && ((int)(transfer->tx_buf) % 8) != 0) {
+		pr_err("8-byte unalligned access seen for TX buffer\n");
+		return -EINVAL;
+	}
 		/* Setup completion events */
 		init_completion(&spi_kona->tx_dma_evt);
 		init_completion(&spi_kona->rx_dma_evt);
@@ -878,7 +869,10 @@ static int spi_kona_txrxfer_bufs(struct spi_device *spi,
 			spi_kona_fifo_config(spi_kona, 0);
 
 		/* Only pending bytes if enable_dma = 1 */
-		spi_kona_tx_data(spi_kona);
+		if (spi_kona->tx_buf)
+			spi_kona_tx_data(spi_kona);
+		if (spi_kona->rx_buf)
+			spi_kona_rx_data(spi_kona);
 
 		chal_sspi_enable_intr(chandle,
 			SSPIL_INTERRUPT_ENABLE_SCHEDULER_INTERRUPT_ENB_MASK);
@@ -1369,6 +1363,7 @@ static int spi_kona_probe(struct platform_device *pdev)
 	status = spi_register_master(master);
 	if (status != 0) {
 		dev_err(&pdev->dev, "problem registering spi master\n");
+		destroy_workqueue(spi_kona->workqueue);
 		goto out_clk_put;
 	}
 

@@ -27,7 +27,6 @@
 #include <linux/poll.h>
 #include <linux/power_supply.h>
 #include <linux/ktime.h>
-#include <linux/sort.h>
 #include <linux/wakelock.h>
 #ifdef CONFIG_DEBUG_FS
 #include <linux/debugfs.h>
@@ -56,12 +55,14 @@
 
 #define FG_CAP_DELTA_THRLD		30
 #define ADC_VBAT_AVG_SAMPLES		8
+#define ADC_NTC_AVG_SAMPLES		8
 #define FG_INIT_CAPACITY_AVG_SAMPLES	8
 #define FG_CAL_CAPACITY_AVG_SAMPLES	8
 #define FG_INIT_CAPACITY_SAMPLE_DELAY	150
 #define ADC_READ_TRIES			10
 #define ADC_RETRY_DELAY		20 /* 20ms */
 #define AVG_SAMPLES			5
+#define NTC_TEMP_OFFSET			100
 
 #define FG_WORK_POLL_TIME_MS		(5000)
 #define CHARG_ALGO_POLL_TIME_MS		(5000)
@@ -226,6 +227,7 @@ static enum power_supply_property bcmpmu_fg_props[] = {
 	POWER_SUPPLY_PROP_VOLTAGE_NOW,
 	POWER_SUPPLY_PROP_TEMP,
 	POWER_SUPPLY_PROP_HEALTH,
+	POWER_SUPPLY_PROP_FULL_BAT,
 	POWER_SUPPLY_PROP_MODEL_NAME,
 };
 
@@ -375,50 +377,6 @@ static inline int capacity_to_percentage(struct bcmpmu_fg_data *fg, int cap)
 	capacity = div64_s64(capacity, fg->capacity_info.full_charge);
 
 	return capacity;
-}
-
-static int cmp(const void *a, const void *b)
-{
-	if (*((int *)a) < *((int *)b))
-		return -1;
-	if (*((int *)a) > *((int *)b))
-		return 1;
-	return 0;
-}
-
-static inline int average(int *data, int samples)
-{
-	int i;
-	int sum = 0;
-
-	for (i = 0; i < samples; i++)
-		sum += data[i];
-
-	return sum/i;
-}
-
-/**
- * calculates interquartile mean of the integer data set @data
- * @size is the number of samples. It is assumed that
- * @size is divisible by 4 to ease the calculations
- */
-
-static int interquartile_mean(int *data, int num)
-{
-	int i, j;
-	int avg = 0;
-
-	sort(data, num, sizeof(int), cmp, NULL);
-
-	i = num / 4;
-	j = num - i;
-
-	for ( ; i < j; i++)
-		avg += data[i];
-
-	avg = avg / (j - (num / 4));
-
-	return avg;
 }
 
 static inline void fill_avg_sample_buff(struct bcmpmu_fg_data *fg)
@@ -1137,23 +1095,46 @@ int bcmpmu_fg_get_avg_volt(struct bcmpmu59xxx *bcmpmu)
 
 static inline int bcmpmu_fg_get_batt_temp(struct bcmpmu_fg_data *fg)
 {
+	int temp_samples[ADC_NTC_AVG_SAMPLES] = {0};
 	struct bcmpmu_adc_result result;
-	int ret = 0;
-	int retries = ADC_READ_TRIES;
+	int retries;
+	static int temp_prev;
+	int ret = 0, i = 0;
+	bool mean = true;
 
 	if (ntc_disable)
 		return NTC_ROOM_TEMP;
 
-	while (retries--) {
-		ret = bcmpmu_adc_read(fg->bcmpmu, PMU_ADC_CHANN_NTC,
-				PMU_ADC_REQ_SAR_MODE, &result);
-		if (!ret)
+	do {
+		retries = ADC_READ_TRIES;
+		while (retries--) {
+			ret = bcmpmu_adc_read(fg->bcmpmu, PMU_ADC_CHANN_NTC,
+					PMU_ADC_REQ_SAR_MODE, &result);
+			if (!ret)
+				break;
+			msleep(ADC_RETRY_DELAY);
+		}
+
+		BUG_ON(retries <= 0);
+
+		if ((result.conv < (temp_prev + NTC_TEMP_OFFSET) ||
+				result.conv > (temp_prev - NTC_TEMP_OFFSET))) {
+			temp_prev = result.conv;
+			mean = false;
 			break;
+		}
+		temp_samples[i] = result.conv;
 		msleep(ADC_RETRY_DELAY);
-	}
-	BUG_ON(retries <= 0);
-	return result.conv;
+		i++;
+
+	} while (i < ADC_NTC_AVG_SAMPLES);
+
+	if (mean)
+		temp_prev = interquartile_mean(temp_samples, i);
+
+	return temp_prev;
 }
+
 static int bcmpmu_fg_get_curr_inst(struct bcmpmu_fg_data *fg)
 {
 	ktime_t t_now;
@@ -2767,6 +2748,9 @@ static int bcmpmu_fg_get_properties(struct power_supply *psy,
 			val->intval = POWER_SUPPLY_HEALTH_UNKNOWN;
 		else
 			val->intval = POWER_SUPPLY_HEALTH_GOOD;
+		break;
+	case POWER_SUPPLY_PROP_FULL_BAT:
+		val->intval =  fg->capacity_info.max_design;
 		break;
 	case POWER_SUPPLY_PROP_MODEL_NAME:
 		if (fg->pdata->batt_prop->model)

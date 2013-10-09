@@ -74,13 +74,13 @@ static int kona_tick_set_next_event(unsigned long cycles,
 				    struct clock_event_device *evt)
 {
 	struct kona_td *kona_td;
+	int ret = -1;
 
 	kona_td = (struct kona_td *)&__get_cpu_var(percpu_kona_td);
 
-	if (likely(cpu_online(smp_processor_id())))
-		kona_timer_set_match_start(kona_td->kona_timer, cycles);
+	ret = kona_timer_set_match_start(kona_td->kona_timer, cycles);
 
-	return 0;
+	return ret;
 }
 
 static int kona_tick_interrupt_cb(void *dev)

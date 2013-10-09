@@ -31,7 +31,6 @@
 #include <linux/proc_fs.h>
 #include <asm/uaccess.h>
 #include <linux/if_arp.h>
-
 #define CSL_TYPES_H
 #include <linux/broadcom/bcm_fuse_net_if.h>
 
@@ -41,6 +40,7 @@
 
 #include <linux/broadcom/ipcproperties.h>
 #include "rpc_ipc.h"
+#include "ipcinterface.h"
 
 #include "xdr_porting_layer.h"
 #include "xdr.h"
@@ -53,6 +53,7 @@
 #ifdef CONFIG_HAS_EARLYSUSPEND
 #include <linux/earlysuspend.h>
 #endif
+
 
 static int __init bcm_fuse_net_init_module(void);
 static void __exit bcm_fuse_net_exit_module(void);
@@ -108,6 +109,61 @@ static void bcm_fuse_net_free_entry(uint8_t pdp_cid);
 
 static struct proc_dir_entry *bcm_fuse_net_config_proc_entry;
 
+
+#ifdef CONFIG_BCM_NET_WHITELIST_SUPPORT
+
+/*table 0-127 for tcp, 128-255 for udp, stored as array.
+  each array item has either port number or 0(empty arrary space)*/
+#define BCM_FUSE_NET_WL_PROC_NAME		"bcm_fuse_net_wl"
+#define BCM_FUSE_NET_WL_DEBUG_PROC_NAME		"bcm_fuse_net_wl_debug"
+
+#define MAX_WL_TCP_PORTS_CNT	128
+#define MAX_WL_UDP_PORTS_CNT	128
+
+/*ptr directly points to the IPC memory
+  IPC persistent memory is arranged as
+	1st byte - enable/disable flag, 1-enable, 0-disable
+	2nd byte - reserved
+	word - port
+	word - port
+  ...
+  */
+static uint8_t *ipc_whitelist_enable_ptr;
+static uint16_t *ipc_whitelist_tbl;
+
+/*this info list is internally used and will not be saved into IPC*/
+struct whitelist_info_struct {
+	unsigned int ui_enabled;	/*this is enabled from upper layer*/
+	int tcp_port_end_idx;	/*so that we don't have to
+				traverse whole table*/
+	bool tcp_list_full;
+	int udp_port_end_idx;
+	bool udp_list_full;
+};
+static struct whitelist_info_struct	whitelist_info = {
+						false, -1, false, -1, false};
+
+static spinlock_t wl_lock;
+
+/*proc for enable/disable whitelist*/
+static struct proc_dir_entry *bcm_fuse_net_wl_proc_entry;
+static ssize_t bcm_fuse_net_wl_proc_write(struct file *procFp,
+				       const char __user *ubuff,
+				       unsigned long len, void *data);
+static int bcm_fuse_net_wl_proc_read(char *ubuff, char **start, off_t off,
+				  int count, int *eof, void *data);
+
+#ifdef CONFIG_BCM_NET_WHITELIST_DEBUG_SUPPORT
+static struct proc_dir_entry *bcm_fuse_net_wl_debug_proc_entry;
+static int bcm_fuse_net_wl_debug_proc_read(char *ubuff, char **start, off_t off,
+				  int count, int *eof, void *data);
+#endif
+
+static int ipc_peoperty_setup(void);
+static void set_ipc_property_wl_flag(uint8_t enable);
+#endif
+
+
 /**
  * Write function for bcm_fuse_net proc entry
  */
@@ -121,8 +177,6 @@ static ssize_t bcm_fuse_net_proc_write(struct file *procFp, const char __user * 
 	int proc_c_id;
 	int proc_sim_id;
 
-	BNET_DEBUG(DBG_INFO, "%s: New user settings %s\n", __FUNCTION__, ubuff);
-
 	if (len > BCM_FUSE_NET_PROC_MAX_STR_LEN) {
 		BNET_DEBUG(DBG_INFO, "%s: New settings string is too long!\n",
 			   __FUNCTION__);
@@ -133,17 +187,17 @@ static ssize_t bcm_fuse_net_proc_write(struct file *procFp, const char __user * 
 	} else if (sscanf(uStr, "%d %d %d", &proc_idx, &proc_c_id, &proc_sim_id)
 		   != 3) {
 		BNET_DEBUG(DBG_INFO, "%s: Failed to get new settings!\n",
-			   __FUNCTION__);
+				__func__);
 	} else if ((proc_idx < 0) || (proc_idx >= BCM_NET_MAX_PDP_CNTXS)
 		   || (proc_c_id < 1) || (proc_c_id > BCM_NET_MAX_PDP_CNTXS)
 		   || (proc_sim_id < 1) || (proc_sim_id > 2)) {
 		BNET_DEBUG(DBG_INFO,
-			   "%s: Invalid new settings! idx %d   c_id %d   sim_id %d\n",
-			   __FUNCTION__, proc_idx, proc_c_id, proc_sim_id);
+			"%s: Invalid new settings! idx %d   c_id %d   sim_id %d\n",
+			__func__, proc_idx, proc_c_id, proc_sim_id);
 	} else {
 		BNET_DEBUG(DBG_INFO,
-			   "%s: New settings:  idx %d   c_id %d   sim_id %d\n",
-			   __FUNCTION__, proc_idx, proc_c_id, proc_sim_id);
+			"%s: New settings:  idx %d   c_id %d   sim_id %d\n",
+			__func__, proc_idx, proc_c_id, proc_sim_id);
 		error = FALSE;
 	}
 
@@ -180,6 +234,7 @@ static ssize_t bcm_fuse_net_proc_read(struct file *file, char __user *ubuff,
 
 	return len;
 }
+
 
 /**
    @fn void bcm_fuse_net_fc_cb(RPC_FlowCtrlEvent_t event, unsigned char8 cid);
@@ -376,6 +431,7 @@ void bcm_fuse_net_cp_reset_cb(
 	return;
 }
 
+
 static int bcm_fuse_net_open(struct net_device *dev)
 {
 	int i;
@@ -430,10 +486,11 @@ static int bcm_fuse_net_open(struct net_device *dev)
 
 	spin_unlock_irqrestore(&g_dev_lock, flags);
 	BNET_DEBUG(DBG_INFO,
-		   "%s: BCM_FUSE_NET_ACTIVATE_PDP: rmnet[%d] pdp_info.cid=%d\n",
+		   "%s: BCM_FUSE_NET_ACTIVATE_PDP: rmnet[%d] pdp_info.cid=%d, jin hack 1\n",
 		   __FUNCTION__, idx, g_net_dev_tbl[idx].pdp_context_id);
 
 	netif_start_queue(dev);
+
 	return 0;
 }
 
@@ -453,6 +510,7 @@ static int bcm_fuse_net_stop(struct net_device *dev)
 		}
 	}
 	netif_stop_queue(dev);
+
 	return 0;
 }
 
@@ -898,6 +956,251 @@ static const struct file_operations bcm_fuse_net_config_fops = {
 	.write	=	bcm_fuse_net_proc_write,
 };
 
+#ifdef CONFIG_BCM_NET_WHITELIST_SUPPORT
+static int ipc_peoperty_setup(void)
+{
+	IPC_PersistentDataStore_t ipc_persistent_data;
+
+	/*get ipc persistent area for white list table access
+	  in current paltform, the persistent data info does not change,
+	  we can't do it in init_module as IPC may not be ready yet*/
+	if (ipc_whitelist_enable_ptr == NULL) {
+		IPC_GetPersistentData(&ipc_persistent_data);
+		BNET_DEBUG(DBG_INFO,
+			"IPC_GetPersistentData(), dataptr=0x%x, length=%d\n",
+			(unsigned int)ipc_persistent_data.DataPtr,
+			ipc_persistent_data.DataLength);
+		ipc_whitelist_enable_ptr =
+			(uint8_t *)ipc_persistent_data.DataPtr;
+		ipc_whitelist_tbl = (uint16_t *)(ipc_whitelist_enable_ptr + 2);
+		if (ipc_whitelist_enable_ptr == NULL)
+			BNET_DEBUG(DBG_ERROR,
+				"%s: NULL data ptr from IPC_GetPersistentData()\n",
+				__func__);
+		if (ipc_persistent_data.DataLength <
+			(((MAX_WL_TCP_PORTS_CNT+MAX_WL_UDP_PORTS_CNT)*
+			sizeof(uint16_t))+2)) {
+			BNET_DEBUG(DBG_ERROR,
+				"%s: not enough IPC memory, ipc persistent datalength = %d\n",
+				__func__, ipc_persistent_data.DataLength);
+			/*no need to carry on*/
+			ipc_whitelist_tbl = NULL;
+			return -1;
+		}
+	}
+
+	return 0;
+}
+
+static void set_ipc_property_wl_flag(uint8_t enable)
+{
+	if (ipc_whitelist_enable_ptr == NULL) {
+		if (ipc_peoperty_setup() != 0)
+			return;
+	}
+
+	BNET_DEBUG(DBG_INFO, "%s: set ipc wl enable flag = %d\n",
+		__func__, enable);
+	*ipc_whitelist_enable_ptr = enable;
+	return;
+}
+
+void bcm_net_add_or_remove_port(struct socket *sock, bool add)
+{
+	struct inet_sock *inet;
+	__be32 src_addr;
+	__u16 src_port;
+	int i;
+	unsigned long flags;
+
+	if ((sock == NULL) || (sock->sk == NULL))
+		return;
+
+	inet = inet_sk(sock->sk);
+	src_addr = inet->inet_rcv_saddr;
+	src_port = ntohs(inet->inet_sport);
+
+	BNET_DEBUG(DBG_TRACE,
+		"%s: src_addr=%d, src_port=%d, add=%d\n",
+		__func__, src_addr, src_port, add);
+
+	if (sock->type != SOCK_STREAM) {
+		BNET_DEBUG(DBG_TRACE,
+		"%s: Only handles tcp for now", __func__);
+		return;
+	}
+
+	if (sock->sk->sk_state != TCP_LISTEN) {
+		BNET_DEBUG(DBG_TRACE,
+			"%s: sk_state == %d, not TCP_LISTEN",
+			__func__, sock->sk->sk_state);
+		return;
+	}
+
+	/* ip is local host */
+	if (src_addr == 0x0100007F) {
+		BNET_DEBUG(DBG_TRACE, "%s: local host, ignore\n", __func__);
+		return;
+	}
+
+	if (src_port == 0) {
+		BNET_DEBUG(DBG_ERROR, "%s: port = 0, ignore\n", __func__);
+		return;
+	}
+
+	/*get ipc persistent area for white list table access
+	  in current paltform, the persistent data info does not change,
+	  we can't do it in init_module as IPC may not be ready yet*/
+	if (ipc_whitelist_enable_ptr == NULL) {
+		if (ipc_peoperty_setup() != 0)
+			return;
+	}
+
+	spin_lock_irqsave(&wl_lock, flags);
+	if (add) {
+		if (whitelist_info.tcp_list_full) {
+			BNET_DEBUG(DBG_ERROR,
+				"%s: tcp list full, ignore\n", __func__);
+			goto WL_SPIN_UNLOCK;
+		}
+
+		for (i = 0; i <= whitelist_info.tcp_port_end_idx; i++) {
+			BNET_DEBUG(DBG_TRACE, "%s: wl_tbl[%d]=%d\n",
+				__func__, i, ipc_whitelist_tbl[i]);
+			if (ipc_whitelist_tbl[i] == 0) {
+				ipc_whitelist_tbl[i] = src_port;
+				goto WL_SPIN_UNLOCK;
+			}
+		}
+
+		if (i == MAX_WL_TCP_PORTS_CNT) {
+			/*this is strange, why disable whitelist when list
+			is full, should just ignore
+			the new ones, but, it's a requirement....*/
+			BNET_DEBUG(DBG_ERROR,
+				"%s: tcp list full, disable whitelist\n",
+				__func__);
+			whitelist_info.tcp_list_full = true;
+			if (whitelist_info.ui_enabled)
+				set_ipc_property_wl_flag(0);
+			goto WL_SPIN_UNLOCK;
+		}
+
+		ipc_whitelist_tbl[i] = src_port;
+		BNET_DEBUG(DBG_TRACE,
+			"%s: wl_tbl[%d]=%d\n", __func__,
+			i, ipc_whitelist_tbl[i]);
+		whitelist_info.tcp_port_end_idx = i;
+	} else {
+		for (i = 0; i <= whitelist_info.tcp_port_end_idx; i++) {
+			BNET_DEBUG(DBG_TRACE,
+				"%s: wl_tbl[%d]=%d\n",
+				__func__, i, ipc_whitelist_tbl[i]);
+			if (ipc_whitelist_tbl[i] == src_port) {
+				ipc_whitelist_tbl[i] = 0;
+				if (whitelist_info.tcp_list_full) {
+					whitelist_info.tcp_list_full = false;
+					if (whitelist_info.ui_enabled)
+						set_ipc_property_wl_flag(1);
+				}
+				goto WL_SPIN_UNLOCK;
+			}
+		}
+
+		BNET_DEBUG(DBG_ERROR, "%s: can't find this port\n", __func__);
+	}
+
+WL_SPIN_UNLOCK:
+	spin_unlock_irqrestore(&wl_lock, flags);
+	return;
+
+}
+EXPORT_SYMBOL(bcm_net_add_or_remove_port);
+
+
+/**
+ * Write function for bcm_fuse_net whitelist proc entry
+   1 - enable
+   0 - disable
+ */
+static ssize_t bcm_fuse_net_wl_proc_write(struct file *procFp,
+				       const char __user *ubuff,
+				       unsigned long len, void *data)
+{
+	char uStr[BCM_FUSE_NET_PROC_MAX_STR_LEN];
+	int length = len;
+
+	if (len > BCM_FUSE_NET_PROC_MAX_STR_LEN) {
+		BNET_DEBUG(DBG_INFO, "%s: input string is too long!\n",
+		__func__);
+	} else if (copy_from_user(uStr, ubuff, len)) {
+		BNET_DEBUG(DBG_INFO, "%s: Failed to copy user string!\n",
+		__func__);
+		length = 0;
+	} else if (sscanf(uStr, "%u", &(whitelist_info.ui_enabled)) != 1) {
+		BNET_DEBUG(DBG_INFO,
+			"%s: Failed to get flag from input string!\n",
+			__func__);
+	} else {
+		BNET_DEBUG(DBG_INFO, "%s: enable - %d\n",
+			__func__, whitelist_info.ui_enabled);
+
+		if (whitelist_info.ui_enabled &&
+			(!whitelist_info.tcp_list_full))
+			set_ipc_property_wl_flag(1);
+		else
+			set_ipc_property_wl_flag(0);
+	}
+
+	return (ssize_t) length;
+}
+
+/**
+   Read function for bcm_fuse_net whiltlist proc entry
+   1 - enable
+   0 - disable
+*/
+static int bcm_fuse_net_wl_proc_read(char *ubuff, char **start, off_t off,
+				  int count, int *eof, void *data)
+{
+	int len = 0;
+
+	len = snprintf(ubuff, 10, "%d\n", whitelist_info.ui_enabled);
+	return len;
+}
+
+
+#ifdef CONFIG_BCM_NET_WHITELIST_DEBUG_SUPPORT
+
+/**
+	Read function for bcm_fuse_net whitelist debug proc entry
+*/
+static int bcm_fuse_net_wl_debug_proc_read(
+char *ubuff, char **start, off_t off,
+int count, int *eof, void *data)
+{
+	int len = 0;
+	int i;
+	IPC_PersistentDataStore_t ipc_persistent_data;
+	uint8_t *ptr = NULL;
+
+	IPC_GetPersistentData(&ipc_persistent_data);
+	ptr = (uint8_t *)ipc_persistent_data.DataPtr;
+	if (ptr == NULL)
+		BNET_DEBUG(DBG_ERROR,
+			"%s: NULL data ptr from IPC_GetPersistentData()\n",
+			__func__);
+
+	for (i = 0; i < 258; i++)
+		len += snprintf(ubuff + len, 50, "%2x ", ptr[i]);
+
+	return len;
+}
+#endif	/*end of #ifdef CONFIG_BCM_NET_WHITELIST_DEBUG_SUPPORT*/
+
+#endif   /*end of #ifdef CONFIG_BCM_NET_WHITELIST_SUPPORT*/
+
+
 static int __init bcm_fuse_net_init_module(void)
 {
 	unsigned int i = 0;
@@ -931,6 +1234,45 @@ static int __init bcm_fuse_net_init_module(void)
 		   __FUNCTION__);
 	}
 
+#ifdef CONFIG_BCM_NET_WHITELIST_SUPPORT
+	ipc_whitelist_enable_ptr = NULL;
+	ipc_whitelist_tbl = NULL;
+
+	/* proc entry for net config settings */
+	bcm_fuse_net_wl_proc_entry =
+	    create_proc_entry(BCM_FUSE_NET_WL_PROC_NAME, 0666, NULL);
+	if (bcm_fuse_net_wl_proc_entry == NULL) {
+		BNET_DEBUG(DBG_INFO,
+		"%s: Couldn't create bcm_fuse_net_wl_proc_entry!\n",
+		__func__);
+	} else {
+		BNET_DEBUG(DBG_INFO,
+		"%s: bcm_fuse_net_wl_proc_entry created\n",
+		__func__);
+		bcm_fuse_net_wl_proc_entry->write_proc =
+					bcm_fuse_net_wl_proc_write;
+		bcm_fuse_net_wl_proc_entry->read_proc =
+					bcm_fuse_net_wl_proc_read;
+	}
+
+#ifdef CONFIG_BCM_NET_WHITELIST_DEBUG_SUPPORT
+	/* proc entry for net config settings */
+	bcm_fuse_net_wl_debug_proc_entry =
+	    create_proc_entry(BCM_FUSE_NET_WL_DEBUG_PROC_NAME, 0666, NULL);
+	if (bcm_fuse_net_wl_debug_proc_entry == NULL) {
+		BNET_DEBUG(DBG_INFO,
+			"%s: Couldn't create bcm_fuse_net_wl_debug_proc_entry!\n",
+			__func__);
+	} else {
+		BNET_DEBUG(DBG_INFO,
+			"%s: bcm_fuse_net_wl_debug_proc_entry created\n",
+			__func__);
+		bcm_fuse_net_wl_debug_proc_entry->read_proc =
+				bcm_fuse_net_wl_debug_proc_read;
+	}
+#endif /*end of #ifdef CONFIG_BCM_NET_WHITELIST_DEBUG_SUPPORT*/
+#endif /*end of #ifdef CONFIG_BCM_NET_WHITELIST_SUPPORT*/
+
 	return 0;
 }
 
@@ -945,6 +1287,15 @@ static void __exit bcm_fuse_net_exit_module(void)
 		bcm_fuse_net_deattach(i);
 
 	remove_proc_entry("bcm_fuse_net_sim", bcm_fuse_net_config_proc_entry);
+
+#ifdef CONFIG_BCM_NET_WHITELIST_SUPPORT
+	remove_proc_entry(BCM_FUSE_NET_WL_PROC_NAME,
+				bcm_fuse_net_wl_proc_entry);
+#ifdef CONFIG_BCM_NET_WHITELIST_DEBUG_SUPPORT
+	remove_proc_entry(BCM_FUSE_NET_WL_DEBUG_PROC_NAME,
+				bcm_fuse_net_wl_debug_proc_entry);
+#endif
+#endif
 
 	return;
 }

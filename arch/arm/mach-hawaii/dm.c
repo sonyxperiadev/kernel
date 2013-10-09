@@ -397,7 +397,7 @@ static void restore_proc_clk_regs(void)
 		       PROC_CLK_REG_ADDR(POLICY_CTL));
 
 	/* Wait until the new frequency takes effect */
-	insurance = 10000
+	insurance = 10000;
 	do {
 		udelay(1);
 		insurance--;
@@ -942,6 +942,7 @@ static int __init dormant_init(void)
 	struct clk *clk;
 	int i;
 	struct reg_list *reg;
+	int ret;
 
 	clk = clk_get(NULL, KPROC_CCU_CLK_NAME_STR);
 	if (IS_ERR_OR_NULL(clk))
@@ -980,7 +981,9 @@ static int __init dormant_init(void)
 				  &proc_regs_p, GFP_ATOMIC);
 	if (proc == NULL) {
 		pr_info("%s: proc regs alloc failed\n", __func__);
-		return -ENOMEM;
+		dma_free_coherent(NULL, SZ_4K, vptr, drmt_buf_phy);
+		ret = -ENOMEM;
+		goto free_vptr;
 	}
 	pr_info("%s: proc clock registers buffer; proc = 0x%x",
 		__func__, (unsigned int)proc);
@@ -994,7 +997,10 @@ static int __init dormant_init(void)
 				  &addnl_regs_p, GFP_ATOMIC);
 	if (addnl == NULL) {
 		pr_info("%s: addnl regs alloc failed\n", __func__);
-		return -ENOMEM;
+		dma_free_coherent(NULL, SZ_4K, proc, proc_regs_p);
+		dma_free_coherent(NULL, SZ_4K, vptr, drmt_buf_phy);
+		ret = -ENOMEM;
+		goto free_proc;
 	}
 	pr_info("%s: addnl registers buffer; addnl = 0x%x",
 		__func__, (unsigned int)addnl);
@@ -1005,6 +1011,24 @@ static int __init dormant_init(void)
 		reg->addr = addnl_regs[i];
 
 	return 0;
+
+free_proc:
+	dma_free_coherent(NULL, SZ_4K, proc, proc_regs_p);
+
+free_vptr:
+	dma_free_coherent(NULL, SZ_4K, vptr, drmt_buf_phy);
+
+	return ret;
 }
 
 module_init(dormant_init);
+
+static void __exit dormant_exit(void)
+{
+	dma_free_coherent(NULL, SZ_4K, (void *) addnl_regs_v, addnl_regs_p);
+	dma_free_coherent(NULL, SZ_4K, (void *) proc_regs_v, proc_regs_p);
+	dma_free_coherent(NULL, SZ_4K, (void *) un_cached_stack_ptr,
+								drmt_buf_phy);
+}
+
+module_exit(dormant_exit);

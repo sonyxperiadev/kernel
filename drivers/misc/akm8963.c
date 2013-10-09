@@ -84,6 +84,7 @@ struct akm8963_data {
 	char layout;
 	char outbit;
 	int irq;
+	int irq_gpio;
 	int rstn;
 };
 
@@ -279,7 +280,7 @@ static int AKECS_SetMode(struct akm8963_data *akm, unsigned char mode)
 	case AK8963_MODE_SELF_TEST:
 	case AK8963_MODE_FUSE_ACCESS:
 		err = AKECS_Set_CNTL1(akm, mode);
-		if ((err >= 0) && (akm->irq == 0)) {
+		if ((err >= 0) && (akm->irq_gpio == 0)) {
 			schedule_delayed_work(&akm->work,
 					      usecs_to_jiffies
 					      (AK8963_MEASUREMENT_TIME_US));
@@ -1248,13 +1249,36 @@ static void akm8963_delayed_work(struct work_struct *work)
 {
 	struct akm8963_data *akm =
 	    container_of(work, struct akm8963_data, work.work);
-	FUNCDBG("[akm8963] akm8963_delayed_work\n");
-	akm8963_irq(akm->irq, akm);
+	char buffer[SENSOR_DATA_SIZE];
+	int err;
+	memset(buffer, 0, sizeof(buffer));
+	buffer[0] = AK8963_REG_ST1;
+	err = akm8963_i2c_rxdata(akm->i2c, buffer, SENSOR_DATA_SIZE);
+	if (err < 0) {
+		dev_err(&akm->i2c->dev, "[akm8963]%s failed.\n", __func__);
+		goto next_read;
+	}
+	/* Check ST bit */
+	if ((buffer[0] & 0x01) != 0x01) {
+		FUNCDBG("[akm8963]%s ST is not set.\n", __func__);
+		goto next_read;
+	}
+	mutex_lock(&akm->sensor_mutex);
+	memcpy(akm->sense_data, buffer, SENSOR_DATA_SIZE);
+	mutex_unlock(&akm->sensor_mutex);
+	atomic_set(&akm->drdy, 1);
+	atomic_set(&akm->is_busy, 0);
+	wake_up(&akm->drdy_wq);
+next_read:
+	if (s_akm->irq_gpio == 0)
+		schedule_delayed_work(&akm->work,
+			usecs_to_jiffies(AK8963_MEASUREMENT_TIME_US));
+	return;
 }
 
 static int akm8963_suspend(struct device *dev)
 {
-
+	printk(KERN_INFO "akm8963_suspend\n");
 	return 0;
 }
 
@@ -1279,6 +1303,8 @@ static void akm8963_early_suspend(struct early_suspend *handler)
 	if (err < 0)
 		printk(KERN_INFO "AKECS_SetMode returned %d", err);
 	wake_up(&s_akm->open_wq);
+	if (s_akm->irq_gpio == 0)
+		cancel_delayed_work_sync(&s_akm->work);
 }
 
 static void akm8963_late_resume(struct early_suspend *handler)
@@ -1328,6 +1354,7 @@ int akm8963_probe(struct i2c_client *client, const struct i2c_device_id *id)
 				pr_err("akm8963: irq is not set in dts\n");
 				goto err_read;
 			}
+			s_akm->irq_gpio = val;
 			s_akm->irq = gpio_to_irq(val);
 			if (of_property_read_u32(np, "gpio_RST", &val)) {
 				pr_info("akm8963: rst is not set in dts\n");
@@ -1392,7 +1419,7 @@ int akm8963_probe(struct i2c_client *client, const struct i2c_device_id *id)
 
 	/***** IRQ setup *****/
 	pr_info("[akm8963] IRQ setup [irq]==%d.\n", s_akm->irq);
-	if (s_akm->irq == 0) {
+	if (s_akm->irq_gpio == 0) {
 		FUNCDBG("[akm8963]%s: IRQ is not set.\n");
 		/* Use timer to notify measurement end */
 		INIT_DELAYED_WORK(&s_akm->work, akm8963_delayed_work);
@@ -1436,7 +1463,7 @@ int akm8963_probe(struct i2c_client *client, const struct i2c_device_id *id)
 exit6:
 	misc_deregister(&akm8963_dev);
 exit5:
-	if (s_akm->irq)
+	if (s_akm->irq_gpio)
 		free_irq(s_akm->irq, s_akm);
 exit4:
 	input_unregister_device(s_akm->input);
@@ -1458,7 +1485,7 @@ static int akm8963_remove(struct i2c_client *client)
 	remove_sysfs_interfaces(akm);
 	if (misc_deregister(&akm8963_dev) < 0)
 		dev_err(&client->dev, "[akm8963]misc deregister failed.\n");
-	if (akm->irq)
+	if (akm->irq_gpio)
 		free_irq(akm->irq, akm);
 	input_unregister_device(akm->input);
 	kfree(akm);

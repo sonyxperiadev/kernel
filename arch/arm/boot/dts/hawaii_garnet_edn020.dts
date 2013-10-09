@@ -10,12 +10,12 @@
 	compatible = "bcm,hawaii";
 
 	chosen {
-		bootargs = "console=ttyS0,115200n8 mem=992M gpt androidboot.console=ttyS0 crash_ramdump=1 logbuf_nocache=1";
+		bootargs = "console=ttyS0,115200n8 mem=994M gpt androidboot.console=ttyS0 crash_ramdump=1 logbuf_nocache=1";
 	};
 
-	memory@82000000 {
+	memory@81E00000 {
 		device_type = "memory";
-		reg = <0x82000000 0x2e000000>; /* 736 MB */
+		reg = <0x81E00000 0x3E200000>; /* 994 MB */
 	};
 
 	wd-tapper {
@@ -369,13 +369,16 @@
 		reg = <0x34008000 0x1000>;
 		interrupts = <0 183 4>;
 		chipreg_addr = <0x35004000 0x1000>;
-		thold_size = <5>; /*number of threshold levels*/
-		poll_rate_ms = <30000>;
+		thold_size = <8>; /*number of threshold levels*/
+		poll_rate_ms = <10000>;
 		hysteresis = <0>;
 		flags = <0>;
 		interval_ms = <5>;
 		/*sw shdwn temp is 120*/
-		thold = <85 1
+		thold = <55 1
+			63 1
+			70 1
+			85 1
 			95 1
 			105 1
 			120 4
@@ -485,6 +488,11 @@
 		dft-brightness = <32>;
 		polarity = <1>;		/* Inverted polarity */
 		pwm-period-ns = <99900>; /* ~10010 Hz */
+		temp_comp_size = <3>; /* Number of trigger points*/
+		temp_comp_tbl = <55 20
+				63 18
+				70 15>;
+		/* Brightness values 20:250cd, 18:230cd, 15:200cd */
 		pwm-request-label = "backlight";
 		bl-on-delay = <7000>;
 	};

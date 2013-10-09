@@ -26,7 +26,6 @@
 #include <linux/earlysuspend.h>
 #include <linux/workqueue.h>
 #include <linux/notifier.h>
-#include <linux/i2c/ft5306.h>
 #include "leds.h"
 
 #define DEFAULT_DURATION 3000	/*ms*/
@@ -43,6 +42,8 @@ struct kpbl_trig_data {
 
 static DEFINE_MUTEX(kpbl_lock);
 static LIST_HEAD(kpbl_trigs);
+static pregister_cb tp_key_register;
+static pregister_cb tp_key_unregister;
 
 static void kpbl_trig_work(struct work_struct *work);
 #ifdef CONFIG_HAS_EARLYSUSPEND
@@ -174,6 +175,15 @@ static void kpbl_trig_late_resume(struct early_suspend *h)
 }
 #endif
 
+void led_kpbl_register(pregister_cb pcallback)
+{
+	tp_key_register = pcallback;
+}
+void led_kpbl_unregister(pregister_cb pcallback)
+{
+	tp_key_unregister = pcallback;
+}
+
 static int __init kpbl_trig_init(void)
 {
 	int ret;
@@ -181,12 +191,14 @@ static int __init kpbl_trig_init(void)
 	ret = led_trigger_register(&kpbl_led_trigger);
 	if (ret)
 		return ret;
-	return register_touch_key_notifier(&notify);
+	if (tp_key_register)
+		return (*tp_key_register)(&notify);
 }
 
 static void __exit kpbl_trig_exit(void)
 {
-	unregister_touch_key_notifier(&notify);
+	if (tp_key_unregister)
+		(*tp_key_unregister)(&notify);
 	led_trigger_unregister(&kpbl_led_trigger);
 }
 

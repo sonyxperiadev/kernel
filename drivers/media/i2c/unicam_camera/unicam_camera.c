@@ -1073,7 +1073,7 @@ static int unicam_camera_s_ctrl(struct soc_camera_device *icd,
 		break;
 	case V4L2_CID_CAM_CAPTURE_DONE:
 		pr_info("V4L2_CID_CAM_CAPTURE_DONE\n");
-		unicam_dev->cap_mode = 1;
+		unicam_dev->cap_mode = 0;
 
 		/*for camera driver also invoke s_ctrl */
 		ret = -ENOIOCTLCMD;
@@ -1350,7 +1350,10 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 				}
 			}
 			if (likely(unicam_dev->skip_frames <= 0)) {
+				spin_lock_irqsave(&unicam_dev->lock, flags);
 				list_del_init(&to_unicam_camera_vb(vb)->queue);
+				spin_unlock_irqrestore(&unicam_dev->lock,
+								flags);
 				do_gettimeofday(&vb->v4l2_buf.timestamp);
 				vb->v4l2_planes[0].bytesused = 0;
 

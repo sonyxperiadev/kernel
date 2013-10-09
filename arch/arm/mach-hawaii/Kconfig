@@ -166,6 +166,7 @@ choice
 
 	config MACH_HAWAII_GARNET_EDN020
 	bool "GARNET EDN020"
+	select RESERVED_MEM_SPEC1
 	help
 	  Support for
 		Hawaii based
@@ -523,7 +524,26 @@ config HAWAII_PTM
 	help
 	  Say Y here to enable PTM hardware on hawaii.
 
+config RESERVED_MEM_SPEC1
+	bool "platform shared spec 1"
+	default n
+	help
+	  There can be different memory arrangements
+	  and this deatil has to be shared between AP
+	  and CP. Select this option to define spec 1
+	  category of arrangement.
+
 config BRD_NAME
 	string "customer board name"
 	default "hawaii"
+
+config BCM_HWCAPRI_1605_A2
+	bool "Enable HWCAPRI_1605 workaround"
+	default n
+	help
+	  Enable HWCAPRI_1605 workaround
+	  to set L2 divider to 2 for normal
+	  case should be 3 wait for ASIC fix
+	  Refer JIRA DB for more infor on this
+	  JIRA
 endmenu

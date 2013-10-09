@@ -343,7 +343,7 @@ static ssize_t _otg_attr_name_##_show(struct device *_dev, struct device_attribu
 	dwc_otg_device_t *otg_dev = lm_get_drvdata(lm_dev);		\
 	uint32_t val; \
 	val = dwc_otg_get_##_otg_attr_name_(otg_dev->core_if); \
-	return sprintf(buf, "%s = 0x%x\n", _string_, val); \
+	return snprintf(buf, PAGE_SIZE, "%s = 0x%x\n", _string_, val); \
 }
 #define DWC_OTG_DEVICE_ATTR_BITFIELD_STORE(_otg_attr_name_,_string_) \
 static ssize_t _otg_attr_name_##_store(struct device *_dev, struct device_attribute *attr, \
@@ -362,7 +362,7 @@ static ssize_t _otg_attr_name_##_show(struct device *_dev, struct device_attribu
 	dwc_otg_device_t *otg_dev = dev_get_drvdata(_dev);	\
 	uint32_t val; \
 	val = dwc_otg_get_##_otg_attr_name_(otg_dev->core_if); \
-	return sprintf(buf, "%s = 0x%x\n", _string_, val); \
+	return snprintf(buf, PAGE_SIZE, "%s = 0x%x\n", _string_, val); \
 }
 #define DWC_OTG_DEVICE_ATTR_BITFIELD_STORE(_otg_attr_name_,_string_) \
 static ssize_t _otg_attr_name_##_store(struct device *_dev, struct device_attribute *attr, \
@@ -381,7 +381,7 @@ static ssize_t _otg_attr_name_##_show(struct device *_dev, struct device_attribu
 	dwc_otg_device_t *otg_dev = platform_get_drvdata(platform_dev);		\
 	uint32_t val; \
 	val = dwc_otg_get_##_otg_attr_name_(otg_dev->core_if); \
-	return sprintf(buf, "%s = 0x%x\n", _string_, val); \
+	return snprintf(buf, PAGE_SIZE, "%s = 0x%x\n", _string_, val); \
 }
 #define DWC_OTG_DEVICE_ATTR_BITFIELD_STORE(_otg_attr_name_,_string_) \
 static ssize_t _otg_attr_name_##_store(struct device *_dev, struct device_attribute *attr, \
@@ -406,7 +406,7 @@ static ssize_t _otg_attr_name_##_show(struct device *_dev, struct device_attribu
 	dwc_otg_device_t *otg_dev = lm_get_drvdata(lm_dev);		\
 	uint32_t val; \
 	val = dwc_otg_get_##_otg_attr_name_(otg_dev->core_if); \
-	return sprintf(buf, "%s = 0x%08x\n", _string_, val); \
+	return snprintf(buf, PAGE_SIZE, "%s = 0x%08x\n", _string_, val); \
 }
 #define DWC_OTG_DEVICE_ATTR_REG_STORE(_otg_attr_name_,_string_) \
 static ssize_t _otg_attr_name_##_store(struct device *_dev, struct device_attribute *attr, \
@@ -425,7 +425,7 @@ static ssize_t _otg_attr_name_##_show(struct device *_dev, struct device_attribu
 	dwc_otg_device_t *otg_dev = dev_get_drvdata(_dev);  \
 	uint32_t val; \
 	val = dwc_otg_get_##_otg_attr_name_(otg_dev->core_if); \
-	return sprintf(buf, "%s = 0x%08x\n", _string_, val); \
+	return snprintf(buf, PAGE_SIZE, "%s = 0x%08x\n", _string_, val); \
 }
 #define DWC_OTG_DEVICE_ATTR_REG_STORE(_otg_attr_name_,_string_) \
 static ssize_t _otg_attr_name_##_store(struct device *_dev, struct device_attribute *attr, \
@@ -444,7 +444,7 @@ static ssize_t _otg_attr_name_##_show(struct device *_dev, struct device_attribu
 	dwc_otg_device_t *otg_dev = platform_get_drvdata(platform_dev); \
 	uint32_t val; \
 	val = dwc_otg_get_##_otg_attr_name_(otg_dev->core_if); \
-	return sprintf(buf, "%s = 0x%08x\n", _string_, val); \
+	return snprintf(buf, PAGE_SIZE, "%s = 0x%08x\n", _string_, val); \
 }
 #define DWC_OTG_DEVICE_ATTR_REG_STORE(_otg_attr_name_,_string_) \
 static ssize_t _otg_attr_name_##_store(struct device *_dev, struct device_attribute *attr, \
@@ -568,7 +568,7 @@ static ssize_t regvalue_show(struct device *_dev,
 				val);
 	} else {
 		dev_err(_dev, "Invalid offset (0x%0x)\n", otg_dev->reg_offset);
-		return sprintf(buf, "invalid offset\n");
+		return snprintf(buf, PAGE_SIZE, "invalid offset\n");
 	}
 }
 
@@ -671,7 +671,7 @@ static ssize_t hnp_show(struct device *_dev,
 	    container_of(_dev, struct platform_device, dev);
 	dwc_otg_device_t *otg_dev = platform_get_drvdata(platform_dev);
 #endif
-	return sprintf(buf, "HstNegScs = 0x%x\n",
+	return snprintf(buf, PAGE_SIZE, "HstNegScs = 0x%x\n",
 		       dwc_otg_get_hnpstatus(otg_dev->core_if));
 }
 
@@ -719,10 +719,10 @@ static ssize_t srp_show(struct device *_dev,
 	    container_of(_dev, struct platform_device, dev);
 	dwc_otg_device_t *otg_dev = platform_get_drvdata(platform_dev);
 #endif
-	return sprintf(buf, "SesReqScs = 0x%x\n",
+	return snprintf(buf, PAGE_SIZE, "SesReqScs = 0x%x\n",
 		       dwc_otg_get_srpstatus(otg_dev->core_if));
 #else
-	return sprintf(buf, "Host Only Mode!\n");
+	return snprintf(buf, PAGE_SIZE, "Host Only Mode!\n");
 #endif
 }
 
@@ -771,7 +771,7 @@ static ssize_t buspower_show(struct device *_dev,
 	    container_of(_dev, struct platform_device, dev);
 	dwc_otg_device_t *otg_dev = platform_get_drvdata(platform_dev);
 #endif
-	return sprintf(buf, "Bus Power = 0x%x\n",
+	return snprintf(buf, PAGE_SIZE, "Bus Power = 0x%x\n",
 		       dwc_otg_get_prtpower(otg_dev->core_if));
 }
 
@@ -819,7 +819,7 @@ static ssize_t bussuspend_show(struct device *_dev,
 	dwc_otg_device_t *otg_dev = platform_get_drvdata(platform_dev);
 #endif
 
-	return sprintf(buf, "Bus Suspend = 0x%x\n",
+	return snprintf(buf, PAGE_SIZE, "Bus Suspend = 0x%x\n",
 		       dwc_otg_get_prtsuspend(otg_dev->core_if));
 }
 
@@ -866,7 +866,7 @@ static ssize_t remote_wakeup_show(struct device *_dev,
 	dwc_otg_device_t *otg_dev = platform_get_drvdata(platform_dev);
 #endif
 
-	return sprintf(buf,
+	return snprintf(buf, PAGE_SIZE,
 		       "Remote Wakeup Sig = %d Enabled = %d LPM Remote Wakeup = %d\n",
 		       dwc_otg_get_remotewakesig(otg_dev->core_if),
 		       dwc_otg_pcd_get_rmwkup_enable(otg_dev->pcd),
@@ -1030,7 +1030,7 @@ static ssize_t regdump_show(struct device *_dev,
 		dwc_otg_dump_dev_registers(otg_dev->core_if);
 #endif
 
-	return sprintf(buf, "Register Dump\n");
+	return snprintf(buf, PAGE_SIZE, "Register Dump\n");
 }
 
 DEVICE_ATTR(regdump, S_IRUGO, regdump_show, 0);
@@ -1055,7 +1055,7 @@ static ssize_t spramdump_show(struct device *_dev,
 
 	dwc_otg_dump_spram(otg_dev->core_if);
 
-	return sprintf(buf, "SPRAM Dump\n");
+	return snprintf(buf, PAGE_SIZE, "SPRAM Dump\n");
 }
 
 DEVICE_ATTR(spramdump, S_IRUGO, spramdump_show, 0);
@@ -1080,7 +1080,7 @@ static ssize_t hcddump_show(struct device *_dev,
 
 	dwc_otg_hcd_dump_state(otg_dev->hcd);
 #endif /* DWC_DEVICE_ONLY */
-	return sprintf(buf, "HCD Dump\n");
+	return snprintf(buf, PAGE_SIZE, "HCD Dump\n");
 }
 
 DEVICE_ATTR(hcddump, S_IRUGO, hcddump_show, 0);
@@ -1107,7 +1107,7 @@ static ssize_t hcd_frrem_show(struct device *_dev,
 
 	dwc_otg_hcd_dump_frrem(otg_dev->hcd);
 #endif /* DWC_DEVICE_ONLY */
-	return sprintf(buf, "HCD Dump Frame Remaining\n");
+	return snprintf(buf, PAGE_SIZE, "HCD Dump Frame Remaining\n");
 }
 
 DEVICE_ATTR(hcd_frrem, S_IRUGO, hcd_frrem_show, 0);
@@ -1143,7 +1143,7 @@ static ssize_t rd_reg_test_show(struct device *_dev,
 		dwc_otg_get_gnptxfsiz(otg_dev->core_if);
 
 	time = jiffies - start_jiffies;
-	return sprintf(buf,
+	return snprintf(buf, PAGE_SIZE,
 		       "Time to read GNPTXFSIZ reg %d times: %d msecs (%d jiffies)\n",
 		       RW_REG_COUNT, time * MSEC_PER_JIFFIE, time);
 }
@@ -1181,7 +1181,7 @@ static ssize_t wr_reg_test_show(struct device *_dev,
 		dwc_otg_set_gnptxfsiz(otg_dev->core_if, reg_val);
 
 	time = jiffies - start_jiffies;
-	return sprintf(buf,
+	return snprintf(buf, PAGE_SIZE,
 		       "Time to write GNPTXFSIZ reg %d times: %d msecs (%d jiffies)\n",
 		       RW_REG_COUNT, time * MSEC_PER_JIFFIE, time);
 }
@@ -1324,7 +1324,7 @@ static ssize_t h_conn_wait_tmout_show(struct device *_dev,
 	dwc_otg_device_t *otg_dev = platform_get_drvdata(platform_dev);
 #endif
 
-	return sprintf(buf, "Connection wait timeout in ms = %d\n",
+	return snprintf(buf, PAGE_SIZE, "Connection wait timeout in ms = %d\n",
 		       otg_dev->hcd->conn_wait_timeout);
 #else
 	return sprintf(buf, "Device Only Mode!\n");

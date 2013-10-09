@@ -78,7 +78,7 @@ struct Synaptics_ts_platform_data {
 	int(*power)(ts_power_status vreg_en);
 };
 
-int register_touch_key_notifier(struct notifier_block *n);
-int unregister_touch_key_notifier(struct notifier_block *n);
+static int register_touch_key_notifier(struct notifier_block *n);
+static int unregister_touch_key_notifier(struct notifier_block *n);
 
 #endif /* _FT5306_H_ */

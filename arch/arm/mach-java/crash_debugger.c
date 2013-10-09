@@ -627,7 +627,7 @@ static int cdebugger_panic_handler(struct notifier_block *nb,
 			cdebugger_set_upload_cause(UPLOAD_CAUSE_KERNEL_PANIC);
 
 		/* Save kona timer state */
-		kona_hubtimer_save_state(false);
+		kona_timer_save_state(false);
 
 		cdebugger_dump_stack();
 

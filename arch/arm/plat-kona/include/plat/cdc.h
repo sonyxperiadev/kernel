@@ -126,5 +126,5 @@ int cdc_master_clk_gating_en(bool en);
 int cdc_assert_reset_in_state(u32 states);
 int cdc_assert_cdcbusy_in_state(u32 states);
 int cdc_enable_isolation_in_state(u32 states);
-
+int cdc_disable_cluster_dormant(bool disable);
 #endif /*__CDC_H__*/

@@ -291,7 +291,7 @@ uint32_t g_dbg_lvl;		/* OFF */
  */
 static ssize_t dbg_level_show(struct device_driver *drv, char *buf)
 {
-	return sprintf(buf, "0x%0x\n", g_dbg_lvl);
+	return snprintf(buf, PAGE_SIZE, "0x%0x\n", g_dbg_lvl);
 }
 
 /**

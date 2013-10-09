@@ -31,6 +31,7 @@
 #include<plat/clock.h>
 #include<mach/pi_mgr.h>
 #include<mach/pwr_mgr.h>
+#include<mach/dormant.h>
 #include<plat/pwr_mgr.h>
 #include <mach/rdb/brcm_rdb_chipreg.h>
 #include <mach/rdb/brcm_rdb_bmdm_pwrmgr.h>
@@ -955,6 +956,7 @@ static int param_set_pm_late_init(const char *val,
 		hawaii_pwr_mgr_delayed_init();
 
 	kona_pm_disable_idle_state(CSTATE_ALL, 0);
+	enable_dormant(0xf);
 	return 0;
 }
 #endif
@@ -966,10 +968,12 @@ int __init hawaii_pwr_mgr_late_init(void)
 		pr_info("%s: power off charging, complete int here\n",
 						__func__);
 		hawaii_pwr_mgr_delayed_init();
+		enable_dormant(0xf);
 	} else
 		kona_pm_disable_idle_state(CSTATE_ALL, 1);
 #else
 	hawaii_pwr_mgr_delayed_init();
+	enable_dormant(0xf);
 #endif
 #ifdef CONFIG_DEBUG_FS
 	return pwr_mgr_debug_init(KONA_BMDM_PWRMGR_VA);

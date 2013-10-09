@@ -47,6 +47,7 @@
 #define ACD_DELAY msecs_to_jiffies(100)
 #define ACD_RETRY_DELAY msecs_to_jiffies(1000)
 #define DISCONNECT_EVENT_TIME (HZ * 2)
+#define REGL_BC "bc_vcc"
 
 static int debug_mask = BCMPMU_PRINT_ERROR |
 	BCMPMU_PRINT_INIT |  BCMPMU_PRINT_FLOW;
@@ -73,6 +74,7 @@ struct accy_det {
 	struct notifier_block chrgr_latch_event;
 	struct notifier_block chrgr_rm_event;
 	struct notifier_block id_change_event;
+	struct regulator *regl_bc;
 #ifdef CONFIG_HAS_WAKELOCK
 	struct wake_lock wake_lock;
 	struct wake_lock notify_wake_lock;
@@ -86,7 +88,9 @@ struct accy_det {
 	u32 xceiv_start;
 	bool reschedule;
 	bool clock_en;
+	bool rgl_en;
 };
+static atomic_t drv_init_done;
 
 #define pr_acd(debug_level, args...) \
 	do { \
@@ -325,47 +329,42 @@ err:
 	return state;
 }
 
-void bcmpm_accy_setup_detection(struct accy_det *accy_d, bool en)
+void bcmpmu_enable_bc_regl(struct accy_det *accy_d, bool en)
 {
-	u32 id_status;
-
-	bcmpmu_usb_get(accy_d->bcmpmu,
-			BCMPMU_USB_CTRL_GET_ID_VALUE,
-			(void *)&id_status);
-
-	if ((accy_d->bc == BCMPMU_BC_BB_BC12) &&
-		(id_status == PMU_USB_ID_FLOAT)) {
-
-		if (en) {
-			accy_d->xceiv_start = 1;
-			pr_acd(VERBOSE, "=== %s ev send xceiv_start %d\n",
-					__func__, accy_d->xceiv_start);
-			bcmpmu_call_notifier(accy_d->bcmpmu,
-					PMU_CHRGR_DET_EVT_OUT_XCVR,
-					&accy_d->xceiv_start);
-			if (!accy_d->clock_en)
-				enable_bc_clock(accy_d, true);
-
-		} else if ((!en) & accy_d->xceiv_start) {
-			accy_d->xceiv_start = 0;
-			pr_acd(VERBOSE, "=== %s ev send xceiv_start %d\n",
-					__func__, accy_d->xceiv_start);
-			bcmpmu_call_notifier(accy_d->bcmpmu,
-					PMU_CHRGR_DET_EVT_OUT_XCVR,
-					&accy_d->xceiv_start);
-			if (accy_d->clock_en)
-				enable_bc_clock(accy_d, false);
-
-		}
-
+	accy_d->regl_bc = regulator_get(NULL, REGL_BC);
+	if (IS_ERR(accy_d->regl_bc)) {
+		pr_acd(ERROR, "-----BC Detect regulator nt found\n");
+		return;
 	}
+
+	if (en){
+		regulator_enable(accy_d->regl_bc);
+		msleep(2);
+	} else
+		regulator_disable(accy_d->regl_bc);
+
+	accy_d->rgl_en = en;
+	regulator_put(accy_d->regl_bc);
+}
+
+void bcmpmu_accy_setup_detection(struct accy_det *accy_d, bool en)
+{
 	if (en) {
+		if (!accy_d->rgl_en)
+			bcmpmu_enable_bc_regl(accy_d, en);
+		if (!accy_d->clock_en)
+			enable_bc_clock(accy_d, true);
 #ifdef CONFIG_HAS_WAKELOCK
 		if (!wake_lock_active
 				(&accy_d->wake_lock))
 			wake_lock(&accy_d->wake_lock);
 #endif
 	} else {
+		if (accy_d->rgl_en)
+			bcmpmu_enable_bc_regl(accy_d, en);
+		if (accy_d->clock_en)
+			enable_bc_clock(accy_d, false);
+
 #ifdef CONFIG_HAS_WAKELOCK
 		if (wake_lock_active(&accy_d->wake_lock))
 			wake_unlock(&accy_d->wake_lock);
@@ -387,7 +386,7 @@ static void bcmpmu_accy_handle_state(struct accy_det *accy_d)
 
 	case STATE_IDLE:
 		cancel_delayed_work(&accy_d->d_work);
-		bcmpm_accy_setup_detection(accy_d, 0);
+		bcmpmu_accy_setup_detection(accy_d, 0);
 		accy_d->retry_cnt = 0;
 		break;
 
@@ -430,6 +429,12 @@ static int bcmpmu_accy_event_handler(struct notifier_block *nb,
 	struct accy_det *accy_d;
 	u32 id_status;
 	pr_acd(FLOW, "=== %s event %ld\n", __func__, event);
+
+	if (!atomic_read(&drv_init_done)) {
+		pr_acd(ERROR, "%s: Driver not initialized yet\n", __func__);
+		return -ENOMEM;
+	}
+
 	switch (event) {
 	case PMU_ACCY_EVT_OUT_CHGDET_LATCH:
 		accy_d = container_of(nb,
@@ -490,7 +495,7 @@ static void bcmpmu_detect_wq(struct work_struct *work)
 			goto exit;
 		}
 
-		bcmpm_accy_setup_detection(accy_d, 1);
+		bcmpmu_accy_setup_detection(accy_d, 1);
 		accy_d->state = STATE_DETECT;
 		state = bcmpmu_accy_detect_func(accy_d);
 
@@ -498,7 +503,7 @@ static void bcmpmu_detect_wq(struct work_struct *work)
 			accy_d->state = state;
 			pr_acd(VERBOSE, "*** accy updated state %d\n",
 					accy_d->state);
-			bcmpm_accy_setup_detection(accy_d, 0);
+			bcmpmu_accy_setup_detection(accy_d, 0);
 			bcmpmu_accy_handle_state(accy_d);
 		} else {
 			reset_bc(accy_d);
@@ -608,6 +613,8 @@ static int bcmpmu_accy_detect_probe(struct platform_device *pdev)
 	pr_acd(INIT, "%s vbus_status %d\n", __func__, vbus_status);
 	if (vbus_status)
 		queue_delayed_work(accy_d->wq, &accy_d->d_work, ACD_DELAY);
+
+	atomic_set(&drv_init_done, 1);
 	return ret;
 err:
 	kfree(accy_d);

@@ -163,13 +163,14 @@ void read_workqueue(struct work_struct *work)
 	int counter, ret;
 	int kk;
 
-struct gps_irq *ac_data =
+	struct gps_irq *ac_data =
 		container_of(work, struct gps_irq, read_task);
 	--cnt;
 
 #if defined(CONFIG_NEW_GPSCHIP_I2C)
 	read_new(ac_data);
 #else
+
 	kk = 0;
 	counter = 0;
 	i = __gpio_get_value(ac_data->host_req_pin);
@@ -228,6 +229,7 @@ static int gps_irq_open(struct inode *inode, struct file *filp)
 {
 	int ret = 0;
 	/* This packet enables host req pin */
+
 	struct gps_irq *ac_data = container_of(filp->private_data,
 							   struct gps_irq,
 							   misc);
@@ -258,7 +260,6 @@ static int gps_irq_open(struct inode *inode, struct file *filp)
 
 static int gps_irq_release(struct inode *inode, struct file *filp)
 {
-
 #ifdef POLLING
 	if ((int)poll_thread_task != -ENOMEM)
 		kthread_stop(poll_thread_task);
@@ -283,19 +284,16 @@ static ssize_t gps_irq_read(struct file *filp,
 			    char *buffer, size_t length, loff_t * offset)
 {
 	struct gps_irq *ac_data = filp->private_data;
-#if defined(CONFIG_NEW_GPSCHIP_I2C)
-	int l = 0;
-	int i, j;
-#endif
 
 	/* printk(KERN_INFO "irq read pointers %d %d",
 		ac_data->rxlength_wp,
 		ac_data->rxlength_rp); */
 
 #if defined(CONFIG_NEW_GPSCHIP_I2C)
+	int l = 0;
+	int i, j;
 	if (ac_data->rxlength_rp != ac_data->rxlength_wp) {
 		i = ac_data->rxlength[ac_data->rxlength_rp];
-
 		if (i>length)
 		{
 			memcpy(ac_data->tmp+l,

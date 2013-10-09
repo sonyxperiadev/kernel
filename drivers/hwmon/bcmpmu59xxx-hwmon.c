@@ -481,7 +481,7 @@ static ssize_t adc_read(struct device *dev,
 	int ret = 0;
 	int len = 0;
 
-	len += snprintf(buf + len, 30, "SAR READ OF channel=%d", attr->index);
+	len += snprintf(buf + len, 30, "SAR READ OF channel = %d", attr->index);
 	ret = bcmpmu_adc_read(bcmpmu, attr->index,
 						PMU_ADC_REQ_SAR_MODE, &result);
 	if (ret < 0)
@@ -493,7 +493,8 @@ static ssize_t adc_read(struct device *dev,
 	 * so again dividing by 10 and reporting*/
 	if ((attr->index == PMU_ADC_CHANN_NTC) ||
 			(attr->index == PMU_ADC_CHANN_32KTEMP) ||
-			(attr->index == PMU_ADC_CHANN_PATEMP))
+			(attr->index == PMU_ADC_CHANN_PATEMP) ||
+			(attr->index == PMU_ADC_CHANN_DIE_TEMP))
 		result.conv = result.conv / 10;
 
 	len += snprintf(buf + len, 30, " raw = 0x%x conv = %d\n",
@@ -511,7 +512,8 @@ static ssize_t adc_read(struct device *dev,
 	 * so again dividing by 10 and reporting*/
 	if ((attr->index == PMU_ADC_CHANN_NTC) ||
 			(attr->index == PMU_ADC_CHANN_32KTEMP) ||
-			(attr->index == PMU_ADC_CHANN_PATEMP))
+			(attr->index == PMU_ADC_CHANN_PATEMP) ||
+			(attr->index == PMU_ADC_CHANN_DIE_TEMP))
 		result.conv = result.conv / 10;
 	len += snprintf(buf + len, 30, " raw = 0x%x conv = %d\n",
 						result.raw, result.conv);
@@ -534,7 +536,7 @@ static SENSOR_DEVICE_ATTR(32ktemp, S_IRUGO, adc_read,
 static SENSOR_DEVICE_ATTR(patemp, S_IRUGO, adc_read,
 						NULL, PMU_ADC_CHANN_PATEMP);
 static SENSOR_DEVICE_ATTR(als, S_IRUGO, adc_read, NULL, PMU_ADC_CHANN_ALS);
-static SENSOR_DEVICE_ATTR(die_temp, S_IRUGO, adc_read,
+static SENSOR_DEVICE_ATTR(dietemp, S_IRUGO, adc_read,
 						NULL, PMU_ADC_CHANN_DIE_TEMP);
 
 static struct attribute *bcmpmu_hwmon_attrs[] = {
@@ -548,7 +550,7 @@ static struct attribute *bcmpmu_hwmon_attrs[] = {
 	&sensor_dev_attr_32ktemp.dev_attr.attr,
 	&sensor_dev_attr_patemp.dev_attr.attr,
 	&sensor_dev_attr_als.dev_attr.attr,
-	&sensor_dev_attr_die_temp.dev_attr.attr,
+	&sensor_dev_attr_dietemp.dev_attr.attr,
 	NULL
 };
 
@@ -580,7 +582,7 @@ err:
 #endif
 static int bcmpmu_adc_remove(struct platform_device *pdev)
 {
-	hwmon_device_register(&pdev->dev);
+	hwmon_device_unregister(&pdev->dev);
 	sysfs_remove_group(&pdev->dev.kobj, &bcmpmu_hwmon_attr_group);
 #ifdef CONFIG_DEBUG_FS
 	debugfs_remove(debugfs_adc_dir);

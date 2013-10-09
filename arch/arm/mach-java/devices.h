@@ -94,5 +94,7 @@ extern struct platform_device ion_secure_device;
 extern struct mobicore_data mobicore_plat_data;
 extern struct platform_device mobicore_device;
 #endif
+extern struct secure_mem_data secure_mem_plat_data;
+extern struct platform_device secure_mem_device;
 
 #endif /* __MACH_JAVA_DEVICE_H */

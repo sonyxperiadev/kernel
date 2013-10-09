@@ -43,12 +43,10 @@
 #else
 #error "CDC not enabled !!"
 #endif
+#include <mach/rdb/brcm_rdb_csr.h>
+#include <plat/kona_memc.h>
 
 #include "pm_params.h"
-
-#ifdef CONFIG_BRCM_SECURE_WATCHDOG
-#include <linux/sec-wd.h>
-#endif
 
 /* DM log masks */
 enum {
@@ -119,9 +117,13 @@ static u32 fdm_en = 1; /* Enable full dormant */
 static u32 dbg_log;
 static int wr_enabled;
 static int pllarma_inx = -1;
+
 /* Data for the entire cluster */
 static DEFINE_SPINLOCK(drmt_lock);
 
+#ifdef CONFIG_MEMC_FORCE_156M_IN_SUSPEND
+static struct kona_memc_node memc_dfs_node;
+#endif /*CONFIG_MEMC_FORCE_156M_IN_SUSPEND*/
 
 /* un-cached memory for dormant stack */
 u32 un_cached_stack_ptr;
@@ -424,8 +426,7 @@ static void local_secure_api(unsigned service_id,
 
 
 #ifdef CONFIG_MOBICORE_DRIVER
-	/* Temporay block fastcall before mobicore is ready */
-	/* mobicore_smc(service_id,arg0,arg1,arg2); */
+	mobicore_smc(service_id, arg0, arg1, arg2);
 #else
 	/* Set Up Registers to pass data to Secure Monitor */
 	register u32 r4 asm("r4");
@@ -475,7 +476,6 @@ void dormant_enter(u32 svc)
 	u32 cdc_states;
 	int cdc_resp;
 	u32 drmt_status = DORMANT_ENTRY_FAILURE;
-	bool fd = false;
 	bool restore_gic = true;
 	bool retry;
 	u32 cpu;
@@ -483,14 +483,9 @@ void dormant_enter(u32 svc)
 	u32 insurance = 1000;
 	(*((u32 *)(&__get_cpu_var(cdm_attempts))))++;
 
-#ifdef CONFIG_MOBICORE_DRIVER
-	/* tempoary block dormant before mobicore is ready*/
-	return;
-#endif
-
 	/*vote for dormant svc..*/
 	set_svc_req(svc);
-
+	instrument_lpm(LPM_TRACE_ENTER_DRMNT, svc);
 	cdc_resp = cdc_send_cmd(CDC_CMD_RED);
 	switch (cdc_resp) {
 
@@ -584,6 +579,7 @@ void dormant_enter(u32 svc)
 			 - svc_max == FULL_DORMANT_L2_OFF and
 			 - CDC status == FDCEOK (last core entering dormant)*/
 		drmt_status = cpu_suspend(svc_max, dormant_enter_continue);
+		instrument_lpm(LPM_TRACE_DRMNT_WAKEUP, drmt_status);
 		break;
 
 	default:
@@ -614,16 +610,9 @@ void dormant_enter(u32 svc)
 	before restoring context*/
 	cpu = smp_processor_id();
 
-	#ifdef CONFIG_BRCM_SECURE_WATCHDOG
-	/*WD is disabled during suspend. FULL_DORMANT_L2_OFF is used
-	only during suspend and use the same to enable/disable WD*/
-	if (svc_max == FULL_DORMANT_L2_OFF && cpu == 0) {
-		pr_info("%s: enabling sec watchdog\n", __func__);
-		sec_wd_enable();
-	}
-	#endif
-
 	cdc_resp = cdc_get_status_for_core(cpu);
+	instrument_lpm(LPM_TRACE_EXIT_DRMNT,
+						cdc_resp);
 	do {
 		retry = false;
 		insurance--;
@@ -640,7 +629,6 @@ void dormant_enter(u32 svc)
 			/*No break continue...*/
 		case CDC_STATUS_RESDFS_SHORT:
 		(*((u32 *)(&__get_cpu_var(cdm_success))))++;
-			fd = false;
 			cdc_resp = cdc_send_cmd_for_core(CDC_CMD_SDEC, cpu);
 			break;
 
@@ -651,15 +639,30 @@ void dormant_enter(u32 svc)
 			/*No break continue...*/
 		case CDC_STATUS_RESFDM:
 			(*((u32 *)(&__get_cpu_var(cdm_success))))++;
-
+#ifdef CONFIG_MEMC_FORCE_156M_IN_SUSPEND
+			if (svc_max == FULL_DORMANT_L2_OFF)
+				memc_update_dfs_req(&memc_dfs_node,
+					MEMC_OPP_NORMAL);
+#endif /*CONFIG_MEMC_FORCE_156M_IN_SUSPEND*/
 			if (CDC_STATUS_RESFDM == cdc_resp) {
 				fdm_success++;
 				restore_gic = true;
 				restore_proc_clk_regs();
 				restore_addnl_regs();
+				/*restore GIC shared reg*/
+				gic_distributor_set_enabled(false,
+						    (u32)KONA_GICDIST_VA);
+				restore_gic_distributor_shared((void *)
+						       gic_dist_shared_data,
+						       (u32)KONA_GICDIST_VA,
+						       false);
+				gic_distributor_set_enabled(true,
+					(u32)KONA_GICDIST_VA);
+
 				if (cdc_get_pwr_status() ==
 					CDC_PWR_DRMNT_L2_OFF)
 					l2_off_cnt++;
+				instrument_lpm(LPM_TRACE_DRMNT_RS_ADDNL, 0);
 			}
 			clear_wakeup_interrupts();
 			set_spare_power_status(CDC_PWR_NORMAL);
@@ -702,10 +705,8 @@ void dormant_enter(u32 svc)
 			cdc_set_switch_counter(STRONG_SWITCH_TIMER, 0x0C);
 
 			cdc_resp = cdc_send_cmd_for_core(CDC_CMD_MDEC, cpu);
-	                cdc_set_override(IS_IDLE_OVERRIDE, 0x180);
+			cdc_set_override(IS_IDLE_OVERRIDE, 0x180);
 			cdc_master_clk_gating_en(true);
-
-			fd = true;
 			break;
 
 		case CDC_STATUS_RESFD_SHORT_WAIT:
@@ -729,17 +730,6 @@ void dormant_enter(u32 svc)
 	restore_control_registers((void *)__get_cpu_var(control_data),
 					  false);
 	restore_v7_debug((void *)__get_cpu_var(debug_data));
-
-	if (fd) {
-		gic_distributor_set_enabled(false,
-						    (u32)KONA_GICDIST_VA);
-		restore_gic_distributor_shared((void *)
-						       gic_dist_shared_data,
-						       (u32)KONA_GICDIST_VA,
-						       false);
-		gic_distributor_set_enabled(true, (u32)KONA_GICDIST_VA);
-
-	}
 
 	/*For Java, GIC gets powered down only during
 	cluster dormant.
@@ -769,6 +759,7 @@ ret:
 	/*Clr svc vote*/
 	clr_svc_req(svc);
 
+	instrument_lpm(LPM_TRACE_EXIT_DRMNT, 0);
 }
 
 /*
@@ -781,25 +772,29 @@ static int dormant_enter_continue(unsigned long svc)
 	unsigned int arg2;
 	cpu = smp_processor_id();
 
-	#ifdef CONFIG_BRCM_SECURE_WATCHDOG
-	/*WD is disabled during suspend. FULL_DORMANT_L2_OFF is used
-	only during suspend and use the same to enable/disable WD*/
-	if (svc == FULL_DORMANT_L2_OFF && cpu == 0) {
-		pr_info("%s: disable sec watchdog\n", __func__);
-		sec_wd_disable();
-	}
-	#endif
-
-	if (svc == FULL_DORMANT_L2_OFF && l2_off_en &&
+	if (svc == FULL_DORMANT_L2_OFF &&
 		cdc_get_status_for_core(cpu) == CDC_STATUS_FDCEOK) {
-		arg2 = 3;  /*L2 mem OFF*/
-		disable_clean_inv_dcache_v7_all();
+#ifdef CONFIG_MEMC_FORCE_156M_IN_SUSPEND
+		memc_update_dfs_req(&memc_dfs_node, MEMC_OPP_ECO);
+#endif
+
+		if (l2_off_en) {
+			arg2 = 3;  /*L2 mem OFF*/
+#ifndef CONFIG_MOBICORE_DRIVER
+			disable_clean_inv_dcache_v7_all();
+#endif
+		}
+
 	} else {
 		arg2 = 2;  /*L2 mem ON*/
+#ifndef CONFIG_MOBICORE_DRIVER
 		disable_clean_inv_dcache_v7_l1();
+#endif
 	}
 
+#ifndef CONFIG_MOBICORE_DRIVER
 	write_actlr(read_actlr() & ~A15_SMP_BIT);
+#endif
 
 /* Inform Secure Core (core 0) that we are entering dormant.
  * so that Secure core( core 0) will save secure world context
@@ -834,9 +829,15 @@ static int dormant_enter_continue(unsigned long svc)
 				CHIPREG_A9_DORMANT_BOOT_ADDR_REG1_OFFSET);
 		/* Directly execute WFI for non core-0 cores */
 	}
+#ifdef CONFIG_MOBICORE_DRIVER
+	if (arg2 == 3)
+		disable_clean_inv_dcache_v7_all();
+	else
+		disable_clean_inv_dcache_v7_l1();
 
-	instrument_lpm(LPM_TRACE_DRMNT_CNTNUE,
-						0);
+	write_actlr(read_actlr() & ~A15_SMP_BIT);
+#endif
+	instrument_lpm(LPM_TRACE_DRMNT_CNTNUE, arg2);
 	wfi();
 	return 1;
 }
@@ -997,6 +998,10 @@ static int __init dm_init(void)
 			break;
 		}
 	}
+
+#ifdef CONFIG_MEMC_FORCE_156M_IN_SUSPEND
+	memc_add_dfs_req(&memc_dfs_node, "dm", MEMC_OPP_NORMAL);
+#endif
 
 #ifdef CONFIG_DEBUG_FS
 	dm_debug_init();

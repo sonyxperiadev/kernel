@@ -42,6 +42,9 @@
 #include "flash_gpio.h"
 #endif
 
+static int Is_SnapToPrev_expo;
+static int Is_SnapToPrev_gain;
+
 #define OV8825_DEBUG 1
 
 /* OV5648 has only one fixed colorspace per pixelcode */
@@ -267,6 +270,7 @@ static const struct ov8825_reg ov8825_regtbl[OV8825_MODE_MAX][1024] = {
 	{0x3619, 0x00},
 	{0x361a, 0x8a},
 	{0x361b, 0x02},
+	{0x361c, 0x07},
 	{0x3700, 0x20},
 	{0x3701, 0x44},
 	{0x3702, 0x50},
@@ -593,6 +597,7 @@ static const struct ov8825_reg ov8825_regtbl[OV8825_MODE_MAX][1024] = {
 	{0x3619, 0x00},
 	{0x361a, 0x8a},
 	{0x361b, 0x02},
+	{0x361c, 0x07},
 	{0x3700, 0x20},
 	{0x3701, 0x44},
 	{0x3702, 0x50},
@@ -1538,8 +1543,9 @@ static int ov8825_rbgains_update(struct i2c_client *client)
 #endif
 
 /* ov8825 use internal vcm driver, the same i2c client */
-#define OV8825_VCM_STEP_PERIOD_US       3200    /* in microseconds */
-#define OV8825_VCM_MAX_POSITION   1024
+#define OV8825_VCM_STEP_PERIOD_US       800    /* in microseconds */
+#define OV8825_VCM_MAX_POSITION   1023
+#define OV8825_VCM_START_POINT 200
 #define OV8825_VCM_MIN_POSITION   0
 #define OV8825_DAC_A_VCM_LOW 0x3618
 #define OV8825_DAC_A_VCM_MID0 0x3619
@@ -1554,7 +1560,7 @@ static int ov8825_vcm_position_code(struct ov8825 *ov8825,
 {
 	int  pos = ov8825->position;
 
-	*code1 = ((pos & 0xF)  << 4) | 0xF;
+	*code1 = ((pos & 0xF)  << 4) | 0xA;
 	*code2 = (pos >> 4) & 0x3F;
 
 	return 0;
@@ -1571,7 +1577,8 @@ static int ov8825_vcm_lens_set_position(struct i2c_client *client,
 	int step = 0;
 
 	ov8825->requested_position = target_position;
-	dac_code =  (OV8825_VCM_MAX_POSITION * (255 - target_position)) / 255;
+	dac_code =  ((OV8825_VCM_MAX_POSITION - OV8825_VCM_START_POINT)
+		* (255 - target_position)) / 255 + OV8825_VCM_START_POINT;
 	dac_code = max(OV8825_VCM_MIN_POSITION,
 				min(dac_code, OV8825_VCM_MAX_POSITION));
 	diff = abs(dac_code - ov8825->position);
@@ -1582,6 +1589,7 @@ static int ov8825_vcm_lens_set_position(struct i2c_client *client,
 	ov8825_vcm_position_code(ov8825, &code_3618, &code_3619);
 
 	/* Not exact, but close (off by <500us) */
+#if 0
 	while (diff) {
 		if (0 < diff <= 16) {
 			step++;
@@ -1594,6 +1602,7 @@ static int ov8825_vcm_lens_set_position(struct i2c_client *client,
 		       diff = diff % 64;
 		}
 	}
+#endif
 	pr_debug("ov8825_vcm_lens_set_position step=%d", step);
 
 	ov8825->flying_time = step * OV8825_VCM_STEP_PERIOD_US;
@@ -1619,7 +1628,7 @@ int ov8825_vcm_lens_get_position(struct i2c_client *client,
 			ov8825->flying_time) - jiffies_to_usecs(jiffies);
 
 	if (*time_to_destination < 0 || !ov8825->flying_time ||
-		*time_to_destination > 70000) {
+		*time_to_destination > 200000) {
 		ov8825->flying_time = 0;
 		*current_position = ov8825->requested_position;
 	} else {
@@ -1780,12 +1789,18 @@ static int ov8825_get_gain(struct i2c_client *client,
 	ov8825_reg_read_multi(client, OV8825_REG_AGC_HI, gain_buf, 2);
 	gain_code = ((gain_buf[0] & 0x3f) << 8) + gain_buf[1];
 
+	if (Is_SnapToPrev_gain == 1) {
+		gain_code = ov8825->gain_read_buf[0];
+		Is_SnapToPrev_gain = 0;
+		}
+
 	if (ov8825->aecpos_delay > 0) {
 		ov8825->gain_read_buf[ov8825->aecpos_delay] = gain_code;
 		gain_code = ov8825->gain_read_buf[0];
 		for (i = 0; i < GAIN_DELAY_MAX-1; i++)
 			ov8825->gain_read_buf[i] = ov8825->gain_read_buf[i+1];
 	}
+
 	if (gain_code < 0x10)
 		gain_code = 0x10;
 
@@ -1810,12 +1825,19 @@ static int ov8825_get_exposure(struct i2c_client *client,
 		((exp_buf[1] & 0xff) << 8) +
 		(exp_buf[2] & 0xf0);
 
+	if (Is_SnapToPrev_expo == 1) {
+		exp_code = ov8825->exp_read_buf[0];
+		Is_SnapToPrev_expo = 0;
+		}
+
 	if (ov8825->aecpos_delay > 0) {
 		ov8825->exp_read_buf[ov8825->aecpos_delay] = exp_code;
 		exp_code = ov8825->exp_read_buf[0];
 		for (i = 0; i < EXP_DELAY_MAX-1; i++)
 			ov8825->exp_read_buf[i] = ov8825->exp_read_buf[i+1];
 	}
+
+	pr_debug("ov8825_get_exposure: exp_code=%d", exp_code);
 
 	if (exp_code_p)
 		*exp_code_p = exp_code;
@@ -2021,6 +2043,11 @@ static int ov8825_set_mode(struct i2c_client *client, int new_mode_idx)
 	}
 	if (ret)
 		return ret;
+
+	if (new_mode_idx == 1) {
+		Is_SnapToPrev_expo = 1;
+		Is_SnapToPrev_gain = 1;
+		}
 
 	ov8825->mode_idx = new_mode_idx;
 	ov8825->line_length  = ov8825_mode[new_mode_idx].line_length_ns;
@@ -2331,11 +2358,11 @@ int set_flash_mode(struct i2c_client *client, int mode)
 			gpio_flash_torch_on();
 		} else if (mode == FLASH_MODE_ON) {
 			ov8825->flash_timeout =
-				2 * (ov8825->vts * ov8825->line_length)/1000;
+				5 * (ov8825->vts * ov8825->line_length)/1000;
 			gpio_flash_flash_on(ov8825->flash_timeout);
 		} else if (mode == FLASH_MODE_AUTO) {
 			ov8825->flash_timeout =
-				2 * (ov8825->vts * ov8825->line_length)/1000;
+				5 * (ov8825->vts * ov8825->line_length)/1000;
 			gpio_flash_flash_on(ov8825->flash_timeout);
 		} else {
 			return -EINVAL;
@@ -2470,7 +2497,11 @@ static int ov8825_init(struct i2c_client *client)
 	 *  Since we don't have line_length yet, just estimate
 	 */
 
-	ov8825->exposure_current  = DEFAULT_EXPO * 22;
+	ov8825->exposure_current  = 10000;
+	ov8825->exp_read_buf[0] = 6032;
+	ov8825->exp_read_buf[1] = 6032;
+	ov8825->gain_read_buf[0] = 31;
+	ov8825->gain_read_buf[1] = 31;
 	ov8825->aecpos_delay      = 2;
 	ov8825->lenspos_delay     = 0;
 	ov8825->flashmode         = FLASH_MODE_OFF;
@@ -2662,7 +2693,7 @@ static struct v4l2_subdev_video_ops ov8825_subdev_video_ops = {
 static int ov8825_g_skip_frames(struct v4l2_subdev *sd, u32 *frames)
 {
 	/* Quantity of initial bad frames to skip. Revisit. */
-	*frames = 1;
+	*frames = 2;
 
 	return 0;
 }

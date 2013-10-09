@@ -146,6 +146,18 @@ static struct usb_device_descriptor device_desc = {
 	.bNumConfigurations   = 1,
 };
 
+static struct usb_otg_descriptor otg_descriptor = {
+	.bLength =		sizeof otg_descriptor,
+	.bDescriptorType =	USB_DT_OTG,
+	.bmAttributes =		0,
+	.bcdOTG 	  = __constant_cpu_to_le16(0x0200),
+};
+
+static const struct usb_descriptor_header *otg_desc[] = {
+	(struct usb_descriptor_header *) &otg_descriptor,
+	NULL,
+};
+
 static struct usb_configuration android_config_driver = {
 	.label		= "android",
 	.unbind		= android_unbind_config,
@@ -905,7 +917,7 @@ static ssize_t ncm_manufacturer_show(struct device *dev,
 {
 	struct android_usb_function *f = dev_get_drvdata(dev);
 	struct ncm_function_config *config = f->config;
-	return sprintf(buf, "%s\n", config->manufacturer);
+	return snprintf(buf, PAGE_SIZE, "%s\n", config->manufacturer);
 }
 
 static ssize_t ncm_manufacturer_store(struct device *dev,
@@ -929,7 +941,7 @@ static ssize_t ncm_ethaddr_show(struct device *dev,
 {
 	struct android_usb_function *f = dev_get_drvdata(dev);
 	struct ncm_function_config *ncm = f->config;
-	return sprintf(buf, "%02x:%02x:%02x:%02x:%02x:%02x\n",
+	return snprintf(buf, PAGE_SIZE, "%02x:%02x:%02x:%02x:%02x:%02x\n",
 		ncm->ethaddr[0], ncm->ethaddr[1], ncm->ethaddr[2],
 		ncm->ethaddr[3], ncm->ethaddr[4], ncm->ethaddr[5]);
 }
@@ -956,7 +968,7 @@ static ssize_t ncm_vendorID_show(struct device *dev,
 {
 	struct android_usb_function *f = dev_get_drvdata(dev);
 	struct ncm_function_config *config = f->config;
-	return sprintf(buf, "%04x\n", config->vendorID);
+	return snprintf(buf, PAGE_SIZE, "%04x\n", config->vendorID);
 }
 
 static ssize_t ncm_vendorID_store(struct device *dev,
@@ -981,7 +993,7 @@ static ssize_t ncm_ntb_out_size_show(struct device *dev,
 {
 	struct android_usb_function *f = dev_get_drvdata(dev);
 	struct ncm_function_config *config = f->config;
-	return sprintf(buf, "%d\n", config->ntb_out_size);
+	return snprintf(buf, PAGE_SIZE, "%d\n", config->ntb_out_size);
 }
 
 static ssize_t ncm_ntb_out_size_store(struct device *dev,
@@ -1228,7 +1240,8 @@ static ssize_t audio_source_pcm_show(struct device *dev,
 	struct audio_source_config *config = f->config;
 
 	/* print PCM card and device numbers */
-	return sprintf(buf, "%d %d\n", config->card, config->device);
+	return snprintf(buf, PAGE_SIZE, "%d %d\n", config->card,
+			config->device);
 }
 
 

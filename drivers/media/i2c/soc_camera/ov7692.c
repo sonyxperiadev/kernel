@@ -408,27 +408,6 @@ static int ov7692_config_timing(struct i2c_client *client)
 	return ret;
 }
 
-static int ov7692_s_stream(struct v4l2_subdev *sd, int enable)
-{
-	struct i2c_client *client = v4l2_get_subdevdata(sd);
-	int ret = 0;
-
-#if 0
-	if (enable) {
-    	ret =ov7692_write_smbus(client,0x0e, 0x02); 
-        if (ret)
-            goto out;
-	} else {
-    	ov7692_write_smbus(client,0x0e, 0x08); 
-        if (ret)
-            goto out;
-
-	}
-#endif
-
-out:
-	return ret;
-}
 
 static int ov7692_set_bus_param(struct soc_camera_device *icd,
 				unsigned long flags)
@@ -608,13 +587,6 @@ static int ov7692_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	return 0;
 }
 
-static int ov7692_preview_start(struct i2c_client *client)
-{
-	int ret = 0;
-	printk(KERN_INFO "ov7692_preview_start!");
-	ret = ov7692_write_smbuss(client, configscript_common1);
-	return ret;
-}
 
 static int ov7692_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 {
@@ -1162,7 +1134,6 @@ static int ov7692_s_parm(struct v4l2_subdev *sd, struct v4l2_streamparm *param)
 }
 
 static struct v4l2_subdev_video_ops ov7692_subdev_video_ops = {
-	.s_stream = ov7692_s_stream,
 	.s_mbus_fmt = ov7692_s_fmt,
 	.g_mbus_fmt = ov7692_g_fmt,
 	.try_mbus_fmt = ov7692_try_fmt,

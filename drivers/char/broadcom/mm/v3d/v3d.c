@@ -54,6 +54,8 @@ int __init mm_v3d_init(void)
 	v3d_device->subdev_init[1] = &v3d_user_init;
 	v3d_device->subdev_deinit[1] = &v3d_user_deinit;
 
+	core_param[0].core_name = "BIN_RENDER";
+	core_param[1].core_name = "USER";
 	/*Calling init on sub devices*/
 	for (i = 0; i < V3D_SUBDEV_COUNT; i++) {
 		ret = v3d_device->subdev_init[i](&core_param[i]);
@@ -94,6 +96,8 @@ int __init mm_v3d_init(void)
 	pr_debug("v3d_init: H264 driver Module Init over");
 	return ret;
 err1:
+	while (--i >= 0)
+		v3d_device->subdev_deinit[i]();
 	kfree(v3d_device);
 err:
 	pr_err("v3d_init: V3D driver Module Init Error");

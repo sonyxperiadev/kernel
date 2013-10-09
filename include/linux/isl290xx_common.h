@@ -45,6 +45,7 @@ struct isl290xx_cfg_s {
 	u8 aps_intr;
 	u8 prox_offset;
 	u8 prox_boot_cali;
+	u8 scale_factor;
 };
 
 struct isl290xx_prox_info_s {

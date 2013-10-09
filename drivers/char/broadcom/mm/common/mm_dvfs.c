@@ -10,7 +10,8 @@ Notwithstanding the above, under no circumstances may you combine this software
 in any way with any other Broadcom software provided under a license other than
 the GPL, without Broadcom's express prior written consent.
 *******************************************************************************/
-#define pr_fmt(fmt) "<%s> %s:" fmt "\n", mm_dvfs->mm_common->mm_name, __func__
+#define pr_fmt(fmt) "<%s> %s:" fmt "\n",\
+			mm_dvfs->mm_common_ifc->mm_name, __func__
 
 #include "mm_dvfs.h"
 
@@ -28,7 +29,6 @@ int mm_dvfs_notification_handler(struct notifier_block *block, \
 		mm_dvfs->jobs_pend++;
 		break;
 	case MM_FMWK_NOTIFY_JOB_COMPLETE:
-	case MM_FMWK_NOTIFY_JOB_REMOVE:
 		mm_dvfs->jobs_done++;
 		mm_dvfs->jobs_pend--;
 		break;
@@ -117,7 +117,7 @@ static void dvfs_work(struct work_struct *work)
 		}
 
 	getnstimeofday(&diff);
-	if (mm_dvfs->mm_common->mm_hw_is_on) {
+	if (mm_dvfs->mm_common_ifc->mm_hw_is_on) {
 		struct timespec diff2 = timespec_sub(diff, mm_dvfs->ts1);
 		mm_dvfs->hw_on_dur += timespec_to_ns(&diff2);
 		getnstimeofday(&mm_dvfs->ts1);
@@ -191,11 +191,13 @@ static void dvfs_work(struct work_struct *work)
 		mm_dvfs->requested_mode = ECONOMY;
 
 dvfs_work_end:
-	raw_notifier_call_chain(&mm_dvfs->mm_common->notifier_head, \
+	raw_notifier_call_chain(&mm_dvfs->mm_common_ifc->notifier_head, \
 					MM_FMWK_NOTIFY_DVFS_UPDATE, \
 					(void *)mm_dvfs->requested_mode);
-	pi_mgr_dfs_request_update(&(mm_dvfs->dev_dfs_node), \
-			mm_dvfs->requested_mode);
+	if (pi_mgr_dfs_request_update(&(mm_dvfs->dev_dfs_node), \
+			mm_dvfs->requested_mode)) {
+		pr_err("%s: failed to update dfs request\n", __func__);
+	}
 
 }
 
@@ -212,14 +214,14 @@ DEFINE_DEBUGFS_HANDLER(P2L);
 DEFINE_DEBUGFS_HANDLER(T3);
 DEFINE_DEBUGFS_HANDLER(P3L);
 
-void *mm_dvfs_init(struct mm_common *mm_common, \
+void *mm_dvfs_init(struct _mm_common_ifc *mm_common_ifc, \
 		const char *dev_name, MM_DVFS_HW_IFC *dvfs_params)
 {
 	int ret = 0;
 	struct _mm_dvfs *mm_dvfs = kmalloc(sizeof(struct _mm_dvfs), GFP_KERNEL);
 	memset(mm_dvfs, 0, sizeof(struct _mm_dvfs));
 
-	mm_dvfs->mm_common = mm_common;
+	mm_dvfs->mm_common_ifc = mm_common_ifc;
 	INIT_WORK(&(mm_dvfs->dvfs_work), dvfs_work);
 
 	/* Init prof counters */
@@ -232,11 +234,11 @@ void *mm_dvfs_init(struct mm_common *mm_common, \
 	mm_dvfs->mm_fmwk_notifier_blk.notifier_call \
 			= mm_dvfs_notification_handler;
 	raw_notifier_chain_register(\
-		&mm_common->notifier_head, \
+		&mm_common_ifc->notifier_head, \
 		&mm_dvfs->mm_fmwk_notifier_blk);
 
 	mm_dvfs->dvfs_dir = debugfs_create_dir("dvfs", \
-				mm_dvfs->mm_common->debugfs_dir);
+				mm_dvfs->mm_common_ifc->debugfs_dir);
 	if (mm_dvfs->dvfs_dir == NULL) {
 		pr_err("Error %ld creating dvfs dir for %s", \
 			PTR_ERR(mm_dvfs->dvfs_dir), dev_name);
@@ -262,8 +264,10 @@ void *mm_dvfs_init(struct mm_common *mm_common, \
 		pr_err("failed to register PI DFS request for %s", dev_name);
 		return NULL;
 		}
-	pi_mgr_dfs_request_update(&(mm_dvfs->dev_dfs_node), \
-				mm_dvfs->requested_mode);
+	if (pi_mgr_dfs_request_update(&(mm_dvfs->dev_dfs_node), \
+				mm_dvfs->requested_mode)) {
+		pr_err("%s: failed to update dfs request\n", __func__);
+	}
 
 	return mm_dvfs;
 }
@@ -273,7 +277,7 @@ void mm_dvfs_exit(void *dev_p)
 {
 	struct _mm_dvfs *mm_dvfs = (struct _mm_dvfs *)dev_p;
 	raw_notifier_chain_unregister(\
-		&mm_dvfs->mm_common->notifier_head, \
+		&mm_dvfs->mm_common_ifc->notifier_head, \
 		&mm_dvfs->mm_fmwk_notifier_blk);
 	debugfs_remove_recursive(mm_dvfs->dvfs_dir);
 	pi_mgr_dfs_request_remove(&(mm_dvfs->dev_dfs_node));

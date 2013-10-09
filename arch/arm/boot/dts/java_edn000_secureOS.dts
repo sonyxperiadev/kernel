@@ -345,6 +345,7 @@
 		cmnd-LP;		/* Commands in LP mode*/
 		hs-bitrate = <333000000>;
 		lp-bitrate = <8000000>;	/* 8mbps */
+		desense-offset = <2400000>;  /* +2.4Mbps */
 		iommu = <&iommu_mm>;
 		iovmm = <&iovmm_mm>;
 		rotation = <180>;
@@ -372,6 +373,7 @@
 		cmnd-LP;		/* Commands in LP mode*/
 		hs-bitrate = <333000000>;
 		lp-bitrate = <8000000>;	/* 8mbps */
+		desense-offset = <2400000>;  /* +2.4Mbps */
 		iommu = <&iommu_mm>;
 		iovmm = <&iovmm_mm>;
 		rotation = <180>;
@@ -528,8 +530,13 @@
 		};
 	};
 
+	secure_mem {
+		sec-mem-base = <0x9d800000>;
+		sec-mem-size = <0x100000>;
+	};
+
 	mobicore {
-		mobicore-base = <0x9d800000>;
+		mobicore-base = <0x9d900000>;
 		mobicore-size = <0x300000>;
 	};
 

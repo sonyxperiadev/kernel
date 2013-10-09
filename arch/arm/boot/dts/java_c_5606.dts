@@ -10,7 +10,7 @@
 	compatible = "bcm,java";
 
 	chosen {
-		bootargs = "console=ttyS0,115200n8 mem=480M gpt androidboot.console=ttyS0 crash_ramdump=1 logbuf_nocache=1";
+		bootargs = "console=ttyS0,115200n8 mem=480M gpt androidboot.console=ttyS0 crash_ramdump=1 logbuf_nocache=1                                                  ";
 	};
 
 	memory@82000000 {
@@ -90,8 +90,9 @@
 			compatible = "bcm,isl290xx";
 			reg = <0x44>;
 			gpio-irq-pin = <89>;
-			prox_threshold_hi_param = <120>;
-			prox_threshold_lo_param = <60>;
+			scale_factor = <52>;
+			prox_threshold_hi_param = <65>;
+			prox_threshold_lo_param = <35>;
 		};
 
 	};
@@ -118,6 +119,21 @@
 			power = "camldo2";
 			auto_update_fw = <0>;
 			vkey_scope = "0x01:139:80:900:160:80:0x01:102:240:900:160:80:0x01:158:400:900:160:80\n";
+		};
+		ms-msg21xx@26 {
+			compatible = "bcm,ms-msg21xx";
+			reg = <0x26>;
+			gpio-irq-pin = <73>;
+			gpio-reset-pin = <70>;
+			x-max-value = <480>;
+			y-max-value = <854>;
+			max_finger = <2>;
+			axis-orientation-flag = <0>;
+			vkey_scope = "0x01:139:80:900:160:80:0x01:102:240:900:160:80:0x01:158:400:900:160:80\n";
+			/* Enable I2C autosense but disable timeout */
+			client_func_magic = <0x666C6167>;
+			client_func_map = <1>;
+
 		};
 	};
 
@@ -447,4 +463,10 @@
 			linux,default-trigger = "kpbl";
 		};
 	};
+
+	secure_mem {
+		sec-mem-base = <0x9d800000>;
+		sec-mem-size = <0x100000>;
+	};
+
 };

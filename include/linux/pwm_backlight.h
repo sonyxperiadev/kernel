@@ -6,6 +6,14 @@
 
 #include <linux/backlight.h>
 
+#ifdef CONFIG_KONA_TMON
+/* Temperature compensation (used to limit max brightness) */
+struct pb_temp_comp {
+	unsigned long trigger_temp;
+	int max_brightness;
+};
+#endif
+
 struct platform_pwm_backlight_data {
 	int pwm_id;
 	unsigned int max_brightness;
@@ -14,6 +22,11 @@ struct platform_pwm_backlight_data {
 	unsigned int pwm_period_ns;
 	unsigned int *levels;
 	unsigned int polarity;
+#ifdef CONFIG_KONA_TMON
+	bool pb_enable_adapt_bright;
+	struct pb_temp_comp *temp_comp_tbl;
+	unsigned int temp_comp_size;
+#endif
 	int (*init)(struct device *dev);
 	int (*notify)(struct device *dev, int brightness);
 	void (*notify_after)(struct device *dev, int brightness);

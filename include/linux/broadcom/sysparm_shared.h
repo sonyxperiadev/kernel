@@ -389,14 +389,14 @@ typedef struct
 	UInt32 treq_outbit_sel[2];
 	UInt32 treq_output_gain;
 #ifdef CONFIG_ARCH_JAVA
-	Int16  mbc_cr[3];
-	Int16  mbc_th_adj[3];
-	Int16  fbc_cr[3];
-	Int16  ale_gain[3];
-	Int16  ale_th[3];
-	Int16  ale_scale[3];
-	Int16  hpf_fq[3];
-	Int16  scale;
+	Int16  mbc_cr[5];
+	Int16  mbc_th_adj[5];
+	Int16  fbc_cr[5];
+	Int16  ale_gain[5];
+	Int16  ale_th[5];
+	Int16  ale_scale[5];
+	Int16  hpf_fq[5];
+	Int16  scale[16];
 #endif
 } SysIndMultimediaAudioParm_t;
 

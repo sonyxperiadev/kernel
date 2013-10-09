@@ -6,10 +6,10 @@
 		0x14 0x75 0xFF 0
 		/*  enable PC3 function */
 		0x15 0x0F 0xFF 0
-		/*Enable PASR_EN*/
-		0x16 0x2 0x2 0
-		/*Enable PASR_MODE*/
-		0x08 0x1 0x1 1
+		/*Disable PASR_EN*/
+		0x16 0x0 0x2 0
+		/*Disable PASR_MODE*/
+		0x08 0x0 0x1 1
 		  /* Mask Interrupt */
 		0x30 0xFF 0xFF 0
 		0x31 0xFF 0xFF 0
@@ -38,13 +38,13 @@
 		  /*  ICCMAX to 1500mA*/
 		0x47 0x0B 0xFF 0
 		  /* NTC Hot Temperature Comparator rising = 45C*/
-		0xCC 0x70 0xFF 1
+		0xCC 0x73 0xFF 1
 		  /* NTC Hot Temperature Comparator falling = 40C*/
-		0xCD 0x84 0xFF 1
+		0xCD 0x85 0xFF 1
 		  /* NTC Cold Temperature Comparator rising = 0C*/
-		0xCE 0xF4 0xFF 1
+		0xCE 0xA4 0xFF 1
 		  /* NTC Cold Temperature Comparator falling = 5C*/
-		0xCF 0xB8 0xFF 1
+		0xCF 0x71 0xFF 1
 		  /* NTC Hot Temperature Comparator bit 9,8 */
 		0xD0 0x05 0xFF 1
 		 /*MBCCTRL11*/
@@ -135,7 +135,7 @@
 		/*pc_map = PMU_PC2|PMU_PC3, initial_mode = REGULATOR_MODE_STANDBY*/
 		aud  = "1", "audldo_uc", "1", "6", "8", "0", "0";
 		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, initial_mode = REGULATOR_MODE_NORMAL*/
-		usb  = "1", "usb_vcc", "0", "7", "2", "0", "0";
+		usb  = "2", "usb_vcc", "bc_vcc", "0", "7", "2", "0", "0";
 		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, initial_mode = REGULATOR_MODE_NORMAL*/
 		mic  = "1", "micldo_uc", "0","0", "2", "0", "0";
 		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, initial_mode = REGULATOR_MODE_NORMAL*/

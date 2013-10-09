@@ -78,6 +78,7 @@ struct cdc {
 	spinlock_t lock;
 	bool acp_active;
 	bool timer_active;
+	int cluster_dormant_disable;
 #ifdef CONFIG_DEBUG_FS
 	struct dentry *cdc_dir;
 #endif
@@ -102,13 +103,10 @@ int cdc_send_cmd_early(u32 cmd, int cpu)
 int cdc_send_cmd(u32 cmd)
 {
 	int ret;
-	int cpu = get_cpu();
+	int cpu = smp_processor_id();
 	ret = cdc_send_cmd_for_core(cmd, cpu);
-	if (ret)
-		goto done;
-	ret = cdc_get_status_for_core(cpu);
-done:
-	put_cpu();
+	if (!ret)
+		ret = cdc_get_status_for_core(cpu);
 	return ret;
 }
 
@@ -143,25 +141,28 @@ int cdc_get_status_for_core(int cpu)
 
 int cdc_acp_active(bool active)
 {
+	unsigned long flags;
 	u32 val = !!active;
+
 	if (!cdc)
 		return -EINVAL;
-	spin_lock(&cdc->lock);
+	spin_lock_irqsave(&cdc->lock, flags);
 	writel_relaxed(val, cdc->base + CDC_ACP_IS_ACTIVE_OFFSET);
 	cdc->acp_active = val;
-	spin_unlock(&cdc->lock);
+	spin_unlock_irqrestore(&cdc->lock, flags);
 	return 0;
 }
 
 int cdc_core_timer_in_use(bool in_use)
 {
+	unsigned long flags;
 	u32 val = !!in_use;
 	if (!cdc)
 		return -EINVAL;
-	spin_lock(&cdc->lock);
+	spin_lock_irqsave(&cdc->lock, flags);
 	writel_relaxed(val, cdc->base + CDC_CORE_TIMER_IN_USE_OFFSET);
 	cdc->timer_active = val;
-	spin_unlock(&cdc->lock);
+	spin_unlock_irqrestore(&cdc->lock, flags);
 	return 0;
 }
 
@@ -191,11 +192,9 @@ int cdc_set_pwr_status(u32 status)
 		return -EINVAL;
 	BUG_ON(status == CDC_PWR_RSVD ||
 		status > CDC_PWR_DRMNT_L2_OFF);
-	spin_lock(&cdc->lock);
 	val = (status << CDC_CDC_POWER_STATUS_PWRCTLO_SHIFT) &
 		CDC_CDC_POWER_STATUS_PWRCTLO_MASK;
 	writel_relaxed(val, cdc->base + CDC_CDC_POWER_STATUS_OFFSET);
-	spin_unlock(&cdc->lock);
 	return 0;
 }
 
@@ -210,18 +209,14 @@ int cdc_set_usr_reg(u32 set_mask)
 {
 	if (!cdc)
 		return -EINVAL;
-	spin_lock(&cdc->lock);
 	writel_relaxed(set_mask, cdc->base + CDC_USER_REGISTER_SET_OFFSET);
-	spin_unlock(&cdc->lock);
 	return 0;
 }
 int cdc_clr_usr_reg(u32 clr_mask)
 {
 	if (!cdc)
 		return -EINVAL;
-	spin_lock(&cdc->lock);
 	writel_relaxed(clr_mask, cdc->base + CDC_USER_REGISTER_CLR_OFFSET);
-	spin_unlock(&cdc->lock);
 	return 0;
 
 }
@@ -230,10 +225,8 @@ int cdc_set_fsm_ctrl(u32 fsm_ctrl)
 {
 	if (!cdc)
 		return -EINVAL;
-	spin_lock(&cdc->lock);
 	fsm_ctrl &= 0xF;
 	writel_relaxed(fsm_ctrl, cdc->base + CDC_FSM_CONTROL_OFFSET);
-	spin_unlock(&cdc->lock);
 	return 0;
 }
 int cdc_get_override(u32 type)
@@ -293,14 +286,12 @@ int cdc_set_override(u32 type, u32 val)
 		return -EINVAL;
 	};
 
-	spin_lock(&cdc->lock);
 	reg = readl_relaxed(cdc->base +
 					CDC_IS_IDLE_OVERRIDE_OFFSET);
 	reg &= ~mask;
 	reg |= (val << shift) & mask;
 	writel_relaxed(reg,
 			cdc->base + CDC_IS_IDLE_OVERRIDE_OFFSET);
-	spin_unlock(&cdc->lock);
 
 	return 0;
 }
@@ -335,13 +326,11 @@ int cdc_assert_reset_in_state(u32 states)
 	if (!cdc)
 		return -EINVAL;
 
-	spin_lock(&cdc->lock);
 	reg = readl_relaxed(cdc->base +
 		CDC_RESET_STATE_ENABLE_OFFSET);
 	reg |= states;
 	writel_relaxed(states,
 	cdc->base + CDC_RESET_STATE_ENABLE_OFFSET);
-	spin_unlock(&cdc->lock);
 
 	return 0;
 }
@@ -352,13 +341,11 @@ int cdc_enable_isolation_in_state(u32 states)
 	if (!cdc)
 		return -EINVAL;
 
-	spin_lock(&cdc->lock);
 	reg = readl_relaxed(cdc->base +
 		CDC_ISOLATION_STATE_ENABLE_OFFSET);
 	reg |= states;
 	writel_relaxed(states,
 		cdc->base + CDC_ISOLATION_STATE_ENABLE_OFFSET);
-	spin_unlock(&cdc->lock);
 
 	return 0;
 }
@@ -369,13 +356,11 @@ int cdc_assert_cdcbusy_in_state(u32 states)
 	if (!cdc)
 		return -EINVAL;
 
-	spin_lock(&cdc->lock);
 	reg = readl_relaxed(cdc->base +
 		CDC_CDCBUSY_STATE_ENABLE_OFFSET);
 	reg |= states;
 	writel_relaxed(states,
 		cdc->base + CDC_CDCBUSY_STATE_ENABLE_OFFSET);
-	spin_unlock(&cdc->lock);
 
 	return 0;
 }
@@ -404,15 +389,12 @@ int cdc_set_reset_counter(int type, u32 val)
 		BUG();
 	}
 
-	spin_lock(&cdc->lock);
 	reg = readl_relaxed(cdc->base +
 		CDC_RESET_COUNTER_VALUES_OFFSET);
 	reg &= ~mask;
 	reg |= (val << shift) & mask;
 	writel_relaxed(reg,
 		cdc->base + CDC_RESET_COUNTER_VALUES_OFFSET);
-
-	spin_unlock(&cdc->lock);
 
 	return 0;
 }
@@ -441,14 +423,12 @@ int cdc_set_switch_counter(int type, u32 val)
 		BUG();
 	}
 
-	spin_lock(&cdc->lock);
 	reg = readl_relaxed(cdc->base +
 		CDC_SWITCH_COUNTER_VALUES_OFFSET);
 	reg &= ~mask;
 	reg |= (val << shift) & mask;
 	writel_relaxed(reg,
 		cdc->base + CDC_SWITCH_COUNTER_VALUES_OFFSET);
-	spin_unlock(&cdc->lock);
 	return 0;
 }
 
@@ -459,7 +439,6 @@ int cdc_master_clk_gating_en(bool en)
 	if (!cdc)
 		return -EINVAL;
 
-	spin_lock(&cdc->lock);
 	reg = readl_relaxed(cdc->base +
 		CDC_ENABLE_MASTER_CLK_GATING_OFFSET);
 	mask = CDC_ENABLE_MASTER_CLK_GATING_ENABLE_MASTER_CLK_GATING_MASK;
@@ -469,11 +448,34 @@ int cdc_master_clk_gating_en(bool en)
 		reg &= ~mask;
 	writel_relaxed(reg,
 		cdc->base + CDC_ENABLE_MASTER_CLK_GATING_OFFSET);
-	spin_unlock(&cdc->lock);
 	return 0;
 }
 
+int cdc_disable_cluster_dormant(bool disable)
+{
+	unsigned long flags;
+	if (!cdc)
+		return -EINVAL;
+	spin_lock_irqsave(&cdc->lock, flags);
+	if (disable) {
+		if (cdc->cluster_dormant_disable == 0)
+			writel_relaxed(1, cdc->base +
+					CDC_CORE_TIMER_IN_USE_OFFSET);
+		cdc->cluster_dormant_disable++;
+	} else {
+		if (!cdc->cluster_dormant_disable) {
+			spin_unlock_irqrestore(&cdc->lock, flags);
+			return -EINVAL;
+		}
 
+		cdc->cluster_dormant_disable--;
+		if (cdc->cluster_dormant_disable == 0)
+			writel_relaxed(0, cdc->base +
+					CDC_CORE_TIMER_IN_USE_OFFSET);
+	}
+	spin_unlock_irqrestore(&cdc->lock, flags);
+	return 0;
+}
 
 #ifdef CONFIG_DEBUG_FS
 

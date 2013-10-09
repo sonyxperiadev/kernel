@@ -57,6 +57,11 @@
 #define CHIPREG_REG(kmemc, off) ((kmemc)->chipreg_base + (off))
 #define INSURANCE_MAX	10000
 #define FREF 26000000
+
+
+#define REM_NODE_OPP 0xFFFFFFFF
+#define BOOT_DFS_REQ_CLIENT "BOOTUP_REQ"
+
 enum {
 	MEMC_NODE_ADD,
 	MEMC_NODE_DEL,
@@ -115,7 +120,7 @@ static int memc_set_min_pwr(struct kona_memc *kmemc, u32 val, u32 core)
 	u32 offset;
 	u32 mask;
 	u32 insurance = 0;
-	if (val > APPS_MIN_PWR_MAX)
+	if (val > MEMC_PWR_MAX)
 		return -EINVAL;
 	switch (core) {
 	case MEMC_AP_MIN_PWR:
@@ -237,6 +242,14 @@ static int memc_get_force_max_pwr_state(struct kona_memc *kmemc)
 			CSR_MEMC_MAX_PWR_STATE_MEMC_MAX_PWR_STATE_SHIFT;
 }
 
+static u32 memc_min_pwr_get_max_req(struct kona_memc *kmemc)
+{
+	if (plist_head_empty(&kmemc->min_pwr_list))
+		return 0;
+	return plist_last(&kmemc->min_pwr_list)->prio;
+}
+
+
 static int memc_min_pwr_update(struct kona_memc *kmemc,
 		struct kona_memc_node *memc_node, int action)
 {
@@ -245,7 +258,7 @@ static int memc_min_pwr_update(struct kona_memc *kmemc,
 	spin_lock(&kmemc->memc_lock);
 	switch (action) {
 	case MEMC_NODE_ADD:
-		plist_node_init(&memc_node->node, memc_node->min_pwr);
+		plist_node_init(&memc_node->node, memc_node->req);
 		plist_add(&memc_node->node, &kmemc->min_pwr_list);
 		break;
 	case MEMC_NODE_DEL:
@@ -253,14 +266,14 @@ static int memc_min_pwr_update(struct kona_memc *kmemc,
 		break;
 	case MEMC_NODE_UPDATE:
 		plist_del(&memc_node->node, &kmemc->min_pwr_list);
-		plist_node_init(&memc_node->node, memc_node->min_pwr);
+		plist_node_init(&memc_node->node, memc_node->req);
 		plist_add(&memc_node->node, &kmemc->min_pwr_list);
 		break;
 	default:
 		BUG();
 		return -EINVAL;
 	}
-	new_val = plist_last(&kmemc->min_pwr_list)->prio;
+	new_val = memc_min_pwr_get_max_req(kmemc);
 	if (new_val != kmemc->active_min_pwr) {
 		ret = memc_set_min_pwr(kmemc, new_val, MEMC_AP_MIN_PWR);
 		if (!ret)
@@ -278,8 +291,9 @@ int memc_add_min_pwr_req(struct kona_memc_node *memc_node,
 		BUG();
 		return -EINVAL;
 	}
-	memc_node->name = client_name;
-	memc_node->min_pwr = min_pwr;
+
+	strncpy(memc_node->name, client_name, NODE_NAME_LEN);
+	memc_node->req = min_pwr;
 	memc_node->valid = 1;
 	return memc_min_pwr_update(&kona_memc, memc_node, MEMC_NODE_ADD);
 
@@ -295,7 +309,7 @@ int memc_del_min_pwr_req(struct kona_memc_node *memc_node)
 	}
 	ret = memc_min_pwr_update(&kona_memc, memc_node, MEMC_NODE_DEL);
 	memc_node->valid = 0;
-	memc_node->name = NULL;
+	memc_node->name[0] = 0;
 	return ret;
 }
 EXPORT_SYMBOL(memc_del_min_pwr_req);
@@ -306,8 +320,8 @@ int memc_update_min_pwr_req(struct kona_memc_node *memc_node, u32 min_pwr)
 		BUG();
 		return -EINVAL;
 	}
-	if (memc_node->min_pwr != min_pwr) {
-		memc_node->min_pwr = min_pwr;
+	if (memc_node->req != min_pwr) {
+		memc_node->req = min_pwr;
 		return memc_min_pwr_update(&kona_memc,
 				memc_node, MEMC_NODE_UPDATE);
 	}
@@ -315,6 +329,373 @@ int memc_update_min_pwr_req(struct kona_memc_node *memc_node, u32 min_pwr)
 }
 EXPORT_SYMBOL(memc_update_min_pwr_req);
 
+#ifdef CONFIG_MEMC_DFS
+
+static void memc_wait_for_state_change(struct kona_memc *kmemc)
+{
+	int ins = 10000;
+	u32 reg;
+	u32 cur_state;
+	u32 tgt_state;
+
+	/* wait till current state != target state*/
+	reg = readl_relaxed(MEMC0_NS_REG(kmemc,
+		CSR_CURRENT_FREQUENCY_STATE_OFFSET));
+	cur_state = (reg & CSR_CURRENT_FREQUENCY_STATE_CURRENT_STATE_MASK) >>
+			CSR_CURRENT_FREQUENCY_STATE_CURRENT_STATE_SHIFT;
+	tgt_state = (reg & CSR_CURRENT_FREQUENCY_STATE_TARGET_STATE_MASK) >>
+			CSR_CURRENT_FREQUENCY_STATE_TARGET_STATE_SHIFT;
+
+	while (ins && cur_state != tgt_state) {
+		ins--;
+		udelay(1);
+		reg = readl_relaxed(MEMC0_NS_REG(kmemc,
+			CSR_CURRENT_FREQUENCY_STATE_OFFSET));
+		cur_state = (reg &
+			CSR_CURRENT_FREQUENCY_STATE_CURRENT_STATE_MASK) >>
+			CSR_CURRENT_FREQUENCY_STATE_CURRENT_STATE_SHIFT;
+		tgt_state = (reg &
+			CSR_CURRENT_FREQUENCY_STATE_TARGET_STATE_MASK) >>
+			CSR_CURRENT_FREQUENCY_STATE_TARGET_STATE_SHIFT;
+	}
+	BUG_ON(ins == 0);
+}
+
+static int memc_config_ddr_pll_freq(struct kona_memc *kmemc,
+	struct memc_dfs_pll_freq *pll_freq)
+{
+	u32 reg;
+	u32 max_pwr;
+	int ins = 10000;
+
+	BUG_ON(!kmemc->pdata);
+	/*  power state change pending  ? */
+	reg = readl_relaxed(MEMC0_NS_REG(kmemc,
+		CSR_MEMC_PWR_STATE_PENDING_OFFSET));
+	while (ins &&
+		reg &
+		CSR_MEMC_PWR_STATE_PENDING_MEMC_MAX_PWR_STATE_PENDING_MASK) {
+		udelay(1);
+		ins--;
+		reg = readl(MEMC0_NS_REG(kmemc,
+				CSR_MEMC_PWR_STATE_PENDING_OFFSET));
+	}
+	BUG_ON(ins == 0);
+	/* force maxpwr to 2 - 156 from syspll */
+	reg = readl_relaxed(MEMC0_NS_REG(kmemc, CSR_MEMC_MAX_PWR_STATE_OFFSET));
+	max_pwr = reg;
+	reg &= ~CSR_MEMC_MAX_PWR_STATE_MEMC_MAX_PWR_STATE_MASK;
+	reg |= MEMC_PWR_STATE2 <<
+		CSR_MEMC_MAX_PWR_STATE_MEMC_MAX_PWR_STATE_SHIFT;
+	reg |= CSR_MEMC_MAX_PWR_STATE_FORCE_MAX_POWER_STATE_MASK;
+	writel_relaxed(reg, MEMC0_NS_REG(kmemc, CSR_MEMC_MAX_PWR_STATE_OFFSET));
+
+	memc_wait_for_state_change(kmemc);
+
+	/* set ddr pll frequency */
+	reg = readl_relaxed(MEMC0_APHY_REG(kmemc,
+			APHY_CSR_DDR_PLL_VCO_FREQ_CNTRL0_OFFSET));
+	reg &= ~(APHY_CSR_DDR_PLL_VCO_FREQ_CNTRL0_PDIV_MASK |
+		APHY_CSR_DDR_PLL_VCO_FREQ_CNTRL0_NDIV_INT_MASK);
+	reg |= (pll_freq->ndiv <<
+		APHY_CSR_DDR_PLL_VCO_FREQ_CNTRL0_NDIV_INT_SHIFT) &
+		APHY_CSR_DDR_PLL_VCO_FREQ_CNTRL0_NDIV_INT_MASK;
+	reg |= (pll_freq->pdiv <<
+		APHY_CSR_DDR_PLL_VCO_FREQ_CNTRL0_PDIV_SHIFT) &
+		APHY_CSR_DDR_PLL_VCO_FREQ_CNTRL0_PDIV_MASK;
+	writel_relaxed(reg, MEMC0_APHY_REG(kmemc,
+		APHY_CSR_DDR_PLL_VCO_FREQ_CNTRL0_OFFSET));
+	reg = readl_relaxed(MEMC0_APHY_REG(kmemc,
+		APHY_CSR_DDR_PLL_VCO_FREQ_CNTRL1_OFFSET));
+	reg &= ~APHY_CSR_DDR_PLL_VCO_FREQ_CNTRL1_NDIV_FRAC_MASK;
+	reg |= (pll_freq->ndiv_frac <<
+		APHY_CSR_DDR_PLL_VCO_FREQ_CNTRL1_NDIV_FRAC_SHIFT) &
+		APHY_CSR_DDR_PLL_VCO_FREQ_CNTRL1_NDIV_FRAC_MASK;
+	writel_relaxed(reg, MEMC0_APHY_REG(kmemc,
+			APHY_CSR_DDR_PLL_VCO_FREQ_CNTRL1_OFFSET));
+
+	reg = readl_relaxed(MEMC0_APHY_REG(kmemc,
+			APHY_CSR_DDR_PLL_MDIV_VALUE_OFFSET));
+	reg &= ~APHY_CSR_DDR_PLL_MDIV_VALUE_MDIV_MASK;
+	reg |= (pll_freq->mdiv <<
+		APHY_CSR_DDR_PLL_MDIV_VALUE_MDIV_SHIFT) &
+		APHY_CSR_DDR_PLL_MDIV_VALUE_MDIV_MASK;
+	writel_relaxed(reg, MEMC0_APHY_REG(kmemc,
+			APHY_CSR_DDR_PLL_MDIV_VALUE_OFFSET));
+
+	/*  power state change pending  ? */
+	ins = 1000;
+	reg = readl_relaxed(MEMC0_NS_REG(kmemc,
+		CSR_MEMC_PWR_STATE_PENDING_OFFSET));
+	while (ins &&
+		reg &
+		CSR_MEMC_PWR_STATE_PENDING_MEMC_MAX_PWR_STATE_PENDING_MASK) {
+		udelay(1);
+		ins--;
+		reg = readl(MEMC0_NS_REG(kmemc,
+				CSR_MEMC_PWR_STATE_PENDING_OFFSET));
+	}
+	BUG_ON(ins == 0);
+
+	/*restore max power state*/
+	writel_relaxed(max_pwr,
+		MEMC0_NS_REG(kmemc, CSR_MEMC_MAX_PWR_STATE_OFFSET));
+
+	memc_wait_for_state_change(kmemc);
+	return 0;
+}
+
+
+
+static u32 memc_dfs_get_max_req(struct kona_memc *kmemc)
+{
+	if (plist_head_empty(&kmemc->dfs_list))
+		return MEMC_OPP_NORMAL;
+	return plist_last(&kmemc->dfs_list)->prio;
+}
+
+
+static int memc_dfs_update(struct kona_memc *kmemc,
+		struct kona_memc_node *memc_node, int action)
+{
+	u32 new_val;
+	int ret = 0;
+	struct memc_dfs_pll_freq *pll_freq;
+
+	spin_lock(&kmemc->memc_lock);
+	switch (action) {
+	case MEMC_NODE_ADD:
+		plist_node_init(&memc_node->node, memc_node->req);
+		plist_add(&memc_node->node, &kmemc->dfs_list);
+		break;
+	case MEMC_NODE_DEL:
+		plist_del(&memc_node->node, &kmemc->dfs_list);
+		break;
+	case MEMC_NODE_UPDATE:
+		plist_del(&memc_node->node, &kmemc->dfs_list);
+		plist_node_init(&memc_node->node, memc_node->req);
+		plist_add(&memc_node->node, &kmemc->dfs_list);
+		break;
+	default:
+		BUG();
+		return -EINVAL;
+	}
+	new_val = memc_dfs_get_max_req(kmemc);
+	if (new_val != kmemc->active_dfs_opp) {
+		switch (new_val) {
+		case MEMC_OPP_ECO:
+			/*Set max power to 2 - 156MHz*/
+			memc_set_max_pwr(kmemc, MEMC_PWR_STATE2);
+			break;
+
+		case MEMC_OPP_NORMAL:
+		case MEMC_OPP_TURBO:
+			if (kmemc->active_dfs_opp == MEMC_OPP_ECO)
+				memc_set_max_pwr(kmemc, MEMC_PWR_STATE3);
+			if (kmemc->pll_rate != new_val) {
+				pll_freq = &kmemc->pdata->pll_freq[new_val];
+				memc_config_ddr_pll_freq(kmemc, pll_freq);
+			}
+			kmemc->pll_rate = new_val;
+			break;
+
+		default:
+			BUG();
+			break;
+		}
+		kmemc->active_dfs_opp = new_val;
+	}
+	spin_unlock(&kmemc->memc_lock);
+	return ret;
+}
+
+int memc_add_dfs_req(struct kona_memc_node *memc_node,
+		char *client_name, u32 opp)
+{
+	if (unlikely(memc_node->valid)) {
+		BUG();
+		return -EINVAL;
+	}
+	if (unlikely(opp >= MEMC_OPP_MAX))
+		return -EINVAL;
+
+	strncpy(memc_node->name, client_name, NODE_NAME_LEN);
+	memc_node->req = opp;
+	memc_node->valid = 1;
+	return memc_dfs_update(&kona_memc, memc_node, MEMC_NODE_ADD);
+}
+EXPORT_SYMBOL(memc_add_dfs_req);
+
+int memc_del_dfs_req(struct kona_memc_node *memc_node)
+{
+	int ret;
+	if (unlikely(memc_node->valid == 0)) {
+		BUG();
+		return -EINVAL;
+	}
+	ret = memc_dfs_update(&kona_memc, memc_node, MEMC_NODE_DEL);
+	memc_node->valid = 0;
+	memc_node->name[0] = 0;
+	return ret;
+}
+EXPORT_SYMBOL(memc_del_dfs_req);
+
+int memc_update_dfs_req(struct kona_memc_node *memc_node, u32 opp)
+{
+	if (unlikely(memc_node->valid == 0)) {
+		BUG();
+		return -EINVAL;
+	}
+
+	if (unlikely(opp >= MEMC_OPP_MAX))
+		return -EINVAL;
+
+	if (memc_node->req != opp) {
+		memc_node->req = opp;
+		return memc_dfs_update(&kona_memc,
+				memc_node, MEMC_NODE_UPDATE);
+	}
+	return 0;
+}
+EXPORT_SYMBOL(memc_update_dfs_req);
+
+struct usr_dfs_mode *memc_find_usr_dfs_mode(struct kona_memc *kmemc,
+	char *client_name)
+{
+	struct usr_dfs_mode *usr_node;
+	struct usr_dfs_mode *ret = NULL;
+	spin_lock(&kmemc->memc_lock);
+	list_for_each_entry(usr_node, &kmemc->usr_dfs_list, node) {
+		if (strncmp(usr_node->req_node.name, client_name,
+			NODE_NAME_LEN) == 0) {
+			ret = usr_node;
+			break;
+		}
+	}
+	spin_unlock(&kmemc->memc_lock);
+	return ret;
+}
+
+static int memc_add_usr_dfs_req(struct kona_memc *kmemc, char *client_name,
+		u32 opp)
+{
+	struct usr_dfs_mode *usr_node =
+		memc_find_usr_dfs_mode(kmemc, client_name);
+	if (usr_node)
+		return -EINVAL;
+	usr_node = kzalloc(sizeof(struct usr_dfs_mode), GFP_KERNEL);
+	if (!usr_node)
+		return -ENOMEM;
+	spin_lock(&kmemc->memc_lock);
+	list_add(&usr_node->node, &kmemc->usr_dfs_list);
+	spin_unlock(&kmemc->memc_lock);
+	return memc_add_dfs_req(&usr_node->req_node, client_name, opp);
+
+}
+
+static int memc_del_usr_dfs_req(struct kona_memc *kmemc,
+	struct usr_dfs_mode *usr_node)
+{
+	int ret;
+	ret = memc_del_dfs_req(&usr_node->req_node);
+	spin_lock(&kmemc->memc_lock);
+	list_del(&usr_node->node);
+	spin_unlock(&kmemc->memc_lock);
+	kfree(usr_node);
+	return ret;
+}
+
+static int memc_update_usr_dfs_req(struct usr_dfs_mode *usr_node, u32 opp)
+{
+	return memc_update_dfs_req(&usr_node->req_node, opp);
+}
+
+static ssize_t dfs_usr_req_store(struct kobject *kobj,
+	struct kobj_attribute *attr, const char *buf, size_t n)
+{
+	char name[NODE_NAME_LEN+1] = {0};
+	u32 opp = MEMC_OPP_MAX;
+	struct usr_dfs_mode *usr_node;
+
+	sscanf(buf, "%s%x", name, &opp);
+
+	if (!name[0] || opp == MEMC_OPP_MAX) {
+		pr_info("%s: invalid params\n", __func__);
+		return -EINVAL;
+	}
+
+	if (opp > MEMC_OPP_MAX && opp != REM_NODE_OPP) {
+			pr_info("%s: invalid opp\n", __func__);
+			return -EINVAL;
+	}
+
+	usr_node = memc_find_usr_dfs_mode(&kona_memc, name);
+
+	if (usr_node) {
+		if (opp == REM_NODE_OPP)
+			memc_del_usr_dfs_req(&kona_memc, usr_node);
+		else
+			memc_update_usr_dfs_req(usr_node, opp);
+	} else if (opp < MEMC_OPP_MAX)
+		memc_add_usr_dfs_req(&kona_memc, name, opp);
+	else {
+			pr_info("%s: invalid opp\n", __func__);
+			return -EINVAL;
+	}
+	return n;
+}
+
+static struct kobj_attribute dfs_usr_req_attr = {
+	.attr	= {
+		.name = __stringify(memc_dfs),
+		.mode = S_IWUSR,
+	},
+	.store	= dfs_usr_req_store,
+};
+
+
+static ssize_t dfs_init_store(struct kobject *kobj,
+	struct kobj_attribute *attr, const char *buf, size_t n)
+
+{
+	struct usr_dfs_mode *usr_node;
+	usr_node = memc_find_usr_dfs_mode(&kona_memc, BOOT_DFS_REQ_CLIENT);
+
+	if (!usr_node)
+		return -EINVAL;
+
+#ifdef CONFIG_MEMC_FORCE_156M_IN_SUSPEND
+	pr_info("MEMC DFS Del req:%s\n", BOOT_DFS_REQ_CLIENT);
+	memc_del_usr_dfs_req(&kona_memc, usr_node);
+#else
+	pr_info("MEMC DFS update req:%s\n", BOOT_DFS_REQ_CLIENT);
+	memc_update_usr_dfs_req(usr_node, MEMC_OPP_NORMAL);
+#endif
+	return n;
+}
+
+static struct kobj_attribute dfs_init_attr = {
+	.attr	= {
+		.name = __stringify(memc_dfs_init),
+		.mode = S_IWUSR,
+	},
+	.store	= dfs_init_store,
+};
+
+
+static struct attribute *kmemc_attr[] = {
+	&dfs_usr_req_attr.attr,
+	&dfs_init_attr.attr,
+	NULL,
+};
+
+static struct attribute_group kmemc_attr_group = {
+	.attrs = kmemc_attr,
+};
+
+
+
+#endif /*CONFIG_MEMC_DFS*/
 
 int memc_enable_selfrefresh(struct kona_memc *kmemc, int enable)
 {
@@ -537,13 +918,29 @@ static int kona_memc_probe(struct platform_device *pdev)
 	int size, ret;
 	struct resource *iomem;
 	struct kona_memc_pdata *pdata;
+	int i;
 #ifdef CONFIG_LPDDR_DEV_TEMP
-	int i, irq;
+	int irq;
 	int *temp_tholds;
+#endif
+
+#ifdef CONFIG_MEMC_DFS
+	u32 *dfs;
 #endif
 	spin_lock_init(&kona_memc.memc_lock);
 	plist_head_init(&kona_memc.min_pwr_list);
 	kona_memc.active_min_pwr = 0;
+#ifdef CONFIG_MEMC_DFS
+	kona_memc.active_dfs_opp = MEMC_OPP_NORMAL;
+	kona_memc.pll_rate = MEMC_OPP_ECO; /*init to min*/
+	 INIT_LIST_HEAD(&kona_memc.usr_dfs_list);
+	 plist_head_init(&kona_memc.dfs_list);
+	ret = sysfs_create_group(power_kobj, &kmemc_attr_group);
+	if (ret) {
+		pr_info("%s:sysfs_create_group failed\n", __func__);
+		return ret;
+	}
+#endif
 
 	if (pdev->dev.platform_data)
 		pdata =	(struct kona_memc_pdata *)pdev->dev.platform_data;
@@ -656,6 +1053,19 @@ static int kona_memc_probe(struct platform_device *pdev)
 		pr_info("%s:temp_period: %x, num_thold: %d\n", __func__,
 				pdata->temp_period, pdata->num_thold);
 #endif
+
+#ifdef CONFIG_MEMC_DFS
+		dfs = (u32 *)of_get_property(pdev->dev.of_node,
+			"pll_freq", &size);
+		for (i = 0; i < MEMC_OPP_MAX; i++) {
+			pdata->pll_freq[i].ndiv = be32_to_cpu(*dfs++);
+			pdata->pll_freq[i].ndiv_frac =
+					be32_to_cpu(*dfs++);
+			pdata->pll_freq[i].pdiv = be32_to_cpu(*dfs++);
+			pdata->pll_freq[i].mdiv = be32_to_cpu(*dfs++);
+		}
+#endif
+
 	} else {
 		pr_info("%s: no platform data found\n", __func__);
 		return -EINVAL;
@@ -680,6 +1090,11 @@ static int kona_memc_probe(struct platform_device *pdev)
 		pr_info("unable to register isr\n");
 		return -EINVAL;
 	}
+#endif
+
+#ifdef CONFIG_MEMC_DFS
+	/*Add turbo request to boot MEMC @ turbo freq*/
+	memc_add_usr_dfs_req(&kona_memc, BOOT_DFS_REQ_CLIENT, MEMC_OPP_TURBO);
 #endif
 	return 0;
 }
@@ -930,6 +1345,39 @@ DEFINE_SIMPLE_ATTRIBUTE(memc_temp_period_ops,
 	memc_dbg_get_temp_period,
 	memc_dbg_set_temp_period, "%llu\n");
 #endif
+
+#ifdef CONFIG_MEMC_DFS
+static char dbg_fs_buf[2048];
+static int kona_memc_debugfs_open(struct inode *inode, struct file *file)
+{
+	file->private_data = inode->i_private;
+	return 0;
+}
+
+static ssize_t kona_memc_dbg_get_dfs_req_list(struct file *file,
+					   char __user *user_buf, size_t count,
+					   loff_t *ppos)
+{
+	u32 len = 0;
+	struct kona_memc_node *this;
+	struct kona_memc *kmemc = (struct kona_memc *)file->private_data;
+
+	plist_for_each_entry(this, &kmemc->dfs_list, node) {
+		len += snprintf(dbg_fs_buf + len, sizeof(dbg_fs_buf) - len,
+			"%s:%u\n",
+			this->name, this->req);
+	}
+	return simple_read_from_buffer(user_buf, count, ppos, dbg_fs_buf,
+				       len);
+}
+
+static const struct file_operations dfs_req_fops = {
+	.open = kona_memc_debugfs_open,
+	.read = kona_memc_dbg_get_dfs_req_list,
+};
+
+#endif /*CONFIG_MEMC_DFS*/
+
 static struct dentry *dent_kona_memc_dir;
 
 static int kona_menc_init_debugfs(void)
@@ -980,6 +1428,15 @@ static int kona_menc_init_debugfs(void)
 				&memc_temp_period_ops))
 		return -ENOMEM;
 #endif
+
+#ifdef CONFIG_MEMC_DFS
+	if (!debugfs_create_file("dfs_req", S_IRUGO,
+				 dent_kona_memc_dir, &kona_memc,
+				 &dfs_req_fops))
+		return -ENOMEM;
+
+#endif
+
 	return 0;
 }
 #endif /*CONFIG_DEBUG_FS*/

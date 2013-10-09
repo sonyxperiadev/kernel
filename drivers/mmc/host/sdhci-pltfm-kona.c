@@ -337,7 +337,7 @@ proc_card_ctrl_read(char *buffer, char **start, off_t off, int count,
 	if (off > 0)
 		return 0;
 
-	len += sprintf(buffer + len, "SD/MMC card is %s\n",
+	len += scnprintf(buffer + len, PAGE_SIZE, "SD/MMC card is %s\n",
 		       sdhci_readl(host,
 				   KONA_SDHOST_CORESTAT) & KONA_SDHOST_CD_SW ?
 		       "INSERTED" : "NOT INSERTED");
@@ -672,10 +672,6 @@ static int sdhci_pltfm_probe(struct platform_device *pdev)
 	char devname[MAX_DEV_NAME_SIZE];
 	int ret = 0;
 	char *emmc_regulator = NULL;
-#ifdef CONFIG_MACH_BCM_FPGA
-	u32 of_quirks = 0;
-	u32 of_quirks2 = 0;
-#endif
 
 	pr_debug("%s: ENTRY\n", __func__);
 
@@ -728,6 +724,22 @@ static int sdhci_pltfm_probe(struct platform_device *pdev)
 
 		hw_cfg->flags = val;
 
+		if (of_property_read_u32(pdev->dev.of_node, "quirks", &val)) {
+			dev_warn(&pdev->dev, "quirks not available in %s\n",
+			__func__);
+			val = 0;
+		}
+
+		hw_cfg->quirks = val;
+
+		if (of_property_read_u32(pdev->dev.of_node, "quirks2", &val)) {
+			dev_warn(&pdev->dev, "quirks2 not available in %s\n",
+			__func__);
+			val = 0;
+		}
+
+		hw_cfg->quirks2 = val;
+
 		if (of_property_read_string(pdev->dev.of_node, "peri-clk-name",
 			&prop)) {
 			dev_err(&pdev->dev, "peri-clk-name read failed in %s\n",
@@ -761,16 +773,6 @@ static int sdhci_pltfm_probe(struct platform_device *pdev)
 			__func__);
 			goto err_free_priv_data_mem;
 		}
-
-#ifdef CONFIG_MACH_BCM_FPGA
-		if (of_property_read_u32(pdev->dev.of_node, "quirks", &of_quirks)) {
-			pr_info("quirks = 0x%08x foud for the configuration\n", of_quirks);
-		}
-
-		if (of_property_read_u32(pdev->dev.of_node, "quirks2", &of_quirks2)) {
-			pr_info("quirks2 = 0x%08x foud for the configuration\n", of_quirks2);
-		}
-#endif
 
 		hw_cfg->peri_clk_rate = val;
 
@@ -864,10 +866,8 @@ static int sdhci_pltfm_probe(struct platform_device *pdev)
 #ifdef CONFIG_MACH_RHEA_DALTON2_EB30
         host->quirks |= SDHCI_QUIRK_NO_MULTIBLOCK;
 #endif
-#ifdef CONFIG_MACH_BCM_FPGA
-	host->quirks |= of_quirks;
-	host->quirks2 |= of_quirks2;
-#endif
+	host->quirks |= hw_cfg->quirks;
+	host->quirks2 |= hw_cfg->quirks2;
 
         pr_debug("%s: GET IRQ\n", __func__);
 

@@ -69,15 +69,13 @@ struct i2c_client *client1;
 static int as3643_reg_read(struct i2c_client *client, u16 reg, u8 * val)
 {
 	int ret;
-	u8 data[1];
 	u8 reg8 = (u8) reg;
-	data[0] = reg8;
 	struct i2c_msg msg[2] = {
 		{
 		 client->addr,
 		 client->flags,
 		 1,
-		 data},
+		 &reg8},
 		{
 		 client->addr,
 		 client->flags | I2C_M_RD,

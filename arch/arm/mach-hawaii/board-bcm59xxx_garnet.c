@@ -1019,6 +1019,12 @@ struct bcmpmu_adc_pdata adc_pdata[PMU_ADC_CHANN_MAX] = {
 	},
 };
 
+int bcmpmu_acld_chargers[] = {
+	PMU_CHRGR_TYPE_DCP,
+	PMU_CHRGR_TYPE_SDP,
+	PMU_CHRGR_TYPE_TYPE2,
+};
+
 struct bcmpmu_acld_pdata acld_pdata = {
 	.acld_vbus_margin = 200,	/*mV*/
 	.acld_vbus_thrs = 5950,
@@ -1031,6 +1037,8 @@ struct bcmpmu_acld_pdata acld_pdata = {
 				  If customer defines any other value
 				  chage accordingly*/
 	.otp_cc_trim = 0x1F,
+	.acld_chrgrs = bcmpmu_acld_chargers,
+	.acld_chrgrs_list_size = ARRAY_SIZE(bcmpmu_acld_chargers),
 };
 
 static struct batt_volt_cap_map ys_05_volt_cap_lut[] = {

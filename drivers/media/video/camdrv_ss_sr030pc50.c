@@ -69,6 +69,18 @@ static struct regulator *VCAM_CORE_1_2_V;
 #define CAM1_STNBY			5
 #define EXIF_MODEL			"GT-B7272"
 
+#elif defined(CONFIG_MACH_JAVA_SS_BAFFINLITE)
+
+#define VCAM_A_2_8V_REGULATOR		"mmcldo1"
+#define VCAM_IO_1_8V_REGULATOR		"lvldo2"
+#define VCAM0_IO_1_8V_REGULATOR_NEEDED
+#define VCAM0_IO_1_8V_REGULATOR		"lvldo1"
+#define VCAM_A_2_8V_REGULATOR_uV	2800000
+#define VCAM_IO_1_8V_REGULATOR_uV	1786000
+#define VCAM0_IO_1_8V_REGULATOR_uV	1786000
+#define CAM1_RESET			4
+#define CAM1_STNBY			5
+#define EXIF_MODEL			"GT-B7272"
 
 #elif defined(CONFIG_MACH_HAWAII_SS_LOGAN_REV00)
 

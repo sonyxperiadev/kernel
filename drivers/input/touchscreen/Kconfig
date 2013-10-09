@@ -123,14 +123,26 @@ config TOUCHSCREEN_AUO_PIXCIR
 	  To compile this driver as a module, choose M here: the
 	  module will be called auo-pixcir-ts.
 
-config TOUCHSCREEN_BCM15500
-	tristate "Broadcom 15500 touchscreen interface"
-	depends on I2C
+config TOUCHSCREEN_BITSY
+	tristate "Compaq iPAQ H3600 (Bitsy) touchscreen"
+	depends on SA1100_BITSY
+	select SERIO
 	help
-	  Say Y here to support BCM15500 touchscreen controller on a I2C bus
+	  Say Y here if you have the h3600 (Bitsy) touchscreen.
+
+	  If unsure, say N.
 
 	  To compile this driver as a module, choose M here: the
-	  module will be called bcm915500.
+	  module will be called h3600_ts_input.
+
+config TOUCHSCREEN_BCMTCH15XXX
+	tristate "Broadcom 15xxx touchscreen interface"
+	depends on I2C
+	help
+	  Say Y here to support BCM15XXX touchscreen controller on a I2C bus
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called bcm15xxx.
 
 config TOUCHSCREEN_BU21013
 	tristate "BU21013 based touch panel controllers"
@@ -1054,6 +1066,27 @@ config TOUCHSCREEN_ICN83XX
         depends on I2C
         help
           This enables support for Chipone touchscreens.
+
+config TOUCHSCREEN_JAVA_AMETHYST_FT5336_FW
+	bool "FT5306 Touchscreen for hawaii garnet"
+	depends on TOUCHSCREEN_FT5306
+	help
+	  Say Y here if you have
+	  a ft5336 based
+	  touchscreen for hawaii garnet.
+	  If unsure, say N.
+
+config TOUCHSCREEN_MSG21XX
+        tristate "MSG21XX I2C Touchscreen"
+        depends on I2C
+        help
+          Say Y here if you have the Imagis MSG21XX I2C touchscreen
+          connected to your system.
+
+          If unsure, say N.
+
+          To compile this driver as a module, choose M here: the
+          module will be called MSG21XX.
 source "drivers/input/touchscreen/coreriver_touchkey/Kconfig"
 
 endif

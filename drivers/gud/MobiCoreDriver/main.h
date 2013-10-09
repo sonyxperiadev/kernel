@@ -147,4 +147,7 @@ int mc_free_buffer(struct mc_instance *instance, uint32_t handle);
 /* Check if the other end of the fd owns instance */
 bool mc_check_owner_fd(struct mc_instance *instance, int32_t fd);
 
+/* Test if sleep is possible */
+bool mc_sleep_ready(void);
+
 #endif /* _MC_MAIN_H_ */

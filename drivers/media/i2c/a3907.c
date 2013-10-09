@@ -60,26 +60,6 @@ struct a3907_lens {
 static struct i2c_client *client_a3907;
 static struct a3907_lens *a3907;
 
-static int a3907_reg_read(struct i2c_client *client, u16 *val)
-{
-	int ret;
-	u8 data[2];
-	struct i2c_msg msg[2] = {
-		{
-		 client->addr,
-		 client->flags,
-		 0,
-		 data},
-		{
-		 client->addr,
-		 client->flags | I2C_M_RD,
-		 2,
-		 data}
-	};
-	ret = i2c_transfer(client->adapter, msg, 2);
-	*val = (data[0] << 8) | data[1];
-	return ret;
-}
 
 /**
  * Write a value to a register in a3907 device.
@@ -157,7 +137,7 @@ int a3907_lens_set_position_fine(int target_position)
 {
 	int ret = 0;
 	unsigned int diff;
-	unsigned int dac_code;
+	int dac_code;
 
 	if (!a3907)
 		return -ENOMEM;

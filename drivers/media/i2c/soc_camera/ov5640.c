@@ -197,8 +197,6 @@ struct ov5640 {
 
 static int ov5640_set_flash_mode(int mode, struct i2c_client *client);
 
-static int flash_gpio_strobe(int);
-
 static struct ov5640 *to_ov5640(const struct i2c_client *client)
 {
 
@@ -1265,6 +1263,7 @@ static int ov5640_get_sysclk(struct v4l2_subdev *sd)
 
 	ov5640_reg_read(client, 0x3034, &val);
 	val &= 0x0F;
+	Bit_div2x = 1;
 	if (val == 8 || val == 10)
 		Bit_div2x = val / 2;
 
@@ -1386,21 +1385,6 @@ static int ov5640_get_red_gain16(struct v4l2_subdev *sd)
 	return gain16;
 }
 
-static int ov5640_set_red_gain16(struct v4l2_subdev *sd, int gain16)
-{
-	/* write gain, 16 = 1x */
-	struct i2c_client *client = v4l2_get_subdevdata(sd);
-	u8 val;
-	gain16 = gain16 & 0xFFF;
-
-	val = gain16 & 0xFF;
-	ov5640_reg_write(client, 0x3401, val);
-
-	val = gain16 >> 8;
-	ov5640_reg_write(client, 0x3400, val);
-
-	return 0;
-}
 
 static int ov5640_get_green_gain16(struct v4l2_subdev *sd)
 {
@@ -1417,21 +1401,6 @@ static int ov5640_get_green_gain16(struct v4l2_subdev *sd)
 	return gain16;
 }
 
-static int ov5640_set_green_gain16(struct v4l2_subdev *sd, int gain16)
-{
-	/* write gain, 16 = 1x */
-	struct i2c_client *client = v4l2_get_subdevdata(sd);
-	u8 val;
-	gain16 = gain16 & 0xFFF;
-
-	val = gain16 & 0xFF;
-	ov5640_reg_write(client, 0x3403, val);
-
-	val = gain16 >> 8;
-	ov5640_reg_write(client, 0x3402, val);
-
-	return 0;
-}
 
 static int ov5640_get_blue_gain16(struct v4l2_subdev *sd)
 {
@@ -1448,21 +1417,6 @@ static int ov5640_get_blue_gain16(struct v4l2_subdev *sd)
 	return gain16;
 }
 
-static int ov5640_set_blue_gain16(struct v4l2_subdev *sd, int gain16)
-{
-	/* write gain, 16 = 1x */
-	struct i2c_client *client = v4l2_get_subdevdata(sd);
-	u8 val;
-	gain16 = gain16 & 0xFFF;
-
-	val = gain16 & 0xFF;
-	ov5640_reg_write(client, 0x3405, val);
-
-	val = gain16 >> 8;
-	ov5640_reg_write(client, 0x3404, val);
-
-	return 0;
-}
 
 static int ov5640_get_gain16(struct v4l2_subdev *sd)
 {
@@ -1522,6 +1476,7 @@ static int ov5640_get_banding(struct v4l2_subdev *sd)
 			banding = 50;
 		} else {
 			/* 60Hz */
+			banding = 60;
 		}
 	}
 	return banding;
@@ -1551,7 +1506,6 @@ static void ov5640_set_banding(struct v4l2_subdev *sd)
 {
 	int preview_VTS;
 	int band_step60, max_band60, band_step50, max_band50;
-	u8 val;
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 
 	/* read preview PCLK */
@@ -1633,9 +1587,8 @@ static int ov5640_config_capture(struct v4l2_subdev *sd)
 {
 	int ret = 0;
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
-
 	int preview_shutter, preview_gain16;
-	u8 average, preview_uv;
+	u8 average;
 	int capture_shutter, capture_gain16;
 	int red_gain16, green_gain16, blue_gain16;
 	int capture_sysclk, capture_HTS, capture_VTS;
@@ -1760,8 +1713,6 @@ static int ov5640_config_capture(struct v4l2_subdev *sd)
 static int ov5640_flash_control(struct i2c_client *client, int control)
 {
 	int ret = 0;
-	struct ov5640 *ov5640 = to_ov5640(client);
-
 	switch (control) {
 	case FLASH_MODE_ON:
 		#ifdef CONFIG_VIDEO_ADP1653
@@ -2056,7 +2007,6 @@ static int ov5640_s_stream(struct v4l2_subdev *sd, int enable)
 {
 
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
-	struct ov5640 *ov5640 = to_ov5640(client);
 	int ret = 0;
 
 	printk(KERN_INFO "%s: enable:%d runmode:%d  stream_mode:%d\n",
@@ -2886,15 +2836,6 @@ static int ov5640_set_flash_mode(int mode, struct i2c_client *client)
 }
 
 
-static int flash_gpio_strobe(int on)
-{
-#ifdef CONFIG_VIDEO_ADP1653
-	return adp1653_gpio_strobe(on);
-#endif
-#ifdef CONFIG_VIDEO_AS3643
-	return 0;
-#endif
-}
 
 static long ov5640_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 {

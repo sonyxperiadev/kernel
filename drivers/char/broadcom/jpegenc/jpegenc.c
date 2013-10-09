@@ -167,7 +167,7 @@ err:
 static int jpegenc_release(struct inode *inode, struct file *filp)
 {
 	struct jpegenc_t *dev = (struct jpegenc_t *) filp->private_data;
-
+	free_irq(IRQ_JPEGENC, dev);
 	pi_mgr_qos_request_update(&jpegenc_qos_node, PI_MGR_QOS_DEFAULT_VALUE);
 	disable_jpegenc_clock();
 	if (pi_mgr_dfs_request_update
@@ -182,7 +182,6 @@ static int jpegenc_release(struct inode *inode, struct file *filp)
 	pi_mgr_qos_request_remove(&jpegenc_qos_node);
 	jpegenc_qos_node.name = NULL;
 
-	free_irq(IRQ_JPEGENC, dev);
 	kfree(dev);
 
 	return 0;

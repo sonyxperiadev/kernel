@@ -5840,30 +5840,6 @@ static bool nl80211_valid_wpa_versions(u32 wpa_versions)
 				NL80211_WAPI_VERSION_1 ));
 }
 
-static bool nl80211_valid_akm_suite(u32 akm)
-{
-	return akm == WLAN_AKM_SUITE_8021X ||
-		akm == WLAN_AKM_SUITE_PSK ||
-/* WAPI */
-		akm == WLAN_AKM_SUITE_WAPI_PSK ||
-		akm == WLAN_AKM_SUITE_WAPI_CERT;
-}
-
-static bool nl80211_valid_cipher_suite(u32 cipher)
-{
-	if(cipher == WLAN_CIPHER_SUITE_SMS4)
-		printk(" ** nl80211_valid_cipher_suite, is WLAN_CIPHER_SUITE_SMS4\n");
-	return cipher == WLAN_CIPHER_SUITE_WEP40 ||
-		cipher == WLAN_CIPHER_SUITE_WEP104 ||
-		cipher == WLAN_CIPHER_SUITE_TKIP ||
-		cipher == WLAN_CIPHER_SUITE_CCMP ||
-		cipher == WLAN_CIPHER_SUITE_AES_CMAC ||
-/*
-WAPI
-*/
-		cipher == WLAN_CIPHER_SUITE_SMS4;
-}
-
 
 static int nl80211_authenticate(struct sk_buff *skb, struct genl_info *info)
 {

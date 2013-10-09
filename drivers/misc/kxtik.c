@@ -149,14 +149,15 @@ static void kxtik_report_acceleration_data(struct kxtik_data *tik)
 	s16 acc_data[3];
 	s16 x, y, z;
 	int err;
-	struct input_dev *input_dev = tik->input_dev;
 	int loop = KXTIK_I2C_RETRY_COUNT;
 
 	if (atomic_read(&tik->acc_enabled) > 0) {
 		if (atomic_read(&tik->acc_enable_resume) > 1) {
 			while (loop) {
-				if (mutex_trylock(&tik->data_mutex) == 0)
-					return -ERESTARTSYS;
+				if (mutex_trylock(&tik->data_mutex) == 0) {
+					printk(KERN_ERR "acceleration_data:error mutex try lock");
+					return;
+				}
 				err = kxtik_i2c_read(tik, XOUT_L,
 						     (u8 *) acc_data, 6);
 				mutex_unlock(&tik->data_mutex);
@@ -529,7 +530,6 @@ static ssize_t kxtik_set_poll(struct device *dev, struct device_attribute *attr,
 {
 	struct i2c_client *client = to_i2c_client(dev);
 	struct kxtik_data *tik = i2c_get_clientdata(client);
-	struct input_dev *input_dev = tik->input_dev;
 	unsigned int interval;
 
 	int error;
@@ -559,7 +559,6 @@ static ssize_t kxtik_set_enable(struct device *dev, struct device_attribute
 {
 	struct i2c_client *client = to_i2c_client(dev);
 	struct kxtik_data *tik = i2c_get_clientdata(client);
-	struct input_dev *input_dev = tik->input_dev;
 	unsigned int enable;
 
 	int error;
@@ -596,7 +595,6 @@ static ssize_t kxtik_set_offset(struct device *dev,
 	int err = -EINVAL;
 	struct i2c_client *client = to_i2c_client(dev);
 	struct kxtik_data *tik = i2c_get_clientdata(client);
-	struct input_dev *input_dev = tik->input_dev;
 
 	err = sscanf(buf, "%d %d %d", &x, &y, &z);
 	if (err != 3) {
@@ -681,7 +679,7 @@ void kxtik_earlysuspend_resume(struct early_suspend *h)
 		if (err < 0)
 			FUNCDBG("earlysuspend failed to resume\n");
 		else {
-			setup_timer(&tik->timer, kxtik1004_timer_func, tik) ;
+			setup_timer(&tik->timer, kxtik1004_timer_func, (unsigned long)tik) ;
 			mod_timer(&tik->timer,
 			jiffies+msecs_to_jiffies(tik->poll_interval));
 		}
@@ -815,7 +813,7 @@ static int kxtik_probe(struct i2c_client *client,
 		}
 	} else {
 		printk(KERN_ALERT "__kxtik is in polling mode__\n");
-		setup_timer(&tik->timer, kxtik1004_timer_func, tik);
+		setup_timer(&tik->timer, kxtik1004_timer_func, (unsigned long)tik);
 		mod_timer(&tik->timer,
 		jiffies+msecs_to_jiffies(tik->poll_interval));
 		tik->int_ctrl = 0x10; /* reset value, no interrupt support. */

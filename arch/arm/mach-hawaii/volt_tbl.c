@@ -639,25 +639,38 @@ static const struct file_operations volt_tbl_fops = {
 
 static int volt_tbl_init(void)
 {
+	int ret;
 	dent_vlt_root_dir = debugfs_create_dir("voltage_table", 0);
 	if (!dent_vlt_root_dir)
 		return -ENOMEM;
 
 	if (!debugfs_create_file
 	    ("rev_id", S_IRUGO, dent_vlt_root_dir, NULL,
-	     &volt_tbl_rev_id_fops))
+	     &volt_tbl_rev_id_fops)) {
+		debugfs_remove(dent_vlt_root_dir);
 		return -ENOMEM;
+	}
 
 	if (!debugfs_create_file
 	    ("volt_tbl", S_IRUGO, dent_vlt_root_dir, NULL,
-	     &volt_tbl_fops))
-		return -ENOMEM;
+	     &volt_tbl_fops)) {
+		ret = -ENOMEM;
+		goto remove_root_dir;
+	}
 
 	if (!debugfs_create_file("pmu_voltage_log", S_IRUGO,
-			dent_vlt_root_dir, NULL, &pmu_volt_log_fops))
-		return -ENOMEM;
+			dent_vlt_root_dir, NULL, &pmu_volt_log_fops)) {
+		ret = -ENOMEM;
+		goto remove_root_dir;
+	}
+
 	pr_info("Voltage Table Debug Init Successs\n");
 	return 0;
+
+remove_root_dir:
+
+	debugfs_remove_recursive(dent_vlt_root_dir);
+	return ret;
 }
 
 late_initcall(volt_tbl_init);

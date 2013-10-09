@@ -964,7 +964,7 @@ static void dma_vc4lite_hisr(void)
 				if ((pdma->chan[chanNum].chanState !=
 				     CHAL_DMA_VC4LITE_STATE_INVALID)
 				    && (pdma->chan[chanNum].
-					chanState | CHAL_DMA_VC4LITE_STATE_END))
+					chanState & CHAL_DMA_VC4LITE_STATE_END))
 					pdma->chan[chanNum].chanInfo.
 					    callback
 					    (DMA_VC4LITE_CALLBACK_SUCCESS);

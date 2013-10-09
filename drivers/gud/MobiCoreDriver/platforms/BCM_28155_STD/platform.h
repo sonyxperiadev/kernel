@@ -25,4 +25,7 @@
  #define MC_PM_RUNTIME
 #endif
 
+/* Enable Fastcall worker thread */
+#define MC_FASTCALL_WORKER_THREAD
+
 #endif /* _MC_DRV_PLATFORM_H_ */

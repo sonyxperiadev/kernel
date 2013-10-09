@@ -1315,6 +1315,7 @@ static int __init populate_dispdrv_cfg(struct kona_fb *fb,
 		info->hs = cfg->hs;
 		info->hbp = cfg->hbp;
 		info->hfp = cfg->hfp;
+		info->hbllp = cfg->hbllp;
 		info->vs = cfg->vs;
 		info->vbp = cfg->vbp;
 		info->vfp = cfg->vfp;
@@ -1345,6 +1346,7 @@ static int __init populate_dispdrv_cfg(struct kona_fb *fb,
 
 	info->vsync_cb = (info->vmode) ? konafb_vsync_cb : NULL;
 	info->cont_clk = cfg->cont_clk;
+	info->init_fn = cfg->init_fn;
 	fb->display_info = info;
 	return 0;
 

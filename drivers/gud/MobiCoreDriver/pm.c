@@ -203,6 +203,12 @@ int mc_pm_free(void)
 	return ret;
 }
 
+bool mc_pm_sleep_ready(void)
+{
+	if (ctx == 0)
+		return true;
+	return sleep_ready();
+}
 #endif /* MC_PM_RUNTIME */
 
 #ifdef MC_CRYPTO_CLOCK_MANAGEMENT

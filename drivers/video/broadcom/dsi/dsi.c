@@ -475,6 +475,7 @@ Int32 DSI_Init(DISPDRV_INFO_T *info, DISPDRV_HANDLE_T *handle)
 		DispDrv_dsiCfg.hs = info->hs;
 		DispDrv_dsiCfg.hbp = info->hbp;
 		DispDrv_dsiCfg.hfp = info->hfp;
+		DispDrv_dsiCfg.hbllp = info->hbllp;
 		DispDrv_dsiCfg.vsync_cb = info->vsync_cb;
 		DispDrv_dsiCfg.enaContClock = info->cont_clk;
 
@@ -590,6 +591,10 @@ Int32 DSI_Open(DISPDRV_HANDLE_T drvH)
 		if (IS_ERR_OR_NULL(disp_reg)) {
 			DSI_ERR("Failed to get disp_reg\n");
 			goto err_reg_init;
+		}
+		if (g_display_enabled) {
+			/* Increase the ref_count, disp_reg power on already */
+			regulator_enable(disp_reg);
 		}
 	}
 	res = gpio_request(pPanel->disp_info->rst->gpio, "LCD_RST");
@@ -879,6 +884,8 @@ Int32 DSI_PowerControl(
 				break;
 			}
 			usleep_range(1000, 1010);
+			if (info->init_fn)
+				info->init_fn();
 			DSI_ExecCmndList(pPanel, info->init_seq);
 			DSI_WinSet(drvH, TRUE, &pPanel->win_dim);
 			pPanel->pwrState = STATE_SCREEN_OFF;

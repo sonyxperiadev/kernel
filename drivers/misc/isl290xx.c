@@ -994,6 +994,10 @@ static int isl290xx_probe(struct i2c_client *clientp,
 			"prox_boot_cali", &val);
 		isl290xx_cfgp->prox_boot_cali = val;
 #endif
+		if (!of_property_read_u32(np, "scale_factor", &val))
+			isl290xx_cfgp->scale_factor = val;
+		else
+			isl290xx_cfgp->scale_factor = 100;
 	}
 	light = kzalloc(sizeof(struct isl290xx_alsprox_data_s), GFP_KERNEL);
 	if (!light) {
@@ -2104,7 +2108,7 @@ static int prv_isl290xx_get_lux(void)
 	}
 
 	 /*enable als*/
-	lux = raw_clear;
+	lux = (raw_clear * isl290xx_cfgp->scale_factor) / 100;
 	mutex_unlock(&isl290xx_data_tp->lock);
 	return lux;
 }

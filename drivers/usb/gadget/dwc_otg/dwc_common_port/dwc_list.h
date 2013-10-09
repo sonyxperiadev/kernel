@@ -568,8 +568,10 @@ struct {								\
 	if ((head)->cqh_last == DWC_CIRCLEQ_END(head))			\
 		(head)->cqh_last = (elm);				\
 	else								\
-		(head)->cqh_first->field.cqe_prev = (elm);		\
-	(head)->cqh_first = (elm);					\
+		if (((head)->cqh_first) != NULL)	\
+			(head)->cqh_first->field.cqe_prev = (elm);	\
+	if (((head)->cqh_first) != NULL)	\
+		(head)->cqh_first = (elm);	\
 } while (0)
 
 #define DWC_CIRCLEQ_INSERT_TAIL(head, elm, field) do {			\
@@ -578,8 +580,10 @@ struct {								\
 	if ((head)->cqh_first == DWC_CIRCLEQ_END(head))			\
 		(head)->cqh_first = (elm);				\
 	else								\
-		(head)->cqh_last->field.cqe_next = (elm);		\
-	(head)->cqh_last = (elm);					\
+		if (((head)->cqh_last) != NULL)	\
+			(head)->cqh_last->field.cqe_next = (elm);	\
+	if (((head)->cqh_last) != NULL)	\
+		(head)->cqh_last = (elm);	\
 } while (0)
 
 #define DWC_CIRCLEQ_REMOVE(head, elm, field) do {				\

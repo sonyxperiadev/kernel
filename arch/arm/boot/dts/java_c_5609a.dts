@@ -10,7 +10,7 @@
 	compatible = "bcm,java";
 
 	chosen {
-		bootargs = "console=ttyS0,115200n8 mem=992M gpt androidboot.console=ttyS0 crash_ramdump=1 logbuf_nocache=1";
+		bootargs = "console=ttyS0,115200n8 mem=992M gpt androidboot.console=ttyS0 crash_ramdump=1 logbuf_nocache=1                                                  ";
 	};
 
 	memory@82000000 {
@@ -290,6 +290,31 @@
 		rotation = <0>;
 	};
 
+	kona-fb-2 {
+		module-name = "OTM8018B_TM";
+		reg-name = "cam2";
+		rst-gpio = <22>;
+		rst-setup = <700>;	/* 700us */
+		rst-pulse = <1000>;	/* 1ms */
+		rst-hold = <10000>;	/* 10ms */
+		col-mod-i = <3>;
+		col-mod-o = <2>;
+		width = <480>;
+		height = <854>;
+		/* rst-active-high */	/* Commented => Active Low */
+		vmode;
+		/* vburst */	/* Non-burst mode */
+		/* te-ctrl; */		/* Tearing Effect Control disabled */
+		fps = <60>;
+		lanes = <2>;
+		cmnd-LP;		/* Commands in LP mode*/
+		hs-bitrate = <333000000>;
+		lp-bitrate = <8000000>;	/* 5mbps */
+		iommu = <&iommu_mm>;
+		iovmm = <&iovmm_mm>;
+		rotation = <0>;
+	};
+
 	tmon@0x34008000 {
 		compatible = "bcm,tmon";
 		reg = <0x34008000 0x1000>;
@@ -430,4 +455,10 @@
 			linux,default-trigger = "kpbl";
 		};
 	};
+
+	secure_mem {
+		sec-mem-base = <0x9d800000>;
+		sec-mem-size = <0x100000>;
+	};
+
 };

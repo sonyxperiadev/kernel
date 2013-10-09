@@ -36,6 +36,11 @@ void mm_prof_update_handler(struct work_struct *work);
 
 #undef DEFINE_DEBUGFS_HANDLER
 #undef CREATE_DEBUGFS_FILE
+#undef SCHEDULER_WORK
+
+#define SCHEDULER_WORK(core, work) \
+	queue_work_on(0, core->mm_common_ifc->single_wq, \
+							work)
 
 #define DEFINE_DEBUGFS_HANDLER(name, type_name)				\
 	static int mm_prof_debugfs_##name##_get(void *root, u64 *param)	\
@@ -79,7 +84,6 @@ void mm_prof_update_handler(struct work_struct *work);
 #define MAX_JOB_TYPE 4
 
 struct mm_buff {
-	struct timespec print_time;
 	int percent;
 	unsigned int jobs_done;
 	unsigned int jobs_done_type[MAX_JOB_TYPE];
@@ -88,7 +92,7 @@ struct mm_buff {
 };
 struct _mm_prof {
 
-	struct mm_common *mm_common;
+	struct _mm_common_ifc *mm_common_ifc;
 
 	struct notifier_block mm_fmwk_notifier_blk;
 
@@ -97,7 +101,7 @@ struct _mm_prof {
 	struct dentry *TIME;
 	struct dentry *JOB;
 	struct dentry *HW;
-	struct dentry *Buffer;
+	struct dentry *BUFFER;
 	/* for prof */
 	dvfs_mode_e current_mode;
 		/*updated in PROF callback from Power Manager*/
@@ -120,9 +124,10 @@ struct _mm_prof {
 
 	struct mm_buff buff[BUFFSIZE];
 	int write_ptr;
+
 };
 
-void *mm_prof_init(struct mm_common *mm_common, \
+void *mm_prof_init(struct _mm_common_ifc *mm_common_ifc, \
 		const char *mm_dev_name, \
 		MM_PROF_HW_IFC *prof_params);
 void mm_prof_exit(void *mm_prof);

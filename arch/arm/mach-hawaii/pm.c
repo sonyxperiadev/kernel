@@ -672,14 +672,18 @@ int __init __pm_debug_init(void)
 	if (!dent_pm_root_dir)
 		return -ENOMEM;
 	if (!debugfs_create_u32("log_mask", S_IRUGO | S_IWUSR,
-		dent_pm_root_dir, (int *)&pm_info.log_mask))
+		dent_pm_root_dir, (int *)&pm_info.log_mask)) {
+		debugfs_remove(dent_pm_root_dir);
 		return -ENOMEM;
+	}
 
 	/* Interface to enable disable dormant mode at runtime */
 	if (!debugfs_create_file("dormant_enable", S_IRUGO | S_IWUSR,
 				 dent_pm_root_dir, NULL,
-				 &dormant_enable_fops))
+				 &dormant_enable_fops)) {
+		debugfs_remove_recursive(dent_pm_root_dir);
 		return -ENOMEM;
+	}
 
 	return 0;
 }

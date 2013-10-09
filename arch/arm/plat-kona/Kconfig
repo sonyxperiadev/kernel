@@ -259,6 +259,22 @@ config KONA_MEMC
 	 MEMC config params (self refresh, DDRLDO state etc)
 	 can be set through driver platform data.
 
+config MEMC_DFS
+	bool "Enable DFS for Kona MEMC"
+	depends on KONA_MEMC
+	help
+	 Say Y to enable Kona MEMC DFS. MEMC max frequency is
+	 set based on request if MEMC DFS is enabled.
+
+config MEMC_FORCE_156M_IN_SUSPEND
+	bool "Force MEMC to 156MHz (economy) in suspend"
+	depends on MEMC_DFS
+	help
+	 Say Y to force MEMC to economy mode (156MHz) while
+	 AP is in suspend state. MEMC max power state will be
+	 set to 2 to force MEMC frequency to 156MHz while AP is
+	 in suspend state
+
 config BRCM_CDC
 	bool "Enable Broadcom CDC driver"
 	help

@@ -1181,7 +1181,6 @@ static ssize_t cpufreq_set_temp_tholds(struct file *file,
 	}
 set_thold:
 	pdata->freq_tbl[inx].max_temp = thold;
-	cpufreq_set_init_thold_freq(kona_cpufreq);
 	return count;
 exit:
 	pr_info("USAGE:\necho inx thold > temp_tholds\n");

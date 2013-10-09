@@ -432,16 +432,17 @@ static int bcm_keypad_probe(struct platform_device *pdev)
 	if (bcm_kb == NULL) {
 		pr_err("%s(%s:%u)::Failed to allocate keypad structure...\n",
 		       __FUNCTION__, __FILE__, __LINE__);
-		return -ENOMEM;
+		ret = -ENOMEM;
+		goto keycode_free;
 	}
 	memset(bcm_kb, 0, sizeof(*bcm_kb));
 
 	bcm_kb->input_dev = input_allocate_device();
 	if (bcm_kb->input_dev == NULL) {
-		kfree(bcm_kb);
 		pr_err("%s(%s:%u)::Failed to allocate input device...\n",
 		       __FUNCTION__, __FILE__, __LINE__);
-		return -ENOMEM;
+		ret = -ENOMEM;
+		goto kb_free;
 	}
 	platform_set_drvdata(pdev, bcm_kb);
 	bcm_kb->kpmap = pdata->keymap;
@@ -526,14 +527,14 @@ static int bcm_keypad_probe(struct platform_device *pdev)
 	if (ret < 0) {
 		pr_err("%s(%s:%u)::request_irq failed IRQ %d\n",
 		       __FUNCTION__, __FILE__, __LINE__, bcm_kb->irq);
-		goto free_irq;
+		goto free_dev;
 	}
 	ret = input_register_device(bcm_kb->input_dev);
 	if (ret < 0) {
 		pr_err
 		    ("%s(%s:%u)::Unable to register GPIO-keypad input device\n",
 		     __FUNCTION__, __FILE__, __LINE__);
-		goto free_dev;
+		goto free_irq;
 	}
 #ifdef CONFIG_DEBUG_FS
 	bcm_keypad_debug_init();
@@ -547,13 +548,17 @@ static int bcm_keypad_probe(struct platform_device *pdev)
 
 	return ret;
 
-free_dev:
-	input_free_device(bcm_kb->input_dev);
-	ret = -EINVAL;
-
 free_irq:
 	free_irq(bcm_kb->irq, (void *)bcm_kb);
 	ret = -EINVAL;
+
+free_dev:
+	tasklet_disable(&kp_tasklet);
+	input_free_device(bcm_kb->input_dev);
+	ret = -EINVAL;
+
+kb_free:
+	kfree(bcm_kb);
 
 keycode_free:
 	if (pdev->dev.of_node)
@@ -575,6 +580,7 @@ pdata_free:
 static int bcm_keypad_remove(struct platform_device *pdev)
 {
 	struct bcm_keypad *bcm_kb = platform_get_drvdata(pdev);
+	struct bcm_keymap *keymap_p;
 	struct bcm_keypad_platform_info *pdata = pdev->dev.platform_data;
 
 	BCMKP_DBG(KERN_NOTICE "bcm_keypad_remove\n");
@@ -587,11 +593,15 @@ static int bcm_keypad_remove(struct platform_device *pdev)
 	/* unregister everything */
 	input_unregister_device(bcm_kb->input_dev);
 
+	keymap_p = bcm_kb->kpmap;
+
 	if (pdev->dev.of_node) {
+		kfree(keymap_p[0].key_code);
 		kfree(pdata->keymap);
 		kfree(pdata);
 		pdev->dev.platform_data = NULL;
 	}
+	kfree(bcm_kb);
 #ifdef CONFIG_DEBUG_FS
 	debugfs_remove_recursive(keypad_root_dir);
 #endif

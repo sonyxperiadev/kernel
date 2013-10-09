@@ -96,6 +96,8 @@ struct sdhci_host {
 #define SDHCI_QUIRK2_NO_1_8_V				(1<<2)
 #define SDHCI_QUIRK2_PRESET_VALUE_BROKEN		(1<<3)
 #define SDHCI_QUIRK2_HOST_MASK_HS_BIT			(1<<4)
+/* Disable the DDR capability for the host */
+#define SDHCI_QUIRK2_HOST_DISABLE_DDR			(1<<1)
 
 	int irq;		/* Device IRQ */
 	void __iomem *ioaddr;	/* Mapped address */

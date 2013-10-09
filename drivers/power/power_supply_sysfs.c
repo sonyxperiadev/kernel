@@ -187,6 +187,7 @@ static struct device_attribute power_supply_attrs[] = {
 	POWER_SUPPLY_ATTR(batt_temp_adc),
 #endif
 	POWER_SUPPLY_ATTR(time_to_empty_now),
+	POWER_SUPPLY_ATTR(full_bat),
 	POWER_SUPPLY_ATTR(time_to_empty_avg),
 	POWER_SUPPLY_ATTR(time_to_full_now),
 	POWER_SUPPLY_ATTR(time_to_full_avg),

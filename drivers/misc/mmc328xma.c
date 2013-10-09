@@ -88,9 +88,6 @@
 
 #include "mmc328xma.h"
 
-#ifdef CONFIG_ARCH_KONA
-#include <linux/regulator/consumer.h>
-#endif
 
 #define ABS_STATUS		(ABS_RUDDER)
 
@@ -173,9 +170,6 @@ static struct mmc328xma_data *mag;
 
 static int mmc328xma_do_magnetization(void);
 
-#ifdef CONFIG_ARCH_KONA1
-static struct regulator *mmc328x_regulator;
-#endif
 
 
 static int __mmc328xma_i2c_rxdata(char *buf, int length)
@@ -985,25 +979,6 @@ int mmc328xma_probe(struct i2c_client *client,
 		goto exit_kfree_pdata;
 	}
 
-#ifdef CONFIG_ARCH_KONA1
-	mmc328x_regulator = regulator_get(&client->dev, "vdd");
-	err = IS_ERR_OR_NULL(mmc328x_regulator);
-	if (err) {
-		printk(KERN_ERR "can't get vdd regulator!\n");
-		err = -EIO;
-		goto err_get_regulator;
-	}
-
-	/* make sure that regulator is enabled if device is successfully
-	   bound */
-	err = regulator_enable(mmc328x_regulator);
-	if (err) {
-		pr_err("regulator_enable for vdd failed with status: %d\n",
-			err);
-		goto err_enable_regulator;
-	}
-#endif
-
 	mag = data;
 	tempvalue = i2c_smbus_read_byte_data(client, MMC328XMA_REG_CHIPID);
 	if ((tempvalue & 0x00FF) == MMC328XMA_TEST_ID) {
@@ -1035,14 +1010,6 @@ int mmc328xma_probe(struct i2c_client *client,
 inputdev_exit:
 	mmc328xma_input_fini(data);
 input_init_err:
-
-#ifdef CONFIG_ARCH_KONA1
-	regulator_disable(mmc328x_regulator);
-err_enable_regulator:
-	if (mmc328x_regulator)
-		regulator_put(mmc328x_regulator);
-err_get_regulator:
-#endif
 exit_kfree_pdata:
 	kfree(data->pdata);
 exit_kfree:
@@ -1064,13 +1031,6 @@ static int mmc328xma_remove(struct i2c_client *client)
 
 	kfree(data);
 
-#ifdef CONFIG_ARCH_KONA1
-		regulator_disable(mmc328x_regulator);
-		if (mmc328x_regulator)
-			regulator_put(mmc328x_regulator);
-#endif
-
-
 	mag->client = NULL;
 
 	return 0;
@@ -1082,17 +1042,6 @@ static int mmc328xma_suspend(struct i2c_client *client, pm_message_t state)
 	printk(KERN_DEBUG "mmc328xma_resume\n");
 
 	mmc328xma_set_enable(&client->dev, 0);
-
-#ifdef CONFIG_ARCH_KONA1
-	if (mmc328x_regulator) {
-		ret = regulator_disable(mmc328x_regulator);
-		if (ret != 0) {
-			printk(KERN_ERR "disable regulator fail\n");
-			return ret;
-		}
-	}
-#endif
-
 	return 0;
 }
 
@@ -1102,17 +1051,6 @@ static int mmc328xma_resume(struct i2c_client *client)
 	struct mmc328xma_data *mmc328xma = i2c_get_clientdata(client);
 
 	printk(KERN_DEBUG "mmc328xma_resume\n");
-
-#ifdef CONFIG_ARCH_KONA1
-		if (mmc328x_regulator) {
-			ret = regulator_enable(mmc328x_regulator);
-			if (ret != 0) {
-				printk(KERN_ERR "enable regulator fail\n");
-				return ret;
-			}
-		}
-#endif
-
 	device_init();
 	if (mmc328xma->user > 0)
 		mmc328xma_set_enable(&client->dev, 1);

@@ -119,6 +119,7 @@ extern "C" {
 		DISPDRV_FB_FORMAT_T in_fmt;
 		DISPDRV_FB_FORMAT_T out_fmt;
 		uint8_t Bpp;
+		void (*init_fn)(void);
 		char *init_seq;
 		char *slp_in_seq;
 		char *slp_out_seq;
@@ -129,7 +130,7 @@ extern "C" {
 		void (*updt_win_fn)(char *buff, DISPDRV_WIN_t *p_win);
 		uint8_t updt_win_seq_len;
 		struct DSI_COUNTER phy_timing[18];
-		uint8_t hs, hbp, hfp;
+		uint8_t hs, hbp, hfp, hbllp;
 		uint8_t vs, vbp, vfp;
 
 		uint32_t hs_bps;

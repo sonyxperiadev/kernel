@@ -17,6 +17,7 @@
 #include <linux/rwsem.h>
 #include <linux/timer.h>
 #include <linux/workqueue.h>
+#include <linux/notifier.h>
 
 struct device;
 /*
@@ -268,6 +269,9 @@ struct gpio_led_platform_data {
 
 struct platform_device *gpio_led_register_device(
 		int id, const struct gpio_led_platform_data *pdata);
+typedef int (*pregister_cb)(struct notifier_block * n);
+void led_kpbl_register(pregister_cb pcallback);
+void led_kpbl_unregister(pregister_cb pcallback);
 
 enum cpu_led_event {
 	CPU_LED_IDLE_START,	/* CPU enters idle */

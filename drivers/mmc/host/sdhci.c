@@ -3726,6 +3726,9 @@ int sdhci_add_host(struct sdhci_host *host)
 		}
 	}
 
+	if (host->quirks2 & SDHCI_QUIRK2_HOST_DISABLE_DDR)
+		mmc->caps &= ~MMC_CAP_UHS_DDR50;
+
 	mmc->max_blk_size = 512 << mmc->max_blk_size;
 
 	/*

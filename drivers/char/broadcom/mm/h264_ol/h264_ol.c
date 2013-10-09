@@ -105,12 +105,14 @@ int __init h264_ol_separate_init(void)
 	/* Map the H264 registers */
 	h264_base = (void __iomem *)ioremap_nocache(H264_OL_BASE, H264_OL_SIZE);
 	if (h264_base == NULL) {
+		clk_put(h264_clk);
 		pr_err("failed to map the registers.");
 		return -1;
 	}
 
 	ret = misc_register(&mdev);
 	if (ret) {
+		clk_put(h264_clk);
 		pr_err("failed to register misc device.");
 		iounmap(h264_base);
 		return ret;

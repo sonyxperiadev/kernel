@@ -116,6 +116,7 @@ struct mm_prof_hw_ifc {
 #define MM_PROF_HW_IFC struct mm_prof_hw_ifc
 
 struct mm_core_hw_ifc {
+	const char *core_name;
 	uint8_t mm_irq;
 	uint32_t mm_base_addr;
 	void *mm_virt_addr; /* to be filled in by fmwk init with KVA */

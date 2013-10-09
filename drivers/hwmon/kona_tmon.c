@@ -534,6 +534,15 @@ static ssize_t tmon_set_threshold_levels(struct device *dev,
 		((inx <= max) && (thold >= pdata->thold[next].rising)))
 		goto exit;
 
+	/*cancel polling work*/
+	if ((kona_tmon->poll_inx != INVALID_INX) &&
+			(kona_tmon->poll_inx == inx))
+		flush_delayed_work_sync(&kona_tmon->poll_work);
+
+	if (thold > pdata->thold[inx].rising)
+		atomic_notifier_call_chain(&kona_tmon->notifiers,
+				pdata->thold[inx].rising, NULL);
+
 	pdata->thold[inx].rising = thold;
 	tmon_init_set_thold(kona_tmon);
 	return count;

@@ -46,7 +46,8 @@ enum {
 };
 
 #define MEMC_SEQ_BUSY_CRITERIA_MAX	3
-#define MEMC_MAX_PWR_MAX			3
+#define MEMC_MAX_PWR_MAX		3
+#define NODE_NAME_LEN			10
 
 #ifdef CONFIG_LPDDR_DEV_TEMP
 enum {
@@ -58,6 +59,37 @@ struct temp_thold {
 	int action;
 };
 #endif
+
+struct kona_memc_node {
+	char name[NODE_NAME_LEN+1];
+	struct plist_node node;
+	u32 req;
+	bool valid;
+};
+
+
+#ifdef CONFIG_MEMC_DFS
+enum {
+	MEMC_OPP_ECO,
+	MEMC_OPP_NORMAL,
+	MEMC_OPP_TURBO,
+	MEMC_OPP_MAX,
+};
+
+struct usr_dfs_mode {
+	struct list_head node;
+	struct kona_memc_node req_node;
+};
+
+
+struct memc_dfs_pll_freq {
+	u32 ndiv;
+	u32 ndiv_frac;
+	u32 pdiv;
+	u32 mdiv;
+};
+
+#endif /*CONFIG_MEMC_DFS*/
 
 struct kona_memc_pdata {
 	u32 flags;
@@ -72,25 +104,28 @@ struct kona_memc_pdata {
 	struct temp_thold *temp_tholds;
 	int num_thold; /*number of temperature limits*/
 #endif
+#ifdef CONFIG_MEMC_DFS
+	struct memc_dfs_pll_freq pll_freq[MEMC_OPP_MAX];
+#endif
+
 };
 
 enum {
-	APPS_MIN_PWR_STATE0,
-	APPS_MIN_PWR_STATE1,
-	APPS_MIN_PWR_STATE2,
-	APPS_MIN_PWR_STATE3,
-	APPS_MIN_PWR_MAX = APPS_MIN_PWR_STATE3
-};
-
-struct kona_memc_node {
-	char *name;
-	struct plist_node node;
-	u32 min_pwr;
-	bool valid;
+	MEMC_PWR_STATE0,
+	MEMC_PWR_STATE1,
+	MEMC_PWR_STATE2,
+	MEMC_PWR_STATE3,
+	MEMC_PWR_MAX = MEMC_PWR_STATE3
 };
 
 struct kona_memc {
 	struct plist_head min_pwr_list;
+#ifdef CONFIG_MEMC_DFS
+	struct plist_head dfs_list;
+	struct list_head usr_dfs_list;
+	u32 active_dfs_opp;
+	u32 pll_rate;
+#endif
 	spinlock_t memc_lock;
 	void __iomem *memc0_ns_base;
 	void __iomem *chipreg_base;
@@ -113,6 +148,29 @@ int memc_del_min_pwr_req(struct kona_memc_node *memc_node);
 int memc_update_min_pwr_req(struct kona_memc_node *memc_node, u32 min_pwr);
 int memc_enable_selfrefresh(struct kona_memc *kmemc, int enable);
 u32 kona_memc_get_ddr_clk_freq(void);
+
+#ifdef CONFIG_MEMC_DFS
+int memc_add_dfs_req(struct kona_memc_node *memc_node,
+		char *client_name, u32 opp);
+int memc_del_dfs_req(struct kona_memc_node *memc_node);
+int memc_update_dfs_req(struct kona_memc_node *memc_node, u32 opp);
+#else
+static inline int memc_add_dfs_req(struct kona_memc_node *memc_node,
+		char *client_name, u32 opp)
+{
+	return -EINVAL;
+}
+static inline int memc_del_dfs_req(struct kona_memc_node *memc_node)
+{
+	return -EINVAL;
+}
+
+static inline int memc_update_dfs_req(struct kona_memc_node *memc_node, u32 opp)
+{
+	return -EINVAL;
+}
+#endif /*CONFIG_MEMC_DFS*/
+
 
 #endif /*__KONA_MEMC_H__*/
 

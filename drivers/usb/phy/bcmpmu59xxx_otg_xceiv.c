@@ -124,6 +124,18 @@ bool bcmpmu_otg_xceiv_check_id_rid_c(struct bcmpmu_otg_xceiv_data
 	return id_rid_c;
 }
 
+bool bcmpmu_otg_xceiv_check_id_rid_float(struct bcmpmu_otg_xceiv_data
+				  *xceiv_data)
+{
+	unsigned int data = 0;
+	bool id = false;
+
+	bcmpmu_usb_get(xceiv_data->bcmpmu, BCMPMU_USB_CTRL_GET_ID_VALUE, &data);
+	id = (data == PMU_USB_ID_FLOAT);
+
+	return id;
+}
+
 static void bcmpmu_otg_xceiv_shutdown(struct usb_phy *phy)
 {
 	struct bcmpmu_otg_xceiv_data *xceiv_data = dev_get_drvdata(phy->dev);
@@ -835,6 +847,10 @@ static void bcmpmu_otg_xceiv_id_change_handler(struct work_struct *work)
 		xceiv_data->otg_xceiver.phy.state = OTG_STATE_UNDEFINED;
 		atomic_notifier_call_chain(&xceiv_data->otg_xceiver.phy.
 					   notifier, USB_EVENT_ID, NULL);
+	} else if (bcmpmu_otg_xceiv_check_id_rid_float(xceiv_data) &&
+		(xceiv_data->otg_xceiver.phy.state >= OTG_STATE_A_IDLE)) {
+		atomic_notifier_call_chain(&xceiv_data->otg_xceiver.phy.
+					   notifier, USB_EVENT_NONE, NULL);
 	}
 }
 

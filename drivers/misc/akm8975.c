@@ -67,7 +67,7 @@ struct akm8975_data {
 	atomic_t	is_busy;
 	atomic_t	drdy;
 	atomic_t	suspend;
-
+	atomic_t reserve_active;
 #ifdef CONFIG_HAS_EARLYSUSPEND
 	struct early_suspend akm_early_suspend;
 #endif
@@ -782,7 +782,7 @@ static ssize_t akm8975_sysfs_enable_show(
 	flag = ((akm->enable_flag >> pos) & 1);
 	mutex_unlock(&akm->val_mutex);
 
-	return sprintf(buf, "%d\n", flag);
+	return snprintf(buf, PAGE_SIZE, "%d\n", flag);
 }
 
 static ssize_t akm8975_sysfs_enable_store(
@@ -866,7 +866,7 @@ static ssize_t akm8975_sysfs_delay_show(
 	val = akm->delay[pos];
 	mutex_unlock(&akm->val_mutex);
 
-	return sprintf(buf, "%lld\n", val);
+	return snprintf(buf, PAGE_SIZE, "%lld\n", val);
 }
 
 static ssize_t akm8975_sysfs_delay_store(
@@ -1000,7 +1000,7 @@ static ssize_t akm8975_bdata_show(
 	memcpy(&rbuf, akm->sense_data, sizeof(rbuf));
 	mutex_unlock(&akm->sensor_mutex);
 
-	return sprintf(buf,
+	return snprintf(buf, PAGE_SIZE,
 		"0x%02X,0x%02X,0x%02X,0x%02X,"
 		"0x%02X,0x%02X,0x%02X,0x%02X\n",
 		rbuf[0], rbuf[1], rbuf[2], rbuf[3],
@@ -1027,7 +1027,7 @@ static ssize_t akm8975_asa_show(
 	if (err < 0)
 		return err;
 
-	return sprintf(buf, "0x%02X,0x%02X,0x%02X\n",
+	return snprintf(buf, PAGE_SIZE, "0x%02X,0x%02X,0x%02X\n",
 		asa[0], asa[1], asa[2]);
 }
 #endif
@@ -1266,6 +1266,7 @@ static void akm8975_early_suspend(struct early_suspend *handler)
 	printk(KERN_INFO "akm8975_early_suspend\n");
 	/* Power down the device during early suspend */
 	atomic_set(&s_akm->suspend, 1);
+	atomic_set(&s_akm->reserve_active, atomic_read(&s_akm->active));
 	atomic_set(&s_akm->active, 0);
 	/* get the current state */
 	err = AKECS_SetMode(s_akm, AK8975_MODE_POWERDOWN);
@@ -1280,6 +1281,7 @@ static void akm8975_late_resume(struct early_suspend *handler)
 {
 	printk(KERN_INFO "akm8975_late_resume\n");
 	atomic_set(&s_akm->suspend, 0);
+	atomic_set(&s_akm->active, atomic_read(&s_akm->reserve_active));
 	wake_up(&s_akm->open_wq);
 }
 #endif
@@ -1394,7 +1396,7 @@ int akm8975_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	atomic_set(&s_akm->is_busy, 0);
 	atomic_set(&s_akm->drdy, 0);
 	atomic_set(&s_akm->suspend, 0);
-
+	atomic_set(&s_akm->reserve_active, 0);
 	s_akm->enable_flag = 0;
 	for (i = 0; i < AKM_NUM_SENSORS; i++)
 		s_akm->delay[i] = -1;

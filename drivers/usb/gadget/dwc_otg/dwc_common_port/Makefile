@@ -3,7 +3,6 @@
 #
 
 EXTRA_CFLAGS	+= -DDWC_LINUX
-EXTRA_CFLAGS	+= -DDEBUG
 
 obj-$(CONFIG_USB_DWC_OTG)	:= dwc_common_port_lib.o
 
