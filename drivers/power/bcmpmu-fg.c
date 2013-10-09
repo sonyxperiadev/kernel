@@ -1821,7 +1821,8 @@ static void  bcmpmu_fg_irq_handler(u32 irq, void *data)
 	FG_UNLOCK(fg);
 
 	if ((irq == PMU_IRQ_MBTEMPHIGH) || (irq == PMU_IRQ_MBTEMPLOW)) {
-		pr_fg(FLOW, "%s: ISR : %x\n", __func__, irq);
+		pr_fg(FLOW, "%s: PMU NTC ISR Triggered,Charging Disabled: %x\n",
+			__func__, irq);
 		bcmpmu_chrgr_usb_en(fg->bcmpmu, 0);
 	}
 }

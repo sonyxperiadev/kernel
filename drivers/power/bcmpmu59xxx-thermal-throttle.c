@@ -86,6 +86,7 @@ struct bcmpmu_throttle_data {
 	u8 high_temp_db_cnt;
 	bool acld_algo_finished;
 	u8 acld_wait_count;
+	bool cooling;
 };
 
 int bcmpmu_throttle_get_temp(struct bcmpmu_throttle_data *tdata, u8 channel,
@@ -123,8 +124,6 @@ int bcmpmu_throttle_get_temp(struct bcmpmu_throttle_data *tdata, u8 channel,
 
 	if (mean)
 		temp_prev = interquartile_mean(temp_samples, i);
-	pr_throttle(FLOW,
-			"PMU Die Temp %d\n", temp_prev);
 
 	return temp_prev;
 
@@ -407,19 +406,30 @@ static void bcmpmu_throttle_algo(struct bcmpmu_throttle_data *tdata)
 	int lut_sz = tdata->pdata->temp_curr_lut_sz;
 	int temp, index;
 	int cc_curr;
-	bool cooling = false;
 
 	temp_curr_lut = tdata->pdata->temp_curr_lut;
 	temp = bcmpmu_throttle_get_temp(tdata, tdata->pdata->temp_adc_channel,
 			tdata->pdata->temp_adc_req_mode);
 
 	if (tdata->temp_algo_running) {
-		pr_throttle(FLOW,
+		pr_throttle(VERBOSE,
 		"Temp: %d, Zone: %d , Ibat Limit: %d, Throttle ON\n",
 		temp, tdata->zone_index,
 		(tdata->zone_index != -1) ?
 		temp_curr_lut[tdata->zone_index].curr : 0);
-	}
+
+		pr_throttle(FLOW,
+			"PMU Die Temp, Threshold Crossed: %d, Dir: %s, "
+			"Curr Temp: %d, Action: %s, Current Limit: %d\n",
+			temp_curr_lut[tdata->zone_index].temp,
+			tdata->cooling ? "Fall" : "Rise",
+			temp,
+			(tdata->zone_index == (lut_sz - 1)) ?
+				"Dis-Charging" : "Charging",
+			temp_curr_lut[tdata->zone_index].curr);
+	} else
+		pr_throttle(FLOW, "PMU Die Temp, Curr Temp: %d, State: OFF\n",
+			temp);
 
 	/* Make sure that the ADC temperature reading
 	 * is correct by debouncing
@@ -474,6 +484,7 @@ static void bcmpmu_throttle_algo(struct bcmpmu_throttle_data *tdata)
 			tdata->previous_index = index;
 			return;
 		}
+		tdata->cooling = false;
 	} else if (index < tdata->zone_index) {
 		if (temp < (temp_curr_lut[tdata->zone_index].temp -
 				tdata->pdata->hysteresis_temp))
@@ -487,7 +498,7 @@ static void bcmpmu_throttle_algo(struct bcmpmu_throttle_data *tdata)
 				tdata->temp_db_cnt);
 			return;
 		}
-		cooling = true;
+		tdata->cooling = true;
 	}
 
 	tdata->zone_index = index;
@@ -519,12 +530,12 @@ static void bcmpmu_throttle_algo(struct bcmpmu_throttle_data *tdata)
 
 	bcmpmu_set_chrgr_trim_default(tdata);
 	cc_curr = bcmpmu_get_icc_fc(tdata->bcmpmu);
-	if (cooling)
+	if (tdata->cooling)
 		bcmpmu_set_icc_fc(bcmpmu, temp_curr_lut[index].curr);
 	else if (cc_curr > temp_curr_lut[index].curr)
 		bcmpmu_set_icc_fc(bcmpmu, temp_curr_lut[index].curr);
 	else
-		pr_throttle(FLOW, "Already charging ar lower current\n");
+		pr_throttle(FLOW, "Already charging at lower current\n");
 
 }
 
@@ -1012,6 +1023,7 @@ static int __devinit bcmpmu_throttle_probe(struct platform_device *pdev)
 	tdata->acld_algo_finished = false;
 	tdata->temp_algo_running = false;
 	tdata->throttle_scheduled = false;
+	tdata->cooling = false;
 
 	tdata->throttle_wq =
 		create_singlethread_workqueue("bcmpmu_throttle_wq");
