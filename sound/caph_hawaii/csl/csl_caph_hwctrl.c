@@ -614,7 +614,6 @@ static void csl_caph_start_arm2sp(unsigned int i)
 	}
 
 	if (i == VORENDER_ARM2SP_INSTANCE1) {
-		CSL_ARM2SP_Init();
 		csl_arm2sp_set_arm2sp((UInt32) p_arm2sp->srOut,
 			(CSL_ARM2SP_PLAYBACK_MODE_t)p_arm2sp->playbackMode,
 			(CSL_ARM2SP_VOICE_MIX_MODE_t)p_arm2sp->mixMode,
@@ -625,7 +624,6 @@ static void csl_caph_start_arm2sp(unsigned int i)
 			CSL_ARM2SP_UL_AFTER_AUDIO_PROC,
 			p_arm2sp->hq);
 	} else {
-		CSL_ARM2SP2_Init();
 		csl_arm2sp_set_arm2sp2((UInt32) p_arm2sp->srOut,
 			(CSL_ARM2SP_PLAYBACK_MODE_t)p_arm2sp->playbackMode,
 			(CSL_ARM2SP_VOICE_MIX_MODE_t)p_arm2sp->mixMode,
@@ -2799,6 +2797,16 @@ static void csl_caph_start_blocks
 	/*ihf call, dsp starts dma.*/
 	if (!(path->source == CSL_CAPH_DEV_DSP_throughMEM &&
 		path->sink[sinkNo] == CSL_CAPH_DEV_IHF)) {
+		if ((path->source == CSL_CAPH_DEV_MEMORY &&
+			path->sink[sinkNo] == CSL_CAPH_DEV_DSP_throughMEM)) {
+			aTrace(LOG_AUDIO_CSL,
+				"%s:CSL_ARM2SP_Init for instance %d",
+					__func__, path->arm2sp_instance);
+			if (path->arm2sp_instance == VORENDER_ARM2SP_INSTANCE1)
+				CSL_ARM2SP_Init();
+			if (path->arm2sp_instance ==  VORENDER_ARM2SP_INSTANCE2)
+				CSL_ARM2SP2_Init();
+		}
 		for (i = 0; i < MAX_BLOCK_NUM; i++) {
 			dma = path->dma[sinkNo][i];
 			if (!dma)
