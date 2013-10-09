@@ -515,7 +515,7 @@ struct dwc_otg_hcd {
 	dwc_timer_t *conn_timer;
 
 	/* Default timeout for turning off Vbus if no connect */
-#define T_HOST_VBOFF					10000
+#define T_HOST_VBOFF					3000
 	/**
 	 * Wait in milliseconds for device to connect
 	 */
