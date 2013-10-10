@@ -1253,7 +1253,7 @@ static struct bcmpmu_throttle_pdata throttle_pdata = {
 	.temp_curr_lut_sz = ARRAY_SIZE(ys_05_temp_curr_lut),
 	/* ADC channel and mode selection */
 	.temp_adc_channel = PMU_ADC_CHANN_DIE_TEMP,
-	.temp_adc_req_mode = PMU_ADC_REQ_RTM_MODE,
+	.temp_adc_req_mode = PMU_ADC_REQ_SAR_MODE,
 	/* Registers to store/restore while throttling*/
 	.chrgr_trim_reg_lut = chrgr_def_trim_reg_lut,
 	.chrgr_trim_reg_lut_sz = ARRAY_SIZE(chrgr_def_trim_reg_lut),

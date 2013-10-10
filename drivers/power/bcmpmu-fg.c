@@ -1109,7 +1109,7 @@ static inline int bcmpmu_fg_get_batt_temp(struct bcmpmu_fg_data *fg)
 		retries = ADC_READ_TRIES;
 		while (retries--) {
 			ret = bcmpmu_adc_read(fg->bcmpmu, PMU_ADC_CHANN_NTC,
-					PMU_ADC_REQ_RTM_MODE, &result);
+					PMU_ADC_REQ_SAR_MODE, &result);
 			if (!ret)
 				break;
 			msleep(ADC_RETRY_DELAY);
@@ -1256,9 +1256,8 @@ static int bcmpmu_fg_get_load_comp_capacity(struct bcmpmu_fg_data *fg,
 	if (!fg->flags.init_capacity)
 		update_avg_sample_buff(fg);
 
-	pr_fg(FLOW, "vbat: %d, vbat_comp: %d ocv_cap: %d NTC Temp: %d\n",
-			fg->adc_data.volt, vbat_oc, capacity_percentage,
-			fg->adc_data.temp);
+	pr_fg(FLOW, "vbat: %d, vbat_comp: %d ocv_cap: %d\n",
+			fg->adc_data.volt, vbat_oc, capacity_percentage);
 
 	BUG_ON(capacity_percentage > 100);
 	return capacity_percentage;
