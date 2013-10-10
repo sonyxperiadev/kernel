@@ -419,9 +419,10 @@ static void bcmpmu_throttle_algo(struct bcmpmu_throttle_data *tdata)
 		temp_curr_lut[tdata->zone_index].curr : 0);
 
 		pr_throttle(FLOW,
-			"PMU Die Temp, Threshold Crossed: %d, Dir: %s, "
-			"Curr Temp: %d, Action: %s, Current Limit: %d\n",
-			temp_curr_lut[tdata->zone_index].temp,
+			"PMU Die Temp: Threshold Crossed: %d\n",
+				temp_curr_lut[tdata->zone_index].temp);
+		pr_throttle(FLOW,
+			"Dir: %s, Curr Temp: %d, Action: %s, Current Limit: %d\n",
 			tdata->cooling ? "Fall" : "Rise",
 			temp,
 			(tdata->zone_index == (lut_sz - 1)) ?

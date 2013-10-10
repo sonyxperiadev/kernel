@@ -297,7 +297,11 @@ static void tmon_poll_work(struct work_struct *ws)
 	poll_inx = tmon->poll_inx;
 	falling = pdata->thold[poll_inx].rising - pdata->falling;
 	if (curr_temp <= (falling + kona_tmon->hysteresis)) {
-		pr_info("%s: reached the polling temp %d\n", __func__, falling);
+		pr_info(KERN_ALERT "TMON_DRIVER: BBIC, Threshold Crossed: %d\n",
+						falling);
+		pr_info(KERN_ALERT "TMON_DRIVER: Dir: Fall, Curr Temp: %ld\n",
+						curr_temp);
+
 		/* updating threshold value and indexes*/
 		tmon_set_int_thold(tmon, pdata->thold[poll_inx].rising,
 				CELCIUS);
@@ -350,9 +354,11 @@ static irqreturn_t tmon_isr(int irq, void *drvdata)
 
 	BUG_ON(tmon->thresh_inx == INVALID_INX);
 	curr_temp = tmon_get_current_temp(CELCIUS, false);
-	pr_info(KERN_ALERT "SoC temperature threshold of %d exceeded."\
-			"Current temperature is %ld\n",
-	pdata->thold[tmon->thresh_inx].rising, curr_temp);
+
+	pr_info(KERN_ALERT "TMON_INTERRUPT: BBIC, Threshold Crossed: %d\n",
+					pdata->thold[tmon->thresh_inx].rising);
+	pr_info(KERN_ALERT "TMON_INTERRUPT: Dir: Rise, Curr Temp: %ld\n",
+					curr_temp);
 
 	/*Clear interrupt*/
 	writel(CLR_INT, pdata->base_addr + TMON_CFG_CLR_INT_OFFSET);
