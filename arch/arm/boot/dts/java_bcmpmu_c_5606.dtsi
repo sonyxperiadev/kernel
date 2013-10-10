@@ -81,10 +81,8 @@
 		 0xD0 0x24 0x3F 0
 		 /* IOSR1 LPM voltage - 1.8V */
 		 0xC4 0x3E 0x3f 0
-		 /* CSR LPM voltage - 0 V */
+		 /* CSR LPM voltage - 0.7 V */
 		 0xC1 0x0 0x3F 0
-		 /* PASRCTRL MobC00256738*/
-		 0x08 0x00 0x06 1
 		 0x0D 0x00 0xF0 1
 		 0x0E 0x00 0x3F 1
 		 /*otg boost ctrl1-2*/
@@ -118,7 +116,7 @@
 		compatible = "Broadcom,rgltr";
 		/*num_of_consumer_supp, consumer_supply, always_on, pc_map, initial_mode, boot_on req_volt(in uV)*/
 		/*pc_map = PMU_PC2, initial_mode = REGULATOR_MODE_STANDBY*/
-		rf   = "1", "rf", "1", "2", "8", "0", "0";
+		rf   = "1", "rf", "0", "2", "8", "0", "0";
 		/*pc_map = PMU_PC2|PMU_PC3, initial_mode = REGULATOR_MODE_IDLE*/
 		cam1 = "1", "cam1", "1", "6", "4", "0", "0";
 		/*pc_map = PMU_PC2|PMU_PC3, initial_mode = REGULATOR_MODE_IDLE*/
