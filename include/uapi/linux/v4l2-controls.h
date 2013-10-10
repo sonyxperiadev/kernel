@@ -745,6 +745,7 @@ enum v4l2_preemphasis {
 enum v4l2_flash_led_mode {
 	V4L2_FLASH_LED_MODE_NONE,
 	V4L2_FLASH_LED_MODE_FLASH,
+	V4L2_FLASH_LED_MODE_FLASH_AUTO,
 	V4L2_FLASH_LED_MODE_TORCH,
 };
 

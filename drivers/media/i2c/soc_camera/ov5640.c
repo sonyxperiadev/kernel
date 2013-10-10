@@ -191,11 +191,12 @@ struct ov5640 {
 	 */
 	int touch_focus;
 	v4l2_touch_area touch_area[OV5640_MAX_FOCUS_AREAS];
-	short flashmode;
+	enum v4l2_flash_led_mode flashmode;
 	short fireflash;
 };
 
-static int ov5640_set_flash_mode(int mode, struct i2c_client *client);
+static int ov5640_set_flash_mode(struct v4l2_ctrl *ctrl,
+				struct i2c_client *client);
 
 static struct ov5640 *to_ov5640(const struct i2c_client *client)
 {
@@ -1710,11 +1711,13 @@ static int ov5640_config_capture(struct v4l2_subdev *sd)
 	return ret;
 }
 
-static int ov5640_flash_control(struct i2c_client *client, int control)
+static int ov5640_flash_control(struct i2c_client *client,
+				enum v4l2_flash_led_mode control)
 {
 	int ret = 0;
+
 	switch (control) {
-	case FLASH_MODE_ON:
+	case V4L2_FLASH_LED_MODE_FLASH:
 		#ifdef CONFIG_VIDEO_ADP1653
 		adp1653_gpio_strobe(0);
 		adp1653_gpio_toggle(1);
@@ -1731,7 +1734,7 @@ static int ov5640_flash_control(struct i2c_client *client, int control)
 		as3643_set_ind_led(0x80, 900000);
 		#endif
 		break;
-	case FLASH_MODE_TORCH_ON:
+	case V4L2_FLASH_LED_MODE_TORCH:
 		#ifdef CONFIG_VIDEO_ADP1653
 		adp1653_gpio_toggle(1);
 		adp1653_gpio_strobe(0);
@@ -1748,17 +1751,7 @@ static int ov5640_flash_control(struct i2c_client *client, int control)
 		as3643_set_torch_flash(0x80);
 		#endif
 		break;
-	case FLASH_MODE_TORCH_OFF:
-		#ifdef CONFIG_VIDEO_ADP1653
-		adp1653_clear_all();
-		adp1653_gpio_toggle(0);
-		#endif
-		#ifdef CONFIG_VIDEO_AS3643
-		as3643_clear_all();
-		as3643_gpio_toggle(0);
-		#endif
-		break;
-	case FLASH_MODE_OFF:
+	case V4L2_FLASH_LED_MODE_NONE:
 	default:
 		#ifdef CONFIG_VIDEO_ADP1653
 		adp1653_clear_all();
@@ -1780,14 +1773,15 @@ static int ov5640_pre_flash(struct i2c_client *client)
 	struct ov5640 *ov5640 = to_ov5640(client);
 
 	ov5640->fireflash = 0;
-	if (FLASH_MODE_ON == ov5640->flashmode) {
+	if (V4L2_FLASH_LED_MODE_FLASH == ov5640->flashmode) {
 		ret = ov5640_flash_control(client, ov5640->flashmode);
 		ov5640->fireflash = 1;
-	} else if (FLASH_MODE_AUTO == ov5640->flashmode) {
+	} else if (V4L2_FLASH_LED_MODE_FLASH_AUTO == ov5640->flashmode) {
 		u8 average = 0;
 		ov5640_reg_read(client, 0x56a1, &average);
 		if ((average & 0xFF) < OV5640_FLASH_THRESHHOLD) {
-			ret = ov5640_flash_control(client, FLASH_MODE_ON);
+			ret = ov5640_flash_control(client,
+						V4L2_FLASH_LED_MODE_FLASH);
 			ov5640->fireflash = 1;
 		}
 	}
@@ -2307,6 +2301,11 @@ static int ov5640_s_ctrl(struct v4l2_ctrl *ctrl)
 	u8 ov_reg;
 	int ret = 0;
 
+	if (ctrl == NULL) {
+		dev_err(&client->dev, "%s: v4l2_ctrl is null\n", __func__);
+		return -EINVAL;
+	}
+
 	switch (ctrl->id) {
 	case V4L2_CID_BRIGHTNESS:
 
@@ -2660,7 +2659,7 @@ static int ov5640_s_ctrl(struct v4l2_ctrl *ctrl)
 			return ret;
 		break;
 	case V4L2_CID_FLASH_LED_MODE:
-		ov5640_set_flash_mode(ctrl->val, client);
+		ret = ov5640_set_flash_mode(ctrl, client);
 		break;
 
 	case V4L2_CID_CAM_PREVIEW_ONOFF:
@@ -2679,7 +2678,7 @@ static int ov5640_s_ctrl(struct v4l2_ctrl *ctrl)
 	case V4L2_CID_CAM_CAPTURE:
 		runmode = CAM_RUNNING_MODE_CAPTURE;
 		if (ov5640->fireflash) {
-			ov5640_flash_control(client, FLASH_MODE_ON);
+			ov5640_flash_control(client, V4L2_FLASH_LED_MODE_FLASH);
 			msleep(50);
 		}
 		ov5640_config_capture(sd);
@@ -2726,22 +2725,22 @@ static int ov5640_s_ctrl(struct v4l2_ctrl *ctrl)
 	return ret;
 }
 
-int set_flash_mode(int mode, struct ov5640 *ov5640)
+int set_flash_mode(enum v4l2_flash_led_mode mode, struct ov5640 *ov5640)
 {
 	if (ov5640->flashmode == mode)
 		return 0;
 
 #ifdef CONFIG_VIDEO_ADP1653
-	if ((mode == FLASH_MODE_OFF) || (mode == FLASH_MODE_TORCH_OFF)) {
-		if (ov5640->flashmode != FLASH_MODE_OFF) {
+	if (mode == V4L2_FLASH_LED_MODE_NONE) {
+		if (ov5640->flashmode != V4L2_FLASH_LED_MODE_NONE) {
 			adp1653_clear_all();
 			adp1653_gpio_toggle(0);
-			mode = FLASH_MODE_OFF;
+			mode = V4L2_FLASH_LED_MODE_NONE;
 		}
-	} else if (mode == FLASH_MODE_TORCH_ON) {
-		if ((ov5640->flashmode == FLASH_MODE_ON)
-		    || (ov5640->flashmode == FLASH_MODE_AUTO))
-			set_flash_mode(FLASH_MODE_OFF, ov5640);
+	} else if (mode == V4L2_FLASH_LED_MODE_TORCH) {
+		if ((ov5640->flashmode == V4L2_FLASH_LED_MODE_FLASH)
+		    || (ov5640->flashmode == V4L2_FLASH_LED_MODE_FLASH_AUTO))
+			set_flash_mode(V4L2_FLASH_LED_MODE_NONE, ov5640);
 		adp1653_gpio_toggle(1);
 		adp1653_gpio_strobe(0);
 		usleep_range(30, 31);
@@ -2750,10 +2749,10 @@ int set_flash_mode(int mode, struct ov5640 *ov5640)
 		/* Torch current no indicator LED */
 		adp1653_set_torch_flash(10);
 		adp1653_sw_strobe(1);
-	} else if (mode == FLASH_MODE_ON) {
-		if ((ov5640->flashmode == FLASH_MODE_TORCH_ON)
-		    || (ov5640->flashmode == FLASH_MODE_AUTO))
-			set_flash_mode(FLASH_MODE_OFF, ov5640);
+	} else if (mode == V4L2_FLASH_LED_MODE_FLASH) {
+		if ((ov5640->flashmode == V4L2_FLASH_LED_MODE_TORCH)
+		    || (ov5640->flashmode == V4L2_FLASH_LED_MODE_FLASH_AUTO))
+			set_flash_mode(V4L2_FLASH_LED_MODE_NONE, ov5640);
 		adp1653_gpio_strobe(0);
 		adp1653_gpio_toggle(1);
 		usleep_range(30, 31);
@@ -2762,10 +2761,10 @@ int set_flash_mode(int mode, struct ov5640 *ov5640)
 		/* Flash current indicator LED ON */
 		adp1653_set_torch_flash(28);
 		/* Strobing should hapen later */
-	} else if (mode == FLASH_MODE_AUTO) {
-		if ((ov5640->flashmode == FLASH_MODE_TORCH_ON)
-		    || (ov5640->flashmode == FLASH_MODE_ON))
-			set_flash_mode(FLASH_MODE_OFF, ov5640);
+	} else if (mode == V4L2_FLASH_LED_MODE_FLASH_AUTO) {
+		if ((ov5640->flashmode == V4L2_FLASH_LED_MODE_TORCH)
+		    || (ov5640->flashmode == V4L2_FLASH_LED_MODE_FLASH))
+			set_flash_mode(V4L2_FLASH_LED_MODE_NONE, ov5640);
 		adp1653_gpio_strobe(0);
 		adp1653_gpio_toggle(1);
 		usleep_range(30, 31);
@@ -2781,20 +2780,20 @@ int set_flash_mode(int mode, struct ov5640 *ov5640)
 #endif
 
 #ifdef CONFIG_VIDEO_AS3643
-	if ((mode == FLASH_MODE_OFF) || (mode == FLASH_MODE_TORCH_OFF)) {
-		if (ov5640->flashmode != FLASH_MODE_OFF) {
+	if (mode == V4L2_FLASH_LED_MODE_NONE) {
+		if (ov5640->flashmode != V4L2_FLASH_LED_MODE_NONE) {
 			as3643_clear_all();
 			as3643_gpio_toggle(0);
 		}
-	} else if (mode == FLASH_MODE_TORCH_ON) {
+	} else if (mode == V4L2_FLASH_LED_MODE_TORCH) {
 		as3643_gpio_toggle(1);
 		usleep_range(25, 30);
 		as3643_set_torch_flash(0x80);
-	} else if (mode == FLASH_MODE_ON) {
+	} else if (mode == V4L2_FLASH_LED_MODE_FLASH) {
 		as3643_gpio_toggle(1);
 		usleep_range(25, 30);
 		as3643_set_ind_led(0x80, 900000);
-	} else if (mode == FLASH_MODE_AUTO) {
+	} else if (mode == V4L2_FLASH_LED_MODE_FLASH_AUTO) {
 		u8 average;
 		struct i2c_client *client =
 				v4l2_get_subdevdata(&(ov5640->subdev));
@@ -2813,13 +2812,23 @@ int set_flash_mode(int mode, struct ov5640 *ov5640)
 	return 0;
 }
 
-static int ov5640_set_flash_mode(int mode, struct i2c_client *client)
+static int ov5640_set_flash_mode(struct v4l2_ctrl *ctrl,
+				struct i2c_client *client)
 {
 	int ret = 0;
 	struct ov5640 *ov5640 = to_ov5640(client);
+	enum v4l2_flash_led_mode mode;
+
+	if (ctrl)
+		mode = ctrl->val;
+	else {
+		dev_err(&client->dev, "v4l2_ctrl is null\n");
+		return -EINVAL;
+	}
 
 	switch (mode) {
 	case V4L2_FLASH_LED_MODE_FLASH:
+	case V4L2_FLASH_LED_MODE_FLASH_AUTO:
 		ov5640->flashmode = mode;
 		break;
 	case V4L2_FLASH_LED_MODE_TORCH:
@@ -2962,7 +2971,7 @@ static int ov5640_init(struct i2c_client *client)
 	ov5640->focus_mode = FOCUS_MODE_AUTO;
 	ov5640->touch_focus = 0;
 	atomic_set(&ov5640->focus_status, OV5640_NOT_FOCUSING);
-	ov5640->flashmode = FLASH_MODE_OFF;
+	ov5640->flashmode = V4L2_FLASH_LED_MODE_NONE;
 	ov5640->fireflash = 0;
 
 	dev_dbg(&client->dev, "Sensor initialized\n");
