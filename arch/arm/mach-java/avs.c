@@ -33,7 +33,10 @@
 #include <linux/regulator/consumer.h>
 #include <plat/kona_pm.h>
 #include <linux/mfd/bcmpmu59xxx.h>
+
+#ifdef CONFIG_KONA_TMON
 #include <linux/broadcom/kona_tmon.h>
+#endif
 
 #ifdef CONFIG_DEBUG_FS
 #include <linux/debugfs.h>
@@ -280,9 +283,14 @@ static ssize_t avs_debug_read_irdrop(struct file *file, char __user
 	int irdrop_count = avs_get_irdrop_osc_count(&avs_info);
 	/* Temperature in raw/celcius, instantaneous/avg */
 	if (irdrop_count > 0)
+#ifdef CONFIG_KONA_TMON
 		len += snprintf(buf + len, sizeof(buf) - len,
 			"Reading IRDROP Osc count now @ %ld Celcius: %d\n",
 			tmon_get_current_temp(true, false), irdrop_count);
+#else
+		len += snprintf(buf + len, sizeof(buf) - len,
+			"Reading IRDROP Osc count now: %d\n", irdrop_count);
+#endif
 	else
 		len += snprintf(buf + len, sizeof(buf) - len,
 			"error reading the register\n");
