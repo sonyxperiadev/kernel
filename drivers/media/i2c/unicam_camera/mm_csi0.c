@@ -879,7 +879,6 @@ int mm_csi0_stop_rx(void)
 	u32 val;
 	unsigned int i;
 
-	enable_done = 0;
 	rx_init_done = 0;
 
 	BRCM_WRITE_REG_FIELD(base, CAM_ANA, DDL, 1);
