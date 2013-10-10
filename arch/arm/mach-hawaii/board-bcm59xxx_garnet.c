@@ -1088,9 +1088,9 @@ static struct batt_cutoff_cap_map ys_05_cutoff_cap_lut[] = {
 
 #if defined(CONFIG_BCMPMU_THERMAL_THROTTLE)
 static struct batt_temp_curr_map ys_05_temp_curr_lut[] = {
-		{400, 510},
-		{500, 270},
-		{580,  0},
+		{540, 510},
+		{580, 270},
+		{630,  0},
 };
 #endif
 
