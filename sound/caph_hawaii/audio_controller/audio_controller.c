@@ -184,7 +184,6 @@ static bool sExtraVol;
 static AudioApp_t sForcedApp = AUDIO_APP_DEFAULT;
 
 static struct regulator *vibra_reg;
-static bool vibra_enabled = FALSE;
 
 /*wait in us, to avoid hs/ihf pop noise*/
 static int wait_bb_on;
@@ -3639,7 +3638,6 @@ void AUDCTRL_EnableBypassVibra(UInt32 Strength, int direction)
 {
 	UInt32 vib_power;
 	int ret = 0;
-	vibra_enabled = TRUE;
 
 	aTrace(LOG_AUDIO_CNTLR, "AUDCTRL_EnableBypassVibra");
 
@@ -3684,7 +3682,6 @@ void AUDCTRL_DisableBypassVibra(void)
 	ctl_parm.parm_hwCtl.arg2 = 0;
 	ctl_parm.parm_hwCtl.arg3 = 0;
 	ctl_parm.parm_hwCtl.arg4 = 0;
-	vibra_enabled = FALSE;
 
 	AUDIO_Ctrl_Trigger(ACTION_AUD_HwCtl, &ctl_parm.parm_hwCtl, NULL, 0);
 }
@@ -3834,14 +3831,13 @@ int AUDCTRL_HardwareControl(AUDCTRL_HW_ACCESS_TYPE_en_t access_type,
 	hw_control[access_type][3] = arg4;
 
 	if (access_type == AUDCTRL_HW_DISABLE_CLK) {
-		aTrace(LOG_AUDIO_CNTLR,
-				       "AUDCTRL_HardwareControl: "
-				       "vibra_enabled = %d\n", vibra_enabled);
-		if (csl_caph_hwctrl_allPathsDisabled() == TRUE
-						&& !vibra_enabled)
+		if (csl_caph_hwctrl_allPathsDisabled() == TRUE)
 			csl_caph_ControlHWClock(FALSE);
 
-		if (vibra_reg && !vibra_enabled) {
+		aTrace(LOG_AUDIO_CNTLR,
+			       "Disable clock after vibra\n");
+
+		if (vibra_reg) {
 			int ret;
 			ret = regulator_disable(vibra_reg);
 			if (ret != 0)

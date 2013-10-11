@@ -1448,19 +1448,13 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 		{
 #ifdef USE_HR_TIMER
 			int isHRTimActive = 0;
-			int ret_val = 0;
 			isHRTimActive = hrtimer_active(&hr_timer);
 			if (isHRTimActive) {
 				aTrace(LOG_AUDIO_CNTLR,
 				       "Hrtimer cancel is going to be called"
 				       "from Disable Vibra\n");
 
-				ret_val = hrtimer_cancel(&hr_timer);
-				if (ret_val) {
-					aTrace(LOG_AUDIO_CNTLR,
-					       "ACTION_AUD_DisableByPassVibra\n");
-					AUDCTRL_DisableBypassVibra();
-				}
+				hrtimer_cancel(&hr_timer);
 			}
 #else
 			if (gpVibratorTimer) {
@@ -1469,8 +1463,12 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 			}
 #endif
 			/* stop it */
+			aTrace(LOG_AUDIO_CNTLR,
+			       "ACTION_AUD_DisableByPassVibra\n");
 #ifdef CONFIG_AUDIO_S2
 			PCM_Vibra_Gen_Stop();
+#else
+			AUDCTRL_DisableBypassVibra();
 #endif
 		}
 		break;
