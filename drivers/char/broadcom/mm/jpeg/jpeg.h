@@ -12,14 +12,14 @@ the GPL, without Broadcom's express prior written consent.
 *******************************************************************************/
 #ifndef _JPEG_H_
 #define _JPEG_H_
-#define jpe_outb_size	(10 * 1024 * 1024)
 #define JPEG_DEV_NAME	"mm_jpeg"
 /* It has a structure for the values passed from the user code to kernel*/
 struct jpeg_value {
 	unsigned int h;
 	unsigned int v;
 	unsigned int p;
-	unsigned int hardware_add_p;
+	unsigned int hardware_add_out_p;
+	unsigned int out_size_p;
 	unsigned int hardware_add_Y;
 	unsigned int hardware_add_U;
 	unsigned int hardware_add_V;
