@@ -182,7 +182,6 @@ static bool sExtraVol;
 static AudioApp_t sForcedApp = AUDIO_APP_DEFAULT;
 
 static struct regulator *vibra_reg;
-static bool vibra_enabled = FALSE;
 
 /*wait in us, to avoid hs/ihf pop noise*/
 static int wait_bb_on;
@@ -3623,7 +3622,6 @@ void AUDCTRL_EnableBypassVibra(UInt32 Strength, int direction)
 {
 	UInt32 vib_power;
 	int ret = 0;
-	vibra_enabled = TRUE;
 
 	aTrace(LOG_AUDIO_CNTLR, "AUDCTRL_EnableBypassVibra");
 
