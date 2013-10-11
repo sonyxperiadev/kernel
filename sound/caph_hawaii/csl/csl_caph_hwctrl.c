@@ -5131,6 +5131,12 @@ void csl_caph_hwctrl_vibrator(AUDDRV_VIBRATOR_MODE_Enum_t mode,
 		chal_audio_vibra_write_fifo(lp_handle, &strength, 1, TRUE);
 		chal_audio_vibra_set_dac_pwr(lp_handle, enable_vibrator);
 		chal_audio_vibra_enable(lp_handle, enable_vibrator);
+
+		/*shutdown all audio clock if no audio activity, at last*/
+		if (!enable_vibrator) {
+			if (csl_caph_hwctrl_allPathsDisabled() == TRUE)
+				csl_caph_ControlHWClock(FALSE);
+		}
 	} else {
 		/*PCM mode*/
 
