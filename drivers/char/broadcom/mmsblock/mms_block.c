@@ -142,7 +142,7 @@ const struct file_operations white_list_fops = {
 static int __init mms_block_init(void)
 {
 #ifdef CONFIG_PROC_FS
-	if (!proc_create("mms_white_list", 0666, NULL, &white_list_fops))
+	if (!proc_create("mms_white_list", 0660, NULL, &white_list_fops))
 		return -ENOMEM;
 #endif
 	g_whitelistnode = NULL;
