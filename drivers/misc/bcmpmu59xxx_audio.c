@@ -740,6 +740,7 @@ void bcmpmu_ihf_power(bool on)
 		/* Enable auto sequence for IHF power up and power down */
 		bcmpmu->read_dev(bcmpmu, PMU_REG_IHFPOP, &temp);
 		temp |= IHFAUTO_SEQ;
+		temp &= ~IHFPOP_BYPASS;
 		bcmpmu->write_dev(bcmpmu, PMU_REG_IHFPOP, temp);
 
 		bcmpmu->read_dev(bcmpmu, PMU_REG_IHFLDO, &temp);
