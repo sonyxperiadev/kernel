@@ -480,6 +480,15 @@ config SENSORS_STK31XX
           if you don't need this driver,
 	  say N.
 
+config SENSORS_BH1721FVC
+	bool "bh1721fvc ambient light driver"
+	depends on I2C
+	default n
+	help
+		Say yes here, if you want to include
+		Rohm bh1721fvc sensor driver.
+		if you don't need this driver, say N.
+
 config SENSORS_HM8001
         bool "sensor proximity & light hm8001 driver"
         depends on I2C
