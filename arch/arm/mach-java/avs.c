@@ -28,6 +28,7 @@
 #include <mach/io_map.h>
 
 #include <mach/memory.h>
+#include <mach/cpu.h>
 #include <linux/delay.h>
 #include <plat/pi_mgr.h>
 #include <linux/regulator/consumer.h>
@@ -132,7 +133,8 @@ static int avs_print_opp_info(struct avs_info *avs_inf_ptr)
 	avs_dbg(AVS_LOG_INIT, "VDDVAR Retn: 0x%02x, VDDFIX Retn: 0x%02x\n",
 			avs_inf_ptr->avs_handshake->vddvar_ret,
 			avs_inf_ptr->avs_handshake->vddfix_ret);
-	avs_dbg(AVS_LOG_INIT, "---------------------------------\n");
+	avs_dbg(AVS_LOG_INIT,
+		"--------------------------------------------------\n");
 	return 0;
 }
 
@@ -443,6 +445,7 @@ static int panic_event(struct notifier_block *this, unsigned long event,
 		return 0;
 	avs_print_opp_info(&avs_info);
 	pr_info("ARM Cur OPP: %u", pi_get_active_opp(PI_MGR_PI_ID_ARM_CORE));
+	cpu_info_verbose();
 	has_panicked = 1;
 	return 0;
 }
