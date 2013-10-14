@@ -562,7 +562,6 @@ static int gc2035_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 	if (gc2035->initNeeded) {
 		ret = gc2035_reg_writes(client, configscript_common1);
 		printk(KERN_INFO "gc2035 init configscript_common1!");
-		gc2035->initNeeded = 0;
 	}
 
 	if (ret) {
@@ -1211,7 +1210,16 @@ static int gc2035_g_skip_frames(struct v4l2_subdev *sd, u32 *frames)
 {
 	/* Quantity of initial bad frames to skip. Revisit. */
 	/*Waitting for AWB stability,  avoid green color issue*/
-	*frames = 2;
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	struct gc2035 *gc2035 = to_gc2035(client);
+	if (gc2035->initNeeded) {
+		/* frames need to be dropped for camera power on */
+		*frames = 6;
+		gc2035->initNeeded = 0;
+	} else {
+		/* frames need to be dropped for camera mode switch */
+		*frames = 2;
+	}
 
 	return 0;
 }
