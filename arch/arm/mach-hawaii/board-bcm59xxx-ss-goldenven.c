@@ -59,8 +59,8 @@ static int bcmpmu_exit_platform_hw(struct bcmpmu59xxx *bcmpmu);
 static struct bcmpmu59xxx_rw_data __initdata register_init_data[] = {
 /* mask 0x00 is invalid value for mask */
 	/* pin mux selection for pc3 and simldo1
-	 * AUXONb Wakeup disabled */
-	{.addr = PMU_REG_GPIOCTRL1, .val = 0x75, .mask = 0xFF},
+	 * AUXONb Wakeup enabled */
+	{.addr = PMU_REG_GPIOCTRL1, .val = 0xF5, .mask = 0xFF},
 	/*  enable PC3 function */
 	{.addr = PMU_REG_GPIOCTRL2, .val = 0x0E, .mask = 0xFF},
 	/* Selecting 0.87V */

@@ -94,6 +94,11 @@ static struct bcmpmu59xxx_rw_data __initdata register_init_data[] = {
 	/*  ICCMAX to 1500mA*/
 	{.addr = PMU_REG_MBCCTRL8, .val = 0x0B, .mask = 0xFF},
 
+	/*  TCXCTRL*/
+	{.addr = PMU_REG_TCXLDOCTRL, .val = 0xB8, .mask = 0xFF},
+
+	/* set USBOV to 8V */
+	{.addr = PMU_REG_CMPCTRL4, .val = 0x21, .mask = 0xFF},
 	/* NTC Hot Temperature Comparator*/
 	{.addr = PMU_REG_CMPCTRL5, .val = 0x01, .mask = 0xFF},
 	/* NTC Hot Temperature Comparator*/
@@ -122,8 +127,13 @@ static struct bcmpmu59xxx_rw_data __initdata register_init_data[] = {
 /* TODO regulator */
 	{.addr = PMU_REG_FG_EOC_TH, .val = 0x64, .mask = 0xFF},
 
+#if defined(CONFIG_MACH_HAWAII_SS_LOGANDS_REV01)
+	/* Logan rev01 Xtal RTC = 18pF shows 32768.12Hz */
+	{.addr = PMU_REG_RTC_C2C1_XOTRIM, .val = 0x99, .mask = 0xFF},
+#else
 	/* Logan rev02 Xtal RTC = 13pF shows 32767.93Hz */
-	{.addr = PMU_REG_RTC_C2C1_XOTRIM, .val = 0x22, .mask = 0xFF},
+	{.addr = PMU_REG_RTC_C2C1_XOTRIM, .val = 0x00, .mask = 0xFF},
+#endif
 	{.addr = PMU_REG_FGOCICCTRL, .val = 0x02, .mask = 0xFF},
 	 /* FG power down */
 	{.addr = PMU_REG_FGCTRL1, .val = 0x00, .mask = 0xFF},
@@ -387,7 +397,7 @@ static struct regulator_init_data bcm59xxx_usbldo_data = {
 			.max_uV = 3300000,
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
-			.always_on = 0,
+			.always_on = 1,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(usb_supply),
 	.consumer_supplies = usb_supply,
@@ -728,6 +738,12 @@ struct bcmpmu59xxx_regulator_init_data
 			.pc_pins_map = PCPIN_MAP_ENC(0, PMU_PC2|PMU_PC3),
 			.name = "aud",
 			.req_volt = 0,
+#if defined(CONFIG_MACH_HAWAII_SS_COMMON)
+			.reg_value = 0x01,
+			.reg_value2 = 0x05, /* 0x11 in Capri */
+			.off_value = 0x02,
+			.off_value2 = 0x0a, /* 0x22 in Capri */
+#endif
 		},
 
 		[BCMPMU_REGULATOR_MICLDO] = {
@@ -784,11 +800,7 @@ struct bcmpmu59xxx_regulator_init_data
 			.name = "tcx",
 			.req_volt = 0,
 		},
-	#if defined(CONFIG_MACH_HAWAII_SS_LOGAN_REV01)	\
-			|| defined(CONFIG_MACH_HAWAII_SS_LOGAN_REV02) \
-			|| defined(CONFIG_MACH_HAWAII_SS_LOGANDS_REV00) \
-			|| defined(CONFIG_MACH_HAWAII_SS_LOGANDS_REV01) \
-			|| defined(CONFIG_MACH_HAWAII_SS_LOGAN_COMBINED)
+	#if 1 /* defined(CONFIG_MACH_HAWAII_SS_LOGAN_REV01) */
 		[BCMPMU_REGULATOR_LVLDO1] = {
 			.id = BCMPMU_REGULATOR_LVLDO1, /* CAM0_1V8 */
 			.initdata = &bcm59xxx_lvldo1_data,

@@ -15,7 +15,7 @@
 */
 #ifndef __SPA_POWER_H
 #define __SPA_POWER_H
-// +++ for header files
+/* +++ for header files */
 
 typedef enum
 {
@@ -53,7 +53,7 @@ typedef enum
 #define SPA_BATT_UPDATE_INTERVAL 30000
 #define SPA_BATT_UPDATE_INTERVAL_WHILE_CHARGING 5000
 
-// Init progress, descending steps.
+/* Init progress, descending steps. */
 enum
 {
 	SPA_INIT_PROGRESS_STEP0,
@@ -64,11 +64,11 @@ enum
 	SPA_INIT_PROGRESS_STEP5,
 };
 
-#define SPA_INIT_PROGRESS_START SPA_INIT_PROGRESS_STEP5 
+#define SPA_INIT_PROGRESS_START SPA_INIT_PROGRESS_STEP5
 #define SPA_INIT_PROGRESS_DONE SPA_INIT_PROGRESS_STEP0
 #define SPA_INIT_PROGRESS_DURATION 10000 // 10 SECONDS
 
-// For charging status, more detail 
+/* For charging status, more detail */
 enum
 {
 	SPA_STATUS_NONE, // no additional status.
@@ -122,7 +122,7 @@ enum
 		battery information update cycle
 */
 
-typedef struct 
+typedef struct
 {
 	unsigned int phase; // discharging, charging, suspend, full charge and discharge, full charge and recharge, suspend
 	unsigned int status;

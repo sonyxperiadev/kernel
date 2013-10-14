@@ -44,7 +44,7 @@ struct spa_batt_status
         int lp_charging;
         int charging_source;
 
-	
+
 		int ac_online;
 		int usb_online;
 };
@@ -316,7 +316,7 @@ __setup("lpcharge=",get_boot_mode);
 int spa_ps_init(struct platform_device *pdev)
 {
 	int ret=0;
-	
+
 	struct spa_ps *spa_ps;
 
 	printk("%s : spa_ps start\n", __func__);

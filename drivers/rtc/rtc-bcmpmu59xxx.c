@@ -29,6 +29,9 @@
 static int dbg_mask = BCMPMU_PRINT_ERROR |
 		BCMPMU_PRINT_INIT | BCMPMU_PRINT_DATA;
 
+#define SEC_YEAR_BASE 			13  /* 2013 */
+
+static void bcmpmu_rtc_time_fixup(struct device *dev);
 #define pr_rtc(debug_level, args...) \
 	do { \
 		if (dbg_mask & BCMPMU_PRINT_##debug_level) { \
@@ -557,6 +560,7 @@ static int __devinit bcmpmu_rtc_probe(struct platform_device *pdev)
 	if (val == 0) {
 		bcmpmu->write_dev(bcmpmu, PMU_REG_RTCDT, 1);
 		bcmpmu->write_dev(bcmpmu, PMU_REG_RTCYR, 0);
+		bcmpmu_rtc_time_fixup(&pdev->dev);
 	}
 
 	ret = device_create_file(&rdata->rtc->dev, &dev_attr_dbgmask);
@@ -590,6 +594,17 @@ static int __devexit bcmpmu_rtc_remove(struct platform_device *pdev)
 #endif
 	kfree(bcmpmu->rtcinfo);
 	return 0;
+}
+
+
+static void bcmpmu_rtc_time_fixup(struct device *dev)
+{
+	struct rtc_time current_rtc_time;
+	memset(&current_rtc_time, 0 , sizeof(struct rtc_time));
+
+	bcmpmu_read_time(dev, &current_rtc_time);
+	current_rtc_time.tm_year += SEC_YEAR_BASE;
+	bcmpmu_set_time(dev, &current_rtc_time);
 }
 
 static int bcmpmu_rtc_suspend(struct platform_device *pdev, pm_message_t state)
