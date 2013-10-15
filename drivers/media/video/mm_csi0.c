@@ -240,6 +240,8 @@ int mm_csi0_set_afe()
 	else
 		BRCM_WRITE_REG(MM_CFG_BASE, MM_CFG_CSI1_LDO_CTL, 0x5A00000D);
 
+	udelay(100);
+
 	/* CSI1 uses CSI0 clocks and dividers */
 
 	/* point base to mm_csi0 base */
@@ -335,7 +337,7 @@ int mm_csi0_set_dig_phy(struct lane_timing *timing)
 		/* DLT1 0x8 DLT2 and DLT3 = 0 */
 	}
 	/* The OV5640 driver to send the correct timings */
-	BRCM_WRITE_REG_FIELD(base, CAM_CLK, CLTRE, 1);
+	BRCM_WRITE_REG_FIELD(base, CAM_CLK, CLTRE, term);
 	BRCM_WRITE_REG_FIELD(base, CAM_DAT0, DLTREN, term);
 	if (cam_state.lanes == CSI2_DUAL_LANE)
 		BRCM_WRITE_REG_FIELD(base, CAM_DAT1, DLTREN, term);
@@ -623,7 +625,7 @@ int mm_csi0_buffering_mode(enum buffer_mode bmode)
 	} else {
 		cam_state.db_en = 0;
 		if (bmode == BUFFER_TRIGGER) {
-			pr_debug("Trigger Mode set");
+			pr_debug("Trigger Mode set\n");
 			cam_state.trigger = 1;
 		} else
 			cam_state.trigger = 0;
@@ -687,12 +689,6 @@ int mm_csi0_update_addr(struct buffer_desc *im0, struct buffer_desc *im1,
 	BRCM_WRITE_REG_FIELD(base, CAM_DBCTL, BUF0_IE, 0);
 	BRCM_WRITE_REG_FIELD(base, CAM_DBCTL, BUF1_IE, 0);
 	BRCM_WRITE_REG_FIELD(base, CAM_MISC,  DIS_DB_IE, 1);
-	if (cam_state.trigger) {
-		pr_info("%d\n ", __LINE__);
-		BRCM_WRITE_REG_FIELD(base, CAM_ICTL, FCM, 0x1);
-	}
-	else
-		BRCM_WRITE_REG_FIELD(base, CAM_ICTL, FCM, 0x0);
 
 	/* Check the logic above again */
 	/* register prog start */
@@ -796,7 +792,6 @@ int mm_csi0_trigger_cap(void)
 	u32 base = V_BASE;
 
 	if (cam_state.trigger) {
-		BRCM_WRITE_REG_FIELD(base, CAM_ICTL, FCM, 0x1);
 		BRCM_WRITE_REG_FIELD(base, CAM_ICTL, TFC, 0x1);
 		return 0;
 	} else {
@@ -838,11 +833,11 @@ int mm_csi0_enable_unicam(void)
 
 	BRCM_WRITE_REG(base, CAM_ISTA, BRCM_READ_REG(base, CAM_ISTA));
 	BRCM_WRITE_REG(base, CAM_STA, BRCM_READ_REG(base, CAM_STA));
-/*
+
 	if (cam_state.trigger)
 		BRCM_WRITE_REG_FIELD(base, CAM_ICTL, FCM, 0x1);
 	else
-		BRCM_WRITE_REG_FIELD(base, CAM_ICTL, FCM, 0x0); */
+		BRCM_WRITE_REG_FIELD(base, CAM_ICTL, FCM, 0x0);
 	BRCM_WRITE_REG_FIELD(base, CAM_ANA, DDL, 1);
 
 	BRCM_WRITE_REG_FIELD(base, CAM_CLK, CLPD, 0);
