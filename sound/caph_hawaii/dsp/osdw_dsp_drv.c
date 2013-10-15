@@ -212,7 +212,8 @@ static irqreturn_t rip_isr(int irq, void *dev_id)
 ******************************************************************************/
 static void dsp_thread_proc(unsigned long data)
 {
-	AP_ProcessStatus();
+	if (ap_shared_mem)
+		AP_ProcessStatus();
 
 	enable_irq(COMMS_SUBS6_IRQ);
 
