@@ -1156,6 +1156,10 @@ static Result_t AUDIO_DRIVER_ProcessCaptureVoiceCmd(AUDIO_DDRIVER_t *aud_drv,
 			UInt32 speech_mode = CSL_VP_SPEECH_MODE_LINEAR_PCM_8K;
 			VOCAPTURE_start_t capt_start;
 
+			if (AUDCTRL_GetCPResetState() ||
+				AUDCTRL_GetAudioPathResetPendingState())
+				return RESULT_ERROR;
+
 			if (pCtrlStruct != NULL)
 				voiceRecStr = (voice_rec_t *) pCtrlStruct;
 			else

@@ -206,7 +206,7 @@ static CHAL_HANDLE lp_handle;
 static int en_lpbk_pcm, en_lpbk_i2s;
 static int rec_pre_call;
 static int dsp_path;
-
+static Boolean cp_reset = FALSE;
 
 static CAPH_BLOCK_t caph_block_list[LIST_NUM][MAX_PATH_LEN] = {
 	/*the order must match CAPH_LIST_t*/
@@ -284,7 +284,6 @@ static void csl_caph_hwctrl_tdm_config(
 			CSL_CAPH_HWConfig_Table_t *path, int sinkNo);
 static void csl_caph_hwctrl_pcm_stop_tx(CSL_CAPH_PathID pathID, UInt8 channel);
 
-/*static void csl_caph_hwctrl_SetDSPInterrupt(void);*/
 /******************************************************************************
  * local function definitions
  ******************************************************************************/
@@ -418,7 +417,7 @@ static int csl_caph_hwctrl_FindDma(int ch, int myPathID)
  * Function Name: csl_caph_hwctrl_SetDSPInterrupt
  * Description: Enable the DSP interrupt in BMINTC block
  */
-static void csl_caph_hwctrl_SetDSPInterrupt(void)
+void csl_caph_hwctrl_SetDSPInterrupt(void)
 {
 	UInt32 value;
 	char *reg;
@@ -722,6 +721,11 @@ void csl_caph_arm2sp_set_mixmode(int type, int value)
 void csl_caph_dspcb(int path)
 {
 	dsp_path = path;
+}
+
+void csl_caph_hwctrl_reset_dsp_path(void)
+{
+	dsp_path = 0;
 }
 
 /*
@@ -1739,7 +1743,9 @@ static void csl_caph_hwctrl_remove_blocks(CSL_CAPH_PathID pathID,
 		path->sink[sinkNo] == CSL_CAPH_DEV_DSP_throughMEM) ||
 		(path->source == CSL_CAPH_DEV_FM_RADIO &&
 		 path->sink[sinkNo] == CSL_CAPH_DEV_DSP_throughMEM)) {
-		csl_caph_release_arm2sp(path->arm2sp_instance);
+		/*check for CP reset state*/
+		if (!csl_caph_get_cpreset())
+			csl_caph_release_arm2sp(path->arm2sp_instance);
 	}
 #endif
 	for (i = startOffset; i < MAX_PATH_LEN; i++) {
@@ -3815,8 +3821,10 @@ void csl_caph_hwctrl_init(void)
 		clkIDCAPH[i] = ERR_PTR(-ENODEV);
 	for (i = 0; i < MAX_SSP_CLOCK_NUM; i++)
 		clkIDSSP[i] = ERR_PTR(-ENODEV);
+	Boolean bClk = csl_caph_QueryHWClock();
 
-	csl_caph_ControlHWClock(TRUE);
+	if (!bClk)
+		csl_caph_ControlHWClock(TRUE);
 
 	memset(&addr, 0, sizeof(addr));
 	addr.cfifo_baseAddr = (UInt32)CFIFO_BASE_ADDR1;
@@ -3919,7 +3927,8 @@ void csl_caph_hwctrl_init(void)
 		(addr.srcmixer_baseAddr, (UInt32)caph_intc_handle);
 	lp_handle = csl_caph_audioh_init(addr.audioh_baseAddr,
 		addr.sdt_baseAddr);
-	csl_caph_ControlHWClock(FALSE);
+	if (!bClk)
+		csl_caph_ControlHWClock(FALSE);
 	memset(&arm2spCfg, 0, sizeof(arm2spCfg));
 	return;
 }
@@ -6101,4 +6110,23 @@ void csl_caph_SetTuningFlag(int flag)
 int csl_caph_TuningFlag(void)
 {
 	return audio_tuning_flag;
+}
+
+/****************************************************************************
+*
+*  Description: Get CP reset status
+*
+*****************************************************************************/
+Boolean csl_caph_get_cpreset(void)
+{
+	return cp_reset;
+}
+/****************************************************************************
+*
+*  Description: Set CP reset status
+*
+*****************************************************************************/
+void csl_caph_set_cpreset(Boolean status)
+{
+	cp_reset = status;
 }

@@ -330,7 +330,7 @@ void AUDCTRL_EnableTelephony(AUDIO_SOURCE_Enum_t source, AUDIO_SINK_Enum_t sink)
 		return;
 
 	if (audioPathResetPending) {
-		csl_caph_hwctrl_init();
+		csl_caph_hwctrl_SetDSPInterrupt();
 #if defined(CONFIG_BCM_MODEM)
 		DSPDRV_Init();
 #endif
@@ -417,6 +417,8 @@ void AUDCTRL_DisableTelephony(void)
 {
 	aTrace(LOG_AUDIO_CNTLR, "AUDCTRL_DisableTelephony\n");
 
+	if (cpReset || audioPathResetPending)
+		return;
 	/* continues speech playback when end the phone call.
 	   continues speech recording when end the phone call.
 	   if ( FALSE==vopath_enabled && FALSE==DspVoiceIfActive_DL()\
@@ -463,6 +465,8 @@ void AUDCTRL_Telephony_RateChange(unsigned int sample_rate)
 	int bNeedDualMic;
 	aTrace(LOG_AUDIO_CNTLR, "%s sample_rate %d-->%d",
 	       __func__, voiceCallSampleRate, sample_rate);
+	if (cpReset || audioPathResetPending)
+		return;
 
 	if (voiceCallSampleRate == sample_rate)
 		return;
@@ -566,6 +570,8 @@ void AUDCTRL_HandleCPReset(Boolean cp_reset)
 
 	if (cp_reset) {
 		cpReset = cp_reset;
+		csl_caph_set_cpreset(cp_reset);
+		csl_caph_hwctrl_reset_dsp_path();
 		if (bInVoiceCall == TRUE) {
 			aTrace(LOG_AUDIO_CNTLR,
 			       "In voice call, cp reset start\n");
@@ -582,7 +588,9 @@ void AUDCTRL_HandleCPReset(Boolean cp_reset)
 
 			voiceCallSpkr = AUDIO_SINK_UNDEFINED;
 			voiceCallMic = AUDIO_SOURCE_UNDEFINED;
-
+			/*Set playback Xrun here to restart play path*/
+			if (playbackPathID)
+				AUDCTRL_SetRestartPlaybackFlag(TRUE);
 		}
 #if defined(CONFIG_BCM_MODEM)
 		DSPDRV_DeInit();
@@ -592,7 +600,7 @@ void AUDCTRL_HandleCPReset(Boolean cp_reset)
 	} else {
 		if (bInVoiceCall || csl_caph_hwctrl_allPathsDisabled()) {
 			AUDDRV_CPResetCleanup();
-			csl_caph_hwctrl_init();
+			csl_caph_hwctrl_SetDSPInterrupt();
 #if defined(CONFIG_BCM_MODEM)
 			DSPDRV_Init();
 #endif
@@ -600,6 +608,7 @@ void AUDCTRL_HandleCPReset(Boolean cp_reset)
 			audioPathResetPending = FALSE;
 		} else
 			audioPathResetPending = TRUE;
+		csl_caph_set_cpreset(cp_reset);
 		cpReset = cp_reset;
 	}
 	return;
@@ -684,7 +693,7 @@ void AUDCTRL_SetTelephonyMicSpkr(AUDIO_SOURCE_Enum_t source,
 
 	aTrace(LOG_AUDIO_CNTLR, "%s sink %d, mic %d\n", __func__, sink, source);
 
-	if (cpReset == TRUE)
+	if (cpReset || audioPathResetPending)
 		return;
 
 	if (voiceCallMic == source && voiceCallSpkr == sink && force == false
@@ -784,6 +793,8 @@ void AUDCTRL_SetTelephonySpkrVolume(AUDIO_SINK_Enum_t speaker,
 #else
 	AudioSysParm_t *p;
 #endif
+	if (cpReset || audioPathResetPending)
+		return;
 
 	app = AUDCTRL_GetAudioApp();
 	mode = AUDCTRL_GetAudioMode();
@@ -875,6 +886,9 @@ int AUDCTRL_GetTelephonySpkrVolume(AUDIO_GAIN_FORMAT_t gain_format)
 ****************************************************************************/
 void AUDCTRL_SetTelephonySpkrMute(AUDIO_SINK_Enum_t spk, Boolean mute)
 {
+	if (cpReset || audioPathResetPending)
+		return;
+
 	if (mute)
 		audio_control_generic(AUDDRV_CPCMD_SetBasebandDownlinkMute, 0,
 				      0, 0, 0, 0);
@@ -893,6 +907,8 @@ void AUDCTRL_SetTelephonySpkrMute(AUDIO_SINK_Enum_t spk, Boolean mute)
 void AUDCTRL_SetTelephonyMicGain(AUDIO_SOURCE_Enum_t mic,
 				 Int16 gain, AUDIO_GAIN_FORMAT_t gain_format)
 {
+	if (cpReset || audioPathResetPending)
+		return;
 	if (gain_format == AUDIO_GAIN_FORMAT_mB) {
 		telephony_ul_gain_dB = gain / 100;
 
@@ -919,6 +935,8 @@ void AUDCTRL_SetTelephonyMicMute(AUDIO_SOURCE_Enum_t mic, Boolean mute)
 {
 	aTrace(LOG_AUDIO_CNTLR,
 	       "AUDCTRL_SetTelephonyMicMute: mute = 0x%x", mute);
+	if (cpReset || audioPathResetPending)
+		return;
 
 	if (mute) {
 		bmuteVoiceCall = TRUE;
@@ -1544,7 +1562,7 @@ void AUDCTRL_EnablePlay(AUDIO_SOURCE_Enum_t source,
 	aTrace(LOG_AUDIO_CNTLR, "%s src %d, sink %d\n", __func__, source, sink);
 
 	if ((source == AUDIO_SOURCE_DSP || sink == AUDIO_SINK_DSP)
-	    && cpReset == TRUE)
+	    && (cpReset || audioPathResetPending))
 		return;
 
 	pathID = 0;
@@ -1776,9 +1794,10 @@ void AUDCTRL_DisablePlay(AUDIO_SOURCE_Enum_t source,
 		}
 	}
 	pathIDTuning = 0;
+	playbackPathID = 0;
 	if (audioPathResetPending && csl_caph_hwctrl_allPathsDisabled()) {
 		AUDDRV_CPResetCleanup();
-		csl_caph_hwctrl_init();
+		csl_caph_hwctrl_SetDSPInterrupt();
 #if defined(CONFIG_BCM_MODEM)
 		DSPDRV_Init();
 #endif
@@ -2778,7 +2797,7 @@ void AUDCTRL_EnableRecord(AUDIO_SOURCE_Enum_t source,
 	       "%s src 0x%x, sink 0x%x,sr %d", __func__, source, sink, sr);
 
 	if ((source == AUDIO_SOURCE_DSP || sink == AUDIO_SINK_DSP)
-	    && cpReset == TRUE)
+	    && (cpReset || audioPathResetPending))
 		return;
 
 	/* for amixer command */
@@ -2811,6 +2830,7 @@ void AUDCTRL_EnableRecord(AUDIO_SOURCE_Enum_t source,
 			/*in call mode, return the UL path */
 			*pPathID = AUDDRV_GetULPath();
 			AUDDRV_EnableDSPInput(source, sr);
+			spRecPathID = AUDDRV_GetULPath();
 			return;
 		} else if (sr == AUDIO_SAMPLING_RATE_48000)
 			;
@@ -2869,19 +2889,20 @@ void AUDCTRL_DisableRecord(AUDIO_SOURCE_Enum_t source,
 	aTrace(LOG_AUDIO_CNTLR, "%s src 0x%x, sink 0x%x\n",
 	       __func__, source, sink);
 
+	if (pathID)
+		path = csl_caph_FindPath(pathID);
+	else
+		return;
+
 	/* Disable DSP UL */
-	if (sink == AUDIO_SINK_DSP && !cpReset) {
+	if (sink == AUDIO_SINK_DSP && !cpReset && !audioPathResetPending) {
 		AUDDRV_DisableDSPInput(1);
 		spRecPathID = 0;
 	}
 
 	/*in call mode, return */
-	if (bInVoiceCall && source != AUDIO_SOURCE_I2S)
-		return;
-
-	if (pathID)
-		path = csl_caph_FindPath(pathID);
-	else
+	if (bInVoiceCall && source != AUDIO_SOURCE_I2S && !cpReset &&
+		!audioPathResetPending)
 		return;
 
 	if (path == NULL)
@@ -2966,7 +2987,7 @@ which selects IHF protection loopback or Analog Mic line to BB*/
 #endif
 	if (audioPathResetPending && csl_caph_hwctrl_allPathsDisabled()) {
 		AUDDRV_CPResetCleanup();
-		csl_caph_hwctrl_init();
+		csl_caph_hwctrl_SetDSPInterrupt();
 #if defined(CONFIG_BCM_MODEM)
 		DSPDRV_Init();
 #endif
@@ -3693,6 +3714,9 @@ void AUDCTRL_DisableBypassVibra(void)
 int AUDCTRL_Telephony_HW_16K(AudioMode_t voiceMode)
 {
 	int is_call16k = FALSE;
+
+	if (cpReset || audioPathResetPending)
+		return;
 
 	if (voiceCallSampleRate == AUDIO_SAMPLING_RATE_16000)
 		is_call16k = TRUE;
@@ -4675,6 +4699,11 @@ void AUDCTRL_UpdateUserVolSetting(AUDIO_SINK_Enum_t sink,
 Boolean AUDCTRL_GetCPResetState(void)
 {
 	return cpReset;
+}
+
+Boolean AUDCTRL_GetAudioPathResetPendingState(void)
+{
+	return audioPathResetPending;
 }
 
 void AUDCTRL_RegisterCallModeResetCB(caphCtl_resetCallMode reset_cb)

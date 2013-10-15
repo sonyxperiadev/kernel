@@ -828,6 +828,19 @@ void csl_caph_enable_adcpath_by_dsp(UInt16 enabled_path);
 #endif
 
 /****************************************************************************
+*
+*  Description: Get CP reset status
+*
+*****************************************************************************/
+Boolean csl_caph_get_cpreset(void);
+/****************************************************************************
+*
+*  Description: Set CP reset status
+*
+*****************************************************************************/
+void csl_caph_set_cpreset(Boolean status);
+
+/****************************************************************************
 *  @brief  Dump all paths
 *
 *  @param  none
@@ -843,4 +856,6 @@ int csl_caph_FindPathWithSink(CSL_CAPH_DEVICE_e sink, int skip_path);
 int csl_caph_hwctrl_aadmac_autogate_status(void);
 void csl_caph_SetTuningFlag(int flag);
 int csl_caph_TuningFlag(void);
+void csl_caph_hwctrl_reset_dsp_path(void);
+void csl_caph_hwctrl_SetDSPInterrupt(void);
 #endif

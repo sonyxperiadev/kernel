@@ -461,7 +461,8 @@ static int PcmPlaybackTrigger(struct snd_pcm_substream *substream, int cmd)
 		    AUDIO_SINK_LOUDSPK;
 	} else if ((callMode == MODEM_CALL)
 		   && (chip->streamCtl[substream_number].iLineSelect[0]
-		       != AUDIO_SINK_I2S)) {
+		       != AUDIO_SINK_I2S) &&
+			   !AUDCTRL_GetCPResetState()) {
 		/*call mode & not FM Tx playback */
 		chip->streamCtl[substream_number].dev_prop.p[0].source =
 		    AUDIO_SOURCE_MEM;

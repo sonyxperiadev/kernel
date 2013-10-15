@@ -905,6 +905,16 @@ void AUDCTRL_UpdateUserVolSetting(
 Boolean AUDCTRL_GetCPResetState(void);
 
 /********************************************************************
+*  @brief  Return Audio Path reset pending state.
+*
+*  @param
+*
+*  @return TRUE/FALSE : in/out Audio Path reset pending
+*
+****************************************************************************/
+Boolean AUDCTRL_GetAudioPathResetPendingState(void);
+
+/********************************************************************
 *  @brief  Register callback for resetting callmode due to CP reset
 *
 *  @param  none
