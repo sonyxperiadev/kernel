@@ -313,15 +313,22 @@ static int _usb_host_en(struct bcmpmu_accy_data *di, int enable)
 			return ret;
 		}
 		di->usb_host_en = enable;
-		ret = bcmpmu_accy_queue_event(di, PMU_CHRGR_EVT_CHRG_STATUS,
-			&di->usb_host_en);
+		if (di->chrgr_type)
+			ret = bcmpmu_accy_queue_event(di,
+				PMU_CHRGR_EVT_CHRG_STATUS,
+				&di->usb_host_en);
 	} else {
 		di->usb_host_en = enable;
-		ret = bcmpmu_accy_queue_event(di, PMU_CHRGR_EVT_CHRG_STATUS,
-			&di->usb_host_en);
+		if (di->chrgr_type)
+			ret = bcmpmu_accy_queue_event(di,
+				PMU_CHRGR_EVT_CHRG_STATUS,
+				&di->usb_host_en);
 	}
 
-	pr_accy(FLOW, "%s:ENABLE %d\n", __func__, di->usb_host_en);
+	if (di->chrgr_type)
+		pr_accy(FLOW, "%s:ENABLE %d\n", __func__, di->usb_host_en);
+	else
+		pr_accy(FLOW, "%s:No Charger\n", __func__);
 
 	return ret;
 }

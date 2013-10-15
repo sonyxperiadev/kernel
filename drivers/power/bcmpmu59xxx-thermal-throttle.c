@@ -637,7 +637,6 @@ static int bcmpmu_throttle_event_handler(struct notifier_block *nb,
 		if (enable && tdata->chrgr_type &&
 				tdata->throttle_algo_enabled &&
 				(!tdata->throttle_scheduled)) {
-			bcmpmu_throttle_algo_init(tdata);
 			queue_delayed_work(tdata->throttle_wq,
 					&tdata->throttle_work, 0);
 			pr_throttle(FLOW,
@@ -646,9 +645,7 @@ static int bcmpmu_throttle_event_handler(struct notifier_block *nb,
 			if (tdata->zone_index !=
 				(tdata->pdata->temp_curr_lut_sz - 1)) {
 				pr_throttle(FLOW,
-					"Chargering Disabled, Disabling Thermal Throttling\n");
-				if (tdata->temp_algo_running)
-					tdata->temp_algo_running = false;
+					"Charging Disabled, Disabling Thermal Throttling\n");
 				cancel_delayed_work_sync(&tdata->throttle_work);
 				tdata->acld_algo_finished = false;
 				tdata->throttle_scheduled = false;
