@@ -50,6 +50,10 @@
 #include <linux/of.h>
 #include <linux/of_fdt.h>
 #include <linux/of_platform.h>
+#include <linux/sensors_core.h>
+#if defined(CONFIG_SENSORS_CORE)
+static  struct device *prox_dev;
+#endif
 
 #define LOG_LEVEL_ERROR         (1U<<0)
 #define LOG_LEVEL_INFO          (1U<<0)
@@ -485,6 +489,7 @@ static int __init isl290xx_init(void)
 
 static void __exit isl290xx_exit(void)
 {
+	pr_info("isl290xx_exit +++\n");
 	i2c_del_driver(&isl290xx_driver);
 	unregister_chrdev_region(isl290xx_device_number,
 				 ISL290XX_MAX_NUM_DEVICES);
@@ -742,6 +747,32 @@ static struct attribute_group isl290xx_ctrl_attr_grp = {
 	.attrs = isl290xx_ctrl_attr,
 };
 
+static ssize_t factory_file_prox_show(struct device *dev,
+				struct device_attribute *attr,
+				char *buf)
+{
+	u32 prox_mean;
+	int ret;
+	int  prox_status = 0;
+	if (!prox_on) {
+		prv_isl290xx_ctrl_lp(0x01);
+		prox_status = 1;
+	}
+	ret = prv_isl290xx_prox_poll(&prox_mean);
+	if (ret < 0)
+		pr_isl(ERROR, "call to prox_poll failed\n");
+	if (prox_status)
+		prv_isl290xx_ctrl_lp(0x02);
+	return sprintf(buf, "%d\n", prox_mean);
+}
+
+static DEVICE_ATTR(raw_data, 0644, factory_file_prox_show, NULL);
+
+static struct device_attribute *isl290xx_sensors_attrs[] = {
+	&dev_attr_raw_data,
+	NULL
+};
+
 
 #ifdef ISL290XX_POLL_MODE
 void isl290xx_poll_timer_func(unsigned long data)
@@ -828,6 +859,9 @@ static int isl290xx_probe(struct i2c_client *clientp,
 #ifdef ISL290XX_USER_CALIBRATION
 	isl290xx_offset = 0;
 #endif
+#if defined(CONFIG_SENSORS_CORE)
+	prox_dev = NULL;
+#endif
 	val = 0;
         light_on = 0;
         prox_on = 0;
@@ -838,6 +872,7 @@ static int isl290xx_probe(struct i2c_client *clientp,
 	device_released = 0;
 	ret = 0;
 	i = 0;
+	np = NULL;
 	pr_info("isl290xx_probe+\n");
 	if (!i2c_check_functionality
 	    (clientp->adapter, I2C_FUNC_SMBUS_BYTE_DATA)) {
@@ -1064,8 +1099,22 @@ static int isl290xx_probe(struct i2c_client *clientp,
 	isl290xx_data_tp->early_suspend.resume = isl290xx_late_resume;
 	register_early_suspend(&isl290xx_data_tp->early_suspend);
 #endif
+
+#if defined(CONFIG_SENSORS_CORE)
+	ret = sensors_register(&prox_dev,
+		isl290xx_data_tp, isl290xx_sensors_attrs, "proximity");
+	if (ret < 0) {
+		pr_err("%s: could not sensors_register\n", __func__);
+		goto err_proximity_device_create_file;
+	}
+#endif
+
 	pr_info("isl probe ---\n");
 	return ret;
+#if defined(CONFIG_SENSORS_CORE)
+err_proximity_device_create_file:
+	sensors_unregister(prox_dev);
+#endif
 exit_input_register_device_failed:
 	sysfs_remove_group(&clientp->dev.kobj, &isl290xx_ctrl_attr_grp);
 	if (light->input_dev)
@@ -1082,6 +1131,10 @@ exit_alloc_data_failed:
 static int __devexit isl290xx_remove(struct i2c_client *client)
 {
 	int ret = 0;
+	pr_info("isl290xx_remove+++\n");
+#if defined(CONFIG_SENSORS_CORE)
+	sensors_unregister(prox_dev);
+#endif
 	sysfs_remove_group(&client->dev.kobj, &isl290xx_ctrl_attr_grp);
 #ifdef ISL290XX_POLL_MODE
 	del_timer(&prox_poll_timer);
@@ -1892,7 +1945,7 @@ static long isl290xx_ioctl(struct file *file, unsigned int cmd,
 
 	case ISL290XX_IOCTL_CONFIG_GET:
 #ifdef ISL290XX_USER_CALIBRATION
-		if (isl290xx_cfgp->prox_boot_cali)
+		if (isl290xx_cfgp->prox_boot_cali && isl290xx_offset == 0)
 			prv_isl290xx_prox_boot_cali();
 #endif
 		ret =
