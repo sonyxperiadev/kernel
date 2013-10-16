@@ -159,6 +159,13 @@ Result_t Handle_CAPI2_SYSRPC_PMU_ActivateSIM(RPC_Msg_t *pReqMsg,
 		   " enter Handle_CAPI2_PMU_ActivateSIM ldo=%d handle=%p active=%d\n",
 		   simldo, curReg->handle, curReg->isSimInit);
 
+	if (REG_INDEX(simldo))
+			sim_sldor = (void __iomem *)(KONA_SIMI2_VA +
+							SIMI_SLDOCR_OFFSET);
+		else
+			sim_sldor = (void __iomem *) (KONA_SIMI_VA +
+							SIMI_SLDOCR_OFFSET);
+
 	switch (volt) {
 	case PMU_SIM3P0Volt:
 		{
@@ -180,6 +187,12 @@ Result_t Handle_CAPI2_SYSRPC_PMU_ActivateSIM(RPC_Msg_t *pReqMsg,
 		{
 			simMicroVolts = 0;
 
+			if (sim_sldor) {
+				val = readl(sim_sldor);
+				val &= ~SIMI_SLDOCR_SIMVCC_EN_MASK;
+				writel(val, sim_sldor);
+				KRIL_DEBUG(DBG_INFO, "SIM SLDOR 0x%x\n", val);
+			}
 			KRIL_DEBUG(DBG_INFO,
 				   " ** PMU_SIM0P0Volt - turn off regulator (FORCE)\n");
 
@@ -213,12 +226,6 @@ Result_t Handle_CAPI2_SYSRPC_PMU_ActivateSIM(RPC_Msg_t *pReqMsg,
 		ret = regulator_enable(curReg->handle);
 		KRIL_DEBUG(DBG_INFO, " regulator_enable returned %d\n", ret);
 
-		if (REG_INDEX(simldo))
-			sim_sldor = (void __iomem *)(KONA_SIMI2_VA +
-							SIMI_SLDOCR_OFFSET);
-		else
-			sim_sldor = (void __iomem *) (KONA_SIMI_VA +
-							SIMI_SLDOCR_OFFSET);
 		if (sim_sldor) {
 			val = readl(sim_sldor);
 			val |= SIMI_SLDOCR_SIMVCC_EN_MASK;
@@ -274,8 +281,6 @@ Result_t SetLDORegulator(enum SYS_LDO_Cmd_Type_t cmdType,
 {
 	Result_t result = RESULT_OK;
 	struct regulator *reg_handle;
-	void __iomem *sim_sldor = NULL;
-	int val;
 
 	printk(KERN_INFO "Excuting LDO %s cmd type=%d\n",
 		name, (int)cmdType);
@@ -287,19 +292,6 @@ Result_t SetLDORegulator(enum SYS_LDO_Cmd_Type_t cmdType,
 		} else if (cmdType == SYS_LDO_ON) {
 			printk(KERN_INFO "Turn on LDO\n");
 			regulator_enable(reg_handle);
-			if (!strcmp("sim2_vcc", name))
-				sim_sldor = (void __iomem *)(KONA_SIMI2_VA +
-							SIMI_SLDOCR_OFFSET);
-			else if (!strcmp("sim_vcc", name))
-				sim_sldor = (void __iomem *)(KONA_SIMI_VA +
-							SIMI_SLDOCR_OFFSET);
-			if (sim_sldor) {
-				val = readl(sim_sldor);
-				val |= SIMI_SLDOCR_SIMVCC_EN_MASK;
-				writel(val, sim_sldor);
-				KRIL_DEBUG(DBG_INFO, "SIM SLDOR 0x%x\n", val);
-			}
-
 			/*Set LDO mode to LPM */
 			printk(KERN_INFO "Set mode LDO\n");
 			regulator_set_mode(reg_handle,
