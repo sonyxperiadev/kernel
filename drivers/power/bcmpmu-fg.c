@@ -1266,9 +1266,10 @@ static int bcmpmu_fg_get_load_comp_capacity(struct bcmpmu_fg_data *fg,
 	if (!fg->flags.init_capacity)
 		update_avg_sample_buff(fg);
 
-	pr_fg(FLOW, "vbat: %d, vbat_comp: %d ocv_cap: %d NTC Temp: %d\n",
+	pr_fg(FLOW,
+			"vbat: %d, vbat_comp: %d ocv_cap: %d Tntc: %d, Ic: %d\n",
 			fg->adc_data.volt, vbat_oc, capacity_percentage,
-			fg->adc_data.temp);
+			fg->adc_data.temp, fg->adc_data.curr_inst);
 
 	BUG_ON(capacity_percentage > 100);
 	return capacity_percentage;
