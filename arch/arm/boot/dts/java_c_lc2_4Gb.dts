@@ -125,8 +125,8 @@
 			filter_history_param = <3>;
 			filter_count_param = <1>;
 			gain_param = <2>;
-			prox_threshold_hi_param = <350>;
-			prox_threshold_lo_param = <180>;
+			prox_threshold_hi_param = <410>;
+			prox_threshold_lo_param = <260>;
 			als_threshold_hi_param = <1>;
 			als_threshold_lo_param = <0>;
 			prox_int_time_param = <238>;
