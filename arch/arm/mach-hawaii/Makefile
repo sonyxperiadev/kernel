@@ -21,7 +21,7 @@ obj-$(CONFIG_MACH_HAWAII_SS_EVAL_REV00) += hawaii.o board-hawaii_ss_eval.o hawai
 obj-$(CONFIG_MACH_HAWAII_SS_LOGAN_REV00) += hawaii.o board-hawaii_ss_logan.o hawaii_ss_logan_wifi.o board-bcm59xxx-ss-logan.o
 obj-$(CONFIG_MACH_HAWAII_SS_LOGAN_REV01) += hawaii.o board-hawaii_ss_logan.o hawaii_ss_logan_wifi.o board-bcm59xxx-ss-logan.o
 obj-$(CONFIG_MACH_HAWAII_SS_LOGAN_REV02) += hawaii.o board-hawaii_ss_logan.o hawaii_ss_logan_wifi.o board-bcm59xxx-ss-logan.o
-obj-$(CONFIG_MACH_HAWAII_SS_LOGANDS) += hawaii.o board-hawaii_ss_logands.o hawaii_wifi.o board-bcm59xxx-ss-logands.o
+obj-$(CONFIG_MACH_HAWAII_SS_LOGANDS) += hawaii.o board-hawaii_ss_logands.o hawaii_wifi.o board-bcm59xxx-ss-logands.o dev-hawaii_ss_muic.o
 obj-$(CONFIG_MACH_HAWAII_SS_CS02_REV00) += hawaii.o board-hawaii_ss_cs02.o hawaii_ss_cs02_wifi.o board-bcm59xxx-ss-cs02.o
 obj-$(CONFIG_MACH_HAWAII_SS_LOGANDS_REV00_POWER) += hawaii.o board-hawaii_ss_logands.o hawaii_ss_logands_wifi.o board-bcm59xxx-ss-logands.o
 obj-$(CONFIG_MACH_HAWAII_SS_LOGANDS_COMBINED) += hawaii.o board-hawaii_ss_logands.o hawaii_ss_logands_wifi.o board-bcm59xxx-ss-logands.o
@@ -67,5 +67,18 @@ obj-y += board-bcm59xxx.o
 endif
 endif
 endif
+
+
+
+ifeq ($(CONFIG_MACH_HAWAII_SS_LOGANDS_REV01), y)
+obj-$(CONFIG_RT8973) += dev-muic_rt8973.o
+obj-$(CONFIG_MACH_HAWAII_SS_LOGANDS_REV01) += dev-hawaii_logands_keyboard.o dev-hawaii_logands_bt.o dev-hawaii_logands_camera.o dev-hawaii_logands_tsp.o dev-hawaii_logands_nfc.o dev-hawaii_sensor.o
+obj-$(CONFIG_USB_SWITCH_TSU6111) += dev-muic_tsu6111.o
+
+endif
+
+
+
+
 
 CFLAGS_dm.o :=$(call as-instr,.arch_extension sec,-DSMC_INSTR=1)
