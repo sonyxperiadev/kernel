@@ -1,12 +1,12 @@
-/* Java_Kivu1dot0 Dts file */
+/* Java_Kivu_xdot0 Dts file */
 
 /dts-v1/;
 
 /include/ "java.dtsi"
-/include/ "java_kivu_bcmpmu_kivu1dot0.dtsi"
+/include/ "java_kivu_bcmpmu_kivu_xdot0.dtsi"
 
 / {
-	model = "Javakivu KIVU1DOT0";
+	model = "Javakivu KIVU XDOT0";
 	compatible = "bcm,java";
 
 	chosen {

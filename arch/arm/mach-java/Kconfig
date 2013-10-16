@@ -148,12 +148,12 @@ endchoice
 choice
 	prompt "Java Kivu type"
 	depends on MACH_JAVA_KIVU
-	default MACH_JAVA_KIVU1DOT0
+	default MACH_JAVA_KIVU_XDOT0
 
-	config MACH_JAVA_KIVU1DOT0
-	bool "JAVA KIVU 1DOT0"
+	config MACH_JAVA_KIVU_XDOT0
+	bool "JAVA KIVU XDOT0"
 	help
-	  Support for Java Kivu1.0
+	  Support for Java Kivu
 
 endchoice
 
