@@ -1851,11 +1851,6 @@ static int sdhci_do_start_signal_voltage_switch(struct sdhci_host *host,
 				ret = -EIO;
 		}
 	case MMC_SIGNAL_VOLTAGE_180:
-		/* Stop SDCLK */
-		clk = sdhci_readw(host, SDHCI_CLOCK_CONTROL);
-		clk &= ~SDHCI_CLOCK_CARD_EN;
-		sdhci_writew(host, clk, SDHCI_CLOCK_CONTROL);
-
 		/* Check whether DAT[3:0] is 0000 */
 		present_state = sdhci_readl(host, SDHCI_PRESENT_STATE);
 		if (!((present_state & SDHCI_DATA_LVL_MASK) >>
@@ -1887,57 +1882,11 @@ static int sdhci_do_start_signal_voltage_switch(struct sdhci_host *host,
 				/* Wait for 5ms */
 				usleep_range(5000, 5500);
 
-				/* 1.8V regulator output should be stable within 5 ms */
 				ctrl = sdhci_readw(host, SDHCI_HOST_CONTROL2);
-				if (ctrl & SDHCI_CTRL_VDD_180) {
-					/* Provide SDCLK again and wait for 1ms*/
-					clk = sdhci_readw(host, SDHCI_CLOCK_CONTROL);
-					clk |= SDHCI_CLOCK_CARD_EN;
-					sdhci_writew(host, clk, SDHCI_CLOCK_CONTROL);
-					usleep_range(1000, 1500);
-
-					/*
-					 * If DAT[3:0] level is 1111b, then the card
-					 * was successfully switched to 1.8V signaling.
-					 */
-					present_state = sdhci_readl(host,
-								SDHCI_PRESENT_STATE);
-					if ((present_state & SDHCI_DATA_LVL_MASK) ==
-								SDHCI_DATA_LVL_MASK)	{
-						printk(KERN_DEBUG DRIVER_NAME
-							": SD core switched to 1.8V signalling\n");
-						return 0;
-					} else	{
-						printk(KERN_INFO DRIVER_NAME
-       				                         ": SD core 1.8V switching failed!\n");
-						ret = -EAGAIN;
-					}
-				}
-
-				pr_warning("%s: 1.8V regulator output did not became stable\n",
-						mmc_hostname(host->mmc));
-
-				return -EAGAIN;
-			} else {
-				printk(KERN_INFO DRIVER_NAME ": Switching vddo Regulator "
-					"to 1.8V signalling failed");
-				ret = -EAGAIN;
+				if (ctrl & SDHCI_CTRL_VDD_180)
+					return 0;
 			}
 		}
-	    	 /*
-		 * If we are here, that means the switch to 1.8V signaling
-		 * failed. We power cycle the card, and retry initialization
-		 * sequence by setting S18R to 0.
-		 */
-		pwr = sdhci_readb(host, SDHCI_POWER_CONTROL);
-		pwr &= ~SDHCI_POWER_ON;
-		sdhci_writeb(host, pwr, SDHCI_POWER_CONTROL);
-
-		/* Wait for 1ms as per the spec */
-		usleep_range(1000, 1500);
-		pwr |= SDHCI_POWER_ON;
-		sdhci_writeb(host, pwr, SDHCI_POWER_CONTROL);
-
 		pr_info(DRIVER_NAME ": Switching to 1.8V signalling "
 			"voltage failed, retrying with S18R set to 0\n");
 		return -EAGAIN;
