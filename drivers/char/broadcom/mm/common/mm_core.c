@@ -61,7 +61,7 @@ static int mm_core_enable_clock(struct mm_core *core_dev)
 {
 	MM_CORE_HW_IFC *hw_ifc = &core_dev->mm_device;
 	int ret = 0;
-	cancel_delayed_work_sync(&core_dev->clk_dis_work);
+
 	if (core_dev->mm_common_ifc.mm_hw_is_on == 0) {
 		mm_common_enable_clock(core_dev->mm_common);
 		pr_debug("dev turned on ");
@@ -96,10 +96,8 @@ static int mm_core_enable_clock(struct mm_core *core_dev)
 
 }
 
-static void mm_core_disable_clock(struct delayed_work *work)
+static void mm_core_disable_clock(struct mm_core *core_dev)
 {
-	struct mm_core *core_dev = container_of(work, struct mm_core,
-								clk_dis_work);
 	MM_CORE_HW_IFC *hw_ifc = &core_dev->mm_device;
 
 	if (core_dev->mm_common_ifc.mm_hw_is_on == 1) {
@@ -219,7 +217,7 @@ static void mm_fmwk_job_scheduler(struct work_struct *work)
 		}
 
 mm_fmwk_job_scheduler_done:
-	SCHEDULER_DELAYED_WORK(core_dev, &(core_dev->clk_dis_work));
+	mm_core_disable_clock(core_dev);
 }
 
 
@@ -250,9 +248,6 @@ void *mm_core_init(struct mm_common *mm_common, \
 
 	/* Init structure */
 	INIT_WORK(&(core_dev->job_scheduler), mm_fmwk_job_scheduler);
-
-	INIT_DELAYED_WORK(&(core_dev->clk_dis_work), mm_core_disable_clock);
-
 	plist_head_init(&(core_dev->job_list));
 	core_dev->device_job_id = 1;
 	core_dev->mm_core_idle = true;
@@ -279,7 +274,7 @@ void *mm_core_init(struct mm_common *mm_common, \
 		core_params->mm_version_init(core_params->mm_device_id,
 					     core_params->mm_virt_addr,
 					     &mm_common->version_info);
-		mm_core_disable_clock(&(core_dev->clk_dis_work));
+		mm_core_disable_clock(core_dev);
 	}
 
 	core_dev->notifier_block.notifier_call =
