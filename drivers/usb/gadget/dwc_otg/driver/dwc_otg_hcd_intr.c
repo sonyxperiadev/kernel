@@ -1255,6 +1255,9 @@ static int32_t handle_hc_nak_intr(dwc_otg_hcd_t *hcd,
 	DWC_DEBUGPL(DBG_HCD, "--Host Channel %d Interrupt: "
 		    "NAK Received--\n", hc->hc_num);
 
+	if ((qtd == NULL) || (qtd->urb == NULL))
+		goto handle_nak_done;
+
 	/*
 	 * Handle NAK for IN/OUT SSPLIT/CSPLIT transfers, bulk, control, and
 	 * interrupt.  Re-start the SSPLIT transfer.
@@ -1267,9 +1270,6 @@ static int32_t handle_hc_nak_intr(dwc_otg_hcd_t *hcd,
 		halt_channel(hcd, hc, qtd, DWC_OTG_HC_XFER_NAK);
 		goto handle_nak_done;
 	}
-
-	if ((qtd == NULL) || (qtd->urb == NULL))
-		goto handle_nak_done;
 
 	switch (dwc_otg_hcd_get_pipe_type(&qtd->urb->pipe_info)) {
 	case UE_CONTROL:
