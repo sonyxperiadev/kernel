@@ -141,6 +141,8 @@ __initdata DISPCTRL_REC_T nt35512_slp_out[] = {
 };
 
 #if defined CONFIG_MACH_HAWAII_GARNET_C_A18 || \
+	defined(CONFIG_MACH_HAWAII_GARNET_C_A18_RAWCAM) || \
+	defined(CONFIG_MACH_HAWAII_GARNET_C_A18_8Gb) || \
 	defined(CONFIG_MACH_JAVA_C_A18)
 __initdata DISPCTRL_REC_T nt35512_init_panel_vid[] = {
 	{DISPCTRL_WR_CMND, 0xF0},
