@@ -252,14 +252,10 @@ void RPC_SYSFreeResultDataBuffer(ResultDataBufHandle_t dataBufHandle)
 			dataBuf->xdrs.x_op = XDR_FREE;
 			xdr_RPC_InternalMsg_t(&dataBuf->xdrs, &dataBuf->rsp);
 			xdr_destroy(&dataBuf->xdrs);
-			capi2_free(dataBuf);
-			/**
-			 * coverity[deref_after_free]
-			 *  Dereferencing freed pointer "dataBuf"
-			 */
 			_DBG_(RPC_TRACE_INFO
 			      ("RPC_SYSFreeResultDataBuffer ( FREE ) ref=%d",
 			       (dataBuf) ? dataBuf->refCount : -1));
+			capi2_free(dataBuf);
 		}
 	}
 	RPC_USER_UNLOCK(gRpcFreeLock);
