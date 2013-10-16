@@ -526,9 +526,8 @@ void RPC_DispatchMsg(ResultDataBuffer_t *pDataBuf)
 			gClientMap[clientIndex].ackCb(pMsg->tid, pMsg->clientID,
 						      ackRsp->ackResult,
 						      ackRsp->ackUsrData);
-			RPC_SYSFreeResultDataBuffer((ResultDataBufHandle_t)
-						    pDataBuf);
 		}
+		RPC_SYSFreeResultDataBuffer((ResultDataBufHandle_t) pDataBuf);
 	} else {
 		clientIndex = GetClientIndex(pDataBuf, &isUnsolicited);
 
