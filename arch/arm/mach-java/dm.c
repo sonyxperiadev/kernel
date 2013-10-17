@@ -511,6 +511,8 @@ void dormant_enter(u32 svc)
 		break;
 
 	default:
+		pr_err("%s cdc status: %u  cpu-%d\n", cdc_resp,
+			smp_processor_id());
 		BUG();
 	}
 
