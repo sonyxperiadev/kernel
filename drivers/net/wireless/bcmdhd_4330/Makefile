@@ -25,7 +25,7 @@ DHDCFLAGS = -Wall -Wstrict-prototypes -Dlinux -DBCMDRIVER                     \
 DHDOFILES = aiutils.o bcmsdh_sdmmc_linux.o dhd_linux.o siutils.o bcmutils.o   \
 	dhd_linux_sched.o dhd_sdio.o bcmwifi_channels.o bcmevent.o hndpmu.o   \
 	bcmsdh.o dhd_cdc.o bcmsdh_linux.o dhd_common.o dhd_wlfc.o dhd_ip.o    \
-	linux_osl.o bcmsdh_sdmmc.o dhd_custom_gpio.o sbutils.o wldev_common.o \
+	linux_osl.o bcmsdh_sdmmc.o dhd_custom_gpio.o dhd_custom_sec.o sbutils.o wldev_common.o \
 	wl_android.o
 
 obj-$(CONFIG_BCM4330) += bcmdhd_4330.o
@@ -57,6 +57,7 @@ DHDCFLAGS += -DCUSTOMER_HW4
 DHDCFLAGS += -DBLOCK_IPV6_PACKET -DPASS_IPV4_SUSPEND
 DHDCFLAGS += -DSUPPORT_DEEP_SLEEP
 DHDCFLAGS += -DSIMPLE_MAC_PRINT
+DHDCFLAGS += -DREAD_MACADDR
 
 # Print out kernel panic point of file and line info when assertion happened
 DHDCFLAGS += -DBCMASSERT_LOG

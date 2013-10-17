@@ -184,7 +184,7 @@ extern void dhd_pktfilter_offload_enable(dhd_pub_t * dhd, char *arg, int enable,
 
 
 #ifdef READ_MACADDR
-extern int dhd_read_macaddr(struct dhd_info *dhd);
+extern int dhd_read_macaddr(struct dhd_info *dhd, struct ether_addr *mac);
 #endif
 #ifdef WRITE_MACADDR
 extern int dhd_write_macaddr(struct ether_addr *mac);
@@ -550,8 +550,6 @@ static int dhd_wl_host_event(dhd_info_t *dhd, int *ifidx, void *pktdata,
 static int dhd_sleep_pm_callback(struct notifier_block *nfb, unsigned long action, void *ignored)
 {
 	int ret = NOTIFY_DONE;
-
-#if (LINUX_VERSION_CODE <= KERNEL_VERSION(2, 6, 39))
 	switch (action) {
 	case PM_HIBERNATION_PREPARE:
 	case PM_SUSPEND_PREPARE:
@@ -565,7 +563,6 @@ static int dhd_sleep_pm_callback(struct notifier_block *nfb, unsigned long actio
 		break;
 	}
 	smp_mb();
-#endif
 	return ret;
 }
 
@@ -2482,7 +2479,8 @@ int dhd_ioctl_process(dhd_pub_t *pub, int ifidx, dhd_ioctl_t *ioc)
 		} else {
 		*/
 		{
-			if (!(buf = (char*)MALLOC(pub->osh, buflen))) {
+			buf = MALLOC(pub->osh, buflen + 1);
+			if (!buf) {
 				bcmerror = BCME_NOMEM;
 				goto done;
 			}
@@ -2490,6 +2488,7 @@ int dhd_ioctl_process(dhd_pub_t *pub, int ifidx, dhd_ioctl_t *ioc)
 				bcmerror = BCME_BADADDR;
 				goto done;
 			}
+			*(char *)(buf + buflen) = '\0';
 		}
 	}
 
@@ -2597,7 +2596,7 @@ done:
 	}
 
 	if (buf)
-		MFREE(pub->osh, buf, buflen);
+		MFREE(pub->osh, buf, buflen + 1);
 
 	return bcmerror;
 }
@@ -2777,6 +2776,8 @@ exit:
 #endif 
 	dhd->pub.rxcnt_timeout = 0;
 	dhd->pub.txcnt_timeout = 0;
+
+	dhd->pub.hang_was_sent = 0;
 
 	DHD_OS_WAKE_UNLOCK(&dhd->pub);
 	return 0;
@@ -3397,9 +3398,8 @@ dhd_bus_start(dhd_pub_t *dhdp)
 		dhd_os_sdunlock(dhdp);
 #endif /* DHDTHREAD */
 
-
 #ifdef READ_MACADDR
-	dhd_read_macaddr(dhd);
+	dhd_read_macaddr(dhd, &dhd->pub.mac);
 #endif
 
 	/* Bus is ready, do any protocol initialization */
@@ -3408,6 +3408,10 @@ dhd_bus_start(dhd_pub_t *dhdp)
 
 #ifdef WRITE_MACADDR
 	dhd_write_macaddr(dhd->pub.mac.octet);
+#endif
+
+#ifdef READ_MACADDR
+	dhd_read_macaddr(dhd, &dhd->pub.mac);
 #endif
 
 #ifdef ARP_OFFLOAD_SUPPORT
@@ -3484,16 +3488,14 @@ dhd_get_concurrent_capabilites(dhd_pub_t *dhd)
 				ret = DHD_FLAG_CONCURR_SINGLE_CHAN_MODE;
 				if (mchan_supported)
 					ret |= DHD_FLAG_CONCURR_MULTI_CHAN_MODE;
-#if defined(WL_ENABLE_P2P_IF) || defined(CUSTOMER_HW4) || \
-	defined(WL_CFG80211_P2P_DEV_IF)
-
+#if defined(WL_ENABLE_P2P_IF) || defined(WL_CFG80211_P2P_DEV_IF)
 				/* For customer_hw4, although ICS,
 				* we still support concurrent mode
 				*/
 				return ret;
 #else
 				return 0;
-#endif /* WL_ENABLE_P2P_IF || CUSTOMER_HW4 || WL_CFG80211_P2P_DEV_IF */
+#endif
 			}
 		}
 	}
@@ -4151,7 +4153,7 @@ dhd_net_attach(dhd_pub_t *dhdp, int ifidx)
 	int err = 0;
 	uint8 temp_addr[ETHER_ADDR_LEN] = { 0x00, 0x90, 0x4c, 0x11, 0x22, 0x33 };
 
-	DHD_TRACE(("%s: ifidx %d\n", __FUNCTION__, ifidx));
+	DHD_TRACE(("%s: ifidx %d\n", __func__, ifidx));
 
 	ASSERT(dhd && dhd->iflist[ifidx]);
 
@@ -4220,6 +4222,7 @@ dhd_net_attach(dhd_pub_t *dhdp, int ifidx)
 
 	memcpy(net->dev_addr, temp_addr, ETHER_ADDR_LEN);
 
+	net->ifindex = 0;
 	if ((err = register_netdev(net)) != 0) {
 		DHD_ERROR(("couldn't register the net device, err %d\n", err));
 		goto fail;

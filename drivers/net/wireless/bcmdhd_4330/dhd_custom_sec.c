@@ -48,7 +48,7 @@ struct cntry_locales_custom {
 };
 
 /* Locale table for sec */
-const struct cntry_locales_custom translate_custom_table[] = {
+const struct cntry_locales_custom translate_custom_table_sec[] = {
 #ifdef BCM4334_CHIP
 	{"",   "XZ", 11},  /* Universal if Country code is unknown or empty */
 #endif
@@ -164,11 +164,13 @@ const struct cntry_locales_custom translate_custom_table[] = {
 *  input : ISO 3166-1 country abbreviation
 *  output: customized cspec
 */
-void get_customized_country_code(char *country_iso_code, wl_country_t *cspec)
+void get_customized_country_code_custom_sec(
+char *country_iso_code,
+wl_country_t *cspec)
 {
 	int size, i;
 
-	size = ARRAYSIZE(translate_custom_table);
+	size = ARRAYSIZE(translate_custom_table_sec);
 
 	if (cspec == 0)
 		 return;
@@ -177,10 +179,13 @@ void get_customized_country_code(char *country_iso_code, wl_country_t *cspec)
 		 return;
 
 	for (i = 0; i < size; i++) {
-		if (strcmp(country_iso_code, translate_custom_table[i].iso_abbrev) == 0) {
+		if (!strcmp(country_iso_code,
+			translate_custom_table_sec[i].iso_abbrev)) {
 			memcpy(cspec->ccode,
-				translate_custom_table[i].custom_locale, WLC_CNTRY_BUF_SZ);
-			cspec->rev = translate_custom_table[i].custom_locale_rev;
+				translate_custom_table_sec[i].custom_locale,
+				WLC_CNTRY_BUF_SZ);
+			cspec->rev =
+				translate_custom_table_sec[i].custom_locale_rev;
 			return;
 		}
 	}
@@ -1038,6 +1043,7 @@ startwrite:
 #endif /* WRITE_MACADDR */
 
 #ifdef CONFIG_CONTROL_PM
+#if defined(CONFIG_CONTROL_PM_SEC)
 extern bool g_pm_control;
 void sec_control_pm(dhd_pub_t *dhd, uint *power_mode)
 {
@@ -1110,6 +1116,7 @@ void sec_control_pm(dhd_pub_t *dhd, uint *power_mode)
 	if (fp)
 		filp_close(fp, NULL);
 }
+#endif
 #endif /* CONFIG_CONTROL_PM */
 #ifdef GLOBALCONFIG_WLAN_COUNTRY_CODE
 int dhd_customer_set_country(dhd_pub_t *dhd)
