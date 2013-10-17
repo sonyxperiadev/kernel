@@ -115,9 +115,5 @@ obj-$(CONFIG_RTC_DRV_X1205)	+= rtc-x1205.o
 obj-$(CONFIG_RTC_DRV_KONA)	+= rtc-kona.o
 ifeq ($(CONFIG_MFD_BCM_PMU59xxx),y)
 obj-$(CONFIG_RTC_DRV_BCMPMU)   += rtc-bcmpmu59xxx.o
-else ifeq ($(CONFIG_MFD_BCM_PMU59056), y)
-obj-$(CONFIG_RTC_DRV_BCMPMU)    += rtc-bcmpmu-56.o
-else
-obj-$(CONFIG_RTC_DRV_BCMPMU)	+= rtc-bcmpmu.o
 endif
 obj-$(CONFIG_RTC_DRV_ISLAND)	+= rtc-island.o

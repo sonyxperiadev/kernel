@@ -60,12 +60,7 @@ obj-$(CONFIG_INPUT_YEALINK)		+= yealink.o
 obj-$(CONFIG_INPUT_SMB380)      += smb380.o
 ifeq ($(CONFIG_MFD_BCM_PMU59xxx),y)
 obj-$(CONFIG_INPUT_PONKEY_BCMPMU)	+= bcmpmu59xxx_ponkey.o
-else ifeq  ($(CONFIG_MFD_BCM_PMU59056), y)
-obj-$(CONFIG_INPUT_PONKEY_BCMPMU)       += bcmpmu_ponkey_56.o
-else
-obj-$(CONFIG_INPUT_PONKEY_BCMPMU)	+= bcmpmu_ponkey.o
 endif
-obj-$(CONFIG_INPUT_BCM59055_ONKEY)	+= bcm59055_onkey.o
 obj-$(CONFIG_INPUT_BCM2850_MIC_DETECT)	+= bcm2850_mic_detect.o
 obj-$(CONFIG_KONA_HEADSET) += kona_headset.o
 obj-$(CONFIG_KONA_HEADSET_MULTI_BUTTON) += kona_headset_multi_button.o

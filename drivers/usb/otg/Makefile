@@ -24,9 +24,6 @@ obj-$(CONFIG_FSL_USB2_OTG)	+= fsl_usb2_otg.o
 ifeq ($(CONFIG_MFD_BCM_PMU59xxx),y)
 brcmpmu59xxx_otg_xceiv-objs	+= bcmpmu59xxx_otg_xceiv.o bcm_otg_adp.o
 obj-$(CONFIG_BCMPMU_OTG_XCEIV)	+= brcmpmu59xxx_otg_xceiv.o
-else
-brcmpmu_otg_xceiv-objs		+= bcmpmu_otg_xceiv.o bcm_otg_adp.o
-obj-$(CONFIG_BCMPMU_OTG_XCEIV)	+= brcmpmu_otg_xceiv.o
 endif
 obj-$(CONFIG_KONA_OTG_CP)	+= kona_otg_cp.o
 obj-$(CONFIG_USB_MV_OTG)	+= mv_otg.o

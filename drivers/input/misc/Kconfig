@@ -623,14 +623,6 @@ config INPUT_PONKEY_BCMPMU
           To compile this driver as a module, choose M here.
 
 
-config INPUT_BCM59055_ONKEY
-        tristate "BCM BCM59055 PowerOnKey input events"
-        depends on MFD_BCM_PMU590XX
-        help
-          Say Y here if want to support BCM59055 PowerOnKey events.
-
-          To compile this driver as a module, choose M here.
-
 config INPUT_BCM2850_MIC_DETECT
    tristate "BCM2850 microphone detection support"
    depends on I2C

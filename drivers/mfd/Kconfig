@@ -20,18 +20,9 @@ config MFD_88PM860X
 	  select individual components like voltage regulators, RTC and
 	  battery-charger under the corresponding menus.
 
-config MFD_BCMPMU
-	bool "MFD BCM PMU"
-	depends on I2C_BSC
-	select KONA_USB_CONTROL
-	select MFD_CORE
-	default n
-	help
-	  Support for the Broadcom PMUs
-
 config MFD_BCM_PMU59xxx
        bool "BCM PMU59xxx"
-       depends on I2C_BSC && !MFD_BCMPMU
+       depends on I2C_BSC
 	select KONA_USB_CONTROL
        select MFD_CORE
        default n
@@ -39,49 +30,12 @@ config MFD_BCM_PMU59xxx
          Support for the Broadcom PMUs
 	 This will select mfd based PMU core ,IRQ and I2C drivers
 
-config MFD_BCM_PMU59056
-	bool "MFD_BCM_PMU59056"
-	depends on I2C_BSC && !MFD_BCM_PMU59xxx && !MFD_BCMPMU
-	select KONA_USB_CONTROL
-	select MFD_CORE
-	default n
-	help
-	 Support for 59056 PMU.
-
-
-config MFD_BCM_PMU590XX
-	bool "MFD BCM PMU590XX PMIC"
-	depends on I2C_BSC
-	help
-	  Support for the Broadcom PMIC.
-
 config MFD_BCMPMU_DBG
 	bool "MFD BCM PMU DEBUG"
 	depends on (MFD_BCMPMU || MFD_BCM_PMU59056 || MFD_BCM_PMU59xxx)
 	default n
 	help
 	  Support debug functions for Broadcom PMUs.
-
-config MFD_BCM59055
-	bool "PMU BCM59055 Support"
-	depends on MFD_BCMPMU
-	default n
-	help
-	  This enables PMU driver to support BCM59055.
-
-config MFD_BCM59039
-	bool "PMU BCM59039 Support"
-	depends on MFD_BCMPMU
-	default n
-	help
-	  This enables PMU driver to support BCM59039.
-
-config MFD_BCM59042
-	bool "PMU BCM59042 Support"
-	depends on MFD_BCMPMU
-	default n
-	help
-	  This enables PMU driver to support BCM59042.
 
 config MFD_BCM_PWRMGR_SW_SEQUENCER
 	bool "MFD BCM POWER MANAGER I2C SEQUENCER Support"
