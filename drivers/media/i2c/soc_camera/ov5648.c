@@ -174,7 +174,8 @@ struct ov5648_otp {
 struct ov5648 {
 	struct v4l2_subdev subdev;
 	struct v4l2_subdev_sensor_interface_parms *plat_parms;
-	struct soc_camera_device *ssdd;
+	struct v4l2_ctrl_handler hdl;
+	struct soc_camera_device *icd;
 	int state;
 	int mode_idx;
 	int i_fmt;
@@ -978,89 +979,75 @@ err:
 	return ret;
 }
 
-static const struct v4l2_queryctrl ov5648_controls[] = {
-	 {
-	 .id = V4L2_CID_CAMERA_FRAME_RATE,
-	 .type = V4L2_CTRL_TYPE_INTEGER,
-	 .name = "Framerate control",
-	 .minimum = FRAME_RATE_AUTO,
-	 .maximum = (1 << FRAME_RATE_AUTO | 1 << FRAME_RATE_5 |
-			 1 << FRAME_RATE_10 | 1 << FRAME_RATE_15 |
-			 1 << FRAME_RATE_25 | 1 << FRAME_RATE_30),
-	 .step = 1,
-	 .default_value = FRAME_RATE_AUTO,
-	 },
-	{
-	 .id = V4L2_CID_CAMERA_FOCUS_MODE,
-	 .type = V4L2_CTRL_TYPE_INTEGER,
-	 .name = "Focus Modes",
-	 .minimum = FOCUS_MODE_AUTO,
-	 .maximum = (1 << FOCUS_MODE_AUTO | 1 << FOCUS_MODE_MACRO
-			 | 1 << FOCUS_MODE_INFINITY | 1 << FOCUS_MODE_MANUAL),
-	 .step = 1,
-	 .default_value = FOCUS_MODE_AUTO,
-	 },
-	{
-	 .id = V4L2_CID_GAIN,
-	 .type = V4L2_CTRL_TYPE_INTEGER,
-	 .name = "Gain",
-	 .minimum = OV5648_GAIN_MIN,
-	 .maximum = OV5648_GAIN_MAX,
-	 .step = OV5648_GAIN_STEP,
-	 .default_value = DEFAULT_GAIN,
-	 },
-	{
-	 .id = V4L2_CID_EXPOSURE,
-	 .type = V4L2_CTRL_TYPE_INTEGER,
-	 .name = "Exposure",
-	 .minimum = OV5648_EXP_MIN,
-	 .maximum = OV5648_EXP_MAX,
-	 .step = OV5648_EXP_STEP,
-	 .default_value = DEFAULT_EXPO,
-	 },
-	{
-	 .id = V4L2_CID_CAMERA_LENS_POSITION,
-	 .type = V4L2_CTRL_TYPE_INTEGER,
-	 .name = "Lens Position",
-	 .minimum = OV5648_LENS_MIN,
-	 .maximum = OV5648_LENS_MAX,
-	 .step = OV5648_LENS_STEP,
-	 .default_value = DEFAULT_LENS_POS,
-	 },
-	{
-	 .id = V4L2_CID_CAMERA_FLASH_MODE,
-	 .type = V4L2_CTRL_TYPE_INTEGER,
-#ifdef CONFIG_VIDEO_AS3643
-	 .name = "AS3643-flash",
-#endif
+static int ov5648_s_ctrl(struct v4l2_ctrl *);
+static int ov5648_g_ctrl(struct v4l2_ctrl *);
 
-#if defined(CONFIG_MACH_JAVA_C_LC1)
-	 .name = "OCP8111-flash",
-#endif
-	 .minimum = FLASH_MODE_OFF,
-	 .maximum = (1 << FLASH_MODE_OFF) | (1 << FLASH_MODE_ON) |
-		(1 << FLASH_MODE_TORCH_OFF) | (1 << FLASH_MODE_TORCH_ON),
-	 .step = 1,
-	 .default_value = FLASH_MODE_OFF,
-	 },
+static struct v4l2_ctrl_ops ov5648_ctrl_ops = {
+	.s_ctrl = ov5648_s_ctrl,
+	.g_volatile_ctrl = ov5648_g_ctrl,
+};
+
+static const struct v4l2_ctrl_config ov5648_controls[] = {
 	{
-	 .id = V4L2_CID_FLASH_INTENSITY,
-	 .type = V4L2_CTRL_TYPE_INTEGER,
-	 .name = "Intensity in mA",
-	 .minimum = OV5648_FLASH_INTENSITY_MIN,
-	 .maximum = OV5648_FLASH_INTENSITY_MAX,
-	 .step = OV5648_FLASH_INTENSITY_STEP,
-	 .default_value = OV5648_FLASH_INTENSITY_DEFAULT,
-	 },
+		.ops = &ov5648_ctrl_ops,
+		.id = V4L2_CID_CAMERA_LENS_POSITION,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.name = "Lens Position",
+		.min = OV5648_LENS_MIN,
+		.max = OV5648_LENS_MAX,
+		.step = OV5648_LENS_STEP,
+		.def = DEFAULT_LENS_POS,
+		.flags = 0,
+	},
 	{
-	 .id = V4L2_CID_FLASH_TIMEOUT,
-	 .type = V4L2_CTRL_TYPE_INTEGER,
-	 .name = "Flash timeout in us",
-	 .minimum = OV5648_FLASH_TIMEOUT_MIN,
-	 .maximum = OV5648_FLASH_TIMEOUT_MAX,
-	 .step = OV5648_FLASH_TIMEOUT_STEP,
-	 .default_value = OV5648_FLASH_TIMEOUT_DEFAULT,
-	 },
+		.ops = &ov5648_ctrl_ops,
+		.id = V4L2_CID_CAMERA_FRAME_RATE,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.name = "Framerate control",
+		.min = FRAME_RATE_AUTO,
+		.max = (1 << FRAME_RATE_AUTO | 1 << FRAME_RATE_5 |
+			1 << FRAME_RATE_10 | 1 << FRAME_RATE_15 |
+			1 << FRAME_RATE_25 | 1 << FRAME_RATE_30),
+		.step = 1,
+		.def = FRAME_RATE_AUTO,
+		.flags = 0,
+	},
+	{
+		.ops = &ov5648_ctrl_ops,
+		.id = V4L2_CID_CAMERA_SET_AUTO_FOCUS,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.name = "AF start/stop",
+		.min = AUTO_FOCUS_OFF,
+		.max = AUTO_FOCUS_ON,
+		.step = 1,
+		.def = AUTO_FOCUS_OFF,
+		.flags = 0,
+	},
+	{
+		.ops = &ov5648_ctrl_ops,
+		.id = V4L2_CID_CAMERA_FLASH_MODE,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.name = "AS3643-flash",
+		.min = FLASH_MODE_OFF,
+		.max = (1 << FLASH_MODE_OFF) | (1 << FLASH_MODE_ON) |
+			(1 << FLASH_MODE_TORCH_OFF) |
+			(1 << FLASH_MODE_TORCH_ON),
+		.step = 1,
+		.def = FLASH_MODE_OFF,
+		.flags = 0,
+	},
+	{
+		.ops = &ov5648_ctrl_ops,
+		.id = V4L2_CID_CAMERA_FOCUS_MODE,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.name = "Focus Modes",
+		.min = FOCUS_MODE_AUTO,
+		.max = (1 << FOCUS_MODE_AUTO | 1 << FOCUS_MODE_MACRO |
+			1 << FOCUS_MODE_INFINITY | 1 << FOCUS_MODE_MANUAL),
+		.step = 1,
+		.def = FOCUS_MODE_AUTO,
+		.flags = 0,
+	},
 };
 
 /**
@@ -1336,11 +1323,7 @@ static int ov5648_rbgains_update(struct i2c_client *client)
 		pr_debug("ov5648_rbgains_update: OTP not initialized\n");
 		return -1;
 	}
-# if 0
-	gainr = 0x400 * RG_GOLDEN / otp->rg_ratio;
-	gaing = 0x400;
-	gainb = 0x400 * BG_GOLDEN / otp->bg_ratio;
-#else
+
 	if (otp->bg_ratio < BG_GOLDEN) {
 		if (otp->rg_ratio < RG_GOLDEN) {
 			gaing = 0x400;
@@ -1369,7 +1352,6 @@ static int ov5648_rbgains_update(struct i2c_client *client)
 				gainb = gaing * BG_GOLDEN / otp->bg_ratio; }
 		}
 	}
-#endif
 	ret =  ov5648_reg_write(client, 0x5180, 1<<3);
 	ret |= ov5648_reg_write(client, 0x5186, gainr >> 8);
 	ret |= ov5648_reg_write(client, 0x5187, gainr & 0xff);
@@ -1707,50 +1689,6 @@ static int ov5648_s_stream(struct v4l2_subdev *sd, int enable)
 	return ret;
 }
 
-static int ov5648_set_bus_param(struct soc_camera_device *ssdd,
-				unsigned long flags)
-{
-	/* TODO: Do the right thing here, and validate bus params */
-	return 0;
-}
-
-static unsigned long ov5648_query_bus_param(struct soc_camera_device *ssdd)
-{
-	unsigned long flags = SOCAM_PCLK_SAMPLE_FALLING |
-		SOCAM_HSYNC_ACTIVE_HIGH | SOCAM_VSYNC_ACTIVE_HIGH |
-		SOCAM_DATA_ACTIVE_HIGH | SOCAM_MASTER;
-
-	/* TODO: Do the right thing here, and validate bus params */
-
-	flags |= SOCAM_DATAWIDTH_10;
-
-	return flags;
-}
-
-static int ov5648_enum_input(struct soc_camera_device *ssdd,
-			     struct v4l2_input *inp)
-{
-	struct soc_camera_subdev_desc *ssdd = to_soc_camera_link(ssdd);
-	struct v4l2_subdev_sensor_interface_parms *plat_parms;
-
-	inp->type = V4L2_INPUT_TYPE_CAMERA;
-	inp->std = V4L2_STD_UNKNOWN;
-	strcpy(inp->name, "ov5648");
-
-	if (ssdd && ssdd->priv) {
-		plat_parms = ssdd->priv;
-		inp->status = 0;
-
-		if (plat_parms->orientation == V4L2_SUBDEV_SENSOR_PORTRAIT)
-			inp->status |= V4L2_IN_ST_HFLIP;
-
-		if (plat_parms->facing == V4L2_SUBDEV_SENSOR_BACK)
-			inp->status |= V4L2_IN_ST_BACK;
-	}
-
-	return 0;
-}
-
 static int ov5648_g_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
@@ -1860,7 +1798,6 @@ static int ov5648_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 	ret = ov5648_try_fmt(sd, mf);
 	if (ret < 0)
 		return ret;
-
 	new_mode_idx = ov5648_find_framesize(mf->width, mf->height);
 	ov5648->i_fmt = ov5648_find_datafmt(mf->code);
 	switch ((u32) ov5648_fmts[ov5648->i_fmt].code) {
@@ -1897,59 +1834,61 @@ static int ov5648_g_chip_ident(struct v4l2_subdev *sd,
 }
 
 
-static int ov5648_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
+static int ov5648_g_ctrl(struct v4l2_ctrl *ctrl)
 {
+	struct ov5648 *ov5648 = container_of(ctrl->handler, struct ov5648, hdl);
+	struct v4l2_subdev *sd = &ov5648->subdev;
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
-	struct ov5648 *ov5648 = to_ov5648(client);
 	int retval;
 
 	switch (ctrl->id) {
 	case V4L2_CID_CAMERA_FRAME_RATE:
-		ctrl->value = ov5648->framerate;
+		ctrl->val = ov5648->framerate;
 		break;
 	case V4L2_CID_CAMERA_FOCUS_MODE:
-		ctrl->value = ov5648->focus_mode;
+		ctrl->val = ov5648->focus_mode;
 		break;
 	case V4L2_CID_GAIN:
 		ov5648_get_gain(client, &retval, NULL);
-		ctrl->value = retval;
+		ctrl->val = retval;
 		break;
 	case V4L2_CID_EXPOSURE:
 		ov5648_get_exposure(client, &retval, NULL);
-		ctrl->value = retval;
+		ctrl->val = retval;
 		break;
 	case V4L2_CID_CAMERA_LENS_POSITION:
 		ov5648_lens_get_position(client, &ov5648->current_position,
 			&ov5648->time_to_destination);
-		ctrl->value = ov5648->current_position;
+		ctrl->val = ov5648->current_position;
 		break;
 	case V4L2_CID_CAMERA_FLASH_MODE:
-		ctrl->value = ov5648->flashmode;
+		ctrl->val = ov5648->flashmode;
 		break;
 	case V4L2_CID_FLASH_INTENSITY:
-		ctrl->value = ov5648->flash_intensity;
+		ctrl->val = ov5648->flash_intensity;
 		break;
 	case V4L2_CID_FLASH_TIMEOUT:
-		ctrl->value = ov5648->flash_timeout;
+		ctrl->val = ov5648->flash_timeout;
 		break;
 
 	}
 	return 0;
 }
 
-static int ov5648_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
+static int ov5648_s_ctrl(struct v4l2_ctrl *ctrl)
 {
+	struct ov5648 *ov5648 = container_of(ctrl->handler, struct ov5648, hdl);
+	struct v4l2_subdev *sd = &ov5648->subdev;
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
-	struct ov5648 *ov5648 = to_ov5648(client);
 	int ret = 0;
 
 	switch (ctrl->id) {
 	case V4L2_CID_CAMERA_FRAME_RATE:
 
-		if (ctrl->value > FRAME_RATE_30)
+		if (ctrl->val > FRAME_RATE_30)
 			return -EINVAL;
 
-		ov5648->framerate = ctrl->value;
+		ov5648->framerate = ctrl->val;
 
 		switch (ov5648->framerate) {
 		case FRAME_RATE_5:
@@ -1997,10 +1936,10 @@ static int ov5648_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 
 	case V4L2_CID_CAMERA_FOCUS_MODE:
 
-		if (ctrl->value > FOCUS_MODE_MANUAL)
+		if (ctrl->val > FOCUS_MODE_MANUAL)
 			return -EINVAL;
 
-		ov5648->focus_mode = ctrl->value;
+		ov5648->focus_mode = ctrl->val;
 
 		/*
 		 * Donot start the AF cycle here
@@ -2041,49 +1980,42 @@ static int ov5648_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 
 	case V4L2_CID_CAMERA_SET_AUTO_FOCUS:
 
-		if (ctrl->value > AUTO_FOCUS_ON)
+		if (ctrl->val > AUTO_FOCUS_ON)
 			return -EINVAL;
 
 		if (ret)
 			return ret;
 		break;
 	case V4L2_CID_GAIN:
-		if ((unsigned int)(ctrl->value) > OV5648_GAIN_MAX) {
+		if ((unsigned int)(ctrl->val) > OV5648_GAIN_MAX) {
 			pr_debug("V4L2_CID_GAIN invalid gain=%u max=%u",
-				ctrl->value, OV5648_GAIN_MAX);
+				ctrl->val, OV5648_GAIN_MAX);
 			return -EINVAL;
 		}
-		ov5648_set_gain(client, ctrl->value);
+		ov5648_set_gain(client, ctrl->val);
 		break;
 
 	case V4L2_CID_EXPOSURE:
-		if (ctrl->value > OV5648_EXP_MAX)
+		if (ctrl->val > OV5648_EXP_MAX)
 			return -EINVAL;
-		ov5648_set_exposure(client, ctrl->value);
+		ov5648_set_exposure(client, ctrl->val);
 		break;
 
 	case V4L2_CID_CAMERA_LENS_POSITION:
-		if (ctrl->value > OV5648_LENS_MAX)
+		if (ctrl->val > OV5648_LENS_MAX)
 			return -EINVAL;
-		ov5648_lens_set_position(client, ctrl->value);
+		ov5648_lens_set_position(client, ctrl->val);
 		break;
 	case V4L2_CID_CAMERA_FLASH_MODE:
-		set_flash_mode(client, ctrl->value);
+		set_flash_mode(client, ctrl->val);
 		break;
 	case V4L2_CID_FLASH_INTENSITY:
-		ov5648->flash_intensity = ctrl->value;
+		ov5648->flash_intensity = ctrl->val;
 		break;
 	case V4L2_CID_FLASH_TIMEOUT:
-		ov5648->flash_timeout = ctrl->value;
+		ov5648->flash_timeout = ctrl->val;
 		break;
 
-	#if 0
-	case V4L2_CID_CAM_APERTURE:
-		if (ctrl->value > OV5648_APERTURE_MAX)
-			return -EINVAL;
-		ov5648_lens_set_aperture(client, ctrl->value);
-		break;
-	#endif
 	}
 
 	return ret;
@@ -2246,21 +2178,15 @@ static int ov5648_s_power(struct v4l2_subdev *sd, int on)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct ov5648 *ov5648 = to_ov5648(client);
+	struct soc_camera_subdev_desc *ssdd = soc_camera_i2c_to_desc(client);
 
-	if (0 == on) {
+	if (!on) {
 		ov5648->mode_idx = OV5648_MODE_MAX;
 		ov5648->calibrated = 0;
+		return soc_camera_power_off(&client->dev, ssdd);
 	}
-	return 0;
+	return soc_camera_power_on(&client->dev, ssdd);
 }
-
-static struct soc_camera_ops ov5648_ops = {
-	.set_bus_param   = ov5648_set_bus_param,
-	.query_bus_param = ov5648_query_bus_param,
-	.enum_input      = ov5648_enum_input,
-	.controls        = ov5648_controls,
-	.num_controls    = ARRAY_SIZE(ov5648_controls),
-};
 
 static int ov5648_init(struct i2c_client *client)
 {
@@ -2310,8 +2236,7 @@ static int ov5648_init(struct i2c_client *client)
  * Interface active, can use i2c. If it fails, it can indeed mean, that
  * this wasn't our capture interface, so, we wait for the right one
  */
-static int ov5648_video_probe(struct soc_camera_device *ssdd,
-			      struct i2c_client *client)
+static int ov5648_video_probe(struct i2c_client *client)
 {
 	unsigned long flags;
 	int ret = 0;
@@ -2322,9 +2247,6 @@ static int ov5648_video_probe(struct soc_camera_device *ssdd,
 	 * We must have a parent by now. And it cannot be a wrong one.
 	 * So this entire test is completely redundant.
 	 */
-	if (!ssdd->dev.parent ||
-	    to_soc_camera_host(ssdd->dev.parent)->nr != ssdd->iface)
-		return -ENODEV;
 
 	ret = ov5648_reg_read(client, 0x302A, &revision);
 	if (ret) {
@@ -2359,10 +2281,9 @@ out:
 	return ret;
 }
 
+
 static struct v4l2_subdev_core_ops ov5648_subdev_core_ops = {
 	.g_chip_ident = ov5648_g_chip_ident,
-	.g_ctrl = ov5648_g_ctrl,
-	.s_ctrl = ov5648_s_ctrl,
 	.ioctl = ov5648_ioctl,
 #ifdef CONFIG_VIDEO_ADV_DEBUG
 	.g_register = ov5648_g_register,
@@ -2536,10 +2457,10 @@ static int ov5648_probe(struct i2c_client *client,
 			const struct i2c_device_id *did)
 {
 	struct ov5648 *ov5648;
-	struct soc_camera_subdev_desc *ssdd = soc_camera_i2c_to_desc(client);
-	int ret;
+	struct soc_camera_subdev_desc *sdesc = soc_camera_i2c_to_desc(client);
+	int ret, i;
 
-	if (!ssdd) {
+	if (!sdesc) {
 		dev_err(&client->dev, "OV5648: missing platform data!\n");
 		return -EINVAL;
 	}
@@ -2551,18 +2472,81 @@ static int ov5648_probe(struct i2c_client *client,
 	v4l2_i2c_subdev_init(&ov5648->subdev, client, &ov5648_subdev_ops);
 
 	/* Second stage probe - when a capture adapter is there */
-	ssdd->ops = &ov5648_ops;
-
 	ov5648->mode_idx = OV5648_MODE_MAX;
 	ov5648->i_fmt = 0;	/* First format in the list */
-	ov5648->plat_parms = ssdd->priv;
-	ov5648->ssdd = ssdd;
+	ov5648->plat_parms = sdesc->drv_priv;
+
+	struct v4l2_subdev *subdev = i2c_get_clientdata(client);
+
+	v4l2_i2c_subdev_init(&ov5648->subdev, client, &ov5648_subdev_ops);
+
+	v4l2_ctrl_handler_init(&ov5648->hdl,  ARRAY_SIZE(ov5648_controls) + 6);
+
+	if (ov5648->hdl.error)
+		pr_err("error set during init itself!\n");
+
+	/* register standard controls */
+	v4l2_ctrl_new_std(&ov5648->hdl,	&ov5648_ctrl_ops,
+			V4L2_CID_GAIN, OV5648_GAIN_MIN,
+			OV5648_GAIN_MAX, OV5648_GAIN_STEP, DEFAULT_GAIN);
+	v4l2_ctrl_new_std(&ov5648->hdl,	&ov5648_ctrl_ops,
+			V4L2_CID_EXPOSURE, OV5648_EXP_MIN,
+			OV5648_EXP_MAX, OV5648_EXP_STEP, DEFAULT_EXPO);
+	v4l2_ctrl_new_std(&ov5648->hdl,	&ov5648_ctrl_ops,
+			V4L2_CID_FLASH_INTENSITY, OV5648_FLASH_INTENSITY_MIN,
+			OV5648_FLASH_INTENSITY_MAX, OV5648_FLASH_INTENSITY_STEP,
+			OV5648_FLASH_INTENSITY_DEFAULT);
+	v4l2_ctrl_new_std(&ov5648->hdl,	&ov5648_ctrl_ops,
+			V4L2_CID_FLASH_TIMEOUT, OV5648_FLASH_TIMEOUT_MIN,
+			OV5648_FLASH_TIMEOUT_MAX, OV5648_FLASH_TIMEOUT_STEP,
+			OV5648_FLASH_TIMEOUT_DEFAULT);
+
+	if (ov5648->hdl.error) {
+		dev_err(&client->dev,
+			"Standard controls initialization error %d\n",
+			ov5648->hdl.error);
+		ret = ov5648->hdl.error;
+		goto ctrl_hdl_err;
+	}
+
+	/* register standard menu controls */
+#if 0
+	v4l2_ctrl_new_std_menu(&ov5648->hdl, &ov5648_ctrl_ops,
+		V4L2_CID_AUTO_FOCUS_RANGE, V4L2_AUTO_FOCUS_RANGE_INFINITY,
+		0, V4L2_AUTO_FOCUS_RANGE_AUTO);
+	v4l2_ctrl_new_std_menu(&ov5648->hdl, &ov5648_ctrl_ops,
+		V4L2_CID_FLASH_LED_MODE, V4L2_FLASH_LED_MODE_TORCH,
+		0, V4L2_FLASH_LED_MODE_FLASH);
+#endif
+	if (ov5648->hdl.error) {
+		dev_err(&client->dev,
+			"Standard menu controls initialization error %d\n",
+			ov5648->hdl.error);
+		ret = ov5648->hdl.error;
+		goto ctrl_hdl_err;
+	}
+
+	/* register custom controls */
+	for (i = 0; i < ARRAY_SIZE(ov5648_controls); ++i)
+		v4l2_ctrl_new_custom(&ov5648->hdl, &ov5648_controls[i], NULL);
+
+	ov5648->subdev.ctrl_handler = &ov5648->hdl;
+	if (ov5648->hdl.error) {
+		dev_err(&client->dev,
+			"Custom controls initialization error %d\n",
+			ov5648->hdl.error);
+		ret = ov5648->hdl.error;
+		goto ctrl_hdl_err;
+	}
+
+	ret = ov5648_s_power(subdev, 1);
+	if (ret < 0)
+		return ret;
 
 	ret = ov5648_video_probe(client);
 	if (ret) {
-		ssdd->ops = NULL;
 		kfree(ov5648);
-		return ret;
+		goto vid_probe_fail;
 	}
 
 	/* init the sensor here */
@@ -2570,6 +2554,7 @@ static int ov5648_probe(struct i2c_client *client,
 	if (ret) {
 		dev_err(&client->dev, "Failed to initialize sensor\n");
 		ret = -EINVAL;
+		goto init_fail;
 	}
 
 #ifdef CONFIG_VIDEO_A3907
@@ -2598,6 +2583,14 @@ static int ov5648_probe(struct i2c_client *client,
 	}
 #endif
 
+	return ret;
+
+ctrl_hdl_err:
+init_fail:
+vid_probe_fail:
+	v4l2_ctrl_handler_free(&ov5648->hdl);
+	kfree(ov5648);
+	pr_err("ov5648_probe failed with ret = %d\n", ret);
 	return ret;
 }
 
@@ -2651,7 +2644,7 @@ static void __exit ov5648_mod_exit(void)
 	i2c_del_driver(&ov5648_i2c_driver);
 }
 
-module_init(ov5648_mod_init);
+late_initcall(ov5648_mod_init);
 module_exit(ov5648_mod_exit);
 
 MODULE_DESCRIPTION("OmniVision OV5648 Camera driver");

@@ -1050,10 +1050,46 @@ static int unicam_stop()
 	return 0;
 }
 
-static int unicam_camera_s_ctrl(struct soc_camera_device *icd,
-				 struct v4l2_control *ctl)
-{
+static int unicam_camera_s_ctrl(struct v4l2_ctrl *ctl);
 
+static const struct v4l2_ctrl_ops unicam_camera_ctrl_ops = {
+	.s_ctrl = unicam_camera_s_ctrl,
+};
+
+static const struct v4l2_ctrl_config unicam_camera_controls[] = {
+	{
+		.ops = &unicam_camera_ctrl_ops,
+		.id = V4L2_CID_CAM_CAPTURE,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.name = "Cam Capture",
+		.min = 0,
+		.max = 1,
+		.step = 1,
+		.def = 1,
+		.flags = 0,
+	},
+	{
+		.ops = &unicam_camera_ctrl_ops,
+		.id = V4L2_CID_CAM_CAPTURE_DONE,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.name = "Cam Capture Done",
+		.min = 0,
+		.max = 1,
+		.step = 1,
+		.def = 1,
+		.flags = 0,
+	},
+};
+
+static struct soc_camera_device *ctrl_to_icd(struct v4l2_ctrl *ctrl)
+{
+	return container_of(ctrl->handler,
+				struct soc_camera_device, ctrl_handler);
+}
+
+static int unicam_camera_s_ctrl(struct v4l2_ctrl *ctl)
+{
+	struct soc_camera_device *icd = ctrl_to_icd(ctl);
 	struct soc_camera_host *ici = to_soc_camera_host(icd->parent);
 	struct unicam_camera_dev *unicam_dev = ici->priv;
 	int ret = 0;
@@ -1181,6 +1217,7 @@ static int unicam_camera_set_fmt_int(struct unicam_camera_dev *unicam_dev)
 	return ret;
 }
 
+
 static int unicam_camera_set_fmt(struct soc_camera_device *icd,
 				 struct v4l2_format *f)
 {
@@ -1200,7 +1237,7 @@ static int unicam_camera_add_device(struct soc_camera_device *icd)
 	struct soc_camera_host *ici = to_soc_camera_host(icd->parent);
 	struct unicam_camera_dev *unicam_dev = ici->priv;
 	struct v4l2_subdev *sd = soc_camera_to_subdev(icd);
-	int err = 0;
+	int err = 0, i = 0;
 
 	if (unicam_dev->icd) {
 		dev_warn(icd->parent,
@@ -1233,7 +1270,14 @@ static int unicam_camera_add_device(struct soc_camera_device *icd)
 
 	dev_info(icd->parent,
 		 "Unicam Camera driver attached to camera %d\n", icd->devnum);
+#if 0
+	for (i = 0; i < ARRAY_SIZE(unicam_camera_controls); ++i)
+		v4l2_ctrl_new_custom(&icd->ctrl_handler,
+					&unicam_camera_controls[i], NULL);
 
+	if (icd->ctrl_handler.error)
+		return icd->ctrl_handler.error;
+#endif
 eirq:
 eicd:
 	return err;
@@ -1419,6 +1463,7 @@ out:
 	return IRQ_HANDLED;
 }
 
+
 static int unicam_camera_probe(struct platform_device *pdev)
 {
 
@@ -1510,5 +1555,4 @@ late_initcall(unicam_camera_init);
 module_exit(unicam_camera_exit);
 
 MODULE_DESCRIPTION("Unicam Camera Host driver");
-MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Pradeep Sawlani <spradeep@broadcom.com>");

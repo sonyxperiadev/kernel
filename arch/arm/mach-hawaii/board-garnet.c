@@ -404,6 +404,7 @@ static struct regulator *d_3v0_mmc1_vcc;
 #define SENSOR_1_CLK                    "dig_ch0_clk"	/* DCLK1 */
 
 #define OV5640_I2C_ADDRESS		(0x3C)
+#define OV5648_I2C_ADDRESS              (0x36)
 #define OV7692_I2C_ADDRESS              (0x3e)
 #define SENSOR_0_GPIO_PWRDN             (002)
 #define SENSOR_0_GPIO_RST               (111)
@@ -436,6 +437,9 @@ static struct i2c_board_info hawaii_i2c_camera[] = {
 		I2C_BOARD_INFO("ov5640", OV5640_I2C_ADDRESS)
 	},
 	{
+		I2C_BOARD_INFO("ov5648", OV5648_I2C_ADDRESS)
+	},
+	{
 		I2C_BOARD_INFO("ov7692", OV7692_I2C_ADDRESS)
 	},
 };
@@ -452,8 +456,8 @@ static struct cameracfg_s *getcameracfg(const char *camera_name)
 	return NULL;
 }
 
-#if defined(CONFIG_SOC_CAMERA_OV5640)
-static struct regulator_bulk_data ov5640_regulator_data[] = {
+#if defined(CONFIG_SOC_CAMERA_OV5640) || defined(CONFIG_SOC_CAMERA_OV5648)
+static struct regulator_bulk_data ov564x_regulator_data[] = {
 	[0] = {
 		.supply = "lvldo1_uc",
 	},
@@ -468,7 +472,6 @@ static struct regulator_bulk_data ov5640_regulator_data[] = {
 	},
 };
 #endif
-
 
 static int hawaii_camera_power(struct device *dev, int on)
 {
@@ -493,7 +496,11 @@ static int hawaii_camera_power(struct device *dev, int on)
 	pr_info("%s:camera power %s\n", __func__, (on ? "on" : "off"));
 
 	/* for bringup purpose */
+#ifdef CONFIG_SOC_CAMERA_OV5648
+	char module[] = "ov5648";
+#else
 	char module[] = "ov5640";
+#endif
 	struct cameracfg_s *thiscfg = getcameracfg(module);
 	if (NULL == thiscfg) {
 		pr_err("No cfg for [%s]\n", module);
@@ -520,20 +527,20 @@ static int hawaii_camera_power(struct device *dev, int on)
 
 		/*MMC1 VCC */
 		d_1v8_mmc1_vcc = regulator_get(NULL,
-					ov5640_regulator_data[1].supply);
+					ov564x_regulator_data[1].supply);
 		if (IS_ERR_OR_NULL(d_1v8_mmc1_vcc))
 			pr_err("Failed to  get d_1v8_mmc1_vcc\n");
 		d_3v0_mmc1_vcc = regulator_get(NULL,
-					ov5640_regulator_data[2].supply);
+					ov564x_regulator_data[2].supply);
 		if (IS_ERR_OR_NULL(d_3v0_mmc1_vcc))
 			pr_err("Failed to  get d_3v0_mmc1_vcc\n");
 		d_gpsr_cam0_1v8 = regulator_get(NULL,
-			ov5640_regulator_data[0].supply);
+			ov564x_regulator_data[0].supply);
 		if (IS_ERR_OR_NULL(d_gpsr_cam0_1v8))
 			pr_err("Failed to  get d_gpsr_cam0_1v8\n");
 		if (d_lvldo2_cam1_1v8 == NULL) {
 			d_lvldo2_cam1_1v8 = regulator_get(NULL,
-			ov5640_regulator_data[3].supply);
+			ov564x_regulator_data[3].supply);
 			if (IS_ERR_OR_NULL(d_lvldo2_cam1_1v8))
 				pr_err("Fd_lvldo2_cam1_1v8 cam\n");
 		}
@@ -889,6 +896,7 @@ static int hawaii_camera_reset_front(struct device *dev)
 	return 0;
 }
 
+#ifdef CONFIG_SOC_CAMERA_OV5640
 static struct v4l2_subdev_sensor_interface_parms ov5640_if_params = {
 	.if_type = V4L2_SUBDEV_SENSOR_SERIAL,
 	.if_mode = V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2,
@@ -902,8 +910,6 @@ static struct v4l2_subdev_sensor_interface_parms ov5640_if_params = {
 	},
 };
 
-
-#ifdef CONFIG_SOC_CAMERA_OV5640
 static struct soc_camera_desc iclink_ov5640 = {
 	.host_desc = {
 		.bus_id = 0,
@@ -916,7 +922,7 @@ static struct soc_camera_desc iclink_ov5640 = {
 		.reset = &hawaii_camera_reset,
 		.drv_priv = &ov5640_if_params,
 #if 0
-		.regulators = ov5640_regulator_data,
+		.regulators = ov564x_regulator_data,
 		.num_regulators = 4,
 #endif
 	},
@@ -930,10 +936,45 @@ static struct platform_device hawaii_camera_back = {
 	},
 };
 #endif
+
 #ifdef CONFIG_SOC_CAMERA_OV5648
+static struct v4l2_subdev_sensor_interface_parms ov5648_if_params = {
+	.if_type = V4L2_SUBDEV_SENSOR_SERIAL,
+	.if_mode = V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2,
+	.orientation = V4L2_SUBDEV_SENSOR_PORTRAIT,
+	.facing = V4L2_SUBDEV_SENSOR_BACK,
+	.parms.serial = {
+		.lanes = 2,
+		.channel = 0,
+		.phy_rate = 0,
+		.pix_clk = 0,
+	},
+};
+
 static struct soc_camera_desc iclink_ov5648 = {
-	.power = &hawaii_camera_power,
-	.reset = &hawaii_camera_reset,
+	 .host_desc = {
+		 .bus_id = 0,
+		 .board_info = &hawaii_i2c_camera[1],
+		 .i2c_adapter_id = 0,
+		 .module_name = "ov5648",
+	 },
+	 .subdev_desc = {
+		 .power = &hawaii_camera_power,
+		 .reset = &hawaii_camera_reset,
+		 .drv_priv = &ov5648_if_params,
+#if 0
+		 .regulators = ov564x_regulator_data,
+		 .num_regulators = 4,
+#endif
+	 },
+};
+
+static struct platform_device hawaii_camera_back = {
+	.name = "soc-camera-pdrv",
+	.id = 0,
+	.dev = {
+		.platform_data = &iclink_ov5648,
+	},
 };
 #endif
 
@@ -952,7 +993,7 @@ static struct v4l2_subdev_sensor_interface_parms ov7692_if_parms = {
 static struct soc_camera_desc iclink_ov7692 = {
 	.host_desc = {
 		.bus_id = 0,
-		.board_info = &hawaii_i2c_camera[1],
+		.board_info = &hawaii_i2c_camera[2],
 		.i2c_adapter_id = 0,
 		.module_name = "ov7692",
 	},
@@ -1252,9 +1293,11 @@ static const struct of_dev_auxdata hawaii_auxdata_lookup[] __initconst = {
 		"soc-back-camera", &iclink_ov5640),
 #endif
 #endif
+#if 0
 #ifdef CONFIG_SOC_CAMERA_OV5648
 	OF_DEV_AUXDATA("bcm,soc-camera", 0x36,
 		"soc-back-camera", &iclink_ov5648),
+#endif
 #endif
 #if 0
 #ifdef CONFIG_SOC_CAMERA_OV7692
