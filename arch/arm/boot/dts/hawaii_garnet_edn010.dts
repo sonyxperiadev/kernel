@@ -371,15 +371,20 @@
 		reg = <0x34008000 0x1000>;
 		interrupts = <0 183 4>;
 		chipreg_addr = <0x35004000 0x1000>;
-		thold_size = <3>; /*number of threshold levels*/
+		thold_size = <8>; /*number of threshold levels*/
 		poll_rate_ms = <30000>;
 		hysteresis = <0>;
 		flags = <0>;
 		interval_ms = <5>;
 		/*critical temp is 115*/
-		thold = <85 1
-			100 1
-			115 2>;
+		thold = <58 1
+			65 1
+			70 1
+			85 1
+			95 1
+			105 1
+			120 4
+			125 2>;
 		tmon_apb_clk = "tmon_apb";
 		tmon_1m_clk = "tmon_1m_clk";
 		falling = <5>;
@@ -485,6 +490,10 @@
 		dft-brightness = <32>;
 		polarity = <1>;		/* Inverted polarity */
 		pwm-period-ns = <99900>; /* ~10010 Hz */
+		temp_comp_size = <3>;
+		temp_comp_tbl = <55 20
+				60 18
+				65 15>;
 		pwm-request-label = "backlight";
 		bl-on-delay = <7000>;
 	};
