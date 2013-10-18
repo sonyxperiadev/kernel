@@ -5495,6 +5495,11 @@ static void bcmtch_dev_post_boot_reset(
 
 	/* free communication channels */
 	bcmtch_dev_free_channels(bcmtch_data_ptr);
+
+	/* free post boot buffer */
+	kfree(bcmtch_data_ptr->post_boot_buffer);
+	bcmtch_data_ptr->post_boot_buffer = NULL;
+
 }
 
 static int32_t bcmtch_dev_suspend(
@@ -7481,8 +7486,8 @@ static int32_t bcmtch_i2c_remove(struct i2c_client *p_i2c_client)
 	/* release power */
 	bcmtch_dev_power_free(bcmtch_data_ptr);
 
-	/* free communication channels */
-	bcmtch_dev_free_channels(bcmtch_data_ptr);
+	/* reset + free communication channels */
+	bcmtch_dev_post_boot_reset(bcmtch_data_ptr);
 
 	/* free i2c device clients */
 	bcmtch_i2c_free_clients(bcmtch_data_ptr);
