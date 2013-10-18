@@ -81,6 +81,7 @@ static inline void arch_spin_lock(arch_spinlock_t *lock)
 	unsigned long tmp;
 
 	__asm__ __volatile__(
+"	isb\n"
 "1:	ldrex	%0, [%1]\n"
 "	teq	%0, #0\n"
 	WFE("ne")
