@@ -187,6 +187,17 @@ extern UInt32 audio_control_dsp(UInt32 param1, UInt32 param2,
 AUDIO_DRIVER_HANDLE_t AUDIO_DRIVER_Open(AUDIO_DRIVER_TYPE_t drv_type);
 
 /**
+*  @brief  This function is used to check whether the voip driver is running
+*
+*  @param  none
+*
+*  @return True if voip driver is running, else false
+*
+ *************************************************************************/
+
+Boolean AUDIO_DRIVER_VoipStatus(void);
+
+/**
 *  @brief  This function is used to close the audio data driver
 *
 *  @param  drv_handle   (in)  handle returned while opening the driver
@@ -194,6 +205,7 @@ AUDIO_DRIVER_HANDLE_t AUDIO_DRIVER_Open(AUDIO_DRIVER_TYPE_t drv_type);
 *  @return none
 *
  *************************************************************************/
+
 void AUDIO_DRIVER_Close(AUDIO_DRIVER_HANDLE_t drv_handle);
 
 /**
