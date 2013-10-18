@@ -56,6 +56,10 @@ static int v3d_user_reset(void *device_id)
 	v3d_write(id, V3D_DBQITC_OFFSET, 0xffff);
 	v3d_write(id, V3D_DBQITE_OFFSET, 0xffff);
 
+	v3d_write(id, V3D_L2CACTL_OFFSET, 4);
+	v3d_write(id, V3D_L2CACTL_OFFSET, 1);
+	v3d_write(id, V3D_L2CACTL_OFFSET, 4);
+
 	return 0;
 }
 
