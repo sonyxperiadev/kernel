@@ -1470,12 +1470,6 @@ static int __devinit bcmpmu_accy_probe(struct platform_device *pdev)
 	di->bcmpmu = bcmpmu;
 	di->pdata = pdata;
 
-	ret = bcmpmu_accy_register_irqs(di);
-	if (ret) {
-		pr_accy(INIT, "%s: failed to register irqs\n", __func__);
-		goto free_mem;
-	}
-
 	di->wq = create_singlethread_workqueue("accy_wq");
 	if (!di->wq) {
 		pr_accy(INIT, "failed to create workq\n");
@@ -1508,6 +1502,13 @@ static int __devinit bcmpmu_accy_probe(struct platform_device *pdev)
 	di->chrgr_type = PMU_CHRGR_TYPE_NONE;
 	di->chrgr_type_prev = PMU_CHRGR_TYPE_NONE;
 	atomic_set(&drv_init_done, 1);
+
+	ret = bcmpmu_accy_register_irqs(di);
+	if (ret) {
+		pr_accy(INIT, "%s: failed to register irqs\n", __func__);
+		goto free_mem;
+	}
+
 	pr_accy(INIT, "%s: success\n", __func__);
 	return 0;
 
