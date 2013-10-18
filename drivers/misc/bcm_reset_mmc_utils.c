@@ -47,25 +47,33 @@ static int
 reboot_notifier_callback(struct notifier_block *nb, unsigned long val, void *v)
 {
 	pr_debug("%s\n", __func__);
+
 	if (v == NULL) {
-		do_set_poweron_reset_boot();
-		goto clean_up;
+		goto default_boot;
 	}
 
 	if (!strncmp(v, "recovery", 8)) {
 		pr_info("Rebooting in recovery mode\n");
 		do_set_recovery_boot();
+		goto clean_up;
 	}
 
 	if (!strncmp(v, "ap_only", 7)) {
 		pr_info("Rebooting with ap_only mode\n");
 		do_set_ap_only_boot();
+		goto clean_up;
 	}
 
 	if (!strncmp(v, "bootloader", 10)) {
 		pr_info("Rebooting in bootloader mode\n");
 		do_set_bootloader_boot();
+		goto clean_up;
 	}
+
+default_boot:
+	/* default reboot reason */
+	do_set_poweron_reset_boot();
+
 clean_up:
 	return NOTIFY_DONE;
 }
