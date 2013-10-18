@@ -45,6 +45,7 @@
 
 #define KXTIK_WAI_1004_ID	0x05
 #define KXTIK_WAI_1009_ID	0x09
+#define KXTIK_WAI_1013_ID	0x11
 
 #define G_MAX			8096
 /* OUTPUT REGISTERS */
@@ -645,8 +646,9 @@ static int __devinit kxtik_verify(struct kxtik_data *tik)
 	if (retval < 0)
 		FUNCDBG("error reading WHO_AM_I register!\n");
 	else {
-		FUNCDBG("who_am_i id = %d\n", retval);
-		if (KXTIK_WAI_1004_ID == retval || KXTIK_WAI_1009_ID == retval)
+		pr_info("kionix: who_am_i id = %d\n", retval);
+		if (KXTIK_WAI_1004_ID == retval || KXTIK_WAI_1009_ID == retval
+			|| KXTIK_WAI_1013_ID == retval)
 			retval = 0;
 		else
 			retval = -EIO;
