@@ -177,7 +177,7 @@ static const UInt16 sVoIPDataLen[] = { 0, 322, 160, 38, 166, 642, 70 };
 static CSL_VP_Mode_AMR_t prev_amr_mode = (CSL_VP_Mode_AMR_t) 0xffff;
 static Boolean telephony_amr_if2;
 static int wait_cnt, waitcnt_thold = 2;
-static UInt32 isDTXEnabled = 0;
+static UInt32 isDTXEnabled;
 
 static struct work_struct voip_work;
 static struct workqueue_struct *voip_workqueue; /* init to NULL */
@@ -448,6 +448,28 @@ AUDIO_DRIVER_HANDLE_t AUDIO_DRIVER_Open(AUDIO_DRIVER_TYPE_t drv_type)
 	}
 	return (AUDIO_DRIVER_HANDLE_t) aud_drv;
 }
+
+/**
+ *
+ * Function Name: AUDIO_DRIVER_VoipStatus
+ *
+ * Description:   This function returns whether voip driver is running or not
+ *
+ ***************************************************************************/
+
+Boolean AUDIO_DRIVER_VoipStatus(void)
+{
+	 bool  voipstatus;
+	 if (audio_voip_driver.aud_drv_p)
+		voipstatus =  TRUE;
+	 else
+		voipstatus = FALSE;
+
+	 aTrace(LOG_AUDIO_DRIVER, "voipstatus = %d\n", voipstatus);
+
+	 return voipstatus;
+}
+
 
 /**
  *

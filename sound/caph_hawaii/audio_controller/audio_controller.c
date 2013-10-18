@@ -461,6 +461,8 @@ void AUDCTRL_Telephony_RateChange(unsigned int sample_rate)
 	AudioApp_t pre_app, app;
 	AudioMode_t mode;
 	int bNeedDualMic;
+	bool voipstatus;
+
 	aTrace(LOG_AUDIO_CNTLR, "%s sample_rate %d-->%d",
 	       __func__, voiceCallSampleRate, sample_rate);
 
@@ -472,7 +474,9 @@ void AUDCTRL_Telephony_RateChange(unsigned int sample_rate)
 	/*update the new sample rate. so new voice call app will be set */
 	voiceCallSampleRate = sample_rate;
 
-	if (AUDCTRL_InVoiceCall()) {
+	voipstatus = AUDIO_DRIVER_VoipStatus();
+
+	if (AUDCTRL_InVoiceCall() && !voipstatus) {
 		mode = AUDCTRL_GetAudioMode();
 		pre_app = AUDCTRL_GetAudioApp();
 		AUDCTRL_FinalizeAudioApp(mode);
