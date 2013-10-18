@@ -469,7 +469,8 @@ int32_t dwc_otg_handle_wakeup_detected_intr(dwc_otg_core_if_t *core_if)
 	DWC_DEBUGPL(DBG_ANY,
 		    "++Resume and Remote Wakeup Detected Interrupt++\n");
 
-	DWC_PRINTF("%s lxstate = %d\n", __func__, core_if->lx_state);
+	DWC_DEBUGPL(DBG_PCD,
+			"%s lxstate = %d\n", __func__, core_if->lx_state);
 
 #ifdef CONFIG_USB_OTG_UTILS
 	if (core_if->xceiver->set_suspend &&
