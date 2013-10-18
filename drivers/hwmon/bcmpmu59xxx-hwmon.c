@@ -59,7 +59,6 @@ struct bcmpmu_adc {
 	struct mutex chann_mutex[PMU_ADC_CHANN_MAX]; /* per channel mutex */
 	struct mutex rtm_mutex;
 	struct bcmpmu_adc_pdata *pdata;
-	unsigned int int_status;
 	struct completion rtm_ready_complete;
 };
 
@@ -257,13 +256,6 @@ int read_rtm_adc(struct bcmpmu59xxx *bcmpmu, enum bcmpmu_adc_channel channel,
 		goto err;
 	}
 
-	if (adc->int_status != PMU_IRQ_RTM_DATA_RDY) {
-		pr_hwmon(ERROR, "adc->int_status=%d\n", adc->int_status);
-		adc->int_status = 0;
-		goto err;
-	} else
-		adc->int_status = 0;
-
 	ret = bcmpmu->read_dev_bulk(bcmpmu, PMU_REG_ADCCTRL27, rtm_read,
 								ADC_READ_LEN);
 	if (ret != 0) {
@@ -296,6 +288,12 @@ int read_rtm_adc(struct bcmpmu59xxx *bcmpmu, enum bcmpmu_adc_channel channel,
 
 	return 0;
 err:
+
+	val = ADC_RTM_CONV_DISABLE << ADC_RTM_CONVERSION_SHIFT;
+	ret = bcmpmu->write_dev(bcmpmu, PMU_REG_ADCCTRL1, val);
+	if (ret != 0)
+		pr_hwmon(ERROR, "%s I2C write failed\n", __func__);
+
 	mutex_unlock(&adc->rtm_mutex);
 	return -EAGAIN;
 
@@ -532,13 +530,9 @@ static void  bcmpmu_rtm_irq_handler(u32 irq, void *data)
 {
 	struct bcmpmu_adc *adc = data;
 
-	if (irq == PMU_IRQ_RTM_DATA_RDY ||
-		irq == PMU_IRQ_RTM_UPPER ||
-		irq == PMU_IRQ_RTM_IGNORE ||
-		irq == PMU_IRQ_RTM_OVERRIDDEN) {
-		adc->int_status = irq;
+	if (irq == PMU_IRQ_RTM_DATA_RDY)
 		complete(&adc->rtm_ready_complete);
-	} else
+	else
 		BUG();
 }
 
@@ -677,10 +671,11 @@ static int __devinit bcmpmu_adc_probe(struct platform_device *pdev)
 
 	/* Unmask interrupts */
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_RTM_DATA_RDY);
-	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_RTM_UPPER);
-	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_RTM_IGNORE);
-	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_RTM_OVERRIDDEN);
+
 	/* Mask interrupts */
+	bcmpmu->mask_irq(bcmpmu, PMU_IRQ_RTM_UPPER);
+	bcmpmu->mask_irq(bcmpmu, PMU_IRQ_RTM_IGNORE);
+	bcmpmu->mask_irq(bcmpmu, PMU_IRQ_RTM_OVERRIDDEN);
 	bcmpmu->mask_irq(bcmpmu, PMU_IRQ_RTM_IN_CON_MEAS);
 
 	ret = sysfs_create_group(&pdev->dev.kobj, &bcmpmu_hwmon_attr_group);
