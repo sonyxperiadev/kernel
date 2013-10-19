@@ -894,7 +894,7 @@ static ssize_t akm_compass_sysfs_delay_store(struct akm_compass_data *akm,
 	if (0 == count)
 		return 0;
 
-	if (strtoll(buf, AKM_BASE_NUM, &val))
+	if (kstrtoll(buf, AKM_BASE_NUM, &val))
 		return -EINVAL;
 
 	mutex_lock(&akm->val_mutex);
