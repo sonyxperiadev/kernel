@@ -39,6 +39,7 @@
 #else
 #include <linux/alarmtimer.h>
 #endif
+#include <mach/kona_timer.h>
 
 
 #ifndef CONFIG_WD_TAPPER
@@ -308,8 +309,8 @@ struct bcmpmu_fg_data {
 	struct wake_lock fg_alarm_wake_lock;
 	int alarm_timeout;
 #endif /*CONFIG_WD_TAPPER*/
-	ktime_t last_sample_tm;
-	ktime_t last_curr_sample_tm;
+	u64 last_sample_tm;
+	u64 last_curr_sample_tm;
 	int last_curr_sample;
 
 	enum bcmpmu_fg_cal_state cal_state;
@@ -364,6 +365,9 @@ static void bcmpmu_fg_reset_adj_factors(struct bcmpmu_fg_data *fg);
 static void bcmpmu_fg_update_psy(struct bcmpmu_fg_data *fg, bool force_update);
 static int bcmpmu_fg_get_curr_inst(struct bcmpmu_fg_data *fg);
 static int bcmpmu_fg_freeze_read(struct bcmpmu_fg_data *fg);
+static inline int bcmpmu_fg_sample_rate_to_time(
+		enum bcmpmu_fg_sample_rate rate);
+
 
 
 /**
@@ -386,6 +390,7 @@ static inline void fill_avg_sample_buff(struct bcmpmu_fg_data *fg)
 
 	for (i = 0; i < AVG_SAMPLES; i++) {
 		fg->avg_sample.volt[i] = bcmpmu_fg_get_batt_volt(fg->bcmpmu);
+		msleep(bcmpmu_fg_sample_rate_to_time(fg->sample_rate));
 		fg->avg_sample.curr[i] = bcmpmu_fg_get_curr_inst(fg);
 		fg->avg_sample.idx++;
 	}
@@ -593,7 +598,7 @@ static int bcmpmu_fg_set_sample_rate(struct bcmpmu_fg_data *fg,
 
 	if ((rate < SAMPLE_RATE_2HZ) || (rate > SAMPLE_RATE_16HZ))
 		return -EINVAL;
-
+	fg->sample_rate = rate;
 	ret = fg->bcmpmu->read_dev(fg->bcmpmu, PMU_REG_FGOCICCTRL, &reg);
 	if (ret)
 		return ret;
@@ -1137,24 +1142,29 @@ static inline int bcmpmu_fg_get_batt_temp(struct bcmpmu_fg_data *fg)
 
 static int bcmpmu_fg_get_curr_inst(struct bcmpmu_fg_data *fg)
 {
-	ktime_t t_now;
-	ktime_t t_diff;
+	u64 t_now;
 	u64 t_ms;
 	int ret = 0;
 	u8 reg;
 	u8 smpl_cal[2];
+	int last_curr_sample;
 
 	FG_LOCK(fg);
 	/**
 	 * Avoid reading instant current register earlier than
 	 * next sample available
 	 */
-	t_now = ktime_get();
-	t_diff = ktime_sub(t_now, fg->last_curr_sample_tm);
-	t_ms = ktime_to_ms(t_diff);
+	t_now = kona_hubtimer_get_counter();
+	t_ms = ((t_now - fg->last_curr_sample_tm) * 1000)/CLOCK_TICK_RATE;
 
-	if (t_ms < bcmpmu_fg_sample_rate_to_time(fg->sample_rate))
-		msleep(fg->sample_rate);
+	if (t_ms < bcmpmu_fg_sample_rate_to_time(fg->sample_rate)) {
+		last_curr_sample = fg->last_curr_sample;
+		FG_UNLOCK(fg);
+		pr_fg(FLOW,
+			"Read time(%llu) < FG samp time(%d)\n",
+			t_ms, bcmpmu_fg_sample_rate_to_time(fg->sample_rate));
+		return last_curr_sample;
+	}
 
 	fg->last_curr_sample_tm = t_now;
 
@@ -1446,8 +1456,7 @@ static void bcmpmu_fg_update_adj_factor(struct bcmpmu_fg_data *fg)
 
 static void bcmpmu_fg_get_coulomb_counter(struct bcmpmu_fg_data *fg)
 {
-	ktime_t t_now;
-	ktime_t t_diff;
+	u64 t_now;
 	u64 t_ms;
 	int ret;
 	int sample_count;
@@ -1467,12 +1476,16 @@ static void bcmpmu_fg_get_coulomb_counter(struct bcmpmu_fg_data *fg)
 	 * Avoid reading accumulator register earlier than
 	 * next sample available
 	 */
-	t_now = ktime_get();
-	t_diff = ktime_sub(t_now, fg->last_sample_tm);
-	t_ms = ktime_to_ms(t_diff);
 
-	if (t_ms < bcmpmu_fg_sample_rate_to_time(fg->sample_rate))
+	t_now = kona_hubtimer_get_counter();
+	t_ms = ((t_now - fg->last_sample_tm) * 1000)/CLOCK_TICK_RATE;
+
+	if (t_ms < bcmpmu_fg_sample_rate_to_time(fg->sample_rate)) {
+		pr_fg(FLOW,
+			"CC Read time(%llu) < FG samp time(%d)\n",
+			t_ms, bcmpmu_fg_sample_rate_to_time(fg->sample_rate));
 		return;
+	}
 
 	fg->last_sample_tm = t_now;
 
@@ -1999,7 +2012,7 @@ static int bcmpmu_fg_get_ocv_avg_capacity(struct bcmpmu_fg_data *fg,
 	BUG_ON((cap_percentage > 100) || (cap_percentage < 0));
 
 	bcmpmu_fg_enable(fg, false);
-	bcmpmu_fg_set_sample_rate(fg, fg->sample_rate);
+	bcmpmu_fg_set_sample_rate(fg, SAMPLE_RATE_2HZ);
 	bcmpmu_fg_enable(fg, true);
 	bcmpmu_fg_reset(fg);
 
@@ -3403,8 +3416,9 @@ static int __devinit bcmpmu_fg_probe(struct platform_device *pdev)
 	} else
 		pr_fg(INIT, "booting with power supply\n");
 
-	fg->sample_rate = SAMPLE_RATE_2HZ;
+	bcmpmu_fg_set_sample_rate(fg, SAMPLE_RATE_2HZ);
 	bcmpmu_fg_hw_init(fg);
+
 
 	if (!(bcmpmu->flags & BCMPMU_SPA_EN)) {
 		ret = power_supply_register(&pdev->dev, &fg->psy);
