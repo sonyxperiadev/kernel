@@ -1786,8 +1786,12 @@ static int ov8825_get_gain(struct i2c_client *client,
 	u8 gain_buf[2];
 	int i;
 
+/*
 	ov8825_reg_read_multi(client, OV8825_REG_AGC_HI, gain_buf, 2);
 	gain_code = ((gain_buf[0] & 0x3f) << 8) + gain_buf[1];
+	*/
+
+	gain_code = ov8825->gain_current >> 4;
 
 	if (Is_SnapToPrev_gain == 1) {
 		gain_code = ov8825->gain_read_buf[0];
@@ -1818,12 +1822,15 @@ static int ov8825_get_exposure(struct i2c_client *client,
 	int i, ret = 0;
 	int exp_code;
 	u8 exp_buf[3];
-
+/*
 	ov8825_reg_read_multi(client, OV8825_REG_EXP_HI, exp_buf, 3);
 	exp_code =
 		((exp_buf[0] & 0xf) << 16) +
 		((exp_buf[1] & 0xff) << 8) +
 		(exp_buf[2] & 0xf0);
+		*/
+
+	exp_code = (ov8825->exposure_current * 1000 / ov8825->line_length) << 4;
 
 	if (Is_SnapToPrev_expo == 1) {
 		exp_code = ov8825->exp_read_buf[0];
