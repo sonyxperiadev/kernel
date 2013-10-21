@@ -32,12 +32,14 @@
 #include <linux/wait.h>
 #include <linux/input.h>
 #include <linux/sysfs.h>
+#include <linux/wakelock.h>
 #include <linux/mfd/bcmpmu59xxx.h>
 #include <linux/mfd/bcmpmu59xxx_reg.h>
 
 struct bcmpmu_ponkey {
 	struct input_dev *idev;
 	struct bcmpmu59xxx *bcmpmu;
+	struct wake_lock wake_lock;
 	u32 ponkey_state;/*0: Released, 1 : Pressed */
 	u32 ponkey_mode;
 };
@@ -177,6 +179,8 @@ static void bcmpmu_ponkey_isr(u32 irq, void *data)
 
 	switch (irq) {
 	case PMU_IRQ_POK_PRESSED:
+		if (!wake_lock_active(&bcmpmu_pkey->wake_lock))
+			wake_lock_timeout(&bcmpmu_pkey->wake_lock, HZ);
 		ponkey->ponkey_state = 1;
 		break;
 
@@ -350,6 +354,9 @@ static int bcmpmu59xxx_ponkey_probe(struct platform_device *pdev)
 		goto out_input;
 	}
 
+	wake_lock_init(&bcmpmu_pkey->wake_lock,
+			WAKE_LOCK_SUSPEND, "PONKEY_press");
+
 	/* Request PRESSED and RELEASED interrupts.
 	 */
 	bcmpmu->register_irq(bcmpmu, PMU_IRQ_POK_PRESSED, bcmpmu_ponkey_isr,
@@ -396,7 +403,7 @@ static int bcmpmu59xxx_ponkey_remove(struct platform_device *pdev)
 	struct bcmpmu_ponkey *ponkey = bcmpmu->ponkeyinfo;
 
 	sysfs_remove_group(ponkey_kobj, &ponkey_mode_attr_group);
-
+	wake_lock_destroy(&bcmpmu_pkey->wake_lock);
 	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_POK_PRESSED);
 	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_POK_RELEASED);
 	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_POK_T1);
