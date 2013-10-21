@@ -802,7 +802,7 @@ static Int32 DSI_SetMaxRtnPktSize(DISPDRV_HANDLE_T drvH, UInt8 size)
 	msg.isLong     = FALSE;
 	msg.endWithBta = FALSE;
 
-	DSI_INFO("[DISPDRV]: disCmnd[0x%02X]\n", DSI_DT_SH_MAX_RET_PKT_SIZE);
+	DSI_DBG("[DISPDRV]: disCmnd[0x%02X]\n", DSI_DT_SH_MAX_RET_PKT_SIZE);
 	cslRes = CSL_DSI_SendPacket(pPanel->clientH, &msg, FALSE);
 	if (cslRes != CSL_LCD_OK) {
 
@@ -856,9 +856,9 @@ static Int32 DSI_DCS_Read(DispDrv_PANEL_t *pPanel,
 			, reg);
 		res = -1;
 	} else {
-		DSI_INFO("[DISPDRV]: Command: 0x%02X\n", reg);
+		DSI_DBG("[DISPDRV]: Command: 0x%02X\n", reg);
 		for (i = 0; i < buffLen; i++)
-			DSI_INFO("Parameter[%d]: [0x%02X]\n", i, rxBuff[i]);
+			DSI_DBG("Parameter[%d]: [0x%02X]\n", i, rxBuff[i]);
 		res = rxMsg.readReplySize;
 	}
 	return res;

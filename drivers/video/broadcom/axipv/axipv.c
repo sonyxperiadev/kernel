@@ -900,11 +900,13 @@ int axipv_change_state(u32 event, struct axipv_config_t *config)
 				axipv_err("0x%x marked as available\n", g_curr);
 				axipv_set_buff_status(dev->buff, g_curr,
 						AXIPV_BUFF_AVAILABLE);
+				dev->release_cb(g_curr);
 			}
 			if (g_nxt && (g_nxt != g_curr)) {
 				axipv_err("0x%x marked as available\n", g_nxt);
 				axipv_set_buff_status(dev->buff, g_nxt,
 						AXIPV_BUFF_AVAILABLE);
+				dev->release_cb(g_nxt);
 			}
 			g_curr = 0;
 			g_nxt = 0;
@@ -1044,6 +1046,7 @@ int axipv_check_completion(u32 event, struct axipv_config_t *config)
 			axipv_err("marking 0x%x as available\n", curr_buff);
 			axipv_set_buff_status(dev->buff, curr_buff,
 						AXIPV_BUFF_AVAILABLE);
+
 			if (curr_buff == g_curr)
 				g_curr = 0;
 			if (curr_buff == g_nxt)

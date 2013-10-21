@@ -120,6 +120,14 @@ static int dsi_axi_clk(int bus, bool on)
 	dsi_axi = clk_get(NULL, dsi_bus_clk[bus].dsi_axi);
 	BUG_ON(IS_ERR_OR_NULL(dsi_axi));
 	if (on) {
+		if (0 == clk_get_usage(dsi_axi)) {
+			/*
+			Sometimes DSI axi bus may get hang if
+			TX (CSL_DSI_SendPacket) busy,
+			doing a clk_reset to recovery from this error
+			*/
+			clk_reset(dsi_axi);
+		}
 		if (clk_enable(dsi_axi)) {
 			pr_err("Failed to enable the DSI[%d] AXI clock\n",
 			bus);
