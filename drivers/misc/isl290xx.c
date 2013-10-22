@@ -751,19 +751,18 @@ static ssize_t factory_file_prox_show(struct device *dev,
 				struct device_attribute *attr,
 				char *buf)
 {
-	u32 prox_mean;
-	int ret;
+	u8 pdata;
 	int  prox_status = 0;
 	if (!prox_on) {
 		prv_isl290xx_ctrl_lp(0x01);
 		prox_status = 1;
 	}
-	ret = prv_isl290xx_prox_poll(&prox_mean);
-	if (ret < 0)
-		pr_isl(ERROR, "call to prox_poll failed\n");
+	pdata = i2c_smbus_read_byte_data(isl290xx_data_tp->client,
+		ISL290XX_PROX_DATA);
+
 	if (prox_status)
 		prv_isl290xx_ctrl_lp(0x02);
-	return sprintf(buf, "%d\n", prox_mean);
+	return sprintf(buf, "%d\n", pdata);
 }
 
 static DEVICE_ATTR(raw_data, 0644, factory_file_prox_show, NULL);
