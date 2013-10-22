@@ -2057,6 +2057,7 @@ static int mmc_blk_issue_rq(struct mmc_queue *mq, struct request *req)
 	struct mmc_card *card = md->queue.card;
 	struct mmc_host *host = card->host;
 	unsigned long flags;
+	int special_req = 0;
 
 
 #ifdef CONFIG_MMC_BLOCK_DEFERRED_RESUME
@@ -2080,6 +2081,8 @@ static int mmc_blk_issue_rq(struct mmc_queue *mq, struct request *req)
 	}
 
 	mq->flags &= ~MMC_QUEUE_NEW_REQUEST;
+	if (req && (req->cmd_flags & MMC_REQ_SPECIAL_MASK))
+		special_req = 1;
 	if (req && req->cmd_flags & REQ_DISCARD) {
 		/* complete ongoing async transfer before issuing discard */
 		if (card->host->areq)
@@ -2105,7 +2108,7 @@ static int mmc_blk_issue_rq(struct mmc_queue *mq, struct request *req)
 
 out:
 	if ((!req && !(mq->flags & MMC_QUEUE_NEW_REQUEST)) ||
-	     (req && (req->cmd_flags & MMC_REQ_SPECIAL_MASK)))
+		special_req)
 		/*
 		 * Release host when there are no more requests
 		 * and after special request(discard, flush) is done.
