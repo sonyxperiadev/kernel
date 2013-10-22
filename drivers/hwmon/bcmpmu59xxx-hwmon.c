@@ -239,7 +239,7 @@ int read_rtm_adc(struct bcmpmu59xxx *bcmpmu, enum bcmpmu_adc_channel channel,
 	val = channel << ADC_RTM_CHANN_SHIFT;
 	val |= (ADC_RTM_CONV_ENABLE << ADC_RTM_CONVERSION_SHIFT);
 	val |= (ADC_RTM_START << ADC_RTM_START_SHIFT);
-	val |= ADC_RTM_MAX_RST_CNT;
+	val |= ADC_RTM_MAX_RST_CNT_5;
 
 	ret = bcmpmu->write_dev(bcmpmu, PMU_REG_ADCCTRL1, val);
 	if (ret != 0) {
@@ -249,10 +249,16 @@ int read_rtm_adc(struct bcmpmu59xxx *bcmpmu, enum bcmpmu_adc_channel channel,
 
 
 	if (!wait_for_completion_timeout(&adc->rtm_ready_complete,
-			msecs_to_jiffies(100))) {
+			msecs_to_jiffies(40))) {
+
+		ret = bcmpmu->read_dev(bcmpmu, PMU_REG_INT9, &val);
+		if (ret != 0) {
+			pr_hwmon(ERROR, "%s I2C write failed\n", __func__);
+			goto err;
+		}
 		pr_hwmon(ERROR,
-			"%s: Timeout waiting for ADC_RTM_DATA_READY\n",
-			__func__);
+			"%s: Timeout waiting for ADC_RTM_DATA_READY, INT9: 0x%x\n",
+			__func__, val);
 		goto err;
 	}
 
