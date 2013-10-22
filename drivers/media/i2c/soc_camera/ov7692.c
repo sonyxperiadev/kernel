@@ -12,12 +12,14 @@
  */
 
 #include <linux/module.h>
-#include <linux/videodev2.h>
+#include <uapi/linux/time.h>
+#include <uapi/linux/videodev2.h>
 #include <linux/slab.h>
 #include <linux/i2c.h>
 #include <linux/log2.h>
 #include <linux/delay.h>
 
+#include <media/v4l2-ctrls.h>
 #include <media/v4l2-subdev.h>
 #include <media/v4l2-chip-ident.h>
 #include <media/soc_camera.h>
@@ -113,6 +115,7 @@ static int ov7692_find_framesize(u32 width, u32 height)
 struct ov7692 {
 	struct v4l2_subdev subdev;
 	struct v4l2_subdev_sensor_interface_parms *plat_parms;
+	struct v4l2_ctrl_handler hdl;
 	int i_size;
 	int i_fmt;
 	int brightness;
@@ -233,22 +236,6 @@ static const struct ov7692_timing_cfg timing_cfg_jpeg[OV7692_SIZE_LAST] = {
 			       },
 };
 
-#if 0
-static struct v4l2_subdev_sensor_serial_parms mipi_cfgs[OV7692_SIZE_LAST] = {
-	[OV7692_SIZE_QVGA] = {
-			      .lanes = 1,
-			      .channel = 0,
-			      .phy_rate = (336 * 2 * 1000000),
-			      .pix_clk = 21,	/* Revisit */
-			      },
-	[OV7692_SIZE_VGA] = {
-			     .lanes = 1,
-			     .channel = 0,
-			     .phy_rate = (336 * 2 * 1000000),
-			     .pix_clk = 21,	/* Revisit */
-			     },
-};
-#endif
 
 /**
  *ov7692_read_smbus - Read a value from a register in an ov7692 sensor device
@@ -308,66 +295,6 @@ static int ov7692_write_smbus(struct i2c_client *client, unsigned char reg,
 
 
 
-static const struct v4l2_queryctrl ov7692_controls[] = {
-	{
-	 .id = V4L2_CID_CAMERA_BRIGHTNESS,
-	 .type = V4L2_CTRL_TYPE_INTEGER,
-	 .name = "Brightness",
-	 .minimum = EV_MINUS_1,
-	 .maximum = EV_PLUS_1,
-	 .step = 1,
-	 .default_value = EV_DEFAULT,
-	 },
-	{
-	 .id = V4L2_CID_CAMERA_CONTRAST,
-	 .type = V4L2_CTRL_TYPE_INTEGER,
-	 .name = "Contrast",
-	 .minimum = CONTRAST_MINUS_2,
-	 .maximum = CONTRAST_PLUS_2,
-	 .step = 1,
-	 .default_value = CONTRAST_DEFAULT,
-	 },
-	{
-	 .id = V4L2_CID_CAMERA_EFFECT,
-	 .type = V4L2_CTRL_TYPE_INTEGER,
-	 .name = "Color Effects",
-	 .minimum = IMAGE_EFFECT_NONE,
-	 .maximum = (1 << IMAGE_EFFECT_NONE | 1 << IMAGE_EFFECT_SEPIA |
-			 1 << IMAGE_EFFECT_BNW | 1 << IMAGE_EFFECT_NEGATIVE),
-	 .step = 1,
-	 .default_value = IMAGE_EFFECT_NONE,
-	 },
-	{
-	 .id = V4L2_CID_CAMERA_ANTI_BANDING,
-	 .type = V4L2_CTRL_TYPE_INTEGER,
-	 .name = "Anti Banding",
-	 .minimum = ANTI_BANDING_AUTO,
-	 .maximum = ANTI_BANDING_60HZ,
-	 .step = 1,
-	 .default_value = ANTI_BANDING_AUTO,
-	 },
-	 {
-	 .id = V4L2_CID_CAMERA_WHITE_BALANCE,
-	 .type = V4L2_CTRL_TYPE_INTEGER,
-	 .name = "White Balance",
-	 .minimum = WHITE_BALANCE_AUTO,
-	 .maximum = WHITE_BALANCE_FLUORESCENT,
-	 .step = 1,
-	 .default_value = WHITE_BALANCE_AUTO,
-	 },
-	 {
-	 .id = V4L2_CID_CAMERA_FRAME_RATE,
-	 .type = V4L2_CTRL_TYPE_INTEGER,
-	 .name = "Framerate control",
-	 .minimum = FRAME_RATE_AUTO,
-	 .maximum = (1 << FRAME_RATE_AUTO |
-			1 << FRAME_RATE_10 | 1 << FRAME_RATE_30),
-	 .step = 1,
-	 .default_value = FRAME_RATE_AUTO,
-	 },
-
-};
-
 /**
  * Initialize a list of ov7692 registers.
  * The list of registers is terminated by the pair of values
@@ -408,54 +335,13 @@ static int ov7692_config_timing(struct i2c_client *client)
 	return ret;
 }
 
-
-static int ov7692_set_bus_param(struct soc_camera_device *icd,
-				unsigned long flags)
+static int ov7692_s_stream(struct v4l2_subdev *sd, int enable)
 {
-	/* TODO: Do the right thing here, and validate bus params */
 	return 0;
 }
 
-static unsigned long ov7692_query_bus_param(struct soc_camera_device *icd)
-{
-	unsigned long flags = SOCAM_PCLK_SAMPLE_FALLING |
-		SOCAM_HSYNC_ACTIVE_HIGH | SOCAM_VSYNC_ACTIVE_HIGH |
-		SOCAM_DATA_ACTIVE_HIGH | SOCAM_MASTER;
 
-	/* TODO: Do the right thing here, and validate bus params */
-
-	flags |= SOCAM_DATAWIDTH_10;
-
-	return flags;
-}
-
-static int initNeeded = -1;
-static int ov7692_enum_input(struct soc_camera_device *icd,
-			     struct v4l2_input *inp)
-{
-	struct soc_camera_link *icl = to_soc_camera_link(icd);
-	struct v4l2_subdev_sensor_interface_parms *plat_parms;
-
-	inp->type = V4L2_INPUT_TYPE_CAMERA;
-	inp->std = V4L2_STD_UNKNOWN;
-	strcpy(inp->name, "ov7692");
-
-	if (icl && icl->priv) {
-
-		plat_parms = icl->priv;
-		inp->status = 0;
-
-		if (plat_parms->orientation == V4L2_SUBDEV_SENSOR_PORTRAIT)
-			inp->status |= V4L2_IN_ST_HFLIP;
-
-		if (plat_parms->facing == V4L2_SUBDEV_SENSOR_BACK)
-			inp->status |= V4L2_IN_ST_BACK;
-
-	}
-	initNeeded = 1;
-	return 0;
-}
-
+static int initneeded = -1;
 static int ov7692_g_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
@@ -505,9 +391,9 @@ static int ov7692_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 		return ret;
 	/*To avoide reentry init sensor when captrue, remove from here  */
 	/*ret = ov7692_write_smbuss(client, configscript_common1);*/
-	if (initNeeded > 0) {
+	if (initneeded > 0) {
 		ret = ov7692_write_smbuss(client, hawaii_init_common);
-		initNeeded = 0;
+		initneeded = 0;
 	}
 
 	ov7692->i_size = ov7692_find_framesize(mf->width, mf->height);
@@ -550,60 +436,121 @@ static int ov7692_g_chip_ident(struct v4l2_subdev *sd,
 	return 0;
 }
 
-static int ov7692_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
+void ov7692_check_mounting(struct i2c_client *client, struct v4l2_ctrl *ctrl)
 {
+	struct soc_camera_subdev_desc *ssd = client->dev.platform_data;
+	struct v4l2_subdev_sensor_interface_parms *iface_parms;
+
+	if (ssd && ssd->drv_priv) {
+		iface_parms = ssd->drv_priv;
+		ctrl->val = 0;
+
+		if (iface_parms->orientation == V4L2_SUBDEV_SENSOR_PORTRAIT)
+			ctrl->val |= V4L2_IN_ST_HFLIP;
+		if (iface_parms->facing == V4L2_SUBDEV_SENSOR_BACK)
+			ctrl->val |= V4L2_IN_ST_BACK;
+	} else
+		dev_err(&client->dev, "Missing interface parameters\n");
+}
+
+static int ov7692_s_ctrl(struct v4l2_ctrl *ctrl);
+static int ov7692_g_volatile_ctrl(struct v4l2_ctrl *ctrl);
+
+static const struct v4l2_ctrl_ops ov7692_ctrl_ops = {
+	.s_ctrl = ov7692_s_ctrl,
+	.g_volatile_ctrl = ov7692_g_volatile_ctrl,
+};
+
+static const struct v4l2_ctrl_config ov7692_controls[] = {
+	 {
+		.ops = &ov7692_ctrl_ops,
+		.id = V4L2_CID_CAMERA_FRAME_RATE,
+		.type = V4L2_CTRL_TYPE_INTEGER,
+		.name = "Framerate control",
+		.min = FRAME_RATE_AUTO,
+		.max = (1 << FRAME_RATE_AUTO |
+				1 << FRAME_RATE_10 | 1 << FRAME_RATE_30),
+		.step = 1,
+		.def = FRAME_RATE_AUTO,
+		.flags = V4L2_CTRL_FLAG_VOLATILE,
+	 },
+	 {
+		 .ops = &ov7692_ctrl_ops,
+		 .id = V4L2_CID_CAM_MOUNTING,
+		 .type = V4L2_CTRL_TYPE_INTEGER,
+		 .name = "Sensor Mounting",
+		 .min = 0,
+		 .max = 0x10 | 0x20 | 0x40,
+		 .step = 1,
+		 .def = 0,
+		 .flags = V4L2_CTRL_FLAG_VOLATILE,
+	 },
+};
+
+static int ov7692_g_volatile_ctrl(struct v4l2_ctrl *ctrl)
+{
+	struct ov7692 *ov7692 = container_of(ctrl->handler,
+						struct ov7692, hdl);
+	struct v4l2_subdev *sd = &ov7692->subdev;
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
-	struct ov7692 *ov7692 = to_ov7692(client);
 
 	dev_dbg(&client->dev, "ov7692_g_ctrl\n");
-
 	switch (ctrl->id) {
-	case V4L2_CID_CAMERA_BRIGHTNESS:
-		ctrl->value = ov7692->brightness;
+	case V4L2_CID_BRIGHTNESS:
+		ctrl->val = ov7692->brightness;
 		break;
-	case V4L2_CID_CAMERA_CONTRAST:
-		ctrl->value = ov7692->contrast;
+	case V4L2_CID_CONTRAST:
+		ctrl->val = ov7692->contrast;
 		break;
-	case V4L2_CID_CAMERA_EFFECT:
-		ctrl->value = ov7692->colorlevel;
+	case V4L2_CID_COLORFX:
+		ctrl->val = ov7692->colorlevel;
 		break;
 	case V4L2_CID_SATURATION:
-		ctrl->value = ov7692->saturation;
+		ctrl->val = ov7692->saturation;
 		break;
 	case V4L2_CID_SHARPNESS:
-		ctrl->value = ov7692->sharpness;
+		ctrl->val = ov7692->sharpness;
 		break;
-	case V4L2_CID_CAMERA_ANTI_BANDING:
-		ctrl->value = ov7692->antibanding;
+	case V4L2_CID_POWER_LINE_FREQUENCY:
+		ctrl->val = ov7692->antibanding;
 		break;
-	case V4L2_CID_CAMERA_WHITE_BALANCE:
-		ctrl->value = ov7692->whitebalance;
+	case V4L2_CID_AUTO_N_PRESET_WHITE_BALANCE:
+		ctrl->val = ov7692->whitebalance;
 		break;
 	case V4L2_CID_CAMERA_FRAME_RATE:
-		ctrl->value = ov7692->framerate;
+		ctrl->val = ov7692->framerate;
+		break;
+	case V4L2_CID_CAM_MOUNTING:
+		ov7692_check_mounting(client, ctrl);
 		break;
 	}
 
 	return 0;
 }
-
-
-static int ov7692_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
+#if 0
+static int ov7692_preview_start(struct i2c_client *client)
 {
+	int ret = 0;
+	ret = ov7692_write_smbuss(client, configscript_common1);
+	return ret;
+}
+#endif
+static int ov7692_s_ctrl(struct v4l2_ctrl *ctrl)
+{
+	struct ov7692 *ov7692 = container_of(ctrl->handler,
+						struct ov7692, hdl);
+	struct v4l2_subdev *sd = &ov7692->subdev;
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
-	struct ov7692 *ov7692 = to_ov7692(client);
 	u8 ov_reg;
 	int ret = 0;
 
-	dev_dbg(&client->dev, "ov7692_s_ctrl\n");
-
 	switch (ctrl->id) {
-	case V4L2_CID_CAMERA_BRIGHTNESS:
+	case V4L2_CID_BRIGHTNESS:
 
-		if (ctrl->value > EV_PLUS_1)
+		if (ctrl->val > EV_PLUS_1)
 			return -EINVAL;
 
-		ov7692->brightness = ctrl->value;
+		ov7692->brightness = ctrl->val;
 		switch (ov7692->brightness) {
 		case EV_MINUS_1:
 			ret = ov7692_write_smbuss(client,
@@ -621,12 +568,12 @@ static int ov7692_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		if (ret)
 			return ret;
 		break;
-	case V4L2_CID_CAMERA_CONTRAST:
+	case V4L2_CID_CONTRAST:
 
-		if (ctrl->value > CONTRAST_PLUS_2)
+		if (ctrl->val > CONTRAST_PLUS_2)
 			return -EINVAL;
 
-		ov7692->contrast = ctrl->value;
+		ov7692->contrast = ctrl->val;
 		switch (ov7692->contrast) {
 		case CONTRAST_MINUS_2:
 			ret = ov7692_write_smbuss(client,
@@ -652,26 +599,27 @@ static int ov7692_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		if (ret)
 			return ret;
 		break;
-	case V4L2_CID_CAMERA_EFFECT:
+	case V4L2_CID_COLORFX:
 
-		if (ctrl->value > IMAGE_EFFECT_BNW)
+		if (ctrl->val > IMAGE_EFFECT_BNW)
 			return -EINVAL;
 
-		ov7692->colorlevel = ctrl->value;
+		ov7692->colorlevel = ctrl->val;
 
 		switch (ov7692->colorlevel) {
-		case IMAGE_EFFECT_BNW:
+		case V4L2_COLORFX_BW:
 			ret = ov7692_write_smbuss(client,
 					ov7692_effect_bw_tbl);
 			break;
-		case IMAGE_EFFECT_SEPIA:
+		case V4L2_COLORFX_SEPIA:
 			ret = ov7692_write_smbuss(client,
 					ov7692_effect_sepia_tbl);
 			break;
-		case IMAGE_EFFECT_NEGATIVE:
+		case V4L2_COLORFX_NEGATIVE:
 			ret = ov7692_write_smbuss(client,
 					ov7692_effect_negative_tbl);
 			break;
+		case V4L2_COLORFX_NONE:
 		default:
 			ret = ov7692_write_smbuss(client,
 					ov7692_effect_normal_tbl);
@@ -682,10 +630,10 @@ static int ov7692_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		break;
 	case V4L2_CID_SATURATION:
 
-		if (ctrl->value > OV7692_SATURATION_MAX)
+		if (ctrl->val > OV7692_SATURATION_MAX)
 			return -EINVAL;
 
-		ov7692->saturation = ctrl->value;
+		ov7692->saturation = ctrl->val;
 		switch (ov7692->saturation) {
 		case OV7692_SATURATION_MIN:
 			ret = ov7692_write_smbuss(client,
@@ -705,10 +653,10 @@ static int ov7692_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		break;
 	case V4L2_CID_SHARPNESS:
 
-		if (ctrl->value > OV7692_SHARPNESS_MAX)
+		if (ctrl->val > OV7692_SHARPNESS_MAX)
 			return -EINVAL;
 
-		ov7692->sharpness = ctrl->value;
+		ov7692->sharpness = ctrl->val;
 		switch (ov7692->sharpness) {
 		case OV7692_SHARPNESS_MIN:
 			ret = ov7692_write_smbuss(client,
@@ -727,22 +675,25 @@ static int ov7692_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			return ret;
 		break;
 
-	case V4L2_CID_CAMERA_ANTI_BANDING:
+	case V4L2_CID_POWER_LINE_FREQUENCY:
 
-		if (ctrl->value > ANTI_BANDING_60HZ)
+		if (ctrl->val > ANTI_BANDING_60HZ)
 			return -EINVAL;
 
-		ov7692->antibanding = ctrl->value;
+		ov7692->antibanding = ctrl->val;
 
 		switch (ov7692->antibanding) {
-		case ANTI_BANDING_50HZ:
+		case V4L2_CID_POWER_LINE_FREQUENCY_DISABLED:
+			break;
+		case V4L2_CID_POWER_LINE_FREQUENCY_50HZ:
 			ret = ov7692_write_smbuss(client,
 					ov7692_antibanding_50z_tbl);
 			break;
-		case ANTI_BANDING_60HZ:
+		case V4L2_CID_POWER_LINE_FREQUENCY_60HZ:
 			ret = ov7692_write_smbuss(client,
 					ov7692_antibanding_60z_tbl);
 			break;
+		case V4L2_CID_POWER_LINE_FREQUENCY_AUTO:
 		default:
 			ret = ov7692_write_smbuss(client,
 					ov7692_antibanding_auto_tbl);
@@ -752,37 +703,40 @@ static int ov7692_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			return ret;
 		break;
 
-	case V4L2_CID_CAMERA_WHITE_BALANCE:
+	case V4L2_CID_AUTO_N_PRESET_WHITE_BALANCE:
 
-		if (ctrl->value > WHITE_BALANCE_FLUORESCENT)
+		if (ctrl->val > WHITE_BALANCE_FLUORESCENT)
 			return -EINVAL;
 
-		ov7692->whitebalance = ctrl->value;
+		ov7692->whitebalance = ctrl->val;
 
 		if (ret)
 			return ret;
 
 		switch (ov7692->whitebalance) {
-		case WHITE_BALANCE_FLUORESCENT:
+		case V4L2_WHITE_BALANCE_FLUORESCENT:
 			ov_reg |= 0x01;
 			ret = ov7692_write_smbuss(client,
 					ov7692_wb_fluorescent);
 			break;
-		case WHITE_BALANCE_SUNNY:
+		case V4L2_WHITE_BALANCE_DAYLIGHT:
 			ov_reg |= 0x01;
 			ret = ov7692_write_smbuss(client,
 					ov7692_wb_daylight);
 			break;
-		case WHITE_BALANCE_CLOUDY:
+		case V4L2_WHITE_BALANCE_CLOUDY:
 			ov_reg |= 0x01;
 			ret = ov7692_write_smbuss(client,
 				ov7692_wb_cloudy);
 			break;
-		case WHITE_BALANCE_TUNGSTEN:
+		case V4L2_WHITE_BALANCE_INCANDESCENT:
 			ov_reg |= 0x01;
 			ret = ov7692_write_smbuss(client,
 					ov7692_wb_tungsten);
 			break;
+		case V4L2_WHITE_BALANCE_MANUAL:
+			break;
+		case V4L2_WHITE_BALANCE_AUTO:
 		default:
 			ov_reg &= ~(0x01);
 			ret = ov7692_write_smbuss(client,
@@ -795,20 +749,20 @@ static int ov7692_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 
 	case V4L2_CID_CAMERA_FRAME_RATE:
 
-		if (ctrl->value > FRAME_RATE_30)
+		if (ctrl->val > FRAME_RATE_30)
 			return -EINVAL;
 
 		if ((ov7692->i_size < OV7692_SIZE_QVGA) ||
 				(ov7692->i_size > OV7692_SIZE_VGA))
 		{
-			if (ctrl->value == FRAME_RATE_30 ||
-					ctrl->value == FRAME_RATE_AUTO)
+			if (ctrl->val == FRAME_RATE_30 ||
+					ctrl->val == FRAME_RATE_AUTO)
 				return 0;
 			else
 				return -EINVAL;
 		}
 
-		ov7692->framerate = ctrl->value;
+		ov7692->framerate = ctrl->val;
 
 		switch (ov7692->framerate) {
 		/*case FRAME_RATE_5:
@@ -936,28 +890,20 @@ static int ov7692_s_register(struct v4l2_subdev *sd,
 }
 #endif
 
-static struct soc_camera_ops ov7692_ops = {
-	.set_bus_param = ov7692_set_bus_param,
-	.query_bus_param = ov7692_query_bus_param,
-	.enum_input = ov7692_enum_input,
-	.controls = ov7692_controls,
-	.num_controls = ARRAY_SIZE(ov7692_controls),
-};
-
 
 static int ov7692_init(struct i2c_client *client)
 {
 	struct ov7692 *ov7692 = to_ov7692(client);
 	int ret = 0;
 
-	printk(KERN_INFO "%s: Sensor initialized!\n", __func__);
+	pr_info("%s: Sensor initialized!\n", __func__);
 
 	ret = ov7692_write_smbuss(client, configscript_common1);
 	if (ret)
 	{
-        printk(KERN_INFO "%s: Sensor initialized failed!\n", __func__);
+		pr_info("%s: Sensor initialized failed!\n", __func__);
 		goto out;
-    }
+	}
 
 	/* default brightness and contrast */
 	ov7692->brightness = EV_DEFAULT;
@@ -973,23 +919,24 @@ out:
 	return ret;
 }
 
+static int ov7692_s_power(struct v4l2_subdev *sd, int on)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	struct soc_camera_subdev_desc *ssdd = soc_camera_i2c_to_desc(client);
+	if (!on)
+		return soc_camera_power_off(&client->dev, ssdd);
+	initneeded = 1;
+	return soc_camera_power_on(&client->dev, ssdd);
+}
+
 /*
  * Interface active, can use i2c. If it fails, it can indeed mean, that
  *this wasn't our capture interface, so, we wait for the right one
  */
-static int ov7692_video_probe(struct soc_camera_device *icd,
-			      struct i2c_client *client)
+static int ov7692_video_probe(struct i2c_client *client)
 {
 	int ret = 0;
     u8 value = 0;
-
-	/*
-	 * We must have a parent by now. And it cannot be a wrong one.
-	 * So this entire test is completely redundant.
-	 */
-	if (!icd->dev.parent ||
-	    to_soc_camera_host(icd->dev.parent)->nr != icd->iface)
-		return -ENODEV;
 
     ret = ov7692_read_smbus(client, 0x1c, &value);
     printk(KERN_INFO "%s: REG_MIDH = 0x%x\n", __func__, value);
@@ -1029,14 +976,13 @@ static int ov7692_video_probe(struct soc_camera_device *icd,
 
 static void ov7692_video_remove(struct soc_camera_device *icd)
 {
-	dev_dbg(&icd->dev, "Video removed: %p, %p\n",
-		icd->dev.parent, icd->vdev);
+	dev_dbg(&icd->control, "Video removed: %p, %p\n",
+		icd->parent, icd->vdev);
 }
 
 static struct v4l2_subdev_core_ops ov7692_subdev_core_ops = {
 	.g_chip_ident = ov7692_g_chip_ident,
-	.g_ctrl = ov7692_g_ctrl,
-	.s_ctrl = ov7692_s_ctrl,
+	.s_power = ov7692_s_power,
 	.ioctl = ov7692_ioctl,
 #ifdef CONFIG_VIDEO_ADV_DEBUG
 	.g_register = ov7692_g_register,
@@ -1134,6 +1080,7 @@ static int ov7692_s_parm(struct v4l2_subdev *sd, struct v4l2_streamparm *param)
 }
 
 static struct v4l2_subdev_video_ops ov7692_subdev_video_ops = {
+	.s_stream = ov7692_s_stream,
 	.s_mbus_fmt = ov7692_s_fmt,
 	.g_mbus_fmt = ov7692_g_fmt,
 	.try_mbus_fmt = ov7692_try_fmt,
@@ -1197,27 +1144,19 @@ static struct v4l2_subdev_ops ov7692_subdev_ops = {
 static int ov7692_probe(struct i2c_client *client,
 			const struct i2c_device_id *did)
 {
-	struct ov7692 *ov7692;
-	struct soc_camera_device *icd = client->dev.platform_data;
-	struct soc_camera_link *icl;
+	unsigned int i;
 	int ret;
+	struct ov7692 *ov7692;
+	struct soc_camera_subdev_desc *ssd = client->dev.platform_data;
 
+	client->addr = 0x3c;
 
-    /*since OV5640 and OV7692 have the same I2C address, we need to modify it here*/
-    client->addr = 0x3c; 
-
-	if (!icd) {
+	if (!ssd) {
 		dev_err(&client->dev, "OV7692: missing soc-camera data!\n");
 		return -EINVAL;
 	}
 
-	icl = to_soc_camera_link(icd);
-	if (!icl) {
-		dev_err(&client->dev, "OV7692 driver needs platform data\n");
-		return -EINVAL;
-	}
-
-	if (!icl->priv) {
+	if (!ssd->drv_priv) {
 		dev_err(&client->dev,
 			"OV7692 driver needs i/f platform data\n");
 		return -EINVAL;
@@ -1228,31 +1167,96 @@ static int ov7692_probe(struct i2c_client *client,
 		return -ENOMEM;
 
 	v4l2_i2c_subdev_init(&ov7692->subdev, client, &ov7692_subdev_ops);
-
-	/* Second stage probe - when a capture adapter is there */
-	icd->ops = &ov7692_ops;
+	/* Change this to &ov7692->subdev */
+	struct v4l2_subdev *subdev = i2c_get_clientdata(client);
 
 	ov7692->i_size = OV7692_SIZE_VGA;
 	ov7692->i_fmt = 0;	/* First format in the list */
-	ov7692->plat_parms = icl->priv;
+	ov7692->plat_parms = ssd->drv_priv;
+
+	/* Initializing hdl with 12 controls (3 for future purposes) */
+	v4l2_ctrl_handler_init(&ov7692->hdl, ARRAY_SIZE(ov7692_controls) + 10);
+	if (ov7692->hdl.error)
+		dev_dbg(&client->dev, "Error set during init itself! %d\n",
+			ov7692->hdl.error);
+
+	/* register standard controls */
+	v4l2_ctrl_new_std(&ov7692->hdl, &ov7692_ctrl_ops,
+		V4L2_CID_BRIGHTNESS, 0, 4, 1, 2);
+	v4l2_ctrl_new_std(&ov7692->hdl, &ov7692_ctrl_ops,
+		V4L2_CID_CONTRAST, 0, 4, 1, 0);
+	v4l2_ctrl_new_std(&ov7692->hdl, &ov7692_ctrl_ops,
+		V4L2_CID_SATURATION, 0, 4, 1, 0);
+	v4l2_ctrl_new_std(&ov7692->hdl, &ov7692_ctrl_ops,
+		V4L2_CID_SHARPNESS, 0, 4, 1, 0);
+
+	if (ov7692->hdl.error) {
+		dev_err(&client->dev,
+			"Standard controls initialization error %d\n",
+			ov7692->hdl.error);
+		ret = ov7692->hdl.error;
+		goto ctrl_hdl_err;
+	}
+
+	/* register standard menu controls */
+	v4l2_ctrl_new_std_menu(&ov7692->hdl, &ov7692_ctrl_ops,
+		V4L2_CID_COLORFX, V4L2_COLORFX_SOLARIZATION, 0,
+		V4L2_COLORFX_NONE);
+
+	v4l2_ctrl_new_std_menu(&ov7692->hdl, &ov7692_ctrl_ops,
+		V4L2_CID_POWER_LINE_FREQUENCY,
+		V4L2_CID_POWER_LINE_FREQUENCY_AUTO, 0,
+		V4L2_CID_POWER_LINE_FREQUENCY_50HZ);
+
+	v4l2_ctrl_new_std_menu(&ov7692->hdl, &ov7692_ctrl_ops,
+		V4L2_CID_AUTO_N_PRESET_WHITE_BALANCE,
+		V4L2_WHITE_BALANCE_CLOUDY, 0,
+		V4L2_WHITE_BALANCE_AUTO);
+
+	if (ov7692->hdl.error) {
+		dev_err(&client->dev,
+			"Standard menu controls initialization error %d\n",
+			ov7692->hdl.error);
+		ret = ov7692->hdl.error;
+		goto ctrl_hdl_err;
+	}
+
+	/* register custom controls */
+	for (i = 0; i < ARRAY_SIZE(ov7692_controls); ++i)
+		v4l2_ctrl_new_custom(&ov7692->hdl, &ov7692_controls[i], NULL);
+
+	ov7692->subdev.ctrl_handler = &ov7692->hdl;
+	if (ov7692->hdl.error) {
+		ret = ov7692->hdl.error;
+		goto ctrl_hdl_err;
+	}
+
+	ret = ov7692_s_power(subdev, 1);
+	if (ret < 0)
+		return ret;
 
 
-    ret = ov7692_video_probe(icd, client);
-    if (ret) {
-        icd->ops = NULL;
-        kfree(ov7692);
-        return ret;
-    }
-
-    msleep(10);
+	ret = ov7692_video_probe(client);
+	if (ret) {
+		pr_err("ov7692_video_probe: failed to probe the sensor\n");
+		goto vid_probe_fail;
+	}
 
 	/* init the sensor here */
 	ret = ov7692_init(client);
 	if (ret) {
-		ret = -EINVAL;
-		return ret;
+		dev_err(&client->dev, "Failed to initialize sensor\n");
+		goto init_fail;
 	}
 
+	return ret;
+
+ctrl_hdl_err:
+init_fail:
+vid_probe_fail:
+	v4l2_ctrl_handler_free(&ov7692->hdl);
+	kfree(ov7692);
+	pr_err("ov7692_probe failed with ret = %d\n", ret);
 	return ret;
 }
 
@@ -1261,7 +1265,6 @@ static int ov7692_remove(struct i2c_client *client)
 	struct ov7692 *ov7692 = to_ov7692(client);
 	struct soc_camera_device *icd = client->dev.platform_data;
 
-	icd->ops = NULL;
 	ov7692_video_remove(icd);
 	client->driver = NULL;
 	kfree(ov7692);
@@ -1295,7 +1298,7 @@ static void __exit ov7692_mod_exit(void)
 	i2c_del_driver(&ov7692_i2c_driver);
 }
 
-module_init(ov7692_mod_init);
+late_initcall(ov7692_mod_init);
 module_exit(ov7692_mod_exit);
 
 MODULE_DESCRIPTION("OmniVision OV7692 Camera driver");

@@ -473,6 +473,23 @@ static struct regulator_bulk_data ov564x_regulator_data[] = {
 };
 #endif
 
+#if defined(CONFIG_SOC_CAMERA_OV7692)
+static struct regulator_bulk_data ov7692_regulator_data[] = {
+	[0] = {
+		.supply = "lvldo2_uc",
+	},
+	[1] = {
+		.supply = "mmc1_vcc",
+	},
+	[2] = {
+		.supply = "mmc2_vcc",
+	},
+	[3] = {
+		.supply = "lvldo1_uc",
+	},
+};
+#endif
+
 static int hawaii_camera_power(struct device *dev, int on)
 {
 	unsigned int value;
@@ -703,7 +720,7 @@ static int hawaii_camera_power_front(struct device *dev, int on)
 
 	pr_info("%s:camera power %s\n", __func__, (on ? "on" : "off"));
 
-	char module[] = "ov5648";
+	char module[] = "ov7692";
 	struct cameracfg_s *thiscfg = getcameracfg(module);
 	if (NULL == thiscfg) {
 		pr_err("No cfg for [%s]\n", module);
@@ -723,24 +740,24 @@ static int hawaii_camera_power_front(struct device *dev, int on)
 			return -1;
 		}
 		d_lvldo2_cam1_1v8 = regulator_get(NULL,
-			ssd->regulators[0].supply);
+			ov7692_regulator_data[0].supply);
 		if (IS_ERR_OR_NULL(d_lvldo2_cam1_1v8))
 			pr_err("Failed to get d_lvldo2_cam1_1v8\n");
 		if (d_1v8_mmc1_vcc == NULL) {
 			d_1v8_mmc1_vcc = regulator_get(NULL,
-				ssd->regulators[1].supply);
+				ov7692_regulator_data[1].supply);
 			if (IS_ERR_OR_NULL(d_1v8_mmc1_vcc))
 				pr_err("Err d_1v8_mmc1_vcc\n");
 		}
 		if (d_3v0_mmc1_vcc == NULL) {
 			d_3v0_mmc1_vcc = regulator_get(NULL,
-			ssd->regulators[2].supply);
+			ov7692_regulator_data[2].supply);
 			if (IS_ERR_OR_NULL(d_3v0_mmc1_vcc))
 				pr_err("d_3v0_mmc1_vcc");
 		}
 		if (d_gpsr_cam0_1v8 == NULL) {
 			d_gpsr_cam0_1v8 = regulator_get(NULL,
-			ssd->regulators[3].supply);
+			ov7692_regulator_data[3].supply);
 			if (IS_ERR_OR_NULL(d_gpsr_cam0_1v8))
 				pr_err("Fl d_gpsr_cam0_1v8 get	fail");
 		}
@@ -978,6 +995,7 @@ static struct platform_device hawaii_camera_back = {
 };
 #endif
 
+#ifdef CONFIG_SOC_CAMERA_OV7692
 static struct v4l2_subdev_sensor_interface_parms ov7692_if_parms = {
 	.if_type = V4L2_SUBDEV_SENSOR_SERIAL,
 	.if_mode = V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2,
@@ -1001,6 +1019,8 @@ static struct soc_camera_desc iclink_ov7692 = {
 		.power = &hawaii_camera_power_front,
 		.reset = &hawaii_camera_reset_front,
 		.drv_priv = &ov7692_if_parms,
+		.regulators = ov7692_regulator_data,
+		.num_regulators = 4,
 	},
 };
 
@@ -1011,6 +1031,7 @@ static struct platform_device hawaii_camera_front = {
 		.platform_data = &iclink_ov7692,
 	},
 };
+#endif
 #endif /* CONFIG_UNICAM_CAMERA */
 
 static struct spi_kona_platform_data hawaii_ssp0_info = {
@@ -1093,7 +1114,7 @@ struct platform_device *hawaii_common_plat_devices[] __initdata = {
 #ifdef CONFIG_UNICAM_CAMERA
 	&hawaii_camera_device,
 	&hawaii_camera_back,
-/*	&hawaii_camera_front, */
+	&hawaii_camera_front,
 #endif
 
 #ifdef CONFIG_SND_BCM_SOC
