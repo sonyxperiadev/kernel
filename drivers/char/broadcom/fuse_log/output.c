@@ -293,11 +293,10 @@ static void WriteToLogDev_SDCARD(void)
 						   nFifo,
 						   &g_devWrParms.
 						   file->f_pos);
-
 				if (nWrite > 0)
 					BCMLOG_FifoRemove(&g_fifo, nWrite);
 
-				if ((nWrite < nFifo)
+				if ((nWrite < (int)nFifo)
 				    || ((Get_SDCARD_Available()) <
 					MTT_SD_RESERVED)) {
 					nFifo = 0;
