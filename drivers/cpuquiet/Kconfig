@@ -9,6 +9,17 @@ config CPU_QUIET
 
 if CPU_QUIET
 
+config CPU_QUIET_STATS
+	bool "per CPU statistics"
+	depends on SYSFS
+	default n
+	help
+	 Enable up/down count and total time plugged statistics per CPU. These
+	 depend on correct driver input for reliability. The statistic value
+	 can be checked under "/sys/devices/system/cpu/cpux/cpuquiet/stats".
+
+	 If in doubt say N.
+
 config CPU_QUIET_GOVERNOR_USERSPACE
 	bool "'userspace' governor"
 	default y
