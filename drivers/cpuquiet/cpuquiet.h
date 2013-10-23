@@ -29,4 +29,29 @@ extern int cpuquiet_switch_governor(struct cpuquiet_governor *gov);
 extern struct cpuquiet_governor *cpuquiet_get_first_governor(void);
 extern struct cpuquiet_driver *cpuquiet_get_driver(void);
 
+#ifdef CONFIG_CPU_QUIET_STATS
+extern int cpuquiet_sysfs_init(void);
+extern void cpuquiet_sysfs_exit(void);
+extern int cpuquiet_add_dev(struct device *dev, unsigned int cpu);
+extern void cpuquiet_remove_dev(unsigned int cpu);
+#else
+static inline int cpuquiet_sysfs_init(void)
+{
+	return 0;
+}
+
+static inline void cpuquiet_sysfs_exit(void)
+{
+}
+
+static inline int cpuquiet_add_dev(struct device *dev, unsigned int cpu)
+{
+	return 0;
+}
+
+static inline void cpuquiet_remove_dev(unsigned int cpu)
+{
+}
+#endif
+
 #endif
