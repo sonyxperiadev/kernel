@@ -19,6 +19,9 @@
 #ifndef _LINUX_CPUQUIET_H
 #define _LINUX_CPUQUIET_H
 
+#include <linux/kobject.h>
+#include <linux/sysfs.h>
+
 #define CPUQUIET_NAME_LEN 16
 
 struct cpuquiet_governor {
@@ -42,5 +45,70 @@ extern int cpuquiet_quiesce_cpu(unsigned int cpunumber, bool sync);
 extern int cpuquiet_wake_cpu(unsigned int cpunumber, bool sync);
 extern int cpuquiet_register_driver(struct cpuquiet_driver *drv);
 extern void cpuquiet_unregister_driver(struct cpuquiet_driver *drv);
+
+#ifdef CONFIG_CPU_QUIET_STATS
+/* Sysfs support */
+struct cpuquiet_attribute {
+	struct attribute attr;
+	ssize_t (*show)(struct cpuquiet_attribute *attr, char *buf);
+	ssize_t (*store)(struct cpuquiet_attribute *attr, const char *buf,
+				size_t count);
+	/*
+	 * For simple attributes, a pointer to the memory that is being
+	 * read/written.
+	 */
+	void *param;
+};
+
+#define CPQ_SIMPLE_ATTRIBUTE(_name, _mode, _type)			\
+	static struct cpuquiet_attribute _name ## _attr = {		\
+		.attr = {.name = __stringify(_name), .mode = _mode },	\
+		.show = show_ ## _type ## _attribute,			\
+		.store = store_ ## _type ## _attribute,			\
+		.param = &_name,					\
+	}
+
+#define CPQ_ATTRIBUTE(_name, _mode, _show, _store)			\
+	static struct cpuquiet_attribute _name ## _attr = {		\
+		.attr = {.name = __stringify(_name), .mode = _mode },	\
+		.show = _show,						\
+		.store = _store,					\
+		.param = NULL,						\
+	}
+
+struct cpuquiet_cpu_attribute {
+	struct attribute attr;
+	ssize_t (*show)(unsigned int cpu, char *buf);
+	ssize_t (*store)(unsigned int cpu, const char *buf, size_t count);
+};
+
+#define CPQ_CPU_ATTRIBUTE(_name, _mode, _show, _store)			\
+	static struct cpuquiet_cpu_attribute _name ## _attr = {		\
+		.attr = {.name = __stringify(_name), .mode = _mode },	\
+		.show = _show,						\
+		.store = _store,					\
+	}
+
+extern ssize_t show_int_attribute(struct cpuquiet_attribute *cattr, char *buf);
+extern ssize_t store_int_attribute(struct cpuquiet_attribute *cattr,
+				const char *buf, size_t count);
+extern ssize_t show_bool_attribute(struct cpuquiet_attribute *cattr, char *buf);
+extern ssize_t store_bool_attribute(struct cpuquiet_attribute *cattr,
+				const char *buf, size_t count);
+extern ssize_t show_uint_attribute(struct cpuquiet_attribute *cattr, char *buf);
+extern ssize_t store_uint_attribute(struct cpuquiet_attribute *cattr,
+				const char *buf, size_t count);
+extern ssize_t show_ulong_attribute(struct cpuquiet_attribute *cattr,
+				char *buf);
+extern ssize_t store_ulong_attribute(struct cpuquiet_attribute *cattr,
+				const char *buf, size_t count);
+
+extern int cpuquiet_register_attrs(struct attribute_group *attrs);
+extern void cpuquiet_unregister_attrs(struct attribute_group *attrs);
+
+extern int cpuquiet_register_cpu_attrs(struct attribute_group *attrs);
+extern void cpuquiet_unregister_cpu_attrs(struct attribute_group *attrs);
+
+#endif
 
 #endif
