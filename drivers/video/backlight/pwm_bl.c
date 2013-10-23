@@ -116,6 +116,12 @@ static int pwm_backlight_update_status(struct backlight_device *bl)
 
 static int pwm_backlight_get_brightness(struct backlight_device *bl)
 {
+#ifdef CONFIG_KONA_TMON
+	struct pwm_bl_data *pb = dev_get_drvdata(&bl->dev);
+
+	if (bl->props.brightness > pb->max_brightness)
+		return pb->max_brightness;
+#endif
 	return bl->props.brightness;
 }
 
