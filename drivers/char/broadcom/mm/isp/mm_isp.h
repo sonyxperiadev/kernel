@@ -10,24 +10,8 @@ Notwithstanding the above, under no circumstances may you combine this software
 in any way with any other Broadcom software provided under a license other than
 the GPL, without Broadcom's express prior written consent.
 *******************************************************************************/
-#ifndef _ISP_H_
-#define _ISP_H_
-#include <linux/ioctl.h>
-
-#define ISP_VERSION 460
-#define HERA_ISP    1
-#define HERA_A0_ISP 0
-
-
-#include <linux/broadcom/mm_fw_usr_ifc.h>
-
-#define BCM_ISP_MAGIC	'I'
-
-#define SINT4P12(x) ((signed short)(((x) > 0) ? ((x)*4096+0.5) : \
-						((x)*4096-0.5)))
-#define UINT4P12(x) ((uint16_t)((x)*4096+0.5))
-
-#define TRUNC12(x) (((int)(x*4096))&0xFFFF)
+#ifndef _MM_ISP_H_
+#define _MM_ISP_H_
 
 #define MAX_NUM_ISP_REGS 70
 
@@ -40,18 +24,6 @@ struct isp_job_post_t {
 	struct regs_t isp_regs[MAX_NUM_ISP_REGS];
 	unsigned int num_regs;
 };
-
-enum {
-	ISP_CMD_WAIT_IRQ = 0x80,
-	ISP_CMD_CLK_RESET,
-	ISP_CMD_RELEASE_IRQ,
-	ISP_CMD_LAST
-};
-
-#define ISP_IOCTL_WAIT_IRQ _IOR(BCM_ISP_MAGIC, ISP_CMD_WAIT_IRQ, unsigned int)
-#define ISP_IOCTL_CLK_RESET _IOR(BCM_ISP_MAGIC, ISP_CMD_CLK_RESET, unsigned int)
-#define ISP_IOCTL_RELEASE_IRQ _IOR(BCM_ISP_MAGIC, ISP_CMD_RELEASE_IRQ, \
-							unsigned int)
 
 #define ISP_CTRL_OFFSET                  0x00000000
 #define ISP_CTRL_TYPE			 UInt32
@@ -95,5 +67,4 @@ enum {
 #define       ISP_STATUS_STATE_SUSPENDED 2
 #define       ISP_STATUS_STATE_SUSPENDING 3
 
-
-#endif
+#endif /*_MM_ISP_H_*/

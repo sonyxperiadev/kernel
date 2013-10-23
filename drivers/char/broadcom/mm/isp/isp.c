@@ -12,96 +12,83 @@ the GPL, without Broadcom's express prior written consent.
 *******************************************************************************/
 
 #include <linux/kernel.h>
-#include <linux/delay.h>
-#include <linux/device.h>
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/mm.h>
-#include <linux/fs.h>
-#include <linux/interrupt.h>
-#include <linux/semaphore.h>
-#include <linux/mutex.h>
 #include <mach/irqs.h>
 #include <mach/clock.h>
-#include <linux/io.h>
-#include <linux/clk.h>
-#include <linux/uaccess.h>
-#include <linux/vmalloc.h>
 #include <linux/mm.h>
-#include <linux/bootmem.h>
-#include <linux/dma-mapping.h>
 #include <linux/slab.h>
-
-#include "mm_isp.h"
 #include <mach/rdb/brcm_rdb_sysmap.h>
-#include <mach/rdb/brcm_rdb_pwrmgr.h>
-#include <mach/rdb/brcm_rdb_mm_rst_mgr_reg.h>
 #include <linux/broadcom/mm_fw_hw_ifc.h>
 #include <linux/broadcom/mm_fw_usr_ifc.h>
+#include "mm_isp.h"
 
-#define ISP_HW_SIZE (1024*512)
+
+#define ISP_HW_SIZE     0x4000
 #define IRQ_ISP         BCM_INT_ID_RESERVED153
-
-
-struct isp_device_t {
-	void *vaddr;
-	void *fmwk_handle;
-};
 
 #define isp_write(reg, value) mm_write_reg(isp->vaddr, reg, value)
 #define isp_read(reg) mm_read_reg(isp->vaddr, reg)
 #define isp_clr_bit32(reg, bits) mm_clr_bit32(isp->vaddr, reg, bits)
 #define isp_write_bit32(reg, bits) mm_write_bit32(isp->vaddr, reg, bits)
 
+struct isp_device_t {
+	void *vaddr;
+	void *fmwk_handle;
+};
+
 void printispregs(struct isp_device_t *isp)
 {
-	pr_err("ISP_STATUS = 0x%lx\n",
+	pr_info("ISP_CTRL = 0x%lx\n",
+		(unsigned long)(isp_read(ISP_CTRL_OFFSET)));
+	pr_info("ISP_STATUS = 0x%lx\n",
 		(unsigned long)(isp_read(ISP_STATUS_OFFSET)));
-	pr_err("offset = 0x00000018 value = 0x%lx\n",
+	pr_info("offset = 0x00000018 value = 0x%lx\n",
 		(unsigned long) (isp_read(0x00000018)));
-	pr_err("offset = 0x00000008 value = 0x%lx\n",
+	pr_info("offset = 0x00000008 value = 0x%lx\n",
 		(unsigned long)(isp_read(0x00000008)));
-	pr_err("offset = 0x00000010 value = 0x%lx\n",
+	pr_info("offset = 0x00000010 value = 0x%lx\n",
 		(unsigned long)(isp_read(0x00000010)));
-	pr_err("offset = 0x0000001C value = 0x%lx\n",
+	pr_info("offset = 0x0000001C value = 0x%lx\n",
 		(unsigned long)(isp_read(0x0000001C)));
-	pr_err("offset = 0x00000030 value = 0x%lx\n",
+	pr_info("offset = 0x00000030 value = 0x%lx\n",
 		(unsigned long)(isp_read(0x00000030)));
-	pr_err("offset = 0x00000034 value = 0x%lx\n",
+	pr_info("offset = 0x00000034 value = 0x%lx\n",
 		(unsigned long)(isp_read(0x00000034)));
-	pr_err("offset = 0x00000038 value = 0x%lx\n",
+	pr_info("offset = 0x00000038 value = 0x%lx\n",
 		(unsigned long)(isp_read(0x00000038)));
-	pr_err("offset = 0x0000003C value = 0x%lx\n",
+	pr_info("offset = 0x0000003C value = 0x%lx\n",
 		(unsigned long)(isp_read(0x0000003C)));
-	pr_err("offset = 0x00000DC0 value = 0x%lx\n",
+	pr_info("offset = 0x00000DC0 value = 0x%lx\n",
 		(unsigned long)(isp_read(0x00000DC0)));
-	pr_err("offset = 0x00000DCC value = 0x%lx\n",
+	pr_info("offset = 0x00000DCC value = 0x%lx\n",
 		(unsigned long)(isp_read(0x00000DCC)));
-	pr_err("offset = 0x00000DD0 value = 0x%lx\n",
+	pr_info("offset = 0x00000DD0 value = 0x%lx\n",
 		(unsigned long)(isp_read(0x00000DD0)));
-	pr_err("offset = 0x00000DD4 value = 0x%lx\n",
+	pr_info("offset = 0x00000DD4 value = 0x%lx\n",
 		(unsigned long)(isp_read(0x00000DD4)));
-	pr_err("offset = 0x00000DD8 value = 0x%lx\n",
+	pr_info("offset = 0x00000DD8 value = 0x%lx\n",
 		(unsigned long)(isp_read(0x00000DD8)));
-	pr_err("offset = 0x00000DDC value = 0x%lx\n",
+	pr_info("offset = 0x00000DDC value = 0x%lx\n",
 		(unsigned long)(isp_read(0x00000DDC)));
-	pr_err("offset = 0x00000700 value = 0x%lx\n",
+	pr_info("offset = 0x00000700 value = 0x%lx\n",
 		(unsigned long)(isp_read(0x00000700)));
-	pr_err("offset = 0X00000704 value = 0x%lx\n",
+	pr_info("offset = 0X00000704 value = 0x%lx\n",
 		(unsigned long)(isp_read(0X00000704)));
-	pr_err("offset = 0X00000708 value = 0x%lx\n",
+	pr_info("offset = 0X00000708 value = 0x%lx\n",
 		(unsigned long)(isp_read(0X00000708)));
-	pr_err("offset = 0X0000070C value = 0x%lx\n",
+	pr_info("offset = 0X0000070C value = 0x%lx\n",
 		(unsigned long)(isp_read(0X0000070C)));
-	pr_err("offset = 0X00000710 value = 0x%lx\n",
+	pr_info("offset = 0X00000710 value = 0x%lx\n",
 		(unsigned long)(isp_read(0X00000710)));
-	pr_err("offset = 0X00000714 value = 0x%lx\n",
+	pr_info("offset = 0X00000714 value = 0x%lx\n",
 		(unsigned long)(isp_read(0X00000714)));
-	pr_err("offset = 0X00000720 value = 0x%lx\n",
+	pr_info("offset = 0X00000720 value = 0x%lx\n",
 		(unsigned long)(isp_read(0X00000720)));
-	pr_err("offset = 0X00000724 value = 0x%lx\n",
+	pr_info("offset = 0X00000724 value = 0x%lx\n",
 		(unsigned long)(isp_read(0X00000724)));
-	pr_err("offset = 0X00000728 value = 0x%lx\n",
+	pr_info("offset = 0X00000728 value = 0x%lx\n",
 		(unsigned long)(isp_read(0X00000728)));
 	return;
 }
@@ -110,18 +97,22 @@ static mm_isr_type_e  process_isp_irq(void *id)
 {
 	struct isp_device_t *isp = (struct isp_device_t *)id;
 	u32 ispStatus = 0;
-	uint32_t ctrl = 0;
+	u32 ctrl = 0;
 	ispStatus = isp_read(ISP_STATUS_OFFSET);
 	isp_write(ISP_STATUS_OFFSET, ispStatus);
 	ctrl = isp_read(ISP_CTRL_OFFSET);
-	pr_debug("ispStatus 0x%x ctrl 0x%x", ispStatus, ctrl);
 
-	if (ispStatus & 0x10) {
+	if (ispStatus & ISP_CTRL_EOT_IMASK_MASK) {
 		/* end of tile interrupt, disable control reg,
 		    as queue head job completed, schedule tasklet again*/
-		pr_debug("EOT intr");
 		isp_clr_bit32(ISP_CTRL_OFFSET, ISP_CTRL_ENABLE_MASK);
 		return MM_ISR_SUCCESS;
+	} else if (ispStatus & ISP_CTRL_ERROR_IMASK_MASK) {
+		printispregs(isp);
+		pr_err("process_isp_irq: Error intr from ISP!!!");
+		return MM_ISR_ERROR;
+	} else {
+		pr_err("process_isp_irq: Unknown intr from ISP!!!");
 	}
 	return MM_ISR_UNKNOWN;
 }
@@ -129,7 +120,7 @@ static mm_isr_type_e  process_isp_irq(void *id)
 static bool get_isp_status(void *id)
 {
 	struct isp_device_t *isp = (struct isp_device_t *)id;
-	uint32_t ispStatus = 0;
+	u32 ispStatus = 0;
 	ispStatus = isp_read(ISP_STATUS_OFFSET);
 	/* Check if hw busy */
 	if (ispStatus & 0x1)
@@ -141,9 +132,9 @@ static int isp_reset(void *id)
 {
 	struct isp_device_t *isp = (struct isp_device_t *)id;
 	int ret = 0;
-	uint32_t ispStatus = 0;
-	uint32_t ispCtrl = 0;
-	uint32_t dummy;
+	u32 ispStatus = 0;
+	u32 ispCtrl = 0;
+	u32 dummy;
 
 	ispStatus = isp_read(ISP_STATUS_OFFSET);
 	if (ispStatus & ISP_STATUS_STATE_ENABLED) {
@@ -207,7 +198,7 @@ int isp_program(struct isp_device_t *isp, struct isp_job_post_t *job_post)
 int isp_start(struct isp_device_t *isp)
 {
 	int ret = 0;
-	uint32_t ctrl;
+	u32 ctrl;
 	ctrl = isp_read(ISP_CTRL_OFFSET);
 	ctrl |= ISP_CTRL_ENABLE_MASK;
 	isp_write(ISP_CTRL_OFFSET, ctrl);
@@ -225,14 +216,13 @@ static mm_job_status_e isp_start_job(void *id , mm_job_post_t *job,
 	switch (job->status) {
 	case MM_JOB_STATUS_READY:
 		{
-			pr_debug("Prog the regs and start\n");
 			ret = isp_program(isp, job_params);
 			if (ret != 0) {
 				pr_err("isp_program failed with %d", ret);
 				job->status = MM_JOB_STATUS_ERROR;
 				return MM_JOB_STATUS_ERROR;
 			}
-			/* printispregs(isp); */
+			/*printispregs(isp);*/
 			ret = isp_start(isp);
 			if (ret != 0) {
 				pr_err("isp_start failed with %d", ret);
@@ -245,7 +235,7 @@ static mm_job_status_e isp_start_job(void *id , mm_job_post_t *job,
 		break;
 	case MM_JOB_STATUS_RUNNING:
 		{
-			pr_debug("job completed\n");
+			pr_debug("isp_start_job: MM_JOB_STATUS_RUNNING\n");
 			job->status = MM_JOB_STATUS_SUCCESS;
 			return MM_JOB_STATUS_SUCCESS;
 		}
@@ -269,7 +259,7 @@ int __init mm_isp_init(void)
 	MM_PROF_HW_IFC prof_param;
 	isp_device = kmalloc(sizeof(struct isp_device_t), GFP_KERNEL);
 	isp_device->vaddr = NULL;
-	pr_debug("ISP driver Module Init");
+	pr_debug("mm_isp_init: ISP driver Module Init");
 
 	core_param.mm_base_addr = ISP_BASE_ADDR;
 	core_param.mm_hw_size = ISP_HW_SIZE;
