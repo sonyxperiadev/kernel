@@ -193,6 +193,42 @@ static void runnables_work_func(struct work_struct *work)
 		cpuquiet_quiesce_cpu(cpu, false);
 }
 
+#ifdef CONFIG_CPU_QUIET_STATS
+CPQ_SIMPLE_ATTRIBUTE(sample_rate, 0644, uint);
+CPQ_SIMPLE_ATTRIBUTE(nr_run_hysteresis, 0644, uint);
+
+static struct attribute *runnables_attrs[] = {
+	&sample_rate_attr.attr,
+	&nr_run_hysteresis_attr.attr,
+	NULL,
+};
+
+static struct attribute_group runnables_group = {
+	.name = "runnable_threads",
+	.attrs = runnables_attrs,
+};
+
+static int runnables_sysfs_init(void)
+{
+	return cpuquiet_register_attrs(&runnables_group);
+}
+
+static void runnables_sysfs_exit(void)
+{
+	cpuquiet_unregister_attrs(&runnables_group);
+}
+#else
+static inline int runnables_sysfs_init(void)
+{
+	return 0;
+}
+
+static inline void runnables_sysfs_exit(void)
+{
+	return;
+}
+#endif
+
 static void runnables_stop(void)
 {
 	mutex_lock(&runnables_lock);
@@ -200,13 +236,18 @@ static void runnables_stop(void)
 	runnables_enabled = false;
 	del_timer_sync(&runnables_timer);
 	cancel_work_sync(&runnables_work);
+	runnables_sysfs_exit();
 
 	mutex_unlock(&runnables_lock);
 }
 
 static int runnables_start(void)
 {
-	int i;
+	int i, err;
+
+	err = runnables_sysfs_init();
+	if (err)
+		return err;
 
 	INIT_WORK(&runnables_work, runnables_work_func);
 
