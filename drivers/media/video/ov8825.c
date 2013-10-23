@@ -2509,7 +2509,7 @@ static int ov8825_init(struct i2c_client *client)
 	ov8825->exp_read_buf[1] = 6032;
 	ov8825->gain_read_buf[0] =  (ov8825->gain_current  & 0x3fff) >> 4;
 	ov8825->gain_read_buf[1] =  (ov8825->gain_current  & 0x3fff) >> 4;
-	ov8825->aecpos_delay      = 1;
+	ov8825->aecpos_delay      = 2;
 	ov8825->lenspos_delay     = 0;
 	ov8825->flashmode         = FLASH_MODE_OFF;
 	ov8825->flash_intensity   = OV8825_FLASH_INTENSITY_DEFAULT;
