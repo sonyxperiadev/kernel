@@ -44,7 +44,8 @@
 #include <linux/of.h>
 #include <linux/of_irq.h>
 #include <linux/of_gpio.h>
-
+#include <linux/slab.h>
+#include <linux/vmalloc.h>
 #ifdef CONFIG_REGULATOR
 #include <linux/regulator/consumer.h>
 #endif
@@ -3886,7 +3887,7 @@ static int32_t bcmtch_dev_download_firmware(
 				if (!bcmtch_data_ptr->post_boot_sections) {
 					/* Allocate firmware buffer memory */
 					bcmtch_data_ptr->post_boot_buffer =
-						kzalloc(p_fw->size, GFP_KERNEL);
+						vzalloc(p_fw->size);
 
 					if (bcmtch_data_ptr->
 						post_boot_buffer == NULL) {
@@ -5497,7 +5498,7 @@ static void bcmtch_dev_post_boot_reset(
 	bcmtch_dev_free_channels(bcmtch_data_ptr);
 
 	/* free post boot buffer */
-	kfree(bcmtch_data_ptr->post_boot_buffer);
+	vfree(bcmtch_data_ptr->post_boot_buffer);
 	bcmtch_data_ptr->post_boot_buffer = NULL;
 
 }
