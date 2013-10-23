@@ -77,6 +77,44 @@ static const u8 bl_command[] = {
 	0, 1, 2, 3, 4, 5, 6, 7	/* default keys */
 };
 
+/* SOMC addition */
+static ssize_t virtual_keys_settings_show(struct device *dev,
+				struct device_attribute *attr, char *buf)
+{
+	struct cyttsp *ts = dev_get_drvdata(dev);
+
+	return sprintf(buf, "%s\n", ts->pdata->virtual_key_settings);
+}
+
+static struct device_attribute virtual_keys_attrib =
+	__ATTR(NULL, 0444, virtual_keys_settings_show, NULL);
+
+static int add_sysfs_virtual_keys_settings(struct device *dev)
+{
+	int retval;
+
+	virtual_keys_attrib.attr.name = "virtualkeys."CY_SPI_NAME;
+	retval = device_create_file(dev, &virtual_keys_attrib);
+	if (retval) {
+		dev_err(dev, "%s: Error creating device.\n", __func__);
+		return -ENODEV;
+	}
+
+	retval = sysfs_create_link(NULL, &(dev->kobj), "board_properties");
+
+	if (retval) {
+		dev_err(dev, "%s: Error creating symlink.\n", __func__);
+		goto undo;
+	}
+
+	return 0;
+undo:
+	device_remove_file(dev, &virtual_keys_attrib);
+	return -ENODEV;
+}
+
+/* SOMC addition END */
+
 static int ttsp_read_block_data(struct cyttsp *ts, u8 command,
 				u8 length, void *buf)
 {
@@ -594,6 +632,15 @@ struct cyttsp *cyttsp_probe(const struct cyttsp_bus_ops *bus_ops,
 			error);
 		goto err_free_irq;
 	}
+	/* SOMC addition */
+	if (ts->pdata->virtual_key_settings) {
+		error = add_sysfs_virtual_keys_settings(dev);
+		if (error)
+			goto err_out;
+	}
+	/* SOMC addition END */
+
+
 
 	return ts;
 

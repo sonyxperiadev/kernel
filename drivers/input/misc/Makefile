@@ -64,3 +64,9 @@ endif
 obj-$(CONFIG_INPUT_BCM2850_MIC_DETECT)	+= bcm2850_mic_detect.o
 obj-$(CONFIG_KONA_HEADSET) += kona_headset.o
 obj-$(CONFIG_KONA_HEADSET_MULTI_BUTTON) += kona_headset_multi_button.o
+obj-$(CONFIG_INPUT_LSM303DLH_ACCELEROMETER) += lsm303dlh_acc.o
+obj-$(CONFIG_INPUT_LSM303DLH_MAGNETOMETER) += lsm303dlh_mag.o
+obj-$(CONFIG_INPUT_LSM303DLHC_ACCELEROMETER) += lsm303dlhc_acc.o
+obj-$(CONFIG_INPUT_L3G4200D)		+= l3g4200d_gyr_sysfs.o
+obj-$(CONFIG_INPUT_APDS9702)	        += apds9702.o
+

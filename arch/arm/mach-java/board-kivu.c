@@ -26,6 +26,7 @@
 /*  prior written consent.						*/
 /*									*/
 /************************************************************************/
+#define DEBUG
 #include <linux/version.h>
 #include <linux/init.h>
 #include <linux/device.h>
@@ -110,6 +111,10 @@
 #include <linux/broadcom/bcm_bzhw.h>
 #endif
 
+#ifdef CONFIG_INPUT_APDS9702
+#include <linux/apds9702.h>
+#endif
+
 #ifdef CONFIG_BCM_BT_LPM
 #include <linux/broadcom/bcmbt_lpm.h>
 #endif
@@ -118,9 +123,17 @@
 #include <linux/broadcom/mobicore.h>
 #endif
 
-#if defined(CONFIG_BMP18X) || \
-defined(CONFIG_BMP18X_I2C) || \
-defined(CONFIG_BMP18X_I2C_MODULE)
+#if defined(CONFIG_TOUCHSCREEN_CYTTSP_CORE)
+#include <linux/input/cyttsp.h>
+#endif
+
+#define BMU_NFC_I2C_BUS_ID 1
+#define SENSOR_I2C_BUS_ID 2
+#define TOUCH_I2C_BUS_ID 3
+
+#if defined(CONFIG_SENSORS_BMP18X) || \
+defined(CONFIG_SENSORS_BMP18X_I2C) || \
+defined(CONFIG_SENSORS_BMP18X_I2C_MODULE)
 
 #include <linux/bmp18x.h>
 #include <mach/bmp18x_i2c_settings.h>
@@ -143,6 +156,14 @@ defined(CONFIG_BMP18X_I2C_MODULE)
 
 #ifdef CONFIG_BACKLIGHT_PWM
 #include <linux/pwm_backlight.h>
+#endif
+
+#ifdef CONFIG_LEDS_LM3530
+#include <linux/led-lm3530.h>
+#endif
+
+#ifdef CONFIG_INPUT_L3G4200D
+#include <linux/l3g4200d_gyr.h>
 #endif
 
 #if defined(CONFIG_BCM_ALSA_SOUND)
@@ -185,7 +206,15 @@ defined(CONFIG_TOUCHSCREEN_BCMTCH15XXX_MODULE)
 #include <linux/i2c/bcmtch15xxx.h>
 #include <linux/i2c/bcmtch15xxx_settings.h>
 #endif
-
+#ifdef CONFIG_INPUT_LSM303DLH_ACCELEROMETER
+#include <linux/lsm303dlh_acc.h>
+#endif
+#ifdef CONFIG_INPUT_LSM303DLHC_ACCELEROMETER
+#include <linux/lsm303dlhc_acc.h>
+#endif
+#ifdef CONFIG_INPUT_LSM303DLH_MAGNETOMETER
+#include <linux/lsm303dlh_mag.h>
+#endif
 #ifdef CONFIG_USB_DWC_OTG
 #include <linux/usb/bcm_hsotgctrl.h>
 #include <linux/usb/otg.h>
@@ -226,6 +255,10 @@ hawaii_wifi_status_register(void (*callback) (int card_present, void *dev_id),
 #define TSC_GPIO_WAKEUP_PIN         70
 
 #define TANGO_I2C_TS_DRIVER_NUM_BYTES_TO_READ	14
+
+/* Cypress Touch */
+#define CYTTSP_IRQ_GPIO 73
+#define CYTTSP_RESET_GPIO 70
 
 #ifdef CONFIG_MOBICORE_DRIVER
 struct mobicore_data mobicore_plat_data = {
@@ -400,6 +433,109 @@ static struct i2c_board_info as3643_flash[] = {
 	 I2C_BOARD_INFO("as3643", (AS3643_I2C_ADDR >> 1))
 	 },
 };
+#endif
+
+#if defined(CONFIG_INPUT_LSM303DLHC_ACCELEROMETER) || \
+	defined(CONFIG_INPUT_LSM303DLHC_ACCELEROMETER_LT) || \
+	defined(CONFIG_INPUT_LSM303DLH_MAGNETOMETER) || \
+	defined(CONFIG_INPUT_L3G4200D)
+
+int regulator_enable_handler(struct regulator *r, const char *func_str)
+{
+	int rc, enabled;
+
+	if (IS_ERR_OR_NULL(r)) {
+		rc = r ? PTR_ERR(r) : -EINVAL;
+		dev_err(NULL, "%s: regulator invalid",
+			func_str ? func_str : "?");
+		return rc;
+	}
+
+	rc = regulator_enable(r);
+	if (!rc)
+		return rc;
+
+	enabled = regulator_is_enabled(r);
+	if (enabled > 0) {
+		dev_warn(NULL, "%s: regulator already enabled",
+			func_str ? func_str : "?");
+		rc = 0;
+	} else if (enabled == 0) {
+		dev_err(NULL, "%s: regulator still disabled",
+			func_str ? func_str : "?");
+	} else {
+		dev_err(NULL, "%s: regulator status error %d",
+			func_str ? func_str : "?", enabled);
+	}
+	return rc;
+}
+
+int regulator_disable_handler(struct regulator *r, const char *func_str)
+{
+	int rc, enabled;
+
+	if (IS_ERR_OR_NULL(r)) {
+		rc = r ? PTR_ERR(r) : -EINVAL;
+		dev_err(NULL, "%s: regulator invalid",
+			func_str ? func_str : "?");
+		return rc;
+	}
+
+	rc = regulator_disable(r);
+	if (!rc)
+		return rc;
+
+	enabled = regulator_is_enabled(r);
+	if (enabled == 0) {
+		dev_warn(NULL, "%s: regulator already disabled",
+			func_str ? func_str : "?");
+		rc = 0;
+	} else if (enabled > 0) {
+		dev_err(NULL, "%s: regulator still enabled",
+			func_str ? func_str : "?");
+	} else {
+		dev_err(NULL, "%s: regulator status error %d",
+			func_str ? func_str : "?", enabled);
+	}
+	return rc;
+}
+
+static int platform_power_config(struct device *dev, bool enable,
+			struct regulator **regulator, char *regulator_id)
+{
+	int rc = 0;
+	dev_dbg(dev, "%s\n", __func__);
+
+	if (enable) {
+		if (*regulator == NULL) {
+			dev_dbg(dev, "%s: get regulator %s\n",
+							__func__, regulator_id);
+			*regulator = regulator_get(NULL, regulator_id);
+			if (IS_ERR(*regulator)) {
+				rc = PTR_ERR(*regulator);
+				dev_err(dev, "%s: Failed to get regulator %s\n",
+							__func__, regulator_id);
+				return rc;
+			}
+		}
+		rc = regulator_set_voltage(*regulator, 2800000, 2800000);
+		if (rc) {
+			dev_err(dev, "%s: unable to set voltage rc = %d!\n",
+								 __func__, rc);
+			goto exit;
+		}
+	} else {
+		goto exit;
+	}
+
+	return rc;
+
+exit:
+	regulator_put(*regulator);
+	*regulator = NULL;
+	return rc;
+}
+
 #endif
 #ifdef CONFIG_VIDEO_UNICAM_CAMERA
 
@@ -1057,6 +1193,353 @@ struct platform_device *hawaii_common_plat_devices[] __initdata = {
 #endif
 };
 
+#ifdef CONFIG_INPUT_L3G4200D
+static struct regulator *gyro_regulator;
+
+static int power_config_gyro(struct device *dev, bool enable)
+{
+	int rc;
+
+	dev_dbg(dev, "%s enable = %d\n", __func__, enable);
+
+	rc = platform_power_config(dev, enable, &gyro_regulator, "gpldo1_uc");
+
+	dev_dbg(dev, "%s platform_power_config returned %d\n", __func__, rc);
+
+	return rc;
+}
+
+static int power_on_gyro(struct device *dev)
+{
+	int rc;
+
+	dev_dbg(dev, "%s\n", __func__);
+
+	rc = regulator_enable_handler(gyro_regulator, __func__);
+	/* Sleep 5 ms to let gyro power on */
+		mdelay(5);
+
+	return rc;
+}
+
+static int power_off_gyro(struct device *dev)
+{
+	int rc;
+
+	dev_dbg(dev, "%s\n", __func__);
+
+
+	dev_dbg(dev, "%s\n", __func__);
+
+	rc = regulator_disable_handler(gyro_regulator, __func__);
+	return rc;
+}
+
+static struct l3g4200d_gyr_platform_data l3g4200d_gyro_platform_data = {
+	.poll_interval = 100,
+	.min_interval = 40,
+
+	.fs_range = L3G4200D_FS_2000DPS,
+
+	.axis_map_x =  0,
+	.axis_map_y = 1,
+	.axis_map_z = 2,
+
+	.negate_x = 0,
+	.negate_y = 0,
+	.negate_z = 0,
+
+	.init = NULL,
+	.exit = NULL,
+	.power_on = power_on_gyro,
+	.power_off = power_off_gyro,
+	.power_config = power_config_gyro,
+};
+#endif
+#if defined(CONFIG_TOUCHSCREEN_CYTTSP_CORE)
+
+static struct regulator *cyttsp_regulator;
+
+static int cyttsp_power_on_regulator(void)
+{
+	int rc, enabled;
+
+	printk(KERN_INFO "cyttsp_power_on_regulator\n");
+
+	rc = regulator_enable(cyttsp_regulator);
+	if (!rc) {
+
+		printk(KERN_INFO
+		"cyttsp_power_on_regulator,regulator_enable returned %d\n",
+		 rc);
+
+		/* Sleep 5 ms to let touch power on */
+		mdelay(5);
+		return rc;
+	}
+
+	printk(KERN_INFO "cyttsp_power_on_regulator 1\n");
+
+	enabled = regulator_is_enabled(cyttsp_regulator);
+	if (enabled > 0) {
+		printk(KERN_INFO "%s: regulator already enabled",
+			__func__);
+		rc = 0;
+	} else if (enabled == 0) {
+		printk(KERN_INFO "%s: regulator still disabled",
+			__func__);
+	} else {
+		printk(KERN_ERR "%s: regulator status error %d",
+			__func__, enabled);
+	}
+	printk(KERN_INFO "cyttsp_power_on_regulator, returning %d\n", rc);
+	return rc;
+}
+
+static int cyttsp_power_config(void)
+{
+	int rc = 0;
+
+	printk(KERN_INFO "cyttsp_power_config\n");
+
+	cyttsp_regulator = regulator_get(NULL, "gpldo2_uc");
+	if (IS_ERR(cyttsp_regulator)) {
+		rc = PTR_ERR(cyttsp_regulator);
+		printk(KERN_ERR "%s: Failed to get regulator %s\n",
+				__func__, "gpldo2_uc");
+		return rc;
+	}
+	rc = regulator_set_voltage(cyttsp_regulator, 1800000, 1800000);
+	if (rc) {
+		printk(KERN_ERR "%s: unable to set voltage rc = %d!\n",
+				 __func__, rc);
+			goto exit;
+	}
+
+
+	return rc;
+
+exit:
+	regulator_put(cyttsp_regulator);
+	cyttsp_regulator = NULL;
+	return rc;
+}
+
+
+int  cyttsp_dev_init(void)
+{
+	printk(KERN_INFO "cyttsp_dev_init\n");
+
+	if (cyttsp_power_config() < 0) {
+		printk(KERN_ERR "cyttsp_power_config failed\n");
+		return -1;
+	}
+
+	if (gpio_request(CYTTSP_RESET_GPIO, "cyttsp_reset") < 0) {
+		printk(KERN_ERR "can't get cyttsp reset GPIO\n");
+		return -1;
+	}
+
+	gpio_set_value(CYTTSP_RESET_GPIO, 1);
+
+	if (gpio_request(CYTTSP_IRQ_GPIO, "cyttsp_touch") < 0) {
+		printk(KERN_ERR "can't get cyttsp interrupt GPIO\n");
+		return -1;
+	}
+
+	/* Turn on power */
+	cyttsp_power_on_regulator();
+
+	gpio_direction_input(CYTTSP_IRQ_GPIO);
+	gpio_set_debounce(CYTTSP_RESET_GPIO, 0);
+	return 0;
+}
+
+void cyttsp_dev_exit(void)
+{
+	/* return 0; */
+}
+
+static struct cyttsp_platform_data cyttsp_touch_platform_data = {
+	.maxx = 220,
+	.maxy = 176,
+	.use_hndshk = 0,
+	.act_dist = CY_ACT_DIST_DFLT,	/* Active distance */
+	.act_intrvl = 16,   /* Active refresh interval; ms 16 = 62.5Hz*/
+	.tch_tmout = CY_TCH_TMOUT_DFLT,   /* Active touch timeout; ms */
+	.lp_intrvl = CY_LP_INTRVL_DFLT,/* Low power refresh interval; ms */
+	.init = cyttsp_dev_init,
+	.exit = cyttsp_dev_exit,
+	.name = CY_I2C_NAME,
+	.irq_gpio = CYTTSP_IRQ_GPIO,
+	.bl_keys = {0, 1, 2, 3, 4, 5, 6, 7},
+	.virtual_key_settings = "0x01:158:30:200:60:24\n"\
+			"0x01:102:110:200:60:24\n0x01:139:190:200:60:24"
+};
+#endif
+
+#ifdef CONFIG_INPUT_LSM303DLHC_ACCELEROMETER
+static struct regulator *acc_regulator;
+
+static int power_config_acc(struct device *dev, bool enable)
+{
+	int rc;
+
+	dev_dbg(dev, "%s enable = %d\n", __func__, enable);
+
+	rc = platform_power_config(dev, enable, &acc_regulator, "gpldo1_uc");
+
+	return rc;
+}
+
+static int power(struct device *dev, enum lsm303dlhc_acc_power_sate pwr_state)
+{
+	int rc = -ENOSYS;
+
+	dev_dbg(dev, "%s pwr_state = %d\n", __func__, pwr_state);
+
+	if (pwr_state == LSM303DLHC_STANDBY)
+		goto exit;
+	else if (pwr_state == LSM303DLHC_PWR_ON) {
+		rc = regulator_enable_handler(acc_regulator, __func__);
+		/* Sleep 5 ms to let accelerometer power on */
+		mdelay(5);
+	} else if (pwr_state == LSM303DLHC_PWR_OFF) {
+		rc = regulator_disable_handler(acc_regulator, __func__);
+	}
+
+exit:
+	return rc;
+}
+static struct lsm303dlhc_acc_platform_data lsm303dlhc_acc_platform_data = {
+	.range = 2,
+	.poll_interval_ms = 100,
+	.mode = MODE_POLL,
+	.irq_pad = 1,
+	.power = power,
+	.power_config = power_config_acc,
+};
+#endif
+#ifdef CONFIG_INPUT_LSM303DLH_MAGNETOMETER
+static struct regulator *mag_regulator;
+
+static int power_config_mag(struct device *dev, bool enable)
+{
+	int rc;
+
+	dev_dbg(dev, "%s enable = %d\n", __func__, enable);
+
+	rc = platform_power_config(dev, enable, &mag_regulator, "gpldo1_uc");
+
+	return rc;
+}
+
+static int power_on_mag(struct device *dev)
+{
+	int rc;
+
+	dev_dbg(dev, "%s\n", __func__);
+
+	rc = regulator_enable_handler(mag_regulator, __func__);
+	/* Sleep 5 ms to let magnetometer power on */
+	mdelay(5);
+
+	return rc;
+}
+
+static int power_off_mag(struct device *dev)
+{
+	int rc;
+
+	dev_dbg(dev, "%s\n", __func__);
+
+	rc = regulator_disable_handler(mag_regulator, __func__);
+	return rc;
+}
+
+static struct lsm303dlh_mag_platform_data lsm303dlh_mag_platform_data = {
+	.range = LSM303_RANGE_8200mG,
+	.poll_interval_ms = 100,
+	.power_on = power_on_mag,
+	.power_off = power_off_mag,
+	.power_config = power_config_mag,
+};
+#endif
+#ifdef CONFIG_INPUT_APDS9702
+#define APDS9702_PROX_INT_GPIO 81
+
+static struct regulator *prox_regulator;
+static int power_config_prox(struct device *dev, int enable)
+{
+	int rc;
+	bool enable_bool = FALSE;
+
+	dev_dbg(dev, "%s enable = %d\n", __func__, enable);
+	if (enable)
+		enable_bool = TRUE;
+
+	rc = platform_power_config(dev, enable_bool,	\
+				 &prox_regulator, "gpldo1_uc");
+
+	dev_dbg(dev, "%s platform_power_config returned %d\n", __func__, rc);
+
+      /* return rc;*/
+}
+
+static int apds9702_setup(struct device *dev, int request)
+{
+	int rc;
+	if (request) {
+			rc = gpio_request(APDS9702_PROX_INT_GPIO,
+						"apds9702_dout");
+			if (rc) {
+					dev_err(dev,
+					"%s: failed to request gpio %d\n",
+					__func__, APDS9702_PROX_INT_GPIO);
+					return rc;
+				}
+			return 0;
+		}
+	 rc = 0;
+	 gpio_free(APDS9702_PROX_INT_GPIO);
+	 return rc;
+
+}
+
+static struct apds9702_platform_data apds9702_pdata = {
+	.gpio_dout      = APDS9702_PROX_INT_GPIO,
+	.is_irq_wakeup  = 1,
+	.hw_config      = power_config_prox,
+	.gpio_setup     = apds9702_setup,
+	.ctl_reg = {
+			.trg   = 1,
+			.pwr   = 1,
+			.burst = 7,
+			.frq   = 3,
+			.dur   = 2,
+			.th    = 15,
+			.rfilt = 0,
+	},
+	.phys_dev_path = "/sys/devices/i2c-2/2-0054"
+};
+static struct i2c_board_info __initdata apds9702_i2c_boardinfo[] = {
+	{
+		/* Proximity (0xA8 >>1 = 0x54)*/
+		I2C_BOARD_INFO(APDS9702_NAME, 0xA8 >> 1),
+		.platform_data = &apds9702_pdata,
+	},
+};
+#endif
+
+#if  defined(CONFIG_SENSORS_BMP18X) || defined(CONFIG_SENSORS_BMP18X_I2C) \
+		|| defined(CONFIG_SENSORS_BMP18X_I2C_MODULE)
+static struct i2c_board_info __initdata i2c_bmp18x_info[] = {
+	{
+	       /* Barometer */
+	       I2C_BOARD_INFO(BMP18X_NAME, BMP18X_I2C_ADDRESS),
+	},
+};
+#endif
 
 
 #ifdef CONFIG_KONA_HEADSET_MULTI_BUTTON
@@ -1064,14 +1547,15 @@ struct platform_device *hawaii_common_plat_devices[] __initdata = {
 #define HS_IRQ		gpio_to_irq(92)
 #define HSB_IRQ		BCM_INT_ID_AUXMIC_COMP2
 #define HSB_REL_IRQ	BCM_INT_ID_AUXMIC_COMP2_INV
-static unsigned int hawaii_button_adc_values[3][2] = {
-	/* SEND/END Min, Max */
+/*static unsigned int hawaii_button_adc_values[3][2] = {
+	// SEND/END Min, Max
 	{0, 10},
-	/* Volume Up  Min, Max */
+	// Volume Up  Min, Max
 	{11, 30},
-	/* Volue Down Min, Max */
+	// Volue Down Min, Max
 	{30, 680},
 };
+*/
 
 static unsigned int hawaii_button_adc_values_2_1[3][2] = {
 	/* SEND/END Min, Max */
@@ -1141,7 +1625,7 @@ static struct kona_pl330_data hawaii_pl330_pdata = {
 };
 #endif
 
-#ifdef CONFIG_BCM_BT_LPM
+#if defined(CONFIG_BCM_BT_LPM) && !defined(CONFIG_OF_DEVICE)
 #define GPIO_BT_WAKE	32
 #define GPIO_HOST_WAKE	72
 
@@ -1232,7 +1716,7 @@ static const struct of_dev_auxdata hawaii_auxdata_lookup[] __initconst = {
 		"soc-back-camera", &iclink_main),
 #endif
 #ifdef CONFIG_SOC_CAMERA_OV5648
-	OF_DEV_AUXDATA("bcm,soc-camera", 0x36,
+	OF_DEV_AUXDATA("bcm,soc-camera", 0x36, q
 		"soc-back-camera", &iclink_main),
 #endif
 #ifdef CONFIG_SOC_CAMERA_OV7695
@@ -1247,9 +1731,10 @@ static const struct of_dev_auxdata hawaii_auxdata_lookup[] __initconst = {
 	OF_DEV_AUXDATA("bcm,soc-camera", 0x3c,
 		"soc-front-camera", &iclink_front),
 #endif
-
+#ifdef CONFIG_SOC_CAMERA_OV7692
 	OF_DEV_AUXDATA("bcm,soc-camera", 0x3e,
 		"soc-front-camera", &iclink_front),
+#endif
 	{},
 };
 
@@ -1407,6 +1892,69 @@ static struct i2c_board_info __initdata bcmtch15xxx_i2c_boardinfo[] = {
 	},
 };
 #endif
+#ifdef CONFIG_LEDS_LM3530
+static struct lm3530_platform_data lm3530_als_platform_data = {
+	.mode = LM3530_BL_MODE_MANUAL,
+	.als_input_mode = LM3530_INPUT_ALS2,
+	.max_current = LM3530_FS_CURR_26mA,
+	.pwm_pol_hi = true,
+	.als_avrg_time = LM3530_ALS_AVRG_TIME_512ms,
+	.brt_ramp_law = 1,      /* Linear */
+	.brt_ramp_fall = LM3530_RAMP_TIME_1s,
+	.brt_ramp_rise = LM3530_RAMP_TIME_1s,
+	.als1_resistor_sel = LM3530_ALS_IMPD_Z,
+	.als2_resistor_sel = LM3530_ALS_IMPD_Z,
+	.als_vmin = 730,        /* mV */
+	.als_vmax = 1020,       /* mV */
+	.brt_val = 0x7F,        /* Max brightness */
+};
+
+static struct i2c_board_info __initdata lm3530_i2c_boardinfo[] = {
+	{
+		/* Backlight */
+		I2C_BOARD_INFO("lm3530-led", 0x36),
+		.platform_data = &lm3530_als_platform_data,
+	},
+};
+#endif
+
+#if defined(CONFIG_TOUCHSCREEN_CYTTSP_CORE)
+static struct i2c_board_info __initdata cyttsp_i2c_boardinfo[] = {
+	{
+		I2C_BOARD_INFO(CY_I2C_NAME, 0x24),
+		.platform_data = &cyttsp_touch_platform_data,
+		.irq = gpio_to_irq(CYTTSP_IRQ_GPIO),
+	},
+};
+#endif
+
+#ifdef CONFIG_INPUT_L3G4200D
+static struct i2c_board_info __initdata l3g4200d_i2c_boardinfo[] = {
+	{
+		I2C_BOARD_INFO(L3G4200D_DEV_NAME, 0xD0 >> 1),
+		.platform_data = &l3g4200d_gyro_platform_data,
+	},
+};
+#endif
+
+
+#ifdef CONFIG_INPUT_LSM303DLHC_ACCELEROMETER
+static struct i2c_board_info __initdata lsm303dlhc_i2c_boardinfo[] = {
+	{
+		I2C_BOARD_INFO(LSM303DLHC_ACC_DEV_NAME, 0x19),
+		.platform_data = &lsm303dlhc_acc_platform_data,
+	},
+};
+#endif
+
+#ifdef CONFIG_INPUT_LSM303DLH_MAGNETOMETER
+static struct i2c_board_info __initdata lsm303dlh_i2c_boardinfo[] = {
+	{
+		I2C_BOARD_INFO(LSM303DLH_MAG_DEV_NAME, 0x1E),
+		.platform_data = &lsm303dlh_mag_platform_data,
+	},
+};
+#endif
 
 #if defined(CONFIG_BCM_ALSA_SOUND)
 static struct caph_platform_cfg board_caph_platform_cfg =
@@ -1551,8 +2099,51 @@ static void __init hawaii_add_i2c_devices(void)
 #ifdef CONFIG_VIDEO_AS3643
 	i2c_register_board_info(0, as3643_flash, ARRAY_SIZE(as3643_flash));
 #endif
+#ifdef CONFIG_LEDS_LM3530
+	 i2c_register_board_info(BMU_NFC_I2C_BUS_ID,
+		lm3530_i2c_boardinfo,
+		ARRAY_SIZE(lm3530_i2c_boardinfo));
 
+ #define BMU_HW_EN_GPIO 24
+	if (gpio_request(BMU_HW_EN_GPIO , "bl_enable") < 0) {
+		printk(KERN_ERR "can't get bl_enable GPIO\n");
+		/* return -1;*/
+	} else {
+		gpio_set_value(BMU_HW_EN_GPIO, 1);
+	}
+#endif
+#ifdef CONFIG_INPUT_L3G4200D
+	i2c_register_board_info(SENSOR_I2C_BUS_ID,
+		l3g4200d_i2c_boardinfo,
+		ARRAY_SIZE(l3g4200d_i2c_boardinfo));
+#endif
 
+#ifdef CONFIG_TOUCHSCREEN_CYTTSP_CORE
+	i2c_register_board_info(TOUCH_I2C_BUS_ID,
+		cyttsp_i2c_boardinfo,
+		ARRAY_SIZE(cyttsp_i2c_boardinfo));
+#endif
+
+#ifdef CONFIG_INPUT_LSM303DLHC_ACCELEROMETER
+	i2c_register_board_info(SENSOR_I2C_BUS_ID,
+		lsm303dlhc_i2c_boardinfo,
+		ARRAY_SIZE(lsm303dlhc_i2c_boardinfo));
+#endif
+
+#ifdef CONFIG_INPUT_LSM303DLH_MAGNETOMETER
+	i2c_register_board_info(SENSOR_I2C_BUS_ID,
+		lsm303dlh_i2c_boardinfo,
+		ARRAY_SIZE(lsm303dlh_i2c_boardinfo));
+#endif
+
+#if  defined(CONFIG_SENSORS_BMP18X) || \
+		defined(CONFIG_SENSORS_BMP18X_I2C) || \
+		defined(CONFIG_SENSORS_BMP18X_I2C_MODULE)
+
+	i2c_register_board_info(SENSOR_I2C_BUS_ID,
+		i2c_bmp18x_info,
+		ARRAY_SIZE(i2c_bmp18x_info));
+#endif
 
 #if defined(CONFIG_TOUCHSCREEN_BCMTCH15XXX)	|| \
 defined(CONFIG_TOUCHSCREEN_BCMTCH15XXX_MODULE)
@@ -1600,7 +2191,7 @@ static void hawaii_add_pdata(void)
 {
 	hawaii_ssp0_device.dev.platform_data = &hawaii_ssp0_info;
 	hawaii_ssp1_device.dev.platform_data = &hawaii_ssp1_info;
-#ifdef CONFIG_BCM_STM
+#if defined(CONFIG_BCM_STM) || defined(CONFIG_STM_TRACE)
 	hawaii_stm_device.dev.platform_data = &hawaii_stm_pdata;
 #endif
 	hawaii_headset_device.dev.platform_data = &hawaii_headset_data;

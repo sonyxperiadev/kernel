@@ -85,6 +85,47 @@ config INPUT_PCSPKR
 	  To compile this driver as a module, choose M here: the
 	  module will be called pcspkr.
 
+config INPUT_LSM303DLH_ACCELEROMETER
+        tristate "LSM303DLH combo chip accelerometer driver"
+        depends on I2C
+        default n
+        help
+         LSM303DLH combo chip accelerometer driver.
+	 Accelerometer Driver compile flag.
+	 Currently being
+	 used by Sony Kivu platform.
+
+config INPUT_LSM303DLH_MAGNETOMETER
+        tristate "LSM303DLH combo chip magnetometer driver"
+        depends on I2C
+        default n
+        help
+         LSM303DLH combo chip magnetometer driver.
+	 Magnetometer Driver compile flag.
+	 Currently being
+	 used by Sony Kivu platform.
+
+
+config INPUT_LSM303DLHC_ACCELEROMETER
+        tristate "LSM303DLHC combo chip accelerometer driver"
+        depends on I2C
+        default n
+        help
+         LSM303DLHC combo chip accelerometer driver.
+	 Acceleromemter Driver compile flag.
+	 Currently being
+	 used by Sony Kivu platform.
+
+config INPUT_L3G4200D
+        bool "L3G4200D gyroscope sensor driver"
+        depends on I2C
+        default n
+        help
+          If you say yes here you get support L3G4200D gyroscope sensor.
+	  Gyroscope sensor driver complile flag.
+	  Currently being
+	  used by Sony Kivu platform.
+
 config INPUT_PM8XXX_VIBRATOR
 	tristate "Qualcomm PM8XXX vibrator support"
 	depends on MFD_PM8XXX
@@ -437,6 +478,17 @@ config INPUT_PCF50633_PMU
 	help
 	 Say Y to include support for delivering  PMU events via  input
 	 layer on NXP PCF50633.
+
+config INPUT_APDS9702
+	tristate "APDS9702 proximity driver"
+	depends on I2C
+	default n
+	help
+	 If you say yes here you get support for the APDS9702 chip.
+	 This is used as a proximity sensor.
+
+	 Proximity sensor driver compile flag. Currently being used
+	 by Sony Kivu platform.
 
 config INPUT_PCF8574
 	tristate "PCF8574 Keypad input device"
