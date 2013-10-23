@@ -256,6 +256,7 @@ bool get_v3d_bin_render_status(void *device_id)
 			pr_debug("supply boom from get_v3d_status %x %x\n",
 					block->v3d_bin_oom_block,
 					block->v3d_bin_oom_size);
+			v3d_write(id, V3D_SLCACTL_OFFSET, 0x0f0f);
 			return true;
 			}
 		else {
@@ -268,8 +269,10 @@ bool get_v3d_bin_render_status(void *device_id)
 
 	if ((v3d_read(id, V3D_CT0CS_OFFSET)&(0x20)) ||
 		(v3d_read(id, V3D_CT1CS_OFFSET)&(0x20)) ||
-		(v3d_read(id, V3D_PCS_OFFSET)))
+		(v3d_read(id, V3D_PCS_OFFSET))) {
+		v3d_write(id, V3D_SLCACTL_OFFSET, 0x0f0f);
 		return true;
+	}
 	return false;
 }
 

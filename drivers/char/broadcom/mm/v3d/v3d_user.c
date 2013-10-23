@@ -30,6 +30,7 @@ the GPL, without Broadcom's express prior written consent.
 #define V3D_HW_SIZE (1024*4)
 #define IRQ_V3D	BCM_INT_ID_RESERVED148
 #define v3d_user_device_t struct _v3d_user_device_t
+/*#define V3D_USER_SERIAL_DEBUG*/
 
 struct _v3d_user_device_t {
 	void __iomem *vaddr;
@@ -50,6 +51,9 @@ static int v3d_user_reset(void *device_id)
 {
 	v3d_user_device_t *id = (v3d_user_device_t *)device_id;
 	pr_debug("v3d_user_reset:\n");
+#ifdef V3D_USER_SERIAL_DEBUG
+	v3d_write(id, V3D_DBCFG_OFFSET, 1);
+#endif
 	v3d_write(id, V3D_SRQCS_OFFSET, 1 | (1 << 8) | (1 << 16));
 	v3d_write(id, V3D_VPACNTL_OFFSET, 0);
 	v3d_write(id, V3D_SLCACTL_OFFSET, 0xf0f0f0f);
@@ -63,10 +67,70 @@ static int v3d_user_reset(void *device_id)
 	return 0;
 }
 
+#ifdef V3D_USER_SERIAL_DEBUG
+static void print_regs(v3d_user_device_t *id, char *name,
+		int client, int device, int addresses, int length)
+{
+	int i = 0;
+	for (i = 0; i < addresses; i++) {
+		while (!(v3d_read(id, V3D_DBSCS_OFFSET)&1))
+			;
+		v3d_write(id, V3D_DBSCFG_OFFSET, client);
+		v3d_write(id, V3D_DBSSR_OFFSET, device | (i<<8));
+		v3d_write(id, V3D_DBSCS_OFFSET, 0x2);
+		v3d_write(id, V3D_DBSCS_OFFSET, 0x4 | (length<<8));
+		while (!(v3d_read(id, V3D_DBSCS_OFFSET)&1))
+			;
+		pr_info("QPU[%d] %s[%d] 0x%08x 0x%08x 0x%08x 0x%08x",
+				client,    name, i,
+				v3d_read(id, V3D_DBSDR0_OFFSET),
+				v3d_read(id, V3D_DBSDR1_OFFSET),
+				v3d_read(id, V3D_DBSDR2_OFFSET),
+				v3d_read(id, V3D_DBSDR3_OFFSET));
+	}
+}
+#endif
+
 static int v3d_user_abort(void *device_id)
 {
 	v3d_user_device_t *id = (v3d_user_device_t *)device_id;
-	pr_debug("v3d_user_abort:\n");
+	pr_info("v3d_user_abort:\n");
+
+#ifdef V3D_USER_SERIAL_DEBUG
+	int i = 0;
+	v3d_write(id, V3D_DBQHLT_OFFSET, 0xFF);
+	for (i = 0; i < 8; i++) {
+		print_regs(id, "R0.0  ", i, 0, 1, 128);
+		print_regs(id, "R1.0  ", i, 1, 1, 128);
+		print_regs(id, "R2.0  ", i, 2, 1, 128);
+		print_regs(id, "R3.0  ", i, 3, 1, 128);
+		print_regs(id, "R0.1  ", i, 4, 1, 128);
+		print_regs(id, "R1.1  ", i, 5, 1, 128);
+		print_regs(id, "R2.1  ", i, 6, 1, 128);
+		print_regs(id, "R3.1  ", i, 7, 1, 128);
+		print_regs(id, "R0.2  ", i, 8, 1, 128);
+		print_regs(id, "R1.2  ", i, 9, 1, 128);
+		print_regs(id, "R2.2  ", i, 10, 1, 128);
+		print_regs(id, "R3.2  ", i, 11, 1, 128);
+		print_regs(id, "R0.3  ", i, 12, 1, 128);
+		print_regs(id, "R1.3  ", i, 13, 1, 128);
+		print_regs(id, "R2.3  ", i, 14, 1, 128);
+		print_regs(id, "R3.3  ", i, 15, 1, 128);
+		print_regs(id, "Flags ", i, 16, 1, 48);
+		print_regs(id, "R4	  ", i, 17, 4, 128);
+		print_regs(id, "R5	  ", i, 18, 4, 32);
+		print_regs(id, "PC0   ", i, 19, 1, 128);
+		print_regs(id, "PC1   ", i, 20, 1, 128);
+		print_regs(id, "RA	  ", i, 21, 128, 128);
+		print_regs(id, "RB	  ", i, 22, 128, 128);
+		print_regs(id, "QR0   ", i, 23, 2, 122);
+		print_regs(id, "QR1   ", i, 24, 2, 37);
+		print_regs(id, "QR2   ", i, 25, 1, 72);
+		print_regs(id, "Thrd  ", i, 26, 1, 25);
+		msleep(500);
+	}
+	BUG_ON(1);
+#endif
 	v3d_user_reset(id);
 	return 0;
 }
@@ -74,6 +138,15 @@ static int v3d_user_abort(void *device_id)
 static int v3d_u_abort(void *id, mm_job_post_t *job)
 {
 	int ret;
+	v3d_user_job_t *job_params  = (v3d_user_job_t *)job->data;
+#ifdef V3D_USER_SERIAL_DEBUG
+	v3d_write(id, V3D_DBQHLT_OFFSET, 0xFF);
+#endif
+	pr_info("job_count %d", job_params->numUserJobs);
+	pr_info("job pc 0x%08x 0x%08x 0x%08x", job_params->v3d_srqpc[0],
+		job_params->v3d_srqpc[1], job_params->v3d_srqpc[2]);
+	pr_info("job unif 0x%08x 0x%08x 0x%08x", job_params->v3d_srqua[0],
+		job_params->v3d_srqua[1], job_params->v3d_srqua[2]);
 	ret = v3d_user_abort(id);
 	return ret;
 }
@@ -182,8 +255,10 @@ bool get_v3d_user_status(void *device_id)
 
 	/*Read the status to find Hardware busy status*/
 	uint32_t status = v3d_read(id, V3D_SRQCS_OFFSET);
-	if (((status >> 8) & 0xff) != ((status >> 16) & 0xff))
+	if (((status >> 8) & 0xff) != ((status >> 16) & 0xff)) {
+		v3d_write(id, V3D_SLCACTL_OFFSET, 0x0f0f);
 		return true;
+	}
 
 	return false;
 }
