@@ -46,9 +46,6 @@
 #define PMU_DEVICE_INT_GPIO	29
 #define PMU_DEVICE_I2C_BUSNO 4
 
-#define PMU_SR_VOLTAGE_MASK	0x3F
-#define PMU_SR_VOLTAGE_SHIFT 0
-
 static int bcmpmu_init_platform_hw(struct bcmpmu59xxx *bcmpmu);
 static int bcmpmu_exit_platform_hw(struct bcmpmu59xxx *bcmpmu);
 
@@ -145,8 +142,6 @@ static struct bcmpmu59xxx_rw_data __initdata register_init_data[] = {
 	{.addr = PMU_REG_SDSR2VOUT2 , .val = 0x28, .mask = 0x3F},
 	/* IOSR1 LPM voltage - 1.8V */
 	{.addr = PMU_REG_IOSR1VOUT2 , .val = 0x3E, .mask = 0x3F},
-
-	{.addr = PMU_REG_CSRVOUT1 , .val = 0x28, .mask = 0x3F},
 
 	/*from h/w team for power consumption*/
 	{.addr = PMU_REG_PASRCTRL1 , .val = 0x00, .mask = 0x06},
