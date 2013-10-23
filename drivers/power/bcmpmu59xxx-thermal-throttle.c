@@ -51,7 +51,7 @@ static u32 debug_mask = BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT | \
 
 #define TEMP_MULTI_FACTOR			10
 #define ADC_READ_TRIES				10
-#define ADC_RETRY_DELAY				20 /* 20ms */
+#define ADC_RETRY_DELAY				50 /* 50ms */
 #define TEMP_READ_DEBOUNCE			3
 #define ACLD_MAX_WAIT_COUNT			10
 #define TEMP_OFFSET				50

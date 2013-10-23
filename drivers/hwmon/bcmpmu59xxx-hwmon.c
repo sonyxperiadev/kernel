@@ -239,7 +239,7 @@ int read_rtm_adc(struct bcmpmu59xxx *bcmpmu, enum bcmpmu_adc_channel channel,
 	val = channel << ADC_RTM_CHANN_SHIFT;
 	val |= (ADC_RTM_CONV_ENABLE << ADC_RTM_CONVERSION_SHIFT);
 	val |= (ADC_RTM_START << ADC_RTM_START_SHIFT);
-	val |= ADC_RTM_MAX_RST_CNT_5;
+	val |= ADC_RTM_MAX_RST_CNT_7;
 
 	ret = bcmpmu->write_dev(bcmpmu, PMU_REG_ADCCTRL1, val);
 	if (ret != 0) {
