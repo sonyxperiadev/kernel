@@ -636,10 +636,10 @@ __initdata DISPCTRL_REC_T otm8018b_tm_init_panel_vid[] = {
 	{DISPCTRL_WR_DATA, 0x00},
 
 	{DISPCTRL_WR_CMND, 0x11},
-	{DISPCTRL_SLEEP_MS, 150},
+	{DISPCTRL_SLEEP_MS, 120},
 
 	{DISPCTRL_WR_CMND, 0x29},
-	{DISPCTRL_SLEEP_MS, 200},
+	{DISPCTRL_SLEEP_MS, 10},
 };
 
 void otm8018b_tm_winset(char *msgData, DISPDRV_WIN_t *p_win)
