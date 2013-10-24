@@ -535,7 +535,7 @@ static struct regulator_init_data bcm59xxx_csr_data = {
 			.min_uV = 700000,
 			.max_uV = 1440000,
 			.valid_ops_mask = REGULATOR_CHANGE_STATUS |
-			REGULATOR_CHANGE_MODE,
+			REGULATOR_CHANGE_MODE | REGULATOR_CHANGE_VOLTAGE,
 			.always_on = 1,
 			.initial_mode = REGULATOR_MODE_STANDBY,
 			},
