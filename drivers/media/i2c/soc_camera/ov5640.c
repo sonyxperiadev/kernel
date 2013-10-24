@@ -1256,11 +1256,19 @@ static int ov5640_get_sysclk(struct v4l2_subdev *sd)
 {
 	/* calculate sysclk */
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	struct ov5640 *ov5640 = to_ov5640(client);
 	u8 val;
 	int Multiplier, PreDiv, VCO, SysDiv, Pll_rdiv, Bit_div2x, sclk_rdiv,
 	    sysclk;
 
 	int sclk_rdiv_map[] = { 1, 2, 4, 8 };
+	int  i = ov5640->i_size;
+	const struct ov5640_timing_cfg *timing_cfg;
+
+	if (ov5640_fmts[ov5640->i_fmt].code == V4L2_MBUS_FMT_JPEG_1X8)
+		timing_cfg = &timing_cfg_jpeg[i];
+	else
+		timing_cfg = &timing_cfg_yuv[i];
 
 	ov5640_reg_read(client, 0x3034, &val);
 	val &= 0x0F;
@@ -1274,13 +1282,18 @@ static int ov5640_get_sysclk(struct v4l2_subdev *sd)
 		SysDiv = 16;
 
 	ov5640_reg_read(client, 0x3036, &val);
+	if (val == 0)
+		val = 0x68;
 	Multiplier = val;
 
 	ov5640_reg_read(client, 0x3037, &val);
+	if ((val & 0x0f) == 0)
+		val = 0x12;
+
 	PreDiv = val & 0x0f;
 	Pll_rdiv = ((val >> 4) & 0x01) + 1;
 
-	ov5640_reg_read(client, 0x3108, &val);
+	val = timing_cfg->sclk_dividers;
 	val &= 0x03;
 	sclk_rdiv = sclk_rdiv_map[val];
 
@@ -1289,36 +1302,6 @@ static int ov5640_get_sysclk(struct v4l2_subdev *sd)
 	sysclk = VCO / SysDiv / Pll_rdiv * 2 / Bit_div2x / sclk_rdiv;
 
 	return sysclk;
-}
-
-static int ov5640_get_HTS(struct v4l2_subdev *sd)
-{
-	/* read HTS from register settings */
-	struct i2c_client *client = v4l2_get_subdevdata(sd);
-	int HTS;
-	u8 val;
-
-	ov5640_reg_read(client, 0x380c, &val);
-	HTS = val;
-	ov5640_reg_read(client, 0x380d, &val);
-	HTS = (HTS << 8) + val;
-
-	return HTS;
-}
-
-static int ov5640_get_VTS(struct v4l2_subdev *sd)
-{
-	/* read VTS from register settings */
-	struct i2c_client *client = v4l2_get_subdevdata(sd);
-	int VTS;
-	u8 val;
-
-	ov5640_reg_read(client, 0x380e, &val);
-	VTS = val;
-	ov5640_reg_read(client, 0x380f, &val);
-	VTS = (VTS << 8) + val;
-
-	return VTS;
 }
 
 static int ov5640_set_VTS(struct v4l2_subdev *sd, int VTS)
@@ -1508,15 +1491,23 @@ static void ov5640_set_banding(struct v4l2_subdev *sd)
 	int preview_VTS;
 	int band_step60, max_band60, band_step50, max_band50;
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	struct ov5640 *ov5640 = to_ov5640(client);
+	const struct ov5640_timing_cfg *timing_cfg;
+	int i = ov5640->i_size;
+
+	if (ov5640_fmts[ov5640->i_fmt].code == V4L2_MBUS_FMT_JPEG_1X8)
+		timing_cfg = &timing_cfg_jpeg[i];
+	else
+		timing_cfg = &timing_cfg_yuv[i];
 
 	/* read preview PCLK */
 	preview_sysclk = ov5640_get_sysclk(sd);
 
 	/* read preview HTS */
-	preview_HTS = ov5640_get_HTS(sd);
+	preview_HTS = timing_cfg->h_total_size;
 
 	/* read preview VTS */
-	preview_VTS = ov5640_get_VTS(sd);
+	preview_VTS = timing_cfg->v_total_size;
 	printk(KERN_INFO "%s: preview_HTS=0x%x, VTS: 0x%x preview_sysclk=%ul\n",
 	       __func__, preview_HTS, preview_VTS, preview_sysclk);
 
@@ -1595,17 +1586,12 @@ static int ov5640_config_capture(struct v4l2_subdev *sd)
 	int capture_sysclk, capture_HTS, capture_VTS;
 	int banding, capture_bandingfilter, capture_max_band;
 	long capture_gain16_shutter;
+	struct ov5640 *ov5640 = to_ov5640(client);
+	const struct ov5640_timing_cfg *timing_cfg;
+	int i;
 
 	/*disable aec/agc */
 	ov5640_reg_write(client, 0x3503, 0x03);
-
-	/* read preview PCLK */
-	preview_sysclk = ov5640_get_sysclk(sd);
-
-	/* read preview HTS */
-	preview_HTS = ov5640_get_HTS(sd);
-	printk(KERN_INFO "%s: preview_HTS=0x%x, preview_sysclk=%ul\n",
-	       __func__, preview_HTS, preview_sysclk);
 
 	/* read preview shutter */
 	preview_shutter = ov5640_get_shutter(sd);
@@ -1630,13 +1616,25 @@ static int ov5640_config_capture(struct v4l2_subdev *sd)
 	ov5640_reg_writes(client, hawaii_capture_init);
 	ov5640_config_timing(client);
 
+	/* preview_HTS & preview_sysclk are static and set in config_preview */
+	/* print preview_HTS and preview_sysclk */
+	dev_info(&client->dev, "%s: preview_HTS=0x%x, preview_sysclk=%ul\n",
+	       __func__, preview_HTS, preview_sysclk);
+
 	/* read capture VTS */
-	capture_VTS = ov5640_get_VTS(sd);
-	capture_HTS = ov5640_get_HTS(sd);
+	i = ov5640->i_size;
+	if (ov5640_fmts[ov5640->i_fmt].code == V4L2_MBUS_FMT_JPEG_1X8)
+		timing_cfg = &timing_cfg_jpeg[i];
+	else
+		timing_cfg = &timing_cfg_yuv[i];
+
+	capture_VTS = timing_cfg->v_total_size;
+	capture_HTS = timing_cfg->h_total_size;
 	capture_sysclk = ov5640_get_sysclk(sd);
 	printk(KERN_INFO
 	       "%s: capture_VTS=0x%x, capture_HTS=0x%x, capture_sysclk=%ul\n",
 	       __func__, capture_VTS, capture_HTS, capture_sysclk);
+
 	/* calculate capture banding filter */
 	banding = ov5640_get_banding(sd);
 	if (banding == 60) {
