@@ -1007,10 +1007,10 @@ AudioApp_t AUDCTRL_GetAudioApp(void)
 		currAudioApp = AUDIO_APP_RECORDING_GVS_HQ;
 	else if (sAudioAppStates[AUDIO_APP_RECORDING_BARGEIN])
 		currAudioApp = AUDIO_APP_RECORDING_BARGEIN;
-	else if (sAudioAppStates[AUDIO_APP_FM_RADIO])
-		currAudioApp = AUDIO_APP_FM_RADIO;
 	else if (sAudioAppStates[AUDIO_APP_TONE])
 		currAudioApp = AUDIO_APP_TONE;
+	else if (sAudioAppStates[AUDIO_APP_FM_RADIO])
+		currAudioApp = AUDIO_APP_FM_RADIO;
 	else if (sAudioAppStates[AUDIO_APP_MUSIC])
 		currAudioApp = AUDIO_APP_MUSIC;
 	else if (sAudioAppStates[AUDIO_APP_MM_RESERVED1])
