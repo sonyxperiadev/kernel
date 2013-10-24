@@ -171,9 +171,9 @@
 		channel5 = "ntc", "0", "1200", "0", "0xc";
 		channel6 = "bsi", "0", "1200", "0", "0xe";
 		channel7 = "bom", "0", "1200", "0", "0x10";
-		channel8 = "32ktemp", "0", "1200", "0","0x12";
+		channel8 = "32ktemp", "0", "1200", "0","0x14";
 		channel9 = "patemp", "0", "1200", "0", "0x14";
-		channel10 = "als", "0", "1200", "0", "0x16";
+		channel10 = "als", "0", "1200", "0", "0x14";
 		channel11 = "0";
 		channel12 = "0";
 		channel13 = "0";

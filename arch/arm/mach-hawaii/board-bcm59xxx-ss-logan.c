@@ -961,6 +961,7 @@ static struct bcmpmu_adc_lut batt_temp_map[] = {
 	{900, -350},			/* -35 C */
 	{932, -400},			/* -40 C */
 };
+
 struct bcmpmu_adc_pdata adc_pdata[PMU_ADC_CHANN_MAX] = {
 	[PMU_ADC_CHANN_VMBATT] = {
 					.flag = 0,
@@ -968,6 +969,8 @@ struct bcmpmu_adc_pdata adc_pdata[PMU_ADC_CHANN_MAX] = {
 					.adc_offset = 0,
 					.lut = NULL,
 					.lut_len = 0,
+					.name = "vmbatt",
+					.reg = PMU_REG_ADCCTRL3,
 	},
 	[PMU_ADC_CHANN_VBBATT] = {
 					.flag = 0,
@@ -975,6 +978,8 @@ struct bcmpmu_adc_pdata adc_pdata[PMU_ADC_CHANN_MAX] = {
 					.adc_offset = 0,
 					.lut = NULL,
 					.lut_len = 0,
+					.name = "vbbatt",
+					.reg = PMU_REG_ADCCTRL5,
 	},
 	[PMU_ADC_CHANN_VBUS] = {
 					.flag = 0,
@@ -982,6 +987,8 @@ struct bcmpmu_adc_pdata adc_pdata[PMU_ADC_CHANN_MAX] = {
 					.adc_offset = 0,
 					.lut = NULL,
 					.lut_len = 0,
+					.name = "vbus",
+					.reg = PMU_REG_ADCCTRL9,
 	},
 	[PMU_ADC_CHANN_IDIN] = {
 					.flag = 0,
@@ -989,20 +996,18 @@ struct bcmpmu_adc_pdata adc_pdata[PMU_ADC_CHANN_MAX] = {
 					.adc_offset = 0,
 					.lut = NULL,
 					.lut_len = 0,
+					.name = "idin",
+					.reg = PMU_REG_ADCCTRL11,
 	},
-	[PMU_ADC_CHANN_NTC] = {
-					.flag = 0,
-					.volt_range = 1200,
-					.adc_offset = 0,
-					.lut = batt_temp_map,
-					.lut_len = ARRAY_SIZE(batt_temp_map),
-	},
+
 	[PMU_ADC_CHANN_BSI] = {
 					.flag = 0,
 					.volt_range = 1200,
 					.adc_offset = 0,
 					.lut = NULL,
 					.lut_len = 0,
+					.name = "bsi",
+					.reg = PMU_REG_ADCCTRL15,
 	},
 	[PMU_ADC_CHANN_BOM] = {
 					.flag = 0,
@@ -1010,13 +1015,51 @@ struct bcmpmu_adc_pdata adc_pdata[PMU_ADC_CHANN_MAX] = {
 					.adc_offset = 0,
 					.lut = NULL,
 					.lut_len = 0,
+					.name = "bom",
+					.reg = PMU_REG_ADCCTRL17,
 	},
+	[PMU_ADC_CHANN_DIE_TEMP] = {
+					.flag = 0,
+					.volt_range = 1200,
+					.adc_offset = 0,
+					.lut = NULL,
+					.lut_len = 0,
+					.name = "dietemp",
+					.reg = PMU_REG_ADCCTRL25,
+	},
+#if defined(CONFIG_MACH_HAWAII_SS_LOGAN_REV00)
+	/* Channel logan 000 NTC 32Ktemp, ALS, shd be mapped to PATEMP */
+	[PMU_ADC_CHANN_NTC] = {
+					.flag = 0,
+					.volt_range = 1200,
+					.adc_offset = 0,
+					.lut = batt_temp_map,
+					.lut_len = ARRAY_SIZE(batt_temp_map),
+					.name = "ntc",
+					.reg = PMU_REG_ADCCTRL21,
+	},
+
+#else
+	[PMU_ADC_CHANN_NTC] = {
+					.flag = 0,
+					.volt_range = 1200,
+					.adc_offset = 0,
+					.lut = batt_temp_map,
+					.lut_len = ARRAY_SIZE(batt_temp_map),
+					.name = "ntc",
+					.reg = PMU_REG_ADCCTRL13,
+	},
+
+
+	/* Channel 32Ktemp, ALS, shOuld be mapped to PATEMP*/
 	[PMU_ADC_CHANN_32KTEMP] = {
 					.flag = 0,
 					.volt_range = 1200,
 					.adc_offset = 0,
 					.lut = batt_temp_map,
 					.lut_len = ARRAY_SIZE(batt_temp_map),
+					.name = "32ktemp",
+					.reg = PMU_REG_ADCCTRL21,
 	},
 	[PMU_ADC_CHANN_PATEMP] = {
 					.flag = 0,
@@ -1024,14 +1067,20 @@ struct bcmpmu_adc_pdata adc_pdata[PMU_ADC_CHANN_MAX] = {
 					.adc_offset = 0,
 					.lut = batt_temp_map,
 					.lut_len = ARRAY_SIZE(batt_temp_map),
+					.name = "patemp",
+					.reg = PMU_REG_ADCCTRL21,
 	},
 	[PMU_ADC_CHANN_ALS] = {
 					.flag = 0,
 					.volt_range = 1200,
 					.adc_offset = 0,
-					.lut = NULL,
-					.lut_len = 0,
+					.lut = batt_temp_map,
+					.lut_len = ARRAY_SIZE(batt_temp_map),
+					.name = "als",
+					.reg = PMU_REG_ADCCTRL21,
 	},
+#endif
+
 };
 
 struct bcmpmu_acld_pdata acld_pdata = {
