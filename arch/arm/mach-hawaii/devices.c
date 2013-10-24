@@ -122,6 +122,9 @@ struct platform_device mobicore_device = {
 };
 #endif
 
+atomic_t nohz_pause = ATOMIC_INIT(0);
+EXPORT_SYMBOL(nohz_pause);
+
 /* dynamic ETM support */
 unsigned int etm_on;
 EXPORT_SYMBOL(etm_on);

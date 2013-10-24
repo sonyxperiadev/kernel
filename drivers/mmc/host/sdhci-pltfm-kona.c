@@ -40,6 +40,7 @@
 #include <linux/of.h>
 #include <linux/of_irq.h>
 #include <linux/of_platform.h>
+#include <linux/tick.h>
 
 #include <plat/clock.h>
 
@@ -480,12 +481,19 @@ static int sdhci_pltfm_clk_enable(struct sdio_dev *dev, int enable)
 
 	BUG_ON(!dev);
 	if (enable) {
+#if defined(CONFIG_ARCH_JAVA) || defined(CONFIG_ARCH_HAWAII)
+		pause_nohz();
+#endif
 		/* peripheral clock */
 		ret = clk_enable(dev->peri_clk);
 		if (ret)
 			return ret;
 	} else {
 		clk_disable(dev->peri_clk);
+#if defined(CONFIG_ARCH_JAVA) || defined(CONFIG_ARCH_HAWAII)
+		resume_nohz();
+#endif
+
 	}
 	return ret;
 #endif

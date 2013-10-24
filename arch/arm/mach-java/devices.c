@@ -113,6 +113,9 @@ static int board_version = -1;
 #include <linux/broadcom/mobicore.h>
 #endif
 
+atomic_t nohz_pause = ATOMIC_INIT(0);
+EXPORT_SYMBOL(nohz_pause);
+
 #if defined(CONFIG_MOBICORE_DRIVER) && defined(CONFIG_OF)
 struct mobicore_data mobicore_init_data = {
 	.name = "mobicore",
