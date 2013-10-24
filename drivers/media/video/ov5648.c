@@ -1749,6 +1749,7 @@ static int ov5648_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			ov5648->framerate_hi = F24p8(30.0);
 			break;
 		}
+
 		ov5648_set_framerate_lo(client, ov5648->framerate_lo);
 		ov5648_set_framerate_hi(client, ov5648->framerate_hi);
 		ov5648_set_exposure(client, ov5648->exposure_current);
@@ -1900,18 +1901,25 @@ int set_flash_mode(struct i2c_client *client, int mode)
 			gpio_set_value(FLASH_EN, 0);
 		} else if (mode == FLASH_MODE_ON) {
 			ov5648->flash_timeout =
-				2 * (ov5648->vts * ov5648->line_length)/1000;
+				3 * (ov5648->vts * ov5648->line_length)/1000;
+			if (ov5648->flash_timeout < 250000)
+				ov5648->flash_timeout = 4 *
+						(ov5648->flash_timeout/3);
 			timer.data = (unsigned long) msg;
 			timer.expires = jiffies
 				+ (ov5648->flash_timeout*HZ)/1000000;
 			timer.function = print_func;
 			add_timer(&timer);
-			pr_debug("flash_timeout=%d", ov5648->flash_timeout);
+			pr_debug("flash_timeout=%d mode_id %d",
+				ov5648->flash_timeout, ov5648->mode_idx);
 			gpio_set_value(TORCH_EN, 1);
 			gpio_set_value(FLASH_EN, 1);
 		} else if (mode == FLASH_MODE_AUTO) {
 			ov5648->flash_timeout =
-				2 * (ov5648->vts * ov5648->line_length)/1000;
+				3 * (ov5648->vts * ov5648->line_length)/1000;
+			if (ov5648->flash_timeout < 250000)
+				ov5648->flash_timeout = 4 *
+					(ov5648->flash_timeout/3);
 			timer.data = (unsigned long) msg;
 			timer.expires =
 				jiffies + (ov5648->flash_timeout*HZ)/1000000;
