@@ -102,6 +102,28 @@ extern int tick_check_oneshot_change(int allow_nohz);
 extern struct tick_sched *tick_get_tick_sched(int cpu);
 extern void tick_check_idle(int cpu);
 extern int tick_oneshot_mode_active(void);
+
+#if defined(CONFIG_ARCH_JAVA) || defined(CONFIG_ARCH_HAWAII)
+extern atomic_t nohz_pause;
+
+static inline void pause_nohz(void)
+{
+	atomic_inc(&nohz_pause);
+}
+
+static inline void resume_nohz(void)
+{
+	atomic_dec(&nohz_pause);
+}
+
+static inline int kona_nohz_delay(int cpu)
+{
+	return atomic_read(&nohz_pause);
+}
+
+#define arch_needs_cpu(cpu) kona_nohz_delay(cpu)
+#endif
+
 #  ifndef arch_needs_cpu
 #   define arch_needs_cpu(cpu) (0)
 #  endif

@@ -32,7 +32,7 @@
 #include <linux/of_i2c.h>
 #include <mach/chip_pinmux.h>
 #include <mach/pinmux.h>
-
+#include <linux/tick.h>
 #ifdef CONFIG_DEBUG_FS
 #include <linux/seq_file.h>
 #include <linux/debugfs.h>
@@ -1227,6 +1227,9 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[], int num)
 #endif
 
 	mutex_lock(&dev->dev_lock);
+#if defined(CONFIG_ARCH_JAVA) || defined(CONFIG_ARCH_HAWAII)
+	pause_nohz();
+#endif
 	bsc_enable_clk(dev);
 	bsc_enable_pad_output((uint32_t)dev->virt_base, true);
 	hw_cfg = (struct bsc_adap_cfg *)dev->device->platform_data;
@@ -1373,6 +1376,10 @@ out:
 out1:
 	bsc_enable_pad_output((uint32_t)dev->virt_base, false);
 	bsc_disable_clk(dev);
+
+#if defined(CONFIG_ARCH_JAVA) || defined(CONFIG_ARCH_HAWAII)
+	resume_nohz();
+#endif
 	mutex_unlock(&dev->dev_lock);
 	return rc;
 }
