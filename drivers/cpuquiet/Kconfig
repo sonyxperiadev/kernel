@@ -61,5 +61,21 @@ config CPU_QUIET_DEFAULT_GOV_RUNNABLE
 	 Use the CPUQuiet governor 'runnable threads' as default.
 endchoice
 
+menu "Tegra CPUquiet Driver"
+depends on ARCH_TEGRA
+
+config TEGRA_CPUQUIET
+	bool "Tegra SoCs"
+	depends on HOTPLUG_CPU && ARM64
+	default n
+	help
+	  This is the CPUquiet driver for NVIDIA Tegra SoCs. It supports
+	  auto hotplug the secondary CPU cores by the CPUquiet governor.
+	  And the auto clusterswitch would be supported in this driver
+	  too.
+
+	  If unsure, say N.
+endmenu
+
 endif
 endmenu
