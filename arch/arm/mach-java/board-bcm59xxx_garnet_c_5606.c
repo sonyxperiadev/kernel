@@ -1017,9 +1017,9 @@ struct bcmpmu_acld_pdata acld_pdata = {
 	.acld_vbat_thrs = 3500,
 	.i_sat = 3000,			/* saturation current in mA
 						for chrgr while using ACLD */
-	.i_def_dcp = 700,
+	.i_def_dcp = 800,
 	.i_max_cc = 2200,
-	.acld_cc_lmt = 1360,    /*In general this is 80% of 1C.
+	.acld_cc_lmt = 800,    /*In general this is 80% of 1C.
 				  If customer defines any other value
 				  chage accordingly*/
 	.otp_cc_trim = 0x1F,
