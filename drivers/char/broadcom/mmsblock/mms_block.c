@@ -102,6 +102,8 @@ ssize_t white_list_write(struct file *file, const char __user *buf,
 			return count;
 		mmsevent.uid = blocked_uid;
 		send_event_to_security_center(&mmsevent);
+	} else if (*buf1 == '#') {
+		kstrtoul(buf1+1, 10, &g_block_enabled);
 	} else {
 		kstrtoul(buf1, 10, &g_pid);
 	}
@@ -132,6 +134,11 @@ int get_com_pid(void)
 	return g_pid;
 }
 
+int get_block_enabled(void)
+{
+	return g_block_enabled;
+}
+
 const struct file_operations white_list_fops = {
 	.read = white_list_read,
 	.write = white_list_write,
@@ -145,6 +152,7 @@ static int __init mms_block_init(void)
 #endif
 	g_whitelistnode = NULL;
 	g_pid = 0;
+	g_block_enabled = 1;
 	return 0;
 }
 

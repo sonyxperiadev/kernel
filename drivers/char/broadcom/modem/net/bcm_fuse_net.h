@@ -23,5 +23,6 @@ struct mms_event {
 
 extern int is_uid_in_white_list(int uid);
 extern int get_com_pid(void);
+extern int get_block_enabled(void);
 
 #endif /* _BCM_FUSE_NET_H */

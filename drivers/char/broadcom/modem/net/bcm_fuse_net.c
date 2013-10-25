@@ -616,7 +616,7 @@ static int __bcm_fuse_net_tx(struct sk_buff *skb, struct net_device *dev)
 	int i;
 
 #if defined(CONFIG_BCM_MMS_BLOCK)
-	if (check_if_block_mms(skb, dev) == 1) {
+	if (get_block_enabled() == 1 && check_if_block_mms(skb, dev) == 1) {
 		dev_kfree_skb(skb);
 		return 0; /* Pretend to be sent, don't return -1 */
 	}
