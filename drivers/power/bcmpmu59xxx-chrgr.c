@@ -185,6 +185,7 @@ char *get_supply_type_str(int chrgr_type)
 	case PMU_CHRGR_TYPE_TYPE1:
 	case PMU_CHRGR_TYPE_TYPE2:
 	case PMU_CHRGR_TYPE_PS2:
+	case PMU_CHRGR_TYPE_ACA_DOCK:
 		return "bcmpmu_ac";
 
 	default:
@@ -481,8 +482,9 @@ static int charger_event_handler(struct notifier_block *nb,
 			BCMPMU_USB_CTRL_GET_CHRGR_TYPE, &chrgr_type);
 		if ((chrgr_type < PMU_CHRGR_TYPE_MAX) &&
 				(chrgr_type >  PMU_CHRGR_TYPE_NONE)) {
-			if (!strcmp(get_supply_type_str(chrgr_type),
-				"bcmpmu_usb")) {
+			if ((get_supply_type_str(chrgr_type) != NULL) &&
+			    (strcmp(get_supply_type_str(chrgr_type),
+				    "bcmpmu_usb") == 0)) {
 				di->usb_chrgr_info.curr = chrgr_curr;
 				power_supply_changed(&di->usb_psy);
 			} else {
