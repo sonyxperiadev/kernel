@@ -668,6 +668,7 @@ static int unicam_videobuf_start_streaming_int(struct unicam_camera_dev \
 	/* Output engine */
 	mm_csi0_buffering_mode(unicam_dev->b_mode);
 	mm_csi0_rx_burst();
+	mm_csi0_enable_unicam();
 
 	/* start sensor streaming */
 	ret = v4l2_subdev_call(sd, video, s_stream, 1);
