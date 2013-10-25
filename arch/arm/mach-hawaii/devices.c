@@ -715,14 +715,14 @@ struct platform_device hawaii_otg_platform_device = {
 #ifdef CONFIG_KONA_CPU_FREQ_DRV
 struct kona_freq_tbl kona_freq_tbl[] = {
 	FTBL_INIT(312000, PI_OPP_ECONOMY, TEMP_DONT_CARE),
-	FTBL_INIT(499999, PI_OPP_NORMAL, 100),
-	FTBL_INIT(666667, PI_OPP_TURBO, TEMP_DONT_CARE),
-	FTBL_INIT(1000000, PI_OPP_SUPER_TURBO, 85),
+	FTBL_INIT(499999, PI_OPP_NORMAL, 70),
+	FTBL_INIT(666667, PI_OPP_TURBO, 65),
+	FTBL_INIT(1000000, PI_OPP_SUPER_TURBO, 58),
 };
 
 int temp_lmt[2][ARRAY_SIZE(kona_freq_tbl)] = {
-	{TEMP_DONT_CARE, 100, TEMP_DONT_CARE, 85}, /*1GHz*/
-	{TEMP_DONT_CARE, 105, 95, 85}, /*1.2GHz*/
+	{TEMP_DONT_CARE, 70, 65, 58}, /*1GHz*/
+	{TEMP_DONT_CARE, 70, 65, 58}, /*1.2GHz*/
 };
 
 void hawaii_cpufreq_init(void)
@@ -969,9 +969,14 @@ struct platform_device kona_memc_device = {
 
 #ifdef CONFIG_KONA_TMON
 struct tmon_state threshold_val[] = {
-	{.rising = 85, .flags = TMON_NOTIFY,},
-	{.rising = 100, .flags = TMON_NOTIFY,},
-	{.rising = 115, .flags = TMON_HW_SHDWN,},
+	{.rising = 55, .flags = TMON_NOTIFY,},
+	{.rising = 58, .flags = TMON_NOTIFY,},
+	{.rising = 63, .flags = TMON_NOTIFY,},
+	{.rising = 65, .flags = TMON_NOTIFY,},
+	{.rising = 70, .flags = TMON_NOTIFY,},
+	{.rising = 80, .flags = TMON_NOTIFY,},
+	{.rising = 110, .flags = TMON_SW_SHDWN,},
+	{.rising = 120, .flags = TMON_HW_SHDWN,},
 };
 struct kona_tmon_pdata tmon_plat_data = {
 	.base_addr = KONA_TMON_VA,

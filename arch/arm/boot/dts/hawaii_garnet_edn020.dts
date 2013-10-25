@@ -379,14 +379,14 @@
 		flags = <0>;
 		interval_ms = <5>;
 		/*sw shdwn temp is 120*/
-		thold = <58 1
+		thold = <55 1
+			58 1
+			63 1
 			65 1
 			70 1
-			85 1
-			95 1
-			105 1
-			120 4
-			125 2>;
+			80 1
+			115 4
+			120 2>;
 		tmon_apb_clk = "tmon_apb";
 		tmon_1m_clk = "tmon_1m_clk";
 		falling = <5>;
@@ -494,8 +494,8 @@
 		pwm-period-ns = <99900>; /* ~10010 Hz */
 		temp_comp_size = <3>; /* Number of trigger points*/
 		temp_comp_tbl = <55 20
-				60 18
-				65 15>;
+				63 18
+				70 15>;
 		/* Brightness values 20:250cd, 18:230cd, 15:200cd */
 		pwm-request-label = "backlight";
 		bl-on-delay = <7000>;
