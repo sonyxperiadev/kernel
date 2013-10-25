@@ -42,6 +42,26 @@
 #include <mach/memory.h>
 #include "mm_csi0.h"
 
+/* #define MMCSI0_TRACE_WRITE_ACCESS */
+
+#ifdef MMCSI0_TRACE_WRITE_ACCESS
+#define MMCSI0_WRITE_REG(b, r, d) \
+	({ \
+		pr_info("MMCSI0: *(%x) <- %x\n", b + r##_OFFSET, d); \
+		BRCM_WRITE_REG(b, r, d); \
+	})
+#define MMCSI0_WRITE_REG_FIELD(b, r, f, d) \
+	({ \
+		pr_info("MMCSI0: *(%x) <- (%x << %d)\n", \
+				b + r##_OFFSET, d, r##_##f##_SHIFT); \
+		BRCM_WRITE_REG_FIELD(b, r, f, d); \
+	})
+#else
+	#define MMCSI0_WRITE_REG(b, r, d) BRCM_WRITE_REG(b, r, d)
+	#define MMCSI0_WRITE_REG_FIELD(b, r, f, d) \
+					BRCM_WRITE_REG_FIELD(b, r, f, d)
+#endif
+
 struct mm_csi0_generic {
 	int devbusy;
 	enum host_mode mode;
@@ -190,11 +210,13 @@ int mm_csi0_init()
 	/* LDO Enable */
 	/* point base to mm_cfg base address */
 	if (cam_state.afe == AFE0) {
-		BRCM_WRITE_REG_FIELD(base, MM_CFG_CSI0_PHY_CTRL, CSI_PHY_SEL, 0);
-		BRCM_WRITE_REG(base, MM_CFG_CSI0_LDO_CTL, 0x5A00000D);
+		MMCSI0_WRITE_REG_FIELD(base, MM_CFG_CSI0_PHY_CTRL,
+						CSI_PHY_SEL, 0);
+		MMCSI0_WRITE_REG(base, MM_CFG_CSI0_LDO_CTL, 0x5A00000D);
 	} else if (cam_state.afe == AFE1) {
-		BRCM_WRITE_REG_FIELD(base, MM_CFG_CSI0_PHY_CTRL, CSI_PHY_SEL, 1);
-		BRCM_WRITE_REG(base, MM_CFG_CSI1_LDO_CTL, 0x5A00000D);
+		MMCSI0_WRITE_REG_FIELD(base, MM_CFG_CSI0_PHY_CTRL,
+						CSI_PHY_SEL, 1);
+		MMCSI0_WRITE_REG(base, MM_CFG_CSI1_LDO_CTL, 0x5A00000D);
 	} else {
 		pr_info("Wrong AFE specified in Enable\n");
 		ret = -EINVAL;
@@ -213,9 +235,9 @@ int mm_csi0_teardown()
 	/* point base to mm_cfg base address */
 	spin_lock_irqsave(&lock, flags);
 	if (cam_state.afe == AFE0)
-		BRCM_WRITE_REG(base, MM_CFG_CSI0_LDO_CTL, 0x0);
+		MMCSI0_WRITE_REG(base, MM_CFG_CSI0_LDO_CTL, 0x0);
 	else if (cam_state.afe == AFE1)
-		BRCM_WRITE_REG(base, MM_CFG_CSI1_LDO_CTL, 0x0);
+		MMCSI0_WRITE_REG(base, MM_CFG_CSI1_LDO_CTL, 0x0);
 	else
 		pr_info("Wrong AFE specified in Teardown\n");
 
@@ -236,9 +258,9 @@ int mm_csi0_set_afe()
 
 	/* Enable access ... need to check how or why ?? */
 	if (cam_state.afe == AFE0)
-		BRCM_WRITE_REG(MM_CFG_BASE, MM_CFG_CSI0_LDO_CTL, 0x5A00000D);
+		MMCSI0_WRITE_REG(MM_CFG_BASE, MM_CFG_CSI0_LDO_CTL, 0x5A00000D);
 	else
-		BRCM_WRITE_REG(MM_CFG_BASE, MM_CFG_CSI1_LDO_CTL, 0x5A00000D);
+		MMCSI0_WRITE_REG(MM_CFG_BASE, MM_CFG_CSI1_LDO_CTL, 0x5A00000D);
 
 	udelay(100);
 
@@ -246,60 +268,60 @@ int mm_csi0_set_afe()
 
 	/* point base to mm_csi0 base */
 	base = V_BASE;
-	BRCM_WRITE_REG_FIELD(base, CAM_CTL, MEN, 0x1);
+	MMCSI0_WRITE_REG_FIELD(base, CAM_CTL, MEN, 0x1);
 
-	BRCM_WRITE_REG(base, CAM_CLK, 0x00);
-	BRCM_WRITE_REG(base, CAM_CLT, 0x00);
-	BRCM_WRITE_REG(base, CAM_DAT0, 0x00);
-	BRCM_WRITE_REG(base, CAM_DAT1, 0x00);
-	BRCM_WRITE_REG(base, CAM_DLT, 0x00);
+	MMCSI0_WRITE_REG(base, CAM_CLK, 0x00);
+	MMCSI0_WRITE_REG(base, CAM_CLT, 0x00);
+	MMCSI0_WRITE_REG(base, CAM_DAT0, 0x00);
+	MMCSI0_WRITE_REG(base, CAM_DAT1, 0x00);
+	MMCSI0_WRITE_REG(base, CAM_DLT, 0x00);
 
-	BRCM_WRITE_REG_FIELD(base, CAM_CTL, CPR, 1);
+	MMCSI0_WRITE_REG_FIELD(base, CAM_CTL, CPR, 1);
 	udelay(5);
-	BRCM_WRITE_REG_FIELD(base, CAM_CTL, CPR, 0);
-	BRCM_WRITE_REG_FIELD(base, CAM_ANA, PTATADJ, 0x7);
-	BRCM_WRITE_REG_FIELD(base, CAM_ANA, CTATADJ, 0x7);
+	MMCSI0_WRITE_REG_FIELD(base, CAM_CTL, CPR, 0);
+	MMCSI0_WRITE_REG_FIELD(base, CAM_ANA, PTATADJ, 0x7);
+	MMCSI0_WRITE_REG_FIELD(base, CAM_ANA, CTATADJ, 0x7);
 
-	BRCM_WRITE_REG_FIELD(base, CAM_ANA, APD, 0x0);
-	BRCM_WRITE_REG_FIELD(base, CAM_ANA, BPD, 0x0);
-	BRCM_WRITE_REG_FIELD(base, CAM_ANA, DDL, 0x0);
+	MMCSI0_WRITE_REG_FIELD(base, CAM_ANA, APD, 0x0);
+	MMCSI0_WRITE_REG_FIELD(base, CAM_ANA, BPD, 0x0);
+	MMCSI0_WRITE_REG_FIELD(base, CAM_ANA, DDL, 0x0);
 	/* Waiting for analog PHY LDO to settle */
 	udelay(20);
-	BRCM_WRITE_REG_FIELD(base, CAM_ANA, AR, 0x1);
+	MMCSI0_WRITE_REG_FIELD(base, CAM_ANA, AR, 0x1);
 	udelay(100);
-	BRCM_WRITE_REG_FIELD(base, CAM_ANA, AR, 0x0);
+	MMCSI0_WRITE_REG_FIELD(base, CAM_ANA, AR, 0x0);
 
-	BRCM_WRITE_REG(base, CAM_IPIPE, 0x00);
-	BRCM_WRITE_REG(base, CAM_CMP0, 0x00);
-	BRCM_WRITE_REG(base, CAM_CMP1, 0x00);
+	MMCSI0_WRITE_REG(base, CAM_IPIPE, 0x00);
+	MMCSI0_WRITE_REG(base, CAM_CMP0, 0x00);
+	MMCSI0_WRITE_REG(base, CAM_CMP1, 0x00);
 
-	BRCM_WRITE_REG_FIELD(base, CAM_CLK, CLPD, 0x0);
-	BRCM_WRITE_REG_FIELD(base, CAM_DAT0, DLPDN, 0x0);
+	MMCSI0_WRITE_REG_FIELD(base, CAM_CLK, CLPD, 0x0);
+	MMCSI0_WRITE_REG_FIELD(base, CAM_DAT0, DLPDN, 0x0);
 	if (cam_state.lanes == CSI2_DUAL_LANE)
-		BRCM_WRITE_REG_FIELD(base, CAM_DAT1, DLPDN, 0x0);
+		MMCSI0_WRITE_REG_FIELD(base, CAM_DAT1, DLPDN, 0x0);
 	else
-		BRCM_WRITE_REG_FIELD(base, CAM_DAT1, DLPDN, 0x1);
+		MMCSI0_WRITE_REG_FIELD(base, CAM_DAT1, DLPDN, 0x1);
 	if (cam_state.mode == CSI2)
 		term = 0;
 	/* HS */
-	BRCM_WRITE_REG_FIELD(base, CAM_CLK, CLHSE, 1);
-	BRCM_WRITE_REG_FIELD(base, CAM_DAT0, DLHSEN, term);
+	MMCSI0_WRITE_REG_FIELD(base, CAM_CLK, CLHSE, 1);
+	MMCSI0_WRITE_REG_FIELD(base, CAM_DAT0, DLHSEN, term);
 	if (cam_state.lanes == CSI2_DUAL_LANE)
-		BRCM_WRITE_REG_FIELD(base, CAM_DAT1, DLHSEN, term);
+		MMCSI0_WRITE_REG_FIELD(base, CAM_DAT1, DLHSEN, term);
 	/* LP */
 	if (cam_state.mode == CSI1CCP2) {
-		BRCM_WRITE_REG_FIELD(base, CAM_CLK, CLLPE, 0x0);
-		BRCM_WRITE_REG_FIELD(base, CAM_DAT0, DLLPEN, 0x0);
+		MMCSI0_WRITE_REG_FIELD(base, CAM_CLK, CLLPE, 0x0);
+		MMCSI0_WRITE_REG_FIELD(base, CAM_DAT0, DLLPEN, 0x0);
 		if (cam_state.lanes == CSI2_DUAL_LANE)
-			BRCM_WRITE_REG_FIELD(base, CAM_DAT1, DLLPEN, 0x0);
+			MMCSI0_WRITE_REG_FIELD(base, CAM_DAT1, DLLPEN, 0x0);
 	} else { /* CSI-2 */
-		BRCM_WRITE_REG_FIELD(base, CAM_CLK, CLLPE, 0x1);
-		BRCM_WRITE_REG_FIELD(base, CAM_DAT0, DLLPEN, 0x1);
+		MMCSI0_WRITE_REG_FIELD(base, CAM_CLK, CLLPE, 0x1);
+		MMCSI0_WRITE_REG_FIELD(base, CAM_DAT0, DLLPEN, 0x1);
 		if (cam_state.lanes == CSI2_DUAL_LANE)
-			BRCM_WRITE_REG_FIELD(base, CAM_DAT1, DLLPEN, 0x1);
+			MMCSI0_WRITE_REG_FIELD(base, CAM_DAT1, DLLPEN, 0x1);
 	}
 	/* Now enable only clock lane */
-	BRCM_WRITE_REG_FIELD(base, CAM_CLK, CLE, 0x1);
+	MMCSI0_WRITE_REG_FIELD(base, CAM_CLK, CLE, 0x1);
 	return 0;
 }
 
@@ -315,38 +337,39 @@ int mm_csi0_set_dig_phy(struct lane_timing *timing)
 		term = 0;
 	/* Digital PHY setup */
 	if (cam_state.mode == CSI1CCP2) {
-		BRCM_WRITE_REG_FIELD(base, CAM_CLT, CLT1, 0x6);
-		BRCM_WRITE_REG_FIELD(base, CAM_CLT, CLT2, 0x6);
+		MMCSI0_WRITE_REG_FIELD(base, CAM_CLT, CLT1, 0x6);
+		MMCSI0_WRITE_REG_FIELD(base, CAM_CLT, CLT2, 0x6);
 
-		BRCM_WRITE_REG_FIELD(base, CAM_DLT, DLT1, 0x0);
-		BRCM_WRITE_REG_FIELD(base, CAM_DLT, DLT2, 0x6);
-		BRCM_WRITE_REG_FIELD(base, CAM_DLT, DLT3, 0x0);
+		MMCSI0_WRITE_REG_FIELD(base, CAM_DLT, DLT1, 0x0);
+		MMCSI0_WRITE_REG_FIELD(base, CAM_DLT, DLT2, 0x6);
+		MMCSI0_WRITE_REG_FIELD(base, CAM_DLT, DLT3, 0x0);
 
 	} else {
-		BRCM_WRITE_REG_FIELD(base, CAM_CLT, CLT1, 0xA);
-		BRCM_WRITE_REG_FIELD(base, CAM_CLT, CLT2,  0x3C);
+		MMCSI0_WRITE_REG_FIELD(base, CAM_CLT, CLT1, 0xA);
+		MMCSI0_WRITE_REG_FIELD(base, CAM_CLT, CLT2,  0x3C);
 
-		BRCM_WRITE_REG_FIELD(base, CAM_DLT, DLT1, timing->hs_term_time);
-		BRCM_WRITE_REG_FIELD(base, CAM_DLT, DLT2,
+		MMCSI0_WRITE_REG_FIELD(base, CAM_DLT, DLT1,
+					timing->hs_term_time);
+		MMCSI0_WRITE_REG_FIELD(base, CAM_DLT, DLT2,
 			timing->hs_settle_time);
 
 		/* DLT3 has always been zero */
-		BRCM_WRITE_REG_FIELD(base, CAM_DLT, DLT3, 0x0);
+		MMCSI0_WRITE_REG_FIELD(base, CAM_DLT, DLT3, 0x0);
 		/* New value from Venky */
 		/* CLT1 0xA CLT2 0x3C*/
 		/* DLT1 0x8 DLT2 and DLT3 = 0 */
 	}
 	/* The OV5640 driver to send the correct timings */
-	BRCM_WRITE_REG_FIELD(base, CAM_CLK, CLTRE, term);
-	BRCM_WRITE_REG_FIELD(base, CAM_DAT0, DLTREN, term);
+	MMCSI0_WRITE_REG_FIELD(base, CAM_CLK, CLTRE, term);
+	MMCSI0_WRITE_REG_FIELD(base, CAM_DAT0, DLTREN, term);
 	if (cam_state.lanes == CSI2_DUAL_LANE)
-		BRCM_WRITE_REG_FIELD(base, CAM_DAT1, DLTREN, term);
-	BRCM_WRITE_REG_FIELD(base, CAM_DAT0, DLSMN, 0x0);
+		MMCSI0_WRITE_REG_FIELD(base, CAM_DAT1, DLTREN, term);
+	MMCSI0_WRITE_REG_FIELD(base, CAM_DAT0, DLSMN, 0x0);
 	if (cam_state.lanes == CSI2_DUAL_LANE)
-		BRCM_WRITE_REG_FIELD(base, CAM_DAT1, DLSMN, 0x0);
+		MMCSI0_WRITE_REG_FIELD(base, CAM_DAT1, DLSMN, 0x0);
 	/* Packet framer timeout */
-	BRCM_WRITE_REG_FIELD(base, CAM_CTL, PFT, 0xF);
-	BRCM_WRITE_REG_FIELD(base, CAM_CTL, OET, 0xFF);
+	MMCSI0_WRITE_REG_FIELD(base, CAM_CTL, PFT, 0xF);
+	MMCSI0_WRITE_REG_FIELD(base, CAM_CTL, OET, 0xFF);
 	return 0;
 }
 
@@ -355,11 +378,11 @@ int mm_csi0_set_mode(enum csi1ccp2_clock_mode clk_mode)
 	u32 base = V_BASE;
 
 	/* As per the recommended seq, we set the mode over here */
-	BRCM_WRITE_REG_FIELD(base, CAM_CTL, CPM, cam_state.mode);
+	MMCSI0_WRITE_REG_FIELD(base, CAM_CTL, CPM, cam_state.mode);
 	if (cam_state.mode == CSI1CCP2) {
 		if ((clk_mode != DATA_CLOCK) && (clk_mode != DATA_STROBE))
 			clk_mode = DATA_CLOCK;
-		BRCM_WRITE_REG_FIELD(base, CAM_CTL, DCM, clk_mode);
+		MMCSI0_WRITE_REG_FIELD(base, CAM_CTL, DCM, clk_mode);
 		pr_info("Setting CCP2 clock mode %d\n", clk_mode);
 	}
 	return 0;
@@ -374,14 +397,14 @@ int mm_csi0_cfg_image_id(int vc, int id)
 			pr_info("Wrong CCP2 ID\n");
 			return -EINVAL;
 		}
-		BRCM_WRITE_REG_FIELD(base, CAM_IDI, IDI0, (0x80 | id));
+		MMCSI0_WRITE_REG_FIELD(base, CAM_IDI, IDI0, (0x80 | id));
 
 	} else { /* CSI2 mode */
 		if (vc > 3) {
 			pr_info("Wrong CSI2 VC\n");
 			return -EINVAL;
 		}
-		BRCM_WRITE_REG_FIELD(base, CAM_IDI, IDI0, ((vc << 6) | id));
+		MMCSI0_WRITE_REG_FIELD(base, CAM_IDI, IDI0, ((vc << 6) | id));
 	}
 	return 0;
 }
@@ -390,7 +413,8 @@ int mm_csi0_set_windowing_vertical(int v_line_start, int v_line_end)
 {
 	u32 base = V_BASE;
 
-	BRCM_WRITE_REG(base, CAM_IVWIN, ((v_line_end << 16) | (v_line_start)));
+	MMCSI0_WRITE_REG(base, CAM_IVWIN,
+				((v_line_end << 16) | (v_line_start)));
 	return 0;
 }
 
@@ -398,7 +422,7 @@ int mm_csi0_set_windowing_horizontal(int h_pix_start, int h_pix_end)
 {
 	u32 base = V_BASE;
 
-	BRCM_WRITE_REG(base, CAM_IHWIN, ((h_pix_end << 16) | (h_pix_start)));
+	MMCSI0_WRITE_REG(base, CAM_IHWIN, ((h_pix_end << 16) | (h_pix_start)));
 	return 0;
 }
 
@@ -408,14 +432,14 @@ int mm_csi0_enc_blk_length(int len)
 	u8 val;
 
 	if (len == 0)
-		BRCM_WRITE_REG_FIELD(base, CAM_IPIPE, DEBL, 0x0);
+		MMCSI0_WRITE_REG_FIELD(base, CAM_IPIPE, DEBL, 0x0);
 	else {
 		if (((len & (len - 1)) != 0) || (len > 512) || (len < 8)) {
 			pr_info("Wrong encode block length\n");
 			return -EINVAL;
 		}
 		val = __ffs(len) - 2; /* Validate this change */
-		BRCM_WRITE_REG_FIELD(base, CAM_IPIPE, DEBL, val);
+		MMCSI0_WRITE_REG_FIELD(base, CAM_IPIPE, DEBL, val);
 	}
 	return 0;
 }
@@ -428,7 +452,7 @@ int mm_csi0_cfg_pipeline_dpcm_enc(enum dpcm_encode_mode enc)
 		pr_info("Wrong DPCM encode mode\n");
 		return -EINVAL;
 	}
-	BRCM_WRITE_REG_FIELD(base, CAM_IPIPE, DEM, enc);
+	MMCSI0_WRITE_REG_FIELD(base, CAM_IPIPE, DEM, enc);
 	return 0;
 }
 
@@ -440,7 +464,7 @@ int mm_csi0_cfg_pipeline_dpcm_dec(enum dpcm_decode_mode dec)
 		pr_info("Wrong DPCM decode mode\n");
 		return -EINVAL;
 	}
-	BRCM_WRITE_REG_FIELD(base, CAM_IPIPE, DDM, dec);
+	MMCSI0_WRITE_REG_FIELD(base, CAM_IPIPE, DDM, dec);
 	return 0;
 }
 
@@ -452,7 +476,7 @@ int mm_csi0_cfg_pipeline_pack(enum pix_pack_mode pack)
 		pr_info("Wrong pix pack mode\n");
 		return -EINVAL;
 	}
-	BRCM_WRITE_REG_FIELD(base, CAM_IPIPE, PPM, pack);
+	MMCSI0_WRITE_REG_FIELD(base, CAM_IPIPE, PPM, pack);
 	return 0;
 }
 
@@ -464,7 +488,7 @@ int mm_csi0_cfg_pipeline_unpack(enum pix_unpack_mode unpack)
 		pr_info("Wrong pix unpack mode\n");
 		return -EINVAL;
 	}
-	BRCM_WRITE_REG_FIELD(base, CAM_IPIPE, PUM, unpack);
+	MMCSI0_WRITE_REG_FIELD(base, CAM_IPIPE, PUM, unpack);
 	return 0;
 }
 
@@ -473,9 +497,9 @@ int mm_csi0_enable_fsp_ccp2(void)
 	u32 base = V_BASE;
 
 	if (cam_state.mode == CSI1CCP2)
-		BRCM_WRITE_REG_FIELD(base, CAM_DCS, FDE, 0x1);
+		MMCSI0_WRITE_REG_FIELD(base, CAM_DCS, FDE, 0x1);
 	else
-		BRCM_WRITE_REG_FIELD(base, CAM_DCS, FDE, 0x0);
+		MMCSI0_WRITE_REG_FIELD(base, CAM_DCS, FDE, 0x0);
 
 	return 0;
 }
@@ -486,17 +510,17 @@ int mm_csi0_config_int(struct int_desc *desc, enum buffer_type type)
 
 	if (type == IMAGE_BUFFER) {
 		if (desc->fsi)
-			BRCM_WRITE_REG_FIELD(base, CAM_ICTL, FSIE, 0x1);
+			MMCSI0_WRITE_REG_FIELD(base, CAM_ICTL, FSIE, 0x1);
 		else
-			BRCM_WRITE_REG_FIELD(base, CAM_ICTL, FSIE, 0x0);
+			MMCSI0_WRITE_REG_FIELD(base, CAM_ICTL, FSIE, 0x0);
 		if (desc->fei)
-			BRCM_WRITE_REG_FIELD(base, CAM_ICTL, FEIE, 0x1);
+			MMCSI0_WRITE_REG_FIELD(base, CAM_ICTL, FEIE, 0x1);
 		else
-			BRCM_WRITE_REG_FIELD(base, CAM_ICTL, FEIE, 0x0);
+			MMCSI0_WRITE_REG_FIELD(base, CAM_ICTL, FEIE, 0x0);
 		if (desc->lci)
-			BRCM_WRITE_REG_FIELD(base, CAM_ICTL, LCIE, desc->lci);
+			MMCSI0_WRITE_REG_FIELD(base, CAM_ICTL, LCIE, desc->lci);
 		else
-			BRCM_WRITE_REG_FIELD(base, CAM_ICTL, LCIE, 0);
+			MMCSI0_WRITE_REG_FIELD(base, CAM_ICTL, LCIE, 0);
 		/* The CSI2 on UNICAM cannot have EDL=0 due to a limitation
 		   Not sure where to address this                        */
 	} else if (type == DATA_BUFFER) {
@@ -509,19 +533,19 @@ int mm_csi0_config_int(struct int_desc *desc, enum buffer_type type)
 		   lines of data properly */
 		pr_info("Data buffer set\n");
 		if (desc->die) {
-			/*BRCM_WRITE_REG_FIELD(base, CAM_DCS, DIE, 0x1);
+			/*MMCSI0_WRITE_REG_FIELD(base, CAM_DCS, DIE, 0x1);
 			  if (desc->fei) {
-			  BRCM_WRITE_REG_FIELD(base, CAM_DCS, DIM, 0x0);
+			  MMCSI0_WRITE_REG_FIELD(base, CAM_DCS, DIM, 0x0);
 			  }
 			  else {
-			  BRCM_WRITE_REG_FIELD(base, CAM_DCS, DIM, 0x0);
-			  BRCM_WRITE_REG_FIELD(base, CAM_DCS, EDL,
+			  MMCSI0_WRITE_REG_FIELD(base, CAM_DCS, DIM, 0x0);
+			  MMCSI0_WRITE_REG_FIELD(base, CAM_DCS, EDL,
 			  desc->dataline);
 			  }*/
-			BRCM_WRITE_REG_FIELD(base, CAM_DCS, EDL,
+			MMCSI0_WRITE_REG_FIELD(base, CAM_DCS, EDL,
 					desc->dataline);
 		} else {
-			BRCM_WRITE_REG_FIELD(base, CAM_DCS, DIE, 0x0);
+			MMCSI0_WRITE_REG_FIELD(base, CAM_DCS, DIE, 0x0);
 		}
 	} else {
 		pr_info("Invalid buffer type\n");
@@ -541,7 +565,7 @@ int mm_csi0_get_int_stat(struct int_desc *desc, int ack)
 	}
 	reg = BRCM_READ_REG(base, CAM_ISTA);
 	if (ack)
-		BRCM_WRITE_REG(base, CAM_ISTA, reg);
+		MMCSI0_WRITE_REG(base, CAM_ISTA, reg);
 	if (reg & CAM_ISTA_FSI_MASK)
 		desc->fsi = 1;
 	if (reg & CAM_ISTA_FEI_MASK)
@@ -561,7 +585,7 @@ int mm_csi0_get_data_stat(struct int_desc *desc, int ack)
 	}
 	if (BRCM_READ_REG_FIELD(base, CAM_DCS, DI)) {
 		if (ack)
-			BRCM_WRITE_REG_FIELD(base, CAM_DCS, DI, 0x1);
+			MMCSI0_WRITE_REG_FIELD(base, CAM_DCS, DI, 0x1);
 		desc->die = 1;
 		/* The caller knows whether the interrupt was FE or EDL */
 	}
@@ -579,7 +603,7 @@ u32 mm_csi0_get_rx_stat(struct rx_stat_list *list, int ack)
 	}
 	reg = BRCM_READ_REG(base, CAM_STA);
 	if (ack)
-		BRCM_WRITE_REG(base, CAM_STA, reg);
+		MMCSI0_WRITE_REG(base, CAM_STA, reg);
 	if (reg & CAM_STA_SYN_MASK)
 		list->syn = 1;
 	if (reg & CAM_STA_CS_MASK)
@@ -685,51 +709,53 @@ int mm_csi0_update_addr(struct buffer_desc *im0, struct buffer_desc *im1,
 			pr_info("Disabling data 2 as buffer not alligned\n");
 		}
 	}
-	BRCM_WRITE_REG_FIELD(base, CAM_DBCTL, DB_EN, 0);
-	BRCM_WRITE_REG_FIELD(base, CAM_DBCTL, BUF0_IE, 0);
-	BRCM_WRITE_REG_FIELD(base, CAM_DBCTL, BUF1_IE, 0);
-	BRCM_WRITE_REG_FIELD(base, CAM_MISC,  DIS_DB_IE, 1);
+	MMCSI0_WRITE_REG_FIELD(base, CAM_DBCTL, DB_EN, 0);
+	MMCSI0_WRITE_REG_FIELD(base, CAM_DBCTL, BUF0_IE, 0);
+	MMCSI0_WRITE_REG_FIELD(base, CAM_DBCTL, BUF1_IE, 0);
+	MMCSI0_WRITE_REG_FIELD(base, CAM_MISC,  DIS_DB_IE, 1);
 
 	/* Check the logic above again */
 	/* register prog start */
 	if (cam_state.db_en)
-		BRCM_WRITE_REG_FIELD(base, CAM_DBCTL, DB_EN, 1);
+		MMCSI0_WRITE_REG_FIELD(base, CAM_DBCTL, DB_EN, 1);
 	if (im0) {
-		BRCM_WRITE_REG(base, CAM_IBSA, im0->start);
-		BRCM_WRITE_REG(base, CAM_IBEA, (im0->start + im0->size));
-		BRCM_WRITE_REG_FIELD(base, CAM_IBLS, IBLS, im0->ls);
+		MMCSI0_WRITE_REG(base, CAM_IBSA, im0->start);
+		MMCSI0_WRITE_REG(base, CAM_IBEA, (im0->start + im0->size));
+		MMCSI0_WRITE_REG_FIELD(base, CAM_IBLS, IBLS, im0->ls);
 		if (im0->wrap_en == 1)
-			BRCM_WRITE_REG_FIELD(base, CAM_ICTL, IBOB, 1);
+			MMCSI0_WRITE_REG_FIELD(base, CAM_ICTL, IBOB, 1);
 		else
-			BRCM_WRITE_REG_FIELD(base, CAM_ICTL, IBOB, 0);
+			MMCSI0_WRITE_REG_FIELD(base, CAM_ICTL, IBOB, 0);
 
 	}
 	if (im1) {
-		BRCM_WRITE_REG(base, CAM_IBSA1, im1->start);
-		BRCM_WRITE_REG(base, CAM_IBEA1, (im1->start + im1->size));
+		MMCSI0_WRITE_REG(base, CAM_IBSA1, im1->start);
+		MMCSI0_WRITE_REG(base, CAM_IBEA1, (im1->start + im1->size));
 	}
-	BRCM_WRITE_REG_FIELD(base, CAM_ICTL, LIP, 1);
+	MMCSI0_WRITE_REG_FIELD(base, CAM_ICTL, LIP, 1);
 	if (data) {
 		if (data == 1) {
-			BRCM_WRITE_REG(base, CAM_DBSA, dat0->start);
-			BRCM_WRITE_REG(base, CAM_DBEA, (dat0->start + dat0->size));
+			MMCSI0_WRITE_REG(base, CAM_DBSA, dat0->start);
+			MMCSI0_WRITE_REG(base, CAM_DBEA,
+						(dat0->start + dat0->size));
 		}
 		if (data == 2) {
-			BRCM_WRITE_REG(base, CAM_DBSA1, dat1->start);
-			BRCM_WRITE_REG(base, CAM_DBEA1, (dat1->start + dat1->size));
+			MMCSI0_WRITE_REG(base, CAM_DBSA1, dat1->start);
+			MMCSI0_WRITE_REG(base, CAM_DBEA1,
+						(dat1->start + dat1->size));
 		}
-		BRCM_WRITE_REG_FIELD(base, CAM_DCS, LDP, 1);
+		MMCSI0_WRITE_REG_FIELD(base, CAM_DCS, LDP, 1);
 	}
 	if (cam_state.db_en) {
-		BRCM_WRITE_REG_FIELD(base, CAM_DBCTL, DB_EN, 1);
-		BRCM_WRITE_REG_FIELD(base, CAM_DBCTL, BUF0_IE, 1);
-		BRCM_WRITE_REG_FIELD(base, CAM_DBCTL, BUF1_IE, 1);
-		BRCM_WRITE_REG_FIELD(base, CAM_MISC,  DIS_DB_IE, 0);
+		MMCSI0_WRITE_REG_FIELD(base, CAM_DBCTL, DB_EN, 1);
+		MMCSI0_WRITE_REG_FIELD(base, CAM_DBCTL, BUF0_IE, 1);
+		MMCSI0_WRITE_REG_FIELD(base, CAM_DBCTL, BUF1_IE, 1);
+		MMCSI0_WRITE_REG_FIELD(base, CAM_MISC,  DIS_DB_IE, 0);
 	} else {
-		BRCM_WRITE_REG_FIELD(base, CAM_DBCTL, DB_EN, 0);
-		BRCM_WRITE_REG_FIELD(base, CAM_DBCTL, BUF0_IE, 0);
-		BRCM_WRITE_REG_FIELD(base, CAM_DBCTL, BUF1_IE, 0);
-		BRCM_WRITE_REG_FIELD(base, CAM_MISC,  DIS_DB_IE, 1);
+		MMCSI0_WRITE_REG_FIELD(base, CAM_DBCTL, DB_EN, 0);
+		MMCSI0_WRITE_REG_FIELD(base, CAM_DBCTL, BUF0_IE, 0);
+		MMCSI0_WRITE_REG_FIELD(base, CAM_DBCTL, BUF1_IE, 0);
+		MMCSI0_WRITE_REG_FIELD(base, CAM_MISC,  DIS_DB_IE, 1);
 	}
 	return 0;
 }
@@ -750,39 +776,43 @@ int mm_csi0_update_one(struct buffer_desc *im, int buf_num,
 	}
 	if (type == IMAGE_BUFFER) {
 		if (buf_num == 0) {
-			BRCM_WRITE_REG(base, CAM_IBSA, im->start);
-			BRCM_WRITE_REG(base, CAM_IBEA, (im->start + im->size));
-			BRCM_WRITE_REG(base, CAM_IBLS, im->ls);
-			BRCM_WRITE_REG_FIELD(base, CAM_STA, BUF1_RDY, 1);
-			BRCM_WRITE_REG_FIELD(base, CAM_STA, BUF0_RDY, 0);
+			MMCSI0_WRITE_REG(base, CAM_IBSA, im->start);
+			MMCSI0_WRITE_REG(base, CAM_IBEA,
+						(im->start + im->size));
+			MMCSI0_WRITE_REG(base, CAM_IBLS, im->ls);
+			MMCSI0_WRITE_REG_FIELD(base, CAM_STA, BUF1_RDY, 1);
+			MMCSI0_WRITE_REG_FIELD(base, CAM_STA, BUF0_RDY, 0);
 		} else {
-			BRCM_WRITE_REG(base, CAM_IBSA1, im->start);
-			BRCM_WRITE_REG(base, CAM_IBEA1, (im->start + im->size));
-			BRCM_WRITE_REG(base, CAM_IBLS, im->ls);
-			BRCM_WRITE_REG_FIELD(base, CAM_STA, BUF0_RDY, 1);
-			BRCM_WRITE_REG_FIELD(base, CAM_STA, BUF1_RDY, 0);
+			MMCSI0_WRITE_REG(base, CAM_IBSA1, im->start);
+			MMCSI0_WRITE_REG(base, CAM_IBEA1,
+						(im->start + im->size));
+			MMCSI0_WRITE_REG(base, CAM_IBLS, im->ls);
+			MMCSI0_WRITE_REG_FIELD(base, CAM_STA, BUF0_RDY, 1);
+			MMCSI0_WRITE_REG_FIELD(base, CAM_STA, BUF1_RDY, 0);
 		}
 	} else {
 		/* Data buffer */
 		if (buf_num == 0) {
-			BRCM_WRITE_REG(base, CAM_DBSA, im->start);
-			BRCM_WRITE_REG(base, CAM_DBEA, (im->start + im->size));
+			MMCSI0_WRITE_REG(base, CAM_DBSA, im->start);
+			MMCSI0_WRITE_REG(base, CAM_DBEA,
+						(im->start + im->size));
 		} else {
-			BRCM_WRITE_REG(base, CAM_DBSA1, im->start);
-			BRCM_WRITE_REG(base, CAM_DBEA1, (im->start + im->size));
+			MMCSI0_WRITE_REG(base, CAM_DBSA1, im->start);
+			MMCSI0_WRITE_REG(base, CAM_DBEA1,
+						(im->start + im->size));
 		}
 	}
-	BRCM_WRITE_REG_FIELD(base, CAM_ICTL, LIP, 1);
+	MMCSI0_WRITE_REG_FIELD(base, CAM_ICTL, LIP, 1);
 	if (cam_state.db_en) {
-		BRCM_WRITE_REG_FIELD(base, CAM_DBCTL, DB_EN, 1);
-		BRCM_WRITE_REG_FIELD(base, CAM_DBCTL, BUF0_IE, 1);
-		BRCM_WRITE_REG_FIELD(base, CAM_DBCTL, BUF1_IE, 1);
-		BRCM_WRITE_REG_FIELD(base, CAM_MISC,  DIS_DB_IE, 0);
+		MMCSI0_WRITE_REG_FIELD(base, CAM_DBCTL, DB_EN, 1);
+		MMCSI0_WRITE_REG_FIELD(base, CAM_DBCTL, BUF0_IE, 1);
+		MMCSI0_WRITE_REG_FIELD(base, CAM_DBCTL, BUF1_IE, 1);
+		MMCSI0_WRITE_REG_FIELD(base, CAM_MISC,  DIS_DB_IE, 0);
 	} else {
-		BRCM_WRITE_REG_FIELD(base, CAM_DBCTL, DB_EN, 0);
-		BRCM_WRITE_REG_FIELD(base, CAM_DBCTL, BUF0_IE, 0);
-		BRCM_WRITE_REG_FIELD(base, CAM_DBCTL, BUF1_IE, 0);
-		BRCM_WRITE_REG_FIELD(base, CAM_MISC,  DIS_DB_IE, 1);
+		MMCSI0_WRITE_REG_FIELD(base, CAM_DBCTL, DB_EN, 0);
+		MMCSI0_WRITE_REG_FIELD(base, CAM_DBCTL, BUF0_IE, 0);
+		MMCSI0_WRITE_REG_FIELD(base, CAM_DBCTL, BUF1_IE, 0);
+		MMCSI0_WRITE_REG_FIELD(base, CAM_MISC,  DIS_DB_IE, 1);
 	}
 	return 0;
 }
@@ -792,7 +822,7 @@ int mm_csi0_trigger_cap(void)
 	u32 base = V_BASE;
 
 	if (cam_state.trigger) {
-		BRCM_WRITE_REG_FIELD(base, CAM_ICTL, TFC, 0x1);
+		MMCSI0_WRITE_REG_FIELD(base, CAM_ICTL, TFC, 0x1);
 		return 0;
 	} else {
 		pr_err("unicam is not in trigger capture mode\n");
@@ -810,13 +840,13 @@ int mm_csi0_rx_burst()
 	writel(val_sw, (base + 0x444));
 	/* For QoS enable */
 	base = V_BASE;
-	BRCM_WRITE_REG_FIELD(base, CAM_PRI, BL, 0);
-	BRCM_WRITE_REG_FIELD(base, CAM_PRI, BS, 0);
-	BRCM_WRITE_REG_FIELD(base, CAM_PRI, PT, 2);
-	BRCM_WRITE_REG_FIELD(base, CAM_PRI, PP, 0xf);
-	BRCM_WRITE_REG_FIELD(base, CAM_PRI, NP, 0);
+	MMCSI0_WRITE_REG_FIELD(base, CAM_PRI, BL, 0);
+	MMCSI0_WRITE_REG_FIELD(base, CAM_PRI, BS, 0);
+	MMCSI0_WRITE_REG_FIELD(base, CAM_PRI, PT, 2);
+	MMCSI0_WRITE_REG_FIELD(base, CAM_PRI, PP, 0xf);
+	MMCSI0_WRITE_REG_FIELD(base, CAM_PRI, NP, 0);
 	/* Enabling panic enable */
-	BRCM_WRITE_REG_FIELD(base, CAM_PRI, PE, 1);
+	MMCSI0_WRITE_REG_FIELD(base, CAM_PRI, PE, 1);
 	return 0;
 }
 
@@ -831,20 +861,20 @@ int mm_csi0_enable_unicam(void)
 		return 0;
 	}
 
-	BRCM_WRITE_REG(base, CAM_ISTA, BRCM_READ_REG(base, CAM_ISTA));
-	BRCM_WRITE_REG(base, CAM_STA, BRCM_READ_REG(base, CAM_STA));
+	MMCSI0_WRITE_REG(base, CAM_ISTA, BRCM_READ_REG(base, CAM_ISTA));
+	MMCSI0_WRITE_REG(base, CAM_STA, BRCM_READ_REG(base, CAM_STA));
 
 	if (cam_state.trigger)
-		BRCM_WRITE_REG_FIELD(base, CAM_ICTL, FCM, 0x1);
+		MMCSI0_WRITE_REG_FIELD(base, CAM_ICTL, FCM, 0x1);
 	else
-		BRCM_WRITE_REG_FIELD(base, CAM_ICTL, FCM, 0x0);
-	BRCM_WRITE_REG_FIELD(base, CAM_ANA, DDL, 1);
+		MMCSI0_WRITE_REG_FIELD(base, CAM_ICTL, FCM, 0x0);
+	MMCSI0_WRITE_REG_FIELD(base, CAM_ANA, DDL, 1);
 
-	BRCM_WRITE_REG_FIELD(base, CAM_CLK, CLPD, 0);
-	BRCM_WRITE_REG_FIELD(base, CAM_CLK, CLE, 1);
+	MMCSI0_WRITE_REG_FIELD(base, CAM_CLK, CLPD, 0);
+	MMCSI0_WRITE_REG_FIELD(base, CAM_CLK, CLE, 1);
 	/* analog reset */
-	BRCM_WRITE_REG_FIELD(base, CAM_ANA, AR, 1);
-	BRCM_WRITE_REG_FIELD(base, CAM_CTL, CPE, 1);
+	MMCSI0_WRITE_REG_FIELD(base, CAM_ANA, AR, 1);
+	MMCSI0_WRITE_REG_FIELD(base, CAM_CTL, CPE, 1);
 
 	enable_done = 1;
 
@@ -862,23 +892,23 @@ int mm_csi0_start_rx(void)
 		return 0;
 	}
 
-	BRCM_WRITE_REG_FIELD(base, CAM_CTL, CPR, 1);
+	MMCSI0_WRITE_REG_FIELD(base, CAM_CTL, CPR, 1);
 	udelay(1);
-	BRCM_WRITE_REG_FIELD(base, CAM_CTL, CPR, 0);
+	MMCSI0_WRITE_REG_FIELD(base, CAM_CTL, CPR, 0);
 	if (cam_state.db_en) {
-		BRCM_WRITE_REG_FIELD(base, CAM_DBCTL, DB_EN, 1);
-		BRCM_WRITE_REG_FIELD(base, CAM_DBCTL, BUF0_IE, 1);
-		BRCM_WRITE_REG_FIELD(base, CAM_DBCTL, BUF1_IE, 1);
-		BRCM_WRITE_REG_FIELD(base, CAM_MISC,  DIS_DB_IE, 0);
+		MMCSI0_WRITE_REG_FIELD(base, CAM_DBCTL, DB_EN, 1);
+		MMCSI0_WRITE_REG_FIELD(base, CAM_DBCTL, BUF0_IE, 1);
+		MMCSI0_WRITE_REG_FIELD(base, CAM_DBCTL, BUF1_IE, 1);
+		MMCSI0_WRITE_REG_FIELD(base, CAM_MISC,  DIS_DB_IE, 0);
 	}
-	BRCM_WRITE_REG_FIELD(base, CAM_ICTL, LIP, 1);
-	BRCM_WRITE_REG_FIELD(base, CAM_DCS, LDP, 1);
-	BRCM_WRITE_REG_FIELD(base, CAM_DAT0, DLEN, 1);
+	MMCSI0_WRITE_REG_FIELD(base, CAM_ICTL, LIP, 1);
+	MMCSI0_WRITE_REG_FIELD(base, CAM_DCS, LDP, 1);
+	MMCSI0_WRITE_REG_FIELD(base, CAM_DAT0, DLEN, 1);
 	if (cam_state.lanes == CSI2_DUAL_LANE)
-		BRCM_WRITE_REG_FIELD(base, CAM_DAT1, DLEN, 0x1);
-	BRCM_WRITE_REG_FIELD(base, CAM_ANA, AR, 0);
-	BRCM_WRITE_REG_FIELD(base, CAM_CTL, SOE, 0);
-	BRCM_WRITE_REG_FIELD(base, CAM_ANA, DDL, 0);
+		MMCSI0_WRITE_REG_FIELD(base, CAM_DAT1, DLEN, 0x1);
+	MMCSI0_WRITE_REG_FIELD(base, CAM_ANA, AR, 0);
+	MMCSI0_WRITE_REG_FIELD(base, CAM_CTL, SOE, 0);
+	MMCSI0_WRITE_REG_FIELD(base, CAM_ANA, DDL, 0);
 	udelay(5);
 	rx_init_done = 1;
 
@@ -894,11 +924,11 @@ int mm_csi0_stop_rx(void)
 	enable_done = 0;
 	rx_init_done = 0;
 
-	BRCM_WRITE_REG_FIELD(base, CAM_ANA, DDL, 1);
-	BRCM_WRITE_REG_FIELD(base, CAM_DAT0, DLEN, 0);
-	BRCM_WRITE_REG_FIELD(base, CAM_DAT1, DLEN, 0);
+	MMCSI0_WRITE_REG_FIELD(base, CAM_ANA, DDL, 1);
+	MMCSI0_WRITE_REG_FIELD(base, CAM_DAT0, DLEN, 0);
+	MMCSI0_WRITE_REG_FIELD(base, CAM_DAT1, DLEN, 0);
 
-	BRCM_WRITE_REG_FIELD(base, CAM_CTL, SOE, 1);
+	MMCSI0_WRITE_REG_FIELD(base, CAM_CTL, SOE, 1);
 	val = 0;
 	i = 0;
 	while ((val & CAM_STA_OES_MASK) == 0) {
@@ -911,18 +941,18 @@ int mm_csi0_stop_rx(void)
 		}
 	}
 
-	BRCM_WRITE_REG_FIELD(base, CAM_CTL, SOE, 0);
+	MMCSI0_WRITE_REG_FIELD(base, CAM_CTL, SOE, 0);
 
-	BRCM_WRITE_REG_FIELD(base, CAM_CTL, CPR, 1);
+	MMCSI0_WRITE_REG_FIELD(base, CAM_CTL, CPR, 1);
 	udelay(10);
-	BRCM_WRITE_REG_FIELD(base, CAM_CTL, CPR, 0);
+	MMCSI0_WRITE_REG_FIELD(base, CAM_CTL, CPR, 0);
 
-	BRCM_WRITE_REG(base, CAM_DCS, 0x0);
-	BRCM_WRITE_REG(base, CAM_IBSA, 0x0);
-	BRCM_WRITE_REG(base, CAM_IBEA, 0x0);
-	BRCM_WRITE_REG(base, CAM_IBLS, 0x0);
-	BRCM_WRITE_REG_FIELD(base, CAM_CTL, CPE, 0);
-	BRCM_WRITE_REG_FIELD(base, CAM_ANA, AR, 1);
+	MMCSI0_WRITE_REG(base, CAM_DCS, 0x0);
+	MMCSI0_WRITE_REG(base, CAM_IBSA, 0x0);
+	MMCSI0_WRITE_REG(base, CAM_IBEA, 0x0);
+	MMCSI0_WRITE_REG(base, CAM_IBLS, 0x0);
+	MMCSI0_WRITE_REG_FIELD(base, CAM_CTL, CPE, 0);
+	MMCSI0_WRITE_REG_FIELD(base, CAM_ANA, AR, 1);
 
 	return 0;
 }
@@ -935,7 +965,7 @@ void mm_csi0_ibwp()
 	val = BRCM_READ_REG(base, CAM_IBWP);
 	baseval = BRCM_READ_REG(base, CAM_IBSA);
 	pr_info("IBWP 0x%x\n", (val - baseval));
-	BRCM_WRITE_REG(base, CAM_IBWP, 0x00);
+	MMCSI0_WRITE_REG(base, CAM_IBWP, 0x00);
 }
 
 /* Packet compare and capture */
@@ -945,7 +975,8 @@ void mm_csi0_ibwp()
    matching credentials. Used to debug and recieve if sensor/ISP
    sends generic short packets */
 
-enum packet_comp_cap mm_csi0_enable_packet_compare(struct packet_compare *compare)
+enum packet_comp_cap mm_csi0_enable_packet_compare(
+						struct packet_compare *compare)
 {
 	u32 base = V_BASE;
 
@@ -956,23 +987,31 @@ enum packet_comp_cap mm_csi0_enable_packet_compare(struct packet_compare *compar
 		if (BRCM_READ_REG_FIELD(base, CAM_CMP0, PCEN)) {
 			pr_info("CMP0 occupied trying CMP1\n");
 		} else {
-			BRCM_WRITE_REG_FIELD(base, CAM_CMP0, PCEN, 1);
-			BRCM_WRITE_REG_FIELD(base, CAM_CMP0, GIN, compare->gen_int);
-			BRCM_WRITE_REG_FIELD(base, CAM_CMP0, CPHN, compare->capture_header);
-			BRCM_WRITE_REG_FIELD(base, CAM_CMP0, PCVCN, compare->vc);
-			BRCM_WRITE_REG_FIELD(base, CAM_CMP0, PCDTN, compare->dt);
-			BRCM_WRITE_REG_FIELD(base, CAM_CAP0, CPHV, 1);
+			MMCSI0_WRITE_REG_FIELD(base, CAM_CMP0, PCEN, 1);
+			MMCSI0_WRITE_REG_FIELD(base, CAM_CMP0, GIN,
+						compare->gen_int);
+			MMCSI0_WRITE_REG_FIELD(base, CAM_CMP0, CPHN,
+						compare->capture_header);
+			MMCSI0_WRITE_REG_FIELD(base, CAM_CMP0, PCVCN,
+						compare->vc);
+			MMCSI0_WRITE_REG_FIELD(base, CAM_CMP0, PCDTN,
+						compare->dt);
+			MMCSI0_WRITE_REG_FIELD(base, CAM_CAP0, CPHV, 1);
 			cur = COMP_CAP_0;
 		}
 		if (BRCM_READ_REG_FIELD(base, CAM_CMP1, PCEN)) {
 			pr_info("CMP1 occupied trying CMP1\n");
 		} else {
-			BRCM_WRITE_REG_FIELD(base, CAM_CMP1, PCEN, 1);
-			BRCM_WRITE_REG_FIELD(base, CAM_CMP1, GIN, compare->gen_int);
-			BRCM_WRITE_REG_FIELD(base, CAM_CMP1, CPHN, compare->capture_header);
-			BRCM_WRITE_REG_FIELD(base, CAM_CMP1, PCVCN, compare->vc);
-			BRCM_WRITE_REG_FIELD(base, CAM_CMP1, PCDTN, compare->dt);
-			BRCM_WRITE_REG_FIELD(base, CAM_CAP1, CPHV, 1);
+			MMCSI0_WRITE_REG_FIELD(base, CAM_CMP1, PCEN, 1);
+			MMCSI0_WRITE_REG_FIELD(base, CAM_CMP1, GIN,
+						compare->gen_int);
+			MMCSI0_WRITE_REG_FIELD(base, CAM_CMP1, CPHN,
+						compare->capture_header);
+			MMCSI0_WRITE_REG_FIELD(base, CAM_CMP1, PCVCN,
+						compare->vc);
+			MMCSI0_WRITE_REG_FIELD(base, CAM_CMP1, PCDTN,
+						compare->dt);
+			MMCSI0_WRITE_REG_FIELD(base, CAM_CAP1, CPHV, 1);
 			cur = COMP_CAP_1;
 		}
 	}
@@ -992,7 +1031,8 @@ enum packet_comp_cap mm_csi0_get_captured_packet(enum packet_comp_cap num,
 		if (BRCM_READ_REG_FIELD(base, CAM_CAP0, CPHV)) {
 			cap->valid = 1;
 			cap->ecc = BRCM_READ_REG_FIELD(base, CAM_CAP0, CECCN);
-			cap->word_count = BRCM_READ_REG_FIELD(base, CAM_CAP0, CWCN);
+			cap->word_count = BRCM_READ_REG_FIELD(base, CAM_CAP0,
+									CWCN);
 			cap->vc = BRCM_READ_REG_FIELD(base, CAM_CAP0, CVCN);
 			cap->dt = BRCM_READ_REG_FIELD(base, CAM_CAP0, CDTN);
 			cur = COMP_CAP_0;
@@ -1003,7 +1043,8 @@ enum packet_comp_cap mm_csi0_get_captured_packet(enum packet_comp_cap num,
 		if (BRCM_READ_REG_FIELD(base, CAM_CAP1, CPHV)) {
 			cap->valid = 1;
 			cap->ecc = BRCM_READ_REG_FIELD(base, CAM_CAP1, CECCN);
-			cap->word_count = BRCM_READ_REG_FIELD(base, CAM_CAP1, CWCN);
+			cap->word_count = BRCM_READ_REG_FIELD(base, CAM_CAP1,
+									CWCN);
 			cap->vc = BRCM_READ_REG_FIELD(base, CAM_CAP1, CVCN);
 			cap->dt = BRCM_READ_REG_FIELD(base, CAM_CAP1, CDTN);
 			cur = COMP_CAP_1;
@@ -1052,7 +1093,7 @@ bool mm_csi0_get_panic_state()
 	u32 base = V_BASE;
 
 	if (BRCM_READ_REG_FIELD(base, CAM_STA, PS)) {
-		BRCM_WRITE_REG_FIELD(base, CAM_STA, PS, 1);
+		MMCSI0_WRITE_REG_FIELD(base, CAM_STA, PS, 1);
 		return 1;
 	}
 	return 0;
