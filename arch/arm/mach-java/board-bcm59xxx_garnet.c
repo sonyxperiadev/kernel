@@ -65,7 +65,7 @@ static struct bcmpmu59xxx_rw_data __initdata register_init_data[] = {
 	 * AUXONb Wakeup disabled */
 	{.addr = PMU_REG_GPIOCTRL1, .val = 0x75, .mask = 0xFF},
 	/*  enable PC3 function */
-	{.addr = PMU_REG_GPIOCTRL2, .val = 0x0E, .mask = 0xFF},
+	{.addr = PMU_REG_GPIOCTRL2, .val = 0x0F, .mask = 0xFF},
 	/* Mask Interrupt */
 	{.addr = PMU_REG_INT1MSK, .val = 0xFF, .mask = 0xFF},
 	{.addr = PMU_REG_INT2MSK, .val = 0xFF, .mask = 0xFF},
@@ -92,14 +92,14 @@ static struct bcmpmu59xxx_rw_data __initdata register_init_data[] = {
 	/* Enable BC12_EN */
 	{.addr = PMU_REG_MBCCTRL5, .val = 0x01, .mask = 0x01},
 	/* Max VFLOAT to 4.2*/
-	/*  ICCMAX to 1500mA*/
-	{.addr = PMU_REG_MBCCTRL8, .val = 0x09, .mask = 0xFF},
+	/*  ICCMAX set to MAX value(1755)mA*/
+	{.addr = PMU_REG_MBCCTRL8, .val = 0x0B, .mask = 0xFF},
 	/* Set curr to 100mA during boot*/
-	{.addr = PMU_REG_MBCCTRL10, .val = 0x0, .mask = 0xF},
-	/* NTC Hot Temperature Comparator set to 45C */
-	{.addr = PMU_REG_CMPCTRL5, .val = 0x70, .mask = 0xFF},
-	/* NTC Hot Temperature Comparator set to 40C*/
-	{.addr = PMU_REG_CMPCTRL6, .val = 0x84, .mask = 0xFF},
+	/*{.addr = PMU_REG_MBCCTRL10, .val = 0x0, .mask = 0xF},*/
+	/* NTC Hot Temperature Comparator set to 55C */
+	{.addr = PMU_REG_CMPCTRL5, .val = 0x4C, .mask = 0xFF},
+	/* NTC Hot Temperature Comparator set to 50C*/
+	{.addr = PMU_REG_CMPCTRL6, .val = 0x5C, .mask = 0xFF},
 	/* NTC Cold Temperature Comparator set to 0C*/
 	{.addr = PMU_REG_CMPCTRL7, .val = 0xF4, .mask = 0xFF},
 	/* NTC Cold Temperature Comparator set to 5C*/
@@ -119,47 +119,67 @@ static struct bcmpmu59xxx_rw_data __initdata register_init_data[] = {
 /* Regulator configuration */
 /* TODO regulator */
 	{.addr = PMU_REG_FG_EOC_TH, .val = 0x64, .mask = 0xFF},
-	{.addr = PMU_REG_RTC_C2C1_XOTRIM, .val = 0xEE, .mask = 0xFF},
-	{.addr = PMU_REG_FGOCICCTRL, .val = 0x02, .mask = 0xFF},
+	{.addr = PMU_REG_RTC_C2C1_XOTRIM, .val = 0xFF, .mask = 0xFF},
+	/*{.addr = PMU_REG_FGOCICCTRL, .val = 0x02, .mask = 0xFF},*/
 	 /* FG power down */
-	{.addr = PMU_REG_FGCTRL1, .val = 0x00, .mask = 0xFF},
+	/*{.addr = PMU_REG_FGCTRL1, .val = 0x00, .mask = 0xFF},*/
 	/* Enable operation mode for PC3PC2PC1 */
-	{.addr = PMU_REG_GPLDO2PMCTRL2, .val = 0x00, .mask = 0xFF},
+	/*{.addr = PMU_REG_GPLDO2PMCTRL2, .val = 0x00, .mask = 0xFF},*/
 	 /* PWMLED blovk powerdown */
 	{.addr =  PMU_REG_PWMLEDCTRL1, .val = 0x23, .mask = 0xFF},
 	{.addr = PMU_REG_HSCP3, .val = 0x00, .mask = 0xFF},
 	 /* HS audio powerdown feedback path */
 	{.addr =  PMU_REG_IHF_NGMISC, .val = 0x0C, .mask = 0xFF},
 	/* NTC BiasSynchronous Mode,Host Enable Control NTC_PM0 Disable*/
-	{.addr =  PMU_REG_CMPCTRL14, .val = 0x13, .mask = 0xFF},
-	{.addr =  PMU_REG_CMPCTRL15, .val = 0x01, .mask = 0xFF},
+	{.addr =  PMU_REG_CMPCTRL14, .val = 0x12, .mask = 0xFF},
+	{.addr =  PMU_REG_CMPCTRL15, .val = 0x0, .mask = 0xFF},
 	/* BSI Bias Host Control, Synchronous Mode Enable */
 
-	{.addr =  PMU_REG_CMPCTRL16, .val = 0x13, .mask = 0xFF},
+	{.addr =  PMU_REG_CMPCTRL16, .val = 0x12, .mask = 0xFF},
 	/* MBUV host enable control*/
 	{.addr =  PMU_REG_CMPCTRL17, .val = 0x40, .mask = 0x7F},
 	/* Mask RTM conversion */
-	{.addr =  PMU_REG_ADCCTRL1, .val = 0x08, .mask = 0x08},
+	/*{.addr =  PMU_REG_ADCCTRL1, .val = 0x08, .mask = 0x08},*/
 	/* EN_SESS_VALID  enable ID detection */
 	{.addr = PMU_REG_OTGCTRL1 , .val = 0x18, .mask = 0xFF},
 
 	/* SDSR2 NM1 voltage - 1.24 */
 	{.addr = PMU_REG_SDSR2VOUT1 , .val = 0x28, .mask = 0x3F},
 	/* SDSR2 LPM voltage - 1.24V */
-	{.addr = PMU_REG_SDSR2VOUT2 , .val = 0x28, .mask = 0x3F},
+	{.addr = PMU_REG_SDSR2VOUT2 , .val = 0x24, .mask = 0x3F},
 	/* IOSR1 LPM voltage - 1.8V */
 	{.addr = PMU_REG_IOSR1VOUT2 , .val = 0x3E, .mask = 0x3F},
-
-	{.addr = PMU_REG_CSRVOUT1 , .val = 0x28, .mask = 0x3F},
+	/* CSR LPM voltage - 0.7 V */
+	{.addr = PMU_REG_CSRVOUT2 , .val = 0x00, .mask = 0x3F},
 
 	/* PASRCTRL MobC00256738*/
-	{.addr = PMU_REG_PASRCTRL1 , .val = 0x00, .mask = 0x06},
+	/*{.addr = PMU_REG_PASRCTRL1 , .val = 0x00, .mask = 0x06},*/
 	{.addr = PMU_REG_PASRCTRL6 , .val = 0x00, .mask = 0xF0},
 	{.addr = PMU_REG_PASRCTRL7 , .val = 0x00, .mask = 0x3F},
+
+	/*otg boost ctrl1-2*/
+	{.addr = OTG_BOOSTCTRL1 , .val = 0xD4, .mask = 0xFF},
+	{.addr = OTG_BOOSTCTRL2 , .val = 0x1B, .mask = 0xFF},
+
+	/*MBC_CC_BOOST*/
+	{.addr = PMU_REG_MBCCTRL29 , .val = 0x05, .mask = 0x0F},
+
+	/*otgctrl1 disable boost bydefault*/
+	{.addr = PMU_REG_OTGCTRL1 , .val = 0x00, .mask = 0x04},
+
+	/*turn of synthesizer when no PLL request */
+	{.addr = PMU_REG_PLLPMCTRL , .val = 0xFE, .mask = 0xFF},
 
 	/*RFLDO and AUDLDO pulldown disable MobC00290043*/
 	{.addr = PMU_REG_RFLDOCTRL , .val = 0x40, .mask = 0x40},
 	{.addr = PMU_REG_AUDLDOCTRL , .val = 0x40, .mask = 0x40},
+
+	/*LVLDO1 voltage - 1.786V */
+	{.addr = PMU_REG_LVLDO1CTRL , .val = 0xB8, .mask = 0xFF},
+
+	/*SIMLDO2 enable pulldown MobC00298660*/
+	{.addr = PMU_REG_SIMLDO2CTRL , .val = 0x00, .mask = 0x40},
+
 };
 
 static struct bcmpmu59xxx_rw_data register_exit_data[] = {
@@ -237,6 +257,7 @@ static struct regulator_init_data bcm59xxx_simldo1_data = {
 						REGULATOR_MODE_IDLE |
 						REGULATOR_MODE_STANDBY,
 			.always_on = 0,
+			.initial_mode = REGULATOR_MODE_IDLE,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(sim1_supply),
 	.consumer_supplies = sim1_supply,
@@ -257,15 +278,16 @@ static struct regulator_init_data bcm59xxx_simldo2_data = {
 						REGULATOR_MODE_IDLE |
 						REGULATOR_MODE_STANDBY,
 			.always_on = 0,
+			.initial_mode = REGULATOR_MODE_IDLE,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(sim2_supply),
 	.consumer_supplies = sim2_supply,
 };
 
 __weak struct regulator_consumer_supply sd_supply[] = {
-	{.supply = "sd_vcc"},
+	{.supply = "sdldo_uc"},
 	REGULATOR_SUPPLY("vddmmc", "sdhci.3"), /* 0x3f1b0000.sdhci */
-	{.supply = "dummy"},
+	{.supply = "vdd_sdio"},
 };
 static struct regulator_init_data bcm59xxx_sdldo_data = {
 	.constraints = {
@@ -280,15 +302,16 @@ static struct regulator_init_data bcm59xxx_sdldo_data = {
 						REGULATOR_MODE_STANDBY,
 
 			.always_on = 0,
+			.initial_mode = REGULATOR_MODE_NORMAL,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(sd_supply),
 	.consumer_supplies = sd_supply,
 };
 __weak struct regulator_consumer_supply sdx_supply[] = {
-	{.supply = "sdx_vcc"},
+	{.supply = "sdxldo_uc"},
 	REGULATOR_SUPPLY("vddo", "sdhci.3"), /* 0x3f1b0000.sdhci */
-	{.supply = "dummy"},
-	{.supply = "dummy"},
+	{.supply = "vdd_sdxc"},
+	{.supply = "sddat_debug_bus"},
 };
 static struct regulator_init_data bcm59xxx_sdxldo_data = {
 	.constraints = {
@@ -298,6 +321,7 @@ static struct regulator_init_data bcm59xxx_sdxldo_data = {
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
 			.always_on = 0,
+			.initial_mode = REGULATOR_MODE_NORMAL,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(sdx_supply),
 	.consumer_supplies = sdx_supply,
@@ -314,6 +338,7 @@ static struct regulator_init_data bcm59xxx_mmcldo1_data = {
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
 			.always_on = 0,
+			.initial_mode = REGULATOR_MODE_NORMAL,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(mmc1_supply),
 	.consumer_supplies = mmc1_supply,
@@ -330,6 +355,7 @@ static struct regulator_init_data bcm59xxx_mmcldo2_data = {
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
 			.always_on = 0,
+			.initial_mode = REGULATOR_MODE_NORMAL,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(mmc2_supply),
 	.consumer_supplies = mmc2_supply,
@@ -358,6 +384,7 @@ static struct regulator_init_data bcm59xxx_audldo_data = {
 
 __weak struct regulator_consumer_supply usb_supply[] = {
 	{.supply = "usb_vcc"},
+	{.supply = "bc_vcc"},
 };
 static struct regulator_init_data bcm59xxx_usbldo_data = {
 	.constraints = {
@@ -367,6 +394,7 @@ static struct regulator_init_data bcm59xxx_usbldo_data = {
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
 			.always_on = 0,
+			.initial_mode = REGULATOR_MODE_NORMAL,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(usb_supply),
 	.consumer_supplies = usb_supply,
@@ -383,6 +411,7 @@ static struct regulator_init_data bcm59xxx_micldo_data = {
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
 			.always_on = 0,
+			.initial_mode = REGULATOR_MODE_NORMAL,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(mic_supply),
 	.consumer_supplies = mic_supply,
@@ -399,6 +428,7 @@ static struct regulator_init_data bcm59xxx_vibldo_data = {
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
 			.always_on = 0,
+			.initial_mode = REGULATOR_MODE_NORMAL,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(vib_supply),
 	.consumer_supplies = vib_supply,
@@ -415,6 +445,7 @@ static struct regulator_init_data bcm59xxx_gpldo1_data = {
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
 			.always_on = 0,
+			.initial_mode = REGULATOR_MODE_NORMAL,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(gpldo1_supply),
 	.consumer_supplies = gpldo1_supply,
@@ -431,6 +462,7 @@ static struct regulator_init_data bcm59xxx_gpldo2_data = {
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
 			.always_on = 0,
+			.initial_mode = REGULATOR_MODE_NORMAL,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(gpldo2_supply),
 	.consumer_supplies = gpldo2_supply,
@@ -446,7 +478,8 @@ static struct regulator_init_data bcm59xxx_gpldo3_data = {
 			.max_uV = 3300000,
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
-			.always_on = 0,
+			.always_on = 1,
+			.initial_mode = REGULATOR_MODE_IDLE,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(gpldo3_supply),
 	.consumer_supplies = gpldo3_supply,
@@ -480,7 +513,7 @@ static struct regulator_init_data bcm59xxx_lvldo1_data = {
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
 			.always_on = 0,
-			},
+		},
 	.num_consumer_supplies = ARRAY_SIZE(lvldo1_supply),
 	.consumer_supplies = lvldo1_supply,
 };
@@ -511,7 +544,8 @@ static struct regulator_init_data bcm59xxx_vsr_data = {
 			.max_uV = 1800000,
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
-			.always_on = 0,
+			.always_on = 1,
+			.initial_mode = REGULATOR_MODE_STANDBY,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(vsr_supply),
 	.consumer_supplies = vsr_supply,
@@ -615,6 +649,7 @@ static struct regulator_init_data bcm59xxx_iosr2_data = {
 			.max_uV = 1800000,
 			.valid_ops_mask = REGULATOR_CHANGE_STATUS,
 			.always_on = 0,
+			.initial_mode = REGULATOR_MODE_STANDBY,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(iosr2_supply),
 	.consumer_supplies = iosr2_supply,
@@ -742,7 +777,7 @@ struct bcmpmu59xxx_regulator_init_data
 		[BCMPMU_REGULATOR_GPLDO3] = {
 			.id = BCMPMU_REGULATOR_GPLDO3,
 			.initdata = &bcm59xxx_gpldo3_data,
-			.pc_pins_map = PCPIN_MAP_ENC(0, PMU_PC2),
+			.pc_pins_map = PCPIN_MAP_ENC(0, PMU_PC2|PMU_PC3),
 			.name = "gp3",
 			.req_volt = 0,
 		},
@@ -757,7 +792,8 @@ struct bcmpmu59xxx_regulator_init_data
 		[BCMPMU_REGULATOR_LVLDO1] = {
 			.id = BCMPMU_REGULATOR_LVLDO1,
 			.initdata = &bcm59xxx_lvldo1_data,
-			.pc_pins_map = PCPIN_MAP_ENC(0, 0), /*Not used*/
+			.pc_pins_map =
+				PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
 			.name = "lv1",
 			.req_volt = 0,
 		},
@@ -775,7 +811,7 @@ struct bcmpmu59xxx_regulator_init_data
 			.pc_pins_map =
 				PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
 			.name = "vsr",
-			.req_volt = 0,
+			.req_volt = 1630000,
 		},
 		[BCMPMU_REGULATOR_CSR] = {
 			.id = BCMPMU_REGULATOR_CSR,
@@ -1638,7 +1674,6 @@ int __init adc_init(void)
 		pr_err("device tree support for adc not found\n");
 		return 0;
 	}
-
 	for (i = 0; i < PMU_ADC_CHANN_MAX; i++) {
 		/* coverity[secure_coding] */
 		sprintf(buf, "channel%d", i);
