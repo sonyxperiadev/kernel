@@ -555,7 +555,7 @@ static struct cyttsp_platform_data cyttsp_touch_platform_data = {
 
 #ifdef CONFIG_KONA_HEADSET_MULTI_BUTTON
 
-#define HS_IRQ		gpio_to_irq(92)
+#define HS_IRQ		gpio_to_irq(26)
 #define HSB_IRQ		BCM_INT_ID_AUXMIC_COMP2
 #define HSB_REL_IRQ	BCM_INT_ID_AUXMIC_COMP2_INV
 
@@ -941,7 +941,7 @@ struct bcm_iovmm_pdata iovmm_mm_256mb_pdata = {
 #endif
 #endif /* CONFIG_ION_BCM_NO_DT */
 
-#define HS_IRQ		gpio_to_irq(92)
+#define HS_IRQ		gpio_to_irq(26)
 
 static void hawaii_add_pdata(void)
 {
