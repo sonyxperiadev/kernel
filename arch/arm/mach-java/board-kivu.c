@@ -1544,7 +1544,7 @@ static struct i2c_board_info __initdata i2c_bmp18x_info[] = {
 
 #ifdef CONFIG_KONA_HEADSET_MULTI_BUTTON
 
-#define HS_IRQ		gpio_to_irq(92)
+#define HS_IRQ		gpio_to_irq(26)
 #define HSB_IRQ		BCM_INT_ID_AUXMIC_COMP2
 #define HSB_REL_IRQ	BCM_INT_ID_AUXMIC_COMP2_INV
 /*static unsigned int hawaii_button_adc_values[3][2] = {
@@ -2185,7 +2185,7 @@ struct bcm_iovmm_pdata iovmm_mm_256mb_pdata = {
 #endif
 #endif /* CONFIG_ION_BCM_NO_DT */
 
-#define HS_IRQ		gpio_to_irq(92)
+#define HS_IRQ		gpio_to_irq(26)
 
 static void hawaii_add_pdata(void)
 {
