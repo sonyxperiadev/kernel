@@ -589,6 +589,236 @@ static int bcmpmu_accy_chrgr_type_handler(struct bcmpmu_accy_data *di,
 
 	return 0;
 }
+static int bcmpmu_set_ntcht_rise(struct bcmpmu59xxx *bcmpmu,
+		int temp_rise)
+{
+	struct bcmpmu_adc_result result;
+	int ret;
+	int rise_7_0, rise_9_8;
+	u8 reg;
+
+	result.conv = temp_rise * 10;
+	ret = bcmpmu_adc_convert(bcmpmu, PMU_ADC_CHANN_NTC, &result,
+			true);
+	if (ret)
+		return ret;
+
+	pr_accy(FLOW, "NTC temp->raw: %d\n", result.raw);
+
+	rise_7_0 = result.raw & NTCHT_RISE_7_0_MASK;
+	rise_9_8 = ((result.raw >> 8) & 0x3) << NTCHT_RISE_9_8_SHIFT;
+
+	bcmpmu->read_dev(bcmpmu, PMU_REG_CMPCTRL9, &reg);
+	reg &= ~NTCHT_RISE_9_8_MASK;
+	bcmpmu->write_dev(bcmpmu, PMU_REG_CMPCTRL9, reg);
+	reg |= rise_9_8;
+	bcmpmu->write_dev(bcmpmu, PMU_REG_CMPCTRL9, reg);
+
+	reg = rise_7_0;
+	bcmpmu->write_dev(bcmpmu, PMU_REG_CMPCTRL5, reg);
+
+	return 0;
+}
+static int bcmpmu_set_ntcht_fall(struct bcmpmu59xxx *bcmpmu,
+		int temp_fall)
+{
+	struct bcmpmu_adc_result result;
+	int ret;
+	int fall_7_0, fall_9_8;
+	u8 reg;
+
+	result.conv = temp_fall * 10;
+	ret = bcmpmu_adc_convert(bcmpmu, PMU_ADC_CHANN_NTC, &result,
+			true);
+	if (ret)
+		return ret;
+
+	pr_accy(FLOW, "NTC temp->raw: %d\n", result.raw);
+
+	fall_7_0 = result.raw & NTCHT_FALL_7_0_MASK;
+	fall_9_8 = ((result.raw >> 8) & 0x3) << NTCHT_FALL_9_8_SHIFT;
+
+	bcmpmu->read_dev(bcmpmu, PMU_REG_CMPCTRL9, &reg);
+	reg &= ~NTCHT_FALL_9_8_MASK;
+	bcmpmu->write_dev(bcmpmu, PMU_REG_CMPCTRL9, reg);
+	reg |= fall_9_8;
+	bcmpmu->write_dev(bcmpmu, PMU_REG_CMPCTRL9, reg);
+
+	reg = fall_7_0;
+	bcmpmu->write_dev(bcmpmu, PMU_REG_CMPCTRL6, reg);
+
+	return 0;
+}
+static int bcmpmu_set_ntcct_rise(struct bcmpmu59xxx *bcmpmu,
+		int temp_rise)
+{
+	struct bcmpmu_adc_result result;
+	int ret;
+	int rise_7_0, rise_9_8;
+	u8 reg;
+
+	result.conv = temp_rise * 10;
+	ret = bcmpmu_adc_convert(bcmpmu, PMU_ADC_CHANN_NTC, &result,
+			true);
+	if (ret)
+		return ret;
+
+	pr_accy(FLOW, "NTC temp->raw: %d\n", result.raw);
+
+	rise_7_0 = result.raw & NTCCT_RISE_7_0_MASK;
+	rise_9_8 = ((result.raw >> 8) & 0x3) << NTCCT_RISE_9_8_SHIFT;
+
+	bcmpmu->read_dev(bcmpmu, PMU_REG_CMPCTRL9, &reg);
+	reg &= ~NTCCT_RISE_9_8_MASK;
+	bcmpmu->write_dev(bcmpmu, PMU_REG_CMPCTRL9, reg);
+	reg |= rise_9_8;
+	bcmpmu->write_dev(bcmpmu, PMU_REG_CMPCTRL9, reg);
+
+	reg = rise_7_0;
+	bcmpmu->write_dev(bcmpmu, PMU_REG_CMPCTRL7, reg);
+	return 0;
+}
+static int bcmpmu_set_ntcct_fall(struct bcmpmu59xxx *bcmpmu,
+		int temp_fall)
+{
+	struct bcmpmu_adc_result result;
+	int ret;
+	int fall_7_0, fall_9_8;
+	u8 reg;
+	result.conv = temp_fall * 10;
+	ret = bcmpmu_adc_convert(bcmpmu, PMU_ADC_CHANN_NTC, &result,
+			true);
+	if (ret)
+		return ret;
+
+	pr_accy(FLOW, "NTC temp->raw: %d\n", result.raw);
+
+	fall_7_0 = result.raw & NTCCT_FALL_7_0_MASK;
+	fall_9_8 = ((result.raw >> 8) & 0x3) << NTCCT_FALL_9_8_SHIFT;
+
+	bcmpmu->read_dev(bcmpmu, PMU_REG_CMPCTRL9, &reg);
+	reg &= ~NTCCT_FALL_9_8_MASK;
+	bcmpmu->write_dev(bcmpmu, PMU_REG_CMPCTRL9, reg);
+	reg |= fall_9_8;
+	bcmpmu->write_dev(bcmpmu, PMU_REG_CMPCTRL9, reg);
+
+	reg = fall_7_0;
+	bcmpmu->write_dev(bcmpmu, PMU_REG_CMPCTRL8, reg);
+
+	return 0;
+}
+static int bcmpmu_get_ntcht_rise(struct bcmpmu59xxx *bcmpmu,
+		int *temp_rise)
+{
+	struct bcmpmu_adc_result result;
+	int ret;
+	int rise_7_0, rise_9_8;
+	u8 reg;
+
+	ret = bcmpmu->read_dev(bcmpmu, PMU_REG_CMPCTRL9, &reg);
+	if (ret)
+		return ret;
+	rise_9_8 = (reg & NTCHT_RISE_9_8_MASK) >> NTCHT_RISE_9_8_SHIFT;
+
+	ret = bcmpmu->read_dev(bcmpmu, PMU_REG_CMPCTRL5, &reg);
+	if (ret)
+		return ret;
+
+	rise_7_0 = reg & NTCHT_RISE_7_0_MASK;
+	result.raw = rise_7_0 | (rise_9_8 << 8);
+
+	pr_accy(FLOW, "NTC raw: %d\n", result.raw);
+	ret = bcmpmu_adc_convert(bcmpmu, PMU_ADC_CHANN_NTC, &result,
+			false);
+	if (ret)
+		return ret;
+	*temp_rise = result.conv;
+	return 0;
+}
+static int bcmpmu_get_ntcht_fall(struct bcmpmu59xxx *bcmpmu,
+		int *temp_fall)
+{
+	struct bcmpmu_adc_result result;
+	int ret;
+	int fall_7_0, fall_9_8;
+	u8 reg;
+
+	ret = bcmpmu->read_dev(bcmpmu, PMU_REG_CMPCTRL9, &reg);
+	if (ret)
+		return ret;
+	fall_9_8 = (reg & NTCHT_FALL_9_8_MASK) >> NTCHT_FALL_9_8_SHIFT;
+
+	ret = bcmpmu->read_dev(bcmpmu, PMU_REG_CMPCTRL6, &reg);
+	if (ret)
+		return ret;
+
+	fall_7_0 = reg & NTCHT_FALL_7_0_MASK;
+	result.raw = fall_7_0 | (fall_9_8 << 8);
+	pr_accy(FLOW, "NTC raw: %d\n", result.raw);
+
+	ret = bcmpmu_adc_convert(bcmpmu, PMU_ADC_CHANN_NTC, &result,
+			false);
+	if (ret)
+		return ret;
+	*temp_fall = result.conv;
+	return 0;
+}
+
+static int bcmpmu_get_ntcct_rise(struct bcmpmu59xxx *bcmpmu, int *temp_rise)
+{
+	struct bcmpmu_adc_result result;
+	int ret;
+	int rise_7_0, rise_9_8;
+	u8 reg;
+
+	ret = bcmpmu->read_dev(bcmpmu, PMU_REG_CMPCTRL9, &reg);
+	if (ret)
+		return ret;
+	rise_9_8 = (reg & NTCCT_RISE_9_8_MASK) >> NTCCT_RISE_9_8_SHIFT;
+
+	ret = bcmpmu->read_dev(bcmpmu, PMU_REG_CMPCTRL7, &reg);
+	if (ret)
+		return ret;
+
+	rise_7_0 = reg & NTCCT_RISE_7_0_MASK;
+	result.raw = rise_7_0 | (rise_9_8 << 8);
+	pr_accy(FLOW, "NTC raw: %d\n", result.raw);
+
+	ret = bcmpmu_adc_convert(bcmpmu, PMU_ADC_CHANN_NTC, &result,
+			false);
+	if (ret)
+		return ret;
+	*temp_rise = result.conv;
+	return 0;
+
+}
+static int bcmpmu_get_ntcct_fall(struct bcmpmu59xxx *bcmpmu, int *temp_fall)
+{
+	struct bcmpmu_adc_result result;
+	int ret;
+	int fall_7_0, fall_9_8;
+	u8 reg;
+
+	ret = bcmpmu->read_dev(bcmpmu, PMU_REG_CMPCTRL9, &reg);
+	if (ret)
+		return ret;
+	fall_9_8 = (reg & NTCCT_FALL_9_8_MASK) >> NTCCT_FALL_9_8_SHIFT;
+
+	ret = bcmpmu->read_dev(bcmpmu, PMU_REG_CMPCTRL8, &reg);
+	if (ret)
+		return ret;
+
+	fall_7_0 = reg & NTCCT_FALL_7_0_MASK;
+	result.raw = fall_7_0 | (fall_9_8 << 8);
+	pr_accy(FLOW, "NTC raw: %d\n", result.raw);
+
+	ret = bcmpmu_adc_convert(bcmpmu, PMU_ADC_CHANN_NTC, &result,
+			false);
+	if (ret)
+		return ret;
+	*temp_fall = result.conv;
+	return 0;
+}
 
 int bcmpmu_usb_set(struct bcmpmu59xxx *bcmpmu,
 		int ctrl, unsigned long data)
@@ -828,7 +1058,18 @@ int bcmpmu_usb_set(struct bcmpmu59xxx *bcmpmu,
 		else
 			atomic_set(&di->usb_allow_bc_detect, 0);
 		break;
-
+	case BCMPMU_USB_CTRL_SET_NTCHT_RISE:
+		ret = bcmpmu_set_ntcht_rise(di->bcmpmu, data);
+		break;
+	case BCMPMU_USB_CTRL_SET_NTCHT_FALL:
+		ret = bcmpmu_set_ntcht_fall(di->bcmpmu, data);
+		break;
+	case BCMPMU_USB_CTRL_SET_NTCCT_RISE:
+		ret = bcmpmu_set_ntcct_rise(di->bcmpmu, data);
+		break;
+	case BCMPMU_USB_CTRL_SET_NTCCT_FALL:
+		ret = bcmpmu_set_ntcct_fall(di->bcmpmu, data);
+		break;
 	default:
 		ret = -EINVAL;
 		break;
@@ -844,6 +1085,7 @@ int bcmpmu_usb_get(struct bcmpmu59xxx *bcmpmu,
 	struct bcmpmu_accy_data *di = bcmpmu->accyinfo;
 	u8 val, val1;
 	int tprobe;
+	int update = 1;
 
 	switch (ctrl) {
 	case BCMPMU_USB_CTRL_TPROBE_MAX:
@@ -957,11 +1199,28 @@ int bcmpmu_usb_get(struct bcmpmu59xxx *bcmpmu,
 		ret = 0;
 		val = atomic_read(&di->usb_allow_bc_detect);
 		break;
+	case BCMPMU_USB_CTRL_GET_NTCHT_RISE:
+		ret = bcmpmu_get_ntcht_rise(di->bcmpmu, data);
+		update = 0;
+		break;
+	case BCMPMU_USB_CTRL_GET_NTCHT_FALL:
+		ret = bcmpmu_get_ntcht_fall(di->bcmpmu, data);
+		update = 0;
+		break;
+	case BCMPMU_USB_CTRL_GET_NTCCT_RISE:
+		ret = bcmpmu_get_ntcct_rise(di->bcmpmu, data);
+		update = 0;
+		break;
+	case BCMPMU_USB_CTRL_GET_NTCCT_FALL:
+		ret = bcmpmu_get_ntcct_fall(di->bcmpmu, data);
+		update = 0;
+		break;
 	default:
 		ret = -EINVAL;
 		break;
 	}
-	if ((ret == 0) && (data != NULL))
+
+	if ((ret == 0) && (data != NULL) && (update))
 		*(unsigned int *)data = val;
 
 	pr_accy(FLOW, "%s, ctrl=%d, val=0x%X\n", __func__, ctrl,
