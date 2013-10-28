@@ -494,9 +494,10 @@ Int32 DSI_Init(DISPDRV_INFO_T *info, DISPDRV_HANDLE_T *handle)
 		pPanel->teOut =	TE_VC4L_OUT_DSI0_TE0;
 
 		pPanel->drvState = DRV_STATE_INIT;
-		if (!g_display_enabled)
+		if (!g_display_enabled) {
 			pPanel->pwrState = STATE_PWR_OFF;
-		else
+			brcm_init_lcd_clocks(pPanel->busNo);
+		} else
 			pPanel->pwrState = STATE_SCREEN_ON;
 
 		*handle	= (DISPDRV_HANDLE_T)pPanel;
