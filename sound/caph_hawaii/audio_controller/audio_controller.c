@@ -265,6 +265,11 @@ static AudioMode_t AUDCTRL_GetModeBySpeaker(CSL_CAPH_DEVICE_e speaker)
 		/* use the current audio mode for this sink */
 	case CSL_CAPH_DEV_DSP_throughMEM:
 		mode = AUDCTRL_GetAudioMode();	/* play throu DSP */
+		if (mode == AUDIO_MODE_HANDSET)
+			mode = AUDIO_MODE_SPEAKERPHONE;
+		else
+			mode = AUDIO_MODE_HANDSET;
+
 		break;
 	default:
 		break;
