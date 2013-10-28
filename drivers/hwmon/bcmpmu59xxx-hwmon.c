@@ -249,7 +249,7 @@ int read_rtm_adc(struct bcmpmu59xxx *bcmpmu, enum bcmpmu_adc_channel channel,
 
 
 	if (!wait_for_completion_timeout(&adc->rtm_ready_complete,
-			msecs_to_jiffies(40))) {
+			msecs_to_jiffies(250))) {
 
 		ret = bcmpmu->read_dev(bcmpmu, PMU_REG_INT9, &val);
 		if (ret != 0) {

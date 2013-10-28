@@ -1117,8 +1117,8 @@ static inline int bcmpmu_fg_get_batt_temp(struct bcmpmu_fg_data *fg)
 
 		BUG_ON(retries <= 0);
 
-		if ((result.conv < (temp_prev + NTC_TEMP_OFFSET) ||
-				result.conv > (temp_prev - NTC_TEMP_OFFSET))) {
+		if ((result.conv < (temp_prev + NTC_TEMP_OFFSET)) &&
+				(result.conv > (temp_prev - NTC_TEMP_OFFSET))) {
 			temp_prev = result.conv;
 			mean = false;
 			break;

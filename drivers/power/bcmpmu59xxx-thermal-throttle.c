@@ -110,8 +110,8 @@ int bcmpmu_throttle_get_temp(struct bcmpmu_throttle_data *tdata, u8 channel,
 		}
 		BUG_ON(retries <= 0);
 
-		if ((result.conv < (temp_prev + TEMP_OFFSET) ||
-				result.conv > (temp_prev - TEMP_OFFSET))) {
+		if ((result.conv < (temp_prev + TEMP_OFFSET)) &&
+				(result.conv > (temp_prev - TEMP_OFFSET))) {
 			temp_prev = result.conv;
 			mean = false;
 			break;
