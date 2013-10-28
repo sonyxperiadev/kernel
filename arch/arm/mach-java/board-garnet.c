@@ -583,7 +583,7 @@ static int hawaii_camera_power(struct device *dev, int on)
 		regulator_enable(d_lvldo2_cam1_1v8);
 		usleep_range(1000, 1010);
 
-		if (mm_ccu_set_pll_select(CSI0_BYTE1_PLL, 8)) {
+		if (mm_ccu_set_pll_select(CSI0_BYTE1_PLL, 6)) {
 			pr_err("failed to set BYTE1\n");
 			goto e_clk_pll;
 		}

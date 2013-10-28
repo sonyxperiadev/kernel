@@ -2713,7 +2713,7 @@ static int ov8825_g_interface_parms(struct v4l2_subdev *sd,
 
 	/* set the hs term time */
 	parms->parms.serial.hs_term_time = 0;
-	parms->parms.serial.hs_settle_time = 2;
+	parms->parms.serial.hs_settle_time = 6;
 
 	return 0;
 }
