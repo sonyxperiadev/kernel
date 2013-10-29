@@ -212,7 +212,6 @@ int isp2_start(struct isp_device_t *isp)
 	uint32_t ctrl;
 	ctrl = isp_read(ISP_CTRL_OFFSET);
 	ctrl |= ISP_CTRL_ENABLE_MASK;
-	isp_write(ISP_CTRL_OFFSET, ctrl);
 	ctrl &= ~ISP_CTRL_FORCE_CLKEN_MASK;
 	isp_write(ISP_CTRL_OFFSET, ctrl);
 	return ret;

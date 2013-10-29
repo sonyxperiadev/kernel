@@ -20,6 +20,7 @@ the GPL, without Broadcom's express prior written consent.
 #include <linux/mm.h>
 #include <linux/slab.h>
 #include <mach/rdb/brcm_rdb_sysmap.h>
+#include <mach/rdb/brcm_rdb_isp.h>
 #include <linux/broadcom/mm_fw_hw_ifc.h>
 #include <linux/broadcom/mm_fw_usr_ifc.h>
 #include "mm_isp.h"
@@ -44,52 +45,70 @@ void printispregs(struct isp_device_t *isp)
 		(unsigned long)(isp_read(ISP_CTRL_OFFSET)));
 	pr_info("ISP_STATUS = 0x%lx\n",
 		(unsigned long)(isp_read(ISP_STATUS_OFFSET)));
-	pr_info("offset = 0x00000018 value = 0x%lx\n",
-		(unsigned long) (isp_read(0x00000018)));
-	pr_info("offset = 0x00000008 value = 0x%lx\n",
-		(unsigned long)(isp_read(0x00000008)));
-	pr_info("offset = 0x00000010 value = 0x%lx\n",
-		(unsigned long)(isp_read(0x00000010)));
-	pr_info("offset = 0x0000001C value = 0x%lx\n",
-		(unsigned long)(isp_read(0x0000001C)));
-	pr_info("offset = 0x00000030 value = 0x%lx\n",
-		(unsigned long)(isp_read(0x00000030)));
-	pr_info("offset = 0x00000034 value = 0x%lx\n",
-		(unsigned long)(isp_read(0x00000034)));
-	pr_info("offset = 0x00000038 value = 0x%lx\n",
-		(unsigned long)(isp_read(0x00000038)));
-	pr_info("offset = 0x0000003C value = 0x%lx\n",
-		(unsigned long)(isp_read(0x0000003C)));
-	pr_info("offset = 0x00000DC0 value = 0x%lx\n",
-		(unsigned long)(isp_read(0x00000DC0)));
-	pr_info("offset = 0x00000DCC value = 0x%lx\n",
-		(unsigned long)(isp_read(0x00000DCC)));
-	pr_info("offset = 0x00000DD0 value = 0x%lx\n",
-		(unsigned long)(isp_read(0x00000DD0)));
-	pr_info("offset = 0x00000DD4 value = 0x%lx\n",
-		(unsigned long)(isp_read(0x00000DD4)));
-	pr_info("offset = 0x00000DD8 value = 0x%lx\n",
-		(unsigned long)(isp_read(0x00000DD8)));
-	pr_info("offset = 0x00000DDC value = 0x%lx\n",
-		(unsigned long)(isp_read(0x00000DDC)));
-	pr_info("offset = 0x00000700 value = 0x%lx\n",
+	pr_info("ISP_ID = 0x%lx\n",
+		(unsigned long)(isp_read(ISP_ID_OFFSET)));
+	pr_info("ISP_TILE_CTRL = 0x%lx\n",
+		(unsigned long)(isp_read(ISP_TILE_CTRL_OFFSET)));
+	pr_info("ISP_TILE_STATUS = 0x%lx\n",
+		(unsigned long) (isp_read(ISP_TILE_STATUS_OFFSET)));
+	pr_info("ISP_TILE_ADDR = 0x%lx\n",
+		(unsigned long) (isp_read(ISP_TILE_ADDR_OFFSET)));
+	pr_info("ISPFR_BAYER_EN = 0x%lx\n",
+		(unsigned long) (isp_read(ISPFR_BAYER_EN_OFFSET)));
+	pr_info("ISPFR_YCBCR_EN = 0x%lx\n",
+		(unsigned long) (isp_read(ISPFR_YCBCR_EN_OFFSET)));
+	pr_info("ISPYI_CTRL = 0x%lx\n",
 		(unsigned long)(isp_read(0x00000700)));
-	pr_info("offset = 0X00000704 value = 0x%lx\n",
-		(unsigned long)(isp_read(0X00000704)));
-	pr_info("offset = 0X00000708 value = 0x%lx\n",
-		(unsigned long)(isp_read(0X00000708)));
-	pr_info("offset = 0X0000070C value = 0x%lx\n",
-		(unsigned long)(isp_read(0X0000070C)));
-	pr_info("offset = 0X00000710 value = 0x%lx\n",
-		(unsigned long)(isp_read(0X00000710)));
-	pr_info("offset = 0X00000714 value = 0x%lx\n",
-		(unsigned long)(isp_read(0X00000714)));
-	pr_info("offset = 0X00000720 value = 0x%lx\n",
-		(unsigned long)(isp_read(0X00000720)));
-	pr_info("offset = 0X00000724 value = 0x%lx\n",
-		(unsigned long)(isp_read(0X00000724)));
-	pr_info("offset = 0X00000728 value = 0x%lx\n",
-		(unsigned long)(isp_read(0X00000728)));
+	pr_info("ISPYI_RY_ADDR = 0x%lx\n",
+		(unsigned long) (isp_read(0x00000704)));
+	pr_info("ISPYI_GU_ADDR = 0x%lx\n",
+		(unsigned long) (isp_read(0x00000708)));
+	pr_info("ISPYI_BV_ADDR = 0x%lx\n",
+		(unsigned long) (isp_read(0x0000070c)));
+	pr_info("ISPYI_STRIDE1 = 0x%lx\n",
+		(unsigned long) (isp_read(0x00000710)));
+	pr_info("ISPYI_STRIDE2 = 0x%lx\n",
+		(unsigned long) (isp_read(0x00000714)));
+	pr_info("ISPYI_COL_STRIDE1 = 0x%lx\n",
+		(unsigned long) (isp_read(0x00000718)));
+	pr_info("ISPYI_COL_STRIDE2 = 0x%lx\n",
+		(unsigned long) (isp_read(0x0000071c)));
+	pr_info("ISPYI_RY_EADDR = 0x%lx\n",
+		(unsigned long) (isp_read(0x00000720)));
+	pr_info("ISPYI_GU_EADDR = 0x%lx\n",
+		(unsigned long) (isp_read(0x00000724)));
+	pr_info("ISPYI_BV_EADDR: = 0x%lx\n",
+		(unsigned long) (isp_read(0x00000728)));
+	pr_info("ISPYC_MATRIX = 0x%lx\n",
+		(unsigned long) (isp_read(ISPYC_MATRIX_OFFSET)));
+	pr_info("ISPYC_OFFSET = 0x%lx\n",
+		(unsigned long) (isp_read(ISPYC_OFFSET_OFFSET)));
+	pr_info("ISPLR_TSCALEX = 0x%lx\n",
+		(unsigned long) (isp_read(ISPLR_TSCALEX_OFFSET)));
+	pr_info("ISPLR_TSCALEY = 0x%lx\n",
+		(unsigned long) (isp_read(ISPLR_TSCALEY_OFFSET)));
+	pr_info("ISPLR_NORM_0_1 = 0x%lx\n",
+		(unsigned long) (isp_read(ISPLR_NORM_0_1_OFFSET)));
+	pr_info("ISPLR_NORM_2_3 = 0x%lx\n",
+		(unsigned long) (isp_read(ISPLR_NORM_2_3_OFFSET)));
+	pr_info("ISPLR_SHIFT = 0x%lx\n",
+		(unsigned long) (isp_read(ISPLR_SHIFT_OFFSET)));
+	pr_info("ISPLO_CTRL = 0x%lx\n",
+		(unsigned long) (isp_read(ISPLO_CTRL_OFFSET)));
+	pr_info("ISPLO_COL_STRIDE1 = 0x%lx\n",
+		(unsigned long) (isp_read(ISPLO_COL_STRIDE1_OFFSET)));
+	pr_info("ISPLO_COL_STRIDE2 = 0x%lx\n",
+		(unsigned long) (isp_read(ISPLO_COL_STRIDE2_OFFSET)));
+	pr_info("ISPLO_ADDRESS1 = 0x%lx\n",
+		(unsigned long) (isp_read(ISPLO_ADDRESS1_OFFSET)));
+	pr_info("ISPLO_ADDRESS2 = 0x%lx\n",
+		(unsigned long) (isp_read(ISPLO_ADDRESS2_OFFSET)));
+	pr_info("ISPLO_ADDRESS3 = 0x%lx\n",
+		(unsigned long) (isp_read(ISPLO_ADDRESS3_OFFSET)));
+	pr_info("ISPLO_STRIDE1 = 0x%lx\n",
+		(unsigned long) (isp_read(ISPLO_STRIDE1_OFFSET)));
+	pr_info("ISPLO_STRIDE2 = 0x%lx\n",
+		(unsigned long) (isp_read(ISPLO_STRIDE2_OFFSET)));
 	return;
 }
 
@@ -176,7 +195,7 @@ static int isp_abort(void *id, mm_job_post_t *job)
 {
 	int ret;
 	ret = isp_reset(id);
-	pr_err("isp_abort");
+	pr_info("isp_abort");
 	return ret;
 }
 
@@ -201,7 +220,6 @@ int isp_start(struct isp_device_t *isp)
 	u32 ctrl;
 	ctrl = isp_read(ISP_CTRL_OFFSET);
 	ctrl |= ISP_CTRL_ENABLE_MASK;
-	isp_write(ISP_CTRL_OFFSET, ctrl);
 	ctrl &= ~ISP_CTRL_FORCE_CLKEN_MASK;
 	isp_write(ISP_CTRL_OFFSET, ctrl);
 	return ret;
