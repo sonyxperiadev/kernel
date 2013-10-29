@@ -1318,7 +1318,7 @@ void gserial_disconnect(struct gserial *gser)
 
 #ifdef CONFIG_BRCM_FUSE_LOG
 	if (port->port_num == ACM_LOGGING_PORT)
-		if (acm_logging_cb->stop)
+		if (acm_logging_cb && acm_logging_cb->stop)
 			acm_logging_cb->stop();
 #endif
 
