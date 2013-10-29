@@ -393,8 +393,8 @@ static int kona_mmc_send_cmd(struct mmc *mmc, struct mmc_cmd *cmd,
 		if (cmd->resp_type & MMC_RSP_136) {
 			/* CRC is stripped so we need to do some shifting. */
 			for (i = 0; i < 4; i++) {
-				unsigned int offset =
-				    (unsigned int)(&host->reg->rspreg3 - i);
+				void __iomem *offset =
+				    &host->reg->rspreg3 - i;
 				cmd->response[i] = ioread32(offset) << 8;
 
 				if (i != 3)
