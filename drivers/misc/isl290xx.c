@@ -787,17 +787,24 @@ void isl290xx_poll_timer_func(unsigned long data)
 static void isl290xx_prox_poll_work_f(struct work_struct *work)
 {
 	int ret = 0;
+	static int prox_flag;
 	ret = prv_isl290xx_prox_poll(isl290xx_prox_cur_infop);
 	if (ret < 0)
 		pr_isl(ERROR, "get prox poll failed\n");
 	if (isl290xx_prox_cur_infop->prox_data >
 		isl290xx_cfgp->prox_threshold_hi) {
 		isl290xx_prox_cur_infop->prox_event = 1;
+		prox_flag = 1;
 	} else if (isl290xx_prox_cur_infop->prox_data <
 			isl290xx_cfgp->prox_threshold_lo) {
 		isl290xx_prox_cur_infop->prox_event = 0;
 		if (prox_poll_count == 10)
 			del_timer(&prox_poll_timer);
+		if (prox_flag) {
+			pr_isl(INFO, "object leave. proxdata: %d\n",
+				isl290xx_prox_cur_infop->prox_data);
+			prox_flag = 0;
+		}
 	}
 	prv_isl290xx_report_value(1);
 }
@@ -1570,7 +1577,7 @@ static int prv_isl290xx_ctrl_lp(int mask)
 	mutex_lock(&isl290xx_data_tp->update_lock);
 	if (mask == 0x10) {	/*10 : light on */
 		pr_isl(INFO, "light on\n");
-		prv_isl290xx_reset();
+
 		input_report_abs(light->input_dev, ABS_MISC, -1);
 		input_sync(light->input_dev);
 		ret = prv_isl290xx_set_bit(ISL290XX_INT_REG,
