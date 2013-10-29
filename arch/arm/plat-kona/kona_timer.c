@@ -581,7 +581,6 @@ int kona_timer_set_match_start(struct kona_timer *kt, unsigned long load)
 	 * So do this for only the required channel.
 	 */
 	reg &= ~KONA_GPTIMER_STCS_TIMER_MATCH_MASK;
-	reg |= 1 << (kt->ch_num + KONA_GPTIMER_STCS_TIMER_MATCH_SHIFT);
 	reg |= (1 << (kt->ch_num + KONA_GPTIMER_STCS_COMPARE_ENABLE_SHIFT));
 	writel(reg, ktm->reg_base + KONA_GPTIMER_STCS_OFFSET);
 
