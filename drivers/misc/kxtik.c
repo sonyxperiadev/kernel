@@ -217,6 +217,11 @@ static irqreturn_t kxtik_isr(int irq, void *dev)
 void kxtik1004_timer_func(unsigned long data)
 {
 	struct kxtik_data *tik = (struct kxtik_data *) data;
+	if (!tik || !tik->irq_workqueue) {
+		printk(KERN_ERR
+			"kxtik1004_timer_func:error kxtik_data is %x\n", tik);
+		return;
+	}
 	queue_work(tik->irq_workqueue, &tik->irq_work);
 	mod_timer(&kxtik_wakeup_timer,
 		jiffies+msecs_to_jiffies(tik->poll_interval));
@@ -801,6 +806,11 @@ static int __devinit kxtik_probe(struct i2c_client *client,
 		goto err_pdata_exit;
 
 	tik->irq_workqueue = create_workqueue("KXTIK Workqueue");
+	if (unlikely(!tik->irq_workqueue)) {
+		printk(KERN_ALERT "create KXTIK Workqueue failed\n");
+		goto err_pdata_exit;
+	}
+
 	INIT_WORK(&tik->irq_work, kxtik_irq_work);
 	mutex_init(&tik->data_mutex);
 	if (client->irq) {
