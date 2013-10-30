@@ -8968,10 +8968,10 @@ void wl_cfg80211_detach(void *para)
 #ifdef DEBUGFS_CFG80211
 	wl_free_debugfs(wl);
 #endif
+
 	if (wl->p2p_supported) {
 		if (timer_pending(&wl->p2p->listen_timer))
 			del_timer_sync(&wl->p2p->listen_timer);
-		wl_cfgp2p_deinit_priv(wl);
 	}
 
 #if defined(WL_CFG80211_P2P_DEV_IF)
@@ -8980,6 +8980,7 @@ void wl_cfg80211_detach(void *para)
 	wl_cfg80211_detach_p2p();
 #endif /* WL_CFG80211_P2P_DEV_IF */
 
+	wl_cfgp2p_deinit_priv(wl);
 	wl_deinit_priv(wl);
 	wlcfg_drv_priv = NULL;
 	wl_cfg80211_clear_parent_dev();

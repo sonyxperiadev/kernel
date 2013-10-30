@@ -35,6 +35,7 @@
 #include <linux/string.h>
 #include <linux/timer.h>
 #include <linux/if_arp.h>
+#include <linux/rtnetlink.h>
 #include <asm/uaccess.h>
 
 #include <bcmutils.h>
@@ -42,6 +43,8 @@
 #include <proto/ethernet.h>
 #include <proto/802.11.h>
 
+#include <dngl_stats.h>
+#include <dhd.h>
 #include <wl_cfg80211.h>
 #include <wl_cfgp2p.h>
 #include <wldev_common.h>
@@ -490,7 +493,15 @@ wl_cfgp2p_set_discovery(struct wl_priv *wl, s32 on)
 {
 	s32 ret = BCME_OK;
 	struct net_device *ndev = wl_to_prmry_ndev(wl);
+	dhd_pub_t *dhd =  (dhd_pub_t *)(wl->pub);
+
 	CFGP2P_DBG(("enter\n"));
+
+	if (dhd == NULL)
+		return -1;
+
+	if (dhd->busstate == DHD_BUS_DOWN)
+		return -1;
 
 	ret = wldev_iovar_setint(ndev, "p2p_disc", on);
 
@@ -516,12 +527,21 @@ wl_cfgp2p_set_p2p_mode(struct wl_priv *wl, u8 mode, u32 channel, u16 listen_ms, 
 	wl_p2p_disc_st_t discovery_mode;
 	s32 ret;
 	struct net_device *dev;
+
+	dhd_pub_t *dhd =  (dhd_pub_t *)(wl->pub);
+
 	CFGP2P_DBG(("enter\n"));
 
 	if (unlikely(bssidx == WL_INVALID)) {
 		CFGP2P_ERR((" %d index out of range\n", bssidx));
 		return -1;
 	}
+
+	if (dhd == NULL)
+		return -1;
+
+	if (dhd->busstate == DHD_BUS_DOWN)
+		return -1;
 
 	dev = wl_cfgp2p_find_ndev(wl, bssidx);
 	if (unlikely(dev == NULL)) {
@@ -703,6 +723,8 @@ wl_cfgp2p_disable_discovery(struct wl_priv *wl)
 {
 	s32 ret = BCME_OK;
 	CFGP2P_DBG((" enter\n"));
+
+
 	wl_clr_p2p_status(wl, DISCOVERY_ON);
 
 	if (wl_to_p2p_bss_bssidx(wl, P2PAPI_BSSCFG_DEVICE) == 0) {
@@ -2563,14 +2585,24 @@ wl_cfgp2p_del_p2p_disc_if(struct wireless_dev *wdev)
 {
 	extern struct wl_priv *wlcfg_drv_priv;
 	struct wl_priv *wl = wlcfg_drv_priv;
+	bool rollback_lock = false;
 
 	if (!wdev)
 		return -EINVAL;
 
 	WL_TRACE(("Enter\n"));
 
+	if (!rtnl_is_locked()) {
+		rtnl_lock();
+		rollback_lock = true;
+	}
+
 	cfg80211_unregister_wdev(wdev);
 
+	if (rollback_lock == true) {
+		rtnl_unlock();
+		rollback_lock = false;
+	}
 	kfree(wdev);
 
 	wl->p2p_wdev = NULL;
