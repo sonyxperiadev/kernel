@@ -329,7 +329,7 @@
 		thold_size = <4>; /*number of threshold levels*/
 		poll_rate_ms = <30000>;
 		hysteresis = <0>;
-		flags = <1>;
+		flags = <2>;
 		interval_ms = <5>;
 		thold = <70 1
 			80 1

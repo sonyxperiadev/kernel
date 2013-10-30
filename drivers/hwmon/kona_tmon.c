@@ -381,7 +381,7 @@ static irqreturn_t tmon_isr(int irq, void *drvdata)
 	return IRQ_HANDLED;
 }
 
-static int tmon_init(struct kona_tmon *tmon, int vtmon)
+static int tmon_init(struct kona_tmon *tmon, int flags)
 {
 	u32 reg;
 	int i;
@@ -393,14 +393,13 @@ static int tmon_init(struct kona_tmon *tmon, int vtmon)
 
 	reg = readl(pdata->chipreg_addr +
 				CHIPREG_SPARE_CONTROL0_OFFSET);
-	switch (vtmon) {
-	case VTMON:
+	if (flags & TMON_VTMON) {
+		kona_tmon->vtmon_sel = TMON_VTMON;
 		reg &= ~CHIPREG_SPARE_CONTROL0_VTMON_SELECT_MASK;
-		break;
-	case PVTMON:
+	} else if (flags & TMON_PVTMON) {
+		kona_tmon->vtmon_sel = TMON_PVTMON;
 		reg |= CHIPREG_SPARE_CONTROL0_VTMON_SELECT_MASK;
-		break;
-	default:
+	} else {
 		BUG();
 	}
 	writel(reg, pdata->chipreg_addr +
@@ -446,6 +445,21 @@ int tmon_unregister_notifier(struct notifier_block *notifier)
 			notifier);
 }
 EXPORT_SYMBOL_GPL(tmon_unregister_notifier);
+
+void tmon_set_suspend_poweroff(int poweroff)
+{
+	if (poweroff)
+		kona_tmon->pdata->flags |= TMON_SUSPEND_POWEROFF;
+	else
+		kona_tmon->pdata->flags &= ~TMON_SUSPEND_POWEROFF;
+}
+EXPORT_SYMBOL_GPL(tmon_set_suspend_poweroff);
+
+int tmon_get_suspend_poweroff(void)
+{
+	return !!(kona_tmon->pdata->flags & TMON_SUSPEND_POWEROFF);
+}
+EXPORT_SYMBOL_GPL(tmon_get_suspend_poweroff);
 
 static ssize_t tmon_get_name(struct device *dev,
 struct device_attribute *devattr, char *buf)
@@ -631,6 +645,7 @@ static ssize_t kona_tmon_set_interval(struct device *dev,
 
 	/* coverity[secure_coding] */
 	sscanf(buf, "%ld", &msecs);
+	kona_tmon->pdata->interval_ms = msecs;
 	tmon_set_interval(kona_tmon, msecs);
 	return count;
 }
@@ -654,7 +669,6 @@ static ssize_t tmon_vtmon_sel(struct device *dev,
 	if (vtmon == kona_tmon->vtmon_sel)
 		return count;
 
-	kona_tmon->vtmon_sel = vtmon;
 	tmon_init(kona_tmon, vtmon);
 	return count;
 }
@@ -713,6 +727,23 @@ static ssize_t tmon_get_falling_offset(struct device *dev,
 	struct kona_tmon_pdata *pdata = kona_tmon->pdata;
 	return snprintf(buf, 10, "%d\n", pdata->falling);
 }
+
+static ssize_t tmon_set_poweroff(struct device *dev,
+		struct device_attribute *devattr, const char *buf, size_t count)
+{
+	int val;
+
+	sscanf(buf, "%d", &val);
+	tmon_set_suspend_poweroff(val);
+	return count;
+}
+
+static ssize_t tmon_get_poweroff(struct device *dev,
+		struct device_attribute *devattr, char *buf)
+{
+	return snprintf(buf, 10, "%d\n", tmon_get_suspend_poweroff());
+}
+
 static struct sensor_device_attribute kona_attrs[] = {
 SENSOR_ATTR(name, S_IRUGO, tmon_get_name, NULL, 0),
 SENSOR_ATTR(interval, S_IWUSR | S_IRUGO, kona_tmon_get_interval,
@@ -740,14 +771,21 @@ SENSOR_ATTR(hysteresis, S_IWUSR | S_IRUGO, tmon_get_hysteresis,
 		tmon_set_hysteresis, 0),
 SENSOR_ATTR(falling, S_IWUSR | S_IRUGO, tmon_get_falling_offset,
 		tmon_set_falling_offset, 0),
+SENSOR_ATTR(suspend_poweroff, S_IWUSR | S_IRUGO, tmon_get_poweroff,
+		tmon_set_poweroff, 0),
 };
 
 static int kona_tmon_suspend(struct platform_device *pdev, pm_message_t state)
 {
 	atomic_set(&kona_tmon->suspend, 1);
 	if (kona_tmon->poll_inx != INVALID_INX) {
-		flush_delayed_work_sync(&kona_tmon->poll_work);
+		cancel_delayed_work_sync(&kona_tmon->poll_work);
 		tmon_dbg(TMON_LOG_DBG, "%s: cancelling work queue\n", __func__);
+	}
+	/* Disable TMON and turn off the clocks */
+	if (kona_tmon->pdata->flags & TMON_SUSPEND_POWEROFF) {
+		tmon_enable(kona_tmon, 0);
+		clk_disable(kona_tmon->tmon_1m_clk);
 	}
 	return 0;
 }
@@ -755,6 +793,13 @@ static int kona_tmon_suspend(struct platform_device *pdev, pm_message_t state)
 static int kona_tmon_resume(struct platform_device *pdev)
 {
 	atomic_set(&kona_tmon->suspend, 0);
+
+	/* Init TMON and turn on the clocks */
+	if (kona_tmon->pdata->flags & TMON_SUSPEND_POWEROFF) {
+		clk_enable(kona_tmon->tmon_1m_clk);
+		tmon_init(kona_tmon, kona_tmon->vtmon_sel);
+	}
+
 	if (kona_tmon->poll_inx != INVALID_INX) {
 		queue_delayed_work(kona_tmon->wqueue, &kona_tmon->poll_work,
 				msecs_to_jiffies(0));
@@ -941,7 +986,6 @@ static int kona_tmon_probe(struct platform_device *pdev)
 		if (device_create_file(&pdev->dev, &kona_attrs[i].dev_attr))
 			goto err_remove_files;
 
-	kona_tmon->vtmon_sel = pdata->flags & VTMON;
 	kona_tmon->hysteresis = pdata->hysteresis;
 
 	INIT_WORK(&kona_tmon->tmon_work, tmon_irq_work);
@@ -961,7 +1005,7 @@ static int kona_tmon_probe(struct platform_device *pdev)
 
 	kona_tmon->init = 1;
 	kona_tmon->poll_inx = INVALID_INX;
-	tmon_init(kona_tmon, kona_tmon->vtmon_sel);
+	tmon_init(kona_tmon, kona_tmon->pdata->flags);
 	kona_tmon->init = 0;
 
 	/* Register hwmon device */

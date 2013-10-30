@@ -374,7 +374,7 @@
 		thold_size = <8>; /*number of threshold levels*/
 		poll_rate_ms = <10000>;
 		hysteresis = <0>;
-		flags = <1>;
+		flags = <2>;
 		interval_ms = <5>;
 		/*sw shdwn temp is 120*/
 		thold = <55 1

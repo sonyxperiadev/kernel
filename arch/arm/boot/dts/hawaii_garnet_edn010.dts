@@ -374,7 +374,7 @@
 		thold_size = <8>; /*number of threshold levels*/
 		poll_rate_ms = <30000>;
 		hysteresis = <0>;
-		flags = <0>;
+		flags = <1>;
 		interval_ms = <5>;
 		/*critical temp is 115*/
 		thold = <55 1
