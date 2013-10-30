@@ -72,6 +72,7 @@ dwc_otg_hcd_t *dwc_otg_hcd_alloc_hcd(void)
  */
 void dwc_otg_hcd_connect_timeout(void *ptr)
 {
+#ifdef CONFIG_USB_OTG
 	dwc_otg_hcd_t *hcd = (dwc_otg_hcd_t *)ptr;
 	hprt0_data_t hprt0 = {.d32 = 0 };
 
@@ -85,6 +86,7 @@ void dwc_otg_hcd_connect_timeout(void *ptr)
 #ifdef CONFIG_USB_OTG_UTILS
 	DWC_WORKQ_SCHEDULE(hcd->core_if->wq_otg,
 			   disable_vbus_func, hcd->core_if, "no_connect");
+#endif
 #endif
 }
 
@@ -172,7 +174,9 @@ static void del_xfer_timers(dwc_otg_hcd_t *hcd)
 static void del_timers(dwc_otg_hcd_t *hcd)
 {
 	del_xfer_timers(hcd);
+#ifdef CONFIG_USB_OTG
 	DWC_TIMER_CANCEL(hcd->conn_timer);
+#endif
 }
 
 /**
@@ -221,6 +225,7 @@ static void kill_all_urbs(dwc_otg_hcd_t *hcd)
 	kill_urbs_in_qh_list(hcd, &hcd->periodic_sched_queued);
 }
 
+#ifdef CONFIG_USB_OTG
 /**
  * Start the connection timer.  An OTG host is required to display a
  * message if the device does not connect within 10 seconds.  The
@@ -231,7 +236,7 @@ static void dwc_otg_hcd_start_connect_timer(dwc_otg_hcd_t *hcd)
 {
 	DWC_TIMER_SCHEDULE(hcd->conn_timer, hcd->conn_wait_timeout);
 }
-
+#endif
 /**
  * HCD Callback function for disconnect of the HCD.
  *
@@ -242,7 +247,9 @@ static int32_t dwc_otg_hcd_session_start_cb(void *p)
 	dwc_otg_hcd_t *dwc_otg_hcd;
 	DWC_DEBUGPL(DBG_HCDV, "%s(%p)\n", __func__, p);
 	dwc_otg_hcd = p;
+#ifdef CONFIG_USB_OTG
 	dwc_otg_hcd_start_connect_timer(dwc_otg_hcd);
+#endif
 	return 1;
 }
 
@@ -472,11 +479,13 @@ void dwc_otg_hcd_stop(dwc_otg_hcd_t *hcd)
 
 	/* Turn off all host-specific interrupts. */
 	dwc_otg_disable_host_interrupts(hcd->core_if);
+
+#ifdef CONFIG_USB_OTG
 	/* Cancel the connection timer since we are
 	 * turning off the Vbus now
 	 */
 	DWC_TIMER_CANCEL(hcd->conn_timer);
-
+#endif
 	/* Turn off the vbus power */
 	DWC_PRINTF("PortPower off\n");
 	hprt0.b.prtpwr = 0;
@@ -780,10 +789,11 @@ static void dwc_otg_hcd_free(dwc_otg_hcd_t *dwc_otg_hcd)
 		dwc_free(dwc_otg_hcd->status_buf);
 	}
 	DWC_SPINLOCK_FREE(dwc_otg_hcd->lock);
+
+#ifdef CONFIG_USB_OTG
 	DWC_TIMER_FREE(dwc_otg_hcd->conn_timer);
-
 	dwc_otg_hcd->conn_wait_timeout = T_HOST_VBOFF;
-
+#endif
 	DWC_TASK_FREE(dwc_otg_hcd->reset_tasklet);
 
 #ifdef DWC_DEV_SRPCAP
@@ -845,13 +855,14 @@ int dwc_otg_hcd_init(dwc_otg_hcd_t *hcd, dwc_otg_core_if_t *core_if)
 			    channel);
 	}
 
+#ifdef CONFIG_USB_OTG
 	/* Initialize the Connection timeout timer. */
 	hcd->conn_timer = DWC_TIMER_ALLOC("Connection timer",
 					  dwc_otg_hcd_connect_timeout,
 					  (void *)hcd);
 
 	hcd->conn_wait_timeout = T_HOST_VBOFF;
-
+#endif
 	/* Initialize reset tasklet. */
 	hcd->reset_tasklet = DWC_TASK_ALLOC(reset_tasklet_func, hcd);
 #ifdef DWC_DEV_SRPCAP
@@ -2081,7 +2092,7 @@ int dwc_otg_hcd_hub_control(dwc_otg_hcd_t *dwc_otg_hcd,
 			hprt0.d32 = dwc_otg_read_hprt0(core_if);
 			hprt0.b.prtena = 1;
 			dwc_write_reg32(core_if->host_if->hprt0, hprt0.d32);
-#ifdef CONFIG_USB_OTG_UTILS
+#ifdef CONFIG_USB_OTG
 			/* REVISIT: Looks like device went away.
 			 * Shutdown Vbus otherwise we'll be stuck in a loop
 			 * This is a temp workaround until we handle this from

@@ -351,9 +351,10 @@ int32_t dwc_otg_hcd_handle_port_intr(dwc_otg_hcd_t *dwc_otg_hcd)
 			dwc_otg_hcd->flags.b.port_connect_status_change = 1;
 			dwc_otg_hcd->flags.b.port_connect_status = 1;
 			hprt0_modify.b.prtconndet = 1;
-
+#ifdef CONFIG_USB_OTG
 			/* B-Device has connected, Delete the connection timer. */
 			DWC_TIMER_CANCEL(dwc_otg_hcd->conn_timer);
+#endif
 		}
 		/* The Hub driver asserts a reset when it sees port connect
 		 * status change flag */
