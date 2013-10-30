@@ -17,6 +17,7 @@ obj-$(CONFIG_ARCH_JAVA) += clock.o
 obj-$(CONFIG_MACH_JAVA_RAY) += java.o board-java.o java_wifi.o
 obj-$(CONFIG_MACH_JAVA_STONE) += java.o board-java.o java_wifi.o
 obj-$(CONFIG_MACH_JAVA_GARNET) += java.o board-garnet.o java_wifi.o
+obj-$(CONFIG_MACH_JAVA_KIVU) += java.o board-kivu.o java_wifi.o
 obj-$(CONFIG_MACH_JAVA_SS_EVAL) += java.o board-ss_eval.o java_ss_eval_wifi.o
 obj-$(CONFIG_MACH_JAVA_SS_BAFFINLITE) += java.o board-ss_baffinlite.o java_ss_baffinlite_wifi.o
 obj-$(CONFIG_MACH_JAVA_FPGA) += java_fpga.o
@@ -65,15 +66,15 @@ obj-y += board-bcm59xxx_garnet_c_amethyst.o
 else
 obj-y += board-bcm59xxx_garnet.o
 endif
-else
-ifeq ($(CONFIG_MACH_JAVA_SS_EVAL), y)
+else ifeq ($(CONFIG_MACH_JAVA_KIVU), y)
+obj-y += board-bcm59xxx_kivu.o
+else ifeq ($(CONFIG_MACH_JAVA_SS_EVAL), y)
 obj-y += board-bcm59xxx_ss_eval.o
 else
 ifeq ($(CONFIG_MACH_JAVA_SS_BAFFINLITE), y)
 obj-y += board-bcm59xxx_ss_baffinlite.o
 else
 obj-y += board-bcm59xxx.o
-endif
 endif
 endif
 endif

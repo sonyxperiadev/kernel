@@ -53,6 +53,7 @@ struct cyttsp_platform_data {
 	char *name;
 	s16 irq_gpio;
 	u8 *bl_keys;
+	char *virtual_key_settings;
 };
 
 #endif /* _CYTTSP_H_ */
