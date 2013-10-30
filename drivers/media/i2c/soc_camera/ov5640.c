@@ -678,7 +678,11 @@ static const struct v4l2_ctrl_config ov5640_controls[] = {
 	{
 	 .ops = &ov5640_ctrl_ops,
 	 .id = V4L2_CID_CAM_CAPTURE,
-	 .type = V4L2_CTRL_TYPE_INTEGER,
+	/* v4l2 control framework does not call s_ctrl if
+	 * current control value == previous control value.
+	 * If type = V4L2_CTRL_TYPE_BUTTON then s_ctrl is called always.
+	 */
+	 .type = V4L2_CTRL_TYPE_BUTTON,
 	 .name = "Camera capture",
 	 .min = 0,
 	 .max = 1,
@@ -689,7 +693,7 @@ static const struct v4l2_ctrl_config ov5640_controls[] = {
 	{
 	 .ops = &ov5640_ctrl_ops,
 	 .id = V4L2_CID_CAM_CAPTURE_DONE,
-	 .type = V4L2_CTRL_TYPE_INTEGER,
+	 .type = V4L2_CTRL_TYPE_BUTTON,
 	 .name = "Camera capture done",
 	 .min = 0,
 	 .max = 1,
@@ -2828,6 +2832,7 @@ static int ov5640_set_flash_mode(struct v4l2_ctrl *ctrl,
 	case V4L2_FLASH_LED_MODE_FLASH:
 	case V4L2_FLASH_LED_MODE_FLASH_AUTO:
 		ov5640->flashmode = mode;
+		ov5640->fireflash = 1;
 		break;
 	case V4L2_FLASH_LED_MODE_TORCH:
 		ov5640_flash_control(client, mode);
@@ -2836,6 +2841,7 @@ static int ov5640_set_flash_mode(struct v4l2_ctrl *ctrl,
 	default:
 		ov5640_flash_control(client, mode);
 		ov5640->flashmode = mode;
+		ov5640->fireflash = 0;
 		break;
 	}
 

@@ -109,3 +109,12 @@ config SOC_CAMERA_TW9910
 	depends on SOC_CAMERA && I2C
 	help
 	  This is a tw9910 video driver
+
+comment "Flash devices"
+
+config VIDEO_AS3643
+	tristate "AS3643 flash driver support"
+	depends on SOC_CAMERA && I2C
+	---help---
+	  This is a driver for the AS3643 flash controller. It has
+	  built in control for flash and torch modes.

@@ -580,13 +580,6 @@ config VIDEO_AS3645A
 	  This is a driver for the AS3645A and LM3555 flash controllers. It has
 	  build in control for flash, torch and indicator LEDs.
 
-config VIDEO_AS3643
-	tristate "AS3643 flash driver support"
-	depends on I2C && VIDEO_V4L2 && MEDIA_CONTROLLER
-	depends on MEDIA_CAMERA_SUPPORT
-	---help---
-	  This is a driver for the AS3643 flash controller.
-
 config VIDEO_A3907
 	tristate "A3907 flash driver support"
 	depends on I2C && VIDEO_V4L2 && MEDIA_CONTROLLER

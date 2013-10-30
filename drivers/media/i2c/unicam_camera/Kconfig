@@ -1,3 +1,4 @@
+comment "soc camera host driver"
 config VIDEOBUF2_VMALLOC
 	select VIDEOBUF2_CORE
 config UNICAM_CAMERA

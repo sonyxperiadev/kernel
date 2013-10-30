@@ -26,11 +26,10 @@
 #include <media/soc_camera.h>
 #include <linux/videodev2_brcm.h>
 #include <linux/gpio_keys.h>
-#include <asm/gpio.h>
 #include "as3643.h"
 
 /* Different modes of operation for the "Torch" */
-typedef enum {
+enum flashlamp_mode_t {
 	FLASHLAMP_MODE_MIN,
 	FLASHLAMP_MODE_TORCH,
 	FLASHLAMP_MODE_FLASH,
@@ -38,7 +37,7 @@ typedef enum {
 	FLASHLAMP_MODE_BLINKING,
 
 	FLASHLAMP_MODE_MAX
-} FLASHLAMP_MODE_T;
+};
 
 /* I2C registers */
 #define REG_ID              0
@@ -66,7 +65,7 @@ typedef enum {
 #define GPIO_FLASH_EN 11
 #define GPIO_FLASH_TRIG 34
 struct i2c_client *client1;
-static int as3643_reg_read(struct i2c_client *client, u16 reg, u8 * val)
+static int as3643_reg_read(struct i2c_client *client, u16 reg, u8 *val)
 {
 	int ret;
 	u8 reg8 = (u8) reg;
@@ -108,8 +107,7 @@ static int as3643_reg_write(struct i2c_client *client, u8 reg, u8 val)
 	data[1] = val;
 	ret = i2c_transfer(client->adapter, &msg, 1);
 	if (ret < 0) {
-		printk(KERN_INFO KERN_ERR
-		       "Failed in write_reg writing over I2C\n");
+		dev_err(&client->dev, "Failed in write_reg writing over I2C\n");
 		return ret;
 	}
 	return 0;
@@ -152,7 +150,7 @@ static u8 flash_timer_set(int ms)
 	return reg;
 }
 
-static int as3643_enable(FLASHLAMP_MODE_T mode, const u8 intensity,
+static int as3643_enable(enum flashlamp_mode_t mode, const u8 intensity,
 			 const u32 duration_us)
 {
 	int ret = 0;
@@ -242,10 +240,10 @@ int as3643_sw_strobe(int on)
 	val = val & 0xbf;	/* as3643 set edge sensitive */
 #endif
 	if (on) {
-		printk("as3643 turn on SW strobe\n");
+		dev_info(&client1->dev, "as3643 turn on SW strobe\n");
 		val = val | 0x80;
 	} else {
-		printk("as3643 turn off SW strobe\n");
+		dev_info(&client1->dev, "as3643 turn off SW strobe\n");
 		val = val & 0x7f;
 	}
 	as3643_reg_write(client1, REG_STROBE_SIG, 0);
@@ -258,7 +256,7 @@ int as3643_gpio_strobe(int on)
 		if (gpio_request_one
 		    (GPIO_FLASH_TRIG, GPIOF_DIR_OUT | GPIOF_INIT_LOW,
 		     "Flash-Trig")) {
-			printk(KERN_ERR "GPIO flash Trig failed\n");
+			dev_err(&client1->dev, "GPIO flash Trig failed\n");
 			return -1;
 		}
 		gpio_set_value(GPIO_FLASH_TRIG, 1);
@@ -273,7 +271,7 @@ int as3643_set_timer(int timer_val)
 {
 	u8 val;
 	val = flash_timer_set(timer_val);
-	printk("Turn on timer before flash\n");
+	dev_info(&client1->dev, "Turn on timer before flash\n");
 	as3643_reg_write(client1, REG_FLASH_TIMER, val);
 	return 0;
 }
@@ -284,7 +282,7 @@ int as3643_gpio_toggle(bool en)
 		if (gpio_request_one
 		    (GPIO_FLASH_EN, GPIOF_DIR_OUT | GPIOF_INIT_LOW,
 		     "Flash-En")) {
-			printk(KERN_ERR "GPIO flash En failed\n");
+			dev_err(&client1->dev, "GPIO flash En failed\n");
 			return -1;
 		}
 		gpio_set_value(GPIO_FLASH_EN, 1);
@@ -305,7 +303,7 @@ static int as3643_probe(struct i2c_client *client,
 			const struct i2c_device_id *did)
 {
 	client1 = client;
-	printk("\n ***********#########$$$$$$$$$$ as3643 probe\n");
+	dev_info(&client->dev, "\n *********#########$$$$$$$$$ as3643 probe\n");
 	return 0;
 }
 
