@@ -148,6 +148,9 @@ static void dvfs_work(struct work_struct *work)
 			(current_mode == mm_dvfs->requested_mode)) {
 			pr_debug("change dvfs mode to turbo..");
 			mm_dvfs->requested_mode = TURBO;
+#ifdef CONFIG_MEMC_DFS
+			memc_update_dfs_req(mm_dvfs->memc_node, MEMC_OPP_ECO);
+#endif
 			}
 		break;
 #endif
@@ -156,6 +159,9 @@ static void dvfs_work(struct work_struct *work)
 		if (percnt > (mm_dvfs->dvfs.P2*temp)) {
 			pr_debug("change dvfs mode to super turbo..");
 			mm_dvfs->requested_mode = SUPER_TURBO;
+#ifdef CONFIG_MEMC_DFS
+			memc_update_dfs_req(mm_dvfs->memc_node, MEMC_OPP_TURBO);
+#endif
 			}
 #endif
 		if ((percnt < mm_dvfs->dvfs.P2L*temp) &&
@@ -188,9 +194,12 @@ static void dvfs_work(struct work_struct *work)
 	mm_dvfs->timer_state = false;
 	if (percnt != 0)
 		dvfs_start_timer(mm_dvfs);
-	else
+	else {
 		mm_dvfs->requested_mode = ECONOMY;
-
+#ifdef CONFIG_MEMC_DFS
+		memc_update_dfs_req(mm_dvfs->memc_node, MEMC_OPP_ECO);
+#endif
+	}
 dvfs_work_end:
 	raw_notifier_call_chain(&mm_dvfs->mm_common_ifc->notifier_head, \
 					MM_FMWK_NOTIFY_DVFS_UPDATE, \
@@ -269,6 +278,12 @@ void *mm_dvfs_init(struct _mm_common_ifc *mm_common_ifc, \
 				mm_dvfs->requested_mode)) {
 		pr_err("%s: failed to update dfs request\n", __func__);
 	}
+
+#ifdef CONFIG_MEMC_DFS
+	mm_dvfs->memc_node = kmalloc(sizeof(struct kona_memc_node), GFP_KERNEL);
+	memset(mm_dvfs->memc_node, 0, sizeof(struct kona_memc_node));
+	memc_add_dfs_req(mm_dvfs->memc_node, (char *)dev_name, MEMC_OPP_ECO);
+#endif
 
 	return mm_dvfs;
 }
