@@ -95,6 +95,7 @@ struct kona_timer_module {
 	char clk_name[255];
 	enum config_state cfg_state;
 	void __iomem *reg_base;
+	struct clk *clk;
 	unsigned long rate;
 };
 
@@ -252,6 +253,21 @@ int __init kona_timer_modules_init(void)
 
 	kona_init_done = 1;
 	return 0;
+}
+
+/*
+ * Obtain clocks for Kona timer and store them into the internal data
+ * structure
+ */
+void kona_timer_clk_setup(void)
+{
+	unsigned int i;
+
+	for (i = 0; i < NUM_OF_TIMER_MODULES; i++) {
+		timer_module_list[i].clk = clk_get(NULL,
+				timer_module_list[i].clk_name);
+		WARN_ON(IS_ERR_OR_NULL(timer_module_list[i].clk));
+	}
 }
 
 /*
@@ -612,6 +628,68 @@ int kona_timer_stop(struct kona_timer *kt)
 	return 0;
 }
 EXPORT_SYMBOL(kona_timer_stop);
+
+int kona_timer_suspend(struct kona_timer *kt)
+{
+	struct kona_timer_module *ktm;
+	struct clk *clk;
+	unsigned long flags;
+
+	if (!kt)
+		return -EINVAL;
+
+	ktm = kt->ktm;
+
+	/* only touch the slave timer clock */
+	if (strcmp(ktm->name, "slave-timer") != 0)
+		return 0;
+
+	clk = ktm->clk;
+	if (IS_ERR_OR_NULL(clk)) {
+		pr_err("timer_suspend: clk_get of %s failed\n", ktm->clk_name);
+		/* still allow suspend */
+		return 0;
+	}
+
+	spin_lock_irqsave(&ktm->lock, flags);
+	clk_disable(clk);
+	spin_unlock_irqrestore(&ktm->lock, flags);
+
+	return 0;
+}
+
+int kona_timer_resume(struct kona_timer *kt)
+{
+	struct kona_timer_module *ktm;
+	struct clk *clk;
+	unsigned long flags;
+	int ret;
+
+	if (!kt)
+		return -EINVAL;
+
+	ktm = kt->ktm;
+
+	/* only touch the slave timer clock */
+	if (strcmp(ktm->name, "slave-timer") != 0)
+		return 0;
+
+	clk = ktm->clk;
+	if (IS_ERR_OR_NULL(clk)) {
+		pr_err("timer_resume: clk_get of %s failed\n", ktm->clk_name);
+		/* still allow resume */
+		return 0;
+	}
+
+	spin_lock_irqsave(&ktm->lock, flags);
+	ret = clk_enable(clk);
+	if (ret < 0)
+		pr_err("timer_resume: clk_enable of %s failed\n",
+				ktm->clk_name);
+	spin_unlock_irqrestore(&ktm->lock, flags);
+
+	return 0;
+}
 
 /*
  * kona_timer_free - Release the timer, after this call the timer can be used
