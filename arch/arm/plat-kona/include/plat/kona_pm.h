@@ -27,6 +27,11 @@
 
 #define CSTATE_ALL 0xffffffff
 
+enum {
+	CSTATE_ENTER,
+	CSTATE_EXIT,
+};
+
 struct kona_idle_state {
 	char *name;
 	char *desc;
@@ -52,4 +57,8 @@ extern void instrument_idle_exit(void);
 int kona_pm_disable_idle_state(int state, bool disable);
 int kona_pm_set_suspend_state(int state_inx);
 int kona_pm_cpu_lowpower(void);
+int kona_pm_get_num_cstates(void);
+char *kona_pm_get_cstate_name(int state_inx);
+int cstate_notifier_register(struct notifier_block *nb);
+int cstate_notifier_unregister(struct notifier_block *nb);
 #endif /*__KONA_PM_H__*/

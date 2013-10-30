@@ -41,11 +41,7 @@
 #include <mach/pm.h>
 #endif
 
-#ifdef CONFIG_KONA_PROFILER
-int deepsleep_profiling;
-module_param_named(deepsleep_profiling, deepsleep_profiling, int,
-	S_IRUGO | S_IWUSR | S_IWGRP);
-#endif /*CONFIG_KONA_PROFILER*/
+#include <linux/notifier.h>
 
 enum {
 	KONA_PM_LOG_LVL_NONE = 0,
@@ -65,6 +61,7 @@ struct kona_pm_params {
 	u32 suspend_state;
 	int log_lvl;
 	spinlock_t cstate_lock;
+	struct atomic_notifier_head cstate_nh;
 };
 
 static struct kona_pm_params pm_prms = {
@@ -111,7 +108,6 @@ static int __kona_pm_enter_idle(struct cpuidle_device *dev,
 	int cpu_id = smp_processor_id();
 #endif
 	if (pm_prms.idle_en) {
-
 #ifdef CONFIG_HAS_WAKELOCK
 		if (has_wake_lock(WAKE_LOCK_IDLE))
 			kona_state = cpuidle_get_statedata
@@ -120,6 +116,8 @@ static int __kona_pm_enter_idle(struct cpuidle_device *dev,
 		BUG_ON(kona_state == NULL);
 		local_irq_disable();
 		local_fiq_disable();
+		atomic_notifier_call_chain(&pm_prms.cstate_nh, CSTATE_ENTER,
+				&index);
 		instrument_idle_entry();
 
 /*
@@ -150,7 +148,8 @@ static int __kona_pm_enter_idle(struct cpuidle_device *dev,
 				&cpu_id);
 #endif
 		instrument_idle_exit();
-
+		atomic_notifier_call_chain(&pm_prms.cstate_nh, CSTATE_EXIT,
+				&index);
 		local_irq_enable();
 		local_fiq_enable();
 	}
@@ -236,8 +235,14 @@ __weak int kona_mach_pm_enter(suspend_state_t state)
 
 			time1 = kona_hubtimer_get_counter();
 			pr_info(" Timer value before suspend: %llu", time1);
+
+			atomic_notifier_call_chain(&pm_prms.cstate_nh,
+					CSTATE_ENTER, &pm_prms.suspend_state);
 			suspend->enter(suspend,
 				suspend->params | CTRL_PARAMS_ENTER_SUSPEND);
+			atomic_notifier_call_chain(&pm_prms.cstate_nh,
+					CSTATE_EXIT, &pm_prms.suspend_state);
+
 			time2 = kona_hubtimer_get_counter();
 
 			pr_info(" Timer value when resume: %llu", time2);
@@ -249,9 +254,14 @@ __weak int kona_mach_pm_enter(suspend_state_t state)
 				time_awake = stop_profiler("ccu_root");
 				if (time_awake == OVERFLOW_VAL)
 					printk(KERN_ALERT "counter overflow");
-				else if	(time_awake > 0)
+				else if	(time_awake > 0) {
 					pr_info("System in deepsleep: %llums",
 						time_susp - time_awake);
+					if ((time_susp - time_awake) == 0) {
+						pr_err("Deepsleep broken\n");
+						__WARN();
+					}
+				}
 			}
 #endif /*CONFIG_KONA_PROFILER*/
 
@@ -277,7 +287,6 @@ int kona_pm_cpu_lowpower(void)
 {
 	struct kona_idle_state *suspend =
 		&pm_prms.states[pm_prms.suspend_state];
-
 	BUG_ON(!suspend);
 	if (LOG_LEVEL_ENABLED(KONA_PM_LOG_LVL_FLOW))
 		pr_info("Put cpu to lowpower\n");
@@ -286,10 +295,14 @@ int kona_pm_cpu_lowpower(void)
 	 * In dormant path, we will put this core
 	 * to DORMANT_CORE_DOWN.
 	 */
-	if (suspend->enter) {
+	atomic_notifier_call_chain(&pm_prms.cstate_nh, CSTATE_ENTER,
+				&pm_prms.suspend_state);
+	if (suspend->enter)
 		suspend->enter(suspend,
 			suspend->params | CTRL_PARAMS_OFFLINE_CORE);
-	}
+
+	atomic_notifier_call_chain(&pm_prms.cstate_nh, CSTATE_EXIT,
+				&pm_prms.suspend_state);
 	return 0;
 }
 EXPORT_SYMBOL(kona_pm_cpu_lowpower);
@@ -333,6 +346,18 @@ static void kona_setup_broadcast_timer(void *arg)
 	clockevents_notify(CLOCK_EVT_NOTIFY_BROADCAST_ON, &cpu);
 }
 #endif
+
+int cstate_notifier_register(struct notifier_block *nb)
+{
+	return atomic_notifier_chain_register(&pm_prms.cstate_nh, nb);
+}
+EXPORT_SYMBOL_GPL(cstate_notifier_register);
+
+int cstate_notifier_unregister(struct notifier_block *nb)
+{
+	return atomic_notifier_chain_unregister(&pm_prms.cstate_nh, nb);
+}
+EXPORT_SYMBOL_GPL(cstate_notifier_unregister);
 
 /**
  * kona_pm_init - init function init Kona platform idle/suspend
@@ -417,6 +442,7 @@ int __init kona_pm_init(struct pm_init_param *ip)
 	suspend_set_ops(&kona_pm_ops);
 #endif /*CONFIG_SUSPEND */
 
+	ATOMIC_INIT_NOTIFIER_HEAD(&pm_prms.cstate_nh);
 	return 0;
 }
 
@@ -502,6 +528,18 @@ int kona_pm_set_suspend_state(int state_inx)
 	return 0;
 }
 EXPORT_SYMBOL(kona_pm_set_suspend_state);
+
+int kona_pm_get_num_cstates(void)
+{
+	return pm_prms.num_states;
+}
+EXPORT_SYMBOL(kona_pm_get_num_cstates);
+
+char *kona_pm_get_cstate_name(int state_inx)
+{
+	return kona_idle_driver.states[state_inx].name;
+}
+EXPORT_SYMBOL(kona_pm_get_cstate_name);
 
 #ifdef CONFIG_DEBUG_FS
 
