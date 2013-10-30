@@ -28,7 +28,6 @@
 #include <linux/delay.h>
 #include <linux/highmem.h>
 #include <linux/platform_device.h>
-#include <linux/proc_fs.h>
 #include <linux/mmc/host.h>
 #include <linux/io.h>
 #include <linux/gpio.h>
@@ -74,8 +73,7 @@
 
 #define MAX_PROC_BUF_SIZE           256
 #define MAX_PROC_NAME_SIZE          20
-#define PROC_GLOBAL_PARENT_DIR      "sdhci-pltfm"
-#define PROC_ENTRY_CARD_CTRL        "cardCtrl"
+#define PROC_ENTRY_CARD_CTRL        "card_ctrl"
 
 #define SD_DETECT_GPIO_DEBOUNCE_128MS	128
 
@@ -101,11 +99,6 @@
 
 enum {ENABLED = 0, DISABLED, OFF};
 
-struct procfs {
-	char name[MAX_PROC_NAME_SIZE];
-	struct proc_dir_entry *parent;
-};
-
 struct sdio_dev {
 	atomic_t initialized;
 	struct device *dev;
@@ -116,7 +109,6 @@ struct sdio_dev {
 	int suspended;
 	int runtime_pm_enabled;
 	struct sdio_wifi_gpio_cfg *wifi_gpio;
-	struct procfs proc;
 	struct clk *peri_clk;
 	struct clk *sleep_clk;
 	struct regulator *vddo_sd_regulator;
@@ -133,7 +125,6 @@ static unsigned int clock;
 module_param(clock, uint, 0444);
 #endif
 
-static struct proc_dir_entry *gProcParent;
 static struct sdio_dev *gDevs[SDIO_DEV_TYPE_MAX];
 
 static int sdhci_pltfm_regulator_init(struct sdio_dev *dev, char *reg_name);
@@ -153,6 +144,7 @@ static int sdhci_pltfm_rpm_enabled(struct sdio_dev *dev);
 static int sdhci_rpm_enabled(struct sdhci_host *host);
 static int sdhci_clk_enable(struct sdhci_host *host, int enable);
 static void sdhci_print_critical(struct sdhci_host *host);
+
 /*
  * Get the base clock. Use central clock source for now. Not sure if different
  * clock speed to each dev is allowed
@@ -327,105 +319,44 @@ static int bcm_kona_sd_card_emulate(struct sdio_dev *dev, int insert)
 	return 0;
 }
 
-static int
-proc_card_ctrl_read(char *buffer, char **start, off_t off, int count,
-		    int *eof, void *data)
+/* Reads 1 when SD/MMC card is inserted, 0 otherwise */
+static ssize_t card_ctrl_show(struct device *dev, struct device_attribute *attr,
+		char *buf)
 {
-	unsigned int len = 0;
-	struct sdio_dev *dev = (struct sdio_dev *)data;
-	struct sdhci_host *host = dev->host;
+	struct sdio_dev *sdio = dev_get_drvdata(dev);
+	struct sdhci_host *host = sdio->host;
 
-	if (off > 0)
-		return 0;
-
-	len += scnprintf(buffer + len, PAGE_SIZE, "SD/MMC card is %s\n",
-		       sdhci_readl(host,
-				   KONA_SDHOST_CORESTAT) & KONA_SDHOST_CD_SW ?
-		       "INSERTED" : "NOT INSERTED");
-
-	return len;
+	return scnprintf(buf, PAGE_SIZE, "%d",
+			sdhci_readl(host, KONA_SDHOST_CORESTAT)
+			& KONA_SDHOST_CD_SW ? 1 : 0);
 }
 
-static int
-proc_card_ctrl_write(struct file *file, const char __user * buffer,
-		     unsigned long count, void *data)
+/* Write 1 emulates card insert, 0 emulate card remove */
+static ssize_t card_ctrl_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
 {
-	int rc, insert;
-	struct sdio_dev *dev = (struct sdio_dev *)data;
-	unsigned char kbuf[MAX_PROC_BUF_SIZE];
+	struct sdio_dev *sdio = dev_get_drvdata(dev);
+	int insert;
 
-	if (count > MAX_PROC_BUF_SIZE)
-		count = MAX_PROC_BUF_SIZE;
-
-	rc = copy_from_user(kbuf, buffer, count);
-	if (rc) {
-		pr_err("copy_from_user failed status=%d\n", rc);
-		return -EFAULT;
-	}
-
-	if (sscanf(kbuf, "%d", &insert) != 1) {
-		pr_err("echo <insert> > %s\n", PROC_ENTRY_CARD_CTRL);
-		return count;
+	if (sscanf(buf, "%d", &insert) != 1) {
+		pr_err("Error: Invalid argument.\n");
+		pr_err("Usage: echo <insert> > %s, where <insert> is 1 or 0.\n",
+		       PROC_ENTRY_CARD_CTRL);
+		return -EINVAL;
 	}
 
 	if (insert) {
-		bcm_kona_sd_card_emulate(dev, 1);
+		bcm_kona_sd_card_emulate(sdio, 1);
 		pr_info("Emulated card insert!\n");
 	} else {
-		bcm_kona_sd_card_emulate(dev, 0);
+		bcm_kona_sd_card_emulate(sdio, 0);
 		pr_info("Emulated card remove!\n");
 	}
 
 	return count;
 }
 
-static const struct file_operations proc_card_ctrl_fops = {
-	.read	=	proc_card_ctrl_read,
-	.write	=	proc_card_ctrl_write,
-};
-
-/*
- * Initialize the proc entries
- */
-static int proc_init(struct platform_device *pdev)
-{
-	int rc;
-	struct sdio_dev *dev = platform_get_drvdata(pdev);
-	struct procfs *proc = &dev->proc;
-	struct proc_dir_entry *proc_card_ctrl;
-
-	snprintf(proc->name, sizeof(proc->name), "%s%d", DEV_NAME, pdev->id);
-
-	proc->parent = proc_mkdir(proc->name, gProcParent);
-	if (proc->parent == NULL)
-		return -ENOMEM;
-
-	proc_card_ctrl =
-		proc_create_data(PROC_ENTRY_CARD_CTRL, 0644,  proc->parent,
-				&proc_card_ctrl_fops,
-				dev);
-	if (proc_card_ctrl == NULL) {
-		rc = -ENOMEM;
-		goto proc_exit;
-	}
-	return 0;
-proc_exit:
-	remove_proc_entry(proc->name, gProcParent);
-
-	return rc;
-}
-
-/*
- * Terminate and remove the proc entries
- */
-static void proc_term(struct platform_device *pdev)
-{
-	struct sdio_dev *dev = platform_get_drvdata(pdev);
-	struct procfs *proc = &dev->proc;
-
-	remove_proc_entry(PROC_ENTRY_CARD_CTRL, proc->parent);
-	remove_proc_entry(proc->name, gProcParent);
-}
+static DEVICE_ATTR(card_ctrl, 0644, card_ctrl_show, card_ctrl_store);
 
 /*
  * SD card detection interrupt handler
@@ -1057,7 +988,7 @@ static int sdhci_pltfm_probe(struct platform_device *pdev)
 	if (ret)
 		goto err_reset;
 
-	ret = proc_init(pdev);
+	ret = device_create_file(&pdev->dev, &dev_attr_card_ctrl);
 	if (ret)
 		goto err_rm_host;
 
@@ -1075,7 +1006,7 @@ static int sdhci_pltfm_probe(struct platform_device *pdev)
 		if (ret) {
 			dev_err(&pdev->dev,
 				"unable to emulate card insertion\n");
-			goto err_proc_term;
+			goto err_rm_sysfs;
 		}
 		pr_info("%s: card insert emulated!\n", devname);
 	} else if (dev->devtype == SDIO_DEV_TYPE_SDMMC && dev->cd_gpio >= 0) {
@@ -1086,7 +1017,7 @@ static int sdhci_pltfm_probe(struct platform_device *pdev)
 		if (!dev->cd_int_wake_lock_name) {
 			dev_err(&pdev->dev,
 				"error allocating mem for wake_lock_name\n");
-			goto err_proc_term;
+			goto err_rm_sysfs;
 		}
 
 		wake_lock_init(&dev->cd_int_wake_lock, WAKE_LOCK_SUSPEND,
@@ -1098,7 +1029,7 @@ static int sdhci_pltfm_probe(struct platform_device *pdev)
 		if (ret < 0) {
 			dev_err(&pdev->dev, "Unable to request GPIO pin %d\n",
 				dev->cd_gpio);
-			goto err_proc_term;
+			goto err_rm_sysfs;
 		}
 		gpio_direction_input(dev->cd_gpio);
 
@@ -1177,8 +1108,8 @@ err_free_cd_gpio:
 	if (dev->devtype == SDIO_DEV_TYPE_SDMMC && dev->cd_gpio >= 0)
 		gpio_free(dev->cd_gpio);
 
-err_proc_term:
-	proc_term(pdev);
+err_rm_sysfs:
+	device_remove_file(&pdev->dev, &dev_attr_card_ctrl);
 
 err_rm_host:
 	sdhci_remove_host(host, 0);
@@ -1246,7 +1177,7 @@ static int sdhci_pltfm_remove(struct platform_device *pdev)
 		regulator_put(dev->vdd_sdxc_regulator);
 	}
 
-	proc_term(pdev);
+	device_remove_file(&pdev->dev, &dev_attr_card_ctrl);
 
 	if (sdhci_pltfm_rpm_enabled(dev)) {
 		pm_runtime_get_sync(dev->dev);
@@ -1468,16 +1399,9 @@ static int __init sdhci_drv_init(void)
 {
 	int rc;
 
-	gProcParent = proc_mkdir(PROC_GLOBAL_PARENT_DIR, NULL);
-	if (gProcParent == NULL) {
-		pr_err("%s: sdhci platform procfs install failed\n", __func__);
-		return -ENOMEM;
-	}
-
 	rc = platform_driver_register(&sdhci_pltfm_driver);
 	if (rc < 0) {
 		pr_err("%s: sdhci_drv_init failed\n", __func__);
-		remove_proc_entry(PROC_GLOBAL_PARENT_DIR, NULL);
 		return rc;
 	}
 
@@ -1486,7 +1410,6 @@ static int __init sdhci_drv_init(void)
 
 static void __exit sdhci_drv_exit(void)
 {
-	remove_proc_entry(PROC_GLOBAL_PARENT_DIR, NULL);
 	platform_driver_unregister(&sdhci_pltfm_driver);
 }
 
