@@ -1985,7 +1985,8 @@ wl_cfgp2p_down(struct wl_priv *wl)
 	wdev = ndev_to_wdev(ndev);
 #endif /* WL_CFG80211_P2P_DEV_IF */
 
-	wl_cfgp2p_cancel_listen(wl, ndev, wdev, TRUE);
+	if (wdev)
+		wl_cfgp2p_cancel_listen(wl, ndev, wdev, TRUE);
 	for (i = 0; i < P2PAPI_BSSCFG_MAX; i++) {
 			index = wl_to_p2p_bss_bssidx(wl, i);
 			if (index != WL_INVALID)
