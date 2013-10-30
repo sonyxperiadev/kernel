@@ -107,6 +107,11 @@ struct kona_timer {
 int kona_timer_modules_init(void);
 
 /*
+ * Obtain Kona timer clocks and store in its internal data structure
+ */
+void kona_timer_clk_setup(void);
+
+/*
  * kona_timer_module_set_rate - Set the speed in which a timer module should count
  * name - Name of the Timer to configure
  * rate - Speed 
@@ -171,6 +176,22 @@ int kona_timer_disable_and_clear(struct kona_timer *kt);
  * kt - The timer context to be stopped.
  */
 int kona_timer_stop(struct kona_timer *kt);
+
+/*
+ * kona_timer_suspend - Suspend the timer by shutting off its clock source.
+ *
+ * kt - Timer context.
+ *
+ */
+int kona_timer_suspend(struct kona_timer *kt);
+
+/*
+ * kona_timer_resume - Resume the timer by re-enabling its clock source.
+ *
+ * kt - Timer context.
+ *
+ */
+int kona_timer_resume(struct kona_timer *kt);
 
 /*
  * kona_timer_free - Release the timer, after this call the timer can be used
