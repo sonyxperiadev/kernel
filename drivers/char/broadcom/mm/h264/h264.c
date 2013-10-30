@@ -112,10 +112,10 @@ int __init mm_h264_init(void)
 	dvfs_param.P1 = 80;
 	dvfs_param.P1L = 0;
 	dvfs_param.T2 = 500;
-	dvfs_param.P2 = 80;
-	dvfs_param.P2L = 45;
-	dvfs_param.T3 = 1000;
-	dvfs_param.P3L = 45;
+	dvfs_param.P2 = 85;
+	dvfs_param.P2L = 50;
+	dvfs_param.T3 = 750;
+	dvfs_param.P3L = 65;
 	dvfs_param.dvfs_bulk_job_cnt = 0;
 
 	h264_device->fmwk_handle = mm_fmwk_register(H264_DEV_NAME,
