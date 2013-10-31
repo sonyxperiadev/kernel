@@ -1242,6 +1242,7 @@ static inline void __disable_channel(void __iomem *reg_base, int ch_num)
 static inline unsigned long notrace __get_counter(void __iomem *reg_base)
 {
 #define KONA_MAX_REPEAT_TIMES 100
+#define KONA_MAX_COUNTER_DIFF 1
 	unsigned long prev;
 	unsigned long cur, read_count;
 
@@ -1261,7 +1262,7 @@ static inline unsigned long notrace __get_counter(void __iomem *reg_base)
 		prev = readl(reg_base + KONA_GPTIMER_STCLO_OFFSET);
 		do {
 			cur = readl(reg_base + KONA_GPTIMER_STCLO_OFFSET);
-			if (cur != prev)
+			if (cur - prev > KONA_MAX_COUNTER_DIFF)
 				prev = cur;
 			else
 				break;
