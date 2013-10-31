@@ -114,6 +114,50 @@ static void kona_tick_set_mode(enum clock_event_mode mode,
 
 #ifdef CONFIG_LOCAL_TIMERS
 
+#ifdef CONFIG_1MHZ_SLV_SYSTEM_TIMER
+#define SLV_TIMER_RATE_HZ 1000000
+
+static int slv_timer_rate_is_set;
+static struct kona_timer *slv_timer;
+
+static cycle_t clksrc_read(struct clocksource *cs)
+{
+	cycle_t count = 0;
+
+	count = kona_timer_get_counter(slv_timer);
+	return count;
+}
+
+static void clksrc_suspend(struct clocksource *cs)
+{
+	kona_timer_suspend(slv_timer);
+}
+
+static void clksrc_resume(struct clocksource *cs)
+{
+	kona_timer_resume(slv_timer);
+}
+
+/*
+ * This is a dummy clock source that has no real usage except in system level
+ * suspend/resume, the suspend/resume callback in this dummy clock source can
+ * be used to disable/enable the 1 MHz slave timer clock
+ *
+ * Purposely drop to rating to 1 so the kernel time keeping system won't use
+ * it
+ */
+static struct clocksource dummy_clksrc = {
+	.name = "dummy_clksrc",
+	.rating = 1,
+	.read = clksrc_read,
+	.mask = CLOCKSOURCE_MASK(32),
+	.shift = 16,
+	.flags = 0,
+	.suspend = clksrc_suspend,
+	.resume = clksrc_resume,
+};
+#endif
+
 /*
  * Setup the local clock events for a CPU.
  */
@@ -124,8 +168,30 @@ int __cpuinit local_timer_setup(struct clock_event_device *evt)
 	struct timer_ch_cfg config;
 
 	pr_info("local_timer_setup called for %d\n", cpu);
-	/* allocate an AON timer channel as local tick timer
-	 */
+
+#ifdef CONFIG_1MHZ_SLV_SYSTEM_TIMER
+	if (!slv_timer_rate_is_set) {
+		if (kona_timer_module_set_rate("slave-timer",
+					SLV_TIMER_RATE_HZ)) {
+			pr_err("Failed to set slave-timer rate to %d\n",
+					SLV_TIMER_RATE_HZ);
+			return -EFAULT;
+		}
+		slv_timer_rate_is_set = 1;
+
+		/* use slave-timer channel 0 as a dummy clock source device */
+		slv_timer = kona_timer_request("slave-timer", 0);
+		if (!slv_timer) {
+			pr_err("Failed to allocate slave timer channel 0\n");
+			return -EFAULT;
+		}
+
+		dummy_clksrc.mult = clocksource_hz2mult(SLV_TIMER_RATE_HZ,
+				dummy_clksrc.shift);
+		clocksource_register(&dummy_clksrc);
+	}
+#endif
+
 	kona_td = (struct kona_td)__get_cpu_var(percpu_kona_td);
 
 	if (!kona_td.allocated) {
@@ -172,7 +238,11 @@ int __cpuinit local_timer_setup(struct clock_event_device *evt)
 	evt->features = CLOCK_EVT_FEAT_ONESHOT;
 	evt->rating = 250;
 	evt->shift = 32;
+#ifdef CONFIG_1MHZ_SLV_SYSTEM_TIMER
+	evt->mult = div_sc(SLV_TIMER_RATE_HZ, NSEC_PER_SEC, evt->shift);
+#else
 	evt->mult = div_sc(CLOCK_TICK_RATE, NSEC_PER_SEC, evt->shift);
+#endif
 	evt->max_delta_ns = clockevent_delta2ns(MAX_KONA_COUNT_CLOCK, evt);
 	/* There is MIN_KONA_DELTA_CLOCK clock cycles delay in HUB Timer by
 	 * ASIC limitation. When min_delta_ns set N, real requested load value

@@ -54,6 +54,7 @@
 #include <plat/pi_mgr.h>
 #include <plat/cpu.h>
 #include "pm_params.h"
+#include <mach/kona_timer.h>
 
 #ifdef CONFIG_DEBUG_FS
 /*GPIO0-15/ debug bus select values*/
@@ -5807,7 +5808,7 @@ static struct peri_clk CLK_NAME(timers) = {
     },
 	.src = {
 		.count = ARRAY_SIZE(timers_peri_clk_src_list),
-		.src_inx = 1,
+		.src_inx = 0,
 		.list = timers_peri_clk_src_list,
 	},
     .soft_reset_offset	= KPS_RST_MGR_REG_APB1_SOFTRST_OFFSET,
@@ -7956,6 +7957,8 @@ int __init __clock_init(void)
 
 	if (clk_register(hawaii_clk_tbl, ARRAY_SIZE(hawaii_clk_tbl)))
 		printk(KERN_INFO "%s clk_register failed !!!!\n", __func__);
+
+	kona_timer_clk_setup();
 
 #if defined(CONFIG_BCM_HWCAPRI_1605_A2)
 	a9_pll = clk_get(NULL, A9_PLL_CLK_NAME_STR);
