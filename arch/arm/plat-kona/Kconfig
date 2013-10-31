@@ -51,6 +51,16 @@ config GP_TIMER_COMPARATOR_LOAD_DELAY
         depends on ARCH_RHEA || ARCH_ISLAND || ARCH_HAWAII || ARCH_JAVA
         default y
 
+config 1MHZ_SLV_SYSTEM_TIMER
+	bool "Use 1MHz slave timer as per CPU local timer"
+	depends on ARCH_HAWAII && LOCAL_TIMERS
+	default y
+	help
+	  Say Y if you want to use the 1 MHz slave timer as the per CPU local timer
+	  The 1 MHz slave timer will produce a better performance compared to the
+	  32 KHz AON timer
+	  The 1 MHz slave timer helps to reduce timer scheduling overhead
+
 config KONA_DCACHE_INVALIDATION
 	bool "Have Linux invalidate D-Cache"
         default y
