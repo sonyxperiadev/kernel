@@ -610,37 +610,42 @@ static unsigned long apanic_partition_start;
 static unsigned long apanic_partition_size;
 #endif
 
+struct partition_info {
+	sector_t size;
+	char volname[PARTITION_META_INFO_VOLNAMELTH];
+};
+
 static struct gpt_info {
-	struct parsed_partitions partitions;
+	struct partition_info *partitions;
 	int num_of_partitions;
 	int erase_size;
 } gpt_info;
-#warning "Porting hack: Tobe fixed"
-#if 0
-int emmc_partition_read_proc(char *page, char **start, off_t off,
-				int count, int *eof, void *data)
-#endif
-int emmc_partition_read_proc(struct file *file, char __user *p,
-				size_t count,  loff_t *data)
+
+static int emmc_partition_show(struct seq_file *m, void *v)
 {
 	int i;
-	char *page = p;
 
-	return 0;
-
-	p += sprintf(p, "dev:	     size	erasesize	name\n");
+	seq_puts(m, "dev:        size     erasesize name\n");
 	for (i = 0; i < gpt_info.num_of_partitions; i++) {
-		p += sprintf(p, "mmcblk0p%i: %08llx %08x \"%s\"\n", i + 1,
-				(u64)gpt_info.partitions.parts[i].size,
+		seq_printf(m, "mmcblk0p%-2i: %08llx %08x  \"%s\"\n", i + 1,
+				(u64)gpt_info.partitions[i].size,
 				gpt_info.erase_size,
-				gpt_info.partitions.parts[i].info.volname);
+				gpt_info.partitions[i].volname);
 	}
 
-	return p - page;
+	return 0;
+}
+
+static int emmc_partition_open(struct inode *indoe, struct file *file)
+{
+	return single_open(file, emmc_partition_show, NULL);
 }
 
 static const struct file_operations emmc_partition_fops = {
-	.read	=	emmc_partition_read_proc,
+	.open		= emmc_partition_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
 };
 
 /**
@@ -684,9 +689,18 @@ int efi_partition(struct parsed_partitions *state)
 
 	pr_debug("GUID Partition Table is valid!  Yea!\n");
 
-//	proc_create_data("emmc", 0666, NULL, &emmc_partition_fops, NULL);
-//	gpt_info.num_of_partitions = le32_to_cpu(gpt->num_partition_entries);
-//	gpt_info.erase_size = bdev_erase_size(state->bdev) * ssz;
+	proc_create("emmc", 0666, NULL, &emmc_partition_fops);
+	gpt_info.num_of_partitions = le32_to_cpu(gpt->num_partition_entries);
+	gpt_info.erase_size = bdev_erase_size(state->bdev) * ssz;
+
+	/*
+	 * Not certain if there is a chance this function is called again with
+	 * a different GPT. In case there is, free previously allocated memory
+	 */
+	kfree(gpt_info.partitions);
+
+	gpt_info.partitions = kzalloc(gpt_info.num_of_partitions
+			* sizeof(*gpt_info.partitions), GFP_KERNEL);
 
 	for (i = 0; i < le32_to_cpu(gpt->num_partition_entries) && i < state->limit-1; i++) {
 		int partition_name_len;
@@ -697,7 +711,7 @@ int efi_partition(struct parsed_partitions *state)
 		u64 size = le64_to_cpu(ptes[i].ending_lba) -
 			   le64_to_cpu(ptes[i].starting_lba) + 1ULL;
 
-//		gpt_info.partitions.parts[i].size = size * ssz;
+		gpt_info.partitions[i].size = size * ssz;
 
 		if (!is_pte_valid(&ptes[i], last_lba(state->bdev)))
 			continue;
@@ -737,9 +751,8 @@ int efi_partition(struct parsed_partitions *state)
 			if (c && !isprint(c))
 				c = '!';
 			info->volname[label_count] = c;
-//			if (label_count <= partition_name_len)
-//				gpt_info.partitions.parts[i].info.
-//					volname[label_count] = c;
+			if (label_count <= partition_name_len)
+				gpt_info.partitions[i].volname[label_count] = c;
 			label_count++;
 		}
 		state->parts[i + 1].has_info = true;
