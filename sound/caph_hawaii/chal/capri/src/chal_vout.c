@@ -802,8 +802,6 @@ void chal_audio_earpath_set_dac_pwr(CHAL_HANDLE handle, cUInt16 enable)
 
 		reg_value = BRCM_READ_REG(base, AUDIOH_HS_PWR);
 		reg_value &= ~(AUDIOH_HS_PWR_AUDIOTX_HS_REF_PD_MASK);
-		reg_value &= ~(AUDIOH_HS_PWR_AUDIOTX_HS_DACR_PD_MASK);
-		reg_value &= ~(AUDIOH_HS_PWR_AUDIOTX_HS_DACL_PD_MASK);
 		BRCM_WRITE_REG(base, AUDIOH_HS_PWR, reg_value);
 
 		/* Not only HS but also IHF. This should be fixed in A1 */
@@ -831,8 +829,6 @@ void chal_audio_earpath_set_dac_pwr(CHAL_HANDLE handle, cUInt16 enable)
 		if (!chal_audio_isHSpath_active()) {
 			reg_value = BRCM_READ_REG(base, AUDIOH_HS_PWR);
 			reg_value |= AUDIOH_HS_PWR_AUDIOTX_HS_REF_PD_MASK;
-			reg_value |= AUDIOH_HS_PWR_AUDIOTX_HS_DACR_PD_MASK;
-			reg_value |= AUDIOH_HS_PWR_AUDIOTX_HS_DACL_PD_MASK;
 			BRCM_WRITE_REG(base, AUDIOH_HS_PWR, reg_value);
 		}
 
