@@ -150,13 +150,13 @@ static int mm_pi_enable(struct pi *pi, int enable)
 
 #ifdef CONFIG_MM_FREEZE_VAR500M_ERRATUM
 	if (is_pm_erratum(ERRATUM_MM_FREEZE_VAR500M) && enable)
-		var500m_clk_en_override(true);
+		mm_varvdd_clk_en_override(true);
 #endif
 	ret = gen_pi_ops.enable(pi, enable);
 
 #ifdef CONFIG_MM_FREEZE_VAR500M_ERRATUM
 	if (is_pm_erratum(ERRATUM_MM_FREEZE_VAR500M) && !enable)
-		var500m_clk_en_override(false);
+		mm_varvdd_clk_en_override(false);
 #endif
 
 #ifdef CONFIG_PLL1_8PHASE_OFF_ERRATUM

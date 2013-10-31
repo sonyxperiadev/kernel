@@ -7255,24 +7255,27 @@ int root_ccu_clk_init(struct clk* clk)
 
 	return 0;
 }
+
 #ifdef CONFIG_MM_FREEZE_VAR500M_ERRATUM
-int var500m_clk_en_override(int enable)
+int mm_varvdd_clk_en_override(int enable)
 {
-	u32 reg_val = 0;
+	u32 reg_val;
+	u32 mask;
 
 	reg_val = readl(KONA_ROOT_CLK_VA +
 			ROOT_CLK_MGR_REG_VARVDD_CLKEN_OVERRIDE_OFFSET);
-	if (enable) {
-		reg_val |=
-		ROOT_CLK_MGR_REG_VARVDD_CLKEN_OVERRIDE_VAR_500M_VARVDD_SW_EN_MASK;
-	} else {
-		reg_val &=
-		~ROOT_CLK_MGR_REG_VARVDD_CLKEN_OVERRIDE_VAR_500M_VARVDD_SW_EN_MASK;
-	}
+#ifdef CONFIG_MM_312M_SOURCE_CLK
+	mask = ROOT_CLK_MGR_REG_VARVDD_CLKEN_OVERRIDE_VAR_312M_VARVDD_SW_EN_MASK;
+#else
+	mask = ROOT_CLK_MGR_REG_VARVDD_CLKEN_OVERRIDE_VAR_500M_VARVDD_SW_EN_MASK;
+#endif
+	if (enable)
+		reg_val |= mask;
+	else
+		reg_val &= ~mask;
+
 	writel(reg_val, KONA_ROOT_CLK_VA +
 		ROOT_CLK_MGR_REG_VARVDD_CLKEN_OVERRIDE_OFFSET);
-
-
 	return 0;
 }
 #endif

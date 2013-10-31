@@ -459,9 +459,15 @@ Int32 DSI_Init(DISPDRV_INFO_T *info, DISPDRV_HANDLE_T *handle)
 		pPanel->dsi_cfg = &DispDrv_dsiCfg;
 		DispDrv_dsiCfg.dlCount = info->lanes;
 		DispDrv_dsiCfg.phy_timing = info->phy_timing;
+
+#ifdef CONFIG_MM_312M_SOURCE_CLK
+/* Move the clock speed to 104Mhz to be derived from 312 with a div 3 */
+		DispDrv_dsiCfg.escClk.clkIn_MHz = 312;
+		DispDrv_dsiCfg.escClk.clkInDiv = 3;
+#else
 		DispDrv_dsiCfg.escClk.clkIn_MHz = 500;
 		DispDrv_dsiCfg.escClk.clkInDiv = 5;
-
+#endif
 		DispDrv_dsiCfg.hsBitClk.clkIn_MHz = info->hs_bps / DSI_1MHZ;
 		WARN_ON(DispDrv_dsiCfg.hsBitClk.clkIn_MHz > 2400);
 		while (DispDrv_dsiCfg.hsBitClk.clkIn_MHz < 600)

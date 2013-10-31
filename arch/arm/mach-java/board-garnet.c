@@ -418,8 +418,14 @@ static struct regulator *d_3v0_mmc1_vcc;
 #define SENSOR_1_GPIO_PWRDN             (005)
 #define SENSOR_1_GPIO_RST               (121)
 
+#ifdef CONFIG_MM_312M_SOURCE_CLK
+/* Move the clock speed to 104Mhz to be derived from 312 with a div 3 */
+#define CSI0_LP_FREQ					(104000000)
+#define CSI1_LP_FREQ					(104000000)
+#else
 #define CSI0_LP_FREQ					(100000000)
 #define CSI1_LP_FREQ					(100000000)
+#endif
 
 struct cameraCfg_s {
 	char *name;

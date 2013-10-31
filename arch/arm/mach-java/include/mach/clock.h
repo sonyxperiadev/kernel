@@ -753,7 +753,7 @@ enum {
 	ROOT_CCU_PLL1A,
 };
 #ifdef CONFIG_MM_FREEZE_VAR500M_ERRATUM
-int var500m_clk_en_override(int enable);
+int mm_varvdd_clk_en_override(int enable);
 #endif
 int mm_ccu_set_pll_select(u32 clk_id, u32 value);
 int clk_set_pll_pwr_on_idle(int pll_id, int enable);

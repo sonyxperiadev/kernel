@@ -103,9 +103,21 @@ int __init mm_h264_init(void)
 		}
 	}
 
-	/*Initialize generice params*/
+	/*Initialize params*/
 	dvfs_param.ON = 1;
 	dvfs_param.MODE = TURBO;
+#ifdef CONFIG_MM_312M_SOURCE_CLK
+	dvfs_param.T0 = 100;
+	dvfs_param.P0 = 90;
+	dvfs_param.T1 = 200;
+	dvfs_param.P1 = 90;
+	dvfs_param.P1L = 60;
+	dvfs_param.T2 = 500;
+	dvfs_param.P2 = 97;
+	dvfs_param.P2L = 60;
+	dvfs_param.T3 = 750;
+	dvfs_param.P3L = 63;
+#else
 	dvfs_param.T0 = 0;
 	dvfs_param.P0 = 0;
 	dvfs_param.T1 = 300;
@@ -116,6 +128,7 @@ int __init mm_h264_init(void)
 	dvfs_param.P2L = 50;
 	dvfs_param.T3 = 750;
 	dvfs_param.P3L = 65;
+#endif
 	dvfs_param.dvfs_bulk_job_cnt = 0;
 
 	h264_device->fmwk_handle = mm_fmwk_register(H264_DEV_NAME,
