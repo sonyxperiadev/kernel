@@ -475,9 +475,6 @@ void bcm_hsotgctrl_wakeup_core(void)
 
 	bcm_hsotgctrl_handle->usb_active = true;
 
-	/* Enable OTG AHB clock */
-	bcm_hsotgctrl_en_clock(true);
-
 	/* Disable wakeup interrupt */
 	bcm_hsotgctrl_phy_wakeup_condition(false);
 
@@ -682,7 +679,6 @@ static int __devinit bcm_hsotgctrl_probe(struct platform_device *pdev)
 
 	/* Init the PHY */
 	hsotgctrl_drvdata->usb_active = true;
-	bcm_hsotgctrl_en_clock(true);
 
 	mdelay(HSOTGCTRL_STEP_DELAY_IN_MS);
 
