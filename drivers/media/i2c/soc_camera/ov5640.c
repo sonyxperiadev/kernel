@@ -2012,8 +2012,6 @@ static int ov5640_s_stream(struct v4l2_subdev *sd, int enable)
 		return ret;
 
 	if (enable) {
-		runmode = CAM_RUNNING_MODE_PREVIEW;
-		ov5640_config_preview(sd);
 		int delayMs = 50;
 		if (CAM_RUNNING_MODE_PREVIEW == runmode) {
 			/* need more delay to get stable
@@ -2032,7 +2030,6 @@ static int ov5640_s_stream(struct v4l2_subdev *sd, int enable)
 #endif
 		msleep(delayMs);
 	} else {
-		runmode = CAM_RUNNING_MODE_NOTREADY;
 		/* Stop Streaming, Power Down */
 		/* ret = ov5640_reg_writes(client, ov5640_power_down); */
 		ov5640_reg_write(client, 0x4202, 0x0f);
