@@ -138,11 +138,8 @@ static int DriverProbe(struct platform_device *pdev)
 	int err;
 
 	aTrace(LOG_ALSA_INTERFACE, "ALSA-CAPH Driver Probe:\n");
-	aError("ALSA-CAPH Driver Probe:\n");
 
 	aTrace(LOG_ALSA_INTERFACE, "\n %lx:DriverProbe\n", jiffies);
-	aError("\n %lx:DriverProbe\n", jiffies);
-
 
 	if (pdev->dev.platform_data != NULL) {
 		/* Copy over platform specific data */
@@ -152,14 +149,11 @@ static int DriverProbe(struct platform_device *pdev)
 		/* Set the platform configuration data */
 		AUDCTRL_PlatCfgSet(&sgCaphPlatInfo.aud_ctrl_plat_cfg);
 	}
-	aError("After platfor_data != NULL CHECK");
 
 	err = -ENODEV;
 	err = -ENOMEM;
 	err = snd_card_create(SNDRV_DEFAULT_IDX1, SNDRV_DEFAULT_STR1,
 			      THIS_MODULE, sizeof(brcm_alsa_chip_t), &card);
-
-	aError("After snd_card_create");
 
 	if (!card) {
 		aError("card is not created!!!!!!!!");
@@ -173,7 +167,6 @@ static int DriverProbe(struct platform_device *pdev)
 	strncpy(card->driver, pdev->dev.driver->name, sizeof(card->driver) - 1);
 	/* add Null terminating character */
 	card->driver[sizeof(card->driver) - 1] = '\0';
-	aError("Before PcmDeviceNew");
 	/* PCM interface */
 	err = PcmDeviceNew(card);
 	if (err) {
@@ -181,7 +174,6 @@ static int DriverProbe(struct platform_device *pdev)
 		goto err;
 		}
 	/* CTRL interface */
-	aError("Before ControlDeviceNew");
 	err = ControlDeviceNew(card);
 	if (err) {
 		aError("failed ControlDeviceNew");
@@ -191,11 +183,6 @@ static int DriverProbe(struct platform_device *pdev)
 	/*err = HwdepDeviceNew(card);*/
 
 	voipchrdevpvtdata.card = card;
-
-	/*aError("M:caphmod:card = 0x%x ,&voipchrdevpvtdata = 0x%x,"
-		"voipchrdevpvtdata.card = 0x%x\n",
-		(unsigned int)card, (unsigned int)&voipchrdevpvtdata,
-		(unsigned int)voipchrdevpvtdata.card); */
 
 	err = voipdevicecreate(&voipchrdevpvtdata);
 	if (err) {
@@ -1003,17 +990,14 @@ static const struct file_operations bcmlog_fops = {
 static void vibra_enable_set_timeout(struct timed_output_dev *sdev,
 	int timeout)
 {
-	aError("Vibrator: Set duration: %dms\n", timeout);
 	BRCM_AUDIO_Param_Vibra_t parm_vibra;
 	parm_vibra.strength = 100;   /* Strength*/
 	parm_vibra.direction = 0;     /* Direction*/
 	parm_vibra.duration = timeout; /* timeout_ms; */
 	if (timeout != 0) {
-		aError("enable vibra");
 		AUDIO_Ctrl_Trigger(ACTION_AUD_EnableByPassVibra,
 		&parm_vibra, NULL, 0);
 	} else {
-		aError("disable vibra");
 		AUDIO_Ctrl_Trigger(ACTION_AUD_DisableByPassVibra,
 		&parm_vibra, NULL, 0);
 	}
@@ -1027,7 +1011,6 @@ static int vibra_get_remaining_time(struct timed_output_dev *sdev)
 int vibra_init()
 {
 	int ret;
-	aError("vibra_enable");
 	vibra_timed_dev.name = "vibrator";
 	vibra_timed_dev.enable = vibra_enable_set_timeout;
 	vibra_timed_dev.get_time = vibra_get_remaining_time;
