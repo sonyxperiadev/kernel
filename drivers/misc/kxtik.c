@@ -217,11 +217,6 @@ static irqreturn_t kxtik_isr(int irq, void *dev)
 void kxtik1004_timer_func(unsigned long data)
 {
 	struct kxtik_data *tik = (struct kxtik_data *) data;
-	if (!tik || !tik->irq_workqueue) {
-		printk(KERN_ERR
-			"kxtik1004_timer_func:error kxtik_data is %x\n", tik);
-		return;
-	}
 	queue_work(tik->irq_workqueue, &tik->irq_work);
 	mod_timer(&kxtik_wakeup_timer,
 		jiffies+msecs_to_jiffies(tik->poll_interval));
@@ -808,7 +803,7 @@ static int __devinit kxtik_probe(struct i2c_client *client,
 	tik->irq_workqueue = create_workqueue("KXTIK Workqueue");
 	if (unlikely(!tik->irq_workqueue)) {
 		printk(KERN_ALERT "create KXTIK Workqueue failed\n");
-		goto err_pdata_exit;
+		goto err_destroy_input;
 	}
 
 	INIT_WORK(&tik->irq_work, kxtik_irq_work);
@@ -824,7 +819,7 @@ static int __devinit kxtik_probe(struct i2c_client *client,
 					   "kxtik-irq", tik);
 		if (err) {
 			FUNCDBG("request irq failed: %d\n", err);
-			goto err_destroy_input;
+			goto err_destroy_mutex;
 		}
 	} else {
 		printk(KERN_ALERT "__kxtik is in polling mode__\n");
@@ -860,9 +855,12 @@ static int __devinit kxtik_probe(struct i2c_client *client,
 err_read:
 err_free_irq:
 	FUNCDBG("error :err_free_irq\n");
-	destroy_workqueue(tik->irq_workqueue);
+	del_timer_sync(&kxtik_wakeup_timer);
 	if (client->irq)
 		free_irq(client->irq, tik);
+err_destroy_mutex:
+	mutex_destroy(&tik->data_mutex);
+	destroy_workqueue(tik->irq_workqueue);
 err_destroy_input:
 	FUNCDBG("error :err_destroy_input\n");
 	input_unregister_device(tik->input_dev);
@@ -877,7 +875,6 @@ err_pdata_power_off:
 	kxtik_device_power_off(tik);
 err_free_mem:
 	FUNCDBG("error :err_free_mem\n");
-	mutex_destroy(&tik->data_mutex);
 	kfree(tik);
 	return err;
 }
