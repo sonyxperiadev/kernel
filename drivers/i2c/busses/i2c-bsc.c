@@ -1227,7 +1227,7 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[], int num)
 #endif
 
 	mutex_lock(&dev->dev_lock);
-#if defined(CONFIG_ARCH_JAVA) || defined(CONFIG_ARCH_HAWAII)
+#if defined(CONFIG_ARCH_JAVA)
 	pause_nohz();
 #endif
 	bsc_enable_clk(dev);
@@ -1377,7 +1377,7 @@ out1:
 	bsc_enable_pad_output((uint32_t)dev->virt_base, false);
 	bsc_disable_clk(dev);
 
-#if defined(CONFIG_ARCH_JAVA) || defined(CONFIG_ARCH_HAWAII)
+#if defined(CONFIG_ARCH_JAVA)
 	resume_nohz();
 #endif
 	mutex_unlock(&dev->dev_lock);
