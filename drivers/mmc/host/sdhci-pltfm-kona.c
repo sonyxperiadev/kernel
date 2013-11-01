@@ -412,7 +412,7 @@ static int sdhci_pltfm_clk_enable(struct sdio_dev *dev, int enable)
 
 	BUG_ON(!dev);
 	if (enable) {
-#if defined(CONFIG_ARCH_JAVA) || defined(CONFIG_ARCH_HAWAII)
+#if defined(CONFIG_ARCH_JAVA)
 		pause_nohz();
 #endif
 		/* peripheral clock */
@@ -421,7 +421,7 @@ static int sdhci_pltfm_clk_enable(struct sdio_dev *dev, int enable)
 			return ret;
 	} else {
 		clk_disable(dev->peri_clk);
-#if defined(CONFIG_ARCH_JAVA) || defined(CONFIG_ARCH_HAWAII)
+#if defined(CONFIG_ARCH_JAVA)
 		resume_nohz();
 #endif
 
