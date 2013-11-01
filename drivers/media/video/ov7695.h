@@ -93,10 +93,10 @@ static const struct ov7695_reg ov7695_init_common[] = {
 #endif
 	{0x5002, 0x40}, /* [7:6] Y source select, manual 60Hz */
 	{0x5910, 0x00}, /* Y formula */
-	{0x3a0f, 0x68}, /* AEC in H */
-	{0x3a10, 0x58}, /* 38 ;AEC in L */
-	{0x3a1b, 0x68}, /* 40 ;AEC out H */
-	{0x3a1e, 0x58}, /* 36 ;AEC out L */
+	{0x3a0f, 0x58}, /* AEC in H */
+	{0x3a10, 0x48}, /* 38 ;AEC in L */
+	{0x3a1b, 0x58}, /* 40 ;AEC out H */
+	{0x3a1e, 0x48}, /* 36 ;AEC out L */
 	{0x3a11, 0x90}, /* 80 ;control zone H */
 	{0x3a1f, 0x40}, /* 18 ;control zone L */
 	{0x3a18, 0x00}, /* gain ceiling */
@@ -461,11 +461,11 @@ static const struct ov7695_reg ov7695_wb_def[] = {
 /*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 /* White Balance */
 static const struct ov7695_reg ov7695_wb_fluorescent[] = {
-	{0x5204, 0x04},
+	{0x5204, 0x06},
 	{0x5205, 0x00},
 	{0x5206, 0x04},
 	{0x5207, 0xdc},
-	{0x5208, 0x0b},
+	{0x5208, 0x08},
 	{0x5209, 0xb4},
 	{0xFFFF, 0xff},
 };
@@ -491,7 +491,7 @@ static const struct ov7695_reg ov7695_wb_cloudy[] = {
 };
 
 static const struct ov7695_reg ov7695_wb_tungsten[] = {
-	{0x5204, 0x05},
+	{0x5204, 0x03},
 	{0x5205, 0xa0},
 	{0x5206, 0x04},
 	{0x5207, 0x00},
