@@ -177,15 +177,21 @@ static void bcmpmu_otg_xceiv_set_def_state(
 static int bcmpmu_otg_xceiv_start(struct usb_phy *phy)
 {
 	struct bcmpmu_otg_xceiv_data *xceiv_data = dev_get_drvdata(phy->dev);
+	int ret = 0;
 	bool id_default_host = false;
 
 	if (xceiv_data) {
 
 		if (!xceiv_data->otg_enabled) {
 			if (xceiv_data->bcm_hsotg_regulator &&
-				    !xceiv_data->regulator_enabled) {
-				regulator_enable(xceiv_data->
-					    bcm_hsotg_regulator);
+				!xceiv_data->regulator_enabled) {
+				ret = regulator_enable(xceiv_data->
+						bcm_hsotg_regulator);
+				if (ret) {
+					dev_warn(xceiv_data->dev,
+						"Regulator enable failed\n");
+					return ret;
+				}
 				/* Give 2ms to ramp up USBLDO */
 				mdelay(USBLDO_RAMP_UP_DELAY_IN_MS);
 				xceiv_data->regulator_enabled = true;
@@ -917,7 +923,13 @@ static int __init bcmpmu_otg_xceiv_probe(struct platform_device *pdev)
 	}
 
 	/* Enable USB LDO */
-	regulator_enable(xceiv_data->bcm_hsotg_regulator);
+	error = regulator_enable(xceiv_data->bcm_hsotg_regulator);
+	if (error) {
+		xceiv_data->regulator_enabled = false;
+		regulator_put(xceiv_data->bcm_hsotg_regulator);
+		dev_warn(xceiv_data->dev, "regulator_enable failed\n");
+		return error;
+	}
 	/* Give 2ms to ramp up USBLDO */
 	mdelay(USBLDO_RAMP_UP_DELAY_IN_MS);
 	xceiv_data->regulator_enabled = true;
