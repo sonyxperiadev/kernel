@@ -433,20 +433,6 @@ static int hid_submit_ctrl(struct hid_device *hid)
 	return 0;
 }
 
-/*
- * Output interrupt completion handler.
- */
-
-static int irq_out_pump_restart(struct hid_device *hid)
-{
-	struct usbhid_device *usbhid = hid->driver_data;
-
-	if (usbhid->outhead != usbhid->outtail)
-		return hid_submit_out(hid);
-	else
-		return -1;
-}
-
 static void hid_irq_out(struct urb *urb)
 {
 	struct hid_device *hid = urb->context;
@@ -488,19 +474,6 @@ static void hid_irq_out(struct urb *urb)
 	spin_unlock_irqrestore(&usbhid->lock, flags);
 	usb_autopm_put_interface_async(usbhid->intf);
 	wake_up(&usbhid->wait);
-}
-
-/*
- * Control pipe completion handler.
- */
-static int ctrl_pump_restart(struct hid_device *hid)
-{
-	struct usbhid_device *usbhid = hid->driver_data;
-
-	if (usbhid->ctrlhead != usbhid->ctrltail)
-		return hid_submit_ctrl(hid);
-	else
-		return -1;
 }
 
 static void hid_ctrl(struct urb *urb)
