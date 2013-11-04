@@ -3801,13 +3801,31 @@ static int32_t bcmtch_dev_parse_firmware(
 	return ret_val;
 }
 
+static unsigned char bcmtchfw15200_bin[] = {
+#include "bcmtchfw15200_bin.i"
+};
+
+static unsigned char bcmtchfw15300_bin[] = {
+#include "bcmtchfw15300_bin.i"
+};
+
+struct firmware bcmtchfw15200_fw = {
+	.data = bcmtchfw15200_bin,
+	.size = sizeof(bcmtchfw15200_bin)
+};
+
+struct firmware bcmtchfw15300_fw = {
+	.data = bcmtchfw15300_bin,
+	.size = sizeof(bcmtchfw15300_bin)
+};
+
 static int32_t bcmtch_dev_download_firmware(
 				struct bcmtch_data *bcmtch_data_ptr,
 				uint8_t *fw_name,
 				uint32_t fw_addr,
 				uint32_t fw_flags)
 {
-	const struct firmware *p_fw;
+	struct firmware *p_fw;
 	int32_t ret_val = 0;
 
 	uint32_t entry_id = 1;
@@ -3817,10 +3835,18 @@ static int32_t bcmtch_dev_download_firmware(
 		{0, 0, 0, 0},
 	};
 
-	/* request firmware binary from OS */
-	ret_val = request_firmware(
-				&p_fw, fw_name,
-				&bcmtch_data_ptr->p_i2c_client_spm->dev);
+	if (strncmp("bcmtchfw15200_bin", fw_name, 13) == 0) {
+		p_fw = &bcmtchfw15200_fw;
+		BCMTCH_INFO("choosiing fw bcmtchfw15200_bin fw_size = %d\n",
+								p_fw->size);
+	} else if (strncmp("bcmtchfw15300_bin", fw_name, 13) == 0) {
+		p_fw = &bcmtchfw15300_fw;
+		BCMTCH_INFO("choosiing fw bcmtchfw15300_bin fw_size = %d\n",
+								p_fw->size);
+	} else {
+		ret_val = -1;
+		BCMTCH_ERR("cannot find a matching firmware\n");
+	}
 
 	if (ret_val) {
 		BCMTCH_ERR("%s: Firmware request failed (%d) for %s\n",
@@ -3999,8 +4025,6 @@ static int32_t bcmtch_dev_download_firmware(
 
 download_error:
 
-	/* free kernel structures */
-	release_firmware(p_fw);
 	return ret_val;
 }
 
@@ -7534,7 +7558,7 @@ static int32_t __init bcmtch_i2c_init(void)
 	return i2c_add_driver(&bcmtch_i2c_driver);
 }
 
-module_init(bcmtch_i2c_init);
+late_initcall(bcmtch_i2c_init);
 
 static void __exit bcmtch_i2c_exit(void)
 {
