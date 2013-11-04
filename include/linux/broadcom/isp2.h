@@ -21,6 +21,7 @@ enum {
 	ISP2_CMD_WAIT_IRQ = 0x80,
 	ISP2_CMD_CLK_RESET,
 	ISP2_CMD_RELEASE_IRQ,
+	ISP2_CMD_WAIT_STATS,
 	ISP2_CMD_LAST
 };
 
@@ -30,6 +31,8 @@ enum {
 					ISP2_CMD_CLK_RESET, unsigned int)
 #define ISP2_IOCTL_RELEASE_IRQ _IOR(BCM_ISP2_MAGIC, \
 					ISP2_CMD_RELEASE_IRQ, unsigned int)
+#define ISP2_IOCTL_WAIT_STATS	_IOR(BCM_ISP2_MAGIC, \
+					ISP2_CMD_WAIT_STATS, unsigned int)
 
 
 #endif
