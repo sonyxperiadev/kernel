@@ -2256,8 +2256,10 @@ static int32_t bcmtch_dev_init_channel(
 			p_channel, p_chan_cfg);
 
 		bcmtch_data_ptr->p_channels[chan_set][chan_id] = p_channel;
-	} else if (active)
+	} else if (active) {
 		ret_val = -ENOMEM;
+		bcmtch_data_ptr->p_channels[chan_set][chan_id] = NULL;
+	}
 
 	return ret_val;
 }
@@ -2273,10 +2275,13 @@ static void bcmtch_dev_free_channels(
 
 	while (chan_set < BCMTCH_MAX_CHANNEL_SET) {
 		while (chan < BCMTCH_CHANNEL_MAX) {
-			kfree(bcmtch_data_ptr->
-				p_channels[chan_set][chan++]);
-			bcmtch_data_ptr->
-				p_channels[chan_set][chan++] = NULL;
+			if (bcmtch_data_ptr->p_channels[chan_set][chan]) {
+				kfree(bcmtch_data_ptr->
+					p_channels[chan_set][chan]);
+				bcmtch_data_ptr->
+					p_channels[chan_set][chan] = NULL;
+			}
+			chan++;
 		}
 		chan_set++;
 	}
