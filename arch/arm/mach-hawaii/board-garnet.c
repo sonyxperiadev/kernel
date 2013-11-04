@@ -391,10 +391,10 @@ static struct i2c_board_info as3643_flash[] = {
 #endif
 #ifdef CONFIG_UNICAM_CAMERA
 
-static struct regulator *d_gpsr_cam0_1v8;
-static struct regulator *d_lvldo2_cam1_1v8;
-static struct regulator *d_1v8_mmc1_vcc;
-static struct regulator *d_3v0_mmc1_vcc;
+static struct regulator *d_gpsr_cam0_1v8;	/* Back camera Digital I/O */
+static struct regulator *d_lvldo2_cam1_1v8;	/* Front camera Digital I/O */
+static struct regulator *d_1v8_mmc1_vcc;	/* Front & Back camera Analog */
+static struct regulator *d_3v0_mmc1_vcc;	/* Back camera Auto focus VCM */
 
 /* The pre-div clock rate needs to satisfy
    the rate requirements of all digital
@@ -555,12 +555,6 @@ static int hawaii_camera_power(struct device *dev, int on)
 			ov564x_regulator_data[0].supply);
 		if (IS_ERR_OR_NULL(d_gpsr_cam0_1v8))
 			pr_err("Failed to  get d_gpsr_cam0_1v8\n");
-		if (d_lvldo2_cam1_1v8 == NULL) {
-			d_lvldo2_cam1_1v8 = regulator_get(NULL,
-			ov564x_regulator_data[3].supply);
-			if (IS_ERR_OR_NULL(d_lvldo2_cam1_1v8))
-				pr_err("Fd_lvldo2_cam1_1v8 cam\n");
-		}
 	}
 
 	ret = -1;
@@ -591,8 +585,6 @@ static int hawaii_camera_power(struct device *dev, int on)
 		regulator_enable(d_gpsr_cam0_1v8);
 		usleep_range(1000, 1010);
 		regulator_enable(d_1v8_mmc1_vcc);
-		usleep_range(1000, 1010);
-		regulator_enable(d_lvldo2_cam1_1v8);
 		usleep_range(1000, 1010);
 
 		if (mm_ccu_set_pll_select(CSI0_BYTE1_PLL, 8)) {
@@ -673,7 +665,6 @@ static int hawaii_camera_power(struct device *dev, int on)
 		clk_disable(lp_clock);
 		clk_disable(axi_clk);
 		regulator_disable(d_3v0_mmc1_vcc);
-		regulator_disable(d_lvldo2_cam1_1v8);
 		regulator_disable(d_1v8_mmc1_vcc);
 		regulator_disable(d_gpsr_cam0_1v8);
 		if (pi_mgr_dfs_request_update
@@ -749,19 +740,6 @@ static int hawaii_camera_power_front(struct device *dev, int on)
 			if (IS_ERR_OR_NULL(d_1v8_mmc1_vcc))
 				pr_err("Err d_1v8_mmc1_vcc\n");
 		}
-		if (d_3v0_mmc1_vcc == NULL) {
-			d_3v0_mmc1_vcc = regulator_get(NULL,
-			ov7692_regulator_data[2].supply);
-			if (IS_ERR_OR_NULL(d_3v0_mmc1_vcc))
-				pr_err("d_3v0_mmc1_vcc");
-		}
-		if (d_gpsr_cam0_1v8 == NULL) {
-			d_gpsr_cam0_1v8 = regulator_get(NULL,
-			ov7692_regulator_data[3].supply);
-			if (IS_ERR_OR_NULL(d_gpsr_cam0_1v8))
-				pr_err("Fl d_gpsr_cam0_1v8 get	fail");
-		}
-
 	}
 
 	ret = -1;
@@ -802,11 +780,6 @@ static int hawaii_camera_power_front(struct device *dev, int on)
 		regulator_enable(d_lvldo2_cam1_1v8);
 		usleep_range(1000, 1010);
 		regulator_enable(d_1v8_mmc1_vcc);
-		usleep_range(1000, 1010);
-		/* Secondary cam addition */
-		regulator_enable(d_gpsr_cam0_1v8);
-		usleep_range(1000, 1010);
-		regulator_enable(d_3v0_mmc1_vcc);
 		usleep_range(1000, 1010);
 
 		if (mm_ccu_set_pll_select(CSI1_BYTE1_PLL, 8)) {
@@ -879,8 +852,6 @@ static int hawaii_camera_power_front(struct device *dev, int on)
 		clk_disable(axi_clk_0);
 		regulator_disable(d_lvldo2_cam1_1v8);
 		regulator_disable(d_1v8_mmc1_vcc);
-		regulator_disable(d_gpsr_cam0_1v8);
-		regulator_disable(d_3v0_mmc1_vcc);
 		if (pi_mgr_dfs_request_update
 		    (&unicam_dfs_node, PI_MGR_DFS_MIN_VALUE)) {
 			pr_err("Failed to set DVFS for unicam\n");
@@ -1020,7 +991,7 @@ static struct soc_camera_desc iclink_ov7692 = {
 		.reset = &hawaii_camera_reset_front,
 		.drv_priv = &ov7692_if_parms,
 		.regulators = ov7692_regulator_data,
-		.num_regulators = 4,
+		.num_regulators = 2,
 	},
 };
 
