@@ -74,6 +74,7 @@ struct isp2_status_t {
 
 struct isp2_t {
 	struct completion irq_sem;
+	struct completion stats_sem;
 	spinlock_t lock;
 	struct isp2_status_t isp2_status;
 };
@@ -84,21 +85,26 @@ static inline unsigned int reg_read(void __iomem *, unsigned int reg);
 static inline void reg_write(void __iomem *, unsigned int reg,
 			     unsigned int value);
 
+#define ISP_EOT_INT (1 << 4)
+#define ISP_STATS_INT (1 << 8)
+
 static irqreturn_t isp2_isr(int irq, void *dev_id)
 {
 	struct isp2_t *dev;
 	unsigned long flags;
 
 	dev = (struct isp2_t *) dev_id;
-
 	spin_lock_irqsave(&dev->lock, flags);
 	dev->isp2_status.status = reg_read(isp2_base, ISP2_STATUS_OFFSET);
 	spin_unlock_irqrestore(&dev->lock, flags);
-
+	if (dev->isp2_status.status & (ISP_EOT_INT | ISP_STATS_INT))
+		complete(&dev->irq_sem);
+	if (dev->isp2_status.status & ISP_STATS_INT)
+		complete(&dev->stats_sem);
+	dbg_print("%s status=0x%X", __func__, dev->isp2_status.status);
 	if (dev->isp2_status.status) {
 		reg_write(isp2_base, ISP2_STATUS_OFFSET,
-				dev->isp2_status.status);
-		complete(&dev->irq_sem);
+			  dev->isp2_status.status);
 		return IRQ_RETVAL(1);
 	} else {
 		return IRQ_NONE;
@@ -118,6 +124,7 @@ static int isp2_open(struct inode *inode, struct file *filp)
 	dev->isp2_status.status = 0;
 
 	init_completion(&dev->irq_sem);
+	init_completion(&dev->stats_sem);
 
 	ret =
 	    pi_mgr_dfs_add_request(&isp2_dfs_node, "isp2", PI_MGR_PI_ID_MM,
@@ -249,19 +256,41 @@ static long isp2_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 				disable_irq(IRQ_ISP2);
 				return -ERESTARTSYS;
 			}
-
-			if (copy_to_user
-			    ((u32 *) arg, &dev->isp2_status,
-			     sizeof(dev->isp2_status))) {
-				err_print("ISP2_IOCTL_WAIT_IRQ " \
-						"copy_to_user failed\n");
-				ret = -EFAULT;
-			}
-
 			dbg_print("Disabling ISP2 interrupt\n");
 			disable_irq(IRQ_ISP2);
 			if (interrupt_irq)
 				return -EIO;
+			if (copy_to_user
+			    ((u32 *) arg, &dev->isp2_status,
+			     sizeof(dev->isp2_status))) {
+				err_print("ISP2_IOCTL_WAIT_IRQ "\
+					  "copy_to_user failed\n");
+				ret = -EFAULT;
+			}
+		}
+		break;
+
+	case ISP2_IOCTL_WAIT_STATS:
+		{
+			interrupt_irq = 0;
+			enable_irq(IRQ_ISP2);
+			dbg_print("Waiting for stats interrupt\n");
+			if (wait_for_completion_interruptible(
+				    &dev->stats_sem)) {
+				disable_irq(IRQ_ISP2);
+				return -ERESTARTSYS;
+			}
+			dbg_print("Disabling ISP2 interrupt\n");
+			disable_irq(IRQ_ISP2);
+			if (interrupt_irq)
+				return -EIO;
+			if (copy_to_user
+			    ((u32 *) arg, &dev->isp2_status,
+			     sizeof(dev->isp2_status))) {
+				err_print("ISP2_IOCTL_WAIT_STATS "\
+					  "copy_to_user failed\n");
+				ret = -EFAULT;
+			}
 		}
 		break;
 
@@ -270,6 +299,7 @@ static long isp2_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			interrupt_irq = 1;
 			dbg_print("Interrupting irq ioctl\n");
 			complete(&dev->irq_sem);
+			complete(&dev->stats_sem);
 		}
 		break;
 
