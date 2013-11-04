@@ -641,10 +641,10 @@ config INPUT_BMA2x2_ACC_ALERT_INT
 	  acceleration sensors BMA255/BMA250E/BMA222E/BMA280.
 
 config SENSORS_MMC328XMA
-	tristate "Memsic MMC328XMA\MMC3416X compass"
+	tristate "Memsic MMC328xMA\MMC3416x\MMC3516x compass"
 	depends on I2C
 	help
-	This driver provides support for the MEMSIC MMC328XMA&MMC3416X
+	This driver provides support for the MEMSIC MMC328XMA&MMC3416X&MMC3516X
 	compass which is a 3-axis magnetic sensor and provides an I2C
 	digital output.
 	To compile this driver as a module, choose M here: the

@@ -981,13 +981,7 @@ int mmc328xma_probe(struct i2c_client *client,
 
 	mag = data;
 	tempvalue = i2c_smbus_read_byte_data(client, MMC328XMA_REG_CHIPID);
-	if ((tempvalue & 0x00FF) == MMC328XMA_TEST_ID) {
-		printk(KERN_INFO "I2C driver registered!\n");
-	} else {
-		mag->client = NULL;
-		err = -ENODEV;
-		goto exit_kfree_pdata;
-	}
+	pr_info("mmc328x chip id =0x%x\n", tempvalue&0x00FF);
 
 	mutex_init(&data->enable_mutex);
 	mutex_init(&data->data_mutex);
