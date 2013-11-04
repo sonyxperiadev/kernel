@@ -579,6 +579,15 @@ static ssize_t fsg_show_ro(struct device *dev, struct device_attribute *attr,
 				  : curlun->initially_ro);
 }
 
+static ssize_t fsg_show_cdrom(struct device *dev,
+			struct device_attribute *attr, char *buf)
+{
+	struct fsg_lun	*curlun = fsg_lun_from_dev(dev);
+
+	return sprintf(buf, "%d\n", curlun->cdrom);
+}
+
+
 static ssize_t fsg_show_nofua(struct device *dev, struct device_attribute *attr,
 			      char *buf)
 {
@@ -586,6 +595,38 @@ static ssize_t fsg_show_nofua(struct device *dev, struct device_attribute *attr,
 
 	return sprintf(buf, "%u\n", curlun->nofua);
 }
+
+
+static ssize_t fsg_store_cdrom(struct device *dev,
+			struct device_attribute *attr,
+			const char *buf, size_t count)
+{
+	ssize_t		rc;
+	struct fsg_lun	*curlun = fsg_lun_from_dev(dev);
+	struct rw_semaphore	*filesem = dev_get_drvdata(dev);
+	unsigned	cdrom;
+
+	rc = kstrtouint(buf, 2, &cdrom);
+	if (rc)
+		return rc;
+
+	/*
+	 * Allow the write-enable status to change only while the
+	 * backing file is closed.
+	 */
+	down_read(filesem);
+	if (fsg_lun_is_open(curlun)) {
+		LDBG(curlun, "cdrom status change prevented\n");
+		rc = -EBUSY;
+	} else {
+		curlun->cdrom = cdrom;
+		LDBG(curlun, "cdrom status set to %d\n", curlun->cdrom);
+		rc = count;
+	}
+	up_read(filesem);
+	return rc;
+}
+
 
 #ifdef CONFIG_USB_MSC_PROFILING
 static ssize_t fsg_show_perf(struct device *dev, struct device_attribute *attr,
