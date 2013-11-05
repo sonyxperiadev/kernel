@@ -134,7 +134,7 @@ extern "C" {
 
 /**
 *
-* CSL LCD Callback  
+* CSL LCD Callback
 *
 *****************************************************************************/
 //typedef void (*CSL_LCD_CB_T) ( CSL_LCD_RES_T, CSL_LCD_HANDLE, void* );  
@@ -186,9 +186,10 @@ extern "C" {
 	typedef enum {
 		LCD_IF_CM_O_RGB565,      	///< RGB565    
 		LCD_IF_CM_O_RGB565_DSI_VM,  	///< RGB565
-		LCD_IF_CM_O_RGB666,      	///< RGB666    
+		LCD_IF_CM_O_RGB666,		/* < RGB666 Packed */
 		LCD_IF_CM_O_xRGB8888,		/* xRGB8888 */
 		LCD_IF_CM_O_xBGR8888,		/* xRGB8888 */
+		LCD_IF_CM_O_RGB666U,		/* RGB666 unpacked */
 		LCD_IF_CM_O_INV,
 	} CSL_LCD_CM_OUT;
 

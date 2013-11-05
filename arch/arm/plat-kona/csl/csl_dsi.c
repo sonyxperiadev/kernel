@@ -1645,6 +1645,40 @@ CSL_LCD_RES_T CSL_DSI_OpenCmVc(CSL_LCD_HANDLE client,
 				cmVcH->cm = dsiH->dispEngine ?
 						DE1_CM_LE : DE0_CM_565P;
 			break;
+			/* RGB666 unpacked */
+		case LCD_IF_CM_O_RGB666U:
+			cmVcH->bpp_dma = 2;
+			cmVcH->bpp_wire = 3;
+			cmVcH->wc_rshift = 0;
+			if (!dsiH->pixTxporter)
+				dsiH->axipvCfg->pix_fmt =
+					AXIPV_PIXEL_FORMAT_18BPP_UNPACKED;
+			if (!dsiH->dispEngine)
+					/* for both cmd and vid modes */
+					dsiH->pvCfg->pix_fmt =
+							DSI_VIDEO_CMD_18_24BPP;
+			cmVcH->cm = dsiH->dispEngine ?
+						DE1_CM_888U : DE0_CM_666;
+			break;
+			/* RGB666 packed */
+		case LCD_IF_CM_O_RGB666:
+			cmVcH->bpp_dma = 2;
+			cmVcH->bpp_wire = 3;
+			cmVcH->wc_rshift = 0;
+			if (!dsiH->pixTxporter)
+				dsiH->axipvCfg->pix_fmt =
+					AXIPV_PIXEL_FORMAT_18BPP_PACKED;
+			if (!dsiH->dispEngine) {
+				if (dsiH->pvCfg->cmd)
+					dsiH->pvCfg->pix_fmt =
+							DSI_VIDEO_CMD_18_24BPP;
+				else
+					dsiH->pvCfg->pix_fmt =
+							PACKED_DSI_VIDEO_18BPP;
+			}
+			cmVcH->cm = dsiH->dispEngine ?
+						DE1_CM_888U : DE0_CM_666P_VID;
+			break;
 		default:
 			LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI][%d] %s: "
 				"ERR, Invalid OutCol Mode[%d] for "

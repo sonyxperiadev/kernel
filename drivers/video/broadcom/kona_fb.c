@@ -1286,7 +1286,12 @@ static int __init populate_dispdrv_cfg(struct kona_fb *fb,
 	/* Hardcode for now */
 	info->in_fmt = pd->col_mod_i;
 	info->out_fmt = pd->col_mod_o;
-	info->Bpp = 4;
+	if (info->in_fmt == DISPDRV_FB_FORMAT_RGB666U ||
+			info->in_fmt == DISPDRV_FB_FORMAT_RGB666P ||
+			info->in_fmt == DISPDRV_FB_FORMAT_RGB565)
+		info->Bpp = 2;
+	else
+		info->Bpp = 4;
 
 	info->phys_width = cfg->phys_width;
 	info->phys_height = cfg->phys_height;
@@ -1573,6 +1578,8 @@ static int __ref kona_fb_probe(struct platform_device *pdev)
 	fb->fb.var.rotate = fb_data->rotation;
 
 	switch (fb->display_info->in_fmt) {
+	case DISPDRV_FB_FORMAT_RGB666P:
+	case DISPDRV_FB_FORMAT_RGB666U:
 	case DISPDRV_FB_FORMAT_RGB565:
 		fb->fb.var.red.offset = 11;
 		fb->fb.var.red.length = 5;
