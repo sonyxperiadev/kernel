@@ -6322,7 +6322,7 @@ static int32_t bcmtch_init_input_device(
 			/* request new os input queue size for this device */
 			input_set_events_per_packet(
 				bcmtch_data_ptr->p_input_device,
-				50 * BCMTCH_MAX_TOUCH);
+				6 * BCMTCH_MAX_TOUCH);
 
 			/* register device */
 			ret_val =
