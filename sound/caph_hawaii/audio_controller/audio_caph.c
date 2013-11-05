@@ -57,7 +57,7 @@ the GPL, without Broadcom's express prior written consent.
 #ifdef CONFIG_ARCH_JAVA
 #include <linux/slab.h>
 static struct workqueue_struct *pWorkqueue_AudioControl;
-#define TIMEOUT_STOP_REQ_MS 60000
+#define TIMEOUT_STOP_REQ_MS 300000
 #ifdef CONFIG_SMP
 #define QUEUE_WORK(x, y) queue_work(x, \
 		(struct work_struct *)y);

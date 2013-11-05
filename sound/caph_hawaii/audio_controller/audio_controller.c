@@ -1707,6 +1707,10 @@ void AUDCTRL_DisablePlay(AUDIO_SOURCE_Enum_t source,
 		audioPathResetPending = FALSE;
 		spRecPathID = 0;
 	}
+
+	if (sink == AUDIO_SINK_DSP)
+		msleep(100);
+
 }
 
 /****************************************************************************
