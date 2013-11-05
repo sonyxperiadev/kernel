@@ -1695,7 +1695,7 @@ static int bcmpmu_accy_suspend(struct platform_device *pdev, pm_message_t state)
 	struct bcmpmu59xxx *bcmpmu = dev_get_drvdata(pdev->dev.parent);
 	struct bcmpmu_accy_data *di;
 	di = bcmpmu->accyinfo;
-	flush_delayed_work_sync(&di->evt_notify_work);
+	flush_delayed_work(&di->evt_notify_work);
 	return 0;
 }
 

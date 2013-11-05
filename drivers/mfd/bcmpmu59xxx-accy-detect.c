@@ -331,6 +331,7 @@ err:
 
 void bcmpmu_enable_bc_regl(struct accy_det *accy_d, bool en)
 {
+	int ret;
 	accy_d->regl_bc = regulator_get(NULL, REGL_BC);
 	if (IS_ERR(accy_d->regl_bc)) {
 		pr_acd(ERROR, "-----BC Detect regulator nt found\n");
@@ -338,7 +339,9 @@ void bcmpmu_enable_bc_regl(struct accy_det *accy_d, bool en)
 	}
 
 	if (en){
-		regulator_enable(accy_d->regl_bc);
+		ret = regulator_enable(accy_d->regl_bc);
+		if (ret)
+			pr_acd(ERROR, "Failed to enable BC Detect regulator\n");
 		msleep(2);
 	} else
 		regulator_disable(accy_d->regl_bc);
@@ -536,7 +539,7 @@ static int bcmpmu_accy_detect_suspend(struct platform_device *pdev,
 	struct bcmpmu59xxx *bcmpmu = dev_get_drvdata(pdev->dev.parent);
 	struct accy_det *accy_d;
 	accy_d = bcmpmu->accy_d;
-	flush_delayed_work_sync(&accy_d->d_work);
+	flush_delayed_work(&accy_d->d_work);
 	return 0;
 }
 

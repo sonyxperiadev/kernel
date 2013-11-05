@@ -57,8 +57,10 @@ static struct platform_device bcmpmu59xxx_pdev = {
 	.dev.platform_data = NULL,
 };
 
+#if 0
 #ifdef CONFIG_HAS_WAKELOCK
 static DEFINE_SPINLOCK(wl_lock);
+#endif
 #endif
 
 static u32 *i2c_log_buf_v;

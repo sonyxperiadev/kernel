@@ -1823,7 +1823,7 @@ static void __iomem *pwr_mgr_i2c_cmd_off_to_reg(int cmd_offset)
 
 static void pwr_mgr_update_i2c_cmd_data(u32 cmd_offset, u8 cmd_data)
 {
-	u32 reg_addr;
+	void __iomem *reg_addr;
 	u32 reg_val = 0;
 	u32 mask, shift;
 
@@ -1832,7 +1832,7 @@ static void pwr_mgr_update_i2c_cmd_data(u32 cmd_offset, u8 cmd_data)
 	mask = PWR_MGR_I2C_CMD_OFF_TO_CMD_DATA_MASK(cmd_offset);
 	reg_val = readl(reg_addr);
 	pwr_dbg(PWR_LOG_CONFIG,
-			"%s:cmd_offset = %d, cmd_data = %x reg_Addr = %x\n",
+			"%s:cmd_offset = %d, cmd_data = %x reg_Addr = %p\n",
 			__func__, cmd_offset, cmd_data, reg_addr);
 
 	pwr_dbg(PWR_LOG_CONFIG, "%s:reg_val = %x, shift = %d, mask = %x\n",

@@ -128,7 +128,7 @@ static int bcmpmu_alarm_irq_enable(struct device *dev,
 		 * firing at unwanted time.
 		 */
 		ret = rdata->bcmpmu->write_dev(rdata->bcmpmu, PMU_REG_RTCYR_A1,
-					0xFF);
+					(u8)0xFF);
 		if (unlikely(ret))
 			goto err;
 
