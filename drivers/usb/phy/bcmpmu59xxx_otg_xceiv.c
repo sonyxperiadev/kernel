@@ -180,34 +180,35 @@ static int bcmpmu_otg_xceiv_start(struct usb_phy *phy)
 	int ret = 0;
 	bool id_default_host = false;
 
-	if (xceiv_data) {
-
-		if (!xceiv_data->otg_enabled) {
-			if (xceiv_data->bcm_hsotg_regulator &&
-				!xceiv_data->regulator_enabled) {
-				ret = regulator_enable(xceiv_data->
-						bcm_hsotg_regulator);
-				if (ret) {
-					dev_warn(xceiv_data->dev,
-						"Regulator enable failed\n");
-					return ret;
-				}
-				/* Give 2ms to ramp up USBLDO */
-				mdelay(USBLDO_RAMP_UP_DELAY_IN_MS);
-				xceiv_data->regulator_enabled = true;
-			}
-		}
-
-		id_default_host = bcmpmu_otg_xceiv_check_id_gnd(xceiv_data) ||
-			bcmpmu_otg_xceiv_check_id_rid_a(xceiv_data);
-		/* Initialize OTG core and PHY */
-		bcm_hsotgctrl_phy_init(!id_default_host);
-
-		bcmpmu_otg_xceiv_set_def_state(xceiv_data,
-			id_default_host);
-
-	} else
+	if (!xceiv_data)
 		return -EINVAL;
+
+	if (!xceiv_data->otg_enabled) {
+		if (xceiv_data->bcm_hsotg_regulator &&
+			!xceiv_data->regulator_enabled) {
+			ret = regulator_enable(xceiv_data->
+					bcm_hsotg_regulator);
+			if (ret) {
+				dev_warn(xceiv_data->dev,
+					"Regulator enable failed\n");
+				return ret;
+			}
+			/* Give 2ms to ramp up USBLDO */
+			mdelay(USBLDO_RAMP_UP_DELAY_IN_MS);
+			xceiv_data->regulator_enabled = true;
+		}
+	}
+
+	/* Give 2ms to ramp up USBLDO */
+	mdelay(USBLDO_RAMP_UP_DELAY_IN_MS);
+	xceiv_data->regulator_enabled = true;
+
+	id_default_host = bcmpmu_otg_xceiv_check_id_gnd(xceiv_data) ||
+		bcmpmu_otg_xceiv_check_id_rid_a(xceiv_data);
+	/* Initialize OTG core and PHY */
+	bcm_hsotgctrl_phy_init(!id_default_host);
+
+	bcmpmu_otg_xceiv_set_def_state(xceiv_data, id_default_host);
 
 	return 0;
 }
