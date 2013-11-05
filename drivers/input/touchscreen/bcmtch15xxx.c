@@ -7150,53 +7150,66 @@ static int32_t bcmtch_i2c_write_sys(
 					uint16_t write_len,
 					uint8_t *write_data)
 {
-	int32_t ret_val = 0;
 
-	uint16_t dma_len = write_len + 1;
-	uint8_t *dma_data = kzalloc(dma_len, GFP_KERNEL);
+	int total_dma_len, len, dma_len, ret_val = 0;
+	uint8_t *dma_data;
+	struct i2c_msg request;
 
-	/* setup the DMA header for this read transaction */
 	uint8_t dma_header[8] = {
-		/* set dma controller addr */
+		/* dma controller addr */
 		BCMTCH_SPM_REG_DMA_ADDR,
-		/* setup dma address */
+		/* dma address */
 		(sys_addr & 0xFF),
 		((sys_addr & 0xFF00) >> 8),
 		((sys_addr & 0xFF0000) >> 16),
 		((sys_addr & 0xFF000000) >> 24),
-		/* setup dma length */
+		/* dma length */
 		(write_len & 0xFF),
 		((write_len & 0xFF00) >> 8),
-		/* setup dma mode */
+		/* dma mode */
 		BCMTCH_DMA_MODE_WRITE
 	};
 
-	/* setup I2C messages for DMA read request transaction */
-	struct i2c_msg dma_request[2] = {
-		/* write DMA request header */
-		{.addr = p_i2c->addr,
-			.flags = 0,
-			.len = 8,
-			.buf = dma_header},
-		{.addr = p_i2c->addr,
-			.flags = 0,
-			.len = dma_len,
-			.buf = dma_data}
-	};
+	total_dma_len = write_len + 1;
 
-	if (dma_data) {
-		/* setup dma data buffer */
-		dma_data[0] = BCMTCH_SPM_REG_DMA_WFIFO;
-		memcpy(&dma_data[1], write_data, write_len);
+	dma_data = kzalloc(SZ_4K, GFP_KERNEL);
+	if (!dma_data)
+		return -ENOMEM;
 
-		if (i2c_transfer(p_i2c->adapter, dma_request, 2) != 2)
-			ret_val = -EIO;
+	request.addr = p_i2c->addr;
+	request.flags = 0;
+	request.len = 8;
+	request.buf = dma_header;
 
-		/* free dma buffer */
-		kfree(dma_data);
-	} else {
-		ret_val = -ENOMEM;
+	if (i2c_transfer(p_i2c->adapter, &request, 1) != 1) {
+		ret_val = -EIO;
+		goto error;
 	}
+
+	for (len = total_dma_len; len > 0; len -= (SZ_4K - 1)) {
+
+		if (len < (SZ_4K - 1))
+			dma_len = len;
+		else
+			dma_len = SZ_4K;
+
+		request.addr = p_i2c->addr;
+		request.flags = 0;
+		request.len = dma_len;
+		request.buf = dma_data;
+
+		dma_data[0] = BCMTCH_SPM_REG_DMA_WFIFO;
+		memcpy(&dma_data[1],
+			(write_data + (total_dma_len - len)), dma_len - 1);
+
+		if (i2c_transfer(p_i2c->adapter, &request, 1) != 1) {
+			ret_val = -EIO;
+			break;
+		}
+	}
+
+error:
+	kfree(dma_data);
 
 	return ret_val;
 }
