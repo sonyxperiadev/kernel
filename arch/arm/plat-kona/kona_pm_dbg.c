@@ -35,11 +35,12 @@ static dma_addr_t pm_log_buf_p;
 				(CIRC_INC(log_end) == log_start) ? \
 				CIRC_INC(log_start) : ++logged_chars)
 
-const char *pi_name_list[6] = {
-	"arm_core",
+/* Order is important, based on enum in pi_mgr.h */
+static const char *pi_name_list[6] = {
 	"mm",
 	"hub",
 	"aon",
+	"arm_core",
 	"sub_sys",
 	"modem"
 };
@@ -104,12 +105,13 @@ enum {
 static void cmd_show_usage(void)
 {
 	const char usage[] = "Usage:\n"
-	  "echo 'cmd string' > /sys/module/rhea_pm/parameters/debug\n"
+	  "echo 'cmd string' > /sys/module/kona_pm_dbg/parameters/debug\n"
 	  "'cmd string' is constructed as follows:\n"
 	  "Enable snapshot: s e\n"
 	  "Disable snapshot: s d\n"
 	  "Take snapshot: s t\n"
 	  "Show snapshot: s s\n"
+	  "Print log: p\n"
 	  "Add register to snapshot list: s a <reg> <mask> <good> (in hex)\n"
 	  "Remove register from snapshot list: s r <reg>\n"
 	  "Display snapshot list: s l\n"
