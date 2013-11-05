@@ -54,11 +54,11 @@ extern "C" {
 *****************************************************************************/
 	typedef enum {
 		DISPDRV_FB_FORMAT_MIN,	///<  Min Number
-
 		DISPDRV_FB_FORMAT_RGB565,	///<  RG5565 2Bpp
 		DISPDRV_FB_FORMAT_xRGB8888,	/*  xRGB8888 4Bpp */
 		DISPDRV_FB_FORMAT_xBGR8888,	/*  xBGR8888 4Bpp */
-
+		DISPDRV_FB_FORMAT_RGB666P,	/* RGB666 2Bpp */
+		DISPDRV_FB_FORMAT_RGB666U,	/* RGB666 Unpacked */
 		DISPDRV_FB_FORMAT_MAX,	///<  MAX Number
 	} DISPDRV_FB_FORMAT_T;
 

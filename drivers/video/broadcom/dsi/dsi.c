@@ -437,7 +437,25 @@ Int32 DSI_Init(DISPDRV_INFO_T *info, DISPDRV_HANDLE_T *handle)
 		switch (info->in_fmt) {
 		case DISPDRV_FB_FORMAT_RGB565:
 			DispDrv_VCCmCfg.cm_in = LCD_IF_CM_I_RGB565P;
-			DispDrv_VCCmCfg.cm_out = LCD_IF_CM_O_RGB565;
+			switch (info->out_fmt) {
+			case DISPDRV_FB_FORMAT_RGB565:
+				DispDrv_VCCmCfg.cm_out =
+						LCD_IF_CM_O_RGB565;
+				break;
+			case DISPDRV_FB_FORMAT_RGB666P:
+				DispDrv_VCCmCfg.cm_out =
+						LCD_IF_CM_O_RGB666;
+				break;
+			case DISPDRV_FB_FORMAT_RGB666U:
+				DispDrv_VCCmCfg.cm_out =
+						LCD_IF_CM_O_RGB666U;
+				break;
+			default:
+				DSI_ERR("Invalid output colour format!.");
+				DispDrv_VCCmCfg.cm_out =
+						LCD_IF_CM_O_RGB565;
+				DSI_ERR("Changing to RGB565\n");
+			}
 			break;
 		case DISPDRV_FB_FORMAT_xRGB8888:
 			DispDrv_VCCmCfg.cm_in = LCD_IF_CM_I_xRGB8888;
