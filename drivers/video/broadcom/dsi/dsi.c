@@ -755,6 +755,7 @@ static void DSI_ExecCmndList(DispDrv_PANEL_t *pPanel, char *buff)
 {
 	CSL_DSI_CMND_t msg;
 	int res = 0;
+	Boolean generic;
 
 	msg.vc = pPanel->cmnd_mode->vc;
 	msg.isLP = pPanel->disp_info->cmnd_LP;
@@ -763,22 +764,34 @@ static void DSI_ExecCmndList(DispDrv_PANEL_t *pPanel, char *buff)
 
 	while (*buff) {
 		uint8_t len = *buff++;
-		if (len == (uint8_t)~0) {
+		if (len == DISPCTRL_TAG_SLEEP) {
 			msleep(*buff++);
 		} else {
+			if (len == DISPCTRL_TAG_GEN_WR) {
+				/* (~0 -1) was used as generic cmd tag */
+				len = *buff++;
+				generic = TRUE;
+			} else
+				generic = FALSE;
 			switch (len) {
 			case 0:
 				res = -1;
 				break;
 			case 1:
-				msg.dsiCmnd = DSI_DT_SH_DCS_WR_P0;
+				msg.dsiCmnd = generic ?
+					DSI_DT_SH_GEN_WR_P1 :
+					DSI_DT_SH_DCS_WR_P0;
 				break;
 			case 2:
-				msg.dsiCmnd = DSI_DT_SH_DCS_WR_P1;
+				msg.dsiCmnd = generic ?
+					DSI_DT_SH_GEN_WR_P2 :
+					DSI_DT_SH_DCS_WR_P1;
 				break;
 			default:
 				if (len <= CSL_DSI_GetMaxTxMsgSize())
-					msg.dsiCmnd = DSI_DT_LG_DCS_WR;
+					msg.dsiCmnd = generic ?
+						DSI_DT_LG_GEN_WR :
+						DSI_DT_LG_DCS_WR;
 				else
 					res = -1;
 				break;
