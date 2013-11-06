@@ -93,8 +93,22 @@ typedef struct {
 	struct net_device_stats stats;
 } net_drvr_info_t;
 
+struct net_tx {
+	struct sk_buff_head queue;
+	struct work_struct work;
+	struct workqueue_struct *wq;
+	unsigned long high_water_mark;
+};
+
+#define GET_NETDEV_IN_SKB_CB(__skb) \
+	((struct net_device *)(*((unsigned long *)&((__skb)->cb[0]))))
+#define PUT_NETDEV_IN_SKB_CB(__skb, dev) \
+	(*((unsigned long *)&((__skb)->cb[0])) = (unsigned long)(dev))
+#define QUEUE_MAX_SIZE  BCM_NET_MAX_NUM_PKTS
+
 spinlock_t g_dev_lock;
 static net_drvr_info_t g_net_dev_tbl[BCM_NET_MAX_PDP_CNTXS];
+static struct net_tx g_net_tx;
 static unsigned char g_NetClientId = 0;
 
 static void bcm_fuse_net_fc_cb(RPC_FlowCtrlEvent_t event, unsigned char cid);
@@ -590,7 +604,7 @@ int check_if_block_mms(struct sk_buff *skb, struct net_device *dev)
 }
 #endif
 
-static int bcm_fuse_net_tx(struct sk_buff *skb, struct net_device *dev)
+static int __bcm_fuse_net_tx(struct sk_buff *skb, struct net_device *dev)
 {
 	void *buff_data_ptr;
 	uint8_t pdp_cid = BCM_NET_MAX_PDP_CNTXS;
@@ -685,6 +699,55 @@ static int bcm_fuse_net_tx(struct sk_buff *skb, struct net_device *dev)
 	dev_kfree_skb(skb);
 
 	return 0;
+}
+
+static void tx_work(struct work_struct *work)
+{
+	struct net_device *dev = NULL;
+	struct sk_buff *skb;
+	int i;
+
+	while ((skb = skb_dequeue(&g_net_tx.queue))) {
+		dev = GET_NETDEV_IN_SKB_CB(skb);
+		for (i = 0; i < 2; i++) {
+			if (__bcm_fuse_net_tx(skb, dev) == -ENOBUFS) {
+				BNET_DEBUG(DBG_ERROR,
+				"No AP-CP shared buffer, try again\n");
+				msleep(32);
+				continue;
+			}
+			break;
+		}
+	}
+
+	if (dev && netif_queue_stopped(dev)) {
+		BNET_DEBUG(DBG_ERROR, "Wake uper layer tx\n");
+		netif_wake_queue(dev);
+	}
+}
+
+static int bcm_fuse_net_tx(struct sk_buff *skb, struct net_device *dev)
+{
+	__u32 qlen = skb_queue_len(&g_net_tx.queue);
+
+	if (qlen >= QUEUE_MAX_SIZE) {
+		netif_stop_queue(dev);
+		BNET_DEBUG(DBG_ERROR,
+		"Stop uper layer tx(queue full)\n");
+		return NETDEV_TX_BUSY;
+	}
+
+	PUT_NETDEV_IN_SKB_CB(skb, dev);
+	skb_queue_tail(&g_net_tx.queue, skb);
+	qlen = skb_queue_len(&g_net_tx.queue);
+	if (qlen > g_net_tx.high_water_mark) {
+		g_net_tx.high_water_mark = qlen;
+		BNET_DEBUG(DBG_ERROR,
+		"Update qlen high water mark: %u\n", qlen);
+	}
+	queue_work(g_net_tx.wq, &g_net_tx.work);
+
+	return NETDEV_TX_OK;
 }
 
 static struct net_device_stats *bcm_fuse_net_stats(struct net_device *dev)
@@ -1356,6 +1419,16 @@ static int __init bcm_fuse_net_init_module(void)
 #endif /*end of #ifdef CONFIG_BCM_NET_WHITELIST_DEBUG_SUPPORT*/
 #endif /*end of #ifdef CONFIG_BCM_NET_WHITELIST_SUPPORT*/
 
+	g_net_tx.wq = alloc_workqueue("tx-wq", WQ_FREEZABLE
+		| WQ_NON_REENTRANT | WQ_HIGHPRI, 0);
+	if (!g_net_tx.wq) {
+		BNET_DEBUG(DBG_ERROR,
+		"%s: Alloc tx workqueue failed!\n", __func__);
+		return -ENOMEM;
+	}
+	INIT_WORK(&g_net_tx.work, tx_work);
+	skb_queue_head_init(&g_net_tx.queue);
+
 	return 0;
 }
 
@@ -1379,6 +1452,10 @@ static void __exit bcm_fuse_net_exit_module(void)
 				bcm_fuse_net_wl_debug_proc_entry);
 #endif
 #endif
+
+	skb_queue_purge(&g_net_tx.queue);
+	flush_workqueue(g_net_tx.wq);
+	destroy_workqueue(g_net_tx.wq);
 
 	return;
 }
