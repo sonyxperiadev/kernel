@@ -3915,26 +3915,9 @@ static int32_t bcmtch_dev_download_firmware(
 							BCMTCH_RAM_CHANNELS);
 
 			case BCMTCH_FIRMWARE_FLAGS_POST_BOOT_CODE:
-				if (!bcmtch_data_ptr->post_boot_sections) {
-					/* Allocate firmware buffer memory */
+				if (!bcmtch_data_ptr->post_boot_sections)
 					bcmtch_data_ptr->post_boot_buffer =
-						vzalloc(p_fw->size);
-
-					if (bcmtch_data_ptr->
-						post_boot_buffer == NULL) {
-						BCMTCH_ERR(
-							"%s: failed to alloc firmware buffer.\n",
-							__func__);
-						ret_val = -ENOMEM;
-						goto download_error;
-					}
-
-					memcpy(
-						bcmtch_data_ptr->
-						post_boot_buffer,
-						(void *) p_fw->data,
-						p_fw->size);
-				}
+						(uint8_t *) p_fw->data;
 
 				bcmtch_data_ptr->post_boot_sections++;
 
@@ -4022,8 +4005,6 @@ static int32_t bcmtch_dev_download_firmware(
 	}
 
 	BCMTCH_DBG(BCMTCH_DF_INFO, "INFO: FIRMWARE: loaded\n");
-
-download_error:
 
 	return ret_val;
 }
@@ -5526,8 +5507,6 @@ static void bcmtch_dev_post_boot_reset(
 	/* free communication channels */
 	bcmtch_dev_free_channels(bcmtch_data_ptr);
 
-	/* free post boot buffer */
-	vfree(bcmtch_data_ptr->post_boot_buffer);
 	bcmtch_data_ptr->post_boot_buffer = NULL;
 
 }
