@@ -374,7 +374,7 @@ module_param(dhd_arp_mode, uint, 0);
 module_param(disable_proptx, int, 0644);
 /* load firmware and/or nvram values from the filesystem */
 module_param_string(firmware_path, firmware_path, MOD_PARAM_PATHLEN, 0660);
-module_param_string(nvram_path, nvram_path, MOD_PARAM_PATHLEN, 0);
+module_param_string(nvram_path, nvram_path, MOD_PARAM_PATHLEN, 0660);
 
 /* Watchdog interval */
 
@@ -2739,6 +2739,7 @@ dhd_stop(struct net_device *net)
 {
 	int ifidx = 0;
 	dhd_info_t *dhd = *(dhd_info_t **)netdev_priv(net);
+
 	DHD_OS_WAKE_LOCK(&dhd->pub);
 	DHD_TRACE(("%s: Enter %p\n", __FUNCTION__, net));
 	if (dhd->pub.up == 0) {
@@ -4629,7 +4630,11 @@ fail_0:
 }
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 0)
+#if defined(ENABLE_INSMOD_NO_FW_LOAD)
+late_initcall_sync(dhd_module_init);
+#else
 late_initcall(dhd_module_init);
+#endif /* ENABLE_INSMOD_NO_FW_LOAD */
 #else
 module_init(dhd_module_init);
 #endif
