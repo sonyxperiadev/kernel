@@ -44,9 +44,15 @@ extern "C" {
 		STATE_SCREEN_OFF,	///<  Sleep-out, Screen Off
 	} DISP_PWR_STATE;
 
+#define DISPCTRL_TAG_SLEEP	((uint8_t)~0)
+#define DISPCTRL_TAG_GEN_WR	(DISPCTRL_TAG_SLEEP - 1)
+/* Maximum packet size is limited to 253 */
+#define DISPCTRL_MAX_DATA_LEN (DISPCTRL_TAG_GEN_WR - 1)
+
 	typedef enum {
 		DISPCTRL_LIST_END,	/* END OF COMMAND LIST */
-		DISPCTRL_WR_CMND,	///< write command 
+		DISPCTRL_WR_CMND,	/* DCS write command */
+		DISPCTRL_GEN_WR_CMND,	/* Generic write command */
 		DISPCTRL_WR_DATA,	///< write data     
 		DISPCTRL_SLEEP_MS,	///< SLEEP for <data> msec
 	} DISPCTRL_T;

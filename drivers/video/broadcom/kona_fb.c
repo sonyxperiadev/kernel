@@ -1180,6 +1180,8 @@ static char *get_seq(DISPCTRL_REC_T *rec)
 	for (i = 0; DISPCTRL_LIST_END != cur[i].type; i++) {
 		if (DISPCTRL_WR_DATA == cur[i].type)
 			list_len++;
+		else if (DISPCTRL_GEN_WR_CMND == cur[i].type)
+			list_len += 3; /* One more tag for Gen cmd */
 		else
 			list_len += 2; /* Indicates new packet */
 	}
@@ -1198,6 +1200,9 @@ static char *get_seq(DISPCTRL_REC_T *rec)
 	i = 0;
 	for (i = 0; DISPCTRL_LIST_END != cur[i].type; i++) {
 		switch (cur[i].type) {
+		case DISPCTRL_GEN_WR_CMND:
+			*dst++ = DISPCTRL_TAG_GEN_WR;
+			/* fall through */
 		case DISPCTRL_WR_CMND:
 			cmd_len = 1;
 			dst++;
@@ -1207,11 +1212,17 @@ static char *get_seq(DISPCTRL_REC_T *rec)
 				*dst++ = cur[i].val;
 				cmd_len++;
 			}
+			if (cmd_len > DISPCTRL_MAX_DATA_LEN) {
+				pr_err("cmd_len %d reach max\n", cmd_len);
+				kfree(buff);
+				buff = NULL;
+				goto seq_done;
+			}
 			*(dst - cmd_len - 1) = cmd_len;
 			break;
 		case DISPCTRL_SLEEP_MS:
 			/* Maximum packet size is limited to 254 */
-			*dst++ = ~0;
+			*dst++ = DISPCTRL_TAG_SLEEP;
 			*dst++ = cur[i].val;
 			break;
 		default:
