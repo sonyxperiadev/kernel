@@ -169,4 +169,10 @@ config INTEL_POWERCLAMP
 	  enforce idle time which results in more package C-state residency. The
 	  user interface is exposed via generic thermal framework.
 
+config KONA_TMON_THERMAL
+	tristate "Kona TMON thermal driver"
+	depends on THERMAL
+	depends on ARCH_KONA
+	help
+	  Enable this option to include Kona TMON thermal sensor driver.
 endif
