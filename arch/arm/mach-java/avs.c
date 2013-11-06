@@ -393,6 +393,8 @@ static ssize_t avs_debug_read_spm_val(struct file *file, char __user
 		"spm5: %u\n", avs_info.avs_handshake->spm5);
 	len += snprintf(buf + len, sizeof(buf) - len,
 		"IRDROP: %u\n", avs_info.avs_handshake->irdrop_1v2);
+	len += snprintf(buf + len, sizeof(buf) - len,
+		"silicon_type:: %u\n", avs_info.avs_handshake->silicon_type);
 
 	return simple_read_from_buffer(user_buf, count, ppos, buf, len);
 }
