@@ -2310,6 +2310,15 @@ CONFIG_SOC_CAMERA_OV5648=y
 # CONFIG_SOC_CAMERA_OV7692 is not set
 # CONFIG_SOC_CAMERA_RJ54N1 is not set
 # CONFIG_SOC_CAMERA_TW9910 is not set
+
+#
+# Flash devices
+#
+# CONFIG_VIDEO_AS3643 is not set
+
+#
+# soc camera host driver
+#
 CONFIG_UNICAM_CAMERA=y
 
 #
