@@ -1308,7 +1308,7 @@ void BCMLOG_StartCpCrashDump(struct file *inDumpFile, int cpresetStatus)
 	}
 
 	/* buffer for packaging up CP RAM dump blocks for crash log */
-	sMemDumpSignalBuf = kmalloc((WORDS_PER_SIGNAL << 3), GFP_KERNEL);
+	sMemDumpSignalBuf = kmalloc((WORDS_PER_SIGNAL << 3), GFP_ATOMIC);
 	if (sMemDumpSignalBuf == NULL) {
 		pr_err("sMemDumpSignalBuf kmalloc failed\n");
 		return;
