@@ -117,7 +117,7 @@ ENTRY(cpu_v7_set_pte_ext)
 #ifdef CONFIG_ARM_ERRATA_782773
 	msr	cpsr_c, r2			@ load cpsr
 #endif
-	ALT_SMP(mov	pc,lr)
+	ALT_SMP(W(nop))
 	ALT_UP (mcr	p15, 0, r0, c7, c10, 1)		@ flush_pte
 #endif
 	mov	pc, lr

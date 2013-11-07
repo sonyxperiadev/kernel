@@ -1284,8 +1284,17 @@ static int do_end_io(struct multipath *m, struct request *clone,
 	if (!error && !clone->errors)
 		return 0;	/* I/O complete */
 
-	if (error == -EOPNOTSUPP || error == -EREMOTEIO || error == -EILSEQ)
+	if (error == -EOPNOTSUPP || error == -EREMOTEIO || error == -EILSEQ) {
+		if ((clone->cmd_flags & REQ_WRITE_SAME) &&
+		    !clone->q->limits.max_write_same_sectors) {
+			struct queue_limits *limits;
+
+			/* device doesn't really support WRITE SAME, disable it */
+			limits = dm_get_queue_limits(dm_table_get_md(m->ti->table));
+			limits->max_write_same_sectors = 0;
+		}
 		return error;
+	}
 
 	if (mpio->pgpath)
 		fail_path(mpio->pgpath);
@@ -1561,7 +1570,6 @@ static int multipath_ioctl(struct dm_target *ti, unsigned int cmd,
 	unsigned long flags;
 	int r;
 
-again:
 	bdev = NULL;
 	mode = 0;
 	r = 0;
@@ -1579,7 +1587,7 @@ again:
 	}
 
 	if ((pgpath && m->queue_io) || (!pgpath && m->queue_if_no_path))
-		r = -EAGAIN;
+		r = -ENOTCONN;
 	else if (!bdev)
 		r = -EIO;
 
@@ -1591,11 +1599,8 @@ again:
 	if (!r && ti->len != i_size_read(bdev->bd_inode) >> SECTOR_SHIFT)
 		r = scsi_verify_blk_ioctl(NULL, cmd);
 
-	if (r == -EAGAIN && !fatal_signal_pending(current)) {
+	if (r == -ENOTCONN && !fatal_signal_pending(current))
 		queue_work(kmultipathd, &m->process_queued_ios);
-		msleep(10);
-		goto again;
-	}
 
 	return r ? : __blkdev_driver_ioctl(bdev, mode, cmd, arg);
 }
