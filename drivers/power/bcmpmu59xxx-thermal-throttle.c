@@ -95,7 +95,7 @@ int bcmpmu_throttle_get_temp(struct bcmpmu_throttle_data *tdata, u8 channel,
 	int temp_samples[ADC_DIE_TEMP_SAMPLES] = {0};
 	struct bcmpmu_adc_result result;
 	int retries;
-	static int temp_prev;
+	static int temp_prev = 0xffff;
 	int ret = 0, i = 0;
 	bool mean = true;
 
@@ -109,9 +109,9 @@ int bcmpmu_throttle_get_temp(struct bcmpmu_throttle_data *tdata, u8 channel,
 			msleep(ADC_RETRY_DELAY);
 		}
 		BUG_ON(retries <= 0);
-
-		if ((result.conv < (temp_prev + TEMP_OFFSET)) &&
-				(result.conv > (temp_prev - TEMP_OFFSET))) {
+	if ((temp_prev == 0xffff) ||
+			((result.conv < (temp_prev + TEMP_OFFSET)) &&
+			(result.conv > (temp_prev - TEMP_OFFSET)))) {
 			temp_prev = result.conv;
 			mean = false;
 			break;
