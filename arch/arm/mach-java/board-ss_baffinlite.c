@@ -508,7 +508,7 @@ static int hawaii_camera_power(struct device *dev, int on)
 		}
 
 	if (on) {
-		if (pi_mgr_dfs_request_update(&unicam_dfs_node, PI_OPP_TURBO)) {
+		if (pi_mgr_dfs_request_update(&unicam_dfs_node, PI_OPP_ECONOMY)) {
 			printk(
 			KERN_ERR "%s:failed to update dfs request for unicam\n",
 			__func__
@@ -604,7 +604,7 @@ static int hawaii_camera_power_sub(struct device *dev, int on)
 	}
 
 	if (on) {
-		if (pi_mgr_dfs_request_update(&unicam_dfs_node, PI_OPP_TURBO)) {
+		if (pi_mgr_dfs_request_update(&unicam_dfs_node, PI_OPP_ECONOMY)) {
 			printk(
 			KERN_ERR "%s:failed to update dfs request for unicam\n",
 			 __func__
