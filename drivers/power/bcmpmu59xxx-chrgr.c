@@ -536,7 +536,7 @@ static int charger_event_handler(struct notifier_block *nb,
 	return 0;
 }
 
-static int __init bcmpmu_chrgr_add_notifiers(struct bcmpmu_chrgr_data *di)
+static int bcmpmu_chrgr_add_notifiers(struct bcmpmu_chrgr_data *di)
 {
 	int ret = 0;
 
