@@ -396,6 +396,15 @@ config USE_ARCH_TIMER_AS_LOCAL_TIMER
 	  local timer another event timer that ca be alive during C3 state
 	  as well. If you are not sure say N
 
+config USE_JAVA_SPINLOCK
+	bool "Use Java specific Spinlock implementation"
+	depends on ARCH_JAVA
+	default n
+	help
+	  Because of the way WFE and SEV are implemented on A7 based Java
+	  there could be issues seen in the spinlocks. Enabling this option
+	  would replace the WFE and SEV with NOP.
+
 endmenu
 
 endif

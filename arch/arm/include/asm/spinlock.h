@@ -19,7 +19,11 @@
 	"	.popsection\n"
 
 #ifdef CONFIG_THUMB2_KERNEL
+#ifdef CONFIG_USE_JAVA_SPINLOCK
+#define SEV		ALT_SMP("nop.w", "nop.w")
+#else
 #define SEV		ALT_SMP("sev.w", "nop.w")
+#endif
 /*
  * For Thumb-2, special care is needed to ensure that the conditional WFE
  * instruction really does assemble to exactly 4 bytes (as required by
@@ -31,15 +35,29 @@
  * the assembler won't change IT instructions which are explicitly present
  * in the input.
  */
+#ifdef CONFIG_USE_JAVA_SPINLOCK
+#define WFE(cond)	ALT_SMP(		\
+	"it " cond "\n\t"			\
+	"nop" cond ".n",			\
+						\
+	"nop.w"					\
+)
+#else
 #define WFE(cond)	ALT_SMP(		\
 	"it " cond "\n\t"			\
 	"wfe" cond ".n",			\
 						\
 	"nop.w"					\
 )
+#endif
+#else
+#ifdef CONFIG_USE_JAVA_SPINLOCK
+#define SEV		ALT_SMP("nop", "nop")
+#define WFE(cond)	ALT_SMP("nop" cond, "nop")
 #else
 #define SEV		ALT_SMP("sev", "nop")
 #define WFE(cond)	ALT_SMP("wfe" cond, "nop")
+#endif
 #endif
 
 static inline void dsb_sev(void)
@@ -81,7 +99,9 @@ static inline void arch_spin_lock(arch_spinlock_t *lock)
 	unsigned long tmp;
 
 	__asm__ __volatile__(
+#ifdef CONFIG_USE_JAVA_SPINLOCK
 "	isb\n"
+#endif
 "1:	ldrex	%0, [%1]\n"
 "	teq	%0, #0\n"
 	WFE("ne")
@@ -141,6 +161,9 @@ static inline void arch_write_lock(arch_rwlock_t *rw)
 	unsigned long tmp;
 
 	__asm__ __volatile__(
+#ifdef CONFIG_USE_JAVA_SPINLOCK
+"	isb\n"
+#endif
 "1:	ldrex	%0, [%1]\n"
 "	teq	%0, #0\n"
 	WFE("ne")
@@ -207,6 +230,9 @@ static inline void arch_read_lock(arch_rwlock_t *rw)
 	unsigned long tmp, tmp2;
 
 	__asm__ __volatile__(
+#ifdef CONFIG_USE_JAVA_SPINLOCK
+"	isb\n"
+#endif
 "1:	ldrex	%0, [%2]\n"
 "	adds	%0, %0, #1\n"
 "	strexpl	%1, %0, [%2]\n"
