@@ -41,6 +41,10 @@
 #include <mach/pm.h>
 #endif
 
+#ifdef CONFIG_BRCM_SECURE_WATCHDOG
+#include <linux/broadcom/kona_sec_wd.h>
+#endif
+
 #include <linux/notifier.h>
 
 enum {
@@ -223,7 +227,10 @@ __weak int kona_mach_pm_enter(suspend_state_t state)
 #endif /*CONFIG_HAS_WAKELOCK */
 		if (suspend->enter) {
 			pr_info("--%s:suspend->enter--\n", __func__);
-
+#ifdef CONFIG_BRCM_SECURE_WATCHDOG
+		if  (is_sec_wd_enabled())
+			sec_wd_disable();
+#endif
 #ifdef CONFIG_BCM_MODEM
 			BcmRpc_SetApSleep(1);
 #endif
@@ -267,6 +274,10 @@ __weak int kona_mach_pm_enter(suspend_state_t state)
 
 #ifdef CONFIG_BCM_MODEM
 			BcmRpc_SetApSleep(0);
+#endif
+#ifdef CONFIG_BRCM_SECURE_WATCHDOG
+		if  (is_sec_wd_enabled())
+			sec_wd_enable();
 #endif
 		} else
 			cpu_do_idle();

@@ -121,6 +121,27 @@ void secure_api_call_init(void)
 }
 
 /* This function exclusively runs on Core 0 with preemption disabled */
+int secure_api_call_local(unsigned long service_id)
+{
+	struct sec_api_data data;
+
+	BUG_ON(smp_processor_id() != 0);
+
+	data.service_id = service_id;
+	data.arg0 = 0;
+	data.arg1 = 0;
+	data.arg2 = 0;
+	data.arg3 = 0;
+
+	/* Flush caches for input data passed to Secure Monitor */
+	flush_cache_all();
+
+	/*printk(KERN_NOTICE "About to trap into Secure Monitor on CPU %d\n",
+		raw_smp_processor_id());*/
+	return smc(&data);
+}
+
+/* This function exclusively runs on Core 0 with preemption disabled */
 static void secure_api_call_shim(void *info)
 {
 	struct sec_api_data *data = (struct sec_api_data *)info;

@@ -67,6 +67,7 @@ extern bool mobicore_sleep_ready(void);
 #ifdef CONFIG_KONA_SECURE_MONITOR_CALL
 extern void secure_api_call_init(void);
 
+extern int secure_api_call_local(unsigned long service_id);
 extern unsigned secure_api_call(unsigned service_id, unsigned arg0,
 	unsigned arg1, unsigned arg2, unsigned arg3);
 
