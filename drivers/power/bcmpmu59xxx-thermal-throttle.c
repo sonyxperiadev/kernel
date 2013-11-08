@@ -922,7 +922,7 @@ static int bcmpmu_throttle_remove(struct platform_device *pdev)
 	return 0;
 }
 
-static struct platform_driver bcmpmu_throttle_drv = {
+static struct platform_driver bcmpmu_throttle_driver = {
 	.driver = {
 		.name = "bcmpmu_thermal_throttle",
 	},
@@ -932,13 +932,13 @@ static struct platform_driver bcmpmu_throttle_drv = {
 
 static int __init bcmpmu_throttle_init(void)
 {
-	return platform_driver_register(&bcmpmu_throttle_drv);
+	return platform_driver_register(&bcmpmu_throttle_driver);
 }
 module_init(bcmpmu_throttle_init);
 
 static void __exit bcmpmu_throttle_exit(void)
 {
-	platform_driver_unregister(&bcmpmu_throttle_drv);
+	platform_driver_unregister(&bcmpmu_throttle_driver);
 }
 module_exit(bcmpmu_throttle_exit);
 
