@@ -811,6 +811,8 @@ int process_logmsg(void *data)
 	struct BCMLOG_LogLinkList_t link_list[2];
 	unsigned short state;
 	unsigned short sender;
+	size_t period_size;
+	unsigned char *buffer_boundary;
 
 	while (1) {
 		wait_event_interruptible(audio_log_queue,
@@ -874,6 +876,10 @@ int process_logmsg(void *data)
 					if (runtime == NULL)
 						goto this_path_done;
 
+					period_size = runtime->dma_bytes
+						/ runtime->periods;
+					buffer_boundary = runtime->dma_area
+						+ runtime->dma_bytes;
 					log_header.magicID = 0xA0D10106;
 					log_header.logPointID =
 					    audio_log_cbinfo[i].stream_index;
@@ -884,8 +890,7 @@ int process_logmsg(void *data)
 					log_header.bitsPerSample =
 					    runtime->sample_bits;
 					log_header.frame_size =
-					    runtime->dma_bytes / 2;
-
+						period_size;
 				link_list[0].byte_array = (void *)&log_header;
 				link_list[0].size = sizeof(log_header);
 
@@ -908,15 +913,11 @@ int process_logmsg(void *data)
 					p_dma_area =
 					    (void *)audio_log_cbinfo[i].
 					    p_LogRead;
-
-					if (p_dma_area == runtime->dma_area) {
-						p_dma_area =
-						    runtime->dma_area +
-						    runtime->dma_bytes / 2;
-
-					} else {
+					if (p_dma_area == NULL || p_dma_area ==
+						buffer_boundary - period_size)
 						p_dma_area = runtime->dma_area;
-					}
+					else
+						p_dma_area += period_size;
 
 					audio_log_cbinfo[i].p_LogRead =
 					    (void *)p_dma_area;
@@ -926,7 +927,7 @@ int process_logmsg(void *data)
 
 					link_list[1].byte_array = p_dma_area;
 					link_list[1].size =
-						runtime->dma_bytes / 2;
+						period_size;
 
 				if (log_point == AUD_LOG_VOCODER_UL)
 					mutex_unlock(&voip_log.voip_ul_mutex);
