@@ -40,10 +40,6 @@ struct rand_pool_info {
 	__u32	buf[0];
 };
 
-struct rnd_state {
-	__u32 s1, s2, s3;
-};
-
 /* Exported functions */
 
 
