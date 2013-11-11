@@ -601,7 +601,7 @@ static int ov7692_s_ctrl(struct v4l2_ctrl *ctrl)
 		break;
 	case V4L2_CID_COLORFX:
 
-		if (ctrl->val > IMAGE_EFFECT_BNW)
+		if (ctrl->val > V4L2_COLORFX_NEGATIVE)
 			return -EINVAL;
 
 		ov7692->colorlevel = ctrl->val;
@@ -677,7 +677,7 @@ static int ov7692_s_ctrl(struct v4l2_ctrl *ctrl)
 
 	case V4L2_CID_POWER_LINE_FREQUENCY:
 
-		if (ctrl->val > ANTI_BANDING_60HZ)
+		if (ctrl->val > V4L2_CID_POWER_LINE_FREQUENCY_AUTO)
 			return -EINVAL;
 
 		ov7692->antibanding = ctrl->val;
@@ -705,13 +705,10 @@ static int ov7692_s_ctrl(struct v4l2_ctrl *ctrl)
 
 	case V4L2_CID_AUTO_N_PRESET_WHITE_BALANCE:
 
-		if (ctrl->val > WHITE_BALANCE_FLUORESCENT)
+		if (ctrl->val > V4L2_WHITE_BALANCE_CLOUDY)
 			return -EINVAL;
 
 		ov7692->whitebalance = ctrl->val;
-
-		if (ret)
-			return ret;
 
 		switch (ov7692->whitebalance) {
 		case V4L2_WHITE_BALANCE_FLUORESCENT:
@@ -906,12 +903,12 @@ static int ov7692_init(struct i2c_client *client)
 	}
 
 	/* default brightness and contrast */
-	ov7692->brightness = EV_DEFAULT;
-	ov7692->contrast = CONTRAST_DEFAULT;
-	ov7692->colorlevel = IMAGE_EFFECT_NONE;
-	ov7692->antibanding = ANTI_BANDING_AUTO;
-	ov7692->whitebalance = WHITE_BALANCE_AUTO;
-	ov7692->framerate = FRAME_RATE_AUTO;
+	ov7692->brightness	= EV_DEFAULT;
+	ov7692->contrast	= CONTRAST_DEFAULT;
+	ov7692->colorlevel	= V4L2_COLORFX_NONE;
+	ov7692->antibanding	= V4L2_CID_POWER_LINE_FREQUENCY_AUTO;
+	ov7692->whitebalance	= V4L2_WHITE_BALANCE_AUTO;
+	ov7692->framerate	= FRAME_RATE_AUTO;
 
 	dev_dbg(&client->dev, "Sensor initialized\n");
 
@@ -1181,14 +1178,19 @@ static int ov7692_probe(struct i2c_client *client,
 			ov7692->hdl.error);
 
 	/* register standard controls */
-	v4l2_ctrl_new_std(&ov7692->hdl, &ov7692_ctrl_ops,
-		V4L2_CID_BRIGHTNESS, 0, 4, 1, 2);
-	v4l2_ctrl_new_std(&ov7692->hdl, &ov7692_ctrl_ops,
-		V4L2_CID_CONTRAST, 0, 4, 1, 0);
-	v4l2_ctrl_new_std(&ov7692->hdl, &ov7692_ctrl_ops,
-		V4L2_CID_SATURATION, 0, 4, 1, 0);
-	v4l2_ctrl_new_std(&ov7692->hdl, &ov7692_ctrl_ops,
-		V4L2_CID_SHARPNESS, 0, 4, 1, 0);
+	v4l2_ctrl_new_std(&ov7692->hdl, &ov7692_ctrl_ops, V4L2_CID_BRIGHTNESS,
+			EV_MINUS_1, EV_PLUS_1, 1, EV_DEFAULT);
+
+	v4l2_ctrl_new_std(&ov7692->hdl, &ov7692_ctrl_ops, V4L2_CID_CONTRAST,
+			CONTRAST_MINUS_2, CONTRAST_PLUS_2, 1, CONTRAST_DEFAULT);
+
+	v4l2_ctrl_new_std(&ov7692->hdl, &ov7692_ctrl_ops, V4L2_CID_SATURATION,
+			OV7692_SATURATION_MIN, OV7692_SATURATION_MAX,
+			OV7692_SATURATION_STEP, OV7692_SATURATION_DEF);
+
+	v4l2_ctrl_new_std(&ov7692->hdl, &ov7692_ctrl_ops, V4L2_CID_SHARPNESS,
+			OV7692_SHARPNESS_MIN, OV7692_SHARPNESS_MAX,
+			OV7692_SHARPNESS_STEP, OV7692_SHARPNESS_DEF);
 
 	if (ov7692->hdl.error) {
 		dev_err(&client->dev,
@@ -1200,7 +1202,7 @@ static int ov7692_probe(struct i2c_client *client,
 
 	/* register standard menu controls */
 	v4l2_ctrl_new_std_menu(&ov7692->hdl, &ov7692_ctrl_ops,
-		V4L2_CID_COLORFX, V4L2_COLORFX_SOLARIZATION, 0,
+		V4L2_CID_COLORFX, V4L2_COLORFX_NEGATIVE, 0,
 		V4L2_COLORFX_NONE);
 
 	v4l2_ctrl_new_std_menu(&ov7692->hdl, &ov7692_ctrl_ops,

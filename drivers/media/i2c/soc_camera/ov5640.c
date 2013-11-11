@@ -48,6 +48,7 @@
 #define OV5640_BINNING_MASK		0x01
 #define OV5640_TIMING_REG20		0x3820
 #define OV5640_TIMING_REG21		0x3821
+#define OV5640_NUM_OF_STD_CTRLS		15	/* no.of std + std_menu ctrls */
 
 /* OV5640 has only one fixed colorspace per pixelcode */
 struct ov5640_datafmt {
@@ -171,15 +172,16 @@ struct ov5640 {
 	int i_fmt;
 	int brightness;
 	int contrast;
-	int colorlevel;
 	int sharpness;
 	int saturation;
-	int antibanding;
-	int whitebalance;
 	int hflip;
 	int vflip;
 	int framerate;
-	int focus_mode;
+	enum v4l2_colorfx			colorlevel;
+	enum v4l2_power_line_frequency		antibanding;
+	enum v4l2_auto_n_preset_white_balance	whitebalance;
+	enum v4l2_auto_focus_range		focus_mode;
+	enum v4l2_flash_led_mode		flashmode;
 	/*
 	 * focus_status = 1 focusing
 	 * focus_status = 0 focus cancelled or not focusing
@@ -191,7 +193,6 @@ struct ov5640 {
 	 */
 	int touch_focus;
 	v4l2_touch_area touch_area[OV5640_MAX_FOCUS_AREAS];
-	enum v4l2_flash_led_mode flashmode;
 	short fireflash;
 };
 
@@ -653,18 +654,7 @@ static const struct v4l2_ctrl_config ov5640_controls[] = {
 		.def	= FRAME_RATE_AUTO,
 		.flags	= V4L2_CTRL_FLAG_VOLATILE,
 	},
-	{
-		.ops	= &ov5640_ctrl_ops,
-		.id	= V4L2_CID_CAMERA_SET_AUTO_FOCUS,
-		.type	= V4L2_CTRL_TYPE_INTEGER,
-		.name	= "AF start/stop",
-		.min	= AUTO_FOCUS_OFF,
-		.max	= AUTO_FOCUS_ON,
-		.step	= 1,
-		.def	= AUTO_FOCUS_OFF,
-		.flags	= V4L2_CTRL_FLAG_VOLATILE,
-	},
-	{
+/*	{
 		.ops	= &ov5640_ctrl_ops,
 		.id	= V4L2_CID_CAMERA_TOUCH_AF_AREA,
 		.type	= V4L2_CTRL_TYPE_INTEGER,
@@ -674,21 +664,24 @@ static const struct v4l2_ctrl_config ov5640_controls[] = {
 		.step	= 1,
 		.def	= 1,
 		.flags	= V4L2_CTRL_FLAG_VOLATILE,
-	},
+	}, */
 	{
 		.ops	= &ov5640_ctrl_ops,
 		.id	= V4L2_CID_CAM_CAPTURE,
 		/* v4l2 control framework does not call s_ctrl if
 		 * current control value == previous control value.
 		 * If type = V4L2_CTRL_TYPE_BUTTON then s_ctrl is called always.
+		 *
+		 * For BUTTON controls: min = max = step = def = 0
+		 * and flag = write_only.
 		 */
 		.type	= V4L2_CTRL_TYPE_BUTTON,
 		.name	= "Camera capture",
 		.min	= 0,
-		.max	= 1,
-		.step	= 1,
+		.max	= 0,
+		.step	= 0,
 		.def	= 0,
-		.flags	= V4L2_CTRL_FLAG_VOLATILE,
+		.flags	= V4L2_CTRL_FLAG_WRITE_ONLY,
 	},
 	{
 		.ops	= &ov5640_ctrl_ops,
@@ -696,10 +689,10 @@ static const struct v4l2_ctrl_config ov5640_controls[] = {
 		.type	= V4L2_CTRL_TYPE_BUTTON,
 		.name	= "Camera capture done",
 		.min	= 0,
-		.max	= 1,
-		.step	= 1,
+		.max	= 0,
+		.step	= 0,
 		.def	= 0,
-		.flags	= V4L2_CTRL_FLAG_VOLATILE,
+		.flags	= V4L2_CTRL_FLAG_WRITE_ONLY,
 	},
 	{
 		.ops	= &ov5640_ctrl_ops,
@@ -1210,7 +1203,7 @@ static int ov5640_af_status(struct i2c_client *client, int num_trys)
 	int af_st = 0;
 	u8 af_zone0, af_zone1, af_zone2, af_zone3, af_zone4;
 
-	if (ov5640->focus_mode == FOCUS_MODE_AUTO) {
+	if (ov5640->focus_mode == V4L2_AUTO_FOCUS_RANGE_AUTO) {
 		/* Check if Focused */
 		af_st = ov5640_af_fw_status(client);
 		if (af_st != 0x10) {
@@ -1800,14 +1793,14 @@ static int ov5640_af_start(struct i2c_client *client)
 	int ret = 0;
 	struct ov5640 *ov5640 = to_ov5640(client);
 
-	if (ov5640->focus_mode == FOCUS_MODE_MACRO) {
+	if (ov5640->focus_mode == V4L2_AUTO_FOCUS_RANGE_MACRO) {
 		/*
 		 * FIXME: Can the af_area be set before af_macro, or does
 		 * this need to be inside the af_macro func?
 		 * ret = ov5640_af_area(client);
 		 */
 		ret = ov5640_af_macro(client);
-	} else if (ov5640->focus_mode == FOCUS_MODE_INFINITY)
+	} else if (ov5640->focus_mode == V4L2_AUTO_FOCUS_RANGE_INFINITY)
 		ret = ov5640_af_infinity(client);
 	else {
 		if (ov5640->touch_focus) {
@@ -2056,11 +2049,11 @@ static int ov5640_g_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct ov5640 *ov5640 = to_ov5640(client);
 
-	mf->width = ov5640_frmsizes[ov5640->i_size].width;
-	mf->height = ov5640_frmsizes[ov5640->i_size].height;
-	mf->code = ov5640_fmts[ov5640->i_fmt].code;
-	mf->colorspace = ov5640_fmts[ov5640->i_fmt].colorspace;
-	mf->field = V4L2_FIELD_NONE;
+	mf->width	= ov5640_frmsizes[ov5640->i_size].width;
+	mf->height	= ov5640_frmsizes[ov5640->i_size].height;
+	mf->code	= ov5640_fmts[ov5640->i_fmt].code;
+	mf->colorspace	= ov5640_fmts[ov5640->i_fmt].colorspace;
+	mf->field	= V4L2_FIELD_NONE;
 
 	return 0;
 }
@@ -2364,7 +2357,7 @@ static int ov5640_s_ctrl(struct v4l2_ctrl *ctrl)
 		break;
 	case V4L2_CID_COLORFX:
 
-		if (ctrl->val > IMAGE_EFFECT_BNW)
+		if (ctrl->val > V4L2_COLORFX_NEGATIVE)
 			return -EINVAL;
 
 		ov5640->colorlevel = ctrl->val;
@@ -2439,7 +2432,7 @@ static int ov5640_s_ctrl(struct v4l2_ctrl *ctrl)
 
 	case V4L2_CID_POWER_LINE_FREQUENCY:
 
-		if (ctrl->val > ANTI_BANDING_60HZ)
+		if (ctrl->val > V4L2_CID_POWER_LINE_FREQUENCY_AUTO)
 			return -EINVAL;
 
 		ov5640->antibanding = ctrl->val;
@@ -2467,7 +2460,7 @@ static int ov5640_s_ctrl(struct v4l2_ctrl *ctrl)
 
 	case V4L2_CID_AUTO_N_PRESET_WHITE_BALANCE:
 
-		if (ctrl->val > WHITE_BALANCE_FLUORESCENT)
+		if (ctrl->val > V4L2_WHITE_BALANCE_CLOUDY)
 			return -EINVAL;
 
 		ov5640->whitebalance = ctrl->val;
@@ -2560,7 +2553,7 @@ static int ov5640_s_ctrl(struct v4l2_ctrl *ctrl)
 
 	case V4L2_CID_AUTO_FOCUS_RANGE:
 
-		if (ctrl->val > FOCUS_MODE_INFINITY)
+		if (ctrl->val > V4L2_AUTO_FOCUS_RANGE_INFINITY)
 			return -EINVAL;
 
 		ov5640->focus_mode = ctrl->val;
@@ -2621,44 +2614,32 @@ static int ov5640_s_ctrl(struct v4l2_ctrl *ctrl)
 
 		break;
 
-	case V4L2_CID_CAMERA_SET_AUTO_FOCUS:
-
-		if (ctrl->val > AUTO_FOCUS_ON)
-			return -EINVAL;
-
-		/* start and stop af cycle here */
-		switch (ctrl->val) {
-
-		case AUTO_FOCUS_OFF:
-
-			if (atomic_read(&ov5640->focus_status)
-			    == OV5640_FOCUSING) {
-				ret = ov5640_af_release(client);
-				atomic_set(&ov5640->focus_status,
-					   OV5640_NOT_FOCUSING);
-			}
-			ov5640->touch_focus = 0;
-			break;
-
-		case AUTO_FOCUS_ON:
-			if (1 != afFWLoaded) {
-				ret = ov5640_af_enable(client);
-				if (ret)
-					return ret;
-				afFWLoaded = 1;
-			}
-			/* check if preflash is needed */
-			ret = ov5640_pre_flash(client);
-
-			ret = ov5640_af_start(client);
-			atomic_set(&ov5640->focus_status, OV5640_FOCUSING);
-			break;
-
+	case V4L2_CID_AUTO_FOCUS_STOP:
+		if (atomic_read(&ov5640->focus_status)
+				== OV5640_FOCUSING) {
+			ret = ov5640_af_release(client);
+			atomic_set(&ov5640->focus_status,
+					OV5640_NOT_FOCUSING);
 		}
+		ov5640->touch_focus = 0;
+		break;
 
+	case V4L2_CID_AUTO_FOCUS_START:
+		if (1 != afFWLoaded) {
+			ret = ov5640_af_enable(client);
+			if (ret)
+				return ret;
+			afFWLoaded = 1;
+		}
+		/* check if preflash is needed */
+		ret = ov5640_pre_flash(client);
+
+		ret = ov5640_af_start(client);
+		atomic_set(&ov5640->focus_status, OV5640_FOCUSING);
 		if (ret)
 			return ret;
 		break;
+
 	case V4L2_CID_FLASH_LED_MODE:
 		ret = ov5640_set_flash_mode(ctrl, client);
 		break;
@@ -2964,17 +2945,17 @@ static int ov5640_init(struct i2c_client *client)
 	ret = ov5640_reg_writes(client, ov5640_power_down);
 
 	/* default brightness and contrast */
-	ov5640->brightness = EV_DEFAULT;
-	ov5640->contrast = CONTRAST_DEFAULT;
-	ov5640->colorlevel = IMAGE_EFFECT_NONE;
-	ov5640->antibanding = ANTI_BANDING_AUTO;
-	ov5640->whitebalance = WHITE_BALANCE_AUTO;
-	ov5640->framerate = FRAME_RATE_AUTO;
-	ov5640->focus_mode = FOCUS_MODE_AUTO;
-	ov5640->touch_focus = 0;
+	ov5640->brightness	= EV_DEFAULT;
+	ov5640->contrast	= CONTRAST_DEFAULT;
+	ov5640->colorlevel	= V4L2_COLORFX_NONE;
+	ov5640->antibanding	= V4L2_CID_POWER_LINE_FREQUENCY_AUTO;
+	ov5640->whitebalance	= V4L2_WHITE_BALANCE_AUTO;
+	ov5640->framerate	= FRAME_RATE_AUTO;
+	ov5640->focus_mode	= V4L2_AUTO_FOCUS_RANGE_AUTO;
+	ov5640->touch_focus	= 0;
 	atomic_set(&ov5640->focus_status, OV5640_NOT_FOCUSING);
-	ov5640->flashmode = V4L2_FLASH_LED_MODE_NONE;
-	ov5640->fireflash = 0;
+	ov5640->flashmode	= V4L2_FLASH_LED_MODE_NONE;
+	ov5640->fireflash	= 0;
 
 	dev_dbg(&client->dev, "Sensor initialized\n");
 
@@ -3273,23 +3254,33 @@ static int ov5640_probe(struct i2c_client *client,
 
 	v4l2_i2c_subdev_init(&ov5640->subdev, client, &ov5640_subdev_ops);
 
-	v4l2_ctrl_handler_init(&ov5640->hdl, ARRAY_SIZE(ov5640_controls) + 12);
+	v4l2_ctrl_handler_init(&ov5640->hdl, ARRAY_SIZE(ov5640_controls) +
+						OV5640_NUM_OF_STD_CTRLS);
 	if (ov5640->hdl.error)
 		dev_dbg(&client->dev, "Error set during init itself! %d\n",
 			ov5640->hdl.error);
 
 	/* register standard controls */
 	v4l2_ctrl_new_std(&ov5640->hdl, &ov5640_ctrl_ops,
-		V4L2_CID_BRIGHTNESS, 0, 4, 1, 2);
+		V4L2_CID_BRIGHTNESS, EV_MINUS_2, EV_PLUS_2, 1, EV_DEFAULT);
+
+	v4l2_ctrl_new_std(&ov5640->hdl, &ov5640_ctrl_ops, V4L2_CID_CONTRAST,
+			CONTRAST_MINUS_1, CONTRAST_PLUS_1, 1, CONTRAST_DEFAULT);
+
+	v4l2_ctrl_new_std(&ov5640->hdl, &ov5640_ctrl_ops, V4L2_CID_SATURATION,
+		OV5640_SATURATION_MIN, OV5640_SATURATION_MAX,
+		OV5640_SATURATION_STEP, OV5640_SATURATION_DEF);
+
+	v4l2_ctrl_new_std(&ov5640->hdl, &ov5640_ctrl_ops, V4L2_CID_SHARPNESS,
+		OV5640_SHARPNESS_MIN, OV5640_SHARPNESS_MAX,
+		OV5640_SHARPNESS_STEP, OV5640_SHARPNESS_DEF);
+
+	/* For BUTTON controls: min = max = step = def = 0 */
+/*	v4l2_ctrl_new_std(&ov5640->hdl, &ov5640_ctrl_ops,
+		V4L2_CID_AUTO_FOCUS_START, 0, 0, 0, 0);
 
 	v4l2_ctrl_new_std(&ov5640->hdl, &ov5640_ctrl_ops,
-		V4L2_CID_CONTRAST, 0, 4, 1, 0);
-
-	v4l2_ctrl_new_std(&ov5640->hdl, &ov5640_ctrl_ops,
-		V4L2_CID_SATURATION, 0, 4, 1, 0);
-
-	v4l2_ctrl_new_std(&ov5640->hdl, &ov5640_ctrl_ops,
-		V4L2_CID_SHARPNESS, 0, 4, 1, 0);
+		V4L2_CID_AUTO_FOCUS_STOP, 0, 0, 0, 0);
 
 	v4l2_ctrl_new_std(&ov5640->hdl, &ov5640_ctrl_ops,
 			V4L2_CID_AUTO_FOCUS_STATUS, 0,
@@ -3297,7 +3288,7 @@ static int ov5640_probe(struct i2c_client *client,
 			V4L2_AUTO_FOCUS_STATUS_REACHED |
 			V4L2_AUTO_FOCUS_STATUS_FAILED),
 			0, V4L2_AUTO_FOCUS_STATUS_IDLE);
-
+*/
 	v4l2_ctrl_new_std(&ov5640->hdl, &ov5640_ctrl_ops,
 		V4L2_CID_HFLIP, 0, 1, 1, 0);
 	ov5640->hflip = 0;
@@ -3323,7 +3314,7 @@ static int ov5640_probe(struct i2c_client *client,
 
 	/* register standard menu controls */
 	v4l2_ctrl_new_std_menu(&ov5640->hdl, &ov5640_ctrl_ops,
-		V4L2_CID_COLORFX, V4L2_COLORFX_SOLARIZATION, 0,
+		V4L2_CID_COLORFX, V4L2_COLORFX_NEGATIVE, 0,
 		V4L2_COLORFX_NONE);
 
 	v4l2_ctrl_new_std_menu(&ov5640->hdl, &ov5640_ctrl_ops,
