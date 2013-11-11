@@ -117,7 +117,8 @@ struct _AUDIO_DRIVER_CallBackParams_t {
 #define AUDIO_DRIVER_CallBackParams_t struct _AUDIO_DRIVER_CallBackParams_t
 
 struct _voip_data_t {
-	UInt32 codec_type;
+	UInt32 codec_type_ul;
+	UInt32 codec_type_dl;
 	UInt32 bitrate_index;
 	UInt8 isVoLTE;
 	UInt8 isDTXEnabled;

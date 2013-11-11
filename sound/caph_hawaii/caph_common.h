@@ -94,6 +94,11 @@ struct treq_sysparm_t {
 	unsigned int data[TREQ_DATA_SIZE];
 };
 
+struct voip_codec_type_data {
+	voip_codec_type_t codec_type;
+	voip_start_stop_type_t ul_dl_type;
+};
+#define voip_codec_type_data_t struct voip_codec_type_data
 
 enum {
 	VoIP_Ioctl_GetVersion = _IOR('H', 0x10, int),
@@ -101,10 +106,10 @@ enum {
 	VoIP_Ioctl_Stop = _IOW('H', 0x12, voip_start_stop_type_t),
 	VoIP_Ioctl_SetSource = _IOW('H', 0x13, int),
 	VoIP_Ioctl_SetSink = _IOW('H', 0x14, int),
-	VoIP_Ioctl_SetCodecType = _IOW('H', 0x15, int),
+	VoIP_Ioctl_SetCodecType = _IOW('H', 0x15, voip_codec_type_data_t),
 	VoIP_Ioctl_GetSource = _IOR('H', 0x16, int),
 	VoIP_Ioctl_GetSink = _IOR('H', 0x17, int),
-	VoIP_Ioctl_GetCodecType = _IOR('H', 0x18, int),
+	VoIP_Ioctl_GetCodecType = _IOR('H', 0x18, voip_codec_type_data_t),
 	VoIP_Ioctl_SetMode = _IOW('H', 0x19, int),
 	VoIP_Ioctl_GetMode = _IOR('H', 0x1A, int),
 	VoIP_Ioctl_SetBitrate = _IOW('H', 0x1B, int),
