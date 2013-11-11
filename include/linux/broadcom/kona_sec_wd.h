@@ -29,6 +29,8 @@
 unsigned int sec_wd_activate(void);
 void sec_wd_suspend(void);
 void sec_wd_resume(void);
+void sec_wd_enable(void);
+void sec_wd_disable(void);
 unsigned int is_sec_wd_enabled(void);
 
 #endif
