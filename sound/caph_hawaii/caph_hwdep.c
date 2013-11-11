@@ -103,10 +103,13 @@ struct __bcm_caph_hwdep_voip {
 	audio_voip_driver_t *buffer_handle;
 	AUDIO_SOURCE_Enum_t mic;
 	AUDIO_SINK_Enum_t spk;
-	u32 codec_type;
+	u32 codec_type_ul;
+	u32 codec_type_dl;
 	u8 voip_type;
-	u32 frame_size;
-	u32 buffer_size;
+	u32 frame_size_ul;
+	u32 frame_size_dl;
+	u32 buffer_size_ul;
+	u32 buffer_size_dl;
 	int dlstarted;
 	int ulstarted;
 };
@@ -199,14 +202,14 @@ static void HWDEP_VOIP_DumpUL_CB(void *pPrivate, u8 * pSrc, u32 nSize)
 			if (pVoIP->frames_available_to_read > 1)
 				aTrace(LOG_ALSA_INTERFACE, "more than 1 frame"
 				" available frame_size %d, readcount %d\n",
-				pVoIP->frame_size,
+				pVoIP->frame_size_ul,
 				pVoIP->frames_available_to_read);
 #ifdef CONFIG_VOIP_BUFFER_INCREASE
 			pVoIP->buffer_handle->voip_data_ul_wr_index += nSize;
 			if (pVoIP->buffer_handle->voip_data_ul_wr_index >=
-			    pVoIP->buffer_size) {
+			    pVoIP->buffer_size_ul) {
 				pVoIP->buffer_handle->voip_data_ul_wr_index -=
-				    pVoIP->buffer_size;
+				    pVoIP->buffer_size_ul;
 			}
 #endif
 		}
@@ -234,7 +237,7 @@ static void HWDEP_VOIP_FillDL_CB(
 		pVoIP->frames_available_to_write);
 
 	if (pVoIP->dlstarted == 0) {
-		FillSilenceFrame(pVoIP->codec_type, nSize, pDst);
+		FillSilenceFrame(pVoIP->codec_type_dl, nSize, pDst);
 		return;
 	}
 
@@ -245,10 +248,10 @@ static void HWDEP_VOIP_FillDL_CB(
 		 */
 		if (pVoIP->frames_available_to_write == 0) {
 			/* fill with silent data based on the frame type  */
-			FillSilenceFrame(pVoIP->codec_type, nSize, pDst);
+			FillSilenceFrame(pVoIP->codec_type_dl, nSize, pDst);
 			aTrace(LOG_ALSA_INTERFACE, "under run frame_size %d,"
 				"writecount %d\n",
-				pVoIP->frame_size, pVoIP->writecount);
+				pVoIP->frame_size_dl, pVoIP->writecount);
 
 		} else {
 		if (isVoLTE)
@@ -265,9 +268,9 @@ static void HWDEP_VOIP_FillDL_CB(
 #ifdef CONFIG_VOIP_BUFFER_INCREASE
 			pVoIP->buffer_handle->voip_data_dl_rd_index += nSize;
 			if (pVoIP->buffer_handle->voip_data_dl_rd_index >=
-			    pVoIP->buffer_size) {
+			    pVoIP->buffer_size_dl) {
 				pVoIP->buffer_handle->voip_data_dl_rd_index -=
-				    pVoIP->buffer_size;
+				    pVoIP->buffer_size_dl;
 			}
 #endif
 		}
@@ -296,28 +299,28 @@ static long hwdep_read(struct snd_hwdep *hw, char __user * buf, long count,
 						 voip_data_ul_buf_ptr +
 						 pVoIP->buffer_handle->
 						 voip_data_ul_rd_index,
-						 pVoIP->frame_size);
+						 pVoIP->frame_size_ul);
 
 				voip_log_capture(AUD_LOG_VOCODER_UL,
 						pVoIP->buffer_handle->
 						voip_data_ul_buf_ptr +
 						pVoIP->buffer_handle->
 						voip_data_ul_rd_index,
-						pVoIP->frame_size);
+						pVoIP->frame_size_ul);
 
 				pVoIP->frames_available_to_read--;
 #ifdef CONFIG_VOIP_BUFFER_INCREASE
 				pVoIP->buffer_handle->voip_data_ul_rd_index +=
-				    pVoIP->frame_size;
+				    pVoIP->frame_size_ul;
 				if (pVoIP->buffer_handle->
 				    voip_data_ul_rd_index >=
-				    pVoIP->buffer_size) {
+				    pVoIP->buffer_size_ul) {
 					pVoIP->buffer_handle->
 					    voip_data_ul_rd_index -=
-					    pVoIP->buffer_size;
+					    pVoIP->buffer_size_ul;
 				}
 #endif
-				ret = pVoIP->frame_size;
+				ret = pVoIP->frame_size_ul;
 			}
 		}
 	} else
@@ -355,14 +358,14 @@ static long hwdep_write(struct snd_hwdep *hw, const char __user * buf,
 					voip_data_dl_wr_index,
 					(struct __dl_frame *)
 					frame_dl_data->data,
-					pVoIP->frame_size);
+					pVoIP->frame_size_dl);
 
 				voip_log_capture(AUD_LOG_VOCODER_DL,
 					pVoIP->buffer_handle->
 					voip_data_dl_buf_ptr +
 					pVoIP->buffer_handle->
 					voip_data_dl_wr_index,
-					pVoIP->frame_size);
+					pVoIP->frame_size_dl);
 
 				/* send the DL frame to DSP . In case of VoLTE,
 				whenever the application sends the data,
@@ -377,14 +380,14 @@ static long hwdep_write(struct snd_hwdep *hw, const char __user * buf,
 					pVoIP->buffer_handle->
 					voip_data_dl_wr_index,
 					buf,
-					pVoIP->frame_size);
+					pVoIP->frame_size_dl);
 
 				voip_log_capture(AUD_LOG_VOCODER_DL,
 					pVoIP->buffer_handle->
 					voip_data_dl_buf_ptr +
 					pVoIP->buffer_handle->
 					voip_data_dl_wr_index,
-					pVoIP->frame_size);
+					pVoIP->frame_size_dl);
 
 			}
 			pVoIP->frames_available_to_write++;
@@ -392,15 +395,15 @@ static long hwdep_write(struct snd_hwdep *hw, const char __user * buf,
 				pVoIP->writecount--;
 #ifdef CONFIG_VOIP_BUFFER_INCREASE
 			pVoIP->buffer_handle->voip_data_dl_wr_index +=
-			    pVoIP->frame_size;
+			    pVoIP->frame_size_dl;
 			if (pVoIP->buffer_handle->voip_data_dl_wr_index >=
-			    pVoIP->buffer_size) {
+			    pVoIP->buffer_size_dl) {
 				pVoIP->buffer_handle->voip_data_dl_wr_index -=
-				    pVoIP->buffer_size;
+				    pVoIP->buffer_size_dl;
 			}
 #endif
 		}
-		ret = pVoIP->frame_size;
+		ret = pVoIP->frame_size_dl;
 	} else
 		ret = 0;
 	return ret;
@@ -427,6 +430,7 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file,
 	Boolean enable = FALSE;
 	Int32 size = 0;
 	int data;
+	voip_codec_type_data_t val;
 	static UserCtrl_data_t *dataptr;
 	brcm_alsa_chip_t *pChip = NULL;
 	struct treq_sysparm_t *eq;
@@ -460,8 +464,6 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file,
 
 			init_waitqueue_head(&pVoIP->sleep);
 
-			pVoIP->codec_type = pChip->voip_data.codec_type;
-
 			pVoIP->buffer_handle =
 			    (audio_voip_driver_t *)
 			    kzalloc(sizeof(audio_voip_driver_t), GFP_KERNEL);
@@ -469,36 +471,58 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file,
 			if (pVoIP->buffer_handle)
 				memset((u8 *) pVoIP->buffer_handle, 0,
 				       sizeof(audio_voip_driver_t));
-			else
+			else {
+				pVoIP->buffer_handle = NULL;
 				return -ENOMEM;
-			pVoIP->frame_size = sVoIPFrameLen[pVoIP->codec_type];
-
-			pVoIP->buffer_size =
-			    pVoIP->frame_size * VOIP_FRAMES_IN_BUFFER;
-
-			pVoIP->buffer_handle->voip_data_dl_buf_ptr =
-				kzalloc(pVoIP->buffer_size, GFP_KERNEL);
-			if (pVoIP->buffer_handle->voip_data_dl_buf_ptr) {
+			}
+/*ul data*/
+			pVoIP->codec_type_ul = pChip->voip_data.codec_type_ul;
+			pVoIP->frame_size_ul = sVoIPFrameLen[pVoIP->
+								codec_type_ul];
+			pVoIP->buffer_size_ul = pVoIP->frame_size_ul *
+							VOIP_FRAMES_IN_BUFFER;
+			pVoIP->buffer_handle->voip_data_ul_buf_ptr =
+			kzalloc(pVoIP->buffer_size_ul, GFP_KERNEL);
+			if (pVoIP->buffer_handle->voip_data_ul_buf_ptr)
 				memset(pVoIP->buffer_handle->
-				       voip_data_dl_buf_ptr, 0,
-				       pVoIP->buffer_size);
-			} else {
+				       voip_data_ul_buf_ptr, 0,
+				       pVoIP->buffer_size_ul);
+			else {
+				if (pVoIP->buffer_handle->
+					voip_data_dl_buf_ptr) {
+					kfree(pVoIP->buffer_handle->
+						voip_data_dl_buf_ptr);
+					pVoIP->buffer_handle->
+						voip_data_dl_buf_ptr = NULL;
+				}
+				pVoIP->buffer_handle->voip_data_ul_buf_ptr =
+									NULL;
 				kfree(pVoIP->buffer_handle);
 				pVoIP->buffer_handle = NULL;
 				return -ENOMEM;
 			}
-
-			pVoIP->buffer_handle->voip_data_ul_buf_ptr =
-				kzalloc(pVoIP->buffer_size, GFP_KERNEL);
-			if (pVoIP->buffer_handle->voip_data_ul_buf_ptr)
+/*dl data*/
+			pVoIP->codec_type_dl = pChip->voip_data.codec_type_dl;
+			pVoIP->frame_size_dl = sVoIPFrameLen[pVoIP->
+								codec_type_dl];
+			pVoIP->buffer_size_dl = pVoIP->frame_size_dl *
+							VOIP_FRAMES_IN_BUFFER;
+			pVoIP->buffer_handle->voip_data_dl_buf_ptr =
+				kzalloc(pVoIP->buffer_size_dl, GFP_KERNEL);
+			if (pVoIP->buffer_handle->voip_data_dl_buf_ptr) {
 				memset(pVoIP->buffer_handle->
-				       voip_data_ul_buf_ptr, 0,
-				       pVoIP->buffer_size);
-			else {
-				kfree(pVoIP->buffer_handle->
-				      voip_data_ul_buf_ptr);
-				pVoIP->buffer_handle->
-				      voip_data_ul_buf_ptr = NULL;
+				       voip_data_dl_buf_ptr, 0,
+				       pVoIP->buffer_size_dl);
+			} else {
+				if (pVoIP->buffer_handle->
+					voip_data_ul_buf_ptr) {
+					kfree(pVoIP->buffer_handle->
+						voip_data_ul_buf_ptr);
+					pVoIP->buffer_handle->
+						voip_data_ul_buf_ptr = NULL;
+				}
+				pVoIP->buffer_handle->voip_data_dl_buf_ptr =
+									NULL;
 				kfree(pVoIP->buffer_handle);
 				pVoIP->buffer_handle = NULL;
 				return -ENOMEM;
@@ -548,8 +572,12 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file,
 			/* VoIP is always 16K.
 			No need to set the codec type here*/
 			if (isVoLTE) {
-				if ((pVoIP->codec_type == 4)
-				   || (pVoIP->codec_type == 5)) {
+				if (((val.ul_dl_type == VoIP_UL) &&
+					((pVoIP->codec_type_ul == 4) ||
+					(pVoIP->codec_type_ul == 5)))
+				|| ((val.ul_dl_type == VoIP_DL) &&
+					((pVoIP->codec_type_dl == 4) ||
+					(pVoIP->codec_type_dl == 5)))) {
 					/* VOIP_PCM_16K or
 					VOIP_AMR_WB_MODE_7k */
 				param_rate_change.codecID = 0x0A;
@@ -632,17 +660,31 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file,
 		break;
 
 	case VoIP_Ioctl_SetCodecType:
-		get_user(data, (int __user *)arg);
-		pChip->voip_data.codec_type = (u32) data;
-		aTrace(LOG_ALSA_INTERFACE,
+		copy_from_user(&val, (int __user *)arg,
+				   sizeof(voip_codec_type_data_t));
+		if (val.ul_dl_type == VoIP_UL) {
+			pChip->voip_data.codec_type_ul = val.codec_type;
+			aTrace(LOG_ALSA_INTERFACE,
 				" VoIP_Ioctl_SetCodecType codec_type %ld,\n",
-				pChip->voip_data.codec_type);
+				pChip->voip_data.codec_type_ul);
 
-		pVoIP = (bcm_caph_hwdep_voip_t *) hw->private_data;
-		if (!pVoIP)
-			break;
+			pVoIP = (bcm_caph_hwdep_voip_t *) hw->private_data;
+			if (!pVoIP)
+				break;
 
-		pVoIP->codec_type = pChip->voip_data.codec_type;
+			pVoIP->codec_type_ul = pChip->voip_data.codec_type_ul;
+		} else {
+			pChip->voip_data.codec_type_dl = val.codec_type;
+			aTrace(LOG_ALSA_INTERFACE,
+				" VoIP_Ioctl_SetCodecType codec_type %ld,\n",
+				pChip->voip_data.codec_type_dl);
+
+			pVoIP = (bcm_caph_hwdep_voip_t *) hw->private_data;
+			if (!pVoIP)
+				break;
+
+			pVoIP->codec_type_dl = pChip->voip_data.codec_type_dl;
+		}
 
 		/*Check whether in a VoLTE call*/
 		/*If no, do nothing.*/
@@ -661,12 +703,16 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file,
 			AUDIO_DRIVER_Ctrl(pVoIP->buffer_handle->drv_handle,
 				AUDIO_DRIVER_SET_AMR, &pChip->voip_data);
 
-			if ((pVoIP->codec_type == 4) ||
-			    (pVoIP->codec_type == 5))
+			if (((val.ul_dl_type == VoIP_UL) &&
+				((pVoIP->codec_type_ul == 4) ||
+				(pVoIP->codec_type_ul == 5)))
+			|| ((val.ul_dl_type == VoIP_DL) &&
+			((pVoIP->codec_type_dl == 4) ||
+			(pVoIP->codec_type_dl == 5))))
 				/* VOIP_PCM_16K or VOIP_AMR_WB_MODE_7k */
-				param_rate_change.codecID = 0x0A;
+					param_rate_change.codecID = 0x0A;
 			else
-				param_rate_change.codecID = 0x06;
+					param_rate_change.codecID = 0x06;
 			AUDIO_Ctrl_Trigger(ACTION_AUD_RateChange,
 					&param_rate_change, NULL, 0);
 		}
@@ -717,8 +763,14 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file,
 		}
 		break;
 	case VoIP_Ioctl_GetCodecType:
-		data = (int)pChip->voip_data.codec_type;
-		put_user(data, (int __user *)arg);
+		copy_from_user(&val, (int __user *)arg,
+				   sizeof(voip_codec_type_data_t));
+		if (val.ul_dl_type == VoIP_UL)
+			val.codec_type = (int)pChip->voip_data.codec_type_ul;
+		else
+			val.codec_type = (int)pChip->voip_data.codec_type_dl;
+		copy_to_user((int __user *)arg, &val,
+				   sizeof(voip_codec_type_data_t));
 		break;
 	case VoIP_Ioctl_GetBitrate:
 		data = (int)pChip->voip_data.bitrate_index;

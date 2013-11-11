@@ -116,7 +116,8 @@ struct _VOIP_t {
 	void *pVoIPCBPrivate;
 	AUDIO_DRIVER_VoipCB_t pVoipULCallback;
 	AUDIO_DRIVER_VoipDLCB_t pVoipDLCallback;
-	UInt16 codec_type;
+	UInt16 codec_type_ul;
+	UInt16 codec_type_dl;
 	Boolean isVoLTECall;
 };
 #define VOIP_t struct _VOIP_t
@@ -1409,7 +1410,8 @@ static Result_t AUDIO_DRIVER_ProcessVoIPCmd(AUDIO_DDRIVER_t *aud_drv,
 					    void *pCtrlStruct)
 {
 	Result_t result_code = RESULT_ERROR;
-	UInt32 codec_type = 99;	/* valid number:0~5 */
+	UInt32 codec_type_ul = 99;/* valid number:0~5 */
+	UInt32 codec_type_dl = 99;/* valid number:0~5 */
 	UInt32 bitrate_index = 0;
 	CSL_VP_Mode_AMR_t encode_amr_mode;
 
@@ -1421,8 +1423,10 @@ static Result_t AUDIO_DRIVER_ProcessVoIPCmd(AUDIO_DDRIVER_t *aud_drv,
 	{
 
 		if (pCtrlStruct != NULL) {
-			codec_type =
-			    ((voip_data_t *) pCtrlStruct)->codec_type;
+			codec_type_ul =
+			    ((voip_data_t *) pCtrlStruct)->codec_type_ul;
+			codec_type_dl =
+			    ((voip_data_t *) pCtrlStruct)->codec_type_dl;
 			bitrate_index =
 			    ((voip_data_t *) pCtrlStruct)->
 			    bitrate_index;
@@ -1432,26 +1436,48 @@ static Result_t AUDIO_DRIVER_ProcessVoIPCmd(AUDIO_DDRIVER_t *aud_drv,
 
 		}
 
-		if (codec_type == 0)
-			aud_drv->voip_config.codec_type = CSL_VOIP_PCM;
-		else if (codec_type == 1)
-			aud_drv->voip_config.codec_type = CSL_VOIP_FR;
-		else if (codec_type == 2)
-			aud_drv->voip_config.codec_type = CSL_VOIP_AMR475;
-		else if (codec_type == 3)
-			aud_drv->voip_config.codec_type = CSL_VOIP_G711_U;
-		else if (codec_type == 4)
-			aud_drv->voip_config.codec_type = CSL_VOIP_PCM_16K;
-		else if (codec_type == 5)
-			aud_drv->voip_config.codec_type =
+		if (codec_type_ul == 0)
+			aud_drv->voip_config.codec_type_ul = CSL_VOIP_PCM;
+		else if (codec_type_ul == 1)
+			aud_drv->voip_config.codec_type_ul = CSL_VOIP_FR;
+		else if (codec_type_ul == 2)
+			aud_drv->voip_config.codec_type_ul = CSL_VOIP_AMR475;
+		else if (codec_type_ul == 3)
+			aud_drv->voip_config.codec_type_ul = CSL_VOIP_G711_U;
+		else if (codec_type_ul == 4)
+			aud_drv->voip_config.codec_type_ul = CSL_VOIP_PCM_16K;
+		else if (codec_type_ul == 5)
+			aud_drv->voip_config.codec_type_ul =
 			   CSL_VOIP_AMR_WB_MODE_7k;
 		else {
 			aWarn(
-				"AUDIO_DRIVER_ProcessVOIPCmd::Codec Type not supported\n");
+				"AUDIO_DRIVER_ProcessVOIPCmd::Codec Type not"
+				"supported\n");
 			break;
 		}
 
-		aud_drv->voip_config.codec_type += (bitrate_index << 8);
+		if (codec_type_dl == 0)
+			aud_drv->voip_config.codec_type_dl = CSL_VOIP_PCM;
+		else if (codec_type_dl == 1)
+			aud_drv->voip_config.codec_type_dl = CSL_VOIP_FR;
+		else if (codec_type_dl == 2)
+			aud_drv->voip_config.codec_type_dl = CSL_VOIP_AMR475;
+		else if (codec_type_dl == 3)
+			aud_drv->voip_config.codec_type_dl = CSL_VOIP_G711_U;
+		else if (codec_type_dl == 4)
+			aud_drv->voip_config.codec_type_dl = CSL_VOIP_PCM_16K;
+		else if (codec_type_dl == 5)
+			aud_drv->voip_config.codec_type_dl =
+			   CSL_VOIP_AMR_WB_MODE_7k;
+		else {
+			aWarn(
+				"AUDIO_DRIVER_ProcessVOIPCmd::Codec Type not"
+				"supported\n");
+			break;
+		}
+
+		aud_drv->voip_config.codec_type_ul += (bitrate_index << 8);
+		aud_drv->voip_config.codec_type_dl += (bitrate_index << 8);
 		aud_drv->tmp_buffer = kzalloc(VOIP_MAX_FRAME_LEN, GFP_KERNEL);
 
 		if (aud_drv->tmp_buffer == NULL)
@@ -1463,8 +1489,9 @@ static Result_t AUDIO_DRIVER_ProcessVoIPCmd(AUDIO_DDRIVER_t *aud_drv,
 		inVoLTECall = ((voip_data_t *) pCtrlStruct)->isVoLTE;
 		if (inVoLTECall) {
 #ifdef CONFIG_BCM_MODEM
-			if ((aud_drv->voip_config.codec_type & CSL_VOIP_AMR475)
-			    || (aud_drv->voip_config.codec_type &
+			if ((aud_drv->voip_config.codec_type_ul &
+							CSL_VOIP_AMR475)
+			    || (aud_drv->voip_config.codec_type_ul &
 				CSL_VOIP_AMR_WB_MODE_7k)) {
 				if (djbBuf == NULL)
 					djbBuf = kzalloc(
@@ -1473,7 +1500,7 @@ static Result_t AUDIO_DRIVER_ProcessVoIPCmd(AUDIO_DDRIVER_t *aud_drv,
 				DJB_Init();
 				aTrace(LOG_AUDIO_DRIVER,
 					"==> VoLTE call starts, codec_type=%x\n",
-					aud_drv->voip_config.codec_type);
+					aud_drv->voip_config.codec_type_ul);
 			} else {
 				aWarn(
 					"==> Codec Type not supported in VoLTE\n");
@@ -1483,7 +1510,7 @@ static Result_t AUDIO_DRIVER_ProcessVoIPCmd(AUDIO_DDRIVER_t *aud_drv,
 		/* start the VoLTE session  without sending
 		any dummy DL frames */
 		encode_amr_mode = (CSL_VP_Mode_AMR_t)
-			aud_drv->voip_config.codec_type;
+			aud_drv->voip_config.codec_type_ul;
 		encode_amr_mode |= VOLTECALLENABLE;
 /* Here setting DTX does not work for unknown reason.
  * And it affects VoIP_StartMainAMRDecodeEncode() setting
@@ -1559,36 +1586,61 @@ static Result_t AUDIO_DRIVER_ProcessVoIPCmd(AUDIO_DDRIVER_t *aud_drv,
 	case AUDIO_DRIVER_SET_AMR:
 	{
 		if (pCtrlStruct != NULL) {
-			codec_type =
-			    ((voip_data_t *) pCtrlStruct)->codec_type;
+			codec_type_ul =
+			    ((voip_data_t *) pCtrlStruct)->codec_type_ul;
+			codec_type_dl =
+			    ((voip_data_t *) pCtrlStruct)->codec_type_dl;
 			bitrate_index = ((voip_data_t *) pCtrlStruct)
 				->bitrate_index;
 		}
 
-		if (codec_type == 0)
-			aud_drv->voip_config.codec_type = CSL_VOIP_PCM;
-		else if (codec_type == 1)
-			aud_drv->voip_config.codec_type = CSL_VOIP_FR;
-		else if (codec_type == 2)
-			aud_drv->voip_config.codec_type = CSL_VOIP_AMR475;
-		else if (codec_type == 3)
-			aud_drv->voip_config.codec_type = CSL_VOIP_G711_U;
-		else if (codec_type == 4)
-			aud_drv->voip_config.codec_type = CSL_VOIP_PCM_16K;
-		else if (codec_type == 5)
-			aud_drv->voip_config.codec_type =
+		if (codec_type_ul == 0)
+			aud_drv->voip_config.codec_type_ul = CSL_VOIP_PCM;
+		else if (codec_type_ul == 1)
+			aud_drv->voip_config.codec_type_ul = CSL_VOIP_FR;
+		else if (codec_type_ul == 2)
+			aud_drv->voip_config.codec_type_ul = CSL_VOIP_AMR475;
+		else if (codec_type_ul == 3)
+			aud_drv->voip_config.codec_type_ul = CSL_VOIP_G711_U;
+		else if (codec_type_ul == 4)
+			aud_drv->voip_config.codec_type_ul = CSL_VOIP_PCM_16K;
+		else if (codec_type_ul == 5)
+			aud_drv->voip_config.codec_type_ul =
 			   CSL_VOIP_AMR_WB_MODE_7k;
 		else {
-			aTrace(LOG_AUDIO_DRIVER,
-				"AUDIO_DRIVER_ProcessVOIPCmd::Codec Type not supported\n");
+			aWarn(
+				"AUDIO_DRIVER_ProcessVOIPCmd::Codec Type not"
+				"supported\n");
+			break;
+		}
+
+		if (codec_type_dl == 0)
+			aud_drv->voip_config.codec_type_dl = CSL_VOIP_PCM;
+		else if (codec_type_dl == 1)
+			aud_drv->voip_config.codec_type_dl = CSL_VOIP_FR;
+		else if (codec_type_dl == 2)
+			aud_drv->voip_config.codec_type_dl = CSL_VOIP_AMR475;
+		else if (codec_type_dl == 3)
+			aud_drv->voip_config.codec_type_dl = CSL_VOIP_G711_U;
+		else if (codec_type_dl == 4)
+			aud_drv->voip_config.codec_type_dl = CSL_VOIP_PCM_16K;
+		else if (codec_type_dl == 5)
+			aud_drv->voip_config.codec_type_dl =
+			   CSL_VOIP_AMR_WB_MODE_7k;
+		else {
+			aWarn(
+				"AUDIO_DRIVER_ProcessVOIPCmd::Codec Type not"
+				"supported\n");
 			break;
 		}
 
 		if (inVoLTECall) {
-			aud_drv->voip_config.codec_type +=
+			aud_drv->voip_config.codec_type_ul +=
+				(bitrate_index << 8);
+			aud_drv->voip_config.codec_type_dl +=
 				(bitrate_index << 8);
 			encode_amr_mode = (CSL_VP_Mode_AMR_t)
-				aud_drv->voip_config.codec_type;
+				aud_drv->voip_config.codec_type_ul;
 			encode_amr_mode |= VOLTECALLENABLE;
 #if defined(ENABLE_VOLTE_DTX)
 		if (!isDTXEnabled)
@@ -2641,9 +2693,10 @@ static Boolean VOIP_FillDL_CB(UInt32 nFrames)
 				"VOIP_FillDL_CB:: Spurious call back\n");
 		return TRUE;
 	}
-	dlSize = sVoIPDataLen[(aud_drv->voip_config.codec_type & 0xf000) >> 12];
+	dlSize = sVoIPDataLen[(aud_drv->voip_config.codec_type_dl &
+							0xf000)	>> 12];
 	memset(aud_drv->tmp_buffer, 0, VOIP_MAX_FRAME_LEN);
-	aud_drv->tmp_buffer[0] = aud_drv->voip_config.codec_type;
+	aud_drv->tmp_buffer[0] = aud_drv->voip_config.codec_type_dl;
 	/*aTrace(LOG_AUDIO_DRIVER,
 	"VOIP_FillDL_CB :: aud_drv->codec_type %d, dlSize = %d...\n",
 	aud_drv->voip_config.codec_type, dlSize);*/
@@ -2663,10 +2716,11 @@ static Boolean VOIP_FillDL_CB(UInt32 nFrames)
 
 #if defined(CONFIG_BCM_MODEM)
 	VoIP_StartMainAMRDecodeEncode((CSL_VP_Mode_AMR_t) aud_drv->voip_config.
-				      codec_type, (UInt8 *) aud_drv->tmp_buffer,
+				      codec_type_dl,
+				      (UInt8 *) aud_drv->tmp_buffer,
 				      dlSize,
 				      (CSL_VP_Mode_AMR_t) aud_drv->voip_config.
-				      codec_type,
+				      codec_type_ul,
 #if defined(ENABLE_VOLTE_DTX)
 					  dtx_mode,
 #else
