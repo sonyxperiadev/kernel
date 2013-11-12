@@ -635,6 +635,15 @@ config VIDEO_AS3645A
 	  This is a driver for the AS3645A and LM3555 flash controllers. It has
 	  build in control for flash, torch and indicator LEDs.
 
+config VIDEO_DRV201
+    tristate "TI DRV201 VCM support"
+    depends on I2C && VIDEO_V4L2
+    ---help---
+      This is a driver for the TI DRV201 controller.
+      The TI Drv201 is a coil motor driver for linear
+      control of small form factor voice coil motors.
+      It is used with the imx219 as a camera focus motor.
+
 comment "Video improvement chips"
 
 config VIDEO_UPD64031A

@@ -34,7 +34,9 @@
 #include <linux/init.h>
 #include <linux/module.h>
 #include <linux/timer.h>
-#define IMX219_DEBUG 0
+#ifdef CONFIG_VIDEO_DRV201
+#include <media/drv201.h>
+#endif
 
 struct imx219_datafmt {
 	enum v4l2_mbus_pixelcode code;
@@ -56,6 +58,69 @@ enum imx219_state {
 	IMX219_STATE_STOP = 0,
 	IMX219_STATE_STRM = 1,
 	IMX219_STATE_MAX  = 2,
+};
+
+enum imx219_mode {
+	IMX219_MODE_3280x2464P15 = 0,
+	IMX219_MODE_MAX          = 1,
+};
+
+enum bayer_order {
+	BAYER_RGGB = 0,
+	BAYER_GRBG = 1,
+	BAYER_GBRG = 2,
+	BAYER_BGGR = 3,
+};
+
+struct sensor_mode {
+	char			name[128];
+	int			height;
+	int			width;
+	int			line_length_ns;
+	int			hts;
+	int			vts;
+	int			vts_max;
+	enum bayer_order	bayer;
+	int			bpp;
+	int			fps;
+};
+
+#define LENS_READ_DELAY 4
+
+struct imx219 {
+	struct v4l2_subdev subdev;
+	struct v4l2_subdev_sensor_interface_parms *plat_parms;
+	struct soc_camera_device *icd;
+	int state;
+	int mode_idx;
+	int i_fmt;
+	int framerate;
+	int focus_mode;
+	int line_length;
+	int vts;
+	int vts_max;
+	int vts_min;
+	int lens_read_buf[LENS_READ_DELAY];
+	int lenspos_delay;
+};
+
+struct sensor_mode imx219_mode[IMX219_MODE_MAX + 1] = {
+	{
+		.name           = "3280x2464P15",
+		.height         = 2464,
+		.width          = 3280,
+		.hts            = 3448,
+		.vts            = 2504,
+		.vts_max        = 32767 - 6,
+		.line_length_ns = 22190,
+		.bayer          = BAYER_GBRG,
+		.bpp            = 10,
+		.fps            = F24p8(15.0),
+	},
+	{
+		.name           = "STOPPED",
+		.line_length_ns = 22190,
+	}
 };
 
 /**
@@ -105,6 +170,7 @@ static const struct imx219_reg imx219_reginit[256] = {
 	{0x016F, 0xA0},
 	{0x0170, 0x01},
 	{0x0171, 0x01},
+	{0x0172, 0x03},
 	{0x0174, 0x00},
 	{0x0175, 0x00},
 	{0x018C, 0x0A},
@@ -135,6 +201,11 @@ static const struct imx219_reg imx219_reginit[256] = {
 
 	{0xFFFF, 0x00}	/* end of the list */
 };
+
+static struct imx219 *to_imx219(const struct i2c_client *client)
+{
+	return container_of(i2c_get_clientdata(client), struct imx219, subdev);
+}
 
 /**
  * Write a value to a register in imx219 sensor device.
@@ -232,71 +303,42 @@ err:
 	return ret;
 }
 
-enum imx219_mode {
-	IMX219_MODE_3280x2464P15 = 0,
-	IMX219_MODE_MAX          = 1,
-};
-
-enum bayer_order {
-	BAYER_RGGB = 0,
-	BAYER_GRBG = 1,
-	BAYER_GBRG = 2,
-	BAYER_BGGR = 3,
-};
-
-struct sensor_mode {
-	char			name[128];
-	int			height;
-	int			width;
-	int			line_length_ns;
-	int			hts;
-	int			vts;
-	int			vts_max;
-	enum bayer_order	bayer;
-	int			bpp;
-	int			fps;
-};
-
-struct imx219 {
-	struct v4l2_subdev subdev;
-	struct v4l2_subdev_sensor_interface_parms *plat_parms;
-	struct soc_camera_device *icd;
-	int state;
-	int mode_idx;
-	int i_fmt;
-	int framerate;
-	int focus_mode;
-	int line_length;
-	int vts;
-	int vts_max;
-	int vts_min;
-	int current_position;
-	int time_to_destination;
-	int calibrated;
-};
-
-struct sensor_mode imx219_mode[IMX219_MODE_MAX + 1] = {
-	{
-		.name           = "3280x2464P15",
-		.height         = 2464,
-		.width          = 3280,
-		.hts            = 3448,
-		.vts            = 2504,
-		.vts_max        = 32767 - 6,
-		.line_length_ns = 22190,
-		.bayer          = BAYER_BGGR,
-		.bpp            = 10,
-		.fps            = F24p8(15.0),
-	},
-	{
-		.name           = "STOPPED",
-		.line_length_ns = 22190,
-	}
-};
-
-static struct imx219 *to_imx219(const struct i2c_client *client)
+/*
+ * Routine used to send lens to a traget position position and calculate
+ * the estimated time required to get to this position, the flying time in us.
+*/
+static int imx219_lens_set_position(struct i2c_client *client,
+				    int target_position)
 {
-	return container_of(i2c_get_clientdata(client), struct imx219, subdev);
+	int ret = 0;
+#ifdef CONFIG_VIDEO_DRV201
+	ret = drv201_lens_set_position(target_position);
+#endif
+	return ret;
+}
+
+
+/*
+ * Routine used to get the current lens position and/or the estimated
+ * time required to get to the requested destination (time in us).
+ */
+static void imx219_lens_get_position(struct i2c_client *client,
+					int *current_position,
+					int *time_to_destination)
+{
+	int i;
+	struct imx219 *imx219 = to_imx219(client);
+
+#ifdef CONFIG_VIDEO_DRV201
+	drv201_lens_get_position(current_position,
+				 time_to_destination);
+#endif
+	for (i = 0; i < imx219->lenspos_delay; i++)
+		imx219->lens_read_buf[i] = imx219->lens_read_buf[i + 1];
+	imx219->lens_read_buf[imx219->lenspos_delay] = *current_position;
+	*current_position = imx219->lens_read_buf[0];
+
+	return;
 }
 
 static int imx219_set_bus_param(struct soc_camera_device *icd,
@@ -372,6 +414,9 @@ static struct soc_camera_ops imx219_ops = {
 	.num_controls    = ARRAY_SIZE(imx219_controls),
 };
 
+/*
+ *
+ */
 static int imx219_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
@@ -388,16 +433,43 @@ static int imx219_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	case V4L2_CID_CAMERA_FOCUS_MODE:
 		ctrl->value = imx219->focus_mode;
 		break;
+	case V4L2_CID_CAMERA_LENS_POSITION: {
+		int current_position;
+		int time_to_destination;
+		imx219_lens_get_position(client, &current_position,
+					 &time_to_destination);
+		ctrl->value = current_position;
+		break;
+	}
 	}
 	return 0;
 }
 
+/*
+ *
+ */
 static int imx219_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct imx219 *imx219 = to_imx219(client);
 	int ret = 0;
 
+	switch (ctrl->id) {
+	case V4L2_CID_CAMERA_LENS_POSITION:
+		if (ctrl->value > IMX219_LENS_MAX)
+			return -EINVAL;
+		imx219_lens_set_position(client, ctrl->value);
+		break;
+	case V4L2_CID_CAMERA_FOCUS_MODE:
+		if (ctrl->value > FOCUS_MODE_MANUAL)
+			return -EINVAL;
+		imx219->focus_mode = ctrl->value;
+		break;
+	default:
+		dev_err(&client->dev,
+			"s_ctrl not supported for id=0x%X\n", ctrl->id);
+		break;
+	}
 	return ret;
 
 	/* TODO update when all settings available */
@@ -419,7 +491,6 @@ static int imx219_s_power(struct v4l2_subdev *sd, int on)
 
 	if (0 == on) {
 		imx219->mode_idx = IMX219_MODE_MAX;
-		imx219->calibrated = 0;
 	}
 	return 0;
 }
@@ -428,7 +499,6 @@ static int imx219_init(struct i2c_client *client)
 {
 	struct imx219 *imx219 = to_imx219(client);
 	int ret = 0;
-	int i = 0;
 
 	/* set initial mode */
 	imx219->mode_idx = IMX219_MODE_MAX;
@@ -437,6 +507,8 @@ static int imx219_init(struct i2c_client *client)
 	/* default settings */
 	imx219->framerate         = FRAME_RATE_AUTO;
 	imx219->focus_mode        = FOCUS_MODE_AUTO;
+	imx219->lenspos_delay     = 0;
+
 	dev_dbg(&client->dev, "Sensor initialized\n");
 	return ret;
 }
@@ -450,8 +522,11 @@ static int imx219_video_probe(struct soc_camera_device *icd,
 {
 	unsigned long flags;
 	int ret = 0;
-	u8 revision = 0, id_high, id_low;
+	u8 id_high, id_low;
 	u16 id;
+
+	/* */
+	dev_info(&client->dev, "imx219_video_probe start");
 
 	/*
 	 * We must have a parent by now. And it cannot be a wrong one.
@@ -481,8 +556,7 @@ static int imx219_video_probe(struct soc_camera_device *icd,
 
 	dev_info(&client->dev, "Detected a imx219 chip 0x%04x\n", id);
 
-out:
-	return ret;
+	return 0;
 }
 
 static void imx219_video_remove(struct soc_camera_device *icd)
@@ -723,7 +797,6 @@ static int imx219_enum_framesizes(struct v4l2_subdev *sd,
 	return 0;
 }
 
-
 static int imx219_g_parm(struct v4l2_subdev *sd, struct v4l2_streamparm *param)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
@@ -815,6 +888,14 @@ static struct v4l2_subdev_ops imx219_subdev_ops = {
 	.sensor = &imx219_subdev_sensor_ops,
 };
 
+#ifdef CONFIG_VIDEO_DRV201
+#define DRV201_I2C_ADDR 0x1C
+static struct i2c_board_info drv201_i2c_board_info = {
+	 I2C_BOARD_INFO("drv201", (DRV201_I2C_ADDR >> 1))
+};
+static struct i2c_client *drv201_i2c_client;
+static struct i2c_adapter *drv201_i2c_adap;
+#endif
 
 static int imx219_probe(struct i2c_client *client,
 		const struct i2c_device_id *did)
@@ -824,6 +905,7 @@ static int imx219_probe(struct i2c_client *client,
 	struct soc_camera_link *icl;
 	int ret;
 
+	dev_info(&client->dev, "imx219_probe");
 
 	if (!icd) {
 		dev_err(&client->dev, "imx219: missing soc-camera data!\n");
@@ -869,6 +951,19 @@ static int imx219_probe(struct i2c_client *client,
 		dev_err(&client->dev, "Failed to initialize sensor\n");
 		ret = -EINVAL;
 	}
+
+#ifdef CONFIG_VIDEO_DRV201
+	dev_info(&client->dev, "imx219: drv201 i2c start");
+	drv201_i2c_adap = i2c_get_adapter(0);
+	if (!drv201_i2c_adap)
+		dev_err(&client->dev, "imx219: drv201 i2c_get_adapter(0) FAILED");
+	if (drv201_i2c_adap) {
+		drv201_i2c_client = i2c_new_device(drv201_i2c_adap,
+						   &drv201_i2c_board_info);
+		i2c_put_adapter(drv201_i2c_adap);
+		dev_info(&client->dev, "imx219: drv201 i2c start OK");
+	}
+#endif
 
 	return ret;
 }
@@ -919,4 +1014,3 @@ module_exit(imx219_mod_exit);
 MODULE_DESCRIPTION("Sony IMX219 Camera driver");
 MODULE_AUTHOR("Broadcom Corporation");
 MODULE_LICENSE("GPL v2");
-

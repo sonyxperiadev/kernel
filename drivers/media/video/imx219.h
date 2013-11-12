@@ -24,9 +24,15 @@
 #define F4p7(x)		((u16)((x)*128))
 
 #define INPUT_CLOCK_24MHZ 1
-
-
 #define IMX219_REG_MODEL_ID_HIGH		0x0000
 #define IMX219_REG_MODEL_ID_LOW			0x0001
+
+/* Lens */
+/* infinity, 0 current */
+#define IMX219_LENS_MIN					0
+/* macro max current */
+#define IMX219_LENS_MAX					255
+#define IMX219_LENS_STEP				1
+#define IMX219_LENS_POS_DEFAULT				0
 
 #endif /* __IMX219_H_ */
