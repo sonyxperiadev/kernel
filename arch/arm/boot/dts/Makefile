@@ -211,6 +211,7 @@ dtb-$(CONFIG_ARCH_VT8500) += vt8500-bv07.dtb \
 dtb-$(CONFIG_ARCH_ZYNQ) += zynq-zc702.dtb
 dtb-$(CONFIG_ARCH_HAWAII) += hawaii_garnet_edn020.dtb \
 	hawaii_garnet_edn010.dtb \
+	hawaii_garnet_edn010_2Gb.dtb \
 	hawaii_garnet_edn010_4Gb.dtb \
 	hawaii_garnet_edn020_4Gb.dtb \
 	hawaii_garnet_edn020_soc_4Gb.dtb \
