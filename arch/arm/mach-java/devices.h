@@ -97,8 +97,4 @@ extern struct platform_device mobicore_device;
 extern struct secure_mem_data secure_mem_plat_data;
 extern struct platform_device secure_mem_device;
 
-#ifdef CONFIG_KONA_TMON_THERMAL
-extern struct platform_device kona_tmon_thermal_device;
-#endif
-
 #endif /* __MACH_JAVA_DEVICE_H */

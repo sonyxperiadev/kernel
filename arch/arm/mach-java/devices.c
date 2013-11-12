@@ -100,10 +100,6 @@
 #include <linux/broadcom/kona_tmon.h>
 #endif
 
-#ifdef CONFIG_KONA_TMON_THERMAL
-#include <linux/broadcom/kona_tmon_thermal.h>
-#endif
-
 #ifdef CONFIG_BRCM_CDC
 #include <plat/cdc.h>
 #endif
@@ -911,39 +907,6 @@ struct platform_device kona_tmon_device = {
 	.id = -1,
 	.dev = {
 		.platform_data = &tmon_plat_data,
-	},
-};
-#endif
-
-#ifdef CONFIG_KONA_TMON_THERMAL
-struct kona_tmon_trip trip_points[] = {
-	{.temp = 85, .type = THERMAL_TRIP_ACTIVE, .max_freq = 1200000,},
-	{.temp = 95, .type = THERMAL_TRIP_ACTIVE, .max_freq = 800000,},
-	{.temp = 105, .type = THERMAL_TRIP_ACTIVE, .max_freq = 600000,},
-	{.temp = 115, .type = THERMAL_TRIP_CRITICAL, .max_freq = 312000,},
-};
-
-struct kona_tmon_pdata tmon_thermal_plat_data = {
-	.base_addr = KONA_TMON_VA,
-	.chipreg_addr = KONA_CHIPREG_VA,
-	.irq = BCM_INT_ID_TEMP_MON,
-	.poll_rate_ms = 30000,
-	.interval_ms = 5,
-	.hysteresis = 0,
-	.flags = TMON_PVTMON | TMON_SUSPEND_POWEROFF | TMON_RESET_ENABLE,
-	.falling = 5,
-	.shutdown_temp = 120,
-	.trip_cnt = ARRAY_SIZE(trip_points),
-	.trips = trip_points,
-	.tmon_apb_clk = "tmon_apb",
-	.tmon_1m_clk = "tmon_1m_clk",
-};
-
-struct platform_device kona_tmon_thermal_device = {
-	.name = "kona_tmon_thermal",
-	.id = -1,
-	.dev = {
-		.platform_data = &tmon_thermal_plat_data,
 	},
 };
 #endif

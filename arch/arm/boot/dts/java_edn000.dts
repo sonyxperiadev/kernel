@@ -366,46 +366,6 @@
 		falling = <5>; /*fall back temperature offset*/
 	};
 
-    tmon-thermal@0x34008000 {
-        compatible = "bcm,tmon-thermal";
-        reg  = <0x34008000 0x1000>, <0x35004000 0x1000>;
-        interrupts = <0 183 4>;
-        hysteresis = <0>;
-        flags = <5>;
-        interval_ms = <5>;
-        poll_rate_ms = <30000>;
-        tmon_apb_clk = "tmon_apb";
-        tmon_1m_clk = "tmon_1m_clk";
-        falling = <5>; /*fall back temperature offset*/
-        shutdown_temp = <120>;
-
-		trip0 {
-			type = "active";
-			temp = <75>;
-			max_freq = <1200000>;
-		};
-		trip1 {
-			type = "active";
-			temp = <85>;
-			max_freq = <800000>;
-		};
-		trip2 {
-			type = "active";
-			temp = <95>;
-			max_freq = <600000>;
-		};
-		trip3 {
-			type = "active";
-			temp = <105>;
-			max_freq = <312000>;
-		};
-		trip4 {
-			type = "critical";
-			temp = <115>;
-			max_freq = <0>;
-		};
-    };
-
 	memc@35008000 {
 		compatible = "bcm,memc";
 		reg = <0x35008000 0x1000>;
