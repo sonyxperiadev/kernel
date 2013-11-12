@@ -410,6 +410,7 @@ static struct regulator *d_3v0_mmc1_vcc;
    the rate requirements of all digital
    channel clocks in use. */
 #define OV5648_I2C_ADDRESS              (0x36)
+#define OV7692_I2C_ADDRESS              (0x3e)
 #define SENSOR_PREDIV_CLK               "dig_prediv_clk"
 #define SENSOR_0_CLK                    "dig_ch0_clk"	/*DCLK1 */
 #define SENSOR_1_CLK                    "dig_ch0_clk"	/* DCLK1 */
@@ -426,6 +427,10 @@ static struct i2c_board_info hawaii_i2c_camera[] = {
 	{
 		I2C_BOARD_INFO("ov5648", OV5648_I2C_ADDRESS)
 	},
+	{
+		I2C_BOARD_INFO("ov7692", OV7692_I2C_ADDRESS)
+	},
+
 };
 struct cameracfg_s {
 	char *name;
@@ -462,6 +467,23 @@ static struct cameracfg_s *getcameracfg(const char *cameraname)
 static struct regulator_bulk_data ov5648_regulator_data[] = {
 	[0] = {
 		.supply = "lvldo1_uc",
+	},
+	[1] = {
+		.supply = "mmc1_vcc",
+	},
+	[2] = {
+		.supply = "mmc2_vcc",
+	},
+	[3] = {
+		.supply = "lvldo2_uc",
+	},
+};
+#endif
+
+#if defined(CONFIG_SOC_CAMERA_OV7692)
+static struct regulator_bulk_data ov7692_regulator_data[] = {
+	[0] = {
+		.supply = "lvldo2_uc",
 	},
 	[1] = {
 		.supply = "mmc1_vcc",
@@ -760,18 +782,14 @@ static int hawaii_camera_power_front(struct device *dev, int on)
 	struct clk *lp_clock_0;
 	struct clk *lp_clock_1;
 	static struct pi_mgr_dfs_node unicam_dfs_node;
-#if 0
-	struct soc_camera_device *icd = to_soc_camera_dev(dev);
-	struct soc_camera_link *icl = to_soc_camera_link(icd);
-#else
-	struct soc_camera_link *icl = dev->platform_data;
-#endif
+	struct soc_camera_subdev_desc *ssd = dev->platform_data;
 
 	printk(KERN_INFO "%s:camera power %s\n", __func__, (on ? "on" : "off"));
 
-	struct cameracfg_s *thiscfg = getcameracfg(icl->module_name);
+	char module[] = "ov7692";
+	struct cameracfg_s *thiscfg = getcameracfg(module);
 	if (NULL == thiscfg) {
-		pr_err("No cfg for [%s]\n", icl->module_name);
+		pr_err("No cfg for [%s]\n", module);
 		 return -1;
 	}
 
@@ -794,24 +812,24 @@ static int hawaii_camera_power_front(struct device *dev, int on)
 		}
 
 		d_lvldo2_cam1_1v8 = regulator_get(NULL,
-			icl->regulators[0].supply);
+			ov7692_regulator_data[0].supply);
 		if (IS_ERR_OR_NULL(d_lvldo2_cam1_1v8))
 			pr_err("Failed to get d_lvldo2_cam1_1v8\n");
 		if (d_1v8_mmc1_vcc == NULL) {
 			d_1v8_mmc1_vcc = regulator_get(NULL,
-				icl->regulators[1].supply);
+				ov7692_regulator_data[1].supply);
 			if (IS_ERR_OR_NULL(d_1v8_mmc1_vcc))
 				pr_err("Err d_1v8_mmc1_vcc\n");
 		}
 		if (d_3v0_mmc1_vcc == NULL) {
 			d_3v0_mmc1_vcc = regulator_get(NULL,
-			icl->regulators[2].supply);
+			ov7692_regulator_data[2].supply);
 			if (IS_ERR_OR_NULL(d_3v0_mmc1_vcc))
 				pr_err("d_3v0_mmc1_vcc");
 		}
 		if (d_gpsr_cam0_1v8 == NULL) {
 			d_gpsr_cam0_1v8 = regulator_get(NULL,
-			icl->regulators[3].supply);
+			ov7692_regulator_data[3].supply);
 			if (IS_ERR_OR_NULL(d_gpsr_cam0_1v8))
 				pr_err("Fl d_gpsr_cam0_1v8 get	fail");
 		}
@@ -1026,6 +1044,43 @@ static struct soc_camera_link iclink_ov8825 = {
 };
 #endif
 
+#ifdef CONFIG_SOC_CAMERA_OV7692
+static struct v4l2_subdev_sensor_interface_parms ov7692_if_parms = {
+	.if_type = V4L2_SUBDEV_SENSOR_SERIAL,
+	.if_mode = V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2,
+	.orientation = V4L2_SUBDEV_SENSOR_LANDSCAPE,
+	.facing = V4L2_SUBDEV_SENSOR_FRONT,
+	.parms.serial = {
+		.lanes = 1,
+		.channel = 1,
+		.phy_rate = 0,
+		.pix_clk = 0,
+	},
+};
+static struct soc_camera_desc iclink_ov7692 = {
+	.host_desc = {
+		.bus_id = 0,
+		.board_info = &hawaii_i2c_camera[1],
+		.i2c_adapter_id = 0,
+		.module_name = "ov7692",
+	},
+	.subdev_desc = {
+		.power = &hawaii_camera_power_front,
+		.reset = &hawaii_camera_reset_front,
+		.drv_priv = &ov7692_if_parms,
+		.regulators = ov7692_regulator_data,
+		.num_regulators = 2,
+	},
+};
+static struct platform_device hawaii_camera_front = {
+	.name = "soc-camera-pdrv",
+	.id = 1,
+	.dev = {
+		.platform_data = &iclink_ov7692,
+	},
+};
+#endif
+
 #endif /* CONFIG_UNICAM_CAMERA */
 
 static struct spi_kona_platform_data hawaii_ssp0_info = {
@@ -1113,6 +1168,7 @@ struct platform_device *hawaii_common_plat_devices[] __initdata = {
 #ifdef CONFIG_UNICAM_CAMERA
 	&hawaii_camera_device,
 	&hawaii_camera_back,
+	&hawaii_camera_front,
 #endif
 
 #ifdef CONFIG_SND_BCM_SOC
@@ -1319,10 +1375,6 @@ static const struct of_dev_auxdata hawaii_auxdata_lookup[] __initconst = {
 		"soc-front-camera", &iclink_front),
 #endif
 
-#ifdef CONFIG_SOC_CAMERA_OV7692
-	OF_DEV_AUXDATA("bcm,soc-camera", 0x3e,
-		"soc-front-camera", &iclink_ov7692),
-#endif
 	{},
 };
 
