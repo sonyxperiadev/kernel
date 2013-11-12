@@ -3589,7 +3589,7 @@ void dwc_otg_ep_deactivate(dwc_otg_core_if_t *core_if, dwc_ep_t *ep)
 				dwc_udelay(10);
 				gintsts.d32 = dwc_read_reg32(gintsts_addr);
 				if (++count > 1000) {
-					DWC_WARN("%s() HANG! GINTSTS=%0x\n",
+					DWC_WARN("%s failed to get goutnakeff GINTSTS=%0x\n",
 						 __func__, gintsts.d32);
 					break;
 				}
@@ -3616,7 +3616,7 @@ void dwc_otg_ep_deactivate(dwc_otg_core_if_t *core_if, dwc_ep_t *ep)
 				dwc_udelay(10);
 				doepint.d32 = dwc_read_reg32(doepint_addr);
 				if (++count > 1000) {
-					DWC_WARN("%s() HANG! DOEPINT=%0x\n",
+					DWC_WARN("%s failed to get epdisabled DOEPINT=%0x\n",
 						 __func__, doepint.d32);
 					break;
 				}
@@ -3656,7 +3656,7 @@ void dwc_otg_ep_deactivate(dwc_otg_core_if_t *core_if, dwc_ep_t *ep)
 				dwc_udelay(10);
 				diepint.d32 = dwc_read_reg32(diepint_addr);
 				if (++count > 1000) {
-					DWC_WARN("%s() HANG! DIEPINT=%0x\n",
+					DWC_WARN("%s failed to get epdisabled DIEPINT=%0x\n",
 						 __func__, diepint.d32);
 					break;
 				}
@@ -5101,7 +5101,7 @@ void dwc_otg_flush_tx_fifo(dwc_otg_core_if_t *core_if, const int num)
 	do {
 		greset.d32 = dwc_read_reg32(&global_regs->grstctl);
 		if (++count > 10000) {
-			DWC_WARN("%s() HANG! GRSTCTL=%0x GNPTXSTS=0x%08x\n",
+			DWC_WARN("%s failed GRSTCTL=%0x GNPTXSTS=0x%08x\n",
 				 __func__, greset.d32,
 				 dwc_read_reg32(&global_regs->gnptxsts));
 			break;
@@ -5134,7 +5134,7 @@ void dwc_otg_flush_rx_fifo(dwc_otg_core_if_t *core_if)
 	do {
 		greset.d32 = dwc_read_reg32(&global_regs->grstctl);
 		if (++count > 10000) {
-			DWC_WARN("%s() HANG! GRSTCTL=%0x\n", __func__,
+			DWC_WARN("%s failed to read GRSTCTL=%0x\n", __func__,
 				 greset.d32);
 			break;
 		}
@@ -5161,7 +5161,7 @@ void dwc_otg_core_reset(dwc_otg_core_if_t *core_if)
 		dwc_udelay(10);
 		greset.d32 = dwc_read_reg32(&global_regs->grstctl);
 		if (++count > 100000) {
-			DWC_WARN("%s() HANG! AHB Idle GRSTCTL=%0x\n", __func__,
+			DWC_WARN("%s failed to get AHB Idle GRSTCTL=%0x\n", __func__,
 				 greset.d32);
 			return;
 		}
@@ -5174,7 +5174,7 @@ void dwc_otg_core_reset(dwc_otg_core_if_t *core_if)
 	do {
 		greset.d32 = dwc_read_reg32(&global_regs->grstctl);
 		if (++count > 10000) {
-			DWC_WARN("%s() HANG! Soft Reset GRSTCTL=%0x\n",
+			DWC_WARN("%s Soft Reset failed GRSTCTL=%0x\n",
 				 __func__, greset.d32);
 			break;
 		}

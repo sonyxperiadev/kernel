@@ -326,7 +326,7 @@ static int _usb_host_en(struct bcmpmu_accy_data *di, int enable)
 	}
 
 	if (di->chrgr_type)
-		pr_accy(FLOW, "%s:ENABLE %d\n", __func__, di->usb_host_en);
+	        pr_accy(FLOW, "%s:Enabling Charging: usb_host_en=%d\n", __func__, di->usb_host_en);
 	else
 		pr_accy(FLOW, "%s:No Charger\n", __func__);
 
