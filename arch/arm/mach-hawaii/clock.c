@@ -7809,10 +7809,6 @@ static int proc_ccu_set_freq_policy(struct ccu_clk *ccu_clk, int policy_id,
 	u32 target_volt;
 	int curr_opp;
 	u32 sw_freq_id;
-#if defined(CONFIG_BCM_HWCAPRI_1605_A2)
-	int saved_pllarma = 0;
-	int saved_pll_debug = 0;
-#endif
 
 	clk_dbg("%s:policy = %d, freq = %d opp = %d prms = %d\n",
 			__func__, policy_id, opp_info->freq_id,
@@ -7839,23 +7835,6 @@ static int proc_ccu_set_freq_policy(struct ccu_clk *ccu_clk, int policy_id,
 
 	ccu_write_access_enable(ccu_clk, true);
 	ccu_policy_engine_stop(ccu_clk);
-#if defined(CONFIG_BCM_HWCAPRI_1605_A2)
-	/* Change PLL settings to avoid glitches */
-	reg_val = readl(CCU_REG_ADDR(ccu_clk,
-			KPROC_CLK_MGR_REG_PLLARMA_OFFSET));
-	saved_pllarma = reg_val;
-	reg_val &=
-	    ~KPROC_CLK_MGR_REG_PLLARMA_PLLARM_IDLE_PWRDWN_SW_OVRRIDE_MASK;
-	writel(reg_val,
-	       CCU_REG_ADDR(ccu_clk, KPROC_CLK_MGR_REG_PLLARMA_OFFSET));
-
-	reg_val = readl(CCU_REG_ADDR(ccu_clk,
-			KPROC_CLK_MGR_REG_PLL_DEBUG_OFFSET));
-	saved_pll_debug = reg_val;
-	reg_val |= KPROC_CLK_MGR_REG_PLL_DEBUG_PLLARM_TIMER_LOCK_EN_MASK;
-	writel(reg_val,
-	       CCU_REG_ADDR(ccu_clk, KPROC_CLK_MGR_REG_PLL_DEBUG_OFFSET));
-#endif
 	if (opp_info->ctrl_prms != CCU_POLICY_FREQ_REG_INIT &&
 			(opp_info->opp_id == PI_OPP_NORMAL ||
 			opp_info->opp_id == PI_OPP_TURBO)) {
@@ -7865,7 +7844,6 @@ static int proc_ccu_set_freq_policy(struct ccu_clk *ccu_clk, int policy_id,
 		curr_opp = pi_get_active_opp(ccu_clk->pi_id);
 		if (curr_opp != PI_OPP_ECONOMY) {
 			sw_freq_id = PROC_CCU_FREQ_ID_ECO;
-
 /* Move economy volt id to that of target voltage to avoid extra seq txn */
 			ccu_set_voltage(ccu_clk, sw_freq_id, target_volt);
 /* Move to economy */
@@ -7904,13 +7882,6 @@ static int proc_ccu_set_freq_policy(struct ccu_clk *ccu_clk, int policy_id,
 
 	writel(reg_val, CCU_POLICY_FREQ_REG(ccu_clk));
 
-#if defined(CONFIG_BCM_HWCAPRI_1605_A2)
-	/* Restore saved PLL settings */
-	writel(saved_pllarma,
-	       CCU_REG_ADDR(ccu_clk, KPROC_CLK_MGR_REG_PLLARMA_OFFSET));
-	writel(saved_pll_debug,
-	       CCU_REG_ADDR(ccu_clk, KPROC_CLK_MGR_REG_PLL_DEBUG_OFFSET));
-#endif
 	ccu_policy_engine_resume(ccu_clk, ccu_clk->clk.flags &
 		CCU_TARGET_LOAD ? CCU_LOAD_TARGET : CCU_LOAD_ACTIVE);
 	ccu_write_access_enable(ccu_clk, false);
@@ -7931,7 +7902,6 @@ int __init __clock_init(void)
 #if defined(CONFIG_BCM_HWCAPRI_1605_A2)
 	cur_freq_id = 0;
 #endif
-
 	/*overrride callback functions b4 registering the clks*/
 
 /*only clk mgr write_access and reset mgr access functions is needed for root ccu*/
