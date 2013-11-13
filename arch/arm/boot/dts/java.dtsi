@@ -203,6 +203,15 @@
 		interrupts = <0 14 0x04>;
 	};
 
+	spi0: spi@0x3E004000 {
+		compatible = "bcm,spi";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		reg = <0x3E004000 0x1000>;
+		interrupts = <0 90 0x04>;
+		id = <0>;
+	};
+
 	keypad {
 		compatible = "bcm,bcm_keypad" ;
 		reg = <0x35003800 0x800>;

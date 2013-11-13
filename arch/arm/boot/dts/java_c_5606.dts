@@ -161,6 +161,20 @@
 		hs-ref-frequency = <26000000>;
 	};
 
+	spi0: spi@0x3E004000 {
+		enable-dma = <1>;
+		cs-line = <1>;
+		mode = <0x23>;
+
+		spidev@0x0 {
+			compatible = "bcm,spidev";
+			reg = <0x0>;
+			spi-max-frequency = <13000000>;
+			spi-loop = <0x20>;
+		};
+	};
+
+
 	bluetooth-btlpm {
 		compatible = "bcm,btlpm";
 		bt-wake-gpio = <32>;

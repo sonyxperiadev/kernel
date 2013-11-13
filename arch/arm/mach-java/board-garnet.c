@@ -1235,7 +1235,9 @@ struct platform_device *hawaii_common_plat_devices[] __initdata = {
 #endif /* End of CONFIG_OF */
 
 	&pmu_device,
+#ifndef CONFIG_OF
 	&hawaii_ssp0_device,
+#endif
 
 #ifdef CONFIG_SENSORS_KONA
 	&thermal_device,
@@ -2559,9 +2561,10 @@ static void __init hawaii_add_devices(void)
 	platform_add_devices(hawaii_devices, ARRAY_SIZE(hawaii_devices));
 
 	hawaii_add_i2c_devices();
-
+#ifndef CONFIG_OF
 	spi_register_board_info(spi_slave_board_info,
 				ARRAY_SIZE(spi_slave_board_info));
+#endif
 
 }
 

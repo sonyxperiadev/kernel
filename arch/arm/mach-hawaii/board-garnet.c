@@ -1038,16 +1038,6 @@ static struct platform_device hawaii_camera_front = {
 #endif
 #endif /* CONFIG_UNICAM_CAMERA */
 
-static struct spi_kona_platform_data hawaii_ssp0_info = {
-#ifdef CONFIG_DMAC_PL330
-	.enable_dma = 1,
-#else
-	.enable_dma = 0,
-#endif
-	.cs_line = 1,
-	.mode = SPI_LOOP | SPI_MODE_3,
-};
-
 static struct spi_kona_platform_data hawaii_ssp1_info = {
 #ifdef CONFIG_DMAC_PL330
 	.enable_dma = 1,
@@ -1077,7 +1067,6 @@ static struct bcm_hsotgctrl_platform_data hsotgctrl_plat_data = {
 
 struct platform_device *hawaii_common_plat_devices[] __initdata = {
 	&pmu_device,
-	&hawaii_ssp0_device,
 
 #ifdef CONFIG_SENSORS_KONA
 	&thermal_device,
@@ -1586,7 +1575,6 @@ struct bcm_iovmm_pdata iovmm_mm_256mb_pdata = {
 
 static void hawaii_add_pdata(void)
 {
-	hawaii_ssp0_device.dev.platform_data = &hawaii_ssp0_info;
 	hawaii_ssp1_device.dev.platform_data = &hawaii_ssp1_info;
 #ifdef CONFIG_BCM_STM
 	hawaii_stm_device.dev.platform_data = &hawaii_stm_pdata;
