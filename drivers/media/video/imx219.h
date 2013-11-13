@@ -30,9 +30,20 @@
 /* Lens */
 /* infinity, 0 current */
 #define IMX219_LENS_MIN					0
-/* macro max current */
+/* macro, max current */
 #define IMX219_LENS_MAX					255
 #define IMX219_LENS_STEP				1
-#define IMX219_LENS_POS_DEFAULT				0
+
+/* AEC */
+#define IMX219_DEFAULT_EXP		                32000
+#define IMX219_DEFAULT_GAIN		                UINT8P8(1.0)
+#define IMX219_GAIN_MIN					UINT8P8(1.0)
+#define IMX219_GAIN_MAX					UINT8P8(8.0)
+#define IMX219_EXP_MIN					1
+#define IMX219_ANA_GAIN_GLOBAL                          0x0157
+#define IMX219_COARSE_INT_TIME_HI                       0x015A
+#define IMX219_COARSE_INT_TIME_LO                       0x015B
+#define IMX219_FRM_LENGTH_HI                            0x0160
+#define IMX219_FRM_LENGTH_LO                            0x0161
 
 #endif /* __IMX219_H_ */

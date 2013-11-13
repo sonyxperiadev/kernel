@@ -29,14 +29,17 @@
 #include <media/v4l2-chip-ident.h>
 #include <media/soc_camera.h>
 #include <linux/videodev2_brcm.h>
-#include "imx219.h"
-
 #include <linux/init.h>
 #include <linux/module.h>
 #include <linux/timer.h>
+#include <linux/proc_fs.h>
+#include "imx219.h"
 #ifdef CONFIG_VIDEO_DRV201
 #include <media/drv201.h>
 #endif
+
+#define SENSOR_NAME_STR "imx219"
+#define IMX219_DEBUGFS 1
 
 struct imx219_datafmt {
 	enum v4l2_mbus_pixelcode code;
@@ -80,6 +83,7 @@ struct sensor_mode {
 	int			hts;
 	int			vts;
 	int			vts_max;
+	int			vts_min;
 	enum bayer_order	bayer;
 	int			bpp;
 	int			fps;
@@ -91,6 +95,7 @@ struct imx219 {
 	struct v4l2_subdev subdev;
 	struct v4l2_subdev_sensor_interface_parms *plat_parms;
 	struct soc_camera_device *icd;
+	struct proc_dir_entry *proc_entry;
 	int state;
 	int mode_idx;
 	int i_fmt;
@@ -100,8 +105,13 @@ struct imx219 {
 	int vts;
 	int vts_max;
 	int vts_min;
-	int lens_read_buf[LENS_READ_DELAY];
-	int lenspos_delay;
+	u16 lens_read_buf[LENS_READ_DELAY];
+	u16 lens_delay;
+	u16 af_on;
+	u16 gain_current;
+	u16 exposure_current;
+	u16 coarse_int_lines;
+	u16 agc_on;
 };
 
 struct sensor_mode imx219_mode[IMX219_MODE_MAX + 1] = {
@@ -112,7 +122,8 @@ struct sensor_mode imx219_mode[IMX219_MODE_MAX + 1] = {
 		.hts            = 3448,
 		.vts            = 2504,
 		.vts_max        = 32767 - 6,
-		.line_length_ns = 22190,
+		.vts_min        = 1,
+		.line_length_ns = 26624,
 		.bayer          = BAYER_GBRG,
 		.bpp            = 10,
 		.fps            = F24p8(15.0),
@@ -303,6 +314,51 @@ err:
 	return ret;
 }
 
+/**
+ *imx219_reg_read_multi - Read values from a register in an imx219 sensor device
+ *@client: i2c driver client structure
+ *@reg: register address / offset
+ *@val: stores the value that gets read
+ *
+ * Read multiple values from a register in an imx219 sensor device.
+ * The values are returned in 'val'.
+ * Returns zero if successful, or non-zero otherwise.
+ */
+static int imx219_reg_read_multi(struct i2c_client *client,
+				 u16 reg, u8 *val, u16 cnt)
+{
+	int ret;
+	u8 data[2] = { 0 };
+	struct i2c_msg msg = {
+		.addr = client->addr,
+		.flags = 0,
+		.len = 2,
+		.buf = data,
+	};
+
+	data[0] = (u8) (reg >> 8);
+	data[1] = (u8) (reg & 0xff);
+
+	ret = i2c_transfer(client->adapter, &msg, 1);
+	if (ret < 0)
+		goto err;
+
+	msg.flags = I2C_M_RD;
+	msg.len = cnt;
+	msg.buf = val;
+	ret = i2c_transfer(client->adapter, &msg, 1);
+	if (ret < 0)
+		goto err;
+
+	return 0;
+
+err:
+	dev_err(&client->dev, "%s(): Failed reading register addr=0x%02x cnt=%d\n",
+		__func__,
+		reg, cnt);
+	return ret;
+}
+
 /*
  * Routine used to send lens to a traget position position and calculate
  * the estimated time required to get to this position, the flying time in us.
@@ -333,12 +389,180 @@ static void imx219_lens_get_position(struct i2c_client *client,
 	drv201_lens_get_position(current_position,
 				 time_to_destination);
 #endif
-	for (i = 0; i < imx219->lenspos_delay; i++)
+	for (i = 0; i < imx219->lens_delay; i++)
 		imx219->lens_read_buf[i] = imx219->lens_read_buf[i + 1];
-	imx219->lens_read_buf[imx219->lenspos_delay] = *current_position;
+	imx219->lens_read_buf[imx219->lens_delay] = *current_position;
 	*current_position = imx219->lens_read_buf[0];
 
 	return;
+}
+
+/*
+ * Set sensor analog gain for the requested gain value in 8.8 FP format
+ *@client: i2c driver client structure
+ *@gain_value: requested gain value in 8.8 FP format
+ *
+ * Determine closest possible sensor analog gain and corresponding code,
+ * and change sensor register settings to use the new gain.
+ * Return 0 for success, or nonzero code for failure.
+ */
+static int imx219_set_gain(struct i2c_client *client, int gain_value)
+{
+	u16 gain_code;
+	int ret;
+	struct imx219 *imx219 = to_imx219(client);
+
+	gain_code = (256 - (10*256*256 /  gain_value + 5) / 10) & 0xFF;
+	imx219->gain_current = 256 * 256 / (256 - gain_code);
+	ret = imx219_reg_write(client, IMX219_ANA_GAIN_GLOBAL, gain_code);
+	pr_debug("%s(): gain requested=0x%X code=0x%X actual=0x%X",
+		 __func__, gain_value, gain_code, imx219->gain_current);
+	return ret;
+}
+
+/*
+ * Read sensor analog gain
+ *@client: i2c driver client structure
+ *@gain_value_p: pointer to return gain value in 8.8 FP format
+ *@gain_code_p : pointer to return gain code
+ *
+ * Read sensor analog gain code, compute analog gain.
+ * Return 0 for success, or nonzero code for failure.
+ */
+static int imx219_get_gain(struct i2c_client *client,
+			   int *gain_value_p, int *gain_code_p)
+{
+	int ret;
+	u8 gain_code;
+
+	ret = imx219_reg_read(client, IMX219_ANA_GAIN_GLOBAL, &gain_code);
+	if (gain_code_p)
+		*gain_code_p = gain_code;
+	if (gain_value_p)
+		*gain_value_p = 256 * 256 / (256 - gain_code);
+	pr_debug("%s(): gain value=0x%X code=0x%X",
+		 __func__, *gain_value_p, gain_code);
+	return ret;
+}
+
+#define INTEGRATION_MIN		1
+#define INTEGRATION_OFFSET	10
+
+/*
+ * Compute sensor exposure for the requested exposure value in ms.
+ *@client: i2c driver client structure
+ *@exp_value: requested exposure value in ms
+ *
+ * Determine closest possible sensor exposure and code,
+ * Return 0 for success, or nonzero code for failure.
+ */
+static int imx219_calc_exposure(struct i2c_client *client,
+				int exposure_value,
+				unsigned int *vts_ptr,
+				unsigned int *coarse_int_lines)
+{
+	struct imx219 *imx219 = to_imx219(client);
+	unsigned int integration_lines, exposure_current;
+	int vts = imx219_mode[imx219->mode_idx].vts;
+
+	integration_lines = (1000 * exposure_value) / imx219->line_length;
+	if (integration_lines < INTEGRATION_MIN)
+		integration_lines = INTEGRATION_MIN;
+	else if (integration_lines > (unsigned int)
+		 (imx219->vts_max - INTEGRATION_OFFSET))
+		integration_lines = imx219->vts_max - INTEGRATION_OFFSET;
+	vts = min(integration_lines + INTEGRATION_OFFSET,
+		  (unsigned int)imx219_mode[imx219->mode_idx].vts_max);
+	vts = max(vts, imx219_mode[imx219->mode_idx].vts);
+	vts = max(vts, imx219->vts_min);
+	if (coarse_int_lines)
+		*coarse_int_lines = integration_lines;
+	if (vts_ptr)
+		*vts_ptr = vts;
+	exposure_current =
+		integration_lines * imx219->line_length / (unsigned long)1000;
+	pr_debug("%s(): req=%d act=%d lines=%d vts=%d\n",
+		 __func__,
+		 exposure_value,
+		 exposure_current,
+		 *coarse_int_lines,
+		 vts);
+	return exposure_value;
+}
+
+/*
+ * Set sensor exposure for the requested exposure value in ms.
+ *@client: i2c driver client structure
+ *@exp_value: requested exposure value in ms
+ *
+ * Determine closest possible sensor exposure and code,
+ * and change sensor register settings to use the new exposure.
+ * Return 0 for success, or nonzero code for failure.
+ */
+static void imx219_set_exposure(struct i2c_client *client, int exp_value)
+{
+	struct imx219 *imx219 = to_imx219(client);
+	unsigned int actual_exposure;
+	unsigned int vts;
+	unsigned int coarse_int_lines;
+	int ret = 0;
+
+	actual_exposure = imx219_calc_exposure(client,
+					       exp_value,
+					       &vts,
+					       &coarse_int_lines);
+	pr_debug("%s(): cur=%d req=%d act=%d coarse=%d vts=%d\n",
+		 __func__,
+		 imx219->exposure_current, exp_value, actual_exposure,
+		 coarse_int_lines, vts);
+	ret = imx219_reg_write(client,
+			       IMX219_COARSE_INT_TIME_HI,
+			       (coarse_int_lines >> 8) & 0xFF);
+	ret |= imx219_reg_write(client,
+				IMX219_COARSE_INT_TIME_LO,
+				coarse_int_lines & 0xFF);
+	ret |= imx219_reg_write(client,
+				IMX219_FRM_LENGTH_HI,
+				(vts >> 8) & 0xFF);
+	ret |= imx219_reg_write(client,
+				IMX219_FRM_LENGTH_LO,
+				vts & 0xFF);
+	if (ret) {
+		pr_debug("imx219_set_exposure: error writing exposure register");
+		return;
+	}
+	imx219->vts = vts;
+	imx219->exposure_current = actual_exposure;
+	imx219->coarse_int_lines = coarse_int_lines;
+}
+
+/*
+ * Read sensor exposure.
+ *@client: i2c driver client structure
+ *@exp_value_p: pointer to return exposure value in ms
+ *@exp_value_p: pointer to return exposure code
+ *
+ * Read sensor exposure
+ * Return 0 for success, or nonzero code for failure.
+ */
+static int imx219_get_exposure(struct i2c_client *client,
+			       int *exp_value_p, int *exp_code_p)
+{
+	struct imx219 *imx219 = to_imx219(client);
+	int ret = 0;
+	int exp_code;
+	u8 exp_buf[2];
+
+	imx219_reg_read_multi(client, IMX219_COARSE_INT_TIME_HI, exp_buf, 2);
+	exp_code = (exp_buf[0] << 8) + (exp_buf[1] << 0);
+	if (exp_code_p)
+		*exp_code_p = exp_code;
+	if (exp_value_p)
+		*exp_value_p = (exp_code * imx219->line_length) / 1000;
+	pr_debug("%s(): code=%d value=%d",
+		 __func__,
+		 exp_code, *exp_value_p);
+	return ret;
 }
 
 static int imx219_set_bus_param(struct soc_camera_device *icd,
@@ -427,12 +651,15 @@ static int imx219_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 
 	/* TODO update when all settings available */
 	switch (ctrl->id) {
+
 	case V4L2_CID_CAMERA_FRAME_RATE:
 		ctrl->value = imx219->framerate;
 		break;
+
 	case V4L2_CID_CAMERA_FOCUS_MODE:
 		ctrl->value = imx219->focus_mode;
 		break;
+
 	case V4L2_CID_CAMERA_LENS_POSITION: {
 		int current_position;
 		int time_to_destination;
@@ -441,7 +668,19 @@ static int imx219_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		ctrl->value = current_position;
 		break;
 	}
+
+	case V4L2_CID_GAIN:
+		imx219_get_gain(client, &retval, NULL);
+		ctrl->value = retval;
+		break;
+
+	case V4L2_CID_EXPOSURE:
+		imx219_get_exposure(client, &retval, NULL);
+		ctrl->value = retval;
+		break;
+
 	}
+
 	return 0;
 }
 
@@ -455,16 +694,49 @@ static int imx219_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	int ret = 0;
 
 	switch (ctrl->id) {
+
 	case V4L2_CID_CAMERA_LENS_POSITION:
 		if (ctrl->value > IMX219_LENS_MAX)
 			return -EINVAL;
-		imx219_lens_set_position(client, ctrl->value);
+		if (imx219->af_on)
+			imx219_lens_set_position(client, ctrl->value);
+		else
+			pr_debug("%s(): af is off", __func__);
 		break;
+
 	case V4L2_CID_CAMERA_FOCUS_MODE:
 		if (ctrl->value > FOCUS_MODE_MANUAL)
 			return -EINVAL;
 		imx219->focus_mode = ctrl->value;
 		break;
+
+	case V4L2_CID_GAIN:
+		if (((unsigned int)ctrl->value > IMX219_GAIN_MAX) |
+		    ((unsigned int)ctrl->value < IMX219_GAIN_MIN)) {
+			dev_err(&client->dev,
+				"V4L2_CID_GAIN invalid gain=%u min=%u max=%d",
+				ctrl->value, IMX219_GAIN_MIN, IMX219_GAIN_MAX);
+			return -EINVAL;
+		}
+		if (imx219->agc_on)
+			imx219_set_gain(client, ctrl->value);
+		else
+			pr_debug("%s(): agc is off", __func__);
+		break;
+
+	case V4L2_CID_EXPOSURE:
+		if ((unsigned int)ctrl->value < IMX219_EXP_MIN) {
+			dev_err(&client->dev,
+				"V4L2_CID_EXPOSURE invalid exposure=%u min=%d",
+				ctrl->value, IMX219_EXP_MIN);
+			return -EINVAL;
+		}
+		if (imx219->agc_on)
+			imx219_set_exposure(client, ctrl->value);
+		else
+			pr_debug("%s(): agc is off", __func__);
+		break;
+
 	default:
 		dev_err(&client->dev,
 			"s_ctrl not supported for id=0x%X\n", ctrl->id);
@@ -489,6 +761,7 @@ static int imx219_s_power(struct v4l2_subdev *sd, int on)
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct imx219 *imx219 = to_imx219(client);
 
+	pr_debug("%s(): on=%d", __func__, on);
 	if (0 == on) {
 		imx219->mode_idx = IMX219_MODE_MAX;
 	}
@@ -507,10 +780,152 @@ static int imx219_init(struct i2c_client *client)
 	/* default settings */
 	imx219->framerate         = FRAME_RATE_AUTO;
 	imx219->focus_mode        = FOCUS_MODE_AUTO;
-	imx219->lenspos_delay     = 0;
-
-	dev_dbg(&client->dev, "Sensor initialized\n");
+	imx219->lens_delay        = 0;
+	imx219->gain_current      = IMX219_DEFAULT_GAIN;
+	imx219->exposure_current  = IMX219_DEFAULT_EXP;
+	imx219->agc_on            = 1;
+	imx219->af_on             = 1;
+	pr_debug("%s()", __func__);
 	return ret;
+}
+
+static int imx219_procfs_read(char *buf, char **start, off_t offset,
+		       int count, int *eof, void *data) {
+	int len;
+	int lens_position, lens_ttd;
+	struct imx219 *imx219 = to_imx219((struct i2c_client *)data);
+
+	drv201_lens_get_position(&lens_position, &lens_ttd);
+
+	len = sprintf(buf,
+		      "mode   = %s\n"\
+		      "ag     = 0x%2X (%d.%03d)\n"\
+		      "exp    = %d\n"\
+		      "lines  = %d\n"\
+		      "vts    = %d\n"\
+		      "agc    = %s\n"\
+		      "lens   = [%d %d]\n"\
+		      "af     = %s\n",
+		      imx219_mode[imx219->mode_idx].name,
+		      imx219->gain_current,
+		      imx219->gain_current >> 8, imx219->gain_current & 0xFF,
+		      imx219->exposure_current,
+		      imx219->coarse_int_lines,
+		      imx219->vts,
+		      imx219->agc_on ? "on" : "off",
+		      lens_position, lens_ttd,
+		      imx219->af_on ? "on" : "off"
+		      );
+	return len;
+}
+
+#define IMX219_MAX_PROC 255
+
+static int imx219_procfs_write(struct file *file,
+			       const char __user *buf,
+			       unsigned long count,
+			       void *data)
+{
+	int val;
+	char str[IMX219_MAX_PROC+1];
+	struct i2c_client *client;
+	struct imx219 *imx219;
+	int lens_position, lens_ttd;
+
+	client = (struct i2c_client *)data;
+	imx219 = to_imx219(client);
+	if (count > IMX219_MAX_PROC)
+		count = IMX219_MAX_PROC;
+	if (copy_from_user(str, buf, count))
+		return -EFAULT;
+	str[IMX219_MAX_PROC] = 0;
+	pr_debug("%s(): str='%s'\n", __func__, str);
+	if (strncmp(str, "ag=", 3) == 0) {
+		val = 0;
+		sscanf(str, "ag=%d", &val);
+		if (val == -1) {
+			imx219->agc_on = 1;
+		} else {
+			imx219->agc_on = 0;
+			imx219_set_gain(client, val);
+		}
+		pr_debug("%s(): ag=0x%X agc_on=%d\n",
+			 __func__, val, imx219->agc_on);
+	} else if (strncmp(str, "exp=", 4) == 0) {
+		val = 0;
+		sscanf(str, "exp=%d", &val);
+		if (val == -1) {
+			imx219->agc_on = 1;
+		} else {
+			imx219->agc_on = 0;
+			imx219_set_exposure(client, val);
+		}
+		pr_debug("%s(): exp=0x%X agc_on=%d\n",
+			 __func__, val, imx219->agc_on);
+	} else if (strncmp(str, "lens=", 5) == 0) {
+		val = 0;
+		sscanf(str, "lens=%d", &val);
+		if (val == -1) {
+			imx219->af_on = 1;
+		} else {
+			imx219->af_on = 0;
+			imx219_lens_set_position(client, val);
+		}
+		pr_debug("%s(): lens_pos=%d af_on=%d\n",
+			 __func__, val, imx219->af_on);
+	} else if (strncmp(str, "lens+=", 6) == 0) {
+		val = 0;
+		sscanf(str, "lens+=%d", &val);
+		imx219->af_on = 0;
+		drv201_lens_get_position(&lens_position, &lens_ttd);
+		imx219_lens_set_position(client, lens_position+val);
+		pr_debug("%s(): lens_pos=%d af_on=%d\n",
+			 __func__, lens_position+val, imx219->af_on);
+	} else if (strncmp(str, "lens-=", 6) == 0) {
+		val = 0;
+		sscanf(str, "lens-=%d", &val);
+		imx219->af_on = 0;
+		drv201_lens_get_position(&lens_position, &lens_ttd);
+		imx219_lens_set_position(client, lens_position-val);
+		pr_debug("%s(): lens_pos=%d af_on=%d\n",
+			 __func__, lens_position-val, imx219->af_on);
+	} else
+		pr_debug("%s(): unknown command: '%s'\n",
+			 __func__, str);
+	return count;
+}
+
+static int imx219_procfs_init(struct i2c_client *client)
+{
+	struct imx219 *imx219 = to_imx219(client);
+
+	imx219->proc_entry = create_proc_entry(SENSOR_NAME_STR,
+					       (S_IRUSR | S_IRGRP),
+					       NULL);
+	if (NULL == imx219->proc_entry) {
+		dev_err(&client->dev, "%s(): error creating proc entry %s",
+			__func__,
+			SENSOR_NAME_STR);
+		return -ENOMEM;
+	}
+	imx219->proc_entry->read_proc = imx219_procfs_read;
+	imx219->proc_entry->write_proc = imx219_procfs_write;
+	imx219->proc_entry->data = client;
+	dev_info(&client->dev, "%s(): proc entry %s OK",
+		 __func__, SENSOR_NAME_STR);
+	return 0;
+}
+
+static int imx219_procfs_exit(struct i2c_client *client)
+{
+	struct imx219 *imx219 = to_imx219(client);
+
+	if (imx219->proc_entry) {
+		remove_proc_entry(SENSOR_NAME_STR,  NULL);
+		dev_info(&client->dev, "%s(): proc entry %s removed",
+			 __func__, SENSOR_NAME_STR);
+	}
+	return 0;
 }
 
 /*
@@ -561,8 +976,8 @@ static int imx219_video_probe(struct soc_camera_device *icd,
 
 static void imx219_video_remove(struct soc_camera_device *icd)
 {
-	dev_dbg(&icd->dev, "Video removed: %p, %p\n",
-			icd->dev.parent, icd->vdev);
+	pr_debug("Video removed: %p, %p\n",
+		 icd->dev.parent, icd->vdev);
 }
 
 static struct v4l2_subdev_core_ops imx219_subdev_core_ops = {
@@ -722,9 +1137,14 @@ static int imx219_set_mode(struct i2c_client *client, int new_mode_idx)
 	if (ret)
 		return ret;
 
+	/* init new mode values */
 	imx219->mode_idx = new_mode_idx;
 	imx219->line_length  = imx219_mode[new_mode_idx].line_length_ns;
 	imx219->vts = imx219_mode[new_mode_idx].vts;
+	/* gain_current, exposure_current are reset in imx219_init */
+	imx219_set_gain(client, imx219->gain_current);
+	imx219_set_exposure(client, imx219->exposure_current);
+
 	return 0;
 }
 
@@ -904,7 +1324,9 @@ static int imx219_probe(struct i2c_client *client,
 	struct soc_camera_device *icd = client->dev.platform_data;
 	struct soc_camera_link *icl;
 	int ret;
-
+#ifdef CONFIG_VIDEO_DRV201
+	int lens_position, lens_ttd;
+#endif
 	dev_info(&client->dev, "imx219_probe");
 
 	if (!icd) {
@@ -953,6 +1375,7 @@ static int imx219_probe(struct i2c_client *client,
 	}
 
 #ifdef CONFIG_VIDEO_DRV201
+	/* init VCM */
 	dev_info(&client->dev, "imx219: drv201 i2c start");
 	drv201_i2c_adap = i2c_get_adapter(0);
 	if (!drv201_i2c_adap)
@@ -963,6 +1386,13 @@ static int imx219_probe(struct i2c_client *client,
 		i2c_put_adapter(drv201_i2c_adap);
 		dev_info(&client->dev, "imx219: drv201 i2c start OK");
 	}
+	drv201_lens_get_position(&lens_position, &lens_ttd);
+	imx219->lens_read_buf[imx219->lens_delay] = lens_position;
+#endif
+
+#if IMX219_DEBUGFS
+	/* init procfs */
+	imx219_procfs_init(client);
 #endif
 
 	return ret;
@@ -973,7 +1403,8 @@ static int imx219_remove(struct i2c_client *client)
 	struct imx219 *imx219 = to_imx219(client);
 	struct soc_camera_device *icd = client->dev.platform_data;
 
-	pr_debug(" remove");
+	pr_debug("%s(): remove", __func__);
+	imx219_procfs_exit(client);
 	icd->ops = NULL;
 	imx219_video_remove(icd);
 	client->driver = NULL;
@@ -991,7 +1422,7 @@ MODULE_DEVICE_TABLE(i2c, imx219_id);
 
 static struct i2c_driver imx219_i2c_driver = {
 	.driver = {
-		.name = "imx219",
+		.name = SENSOR_NAME_STR,
 	},
 	.probe = imx219_probe,
 	.remove = imx219_remove,

@@ -33,7 +33,7 @@
 
 #define drv201_MIN_POSITION   0
 #define drv201_MAX_POSITION   1023
-#define drv201_DEFAULT_POSITION     0
+#define drv201_DEFAULT_POSITION     20
 #define drv201_STEP_PERIOD_US       25    /* in microseconds */
 #define drv201_SLEEP_OP             0x1
 #define drv201_NORM_OP              0x0
@@ -102,7 +102,9 @@ static int drv201_reg_write(struct i2c_client *client, u8 reg, u8 val)
 	data[1] = val;
 	ret = i2c_transfer(client->adapter, &msg, 1);
 	if (ret < 0) {
-		dev_err(&client->dev, "Failed writing register 0x%02x!\n", reg);
+		dev_err(&client->dev,
+			"%s(): failed writing register 0x%02X val=0x%02X, ret=%d",
+			__func__, reg, val, ret);
 		return ret;
 	}
 	return 0;
@@ -131,9 +133,13 @@ static int drv201_reg_write2(struct i2c_client *client, u8 reg, u8 *val)
 	data[2] = val[1];
 	ret = i2c_transfer(client->adapter, &msg, 1);
 	if (ret < 0) {
-		dev_err(&client->dev, "Failed writing register 0x%02x!\n", reg);
+		dev_err(&client->dev,
+			"%s(): failed writing register 0x%02x, ret=%d",
+			__func__, reg, ret);
 		return ret;
-	}
+	} else
+		pr_debug("%s(): register write OK addr=0x%02x val=0x%0X%0X\n",
+			 __func__, reg, val[0], val[1], ret);
 	return 0;
 }
 
@@ -146,23 +152,28 @@ int drv201_lens_set_position(int target_position)
 	int iter;
 	if (!drv201)
 		return -ENOMEM;
-	drv201->requested_position = target_position;
 	dac_code = target_position * 4;
 	dac_code = max_t(u16, drv201_MIN_POSITION,
 			 min_t(u16, dac_code, drv201_MAX_POSITION));
+	drv201->requested_position = dac_code / 4;
 	diff = abs(dac_code - drv201->position);
 	drv201->position = dac_code;
 	drv201->dac_code = dac_code;
-	drv201->flying_time = 0;
+	drv201->flying_time = 1000000 / 30; /* FIXME: calc flying time */
 	drv201->flying_start_time = jiffies_to_usecs(jiffies);
 	iter = 5;
+	buf[0] = dac_code >> 8;
+	buf[1] = dac_code & 0xFF;
 	while (iter--) {
 		ret = drv201_reg_write2(client_drv201, VCM_CURRENT_MSB, buf);
 		if (ret == 0)
 			break;
 	}
-	pr_debug("%s(): iter=%d ret=%d target_position=%d dac_code=%d\n",
-		 __func__, iter, ret, target_position, dac_code);
+	pr_debug("%s(): iter=%d ret=%d requested=%d (was %d) dac_code=0x%X\n",
+		 __func__, iter, ret,
+		 drv201->requested_position,
+		 target_position,
+		 dac_code);
 	return ret;
 }
 
@@ -180,6 +191,7 @@ int drv201_lens_get_position(int *current_position, int *time_to_destination)
 	if (*time_to_destination < 0 || !drv201->flying_time ||
 	    *time_to_destination > 1000000) {
 		drv201->flying_time = 0;
+		*time_to_destination = 0;
 	}
 	*current_position = drv201->requested_position;
 	pr_debug("%s(): position=%d\n", __func__, *current_position);
@@ -190,6 +202,7 @@ int drv201_enable(bool enable)
 {
 	int ret;
 
+	pr_debug("%s()", __func__);
 	if (!drv201)
 		return -ENOMEM;
 	if (enable)
