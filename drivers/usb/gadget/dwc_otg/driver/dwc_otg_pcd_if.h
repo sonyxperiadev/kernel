@@ -335,6 +335,14 @@ extern void dwc_otg_pcd_disconnect(dwc_otg_pcd_t *pcd, int enable);
 /** Stop PCD */
 extern void dwc_otg_pcd_stop(dwc_otg_pcd_t *pcd);
 
+#ifdef CONFIG_USB_PCD_SETTINGS
+/** Start/clean PCD */
+extern void dwc_otg_pcd_start_clean(dwc_otg_pcd_t *pcd, int start);
+
+/** Clean PCD */
+extern void dwc_otg_pcd_clean(dwc_otg_pcd_t *pcd);
+#endif
+
 /** Starts micorsecond soft disconnect. */
 extern void dwc_otg_pcd_disconnect_us(dwc_otg_pcd_t *pcd, int no_of_usecs);
 /** This function returns whether device is dualspeed.*/

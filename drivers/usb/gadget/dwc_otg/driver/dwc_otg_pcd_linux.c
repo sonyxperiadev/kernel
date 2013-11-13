@@ -739,6 +739,30 @@ static int pullup(struct usb_gadget *gadget, int is_on)
 	return 0;
 }
 
+#ifdef CONFIG_USB_PCD_SETTINGS
+static int pcd_start_clean(struct usb_gadget *gadget, int is_start)
+{
+	struct gadget_wrapper *d;
+
+	pr_info("%s = %d\n", __func__, is_start);
+
+	if (gadget == 0)
+		return -ENODEV;
+	else
+		d = container_of(gadget, struct gadget_wrapper, gadget);
+
+	d->pcd->core_if->gadget_pullup_on = is_start;
+
+#ifdef CONFIG_USB_OTG_UTILS
+	/* Need a defined transceiver's state before controlling pullup */
+	if (gadget_wrapper->pcd->core_if->xceiver->state != OTG_STATE_UNDEFINED)
+#endif
+		dwc_otg_pcd_start_clean(d->pcd, is_start);
+
+	return 0;
+}
+#endif
+
 #ifdef CONFIG_USB_DWC_OTG_LPM
 static int test_lpm_enabled(struct usb_gadget *gadget)
 {
@@ -906,6 +930,10 @@ static const struct usb_gadget_ops dwc_otg_pcd_ops = {
 
 	.start = dwc_udc_start,
 	.stop = dwc_udc_stop,
+
+#ifdef CONFIG_USB_PCD_SETTINGS
+	.pcd_start_clean = pcd_start_clean,
+#endif
 };
 
 static int _setup(dwc_otg_pcd_t *pcd, uint8_t *bytes)

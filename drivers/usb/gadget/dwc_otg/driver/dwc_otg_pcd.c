@@ -249,6 +249,21 @@ static int32_t dwc_otg_pcd_stop_cb(void *p)
 	return 1;
 }
 
+#ifdef CONFIG_USB_PCD_SETTINGS
+/**
+ * PCD Callback function for cleaning up the PCD when USB mode switching.
+ *
+ * @param p void pointer to the <code>dwc_otg_pcd_t</code>
+ */
+static int32_t dwc_otg_pcd_clean_cb(void *p)
+{
+	dwc_otg_pcd_t *pcd = (dwc_otg_pcd_t *) p;
+
+	dwc_otg_pcd_clean(pcd);
+	return 1;
+}
+#endif
+
 /**
  * PCD Callback structure for handling mode switching.
  */
@@ -257,6 +272,9 @@ static dwc_otg_cil_callbacks_t pcd_callbacks = {
 	.stop = dwc_otg_pcd_stop_cb,
 	.suspend = dwc_otg_pcd_suspend_cb,
 	.resume_wakeup = dwc_otg_pcd_resume_cb,
+#ifdef CONFIG_USB_PCD_SETTINGS
+	.clean = dwc_otg_pcd_clean_cb,
+#endif
 	.p = 0,			/* Set at registration */
 };
 
@@ -2496,6 +2514,20 @@ void dwc_otg_pcd_disconnect(dwc_otg_pcd_t *pcd, int enable)
 {
 	return dwc_otg_core_soft_disconnect(GET_CORE_IF(pcd), enable);
 }
+
+#ifdef CONFIG_USB_PCD_SETTINGS
+void dwc_otg_pcd_start_clean(dwc_otg_pcd_t *pcd, int start)
+{
+	if (start)
+		cil_pcd_start(GET_CORE_IF(pcd));
+	else {
+		dwc_otg_start_stop_phy_clk(GET_CORE_IF(pcd), true);
+		cil_pcd_clean(GET_CORE_IF(pcd));
+		dwc_otg_start_stop_phy_clk(GET_CORE_IF(pcd), false);
+	}
+	return;
+}
+#endif
 
 void dwc_otg_pcd_disconnect_us(dwc_otg_pcd_t *pcd, int no_of_usecs)
 {

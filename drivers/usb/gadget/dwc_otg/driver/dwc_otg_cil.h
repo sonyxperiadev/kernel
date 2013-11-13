@@ -1352,6 +1352,10 @@ typedef struct dwc_otg_cil_callbacks {
 	/** Sleep (switch to L0 state) */
 	int (*sleep) (void *_p);
 #endif
+#ifdef CONFIG_USB_PCD_SETTINGS
+	/** Clean Fuction for USB mode switching */
+	int (*clean) (void *_p);
+#endif
 	/** Pointer passed to start() and stop() */
 	void *p;
 } dwc_otg_cil_callbacks_t;
@@ -1449,6 +1453,19 @@ static inline void cil_pcd_stop(dwc_otg_core_if_t *core_if)
 	if (core_if->pcd_cb && core_if->pcd_cb->stop)
 		core_if->pcd_cb->stop(core_if->pcd_cb->p);
 }
+
+#ifdef CONFIG_USB_PCD_SETTINGS
+/** Clean up the PCD for USB mode switching.
+ *    Helper function for using the PCD callbacks.
+ *
+ * @param core_if Programming view of DWC_otg controller.
+ */
+static inline void cil_pcd_clean(dwc_otg_core_if_t *core_if)
+{
+	if (core_if->pcd_cb && core_if->pcd_cb->clean)
+		core_if->pcd_cb->clean(core_if->pcd_cb->p);
+}
+#endif
 
 /** Suspend the PCD.  Helper function for using the PCD callbacks.
  *
