@@ -847,6 +847,7 @@ struct platform_device avs_device = {
 #endif
 
 #ifdef CONFIG_KONA_MEMC
+
 #ifdef CONFIG_LPDDR_DEV_TEMP
 struct temp_thold temp_tholds[] = {
 	{.mr4_sts = 7, .action = SHDWN,},
@@ -869,6 +870,28 @@ struct kona_memc_pdata kmemc_plat_data = {
 	.temp_period = 0xA09E6C, /*cycles on XTAL (26MHz) clock, period=400ms*/
 	.temp_tholds = temp_tholds,
 	.num_thold = ARRAY_SIZE(temp_tholds),
+#endif
+#ifdef CONFIG_MEMC_DFS
+	.pll_freq = {
+		[0] = {
+			.ndiv = 0,
+			.ndiv_frac = 0,
+			.pdiv = 0,
+			.mdiv = 0,
+		},
+		[1] = {
+			.ndiv = 61,	/* 0x3D */
+			.ndiv_frac = 0,
+			.pdiv = 1,
+			.mdiv = 0,
+		},
+		[2] = {
+			.ndiv = 80,	/* 0x50 */
+			.ndiv_frac = 0,
+			.pdiv = 1,
+			.mdiv = 0,
+		},
+	},
 #endif
 };
 struct platform_device kona_memc_device = {

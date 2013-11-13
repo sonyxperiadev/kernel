@@ -79,7 +79,6 @@ static int bmp18x_i2c_probe(struct i2c_client *client,
 		.client = client
 	};
 
-
         printk(KERN_ALERT "****************** calling bmp probe*************************"); 
 	err = bmp18x_probe(&client->dev, &data_bus);
 	if (err) {
@@ -107,26 +106,29 @@ static int bmp18x_i2c_probe(struct i2c_client *client,
 		pdata->supply_name = (char *) regulator_name;
 	}
 #ifdef CONFIG_ARCH_KONA
-	regulator = regulator_get(&client->dev, pdata->supply_name);
 
-	err = IS_ERR_OR_NULL(regulator);
-	if (err) {
-		regulator = NULL;
-		BMP_ERROR("%s: can't get vdd regulator!\n", BMP18X_NAME);
-		return -EIO;
-	}
+	if (pdata) {
+		regulator = regulator_get(&client->dev, pdata->supply_name);
+		err = IS_ERR_OR_NULL(regulator);
+		if (err) {
+			regulator = NULL;
+			BMP_ERROR("%s: can't get vdd regulator!\n",
+				BMP18X_NAME);
+			return -EIO;
+		}
 
-	/* make sure that regulator is enabled if device is successfully
-	   bound */
-	err = regulator_enable(regulator);
-	BMP_INFO("called regulator_enable for vdd regulator. "
-		"Status: %d\n", err);
-	if (err) {
-		BMP_ERROR("regulator_enable for vdd regulator "
-			 "failed with status: %d\n", err);
-		regulator_put(regulator);
+		/* make sure that regulator is enabled if device
+		 is successfully bound */
+		err = regulator_enable(regulator);
+		BMP_INFO("called regulator_enable for vdd regulator. "
+			"Status: %d\n", err);
+		if (err) {
+			BMP_ERROR("regulator_enable for vdd regulator "
+				 "failed with status: %d\n", err);
+			regulator_put(regulator);
+		}
+		return err;
 	}
-	return err;
 err_read:
 	if (client->dev.of_node)
 		kfree(pdata);

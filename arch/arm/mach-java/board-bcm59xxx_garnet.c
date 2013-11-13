@@ -1509,6 +1509,7 @@ static const struct of_device_id bcmpmu_adc_dt_ids[] __initconst = {
 	{ },
 };
 
+#ifdef CONFIG_OF
 static int __init bcmpmu_update_pdata(char *name,
 		struct bcmpmu59xxx_platform_data *bcmpmu_i2c_pdata, int init)
 {
@@ -1518,7 +1519,6 @@ static int __init bcmpmu_update_pdata(char *name,
 	int max = 0;
 	uint32_t *p, *p1;
 	struct bcmpmu59xxx_rw_data *tbl, *data;
-
 	np = of_find_matching_node(NULL, matches);
 	if (np) {
 		prop = of_find_property(np, name, &size);
@@ -1555,6 +1555,7 @@ static int __init bcmpmu_update_pdata(char *name,
 	}
 	return ret;
 }
+#endif
 
 int __init bcmpmu_reg_init(void)
 {
@@ -1562,19 +1563,21 @@ int __init bcmpmu_reg_init(void)
 	int updt = 0;
 	struct property *prop;
 	const char *model;
-
+#ifdef CONFIG_OF
 	updt = bcmpmu_update_pdata("initdata", &bcmpmu_i2c_pdata, 1);
+#endif
 	if (!updt) {
 		bcmpmu_i2c_pdata.init_data =  register_init_data;
 		bcmpmu_i2c_pdata.init_max = ARRAY_SIZE(register_init_data);
 	}
-
+#ifdef CONFIG_OF
 	updt = bcmpmu_update_pdata("exitdata", &bcmpmu_i2c_pdata, 0);
+#endif
 	if (!updt) {
 		bcmpmu_i2c_pdata.exit_data =  register_exit_data;
 		bcmpmu_i2c_pdata.exit_max = ARRAY_SIZE(register_exit_data);
 	}
-
+#ifdef CONFIG_OF
 	np = of_find_matching_node(NULL, matches);
 	if (np) {
 		prop = of_find_property(np, "model", NULL);
@@ -1590,10 +1593,11 @@ int __init bcmpmu_reg_init(void)
 		pr_info("Board id from dtb %x\n",
 				bcmpmu_i2c_pdata.board_id);
 	}
-
+#endif
 	return 0;
 }
 
+#ifdef CONFIG_OF
 int __init rgltr_init(void)
 {
 	int i, j, k, int_val;
@@ -1652,6 +1656,7 @@ int __init rgltr_init(void)
 			rgltr_pdata.bcmpmu_rgltr[i].req_volt = int_val;
 		}
 	}
+
 /* Workaround for VDDFIX leakage during deepsleep.
    Will be fixed in Java A1 revision */
 	if (is_pm_erratum(ERRATUM_VDDFIX_LEAKAGE))
@@ -1659,7 +1664,9 @@ int __init rgltr_init(void)
 			REGULATOR_MODE_IDLE;
 	return 0;
 }
+#endif
 
+#ifdef CONFIG_OF
 int __init adc_init(void)
 {
 	int i, j;
@@ -1702,14 +1709,17 @@ int __init adc_init(void)
 	}
 	return 0;
 }
+#endif
 
 int __init board_bcm59xx_init(void)
 {
 	int             ret = 0;
 	int             irq;
 	bcmpmu_reg_init();
+#ifdef CONFIG_OF
 	rgltr_init();
 	adc_init();
+#endif
 	bcmpmu_set_pullup_reg();
 	ret = gpio_request(PMU_DEVICE_INT_GPIO, "bcmpmu59xxx-irq");
 	if (ret < 0) {

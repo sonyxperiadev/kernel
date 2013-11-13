@@ -139,9 +139,9 @@ static const struct backlight_ops pwm_backlight_ops = {
 	.check_fb	= pwm_backlight_check_fb,
 };
 
-#ifdef CONFIG_OF
 int bl_delay_on = 0;
 const char *pwm_request_label = NULL;
+#ifdef CONFIG_OF
 static int pwm_backlight_parse_dt(struct device *dev,
 				  struct platform_pwm_backlight_data *data)
 {
@@ -260,6 +260,7 @@ static int pwm_backlight_parse_dt(struct device *dev,
 			}
 		}
 #endif	
+
 	ret = of_property_read_string(node,
 		"pwm-request-label", &pwm_request_label);
 	if (ret < 0)
@@ -270,6 +271,7 @@ static int pwm_backlight_parse_dt(struct device *dev,
 		bl_delay_on = 0;
 	} else
 		bl_delay_on = val;
+
 err_alloc:
 	if (data->exit)
 		data->exit(dev);
@@ -377,7 +379,12 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 			return ret;
 		}
 		data = &defdata;
+		pdev->dev.platform_data = data;
+	} else {
+			bl_delay_on = data->bl_delay_on;
+			pwm_request_label = data->pwm_request_label;
 	}
+
 	if (data->init) {
 		ret = data->init(&pdev->dev);
 		if (ret < 0)
@@ -453,7 +460,6 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 			schedule_delayed_work(&(pb->bl_delay_on_work),
 			msecs_to_jiffies(bl_delay_on));
 	}
-
 	platform_set_drvdata(pdev, bl);
 	return 0;
 err_alloc:

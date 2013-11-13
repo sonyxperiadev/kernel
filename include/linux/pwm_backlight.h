@@ -27,6 +27,8 @@ struct platform_pwm_backlight_data {
 	struct pb_temp_comp *temp_comp_tbl;
 	unsigned int temp_comp_size;
 #endif
+	int bl_delay_on;
+	const char *pwm_request_label;
 	int (*init)(struct device *dev);
 	int (*notify)(struct device *dev, int brightness);
 	void (*notify_after)(struct device *dev, int brightness);

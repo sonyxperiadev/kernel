@@ -19,7 +19,7 @@
 #define INV_MPU_SLAVE_ADDR	0x68
 
 #define INV_MPU_INIT_CFG	0x10
-#if defined(CONFIG_MACH_HAWAII_GARNET)
+#if defined(CONFIG_MACH_HAWAII_GARNET) || defined(CONFIG_MACH_JAVA_GARNET)
 #define INV_MPU_DRIVER_NAME	"mpu3050"
 #define INV_MPU_IRQ_GPIO	33
 #else
@@ -33,7 +33,7 @@
  *  For y y
  *  For z reverse z
  */
-#if defined(CONFIG_MACH_HAWAII_GARNET)
+#if defined(CONFIG_MACH_HAWAII_GARNET)  || defined(CONFIG_MACH_JAVA_GARNET)
 #define INV_MPU_DRIVER_GYRO_ORIENTATION \
 { \
 	0, -1, 0, \
