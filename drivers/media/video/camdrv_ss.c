@@ -5207,7 +5207,6 @@ bool camdrv_ss_power(int cam_id, int bOn)
 		CAM_INFO_PRINTK("%s : cam_id = %d powering ON ..\n",
 				 __func__, cam_id);
 
-#ifdef CONFIG_SOC_MAIN_CAMERA
 		if (camera_id == CAMDRV_SS_CAM_ID_MAIN) {
 			if (camdrv_ss_sensor_init_main == NULL) {
 				CAM_INFO_PRINTK("%s: First time main" \
@@ -5229,7 +5228,6 @@ bool camdrv_ss_power(int cam_id, int bOn)
 						__func__, camdrv_rear_camera_vendorid);
 				}
 		}
-#endif
 
 #ifdef CONFIG_SOC_SUB_CAMERA
 		else if (camera_id == CAMDRV_SS_CAM_ID_SUB) {
@@ -5433,9 +5431,6 @@ static int camdrv_ss_probe(struct i2c_client *client, const struct i2c_device_id
 			"return error\n", __func__);
 			return -1;
 		} else {
-			CAM_INFO_PRINTK(
-				"%s: calling function pointer inits\n",
-				__func__);
 			camdrv_ss_sensor_init_main(&sensor);
 		}
 	}
@@ -5665,26 +5660,11 @@ static struct i2c_driver camdrv_ss_i2c_driver = {
 
 static int __init camdrv_ss_mod_init(void)
 {
-	int err;
-	CAM_INFO_PRINTK("%s\n", __func__);
-
+	CAM_INFO_PRINTK("%s %s :\n", CAMDRV_SS_MODULE_NAME_MAIN, __func__);
 #ifdef CONFIG_SOC_SUB_CAMERA
-	err = i2c_add_driver(&camdrv_ss_i2c_driver_sub);
-	if (err) {
-		CAM_INFO_PRINTK("%s main camera i2c add failed\n", __func__);
-		return err;
-	}
+	i2c_add_driver(&camdrv_ss_i2c_driver_sub);
 #endif
-
-#ifdef CONFIG_SOC_MAIN_CAMERA
-	err = i2c_add_driver(&camdrv_ss_i2c_driver);
-	if (err) {
-		CAM_INFO_PRINTK("%s main camera i2c add failed\n", __func__);
-		return err;
-	}
-#endif
-
-	return 0;
+	return i2c_add_driver(&camdrv_ss_i2c_driver);
 }
 
 static void __exit camdrv_ss_mod_exit(void)
@@ -5692,10 +5672,7 @@ static void __exit camdrv_ss_mod_exit(void)
 #ifdef CONFIG_SOC_SUB_CAMERA
 	i2c_del_driver(&camdrv_ss_i2c_driver_sub);
 #endif
-
-#ifdef CONFIG_SOC_MAIN_CAMERA
 	i2c_del_driver(&camdrv_ss_i2c_driver);
-#endif
 }
 
 int camdrv_ss_sensors_register(struct camdrv_ss_sensor_reg *sens)

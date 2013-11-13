@@ -34,7 +34,7 @@
 
 #define RT8973_DEV2_UNKNOWN_ACC	0x80
 
-#define RT8973_INTM_ADC_CHG			(1<<6)
+#define RT8973_INTM_ADC_CHG		1<<6
 
 #if 1 // modify for Samsung ivory (AP does not support TRIGGER_LOW)
 #define RT8973_IRQF_MODE (IRQF_TRIGGER_FALLING)

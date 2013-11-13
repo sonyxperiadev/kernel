@@ -24,10 +24,6 @@
 #include <linux/debugfs.h>
 #endif
 
-#ifndef MAX_CCU_COUNT
-#define MAX_CCU_COUNT	6
-#endif
-
 #define GET_BIT_USING_MASK(reg_val, mask)	(!!((reg_val) & (mask)))
 #define SET_BIT_USING_MASK(reg_val, mask)	((reg_val) | (mask))
 #define RESET_BIT_USING_MASK(reg_val, mask)	((reg_val) & ~(mask))
@@ -529,11 +525,11 @@ struct ccu_clk {
 	struct ccu_state_save *ccu_state_save;
 	spinlock_t clk_lock;
 	spinlock_t access_lock;
+#ifdef CONFIG_DEBUG_FS
+	struct dentry *dent_ccu_dir;
 	u32 policy_dbg_offset;
 	u32 policy_dbg_act_freq_shift;
 	u32 policy_dbg_act_policy_shift;
-#ifdef CONFIG_DEBUG_FS
-	struct dentry *dent_ccu_dir;
 	u32 clk_mon_offset;
 #endif
 
@@ -810,7 +806,6 @@ int pll_get_desense_offset(struct clk *clk);
 int pll_desense_enable(struct clk *clk, int enable);
 
 int ccu_policy_dbg_get_act_policy(struct ccu_clk *ccu_clk);
-int ccu_policy_dbg_get_act_freqid(struct ccu_clk *ccu_clk);
 int ref_clk_get_gating_status(struct ref_clk *ref_clk);
 
 int pll_clk_get_lock_status(struct pll_clk *pll_clk);

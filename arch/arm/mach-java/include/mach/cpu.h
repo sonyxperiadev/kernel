@@ -23,6 +23,4 @@
 #define cpu_is_java_A1() \
 			(get_chip_id() == KONA_CHIP_ID_JAVA_A1)
 
-void cpu_info_verbose(void);
-
 #endif /*__JAVA_CPU_H__*/

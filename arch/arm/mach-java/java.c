@@ -184,14 +184,13 @@ uint32_t dt_pinmux_gpio_mask[4] = { 0, 0, 0, 0 };
 uint32_t dt_gpio[128];
 #endif
 
-void cpu_info_verbose(void)
+static void cpu_info_verbose(void)
 {
 	if (cpu_is_java_A0())
 		pr_info("Java CHIPID-A0\n");
 	if (cpu_is_java_A1())
 		pr_info("Java CHIPID-A1\n");
 }
-EXPORT_SYMBOL(cpu_info_verbose);
 
 static void block_mm_access_to_hub(void)
 {

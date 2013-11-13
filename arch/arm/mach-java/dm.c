@@ -108,13 +108,6 @@ static DEFINE_PER_CPU(u32, cdm_attempts);
 
 static u8 svc_req[DRMT_SVC_MAX];
 
-static u32 fdm_abort;
-
-bool is_fdm_abort()
-{
-	return fdm_abort ? true : false;
-}
-
 static u32 fdm_success;
 static u32 fdm_short_success;
 static u32 fdm_attempt;
@@ -477,6 +470,7 @@ static void local_secure_api(unsigned service_id,
  */
 void dormant_enter(u32 svc)
 {
+	unsigned long flgs;
 	u32 fd_cmd = CDC_CMD_CDCE;
 	u32 pwr_ctrl;
 	u32 cdc_states;
@@ -518,8 +512,6 @@ void dormant_enter(u32 svc)
 		break;
 
 	default:
-		pr_err("%s cdc status: %u  cpu-%d\n", cdc_resp,
-			smp_processor_id());
 		BUG();
 	}
 
@@ -558,6 +550,7 @@ void dormant_enter(u32 svc)
 	case CDC_STATUS_FDCEOK:
 		cdc_master_clk_gating_en(false);
 		cdc_set_override(IS_IDLE_OVERRIDE, 0x1C0);
+		spin_lock_irqsave(&drmt_lock, flgs);
 		save_proc_clk_regs();
 		save_addnl_regs();
 		save_gic_distributor_shared((void *)gic_dist_shared_data,
@@ -578,7 +571,8 @@ void dormant_enter(u32 svc)
 		cdc_set_fsm_ctrl(FSM_CLR_ALL_STATUS);
 		cdc_set_override(WAIT_IDLE_TIMEOUT, 0xF);
 		fdm_attempt++;
-		fdm_abort = 0;
+		spin_unlock_irqrestore(&drmt_lock, flgs);
+
 		/*no break to continue to CEOK*/
 	case CDC_STATUS_CEOK:
 		/*dormant_enter_continue will turn OFF L2 mem only if
@@ -642,7 +636,6 @@ void dormant_enter(u32 svc)
 			/*clear TIMEOUT_INT FDM_SHORT*/
 			cdc_set_fsm_ctrl(FSM_CLR_TIMEOUT_INT);
 			fdm_short_success++;
-			fdm_abort = 1;
 			/*No break continue...*/
 		case CDC_STATUS_RESFDM:
 			(*((u32 *)(&__get_cpu_var(cdm_success))))++;
@@ -1011,18 +1004,9 @@ static int __init dm_init(void)
 #endif
 
 #ifdef CONFIG_DEBUG_FS
-	if (dm_debug_init() != 0) {
-		dma_free_coherent(NULL, SZ_4K, vptr, drmt_buf_phy);
-		return -ENOMEM;
-	}
+	dm_debug_init();
 #endif
 	return 0;
 }
 module_init(dm_init);
 
-static void __exit dm_exit(void)
-{
-	dma_free_coherent(NULL, SZ_4K, (void *) un_cached_stack_ptr,
-							drmt_buf_phy);
-}
-module_exit(dm_exit);

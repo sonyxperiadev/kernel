@@ -208,14 +208,14 @@
 	iovmm_mm: iovmm-mm {
 		compatible = "bcm,iovmm";
 		base = <0xc0000000>;
-		size = <0x30000000>;
+		size = <0x20000000>;
 		order = <0>;
 	};
 
 	iovmm_mm_256mb: iovmm-mm-256mb {
 		compatible = "bcm,iovmm";
-		base = <0xf0000000>;
-		size = <0x0ff00000>;
+		base = <0xe0000000>;
+		size = <0x10000000>;
 		order = <0>;
 	};
 
@@ -330,20 +330,17 @@
 		reg = <0x34008000 0x1000>;
 		interrupts = <0 183 4>;
 		chipreg_addr = <0x35004000 0x1000>;
-		thold_size = <8>; /*number of threshold levels*/
-		poll_rate_ms = <10000>;
+		thold_size = <5>; /*number of threshold levels*/
+		poll_rate_ms = <30000>;
 		hysteresis = <0>;
-		flags = <1>;
+		flags = <0>;
 		interval_ms = <5>;
 		/*sw shdwn temp is 120*/
-		thold = <55 1
-			58 1
-			63 1
-			65 1
-			70 1
-			80 1
-			115 4
-			120 2>;
+		thold = <85 1
+			95 1
+			105 1
+			120 4
+			125 2>;
 		tmon_apb_clk = "tmon_apb";
 		tmon_1m_clk = "tmon_1m_clk";
 		falling = <5>;
@@ -449,11 +446,6 @@
 		dft-brightness = <32>;
 		polarity = <1>;		/* Inverted polarity */
 		pwm-period-ns = <99900>; /* ~10010 Hz */
-		temp_comp_size = <3>; /* Number of trigger points*/
-		temp_comp_tbl = <55 20
-				63 18
-				70 15>;
-		/* Brightness values 20:250cd, 18:230cd, 15:200cd */
 		pwm-request-label = "backlight";
 		bl-on-delay = <7000>;
 	};

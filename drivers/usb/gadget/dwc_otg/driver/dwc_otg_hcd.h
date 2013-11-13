@@ -507,7 +507,6 @@ struct dwc_otg_hcd {
 	dma_addr_t status_buf_dma;
 #define DWC_OTG_HCD_STATUS_BUF_SIZE 64
 
-#ifdef CONFIG_USB_OTG
 	/**
 	 * Connection timer. An OTG host must display a message if the device
 	 * does not connect. Started when the VBus power is turned on via
@@ -516,12 +515,11 @@ struct dwc_otg_hcd {
 	dwc_timer_t *conn_timer;
 
 	/* Default timeout for turning off Vbus if no connect */
-#define T_HOST_VBOFF					3000
+#define T_HOST_VBOFF					10000
 	/**
 	 * Wait in milliseconds for device to connect
 	 */
 	 uint32_t conn_wait_timeout;
-#endif
 
 	/* Tasket to do a reset */
 	dwc_tasklet_t *reset_tasklet;

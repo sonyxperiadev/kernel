@@ -83,10 +83,6 @@ unsigned int musb_get_charger_type_rt8973(void)
 		pDrvData->accessory_id = ID_CHARGER;
 printk("%s chrgr type : 3rd party charger - only vbus!!!\n", __func__);
 		return POWER_SUPPLY_TYPE_USB_DCP;
-	} else if (1 == bcmpmu_check_vbus()) {
-		pDrvData->accessory_id = ID_CHARGER;
-		printk("%s chrgr type : 3rd party charger - only vbus!!!\n", __func__);
-		return POWER_SUPPLY_TYPE_USB_DCP;
 	}
 
 	return POWER_SUPPLY_TYPE_BATTERY;
@@ -105,9 +101,6 @@ u16 rt8973_get_chrgr_type(void)
 		return 0x4;
 	if (regDev2 & 0x2)
 		return 0x40;
-	printk("%s chrgr type 0x%x 0x%x\n", __func__, regDev1, regDev2);
-		return 0x40;
-
 	printk("%s chrgr type 0x%x 0x%x\n", __func__, regDev1, regDev2);
 	return (u16)regDev1;
 }
@@ -334,16 +327,12 @@ void musb_vbus_changed_rt8973(int state)
 	}
 }
 EXPORT_SYMBOL(musb_vbus_changed_rt8973);
-EXPORT_SYMBOL(musb_vbus_changed);
-
 inline void do_attach_work(int32_t regIntFlag, int32_t regDev1, int32_t regDev2)
 {
 	int32_t regADC;
 	int32_t regCtrl1;
 	struct i2c_client *pClient = pDrvData->client;
 	printk("%s:0x%x 0x%x\n", __func__, regDev1, regDev2);
-    printk("%s:0x%x 0x%x\n", __func__, regDev1, regDev2);
-
 	if (regIntFlag&RT8973_INT_DCDTIMEOUT_MASK) {
 		regADC = I2CRByte(RT8973_REG_ADC) & 0x1f;
 		if (regADC == 0x1d || regADC == 0x1c
@@ -403,10 +392,6 @@ inline void do_attach_work(int32_t regIntFlag, int32_t regDev1, int32_t regDev2)
 				platform_data.charger_callback(1);
 			return;
 	 }
-				platform_data.charger_callback(1);
-			return;
-		}
-
 		INFO("Redo USB charger detection\n");
 		regCtrl1 = I2CRByte(RT8973_REG_CONTROL_1);
 		if (regCtrl1 < 0)
@@ -492,7 +477,6 @@ inline void do_attach_work(int32_t regIntFlag, int32_t regDev1, int32_t regDev2)
 				INFO("Auto Switch Mode UART cable\n");
 		  INTM_value = I2CRByte(RT8973_REG_DEVICE_1);
 				I2CWByte(RT8973_REG_INTERRUPT_MASK, INTM_value | RT8973_INTM_ADC_CHG | RT8973_INT_ATTACH_MASK);
-					INTM_value | RT8973_INTM_ADC_CHG | RT8973_INT_ATTACH_MASK);
 				pDrvData->accessory_id = ID_UART;
 				if (platform_data.uart_callback)
 					platform_data.uart_callback(1);
@@ -504,7 +488,6 @@ inline void do_attach_work(int32_t regIntFlag, int32_t regDev1, int32_t regDev2)
 				pDrvData->accessory_id = ID_UART;
 				if (platform_data.uart_callback)
 					platform_data.uart_callback(1);
-					platform_data.uart_callback(1);
 				break;
 				case 0x1c:
 				INFO("Auto Switch Mode JIG UART OFF= 1\n");
@@ -512,7 +495,6 @@ inline void do_attach_work(int32_t regIntFlag, int32_t regDev1, int32_t regDev2)
 				  I2CWByte(RT8973_REG_INTERRUPT_MASK, INTM_value | RT8973_INTM_ADC_CHG | RT8973_INT_ATTACH_MASK);
 				pDrvData->accessory_id = ID_UART;
 				if (platform_data.uart_callback)
-					platform_data.uart_callback(1);
 					platform_data.uart_callback(1);
 				break;
 				case 0x19:
@@ -708,9 +690,6 @@ static bool init_reg_setting(void)
 	regCtrl1 = I2CRByte(RT8973_REG_CONTROL_1);
 	regCtrl1 |= (0x08);
 	I2CWByte(RT8973_REG_CONTROL_1, regCtrl1);
-    regCtrl1 |= (0x08);
-    I2CWByte(RT8973_REG_CONTROL_1, regCtrl1);
-
 	pDrvData->prev_int_flag = I2CRByte(RT8973_REG_INT_FLAG);
 
 	INFO("prev_int_flag = 0x%x\n",
@@ -946,6 +925,7 @@ static void __exit rt8973_exit(void)
 	i2c_del_driver(&rt8973_i2c_driver);
 	INFO("RT8973 Module deinitialized.\n");
 }
+
 MODULE_AUTHOR("Patrick Chang <weichung.chang@gmail.com>");
 MODULE_DESCRIPTION("Richtek micro USB switch device diver");
 MODULE_LICENSE("GPL");

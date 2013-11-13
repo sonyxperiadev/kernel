@@ -16,6 +16,7 @@
 /* Types of snapshot parms */
 enum {
 	SNAPSHOT_SIMPLE,
+	SNAPSHOT_CLK,
 	SNAPSHOT_AHB_REG,
 	SNAPSHOT_USER_DEFINED,
 };
@@ -45,6 +46,15 @@ struct snapshot {
 		.type = SNAPSHOT_SIMPLE,	\
 		.data = NULL,			\
 		.name = #_reg,			\
+	}
+
+#define CLK_PARM(clk)				\
+	{					\
+		.data = (void *)clk,		\
+		.type = SNAPSHOT_CLK,		\
+		.mask = 0,			\
+		.good = 0,			\
+		.name = clk,			\
 	}
 
 #define AHB_REG_PARM(_reg, _good, _mask, _clk)	\

@@ -20,7 +20,6 @@ the GPL, without Broadcom's express prior written consent.
 #include <linux/fs.h>
 #include <linux/interrupt.h>
 #include <linux/semaphore.h>
-#include <linux/slab.h>
 #include <linux/mutex.h>
 #include <mach/irqs.h>
 #include <mach/clock.h>
@@ -212,6 +211,7 @@ int isp2_start(struct isp_device_t *isp)
 	uint32_t ctrl;
 	ctrl = isp_read(ISP_CTRL_OFFSET);
 	ctrl |= ISP_CTRL_ENABLE_MASK;
+	isp_write(ISP_CTRL_OFFSET, ctrl);
 	ctrl &= ~ISP_CTRL_FORCE_CLKEN_MASK;
 	isp_write(ISP_CTRL_OFFSET, ctrl);
 	return ret;

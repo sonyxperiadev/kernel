@@ -147,6 +147,11 @@ void auo080100_init_fn(void)
 	val = readl(KONA_DSI0_VA + DSI1_PHYC_OFFSET);
 	val |= (0x1<<DSI1_PHYC_TX_HSCLK_CONT_SHIFT);
 	writel(val, KONA_DSI0_VA + DSI1_PHYC_OFFSET);
+
+	/* Set ISP0_CTRL ST_END */
+	val = readl(KONA_DSI0_VA + DSI1_DISP0_CTRL_OFFSET);
+	val |= (0x1<<DSI1_DISP0_CTRL_ST_END_SHIFT);
+	writel(val, KONA_DSI0_VA + DSI1_DISP0_CTRL_OFFSET);
 }
 
 __initdata struct lcd_config auo080100_cfg = {
@@ -172,11 +177,10 @@ __initdata struct lcd_config auo080100_cfg = {
 	.vid_cmnds = false,
 	.vburst = false,
 	.cont_clk = false,
-	.sync_pulses = false,
-	.hs = 140+60,
-	.hbp = 140+60,
-	.hfp = 140+62,
-	.hbllp = 0,
+	.hs = 140,
+	.hbp = 140,
+	.hfp = 140,
+	.hbllp = (948-768+2),
 	.vs = 50-1,
 	.vbp = 30+1,
 	.vfp = 36+1,

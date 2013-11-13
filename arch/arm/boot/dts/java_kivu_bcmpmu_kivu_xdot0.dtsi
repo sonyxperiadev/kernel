@@ -122,7 +122,7 @@
 		cam2 = "1", "cam2", "1", "6", "4", "0", "0";
 		/*pc_map = PMU_PC2, initial_mode = REGULATOR_MODE_IDLE*/
 		sim1 = "1", "sim_vcc", "0", "2", "4", "0", "0";
-		/*pc_map = PMmmcU_PC2, initial_mode = REGULATOR_MODE_IDLE*/
+		/*pc_map = PMU_PC2, initial_mode = REGULATOR_MODE_IDLE*/
 		sim2 = "1", "sim2_vcc", "0", "2", "4", "0", "0";
 		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, initial_mode = REGULATOR_MODE_NORMAL*/
 		sd   = "3", "sdldo_uc", "vddmmc", "vdd_sdio", "0", "7", "2", "0", "0";

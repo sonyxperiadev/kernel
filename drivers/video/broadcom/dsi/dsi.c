@@ -37,17 +37,11 @@
 
 #define DSI_ERR(fmt, args...) \
 	printk(KERN_ERR "%s:%d " fmt, __func__, __LINE__, ##args)
-#if 1
+#if 0
 #define DSI_INFO(fmt, args...) \
-	printk(KERN_DEBUG "%s:%d " fmt, __func__, __LINE__, ##args)
+	printk(KERN_INFO "%s:%d " fmt, __func__, __LINE__, ##args)
 #else
 #define DSI_INFO(fmt, args...)
-#endif
-#if 0
-#define DSI_DBG(fmt, args...) \
-	printk(KERN_DEBUG "%s:%d " fmt, __func__, __LINE__, ##args)
-#else
-#define DSI_DBG(fmt, args...)
 #endif
 
 typedef struct {
@@ -459,15 +453,9 @@ Int32 DSI_Init(DISPDRV_INFO_T *info, DISPDRV_HANDLE_T *handle)
 		pPanel->dsi_cfg = &DispDrv_dsiCfg;
 		DispDrv_dsiCfg.dlCount = info->lanes;
 		DispDrv_dsiCfg.phy_timing = info->phy_timing;
-
-#ifdef CONFIG_MM_312M_SOURCE_CLK
-/* Move the clock speed to 104Mhz to be derived from 312 with a div 3 */
-		DispDrv_dsiCfg.escClk.clkIn_MHz = 312;
-		DispDrv_dsiCfg.escClk.clkInDiv = 3;
-#else
 		DispDrv_dsiCfg.escClk.clkIn_MHz = 500;
 		DispDrv_dsiCfg.escClk.clkInDiv = 5;
-#endif
+
 		DispDrv_dsiCfg.hsBitClk.clkIn_MHz = info->hs_bps / DSI_1MHZ;
 		WARN_ON(DispDrv_dsiCfg.hsBitClk.clkIn_MHz > 2400);
 		while (DispDrv_dsiCfg.hsBitClk.clkIn_MHz < 600)
@@ -490,7 +478,6 @@ Int32 DSI_Init(DISPDRV_INFO_T *info, DISPDRV_HANDLE_T *handle)
 		DispDrv_dsiCfg.hbllp = info->hbllp;
 		DispDrv_dsiCfg.vsync_cb = info->vsync_cb;
 		DispDrv_dsiCfg.enaContClock = info->cont_clk;
-		DispDrv_dsiCfg.enaStEnd = info->sync_pulses;
 
 		pPanel->disp_info = info;
 		pPanel->isTE = info->vmode ? false : info->te_ctrl;
@@ -500,10 +487,9 @@ Int32 DSI_Init(DISPDRV_INFO_T *info, DISPDRV_HANDLE_T *handle)
 		pPanel->teOut =	TE_VC4L_OUT_DSI0_TE0;
 
 		pPanel->drvState = DRV_STATE_INIT;
-		if (!g_display_enabled) {
+		if (!g_display_enabled)
 			pPanel->pwrState = STATE_PWR_OFF;
-			brcm_init_lcd_clocks(pPanel->busNo);
-		} else
+		else
 			pPanel->pwrState = STATE_SCREEN_ON;
 
 		*handle	= (DISPDRV_HANDLE_T)pPanel;
@@ -809,7 +795,7 @@ static Int32 DSI_SetMaxRtnPktSize(DISPDRV_HANDLE_T drvH, UInt8 size)
 	msg.isLong     = FALSE;
 	msg.endWithBta = FALSE;
 
-	DSI_DBG("[DISPDRV]: disCmnd[0x%02X]\n", DSI_DT_SH_MAX_RET_PKT_SIZE);
+	DSI_INFO("[DISPDRV]: disCmnd[0x%02X]\n", DSI_DT_SH_MAX_RET_PKT_SIZE);
 	cslRes = CSL_DSI_SendPacket(pPanel->clientH, &msg, FALSE);
 	if (cslRes != CSL_LCD_OK) {
 
@@ -863,9 +849,9 @@ static Int32 DSI_DCS_Read(DispDrv_PANEL_t *pPanel,
 			, reg);
 		res = -1;
 	} else {
-		DSI_DBG("[DISPDRV]: Command: 0x%02X\n", reg);
+		DSI_INFO("[DISPDRV]: Command: 0x%02X\n", reg);
 		for (i = 0; i < buffLen; i++)
-			DSI_DBG("Parameter[%d]: [0x%02X]\n", i, rxBuff[i]);
+			DSI_INFO("Parameter[%d]: [0x%02X]\n", i, rxBuff[i]);
 		res = rxMsg.readReplySize;
 	}
 	return res;
@@ -886,7 +872,6 @@ Int32 DSI_PowerControl(
 	DispDrv_PANEL_t *pPanel = (DispDrv_PANEL_t *)drvH;
 	DISPDRV_INFO_T *info = pPanel->disp_info;
 
-	DSI_INFO("state %d pwrState %d\n", state, pPanel->pwrState);
 	switch (state) {
 	case CTRL_PWR_ON:
 		switch (pPanel->pwrState) {
@@ -1061,7 +1046,7 @@ static void DSI_Cb(CSL_LCD_RES_T cslRes, pCSL_LCD_CB_REC pCbRec)
 {
 	DISPDRV_CB_RES_T apiRes;
 
-	DSI_DBG("+\n");
+	DSI_INFO("+\n");
 
 	if (pCbRec->dispDrvApiCb != NULL) {
 		switch (cslRes)	{
@@ -1076,7 +1061,7 @@ static void DSI_Cb(CSL_LCD_RES_T cslRes, pCSL_LCD_CB_REC pCbRec)
 		((DISPDRV_CB_T)pCbRec->dispDrvApiCb)(apiRes);
 	}
 
-	DSI_DBG("-\n");
+	DSI_INFO("-\n");
 }
 
 
@@ -1098,7 +1083,7 @@ Int32 DSI_Update(
 	Int32 res  = 0;
 	uint32_t offset;
 
-	DSI_DBG("+\n");
+	DSI_INFO("+\n");
 	if (pPanel->pwrState ==	STATE_PWR_OFF) {
 		DSI_ERR("Skip Due To Power State\n");
 		return -1;
@@ -1106,7 +1091,7 @@ Int32 DSI_Update(
 	if (p_win == NULL)
 		p_win =	&pPanel->win_dim;
 
-	DSI_DBG("%d %d %d %d\n", p_win->l,
+	DSI_INFO("%d %d %d %d\n", p_win->l,
 			p_win->r, p_win->t, p_win->b);
 
 	DSI_WinSet(drvH, TRUE, p_win);
@@ -1126,7 +1111,7 @@ Int32 DSI_Update(
 	req.cslLcdCbRec.dispDrvApiCb	= (void	*) apiCb;
 	req.cslLcdCbRec.dispDrvApiCbP1	= NULL;
 
-	DSI_DBG("buf=%08x, linelenp = %lu, linecnt =%lu\n",
+	DSI_INFO("buf=%08x, linelenp = %lu, linecnt =%lu\n",
 		(u32)req.buff, req.lineLenP, req.lineCount);
 
 	if (apiCb != NULL)
@@ -1145,7 +1130,7 @@ Int32 DSI_Update(
 		DSI_Cb(res, &req.cslLcdCbRec);
 	}
 
-	DSI_DBG("-\n");
+	DSI_INFO("-\n");
 
 	return res;
 }
@@ -1166,7 +1151,7 @@ Int32 DSI_Atomic_Update(
 	CSL_LCD_UPD_REQ_T req;
 	Int32 res  = 0;
 
-	DSI_DBG("+\n");
+	DSI_INFO("+\n");
 
 	if (pPanel->pwrState ==	STATE_PWR_OFF) {
 		DSI_ERR("Skip Due To Power State\n");
@@ -1196,7 +1181,7 @@ Int32 DSI_Atomic_Update(
 	req.cslLcdCbRec.dispDrvApiCbP1	= NULL;
 	req.cslLcdCb = NULL;
 
-	DSI_DBG("buf=%08x, linelenp = %lu, linecnt =%lu\n",
+	DSI_INFO("buf=%08x, linelenp = %lu, linecnt =%lu\n",
 		(u32)req.buff, req.lineLenP, req.lineCount);
 
 	if (pPanel->disp_info->vmode)
@@ -1209,7 +1194,7 @@ Int32 DSI_Atomic_Update(
 		res = -1;
 	}
 
-	DSI_DBG("-\n");
+	DSI_INFO("-\n");
 
 	csl_dma_unlock();
 

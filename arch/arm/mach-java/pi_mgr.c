@@ -50,7 +50,7 @@ static struct clk *ref_8ph_en_pll1_clk;
 char *armc_core_ccu[] = { KPROC_CCU_CLK_NAME_STR };
 
 struct opp_info __arm_opp_info[] = {
-	INIT_OPP_INFO(PROC_CCU_FREQ_ID_ECO, PI_OPP_ECONOMY, PROC_FREQ_ECO_DIV),
+	INIT_OPP_INFO(PROC_CCU_FREQ_ID_ECO, PI_OPP_ECONOMY, 0),
 	INIT_OPP_INFO(PROC_CCU_FREQ_ID_NRML, PI_OPP_NORMAL,
 			PROC_FREQ_NORMAL_DIV),
 	INIT_OPP_INFO(PROC_CCU_FREQ_ID_TURBO, PI_OPP_TURBO,
@@ -150,13 +150,13 @@ static int mm_pi_enable(struct pi *pi, int enable)
 
 #ifdef CONFIG_MM_FREEZE_VAR500M_ERRATUM
 	if (is_pm_erratum(ERRATUM_MM_FREEZE_VAR500M) && enable)
-		mm_varvdd_clk_en_override(true);
+		var500m_clk_en_override(true);
 #endif
 	ret = gen_pi_ops.enable(pi, enable);
 
 #ifdef CONFIG_MM_FREEZE_VAR500M_ERRATUM
 	if (is_pm_erratum(ERRATUM_MM_FREEZE_VAR500M) && !enable)
-		mm_varvdd_clk_en_override(false);
+		var500m_clk_en_override(false);
 #endif
 
 #ifdef CONFIG_PLL1_8PHASE_OFF_ERRATUM

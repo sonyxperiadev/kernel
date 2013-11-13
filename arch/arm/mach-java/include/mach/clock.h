@@ -711,8 +711,6 @@ enum {
 
 #define PLL1_OFFSET_CONFIG	0xBFFFF
 
-#define MAX_CCU_COUNT 7
-
 enum {
 	CSI0_CAMPIX_PLL,
 	CSI1_CAMPIX_PLL,
@@ -753,7 +751,7 @@ enum {
 	ROOT_CCU_PLL1A,
 };
 #ifdef CONFIG_MM_FREEZE_VAR500M_ERRATUM
-int mm_varvdd_clk_en_override(int enable);
+int var500m_clk_en_override(int enable);
 #endif
 int mm_ccu_set_pll_select(u32 clk_id, u32 value);
 int clk_set_pll_pwr_on_idle(int pll_id, int enable);
@@ -761,7 +759,6 @@ int clk_set_crystal_pwr_on_idle(int enable);
 int __clock_init(void);
 int __clock_print_act_clks(void);
 int chip_reset(void);
-extern bool is_fdm_abort(void);
 #ifdef CONFIG_DEBUG_FS
 int debug_bus_mux_sel(int mux_sel, int mux_param, u32 dbg_bit_sel);
 int set_clk_idle_debug_mon(int clk_idle, int db_sel, u32 dbg_bit_sel);

@@ -45,6 +45,18 @@ __weak u32 get_misc_dbg_bus(void)
 	return 0;
 }
 
+static int ccu_policy_dbg_get_act_freqid(struct ccu_clk *ccu_clk)
+{
+	u32 reg_val;
+
+	reg_val = readl(ccu_clk->ccu_clk_mgr_base + ccu_clk->policy_dbg_offset);
+	reg_val =
+	    (reg_val >> ccu_clk->
+	     policy_dbg_act_freq_shift) & CCU_POLICY_DBG_FREQ_MASK;
+
+	return (int)reg_val;
+}
+
 static int clk_debugfs_open(struct inode *inode, struct file *file)
 {
 	file->private_data = inode->i_private;
@@ -893,7 +905,7 @@ int __init clock_debug_init(void)
 
 int __init clock_debug_add_ccu(struct clk *c, bool is_root_ccu)
 {
-	#define DENT_COUNT 8
+	#define DENT_COUNT 7
 	struct ccu_clk *ccu_clk;
 	int i = 0;
 	struct dentry *dentry[DENT_COUNT] = {NULL};
@@ -967,7 +979,7 @@ int __init clock_debug_add_ccu(struct clk *c, bool is_root_ccu)
 		if (!debugfs_create_file("clk_idle_debug", S_IRUSR | S_IWUSR,
 					ccu_clk->dent_ccu_dir, NULL,
 					&clock_idle_debug_fops))
-			goto err;
+			return -ENOMEM;
 	}
 
 	return 0;

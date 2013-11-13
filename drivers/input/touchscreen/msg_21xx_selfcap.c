@@ -1587,9 +1587,10 @@ static void msg21xx_chip_init(void)
 	gpio_request(ts_gpio_reset_pin, "reset");
 	gpio_direction_output(ts_gpio_reset_pin, 0);
 	gpio_set_value(ts_gpio_reset_pin, 0);
-	mdelay(20);/*min value is 10ms */
+	mdelay(200);
+	gpio_direction_input(ts_gpio_reset_pin);
 	gpio_set_value(ts_gpio_reset_pin, 1);
-	mdelay(80);/*min value is 50ms*/
+	mdelay(500);
 	gpio_free(ts_gpio_reset_pin);
 }
 
@@ -2237,7 +2238,6 @@ static int __devinit msg21xx_probe(struct i2c_client *client,
 		printk(KERN_ERR "%s: cannot register irq\n", __func__);
 		goto exit;
 	}
-	disable_irq(msg21xx_irq);
 	msg21xx_chip_init();
 	chip_type = getchipType();
 	printk(KERN_INFO "chip_type=%d \n",chip_type);
@@ -2313,7 +2313,6 @@ static int __devinit msg21xx_probe(struct i2c_client *client,
 	#endif
 	if (1 == g_debugTp)
 		printk(KERN_INFO "exit msg21xx_probe.\r\n");
-	enable_irq(msg21xx_irq);
 	return 0;
 chip_not_exist:
 	if (mstar_wq != NULL) {

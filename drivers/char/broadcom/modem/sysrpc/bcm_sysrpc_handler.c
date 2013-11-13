@@ -21,8 +21,6 @@
 #include <linux/unistd.h>
 #include <linux/reboot.h>
 #include <plat/kona_reset_reason.h>
-#include <mach/io_map.h>
-#include <mach/rdb_A0/brcm_rdb_simi.h>
 
 
 #include "mobcom_types.h"
@@ -140,8 +138,6 @@ Result_t Handle_CAPI2_SYSRPC_PMU_ActivateSIM(RPC_Msg_t *pReqMsg,
 	int simMicroVolts = 0;
 	int ret;
 	RegulatorInfo_t *curReg = &gRegulatorList[REG_INDEX(simldo)];
-	void __iomem *sim_sldor = NULL;
-	int val;
 
 	memset(&data, 0, sizeof(SYS_ReqRep_t));
 	data.result = result;
@@ -158,13 +154,6 @@ Result_t Handle_CAPI2_SYSRPC_PMU_ActivateSIM(RPC_Msg_t *pReqMsg,
 	KRIL_DEBUG(DBG_INFO,
 		   " enter Handle_CAPI2_PMU_ActivateSIM ldo=%d handle=%p active=%d\n",
 		   simldo, curReg->handle, curReg->isSimInit);
-
-	if (REG_INDEX(simldo))
-			sim_sldor = (void __iomem *)(KONA_SIMI2_VA +
-							SIMI_SLDOCR_OFFSET);
-		else
-			sim_sldor = (void __iomem *) (KONA_SIMI_VA +
-							SIMI_SLDOCR_OFFSET);
 
 	switch (volt) {
 	case PMU_SIM3P0Volt:
@@ -187,12 +176,6 @@ Result_t Handle_CAPI2_SYSRPC_PMU_ActivateSIM(RPC_Msg_t *pReqMsg,
 		{
 			simMicroVolts = 0;
 
-			if (sim_sldor) {
-				val = readl(sim_sldor);
-				val &= ~SIMI_SLDOCR_SIMVCC_EN_MASK;
-				writel(val, sim_sldor);
-				KRIL_DEBUG(DBG_INFO, "SIM SLDOR 0x%x\n", val);
-			}
 			KRIL_DEBUG(DBG_INFO,
 				   " ** PMU_SIM0P0Volt - turn off regulator (FORCE)\n");
 
@@ -225,14 +208,6 @@ Result_t Handle_CAPI2_SYSRPC_PMU_ActivateSIM(RPC_Msg_t *pReqMsg,
 
 		ret = regulator_enable(curReg->handle);
 		KRIL_DEBUG(DBG_INFO, " regulator_enable returned %d\n", ret);
-
-		if (sim_sldor) {
-			val = readl(sim_sldor);
-			val |= SIMI_SLDOCR_SIMVCC_EN_MASK;
-			writel(val, sim_sldor);
-			KRIL_DEBUG(DBG_INFO, "SIM SLDOR 0x%x\n", val);
-		}
-
 		/*Set SIMLDO mode to LPM in DSM*/
 		ret = regulator_set_mode(curReg->handle, REGULATOR_MODE_IDLE);
 		KRIL_DEBUG(DBG_INFO, "regulator_set_mode returned %d\n", ret);

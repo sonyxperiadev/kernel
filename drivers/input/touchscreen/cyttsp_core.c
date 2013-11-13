@@ -114,7 +114,6 @@ undo:
 }
 
 /* SOMC addition END */
-
 static int ttsp_read_block_data(struct cyttsp *ts, u8 command,
 				u8 length, void *buf)
 {

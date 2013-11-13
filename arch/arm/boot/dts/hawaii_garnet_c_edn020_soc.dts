@@ -109,7 +109,7 @@
 		kxtik@0f {
                         compatible = "bcm,kxtik";
                         reg = <0x0f>;
-                        gpio-irq-pin = <0>;
+                        gpio-irq-pin = <1>;
                         min_interval = <5>;
                         poll_interval = <200>;
                         axis_map_x = <0>;
@@ -376,7 +376,7 @@
 		thold_size = <5>; /*number of threshold levels*/
 		poll_rate_ms = <30000>;
 		hysteresis = <0>;
-		flags = <1>;
+		flags = <0>;
 		interval_ms = <5>;
 		/*sw shdwn temp is 120*/
 		thold = <85 1

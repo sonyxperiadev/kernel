@@ -158,18 +158,6 @@ choice
 
 endchoice
 
-choice
-	prompt "Java Kivu type"
-	depends on MACH_JAVA_KIVU
-	default MACH_JAVA_KIVU_XDOT0
-
-	config MACH_JAVA_KIVU_XDOT0
-	bool "JAVA KIVU XDOT0"
-	help
-	  Support for Java Kivu
-
-endchoice
-
 
 choice
 	prompt "Java FPGA type"

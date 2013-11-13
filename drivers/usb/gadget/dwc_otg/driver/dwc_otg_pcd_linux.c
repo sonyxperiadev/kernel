@@ -98,6 +98,8 @@ static struct gadget_wrapper {
 
 } *gadget_wrapper;
 
+static int _disconnect(dwc_otg_pcd_t *pcd);
+
 /* check if request buffer is 4byte aligned */
 static inline int is_req_aligned(struct usb_request *req)
 {
@@ -734,6 +736,12 @@ static int pullup(struct usb_gadget *gadget, int is_on)
 #endif
 	{
 		dwc_otg_pcd_disconnect(d->pcd, is_on ? false : true);
+
+		if (is_on == 0) {
+			DWC_DEBUGPL(DBG_PCDV, "usbd][pullup] fops=0x%x\n",
+				d->pcd->fops);
+			_disconnect(d->pcd);
+		}
 	}
 
 	return 0;

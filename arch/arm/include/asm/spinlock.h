@@ -78,7 +78,6 @@ static inline void arch_spin_lock(arch_spinlock_t *lock)
 	arch_spinlock_t lockval;
 
 	__asm__ __volatile__(
-"	isb\n"
 "1:	ldrex	%0, [%3]\n"
 "	add	%1, %0, %4\n"
 "	strex	%2, %1, [%3]\n"
