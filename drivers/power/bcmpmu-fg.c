@@ -60,7 +60,7 @@
 #define FG_CAL_CAPACITY_AVG_SAMPLES	8
 #define FG_INIT_CAPACITY_SAMPLE_DELAY	150
 #define ADC_READ_TRIES			10
-#define ADC_RETRY_DELAY		20 /* 20ms */
+#define ADC_RETRY_DELAY		50 /* 50ms */
 #define AVG_SAMPLES			5
 #define NTC_TEMP_OFFSET			100
 
@@ -1109,7 +1109,7 @@ static inline int bcmpmu_fg_get_batt_temp(struct bcmpmu_fg_data *fg)
 		retries = ADC_READ_TRIES;
 		while (retries--) {
 			ret = bcmpmu_adc_read(fg->bcmpmu, PMU_ADC_CHANN_NTC,
-					PMU_ADC_REQ_SAR_MODE, &result);
+					PMU_ADC_REQ_RTM_MODE, &result);
 			if (!ret)
 				break;
 			msleep(ADC_RETRY_DELAY);
@@ -1117,8 +1117,8 @@ static inline int bcmpmu_fg_get_batt_temp(struct bcmpmu_fg_data *fg)
 
 		BUG_ON(retries <= 0);
 
-		if ((result.conv < (temp_prev + NTC_TEMP_OFFSET) ||
-				result.conv > (temp_prev - NTC_TEMP_OFFSET))) {
+		if ((result.conv < (temp_prev + NTC_TEMP_OFFSET)) &&
+				(result.conv > (temp_prev - NTC_TEMP_OFFSET))) {
 			temp_prev = result.conv;
 			mean = false;
 			break;
@@ -1256,8 +1256,9 @@ static int bcmpmu_fg_get_load_comp_capacity(struct bcmpmu_fg_data *fg,
 	if (!fg->flags.init_capacity)
 		update_avg_sample_buff(fg);
 
-	pr_fg(FLOW, "vbat: %d, vbat_comp: %d ocv_cap: %d\n",
-			fg->adc_data.volt, vbat_oc, capacity_percentage);
+	pr_fg(FLOW, "vbat: %d, vbat_comp: %d ocv_cap: %d NTC Temp: %d\n",
+			fg->adc_data.volt, vbat_oc, capacity_percentage,
+			fg->adc_data.temp);
 
 	BUG_ON(capacity_percentage > 100);
 	return capacity_percentage;
@@ -1821,7 +1822,8 @@ static void  bcmpmu_fg_irq_handler(u32 irq, void *data)
 	FG_UNLOCK(fg);
 
 	if ((irq == PMU_IRQ_MBTEMPHIGH) || (irq == PMU_IRQ_MBTEMPLOW)) {
-		pr_fg(FLOW, "%s: ISR : %x\n", __func__, irq);
+		pr_fg(FLOW, "%s: PMU NTC ISR Triggered,Charging Disabled: %x\n",
+			__func__, irq);
 		bcmpmu_chrgr_usb_en(fg->bcmpmu, 0);
 	}
 }
@@ -2750,7 +2752,7 @@ static int bcmpmu_fg_get_properties(struct power_supply *psy,
 			val->intval = POWER_SUPPLY_HEALTH_GOOD;
 		break;
 	case POWER_SUPPLY_PROP_FULL_BAT:
-		val->intval =  fg->capacity_info.max_design;
+		val->intval =  fg->pdata->batt_prop->one_c_rate;
 		break;
 	case POWER_SUPPLY_PROP_MODEL_NAME:
 		if (fg->pdata->batt_prop->model)

@@ -31,8 +31,8 @@
 #include <linux/seq_file.h>
 #endif
 
-#define PMU_TEMP_MULTI_CONST 497
-#define KELVIN_CONST 276
+#define PMU_TEMP_MULTI_CONST 514
+#define KELVIN_CONST 284
 
 static int debug_mask = BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT;
 #define pr_hwmon(debug_level, args...) \
@@ -59,6 +59,7 @@ struct bcmpmu_adc {
 	struct mutex chann_mutex[PMU_ADC_CHANN_MAX]; /* per channel mutex */
 	struct mutex rtm_mutex;
 	struct bcmpmu_adc_pdata *pdata;
+	struct completion rtm_ready_complete;
 };
 
 static inline bool is_temp_channel(enum bcmpmu_adc_channel channel)
@@ -175,7 +176,7 @@ static int bcmpmu_adc_raw_to_actual(struct bcmpmu_adc *adc,
 					BCMPMU_ADC_RESOLUTION +
 					(adc->pdata[channel].adc_offset);
 	} else {
-		/* temp = raw * 0.497 - 275.7 C
+		/* temp = raw * 0.514 - 283.5 C
 		 * But for better precision below formulae
 		 * gives the result in 10th multiple of Centigrade*/
 		result->conv = ((result->raw * PMU_TEMP_MULTI_CONST) -
@@ -227,18 +228,18 @@ int read_rtm_adc(struct bcmpmu59xxx *bcmpmu, enum bcmpmu_adc_channel channel,
 	unsigned char rtm_read[ADC_READ_LEN] = {0, 0};
 	u8 val = 0;
 	int ret = 0;
-	int poll;
 
 	pr_hwmon(FLOW, "%s channel = %d\n", __func__, channel);
 	if (channel >= PMU_ADC_CHANN_MAX || channel == PMU_ADC_CHANN_RESERVED)
 		return -EINVAL;
 
 	mutex_lock(&adc->rtm_mutex);
+	init_completion(&adc->rtm_ready_complete);
 
 	val = channel << ADC_RTM_CHANN_SHIFT;
 	val |= (ADC_RTM_CONV_ENABLE << ADC_RTM_CONVERSION_SHIFT);
 	val |= (ADC_RTM_START << ADC_RTM_START_SHIFT);
-	val |= ADC_RTM_MAX_RST_CNT;
+	val |= ADC_RTM_MAX_RST_CNT_7;
 
 	ret = bcmpmu->write_dev(bcmpmu, PMU_REG_ADCCTRL1, val);
 	if (ret != 0) {
@@ -246,27 +247,20 @@ int read_rtm_adc(struct bcmpmu59xxx *bcmpmu, enum bcmpmu_adc_channel channel,
 		goto err;
 	}
 
-	for (poll = 0; poll < ADC_RTM_MAX_POLL; poll++) {
-		msleep(ADC_RTM_SLEEP);
+
+	if (!wait_for_completion_timeout(&adc->rtm_ready_complete,
+			msecs_to_jiffies(250))) {
+
 		ret = bcmpmu->read_dev(bcmpmu, PMU_REG_INT9, &val);
 		if (ret != 0) {
-			pr_hwmon(ERROR, "%s I2C read failed\n", __func__);
+			pr_hwmon(ERROR, "%s I2C write failed\n", __func__);
 			goto err;
-		} else {
-			if (val & ADC_RTM_DATA_READY) {
-				bcmpmu->write_dev(bcmpmu,
-						PMU_REG_INT9,
-						(val & ~ADC_RTM_DATA_READY));
-				break;
-			}
 		}
-	}
-
-	if (poll == (ADC_RTM_MAX_POLL - 1)) {
-		pr_hwmon(ERROR, "%s: exceeded max polls\n", __func__);
+		pr_hwmon(ERROR,
+			"%s: Timeout waiting for ADC_RTM_DATA_READY, INT9: 0x%x\n",
+			__func__, val);
 		goto err;
 	}
-
 
 	ret = bcmpmu->read_dev_bulk(bcmpmu, PMU_REG_ADCCTRL27, rtm_read,
 								ADC_READ_LEN);
@@ -285,11 +279,27 @@ int read_rtm_adc(struct bcmpmu59xxx *bcmpmu, enum bcmpmu_adc_channel channel,
 		result->raw = (result->raw << ADC_MSB_SHIFT);
 		result->raw |= rtm_read[1];
 	}
+
+	val = ADC_RTM_CONV_DISABLE << ADC_RTM_CONVERSION_SHIFT;
+	ret = bcmpmu->write_dev(bcmpmu, PMU_REG_ADCCTRL1, val);
+	if (ret != 0) {
+		pr_hwmon(ERROR, "%s I2C write failed\n", __func__);
+		goto err;
+	}
+
+	mutex_unlock(&adc->rtm_mutex);
+
 	pr_hwmon(FLOW, "%s channel:%d, raw:%x\n", __func__, channel,
 								result->raw);
-	mutex_unlock(&adc->rtm_mutex);
+
 	return 0;
 err:
+
+	val = ADC_RTM_CONV_DISABLE << ADC_RTM_CONVERSION_SHIFT;
+	ret = bcmpmu->write_dev(bcmpmu, PMU_REG_ADCCTRL1, val);
+	if (ret != 0)
+		pr_hwmon(ERROR, "%s I2C write failed\n", __func__);
+
 	mutex_unlock(&adc->rtm_mutex);
 	return -EAGAIN;
 
@@ -522,6 +532,16 @@ static ssize_t adc_read(struct device *dev,
 
 }
 
+static void  bcmpmu_rtm_irq_handler(u32 irq, void *data)
+{
+	struct bcmpmu_adc *adc = data;
+
+	if (irq == PMU_IRQ_RTM_DATA_RDY)
+		complete(&adc->rtm_ready_complete);
+	else
+		BUG();
+}
+
 static SENSOR_DEVICE_ATTR(vmbatt, S_IRUGO, adc_read,
 						NULL, PMU_ADC_CHANN_VMBATT);
 static SENSOR_DEVICE_ATTR(vbbatt, S_IRUGO, adc_read,
@@ -623,12 +643,46 @@ static int bcmpmu_adc_probe(struct platform_device *pdev)
 	/* RTM mutex */
 	mutex_init(&adc->rtm_mutex);
 
+	init_completion(&adc->rtm_ready_complete);
+
+	/* Register Interrupts */
+
+	ret = bcmpmu->register_irq(bcmpmu, PMU_IRQ_RTM_DATA_RDY,
+			bcmpmu_rtm_irq_handler, adc);
+	if (ret) {
+		pr_hwmon(ERROR, "Failed to register PMU_IRQ_RTM_DATA_RDY\n");
+		goto error;
+	}
+
+	ret = bcmpmu->register_irq(bcmpmu, PMU_IRQ_RTM_UPPER,
+			bcmpmu_rtm_irq_handler, adc);
+	if (ret) {
+		pr_hwmon(ERROR, "Failed to register PMU_IRQ_RTM_UPPER\n");
+		goto error;
+	}
+
+	ret = bcmpmu->register_irq(bcmpmu, PMU_IRQ_RTM_IGNORE,
+			bcmpmu_rtm_irq_handler, adc);
+	if (ret) {
+		pr_hwmon(ERROR, "Failed to register PMU_IRQ_RTM_IGNORE\n");
+		goto error;
+	}
+
+	ret = bcmpmu->register_irq(bcmpmu, PMU_IRQ_RTM_OVERRIDDEN,
+			bcmpmu_rtm_irq_handler, adc);
+	if (ret) {
+		pr_hwmon(ERROR, "Failed to register PMU_IRQ_RTM_OVERRIDDEN\n");
+		goto error;
+	}
+
+	/* Unmask interrupts */
+	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_RTM_DATA_RDY);
+
 	/* Mask interrupts */
-	bcmpmu->mask_irq(bcmpmu, PMU_IRQ_RTM_DATA_RDY);
-	bcmpmu->mask_irq(bcmpmu, PMU_IRQ_RTM_IN_CON_MEAS);
 	bcmpmu->mask_irq(bcmpmu, PMU_IRQ_RTM_UPPER);
 	bcmpmu->mask_irq(bcmpmu, PMU_IRQ_RTM_IGNORE);
 	bcmpmu->mask_irq(bcmpmu, PMU_IRQ_RTM_OVERRIDDEN);
+	bcmpmu->mask_irq(bcmpmu, PMU_IRQ_RTM_IN_CON_MEAS);
 
 	ret = sysfs_create_group(&pdev->dev.kobj, &bcmpmu_hwmon_attr_group);
 	if (ret != 0)
@@ -640,6 +694,11 @@ static int bcmpmu_adc_probe(struct platform_device *pdev)
 exit_remove_files:
 	 sysfs_remove_group(&pdev->dev.kobj, &bcmpmu_hwmon_attr_group);
 error:
+	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_RTM_DATA_RDY);
+	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_RTM_UPPER);
+	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_RTM_IGNORE);
+	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_RTM_OVERRIDDEN);
+
 	kfree(adc);
 	return 0;
 }

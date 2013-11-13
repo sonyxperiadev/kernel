@@ -133,7 +133,7 @@ int bcm_hsotgctrl_en_clock(bool on)
 	struct bcm_hsotgctrl_drv_data *bcm_hsotgctrl_handle =
 		local_hsotgctrl_handle;
 
-	if (!bcm_hsotgctrl_handle || !bcm_hsotgctrl_handle->otg_clk)
+	if (!bcm_hsotgctrl_handle)
 		return -EIO;
 
 	if (on) {
@@ -173,8 +173,7 @@ int bcm_hsotgctrl_phy_init(bool id_device)
 	if (NULL == local_hsotgctrl_handle)
 		return -ENODEV;
 
-	if ((!bcm_hsotgctrl_handle->otg_clk) ||
-		  (!bcm_hsotgctrl_handle->hsotg_ctrl_base) ||
+	if ((!bcm_hsotgctrl_handle->hsotg_ctrl_base) ||
 		  (!bcm_hsotgctrl_handle->dev))
 		return -EIO;
 
@@ -252,7 +251,7 @@ int bcm_hsotgctrl_phy_deinit(void)
 	if (NULL == local_hsotgctrl_handle)
 		return -ENODEV;
 
-	if ((!bcm_hsotgctrl_handle->otg_clk) || (!bcm_hsotgctrl_handle->dev))
+	if (!bcm_hsotgctrl_handle->dev)
 		return -EIO;
 
 	if (bcm_hsotgctrl_handle->irq_enabled) {
@@ -319,8 +318,7 @@ int bcm_hsotgctrl_bc_reset(void)
 	if (NULL == local_hsotgctrl_handle)
 		return -ENODEV;
 
-	if ((!bcm_hsotgctrl_handle->otg_clk) ||
-		  (!bcm_hsotgctrl_handle->dev))
+	if (!bcm_hsotgctrl_handle->dev)
 		return -EIO;
 
 	clk_cnt = clk_get_usage(bcm_hsotgctrl_handle->otg_clk);
@@ -414,8 +412,7 @@ int bcm_hsotgctrl_bc_status(unsigned long *status)
 	if (NULL == local_hsotgctrl_handle)
 		return -ENODEV;
 
-	if ((!bcm_hsotgctrl_handle->otg_clk) ||
-		  (!bcm_hsotgctrl_handle->dev) || !status)
+	if ((!bcm_hsotgctrl_handle->dev) || !status)
 		return -EIO;
 
 	clk_cnt = clk_get_usage(bcm_hsotgctrl_handle->otg_clk);
@@ -437,8 +434,7 @@ int bcm_hsotgctrl_bc_vdp_src_off(void)
 	if (NULL == local_hsotgctrl_handle)
 		return -ENODEV;
 
-	if ((!bcm_hsotgctrl_handle->otg_clk) ||
-		  (!bcm_hsotgctrl_handle->dev))
+	if (!bcm_hsotgctrl_handle->dev)
 		return -EIO;
 
 	val = readl(bcm_hsotgctrl_handle->hsotg_ctrl_base +
@@ -551,7 +547,7 @@ static irqreturn_t bcm_hsotgctrl_wake_irq(int irq, void *dev)
 	if (NULL == local_hsotgctrl_handle)
 		return -ENODEV;
 
-	if ((!bcm_hsotgctrl_handle->otg_clk) || (!bcm_hsotgctrl_handle->dev))
+	if (!bcm_hsotgctrl_handle->dev)
 		return IRQ_NONE;
 
 	/* Disable the IRQ since already waking up */
@@ -571,8 +567,7 @@ int bcm_hsotgctrl_get_clk_count(void)
 	if (NULL == local_hsotgctrl_handle)
 		return -ENODEV;
 
-	if ((!bcm_hsotgctrl_handle->otg_clk) ||
-		  (!bcm_hsotgctrl_handle->dev))
+	if (!bcm_hsotgctrl_handle->dev)
 		return -EIO;
 
 	return clk_get_usage(bcm_hsotgctrl_handle->otg_clk);
@@ -587,8 +582,7 @@ int bcm_hsotgctrl_handle_bus_suspend(void)
 	if (NULL == local_hsotgctrl_handle)
 		return -ENODEV;
 
-	if ((!bcm_hsotgctrl_handle->otg_clk) ||
-		  (!bcm_hsotgctrl_handle->dev))
+	if (!bcm_hsotgctrl_handle->dev)
 		return -EIO;
 
 	/* Enable software control of PHY-PM */
@@ -665,16 +659,14 @@ static int bcm_hsotgctrl_probe(struct platform_device *pdev)
 		(void *)plat_data->hsotgctrl_virtual_mem_base;
 	if (!hsotgctrl_drvdata->hsotg_ctrl_base) {
 		dev_warn(&pdev->dev, "No vaddr for HSOTGCTRL!\n");
-		kfree(hsotgctrl_drvdata);
-		return -ENOMEM;
+		goto error_get_vaddr;
 	}
 
 	hsotgctrl_drvdata->chipregs_base =
 		(void *)plat_data->chipreg_virtual_mem_base;
 	if (!hsotgctrl_drvdata->chipregs_base) {
 		dev_warn(&pdev->dev, "No vaddr for CHIPREG!\n");
-		kfree(hsotgctrl_drvdata);
-		return -ENOMEM;
+		goto error_get_vaddr;
 	}
 
 	hsotgctrl_drvdata->dev = &pdev->dev;
@@ -683,9 +675,9 @@ static int bcm_hsotgctrl_probe(struct platform_device *pdev)
 
 	if (IS_ERR(hsotgctrl_drvdata->otg_clk)) {
 		error = PTR_ERR(hsotgctrl_drvdata->otg_clk);
-		dev_warn(&pdev->dev, "OTG clock allocation failed\n");
-		kfree(hsotgctrl_drvdata);
-		return error;
+		dev_warn(&pdev->dev,
+			 "OTG clock allocation failed - %d\n", error);
+		goto error_get_otg_clk;
 	}
 
 	hsotgctrl_drvdata->mdio_master_clk = clk_get(NULL,
@@ -693,9 +685,9 @@ static int bcm_hsotgctrl_probe(struct platform_device *pdev)
 
 	if (IS_ERR(hsotgctrl_drvdata->mdio_master_clk)) {
 		error = PTR_ERR(hsotgctrl_drvdata->mdio_master_clk);
-		dev_warn(&pdev->dev, "MDIO Mst clk alloc failed\n");
-		kfree(hsotgctrl_drvdata);
-		return error;
+		dev_warn(&pdev->dev,
+			 "MDIO Mst clk alloc failed - %d\n", error);
+		goto error_get_master_clk;
 	}
 
 	hsotgctrl_drvdata->allow_suspend = true;
@@ -821,8 +813,11 @@ static int bcm_hsotgctrl_probe(struct platform_device *pdev)
 	return 0;
 
 Error_bcm_hsotgctrl_probe:
-	clk_put(hsotgctrl_drvdata->otg_clk);
 	clk_put(hsotgctrl_drvdata->mdio_master_clk);
+error_get_master_clk:
+	clk_put(hsotgctrl_drvdata->otg_clk);
+error_get_otg_clk:
+error_get_vaddr:
 	kfree(hsotgctrl_drvdata);
 	return error;
 }

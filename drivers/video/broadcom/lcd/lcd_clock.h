@@ -43,3 +43,6 @@ extern int brcm_enable_dsi_pll_clocks(u32 dsi_bus, u32 dsi_pll_hz,
 		u32 esc_clk_hz);
 
 extern int brcm_disable_dsi_pll_clocks(u32 dsi_bus);
+
+extern int brcm_init_lcd_clocks(u32 dsi_bus);
+

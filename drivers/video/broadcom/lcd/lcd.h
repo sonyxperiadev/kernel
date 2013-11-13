@@ -51,6 +51,9 @@ struct lcd_config {
 	uint8_t phys_width;
 	uint8_t phys_height;
 	void (*init_fn)(void);
+	int (*esd_check_fn)(void);
+	uint32_t esd_check_period;
+	uint32_t esd_check_retry;
 	DISPCTRL_REC_T *init_cmd_seq;
 	DISPCTRL_REC_T *init_vid_seq;
 	DISPCTRL_REC_T *slp_in_seq;
@@ -64,8 +67,11 @@ struct lcd_config {
 	bool vid_cmnds; /* TURN_ON SHUT_DOWN*/
 	bool vburst;
 	bool cont_clk;
+	bool sync_pulses; /* Non burst mode with sync pulses or events */
 	uint8_t hs, hbp, hfp, hbllp;
 	uint8_t vs, vbp, vfp;
 };
+
+void panel_read(UInt8 reg, UInt8 *rxBuff, UInt8 buffLen);
 
 #endif

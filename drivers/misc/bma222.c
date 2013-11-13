@@ -954,7 +954,7 @@ static ssize_t bma222_set_offset(struct device *dev,
 	return count;
 }
 static DEVICE_ATTR(offset, 00664, bma222_get_offset, bma222_set_offset);
-static DEVICE_ATTR(delay, S_IRUGO | S_IWUSR | S_IWGRP | S_IWOTH,
+static DEVICE_ATTR(delay, S_IRUGO | S_IWUSR | S_IWGRP ,
 			bma222_delay_show, bma222_delay_store);
 static struct attribute *bma222_attributes[] = {
 	&dev_attr_offset.attr,

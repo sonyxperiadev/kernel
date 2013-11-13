@@ -166,7 +166,8 @@ int mach_config_arm_pll(int turbo_val, int update_volt_tbl)
 	clk = clk_get(NULL, A9_PLL_CLK_NAME_STR);
 	if (IS_ERR_OR_NULL(clk))
 		return -EINVAL;
-	ret = switch_arm_pll(PROC_CCU_FREQ_ID_ECO, PM_WKP); /*ECO => sys PLL*/
+/* Switch to FID 4, configure PLL for reqd rate */
+	ret = switch_arm_pll(PROC_CCU_FREQ_ID_312MHZ, PM_WKP);
 	if (ret)
 		return ret;
 

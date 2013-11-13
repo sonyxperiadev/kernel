@@ -56,14 +56,14 @@ static bool first_af_status = false;
 
 #define SENSOR_0_CLK			"dig_ch0_clk"    
 #define SENSOR_0_CLK_FREQ		(26000000) 
-
 #define CSI0_LP_FREQ			(100000000)
 #define CSI1_LP_FREQ			(100000000)
+
 static struct regulator *VCAM_IO_1_8_V;
 static struct regulator *VCAM_A_2_8_V; 
 static struct regulator *VCAM_CORE_1_8_V;  
 
-//#ifdef CONFIG_MACH_HAWAII_SS_LT063G
+#ifdef CONFIG_MACH_HAWAII_SS_LT063G_REV00
 #define VCAM_A_2_8V_REGULATOR		"mmcldo1"
 #define VCAM_IO_1_8V_REGULATOR		"lvldo1"
 #define VCAM_CORE_1_8V_REGULATOR	"lvldo2"
@@ -72,7 +72,28 @@ static struct regulator *VCAM_CORE_1_8_V;
 #define VCAM_CORE_1_8V_REGULATOR_uV	1786000
 #define CAM_RESET	111
 #define CAM_STNBY	002
-//#endif
+
+#elif CONFIG_MACH_HAWAII_SS_LT063G_REV01
+#define VCAM_A_2_8V_REGULATOR		"mmcldo1"
+#define VCAM_IO_1_8V_REGULATOR		"lvldo1"
+#define VCAM_CORE_1_8V_REGULATOR	"lvldo2"
+#define VCAM_A_2_8V_REGULATOR_uV	2800000
+#define VCAM_IO_1_8V_REGULATOR_uV	1786000
+#define VCAM_CORE_1_8V_REGULATOR_uV	1786000
+#define CAM_RESET	004
+#define CAM_STNBY	005
+
+#else
+#define VCAM_A_2_8V_REGULATOR		"mmcldo1"
+#define VCAM_IO_1_8V_REGULATOR		"lvldo1"
+#define VCAM_CORE_1_8V_REGULATOR	"lvldo2"
+#define VCAM_A_2_8V_REGULATOR_uV	2800000
+#define VCAM_IO_1_8V_REGULATOR_uV	1786000
+#define VCAM_CORE_1_8V_REGULATOR_uV	1786000
+#define CAM_RESET	004
+#define CAM_STNBY	005
+#endif
+
 
 static DEFINE_MUTEX(af_cancel_op);
 extern inline struct camdrv_ss_state *to_state(struct v4l2_subdev *sd);
@@ -1414,14 +1435,15 @@ static int camdrv_ss_sr130pc20_check_table_size_for_60hz(void)
 }	
 
 
-
 static int camdrv_ss_sr130pc20_sensor_power(int on)
 {
 	unsigned int value;
 	int ret = -1;
 	struct clk *clock;
 	struct clk *lp_clock;
+	struct clk *lp_clock_1;
 	struct clk *axi_clk;
+	struct clk *axi_clk_1;
 	static struct pi_mgr_dfs_node unicam_dfs_node;
 	CAM_ERROR_PRINTK(KERN_INFO "%s:camera power %s\n", __func__, (on ? "on" : "off"));
 
@@ -1433,6 +1455,15 @@ static int camdrv_ss_sr130pc20_sensor_power(int on)
 		CSI0_LP_PERI_CLK_NAME_STR);
 		goto e_clk_get;
 	}
+
+#ifdef CONFIG_SOC_CAMERA_SUB_SR130
+	lp_clock_1 = clk_get(NULL, CSI1_LP_PERI_CLK_NAME_STR);
+	if (IS_ERR_OR_NULL(lp_clock_1)) {
+		printk(KERN_ERR "Unable to get %s clock\n",
+		CSI1_LP_PERI_CLK_NAME_STR);
+		goto e_clk_get;
+	}
+#endif
 
 	clock = clk_get(NULL, SENSOR_0_CLK);
 	if (IS_ERR_OR_NULL(clock)) {
@@ -1446,6 +1477,13 @@ static int camdrv_ss_sr130pc20_sensor_power(int on)
 		goto e_clk_get;
 	}
 
+#ifdef CONFIG_SOC_CAMERA_SUB_SR130
+	axi_clk_1 = clk_get(NULL, "csi1_axi_clk");
+	if (IS_ERR_OR_NULL(axi_clk)) {
+		printk(KERN_ERR "Unable to get AXI clock 1\n");
+		goto e_clk_get;
+	}
+#endif
 
 
 	VCAM_A_2_8_V= regulator_get(NULL, VCAM_A_2_8V_REGULATOR);
@@ -1456,7 +1494,7 @@ static int camdrv_ss_sr130pc20_sensor_power(int on)
 	}
 
 
-        VCAM_IO_1_8_V = regulator_get(NULL, VCAM_IO_1_8V_REGULATOR);
+	VCAM_IO_1_8_V = regulator_get(NULL, VCAM_IO_1_8V_REGULATOR);
 	if(IS_ERR(VCAM_IO_1_8_V))
 	{
 		CAM_ERROR_PRINTK("can not get VCAM_IO_1.8V\n");
@@ -1494,10 +1532,12 @@ static int camdrv_ss_sr130pc20_sensor_power(int on)
 
 
   		value = regulator_set_voltage(VCAM_CORE_1_8_V, VCAM_CORE_1_8V_REGULATOR_uV, VCAM_CORE_1_8V_REGULATOR_uV);
-		  if (value)
-  		 CAM_ERROR_PRINTK("%s:regulator_set_voltage VCAM_CORE_1_8_V failed \n", __func__);
+		if (value)
+			CAM_ERROR_PRINTK(
+			"%s:regulator_set_voltage VCAM_CORE_1_8_V failed\n",
+			__func__);
 
-
+#ifdef CONFIG_SOC_CAMERA_MAIN_SR130
  		 if (mm_ccu_set_pll_select(CSI0_BYTE1_PLL, 8)) {
    			CAM_ERROR_PRINTK("failed to set BYTE1\n");
   			 goto e_clk_pll;
@@ -1510,11 +1550,27 @@ static int camdrv_ss_sr130pc20_sensor_power(int on)
   			 CAM_ERROR_PRINTK("failed to set PIXPLL\n");
    			goto e_clk_pll;
   		}
+#else if CONFIG_SOC_CAMERA_SUB_SR130
+		if (mm_ccu_set_pll_select(CSI1_BYTE1_PLL, 8)) {
+			pr_err("failed to set BYTE1\n");
+			goto e_clk_pll;
+		}
+		if (mm_ccu_set_pll_select(CSI1_BYTE0_PLL, 8)) {
+			pr_err("failed to set BYTE0\n");
+			goto e_clk_pll;
+		}
+		if (mm_ccu_set_pll_select(CSI1_CAMPIX_PLL, 8)) {
+			pr_err("failed to set PIXPLL\n");
+			goto e_clk_pll;
+		}
+#endif
+
 		value = clk_enable(axi_clk);
 		if (value) {
    			CAM_ERROR_PRINTK("%s:failed to enable csi2 axi clock\n", __func__);
   		 	goto e_clk_axi;
  		 }
+
   		value = clk_enable(lp_clock);
   		if (value) {
    			CAM_ERROR_PRINTK(KERN_ERR "Failed to enable lp clock\n");
@@ -1526,6 +1582,25 @@ static int camdrv_ss_sr130pc20_sensor_power(int on)
   			 CAM_ERROR_PRINTK("Failed to set lp clock\n");
  			  goto e_clk_set_lp;
  		 }
+#ifdef CONFIG_SOC_CAMERA_SUB_SR130
+		value = clk_enable(lp_clock_1);
+		if (value) {
+			pr_err(KERN_ERR "Failed to enable lp clock 1\n");
+			goto e_clk_lp1;
+		}
+
+		value = clk_set_rate(lp_clock_1, CSI1_LP_FREQ);
+		if (value) {
+			pr_err("Failed to set lp clock 1\n");
+			goto e_clk_set_lp1;
+		}
+
+		value = clk_enable(axi_clk_1);
+		if (value) {
+			printk(KERN_ERR "Failed to enable axi clock 1\n");
+			goto e_clk_axi;
+		}
+#endif
 
   		value = regulator_enable(VCAM_IO_1_8_V);
   		if (value) {
@@ -1549,13 +1624,13 @@ static int camdrv_ss_sr130pc20_sensor_power(int on)
 		value = clk_enable(clock);
 		if (value) {
    			CAM_ERROR_PRINTK("%s: failed to enable clock %s\n", __func__,SENSOR_0_CLK);
-   			goto e_clk_sensor;
+			goto e_clk_clock;
 		}
 
 		value = clk_set_rate(clock, SENSOR_0_CLK_FREQ);
 		if (value) {
    			CAM_ERROR_PRINTK("%s: failed to set the clock %s to freq %d\n",__func__, SENSOR_0_CLK, SENSOR_0_CLK_FREQ);
-   			goto e_clk_set_sensor;
+			goto e_clk_set_clock;
 		}
 
 		msleep(20);
@@ -1581,11 +1656,17 @@ static int camdrv_ss_sr130pc20_sensor_power(int on)
 		msleep(3);
 	
 		clk_disable(lp_clock);
+	#ifdef CONFIG_SOC_CAMERA_SUB_SR130
+		clk_disable(lp_clock_1);
+	#endif
+		clk_disable(clock);
 		clk_disable(axi_clk);
-
+	#ifdef CONFIG_SOC_CAMERA_SUB_SR130
+		clk_disable(axi_clk_1);
+	#endif
 		msleep(1);
 
-		CAM_INFO_PRINTK("powerOFF the sensor \n"); 
+		CAM_INFO_PRINTK("powerOFF the sensor\n");
 
 	}
 #if 0
@@ -1599,17 +1680,23 @@ static int camdrv_ss_sr130pc20_sensor_power(int on)
 	}
 #endif
 	return 0;
-	e_clk_set_sensor:
-		clk_disable(clock);
-	e_clk_sensor:
-	e_clk_set_lp:
-		clk_disable(lp_clock);
-	e_clk_lp:
-		clk_disable(axi_clk);
-	e_clk_axi:
-	e_clk_pll:
-	e_clk_get:
-		return ret;
+e_clk_set_clock:
+	clk_disable(clock);
+e_clk_clock:
+e_clk_axi:
+clk_disable(axi_clk);
+#ifdef CONFIG_SOC_CAMERA_SUB_SR130
+clk_disable(axi_clk_1);
+e_clk_set_lp1:
+	clk_disable(lp_clock_1);
+#endif
+e_clk_lp1:
+e_clk_set_lp:
+	clk_disable(lp_clock);
+e_clk_lp:
+e_clk_pll:
+e_clk_get:
+	return ret;
 
 }
 //power end
@@ -2357,5 +2444,4 @@ module_init(camdrv_ss_sr130pc20_mod_init);
 MODULE_DESCRIPTION("SAMSUNG CAMERA SENSOR SR130 ");
 MODULE_AUTHOR("Samsung");
 MODULE_LICENSE("GPL");
-
 

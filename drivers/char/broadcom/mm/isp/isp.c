@@ -12,96 +12,103 @@ the GPL, without Broadcom's express prior written consent.
 *******************************************************************************/
 
 #include <linux/kernel.h>
-#include <linux/delay.h>
-#include <linux/device.h>
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/mm.h>
-#include <linux/fs.h>
-#include <linux/interrupt.h>
-#include <linux/semaphore.h>
-#include <linux/mutex.h>
 #include <mach/irqs.h>
 #include <mach/clock.h>
-#include <linux/io.h>
-#include <linux/clk.h>
-#include <linux/uaccess.h>
-#include <linux/vmalloc.h>
 #include <linux/mm.h>
-#include <linux/bootmem.h>
-#include <linux/dma-mapping.h>
-
-#include "mm_isp.h"
+#include <linux/slab.h>
 #include <mach/rdb/brcm_rdb_sysmap.h>
-#include <mach/rdb/brcm_rdb_pwrmgr.h>
-#include <mach/rdb/brcm_rdb_mm_rst_mgr_reg.h>
+#include <mach/rdb/brcm_rdb_isp.h>
 #include <linux/broadcom/mm_fw_hw_ifc.h>
 #include <linux/broadcom/mm_fw_usr_ifc.h>
+#include "mm_isp.h"
 
-#define ISP_HW_SIZE (1024*512)
+
+#define ISP_HW_SIZE     0x4000
 #define IRQ_ISP         BCM_INT_ID_RESERVED153
-
-
-struct isp_device_t {
-	void *vaddr;
-	void *fmwk_handle;
-};
 
 #define isp_write(reg, value) mm_write_reg(isp->vaddr, reg, value)
 #define isp_read(reg) mm_read_reg(isp->vaddr, reg)
 #define isp_clr_bit32(reg, bits) mm_clr_bit32(isp->vaddr, reg, bits)
 #define isp_write_bit32(reg, bits) mm_write_bit32(isp->vaddr, reg, bits)
 
+struct isp_device_t {
+	void *vaddr;
+	void *fmwk_handle;
+};
+
 void printispregs(struct isp_device_t *isp)
 {
-	pr_err("ISP_STATUS = 0x%lx\n",
+	pr_info("ISP_CTRL = 0x%lx\n",
+		(unsigned long)(isp_read(ISP_CTRL_OFFSET)));
+	pr_info("ISP_STATUS = 0x%lx\n",
 		(unsigned long)(isp_read(ISP_STATUS_OFFSET)));
-	pr_err("offset = 0x00000018 value = 0x%lx\n",
-		(unsigned long) (isp_read(0x00000018)));
-	pr_err("offset = 0x00000008 value = 0x%lx\n",
-		(unsigned long)(isp_read(0x00000008)));
-	pr_err("offset = 0x00000010 value = 0x%lx\n",
-		(unsigned long)(isp_read(0x00000010)));
-	pr_err("offset = 0x0000001C value = 0x%lx\n",
-		(unsigned long)(isp_read(0x0000001C)));
-	pr_err("offset = 0x00000030 value = 0x%lx\n",
-		(unsigned long)(isp_read(0x00000030)));
-	pr_err("offset = 0x00000034 value = 0x%lx\n",
-		(unsigned long)(isp_read(0x00000034)));
-	pr_err("offset = 0x00000038 value = 0x%lx\n",
-		(unsigned long)(isp_read(0x00000038)));
-	pr_err("offset = 0x0000003C value = 0x%lx\n",
-		(unsigned long)(isp_read(0x0000003C)));
-	pr_err("offset = 0x00000DC0 value = 0x%lx\n",
-		(unsigned long)(isp_read(0x00000DC0)));
-	pr_err("offset = 0x00000DCC value = 0x%lx\n",
-		(unsigned long)(isp_read(0x00000DCC)));
-	pr_err("offset = 0x00000DD0 value = 0x%lx\n",
-		(unsigned long)(isp_read(0x00000DD0)));
-	pr_err("offset = 0x00000DD4 value = 0x%lx\n",
-		(unsigned long)(isp_read(0x00000DD4)));
-	pr_err("offset = 0x00000DD8 value = 0x%lx\n",
-		(unsigned long)(isp_read(0x00000DD8)));
-	pr_err("offset = 0x00000DDC value = 0x%lx\n",
-		(unsigned long)(isp_read(0x00000DDC)));
-	pr_err("offset = 0x00000700 value = 0x%lx\n",
+	pr_info("ISP_ID = 0x%lx\n",
+		(unsigned long)(isp_read(ISP_ID_OFFSET)));
+	pr_info("ISP_TILE_CTRL = 0x%lx\n",
+		(unsigned long)(isp_read(ISP_TILE_CTRL_OFFSET)));
+	pr_info("ISP_TILE_STATUS = 0x%lx\n",
+		(unsigned long) (isp_read(ISP_TILE_STATUS_OFFSET)));
+	pr_info("ISP_TILE_ADDR = 0x%lx\n",
+		(unsigned long) (isp_read(ISP_TILE_ADDR_OFFSET)));
+	pr_info("ISPFR_BAYER_EN = 0x%lx\n",
+		(unsigned long) (isp_read(ISPFR_BAYER_EN_OFFSET)));
+	pr_info("ISPFR_YCBCR_EN = 0x%lx\n",
+		(unsigned long) (isp_read(ISPFR_YCBCR_EN_OFFSET)));
+	pr_info("ISPYI_CTRL = 0x%lx\n",
 		(unsigned long)(isp_read(0x00000700)));
-	pr_err("offset = 0X00000704 value = 0x%lx\n",
-		(unsigned long)(isp_read(0X00000704)));
-	pr_err("offset = 0X00000708 value = 0x%lx\n",
-		(unsigned long)(isp_read(0X00000708)));
-	pr_err("offset = 0X0000070C value = 0x%lx\n",
-		(unsigned long)(isp_read(0X0000070C)));
-	pr_err("offset = 0X00000710 value = 0x%lx\n",
-		(unsigned long)(isp_read(0X00000710)));
-	pr_err("offset = 0X00000714 value = 0x%lx\n",
-		(unsigned long)(isp_read(0X00000714)));
-	pr_err("offset = 0X00000720 value = 0x%lx\n",
-		(unsigned long)(isp_read(0X00000720)));
-	pr_err("offset = 0X00000724 value = 0x%lx\n",
-		(unsigned long)(isp_read(0X00000724)));
-	pr_err("offset = 0X00000728 value = 0x%lx\n",
-		(unsigned long)(isp_read(0X00000728)));
+	pr_info("ISPYI_RY_ADDR = 0x%lx\n",
+		(unsigned long) (isp_read(0x00000704)));
+	pr_info("ISPYI_GU_ADDR = 0x%lx\n",
+		(unsigned long) (isp_read(0x00000708)));
+	pr_info("ISPYI_BV_ADDR = 0x%lx\n",
+		(unsigned long) (isp_read(0x0000070c)));
+	pr_info("ISPYI_STRIDE1 = 0x%lx\n",
+		(unsigned long) (isp_read(0x00000710)));
+	pr_info("ISPYI_STRIDE2 = 0x%lx\n",
+		(unsigned long) (isp_read(0x00000714)));
+	pr_info("ISPYI_COL_STRIDE1 = 0x%lx\n",
+		(unsigned long) (isp_read(0x00000718)));
+	pr_info("ISPYI_COL_STRIDE2 = 0x%lx\n",
+		(unsigned long) (isp_read(0x0000071c)));
+	pr_info("ISPYI_RY_EADDR = 0x%lx\n",
+		(unsigned long) (isp_read(0x00000720)));
+	pr_info("ISPYI_GU_EADDR = 0x%lx\n",
+		(unsigned long) (isp_read(0x00000724)));
+	pr_info("ISPYI_BV_EADDR: = 0x%lx\n",
+		(unsigned long) (isp_read(0x00000728)));
+	pr_info("ISPYC_MATRIX = 0x%lx\n",
+		(unsigned long) (isp_read(ISPYC_MATRIX_OFFSET)));
+	pr_info("ISPYC_OFFSET = 0x%lx\n",
+		(unsigned long) (isp_read(ISPYC_OFFSET_OFFSET)));
+	pr_info("ISPLR_TSCALEX = 0x%lx\n",
+		(unsigned long) (isp_read(ISPLR_TSCALEX_OFFSET)));
+	pr_info("ISPLR_TSCALEY = 0x%lx\n",
+		(unsigned long) (isp_read(ISPLR_TSCALEY_OFFSET)));
+	pr_info("ISPLR_NORM_0_1 = 0x%lx\n",
+		(unsigned long) (isp_read(ISPLR_NORM_0_1_OFFSET)));
+	pr_info("ISPLR_NORM_2_3 = 0x%lx\n",
+		(unsigned long) (isp_read(ISPLR_NORM_2_3_OFFSET)));
+	pr_info("ISPLR_SHIFT = 0x%lx\n",
+		(unsigned long) (isp_read(ISPLR_SHIFT_OFFSET)));
+	pr_info("ISPLO_CTRL = 0x%lx\n",
+		(unsigned long) (isp_read(ISPLO_CTRL_OFFSET)));
+	pr_info("ISPLO_COL_STRIDE1 = 0x%lx\n",
+		(unsigned long) (isp_read(ISPLO_COL_STRIDE1_OFFSET)));
+	pr_info("ISPLO_COL_STRIDE2 = 0x%lx\n",
+		(unsigned long) (isp_read(ISPLO_COL_STRIDE2_OFFSET)));
+	pr_info("ISPLO_ADDRESS1 = 0x%lx\n",
+		(unsigned long) (isp_read(ISPLO_ADDRESS1_OFFSET)));
+	pr_info("ISPLO_ADDRESS2 = 0x%lx\n",
+		(unsigned long) (isp_read(ISPLO_ADDRESS2_OFFSET)));
+	pr_info("ISPLO_ADDRESS3 = 0x%lx\n",
+		(unsigned long) (isp_read(ISPLO_ADDRESS3_OFFSET)));
+	pr_info("ISPLO_STRIDE1 = 0x%lx\n",
+		(unsigned long) (isp_read(ISPLO_STRIDE1_OFFSET)));
+	pr_info("ISPLO_STRIDE2 = 0x%lx\n",
+		(unsigned long) (isp_read(ISPLO_STRIDE2_OFFSET)));
 	return;
 }
 
@@ -109,18 +116,22 @@ static mm_isr_type_e  process_isp_irq(void *id)
 {
 	struct isp_device_t *isp = (struct isp_device_t *)id;
 	u32 ispStatus = 0;
-	uint32_t ctrl = 0;
+	u32 ctrl = 0;
 	ispStatus = isp_read(ISP_STATUS_OFFSET);
 	isp_write(ISP_STATUS_OFFSET, ispStatus);
 	ctrl = isp_read(ISP_CTRL_OFFSET);
-	pr_debug("ispStatus 0x%x ctrl 0x%x", ispStatus, ctrl);
 
-	if (ispStatus & 0x10) {
+	if (ispStatus & ISP_CTRL_EOT_IMASK_MASK) {
 		/* end of tile interrupt, disable control reg,
 		    as queue head job completed, schedule tasklet again*/
-		pr_debug("EOT intr");
 		isp_clr_bit32(ISP_CTRL_OFFSET, ISP_CTRL_ENABLE_MASK);
 		return MM_ISR_SUCCESS;
+	} else if (ispStatus & ISP_CTRL_ERROR_IMASK_MASK) {
+		printispregs(isp);
+		pr_err("process_isp_irq: Error intr from ISP!!!");
+		return MM_ISR_ERROR;
+	} else {
+		pr_err("process_isp_irq: Unknown intr from ISP!!!");
 	}
 	return MM_ISR_UNKNOWN;
 }
@@ -128,7 +139,7 @@ static mm_isr_type_e  process_isp_irq(void *id)
 static bool get_isp_status(void *id)
 {
 	struct isp_device_t *isp = (struct isp_device_t *)id;
-	uint32_t ispStatus = 0;
+	u32 ispStatus = 0;
 	ispStatus = isp_read(ISP_STATUS_OFFSET);
 	/* Check if hw busy */
 	if (ispStatus & 0x1)
@@ -140,9 +151,9 @@ static int isp_reset(void *id)
 {
 	struct isp_device_t *isp = (struct isp_device_t *)id;
 	int ret = 0;
-	uint32_t ispStatus = 0;
-	uint32_t ispCtrl = 0;
-	uint32_t dummy;
+	u32 ispStatus = 0;
+	u32 ispCtrl = 0;
+	u32 dummy;
 
 	ispStatus = isp_read(ISP_STATUS_OFFSET);
 	if (ispStatus & ISP_STATUS_STATE_ENABLED) {
@@ -184,7 +195,7 @@ static int isp_abort(void *id, mm_job_post_t *job)
 {
 	int ret;
 	ret = isp_reset(id);
-	pr_err("isp_abort");
+	pr_info("isp_abort");
 	return ret;
 }
 
@@ -206,10 +217,9 @@ int isp_program(struct isp_device_t *isp, struct isp_job_post_t *job_post)
 int isp_start(struct isp_device_t *isp)
 {
 	int ret = 0;
-	uint32_t ctrl;
+	u32 ctrl;
 	ctrl = isp_read(ISP_CTRL_OFFSET);
 	ctrl |= ISP_CTRL_ENABLE_MASK;
-	isp_write(ISP_CTRL_OFFSET, ctrl);
 	ctrl &= ~ISP_CTRL_FORCE_CLKEN_MASK;
 	isp_write(ISP_CTRL_OFFSET, ctrl);
 	return ret;
@@ -224,14 +234,13 @@ static mm_job_status_e isp_start_job(void *id , mm_job_post_t *job,
 	switch (job->status) {
 	case MM_JOB_STATUS_READY:
 		{
-			pr_debug("Prog the regs and start\n");
 			ret = isp_program(isp, job_params);
 			if (ret != 0) {
 				pr_err("isp_program failed with %d", ret);
 				job->status = MM_JOB_STATUS_ERROR;
 				return MM_JOB_STATUS_ERROR;
 			}
-			/* printispregs(isp); */
+			/*printispregs(isp);*/
 			ret = isp_start(isp);
 			if (ret != 0) {
 				pr_err("isp_start failed with %d", ret);
@@ -244,7 +253,7 @@ static mm_job_status_e isp_start_job(void *id , mm_job_post_t *job,
 		break;
 	case MM_JOB_STATUS_RUNNING:
 		{
-			pr_debug("job completed\n");
+			pr_debug("isp_start_job: MM_JOB_STATUS_RUNNING\n");
 			job->status = MM_JOB_STATUS_SUCCESS;
 			return MM_JOB_STATUS_SUCCESS;
 		}
@@ -268,7 +277,7 @@ int __init mm_isp_init(void)
 	MM_PROF_HW_IFC prof_param;
 	isp_device = kmalloc(sizeof(struct isp_device_t), GFP_KERNEL);
 	isp_device->vaddr = NULL;
-	pr_debug("ISP driver Module Init");
+	pr_debug("mm_isp_init: ISP driver Module Init");
 
 	core_param.mm_base_addr = ISP_BASE_ADDR;
 	core_param.mm_hw_size = ISP_HW_SIZE;

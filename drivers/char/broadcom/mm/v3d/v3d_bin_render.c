@@ -26,6 +26,7 @@ the GPL, without Broadcom's express prior written consent.
 #include <mach/clock.h>
 #include <linux/io.h>
 #include <linux/clk.h>
+#include <linux/slab.h>
 #include <linux/uaccess.h>
 #include <linux/vmalloc.h>
 #include <linux/mm.h>
@@ -206,19 +207,16 @@ static int v3d_bin_render_abort(void *device_id, mm_job_post_t *job)
 
 static mm_isr_type_e process_v3d_bin_render_irq(void *device_id)
 {
-	u32 flags, flags_qpu, tmp;
+	u32 flags, tmp;
 	mm_isr_type_e irq_retval = MM_ISR_UNKNOWN;
 	v3d_bin_render_device_t *id = (v3d_bin_render_device_t *)device_id;
 
 	/* Read the interrupt status registers */
 	flags = v3d_read(id, V3D_INTCTL_OFFSET);
-	flags_qpu = v3d_read(id, V3D_DBQITC_OFFSET);
 
 	/* Clear interrupts isr is going to handle */
 	tmp = flags & v3d_read(id, V3D_INTENA_OFFSET);
 	v3d_write(id, V3D_INTCTL_OFFSET, tmp);
-	if (flags_qpu)
-		v3d_write(id, V3D_DBQITC_OFFSET, flags_qpu);
 
 	/* Handle Binning Interrupt*/
 	if (flags & 2)
@@ -258,6 +256,7 @@ bool get_v3d_bin_render_status(void *device_id)
 			pr_debug("supply boom from get_v3d_status %x %x\n",
 					block->v3d_bin_oom_block,
 					block->v3d_bin_oom_size);
+			v3d_write(id, V3D_SLCACTL_OFFSET, 0x0f0f);
 			return true;
 			}
 		else {
@@ -270,8 +269,10 @@ bool get_v3d_bin_render_status(void *device_id)
 
 	if ((v3d_read(id, V3D_CT0CS_OFFSET)&(0x20)) ||
 		(v3d_read(id, V3D_CT1CS_OFFSET)&(0x20)) ||
-		(v3d_read(id, V3D_PCS_OFFSET)))
+		(v3d_read(id, V3D_PCS_OFFSET))) {
+		v3d_write(id, V3D_SLCACTL_OFFSET, 0x0f0f);
 		return true;
+	}
 	return false;
 }
 

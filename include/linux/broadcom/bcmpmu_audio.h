@@ -54,6 +54,7 @@ the GPL, without Broadcom's express prior written consent.
 #define BCMPMU_PGA_CPCTL_MASK		0x3
 
 /* HSPGA3 */
+#define BCMPMU_HSPGA3_PGA_RAMPDIS	0x80
 #define BCMPMU_HSPGA3_PGA_INSHORT	0x40
 #define BCMPMU_HSPGA3_PGA_ACINADJ	0x20
 #define BCMPMU_HSPGA3_PGA_ENACCPL	0x04

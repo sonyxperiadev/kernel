@@ -141,6 +141,10 @@ MODULE_PARM_DESC(debug,
 #define TAOS_FILTER_DEPTH               3
 #define CHIP_ID                         0x3d
 
+#ifdef TMD2771_MD_TEST
+static struct timer_list tmd2771_wakeup_timer;
+#endif
+
 struct tmd2771x_reg {
 	const char *name;
 	u8 reg;
@@ -349,11 +353,21 @@ struct lux_data TritonFN_lux_data[] = {
 struct lux_data *lux_tablep = TritonFN_lux_data;
 static int lux_history[TAOS_FILTER_DEPTH] = { -ENODATA, -ENODATA, -ENODATA };
 
+
 static irqreturn_t taos_irq_handler(int irq, void *dev_id)
 {
 	schedule_work(&taos_datap->work);
 	return IRQ_HANDLED;
 }
+
+#ifdef TMD2771_MD_TEST
+void tmd2771_timer_func(unsigned long data)
+{
+	schedule_work(&taos_datap->work);
+	mod_timer(&tmd2771_wakeup_timer,
+		jiffies+msecs_to_jiffies(100));
+}
+#endif
 
 static int taos_get_data(void)
 {
@@ -395,7 +409,24 @@ static int taos_interrupts_clear(void)
 	}
 	return ret;
 }
-
+#ifdef TMD2771_MD_TEST
+static void taos_work_func(struct work_struct *work)
+{
+	int i, ret = 0;
+	u8 chdata[6];
+	u16 proxdata = 0;
+	u16 cleardata = 0;
+	int data = 0;
+	for (i = 0; i < 6; i++) {
+		chdata[i] = (i2c_smbus_read_byte_data(taos_datap->client,
+			(TAOS_TRITON_CMD_REG | TAOS_TRITON_CMD_AUTO |
+			(TAOS_TRITON_ALS_CHAN0LO + i))));
+	}
+	cleardata = chdata[0] + chdata[1] * 256;
+	proxdata = chdata[4] + chdata[5] * 256;
+	pr_info("[md test] tmd2771x prox data = %d\n", proxdata);
+}
+#else
 static void taos_work_func(struct work_struct *work)
 {
 	int ret;
@@ -409,7 +440,7 @@ static void taos_work_func(struct work_struct *work)
 		taos_interrupts_clear();
 	}
 }
-
+#endif
 static void taos_calib_work_func(struct work_struct *work)
 {
 	int ret = 0;
@@ -1244,6 +1275,10 @@ static ssize_t prox_enable_store(struct device *dev,
 		if (ret < 0)
 			return ret;
 		PROX_ON = 1;
+#ifdef TMD2771_MD_TEST
+		mod_timer(&tmd2771_wakeup_timer,
+			jiffies+msecs_to_jiffies(100));
+#endif
 	} else {
 		if (PROX_ON == 0) {
 			pr_taos(INFO,
@@ -1362,7 +1397,7 @@ static int taos_probe(struct i2c_client *clientp,
 			pr_taos(ERROR, "get chip id fail with tries %d\n",
 				i);
 			msleep_interruptible(I2C_RETRY_DELAY);
-			if (i == (I2C_RETRY_DELAY-1)) {
+			if (i == (I2C_RETRY_COUNTS-1)) {
 				ret = -ENODEV;
 				goto err_i2c_check_function;
 			}
@@ -1605,14 +1640,20 @@ static int taos_probe(struct i2c_client *clientp,
 		goto err_gpio_request;
 	}
 	gpio_direction_input(als_ps_gpio_inr);
-
+#ifdef TMD2771_MD_TEST
+	setup_timer(&tmd2771_wakeup_timer,
+		tmd2771_timer_func, (unsigned long)taos_datap);
+	mod_timer(&tmd2771_wakeup_timer,
+		jiffies+msecs_to_jiffies(100));
+#else
 	ret = request_threaded_irq(als_ps_int, NULL, &taos_irq_handler,
-				   IRQF_TRIGGER_FALLING | IRQF_ONESHOT,
-				   "taos_irq", taos_datap);
+					   IRQF_TRIGGER_FALLING | IRQF_ONESHOT,
+					   "taos_irq", taos_datap);
 	if (ret != 0) {
 		pr_taos(ERROR, "request irq fail for taos\n");
 		goto err_request_irq;
 	}
+#endif
 #ifdef CONFIG_HAS_EARLYSUSPEND
 	register_early_suspend(&taos_early_suspend_desc);
 #endif

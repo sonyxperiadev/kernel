@@ -8,4 +8,5 @@ obj-y += isp/
 obj-$(CONFIG_HAWAII_MM_H264) += h264/
 obj-$(CONFIG_HAWAII_MM_H264) += h264_ol/
 obj-$(CONFIG_ARCH_JAVA) += isp2/
+obj-$(CONFIG_ARCH_JAVA) += jpeg/
 #obj-y += unicam/

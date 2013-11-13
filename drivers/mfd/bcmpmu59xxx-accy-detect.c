@@ -352,8 +352,7 @@ void bcmpmu_accy_setup_detection(struct accy_det *accy_d, bool en)
 	if (en) {
 		if (!accy_d->rgl_en)
 			bcmpmu_enable_bc_regl(accy_d, en);
-		if (!accy_d->clock_en)
-			enable_bc_clock(accy_d, true);
+		enable_bc_clock(accy_d, true);
 #ifdef CONFIG_HAS_WAKELOCK
 		if (!wake_lock_active
 				(&accy_d->wake_lock))

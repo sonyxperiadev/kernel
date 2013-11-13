@@ -11,6 +11,8 @@ in any way with any other Broadcom software provided under a license other than
 the GPL, without Broadcom's express prior written consent.
 *******************************************************************************/
 
+#include <linux/slab.h>
+
 #define pr_fmt(fmt) "<%s> " fmt "\n", core_dev->mm_common->mm_common_ifc.mm_name
 
 #include "mm_core.h"

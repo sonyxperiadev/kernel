@@ -28,6 +28,7 @@ the GPL, without Broadcom's express prior written consent.
 #include <linux/vmalloc.h>
 #include <linux/mm.h>
 #include <linux/bootmem.h>
+#include <linux/slab.h>
 
 #include <linux/spinlock_types.h>
 
@@ -37,7 +38,6 @@ the GPL, without Broadcom's express prior written consent.
 #include <mach/rdb/brcm_rdb_mm_rst_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_h264.h>
 #include <mach/memory.h>
-#include <plat/clock.h>
 #include <plat/pi_mgr.h>
 #include <plat/scu.h>
 #include <linux/delay.h>

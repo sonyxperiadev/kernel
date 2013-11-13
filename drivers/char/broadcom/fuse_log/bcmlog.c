@@ -1284,6 +1284,7 @@ void BCMLOG_StartCpCrashDump(struct file *inDumpFile, int cpresetStatus)
 	case BCMLOG_OUTDEV_SDCARD:
 		if ((Get_SDCARD_Available() < CP_CRASH_DUMP_SDCARD_SIZE) ||
 				!start_sdcard_crashlog(inDumpFile)) {
+#ifdef CONFIG_BCM_MODEM
 			if (!cpresetStatus) {
 				plat_iounmap_ns(get_vaddr_ipc
 				(IPC_CP_CRASH_SUMMARY_AREA),
@@ -1294,6 +1295,7 @@ void BCMLOG_StartCpCrashDump(struct file *inDumpFile, int cpresetStatus)
 				BCMLOG_SetCpCrashLogDevice(BCMLOG_OUTDEV_PANIC);
 				abort();
 			}
+#endif
 		}
 		break;
 	case BCMLOG_OUTDEV_PANIC:

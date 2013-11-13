@@ -29,6 +29,7 @@ the GPL, without Broadcom's express prior written consent.
 #include <linux/mm.h>
 #include <linux/bootmem.h>
 #include <linux/dma-mapping.h>
+#include <linux/slab.h>
 
 #include <linux/broadcom/mm_fw_hw_ifc.h>
 #include <linux/broadcom/mm_fw_usr_ifc.h>

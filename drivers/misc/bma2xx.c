@@ -146,7 +146,7 @@ static int bma2xx_set_mode(struct i2c_client *client, unsigned char Mode)
 	return comres;
 }
 
-#ifdef BMA2XXX_ENABLE_INT1
+#ifdef BMA2XX_ENABLE_INT1
 static int bma2xx_set_int1_pad_sel(struct i2c_client *client,
 				   unsigned char int1sel)
 {
@@ -251,8 +251,8 @@ static int bma2xx_set_int1_pad_sel(struct i2c_client *client,
 
 	return comres;
 }
-#endif /* BMA2XXX_ENABLE_INT1 */
-#ifdef BMA2XXX_ENABLE_INT2
+#endif /* BMA2XX_ENABLE_INT1 */
+#ifdef BMA2XX_ENABLE_INT2
 static int bma2xx_set_int2_pad_sel(struct i2c_client *client,
 				   unsigned char int2sel)
 {
@@ -357,7 +357,7 @@ static int bma2xx_set_int2_pad_sel(struct i2c_client *client,
 
 	return comres;
 }
-#endif /* BMA2XXX_ENABLE_INT2 */
+#endif /* BMA2XX_ENABLE_INT2 */
 
 static int bma2xx_set_Int_Enable(struct i2c_client *client,
 				 unsigned char InterruptType,
@@ -584,7 +584,7 @@ static int bma2xx_get_bandwidth(struct i2c_client *client, unsigned char *BW)
 	return comres;
 }
 
-#if defined(BMA2XXX_ENABLE_INT1) || defined(BMA2XXX_ENABLE_INT2)
+#if defined(BMA2XX_ENABLE_INT1) || defined(BMA2XX_ENABLE_INT2)
 static int bma2xx_get_interruptstatus1(struct i2c_client *client,
 				       unsigned char *intstatus)
 {
@@ -728,7 +728,7 @@ static int bma2xx_get_orient_flat_status(struct i2c_client *client,
 
 	return comres;
 }
-#endif /* defined(BMA2XXX_ENABLE_INT1)||defined(BMA2XXX_ENABLE_INT2) */
+#endif /* defined(BMA2XX_ENABLE_INT1)||defined(BMA2XX_ENABLE_INT2) */
 static int bma2xx_set_Int_Mode(struct i2c_client *client, unsigned char Mode)
 {
 	int comres = 0;
@@ -2835,7 +2835,7 @@ static struct attribute_group bma2xx_attribute_group = {
 	.attrs = bma2xx_attributes
 };
 
-#if defined(BMA2XXX_ENABLE_INT1) || defined(BMA2XXX_ENABLE_INT2)
+#if defined(BMA2XX_ENABLE_INT1) || defined(BMA2XX_ENABLE_INT2)
 unsigned char *orient[] = { "upward looking portrait upright",
 	"upward looking portrait upside-down",
 	"upward looking landscape left",
@@ -3015,7 +3015,7 @@ static irqreturn_t bma2xx_irq_handler(int irq, void *handle)
 	return IRQ_HANDLED;
 
 }
-#endif /* defined(BMA2XXX_ENABLE_INT1)||defined(BMA2XXX_ENABLE_INT2) */
+#endif /* defined(BMA2XX_ENABLE_INT1)||defined(BMA2XX_ENABLE_INT2) */
 
 
 static int bma2xx_probe(struct i2c_client *client,
@@ -3052,7 +3052,7 @@ static int bma2xx_probe(struct i2c_client *client,
 	bma2xx_set_bandwidth(client, BMA2XXX_BW_SET);
 	bma2xx_set_range(client, BMA2XXX_RANGE_SET);
 
-#if defined(BMA2XXX_ENABLE_INT1) || defined(BMA2XXX_ENABLE_INT2)
+#if defined(BMA2XX_ENABLE_INT1) || defined(BMA2XX_ENABLE_INT2)
 	bma2xx_set_Int_Mode(client, 1);	/*latch interrupt 250ms */
 #endif
 	/***************
@@ -3068,7 +3068,7 @@ static int bma2xx_probe(struct i2c_client *client,
 	bma2xx_set_Int_Enable(client, 10, 1);
 	bma2xx_set_Int_Enable(client, 11, 1);
 
-#ifdef BMA2XXX_ENABLE_INT1
+#ifdef BMA2XX_ENABLE_INT1
 	/* maps interrupt to INT1 pin */
 	bma2xx_set_int1_pad_sel(client, PAD_LOWG);
 	bma2xx_set_int1_pad_sel(client, PAD_HIGHG);
@@ -3079,7 +3079,7 @@ static int bma2xx_probe(struct i2c_client *client,
 	bma2xx_set_int1_pad_sel(client, PAD_FLAT);
 #endif
 
-#ifdef BMA2XXX_ENABLE_INT2
+#ifdef BMA2XX_ENABLE_INT2
 	/* maps interrupt to INT2 pin */
 	bma2xx_set_int2_pad_sel(client, PAD_LOWG);
 	bma2xx_set_int2_pad_sel(client, PAD_HIGHG);
@@ -3100,7 +3100,7 @@ static int bma2xx_probe(struct i2c_client *client,
 			data->orientation = val;
 		client->irq = val;
 	}
-#if defined(BMA2XXX_ENABLE_INT1) || defined(BMA2XXX_ENABLE_INT2)
+#if defined(BMA2XX_ENABLE_INT1) || defined(BMA2XX_ENABLE_INT2)
 	data->IRQ = gpio_to_irq(client->irq);
 	err =
 	    request_irq(data->IRQ, bma2xx_irq_handler, IRQF_TRIGGER_RISING,

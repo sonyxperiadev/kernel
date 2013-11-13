@@ -120,6 +120,9 @@ extern "C" {
 		DISPDRV_FB_FORMAT_T out_fmt;
 		uint8_t Bpp;
 		void (*init_fn)(void);
+		int (*esd_check_fn)(void);
+		uint32_t esd_check_period;
+		uint32_t esd_check_retry;
 		char *init_seq;
 		char *slp_in_seq;
 		char *slp_out_seq;
@@ -138,6 +141,7 @@ extern "C" {
 		int desense_offset;
 		void (*vsync_cb)(void);
 		bool cont_clk;
+		bool sync_pulses;
 	} DISPDRV_INFO_T;
 
 

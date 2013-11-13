@@ -113,6 +113,10 @@ static void free_buffer_page(struct ion_system_heap *heap,
 
 	if (!cached) {
 		struct ion_page_pool *pool = heap->pools[order_to_index(order)];
+                arm_dma_ops.sync_single_for_device(NULL,
+                       pfn_to_dma(NULL, page_to_pfn(page)),
+                       PAGE_SIZE << order, DMA_BIDIRECTIONAL);
+
 		ion_page_pool_free(pool, page);
 	} else if (split_pages) {
 		for (i = 0; i < (1 << order); i++)

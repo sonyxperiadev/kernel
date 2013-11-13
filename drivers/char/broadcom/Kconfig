@@ -400,3 +400,9 @@ config BCM_SET_CP_LOCK_STATE_SUPPORT
     default n
     ---help---
     Set CP lock status directly
+
+config BCM_MMS_BLOCK
+    boolean "Broadcom mms block driver for CTA security requirement"
+    default n
+    ---help---
+    Say Y to enable MMS block function support

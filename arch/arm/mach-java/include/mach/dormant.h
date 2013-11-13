@@ -31,5 +31,5 @@ extern u32 dormant_enter_prepare(u32 dont_care, u32 v_to_p_offset);
 extern u32 is_dormant_enabled(void);
 extern void enable_dormant(u32 core_mask);
 extern void invalidate_tlb_btac(void);
-
+extern bool is_fdm_abort(void);
 #endif /* DORMANT_H */
