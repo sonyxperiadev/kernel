@@ -528,6 +528,7 @@ static int hawaii_camera_power(struct device *dev, int on)
 	static struct pi_mgr_dfs_node unicam_dfs_node;
 	static int sensor_on = -1;
 	struct soc_camera_subdev_desc *ssd = dev->platform_data;
+
 	if (sensor_on == on) {
 		pr_info("hawaii_camera_power already in same state: %s\n",
 							(on ? "on" : "off"));
@@ -782,11 +783,21 @@ static int hawaii_camera_power_front(struct device *dev, int on)
 	struct clk *lp_clock_0;
 	struct clk *lp_clock_1;
 	static struct pi_mgr_dfs_node unicam_dfs_node;
+	static int sensor_on = -1;
 	struct soc_camera_subdev_desc *ssd = dev->platform_data;
+
+	if (sensor_on == on) {
+		pr_info("hawaii_camera_power_front already in same state: %s\n",
+				(on ? "on" : "off"));
+		return 0;
+	}
 
 	printk(KERN_INFO "%s:camera power %s\n", __func__, (on ? "on" : "off"));
 
+#ifdef CONFIG_SOC_CAMERA_OV7692
 	char module[] = "ov7692";
+#endif
+
 	struct cameracfg_s *thiscfg = getcameracfg(module);
 	if (NULL == thiscfg) {
 		pr_err("No cfg for [%s]\n", module);
