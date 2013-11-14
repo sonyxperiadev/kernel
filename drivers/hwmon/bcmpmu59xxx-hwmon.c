@@ -60,6 +60,7 @@ struct bcmpmu_adc {
 	struct mutex rtm_mutex;
 	struct bcmpmu_adc_pdata *pdata;
 	struct completion rtm_ready_complete;
+	int int_status;
 };
 
 static inline bool is_temp_channel(enum bcmpmu_adc_channel channel)
@@ -229,13 +230,13 @@ int read_rtm_adc(struct bcmpmu59xxx *bcmpmu, enum bcmpmu_adc_channel channel,
 	u8 val = 0;
 	int ret = 0;
 
-	pr_hwmon(FLOW, "%s channel = %d\n", __func__, channel);
 	if (channel >= PMU_ADC_CHANN_MAX || channel == PMU_ADC_CHANN_RESERVED)
 		return -EINVAL;
 
 	mutex_lock(&adc->rtm_mutex);
+	pr_hwmon(FLOW, "%s Start channel = %d\n", __func__, channel);
 	init_completion(&adc->rtm_ready_complete);
-
+	adc->int_status = 0;
 	val = channel << ADC_RTM_CHANN_SHIFT;
 	val |= (ADC_RTM_CONV_ENABLE << ADC_RTM_CONVERSION_SHIFT);
 	val |= (ADC_RTM_START << ADC_RTM_START_SHIFT);
@@ -258,6 +259,10 @@ int read_rtm_adc(struct bcmpmu59xxx *bcmpmu, enum bcmpmu_adc_channel channel,
 		pr_hwmon(ERROR,
 			"%s: Timeout waiting for ADC_RTM_DATA_READY, INT9: 0x%x\n",
 			__func__, val);
+		goto err;
+	}
+	if (adc->int_status == PMU_IRQ_RTM_IGNORE) {
+		pr_hwmon(ERROR, "%s RTM_IGNORE INT\n", __func__);
 		goto err;
 	}
 
@@ -288,7 +293,7 @@ int read_rtm_adc(struct bcmpmu59xxx *bcmpmu, enum bcmpmu_adc_channel channel,
 
 	mutex_unlock(&adc->rtm_mutex);
 
-	pr_hwmon(FLOW, "%s channel:%d, raw:%x\n", __func__, channel,
+	pr_hwmon(FLOW, "%s Done channel:%d, raw:%x\n", __func__, channel,
 								result->raw);
 
 	return 0;
@@ -535,8 +540,11 @@ static void  bcmpmu_rtm_irq_handler(u32 irq, void *data)
 {
 	struct bcmpmu_adc *adc = data;
 
-	if (irq == PMU_IRQ_RTM_DATA_RDY)
+
+	if ((irq == PMU_IRQ_RTM_DATA_RDY) || (irq == PMU_IRQ_RTM_IGNORE)) {
+		adc->int_status = irq;
 		complete(&adc->rtm_ready_complete);
+	}
 	else
 		BUG();
 }
@@ -676,10 +684,10 @@ static int bcmpmu_adc_probe(struct platform_device *pdev)
 
 	/* Unmask interrupts */
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_RTM_DATA_RDY);
+	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_RTM_IGNORE);
 
 	/* Mask interrupts */
 	bcmpmu->mask_irq(bcmpmu, PMU_IRQ_RTM_UPPER);
-	bcmpmu->mask_irq(bcmpmu, PMU_IRQ_RTM_IGNORE);
 	bcmpmu->mask_irq(bcmpmu, PMU_IRQ_RTM_OVERRIDDEN);
 	bcmpmu->mask_irq(bcmpmu, PMU_IRQ_RTM_IN_CON_MEAS);
 
