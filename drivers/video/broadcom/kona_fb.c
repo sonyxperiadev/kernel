@@ -894,7 +894,7 @@ static void kona_fb_early_suspend(struct early_suspend *h)
 		/* Turn off the backlight */
 		fb = container_of(h, struct kona_fb, early_suspend_level1);
 
-		if (fb->display_info->esd_check_fn) {
+		if (fb->fb_data->esdcheck) {
 			/* cancel the esd check routine */
 			cancel_delayed_work(&fb->esd_check_work);
 		}
@@ -984,11 +984,12 @@ static void kona_fb_late_resume(struct early_suspend *h)
 		if (atomic_read(&g_kona_fb->force_update))
 			kona_display_crash_image(CP_CRASH_DUMP_START);
 #endif
-		if (fb->display_info->esd_check_fn) {
+		if (fb->fb_data->esdcheck) {
 			/* schedule the esd check routine */
 			queue_delayed_work(fb->esd_check_wq,
-					&fb->esd_check_work,
-					fb->display_info->esd_check_period);
+				&fb->esd_check_work,
+				msecs_to_jiffies(
+					fb->fb_data->esdcheck_period_ms));
 		}
 		break;
 
@@ -1045,7 +1046,7 @@ static void koan_fb_esd_check(struct work_struct *data)
 	if (g_display_enabled) {
 		/* Wait fb initial completed */
 		queue_delayed_work(fb->esd_check_wq, &fb->esd_check_work,
-					fb->display_info->esd_check_period);
+			msecs_to_jiffies(fb->fb_data->esdcheck_period_ms));
 		return;
 	}
 
@@ -1073,17 +1074,17 @@ static void koan_fb_esd_check(struct work_struct *data)
 		kona_fb_late_resume(&fb->early_suspend_level1);
 
 		fb->esd_failure_cnt++;
-		if (fb->esd_failure_cnt > fb->display_info->esd_check_retry) {
+		if (fb->esd_failure_cnt > fb->fb_data->esdcheck_retry) {
 			konafb_error("too many fail %d, disable esd check\n",
 				fb->esd_failure_cnt);
-			fb->display_info->esd_check_fn = NULL;
+			fb->fb_data->esdcheck = FALSE;
 			cancel_delayed_work(&fb->esd_check_work);
 			destroy_workqueue(fb->esd_check_wq);
 		}
 	} else {
 		fb->esd_failure_cnt = 0;
 		queue_delayed_work(fb->esd_check_wq, &fb->esd_check_work,
-					fb->display_info->esd_check_period);
+			msecs_to_jiffies(fb->fb_data->esdcheck_period_ms));
 	}
 
 	return;
@@ -1225,6 +1226,18 @@ static struct kona_fb_platform_data * __init get_of_data(struct device_node *np)
 		konafb_info("desense offset requested %d\n", val);
 		fb_data->desense_offset = (int) val;
 	}
+
+	/*Get the ESD config */
+	if (of_property_read_bool(np, "esdcheck")) {
+		fb_data->esdcheck = TRUE;
+		if (of_property_read_u32(np, "esdcheck-period-ms", &val))
+			goto of_fail;
+		fb_data->esdcheck_period_ms = val;
+		if (of_property_read_u32(np, "esdcheck-retry", &val))
+			goto of_fail;
+		fb_data->esdcheck_retry = (uint8_t)val;
+	} else
+		fb_data->esdcheck = FALSE;
 
 #ifdef CONFIG_IOMMU_API
 	/* Get the iommu device and link fb dev to iommu dev */
@@ -1464,8 +1477,6 @@ static int __init populate_dispdrv_cfg(struct kona_fb *fb,
 	info->sync_pulses = cfg->sync_pulses;
 	info->init_fn = cfg->init_fn;
 	info->esd_check_fn = cfg->esd_check_fn;
-	info->esd_check_period = cfg->esd_check_period;
-	info->esd_check_retry = cfg->esd_check_retry;
 	fb->display_info = info;
 	return 0;
 
@@ -1850,17 +1861,13 @@ static int __ref kona_fb_probe(struct platform_device *pdev)
 	register_early_suspend(&fb->early_suspend_level3);
 #endif
 
-	if (fb->display_info->esd_check_fn) {
+	if (fb->fb_data->esdcheck) {
 		konafb_info("Enable esd check function for lcd\n");
-		if (fb->display_info->esd_check_period <= 0)
-			fb->display_info->esd_check_period = HZ;
-		if (fb->display_info->esd_check_retry <= 0)
-			fb->display_info->esd_check_retry = 3;
 		fb->esd_check_wq =
 			create_singlethread_workqueue("lcd_esd_check");
 		INIT_DELAYED_WORK(&fb->esd_check_work, koan_fb_esd_check);
 		queue_delayed_work(fb->esd_check_wq, &fb->esd_check_work,
-					fb->display_info->esd_check_period);
+			msecs_to_jiffies(fb->fb_data->esdcheck_period_ms));
 	}
 
 	fb->proc_entry = create_proc_entry("fb_debug", 0666, NULL);
@@ -1964,7 +1971,7 @@ static int __devexit kona_fb_remove(struct platform_device *pdev)
 	struct kona_fb_platform_data *pdata = (struct kona_fb_platform_data *)
 						pdev->dev.platform_data;
 
-	if (fb->display_info->esd_check_fn)
+	if (fb->fb_data->esdcheck)
 		destroy_workqueue(fb->esd_check_wq);
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
