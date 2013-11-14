@@ -8,14 +8,14 @@ config BCM4330
 	  If you choose to build a module, it'll be called dhd. Say M if
 	  unsure.
 
-config BCMDHD_FW_PATH_4330
+config BCMDHD_FW_PATH
 	depends on BCM4330
 	string "Firmware path"
 	default "/system/vendor/firmware/fw_wifi_4330.bin"
 	---help---
 	  Path to the firmware file.
 
-config BCMDHD_NVRAM_PATH_4330
+config BCMDHD_NVRAM_PATH
 	depends on BCM4330
 	string "NVRAM path"
 	default "/system/vendor/firmware/fw_wifi_nvram_4330.txt"
