@@ -40,6 +40,7 @@
 #include <linux/of_irq.h>
 #include <linux/of_platform.h>
 #include <linux/slab.h>
+#include <linux/of_gpio.h>
 #include <linux/tick.h>
 
 #ifdef CONFIG_APANIC_ON_MMC
@@ -629,6 +630,7 @@ static int sdhci_pltfm_probe(struct platform_device *pdev)
 			ret = -ENOMEM;
 			goto err;
 		}
+
 		if (of_property_read_u32(pdev->dev.of_node, "id", &val)) {
 			dev_err(&pdev->dev, "id read failed in %s\n", __func__);
 			goto err_free_priv_data_mem;
@@ -741,15 +743,14 @@ static int sdhci_pltfm_probe(struct platform_device *pdev)
 
 			hw_cfg->vddsdxc_regulator_name = (char *)prop;
 
-
-			if (of_property_read_u32(pdev->dev.of_node,
-				"cd-gpio", &val)) {
-				dev_err(&pdev->dev, "cd-gpio read failed in %s\n",
+			hw_cfg->cd_gpio = of_get_named_gpio(pdev->dev.of_node,
+			"cd-gpio", 0);
+			if (!gpio_is_valid(hw_cfg->cd_gpio)) {
+				dev_err(&pdev->dev,
+				"%s: ERROR setting -1 to cd-gpio\n",
 				__func__);
-				goto err_free_priv_data_mem;
+				hw_cfg->cd_gpio = -1;
 			}
-
-			hw_cfg->cd_gpio = val;
 		}
 
 		else if (hw_cfg->devtype == SDIO_DEV_TYPE_EMMC) {

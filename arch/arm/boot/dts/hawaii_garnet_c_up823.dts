@@ -95,13 +95,13 @@
 		akm8975@0c {
 			compatible = "bcm,akm8975";
 			reg = <0x0c>;
-			gpio-irq-pin = <4>;
+			gpio-irq-pin = <&gpio 4 0>;
 			layout = <6>;
 		};
 		tmd2771@39 {
 			compatible = "bcm,tmd2771";
 			reg = <0x39>;
-			gpio-irq-pin = <89>;
+			gpio-irq-pin = <&gpio 89 0>;
 			calibrate_target_param = <300000>;
 			als_time_param = <200>;
 			scale_factor_param = <1>;
@@ -283,7 +283,7 @@
 	kona-fb {
 		module-name = "ILI9806C";
 		reg-name = "cam2";
-		rst-gpio = <22>;
+		rst-gpio = <&gpio 22 0>;
 		rst-setup = <1000>;	/* 1ms */
 		rst-pulse = <10000>;	/* 10ms */
 		rst-hold = <120000>;	/* 120ms */
@@ -369,7 +369,6 @@
 		interrupts = <0 77 0x04>;
 		id = <0>;
 		data-pullup = <0>;
-		cd-gpio = <0xFFFFFFFF>;		/*SD_CARDDET_GPIO_PIN*/
 		devtype = <0>;		/*SDIO_DEV_TYPE_SDMMC*/
 		flags = <0>;		/*KONA_SDIO_FLAGS_DEVICE_REMOVABLE*/
 		peri-clk-name = "sdio1_clk";
