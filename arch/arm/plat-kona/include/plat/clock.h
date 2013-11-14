@@ -839,6 +839,7 @@ int bus_clk_get_enable_bit(struct bus_clk *bus_clk);
 int bus_clk_get_gating_ctrl(struct bus_clk *bus_clk);
 int bus_clk_get_gating_status(struct bus_clk *bus_clk);
 
+int clk_trace_init(unsigned int count);
 
 
 

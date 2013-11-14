@@ -339,6 +339,12 @@ config KONA_PROFILER
 	help
 	  Say Y if you want to enable Kona profiling
 
+config KONA_CLK_TRACE
+	bool "Enable clk usage tracing to non-cached buffer"
+	default y
+	help
+	  Say Y if you want to enable clk usage counter tracing
+
 config KONA_USB_CONTROL
        bool "Support BCM USB wrapper framework"
        default n
