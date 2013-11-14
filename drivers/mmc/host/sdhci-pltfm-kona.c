@@ -817,6 +817,8 @@ static int sdhci_pltfm_probe(struct platform_device *pdev)
 
         pr_debug("%s: GET IRQ\n", __func__);
 
+	host->mmc->caps |= MMC_CAP_WAIT_WHILE_BUSY;
+
 	if (hw_cfg->flags & KONA_SDIO_FLAGS_DEVICE_NON_REMOVABLE)
 		host->mmc->caps |= MMC_CAP_NONREMOVABLE;
 
@@ -1717,7 +1719,9 @@ static void sdhci_pltfm_init_74_clocks(struct sdhci_host *host, u8 power_mode)
 	if (power_mode == MMC_POWER_OFF)
 		return;
 	else
-		mdelay(10);
+	/*For 74 clocks the worst case delay is 740usecs
+	  considering 100kHz clock*/
+		mdelay(1);
 }
 
 static void sdhci_print_critical(struct sdhci_host *host)
