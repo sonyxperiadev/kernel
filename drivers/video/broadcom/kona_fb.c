@@ -60,6 +60,7 @@
 #include <linux/of.h>
 #include <linux/of_irq.h>
 #include <linux/of_platform.h>
+#include <linux/of_gpio.h>
 
 #ifdef CONFIG_FB_BRCM_CP_CRASH_DUMP_IMAGE_SUPPORT
 #include <video/kona_fb_image_dump.h>
@@ -1055,10 +1056,9 @@ static struct kona_fb_platform_data * __init get_of_data(struct device_node *np)
 	if (unlikely(strlen(str) > DISPDRV_NAME_SZ))
 		goto of_fail;
 	strcpy(fb_data->reg_name, str);
-
-	if (of_property_read_u32(np, "rst-gpio", &val))
+	fb_data->rst.gpio = of_get_named_gpio(np, "rst-gpio", 0);
+	if (!gpio_is_valid(fb_data->rst.gpio))
 		goto of_fail;
-	fb_data->rst.gpio = val;
 	if (of_property_read_u32(np, "rst-setup", &val))
 		goto of_fail;
 	fb_data->rst.setup = val;
@@ -1078,16 +1078,20 @@ static struct kona_fb_platform_data * __init get_of_data(struct device_node *np)
 		goto of_fail;
 	fb_data->rotation = val;
 
-	if (!(of_property_read_u32(np, "detect-gpio", &val))) {
-		fb_data->detect.gpio = val;
-		if (of_property_read_u32(np, "detect-gpio-val", &val))
+	fb_data->detect.gpio = of_get_named_gpio(np, "detect-gpio", 0);
+	if (gpio_is_valid(fb_data->detect.gpio)) {
+		if (of_property_read_u32(np,
+			"detect-gpio-val", &val))
 			goto of_fail;
 		fb_data->detect.gpio_val = val;
 
-		fb_data->detect.active = gpio_get_value(fb_data->detect.gpio);
-		if (fb_data->detect.active != fb_data->detect.gpio_val) {
-			konafb_error("gpio %d value failed for panel %s\n",
-					fb_data->detect.gpio, fb_data->name);
+		fb_data->detect.active =
+			gpio_get_value(fb_data->detect.gpio);
+		if (fb_data->detect.active !=
+				fb_data->detect.gpio_val) {
+			konafb_error(
+			"gpio %d value failed for panel %s\n",
+			fb_data->detect.gpio, fb_data->name);
 			goto of_fail;
 		}
 	}

@@ -34,6 +34,7 @@
 #include <linux/of.h>
 #include <linux/of_fdt.h>
 #include <linux/of_platform.h>
+#include <linux/of_gpio.h>
 #ifdef CONFIG_HAS_EARLYSUSPEND
 #include <linux/earlysuspend.h>
 #endif
@@ -1348,13 +1349,14 @@ int akm8975_probe(struct i2c_client *client, const struct i2c_device_id *id)
 		}
 		s_akm->layout = val;
 
-		if (of_property_read_u32(np, "gpio-irq-pin", &val)) {
+		s_akm->irq = of_get_named_gpio(np, "gpio-irq-pin", 0);
+		if (!gpio_is_valid(s_akm->irq)) {
 			dev_err(&client->dev,
-				"%s: get gpio-irq-pin fail, from DTS",
-				__func__);
-			val = 0;
+			"%s: ERROR Invalid gpio-irq-pin\n",
+			__func__);
+			s_akm->irq = 0;
 		}
-		s_akm->irq = val;
+
 		dev_info(&client->dev,
 			"%s: initialized from DTS: layout=%d GPIO=%d",
 			__func__, s_akm->layout, s_akm->irq);

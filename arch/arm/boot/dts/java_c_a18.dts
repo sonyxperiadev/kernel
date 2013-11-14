@@ -101,7 +101,7 @@
 		tmd2771@39 {
 			compatible = "bcm,tmd2771";
 			reg = <0x39>;
-			gpio-irq-pin = <89>;
+			gpio-irq-pin = <&gpio 89 0>;
 			calibrate_target_param = <300000>;
 			als_time_param = <200>;
 			scale_factor_param = <1>;
@@ -138,9 +138,9 @@
 		FocalTech-Ft5306@46 {
 			compatible = "bcm,FocalTech-Ft5306";
 			reg = <0x38>;
-			gpio-irq-pin = <73>;
-			gpio-reset-pin = <70>;
-			gpio-wakeup-pin = <70>;
+			gpio-irq-pin = <&gpio 73 0>;
+			gpio-reset-pin = <&gpio 70 0>;
+			gpio-wakeup-pin = <&gpio 70 0>;
 			x-max-value = <480>;
 			y-max-value = <854>;
 			use-irq = <1>;
@@ -288,7 +288,7 @@
 	kona-fb {
 		module-name = "NT35512";
 		reg-name = "cam2";
-		rst-gpio = <22>;
+		rst-gpio = <&gpio 22 0>;
 		rst-setup = <700>;	/* 700us */
 		rst-pulse = <1000>;	/* 1ms */
 		rst-hold = <100000>;	/* 100ms */
@@ -387,7 +387,6 @@
 		interrupts = <0 77 0x04>;
 		id = <0>;
 		data-pullup = <0>;
-		cd-gpio = <0xFFFFFFFF>;		/*SD_CARDDET_GPIO_PIN*/
 		devtype = <0>;		/*SDIO_DEV_TYPE_SDMMC*/
 		flags = <0>;		/*KONA_SDIO_FLAGS_DEVICE_REMOVABLE*/
 		peri-clk-name = "sdio1_clk";
