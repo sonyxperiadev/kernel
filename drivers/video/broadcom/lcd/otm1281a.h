@@ -345,6 +345,23 @@ void otm1281a_winset(char *msgData, DISPDRV_WIN_t *p_win)
 		pr_err("otm1281a_winset msg len incorrect!\n");
 }
 
+int otm1281a_esd_check_fn(void)
+{
+	int ret = -EIO;
+	UInt8 id[4] = {0};
+
+	/* Read display power mode */
+	panel_read(0x0A, id, 1);
+	if (0x9C == (id[0]&0xFC)) {
+		ret = 0;
+	} else {
+		pr_err("otm1281a_esd_check_fn fail id 0x%x\n", id[0]);
+		ret = -EIO;
+	}
+
+	return ret;
+}
+
 __initdata struct lcd_config otm1281a_cfg = {
 	.name = "OTM1281A",
 	.mode_supp = LCD_CMD_VID_BOTH,
@@ -354,6 +371,9 @@ __initdata struct lcd_config otm1281a_cfg = {
 	.max_lp_bps = 5000000,
 	.phys_width = 56,
 	.phys_height = 99,
+	.esd_check_fn = otm1281a_esd_check_fn,
+	.esd_check_period = HZ,
+	.esd_check_retry = 3,
 	.init_cmd_seq = &otm1281a_init_panel_cmd[0],
 	.init_vid_seq = &otm1281a_init_panel_cmd[0],
 	.slp_in_seq = &otm1281a_slp_in[0],

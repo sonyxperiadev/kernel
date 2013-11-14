@@ -779,9 +779,9 @@ struct platform_device hawaii_otg_platform_device = {
 #ifdef CONFIG_KONA_CPU_FREQ_DRV
 struct kona_freq_tbl kona_freq_tbl[] = {
 	FTBL_INIT(312000, PI_OPP_ECONOMY, TEMP_DONT_CARE),
-	FTBL_INIT(499999, PI_OPP_NORMAL, 105),
-	FTBL_INIT(666667, PI_OPP_TURBO, 95),
-	FTBL_INIT(1000000, PI_OPP_SUPER_TURBO, 85),
+	FTBL_INIT(499999, PI_OPP_NORMAL, 70),
+	FTBL_INIT(666667, PI_OPP_TURBO, 65),
+	FTBL_INIT(1000000, PI_OPP_SUPER_TURBO, 58),
 };
 
 void hawaii_cpufreq_init(void)
@@ -798,14 +798,17 @@ void hawaii_cpufreq_init(void)
 				|| IS_ERR_OR_NULL(a9_pll_chnl1));
 
 	/*Update DVFS freq table based on PLL settings done by the loader */
-	/*For B0 and above, ECONOMY:0 NORMAL:1 TURBO:2 */
-	kona_freq_tbl[1].cpu_freq = clk_get_rate(a9_pll) / (4 * 1000);
-	kona_freq_tbl[2].cpu_freq = clk_get_rate(a9_pll) / (3 * 1000);
+	kona_freq_tbl[0].cpu_freq = clk_get_rate(a9_pll)/
+					(PROC_FREQ_ECO_DIV * 1000);
+	kona_freq_tbl[1].cpu_freq = clk_get_rate(a9_pll)/
+					(PROC_FREQ_NORMAL_DIV * 1000);
+	kona_freq_tbl[2].cpu_freq = clk_get_rate(a9_pll)/
+					(PROC_FREQ_TURBO_DIV * 1000);
 	kona_freq_tbl[3].cpu_freq = clk_get_rate(a9_pll_chnl1) / 1000;
 
-	pr_info("%s a9_pll_chnl0 OPP0_freq = %dkHz OPP1_freq = %dKhz a9_pll_chnl1 freq = %dKhz\n",
-		__func__, kona_freq_tbl[1].cpu_freq, kona_freq_tbl[2].cpu_freq,
-		kona_freq_tbl[3].cpu_freq);
+	pr_info("%s ARM Eco: %u, Normal: %u, Turbo: %u, Super Turbo: %u\n",
+		__func__, kona_freq_tbl[0].cpu_freq, kona_freq_tbl[1].cpu_freq,
+		kona_freq_tbl[2].cpu_freq, kona_freq_tbl[3].cpu_freq);
 }
 
 struct kona_cpufreq_drv_pdata kona_cpufreq_drv_pdata = {
@@ -904,12 +907,16 @@ struct platform_device kona_memc_device = {
 #endif
 
 #ifdef CONFIG_KONA_TMON
+
 struct tmon_state threshold_val[] = {
-	{.rising = 85, .flags = TMON_NOTIFY,},
-	{.rising = 95, .flags = TMON_NOTIFY,},
-	{.rising = 105, .flags = TMON_NOTIFY,},
-	{.rising = 120, .flags = TMON_SW_SHDWN,},
-	{.rising = 125, .flags = TMON_HW_SHDWN,},
+	{.rising = 55, .flags = TMON_NOTIFY,},
+	{.rising = 58, .flags = TMON_NOTIFY,},
+	{.rising = 63, .flags = TMON_NOTIFY,},
+	{.rising = 65, .flags = TMON_NOTIFY,},
+	{.rising = 70, .flags = TMON_NOTIFY,},
+	{.rising = 80, .flags = TMON_NOTIFY,},
+	{.rising = 110, .flags = TMON_SW_SHDWN,},
+	{.rising = 120, .flags = TMON_HW_SHDWN,},
 };
 struct kona_tmon_pdata tmon_plat_data = {
 	.base_addr = KONA_TMON_VA,
@@ -918,7 +925,7 @@ struct kona_tmon_pdata tmon_plat_data = {
 	.thold_size = ARRAY_SIZE(threshold_val),
 	.poll_rate_ms = 30000,
 	.hysteresis = 0,
-	.flags = PVTMON,
+	.flags = TMON_PVTMON | TMON_SUSPEND_POWEROFF,
 	.chipreg_addr = KONA_CHIPREG_VA,
 	.interval_ms = 5,
 	.tmon_apb_clk = "tmon_apb",

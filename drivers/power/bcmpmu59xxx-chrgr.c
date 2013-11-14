@@ -509,6 +509,8 @@ static int charger_event_handler(struct notifier_block *nb,
 	case PMU_ACCY_EVT_OUT_CHGERRDIS:
 		di = container_of(nb, struct bcmpmu_chrgr_data,
 					usb_chrgr_err_dis);
+		pr_chrgr(FLOW,
+			"PMU HW Charging Error is cleared\n");
 	case PMU_ACCY_EVT_OUT_USBOV_DIS:
 		if (!di)
 			di = container_of(nb, struct bcmpmu_chrgr_data,

@@ -23,7 +23,6 @@ struct platform_pwm_backlight_data {
 	unsigned int *levels;
 	unsigned int polarity;
 #ifdef CONFIG_KONA_TMON
-	bool pb_enable_adapt_bright;
 	struct pb_temp_comp *temp_comp_tbl;
 	unsigned int temp_comp_size;
 #endif

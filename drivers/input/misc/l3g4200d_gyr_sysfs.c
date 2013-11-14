@@ -345,7 +345,7 @@ static void l3g4200d_device_power_off(struct l3g4200d_data *dev_data)
 	u8 buf[2];
 
 	if (!dev_data->enabled)
-		return;
+		return ;
 	dev_dbg(&dev_data->client->dev, "%s\n", __func__);
 
 	buf[0] = CTRL_REG1;
@@ -353,7 +353,7 @@ static void l3g4200d_device_power_off(struct l3g4200d_data *dev_data)
 	err = l3g4200d_i2c_write(dev_data, buf, sizeof(buf));
 	if (err < 0) {
 		dev_err(&dev_data->client->dev, "power off failed\n");
-		return;
+		return ;
 	}
 	if (dev_data->pdata->power_off)
 		dev_data->pdata->power_off(&dev_data->client->dev);
@@ -551,7 +551,7 @@ static int create_sysfs_interfaces(struct device *dev)
 	return 0;
 
 error:
-	for (; i >= 0; i--)
+	for ( ; i >= 0; i--)
 		device_remove_file(dev, attributes + i);
 	dev_err(dev, "%s:Unable to create interface\n", __func__);
 	return -EIO;

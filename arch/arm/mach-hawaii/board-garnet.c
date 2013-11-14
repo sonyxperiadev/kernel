@@ -409,6 +409,7 @@ static struct regulator *d_3v0_mmc1_vcc;	/* Back camera Auto focus VCM */
 #define SENSOR_0_GPIO_PWRDN             (002)
 #define SENSOR_0_GPIO_RST               (111)
 #define SENSOR_1_GPIO_PWRDN             (005)
+#define MAIN_CAM_AF_ENABLE			    (33)
 
 #define CSI0_LP_FREQ					(100000000)
 #define CSI1_LP_FREQ					(100000000)
@@ -454,6 +455,17 @@ static struct cameracfg_s *getcameracfg(const char *camera_name)
 			pcamera++;
 	}
 	return NULL;
+}
+
+void set_af_enable(int on)
+{
+    if (on) {
+        gpio_set_value(MAIN_CAM_AF_ENABLE, 1);
+        usleep_range(10000, 10010);
+    } else {
+        gpio_set_value(MAIN_CAM_AF_ENABLE, 0);
+        usleep_range(10000, 10010);
+    }
 }
 
 #if defined(CONFIG_SOC_CAMERA_OV5640) || defined(CONFIG_SOC_CAMERA_OV5648)
@@ -648,12 +660,14 @@ static int hawaii_camera_power(struct device *dev, int on)
 		msleep(30);
 		regulator_enable(d_3v0_mmc1_vcc);
 		usleep_range(1000, 1010);
+		set_af_enable(1);
 #ifdef CONFIG_VIDEO_A3907
 		a3907_enable(1);
 #endif
 	} else {
 #ifdef CONFIG_VIDEO_A3907
 		a3907_enable(0);
+		set_af_enable(0);
 #endif
 
 		gpio_set_value(SENSOR_0_GPIO_PWRDN, thiscfg->pwdn_active);
@@ -977,6 +991,13 @@ static struct platform_device hawaii_camera_back = {
 	},
 };
 #endif
+#ifdef CONFIG_SOC_CAMERA_OV7695
+static struct soc_camera_link iclink_ov7695 = {
+	.power = &hawaii_camera_power_front,
+	.reset = &hawaii_camera_reset_front,
+};
+#endif
+
 
 #ifdef CONFIG_SOC_CAMERA_OV7692
 static struct v4l2_subdev_sensor_interface_parms ov7692_if_parms = {
@@ -1297,11 +1318,13 @@ static const struct of_dev_auxdata hawaii_auxdata_lookup[] __initconst = {
 		"soc-back-camera", &iclink_ov5640),
 #endif
 #endif
-#if 0
 #ifdef CONFIG_SOC_CAMERA_OV5648
 	OF_DEV_AUXDATA("bcm,soc-camera", 0x36,
 		"soc-back-camera", &iclink_ov5648),
 #endif
+#ifdef CONFIG_SOC_CAMERA_OV7695
+        OF_DEV_AUXDATA("bcm,soc-camera", 0x21,
+            "soc-front-camera", &iclink_ov7695),
 #endif
 #if 0
 #ifdef CONFIG_SOC_CAMERA_OV7692
@@ -1309,7 +1332,7 @@ static const struct of_dev_auxdata hawaii_auxdata_lookup[] __initconst = {
 		"soc-front-camera", &iclink_ov7692),
 #endif
 #endif
-	{},
+    {},
 };
 
 #ifdef CONFIG_VIDEO_KONA

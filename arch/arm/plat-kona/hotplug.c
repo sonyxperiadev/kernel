@@ -65,6 +65,7 @@ static inline void platform_do_lowpower(unsigned int cpu, int *spurious)
 {
 	struct task_struct *idle;
 
+
 	/*
 	 * there is no power-control hardware on this platform, so all
 	 * we can do is put the core into WFI; this is safe as the calling
@@ -129,6 +130,7 @@ static inline void platform_do_lowpower(unsigned int cpu, int *spurious)
 	*/
 	task_thread_info(idle)->preempt_count = 0;
 
+	local_irq_enable();
 	local_irq_enable();
 }
 

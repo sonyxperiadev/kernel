@@ -14,6 +14,7 @@ the GPL, without Broadcom's express prior written consent.
 #define pr_fmt(fmt) "vce: " fmt
 
 #include <linux/kernel.h>
+#include <linux/slab.h>
 #include <mach/irqs.h>
 #include <mach/clock.h>
 #include <mach/rdb/brcm_rdb_sysmap.h>
@@ -61,8 +62,8 @@ u32 h264_read(void *id, u32 reg)
 }
 static void vce_write(struct vce_device_t *vce, u32 reg, u32 value)
 {
-	mm_write_reg(vce->vaddr,
-		reg + (VCE_BASE - VIDEOCODEC_BASE_ADDRESS), value);
+	*((u32 *)(vce->vaddr + reg + VCE_BASE - VIDEOCODEC_BASE_ADDRESS)) =
+									value;
 }
 
 static u32 vce_read(struct vce_device_t *vce, u32 reg)
@@ -225,8 +226,10 @@ mm_job_status_e vce_start_job(void *device_id, mm_job_post_t *job,
 
 	switch (job->type) {
 	case H264_VCE_ENC_SLICE_JOB:
-		enc_info = (struct enc_info_t *)(jp + \
-					(sizeof(struct vce_launch_info_t)));
+		if (job->size != sizeof(struct vce_launch_info_t))
+			enc_info = (struct enc_info_t *)(jp + \
+					sizeof(struct vce_launch_info_t));
+
 		vce_info = (struct vce_launch_info_t *) \
 				(jp);
 		break;
@@ -256,7 +259,6 @@ mm_job_status_e vce_start_job(void *device_id, mm_job_post_t *job,
 		if (dec_info != NULL)
 			decodeSlice(id, dec_info);
 		/*Reset VCE*/
-		vce_reset(id);
 		/*Bound checks*/
 		/*vce_info->codesize is in words*/
 			if (vce_info->codesize > VCE_PROGRAM_MEM_SIZE) {
@@ -358,7 +360,6 @@ mm_job_status_e vce_start_job(void *device_id, mm_job_post_t *job,
 		}
 
 		/*Write the registers passed*/
-		vce_reset(id);
 		for (i = 0; i < VCE_REGISTERS_COUNT; i++) {
 			if (((vce_info->vce_regpst.changed_mask) >> i) & 0x1) {
 				vce_write(id, \
@@ -418,7 +419,6 @@ mm_job_status_e vce_start_job(void *device_id, mm_job_post_t *job,
 				vce_read(id, (VCE_REGISTERS_OFFSET+(i*4)));
 		}
 
-		vce_reset(id);
 
 		/*Write the registers passed*/
 		vce_write(id, (VCE_REGISTERS_OFFSET+(1*4)), \

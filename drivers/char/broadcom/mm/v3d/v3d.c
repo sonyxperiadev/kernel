@@ -18,9 +18,11 @@ the GPL, without Broadcom's express prior written consent.
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/mm.h>
+#include <linux/slab.h>
 #include <linux/fs.h>
 #include <linux/io.h>
 #include <linux/broadcom/mm_fw_hw_ifc.h>
+#include <mach/clock.h>
 #include "v3d.h"
 #define v3d_device_t struct _v3d_device_t
 
@@ -66,9 +68,21 @@ int __init mm_v3d_init(void)
 		}
 	}
 
-	/*Initialize generice params*/
+	/*Initialize params*/
 	dvfs_param.ON = 1;
 	dvfs_param.MODE = TURBO;
+#ifdef CONFIG_MM_312M_SOURCE_CLK
+	dvfs_param.T0 = 100;
+	dvfs_param.P0 = 80;
+	dvfs_param.T1 = 300;
+	dvfs_param.P1 = 85;
+	dvfs_param.P1L = 50;
+	dvfs_param.T2 = 750;
+	dvfs_param.P2 = 90;
+	dvfs_param.P2L = 60;
+	dvfs_param.T3 = 1000;
+	dvfs_param.P3L = 55;
+#else
 	dvfs_param.T0 = 0;
 	dvfs_param.P0 = 0;
 	dvfs_param.T1 = 300;
@@ -79,6 +93,7 @@ int __init mm_v3d_init(void)
 	dvfs_param.P2L = 45;
 	dvfs_param.T3 = 1000;
 	dvfs_param.P3L = 45;
+#endif
 	dvfs_param.dvfs_bulk_job_cnt = 0;
 	v3d_device->fmwk_handle =
 	mm_fmwk_register(V3D_DEV_NAME,

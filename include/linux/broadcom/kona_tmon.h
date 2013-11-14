@@ -49,8 +49,9 @@ enum {
 };
 
 enum {
-	PVTMON,
-	VTMON,
+	TMON_PVTMON = 1,
+	TMON_VTMON = (1 << 1),
+	TMON_SUSPEND_POWEROFF = (1 << 2),
 };
 
 enum {
@@ -80,5 +81,7 @@ struct kona_tmon_pdata {
 int tmon_register_notifier(struct notifier_block *notifier);
 int tmon_unregister_notifier(struct notifier_block *notifier);
 long tmon_get_current_temp(bool celcius, bool avg);
+void tmon_set_suspend_poweroff(int poweroff);
+int tmon_get_suspend_poweroff(void);
 
 #endif /*__KONA_TMON_H__*/

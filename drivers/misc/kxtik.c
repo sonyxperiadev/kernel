@@ -45,6 +45,7 @@
 
 #define KXTIK_WAI_1004_ID	0x05
 #define KXTIK_WAI_1009_ID	0x09
+#define KXTIK_WAI_1013_ID	0x11
 
 #define G_MAX			8096
 /* OUTPUT REGISTERS */
@@ -115,13 +116,13 @@ struct kxtik_data {
 	atomic_t acc_enabled;
 	atomic_t acc_input_event;
 	atomic_t acc_enable_resume;
-	struct timer_list timer;
 	struct mutex data_mutex;
 #ifdef CONFIG_HAS_EARLYSUSPEND
 	struct early_suspend early_suspend;
 #endif				/* CONFIG_HAS_EARLYSUSPEND */
 };
 
+static struct timer_list kxtik_wakeup_timer;
 static int kxtik_offset[3];
 
 static int kxtik_i2c_read(struct kxtik_data *tik, u8 addr, u8 * data, int len)
@@ -217,7 +218,8 @@ void kxtik1004_timer_func(unsigned long data)
 {
 	struct kxtik_data *tik = (struct kxtik_data *) data;
 	queue_work(tik->irq_workqueue, &tik->irq_work);
-	mod_timer(&tik->timer, jiffies+msecs_to_jiffies(tik->poll_interval));
+	mod_timer(&kxtik_wakeup_timer,
+		jiffies+msecs_to_jiffies(tik->poll_interval));
 }
 
 static void kxtik_irq_work(struct work_struct *work)
@@ -570,8 +572,12 @@ static ssize_t kxtik_set_enable(struct device *dev, struct device_attribute
 
 	/* Lock the device to prevent races with open/close (and itself) */
 
-	if (enable)
+	if (enable) {
 		kxtik_enable(tik);
+		if (!client->irq)
+			mod_timer(&kxtik_wakeup_timer,
+				jiffies+msecs_to_jiffies(tik->poll_interval));
+	}
 	else
 		kxtik_disable(tik);
 	mutex_unlock(&tik->data_mutex);
@@ -640,8 +646,9 @@ static int kxtik_verify(struct kxtik_data *tik)
 	if (retval < 0)
 		FUNCDBG("error reading WHO_AM_I register!\n");
 	else {
-		FUNCDBG("who_am_i id = %d\n", retval);
-		if (KXTIK_WAI_1004_ID == retval || KXTIK_WAI_1009_ID == retval)
+		pr_info("kionix: who_am_i id = %d\n", retval);
+		if (KXTIK_WAI_1004_ID == retval || KXTIK_WAI_1009_ID == retval
+			|| KXTIK_WAI_1013_ID == retval)
 			retval = 0;
 		else
 			retval = -EIO;
@@ -657,8 +664,8 @@ void kxtik_earlysuspend_suspend(struct early_suspend *h)
 					      early_suspend);
 	int err;
 	pr_debug("kxtik_earlysuspend_suspend\n");
-
-	del_timer(&tik->timer);
+	if (!tik->client->irq)
+		del_timer_sync(&kxtik_wakeup_timer);
 	cancel_work_sync(&tik->irq_work);
 	err = kxtik_standby(tik);
 	if (err < 0)
@@ -678,11 +685,9 @@ void kxtik_earlysuspend_resume(struct early_suspend *h)
 		err = kxtik_operate(tik);
 		if (err < 0)
 			FUNCDBG("earlysuspend failed to resume\n");
-		else {
-			setup_timer(&tik->timer, kxtik1004_timer_func, (unsigned long)tik) ;
-			mod_timer(&tik->timer,
-			jiffies+msecs_to_jiffies(tik->poll_interval));
-		}
+		else if (!tik->client->irq)
+			mod_timer(&kxtik_wakeup_timer,
+				jiffies+msecs_to_jiffies(tik->poll_interval));
 	}
 
 	return;
@@ -796,6 +801,11 @@ static int kxtik_probe(struct i2c_client *client,
 		goto err_pdata_exit;
 
 	tik->irq_workqueue = create_workqueue("KXTIK Workqueue");
+	if (unlikely(!tik->irq_workqueue)) {
+		printk(KERN_ALERT "create KXTIK Workqueue failed\n");
+		goto err_destroy_input;
+	}
+
 	INIT_WORK(&tik->irq_work, kxtik_irq_work);
 	mutex_init(&tik->data_mutex);
 	if (client->irq) {
@@ -809,13 +819,14 @@ static int kxtik_probe(struct i2c_client *client,
 					   "kxtik-irq", tik);
 		if (err) {
 			FUNCDBG("request irq failed: %d\n", err);
-			goto err_destroy_input;
+			goto err_destroy_mutex;
 		}
 	} else {
 		printk(KERN_ALERT "__kxtik is in polling mode__\n");
-		setup_timer(&tik->timer, kxtik1004_timer_func, (unsigned long)tik);
-		mod_timer(&tik->timer,
-		jiffies+msecs_to_jiffies(tik->poll_interval));
+		setup_timer(&kxtik_wakeup_timer,
+			kxtik1004_timer_func, (unsigned long)tik);
+		mod_timer(&kxtik_wakeup_timer,
+			jiffies+msecs_to_jiffies(tik->poll_interval));
 		tik->int_ctrl = 0x10; /* reset value, no interrupt support. */
 	}
 
@@ -844,9 +855,12 @@ static int kxtik_probe(struct i2c_client *client,
 err_read:
 err_free_irq:
 	FUNCDBG("error :err_free_irq\n");
-	destroy_workqueue(tik->irq_workqueue);
+	del_timer_sync(&kxtik_wakeup_timer);
 	if (client->irq)
 		free_irq(client->irq, tik);
+err_destroy_mutex:
+	mutex_destroy(&tik->data_mutex);
+	destroy_workqueue(tik->irq_workqueue);
 err_destroy_input:
 	FUNCDBG("error :err_destroy_input\n");
 	input_unregister_device(tik->input_dev);
@@ -861,7 +875,6 @@ err_pdata_power_off:
 	kxtik_device_power_off(tik);
 err_free_mem:
 	FUNCDBG("error :err_free_mem\n");
-	mutex_destroy(&tik->data_mutex);
 	kfree(tik);
 	return err;
 }

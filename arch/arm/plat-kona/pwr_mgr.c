@@ -2598,24 +2598,28 @@ void pwr_mgr_init_sequencer(struct pwr_mgr_info *info)
 
 #ifdef CONFIG_KONA_PWRMGR_SWSEQ_RETRY_WORKAROUND
 	int ret = 0;
-	if (!pwr_mgr.seq_qos_client.valid) {
-		ret = pi_mgr_qos_add_request(&pwr_mgr.seq_qos_client,
-				"sequencer",
-				PI_MGR_PI_ID_MM,
-				PI_MGR_QOS_DEFAULT_VALUE);
-		if (ret)
-			pwr_dbg(PWR_LOG_SEQ, "%s: qos_add_request failed\n",
-					__func__);
-	}
+	if (pi_mgr_initialized()) {
+		if (!pwr_mgr.seq_qos_client.valid) {
+			ret = pi_mgr_qos_add_request(&pwr_mgr.seq_qos_client,
+					"sequencer",
+					PI_MGR_PI_ID_MM,
+					PI_MGR_QOS_DEFAULT_VALUE);
+			if (ret)
+				pwr_dbg(PWR_LOG_SEQ,
+						"%s: qos_add_request failed\n",
+						__func__);
+		}
 
-	if (!pwr_mgr.seq_dfs_client.valid) {
-		ret = pi_mgr_dfs_add_request(&pwr_mgr.seq_dfs_client,
-				"sequencer",
-				PI_MGR_PI_ID_MM,
-				PI_MGR_DFS_MIN_VALUE);
-		if (ret)
-			pwr_dbg(PWR_LOG_SEQ, "%s: dfs_add_request failed\n",
-					__func__);
+		if (!pwr_mgr.seq_dfs_client.valid) {
+			ret = pi_mgr_dfs_add_request(&pwr_mgr.seq_dfs_client,
+					"sequencer",
+					PI_MGR_PI_ID_MM,
+					PI_MGR_DFS_MIN_VALUE);
+			if (ret)
+				pwr_dbg(PWR_LOG_SEQ,
+						"%s: dfs_add_request failed\n",
+						__func__);
+		}
 	}
 #endif
 

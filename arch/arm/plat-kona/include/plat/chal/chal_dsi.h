@@ -577,6 +577,20 @@ extern "C" {
 
 /**
 *
+*  @brief    Enable/Disable ST_END of Display Engine 0
+*
+*  @param	 handle  (in)  DSI cHAL handle
+*  @param	 ena     (in)  TRUE=enable FALSE=disable
+*
+*  @return	 void
+*
+*  @note
+*****************************************************************************/
+	cVoid chal_dsi_de0_st_end(CHAL_HANDLE handle, cBool ena);
+
+
+/**
+*
 *  @brief    Send Bus Turn Around Request
 *
 *  @param	 handle  (in)  DSI cHAL handle

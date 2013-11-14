@@ -175,6 +175,12 @@ static int cpufreq_tmon_notify_handler(struct notifier_block *nb,
 		curr_temp < pdata->freq_tbl[f_inx].max_temp) {
 		cpufreq_update_lmt_req(&kona_cpufreq->tmon_node,
 				pdata->freq_tbl[f_inx].cpu_freq);
+
+		printk(KERN_ALERT "CPU FREQ: BBIC, Threshold Crossed: %ld\n",
+			pdata->freq_tbl[f_inx].max_temp);
+		printk(KERN_ALERT "CPU FREQ: Dir: Fall, Action:Freq : %u\n",
+			pdata->freq_tbl[f_inx].cpu_freq);
+
 		kona_cpufreq->r_inx = f_inx;
 		for (i = f_inx + 1; i < pdata->num_freqs; i++) {
 			if (pdata->freq_tbl[i].max_temp != TEMP_DONT_CARE) {
@@ -189,6 +195,12 @@ static int cpufreq_tmon_notify_handler(struct notifier_block *nb,
 		BUG_ON(r_inx == 0);
 		cpufreq_update_lmt_req(&kona_cpufreq->tmon_node,
 				pdata->freq_tbl[r_inx - 1].cpu_freq);
+
+		printk(KERN_ALERT "CPU FREQ: BBIC, Threshold Crossed: %ld\n",
+			pdata->freq_tbl[r_inx].max_temp);
+		printk(KERN_ALERT "CPU FREQ: Dir: Rise, Action:Freq : %u\n",
+			pdata->freq_tbl[r_inx - 1].cpu_freq);
+
 		kona_cpufreq->f_inx = r_inx;
 		for (i = r_inx - 1; i > 0; i--) {
 			if (pdata->freq_tbl[i].max_temp != TEMP_DONT_CARE) {

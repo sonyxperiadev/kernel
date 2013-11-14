@@ -287,6 +287,7 @@ int pi_mgr_unregister_notifier(u32 pi_id, struct notifier_block *notifier,
 int pi_state_allowed(int pi_id);
 int pi_mgr_register(struct pi *pi);
 int pi_mgr_init(void);
+int pi_mgr_initialized(void);
 u32 pi_get_active_qos(int pi_id);
 u32 pi_get_active_opp(int pi_id);
 u32 pi_get_dfs_lmt(u32 pi_id, bool max);

@@ -806,7 +806,7 @@ static int __init hawaii_pwr_mgr_init(void)
 		BUG_ON(insurance == 0);
 	}
 	if (is_pm_erratum(ERRATUM_MM_FREEZE_VAR500M))
-		var500m_clk_en_override(true);
+		mm_varvdd_clk_en_override(true);
 
 	writel(0, KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_WR_ACCESS_OFFSET);
 #endif

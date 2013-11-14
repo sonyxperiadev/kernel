@@ -18,6 +18,10 @@ express prior written consent.
 
 #include "mm_common.h"
 
+#ifdef CONFIG_MEMC_DFS
+#include <plat/kona_memc.h>
+#endif
+
 struct dvfs_update {
 	struct work_struct work;
 	u64 param;
@@ -102,6 +106,9 @@ struct _mm_dvfs {
 	s64 hw_on_dur;
 	unsigned int jobs_done;
 	unsigned int jobs_pend;
+#ifdef CONFIG_MEMC_DFS
+	struct kona_memc_node *memc_node;
+#endif
 };
 
 void *mm_dvfs_init(struct _mm_common_ifc *mm_common_ifc,

@@ -76,7 +76,7 @@
 #if 0
 #if defined(CONFIG_MACH_BCM_FPGA_E) || defined(CONFIG_MACH_BCM_FPGA)
 int DE1_FIFO_SIZE_W = 256;
-int CM_PKT_SIZE_B= 256 * 3;
+int CM_PKT_SIZE_B = 256 * 3;
 int DE1_DEF_THRESHOLD_W = (256 * 3) >> 2;
 int DE1_DEF_THRESHOLD_B = 256 * 3;
 #else
@@ -94,7 +94,7 @@ int DE1_DEF_THRESHOLD_B = 256 * 3;
 
 #define AXIPV_MIN_BUFF_SIZE (3 * 8)
 
-
+#define SEMA_TIMEOUT_MS 4000
 /* DSI Core clk tree configuration / settings */
 typedef struct {
 	UInt32 hsPllReq_MHz;	/* in:  PLL freq requested */
@@ -147,8 +147,6 @@ typedef struct {
 	UInt32 dsiCoreRegAddr;
 	UInt32 clients;
 	DSI_CLK_CFG_T clkCfg;	/* HS & ESC Clk configuration */
-	Task_t updReqT;
-	Queue_t updReqQ;
 	Semaphore_t semaDsi;
 	Semaphore_t semaInt;
 	Semaphore_t semaDma;
@@ -156,7 +154,6 @@ typedef struct {
 	Semaphore_t semaPV;
 	irq_handler_t lisr;
 	void (*hisr) (void);
-	void (*task) (void);
 	void (*dma_cb) (DMA_VC4LITE_CALLBACK_STATUS);
 	Interrupt_t iHisr;
 	UInt32 interruptId;
@@ -164,6 +161,11 @@ typedef struct {
 	DSI_CM_HANDLE_t chCm[DSI_CM_MAX_HANDLES];
 	struct axipv_config_t *axipvCfg;
 	struct pv_config_t *pvCfg;
+
+	struct workqueue_struct *wq;
+	struct work_struct update_task_work;
+	void *upd_msg;
+
 	Boolean vmode;		/* 1 = Video Mode, 0 = Command Mode */
 	UInt32 dispEngine;	/* Display Engine- 0=DE0 via Pixel Valve
 						 / 1=DE1 via TXPKT_PIXD_FIFO
@@ -173,6 +175,7 @@ typedef struct {
 					:Corresponds to the module which
 					fetches pixels and feeds DSI*/
 	UInt32 dlCount;		/* No. of data lanes*/
+	Boolean stEnd;		/* control transfer of end SYNC events */
 	void (*vsync_cb)(void);	/* Function pointer for vsync events */
 } DSI_HANDLE_t, *DSI_HANDLE;
 
@@ -209,6 +212,7 @@ static void axipv_irq_cb(int err);
 static void axipv_release_cb(u32 free_buf);
 static void pv_err_cb(int err);
 static void pv_eof_cb(void);
+
 
 #if 0
 /* For debugging purposes*/
@@ -293,7 +297,7 @@ static CSL_LCD_RES_T cslDsiAxipvStart(DSI_UPD_REQ_MSG_T *updMsg)
 	if (updMsg->clientH->hasLock)
 		cslDsiAxipvPollInt(updMsg);
 	else if (OSSTATUS_SUCCESS != OSSEMAPHORE_Obtain(updMsg->dsiH->semaAxipv,
-		TICKS_IN_MILLISECONDS(100))) {
+		TICKS_IN_MILLISECONDS(SEMA_TIMEOUT_MS))) {
 		int tx_done = axipv_check_completion(AXIPV_START, axipvCfg);
 		if (tx_done < 0) {
 			pr_err("Timed out waiting for PV_START_THRESH intr\n");
@@ -436,84 +440,80 @@ static void cslDsi0EofDma(DMA_VC4LITE_CALLBACK_STATUS status)
 	OSSEMAPHORE_Release(dsiH->semaDma);
 }
 
-
 /*
  *
- * Function Name:  cslDsi0UpdateTask
+ * Function Name:  cslDsi0updateTask
  *
  * Description:    DSI Controller 0 Update Task
  *
  */
-static void cslDsi0UpdateTask(void)
+static void cslDsi0UpdateTask(struct work_struct *work)
 {
+
 	DSI_UPD_REQ_MSG_T updMsg;
 	OSStatus_t osStat;
 	CSL_LCD_RES_T res;
 	DSI_HANDLE dsiH = &dsiBus[0];
 
-	for (;;) {
-		res = CSL_LCD_OK;
+	res = CSL_LCD_OK;
 
-		/* Wait for update request */
-		OSQUEUE_Pend(dsiH->updReqQ, (QMsg_t *)&updMsg, TICKS_FOREVER);
+	updMsg = *(DSI_UPD_REQ_MSG_T *) ((DSI_HANDLE)container_of
+					(work, DSI_HANDLE_t,
+					update_task_work))->upd_msg;
 
-		/* Wait For signal from eof DMA */
-		osStat = OSSEMAPHORE_Obtain(dsiH->semaDma,
-					    TICKS_IN_MILLISECONDS(updMsg.updReq.
-								  timeOut_ms));
+	osStat = OSSEMAPHORE_Obtain(dsiH->semaDma,
+		TICKS_IN_MILLISECONDS(updMsg.updReq.
+		    timeOut_ms));
 
-		if (osStat != OSSTATUS_SUCCESS) {
-			int tx_done;
-			if (osStat == OSSTATUS_TIMEOUT) {
-				LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI] %s: "
-					"TIMED OUT While waiting for "
-					"EOF DMA\n", __func__);
-				res = CSL_LCD_OS_TOUT;
-			} else {
-				LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI] %s: "
-					"OS ERR While waiting for EOF DMA\n",
-					__func__);
-				res = CSL_LCD_OS_ERR;
-			}
-
-			tx_done = cslDsiPixTxStop(&updMsg);
-			if (tx_done == CSL_LCD_OK) {
-				osStat = OSSTATUS_SUCCESS;
-				res = CSL_LCD_OK;
-				pr_err("csl_dsi: recovered %d\n", __LINE__);
-			} else {
-				pr_err("csl_dsi: didn't recovered %d\n",
-					__LINE__);
-			}
+	if (osStat != OSSTATUS_SUCCESS) {
+		int tx_done;
+		if (osStat == OSSTATUS_TIMEOUT) {
+			LCD_DBG(LCD_DBG_ERR_ID,
+			"[CSL DSI] %s: TIMED OUT While waiting for EOF DMA\n",
+								__func__);
+			res = CSL_LCD_OS_TOUT;
+		} else {
+			LCD_DBG(LCD_DBG_ERR_ID,
+			"[CSL DSI] %s: OS ERR While waiting for EOF DMA\n",
+								__func__);
+			res = CSL_LCD_OS_ERR;
 		}
 
-		if (!dsiH->vmode) {
-			if (res == CSL_LCD_OK)
-				res = cslDsiWaitForInt(dsiH,
-						updMsg.updReq.timeOut_ms);
-			else
-				cslDsiWaitForInt(dsiH, 1);
-
-			chal_dsi_tx_start(dsiH->chalH, TX_PKT_ENG_1, FALSE);
-			chal_dsi_tx_start(dsiH->chalH, TX_PKT_ENG_2, FALSE);
-
-			if (dsiH->dispEngine)
-				chal_dsi_de1_enable(dsiH->chalH, FALSE);
-			else
-				chal_dsi_de0_enable(dsiH->chalH, FALSE);
-
-			if (!updMsg.clientH->hasLock)
-				OSSEMAPHORE_Release(dsiH->semaDsi);
+		tx_done = cslDsiPixTxStop(&updMsg);
+		if (tx_done == CSL_LCD_OK) {
+			osStat = OSSTATUS_SUCCESS;
+			res = CSL_LCD_OK;
+			pr_err("csl_dsi: recovered %d\n", __LINE__);
+		} else {
+			pr_err("csl_dsi: didn't recovered %d\n", __LINE__);
 		}
-
-		if (updMsg.updReq.cslLcdCb)
-			updMsg.updReq.cslLcdCb(res, &updMsg.updReq.cslLcdCbRec);
-		else
-			LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI] %s: "
-				"Callback EQ NULL, Skipping\n", __func__);
 	}
-}
 
+
+	if (!dsiH->vmode) {
+		if (res == CSL_LCD_OK)
+			res = cslDsiWaitForInt(dsiH, updMsg.updReq.timeOut_ms);
+		else
+			cslDsiWaitForInt(dsiH, 1);
+
+		chal_dsi_tx_start(dsiH->chalH, TX_PKT_ENG_1, FALSE);
+		chal_dsi_tx_start(dsiH->chalH, TX_PKT_ENG_2, FALSE);
+
+		if (dsiH->dispEngine)
+			chal_dsi_de1_enable(dsiH->chalH, FALSE);
+		else
+			chal_dsi_de0_enable(dsiH->chalH, FALSE);
+
+		if (!updMsg.clientH->hasLock)
+			OSSEMAPHORE_Release(dsiH->semaDsi);
+	}
+
+	if (updMsg.updReq.cslLcdCb)
+		updMsg.updReq.cslLcdCb(res, &updMsg.updReq.cslLcdCbRec);
+	else
+		LCD_DBG(LCD_DBG_ERR_ID,
+		"[CSL DSI] %s: Callback EQ NULL, Skipping\n", __func__);
+}
 
 /*
  *
@@ -527,29 +527,17 @@ Boolean cslDsiOsInit(DSI_HANDLE dsiH)
 	Boolean res = TRUE;
 	int ret;
 
-	/* Update Request Queue */
-	dsiH->updReqQ = OSQUEUE_Create(FLUSH_Q_SIZE,
-			sizeof(DSI_UPD_REQ_MSG_T),
-			OSSUSPEND_PRIORITY);
-	if (!dsiH->updReqQ) {
-		LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI] %s: OSQUEUE_Create failed\n",
-			__func__);
-		res = FALSE;
-	} else {
-		OSQUEUE_ChangeName(dsiH->updReqQ,
-				   dsiH->bus ? "Dsi1Q" : "Dsi0Q");
-	}
-
 	/* Update Request Task */
-	dsiH->updReqT = OSTASK_Create(dsiH->task,
-			dsiH->
-			bus ? (TName_t) "Dsi1T" : (TName_t)
-			"Dsi0T", TASKPRI_DSI, STACKSIZE_DSI);
-	if (!dsiH->updReqT) {
-		LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI] %s: Create Task failure\n",
-			__func__);
+	dsiH->wq = create_workqueue("cslDsi0UpdateTaskWQueue");
+	dsiH->upd_msg = kzalloc(sizeof(DSI_UPD_REQ_MSG_T), GFP_KERNEL);
+	if (!dsiH->upd_msg) {
+		LCD_DBG(LCD_DBG_ERR_ID,
+		"[CSL DSI] %s: Error allocating memory for upd_msg", __func__);
 		res = FALSE;
+		goto free_wq;
 	}
+	INIT_WORK(&dsiH->update_task_work, cslDsi0UpdateTask);
+
 	/* DSI Interface Semaphore */
 	dsiH->semaDsi = OSSEMAPHORE_Create(1, OSSUSPEND_PRIORITY);
 	if (!dsiH->semaDsi) {
@@ -618,6 +606,8 @@ Boolean cslDsiOsInit(DSI_HANDLE dsiH)
 
 free_irq:
 	free_irq(dsiH->interruptId, NULL);
+free_wq:
+	destroy_workqueue(dsiH->wq);
 	return res;
 }
 
@@ -653,14 +643,13 @@ static CSL_LCD_RES_T cslDsiDmaStart(DSI_UPD_REQ_MSG_T *updMsg)
 		DMA_VC4LITE_CLIENT_MEMORY, dmaChInfo.dstID);
 
 	if (dmaCh == -1) {
-		LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI] %s: ERR Reserving "
-			"DMA Ch\n", __func__);
+		LCD_DBG(LCD_DBG_ERR_ID,
+		"[CSL DSI] %s: ERR Reserving DMA Ch\n", __func__);
 		return CSL_LCD_DMA_ERR;
 	}
 	updMsg->dmaCh = (DMA_VC4LITE_CHANNEL_t)dmaCh;
 
-	LCD_DBG(LCD_DBG_ID, "[CSL DSI] %s: Got DmaCh[%d]\n ",
-		__func__, dmaCh);
+	LCD_DBG(LCD_DBG_ID, "[CSL DSI] %s: Got DmaCh[%d]\n ", __func__, dmaCh);
 
 	/* Configure Channel */
 	dmaChInfo.autoFreeChan = 1;
@@ -676,8 +665,8 @@ static CSL_LCD_RES_T cslDsiDmaStart(DSI_UPD_REQ_MSG_T *updMsg)
 
 	if (csl_dma_vc4lite_config_channel(updMsg->dmaCh, &dmaChInfo)
 	    != DMA_VC4LITE_STATUS_SUCCESS) {
-		LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI] %s: "
-			"ERR Configure DMA Ch\n ", __func__);
+		LCD_DBG(LCD_DBG_ERR_ID,
+			"[CSL DSI] %s: ERR Configure DMA Ch\n ", __func__);
 		return CSL_LCD_DMA_ERR;
 	}
 
@@ -721,7 +710,7 @@ static CSL_LCD_RES_T cslDsiDmaStart(DSI_UPD_REQ_MSG_T *updMsg)
 					DMA_VC4LITE_STATUS_SUCCESS) {
 					LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI] %s:"
 					"ERR add 1D DMA transfer data\n",
-					__func__);
+							__func__);
 					return CSL_LCD_DMA_ERR;
 				}
 				updMsg->updReq.buff =
@@ -756,15 +745,15 @@ static CSL_LCD_RES_T cslDsiDmaStart(DSI_UPD_REQ_MSG_T *updMsg)
 	}
 	if (csl_dma_vc4lite_add_data_ex(updMsg->dmaCh, &dmaData2D)
 	    != DMA_VC4LITE_STATUS_SUCCESS) {
-		LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI] %s: "
-			"ERR add DMA transfer data\n ", __func__);
+		LCD_DBG(LCD_DBG_ERR_ID,
+		"[CSL DSI] %s: ERR add DMA transfer data\n ", __func__);
 		return CSL_LCD_DMA_ERR;
 	}
 	/* start DMA transfer */
 	if (csl_dma_vc4lite_start_transfer(updMsg->dmaCh)
 	    != DMA_VC4LITE_STATUS_SUCCESS) {
-		LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI] %s: "
-			"ERR start DMA data transfer\n ", __func__);
+		LCD_DBG(LCD_DBG_ERR_ID,
+		"[CSL DSI] %s: ERR start DMA data transfer\n ", __func__);
 		return CSL_LCD_DMA_ERR;
 	}
 
@@ -787,15 +776,16 @@ static CSL_LCD_RES_T cslDsiDmaStop(DSI_UPD_REQ_MSG_T *updMsg)
 	/* stop DMA transfer */
 	if (csl_dma_vc4lite_stop_transfer(updMsg->dmaCh)
 	    != DMA_VC4LITE_STATUS_SUCCESS) {
-		LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI] %s: "
-			"ERR DMA Stop Transfer\n ", __func__);
+		LCD_DBG(LCD_DBG_ERR_ID,
+			"[CSL DSI] %s: ERR DMA Stop Transfer\n ", __func__);
 		res = CSL_LCD_DMA_ERR;
 	}
 	/* release DMA channel */
 	if (csl_dma_vc4lite_release_channel(updMsg->dmaCh)
 	    != DMA_VC4LITE_STATUS_SUCCESS) {
-		LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI] %s: "
-			"ERR ERR DMA Release Channel\n ", __func__);
+		LCD_DBG(LCD_DBG_ERR_ID,
+			"[CSL DSI] %s: ERR ERR DMA Release Channel\n ",
+								__func__);
 		res = CSL_LCD_DMA_ERR;
 	}
 
@@ -835,9 +825,9 @@ static void cslDsiAfeLdoSetState(DSI_HANDLE dsiH, DSI_LDO_STATE_t state)
 		break;
 	default:
 		ldo_val = DSI_LDO_CNTL_ENA | DSI_LDO_HP_EN;
-		LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI] %s: "
-			"ERROR Invalid LDO State[%d] !\r\n", __func__,
-			state);
+		LCD_DBG(LCD_DBG_ERR_ID,
+			"[CSL DSI] %s: ERROR Invalid LDO State[%d] !\r\n",
+							__func__, state);
 		break;
 	}
 
@@ -978,12 +968,12 @@ static CSL_LCD_RES_T cslDsiWaitForInt(DSI_HANDLE dsiH, UInt32 tout_msec)
 	if (osRes != OSSTATUS_SUCCESS) {
 		int tx_done;
 		if (osRes == OSSTATUS_TIMEOUT) {
-			LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI] %s: "
-				"ERR Timed Out!\n", __func__);
+			LCD_DBG(LCD_DBG_ERR_ID,
+				"[CSL DSI] %s: ERR Timed Out!\n", __func__);
 			res = CSL_LCD_OS_TOUT;
 		} else {
-			LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI] %s: "
-				"ERR OS Err...!\n", __func__);
+			LCD_DBG(LCD_DBG_ERR_ID,
+				"[CSL DSI] %s: ERR OS Err...!\n", __func__);
 			res = CSL_LCD_OS_ERR;
 		}
 		/* If DSI interrupt was blocked */
@@ -1042,9 +1032,9 @@ void CSL_DSI_Lock(CSL_LCD_HANDLE vcH)
 	dsiH = (DSI_HANDLE)clientH->lcdH;
 
 	if (clientH->hasLock)
-		WARN(TRUE, "[CSL DSI][%d] %s: "
-		     "DSI Client Lock/Unlock Not balanced\n",
-		     dsiH->bus, __func__);
+		WARN(TRUE,
+		"[CSL DSI][%d] %s: DSI Client Lock/Unlock Not balanced\n",
+							dsiH->bus, __func__);
 	else
 		clientH->hasLock = TRUE;
 }
@@ -1068,9 +1058,9 @@ void CSL_DSI_Unlock(CSL_LCD_HANDLE vcH)
 	dsiH = (DSI_HANDLE)clientH->lcdH;
 
 	if (!clientH->hasLock)
-		WARN(TRUE, "[CSL DSI][%d] %s: "
-		     "DSI Client Lock/Unlock Not balanced\n",
-		     dsiH->bus, __func__);
+		WARN(TRUE,
+		"[CSL DSI][%d] %s: DSI Client Lock/Unlock Not balanced\n",
+							dsiH->bus, __func__);
 	else
 		clientH->hasLock = FALSE;
 }
@@ -1095,8 +1085,9 @@ CSL_LCD_RES_T CSL_DSI_SendTrigger(CSL_LCD_HANDLE client, UInt8 trig)
 		OSSEMAPHORE_Obtain(dsiH->semaDsi, TICKS_FOREVER);
 
 	if (dsiH->ulps) {
-		LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI][%d] %s: "
-			"ERR, Link Is In ULPS\n", dsiH->bus, __func__);
+		LCD_DBG(LCD_DBG_ERR_ID,
+		"[CSL DSI][%d] %s: ERR, Link Is In ULPS\n",
+						dsiH->bus, __func__);
 		res = CSL_LCD_BAD_STATE;
 		goto exit_err;
 	}
@@ -1112,9 +1103,9 @@ CSL_LCD_RES_T CSL_DSI_SendTrigger(CSL_LCD_HANDLE client, UInt8 trig)
 	if (!clientH->hasLock)
 		res = cslDsiWaitForInt(dsiH, 100);
 	else {
-		LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI][%d] %s: "
-			"In Atomic wait for DSI/DMA finish...\n",
-			dsiH->bus, __func__);
+		LCD_DBG(LCD_DBG_ERR_ID,
+		"[CSL DSI][%d] %s: In Atomic wait for DSI/DMA finish...\n",
+							dsiH->bus, __func__);
 
 		res = cslDsiWaitForStatAny_Poll(dsiH,
 					CHAL_DSI_STAT_TXPKT1_DONE, NULL, 100);
@@ -1162,9 +1153,9 @@ CSL_LCD_RES_T CSL_DSI_SendPacket(CSL_LCD_HANDLE client,
 	dsiH = (DSI_HANDLE)clientH->lcdH;
 
 	if (command->msgLen > CHAL_DSI_TX_MSG_MAX) {
-		LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI][%d] %s: "
-			"ERR, TX Packet Size To Big\n",
-			dsiH->bus, __func__, command->vc);
+		LCD_DBG(LCD_DBG_ERR_ID,
+		"[CSL DSI][%d] %s: ERR, TX Packet Size To Big\n",
+				dsiH->bus, __func__, command->vc);
 		return CSL_LCD_MSG_SIZE;
 	}
 	if (command->endWithBta && (command->reply == NULL)) {
@@ -1175,13 +1166,20 @@ CSL_LCD_RES_T CSL_DSI_SendPacket(CSL_LCD_HANDLE client,
 	}
 
 	if (!clientH->hasLock) {
-		OSSEMAPHORE_Obtain(dsiH->semaDsi, TICKS_FOREVER);
+		OSStatus_t osRes = OSSEMAPHORE_Obtain(dsiH->semaDsi,
+				TICKS_IN_MILLISECONDS(1000));
+		if (osRes != OSSTATUS_SUCCESS) {
+			LCD_DBG(LCD_DBG_ERR_ID,
+				"[CSL DSI][%d] %s: ERR, semaDsi timeout\n",
+				dsiH->bus, __func__);
+			return CSL_LCD_API_ERR;
+		}
 	}
 
 	if (dsiH->ulps) {
-		LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI][%d] %s: "
-			"ERR, VC[%d] Link Is In ULPS\n",
-			dsiH->bus, __func__, command->vc);
+		LCD_DBG(LCD_DBG_ERR_ID,
+			"[CSL DSI][%d] %s: ERR, VC[%d] Link Is In ULPS\n",
+					dsiH->bus, __func__, command->vc);
 		if (!clientH->hasLock)
 			OSSEMAPHORE_Release(dsiH->semaDsi);
 		return CSL_LCD_BAD_STATE;
@@ -1229,9 +1227,9 @@ CSL_LCD_RES_T CSL_DSI_SendPacket(CSL_LCD_HANDLE client,
 	}
 
 	if (txPkt.msgLen <= 2) {
-		LCD_DBG(LCD_DBG_ID, "[CSL DSI][%d] %s: "
-			"SHORT, MSG_LEN[%d]\n",
-			dsiH->bus, __func__, txPkt.msgLen);
+		LCD_DBG(LCD_DBG_ID,
+			"[CSL DSI][%d] %s: SHORT, MSG_LEN[%d]\n",
+					dsiH->bus, __func__, txPkt.msgLen);
 		txPkt.msgLenCFifo = 0;	/* NA to short */
 		chalRes = chal_dsi_tx_short(dsiH->chalH, TX_PKT_ENG_1, &txPkt);
 		if (chalRes != CHAL_DSI_OK) {
@@ -1321,6 +1319,7 @@ CSL_LCD_RES_T CSL_DSI_SendPacket(CSL_LCD_HANDLE client,
 	if (pkt_to_be_enabled) {
 		u32 cnt2 = 0;
 		u32 dsi_stat, int_status, int_en_mask;
+		int retry;
 		unsigned long pkt_flags;
 		pv_change_state(PV_PAUSE_STREAM_SYNC, dsiH->pvCfg);
 		local_irq_save(pkt_flags);
@@ -1357,10 +1356,14 @@ start_tx:
 			chal_dsi_tx_start(dsiH->chalH, TX_PKT_ENG_1, TRUE);
 			goto start_tx;
 		}
-		while (dsi_stat & CHAL_DSI_STAT_TXPKT1_BUSY) {
+		retry = 10*1000; /* 100ms */
+		while (dsi_stat & CHAL_DSI_STAT_TXPKT1_BUSY && retry > 0) {
+			retry--;
 			udelay(WAIT_GENERAL_US);
 			dsi_stat = chal_dsi_get_status(dsiH->chalH);
 		}
+		if (retry <= 0)
+			pr_err("CHAL_DSI_STAT_TXPKT1_BUSY timeout\n");
 		if (!(dsi_stat & PKT1_STAT_MASK))
 			pr_err("something fishy\n");
 		chal_dsi_clr_status(dsiH->chalH, PKT1_STAT_MASK);
@@ -1462,7 +1465,7 @@ read_reply:
 				"Timed Out Waiting For TX end\n",
 				dsiH->bus, __func__, txPkt.vc);
 			while ((res == CSL_LCD_OS_TOUT) && --tries) {
-				printk("Trying once more\n");
+				LCD_DBG(LCD_DBG_ERR_ID, "Trying once more\n");
 				if (!clientH->hasLock)
 					cslDsiEnaIntEvent(dsiH, event);
 				chal_dsi_tx_start(dsiH->chalH, TX_PKT_ENG_1,
@@ -1483,7 +1486,7 @@ read_reply:
 				}
 			}
 			if (!tries)
-				printk("Couldn't recover!\n");
+				LCD_DBG(LCD_DBG_ERR_ID, "Couldn't recover!\n");
 			else
 				goto exit_ok;
 		} else {
@@ -1574,14 +1577,14 @@ CSL_LCD_RES_T CSL_DSI_OpenCmVc(CSL_LCD_HANDLE client,
 		cmVcH->teMode = TE_EXT_1;
 		break;
 	case DSI_TE_CTRLR_TRIG:
-		LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI][%d] %s: "
-			"ERR, DSI TRIG Not Supported Yet\n",
-			dsiH->bus, __func__);
+		LCD_DBG(LCD_DBG_ERR_ID,
+		"[CSL DSI][%d] %s: ERR, DSI TRIG Not Supported Yet\n",
+						dsiH->bus, __func__);
 		res = CSL_LCD_ERR;
 		goto exit_err;
 	default:
-		LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI][%d] %s: "
-			"ERR, Invalid TE Config Type [%d]\n",
+		LCD_DBG(LCD_DBG_ERR_ID,
+		"[CSL DSI][%d] %s: ERR, Invalid TE Config Type [%d]\n",
 			dsiH->bus, __func__, dsiCmVcCfg->teCfg.teInType);
 		res = CSL_LCD_ERR;
 		goto exit_err;
@@ -1654,8 +1657,8 @@ CSL_LCD_RES_T CSL_DSI_OpenCmVc(CSL_LCD_HANDLE client,
 		break;
 
 	default:
-		LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI][%d] %s: ERR, Invalid "
-			"InCol Mode[%d]\n",
+		LCD_DBG(LCD_DBG_ERR_ID,
+		"[CSL DSI][%d] %s: ERR, Invalid InCol Mode[%d]\n",
 			dsiH->bus, __func__, dsiCmVcCfg->cm_in);
 		res = CSL_LCD_COL_MODE;
 		goto exit_err;
@@ -1665,10 +1668,9 @@ CSL_LCD_RES_T CSL_DSI_OpenCmVc(CSL_LCD_HANDLE client,
 	cmVcH->configured = TRUE;
 	cmVcH->client = clientH;
 
-	LCD_DBG(LCD_DBG_INIT_ID, "[CSL DSI][%d] %s: "
-		"OK, VC[%d], TE[%s]\n",
-		dsiH->bus, __func__, cmVcH->vc,
-		cmVcH->usesTe ? "YES" : "NO");
+	LCD_DBG(LCD_DBG_INIT_ID, "[CSL DSI][%d] %s: OK, VC[%d], TE[%s]\n",
+					dsiH->bus, __func__, cmVcH->vc,
+					cmVcH->usesTe ? "YES" : "NO");
 
 	*dsiCmVcH = (CSL_LCD_HANDLE)cmVcH;
 	if (!clientH->hasLock)
@@ -1731,14 +1733,15 @@ void CSL_DSI_Force_Stop(CSL_LCD_HANDLE vcH)
 		/* stop DMA transfer */
 		if (csl_dma_vc4lite_stop_transfer(0)
 		    != DMA_VC4LITE_STATUS_SUCCESS) {
-			LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI] %s: "
-				"ERR DMA Stop Transfer\n ", __func__);
+			LCD_DBG(LCD_DBG_ERR_ID,
+			":[CSL DSI] %s: ERR DMA Stop Transfer\n ", __func__);
 		}
 		/* release DMA channel */
 		if (csl_dma_vc4lite_release_channel(0)
 		    != DMA_VC4LITE_STATUS_SUCCESS) {
-			LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI] %s: "
-				"ERR ERR DMA Release Channel\n ", __func__);
+			LCD_DBG(LCD_DBG_ERR_ID,
+			"[CSL DSI] %s: ERR ERR DMA Release Channel\n ",
+								__func__);
 		}
 	} else {
 		/* Force stop AXIPV */
@@ -1773,7 +1776,6 @@ CSL_LCD_RES_T CSL_DSI_UpdateVmVc(CSL_LCD_HANDLE vcH,
 	DSI_UPD_REQ_MSG_T updMsg;
 	struct axipv_config_t *axipvCfg;
 	struct pv_config_t *pvCfg;
-	OSStatus_t osStat;
 
 	dsiChH = (DSI_CM_HANDLE) vcH;
 	clientH = (DSI_CLIENT) dsiChH->client;
@@ -1804,13 +1806,15 @@ CSL_LCD_RES_T CSL_DSI_UpdateVmVc(CSL_LCD_HANDLE vcH,
 		chal_dsi_clr_status(dsiH->chalH, 0xffffffff);
 		chal_dsi_de0_set_cm(dsiH->chalH, dsiChH->cm);
 		chal_dsi_de0_set_mode(dsiH->chalH, DE0_MODE_VID);
+		chal_dsi_de0_st_end(dsiH->chalH, dsiH->stEnd);
 		/* Set pix clk divider to bits per pixel for non-burst mode */
 		chal_dsi_de0_set_pix_clk_div(dsiH->chalH,
 			(dsiChH->bpp_wire << 3) / dsiH->dlCount);
 		res = cslDsiPixTxStart(&updMsg);
 		if (res != CSL_LCD_OK) {
-			LCD_DBG(LCD_DBG_ID, "[CSL DSI][%d] %s: "
-			"ERR Failed To Start DMA!\n", dsiH->bus, __func__);
+			LCD_DBG(LCD_DBG_ID,
+			"[CSL DSI][%d] %s: ERR Failed To Start DMA!\n",
+							dsiH->bus, __func__);
 			goto done;
 		}
 		videoEnabled = 1;
@@ -1819,13 +1823,9 @@ CSL_LCD_RES_T CSL_DSI_UpdateVmVc(CSL_LCD_HANDLE vcH,
 		axipv_post(axipvCfg);
 	}
 
-	osStat = OSQUEUE_Post(dsiH->updReqQ, (QMsg_t *)&updMsg, TICKS_NO_WAIT);
-	if (osStat != OSSTATUS_SUCCESS) {
-		if (osStat == OSSTATUS_TIMEOUT)
-			res = CSL_LCD_OS_TOUT;
-		else
-			res = CSL_LCD_OS_ERR;
-	}
+	*((DSI_UPD_REQ_MSG_T *)dsiH->upd_msg) = updMsg;
+	if (!queue_work(dsiH->wq, &dsiH->update_task_work))
+		res = CSL_LCD_ERR;
 
 done:
 	if (!clientH->hasLock)
@@ -1869,7 +1869,8 @@ CSL_LCD_RES_T CSL_DSI_Suspend(CSL_LCD_HANDLE vcH)
 		return CSL_LCD_BAD_HANDLE;
 	}
 	axipv_change_state(AXIPV_STOP_EOF, axipvCfg);
-	osStat = OSSEMAPHORE_Obtain(dsiH->semaAxipv, msecs_to_jiffies(100));
+	osStat = OSSEMAPHORE_Obtain(dsiH->semaAxipv,
+					msecs_to_jiffies(SEMA_TIMEOUT_MS));
 	if (osStat == OSSTATUS_TIMEOUT) {
 		int tx_done = axipv_check_completion(AXIPV_STOP_EOF, axipvCfg);
 		if (tx_done < 0) {
@@ -1883,7 +1884,8 @@ CSL_LCD_RES_T CSL_DSI_Suspend(CSL_LCD_HANDLE vcH)
 	pv_change_state(PV_STOP_EOF_ASYNC, pvCfg);
 	/*cslDsiEnaIntEvent(dsiH, (UInt32)CHAL_DSI_ISTAT_PHY_CLK_ULPS);*/
 	/*wait for pv to stop*/
-	osStat = OSSEMAPHORE_Obtain(dsiH->semaPV, msecs_to_jiffies(100));
+	osStat = OSSEMAPHORE_Obtain(dsiH->semaPV,
+					msecs_to_jiffies(SEMA_TIMEOUT_MS));
 	if (osStat == OSSTATUS_TIMEOUT) {
 		int tx_done = check_pv_state(PV_STOP_EOF_ASYNC, pvCfg);
 		if (tx_done < 0) {
@@ -1986,8 +1988,9 @@ CSL_LCD_RES_T CSL_DSI_UpdateCmVc(CSL_LCD_HANDLE vcH,
 	txNo1_cfifo_len = 0;
 
 	if (txNo2_repeat > DSI_PKT_RPT_MAX) {
-		LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI][%d] %s: "
-			"ERR Packet Repeat Count!\n", dsiH->bus, __func__);
+		LCD_DBG(LCD_DBG_ERR_ID,
+		"[CSL DSI][%d] %s: ERR Packet Repeat Count!\n",
+						dsiH->bus, __func__);
 		return CSL_LCD_ERR;
 	}
 
@@ -1995,8 +1998,9 @@ CSL_LCD_RES_T CSL_DSI_UpdateCmVc(CSL_LCD_HANDLE vcH,
 		OSSEMAPHORE_Obtain(dsiH->semaDsi, TICKS_FOREVER);
 
 	if (dsiH->ulps) {
-		LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI][%d] %s: "
-			"ERR, Link Is In ULPS\n", dsiH->bus, __func__);
+		LCD_DBG(LCD_DBG_ERR_ID,
+		"[CSL DSI][%d] %s: ERR, Link Is In ULPS\n",
+						dsiH->bus, __func__);
 		if (!clientH->hasLock)
 			OSSEMAPHORE_Release(dsiH->semaDsi);
 		return CSL_LCD_BAD_STATE;
@@ -2108,9 +2112,9 @@ CSL_LCD_RES_T CSL_DSI_UpdateCmVc(CSL_LCD_HANDLE vcH,
 
 	if (1 == dsiH->dispEngine) {
 		/*--- Start TX PKT Engine(s) */
-		if (txNo2_repeat != 0) {
+		if (txNo2_repeat != 0)
 			chal_dsi_tx_start(dsiH->chalH, TX_PKT_ENG_2, TRUE);
-		}
+
 		chal_dsi_tx_start(dsiH->chalH, TX_PKT_ENG_1, TRUE);
 	}
 	/* send rest of the frame */
@@ -2118,8 +2122,9 @@ CSL_LCD_RES_T CSL_DSI_UpdateCmVc(CSL_LCD_HANDLE vcH,
 	/*--- Start DMA */
 	res = cslDsiPixTxStart(&updMsgCm);
 	if (res != CSL_LCD_OK) {
-		LCD_DBG(LCD_DBG_ID, "[CSL DSI][%d] %s: "
-			"ERR Failed To Start DMA!\n", dsiH->bus, __func__);
+		LCD_DBG(LCD_DBG_ID,
+			"[CSL DSI][%d] %s: ERR Failed To Start DMA!\n",
+							dsiH->bus, __func__);
 
 		if (!clientH->hasLock)
 			OSSEMAPHORE_Release(dsiH->semaDsi);
@@ -2127,9 +2132,9 @@ CSL_LCD_RES_T CSL_DSI_UpdateCmVc(CSL_LCD_HANDLE vcH,
 	}
 	if (0 == dsiH->dispEngine) {
 		/*--- Start TX PKT Engine(s) */
-		if (txNo2_repeat != 0) {
+		if (txNo2_repeat != 0)
 			chal_dsi_tx_start(dsiH->chalH, TX_PKT_ENG_2, TRUE);
-		}
+
 		chal_dsi_tx_start(dsiH->chalH, TX_PKT_ENG_1, TRUE);
 	}
 	if (req->cslLcdCb == NULL) {
@@ -2186,15 +2191,9 @@ CSL_LCD_RES_T CSL_DSI_UpdateCmVc(CSL_LCD_HANDLE vcH,
 		if (!clientH->hasLock)
 			OSSEMAPHORE_Release(dsiH->semaDsi);
 	} else {
-		osStat = OSQUEUE_Post(dsiH->updReqQ,
-				      (QMsg_t *)&updMsgCm, TICKS_NO_WAIT);
-
-		if (osStat != OSSTATUS_SUCCESS) {
-			if (osStat == OSSTATUS_TIMEOUT)
-				res = CSL_LCD_OS_TOUT;
-			else
-				res = CSL_LCD_OS_ERR;
-		}
+		*((DSI_UPD_REQ_MSG_T *)dsiH->upd_msg) = updMsgCm;
+		if (!queue_work(dsiH->wq, &dsiH->update_task_work))
+			res = CSL_LCD_ERR;
 	}
 	return res;
 }
@@ -2216,8 +2215,9 @@ CSL_LCD_RES_T CSL_DSI_CloseClient(CSL_LCD_HANDLE client)
 	dsiH = (DSI_HANDLE)clientH->lcdH;
 
 	if (clientH->hasLock) {
-		LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI][%d] %s: ERR Client LOCK "
-			"Active!\n", dsiH->bus, __func__);
+		LCD_DBG(LCD_DBG_ERR_ID,
+		"[CSL DSI][%d] %s: ERR Client LOCK Active!\n",
+						dsiH->bus, __func__);
 		res = CSL_LCD_ERR;
 	} else {
 		OSSEMAPHORE_Obtain(dsiH->semaDsi, TICKS_FOREVER);
@@ -2225,9 +2225,9 @@ CSL_LCD_RES_T CSL_DSI_CloseClient(CSL_LCD_HANDLE client)
 		clientH->open = FALSE;
 		dsiH->clients--;
 		res = CSL_LCD_OK;
-		LCD_DBG(LCD_DBG_INIT_ID, "[CSL DSI][%d] %s: "
-			"OK, Clients Left[%d]\n",
-			dsiH->bus, __func__, dsiH->clients);
+		LCD_DBG(LCD_DBG_INIT_ID,
+				"[CSL DSI][%d] %s: OK, Clients Left[%d]\n",
+					dsiH->bus, __func__, dsiH->clients);
 
 		OSSEMAPHORE_Release(dsiH->semaDsi);
 	}
@@ -2273,8 +2273,8 @@ CSL_LCD_RES_T CSL_DSI_OpenClient(UInt32 bus, CSL_LCD_HANDLE *clientH)
 	UInt32 i;
 
 	if (bus >= DSI_INST_COUNT) {
-		LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI] %s: ERR Invalid "
-			"Bus Id[%d]!\n", __func__, bus);
+		LCD_DBG(LCD_DBG_ERR_ID,
+		"[CSL DSI] %s: ERR Invalid Bus Id[%d]!\n", __func__, bus);
 		*clientH = (CSL_LCD_HANDLE)NULL;
 		return CSL_LCD_BUS_ID;
 	}
@@ -2296,9 +2296,9 @@ CSL_LCD_RES_T CSL_DSI_OpenClient(UInt32 bus, CSL_LCD_HANDLE *clientH)
 			}
 		}
 		if (i >= DSI_MAX_CLIENT) {
-			LCD_DBG(LCD_DBG_ID, "[CSL DSI][%d] %s: "
-				"ERR, Max Client Count Reached[%d]\n",
-				dsiH->bus, __func__, DSI_MAX_CLIENT);
+			LCD_DBG(LCD_DBG_ID,
+			"[CSL DSI][%d] %s: ERR, Max Client Count Reached[%d]\n",
+					dsiH->bus, __func__, DSI_MAX_CLIENT);
 			res = CSL_LCD_INST_COUNT;
 		} else {
 			dsiH->clients++;
@@ -2309,9 +2309,9 @@ CSL_LCD_RES_T CSL_DSI_OpenClient(UInt32 bus, CSL_LCD_HANDLE *clientH)
 	if (res != CSL_LCD_OK)
 		*clientH = (CSL_LCD_HANDLE)NULL;
 	else
-		LCD_DBG(LCD_DBG_INIT_ID, "[CSL DSI][%d] %s: "
-			"OK, Client Count[%d]\n",
-			dsiH->bus, __func__, dsiH->clients);
+		LCD_DBG(LCD_DBG_INIT_ID,
+				"[CSL DSI][%d] %s: OK, Client Count[%d]\n",
+					dsiH->bus, __func__, dsiH->clients);
 
 	OSSEMAPHORE_Release(dsiH->semaDsi);
 
@@ -2373,16 +2373,16 @@ CSL_LCD_RES_T CSL_DSI_Close(UInt32 bus)
 	OSSEMAPHORE_Obtain(dsiH->semaDsi, TICKS_FOREVER);
 
 	if (dsiH->init != DSI_INITIALIZED) {
-		LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI][%d] %s: "
-			"DSI Interface Not Init\n", bus, __func__);
+		LCD_DBG(LCD_DBG_ERR_ID,
+		"[CSL DSI][%d] %s: DSI Interface Not Init\n", bus, __func__);
 		res = CSL_LCD_ERR;
 		goto CSL_DSI_CloseRet;
 	}
 
 	if (dsiH->clients != 0) {
-		LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI][%d] %s: "
-			"DSI Interface Client Count[%d] != 0\n",
-			bus, __func__, dsiH->clients);
+		LCD_DBG(LCD_DBG_ERR_ID,
+		"[CSL DSI][%d] %s: DSI Interface Client Count[%d] != 0\n",
+						bus, __func__, dsiH->clients);
 		res = CSL_LCD_ERR;
 		goto CSL_DSI_CloseRet;
 	}
@@ -2477,17 +2477,18 @@ CSL_LCD_RES_T CSL_DSI_Init(const pCSL_DSI_CFG dsiCfg)
 
 
 	if (dsiCfg->bus >= DSI_INST_COUNT) {
-		LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI][%d] %s: "
-			"ERR Invalid Bus Id!\n", dsiCfg->bus, __func__);
+		LCD_DBG(LCD_DBG_ERR_ID,
+			"[CSL DSI][%d] %s: ERR Invalid Bus Id!\n",
+						dsiCfg->bus, __func__);
 		return CSL_LCD_BUS_ID;
 	}
 
 	dsiH = (DSI_HANDLE)&dsiBus[dsiCfg->bus];
 
 	if (dsiH->init == DSI_INITIALIZED) {
-		LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI][%d] %s: "
-			"DSI Interface Already Init\n",
-			dsiCfg->bus, __func__);
+		LCD_DBG(LCD_DBG_ERR_ID,
+		"[CSL DSI][%d] %s: DSI Interface Already Init\n",
+						dsiCfg->bus, __func__);
 		return CSL_LCD_IS_OPEN;
 	}
 
@@ -2502,13 +2503,13 @@ CSL_LCD_RES_T CSL_DSI_Init(const pCSL_DSI_CFG dsiCfg)
 			dsiH->interruptId = CSL_DSI0_IRQ;
 			dsiH->lisr = cslDsi0Stat_LISR;
 			dsiH->hisr = NULL;
-			dsiH->task = cslDsi0UpdateTask;
 			dsiH->dma_cb = cslDsi0EofDma;
 		}
 
 		if (!cslDsiOsInit(dsiH)) {
-			LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI][%d] %s: ERROR OS "
-				"Init!\n", dsiCfg->bus, __func__);
+			LCD_DBG(LCD_DBG_ERR_ID,
+				"[CSL DSI][%d] %s: ERROR OS Init!\n",
+						dsiCfg->bus, __func__);
 			return CSL_LCD_OS_ERR;
 		} else {
 			dsiH->initOnce = DSI_INITIALIZED;
@@ -2521,6 +2522,7 @@ CSL_LCD_RES_T CSL_DSI_Init(const pCSL_DSI_CFG dsiCfg)
 	axipv_init_data.vsync_cb = dsiCfg->vsync_cb,
 
 	dsiH->dlCount = dsiCfg->dlCount;
+	dsiH->stEnd = dsiCfg->enaStEnd;
 	dsiH->dispEngine = dsiCfg->dispEngine;
 	dsiH->pixTxporter = dsiCfg->pixTxporter;
 	dsiH->vmode = dsiCfg->vmode;
@@ -2611,8 +2613,9 @@ CSL_LCD_RES_T CSL_DSI_Init(const pCSL_DSI_CFG dsiCfg)
 	dsiH->chalH = chal_dsi_init(dsiH->dsiCoreRegAddr, &chalInit);
 
 	if (dsiH->chalH == NULL) {
-		LCD_DBG(LCD_DBG_ERR_ID, "[CSL DSI][%d] %s: ERROR in "
-				"cHal Init!\n", dsiCfg->bus, __func__);
+		LCD_DBG(LCD_DBG_ERR_ID,
+			"[CSL DSI][%d] %s: ERROR in cHal Init!\n",
+						dsiCfg->bus, __func__);
 		res = CSL_LCD_ERR;
 	} else {
 		/* as per rdb clksel must be set before ANY timing
@@ -2656,6 +2659,7 @@ CSL_LCD_RES_T CSL_DSI_Init(const pCSL_DSI_CFG dsiCfg)
 	} else {
 		dsiH->init = 0;
 	}
+
 
 	return res;
 }

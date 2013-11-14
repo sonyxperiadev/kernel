@@ -12,7 +12,7 @@ config FB_BRCM_KONA
 
 config FB_BRCM_CP_CRASH_DUMP_IMAGE_SUPPORT
 	bool "CP Crash Dump Image Support"
-	depends on FB_BRCM_KONA
+	depends on FB_BRCM_KONA && BCM_MODEM
 	default Y
 	help
 	  This is used for LCD to show that cp goes into crahs dump state.

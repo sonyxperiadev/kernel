@@ -1306,6 +1306,7 @@ DEVICE_ATTR(sleep_status, S_IRUGO | S_IWUSR, sleepstatus_show,
 
 #endif /* CONFIG_USB_DWC_OTG_LPM_ENABLE */
 
+#ifdef CONFIG_USB_OTG
 /**
  * Show the value of Host mode Connection Timeout.
  */
@@ -1358,6 +1359,7 @@ static ssize_t h_conn_wait_tmout_store(struct device *_dev,
 
 DEVICE_ATTR(h_conn_wait_tmout, S_IRUGO | S_IWUSR, h_conn_wait_tmout_show,
 	    h_conn_wait_tmout_store);
+#endif
 
 /**@}*/
 
@@ -1413,7 +1415,9 @@ void dwc_otg_attr_create(
 	error = device_create_file(&dev->dev, &dev_attr_lpm_response);
 	error = device_create_file(&dev->dev, &dev_attr_sleep_status);
 #endif
+#ifdef CONFIG_USB_OTG
 	error = device_create_file(&dev->dev, &dev_attr_h_conn_wait_tmout);
+#endif
 }
 
 /**
@@ -1466,5 +1470,7 @@ void dwc_otg_attr_remove(
 	device_remove_file(&dev->dev, &dev_attr_lpm_response);
 	device_remove_file(&dev->dev, &dev_attr_sleep_status);
 #endif
+#ifdef CONFIG_USB_OTG
 	device_remove_file(&dev->dev, &dev_attr_h_conn_wait_tmout);
+#endif
 }

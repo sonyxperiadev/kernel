@@ -659,20 +659,20 @@ static int __devinit mxc622x_acc_probe(struct i2c_client *client,
 			dev_err(&client->dev,
 				"dts config poll_interval missed");
 			acc->pdata->poll_interval = 200;
-		}
-		acc->pdata->poll_interval = val;
+		} else
+			acc->pdata->poll_interval = val;
 		err = of_property_read_u32(np, "min_interval", &val);
 		if (err) {
 			dev_err(&client->dev, "dts config min_interval missed");
 			acc->pdata->min_interval = 10;
-		}
-		acc->pdata->min_interval = val;
+		} else
+			acc->pdata->min_interval = val;
 		err = of_property_read_u32(np, "orientation", &val);
 		if (err) {
 			dev_err(&client->dev, "dts config orientation missed");
 			acc->pdata->orientation = MXC622X_ORIE_10_01;
-		}
-		acc->pdata->orientation = val;
+		} else
+			acc->pdata->orientation = val;
 	}
 	i2c_set_clientdata(client, acc);
 

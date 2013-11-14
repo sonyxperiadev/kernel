@@ -82,6 +82,7 @@ struct bsc_adap_cfg {
 #define TIMEOUT_DISABLE		(0x1 << 0)
 #define TX_FIFO_ENABLE		(0x1 << 1)
 #define RX_FIFO_ENABLE		(0x1 << 2)
+#define POLLING_ENABLE		(0x1 << 3)
 /*
  * I2C slave platform data, for I2C slaves to specify the bus speed.
  *
@@ -129,5 +130,10 @@ struct i2c_slave_platform_data {
 				CLIENT_FUNC_MAGIC_NUM && \
 				(x->client_func_map & \
 				RX_FIFO_ENABLE))
+
+#define enable_polling_mode(x)	(x->client_func_magic == \
+				CLIENT_FUNC_MAGIC_NUM && \
+				(x->client_func_map & \
+				POLLING_ENABLE))
 
 #endif // _I2C_KONA_H_
