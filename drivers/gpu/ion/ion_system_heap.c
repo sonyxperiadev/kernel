@@ -113,10 +113,12 @@ static void free_buffer_page(struct ion_system_heap *heap,
 
 	if (!cached) {
 		struct ion_page_pool *pool = heap->pools[order_to_index(order)];
-                arm_dma_ops.sync_single_for_device(NULL,
-                       pfn_to_dma(NULL, page_to_pfn(page)),
-                       PAGE_SIZE << order, DMA_BIDIRECTIONAL);
-
+#ifdef CONFIG_ION_BCM
+		if (buffer->flags & ION_FLAG_WRITEBACK)
+			arm_dma_ops.sync_single_for_device(NULL,
+					pfn_to_dma(NULL, page_to_pfn(page)),
+					PAGE_SIZE << order, DMA_FROM_DEVICE);
+#endif
 		ion_page_pool_free(pool, page);
 	} else if (split_pages) {
 		for (i = 0; i < (1 << order); i++)
@@ -269,11 +271,6 @@ void ion_system_heap_free(struct ion_buffer *buffer)
 	if (!cached)
 		ion_heap_buffer_zero(buffer);
 
-	/* uncached pages come from the page pools, zero them before returning
-	   for security purposes (other allocations are zerod at alloc time */
-	if (!cached)
-		ion_heap_buffer_zero(buffer);
-
 #ifdef CONFIG_ION_BCM
 #ifdef CONFIG_BCM_IOVMM
 	arm_iommu_unmap(heap->device, buffer->dma_addr, buffer->size);
@@ -318,7 +315,6 @@ int ion_system_heap_clean_cache(struct ion_heap *heap,
 		struct ion_buffer *buffer, unsigned long offset,
 		unsigned long len)
 {
-#if 0
 	struct scatterlist *sg;
 	struct sg_table *table = buffer->sg_table;
 	int i;
@@ -334,16 +330,14 @@ int ion_system_heap_clean_cache(struct ion_heap *heap,
 			unsigned long l_off = max(offset, curr_off);
 			unsigned long l_len = min(end_off, curr_end) - l_off;
 			l_off -= curr_off;
-			__dma_page_cpu_to_dev(page, l_off, l_len,
-					DMA_BIDIRECTIONAL);
 			arm_dma_ops.sync_single_for_device(NULL,
-				pfn_to_dma(NULL, page_to_pfn(page)),
+				pfn_to_dma(NULL, page_to_pfn(page)) + l_off,
 				l_len, DMA_BIDIRECTIONAL);
 		}
 		curr_off = curr_end;
 	}
 	pr_debug("clean: off(%ld) len(%ld)\n", offset, len);
-#endif
+
 	return 0;
 }
 
@@ -351,7 +345,6 @@ int ion_system_heap_invalidate_cache(struct ion_heap *heap,
 		struct ion_buffer *buffer, unsigned long offset,
 		unsigned long len)
 {
-#if 0
 	struct scatterlist *sg;
 	struct sg_table *table = buffer->sg_table;
 	int i;
@@ -367,13 +360,14 @@ int ion_system_heap_invalidate_cache(struct ion_heap *heap,
 			unsigned long l_off = max(offset, curr_off);
 			unsigned long l_len = min(end_off, curr_end) - l_off;
 			l_off -= curr_off;
-			__dma_page_dev_to_cpu(page, l_off, l_len,
-					DMA_BIDIRECTIONAL);
+			arm_dma_ops.sync_single_for_cpu(NULL,
+				pfn_to_dma(NULL, page_to_pfn(page)) + l_off,
+				l_len, DMA_BIDIRECTIONAL);
 		}
 		curr_off = curr_end;
 	}
 	pr_debug("inv: off(%ld) len(%ld)\n", offset, len);
-#endif
+
 	return 0;
 }
 #endif
@@ -391,52 +385,6 @@ static struct ion_heap_ops system_heap_ops = {
 	.invalidate_cache = ion_system_heap_invalidate_cache,
 #endif
 };
-
-static int ion_system_heap_shrink(struct shrinker *shrinker,
-				  struct shrink_control *sc) {
-
-	struct ion_heap *heap = container_of(shrinker, struct ion_heap,
-					     shrinker);
-	struct ion_system_heap *sys_heap = container_of(heap,
-							struct ion_system_heap,
-							heap);
-	int nr_total = 0;
-	int nr_freed = 0;
-	int i;
-
-	if (sc->nr_to_scan == 0)
-		goto end;
-
-	/* shrink the free list first, no point in zeroing the memory if
-	   we're just going to reclaim it */
-	if (sys_heap->heap.flags & ION_HEAP_FLAG_DEFER_FREE)
-		nr_freed += ion_heap_freelist_drain(heap,
-					sc->nr_to_scan * PAGE_SIZE) / PAGE_SIZE;
-
-	if (nr_freed >= sc->nr_to_scan)
-		goto end;
-
-	for (i = 0; i < num_orders; i++) {
-		struct ion_page_pool *pool = sys_heap->pools[i];
-
-		nr_freed += ion_page_pool_shrink(pool, sc->gfp_mask,
-						 sc->nr_to_scan);
-		if (nr_freed >= sc->nr_to_scan)
-			break;
-	}
-
-end:
-	/* total number of items is whatever the page pools are holding
-	   plus whatever's in the freelist */
-	for (i = 0; i < num_orders; i++) {
-		struct ion_page_pool *pool = sys_heap->pools[i];
-		nr_total += ion_page_pool_shrink(pool, sc->gfp_mask, 0);
-	}
-	if (sys_heap->heap.flags & ION_HEAP_FLAG_DEFER_FREE)
-		nr_total += ion_heap_freelist_size(heap) / PAGE_SIZE;
-	return nr_total;
-
-}
 
 static int ion_system_heap_debug_show(struct ion_heap *heap, struct seq_file *s,
 				      void *unused)
@@ -517,11 +465,6 @@ struct ion_heap *ion_system_heap_create(struct ion_platform_heap *unused)
 			goto err_create_pool;
 		heap->pools[i] = pool;
 	}
-
-	heap->heap.shrinker.shrink = ion_system_heap_shrink;
-	heap->heap.shrinker.seeks = DEFAULT_SEEKS;
-	heap->heap.shrinker.batch = 0;
-	register_shrinker(&heap->heap.shrinker);
 	heap->heap.debug_show = ion_system_heap_debug_show;
 #ifdef CONFIG_ION_BCM
 	heap->reg_lmk.cbk = ion_system_heap_lmk_cbk;

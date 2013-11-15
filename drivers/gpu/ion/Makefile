@@ -4,4 +4,3 @@ obj-$(CONFIG_CMA) += ion_cma_heap.o
 obj-$(CONFIG_MM_SECURE_DRIVER) += ion_secure_heap.o
 obj-$(CONFIG_ION_TEGRA) += tegra/
 obj-$(CONFIG_ION_BCM) += bcm/
-obj-$(CONFIG_ION_TEGRA) += tegra/
