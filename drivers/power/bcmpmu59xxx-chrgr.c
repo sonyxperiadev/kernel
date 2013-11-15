@@ -405,14 +405,17 @@ static int bcmpmu_chrgr_usb_set_property(struct power_supply *psy,
 	return ret;
 }
 
-int bcmpmu_set_chrgr_def_current(struct bcmpmu59xxx *bcmpmu,
-		enum bcmpmu_chrgr_type_t chrgr_type)
+int bcmpmu_set_chrgr_def_current(struct bcmpmu59xxx *bcmpmu)
 {
 	u32 curr;
+	int chrgr_type = PMU_CHRGR_TYPE_NONE;
 
-	if (!gbl_di)
+	if (!atomic_read(&drv_init_done))
 		return -EAGAIN;
 
+	bcmpmu_usb_get(bcmpmu,
+			BCMPMU_USB_CTRL_GET_CHRGR_TYPE, &chrgr_type);
+	pr_chrgr(FLOW, "%s: chrgr_type = %d\n", __func__, chrgr_type);
 	curr = gbl_di->chrgr_curr_tbl[chrgr_type];
 	bcmpmu_set_icc_fc(bcmpmu, curr);
 	return 0;

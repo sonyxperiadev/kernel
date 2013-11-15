@@ -62,6 +62,9 @@
 #define PMU_CHRGR_CURR_DEFAULT	500
 #define MAX_EVENTS		100
 
+#define CHRGR_RETRIES		30
+#define ACCY_DELAY_20		20
+
 #ifdef CONFIG_DEBUG_FS
 #define DEBUG_FS_PERMISSIONS	(S_IRUSR | S_IWUSR)
 #endif
@@ -109,6 +112,7 @@ struct bcmpmu_accy_data {
 	int adp_cal_done;
 	atomic_t usb_allow_bc_detect;
 	bool icc_host_ctrl;
+	bool false_usb_rm;
 	int usb_host_en;
 };
 
@@ -173,18 +177,18 @@ static u32 bcmpmu_pmu_curr_table[] = {
 };
 
 static u32 bcmpmu_pmu_curr_acld_table[] = {
-	88,
-	244,
-	368,
-	449,
-	483,
-	590,
-	624,
-	691,
-	836,
-	1051,
-	1255,
-	1565,
+	85,
+	229,
+	365,
+	423,
+	455,
+	557,
+	589,
+	652,
+	789,
+	992,
+	1193,
+	1491,
 };
 
 static struct trim_to_percentage trim_to_per[] = {
@@ -1494,7 +1498,21 @@ static void bcmpmu_accy_pm_qos_request(struct bcmpmu_accy_data *di, bool active)
 #endif
 	}
 }
+static void bcmpmu_accy_set_chrgr_def_curr(struct bcmpmu_accy_data *di)
+{
+	int ret;
+	int retries = CHRGR_RETRIES;
 
+	while (retries--) {
+		ret = bcmpmu_set_chrgr_def_current(di->bcmpmu);
+		if (!ret)
+			break;
+		msleep(ACCY_DELAY_20);
+	}
+	if (retries <= 0)
+		BUG_ON(1);
+
+}
 static void bcmpmu_accy_isr(enum bcmpmu59xxx_irq irq, void *data)
 {
 	struct bcmpmu_accy_data *di = data;
@@ -1520,7 +1538,16 @@ static void bcmpmu_accy_isr(enum bcmpmu59xxx_irq irq, void *data)
 			chrgr_type, chrgr_type_prev);
 	switch (irq) {
 	case PMU_IRQ_USBINS:
-		event = accy_irq_evt_map[idx].event;
+		if (di->false_usb_rm) {
+			bcmpmu_accy_set_chrgr_def_curr(di);
+			_usb_host_en(di, 1);
+			pr_accy(FLOW, "IRQ_USBINS:Not sent.false_usb_rm:%d\n",
+					di->false_usb_rm);
+			di->false_usb_rm = false;
+		} else {
+			event = accy_irq_evt_map[idx].event;
+			pr_accy(FLOW, "PMU_IRQ_USBINS: sent\n");
+		}
 		break;
 	case PMU_IRQ_CHGDET_TO:
 		/**
@@ -1577,6 +1604,17 @@ static void bcmpmu_accy_isr(enum bcmpmu59xxx_irq irq, void *data)
 		pr_accy(VERBOSE, " ==== pmu_id %d\n", di->pmu_usb_id);
 		break;
 	case PMU_IRQ_USBRM:
+		if ((di->bcmpmu->flags & BCMPMU_ACLD_EN) &&
+				bcmpmu_acld_false_usbrm(di->bcmpmu)) {
+			di->false_usb_rm = true;
+			pr_accy(FLOW, "IRQ_USBRM: Not sent.false_usb_rm:%d\n",
+					di->false_usb_rm);
+		} else {
+
+			event = accy_irq_evt_map[idx].event;
+			pr_accy(FLOW, "PMU_IRQ_USBRM: sent\n");
+		}
+		break;
 	case PMU_IRQ_CHGDET_LATCH:
 	case PMU_IRQ_VA_SESS_VALID_R:
 	case PMU_IRQ_VBUS_VALID_R:
@@ -1777,7 +1815,6 @@ static int bcmpmu_accy_probe(struct platform_device *pdev)
 		pr_accy(INIT, "%s: failed to register irqs\n", __func__);
 		goto free_mem;
 	}
-
 	pr_accy(INIT, "%s: success\n", __func__);
 	return 0;
 

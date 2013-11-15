@@ -1070,6 +1070,7 @@ struct bcmpmu_acld_pdata acld_pdata = {
 	.acld_vbus_margin = 200,	/*mV*/
 	.acld_vbus_thrs = 5950,
 	.acld_vbat_thrs = 3500,
+	.usbrm_vbus_thrs = 4000,
 	.i_sat = 3000,		/* saturation current in mA
 					for chrgr while using ACLD */
 	.i_def_dcp = 700,

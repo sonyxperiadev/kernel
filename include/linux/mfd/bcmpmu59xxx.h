@@ -401,6 +401,7 @@ struct bcmpmu_acld_pdata {
 	int acld_vbus_margin;
 	int acld_vbus_thrs;
 	int acld_vbat_thrs;
+	int usbrm_vbus_thrs;
 	int i_sat;
 	int i_def_dcp; /* Default DCP current */
 	int i_max_cc;
@@ -1028,13 +1029,12 @@ int bcmpmu_cc_trim_up(struct bcmpmu59xxx *bcmpmu);
 int bcmpmu_cc_trim_down(struct bcmpmu59xxx *bcmpmu);
 bool bcmpmu_get_mbc_faults(struct bcmpmu59xxx *bcmpmu);
 int  bcmpmu_get_trim_curr(struct bcmpmu59xxx *bcmpmu);
-int bcmpmu_set_chrgr_def_current(struct bcmpmu59xxx *bcmpmu,
-		enum bcmpmu_chrgr_type_t chrgr_type);
+int bcmpmu_set_chrgr_def_current(struct bcmpmu59xxx *bcmpmu);
 
 bool bcmpmu_is_acld_enabled(struct bcmpmu59xxx *bcmpmu);
-
 bool bcmpmu_is_acld_supported(struct bcmpmu59xxx *bcmpmu,
 		enum bcmpmu_chrgr_type_t chrgr_type);
+bool bcmpmu_acld_false_usbrm(struct bcmpmu59xxx *bcmpmu);
 /* ADC */
 int bcmpmu_adc_read(struct bcmpmu59xxx *bcmpmu, enum bcmpmu_adc_channel channel,
 		enum bcmpmu_adc_req req, struct bcmpmu_adc_result *result);
