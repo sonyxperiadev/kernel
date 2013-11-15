@@ -1159,17 +1159,17 @@ static size_t iommu_m4u_unmap(struct iommu_domain *domain, unsigned long va,
 }
 
 static phys_addr_t iommu_m4u_iova_to_phys(struct iommu_domain *domain,
-					  unsigned long va)
+					  dma_addr_t iova)
 {
 	struct m4u_drvdata *mdata = domain->priv;
 	phys_addr_t ret = 0;
 
-	pr_info("iova_to_phys: domain(%p) va(%#08lx) mdata(%p)\n",
-			domain, va, mdata);
+	pr_info("iova_to_phys: domain(%p) iova(%#08x) mdata(%p)\n",
+			domain, iova, mdata);
 	/* Cannot do because of the 2D page table format.
 	 * API not used by any of the drivers */
 
-	ret = va;
+	ret = iova;
 	return ret;
 }
 
