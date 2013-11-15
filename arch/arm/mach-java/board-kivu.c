@@ -393,9 +393,11 @@ struct platform_device *hawaii_common_plat_devices[] __initdata = {
 #endif
 
 #if defined(CONFIG_USB_DWC_OTG)
+#ifndef CONFIG_OF
 	&hawaii_usb_phy_platform_device,
 	&hawaii_hsotgctrl_platform_device,
 	&hawaii_otg_platform_device,
+#endif
 #endif
 
 #ifdef CONFIG_KONA_AVS

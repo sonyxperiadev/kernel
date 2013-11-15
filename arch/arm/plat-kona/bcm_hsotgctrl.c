@@ -29,10 +29,13 @@
 #include <mach/rdb/brcm_rdb_hsotg_ctrl.h>
 #include <mach/rdb/brcm_rdb_khub_clk_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_chipreg.h>
+#include <mach/memory.h>
 #include <plat/pi_mgr.h>
 #include <plat/clock.h>
 #include <linux/usb/bcm_hsotgctrl.h>
 #include <linux/usb/bcm_hsotgctrl_phy_mdio.h>
+#include <linux/of.h>
+#include <linux/of_platform.h>
 
 #define	PHY_MODE_OTG		2
 #define BCCFG_SW_OVERWRITE_KEY 0x55560000
@@ -607,8 +610,67 @@ static int bcm_hsotgctrl_probe(struct platform_device *pdev)
 	int error = 0;
 	unsigned int val;
 	struct bcm_hsotgctrl_drv_data *hsotgctrl_drvdata;
-	struct bcm_hsotgctrl_platform_data *plat_data =
-	  (struct bcm_hsotgctrl_platform_data *)pdev->dev.platform_data;
+	struct bcm_hsotgctrl_platform_data *plat_data;
+
+	if (pdev->dev.platform_data)
+		plat_data = (struct bcm_hsotgctrl_platform_data *)
+			pdev->dev.platform_data;
+	else if (pdev->dev.of_node) {
+		int val;
+		struct resource *resource;
+
+		plat_data = kzalloc(sizeof(struct bcm_hsotgctrl_platform_data),
+				GFP_KERNEL);
+		if (!plat_data) {
+			dev_err(&pdev->dev,
+				"%s: memory allocation failed.", __func__);
+			error = -ENOMEM;
+			goto err_ret;
+		}
+
+		resource = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+		if (resource->start)
+			plat_data->hsotgctrl_virtual_mem_base =
+				HW_IO_PHYS_TO_VIRT(resource->start);
+		else {
+			pr_info("Invalid hsotgctrl_virtual_mem_basei from DT\n");
+			goto err_read;
+		}
+
+
+		if (of_property_read_u32(pdev->dev.of_node,
+				"chipreg-virtual-mem-base", &val)) {
+			error = -EINVAL;
+			dev_err(&pdev->dev, "chipreg-virtual-mem-base read failed\n");
+			goto err_read;
+		}
+		plat_data->chipreg_virtual_mem_base = HW_IO_PHYS_TO_VIRT(val);
+
+		resource = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
+		if (resource->start)
+			plat_data->irq = resource->start;
+		else {
+			pr_info("Invalid irq from DT\n");
+			goto err_read;
+		}
+
+		if (of_property_read_string(pdev->dev.of_node,
+				"usb-ahb-clk-name",
+			&plat_data->usb_ahb_clk_name) != 0) {
+			error = -EINVAL;
+			dev_err(&pdev->dev, "usb-ahb-clk-name read failed\n");
+			goto err_read;
+		}
+
+		if (of_property_read_string(pdev->dev.of_node,
+				"mdio-mstr-clk-name",
+			&plat_data->mdio_mstr_clk_name) != 0) {
+			error = -EINVAL;
+			dev_err(&pdev->dev, "mdio-mstr-clk-name read failed\n");
+			goto err_read;
+		}
+	}
+
 
 	if (plat_data == NULL) {
 		dev_err(&pdev->dev, "platform_data failed\n");
@@ -783,6 +845,11 @@ error_get_master_clk:
 error_get_otg_clk:
 error_get_vaddr:
 	kfree(hsotgctrl_drvdata);
+err_read:
+	if (pdev->dev.of_node)
+		kfree(plat_data);
+err_ret:
+	pr_err("%s probe failed\n", __func__);
 	return error;
 }
 
@@ -825,11 +892,17 @@ static int bcm_hsotgctrl_pm_resume(struct platform_device *pdev)
 {
 	return 0;
 }
+static const struct of_device_id usb_hsotgctrl_of_match[] = {
+	{.compatible = "bcm,usb-hsotgctrl",},
+	{},
+}
+MODULE_DEVICE_TABLE(of, usb_hsotgctrl_of_match);
 
 static struct platform_driver bcm_hsotgctrl_driver = {
 	.driver = {
 		   .name = "bcm_hsotgctrl",
 		   .owner = THIS_MODULE,
+		.of_match_table = usb_hsotgctrl_of_match,
 	},
 	.probe = bcm_hsotgctrl_probe,
 	.remove = bcm_hsotgctrl_remove,
