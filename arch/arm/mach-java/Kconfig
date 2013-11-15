@@ -298,6 +298,15 @@ config MM_FREEZE_VAR500M_ERRATUM
 	 enabled erratum(HWHAWAII-73)
 	 Refer JIRA DB for more info
 
+config MOVE_MM_CLK_TO_PLL0
+	bool "Change the var312Mhz source clock to PLL0"
+	default n
+	help
+	 By default var312 is derived from PLL1.
+	 But, it can be derived from PLL0 also.
+	 Say Y to move the source clock to PLL0.
+	 We do this to switch off PLL1 during non-modem use cases.
+
 config A7_PLL_PWRDWN_ERRATUM
 	bool "Disable A7 PLL pwrdwn while swicthing from A7 PLL to 312Mhz PLL"
 	default y
