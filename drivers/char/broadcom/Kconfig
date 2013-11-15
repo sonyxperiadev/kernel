@@ -406,3 +406,15 @@ config BCM_MMS_BLOCK
     default n
     ---help---
     Say Y to enable MMS block function support
+
+
+config BCM_TRACE_LOG
+	bool "Trace log driver"
+	default n
+	---help---
+	Say Y to enable trace logging. When enabled,
+	traces (irq, sched_switch etc) are collected
+	on events and are saved to uncached location
+	in RAM. On the occurence of a system crash or
+	freeze, the RAM buffer can be decoded to get
+	useful information.
