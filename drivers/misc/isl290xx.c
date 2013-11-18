@@ -214,7 +214,7 @@ static void prv_isl290xx_work_func(struct work_struct *w);
 static void prv_isl290xx_report_value(int mask);
 static int prv_isl290xx_calc_distance(int value);
 static int prv_isl290xx_ctrl_lp(int mask);
-static void prv_isl290xx_reset(void);
+static int prv_isl290xx_reset(void);
 static int light_on;
 static int prox_on;
 
@@ -327,7 +327,7 @@ struct isl290xx_reg {
 	{"ALS_IR_DT2",		ISL290XX_ALSIR_DATA_H},
 #ifdef ISL29147_ENABLE
 	{"PROX_AMBIR",	ISL290XX_PROX_AMBIR},
-	{"CONFIG3",	ISL290XX_TEST2},
+	{"CONFIG3",	ISL290XX_TEST1},
 #else
 	{"TEST1",	ISL290XX_TEST1},
 	{"TEST2",		ISL290XX_TEST2},
@@ -930,26 +930,9 @@ static int isl290xx_probe(struct i2c_client *clientp,
 		return ret;
 	}
 #ifdef ISL29147_ENABLE
-	ret = i2c_smbus_write_byte_data(isl290xx_data_tp->client,
-		ISL290XX_CFG_REG,
-		0);
+	ret = prv_isl290xx_reset();
 	if (ret < 0) {
-		pr_isl(ERROR,
-		       "control reg failed in isl290xx_probe()\n");
-		return ret;
-	}
-	ret = i2c_smbus_write_byte_data(isl290xx_data_tp->client,
-		ISL290XX_CFG1_REG, 0);
-	if (ret < 0) {
-		pr_isl(ERROR, "control reg failed in isl290xx_probe()\n");
-		return ret;
-	}
-
-	ret = i2c_smbus_write_byte_data(isl290xx_data_tp->client,
-			ISL290XX_INT_REG, 0x10);
-	if (ret  < 0) {
-		pr_isl(ERROR,
-		       "control reg failed in isl290xx_probe()\n");
+		pr_isl(ERROR, "reset chip fail, ret: %d\n", ret);
 		return ret;
 	}
 
@@ -1285,20 +1268,18 @@ static loff_t isl290xx_llseek(struct file *file, loff_t offset, int orig)
 	return new_pos;
 }
 #ifdef ISL29147_ENABLE
-static void prv_isl290xx_reset(void)
+static int prv_isl290xx_reset(void)
 {
 	int ret = 0;
 	ret = i2c_smbus_write_byte_data(isl290xx_data_tp->client,
 		ISL290XX_TEST1, 0x38);
 	if (ret < 0)
 		pr_isl(ERROR, "write test2 register failed in reset\n");
-	ret = i2c_smbus_write_byte_data(isl290xx_data_tp->client,
-		ISL290XX_TEST1, 0x00);
-	if (ret < 0)
-		pr_isl(ERROR, "s/w reset error\n");
+	usleep_range(1000, 2000);
+	return ret;
 }
 #else
-static void prv_isl290xx_reset(void)
+static int prv_isl290xx_reset(void)
 {
 	int ret = 0;
 	ret = i2c_smbus_write_byte_data(isl290xx_data_tp->client,
@@ -1317,7 +1298,7 @@ static void prv_isl290xx_reset(void)
 		ISL290XX_TEST2, 0x00);
 	if (ret < 0)
 		pr_isl(ERROR, "write test2 register failed in reset");
-
+	return ret;
 }
 #endif
 static int prv_isl290xx_set_bit(u8 reg, u8 bit_mask, u8 value)
@@ -1382,7 +1363,6 @@ static int prv_isl290xx_ctrl_lp(int mask)
 	mutex_lock(&isl290xx_data_tp->update_lock);
 	if (mask == 0x10) {	/*10 : light on */
 		pr_isl(INFO, "light on\n");
-		prv_isl290xx_reset();
 		input_report_abs(light->input_dev, ABS_MISC, -1);
 		input_sync(light->input_dev);
 		ret = isl290xx_set_bits(ISL290XX_INT_REG,
