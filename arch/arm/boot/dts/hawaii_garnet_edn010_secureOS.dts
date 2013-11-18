@@ -126,6 +126,7 @@
 		bmp18x@77 {
                          compatible = "bcm,bmp18x";
                          reg = <0x77>;
+			 regulator-name = "cam2";
 		};
 	};
 
