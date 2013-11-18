@@ -25,6 +25,19 @@
 		timer-name = "aon-timer";
 	};
 
+	usb-phy@0x3F130000 {
+		interrupts = <0 128 0x04>;
+		chipreg-virtual-mem-base = <0x35004000>;
+		usb-ahb-clk-name = "usb_otg_clk";
+		mdio-mstr-clk-name = "mdiomaster";
+	};
+	usb-hsotgctrl@0x3F130000 {
+		chipreg-virtual-mem-base = <0x35004000>;
+		usb-ahb-clk-name = "usb_otg_clk";
+		mdio-mstr-clk-name = "mdiomaster";
+	};
+
+
 	uart@3e000000 {
 		clock-frequency = <26000000>;
 		port-name = "console";

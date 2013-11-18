@@ -24,6 +24,27 @@
 		reg = <0x3e01a000 0x10>;
 	};
 
+	usb-phy@0x3F130000 {
+		compatible = "bcm,usb-phy";
+		reg = <0x3F130000 0x1000
+			0x35004000 0x1000>;
+	};
+
+	usb-hsotgctrl@0x3F130000 {
+		compatible = "bcm,usb-hsotgctrl";
+		reg = <0x3F130000 0x1000
+			0x35004000 0x1000
+			0x34000000 0x1000>;
+		interrupts = <0 128 0x04>;
+	};
+
+	usb-otg@0x3F120000 {
+		compatible = "bcm,dwc-otg";
+		reg = <0x3F120000 0x10000>;
+		interrupts = <0 47 0x04>;
+	};
+
+
 	uart@3e000000 {
 		compatible = "bcm,uart";
 		reg = <0x3e000000 0x1000>;
