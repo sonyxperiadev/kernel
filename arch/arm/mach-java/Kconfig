@@ -358,16 +358,6 @@ config	59055_SIM_EM_SHDWN
 	help
 	  For 59055 supported emergency sim shutdown
 
-config CPU_SYSPLL_WFI_CSTATE
-	bool "Enable CPU WFI idle state using system PLL"
-	default n
-	help
-	 Option to enable special ARM WFI cpuidle state.
-	 PROC policy is changed to use FID 0-4 which comes
-	 from system PLL when all the cores are in this
-	 state. This way, ARM internal PLL can be turned
-	 off to save power.
-
 config DORMANT_MODE
 	bool "Enable dormant state"
 	depends on BRCM_CDC

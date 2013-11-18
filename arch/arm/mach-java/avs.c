@@ -1,7 +1,7 @@
 /*******************************************************************************
  * Copyright 2012 Broadcom Corporation.  All rights reserved.
  *
- *	@file	arch/arm/mach-hawaii/avs.c
+ *	@file	arch/arm/mach-java/avs.c
  *
  * Unless you and Broadcom execute a separate written software license agreement
  * governing use of this software, this software is licensed to you under the

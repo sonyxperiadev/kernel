@@ -407,7 +407,7 @@ static struct pi_profiler *__pi_profiler_tbl[] = {
 	&PI_PROFILER(aon),
 };
 
-static struct platform_device hawaii_profiler_device = {
+static struct platform_device java_profiler_device = {
 	.name = "kona_profiler",
 	.id = -1,
 	.dev = {
@@ -425,7 +425,7 @@ static int __init java_profiler_init(void)
 		__ccu_profiler_tbl[idx]->ccu_clk = to_ccu_clk(clk);
 	}
 	pr_info("%s\n", __func__);
-	return platform_device_register(&hawaii_profiler_device);
+	return platform_device_register(&java_profiler_device);
 }
 device_initcall(java_profiler_init);
 

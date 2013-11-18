@@ -633,7 +633,7 @@ u32 get_opp_from_name(char *name)
 	return -EINVAL;
 }
 
-void __init hawaii_pi_mgr_init()
+void __init java_pi_mgr_init()
 {
 	int i;
 #if defined(CONFIG_PLL1_8PHASE_OFF_ERRATUM) || \
@@ -651,7 +651,7 @@ void __init hawaii_pi_mgr_init()
 	}
 
 }
-EXPORT_SYMBOL(hawaii_pi_mgr_init);
+EXPORT_SYMBOL(java_pi_mgr_init);
 
 #ifdef CONFIG_PLL1_8PHASE_OFF_ERRATUM
 static int __init __mm_pre_init_state(void)

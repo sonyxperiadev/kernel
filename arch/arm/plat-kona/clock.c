@@ -5633,12 +5633,13 @@ int __init clk_trace_init(unsigned int count)
 #ifdef CONFIG_KONA_CLK_TRACE
 	void *virt;
 
-	clk_trace_v = dma_zalloc_coherent(NULL, count * sizeof(u32),
+	virt = dma_zalloc_coherent(NULL, count * sizeof(u32),
 						&clk_trace_p, GFP_ATOMIC);
 	if (!virt) {
 		pr_info("%s: dma allocation failed\n", __func__);
 		return -ENOMEM;
 	}
+	clk_trace_v = (u32 *)virt;
 	pr_info("%s: virtual: %p physical: %#lx",
 		__func__, clk_trace_v, (long)clk_trace_p);
 #endif

@@ -821,6 +821,9 @@ static int dormant_enter_continue(unsigned long svc)
 #ifndef CONFIG_MOBICORE_DRIVER
 			disable_clean_inv_dcache_v7_all();
 #endif
+		} else {
+			arg2 = 2;
+			disable_clean_inv_dcache_v7_l1();
 		}
 
 	} else {

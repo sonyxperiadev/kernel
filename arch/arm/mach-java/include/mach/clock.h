@@ -11,8 +11,8 @@
 * license other than the GPL, without Broadcom's express prior written
 * consent.
 *****************************************************************************/
-#ifndef __ARM_ARCH_BCM2165X_CLOCK_MGR_H
-#define __ARM_ARCH_BCM2165X_CLOCK_MGR_H
+#ifndef __ARM_ARCH_BCM23550_CLOCK_MGR_H
+#define __ARM_ARCH_BCM23550_CLOCK_MGR_H
 
 /*Defines used by Kona*/
 #define	CLK_WR_ACCESS_PASSWORD	0x00A5A5
@@ -428,7 +428,7 @@ enum {
 	CLK_DSI_PLL_CHNL0_CLK_ID,
 	CLK_DSI_PLL_CHNL1_CLK_ID,
 	CLK_DSI_PLL_CHNL2_CLK_ID,
-	CLK_mm_switch_axi_PERI_CLK_ID,
+	CLK_MM_SWITCH_AXI_PERI_CLK_ID,
 	CLK_CSI0_AXI_BUS_CLK_ID,
 	CLK_CSI1_AXI_BUS_CLK_ID,
 	CLK_ISP_AXI_BUS_CLK_ID,
@@ -657,7 +657,8 @@ enum {
 #define DSI_PLL_CHNL0_CLK_FLAGS 		0
 #define DSI_PLL_CHNL1_CLK_FLAGS 		0
 #define DSI_PLL_CHNL2_CLK_FLAGS 		0
-#define mm_switch_axi_PERI_CLK_FLAGS		DONOT_NOTIFY_STATUS_TO_CCU|HYST_ENABLE|HYST_HIGH
+#define MM_SWITCH_AXI_PERI_CLK_FLAGS		(DONOT_NOTIFY_STATUS_TO_CCU |\
+							HYST_ENABLE|HYST_HIGH)
 #define CSI0_AXI_BUS_CLK_FLAGS 			NOTIFY_STATUS_TO_CCU|HYST_ENABLE|HYST_HIGH
 #define CSI1_AXI_BUS_CLK_FLAGS 			NOTIFY_STATUS_TO_CCU|HYST_ENABLE|HYST_HIGH
 #define ISP_AXI_BUS_CLK_FLAGS 			NOTIFY_STATUS_TO_CCU|HYST_ENABLE|HYST_HIGH
@@ -767,4 +768,4 @@ int set_clk_idle_debug_mon(int clk_idle, int db_sel, u32 dbg_bit_sel);
 int set_clk_monitor_debug(int mon_select, int db_sel, u32 dbg_bit_sel);
 #endif
 
-#endif /* __ARM_ARCH_BCM2165X_CLOCK_MGR_H  */
+#endif /* __ARM_ARCH_BCM23550_CLOCK_MGR_H  */

@@ -6401,9 +6401,9 @@ static struct clock_source mm_switch_axi_peri_clk_src_list[] = {
 static struct peri_clk CLK_NAME(mm_switch_axi) = {
 
 	.clk =	{
-				.flags = mm_switch_axi_PERI_CLK_FLAGS,
+				.flags = MM_SWITCH_AXI_PERI_CLK_FLAGS,
 				.clk_type = CLK_TYPE_PERI,
-				.id	= CLK_mm_switch_axi_PERI_CLK_ID,
+				.id	= CLK_MM_SWITCH_AXI_PERI_CLK_ID,
 				.name = MM_SWITCH_AXI_PERI_CLK_NAME_STR,
 				.dep_clks = DEFINE_ARRAY_ARGS(NULL),
 				.ops = &gen_peri_clk_ops,

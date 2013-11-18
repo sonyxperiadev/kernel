@@ -604,7 +604,7 @@ static struct i2c_cmd i2c_dummy_seq_cmd[] = {
 #define DUMMY_SEQ_VO1_ZERO_PTR_OFFSET	28
 #define DUMMY_SEQ_VO1_SET2_OFFSET	24
 
-#define HAWAII_EVENT_POLICY_OFFSET	{ \
+#define JAVA_EVENT_POLICY_OFFSET	{ \
 	[LCDTE_EVENT]		= 0x0, \
 	[SSP2SYN_EVENT]		= 0x4, \
 	[SSP2DI_EVENT]		= 0x4, \
@@ -732,10 +732,10 @@ struct pwr_mgr_info __pwr_mgr_info = {
 	.base_addr = KONA_PWRMGR_VA,
 	.flags = PM_PMU_I2C | I2C_SIMULATE_BURST_MODE,
 	.pwrmgr_intr = BCM_INT_ID_PWR_MGR,
-	.event_policy_offset = HAWAII_EVENT_POLICY_OFFSET,
+	.event_policy_offset = JAVA_EVENT_POLICY_OFFSET,
 };
 
-static int __init hawaii_pwr_mgr_init(void)
+static int __init java_pwr_mgr_init(void)
 {
 	struct pm_policy_cfg cfg;
 	int i;
@@ -778,7 +778,7 @@ static int __init hawaii_pwr_mgr_init(void)
 
 	pwr_mgr_init(&__pwr_mgr_info);
 
-	hawaii_pi_mgr_init();
+	java_pi_mgr_init();
 
 
 #ifdef CONFIG_MM_POWER_OK_ERRATUM
@@ -901,7 +901,7 @@ static int __init hawaii_pwr_mgr_init(void)
 	return 0;
 }
 
-early_initcall(hawaii_pwr_mgr_init);
+early_initcall(java_pwr_mgr_init);
 
 #ifdef CONFIG_DEBUG_FS
 
@@ -918,7 +918,7 @@ void pwr_mgr_mach_debug_fs_init(int type, int db_mux, int mux_param,
 #endif /*CONFIG_DEBUG_FS */
 
 
-int hawaii_pwr_mgr_delayed_init(void)
+int java_pwr_mgr_delayed_init(void)
 {
 	int i;
 	struct pi *pi;
@@ -956,7 +956,7 @@ static int param_set_pm_late_init(const char *val,
 	ret = sscanf(val, "%d", &pm_delayed_init);
 	pr_info("%s, pm_delayed_init:%d\n", __func__, pm_delayed_init);
 	if (pm_delayed_init == 1)
-		hawaii_pwr_mgr_delayed_init();
+		java_pwr_mgr_delayed_init();
 
 	kona_pm_disable_idle_state(CSTATE_ALL, 0);
 	enable_dormant(0xf);
@@ -967,13 +967,13 @@ static int param_set_pm_late_init(const char *val,
 }
 #endif
 
-int __init hawaii_pwr_mgr_late_init(void)
+int __init java_pwr_mgr_late_init(void)
 {
 #ifdef CONFIG_DELAYED_PM_INIT
 	if (is_charging_state()) {
 		pr_info("%s: power off charging, complete int here\n",
 						__func__);
-		hawaii_pwr_mgr_delayed_init();
+		java_pwr_mgr_delayed_init();
 		enable_dormant(0xf);
 #ifdef CONFIG_BRCM_SECURE_WATCHDOG
 		sec_wd_activate();
@@ -981,7 +981,7 @@ int __init hawaii_pwr_mgr_late_init(void)
 	} else
 		kona_pm_disable_idle_state(CSTATE_ALL, 1);
 #else
-	hawaii_pwr_mgr_delayed_init();
+	java_pwr_mgr_delayed_init();
 	enable_dormant(0xf);
 #endif
 #ifdef CONFIG_DEBUG_FS
@@ -990,7 +990,7 @@ int __init hawaii_pwr_mgr_late_init(void)
 	return 0;
 }
 
-late_initcall(hawaii_pwr_mgr_late_init);
+late_initcall(java_pwr_mgr_late_init);
 
 /**
  * Initialize the real sequencer
