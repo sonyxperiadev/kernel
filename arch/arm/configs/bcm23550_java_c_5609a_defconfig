@@ -1,6 +1,6 @@
 #
 # Automatically generated file; DO NOT EDIT.
-# Linux/arm 3.10.0 Kernel Configuration
+# Linux/arm 3.10.17 Kernel Configuration
 #
 CONFIG_ARM=y
 CONFIG_ARM_HAS_SG_CHAIN=y
@@ -435,6 +435,7 @@ CONFIG_ARM_VIRT_EXT=y
 # CONFIG_CPU_ICACHE_DISABLE is not set
 # CONFIG_CPU_DCACHE_DISABLE is not set
 # CONFIG_CPU_BPREDICT_DISABLE is not set
+CONFIG_KUSER_HELPERS=y
 CONFIG_MIGHT_HAVE_CACHE_L2X0=y
 # CONFIG_CACHE_L2X0 is not set
 CONFIG_ARM_L1_CACHE_SHIFT_6=y
@@ -604,8 +605,7 @@ CONFIG_BINFMT_ELF=y
 CONFIG_ARCH_BINFMT_ELF_RANDOMIZE_PIE=y
 # CONFIG_CORE_DUMP_DEFAULT_ELF_HEADERS is not set
 CONFIG_BINFMT_SCRIPT=y
-CONFIG_HAVE_AOUT=y
-# CONFIG_BINFMT_AOUT is not set
+# CONFIG_HAVE_AOUT is not set
 # CONFIG_BINFMT_MISC is not set
 CONFIG_COREDUMP=y
 
@@ -1492,8 +1492,8 @@ CONFIG_TARGET_LOCALE_CHN=y
 # CONFIG_B43LEGACY is not set
 # CONFIG_BCMDHD_4334 is not set
 CONFIG_BCM4330=m
-CONFIG_BCMDHD_FW_PATH_4330="/system/vendor/firmware/fw_wifi_4330.bin"
-CONFIG_BCMDHD_NVRAM_PATH_4330="/system/vendor/firmware/fw_wifi_nvram_4330.txt"
+CONFIG_BCMDHD_FW_PATH="/system/vendor/firmware/fw_wifi_4330.bin"
+CONFIG_BCMDHD_NVRAM_PATH="/system/vendor/firmware/fw_wifi_nvram_4330.txt"
 # CONFIG_BCMDHD is not set
 # CONFIG_BRCMFMAC is not set
 # CONFIG_HOSTAP is not set
@@ -2220,11 +2220,6 @@ CONFIG_DVB_TUNER_DIB0090=m
 # Tools to develop new frontends
 #
 # CONFIG_DVB_DUMMY_FE is not set
-# CONFIG_SOC_MAIN_CAMERA is not set
-# CONFIG_SOC_CAMERA_MAIN_DB8V61M is not set
-# CONFIG_SOC_CAMERA_SUB_DB8V61M is not set
-# CONFIG_SOC_CAMERA_MAIN_SR130 is not set
-# CONFIG_SOC_CAMERA_SUB_SR130 is not set
 
 #
 # Graphics support
