@@ -59,6 +59,7 @@ struct kona_fb_platform_data {
 	bool esdcheck;
 	uint32_t esdcheck_period_ms;
 	uint8_t esdcheck_retry;
+	uint32_t tectl_gpio;
 };
 
 #endif /* KONA_FB_H_ */
