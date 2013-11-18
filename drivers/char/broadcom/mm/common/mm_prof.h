@@ -53,7 +53,7 @@ void mm_prof_update_handler(struct work_struct *work);
 		update.mm_prof = mm_prof;				\
 		INIT_WORK(&(update.work), mm_prof_update_handler);	\
 		SCHEDULER_WORK(mm_prof, &(update.work));		\
-		flush_work(&(update.work));			\
+		flush_work_sync(&(update.work));			\
 		*param = update.param;					\
 		return 0;						\
 	}								\
@@ -67,7 +67,7 @@ void mm_prof_update_handler(struct work_struct *work);
 		update.mm_prof = mm_prof;				\
 		INIT_WORK(&(update.work), mm_prof_update_handler);	\
 		SCHEDULER_WORK(mm_prof, &(update.work));		\
-		flush_work(&(update.work));			\
+		flush_work_sync(&(update.work));			\
 		return 0;						\
 	}								\
 	DEFINE_SIMPLE_ATTRIBUTE(mm_prof_debugfs_##name,			\

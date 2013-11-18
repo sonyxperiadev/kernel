@@ -35,6 +35,7 @@ struct jpeg_device_t {
 
 static mm_isr_type_e  process_jpeg_irq(void *id)
 {
+	pr_err("in side irq\n");
 	struct jpeg_device_t *jpeg = (struct jpeg_device_t *)id;
 	u32 jpegStatus = 0;
 	jpegStatus = jpeg_read(JP_ICST_OFFSET);
@@ -84,6 +85,10 @@ static mm_job_status_e jpeg_start_job(void *id ,  mm_job_post_t *job, \
 	switch (job->status) {
 	case MM_JOB_STATUS_READY:
 		{
+		if (jp->out_size_p > jp->hardware_add_out_p) {
+			job->status = MM_JOB_STATUS_ERROR;
+			return MM_JOB_STATUS_ERROR;
+			}
 		jpeg_write(JP_CTRL_OFFSET ,  (1 << 30) | JCTRL_RESET |
 		JCTRL_STUFF | JCTRL_DCTEN);
 		jpeg_write(JP_MCTRL_OFFSET ,  ((3 * JMCTRL_NUMCMP) |
@@ -144,7 +149,7 @@ static mm_job_status_e jpeg_start_job(void *id ,  mm_job_post_t *job, \
 			jpeg_write(JP_QWDATA_OFFSET ,  (hw_quantf_t_C[i]));
 		jpeg_write(JP_QADDR_OFFSET ,  0);
 		jpeg_write(JP_QCTRL_OFFSET ,  ((0 << 0) | (1 << 2) | (1 << 4)));
-		jpeg_write(JP_SDA_OFFSET ,  ((jp->hardware_add_p) & ~0xF));
+		jpeg_write(JP_SDA_OFFSET ,  ((jp->hardware_add_out_p) & ~0xF));
 		jpeg_write(JP_SBO_OFFSET ,  (8 * (jp->p & 0xF)));
 		jpeg_write(JP_NSB_OFFSET ,  jp->jnsb);
 		int sumhv = (jp->h)*(jp->v) + 2;
@@ -166,22 +171,25 @@ static mm_job_status_e jpeg_start_job(void *id ,  mm_job_post_t *job, \
 		jpeg_write(JP_CTRL_OFFSET ,  (reg_value | JCTRL_START));
 		while (jpeg_read(JP_CTRL_OFFSET) & (JCTRL_START | JCTRL_WOUT))
 			;
-		jpeg_write(JP_ICST_OFFSET , JICST_SDONE | JICST_CDONE);
-		reg_value = jpeg_read(JP_NSB_OFFSET);
-		jpegStatus = jpeg_read(JP_CTRL_OFFSET);
-		reg_value = jpeg_read(JP_CTRL_OFFSET);
-		jpeg_write(JP_CTRL_OFFSET ,  (reg_value | JCTRL_FLUSH));
-		while ((jpeg_read(JP_CTRL_OFFSET)) & (JCTRL_FLUSH | JCTRL_WOUT))
-			;
-		reg_value = jpeg_read(JP_NSB_OFFSET);
-		jp->jnsb_callback_value = reg_value;
-		jpegStatus = jpeg_read(JP_CTRL_OFFSET);
-		job->status = MM_JOB_STATUS_RUNNING;
-		return MM_JOB_STATUS_RUNNING;
+		job->status = MM_JOB_STATUS_RUNNING1;
+		return MM_JOB_STATUS_RUNNING1;
+		}
+		break;
+	case MM_JOB_STATUS_RUNNING1:
+		{	pr_err("in side kernel\n");
+			reg_value = jpeg_read(JP_CTRL_OFFSET);
+			jpeg_write(JP_CTRL_OFFSET ,  (reg_value | JCTRL_FLUSH));
+			while ((jpeg_read(JP_CTRL_OFFSET)) &
+				(JCTRL_FLUSH | JCTRL_WOUT))
+				;
+			job->status = MM_JOB_STATUS_RUNNING;
+			return MM_JOB_STATUS_RUNNING;
 		}
 		break;
 	case MM_JOB_STATUS_RUNNING:
-		{
+		{	pr_err("in side kernel\n");
+			reg_value = jpeg_read(JP_NSB_OFFSET);
+			jp->jnsb_callback_value = reg_value;
 			job->status = MM_JOB_STATUS_SUCCESS;
 			return MM_JOB_STATUS_SUCCESS;
 		}
@@ -224,16 +232,16 @@ int __init mm_jpeg_init(void)
 	core_param.core_name = "JPEG";
 	dvfs_param.ON = 1;
 	dvfs_param.MODE = TURBO;
-	dvfs_param.T0 = 0;
+	dvfs_param.T0 = 200;
 	dvfs_param.P0 = 0;
 	dvfs_param.T1 = 300;
-	dvfs_param.P1 = 80;
+	dvfs_param.P1 = 0;
 	dvfs_param.P1L = 0;
-	dvfs_param.T2 = 500;
-	dvfs_param.P2 = 80;
-	dvfs_param.P2L = 45;
+	dvfs_param.T2 = 300;
+	dvfs_param.P2 = 120;
+	dvfs_param.P2L = 0;
 	dvfs_param.T3 = 1000;
-	dvfs_param.P3L = 45;
+	dvfs_param.P3L = 120;
 	dvfs_param.dvfs_bulk_job_cnt = 0;
 	jpeg_device->fmwk_handle = mm_fmwk_register(JPEG_DEV_NAME, \
 	JPEG_AXI_BUS_CLK_NAME_STR,  1, &core_param,  &dvfs_param,  &prof_param);
