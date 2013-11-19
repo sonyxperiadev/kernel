@@ -402,6 +402,9 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 	pb->check_fb = data->check_fb;
 	pb->lth_brightness = data->lth_brightness *
 		(data->pwm_period_ns / data->max_brightness);
+#ifdef CONFIG_KONA_TMON
+	pb->max_brightness = data->max_brightness;
+#endif
 	pb->dev = &pdev->dev;
 	if (pdev->dev.of_node)
 		pb->pwm = pwm_request(data->pwm_id, pwm_request_label);
@@ -447,8 +450,6 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 #endif
 
 #ifdef CONFIG_KONA_TMON
-	pb->max_brightness = data->max_brightness;
-
 	if (data->temp_comp_size > 0) {
 		if (pb_enable_adapt_bright) {
 			INIT_DELAYED_WORK(&pb->tmon_nb_init_work,
