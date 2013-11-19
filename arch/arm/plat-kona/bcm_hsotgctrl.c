@@ -138,10 +138,12 @@ int bcm_hsotgctrl_en_clock(bool on)
 
 	if (on) {
 		atomic_inc(&bcm_hsotgctrl_handle->no_suspend_count);
-		pr_info("hsotgctrl_clk=on\n");
+		pr_info("hsotgctrl_clk=on called from %pS\n",
+			__builtin_return_address(0));
 		rc = clk_enable(bcm_hsotgctrl_handle->otg_clk);
 	} else {
-		pr_info("hsotgctrl_clk=off\n");
+		pr_info("hsotgctrl_clk=off called from %pS\n",
+			__builtin_return_address(0));
 		clk_disable(bcm_hsotgctrl_handle->otg_clk);
 		atomic_dec(&bcm_hsotgctrl_handle->no_suspend_count);
 	}
