@@ -181,7 +181,8 @@ int mmc_send_app_op_cond(struct mmc_host *host, u32 ocr, u32 *rocr)
 
 		err = -ETIMEDOUT;
 
-		mmc_delay(10);
+		mmc_delay(9);
+		mmc_delay(1);
 	}
 
 	if (rocr && !mmc_host_is_spi(host))
