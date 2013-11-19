@@ -55,8 +55,7 @@ struct channel_data {
 };
 
 static u64 stm_printk_buf[1024 / sizeof(u64)];
-static arch_spinlock_t stm_buf_lock =
-	(arch_spinlock_t) __ARCH_SPIN_LOCK_UNLOCKED;
+static DEFINE_SPINLOCK(stm_buf_lock);
 
 #ifdef CONFIG_BCM_STM
 /* STM and SWSTM on A9 will be initialized at boot loader. */
@@ -685,13 +684,14 @@ int stm_printk(const char *fmt, ...)
 	int ret;
 	size_t size;
 	va_list args;
+	unsigned long flags;
 
 	va_start(args, fmt);
-	arch_spin_lock(&stm_buf_lock);
+	spin_lock_irqsave(&stm_buf_lock, flags);
 	size = vscnprintf((char *)stm_printk_buf,
 			  sizeof(stm_printk_buf), fmt, args);
 	ret = stm_trace_buffer(stm_printk_buf, size);
-	arch_spin_unlock(&stm_buf_lock);
+	spin_unlock_irqrestore(&stm_buf_lock, flags);
 	va_end(args);
 	return ret;
 }
