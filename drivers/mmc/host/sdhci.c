@@ -2618,6 +2618,7 @@ static void sdhci_data_irq(struct sdhci_host *host, u32 intmask)
 			"though no data operation was in progress.\n",
 			mmc_hostname(host->mmc), (unsigned)intmask);
 		sdhci_dumpregs(host);
+		host->ops->sdhci_debug(host);
 
 		/*
 		 * This condition is hit with some damaged SD card.
@@ -2644,8 +2645,10 @@ static void sdhci_data_irq(struct sdhci_host *host, u32 intmask)
 				 "damaged SD card is inserted-Error:0x%x\n",
 				 mmc_hostname(host->mmc),
 				 host->mrq->data->error);
-
-				host->mrq->cmd->error = -ENOMEDIUM;
+				if (mmc_card_is_removable(host->mmc))
+					host->mrq->cmd->error = -ENOMEDIUM;
+				else
+					host->mrq->cmd->error = -EIO;
 				host->mrq->cmd->retries = 0;
 				tasklet_schedule(&host->finish_tasklet);
 			}
