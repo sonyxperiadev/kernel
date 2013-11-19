@@ -642,6 +642,9 @@ static long voip_ioctl(struct file *hw, unsigned int cmd, unsigned long arg)
 			aError("Status made to voip_hwdep_status_started");
 		} else {
 			voipinstcnt++;
+			/*Limit Voip instance to two*/
+			if (voipInstCnt > 2)
+				voipInstCnt = 2;
 			aTrace(LOG_ALSA_INTERFACE,
 					"VoIP_Ioctl_Start -> just increment "
 					"the count, voip already started\n");
@@ -659,13 +662,16 @@ static long voip_ioctl(struct file *hw, unsigned int cmd, unsigned long arg)
 		/*aTrace(LOG_ALSA_INTERFACE, "VoIP_Ioctl_Stop type=%d (2==UL) "
 			"voipinstcnt=%u\n", data, voipinstcnt);*/
 
-
-		/*aError("VoIP_Ioctl_Stop type=%d (2==UL) "
-			"voipinstcnt=%u\n", data, voipinstcnt);*/
+		if (data == VoIP_UL)
+			pvoip->ulstarted = 0;
+		else
+			pvoip->dlstarted = 0;
 
 		if (voipinstcnt == 2)
 			voipinstcnt--;
-		else if (voipinstcnt == 1) {
+		else if ((voipinstcnt == 1) ||
+				(pVoIP->ulstarted == 0 &&
+					pVoIP->dlstarted == 0)) {
 			BRCM_AUDIO_Param_Stop_t param_stop;
 			BRCM_AUDIO_Param_Close_t param_close;
 
@@ -689,10 +695,6 @@ static long voip_ioctl(struct file *hw, unsigned int cmd, unsigned long arg)
 			voipinstcnt = 0;
 		}
 
-		if (data == VoIP_UL)
-			pvoip->ulstarted = 0;
-		else
-			pvoip->dlstarted = 0;
 		break;
 	case VoIP_Ioctl_SetSource:
 		aTrace(LOG_ALSA_INTERFACE ,
