@@ -74,6 +74,7 @@ struct file_private_data {
 	u8 *spl_data_ptr;
 	int spl_data_size;
 	u8 device_locked;
+	atomic_t buffer_status;
 };
 
 struct dev_job_list {

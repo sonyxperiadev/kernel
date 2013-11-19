@@ -360,6 +360,7 @@ static int mm_file_open(struct inode *inode, struct file *filp)
 	private->spl_data_ptr = NULL;
 	private->spl_data_size = 0;
 	private->device_locked = 0;
+	atomic_set(&private->buffer_status, 0);
 	init_waitqueue_head(&private->wait_queue);
 	init_waitqueue_head(&private->read_queue);
 
@@ -734,6 +735,18 @@ static long mm_file_ioctl(struct file *filp, \
 	break;
 
 #endif /* CONFIG_MM_SECURE_DRIVER */
+	case MM_IOCTL_SET_BUFFER_UPDATED:
+		atomic_set(&private->buffer_status, (uint32_t) arg);
+	break;
+	case MM_IOCTL_SET_BUFFER_SYNCED:
+		atomic_or(&private->buffer_status, (uint32_t) arg);
+	break;
+	case MM_IOCTL_GET_BUFFER_STATUS:
+	{
+		int flags = atomic_read(&private->buffer_status);
+		ret = copy_to_user((uint32_t *)arg, &flags, sizeof(int));
+	}
+	break;
 	default:
 		pr_err("cmd[0x%08x] not supported", cmd);
 		ret = -EINVAL;
