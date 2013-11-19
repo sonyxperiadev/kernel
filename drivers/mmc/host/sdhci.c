@@ -2336,10 +2336,7 @@ static void sdhci_tasklet_finish(unsigned long param)
 			/* This is to force an update */
 			sdhci_update_clock(host);
 
-		/* Spec says we should do both at the same time, but Ricoh
-		   controllers do not like that. */
-		sdhci_reset(host, SDHCI_RESET_CMD);
-		sdhci_reset(host, SDHCI_RESET_DATA);
+		sdhci_reset(host, SDHCI_RESET_CMD | SDHCI_RESET_DATA);
 	}
 
 	host->mrq = NULL;
