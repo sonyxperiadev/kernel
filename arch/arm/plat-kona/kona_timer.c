@@ -1242,7 +1242,6 @@ static inline void __disable_channel(void __iomem *reg_base, int ch_num)
 static inline unsigned long notrace __get_counter(void __iomem *reg_base)
 {
 #define KONA_MAX_REPEAT_TIMES 100
-#define KONA_MAX_COUNTER_DIFF 1
 	unsigned long prev;
 	unsigned long cur, read_count;
 
@@ -1252,30 +1251,22 @@ static inline unsigned long notrace __get_counter(void __iomem *reg_base)
 	return readl(ktm->reg_base + KONA_GPTIMER_STCLO_OFFSET);
 #endif
 
-#ifdef CONFIG_ARCH_JAVA
-	if ((reg_base == IOMEM(KONA_TMR_HUB_VA)) ||
-	    (reg_base == IOMEM(KONA_CORETMR_VA))) {
-#else
-	if (reg_base == IOMEM(KONA_TMR_HUB_VA)) {
-#endif
-		read_count = 0;
-		prev = readl(reg_base + KONA_GPTIMER_STCLO_OFFSET);
-		do {
-			cur = readl(reg_base + KONA_GPTIMER_STCLO_OFFSET);
-			if (cur - prev > KONA_MAX_COUNTER_DIFF)
-				prev = cur;
-			else
-				break;
+	read_count = 0;
+	prev = readl(reg_base + KONA_GPTIMER_STCLO_OFFSET);
+	do {
+		cur = readl(reg_base + KONA_GPTIMER_STCLO_OFFSET);
+		if (cur != prev)
+			prev = cur;
+		else
+			break;
 
-			if (read_count++ > KONA_MAX_REPEAT_TIMES)
-				break;
-		} while (1);
+		if (read_count++ > KONA_MAX_REPEAT_TIMES)
+			break;
+	} while (1);
 
-		BUG_ON(read_count > KONA_MAX_REPEAT_TIMES);
-		return cur;
-	} else {
-		return readl(reg_base + KONA_GPTIMER_STCLO_OFFSET);
-	}
+	BUG_ON(read_count > KONA_MAX_REPEAT_TIMES);
+
+	return cur;
 }
 
 static inline int irq_to_ch(int irq)
