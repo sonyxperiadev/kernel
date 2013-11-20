@@ -280,6 +280,15 @@ extern struct ion_buffer *ion_lock_buffer(struct ion_client *client,
 extern void ion_unlock_buffer(struct ion_client *client,
 		struct ion_buffer *buffer);
 
+extern struct ion_client *ion_client_get_from_pid(struct ion_client *client,
+		pid_t pid);
+extern void ion_client_put(struct ion_client *client);
+
+extern void ion_client_foreach_buffer(struct ion_client *client,
+		void (*process)(struct ion_buffer *buffer, void *arg),
+		void *data);
+
+
 #define pgprot_writethrough(prot) \
 	__pgprot_modify(prot, L_PTE_MT_MASK, L_PTE_MT_WRITETHROUGH)
 

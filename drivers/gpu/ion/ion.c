@@ -1898,5 +1898,68 @@ void ion_unlock_buffer(struct ion_client *client,
 	mutex_unlock(&buffer->lock);
 	mutex_unlock(&client->lock);
 }
+
+/* Get the ion client if present for the pid.
+ *
+ * Note: If multiple clients are present for same process, only the first
+ * one is used. This assumption holds trues as the broadcom userspace
+ * ION library opens only one instance of ION and re-uses same fd.
+ *
+ * A reference of the task struct of the remote client is taken to ensure
+ * that remote client does not get closed while operating on it.
+ *
+ * Caller of this API need to ensure that task struct reference is released
+ * after use.
+ **/
+struct ion_client *ion_client_get_from_pid(struct ion_client *client, pid_t pid)
+{
+	struct ion_client *client_tmp, *client_remote = NULL;
+	struct ion_device *dev = client->dev;
+	struct rb_node *n;
+
+	down_write(&dev->lock);
+	for (n = rb_first(&dev->clients); n; n = rb_next(n)) {
+		client_tmp = rb_entry(n, struct ion_client,
+				node);
+		if (client_tmp->pid == pid) {
+			client_remote = client_tmp;
+			if (client_remote->task)
+				get_task_struct(client_remote->task);
+			break;
+		}
+	}
+	up_write(&dev->lock);
+
+	return client_remote;
+}
+
+/**
+ * Release the task struct reference
+ * This is exposed so that user of ion_client_get_from_pid can release the
+ * reference.
+ **/
+void ion_client_put(struct ion_client *client)
+{
+	if (client->task)
+		put_task_struct(client->task);
+}
+
+/**
+ * Call the callback function for every buffer allocated/imported by the client
+ */
+void ion_client_foreach_buffer(struct ion_client *client,
+		void (*process)(struct ion_buffer *buffer, void *arg),
+		void *arg)
+{
+	struct rb_node *n;
+
+	mutex_lock(&client->lock);
+	for (n = rb_first(&client->handles); n; n = rb_next(n)) {
+		struct ion_handle *handle = rb_entry(n, struct ion_handle,
+						     node);
+		process(handle->buffer, arg);
+	}
+	mutex_unlock(&client->lock);
+}
 #endif
 

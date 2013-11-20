@@ -217,6 +217,130 @@ unsigned int bcm_ion_get_heapmask(unsigned int flags)
 }
 EXPORT_SYMBOL(bcm_ion_get_heapmask);
 
+/**
+ * These correspond to the flags present in memtrack.h in memtrack HAL
+ */
+enum {
+	/* ION_MT_GRP1_ACC_E, */
+	ION_MT_GRP1_UNACC_E,
+	ION_MT_GRP1_MAX_E,
+};
+
+enum {
+	ION_MT_GRP2_SH_E,
+	ION_MT_GRP2_SHPSS_E,
+	ION_MT_GRP2_PRIV_E,
+	ION_MT_GRP2_MAX_E,
+};
+
+enum {
+	ION_MT_GRP3_NS_SYS_E,
+	ION_MT_GRP3_NS_DED_E,
+	ION_MT_GRP3_S_DED_E,
+	ION_MT_GRP3_MAX_E,
+};
+
+#define ION_MT_SIZES          (ION_MT_GRP1_MAX_E * ION_MT_GRP2_MAX_E \
+		* ION_MT_GRP3_MAX_E)
+
+struct bcm_ion_mt_data_t {
+	pid_t pid;
+	unsigned int type;
+	unsigned int *sizes;
+};
+
+/**
+ * Callback function which will be called for each buffer allocated/imported
+ * by the ion client. Used for supporting memtrack HAL
+ */
+void bcm_ion_buffer_process(struct ion_buffer *buffer, void *arg)
+{
+	struct bcm_ion_mt_data_t *ion_mt_data = (struct bcm_ion_mt_data_t *)arg;
+	unsigned int *sizes = ion_mt_data->sizes;
+	unsigned int size, tmp, index = 0;
+
+	size = buffer->size;
+
+	/**
+	 * Hierarchy is GRP3->GRP2->GRP1
+	 * index = GRP3 * (GRP2_MAX * GRP1_MAX)
+	 *       + GRP2 * (GRP1_MAX)
+	 **/
+
+	/* Check the buffer type - OTH, GL, GFX, ..) */
+	tmp = (buffer->flags & ION_FLAG_USAGE_MASK) >> ION_FLAG_USAGE_OFFSET;
+	if (tmp != ion_mt_data->type)
+		return;
+
+	/* Modify the index based on GRP3 - system/dedicated/secure */
+	switch (buffer->heap->type) {
+
+	case ION_HEAP_TYPE_CARVEOUT:
+	case ION_HEAP_TYPE_CHUNK:
+		tmp = ION_MT_GRP3_NS_DED_E;
+		break;
+	case ION_HEAP_TYPE_SECURE:
+		tmp = ION_MT_GRP3_S_DED_E;
+		break;
+	default:
+		tmp = ION_MT_GRP3_NS_SYS_E;
+		break;
+	}
+	index += tmp * ION_MT_GRP2_MAX_E * ION_MT_GRP1_MAX_E;
+
+	/* Modify the index based on GRP2 - shared/private */
+	if (buffer->handle_count > 1)
+		tmp = ION_MT_GRP2_SH_E;
+	else
+		tmp = ION_MT_GRP2_PRIV_E;
+	index += tmp * ION_MT_GRP1_MAX_E;
+
+	/* Skip index adjustment for GRP1 as ION tracks only unaccounted mem */
+
+	/* Increment the size for the type.flags */
+	sizes[index] += size;
+}
+
+int bcm_ion_mt_get_mem(struct ion_client *client,
+		struct ion_custom_mt_get_mem *data, unsigned int *sizes)
+{
+	struct ion_client *client_remote;
+	struct bcm_ion_mt_data_t ion_mt_data;
+	int i;
+
+	ion_mt_data.pid   = data->pid;
+	ion_mt_data.type  = data->type;
+	ion_mt_data.sizes = sizes;
+
+	/* Sanity check the version, sizes and num_sizes */
+	if ((data->version != 0) || (data->sizes == NULL)
+			|| (data->num_sizes != ION_MT_SIZES)) {
+		pr_err("ION_IOC_CUSTOM_MT_GET_MEM param mismatch\n");
+		return -EINVAL;
+	}
+
+	/* Get the client corresponding to the pid
+	 * If client matching the pid is not present, return all sizes
+	 * as zero, the call should not fail */
+	client_remote = ion_client_get_from_pid(client, data->pid);
+	if (client_remote == NULL) {
+		pr_debug("ION_IOC_CUSTOM_MT_GET_MEM pid(%d) not used\n",
+				data->pid);
+		return 0;
+	}
+
+	/* Loop for all buffers which are allocated/imported by the
+	 * requested pid(client) */
+	ion_client_foreach_buffer(client_remote, bcm_ion_buffer_process,
+			(void *)&ion_mt_data);
+
+	/* Release the task struct reference */
+	ion_client_put(client_remote);
+
+	return 0;
+}
+
+
 static long bcm_ion_custom_ioctl(struct ion_client *client,
 				      unsigned int cmd,
 				      unsigned long arg)
@@ -333,6 +457,35 @@ static long bcm_ion_custom_ioctl(struct ion_client *client,
 		if (copy_to_user((void __user *)arg, &bcm_ion_config_data,
 					sizeof(bcm_ion_config_data)))
 			return -EFAULT;
+		break;
+	}
+	case ION_IOC_CUSTOM_MT_GET_MEM:
+	{
+		struct ion_custom_mt_get_mem data;
+		unsigned int *sizes;
+
+		if (copy_from_user(&data, (void __user *)arg, sizeof(data)))
+			return -EFAULT;
+
+		pr_debug("ION_IOC_CUSTOM_MT_GET_MEM pid(%d) type(%d) n(%d)\n",
+				data.pid, data.type, data.num_sizes);
+
+		sizes = kzalloc(ION_MT_SIZES * sizeof(unsigned int),
+				GFP_KERNEL);
+		if (!sizes)
+			return -ENOMEM;
+
+		if (bcm_ion_mt_get_mem(client, &data, sizes)) {
+			kfree(sizes);
+			return -EINVAL;
+		}
+
+		if (copy_to_user((void __user *)data.sizes, sizes,
+					ION_MT_SIZES * sizeof(unsigned int))) {
+			kfree(sizes);
+			return -EFAULT;
+		}
+		kfree(sizes);
 		break;
 	}
 	case ION_IOC_CUSTOM_TP:

@@ -14,8 +14,8 @@
  *
  */
 
-#ifndef _LINUX_BCM_ION_H
-#define _LINUX_BCM_ION_H
+#ifndef _LINUX_BCM_ION_H_
+#define _LINUX_BCM_ION_H_
 
 #include <linux/types.h>
 #include <linux/ion.h>
@@ -82,7 +82,7 @@ unsigned int bcm_ion_get_heapmask(unsigned int flags);
 /**
  * DOC: Broadcom Ion Interface Version
  */
-#define BCM_ION_VERSION		(0x00010000)
+#define BCM_ION_VERSION		(0x00010001)
 
 /**
  * DOC: Broadcom Ion Heap Types for user space to select at alloc time
@@ -102,8 +102,13 @@ unsigned int bcm_ion_get_heapmask(unsigned int flags);
  * 27-24 : Mapping
  *	24 : User Map needed
  *	25 : Kernel Map needed
- * 23-20 : RW properties
- *	20 : HW may write
+ * 23-21 : Usage properties
+ *	0  : Others
+ *	1  : GL
+ *	2  : Graphics
+ *	3  : Multimedia
+ *	4  : Camera
+ * 20    : HW may write
  * 19-16 : Custom Cache ops
  *	16 : Writecombine mode
  *	17 : Writethrough mode
@@ -117,12 +122,20 @@ unsigned int bcm_ion_get_heapmask(unsigned int flags);
 #define ION_FLAG_USER_MAP     (1 << 24)
 #define ION_FLAG_KMAP         (2 << 24)
 
+#define ION_FLAG_USAGE_OFFSET (21)
+#define ION_FLAG_USAGE_MASK   (7 << ION_FLAG_USAGE_OFFSET)
+#define ION_FLAG_OTHERS       (0 << ION_FLAG_USAGE_OFFSET)
+#define ION_FLAG_GL           (1 << ION_FLAG_USAGE_OFFSET)
+#define ION_FLAG_GRAPHICS     (2 << ION_FLAG_USAGE_OFFSET)
+#define ION_FLAG_MULTIMEDIA   (3 << ION_FLAG_USAGE_OFFSET)
+#define ION_FLAG_CAMERA       (4 << ION_FLAG_USAGE_OFFSET)
+
 #define ION_FLAG_HWWR         (1 << 20) /* For buffers which may over-run */
 
+#define ION_FLAG_ACP          (1 << 19) /* ACP allocation(WB) requested */
+#define ION_FLAG_WRITEBACK    (1 << 18) /* Needs explicit cache flushes */
+#define ION_FLAG_WRITETHROUGH (1 << 17) /* Needs explicit cache invalidates */
 #define ION_FLAG_WRITECOMBINE (1 << 16)
-#define ION_FLAG_WRITETHROUGH (2 << 16) /* Needs explicit cache invalidates */
-#define ION_FLAG_WRITEBACK    (4 << 16) /* Needs explicit cache flushes */
-#define ION_FLAG_ACP          (8 << 16) /* ACP allocation(WB) requested */
 
 /**
  * DOC: Buffer property flags and masks
@@ -248,6 +261,24 @@ struct ion_custom_config_data {
 };
 
 /**
+ * struct ion_custom_mt_get_mem - Used to get memory usage records for
+ * the memtrack HAL
+ *
+ * @version:   Version of the API (driver will fill it)
+ * @pid:       PID for which info is needed
+ * @type:      Type of allocation
+ * @sizes:     Pointer to array of sizes for type.flags
+ * @num_sizes: Size of the above array
+ */
+struct ion_custom_mt_get_mem {
+	unsigned int version;
+	pid_t pid;
+	unsigned int type;
+	size_t *sizes;
+	unsigned int num_sizes;
+};
+
+/**
  * DOC: ION_IOC_CUSTOM_DMA_MAP - get dma mapped address
  *
  * Takes an ion_custom_dma_map_data struct with the handle field populated
@@ -323,11 +354,25 @@ struct ion_custom_config_data {
 #define ION_IOC_CUSTOM_GET_CONFIG	(9)
 
 /**
+ * DOC: ION_IOC_CUSTOM_MT_GET_MEM - Get the memory usage information for
+ * the pid that is passed from memtrack HAL.
+ *
+ * Fill the ion_custom_mt_get_mem struct with records for each type, flag.
+ *
+ * User to fill the version, pid, sizes, num_sizes fields
+ * Driver will cross-check version and num_sizes fields and fill up the
+ * "sizes" array with sizes of each usage type/flag.
+ * User needs to allocate enough memory for "sizes" field as specified in
+ * the num_sizes.
+ */
+#define ION_IOC_CUSTOM_MT_GET_MEM	(10)
+
+/**
  * DOC: ION_IOC_CUSTOM_TP - Do a kernel print - to trace the code
  *
  * Pass the trace point value to be printed as argument.
  */
 #define ION_IOC_CUSTOM_TP		(20)
 
-#endif /* _LINUX_BCM_ION_H */
+#endif /* _LINUX_BCM_ION_H_ */
 
