@@ -1230,7 +1230,14 @@ dwc_otg_transaction_type_e dwc_otg_hcd_select_transactions(dwc_otg_hcd_t *hcd)
 		qtd = DWC_CIRCLEQ_FIRST(&qh->qtd_list);
 		if (!qtd->urb) {
 			DWC_ERROR("USB Host: QTD with NULL urb!\n");
-			BUG();
+			/*
+			BUG() should be removed because
+			1)usb OTG intr handler APIs will check qtd->urb is
+			 NULL or not
+			2)soft intr API will automatically stop and not
+			enqueue this fake event if DWC_OTG_TRANSACTION_NONE
+			is returned
+			*/
 			return DWC_OTG_TRANSACTION_NONE;
 		}
 		assign_and_init_hc(hcd, qh);
