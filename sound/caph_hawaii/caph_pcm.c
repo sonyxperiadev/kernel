@@ -670,12 +670,7 @@ static snd_pcm_uframes_t PcmPlaybackPointer(struct snd_pcm_substream *substream)
 	brcm_alsa_chip_t *chip = pcm_device->chip;
 	int substream_number = pcm_device->stream_number;
 	UInt16 dmaPointer = 0;
-	Boolean restartflag = AUDCTRL_GetRestartPlaybackFlag();
 
-	if (restartflag == TRUE) {
-		AUDCTRL_SetRestartPlaybackFlag(FALSE);
-		return SNDRV_PCM_POS_XRUN;
-	}
 	pos =
 	    chip->streamCtl[substream_number].stream_hw_ptr +
 	    bytes_to_frames(runtime, dmaPointer);
@@ -1077,6 +1072,12 @@ int PcmPlaybackCopy(struct snd_pcm_substream *substream, int channel,
 	int bytes_to_copy = frames_to_bytes(runtime, count);
 	int not_copied = copy_from_user(hwbuf, buf, bytes_to_copy);
 	char *new_hwbuf = hwbuf + (bytes_to_copy - not_copied);
+	Boolean restartflag = AUDCTRL_GetRestartPlaybackFlag();
+
+	if (restartflag == TRUE) {
+		AUDCTRL_SetRestartPlaybackFlag(FALSE);
+		return SNDRV_PCM_POS_XRUN;
+	}
 
 	if (not_copied) {
 		/*aError("%s: why didn't copy all the bytes?"
