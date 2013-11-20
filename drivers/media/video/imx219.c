@@ -65,7 +65,8 @@ enum imx219_state {
 
 enum imx219_mode {
 	IMX219_MODE_3280x2464P15 = 0,
-	IMX219_MODE_MAX          = 1,
+	IMX219_MODE_1920x1080P48 = 1,
+	IMX219_MODE_MAX          = 2,
 };
 
 enum bayer_order {
@@ -87,6 +88,8 @@ struct sensor_mode {
 	enum bayer_order	bayer;
 	int			bpp;
 	int			fps;
+	int			fps_min;
+	int			fps_max;
 };
 
 #define LENS_READ_DELAY 4
@@ -99,7 +102,6 @@ struct imx219 {
 	int state;
 	int mode_idx;
 	int i_fmt;
-	int framerate;
 	int focus_mode;
 	int line_length;
 	int vts;
@@ -112,6 +114,9 @@ struct imx219 {
 	u16 exposure_current;
 	u16 coarse_int_lines;
 	u16 agc_on;
+	int framerate;
+	int framerate_lo;
+	int framerate_hi;
 };
 
 struct sensor_mode imx219_mode[IMX219_MODE_MAX + 1] = {
@@ -122,12 +127,31 @@ struct sensor_mode imx219_mode[IMX219_MODE_MAX + 1] = {
 		.hts            = 3448,
 		.vts            = 2504,
 		.vts_max        = 32767 - 6,
-		.vts_min        = 1,
+		.vts_min        = 2504,
 		.line_length_ns = 26624,
 		.bayer          = BAYER_GBRG,
 		.bpp            = 10,
 		.fps            = F24p8(15.0),
+		.fps_min        = F24p8(1.0),
+		.fps_max        = F24p8(15.0),
 	},
+
+	{
+		.name           = "1920x1080P48",
+		.height         = 1080,
+		.width          = 1920,
+		.hts            = 3448,
+		.vts            = 1113,
+		.vts_max        = 32767 - 6,
+		.vts_min        = 1113,
+		.line_length_ns = 18915,
+		.bayer          = BAYER_GBRG,
+		.bpp            = 10,
+		.fps            = F24p8(47.5),
+		.fps_min        = F24p8(1.0),
+		.fps_max        = F24p8(47.5),
+	},
+
 	{
 		.name           = "STOPPED",
 		.line_length_ns = 22190,
@@ -148,69 +172,126 @@ struct imx219_reg {
 	u8	pad;
 };
 
-static const struct imx219_reg imx219_reginit[256] = {
-	/* Sequence to access manufacturer specific
-	   registers*/
-	{0x30EB, 0x05},
-	{0x30EB, 0x0C},
-	{0x300A, 0xFF},
-	{0x300B, 0xFF},
-	{0x30EB, 0x05},
-	{0x30EB, 0x09},
+static const struct imx219_reg imx219_reginit[IMX219_MODE_MAX][256] = {
+	{
+		/* 3280x2464P15 */
+		{0x30EB, 0x05},
+		{0x30EB, 0x0C},
+		{0x300A, 0xFF},
+		{0x300B, 0xFF},
+		{0x30EB, 0x05},
+		{0x30EB, 0x09},
+		/* 2 Lane MIPI */
+		{0x0114, 0x01},
+		{0x0128, 0x00},
+		{0x012A, 0x18},
+		{0x012B, 0x00},
+		{0x0160, 0x09},
+		{0x0161, 0xC8},
+		{0x0162, 0x0D},
+		{0x0163, 0x78},
+		{0x0164, 0x00},
+		{0x0165, 0x00},
+		{0x0166, 0x0C},
+		{0x0167, 0xCF},
+		{0x0168, 0x00},
+		{0x0169, 0x00},
+		{0x016A, 0x09},
+		{0x016B, 0x9F},
+		{0x016C, 0x0C},
+		{0x016D, 0xD0},
+		{0x016E, 0x09},
+		{0x016F, 0xA0},
+		{0x0170, 0x01},
+		{0x0171, 0x01},
+		{0x0172, 0x03},
+		{0x0174, 0x00},
+		{0x0175, 0x00},
+		{0x018C, 0x0A},
+		{0x018D, 0x0A},
+		{0x0301, 0x05},
+		{0x0303, 0x01},
+		{0x0304, 0x03},
+		{0x0305, 0x03},
+		{0x0306, 0x00},
+		{0x0307, 0x2B},
+		{0x0309, 0x0A},
+		{0x030B, 0x01},
+		{0x030C, 0x00},
+		{0x030D, 0x55},
+		{0x455E, 0x00},
+		{0x471E, 0x4B},
+		{0x4767, 0x0F},
+		{0x4750, 0x14},
+		{0x4540, 0x00},
+		{0x47B4, 0x14},
+		{0x4713, 0x30},
+		{0x478B, 0x10},
+		{0x478F, 0x10},
+		{0x4797, 0x0E},
+		{0x479B, 0x0E},
+		{0xFFFF, 0x00}	/* end of the list */
+	},
 
-	/* 2 Lane MIPI */
-	{0x0114, 0x01},
-	{0x0128, 0x00},
-	{0x012A, 0x18},
-	{0x012B, 0x00},
-	{0x0160, 0x09},
-	{0x0161, 0xC8},
-	{0x0162, 0x0D},
-	{0x0163, 0x78},
-	{0x0164, 0x00},
-	{0x0165, 0x00},
-	{0x0166, 0x0C},
-	{0x0167, 0xCF},
-	{0x0168, 0x00},
-	{0x0169, 0x00},
-	{0x016A, 0x09},
-	{0x016B, 0x9F},
-	{0x016C, 0x0C},
-	{0x016D, 0xD0},
-	{0x016E, 0x09},
-	{0x016F, 0xA0},
-	{0x0170, 0x01},
-	{0x0171, 0x01},
-	{0x0172, 0x03},
-	{0x0174, 0x00},
-	{0x0175, 0x00},
-	{0x018C, 0x0A},
-	{0x018D, 0x0A},
+	{
+		/* 1920x1080P48 */
+		{0x30EB, 0x05},
+		{0x30EB, 0x0C},
+		{0x300A, 0xFF},
+		{0x300B, 0xFF},
+		{0x30EB, 0x05},
+		{0x30EB, 0x09},
+		{0x0114, 0x01},
+		{0x0128, 0x00},
+		{0x012A, 0x18},
+		{0x012B, 0x00},
+		{0x0160, 0x04},
+		{0x0161, 0x59},
+		{0x0162, 0x0D},
+		{0x0163, 0x78},
+		{0x0164, 0x02},
+		{0x0165, 0xA8},
+		{0x0166, 0x0A},
+		{0x0167, 0x27},
+		{0x0168, 0x02},
+		{0x0169, 0xB4},
+		{0x016A, 0x06},
+		{0x016B, 0xEB},
+		{0x016C, 0x07},
+		{0x016D, 0x80},
+		{0x016E, 0x04},
+		{0x016F, 0x38},
+		{0x0170, 0x01},
+		{0x0171, 0x01},
+		{0x0174, 0x00},
+		{0x0175, 0x00},
+		{0x018C, 0x0A},
+		{0x018D, 0x0A},
+		{0x0301, 0x05},
+		{0x0303, 0x01},
+		{0x0304, 0x03},
+		{0x0305, 0x03},
+		{0x0306, 0x00},
+		{0x0307, 0x39},
+		{0x0309, 0x0A},
+		{0x030B, 0x01},
+		{0x030C, 0x00},
+		{0x030D, 0x72},
+		{0x455E, 0x00},
+		{0x471E, 0x4B},
+		{0x4767, 0x0F},
+		{0x4750, 0x14},
+		{0x4540, 0x00},
+		{0x47B4, 0x14},
+		{0x4713, 0x30},
+		{0x478B, 0x10},
+		{0x478F, 0x10},
+		{0x4793, 0x10},
+		{0x4797, 0x0E},
+		{0x479B, 0x0E},
 
-	{0x0301, 0x05},
-	{0x0303, 0x01},
-	{0x0304, 0x03},
-	{0x0305, 0x03},
-	{0x0306, 0x00},
-	{0x0307, 0x2B},
-	{0x0309, 0x0A},
-	{0x030B, 0x01},
-	{0x030C, 0x00},
-	{0x030D, 0x55},
-
-	{0x455E, 0x00},
-	{0x471E, 0x4B},
-	{0x4767, 0x0F},
-	{0x4750, 0x14},
-	{0x4540, 0x00},
-	{0x47B4, 0x14},
-	{0x4713, 0x30},
-	{0x478B, 0x10},
-	{0x478F, 0x10},
-	{0x4797, 0x0E},
-	{0x479B, 0x0E},
-
-	{0xFFFF, 0x00}	/* end of the list */
+		{0xFFFF, 0x00}	/* end of the list */
+	}
 };
 
 static struct imx219 *to_imx219(const struct i2c_client *client)
@@ -471,22 +552,23 @@ static int imx219_calc_exposure(struct i2c_client *client,
 	else if (integration_lines > (unsigned int)
 		 (imx219->vts_max - INTEGRATION_OFFSET))
 		integration_lines = imx219->vts_max - INTEGRATION_OFFSET;
-	vts = min(integration_lines + INTEGRATION_OFFSET,
-		  (unsigned int)imx219_mode[imx219->mode_idx].vts_max);
-	vts = max(vts, imx219_mode[imx219->mode_idx].vts);
-	vts = max(vts, imx219->vts_min);
+	vts = integration_lines + INTEGRATION_OFFSET;
+	vts = min(max(vts, imx219->vts_min), imx219->vts_max);
 	if (coarse_int_lines)
 		*coarse_int_lines = integration_lines;
 	if (vts_ptr)
 		*vts_ptr = vts;
 	exposure_current =
 		integration_lines * imx219->line_length / (unsigned long)1000;
-	pr_debug("%s(): req=%d act=%d lines=%d vts=%d\n",
+	pr_debug("%s req=%d act=%d lin=%d vts=%d [%d %d]\n",
 		 __func__,
 		 exposure_value,
 		 exposure_current,
 		 *coarse_int_lines,
-		 vts);
+		 vts,
+		 imx219->vts_min,
+		 imx219->vts_max
+		);
 	return exposure_value;
 }
 
@@ -555,14 +637,57 @@ static int imx219_get_exposure(struct i2c_client *client,
 
 	imx219_reg_read_multi(client, IMX219_COARSE_INT_TIME_HI, exp_buf, 2);
 	exp_code = (exp_buf[0] << 8) + (exp_buf[1] << 0);
-	if (exp_code_p)
-		*exp_code_p = exp_code;
-	if (exp_value_p)
-		*exp_value_p = (exp_code * imx219->line_length) / 1000;
+	*exp_code_p = exp_code;
+	*exp_value_p = (exp_code * imx219->line_length) / 1000;
 	pr_debug("%s(): code=%d value=%d",
-		 __func__,
-		 exp_code, *exp_value_p);
+		 __func__, exp_code, *exp_value_p);
 	return ret;
+}
+
+/*
+ * Setup the sensor integration and frame length based on requested mimimum
+ * framerate
+ *@client: i2c driver client structure
+ *@exp_framerate: requested framerate
+ */
+static void imx219_set_framerate_lo(struct i2c_client *client, int framerate)
+{
+	struct imx219 *imx219 = to_imx219(client);
+
+	framerate = max(framerate, imx219_mode[imx219->mode_idx].fps_min);
+	framerate = min(framerate, imx219_mode[imx219->mode_idx].fps_max);
+	imx219->framerate_lo = framerate;
+	framerate >>= 8;
+	imx219->vts_max = 1000000000 / (imx219->line_length * framerate);
+	imx219->vts_max = min(imx219->vts_max,
+			      imx219_mode[imx219->mode_idx].vts_max);
+	pr_debug("%s(): Setting frame rate lo %d.%02d vts_min %d",
+		 __func__,
+		 imx219->framerate_lo>>8, imx219->framerate_lo & 0xFF,
+		 imx219->vts_min);
+}
+
+/*
+ * Setup the sensor integration and frame length based on requested maximum
+ * framerate
+ *@client: i2c driver client structure
+ *@exp_framerate: requested framerate
+ */
+static void imx219_set_framerate_hi(struct i2c_client *client, int framerate)
+{
+	struct imx219 *imx219 = to_imx219(client);
+
+	framerate = max(framerate, imx219_mode[imx219->mode_idx].fps_min);
+	framerate = min(framerate, imx219_mode[imx219->mode_idx].fps_max);
+	imx219->framerate_hi = framerate;
+	framerate >>= 8;
+	imx219->vts_min = 1000000000 / (imx219->line_length * framerate);
+	imx219->vts_min = max(imx219->vts_min,
+			      imx219_mode[imx219->mode_idx].vts);
+	pr_debug("%s(): Setting frame rate hi %d.%02d vts_min %d",
+		 __func__,
+		 imx219->framerate_hi>>8, imx219->framerate_hi & 0xFF,
+		 imx219->vts_min);
 }
 
 static int imx219_set_bus_param(struct soc_camera_device *icd,
@@ -647,9 +772,6 @@ static int imx219_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	struct imx219 *imx219 = to_imx219(client);
 	int retval = 0;
 
-	return retval;
-
-	/* TODO update when all settings available */
 	switch (ctrl->id) {
 
 	case V4L2_CID_CAMERA_FRAME_RATE:
@@ -674,11 +796,16 @@ static int imx219_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 		ctrl->value = retval;
 		break;
 
-	case V4L2_CID_EXPOSURE:
-		imx219_get_exposure(client, &retval, NULL);
+	case V4L2_CID_EXPOSURE: {
+		int code;
+		imx219_get_exposure(client, &retval, &code);
 		ctrl->value = retval;
 		break;
+	}
 
+	default:
+		pr_debug("%s(): g_ctrl not supported for id=0x%X",
+			 __func__, ctrl->id);
 	}
 
 	return 0;
@@ -737,6 +864,51 @@ static int imx219_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			pr_debug("%s(): agc is off", __func__);
 		break;
 
+	case V4L2_CID_CAMERA_FRAME_RATE:
+		if (ctrl->value > FRAME_RATE_30)
+			return -EINVAL;
+		imx219->framerate = ctrl->value;
+		switch (imx219->framerate) {
+		case FRAME_RATE_5:
+			imx219->framerate_lo = F24p8(5.0);
+			imx219->framerate_hi = F24p8(5.0);
+			break;
+		case FRAME_RATE_7:
+			imx219->framerate_lo = F24p8(7.0);
+			imx219->framerate_hi = F24p8(7.0);
+			break;
+		case FRAME_RATE_10:
+			imx219->framerate_lo = F24p8(10.0);
+			imx219->framerate_hi = F24p8(10.0);
+			break;
+		case FRAME_RATE_15:
+			imx219->framerate_lo = F24p8(15.0);
+			imx219->framerate_hi = F24p8(15.0);
+			break;
+		case FRAME_RATE_20:
+			imx219->framerate_lo = F24p8(20.0);
+			imx219->framerate_hi = F24p8(20.0);
+			break;
+		case FRAME_RATE_25:
+			imx219->framerate_lo = F24p8(25.0);
+			imx219->framerate_hi = F24p8(25.0);
+			break;
+		case FRAME_RATE_30:
+			imx219->framerate_lo = F24p8(30.0);
+			imx219->framerate_hi = F24p8(30.0);
+			break;
+		case FRAME_RATE_AUTO:
+		default:
+			imx219->framerate_lo = F24p8(1.0);
+			imx219->framerate_hi = F24p8(30.0);
+			break;
+		}
+		imx219_set_framerate_lo(client, imx219->framerate_lo);
+		imx219_set_framerate_hi(client, imx219->framerate_hi);
+		imx219_set_exposure(client, imx219->exposure_current);
+		imx219_set_gain(client, imx219->gain_current);
+		break;
+
 	default:
 		dev_err(&client->dev,
 			"s_ctrl not supported for id=0x%X\n", ctrl->id);
@@ -744,7 +916,6 @@ static int imx219_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 	}
 	return ret;
 
-	/* TODO update when all settings available */
 }
 
 static long imx219_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
@@ -753,7 +924,6 @@ static long imx219_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 
 	return ret;
 
-	/* TODO update when all settings available */
 }
 
 static int imx219_s_power(struct v4l2_subdev *sd, int on)
@@ -995,13 +1165,13 @@ static int imx219_find_framesize(u32 width, u32 height)
 
 	for (i = 0; i < IMX219_MODE_MAX; i++) {
 		if ((imx219_mode[i].width >= width) &&
-				(imx219_mode[i].height >= height))
+		    (imx219_mode[i].height >= height))
 			break;
 	}
 
 	/* If not found, select biggest */
 	if (i >= IMX219_MODE_MAX)
-		i = IMX219_MODE_MAX - 1;
+		i = IMX219_MODE_3280x2464P15;
 
 	return i;
 }
@@ -1024,6 +1194,10 @@ static int imx219_enum_frameintervals(struct v4l2_subdev *sd,
 		interval->discrete.numerator = 1;
 		interval->discrete.denominator = 15;
 		break;
+	case IMX219_MODE_1920x1080P48:
+		interval->discrete.numerator = 1;
+		interval->discrete.denominator = 30;
+		break;
 	default:
 		interval->discrete.numerator = 1;
 		interval->discrete.denominator = 15;
@@ -1031,7 +1205,6 @@ static int imx219_enum_frameintervals(struct v4l2_subdev *sd,
 	}
 	return 0;
 }
-
 
 static const struct imx219_reg imx219_reg_state[IMX219_STATE_MAX][3] = {
 	{ /* to power down */
@@ -1121,18 +1294,17 @@ static int imx219_set_mode(struct i2c_client *client, int new_mode_idx)
 
 	if (imx219->mode_idx == IMX219_MODE_MAX) {
 		pr_debug("imx219_set_mode: full init from mode[%d]=%s to mode[%d]=%s\n",
-				imx219->mode_idx,
-				imx219_mode[imx219->mode_idx].name,
-				new_mode_idx, imx219_mode[new_mode_idx].name);
+			 imx219->mode_idx,
+			 imx219_mode[imx219->mode_idx].name,
+			 new_mode_idx, imx219_mode[new_mode_idx].name);
 		imx219_init(client);
-		ret = imx219_reg_writes(client, imx219_reginit);
-		/* write diff settings when needed */
+		ret = imx219_reg_writes(client, imx219_reginit[new_mode_idx]);
 	} else {
 		pr_debug("imx219_set_mode: diff init from mode[%d]=%s to mode[%d]=%s\n",
-				imx219->mode_idx,
-				imx219_mode[imx219->mode_idx].name,
-				new_mode_idx, imx219_mode[new_mode_idx].name);
-		/* write diff settings when needed */
+			 imx219->mode_idx,
+			 imx219_mode[imx219->mode_idx].name,
+			 new_mode_idx, imx219_mode[new_mode_idx].name);
+		ret = imx219_reg_writes(client, imx219_reginit[new_mode_idx]);
 	}
 	if (ret)
 		return ret;
@@ -1141,6 +1313,9 @@ static int imx219_set_mode(struct i2c_client *client, int new_mode_idx)
 	imx219->mode_idx = new_mode_idx;
 	imx219->line_length  = imx219_mode[new_mode_idx].line_length_ns;
 	imx219->vts = imx219_mode[new_mode_idx].vts;
+	imx219_set_framerate_lo(client, imx219_mode[new_mode_idx].fps_min);
+	imx219_set_framerate_hi(client, imx219_mode[new_mode_idx].fps_max);
+
 	/* gain_current, exposure_current are reset in imx219_init */
 	imx219_set_gain(client, imx219->gain_current);
 	imx219_set_exposure(client, imx219->exposure_current);

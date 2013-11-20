@@ -35,7 +35,7 @@
 #define IMX219_LENS_STEP				1
 
 /* AEC */
-#define IMX219_DEFAULT_EXP		                32000
+#define IMX219_DEFAULT_EXP		                10000
 #define IMX219_DEFAULT_GAIN		                UINT8P8(1.0)
 #define IMX219_GAIN_MIN					UINT8P8(1.0)
 #define IMX219_GAIN_MAX					UINT8P8(8.0)
