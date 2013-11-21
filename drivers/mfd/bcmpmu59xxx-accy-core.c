@@ -101,9 +101,8 @@ struct bcmpmu_accy_data {
 	struct pi_mgr_qos_node qos_client;
 #endif
 	enum bcmpmu_chrgr_type_t chrgr_type;
-	enum bcmpmu_chrgr_type_t chrgr_type_prev;
 	enum bcmpmu_usb_id_lvl_t pmu_usb_id;
-	bool pmu_session_a;
+	bool otg_session;
 	int charging_curr;
 	int otg_block_enabled;
 	int adp_block_enabled;
@@ -573,13 +572,9 @@ static int bcmpmu_accy_chrgr_type_handler(struct bcmpmu_accy_data *di,
 	unsigned long flags;
 
 	spin_lock_irqsave(&gp_accy_data->accy_lock, flags);
-	if ((gp_accy_data->chrgr_type_prev == PMU_CHRGR_TYPE_NONE) &&
-			(chrgr_type != PMU_CHRGR_TYPE_NONE))
-		gp_accy_data->chrgr_type_prev = chrgr_type;
-	else if (gp_accy_data->chrgr_type != PMU_CHRGR_TYPE_NONE)
-		gp_accy_data->chrgr_type_prev =
-			gp_accy_data->chrgr_type;
 	gp_accy_data->chrgr_type = chrgr_type;
+	if (_chrgr_type_usb(chrgr_type))
+		gp_accy_data->otg_session = true;
 	spin_unlock_irqrestore(&gp_accy_data->accy_lock, flags);
 
 	bcmpmu_accy_queue_event(gp_accy_data,
@@ -1469,6 +1464,7 @@ int bcmpmu_accy_chrgr_type_notify(int chrgr_type)
 		pr_accy(FLOW, "----charger type: %s ---\n",
 				chrgr_types_str[chrgr_type]);
 		ret = bcmpmu_accy_chrgr_type_handler(gp_accy_data, chrgr_type);
+
 	}
 	return ret;
 }
@@ -1518,8 +1514,6 @@ static void bcmpmu_accy_isr(enum bcmpmu59xxx_irq irq, void *data)
 	struct bcmpmu_accy_data *di = data;
 	int board_id = di->bcmpmu->pdata->board_id;
 	int idx;
-	int chrgr_type;
-	int chrgr_type_prev;
 	bool chrgr_is_usb;
 	unsigned long flags;
 	int event = PMU_EVENT_MAX;
@@ -1530,12 +1524,7 @@ static void bcmpmu_accy_isr(enum bcmpmu59xxx_irq irq, void *data)
 	BUG_ON(idx < 0);
 
 	spin_lock_irqsave(&gp_accy_data->accy_lock, flags);
-	chrgr_type = di->chrgr_type;
-	chrgr_type_prev = di->chrgr_type_prev;
-	chrgr_is_usb = _chrgr_type_usb(chrgr_type_prev);
 	spin_unlock_irqrestore(&gp_accy_data->accy_lock, flags);
-	pr_accy(FLOW, "chrgr_type: %d chrgr_type_prev:%d\n",
-			chrgr_type, chrgr_type_prev);
 	switch (irq) {
 	case PMU_IRQ_USBINS:
 		if (di->false_usb_rm) {
@@ -1564,21 +1553,12 @@ static void bcmpmu_accy_isr(enum bcmpmu59xxx_irq irq, void *data)
 			event = PMU_ACCY_EVT_OUT_CHGDET_LATCH_TO;
 		break;
 	case PMU_IRQ_OTG_SESS_VALID_F:
-		spin_lock_irqsave(&gp_accy_data->accy_lock, flags);
-		di->chrgr_type = PMU_CHRGR_TYPE_NONE;
-		di->chrgr_type_prev = PMU_CHRGR_TYPE_NONE;
-		event = accy_irq_evt_map[idx].event;
-		spin_unlock_irqrestore(&gp_accy_data->accy_lock, flags);
 		pr_accy(VERBOSE, "PMU_IRQ_OTG_SESS_VALID_F\n");
-		if (chrgr_is_usb) {
+		if (di->otg_session) {
 			pr_accy(VERBOSE,
 				"posting event PMU_IRQ_OTG_SESS_VALID_F\n");
 			event = accy_irq_evt_map[idx].event;
-		} else if (di->pmu_session_a) {
-			pr_accy(VERBOSE,
-				"posting event PMU_IRQ_OTG_SESS_VALID_F\n");
-			event = accy_irq_evt_map[idx].event;
-			di->pmu_session_a = false;
+			di->otg_session = false;
 		} else {
 			event = -1;
 		}
@@ -1597,8 +1577,9 @@ static void bcmpmu_accy_isr(enum bcmpmu59xxx_irq irq, void *data)
 			BCMPMU_USB_CTRL_GET_ID_VALUE, &di->pmu_usb_id);
 
 		if ((di->pmu_usb_id == PMU_USB_ID_RID_A) ||
-				(di->pmu_usb_id == PMU_USB_ID_GROUND))
-			di->pmu_session_a = true;
+			(di->pmu_usb_id == PMU_USB_ID_RID_C) ||
+			(di->pmu_usb_id == PMU_USB_ID_GROUND))
+			di->otg_session = true;
 
 		event = accy_irq_evt_map[idx].event;
 		pr_accy(VERBOSE, " ==== pmu_id %d\n", di->pmu_usb_id);
@@ -1807,7 +1788,6 @@ static int bcmpmu_accy_probe(struct platform_device *pdev)
 #endif
 	gp_accy_data = di;
 	di->chrgr_type = PMU_CHRGR_TYPE_NONE;
-	di->chrgr_type_prev = PMU_CHRGR_TYPE_NONE;
 	atomic_set(&drv_init_done, 1);
 
 	ret = bcmpmu_accy_register_irqs(di);
