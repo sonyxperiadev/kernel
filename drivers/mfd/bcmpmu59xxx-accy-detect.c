@@ -87,7 +87,6 @@ struct accy_det {
 	u32 act;
 	u32 xceiv_start;
 	bool reschedule;
-	bool clock_en;
 	bool rgl_en;
 };
 static atomic_t drv_init_done;
@@ -102,9 +101,8 @@ static atomic_t drv_init_done;
 static void enable_bc_clock(struct accy_det *accy_d, bool en)
 {
 	bcm_hsotgctrl_en_clock(en);
-	accy_d->clock_en = en;
 	pr_acd(VERBOSE, "======<%s> paccy clock %x\n"
-		, __func__, accy_d->clock_en);
+		, __func__, en);
 }
 
 static void reset_bc(struct accy_det *accy_d)
@@ -355,8 +353,7 @@ void bcmpmu_accy_setup_detection(struct accy_det *accy_d, bool en)
 	if (en) {
 		if (!accy_d->rgl_en)
 			bcmpmu_enable_bc_regl(accy_d, en);
-		if (!accy_d->clock_en)
-			enable_bc_clock(accy_d, true);
+		enable_bc_clock(accy_d, true);
 #ifdef CONFIG_HAS_WAKELOCK
 		if (!wake_lock_active
 				(&accy_d->wake_lock))
@@ -365,8 +362,7 @@ void bcmpmu_accy_setup_detection(struct accy_det *accy_d, bool en)
 	} else {
 		if (accy_d->rgl_en)
 			bcmpmu_enable_bc_regl(accy_d, en);
-		if (accy_d->clock_en)
-			enable_bc_clock(accy_d, false);
+		enable_bc_clock(accy_d, false);
 
 #ifdef CONFIG_HAS_WAKELOCK
 		if (wake_lock_active(&accy_d->wake_lock))
