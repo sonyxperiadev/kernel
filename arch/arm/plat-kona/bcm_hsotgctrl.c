@@ -64,7 +64,6 @@ struct bcm_hsotgctrl_drv_data {
 	int hsotgctrl_irq;
 	bool irq_enabled;
 	bool allow_suspend;
-	bool usb_active;
 	send_core_event_cb_t wakeup_core_cb;
 	void *wakeup_arg;
 };
@@ -143,17 +142,10 @@ int bcm_hsotgctrl_en_clock(bool on)
 		if (!clk_get_usage(bcm_hsotgctrl_handle->otg_clk))
 			rc = clk_enable(bcm_hsotgctrl_handle->otg_clk);
 	} else {
-		pr_info("hsotgctrl_clk=off, clk_usage=%d usb_active:%d\n",
-			clk_get_usage(bcm_hsotgctrl_handle->otg_clk),
-			bcm_hsotgctrl_handle->usb_active);
-		/*
-		* Only allow the clock to be shut off by the
-		* PMU if usb is not active
-		*/
-		if (!bcm_hsotgctrl_handle->usb_active) {
-			clk_disable(bcm_hsotgctrl_handle->otg_clk);
-			bcm_hsotgctrl_handle->allow_suspend = true;
-		}
+		pr_info("hsotgctrl_clk=off, clk_usage=%d\n",
+			clk_get_usage(bcm_hsotgctrl_handle->otg_clk));
+		clk_disable(bcm_hsotgctrl_handle->otg_clk);
+		bcm_hsotgctrl_handle->allow_suspend = true;
 	}
 
 	if (rc)
@@ -177,7 +169,6 @@ int bcm_hsotgctrl_phy_init(bool id_device)
 		  (!bcm_hsotgctrl_handle->dev))
 		return -EIO;
 
-	bcm_hsotgctrl_handle->usb_active = true;
 	bcm_hsotgctrl_en_clock(true);
 	mdelay(HSOTGCTRL_STEP_DELAY_IN_MS);
 	/* clear bit 15 RDB error */
@@ -302,7 +293,6 @@ int bcm_hsotgctrl_phy_deinit(void)
 	bcm_hsotgctrl_phy_set_vbus_stat(false);
 
 	/* Disable the OTG core AHB clock */
-	bcm_hsotgctrl_handle->usb_active = false;
 	bcm_hsotgctrl_en_clock(false);
 	return 0;
 }
@@ -475,8 +465,6 @@ void bcm_hsotgctrl_wakeup_core(void)
 	if (NULL == local_hsotgctrl_handle)
 		return;
 
-	bcm_hsotgctrl_handle->usb_active = true;
-
 	/* Disable wakeup interrupt */
 	bcm_hsotgctrl_phy_wakeup_condition(false);
 
@@ -600,7 +588,6 @@ int bcm_hsotgctrl_handle_bus_suspend(void)
 	bcm_hsotgctrl_phy_wakeup_condition(true);
 
 	/* Disable OTG AHB clock */
-	bcm_hsotgctrl_handle->usb_active = false;
 	bcm_hsotgctrl_en_clock(false);
 
 	if (bcm_hsotgctrl_handle->irq_enabled == false) {
@@ -689,9 +676,6 @@ static int bcm_hsotgctrl_probe(struct platform_device *pdev)
 
 	hsotgctrl_drvdata->allow_suspend = true;
 	platform_set_drvdata(pdev, hsotgctrl_drvdata);
-
-	/* Init the PHY */
-	hsotgctrl_drvdata->usb_active = true;
 
 	mdelay(HSOTGCTRL_STEP_DELAY_IN_MS);
 
