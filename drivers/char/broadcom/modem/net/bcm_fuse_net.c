@@ -225,31 +225,41 @@ static ssize_t bcm_fuse_net_proc_write(struct file *procFp, const char __user * 
 }
 
 /**
-	Read function for bcm_fuse_net proc entry
-*/
-static ssize_t bcm_fuse_net_proc_read(struct file *file, char __user *ubuff,
-				size_t count, loff_t *pos)
+  Read function for bcm_net proc entry
+  */
+static ssize_t bcm_fuse_net_proc_read(struct file *file, char __user *user_buf,
+	size_t count, loff_t *ppos)
 {
-	int len = 0;
+	unsigned int len = 0;
 	int i;
+	char *buf = kmalloc(count, GFP_KERNEL);
 
-	len += snprintf(ubuff + len, 50, "IFC     CID     SIM ID     Active\n");
-	len += snprintf(ubuff + len, 50, "---     ---     ------     ------\n");
-	for (i = 0; i < BCM_NET_MAX_PDP_CNTXS; i++) {
+	if (!buf) {
+		BNET_DEBUG(DBG_INFO, "%s: Fail to alloc mem\n", __func__);
+		return 0;
+	}
+
+	len += snprintf(buf + len, count - len,
+			"IFC     CID     SIM ID     Active\n");
+	len += snprintf(buf + len, count - len,
+			"---     ---     ------     ------\n");
+	for (i = 0; i < BCM_NET_MAX_PDP_CNTXS && len < count; i++) {
 		if (g_net_dev_tbl[i].dev_ptr != NULL) {
-			len +=
-			    snprintf(ubuff + len, 50,
-				     "%s  %d      %d         %d\n",
-				     g_net_dev_tbl[i].dev_ptr->name,
-				     g_net_dev_tbl[i].pdp_context_id,
-				     g_net_dev_tbl[i].sim_id,
-				     g_net_dev_tbl[i].entry_stat);
+			len += snprintf(buf + len, count - len,
+					"%s  %d      %d       %d\n",
+					g_net_dev_tbl[i].dev_ptr->name,
+					g_net_dev_tbl[i].pdp_context_id,
+					g_net_dev_tbl[i].sim_id,
+					g_net_dev_tbl[i].entry_stat);
 		}
 	}
 
+	len = simple_read_from_buffer(user_buf, count, ppos, buf, len);
+
+	kfree(buf);
+
 	return len;
 }
-
 
 /**
    @fn void bcm_fuse_net_fc_cb(RPC_FlowCtrlEvent_t event, unsigned char8 cid);
