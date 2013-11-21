@@ -320,12 +320,13 @@ static void pb_update_max_brightness(unsigned long curr_temp,
 	struct platform_device *pdev;
 	struct platform_pwm_backlight_data *data;
 	struct backlight_device *bl;
-	int i;
+	int i, prev_max_brightness;
 
 	pdev = container_of(pb->dev, struct platform_device, dev);
 	data = pdev->dev.platform_data;
 	bl = platform_get_drvdata(pdev);
 
+	prev_max_brightness = pb->max_brightness;
 	pb->max_brightness = data->max_brightness;
 
 	if (!pb_enable_adapt_bright)
@@ -338,9 +339,14 @@ static void pb_update_max_brightness(unsigned long curr_temp,
 			break;
 		}
 	}
-	dev_dbg(&pdev->dev,
-		"pb_update_max_brightness: max_brightness=%d\n",
-		pb->max_brightness);
+	if (prev_max_brightness != pb->max_brightness) {
+		pr_info("[BACKLIGHT_DRIVER] Sensor: [BBIC], Threshold Crossed: [%lu], Threshold Crossing Direction: [%s], Throttling Action: [Max_Brightness = %d]"
+		, pb->max_brightness > prev_max_brightness ?
+		data->temp_comp_tbl[i+1].trigger_temp :
+		data->temp_comp_tbl[i].trigger_temp,
+		pb->max_brightness > prev_max_brightness ? "Fall" :
+		"Rise", pb->max_brightness);
+	}
 
 update_status:
 	backlight_update_status(bl);
