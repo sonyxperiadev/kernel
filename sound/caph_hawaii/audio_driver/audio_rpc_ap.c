@@ -631,6 +631,8 @@ UInt32 audio_control_dsp(UInt32 param1, UInt32 param2, UInt32 param3,
 				BUG_ON(1);
 				panic("COMMAND_AUDIO_ENABLE timeout");
 				*/
+			} else {
+				set_flag_dsp_timeout(0);
 			}
 #if defined(ENABLE_DMA_VOICE)
 			{
