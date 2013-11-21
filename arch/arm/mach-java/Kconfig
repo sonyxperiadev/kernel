@@ -4,14 +4,6 @@ menu	"Java SoC based Machine types"
 	depends on ARCH_JAVA
 
 choice
-	prompt "Choose Java SOC Silicon Version"
-
-config	ARCH_JAVA_A0
-	bool "Java SOC Version - A0"
-
-endchoice
-
-choice
 	prompt "Java SoC based board type"
 
 config	MACH_JAVA_FPGA
