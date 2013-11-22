@@ -90,22 +90,21 @@ static u32 vce_read(struct vce_device_t *vce, u32 reg)
 
 static void print_regs(struct vce_device_t *vce)
 {
-	pr_debug("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
-	pr_debug(" VCE_STATUS: 0x%x\n", vce_read(vce, VCE_STATUS_OFFSET));
-	pr_debug(" VERSION: 0x%x\n", vce_read(vce, VCE_VERSION_OFFSET));
-	pr_debug(" PC_PF0: 0x%x\n", vce_read(vce, VCE_PC_PF0_OFFSET));
-	pr_debug(" PC_IF0: 0x%x\n", vce_read(vce, VCE_PC_IF0_OFFSET));
-	pr_debug(" PC_RD0: 0x%x\n", vce_read(vce, VCE_PC_RD0_OFFSET));
-	pr_debug(" PC_EX0: 0x%x\n", vce_read(vce, VCE_PC_EX0_OFFSET));
-	pr_debug(" BAD_ADDR: 0x%x\n", vce_read(vce, VCE_BAD_ADDR_OFFSET));
-	pr_debug(" PC_ERR: 0x%x\n", vce_read(vce, VCE_PC_ERR_OFFSET));
-	pr_debug("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
+	pr_info("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
+	pr_info(" VCE_STATUS: 0x%x\n", vce_read(vce, VCE_STATUS_OFFSET));
+	pr_info(" VERSION: 0x%x\n", vce_read(vce, VCE_VERSION_OFFSET));
+	pr_info(" PC_PF0: 0x%x\n", vce_read(vce, VCE_PC_PF0_OFFSET));
+	pr_info(" PC_IF0: 0x%x\n", vce_read(vce, VCE_PC_IF0_OFFSET));
+	pr_info(" PC_RD0: 0x%x\n", vce_read(vce, VCE_PC_RD0_OFFSET));
+	pr_info(" PC_EX0: 0x%x\n", vce_read(vce, VCE_PC_EX0_OFFSET));
+	pr_info(" BAD_ADDR: 0x%x\n", vce_read(vce, VCE_BAD_ADDR_OFFSET));
+	pr_info(" PC_ERR: 0x%x\n", vce_read(vce, VCE_PC_ERR_OFFSET));
+	pr_info("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
 }
 
 static int vce_get_regs(void *device_id, MM_REG_VALUE *ptr, int count)
 {
 	struct vce_device_t *id = (struct vce_device_t *)device_id;
-	print_regs(id);
 	return 0;
 }
 
@@ -137,6 +136,7 @@ static int vce_abort(void *device_id, mm_job_post_t *job)
 	struct vce_device_t *id = (struct vce_device_t *)device_id;
 
 	pr_info("vce_abort:\n");
+	print_regs(id);
 	vce_reset(id);
 
 	return 0;
