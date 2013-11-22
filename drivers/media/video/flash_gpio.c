@@ -33,9 +33,12 @@
 #include <linux/module.h>
 #include <linux/timer.h>
 
-#ifdef CONFIG_MACH_JAVA_C_LC2
+#if defined(CONFIG_MACH_JAVA_C_LC2)
 #define GPIO_FLASH_EN 11
 #define GPIO_TORCH_SEL 34
+#elif defined(CONFIG_MACH_JAVA_C_5606)
+#define GPIO_FLASH_EN 11
+#define GPIO_TORCH_SEL 10
 #endif
 
 /*
@@ -93,12 +96,19 @@ static int __init gpio_flash_mod_init(void)
 		printk(KERN_ERR "gpio Flash-En failed\n");
 		return -1;
 	}
+#if defined(CONFIG_MACH_JAVA_C_LC2)
 	if (gpio_request_one(GPIO_TORCH_SEL , GPIOF_DIR_OUT | GPIOF_INIT_HIGH,
 		      "Flash-SEL")) {
 		printk(KERN_ERR "gpio Flash-SEL failed\n");
 		return -1;
 	}
-
+#elif defined(CONFIG_MACH_JAVA_C_5606)
+	if (gpio_request_one(GPIO_TORCH_SEL , GPIOF_DIR_OUT | GPIOF_INIT_LOW,
+				  "Flash-SEL")) {
+			printk(KERN_ERR "gpio Flash-SEL failed\n");
+			return -1;
+		}
+#endif
 	init_timer(&timer);
 	return 0;
 }
