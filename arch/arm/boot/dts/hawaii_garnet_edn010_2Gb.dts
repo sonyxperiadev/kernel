@@ -6,7 +6,7 @@
 /include/ "hawaii_garnet_bcmpmu_edn010.dtsi"
 
 / {
-	model = "Hawaiigarnet EDN01x 2Gb";
+	model = "Hawaiigarnet EDN01x";
 	compatible = "bcm,hawaii";
 
 	chosen {
@@ -366,15 +366,20 @@
 		reg = <0x34008000 0x1000>;
 		interrupts = <0 183 4>;
 		chipreg_addr = <0x35004000 0x1000>;
-		thold_size = <3>; /*number of threshold levels*/
-		poll_rate_ms = <30000>;
+		thold_size = <8>; /*number of threshold levels*/
+		poll_rate_ms = <10000>;
 		hysteresis = <0>;
-		flags = <0>;
+		flags = <1>;
 		interval_ms = <5>;
-		/*critical temp is 115*/
-		thold = <85 1
-			100 1
-			115 2>;
+		/*sw shdwn temp is 120*/
+		thold = <55 1
+			58 1
+			63 1
+			65 1
+			70 1
+			80 1
+			115 4
+			120 2>;
 		tmon_apb_clk = "tmon_apb";
 		tmon_1m_clk = "tmon_1m_clk";
 		falling = <5>;
