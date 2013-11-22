@@ -739,7 +739,7 @@ static long mm_file_ioctl(struct file *filp, \
 		atomic_set(&private->buffer_status, (uint32_t) arg);
 	break;
 	case MM_IOCTL_SET_BUFFER_SYNCED:
-		atomic_or(&private->buffer_status, (uint32_t) arg);
+		atomic_or((uint32_t) arg, &private->buffer_status);
 	break;
 	case MM_IOCTL_GET_BUFFER_STATUS:
 	{
