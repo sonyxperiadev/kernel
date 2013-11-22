@@ -481,12 +481,14 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 			msecs_to_jiffies(bl_delay_on));
 	}
 	platform_set_drvdata(pdev, bl);
-		if (pb_enable_adapt_bright) {
-			INIT_DELAYED_WORK(&pb->tmon_nb_init_work,
-					pb_tmon_nb_init_work);
-			schedule_delayed_work(&pb->tmon_nb_init_work,
-				msecs_to_jiffies(TMON_NB_INIT_WORK_DELAY));
-		}
+	pb->tmon_nb.notifier_call = pb_tmon_notify_handler;
+	if (pb_enable_adapt_bright) {
+		INIT_DELAYED_WORK(&pb->tmon_nb_init_work,
+				pb_tmon_nb_init_work);
+		schedule_delayed_work(&pb->tmon_nb_init_work,
+			msecs_to_jiffies(TMON_NB_INIT_WORK_DELAY));
+	}
+
 	return 0;
 err_alloc:
 	if (data->exit)
