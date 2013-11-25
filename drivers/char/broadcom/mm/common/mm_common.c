@@ -390,8 +390,11 @@ static int mm_file_release(struct inode *inode, struct file *filp)
 	/* Free all jobs posted using this file */
 	if (private->spl_data_ptr != NULL)
 		kfree(private->spl_data_ptr);
-	if (private->device_locked == 1)
+	if (private->device_locked == 1) {
+		if (common->common_clk)
+			clk_disable(common->common_clk);
 		up(&common->device_sem);
+	}
 	kfree(private);
 	return 0;
 }
@@ -683,6 +686,10 @@ static long mm_file_ioctl(struct file *filp, \
 		BUG_ON(private->device_locked == 1);
 		if (down_interruptible(&common->device_sem))
 			return -EINVAL;
+
+		if (common->common_clk)
+			clk_enable(common->common_clk);
+
 		private->device_locked = 1;
 	break;
 	case MM_IOCTL_DEVICE_UNLOCK:
@@ -692,8 +699,11 @@ static long mm_file_ioctl(struct file *filp, \
 			break;
 		}
 		BUG_ON(private->device_locked == 0);
-		up(&common->device_sem);
 		private->device_locked = 0;
+		if (common->common_clk)
+			clk_disable(common->common_clk);
+		up(&common->device_sem);
+
 	break;
 #if defined(CONFIG_MM_SECURE_DRIVER)
 	case MM_IOCTL_SECURE_JOB_WAIT:
