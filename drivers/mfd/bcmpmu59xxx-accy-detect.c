@@ -101,10 +101,10 @@ static atomic_t drv_init_done;
 
 static void enable_bc_clock(struct accy_det *accy_d, bool en)
 {
-		bcm_hsotgctrl_en_clock(en);
-		accy_d->clock_en = en;
-		pr_acd(VERBOSE, "======<%s> paccy clock %x\n"
-			, __func__, accy_d->clock_en);
+	bcm_hsotgctrl_en_clock(en);
+	accy_d->clock_en = en;
+	pr_acd(VERBOSE, "======<%s> paccy clock %x\n"
+		, __func__, accy_d->clock_en);
 }
 
 static void reset_bc(struct accy_det *accy_d)
@@ -355,7 +355,8 @@ void bcmpmu_accy_setup_detection(struct accy_det *accy_d, bool en)
 	if (en) {
 		if (!accy_d->rgl_en)
 			bcmpmu_enable_bc_regl(accy_d, en);
-		enable_bc_clock(accy_d, true);
+		if (!accy_d->clock_en)
+			enable_bc_clock(accy_d, true);
 #ifdef CONFIG_HAS_WAKELOCK
 		if (!wake_lock_active
 				(&accy_d->wake_lock))
