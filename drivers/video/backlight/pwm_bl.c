@@ -95,6 +95,11 @@ static int pwm_backlight_update_status(struct backlight_device *bl)
 	} else {
 		int duty_cycle;
 
+#ifdef CONFIG_KONA_TMON
+		if (brightness > pb->max_brightness)
+			brightness = pb->max_brightness;
+#endif
+
 		if (pb->levels) {
 			duty_cycle = pb->levels[brightness];
 			max = pb->levels[max];
@@ -172,7 +177,6 @@ static int pwm_backlight_parse_dt(struct device *dev,
 	if (!node)
 		return -ENODEV;
 
-	memset(data, 0, sizeof(*data));
 #if 0
 	/* determine the number of brightness levels */
 	prop = of_find_property(node, "brightness-levels", &length);
@@ -253,7 +257,7 @@ static int pwm_backlight_parse_dt(struct device *dev,
 					"temp_comp_tbl", &size);
 			if (!temp_comp_tbl) {
 				ret = -EINVAL;
-				goto err_read;
+				return ret;
 			}
 			data->temp_comp_tbl = kzalloc(sizeof(
 					struct pb_temp_comp)*
@@ -284,16 +288,14 @@ static int pwm_backlight_parse_dt(struct device *dev,
 	} else
 		bl_delay_on = val;
 
+	return ret;
+
 err_alloc:
 	if (data->exit)
 		data->exit(dev);
 #ifdef CONFIG_KONA_TMON
 	kfree(data->temp_comp_tbl);
 #endif
-err_read:
-	if (node) {
-		/*kfree(data);*/
-	}
 	return ret;
 }
 
@@ -385,7 +387,6 @@ static int pb_tmon_notify_handler(struct notifier_block *nb,
 static int pwm_backlight_probe(struct platform_device *pdev)
 {
 	struct platform_pwm_backlight_data *data = pdev->dev.platform_data;
-	struct platform_pwm_backlight_data defdata;
 	struct backlight_properties props;
 	struct backlight_device *bl;
 	struct pwm_bl_data *pb;
@@ -393,12 +394,16 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 	int ret;
 
 	if (!data) {
-		ret = pwm_backlight_parse_dt(&pdev->dev, &defdata);
+		data = kzalloc(sizeof(struct platform_pwm_backlight_data),
+				GFP_KERNEL);
+		if (!data)
+			return -ENOMEM;
+
+		ret = pwm_backlight_parse_dt(&pdev->dev, data);
 		if (ret < 0) {
 			dev_err(&pdev->dev, "failed to find platform data\n");
-			return ret;
+			goto err_init;
 		}
-		data = &defdata;
 		pdev->dev.platform_data = data;
 	} else {
 			bl_delay_on = data->bl_delay_on;
@@ -408,7 +413,7 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 	if (data->init) {
 		ret = data->init(&pdev->dev);
 		if (ret < 0)
-			return ret;
+			goto err_init;
 	}
 
 	pb = devm_kzalloc(&pdev->dev, sizeof(*pb), GFP_KERNEL);
@@ -459,7 +464,7 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 	if (IS_ERR(bl)) {
 		dev_err(&pdev->dev, "failed to register backlight\n");
 		ret = PTR_ERR(bl);
-		goto err_alloc;
+		goto err_bl;
 	}
 
 	if (data->dft_brightness > data->max_brightness) {
@@ -480,21 +485,34 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 			schedule_delayed_work(&(pb->bl_delay_on_work),
 			msecs_to_jiffies(bl_delay_on));
 	}
-	platform_set_drvdata(pdev, bl);
-#ifdef CONFIG_KONA_TMON
-	pb->tmon_nb.notifier_call = pb_tmon_notify_handler;
-	if (pb_enable_adapt_bright) {
-		INIT_DELAYED_WORK(&pb->tmon_nb_init_work,
-				pb_tmon_nb_init_work);
-		schedule_delayed_work(&pb->tmon_nb_init_work,
-			msecs_to_jiffies(TMON_NB_INIT_WORK_DELAY));
-	}
 
+	platform_set_drvdata(pdev, bl);
+
+#ifdef CONFIG_KONA_TMON
+	pb->max_brightness = data->max_brightness;
+
+	if (data->temp_comp_size > 0) {
+		if (pb_enable_adapt_bright) {
+			INIT_DELAYED_WORK(&pb->tmon_nb_init_work,
+					pb_tmon_nb_init_work);
+			schedule_delayed_work(&pb->tmon_nb_init_work,
+				msecs_to_jiffies(TMON_NB_INIT_WORK_DELAY));
+		}
+		pb->tmon_nb.notifier_call = pb_tmon_notify_handler;
+	}
 #endif
+	pwm_bl_data = pb;
+
 	return 0;
+
+err_bl:
+	pwm_free(pb->pwm);
 err_alloc:
 	if (data->exit)
 		data->exit(&pdev->dev);
+err_init:
+	if (pdev->dev.of_node)
+		kfree(data);
 	return ret;
 }
 
