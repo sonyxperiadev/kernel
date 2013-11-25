@@ -430,6 +430,68 @@
 		falling = <5>; /*fall back temperature offset*/
 	};
 
+    tmon-thermal@0x34008000 {
+        compatible = "bcm,tmon-thermal";
+        reg  = <0x34008000 0x1000>, <0x35004000 0x1000>;
+        interrupts = <0 183 4>;
+        hysteresis = <5>;
+        flags = <5>;
+        interval_ms = <5>;
+        poll_rate_ms = <30000>;
+        tmon_apb_clk = "tmon_apb";
+        tmon_1m_clk = "tmon_1m_clk";
+        shutdown_temp = <120>;
+
+		trip0 {
+			type = "active";
+			temp = <0>;
+			max_freq = <1200000>;
+			max_brightness = <32>;
+		};
+		trip1 {
+			type = "active";
+			temp = <55>;
+			max_freq = <0>;
+			max_brightness = <28>;
+		};
+		trip2 {
+			type = "active";
+			temp = <58>;
+			max_freq = <1200000>;
+			max_brightness = <0>;
+		};
+		trip3 {
+			type = "active";
+			temp = <63>;
+			max_freq = <0>;
+			max_brightness = <25>;
+		};
+		trip4 {
+			type = "active";
+			temp = <65>;
+			max_freq = <800000>;
+			max_brightness = <0>;
+		};
+		trip5 {
+			type = "active";
+			temp = <70>;
+			max_freq = <600000>;
+			max_brightness = <22>;
+		};
+		trip6 {
+			type = "active";
+			temp = <80>;
+			max_freq = <312000>;
+			max_brightness = <0>;
+		};
+		trip7 {
+			type = "critical";
+			temp = <115>;
+			max_freq = <0>;
+			max_brightness = <0>;
+		};
+    };
+
 	memc@35008000 {
 		compatible = "bcm,memc";
 		reg = <0x35008000 0x1000>;

@@ -59,6 +59,7 @@ enum {
 struct kona_tmon_trip {
 	u32 temp;
 	u32 max_freq;
+	u32 max_brightness;
 	enum thermal_trip_type type;
 };
 

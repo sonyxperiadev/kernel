@@ -28,6 +28,7 @@
 #include <linux/of_platform.h>
 #endif
 #include <linux/platform_device.h>
+#include <linux/pwm_backlight.h>
 #include <linux/sort.h>
 #include <linux/slab.h>
 #include <linux/thermal.h>
@@ -39,7 +40,7 @@
 /* Flag to control writability of trip threshold limits */
 #define TMON_ENABLE_DEBUG			1
 #if (TMON_ENABLE_DEBUG == 1)
-#define TRIP_UPDATE_MASK			0x0F
+#define TRIP_UPDATE_MASK			0x0FE
 #else
 #define TRIP_UPDATE_MASK			0x0
 #endif
@@ -56,6 +57,13 @@
 
 #define CELCIUS_TO_RAW(x)			((426000 - x * 1000) / 562)
 #define RAW_TO_CELCIUS(x)			((426000 - (562 * x)) / 1000)
+
+#define TRIP_CNT			(thermal->pdata->trip_cnt)
+#define TRIP_MAXFREQ(x)		(thermal->pdata->trips[x].max_freq)
+#define TRIP_TEMP(x)		(thermal->pdata->trips[x].temp)
+#define TRIP_MAXBL(x)		(thermal->pdata->trips[x].max_brightness)
+#define TRIP_TYPE(x)		(thermal->pdata->trips[x].type)
+#define TRIP_START_POLLING	(thermal->cur_trip > 1)
 
 enum {
 	TMON_LOG_ALERT = 1 << 0,    /*b 00000001*/
@@ -79,8 +87,8 @@ struct kona_tmon_thermal {
 	struct clk *tmon_1m_clk;
 	struct mutex lock;
 	enum thermal_device_mode mode;
-	int cur_idx;
-	int active_cnt;	/* Active trip count excluding critical */
+	int cur_trip;
+	unsigned long cur_temp;
 };
 
 /* forward declarations */
@@ -104,32 +112,64 @@ static int kona_tmon_tz_cdev_bind(struct thermal_zone_device *tz,
 		struct thermal_cooling_device *cdev)
 {
 	struct kona_tmon_thermal *thermal = tz->devdata;
-	int idx, level, ret = 0;
+	int cdx, bdx, level, ret = 0;
 
 	/* check if the cooling device is registered */
-	if (thermal->freq_cdev != cdev)
-		return 0;
+	if (thermal->freq_cdev == cdev) {
+		/* Bind cpufreq cooling device to thermal zone */
 
-	for (idx = 0; idx < thermal->active_cnt; idx++) {
-		level = cpufreq_cooling_get_level(0,
-				thermal->pdata->trips[idx].max_freq);
+		for (cdx = 0; cdx < TRIP_CNT; cdx++) {
+			if (!TRIP_MAXFREQ(cdx))
+				continue;
 
-		if (level == THERMAL_CSTATE_INVALID)
-			continue;
+			level = cpufreq_cooling_get_level(0,
+						TRIP_MAXFREQ(cdx));
 
-		ret = thermal_zone_bind_cooling_device(tz, idx,
-					cdev, level, 0);
-		if (ret) {
-			tmon_dbg(TMON_LOG_ERR, "binding colling device (%s) on trip %d: failed\n",
-					cdev->type, idx);
-			goto err;
+			if (level == THERMAL_CSTATE_INVALID)
+				continue;
+
+			ret = thermal_zone_bind_cooling_device(tz, cdx,
+						cdev, level, 0);
+			if (ret) {
+				tmon_dbg(TMON_LOG_ERR, "binding colling device (%s) on trip %d: failed\n",
+						cdev->type, cdx);
+				goto err_cpu;
+			}
 		}
 	}
+
+	if (!strcmp(cdev->type, BACKLIGHT_CDEV_NAME)) {
+		/* Bind backlight cooling device to thermal zone */
+		for (bdx = 0; bdx < TRIP_CNT; bdx++) {
+			if (!TRIP_MAXBL(bdx))
+				continue;
+
+			level = backlight_cooling_get_level(cdev,
+						TRIP_MAXBL(bdx));
+
+			if (level == THERMAL_CSTATE_INVALID)
+				continue;
+
+			ret = thermal_zone_bind_cooling_device(tz, bdx,
+						cdev, level, 0);
+			if (ret) {
+				tmon_dbg(TMON_LOG_ERR, "binding colling device (%s) on trip %d: failed\n",
+						cdev->type, bdx);
+				goto err_bl;
+			}
+		}
+	}
+
 	return ret;
 
-err:
-	for (; idx >= 0; --idx)
-		thermal_zone_unbind_cooling_device(tz, idx, cdev);
+err_bl:
+	for (; bdx >= 0; --bdx)
+		thermal_zone_unbind_cooling_device(tz, bdx, cdev);
+	return ret;
+
+err_cpu:
+	for (; bdx >= 0; --bdx)
+		thermal_zone_unbind_cooling_device(tz, bdx, cdev);
 	return ret;
 }
 
@@ -139,7 +179,7 @@ static int kona_tmon_tz_cdev_unbind(struct thermal_zone_device *tz,
 	struct kona_tmon_thermal *thermal = tz->devdata;
 	int idx, ret = 0;
 
-	for (idx = 0; idx < thermal->active_cnt; idx++) {
+	for (idx = 0; idx < TRIP_CNT; idx++) {
 		ret = thermal_zone_unbind_cooling_device(tz, idx, cdev);
 		if (ret)
 			tmon_dbg(TMON_LOG_ERR, "unbinding colling device (%s) on trip %d: failed\n",
@@ -154,7 +194,7 @@ static int kona_tmon_tz_get_temp(struct thermal_zone_device *tz,
 {
 	struct kona_tmon_thermal *thermal = tz->devdata;
 
-	*temp = kona_tmon_get_current_temp(thermal->pdata, true, true);
+	*temp = thermal->cur_temp;
 
 	return 0;
 }
@@ -164,10 +204,10 @@ static int kona_tmon_tz_get_trip_temp(struct thermal_zone_device *tz,
 {
 	struct kona_tmon_thermal *thermal = tz->devdata;
 
-	if (trip < 0 || trip >= thermal->pdata->trip_cnt)
+	if (trip < 0 || trip >= TRIP_CNT)
 		return -EINVAL;
 
-	*temp = thermal->pdata->trips[trip].temp;
+	*temp = TRIP_TEMP(trip);
 
 	return 0;
 }
@@ -179,14 +219,14 @@ static int kona_tmon_tz_get_trend(struct thermal_zone_device *tz,
 	unsigned long trip_temp;
 	int ret;
 
-	if (trip < 0 || trip >= thermal->pdata->trip_cnt)
+	if (trip < 0 || trip >= TRIP_CNT)
 		return -EINVAL;
 
 	ret = kona_tmon_tz_get_trip_temp(tz, trip, &trip_temp);
 	if (ret < 0)
 		return ret;
 
-	if (tz->temperature >= trip_temp)
+	if (thermal->cur_temp >= trip_temp)
 		*trend = THERMAL_TREND_RAISE_FULL;
 	else
 		*trend = THERMAL_TREND_DROP_FULL;
@@ -225,10 +265,10 @@ static int kona_tmon_tz_get_trip_type(struct thermal_zone_device *tz,
 {
 	struct kona_tmon_thermal *thermal = tz->devdata;
 
-	if (trip < 0 || trip >= thermal->pdata->trip_cnt)
+	if (trip < 0 || trip >= TRIP_CNT)
 		return -EINVAL;
 
-	*type = thermal->pdata->trips[trip].type;
+	*type = TRIP_TYPE(trip);
 
 	return 0;
 }
@@ -238,14 +278,14 @@ static int kona_tmon_tz_set_trip_temp(struct thermal_zone_device *tz,
 {
 	struct kona_tmon_thermal *thermal = tz->devdata;
 
-	if (trip < 0 || trip >= thermal->pdata->trip_cnt)
+	if (trip < 0 || trip >= TRIP_CNT)
 		return -EINVAL;
 
 	mutex_lock(&thermal->lock);
 	/* check if requested trip temp is the current theshold set */
-	if (trip == thermal->cur_idx)
+	if (trip == thermal->cur_trip)
 		kona_tmon_set_theshold(thermal->pdata, temp);
-	thermal->pdata->trips[trip].temp = temp;
+	TRIP_TEMP(trip) = temp;
 	mutex_unlock(&thermal->lock);
 
 	return 0;
@@ -255,12 +295,12 @@ static int kona_tmon_tz_get_crit_temp(struct thermal_zone_device *tz,
 			unsigned long *temp)
 {
 	struct kona_tmon_thermal *thermal = tz->devdata;
-	int idx = thermal->pdata->trip_cnt-1;
+	int idx = TRIP_CNT-1;
 	long crit_temp = 0;
 
 	for (; idx < 0; idx--) {
-		if (thermal->pdata->trips[idx].type == THERMAL_TRIP_CRITICAL) {
-			crit_temp = thermal->pdata->trips[idx].temp;
+		if (TRIP_TYPE(idx) == THERMAL_TRIP_CRITICAL) {
+			crit_temp = TRIP_TEMP(idx);
 			break;
 		}
 	}
@@ -283,18 +323,6 @@ static struct thermal_zone_device_ops tmon_ops = {
 };
 
 /* tmon thermal helper functions */
-static inline int kona_tmon_active_trip_cnt(struct kona_tmon_thermal *thermal)
-{
-	int idx, cnt = 0;
-
-	for (idx = 0; idx < thermal->pdata->trip_cnt; idx++) {
-		if (thermal->pdata->trips[idx].type == THERMAL_TRIP_ACTIVE)
-			cnt++;
-	}
-
-	return cnt;
-}
-
 static inline void kona_tmon_get_sensor(struct kona_tmon_pdata *pdata,
 			u32 *sensor)
 {
@@ -455,8 +483,8 @@ static inline int kona_tmon_init_with_polling(struct kona_tmon_thermal *thermal)
 	if (ret)
 		return ret;
 
-	/* start polling only if cur_idx is greater than zero */
-	if (thermal->cur_idx)
+	/* start polling only if cur_trip is greater than zero */
+	if (TRIP_START_POLLING)
 		schedule_delayed_work(&thermal->polling_work,
 				msecs_to_jiffies(thermal->pdata->poll_rate_ms));
 
@@ -466,7 +494,6 @@ static inline int kona_tmon_init_with_polling(struct kona_tmon_thermal *thermal)
 static int kona_tmon_init(struct kona_tmon_thermal *thermal)
 {
 	u32 val, idx;
-	unsigned long cur_temp;
 	struct kona_tmon_pdata *pdata = thermal->pdata;
 	void __iomem *base_addr = pdata->chipreg_addr;
 
@@ -489,11 +516,11 @@ static int kona_tmon_init(struct kona_tmon_thermal *thermal)
 	kona_tmon_enable(thermal, true);
 
 	/* set initial thresholds for monitoring */
-	cur_temp = kona_tmon_get_current_temp(pdata, true, true);
-	for (idx = 0; idx < thermal->active_cnt; idx++) {
-		if (cur_temp < pdata->trips[idx].temp) {
-			thermal->cur_idx = idx;
-			kona_tmon_set_theshold(pdata, pdata->trips[idx].temp);
+	thermal->cur_temp = kona_tmon_get_current_temp(pdata, true, true);
+	for (idx = 0; idx < TRIP_CNT; idx++) {
+		if (thermal->cur_temp < TRIP_TEMP(idx)) {
+			thermal->cur_trip = idx;
+			kona_tmon_set_theshold(pdata, TRIP_TEMP(idx));
 			break;
 		}
 	}
@@ -513,27 +540,22 @@ static void kona_tmon_polling_work(struct work_struct *work)
 	mutex_lock(&thermal->lock);
 	cur_temp = kona_tmon_get_current_temp(pdata, true, true);
 	/* check how far current temp is down wrt to current theshold */
-	for (idx = thermal->cur_idx; idx >= 0 && thermal->cur_idx; idx--) {
-		falling_temp = pdata->trips[thermal->cur_idx-1].temp -
-			pdata->falling + pdata->hysteresis;
-
-		if (cur_temp <= falling_temp) {
-			tmon_dbg(TMON_LOG_ALERT, "soc temp is below thold (%d)C, cur temp is %ldC\n",
-				pdata->trips[thermal->cur_idx].temp, cur_temp);
-			thermal->cur_idx--;
-			tz_update++;
-		} else {
+	for (idx = thermal->cur_trip - 1; idx >= 1; idx--) {
+		falling_temp = TRIP_TEMP(idx) - pdata->hysteresis;
+		if (cur_temp > falling_temp)
 			break;
-		}
+		tz_update++;
 	}
-
 	if (tz_update) {
-		kona_tmon_set_theshold(pdata,
-				pdata->trips[thermal->cur_idx].temp);
+		tmon_dbg(TMON_LOG_ALERT, "soc temp is below thold (%d)C, cur temp is %ldC\n",
+				TRIP_TEMP(thermal->cur_trip - 1), cur_temp);
+		thermal->cur_trip -= tz_update;
+		thermal->cur_temp = cur_temp;
+		kona_tmon_set_theshold(pdata, TRIP_TEMP(thermal->cur_trip));
 		thermal_zone_device_update(thermal->tz);
 	}
 
-	if (thermal->cur_idx)
+	if (TRIP_START_POLLING)
 		schedule_delayed_work(&thermal->polling_work,
 				msecs_to_jiffies(pdata->poll_rate_ms));
 	mutex_unlock(&thermal->lock);
@@ -544,26 +566,25 @@ static void kona_tmon_irq_work(struct work_struct *work)
 	struct kona_tmon_thermal *thermal = container_of(work,
 					struct kona_tmon_thermal, isr_work);
 	struct kona_tmon_pdata *pdata = thermal->pdata;
-	unsigned long cur_temp;
 
 	mutex_lock(&thermal->lock);
-	cur_temp = kona_tmon_get_current_temp(thermal->pdata, true, true);
+	thermal->cur_temp = kona_tmon_get_current_temp(
+			thermal->pdata, true, true);
 	/* Interrupt is triggered twice sometimes. As an workaround,
 	 * check if current temp is less than the threshold value */
-	if (cur_temp < pdata->trips[thermal->cur_idx].temp)
+	if (thermal->cur_temp < TRIP_TEMP(thermal->cur_trip))
 		goto out;
 
 	tmon_dbg(TMON_LOG_ALERT, "soc threshold (%d)C exceeded, cur temp is %ldC\n",
-				pdata->trips[thermal->cur_idx].temp, cur_temp);
+			TRIP_TEMP(thermal->cur_trip), thermal->cur_temp);
 
 	/* Set threshold to next level */
 	cancel_delayed_work_sync(&thermal->polling_work);
 
-	if (thermal->cur_idx < thermal->active_cnt - 1)
-		thermal->cur_idx++;
+	if (thermal->cur_trip < (TRIP_CNT - 1))
+		thermal->cur_trip++;
 
-	kona_tmon_set_theshold(pdata,
-			pdata->trips[thermal->cur_idx].temp);
+	kona_tmon_set_theshold(pdata, TRIP_TEMP(thermal->cur_trip));
 
 	thermal_zone_device_update(thermal->tz);
 
@@ -571,12 +592,14 @@ static void kona_tmon_irq_work(struct work_struct *work)
 			msecs_to_jiffies(pdata->poll_rate_ms));
 out:
 	mutex_unlock(&thermal->lock);
+	enable_irq(thermal->pdata->irq);
 }
 
 static irqreturn_t kona_tmon_isr(int irq, void *data)
 {
 	struct kona_tmon_thermal *thermal = data;
 
+	disable_irq_nosync(irq);
 	writel(INT_CLR_MASK, thermal->pdata->base_addr +
 						TMON_CFG_CLR_INT_OFFSET);
 	schedule_work(&thermal->isr_work);
@@ -586,6 +609,8 @@ static irqreturn_t kona_tmon_isr(int irq, void *data)
 
 /* debug fs functions */
 #ifdef CONFIG_DEBUG_FS
+struct dentry *dentry_tmon_dir;
+
 static int debugfs_get_sensor(void *data, u64 *sensor)
 {
 	struct kona_tmon_thermal *thermal = data;
@@ -677,9 +702,20 @@ static int debugfs_set_interval(void *data, u64 interval)
 DEFINE_SIMPLE_ATTRIBUTE(debugfs_interval_fops, debugfs_get_interval,
 		debugfs_set_interval, "%llu\n");
 
+static int debugfs_get_temp(void *data, u64 *temp)
+{
+	struct kona_tmon_thermal *thermal = data;
+
+	*temp = kona_tmon_get_current_temp(thermal->pdata, true, true);
+
+	return 0;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(debugfs_temp_fops, debugfs_get_temp,
+		NULL, "%llu\n");
+
 static int __init kona_tmon_debugfs_init(struct kona_tmon_thermal *thermal)
 {
-	struct dentry *dentry_tmon_dir;
 	struct dentry *dentry_tmon_file;
 	int ret = 0;
 
@@ -705,13 +741,6 @@ static int __init kona_tmon_debugfs_init(struct kona_tmon_thermal *thermal)
 
 	dentry_tmon_file = debugfs_create_u32("hyteresis", TMON_FILE_PERM,
 			dentry_tmon_dir, &thermal->pdata->hysteresis);
-	if (IS_ERR_OR_NULL(dentry_tmon_file)) {
-		ret = PTR_ERR(dentry_tmon_file);
-		goto err;
-	}
-
-	dentry_tmon_file = debugfs_create_u32("falling", TMON_FILE_PERM,
-			dentry_tmon_dir, &thermal->pdata->falling);
 	if (IS_ERR_OR_NULL(dentry_tmon_file)) {
 		ret = PTR_ERR(dentry_tmon_file);
 		goto err;
@@ -752,6 +781,13 @@ static int __init kona_tmon_debugfs_init(struct kona_tmon_thermal *thermal)
 		goto err;
 	}
 
+	dentry_tmon_file = debugfs_create_file("temp", TMON_FILE_PERM,
+			dentry_tmon_dir, thermal, &debugfs_temp_fops);
+	if (IS_ERR_OR_NULL(dentry_tmon_file)) {
+		ret = PTR_ERR(dentry_tmon_file);
+		goto err;
+	}
+
 	return ret;
 
 err:
@@ -761,13 +797,21 @@ err:
 	return ret;
 }
 
+static void __exit ths_debugfs_exit(struct kona_tmon_thermal *thermal)
+{
+	if (!IS_ERR_OR_NULL(dentry_tmon_dir))
+		debugfs_remove_recursive(dentry_tmon_dir);
+}
 #else /* CONFIG_DEBUG_FS */
 
 static int __init kona_tmon_debugfs_init(struct kona_tmon_thermal *thermal)
 {
-	return -ENOSYS;
+	return 0;
 }
 
+static void __exit ths_debugfs_exit(struct kona_tmon_thermal *thermal)
+{
+}
 #endif
 
 /* DT parsing */
@@ -807,9 +851,6 @@ static int __init kona_tmon_parse_dt(struct platform_device *pdev,
 		goto out;
 
 	if (of_property_read_u32(of_node, "poll_rate_ms", &pdata->poll_rate_ms))
-		goto out;
-
-	if (of_property_read_u32(of_node, "falling", &pdata->falling))
 		goto out;
 
 	if (of_property_read_u32(of_node, "shutdown_temp",
@@ -853,6 +894,8 @@ static int __init kona_tmon_parse_dt(struct platform_device *pdev,
 
 		of_property_read_u32(child, "max_freq",
 						&pdata->trips[idx].max_freq);
+		of_property_read_u32(child, "max_brightness",
+					&pdata->trips[idx].max_brightness);
 		idx++;
 	}
 
@@ -934,7 +977,6 @@ static int __init kona_thermal_probe(struct platform_device *pdev)
 	INIT_DELAYED_WORK(&thermal->polling_work, kona_tmon_polling_work);
 	platform_set_drvdata(pdev, thermal);
 
-	thermal->active_cnt = kona_tmon_active_trip_cnt(thermal);
 	ret = kona_tmon_init(thermal);
 	if (ret) {
 		tmon_dbg(TMON_LOG_INIT, "tmon configuration failed\n");
@@ -960,8 +1002,8 @@ static int __init kona_thermal_probe(struct platform_device *pdev)
 	suspend_poweroff = pdata->flags & TMON_SUSPEND_POWEROFF ?
 			ENABLE_SUSPEND_POWEROFF : DISABLE_SUSPEND_POWEROFF;
 
-	/* start polling only if cur_idx is greater than zero */
-	if (thermal->cur_idx)
+	/* start polling only if cur_trip is greater than zero */
+	if (TRIP_START_POLLING)
 		schedule_delayed_work(&thermal->polling_work,
 					msecs_to_jiffies(pdata->poll_rate_ms));
 
@@ -986,6 +1028,7 @@ static int __exit kona_thermal_remove(struct platform_device *pdev)
 
 	cpufreq_cooling_unregister(thermal->freq_cdev);
 	thermal_zone_device_unregister(thermal->tz);
+	ths_debugfs_exit(thermal);
 	kona_tmon_exit(thermal, false);
 	clk_disable(thermal->tmon_1m_clk);
 	clk_disable(thermal->tmon_apb_clk);
@@ -1009,7 +1052,7 @@ static int kona_thermal_resume(struct platform_device *pdev)
 	if ((thermal->pdata->flags & TMON_SUSPEND_POWEROFF) && suspend_poweroff)
 		kona_tmon_init(thermal);
 
-	if (thermal->cur_idx)
+	if (TRIP_START_POLLING)
 		schedule_delayed_work(&thermal->polling_work,
 				msecs_to_jiffies(thermal->pdata->poll_rate_ms));
 
