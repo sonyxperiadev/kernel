@@ -902,6 +902,64 @@ struct pll_desense a9_pll_des = {
 #endif
 };
 
+struct gen_clk_ops a9_pll_ops;
+
+static void a9_pll_enable_hw_timer(int en)
+{
+	u32 reg_val = readl(KONA_PROC_CLK_VA +
+		KPROC_CLK_MGR_REG_PLL_DEBUG_OFFSET);
+	if (en)
+		reg_val |=
+		KPROC_CLK_MGR_REG_PLL_DEBUG_PLLARM_TIMER_LOCK_EN_MASK;
+	else
+		reg_val &=
+		~KPROC_CLK_MGR_REG_PLL_DEBUG_PLLARM_TIMER_LOCK_EN_MASK;
+
+	writel(reg_val,
+		KONA_PROC_CLK_VA + KPROC_CLK_MGR_REG_PLL_DEBUG_OFFSET);
+}
+
+static int a9_pll_clk_set_rate(struct clk *clk, u32 rate)
+{
+	const u32 thold_freq = 2400000000UL;
+	struct pll_clk *pll_clk;
+	int ret;
+
+	BUG_ON(clk->clk_type != CLK_TYPE_PLL);
+	pll_clk = to_pll_clk(clk);
+
+	BUG_ON(pll_clk->ccu_clk == NULL);
+
+	/* enable write access */
+	ccu_write_access_enable(pll_clk->ccu_clk, true);
+
+	a9_pll_enable_hw_timer(rate >= thold_freq);
+	ret = gen_pll_clk_ops.set_rate(clk, rate);
+	ccu_write_access_enable(pll_clk->ccu_clk, false);
+	return ret;
+}
+
+static int a9_pll_clk_init(struct clk *clk)
+{
+	struct pll_clk *pll_clk;
+
+	BUG_ON(clk->clk_type != CLK_TYPE_PLL);
+	pll_clk = to_pll_clk(clk);
+
+	BUG_ON(pll_clk->ccu_clk == NULL);
+
+	/* enable write access */
+	ccu_write_access_enable(pll_clk->ccu_clk, true);
+	/*call generic init function*/
+	gen_pll_clk_ops.init(clk);
+#ifdef CONFIG_PWRMGR_1P2GHZ_OPS_SET_SELECT
+	/* Enable timer based lock instead of f-lock for A9 PLL */
+	a9_pll_enable_hw_timer(true);
+#endif
+	ccu_write_access_enable(pll_clk->ccu_clk, false);
+	return 0;
+}
+
 static struct pll_clk CLK_NAME(a9_pll) = {
 
 	.clk =	{
@@ -909,7 +967,7 @@ static struct pll_clk CLK_NAME(a9_pll) = {
 				.id	= CLK_A9_PLL_CLK_ID,
 				.name = A9_PLL_CLK_NAME_STR,
 				.clk_type = CLK_TYPE_PLL,
-				.ops = &gen_pll_clk_ops,
+				.ops = &a9_pll_ops,
 		},
 	.ccu_clk = &CLK_NAME(kproc),
 	.pll_ctrl_offset = KPROC_CLK_MGR_REG_PLLARMA_OFFSET,
@@ -7926,6 +7984,10 @@ int __init __clock_init(void)
 	proc_ccu_ops.set_freq_policy = proc_ccu_set_freq_policy;
 	proc_ccu_ops.get_freq_policy = proc_ccu_get_freq_policy;
 
+	a9_pll_ops = gen_pll_clk_ops;
+	a9_pll_ops.init = a9_pll_clk_init;
+	a9_pll_ops.set_rate = a9_pll_clk_set_rate;
+
 	dig_ch_peri_clk_ops = gen_peri_clk_ops;
 	dig_ch_peri_clk_ops.init = dig_clk_init;
 
@@ -8331,9 +8393,9 @@ int __init clock_debug_add_misc_clock(struct clk *c)
 #endif
 int __init clock_late_init(void)
 {
+	int i;
 	clk_trace_init(ARRAY_SIZE(hawaii_clk_tbl));
 #ifdef CONFIG_DEBUG_FS
-	int i;
 	clock_debug_init();
 	for (i = 0; i < ARRAY_SIZE(hawaii_clk_tbl); i++) {
 		if (hawaii_clk_tbl[i].clk->clk_type == CLK_TYPE_CCU) {
