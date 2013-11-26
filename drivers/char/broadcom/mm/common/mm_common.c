@@ -20,6 +20,11 @@ the GPL, without Broadcom's express prior written consent.
 #include "mm_dvfs.h"
 #include "mm_prof.h"
 #include <mach/memory.h>
+
+#ifdef CONFIG_MEMC_DFS
+#include<plat/kona_memc.h>
+#endif
+
 #include <plat/clock.h> /* for clk_reset() */
 
 
@@ -348,7 +353,7 @@ static int mm_file_open(struct inode *inode, struct file *filp)
 	struct miscdevice *miscdev = filp->private_data;
 	struct mm_common *common = container_of(miscdev, \
 					struct mm_common, mdev);
-	struct file_private_data *private = kmalloc( \
+	struct file_private_data *private = kzalloc( \
 			sizeof(struct file_private_data), GFP_KERNEL);
 
 	INIT_WORK(&(private->work), mm_common_add_file);
@@ -367,6 +372,9 @@ static int mm_file_open(struct inode *inode, struct file *filp)
 	INIT_LIST_HEAD(&private->read_head);
 	INIT_LIST_HEAD(&private->write_head);
 	INIT_LIST_HEAD(&private->file_head);
+#ifdef CONFIG_MEMC_DFS
+	private->memc_init = 0;
+#endif
 	pr_debug(" %p ", private);
 
 	filp->private_data = private;
@@ -387,6 +395,12 @@ static int mm_file_release(struct inode *inode, struct file *filp)
 	SCHEDULER_COMMON_WORK(common, &private->work);
 	flush_work_sync(&private->work);
 
+#ifdef CONFIG_MEMC_DFS
+	if (private->set_freq > 0) {
+		memc_del_dfs_req(&private->memc_node);
+		private->memc_init = 0;
+	}
+#endif
 	/* Free all jobs posted using this file */
 	if (private->spl_data_ptr != NULL)
 		kfree(private->spl_data_ptr);
@@ -757,6 +771,29 @@ static long mm_file_ioctl(struct file *filp, \
 		ret = copy_to_user((uint32_t *)arg, &flags, sizeof(int));
 	}
 	break;
+#ifdef CONFIG_MEMC_DFS
+	case MM_IOCTL_MEMC_SET:
+	{
+		if (private->memc_init == 0) {
+			sprintf(private->memc_name, "%s:0x%p",
+				 common->mm_common_ifc.mm_name, private);
+			memc_add_dfs_req(&private->memc_node,
+				(char *)&private->memc_name, MEMC_OPP_ECO);
+			private->memc_init = 1;
+			private->set_freq = 0;
+		}
+
+		memc_update_dfs_req(&private->memc_node, MEMC_OPP_TURBO);
+		private->set_freq++ ;
+	}
+	break;
+	case MM_IOCTL_MEMC_RESET:
+	{
+		memc_update_dfs_req(&private->memc_node, MEMC_OPP_ECO);
+		private->set_freq--;
+	}
+	break;
+#endif
 	default:
 		pr_err("cmd[0x%08x] not supported", cmd);
 		ret = -EINVAL;
