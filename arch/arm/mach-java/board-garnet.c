@@ -1441,63 +1441,9 @@ struct platform_device haptic_pwm_device = {
 
 /* Platform Data for SDMMC,EMMC and Wifi */
 
-static struct sdio_platform_cfg hawaii_sdio_param[] = {
-	{
-	 .id = 0,
-	 .data_pullup = 0,
-	 .cd_gpio = SD_CARDDET_GPIO_PIN,
-	 .devtype = SDIO_DEV_TYPE_SDMMC,
-	 .flags = KONA_SDIO_FLAGS_DEVICE_REMOVABLE,
-	 .peri_clk_name = "sdio1_clk",
-	 .ahb_clk_name = "sdio1_ahb_clk",
-	 .sleep_clk_name = "sdio1_sleep_clk",
-	 .peri_clk_rate = 48000000,
-	 /*The SD card regulator */
-	 .vddo_regulator_name = "vdd_sdio",
-	 /*The SD controller regulator */
-	 .vddsdxc_regulator_name = "vdd_sdxc",
-	 .configure_sdio_pullup = configure_sdio_pullup,
-	 },
-	{
-	 .id = 1,
-	 .data_pullup = 0,
-	 .is_8bit = 1,
-	 .devtype = SDIO_DEV_TYPE_EMMC,
-	 .flags = KONA_SDIO_FLAGS_DEVICE_NON_REMOVABLE,
-	 .peri_clk_name = "sdio2_clk",
-	 .ahb_clk_name = "sdio2_ahb_clk",
-	 .sleep_clk_name = "sdio2_sleep_clk",
-	 .peri_clk_rate = 52000000,
-	 },
+static struct sdio_platform_cfg hawaii_sdio_param = {
 #ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
-	{
-	 .id = 2,
-	 .data_pullup = 0,
-	 .devtype = SDIO_DEV_TYPE_WIFI,
-	 .flags = KONA_SDIO_FLAGS_DEVICE_REMOVABLE,
-	 .peri_clk_name = "sdio3_clk",
-	 .ahb_clk_name = "sdio3_ahb_clk",
-	 .sleep_clk_name = "sdio3_sleep_clk",
-	 .peri_clk_rate = 48000000,
-	 .register_status_notify = hawaii_wifi_status_register,
-	 },
-#else
-	{
-	 .id = 2,
-	 .data_pullup = 0,
-	 .devtype = SDIO_DEV_TYPE_WIFI,
-	 .wifi_gpio = {
-		       .reset = 3,
-		       .reg = -1,
-		       .host_wake = 74,
-		       .shutdown = -1,
-		       },
-	 .flags = KONA_SDIO_FLAGS_DEVICE_REMOVABLE,
-	 .peri_clk_name = "sdio3_clk",
-	 .ahb_clk_name = "sdio3_ahb_clk",
-	 .sleep_clk_name = "sdio3_sleep_clk",
-	 .peri_clk_rate = 48000000,
-	 },
+	.register_status_notify = hawaii_wifi_status_register,
 #endif
 };
 
@@ -2542,9 +2488,6 @@ static void hawaii_add_pdata(void)
 #ifdef CONFIG_BACKLIGHT_PWM
 	hawaii_backlight_device.dev.platform_data = &hawaii_backlight_data;
 #endif
-	hawaii_sdio1_device.dev.platform_data = &hawaii_sdio_param[0];
-	hawaii_sdio2_device.dev.platform_data = &hawaii_sdio_param[1];
-	hawaii_sdio3_device.dev.platform_data = &hawaii_sdio_param[2];
 	hawaii_ssp0_device.dev.platform_data = &hawaii_ssp0_info;
 	hawaii_ssp1_device.dev.platform_data = &hawaii_ssp1_info;
 #ifdef CONFIG_BCM_STM

@@ -1501,9 +1501,9 @@ CONFIG_TARGET_LOCALE_CHN=y
 # CONFIG_B43 is not set
 # CONFIG_B43LEGACY is not set
 # CONFIG_BCMDHD_4334 is not set
-CONFIG_BCM4330=m
-CONFIG_BCMDHD_FW_PATH="/system/vendor/firmware/fw_wifi_4330.bin"
-CONFIG_BCMDHD_NVRAM_PATH="/system/vendor/firmware/fw_wifi_nvram_4330.txt"
+CONFIG_BCM4330=y
+CONFIG_BCMDHD_FW_PATH_4330="/system/vendor/firmware/fw_wifi_4330.bin"
+CONFIG_BCMDHD_NVRAM_PATH_4330="/system/vendor/firmware/fw_wifi_nvram_4330.txt"
 # CONFIG_BCMDHD is not set
 # CONFIG_BRCMFMAC is not set
 # CONFIG_HOSTAP is not set

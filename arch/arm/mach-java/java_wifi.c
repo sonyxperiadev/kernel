@@ -319,11 +319,13 @@ static void bcm_sdiowl_term(void)
 #endif
 
 #ifdef CONFIG_BRCM_UNIFIED_DHD_SUPPORT
-	__wifi_reset(dev->wifi_gpio->reset, 0);
+	if (dev->wifi_gpio)
+		__wifi_reset(dev->wifi_gpio->reset, 0);
 #endif
 
 	/* free GPIOs */
-	wifi_gpio_free(dev->wifi_gpio);
+	if (dev->wifi_gpio)
+		wifi_gpio_free(dev->wifi_gpio);
 	printk(KERN_ERR " %s GPIO Released\n", __func__);
 
 	dev->wifi_gpio = NULL;
