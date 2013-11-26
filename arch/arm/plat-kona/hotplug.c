@@ -131,7 +131,6 @@ static inline void platform_do_lowpower(unsigned int cpu, int *spurious)
 	task_thread_info(idle)->preempt_count = 0;
 
 	local_irq_enable();
-	local_irq_enable();
 }
 
 int platform_cpu_kill(unsigned int cpu)
