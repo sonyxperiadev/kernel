@@ -17,6 +17,7 @@
 #include <linux/init.h>
 #include <linux/stat.h>
 #include <linux/platform_device.h>
+#include <linux/atomic.h>
 #include <linux/delay.h>
 #include <linux/sched.h>
 #include <linux/err.h>
@@ -66,7 +67,7 @@ struct bcm_hsotgctrl_drv_data {
 	struct delayed_work wakeup_work;
 	int hsotgctrl_irq;
 	bool irq_enabled;
-	bool allow_suspend;
+	atomic_t no_suspend_count;
 	send_core_event_cb_t wakeup_core_cb;
 	void *wakeup_arg;
 };
@@ -136,13 +137,13 @@ int bcm_hsotgctrl_en_clock(bool on)
 		return -EIO;
 
 	if (on) {
-		bcm_hsotgctrl_handle->allow_suspend = false;
+		atomic_inc(&bcm_hsotgctrl_handle->no_suspend_count);
 		pr_info("hsotgctrl_clk=on\n");
 		rc = clk_enable(bcm_hsotgctrl_handle->otg_clk);
 	} else {
 		pr_info("hsotgctrl_clk=off\n");
 		clk_disable(bcm_hsotgctrl_handle->otg_clk);
-		bcm_hsotgctrl_handle->allow_suspend = true;
+		atomic_dec(&bcm_hsotgctrl_handle->no_suspend_count);
 	}
 
 	if (rc)
@@ -446,9 +447,6 @@ EXPORT_SYMBOL_GPL(bcm_hsotgctrl_bc_vdp_src_off);
 
 void bcm_hsotgctrl_wakeup_core(void)
 {
-	struct bcm_hsotgctrl_drv_data *bcm_hsotgctrl_handle =
-		local_hsotgctrl_handle;
-
 	if (NULL == local_hsotgctrl_handle)
 		return;
 
@@ -720,7 +718,6 @@ static int bcm_hsotgctrl_probe(struct platform_device *pdev)
 		goto error_get_master_clk;
 	}
 
-	hsotgctrl_drvdata->allow_suspend = true;
 	platform_set_drvdata(pdev, hsotgctrl_drvdata);
 
 	mdelay(HSOTGCTRL_STEP_DELAY_IN_MS);
@@ -876,22 +873,17 @@ static int bcm_hsotgctrl_remove(struct platform_device *pdev)
 static int bcm_hsotgctrl_pm_suspend(struct platform_device *pdev,
 	pm_message_t state)
 {
-	int status = 0;
+	int status = -EBUSY;
 	struct bcm_hsotgctrl_drv_data *bcm_hsotgctrl_handle =
 		local_hsotgctrl_handle;
 
-	if (bcm_hsotgctrl_handle && bcm_hsotgctrl_handle->allow_suspend)
+	if (bcm_hsotgctrl_handle &&
+	    (atomic_read(&bcm_hsotgctrl_handle->no_suspend_count) == 0))
 		status = 0;
-	else
-		status = -EBUSY;
 
 	return status;
 }
 
-static int bcm_hsotgctrl_pm_resume(struct platform_device *pdev)
-{
-	return 0;
-}
 static const struct of_device_id usb_hsotgctrl_of_match[] = {
 	{.compatible = "bcm,usb-hsotgctrl",},
 	{},
@@ -907,7 +899,6 @@ static struct platform_driver bcm_hsotgctrl_driver = {
 	.probe = bcm_hsotgctrl_probe,
 	.remove = bcm_hsotgctrl_remove,
 	.suspend = bcm_hsotgctrl_pm_suspend,
-	.resume = bcm_hsotgctrl_pm_resume,
 };
 
 static int __init bcm_hsotgctrl_init(void)
@@ -1276,19 +1267,14 @@ EXPORT_SYMBOL_GPL(bcm_hsotgctrl_phy_wakeup_condition);
 
 int bcm_hsotgctrl_is_suspend_allowed(bool *suspend_allowed)
 {
-	if ((NULL != local_hsotgctrl_handle) &&
-		    suspend_allowed) {
-		/* Return the status */
-		*suspend_allowed = local_hsotgctrl_handle->allow_suspend;
-		pr_info("bcm_hsotgctrl_is_suspend_allowed: %d\n",
-			local_hsotgctrl_handle->allow_suspend);
-	} else {
-		/* No device handle */
+	if (!local_hsotgctrl_handle || !suspend_allowed)
 		return -ENODEV;
-	}
+
+	/* Return the status */
+	*suspend_allowed = !atomic_read(&local_hsotgctrl_handle->no_suspend_count);
+	pr_info("bcm_hsotgctrl_is_suspend_allowed: %d\n", *suspend_allowed);
 
 	return 0;
-
 }
 EXPORT_SYMBOL_GPL(bcm_hsotgctrl_is_suspend_allowed);
 
