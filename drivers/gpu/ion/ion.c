@@ -98,6 +98,9 @@ struct ion_client {
 	int deathpending;
 	unsigned long timeout;
 #endif
+#ifdef CONFIG_ION_BCM
+	struct kref ref;
+#endif
 };
 
 /**
@@ -1054,6 +1057,9 @@ struct ion_client *ion_client_create(struct ion_device *dev,
 	client->dev = dev;
 	client->handles = RB_ROOT;
 	mutex_init(&client->lock);
+#ifdef CONFIG_ION_BCM
+	kref_init(&client->ref);
+#endif
 	client->name = name;
 	client->task = task;
 	client->pid = pid;
@@ -1082,6 +1088,57 @@ struct ion_client *ion_client_create(struct ion_device *dev,
 }
 EXPORT_SYMBOL(ion_client_create);
 
+#ifdef CONFIG_ION_BCM
+/**
+ * The client is refcounted because the client may get accessed from
+ * another process - used by memtrack HAL.
+ *
+ * The reference of client is taken by a lookup with dev->lock held
+ * OR used from the fd which was used to create the client.
+ **/
+static void _ion_client_destroy(struct kref *kref)
+{
+	struct ion_client *client = container_of(kref, struct ion_client, ref);
+	struct ion_device *dev = client->dev;
+	struct rb_node *n;
+
+	pr_debug("%s: %d\n", __func__, __LINE__);
+
+	rb_erase(&client->node, &dev->clients);
+	debugfs_remove_recursive(client->debug_root);
+	up_write(&dev->lock);
+
+	while ((n = rb_first(&client->handles))) {
+		struct ion_handle *handle = rb_entry(n, struct ion_handle,
+						     node);
+		ion_handle_put(handle);
+	}
+
+	if (client->task)
+		put_task_struct(client->task);
+	kfree(client);
+}
+
+static void ion_client_get(struct ion_client *client)
+{
+	kref_get(&client->ref);
+}
+
+void ion_client_put(struct ion_client *client)
+{
+	struct ion_device *dev = client->dev;
+
+	down_write(&dev->lock);
+	if (!kref_put(&client->ref, _ion_client_destroy))
+		up_write(&dev->lock);
+}
+
+void ion_client_destroy(struct ion_client *client)
+{
+	ion_client_put(client);
+}
+
+#else
 void ion_client_destroy(struct ion_client *client)
 {
 	struct ion_device *dev = client->dev;
@@ -1102,6 +1159,7 @@ void ion_client_destroy(struct ion_client *client)
 
 	kfree(client);
 }
+#endif
 EXPORT_SYMBOL(ion_client_destroy);
 
 struct sg_table *ion_sg_table(struct ion_client *client,
@@ -1905,10 +1963,10 @@ void ion_unlock_buffer(struct ion_client *client,
  * one is used. This assumption holds trues as the broadcom userspace
  * ION library opens only one instance of ION and re-uses same fd.
  *
- * A reference of the task struct of the remote client is taken to ensure
+ * A reference of the remote client is taken to ensure
  * that remote client does not get closed while operating on it.
  *
- * Caller of this API need to ensure that task struct reference is released
+ * Caller of this API need to ensure that reference to client is released
  * after use.
  **/
 struct ion_client *ion_client_get_from_pid(struct ion_client *client, pid_t pid)
@@ -1923,25 +1981,13 @@ struct ion_client *ion_client_get_from_pid(struct ion_client *client, pid_t pid)
 				node);
 		if (client_tmp->pid == pid) {
 			client_remote = client_tmp;
-			if (client_remote->task)
-				get_task_struct(client_remote->task);
+			ion_client_get(client_remote);
 			break;
 		}
 	}
 	up_write(&dev->lock);
 
 	return client_remote;
-}
-
-/**
- * Release the task struct reference
- * This is exposed so that user of ion_client_get_from_pid can release the
- * reference.
- **/
-void ion_client_put(struct ion_client *client)
-{
-	if (client->task)
-		put_task_struct(client->task);
 }
 
 /**
