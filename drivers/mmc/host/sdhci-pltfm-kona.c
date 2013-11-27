@@ -39,9 +39,8 @@
 #include <linux/of.h>
 #include <linux/of_irq.h>
 #include <linux/of_platform.h>
+#include <linux/slab.h>
 #include <linux/tick.h>
-
-#include <plat/clock.h>
 
 #ifdef CONFIG_APANIC_ON_MMC
 #include <linux/mmc-poll/mmc_poll_stack.h>
@@ -1725,8 +1724,6 @@ static void sdhci_print_critical(struct sdhci_host *host)
 		ret = irqsafe_is_regulator_enable(dev->vddo_sd_regulator);
 		printk(KERN_ALERT "sd regulator enable:%d\n", ret);
 	}
-	ret = clk_get_usage(dev->peri_clk);
-	printk(KERN_ALERT "clk use_cnt:%d\n", ret);
 	printk(KERN_ALERT "runtime_suspended:%d\n", host->runtime_suspended);
 	ret = atomic_read(&dev->dev->power.usage_count);
 	printk(KERN_ALERT "pm runtime usage count:%d\n", ret);
