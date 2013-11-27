@@ -47,7 +47,6 @@
 #include <plat/kona_pm.h>
 #endif
 #include <mach/rdb/brcm_rdb_root_clk_mgr_reg.h>
-#include <mach/rdb/brcm_rdb_kproc_clk_mgr_reg.h>
 
 #define VLT_LUT_SIZE	16
 
@@ -867,12 +866,6 @@ static int __init hawaii_pwr_mgr_init(void)
 
 #ifdef CONFIG_PWRMGR_1P2GHZ_OPS_SET_SELECT
 	mach_config_arm_pll(CONFIG_A9_PLL_2P4GHZ, update_vlt_tbl);
-	writel(0x00A5A501, KONA_PROC_CLK_VA +
-			KPROC_CLK_MGR_REG_WR_ACCESS_OFFSET);
-	reg_val = readl(KONA_PROC_CLK_VA + KPROC_CLK_MGR_REG_PLL_DEBUG_OFFSET);
-	reg_val |= KPROC_CLK_MGR_REG_PLL_DEBUG_PLLARM_TIMER_LOCK_EN_MASK;
-	writel(reg_val, KONA_PROC_CLK_VA + KPROC_CLK_MGR_REG_PLL_DEBUG_OFFSET);
-	writel(0x0, KONA_PROC_CLK_VA + KPROC_CLK_MGR_REG_WR_ACCESS_OFFSET);
 #else
 	mach_config_arm_pll(CONFIG_A9_PLL_2GHZ, update_vlt_tbl);
 #endif
