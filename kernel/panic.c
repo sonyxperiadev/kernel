@@ -130,7 +130,17 @@ void panic(const char *fmt, ...)
 
 	kmsg_dump(KMSG_DUMP_PANIC);
 
-	atomic_notifier_call_chain(&panic_notifier_list, 0, buf);
+	/*
+	* +--------------------------------------------------+
+	* | panic_timeout | Dump | Reboot |    Comment       |
+	* |--------------------------------------------------|
+	* |       3       |  Y   |    Y   | Developemnt(def) |
+	* |--------------------------------------------------|
+	* |       1       |  N   |    Y   | Mass  product    |
+	* +--------------------------------------------------+
+	*/
+	if (panic_timeout != 1)
+		atomic_notifier_call_chain(&panic_notifier_list, 0, buf);
 
 	bust_spinlocks(0);
 

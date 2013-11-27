@@ -529,6 +529,9 @@ void kona_display_crash_image(enum crash_dump_image_idx image_idx)
 	void *image_buf;
 	static bool crash_displayed;
 
+	if (panic_timeout == 1)
+		return;
+
 	pr_err("%s:%d image_idx=%d\n", __func__, __LINE__, image_idx);
 	atomic_set(&g_kona_fb->force_update, 1);
 	kona_clock_start(g_kona_fb);
