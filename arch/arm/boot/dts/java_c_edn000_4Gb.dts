@@ -501,6 +501,7 @@
 		cd-gpio = <91>;		/*SD_CARDDET_GPIO_PIN*/
 		devtype = <0>;		/*SDIO_DEV_TYPE_SDMMC*/
 		flags = <0>;		/*KONA_SDIO_FLAGS_DEVICE_REMOVABLE*/
+		pm_caps = <1>;		/*MMC_PM_KEEP_POWER*/
 		peri-clk-name = "sdio1_clk";
 		ahb-clk-name = "sdio1_ahb_clk";
 		sleep-clk-name = "sdio1_sleep_clk";
