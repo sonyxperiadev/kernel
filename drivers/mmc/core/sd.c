@@ -1139,6 +1139,9 @@ static int mmc_sd_suspend(struct mmc_host *host)
 	BUG_ON(!host);
 	BUG_ON(!host->card);
 
+	if (mmc_card_keep_power(host))
+		return 0;
+
 	mmc_claim_host(host);
 	if (!mmc_host_is_spi(host))
 		err = mmc_deselect_cards(host);
@@ -1163,6 +1166,12 @@ static int mmc_sd_resume(struct mmc_host *host)
 
 	BUG_ON(!host);
 	BUG_ON(!host->card);
+
+	if (mmc_card_keep_power(host)) {
+		pr_debug("%s: no need to re-initialize sd card\r\n",
+				mmc_hostname(host));
+		return 0;
+	}
 
 	mmc_claim_host(host);
 #ifdef CONFIG_MMC_PARANOID_SD_INIT
