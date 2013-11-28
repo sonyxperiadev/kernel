@@ -678,6 +678,14 @@ static int sdhci_pltfm_probe(struct platform_device *pdev)
 
 		hw_cfg->quirks2 = val;
 
+		if (of_property_read_u32(pdev->dev.of_node, "pm_caps", &val)) {
+			dev_warn(&pdev->dev, "pm_caps not available in %s\n",
+			__func__);
+			val = 0;
+		}
+
+		hw_cfg->pm_caps = val;
+
 		if (of_property_read_string(pdev->dev.of_node, "peri-clk-name",
 			&prop)) {
 			dev_err(&pdev->dev, "peri-clk-name read failed in %s\n",
@@ -957,6 +965,8 @@ static int sdhci_pltfm_probe(struct platform_device *pdev)
 		host->mmc->pm_flags =
 		    MMC_PM_KEEP_POWER | MMC_PM_IGNORE_PM_NOTIFY;
 	}
+
+	host->mmc->pm_caps |= hw_cfg->pm_caps;
 
 #if !defined(CONFIG_MACH_BCM_FPGA_E)
 	/* Enable 1.8V DDR operation for e.MMC */
@@ -1280,8 +1290,7 @@ static int sdhci_pltfm_suspend(struct device *device)
 		}
 	}
 
-	if (dev->devtype == SDIO_DEV_TYPE_WIFI)
-		host->mmc->pm_flags |= host->mmc->pm_caps;
+	host->mmc->pm_flags |= host->mmc->pm_caps;
 
 	ret = sdhci_suspend_host(host);
 	if (ret) {
