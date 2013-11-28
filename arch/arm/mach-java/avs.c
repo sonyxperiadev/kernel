@@ -74,50 +74,70 @@ static int avs_print_opp_info(struct avs_info *avs_inf_ptr)
 		return -EINVAL;
 
 	avs_dbg(AVS_LOG_INIT,
-		"--------------------------------------------------\n");
+		"-------------------------------------------------------\n");
 	avs_dbg(AVS_LOG_INIT,
 		"              AVS related information\n");
 	avs_dbg(AVS_LOG_INIT,
-		"--------------------------------------------------\n");
+		"-------------------------------------------------------\n");
 
 	avs_dbg(AVS_LOG_INIT, "Reading handshake info from 0x%08x\n",
 			avs_inf_ptr->pdata->avs_info_base_addr);
-	avs_dbg(AVS_LOG_INIT, "AVS ABI SW version: %u, Kernel SW version: %u\n",
-		avs_inf_ptr->avs_handshake->abi_version, AVS_SW_VERSION);
-
-	avs_dbg(AVS_LOG_INIT, "Computed at %d Celsius.\n",
+	avs_dbg(AVS_LOG_INIT,
+			"ABI-SEC AVS SW version: %u, Kernel AVS SW version: %u",
+			avs_inf_ptr->avs_handshake->abi_version,
+			AVS_SW_VERSION);
+	avs_dbg(AVS_LOG_INIT, "Computed at %d Celsius\n",
 			avs_inf_ptr->avs_handshake->temperature);
 	avs_dbg(AVS_LOG_INIT, "N/P ratio 1: %d.%02d, N/P ratio 2: %d.%02d\n",
 			(avs_inf_ptr->avs_handshake->np_ratio_1)/100,
 			(avs_inf_ptr->avs_handshake->np_ratio_1)%100,
 			(avs_inf_ptr->avs_handshake->np_ratio_2)/100,
 			(avs_inf_ptr->avs_handshake->np_ratio_2)%100);
-	avs_dbg(AVS_LOG_INIT, "Varspm 0:%u, 1:%u, 2:%u, 3:%u, 4:%u, 5:%u\n",
+	avs_dbg(AVS_LOG_INIT,
+			"Varspm 0:%03u, 1:%03u, 2:%03u, 3:%03u, 4:%03u, 5:%03u",
 			avs_inf_ptr->avs_handshake->varspm0,
 			avs_inf_ptr->avs_handshake->varspm1,
 			avs_inf_ptr->avs_handshake->varspm2,
 			avs_inf_ptr->avs_handshake->varspm3,
 			avs_inf_ptr->avs_handshake->varspm4,
 			avs_inf_ptr->avs_handshake->varspm5);
-	avs_dbg(AVS_LOG_INIT, "Spm 0:%u, 1:%u, 2:%u, 3:%u, 4:%u, 5:%u\n",
+	avs_dbg(AVS_LOG_INIT,
+			"Spm    0:%03u, 1:%03u, 2:%03u, 3:%03u, 4:%03u, 5:%03u",
 			avs_inf_ptr->avs_handshake->spm0,
 			avs_inf_ptr->avs_handshake->spm1,
 			avs_inf_ptr->avs_handshake->spm2,
 			avs_inf_ptr->avs_handshake->spm3,
 			avs_inf_ptr->avs_handshake->spm4,
 			avs_inf_ptr->avs_handshake->spm5);
-	if (avs_inf_ptr->avs_handshake->error_status)
-		avs_dbg(AVS_LOG_INIT, "Error Status: 0x%08x\n",
-			avs_inf_ptr->avs_handshake->error_status);
+	if (avs_inf_ptr->avs_handshake->status)
+		avs_dbg(AVS_LOG_INIT, "Status: 0x%08x\n",
+			avs_inf_ptr->avs_handshake->status);
 	avs_dbg(AVS_LOG_INIT, "Root Reset Reason: 0x%08x\n",
 		readl(KONA_ROOT_RST_VA + ROOT_RST_MGR_REG_RSTSTS_OFFSET));
-
+	avs_dbg(AVS_LOG_INIT, "Freq Id: %u\n",
+			avs_inf_ptr->avs_handshake->arm_freq);
 	avs_dbg(AVS_LOG_INIT, "IRDROP @ 1.2V: %u",
 			avs_inf_ptr->avs_handshake->irdrop_1v2);
 	avs_dbg(AVS_LOG_INIT, "Silicon Type: %u\n",
 			avs_inf_ptr->avs_handshake->silicon_type);
-	avs_dbg(AVS_LOG_INIT, "Freq Id: %u\n",
-			avs_inf_ptr->avs_handshake->arm_freq);
+	avs_dbg(AVS_LOG_INIT, "AVS Rev ID (OTP): %u, AVS Rev ID (SW): %u\n",
+			avs_inf_ptr->avs_handshake->avs_rev_id_otp,
+			avs_inf_ptr->avs_handshake->avs_rev_id_sw);
+	avs_dbg(AVS_LOG_INIT, "OTP row 03: 0x%02x_%08x\n",
+			avs_inf_ptr->avs_handshake->row3_ext,
+			avs_inf_ptr->avs_handshake->row3);
+	avs_dbg(AVS_LOG_INIT, "OTP row 04: 0x%02x_%08x\n",
+			avs_inf_ptr->avs_handshake->row4_ext,
+			avs_inf_ptr->avs_handshake->row4);
+	avs_dbg(AVS_LOG_INIT, "OTP row 05: 0x%02x_%08x\n",
+			avs_inf_ptr->avs_handshake->row5_ext,
+			avs_inf_ptr->avs_handshake->row5);
+	avs_dbg(AVS_LOG_INIT, "OTP row 08: 0x%02x_%08x\n",
+			avs_inf_ptr->avs_handshake->row8_ext,
+			avs_inf_ptr->avs_handshake->row8);
+	avs_dbg(AVS_LOG_INIT, "OTP row 19: 0x%02x_%08x\n",
+			avs_inf_ptr->avs_handshake->row19_ext,
+			avs_inf_ptr->avs_handshake->row19);
 	for (i = 0; i < CSR_NUM_OPP; i++) {
 		avs_dbg(AVS_LOG_INIT, "CSR OPP%u Trgt: %3u, Voltage: 0x%02x\n",
 			i + 1, avs_inf_ptr->avs_handshake->csr_targets[i],
@@ -134,7 +154,7 @@ static int avs_print_opp_info(struct avs_info *avs_inf_ptr)
 			avs_inf_ptr->avs_handshake->vddvar_ret,
 			avs_inf_ptr->avs_handshake->vddfix_ret);
 	avs_dbg(AVS_LOG_INIT,
-		"--------------------------------------------------\n");
+		"-------------------------------------------------------\n");
 	return 0;
 }
 
@@ -312,21 +332,25 @@ static ssize_t avs_debug_read_otp_info(struct file *file, char __user
 	u32 len = 0;
 
 	len += snprintf(buf + len, sizeof(buf) - len,
-		"Reading OTP info from row3 0x%02x_%08x\n",
+		"Reading OTP info from row03 0x%02x_%08x\n",
 		avs_info.avs_handshake->row3_ext,
 		avs_info.avs_handshake->row3);
 	len += snprintf(buf + len, sizeof(buf) - len,
-		"Reading OTP info from row4 0x%02x_%08x\n",
+		"Reading OTP info from row04 0x%02x_%08x\n",
 		avs_info.avs_handshake->row4_ext,
 		avs_info.avs_handshake->row4);
 	len += snprintf(buf + len, sizeof(buf) - len,
-		"Reading OTP info from row5 0x%02x_%08x\n",
+		"Reading OTP info from row05 0x%02x_%08x\n",
 		avs_info.avs_handshake->row5_ext,
 		avs_info.avs_handshake->row5);
 	len += snprintf(buf + len, sizeof(buf) - len,
-		"Reading OTP info from row8 0x%02x_%08x\n",
+		"Reading OTP info from row08 0x%02x_%08x\n",
 		avs_info.avs_handshake->row8_ext,
 		avs_info.avs_handshake->row8);
+	len += snprintf(buf + len, sizeof(buf) - len,
+		"Reading OTP info from row19 0x%02x_%08x\n",
+		avs_info.avs_handshake->row19_ext,
+		avs_info.avs_handshake->row19);
 	return simple_read_from_buffer(user_buf, count, ppos, buf, len);
 }
 
@@ -472,6 +496,15 @@ static int avs_drv_probe(struct platform_device *pdev)
 
 	BUG_ON(avs_info.handshake_version != avs_info.avs_handshake->version);
 	BUG_ON(avs_info.kernel_freq_id != avs_info.avs_handshake->arm_freq);
+
+
+#ifdef CONFIG_MM_312M_SOURCE_CLK
+	BUG_ON(!(avs_info.avs_handshake->status &
+			AVS_FEATURE_MM_312M_SOURCE_CLK));
+#else
+	BUG_ON(avs_info.avs_handshake->status &
+			AVS_FEATURE_MM_312M_SOURCE_CLK);
+#endif
 
 	avs_print_opp_info(&avs_info);
 	atomic_notifier_chain_register(&panic_notifier_list, &panic_block);
