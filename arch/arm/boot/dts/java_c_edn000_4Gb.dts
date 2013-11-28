@@ -1,4 +1,4 @@
-/* Java_c_edn000_4Gb Dts file */
+/* Java_garnet_edn000_4Gb Dts file */
 
 /dts-v1/;
 
@@ -10,7 +10,7 @@
 	compatible = "bcm,java";
 
 	chosen {
-		bootargs = "console=ttyS0,115200n8 mem=480M gpt androidboot.console=ttyS0 crash_ramdump=1 logbuf_nocache=1                                                  ";
+		bootargs = "console=ttyS0,115200n8 mem=480M gpt androidboot.console=ttyS0 crash_ramdump=1 logbuf_nocache=1";
 	};
 
 	memory@82000000 {
@@ -18,8 +18,8 @@
 		reg = <0x82000000 0x1e000000>; /* 480 MB */
 	};
 
-	rtc-kona {
-		compatible = "bcm,rtc-kona";
+	wd-tapper {
+		count = <300>; /* Time in seconds */
 		ch-num = <1>; /* Kona hub timer Channel number */
 		timer-name = "aon-timer";
 	};
@@ -105,21 +105,23 @@
 			gpio-irq-pin = <4>;
 			layout = <6>;
 		};
+
 		kxtik@0f {
-			compatible = "bcm,kxtik";
-			reg = <0x0f>;
-			gpio-irq-pin = <0>;
-			min_interval = <5>;
-			poll_interval = <200>;
-			axis_map_x = <0>;
-			axis_map_y = <1>;
-			axis_map_z = <2>;
-			negate_x = <1>;
-			negate_y = <0>;
-			negate_z = <1>;
-			res_12bit = <64>;
-			g_range = <0>;
-		};
+                        compatible = "bcm,kxtik";
+                        reg = <0x0f>;
+                        gpio-irq-pin = <0>;
+                        min_interval = <5>;
+                        poll_interval = <200>;
+                        axis_map_x = <0>;
+                        axis_map_y = <1>;
+                        axis_map_z = <2>;
+                        negate_x = <1>;
+                        negate_y = <0>;
+                        negate_z = <1>;
+                        res_12bit = <64>;
+                        g_range = <0>;
+                };
+
 		tmd2771@39 {
 			compatible = "bcm,tmd2771";
 			reg = <0x39>;
@@ -144,9 +146,10 @@
 			prox_gain_param = <34>;
 			prox_win_sw = <100>;
 		};
+
 		bmp18x@77 {
-			compatible = "bcm,bmp18x";
-			reg = <0x77>;
+                         compatible = "bcm,bmp18x";
+                         reg = <0x77>;
 			 regulator-name = "cam2";
 		};
 	};
@@ -185,20 +188,16 @@
 		hs-ref-frequency = <26000000>;
 	};
 
-	bluetooth-btlpm {
-		compatible = "bcm,btlpm";
-		bt-wake-gpio = <32>;
-		host-wake-gpio = <72>;
-		bt-uart-port = <1>;
-	};
+        bcm-bt-btlpm {
+                compatible = "bcm,bcm-bt-lpm";
+                bt-wake-gpio = <&gpio 32 0>;
+                host-wake-gpio = <&gpio 72 0>;
+        };
 
-	bcmbt-rfkill {
-		compatible = "bcm,bcmbt-rfkill";
-		verg-gpio = <28>;
-		n-reset-gpio = <0xFFFFFFFF>;
-		aux0-gpio = <0xFFFFFFFF>; /* CLK32 */
-		aux1-gpio = <0xFFFFFFFF>; /* UARTB_SEL,probably not required */
-	};
+        bcm-bt-rfkill {
+                compatible = "bcm,bcm-bt-rfkill";
+                bcm-bt-rfkill-vreg-gpio = <&gpio 28 0>;
+        };
 
 	iommu_mm: iommu-mm {
 		compatible = "bcm,iommu-m4u";
@@ -211,7 +210,14 @@
 	iovmm_mm: iovmm-mm {
 		compatible = "bcm,iovmm";
 		base = <0x80000000>;
-		size = <0x70000000>;
+		size = <0x30000000>;
+		order = <0>;
+	};
+
+	iovmm_mm_hwwr: iovmm-mm-hwwr {
+		compatible = "bcm,iovmm";
+		base = <0xb0000000>;
+		size = <0x40000000>;
 		order = <0>;
 	};
 
@@ -224,8 +230,9 @@
 
 	ion-config {
 		compatible = "bcm,ion-config";
-		/* No separate mask needed for hwwr if M4U is enabled */
-		/* mask_hwwr = <0>; */
+		/* Workaround: Use a separate iova pool for hwwr buffers */
+		mask_hwwr = <0x4>;
+		mask_256M = <0x221>;
 	};
 
 	ion-system {
@@ -242,6 +249,14 @@
 		type = <0>;
 		iommu = <&iommu_mm>;
 		iovmm = <&iovmm_mm>;
+	};
+
+	ion-system-hwwr {
+		compatible = "bcm,ion";
+		id = <2>;
+		type = <0>;
+		iommu = <&iommu_mm>;
+		iovmm = <&iovmm_mm_hwwr>;
 	};
 
 	ion-carveout {
@@ -421,7 +436,7 @@
 		compatible = "bcm,memc";
 		reg = <0x35008000 0x1000>;
 		interrupts = <0 61 4>;
-		flags = <0x73>;
+		flags = <0xF3>;
 		chipreg_base = <0x35004000 0x1000>;
 		memc0_aphy_base = <0x35008400 0x1000>;
 		seq_busy_val = <2>;
@@ -479,6 +494,12 @@
 		peri-clk-rate = <48000000>;
 		vddo-regulator-name = "vdd_sdio";
 		vddsdxc-regulator-name = "vdd_sdxc";
+	};
+
+	timer {
+		compatible = "arm,armv7-timer";
+		interrupts = <1 13 0xf08>,
+					<1 14 0xf08>;
 	};
 
 	wifi-driver {
