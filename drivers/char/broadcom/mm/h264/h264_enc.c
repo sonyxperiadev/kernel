@@ -23,7 +23,6 @@ the GPL, without Broadcom's express prior written consent.
 #include "h264_enc.h"
 
 #define FLAG_CABAC 0x010000
-#define FLUSH_COMPLETE
 
 static void update_sg_regs(void *id, struct enc_info_t *enc_info)
 {
@@ -136,15 +135,14 @@ void encodeSlice(void *id, struct enc_info_t *enc_info)
 		}
 	}
 
+	enc_info->startaddr = h264_read(id, ENC_SG_BUF_ADDR);
+	enc_info->startbits = h264_read(id, ENC_SG_BUF_BITS_WRITTEN);
+
 	/* write slice header */
 	writenbits(id, enc_info);
 
 	if (enc_info->flags & FLAG_CABAC)
 		entropy_flush(id);
-
-	enc_info->startAddr = h264_read(id, ENC_SG_BUF_ADDR);
-	enc_info->startBits = h264_read(id, \
-				ENC_SG_BUF_BITS_WRITTEN);
 
 	j = enc_info->h264_enc_regs.inp_reg_cnt - \
 		enc_info->h264_enc_regs.fme_reg_cnt;
@@ -167,18 +165,6 @@ void completeEncodeSlice(void *id, struct enc_info_t *enc_info)
 		h264_write(id, ENC_SG_POSTED_SYMBOL, 1);
 		h264_write(id, ENC_SG_POSTED_PUTSYM, 1);
 	}
-#ifdef FLUSH_COMPLETE
-	h264_write(id, ENC_SG_POSTED_SYMBOL, 0);
-	h264_write(id, ENC_SG_POSTED_PUTSYM, 32);
-	h264_write(id, ENC_SG_POSTED_SYMBOL, 0);
-	h264_write(id, ENC_SG_POSTED_PUTSYM, 32);
-	h264_write(id, ENC_SG_POSTED_SYMBOL, 0);
-	h264_write(id, ENC_SG_POSTED_PUTSYM, 32);
-	h264_write(id, ENC_SG_POSTED_SYMBOL, 0);
-	h264_write(id, ENC_SG_POSTED_PUTSYM, 32);
-	h264_write(id, ENC_SG_POSTED_SYMBOL, 0);
-	h264_write(id, ENC_SG_POSTED_PUTSYM, 32);
-#endif
 	enc_info->endBits = entropy_flush(id);
 
 	h264_write(id, VC_CACHE_CTL, h264_read(id, VC_CACHE_CTL) | 1);

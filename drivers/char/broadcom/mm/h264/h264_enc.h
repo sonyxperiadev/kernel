@@ -35,8 +35,8 @@ struct VENC_REGS_T {
 /* encoder info */
 struct enc_info_t {
 	int	flags;				/* in-out */
-	uint32_t startAddr;		/* output */
-	uint32_t startBits;		/* output */
+	uint32_t startaddr;		/* output */
+	uint32_t startbits;		/* output */
 	uint32_t endBits;		/* output */
 	char sg_buffer[MAX_HEADER_LEN];
 	uint32_t numBits;
