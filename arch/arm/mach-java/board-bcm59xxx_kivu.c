@@ -170,7 +170,12 @@ static struct regulator_init_data bcm59xxx_rfldo_data = {
 			.name = "rfldo",
 			.min_uV = 1300000,
 			.max_uV = 3300000,
-			.valid_ops_mask = 0,
+			.valid_ops_mask = REGULATOR_CHANGE_STATUS |
+					REGULATOR_CHANGE_VOLTAGE |
+					REGULATOR_CHANGE_MODE,
+			.valid_modes_mask = REGULATOR_MODE_NORMAL |
+						REGULATOR_MODE_IDLE |
+						REGULATOR_MODE_STANDBY,
 			.always_on = 0,
 			.initial_mode = REGULATOR_MODE_STANDBY,
 			},
