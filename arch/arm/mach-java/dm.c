@@ -790,9 +790,12 @@ void dormant_enter(u32 svc)
 	} while (retry && insurance);
 	BUG_ON(!insurance && retry);
 
+	instrument_lpm(LPM_TRACE_DRMNT_RS1, 0);
+
 	/* restore everything that is specific to this core */
 	restore_arm_context(restore_gic);
 
+	instrument_lpm(LPM_TRACE_DRMNT_RS2, 0);
 ret:
 	/*Clr svc vote*/
 	clr_svc_req(svc);
