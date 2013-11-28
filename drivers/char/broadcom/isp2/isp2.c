@@ -85,7 +85,9 @@ static inline unsigned int reg_read(void __iomem *, unsigned int reg);
 static inline void reg_write(void __iomem *, unsigned int reg,
 			     unsigned int value);
 
-#define ISP_EOT_INT (1 << 4)
+#define ISP_EOT_INT   (1 << 4)
+#define ISP_EOD_INT   (1 << 5)
+#define ISP_SW_INT    (1 << 6)
 #define ISP_STATS_INT (1 << 8)
 
 static irqreturn_t isp2_isr(int irq, void *dev_id)
@@ -97,7 +99,8 @@ static irqreturn_t isp2_isr(int irq, void *dev_id)
 	spin_lock_irqsave(&dev->lock, flags);
 	dev->isp2_status.status = reg_read(isp2_base, ISP2_STATUS_OFFSET);
 	spin_unlock_irqrestore(&dev->lock, flags);
-	if (dev->isp2_status.status & (ISP_EOT_INT | ISP_STATS_INT))
+	if (dev->isp2_status.status &
+	    (ISP_EOT_INT | ISP_EOD_INT | ISP_STATS_INT))
 		complete(&dev->irq_sem);
 	if (dev->isp2_status.status & ISP_STATS_INT)
 		complete(&dev->stats_sem);

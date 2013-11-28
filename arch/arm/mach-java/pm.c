@@ -408,9 +408,7 @@ static void enable_system_timer_interrupts(void)
 int enter_drmt_state(struct kona_idle_state *state, u32 ctrl_params)
 {
 	struct pi *pi = NULL;
-	u32 gic_mem_base;
 	int trigger_type_ch1_ch0, trigger_type_ch3_ch2;
-	int cpu;
 
 	BUG_ON(!state);
 
@@ -435,7 +433,7 @@ int enter_drmt_state(struct kona_idle_state *state, u32 ctrl_params)
 	BUG_ON(pi == NULL);
 	pi_enable(pi, 0);
 
-	if (pm_info.clk_dbg_dsm)
+	if (unlikely(pm_info.clk_dbg_dsm))
 		if (ctrl_params & CTRL_PARAMS_ENTER_SUSPEND) {
 			__clock_print_act_clks();
 			pi_mgr_print_active_pis();
@@ -445,7 +443,7 @@ int enter_drmt_state(struct kona_idle_state *state, u32 ctrl_params)
 
 	/* Saving and disabling the trigger type and disabling the system
 	 * timer interrupts. */
-	if (ctrl_params & CTRL_PARAMS_ENTER_SUSPEND) {
+	if (unlikely(ctrl_params & CTRL_PARAMS_ENTER_SUSPEND)) {
 		disable_system_timer_interrupts();
 
 		trigger_type_ch1_ch0 =
@@ -459,9 +457,18 @@ int enter_drmt_state(struct kona_idle_state *state, u32 ctrl_params)
 
 	__enter_drmt(ctrl_params);
 
+	if (unlikely(pm_info.clk_dbg_dsm)) {
+		if (ctrl_params & CTRL_PARAMS_ENTER_SUSPEND ||
+			(pm_info.log_mask & LOG_IDLE_INTR)) {
+			pr_info("Active Events at wakeup\n");
+			pm_log_wakeup_intr();
+			pwr_mgr_log_active_events();
+		}
+	}
+
 	/* Restoring the trigger type and enabling the system timer
 	 * interrupts. */
-	if (ctrl_params & CTRL_PARAMS_ENTER_SUSPEND) {
+	if (unlikely(ctrl_params & CTRL_PARAMS_ENTER_SUSPEND)) {
 		pwr_mgr_event_trg_enable(timer_ch1_ch0_event,
 						trigger_type_ch1_ch0);
 		pwr_mgr_event_trg_enable(timer_ch3_ch2_event,
@@ -479,15 +486,6 @@ int enter_drmt_state(struct kona_idle_state *state, u32 ctrl_params)
 	pwr_mgr_process_events(LCDTE_EVENT, KEY_R7_EVENT, false);
 	pwr_mgr_process_events(MISC_WKP_EVENT, BRIDGE_TO_MODEM_EVENT, false);
 	pwr_mgr_process_events(USBOTG_EVENT, PHY_RESUME_EVENT, false);
-
-	if (pm_info.clk_dbg_dsm) {
-		if (ctrl_params & CTRL_PARAMS_ENTER_SUSPEND ||
-			(pm_info.log_mask & LOG_IDLE_INTR)) {
-			pr_info("Active Events at wakeup\n");
-			pm_log_wakeup_intr();
-			pwr_mgr_log_active_events();
-		}
-	}
 
 	if (ctrl_params & CTRL_PARAMS_FLAG_XTAL_ON || pm_info.keep_xtl_on)
 		clk_set_crystal_pwr_on_idle(true);
@@ -575,8 +573,14 @@ static int dormant_enable_set(void *data, u64 val)
 	return 0;
 }
 
-DEFINE_SIMPLE_ATTRIBUTE(dormant_enable_fops, NULL, dormant_enable_set,
-			"%llu\n");
+static int dormant_enable_get(void *data, u64 *val)
+{
+	*val = pm_info.dormant_enable;
+	return 0;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(dormant_enable_fops, dormant_enable_get,
+		 dormant_enable_set, "%llu\n");
 
 static struct dentry *dent_pm_root_dir;
 int __init __pm_debug_init(void)

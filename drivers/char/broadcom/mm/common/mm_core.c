@@ -138,16 +138,16 @@ static void mm_fmwk_job_scheduler(struct work_struct *work)
 			&(core_dev->job_list), \
 			struct dev_job_list, core_list);
 
-			if (job_list_elem->job.status == MM_JOB_STATUS_READY)
-				clean_cnt++;
+	if (job_list_elem->job.status == MM_JOB_STATUS_READY)
+			clean_cnt++;
 
-			if (job_list_elem->job.status == MM_JOB_STATUS_DIRTY) {
-				mm_common_cache_clean();
-				dirty_cnt++;
-				if ((dirty_cnt % 1000) == 0)
-					pr_debug("mm jobs dirty=%d, clean=%d\n",
-					dirty_cnt, clean_cnt);
-			}
+	if (job_list_elem->job.status == MM_JOB_STATUS_DIRTY) {
+		mm_common_cache_clean();
+		dirty_cnt++;
+		if ((dirty_cnt % 1000) == 0)
+			pr_debug("mm jobs dirty=%d, clean=%d\n",
+			dirty_cnt, clean_cnt);
+	}
 
 	if (mm_core_enable_clock(core_dev))
 		goto mm_fmwk_job_scheduler_done;

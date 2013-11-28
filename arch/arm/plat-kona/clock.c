@@ -17,6 +17,7 @@
 
 #include <linux/module.h>
 #include <linux/kernel.h>
+#include <linux/dma-mapping.h>
 #include <linux/device.h>
 #include <linux/list.h>
 #include <linux/errno.h>
@@ -35,6 +36,7 @@
 #include <asm/cpu.h>
 #include <linux/smp.h>
 #endif
+
 /* global spinlock for clock API */
 static DEFINE_SPINLOCK(clk_gen_lock);
 static DEFINE_SPINLOCK(gen_access_lock);
@@ -53,6 +55,11 @@ enum {
 	CLK_RATE_CHANGE		/*param = rate */
 };
 
+#ifdef CONFIG_KONA_CLK_TRACE
+static u32 *clk_trace_v;
+static dma_addr_t clk_trace_p;
+#endif
+
 /*fwd declarations....*/
 static int __pll_clk_enable(struct clk *clk);
 static int __pll_chnl_clk_enable(struct clk *clk);
@@ -64,6 +71,28 @@ static int ccu_init_state_save_buf(struct ccu_clk *ccu_clk);
 
 static int ccu_access_lock(struct ccu_clk *ccu_clk, unsigned long *flags);
 static int ccu_access_unlock(struct ccu_clk *ccu_clk, unsigned long *flags);
+
+#define clk_use_cnt(clk)	((clk)->use_cnt)
+
+static inline int clk_use_cnt_incr_post(struct clk *clk)
+{
+	int use_cnt = clk->use_cnt++;
+#ifdef CONFIG_KONA_CLK_TRACE
+	if (clk_trace_v)
+		clk_trace_v[clk->id] = clk->use_cnt;
+#endif
+	return use_cnt;
+}
+
+static inline int clk_use_cnt_decr_pre(struct clk *clk)
+{
+	int use_cnt = --clk->use_cnt;
+#ifdef CONFIG_KONA_CLK_TRACE
+	if (clk_trace_v)
+		clk_trace_v[clk->id] = clk->use_cnt;
+#endif
+	return use_cnt;
+}
 
 static int __ccu_clk_init(struct clk *clk)
 {
@@ -660,7 +689,7 @@ static int __ccu_clk_enable(struct clk *clk)
 		pi_enable(pi, 1);
 	}
 #endif
-	if (clk->use_cnt++ == 0) {
+	if (clk_use_cnt_incr_post(clk) == 0) {
 		if (clk->ops && clk->ops->enable) {
 			ret = clk->ops->enable(clk, 1);
 		}
@@ -712,7 +741,7 @@ static int __peri_clk_enable(struct clk *clk)
 		peri_clk->clk.use_cnt);
 
 	/*Increment usage count... return if already enabled */
-	if (clk->use_cnt++ == 0) {
+	if (clk_use_cnt_incr_post(clk) == 0) {
 		CCU_ACCESS_EN(peri_clk->ccu_clk, 1);
 		/*Update DFS request before enabling the clock */
 #ifdef CONFIG_KONA_PI_MGR
@@ -773,7 +802,7 @@ static int __bus_clk_enable(struct clk *clk)
 	}
 
 	/*Increment usage count... return if already enabled */
-	if (clk->use_cnt++ == 0) {
+	if (clk_use_cnt_incr_post(clk) == 0) {
 		CCU_ACCESS_EN(bus_clk->ccu_clk, 1);
 		/*Update DFS request before enabling the clock */
 #ifdef CONFIG_KONA_PI_MGR
@@ -798,7 +827,7 @@ static int __ref_clk_enable(struct clk *clk)
 	BUG_ON(clk->clk_type != CLK_TYPE_REF);
 	ref_clk = to_ref_clk(clk);
 
-	if (clk->use_cnt++ == 0) {
+	if (clk_use_cnt_incr_post(clk) == 0) {
 		CCU_ACCESS_EN(ref_clk->ccu_clk, 1);
 		if (clk->ops && clk->ops->enable)
 			ret = clk->ops->enable(clk, 1);
@@ -816,7 +845,7 @@ static int __pll_clk_enable(struct clk *clk)
 	BUG_ON(clk->clk_type != CLK_TYPE_PLL);
 	pll_clk = to_pll_clk(clk);
 
-	if (clk->use_cnt++ == 0) {
+	if (clk_use_cnt_incr_post(clk) == 0) {
 		CCU_ACCESS_EN(pll_clk->ccu_clk, 1);
 		if (clk->ops && clk->ops->enable)
 			ret = clk->ops->enable(clk, 1);
@@ -836,7 +865,7 @@ static int __pll_chnl_clk_enable(struct clk *clk)
 
 	__pll_clk_enable(&pll_chnl_clk->pll_clk->clk);
 
-	if (clk->use_cnt++ == 0) {
+	if (clk_use_cnt_incr_post(clk) == 0) {
 		CCU_ACCESS_EN(pll_chnl_clk->ccu_clk, 1);
 		if (clk->ops && clk->ops->enable)
 			ret = clk->ops->enable(clk, 1);
@@ -860,7 +889,7 @@ static int __misc_clk_enable(struct clk *clk)
 		dep_clk_unlock(get_ccu_clk(clk), clk->dep_clks[inx], &flgs);
 
 	}
-	if (clk->use_cnt++ == 0) {
+	if (clk_use_cnt_incr_post(clk) == 0) {
 		if (clk->ops && clk->ops->enable)
 			ret = clk->ops->enable(clk, 1);
 	}
@@ -942,7 +971,7 @@ static int __ccu_clk_disable(struct clk *clk)
 	BUG_ON(clk->clk_type != CLK_TYPE_CCU);
 	ccu_clk = to_ccu_clk(clk);
 
-	if (clk->use_cnt && --clk->use_cnt == 0) {
+	if (clk_use_cnt(clk) && clk_use_cnt_decr_pre(clk) == 0) {
 		if (clk->ops && clk->ops->enable) {
 /*Debug interface to avoid clk disable*/
 #ifndef CONFIG_KONA_PM_NO_CLK_DISABLE
@@ -988,7 +1017,7 @@ static int __peri_clk_disable(struct clk *clk)
 	BUG_ON(!peri_clk->ccu_clk);
 
 	/*decrment usage count... return if already disabled or usage count is non-zero */
-	if (clk->use_cnt && --clk->use_cnt == 0) {
+	if (clk_use_cnt(clk) && clk_use_cnt_decr_pre(clk) == 0) {
 		CCU_ACCESS_EN(peri_clk->ccu_clk, 1);
 
 /*Debug interface to avoid clk disable*/
@@ -1053,7 +1082,7 @@ static int __bus_clk_disable(struct clk *clk)
 	BUG_ON(bus_clk->ccu_clk == NULL);
 
 	/*decrment usage count... return if already disabled or usage count is non-zero */
-	if (clk->use_cnt && --clk->use_cnt == 0) {
+	if (clk_use_cnt(clk) && clk_use_cnt_decr_pre(clk) == 0) {
 		CCU_ACCESS_EN(bus_clk->ccu_clk, 1);
 /*Debug interface to avoid clk disable*/
 #ifndef CONFIG_KONA_PM_NO_CLK_DISABLE
@@ -1105,7 +1134,7 @@ static int __ref_clk_disable(struct clk *clk)
 	BUG_ON(clk->clk_type != CLK_TYPE_REF);
 	ref_clk = to_ref_clk(clk);
 
-	if (clk->use_cnt && --clk->use_cnt == 0) {
+	if (clk_use_cnt(clk) && clk_use_cnt_decr_pre(clk) == 0) {
 		CCU_ACCESS_EN(ref_clk->ccu_clk, 1);
 /*Debug interface to avoid clk disable*/
 #ifndef CONFIG_KONA_PM_NO_CLK_DISABLE
@@ -1126,7 +1155,7 @@ static int __pll_clk_disable(struct clk *clk)
 	BUG_ON(clk->clk_type != CLK_TYPE_PLL);
 	pll_clk = to_pll_clk(clk);
 
-	if (clk->use_cnt && --clk->use_cnt == 0) {
+	if (clk_use_cnt(clk) && clk_use_cnt_decr_pre(clk) == 0) {
 		CCU_ACCESS_EN(pll_clk->ccu_clk, 1);
 /*Debug interface to avoid clk disable*/
 #ifndef CONFIG_KONA_PM_NO_CLK_DISABLE
@@ -1147,7 +1176,7 @@ static int __pll_chnl_clk_disable(struct clk *clk)
 	BUG_ON(clk->clk_type != CLK_TYPE_PLL_CHNL);
 	pll_chnl_clk = to_pll_chnl_clk(clk);
 
-	if (clk->use_cnt && --clk->use_cnt == 0) {
+	if (clk_use_cnt(clk) && clk_use_cnt_decr_pre(clk) == 0) {
 		CCU_ACCESS_EN(pll_chnl_clk->ccu_clk, 1);
 /*Debug interface to avoid clk disable*/
 #ifndef CONFIG_KONA_PM_NO_CLK_DISABLE
@@ -1165,7 +1194,7 @@ static int __misc_clk_disable(struct clk *clk)
 {
 	int inx, ret = 0;
 	unsigned long flgs;
-	if (clk->use_cnt && --clk->use_cnt == 0) {
+	if (clk_use_cnt(clk) && clk_use_cnt_decr_pre(clk) == 0) {
 		/*Debug interface to avoid clk disable*/
 #ifndef CONFIG_KONA_PM_NO_CLK_DISABLE
 		if (clk->ops && clk->ops->enable)
@@ -1190,7 +1219,7 @@ void __clk_disable(struct clk *clk)
 	int ret = 0;
 	clk_dbg("%s - %s\n", __func__, clk->name);
 	/**Return if the clk is already in disabled state*/
-	if (clk->use_cnt == 0)
+	if (clk_use_cnt(clk) == 0)
 		return;
 
 	switch (clk->clk_type) {
@@ -1759,7 +1788,7 @@ int clk_get_usage(struct clk *clk)
 		return -EINVAL;
 	 clk_dbg("%s - %s\n", __func__, clk->name);
 	clk_lock(clk, &flags);
-	ret = clk->use_cnt;
+	ret = clk_use_cnt(clk);
 	clk_unlock(clk, &flags);
 
 	return ret;
@@ -5597,3 +5626,20 @@ struct gen_clk_ops gen_core_clk_ops = {
 	.get_rate = core_clk_get_rate,
 	.reset = core_clk_reset,
 };
+
+int __init clk_trace_init(unsigned int count)
+{
+#ifdef CONFIG_KONA_CLK_TRACE
+	void *virt;
+
+	clk_trace_v = dma_zalloc_coherent(NULL, count * sizeof(u32),
+						&clk_trace_p, GFP_ATOMIC);
+	if (!virt) {
+		pr_info("%s: dma allocation failed\n", __func__);
+		return -ENOMEM;
+	}
+	pr_info("%s: virtual: %p physical: %#lx",
+		__func__, clk_trace_v, (long)clk_trace_p);
+#endif
+	return 0;
+}

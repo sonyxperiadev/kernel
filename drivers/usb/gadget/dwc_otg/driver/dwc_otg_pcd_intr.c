@@ -635,6 +635,65 @@ void dwc_otg_pcd_stop(dwc_otg_pcd_t *pcd)
 	}
 }
 
+#ifdef CONFIG_USB_PCD_SETTINGS
+/**
+ * This function is called when the Device is disconnected. It stops
+ * any active requests. It is called for USB mode switching.
+ */
+void dwc_otg_pcd_clean(dwc_otg_pcd_t *pcd)
+{
+	int i, num_in_eps, num_out_eps;
+	dwc_otg_pcd_ep_t *ep;
+	uint64_t flags;
+
+	gintmsk_data_t intr_mask = {.d32 = 0 };
+
+	DWC_SPINLOCK_IRQSAVE(pcd->lock, &flags);
+
+	num_in_eps = GET_CORE_IF(pcd)->dev_if->num_in_eps;
+	num_out_eps = GET_CORE_IF(pcd)->dev_if->num_out_eps;
+
+	DWC_DEBUGPL(DBG_PCDV, "%s()\n", __func__);
+	/* don't disconnect drivers more than once */
+	if (pcd->ep0state == EP0_DISCONNECT) {
+		DWC_SPINUNLOCK_IRQRESTORE(pcd->lock, flags);
+		DWC_DEBUGPL(DBG_ANY, "%s() Already Disconnected\n", __func__);
+		return;
+	}
+	pcd->ep0state = EP0_DISCONNECT;
+	pcd->core_if->device_speed = 0;
+
+	/* Reset the OTG state. */
+	dwc_otg_pcd_update_otg(pcd, 1);
+
+	/* Disable the NP Tx Fifo Empty Interrupt. */
+	intr_mask.b.nptxfempty = 1;
+	dwc_modify_reg32(&GET_CORE_IF(pcd)->core_global_regs->gintmsk,
+			 intr_mask.d32, 0);
+
+	/* Flush the FIFOs */
+	/**@todo NGS Flush Periodic FIFOs */
+	dwc_otg_flush_tx_fifo(GET_CORE_IF(pcd), 0x10);
+	dwc_otg_flush_rx_fifo(GET_CORE_IF(pcd));
+
+	/* prevent new request submissions, kill any outstanding requests  */
+	ep = &pcd->ep0;
+	dwc_otg_request_nuke(ep);
+	/* prevent new request submissions, kill any outstanding requests  */
+	for (i = 0; i < num_in_eps; i++) {
+		dwc_otg_pcd_ep_t *ep = &pcd->in_ep[i];
+		dwc_otg_request_nuke(ep);
+	}
+	/* prevent new request submissions, kill any outstanding requests  */
+	for (i = 0; i < num_out_eps; i++) {
+		dwc_otg_pcd_ep_t *ep = &pcd->out_ep[i];
+		dwc_otg_request_nuke(ep);
+	}
+
+	DWC_SPINUNLOCK_IRQRESTORE(pcd->lock, flags);
+}
+#endif
+
 /**
  * This interrupt indicates that ...
  */
@@ -940,11 +999,6 @@ int32_t dwc_otg_pcd_handle_usb_reset_intr(dwc_otg_pcd_t *pcd)
 	gintsts.b.usbreset = 1;
 	dwc_write_reg32(&core_if->core_global_regs->gintsts, gintsts.d32);
 
-	if (get_device_speed(GET_CORE_IF(pcd)) != 0) {
-		DWC_SPINUNLOCK(pcd->lock);
-		pcd->fops->disconnect(pcd);
-		DWC_SPINLOCK(pcd->lock);
-	}
 	return 1;
 }
 

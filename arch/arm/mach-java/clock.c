@@ -5880,11 +5880,7 @@ static struct ccu_clk CLK_NAME(mm) = {
 				.name = MM_CCU_CLK_NAME_STR,
 				.clk_type = CLK_TYPE_CCU,
 				.ops = &gen_ccu_clk_ops,
-#ifdef CONFIG_PLL1_8PHASE_OFF_ERRATUM
-				.dep_clks = DEFINE_ARRAY_ARGS(
-					CLK_PTR(8phase_en_pll1), NULL),
-#endif
-
+				.dep_clks = DEFINE_ARRAY_ARGS(NULL),
 		},
 	.ccu_ops = &mm_ccu_ops,
 	.ccu_state_save = &mm_state_save,
@@ -6898,11 +6894,7 @@ static struct ccu_clk CLK_NAME(mm2) = {
 				.name = MM2_CCU_CLK_NAME_STR,
 				.clk_type = CLK_TYPE_CCU,
 				.ops = &gen_ccu_clk_ops,
-#ifdef CONFIG_PLL1_8PHASE_OFF_ERRATUM
-				.dep_clks = DEFINE_ARRAY_ARGS(
-					CLK_PTR(8phase_en_pll1), NULL),
-#endif
-
+				.dep_clks = DEFINE_ARRAY_ARGS(NULL),
 		},
 	.ccu_ops = &mm_ccu_ops,
 	.ccu_state_save = &mm2_state_save,
@@ -7221,11 +7213,38 @@ int root_ccu_clk_init(struct clk* clk)
 	/* enable write access*/
 	ccu_write_access_enable(ccu_clk,true);
 	reg_val = readl(KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET);
-    reg_val &= ~(ROOT_CLK_MGR_REG_DIG_CLKGATE_DIGITAL_CH0_CLK_EN_MASK | ROOT_CLK_MGR_REG_DIG_CLKGATE_DIGITAL_CH1_CLK_EN_MASK);
-    writel(reg_val, KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET);
+	reg_val &= ~(ROOT_CLK_MGR_REG_DIG_CLKGATE_DIGITAL_CH0_CLK_EN_MASK |
+			ROOT_CLK_MGR_REG_DIG_CLKGATE_DIGITAL_CH1_CLK_EN_MASK);
+	writel(reg_val, KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET);
+
+#ifdef CONFIG_MOVE_MM_CLK_TO_PLL0
+/* var312 clock from PLL0. Enable clock, write to the div regr and trigger it.
+   It will be autogated during the var312 clock init */
+
+	reg_val = readl(KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_VAR_312M_CLKGATE_OFFSET);
+	reg_val |= (ROOT_CLK_MGR_REG_VAR_312M_CLKGATE_VAR_312M_CLK_EN_MASK |
+		ROOT_CLK_MGR_REG_VAR_312M_CLKGATE_VAR_312M_HW_SW_GATING_SEL_MASK);
+	writel(reg_val, KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_VAR_312M_CLKGATE_OFFSET);
+
+	writel(ROOT_CLK_MGR_REG_VAR_312M_DIV_VAR_312M_PLL_SELECT_CMD_PLL0_CLK,
+		KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_VAR_312M_DIV_OFFSET);
+	writel(ROOT_CLK_MGR_REG_REFCLK_SEG_TRG_VAR_312M_TRIGGER_MASK,
+		KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_REFCLK_SEG_TRG_OFFSET);
+
+	if (is_pm_erratum(ERRATUM_MM_FREEZE_VAR500M))
+		mm_varvdd_clk_en_override(false);
+
+	if (is_pm_erratum(ERRATUM_PLL1_8PHASE_OFF)) {
+		reg_val = readl(KONA_ROOT_CLK_VA
+				+ ROOT_CLK_MGR_REG_PLL1CTRL0_OFFSET);
+		reg_val &= ~ROOT_CLK_MGR_REG_PLL1CTRL0_PLL1_8PHASE_EN_MASK;
+		writel(reg_val, KONA_ROOT_CLK_VA
+				+ ROOT_CLK_MGR_REG_PLL1CTRL0_OFFSET);
+	}
+#endif
 
 	/*Reset 8-phase enable de-glitch enable bit for B1 and later chips*/
-		if (get_chip_id() >= KONA_CHIP_ID_JAVA_A0){
+	if (get_chip_id() >= KONA_CHIP_ID_JAVA_A0) {
 		reg_val = readl(KONA_ROOT_CLK_VA +
 					ROOT_CLK_MGR_REG_PLL1CTRL3_OFFSET);
 		reg_val &=
@@ -7247,19 +7266,12 @@ int root_ccu_clk_init(struct clk* clk)
 int mm_varvdd_clk_en_override(int enable)
 {
 	u32 reg_val;
-	u32 mask;
-
 	reg_val = readl(KONA_ROOT_CLK_VA +
 			ROOT_CLK_MGR_REG_VARVDD_CLKEN_OVERRIDE_OFFSET);
-#ifdef CONFIG_MM_312M_SOURCE_CLK
-	mask = ROOT_CLK_MGR_REG_VARVDD_CLKEN_OVERRIDE_VAR_312M_VARVDD_SW_EN_MASK;
-#else
-	mask = ROOT_CLK_MGR_REG_VARVDD_CLKEN_OVERRIDE_VAR_500M_VARVDD_SW_EN_MASK;
-#endif
 	if (enable)
-		reg_val |= mask;
+		reg_val |= ROOT_CLK_MGR_REG_VARVDD_CLKEN_OVERRIDE_VAR_500M_VARVDD_SW_EN_MASK;
 	else
-		reg_val &= ~mask;
+		reg_val &= ~ROOT_CLK_MGR_REG_VARVDD_CLKEN_OVERRIDE_VAR_500M_VARVDD_SW_EN_MASK;
 
 	writel(reg_val, KONA_ROOT_CLK_VA +
 		ROOT_CLK_MGR_REG_VARVDD_CLKEN_OVERRIDE_OFFSET);

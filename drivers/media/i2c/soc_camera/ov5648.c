@@ -216,6 +216,9 @@ struct ov5648 {
 	int flash_timeout;
 	struct ov5648_otp otp;
 	int calibrated;
+#define V4L2_FRAME_INFO_CACHE 4
+	int frame_info_size;
+	struct v4l2_frame_info frame_info[V4L2_FRAME_INFO_CACHE];
 };
 
 /**
@@ -1535,11 +1538,12 @@ static int ov5648_get_gain(struct i2c_client *client,
 
 	int ret = 0;
 	int gain_code;
-	u8 gain_buf[2];
 	int i;
 
+	/*
+	u8 gain_buf[2];
 	ov5648_reg_read_multi(client, OV5648_REG_AGC_HI, gain_buf, 2);
-	/*gain_code = ((gain_buf[0] & 0x3f) << 8) + gain_buf[1];*/
+	gain_code = ((gain_buf[0] & 0x3f) << 8) + gain_buf[1];*/
 	gain_code = ov5648->gain_current >> 4;
 
 	if (Is_SnapToPrev_gain == 1) {
@@ -1569,10 +1573,11 @@ static int ov5648_get_exposure(struct i2c_client *client,
 	struct ov5648 *ov5648 = to_ov5648(client);
 	int i, ret = 0;
 	int exp_code;
+	/*
 	u8 exp_buf[3];
 
 	ov5648_reg_read_multi(client, OV5648_REG_EXP_HI, exp_buf, 3);
-	/*exp_code =
+	exp_code =
 		((exp_buf[0] & 0xf) << 16) +
 		((exp_buf[1] & 0xff) << 8) +
 		(exp_buf[2] & 0xf0);*/
@@ -1581,7 +1586,7 @@ static int ov5648_get_exposure(struct i2c_client *client,
 	if (Is_SnapToPrev_expo == 1) {
 		exp_code = ov5648->exp_read_buf[0];
 		Is_SnapToPrev_expo = 0;
-		}
+	}
 
 	if (ov5648->aecpos_delay > 0) {
 		ov5648->exp_read_buf[ov5648->aecpos_delay] = exp_code;
@@ -1778,11 +1783,15 @@ static int ov5648_set_state(struct i2c_client *client, int new_state)
 	if (ov5648->state != new_state) {
 		ret = ov5648_reg_writes(client, ov5648_reg_state[new_state]);
 		ov5648->state = new_state;
-		if (OV5648_STATE_STRM == new_state &&
-		    0 == ov5648->calibrated) {
-			ov5648_otp_read(client);
-			ov5648_rbgains_update(client);
-			ov5648->calibrated = 1;
+		if (OV5648_STATE_STRM == new_state) {
+			ov5648->frame_info_size = 0;
+			memset(ov5648->frame_info, 0,
+					ARRAY_SIZE(ov5648->frame_info));
+			if (0 == ov5648->calibrated) {
+				ov5648_otp_read(client);
+				ov5648_rbgains_update(client);
+				ov5648->calibrated = 1;
+			}
 		}
 	}
 	return ret;
@@ -1925,6 +1934,7 @@ static int ov5648_s_ctrl(struct v4l2_ctrl *ctrl)
 			ov5648->framerate_hi = F24p8(30.0);
 			break;
 		}
+
 		ov5648_set_framerate_lo(client, ov5648->framerate_lo);
 		ov5648_set_framerate_hi(client, ov5648->framerate_hi);
 		ov5648_set_exposure(client, ov5648->exposure_current);
@@ -2024,7 +2034,6 @@ static int ov5648_s_ctrl(struct v4l2_ctrl *ctrl)
 int set_flash_mode(struct i2c_client *client, int mode)
 {
 	struct ov5648 *ov5648 = to_ov5648(client);
-	int ret = 0;
 	if (ov5648->flashmode == mode)
 		return 0;
 #ifdef CONFIG_VIDEO_AS3643
@@ -2068,18 +2077,25 @@ int set_flash_mode(struct i2c_client *client, int mode)
 			gpio_set_value(FLASH_EN, 0);
 		} else if (mode == FLASH_MODE_ON) {
 			ov5648->flash_timeout =
-				2 * (ov5648->vts * ov5648->line_length)/1000;
+				3 * (ov5648->vts * ov5648->line_length)/1000;
+			if (ov5648->flash_timeout < 250000)
+				ov5648->flash_timeout = 4 *
+						(ov5648->flash_timeout/3);
 			timer.data = (unsigned long) msg;
 			timer.expires = jiffies
 				+ (ov5648->flash_timeout*HZ)/1000000;
 			timer.function = print_func;
 			add_timer(&timer);
-			pr_debug("flash_timeout=%d", ov5648->flash_timeout);
+			pr_debug("flash_timeout=%d mode_id %d",
+				ov5648->flash_timeout, ov5648->mode_idx);
 			gpio_set_value(TORCH_EN, 1);
 			gpio_set_value(FLASH_EN, 1);
 		} else if (mode == FLASH_MODE_AUTO) {
 			ov5648->flash_timeout =
-				2 * (ov5648->vts * ov5648->line_length)/1000;
+				3 * (ov5648->vts * ov5648->line_length)/1000;
+			if (ov5648->flash_timeout < 250000)
+				ov5648->flash_timeout = 4 *
+					(ov5648->flash_timeout/3);
 			timer.data = (unsigned long) msg;
 			timer.expires =
 				jiffies + (ov5648->flash_timeout*HZ)/1000000;
@@ -2130,6 +2146,58 @@ static long ov5648_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 			p->focus_distance[2] = -1; /* infinity */
 			p->focal_length.numerator = 342;
 			p->focal_length.denominator = 100;
+			break;
+		}
+	case VIDIOC_SENSOR_G_FRAME_INFO:
+		{
+			int i, j;
+			struct i2c_client *client = v4l2_get_subdevdata(sd);
+			struct ov5648 *ov5648 = to_ov5648(client);
+			struct v4l2_frame_info *fi_cache, *fi_usr =
+					(struct v4l2_frame_info *)arg;
+			ret = -EINVAL;
+			if (!timespec_valid(&fi_usr->timestamp)) {
+				fi_usr->flash_mode = ov5648->flashmode;
+				ov5648_get_gain(client, &fi_usr->an_gain, NULL);
+				ov5648_get_exposure(client,
+						&fi_usr->exposure, NULL);
+				ov5648_lens_get_position(client,
+						&fi_usr->focus, &i);
+				ret = 0;
+				break;
+			}
+			j = ov5648->frame_info_size;
+			fi_cache = &ov5648->frame_info[0];
+
+			for (i = 0; i < V4L2_FRAME_INFO_CACHE && j > 0;
+					i++, j--, fi_cache++) {
+				if (timespec_equal(&fi_cache->timestamp,
+						&fi_usr->timestamp))
+					break;
+			}
+			if (j != 0) {
+				*fi_usr = *fi_cache;
+				ret = 0;
+			}
+			break;
+		}
+	case VIDIOC_SENSOR_S_FRAME_INFO:
+		{
+			struct i2c_client *client = v4l2_get_subdevdata(sd);
+			struct ov5648 *ov5648 = to_ov5648(client);
+			struct v4l2_frame_info *fi_dst, *fi_src;
+
+			fi_dst = &ov5648->frame_info[0];
+			fi_src = (struct v4l2_frame_info *)arg;
+			if (!timespec_valid(&fi_src->timestamp))
+				break;
+			if (ov5648->frame_info_size == V4L2_FRAME_INFO_CACHE) {
+				int i;
+				for (i = 0; i < V4L2_FRAME_INFO_CACHE - 1; i++)
+					fi_dst[i] = fi_dst[i + 1];
+				ov5648->frame_info_size--;
+			}
+			fi_dst[ov5648->frame_info_size++] = *fi_src;
 			break;
 		}
 	default:

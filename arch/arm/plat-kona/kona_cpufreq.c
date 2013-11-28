@@ -27,6 +27,8 @@
 #include <plat/pi_mgr.h>
 #include <mach/pwr_mgr.h>
 #include <asm/cpu.h>
+#include <asm/div64.h>
+#include <plat/kona_pm.h>
 #ifdef CONFIG_DEBUG_FS
 #include <linux/debugfs.h>
 #include <asm/uaccess.h>
@@ -52,6 +54,8 @@
 #define INIT_WORK_DELAY 20
 #endif
 
+#define CPU_ACTIVE	0xFFFF
+
 static int kcf_debug = 0;
 
 struct kona_freq_map {
@@ -65,15 +69,25 @@ enum {
 	FREQ_LMT_NODE_UPDATE,
 };
 
+struct kona_cpufreq_stats {
+	int stats_en;
+	unsigned long long start_time;
+	u64 *stats[CONFIG_NR_CPUS];
+	u32 cpu_in_idle[CONFIG_NR_CPUS];
+	u32 act_freq_inx;
+	u64 last_time[CONFIG_NR_CPUS];
+};
+
 struct kona_cpufreq {
 	int pi_id;
 	struct pi_mgr_dfs_node dfs_node;
 	struct cpufreq_frequency_table *kona_freqs_table;
 	struct kona_freq_map *freq_map;
 	int no_of_opps;
+	int num_cstates;
 	struct cpufreq_policy *policy;
 	struct kona_cpufreq_drv_pdata *pdata;
-	spinlock_t freq_lmt_lock;
+	spinlock_t kcf_lock;
 	struct plist_head min_lmt_list;
 	struct plist_head max_lmt_list;
 	int active_min_lmt;
@@ -89,7 +103,9 @@ struct kona_cpufreq {
 	struct cpufreq_lmt_node tmon_node;
 	struct delayed_work init_work;
 #endif
+	struct kona_cpufreq_stats stats;
 };
+
 static struct kona_cpufreq *kona_cpufreq;
 
 static struct cpufreq_lmt_node usr_min_lmt_node = {
@@ -98,6 +114,185 @@ static struct cpufreq_lmt_node usr_min_lmt_node = {
 
 static struct cpufreq_lmt_node usr_max_lmt_node = {
 	.name = "usr_max_lmt",
+};
+
+static int kona_cpufreq_freq_stats_update(int new_freq_inx)
+{
+	struct kona_cpufreq_stats *stats;
+	int cpu, num_cstates;
+	unsigned long long cur_time;
+
+	BUG_ON(!kona_cpufreq);
+	num_cstates = kona_cpufreq->num_cstates;
+	spin_lock(&kona_cpufreq->kcf_lock);
+	stats = &kona_cpufreq->stats;
+	cur_time = get_jiffies_64();
+	for (cpu = 0; cpu < CONFIG_NR_CPUS; cpu++) {
+		if (stats->cpu_in_idle[cpu] == CPU_ACTIVE) {
+			stats->stats[cpu][stats->act_freq_inx] +=
+				cur_time - stats->last_time[cpu];
+			stats->last_time[cpu] = cur_time;
+		}
+	}
+	stats->act_freq_inx = new_freq_inx;
+	spin_unlock(&kona_cpufreq->kcf_lock);
+	return 0;
+}
+
+static int kona_cpufreq_cstate_stats_update(int cpu, int state, int enter)
+{
+	struct kona_cpufreq_stats *stats;
+	unsigned long long cur_time;
+
+	BUG_ON(!kona_cpufreq);
+	stats = &kona_cpufreq->stats;
+	cur_time = get_jiffies_64();
+	spin_lock(&kona_cpufreq->kcf_lock);
+	if (enter) {
+		stats->stats[cpu][stats->act_freq_inx] +=
+				cur_time - stats->last_time[cpu];
+	} else {
+		stats->stats[cpu][kona_cpufreq->no_of_opps + state] +=
+			cur_time - stats->last_time[cpu];
+	}
+	stats->last_time[cpu] = cur_time;
+	spin_unlock(&kona_cpufreq->kcf_lock);
+	return 0;
+}
+
+static int kona_cpufreq_freq_stats_enable(int en)
+{
+	struct kona_cpufreq_stats *stats;
+	int i, cpu, num_cstates;
+	int freq_inx = -1;
+	unsigned long long cur_time;
+	struct cpufreq_policy *pol;
+
+	BUG_ON(!kona_cpufreq);
+	stats = &kona_cpufreq->stats;
+	num_cstates = kona_cpufreq->num_cstates;
+	cur_time = get_jiffies_64();
+	if (en && !stats->stats_en) {
+		pol = cpufreq_cpu_get(get_cpu());
+		for (cpu = 0; cpu < CONFIG_NR_CPUS; cpu++) {
+			stats->last_time[cpu] = cur_time;
+			for (i = 0; i < kona_cpufreq->no_of_opps + num_cstates;
+					i++) {
+				stats->stats[cpu][i] = 0;
+				if (i < kona_cpufreq->no_of_opps &&
+				pol->cur == kona_cpufreq->freq_map[i].cpu_freq)
+					freq_inx = i;
+			}
+		}
+		BUG_ON(freq_inx == -1);
+		stats->start_time = cur_time;
+		stats->act_freq_inx = (u32)freq_inx;
+		cpufreq_cpu_put(pol);
+		put_cpu();
+		stats->stats_en = 1;
+		kona_cpufreq_freq_stats_update(freq_inx);
+	} else if (!en && stats->stats_en)
+		stats->stats_en = 0;
+	return 0;
+}
+
+static u32 cpufreq_stats_percentage(unsigned long long cur_time,
+		unsigned long long opp_time)
+{
+	unsigned long long total_time;
+	struct kona_cpufreq_stats *stats;
+	stats = &kona_cpufreq->stats;
+	total_time = cur_time - stats->start_time;
+	opp_time *= 100;
+	do_div(opp_time, total_time);
+	return (u32)opp_time;
+}
+
+static ssize_t kona_cpufreq_log_stats(struct file *file, char __user *user_buf,
+		size_t count, loff_t *ppos)
+{
+	struct kona_cpufreq_stats *stats;
+	int i, cpu, num_cstates;
+	unsigned long long cur_time;
+	unsigned long long act_time;
+	static char buf[2048];
+	int len = 0;
+
+	BUG_ON(!kona_cpufreq);
+	stats = &kona_cpufreq->stats;
+	if (!stats->stats_en)
+		return -EINVAL;
+
+	num_cstates = kona_cpufreq->num_cstates;
+	for (i = 0; i < kona_cpufreq->no_of_opps; i++) {
+		len += snprintf(buf+len, sizeof(buf)-len,
+			"%10uKHz   ", kona_cpufreq->freq_map[i].cpu_freq);
+	}
+	for (i = 0; i < num_cstates; i++)
+		len += snprintf(buf+len, sizeof(buf)-len, "%9s\t",
+				kona_pm_get_cstate_name(i));
+	len += snprintf(buf+len, sizeof(buf)-len, "\n");
+
+	cur_time = get_jiffies_64();
+	for (cpu = 0; cpu < CONFIG_NR_CPUS; cpu++) {
+		for (i = 0; i < kona_cpufreq->no_of_opps + num_cstates; i++) {
+			if (i >= kona_cpufreq->no_of_opps &&
+				stats->cpu_in_idle[cpu] == (i -
+					kona_cpufreq->no_of_opps)) {
+				cur_time = get_jiffies_64();
+				act_time = stats->stats[cpu][i] +
+					(cur_time - stats->last_time[cpu]);
+				goto percentage;
+			} else if (i == stats->act_freq_inx) {
+				if (stats->cpu_in_idle[cpu] == CPU_ACTIVE) {
+					cur_time = get_jiffies_64();
+					act_time = stats->stats[cpu][i] +
+					(cur_time - stats->last_time[cpu]);
+					goto percentage;
+				}
+			}
+			act_time = stats->stats[cpu][i];
+percentage:
+			len += snprintf(buf+len, sizeof(buf)-len, "%8llu"\
+				"(%u%c)\t", act_time, cpufreq_stats_percentage(
+				cur_time, act_time), '%');
+		}
+		len += snprintf(buf+len, sizeof(buf)-len, "\n");
+	}
+	len += snprintf(buf+len, sizeof(buf)-len, "Total Time: %llu\n",
+			cur_time - stats->start_time);
+	return simple_read_from_buffer(user_buf, count, ppos, buf, len);
+}
+
+static int cpufreq_cstate_notify_handler(struct notifier_block *nb,
+					     unsigned long val,
+					     void *data)
+{
+	struct kona_cpufreq_stats *stats;
+	int cpu = get_cpu();
+	int state = *(int *)data;
+
+	BUG_ON(!kona_cpufreq);
+
+	stats = &kona_cpufreq->stats;
+	switch (val) {
+	case CSTATE_ENTER:
+		stats->cpu_in_idle[cpu] = state;
+		if (stats->stats_en)
+			kona_cpufreq_cstate_stats_update(cpu, state, 1);
+		break;
+	case CSTATE_EXIT:
+		stats->cpu_in_idle[cpu] = CPU_ACTIVE;
+		if (stats->stats_en)
+			kona_cpufreq_cstate_stats_update(cpu, state, 0);
+		break;
+	}
+	put_cpu();
+	return 0;
+}
+
+static struct notifier_block kona_cpufreq_cstate_nb = {
+	.notifier_call = cpufreq_cstate_notify_handler,
 };
 
 #ifdef CONFIG_KONA_TMON
@@ -308,7 +503,9 @@ static int kona_cpufreq_set_speed(struct cpufreq_policy *policy,
 	struct cpufreq_freqs freqs;
 	int i, index;
 	int ret = 0;
+	int freq_inx = -1;
 	u32 opp = PI_OPP_NORMAL;
+	struct kona_cpufreq_stats *stats;
 #ifdef CONFIG_SMP
 	struct kona_cpufreq_drv_pdata *pdata = kona_cpufreq->pdata;
 #endif
@@ -334,6 +531,7 @@ static int kona_cpufreq_set_speed(struct cpufreq_policy *policy,
 	for (i = 0; i < kona_cpufreq->no_of_opps; i++) {
 		if (freqs.new == kona_cpufreq->freq_map[i].cpu_freq) {
 			opp = kona_cpufreq->freq_map[i].opp;
+			freq_inx = i;
 			break;
 		}
 	}
@@ -342,6 +540,11 @@ static int kona_cpufreq_set_speed(struct cpufreq_policy *policy,
 	if (unlikely(ret)) {
 		kcf_dbg("%s: cpu freq change failed : %d\n", __func__, ret);
 	}
+
+	stats = &kona_cpufreq->stats;
+	BUG_ON(freq_inx  == -1);
+	if (stats->stats_en)
+		kona_cpufreq_freq_stats_update(freq_inx);
 
 	local_irq_enable();
 
@@ -538,7 +741,7 @@ static int cpufreq_min_lmt_update(struct cpufreq_lmt_node *lmt_node, int action)
 		lmt_node->lmt = (int)policy->cpuinfo.min_freq;
 	cpufreq_cpu_put(policy);
 
-	spin_lock(&kona_cpufreq->freq_lmt_lock);
+	spin_lock(&kona_cpufreq->kcf_lock);
 	switch (action) {
 	case FREQ_LMT_NODE_ADD:
 		plist_node_init(&lmt_node->node, lmt_node->lmt);
@@ -561,7 +764,7 @@ static int cpufreq_min_lmt_update(struct cpufreq_lmt_node *lmt_node, int action)
 			if (!ret)
 				kona_cpufreq->active_min_lmt = new_val;
 	}
-	spin_unlock(&kona_cpufreq->freq_lmt_lock);
+	spin_unlock(&kona_cpufreq->kcf_lock);
 over:
 	return ret;
 }
@@ -584,7 +787,7 @@ static int cpufreq_max_lmt_update(struct cpufreq_lmt_node *lmt_node, int action)
 		lmt_node->lmt = (int)policy->cpuinfo.max_freq;
 	cpufreq_cpu_put(policy);
 
-	spin_lock(&kona_cpufreq->freq_lmt_lock);
+	spin_lock(&kona_cpufreq->kcf_lock);
 	switch (action) {
 	case FREQ_LMT_NODE_ADD:
 		plist_node_init(&lmt_node->node, lmt_node->lmt);
@@ -607,7 +810,7 @@ static int cpufreq_max_lmt_update(struct cpufreq_lmt_node *lmt_node, int action)
 		if (!ret)
 			kona_cpufreq->active_max_lmt = new_val;
 	}
-	spin_unlock(&kona_cpufreq->freq_lmt_lock);
+	spin_unlock(&kona_cpufreq->kcf_lock);
 over:
 	return ret;
 }
@@ -796,6 +999,7 @@ static struct cpufreq_driver kona_cpufreq_driver = {
 
 static int cpufreq_drv_probe(struct platform_device *pdev)
 {
+	struct kona_cpufreq_stats *stats;
 	struct kona_cpufreq_drv_pdata *pdata = pdev->dev.platform_data;
 	int i, ret = -1;
 
@@ -808,7 +1012,7 @@ static int cpufreq_drv_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 	memset(kona_cpufreq, 0, sizeof(struct kona_cpufreq));
-	spin_lock_init(&kona_cpufreq->freq_lmt_lock);
+	spin_lock_init(&kona_cpufreq->kcf_lock);
 	plist_head_init(&kona_cpufreq->min_lmt_list);
 	plist_head_init(&kona_cpufreq->max_lmt_list);
 
@@ -883,6 +1087,15 @@ static int cpufreq_drv_probe(struct platform_device *pdev)
 				msecs_to_jiffies(INIT_WORK_DELAY));
 	}
 #endif
+	kona_cpufreq->num_cstates = kona_pm_get_num_cstates();
+	pr_info("%s: num_cstates: %d\n", __func__, kona_cpufreq->num_cstates);
+	stats = &kona_cpufreq->stats;
+	stats->stats_en = 0;
+	for (i = 0; i < CONFIG_NR_CPUS; i++)
+		stats->stats[i] = kzalloc(sizeof(u64) * ((pdata->num_freqs) +
+				kona_cpufreq->num_cstates), GFP_KERNEL);
+
+	cstate_notifier_register(&kona_cpufreq_cstate_nb);
 	return ret;
 }
 
@@ -900,7 +1113,7 @@ static int cpufreq_drv_remove(struct platform_device *pdev)
 	kfree(kona_cpufreq->freq_map);
 	kfree(kona_cpufreq);
 	kona_cpufreq = NULL;
-
+	cstate_notifier_unregister(&kona_cpufreq_cstate_nb);
 	return 0;
 }
 
@@ -1129,6 +1342,42 @@ static const struct file_operations cpu_config_set_ops_fops = {
 };
 #endif
 
+static int kona_cpufreq_set_stats_en(void *data, u64 val)
+{
+	return kona_cpufreq_freq_stats_enable(!!val);
+}
+
+static int kona_cpufreq_get_stats_en(void *data, u64 *val)
+{
+	*val = kona_cpufreq->stats.stats_en;
+	return 0;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(stats_en_ops, kona_cpufreq_get_stats_en,
+		kona_cpufreq_set_stats_en, "%llu\n");
+
+
+static ssize_t kona_cpufreq_get_stats(struct file *file, char __user *user_buf,
+		size_t count, loff_t *ppos)
+{
+	struct kona_cpufreq_stats *stats;
+	int len = 0;
+	char debug_fs_buf[100];
+	stats = &kona_cpufreq->stats;
+	if (!stats->stats_en) {
+		len += snprintf(debug_fs_buf + len, sizeof(debug_fs_buf) - len,
+			"Stats not enabled\n");
+		return simple_read_from_buffer(user_buf, count, ppos,
+				debug_fs_buf, len);
+	}
+	return kona_cpufreq_log_stats(file, user_buf, count, ppos);
+}
+
+static const struct file_operations stats_ops = {
+	.open = cpufreq_debugfs_open,
+	.read = kona_cpufreq_get_stats,
+};
+
 #ifdef CONFIG_KONA_TMON
 static ssize_t cpufreq_get_temp_tholds(struct file *file,
 	char __user *user_buf, size_t count, loff_t *ppos)
@@ -1235,6 +1484,15 @@ int __init kona_cpufreq_debug_init(void)
 			dent_kcf_root_dir, kona_cpufreq, &kcf_temp_tholds_ops))
 		return -ENOMEM;
 #endif
+	if (!debugfs_create_file
+	    ("enable_stats", S_IWUSR, dent_kcf_root_dir, NULL,
+						&stats_en_ops))
+		return -ENOMEM;
+
+	if (!debugfs_create_file
+	    ("stats", S_IRUSR, dent_kcf_root_dir, NULL,
+						&stats_ops))
+		return -ENOMEM;
 	return 0;
 }
 

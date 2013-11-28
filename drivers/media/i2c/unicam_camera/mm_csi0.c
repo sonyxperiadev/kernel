@@ -264,6 +264,8 @@ int mm_csi0_set_afe()
 
 	udelay(100);
 
+	udelay(100);
+
 	/* CSI1 uses CSI0 clocks and dividers */
 
 	/* point base to mm_csi0 base */

@@ -28,6 +28,7 @@ struct mms_event {
 
 struct white_list_node *g_whitelistnode;
 int g_pid;
+int g_block_enabled;
 
 extern void send_event_to_security_center(struct mms_event *pevent);
 

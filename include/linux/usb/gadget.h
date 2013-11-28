@@ -471,6 +471,14 @@ struct usb_gadget_ops {
 			struct usb_gadget_driver *);
 	int	(*udc_stop)(struct usb_gadget *,
 			struct usb_gadget_driver *);
+
+	/* Those two are deprecated */
+	int	(*start)(struct usb_gadget_driver *,
+			int (*bind)(struct usb_gadget *));
+	int	(*stop)(struct usb_gadget_driver *);
+#ifdef CONFIG_USB_PCD_SETTINGS
+	int	(*pcd_start_clean) (struct usb_gadget *, int is_start);
+#endif
 };
 
 /**
@@ -749,6 +757,31 @@ static inline int usb_gadget_disconnect(struct usb_gadget *gadget)
 	return gadget->ops->pullup(gadget, 0);
 }
 
+#ifdef CONFIG_USB_PCD_SETTINGS
+/**
+ * usb_pcd_enable - enable pcd and initialize endps
+ *
+ * Returns zero on success, else negative errno.
+ */
+static inline int usb_pcd_enable(struct usb_gadget *gadget)
+{
+	if (!gadget->ops->pcd_start_clean)
+		return -EOPNOTSUPP;
+	return gadget->ops->pcd_start_clean(gadget, 1);
+}
+
+/**
+ * usb_pcd_disable - disable pcd and clean up endps
+ *
+ * Returns zero on success, else negative errno.
+ */
+static inline int usb_pcd_disable(struct usb_gadget *gadget)
+{
+	if (!gadget->ops->pcd_start_clean)
+		return -EOPNOTSUPP;
+	return gadget->ops->pcd_start_clean(gadget, 0);
+}
+#endif
 
 /*-------------------------------------------------------------------------*/
 

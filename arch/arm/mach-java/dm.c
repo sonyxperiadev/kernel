@@ -85,7 +85,7 @@ static struct ccu_clk *proc_ccu;
 #define SSAPI_RET_FROM_INT_SERV		4
 
 /* Define pointers per CPU to the data that is banked
- * for both the CPU's
+ * for all the CPU's
  */
 DEFINE_PER_CPU(u8[PMU_DATA_SIZE], pmu_data);
 DEFINE_PER_CPU(u8[TIMER_DATA_SIZE], timer_data);
@@ -103,7 +103,9 @@ DEFINE_PER_CPU(u8[MMU_DATA_SIZE], mmu_data);
 u8 gic_dist_shared_data[GIC_DIST_SHARED_DATA_SIZE];
 
 static DEFINE_PER_CPU(u32, cdm_success);
-static DEFINE_PER_CPU(u32, cdm_failure);
+static DEFINE_PER_CPU(u32, cdm_failure_nrfd);
+static DEFINE_PER_CPU(u32, cdm_failure_cene);
+static DEFINE_PER_CPU(u32, cdm_failure_misc);
 static DEFINE_PER_CPU(u32, cdm_attempts);
 
 static u8 svc_req[DRMT_SVC_MAX];
@@ -117,6 +119,17 @@ static u32 fdm_en = 1; /* Enable full dormant */
 static u32 dbg_log;
 static int wr_enabled;
 static int pllarma_inx = -1;
+
+/*
+ * If cpuidle framework has requested for 'full dormant', but the system
+ * might have not entered full dormant. i.e. system might have attempted for
+ * full dormant, but did not happen. So, we can't rely on the command
+ * 'cat /sys/devices/system/cpu/cpuN/cpuidle/stateX/time' to get to know the
+ * amount of time spend in 'full dormant'. Thereby calculating full dormant time
+ * time and storing in fdm_time variable. This is mainly for debug purpose.
+ */
+static u32 fdm_time;
+static u32 fdm_time_en;
 
 /* Data for the entire cluster */
 static DEFINE_SPINLOCK(drmt_lock);
@@ -462,62 +475,9 @@ static void local_secure_api(unsigned service_id,
 
 }
 
-/******************* Public Functions ***************/
-
-/* Main dormant enter routine.  Must be called with
- * interrupts locked.  Will save/restore context of the CPU/CLUSTER
- * and returns back as a normal function call.
- */
-void dormant_enter(u32 svc)
+/* Save all the local data for this cpu */
+static void save_arm_context(void)
 {
-	u32 fd_cmd = CDC_CMD_CDCE;
-	u32 pwr_ctrl;
-	u32 cdc_states;
-	int cdc_resp;
-	u32 drmt_status = DORMANT_ENTRY_FAILURE;
-	bool restore_gic = true;
-	bool retry;
-	u32 cpu;
-	u32 svc_max = CORE_DORMANT;
-	u32 insurance = 1000;
-	(*((u32 *)(&__get_cpu_var(cdm_attempts))))++;
-
-	/*vote for dormant svc..*/
-	set_svc_req(svc);
-	instrument_lpm(LPM_TRACE_ENTER_DRMNT, svc);
-	cdc_resp = cdc_send_cmd(CDC_CMD_RED);
-	switch (cdc_resp) {
-
-	case CDC_STATUS_NRFD:
-		/*Some other core is entring dormant or an interrupt is pending.
-		Retry later*/
-		(*((u32 *)(&__get_cpu_var(cdm_failure))))++;
-		goto ret;
-		break;
-
-	case CDC_STATUS_RFD:
-		fd_cmd = CDC_CMD_CDCE;
-		break;
-
-	case CDC_STATUS_RFDLC:
-		svc_max = get_svc();
-
-		if (fdm_en && (FULL_DORMANT_L2_ON == svc_max ||
-			FULL_DORMANT_L2_OFF == svc_max)) {
-			fd_cmd = CDC_CMD_FDCE;
-		} else {
-			fd_cmd = CDC_CMD_CDCE;
-		}
-		break;
-
-	default:
-		pr_err("%s cdc status: %u  cpu-%d\n", cdc_resp,
-			smp_processor_id());
-		BUG();
-	}
-
-	/* Save all the local data for this CPU for either service */
-
 	save_performance_monitors((void *)__get_cpu_var(pmu_data));
 
 	save_generic_timer((void *)__get_cpu_var(timer_data));
@@ -540,13 +500,110 @@ void dormant_enter(u32 svc)
 	save_control_registers((void *)__get_cpu_var(control_data), false);
 
 	save_mmu((void *)__get_cpu_var(mmu_data));
+}
 
-	cdc_resp = cdc_send_cmd(fd_cmd);
+/* Restore everything that is specific to this cpu */
+static void restore_arm_context(bool restore_gic)
+{
+	restore_mmu((void *)__get_cpu_var(mmu_data));
+
+	restore_control_registers((void *)__get_cpu_var(control_data),
+					  false);
+	restore_v7_debug((void *)__get_cpu_var(debug_data));
+
+	/*For Java, GIC gets powered down only during
+	cluster dormant.
+	*/
+	if (restore_gic) {
+		/* continue restoring cpu specific content */
+		restore_gic_distributor_private((void *)
+						__get_cpu_var
+						(gic_dist_private_data),
+						(u32)KONA_GICDIST_VA, false);
+
+		restore_gic_interface((void *)__get_cpu_var(gic_interface_data),
+					  (u32)KONA_GICCPU_VA, false);
+	}
+	restore_cp15((void *)__get_cpu_var(cp15_data));
+
+	restore_banked_registers((void *)
+				 __get_cpu_var(banked_registers));
+
+	restore_vfp((void *)__get_cpu_var(vfp_data));
+
+	restore_generic_timer((void *)__get_cpu_var(timer_data));
+
+	restore_performance_monitors((void *)__get_cpu_var(pmu_data));
+}
+
+/******************* Public Functions ***************/
+
+/* Main dormant enter routine.  Must be called with
+ * interrupts locked.  Will save/restore context of the CPU/CLUSTER
+ * and returns back as a normal function call.
+ */
+void dormant_enter(u32 svc)
+{
+	u32 fd_cmd = CDC_CMD_CDCE;
+	u32 pwr_ctrl;
+	u32 cdc_states;
+	int cdc_resp;
+	u32 drmt_status = DORMANT_ENTRY_FAILURE;
+	bool restore_gic = true;
+	bool retry;
+	u32 cpu;
+	u32 svc_max = CORE_DORMANT;
+	u32 insurance = 1000;
+	u32 time1 = 0, time2 = 0;
+	(*((u32 *)(&__get_cpu_var(cdm_attempts))))++;
+
+	/*vote for dormant svc..*/
+	set_svc_req(svc);
+	instrument_lpm(LPM_TRACE_ENTER_DRMNT, svc);
+
+	cdc_resp = cdc_send_cmd(CDC_CMD_RED);
 	switch (cdc_resp) {
 
-	case CDC_STATUS_CENE:
-		cdc_resp = cdc_send_cmd(CDC_CMD_REDCAN);
+	case CDC_STATUS_NRFD:
+		/*Some other core is entring dormant or an interrupt is pending.
+		Retry later*/
+		(*((u32 *)(&__get_cpu_var(cdm_failure_nrfd))))++;
+		goto ret;
 		break;
+
+	case CDC_STATUS_RFD:
+		fd_cmd = CDC_CMD_CDCE;
+		break;
+
+	case CDC_STATUS_RFDLC:
+		svc_max = get_svc();
+
+		if (fdm_en && (FULL_DORMANT_L2_ON == svc_max ||
+			FULL_DORMANT_L2_OFF == svc_max)) {
+			fd_cmd = CDC_CMD_FDCE;
+		} else {
+			fd_cmd = CDC_CMD_CDCE;
+		}
+		break;
+
+	default:
+		pr_err("%s cdc status: %u  cpu-%d\n", __func__,
+				cdc_resp, smp_processor_id());
+		BUG();
+	}
+
+	cdc_resp = cdc_send_cmd(fd_cmd);
+
+	if (cdc_resp == CDC_STATUS_CENE) {
+		(*((u32 *)(&__get_cpu_var(cdm_failure_cene))))++;
+		cdc_resp = cdc_send_cmd(CDC_CMD_REDCAN);
+		goto ret;
+	}
+
+	/* Save all the local data for this CPU for either service */
+	save_arm_context();
+
+	switch (cdc_resp) {
 
 	case CDC_STATUS_FDCEOK:
 		cdc_master_clk_gating_en(false);
@@ -571,7 +628,8 @@ void dormant_enter(u32 svc)
 		cdc_set_fsm_ctrl(FSM_CLR_ALL_STATUS);
 		cdc_set_override(WAIT_IDLE_TIMEOUT, 0xF);
 		fdm_attempt++;
-
+		if (unlikely(fdm_time_en))
+			time1 = kona_hubtimer_get_counter();
 		/*no break to continue to CEOK*/
 	case CDC_STATUS_CEOK:
 		/*dormant_enter_continue will turn OFF L2 mem only if
@@ -596,7 +654,7 @@ void dormant_enter(u32 svc)
 		/* restore only what we lost without entering
 		 * dormant and return
 		 */
-		(*((u32 *)(&__get_cpu_var(cdm_failure))))++;
+		(*((u32 *)(&__get_cpu_var(cdm_failure_misc))))++;
 		restore_control_registers((void *)__get_cpu_var(control_data),
 					  false);
 		restore_generic_timer((void *)__get_cpu_var(timer_data));
@@ -610,8 +668,8 @@ void dormant_enter(u32 svc)
 	cpu = smp_processor_id();
 
 	cdc_resp = cdc_get_status_for_core(cpu);
-	instrument_lpm(LPM_TRACE_EXIT_DRMNT,
-						cdc_resp);
+	instrument_lpm(LPM_TRACE_EXIT_DRMNT, cdc_resp);
+
 	do {
 		retry = false;
 		insurance--;
@@ -627,7 +685,7 @@ void dormant_enter(u32 svc)
 				restore_gic = true;
 			/*No break continue...*/
 		case CDC_STATUS_RESDFS_SHORT:
-		(*((u32 *)(&__get_cpu_var(cdm_success))))++;
+			(*((u32 *)(&__get_cpu_var(cdm_success))))++;
 			cdc_resp = cdc_send_cmd_for_core(CDC_CMD_SDEC, cpu);
 			break;
 
@@ -643,6 +701,15 @@ void dormant_enter(u32 svc)
 				memc_update_dfs_req(&memc_dfs_node,
 					MEMC_OPP_NORMAL);
 #endif /*CONFIG_MEMC_FORCE_156M_IN_SUSPEND*/
+			/* Calculate the time spent in full dormant */
+			if (unlikely(fdm_time_en)) {
+				time2 = kona_hubtimer_get_counter();
+				if (time1 && (time2 > time1)) {
+					fdm_time +=
+					((time2 - time1) * 1000)
+						/ CLOCK_TICK_RATE;
+				}
+			}
 			if (CDC_STATUS_RESFDM == cdc_resp) {
 				fdm_success++;
 				restore_gic = true;
@@ -724,35 +791,7 @@ void dormant_enter(u32 svc)
 	BUG_ON(!insurance && retry);
 
 	/* restore everything that is specific to this core */
-	restore_mmu((void *)__get_cpu_var(mmu_data));
-
-	restore_control_registers((void *)__get_cpu_var(control_data),
-					  false);
-	restore_v7_debug((void *)__get_cpu_var(debug_data));
-
-	/*For Java, GIC gets powered down only during
-	cluster dormant.
-	*/
-	if (restore_gic) {
-		/* continue restoring cpu specific content */
-		restore_gic_distributor_private((void *)
-						__get_cpu_var
-						(gic_dist_private_data),
-						(u32)KONA_GICDIST_VA, false);
-
-		restore_gic_interface((void *)__get_cpu_var(gic_interface_data),
-					  (u32)KONA_GICCPU_VA, false);
-	}
-	restore_cp15((void *)__get_cpu_var(cp15_data));
-
-	restore_banked_registers((void *)
-				 __get_cpu_var(banked_registers));
-
-	restore_vfp((void *)__get_cpu_var(vfp_data));
-
-	restore_generic_timer((void *)__get_cpu_var(timer_data));
-
-	restore_performance_monitors((void *)__get_cpu_var(pmu_data));
+	restore_arm_context(restore_gic);
 
 ret:
 	/*Clr svc vote*/
@@ -768,7 +807,7 @@ ret:
 static int dormant_enter_continue(unsigned long svc)
 {
 	u32 cpu;
-	unsigned int arg2;
+	unsigned int arg2 = 2; /* L2 mem ON */
 	cpu = smp_processor_id();
 
 	if (svc == FULL_DORMANT_L2_OFF &&
@@ -864,8 +903,16 @@ static int __init dm_debug_init(void)
 			cpu_dir[cpu], (u32 *)&per_cpu(cdm_success, cpu)))
 			goto err;
 
-		if (!debugfs_create_u32("cdm_failure", S_IRUGO,
-			cpu_dir[cpu], (u32 *)&per_cpu(cdm_failure, cpu)))
+		if (!debugfs_create_u32("cdm_failure_nrfd", S_IRUGO,
+			cpu_dir[cpu], (u32 *)&per_cpu(cdm_failure_nrfd, cpu)))
+			goto err;
+
+		if (!debugfs_create_u32("cdm_failure_cene", S_IRUGO,
+			cpu_dir[cpu], (u32 *)&per_cpu(cdm_failure_cene, cpu)))
+			goto err;
+
+		if (!debugfs_create_u32("cdm_failure_misc", S_IRUGO,
+			cpu_dir[cpu], (u32 *)&per_cpu(cdm_failure_misc, cpu)))
 			goto err;
 
 		if (!debugfs_create_u32("cdm_attempts", S_IRUGO,
@@ -892,9 +939,19 @@ static int __init dm_debug_init(void)
 	if (!debugfs_create_u32("l2_off_en", S_IRUGO | S_IWUSR,
 			dm_root_dir, &l2_off_en))
 		goto err;
+
 	if (!debugfs_create_u32("fdm_en", S_IRUGO | S_IWUSR,
 			dm_root_dir, &fdm_en))
 		goto err;
+
+	if (!debugfs_create_u32("fdm_time", S_IRUGO | S_IWUSR,
+			dm_root_dir, &fdm_time))
+		goto err;
+
+	if (!debugfs_create_u32("fdm_time_en", S_IRUGO | S_IWUSR,
+			dm_root_dir, &fdm_time_en))
+		goto err;
+
 	if (!debugfs_create_u32("dbg_log", S_IRUGO | S_IWUSR,
 			dm_root_dir, &dbg_log))
 		goto err;

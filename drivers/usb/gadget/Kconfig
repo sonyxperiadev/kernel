@@ -952,8 +952,15 @@ config USB_ETH_SKB_ALLOC_OPTIMIZATION
 
 	   If unsure, say "y".
 
-if TTY
+config USB_PCD_SETTINGS
+	bool "USB_PCD_SETTINGS support"
+	depends on USB_G_ANDROID
+	help
+	   If you say "y" here, the dynamic switching of usb gadget classes is supported
+	   This does the GADGET function switch cleanly	
+	   If unsure, say "y".
 
+if TTY
 config USB_CDC_COMPOSITE
 	tristate "CDC Composite Device (Ethernet and ACM)"
 	depends on NET

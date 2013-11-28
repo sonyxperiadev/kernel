@@ -312,6 +312,15 @@ config MM_FREEZE_VAR500M_ERRATUM
 	 enabled erratum(HWHAWAII-73)
 	 Refer JIRA DB for more info
 
+config MOVE_MM_CLK_TO_PLL0
+	bool "Change the var312Mhz source clock to PLL0"
+	default n
+	help
+	 By default var312 is derived from PLL1.
+	 But, it can be derived from PLL0 also.
+	 Say Y to move the source clock to PLL0.
+	 We do this to switch off PLL1 during non-modem use cases.
+
 config A7_PLL_PWRDWN_ERRATUM
 	bool "Disable A7 PLL pwrdwn while swicthing from A7 PLL to 312Mhz PLL"
 	default y
@@ -409,6 +418,15 @@ config USE_ARCH_TIMER_AS_LOCAL_TIMER
 	  C3 state, the event timer will be automatically migrated from
 	  local timer another event timer that ca be alive during C3 state
 	  as well. If you are not sure say N
+
+config USE_JAVA_SPINLOCK
+	bool "Use Java specific Spinlock implementation"
+	depends on ARCH_JAVA
+	default n
+	help
+	  Because of the way WFE and SEV are implemented on A7 based Java
+	  there could be issues seen in the spinlocks. Enabling this option
+	  would replace the WFE and SEV with NOP.
 
 endmenu
 

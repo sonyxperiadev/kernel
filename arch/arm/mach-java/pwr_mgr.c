@@ -48,6 +48,9 @@
 #endif
 #include <mach/rdb/brcm_rdb_root_clk_mgr_reg.h>
 
+#ifdef CONFIG_BRCM_SECURE_WATCHDOG
+#include <linux/broadcom/kona_sec_wd.h>
+#endif
 
 #define VLT_LUT_SIZE	16
 
@@ -957,6 +960,9 @@ static int param_set_pm_late_init(const char *val,
 
 	kona_pm_disable_idle_state(CSTATE_ALL, 0);
 	enable_dormant(0xf);
+#ifdef CONFIG_BRCM_SECURE_WATCHDOG
+	sec_wd_activate();
+#endif
 	return 0;
 }
 #endif
@@ -969,6 +975,9 @@ int __init hawaii_pwr_mgr_late_init(void)
 						__func__);
 		hawaii_pwr_mgr_delayed_init();
 		enable_dormant(0xf);
+#ifdef CONFIG_BRCM_SECURE_WATCHDOG
+		sec_wd_activate();
+#endif
 	} else
 		kona_pm_disable_idle_state(CSTATE_ALL, 1);
 #else

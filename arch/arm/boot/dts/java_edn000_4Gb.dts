@@ -547,4 +547,7 @@
 		sec-mem-size = <0x100000>;
 	};
 
+	secure_watchdog {
+		compatible = "bcm,secure_watchdog";
+	};
 };

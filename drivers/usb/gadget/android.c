@@ -107,6 +107,7 @@ static struct class *android_class;
 static struct android_dev *_android_dev;
 static int android_bind_config(struct usb_configuration *c);
 static void android_unbind_config(struct usb_configuration *c);
+static void android_disconnect(struct usb_composite_dev *cdev);
 
 /* string IDs are assigned dynamically */
 #define STRING_MANUFACTURER_IDX		0
@@ -197,10 +198,13 @@ static void android_enable(struct android_dev *dev)
 {
 	struct usb_composite_dev *cdev = dev->cdev;
 
-	if (WARN_ON(!dev->disable_depth))
-		return;
+	BUG_ON(!mutex_is_locked(&dev->mutex));
+	BUG_ON(!dev->disable_depth);
 
 	if (--dev->disable_depth == 0) {
+#ifdef CONFIG_USB_PCD_SETTINGS
+		usb_pcd_enable(cdev->gadget);
+#endif
 		usb_add_config(cdev, &android_config_driver,
 					android_bind_config);
 		usb_gadget_connect(cdev->gadget);
@@ -211,11 +215,17 @@ static void android_disable(struct android_dev *dev)
 {
 	struct usb_composite_dev *cdev = dev->cdev;
 
+	BUG_ON(!mutex_is_locked(&dev->mutex));
+
 	if (dev->disable_depth++ == 0) {
+		android_disconnect(cdev);
 		usb_gadget_disconnect(cdev->gadget);
 		/* Cancel pending control requests */
 		usb_ep_dequeue(cdev->gadget->ep0, cdev->req);
 		usb_remove_config(cdev, &android_config_driver);
+#ifdef CONFIG_USB_PCD_SETTINGS
+		usb_pcd_disable(cdev->gadget);
+#endif
 	}
 }
 
@@ -1275,7 +1285,7 @@ static int android_init_functions(struct android_usb_function **functions,
 	struct android_usb_function *f;
 	struct device_attribute **attrs;
 	struct device_attribute *attr;
-	int err;
+	int err = 0;
 	int index = 0;
 
 	for (; (f = *functions++); index++) {

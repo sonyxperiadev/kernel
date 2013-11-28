@@ -8329,9 +8329,9 @@ int __init clock_debug_add_misc_clock(struct clk *c)
 }
 
 #endif
-
 int __init clock_late_init(void)
 {
+	clk_trace_init(ARRAY_SIZE(hawaii_clk_tbl));
 #ifdef CONFIG_DEBUG_FS
 	int i;
 	clock_debug_init();

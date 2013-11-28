@@ -686,7 +686,7 @@ static int hawaii_camera_power(struct device *dev, int on)
 		goto e_clk_get;
 	}
 	if (on) {
-		if (pi_mgr_dfs_request_update(&unicam_dfs_node, PI_OPP_TURBO))
+		if (pi_mgr_dfs_request_update(&unicam_dfs_node, PI_OPP_ECONOMY))
 			printk("DVFS for UNICAM failed\n");
 		regulator_enable(d_gpsr_cam0_1v8);
 		usleep_range(1000, 1010);
@@ -932,7 +932,7 @@ static int hawaii_camera_power_front(struct device *dev, int on)
 		goto e_clk_get;
 	}
 	if (on) {
-		if (pi_mgr_dfs_request_update(&unicam_dfs_node, PI_OPP_TURBO))
+		if (pi_mgr_dfs_request_update(&unicam_dfs_node, PI_OPP_ECONOMY))
 			printk("DVFS for UNICAM failed\n");
 		gpio_set_value(SENSOR_1_GPIO_PWRDN, thiscfg->pwdn_active);
 		usleep_range(1000, 1010);

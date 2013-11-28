@@ -500,6 +500,15 @@ config SENSORS_BH1721FVC
 		Rohm bh1721fvc sensor driver.
 		if you don't need this driver, say N.
 
+config SENSORS_RPR0410
+        bool "rpr0410 ambient light proximity sensor driver"
+	depends on I2C
+	default n
+	help
+		Say yes here, if you want to include
+		Rohm rpr0410 sensor driver.
+		if you don't need this driver, say N.
+
 config SENSORS_HM8001
         bool "sensor proximity & light hm8001 driver"
         depends on I2C
@@ -1034,4 +1043,5 @@ source "drivers/misc/btport/Kconfig"
 source "drivers/misc/emmc_rpmb/Kconfig"
 source "drivers/misc/bmc150/Kconfig"
 source "drivers/misc/cm36xx/Kconfig"
+source "drivers/misc/tmg399x/Kconfig"
 endmenu

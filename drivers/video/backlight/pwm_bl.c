@@ -340,12 +340,14 @@ static void pb_update_max_brightness(unsigned long curr_temp,
 		}
 	}
 	if (prev_max_brightness != pb->max_brightness) {
-		pr_info("[BACKLIGHT_DRIVER] Sensor: [BBIC], Threshold Crossed: [%lu], Threshold Crossing Direction: [%s], Throttling Action: [Max_Brightness = %d]"
-		, pb->max_brightness > prev_max_brightness ?
-		data->temp_comp_tbl[i+1].trigger_temp :
-		data->temp_comp_tbl[i].trigger_temp,
-		pb->max_brightness > prev_max_brightness ? "Fall" :
-		"Rise", pb->max_brightness);
+		pr_info("[BACKLIGHT_DRIVER] Sensor: [BBIC], Threshold Crossed:"\
+			" [%lu], Threshold Crossing Direction: [%s], "\
+			"Throttling Action: [Max_Brightness = %d]",
+			pb->max_brightness > prev_max_brightness ?
+			data->temp_comp_tbl[i+1].trigger_temp :
+			data->temp_comp_tbl[i].trigger_temp,
+			pb->max_brightness > prev_max_brightness ?
+			"Fall" : "Rise", pb->max_brightness);
 	}
 
 update_status:
@@ -438,6 +440,11 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 	pb->notify_after = data->notify_after;
 	pb->check_fb = data->check_fb;
 	pb->exit = data->exit;
+	pb->lth_brightness = data->lth_brightness *
+		(data->pwm_period_ns / data->max_brightness);
+#ifdef CONFIG_KONA_TMON
+	pb->max_brightness = data->max_brightness;
+#endif
 	pb->dev = &pdev->dev;
 	pb->pwm = devm_pwm_get(&pdev->dev, NULL);
 	if (IS_ERR(pb->pwm)) {
@@ -495,8 +502,6 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, bl);
 
 #ifdef CONFIG_KONA_TMON
-	pb->max_brightness = data->max_brightness;
-
 	if (data->temp_comp_size > 0) {
 		if (pb_enable_adapt_bright) {
 			INIT_DELAYED_WORK(&pb->tmon_nb_init_work,

@@ -47,6 +47,9 @@
 #include <linux/of_platform.h>
 #include <linux/i2c-kona.h>
 #include <linux/leds.h>
+#include <linux/vmalloc.h>
+#include <linux/uaccess.h>
+#include <linux/fs.h>
 
 #define VKEY_SYS
 #define u8         unsigned char
@@ -1518,7 +1521,7 @@ static ssize_t firmware_version_store(struct device *dev,
 	/*SM-BUS GET FW VERSION*/
 	dbbus_tx_data[0] = 0x53;
 	dbbus_tx_data[1] = 0x00;
-	dbbus_tx_data[2] = 0x74;
+	dbbus_tx_data[2] = 0x2a;
 	HalTscrCDevWriteI2CSeq(FW_ADDR_MSG21XX_TP, &dbbus_tx_data[0], 3);
 	HalTscrCReadI2CSeq(FW_ADDR_MSG21XX_TP, &dbbus_rx_data[0], 4);
 	major = 0;
@@ -2138,6 +2141,133 @@ static irqreturn_t msg21xx_interrupt(int irq, void *dev_id)
 	#endif
 	return IRQ_HANDLED;
 }
+/*
+*get firmware size
+
+@firmware_name:firmware name
+*note:the firmware default path is sdcard.
+	if you want to change the dir, please modify by yourself.
+*/
+static int msg21xx_get_firmware_size(char *firmware_name)
+{
+	struct file *pfile = NULL;
+	struct inode *inode;
+	unsigned long magic;
+	off_t fsize = 0;
+	char filepath[256];
+	memset(filepath, 0, sizeof(filepath));
+
+	sprintf(filepath, "%s", firmware_name);
+
+	if (NULL == pfile)
+		pfile = filp_open(filepath, O_RDONLY, 0);
+
+	if (IS_ERR(pfile)) {
+		pr_err("error occured while opening file %s.\n", filepath);
+		return -EIO;
+	}
+
+	inode = pfile->f_dentry->d_inode;
+	magic = inode->i_sb->s_magic;
+	fsize = inode->i_size;
+	filp_close(pfile, NULL);
+	return fsize;
+}
+
+
+
+/*
+*read firmware buf for .bin file.
+
+@firmware_name: fireware name of full path
+@firmware_buf: data buf of fireware
+
+note:the firmware default path is sdcard.
+	if you want to change the dir, please modify by yourself.
+*/
+static int msg21xx_read_firmware(char *firmware_name,
+			       unsigned char *firmware_buf)
+{
+	struct file *pfile = NULL;
+	struct inode *inode;
+	unsigned long magic;
+	off_t fsize;
+	char filepath[256];
+	loff_t pos;
+	mm_segment_t old_fs;
+
+	if (!firmware_buf) {
+		pr_err("%s--firmware buffer NULL!\n", __func__);
+		return -EIO;
+	}
+
+	memset(filepath, 0, sizeof(filepath));
+	sprintf(filepath, "%s", firmware_name);
+	if (NULL == pfile)
+		pfile = filp_open(filepath, O_RDONLY, 0);
+	if (IS_ERR(pfile)) {
+		pr_err("error occured while opening file %s.\n", filepath);
+		return -EIO;
+	}
+
+	inode = pfile->f_dentry->d_inode;
+	magic = inode->i_sb->s_magic;
+	fsize = inode->i_size;
+	old_fs = get_fs();
+	set_fs(KERNEL_DS);
+	pos = 0;
+	vfs_read(pfile, firmware_buf, fsize, &pos);
+	filp_close(pfile, NULL);
+	set_fs(old_fs);
+
+	return 0;
+}
+
+/*
+upgrade with *.bin file with full path firmware_name
+*/
+
+int msg_fw_upgrade_with_app_file(struct i2c_client *client,
+				       char *firmware_name)
+{
+	u8 *pbt_buf = NULL;
+	int i_ret;
+	int i;
+	int fwsize = msg21xx_get_firmware_size(firmware_name);
+	printk(KERN_INFO "adcdefghigklmn--fw name:%s\n", firmware_name);
+	if (fwsize <= 0) {
+		dev_err(&client->dev, "%s ERROR:Get firmware size failed\n",
+					__func__);
+		return -EIO;
+	}
+
+	if (fwsize < 8 || fwsize > 50 * 1024) {
+		dev_dbg(&client->dev, "%s:FW length error\n", __func__);
+		return -EIO;
+	}
+
+	/*=========FW upgrade========================*/
+	pbt_buf = vmalloc(fwsize + 1);
+	if (!pbt_buf) {
+		dev_err(&client->dev, "%s() - ERROR: memory allocate failed\n",
+					__func__);
+		return -EIO;
+	}
+	if (msg21xx_read_firmware(firmware_name, pbt_buf)) {
+		dev_err(&client->dev, "%s() - ERROR: request_firmware failed\n",
+					__func__);
+		vfree(pbt_buf);
+		return -EIO;
+	}
+	/*call the upgrade function */
+	for (i = 0; i < 33; i++)
+		firmware_data_store(NULL, NULL, pbt_buf+i*1024, 0);
+	firmware_update_store(NULL, NULL, NULL, 0);
+	printk(KERN_INFO "[FTS] upgrade successfully.\n");
+	vfree(pbt_buf);
+	return i_ret;
+}
+
 #if defined(VKEY_SYS)
 static ssize_t msg21xx_virtual_keys_show(struct kobject *kobj,
 				       struct kobj_attribute *attr, char *buf)
@@ -2152,8 +2282,50 @@ static struct kobj_attribute msg21xx_virtual_keys_attr = {
 	.show = &msg21xx_virtual_keys_show,
 };
 
+static ssize_t msg21xx_firmware_version_show(struct kobject *kobj,
+				   struct kobj_attribute *attr, char *buf)
+{
+	firmware_version_store(NULL, attr, buf, 0);
+	return firmware_version_show(NULL, attr, buf);
+
+}
+ssize_t msg21xx_firmware_upgrade_store(struct kobject *kobj,
+		struct kobj_attribute *attr, const char *buf, size_t count)
+{
+	int i;
+	char fwname[256];
+
+	wake_lock(&update_wake_lock);
+	memset(fwname, 0, sizeof(fwname));
+	sprintf(fwname, "%s", buf);
+	fwname[count - 1] = '\0';
+	msg_fw_upgrade_with_app_file(msg21xx_i2c_client, fwname);
+	wake_unlock(&update_wake_lock);
+	return count;
+}
+
+static struct kobj_attribute msg21xx_firmware_version_attr = {
+	.attr = {
+		.name = "upgradefw",
+		.mode = S_IRUGO,
+	},
+	.show = &msg21xx_firmware_version_show,
+};
+
+static struct kobj_attribute msg21xx_firmware_upgrade_attr = {
+	.attr = {
+		.name = "upgradeapp",
+		.mode = S_IRUGO|S_IWUGO,
+	},
+	.show = &msg21xx_firmware_version_show,
+	.store = &msg21xx_firmware_upgrade_store,
+};
+
+
 static struct attribute *msg21xx_properties_attrs[] = {
 	&msg21xx_virtual_keys_attr.attr,
+	&msg21xx_firmware_version_attr.attr,
+	&msg21xx_firmware_upgrade_attr.attr,
 	NULL
 };
 static struct attribute_group msg21xx_properties_attr_group = {

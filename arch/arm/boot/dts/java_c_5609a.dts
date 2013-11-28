@@ -320,17 +320,20 @@
 		reg = <0x34008000 0x1000>;
 		interrupts = <0 183 4>;
 		chipreg_addr = <0x35004000 0x1000>;
-		thold_size = <5>; /*number of threshold levels*/
+		thold_size = <8>; /*number of threshold levels*/
 		poll_rate_ms = <30000>;
 		hysteresis = <0>;
-		flags = <1>;
-		interval_ms = <5>;
+		flags = <5>;
+		interval_ms = <8>;
 		/*sw shdwn temp is 120*/
-		thold = <85 1
-			95 1
-			105 1
-			120 4
-			125 2>;
+		thold = <55 1
+			58 1
+			63 1
+			65 1
+			70 1
+			80 1
+			115 4
+			120 2>;
 		tmon_apb_clk = "tmon_apb";
 		tmon_1m_clk = "tmon_1m_clk";
 		falling = <5>; /*fall back temperature offset*/
@@ -340,7 +343,7 @@
 		compatible = "bcm,memc";
 		reg = <0x35008000 0x1000>;
 		interrupts = <0 61 4>;
-		flags = <0x1F3>;
+		flags = <0xF3>;
 		chipreg_base = <0x35004000 0x1000>;
 		memc0_aphy_base = <0x35008400 0x1000>;
 		seq_busy_val = <2>;
@@ -348,6 +351,9 @@
 		temp_period = <0xA09E6C>; /*400ms*/
 		temp_tholds = <7 1>;
 		num_thold = <1>;
+		pll_freq = <0 0 0 0
+				0x3D 0 1 0
+				0x50 0 1 0>;
 	};
 
 	sdio1 {
@@ -440,6 +446,10 @@
 		dft-brightness = <32>;
 		polarity = <1>;		/* Inverted polarity */
 		pwm-period-ns = <50000>; /* ~20000 Hz */
+		temp_comp_size = <3>;
+		temp_comp_tbl = <55 20
+				63 18
+				70 15>;
 		pwm-request-label = "backlight";
 		bl-on-delay = <7000>;
 		pwm_pin_name = <39>;	/*GPIO24, enum PIN_NAME defined in chip_pinmux.h*/
@@ -461,4 +471,7 @@
 		sec-mem-size = <0x100000>;
 	};
 
+	secure_watchdog {
+		compatible = "bcm,secure_watchdog";
+	};
 };

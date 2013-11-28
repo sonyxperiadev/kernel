@@ -127,6 +127,12 @@ struct kona_fb {
 	struct sg_table *iovmm_table;
 	struct kona_fb_platform_data *fb_data;
 	struct platform_device *pdev;
+
+	/* ESD check routine */
+	struct workqueue_struct *esd_check_wq;
+	struct delayed_work esd_check_work;
+	struct completion tectl_gpio_done_sem;
+	int esd_failure_cnt;
 };
 
 static struct completion vsync_event;
@@ -979,7 +985,6 @@ static int kona_fb_blank(int blank_mode, struct fb_info *info)
 		if (atomic_read(&g_kona_fb->force_update))
 			kona_display_crash_image(CP_CRASH_DUMP_START);
 #endif
-
 		fb->blank_state = KONA_FB_UNBLANK;
 		break;
 
@@ -1126,6 +1131,27 @@ static struct kona_fb_platform_data * __init get_of_data(struct device_node *np)
 		konafb_info("desense offset requested %d\n", val);
 		fb_data->desense_offset = (int) val;
 	}
+
+	/*Get the ESD config */
+	if (of_property_read_bool(np, "esdcheck")) {
+		fb_data->esdcheck = TRUE;
+		if (of_property_read_u32(np, "esdcheck-period-ms", &val))
+			goto of_fail;
+		fb_data->esdcheck_period_ms = val;
+		if (of_property_read_u32(np, "esdcheck-retry", &val))
+			goto of_fail;
+		fb_data->esdcheck_retry = (uint8_t)val;
+		if (of_property_read_u32(np, "tectl-gpio", &val))
+			fb_data->tectl_gpio = 0;
+		else {
+			/* Only allow tectl as gpio if TE is not used */
+			if (fb_data->vmode || !fb_data->te_ctrl)
+				fb_data->tectl_gpio = val;
+			else
+				konafb_info("Can't enable tectl_gpio");
+		}
+	} else
+		fb_data->esdcheck = FALSE;
 
 #ifdef CONFIG_IOMMU_API
 	/* Get the iommu device and link fb dev to iommu dev */
@@ -1363,6 +1389,7 @@ static int __init populate_dispdrv_cfg(struct kona_fb *fb,
 	info->vsync_cb = (info->vmode) ? konafb_vsync_cb : NULL;
 	info->cont_clk = cfg->cont_clk;
 	info->init_fn = cfg->init_fn;
+	info->esd_check_fn = cfg->esd_check_fn;
 	fb->display_info = info;
 	return 0;
 

@@ -96,6 +96,8 @@ struct unicam_camera_dev {
 	u32 panic_count;
 	atomic_t cam_triggered;
 	struct v4l2_format active_fmt;
+	int frame_info_en;
+	struct v4l2_frame_info frame_info;
 };
 
 struct unicam_camera_buffer {
@@ -105,6 +107,7 @@ struct unicam_camera_buffer {
 };
 int first = -1;
 static irqreturn_t unicam_camera_isr(int irq, void *arg);
+static irqreturn_t unicam_camera_isr_bh(int irq, void *arg);
 static int unicam_stop(void);
 
 #ifdef UNICAM_DEBUG
@@ -433,6 +436,39 @@ static int unicam_videobuf_init(struct vb2_buffer *vb)
 	return 0;
 }
 
+static void unicam_camera_get_frame_info_int(struct unicam_camera_dev *ucdev)
+{
+	int ret;
+	struct soc_camera_device *icd = ucdev->icd;
+	struct v4l2_subdev *sd = soc_camera_to_subdev(icd);
+
+	if (!ucdev->frame_info_en)
+		return;
+	ucdev->frame_info.timestamp = (struct timespec){-1, -1};
+	ret = v4l2_subdev_call(sd, core, ioctl, VIDIOC_SENSOR_G_FRAME_INFO,
+			&ucdev->frame_info);
+	if (ret < 0)
+		ucdev->frame_info_en = 0;
+}
+
+static void unicam_camera_set_frame_info_int(struct unicam_camera_dev *ucdev)
+{
+	int ret;
+	struct soc_camera_device *icd = ucdev->icd;
+	struct v4l2_subdev *sd = soc_camera_to_subdev(icd);
+	struct vb2_buffer *vb = ucdev->active;
+	struct timeval *tv = &vb->v4l2_buf.timestamp;
+
+	if (!ucdev->frame_info_en)
+		return;
+	ucdev->frame_info.timestamp =
+		(struct timespec){tv->tv_sec, tv->tv_usec * 1000};
+	ret = v4l2_subdev_call(sd, core, ioctl, VIDIOC_SENSOR_S_FRAME_INFO,
+			&ucdev->frame_info);
+	if (ret < 0)
+		ucdev->frame_info_en = 0;
+}
+
 static int unicam_videobuf_start_streaming_int(struct unicam_camera_dev \
 						*unicam_dev, unsigned int count)
 {
@@ -551,6 +587,10 @@ static int unicam_videobuf_start_streaming_int(struct unicam_camera_dev \
 
 	/* Set Mode */
 	mm_csi0_set_mode(ccp2_clock);
+
+	/* check if frame_info is supported */
+	unicam_dev->frame_info_en = 1;
+	unicam_camera_get_frame_info_int(unicam_dev);
 
 	/* set image identifier (CSI mode only) */
 
@@ -1249,7 +1289,8 @@ static int unicam_camera_add_device(struct soc_camera_device *icd)
 
 	/* register irq */
 	err =
-	    request_irq(unicam_dev->irq, unicam_camera_isr,
+	    request_threaded_irq(unicam_dev->irq, unicam_camera_isr,
+			unicam_camera_isr_bh,
 			IRQF_DISABLED | IRQF_SHARED, UNICAM_CAM_DRV_NAME,
 			unicam_dev);
 	if (err) {
@@ -1407,9 +1448,8 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 				} else {
 					ret = 1;
 				}
-
+				unicam_camera_set_frame_info_int(unicam_dev);
 				vb2_buffer_done(vb, VB2_BUF_STATE_DONE);
-
 				spin_lock_irqsave(&unicam_dev->lock, flags);
 				if (atomic_read(&unicam_dev->stopping) == 1) {
 					up(&unicam_dev->stop_sem);
@@ -1461,6 +1501,24 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 	}
 
 out:
+	return (idesc.fsi) ? IRQ_WAKE_THREAD : IRQ_HANDLED;
+}
+
+static irqreturn_t unicam_camera_isr_bh(int irq, void *arg)
+{
+	struct unicam_camera_dev *unicam_dev = (struct unicam_camera_dev *)arg;
+	unicam_camera_get_frame_info_int(unicam_dev);
+#if 0 /* DEBUG - metadata validation */
+	{
+		struct v4l2_subdev *sd = soc_camera_to_subdev(unicam_dev->icd);
+		struct v4l2_control gc = { .id = V4L2_CID_GAIN};
+		v4l2_subdev_call(sd, core, g_ctrl, &gc);
+		pr_info("metadata exposure LOCAL:%d CID_QUERY:%d -- %s",
+				unicam_dev->frame_info.an_gain, gc.value,
+				(unicam_dev->frame_info.an_gain == gc.value) ?
+						"PASS" : "FAIL");
+	}
+#endif
 	return IRQ_HANDLED;
 }
 

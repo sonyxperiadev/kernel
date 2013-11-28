@@ -40,7 +40,6 @@
 #include <linux/of_irq.h>
 #include <linux/of_platform.h>
 #include <linux/tick.h>
-
 #include <plat/clock.h>
 
 #ifdef CONFIG_APANIC_ON_MMC
