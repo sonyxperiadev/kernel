@@ -144,16 +144,18 @@ static int param_set_simulate_ponkey(const char *val,
 		return -EINVAL;
 	/* coverity[secure_coding] */
 	ret = sscanf(val, "%d", &trig);
-	pr_info("%s, trig:%d\n", __func__, trig);
 
 	if (bcmpmu_pkey) {
-		if (trig)
-			bcmpmu_pkey->ponkey_state = 1;
-		else
-			bcmpmu_pkey->ponkey_state = 0;
-		pr_info("ponkeystate:%d", bcmpmu_pkey->ponkey_state);
+		bcmpmu_pkey->ponkey_state = 1;
+		pr_info("%s: state:%d", __func__, bcmpmu_pkey->ponkey_state);
 		input_report_key(bcmpmu_pkey->idev,
-			KEY_POWER, bcmpmu_pkey->ponkey_state);
+				KEY_POWER, bcmpmu_pkey->ponkey_state);
+		input_sync(bcmpmu_pkey->idev);
+
+		bcmpmu_pkey->ponkey_state = 0;
+		pr_info("%s: state:%d", __func__, bcmpmu_pkey->ponkey_state);
+		input_report_key(bcmpmu_pkey->idev,
+				KEY_POWER, bcmpmu_pkey->ponkey_state);
 		input_sync(bcmpmu_pkey->idev);
 	} else
 		pr_info("Ponkey ptr is NULL\n");
