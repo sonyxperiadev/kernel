@@ -220,7 +220,8 @@ dtb-$(CONFIG_ARCH_JAVA) += java_edn000.dtb \
 	java_edn000_4Gb.dtb \
 	java_kivu_xdot0.dtb \
 	java_edn000_2Gb.dtb \
-	java_c_edn000_4Gb.dtb
+	java_c_edn000_4Gb.dtb \
+	java_c_edn000.dtb
 
 DTB_NAMES := $(subst $\",,$(CONFIG_BUILD_ARM_APPENDED_DTB_IMAGE_NAMES))
 ifneq ($(DTB_NAMES),)

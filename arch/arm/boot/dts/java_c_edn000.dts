@@ -1,4 +1,4 @@
-/* Java_garet_c_edn000 Dts file */
+/* Java_garet_edn000 Dts file */
 
 /dts-v1/;
 
@@ -10,7 +10,7 @@
 	compatible = "bcm,java";
 
 	chosen {
-		bootargs = "console=ttyS0,115200n8 mem=992M gpt androidboot.console=ttyS0 crash_ramdump=1 logbuf_nocache=1                                                  ";
+		bootargs = "console=ttyS0,115200n8 mem=992M gpt androidboot.console=ttyS0 crash_ramdump=1 logbuf_nocache=1";
 	};
 
 	memory@82000000 {
@@ -18,8 +18,8 @@
 		reg = <0x82000000 0x2e000000>; /* 736 MB */
 	};
 
-	rtc-kona {
-		compatible = "bcm,rtc-kona";
+	wd-tapper {
+		count = <300>; /* Time in seconds */
 		ch-num = <1>; /* Kona hub timer Channel number */
 		timer-name = "aon-timer";
 	};
@@ -201,20 +201,16 @@
 		hs-ref-frequency = <26000000>;
 	};
 
-	bluetooth-btlpm {
-		compatible = "bcm,btlpm";
-		bt-wake-gpio = <32>;
-		host-wake-gpio = <72>;
-		bt-uart-port = <1>;
-	};
+        bcm-bt-btlpm {
+                compatible = "bcm,bcm-bt-lpm";
+                bt-wake-gpio = <&gpio 32 0>;
+                host-wake-gpio = <&gpio 72 0>;
+        };
 
-	bcmbt-rfkill {
-		compatible = "bcm,bcmbt-rfkill";
-		verg-gpio = <28>;
-		n-reset-gpio = <0xFFFFFFFF>;
-		aux0-gpio = <0xFFFFFFFF>; /* CLK32 */
-		aux1-gpio = <0xFFFFFFFF>; /* UARTB_SEL,probably not required */
-	};
+        bcm-bt-rfkill {
+                compatible = "bcm,bcm-bt-rfkill";
+                bcm-bt-rfkill-vreg-gpio = <&gpio 28 0>;
+        };
 
 	iommu_mm: iommu-mm {
 		compatible = "bcm,iommu-m4u";
@@ -227,7 +223,14 @@
 	iovmm_mm: iovmm-mm {
 		compatible = "bcm,iovmm";
 		base = <0x80000000>;
-		size = <0x70000000>;
+		size = <0x30000000>;
+		order = <0>;
+	};
+
+	iovmm_mm_hwwr: iovmm-mm-hwwr {
+		compatible = "bcm,iovmm";
+		base = <0xb0000000>;
+		size = <0x40000000>;
 		order = <0>;
 	};
 
@@ -240,8 +243,9 @@
 
 	ion-config {
 		compatible = "bcm,ion-config";
-		/* No separate mask needed for hwwr if M4U is enabled */
-		mask_hwwr = <0>;
+		/* Workaround: Use a separate iova pool for hwwr buffers */
+		mask_hwwr = <0x4>;
+		mask_256M = <0x221>;
 	};
 
 	ion-system {
@@ -258,6 +262,14 @@
 		type = <0>;
 		iommu = <&iommu_mm>;
 		iovmm = <&iovmm_mm>;
+	};
+
+	ion-system-hwwr {
+		compatible = "bcm,ion";
+		id = <2>;
+		type = <0>;
+		iommu = <&iommu_mm>;
+		iovmm = <&iovmm_mm_hwwr>;
 	};
 
 	ion-carveout {
@@ -286,44 +298,6 @@
 		lmk_min_free = <32>;
 		iommu = <&iommu_mm>;
 		iovmm = <&iovmm_mm_256mb>;
-	};
-
-	soc-back-camera {
-		compatible = "bcm,soc-camera";
-		reg = <0x36 0x0>;
-		bus-id = <0>;
-		i2c-type = "ov5648";
-		i2c-addr = <0x36>;
-		i2c-adapter-id = <0>;
-		module-name = "ov5648";
-		if-type = <1>;
-		if-mode = <3>;
-		orientation = <1>;
-		facing = <1>;
-		lanes = <2>;
-		channel = <0>;
-		phy-rate = <0>;
-		pix-clk = <0>;
-		regulators = "lvldo1_uc", "mmc1_vcc", "mmc2_vcc", "lvldo2_uc";
-	};
-
-	soc-front-camera {
-		compatible = "bcm,soc-camera";
-		reg = <0x3e 0x0>;
-		bus-id = <0>;
-		i2c-type = "ov7692";	/* i2c_board_info type */
-		i2c-addr = <0x3e>;	/* i2c_board_info addr */
-		i2c-adapter-id = <0>;
-		module-name = "ov7692";
-		if-type = <1>;		/* V4L2_SUBDEV_SENSOR_SERIAL */
-		if-mode = <3>;		/* V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2 */
-		orientation = <1>;	/* V4L2_SUBDEV_SENSOR_LANDSCAPE */
-		facing = <0>;		/* V4L2_SUBDEV_SENSOR_FRONT */
-		lanes = <1>;
-		channel = <1>;
-		phy-rate = <0>;
-		pix-clk = <0>;
-		regulators = "lvldo2_uc", "mmc1_vcc", "mmc2_vcc", "lvldo1_uc";
 	};
 
 	kona-fb {
@@ -433,6 +407,46 @@
 		falling = <5>; /*fall back temperature offset*/
 	};
 
+    tmon-thermal@0x34008000 {
+        compatible = "bcm,tmon-thermal";
+        reg  = <0x34008000 0x1000>, <0x35004000 0x1000>;
+        interrupts = <0 183 4>;
+        hysteresis = <0>;
+        flags = <5>;
+        interval_ms = <5>;
+        poll_rate_ms = <30000>;
+        tmon_apb_clk = "tmon_apb";
+        tmon_1m_clk = "tmon_1m_clk";
+        falling = <5>; /*fall back temperature offset*/
+        shutdown_temp = <120>;
+
+		trip0 {
+			type = "active";
+			temp = <75>;
+			max_freq = <1200000>;
+		};
+		trip1 {
+			type = "active";
+			temp = <85>;
+			max_freq = <800000>;
+		};
+		trip2 {
+			type = "active";
+			temp = <95>;
+			max_freq = <600000>;
+		};
+		trip3 {
+			type = "active";
+			temp = <105>;
+			max_freq = <312000>;
+		};
+		trip4 {
+			type = "critical";
+			temp = <115>;
+			max_freq = <0>;
+		};
+    };
+
 	memc@35008000 {
 		compatible = "bcm,memc";
 		reg = <0x35008000 0x1000>;
@@ -495,6 +509,12 @@
 		peri-clk-rate = <48000000>;
 		vddo-regulator-name = "vdd_sdio";
 		vddsdxc-regulator-name = "vdd_sdxc";
+	};
+
+	timer {
+		compatible = "arm,armv7-timer";
+		interrupts = <1 13 0xf08>,
+					<1 14 0xf08>;
 	};
 
 	wifi-driver {
