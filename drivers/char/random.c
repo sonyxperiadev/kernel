@@ -997,9 +997,6 @@ static size_t account(struct entropy_store *r, size_t nbytes, int min,
 	int entropy_count, orig;
 	size_t ibytes;
 
-	/* Hold lock while accounting */
-	spin_lock_irqsave(&r->lock, flags);
-
 	BUG_ON(r->entropy_count > r->poolinfo->poolfracbits);
 
 	/* Can we pull enough? */
@@ -1022,7 +1019,6 @@ retry:
 		    < random_write_wakeup_thresh)
 			wakeup_write = 1;
 	}
-	spin_unlock_irqrestore(&r->lock, flags);
 
 	trace_debit_entropy(r->name, 8 * ibytes);
 	if (wakeup_write) {
