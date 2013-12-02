@@ -832,11 +832,21 @@ int bcmpmu_usb_set(struct bcmpmu59xxx *bcmpmu,
 
 	switch (ctrl) {
 	case BCMPMU_USB_CTRL_CHRG_CURR_LMT:
+
+#ifndef CONFIG_SEC_CHARGING_FEATURE
 		if (!is_charging_state()) {
 			mutex_lock(&di->accy_mutex);
 			_set_icc_fc(di, data);
 			mutex_unlock(&di->accy_mutex);
 		}
+#else
+		/* Under SEC_CHARGING_FEATURE, SPA driver controls
+		 * the charging current. BCMPMU OTG charging curr msg
+		 * should be ignored.
+		*/
+		pr_accy(FLOW , "%s: Ignore OTG CHRG_CURR_LMT, curr=%d\n",
+			__func__, (int)data);
+#endif
 		break;
 	case BCMPMU_USB_CTRL_VBUS_ON_OFF:
 		ret = bcmpmu_usb_otg_bost_en(bcmpmu, !!data);
