@@ -181,14 +181,10 @@ extern void java_timer_init(void);
 #include <linux/mfd/tpa2026d2.h>
 #endif
 
-#include "board-kivu.h"
+#include "board-brooks.h"
 
 /* SD */
 #define SD_CARDDET_GPIO_PIN	91
-
-#ifndef CONFIG_BRD_NAME
-#define CONFIG_BRD_NAME "hawaii"
-#endif
 
 /* Touch */
 #define TSC_GPIO_IRQ_PIN			73
@@ -1043,7 +1039,7 @@ static int __init hawaii_add_lateinit_devices(void)
 late_initcall(hawaii_add_lateinit_devices);
 
 static const char * const java_dt_compat[] = { "bcm,java", NULL, };
-DT_MACHINE_START(HAWAII, CONFIG_BRD_NAME)
+DT_MACHINE_START(HAWAII, "Brooks 1.0")
 	.smp = smp_ops(kona_smp_ops),
 	.map_io = hawaii_map_io,
 	.init_irq = kona_init_irq,

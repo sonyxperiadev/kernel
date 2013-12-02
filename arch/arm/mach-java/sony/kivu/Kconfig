@@ -1,0 +1,7 @@
+config MACH_JAVA_GARNET_SONY_KIVU2
+	depends on ARCH_JAVA_A0
+	depends on MACH_JAVA_SONY
+	select MACH_SONY
+	bool "Kivu 2.0"
+	help
+	  Support for the Sony Kivu device.

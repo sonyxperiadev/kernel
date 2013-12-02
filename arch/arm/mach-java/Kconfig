@@ -46,20 +46,17 @@ config	MACH_JAVA_GARNET
 	help
 	  Support for Broadcom Hawaii garnet board.
 
-config	MACH_JAVA_KIVU
-		bool "MACH_JAVA_KIVU"
-	select MACH_BCM_KIVU
-	help
-	  "This config option will enable support for
-	  Java Kivu platform"
-
-
-
 config	MACH_JAVA_SS_EVAL
 		bool "MACH_JAVA_SS_EVAL"
 	select MACH_BCM_SS_EVAL
 	help
 	  Support for Broadcom Hawaii ss eval board.
+
+config  MACH_JAVA_SONY
+        bool "MACH_JAVA_SONY"
+        select MACH_BCM_GARNET
+        help
+          Support for Sonys Broadcom Java based boards
 
 config	MACH_JAVA_SS_BAFFINLITE
 		bool "MACH_JAVA_SS_BAFFINLITE"
@@ -122,6 +119,8 @@ choice
 
 endchoice
 
+source "arch/arm/mach-java/sony/Kconfig"
+
 choice
 	prompt "Java SS EVAL type"
 	depends on MACH_JAVA_SS_EVAL
@@ -157,19 +156,6 @@ choice
 	  Support for Java Kivu
 
 endchoice
-
-choice
-	prompt "Java Kivu type"
-	depends on MACH_JAVA_KIVU
-	default MACH_JAVA_KIVU_XDOT0
-
-	config MACH_JAVA_KIVU_XDOT0
-	bool "JAVA KIVU XDOT0"
-	help
-	  Support for Java Kivu
-
-endchoice
-
 
 choice
 	prompt "Java FPGA type"

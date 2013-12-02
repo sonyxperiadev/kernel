@@ -66,8 +66,7 @@ obj-y += board-bcm59xxx_garnet_c_amethyst.o
 else
 obj-y += board-bcm59xxx_garnet.o
 endif
-else ifeq ($(CONFIG_MACH_JAVA_KIVU), y)
-obj-y += board-bcm59xxx_kivu.o
+else ifeq ($(CONFIG_MACH_JAVA_SONY), y)
 else ifeq ($(CONFIG_MACH_JAVA_SS_EVAL), y)
 obj-y += board-bcm59xxx_ss_eval.o
 else
@@ -79,13 +78,6 @@ endif
 endif
 endif
 
-ifeq ($(CONFIG_MACH_JAVA_KIVU), y)
-obj-$(CONFIG_INPUT_LSM303DLHC_ACCELEROMETER) += board-kivu-accel.o
-obj-$(CONFIG_INPUT_LSM303DLH_MAGNETOMETER) += board-kivu-magnetometer.o
-obj-$(CONFIG_INPUT_L3G4200D) += board-kivu-gyro.o
-obj-$(CONFIG_LEDS_LM3530) += board-kivu-backlight.o
-obj-$(CONFIG_SENSORS_BMP18X_I2C) += board-kivu-barometer.o
-obj-$(CONFIG_INPUT_APDS9702) += board-kivu-proximity.o
-endif
+obj-$(CONFIG_MACH_JAVA_SONY) += java.o java_wifi.o sony/
 
 CFLAGS_dm.o :=$(call as-instr,.arch_extension sec,-DSMC_INSTR=1)

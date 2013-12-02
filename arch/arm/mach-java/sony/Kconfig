@@ -1,0 +1,6 @@
+config MACH_SONY
+	bool
+
+menu "Sony Board Selection"
+source "arch/arm/mach-java/sony/Kconfig.board"
+endmenu
