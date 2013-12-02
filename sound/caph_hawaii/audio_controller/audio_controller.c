@@ -536,7 +536,7 @@ void AUDCTRL_SetRestartPlaybackFlag(Boolean flag)
 
 Boolean AUDCTRL_GetRestartPlaybackFlag()
 {
-	return restart_playback ;
+	return restart_playback;
 }
 
 /****************************************************************************

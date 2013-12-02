@@ -643,8 +643,8 @@ static long voip_ioctl(struct file *hw, unsigned int cmd, unsigned long arg)
 		} else {
 			voipinstcnt++;
 			/*Limit Voip instance to two*/
-			if (voipInstCnt > 2)
-				voipInstCnt = 2;
+			if (voipinstcnt > 2)
+				voipinstcnt = 2;
 			aTrace(LOG_ALSA_INTERFACE,
 					"VoIP_Ioctl_Start -> just increment "
 					"the count, voip already started\n");
@@ -670,8 +670,8 @@ static long voip_ioctl(struct file *hw, unsigned int cmd, unsigned long arg)
 		if (voipinstcnt == 2)
 			voipinstcnt--;
 		else if ((voipinstcnt == 1) ||
-				(pVoIP->ulstarted == 0 &&
-					pVoIP->dlstarted == 0)) {
+				(pvoip->ulstarted == 0 &&
+					pvoip->dlstarted == 0)) {
 			BRCM_AUDIO_Param_Stop_t param_stop;
 			BRCM_AUDIO_Param_Close_t param_close;
 
@@ -718,7 +718,7 @@ static long voip_ioctl(struct file *hw, unsigned int cmd, unsigned long arg)
 			pchip->voip_data.codec_type_ul = val.codec_type;
 			aTrace(LOG_ALSA_INTERFACE,
 				" VoIP_Ioctl_SetCodecType codec_type %ld,\n",
-				pChip->voip_data.codec_type_ul);
+				pchip->voip_data.codec_type_ul);
 
 		/*pvoip = (bcm_caph_hwdep_voip_t *) hw->private_data;*/
 			if (!pvoip)
@@ -729,7 +729,7 @@ static long voip_ioctl(struct file *hw, unsigned int cmd, unsigned long arg)
 			pchip->voip_data.codec_type_dl = val.codec_type;
 			aTrace(LOG_ALSA_INTERFACE,
 				" VoIP_Ioctl_SetCodecType codec_type %ld,\n",
-				pChip->voip_data.codec_type_dl);
+				pchip->voip_data.codec_type_dl);
 
 		/*pvoip = (bcm_caph_hwdep_voip_t *) hw->private_data;*/
 			if (!pvoip)
