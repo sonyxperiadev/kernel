@@ -801,7 +801,7 @@ static int hawaii_camera_power_front(struct device *dev, int on)
 	if (on) {
 		if (pi_mgr_dfs_request_update(&unicam_dfs_node, PI_OPP_ECONOMY))
 			printk("DVFS for UNICAM failed\n");
-		gpio_set_value(SENSOR_1_GPIO_PWRDN, thisCfg->pwdn_active);
+		gpio_set_value(SENSOR_1_GPIO_PWRDN, thiscfg->pwdn_active);
 		usleep_range(5000, 5010);
 		regulator_enable(d_lvldo2_cam1_1v8);
 		usleep_range(1000, 1010);
