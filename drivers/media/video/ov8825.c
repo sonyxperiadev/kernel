@@ -198,6 +198,10 @@ struct ov8825 {
 	struct ov8825_otp otp;
 	int calibrated;
 
+#define V4L2_FRAME_INFO_CACHE 4
+	int frame_info_size;
+	struct v4l2_frame_info frame_info[V4L2_FRAME_INFO_CACHE];
+
 	int powerdown;
 	int position;
 	int dac_code;
@@ -1543,9 +1547,9 @@ static int ov8825_rbgains_update(struct i2c_client *client)
 #endif
 
 /* ov8825 use internal vcm driver, the same i2c client */
-#define OV8825_VCM_STEP_PERIOD_US       800    /* in microseconds */
+#define OV8825_VCM_STEP_PERIOD_US       100    /* in microseconds */
 #define OV8825_VCM_MAX_POSITION   1023
-#define OV8825_VCM_START_POINT 0
+#define OV8825_VCM_START_POINT 100
 #define OV8825_VCM_MIN_POSITION   0
 #define OV8825_DAC_A_VCM_LOW 0x3618
 #define OV8825_DAC_A_VCM_MID0 0x3619
@@ -1560,7 +1564,7 @@ static int ov8825_vcm_position_code(struct ov8825 *ov8825,
 {
 	int  pos = ov8825->position;
 
-	*code1 = ((pos & 0xF)  << 4) | 0xA;
+	*code1 = ((pos & 0xF)  << 4) | 0x2;
 	*code2 = (pos >> 4) & 0x3F;
 
 	return 0;
@@ -1628,7 +1632,7 @@ int ov8825_vcm_lens_get_position(struct i2c_client *client,
 			ov8825->flying_time) - jiffies_to_usecs(jiffies);
 
 	if (*time_to_destination < 0 || !ov8825->flying_time ||
-		*time_to_destination > 200000) {
+		*time_to_destination > 100000) {
 		ov8825->flying_time = 0;
 		*current_position = ov8825->requested_position;
 	} else {
@@ -2080,9 +2084,12 @@ static int ov8825_set_state(struct i2c_client *client, int new_state)
 	if (ov8825->state != new_state) {
 		ret = ov8825_reg_writes(client, ov8825_reg_state[new_state]);
 		ov8825->state = new_state;
-		if (OV8825_STATE_STRM == new_state &&
-		    0 == ov8825->calibrated) {
-			ov8825->calibrated = 1;
+		if (OV8825_STATE_STRM == new_state) {
+			ov8825->frame_info_size = 0;
+			memset(ov8825->frame_info, 0,
+					ARRAY_SIZE(ov8825->frame_info));
+			if (0 == ov8825->calibrated)
+				ov8825->calibrated = 1;
 		}
 	}
 	return ret;
@@ -2417,6 +2424,58 @@ static long ov8825_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 			p->focal_length.denominator = 100;
 			break;
 		}
+	case VIDIOC_SENSOR_G_FRAME_INFO:
+		{
+			int i, j;
+			struct i2c_client *client = v4l2_get_subdevdata(sd);
+			struct ov8825 *ov8825 = to_ov8825(client);
+			struct v4l2_frame_info *fi_cache, *fi_usr =
+					(struct v4l2_frame_info *)arg;
+			ret = -EINVAL;
+			if (!timespec_valid(&fi_usr->timestamp)) {
+				fi_usr->flash_mode = ov8825->flashmode;
+				ov8825_get_gain(client, &fi_usr->an_gain, NULL);
+				ov8825_get_exposure(client,
+						&fi_usr->exposure, NULL);
+				ov8825_lens_get_position(client,
+						&fi_usr->focus, &i);
+				ret = 0;
+				break;
+			}
+			j = ov8825->frame_info_size;
+			fi_cache = &ov8825->frame_info[0];
+
+			for (i = 0; i < V4L2_FRAME_INFO_CACHE && j > 0;
+					i++, j--, fi_cache++) {
+				if (timespec_equal(&fi_cache->timestamp,
+						&fi_usr->timestamp))
+					break;
+			}
+			if (j != 0) {
+				*fi_usr = *fi_cache;
+				ret = 0;
+			}
+			break;
+		}
+	case VIDIOC_SENSOR_S_FRAME_INFO:
+		{
+			struct i2c_client *client = v4l2_get_subdevdata(sd);
+			struct ov8825 *ov8825 = to_ov8825(client);
+			struct v4l2_frame_info *fi_dst, *fi_src;
+
+			fi_dst = &ov8825->frame_info[0];
+			fi_src = (struct v4l2_frame_info *)arg;
+			if (!timespec_valid(&fi_src->timestamp))
+				break;
+			if (ov8825->frame_info_size == V4L2_FRAME_INFO_CACHE) {
+				int i;
+				for (i = 0; i < V4L2_FRAME_INFO_CACHE - 1; i++)
+					fi_dst[i] = fi_dst[i + 1];
+				ov8825->frame_info_size--;
+			}
+			fi_dst[ov8825->frame_info_size++] = *fi_src;
+			break;
+		}
 	default:
 		ret = -ENOIOCTLCMD;
 		break;
@@ -2509,7 +2568,7 @@ static int ov8825_init(struct i2c_client *client)
 	ov8825->exp_read_buf[1] = 6032;
 	ov8825->gain_read_buf[0] =  (ov8825->gain_current  & 0x3fff) >> 4;
 	ov8825->gain_read_buf[1] =  (ov8825->gain_current  & 0x3fff) >> 4;
-	ov8825->aecpos_delay      = 2;
+	ov8825->aecpos_delay      = 1;
 	ov8825->lenspos_delay     = 0;
 	ov8825->flashmode         = FLASH_MODE_OFF;
 	ov8825->flash_intensity   = OV8825_FLASH_INTENSITY_DEFAULT;
@@ -2700,7 +2759,7 @@ static struct v4l2_subdev_video_ops ov8825_subdev_video_ops = {
 static int ov8825_g_skip_frames(struct v4l2_subdev *sd, u32 *frames)
 {
 	/* Quantity of initial bad frames to skip. Revisit. */
-	*frames = 1;
+	*frames = 2;
 
 	return 0;
 }
