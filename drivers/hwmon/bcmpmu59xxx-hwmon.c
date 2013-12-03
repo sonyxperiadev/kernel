@@ -34,7 +34,7 @@
 #define PMU_TEMP_MULTI_CONST 514
 #define KELVIN_CONST 284
 
-static int debug_mask = BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT;
+static int debug_mask = BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT | BCMPMU_PRINT_FLOW;
 #define pr_hwmon(debug_level, args...) \
 	do { \
 		if (debug_mask & BCMPMU_PRINT_##debug_level) { \
@@ -166,9 +166,9 @@ static int bcmpmu_adc_raw_to_actual(struct bcmpmu_adc *adc,
 					lut[index].raw, lut[index].map,
 					lut[index + 1].raw, lut[index + 1].map);
 
-		pr_hwmon(FLOW, "index = %d, raw = %d, map = %d\n",
+		pr_hwmon(VERBOSE, "index = %d, raw = %d, map = %d\n",
 				index, lut[index].raw, lut[index].map);
-		pr_hwmon(FLOW, "%s channel:%d raw = %x conv_lut = %d\n",
+		pr_hwmon(VERBOSE, "%s channel:%d raw = %x conv_lut = %d\n",
 				__func__, channel, result->raw, result->conv);
 		return 0;
 	}
@@ -261,8 +261,10 @@ int read_rtm_adc(struct bcmpmu59xxx *bcmpmu, enum bcmpmu_adc_channel channel,
 			__func__, val);
 		goto err;
 	}
-	if (adc->int_status == PMU_IRQ_RTM_IGNORE) {
-		pr_hwmon(ERROR, "%s RTM_IGNORE INT\n", __func__);
+	if ((adc->int_status == PMU_IRQ_RTM_UPPER) ||
+		(adc->int_status ==  PMU_IRQ_RTM_OVERRIDDEN)){
+		pr_hwmon(ERROR, "%s RTM IGNORED %d\n",
+			__func__, adc->int_status);
 		goto err;
 	}
 
@@ -541,7 +543,9 @@ static void  bcmpmu_rtm_irq_handler(u32 irq, void *data)
 	struct bcmpmu_adc *adc = data;
 
 
-	if ((irq == PMU_IRQ_RTM_DATA_RDY) || (irq == PMU_IRQ_RTM_IGNORE)) {
+	if ((irq == PMU_IRQ_RTM_DATA_RDY) ||
+		(irq == PMU_IRQ_RTM_UPPER) ||
+		(irq == PMU_IRQ_RTM_OVERRIDDEN)) {
 		adc->int_status = irq;
 		complete(&adc->rtm_ready_complete);
 	}
@@ -681,14 +685,13 @@ static int bcmpmu_adc_probe(struct platform_device *pdev)
 		pr_hwmon(ERROR, "Failed to register PMU_IRQ_RTM_OVERRIDDEN\n");
 		goto error;
 	}
-
 	/* Unmask interrupts */
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_RTM_DATA_RDY);
-	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_RTM_IGNORE);
+	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_RTM_UPPER);
+	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_RTM_OVERRIDDEN);
 
 	/* Mask interrupts */
-	bcmpmu->mask_irq(bcmpmu, PMU_IRQ_RTM_UPPER);
-	bcmpmu->mask_irq(bcmpmu, PMU_IRQ_RTM_OVERRIDDEN);
+	bcmpmu->mask_irq(bcmpmu, PMU_IRQ_RTM_IGNORE);
 	bcmpmu->mask_irq(bcmpmu, PMU_IRQ_RTM_IN_CON_MEAS);
 
 	ret = sysfs_create_group(&pdev->dev.kobj, &bcmpmu_hwmon_attr_group);
