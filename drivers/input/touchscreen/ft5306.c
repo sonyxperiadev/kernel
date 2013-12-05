@@ -50,7 +50,9 @@ static int ts_x_max_value=0;
 static int ts_y_max_value=0;
 static const char *tp_power;
 static const char *vkey_scope;
+static const char *fw_header;
 static bool have_vkey = false;
+static char firmware_str[50];
 
 /*******************************/
 typedef unsigned char	FTS_BYTE;
@@ -161,6 +163,7 @@ typedef struct
 #define TP_MIN_GAP 3
 static int pressure_support;
 static int auto_update_fw;
+static int fw_header_needed;
 static BLOCKING_NOTIFIER_HEAD(touch_key_notifier);
 static int focaltec_fts_ctpm_fw_upgrade(struct i2c_client *client, u8 *pbt_buf,
 			  u32 dw_lenth);
@@ -1497,6 +1500,10 @@ int fts_ctpm_fw_upgrade_with_app_file(struct i2c_client *client,
 {
 	u8 *pbt_buf = NULL;
 	int i_ret;
+	int fw_ver;
+	int length;
+	u8  pshare[100] = {0};
+	char *fw_str = NULL;
 	int fwsize = ft6x06_GetFirmwareSize(firmware_name);
 
 	if (fwsize <= 0) {
@@ -1523,8 +1530,31 @@ int fts_ctpm_fw_upgrade_with_app_file(struct i2c_client *client,
 		vfree(pbt_buf);
 		return -EIO;
 	}
-	/*call the upgrade function */
-	i_ret = focaltec_fts_ctpm_fw_upgrade(client, pbt_buf, fwsize);
+	if (fw_header_needed) {
+		/*parse the firmware file to ensure right firmware for special project*/
+		memcpy(pshare, pbt_buf, 5);/*fetch the first 5 bytes*/
+		pshare[5] = '\0';
+		if (strcmp(pshare, "touch") != 0) {
+			printk(KERN_ERR "Invalid firmware head, please pack it first.\n");
+			vfree(pbt_buf);
+			return -90;
+		}
+		memset(pshare, 0, 100);
+		memcpy(pshare, pbt_buf+5, 4);/*fetch the key string length*/
+		length = *((unsigned *)pshare);
+		memset(pshare, 0, 100);
+		memcpy(pshare, pbt_buf+5+4, length);/*fetch the key string*/
+		pshare[length] = '\0';
+		if (strcmp(pshare, firmware_str) != 0) {
+			printk(KERN_ERR "wrong firmware, stop update.\n");
+			vfree(pbt_buf);
+			return -100;
+		}
+		printk(KERN_INFO "Valid firmare, going to update.\n");
+		/*call the upgrade function */
+		i_ret = focaltec_fts_ctpm_fw_upgrade(client, pbt_buf+5+4+length, fwsize-5-4-length);
+	} else/*call the upgrade function */
+		i_ret = focaltec_fts_ctpm_fw_upgrade(client, pbt_buf, fwsize);
 
 	if (i_ret != 0)
 		dev_err(&client->dev, "%s() - ERROR:[FTS] upgrade failed..\n",
@@ -1776,6 +1806,14 @@ static int focaltech_ft5306_probe(
 		if (!of_property_read_u32(np, "chip_id", &val))
 			chip_id2 = val;
 		of_property_read_string(np, "power", &tp_power);
+		if (!of_property_read_u32(np, "firmware_header_needed", &val))
+			fw_header_needed = val;
+		if (fw_header_needed) {
+			if (of_property_read_string(np, "firmware_header", &fw_header))
+				sprintf(firmware_str, "%s", "no_header");
+			else
+				sprintf(firmware_str, "%s", fw_header);
+		}
 		if (of_property_read_string(np, "vkey_scope", &vkey_scope)) {
 			have_vkey = false;
 			vkey_scope = "\n";
