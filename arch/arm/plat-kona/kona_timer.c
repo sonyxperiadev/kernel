@@ -1256,10 +1256,23 @@ static inline unsigned long notrace __get_counter(void __iomem *reg_base)
 	prev = readl(reg_base + KONA_GPTIMER_STCLO_OFFSET);
 	do {
 		cur = readl(reg_base + KONA_GPTIMER_STCLO_OFFSET);
-		if (cur != prev)
-			prev = cur;
-		else
-			break;
+
+		/*
+		 * Only perform double read optimization for slave-
+		 * timer
+		 */
+		if (reg_base == IOMEM(KONA_SYSTMR_VA)) {
+			if (cur - prev > KONA_MAX_COUNTER_DIFF)
+				prev = cur;
+			else
+				break;
+		} else {
+			if (cur != prev)
+				prev = cur;
+			else
+				break;
+		}
+
 		if (read_count++ > KONA_MAX_REPEAT_TIMES)
 			break;
 	} while (1);
