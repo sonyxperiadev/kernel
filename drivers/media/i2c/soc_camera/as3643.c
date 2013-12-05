@@ -22,70 +22,68 @@
 #include <linux/io.h>
 #include <linux/gpio.h>
 #include <media/v4l2-subdev.h>
+#include <media/v4l2-chip-ident.h>
 #include <media/soc_camera.h>
+#include <linux/videodev2_brcm.h>
+#include <linux/gpio_keys.h>
+#include "as3643.h"
 
-#include "flash_lamp.h"
+/* Different modes of operation for the "Torch" */
+enum FLASHLAMP_MODE_T {
+	FLASHLAMP_MODE_MIN,
+	FLASHLAMP_MODE_TORCH,
+	FLASHLAMP_MODE_FLASH,
+	FLASHLAMP_MODE_INDICATOR,
+	FLASHLAMP_MODE_BLINKING,
 
-#define AS3643_FIXED_ID				(0xB0)
-/* I2C registers */
-#define AS3643_REG_ID				0x0
-#define AS3643_REG_CURRENT_1		0x1
-#define AS3643_REG_CURRENT_2		0x2
-#define AS3643_REG_TX_MASK			0x3
-#define AS3643_REG_LOW_VOLTAGE		0x4
-#define AS3643_REG_FLASH_TIMER		0x5
-#define AS3643_REG_CONTROL			0x6
-#define AS3643_REG_STROBE_SIG		0x7
-#define AS3643_REG_FAULT			0x8
-#define AS3643_REG_PWM_IND			0x9
-#define AS3643_REG_LED_MIN_CUR		0xE
-#define AS3643_REG_LED_ACT_CUR		0xF
-
-#define AS3643_LED_CURR_DEF_MA		(648)
-#define AS3643_LED_CURR_MAX_MA		(1300)
-#define AS3643_FLASH_CURR_DEF_MA	(489)
-#define AS3643_FLASH_CURR_MAX_MA	(1224)
-#define AS3643_FLASH_TIMER_MIN_MS	(2)
-#define AS3643_FLASH_TIMER_DEF_MS	(120)
-#define AS3643_FLASH_TIMER_MAX_MS	(1280)
-#define AS3643_MAX_STROBE_CURR		(1000)
-#define AS3643_MAX_STROBE_MS		(400)
-#define AS3643_MAX_TORCH_CURR		(300)
-
-#if defined(CONFIG_VIDEO_AS3643_STROBE) && \
-	defined(CONFIG_VIDEO_AS3643_TXMASK)
-#define AS3643_GPIO_FLASH_EN CONFIG_VIDEO_AS3643_STROBE
-#define AS3643_GPIO_FLASH_TRIG CONFIG_VIDEO_AS3643_TXMASK
-#else
-#error "STROBE/TXMASK pins are not defined!" \
-	"Please define them in kernel config"
-#endif
-
-struct as3643_state_s {
-	struct i2c_client *client;
-	enum v4l2_flash_led_mode mode;
-	int duration;
-	int intensity;
+	FLASHLAMP_MODE_MAX
 };
-static struct as3643_state_s as3643_state;
 
+/* I2C registers */
+#define REG_ID              0
+#define REG_CURRENT_1       1
+#define REG_CURRENT_2       2
+#define REG_TX_MASK         3
+#define REG_LOW_VOLTAGE     4
+#define REG_FLASH_TIMER     5
+#define REG_CONTROL         6
+#define REG_STROBE_SIG      7
+#define REG_FAULT           8
+#define REG_PWM_IND         9
+#define REG_LED_MIN_CUR     0xE
+#define REG_LED_ACT_CUR     0xF
+
+#define LED_CURR_DEF_MA (648)
+#ifdef CONFIG_VIDEO_AS3643_3647
+#define LED_CURR_MAX_MA (1600)
+#else
+#define LED_CURR_MAX_MA (1300)
+#endif
+#define FLASH_TIMER_MIN_MS (2)
+#define FLASH_TIMER_DEF_MS (72)
+#define FLASH_TIMER_MAX_MS (1280)
+#define AS3643_MAX_STROBE_CURR (1000)
+#define AS3643_MAX_STROBE_MS (400)
+#define AS3643_MAX_TORCH_CURR (300)
+
+#define GPIO_FLASH_EN 11
+#define GPIO_FLASH_TRIG 34
+struct i2c_client *client1;
 static int as3643_reg_read(struct i2c_client *client, u16 reg, u8 *val)
 {
 	int ret;
 	u8 reg8 = (u8) reg;
 	struct i2c_msg msg[2] = {
 		{
-			client->addr,
-			client->flags,
-			1,
-			&reg8,
-		},
+		 client->addr,
+		 client->flags,
+		 1,
+		 &reg8},
 		{
-			client->addr,
-			client->flags | I2C_M_RD,
-			1,
-			val,
-		}
+		 client->addr,
+		 client->flags | I2C_M_RD,
+		 1,
+		 val}
 	};
 	ret = i2c_transfer(client->adapter, msg, 2);
 	return 0;
@@ -113,291 +111,203 @@ static int as3643_reg_write(struct i2c_client *client, u8 reg, u8 val)
 	data[1] = val;
 	ret = i2c_transfer(client->adapter, &msg, 1);
 	if (ret < 0) {
-		dev_err(&client->dev, "Failed in write_reg writing over I2C\n");
+		pr_err("Failed in write_reg writing over I2C\n");
 		return ret;
 	}
 	return 0;
 }
 
-static inline u8 _intensity_to_flash(int intensity)
+/*
+static u8 flash_curr_set(int ma)
 {
-	u8 val;
-
-	val = (intensity * AS3643_MAX_STROBE_CURR / AS3643_LED_CURR_MAX_MA);
-
-	return val;
+	u8 reg = 0x9C;
+	if (ma < 0)
+		ma = 0;
+	if (ma > LED_CURR_MAX_MA)
+		ma = LED_CURR_MAX_MA;
+	ma = ma * AS3643_MAX_STROBE_CURR / LED_CURR_MAX_MA;
+	reg = ma * 0xFF / LED_CURR_MAX_MA;
+	return reg;
 }
 
-static inline u8 _intensity_to_torch(int intensity)
+static u8 torch_curr_set(int ma)
 {
-	u8 val;
+	u8 reg = 0x9C;
+	if (ma < 0)
+		ma = 0;
+	if (ma > LED_CURR_MAX_MA)
+		ma = LED_CURR_MAX_MA;
+	reg = ma * 0xFF / LED_CURR_MAX_MA;
+	return reg;
+}
+*/
 
-	val = (intensity * AS3643_MAX_TORCH_CURR / AS3643_LED_CURR_MAX_MA);
-
-	return val;
+static u8 flash_timer_set(int ms)
+{
+	u8 reg = 0x23;		/* default */
+	if (ms < FLASH_TIMER_MIN_MS)
+		ms = FLASH_TIMER_MIN_MS;
+	if (ms > FLASH_TIMER_MAX_MS)
+		ms = FLASH_TIMER_MAX_MS;
+	if (ms <= 256)
+		reg = (ms - 2) / 2;
+	else
+		reg = ((ms - 256) / 8) + 0x7f;
+	return reg;
 }
 
-/* flash lamp interface implementation */
-#define AS3643_GPIO_INIT   (GPIOF_DIR_OUT | GPIOF_INIT_LOW)
-
-static int as3643_enable(void)
+static int as3643_enable(enum FLASHLAMP_MODE_T mode, const u8 intensity,
+			 u32 duration_ms)
 {
 	int ret = 0;
-	u8 val;
-
-	/* apply intensity */
-	switch (as3643_state.mode) {
-	case V4L2_FLASH_LED_MODE_FLASH:
-	case V4L2_FLASH_LED_MODE_FLASH_AUTO:
-		val = _intensity_to_flash(as3643_state.intensity);
+	switch (mode) {
+	case FLASHLAMP_MODE_FLASH:
+		/* FLASH_TIMER_MAX_MS, AS3643_MAX_STROBE_MS */
+		if (duration_ms == 0)
+			duration_ms = FLASH_TIMER_MAX_MS;
+		ret +=
+		    as3643_reg_write(client1, REG_CURRENT_1, intensity);
+		ret +=
+		    as3643_reg_write(client1, REG_CURRENT_2, intensity);
+		ret +=
+		    as3643_reg_write(client1, REG_FLASH_TIMER,
+				     flash_timer_set(duration_ms));
+		/* Strobe on, level */
+		ret += as3643_reg_write(client1, REG_STROBE_SIG, 0xC0);
+		/* Out on, flash mode */
+		ret += as3643_reg_write(client1, REG_CONTROL, 0xB);
 		break;
-	case V4L2_FLASH_LED_MODE_TORCH:
-		val = _intensity_to_torch(as3643_state.intensity);
-		break;
-	default:
-		as3643_state.intensity = 0;
-		break;
-	}
-	as3643_reg_write(as3643_state.client, AS3643_REG_CURRENT_1, val);
-	as3643_reg_write(as3643_state.client, AS3643_REG_CURRENT_2, val);
-
-	/* apply duration */
-	if ((V4L2_FLASH_LED_MODE_FLASH == as3643_state.mode) |
-		(V4L2_FLASH_LED_MODE_FLASH_AUTO == as3643_state.mode)) {
-		/* duration should only apply to flash mode */
-		u8 val;
-		int ms = as3643_state.duration/1000;
-		if (0 >= ms)
-			ms = AS3643_FLASH_TIMER_DEF_MS;
-		else if (ms > AS3643_FLASH_TIMER_MAX_MS)
-			ms = AS3643_FLASH_TIMER_MAX_MS;
-		/* map ms to reg value */
-		if (ms > 264)
-			val = (ms - 264)/8 + 0x80;
-		else if (ms > 256)
-			val = 0x7F;
-		else if (ms > 2)
-			val = (ms - 2)/2 - 1;
-		else
-			val = 0x0;
-		/* write to reg */
-		as3643_reg_write(as3643_state.client,
-						AS3643_REG_FLASH_TIMER, val);
-	}
-
-	/* apply mode and enable output */
-	switch (as3643_state.mode) {
-	case V4L2_FLASH_LED_MODE_NONE:
-		/* set mode to ext_torch */
-		as3643_reg_read(as3643_state.client, AS3643_REG_CONTROL, &val);
-		val &= ~(0x03);
-		as3643_reg_write(as3643_state.client, AS3643_REG_CONTROL, val);
-		/* disable torch mode */
-		as3643_reg_read(as3643_state.client, AS3643_REG_TX_MASK, &val);
-		val &= ~(0x03);
-		as3643_reg_write(as3643_state.client, AS3643_REG_TX_MASK, val);
+	case FLASHLAMP_MODE_INDICATOR:
+		/*Set the indicator intensity */
+		ret +=
+		    as3643_reg_write(client1, REG_CURRENT_1, intensity);
+		ret +=
+		    as3643_reg_write(client1, REG_CURRENT_2, intensity);
+		ret +=
+		    as3643_reg_write(client1, REG_FLASH_TIMER,
+				     flash_timer_set(duration_ms));
 		/* Strobe off, level */
-		as3643_reg_write(as3643_state.client,
-						AS3643_REG_STROBE_SIG, 0x00);
-		/* disable pin */
-		gpio_set_value(AS3643_GPIO_FLASH_EN, 0);
+		ret += as3643_reg_write(client1, REG_STROBE_SIG, 0x40);
+		/* Out on, flash mode */
+		ret += as3643_reg_write(client1, REG_CONTROL, 0xB);
 		break;
-	case V4L2_FLASH_LED_MODE_FLASH:
-	case V4L2_FLASH_LED_MODE_FLASH_AUTO:
-		/* set mode to flash */
-		as3643_reg_read(as3643_state.client, AS3643_REG_CONTROL, &val);
-		val |= 0x03;
-		as3643_reg_write(as3643_state.client, AS3643_REG_CONTROL, val);
-		/* enable flash mode */
-		as3643_reg_read(as3643_state.client, AS3643_REG_TX_MASK, &val);
-		val &= ~(0x03); val |= 0x00;
-		as3643_reg_write(as3643_state.client, AS3643_REG_TX_MASK, val);
-		/* Strobe level */
-		as3643_reg_write(as3643_state.client,
-						AS3643_REG_STROBE_SIG, 0x40);
-		/* enable pin */
-		gpio_set_value(AS3643_GPIO_FLASH_EN, 1);
-		/* enable output */
-		as3643_reg_read(as3643_state.client, AS3643_REG_CONTROL, &val);
-		val |= 0x08;
-		as3643_reg_write(as3643_state.client, AS3643_REG_CONTROL, val);
-		break;
-	case V4L2_FLASH_LED_MODE_TORCH:
-		/* set mode to torch */
-		as3643_reg_read(as3643_state.client, AS3643_REG_CONTROL, &val);
-		val &= ~(0x03);
-		as3643_reg_write(as3643_state.client, AS3643_REG_CONTROL, val);
-		/* enable torch mode */
-		as3643_reg_read(as3643_state.client, AS3643_REG_TX_MASK, &val);
-		val &= ~(0x03); val |= 0x02;
-		as3643_reg_write(as3643_state.client, AS3643_REG_TX_MASK, val);
-		/* enable pin */
-		gpio_set_value(AS3643_GPIO_FLASH_EN, 1);
-		/* enable output */
-		as3643_reg_read(as3643_state.client, AS3643_REG_CONTROL, &val);
-		val |= 0x08;
-		as3643_reg_write(as3643_state.client, AS3643_REG_CONTROL, val);
+	case FLASHLAMP_MODE_TORCH:
+		ret +=
+		    as3643_reg_write(client1, REG_CURRENT_1, intensity);
+		ret +=
+		    as3643_reg_write(client1, REG_CURRENT_2, intensity);
+		/* External torch mode */
+		ret += as3643_reg_write(client1, REG_TX_MASK, 0x62);
 		break;
 	default:
-		ret = -1;
 		break;
 	}
-
 	return ret;
 }
 
 static int as3643_disable(void)
 {
 	int ret = 0;
+	ret += as3643_reg_write(client1, REG_CONTROL, 0x00);	/*out off */
+	ret += as3643_reg_write(client1, REG_TX_MASK, 0x00);	/*torch off */
+	return ret;
+}
+
+int as3643_set_ind_led(int iled, const u32 duration_ms)
+{
+	as3643_enable(FLASHLAMP_MODE_INDICATOR, iled, duration_ms);
+	return 0;
+}
+
+int as3643_set_flash(const u8 intensity, const u32 duration_ms)
+{
+	as3643_enable(FLASHLAMP_MODE_FLASH, intensity, duration_ms);
+	return 0;
+}
+
+int as3643_set_torch_flash(int hpled)
+{
+	as3643_enable(FLASHLAMP_MODE_TORCH, hpled, 0);
+	return 0;
+}
+
+int as3643_sw_strobe(int on)
+{
 	u8 val;
-
-	/* disable output */
-	as3643_reg_read(as3643_state.client, AS3643_REG_CONTROL, &val);
-	val &= 0xf7;
-	as3643_reg_write(as3643_state.client, AS3643_REG_CONTROL, val);
-	as3643_reg_read(as3643_state.client, AS3643_REG_TX_MASK, &val);
-	val &= 0xfc;
-	as3643_reg_write(as3643_state.client, AS3643_REG_TX_MASK, val);
-	/* disable pin */
-	gpio_set_value(AS3643_GPIO_FLASH_EN, 0);
-
-	return ret;
+	val = 0;
+	as3643_reg_read(client1, REG_STROBE_SIG, &val);
+#if 1
+	val = val | 0x60;	/* as3643 set level sensitive */
+#else
+	val = val & 0xbf;	/* as3643 set edge sensitive */
+#endif
+	if (on)
+		val = val | 0x80;
+	else
+		val = val & 0x7f;
+	as3643_reg_write(client1, REG_STROBE_SIG, 0);
+	return 0;
 }
 
-static int as3643_set_mode(enum v4l2_flash_led_mode mode)
+int as3643_gpio_strobe(int on)
 {
-	int ret = 0;
-
-	as3643_state.mode = mode;
-
-	return ret;
-}
-
-static enum v4l2_flash_led_mode as3643_get_mode(void)
-{
-	if (V4L2_FLASH_LED_MODE_FLASH == as3643_state.mode ||
-		V4L2_FLASH_LED_MODE_FLASH_AUTO == as3643_state.mode) {
-		/* flash is active, check if it is done */
-		u8 val;
-		as3643_reg_read(as3643_state.client, AS3643_REG_CONTROL, &val);
-		if (0x0 == (val&0x03)) {
-			/* flash is done, change our mode */
-			as3643_state.mode = V4L2_FLASH_LED_MODE_NONE;
+	if (on) {
+		if (gpio_request_one
+		    (GPIO_FLASH_TRIG, GPIOF_DIR_OUT | GPIOF_INIT_LOW,
+		     "Flash-Trig")) {
+			pr_err("GPIO flash Trig failed\n");
+			return -1;
 		}
+		gpio_set_value(GPIO_FLASH_TRIG, 1);
+	} else {
+		gpio_set_value(GPIO_FLASH_TRIG, 0);
+		gpio_free(GPIO_FLASH_TRIG);
 	}
-	return as3643_state.mode;
+	return 0;
 }
 
-/* set duration for curent mode */
-static int as3643_set_duration(int duration_in_us)
+int as3643_set_timer(int timer_val)
 {
-	int ret = 0;
-
-	as3643_state.duration = duration_in_us;
-
-	return ret;
+	u8 val;
+	val = flash_timer_set(timer_val);
+	as3643_reg_write(client1, REG_FLASH_TIMER, val);
+	return 0;
 }
 
-/* get duration associated with current mode */
-static int as3643_get_duration(void)
+int as3643_gpio_toggle(bool en)
 {
-	return as3643_state.duration;
+	if (en) {
+		if (gpio_request_one
+		    (GPIO_FLASH_EN, GPIOF_DIR_OUT | GPIOF_INIT_LOW,
+		     "Flash-En")) {
+			pr_err(KERN_ERR "GPIO flash En failed\n");
+			return -1;
+		}
+		gpio_set_value(GPIO_FLASH_EN, 1);
+	} else {
+		gpio_set_value(GPIO_FLASH_EN, 0);
+		gpio_free(GPIO_FLASH_EN);
+	}
+	return 0;
 }
 
-static int as3643_set_intensity(int intensity)
+int as3643_clear_all(void)
 {
-	int ret = 0;
-
-	if (intensity > 255)
-		intensity = 255;
-	else if
-		(intensity < 0) intensity = 0;
-	as3643_state.intensity = intensity;
-
-	return ret;
-}
-
-static int as3643_get_intensity(void)
-{
-	return as3643_state.intensity;
-}
-
-static int as3643_reset(void)
-{
-	int ret = 0;
-
-	as3643_state.mode = V4L2_FLASH_LED_MODE_NONE;
-	as3643_state.duration = 0;
-	as3643_state.intensity = 0;
-	ret += as3643_set_intensity(as3643_state.intensity);
-	ret += as3643_set_duration(as3643_state.duration);
-	ret += as3643_set_mode(as3643_state.mode);
-	ret += as3643_disable();
-
-	return ret;
-}
-
-int get_flash_lamp(struct flash_lamp_s *lamp)
-{
-	int ret = 0;
-
-	/* validate input */
-	if (NULL == lamp)
-		return -1;
-
-	/* initialize flash lamp instance */
-	lamp->name = "as3643";
-	lamp->set_duration = as3643_set_duration;
-	lamp->set_mode = as3643_set_mode;
-	lamp->get_duration = as3643_get_duration;
-	lamp->get_mode = as3643_get_mode;
-	lamp->set_intensity = as3643_set_intensity;
-	lamp->get_intensity = as3643_get_intensity;
-	lamp->reset = as3643_reset;
-	lamp->enable = as3643_enable;
-	lamp->disable = as3643_disable;
-
-	return ret;
+	as3643_disable();
+	return 0;
 }
 
 static int as3643_probe(struct i2c_client *client,
 			const struct i2c_device_id *did)
 {
-	int ret = -1;	/* fail by default */
-	u8 val = 0;
-
-	/* try to read chip id */
-	as3643_reg_read(client, 0x00, &val);
-	if (AS3643_FIXED_ID == (val & 0xF8)) {
-		as3643_state.client = client;
-		as3643_state.mode = V4L2_FLASH_LED_MODE_NONE;
-		as3643_state.duration = 0;
-		as3643_state.intensity = 0;
-		/* request gpios */
-		ret = gpio_request_one(AS3643_GPIO_FLASH_EN,
-					AS3643_GPIO_INIT, "Flash-EN");
-		ret += gpio_request_one(AS3643_GPIO_FLASH_TRIG,
-					AS3643_GPIO_INIT, "Flash-Trig");
-		if (ret)
-			dev_err(&client->dev, "%s: request GPIOs failed\n",
-			    __func__);
-	} else
-		dev_err(&client->dev, "%s: probe failed\n", __func__);
-
-	return ret;
+	client1 = client;
+	pr_debug("%s()", __func__);
+	return 0;
 }
 
 static int as3643_remove(struct i2c_client *client)
 {
-	/* release gpios */
-	gpio_free(AS3643_GPIO_FLASH_EN);
-	gpio_free(AS3643_GPIO_FLASH_TRIG);
-	/* reset state */
-	as3643_state.client = NULL;
-	as3643_state.client = NULL;
-	as3643_state.mode = V4L2_FLASH_LED_MODE_NONE;
-	as3643_state.duration = 0;
-
+	client1 = NULL;
 	return 0;
 }
 
@@ -411,7 +321,7 @@ MODULE_DEVICE_TABLE(i2c, as3643_id);
 static struct i2c_driver as3643_i2c_driver = {
 	.driver = {
 		   .name = "as3643",
-		},
+		   },
 	.probe = as3643_probe,
 	.remove = as3643_remove,
 	.id_table = as3643_id,

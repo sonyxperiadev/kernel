@@ -105,7 +105,6 @@ struct unicam_camera_buffer {
 	struct list_head queue;
 	unsigned int magic;
 };
-int first = -1;
 static irqreturn_t unicam_camera_isr(int irq, void *arg);
 static irqreturn_t unicam_camera_isr_bh(int irq, void *arg);
 static int unicam_stop(void);
@@ -449,6 +448,14 @@ static void unicam_camera_get_frame_info_int(struct unicam_camera_dev *ucdev)
 			&ucdev->frame_info);
 	if (ret < 0)
 		ucdev->frame_info_en = 0;
+	pr_debug("%s(): fi: exp=%d ag=%d lens=%d flash=[%d %d] tv=%ld",
+		 __func__,
+		 ucdev->frame_info.exposure,
+		 ucdev->frame_info.an_gain,
+		 ucdev->frame_info.lens_pos,
+		 ucdev->frame_info.flash_mode,
+		 ucdev->frame_info.flash_intensity,
+		 ucdev->frame_info.timestamp.tv_nsec);
 }
 
 static void unicam_camera_set_frame_info_int(struct unicam_camera_dev *ucdev)
@@ -463,6 +470,14 @@ static void unicam_camera_set_frame_info_int(struct unicam_camera_dev *ucdev)
 		return;
 	ucdev->frame_info.timestamp =
 		(struct timespec){tv->tv_sec, tv->tv_usec * 1000};
+	pr_debug("%s(): fi: exp=%d ag=%d lens=%d flash=[%d %d] tv=%ld",
+		 __func__,
+		 ucdev->frame_info.exposure,
+		 ucdev->frame_info.an_gain,
+		 ucdev->frame_info.lens_pos,
+		 ucdev->frame_info.flash_mode,
+		 ucdev->frame_info.flash_intensity,
+		 ucdev->frame_info.timestamp.tv_nsec);
 	ret = v4l2_subdev_call(sd, core, ioctl, VIDIOC_SENSOR_S_FRAME_INFO,
 			&ucdev->frame_info);
 	if (ret < 0)
@@ -1237,7 +1252,6 @@ static int unicam_camera_set_fmt_int(struct unicam_camera_dev *unicam_dev)
 
 	unicam_dev->skip_frames = skip_frames;
 	unicam_dev->curr = 0;
-	first = 2;
 	unicam_dev->buff[0] = NULL;
 	unicam_dev->buff[1] = NULL;
 
@@ -1278,7 +1292,7 @@ static int unicam_camera_add_device(struct soc_camera_device *icd)
 	struct soc_camera_host *ici = to_soc_camera_host(icd->parent);
 	struct unicam_camera_dev *unicam_dev = ici->priv;
 	struct v4l2_subdev *sd = soc_camera_to_subdev(icd);
-	int err = 0, i = 0;
+	int err = 0;
 
 	if (unicam_dev->icd) {
 		dev_warn(icd->parent,
@@ -1365,24 +1379,24 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 	struct int_desc idesc;
 	struct rx_stat_list rx;
 	u32 isr_status, raw_stat;
-	static unsigned int t1 = 0, t2 = 0, fps = 0;
 	struct buffer_desc im0;
 	dma_addr_t dma_addr;
 	unsigned long flags;
 
 	/* has the interrupt occured for Channel 0? */
-	memset(&rx, 0x00, sizeof(struct rx_stat_list));
+	memset(&rx, 0, sizeof(struct rx_stat_list));
+	memset(&idesc, 0, sizeof(idesc));
 	raw_stat = mm_csi0_get_rx_stat(&rx, 1);
 	if (atomic_read(&unicam_dev->streaming) == 0) {
-		memset(&idesc, 0x00, sizeof(struct int_desc));
 		isr_status = mm_csi0_get_int_stat(&idesc, 1);
 		pr_err("ISR triggered after stop stat=0x%x istat=0x%x\n",
 			raw_stat, isr_status);
 
 		goto out;
 	} else if (rx.is) {
-		memset(&idesc, 0x00, sizeof(struct int_desc));
 		isr_status = mm_csi0_get_int_stat(&idesc, 1);
+		pr_debug("%s(): fsi=%d fei=%d",
+			 __func__, idesc.fsi, idesc.fei);
 		if (idesc.fsi) {
 			if (rx.ps)
 				pr_info("Panic at frame start\n");
@@ -1393,25 +1407,12 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 			/* FS and FE handling */
 			if (rx.ps)
 				pr_info("Panic at frame or lineend\n");
-			fps++;
-			if (t1 == 0 && t2 == 0)
-				t1 = t2 = jiffies_to_msecs(jiffies);
-
-			t2 = jiffies_to_msecs(jiffies);
-			if (t2 - t1 > 1000) {
-				pr_info(" sensor fps = %d panic count %d\n",
-						fps, unicam_dev->panic_count);
-				fps = 0;
-				t1 = t2;
-			}
 			atomic_set(&unicam_dev->cam_triggered, 0);
-			/*atomic_set(&unicam_dev->retry_count, 0);
-			del_timer(&(unicam_dev->unicam_timer));*/
 			pr_debug("frame received");
 			if (!vb)
 				goto out;
 
-			if (unicam_dev->skip_frames <= 0) {
+			if (likely(unicam_dev->skip_frames <= 0)) {
 				struct v4l2_control ctrl;
 				int ret = -1;
 				ctrl.value = 0;
@@ -1488,10 +1489,19 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 				pr_err("ran out of buffers\n");
 			}
 		}
+
+		if (idesc.fei) {
+			/* notify driver there's frame end*/
+			ret = v4l2_subdev_call(sd, core, ioctl,
+					       VIDIOC_SENSOR_FRAME_IRQ,
+					       isr_status & CAM_ISTA_FEI_MASK);
+		}
+
 	}
 
 out:
-	return (idesc.fsi) ? IRQ_WAKE_THREAD : IRQ_HANDLED;
+	return (idesc.fsi && unicam_dev->skip_frames <= 0) ?
+		IRQ_WAKE_THREAD : IRQ_HANDLED;
 }
 
 static irqreturn_t unicam_camera_isr_bh(int irq, void *arg)
@@ -1604,4 +1614,5 @@ late_initcall(unicam_camera_init);
 module_exit(unicam_camera_exit);
 
 MODULE_DESCRIPTION("Unicam Camera Host driver");
-MODULE_AUTHOR("Pradeep Sawlani <spradeep@broadcom.com>");
+MODULE_AUTHOR("Broadcom Corporation");
+
