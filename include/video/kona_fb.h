@@ -40,6 +40,7 @@ struct kona_fb_platform_data {
 	bool vburst;
 	bool cmnd_LP;
 	bool te_ctrl;
+	bool pm_sleep;
 	uint8_t col_mod_i;
 	uint8_t col_mod_o;
 	uint16_t width;

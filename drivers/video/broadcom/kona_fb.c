@@ -774,8 +774,12 @@ static int enable_display(struct kona_fb *fb)
 		konafb_error("Failed to open this display device!\n");
 		goto fail_to_open;
 	}
-
-	ret = fb->display_ops->power_control(fb->display_hdl, CTRL_PWR_ON);
+	if (fb->fb_data->pm_sleep)
+		ret = fb->display_ops->power_control(fb->display_hdl,
+				CTRL_SLEEP_OUT);
+	else
+		ret = fb->display_ops->power_control(fb->display_hdl,
+				CTRL_PWR_ON);
 	if (ret != 0) {
 		konafb_error("Failed to power on this display device!\n");
 		goto fail_to_power_control;
@@ -807,7 +811,12 @@ static int disable_display(struct kona_fb *fb)
 		kona_clock_start(fb);
 	cancel_delayed_work_sync(&fb->vsync_smart);
 
-	fb->display_ops->power_control(fb->display_hdl, CTRL_PWR_OFF);
+	if (fb->fb_data->pm_sleep)
+		fb->display_ops->power_control(fb->display_hdl,
+			CTRL_SLEEP_IN);
+	else
+		fb->display_ops->power_control(fb->display_hdl,
+			CTRL_PWR_OFF);
 	fb->display_ops->close(fb->display_hdl);
 	fb->display_ops->exit(fb->display_hdl);
 	kona_clock_stop(fb);
@@ -1097,6 +1106,10 @@ static struct kona_fb_platform_data * __init get_of_data(struct device_node *np)
 		fb_data->te_ctrl = true;
 	else
 		fb_data->te_ctrl = false;
+	if (of_property_read_bool(np, "pm-sleep"))
+		fb_data->pm_sleep = true;
+	else
+		fb_data->pm_sleep = false;
 
 	if (of_property_read_u32(np, "col-mod-i", &val))
 		goto of_fail;

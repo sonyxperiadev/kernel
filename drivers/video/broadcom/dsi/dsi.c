@@ -157,7 +157,11 @@ CSL_DSI_CFG_t DispDrv_dsiCfg = {
 
 static struct regulator *disp_reg;
 
-static DispDrv_PANEL_t panel[1];
+static DispDrv_PANEL_t panel[1] = {
+	[0] = {
+		.pwrState = STATE_PWR_OFF,
+	},
+};
 
 /*###########################################################################*/
 
@@ -518,10 +522,9 @@ Int32 DSI_Init(DISPDRV_INFO_T *info, DISPDRV_HANDLE_T *handle)
 		pPanel->teOut =	TE_VC4L_OUT_DSI0_TE0;
 
 		pPanel->drvState = DRV_STATE_INIT;
-		if (!g_display_enabled) {
-			pPanel->pwrState = STATE_PWR_OFF;
+		if (!g_display_enabled)
 			brcm_init_lcd_clocks(pPanel->busNo);
-		} else
+		else
 			pPanel->pwrState = STATE_SCREEN_ON;
 
 		*handle	= (DISPDRV_HANDLE_T)pPanel;
@@ -635,7 +638,8 @@ Int32 DSI_Open(DISPDRV_HANDLE_T drvH)
 		goto err_gpio_request;
 	}
 
-	if (!g_display_enabled)
+	/* do hw_reset in power off state only */
+	if (STATE_PWR_OFF == pPanel->pwrState)
 		hw_reset(drvH, FALSE);
 
 	if (DSI_ReadPanelID(pPanel) < 0) {
@@ -713,7 +717,6 @@ Int32 DSI_Close(DISPDRV_HANDLE_T drvH)
 
 	gpio_free(pPanel->disp_info->rst->gpio);
 
-	pPanel->pwrState = STATE_PWR_OFF;
 	pPanel->drvState = DRV_STATE_INIT;
 	DSI_INFO("OK\n");
 
@@ -976,6 +979,7 @@ Int32 DSI_PowerControl(
 		case STATE_SCREEN_OFF:
 			DSI_ExecCmndList(pPanel, info->slp_in_seq);
 			pPanel->pwrState = STATE_SLEEP;
+			DSI_INFO("SLEEP-IN\n");
 			break;
 		default:
 			DSI_ERR("SLEEP Req, But Not In DISP ON|OFF State\n");

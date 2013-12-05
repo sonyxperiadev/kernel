@@ -1194,9 +1194,13 @@ CSL_LCD_RES_T CSL_DSI_SendPacket(CSL_LCD_HANDLE client,
 	txPkt.isTe = isTE;
 	txPkt.vmWhen = CHAL_DSI_CMND_WHEN_BEST_EFFORT;
 	txPkt.repeat = 1;
+#ifdef CONFIG_ARCH_JAVA
+	txPkt.start = 1;
+#else
 	/* Don't start here if PV is enabled,
 	 * instead wait for video stream to stop */
 	txPkt.start = !videoEnabled;
+#endif
 	pkt_to_be_enabled = !txPkt.start;
 	txPkt.dispEngine = 1;
 
