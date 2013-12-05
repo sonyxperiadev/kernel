@@ -120,7 +120,7 @@ struct kona_fb {
 #ifdef CONFIG_FB_BRCM_CP_CRASH_DUMP_IMAGE_SUPPORT
 	struct notifier_block die_nb;
 #endif
-	struct delayed_work vsync_smart;
+	struct work_struct vsync_smart;
 
 	size_t framesize_alloc;
 	struct iommu_domain *direct_domain;
@@ -752,10 +752,12 @@ static void konafb_vsync_cb(void)
 static void vsync_work_smart(struct work_struct *work)
 {
 	struct kona_fb *fb = container_of(work, struct kona_fb,
-						vsync_smart.work);
+						vsync_smart);
 
 	complete(&vsync_event);
-	schedule_delayed_work(&fb->vsync_smart, msecs_to_jiffies(10));
+	/* 16ms ~ 60HZ */
+	usleep_range(16000, 16010);
+	schedule_work(&fb->vsync_smart);
 }
 
 static int enable_display(struct kona_fb *fb)
@@ -784,9 +786,9 @@ static int enable_display(struct kona_fb *fb)
 		konafb_error("Failed to power on this display device!\n");
 		goto fail_to_power_control;
 	}
-	INIT_DELAYED_WORK(&fb->vsync_smart, vsync_work_smart);
+	INIT_WORK(&fb->vsync_smart, vsync_work_smart);
 	if (!fb->display_info->vmode) {
-		schedule_delayed_work(&fb->vsync_smart, 0);
+		schedule_work(&fb->vsync_smart);
 		kona_clock_stop(fb);
 	}
 
@@ -809,7 +811,7 @@ static int disable_display(struct kona_fb *fb)
 
 	if (!fb->display_info->vmode)
 		kona_clock_start(fb);
-	cancel_delayed_work_sync(&fb->vsync_smart);
+	cancel_work_sync(&fb->vsync_smart);
 
 	if (fb->fb_data->pm_sleep)
 		fb->display_ops->power_control(fb->display_hdl,
