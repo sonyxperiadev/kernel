@@ -181,7 +181,8 @@ static struct bcmpmu59xxx_rw_data __initdata register_init_data[] = {
 
 static struct bcmpmu59xxx_rw_data register_exit_data[] = {
 	{.addr = PMU_REG_GPIOCTRL1, .val = 0x5, .mask = 0xFF},
-	{.addr = PMU_REG_MBCCTRL20, .val = 0x1, .mask = 0xFF},
+	/* Disable turbo*/
+	{.addr = PMU_REG_OTG_BOOSTCTRL3, .val = 0x0, .mask = 0x10},
 };
 
 __weak struct regulator_consumer_supply rf_supply[] = {

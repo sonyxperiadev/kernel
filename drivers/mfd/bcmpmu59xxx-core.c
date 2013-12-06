@@ -37,6 +37,13 @@
 #endif
 
 static struct bcmpmu59xxx *bcmpmu_gbl;
+struct bcmpmu_mbc_cc_trim {
+	u8 cc_trim;
+	u8 cc_100_trim;
+	u8 cc_500_trim;
+};
+static struct bcmpmu_mbc_cc_trim mbc_cc_trim;
+
 static struct mfd_cell  irq_devs[] = {
 	{
 		.name = "bcmpmu59xxx_irq",
@@ -627,7 +634,52 @@ static const struct file_operations bcmpmu_fops = {
 static struct miscdevice bcmpmu_device = {
 	MISC_DYNAMIC_MINOR, "bcmpmu", &bcmpmu_fops
 };
+/*
+ * bcmpmu_restore_cc_trim_otp - Restore trim register to OTP.
+ */
+void bcmpmu_restore_cc_trim_otp(struct bcmpmu59xxx *bcmpmu)
+{
+	int ret = 0;
 
+	ret = bcmpmu->write_dev(bcmpmu,
+			PMU_REG_MBCCTRL18, mbc_cc_trim.cc_trim);
+	if (ret)
+		BUG_ON(1);
+	ret = bcmpmu->write_dev(bcmpmu,
+			PMU_REG_MBCCTRL19, mbc_cc_trim.cc_100_trim);
+	if (ret)
+		BUG_ON(1);
+	ret = bcmpmu->write_dev(bcmpmu,
+			PMU_REG_MBCCTRL20, mbc_cc_trim.cc_500_trim);
+	if (ret)
+		BUG_ON(1);
+	pr_pmucore(INIT, "%s: cc_trm: 0x%x cc_100_trm: 0x%x cc_500_trm: 0x%x\n",
+			__func__, mbc_cc_trim.cc_trim,
+			mbc_cc_trim.cc_100_trim, mbc_cc_trim.cc_500_trim);
+}
+/**
+ * bcmpmu_store_cc_trim_otp - store trim registers.
+ */
+void bcmpmu_store_cc_trim_otp(struct bcmpmu59xxx *bcmpmu)
+{
+	int ret = 0;
+
+	ret = bcmpmu->read_dev(bcmpmu,
+			PMU_REG_MBCCTRL18, &mbc_cc_trim.cc_trim);
+	if (ret)
+		BUG_ON(1);
+	ret = bcmpmu->read_dev(bcmpmu,
+			PMU_REG_MBCCTRL19, &mbc_cc_trim.cc_100_trim);
+	if (ret)
+		BUG_ON(1);
+	ret = bcmpmu->read_dev(bcmpmu,
+			PMU_REG_MBCCTRL20, &mbc_cc_trim.cc_500_trim);
+	if (ret)
+		BUG_ON(1);
+	pr_pmucore(INIT, "%s: cc_trm: 0x%x cc_100_trm: 0x%x cc_500_trm: 0x%x\n",
+			__func__, mbc_cc_trim.cc_trim,
+			mbc_cc_trim.cc_100_trim, mbc_cc_trim.cc_500_trim);
+}
 static void bcmpmu59xxx_reg_update(struct bcmpmu59xxx *pmu,
 		struct bcmpmu59xxx_rw_data *data, int max)
 {
@@ -652,6 +704,7 @@ static void bcmpmu_register_init(struct bcmpmu59xxx *pmu)
 	struct bcmpmu59xxx_platform_data *pdata;
 	pdata = pmu->pdata;
 
+	bcmpmu_store_cc_trim_otp(pmu);
 	bcmpmu59xxx_reg_update(pmu, pdata->init_data, pdata->init_max);
 }
 
@@ -661,6 +714,7 @@ static void bcmpmu59xxx_shutdown(struct platform_device *pdev)
 	struct bcmpmu59xxx_platform_data *pdata = bcmpmu->pdata;
 
 	bcmpmu59xxx_reg_update(bcmpmu, pdata->exit_data, pdata->exit_max);
+	bcmpmu_restore_cc_trim_otp(bcmpmu);
 }
 
 static int bcmpmu59xxx_probe(struct platform_device *pdev)

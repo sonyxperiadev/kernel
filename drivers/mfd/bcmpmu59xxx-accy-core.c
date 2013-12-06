@@ -57,7 +57,8 @@
 #define PMU_USB_FC_CC_MAX	(ARRAY_SIZE(bcmpmu_pmu_curr_acld_table) - 1)
 
 #define PMU_USB_CC_TRIM_MIN	0
-#define PMU_USB_CC_TRIM_MAX	0xF
+#define PMU_USB_CC_TRIM_MAX	0x1F
+#define PMU_TRIM_REG_SET_SIZE	(ARRAY_SIZE(cc_trim_settings) - 1)
 
 #define PMU_CHRGR_CURR_DEFAULT	500
 #define MAX_EVENTS		100
@@ -223,6 +224,42 @@ static struct trim_to_percentage trim_to_per[] = {
 	{0x1D, -10},
 	{0x1E, -8},
 	{0x1F, -5},
+};
+/* These settings are in two's complement format
+ **/
+static int cc_trim_settings[] = {
+	0x10,
+	0x11,
+	0x12,
+	0x13,
+	0x14,
+	0x15,
+	0x16,
+	0x17,
+	0x18,
+	0x19,
+	0x1A,
+	0x1B,
+	0x1C,
+	0x1D,
+	0x1E,
+	0x1F,
+	0x0,
+	0x1,
+	0x2,
+	0x3,
+	0x4,
+	0x5,
+	0x6,
+	0x7,
+	0x8,
+	0x9,
+	0xA,
+	0xB,
+	0xC,
+	0xD,
+	0xE,
+	0xF,
 };
 static int charging_enable = 1;
 module_param_named(charging_enable, charging_enable, int,
@@ -1306,6 +1343,32 @@ int bcmpmu_icc_fc_step_up(struct bcmpmu59xxx *bcmpmu)
 }
 EXPORT_SYMBOL(bcmpmu_icc_fc_step_up);
 
+static int __get_cc_trim_up_reg(int reg)
+{
+	int i;
+	for (i = 0; i <= PMU_TRIM_REG_SET_SIZE; i++) {
+		if (cc_trim_settings[i] == reg)
+			break;
+	}
+	if (i >= PMU_TRIM_REG_SET_SIZE)
+		return -ENOSPC;
+
+	return cc_trim_settings[i+1];
+}
+
+static int __get_cc_trim_down_reg(int reg)
+{
+	int i;
+	for (i = 0; i <= PMU_TRIM_REG_SET_SIZE; i++) {
+		if (cc_trim_settings[i] == reg)
+			break;
+	}
+	if (i == 0)
+		return -ENOSPC;
+
+	return cc_trim_settings[i-1];
+}
+
 int bcmpmu_set_cc_trim(struct bcmpmu59xxx *bcmpmu, int cc_trim)
 {
 	int ret = 0;
@@ -1314,7 +1377,8 @@ int bcmpmu_set_cc_trim(struct bcmpmu59xxx *bcmpmu, int cc_trim)
 	if ((cc_trim < PMU_USB_CC_TRIM_MIN) ||
 			(cc_trim > PMU_USB_CC_TRIM_MAX)) {
 		pr_accy(INIT, "cc_trim beyond limit\n");
-		BUG_ON(1);
+		WARN_ON(1);
+		return -EINVAL;
 	}
 
 	reg = cc_trim;
@@ -1336,7 +1400,7 @@ int bcmpmu_get_cc_trim(struct bcmpmu59xxx *bcmpmu)
 	}
 	return reg;
 }
-int  bcmpmu_get_trim_curr(struct bcmpmu59xxx *bcmpmu)
+int  bcmpmu_get_next_trim_curr(struct bcmpmu59xxx *bcmpmu, int add)
 {
 	int curr;
 	int icc_fc;
@@ -1344,7 +1408,19 @@ int  bcmpmu_get_trim_curr(struct bcmpmu59xxx *bcmpmu)
 
 	icc_fc = bcmpmu_get_icc_fc(bcmpmu);
 	trim = bcmpmu_get_cc_trim(bcmpmu);
-	curr = ((icc_fc * trim_to_per[trim].perc) / 100);
+	curr = ((icc_fc * (trim_to_per[trim + 1].perc + add)) / 100);
+
+	return curr;
+}
+int  bcmpmu_get_trim_curr(struct bcmpmu59xxx *bcmpmu, int add)
+{
+	int curr;
+	int icc_fc;
+	u8 trim = 0;
+
+	icc_fc = bcmpmu_get_icc_fc(bcmpmu);
+	trim = bcmpmu_get_cc_trim(bcmpmu);
+	curr = ((icc_fc * (trim_to_per[trim].perc + add)) / 100);
 	pr_accy(INIT, "icc_fc = %d trim_reg = 0x%x curr = %d",
 			icc_fc, trim, curr);
 
@@ -1354,33 +1430,47 @@ int bcmpmu_cc_trim_up(struct bcmpmu59xxx *bcmpmu)
 {
 	int ret = 0;
 	u8 reg;
+	u8 temp;
 
 	ret = bcmpmu->read_dev(bcmpmu, PMU_REG_MBCCTRL18, &reg);
-	reg++;
-	if (reg > PMU_USB_CC_TRIM_MAX) {
+	if (ret)
+		return ret;
+	temp = reg;
+	ret = __get_cc_trim_up_reg(reg);
+	if (ret == -ENOSPC) {
 		pr_accy(INIT, "Already at max trim code\n");
 		return -ENOSPC;
+	} else {
+		reg = (u8)ret;
+		pr_accy(INIT, "%s prev_trim:0x%x, next_trim:0x%x\n",
+				__func__, temp, reg);
+		bcmpmu->write_dev(bcmpmu, PMU_REG_MBCCTRL18, reg);
 	}
-	ret = bcmpmu->write_dev(bcmpmu, PMU_REG_MBCCTRL18, reg);
-	return ret;
-
+	return 0;
 }
 EXPORT_SYMBOL(bcmpmu_cc_trim_up);
-
 int bcmpmu_cc_trim_down(struct bcmpmu59xxx *bcmpmu)
 {
 	int ret = 0;
 	u8 reg;
+	u8 temp;
 
 	ret = bcmpmu->read_dev(bcmpmu, PMU_REG_MBCCTRL18, &reg);
-	if (reg <= PMU_USB_CC_TRIM_MIN) {
+	if (ret)
+		return ret;
+
+	temp = reg;
+	ret = __get_cc_trim_down_reg(reg);
+	if (ret == -ENOSPC) {
 		pr_accy(INIT, "Already at min trim code\n");
 		return -ENOSPC;
-	} else
-		reg--;
-	ret = bcmpmu->write_dev(bcmpmu, PMU_REG_MBCCTRL18, reg);
-	return ret;
-
+	} else {
+		reg = (u8)ret;
+		pr_accy(INIT, "%s prev_trim:0x%x, next_trim:0x%x\n",
+				__func__, temp, reg);
+		bcmpmu->write_dev(bcmpmu, PMU_REG_MBCCTRL18, reg);
+	}
+	return 0;
 }
 EXPORT_SYMBOL(bcmpmu_cc_trim_down);
 

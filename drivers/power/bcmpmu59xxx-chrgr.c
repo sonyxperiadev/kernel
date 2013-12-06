@@ -33,9 +33,6 @@
 #define BATT_VOLT_TO_CAP(volt)		(((volt - 2800) * 100) / (4200 - 2800))
 
 #define MAX_EVENTS		20
-/* 20 % trimp up */
-#define USB_TRIM_INX		7
-#define USB_DEF_TRIM_INX	1
 
 char *get_supply_type_str(int chrgr_type);
 static int icc_fcc;
@@ -444,7 +441,7 @@ static int charger_event_handler(struct notifier_block *nb,
 			if (chrgr_type == PMU_CHRGR_TYPE_SDP)
 				bcmpmu->write_dev(bcmpmu,
 						PMU_REG_MBCCTRL20,
-						USB_TRIM_INX);
+						USB_TRIM_INX_20PER);
 			bcmpmu_chrgr_usb_en(bcmpmu, 1);
 			if ((get_supply_type_str(chrgr_type) != NULL) &&
 					(strcmp(get_supply_type_str(chrgr_type),
@@ -467,8 +464,7 @@ static int charger_event_handler(struct notifier_block *nb,
 				di->ac_chrgr_info.online = 0;
 				power_supply_changed(&di->ac_psy);
 			} else {
-				bcmpmu->write_dev(bcmpmu,
-					PMU_REG_MBCCTRL20, USB_DEF_TRIM_INX);
+				bcmpmu_restore_cc_trim_otp(bcmpmu);
 				di->usb_chrgr_info.online = 0 ;
 				power_supply_changed(&di->usb_psy);
 			}
