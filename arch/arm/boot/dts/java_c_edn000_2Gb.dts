@@ -536,7 +536,6 @@
 				63 18
 				70 15>;
 		pwm-request-label = "backlight";
-		bl-on-delay = <7000>;
 		pwm_pin_name = <39>;	/*GPIO24, enum PIN_NAME defined in chip_pinmux.h*/
 		pwm_pin_reboot_func = <25>;	/*GPIO24, enum PIN_FUNC defined in chip_pinmux.h*/
 	};
