@@ -8,6 +8,7 @@
 #include "board-kivu.h"
 
 #define BMU_NFC_I2C_BUS_ID 1
+#define BMU_HW_EN_GPIO 24
 
 static struct lm3530_platform_data lm3530_bmu_platform_data = {
 	.mode = LM3530_BL_MODE_MANUAL,
@@ -39,4 +40,11 @@ void __init kivu_add_backlight(void)
 	i2c_register_board_info(BMU_NFC_I2C_BUS_ID,
 				lm3530_i2c_boardinfo,
 				ARRAY_SIZE(lm3530_i2c_boardinfo));
+
+	if (gpio_request(BMU_HW_EN_GPIO , "bl_enable") < 0) {
+		pr_err("can't get bl_enable GPIO\n");
+		return;
+	}
+
+	gpio_set_value(BMU_HW_EN_GPIO, 1);
 }
