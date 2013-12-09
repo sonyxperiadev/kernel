@@ -1611,7 +1611,8 @@ static void cont_flush(enum log_flags flags)
 	}
 }
 
-static bool cont_add(int facility, int level, const char *text, size_t len)
+static bool cont_add(int facility, int level, const char *text, size_t len,
+			 u8 cpu_id)
 {
 	if (cont.len && cont.flushed)
 		return false;
@@ -1630,6 +1631,7 @@ static bool cont_add(int facility, int level, const char *text, size_t len)
 		cont.flags = 0;
 		cont.cons = 0;
 		cont.flushed = false;
+		cont.cpu_id = cpu_id;
 	}
 
 	memcpy(cont.buf + cont.len, text, len);
@@ -1777,7 +1779,7 @@ if (bcmlog_mtt_on == 1 && bcmlog_log_ulogging_id > 0 && BrcmLogString)
 			cont_flush(LOG_NEWLINE);
 
 		/* buffer line if possible, otherwise store it right away */
-		if (!cont_add(facility, level, text, text_len))
+		if (!cont_add(facility, level, text, text_len, logbuf_cpu))
 			log_store(facility, level, lflags | LOG_CONT, 0,
 				  dict, dictlen, text, text_len,
 				  logbuf_cpu, current);
@@ -1792,7 +1794,8 @@ if (bcmlog_mtt_on == 1 && bcmlog_log_ulogging_id > 0 && BrcmLogString)
 		 */
 		if (cont.len && cont.owner == current) {
 			if (!(lflags & LOG_PREFIX))
-				stored = cont_add(facility, level, text, text_len);
+				stored = cont_add(facility, level, text,
+						text_len, logbuf_cpu);
 			cont_flush(LOG_NEWLINE);
 		}
 
