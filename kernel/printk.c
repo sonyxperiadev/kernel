@@ -925,9 +925,9 @@ static size_t print_time(u64 ts, char *buf)
 	rem_nsec = do_div(ts, 1000000000);
 
 	if (!buf)
-		return snprintf(NULL, 0, "[%5lu.000000] ", (unsigned long)ts);
+		return snprintf(NULL, 0, "%5lu.000000 ", (unsigned long)ts);
 
-	return sprintf(buf, "[%5lu.%06lu] ",
+	return sprintf(buf, "%5lu.%06lu ",
 		       (unsigned long)ts, rem_nsec / 1000);
 }
 
@@ -936,7 +936,7 @@ static size_t print_pid(const struct log *msg, char *buf)
 {
 	if (!printk_pid || !buf)
 		return 0;
-	return sprintf(buf, "[%15s, %d] ", msg->comm, msg->pid);
+	return sprintf(buf, "%15s, %d ", msg->comm, msg->pid);
 }
 #else
 static size_t print_pid(const struct log *msg, char *buf)
@@ -960,6 +960,20 @@ static size_t print_cpuid(const struct log *msg, char *buf)
 }
 #endif
 
+static size_t prefix_bracket(char *buf)
+{
+	if (!buf)
+		return snprintf(NULL, 0, "[");
+	return sprintf(buf, "[");
+}
+
+static size_t sufix_bracket(char *buf)
+{
+	if (!buf)
+		return snprintf(NULL, 0, "] ");
+	return sprintf(buf, "] ");
+}
+
 static size_t print_prefix(const struct log *msg, bool syslog, char *buf)
 {
 	size_t len = 0;
@@ -979,9 +993,11 @@ static size_t print_prefix(const struct log *msg, bool syslog, char *buf)
 		}
 	}
 
+	len += prefix_bracket(buf ? buf + len : NULL);
 	len += print_time(msg->ts_nsec, buf ? buf + len : NULL);
 	len += print_cpuid(msg, buf ? buf + len : NULL);
 	len += print_pid(msg, buf ? buf + len : NULL);
+	len += sufix_bracket(buf ? buf + len : NULL);
 	return len;
 }
 
