@@ -346,7 +346,7 @@ static void log_store(int facility, int level,
 		      enum log_flags flags, u64 ts_nsec,
 		      const char *dict, u16 dict_len,
 		      const char *text, u16 text_len,
-		      u8 cpu_id, struct task_struct *owner)
+		      u8 cpu_id,  pid_t pid, char *comm)
 {
 	struct log *msg;
 	u32 size, pad_len;
@@ -395,8 +395,8 @@ static void log_store(int facility, int level,
 	msg->cpu_id = cpu_id;
 #endif
 #ifdef CONFIG_PRINTK_PID
-	msg->pid = owner->pid;
-	memcpy(msg->comm, owner->comm, TASK_COMM_LEN);
+	msg->pid = pid;
+	memcpy(msg->comm, comm, TASK_COMM_LEN);
 #endif
 	if (ts_nsec > 0)
 		msg->ts_nsec = ts_nsec;
@@ -1577,6 +1577,8 @@ static struct cont {
 	u8 level;			/* log level of first message */
 	u8 facility;			/* log level of first message */
 	u8 cpu_id;			/* Which cpu is printing */
+	char comm[TASK_COMM_LEN];       /* owner of the print */
+	pid_t pid;                      /* pid of the owner */
 	enum log_flags flags;		/* prefix, newline flags */
 	bool flushed:1;			/* buffer sealed and committed */
 } cont;
@@ -1596,7 +1598,7 @@ static void cont_flush(enum log_flags flags)
 		 */
 		log_store(cont.facility, cont.level, flags | LOG_NOCONS,
 			  cont.ts_nsec, NULL, 0, cont.buf, cont.len,
-			  cont.cpu_id, cont.owner);
+			  cont.cpu_id, cont.pid, cont.comm);
 		cont.flags = flags;
 		cont.flushed = true;
 	} else {
@@ -1606,7 +1608,7 @@ static void cont_flush(enum log_flags flags)
 		 */
 		log_store(cont.facility, cont.level, flags, 0,
 			  NULL, 0, cont.buf, cont.len,
-			  cont.cpu_id, cont.owner);
+			  cont.cpu_id, cont.pid, cont.comm);
 		cont.len = 0;
 	}
 }
@@ -1632,6 +1634,8 @@ static bool cont_add(int facility, int level, const char *text, size_t len,
 		cont.cons = 0;
 		cont.flushed = false;
 		cont.cpu_id = cpu_id;
+		cont.pid = current->pid;
+		memcpy(cont.comm, current->comm, TASK_COMM_LEN);
 	}
 
 	memcpy(cont.buf + cont.len, text, len);
@@ -1727,7 +1731,7 @@ asmlinkage int vprintk_emit(int facility, int level,
 		/* emit KERN_CRIT message */
 		log_store(0, 2, LOG_PREFIX|LOG_NEWLINE, 0,
 			  NULL, 0, recursion_msg, printed_len,
-			  logbuf_cpu, current);
+			  logbuf_cpu, current->pid, current->comm);
 	}
 
 	/*
@@ -1787,7 +1791,7 @@ if (bcmlog_mtt_on == 1 && bcmlog_log_ulogging_id > 0 && BrcmLogString)
 		if (!cont_add(facility, level, text, text_len, logbuf_cpu))
 			log_store(facility, level, lflags | LOG_CONT, 0,
 				  dict, dictlen, text, text_len,
-				  logbuf_cpu, current);
+				  logbuf_cpu, current->pid, current->comm);
 	} else {
 		bool stored = false;
 
@@ -1807,7 +1811,7 @@ if (bcmlog_mtt_on == 1 && bcmlog_log_ulogging_id > 0 && BrcmLogString)
 		if (!stored)
 			log_store(facility, level, lflags, 0,
 				  dict, dictlen, text, text_len,
-				  logbuf_cpu, current);
+				  logbuf_cpu, current->pid, current->comm);
 	}
 	printed_len += text_len;
 
