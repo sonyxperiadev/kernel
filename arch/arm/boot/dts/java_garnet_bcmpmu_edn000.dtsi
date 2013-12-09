@@ -189,4 +189,54 @@
 		channel14 = "dietemp", "0", "1200", "0", "0x18";
 		channel15 = "0";
 	};
+
+	pmu-dietemp-thermal {
+		compatible = "Broadcom,dietemp-thermal";
+		poll_rate_ms = <5000>;
+		hysteresis = <30>;
+		temp_adc_channel = "PMU_ADC_CHANN_DIE_TEMP";
+		temp_adc_req_mode = "PMU_ADC_REQ_RTM_MODE";
+
+			trip0 {
+				type = "active";
+				temp = <0>;
+				max_curr = <1755>;
+			};
+			trip1 {
+				type = "active";
+				temp = <540>;
+				max_curr = <510>;
+			};
+			trip2 {
+				type = "active";
+				temp = <580>;
+				max_curr = <270>;
+			};
+			trip3 {
+				type = "active";
+				temp = <630>;
+				max_curr = <0>;
+			};
+	};
+
+	dietemp-charger-coolant {
+		compatible = "Broadcom,charger-coolant";
+		coolant_poll_time = <10000>;
+		charger_coolant_state = <1755 1378 1185 935 765 695 650 550 510
+		400 270 84 0>;
+			trim_reg0 {
+				addr = <0x51>;/*0x51 : PMU_REG_MBCCTRL18*/
+				def_val = <0x00>;
+			};
+			trim_reg1 {
+				addr = <0x52>;/*0x52 : PMU_REG_MBCCTRL19*/
+				def_val = <0x03>;
+			};
+			trim_reg2 {
+				addr = <0x53>;/*0x53 : PMU_REG_MBCCTRL20*/
+				def_val = <0x02>;
+			};
+	};
+
 };
+

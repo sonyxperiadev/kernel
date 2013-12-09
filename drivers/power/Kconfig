@@ -432,6 +432,12 @@ config BCMPMU_THERMAL_THROTTLE
 	help
 	  Say Y to support Thermal Throttling.
 
+config BCMPMU_CHARGER_COOLANT
+        tristate "BCMPMU Charger Coolant driver"
+        depends on MFD_BCM_PMU59xxx && THERMAL
+        default n
+        help
+          Say Y to support Charger Cooling.
 endif # POWER_SUPPLY
 
 source "drivers/power/avs/Kconfig"

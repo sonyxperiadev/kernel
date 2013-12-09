@@ -38,6 +38,14 @@
 #if defined(CONFIG_BCMPMU_THERMAL_THROTTLE)
 #include <linux/power/bcmpmu59xxx-thermal-throttle.h>
 #endif
+#if defined(CONFIG_BCMPMU_DIETEMP_THERMAL)
+#include <linux/broadcom/bcmpmu59xxx-dietemp-thermal.h>
+#endif
+
+#if defined(CONFIG_BCMPMU_CHARGER_COOLANT)
+#include <linux/bcmpmu-charger-coolant.h>
+#endif
+
 #include <linux/of_platform.h>
 #include <linux/of.h>
 #include <linux/of_fdt.h>
@@ -1297,6 +1305,47 @@ static struct bcmpmu_throttle_pdata throttle_pdata = {
 };
 #endif
 
+#ifdef CONFIG_BCMPMU_DIETEMP_THERMAL
+struct bcmpmu_dietemp_trip dietemp_trip_points[] = {
+	{.temp = 0, .type = THERMAL_TRIP_ACTIVE,
+					.max_curr = MAX_CHARGE_CURRENT,},
+	{.temp = 540, .type = THERMAL_TRIP_ACTIVE, .max_curr = 510,},
+	{.temp = 580, .type = THERMAL_TRIP_ACTIVE, .max_curr = 270,},
+	{.temp = 630, .type = THERMAL_TRIP_ACTIVE,
+					.max_curr = MIN_CHARGE_CURRENT,},
+};
+
+struct bcmpmu_dietemp_pdata dtemp_zone_pdata = {
+	.poll_rate_ms = 5000,
+	.hysteresis = 30,
+	/* ADC channel and mode selection */
+	.temp_adc_channel = PMU_ADC_CHANN_DIE_TEMP,
+	.temp_adc_req_mode = PMU_ADC_REQ_RTM_MODE,
+	.trip_cnt = ARRAY_SIZE(dietemp_trip_points),
+	.trips = dietemp_trip_points,
+};
+#endif
+
+#ifdef CONFIG_BCMPMU_CHARGER_COOLANT
+static struct chrgr_trim_reg_data chrgr_trim_reg_lut[] = {
+	{.addr = PMU_REG_MBCCTRL18, .def_val = 0x00},
+	{.addr = PMU_REG_MBCCTRL19, .def_val = 0x03},
+	{.addr = PMU_REG_MBCCTRL20, .def_val = 0x02},
+};
+
+static unsigned int charger_coolant_state[] = {
+	1755, 1378, 1185, 935, 765, 695, 650, 550, 510, 400, 270, 84, 0,
+};
+struct bcmpmu_cc_pdata ccool_pdata = {
+	.state_no = ARRAY_SIZE(charger_coolant_state),
+	.states = charger_coolant_state,
+	/* Registers to store/restore while throttling*/
+	.chrgr_trim_reg_lut = chrgr_trim_reg_lut,
+	.chrgr_trim_reg_lut_sz = ARRAY_SIZE(chrgr_trim_reg_lut),
+	.coolant_poll_time = 10000,/* 10 seconds*/
+};
+
+#endif
 
 #ifdef CONFIG_CHARGER_BCMPMU_SPA
 struct bcmpmu59xxx_spa_pb_pdata spa_pb_pdata = {
@@ -1423,6 +1472,23 @@ static struct mfd_cell pmu59xxx_devs[] = {
 		.pdata_size = sizeof(throttle_pdata),
 	},
 #endif
+#if defined(CONFIG_BCMPMU_DIETEMP_THERMAL)
+	{
+		.name = "bcmpmu_dietemp_thermal",
+		.id = -1,
+		.platform_data = &dtemp_zone_pdata,
+		.pdata_size = sizeof(dtemp_zone_pdata),
+	},
+#endif
+#if defined(CONFIG_BCMPMU_CHARGER_COOLANT)
+	{
+		.name = "bcmpmu_charger_coolant",
+		.id = -1,
+		.platform_data = &ccool_pdata,
+		.pdata_size = sizeof(ccool_pdata),
+	},
+#endif
+
 };
 
 static struct i2c_board_info pmu_i2c_companion_info[] = {
@@ -1507,6 +1573,20 @@ static const struct of_device_id bcmpmu_adc_dt_ids[] __initconst = {
 	{ .compatible = "Broadcom,adc" },
 	{ },
 };
+
+#ifdef CONFIG_BCMPMU_DIETEMP_THERMAL
+static const struct of_device_id bcmpmu_dietemp_dt[] __initconst = {
+	{ .compatible = "Broadcom,dietemp-thermal" },
+	{ },
+};
+#endif
+
+#ifdef CONFIG_BCMPMU_CHARGER_COOLANT
+static const struct of_device_id bcmpmu_chrgr_coolant_dt[] __initconst = {
+	{ .compatible = "Broadcom,charger-coolant" },
+	{ },
+};
+#endif
 
 #ifdef CONFIG_OF
 static int __init bcmpmu_update_pdata(char *name,
@@ -1710,6 +1790,115 @@ int __init adc_init(void)
 }
 #endif
 
+#ifdef CONFIG_OF
+#ifdef CONFIG_BCMPMU_DIETEMP_THERMAL
+int __init dietemp_zone_init(void)
+{
+	struct device_node *of_node, *child;
+	int idx = 0;
+	const char *str_val;
+
+	of_node = of_find_matching_node(NULL, bcmpmu_dietemp_dt);
+	if (!of_node) {
+		pr_err("device tree support for dietemp_thermal not found\n");
+		return 0;
+	}
+
+	if (of_property_read_u32(of_node, "hysteresis",
+				&dtemp_zone_pdata.hysteresis))
+		goto out;
+
+	if (of_property_read_u32(of_node, "poll_rate_ms",
+				&dtemp_zone_pdata.poll_rate_ms))
+		goto out;
+
+	dtemp_zone_pdata.trip_cnt = of_get_child_count(of_node);
+
+	if (!dtemp_zone_pdata.trip_cnt)
+		goto out;
+
+	if (of_property_read_string(of_node, "temp_adc_channel", &str_val))
+		goto out;
+	if (!strcmp(str_val, "PMU_ADC_CHANN_DIE_TEMP"))
+		dtemp_zone_pdata.temp_adc_channel = PMU_ADC_CHANN_DIE_TEMP;
+
+	if (of_property_read_string(of_node, "temp_adc_req_mode", &str_val))
+		goto out;
+	if (!strcmp(str_val, "PMU_ADC_REQ_RTM_MODE"))
+		dtemp_zone_pdata.temp_adc_req_mode = PMU_ADC_REQ_RTM_MODE;
+
+	for_each_child_of_node(of_node, child) {
+		if (of_property_read_string(child, "type", &str_val))
+			goto out;
+		if (!strcmp(str_val, "active"))
+			dietemp_trip_points[idx].type = THERMAL_TRIP_ACTIVE;
+		else if (!strcmp(str_val, "passive"))
+			dietemp_trip_points[idx].type = THERMAL_TRIP_PASSIVE;
+		else if (!strcmp(str_val, "hot"))
+			dietemp_trip_points[idx].type = THERMAL_TRIP_HOT;
+		else if (!strcmp(str_val, "critical"))
+			dietemp_trip_points[idx].type = THERMAL_TRIP_CRITICAL;
+
+		if (of_property_read_u32(child, "temp",
+					&dietemp_trip_points[idx].temp))
+			goto out;
+
+		of_property_read_u32(child, "max_curr",
+					&dietemp_trip_points[idx].max_curr);
+
+		idx++;
+	}
+	return 0;
+out:
+	return -ENODEV;
+}
+#endif
+
+#ifdef CONFIG_BCMPMU_CHARGER_COOLANT
+int __init charger_coolant_init(void)
+{
+	struct device_node *of_node, *child;
+	struct property *prop;
+	int length, idx = 0;
+	u32 addr, value;
+
+	of_node = of_find_matching_node(NULL, bcmpmu_chrgr_coolant_dt);
+	if (!of_node) {
+		pr_err("device tree support for dietemp_thermal not found\n");
+		return 0;
+	}
+	if (of_property_read_u32(of_node, "coolant_poll_time",
+					&ccool_pdata.coolant_poll_time))
+		goto out;
+
+	prop = of_find_property(of_node, "charger_coolant_state", &length);
+	if (!prop)
+		return -EINVAL;
+
+	ccool_pdata.state_no = length / sizeof(u32);
+
+	/* read current levels from DT property */
+	if (ccool_pdata.state_no > 0)
+		if (of_property_read_u32_array(of_node, "charger_coolant_state",
+				ccool_pdata.states, ccool_pdata.state_no))
+			goto out;
+
+	for_each_child_of_node(of_node, child) {
+		if (of_property_read_u32(child, "def_val", &value))
+			goto out;
+		ccool_pdata.chrgr_trim_reg_lut[idx].def_val = (u8)value;
+		of_property_read_u32(child, "addr", &addr);
+		ccool_pdata.chrgr_trim_reg_lut[idx].addr =
+			ENC_PMU_REG(FIFO_MODE, 0, (unsigned long)addr);
+		idx++;
+	}
+	return 0;
+out:
+	return -ENODEV;
+}
+#endif
+#endif
+
 int __init board_bcm59xx_init(void)
 {
 	int             ret = 0;
@@ -1718,6 +1907,12 @@ int __init board_bcm59xx_init(void)
 #ifdef CONFIG_OF
 	rgltr_init();
 	adc_init();
+#ifdef CONFIG_BCMPMU_DIETEMP_THERMAL
+	dietemp_zone_init();
+#endif
+#ifdef CONFIG_BCMPMU_CHARGER_COOLANT
+	charger_coolant_init();
+#endif
 #endif
 	bcmpmu_set_pullup_reg();
 	ret = gpio_request(PMU_DEVICE_INT_GPIO, "bcmpmu59xxx-irq");
