@@ -932,29 +932,29 @@ static size_t print_time(u64 ts, char *buf)
 }
 
 #ifdef CONFIG_PRINTK_PID
-static size_t print_pid(const struct log *msg, char *buf)
+static size_t print_pid(const char *comm, pid_t pid, char *buf)
 {
 	if (!printk_pid || !buf)
 		return 0;
-	return sprintf(buf, "%15s, %d ", msg->comm, msg->pid);
+	return sprintf(buf, "%15s, %d ", comm, pid);
 }
 #else
-static size_t print_pid(const struct log *msg, char *buf)
+static size_t print_pid(const char *comm, pid_t pid, char *buf)
 {
 	return 0;
 }
 #endif
 
 #ifdef CONFIG_PRINTK_CPU_ID
-static size_t print_cpuid(const struct log *msg, char *buf)
+static size_t print_cpuid(u8 cpu_id, char *buf)
 {
 
 	if (!printk_cpu_id || !buf)
 		return 0;
-	return sprintf(buf, "C%d ", msg->cpu_id);
+	return sprintf(buf, "C%d ", cpu_id);
 }
 #else
-static size_t print_cpuid(const struct log *msg, char *buf)
+static size_t print_cpuid(u8 cpu_id, char *buf)
 {
 	return 0;
 }
@@ -995,8 +995,8 @@ static size_t print_prefix(const struct log *msg, bool syslog, char *buf)
 
 	len += prefix_bracket(buf ? buf + len : NULL);
 	len += print_time(msg->ts_nsec, buf ? buf + len : NULL);
-	len += print_cpuid(msg, buf ? buf + len : NULL);
-	len += print_pid(msg, buf ? buf + len : NULL);
+	len += print_cpuid(msg->cpu_id, buf ? buf + len : NULL);
+	len += print_pid(msg->comm, msg->pid, buf ? buf + len : NULL);
 	len += sufix_bracket(buf ? buf + len : NULL);
 	return len;
 }
@@ -1649,7 +1649,12 @@ static size_t cont_print_text(char *text, size_t size)
 	size_t len;
 
 	if (cont.cons == 0 && (console_prev & LOG_NEWLINE)) {
-		textlen += print_time(cont.ts_nsec, text);
+		textlen += prefix_bracket(text);
+		textlen += print_time(cont.ts_nsec, text + textlen);
+		textlen += print_cpuid(cont.cpu_id, text + textlen);
+		textlen += print_pid(cont.owner->comm, cont.owner->pid,
+				text + textlen);
+		textlen += sufix_bracket(text + textlen);
 		size -= textlen;
 	}
 
