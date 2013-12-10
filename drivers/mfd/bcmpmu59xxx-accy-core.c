@@ -1604,7 +1604,6 @@ static void bcmpmu_accy_isr(enum bcmpmu59xxx_irq irq, void *data)
 	struct bcmpmu_accy_data *di = data;
 	int board_id = di->bcmpmu->pdata->board_id;
 	int idx;
-	bool chrgr_is_usb;
 	unsigned long flags;
 	int event = PMU_EVENT_MAX;
 
@@ -1654,7 +1653,7 @@ static void bcmpmu_accy_isr(enum bcmpmu59xxx_irq irq, void *data)
 		}
 		break;
 	case PMU_IRQ_VBUS_VALID_F:
-		if (chrgr_is_usb) {
+		if (di->otg_session) {
 			pr_accy(VERBOSE,
 				"posting event PMU_IRQ_VBUS_VALID_F\n");
 			event = accy_irq_evt_map[idx].event;
