@@ -1472,6 +1472,8 @@ static int console_trylock_for_printk(unsigned int cpu)
 	return retval;
 }
 
+static int recursion_bug;
+
 int printk_delay_msec __read_mostly;
 
 static inline void printk_delay(void)
@@ -1486,7 +1488,6 @@ static inline void printk_delay(void)
 	}
 }
 
-#ifdef CONFIG_BRCM_UNIFIED_LOGGING
 /* Unified logging */
 
 int bcmlog_mtt_on;
@@ -1550,17 +1551,6 @@ end_restore_irqs:
 	preempt_enable();
 	return 0;
 }
-#else
-/* Unified logging */
-int bcmlog_mtt_on;
-unsigned short bcmlog_log_ulogging_id;
-/* ------------------------------------------------------------ */
-int brcm_retrive_early_printk(void)
-{
-	return 0;
-}
-
-#endif
 
 /*
  * Continuation lines are buffered, and not committed to the record buffer
@@ -1684,7 +1674,6 @@ asmlinkage int vprintk_emit(int facility, int level,
 			    const char *dict, size_t dictlen,
 			    const char *fmt, va_list args)
 {
-	static int recursion_bug;
 	static char textbuf[LOG_LINE_MAX];
 	char *text = textbuf;
 	size_t text_len;
@@ -1772,10 +1761,10 @@ asmlinkage int vprintk_emit(int facility, int level,
 
 	if (level == -1)
 		level = default_message_loglevel;
-#ifdef CONFIG_BRCM_UNIFIED_LOGGING
-if (bcmlog_mtt_on == 1 && bcmlog_log_ulogging_id > 0 && BrcmLogString)
-	BrcmLogString(textbuf, bcmlog_log_ulogging_id);
-#endif
+
+	if (bcmlog_mtt_on == 1 && bcmlog_log_ulogging_id > 0 && BrcmLogString)
+		BrcmLogString(textbuf, bcmlog_log_ulogging_id);
+
 	if (dict)
 		lflags |= LOG_PREFIX|LOG_NEWLINE;
 
