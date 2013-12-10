@@ -53,7 +53,7 @@ Copyright 2009 - 2011  Broadcom Corporation
 #include "ipcinterface.h"
 
 /*when system is busy, 50ms is not enough*/
-#define AUDIO_ENABLE_RESP_TIMEOUT 1000
+#define AUDIO_ENABLE_RESP_TIMEOUT 2000
 #define	timeout_jiff msecs_to_jiffies(AUDIO_ENABLE_RESP_TIMEOUT)
 
 /* If this struct is changed then please change xdr_Audio_Params_t() also. */
