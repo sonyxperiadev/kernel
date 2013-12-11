@@ -407,6 +407,11 @@ config BCM_MMS_BLOCK
     ---help---
     Say Y to enable MMS block function support
 
+config BCM_EMAIL_BLOCK
+    boolean "Broadcom email block driver for CTA security requirement"
+    default n
+    ---help---
+    Say Y to enable email block function support
 
 config BCM_TRACE_LOG
 	bool "Trace log driver"

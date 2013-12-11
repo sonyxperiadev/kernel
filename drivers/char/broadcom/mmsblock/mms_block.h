@@ -21,15 +21,12 @@ struct white_list_node {
 	struct white_list_node *next;
 };
 
-struct mms_event {
+struct netlink_event {
+	int type;
 	int uid;
 	char dest[24];
 };
 
-struct white_list_node *g_whitelistnode;
-int g_pid;
-int g_block_enabled;
-
-extern void send_event_to_security_center(struct mms_event *pevent);
+extern void send_event_to_security_center(struct netlink_event *pevent);
 
 #endif /* _MMS_BLOCK_H */

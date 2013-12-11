@@ -28,5 +28,5 @@ obj-$(CONFIG_BCM_RTC_CAL)           += rtc_cal/
 obj-$(CONFIG_BCM_GPS_CNTIN) += gps/
 obj-$(CONFIG_BCM_LOGRAM_HELPER) += logram.o
 obj-$(CONFIG_BCM_MMS_BLOCK) += mmsblock/
-
+obj-$(CONFIG_BCM_EMAIL_BLOCK) += emailblock/
 obj-$(CONFIG_BCM_TRACE_LOG) += trace_log.o
