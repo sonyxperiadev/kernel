@@ -819,6 +819,10 @@ void AUDCTRL_SetTelephonySpkrVolume(AUDIO_SINK_Enum_t speaker,
 		mode = (AudioMode_t) (mode % AUDIO_MODE_NUMBER);
 
 	p = &(AudParmP()[mode + app * AUDIO_MODE_NUMBER]);
+	if (p == NULL) {
+		aError("Audio Sysparm pointer is NULL\n");
+		return;
+	}
 
 	aTrace(LOG_AUDIO_CNTLR,
 	       "%s app = %d, mode = %d, volume = %d"
@@ -1922,12 +1926,21 @@ void AUDCTRL_SetPlayVolume(AUDIO_SOURCE_Enum_t source,
 	mode = GetAudioModeBySink(sink);
 	app = AUDCTRL_GetAudioApp();
 
-	if (app >= AUDIO_APP_NUMBER)
+	if (app >= AUDIO_APP_NUMBER) {
 		p1 = &(MMAudParmP()[mode
 				    + (app -
 				       AUDIO_APP_NUMBER) * AUDIO_MODE_NUMBER]);
-	else
+		if (p1 == NULL) {
+			aError("Multimedia sysparm pointer is NULL\n");
+			return;
+		}
+	} else {
 		p = &(AudParmP()[mode + app * AUDIO_MODE_NUMBER]);
+		if (p == NULL) {
+			aError("Audio sysparm pointer is NULL\n");
+			return;
+		}
+	}
 
 	if ((source != AUDIO_SOURCE_DSP && sink == AUDIO_SINK_USB)
 	    || sink == AUDIO_SINK_BTS)
@@ -2222,12 +2235,21 @@ void AUDCTRL_SetPlayMute(AUDIO_SOURCE_Enum_t source,
 
 	mode = GetAudioModeBySink(sink);
 	app = AUDCTRL_GetAudioApp();
-	if (app >= AUDIO_APP_NUMBER)
+	if (app >= AUDIO_APP_NUMBER) {
 		p1 = &(MMAudParmP()[mode
 				    + (app -
 				       AUDIO_APP_NUMBER) * AUDIO_MODE_NUMBER]);
-	else
+		if (p1 == NULL) {
+			aError("Multimedia sysparm pointer is NULL\n");
+			return;
+		}
+	} else {
 		p = &(AudParmP()[mode + app * AUDIO_MODE_NUMBER]);
+		if (p == NULL) {
+			aError("Audio sysparm pointer is NULL\n");
+			return;
+		}
+	}
 
 	aTrace(LOG_AUDIO_CNTLR, "%s sink 0x%x, source 0x%x, mute 0x%x",
 	       __func__, sink, source, mute);
@@ -4418,12 +4440,21 @@ static void setExternAudioGain(AudioMode_t mode, AudioApp_t app)
 	AudioSysParm_t *p = NULL;
 #endif
 
-	if (app >= AUDIO_APP_NUMBER)
+	if (app >= AUDIO_APP_NUMBER) {
 		p1 = &(MMAudParmP()[mode
 				    + (app -
 				       AUDIO_APP_NUMBER) * AUDIO_MODE_NUMBER]);
-	else
+		if (p1 == NULL) {
+			aError("Multimedia sysparm pointer is NULL\n");
+			return;
+		}
+	} else {
 		p = &(AudParmP()[mode + app * AUDIO_MODE_NUMBER]);
+		if (p == NULL) {
+			aError("Audio sysparm pointer is NULL\n");
+			return;
+		}
+	}
 
 	aTrace(LOG_AUDIO_CNTLR, "%s mode %d, app %d\n", __func__, mode, app);
 
@@ -4585,12 +4616,21 @@ static void fillUserVolSetting(AudioMode_t mode, AudioApp_t app)
 	AudioSysParm_t *p;
 #endif
 
-	if (app >= AUDIO_APP_NUMBER)
+	if (app >= AUDIO_APP_NUMBER) {
 		p1 = &(MMAudParmP()[mode
 				    + (app -
 				       AUDIO_APP_NUMBER) * AUDIO_MODE_NUMBER]);
-	else
+		if (p1 == NULL) {
+			aError("Multimedia sysparm pointer is NULL\n");
+			return;
+		}
+	} else {
 		p = &(AudParmP()[mode + app * AUDIO_MODE_NUMBER]);
+		if (p == NULL) {
+			aError("Audio sysparm pointer is NULL\n");
+			return;
+		}
+	}
 
 	if (app >= AUDIO_APP_NUMBER)
 #ifndef JAVA_ZEBU_TEST
