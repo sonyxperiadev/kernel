@@ -63,3 +63,12 @@ config LDI_MDNIE_SUPPORT
 	help
 		LDI mDNIe Driver
 
+config DSI_PKT_VID_SIMULTANEOUS
+	tristate "Broadcom DSI simulataneous packet, video mode"
+	depends on FB_BRCM_KONA
+	default N
+	help
+	  the way DSI sending packet while video stream is active.
+	  Y, the packets are sending simultaneously.
+	  N, suspend video stram firstly, then sending packets.
+

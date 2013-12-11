@@ -1194,7 +1194,7 @@ CSL_LCD_RES_T CSL_DSI_SendPacket(CSL_LCD_HANDLE client,
 	txPkt.isTe = isTE;
 	txPkt.vmWhen = CHAL_DSI_CMND_WHEN_BEST_EFFORT;
 	txPkt.repeat = 1;
-#ifdef CONFIG_ARCH_JAVA
+#ifdef CONFIG_DSI_PKT_VID_SIMULTANEOUS
 	txPkt.start = 1;
 #else
 	/* Don't start here if PV is enabled,
