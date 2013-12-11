@@ -601,6 +601,11 @@ Int32 DSI_Open(DISPDRV_HANDLE_T drvH)
 		goto err_dsi_open_cl;
 	}
 
+	if (CSL_DSI_Ulps(pPanel->clientH, FALSE) != CSL_LCD_OK) {
+		DSI_ERR("Exit DSI Ulps Failed\n");
+		goto err_dsi_ulps;
+	}
+
 	if (CSL_DSI_OpenCmVc(pPanel->clientH,
 		pPanel->cmnd_mode, &pPanel->dsiCmVcHandle) != CSL_LCD_OK) {
 
@@ -667,6 +672,7 @@ err_reg_init:
 err_dma_init:
 	CSL_DSI_CloseCmVc(pPanel->dsiCmVcHandle);
 err_dsi_open_cm:
+err_dsi_ulps:
 	CSL_DSI_CloseClient(pPanel->clientH);
 err_dsi_open_cl:
 	CSL_DSI_Close(pPanel->busNo);
@@ -694,6 +700,11 @@ Int32 DSI_Close(DISPDRV_HANDLE_T drvH)
 
 	if (CSL_DSI_CloseCmVc(pPanel->dsiCmVcHandle)) {
 		DSI_ERR("Closing Command Mode Handle\n");
+		return -1;
+	}
+
+	if (CSL_DSI_Ulps(pPanel->clientH, TRUE) != CSL_LCD_OK)	{
+		DSI_ERR("ERR enter DSI Ulps\n");
 		return -1;
 	}
 

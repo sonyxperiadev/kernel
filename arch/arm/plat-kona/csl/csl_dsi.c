@@ -2375,9 +2375,16 @@ CSL_LCD_RES_T CSL_DSI_Ulps(CSL_LCD_HANDLE client, Boolean on)
 	if (!clientH->hasLock)
 		OSSEMAPHORE_Obtain(dsiH->semaDsi, TICKS_FOREVER);
 
-	if (on && !dsiH->ulps) {
-		chal_dsi_phy_state(dsiH->chalH, PHY_ULPS);
-		dsiH->ulps = TRUE;
+	if (on) {
+		if (!dsiH->ulps) {
+			chal_dsi_phy_state(dsiH->chalH, PHY_ULPS);
+			cslDsiWaitForStatAny_Poll(dsiH,
+					CHAL_DSI_STAT_PHY_CLK_ULPS |
+					CHAL_DSI_STAT_PHY_D0_ULPS,
+					NULL, 10);
+			dsiH->ulps = TRUE;
+			printk(KERN_DEBUG"DSI: enter ulps\n");
+		}
 	} else {
 		if (dsiH->ulps) {
 			chal_dsi_phy_state(dsiH->chalH, PHY_CORE);
@@ -2385,6 +2392,7 @@ CSL_LCD_RES_T CSL_DSI_Ulps(CSL_LCD_HANDLE client, Boolean on)
 						  CHAL_DSI_STAT_PHY_D0_STOP,
 						  NULL, 10);
 			dsiH->ulps = FALSE;
+			printk(KERN_DEBUG"DSI: exit ulps\n");
 		}
 	}
 
