@@ -66,31 +66,55 @@ static void dvfs_start_timer(struct _mm_dvfs *mm_dvfs)
 	setup_timer(&(mm_dvfs->dvfs_timeout),  \
 			dvfs_timeout_callback, \
 			(unsigned long)mm_dvfs);
-
-	switch (mm_dvfs->requested_mode) {
-#if defined(CONFIG_PI_MGR_MM_STURBO_ENABLE)
-	case SUPER_TURBO:
-		mod_timer(&mm_dvfs->dvfs_timeout, \
-			jiffies+msecs_to_jiffies(mm_dvfs->dvfs.T3));
-		break;
-#endif
-	case TURBO:
-		mod_timer(&mm_dvfs->dvfs_timeout, \
-			jiffies+msecs_to_jiffies(mm_dvfs->dvfs.T2));
-		break;
-	case NORMAL:
-		mod_timer(&mm_dvfs->dvfs_timeout, \
-			jiffies+msecs_to_jiffies(mm_dvfs->dvfs.T1));
-		break;
-	case ECONOMY:
-	default:
-		mod_timer(&mm_dvfs->dvfs_timeout, \
-			jiffies+msecs_to_jiffies(mm_dvfs->dvfs.T0));
-		break;
-	}
+	mod_timer(&mm_dvfs->dvfs_timeout,
+		jiffies+msecs_to_jiffies(mm_dvfs->dvfs.__ts));
 	mm_dvfs->timer_state = true;
-
 }
+
+static inline void add_to_history_buffer(struct _mm_dvfs *dvfs_struct, int val)
+{
+	int i;
+	for (i = 0; i < NUM_DVFS_PROF_SAMPLES - 1; i++)
+		dvfs_struct->prof_history[i + 1] = dvfs_struct->prof_history[i];
+	dvfs_struct->prof_history[0] = val;
+}
+
+
+static inline void clear_history_buffer(struct _mm_dvfs *dvfs_struct,
+						unsigned int val)
+{
+	int i;
+	for (i = 0; i < NUM_DVFS_PROF_SAMPLES; i++)
+		dvfs_struct->prof_history[i] = val;
+}
+
+static inline bool dvfs_switch_to_lower_mode(struct _mm_dvfs *dvfs_struct,
+		unsigned int val, int count)
+{
+	int i;
+	int ret = 1;
+	count = count > NUM_DVFS_PROF_SAMPLES ? NUM_DVFS_PROF_SAMPLES : count;
+	if (count < 1)
+		count = 1;
+	for (i = 0; i < count; i++)
+		ret = ret && (dvfs_struct->prof_history[i] < val);
+	return ret;
+}
+
+static inline bool dvfs_switch_to_upper_mode(struct _mm_dvfs *dvfs_struct,
+		unsigned int val, int count)
+{
+	int i;
+	int ret = 1;
+	count = count > NUM_DVFS_PROF_SAMPLES ? NUM_DVFS_PROF_SAMPLES : count;
+	if (count < 1)
+		count = 1;
+	for (i = 0; i < count; i++)
+		ret = ret && (dvfs_struct->prof_history[i] > val);
+
+	return ret;
+}
+
 
 static void dvfs_work(struct work_struct *work)
 {
@@ -101,9 +125,9 @@ static void dvfs_work(struct work_struct *work)
 					struct _mm_dvfs, \
 					dvfs_work);
 	int current_mode = pi_get_active_opp(PI_MGR_PI_ID_MM);
-	if (mm_dvfs->dvfs.ON == false) {
+	if (mm_dvfs->dvfs.__on == false) {
 		mm_dvfs->requested_mode = \
-			mm_dvfs->dvfs.MODE;
+			mm_dvfs->dvfs.__mode;
 		goto dvfs_work_end;
 		}
 
@@ -111,7 +135,7 @@ static void dvfs_work(struct work_struct *work)
 		mm_dvfs->jobs_done = 0;
 		mm_dvfs->hw_on_dur = 0;
 		getnstimeofday(&(mm_dvfs->dvfst1));
-		mm_dvfs->requested_mode = TURBO;
+		mm_dvfs->requested_mode = NORMAL;
 		dvfs_start_timer(mm_dvfs);
 		pr_debug("wake dvfs mode to normal..");
 		goto dvfs_work_end;
@@ -130,6 +154,7 @@ static void dvfs_work(struct work_struct *work)
 	percnt = (mm_dvfs->hw_on_dur>>12);
 	percnt = percnt*100;
 	temp = (timespec_to_ns(&diff)>>12);
+	add_to_history_buffer(mm_dvfs, percnt);
 
 	/* In addition to Hardware ON time,
 	  * the Framework also uses the average Job time (in previous slot)
@@ -141,13 +166,16 @@ static void dvfs_work(struct work_struct *work)
 	pr_debug("dvfs_hw_on_dur %lld dvfs timeslot %d percnt %d", \
 				mm_dvfs->hw_on_dur, temp, percnt);
 
-	switch (mm_dvfs->requested_mode) {
+	switch (current_mode) {
 #if defined(CONFIG_PI_MGR_MM_STURBO_ENABLE)
 	case SUPER_TURBO:
-		if ((percnt < mm_dvfs->dvfs.P3L*temp) &&
-			(current_mode == mm_dvfs->requested_mode)) {
+		if (dvfs_switch_to_lower_mode(mm_dvfs,
+			mm_dvfs->dvfs.st_low*temp,
+				mm_dvfs->dvfs.st_ns_low) &&
+				(current_mode == mm_dvfs->requested_mode)) {
 			pr_debug("change dvfs mode to turbo..");
 			mm_dvfs->requested_mode = TURBO;
+			clear_history_buffer(mm_dvfs, mm_dvfs->dvfs.tur_low);
 #ifdef CONFIG_MEMC_DFS
 			memc_update_dfs_req(mm_dvfs->memc_node, MEMC_OPP_ECO);
 #endif
@@ -156,36 +184,51 @@ static void dvfs_work(struct work_struct *work)
 #endif
 	case TURBO:
 #if defined(CONFIG_PI_MGR_MM_STURBO_ENABLE)
-		if (percnt > (mm_dvfs->dvfs.P2*temp)) {
+		if (dvfs_switch_to_upper_mode(mm_dvfs,
+				mm_dvfs->dvfs.tur_high*temp,
+					mm_dvfs->dvfs.tur_ns_high)) {
 			pr_debug("change dvfs mode to super turbo..");
 			mm_dvfs->requested_mode = SUPER_TURBO;
+			clear_history_buffer(mm_dvfs, 0xFFFFFFFF);
 #ifdef CONFIG_MEMC_DFS
 			memc_update_dfs_req(mm_dvfs->memc_node, MEMC_OPP_TURBO);
 #endif
 			}
 #endif
-		if ((percnt < mm_dvfs->dvfs.P2L*temp) &&
-			(current_mode == mm_dvfs->requested_mode)) {
+		if ((dvfs_switch_to_lower_mode(mm_dvfs,
+			mm_dvfs->dvfs.tur_low*temp,
+				mm_dvfs->dvfs.tur_ns_low)) &&
+				(current_mode == mm_dvfs->requested_mode)) {
 			pr_debug("change dvfs mode to normal..");
 			mm_dvfs->requested_mode = NORMAL;
+			clear_history_buffer(mm_dvfs, mm_dvfs->dvfs.nor_low);
 			}
 		break;
 	case NORMAL:
-		if (percnt > (mm_dvfs->dvfs.P1*temp)) {
+		if (dvfs_switch_to_upper_mode(mm_dvfs,
+				mm_dvfs->dvfs.nor_high*temp,
+					mm_dvfs->dvfs.nor_ns_high)) {
 			pr_debug("change dvfs mode to turbo..");
 			mm_dvfs->requested_mode = TURBO;
+			clear_history_buffer(mm_dvfs, mm_dvfs->dvfs.tur_high);
 			}
-		if ((percnt < mm_dvfs->dvfs.P1L*temp) &&
-			(current_mode == mm_dvfs->requested_mode)) {
+		if (dvfs_switch_to_lower_mode(mm_dvfs,
+			mm_dvfs->dvfs.nor_low*temp,
+				mm_dvfs->dvfs.nor_ns_low) &&
+				(current_mode == mm_dvfs->requested_mode)) {
 			pr_debug("change dvfs mode to economy..");
 			mm_dvfs->requested_mode = ECONOMY;
+			clear_history_buffer(mm_dvfs, 0x00000000);
 			}
 		break;
 	case ECONOMY:
 	default:
-		if (percnt > (mm_dvfs->dvfs.P0*temp)) {
+		if (dvfs_switch_to_upper_mode(mm_dvfs,
+				mm_dvfs->dvfs.eco_high*temp,
+					mm_dvfs->dvfs.eco_ns_high)) {
 			pr_debug("change dvfs mode to normal..");
 			mm_dvfs->requested_mode = NORMAL;
+			clear_history_buffer(mm_dvfs, mm_dvfs->dvfs.nor_high);
 			}
 		break;
 		}
@@ -211,18 +254,26 @@ dvfs_work_end:
 
 }
 
-DEFINE_DEBUGFS_HANDLER(ON);
-DEFINE_DEBUGFS_HANDLER(MODE);
-DEFINE_DEBUGFS_HANDLER(T0);
-DEFINE_DEBUGFS_HANDLER(P0);
-DEFINE_DEBUGFS_HANDLER(T1);
-DEFINE_DEBUGFS_HANDLER(P1);
-DEFINE_DEBUGFS_HANDLER(P1L);
-DEFINE_DEBUGFS_HANDLER(T2);
-DEFINE_DEBUGFS_HANDLER(P2);
-DEFINE_DEBUGFS_HANDLER(P2L);
-DEFINE_DEBUGFS_HANDLER(T3);
-DEFINE_DEBUGFS_HANDLER(P3L);
+
+DEFINE_DEBUGFS_HANDLER(__on);
+DEFINE_DEBUGFS_HANDLER(__mode);
+DEFINE_DEBUGFS_HANDLER(__ts);
+
+DEFINE_DEBUGFS_HANDLER(eco_high);
+DEFINE_DEBUGFS_HANDLER(eco_ns_high);
+
+DEFINE_DEBUGFS_HANDLER(nor_high);
+DEFINE_DEBUGFS_HANDLER(nor_low);
+DEFINE_DEBUGFS_HANDLER(nor_ns_low);
+DEFINE_DEBUGFS_HANDLER(nor_ns_high);
+
+DEFINE_DEBUGFS_HANDLER(tur_high);
+DEFINE_DEBUGFS_HANDLER(tur_low);
+DEFINE_DEBUGFS_HANDLER(tur_ns_high);
+DEFINE_DEBUGFS_HANDLER(tur_ns_low);
+
+DEFINE_DEBUGFS_HANDLER(st_low);
+DEFINE_DEBUGFS_HANDLER(st_ns_low);
 
 void *mm_dvfs_init(struct _mm_common_ifc *mm_common_ifc, \
 		const char *dev_name, MM_DVFS_HW_IFC *dvfs_params)
@@ -236,10 +287,10 @@ void *mm_dvfs_init(struct _mm_common_ifc *mm_common_ifc, \
 
 	/* Init prof counters */
 	mm_dvfs->dvfs = *dvfs_params;
-	if (mm_dvfs->dvfs.ON)
+	if (mm_dvfs->dvfs.__on)
 		mm_dvfs->requested_mode = ECONOMY;
 	else
-		mm_dvfs->requested_mode = mm_dvfs->dvfs.MODE;
+		mm_dvfs->requested_mode = mm_dvfs->dvfs.__mode;
 
 	mm_dvfs->mm_fmwk_notifier_blk.notifier_call \
 			= mm_dvfs_notification_handler;
@@ -255,19 +306,31 @@ void *mm_dvfs_init(struct _mm_common_ifc *mm_common_ifc, \
 		ret = -ENOENT;
 		}
 
-	CREATE_DEBUGFS_FILE(mm_dvfs, ON);
-	CREATE_DEBUGFS_FILE(mm_dvfs, MODE);
-	CREATE_DEBUGFS_FILE(mm_dvfs, T0);
-	CREATE_DEBUGFS_FILE(mm_dvfs, P0);
-	CREATE_DEBUGFS_FILE(mm_dvfs, T1);
-	CREATE_DEBUGFS_FILE(mm_dvfs, P1);
-	CREATE_DEBUGFS_FILE(mm_dvfs, P1L);
-	CREATE_DEBUGFS_FILE(mm_dvfs, T2);
-	CREATE_DEBUGFS_FILE(mm_dvfs, P2);
-	CREATE_DEBUGFS_FILE(mm_dvfs, P2L);
-	CREATE_DEBUGFS_FILE(mm_dvfs, T3);
-	CREATE_DEBUGFS_FILE(mm_dvfs, P3L);
+	clear_history_buffer(mm_dvfs, 0x0);
+	mm_dvfs->economy_dir = debugfs_create_dir("ECO", mm_dvfs->dvfs_dir);
+	mm_dvfs->normal_dir = debugfs_create_dir("NOR", mm_dvfs->dvfs_dir);
+	mm_dvfs->turbo_dir = debugfs_create_dir("TUR", mm_dvfs->dvfs_dir);
+	mm_dvfs->super_t_dir = debugfs_create_dir("S_TUR", mm_dvfs->dvfs_dir);
 
+	CREATE_DEBUGFS_FILE(mm_dvfs, eco, high, economy_dir);
+	CREATE_DEBUGFS_FILE(mm_dvfs, eco, ns_high, economy_dir);
+
+	CREATE_DEBUGFS_FILE(mm_dvfs, nor, low, normal_dir);
+	CREATE_DEBUGFS_FILE(mm_dvfs, nor, high, normal_dir);
+	CREATE_DEBUGFS_FILE(mm_dvfs, nor, ns_high, normal_dir);
+	CREATE_DEBUGFS_FILE(mm_dvfs, nor, ns_low, normal_dir);
+
+	CREATE_DEBUGFS_FILE(mm_dvfs, tur, high, turbo_dir);
+	CREATE_DEBUGFS_FILE(mm_dvfs, tur, low, turbo_dir);
+	CREATE_DEBUGFS_FILE(mm_dvfs, tur, ns_high, turbo_dir);
+	CREATE_DEBUGFS_FILE(mm_dvfs, tur, ns_low, turbo_dir);
+
+	CREATE_DEBUGFS_FILE(mm_dvfs, st, low, super_t_dir);
+	CREATE_DEBUGFS_FILE(mm_dvfs, st, ns_low, super_t_dir);
+
+	CREATE_DEBUGFS_FILE(mm_dvfs, _, on, dvfs_dir);
+	CREATE_DEBUGFS_FILE(mm_dvfs, _, mode, dvfs_dir);
+	CREATE_DEBUGFS_FILE(mm_dvfs, _, ts, dvfs_dir);
 	ret = pi_mgr_dfs_add_request(&(mm_dvfs->dev_dfs_node), (char *)dev_name,
 					PI_MGR_PI_ID_MM, PI_MGR_DFS_MIN_VALUE);
 	if (ret) {
@@ -295,6 +358,10 @@ void mm_dvfs_exit(void *dev_p)
 	raw_notifier_chain_unregister(\
 		&mm_dvfs->mm_common_ifc->notifier_head, \
 		&mm_dvfs->mm_fmwk_notifier_blk);
+	debugfs_remove_recursive(mm_dvfs->economy_dir);
+	debugfs_remove_recursive(mm_dvfs->normal_dir);
+	debugfs_remove_recursive(mm_dvfs->turbo_dir);
+	debugfs_remove_recursive(mm_dvfs->super_t_dir);
 	debugfs_remove_recursive(mm_dvfs->dvfs_dir);
 	pi_mgr_dfs_request_remove(&(mm_dvfs->dev_dfs_node));
 

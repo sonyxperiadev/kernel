@@ -54,6 +54,11 @@ the GPL, without Broadcom's express prior written consent.
 #define DEFAULT_MM_DEV_TIMEOUT_MS (1000)
 #endif
 
+#define DEFAULT_MM_DEV_DVFS_SAMPLING_MS 200
+#define DEFAULT_MM_DEV_DVFS_UP_SAMPLES 1
+#define DEFAULT_MM_DEV_DVFS_DOWN_SAMPLES 3
+
+
 enum {
 	MM_ISR_UNKNOWN = 0,
 	MM_ISR_SUCCESS,
@@ -79,32 +84,34 @@ struct mm_reg_value {
 #define MM_REG_VALUE struct mm_reg_value
 
 struct mm_dvfs_hw_ifc {
-	bool ON;
-	dvfs_mode_e MODE; /* When DVFS is off,
+	bool __on;
+	dvfs_mode_e __mode; /* When DVFS is off,
 					this mode will be chosen */
 	unsigned int dvfs_bulk_job_cnt;
 
-	unsigned int T0; /* time in ms for DVFS profiling
-					when in Economy mode */
-	unsigned int P0; /* percentage (1~99) threshold at which framework
-			should request Normal mode for this device */
+	unsigned int __ts; /* time in ms for DVFS profiling */
 
-	unsigned int T1; /* time in ms for DVFS profiling when in Normal mode */
-	unsigned int P1; /* percentage (1~99) threshold at which framework
+	unsigned int eco_high;/* percentage (1~99) threshold at which framework
+			should request Normal mode for this device */
+	unsigned int eco_ns_high;
+
+	unsigned int nor_high;/* percentage (1~99) threshold at which framework
 			should request Turbo mode for this device */
-	unsigned int P1L; /* percentage (1~99) threshold at which framework
+	unsigned int nor_low;/* percentage (1~99) threshold at which framework
 			should request Normal mode for this device */
+	unsigned int nor_ns_high;
+	unsigned int nor_ns_low;
 
-	unsigned int T2; /* time in ms for DVFS profiling when in Turbo mode */
-	unsigned int P2; /* percentage (1~99) threshold at which framework
+	unsigned int tur_high;/* percentage (1~99) threshold at which framework
 			should request to Super Turbo mode for this device */
-	unsigned int P2L; /* percentage (1~99) threshold at which framework
+	unsigned int tur_low;/* percentage (1~99) threshold at which frame
 			should fall back to Normal mode for this device */
+	unsigned int tur_ns_high;
+	unsigned int tur_ns_low;
 
-	unsigned int T3; /* time in ms for DVFS profiling
-					when in Super Turbo mode */
-	unsigned int P3L; /* percentage (1~99) threshold at which framework
+	unsigned int st_low;/* percentage (1~99) threshold at which framework
 			should fall back to Turbo mode for this device */
+	unsigned int st_ns_low;
 };
 #define MM_DVFS_HW_IFC struct mm_dvfs_hw_ifc
 

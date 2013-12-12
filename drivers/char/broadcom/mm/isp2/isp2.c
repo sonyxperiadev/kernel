@@ -291,18 +291,23 @@ int __init mm_isp2_init(void)
 	core_param.mm_device_id = (void *)isp_device;
 	core_param.mm_virt_addr = NULL;
 	core_param.core_name = "ISP2";
-	dvfs_param.ON = 1;
-	dvfs_param.MODE = PI_OPP_TURBO;
-	dvfs_param.T0 = 200;
-	dvfs_param.P0 = 0;
-	dvfs_param.T1 = 300;
-	dvfs_param.P1 = 0;
-	dvfs_param.P1L = 0;
-	dvfs_param.T2 = 300;
-	dvfs_param.P2 = 120;
-	dvfs_param.P2L = 0;
-	dvfs_param.T3 = 1000;
-	dvfs_param.P3L = 120;
+
+	dvfs_param.__on = 1;
+	dvfs_param.__mode = PI_OPP_TURBO;
+	dvfs_param.__ts = DEFAULT_MM_DEV_DVFS_SAMPLING_MS;
+	dvfs_param.eco_ns_high = DEFAULT_MM_DEV_DVFS_UP_SAMPLES;
+	dvfs_param.nor_ns_high = DEFAULT_MM_DEV_DVFS_UP_SAMPLES;
+	dvfs_param.nor_ns_low = DEFAULT_MM_DEV_DVFS_DOWN_SAMPLES;
+	dvfs_param.tur_ns_high = DEFAULT_MM_DEV_DVFS_UP_SAMPLES;
+	dvfs_param.tur_ns_low = DEFAULT_MM_DEV_DVFS_DOWN_SAMPLES;
+	dvfs_param.st_ns_low = DEFAULT_MM_DEV_DVFS_DOWN_SAMPLES;
+
+	dvfs_param.eco_high = 0;
+	dvfs_param.nor_high = 0;
+	dvfs_param.nor_low = 0;
+	dvfs_param.tur_high = 120;
+	dvfs_param.tur_low = 0;
+	dvfs_param.st_low = 120;
 	dvfs_param.dvfs_bulk_job_cnt = 0;
 
 	isp_device->fmwk_handle = mm_fmwk_register(ISP2_DEV_NAME,

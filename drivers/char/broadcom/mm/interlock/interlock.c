@@ -102,18 +102,22 @@ int __init interlock_init(void)
 	core_param.mm_device_id = (void *)interlock_device;
 	core_param.mm_virt_addr = NULL;
 	core_param.core_name = "INTERLOCK";
-	dvfs_param.ON = 0;
-	dvfs_param.MODE = ECONOMY;
-	dvfs_param.T0 = 0;
-	dvfs_param.P0 = 0;
-	dvfs_param.T1 = 300;
-	dvfs_param.P1 = 80;
-	dvfs_param.P1L = 0;
-	dvfs_param.T2 = 500;
-	dvfs_param.P2 = 80;
-	dvfs_param.P2L = 45;
-	dvfs_param.T3 = 1000;
-	dvfs_param.P3L = 45;
+
+	dvfs_param.__on = 0;
+	dvfs_param.__mode = ECONOMY;
+	dvfs_param.__ts = DEFAULT_MM_DEV_DVFS_SAMPLING_MS;
+	dvfs_param.eco_ns_high = DEFAULT_MM_DEV_DVFS_UP_SAMPLES;
+	dvfs_param.nor_ns_high = DEFAULT_MM_DEV_DVFS_UP_SAMPLES;
+	dvfs_param.nor_ns_low = DEFAULT_MM_DEV_DVFS_DOWN_SAMPLES;
+	dvfs_param.tur_ns_high = DEFAULT_MM_DEV_DVFS_UP_SAMPLES;
+	dvfs_param.tur_ns_low = DEFAULT_MM_DEV_DVFS_DOWN_SAMPLES;
+	dvfs_param.st_ns_low = DEFAULT_MM_DEV_DVFS_DOWN_SAMPLES;
+	dvfs_param.eco_high = 0;
+	dvfs_param.nor_high = 80;
+	dvfs_param.nor_low = 0;
+	dvfs_param.tur_high = 80;
+	dvfs_param.tur_low = 45;
+	dvfs_param.st_low = 45;
 	dvfs_param.dvfs_bulk_job_cnt = 0;
 
 	interlock_device->fmwk_handle = mm_fmwk_register(INTERLOCK_DEV_NAME,

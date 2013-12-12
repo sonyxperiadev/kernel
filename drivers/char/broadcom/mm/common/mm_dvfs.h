@@ -22,6 +22,8 @@ express prior written consent.
 #include <plat/kona_memc.h>
 #endif
 
+#define NUM_DVFS_PROF_SAMPLES 8
+
 struct dvfs_update {
 	struct work_struct work;
 	u64 param;
@@ -62,30 +64,42 @@ DEFINE_SIMPLE_ATTRIBUTE(mm_dvfs_debugfs_##name, \
 		mm_dvfs_debugfs_##name##_set, #name" : %llu\n");
 
 
-#define CREATE_DEBUGFS_FILE(root, name) \
-{	root->name = debugfs_create_file(#name, \
+#define CREATE_DEBUGFS_FILE(root, var, name, dir) \
+{	root->var##_##name = debugfs_create_file(#name, \
 		(S_IWUSR | S_IWGRP | S_IRUSR | S_IRGRP), \
-		root->dvfs_dir, root, &mm_dvfs_debugfs_##name); } \
+		root->dir, root, &mm_dvfs_debugfs_##var##_##name); } \
 
 struct _mm_dvfs {
 	struct _mm_common_ifc *mm_common_ifc;
 	struct notifier_block mm_fmwk_notifier_blk;
 
+	unsigned int prof_history[NUM_DVFS_PROF_SAMPLES];
+
 	/* for job based profiling, 'n' jobs take how many microsecs */
 	struct dentry *dvfs_dir;
-	struct dentry *ON;
-	struct dentry *T0;
-	struct dentry *P0;
-	struct dentry *T1;
-	struct dentry *P1;
-	struct dentry *P1L;
-	struct dentry *T2;
-	struct dentry *P2;
-	struct dentry *P2L;
-	struct dentry *T3;
-	struct dentry *P3L;
-	struct dentry *MODE;
+	struct dentry *__on;
+	struct dentry *__ts;
 
+	struct dentry *eco_ns_high;
+	struct dentry *nor_ns_high;
+	struct dentry *tur_ns_high;
+	struct dentry *nor_ns_low;
+	struct dentry *tur_ns_low;
+	struct dentry *st_ns_low;
+
+	struct dentry *__mode;
+
+	struct dentry *economy_dir;
+	struct dentry *normal_dir;
+	struct dentry *turbo_dir;
+	struct dentry *super_t_dir;
+
+	struct dentry *eco_high;
+	struct dentry *nor_high;
+	struct dentry *tur_high;
+	struct dentry *st_low;
+	struct dentry *tur_low;
+	struct dentry *nor_low;
 	struct pi_mgr_dfs_node dev_dfs_node;
 	/* for dvfs */
 	dvfs_mode_e requested_mode;
