@@ -107,20 +107,20 @@ int __init mm_h264_init(void)
 	dvfs_param.__on = 1;
 	dvfs_param.__mode = TURBO;
 	dvfs_param.__ts = DEFAULT_MM_DEV_DVFS_SAMPLING_MS;
-	dvfs_param.eco_ns_high = DEFAULT_MM_DEV_DVFS_UP_SAMPLES;
-	dvfs_param.nor_ns_high = DEFAULT_MM_DEV_DVFS_UP_SAMPLES;
-	dvfs_param.nor_ns_low = DEFAULT_MM_DEV_DVFS_DOWN_SAMPLES;
-	dvfs_param.tur_ns_high = DEFAULT_MM_DEV_DVFS_UP_SAMPLES;
-	dvfs_param.tur_ns_low = DEFAULT_MM_DEV_DVFS_DOWN_SAMPLES;
-	dvfs_param.st_ns_low = DEFAULT_MM_DEV_DVFS_DOWN_SAMPLES;
+	dvfs_param.eco_ns_high = 2;
+	dvfs_param.nor_ns_high = 2;
+	dvfs_param.nor_ns_low = 4;
+	dvfs_param.tur_ns_high = 2;
+	dvfs_param.tur_ns_low = 4;
+	dvfs_param.st_ns_low = 3;
 
 #ifdef CONFIG_MM_312M_SOURCE_CLK
 	dvfs_param.eco_high = 90;
-	dvfs_param.nor_high = 90;
-	dvfs_param.nor_low = 60;
-	dvfs_param.tur_high = 97;
-	dvfs_param.tur_low = 60;
-	dvfs_param.st_low = 63;
+	dvfs_param.nor_high = 80;
+	dvfs_param.nor_low = 52;
+	dvfs_param.tur_high = 80;
+	dvfs_param.tur_low = 50;
+	dvfs_param.st_low = 50;
 #else
 	dvfs_param.eco_high = 0;
 	dvfs_param.nor_high = 80;
