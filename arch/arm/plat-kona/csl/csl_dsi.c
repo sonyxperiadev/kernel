@@ -1176,6 +1176,12 @@ CSL_LCD_RES_T CSL_DSI_SendPacket(CSL_LCD_HANDLE client,
 		}
 	}
 
+	if (dsiH->init != DSI_INITIALIZED) {
+		pr_err("%s:%d\n");
+		__WARN();
+		return CSL_LCD_ERR;
+	}
+
 	if (dsiH->ulps) {
 		LCD_DBG(LCD_DBG_ERR_ID,
 			"[CSL DSI][%d] %s: ERR, VC[%d] Link Is In ULPS\n",
@@ -1423,7 +1429,7 @@ start_tx:
 			 * state! */
 			/* cslDsiBtaRecover(dsiH); */
 			while ((res == CSL_LCD_OS_TOUT) && --tries) {
-				pr_err("Trying once more\n");
+				pr_err("Trying once more with bta\n");
 				if (!clientH->hasLock)
 					cslDsiEnaIntEvent(dsiH, event);
 				chal_dsi_tx_start(dsiH->chalH, TX_PKT_ENG_1,
@@ -1469,7 +1475,8 @@ read_reply:
 				"Timed Out Waiting For TX end\n",
 				dsiH->bus, __func__, txPkt.vc);
 			while ((res == CSL_LCD_OS_TOUT) && --tries) {
-				LCD_DBG(LCD_DBG_ERR_ID, "Trying once more\n");
+				LCD_DBG(LCD_DBG_ERR_ID,
+					"Trying once more w/o BTA\n");
 				if (!clientH->hasLock)
 					cslDsiEnaIntEvent(dsiH, event);
 				chal_dsi_tx_start(dsiH->chalH, TX_PKT_ENG_1,

@@ -696,7 +696,9 @@ Int32 DSI_Close(DISPDRV_HANDLE_T drvH)
 {
 	Int32 res = 0;
 	DispDrv_PANEL_t	*pPanel	= (DispDrv_PANEL_t *)drvH;
+	DSI_ExecCmndList(pPanel, pPanel->disp_info->slp_in_seq);
 
+	pPanel->drvState = DRV_STATE_INIT;
 	if (pPanel->disp_info->vmode)
 		CSL_DSI_Suspend(pPanel->dsiCmVcHandle);
 
@@ -760,6 +762,7 @@ void panel_read(UInt8 reg, UInt8 *rxBuff, UInt8 buffLen)
 	DSI_DCS_Read(panel, reg, rxBuff, buffLen);
 }
 
+DEFINE_MUTEX(cmnd_mutex);
 /*
  *
  *   Function Name:   DSI_ExecCmndList
@@ -772,7 +775,9 @@ static void DSI_ExecCmndList(DispDrv_PANEL_t *pPanel, char *buff)
 	CSL_DSI_CMND_t msg;
 	int res = 0;
 	Boolean generic;
-
+	/* To avoid race condition, when multiple
+	   threads try to execute send commands concurrently*/
+	mutex_lock(&cmnd_mutex);
 	msg.vc = pPanel->cmnd_mode->vc;
 	msg.isLP = pPanel->disp_info->cmnd_LP;
 	msg.endWithBta = FALSE;
@@ -819,13 +824,22 @@ static void DSI_ExecCmndList(DispDrv_PANEL_t *pPanel, char *buff)
 			msg.isLong = len > 2;
 			msg.msg = buff;
 			msg.msgLen = len;
+
+			if (panel[0].drvState != DRV_STATE_OPEN) {
+				pr_err("driver not in OPEN state\n");
+				__WARN();
+				goto err_state;
+			}
+
 			res = CSL_DSI_SendPacket(pPanel->clientH, &msg, FALSE);
 			buff += len;
 		}
 		if (res)
 			DSI_ERR("Error while sending packet %d\n", res);
 	}
+err_state:
 err_size:
+	mutex_unlock(&cmnd_mutex);
 	return;
 }
 
