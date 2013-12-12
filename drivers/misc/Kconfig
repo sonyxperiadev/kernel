@@ -628,6 +628,16 @@ config SENSORS_AK8975
 	  If you say yes here you get support for Asahi Kasei's
 	  orientation sensor AK8975.
 
+config SENSORS_ST480
+	tristate "Senodia magnetic&compass support"
+	default n
+	depends on I2C
+	help
+		If you say yes here you get support senodia
+		magnetic/orientation sensor ST480MQ, ST480MB,
+		ST480MF, ST480M*.
+		if unsure, say N.
+
 config SENSORS_AK8975_BRCM
 	tristate "AK8975 compass support"
 	default n

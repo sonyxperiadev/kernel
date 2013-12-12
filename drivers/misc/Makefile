@@ -81,6 +81,7 @@ obj-$(CONFIG_APANIC_ON_MMC)	+= apanic_mmc.o
 obj-$(CONFIG_SENSORS_AK8963)	+= akm8963.o
 obj-$(CONFIG_BCM_MODEM)		+= cp_crash.o
 obj-$(CONFIG_SENSORS_AK8975)	+= akm8975.o
+obj-$(CONFIG_SENSORS_ST480)	+= st480.o
 obj-$(CONFIG_SENSORS_AK8975_BRCM)	+= akm8975_brcm.o
 obj-$(CONFIG_SENSORS_GP2AP002)	+= gp2ap002.o 
 obj-$(CONFIG_SENSORS_BMC150)    += bmc150/
