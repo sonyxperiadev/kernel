@@ -199,6 +199,44 @@ static int DSI_panel_turn_on(DispDrv_PANEL_t *pPanel)
 	return res;
 }
 
+/*
+ * Read panel ID from register 0xDA, 0xDB and 0xDC
+ *
+ * ID list must end with DISPCTRL_LIST_END
+ */
+static int DSI_ReadPanelIDs(DispDrv_PANEL_t *pPanel)
+{
+	int rc = 0;
+	char *p;
+	int buff_len = 1;
+	UInt8 rd_buff;
+	uint8_t cmd;
+	uint8_t reg;
+	uint8_t data;
+
+	p = pPanel->disp_info->id_seq;
+	if (!p)
+		goto exit;
+	cmd = *p++;
+
+	while (cmd != DISPCTRL_LIST_END) {
+		reg = *p++;
+		data = *p++;
+		rc = DSI_DCS_Read(pPanel, reg, &rd_buff, buff_len);
+		pr_debug("%s(%d): cmd:0x%x, reg:0x%x, data=0x%x rd_buff=0x%x\n",
+				__func__, __LINE__, cmd, reg, data, rd_buff);
+		if (data != rd_buff) {
+			DSI_ERR("cmd:0x%x, reg:0x%x, data=0x%x rd_buff=0x%x\n",
+						cmd, reg, data, rd_buff);
+			rc = -1;
+			break;
+		}
+		cmd = *p++;
+	}
+exit:
+	return rc;
+}
+
 static int DSI_ReadPanelID(DispDrv_PANEL_t *pPanel)
 {
 	int ret = 0;
@@ -638,7 +676,7 @@ Int32 DSI_Open(DISPDRV_HANDLE_T drvH)
 	if (!g_display_enabled)
 		hw_reset(drvH, FALSE);
 
-	if (DSI_ReadPanelID(pPanel) < 0) {
+	if (DSI_ReadPanelIDs(pPanel) < 0) {
 		DSI_ERR("ID read failed\n");
 		goto err_id_read;
 	}
