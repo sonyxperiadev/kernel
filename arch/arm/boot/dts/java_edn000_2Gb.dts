@@ -1,4 +1,4 @@
-/* Java_garnet_edn000_2Gb Dts file */
+/* Java_garnet_edn000_4Gb Dts file */
 
 /dts-v1/;
 
@@ -6,7 +6,7 @@
 /include/ "java_garnet_bcmpmu_edn000.dtsi"
 
 / {
-	model = "Javagarnet EDN000 2Gb";
+	model = "Javagarnet EDN000 4Gb";
 	compatible = "bcm,java";
 
 	chosen {
@@ -560,4 +560,7 @@
 		sec-mem-size = <0x100000>;
 	};
 
+	secure_watchdog {
+		compatible = "bcm,secure_watchdog";
+	};
 };
