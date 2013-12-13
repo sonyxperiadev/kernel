@@ -1501,7 +1501,7 @@ static int proc_tx_fifo_read(struct file *file, char __user *buffer,
 		return 0;
 
 	len += scnprintf(buffer + len, PAGE_SIZE, "TX FIFO is %s\n",
-		       atomic_read(&dev->rx_fifo_support) ? "enabled" :
+		       atomic_read(&dev->tx_fifo_support) ? "enabled" :
 		       "disabled");
 	*off += len;
 	return len;
