@@ -1746,6 +1746,8 @@ static int __ref kona_fb_probe(struct platform_device *pdev)
 	fb->die_nb.notifier_call = kona_fb_die_cb;
 	register_die_notifier(&fb->die_nb);
 #endif
+	pr_info("%s(%d): Probe success. Panel: %s\n",
+					__func__, __LINE__, fb->fb_data->name);
 	return 0;
 
 err_fb_register_failed:

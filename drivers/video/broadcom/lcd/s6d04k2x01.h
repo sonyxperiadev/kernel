@@ -116,12 +116,12 @@ __initdata DISPCTRL_REC_T s6d04k2x01_scrn_off[] = {
 
 __initdata DISPCTRL_REC_T s6d04k2x01_id[] = {
 	{DISPCTRL_WR_CMND, S6D04K2X01_CMD_RDID1},
-	{DISPCTRL_WR_DATA, 0x54},
-	{DISPCTRL_WR_CMND, S6D04K2X01_CMD_RDID2},
-	{DISPCTRL_WR_DATA, 0x54},
+	{DISPCTRL_WR_DATA, 0x26},
+/*	{DISPCTRL_WR_CMND, S6D04K2X01_CMD_RDID2},
+	{DISPCTRL_WR_DATA, 0x04},
 	{DISPCTRL_WR_CMND, S6D04K2X01_CMD_RDID3},
-	{DISPCTRL_WR_DATA, 0x54},
-	{DISPCTRL_LIST_END, 0}
+	{DISPCTRL_WR_DATA, 0x04},
+*/	{DISPCTRL_LIST_END, 0}
 };
 
 __initdata DISPCTRL_REC_T s6d04k2x01_slp_in[] = {
@@ -296,7 +296,7 @@ __initdata struct lcd_config s6d04k2x01_cfg = {
 	.scrn_on_seq = &s6d04k2x01_scrn_on[0],
 	.scrn_off_seq = &s6d04k2x01_scrn_off[0],
 	.id_seq = &s6d04k2x01_id[0],
-	.verify_id = false,
+	.verify_id = true,
 	.updt_win_fn = s6d04k2x01_winset,
 	.updt_win_seq_len = S6D04K2X01_UPDT_WIN_SEQ_LEN,
 	.vid_cmnds = false,
