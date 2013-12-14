@@ -441,7 +441,7 @@ static loff_t mm_file_lseek(struct file *filp, loff_t offset, int ignore)
 	return 0;
 }
 
-static int mm_file_write(struct file *filp, const char __user *buf,
+static ssize_t mm_file_write(struct file *filp, const char __user *buf,
 			size_t size, loff_t *offset)
 {
 	struct file_private_data *private = filp->private_data;
@@ -449,26 +449,31 @@ static int mm_file_write(struct file *filp, const char __user *buf,
 	struct dev_job_list *mm_job_node = mm_common_alloc_job(private,\
 						mm_common_add_job);
 	int    core_id;
+	ssize_t ret;
+	void *job_post;
 
 	if (!mm_job_node)
 		return -ENOMEM;
 
 	mm_job_node->job.size = size - 8;
-	if (size < 8)
+	if (size < 8) {
+		ret = -EINVAL;
 		goto out;
+	}
 
 	if (copy_from_user(&(mm_job_node->job.type), buf, \
 				sizeof(mm_job_node->job.type))) {
 		pr_err("copy_from_user failed for type");
+		ret = -EFAULT;
 		goto out;
-		}
+	}
 	size -= sizeof(mm_job_node->job.type);
 	buf += sizeof(mm_job_node->job.type);
 #ifdef CONFIG_ARCH_JAVA
 	if (mm_job_node->job.type & MM_DIRTY_JOB) {
 		mm_job_node->job.type &= ~MM_DIRTY_JOB;
 		mm_job_node->job.status = MM_JOB_STATUS_DIRTY;
-		}
+	}
 	else
 		mm_job_node->job.status = MM_JOB_STATUS_READY;
 #else
@@ -479,41 +484,52 @@ static int mm_file_write(struct file *filp, const char __user *buf,
 	core_id = (mm_job_node->job.type & 0xFF0000) >> 16;
 	if (copy_from_user(&(mm_job_node->job.id), buf , \
 				sizeof(mm_job_node->job.id))) {
-		pr_err("copy_from_user failed for type");
+		pr_err("copy_from_user failed for id");
+		ret = -EFAULT;
 		goto out;
-		}
+	}
 	size -= sizeof(mm_job_node->job.id);
 	buf += sizeof(mm_job_node->job.id);
 	if (size > 0) {
-		void *job_post = NULL;
-		uint32_t *ptr ;
+		uint8_t *ptr;
+		int i;
 		job_post = kmalloc(size, GFP_KERNEL);
-		mm_job_node->job.data = job_post;
-		ptr = (uint32_t *)job_post;
-		if (copy_from_user(job_post, buf, size)) {
-			pr_err("mm_file_write: data copy_from_user failed");
-			kfree(job_post);
+		if (!job_post) {
+			ret = -ENOMEM;
 			goto out;
-			}
+		}
+		mm_job_node->job.data = job_post;
+		ptr = job_post;
+		if (copy_from_user(job_post, buf, size)) {
+			pr_err("data copy_from_user failed");
+			ret = -EFAULT;
+			goto err_data;
+		}
 
-		pr_debug("mm_file_write %x %x %x %x %x %x %x", \
-					mm_job_node->job.size,
-					mm_job_node->job.type,
-					mm_job_node->job.id,
-					ptr[0], ptr[1], ptr[2], ptr[3]);
+		pr_debug("%x %x %x",
+			mm_job_node->job.size,
+			mm_job_node->job.type,
+			mm_job_node->job.id);
+		for (i = 0; i < min(size, 16); i++) {
+			pr_debug("%02x", *ptr);
+			ptr++;
+		}
 		BUG_ON(core_id >= MAX_ASYMMETRIC_PROC);
 		BUG_ON(common->mm_core[core_id] == NULL);
 		SCHEDULER_COMMON_WORK(common, &mm_job_node->work);
-		}
-	else {
+	} else {
 		pr_err("zero size write");
+		ret = -EINVAL;
 		goto out;
-		}
+	}
 
 	return 0;
+
+err_data:
+	kfree(job_post);
 out:
 	kfree(mm_job_node);
-	return 0;
+	return ret;
 }
 
 static int mm_file_read(struct file *filp, \
