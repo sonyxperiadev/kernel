@@ -9233,6 +9233,11 @@ static s32 wl_event_handler(void *data)
 	tsk_ctl_t *tsk = (tsk_ctl_t *)data;
 	bcm_struct_cfgdev *cfgdev = NULL;
 
+	if (tsk == NULL) {
+		WL_ERR(("wl->event_tsk destroyed"));
+		return 0;
+	}
+
 	wl = (struct wl_priv *)tsk->parent;
 
 #ifndef USE_KTHREAD_API
