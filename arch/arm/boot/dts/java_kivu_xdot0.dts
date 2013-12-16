@@ -231,7 +231,7 @@
 	kona-fb {
 		module-name = "S6D04K2X01";
 		reg-name = "cam2";
-		detect-gpio = <&gpio 10 0>;
+		detect-gpio = <10>;
 		detect-gpio-val = <0>;
 		rst-gpio = <8>;
 		rst-setup = <1000>;
@@ -333,7 +333,7 @@
 		interrupts = <0 77 0x04>;
 		id = <0>;
 		data-pullup = <0>;
-		cd-gpio = <&gpio 91 0>;		/*SD_CARDDET_GPIO_PIN*/
+		cd-gpio = <91>;		/*SD_CARDDET_GPIO_PIN*/
 		devtype = <0>;		/*SDIO_DEV_TYPE_SDMMC*/
 		flags = <0>;		/*KONA_SDIO_FLAGS_DEVICE_REMOVABLE*/
 		peri-clk-name = "sdio1_clk";

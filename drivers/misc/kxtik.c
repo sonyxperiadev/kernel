@@ -30,7 +30,6 @@
 #include <linux/of.h>
 #include <linux/of_fdt.h>
 #include <linux/of_platform.h>
-#include <linux/of_gpio.h>
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
 #include <linux/earlysuspend.h>
@@ -725,14 +724,9 @@ static int kxtik_probe(struct i2c_client *client,
 		memset(&tik->pdata, '\0', sizeof(tik->pdata));
 	if (tik->client->dev.of_node) {
 		np = tik->client->dev.of_node;
-
-		client->irq = of_get_named_gpio(np, "gpio-irq-pin", 0);
-		if (!gpio_is_valid(client->irq)) {
-			dev_err(&client->dev,
-			"%s: ERROR setting gpio-irq-pin to 0\n",
-			__func__);
-			client->irq = 0;
-		}
+		if (of_property_read_u32(np, "gpio-irq-pin", &val))
+			goto err_read;
+		client->irq = val;
 		if (of_property_read_u32(np, "min_interval", &val))
 			goto err_read;
 		tik->pdata.min_interval = val;

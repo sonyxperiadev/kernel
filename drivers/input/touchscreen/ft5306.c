@@ -34,7 +34,6 @@
 #include <linux/wakelock.h>
 #include <linux/vmalloc.h>
 #include <linux/leds.h>
-#include <linux/of_gpio.h>
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
 #include <linux/earlysuspend.h>
@@ -1783,30 +1782,15 @@ static int focaltech_ft5306_probe(
 		ts_y_max_value = pdata->y_max_value;
 
 	} else if (client->dev.of_node) {
-		ts_gpio_irq_pin = of_get_named_gpio(np,
-			"gpio-irq-pin", 0);
-		if (!gpio_is_valid(ts_gpio_irq_pin)) {
-			pr_err(
-			"%s: ERROR Invalid gpio-irq-pin\n",
-			__func__);
-		}
+		if (!of_property_read_u32(np, "gpio-irq-pin", &val))
+			ts_gpio_irq_pin = val;
 
 #if (TP_CNTRL_PIN_TYPE == TP_CNTRL_PIN_RESET)
-		ts_gpio_reset_pin = of_get_named_gpio(np,
-			"gpio-reset-pin", 0);
-		if (!gpio_is_valid(ts_gpio_reset_pin)) {
-			pr_err(
-			"%s: ERROR Invalid gpio-reset-pin\n",
-			__func__);
-		}
+		if (!of_property_read_u32(np, "gpio-reset-pin", &val))
+			ts_gpio_reset_pin = val;
 #else
-		ts_gpio_wakeup_pin = of_get_named_gpio(np,
-			"gpio-wakeup-pin", 0);
-		if (!gpio_is_valid(ts_gpio_wakeup_pin)) {
-			pr_err(
-			"%s: ERROR Invalid gpio-wakeup-pin\n",
-			__func__);
-		}
+		if (!of_property_read_u32(np, "gpio-wakeup-pin", &val))
+			ts_gpio_wakeup_pin = val;
 #endif
 		if (!of_property_read_u32(np, "x-max-value", &val))
 			ts_x_max_value = val;
