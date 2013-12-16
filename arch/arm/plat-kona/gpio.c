@@ -442,6 +442,8 @@ static struct irq_chip kona_gpio_irq_chip = {
 	.irq_unmask = kona_gpio_irq_unmask,
 	.irq_set_type = kona_gpio_irq_set_type,
 	.irq_set_wake = kona_gpio_irq_set_wake,
+	.irq_disable = kona_gpio_irq_mask,
+	.irq_enable = kona_gpio_irq_unmask,
 };
 
 /* This lock class tells lockdep that GPIO irqs are in a different
