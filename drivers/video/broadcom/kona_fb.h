@@ -69,6 +69,7 @@ extern unsigned ramdump_enable;
 #include "lcd/s6e63m0x3.h"
 #include "lcd/s6d04k2x01.h"
 #include "lcd/nt35310_mesona.h"
+#include "lcd/nt35310_brooks.h"
 
 static struct lcd_config *cfgs[] __initdata = {
 #ifdef CONFIG_LCD_HX8369_SUPPORT
@@ -105,6 +106,7 @@ static struct lcd_config *cfgs[] __initdata = {
 	&simulator_cfg,
 	&s6d04k2x01_cfg,
 	&nt35310_mesona_cfg,
+	&nt35310_brooks_cfg,
 };
 
 static struct lcd_config * __init get_dispdrv_cfg(const char *name)
