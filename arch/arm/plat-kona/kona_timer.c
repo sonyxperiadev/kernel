@@ -983,8 +983,7 @@ static int __config_slave_timer_clock(struct kona_timer_module *pktm,
 		goto local_clk_cfg;
 	}
 	clk_set_rate(clk, rate);
-	clk_enable(clk);
-	return 0;
+	return clk_enable(clk);
 #endif
 local_clk_cfg:
 	spin_lock_irqsave(&pktm->lock, flags);
@@ -1118,8 +1117,7 @@ static int __config_aon_hub_timer_clock(struct kona_timer_module *pktm,
 		goto local_clk_cfg;
 	}
 	clk_set_rate(clk, rate);
-	clk_enable(clk);
-	return 0;
+	return clk_enable(clk);
 #endif
 
 local_clk_cfg:
