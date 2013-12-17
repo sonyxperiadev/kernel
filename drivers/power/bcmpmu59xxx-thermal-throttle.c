@@ -527,6 +527,9 @@ static ssize_t bcmpmu_throttle_debugfs_set_lut(struct file *file,
 
 	memset(input_str, 0, 100);
 
+	if (count > (size_t)100)
+		count = 100;
+
 	if (copy_from_user(input_str, buf, count))
 		return -EFAULT;
 
@@ -548,7 +551,7 @@ static ssize_t bcmpmu_throttle_debugfs_set_lut(struct file *file,
 		return count;
 	}
 
-	if (idx[0] < 0 || idx[0] >= tdata->pdata->temp_curr_lut_sz) {
+	if (idx[0] >= tdata->pdata->temp_curr_lut_sz) {
 		pr_throttle(ERROR, "Invalid Index Argument\n");
 		return count;
 	}
@@ -839,7 +842,8 @@ static int bcmpmu_throttle_probe(struct platform_device *pdev)
 	if (tdata->chrgr_trim_reg == NULL) {
 		pr_throttle(FLOW, "%s %d failed to alloc mem\n",
 				__func__, __LINE__);
-			return -ENOMEM;
+		kfree(tdata);
+		return -ENOMEM;
 	}
 	for (i = 0; i < tdata->chrgr_trim_reg_sz; i++) {
 		tdata->chrgr_trim_reg[i].addr =
@@ -911,6 +915,7 @@ unreg_acld_nb:
 destroy_workq:
 	destroy_workqueue(tdata->throttle_wq);
 error:
+	kfree(tdata->chrgr_trim_reg);
 	kfree(tdata);
 	return 0;
 }

@@ -1630,7 +1630,6 @@ static int bcmpmu_accy_register_irqs(struct bcmpmu_accy_data *di)
 {
 	int ret = 0;
 	int i;
-	int j;
 
 	for (i = 0; i < NUM_ACCY_CORE_IRQS; i++) {
 		ret = di->bcmpmu->register_irq(di->bcmpmu,
@@ -1644,9 +1643,9 @@ static int bcmpmu_accy_register_irqs(struct bcmpmu_accy_data *di)
 			ret = di->bcmpmu->unmask_irq(di->bcmpmu,
 					accy_irq_evt_map[i].irq);
 	} else {
-		for (j = i; j < 1; j--)
+		for (; i >= 0; i--)
 			di->bcmpmu->unregister_irq(di->bcmpmu,
-					accy_irq_evt_map[j].irq);
+					accy_irq_evt_map[i].irq);
 	}
 	return ret;
 }

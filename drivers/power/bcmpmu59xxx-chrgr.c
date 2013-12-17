@@ -264,8 +264,7 @@ static int bcmpmu_chrgr_config_tch_timer(struct bcmpmu_chrgr_data *di,
 	int ret;
 	struct bcmpmu59xxx *bcmpmu = di->bcmpmu;
 
-	BUG_ON((tch_base < TCH_HW_TIMER_3HR) ||
-			(tch_base > TCH_HW_TIMER_MAX));
+	BUG_ON(tch_base > TCH_HW_TIMER_MAX);
 
 	di->tch_base = tch_base;
 	di->tch_multiplier = tch_multiplier;
@@ -516,6 +515,7 @@ static int charger_event_handler(struct notifier_block *nb,
 					usb_chrgr_err_dis);
 		pr_chrgr(FLOW,
 			"PMU HW Charging Error is cleared\n");
+		/* fall-through */
 	case PMU_ACCY_EVT_OUT_USBOV_DIS:
 		if (!di)
 			di = container_of(nb, struct bcmpmu_chrgr_data,
@@ -625,8 +625,12 @@ static int bcmpmu_chrgr_probe(struct platform_device *pdev)
 		atomic_set(&drv_init_done, 1);
 		return 0;
 	}
+
 	pdata = pdev->dev.platform_data;
-	if (pdata && pdata->chrgr_curr_lmt_tbl)
+	if (!pdata)
+		return -ENODEV;
+
+	if (pdata->chrgr_curr_lmt_tbl)
 		di->chrgr_curr_tbl = pdata->chrgr_curr_lmt_tbl;
 	else
 		di->chrgr_curr_tbl = chrgr_curr_lmt_default;
