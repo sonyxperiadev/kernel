@@ -350,12 +350,19 @@ DEFINE_SIMPLE_ATTRIBUTE(clock_reset_fops, NULL, clk_debug_reset, "%llu\n");
 static int clk_debug_set_enable(void *data, u64 val)
 {
 	struct clk *clock = data;
-	if (val == 1)
-		clk_enable(clock);
-	else if (val == 0)
+
+	switch (val) {
+	case 1:
+		return clk_enable(clock);
+
+	case 0:
 		clk_disable(clock);
-	else
+		break;
+
+	default:
 		clk_dbg("Invalid value\n");
+		return -EINVAL;
+	}
 
 	return 0;
 }
