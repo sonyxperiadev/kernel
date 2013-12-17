@@ -919,17 +919,15 @@ static int __init bcmpmu_otg_xceiv_probe(struct platform_device *pdev)
 
 	if (IS_ERR(xceiv_data->bcm_hsotg_regulator)) {
 		dev_warn(&pdev->dev, "Failed to get regulator handle\n");
-		kfree(xceiv_data);
-		return -ENODEV;
+		error = -ENODEV;
+		goto error_get_reg;
 	}
 
 	/* Enable USB LDO */
 	error = regulator_enable(xceiv_data->bcm_hsotg_regulator);
 	if (error) {
-		xceiv_data->regulator_enabled = false;
-		regulator_put(xceiv_data->bcm_hsotg_regulator);
 		dev_warn(xceiv_data->dev, "regulator_enable failed\n");
-		return error;
+		goto error_enable_reg;
 	}
 	/* Give 2ms to ramp up USBLDO */
 	mdelay(USBLDO_RAMP_UP_DELAY_IN_MS);
@@ -949,9 +947,8 @@ static int __init bcmpmu_otg_xceiv_probe(struct platform_device *pdev)
 	if (xceiv_data->bcm_otg_work_queue == NULL) {
 		dev_warn(&pdev->dev,
 			 "BCM OTG events work queue creation failed\n");
-		bcmpmu_otg_free_regulator(xceiv_data);
-		kfree(xceiv_data);
-		return -ENOMEM;
+		error = -ENOMEM;
+		goto error_create_wq;
 	}
 
 	/* Create one work item per deferrable function */
@@ -1098,7 +1095,11 @@ error_attr_vbus:
 error_attr_host:
 	wake_lock_destroy(&xceiv_data->otg_xceiver.xceiver_wake_lock);
 	destroy_workqueue(xceiv_data->bcm_otg_work_queue);
-	bcmpmu_otg_free_regulator(xceiv_data);
+error_create_wq:
+	regulator_disable(xceiv_data->bcm_hsotg_regulator);
+error_enable_reg:
+	regulator_put(xceiv_data->bcm_hsotg_regulator);
+error_get_reg:
 	kfree(xceiv_data);
 	return error;
 }
