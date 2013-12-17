@@ -326,7 +326,8 @@ static u32 handle_ahb_reg_parm(struct snapshot *s)
 	if (IS_ERR(clk))
 		goto err;
 
-	clk_enable(clk);
+	if (clk_enable(clk))
+		goto err;
 	ret = readl(s->reg) & s->mask;
 	clk_disable(clk);
 
