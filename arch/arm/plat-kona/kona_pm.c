@@ -522,7 +522,7 @@ int kona_pm_disable_idle_state_for_cpu(int cpu, int state, bool disable)
 	struct cpuidle_device *dev;
 	int i;
 
-	if (cpu > CONFIG_NR_CPUS)
+	if (cpu >= CONFIG_NR_CPUS)
 		return -EINVAL;
 
 	dev = per_cpu(cpuidle_devices, cpu);
