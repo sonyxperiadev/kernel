@@ -39,7 +39,7 @@
 
 static struct dentry *dentry_root_dir;
 static struct dentry *dentry_ccu_dir;
-static unsigned long init;
+static bool init;
 
 char *get_prof_name(enum ccu_profiling_counter prof_type)
 {
@@ -966,6 +966,6 @@ int __init ccu_profiler_init(struct dentry *prof_root_dir)
 			prof_root_dir);
 	if (!dentry_ccu_dir)
 		return -ENOMEM;
-	test_and_set_bit(0, &init);
+	init = true;
 	return 0;
 }
