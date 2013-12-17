@@ -1934,6 +1934,7 @@ static int clock_panic_event(struct notifier_block *this, unsigned long event,
 		ccu_clk = ccu_clk_list[i];
 		if (ccu_clk_list[i]->clk.flags & CCU_ACCESS_ENABLE) {
 			pi = pi_mgr_get(ccu_clk->pi_id);
+			BUG_ON(!pi);
 			if (!pi->usg_cnt)
 				continue;
 		}
