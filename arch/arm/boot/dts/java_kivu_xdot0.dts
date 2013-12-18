@@ -245,9 +245,9 @@
 	kona-fb {
 		module-name = "S6D04K2X01";
 		reg-name = "cam2";
+		rst-gpio = <&gpio 8 0>;
 		detect-gpio = <&gpio 10 0>;
 		detect-gpio-val = <0>;
-		rst-gpio = <8>;
 		rst-setup = <1000>;
 		rst-pulse = <10000>;
 		rst-hold = <10000>;
@@ -407,6 +407,10 @@
 		dft-brightness = <32>;
 		polarity = <1>;		/* Inverted polarity */
 		pwm-period-ns = <99900>; /* ~10010 Hz */
+		temp_comp_size = <3>;
+		temp_comp_tbl = <55 20
+				63 18
+				70 15>;
 		pwm-request-label = "backlight";
 		bl-on-delay = <7000>;
 		pwm_pin_name = <39>;	/*GPIO24, enum PIN_NAME defined in chip_pinmux.h*/
