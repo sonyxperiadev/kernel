@@ -66,6 +66,7 @@ typedef struct {
 	CSL_DSI_CM_VC_t *cmnd_mode;
 	CSL_DSI_CFG_t *dsi_cfg;
 	DISPDRV_INFO_T		*disp_info;
+	UInt8 maxRetPktSize;
 } DispDrv_PANEL_t;
 
 #if 0
@@ -516,6 +517,7 @@ Int32 DSI_Init(DISPDRV_INFO_T *info, DISPDRV_HANDLE_T *handle)
 
 		pPanel->disp_info = info;
 		pPanel->isTE = info->vmode ? false : info->te_ctrl;
+		pPanel->maxRetPktSize = 0;
 
 		/* get TE pin configuration */
 		pPanel->teIn  =	TE_VC4L_IN_1_DSI0;
@@ -842,6 +844,10 @@ static Int32 DSI_SetMaxRtnPktSize(DISPDRV_HANDLE_T drvH, UInt8 size)
 	Int32 res = 0;
 	CSL_LCD_RES_T cslRes;
 
+	if (size == pPanel->maxRetPktSize)
+		return 0;
+	DSI_INFO("%d\n", size);
+
 	txData[0] = size;
 	txData[1] = 0x0;
 	msg.vc = pPanel->cmnd_mode->vc;
@@ -862,7 +868,9 @@ static Int32 DSI_SetMaxRtnPktSize(DISPDRV_HANDLE_T drvH, UInt8 size)
 			"[DISPDRV]:	ERR: Setting Max. Return Packet Size [0x%02X]\n\r"
 			, DSI_DT_SH_MAX_RET_PKT_SIZE);
 		res = -1;
-	}
+	} else
+		pPanel->maxRetPktSize = size;
+
 	return res;
 }
 
