@@ -683,8 +683,10 @@ static int urb_enqueue(struct usb_hcd *hcd,
 	case PIPE_INTERRUPT:
 		ep_type = USB_ENDPOINT_XFER_INT;
 		break;
-	default:
-		DWC_WARN("Wrong ep type\n");
+	/*
+	 * default not needed because usb_pipetype() can only return
+	 * 4 different values
+	 */
 	}
 
 	dwc_otg_urb = dwc_otg_hcd_urb_alloc(dwc_otg_hcd,
