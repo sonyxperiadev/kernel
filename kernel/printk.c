@@ -934,9 +934,13 @@ static size_t print_time(u64 ts, char *buf)
 #ifdef CONFIG_PRINTK_PID
 static size_t print_pid(const char *comm, pid_t pid, char *buf)
 {
-	if (!printk_pid || !buf)
+	if (!printk_pid)
 		return 0;
-	return sprintf(buf, "%15s, %d ", comm, pid);
+
+	if (!buf)
+		return snprintf(NULL, 0, "%15.15s, %d ", comm, pid);
+
+	return sprintf(buf, "%15.15s, %d ", comm, pid);
 }
 #else
 static size_t print_pid(const char *comm, pid_t pid, char *buf)
@@ -949,8 +953,12 @@ static size_t print_pid(const char *comm, pid_t pid, char *buf)
 static size_t print_cpuid(u8 cpu_id, char *buf)
 {
 
-	if (!printk_cpu_id || !buf)
+	if (!printk_cpu_id)
 		return 0;
+
+	if (!buf)
+		return snprintf(NULL, 0, "C%d ", cpu_id);
+
 	return sprintf(buf, "C%d ", cpu_id);
 }
 #else
@@ -963,14 +971,14 @@ static size_t print_cpuid(u8 cpu_id, char *buf)
 static size_t prefix_bracket(char *buf)
 {
 	if (!buf)
-		return snprintf(NULL, 0, "[");
+		return 1;
 	return sprintf(buf, "[");
 }
 
 static size_t sufix_bracket(char *buf)
 {
 	if (!buf)
-		return snprintf(NULL, 0, "] ");
+		return 2;
 	return sprintf(buf, "] ");
 }
 
