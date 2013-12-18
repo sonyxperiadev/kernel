@@ -836,9 +836,7 @@ static int spum_aes_cra_init(struct crypto_tfm *tfm)
 
 	tfm->crt_ablkcipher.reqsize = sizeof(struct spum_request_context);
 
-	clk_enable(dd->spum_open_clk);
-
-	return 0;
+	return clk_enable(dd->spum_open_clk);
 }
 
 static void spum_aes_cra_exit(struct crypto_tfm *tfm)
