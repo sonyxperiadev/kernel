@@ -3491,7 +3491,7 @@ static int __init bcmpmu_fg_init(void)
 {
 	return platform_driver_register(&bcmpmu_fg_driver);
 }
-subsys_initcall_sync(bcmpmu_fg_init);
+module_init(bcmpmu_fg_init);
 
 static void __exit bcmpmu_fg_exit(void)
 {
