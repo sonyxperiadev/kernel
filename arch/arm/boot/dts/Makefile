@@ -219,6 +219,8 @@ dtb-$(CONFIG_ARCH_HAWAII) += hawaii_garnet_edn020.dtb \
 dtb-$(CONFIG_ARCH_JAVA) += java_edn000.dtb \
 	java_edn000_4Gb.dtb \
 	java_kivu_xdot0.dtb \
+	sony_babble.dtb \
+	sony_brooks.dtb \
 	java_edn000_2Gb.dtb
 
 DTB_NAMES := $(subst $\",,$(CONFIG_BUILD_ARM_APPENDED_DTB_IMAGE_NAMES))
