@@ -51,7 +51,8 @@
 #define SDHCI_USE_LEDS_CLASS
 #endif
 
-#define MAX_TUNING_LOOP 40
+#define MAX_TUNING_LOOP		40
+#define SDHCI_MAX_BUSY_WAIT	15
 
 static unsigned int debug_quirks = 0;
 static unsigned int debug_quirks2;
@@ -2355,8 +2356,6 @@ static void sdhci_tasklet_finish(unsigned long param)
 	sdhci_runtime_pm_put(host);
 }
 
-#define MAX_BUSY_WAIT_LOOP 100
-
 /*
  * Internal work. Work to wait for the busy signalling to finish. Certain MMC
  * operations can take a long time to complete.
@@ -2365,7 +2364,11 @@ static void sdhci_work_wait_for_busy(struct work_struct *work)
 {
 	struct sdhci_host *host = container_of(work, struct sdhci_host,
 					      wait_for_busy_work);
-	int wait_cnt = 0;
+	int wait_cnt = 0, delay;
+
+	delay = host->cmd->sanitize_busy ? host->cmd->cmd_timeout_ms / 1000 :
+							SDHCI_MAX_BUSY_WAIT;
+	mod_timer(&host->timer, jiffies + (delay + 5) * HZ);
 
 	/*
 	 * According to Arasan, when DTOERR occured while CMD38/CMD6,
@@ -2376,17 +2379,21 @@ static void sdhci_work_wait_for_busy(struct work_struct *work)
 	sdhci_reset(host, SDHCI_RESET_CMD | SDHCI_RESET_DATA);
 
 	pr_info("Waiting for BUSY signalling to end\n");
-	while (wait_cnt++ < MAX_BUSY_WAIT_LOOP &&
+	while (wait_cnt++ < (10 * delay) &&
 		(sdhci_readl(host, SDHCI_PRESENT_STATE) &
 			SDHCI_DATA_LVL_DAT0_MASK) == 0) {
 		msleep(100);
         }
 	
-	if (wait_cnt >= MAX_BUSY_WAIT_LOOP)
+	if (wait_cnt >= (10 * delay)) {
 		pr_err("%s: Operation takes too long to finish!\n",
 				mmc_hostname(host->mmc));
-
-	sdhci_finish_command(host);
+		host->cmd->error = -ETIMEDOUT;
+		tasklet_schedule(&host->finish_tasklet);
+	} else {
+		pr_info("end of BUSY signalling\n");
+		sdhci_finish_command(host);
+	}
 }
 
 
