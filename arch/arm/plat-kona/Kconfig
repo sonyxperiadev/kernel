@@ -81,6 +81,7 @@ config BRCM_PROP_MODULES
 
 config BCM_STM
 	bool "Enable System Trace Module"
+	depends on STM_TRACE
 	default n
 	help
 	  Say Y if you want to enable the Broadcom System Trace Module

@@ -32,8 +32,8 @@
 #ifdef CONFIG_KONA_PROFILER
 #include <plat/ccu_profiler.h>
 #include <plat/profiler.h>
-#include <mach/kona_timer.h>
 #endif /*CONFIG_KONA_PROFILER*/
+#include <mach/kona_timer.h>
 #include <mach/timex.h>
 
 #ifdef CONFIG_USE_ARCH_TIMER_AS_LOCAL_TIMER
@@ -220,9 +220,10 @@ __weak int kona_mach_pm_prepare(void)
 __weak int kona_mach_pm_enter(suspend_state_t state)
 {
 	int ret = 0;
+	u64 time1, time2, time_susp;
 #ifdef CONFIG_KONA_PROFILER
 	int err = 0;
-	u64 time_awake, time1, time2, time_susp;
+	u64 time_awake;
 	struct ccu_prof_parameter param = {
 		.count_type = CCU_PROF_ALWAYS_ON,
 	};
