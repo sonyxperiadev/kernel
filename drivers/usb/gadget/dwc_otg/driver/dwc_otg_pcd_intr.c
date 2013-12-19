@@ -2339,7 +2339,7 @@ static void complete_ep(dwc_otg_pcd_ep_t *ep)
 
 		ep->dwc_ep.start_xfer_buff = 0;
 		ep->dwc_ep.xfer_buff = 0;
-		ep->dwc_ep.xfer_len = 0;
+		ep->dwc_ep.xfer_count = 0;
 
 		/* If there is a request in the queue start it. */
 		start_next_request(ep);
