@@ -1015,7 +1015,11 @@ static void chal_aci_block_ctrl_arg(CHAL_HANDLE handle,
 				 * fast_settle should be low
 				 */
 				if (audioh_apb_clk != NULL) {
-					clk_enable(audioh_apb_clk);
+					int err = clk_enable(audioh_apb_clk);
+					if (err) {
+						pr_err("clk_enable(audioh_apb_clk) failed - %d", err);
+						return;
+					}
 					BRCM_WRITE_REG_FIELD(KONA_AUDIOH_VA,
 					    AUDIOH_AUDIORX_VREF,
 					    AUDIORX_VREF_FASTSETTLE,
