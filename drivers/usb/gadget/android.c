@@ -969,10 +969,6 @@ static int mass_storage_function_init(struct android_usb_function *f,
 	config->fsg.luns[0].removable = 1;
 #endif
 
-
-	config->fsg.nluns = 1;
-	config->fsg.luns[0].removable = 1;
-
 	common = fsg_common_init(NULL, cdev, &config->fsg);
 	if (IS_ERR(common)) {
 		kfree(config);
