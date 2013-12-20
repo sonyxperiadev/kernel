@@ -1,21 +1,21 @@
-/* Java_Kivu_xdot0 Dts file */
+/* java_sony_kivu dts file */
 
 /dts-v1/;
 
 /include/ "java.dtsi"
-/include/ "java_kivu_bcmpmu_kivu_xdot0.dtsi"
+/include/ "java_sony_bcmpmu_kivu.dtsi"
 
 / {
-	model = "Javakivu KIVU XDOT0";
+	model = "java_sony_kivu";
 	compatible = "bcm,java";
 
 	chosen {
-		bootargs = "console=ttyS0,115200n8 mem=992M gpt androidboot.console=ttyS0 crash_ramdump=1 logbuf_nocache=1";
+		bootargs = "console=ttyS0,115200n8 mem=480M gpt androidboot.console=ttyS0 crash_ramdump=1 logbuf_nocache=1 vmalloc=136M";
 	};
 
 	memory@82000000 {
 		device_type = "memory";
-		reg = <0x82000000 0x3e000000>; /* 992 MB */
+		reg = <0x82000000 0x2e000000>; /* 736 MB */
 	};
 
 	wd-tapper {
