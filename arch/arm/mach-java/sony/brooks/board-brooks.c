@@ -892,22 +892,22 @@ defined(CONFIG_TOUCHSCREEN_BCMTCH15XXX_MODULE)
 #endif
 
 #if defined(CONFIG_INPUT_LSM303DLHC_ACCELEROMETER)
-	kivu_add_accel();
+	//kivu_add_accel();
 #endif
 #if defined(CONFIG_INPUT_LSM303DLH_MAGNETOMETER)
-	kivu_add_magnetometer();
+	//kivu_add_magnetometer();
 #endif
 #if defined(CONFIG_INPUT_L3G4200D)
-	kivu_add_gyro();
+	//kivu_add_gyro();
 #endif
 #if defined(CONFIG_LEDS_LM3530)
 	kivu_add_backlight();
 #endif
 #if defined(CONFIG_SENSORS_BMP18X_I2C)
-	kivu_add_barometer();
+	//kivu_add_barometer();
 #endif
 #if defined(CONFIG_INPUT_APDS9702)
-	kivu_add_proximity();
+	//kivu_add_proximity();
 #endif
 }
 
