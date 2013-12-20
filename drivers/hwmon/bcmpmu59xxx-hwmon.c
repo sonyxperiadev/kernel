@@ -34,7 +34,7 @@
 #define PMU_TEMP_MULTI_CONST 514
 #define KELVIN_CONST 284
 
-static int debug_mask = BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT | BCMPMU_PRINT_FLOW;
+static int debug_mask = BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT;
 #define pr_hwmon(debug_level, args...) \
 	do { \
 		if (debug_mask & BCMPMU_PRINT_##debug_level) { \
