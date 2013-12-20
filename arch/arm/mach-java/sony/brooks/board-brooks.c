@@ -897,8 +897,8 @@ defined(CONFIG_TOUCHSCREEN_BCMTCH15XXX_MODULE)
 #if defined(CONFIG_INPUT_LSM303DLH_MAGNETOMETER)
 	//kivu_add_magnetometer();
 #endif
-#if defined(CONFIG_INPUT_L3G4200D)
-	//kivu_add_gyro();
+#if defined(CONFIG_INPUT_BMG160)
+	kivu_add_gyro();
 #endif
 #if defined(CONFIG_LEDS_LM3530)
 	kivu_add_backlight();

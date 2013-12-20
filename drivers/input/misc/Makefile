@@ -74,4 +74,4 @@ obj-$(CONFIG_INPUT_LSM303DLH_MAGNETOMETER) += lsm303dlh_mag.o
 obj-$(CONFIG_INPUT_LSM303DLHC_ACCELEROMETER) += lsm303dlhc_acc.o
 obj-$(CONFIG_INPUT_L3G4200D)		+= l3g4200d_gyr_sysfs.o
 obj-$(CONFIG_INPUT_APDS9702)	        += apds9702.o
-
+obj-$(CONFIG_INPUT_BMG160)             += bmg160.o

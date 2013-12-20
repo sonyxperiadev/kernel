@@ -4,7 +4,7 @@
 #include <linux/err.h>
 #include <linux/platform_device.h>
 #include <linux/regulator/consumer.h>
-#include <linux/l3g4200d_gyr.h>
+#include <linux/bmg160.h>
 #include "board-brooks.h"
 
 #define SENSOR_I2C_BUS_ID 2
@@ -120,11 +120,23 @@ static int power_config_gyro(struct device *dev, bool enable)
 	return rc;
 }
 
+static int setup_gyro(struct device *dev)
+{
+	return power_config_gyro(dev, true);
+}
+
+static void teardown_gyro(struct device *dev)
+{
+	power_config_gyro(dev, false);
+}
+
 static int power_on_gyro(struct device *dev)
 {
 	int rc;
 
 	dev_dbg(dev, "%s\n", __func__);
+
+	msleep(25);
 
 	rc = regulator_enable_handler(gyro_regulator, __func__);
 	return rc;
@@ -140,39 +152,27 @@ static int power_off_gyro(struct device *dev)
 	return rc;
 }
 
-static struct l3g4200d_gyr_platform_data l3g4200d_gyro_platform_data = {
-	.poll_interval = 100,
-	.min_interval = 40,
-
-	.fs_range = L3G4200D_FS_2000DPS,
-
-	.axis_map_x =  0,
-	.axis_map_y = 1,
-	.axis_map_z = 2,
-
-	.negate_x = 0,
-	.negate_y = 0,
-	.negate_z = 0,
-
-	.init = NULL,
-	.exit = NULL,
-	.power_on = power_on_gyro,
-	.power_off = power_off_gyro,
-	.power_config = power_config_gyro,
+static struct bmg160_platform_data bmg160_pdata = {
+	.setup = setup_gyro,
+	.teardown = teardown_gyro,
+	.power_up = power_on_gyro,
+	.power_down = power_off_gyro,
+	.range = 10,
 };
 
-static struct i2c_board_info __initdata l3g4200d_i2c_boardinfo[] = {
+
+static struct i2c_board_info __initdata bmg160_i2c_boardinfo[] = {
 	{
-		I2C_BOARD_INFO(L3G4200D_DEV_NAME, 0xD0 >> 1),
-		.platform_data = &l3g4200d_gyro_platform_data,
+		I2C_BOARD_INFO(BMG160_NAME, 0x68 >> 0),
+		.platform_data = &bmg160_pdata,
 	},
 };
 
 void __init kivu_add_gyro(void)
 {
-	pr_info("Registering L3G4200D Gyro with I2C bus #%i",
+	pr_info("Registering BMG160 Gyro with I2C bus #%i",
 			SENSOR_I2C_BUS_ID);
 	i2c_register_board_info(SENSOR_I2C_BUS_ID,
-				l3g4200d_i2c_boardinfo,
-				ARRAY_SIZE(l3g4200d_i2c_boardinfo));
+				bmg160_i2c_boardinfo,
+				ARRAY_SIZE(bmg160_i2c_boardinfo));
 }
