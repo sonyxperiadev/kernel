@@ -25,6 +25,7 @@
 #include <linux/of.h>
 #include <linux/of_fdt.h>
 #include <linux/of_platform.h>
+#include <linux/regulator/consumer.h>
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
 #include <linux/earlysuspend.h>
@@ -60,6 +61,7 @@ struct bma2xx_data {
 #endif
 	int IRQ;
 	u32 orientation;
+	struct regulator *regulator;
 };
 
 #ifdef BMA2XX_SW_CALIBRATION
@@ -2992,7 +2994,6 @@ static void bma2xx_irq_work_func(struct work_struct *work)
 		else
 			input_report_abs(bma2xx->input, FLAT_INTERRUPT,
 					 FLAT_INTERRUPT_FALSE_HAPPENED);
-		}
 		break;
 	default:
 		break;
@@ -3040,6 +3041,36 @@ static int bma2xx_probe(struct i2c_client *client,
 		err = -ENOMEM;
 		goto exit;
 	}
+
+	/* Turn on regulator (if it is configured in dt) */
+	if (client->dev.of_node) {
+		char *regname;
+		int rc;
+
+		np = client->dev.of_node;
+		if (of_property_read_string(np,"regulator",
+			(const char**)&regname)) {
+			data->regulator = NULL;
+			printk("Failed to get regulator from OF DT\n");
+		} else {
+			msleep(2000);
+			data->regulator = regulator_get(NULL, regname);
+			if ( data->regulator != NULL ) {
+				rc = regulator_set_voltage(data->regulator, 2800000, 2800000);
+				if (rc) {
+					printk("bma2xx: Set_Voltage failed (rc=%i)\n",rc);
+				} else {
+					printk("bma2xx: Set_Voltage done\n");
+				}
+				rc = regulator_enable(data->regulator);
+				if (rc) {
+					printk("Failed to enable regulator\n");
+				}
+			}
+		}
+		printk("bma2xx: Regulator=%p\n",data->regulator);
+	}
+
 	/* read chip id */
 	tempvalue = i2c_smbus_read_byte_data(client, BMA2XXX_CHIP_ID_REG);
 
@@ -3098,7 +3129,6 @@ static int bma2xx_probe(struct i2c_client *client,
 			data->orientation = 11;
 		else
 			data->orientation = val;
-		client->irq = val;
 	}
 #if defined(BMA2XX_ENABLE_INT1) || defined(BMA2XX_ENABLE_INT2)
 	data->IRQ = gpio_to_irq(client->irq);
@@ -3202,7 +3232,7 @@ static void bma2xx_late_resume(struct early_suspend *h)
 }
 #endif
 
-static int __devexit bma2xx_remove(struct i2c_client *client)
+static int bma2xx_remove(struct i2c_client *client)
 {
 	struct bma2xx_data *data = i2c_get_clientdata(client);
 
@@ -3280,7 +3310,7 @@ static struct i2c_driver bma2xx_driver = {
 	.resume = bma2xx_resume,
 	.id_table = bma2xx_id,
 	.probe = bma2xx_probe,
-	.remove = __devexit_p(bma2xx_remove),
+	.remove = bma2xx_remove,
 
 };
 
