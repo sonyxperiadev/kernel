@@ -1014,7 +1014,11 @@ static int spum_aes_probe(struct platform_device *pdev)
 	/* Initialize SPU-M block */
 	if (clk_set_rate(dd->spum_open_clk, FREQ_MHZ(156)))
 		pr_debug("%s: Clock set failed!!!\n", __func__);
-	clk_enable(dd->spum_open_clk);
+	ret = clk_enable(dd->spum_open_clk);
+	if (ret) {
+		pr_err("%s: Failed to enable clock - %d\n", __func__, ret);
+		goto exit;
+	}
 	spum_init_device(dd->io_apb_base, dd->io_axi_base);
 	if (spum_aes_dma_init(dd)) {
 		pr_err("%s: DMA callback register failed\n", __func__);
