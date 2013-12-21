@@ -377,8 +377,12 @@ static void reserve_skbs_list(void)
 static void zap_completion_queue(void)
 {
 	unsigned long flags;
-	struct softnet_data *sd = &get_cpu_var(softnet_data);
+	struct softnet_data *sd;
 
+	if (in_irq() || irqs_disabled())
+		return;
+
+	sd = &get_cpu_var(softnet_data);
 	if (sd->completion_queue) {
 		struct sk_buff *clist;
 
