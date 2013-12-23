@@ -426,9 +426,9 @@
 		col-mod-o = <2>;
 		width = <720>;
 		height = <1280>;
-		fps = <60>;
+		fps = <58>;
 		lanes = <4>;
-		hs-bitrate = <400000000>;
+		hs-bitrate = <388000000>;
 		lp-bitrate = <5000000>;	/* 5mbps */
 		iommu = <&iommu_mm>;
 		iovmm = <&iovmm_mm>;
