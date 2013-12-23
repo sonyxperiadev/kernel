@@ -377,23 +377,6 @@
 		peri-clk-rate = <48000000>;
 	};
 
-	sdio0 {
-		compatible = "bcm,sdhci";
-		reg = <0x3F180000 10000>;
-		interrupts = <0 77 0x04>;
-		id = <0>;
-		data-pullup = <0>;
-		cd-gpio = <91>;		/*SD_CARDDET_GPIO_PIN*/
-		devtype = <0>;		/*SDIO_DEV_TYPE_SDMMC*/
-		flags = <0>;		/*KONA_SDIO_FLAGS_DEVICE_REMOVABLE*/
-		peri-clk-name = "sdio1_clk";
-		ahb-clk-name = "sdio1_ahb_clk";
-		sleep-clk-name = "sdio1_sleep_clk";
-		peri-clk-rate = <48000000>;
-		vddo-regulator-name = "vdd_sdio";
-		vddsdxc-regulator-name = "vdd_sdxc";
-	};
-
 	timer {
 		compatible = "arm,armv7-timer";
 		interrupts = <1 13 0xf08>,
