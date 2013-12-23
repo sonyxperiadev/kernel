@@ -569,17 +569,15 @@
 		compatible = "bcm,pwm-backlight";
 		reg = <0x0 0x0>;
 		pwm-id = <2>;
-		max-brightness = <32>;	/* Android calibrates to 32 levels */
-		dft-brightness = <32>;
 		polarity = <1>;		/* Inverted polarity */
 		pwm-period-ns = <99900>; /* ~10010 Hz */
-		temp_comp_size = <3>;
-		temp_comp_tbl = <55 20
-				63 18
-				70 15>;
 		pwm-request-label = "backlight";
+		bl-on-delay = <7000>;
 		pwm_pin_name = <39>;	/*GPIO24, enum PIN_NAME defined in chip_pinmux.h*/
 		pwm_pin_reboot_func = <25>;	/*GPIO24, enum PIN_FUNC defined in chip_pinmux.h*/
+		brightness-levels = <0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17
+							18 19 20 21 22 23 24 25 26 27 28 29 30 31 32>; /* Android calibrates to 32 levels */
+		default-brightness-level = <32>; /* Array index */
 	};
 
 	gpio-leds {
