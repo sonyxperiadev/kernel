@@ -25,6 +25,7 @@
 #include <linux/gpio_keys.h>
 #include <linux/printk.h>
 #include <linux/proc_fs.h>
+#include <linux/hrtimer.h>
 
 #include <media/v4l2-subdev.h>
 #include <media/v4l2-chip-ident.h>
@@ -81,8 +82,14 @@ static const struct ov5648_datafmt ov5648_fmts[] = {
 enum ov5648_mode {
 	OV5648_MODE_1280x720P30  = 0,
 	OV5648_MODE_1280x960P30  = 1,
+#ifdef CONFIG_ARCH_JAVA
+	OV5648_MODE_1920x1080P30 = 2,
+	OV5648_MODE_2592x1944P15 = 3,
+	OV5648_MODE_MAX          = 4,
+#else
 	OV5648_MODE_2592x1944P15 = 2,
 	OV5648_MODE_MAX          = 3,
+#endif
 };
 
 enum ov5648_state {
@@ -116,7 +123,7 @@ struct sensor_mode ov5648_mode[OV5648_MODE_MAX + 1] = {
 		.name           = "1280x720P30",
 		.height         = 720,
 		.width          = 1280,
-		.hts            = 1864,
+		.hts            = 1912,
 		.vts            = 1496,
 		.vts_max        = 32767 - 6,
 		.line_length_ns = 11850,
@@ -128,7 +135,7 @@ struct sensor_mode ov5648_mode[OV5648_MODE_MAX + 1] = {
 		.name           = "1280x960P30",
 		.height         = 960,
 		.width          = 1280,
-		.hts            = 1864,
+		.hts            = 1912,
 		.vts            = 1496,
 		.vts_max        = 32767 - 6,
 		.line_length_ns = 11850,
@@ -136,6 +143,20 @@ struct sensor_mode ov5648_mode[OV5648_MODE_MAX + 1] = {
 		.bpp            = 10,
 		.fps            = F24p8(30.0),
 	},
+#ifdef CONFIG_ARCH_JAVA
+	{
+		.name           = "1920x1080P30",
+		.height         = 1080,
+		.width          = 1920,
+		.hts            = 2554,
+		.vts            = 1120,
+		.vts_max        = 32767 - 6,
+		.line_length_ns = 29767,
+		.bayer          = BAYER_BGGR,
+		.bpp            = 10,
+		.fps            = F24p8(30.0),
+	},
+#endif
 	{
 		.name           = "2592x1944P15",
 		.height         = 1944,
@@ -143,7 +164,7 @@ struct sensor_mode ov5648_mode[OV5648_MODE_MAX + 1] = {
 		.hts            = 2844,
 		.vts            = 1968,
 		.vts_max        = 32767 - 6,
-		.line_length_ns = 33875,
+		.line_length_ns = 33148,
 		.bayer          = BAYER_BGGR,
 		.bpp            = 10,
 		.fps            = F24p8(15.0),
@@ -225,6 +246,7 @@ struct ov5648 {
 	enum v4l2_flash_led_mode flashmode;
 	int flash_intensity;
 	int flash_timeout;
+	struct hrtimer flash_hrtimer;
 	struct ov5648_otp otp;
 	int calibrated;
 #define V4L2_FRAME_INFO_CACHE 4
@@ -246,19 +268,19 @@ struct ov5648_reg {
 	u8	pad;
 };
 
-static const struct ov5648_reg ov5648_regtbl[OV5648_MODE_MAX][256] = {
-	{
-	/* WxH=1280x720 HTSxVTS=1864x1496 BPP=10 bits */
-	{0x0100, 0x00},
+static const struct ov5648_reg ov5648_reginit[256] = {
+	{0x0103, 0x01},
 	{0x3001, 0x00},
 	{0x3002, 0x00},
 	{0x3011, 0x02},
+	{0x3017, 0x05},
 	{0x3018, 0x4c},
+	{0x301c, 0xd2},
 	{0x3022, 0x00},
 	{0x3034, 0x1a},
 	{0x3035, 0x21},
 #ifdef OV5648_MCLK_26MHZ
-	{0x3036, 0x61}, /* MCLK=26MHz MIPI=420MBs*2 Lanes FPS=30 */
+	{0x3036, 0x63}, /* MCLK=26MHz MIPI=429MBs(214.5Mb*2) Lanes FPS=30 */
 #else
 	{0x3036, 0x69}, /* MCLK=24MHz MIPI=420MBs*2 Lanes FPS=30 */
 #endif
@@ -283,6 +305,12 @@ static const struct ov5648_reg ov5648_regtbl[OV5648_MODE_MAX][256] = {
 	{0x330e, 0x03},
 	{0x330f, 0x20},
 	{0x3300, 0x00},
+	{0x3500, 0x00},
+	{0x3501, 0x7b},
+	{0x3502, 0x00},
+	{0x3503, 0x07},
+	{0x350a, 0x00},
+	{0x350b, 0x40},
 	{0x3601, 0x33},
 	{0x3602, 0x00},
 	{0x3611, 0x0e},
@@ -295,306 +323,7 @@ static const struct ov5648_reg ov5648_regtbl[OV5648_MODE_MAX][256] = {
 	{0x3632, 0x94},
 	{0x3633, 0x17},
 	{0x3634, 0x14},
-	{0x3705, 0x2a},
-	{0x3708, 0x66},
-	{0x3709, 0x52},
-	{0x370b, 0x23},
-	{0x370c, 0xc3},
-	{0x370d, 0x00},
-	{0x370e, 0x00},
-	{0x371c, 0x07},
-	{0x3739, 0xd2},
-	{0x373c, 0x00},
-	{0x3800, 0x00},
-	{0x3801, 0x10},
-	{0x3802, 0x00},
-	{0x3803, 0xfe},
-	{0x3804, 0x0a},
-	{0x3805, 0x2f},
-	{0x3806, 0x06},
-	{0x3807, 0xa5},
-	{0x3808, 0x05},
-	{0x3809, 0x00},
-	{0x380a, 0x02},
-	{0x380b, 0xd0},
-	{0x380c, 0x07},
-	{0x380d, 0x48},
-	{0x380e, 0x05},
-	{0x380f, 0xd8},
-	{0x3810, 0x00},
-	{0x3811, 0x08},
-	{0x3812, 0x00},
-	{0x3813, 0x02},
-	{0x3814, 0x31},
-	{0x3815, 0x31},
-	{0x3817, 0x00},
-#ifdef CONFIG_MACH_JAVA_C_5606
-	{0x3820, 0x00},
-	{0x3821, 0x07},
-#else
-	{0x3820, 0x0e},
-	{0x3821, 0x01},
-#endif
-	{0x3826, 0x03},
-	{0x3829, 0x00},
-	{0x382b, 0x0b},
-	{0x3830, 0x00},
-	{0x3836, 0x00},
-	{0x3837, 0x00},
-	{0x3838, 0x00},
-	{0x3839, 0x04},
-	{0x383a, 0x00},
-	{0x383b, 0x01},
-	{0x3b00, 0x00},
-	{0x3b02, 0x08},
-	{0x3b03, 0x00},
-	{0x3b04, 0x04},
-	{0x3b05, 0x00},
-	{0x3b06, 0x04},
-	{0x3b07, 0x08},
-	{0x3b08, 0x00},
-	{0x3b09, 0x02},
-	{0x3b0a, 0x04},
-	{0x3b0b, 0x00},
-	{0x3b0c, 0x3d},
-	{0x3f01, 0x0d},
-	{0x3f0f, 0xf5},
-	{0x4000, 0x89},
-	{0x4001, 0x02},
-	{0x4002, 0x45},
-	{0x4004, 0x02},
-	{0x4005, 0x1a},
-	{0x4006, 0x08},
-	{0x4007, 0x10},
-	{0x4008, 0x00},
-	{0x4050, 0x6e},
-	{0x4051, 0x8f},
-	{0x4300, 0xf8},
-	{0x4303, 0xff},
-	{0x4304, 0x00},
-	{0x4307, 0xff},
-	{0x4520, 0x00},
-	{0x4521, 0x00},
-	{0x4511, 0x22},
-	{0x481f, 0x3c},
-	{0x4826, 0x00},
-	{0x4837, 0x18},
-	{0x4b00, 0x06},
-	{0x4b01, 0x0a},
-	{0x5043, 0x00},
-	{0x5013, 0x00},
-	{0x501f, 0x03},
-	{0x503d, 0x00},
-	{0x5a00, 0x08},
-	{0x5b00, 0x01},
-	{0x5b01, 0x40},
-	{0x5b02, 0x00},
-	{0x5b03, 0xf0},
-	{0x4800, 0x24},
-	{0x3503, 0x03},
-	{0x5000, 0Xff},
-	{0x5001, 0X00},
-
-	{0xFFFF, 0x00}	/* end of the list */
-	},
-	{
-	/* WxH=1280x960 HTSxVTS=1864x1496 BPP=10 bits */
-	{0x0100, 0x00},
-	{0x3001, 0x00},
-	{0x3002, 0x00},
-	{0x3011, 0x02},
-	{0x3018, 0x4c},
-	{0x3022, 0x00},
-	{0x3034, 0x1a},
-	{0x3035, 0x21},
-#ifdef OV5648_MCLK_26MHZ
-	{0x3036, 0x61}, /* MCLK=26MHz MIPI=420MBs*2 Lanes FPS=30 */
-#else
-	{0x3036, 0x69}, /* MCLK=24MHz MIPI=420MBs*2 Lanes FPS=30*/
-#endif
-	{0x3037, 0x03},
-	{0x3038, 0x00},
-	{0x3039, 0x00},
-	{0x303a, 0x00},
-	{0x303b, 0x19},
-	{0x303c, 0x11},
-	{0x303d, 0x30},
-	{0x3105, 0x11},
-	{0x3106, 0x05},
-	{0x3304, 0x28},
-	{0x3305, 0x41},
-	{0x3306, 0x30},
-	{0x3308, 0x00},
-	{0x3309, 0xc8},
-	{0x330a, 0x01},
-	{0x330b, 0x90},
-	{0x330c, 0x02},
-	{0x330d, 0x58},
-	{0x330e, 0x03},
-	{0x330f, 0x20},
-	{0x3300, 0x00},
-	{0x3601, 0x33},
-	{0x3602, 0x00},
-	{0x3611, 0x0e},
-	{0x3612, 0x2b},
-	{0x3614, 0x50},
-	{0x3620, 0x33},
-	{0x3622, 0x00},
-	{0x3630, 0xad},
-	{0x3631, 0x00},
-	{0x3632, 0x94},
-	{0x3633, 0x17},
-	{0x3634, 0x14},
-	{0x3705, 0x2a},
-	{0x3708, 0x66},
-	{0x3709, 0x52},
-	{0x370b, 0x23},
-	{0x370c, 0xc3},
-	{0x370d, 0x00},
-	{0x370e, 0x00},
-	{0x371c, 0x07},
-	{0x3739, 0xd2},
-	{0x373c, 0x00},
-	{0x3800, 0x00},
-	{0x3801, 0x10},
-	{0x3802, 0x00},
-	{0x3803, 0x06},
-	{0x3804, 0x0a},
-	{0x3805, 0x2f},
-	{0x3806, 0x07},
-	{0x3807, 0x9d},
-	{0x3808, 0x05},
-	{0x3809, 0x00},
-	{0x380a, 0x03},
-	{0x380b, 0xc0},
-	{0x380c, 0x07},
-	{0x380d, 0x48},
-	{0x380e, 0x05},
-	{0x380f, 0xd8},
-	{0x3810, 0x00},
-	{0x3811, 0x08},
-	{0x3812, 0x00},
-	{0x3813, 0x06},
-	{0x3814, 0x31},
-	{0x3815, 0x31},
-	{0x3817, 0x00},
-#ifdef CONFIG_MACH_JAVA_C_5606
-	{0x3820, 0x00},
-	{0x3821, 0x07},
-#else
-	{0x3820, 0x0e},
-	{0x3821, 0x01},
-#endif
-	{0x3826, 0x03},
-	{0x3829, 0x00},
-	{0x382b, 0x0b},
-	{0x3830, 0x00},
-	{0x3836, 0x00},
-	{0x3837, 0x00},
-	{0x3838, 0x00},
-	{0x3839, 0x04},
-	{0x383a, 0x00},
-	{0x383b, 0x01},
-	{0x3b00, 0x00},
-	{0x3b02, 0x08},
-	{0x3b03, 0x00},
-	{0x3b04, 0x04},
-	{0x3b05, 0x00},
-	{0x3b06, 0x04},
-	{0x3b07, 0x08},
-	{0x3b08, 0x00},
-	{0x3b09, 0x02},
-	{0x3b0a, 0x04},
-	{0x3b0b, 0x00},
-	{0x3b0c, 0x3d},
-	{0x3f01, 0x0d},
-	{0x3f0f, 0xf5},
-	{0x4000, 0x89},
-	{0x4001, 0x02},
-	{0x4002, 0x45},
-	{0x4004, 0x02},
-	{0x4005, 0x1a},
-	{0x4006, 0x08},
-	{0x4007, 0x10},
-	{0x4008, 0x00},
-	{0x4050, 0x6e},
-	{0x4051, 0x8f},
-	{0x4300, 0xf8},
-	{0x4303, 0xff},
-	{0x4304, 0x00},
-	{0x4307, 0xff},
-	{0x4520, 0x00},
-	{0x4521, 0x00},
-	{0x4511, 0x22},
-	{0x481f, 0x3c},
-	{0x4826, 0x00},
-	{0x4837, 0x18},
-	{0x4b00, 0x06},
-	{0x4b01, 0x0a},
-	{0x5043, 0x00},
-	{0x5013, 0x00},
-	{0x501f, 0x03},
-	{0x503d, 0x00},
-	{0x5a00, 0x08},
-	{0x5b00, 0x01},
-	{0x5b01, 0x40},
-	{0x5b02, 0x00},
-	{0x5b03, 0xf0},
-	{0x4800, 0x24},
-	{0x3503, 0x03},
-	{0x5000, 0Xff},
-	{0x5001, 0X00},
-
-	{ 0xFFFF, 0x00 }	/* end of the list */
-	},
-	{
-	/* WxH=2592x1944  HTSxVTS=2844x1968 BPP=10 bits */
-	{0x0100, 0x00},
-	{0x3001, 0x00},
-	{0x3002, 0x00},
-	{0x3011, 0x02},
-	{0x3018, 0x4c},
-	{0x3022, 0x00},
-	{0x3034, 0x1a},
-	{0x3035, 0x21},
-#ifdef OV5648_MCLK_26MHZ
-	{0x3036, 0x60}, /* MCLK=26MHz MIPI=416MBs*2 Lanes FPS=14.8 */
-#else
-	{0x3036, 0x69}, /* MCLK=24MHz MIPI=420MBs*2 Lanes FPS=15 */
-#endif
-	{0x3037, 0x03},
-	{0x3038, 0x00},
-	{0x3039, 0x00},
-	{0x303a, 0x00},
-	{0x303b, 0x19},
-	{0x303c, 0x11},
-	{0x303d, 0x30},
-	{0x3105, 0x11},
-	{0x3106, 0x05},
-	{0x3304, 0x28},
-	{0x3305, 0x41},
-	{0x3306, 0x30},
-	{0x3308, 0x00},
-	{0x3309, 0xc8},
-	{0x330a, 0x01},
-	{0x330b, 0x90},
-	{0x330c, 0x02},
-	{0x330d, 0x58},
-	{0x330e, 0x03},
-	{0x330f, 0x20},
-	{0x3300, 0x00},
-	{0x3601, 0x33},
-	{0x3602, 0x00},
-	{0x3611, 0x0e},
-	{0x3612, 0x2b},
-	{0x3614, 0x50},
-	{0x3620, 0x33},
-	{0x3622, 0x00},
-	{0x3630, 0xad},
-	{0x3631, 0x00},
-	{0x3632, 0x94},
-	{0x3633, 0x17},
-	{0x3634, 0x14},
+	{0x3704, 0xc0},
 	{0x3705, 0x2a},
 	{0x3708, 0x63},
 	{0x3709, 0x12},
@@ -618,9 +347,9 @@ static const struct ov5648_reg ov5648_regtbl[OV5648_MODE_MAX][256] = {
 	{0x380a, 0x07},
 	{0x380b, 0x98},
 	{0x380c, 0x0b},
-	{0x380d, 0x1c},
+	{0x380d, 0x00},
 	{0x380e, 0x07},
-	{0x380f, 0xb0},
+	{0x380f, 0xc0},
 	{0x3810, 0x00},
 	{0x3811, 0x10},
 	{0x3812, 0x00},
@@ -628,13 +357,16 @@ static const struct ov5648_reg ov5648_regtbl[OV5648_MODE_MAX][256] = {
 	{0x3814, 0x11},
 	{0x3815, 0x11},
 	{0x3817, 0x00},
-#ifdef CONFIG_MACH_JAVA_C_5606
+	#if defined(CONFIG_MACH_JAVA_C_5606) \
+	 || defined(CONFIG_MACH_JAVA_C_5609A) \
+	 || defined(CONFIG_MACH_HAWAII_GARNET_C_5606) \
+	 || defined(CONFIG_MACH_HAWAII_GARNET_C_W81)
 	{0x3820, 0x00},
-	{0x3821, 0x06},
-#else
-	{0x3820, 0x06},
-	{0x3821, 0x00},
-#endif
+	{0x3821, 0x07},
+	#else
+	{0x3820, 0x47},
+	{0x3821, 0x01},
+	#endif
 	{0x3826, 0x03},
 	{0x3829, 0x00},
 	{0x382b, 0x0b},
@@ -645,6 +377,7 @@ static const struct ov5648_reg ov5648_regtbl[OV5648_MODE_MAX][256] = {
 	{0x3839, 0x04},
 	{0x383a, 0x00},
 	{0x383b, 0x01},
+	{0X3A00, 0X58},
 	{0x3b00, 0x00},
 	{0x3b02, 0x08},
 	{0x3b03, 0x00},
@@ -663,7 +396,7 @@ static const struct ov5648_reg ov5648_regtbl[OV5648_MODE_MAX][256] = {
 	{0x4001, 0x02},
 	{0x4002, 0x45},
 	{0x4004, 0x04},
-	{0x4005, 0x1a},
+	{0x4005, 0x18},
 	{0x4006, 0x08},
 	{0x4007, 0x10},
 	{0x4008, 0x00},
@@ -676,11 +409,22 @@ static const struct ov5648_reg ov5648_regtbl[OV5648_MODE_MAX][256] = {
 	{0x4520, 0x00},
 	{0x4521, 0x00},
 	{0x4511, 0x22},
+	{0x4801, 0x0f},
+	{0x4814, 0x2a},
 	{0x481f, 0x3c},
+	{0x4823, 0x3c},
 	{0x4826, 0x00},
+	{0x481b, 0x3c},
+	{0x4827, 0x32},
 	{0x4837, 0x18},
 	{0x4b00, 0x06},
 	{0x4b01, 0x0a},
+	{0x4b04, 0x10},
+	{0x5000, 0xff},
+	{0x5001, 0x00},
+	{0x5002, 0x41},
+	{0x5003, 0x0a},
+	{0x5004, 0x00},
 	{0x5043, 0x00},
 	{0x5013, 0x00},
 	{0x501f, 0x03},
@@ -690,13 +434,8 @@ static const struct ov5648_reg ov5648_regtbl[OV5648_MODE_MAX][256] = {
 	{0x5b01, 0x40},
 	{0x5b02, 0x00},
 	{0x5b03, 0xf0},
-	{0x4800, 0x24},
-	{0x3503, 0x03},
-	{0x5000, 0Xff},
-	{0x5001, 0X00},
-
-	{0xFFFF, 0x00}
-	}
+	{0x0100, 0x01},
+	{0xFFFF, 0x00}	/* end of the list */
 };
 
 static const struct ov5648_reg ov5648_regdif[OV5648_MODE_MAX][32] = {
@@ -706,6 +445,7 @@ static const struct ov5648_reg ov5648_regdif[OV5648_MODE_MAX][32] = {
 	{0x3708, 0x66},
 	{0x3709, 0x52},
 	{0x370c, 0xc3},
+	{0x3800, 0x00},
 	{0x3801, 0x10},
 	{0x3802, 0x00},
 	{0x3803, 0xfe},
@@ -718,7 +458,7 @@ static const struct ov5648_reg ov5648_regdif[OV5648_MODE_MAX][32] = {
 	{0x380a, 0x02},
 	{0x380b, 0xd0},
 	{0x380c, 0x07},
-	{0x380d, 0x48},
+	{0x380d, 0x78},
 	{0x380e, 0x05},
 	{0x380f, 0xd8},
 	{0x3810, 0x00},
@@ -727,13 +467,9 @@ static const struct ov5648_reg ov5648_regdif[OV5648_MODE_MAX][32] = {
 	{0x3813, 0x02},
 	{0x3814, 0x31},
 	{0x3815, 0x31},
-#ifdef CONFIG_MACH_JAVA_C_5606
-	{0x3820, 0x00},
-	{0x3821, 0x07},
-#else
-	{0x3820, 0x0e},
+	{0x3820, 0x47},
 	{0x3821, 0x01},
-#endif
+
 	{0x4004, 0x02},
 	{0x4005, 0x1a},
 	{0x301a, 0xf0},
@@ -746,6 +482,7 @@ static const struct ov5648_reg ov5648_regdif[OV5648_MODE_MAX][32] = {
 	{0x3708, 0x66},
 	{0x3709, 0x52},
 	{0x370c, 0xc3},
+	{0x3800, 0x00},
 	{0x3801, 0x10},
 	{0x3802, 0x00},
 	{0x3803, 0x06},
@@ -758,7 +495,7 @@ static const struct ov5648_reg ov5648_regdif[OV5648_MODE_MAX][32] = {
 	{0x380a, 0x03},
 	{0x380b, 0xc0},
 	{0x380c, 0x07},
-	{0x380d, 0x48},
+	{0x380d, 0x78},
 	{0x380e, 0x05},
 	{0x380f, 0xd8},
 	{0x3810, 0x00},
@@ -767,25 +504,59 @@ static const struct ov5648_reg ov5648_regdif[OV5648_MODE_MAX][32] = {
 	{0x3813, 0x06},
 	{0x3814, 0x31},
 	{0x3815, 0x31},
-#ifdef CONFIG_MACH_JAVA_C_5606
-	{0x3820, 0x00},
-	{0x3821, 0x07},
-#else
-	{0x3820, 0x0e},
+	{0x3820, 0x47},
 	{0x3821, 0x01},
-#endif
+
 	{0x4004, 0x02},
 	{0x4005, 0x1a},
 	{0x301a, 0xf0},
 
 	{0xFFFF, 0x00}
 	},
+#ifdef CONFIG_ARCH_JAVA
+	{
+	/* to 1920x1080P30 */
+	{0x301a, 0xf1},
+	{0x3708, 0x63},
+	{0x3709, 0x12},
+	{0x370c, 0xc0},
+	{0x3800, 0x01},
+	{0x3801, 0x50},
+	{0x3802, 0x01},
+	{0x3803, 0xb2},
+	{0x3804, 0x08},
+	{0x3805, 0xef},
+	{0x3806, 0x05},
+	{0x3807, 0xf1},
+	{0x3808, 0x07},
+	{0x3809, 0x80},
+	{0x380a, 0x04},
+	{0x380b, 0x38},
+	{0x380c, 0x09},
+	{0x380d, 0xfa},
+	{0x380e, 0x04},
+	{0x380f, 0x60},
+	{0x3810, 0x00},
+	{0x3811, 0x10},
+	{0x3812, 0x00},
+	{0x3813, 0x04},
+	{0x3814, 0x11},
+	{0x3815, 0x11},
+
+	{0x4004, 0x04},
+	{0x4005, 0x18},
+	{0x301a, 0xf0},
+
+	{0xFFFF, 0x00}
+	},
+#endif
 	{
 	/* to 2592x1944P15       */
 	{0x301a, 0xf1},
 	{0x3708, 0x63},
 	{0x3709, 0x12},
 	{0x370c, 0xc0},
+	{0x3800, 0x00},
 	{0x3801, 0x00},
 	{0x3802, 0x00},
 	{0x3803, 0x00},
@@ -807,19 +578,15 @@ static const struct ov5648_reg ov5648_regdif[OV5648_MODE_MAX][32] = {
 	{0x3813, 0x06},
 	{0x3814, 0x11},
 	{0x3815, 0x11},
-#ifdef CONFIG_MACH_JAVA_C_5606
-	{0x3820, 0x00},
-	{0x3821, 0x06},
-#else
-	{0x3820, 0x06},
+	{0x3820, 0x46},
 	{0x3821, 0x00},
-#endif
+
 	{0x4004, 0x04},
 	{0x4005, 0x1a},
 	{0x301a, 0xf0},
 
 	{0xFFFF, 0x00}
-	},
+	}
 };
 
 static const struct ov5648_reg ov5648_reg_state[OV5648_STATE_MAX][3] = {
@@ -835,8 +602,9 @@ static const struct ov5648_reg ov5648_reg_state[OV5648_STATE_MAX][3] = {
 	},
 };
 
-static int set_flash_mode(struct i2c_client *client,
+static int ov5648_set_flash_mode(struct i2c_client *client,
 					enum v4l2_flash_led_mode mode);
+static enum hrtimer_restart ov5648_flash_mode_timer_cb(struct hrtimer *timer);
 static int ov5648_set_mode(struct i2c_client *client, int new_mode_idx);
 static int ov5648_set_state(struct i2c_client *client, int new_state);
 static int ov5648_init(struct i2c_client *client);
@@ -844,7 +612,6 @@ static int ov5648_init(struct i2c_client *client);
 /*add an timer to close the flash after two frames*/
 #if defined(CONFIG_MACH_JAVA_C_LC1)
 static struct timer_list timer;
-static char *msg = "hello world";
 static void print_func(unsigned long lparam)
 {
 	gpio_set_value(TORCH_EN, 0);
@@ -1547,11 +1314,10 @@ static int ov5648_set_gain(struct i2c_client *client, int gain_value)
 	gain_value = gain_value / GAIN_HIST_MAX;
 #endif
 	gain_actual = ov5648_calc_gain(client, gain_value, &gain_code_analog);
-	pr_debug("ov5648_set_gain: cur=%u req=%u act=%u cod=%u\n",
+	pr_debug("%s(): cur=%u req=%u act=%u cod=%u\n",
+		__func__,
 		 ov5648->gain_current, gain_value,
 		 gain_actual, gain_code_analog);
-	if (gain_actual == ov5648->gain_current)
-		return 0;
 	ret = ov5648_reg_write(client,
 		OV5648_REG_AGC_HI, (gain_code_analog >> 8) & 0x3);
 	ret |= ov5648_reg_write(client,
@@ -1774,7 +1540,8 @@ static int ov5648_set_mode(struct i2c_client *client, int new_mode_idx)
 		ov5648->mode_idx, ov5648_mode[ov5648->mode_idx].name,
 		new_mode_idx, ov5648_mode[new_mode_idx].name);
 		ov5648_init(client);
-		ret  = ov5648_reg_writes(client, ov5648_regtbl[new_mode_idx]);
+		ret = ov5648_reg_writes(client, ov5648_reginit);
+		ret  = ov5648_reg_writes(client, ov5648_regdif[new_mode_idx]);
 	} else {
 		pr_debug("ov5648_set_mode: diff init from mode[%d]=%s to mode[%d]=%s\n",
 			ov5648->mode_idx, ov5648_mode[ov5648->mode_idx].name,
@@ -1983,7 +1750,6 @@ static int ov5648_s_ctrl(struct v4l2_ctrl *ctrl)
 			ov5648->framerate_hi = F24p8(30.0);
 			break;
 		}
-
 		ov5648_set_framerate_lo(client, ov5648->framerate_lo);
 		ov5648_set_framerate_hi(client, ov5648->framerate_hi);
 		ov5648_set_exposure(client, ov5648->exposure_current);
@@ -2072,13 +1838,17 @@ static int ov5648_s_ctrl(struct v4l2_ctrl *ctrl)
 		ov5648_lens_set_position(client, ctrl->val);
 		break;
 	case V4L2_CID_FLASH_LED_MODE:
-		set_flash_mode(client, ctrl->val);
+		ov5648_set_flash_mode(client, ctrl->val);
 		break;
 	case V4L2_CID_FLASH_INTENSITY:
 		ov5648->flash_intensity = ctrl->val;
+		pr_debug("%s() flash_intensity set to %d",
+			 __func__, ov5648->flash_intensity);
 		break;
 	case V4L2_CID_FLASH_TIMEOUT:
 		ov5648->flash_timeout = ctrl->val;
+		pr_debug("%s() flash_timeout set to %d",
+			 __func__, ov5648->flash_timeout);
 		break;
 
 	}
@@ -2086,38 +1856,70 @@ static int ov5648_s_ctrl(struct v4l2_ctrl *ctrl)
 	return ret;
 }
 
-int set_flash_mode(struct i2c_client *client, enum v4l2_flash_led_mode mode)
+static enum hrtimer_restart ov5648_flash_mode_timer_cb(struct hrtimer *timer)
 {
+	struct ov5648 *ov5648;
+	ov5648 = container_of(timer, struct ov5648, flash_hrtimer);
+	if (ov5648->flashmode == V4L2_FLASH_LED_MODE_FLASH)
+		ov5648->flashmode = V4L2_FLASH_LED_MODE_NONE;
+	return HRTIMER_NORESTART;
+}
+
+static int ov5648_set_flash_mode(struct i2c_client *client,
+					enum v4l2_flash_led_mode mode)
+{
+	static const char * const flashmode_str[] = {
+		"V4L2_FLASH_LED_MODE_NONE",
+		"V4L2_FLASH_LED_MODE_FLASH",
+		"V4L2_FLASH_LED_MODE_FLASH_AUTO",
+		"V4L2_FLASH_LED_MODE_TORCH",
+	};
+
 	struct ov5648 *ov5648 = to_ov5648(client);
+
+	pr_debug("%s() mode=%s intensity=%d timeout=%d",
+		__func__,
+		flashmode_str[mode],
+		ov5648->flash_intensity,
+		ov5648->flash_timeout);
+
 	if (ov5648->flashmode == mode)
 		return 0;
 #ifdef CONFIG_VIDEO_AS3643
-	if (mode == V4L2_FLASH_LED_MODE_NONE) {
-		if (ov5648->flashmode != V4L2_FLASH_LED_MODE_NONE) {
-			ov5648_reg_write(client, 0x3B00, 0x00);
-			as3643_clear_all();
-			as3643_gpio_toggle(0);
-		}
-	} else if (mode == V4L2_FLASH_LED_MODE_TORCH) {
+	switch (mode) {
+	case V4L2_FLASH_LED_MODE_NONE:
+		ov5648_reg_write(client, 0x3B00, 0x00);
+		as3643_clear_all();
+		as3643_gpio_toggle(0);
+		break;
+
+	case V4L2_FLASH_LED_MODE_TORCH:
 		as3643_gpio_toggle(1);
 		usleep_range(25, 30);
 		as3643_set_torch_flash(0x80);
-	} else if (mode == V4L2_FLASH_LED_MODE_FLASH) {
-		ov5648_reg_write(client, 0x3B00, 0x83);
+		break;
+
+	case V4L2_FLASH_LED_MODE_FLASH:
+		/* turn flash on */
 		as3643_gpio_toggle(1);
 		usleep_range(25, 30);
-		/* FIXME: timeout should be vts*line_length/1000+constant? */
-		as3643_set_ind_led(ov5648->flash_intensity / 5,
-				ov5648->flash_timeout);
-	} else if (mode == V4L2_FLASH_LED_MODE_FLASH_AUTO) {
+		as3643_set_ind_led(ov5648->flash_intensity,
+					ov5648->flash_timeout);
+		ov5648_reg_write(client, 0x3B00, 0x83);
+		break;
+
+	case V4L2_FLASH_LED_MODE_FLASH_AUTO:
 		as3643_gpio_toggle(1);
 		usleep_range(25, 30);
 		as3643_set_ind_led(0x80, 30000);
 		ov5648_reg_write(client, 0x3B00, 0x83);
+		break;
+
+	default:
 	/* Not yet implemented */
-	} else {
 		return -EINVAL;
 	}
+
 	ov5648->flashmode = mode;
 #endif
 
@@ -2163,6 +1965,18 @@ int set_flash_mode(struct i2c_client *client, enum v4l2_flash_led_mode mode)
 	ov5648->flashmode = mode;
 #endif
 
+	switch (mode) {
+	case FLASH_MODE_ON:
+		hrtimer_start(&ov5648->flash_hrtimer,
+				ns_to_ktime(ov5648->flash_timeout * 1000),
+				HRTIMER_MODE_REL);
+		break;
+	case FLASH_MODE_OFF:
+		hrtimer_cancel(&ov5648->flash_hrtimer);
+		break;
+	default:
+		break;
+	}
 	return 0;
 }
 
@@ -2366,15 +2180,30 @@ static int ov5648_procfs_read(char *buf, char **start, off_t offset,
 		       int count, int *eof, void *data) {
 	int len;
 	int lens_position, lens_ttd;
-	struct ov5648 *ov5648 = to_ov5648((struct i2c_client *)data);
+	u8 gain_buf[2];
+	u8 exp_buf[3];
+	u16 gain_code;
+	u32 exp_code;
+	struct i2c_client *client;
+	struct ov5648 *ov5648;
+
+	client = (struct i2c_client *)data;
+	ov5648 = to_ov5648(client);
 
 	ov5648_lens_get_position((struct i2c_client *)data,
 				 &lens_position, &lens_ttd);
+	ov5648_reg_read_multi(client, OV5648_REG_AGC_HI, gain_buf, 2);
+	gain_code = ((gain_buf[0] & 0x3f) << 8) + gain_buf[1];
+	ov5648_reg_read_multi(client, OV5648_REG_EXP_HI, exp_buf, 3);
+	exp_code =
+		((exp_buf[0] & 0xf) << 16) +
+		((exp_buf[1] & 0xff) << 8) +
+		(exp_buf[2] & 0xf0);
 
 	len = sprintf(buf,
 		      "mode     = %s\n"
-		      "ag       = 0x%2X (%d.%03d)\n"
-		      "exp      = %d\n"
+		      "ag       = 0x%2X (%d.%03d) 0x%04X\n"
+		      "exp      = [%d 0x%06X]\n"
 		      "lines    = %d\n"
 		      "vts      = %d\n"
 		      "line_len = %d\n"
@@ -2384,7 +2213,8 @@ static int ov5648_procfs_read(char *buf, char **start, off_t offset,
 		      ov5648_mode[ov5648->mode_idx].name,
 		      ov5648->gain_current,
 		      ov5648->gain_current >> 8, ov5648->gain_current & 0xFF,
-		      ov5648->exposure_current,
+		      gain_code,
+		      ov5648->exposure_current, exp_code,
 		      ov5648->coarse_int_lines,
 		      ov5648->vts,
 		      ov5648->line_length,
@@ -2402,7 +2232,7 @@ static int ov5648_procfs_write(struct file *file,
 			       unsigned long count,
 			       void *data)
 {
-	int val;
+	int val, val2;
 	char str[OV5648_MAX_PROC+1];
 	struct i2c_client *client;
 	struct ov5648 *ov5648;
@@ -2414,8 +2244,8 @@ static int ov5648_procfs_write(struct file *file,
 		count = OV5648_MAX_PROC;
 	if (copy_from_user(str, buf, count))
 		return -EFAULT;
-	str[OV5648_MAX_PROC] = 0;
-	pr_debug("%s(): str='%s'\n", __func__, str);
+	str[min(OV5648_MAX_PROC, count)] = 0;
+	pr_debug("%s(): str=\"%s\"", __func__, str);
 	if (strncmp(str, "ag=", 3) == 0) {
 		val = 0;
 		sscanf(str, "ag=%d", &val);
@@ -2491,8 +2321,23 @@ static int ov5648_procfs_write(struct file *file,
 		ov5648_lens_set_position(client, lens_position-val);
 		pr_debug("%s(): lens_pos=%d af_on=%d\n",
 			 __func__, lens_position-val, ov5648->af_on);
+	} else if (strncmp(str, "flash=", 6) == 0) {
+		val = 0;
+		sscanf(str, "flash=%d %d", &val, &val2);
+		pr_debug("%s(): flash=%d %d",
+			__func__, val, val2);
+		ov5648->flash_intensity = val;
+		ov5648->flash_timeout   = val2;
+		if (ov5648->flash_intensity > 0) {
+			ov5648_set_flash_mode(client,
+						V4L2_FLASH_LED_MODE_FLASH);
+			usleep_range(val2, val2+1000);
+			ov5648_set_flash_mode(client, V4L2_FLASH_LED_MODE_NONE);
+		} else {
+			ov5648_set_flash_mode(client, V4L2_FLASH_LED_MODE_NONE);
+		}
 	} else
-		pr_debug("%s(): unknown command: '%s'\n",
+		pr_debug("%s(): unknown command: \"%s\"",
 			 __func__, str);
 	return count;
 }
