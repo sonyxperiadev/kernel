@@ -907,7 +907,7 @@ defined(CONFIG_TOUCHSCREEN_BCMTCH15XXX_MODULE)
 	//kivu_add_barometer();
 #endif
 #if defined(CONFIG_INPUT_APDS9702)
-	//kivu_add_proximity();
+	kivu_add_proximity();
 #endif
 }
 
