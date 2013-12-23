@@ -12,9 +12,6 @@
 *  consent.
 *
 *****************************************************************************/
-#if defined(CONFIG_INPUT_LSM303DLHC_ACCELEROMETER)
-void __init kivu_add_accel(void);
-#endif
 #if defined(CONFIG_INPUT_LSM303DLH_MAGNETOMETER)
 void __init kivu_add_magnetometer(void);
 #endif

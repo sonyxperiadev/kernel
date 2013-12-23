@@ -891,9 +891,6 @@ defined(CONFIG_TOUCHSCREEN_BCMTCH15XXX_MODULE)
 		ARRAY_SIZE(bcmtch15xxx_i2c_boardinfo));
 #endif
 
-#if defined(CONFIG_INPUT_LSM303DLHC_ACCELEROMETER)
-	//kivu_add_accel();
-#endif
 #if defined(CONFIG_INPUT_LSM303DLH_MAGNETOMETER)
 	//kivu_add_magnetometer();
 #endif
