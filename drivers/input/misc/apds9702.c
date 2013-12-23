@@ -396,7 +396,7 @@ static int apds9702_probe(struct i2c_client *client,
 		goto err_create_interfaces_failed;
 
 	err = request_threaded_irq(data->interrupt, NULL, apds9702_work,
-				   IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING,
+				   IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING | IRQF_ONESHOT,
 				   APDS9702_NAME, data);
 	if (err < 0) {
 		dev_err(&client->dev, "%s: request_irq failed\n", __func__);
