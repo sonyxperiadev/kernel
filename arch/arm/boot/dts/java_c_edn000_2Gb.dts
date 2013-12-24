@@ -105,7 +105,7 @@
 		mpu3050@68 {
 			compatible = "bcm,mpu3050";
 			reg = <0x68>;
-			gpio-irq-pin = <33>;
+			gpio-irq-pin = <&gpio 33 0>;
 			int-config = <0x10>;
 			level-shifter = <0>;
 			orientation = <0 0xFFFFFFFF 0
@@ -115,30 +115,29 @@
 		akm8975@0c {
 			compatible = "bcm,akm8975";
 			reg = <0x0c>;
-			gpio-irq-pin = <4>;
+			gpio-irq-pin = <&gpio 4 0>;
 			layout = <6>;
 		};
 
 		kxtik@0f {
-                        compatible = "bcm,kxtik";
-                        reg = <0x0f>;
-                        gpio-irq-pin = <0>;
-                        min_interval = <5>;
-                        poll_interval = <200>;
-                        axis_map_x = <0>;
-                        axis_map_y = <1>;
-                        axis_map_z = <2>;
-                        negate_x = <1>;
-                        negate_y = <0>;
-                        negate_z = <1>;
-                        res_12bit = <64>;
-                        g_range = <0>;
-                };
-
+			compatible = "bcm,kxtik";
+			reg = <0x0f>;
+			/* Add gpio-irq-pin if using the same */
+			min_interval = <5>;
+			poll_interval = <200>;
+			axis_map_x = <0>;
+			axis_map_y = <1>;
+			axis_map_z = <2>;
+			negate_x = <1>;
+			negate_y = <0>;
+			negate_z = <1>;
+			res_12bit = <64>;
+			g_range = <0>;
+		};
 		tmd2771@39 {
 			compatible = "bcm,tmd2771";
 			reg = <0x39>;
-			gpio-irq-pin = <89>;
+			gpio-irq-pin = <&gpio 89 0>;
 			calibrate_target_param = <300000>;
 			als_time_param = <200>;
 			scale_factor_param = <1>;
@@ -180,9 +179,9 @@
 		FocalTech-Ft5306@46 {
 			compatible = "bcm,FocalTech-Ft5306";
 			reg = <0x38>;
-			gpio-irq-pin = <73>;
-			gpio-reset-pin = <70>;
-			gpio-wakeup-pin = <70>;
+			gpio-irq-pin = <&gpio 73 0>;
+			gpio-reset-pin = <&gpio 70 0>;
+			gpio-wakeup-pin = <&gpio 70 0>;
 			x-max-value = <720>;
 			y-max-value = <1280>;
 			use-irq = <1>;
@@ -200,6 +199,20 @@
 		fs-ref-frequency = <13000000>;
 		hs-ref-frequency = <26000000>;
 	};
+
+	spi0: spi@0x3E004000 {
+		enable-dma = <1>;
+		cs-line = <1>;
+		mode = <0x23>;
+
+		spidev@0x0 {
+			compatible = "bcm,spidev";
+			reg = <0x0>;
+			spi-max-frequency = <13000000>;
+			spi-loop = <0x20>;
+		};
+	};
+
 
         bcm-bt-btlpm {
                 compatible = "bcm,bcm-bt-lpm";
@@ -341,8 +354,8 @@
 	kona-fb {
 		module-name = "NT35512";
 		reg-name = "cam2";
-		rst-gpio = <8>;
-		detect-gpio = <10>;
+		rst-gpio = <&gpio 8 0>;
+		detect-gpio = <&gpio 10 0>;
 		detect-gpio-val = <0>;
 		rst-setup = <700>;	/* 700us */
 		rst-pulse = <1000>;	/* 1ms */
@@ -369,8 +382,8 @@
 	kona-fb-2 {
 		module-name = "OTM8018B";
 		reg-name = "cam2";
-		rst-gpio = <8>;
-		detect-gpio = <10>;
+		rst-gpio = <&gpio 8 0>;
+		detect-gpio = <&gpio 10 0>;
 		detect-gpio-val = <1>;
 		rst-setup = <700>;	/* 700us */
 		rst-pulse = <1000>;	/* 1ms */
@@ -389,6 +402,33 @@
 		hs-bitrate = <333000000>;
 		lp-bitrate = <8000000>;	/* 8mbps */
 		desense-offset = <2400000>;  /* +2.4Mbps */
+		iommu = <&iommu_mm>;
+		iovmm = <&iovmm_mm>;
+		rotation = <180>;
+	};
+
+	kona-fb-3 {
+		module-name = "OTM1281A";
+		reg-name = "cam2";
+		rst-gpio = <&gpio 8 0>;
+		detect-gpio = <&gpio 10 0>;
+		detect-gpio-val = <0>;
+		rst-setup = <5>;	/* 5us */
+		rst-pulse = <20>;	/* 20us */
+		rst-hold = <20000>;	/* 20ms */
+		/* rst-active-high */	/* Commented => Active Low */
+		vmode;		/* Commented => Command mode */
+		/* vburst = <0>; */	/* Non-burst mode */
+		cmnd-LP;		/* Commands in LP mode*/
+		/* te-ctrl; */		/* Tearing Effect Control disabled */
+		col-mod-i = <3>;
+		col-mod-o = <2>;
+		width = <720>;
+		height = <1280>;
+		fps = <60>;
+		lanes = <4>;
+		hs-bitrate = <400000000>;
+		lp-bitrate = <5000000>;	/* 5mbps */
 		iommu = <&iommu_mm>;
 		iovmm = <&iovmm_mm>;
 		rotation = <180>;
@@ -471,9 +511,10 @@
 		interrupts = <0 77 0x04>;
 		id = <0>;
 		data-pullup = <0>;
-		cd-gpio = <91>;		/*SD_CARDDET_GPIO_PIN*/
+		cd-gpio = <&gpio 91 0>;		/*SD_CARDDET_GPIO_PIN*/
 		devtype = <0>;		/*SDIO_DEV_TYPE_SDMMC*/
 		flags = <0>;		/*KONA_SDIO_FLAGS_DEVICE_REMOVABLE*/
+		pm_caps = <1>;		/*MMC_PM_KEEP_POWER*/
 		peri-clk-name = "sdio1_clk";
 		ahb-clk-name = "sdio1_ahb_clk";
 		sleep-clk-name = "sdio1_sleep_clk";
@@ -557,4 +598,7 @@
 		sec-mem-size = <0x100000>;
 	};
 
+	secure_watchdog {
+		compatible = "bcm,secure_watchdog";
+	};
 };
