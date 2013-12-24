@@ -524,7 +524,9 @@ __weak int bcmpmu_fg_accumulator_to_capacity(struct bcmpmu_fg_data *fg,
 	int accm_act;
 	int accm_sleep;
 	int cap_mas;
-	int ibat_avg;
+	s64 ibat_avg;
+	s64 temp1;
+	s64 temp2;
 	int sample_rate;
 
 	sample_rate = bcmpmu_fg_sample_rate_to_actual(fg->sample_rate);
@@ -539,10 +541,13 @@ __weak int bcmpmu_fg_accumulator_to_capacity(struct bcmpmu_fg_data *fg,
 			accm_act, accm_sleep, cap_mas);
 
 	if (sample_cnt || sleep_cnt) {
-		ibat_avg = (cap_mas * 1000) /
-			((sample_cnt * 1000000 / sample_rate) +
-			(sleep_cnt * 1000000 / fg->pdata->sleep_sample_rate));
-		pr_fg(FLOW, "AVG Current %d\n", ibat_avg);
+		temp1 = ((s64)sample_cnt * 1000000);
+		do_div(temp1, sample_rate);
+		temp2 = ((s64)sleep_cnt * 1000000);
+		do_div(temp2, fg->pdata->sleep_sample_rate);
+		pr_fg(VERBOSE, "temp1 = %lld temp2 = %lld\n", temp1, temp2);
+		ibat_avg = ((cap_mas * 1000) / ((s32)temp1  + (s32)temp2));
+		pr_fg(FLOW, "AVG Current %lld\n", ibat_avg);
 	}
 	return cap_mas;
 }
@@ -1062,7 +1067,7 @@ int bcmpmu_fg_get_batt_volt(struct bcmpmu59xxx *bcmpmu)
 
 	while (retries--) {
 		ret = bcmpmu_adc_read(bcmpmu, PMU_ADC_CHANN_VMBATT,
-				PMU_ADC_REQ_SAR_MODE, &result);
+				PMU_ADC_REQ_RTM_MODE, &result);
 		if (!ret)
 			break;
 		msleep(ADC_RETRY_DELAY);
