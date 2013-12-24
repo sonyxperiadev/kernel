@@ -66,6 +66,7 @@ struct kona_pm_params {
 	int log_lvl;
 	spinlock_t cstate_lock;
 	struct atomic_notifier_head cstate_nh;
+	struct notifier_block pm_notifier;
 };
 
 static struct kona_pm_params pm_prms = {
@@ -171,6 +172,30 @@ struct cpuidle_driver kona_idle_driver = {
 
 #ifdef CONFIG_SUSPEND
 
+static int kona_pm_notifier(struct notifier_block *notifier,
+		       unsigned long pm_event,
+		       void *unused)
+{
+	switch (pm_event) {
+	case PM_SUSPEND_PREPARE:
+#ifdef CONFIG_BCM_MODEM
+		BcmRpc_SetApSleep(1);
+#endif
+		break;
+
+	case PM_POST_SUSPEND:
+#ifdef CONFIG_BCM_MODEM
+		BcmRpc_SetApSleep(0);
+#endif
+		break;
+
+	default:
+		break;
+	}
+	return NOTIFY_DONE;
+}
+
+
 __weak int kona_mach_pm_begin(suspend_state_t state)
 {
 	if (LOG_LEVEL_ENABLED(KONA_PM_LOG_LVL_FLOW))
@@ -217,9 +242,6 @@ __weak int kona_mach_pm_enter(suspend_state_t state)
 		if  (is_sec_wd_enabled())
 			sec_wd_disable();
 #endif
-#ifdef CONFIG_BCM_MODEM
-			BcmRpc_SetApSleep(1);
-#endif
 
 #ifdef CONFIG_KONA_PROFILER
 			err = start_profiler("ccu_root",
@@ -258,9 +280,6 @@ __weak int kona_mach_pm_enter(suspend_state_t state)
 			}
 #endif /*CONFIG_KONA_PROFILER*/
 
-#ifdef CONFIG_BCM_MODEM
-			BcmRpc_SetApSleep(0);
-#endif
 #ifdef CONFIG_BRCM_SECURE_WATCHDOG
 		if  (is_sec_wd_enabled())
 			sec_wd_enable();
@@ -422,6 +441,9 @@ int __init kona_pm_init(struct pm_init_param *ip)
 #ifdef CONFIG_SUSPEND
 	pr_info("--%s : registering suspend hanlders\n", __func__);
 	suspend_set_ops(&kona_pm_ops);
+	pm_prms.pm_notifier.notifier_call = kona_pm_notifier;
+	register_pm_notifier(&pm_prms.pm_notifier);
+
 #endif /*CONFIG_SUSPEND */
 
 	ATOMIC_INIT_NOTIFIER_HEAD(&pm_prms.cstate_nh);
