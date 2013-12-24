@@ -269,14 +269,9 @@ __weak int kona_mach_pm_enter(suspend_state_t state)
 				time_awake = stop_profiler("ccu_root");
 				if (time_awake == OVERFLOW_VAL)
 					printk(KERN_ALERT "counter overflow");
-				else if	(time_awake > 0) {
+				else if	(time_awake > 0)
 					pr_info("System in deepsleep: %llums",
 						time_susp - time_awake);
-					if ((time_susp - time_awake) == 0) {
-						pr_err("Deepsleep broken\n");
-						__WARN();
-					}
-				}
 			}
 #endif /*CONFIG_KONA_PROFILER*/
 
