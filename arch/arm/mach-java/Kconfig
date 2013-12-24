@@ -412,7 +412,7 @@ config USE_ARCH_TIMER_AS_LOCAL_TIMER
 config USE_JAVA_SPINLOCK
 	bool "Use Java specific Spinlock implementation"
 	depends on ARCH_JAVA
-	default n
+	default y
 	help
 	  Because of the way WFE and SEV are implemented on A7 based Java
 	  there could be issues seen in the spinlocks. Enabling this option
