@@ -1956,6 +1956,7 @@ static void handle_hc_chhltd_intr_dma(dwc_otg_hcd_t *hcd,
 	} else {
 		DWC_PRINTF("NYET/NAK/ACK/other in non-error case, 0x%08x\n",
 			   hcint.d32);
+		halt_channel(hcd, hc, qtd, DWC_OTG_HC_XFER_NAK);
 	}
 }
 
