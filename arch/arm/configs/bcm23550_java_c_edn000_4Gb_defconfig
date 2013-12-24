@@ -2294,6 +2294,11 @@ CONFIG_SOC_CAMERA_OV7692=y
 CONFIG_VIDEO_AS3643=y
 
 #
+# VCM drivers
+#
+CONFIG_VIDEO_A3907=y
+
+#
 # soc camera host driver
 #
 CONFIG_UNICAM_CAMERA=y

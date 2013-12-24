@@ -39,13 +39,7 @@
 #define A3907_NORM_OP              0x0
 #define A3907_TIM                  0xb
 
-/* #define A3907_DEBUG */
-#ifdef A3907_DEBUG
-#define iprintk(format, arg...)	\
-	printk(KERN_ERR "[%s]: "format"\n", __func__, ##arg)
-#else
-	#define iprintk(format, arg...)
-#endif
+#define iprintk(format, arg...)
 
 struct a3907_lens {
 	int powerdown;
@@ -83,10 +77,8 @@ static int a3907_reg_write(struct i2c_client *client, u16 val)
 	data[0] = (u8)((val >> 8) & 0xff);
 	data[1] = (u8)(val & 0xff);
 	ret = i2c_transfer(client->adapter, &msg, 1);
-	if (ret < 0) {
-		printk(KERN_INFO KERN_ERR "a3907_reg_write I2C Failed\n");
+	if (ret < 0)
 		return ret;
-	}
 	iprintk("-\n");
 	return 0;
 }
