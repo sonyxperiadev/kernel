@@ -2409,7 +2409,7 @@ void dwc_otg_core_host_init(dwc_otg_core_if_t *core_if)
 		if (hprt0.b.prtpwr == 0) {
 			hprt0.b.prtpwr = 1;
 			dwc_write_reg32(host_if->hprt0, hprt0.d32);
-#ifdef CONFIG_USB_OTG_UTILS
+#ifdef CONFIG_USB_OTG
 			if (core_if->xceiver->otg->set_vbus)
 				core_if->xceiver->otg->set_vbus(core_if->xceiver->otg,
 							   true);
