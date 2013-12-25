@@ -3005,6 +3005,11 @@ void csl_ControlHW_dmic_regulator(Boolean enable)
 {
 	aTrace(LOG_AUDIO_CSL,
 		"%s: action = %d,", __func__, enable);
+#if !defined(CONFIG_MACH_JAVA_GARNET_C_EDN000) \
+	&& !defined(CONFIG_MACH_JAVA_GARNET_EDN000)
+	aError("MICLDO is disabled by default\n");
+	return;
+#endif
 /*Get and turn on the regulator MICLDO, if its not on*/
 	if (enable) {
 		if (!gMIC_regulator) {

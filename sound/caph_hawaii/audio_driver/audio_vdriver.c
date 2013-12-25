@@ -467,7 +467,7 @@ void AUDDRV_Telephony_Init(AUDIO_SOURCE_Enum_t mic, AUDIO_SINK_Enum_t speaker,
 	currVoiceMic = mic;
 	currVoiceSpkr = speaker;
 
-#if defined(CONFIG_IHF_FEEDBACK_CIRCUIT)
+#if defined(CONFIG_MACH_HAWAII_GARNET) || defined(CONFIG_MACH_JAVA_GARNET)
 /*For garnet need to enable regulator to power on analog switch which
 selects IHF protection loopback or Analog Mic line to BB*/
 	if (currVoiceMic == AUDIO_SOURCE_ANALOG_MAIN)
@@ -756,7 +756,7 @@ void AUDDRV_Telephony_Deinit(void)
 		AUDDRV_Telephony_DeinitHW();
 	}
 
-#if defined(CONFIG_IHF_FEEDBACK_CIRCUIT)
+#if defined(CONFIG_MACH_HAWAII_GARNET) || defined(CONFIG_MACH_JAVA_GARNET)
 /*For garnet need to disable regulator to power off analog switch
 which selects IHF protection loopback or Analog Mic line to BB*/
 	if (currVoiceMic == AUDIO_SOURCE_ANALOG_MAIN)

@@ -88,9 +88,3 @@ config IHF_EXT_PA_TPA2026D2
         help
           Say Y here to enable the two external amp for IHF
 
-config IHF_FEEDBACK_CIRCUIT
-        boolean "Define if use ihf feedback circuit"
-        depends on BCM_ALSA_SOUND
-        default n
-        help
-          Say Y here to use ihf feedback circuit

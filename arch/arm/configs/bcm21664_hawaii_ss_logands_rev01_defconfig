@@ -2477,7 +2477,6 @@ CONFIG_SND_USB=y
 # CONFIG_SND_USB_6FIRE is not set
 # CONFIG_SND_SOC is not set
 # CONFIG_SOUND_PRIME is not set
-# CONFIG_IHF_FEEDBACK_CIRCUIT is not set
 
 #
 # HID support
