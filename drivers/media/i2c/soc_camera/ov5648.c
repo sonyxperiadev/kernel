@@ -126,7 +126,7 @@ struct sensor_mode ov5648_mode[OV5648_MODE_MAX + 1] = {
 		.hts            = 1912,
 		.vts            = 1496,
 		.vts_max        = 32767 - 6,
-		.line_length_ns = 11850,
+		.line_length_ns = 22285,
 		.bayer          = BAYER_BGGR,
 		.bpp            = 10,
 		.fps            = F24p8(30.0),
@@ -138,7 +138,7 @@ struct sensor_mode ov5648_mode[OV5648_MODE_MAX + 1] = {
 		.hts            = 1912,
 		.vts            = 1496,
 		.vts_max        = 32767 - 6,
-		.line_length_ns = 11850,
+		.line_length_ns = 22285,
 		.bayer          = BAYER_BGGR,
 		.bpp            = 10,
 		.fps            = F24p8(30.0),
@@ -357,16 +357,8 @@ static const struct ov5648_reg ov5648_reginit[256] = {
 	{0x3814, 0x11},
 	{0x3815, 0x11},
 	{0x3817, 0x00},
-	#if defined(CONFIG_MACH_JAVA_C_5606) \
-	 || defined(CONFIG_MACH_JAVA_C_5609A) \
-	 || defined(CONFIG_MACH_HAWAII_GARNET_C_5606) \
-	 || defined(CONFIG_MACH_HAWAII_GARNET_C_W81)
-	{0x3820, 0x00},
-	{0x3821, 0x07},
-	#else
-	{0x3820, 0x47},
-	{0x3821, 0x01},
-	#endif
+	{0x3820, 0x40},
+	{0x3821, 0x06},
 	{0x3826, 0x03},
 	{0x3829, 0x00},
 	{0x382b, 0x0b},
@@ -467,9 +459,13 @@ static const struct ov5648_reg ov5648_regdif[OV5648_MODE_MAX][32] = {
 	{0x3813, 0x02},
 	{0x3814, 0x31},
 	{0x3815, 0x31},
-	{0x3820, 0x47},
+#ifdef CONFIG_MACH_JAVA_C_5606
+	{0x3820, 0x00},
+	{0x3821, 0x07},
+#else
+	{0x3820, 0x0e},
 	{0x3821, 0x01},
-
+#endif
 	{0x4004, 0x02},
 	{0x4005, 0x1a},
 	{0x301a, 0xf0},
@@ -504,9 +500,13 @@ static const struct ov5648_reg ov5648_regdif[OV5648_MODE_MAX][32] = {
 	{0x3813, 0x06},
 	{0x3814, 0x31},
 	{0x3815, 0x31},
-	{0x3820, 0x47},
+#ifdef CONFIG_MACH_JAVA_C_5606
+	{0x3820, 0x00},
+	{0x3821, 0x07},
+#else
+	{0x3820, 0x0e},
 	{0x3821, 0x01},
-
+#endif
 	{0x4004, 0x02},
 	{0x4005, 0x1a},
 	{0x301a, 0xf0},
@@ -542,7 +542,13 @@ static const struct ov5648_reg ov5648_regdif[OV5648_MODE_MAX][32] = {
 	{0x3813, 0x04},
 	{0x3814, 0x11},
 	{0x3815, 0x11},
-
+#ifdef CONFIG_MACH_JAVA_C_5606
+	{0x3820, 0x00},
+	{0x3821, 0x07},
+#else
+	{0x3820, 0x46},
+	{0x3821, 0x00},
+#endif
 	{0x4004, 0x04},
 	{0x4005, 0x18},
 	{0x301a, 0xf0},
@@ -578,9 +584,13 @@ static const struct ov5648_reg ov5648_regdif[OV5648_MODE_MAX][32] = {
 	{0x3813, 0x06},
 	{0x3814, 0x11},
 	{0x3815, 0x11},
-	{0x3820, 0x46},
+#ifdef CONFIG_MACH_JAVA_C_5606
+	{0x3820, 0x00},
+	{0x3821, 0x06},
+#else
+	{0x3820, 0x06},
 	{0x3821, 0x00},
-
+#endif
 	{0x4004, 0x04},
 	{0x4005, 0x1a},
 	{0x301a, 0xf0},
@@ -612,6 +622,7 @@ static int ov5648_init(struct i2c_client *client);
 /*add an timer to close the flash after two frames*/
 #if defined(CONFIG_MACH_JAVA_C_LC1)
 static struct timer_list timer;
+static char *msg = "hello world";
 static void print_func(unsigned long lparam)
 {
 	gpio_set_value(TORCH_EN, 0);
@@ -1860,6 +1871,7 @@ static enum hrtimer_restart ov5648_flash_mode_timer_cb(struct hrtimer *timer)
 {
 	struct ov5648 *ov5648;
 	ov5648 = container_of(timer, struct ov5648, flash_hrtimer);
+
 	if (ov5648->flashmode == V4L2_FLASH_LED_MODE_FLASH)
 		ov5648->flashmode = V4L2_FLASH_LED_MODE_NONE;
 	return HRTIMER_NORESTART;
@@ -1966,12 +1978,12 @@ static int ov5648_set_flash_mode(struct i2c_client *client,
 #endif
 
 	switch (mode) {
-	case FLASH_MODE_ON:
+	case V4L2_FLASH_LED_MODE_FLASH:
 		hrtimer_start(&ov5648->flash_hrtimer,
 				ns_to_ktime(ov5648->flash_timeout * 1000),
 				HRTIMER_MODE_REL);
 		break;
-	case FLASH_MODE_OFF:
+	case V4L2_FLASH_LED_MODE_NONE:
 		hrtimer_cancel(&ov5648->flash_hrtimer);
 		break;
 	default:
@@ -2154,6 +2166,10 @@ static int ov5648_init(struct i2c_client *client)
 #if defined(CONFIG_MACH_JAVA_C_LC1)
 	init_timer(&timer);
 #endif
+
+	hrtimer_init(&ov5648->flash_hrtimer,
+		CLOCK_MONOTONIC, HRTIMER_MODE_REL);
+	ov5648->flash_hrtimer.function = &ov5648_flash_mode_timer_cb;
 
 	ov5648->exposure_current  = DEFAULT_EXPO;
 	ov5648->aecpos_delay      = 1;
