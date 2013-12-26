@@ -206,6 +206,7 @@
                 bt-wake-gpio = <&gpio 32 0>;
                 host-wake-gpio = <&gpio 72 0>;
         };
+
 	spi0: spi@0x3E004000 {
 		enable-dma = <1>;
 		cs-line = <1>;

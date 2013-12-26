@@ -120,20 +120,21 @@
 		};
 
 		kxtik@0f {
-			compatible = "bcm,kxtik";
-			reg = <0x0f>;
+                        compatible = "bcm,kxtik";
+                        reg = <0x0f>;
 			/* Add gpio-irq-pin if using the same */
-			min_interval = <5>;
-			poll_interval = <200>;
-			axis_map_x = <0>;
-			axis_map_y = <1>;
-			axis_map_z = <2>;
-			negate_x = <1>;
-			negate_y = <0>;
-			negate_z = <1>;
-			res_12bit = <64>;
-			g_range = <0>;
-		};
+                        min_interval = <5>;
+                        poll_interval = <200>;
+                        axis_map_x = <0>;
+                        axis_map_y = <1>;
+                        axis_map_z = <2>;
+                        negate_x = <1>;
+                        negate_y = <0>;
+                        negate_z = <1>;
+                        res_12bit = <64>;
+                        g_range = <0>;
+                };
+
 		tmd2771@39 {
 			compatible = "bcm,tmd2771";
 			reg = <0x39>;
@@ -200,6 +201,12 @@
 		hs-ref-frequency = <26000000>;
 	};
 
+        bcm-bt-btlpm {
+                compatible = "bcm,bcm-bt-lpm";
+                bt-wake-gpio = <&gpio 32 0>;
+                host-wake-gpio = <&gpio 72 0>;
+        };
+
 	spi0: spi@0x3E004000 {
 		enable-dma = <1>;
 		cs-line = <1>;
@@ -212,13 +219,6 @@
 			spi-loop = <0x20>;
 		};
 	};
-
-
-        bcm-bt-btlpm {
-                compatible = "bcm,bcm-bt-lpm";
-                bt-wake-gpio = <&gpio 32 0>;
-                host-wake-gpio = <&gpio 72 0>;
-        };
 
         bcm-bt-rfkill {
                 compatible = "bcm,bcm-bt-rfkill";
@@ -458,6 +458,68 @@
 		falling = <5>; /*fall back temperature offset*/
 	};
 
+    tmon-thermal@0x34008000 {
+        compatible = "bcm,tmon-thermal";
+        reg  = <0x34008000 0x1000>, <0x35004000 0x1000>;
+        interrupts = <0 183 4>;
+        hysteresis = <5>;
+        flags = <5>;
+        interval_ms = <5>;
+        poll_rate_ms = <30000>;
+        tmon_apb_clk = "tmon_apb";
+        tmon_1m_clk = "tmon_1m_clk";
+        shutdown_temp = <120>;
+
+		trip0 {
+			type = "active";
+			temp = <0>;
+			max_freq = <1200000>;
+			max_brightness = <32>;
+		};
+		trip1 {
+			type = "active";
+			temp = <55>;
+			max_freq = <0>;
+			max_brightness = <28>;
+		};
+		trip2 {
+			type = "active";
+			temp = <58>;
+			max_freq = <1200000>;
+			max_brightness = <0>;
+		};
+		trip3 {
+			type = "active";
+			temp = <63>;
+			max_freq = <0>;
+			max_brightness = <25>;
+		};
+		trip4 {
+			type = "active";
+			temp = <65>;
+			max_freq = <800000>;
+			max_brightness = <0>;
+		};
+		trip5 {
+			type = "active";
+			temp = <70>;
+			max_freq = <600000>;
+			max_brightness = <22>;
+		};
+		trip6 {
+			type = "active";
+			temp = <80>;
+			max_freq = <312000>;
+			max_brightness = <0>;
+		};
+		trip7 {
+			type = "critical";
+			temp = <115>;
+			max_freq = <0>;
+			max_brightness = <0>;
+		};
+    };
+
 	memc@35008000 {
 		compatible = "bcm,memc";
 		reg = <0x35008000 0x1000>;
@@ -514,7 +576,6 @@
 		cd-gpio = <&gpio 91 0>;		/*SD_CARDDET_GPIO_PIN*/
 		devtype = <0>;		/*SDIO_DEV_TYPE_SDMMC*/
 		flags = <0>;		/*KONA_SDIO_FLAGS_DEVICE_REMOVABLE*/
-		pm_caps = <1>;		/*MMC_PM_KEEP_POWER*/
 		peri-clk-name = "sdio1_clk";
 		ahb-clk-name = "sdio1_ahb_clk";
 		sleep-clk-name = "sdio1_sleep_clk";

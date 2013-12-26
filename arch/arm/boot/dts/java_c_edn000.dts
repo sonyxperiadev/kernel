@@ -36,7 +36,6 @@
 		mdio-mstr-clk-name = "mdiomaster";
 	};
 
-
 	uart@3e000000 {
 		clock-frequency = <26000000>;
 		port-name = "console";
@@ -122,7 +121,7 @@
 		kxtik@0f {
                         compatible = "bcm,kxtik";
                         reg = <0x0f>;
-			/* Add gpio-irq-pin if requesting for a valid gpio */
+			/* Add gpio-irq-pin if using the same */
                         min_interval = <5>;
                         poll_interval = <200>;
                         axis_map_x = <0>;
@@ -213,7 +212,6 @@
 			spi-loop = <0x20>;
 		};
 	};
-
 
         bcm-bt-btlpm {
                 compatible = "bcm,bcm-bt-lpm";
@@ -425,39 +423,61 @@
         compatible = "bcm,tmon-thermal";
         reg  = <0x34008000 0x1000>, <0x35004000 0x1000>;
         interrupts = <0 183 4>;
-        hysteresis = <0>;
+        hysteresis = <5>;
         flags = <5>;
         interval_ms = <5>;
         poll_rate_ms = <30000>;
         tmon_apb_clk = "tmon_apb";
         tmon_1m_clk = "tmon_1m_clk";
-        falling = <5>; /*fall back temperature offset*/
         shutdown_temp = <120>;
 
 		trip0 {
 			type = "active";
-			temp = <75>;
+			temp = <0>;
 			max_freq = <1200000>;
+			max_brightness = <32>;
 		};
 		trip1 {
 			type = "active";
-			temp = <85>;
-			max_freq = <800000>;
+			temp = <55>;
+			max_freq = <0>;
+			max_brightness = <28>;
 		};
 		trip2 {
 			type = "active";
-			temp = <95>;
-			max_freq = <600000>;
+			temp = <58>;
+			max_freq = <1200000>;
+			max_brightness = <0>;
 		};
 		trip3 {
 			type = "active";
-			temp = <105>;
-			max_freq = <312000>;
+			temp = <63>;
+			max_freq = <0>;
+			max_brightness = <25>;
 		};
 		trip4 {
+			type = "active";
+			temp = <65>;
+			max_freq = <800000>;
+			max_brightness = <0>;
+		};
+		trip5 {
+			type = "active";
+			temp = <70>;
+			max_freq = <600000>;
+			max_brightness = <22>;
+		};
+		trip6 {
+			type = "active";
+			temp = <80>;
+			max_freq = <312000>;
+			max_brightness = <0>;
+		};
+		trip7 {
 			type = "critical";
 			temp = <115>;
 			max_freq = <0>;
+			max_brightness = <0>;
 		};
     };
 
@@ -579,6 +599,7 @@
 		brightness-levels = <0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17
 							18 19 20 21 22 23 24 25 26 27 28 29 30 31 32>; /* Android calibrates to 32 levels */
 		default-brightness-level = <32>; /* Array index */
+		pb_enable_adapt_bright = <1>;
 	};
 
 	gpio-leds {
