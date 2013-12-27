@@ -2388,6 +2388,12 @@ static void sdhci_work_wait_for_busy(struct work_struct *work)
 	if (wait_cnt >= (10 * delay)) {
 		pr_err("%s: Operation takes too long to finish!\n",
 				mmc_hostname(host->mmc));
+		/*
+		 * Set sanitize_busy flag as true so as above stack issues HPI
+		 * to get card out of programming state when timeout occur for
+		 * secure erase (in case of eMMC 4.4.1)
+		 */
+		host->cmd->sanitize_busy = true;
 		host->cmd->error = -ETIMEDOUT;
 		tasklet_schedule(&host->finish_tasklet);
 	} else {
