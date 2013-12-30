@@ -179,7 +179,7 @@ static int kona_cpufreq_freq_stats_enable(int en)
 			for (i = 0; i < kona_cpufreq->no_of_opps + num_cstates;
 					i++) {
 				stats->stats[cpu][i] = 0;
-				if (i < kona_cpufreq->no_of_opps &&
+				if (i < kona_cpufreq->no_of_opps && pol &&
 				pol->cur == kona_cpufreq->freq_map[i].cpu_freq)
 					freq_inx = i;
 			}
