@@ -695,7 +695,8 @@ static int bcm_hsotgctrl_phy_mdio_probe(struct platform_device *pdev)
 {
 	int error = 0;
 	struct bcm_hsotgctrl_drv_data *hsotgctrl_drvdata;
-	struct bcm_hsotgctrl_platform_data *plat_data;
+	struct bcm_hsotgctrl_platform_data *plat_data = NULL;
+
 	if (pdev->dev.platform_data)
 		plat_data = (struct bcm_hsotgctrl_platform_data *)
 			pdev->dev.platform_data;
