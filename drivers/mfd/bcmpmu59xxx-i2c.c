@@ -140,16 +140,6 @@ static inline void bcmpmu_i2c_unlock(struct bcmpmu59xxx *bcmpmu)
 
 int last_trans = I2C_TRANS_NONE;
 
-static inline u8 bcmpmu_get_slaveid(struct bcmpmu59xxx *bcmpmu, u32 reg)
-{
-	u8 map = DEC_MAP_ADD(reg);
-
-	if (map)
-		return bcmpmu->pdata->i2c_companion_info[map - 1].addr;
-	else
-		return bcmpmu->pmu_bus->i2c->addr;
-}
-
 static int bcmpmu_i2c_try_write(struct bcmpmu59xxx *bcmpmu, u32 reg, u8 value)
 {
 	int err = 0;

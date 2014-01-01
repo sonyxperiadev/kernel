@@ -30,6 +30,7 @@
 #include <linux/i2c-kona.h>
 #include <linux/sort.h>
 #include <linux/reboot.h>
+#include <linux/mfd/bcmpmu59xxx_reg.h>
 
 #define BCMPMU_DUMMY_CLIENTS 1
 #define REG_READ_COUNT_MAX	20
@@ -1074,6 +1075,17 @@ static inline int bcmpmu_post_spa_event(struct bcmpmu59xxx *bcmpmu,
 #endif /*CONFIG_CHARGER_BCMPMU_SPA*/
 #ifdef CONFIG_DEBUG_FS
 int bcmpmu_debugfs_open(struct inode *inode, struct file *file);
+#endif
+
+#if defined(CONFIG_MFD_BCM_PWRMGR_SW_SEQUENCER)
+static inline u8 bcmpmu_get_slaveid(struct bcmpmu59xxx *bcmpmu, u32 reg)
+{
+	u8 map = DEC_MAP_ADD(reg);
+	if (map)
+		return bcmpmu->pdata->i2c_companion_info[map - 1].addr;
+	else
+		return bcmpmu->pmu_bus->i2c->addr;
+}
 #endif
 
 #endif

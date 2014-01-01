@@ -253,18 +253,24 @@ EXPORT_SYMBOL(bcmpmu_reg_write_unlock);
 
 void bcmpmu_client_power_off(void)
 {
+	u8 val;
 	BUG_ON(!bcmpmu_gbl);
+	pr_pmucore(INIT, "---%s\n", __func__);
+	pwr_mgr_pmu_reg_read_direct((u8) DEC_REG_ADD(PMU_REG_WRPROEN),
+				bcmpmu_get_slaveid(bcmpmu_gbl,
+					PMU_REG_WRPROEN),
+				&val);
+	if (!(val & (WRPROEN_DIS_WR_PRO | WRPROEN_PMU_UNLOCK)))
+		pwr_mgr_pmu_reg_write_direct((u8)
+					DEC_REG_ADD(PMU_REG_WRLOCKKEY),
+					bcmpmu_get_slaveid(bcmpmu_gbl,
+						PMU_REG_WRLOCKKEY),
+					WRLOCKKEY_VAL);
 
-#ifdef CONFIG_MFD_BCM_PWRMGR_SW_SEQUENCER
-	pwr_mgr_set_i2c_mode(PWR_MGR_I2C_MODE_POLL);
-#endif
-	bcmpmu_reg_write_unlock(bcmpmu_gbl);
-	bcmpmu_gbl->write_dev(bcmpmu_gbl, PMU_REG_HOSTCTRL1,
-			HOSTCTRL1_SW_SHDWN);
-
-#ifdef CONFIG_MFD_BCM_PWRMGR_SW_SEQUENCER
-	pwr_mgr_set_i2c_mode(PWR_MGR_I2C_MODE_IRQ);
-#endif
+	pwr_mgr_pmu_reg_write_direct((u8) DEC_REG_ADD(PMU_REG_HOSTCTRL1),
+					bcmpmu_get_slaveid(bcmpmu_gbl,
+						PMU_REG_HOSTCTRL1),
+					HOSTCTRL1_SW_SHDWN);
 
 }
 EXPORT_SYMBOL(bcmpmu_client_power_off);
