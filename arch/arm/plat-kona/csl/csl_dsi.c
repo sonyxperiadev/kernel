@@ -1861,9 +1861,14 @@ CSL_LCD_RES_T CSL_DSI_UpdateVmVc(CSL_LCD_HANDLE vcH,
 		axipv_post(axipvCfg);
 	}
 
+	flush_work_sync(&dsiH->update_task_work);
 	*((DSI_UPD_REQ_MSG_T *)dsiH->upd_msg) = updMsg;
-	if (!queue_work(dsiH->wq, &dsiH->update_task_work))
+	if (!queue_work(dsiH->wq, &dsiH->update_task_work)) {
 		res = CSL_LCD_ERR;
+		LCD_DBG(LCD_DBG_ERR_ID,
+			"[CSL DSI] %s: queue_work fail\n ",
+			__func__);
+	}
 
 done:
 	if (!clientH->hasLock)
@@ -2229,9 +2234,14 @@ CSL_LCD_RES_T CSL_DSI_UpdateCmVc(CSL_LCD_HANDLE vcH,
 		if (!clientH->hasLock)
 			OSSEMAPHORE_Release(dsiH->semaDsi);
 	} else {
+		flush_work_sync(&dsiH->update_task_work);
 		*((DSI_UPD_REQ_MSG_T *)dsiH->upd_msg) = updMsgCm;
-		if (!queue_work(dsiH->wq, &dsiH->update_task_work))
+		if (!queue_work(dsiH->wq, &dsiH->update_task_work)) {
+			LCD_DBG(LCD_DBG_ERR_ID,
+				"[CSL DSI] %s: queue_work fail\n ",
+				__func__);
 			res = CSL_LCD_ERR;
+		}
 	}
 	return res;
 }
