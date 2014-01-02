@@ -361,7 +361,7 @@ config	DELAYED_PM_INIT
 	  arm dfs is allowed.
 
 config	PWRMGR_1P2GHZ_OPS_SET_SELECT
-	depends on ARCH_HAWAII && KONA_POWER_MGR && KONA_CPU_FREQ_ENABLE_OPP_SET_CHANGE
+	depends on ARCH_HAWAII && KONA_POWER_MGR
 	bool "Reconfigure the pll for OPS set with Turbo at 1.2GHz"
 	default n
 	help
