@@ -1436,7 +1436,8 @@ static int taos_probe(struct i2c_client *clientp,
 	taos_datap->input_dev_prox->id.bustype = BUS_I2C;
 	set_bit(EV_ABS, taos_datap->input_dev_als->evbit);
 	set_bit(EV_ABS, taos_datap->input_dev_prox->evbit);
-	input_set_abs_params(taos_datap->input_dev_als, ABS_MISC, 0, 255, 0, 1);
+	input_set_abs_params(taos_datap->input_dev_als, ABS_MISC, 0,
+							100000, 0, 0);
 	input_set_abs_params(taos_datap->input_dev_prox,
 			     ABS_DISTANCE, 0, 1000, 0, 0);
 	ret = input_register_device(taos_datap->input_dev_als);
@@ -1624,23 +1625,23 @@ static int taos_probe(struct i2c_client *clientp,
 				__func__);
 				goto err_read;
 			}
+			als_ps_int = gpio_to_irq(val);
+			als_ps_gpio_inr = val;
 #ifdef TMD2771_USER_CALIBRATION
-		ret = of_property_read_u32(np,
-			"prox_offset_param", &val);
-		if (ret)
-			taos_cfgp->prox_offset = 0;
-		else
-			taos_cfgp->prox_offset = val;
-		ret = of_property_read_u32(np,
-			"prox_boot_cali", &val);
-		if (ret)
-			taos_cfgp->prox_boot_cali = 0;
-		else
-			taos_cfgp->prox_boot_cali = val;
+			ret = of_property_read_u32(np,
+				"prox_offset_param", &val);
+			if (ret)
+				taos_cfgp->prox_offset = 0;
+			else
+				taos_cfgp->prox_offset = val;
+			ret = of_property_read_u32(np,
+				"prox_boot_cali", &val);
+			if (ret)
+				taos_cfgp->prox_boot_cali = 0;
+			else
+				taos_cfgp->prox_boot_cali = val;
 #endif
 		}
-		als_ps_int = gpio_to_irq(val);
-		als_ps_gpio_inr = val;
 	}
 	sat_als = (256 - taos_cfgp->prox_int_time) << 10;
 	sat_prox = (256 - taos_cfgp->prox_adc_time) << 10;
@@ -1670,16 +1671,20 @@ static int taos_probe(struct i2c_client *clientp,
 #endif
 
 	ret = sysfs_create_group(&clientp->dev.kobj, &taos_prox_attr_grp);
-	if (0 != ret)
+	if (0 != ret) {
 		pr_taos(ERROR, "sysfs create debug node fail, ret: %d\n", ret);
-
+		goto err_create_sys;
+	}
 	pr_taos(INFO, "device tmd27713 probe scuccess, chip id: 0x%x\n",
 		buf[0x12]);
 	return 0;
-err_read:
-	free_irq(als_ps_int, taos_datap);
+err_create_sys:
+	sysfs_remove_group(&clientp->dev.kobj, &taos_prox_attr_grp);
+	unregister_early_suspend(&taos_early_suspend_desc);
 err_request_irq:
+	free_irq(als_ps_int, taos_datap);
 	gpio_free(als_ps_gpio_inr);
+err_read:
 err_gpio_request:
 err_write_ctr_reg:
 	kfree(taos_cfgp);
@@ -1693,6 +1698,8 @@ err_register_input_als:
 err_alloc_input_taos_prox:
 	input_free_device(taos_datap->input_dev_als);
 err_alloc_input_taos_light:
+	mutex_destroy(&taos_datap->mutex);
+	mutex_destroy(&taos_datap->update_lock);
 err_i2c_check_function:
 	return ret;
 }
@@ -1702,6 +1709,7 @@ static int taos_remove(struct i2c_client *client)
 	int ret = 0;
 
 	sysfs_remove_group(&client->dev.kobj, &taos_prox_attr_grp);
+	unregister_early_suspend(&taos_early_suspend_desc);
 	free_irq(als_ps_int, taos_datap);
 	gpio_free(als_ps_gpio_inr);
 	kfree(taos_cfgp);
@@ -1710,6 +1718,8 @@ static int taos_remove(struct i2c_client *client)
 	input_unregister_device(taos_datap->input_dev_als);
 	input_free_device(taos_datap->input_dev_prox);
 	input_free_device(taos_datap->input_dev_als);
+	mutex_destroy(&taos_datap->mutex);
+	mutex_destroy(&taos_datap->update_lock);
 	return ret;
 }
 
