@@ -722,9 +722,6 @@ static void bcmpmu_otg_xceiv_vbus_a_invalid_handler(struct work_struct *work)
 
 	dev_info(xceiv_data->dev, "A session invalid\n");
 
-	if (!bcm_hsotgctrl_get_clk_count())
-		bcm_hsotgctrl_en_clock(true);
-
 	/* Inform the core of session invalid level  */
 	bcm_hsotgctrl_phy_set_vbus_stat(false);
 
