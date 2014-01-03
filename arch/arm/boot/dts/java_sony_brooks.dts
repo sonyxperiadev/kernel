@@ -368,7 +368,7 @@
 		compatible = "bcm,bcm_wifi";
 		wl-reset-gpio = <3>;
 		host-wake-gpio = <74>;
-		board-nvram-file = "/system/vendor/firmware/fw_wifi_nvram_4330.txt";
+		board-nvram-file = "/system/vendor/firmware/fw_wifi_nvram_43341.txt";
 		module-name = "bcmdhd_4330";
 	};
 
