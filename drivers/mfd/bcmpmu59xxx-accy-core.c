@@ -1270,6 +1270,10 @@ int bcmpmu_usb_get(struct bcmpmu59xxx *bcmpmu,
 		ret = bcmpmu_get_ntcct_fall(di->bcmpmu, data);
 		update = 0;
 		break;
+	case BCMPMU_USB_OTG_SESSION:
+		ret = 0;
+		val = di->otg_session;
+		break;
 	default:
 		ret = -EINVAL;
 		break;
@@ -1613,16 +1617,12 @@ static void bcmpmu_accy_isr(enum bcmpmu59xxx_irq irq, void *data)
 	struct bcmpmu_accy_data *di = data;
 	int board_id = di->bcmpmu->pdata->board_id;
 	int idx;
-	unsigned long flags;
 	int event = PMU_EVENT_MAX;
-
 
 	idx = _irq_to_index(irq);
 	pr_accy(FLOW, "%s: IRQ: %d idx %d\n", __func__, irq, idx);
 	BUG_ON(idx < 0);
 
-	spin_lock_irqsave(&gp_accy_data->accy_lock, flags);
-	spin_unlock_irqrestore(&gp_accy_data->accy_lock, flags);
 	switch (irq) {
 	case PMU_IRQ_USBINS:
 		if (di->false_usb_rm) {

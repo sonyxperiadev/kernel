@@ -622,6 +622,7 @@ enum bcmpmu_usb_ctrl_t {
 	BCMPMU_USB_CTRL_SW_UP,
 	BCMPMU_USB_CTRL_TPROBE_MAX,
 	BCMPMU_USB_CTRL_ALLOW_BC_DETECT,
+	BCMPMU_USB_OTG_SESSION,
 };
 
 struct bcmpmu59xxx_rw_data {
