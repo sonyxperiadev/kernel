@@ -155,27 +155,15 @@ static int mm_pi_enable(struct pi *pi, int enable)
 	ret = gen_pi_ops.enable(pi, enable);
 
 #ifdef CONFIG_MM_FREEZE_VAR500M_ERRATUM
-	#ifdef CONFIG_MM_312M_SOURCE_CLK
-	if (is_pm_erratum(ERRATUM_MM_FREEZE_VAR500M) && enable)
-		mm_varvdd_clk_en_override(false);
-	#else
 	if (is_pm_erratum(ERRATUM_MM_FREEZE_VAR500M) && !enable)
 		mm_varvdd_clk_en_override(false);
-	#endif
 #endif
 
 #ifdef CONFIG_PLL1_8PHASE_OFF_ERRATUM
-	#ifdef CONFIG_MOVE_MM_CLK_TO_PLL0
-	if (is_pm_erratum(ERRATUM_PLL1_8PHASE_OFF)) {
-		if (enable && ref_8ph_en_pll1_clk)
-			__clk_disable(ref_8ph_en_pll1_clk);
-	}
-	#else
 	if (is_pm_erratum(ERRATUM_PLL1_8PHASE_OFF)) {
 		if (!enable && ref_8ph_en_pll1_clk)
 			__clk_disable(ref_8ph_en_pll1_clk);
 	}
-	#endif
 #endif
 	return ret;
 }
@@ -241,7 +229,6 @@ struct pi_opp mm_opp = {
 
 static struct pi_state mm_states[] = {
 	PI_STATE(PI_STATE_ACTIVE, RUN_POLICY, 0, 0),
-	PI_STATE(PI_STATE_RETENTION, RETN_POLICY, 10, 0),
 	PI_STATE(PI_STATE_SHUTDOWN, SHTDWN_POLICY, 100, PI_STATE_SAVE_CONTEXT),
 };
 
