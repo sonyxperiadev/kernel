@@ -361,7 +361,7 @@
 		fps = <60>;
 		lanes = <4>;
 		hs-bitrate = <400000000>;
-		lp-bitrate = <5000000>;	/* 5mbps */
+		lp-bitrate = <8000000>;	/* 8mbps */
 		desense-offset = <2400000>;  /* +2.4Mbps */
 		iommu = <&iommu_mm>;
 		iovmm = <&iovmm_mm>;
