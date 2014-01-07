@@ -28,7 +28,7 @@
 #include <linux/debugfs.h>
 #include <linux/uaccess.h>
 #endif
-
+#include <mach/pinmux.h>
 
 struct pwm_bl_data {
 	struct pwm_device	*pwm;
@@ -222,6 +222,19 @@ static int pwm_backlight_parse_dt(struct device *dev,
 		data->bl_delay_on = 0;
 	else
 		data->bl_delay_on = val;
+
+
+	if (of_property_read_u32(node,
+				"pwm_pin_name", &val)) {
+		pwm_pin = -1;
+	} else
+		pwm_pin = val;
+
+	if (of_property_read_u32(node,
+				"pwm_pin_reboot_func", &val)) {
+		pwm_pin_reboot_func = -1;
+	} else
+		pwm_pin_reboot_func = val;
 
 	return ret;
 }
@@ -531,6 +544,20 @@ static int pwm_backlight_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static void pwm_backlight_shutdown(struct platform_device *pdev)
+{
+	struct pin_config new_pin_config;
+
+	/*reset the pwm pin to GPIO function if defined in the kernel-dtb*/
+	if (pwm_pin >= 0 && pwm_pin_reboot_func >= 0) {
+		pr_info("reset the pwm pin to GPIO function\r\n");
+		new_pin_config.name = pwm_pin;
+		pinmux_get_pin_config(&new_pin_config);
+		new_pin_config.func = pwm_pin_reboot_func;
+		pinmux_set_pin_config(&new_pin_config);
+	}
+}
+
 #ifdef CONFIG_PM_SLEEP
 static int pwm_backlight_suspend(struct device *dev)
 {
@@ -567,6 +594,7 @@ static struct platform_driver pwm_backlight_driver = {
 	},
 	.probe		= pwm_backlight_probe,
 	.remove		= pwm_backlight_remove,
+	.shutdown	= pwm_backlight_shutdown,
 };
 
 #ifdef CONFIG_DEBUG_FS
