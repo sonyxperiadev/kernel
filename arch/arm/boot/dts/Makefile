@@ -221,6 +221,8 @@ dtb-$(CONFIG_ARCH_JAVA) += java_edn000.dtb \
 	java_edn000_2Gb.dtb \
 	java_c_edn000_4Gb.dtb \
 	java_c_edn000.dtb \
+	java_c_lc1.dtb \
+	java_c_lc1_4Gb.dtb \
 	java_c_edn000_2Gb.dtb
 
 dtb-$(CONFIG_MACH_JAVA_KIVU) += java_sony_kivu.dtb \
