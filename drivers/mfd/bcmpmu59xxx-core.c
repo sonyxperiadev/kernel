@@ -254,8 +254,10 @@ EXPORT_SYMBOL(bcmpmu_reg_write_unlock);
 void bcmpmu_client_power_off(void)
 {
 	u8 val;
+
 	BUG_ON(!bcmpmu_gbl);
-	pr_pmucore(INIT, "---%s\n", __func__);
+	preempt_disable();
+	local_irq_disable();
 	pwr_mgr_pmu_reg_read_direct((u8) DEC_REG_ADD(PMU_REG_WRPROEN),
 				bcmpmu_get_slaveid(bcmpmu_gbl,
 					PMU_REG_WRPROEN),
@@ -271,7 +273,8 @@ void bcmpmu_client_power_off(void)
 					bcmpmu_get_slaveid(bcmpmu_gbl,
 						PMU_REG_HOSTCTRL1),
 					HOSTCTRL1_SW_SHDWN);
-
+	local_irq_enable();
+	preempt_enable();
 }
 EXPORT_SYMBOL(bcmpmu_client_power_off);
 
