@@ -10,7 +10,7 @@
 	compatible = "bcm,java";
 
 	chosen {
-		bootargs = "console=ttyS0,115200n8 mem=224M gpt androidboot.console=ttyS0 crash_ramdump=1 logbuf_nocache=1";
+		bootargs = "console=ttyS0,115200n8 mem=224M gpt androidboot.console=ttyS0 crash_ramdump=1 logbuf_nocache=1 bcmlog.mtt_log_buffer=2048";
 	};
 
 	memory@82000000 {

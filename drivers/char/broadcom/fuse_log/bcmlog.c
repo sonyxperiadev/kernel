@@ -628,7 +628,7 @@ static int __init setup_mtt_logbuffer(char *str)
 	return 0;
 }
 
-__setup("bcmlog.mtt_log_buffer=", setup_mtt_logbuffer);
+__setup("mtt_log_buffer=", setup_mtt_logbuffer);
 
 /**
  *	Called by Linux I/O system to initialize module.
@@ -651,9 +651,11 @@ static int __init BCMLOG_ModuleInit(void)
 	__func__, (unsigned int)g_module.buffer, g_module.buffer_size);
 
 	if (!g_module.buffer) {
-		pr_err("[%s] Forced to allocate 4MB mtt log buffer\n",\
-		__func__);
-		g_module.buffer_size = KMALLOC_MAX_SIZE;
+		if (g_module.buffer_size <= 0 ||
+			g_module.buffer_size > KMALLOC_MAX_SIZE)
+			g_module.buffer_size = KMALLOC_MAX_SIZE;
+		pr_info("[%s] mtt log buffer size %d\n", __func__,
+			g_module.buffer_size);
 		g_module.buffer = kmalloc(g_module.buffer_size, GFP_KERNEL);
 	}
 	if (!g_module.buffer) {
