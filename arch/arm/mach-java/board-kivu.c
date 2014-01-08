@@ -538,6 +538,9 @@ void cyttsp_dev_exit(void)
 }
 
 static struct cyttsp_platform_data cyttsp_touch_platform_data = {
+	.i2c_pdata = {
+		      SET_CLIENT_FUNC(TIMEOUT_DISABLE),
+		      },
 	.maxx = 220,
 	.maxy = 176,
 	.use_hndshk = 0,
