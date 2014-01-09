@@ -322,7 +322,6 @@ CONFIG_BRD_NAME="java"
 #
 # Java SoC based Machine types
 #
-CONFIG_ARCH_JAVA_A0=y
 # CONFIG_MACH_JAVA_FPGA is not set
 # CONFIG_MACH_JAVA_FPGA_E is not set
 # CONFIG_MACH_JAVA_RAY is not set
