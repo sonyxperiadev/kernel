@@ -25,6 +25,9 @@
 #include <linux/mfd/bcmpmu59xxx_reg.h>
 #include <linux/hwmon.h>
 #include <linux/hwmon-sysfs.h>
+#include <linux/io.h>
+#include <mach/io_map.h>
+#include <mach/rdb/brcm_rdb_padctrlreg.h>
 
 #ifdef CONFIG_DEBUG_FS
 #include <linux/debugfs.h>
@@ -236,9 +239,23 @@ int read_rtm_adc(struct bcmpmu59xxx *bcmpmu, enum bcmpmu_adc_channel channel,
 	mutex_lock(&adc->rtm_mutex);
 	pr_hwmon(FLOW, "%s Start channel = %d\n", __func__, channel);
 	init_completion(&adc->rtm_ready_complete);
+
+	ret = bcmpmu->read_dev(bcmpmu, PMU_REG_ADCCTRL2, &val);
+	if (ret) {
+		pr_hwmon(ERROR, "%s I2C write failed\n", __func__);
+		goto err;
+	}
+	val &= ~ADC_RTM_START_DELAY_MASK;
+	if ((adc->int_status == PMU_IRQ_RTM_UPPER) ||
+		(adc->int_status ==  PMU_IRQ_RTM_OVERRIDDEN))
+		val |= ADC_RTM_START_DELAY_MAX;
+	else
+		val |= ADC_RTM_START_DELAY_MIN;
+	bcmpmu->write_dev(bcmpmu, PMU_REG_ADCCTRL2, val);
+
 	adc->int_status = 0;
+
 	val = channel << ADC_RTM_CHANN_SHIFT;
-	val |= (ADC_RTM_CONV_ENABLE << ADC_RTM_CONVERSION_SHIFT);
 	val |= (ADC_RTM_START << ADC_RTM_START_SHIFT);
 	val |= ADC_RTM_MAX_RST_CNT_7;
 
@@ -248,23 +265,15 @@ int read_rtm_adc(struct bcmpmu59xxx *bcmpmu, enum bcmpmu_adc_channel channel,
 		goto err;
 	}
 
+	wait_for_completion(&adc->rtm_ready_complete);
 
-	if (wait_for_completion_interruptible(&adc->rtm_ready_complete)) {
-
-		ret = bcmpmu->read_dev(bcmpmu, PMU_REG_INT9, &val);
-		if (ret != 0) {
-			pr_hwmon(ERROR, "%s I2C write failed\n", __func__);
-			goto err;
-		}
-		pr_hwmon(ERROR,
-			"%s: Timeout waiting for ADC_RTM_DATA_READY, INT9: 0x%x\n",
-			__func__, val);
-		goto err;
-	}
 	if ((adc->int_status == PMU_IRQ_RTM_UPPER) ||
 		(adc->int_status ==  PMU_IRQ_RTM_OVERRIDDEN)){
 		pr_hwmon(ERROR, "%s RTM IGNORED %d\n",
 			__func__, adc->int_status);
+		pr_hwmon(ERROR, "pinmux %x\n",
+			readl(KONA_PAD_CTRL_VA + PADCTRLREG_ADCSYN_OFFSET));
+		ret = -EAGAIN;
 		goto err;
 	}
 
@@ -277,6 +286,7 @@ int read_rtm_adc(struct bcmpmu59xxx *bcmpmu, enum bcmpmu_adc_channel channel,
 
 	if (rtm_read[0] & ADC_READ_INVALID) {
 		pr_hwmon(ERROR, "%s RTM read INVALID, try again\n", __func__);
+		ret = -EAGAIN;
 		goto err;
 
 	} else {
@@ -286,28 +296,21 @@ int read_rtm_adc(struct bcmpmu59xxx *bcmpmu, enum bcmpmu_adc_channel channel,
 		result->raw |= rtm_read[1];
 	}
 
-	val = ADC_RTM_CONV_DISABLE << ADC_RTM_CONVERSION_SHIFT;
-	ret = bcmpmu->write_dev(bcmpmu, PMU_REG_ADCCTRL1, val);
-	if (ret != 0) {
+err:
+	if (bcmpmu->read_dev(bcmpmu, PMU_REG_ADCCTRL1, &val))
+		pr_hwmon(ERROR, "%s I2C read ADCCTRL1 failed\n", __func__);
+	val &= ~(ADC_RTM_START << ADC_RTM_START_SHIFT);
+	val |= ADC_RTM_CONV_DISABLE << ADC_RTM_CONVERSION_SHIFT;
+	if (bcmpmu->write_dev(bcmpmu, PMU_REG_ADCCTRL1, val))
 		pr_hwmon(ERROR, "%s I2C write failed\n", __func__);
-		goto err;
-	}
 
 	mutex_unlock(&adc->rtm_mutex);
 
 	pr_hwmon(FLOW, "%s Done channel:%d, raw:%x\n", __func__, channel,
 								result->raw);
 
-	return 0;
-err:
+	return ret;
 
-	val = ADC_RTM_CONV_DISABLE << ADC_RTM_CONVERSION_SHIFT;
-	ret = bcmpmu->write_dev(bcmpmu, PMU_REG_ADCCTRL1, val);
-	if (ret != 0)
-		pr_hwmon(ERROR, "%s I2C write failed\n", __func__);
-
-	mutex_unlock(&adc->rtm_mutex);
-	return -EAGAIN;
 
 }
 /**
