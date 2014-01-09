@@ -53,11 +53,17 @@ config	MACH_JAVA_SS_EVAL
 	help
 	  Support for Broadcom Hawaii ss eval board.
 
-config	MACH_JAVA_SS_BAFFINLITE
+config	MACH_JAVA_SS_VICTOR3G
+		bool "MACH_JAVA_SS_VICTOR3G"
+	select MACH_BCM_SS_VICTOR3G
+	help
+	  Support for Broadcom java ss victor3g board.
+
+config  MACH_JAVA_SS_BAFFINLITE
 		bool "MACH_JAVA_SS_BAFFINLITE"
 	select MACH_BCM_SS_BAFFINLITE
 	help
-	  Support for Broadcom Hawaii ss baffinlite board.
+	  Support for Broadcom java ss baffinlite board.
 
 endchoice
 
@@ -127,16 +133,27 @@ choice
 endchoice
 
 choice
-	prompt "Java SS BAFFINLITE type"
-	depends on MACH_JAVA_SS_BAFFINLITE
-	default MACH_JAVA_SS_BAFFINLITE_REV00
+	prompt "Java SS Victor type"
+	depends on MACH_JAVA_SS_VICTOR3G
+	default MACH_JAVA_SS_VICTOR3G_REV00
 
-	config MACH_JAVA_SS_BAFFINLITE_REV00
-	bool "SS BAFFINLITE REV00"
+	config MACH_JAVA_SS_VICTOR3G_REV00
+	bool "SS VICTOR3G REV00"
 	help
-	  Support for SS Baffinlite Rev00
-
+	  Support for SS Victor3g Rev00
 endchoice
+
+choice
+	prompt "Java SS Baffinlite type"
+	depends on MACH_JAVA_SS_BAFFINLITE
+	default MACH_JAVA_SS_BAFFINLITE_REV02
+
+	config MACH_JAVA_SS_BAFFINLITE_REV02
+	bool "SS BAFFINLITE REV02"
+	help
+	  Support for SS Baffinlite Rev02
+endchoice
+
 
 choice
 	prompt "Java Kivu type"
