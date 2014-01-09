@@ -119,6 +119,138 @@ config VIDEO_AS3643
 	  This is a driver for the AS3643 flash controller. It has
 	  built in control for flash and torch modes.
 
+config SOC_CAMERA_MAIN_S5K4ECGX
+	tristate "s5k4ecgx main camera support"
+	depends on SOC_CAMERA && I2C
+	help
+	  This is a s5k4ecgx main camera driver.
+	  5MP Camera interfaced to camera host driver.
+	  I2C controlled. Data out over the
+	  MIPI Lanes.
+
+config SOC_CAMERA_SUB_S5K4ECGX
+	tristate "s5k4ecgx sub camera support"
+	depends on SOC_CAMERA && I2C
+	help
+	  This is a s5k4ecgx sub camera driver.
+	  5MP Camera interfaced to camera host driver.
+	  I2C controlled. Data out over the
+	  MIPI Lanes.
+
+config SOC_CAMERA_MAIN_DB8V61M
+	tristate "db8v61m main camera support"
+	depends on SOC_CAMERA && I2C
+	help
+	  This is a db8v61m main camera driver.
+	  3MP Camera interfaced to camera host driver.
+	  I2C controlled. Data out over the
+	  MIPI Lanes.
+
+config SOC_CAMERA_SUB_DB8V61M
+	tristate "db8v61m sub camera support"
+	depends on SOC_CAMERA && I2C
+	help
+	  This is a db8v61m sub camera driver.
+	  3MP Camera interfaced to camera host driver.
+	  I2C controlled. Data out over the
+	  MIPI Lanes.
+
+config SOC_CAMERA_MAIN_SR130
+	tristate "sr130 main camera support"
+	depends on SOC_CAMERA && I2C
+	help
+	  This is a sr130 main camera driver.
+	  1.3MP Camera interfaced to camera host driver.
+	  I2C controlled. Data out over the
+	  MIPI Lanes.
+
+config SOC_CAMERA_SUB_SR130
+	tristate "sr130 sub camera support"
+	depends on SOC_CAMERA && I2C
+	help
+	  This is a sr130 sub camera driver.
+	  1.3MP Camera interfaced to camera host driver.
+	  I2C controlled. Data out over the
+	  MIPI Lanes.
+
+config SOC_CAMERA_MAIN_SR300PC20
+	tristate "sr300pc20 main camera support"
+	depends on SOC_CAMERA && I2C
+	help
+	  This is a sr300pc20 main camera driver.
+	  3MP Camera interfaced to camera host driver.
+	  I2C controlled. Data out over the
+	  MIPI Lanes.
+
+config SOC_CAMERA_SUB_SR300PC20
+	tristate "sr300pc20 sub camera support"
+	depends on SOC_CAMERA && I2C
+	help
+	  This is a sr300pc20 sub camera driver.
+	  3MP Camera interfaced to camera host driver.
+	  I2C controlled. Data out over the
+	  MIPI Lanes.
+
+config SOC_CAMERA_MAIN_SR030PC50
+	tristate "sr030pc50 main camera support"
+	depends on SOC_CAMERA && I2C
+	help
+	  This is a sr030pc50 main camera driver.
+	  VGA Camera interfaced to camera host driver.
+	  I2C controlled. Data out over the
+	  MIPI Lanes.
+
+config SOC_CAMERA_SUB_SR030PC50
+	tristate "sr030pc50 sub camera support"
+	depends on SOC_CAMERA && I2C
+	help
+	  This is a sr030pc50 sub camera driver.
+	  VGA Camera interfaced to camera host driver.
+	  I2C controlled. Data out over the
+	  MIPI Lanes.
+
+config SOC_CAMERA_MAIN_SR200PC20M
+	tristate "sr200pc20m main camera support"
+	depends on SOC_CAMERA && I2C
+	help
+	  This is a sr200pc20m main camera driver.
+	  VGA Camera interfaced to camera host driver.
+	  I2C controlled. Data out over the
+	  MIPI Lanes.
+
+config SOC_CAMERA_SUB_SR200PC20M
+	tristate "sr200pc20m sub camera support"
+	depends on SOC_CAMERA && I2C
+	help
+	  This is a sr200pc20m sub camera driver.
+	  VGA Camera interfaced to camera host driver.
+	  I2C controlled. Data out over the
+	  MIPI Lanes.
+
+config SOC_CAMERA_MAIN_SR352
+	tristate "sr352 main camera support"
+	depends on SOC_CAMERA && I2C
+	help
+	  This is a sr352 main camera driver
+	  3MP Camera interfaced to camera host driver.
+	  I2C controlled. Data out over the
+	  MIPI Lanes.
+
+config SOC_CAMERA_SUB_SR352
+	tristate "sr352 sub camera support"
+	depends on SOC_CAMERA && I2C
+	help
+	  This is a sr352 sub camera driver
+	  3MP Camera interfaced to camera host driver.
+	  I2C controlled. Data out over the
+	  MIPI Lanes.
+
+config SOC_CAMERA_POWER_USE_ASR
+	bool "Support Broadcom Rhea SS Lucas 03 Ivory 02 board"
+	default n
+	help
+	  Support for the Broadcom Rhea SS Lucas 03 Ivory 02 board.
+
 comment "vcm devices"
 
 config VIDEO_A3907
