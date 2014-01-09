@@ -4,39 +4,36 @@
 #include <linux/err.h>
 #include <linux/platform_device.h>
 #include <linux/regulator/consumer.h>
-#include <linux/led-lm3530.h>
+#include <linux/platform_data/lm3630_bl.h>
 #include "board-kivu.h"
 
-#define BMU_NFC_I2C_BUS_ID 1
+#define BMU_I2C_BUS_ID 1
+#define BMU_HW_EN 24
 
-static struct lm3530_platform_data lm3530_bmu_platform_data = {
-	.mode = LM3530_BL_MODE_MANUAL,
-	.als_input_mode = LM3530_INPUT_ALS2,
-	.max_current = LM3530_FS_CURR_26mA,
-	.pwm_pol_hi = true,
-	.als_avrg_time = LM3530_ALS_AVRG_TIME_512ms,
-	.brt_ramp_law = 1,      /* Linear */
-	.brt_ramp_fall = LM3530_RAMP_TIME_1s,
-	.brt_ramp_rise = LM3530_RAMP_TIME_1s,
-	.als1_resistor_sel = LM3530_ALS_IMPD_Z,
-	.als2_resistor_sel = LM3530_ALS_IMPD_Z,
-	.als_vmin = 730,        /* mV */
-	.als_vmax = 1020,       /* mV */
-	.brt_val = 0x7F,        /* Max brightness */
+static struct lm3630_platform_data lm3630_bmu_platform_data = {
+	.max_brt_led1 = 255,
+	.max_brt_led2 = 255,
+	.init_brt_led1 = 128,
+	.init_brt_led2 = 128,
+	.pwm_ctrl = PWM_CTRL_BANK_B,
+	.pwm_active = PWM_ACTIVE_HIGH,
+	.bank_a_ctrl = BANK_A_CTRL_LED1,
+	.bank_b_ctrl = BANK_B_CTRL_DISABLE,
 };
 
-static struct i2c_board_info __initdata lm3530_i2c_boardinfo[] = {
+
+static struct i2c_board_info __initdata lm3630_i2c_boardinfo[] = {
 	{
 		/* Backlight */
-		I2C_BOARD_INFO("lm3530-led", 0x36),
-		.platform_data = &lm3530_bmu_platform_data,
+		I2C_BOARD_INFO("lm3630_bl", 0x36),
+		.platform_data = &lm3630_bmu_platform_data,
 	},
 };
 
 void __init kivu_add_backlight(void)
 {
-	pr_info("Registering LM3530 BMU with I2C bus #%i", BMU_NFC_I2C_BUS_ID);
-	i2c_register_board_info(BMU_NFC_I2C_BUS_ID,
-				lm3530_i2c_boardinfo,
-				ARRAY_SIZE(lm3530_i2c_boardinfo));
+	pr_info("Registering LM3630 BMU with I2C bus #%i", BMU_I2C_BUS_ID);
+	i2c_register_board_info(BMU_I2C_BUS_ID,
+				lm3630_i2c_boardinfo,
+				ARRAY_SIZE(lm3630_i2c_boardinfo));
 }
