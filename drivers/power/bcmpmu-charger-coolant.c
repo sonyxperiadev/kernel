@@ -110,6 +110,8 @@ static void bcmpmu_coolant_restore_charger_state(struct bcmpmu_cc_data *cdata)
 	u8 num;
 
 	pr_ccool(FLOW, "Restored Charger state\n");
+	if (cdata->charging_halted && cdata->icc_fc_saved)
+		cdata->charging_halted = false;
 	/* Restore Charger registers to previous state */
 	bcmpmu_set_icc_fc(bcmpmu, cdata->icc_fc_saved);
 	pr_ccool(VERBOSE, "icc_fc=%d\n", cdata->icc_fc_saved);
@@ -266,13 +268,13 @@ static int bcmpmu_ccoolant_set_cur_state(struct thermal_cooling_device *cdev,
 	if (cdata->curr_state == state)
 		return 0;
 
+	cdata->curr_state = state;
 	if ((cdata->is_charging || cdata->charging_halted) &&
 					cdata->acld_algo_finished) {
 		pr_ccool(VERBOSE, "%s called, state:%lu\tcurr = %u\n",
 			__func__, state, cdata->pdata->states[state]);
 		bcmpmu_coolant_set_optimal_curr(cdata, state);
 	}
-	cdata->curr_state = state;
 	return 0;
 }
 
@@ -444,7 +446,7 @@ static int bcmpmu_ccoolant_probe(struct platform_device *pdev)
 
 	if (ret) {
 		pr_ccool(ERROR,
-			"%s Failed to add usb notifier\n", __func__);
+			"%s Failed to add acld notifier\n", __func__);
 		goto unreg_usb_det_nb;
 	}
 

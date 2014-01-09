@@ -25,6 +25,7 @@
 #include <linux/platform_device.h>
 #include <linux/sort.h>
 #include <linux/slab.h>
+#include <linux/notifier.h>
 #include <linux/thermal.h>
 #include <linux/workqueue.h>
 #include <linux/export.h>
@@ -57,11 +58,13 @@ struct bcmpmu_dietemp_thermal {
 	struct delayed_work polling_work;
 	struct bcmpmu_dietemp_pdata *pdata;
 	struct thermal_cooling_device *curr_cdev;
+	struct notifier_block chrgr_det_nb;
 	struct mutex lock;
 	int cur_idx;
 	int active_cnt;	/* Active trip count excluding critical */
 	int curr_temp;
 	bool dietemp_coolant_enabled;
+	bool chrgr_present;
 };
 
 /* forward declarations */
@@ -280,6 +283,32 @@ static void dietemp_thermal_polling_work(struct work_struct *work)
 
 	queue_delayed_work(tdata->dietemp_wq,
 	&tdata->polling_work, msecs_to_jiffies(tdata->pdata->poll_rate_ms));
+}
+
+static int bcmpmu_dietemp_thermal_event_handler(struct notifier_block *nb,
+						unsigned long event, void *data)
+{
+	struct bcmpmu_dietemp_thermal *tdata;
+	enum bcmpmu_chrgr_type_t chrgr_type;
+
+	pr_dtemp(FLOW, "%s\n", __func__);
+	switch (event) {
+	case PMU_ACCY_EVT_OUT_CHRGR_TYPE:
+		tdata = container_of(nb, struct bcmpmu_dietemp_thermal,
+								chrgr_det_nb);
+		chrgr_type = *(enum bcmpmu_chrgr_type_t *)data;
+		if ((chrgr_type < PMU_CHRGR_TYPE_MAX) &&
+					(chrgr_type >  PMU_CHRGR_TYPE_NONE)) {
+			queue_delayed_work(tdata->dietemp_wq,
+						&tdata->polling_work, 0);
+			tdata->chrgr_present = true;
+		} else {
+			cancel_delayed_work_sync(&tdata->polling_work);
+			tdata->chrgr_present = false;
+		}
+		break;
+	}
+	return 0;
 }
 
 static int bcmpmu_dietemp_debugfs_enable(void *data, u64 coolant_enable)
@@ -643,6 +672,7 @@ static int dietemp_thermal_probe(struct platform_device *pdev)
 	struct bcmpmu59xxx *bcmpmu = dev_get_drvdata(pdev->dev.parent);
 	struct bcmpmu_dietemp_thermal *tdata;
 	struct bcmpmu_dietemp_pdata	*pdata;
+	enum bcmpmu_chrgr_type_t chrgr_type;
 	int ret = 0;
 
 	pr_dtemp(INIT, "%s\n", __func__);
@@ -671,6 +701,15 @@ static int dietemp_thermal_probe(struct platform_device *pdev)
 	INIT_DELAYED_WORK(&tdata->polling_work, dietemp_thermal_polling_work);
 	platform_set_drvdata(pdev, tdata);
 
+	tdata->chrgr_det_nb.notifier_call =
+					bcmpmu_dietemp_thermal_event_handler;
+	ret = bcmpmu_add_notifier(PMU_ACCY_EVT_OUT_CHRGR_TYPE,
+							&tdata->chrgr_det_nb);
+	if (ret) {
+		pr_dtemp(ERROR, "%s Failed to add usb notifier\n", __func__);
+		goto err_tz_reg;
+	}
+
 	tdata->active_cnt = dietemp_thermal_active_trip_cnt(tdata);
 	tdata->cur_idx = -1;
 
@@ -681,18 +720,26 @@ static int dietemp_thermal_probe(struct platform_device *pdev)
 		pr_dtemp(ERROR, "thermal zone registration failed:%ld\n",
 			PTR_ERR(tdata->tz));
 		ret = PTR_ERR(tdata->tz);
-		goto err_tz_reg;
+		goto unreg_chrgr_det_nb;
 	}
 
 	/* start polling */
-	queue_delayed_work(tdata->dietemp_wq,
-				&tdata->polling_work, 0);
+	bcmpmu_usb_get(bcmpmu, BCMPMU_USB_CTRL_GET_CHRGR_TYPE, &chrgr_type);
+	if ((chrgr_type < PMU_CHRGR_TYPE_MAX) &&
+					(chrgr_type >  PMU_CHRGR_TYPE_NONE)) {
+		queue_delayed_work(tdata->dietemp_wq, &tdata->polling_work,
+				msecs_to_jiffies(tdata->pdata->poll_rate_ms));
+		tdata->chrgr_present = true;
+	} else {
+		tdata->chrgr_present = false;
+	}
 	tdata->dietemp_coolant_enabled = true;
 #ifdef CONFIG_DEBUG_FS
 	bcmpmu_dietemp_debugfs_init(tdata);
 #endif
 	return ret;
-
+unreg_chrgr_det_nb:
+	bcmpmu_remove_notifier(PMU_CHRGR_EVT_CHRG_STATUS, &tdata->chrgr_det_nb);
 err_tz_reg:
 	destroy_workqueue(tdata->dietemp_wq);
 err_init:
@@ -703,6 +750,7 @@ static int dietemp_thermal_remove(struct platform_device *pdev)
 {
 	struct bcmpmu_dietemp_thermal *tdata = platform_get_drvdata(pdev);
 
+	bcmpmu_remove_notifier(PMU_CHRGR_EVT_CHRG_STATUS, &tdata->chrgr_det_nb);
 	thermal_zone_device_unregister(tdata->tz);
 	cancel_delayed_work_sync(&tdata->polling_work);
 	destroy_workqueue(tdata->dietemp_wq);
@@ -720,7 +768,7 @@ static int dietemp_thermal_suspend(struct platform_device *pdev,
 static int dietemp_thermal_resume(struct platform_device *pdev)
 {
 	struct bcmpmu_dietemp_thermal *tdata = platform_get_drvdata(pdev);
-	if (tdata->dietemp_coolant_enabled)
+	if (tdata->dietemp_coolant_enabled && tdata->chrgr_present)
 		queue_delayed_work(tdata->dietemp_wq, &tdata->polling_work,
 				msecs_to_jiffies(tdata->pdata->poll_rate_ms));
 	return 0;
