@@ -91,6 +91,10 @@
 			enable_rxfifo = <1>;
 		};
 
+		bh1721fvc@23 {
+			compatible = "bcm,bh1721fvc";
+			reg = <0x23>;
+		};
 	};
 
 	i2c2: i2c@3e018000 {

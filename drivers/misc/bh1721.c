@@ -542,7 +542,7 @@ err_exit:
 	return err;
 }
 
-static int __devinit bh1721fvc_probe(struct i2c_client *client,
+static int bh1721fvc_probe(struct i2c_client *client,
 				     const struct i2c_device_id *id)
 {
 	int err = 0;
@@ -552,7 +552,9 @@ static int __devinit bh1721fvc_probe(struct i2c_client *client,
 	struct i2c_adapter *adapter = to_i2c_adapter(client->dev.parent);
 	struct device_node *np = NULL;
 	u32 val;
+#if defined(CONFIG_SENSORS_CORE)
 	light_dev = NULL;
+#endif
 	pr_info("%s: is started!\n", __func__);
 	if (!i2c_check_functionality(adapter, I2C_FUNC_I2C))
 		return -EIO;
@@ -601,7 +603,7 @@ static int __devinit bh1721fvc_probe(struct i2c_client *client,
 	bh1721fvc->timer.function = bh1721fvc_timer_func;
 
 	bh1721fvc->wq = alloc_workqueue("bh1721fvc_wq",
-					WQ_UNBOUND | WQ_RESCUER, 1);
+					WQ_UNBOUND, 1);
 	if (!bh1721fvc->wq) {
 		err = -ENOMEM;
 		pr_err("%s: could not create workqueue\n", __func__);
