@@ -977,10 +977,6 @@ static int sdhci_pltfm_probe(struct platform_device *pdev)
 		host->mmc->caps |= MMC_CAP_1_8V_DDR;
 #endif
 
-	/* Don't issue SLEEP command to e.MMC device */
-	if (dev->devtype == SDIO_DEV_TYPE_EMMC)
-		host->mmc->caps2 |= MMC_CAP2_NO_SLEEP_CMD;
-
 	/*
 	 * This has to be done before sdhci_add_host.
 	 * As soon as we add the host, request
