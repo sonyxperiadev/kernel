@@ -939,8 +939,6 @@ static ssize_t bma222_set_offset(struct device *dev,
 	int x, y, z;
 	int err = -EINVAL;
 	struct i2c_client *client = to_i2c_client(dev);
-	struct drv_data *dd = i2c_get_clientdata(client);
-	struct input_dev *input_dev = dd->ip_dev;
 	err = sscanf(buf, "%d %d %d", &x, &y, &z);
 	if (err != 3) {
 		pr_err("invalid parameter number: %d\n", err);
@@ -968,7 +966,7 @@ static struct attribute_group bma222_attr_swcal_grp = {
 
 #endif
 
-static int __devinit bma222_accl_probe(struct i2c_client *client,
+static int bma222_accl_probe(struct i2c_client *client,
 				       const struct i2c_device_id *id)
 {
 	struct drv_data *dd;
@@ -1154,7 +1152,7 @@ probe_exit:
 	return rc;
 }
 
-static int __devexit bma222_accl_remove(struct i2c_client *client)
+static int bma222_accl_remove(struct i2c_client *client)
 {
 	struct drv_data *dd;
 	int rc;
@@ -1208,7 +1206,7 @@ static struct i2c_driver bma222_accl_driver = {
 		   },
 	.id_table = bma222_accl_idtable,
 	.probe = bma222_accl_probe,
-	.remove = __devexit_p(bma222_accl_remove),
+	.remove = bma222_accl_remove,
 #ifndef CONFIG_HAS_EARLYSUSPEND
 	.suspend = bma222_accl_suspend,
 	.resume = bma222_accl_resume,

@@ -50,6 +50,7 @@
 #include <linux/of.h>
 #include <linux/of_fdt.h>
 #include <linux/of_platform.h>
+#include <linux/of_gpio.h>
 #include <linux/sensors_core.h>
 #if defined(CONFIG_SENSORS_CORE)
 static  struct device *prox_dev;
@@ -250,7 +251,7 @@ static struct i2c_driver isl290xx_driver = {
 	.resume	= isl290xx_resume,
 #endif
 	.probe = isl290xx_probe,
-	.remove = __devexit_p(isl290xx_remove),
+	.remove = isl290xx_remove,
 };
 
 
@@ -639,8 +640,7 @@ static ssize_t isl290xx_set_offset(struct device *dev,
 		(isl290xx_offset-isl290xx_cfgp->prox_offset) < 0) {
 		isl290xx_offset = 0;
 		pr_isl(ERROR, "isl290xx sw cali failed\n");
-	}
-	else {
+	} else {
 		if (lo > isl290xx_offset) {
 			isl290xx_cfgp->prox_threshold_hi = hi;
 			isl290xx_cfgp->prox_threshold_lo = lo;
@@ -849,7 +849,8 @@ static void isl290xx_late_resume(struct early_suspend *handler)
 {
 	struct isl290xx_data_t *isl290xx_data;
 
-	isl290xx_data = container_of(handler, struct isl290xx_data_t, early_suspend);
+	isl290xx_data = container_of(handler, struct isl290xx_data_t,
+					early_suspend);
 	isl290xx_resume(isl290xx_data->client);
 }
 #endif
@@ -869,8 +870,8 @@ static int isl290xx_probe(struct i2c_client *clientp,
 	prox_dev = NULL;
 #endif
 	val = 0;
-        light_on = 0;
-        prox_on = 0;
+	light_on = 0;
+	prox_on = 0;
 	isPsensorLocked = 0;
 	als_intr_threshold_hi_param = 0;
 	als_intr_threshold_lo_param = 0x0fff;
@@ -884,7 +885,7 @@ static int isl290xx_probe(struct i2c_client *clientp,
 	    (clientp->adapter, I2C_FUNC_SMBUS_BYTE_DATA)) {
 		pr_isl(ERROR,
 		       "i2c smbus byte data functions unsupported\n");
-		return - EOPNOTSUPP;
+		return -EOPNOTSUPP;
 	}
 	if (!i2c_check_functionality
 	    (clientp->adapter, I2C_FUNC_SMBUS_WORD_DATA)) {
@@ -913,27 +914,27 @@ static int isl290xx_probe(struct i2c_client *clientp,
 	if (ret < 0) {
 		pr_isl(ERROR,
 		       "control reg failed in isl290xx_probe()\n");
-		return ret;
+		goto err_chip_set;
 	}
 	ret = i2c_smbus_write_byte_data(isl290xx_data_tp->client,
 		ISL290XX_ALSIR_TH_HL, 0);
 	if (ret < 0) {
 		pr_isl(ERROR,
 		       "control reg failed in isl290xx_probe()\n");
-		return ret;
+		goto err_chip_set;
 	}
 	ret = i2c_smbus_write_byte_data(isl290xx_data_tp->client,
 			ISL290XX_ALSIR_TH_H, 0);
 	if (ret < 0) {
 		pr_isl(ERROR,
 		       " control reg failed in isl290xx_probe()\n");
-		return ret;
+		goto err_chip_set;
 	}
 #ifdef ISL29147_ENABLE
 	ret = prv_isl290xx_reset();
 	if (ret < 0) {
 		pr_isl(ERROR, "reset chip fail, ret: %d\n", ret);
-		return ret;
+		goto err_chip_set;
 	}
 
 #else
@@ -943,7 +944,7 @@ static int isl290xx_probe(struct i2c_client *clientp,
 	if (ret < 0) {
 		pr_isl(ERROR,
 		       "control reg failed in isl290xx_probe()\n");
-		return ret;
+		goto err_chip_set;
 	}
 	ret = i2c_smbus_write_byte_data(isl290xx_data_tp->client,
 		ISL290XX_INT_REG,
@@ -951,16 +952,20 @@ static int isl290xx_probe(struct i2c_client *clientp,
 	if (ret  < 0) {
 		pr_isl(ERROR,
 		       "control reg failed in isl290xx_probe()\n");
-		return ret;
+		goto err_chip_set;
 	}
 #endif
 	INIT_WORK(&isl290xx_data_tp->isl290xx_work, prv_isl290xx_work_func);
 	mutex_init(&isl290xx_data_tp->proximity_calibrating);
 	if (!clientp->dev.platform_data) {
 		np = isl290xx_data_tp->client->dev.of_node;
-		ret = of_property_read_u32(np, "gpio-irq-pin", &val);
-		clientp->irq = val;
-		isl290xx_pls_irq_num = val;
+		ret = of_get_named_gpio(np, "gpio-irq-pin", 0);
+		if (!gpio_is_valid(ret)) {
+			pr_isl(ERROR, "invalid gpio-irq-pin: %d\n", ret);
+			goto err_get_irqgpio;
+		}
+		clientp->irq = ret;
+		isl290xx_pls_irq_num = ret;
 	}
 	pr_isl(INFO, "ISL290XX use gpio %d\n", clientp->irq);
 	ret = request_threaded_irq(gpio_to_irq(clientp->irq),
@@ -970,7 +975,7 @@ static int isl290xx_probe(struct i2c_client *clientp,
 			isl290xx_prox_cur_infop);
 	if (ret) {
 		pr_isl(INFO, "ISL290XX request interrupt failed\n");
-		return ret;
+		goto err_request_irq;
 	}
 
 	strlcpy(clientp->name, ISL290XX_DEVICE_ID, I2C_NAME_SIZE);
@@ -985,7 +990,8 @@ static int isl290xx_probe(struct i2c_client *clientp,
 	if (!isl290xx_cfgp) {
 		pr_isl(ERROR,
 		       "kmalloc for struct isl290xx_cfg_s failed)\n");
-		return - ENOMEM;
+		ret = -ENOMEM;
+		goto err_alloc_cfgp;
 	}
 	if (!clientp->dev.platform_data) {
 		ret = of_property_read_u32(np,
@@ -1026,12 +1032,12 @@ static int isl290xx_probe(struct i2c_client *clientp,
 	light = kzalloc(sizeof(struct isl290xx_alsprox_data_s), GFP_KERNEL);
 	if (!light) {
 		ret = -ENOMEM;
-		goto exit_alloc_data_failed;
+		goto err_alloc_light_data;
 	}
 	proximity = kzalloc(sizeof(struct isl290xx_alsprox_data_s), GFP_KERNEL);
 	if (!proximity) {
 		ret = -ENOMEM;
-		goto exit_alloc_data_failed;
+		goto err_alloc_proximity;
 	}
 
 	light->input_dev = input_allocate_device();
@@ -1039,14 +1045,14 @@ static int isl290xx_probe(struct i2c_client *clientp,
 		ret = -ENOMEM;
 		pr_isl(ERROR,
 		       "Failed to allocate light input device\n");
-		goto exit_input_dev_alloc_failed;
+		goto err_input_light_alloc;
 	}
 	proximity->input_dev = input_allocate_device();
 	if (!proximity->input_dev) {
 		ret = -ENOMEM;
 		pr_isl(ERROR,
 		       "Failed to allocate prox input device\n");
-		goto exit_input_dev_alloc_failed;
+		goto err_input_proximity_alloc;
 	}
 
 	/* lux */
@@ -1063,13 +1069,13 @@ static int isl290xx_probe(struct i2c_client *clientp,
 	if (ret) {
 		pr_isl(ERROR, "Unable to register input device: %s\n",
 		       light->input_dev->name);
-		goto exit_input_register_device_failed;
+		goto err_input_register_light;
 	}
 	ret = input_register_device(proximity->input_dev);
 	if (ret) {
 		pr_isl(ERROR, "Unable to register input device: %s\n",
 		       proximity->input_dev->name);
-		goto exit_input_register_device_failed;
+		goto err_input_register_proximity;
 	}
 #ifdef ISL290XX_POLL_MODE
 	INIT_DELAYED_WORK(&isl290xx_data_tp->prox_poll_work,
@@ -1079,11 +1085,12 @@ static int isl290xx_probe(struct i2c_client *clientp,
 #endif
 	ret = sysfs_create_group(&clientp->dev.kobj, &isl290xx_ctrl_attr_grp);
 	if (0 != ret) {
-		goto exit_input_register_device_failed;
-                pr_isl(ERROR, "sysfs create debug node fail, ret: %d\n", ret);
+		pr_isl(ERROR, "sysfs create debug node fail, ret: %d\n", ret);
+		goto err_sysfs_create_debug_node;
 	}
 #ifdef CONFIG_HAS_EARLYSUSPEND
-	isl290xx_data_tp->early_suspend.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN + 1;
+	isl290xx_data_tp->early_suspend.level =
+				EARLY_SUSPEND_LEVEL_BLANK_SCREEN + 1;
 	isl290xx_data_tp->early_suspend.suspend = isl290xx_early_suspend;
 	isl290xx_data_tp->early_suspend.resume = isl290xx_late_resume;
 	register_early_suspend(&isl290xx_data_tp->early_suspend);
@@ -1100,24 +1107,39 @@ static int isl290xx_probe(struct i2c_client *clientp,
 
 	pr_info("isl probe ---\n");
 	return ret;
+
 #if defined(CONFIG_SENSORS_CORE)
-err_proximity_device_create_file:
 	sensors_unregister(prox_dev);
+err_proximity_device_create_file:
 #endif
-exit_input_register_device_failed:
+
 	sysfs_remove_group(&clientp->dev.kobj, &isl290xx_ctrl_attr_grp);
-	if (light->input_dev)
-		input_free_device(light->input_dev);
+err_sysfs_create_debug_node:
+	input_unregister_device(proximity->input_dev);
+err_input_register_proximity:
+	input_unregister_device(light->input_dev);
+err_input_register_light:
 	if (proximity->input_dev)
 		input_free_device(proximity->input_dev);
-exit_input_dev_alloc_failed:
-exit_alloc_data_failed:
-	kfree(light);
+err_input_proximity_alloc:
+	if (light->input_dev)
+		input_free_device(light->input_dev);
+err_input_light_alloc:
 	kfree(proximity);
+err_alloc_proximity:
+	kfree(light);
+err_alloc_light_data:
+	kfree(isl290xx_cfgp);
+	isl290xx_cfgp = NULL;
+err_alloc_cfgp:
+	free_irq(gpio_to_irq(clientp->irq), isl290xx_prox_cur_infop);
+err_request_irq:
+err_get_irqgpio:
+err_chip_set:
 	return ret;
 }
 
-static int __devexit isl290xx_remove(struct i2c_client *client)
+static int isl290xx_remove(struct i2c_client *client)
 {
 	int ret = 0;
 	pr_info("isl290xx_remove+++\n");
@@ -1125,9 +1147,23 @@ static int __devexit isl290xx_remove(struct i2c_client *client)
 	sensors_unregister(prox_dev);
 #endif
 	sysfs_remove_group(&client->dev.kobj, &isl290xx_ctrl_attr_grp);
+
+	if (proximity && proximity->input_dev) {
+		input_unregister_device(proximity->input_dev);
+		input_free_device(proximity->input_dev);
+		kfree(proximity);
+	}
+
+	if (light && light->input_dev) {
+		input_unregister_device(light->input_dev);
+		input_free_device(light->input_dev);
+		kfree(light);
+	}
 #ifdef ISL290XX_POLL_MODE
 	del_timer(&prox_poll_timer);
 #endif
+	kfree(isl290xx_cfgp);
+	free_irq(gpio_to_irq(client->irq), isl290xx_prox_cur_infop);
 	return ret;
 }
 
@@ -1179,7 +1215,7 @@ static int isl290xx_read(struct file *file, char *buf, size_t count,
 	    || (count > ISL290XX_MAX_DEVICE_REGS)) {
 		pr_isl(ERROR,
 		       "reg limit check failed in isl290xx_read()\n");
-		return - EINVAL;
+		return -EINVAL;
 	}
 	reg = (u8)*ppos;
 	isl290xx_data_tp =
@@ -1194,7 +1230,7 @@ static int isl290xx_read(struct file *file, char *buf, size_t count,
 	ret = copy_to_user(buf, my_buf, xfrd);
 	if (ret) {
 		pr_isl(ERROR, "copy_to_user failed in isl290xx_read()\n");
-		return - ENODATA;
+		return -ENODATA;
 	}
 	return (int)xfrd;
 }
@@ -1211,13 +1247,13 @@ static int isl290xx_write(struct file *file, const char *buf, size_t count,
 	    || ((*ppos + count) > ISL290XX_MAX_DEVICE_REGS)) {
 		pr_isl(ERROR,
 		       "reg limit check failed in isl290xx_write()\n");
-		return - EINVAL;
+		return -EINVAL;
 	}
 	reg = (u8)*ppos;
 	ret = copy_from_user(my_buf, buf, count);
 	if (ret) {
 		pr_isl(ERROR, "ISL: copy_to_user failed in isl290xx_write()\n");
-		return - ENODATA;
+		return -ENODATA;
 	}
 	isl290xx_data_tp =
 	    container_of(file->f_dentry->d_inode->i_cdev,
@@ -1245,7 +1281,7 @@ static loff_t isl290xx_llseek(struct file *file, loff_t offset, int orig)
 		(orig < 0) || (orig > 1)) {
 		pr_isl(ERROR,
 		       "offset param limit or origin limit check failed\n");
-		return - EINVAL;
+		return -EINVAL;
 	}
 	switch (orig) {
 	case 0:
@@ -1255,14 +1291,14 @@ static loff_t isl290xx_llseek(struct file *file, loff_t offset, int orig)
 		new_pos = file->f_pos + offset;
 		break;
 	default:
-		return - EINVAL;
+		return -EINVAL;
 		break;
 	}
 	if ((new_pos < 0) || (new_pos >= ISL290XX_MAX_DEVICE_REGS)
 		|| (ret < 0)) {
 		pr_isl(ERROR,
 		       "new offset limit or origin limit check failed\n");
-		return - EINVAL;
+		return -EINVAL;
 	}
 	file->f_pos = new_pos;
 	return new_pos;
@@ -1940,7 +1976,7 @@ static long isl290xx_ioctl(struct file *file, unsigned int cmd,
 		if (ret) {
 			pr_isl(ERROR,
 			       "copy_to_user failed in ioctl config_get\n");
-			return - ENODATA;
+			return -ENODATA;
 		}
 		return ret;
 		break;
@@ -1951,7 +1987,7 @@ static long isl290xx_ioctl(struct file *file, unsigned int cmd,
 		if (ret) {
 			pr_isl(ERROR,
 			       "copy_from_user failed in ioctl config_set\n");
-			return - ENODATA;
+			return -ENODATA;
 		}
 		return ret;
 		break;
@@ -1994,7 +2030,7 @@ static long isl290xx_ioctl(struct file *file, unsigned int cmd,
 		if (ret) {
 			pr_isl(ERROR,
 			       "ISL: copy_to_user failed in ioctl prox_data\n");
-			return - ENODATA;
+			return -ENODATA;
 		}
 		return ret;
 		break;
@@ -2012,7 +2048,7 @@ static long isl290xx_ioctl(struct file *file, unsigned int cmd,
 		if (!prox_on) {
 			pr_isl(ERROR,
 			       "ioctl prox_calibrate was called before\n");
-			return - EPERM;
+			return -EPERM;
 		}
 		mutex_lock(&isl290xx_data_tp->proximity_calibrating);
 		prox_sum = 0;
@@ -2041,7 +2077,7 @@ static long isl290xx_ioctl(struct file *file, unsigned int cmd,
 		     prox_pt->ratio && prox_pt->ratio <= ratio; prox_pt++)
 			;
 		if (!prox_pt->ratio)
-			return - 1;
+			return -1;
 		isl290xx_cfgp->prox_threshold_hi =
 		    (prox_mean * prox_pt->hi) / 10;
 		if (isl290xx_cfgp->prox_threshold_hi <= ((0xff * 3) / 100))
@@ -2069,7 +2105,7 @@ static long isl290xx_ioctl(struct file *file, unsigned int cmd,
 		break;
 
 	default:
-		return - EINVAL;
+		return -EINVAL;
 		break;
 	}
 	return ret;

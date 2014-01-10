@@ -142,6 +142,11 @@
 #include <linux/akm8975.h>
 #endif
 
+#if defined(CONFIG_SENSORS_BMA222)
+#include <linux/bma222.h>
+#endif
+
+
 #ifdef CONFIG_BACKLIGHT_PWM
 #include <linux/pwm_backlight.h>
 #endif
@@ -2135,7 +2140,7 @@ static struct i2c_board_info __initdata akm8975_info[] = {
 
 #if defined(CONFIG_SENSORS_BMA222)
 static struct bma222_accl_platform_data bma_pdata = {
-	.orientation = BMA_ROT_90,
+	.orientation = BMA_ORI_XYSWITCH_NOINVERSE,
 	.invert = false,
 };
 #endif

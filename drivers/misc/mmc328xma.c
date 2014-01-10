@@ -537,7 +537,7 @@ static void mmc328xma_work_func(struct work_struct *work)
 		container_of((struct delayed_work *)work,
 		struct mmc328xma_data, work);
 	struct mmc328xma_t magn;
-	int raw[3], data[3];
+	int raw[3];
 	int status = 0;
 	unsigned long delay = delay_to_jiffies(atomic_read(&mmc328xma->delay));
 
@@ -926,7 +926,6 @@ int mmc328xma_probe(struct i2c_client *client,
 		const struct i2c_device_id *devid)
 {
 	struct mmc328xma_data *data;
-	u32 val = 0;
 	int err = 0;
 	int tempvalue;
 	int *pOffset;
@@ -1032,7 +1031,6 @@ static int mmc328xma_remove(struct i2c_client *client)
 
 static int mmc328xma_suspend(struct i2c_client *client, pm_message_t state)
 {
-	int ret;
 	printk(KERN_DEBUG "mmc328xma_resume\n");
 
 	mmc328xma_set_enable(&client->dev, 0);
@@ -1041,7 +1039,6 @@ static int mmc328xma_suspend(struct i2c_client *client, pm_message_t state)
 
 static int mmc328xma_resume(struct i2c_client *client)
 {
-	int ret;
 	struct mmc328xma_data *mmc328xma = i2c_get_clientdata(client);
 
 	printk(KERN_DEBUG "mmc328xma_resume\n");
@@ -1069,7 +1066,7 @@ MODULE_DEVICE_TABLE(of, mmc328x_of_match);
 static struct i2c_driver mmc328xma_driver = {
 	.class = I2C_CLASS_HWMON,
 	.probe = mmc328xma_probe,
-	.remove = __devexit_p(mmc328xma_remove),
+	.remove = mmc328xma_remove,
 	.id_table = mmc328xma_id,
 	.suspend = mmc328xma_suspend,
 	.resume = mmc328xma_resume,
