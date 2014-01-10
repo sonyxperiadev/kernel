@@ -2704,7 +2704,6 @@ static int ov5648_probe(struct i2c_client *client,
 
 	ret = ov5648_video_probe(client);
 	if (ret) {
-		kfree(ov5648);
 		goto vid_probe_fail;
 	}
 
