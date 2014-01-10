@@ -183,10 +183,12 @@
 			gpio-irq-pin = <&gpio 73 0>;
 			gpio-reset-pin = <&gpio 70 0>;
 			gpio-wakeup-pin = <&gpio 70 0>;
-			x-max-value = <720>;
-			y-max-value = <1280>;
+			x-max-value = <480>;
+			y-max-value = <854>;
 			use-irq = <1>;
 			power = "camldo2";
+			auto_update_fw = <0>;
+			vkey_scope = "0x01:139:120:1010:120:80:0x01:102:240:1010:120:80:0x01:158:360:1010:120:80\n";
 		};
 	};
 
