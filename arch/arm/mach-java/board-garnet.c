@@ -582,6 +582,12 @@ static int hawaii_camera_power(struct device *dev, int on)
 	static struct pi_mgr_dfs_node unicam_dfs_node;
 	static int sensor_on = -1;
 	struct soc_camera_subdev_desc *ssd = dev->platform_data;
+#ifdef CONFIG_SOC_CAMERA_OV5648
+	char module[] = "ov5648";
+#else
+	char *module;
+#endif
+	struct cameracfg_s *thiscfg = getcameracfg(module);
 
 	if (sensor_on == on) {
 		pr_info("hawaii_camera_power already in same state: %s\n",
@@ -591,13 +597,8 @@ static int hawaii_camera_power(struct device *dev, int on)
 
 	sensor_on = on;
 
-#ifdef CONFIG_SOC_CAMERA_OV5648
-	char module[] = "ov5648";
-#endif
-
 	printk(KERN_INFO "%s:camera power %s\n", __func__, (on ? "on" : "off"));
 
-	struct cameracfg_s *thiscfg = getcameracfg(module);
 	if (NULL == thiscfg) {
 		pr_err("No cfg for [%s]\n", module);
 		return -1;
@@ -642,6 +643,7 @@ static int hawaii_camera_power(struct device *dev, int on)
 		}
 	#endif
 
+#ifdef CONFIG_SOC_CAMERA_OV5648
 		/*MMC1 VCC */
 		d_1v8_mmc1_vcc = regulator_get(NULL,
 					ov5648_regulator_data[1].supply);
@@ -661,6 +663,7 @@ static int hawaii_camera_power(struct device *dev, int on)
 			if (IS_ERR_OR_NULL(d_lvldo2_cam1_1v8))
 				pr_err("Fd_lvldo2_cam1_1v8 cam\n");
 		}
+#endif
 	}
 
 	ret = -1;
@@ -839,6 +842,12 @@ static int hawaii_camera_power_front(struct device *dev, int on)
 	static struct pi_mgr_dfs_node unicam_dfs_node;
 	static int sensor_on = -1;
 	struct soc_camera_subdev_desc *ssd = dev->platform_data;
+#ifdef CONFIG_SOC_CAMERA_OV7692
+	char module[] = "ov7692";
+#else
+	char *module;
+#endif
+	struct cameracfg_s *thiscfg = getcameracfg(module);
 
 	if (sensor_on == on) {
 		pr_info("hawaii_camera_power_front already in same state: %s\n",
@@ -848,11 +857,6 @@ static int hawaii_camera_power_front(struct device *dev, int on)
 
 	printk(KERN_INFO "%s:camera power %s\n", __func__, (on ? "on" : "off"));
 
-#ifdef CONFIG_SOC_CAMERA_OV7692
-	char module[] = "ov7692";
-#endif
-
-	struct cameracfg_s *thiscfg = getcameracfg(module);
 	if (NULL == thiscfg) {
 		pr_err("No cfg for [%s]\n", module);
 		 return -1;
@@ -876,6 +880,7 @@ static int hawaii_camera_power_front(struct device *dev, int on)
 			return -1;
 		}
 
+#ifdef CONFIG_SOC_CAMERA_OV7692
 		d_lvldo2_cam1_1v8 = regulator_get(NULL,
 			ov7692_regulator_data[0].supply);
 		if (IS_ERR_OR_NULL(d_lvldo2_cam1_1v8))
@@ -898,7 +903,7 @@ static int hawaii_camera_power_front(struct device *dev, int on)
 			if (IS_ERR_OR_NULL(d_gpsr_cam0_1v8))
 				pr_err("Fl d_gpsr_cam0_1v8 get	fail");
 		}
-
+#endif
 	}
 
 	ret = -1;
@@ -1284,8 +1289,12 @@ struct platform_device *hawaii_common_plat_devices[] __initdata = {
 #endif
 #ifdef CONFIG_UNICAM_CAMERA
 	&hawaii_camera_device,
+#ifdef CONFIG_SOC_CAMERA_OV5648
 	&hawaii_camera_back,
+#endif
+#ifdef CONFIG_SOC_CAMERA_OV7692
 	&hawaii_camera_front,
+#endif
 #endif
 
 #ifdef CONFIG_SND_BCM_SOC
