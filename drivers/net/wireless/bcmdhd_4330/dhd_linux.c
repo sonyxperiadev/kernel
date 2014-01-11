@@ -1500,6 +1500,9 @@ dhd_start_xmit(struct sk_buff *skb, struct net_device *net)
 	uint8 htsfdlystat_sz = 0;
 #endif
 
+	uint32 align = 0;
+
+
 	DHD_TRACE(("%s: Enter\n", __FUNCTION__));
 
 	DHD_OS_WAKE_LOCK(&dhd->pub);
@@ -1536,6 +1539,18 @@ dhd_start_xmit(struct sk_buff *skb, struct net_device *net)
 
 	ifp = dhd->iflist[ifidx];
 	datalen  = PKTLEN(dhdp->osh, skb);
+
+
+    /* re-align socket buffer if "skb->data" is odd adress */
+	align = ((unsigned long)(skb->data)) & 0x1;
+	if (align > 0) {
+			unsigned char *data = skb->data;
+			uint32 length = skb->len;
+			PKTPUSH(dhd->pub.osh, skb, align);
+			memmove(skb->data, data, length);
+			PKTSETLEN(dhd->pub.osh, skb, length);
+	}
+
 
 	/* Make sure there's enough room for any header */
 
