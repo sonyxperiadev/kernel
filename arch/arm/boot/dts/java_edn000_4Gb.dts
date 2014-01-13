@@ -257,7 +257,8 @@
 	ion-config {
 		compatible = "bcm,ion-config";
 		/* Workaround: Use a separate iova pool for hwwr buffers */
-		mask_hwwr = <0x4>;
+		mask_hwwr = <0>;
+		mask_fast = <0>;
 		mask_256M = <0x221>;
 	};
 
