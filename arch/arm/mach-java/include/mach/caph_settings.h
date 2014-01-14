@@ -15,7 +15,19 @@
 #ifndef CAPH_SETTINGS_H
 #define CAPH_SETTINGS_H
 
-#ifdef CONFIG_MACH_JAVA_C_5606
+#if defined(CONFIG_MACH_JAVA_C_5606)
+#define HW_CFG_CAPH \
+{ \
+	.aud_ctrl_plat_cfg = \
+	{ \
+		.ext_aud_plat_cfg = \
+		{ \
+			.ihf_ext_amp_gpio = 34, \
+			.dock_aud_route_gpio = -1, \
+		} \
+	} \
+};
+#elif defined(CONFIG_MACH_JAVA_C_LC1)
 #define HW_CFG_CAPH \
 { \
 	.aud_ctrl_plat_cfg = \
