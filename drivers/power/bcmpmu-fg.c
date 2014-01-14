@@ -2390,6 +2390,11 @@ static void bcmpmu_fg_charging_algo(struct bcmpmu_fg_data *fg)
 		fg->discharge_state = DISCHARG_STATE_HIGH_BATT;
 	}
 
+	if (fg->flags.coulb_dis) {
+		pr_fg(FLOW, "%s: enable coulomb counter\n");
+		bcmpmu_fg_enable_coulb_counter(fg, true);
+	}
+
 	bcmpmu_fg_get_coulomb_counter(fg);
 	if (!fg->pdata->hw_maintenance_charging)
 		bcmpmu_fg_sw_maint_charging_algo(fg);
