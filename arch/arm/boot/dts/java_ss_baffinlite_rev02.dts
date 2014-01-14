@@ -1,20 +1,21 @@
-/* Hawaii_ss_logands_rev01 Dts file */
+/* Java_ss_baffinlite_rev02 Dts file */
 
 /dts-v1/;
 
-/include/ "bcm_21664.dtsi"
+/include/ "java.dtsi"
+
 
 / {
-	model = "Hawaii SS Logands Rev01";
-	compatible = "bcm,hawaii";
+	model = "Java ss baffinlite rev02";
+	compatible = "bcm,java";
 
 	chosen {
-		bootargs = "console=ttyS2,115200n8 mem=482M gpt androidboot.console=ttyS2 crash_ramdump=1 logbuf_nocache=1";
+		bootargs = "console=ttyS2,115200n8 mem=738M gpt androidboot.console=ttyS2 crash_ramdump=1 logbuf_nocache=1";
 	};
 
-	memory@81e00000 {
+	memory@81E00000 {
 		device_type = "memory";
-		reg = <0x81e00000 0x20000000>; /* 480 MB */
+		reg = <0x81E00000 0x2e000000>; /* 736 MB */
 	};
 
 	wd-tapper {
@@ -22,19 +23,6 @@
 		ch-num = <1>; /* Kona hub timer Channel number */
 		timer-name = "aon-timer";
 	};
-
-	usb-phy@0x3F130000 {
-		interrupts = <0 128 0x04>;
-		chipreg-virtual-mem-base = <0x35004000>;
-		usb-ahb-clk-name = "usb_otg_clk";
-		mdio-mstr-clk-name = "mdiomaster";
-	};
-	usb-hsotgctrl@0x3F130000 {
-		chipreg-virtual-mem-base = <0x35004000>;
-		usb-ahb-clk-name = "usb_otg_clk";
-		mdio-mstr-clk-name = "mdiomaster";
-	};
-
 
 	uart@3e000000 {
 		clock-frequency = <48000000>;
@@ -112,19 +100,6 @@
 		fs-ref-frequency = <13000000>;
 		hs-ref-frequency = <26000000>;
 	};
-	spi0: spi@0x3E004000 {
-		enable-dma = <1>;
-		cs-line = <1>;
-		mode = <0x23>;
-
-		spidev@0x0 {
-			compatible = "bcm,spidev";
-			reg = <0x0>;
-			spi-max-frequency = <13000000>;
-			spi-loop = <0x20>;
-		};
-	};
-
 
 	bcm-bt-lpm {
 		compatible = "bcm,bcm-bt-lpm";
@@ -148,8 +123,15 @@
 
 	iovmm_mm: iovmm-mm {
 		compatible = "bcm,iovmm";
-		base = <0xc0000000>;
+		base = <0x80000000>;
 		size = <0x30000000>;
+		order = <0>;
+	};
+
+	iovmm_mm_hwwr: iovmm-mm-hwwr {
+		compatible = "bcm,iovmm";
+		base = <0xb0000000>;
+		size = <0x40000000>;
 		order = <0>;
 	};
 
@@ -162,8 +144,9 @@
 
 	ion-config {
 		compatible = "bcm,ion-config";
-		/* No separate mask needed for hwwr if M4U is enabled */
-		mask_hwwr = <0>;
+		/* Workaround: Use a separate iova pool for hwwr buffers */
+		mask_hwwr = <0x4>;
+		mask_256M = <0x221>;
 	};
 
 	ion-system {
@@ -180,6 +163,14 @@
 		type = <0>;
 		iommu = <&iommu_mm>;
 		iovmm = <&iovmm_mm>;
+	};
+
+	ion-system-hwwr {
+		compatible = "bcm,ion";
+		id = <2>;
+		type = <0>;
+		iommu = <&iommu_mm>;
+		iovmm = <&iovmm_mm_hwwr>;
 	};
 
 	ion-carveout {
@@ -212,63 +203,62 @@
 
 	soc-back-camera {
 		compatible = "bcm,soc-camera";
-		reg = <0x56 0x0>;
+		reg = <0x36 0x0>;
 		bus-id = <0>;
-		i2c-type = "camdrv_ss";	/* i2c_board_info type */
-		i2c-addr = <0x56>;	/* i2c_board_info addr */
+		i2c-type = "ov5648";
+		i2c-addr = <0x36>;
 		i2c-adapter-id = <0>;
-		module-name = "camdrv_ss";
-		if-type = <1>;		/* V4L2_SUBDEV_SENSOR_SERIAL */
-		if-mode = <3>;		/* V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2 */
-		orientation = <1>;	/* V4L2_SUBDEV_SENSOR_ORIENT_90 */
-		facing = <1>;		/* V4L2_SUBDEV_SENSOR_BACK */
+		module-name = "ov5648";
+		if-type = <1>;
+		if-mode = <3>;
+		orientation = <1>;
+		facing = <1>;
 		lanes = <2>;
 		channel = <0>;
 		phy-rate = <0>;
 		pix-clk = <0>;
-		hs_term_time = <7>;
-		hs_settle_time = <0>;
+		regulators = "lvldo1_uc", "mmc1_vcc", "mmc2_vcc", "lvldo2_uc";
 	};
 
 	soc-front-camera {
 		compatible = "bcm,soc-camera";
-		reg = <0x30 0x0>;
+		reg = <0x3e 0x0>;
 		bus-id = <0>;
-		i2c-type = "camdrv_ss_sub";	/* i2c_board_info type */
-		i2c-addr = <0x30>;	/* i2c_board_info addr */
+		i2c-type = "ov7692";	/* i2c_board_info type */
+		i2c-addr = <0x3e>;	/* i2c_board_info addr */
 		i2c-adapter-id = <0>;
-		module-name = "camdrv_ss_sub";
+		module-name = "ov7692";
 		if-type = <1>;		/* V4L2_SUBDEV_SENSOR_SERIAL */
 		if-mode = <3>;		/* V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2 */
-		orientation = <3>;	/* V4L2_SUBDEV_SENSOR_ORIENT_270 */
+		orientation = <1>;	/* V4L2_SUBDEV_SENSOR_LANDSCAPE */
 		facing = <0>;		/* V4L2_SUBDEV_SENSOR_FRONT */
 		lanes = <1>;
 		channel = <1>;
 		phy-rate = <0>;
 		pix-clk = <0>;
-		hs_term_time = <7>;
-		hs_settle_time = <0>;
+		regulators = "lvldo2_uc", "mmc1_vcc", "mmc2_vcc", "lvldo1_uc";
 	};
 
 	kona-fb {
-		module-name = "NT35510";
+		module-name = "HX8369";
 		reg-name = "cam2";
 		rst-gpio = <22>;
-		rst-setup = <5>;	/* 5us */
-		rst-pulse = <20>;	/* 20us */
-		rst-hold = <10000>;	/* 10ms */
-		/* rst-active-high */	/* Commented => Active Low */
-		/* vburst = <0>; */	/* Non-burst mode */
-		cmnd-LP;		/* Commands in LP mode*/
-		/* te-ctrl; */		/* Tearing Effect Control disabled */
-		col-mod-i = <3>;
+		rst-setup = <5>;	/* 700us */
+		rst-pulse = <20>;	/* 1ms */
+		rst-hold = <1300000>;	/* 100ms */
+		col-mod-i = <2>;
 		col-mod-o = <2>;
 		width = <480>;
 		height = <800>;
+		/* rst-active-high */	/* Commented => Active Low */
+		vmode;
+		vburst;	/* Non-burst mode */
+		/* te-ctrl; */		/* Tearing Effect Control disabled */
 		fps = <60>;
 		lanes = <2>;
-		hs-bitrate = <500000000>;
-		lp-bitrate = <5000000>;	/* 5mbps */
+		cmnd-LP;		/* Commands in LP mode*/
+		hs-bitrate = <490000000>;
+		lp-bitrate = <8000000>;	/* 8mbps */
 		iommu = <&iommu_mm>;
 		iovmm = <&iovmm_mm>;
 		rotation = <0>;
@@ -281,10 +271,10 @@
 		interrupts = <0 183 4>;
 		chipreg_addr = <0x35004000 0x1000>;
 		thold_size = <8>; /*number of threshold levels*/
-		poll_rate_ms = <10000>;
+		poll_rate_ms = <30000>;
 		hysteresis = <0>;
-		flags = <1>;
-		interval_ms = <5>;
+		flags = <5>;
+		interval_ms = <8>;
 		/*sw shdwn temp is 120*/
 		thold = <55 1
 			58 1
@@ -296,17 +286,24 @@
 			120 2>;
 		tmon_apb_clk = "tmon_apb";
 		tmon_1m_clk = "tmon_1m_clk";
-		falling = <5>;
+		falling = <5>; /*fall back temperature offset*/
 	};
 
 	memc@35008000 {
 		compatible = "bcm,memc";
 		reg = <0x35008000 0x1000>;
-		flags = <0x33>;
+		interrupts = <0 61 4>;
+		flags = <0xF3>;
 		chipreg_base = <0x35004000 0x1000>;
 		memc0_aphy_base = <0x35008400 0x1000>;
 		seq_busy_val = <2>;
 		max_pwr = <3>;
+		temp_period = <0xA09E6C>; /*400ms*/
+		temp_tholds = <7 1>;
+		num_thold = <1>;
+		pll_freq = <0 0 0 0
+				0x3D 0 1 0
+				0x50 0 1 0>;
 	};
 
 	sdio1 {
@@ -322,7 +319,6 @@
 		ahb-clk-name = "sdio2_ahb_clk";
 		sleep-clk-name = "sdio2_sleep_clk";
 		peri-clk-rate = <52000000>;
-
 	};
 
 	sdio2 {
@@ -345,7 +341,7 @@
 		interrupts = <0 77 0x04>;
 		id = <0>;
 		data-pullup = <0>;
-		cd-gpio = <&gpio 91 0>;		/*SD_CARDDET_GPIO_PIN*/
+		cd-gpio = <91>;		/*SD_CARDDET_GPIO_PIN*/
 		devtype = <0>;		/*SDIO_DEV_TYPE_SDMMC*/
 		flags = <0>;		/*KONA_SDIO_FLAGS_DEVICE_REMOVABLE*/
 		peri-clk-name = "sdio1_clk";
@@ -354,6 +350,12 @@
 		peri-clk-rate = <48000000>;
 		vddo-regulator-name = "vdd_sdio";
 		vddsdxc-regulator-name = "vdd_sdxc";
+	};
+
+	timer {
+		compatible = "arm,armv7-timer";
+		interrupts = <1 13 0xf08>,
+					<1 14 0xf08>;
 	};
 
 	wifi-driver {
@@ -390,4 +392,12 @@
 			0 0 0 0 0 0 0 0
 			0 0 0 0 0 0 0 0>;
 	};
+
+
+
+	secure_mem {
+		sec-mem-base = <0x9d800000>;
+		sec-mem-size = <0x100000>;
+	};
+
 };

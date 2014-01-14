@@ -215,7 +215,10 @@ dtb-$(CONFIG_ARCH_HAWAII) += hawaii_garnet_edn020.dtb \
 	hawaii_garnet_edn010_4Gb.dtb \
 	hawaii_garnet_edn020_4Gb.dtb \
 	hawaii_garnet_edn020_soc_4Gb.dtb \
-	hawaii_garnet_edn020_soc_2Gb.dtb
+	hawaii_garnet_edn020_soc_2Gb.dtb \
+	hawaii_ss_logands_rev01.dtb \
+	hawaii_ss_heat3g_rev00.dtb \
+	hawaii_ss_heat3g_rev01.dtb
 dtb-$(CONFIG_ARCH_JAVA) += java_edn000.dtb \
 	java_edn000_4Gb.dtb \
 	java_edn000_2Gb.dtb \
@@ -223,8 +226,10 @@ dtb-$(CONFIG_ARCH_JAVA) += java_edn000.dtb \
 	java_c_edn000.dtb \
 	java_c_lc1.dtb \
 	java_c_lc1_4Gb.dtb \
-	java_c_edn000_2Gb.dtb
-
+	java_c_edn000_2Gb.dtb \
+	java_ss_victor3g_rev00.dtb \
+	java_ss_baffinlite_rev02.dtb \
+	java_ss_eval_rev00.dtb
 dtb-$(CONFIG_MACH_JAVA_KIVU) += java_sony_kivu.dtb \
 	java_sony_brooks.dtb
 

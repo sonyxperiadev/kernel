@@ -3,23 +3,23 @@
 /dts-v1/;
 
 /include/ "java.dtsi"
-/include/ "java_ss_bcmpmu_eval_edn00.dtsi"
+
 
 / {
 	model = "Java ss eval rev00";
 	compatible = "bcm,java";
 
 	chosen {
-		bootargs = "console=ttyS0,115200n8 mem=992M gpt androidboot.console=ttyS0 crash_ramdump=1 logbuf_nocache=1";
+		bootargs = "console=ttyS2,115200n8 mem=994M gpt androidboot.console=ttyS2 crash_ramdump=1 logbuf_nocache=1";
 	};
 
-	memory@82000000 {
+	memory@81E00000 {
 		device_type = "memory";
-		reg = <0x82000000 0x2e000000>; /* 736 MB */
+		reg = <0x81E00000 0x3e200000>; /* 994 MB */
 	};
 
 	wd-tapper {
-		count = <300>; /* Time in seconds */
+		count = <120>; /* Time in seconds */
 		ch-num = <1>; /* Kona hub timer Channel number */
 		timer-name = "aon-timer";
 	};
@@ -38,26 +38,25 @@
 
 
 	uart@3e000000 {
-		clock-frequency = <26000000>;
-		port-name = "console";
+		clock-frequency = <48000000>;
+		port-name = "bluetooth";
 		clk-name = "uartb_clk";
 	};
 
 	uart@3e001000 {
-		clock-frequency = <48000000>;
-		port-name = "bluetooth";
-		clk-name = "uartb2_clk";
-	};
-
-	uart@3e002000 {
 		clock-frequency = <26000000>;
 		port-name = "gps";
-		clk-name = "uartb3_clk";
+		clk-name = "uartb2_clk";
 		/*If power-save-enable is set Change
 		* PADCTRL_UBRTSN from UART3_RTSN to
 		* UBRTSN (Debug UART) when GPS is inactive.*/
 		power-save-enable = <1>;
+	};
 
+	uart@3e002000 {
+		clock-frequency = <26000000>;
+		port-name = "console";
+		clk-name = "uartb3_clk";
 	};
 
 	i2c0: i2c@3e016000 {
@@ -80,17 +79,6 @@
 		is-pmu-i2c = <0>;
 		fs-ref-frequency = <13000000>;
 		hs-ref-frequency = <104000000>;
-
-		broadcom_nfc@77 {
-			compatible = "bcm,nfc-i2c";
-			reg = <0x77>;
-			wake_gpio = <25>;
-			en_gpio = <100>;
-			irq_gpio = <90>;
-			enable_txfifo = <1>;
-			enable_rxfifo = <1>;
-		};
-
 	};
 
 	i2c2: i2c@3e018000 {
@@ -102,69 +90,6 @@
 		is-pmu-i2c = <0>;
 		fs-ref-frequency = <13000000>;
 		hs-ref-frequency = <104000000>;
-		mpu3050@68 {
-			compatible = "bcm,mpu3050";
-			reg = <0x68>;
-			gpio-irq-pin = <&gpio 33 0>;
-			int-config = <0x10>;
-			level-shifter = <0>;
-			orientation = <0 0xFFFFFFFF 0
-					0xFFFFFFFF 0 0
-					0 0 0xFFFFFFFF>;
-		};
-		akm8975@0c {
-			compatible = "bcm,akm8975";
-			reg = <0x0c>;
-			gpio-irq-pin = <&gpio 4 0>;
-			layout = <6>;
-		};
-
-		kxtik@0f {
-                        compatible = "bcm,kxtik";
-                        reg = <0x0f>;
-                        gpio-irq-pin = <&gpio 1 0>;
-                        min_interval = <5>;
-                        poll_interval = <200>;
-                        axis_map_x = <0>;
-                        axis_map_y = <1>;
-                        axis_map_z = <2>;
-                        negate_x = <1>;
-                        negate_y = <0>;
-                        negate_z = <1>;
-                        res_12bit = <64>;
-                        g_range = <0>;
-                };
-
-		tmd2771@39 {
-			compatible = "bcm,tmd2771";
-			reg = <0x39>;
-			gpio-irq-pin = <&gpio 89 0>;
-			calibrate_target_param = <300000>;
-			als_time_param = <200>;
-			scale_factor_param = <1>;
-			gain_trim_param = <512>;
-			filter_history_param = <3>;
-			filter_count_param = <1>;
-			gain_param = <2>;
-			prox_threshold_hi_param = <646>;
-			prox_threshold_lo_param = <638>;
-			als_threshold_hi_param = <1>;
-			als_threshold_lo_param = <0>;
-			prox_int_time_param = <238>;
-			prox_adc_time_param = <255>;
-			prox_wait_time_param = <238>;
-			prox_intr_filter_param = <17>;
-			prox_config_param = <0>;
-			prox_pulse_cnt_param = <96>;
-			prox_gain_param = <34>;
-			prox_win_sw = <100>;
-		};
-
-		bmp18x@77 {
-                         compatible = "bcm,bmp18x";
-                         reg = <0x77>;
-			 regulator-name = "cam2";
-		};
 	};
 
 	i2c3: i2c@3e01c000 {
@@ -176,18 +101,6 @@
 		is-pmu-i2c = <0>;
 		fs-ref-frequency = <13000000>;
 		hs-ref-frequency = <104000000>;
-
-		FocalTech-Ft5306@46 {
-			compatible = "bcm,FocalTech-Ft5306";
-			reg = <0x38>;
-			gpio-irq-pin = <&gpio 73 0>;
-			gpio-reset-pin = <&gpio 70 0>;
-			gpio-wakeup-pin = <&gpio 70 0>;
-			x-max-value = <720>;
-			y-max-value = <1280>;
-			use-irq = <1>;
-			power = "camldo2";
-		};
 	};
 
 	i2c4: i2c@3500d000 {
@@ -232,20 +145,35 @@
 		iova_begin  = <0x80000000>;
 		iova_size   = <0x80000000>;
 		errbuf_size = <0x00001000>;
+		skip_enable = <1>;
 	};
 
 	iovmm_mm: iovmm-mm {
 		compatible = "bcm,iovmm";
-		base = <0xc0000000>;
-		size = <0x20000000>;
+		base = <0x80000000>;
+		size = <0x30000000>;
+		order = <0>;
+	};
+
+	iovmm_mm_hwwr: iovmm-mm-hwwr {
+		compatible = "bcm,iovmm";
+		base = <0xb0000000>;
+		size = <0x40000000>;
 		order = <0>;
 	};
 
 	iovmm_mm_256mb: iovmm-mm-256mb {
 		compatible = "bcm,iovmm";
-		base = <0xe0000000>;
-		size = <0x10000000>;
+		base = <0xf0000000>;
+		size = <0x0ff00000>;
 		order = <0>;
+	};
+
+	ion-config {
+		compatible = "bcm,ion-config";
+		/* Workaround: Use a separate iova pool for hwwr buffers */
+		mask_hwwr = <0x4>;
+		mask_256M = <0x221>;
 	};
 
 	ion-system {
@@ -256,9 +184,25 @@
 		iovmm = <&iovmm_mm_256mb>;
 	};
 
+	ion-system-extra {
+		compatible = "bcm,ion";
+		id = <1>;
+		type = <0>;
+		iommu = <&iommu_mm>;
+		iovmm = <&iovmm_mm>;
+	};
+
+	ion-system-hwwr {
+		compatible = "bcm,ion";
+		id = <2>;
+		type = <0>;
+		iommu = <&iommu_mm>;
+		iovmm = <&iovmm_mm_hwwr>;
+	};
+
 	ion-carveout {
 		compatible = "bcm,ion";
-		id = <3>;
+		id = <9>;
 		type = <2>;
 		base  = <0x90000000>;
 		limit = <0xa0000000>;
@@ -272,7 +216,7 @@
 
 	ion-cma {
 		compatible = "bcm,ion";
-		id = <2>;
+		id = <5>;
 		type = <4>;
 		base  = <0x90000000>;
 		limit = <0xa0000000>;
@@ -323,59 +267,28 @@
 	};
 
 	kona-fb {
-		module-name = "NT35512";
+		module-name = "NT35510";
 		reg-name = "cam2";
-		rst-gpio = <&gpio 8 0>;
-		detect-gpio = <&gpio 10 0>;
-		detect-gpio-val = <0>;
-		rst-setup = <700>;	/* 700us */
-		rst-pulse = <1000>;	/* 1ms */
-		rst-hold = <100000>;	/* 100ms */
+		rst-gpio = <22>;
+		rst-setup = <5>;	/* 5us */
+		rst-pulse = <20>;	/* 20us */
+		rst-hold = <10000>;	/* 10ms */
 		col-mod-i = <3>;
 		col-mod-o = <2>;
 		width = <480>;
-		height = <854>;
+		height = <800>;
 		/* rst-active-high */	/* Commented => Active Low */
-		vmode;
-		/* vburst */	/* Non-burst mode */
-		/* te-ctrl; */		/* Tearing Effect Control disabled */
+		/* vmode; */
+		/* vburst; */	/* Non-burst mode */
 		fps = <60>;
 		lanes = <2>;
 		cmnd-LP;		/* Commands in LP mode*/
-		hs-bitrate = <333000000>;
-		lp-bitrate = <8000000>;	/* 8mbps */
-		desense-offset = <2400000>;  /* +2.4Mbps */
+		/* te-ctrl; */
+		hs-bitrate = <500000000>;
+		lp-bitrate = <5000000>;	/* 5mbps */
 		iommu = <&iommu_mm>;
 		iovmm = <&iovmm_mm>;
-		rotation = <180>;
-	};
-
-	kona-fb-2 {
-		module-name = "OTM8018B";
-		reg-name = "cam2";
-		rst-gpio = <&gpio 8 0>;
-		detect-gpio = <&gpio 10 0>;
-		detect-gpio-val = <1>;
-		rst-setup = <700>;	/* 700us */
-		rst-pulse = <1000>;	/* 1ms */
-		rst-hold = <100000>;	/* 100ms */
-		col-mod-i = <3>;
-		col-mod-o = <2>;
-		width = <480>;
-		height = <854>;
-		/* rst-active-high */	/* Commented => Active Low */
-		vmode;
-		/* vburst */		/* Non-burst mode */
-		/* te-ctrl; */		/* Tearing Effect Control disabled */
-		fps = <60>;
-		lanes = <2>;
-		cmnd-LP;		/* Commands in LP mode*/
-		hs-bitrate = <333000000>;
-		lp-bitrate = <8000000>;	/* 8mbps */
-		desense-offset = <2400000>;  /* +2.4Mbps */
-		iommu = <&iommu_mm>;
-		iovmm = <&iovmm_mm>;
-		rotation = <180>;
+		rotation = <0>;
 	};
 
 	tmon@0x34008000 {
@@ -383,17 +296,20 @@
 		reg = <0x34008000 0x1000>;
 		interrupts = <0 183 4>;
 		chipreg_addr = <0x35004000 0x1000>;
-		thold_size = <5>; /*number of threshold levels*/
+		thold_size = <8>; /*number of threshold levels*/
 		poll_rate_ms = <30000>;
 		hysteresis = <0>;
-		flags = <1>;
-		interval_ms = <5>;
+		flags = <5>;
+		interval_ms = <8>;
 		/*sw shdwn temp is 120*/
-		thold = <85 1
-			95 1
-			105 1
-			120 4
-			125 2>;
+		thold = <55 1
+			58 1
+			63 1
+			65 1
+			70 1
+			80 1
+			115 4
+			120 2>;
 		tmon_apb_clk = "tmon_apb";
 		tmon_1m_clk = "tmon_1m_clk";
 		falling = <5>; /*fall back temperature offset*/
@@ -411,6 +327,9 @@
 		temp_period = <0xA09E6C>; /*400ms*/
 		temp_tholds = <7 1>;
 		num_thold = <1>;
+		pll_freq = <0 0 0 0
+				0x3D 0 1 0
+				0x50 0 1 0>;
 	};
 
 	sdio1 {
@@ -426,7 +345,6 @@
 		ahb-clk-name = "sdio2_ahb_clk";
 		sleep-clk-name = "sdio2_sleep_clk";
 		peri-clk-rate = <52000000>;
-		vddsdmmc-regulator-name = "cam1";
 	};
 
 	sdio2 {
@@ -460,6 +378,12 @@
 		vddsdxc-regulator-name = "vdd_sdxc";
 	};
 
+	timer {
+		compatible = "arm,armv7-timer";
+		interrupts = <1 13 0xf08>,
+					<1 14 0xf08>;
+	};
+
 	wifi-driver {
 		compatible = "bcm,bcm_wifi";
 		wl-reset-gpio = <3>;
@@ -469,12 +393,12 @@
 	};
 
 	keypad {
-		row-num = <2>;
-		col-num = <3>;
+		row-num = <1>;
+		col-num = <4>;
 		row-col-count = <8>;
-		key-name = "Vol Down Key", "Vol Up Key", "unused", "unused",
-			"unused", "unused", "unused", "unused", "Camera Focus Key",
-			"Camera Key", "unused", "unused", "unused", "unused",
+		key-name = "unused", "Vol Down Key", "unused", "Vol Up Key",
+			"unused", "unused", "unused", "unused", "unused",
+			"unused", "unused", "unused", "unused", "unused",
 			"unused", "unused", "unused", "unused", "unused",
 			"unused", "unused", "unused", "unused", "unused",
 			"unused", "unused", "unused", "unused", "unused",
@@ -485,8 +409,8 @@
 			"unused", "unused", "unused", "unused", "unused",
 			"unused", "unused", "unused", "unused", "unused",
 			"unused", "unused", "unused", "unused", "unused";
-		key-code = <114 115 0 0 0 0 0 0
-			528 212 0 0 0 0 0 0
+		key-code = <0 114 0 115 0 0 0 0
+			0 0 0 0 0 0 0 0
 			0 0 0 0 0 0 0 0
 			0 0 0 0 0 0 0 0
 			0 0 0 0 0 0 0 0
@@ -495,29 +419,11 @@
 			0 0 0 0 0 0 0 0>;
 	};
 
-	pwm-backlight {
-		compatible = "bcm,pwm-backlight";
-		reg = <0x0 0x0>;
-		pwm-id = <2>;
-		max-brightness = <32>;	/* Android calibrates to 32 levels */
-		dft-brightness = <32>;
-		polarity = <1>;		/* Inverted polarity */
-		pwm-period-ns = <99900>; /* ~10010 Hz */
-		pwm-request-label = "backlight";
-		bl-on-delay = <7000>;
+
+
+	secure_mem {
+		sec-mem-base = <0x9d800000>;
+		sec-mem-size = <0x100000>;
 	};
 
-	gpio-leds {
-		compatible = "gpio-leds";
-
-		blue {
-			label = "blue";
-			gpios = <&gpio 22 0>;
-		};
-
-		green {
-			label = "green";
-			gpios = <&gpio 9 0>;
-		};
-	};
 };

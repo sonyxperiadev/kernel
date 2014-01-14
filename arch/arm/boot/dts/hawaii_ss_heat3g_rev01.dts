@@ -1,11 +1,11 @@
-/* Hawaii_ss_logands_rev01 Dts file */
+/* Hawaii_ss_heat3g_rev01 Dts file */
 
 /dts-v1/;
 
 /include/ "bcm_21664.dtsi"
 
 / {
-	model = "Hawaii SS Logands Rev01";
+	model = "Hawaii SS Heat3g Rev01";
 	compatible = "bcm,hawaii";
 
 	chosen {
@@ -22,19 +22,6 @@
 		ch-num = <1>; /* Kona hub timer Channel number */
 		timer-name = "aon-timer";
 	};
-
-	usb-phy@0x3F130000 {
-		interrupts = <0 128 0x04>;
-		chipreg-virtual-mem-base = <0x35004000>;
-		usb-ahb-clk-name = "usb_otg_clk";
-		mdio-mstr-clk-name = "mdiomaster";
-	};
-	usb-hsotgctrl@0x3F130000 {
-		chipreg-virtual-mem-base = <0x35004000>;
-		usb-ahb-clk-name = "usb_otg_clk";
-		mdio-mstr-clk-name = "mdiomaster";
-	};
-
 
 	uart@3e000000 {
 		clock-frequency = <48000000>;
@@ -112,19 +99,6 @@
 		fs-ref-frequency = <13000000>;
 		hs-ref-frequency = <26000000>;
 	};
-	spi0: spi@0x3E004000 {
-		enable-dma = <1>;
-		cs-line = <1>;
-		mode = <0x23>;
-
-		spidev@0x0 {
-			compatible = "bcm,spidev";
-			reg = <0x0>;
-			spi-max-frequency = <13000000>;
-			spi-loop = <0x20>;
-		};
-	};
-
 
 	bcm-bt-lpm {
 		compatible = "bcm,bcm-bt-lpm";
@@ -258,6 +232,32 @@
 		rst-pulse = <20>;	/* 20us */
 		rst-hold = <10000>;	/* 10ms */
 		/* rst-active-high */	/* Commented => Active Low */
+		/* Commented => Command mode */
+		/* vburst = <0>; */	/* Non-burst mode */
+		/* cmnd-LP; */		/* Commands in LP mode*/
+		/* te-ctrl; */		/* Tearing Effect Control disabled */
+		col-mod-i = <3>;
+		col-mod-o = <2>;
+		width = <480>;
+		height = <800>;
+		fps = <60>;
+		lanes = <2>;
+		hs-bitrate = <500000000>;
+		lp-bitrate = <5000000>;	/* 5mbps */
+		iommu = <&iommu_mm>;
+		iovmm = <&iovmm_mm>;
+		rotation = <0>;
+	};
+
+	kona-fb-2 {
+		module-name = "ILI9806";
+		reg-name = "cam2";
+		rst-gpio = <22>;
+		rst-setup = <5>;	/* 5us */
+		rst-pulse = <20>;	/* 20us */
+		rst-hold = <10000>;	/* 10ms */
+		/* rst-active-high */	/* Commented => Active Low */
+		/* Commented => Command mode */
 		/* vburst = <0>; */	/* Non-burst mode */
 		cmnd-LP;		/* Commands in LP mode*/
 		/* te-ctrl; */		/* Tearing Effect Control disabled */
@@ -267,7 +267,7 @@
 		height = <800>;
 		fps = <60>;
 		lanes = <2>;
-		hs-bitrate = <500000000>;
+		hs-bitrate = <300000000>;
 		lp-bitrate = <5000000>;	/* 5mbps */
 		iommu = <&iommu_mm>;
 		iovmm = <&iovmm_mm>;
@@ -345,7 +345,7 @@
 		interrupts = <0 77 0x04>;
 		id = <0>;
 		data-pullup = <0>;
-		cd-gpio = <&gpio 91 0>;		/*SD_CARDDET_GPIO_PIN*/
+		cd-gpio = <91>;		/*SD_CARDDET_GPIO_PIN*/
 		devtype = <0>;		/*SDIO_DEV_TYPE_SDMMC*/
 		flags = <0>;		/*KONA_SDIO_FLAGS_DEVICE_REMOVABLE*/
 		peri-clk-name = "sdio1_clk";
