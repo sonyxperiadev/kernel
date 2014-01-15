@@ -505,9 +505,6 @@ static void bcm_hsotgctrl_delayed_wakeup_handler(struct work_struct *work)
 
 	dev_info(bcm_hsotgctrl_handle->dev, "Do HSOTGCTRL wakeup\n");
 
-	/* Ensure the clock is running before calling wakeup_core() */
-	bcm_hsotgctrl_en_clock(true);
-
 	/* Use the PHY-core wakeup sequence */
 	bcm_hsotgctrl_wakeup_core();
 }
