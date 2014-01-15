@@ -1044,11 +1044,18 @@ static struct pci_driver dwc_otg_driver = {
 		   },
 };
 #else
+static const struct of_device_id dwc_otg_of_match[] = {
+	{.compatible = "bcm,dwc-otg",},
+	{},
+}
+MODULE_DEVICE_TABLE(of, dwc_otg_of_match);
+
 static struct platform_driver dwc_otg_driver = {
 	.driver = {
 		   .name = dwc_driver_name,
 		   .owner = THIS_MODULE,
 		   .pm = &dwc_otg_pm_ops,
+		.of_match_table = dwc_otg_of_match,
 		   },
 	.probe = dwc_otg_driver_probe,
 	.remove = dwc_otg_driver_remove,

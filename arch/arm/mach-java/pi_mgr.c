@@ -189,7 +189,8 @@ struct opp_info __mm2_opp_info[] = {
 	INIT_OPP_INFO(MM2_CCU_FREQ_ID_NRML, PI_OPP_NORMAL, MM_CLK_SRC_312M),
 	INIT_OPP_INFO(MM2_CCU_FREQ_ID_TURBO, PI_OPP_TURBO, MM_CLK_SRC_312M),
 #ifdef CONFIG_PI_MGR_MM_STURBO_ENABLE
-	INIT_OPP_INFO(MM2_CCU_FREQ_ID_SUPER_TURBO, PI_OPP_SUPER_TURBO, 0),
+	INIT_OPP_INFO(MM2_CCU_FREQ_ID_SUPER_TURBO, PI_OPP_SUPER_TURBO,
+			MM_CLK_SRC_312M),
 #endif
 };
 #else
@@ -228,7 +229,6 @@ struct pi_opp mm_opp = {
 
 static struct pi_state mm_states[] = {
 	PI_STATE(PI_STATE_ACTIVE, RUN_POLICY, 0, 0),
-	PI_STATE(PI_STATE_RETENTION, RETN_POLICY, 10, 0),
 	PI_STATE(PI_STATE_SHUTDOWN, SHTDWN_POLICY, 100, PI_STATE_SAVE_CONTEXT),
 };
 
@@ -621,7 +621,7 @@ u32 get_opp_from_name(char *name)
 	return -EINVAL;
 }
 
-void __init hawaii_pi_mgr_init()
+void __init java_pi_mgr_init()
 {
 	int i;
 #if defined(CONFIG_PLL1_8PHASE_OFF_ERRATUM) || \
@@ -639,7 +639,7 @@ void __init hawaii_pi_mgr_init()
 	}
 
 }
-EXPORT_SYMBOL(hawaii_pi_mgr_init);
+EXPORT_SYMBOL(java_pi_mgr_init);
 
 #ifdef CONFIG_PLL1_8PHASE_OFF_ERRATUM
 static int __init __mm_pre_init_state(void)

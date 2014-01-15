@@ -69,30 +69,29 @@ int __init mm_v3d_init(void)
 	}
 
 	/*Initialize params*/
-	dvfs_param.ON = 1;
-	dvfs_param.MODE = TURBO;
+	dvfs_param.__on = 1;
+	dvfs_param.__mode = TURBO;
+	dvfs_param.__ts = DEFAULT_MM_DEV_DVFS_SAMPLING_MS;
+	dvfs_param.eco_ns_high = DEFAULT_MM_DEV_DVFS_UP_SAMPLES;
+	dvfs_param.nor_ns_high = DEFAULT_MM_DEV_DVFS_UP_SAMPLES;
+	dvfs_param.nor_ns_low = DEFAULT_MM_DEV_DVFS_DOWN_SAMPLES;
+	dvfs_param.tur_ns_high = DEFAULT_MM_DEV_DVFS_UP_SAMPLES;
+	dvfs_param.tur_ns_low = DEFAULT_MM_DEV_DVFS_DOWN_SAMPLES;
+	dvfs_param.st_ns_low = DEFAULT_MM_DEV_DVFS_DOWN_SAMPLES;
 #ifdef CONFIG_MM_312M_SOURCE_CLK
-	dvfs_param.T0 = 100;
-	dvfs_param.P0 = 80;
-	dvfs_param.T1 = 300;
-	dvfs_param.P1 = 85;
-	dvfs_param.P1L = 50;
-	dvfs_param.T2 = 750;
-	dvfs_param.P2 = 90;
-	dvfs_param.P2L = 60;
-	dvfs_param.T3 = 1000;
-	dvfs_param.P3L = 55;
+	dvfs_param.eco_high = 80;
+	dvfs_param.nor_high = 85;
+	dvfs_param.nor_low = 50;
+	dvfs_param.tur_high = 90;
+	dvfs_param.tur_low = 60;
+	dvfs_param.st_low = 55;
 #else
-	dvfs_param.T0 = 0;
-	dvfs_param.P0 = 0;
-	dvfs_param.T1 = 300;
-	dvfs_param.P1 = 80;
-	dvfs_param.P1L = 0;
-	dvfs_param.T2 = 500;
-	dvfs_param.P2 = 80;
-	dvfs_param.P2L = 45;
-	dvfs_param.T3 = 1000;
-	dvfs_param.P3L = 45;
+	dvfs_param.eco_high = 0;
+	dvfs_param.nor_high = 80;
+	dvfs_param.nor_low = 0;
+	dvfs_param.tur_high = 80;
+	dvfs_param.tur_low = 45;
+	dvfs_param.st_low = 45;
 #endif
 	dvfs_param.dvfs_bulk_job_cnt = 0;
 	v3d_device->fmwk_handle =

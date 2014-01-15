@@ -528,8 +528,13 @@ int iio_update_buffers(struct iio_dev *indio_dev,
 			 * Note can only occur when adding a buffer.
 			 */
 			list_del(&insert_buffer->buffer_list);
-			indio_dev->active_scan_mask = old_mask;
-			success = -EINVAL;
+			if (old_mask == NULL) {
+				ret = -EINVAL;
+				goto error_no_active_mask;
+			} else {
+				indio_dev->active_scan_mask = old_mask;
+				success = -EINVAL;
+			}
 		}
 	} else {
 		indio_dev->active_scan_mask = compound_mask;
@@ -615,6 +620,7 @@ error_remove_inserted:
 	if (insert_buffer)
 		list_del(&insert_buffer->buffer_list);
 	indio_dev->active_scan_mask = old_mask;
+error_no_active_mask:
 	kfree(compound_mask);
 error_ret:
 

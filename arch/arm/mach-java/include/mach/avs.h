@@ -19,11 +19,14 @@
 #define CSR_NUM_OPP	4
 #define MSR_NUM_OPP	4
 
-#define AVS_HANDSHAKE_VERSION 3
-#define AVS_SW_VERSION	5
+#define AVS_HANDSHAKE_VERSION	4
+#define AVS_SW_VERSION		6
 
-#define AVS_INSURANCE	5
+#define AVS_INSURANCE		5
 #define AVS_INSURANCE_DELAY_MS	1
+
+/* Bit fields of status field in AVS handshake structure */
+#define AVS_FEATURE_MM_312M_SOURCE_CLK	(1 << 30)
 
 enum {
 	SILICON_TYPE_SLOW,
@@ -77,10 +80,12 @@ struct avs_handshake {
 	u32 row5_ext;
 	u32 row8;
 	u32 row8_ext;
+	u32 row19;			/* 15 */
+	u32 row19_ext;
 	u8 varspm0;
 	u8 varspm1;
 	u8 varspm2;
-	u8 varspm3;			/* 15 */
+	u8 varspm3;
 	u8 varspm4;
 	u8 varspm5;
 	u8 spm0;
@@ -89,11 +94,13 @@ struct avs_handshake {
 	u8 spm3;
 	u8 spm4;
 	u8 spm5;
-	u32 error_status;
+	u32 status;			/* 20 */
 	u32 abi_version;
-	u16 csr_targets[CSR_NUM_OPP];	/* 21 */
-	u8 msr_targets[MSR_NUM_OPP];	/* 22 */
-	u32 rsvd[3];			/* 25 */
+	u16 csr_targets[CSR_NUM_OPP];
+	u8 msr_targets[MSR_NUM_OPP];
+	u8 avs_rev_id_otp;
+	u8 avs_rev_id_sw;
+	u8 rsvd[2];			/* 25 */
 };
 
 struct avs_pdata {

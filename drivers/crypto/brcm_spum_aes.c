@@ -438,41 +438,56 @@ static int spum_aes_dma_xfer(struct spum_aes_device *dd)
 	dump_sg_list(&rctx->spum_in_cmd_stat);
 
 	/* DMA mapping of input/output sg list. */ /* TODO error condition. */
-	spum_map_sgl(dd, &rctx->spum_in_cmd_hdr, DMA_TO_DEVICE);
-	spum_map_sgl(dd, &rctx->spum_out_cmd_hdr, DMA_FROM_DEVICE);
-	spum_map_sgl(dd, &rctx->spum_in_cmd_stat, DMA_TO_DEVICE);
-	spum_map_sgl(dd, &rctx->spum_out_cmd_stat, DMA_FROM_DEVICE);
+	err = dma_map_sg(dd->dev, &rctx->spum_in_cmd_hdr, 1, DMA_TO_DEVICE);
+	if (err) {
+		pr_err("%s failed to map in_cmd_hdr sgl - %d\n", __func__, err);
+		goto err_xfer;
+	}
+	err = dma_map_sg(dd->dev, &rctx->spum_out_cmd_hdr, 1, DMA_FROM_DEVICE);
+	if (err) {
+		pr_err("%s failed to map in_cmd_hdr sgl - %d\n", __func__, err);
+		goto err_xfer;
+	}
+	err = dma_map_sg(dd->dev, &rctx->spum_in_cmd_stat, 1, DMA_TO_DEVICE);
+	if (err) {
+		pr_err("%s failed to map in_cmd_hdr sgl - %d\n", __func__, err);
+		goto err_xfer;
+	}
+	err = dma_map_sg(dd->dev, &rctx->spum_out_cmd_stat, 1, DMA_FROM_DEVICE);
+	if (err) {
+		pr_err("%s failed to map in_cmd_hdr sgl - %d\n", __func__, err);
+		goto err_xfer;
+	}
 	spum_map_sgl(dd, dd->req->src, DMA_TO_DEVICE);
 	spum_map_sgl(dd, dd->req->dst, DMA_FROM_DEVICE);
 
 	/* Create IN lli */
 	/* Header */
 	lli_in_hdr.sgl = &rctx->spum_in_cmd_hdr;
-	lli_in_hdr.sg_len = get_sg_list_cnt(&rctx->spum_in_cmd_hdr);
+	lli_in_hdr.sg_len = 1;
 	/* If XTS mode. Set tweak value. */
 	if ((spum_cmd->crypto_mode&SPUM_CMD_CMODE_MASK) ==
 					 SPUM_CRYPTO_MODE_XTS) {
 		lli_in_tweak.sgl = &rctx->spum_in_cmd_tweak;
-		lli_in_tweak.sg_len =
-			 get_sg_list_cnt(&rctx->spum_in_cmd_tweak);
+		lli_in_tweak.sg_len = 1;
 	}
 	/* Payload */
 	lli_in_data.sgl = dd->req->src;
 	lli_in_data.sg_len = get_sg_list_cnt(dd->req->src);
 	/* status */
 	lli_in_stat.sgl = &rctx->spum_in_cmd_stat;
-	lli_in_stat.sg_len = get_sg_list_cnt(&rctx->spum_in_cmd_stat);
+	lli_in_stat.sg_len = 1;
 
 	/* Create OUT lli */
 	/* Header */
 	lli_out_hdr.sgl = &rctx->spum_out_cmd_hdr;
-	lli_out_hdr.sg_len = get_sg_list_cnt(&rctx->spum_out_cmd_hdr);
+	lli_out_hdr.sg_len = 1;
 	/* Payload */
 	lli_out_data.sgl = dd->req->dst;
 	lli_out_data.sg_len = get_sg_list_cnt(dd->req->dst);
 	/* status */
 	lli_out_stat.sgl = &rctx->spum_out_cmd_stat;
-	lli_out_stat.sg_len = get_sg_list_cnt(&rctx->spum_out_cmd_stat);
+	lli_out_stat.sg_len = 1;
 
 	/*  IN Linked list */
 	list_add_tail(&lli_in_hdr.next, &head_in);
@@ -836,9 +851,7 @@ static int spum_aes_cra_init(struct crypto_tfm *tfm)
 
 	tfm->crt_ablkcipher.reqsize = sizeof(struct spum_request_context);
 
-	clk_enable(dd->spum_open_clk);
-
-	return 0;
+	return clk_enable(dd->spum_open_clk);
 }
 
 static void spum_aes_cra_exit(struct crypto_tfm *tfm)
@@ -1001,7 +1014,11 @@ static int spum_aes_probe(struct platform_device *pdev)
 	/* Initialize SPU-M block */
 	if (clk_set_rate(dd->spum_open_clk, FREQ_MHZ(156)))
 		pr_debug("%s: Clock set failed!!!\n", __func__);
-	clk_enable(dd->spum_open_clk);
+	ret = clk_enable(dd->spum_open_clk);
+	if (ret) {
+		pr_err("%s: Failed to enable clock - %d\n", __func__, ret);
+		goto exit;
+	}
 	spum_init_device(dd->io_apb_base, dd->io_axi_base);
 	if (spum_aes_dma_init(dd)) {
 		pr_err("%s: DMA callback register failed\n", __func__);

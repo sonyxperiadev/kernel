@@ -18,6 +18,7 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/fs.h>
+#include <linux/seq_file.h>
 #include <linux/proc_fs.h>
 #include <linux/workqueue.h>
 #include <linux/uaccess.h>
@@ -32,6 +33,7 @@
 #define MIN_MTT_SD_SIZE       10
 #define MAX_MTT_SD_SIZE       2048
 #define DEFAULT_MTT_SD_SIZE   2048
+#define MAX_PROC_READ_BUF_SIZE  128
 
 /* log configuration */
 static struct BCMLOG_Config_t g_config;
@@ -156,25 +158,29 @@ static void bld_device_status_str(char *buf,
 		safe_strncat(buf, " unlocked\n", len);
 }
 
-	/**
-	 *	proc read handler
-	 **/
-static ssize_t proc_read(struct file *file, char __user *buf, size_t  count,
-				loff_t *pos)
+static int logcfg_proc_show(struct seq_file *m, void *v)
 {
-	*buf = 0;
-	bld_device_status_str(buf, count, "  BMTT logging",
+	unsigned char buf[MAX_PROC_READ_BUF_SIZE * 4];
+	unsigned char tbuf[MAX_PROC_READ_BUF_SIZE];
+	memset(buf, 0, sizeof(buf));
+	memset(tbuf, 0, sizeof(tbuf));
+	bld_device_status_str(tbuf, MAX_PROC_READ_BUF_SIZE, "  BMTT logging",
 			      g_config.runlog.dev,
 			      g_config.file_max, g_config.runlog.lock);
-	bld_device_status_str(buf, count, "  AP crash dump",
+	strncat(buf, tbuf, MAX_PROC_READ_BUF_SIZE);
+	memset(tbuf, 0, sizeof(tbuf));
+	bld_device_status_str(tbuf, MAX_PROC_READ_BUF_SIZE, "  AP crash dump",
 			      g_config.ap_crashlog.dev, 0,
 			      g_config.ap_crashlog.lock);
-	bld_device_status_str(buf, count, "  CP crash dump",
+	strncat(buf, tbuf, MAX_PROC_READ_BUF_SIZE);
+	memset(tbuf, 0, sizeof(tbuf));
+	bld_device_status_str(tbuf, MAX_PROC_READ_BUF_SIZE, "  CP crash dump",
 			      g_config.cp_crashlog.dev, 0,
 			      g_config.cp_crashlog.lock);
-	return 1 + strlen(buf);
+	strncat(buf, tbuf, MAX_PROC_READ_BUF_SIZE);
+	seq_printf(m, buf);
+	return 0;
 }
-
 /**
  *	proc write handler
  *
@@ -584,8 +590,16 @@ char *BCMLOG_GetAcmDev(void)
 	return g_config.acm_dev;
 }
 
+static int logcfg_proc_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, logcfg_proc_show, NULL);
+}
+
 static const struct file_operations g_proc_dir_fops = {
-	.read	=	proc_read,
+	.open	=	logcfg_proc_open,
+	.read	=	seq_read,
+	.llseek	=	seq_lseek,
+	.release	=	single_release,
 	.write	=	proc_write,
 };
 

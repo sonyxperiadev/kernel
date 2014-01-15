@@ -290,19 +290,18 @@ int dmux_dealloc_peripheral(u32 channel)
 int dmux_init(void)
 {
 
-	printk(KERN_INFO "DMAC MUX Init\n");
+	pr_info("DMAC MUX Init\n");
 
 	/* Set DMUX base address */
 	dmux.base_addr = KONA_DMUX_VA;
 
 	/* get the clocks going */
 	dmux.dmux_clk = clk_get(NULL, "dmac_mux_apb_clk");
-	if (IS_ERR_OR_NULL(dmux.dmux_clk)) {
-		printk(KERN_ERR "Failed to get the dmac_mux_apb_clk!!!\n");
-		return -1;
+	if (IS_ERR(dmux.dmux_clk)) {
+		pr_err("Failed to get the dmac_mux_apb_clk!!!\n");
+		return PTR_ERR(dmux.dmux_clk);
 	}
-	clk_enable(dmux.dmux_clk);
-	return 0;
+	return clk_enable(dmux.dmux_clk);
 }
 
 void dmux_exit(void)

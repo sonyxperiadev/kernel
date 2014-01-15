@@ -231,7 +231,7 @@ static struct lock_class_key rtc_ops_mutex_key;
 #endif
 
 
-static int __devinit rtc_kona_probe(struct platform_device *pdev)
+static int rtc_kona_probe(struct platform_device *pdev)
 {
 	int ret = 0;
 	struct rtc_kona *rtc_info;
@@ -309,7 +309,7 @@ __error:
 	return ret;
 }
 
-static int __devexit rtc_kona_remove(struct platform_device *pdev)
+static int rtc_kona_remove(struct platform_device *pdev)
 {
 	struct rtc_kona *rtc_info = platform_get_drvdata(pdev);
 
@@ -337,7 +337,7 @@ static struct platform_driver rtc_kona_driver = {
 		.of_match_table = rtc_kona_match,
 	},
 	.probe = rtc_kona_probe,
-	.remove = __devexit_p(rtc_kona_remove),
+	.remove = rtc_kona_remove,
 };
 
 static int __init rtc_kona_init(void)

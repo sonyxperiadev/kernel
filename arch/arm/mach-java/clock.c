@@ -1,6 +1,6 @@
 /*****************************************************************************
 *
-* Hawaii clock definitions
+* Java clock definitions
 *
 * Copyright 2010 Broadcom Corporation.  All rights reserved.
 *
@@ -945,6 +945,18 @@ struct pll_desense a7_pll_des = {
 #endif
 };
 
+static int arm_pll_clk_init(struct clk *clk)
+{
+/*Disable A7 PLL auto power down for A0. HWJAVA-218*/
+	BUG_ON(clk->clk_type != CLK_TYPE_PLL);
+	if (is_pm_erratum(ERRATUM_A7_PLL_PWRDWN)) {
+		clk->flags &= ~AUTO_GATE;
+		pr_info("A7 PLL Auto Powerdown disabled for A0\n");
+	}
+	return gen_pll_clk_ops.init(clk);
+}
+
+static struct gen_clk_ops arm_pll_clk_ops;
 
 static struct pll_clk CLK_NAME(a9_pll) = {
 
@@ -953,7 +965,7 @@ static struct pll_clk CLK_NAME(a9_pll) = {
 				.id	= CLK_A9_PLL_CLK_ID,
 				.name = A9_PLL_CLK_NAME_STR,
 				.clk_type = CLK_TYPE_PLL,
-				.ops = &gen_pll_clk_ops,
+				.ops = &arm_pll_clk_ops,
 		},
 	.ccu_clk = &CLK_NAME(kproc),
 	.pll_ctrl_offset = KPROC_CLK_MGR_REG_PLLARMA_OFFSET,
@@ -5880,11 +5892,7 @@ static struct ccu_clk CLK_NAME(mm) = {
 				.name = MM_CCU_CLK_NAME_STR,
 				.clk_type = CLK_TYPE_CCU,
 				.ops = &gen_ccu_clk_ops,
-#ifdef CONFIG_PLL1_8PHASE_OFF_ERRATUM
-				.dep_clks = DEFINE_ARRAY_ARGS(
-					CLK_PTR(8phase_en_pll1), NULL),
-#endif
-
+				.dep_clks = DEFINE_ARRAY_ARGS(NULL),
 		},
 	.ccu_ops = &mm_ccu_ops,
 	.ccu_state_save = &mm_state_save,
@@ -6235,9 +6243,9 @@ static struct clock_source mm_switch_axi_peri_clk_src_list[] = {
 static struct peri_clk CLK_NAME(mm_switch_axi) = {
 
 	.clk =	{
-				.flags = mm_switch_axi_PERI_CLK_FLAGS,
+				.flags = MM_SWITCH_AXI_PERI_CLK_FLAGS,
 				.clk_type = CLK_TYPE_PERI,
-				.id	= CLK_mm_switch_axi_PERI_CLK_ID,
+				.id	= CLK_MM_SWITCH_AXI_PERI_CLK_ID,
 				.name = MM_SWITCH_AXI_PERI_CLK_NAME_STR,
 				.dep_clks = DEFINE_ARRAY_ARGS(NULL),
 				.ops = &gen_peri_clk_ops,
@@ -6898,11 +6906,7 @@ static struct ccu_clk CLK_NAME(mm2) = {
 				.name = MM2_CCU_CLK_NAME_STR,
 				.clk_type = CLK_TYPE_CCU,
 				.ops = &gen_ccu_clk_ops,
-#ifdef CONFIG_PLL1_8PHASE_OFF_ERRATUM
-				.dep_clks = DEFINE_ARRAY_ARGS(
-					CLK_PTR(8phase_en_pll1), NULL),
-#endif
-
+				.dep_clks = DEFINE_ARRAY_ARGS(NULL),
 		},
 	.ccu_ops = &mm_ccu_ops,
 	.ccu_state_save = &mm2_state_save,
@@ -7221,11 +7225,38 @@ int root_ccu_clk_init(struct clk* clk)
 	/* enable write access*/
 	ccu_write_access_enable(ccu_clk,true);
 	reg_val = readl(KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET);
-    reg_val &= ~(ROOT_CLK_MGR_REG_DIG_CLKGATE_DIGITAL_CH0_CLK_EN_MASK | ROOT_CLK_MGR_REG_DIG_CLKGATE_DIGITAL_CH1_CLK_EN_MASK);
-    writel(reg_val, KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET);
+	reg_val &= ~(ROOT_CLK_MGR_REG_DIG_CLKGATE_DIGITAL_CH0_CLK_EN_MASK |
+			ROOT_CLK_MGR_REG_DIG_CLKGATE_DIGITAL_CH1_CLK_EN_MASK);
+	writel(reg_val, KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET);
+
+#ifdef CONFIG_MOVE_MM_CLK_TO_PLL0
+/* var312 clock from PLL0. Enable clock, write to the div regr and trigger it.
+   It will be autogated during the var312 clock init */
+
+	reg_val = readl(KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_VAR_312M_CLKGATE_OFFSET);
+	reg_val |= (ROOT_CLK_MGR_REG_VAR_312M_CLKGATE_VAR_312M_CLK_EN_MASK |
+		ROOT_CLK_MGR_REG_VAR_312M_CLKGATE_VAR_312M_HW_SW_GATING_SEL_MASK);
+	writel(reg_val, KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_VAR_312M_CLKGATE_OFFSET);
+
+	writel(ROOT_CLK_MGR_REG_VAR_312M_DIV_VAR_312M_PLL_SELECT_CMD_PLL0_CLK,
+		KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_VAR_312M_DIV_OFFSET);
+	writel(ROOT_CLK_MGR_REG_REFCLK_SEG_TRG_VAR_312M_TRIGGER_MASK,
+		KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_REFCLK_SEG_TRG_OFFSET);
+
+	if (is_pm_erratum(ERRATUM_MM_FREEZE_VAR500M))
+		mm_varvdd_clk_en_override(false);
+
+	if (is_pm_erratum(ERRATUM_PLL1_8PHASE_OFF)) {
+		reg_val = readl(KONA_ROOT_CLK_VA
+				+ ROOT_CLK_MGR_REG_PLL1CTRL0_OFFSET);
+		reg_val &= ~ROOT_CLK_MGR_REG_PLL1CTRL0_PLL1_8PHASE_EN_MASK;
+		writel(reg_val, KONA_ROOT_CLK_VA
+				+ ROOT_CLK_MGR_REG_PLL1CTRL0_OFFSET);
+	}
+#endif
 
 	/*Reset 8-phase enable de-glitch enable bit for B1 and later chips*/
-		if (get_chip_id() >= KONA_CHIP_ID_JAVA_A0){
+	if (get_chip_id() >= KONA_CHIP_ID_JAVA_A0) {
 		reg_val = readl(KONA_ROOT_CLK_VA +
 					ROOT_CLK_MGR_REG_PLL1CTRL3_OFFSET);
 		reg_val &=
@@ -7247,19 +7278,12 @@ int root_ccu_clk_init(struct clk* clk)
 int mm_varvdd_clk_en_override(int enable)
 {
 	u32 reg_val;
-	u32 mask;
-
 	reg_val = readl(KONA_ROOT_CLK_VA +
 			ROOT_CLK_MGR_REG_VARVDD_CLKEN_OVERRIDE_OFFSET);
-#ifdef CONFIG_MM_312M_SOURCE_CLK
-	mask = ROOT_CLK_MGR_REG_VARVDD_CLKEN_OVERRIDE_VAR_312M_VARVDD_SW_EN_MASK;
-#else
-	mask = ROOT_CLK_MGR_REG_VARVDD_CLKEN_OVERRIDE_VAR_500M_VARVDD_SW_EN_MASK;
-#endif
 	if (enable)
-		reg_val |= mask;
+		reg_val |= ROOT_CLK_MGR_REG_VARVDD_CLKEN_OVERRIDE_VAR_500M_VARVDD_SW_EN_MASK;
 	else
-		reg_val &= ~mask;
+		reg_val &= ~ROOT_CLK_MGR_REG_VARVDD_CLKEN_OVERRIDE_VAR_500M_VARVDD_SW_EN_MASK;
 
 	writel(reg_val, KONA_ROOT_CLK_VA +
 		ROOT_CLK_MGR_REG_VARVDD_CLKEN_OVERRIDE_OFFSET);
@@ -7484,7 +7508,7 @@ static int mm_ccu_clk_get_voltage(struct ccu_clk * ccu_clk, int freq_id)
 
 
 /* table for registering clock */
-static struct __init clk_lookup hawaii_clk_tbl[] =
+static struct __init clk_lookup java_clk_tbl[] =
 {
 	/* All the CCUs are registered first */
 	BRCM_REGISTER_CLK(KPROC_CCU_CLK_NAME_STR, NULL, kproc),
@@ -7758,7 +7782,7 @@ int chip_reset(void)
 	struct ccu_clk *ccu_clk;
 	u32 reg_val;
 
-	pr_info("Hawaii CHIP RESET\n");
+	pr_info("Java CHIP RESET\n");
 	clk = clk_get(NULL, ROOT_CCU_CLK_NAME_STR);
 	ccu_clk = to_ccu_clk(clk);
 
@@ -7885,6 +7909,14 @@ static void change_arm_pll_config(int mdiv)
 				pll_chnl_clk->pll_load_ch_en_offset));
 }
 
+static int get_arm_pll_div(void)
+{
+	struct pll_chnl_clk *pll_chnl_clk = &clk_a9_pll_chnl0;
+
+	return (readl(CCU_REG_ADDR(pll_chnl_clk->ccu_clk,
+		pll_chnl_clk->cfg_reg_offset)) >> pll_chnl_clk->mdiv_shift)
+		& pll_chnl_clk->mdiv_mask;
+}
 
 static int proc_ccu_set_freq_policy(struct ccu_clk *ccu_clk, int policy_id,
 				   struct opp_info *opp_info)
@@ -7918,40 +7950,32 @@ static int proc_ccu_set_freq_policy(struct ccu_clk *ccu_clk, int policy_id,
 	}
 
 	ccu_write_access_enable(ccu_clk, true);
-/*Disable A7 PLL auto power down before changing freq.
-  workaround for HWJAVA-218*/
-	if (is_pm_erratum(ERRATUM_A7_PLL_PWRDWN)) {
-		reg_val = readl(ccu_clk->ccu_clk_mgr_base +
-				KPROC_CLK_MGR_REG_PLLARMA_OFFSET);
-		reg_val &=
-		~KPROC_CLK_MGR_REG_PLLARMA_PLLARM_IDLE_PWRDWN_SW_OVRRIDE_MASK;
-		writel(reg_val, ccu_clk->ccu_clk_mgr_base +
-				KPROC_CLK_MGR_REG_PLLARMA_OFFSET);
-	}
 
 	ccu_policy_engine_stop(ccu_clk);
 	if (opp_info->ctrl_prms != CCU_POLICY_FREQ_REG_INIT &&
 			(opp_info->opp_id == PI_OPP_NORMAL ||
 			opp_info->opp_id == PI_OPP_TURBO)) {
 
-		target_volt = (opp_info->opp_id == PI_OPP_NORMAL) ?
+		if (get_arm_pll_div() != opp_info->ctrl_prms) {
+			target_volt = (opp_info->opp_id == PI_OPP_NORMAL) ?
 				VLT_ID_A9_NORMAL : VLT_ID_A9_TURBO;
-		curr_opp = pi_get_active_opp(ccu_clk->pi_id);
-		if (curr_opp != PI_OPP_ECONOMY) {
-			sw_freq_id = PROC_CCU_FREQ_ID_ECO;
-			reg_val = readl(CCU_POLICY_FREQ_REG(ccu_clk));
-			reg_val &= ~(CCU_FREQ_POLICY_MASK << shift);
-			reg_val |= sw_freq_id << shift;
-			writel(reg_val, CCU_POLICY_FREQ_REG(ccu_clk));
+			curr_opp = pi_get_active_opp(ccu_clk->pi_id);
+			if (curr_opp != PI_OPP_ECONOMY) {
+				sw_freq_id = PROC_CCU_FREQ_ID_ECO;
+				reg_val = readl(CCU_POLICY_FREQ_REG(ccu_clk));
+				reg_val &= ~(CCU_FREQ_POLICY_MASK << shift);
+				reg_val |= sw_freq_id << shift;
+				writel(reg_val, CCU_POLICY_FREQ_REG(ccu_clk));
 
-			ccu_policy_engine_resume(ccu_clk, ccu_clk->clk.flags &
-				CCU_TARGET_LOAD ?
-				CCU_LOAD_TARGET : CCU_LOAD_ACTIVE);
-			ccu_policy_engine_stop(ccu_clk);
+				ccu_policy_engine_resume(ccu_clk,
+					ccu_clk->clk.flags & CCU_TARGET_LOAD ?
+					CCU_LOAD_TARGET : CCU_LOAD_ACTIVE);
+				ccu_policy_engine_stop(ccu_clk);
+			}
+			change_arm_pll_config(opp_info->ctrl_prms);
+			ccu_set_voltage(ccu_clk, opp_info->freq_id,
+					target_volt);
 		}
-		change_arm_pll_config(opp_info->ctrl_prms);
-		ccu_set_voltage(ccu_clk, opp_info->freq_id,
-				target_volt);
 	}
 
 	reg_val = readl(CCU_POLICY_FREQ_REG(ccu_clk));
@@ -7962,17 +7986,6 @@ static int proc_ccu_set_freq_policy(struct ccu_clk *ccu_clk, int policy_id,
 
 	ccu_policy_engine_resume(ccu_clk, ccu_clk->clk.flags &
 		CCU_TARGET_LOAD ? CCU_LOAD_TARGET : CCU_LOAD_ACTIVE);
-	/*re-enable PLL power down*/
-	if (is_pm_erratum(ERRATUM_A7_PLL_PWRDWN)) {
-		if (opp_info->freq_id == PROC_CCU_FREQ_ID_ECO) {
-			reg_val = readl(ccu_clk->ccu_clk_mgr_base +
-				KPROC_CLK_MGR_REG_PLLARMA_OFFSET);
-			reg_val |=
-		KPROC_CLK_MGR_REG_PLLARMA_PLLARM_IDLE_PWRDWN_SW_OVRRIDE_MASK;
-			writel(reg_val, ccu_clk->ccu_clk_mgr_base +
-				KPROC_CLK_MGR_REG_PLLARMA_OFFSET);
-		}
-	}
 
 	ccu_write_access_enable(ccu_clk, false);
 	clk_dbg("%s:%s ccu OK\n", __func__, ccu_clk->clk.name);
@@ -7999,6 +8012,9 @@ int __init __clock_init(void)
 	proc_ccu_clk_ops.init = proc_ccu_clk_init;
 	proc_ccu_ops = gen_ccu_ops;
 	proc_ccu_ops.set_freq_policy = proc_ccu_set_freq_policy;
+
+	arm_pll_clk_ops = gen_pll_clk_ops;
+	arm_pll_clk_ops.init = arm_pll_clk_init;
 
 	mm_ccu_ops = gen_ccu_ops;
 	mm_ccu_ops.set_freq_policy = mm_ccu_set_freq_policy;
@@ -8041,7 +8057,7 @@ int __init __clock_init(void)
 
 	printk(KERN_INFO "%s registering clocks.\n", __func__);
 
-	if (clk_register(hawaii_clk_tbl, ARRAY_SIZE(hawaii_clk_tbl)))
+	if (clk_register(java_clk_tbl, ARRAY_SIZE(java_clk_tbl)))
 		printk(KERN_INFO "%s clk_register failed !!!!\n", __func__);
 
     return 0;
@@ -8403,24 +8419,24 @@ int __init clock_debug_add_misc_clock(struct clk *c)
 
 int __init clock_late_init(void)
 {
-#ifdef CONFIG_DEBUG_FS
 	int i;
+#ifdef CONFIG_DEBUG_FS
 	clock_debug_init();
-	for (i = 0; i < ARRAY_SIZE(hawaii_clk_tbl); i++) {
-		if (hawaii_clk_tbl[i].clk->clk_type == CLK_TYPE_CCU) {
-			if (hawaii_clk_tbl[i].clk->id == CLK_ROOT_CCU_CLK_ID)
-				clock_debug_add_ccu(hawaii_clk_tbl[i].clk,
+	for (i = 0; i < ARRAY_SIZE(java_clk_tbl); i++) {
+		if (java_clk_tbl[i].clk->clk_type == CLK_TYPE_CCU) {
+			if (java_clk_tbl[i].clk->id == CLK_ROOT_CCU_CLK_ID)
+				clock_debug_add_ccu(java_clk_tbl[i].clk,
 						true);
 			else
-				clock_debug_add_ccu(hawaii_clk_tbl[i].clk,
+				clock_debug_add_ccu(java_clk_tbl[i].clk,
 						false);
-		}
-		else if (hawaii_clk_tbl[i].clk->clk_type == CLK_TYPE_MISC)
-			clock_debug_add_misc_clock(hawaii_clk_tbl[i].clk);
+		} else if (java_clk_tbl[i].clk->clk_type == CLK_TYPE_MISC)
+			clock_debug_add_misc_clock(java_clk_tbl[i].clk);
 		else
-			clock_debug_add_clock(hawaii_clk_tbl[i].clk);
+			clock_debug_add_clock(java_clk_tbl[i].clk);
 	}
 #endif
+	clk_trace_init(ARRAY_SIZE(java_clk_tbl));
 	return 0;
 }
 

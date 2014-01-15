@@ -114,6 +114,7 @@ static int early_suspend_notifier_callback(struct notifier_block *self,
 			if (state & EVENT_SUSPENDED) {
 				state &= ~EVENT_SUSPENDED;
 				late_resume_func(FB_EVENT_BLANK);
+				pr_info("late_resume ends\n");
 			}
 		}
 		break;

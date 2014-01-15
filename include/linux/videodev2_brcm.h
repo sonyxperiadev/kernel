@@ -868,4 +868,17 @@ struct v4l2_sensor_optical_info {
 
 #define VIDIOC_SENSOR_G_OPTICAL_INFO	_IOR('V', BASE_VIDIOC_PRIVATE+8, struct v4l2_sensor_optical_info)
 
+struct v4l2_frame_info {
+	int exposure;
+	int an_gain;
+	int focus;
+	int flash_mode;
+	struct timespec timestamp;
+};
+
+#define VIDIOC_SENSOR_G_FRAME_INFO \
+	_IOWR('V', BASE_VIDIOC_PRIVATE+9, struct v4l2_frame_info)
+#define VIDIOC_SENSOR_S_FRAME_INFO \
+	_IOWR('V', BASE_VIDIOC_PRIVATE+10, struct v4l2_frame_info)
+
 #endif /* __LINUX_VIDEODEV2_BRCM_H */

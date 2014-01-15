@@ -2412,6 +2412,160 @@ int pwr_mgr_pmu_reg_write(u8 reg_addr, u8 slave_id, u8 reg_val)
 }
 EXPORT_SYMBOL(pwr_mgr_pmu_reg_write);
 
+/* read_direct will ignore any ongoing i2c transaction and restart
+ * new transaction, result of last ongoing transaction will be unknown
+ * should be called with Preemption disabled and where ongoing transaction
+ * can be ignored, such as poweroff func*/
+int pwr_mgr_pmu_reg_read_direct(u8 reg_addr, u8 slave_id, u8 *reg_val)
+{
+	int ret;
+	u32 reg;
+	int last_mode;
+#if defined(CONFIG_KONA_PWRMGR_REV2)
+	u32 bsc_isr;
+#endif
+	pwr_dbg(PWR_LOG_SEQ, "%s\n", __func__);
+	if (unlikely(!pwr_mgr.info)) {
+		pwr_dbg(PWR_LOG_ERR, "%s:ERROR - pwr mgr not initialized\n",
+			__func__);
+		return -EPERM;
+	}
+	if (!reg_val)
+		return -EINVAL;
+	last_mode = pwr_mgr.i2c_mode;
+	pwr_mgr.i2c_mode = PWR_MGR_I2C_MODE_POLL;
+	pwr_mgr_seq_log_buf_put(SEQ_LOG_READ_BYTE,
+			SEQ_LOG_PACK_U24(0 , slave_id, reg_addr));
+	if (pwr_mgr.info->i2c_rd_slv_id_off1 >= 0)
+		pwr_mgr_update_i2c_cmd_data((u32) pwr_mgr.info->
+					    i2c_rd_slv_id_off1,
+					    I2C_WRITE_ADDR(slave_id));
+	if (pwr_mgr.info->i2c_rd_reg_addr_off >= 0)
+		pwr_mgr_update_i2c_cmd_data((u32) pwr_mgr.info->
+					    i2c_rd_reg_addr_off, reg_addr);
+	if (pwr_mgr.info->i2c_rd_slv_id_off2 >= 0)
+		pwr_mgr_update_i2c_cmd_data((u32) pwr_mgr.info->
+					    i2c_rd_slv_id_off2,
+					    I2C_READ_ADDR(slave_id));
+	ret = pwr_mgr_sw_i2c_seq_start(I2C_SEQ_READ);
+	if (!ret) {
+		reg = readl(PWR_MGR_REG_ADDR(PWRMGR_I2C_SW_CMD_CTRL_OFFSET));
+#if !defined(CONFIG_KONA_PWRMGR_REV2)
+		reg = ((reg & PWRMGR_I2C_READ_DATA_MASK) >>
+				PWRMGR_I2C_READ_DATA_SHIFT);
+		if (reg & 0x1) {
+			pwr_dbg(PWR_LOG_SEQ, "PWRMGR: I2C READ NACK\n");
+			ret = -EAGAIN;
+			goto out;
+		}
+		/**
+		 * if there is no NACK from PMU, we will trigger
+		 * PWRMGR again to read the FIFO data from PMU_BSC
+		 * to PWRMGR buffer
+		 */
+		ret = pwr_mgr_sw_i2c_seq_start(I2C_SEQ_READ_FIFO);
+		if (ret < 0)
+			goto out;
+		reg = readl(PWR_MGR_REG_ADDR(PWRMGR_I2C_SW_CMD_CTRL_OFFSET));
+#else
+		/**
+		 * In KONA REV2 (hawaii), we don't need to trigger the sequencer
+		 * two times, there is another register(POWER_MANAGER_APB_READ)
+		 * is added apart from
+		 * POWER_MANAGER_I2C_SOFTWARE_COMMAND_CONTROL:I2C_READ_DATA.
+		 * So in the single trigger we can read i2c data and i2c isr
+		 * register both.
+		 */
+		bsc_isr = readl(PWR_MGR_REG_ADDR(PWRMGR_I2C_APB_READ_OFFSET)) &
+			PWRMGR_I2C_APB_READ_DATA_MASK;
+		if (bsc_isr & 0x1) {
+			pwr_mgr_seq_log_buf_put(SEQ_LOG_NACK, 0);
+			pwr_dbg(PWR_LOG_SEQ, "PWRMGR: I2C READ NACK\n");
+			ret = -EAGAIN;
+			goto out;
+		}
+#endif
+		*reg_val = (reg & PWRMGR_I2C_READ_DATA_MASK) >>
+		    PWRMGR_I2C_READ_DATA_SHIFT;
+
+		pwr_dbg(PWR_LOG_SEQ,
+		"%s reg_addr:0x%0x; slave_id:%d; reg_val:0x%0x; ret_val:%d\n",
+		__func__, reg_addr, slave_id, *reg_val, ret);
+	}
+out:
+	pwr_mgr.i2c_mode = last_mode;
+	pwr_mgr_seq_log_buf_put(SEQ_LOG_READ_BYTE,
+			SEQ_LOG_PACK_U24(slave_id, reg_addr, *reg_val));
+	pwr_dbg(PWR_LOG_SEQ, "%s : ret = %d\n", __func__, ret);
+	return ret;
+}
+EXPORT_SYMBOL(pwr_mgr_pmu_reg_read_direct);
+
+/* write_direct will ignore any ongoing i2c transaction and restart
+ * new transaction, result of last ongoing transaction will be unknown
+ * should be called with Preemption disabled and where ongoing transaction
+ * can be ignored, such as poweroff func*/
+int pwr_mgr_pmu_reg_write_direct(u8 reg_addr, u8 slave_id, u8 reg_val)
+{
+	int ret = 0;
+	u32 reg;
+	u8 i2c_data;
+	int last_mode;
+
+	pwr_dbg(PWR_LOG_SEQ, "%s\n", __func__);
+	if (unlikely(!pwr_mgr.info)) {
+		pwr_dbg(PWR_LOG_ERR, "%s:ERROR - pwr mgr not initialized\n",
+			__func__);
+		return -EPERM;
+	}
+
+	last_mode = pwr_mgr.i2c_mode;
+	pwr_mgr.i2c_mode = PWR_MGR_I2C_MODE_POLL;
+	pwr_mgr_seq_log_buf_put(SEQ_LOG_WRITE_BYTE,
+			SEQ_LOG_PACK_U24(slave_id, reg_addr, reg_val));
+
+	if (pwr_mgr.info->i2c_wr_slv_id_off >= 0)
+		pwr_mgr_update_i2c_cmd_data((u32) pwr_mgr.info->
+					    i2c_wr_slv_id_off,
+					    I2C_WRITE_ADDR(slave_id));
+	if (pwr_mgr.info->i2c_wr_reg_addr_off >= 0)
+		pwr_mgr_update_i2c_cmd_data((u32) pwr_mgr.info->
+					    i2c_wr_reg_addr_off, reg_addr);
+	if (pwr_mgr.info->i2c_wr_val_addr_off >= 0)
+		pwr_mgr_update_i2c_cmd_data((u32) pwr_mgr.info->
+					    i2c_wr_val_addr_off, reg_val);
+
+	ret = pwr_mgr_sw_i2c_seq_start(I2C_SEQ_WRITE);
+
+	/**
+	 * This code check for the NACK from the PMU
+	 */
+	if (ret == 0) {
+#if !defined(CONFIG_KONA_PWRMGR_REV2)
+		reg = readl(PWR_MGR_REG_ADDR(PWRMGR_I2C_SW_CMD_CTRL_OFFSET));
+		i2c_data = reg & PWRMGR_I2C_READ_DATA_MASK;
+#else
+		reg = readl(PWR_MGR_REG_ADDR(PWRMGR_I2C_APB_READ_OFFSET));
+		i2c_data = reg & PWRMGR_I2C_APB_READ_DATA_MASK;
+#endif
+		if (i2c_data & 0x1) {
+			pwr_mgr_seq_log_buf_put(SEQ_LOG_NACK, 0);
+			pwr_dbg(PWR_LOG_SEQ,
+				"PWRMGR: I2C WRITE NACK from PMU\n");
+			ret = -EAGAIN;
+		}
+	}
+	pwr_mgr.i2c_mode = last_mode;
+	pwr_mgr_seq_log_buf_put(SEQ_LOG_WRITE_BYTE,
+			SEQ_LOG_PACK_U24(slave_id, reg_addr, reg_val));
+	pwr_dbg(PWR_LOG_SEQ,
+		"%s reg_addr:0x%0x; slave_id:%d; reg_val:0x%0x; ret_val:%d\n",
+		__func__, reg_addr, slave_id, reg_val, ret);
+
+	return ret;
+}
+EXPORT_SYMBOL(pwr_mgr_pmu_reg_write_direct);
+
 int pwr_mgr_pmu_reg_read_mul(u8 reg_addr_start, u8 slave_id, u8 count,
 			     u8 *reg_val)
 {

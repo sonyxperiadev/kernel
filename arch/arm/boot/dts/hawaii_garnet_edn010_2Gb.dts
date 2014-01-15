@@ -91,7 +91,7 @@
 		mpu3050@68 {
 			compatible = "bcm,mpu3050";
 			reg = <0x68>;
-			gpio-irq-pin = <33>;
+			gpio-irq-pin = <&gpio 33 0>;
 			int-config = <0x10>;
 			level-shifter = <0>;
 			orientation = <0 0xFFFFFFFF 0
@@ -101,14 +101,14 @@
 		akm8975@0c {
 			compatible = "bcm,akm8975";
 			reg = <0x0c>;
-			gpio-irq-pin = <4>;
+			gpio-irq-pin = <&gpio 4 0>;
 			layout = <6>;
 		};
 
 		kxtik@0f {
                         compatible = "bcm,kxtik";
                         reg = <0x0f>;
-                        gpio-irq-pin = <1>;
+                        gpio-irq-pin = <&gpio 1 0>;
                         min_interval = <5>;
                         poll_interval = <200>;
                         axis_map_x = <0>;
@@ -124,7 +124,7 @@
 		tmd2771@39 {
 			compatible = "bcm,tmd2771";
 			reg = <0x39>;
-			gpio-irq-pin = <89>;
+			gpio-irq-pin = <&gpio 89 0>;
 			calibrate_target_param = <300000>;
 			als_time_param = <200>;
 			scale_factor_param = <1>;
@@ -165,9 +165,9 @@
 		FocalTech-Ft5306@46 {
 			compatible = "bcm,FocalTech-Ft5306";
 			reg = <0x38>;
-			gpio-irq-pin = <73>;
-			gpio-reset-pin = <70>;
-			gpio-wakeup-pin = <70>;
+			gpio-irq-pin = <&gpio 73 0>;
+			gpio-reset-pin = <&gpio 70 0>;
+			gpio-wakeup-pin = <&gpio 70 0>;
 			x-max-value = <720>;
 			y-max-value = <1280>;
 			use-irq = <1>;
@@ -310,8 +310,8 @@
 	kona-fb {
 		module-name = "NT35512";
 		reg-name = "cam2";
-		rst-gpio = <8>;
-		detect-gpio = <10>;
+		rst-gpio = <&gpio 8 0>;
+		detect-gpio = <&gpio 10 0>;
 		detect-gpio-val = <0>;
 		rst-setup = <700>;	/* 700us */
 		rst-pulse = <1000>;	/* 1ms */
@@ -337,8 +337,8 @@
 	kona-fb-2 {
 		module-name = "OTM8018B";
 		reg-name = "cam2";
-		rst-gpio = <8>;
-		detect-gpio = <10>;
+		rst-gpio = <&gpio 8 0>;
+		detect-gpio = <&gpio 10 0>;
 		detect-gpio-val = <1>;
 		rst-setup = <700>;	/* 700us */
 		rst-pulse = <1000>;	/* 1ms */
@@ -431,7 +431,7 @@
 		interrupts = <0 77 0x04>;
 		id = <0>;
 		data-pullup = <0>;
-		cd-gpio = <91>;		/*SD_CARDDET_GPIO_PIN*/
+		cd-gpio = <&gpio 91 0>;		/*SD_CARDDET_GPIO_PIN*/
 		devtype = <0>;		/*SDIO_DEV_TYPE_SDMMC*/
 		flags = <0>;		/*KONA_SDIO_FLAGS_DEVICE_REMOVABLE*/
 		peri-clk-name = "sdio1_clk";

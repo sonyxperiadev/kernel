@@ -592,8 +592,8 @@ static int hawaii_camera_power(struct device *dev, int on)
 		goto e_clk_get;
 	}
 	if (on) {
-		if (pi_mgr_dfs_request_update(&unicam_dfs_node, PI_OPP_TURBO))
-			pr_err("DVFS for UNICAM failed\n");
+		if (pi_mgr_dfs_request_update(&unicam_dfs_node, PI_OPP_ECONOMY))
+			printk("DVFS for UNICAM failed\n");
 		regulator_enable(d_gpsr_cam0_1v8);
 		usleep_range(1000, 1010);
 		regulator_enable(d_1v8_mmc1_vcc);
@@ -799,8 +799,8 @@ static int hawaii_camera_power_front(struct device *dev, int on)
 		goto e_clk_get;
 	}
 	if (on) {
-		if (pi_mgr_dfs_request_update(&unicam_dfs_node, PI_OPP_TURBO))
-			pr_err("DVFS for UNICAM failed\n");
+		if (pi_mgr_dfs_request_update(&unicam_dfs_node, PI_OPP_ECONOMY))
+			printk("DVFS for UNICAM failed\n");
 		gpio_set_value(SENSOR_1_GPIO_PWRDN, thiscfg->pwdn_active);
 		usleep_range(5000, 5010);
 		regulator_enable(d_lvldo2_cam1_1v8);
@@ -1038,16 +1038,6 @@ static struct platform_device hawaii_camera_front = {
 #endif
 #endif /* CONFIG_UNICAM_CAMERA */
 
-static struct spi_kona_platform_data hawaii_ssp0_info = {
-#ifdef CONFIG_DMAC_PL330
-	.enable_dma = 1,
-#else
-	.enable_dma = 0,
-#endif
-	.cs_line = 1,
-	.mode = SPI_LOOP | SPI_MODE_3,
-};
-
 static struct spi_kona_platform_data hawaii_ssp1_info = {
 #ifdef CONFIG_DMAC_PL330
 	.enable_dma = 1,
@@ -1077,7 +1067,6 @@ static struct bcm_hsotgctrl_platform_data hsotgctrl_plat_data = {
 
 struct platform_device *hawaii_common_plat_devices[] __initdata = {
 	&pmu_device,
-	&hawaii_ssp0_device,
 
 #ifdef CONFIG_SENSORS_KONA
 	&thermal_device,
@@ -1092,9 +1081,11 @@ struct platform_device *hawaii_common_plat_devices[] __initdata = {
 #endif
 
 #if defined(CONFIG_USB_DWC_OTG)
+#ifndef CONFIG_OF
 	&hawaii_usb_phy_platform_device,
 	&hawaii_hsotgctrl_platform_device,
 	&hawaii_otg_platform_device,
+#endif
 #endif
 
 #ifdef CONFIG_KONA_AVS
@@ -1584,7 +1575,6 @@ struct bcm_iovmm_pdata iovmm_mm_256mb_pdata = {
 
 static void hawaii_add_pdata(void)
 {
-	hawaii_ssp0_device.dev.platform_data = &hawaii_ssp0_info;
 	hawaii_ssp1_device.dev.platform_data = &hawaii_ssp1_info;
 #ifdef CONFIG_BCM_STM
 	hawaii_stm_device.dev.platform_data = &hawaii_stm_pdata;

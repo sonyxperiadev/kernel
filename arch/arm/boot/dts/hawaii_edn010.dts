@@ -24,6 +24,19 @@
 		timer-name = "aon-timer";
 	};
 
+	usb-phy@0x3F130000 {
+		interrupts = <0 128 0x04>;
+		chipreg-virtual-mem-base = <0x35004000>;
+		usb-ahb-clk-name = "usb_otg_clk";
+		mdio-mstr-clk-name = "mdiomaster";
+	};
+	usb-hsotgctrl@0x3F130000 {
+		chipreg-virtual-mem-base = <0x35004000>;
+		usb-ahb-clk-name = "usb_otg_clk";
+		mdio-mstr-clk-name = "mdiomaster";
+	};
+
+
 	uart@3e000000 {
 		clock-frequency = <26000000>;
 		port-name = "console";
@@ -299,7 +312,7 @@
 	kona-fb {
 		module-name = "NT35516";
 		reg-name = "cam2";
-		rst-gpio = <22>;
+		rst-gpio = <&gpio 22 0>;
 		rst-setup = <5>;	/* 5us */
 		rst-pulse = <15>;	/* 15us */
 		rst-hold = <10000>;	/* 10ms */
@@ -387,7 +400,7 @@
 		interrupts = <0 77 0x04>;
 		id = <0>;
 		data-pullup = <0>;
-		cd-gpio = <91>;		/*SD_CARDDET_GPIO_PIN*/
+		cd-gpio = <&gpio 91 0>;		/*SD_CARDDET_GPIO_PIN*/
 		devtype = <0>;		/*SDIO_DEV_TYPE_SDMMC*/
 		flags = <0>;		/*KONA_SDIO_FLAGS_DEVICE_REMOVABLE*/
 		peri-clk-name = "sdio1_clk";

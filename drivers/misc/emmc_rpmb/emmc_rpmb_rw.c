@@ -405,6 +405,8 @@ static int read_counter_value(void)
 
 	/* Alloc memory for read_buff */
 	read_buff = kmalloc(RPMB_DATA_FRAME_SIZE, GFP_KERNEL);
+	if (!read_buff)
+		return -ENOMEM;
 
 counter_retry:
 	/* Format the Read counter value Data Packet */
@@ -808,6 +810,8 @@ static int authenticated_data_read(char *buff, int len, int addr)
 
 	/* Allocate memory for read_buff */
 	read_buff = kmalloc(RPMB_DATA_FRAME_SIZE, GFP_KERNEL);
+	if (!read_buff)
+		return -ENOMEM;
 
 	do {
 read_retry:

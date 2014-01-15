@@ -198,7 +198,8 @@ static struct bcmpmu59xxx_rw_data __initdata register_init_data[] = {
 
 static struct bcmpmu59xxx_rw_data register_exit_data[] = {
 	{.addr = PMU_REG_GPIOCTRL1, .val = 0x5, .mask = 0xFF},
-	{.addr = PMU_REG_MBCCTRL20, .val = 0x1, .mask = 0xFF},
+	/* Disable turbo*/
+	{.addr = PMU_REG_OTG_BOOSTCTRL3, .val = 0x0, .mask = 0x10},
 };
 
 __weak struct regulator_consumer_supply rf_supply[] = {
@@ -1070,6 +1071,7 @@ struct bcmpmu_acld_pdata acld_pdata = {
 	.acld_vbus_margin = 200,	/*mV*/
 	.acld_vbus_thrs = 5950,
 	.acld_vbat_thrs = 3500,
+	.usbrm_vbus_thrs = 4000,
 	.i_sat = 3000,		/* saturation current in mA
 					for chrgr while using ACLD */
 	.i_def_dcp = 700,

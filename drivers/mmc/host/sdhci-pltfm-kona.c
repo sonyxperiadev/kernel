@@ -39,9 +39,9 @@
 #include <linux/of.h>
 #include <linux/of_irq.h>
 #include <linux/of_platform.h>
+#include <linux/slab.h>
+#include <linux/of_gpio.h>
 #include <linux/tick.h>
-
-#include <plat/clock.h>
 
 #ifdef CONFIG_APANIC_ON_MMC
 #include <linux/mmc-poll/mmc_poll_stack.h>
@@ -630,6 +630,7 @@ static int sdhci_pltfm_probe(struct platform_device *pdev)
 			ret = -ENOMEM;
 			goto err;
 		}
+
 		if (of_property_read_u32(pdev->dev.of_node, "id", &val)) {
 			dev_err(&pdev->dev, "id read failed in %s\n", __func__);
 			goto err_free_priv_data_mem;
@@ -678,6 +679,14 @@ static int sdhci_pltfm_probe(struct platform_device *pdev)
 		}
 
 		hw_cfg->quirks2 = val;
+
+		if (of_property_read_u32(pdev->dev.of_node, "pm_caps", &val)) {
+			dev_warn(&pdev->dev, "pm_caps not available in %s\n",
+			__func__);
+			val = 0;
+		}
+
+		hw_cfg->pm_caps = val;
 
 		if (of_property_read_string(pdev->dev.of_node, "peri-clk-name",
 			&prop)) {
@@ -734,15 +743,14 @@ static int sdhci_pltfm_probe(struct platform_device *pdev)
 
 			hw_cfg->vddsdxc_regulator_name = (char *)prop;
 
-
-			if (of_property_read_u32(pdev->dev.of_node,
-				"cd-gpio", &val)) {
-				dev_err(&pdev->dev, "cd-gpio read failed in %s\n",
+			hw_cfg->cd_gpio = of_get_named_gpio(pdev->dev.of_node,
+			"cd-gpio", 0);
+			if (!gpio_is_valid(hw_cfg->cd_gpio)) {
+				dev_err(&pdev->dev,
+				"%s: ERROR setting -1 to cd-gpio\n",
 				__func__);
-				goto err_free_priv_data_mem;
+				hw_cfg->cd_gpio = -1;
 			}
-
-			hw_cfg->cd_gpio = val;
 		}
 
 		else if (hw_cfg->devtype == SDIO_DEV_TYPE_EMMC) {
@@ -809,6 +817,8 @@ static int sdhci_pltfm_probe(struct platform_device *pdev)
 	host->quirks2 |= hw_cfg->quirks2;
 
         pr_debug("%s: GET IRQ\n", __func__);
+
+	host->mmc->caps |= MMC_CAP_WAIT_WHILE_BUSY;
 
 	if (hw_cfg->flags & KONA_SDIO_FLAGS_DEVICE_NON_REMOVABLE)
 		host->mmc->caps |= MMC_CAP_NONREMOVABLE;
@@ -958,6 +968,8 @@ static int sdhci_pltfm_probe(struct platform_device *pdev)
 		host->mmc->pm_flags =
 		    MMC_PM_KEEP_POWER | MMC_PM_IGNORE_PM_NOTIFY;
 	}
+
+	host->mmc->pm_caps |= hw_cfg->pm_caps;
 
 #if !defined(CONFIG_MACH_BCM_FPGA_E)
 	/* Enable 1.8V DDR operation for e.MMC */
@@ -1281,8 +1293,7 @@ static int sdhci_pltfm_suspend(struct device *device)
 		}
 	}
 
-	if (dev->devtype == SDIO_DEV_TYPE_WIFI)
-		host->mmc->pm_flags |= host->mmc->pm_caps;
+	host->mmc->pm_flags |= host->mmc->pm_caps;
 
 	ret = sdhci_suspend_host(host);
 	if (ret) {
@@ -1709,7 +1720,9 @@ static void sdhci_pltfm_init_74_clocks(struct sdhci_host *host, u8 power_mode)
 	if (power_mode == MMC_POWER_OFF)
 		return;
 	else
-		mdelay(10);
+	/*For 74 clocks the worst case delay is 740usecs
+	  considering 100kHz clock*/
+		mdelay(1);
 }
 
 static void sdhci_print_critical(struct sdhci_host *host)
@@ -1725,8 +1738,6 @@ static void sdhci_print_critical(struct sdhci_host *host)
 		ret = irqsafe_is_regulator_enable(dev->vddo_sd_regulator);
 		printk(KERN_ALERT "sd regulator enable:%d\n", ret);
 	}
-	ret = clk_get_usage(dev->peri_clk);
-	printk(KERN_ALERT "clk use_cnt:%d\n", ret);
 	printk(KERN_ALERT "runtime_suspended:%d\n", host->runtime_suspended);
 	ret = atomic_read(&dev->dev->power.usage_count);
 	printk(KERN_ALERT "pm runtime usage count:%d\n", ret);

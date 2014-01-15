@@ -88,16 +88,14 @@
  */
 enum {
 	CSTATE_SIMPLE_WFI, /* Simple WFI */
-	CSTATE_SYSPLL_WFI, /*26MHz WFI*/
 	CSTATE_CORE_DRMT, /*Core dormant*/
-	CSTATE_SUSPEND_DRMT, /* suspend dormant */
+	CSTATE_SUSPEND_DRMT, /* cluster dormant */
 	CSTATE_DS_DRMT, /* deep sleep dormant */
 };
 
 /*Cstate Exit latency*/
 enum {
 	EXIT_LAT_SIMPLE_WFI = 0,
-	EXIT_LAT_SYSPLL_WFI = 100,
 	EXIT_LAT_CORE_DRMT = 600,
 	/* Worst case dormant sequence delay */
 	EXIT_LAT_SUSPEND_DRMT = 2000,
@@ -108,7 +106,6 @@ enum {
 /*CState target residency values*/
 enum {
 	TRGT_RESI_SIMPLE_WFI = 0,
-	TRGT_RESI_SYSPLL_WFI = 100,
 	TRGT_RESI_CORE_DRMT = 600,
 	TRGT_RESI_SUSPEND_DRMT = EXIT_LAT_SUSPEND_DRMT + 2000,
 	TRGT_RESI_DS_DRMT = EXIT_LAT_DS_DRMT + 5000,

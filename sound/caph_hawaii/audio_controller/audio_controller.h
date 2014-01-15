@@ -189,6 +189,27 @@ void AUDCTRL_DisableTelephony(void);
 void AUDCTRL_Telephony_RateChange(unsigned int sample_rate);
 
 /**
+*  @brief  the Set/Reset flag for Restarting Playback
+*
+*  @param  flag		(in) True/False
+*
+*  @return none
+*
+****************************************************************************/
+
+void AUDCTRL_SetRestartPlaybackFlag(Boolean flag);
+
+/**
+*  @brief  get the flag for restarting playback
+*
+*  @param  none
+*
+*  @return whether Playback has to be restarted
+*
+****************************************************************************/
+Boolean AUDCTRL_GetRestartPlaybackFlag(void);
+
+/**
 *  @brief  the rate change request function called by CAPI message listener
 *
 *  @param  codecID		(in) voice call speech codec ID
@@ -331,6 +352,14 @@ void AUDCTRL_SaveAudioMode(AudioMode_t mode);
 *      @return         none
 **********************************************************************/
 void AUDCTRL_SetAudioMode(AudioMode_t mode, AudioApp_t app);
+/*********************************************************************
+*   Set (voice call) audio mode
+*      @param          mode            (voice call) audio mode
+*      @param          app             (voice call) audio app
+*      @return         none
+**********************************************************************/
+void AUDCTRL_SetAudioModeBT(AudioMode_t mode, AudioApp_t app);
+
 
 /**
 *   Set audio mode for music playback. (no DSP voice)
@@ -874,6 +903,16 @@ void AUDCTRL_UpdateUserVolSetting(
 *
 ****************************************************************************/
 Boolean AUDCTRL_GetCPResetState(void);
+
+/********************************************************************
+*  @brief  Return Audio Path reset pending state.
+*
+*  @param
+*
+*  @return TRUE/FALSE : in/out Audio Path reset pending
+*
+****************************************************************************/
+Boolean AUDCTRL_GetAudioPathResetPendingState(void);
 
 /********************************************************************
 *  @brief  Register callback for resetting callmode due to CP reset

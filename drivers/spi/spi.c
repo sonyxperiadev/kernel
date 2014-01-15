@@ -868,6 +868,9 @@ static void of_register_spi_devices(struct spi_master *master)
 			spi->mode |= SPI_CS_HIGH;
 		if (of_find_property(nc, "spi-3wire", NULL))
 			spi->mode |= SPI_3WIRE;
+		if (of_find_property(nc, "spi-loop", NULL))
+			spi->mode |= SPI_LOOP;
+
 
 		/* Device speed */
 		prop = of_get_property(nc, "spi-max-frequency", &len);

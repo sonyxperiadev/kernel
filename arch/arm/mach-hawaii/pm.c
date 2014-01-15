@@ -661,8 +661,14 @@ static int dormant_enable_set(void *data, u64 val)
 	return 0;
 }
 
-DEFINE_SIMPLE_ATTRIBUTE(dormant_enable_fops, NULL, dormant_enable_set,
-			"%llu\n");
+static int dormant_enable_get(void *data, u64 *val)
+{
+	*val = pm_info.dormant_enable;
+	return 0;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(dormant_enable_fops, dormant_enable_get,
+		dormant_enable_set, "%llu\n");
 
 static struct dentry *dent_pm_root_dir;
 int __init __pm_debug_init(void)

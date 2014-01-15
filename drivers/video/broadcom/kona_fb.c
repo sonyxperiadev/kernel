@@ -60,6 +60,7 @@
 #include <linux/of.h>
 #include <linux/of_irq.h>
 #include <linux/of_platform.h>
+#include <linux/of_gpio.h>
 
 #ifdef CONFIG_FB_BRCM_CP_CRASH_DUMP_IMAGE_SUPPORT
 #include <video/kona_fb_image_dump.h>
@@ -120,13 +121,19 @@ struct kona_fb {
 #ifdef CONFIG_FB_BRCM_CP_CRASH_DUMP_IMAGE_SUPPORT
 	struct notifier_block die_nb;
 #endif
-	struct delayed_work vsync_smart;
+	struct work_struct vsync_smart;
 
 	size_t framesize_alloc;
 	struct iommu_domain *direct_domain;
 	struct sg_table *iovmm_table;
 	struct kona_fb_platform_data *fb_data;
 	struct platform_device *pdev;
+
+	/* ESD check routine */
+	struct workqueue_struct *esd_check_wq;
+	struct delayed_work esd_check_work;
+	struct completion tectl_gpio_done_sem;
+	int esd_failure_cnt;
 };
 
 static struct completion vsync_event;
@@ -746,10 +753,12 @@ static void konafb_vsync_cb(void)
 static void vsync_work_smart(struct work_struct *work)
 {
 	struct kona_fb *fb = container_of(work, struct kona_fb,
-						vsync_smart.work);
+						vsync_smart);
 
 	complete(&vsync_event);
-	schedule_delayed_work(&fb->vsync_smart, msecs_to_jiffies(10));
+	/* 16ms ~ 60HZ */
+	usleep_range(16000, 16010);
+	schedule_work(&fb->vsync_smart);
 }
 
 static int enable_display(struct kona_fb *fb)
@@ -768,15 +777,19 @@ static int enable_display(struct kona_fb *fb)
 		konafb_error("Failed to open this display device!\n");
 		goto fail_to_open;
 	}
-
-	ret = fb->display_ops->power_control(fb->display_hdl, CTRL_PWR_ON);
+	if (fb->fb_data->pm_sleep)
+		ret = fb->display_ops->power_control(fb->display_hdl,
+				CTRL_SLEEP_OUT);
+	else
+		ret = fb->display_ops->power_control(fb->display_hdl,
+				CTRL_PWR_ON);
 	if (ret != 0) {
 		konafb_error("Failed to power on this display device!\n");
 		goto fail_to_power_control;
 	}
-	INIT_DELAYED_WORK(&fb->vsync_smart, vsync_work_smart);
+	INIT_WORK(&fb->vsync_smart, vsync_work_smart);
 	if (!fb->display_info->vmode) {
-		schedule_delayed_work(&fb->vsync_smart, 0);
+		schedule_work(&fb->vsync_smart);
 		kona_clock_stop(fb);
 	}
 
@@ -799,9 +812,14 @@ static int disable_display(struct kona_fb *fb)
 
 	if (!fb->display_info->vmode)
 		kona_clock_start(fb);
-	cancel_delayed_work_sync(&fb->vsync_smart);
+	cancel_work_sync(&fb->vsync_smart);
 
-	fb->display_ops->power_control(fb->display_hdl, CTRL_PWR_OFF);
+	if (fb->fb_data->pm_sleep)
+		fb->display_ops->power_control(fb->display_hdl,
+			CTRL_SLEEP_IN);
+	else
+		fb->display_ops->power_control(fb->display_hdl,
+			CTRL_PWR_OFF);
 	fb->display_ops->close(fb->display_hdl);
 	fb->display_ops->exit(fb->display_hdl);
 	kona_clock_stop(fb);
@@ -979,7 +997,6 @@ static int kona_fb_blank(int blank_mode, struct fb_info *info)
 		if (atomic_read(&g_kona_fb->force_update))
 			kona_display_crash_image(CP_CRASH_DUMP_START);
 #endif
-
 		fb->blank_state = KONA_FB_UNBLANK;
 		break;
 
@@ -1039,10 +1056,9 @@ static struct kona_fb_platform_data * __init get_of_data(struct device_node *np)
 	if (unlikely(strlen(str) > DISPDRV_NAME_SZ))
 		goto of_fail;
 	strcpy(fb_data->reg_name, str);
-
-	if (of_property_read_u32(np, "rst-gpio", &val))
+	fb_data->rst.gpio = of_get_named_gpio(np, "rst-gpio", 0);
+	if (!gpio_is_valid(fb_data->rst.gpio))
 		goto of_fail;
-	fb_data->rst.gpio = val;
 	if (of_property_read_u32(np, "rst-setup", &val))
 		goto of_fail;
 	fb_data->rst.setup = val;
@@ -1062,16 +1078,20 @@ static struct kona_fb_platform_data * __init get_of_data(struct device_node *np)
 		goto of_fail;
 	fb_data->rotation = val;
 
-	if (!(of_property_read_u32(np, "detect-gpio", &val))) {
-		fb_data->detect.gpio = val;
-		if (of_property_read_u32(np, "detect-gpio-val", &val))
+	fb_data->detect.gpio = of_get_named_gpio(np, "detect-gpio", 0);
+	if (gpio_is_valid(fb_data->detect.gpio)) {
+		if (of_property_read_u32(np,
+			"detect-gpio-val", &val))
 			goto of_fail;
 		fb_data->detect.gpio_val = val;
 
-		fb_data->detect.active = gpio_get_value(fb_data->detect.gpio);
-		if (fb_data->detect.active != fb_data->detect.gpio_val) {
-			konafb_error("gpio %d value failed for panel %s\n",
-					fb_data->detect.gpio, fb_data->name);
+		fb_data->detect.active =
+			gpio_get_value(fb_data->detect.gpio);
+		if (fb_data->detect.active !=
+				fb_data->detect.gpio_val) {
+			konafb_error(
+			"gpio %d value failed for panel %s\n",
+			fb_data->detect.gpio, fb_data->name);
 			goto of_fail;
 		}
 	}
@@ -1092,6 +1112,10 @@ static struct kona_fb_platform_data * __init get_of_data(struct device_node *np)
 		fb_data->te_ctrl = true;
 	else
 		fb_data->te_ctrl = false;
+	if (of_property_read_bool(np, "pm-sleep"))
+		fb_data->pm_sleep = true;
+	else
+		fb_data->pm_sleep = false;
 
 	if (of_property_read_u32(np, "col-mod-i", &val))
 		goto of_fail;
@@ -1126,6 +1150,27 @@ static struct kona_fb_platform_data * __init get_of_data(struct device_node *np)
 		konafb_info("desense offset requested %d\n", val);
 		fb_data->desense_offset = (int) val;
 	}
+
+	/*Get the ESD config */
+	if (of_property_read_bool(np, "esdcheck")) {
+		fb_data->esdcheck = TRUE;
+		if (of_property_read_u32(np, "esdcheck-period-ms", &val))
+			goto of_fail;
+		fb_data->esdcheck_period_ms = val;
+		if (of_property_read_u32(np, "esdcheck-retry", &val))
+			goto of_fail;
+		fb_data->esdcheck_retry = (uint8_t)val;
+		if (of_property_read_u32(np, "tectl-gpio", &val))
+			fb_data->tectl_gpio = 0;
+		else {
+			/* Only allow tectl as gpio if TE is not used */
+			if (fb_data->vmode || !fb_data->te_ctrl)
+				fb_data->tectl_gpio = val;
+			else
+				konafb_info("Can't enable tectl_gpio");
+		}
+	} else
+		fb_data->esdcheck = FALSE;
 
 #ifdef CONFIG_IOMMU_API
 	/* Get the iommu device and link fb dev to iommu dev */
@@ -1363,6 +1408,7 @@ static int __init populate_dispdrv_cfg(struct kona_fb *fb,
 	info->vsync_cb = (info->vmode) ? konafb_vsync_cb : NULL;
 	info->cont_clk = cfg->cont_clk;
 	info->init_fn = cfg->init_fn;
+	info->esd_check_fn = cfg->esd_check_fn;
 	fb->display_info = info;
 	return 0;
 
@@ -1778,17 +1824,17 @@ static int kona_fb_reboot_cb(struct notifier_block *nb,
 	struct fb_event event;
 	int blank = FB_BLANK_POWERDOWN;
 
-	/*shut down the backlight before disable the display*/
-	pr_info("Turning off backlight\r\n");
-	event.info = &fb->fb;
-	event.data = &blank;
-	fb_notifier_call_chain(FB_EVENT_BLANK, &event);
-
 	pr_err("Turning off display\n");
 	if (fb->g_stop_drawing) {
 		pr_err("Display is already suspended, nothing to do\n");
 		goto exit;
 	}
+
+	/*shut down the backlight before disable the display*/
+	pr_info("Turning off backlight\r\n");
+	event.info = &fb->fb;
+	event.data = &blank;
+	fb_notifier_call_chain(FB_EVENT_BLANK, &event);
 
 	mutex_lock(&fb->update_sem);
 	fb->g_stop_drawing = 1;

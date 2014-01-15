@@ -395,6 +395,8 @@ static int PcmPlaybackPrepare(struct snd_pcm_substream *substream)
 	/* physical address */
 	parm_prepare.buf_param.phy_addr = (UInt32) (runtime->dma_addr);
 
+	AUDCTRL_SetRestartPlaybackFlag(FALSE);
+
 	aTrace(LOG_ALSA_INTERFACE, "buf_size = %d pBuf=0x%lx phy_addr=0x%x\n",
 	       runtime->dma_bytes, (UInt32) runtime->dma_area,
 	       runtime->dma_addr);
@@ -474,7 +476,8 @@ static int PcmPlaybackTrigger(struct snd_pcm_substream *substream, int cmd)
 		    AUDIO_SINK_LOUDSPK;
 	} else if ((callMode == MODEM_CALL)
 		   && (chip->streamCtl[substream_number].iLineSelect[0]
-		       != AUDIO_SINK_I2S)) {
+		       != AUDIO_SINK_I2S) &&
+			   !AUDCTRL_GetCPResetState()) {
 		/*call mode & not FM Tx playback */
 		chip->streamCtl[substream_number].dev_prop.p[0].source =
 		    AUDIO_SOURCE_MEM;
@@ -1069,6 +1072,12 @@ int PcmPlaybackCopy(struct snd_pcm_substream *substream, int channel,
 	int bytes_to_copy = frames_to_bytes(runtime, count);
 	int not_copied = copy_from_user(hwbuf, buf, bytes_to_copy);
 	char *new_hwbuf = hwbuf + (bytes_to_copy - not_copied);
+	Boolean restartflag = AUDCTRL_GetRestartPlaybackFlag();
+
+	if (restartflag == TRUE) {
+		AUDCTRL_SetRestartPlaybackFlag(FALSE);
+		return SNDRV_PCM_POS_XRUN;
+	}
 
 	if (not_copied) {
 		/*aError("%s: why didn't copy all the bytes?"

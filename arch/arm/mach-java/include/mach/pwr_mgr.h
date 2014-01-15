@@ -1,5 +1,5 @@
-#ifndef __HAWAII_PWR_MNGR_H__
-#define __HAWAII_PWR_MNGR_H__
+#ifndef __JAVA_PWR_MNGR_H__
+#define __JAVA_PWR_MNGR_H__
 
 #include <mach/rdb/brcm_rdb_pwrmgr.h>
 #ifdef CONFIG_DEBUG_FS
@@ -164,4 +164,4 @@ enum {
 
 int mach_init_sequencer(void);
 
-#endif /*__HAWAII_PWR_MNGR_H__*/
+#endif /*__JAVA_PWR_MNGR_H__*/

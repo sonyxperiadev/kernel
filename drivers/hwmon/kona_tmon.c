@@ -37,6 +37,7 @@
 #include <linux/sort.h>
 #include <mach/rdb/brcm_rdb_tmon.h>
 #include <mach/rdb/brcm_rdb_chipreg.h>
+#include <plat/clock.h>
 #include <linux/reboot.h>
 
 #define CLR_INT 1
@@ -785,6 +786,7 @@ static int kona_tmon_suspend(struct platform_device *pdev, pm_message_t state)
 	/* Disable TMON and turn off the clocks */
 	if (kona_tmon->pdata->flags & TMON_SUSPEND_POWEROFF) {
 		tmon_enable(kona_tmon, 0);
+		clk_reset(kona_tmon->tmon_1m_clk);
 		clk_disable(kona_tmon->tmon_1m_clk);
 	}
 	return 0;

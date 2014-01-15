@@ -326,8 +326,8 @@ void chal_audio_mic_pwrctrl(CHAL_HANDLE handle, _Bool pwronoff)
 		reg_val &= ~(AUDIOH_AUDIORX_VRX1_AUDIORX_VRX_PWRDN_MASK);
 		BRCM_WRITE_REG(base, AUDIOH_AUDIORX_VRX1, reg_val);
 
-		/* a must (10ms) to remove bias glitch per asic sequence */
-		usleep_range(10000, 10500);
+		/* a must (50ms) to remove bias glitch per asic sequence */
+		usleep_range(50000, 50500);
 
 		/* Set i_VREF_FastSettle (0) */
 		reg_val = BRCM_READ_REG(base, AUDIOH_AUDIORX_VREF);
@@ -493,8 +493,8 @@ void chal_audio_hs_mic_pwrctrl(CHAL_HANDLE handle, _Bool pwronoff)
 		    (AUDIOH_AUDIORX_VRX1_AUDIORX_VRX_SEL_MIC1B_MIC2_MASK);
 		BRCM_WRITE_REG(base, AUDIOH_AUDIORX_VRX1, reg_val);
 
-		/* a must (10ms) to remove bias glitch per asic sequence */
-		usleep_range(10000, 10500);
+		/* a must (50ms) to remove bias glitch per asic sequence */
+		usleep_range(50000, 50500);
 
 		/* Set i_VREF_FastSettle (0) */
 		reg_val = BRCM_READ_REG(base, AUDIOH_AUDIORX_VREF);
@@ -672,7 +672,7 @@ void chal_audio_dmic1_pwrctrl(CHAL_HANDLE handle, _Bool pwronoff)
 	WRITE_REG32((KONA_PAD_CTRL_VA + PADCTRLREG_DMIC0CLK_OFFSET), regVal);
 
 	/* Select the function for DMIC0_DATA */
-	/* For function = 0 (alt_fn1), this will be set as 
+	/* For function = 0 (alt_fn1), this will be set as
 	 * DMIC1_DATA */
 	regVal = READ_REG32((KONA_PAD_CTRL_VA + PADCTRLREG_DMIC0DQ_OFFSET));
 	regVal &= (~PADCTRLREG_DMIC0DQ_PINSEL_DMIC0DQ_MASK);

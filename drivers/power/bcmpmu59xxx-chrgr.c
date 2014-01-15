@@ -33,9 +33,6 @@
 #define BATT_VOLT_TO_CAP(volt)		(((volt - 2800) * 100) / (4200 - 2800))
 
 #define MAX_EVENTS		20
-/* 20 % trimp up */
-#define USB_TRIM_INX		7
-#define USB_DEF_TRIM_INX	1
 
 char *get_supply_type_str(int chrgr_type);
 static int icc_fcc;
@@ -264,8 +261,7 @@ static int bcmpmu_chrgr_config_tch_timer(struct bcmpmu_chrgr_data *di,
 	int ret;
 	struct bcmpmu59xxx *bcmpmu = di->bcmpmu;
 
-	BUG_ON((tch_base < TCH_HW_TIMER_3HR) ||
-			(tch_base > TCH_HW_TIMER_MAX));
+	BUG_ON(tch_base > TCH_HW_TIMER_MAX);
 
 	di->tch_base = tch_base;
 	di->tch_multiplier = tch_multiplier;
@@ -405,14 +401,17 @@ static int bcmpmu_chrgr_usb_set_property(struct power_supply *psy,
 	return ret;
 }
 
-int bcmpmu_set_chrgr_def_current(struct bcmpmu59xxx *bcmpmu,
-		enum bcmpmu_chrgr_type_t chrgr_type)
+int bcmpmu_set_chrgr_def_current(struct bcmpmu59xxx *bcmpmu)
 {
 	u32 curr;
+	int chrgr_type = PMU_CHRGR_TYPE_NONE;
 
-	if (!gbl_di)
+	if (!atomic_read(&drv_init_done))
 		return -EAGAIN;
 
+	bcmpmu_usb_get(bcmpmu,
+			BCMPMU_USB_CTRL_GET_CHRGR_TYPE, &chrgr_type);
+	pr_chrgr(FLOW, "%s: chrgr_type = %d\n", __func__, chrgr_type);
 	curr = gbl_di->chrgr_curr_tbl[chrgr_type];
 	bcmpmu_set_icc_fc(bcmpmu, curr);
 	return 0;
@@ -442,7 +441,7 @@ static int charger_event_handler(struct notifier_block *nb,
 			if (chrgr_type == PMU_CHRGR_TYPE_SDP)
 				bcmpmu->write_dev(bcmpmu,
 						PMU_REG_MBCCTRL20,
-						USB_TRIM_INX);
+						USB_TRIM_INX_20PER);
 			bcmpmu_chrgr_usb_en(bcmpmu, 1);
 			if ((get_supply_type_str(chrgr_type) != NULL) &&
 					(strcmp(get_supply_type_str(chrgr_type),
@@ -465,8 +464,7 @@ static int charger_event_handler(struct notifier_block *nb,
 				di->ac_chrgr_info.online = 0;
 				power_supply_changed(&di->ac_psy);
 			} else {
-				bcmpmu->write_dev(bcmpmu,
-					PMU_REG_MBCCTRL20, USB_DEF_TRIM_INX);
+				bcmpmu_restore_cc_trim_otp(bcmpmu);
 				di->usb_chrgr_info.online = 0 ;
 				power_supply_changed(&di->usb_psy);
 			}
@@ -513,6 +511,7 @@ static int charger_event_handler(struct notifier_block *nb,
 					usb_chrgr_err_dis);
 		pr_chrgr(FLOW,
 			"PMU HW Charging Error is cleared\n");
+		/* fall-through */
 	case PMU_ACCY_EVT_OUT_USBOV_DIS:
 		if (!di)
 			di = container_of(nb, struct bcmpmu_chrgr_data,
@@ -622,8 +621,12 @@ static int bcmpmu_chrgr_probe(struct platform_device *pdev)
 		atomic_set(&drv_init_done, 1);
 		return 0;
 	}
+
 	pdata = pdev->dev.platform_data;
-	if (pdata && pdata->chrgr_curr_lmt_tbl)
+	if (!pdata)
+		return -ENODEV;
+
+	if (pdata->chrgr_curr_lmt_tbl)
 		di->chrgr_curr_tbl = pdata->chrgr_curr_lmt_tbl;
 	else
 		di->chrgr_curr_tbl = chrgr_curr_lmt_default;

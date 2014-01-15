@@ -81,6 +81,7 @@ config BRCM_PROP_MODULES
 
 config BCM_STM
 	bool "Enable System Trace Module"
+	depends on STM_TRACE
 	default n
 	help
 	  Say Y if you want to enable the Broadcom System Trace Module
@@ -165,14 +166,6 @@ config KONA_CPU_FREQ_LIMITS
 	under /sys/power folder. CPU-freq max & min limits can be set/read
 	using these interfaces. Interace to read freq table and active freq
 	also get added if this config is enabled.
-
-config KONA_CPU_FREQ_ENABLE_OPP_SET_CHANGE
-	bool "Enable OPP set change to select a different OPP set"
-	depends on KONA_CPU_FREQ_DRV
-	default n
-	help
-	    Say Y to enable dynamic switching of OPP set. This will provide
-	    debugfs interface to switch OPP set dynamically.
 
 config KONA_POWER_MGR
        bool "Enable Kona power manager driver"
@@ -338,6 +331,12 @@ config KONA_PROFILER
 	default 0
 	help
 	  Say Y if you want to enable Kona profiling
+
+config KONA_CLK_TRACE
+	bool "Enable clk usage tracing to non-cached buffer"
+	default y
+	help
+	  Say Y if you want to enable clk usage counter tracing
 
 config KONA_USB_CONTROL
        bool "Support BCM USB wrapper framework"

@@ -66,6 +66,7 @@ typedef struct {
 	CSL_DSI_CM_VC_t *cmnd_mode;
 	CSL_DSI_CFG_t *dsi_cfg;
 	DISPDRV_INFO_T		*disp_info;
+	UInt8 maxRetPktSize;
 } DispDrv_PANEL_t;
 
 #if 0
@@ -157,7 +158,11 @@ CSL_DSI_CFG_t DispDrv_dsiCfg = {
 
 static struct regulator *disp_reg;
 
-static DispDrv_PANEL_t panel[1];
+static DispDrv_PANEL_t panel[1] = {
+	[0] = {
+		.pwrState = STATE_PWR_OFF,
+	},
+};
 
 /*###########################################################################*/
 
@@ -550,16 +555,16 @@ Int32 DSI_Init(DISPDRV_INFO_T *info, DISPDRV_HANDLE_T *handle)
 
 		pPanel->disp_info = info;
 		pPanel->isTE = info->vmode ? false : info->te_ctrl;
+		pPanel->maxRetPktSize = 0;
 
 		/* get TE pin configuration */
 		pPanel->teIn  =	TE_VC4L_IN_1_DSI0;
 		pPanel->teOut =	TE_VC4L_OUT_DSI0_TE0;
 
 		pPanel->drvState = DRV_STATE_INIT;
-		if (!g_display_enabled) {
-			pPanel->pwrState = STATE_PWR_OFF;
+		if (!g_display_enabled)
 			brcm_init_lcd_clocks(pPanel->busNo);
-		} else
+		else
 			pPanel->pwrState = STATE_SCREEN_ON;
 
 		*handle	= (DISPDRV_HANDLE_T)pPanel;
@@ -636,6 +641,11 @@ Int32 DSI_Open(DISPDRV_HANDLE_T drvH)
 		goto err_dsi_open_cl;
 	}
 
+	if (CSL_DSI_Ulps(pPanel->clientH, FALSE) != CSL_LCD_OK) {
+		DSI_ERR("Exit DSI Ulps Failed\n");
+		goto err_dsi_ulps;
+	}
+
 	if (CSL_DSI_OpenCmVc(pPanel->clientH,
 		pPanel->cmnd_mode, &pPanel->dsiCmVcHandle) != CSL_LCD_OK) {
 
@@ -673,7 +683,8 @@ Int32 DSI_Open(DISPDRV_HANDLE_T drvH)
 		goto err_gpio_request;
 	}
 
-	if (!g_display_enabled)
+	/* do hw_reset in power off state only */
+	if (STATE_PWR_OFF == pPanel->pwrState)
 		hw_reset(drvH, FALSE);
 
 	if (DSI_ReadPanelIDs(pPanel) < 0) {
@@ -701,6 +712,7 @@ err_reg_init:
 err_dma_init:
 	CSL_DSI_CloseCmVc(pPanel->dsiCmVcHandle);
 err_dsi_open_cm:
+err_dsi_ulps:
 	CSL_DSI_CloseClient(pPanel->clientH);
 err_dsi_open_cl:
 	CSL_DSI_Close(pPanel->busNo);
@@ -722,12 +734,19 @@ Int32 DSI_Close(DISPDRV_HANDLE_T drvH)
 {
 	Int32 res = 0;
 	DispDrv_PANEL_t	*pPanel	= (DispDrv_PANEL_t *)drvH;
+	DSI_ExecCmndList(pPanel, pPanel->disp_info->slp_in_seq);
 
+	pPanel->drvState = DRV_STATE_INIT;
 	if (pPanel->disp_info->vmode)
 		CSL_DSI_Suspend(pPanel->dsiCmVcHandle);
 
 	if (CSL_DSI_CloseCmVc(pPanel->dsiCmVcHandle)) {
 		DSI_ERR("Closing Command Mode Handle\n");
+		return -1;
+	}
+
+	if (CSL_DSI_Ulps(pPanel->clientH, TRUE) != CSL_LCD_OK)	{
+		DSI_ERR("ERR enter DSI Ulps\n");
 		return -1;
 	}
 
@@ -751,7 +770,6 @@ Int32 DSI_Close(DISPDRV_HANDLE_T drvH)
 
 	gpio_free(pPanel->disp_info->rst->gpio);
 
-	pPanel->pwrState = STATE_PWR_OFF;
 	pPanel->drvState = DRV_STATE_INIT;
 	DSI_INFO("OK\n");
 
@@ -782,6 +800,7 @@ void panel_read(UInt8 reg, UInt8 *rxBuff, UInt8 buffLen)
 	DSI_DCS_Read(panel, reg, rxBuff, buffLen);
 }
 
+DEFINE_MUTEX(cmnd_mutex);
 /*
  *
  *   Function Name:   DSI_ExecCmndList
@@ -794,7 +813,9 @@ static void DSI_ExecCmndList(DispDrv_PANEL_t *pPanel, char *buff)
 	CSL_DSI_CMND_t msg;
 	int res = 0;
 	Boolean generic;
-
+	/* To avoid race condition, when multiple
+	   threads try to execute send commands concurrently*/
+	mutex_lock(&cmnd_mutex);
 	msg.vc = pPanel->cmnd_mode->vc;
 	msg.isLP = pPanel->disp_info->cmnd_LP;
 	msg.endWithBta = FALSE;
@@ -841,13 +862,22 @@ static void DSI_ExecCmndList(DispDrv_PANEL_t *pPanel, char *buff)
 			msg.isLong = len > 2;
 			msg.msg = buff;
 			msg.msgLen = len;
+
+			if (panel[0].drvState != DRV_STATE_OPEN) {
+				pr_err("driver not in OPEN state\n");
+				__WARN();
+				goto err_state;
+			}
+
 			res = CSL_DSI_SendPacket(pPanel->clientH, &msg, FALSE);
 			buff += len;
 		}
 		if (res)
 			DSI_ERR("Error while sending packet %d\n", res);
 	}
+err_state:
 err_size:
+	mutex_unlock(&cmnd_mutex);
 	return;
 }
 
@@ -865,6 +895,10 @@ static Int32 DSI_SetMaxRtnPktSize(DISPDRV_HANDLE_T drvH, UInt8 size)
 	UInt8 txData[2];  /* DCS Rd Command */
 	Int32 res = 0;
 	CSL_LCD_RES_T cslRes;
+
+	if (size == pPanel->maxRetPktSize)
+		return 0;
+	DSI_INFO("%d\n", size);
 
 	txData[0] = size;
 	txData[1] = 0x0;
@@ -886,7 +920,9 @@ static Int32 DSI_SetMaxRtnPktSize(DISPDRV_HANDLE_T drvH, UInt8 size)
 			"[DISPDRV]:	ERR: Setting Max. Return Packet Size [0x%02X]\n\r"
 			, DSI_DT_SH_MAX_RET_PKT_SIZE);
 		res = -1;
-	}
+	} else
+		pPanel->maxRetPktSize = size;
+
 	return res;
 }
 
@@ -1014,6 +1050,7 @@ Int32 DSI_PowerControl(
 		case STATE_SCREEN_OFF:
 			DSI_ExecCmndList(pPanel, info->slp_in_seq);
 			pPanel->pwrState = STATE_SLEEP;
+			DSI_INFO("SLEEP-IN\n");
 			break;
 		default:
 			DSI_ERR("SLEEP Req, But Not In DISP ON|OFF State\n");

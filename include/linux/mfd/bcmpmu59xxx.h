@@ -29,6 +29,8 @@
 #include <linux/regulator/machine.h>
 #include <linux/i2c-kona.h>
 #include <linux/sort.h>
+#include <linux/reboot.h>
+#include <linux/mfd/bcmpmu59xxx_reg.h>
 
 #define BCMPMU_DUMMY_CLIENTS 1
 #define REG_READ_COUNT_MAX	20
@@ -85,6 +87,10 @@
 #define PMU_DCP_DEF_CURR_LMT	700
 #define PMU_MAX_CC_CURR		2200
 #define PMU_OTP_CC_TRIM		0x1F
+/* 20 % trimp up */
+#define USB_TRIM_INX_20PER	7
+#define USB_TRIM_INX_24PER	8
+#define USB_DEF_TRIM_INX	1
 #define PMU_TYP_SAT_CURR	1600 /*mA*/
 
 /*helper macros to manage regulator PC pin map*/
@@ -401,6 +407,7 @@ struct bcmpmu_acld_pdata {
 	int acld_vbus_margin;
 	int acld_vbus_thrs;
 	int acld_vbat_thrs;
+	int usbrm_vbus_thrs;
 	int i_sat;
 	int i_def_dcp; /* Default DCP current */
 	int i_max_cc;
@@ -411,6 +418,7 @@ struct bcmpmu_acld_pdata {
 	int acld_chrgrs_list_size;
 	bool qa_required; /* Set this to true if
 			     Ibus is strictly limited to acld_cc_lmt */
+
 };
 
 enum bcmpmu_chrgr_fc_curr_t {
@@ -990,7 +998,8 @@ static inline int interquartile_mean(int *data, int num)
 
 
 int bcmpmu_get_pmu_mfd_cell(struct mfd_cell **);
-
+void bcmpmu_restore_cc_trim_otp(struct bcmpmu59xxx *bcmpmu);
+void bcmpmu_store_cc_trim_otp(struct bcmpmu59xxx *bcmpmu);
 struct bcmpmu59xxx_regulator_info *
 bcmpmu59xxx_get_rgltr_info(struct bcmpmu59xxx *bcmpmu);
 
@@ -1027,14 +1036,15 @@ int bcmpmu_set_cc_trim(struct bcmpmu59xxx *bcmpmu, int cc_trim);
 int bcmpmu_cc_trim_up(struct bcmpmu59xxx *bcmpmu);
 int bcmpmu_cc_trim_down(struct bcmpmu59xxx *bcmpmu);
 bool bcmpmu_get_mbc_faults(struct bcmpmu59xxx *bcmpmu);
-int  bcmpmu_get_trim_curr(struct bcmpmu59xxx *bcmpmu);
-int bcmpmu_set_chrgr_def_current(struct bcmpmu59xxx *bcmpmu,
-		enum bcmpmu_chrgr_type_t chrgr_type);
+int bcmpmu_get_trim_curr(struct bcmpmu59xxx *bcmpmu, int add);
+int bcmpmu_get_cc_trim(struct bcmpmu59xxx *bcmpmu);
+int bcmpmu_get_next_trim_curr(struct bcmpmu59xxx *bcmpmu, int add);
+int bcmpmu_set_chrgr_def_current(struct bcmpmu59xxx *bcmpmu);
 
 bool bcmpmu_is_acld_enabled(struct bcmpmu59xxx *bcmpmu);
-
 bool bcmpmu_is_acld_supported(struct bcmpmu59xxx *bcmpmu,
 		enum bcmpmu_chrgr_type_t chrgr_type);
+bool bcmpmu_acld_false_usbrm(struct bcmpmu59xxx *bcmpmu);
 /* ADC */
 int bcmpmu_adc_read(struct bcmpmu59xxx *bcmpmu, enum bcmpmu_adc_channel channel,
 		enum bcmpmu_adc_req req, struct bcmpmu_adc_result *result);
@@ -1065,6 +1075,17 @@ static inline int bcmpmu_post_spa_event(struct bcmpmu59xxx *bcmpmu,
 #endif /*CONFIG_CHARGER_BCMPMU_SPA*/
 #ifdef CONFIG_DEBUG_FS
 int bcmpmu_debugfs_open(struct inode *inode, struct file *file);
+#endif
+
+#if defined(CONFIG_MFD_BCM_PWRMGR_SW_SEQUENCER)
+static inline u8 bcmpmu_get_slaveid(struct bcmpmu59xxx *bcmpmu, u32 reg)
+{
+	u8 map = DEC_MAP_ADD(reg);
+	if (map)
+		return bcmpmu->pdata->i2c_companion_info[map - 1].addr;
+	else
+		return bcmpmu->pmu_bus->i2c->addr;
+}
 #endif
 
 #endif

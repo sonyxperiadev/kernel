@@ -51,7 +51,6 @@
 struct pm_info {
 	int keep_xtl_on;
 	int clk_dbg_dsm;
-	int wfi_syspll_cnt;
 	int force_sleep;
 	u32 dormant_enable;
 	u32 log_mask;
@@ -63,7 +62,6 @@ struct pm_info {
 static struct pm_info pm_info = {
 	.keep_xtl_on = 0,
 	.clk_dbg_dsm = 0,
-	.wfi_syspll_cnt = 0,
 	.force_sleep = 0,
 	.dormant_enable = 0x0, /* Enable dormant for all 4 cores */
 	.log_mask = 0,
@@ -71,8 +69,6 @@ static struct pm_info pm_info = {
 
 module_param_named(keep_xtl_on, pm_info.keep_xtl_on, int,
 	S_IRUGO|S_IWUSR|S_IWGRP);
-module_param_named(wfi_syspll_cnt, pm_info.wfi_syspll_cnt, int,
-	S_IRUGO | S_IWGRP);
 /**
  * Run time flag to debug the Rhea clocks preventing deepsleep
  */
@@ -111,27 +107,16 @@ static int timer_ch1_ch0_event, timer_ch3_ch2_event;
 static struct kona_idle_state idle_states[] = {
 	{
 		.name = "C1",
-		.desc = "suspend",
+		.desc = "standby",
 		.flags = CPUIDLE_FLAG_TIME_VALID,
 		.latency = EXIT_LAT_SIMPLE_WFI,
 		.target_residency = TRGT_RESI_SIMPLE_WFI,
 		.state = CSTATE_SIMPLE_WFI,
 		.enter = enter_wfi_state,
 	},
-#ifdef CONFIG_CPU_SYSPLL_WFI_CSTATE
-	{
-		.name = "C2",
-		.desc = "wfi_syspll", /*syspll WFI*/
-		.flags = CPUIDLE_FLAG_TIME_VALID,
-		.latency = EXIT_LAT_SYSPLL_WFI,
-		.target_residency = TRGT_RESI_SYSPLL_WFI,
-		.state = CSTATE_SYSPLL_WFI,
-		.enter = enter_wfi_state,
-	},
-#endif
 #ifdef CONFIG_DORMANT_MODE
 	{
-		.name = "C3",
+		.name = "C2",
 		.desc = "core-drmnt", /* core dormant - cluster ON*/
 		.flags = CPUIDLE_FLAG_TIME_VALID,
 		.params = CTRL_PARAMS_CLUSTER_ACTIVE,
@@ -141,8 +126,8 @@ static struct kona_idle_state idle_states[] = {
 		.enter = enter_drmt_state,
 	},
 	{
-		.name = "C4",
-		.desc = "suspnd-drmnt", /* suspennd-dormant(XTAL ON) */
+		.name = "C3",
+		.desc = "cluster-drmnt", /* cluster-dormant(XTAL ON) */
 		.flags = CPUIDLE_FLAG_TIME_VALID,
 		.params = CTRL_PARAMS_FLAG_XTAL_ON,
 		.latency = EXIT_LAT_SUSPEND_DRMT,
@@ -150,8 +135,8 @@ static struct kona_idle_state idle_states[] = {
 		.state = CSTATE_SUSPEND_DRMT,
 		.enter = enter_drmt_state,
 	},
-		{
-		.name = "C5",
+	{
+		.name = "C4",
 		.desc = "ds-drmnt", /* deepsleep-dormant(XTAL OFF) */
 		.flags = CPUIDLE_FLAG_TIME_VALID,
 #ifdef CONFIG_DSM_IN_SUSPEND_ONLY
@@ -162,9 +147,7 @@ static struct kona_idle_state idle_states[] = {
 		.state = CSTATE_DS_DRMT,
 		.enter = enter_drmt_state,
 	},
-
 #endif
-
 };
 
 
@@ -216,67 +199,7 @@ ret:
 
 int enter_wfi_state(struct kona_idle_state *state, u32 ctrl_params)
 {
-#ifdef CONFIG_CPU_SYSPLL_WFI_CSTATE
-	static u32 freq_id = 0xFFFF;
-#endif
-
-#ifdef CONFIG_CPU_SYSPLL_WFI_CSTATE
-	if (state->state == CSTATE_SYSPLL_WFI) {
-		struct opp_info opp_info;
-		spin_lock(&pm_info.lock);
-		opp_info.ctrl_prms = CCU_POLICY_FREQ_REG_INIT;
-		opp_info.freq_id = CPU_FREQ_ID_SYSPLL_WFI;
-		state->num_cpu_in_state++;
-		BUG_ON(state->num_cpu_in_state > CONFIG_NR_CPUS);
-		instrument_lpm(LPM_TRACE_ENTER_SYSPLL_WFI,
-				(u16)state->num_cpu_in_state);
-
-		if (state->num_cpu_in_state == CONFIG_NR_CPUS) {
-			pm_info.wfi_syspll_cnt++;
-			freq_id = ccu_get_freq_policy(pm_info.proc_ccu,
-				CCU_POLICY(PM_DFS));
-			ccu_set_freq_policy(pm_info.proc_ccu,
-				CCU_POLICY(PM_DFS), &opp_info);
-			instrument_lpm(LPM_TRACE_SYSPLL_WFI_SET_FREQ,
-				(u16)freq_id);
-
-
-		}
-		spin_unlock(&pm_info.lock);
-	} else {
-		instrument_lpm(LPM_TRACE_ENTER_WFI, 0);
-	}
-#endif /*CONFIG_CPU_SYSPLL_WFI_CSTATE*/
-
 	enter_wfi();
-
-#ifdef CONFIG_CPU_SYSPLL_WFI_CSTATE
-	if (state->state == CSTATE_SYSPLL_WFI) {
-		struct opp_info opp_info;
-		spin_lock(&pm_info.lock);
-		opp_info.ctrl_prms = CCU_POLICY_FREQ_REG_INIT;
-		BUG_ON(state->num_cpu_in_state == 0);
-		instrument_lpm(LPM_TRACE_EXIT_SYSPLL_WFI,
-				(u16)state->num_cpu_in_state);
-
-		if (state->num_cpu_in_state == CONFIG_NR_CPUS) {
-			BUG_ON(freq_id == 0xFFFF);
-			opp_info.freq_id = freq_id;
-			ccu_set_freq_policy(pm_info.proc_ccu,
-				CCU_POLICY(PM_DFS), &opp_info);
-			instrument_lpm(LPM_TRACE_SYSPLL_WFI_RES_FREQ,
-				(u16)freq_id);
-
-			freq_id = 0xFFFF;
-		}
-		state->num_cpu_in_state--;
-		spin_unlock(&pm_info.lock);
-	} else {
-		instrument_lpm(LPM_TRACE_EXIT_WFI, 0);
-	}
-
-#endif /*CONFIG_CPU_SYSPLL_WFI_CSTATE*/
-
 	return -1;
 }
 
@@ -305,33 +228,6 @@ int __enter_drmt(u32 ctrl_params)
 #endif /* CONFIG_DORMANT_MODE */
 	return 0;
 }
-
-int disable_all_interrupts(void)
-{
-#if 0
-	if (pm_info.force_sleep) {
-		writel(0xFFFFFFFF, KONA_GICDIST_VA +
-				GICDIST_ENABLE_CLR1_OFFSET);
-		writel(0xFFFFFFFF, KONA_GICDIST_VA +
-				GICDIST_ENABLE_CLR2_OFFSET);
-		writel(0xFFFFFFFF, KONA_GICDIST_VA +
-				GICDIST_ENABLE_CLR3_OFFSET);
-		writel(0xFFFFFFFF, KONA_GICDIST_VA +
-				GICDIST_ENABLE_CLR4_OFFSET);
-		writel(0xFFFFFFFF, KONA_GICDIST_VA +
-				GICDIST_ENABLE_CLR5_OFFSET);
-		writel(0xFFFFFFFF, KONA_GICDIST_VA +
-				GICDIST_ENABLE_CLR6_OFFSET);
-		writel(0xFFFFFFFF, KONA_GICDIST_VA +
-				GICDIST_ENABLE_CLR7_OFFSET);
-	}
-#endif
-	return 0;
-}
-
-
-
-
 
 int force_sleep(suspend_state_t state)
 {
@@ -365,8 +261,6 @@ int force_sleep(suspend_state_t state)
 			if (test == 0)
 				pwr_mgr_event_trg_enable(i, 0);
 		}
-		disable_all_interrupts();
-
 		enter_drmt_state(&s, s.params);
 	}
 }
@@ -408,9 +302,7 @@ static void enable_system_timer_interrupts(void)
 int enter_drmt_state(struct kona_idle_state *state, u32 ctrl_params)
 {
 	struct pi *pi = NULL;
-	u32 gic_mem_base;
 	int trigger_type_ch1_ch0, trigger_type_ch3_ch2;
-	int cpu;
 
 	BUG_ON(!state);
 
@@ -435,7 +327,7 @@ int enter_drmt_state(struct kona_idle_state *state, u32 ctrl_params)
 	BUG_ON(pi == NULL);
 	pi_enable(pi, 0);
 
-	if (pm_info.clk_dbg_dsm)
+	if (unlikely(pm_info.clk_dbg_dsm))
 		if (ctrl_params & CTRL_PARAMS_ENTER_SUSPEND) {
 			__clock_print_act_clks();
 			pi_mgr_print_active_pis();
@@ -445,7 +337,7 @@ int enter_drmt_state(struct kona_idle_state *state, u32 ctrl_params)
 
 	/* Saving and disabling the trigger type and disabling the system
 	 * timer interrupts. */
-	if (ctrl_params & CTRL_PARAMS_ENTER_SUSPEND) {
+	if (unlikely(ctrl_params & CTRL_PARAMS_ENTER_SUSPEND)) {
 		disable_system_timer_interrupts();
 
 		trigger_type_ch1_ch0 =
@@ -459,9 +351,18 @@ int enter_drmt_state(struct kona_idle_state *state, u32 ctrl_params)
 
 	__enter_drmt(ctrl_params);
 
+	if (unlikely(pm_info.clk_dbg_dsm)) {
+		if (ctrl_params & CTRL_PARAMS_ENTER_SUSPEND ||
+			(pm_info.log_mask & LOG_IDLE_INTR)) {
+			pr_info("Active Events at wakeup\n");
+			pm_log_wakeup_intr();
+			pwr_mgr_log_active_events();
+		}
+	}
+
 	/* Restoring the trigger type and enabling the system timer
 	 * interrupts. */
-	if (ctrl_params & CTRL_PARAMS_ENTER_SUSPEND) {
+	if (unlikely(ctrl_params & CTRL_PARAMS_ENTER_SUSPEND)) {
 		pwr_mgr_event_trg_enable(timer_ch1_ch0_event,
 						trigger_type_ch1_ch0);
 		pwr_mgr_event_trg_enable(timer_ch3_ch2_event,
@@ -479,15 +380,6 @@ int enter_drmt_state(struct kona_idle_state *state, u32 ctrl_params)
 	pwr_mgr_process_events(LCDTE_EVENT, KEY_R7_EVENT, false);
 	pwr_mgr_process_events(MISC_WKP_EVENT, BRIDGE_TO_MODEM_EVENT, false);
 	pwr_mgr_process_events(USBOTG_EVENT, PHY_RESUME_EVENT, false);
-
-	if (pm_info.clk_dbg_dsm) {
-		if (ctrl_params & CTRL_PARAMS_ENTER_SUSPEND ||
-			(pm_info.log_mask & LOG_IDLE_INTR)) {
-			pr_info("Active Events at wakeup\n");
-			pm_log_wakeup_intr();
-			pwr_mgr_log_active_events();
-		}
-	}
 
 	if (ctrl_params & CTRL_PARAMS_FLAG_XTAL_ON || pm_info.keep_xtl_on)
 		clk_set_crystal_pwr_on_idle(true);
@@ -575,8 +467,14 @@ static int dormant_enable_set(void *data, u64 val)
 	return 0;
 }
 
-DEFINE_SIMPLE_ATTRIBUTE(dormant_enable_fops, NULL, dormant_enable_set,
-			"%llu\n");
+static int dormant_enable_get(void *data, u64 *val)
+{
+	*val = pm_info.dormant_enable;
+	return 0;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(dormant_enable_fops, dormant_enable_get,
+		 dormant_enable_set, "%llu\n");
 
 static struct dentry *dent_pm_root_dir;
 int __init __pm_debug_init(void)

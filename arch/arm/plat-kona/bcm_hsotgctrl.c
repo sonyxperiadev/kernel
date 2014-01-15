@@ -17,6 +17,7 @@
 #include <linux/init.h>
 #include <linux/stat.h>
 #include <linux/platform_device.h>
+#include <linux/atomic.h>
 #include <linux/delay.h>
 #include <linux/sched.h>
 #include <linux/err.h>
@@ -29,10 +30,13 @@
 #include <mach/rdb/brcm_rdb_hsotg_ctrl.h>
 #include <mach/rdb/brcm_rdb_khub_clk_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_chipreg.h>
+#include <mach/memory.h>
 #include <plat/pi_mgr.h>
 #include <plat/clock.h>
 #include <linux/usb/bcm_hsotgctrl.h>
 #include <linux/usb/bcm_hsotgctrl_phy_mdio.h>
+#include <linux/of.h>
+#include <linux/of_platform.h>
 
 #define	PHY_MODE_OTG		2
 #define BCCFG_SW_OVERWRITE_KEY 0x55560000
@@ -63,7 +67,7 @@ struct bcm_hsotgctrl_drv_data {
 	struct delayed_work wakeup_work;
 	int hsotgctrl_irq;
 	bool irq_enabled;
-	bool allow_suspend;
+	atomic_t no_suspend_count;
 	send_core_event_cb_t wakeup_core_cb;
 	void *wakeup_arg;
 };
@@ -77,14 +81,12 @@ static ssize_t dump_hsotgctrl(struct device *dev,
 {
 	struct bcm_hsotgctrl_drv_data *hsotgctrl_drvdata = dev_get_drvdata(dev);
 	void __iomem *hsotg_ctrl_base = hsotgctrl_drvdata->hsotg_ctrl_base;
-	int clk_cnt = clk_get_usage(hsotgctrl_drvdata->otg_clk);
 
 	/* This could be done after USB is unplugged
 	 * Turn on AHB clock so registers
 	 * can be read even when USB is unplugged
 	 */
-	if (!clk_cnt)
-		bcm_hsotgctrl_en_clock(true);
+	bcm_hsotgctrl_en_clock(true);
 
 	pr_info("\nusbotgcontrol: 0x%08X",
 		readl(hsotg_ctrl_base +
@@ -118,8 +120,7 @@ static ssize_t dump_hsotgctrl(struct device *dev,
 		    HSOTG_CTRL_USBPROBEN_OFFSET));
 
 	/* We turned on the clock so turn it off */
-	if (!clk_cnt)
-		bcm_hsotgctrl_en_clock(false);
+	bcm_hsotgctrl_en_clock(false);
 
 	return scnprintf(buf, PAGE_SIZE, "hsotgctrl register dump\n");
 }
@@ -136,16 +137,13 @@ int bcm_hsotgctrl_en_clock(bool on)
 		return -EIO;
 
 	if (on) {
-		bcm_hsotgctrl_handle->allow_suspend = false;
-		pr_info("hsotgctrl_clk=on, clk_usage=%d\n",
-			clk_get_usage(bcm_hsotgctrl_handle->otg_clk));
-		if (!clk_get_usage(bcm_hsotgctrl_handle->otg_clk))
-			rc = clk_enable(bcm_hsotgctrl_handle->otg_clk);
+		atomic_inc(&bcm_hsotgctrl_handle->no_suspend_count);
+		pr_info("hsotgctrl_clk=on\n");
+		rc = clk_enable(bcm_hsotgctrl_handle->otg_clk);
 	} else {
-		pr_info("hsotgctrl_clk=off, clk_usage=%d\n",
-			clk_get_usage(bcm_hsotgctrl_handle->otg_clk));
+		pr_info("hsotgctrl_clk=off\n");
 		clk_disable(bcm_hsotgctrl_handle->otg_clk);
-		bcm_hsotgctrl_handle->allow_suspend = true;
+		atomic_dec(&bcm_hsotgctrl_handle->no_suspend_count);
 	}
 
 	if (rc)
@@ -303,7 +301,6 @@ int bcm_hsotgctrl_bc_reset(void)
 	int val;
 	struct bcm_hsotgctrl_drv_data *bcm_hsotgctrl_handle =
 		local_hsotgctrl_handle;
-	int clk_cnt ;
 
 	if (NULL == local_hsotgctrl_handle)
 		return -ENODEV;
@@ -311,9 +308,7 @@ int bcm_hsotgctrl_bc_reset(void)
 	if (!bcm_hsotgctrl_handle->dev)
 		return -EIO;
 
-	clk_cnt = clk_get_usage(bcm_hsotgctrl_handle->otg_clk);
-	if (!clk_cnt)
-		bcm_hsotgctrl_en_clock(true);
+	bcm_hsotgctrl_en_clock(true);
 
 	val = readl(bcm_hsotgctrl_handle->hsotg_ctrl_base +
 			HSOTG_CTRL_BC_CFG_OFFSET);
@@ -347,8 +342,7 @@ int bcm_hsotgctrl_bc_reset(void)
 
 	val = readl(bcm_hsotgctrl_handle->hsotg_ctrl_base +
 			HSOTG_CTRL_BC_CFG_OFFSET);
-	if (!clk_cnt)
-		bcm_hsotgctrl_en_clock(false);
+	bcm_hsotgctrl_en_clock(false);
 	return 0;
 }
 EXPORT_SYMBOL_GPL(bcm_hsotgctrl_bc_reset);
@@ -358,15 +352,13 @@ int bcm_hsotgctrl_bc_enable_sw_ovwr(void)
 	int val;
 	struct bcm_hsotgctrl_drv_data *bcm_hsotgctrl_handle =
 		local_hsotgctrl_handle;
-	int clk_cnt = clk_get_usage(bcm_hsotgctrl_handle->otg_clk);
 
 	if (NULL == local_hsotgctrl_handle) {
 		dev_warn(bcm_hsotgctrl_handle->dev,
 		  "%s: error invalid handle\n", __func__);
 		return -ENODEV;
 	}
-	if (!clk_cnt)
-		bcm_hsotgctrl_en_clock(true);
+	bcm_hsotgctrl_en_clock(true);
 
 	val = readl(bcm_hsotgctrl_handle->hsotg_ctrl_base +
 			HSOTG_CTRL_BC_CFG_OFFSET);
@@ -385,8 +377,7 @@ int bcm_hsotgctrl_bc_enable_sw_ovwr(void)
 
 	msleep_interruptible(BC_CONFIG_DELAY_MS);
 
-	if (!clk_cnt)
-		bcm_hsotgctrl_en_clock(false);
+	bcm_hsotgctrl_en_clock(false);
 	return 0;
 }
 EXPORT_SYMBOL_GPL(bcm_hsotgctrl_bc_enable_sw_ovwr);
@@ -395,7 +386,6 @@ EXPORT_SYMBOL_GPL(bcm_hsotgctrl_bc_enable_sw_ovwr);
 int bcm_hsotgctrl_bc_status(unsigned long *status)
 {
 	unsigned int val;
-	int clk_cnt;
 	struct bcm_hsotgctrl_drv_data *bcm_hsotgctrl_handle =
 		local_hsotgctrl_handle;
 
@@ -405,8 +395,6 @@ int bcm_hsotgctrl_bc_status(unsigned long *status)
 	if ((!bcm_hsotgctrl_handle->dev) || !status)
 		return -EIO;
 
-	clk_cnt = clk_get_usage(bcm_hsotgctrl_handle->otg_clk);
-	dev_info(bcm_hsotgctrl_handle->dev, "clk cnt %d\n", clk_cnt);
 	val = readl(bcm_hsotgctrl_handle->hsotg_ctrl_base +
 			HSOTG_CTRL_BC_STATUS_OFFSET);
 	*status = val;
@@ -459,9 +447,6 @@ EXPORT_SYMBOL_GPL(bcm_hsotgctrl_bc_vdp_src_off);
 
 void bcm_hsotgctrl_wakeup_core(void)
 {
-	struct bcm_hsotgctrl_drv_data *bcm_hsotgctrl_handle =
-		local_hsotgctrl_handle;
-
 	if (NULL == local_hsotgctrl_handle)
 		return;
 
@@ -623,8 +608,67 @@ static int bcm_hsotgctrl_probe(struct platform_device *pdev)
 	int error = 0;
 	unsigned int val;
 	struct bcm_hsotgctrl_drv_data *hsotgctrl_drvdata;
-	struct bcm_hsotgctrl_platform_data *plat_data =
-	  (struct bcm_hsotgctrl_platform_data *)pdev->dev.platform_data;
+	struct bcm_hsotgctrl_platform_data *plat_data = NULL;
+
+	if (pdev->dev.platform_data)
+		plat_data = (struct bcm_hsotgctrl_platform_data *)
+			pdev->dev.platform_data;
+	else if (pdev->dev.of_node) {
+		int val;
+		struct resource *resource;
+
+		plat_data = kzalloc(sizeof(struct bcm_hsotgctrl_platform_data),
+				GFP_KERNEL);
+		if (!plat_data) {
+			dev_err(&pdev->dev,
+				"%s: memory allocation failed.", __func__);
+			error = -ENOMEM;
+			goto err_ret;
+		}
+
+		resource = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+		if (resource->start)
+			plat_data->hsotgctrl_virtual_mem_base =
+				HW_IO_PHYS_TO_VIRT(resource->start);
+		else {
+			pr_info("Invalid hsotgctrl_virtual_mem_basei from DT\n");
+			goto err_read;
+		}
+
+
+		if (of_property_read_u32(pdev->dev.of_node,
+				"chipreg-virtual-mem-base", &val)) {
+			error = -EINVAL;
+			dev_err(&pdev->dev, "chipreg-virtual-mem-base read failed\n");
+			goto err_read;
+		}
+		plat_data->chipreg_virtual_mem_base = HW_IO_PHYS_TO_VIRT(val);
+
+		resource = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
+		if (resource->start)
+			plat_data->irq = resource->start;
+		else {
+			pr_info("Invalid irq from DT\n");
+			goto err_read;
+		}
+
+		if (of_property_read_string(pdev->dev.of_node,
+				"usb-ahb-clk-name",
+			&plat_data->usb_ahb_clk_name) != 0) {
+			error = -EINVAL;
+			dev_err(&pdev->dev, "usb-ahb-clk-name read failed\n");
+			goto err_read;
+		}
+
+		if (of_property_read_string(pdev->dev.of_node,
+				"mdio-mstr-clk-name",
+			&plat_data->mdio_mstr_clk_name) != 0) {
+			error = -EINVAL;
+			dev_err(&pdev->dev, "mdio-mstr-clk-name read failed\n");
+			goto err_read;
+		}
+	}
+
 
 	if (plat_data == NULL) {
 		dev_err(&pdev->dev, "platform_data failed\n");
@@ -674,7 +718,6 @@ static int bcm_hsotgctrl_probe(struct platform_device *pdev)
 		goto error_get_master_clk;
 	}
 
-	hsotgctrl_drvdata->allow_suspend = true;
 	platform_set_drvdata(pdev, hsotgctrl_drvdata);
 
 	mdelay(HSOTGCTRL_STEP_DELAY_IN_MS);
@@ -799,6 +842,11 @@ error_get_master_clk:
 error_get_otg_clk:
 error_get_vaddr:
 	kfree(hsotgctrl_drvdata);
+err_read:
+	if (pdev->dev.of_node)
+		kfree(plat_data);
+err_ret:
+	pr_err("%s probe failed\n", __func__);
 	return error;
 }
 
@@ -825,32 +873,32 @@ static int bcm_hsotgctrl_remove(struct platform_device *pdev)
 static int bcm_hsotgctrl_pm_suspend(struct platform_device *pdev,
 	pm_message_t state)
 {
-	int status = 0;
+	int status = -EBUSY;
 	struct bcm_hsotgctrl_drv_data *bcm_hsotgctrl_handle =
 		local_hsotgctrl_handle;
 
-	if (bcm_hsotgctrl_handle && bcm_hsotgctrl_handle->allow_suspend)
+	if (bcm_hsotgctrl_handle &&
+	    (atomic_read(&bcm_hsotgctrl_handle->no_suspend_count) == 0))
 		status = 0;
-	else
-		status = -EBUSY;
 
 	return status;
 }
 
-static int bcm_hsotgctrl_pm_resume(struct platform_device *pdev)
-{
-	return 0;
+static const struct of_device_id usb_hsotgctrl_of_match[] = {
+	{.compatible = "bcm,usb-hsotgctrl",},
+	{},
 }
+MODULE_DEVICE_TABLE(of, usb_hsotgctrl_of_match);
 
 static struct platform_driver bcm_hsotgctrl_driver = {
 	.driver = {
 		   .name = "bcm_hsotgctrl",
 		   .owner = THIS_MODULE,
+		.of_match_table = usb_hsotgctrl_of_match,
 	},
 	.probe = bcm_hsotgctrl_probe,
 	.remove = bcm_hsotgctrl_remove,
 	.suspend = bcm_hsotgctrl_pm_suspend,
-	.resume = bcm_hsotgctrl_pm_resume,
 };
 
 static int __init bcm_hsotgctrl_init(void)
@@ -1219,19 +1267,14 @@ EXPORT_SYMBOL_GPL(bcm_hsotgctrl_phy_wakeup_condition);
 
 int bcm_hsotgctrl_is_suspend_allowed(bool *suspend_allowed)
 {
-	if ((NULL != local_hsotgctrl_handle) &&
-		    suspend_allowed) {
-		/* Return the status */
-		*suspend_allowed = local_hsotgctrl_handle->allow_suspend;
-		pr_info("bcm_hsotgctrl_is_suspend_allowed: %d\n",
-			local_hsotgctrl_handle->allow_suspend);
-	} else {
-		/* No device handle */
+	if (!local_hsotgctrl_handle || !suspend_allowed)
 		return -ENODEV;
-	}
+
+	/* Return the status */
+	*suspend_allowed = !atomic_read(&local_hsotgctrl_handle->no_suspend_count);
+	pr_info("bcm_hsotgctrl_is_suspend_allowed: %d\n", *suspend_allowed);
 
 	return 0;
-
 }
 EXPORT_SYMBOL_GPL(bcm_hsotgctrl_is_suspend_allowed);
 

@@ -95,6 +95,10 @@ ifeq ($(CONFIG_BCM4330),m)
 EXTRA_LDFLAGS += --strip-debug
 endif
 
+ifeq ($(CONFIG_TARGET_LOCALE_CHN),y)
+  DHDCFLAGS += -DBCMWAPI_WPI -DBCMWAPI_WAI
+endif
+
 all:
 	@echo "$(MAKE) --no-print-directory -C $(KDIR) SUBDIRS=$(CURDIR) modules"
 	@$(MAKE) --no-print-directory -C $(KDIR) SUBDIRS=$(CURDIR) modules

@@ -47,6 +47,7 @@
 #include <linux/of.h>
 #include <linux/of_fdt.h>
 #include <linux/of_platform.h>
+#include <linux/of_gpio.h>
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
 #include <linux/earlysuspend.h>
@@ -1616,10 +1617,13 @@ static int taos_probe(struct i2c_client *clientp,
 			if (ret)
 				goto err_read;
 			taos_cfgp->prox_win_sw = val;
-			ret = of_property_read_u32(np,
-				"gpio-irq-pin", &val);
-			if (ret)
+			val = of_get_named_gpio(np, "gpio-irq-pin", 0);
+			if (!gpio_is_valid(val)) {
+				dev_err(&clientp->dev,
+				"%s: ERROR Invalid gpio-irq-pin\n",
+				__func__);
 				goto err_read;
+			}
 #ifdef TMD2771_USER_CALIBRATION
 		ret = of_property_read_u32(np,
 			"prox_offset_param", &val);

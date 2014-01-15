@@ -355,8 +355,12 @@ static void AUDDRV_HW_SetFilter(AUDDRV_HWCTRL_FILTER_e filter,
 				       void *coeff);
 static void AUDDRV_HW_EnableSideTone(AudioMode_t audio_mode);
 static void AUDDRV_HW_DisableSideTone(AudioMode_t audio_mode);
+
+#ifdef CONFIG_BCM_MODEM
 static void AP_ProcessAudioEnableDone(UInt16 enabled_path);
 static void AP_ProcessArm2spHqDLInitDone(void);
+#endif
+
 /*=============================================================================
 // Functions
 //=============================================================================
@@ -879,7 +883,9 @@ void AUDDRV_DisableDSPOutput(void)
 void AUDDRV_EnableDSPInput(AUDIO_SOURCE_Enum_t source,
 			   AUDIO_SAMPLING_RATE_t sample_rate)
 {
+#if defined(ENABLE_DMA_VOICE)
 	UInt16 dma_mic_spk;
+#endif
 	UInt32 flag16k = 0;
 
 	aTrace(LOG_AUDIO_DRIVER,  "%s source %d voiceRecOn %d, ulPath %d\n",
@@ -891,8 +897,10 @@ void AUDDRV_EnableDSPInput(AUDIO_SOURCE_Enum_t source,
 	/*only in non-call mode, tell DSP to start UL*/
 	if (telephonyPathID.ulPathID)
 		return;
-#if defined(ENABLE_DMA_VOICE)
+
+#ifdef CONFIG_BCM_MODEM
 	csl_dsp_caph_control_aadmac_set_samp_rate(sample_rate);
+
 #endif
 	if (sample_rate == AUDIO_SAMPLING_RATE_16000)
 		flag16k = 1;
@@ -938,7 +946,9 @@ For now, when voice record is started, UMUTE UL command will be sent */
 */
 void AUDDRV_DisableDSPInput(int stop)
 {
+#if defined(ENABLE_DMA_VOICE)
 	UInt16 dma_mic_spk;
+#endif
 
 	aTrace(LOG_AUDIO_DRIVER,  "%s stop %d, voiceRecOn %d, ulPath %d\n",
 		__func__, stop, voiceRecOn, telephonyPathID.ulPathID);
@@ -1037,7 +1047,10 @@ void AUDDRV_SetAudioMode(AudioMode_t audio_mode, AudioApp_t audio_app,
 
 	sp_struct.mode = audio_mode;
 	sp_struct.app = audio_app;
-	sp_struct.pathID = dlPathID;
+	if (AUDCTRL_InVoiceCall())
+		sp_struct.pathID = telephonyPathID.dlPathID;
+	else
+		sp_struct.pathID = dlPathID;
 	sp_struct.inHWlpbk = FALSE;
 	sp_struct.mixInGain_mB = GAIN_SYSPARM;
 	sp_struct.mixInGainR_mB = GAIN_SYSPARM;
@@ -1045,6 +1058,88 @@ void AUDDRV_SetAudioMode(AudioMode_t audio_mode, AudioApp_t audio_app,
 	sp_struct.mixOutGainR_mB = GAIN_SYSPARM;
 	AUDDRV_SetAudioMode_Speaker(sp_struct);
 }
+
+/*=============================================================================
+//
+// Function Name: AUDDRV_SetAudioModeBT
+//
+// Description:   set audio mode for BT voice call. The mode and app is set
+// based on the BT device paired with the DUT.
+//
+//=============================================================================
+*/
+void AUDDRV_SetAudioModeBT(AudioMode_t audio_mode, AudioApp_t audio_app,
+	CSL_CAPH_PathID ulPathID,
+	CSL_CAPH_PathID ul2PathID,
+	CSL_CAPH_PathID dlPathID)
+{
+	SetAudioMode_Sp_t sp_struct;
+	aTrace(LOG_AUDIO_DRIVER,
+			"%s mode==%d, app=%d\n\r", __func__,
+			audio_mode, audio_app);
+#ifdef CONFIG_BCM_MODEM
+	RPC_SetProperty(RPC_PROP_AUDIO_MODE,
+		(UInt32) (audio_mode +
+		audio_app * AUDIO_MODE_NUMBER));
+#endif
+	audio_control_generic(AUDDRV_CPCMD_PassAudioMode,
+			      (UInt32) audio_mode, (UInt32) audio_app, 0, 0, 0);
+	audio_control_generic(AUDDRV_CPCMD_SetAudioBT_Grp,
+			      (UInt32) (audio_mode +
+					audio_app * AUDIO_MODE_NUMBER),
+			      (UInt32) audio_app, 0, 0, 0);
+
+/*load speaker EQ filter and Mic EQ filter from sysparm to DSP*/
+/* It means mic1, mic2, speaker */
+	if (userEQOn == FALSE) {
+		/* Use the old code, before CP function
+		   audio_control_BuildDSPUlCompfilterCoef() is updated to
+		   handle the mode properly.*/
+		if (audio_app == AUDIO_APP_VOICE_CALL_WB)
+			audio_control_generic(AUDDRV_CPCMD_SetFilter,
+				audio_mode + AUDIO_MODE_NUMBER, 7, 0, 0, 0);
+		else
+			audio_control_generic(AUDDRV_CPCMD_SetFilter,
+				audio_mode % AUDIO_MODE_NUMBER, 7, 0, 0, 0);
+		/*
+		audio_control_generic(AUDDRV_CPCMD_SetFilter,
+				audio_mode + audio_app*AUDIO_MODE_NUMBER,
+				7, 0, 0, 0);
+		audio_control_generic(AUDDRV_CPCMD_SetFilter,
+				audio_mode + audio_app * AUDIO_MODE_NUMBER,
+				1, 0, 0, 0);
+		audio_control_generic(AUDDRV_CPCMD_SetFilter,
+				audio_mode + audio_app * AUDIO_MODE_NUMBER,
+				2, 0, 0, 0);
+		audio_control_generic(AUDDRV_CPCMD_SetFilter,
+				audio_mode + audio_app * AUDIO_MODE_NUMBER,
+				4, 0, 0, 0);
+		*/
+	}
+	/* else */
+	/*There is no need for this function to load the ECI-headset-provided
+	   speaker EQ filter and Mic EQ filter to DSP.
+	   //The ECI headset enable/disable request comes with the data.
+	   It means we'll get the coefficients every time if ECI headset on. */
+/* audio_cmf_filter((AudioCompfilter_t *) &copy_of_AudioCompfilter ); */
+
+	AUDDRV_SetAudioMode_Mic(audio_mode, audio_app, ulPathID, ul2PathID);
+
+	sp_struct.mode = audio_mode;
+	sp_struct.app = audio_app;
+	if (AUDCTRL_InVoiceCall())
+		sp_struct.pathID = telephonyPathID.dlPathID;
+	else
+		sp_struct.pathID = dlPathID;
+	sp_struct.inHWlpbk = FALSE;
+	sp_struct.mixInGain_mB = GAIN_SYSPARM;
+	sp_struct.mixInGainR_mB = GAIN_SYSPARM;
+	sp_struct.mixOutGain_mB = GAIN_SYSPARM;
+	sp_struct.mixOutGainR_mB = GAIN_SYSPARM;
+	AUDDRV_SetAudioMode_Speaker(sp_struct);
+}
+
+
 
 #ifdef CONFIG_ENABLE_SSMULTICAST
 /*=============================================================================
@@ -1070,12 +1165,21 @@ void AUDDRV_SetAudioMode_Multicast(SetAudioMode_Sp_t param)
 	AudioSysParm_t *p = NULL;
 #endif
 /*For SS multicast case always load params from mode AUDIO_MODE_SPEAKERPHONE*/
-	if (param.app >= AUDIO_APP_NUMBER)
+	if (param.app >= AUDIO_APP_NUMBER) {
 		p1 = &(MMAudParmP()[AUDIO_MODE_SPEAKERPHONE
 			+ (param.app - AUDIO_APP_NUMBER) * AUDIO_MODE_NUMBER]);
-	else
+		if (p1 == NULL) {
+			aError("Multimedia sysparm pointer is NULL\n");
+			return;
+		}
+	} else {
 		p = &(AudParmP()[AUDIO_MODE_SPEAKERPHONE
 			+ param.app * AUDIO_MODE_NUMBER]);
+		if (p == NULL) {
+			aError("Audio sysparm pointer is NULL\n");
+			return;
+		}
+	}
 
 	aTrace(LOG_AUDIO_DRIVER,  "%s mode=%d, app %d, pathID %d\n",
 			__func__, param.mode, param.app, param.pathID);
@@ -1281,11 +1385,20 @@ void AUDDRV_SetAudioMode_Speaker(SetAudioMode_Sp_t param)
 	/* Make sure p is NULL, because later the code will
 	 * access p->hw_sidetone_enable*/
 	p = NULL;
-	if (param.app >= AUDIO_APP_NUMBER)
+	if (param.app >= AUDIO_APP_NUMBER) {
 		p1 = &(MMAudParmP()[param.mode
 			+ (param.app - AUDIO_APP_NUMBER) * AUDIO_MODE_NUMBER]);
-	else
+		if (p1 == NULL) {
+			aError("Multimedia sysparm pointer is NULL\n");
+			return;
+		}
+	} else {
 		p = &(AudParmP()[param.mode + param.app * AUDIO_MODE_NUMBER]);
+		if (p == NULL) {
+			aError("Audio sysparm pointer is NULL\n");
+			return;
+		}
+	}
 
 	aTrace(LOG_AUDIO_DRIVER,  "%s mode=%d, app %d, pathID %d\n",
 			__func__, param.mode, param.app, param.pathID);
@@ -1662,11 +1775,20 @@ void AUDDRV_SetAudioMode_Mic(AudioMode_t audio_mode,
 	AudioSysParm_t *p;
 #endif
 
-	if (app >= AUDIO_APP_NUMBER)
+	if (app >= AUDIO_APP_NUMBER) {
 		p1 = &(MMAudParmP()[audio_mode
 			+ (app - AUDIO_APP_NUMBER) * AUDIO_MODE_NUMBER]);
-	else
+		if (p1 == NULL) {
+			aError("Multimedia sysparm pointer is NULL\n");
+			return;
+		}
+	} else {
 		p = &(AudParmP()[audio_mode + app * AUDIO_MODE_NUMBER]);
+		if (p == NULL) {
+			aError("Audio sysparm pointer is NULL\n");
+			return;
+		}
+	}
 
 	/* Load the mic gains from sysparm. */
 
@@ -2361,6 +2483,7 @@ static UInt32 *AUDIO_GetIHF48KHzBufferBaseAddress(void)
 
 }
 
+#ifdef CONFIG_BCM_MODEM
 static void AP_ProcessAudioEnableDone(UInt16 enabled_path)
 {
 	aTrace(LOG_AUDIO_DRIVER,
@@ -2389,6 +2512,7 @@ static void AP_ProcessArm2spHqDLInitDone()
 
 	/*aError("i_f");*/
 }
+#endif
 
 /****************************************************************************
 *

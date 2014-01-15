@@ -132,15 +132,14 @@ static void alarm_set(enum android_alarm_type alarm_type,
 	alarm_enabled |= alarm_type_mask;
 #ifdef CONFIG_BCM_RTC_ALARM_BOOT
 	if (alarm_type != ANDROID_ALARM_RTC_POWERON)
-			devalarm_start(&alarms[alarm_type],
-			timespec_to_ktime(new_alarm_time));
+		devalarm_start(&alarms[alarm_type], timespec_to_ktime(*ts));
 #else
 	devalarm_start(&alarms[alarm_type], timespec_to_ktime(*ts));
 #endif /*CONFIG_BCM_RTC_ALARM_BOOT*/
 	spin_unlock_irqrestore(&alarm_slock, flags);
 #ifdef CONFIG_BCM_RTC_ALARM_BOOT
 		if (alarm_type == ANDROID_ALARM_RTC_POWERON)
-			alarm_poweron_set_alarm(new_alarm_time);
+			alarm_poweron_set_alarm(*ts);
 #endif
 
 }

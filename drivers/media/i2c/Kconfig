@@ -580,16 +580,6 @@ config VIDEO_AS3645A
 	  This is a driver for the AS3645A and LM3555 flash controllers. It has
 	  build in control for flash, torch and indicator LEDs.
 
-config VIDEO_A3907
-	tristate "A3907 flash driver support"
-	depends on I2C && VIDEO_V4L2 && MEDIA_CONTROLLER
-	depends on MEDIA_CAMERA_SUPPORT
-	---help---
-	   This is a driver for the A3907 flash controller.
-	   The Allegro A3907 is a coil motor driver for linear
-	   control of small form factor voice coil motors.
-	   It is used with the OV5648 as a camera focus motor.
-
 comment "Video improvement chips"
 
 config VIDEO_UPD64031A

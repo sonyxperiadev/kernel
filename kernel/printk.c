@@ -346,7 +346,7 @@ static void log_store(int facility, int level,
 		      enum log_flags flags, u64 ts_nsec,
 		      const char *dict, u16 dict_len,
 		      const char *text, u16 text_len,
-		      u8 cpu_id, struct task_struct *owner)
+		      u8 cpu_id,  pid_t pid, char *comm)
 {
 	struct log *msg;
 	u32 size, pad_len;
@@ -395,8 +395,8 @@ static void log_store(int facility, int level,
 	msg->cpu_id = cpu_id;
 #endif
 #ifdef CONFIG_PRINTK_PID
-	msg->pid = owner->pid;
-	memcpy(msg->comm, owner->comm, TASK_COMM_LEN);
+	msg->pid = pid;
+	memcpy(msg->comm, comm, TASK_COMM_LEN);
 #endif
 	if (ts_nsec > 0)
 		msg->ts_nsec = ts_nsec;
@@ -925,40 +925,62 @@ static size_t print_time(u64 ts, char *buf)
 	rem_nsec = do_div(ts, 1000000000);
 
 	if (!buf)
-		return snprintf(NULL, 0, "[%5lu.000000] ", (unsigned long)ts);
+		return snprintf(NULL, 0, "%5lu.000000 ", (unsigned long)ts);
 
-	return sprintf(buf, "[%5lu.%06lu] ",
+	return sprintf(buf, "%5lu.%06lu ",
 		       (unsigned long)ts, rem_nsec / 1000);
 }
 
 #ifdef CONFIG_PRINTK_PID
-static size_t print_pid(const struct log *msg, char *buf)
+static size_t print_pid(const char *comm, pid_t pid, char *buf)
 {
-	if (!printk_pid || !buf)
+	if (!printk_pid)
 		return 0;
-	return sprintf(buf, "[%15s, %d] ", msg->comm, msg->pid);
+
+	if (!buf)
+		return snprintf(NULL, 0, "%15.15s, %d ", comm, pid);
+
+	return sprintf(buf, "%15.15s, %d ", comm, pid);
 }
 #else
-static size_t print_pid(const struct log *msg, char *buf)
+static size_t print_pid(const char *comm, pid_t pid, char *buf)
 {
 	return 0;
 }
 #endif
 
 #ifdef CONFIG_PRINTK_CPU_ID
-static size_t print_cpuid(const struct log *msg, char *buf)
+static size_t print_cpuid(u8 cpu_id, char *buf)
 {
 
-	if (!printk_cpu_id || !buf)
+	if (!printk_cpu_id)
 		return 0;
-	return sprintf(buf, "C%d ", msg->cpu_id);
+
+	if (!buf)
+		return snprintf(NULL, 0, "C%d ", cpu_id);
+
+	return sprintf(buf, "C%d ", cpu_id);
 }
 #else
-static size_t print_cpuid(const struct log *msg, char *buf)
+static size_t print_cpuid(u8 cpu_id, char *buf)
 {
 	return 0;
 }
 #endif
+
+static size_t prefix_bracket(char *buf)
+{
+	if (!buf)
+		return 1;
+	return sprintf(buf, "[");
+}
+
+static size_t sufix_bracket(char *buf)
+{
+	if (!buf)
+		return 2;
+	return sprintf(buf, "] ");
+}
 
 static size_t print_prefix(const struct log *msg, bool syslog, char *buf)
 {
@@ -979,9 +1001,11 @@ static size_t print_prefix(const struct log *msg, bool syslog, char *buf)
 		}
 	}
 
+	len += prefix_bracket(buf ? buf + len : NULL);
 	len += print_time(msg->ts_nsec, buf ? buf + len : NULL);
-	len += print_cpuid(msg, buf ? buf + len : NULL);
-	len += print_pid(msg, buf ? buf + len : NULL);
+	len += print_cpuid(msg->cpu_id, buf ? buf + len : NULL);
+	len += print_pid(msg->comm, msg->pid, buf ? buf + len : NULL);
+	len += sufix_bracket(buf ? buf + len : NULL);
 	return len;
 }
 
@@ -1456,6 +1480,8 @@ static int console_trylock_for_printk(unsigned int cpu)
 	return retval;
 }
 
+static int recursion_bug;
+
 int printk_delay_msec __read_mostly;
 
 static inline void printk_delay(void)
@@ -1470,7 +1496,6 @@ static inline void printk_delay(void)
 	}
 }
 
-#ifdef CONFIG_BRCM_UNIFIED_LOGGING
 /* Unified logging */
 
 int bcmlog_mtt_on;
@@ -1534,17 +1559,6 @@ end_restore_irqs:
 	preempt_enable();
 	return 0;
 }
-#else
-/* Unified logging */
-int bcmlog_mtt_on;
-unsigned short bcmlog_log_ulogging_id;
-/* ------------------------------------------------------------ */
-int brcm_retrive_early_printk(void)
-{
-	return 0;
-}
-
-#endif
 
 /*
  * Continuation lines are buffered, and not committed to the record buffer
@@ -1561,6 +1575,8 @@ static struct cont {
 	u8 level;			/* log level of first message */
 	u8 facility;			/* log level of first message */
 	u8 cpu_id;			/* Which cpu is printing */
+	char comm[TASK_COMM_LEN];       /* owner of the print */
+	pid_t pid;                      /* pid of the owner */
 	enum log_flags flags;		/* prefix, newline flags */
 	bool flushed:1;			/* buffer sealed and committed */
 } cont;
@@ -1580,7 +1596,7 @@ static void cont_flush(enum log_flags flags)
 		 */
 		log_store(cont.facility, cont.level, flags | LOG_NOCONS,
 			  cont.ts_nsec, NULL, 0, cont.buf, cont.len,
-			  cont.cpu_id, cont.owner);
+			  cont.cpu_id, cont.pid, cont.comm);
 		cont.flags = flags;
 		cont.flushed = true;
 	} else {
@@ -1590,12 +1606,13 @@ static void cont_flush(enum log_flags flags)
 		 */
 		log_store(cont.facility, cont.level, flags, 0,
 			  NULL, 0, cont.buf, cont.len,
-			  cont.cpu_id, cont.owner);
+			  cont.cpu_id, cont.pid, cont.comm);
 		cont.len = 0;
 	}
 }
 
-static bool cont_add(int facility, int level, const char *text, size_t len)
+static bool cont_add(int facility, int level, const char *text, size_t len,
+			 u8 cpu_id)
 {
 	if (cont.len && cont.flushed)
 		return false;
@@ -1614,6 +1631,9 @@ static bool cont_add(int facility, int level, const char *text, size_t len)
 		cont.flags = 0;
 		cont.cons = 0;
 		cont.flushed = false;
+		cont.cpu_id = cpu_id;
+		cont.pid = current->pid;
+		memcpy(cont.comm, current->comm, TASK_COMM_LEN);
 	}
 
 	memcpy(cont.buf + cont.len, text, len);
@@ -1631,7 +1651,12 @@ static size_t cont_print_text(char *text, size_t size)
 	size_t len;
 
 	if (cont.cons == 0 && (console_prev & LOG_NEWLINE)) {
-		textlen += print_time(cont.ts_nsec, text);
+		textlen += prefix_bracket(text);
+		textlen += print_time(cont.ts_nsec, text + textlen);
+		textlen += print_cpuid(cont.cpu_id, text + textlen);
+		textlen += print_pid(cont.owner->comm, cont.owner->pid,
+				text + textlen);
+		textlen += sufix_bracket(text + textlen);
 		size -= textlen;
 	}
 
@@ -1657,7 +1682,6 @@ asmlinkage int vprintk_emit(int facility, int level,
 			    const char *dict, size_t dictlen,
 			    const char *fmt, va_list args)
 {
-	static int recursion_bug;
 	static char textbuf[LOG_LINE_MAX];
 	char *text = textbuf;
 	size_t text_len;
@@ -1704,7 +1728,7 @@ asmlinkage int vprintk_emit(int facility, int level,
 		/* emit KERN_CRIT message */
 		log_store(0, 2, LOG_PREFIX|LOG_NEWLINE, 0,
 			  NULL, 0, recursion_msg, printed_len,
-			  logbuf_cpu, current);
+			  logbuf_cpu, current->pid, current->comm);
 	}
 
 	/*
@@ -1745,10 +1769,10 @@ asmlinkage int vprintk_emit(int facility, int level,
 
 	if (level == -1)
 		level = default_message_loglevel;
-#ifdef CONFIG_BRCM_UNIFIED_LOGGING
-if (bcmlog_mtt_on == 1 && bcmlog_log_ulogging_id > 0 && BrcmLogString)
-	BrcmLogString(textbuf, bcmlog_log_ulogging_id);
-#endif
+
+	if (bcmlog_mtt_on == 1 && bcmlog_log_ulogging_id > 0 && BrcmLogString)
+		BrcmLogString(textbuf, bcmlog_log_ulogging_id);
+
 	if (dict)
 		lflags |= LOG_PREFIX|LOG_NEWLINE;
 
@@ -1761,10 +1785,10 @@ if (bcmlog_mtt_on == 1 && bcmlog_log_ulogging_id > 0 && BrcmLogString)
 			cont_flush(LOG_NEWLINE);
 
 		/* buffer line if possible, otherwise store it right away */
-		if (!cont_add(facility, level, text, text_len))
+		if (!cont_add(facility, level, text, text_len, logbuf_cpu))
 			log_store(facility, level, lflags | LOG_CONT, 0,
 				  dict, dictlen, text, text_len,
-				  logbuf_cpu, current);
+				  logbuf_cpu, current->pid, current->comm);
 	} else {
 		bool stored = false;
 
@@ -1773,17 +1797,19 @@ if (bcmlog_mtt_on == 1 && bcmlog_log_ulogging_id > 0 && BrcmLogString)
 		 * either merge it with the current buffer and flush, or if
 		 * there was a race with interrupts (prefix == true) then just
 		 * flush it out and store this line separately.
+		 * If the preceding printk was from a different task and missed
+		 * a newline, flush and append the newline.
 		 */
-		if (cont.len && cont.owner == current) {
-			if (!(lflags & LOG_PREFIX))
-				stored = cont_add(facility, level, text, text_len);
+		if (cont.len) {
+			if (cont.owner == current && !(lflags & LOG_PREFIX))
+				stored = cont_add(facility, level, text,
+						text_len, logbuf_cpu);
 			cont_flush(LOG_NEWLINE);
 		}
-
 		if (!stored)
 			log_store(facility, level, lflags, 0,
 				  dict, dictlen, text, text_len,
-				  logbuf_cpu, current);
+				  logbuf_cpu, current->pid, current->comm);
 	}
 	printed_len += text_len;
 

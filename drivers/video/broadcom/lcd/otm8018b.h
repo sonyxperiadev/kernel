@@ -105,7 +105,7 @@ __initdata struct DSI_COUNTER otm8018b_timing[] = {
 
 __initdata DISPCTRL_REC_T otm8018b_scrn_on[] = {
 	{DISPCTRL_WR_CMND, OTM8018B_CMD_DISPON},
-	{DISPCTRL_SLEEP_MS, 20},
+	{DISPCTRL_SLEEP_MS, 32}, /* Two frames */
 	{DISPCTRL_LIST_END, 0}
 };
 

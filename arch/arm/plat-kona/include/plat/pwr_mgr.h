@@ -323,8 +323,10 @@ int pwr_mgr_init(struct pwr_mgr_info *info);
 int pwr_mgr_mask_intr(u32 intr, bool mask);
 int pwr_mgr_clr_intr_status(u32 intr);
 int pwr_mgr_get_intr_status(u32 intr);
-int pwr_mgr_pmu_reg_read(u8 reg_addr, u8 slave_id, u8 * reg_val);
+int pwr_mgr_pmu_reg_read(u8 reg_addr, u8 slave_id, u8 *reg_val);
+int pwr_mgr_pmu_reg_read_direct(u8 reg_addr, u8 slave_id, u8 *reg_val);
 int pwr_mgr_pmu_reg_write(u8 reg_addr, u8 slave_id, u8 reg_val);
+int pwr_mgr_pmu_reg_write_direct(u8 reg_addr, u8 slave_id, u8 reg_val);
 int pwr_mgr_pmu_reg_read_mul(u8 reg_addr_start, u8 slave_id,
 			     u8 count, u8 * reg_val);
 int pwr_mgr_pmu_reg_write_mul(u8 reg_addr_start, u8 slave_id,

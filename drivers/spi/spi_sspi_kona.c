@@ -52,6 +52,10 @@
 #include <mach/dma.h>
 #include <mach/rdb/brcm_rdb_sysmap.h>
 
+#include <linux/of.h>
+#include <linux/of_platform.h>
+
+
 #define SSPI_MAX_TASK_LOOP	1023
 #define SSPI_TASK_TIME_OUT	500000
 #define SSPI_FIFO_SIZE		128
@@ -1265,7 +1269,45 @@ static int spi_kona_probe(struct platform_device *pdev)
 	/*uint8_t clk_name[32]; */
 	int status = 0;
 
-	platform_info = dev_get_platdata(&pdev->dev);
+	if (pdev->dev.platform_data)
+		platform_info = dev_get_platdata(&pdev->dev);
+	else if (pdev->dev.of_node) {
+		int val;
+		platform_info = kzalloc(sizeof(struct
+			spi_kona_platform_data), GFP_KERNEL);
+		if (of_property_read_u32(pdev->dev.of_node,
+				"enable-dma", &val)) {
+			dev_err(&pdev->dev,
+				"%s: enable-dma read error from DTS", __func__);
+			goto err_read;
+		}
+		platform_info->enable_dma = val;
+		if (of_property_read_u32(pdev->dev.of_node, "id", &val)) {
+			dev_err(&pdev->dev,
+				"%s: enable-dma read error from DTS", __func__);
+			goto err_read;
+		}
+		pdev->id = val;
+		if (!val) {
+			if (of_property_read_u32(pdev->dev.of_node,
+					"cs-line", &val)) {
+				dev_err(&pdev->dev,
+					"%s: cs-line read error from DTS",
+					__func__);
+				goto err_read;
+			}
+			platform_info->cs_line = val;
+			if (of_property_read_u32(pdev->dev.of_node,
+					"mode", &val)) {
+				dev_err(&pdev->dev,
+					"%s: mode read error from DTS",
+						__func__);
+				goto err_read;
+			}
+			platform_info->mode = val;
+		}
+	}
+
 	if (!platform_info) {
 		dev_err(&pdev->dev, "can't get the platform data\n");
 		return -EINVAL;
@@ -1279,6 +1321,9 @@ static int spi_kona_probe(struct platform_device *pdev)
 	}
 
 	platform_set_drvdata(pdev, master);
+
+	if (pdev->dev.of_node)
+		master->dev.of_node = pdev->dev.of_node;
 
 	master->bus_num = pdev->id;
 	master->num_chipselect = platform_info->cs_line;
@@ -1392,6 +1437,10 @@ out_release_mem:
 out_master_put:
 	spi_master_put(master);
 	platform_set_drvdata(pdev, NULL);
+err_read:
+	if (pdev->dev.of_node)
+		kfree(platform_info);
+
 	return status;
 }
 
@@ -1452,10 +1501,17 @@ static int spi_kona_resume(struct platform_device *pdev)
 #define spi_kona_resume      NULL
 #endif
 
+static const struct of_device_id spi_of_match[] = {
+	{.compatible = "bcm,spi",},
+	{},
+}
+MODULE_DEVICE_TABLE(of, spi_of_match);
+
 static struct platform_driver spi_kona_sspi_driver = {
 	.driver = {
 		   .name = "kona_sspi_spi",
 		   .owner = THIS_MODULE,
+		   .of_match_table = spi_of_match,
 		   },
 	.probe = spi_kona_probe,
 	.remove = spi_kona_remove,

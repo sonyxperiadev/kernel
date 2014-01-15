@@ -1,6 +1,6 @@
 
-#ifndef __HAWAII_PI_MNGR_H__
-#define __HAWAII_PI_MNGR_H__
+#ifndef __JAVA_PI_MNGR_H__
+#define __JAVA_PI_MNGR_H__
 
 #define MM_CLK_SRC_312M  1
 
@@ -42,6 +42,6 @@ enum {
 #define OPP_TURBO_STRING	"TURBO"
 #define OPP_SUPER_TURBO_STRING	"SUPER_TURBO"
 
-void hawaii_pi_mgr_init(void);
+void java_pi_mgr_init(void);
 
-#endif /*__HAWAII_PI_MNGR_H__*/
+#endif /*__JAVA_PI_MNGR_H__*/

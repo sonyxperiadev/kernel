@@ -159,7 +159,7 @@ static struct bcmpmu59xxx_rw_data __initdata register_init_data[] = {
 
 static struct bcmpmu59xxx_rw_data register_exit_data[] = {
 	{.addr = PMU_REG_GPIOCTRL1, .val = 0x5, .mask = 0xFF},
-	{.addr = PMU_REG_MBCCTRL20, .val = 0x1, .mask = 0xFF},
+	{.addr = PMU_REG_OTG_BOOSTCTRL3, .val = 0x0, .mask = 0x10},
 };
 
 __weak struct regulator_consumer_supply rf_supply[] = {
@@ -170,7 +170,12 @@ static struct regulator_init_data bcm59xxx_rfldo_data = {
 			.name = "rfldo",
 			.min_uV = 1300000,
 			.max_uV = 3300000,
-			.valid_ops_mask = 0,
+			.valid_ops_mask = REGULATOR_CHANGE_STATUS |
+					REGULATOR_CHANGE_VOLTAGE |
+					REGULATOR_CHANGE_MODE,
+			.valid_modes_mask = REGULATOR_MODE_NORMAL |
+						REGULATOR_MODE_IDLE |
+						REGULATOR_MODE_STANDBY,
 			.always_on = 0,
 			.initial_mode = REGULATOR_MODE_STANDBY,
 			},

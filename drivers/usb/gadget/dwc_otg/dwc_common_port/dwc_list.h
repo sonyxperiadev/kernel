@@ -35,6 +35,8 @@
 #ifndef	_SYS_QUEUE_H_
 #define	_SYS_QUEUE_H_
 
+#include <linux/spinlock.h>
+
 
 /** @file
  *
@@ -490,10 +492,8 @@ struct {								\
 struct name {								\
 	struct type *cqh_first;		/* first element */		\
 	struct type *cqh_last;		/* last element */		\
+	spinlock_t lock;						\
 }
-
-#define DWC_CIRCLEQ_HEAD_INITIALIZER(head)					\
-	{ DWC_CIRCLEQ_END(&head), DWC_CIRCLEQ_END(&head) }
 
 #define DWC_CIRCLEQ_ENTRY(type)						\
 struct {								\
@@ -532,9 +532,10 @@ struct {								\
 /*
  * Circular queue functions.
  */
-#define DWC_CIRCLEQ_INIT(head) do {						\
-	(head)->cqh_first = DWC_CIRCLEQ_END(head);				\
-	(head)->cqh_last = DWC_CIRCLEQ_END(head);				\
+#define DWC_CIRCLEQ_INIT(head) do {					\
+	spin_lock_init(&(head)->lock);					\
+	(head)->cqh_first = DWC_CIRCLEQ_END(head);			\
+	(head)->cqh_last = DWC_CIRCLEQ_END(head);			\
 } while (0)
 
 #define DWC_CIRCLEQ_INIT_ENTRY(elm, field) do { \
@@ -543,6 +544,7 @@ struct {								\
 } while (0)
 
 #define DWC_CIRCLEQ_INSERT_AFTER(head, listelm, elm, field) do {		\
+	spin_lock(&(head)->lock);					\
 	(elm)->field.cqe_next = (listelm)->field.cqe_next;		\
 	(elm)->field.cqe_prev = (listelm);				\
 	if ((listelm)->field.cqe_next == DWC_CIRCLEQ_END(head))		\
@@ -550,9 +552,11 @@ struct {								\
 	else								\
 		(listelm)->field.cqe_next->field.cqe_prev = (elm);	\
 	(listelm)->field.cqe_next = (elm);				\
+	spin_unlock(&(head)->lock);					\
 } while (0)
 
 #define DWC_CIRCLEQ_INSERT_BEFORE(head, listelm, elm, field) do {		\
+	spin_lock(&(head)->lock);					\
 	(elm)->field.cqe_next = (listelm);				\
 	(elm)->field.cqe_prev = (listelm)->field.cqe_prev;		\
 	if ((listelm)->field.cqe_prev == DWC_CIRCLEQ_END(head))		\
@@ -560,33 +564,35 @@ struct {								\
 	else								\
 		(listelm)->field.cqe_prev->field.cqe_next = (elm);	\
 	(listelm)->field.cqe_prev = (elm);				\
+	spin_unlock(&(head)->lock);					\
 } while (0)
 
 #define DWC_CIRCLEQ_INSERT_HEAD(head, elm, field) do {			\
+	spin_lock(&(head)->lock);					\
 	(elm)->field.cqe_next = (head)->cqh_first;			\
 	(elm)->field.cqe_prev = DWC_CIRCLEQ_END(head);			\
 	if ((head)->cqh_last == DWC_CIRCLEQ_END(head))			\
 		(head)->cqh_last = (elm);				\
 	else								\
-		if (((head)->cqh_first) != NULL)	\
-			(head)->cqh_first->field.cqe_prev = (elm);	\
-	if (((head)->cqh_first) != NULL)	\
-		(head)->cqh_first = (elm);	\
+		(head)->cqh_first->field.cqe_prev = (elm);		\
+	(head)->cqh_first = (elm);					\
+	spin_unlock(&(head)->lock);					\
 } while (0)
 
 #define DWC_CIRCLEQ_INSERT_TAIL(head, elm, field) do {			\
+	spin_lock(&(head)->lock);					\
 	(elm)->field.cqe_next = DWC_CIRCLEQ_END(head);			\
 	(elm)->field.cqe_prev = (head)->cqh_last;			\
 	if ((head)->cqh_first == DWC_CIRCLEQ_END(head))			\
 		(head)->cqh_first = (elm);				\
 	else								\
-		if (((head)->cqh_last) != NULL)	\
-			(head)->cqh_last->field.cqe_next = (elm);	\
-	if (((head)->cqh_last) != NULL)	\
-		(head)->cqh_last = (elm);	\
+		(head)->cqh_last->field.cqe_next = (elm);		\
+	(head)->cqh_last = (elm);					\
+	spin_unlock(&(head)->lock);					\
 } while (0)
 
 #define DWC_CIRCLEQ_REMOVE(head, elm, field) do {				\
+	spin_lock(&(head)->lock);					\
 	if ((elm)->field.cqe_next == DWC_CIRCLEQ_END(head))			\
 		(head)->cqh_last = (elm)->field.cqe_prev;		\
 	else								\
@@ -597,6 +603,7 @@ struct {								\
 	else								\
 		(elm)->field.cqe_prev->field.cqe_next =			\
 		    (elm)->field.cqe_next;				\
+	spin_unlock(&(head)->lock);					\
 } while (0)
 
 #define DWC_CIRCLEQ_REMOVE_INIT(head, elm, field) do { \
@@ -605,6 +612,7 @@ struct {								\
 } while (0)
 
 #define DWC_CIRCLEQ_REPLACE(head, elm, elm2, field) do {			\
+	spin_lock(&(head)->lock);					\
 	if (((elm2)->field.cqe_next = (elm)->field.cqe_next) ==		\
 	    DWC_CIRCLEQ_END(head))						\
 		(head).cqh_last = (elm2);				\
@@ -615,6 +623,7 @@ struct {								\
 		(head).cqh_first = (elm2);				\
 	else								\
 		(elm2)->field.cqe_prev->field.cqe_next = (elm2);	\
+	spin_unlock(&(head)->lock);					\
 } while (0)
 
 #endif	/* !_SYS_QUEUE_H_ */

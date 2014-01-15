@@ -37,6 +37,13 @@
 #endif
 
 static struct bcmpmu59xxx *bcmpmu_gbl;
+struct bcmpmu_mbc_cc_trim {
+	u8 cc_trim;
+	u8 cc_100_trim;
+	u8 cc_500_trim;
+};
+static struct bcmpmu_mbc_cc_trim mbc_cc_trim;
+
 static struct mfd_cell  irq_devs[] = {
 	{
 		.name = "bcmpmu59xxx_irq",
@@ -246,19 +253,28 @@ EXPORT_SYMBOL(bcmpmu_reg_write_unlock);
 
 void bcmpmu_client_power_off(void)
 {
+	u8 val;
+
 	BUG_ON(!bcmpmu_gbl);
+	preempt_disable();
+	local_irq_disable();
+	pwr_mgr_pmu_reg_read_direct((u8) DEC_REG_ADD(PMU_REG_WRPROEN),
+				bcmpmu_get_slaveid(bcmpmu_gbl,
+					PMU_REG_WRPROEN),
+				&val);
+	if (!(val & (WRPROEN_DIS_WR_PRO | WRPROEN_PMU_UNLOCK)))
+		pwr_mgr_pmu_reg_write_direct((u8)
+					DEC_REG_ADD(PMU_REG_WRLOCKKEY),
+					bcmpmu_get_slaveid(bcmpmu_gbl,
+						PMU_REG_WRLOCKKEY),
+					WRLOCKKEY_VAL);
 
-#ifdef CONFIG_MFD_BCM_PWRMGR_SW_SEQUENCER
-	pwr_mgr_set_i2c_mode(PWR_MGR_I2C_MODE_POLL);
-#endif
-	bcmpmu_reg_write_unlock(bcmpmu_gbl);
-	bcmpmu_gbl->write_dev(bcmpmu_gbl, PMU_REG_HOSTCTRL1,
-			HOSTCTRL1_SW_SHDWN);
-
-#ifdef CONFIG_MFD_BCM_PWRMGR_SW_SEQUENCER
-	pwr_mgr_set_i2c_mode(PWR_MGR_I2C_MODE_IRQ);
-#endif
-
+	pwr_mgr_pmu_reg_write_direct((u8) DEC_REG_ADD(PMU_REG_HOSTCTRL1),
+					bcmpmu_get_slaveid(bcmpmu_gbl,
+						PMU_REG_HOSTCTRL1),
+					HOSTCTRL1_SW_SHDWN);
+	local_irq_enable();
+	preempt_enable();
 }
 EXPORT_SYMBOL(bcmpmu_client_power_off);
 
@@ -627,7 +643,52 @@ static const struct file_operations bcmpmu_fops = {
 static struct miscdevice bcmpmu_device = {
 	MISC_DYNAMIC_MINOR, "bcmpmu", &bcmpmu_fops
 };
+/*
+ * bcmpmu_restore_cc_trim_otp - Restore trim register to OTP.
+ */
+void bcmpmu_restore_cc_trim_otp(struct bcmpmu59xxx *bcmpmu)
+{
+	int ret = 0;
 
+	ret = bcmpmu->write_dev(bcmpmu,
+			PMU_REG_MBCCTRL18, mbc_cc_trim.cc_trim);
+	if (ret)
+		BUG_ON(1);
+	ret = bcmpmu->write_dev(bcmpmu,
+			PMU_REG_MBCCTRL19, mbc_cc_trim.cc_100_trim);
+	if (ret)
+		BUG_ON(1);
+	ret = bcmpmu->write_dev(bcmpmu,
+			PMU_REG_MBCCTRL20, mbc_cc_trim.cc_500_trim);
+	if (ret)
+		BUG_ON(1);
+	pr_pmucore(INIT, "%s: cc_trm: 0x%x cc_100_trm: 0x%x cc_500_trm: 0x%x\n",
+			__func__, mbc_cc_trim.cc_trim,
+			mbc_cc_trim.cc_100_trim, mbc_cc_trim.cc_500_trim);
+}
+/**
+ * bcmpmu_store_cc_trim_otp - store trim registers.
+ */
+void bcmpmu_store_cc_trim_otp(struct bcmpmu59xxx *bcmpmu)
+{
+	int ret = 0;
+
+	ret = bcmpmu->read_dev(bcmpmu,
+			PMU_REG_MBCCTRL18, &mbc_cc_trim.cc_trim);
+	if (ret)
+		BUG_ON(1);
+	ret = bcmpmu->read_dev(bcmpmu,
+			PMU_REG_MBCCTRL19, &mbc_cc_trim.cc_100_trim);
+	if (ret)
+		BUG_ON(1);
+	ret = bcmpmu->read_dev(bcmpmu,
+			PMU_REG_MBCCTRL20, &mbc_cc_trim.cc_500_trim);
+	if (ret)
+		BUG_ON(1);
+	pr_pmucore(INIT, "%s: cc_trm: 0x%x cc_100_trm: 0x%x cc_500_trm: 0x%x\n",
+			__func__, mbc_cc_trim.cc_trim,
+			mbc_cc_trim.cc_100_trim, mbc_cc_trim.cc_500_trim);
+}
 static void bcmpmu59xxx_reg_update(struct bcmpmu59xxx *pmu,
 		struct bcmpmu59xxx_rw_data *data, int max)
 {
@@ -652,6 +713,7 @@ static void bcmpmu_register_init(struct bcmpmu59xxx *pmu)
 	struct bcmpmu59xxx_platform_data *pdata;
 	pdata = pmu->pdata;
 
+	bcmpmu_store_cc_trim_otp(pmu);
 	bcmpmu59xxx_reg_update(pmu, pdata->init_data, pdata->init_max);
 }
 
@@ -661,6 +723,7 @@ static void bcmpmu59xxx_shutdown(struct platform_device *pdev)
 	struct bcmpmu59xxx_platform_data *pdata = bcmpmu->pdata;
 
 	bcmpmu59xxx_reg_update(bcmpmu, pdata->exit_data, pdata->exit_max);
+	bcmpmu_restore_cc_trim_otp(bcmpmu);
 }
 
 static int bcmpmu59xxx_probe(struct platform_device *pdev)

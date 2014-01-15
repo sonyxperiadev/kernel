@@ -944,10 +944,14 @@ struct platform_device kona_tmon_device = {
 
 #ifdef CONFIG_KONA_TMON_THERMAL
 struct kona_tmon_trip trip_points[] = {
-	{.temp = 85, .type = THERMAL_TRIP_ACTIVE, .max_freq = 1200000,},
-	{.temp = 95, .type = THERMAL_TRIP_ACTIVE, .max_freq = 800000,},
-	{.temp = 105, .type = THERMAL_TRIP_ACTIVE, .max_freq = 600000,},
-	{.temp = 115, .type = THERMAL_TRIP_CRITICAL, .max_freq = 312000,},
+	{.temp = 85, .type = THERMAL_TRIP_ACTIVE, .max_freq = 1200000,
+				.max_brightness = 32,},
+	{.temp = 95, .type = THERMAL_TRIP_ACTIVE, .max_freq = 800000,
+				.max_brightness = 20,},
+	{.temp = 105, .type = THERMAL_TRIP_ACTIVE, .max_freq = 600000,
+				.max_brightness = 18,},
+	{.temp = 115, .type = THERMAL_TRIP_CRITICAL, .max_freq = 312000,
+				.max_brightness = 15,},
 };
 
 struct kona_tmon_pdata tmon_thermal_plat_data = {

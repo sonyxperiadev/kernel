@@ -1763,6 +1763,7 @@ void csl_caph_srcmixer_config_mix_route(CSL_CAPH_SRCM_ROUTE_t routeConfig)
 			}
 		} else {
 			if (chalOutChnl & (UInt8) CAPH_M0_Left) {
+				usleep_range(125, 250);
 				chalInChnlMono =
 					csl_caph_srcmixer_get_mono_inchnl
 					(chalInChnl, CAPH_M0_Left);

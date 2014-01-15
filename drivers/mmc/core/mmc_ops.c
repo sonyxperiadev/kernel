@@ -161,7 +161,8 @@ int mmc_send_op_cond(struct mmc_host *host, u32 ocr, u32 *rocr)
 
 		err = -ETIMEDOUT;
 
-		mmc_delay(10);
+		mmc_delay(9);
+		mmc_delay(1);
 	}
 
 	if (rocr && !mmc_host_is_spi(host))
@@ -431,6 +432,8 @@ int __mmc_switch(struct mmc_card *card, u8 set, u8 index, u8 value,
 
 
 	cmd.cmd_timeout_ms = timeout_ms;
+	if (index == EXT_CSD_SANITIZE_START)
+		cmd.sanitize_busy = true;
 
 	err = mmc_wait_for_cmd(card->host, &cmd, MMC_CMD_RETRIES);
 	if (err)

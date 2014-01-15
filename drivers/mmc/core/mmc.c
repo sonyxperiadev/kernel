@@ -298,7 +298,7 @@ static int mmc_read_ext_csd(struct mmc_card *card, u8 *ext_csd)
 
 	card->ext_csd.rev = ext_csd[EXT_CSD_REV];
 #ifdef CONFIG_MMC_BCM_SD
-	if (card->ext_csd.rev > 6) {
+	if (card->ext_csd.rev > 7) {
 #else
 	if (card->ext_csd.rev > 3) {
 #endif

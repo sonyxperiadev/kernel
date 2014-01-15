@@ -87,7 +87,6 @@ struct accy_det {
 	u32 act;
 	u32 xceiv_start;
 	bool reschedule;
-	bool clock_en;
 	bool rgl_en;
 };
 static atomic_t drv_init_done;
@@ -101,10 +100,9 @@ static atomic_t drv_init_done;
 
 static void enable_bc_clock(struct accy_det *accy_d, bool en)
 {
-		bcm_hsotgctrl_en_clock(en);
-		accy_d->clock_en = en;
-		pr_acd(VERBOSE, "======<%s> paccy clock %x\n"
-			, __func__, accy_d->clock_en);
+	bcm_hsotgctrl_en_clock(en);
+	pr_acd(VERBOSE, "======<%s> paccy clock %x\n"
+		, __func__, en);
 }
 
 static void reset_bc(struct accy_det *accy_d)
@@ -364,8 +362,7 @@ void bcmpmu_accy_setup_detection(struct accy_det *accy_d, bool en)
 	} else {
 		if (accy_d->rgl_en)
 			bcmpmu_enable_bc_regl(accy_d, en);
-		if (accy_d->clock_en)
-			enable_bc_clock(accy_d, false);
+		enable_bc_clock(accy_d, false);
 
 #ifdef CONFIG_HAS_WAKELOCK
 		if (wake_lock_active(&accy_d->wake_lock))
@@ -397,7 +394,6 @@ static void bcmpmu_accy_handle_state(struct accy_det *accy_d)
 		accy_d->retry_cnt = 0;
 		if (accy_d->chrgr_type != PMU_CHRGR_TYPE_DCP)
 			bcm_hsotgctrl_bc_enable_sw_ovwr();
-		bcmpmu_accy_set_pmu_BC12(accy_d->bcmpmu, 0);
 		bcmpmu_notify_charger_state(accy_d);
 		break;
 
@@ -411,7 +407,6 @@ static void bcmpmu_accy_handle_state(struct accy_det *accy_d)
 				DISCONNECT_EVENT_TIME);
 #endif
 		bcmpmu_notify_charger_state(accy_d);
-		bcmpmu_accy_set_pmu_BC12(accy_d->bcmpmu, 1);
 		bcdldo_cycle_power(accy_d);
 		reset_bc(accy_d);
 		break;

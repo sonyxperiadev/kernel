@@ -1693,7 +1693,8 @@ void AUDTST_VoIP(UInt32 Val2, UInt32 Val3, UInt32 Val4, UInt32 Val5,
 	}
 
 	codecVal = Val5;	/* 0 for 8k PCM */
-	voip_codec.codec_type = cur_codecVal = codecVal;
+	voip_codec.codec_type_ul = cur_codecVal = codecVal;
+	voip_codec.codec_type_dl = voip_codec.codec_type_ul;
 
 	if (codecVal == 0 || codecVal == 1 || codecVal == 4)
 		Val6 = 0; /* the above codec type does not have bitrate */

@@ -1176,6 +1176,12 @@ CSL_LCD_RES_T CSL_DSI_SendPacket(CSL_LCD_HANDLE client,
 		}
 	}
 
+	if (dsiH->init != DSI_INITIALIZED) {
+		pr_err("%s:%d\n");
+		__WARN();
+		return CSL_LCD_ERR;
+	}
+
 	if (dsiH->ulps) {
 		LCD_DBG(LCD_DBG_ERR_ID,
 			"[CSL DSI][%d] %s: ERR, VC[%d] Link Is In ULPS\n",
@@ -1194,9 +1200,13 @@ CSL_LCD_RES_T CSL_DSI_SendPacket(CSL_LCD_HANDLE client,
 	txPkt.isTe = isTE;
 	txPkt.vmWhen = CHAL_DSI_CMND_WHEN_BEST_EFFORT;
 	txPkt.repeat = 1;
+#ifdef CONFIG_DSI_PKT_VID_SIMULTANEOUS
+	txPkt.start = 1;
+#else
 	/* Don't start here if PV is enabled,
 	 * instead wait for video stream to stop */
 	txPkt.start = !videoEnabled;
+#endif
 	pkt_to_be_enabled = !txPkt.start;
 	txPkt.dispEngine = 1;
 
@@ -1419,7 +1429,7 @@ start_tx:
 			 * state! */
 			/* cslDsiBtaRecover(dsiH); */
 			while ((res == CSL_LCD_OS_TOUT) && --tries) {
-				pr_err("Trying once more\n");
+				pr_err("Trying once more with bta\n");
 				if (!clientH->hasLock)
 					cslDsiEnaIntEvent(dsiH, event);
 				chal_dsi_tx_start(dsiH->chalH, TX_PKT_ENG_1,
@@ -1465,7 +1475,8 @@ read_reply:
 				"Timed Out Waiting For TX end\n",
 				dsiH->bus, __func__, txPkt.vc);
 			while ((res == CSL_LCD_OS_TOUT) && --tries) {
-				LCD_DBG(LCD_DBG_ERR_ID, "Trying once more\n");
+				LCD_DBG(LCD_DBG_ERR_ID,
+					"Trying once more w/o BTA\n");
 				if (!clientH->hasLock)
 					cslDsiEnaIntEvent(dsiH, event);
 				chal_dsi_tx_start(dsiH->chalH, TX_PKT_ENG_1,
@@ -1857,9 +1868,14 @@ CSL_LCD_RES_T CSL_DSI_UpdateVmVc(CSL_LCD_HANDLE vcH,
 		axipv_post(axipvCfg);
 	}
 
+	flush_work_sync(&dsiH->update_task_work);
 	*((DSI_UPD_REQ_MSG_T *)dsiH->upd_msg) = updMsg;
-	if (!queue_work(dsiH->wq, &dsiH->update_task_work))
+	if (!queue_work(dsiH->wq, &dsiH->update_task_work)) {
 		res = CSL_LCD_ERR;
+		LCD_DBG(LCD_DBG_ERR_ID,
+			"[CSL DSI] %s: queue_work fail\n ",
+			__func__);
+	}
 
 done:
 	if (!clientH->hasLock)
@@ -2225,9 +2241,14 @@ CSL_LCD_RES_T CSL_DSI_UpdateCmVc(CSL_LCD_HANDLE vcH,
 		if (!clientH->hasLock)
 			OSSEMAPHORE_Release(dsiH->semaDsi);
 	} else {
+		flush_work_sync(&dsiH->update_task_work);
 		*((DSI_UPD_REQ_MSG_T *)dsiH->upd_msg) = updMsgCm;
-		if (!queue_work(dsiH->wq, &dsiH->update_task_work))
+		if (!queue_work(dsiH->wq, &dsiH->update_task_work)) {
+			LCD_DBG(LCD_DBG_ERR_ID,
+				"[CSL DSI] %s: queue_work fail\n ",
+				__func__);
 			res = CSL_LCD_ERR;
+		}
 	}
 	return res;
 }
@@ -2371,9 +2392,16 @@ CSL_LCD_RES_T CSL_DSI_Ulps(CSL_LCD_HANDLE client, Boolean on)
 	if (!clientH->hasLock)
 		OSSEMAPHORE_Obtain(dsiH->semaDsi, TICKS_FOREVER);
 
-	if (on && !dsiH->ulps) {
-		chal_dsi_phy_state(dsiH->chalH, PHY_ULPS);
-		dsiH->ulps = TRUE;
+	if (on) {
+		if (!dsiH->ulps) {
+			chal_dsi_phy_state(dsiH->chalH, PHY_ULPS);
+			cslDsiWaitForStatAny_Poll(dsiH,
+					CHAL_DSI_STAT_PHY_CLK_ULPS |
+					CHAL_DSI_STAT_PHY_D0_ULPS,
+					NULL, 10);
+			dsiH->ulps = TRUE;
+			printk(KERN_DEBUG"DSI: enter ulps\n");
+		}
 	} else {
 		if (dsiH->ulps) {
 			chal_dsi_phy_state(dsiH->chalH, PHY_CORE);
@@ -2381,6 +2409,7 @@ CSL_LCD_RES_T CSL_DSI_Ulps(CSL_LCD_HANDLE client, Boolean on)
 						  CHAL_DSI_STAT_PHY_D0_STOP,
 						  NULL, 10);
 			dsiH->ulps = FALSE;
+			printk(KERN_DEBUG"DSI: exit ulps\n");
 		}
 	}
 

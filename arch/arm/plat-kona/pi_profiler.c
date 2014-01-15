@@ -39,7 +39,7 @@
 
 static struct dentry *dentry_root_dir;
 static struct dentry *dentry_pi_dir;
-static unsigned long init;
+static bool init;
 
 #define PI_PROF_REG_ADDR(pi, offset)	\
 	((u32)(pi->pi_prof_addr_base + offset))
@@ -309,7 +309,7 @@ int __init pi_profiler_init(struct dentry *prof_root_dir)
 	dentry_pi_dir = debugfs_create_dir(PROFILER_PI_DIR_NAME, prof_root_dir);
 	if (!dentry_pi_dir)
 		return -ENOMEM;
-	test_and_set_bit(0, &init);
+	init = false;
 	return 0;
 }
 EXPORT_SYMBOL(pi_profiler_init);

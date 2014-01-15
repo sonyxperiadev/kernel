@@ -16,7 +16,9 @@ the GPL, without Broadcom's express prior written consent.
 
 #include <linux/broadcom/mm_fw_hw_ifc.h>
 #include <linux/broadcom/mm_fw_usr_ifc.h>
-
+#ifdef CONFIG_MEMC_DFS
+#include <plat/kona_memc.h>
+#endif
 #define TURBO_RATE 250
 #define NORMAL_RATE 166
 
@@ -75,6 +77,13 @@ struct file_private_data {
 	int spl_data_size;
 	u8 device_locked;
 	atomic_t buffer_status;
+
+#ifdef CONFIG_MEMC_DFS
+	int memc_init;
+	struct kona_memc_node memc_node;
+	char memc_name[32];
+	int set_freq;
+#endif
 };
 
 struct dev_job_list {

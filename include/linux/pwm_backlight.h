@@ -6,12 +6,9 @@
 
 #include <linux/backlight.h>
 
-#ifdef CONFIG_KONA_TMON
-/* Temperature compensation (used to limit max brightness) */
-struct pb_temp_comp {
-	unsigned long trigger_temp;
-	int max_brightness;
-};
+#ifdef CONFIG_THERMAL
+#include <linux/thermal.h>
+#define BACKLIGHT_CDEV_NAME "backlight_coolant"
 #endif
 
 struct platform_pwm_backlight_data {
@@ -22,12 +19,9 @@ struct platform_pwm_backlight_data {
 	unsigned int pwm_period_ns;
 	unsigned int *levels;
 	unsigned int polarity;
-#ifdef CONFIG_KONA_TMON
-	struct pb_temp_comp *temp_comp_tbl;
-	unsigned int temp_comp_size;
-#endif
-	int bl_delay_on;
 	const char *pwm_request_label;
+	u32 bl_delay_on;
+	bool pb_enable_adapt_bright;
 	int (*init)(struct device *dev);
 	int (*notify)(struct device *dev, int brightness);
 	void (*notify_after)(struct device *dev, int brightness);
@@ -35,4 +29,9 @@ struct platform_pwm_backlight_data {
 	int (*check_fb)(struct device *dev, struct fb_info *info);
 };
 
-#endif
+#ifdef CONFIG_THERMAL
+u32 backlight_cooling_get_level(struct thermal_cooling_device *cdev,
+			u32 brightness);
+#endif /* CONFIG_THERMAL */
+
+#endif /* __LINUX_PWM_BACKLIGHT_H */

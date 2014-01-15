@@ -118,3 +118,14 @@ config VIDEO_AS3643
 	---help---
 	  This is a driver for the AS3643 flash controller. It has
 	  built in control for flash and torch modes.
+
+comment "vcm devices"
+
+config VIDEO_A3907
+	tristate "A3907 flash driver support"
+	depends on SOC_CAMERA && I2C
+	---help---
+	   This is a driver for the A3907 flash controller.
+	   The Allegro A3907 is a coil motor driver for linear
+	   control of small form factor voice coil motors.
+	   It is used with the OV5648 as a camera focus motor.

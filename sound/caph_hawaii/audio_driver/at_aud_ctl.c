@@ -465,12 +465,6 @@ int AtMaudTst(brcm_alsa_chip_t *pChip, Int32 ParamCount, Int32 *Params)
 		}
 		break;
 
-	case 101:
-		Params[0] = (Int32) csl_caph_QueryHWClock();
-		aTrace(LOG_AUDIO_DRIVER,
-				"csl_caph_QueryHWClock %ld.\n", Params[0]);
-		break;
-
 	case 110:
 		if (Params[1] == 1) {
 			aTrace(LOG_AUDIO_DRIVER, "Enable CAPH clock\n");

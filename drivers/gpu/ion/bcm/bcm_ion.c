@@ -334,7 +334,7 @@ int bcm_ion_mt_get_mem(struct ion_client *client,
 	ion_client_foreach_buffer(client_remote, bcm_ion_buffer_process,
 			(void *)&ion_mt_data);
 
-	/* Release the task struct reference */
+	/* Release the client reference */
 	ion_client_put(client_remote);
 
 	return 0;

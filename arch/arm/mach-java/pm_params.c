@@ -153,6 +153,7 @@ static int switch_arm_pll(int freq_id, int policy)
 
 	ccu_clk = to_ccu_clk(clk);
 	opp_info.freq_id = freq_id;
+	opp_info.ctrl_prms = CCU_POLICY_FREQ_REG_INIT;
 
 	return ccu_set_freq_policy(ccu_clk, CCU_POLICY(policy),
 				&opp_info);

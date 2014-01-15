@@ -1855,7 +1855,8 @@ static int inv_mpu_probe(struct i2c_client *client,
 		unsigned long size = sizeof(st->plat_data.orientation);
 		u32 val_orientation[size];
 
-		if (of_property_read_u32(np, "gpio-irq-pin", &val))
+		val = of_get_named_gpio(np, "gpio-irq-pin", 0)
+		if (!gpio_is_valid(val))
 			goto err_read;
 		client->irq = gpio_to_irq(val);
 

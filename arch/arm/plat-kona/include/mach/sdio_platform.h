@@ -85,6 +85,9 @@ struct sdio_platform_cfg {
 	unsigned int quirks;
 	unsigned int quirks2;
 
+	/* pm capability of platform */
+	unsigned int pm_caps;
+
 	/* clocks */
 	char *peri_clk_name;
 	char *ahb_clk_name;

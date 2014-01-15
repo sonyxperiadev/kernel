@@ -177,6 +177,8 @@ kbox_write_data(struct device *dev, struct device_attribute *attr,
 	}
 
 	rd_buff = kmalloc(bytes, GFP_KERNEL);
+	if (!rd_buff)
+		return -ENOMEM;
 
 	for (i = 0; i < bytes; i++)
 		*(rd_buff + i) = pattern;
@@ -359,6 +361,8 @@ static long handle_keybox_wr_data(struct file *filp, unsigned int cmd,
 	pr_info("keybox data write count %d\n", kb_param.len);
 
 	rd_buff = kmalloc(kb_param.len, GFP_KERNEL);
+	if (!rd_buff)
+		return -ENOMEM;
 
 	if (copy_from_user(rd_buff, kb_param.buf, kb_param.len) != 0) {
 		pr_err("handle_keybox_wr_data: copy_from_user error\n");

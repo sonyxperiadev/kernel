@@ -423,9 +423,12 @@ static void defer_kevent(struct eth_dev *dev, int flag)
 	testwkbit = test_and_set_bit(flag, &dev->todo);
 	spin_unlock_irqrestore(&dev->req_rx_lock, flags);
 
-
 	if (testwkbit)
 		return;
+#else
+	if (test_and_set_bit(flag, &dev->todo))
+		return;
+#endif
 
 #ifdef CONFIG_BRCM_NETCONSOLE
 	if ((flag == WORK_BRCM_NETCONSOLE_ON) || (flag == WORK_BRCM_NETCONSOLE_OFF)) {
@@ -436,31 +439,15 @@ static void defer_kevent(struct eth_dev *dev, int flag)
 	}
 #endif
 
+#ifdef CONFIG_USB_ETH_SKB_ALLOC_OPTIMIZATION
 	if (dev->rx_workqueue) {
 		if (!queue_work(dev->rx_workqueue, &dev->work))
 			ERROR(dev, "kevent %d may have been dropped\n", flag);
 		else
 			DBG(dev, "kevent %d scheduled\n", flag);
-	} else {
-		if (!schedule_work(&dev->work))
-			ERROR(dev, "kevent %d may have been dropped\n", flag);
-		else
-			DBG(dev, "kevent %d scheduled\n", flag);
-	}
-	return;
-#endif
-	if (test_and_set_bit(flag, &dev->todo))
 		return;
-
-#ifdef CONFIG_BRCM_NETCONSOLE
-	if ((flag == WORK_BRCM_NETCONSOLE_ON) || (flag == WORK_BRCM_NETCONSOLE_OFF)) {
-		if (!queue_usbevent(&dev->usbevent_queue, flag)) {
-			ERROR(dev, "event queue full, kevent %d may have been dropped\n", flag);
-			return;
-		}
 	}
 #endif
-
 	if (!schedule_work(&dev->work))
 		ERROR(dev, "kevent %d may have been dropped\n", flag);
 	else

@@ -108,6 +108,10 @@ const bcmevent_name_t bcmevent_names[] = {
 	{ WLC_E_AUTH_REQ, "WLC_E_AUTH_REQ" },
 	{ WLC_E_IBSS_COALESCE, "IBSS COALESCE" },
 #endif 
+#ifdef BCMWAPI_WAI
+	{ WLC_E_WAI_STA_EVENT, "WAI_STA_EVENT" },
+	{ WLC_E_WAI_MSG, "WAI_MSG" },
+#endif
 	{ WLC_E_ESCAN_RESULT, "WLC_E_ESCAN_RESULT" },
 	{ WLC_E_ACTION_FRAME_OFF_CHAN_COMPLETE, "WLC_E_AF_OFF_CHAN_COMPLETE" },
 #ifdef WLP2P

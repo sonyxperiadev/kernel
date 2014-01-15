@@ -20,6 +20,11 @@ the GPL, without Broadcom's express prior written consent.
 #include "mm_dvfs.h"
 #include "mm_prof.h"
 #include <mach/memory.h>
+
+#ifdef CONFIG_MEMC_DFS
+#include<plat/kona_memc.h>
+#endif
+
 #include <plat/clock.h> /* for clk_reset() */
 
 
@@ -348,7 +353,7 @@ static int mm_file_open(struct inode *inode, struct file *filp)
 	struct miscdevice *miscdev = filp->private_data;
 	struct mm_common *common = container_of(miscdev, \
 					struct mm_common, mdev);
-	struct file_private_data *private = kmalloc( \
+	struct file_private_data *private = kzalloc( \
 			sizeof(struct file_private_data), GFP_KERNEL);
 
 	INIT_WORK(&(private->work), mm_common_add_file);
@@ -367,6 +372,9 @@ static int mm_file_open(struct inode *inode, struct file *filp)
 	INIT_LIST_HEAD(&private->read_head);
 	INIT_LIST_HEAD(&private->write_head);
 	INIT_LIST_HEAD(&private->file_head);
+#ifdef CONFIG_MEMC_DFS
+	private->memc_init = 0;
+#endif
 	pr_debug(" %p ", private);
 
 	filp->private_data = private;
@@ -387,11 +395,20 @@ static int mm_file_release(struct inode *inode, struct file *filp)
 	SCHEDULER_COMMON_WORK(common, &private->work);
 	flush_work_sync(&private->work);
 
+#ifdef CONFIG_MEMC_DFS
+	if (private->set_freq > 0) {
+		memc_del_dfs_req(&private->memc_node);
+		private->memc_init = 0;
+	}
+#endif
 	/* Free all jobs posted using this file */
 	if (private->spl_data_ptr != NULL)
 		kfree(private->spl_data_ptr);
-	if (private->device_locked == 1)
+	if (private->device_locked == 1) {
+		if (common->common_clk)
+			clk_disable(common->common_clk);
 		up(&common->device_sem);
+	}
 	kfree(private);
 	return 0;
 }
@@ -424,7 +441,7 @@ static loff_t mm_file_lseek(struct file *filp, loff_t offset, int ignore)
 	return 0;
 }
 
-static int mm_file_write(struct file *filp, const char __user *buf,
+static ssize_t mm_file_write(struct file *filp, const char __user *buf,
 			size_t size, loff_t *offset)
 {
 	struct file_private_data *private = filp->private_data;
@@ -432,26 +449,31 @@ static int mm_file_write(struct file *filp, const char __user *buf,
 	struct dev_job_list *mm_job_node = mm_common_alloc_job(private,\
 						mm_common_add_job);
 	int    core_id;
+	ssize_t ret;
+	void *job_post;
 
 	if (!mm_job_node)
 		return -ENOMEM;
 
 	mm_job_node->job.size = size - 8;
-	if (size < 8)
+	if (size < 8) {
+		ret = -EINVAL;
 		goto out;
+	}
 
 	if (copy_from_user(&(mm_job_node->job.type), buf, \
 				sizeof(mm_job_node->job.type))) {
 		pr_err("copy_from_user failed for type");
+		ret = -EFAULT;
 		goto out;
-		}
+	}
 	size -= sizeof(mm_job_node->job.type);
 	buf += sizeof(mm_job_node->job.type);
 #ifdef CONFIG_ARCH_JAVA
 	if (mm_job_node->job.type & MM_DIRTY_JOB) {
 		mm_job_node->job.type &= ~MM_DIRTY_JOB;
 		mm_job_node->job.status = MM_JOB_STATUS_DIRTY;
-		}
+	}
 	else
 		mm_job_node->job.status = MM_JOB_STATUS_READY;
 #else
@@ -462,41 +484,52 @@ static int mm_file_write(struct file *filp, const char __user *buf,
 	core_id = (mm_job_node->job.type & 0xFF0000) >> 16;
 	if (copy_from_user(&(mm_job_node->job.id), buf , \
 				sizeof(mm_job_node->job.id))) {
-		pr_err("copy_from_user failed for type");
+		pr_err("copy_from_user failed for id");
+		ret = -EFAULT;
 		goto out;
-		}
+	}
 	size -= sizeof(mm_job_node->job.id);
 	buf += sizeof(mm_job_node->job.id);
 	if (size > 0) {
-		void *job_post = NULL;
-		uint32_t *ptr ;
+		uint8_t *ptr;
+		int i;
 		job_post = kmalloc(size, GFP_KERNEL);
-		mm_job_node->job.data = job_post;
-		ptr = (uint32_t *)job_post;
-		if (copy_from_user(job_post, buf, size)) {
-			pr_err("mm_file_write: data copy_from_user failed");
-			kfree(job_post);
+		if (!job_post) {
+			ret = -ENOMEM;
 			goto out;
-			}
+		}
+		mm_job_node->job.data = job_post;
+		ptr = job_post;
+		if (copy_from_user(job_post, buf, size)) {
+			pr_err("data copy_from_user failed");
+			ret = -EFAULT;
+			goto err_data;
+		}
 
-		pr_debug("mm_file_write %x %x %x %x %x %x %x", \
-					mm_job_node->job.size,
-					mm_job_node->job.type,
-					mm_job_node->job.id,
-					ptr[0], ptr[1], ptr[2], ptr[3]);
+		pr_debug("%x %x %x",
+			mm_job_node->job.size,
+			mm_job_node->job.type,
+			mm_job_node->job.id);
+		for (i = 0; i < min(size, 16); i++) {
+			pr_debug("%02x", *ptr);
+			ptr++;
+		}
 		BUG_ON(core_id >= MAX_ASYMMETRIC_PROC);
 		BUG_ON(common->mm_core[core_id] == NULL);
 		SCHEDULER_COMMON_WORK(common, &mm_job_node->work);
-		}
-	else {
+	} else {
 		pr_err("zero size write");
+		ret = -EINVAL;
 		goto out;
-		}
+	}
 
 	return 0;
+
+err_data:
+	kfree(job_post);
 out:
 	kfree(mm_job_node);
-	return 0;
+	return ret;
 }
 
 static int mm_file_read(struct file *filp, \
@@ -683,6 +716,10 @@ static long mm_file_ioctl(struct file *filp, \
 		BUG_ON(private->device_locked == 1);
 		if (down_interruptible(&common->device_sem))
 			return -EINVAL;
+
+		if (common->common_clk)
+			clk_enable(common->common_clk);
+
 		private->device_locked = 1;
 	break;
 	case MM_IOCTL_DEVICE_UNLOCK:
@@ -692,8 +729,11 @@ static long mm_file_ioctl(struct file *filp, \
 			break;
 		}
 		BUG_ON(private->device_locked == 0);
-		up(&common->device_sem);
 		private->device_locked = 0;
+		if (common->common_clk)
+			clk_disable(common->common_clk);
+		up(&common->device_sem);
+
 	break;
 #if defined(CONFIG_MM_SECURE_DRIVER)
 	case MM_IOCTL_SECURE_JOB_WAIT:
@@ -747,6 +787,29 @@ static long mm_file_ioctl(struct file *filp, \
 		ret = copy_to_user((uint32_t *)arg, &flags, sizeof(int));
 	}
 	break;
+#ifdef CONFIG_MEMC_DFS
+	case MM_IOCTL_MEMC_SET:
+	{
+		if (private->memc_init == 0) {
+			sprintf(private->memc_name, "%s:0x%p",
+				 common->mm_common_ifc.mm_name, private);
+			memc_add_dfs_req(&private->memc_node,
+				(char *)&private->memc_name, MEMC_OPP_ECO);
+			private->memc_init = 1;
+			private->set_freq = 0;
+		}
+
+		memc_update_dfs_req(&private->memc_node, MEMC_OPP_TURBO);
+		private->set_freq++ ;
+	}
+	break;
+	case MM_IOCTL_MEMC_RESET:
+	{
+		memc_update_dfs_req(&private->memc_node, MEMC_OPP_ECO);
+		private->set_freq--;
+	}
+	break;
+#endif
 	default:
 		pr_err("cmd[0x%08x] not supported", cmd);
 		ret = -EINVAL;

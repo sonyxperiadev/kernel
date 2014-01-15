@@ -32,8 +32,8 @@
 #ifdef CONFIG_KONA_PROFILER
 #include <plat/ccu_profiler.h>
 #include <plat/profiler.h>
-#include <mach/kona_timer.h>
 #endif /*CONFIG_KONA_PROFILER*/
+#include <mach/kona_timer.h>
 #include <mach/timex.h>
 
 #ifdef CONFIG_USE_ARCH_TIMER_AS_LOCAL_TIMER
@@ -41,11 +41,11 @@
 #include <mach/pm.h>
 #endif
 
-#ifdef CONFIG_KONA_PROFILER
-int deepsleep_profiling;
-module_param_named(deepsleep_profiling, deepsleep_profiling, int,
-	S_IRUGO | S_IWUSR | S_IWGRP);
-#endif /*CONFIG_KONA_PROFILER*/
+#ifdef CONFIG_BRCM_SECURE_WATCHDOG
+#include <linux/broadcom/kona_sec_wd.h>
+#endif
+
+#include <linux/notifier.h>
 
 enum {
 	KONA_PM_LOG_LVL_NONE = 0,
@@ -65,6 +65,8 @@ struct kona_pm_params {
 	u32 suspend_state;
 	int log_lvl;
 	spinlock_t cstate_lock;
+	struct atomic_notifier_head cstate_nh;
+	struct notifier_block pm_notifier;
 };
 
 static struct kona_pm_params pm_prms = {
@@ -144,13 +146,9 @@ static int __kona_pm_enter_idle(struct cpuidle_device *dev,
 			clockevents_notify(CLOCK_EVT_NOTIFY_BROADCAST_EXIT,
 				&cpu_id);
 #endif
-		time_end = ktime_get();
-		diff = ktime_to_us(ktime_sub(time_end, time_start));
-		if (diff > INT_MAX)
-			diff = INT_MAX;
-		dev->last_residency = (int) diff;
-
 		instrument_idle_exit();
+		atomic_notifier_call_chain(&pm_prms.cstate_nh, CSTATE_EXIT,
+				&index);
 		local_irq_enable();
 		local_fiq_enable();
 	}
@@ -173,6 +171,30 @@ struct cpuidle_driver kona_idle_driver = {
 #endif /*CONFIG_CPU_IDLE */
 
 #ifdef CONFIG_SUSPEND
+
+static int kona_pm_notifier(struct notifier_block *notifier,
+		       unsigned long pm_event,
+		       void *unused)
+{
+	switch (pm_event) {
+	case PM_SUSPEND_PREPARE:
+#ifdef CONFIG_BCM_MODEM
+		BcmRpc_SetApSleep(1);
+#endif
+		break;
+
+	case PM_POST_SUSPEND:
+#ifdef CONFIG_BCM_MODEM
+		BcmRpc_SetApSleep(0);
+#endif
+		break;
+
+	default:
+		break;
+	}
+	return NOTIFY_DONE;
+}
+
 
 __weak int kona_mach_pm_begin(suspend_state_t state)
 {
@@ -198,9 +220,10 @@ __weak int kona_mach_pm_prepare(void)
 __weak int kona_mach_pm_enter(suspend_state_t state)
 {
 	int ret = 0;
+	u64 time1, time2, time_susp;
 #ifdef CONFIG_KONA_PROFILER
 	int err = 0;
-	u64 time_awake, time1, time2, time_susp;
+	u64 time_awake;
 	struct ccu_prof_parameter param = {
 		.count_type = CCU_PROF_ALWAYS_ON,
 	};
@@ -216,9 +239,9 @@ __weak int kona_mach_pm_enter(suspend_state_t state)
 	case PM_SUSPEND_MEM:
 		if (suspend->enter) {
 			pr_info("--%s:suspend->enter--\n", __func__);
-
-#ifdef CONFIG_BCM_MODEM
-			BcmRpc_SetApSleep(1);
+#ifdef CONFIG_BRCM_SECURE_WATCHDOG
+		if  (is_sec_wd_enabled())
+			sec_wd_disable();
 #endif
 
 #ifdef CONFIG_KONA_PROFILER
@@ -228,9 +251,14 @@ __weak int kona_mach_pm_enter(suspend_state_t state)
 
 			time1 = kona_hubtimer_get_counter();
 			pr_info(" Timer value before suspend: %llu", time1);
+
+			atomic_notifier_call_chain(&pm_prms.cstate_nh,
+					CSTATE_ENTER, &pm_prms.suspend_state);
 			suspend->enter(suspend,
-					suspend->params |
-					CTRL_PARAMS_ENTER_SUSPEND);
+				suspend->params | CTRL_PARAMS_ENTER_SUSPEND);
+			atomic_notifier_call_chain(&pm_prms.cstate_nh,
+					CSTATE_EXIT, &pm_prms.suspend_state);
+
 			time2 = kona_hubtimer_get_counter();
 
 			pr_info(" Timer value when resume: %llu", time2);
@@ -244,12 +272,13 @@ __weak int kona_mach_pm_enter(suspend_state_t state)
 					printk(KERN_ALERT "counter overflow");
 				else if	(time_awake > 0)
 					pr_info("System in deepsleep: %llums",
-							time_susp - time_awake);
+						time_susp - time_awake);
 			}
 #endif /*CONFIG_KONA_PROFILER*/
 
-#ifdef CONFIG_BCM_MODEM
-			BcmRpc_SetApSleep(0);
+#ifdef CONFIG_BRCM_SECURE_WATCHDOG
+		if  (is_sec_wd_enabled())
+			sec_wd_enable();
 #endif
 		} else
 			cpu_do_idle();
@@ -270,7 +299,6 @@ int kona_pm_cpu_lowpower(void)
 {
 	struct kona_idle_state *suspend =
 		&pm_prms.states[pm_prms.suspend_state];
-
 	BUG_ON(!suspend);
 	if (LOG_LEVEL_ENABLED(KONA_PM_LOG_LVL_FLOW))
 		pr_info("Put cpu to lowpower\n");
@@ -279,10 +307,14 @@ int kona_pm_cpu_lowpower(void)
 	 * In dormant path, we will put this core
 	 * to DORMANT_CORE_DOWN.
 	 */
-	if (suspend->enter) {
+	atomic_notifier_call_chain(&pm_prms.cstate_nh, CSTATE_ENTER,
+				&pm_prms.suspend_state);
+	if (suspend->enter)
 		suspend->enter(suspend,
 			suspend->params | CTRL_PARAMS_OFFLINE_CORE);
-	}
+
+	atomic_notifier_call_chain(&pm_prms.cstate_nh, CSTATE_EXIT,
+				&pm_prms.suspend_state);
 	return 0;
 }
 EXPORT_SYMBOL(kona_pm_cpu_lowpower);
@@ -326,6 +358,18 @@ static void kona_setup_broadcast_timer(void *arg)
 	clockevents_notify(CLOCK_EVT_NOTIFY_BROADCAST_ON, &cpu);
 }
 #endif
+
+int cstate_notifier_register(struct notifier_block *nb)
+{
+	return atomic_notifier_chain_register(&pm_prms.cstate_nh, nb);
+}
+EXPORT_SYMBOL_GPL(cstate_notifier_register);
+
+int cstate_notifier_unregister(struct notifier_block *nb)
+{
+	return atomic_notifier_chain_unregister(&pm_prms.cstate_nh, nb);
+}
+EXPORT_SYMBOL_GPL(cstate_notifier_unregister);
 
 /**
  * kona_pm_init - init function init Kona platform idle/suspend
@@ -393,9 +437,13 @@ int __init kona_pm_init(struct pm_init_param *ip)
 #ifdef CONFIG_SUSPEND
 	pr_info("--%s : registering suspend hanlders\n", __func__);
 	suspend_set_ops(&kona_pm_ops);
+	pm_prms.pm_notifier.notifier_call = kona_pm_notifier;
+	register_pm_notifier(&pm_prms.pm_notifier);
+
 #endif /*CONFIG_SUSPEND */
 
-	return ret;
+	ATOMIC_INIT_NOTIFIER_HEAD(&pm_prms.cstate_nh);
+	return 0;
 }
 
 /*
@@ -492,7 +540,7 @@ int kona_pm_disable_idle_state_for_cpu(int cpu, int state, bool disable)
 	struct cpuidle_device *dev;
 	int i;
 
-	if (cpu > CONFIG_NR_CPUS)
+	if (cpu >= CONFIG_NR_CPUS)
 		return -EINVAL;
 
 	dev = per_cpu(cpuidle_devices, cpu);
@@ -523,6 +571,18 @@ int kona_pm_set_suspend_state(int state_inx)
 	return 0;
 }
 EXPORT_SYMBOL(kona_pm_set_suspend_state);
+
+int kona_pm_get_num_cstates(void)
+{
+	return pm_prms.num_states;
+}
+EXPORT_SYMBOL(kona_pm_get_num_cstates);
+
+char *kona_pm_get_cstate_name(int state_inx)
+{
+	return kona_idle_driver.states[state_inx].name;
+}
+EXPORT_SYMBOL(kona_pm_get_cstate_name);
 
 #ifdef CONFIG_DEBUG_FS
 

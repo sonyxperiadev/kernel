@@ -686,7 +686,7 @@ static int hawaii_camera_power(struct device *dev, int on)
 		goto e_clk_get;
 	}
 	if (on) {
-		if (pi_mgr_dfs_request_update(&unicam_dfs_node, PI_OPP_TURBO))
+		if (pi_mgr_dfs_request_update(&unicam_dfs_node, PI_OPP_ECONOMY))
 			printk("DVFS for UNICAM failed\n");
 		regulator_enable(d_gpsr_cam0_1v8);
 		usleep_range(1000, 1010);
@@ -932,7 +932,7 @@ static int hawaii_camera_power_front(struct device *dev, int on)
 		goto e_clk_get;
 	}
 	if (on) {
-		if (pi_mgr_dfs_request_update(&unicam_dfs_node, PI_OPP_TURBO))
+		if (pi_mgr_dfs_request_update(&unicam_dfs_node, PI_OPP_ECONOMY))
 			printk("DVFS for UNICAM failed\n");
 		gpio_set_value(SENSOR_1_GPIO_PWRDN, thiscfg->pwdn_active);
 		usleep_range(1000, 1010);
@@ -1235,7 +1235,9 @@ struct platform_device *hawaii_common_plat_devices[] __initdata = {
 #endif /* End of CONFIG_OF */
 
 	&pmu_device,
+#ifndef CONFIG_OF
 	&hawaii_ssp0_device,
+#endif
 
 #ifdef CONFIG_SENSORS_KONA
 	&thermal_device,
@@ -1250,9 +1252,11 @@ struct platform_device *hawaii_common_plat_devices[] __initdata = {
 #endif
 
 #if defined(CONFIG_USB_DWC_OTG)
+#ifndef CONFIG_OF
 	&hawaii_usb_phy_platform_device,
 	&hawaii_hsotgctrl_platform_device,
 	&hawaii_otg_platform_device,
+#endif
 #endif
 
 #ifdef CONFIG_KONA_AVS
@@ -2557,9 +2561,10 @@ static void __init hawaii_add_devices(void)
 	platform_add_devices(hawaii_devices, ARRAY_SIZE(hawaii_devices));
 
 	hawaii_add_i2c_devices();
-
+#ifndef CONFIG_OF
 	spi_register_board_info(spi_slave_board_info,
 				ARRAY_SIZE(spi_slave_board_info));
+#endif
 
 }
 

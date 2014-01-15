@@ -918,13 +918,13 @@ static int kona_memc_probe(struct platform_device *pdev)
 	int size, ret;
 	struct resource *iomem;
 	struct kona_memc_pdata *pdata;
-	int i;
 #ifdef CONFIG_LPDDR_DEV_TEMP
 	int irq;
 	int *temp_tholds;
 #endif
 
 #ifdef CONFIG_MEMC_DFS
+	int i;
 	u32 *dfs;
 #endif
 	spin_lock_init(&kona_memc.memc_lock);

@@ -1390,7 +1390,8 @@ static u32 bsc_functionality(struct i2c_adapter *adap)
 	return I2C_FUNC_I2C | (I2C_FUNC_SMBUS_EMUL &
 			       ~(I2C_FUNC_SMBUS_WRITE_BLOCK_DATA |
 				 I2C_FUNC_SMBUS_READ_BLOCK_DATA)) |
-	    I2C_FUNC_10BIT_ADDR | I2C_FUNC_PROTOCOL_MANGLING;
+	    I2C_FUNC_10BIT_ADDR | I2C_FUNC_PROTOCOL_MANGLING |
+	    I2C_FUNC_NOSTART;
 }
 
 static struct i2c_algorithm bsc_algo = {
@@ -1501,7 +1502,7 @@ static int proc_tx_fifo_read(struct file *file, char __user *buffer,
 		return 0;
 
 	len += scnprintf(buffer + len, PAGE_SIZE, "TX FIFO is %s\n",
-		       atomic_read(&dev->rx_fifo_support) ? "enabled" :
+		       atomic_read(&dev->tx_fifo_support) ? "enabled" :
 		       "disabled");
 	*off += len;
 	return len;

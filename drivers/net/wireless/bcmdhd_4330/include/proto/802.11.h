@@ -3298,6 +3298,10 @@ typedef struct vht_features_ie_hdr vht_features_ie_hdr_t;
 #define WCN_OUI			"\x00\x50\xf2"	/* WCN OUI */
 #define WCN_TYPE		4	/* WCN type */
 
+#ifdef BCMWAPI_WPI
+#define SMS4_KEY_LEN		16
+#define SMS4_WPI_CBC_MAC_LEN	16
+#endif
 
 /* 802.11r protocol definitions */
 
@@ -3360,6 +3364,13 @@ typedef struct mmic_ie mmic_ie_t;
 #define BSSID_INVALID           "\x00\x00\x00\x00\x00\x00"
 #define BSSID_BROADCAST         "\xFF\xFF\xFF\xFF\xFF\xFF"
 
+#ifdef BCMWAPI_WAI
+#define WAPI_IE_MIN_LEN		20
+#define WAPI_VERSION		1
+#define WAPI_VERSION_LEN	2
+#define WAPI_OUI		"\x00\x14\x72"
+#define WAPI_OUI_LEN		DOT11_OUI_LEN
+#endif
 
 /* ************* WMM Parameter definitions. ************* */
 #define WMM_OUI			"\x00\x50\xF2"	/* WNN OUI */

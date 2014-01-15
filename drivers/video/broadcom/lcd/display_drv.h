@@ -121,8 +121,6 @@ extern "C" {
 		uint8_t Bpp;
 		void (*init_fn)(void);
 		int (*esd_check_fn)(void);
-		uint32_t esd_check_period;
-		uint32_t esd_check_retry;
 		char *init_seq;
 		char *slp_in_seq;
 		char *slp_out_seq;

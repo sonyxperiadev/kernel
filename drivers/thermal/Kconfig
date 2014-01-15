@@ -175,4 +175,11 @@ config KONA_TMON_THERMAL
 	depends on ARCH_KONA
 	help
 	  Enable this option to include Kona TMON thermal sensor driver.
+
+config BCMPMU_DIETEMP_THERMAL
+        tristate "Bcmpmu59xxx Dietemp thermal driver"
+        depends on THERMAL
+        help
+         Enable this option to include Bcmpmu59xxx Dietemp thermal sensor
+         driver.
 endif

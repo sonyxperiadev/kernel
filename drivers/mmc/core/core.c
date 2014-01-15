@@ -439,6 +439,24 @@ static void mmc_wait_for_req_done(struct mmc_host *host,
 		wait_for_completion(&mrq->completion);
 
 		cmd = mrq->cmd;
+
+		/*
+		 * If host has timed out waiting for the sanitize
+		 * to complete, card might be still in programming state
+		 * so let's try to bring the card out of programming
+		 * state.
+		 */
+		if (cmd->sanitize_busy && cmd->error == -ETIMEDOUT) {
+			if (!mmc_interrupt_hpi(host->card)) {
+				pr_warning("%s: %s: Interrupted sanitize\n",
+					   mmc_hostname(host), __func__);
+				cmd->error = 0;
+				break;
+			} else {
+				pr_err("%s: %s: Failed to interrupt sanitize\n",
+				       mmc_hostname(host), __func__);
+			}
+		}
 		if (!cmd->error || !cmd->retries ||
 		    mmc_card_removed(host->card))
 			break;
@@ -1499,7 +1517,8 @@ static void mmc_power_up(struct mmc_host *host)
 	 * This delay should be sufficient to allow the power supply
 	 * to reach the minimum voltage.
 	 */
-	mmc_delay(15);
+	mmc_delay(9);
+	mmc_delay(6);
 
 	host->ios.clock = host->f_init;
 
@@ -1510,7 +1529,8 @@ static void mmc_power_up(struct mmc_host *host)
 	 * This delay must be at least 74 clock sizes, or 1 ms, or the
 	 * time required to reach a stable voltage.
 	 */
-	mmc_delay(15);
+	mmc_delay(9);
+	mmc_delay(6);
 
 	mmc_host_clk_release(host);
 }
