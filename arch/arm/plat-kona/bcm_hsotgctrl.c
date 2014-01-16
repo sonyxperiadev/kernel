@@ -506,8 +506,13 @@ static void bcm_hsotgctrl_delayed_wakeup_handler(struct work_struct *work)
 
 	dev_info(bcm_hsotgctrl_handle->dev, "Do HSOTGCTRL wakeup\n");
 
+	/* bcm_hsotgctrl_wakeup_core() expects the clock to be enabled */
+	bcm_hsotgctrl_en_clock(true);
+
 	/* Use the PHY-core wakeup sequence */
 	bcm_hsotgctrl_wakeup_core();
+
+	bcm_hsotgctrl_en_clock(false);
 }
 
 static irqreturn_t bcm_hsotgctrl_wake_irq(int irq, void *dev)
@@ -554,12 +559,8 @@ int bcm_hsotgctrl_handle_bus_suspend(void)
 	/* Clear PHY clock request */
 	bcm_hsotgctrl_set_phy_clk_request(false);
 
-
 	/* Enable wakeup interrupt */
 	bcm_hsotgctrl_phy_wakeup_condition(true);
-
-	/* Disable OTG AHB clock */
-	bcm_hsotgctrl_en_clock(false);
 
 	if (bcm_hsotgctrl_handle->irq_enabled == false) {
 		/* Enable wake IRQ */
