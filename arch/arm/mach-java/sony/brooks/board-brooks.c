@@ -906,6 +906,13 @@ defined(CONFIG_TOUCHSCREEN_BCMTCH15XXX_MODULE)
 #if defined(CONFIG_INPUT_APDS9702)
 	kivu_add_proximity();
 #endif
+
+#if defined(CONFIG_INPUT_APDS9702)
+	kivu_add_proximity();
+#endif
+#if defined(CONFIG_TOUCHSCREEN_SYNAPTICS_I2C_RMI4_2)
+	brooks_add_touch();
+#endif
 }
 
 #ifdef CONFIG_ION_BCM_NO_DT
