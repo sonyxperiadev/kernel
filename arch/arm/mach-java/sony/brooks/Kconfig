@@ -1,5 +1,4 @@
 config MACH_JAVA_GARNET_SONY_BROOKS
-	depends on ARCH_JAVA_A0
 	depends on MACH_JAVA_SONY
 	select MACH_SONY
 	bool "Brooks 1.0"
