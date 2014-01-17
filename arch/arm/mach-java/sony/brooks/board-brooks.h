@@ -27,3 +27,6 @@ void __init kivu_add_barometer(void);
 #if defined(CONFIG_INPUT_APDS9702)
 void __init kivu_add_proximity(void);
 #endif
+#if defined(CONFIG_TOUCHSCREEN_SYNAPTICS_I2C_RMI4_2)
+void __init brooks_add_touch(void);
+#endif

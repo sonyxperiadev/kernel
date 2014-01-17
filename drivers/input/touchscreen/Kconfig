@@ -624,6 +624,32 @@ config TOUCHSCREEN_TNETV107X
 	  To compile this driver as a module, choose M here: the
 	  module will be called tnetv107x-ts.
 
+config TOUCHSCREEN_SYNAPTICS_I2C_RMI4_2
+	tristate "Synaptics DSX I2C touchscreen"
+	depends on I2C
+	help
+	  Say Y here if you have a Synaptics DSX I2C touchscreen
+	  connected to your system.
+
+	  If unsure, say N.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called synaptics_i2c_rmi4.
+
+config TOUCHSCREEN_SYNAPTICS_DSX_RMI4_DEV
+	tristate "Synaptics I2C touchscreen rmi device"
+	depends on TOUCHSCREEN_SYNAPTICS_I2C_RMI4_2
+	help
+	  This enables support for character device channel for Synaptics RMI
+	  touchscreens.
+
+config TOUCHSCREEN_SYNAPTICS_DSX_FW_UPDATE
+	tristate "Synaptics I2C touchscreen firmware update"
+	depends on TOUCHSCREEN_SYNAPTICS_I2C_RMI4_2
+	help
+	  This enables support for firmware update for Synaptics RMI
+	  touchscreens.
+
 config TOUCHSCREEN_TOUCHRIGHT
 	tristate "Touchright serial touchscreen"
 	select SERIO
