@@ -1041,7 +1041,7 @@ static int __init hawaii_add_lateinit_devices(void)
 late_initcall(hawaii_add_lateinit_devices);
 
 static const char * const java_dt_compat[] = { "bcm,java", NULL, };
-DT_MACHINE_START(HAWAII, "Kivu 2.0")
+DT_MACHINE_START(HAWAII, CONFIG_BRD_NAME)
 	.smp = smp_ops(kona_smp_ops),
 	.map_io = hawaii_map_io,
 	.init_irq = kona_init_irq,
