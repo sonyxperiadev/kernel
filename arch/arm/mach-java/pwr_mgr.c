@@ -889,15 +889,6 @@ static int __init java_pwr_mgr_init(void)
 	/*init clks */
 	__clock_init();
 
-#if !defined(CONFIG_MACH_BCM_FPGA_E) && \
-	!defined(CONFIG_MACH_BCM_FPGA)
-#ifdef CONFIG_PWRMGR_1P2GHZ_OPS_SET_SELECT
-	mach_config_arm_pll(CONFIG_A9_PLL_2P4GHZ, 0);
-#else
-	mach_config_arm_pll(CONFIG_A9_PLL_2P8GHZ, 0);
-#endif
-#endif /*CONFIG_MACH_BCM_FPGA_E*/
-
 	return 0;
 }
 

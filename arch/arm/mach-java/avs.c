@@ -56,12 +56,10 @@ struct avs_info {
 	struct avs_pdata *pdata;
 	struct avs_handshake *avs_handshake;
 	u32 handshake_version;
-	u32 kernel_freq_id;
 };
 
 struct avs_info avs_info = {
 	.handshake_version = AVS_HANDSHAKE_VERSION,
-	.kernel_freq_id = ARM_FREQ_1200_MHZ,
 	.avs_handshake = NULL,
 };
 
@@ -495,8 +493,6 @@ static int avs_drv_probe(struct platform_device *pdev)
 			pdata->avs_info_base_addr);
 
 	BUG_ON(avs_info.handshake_version != avs_info.avs_handshake->version);
-	BUG_ON(avs_info.kernel_freq_id != avs_info.avs_handshake->arm_freq);
-
 
 #ifdef CONFIG_MM_312M_SOURCE_CLK
 	BUG_ON(!(avs_info.avs_handshake->status &
