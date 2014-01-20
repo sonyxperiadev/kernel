@@ -151,6 +151,8 @@ static char *pwr_mgr_event2str(int event)
 #define PWR_MGR_SEQ_RETRIES			(50)
 #define PWR_MGR_SEQ_INTR_POLL_TIMEOUT_US	(200)
 
+#define PM_DEBUG_BUS_SELECT_MAX			0xF
+
 /**
  * SW SEQUENCER logging related
  */
@@ -2240,6 +2242,41 @@ static int pwr_mgr_sw_i2c_seq_start(u32 action)
 }
 #endif
 
+static int pm_debug_bus_panic_notify(struct notifier_block *this,
+					unsigned long event, void *ptr)
+{
+	static int has_panicked;
+	u32 reg_val, db_sel;
+	if (has_panicked)
+		return 0;
+
+	pr_info("------- PM Debug Bus -------\n");
+	for (db_sel = 0; db_sel <= PM_DEBUG_BUS_SELECT_MAX; db_sel++) {
+		reg_val =
+			readl(PWR_MGR_REG_ADDR(PWRMGR_PC_PIN_OVERRIDE_CONTROL_OFFSET));
+		reg_val &=
+			~(PWRMGR_PC_PIN_OVERRIDE_CONTROL_DEBUG_BUS_SELECT_MASK);
+		reg_val |=
+			db_sel << PWRMGR_PC_PIN_OVERRIDE_CONTROL_DEBUG_BUS_SELECT_SHIFT;
+		writel(reg_val,
+			PWR_MGR_REG_ADDR(PWRMGR_PC_PIN_OVERRIDE_CONTROL_OFFSET));
+		pr_info("pm_debug_bus[0x%02x]: 0x%04x\n", db_sel,
+			(readl(PWR_MGR_REG_ADDR(PWRMGR_POWER_MANAGER_I2C_ENABLE_OFFSET)) &
+			PWRMGR_POWER_MANAGER_I2C_ENABLE_POWER_MANAGER_DEBUG_BUS_MASK) >>
+			PWRMGR_POWER_MANAGER_I2C_ENABLE_POWER_MANAGER_DEBUG_BUS_SHIFT);
+	}
+	pr_info("----------------------------\n");
+
+	has_panicked = 1;
+	return 0;
+}
+
+static struct notifier_block pm_debug_bus_panic_nb = {
+	.notifier_call	= pm_debug_bus_panic_notify,
+	.next		= NULL,
+	.priority	= 200	/* priority: INT_MAX >= x >= 0 */
+};
+
 int pwr_mgr_pmu_reg_read(u8 reg_addr, u8 slave_id, u8 *reg_val)
 {
 	int ret;
@@ -2815,6 +2852,8 @@ int pwr_mgr_init(struct pwr_mgr_info *info)
 	ret = request_irq(info->pwrmgr_intr, pwr_mgr_irq_handler,
 			  IRQF_TRIGGER_RISING | IRQF_NO_SUSPEND,
 			  "pwr_mgr", NULL);
+	atomic_notifier_chain_register(&panic_notifier_list,
+					&pm_debug_bus_panic_nb);
 	return ret;
 }
 EXPORT_SYMBOL(pwr_mgr_init);
