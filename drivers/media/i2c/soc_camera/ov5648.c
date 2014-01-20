@@ -22,31 +22,21 @@
 #include <linux/module.h>
 #include <linux/io.h>
 #include <linux/gpio.h>
-#include <linux/gpio_keys.h>
 #include <linux/printk.h>
 #include <linux/proc_fs.h>
-#include <linux/hrtimer.h>
-
 #include <media/v4l2-subdev.h>
 #include <media/v4l2-chip-ident.h>
 #include <media/soc_camera.h>
 #include <linux/videodev2_brcm.h>
-#include "ov5648.h"
 #ifdef CONFIG_VIDEO_A3907
 #include <media/a3907.h>
 #endif
-
 #ifdef CONFIG_VIDEO_DW9714
 #include <media/dw9714.h>
 #endif
 
-#ifdef CONFIG_VIDEO_AS3643
-#include "as3643.h"
-#endif
-
-#include <linux/init.h>
-#include <linux/module.h>
-#include <linux/timer.h>
+#include "flash_lamp.h"
+#include "ov5648.h"
 
 #define SENSOR_NAME_STR "ov5648"
 #define OV5648_DEBUG 0
@@ -246,7 +236,8 @@ struct ov5648 {
 	enum v4l2_flash_led_mode flashmode;
 	int flash_intensity;
 	int flash_timeout;
-	struct hrtimer flash_hrtimer;
+	int has_lamp;
+	struct flash_lamp_s lamp;
 	struct ov5648_otp otp;
 	int calibrated;
 #define V4L2_FRAME_INFO_CACHE 4
@@ -614,21 +605,10 @@ static const struct ov5648_reg ov5648_reg_state[OV5648_STATE_MAX][3] = {
 
 static int ov5648_set_flash_mode(struct i2c_client *client,
 					enum v4l2_flash_led_mode mode);
-static enum hrtimer_restart ov5648_flash_mode_timer_cb(struct hrtimer *timer);
 static int ov5648_set_mode(struct i2c_client *client, int new_mode_idx);
 static int ov5648_set_state(struct i2c_client *client, int new_state);
 static int ov5648_init(struct i2c_client *client);
 
-/*add an timer to close the flash after two frames*/
-#if defined(CONFIG_MACH_JAVA_C_LC1)
-static struct timer_list timer;
-static char *msg = "hello world";
-static void print_func(unsigned long lparam)
-{
-	gpio_set_value(TORCH_EN, 0);
-	gpio_set_value(FLASH_EN, 0);
-}
-#endif
 /*
  * Find a data format by a pixel code in an array
  */
@@ -1853,28 +1833,18 @@ static int ov5648_s_ctrl(struct v4l2_ctrl *ctrl)
 		break;
 	case V4L2_CID_FLASH_INTENSITY:
 		ov5648->flash_intensity = ctrl->val;
-		pr_debug("%s() flash_intensity set to %d",
+		pr_info("%s() flash_intensity set to %d\n",
 			 __func__, ov5648->flash_intensity);
 		break;
 	case V4L2_CID_FLASH_TIMEOUT:
 		ov5648->flash_timeout = ctrl->val;
-		pr_debug("%s() flash_timeout set to %d",
+		pr_info("%s() flash_timeout set to %d\n",
 			 __func__, ov5648->flash_timeout);
 		break;
 
 	}
 
 	return ret;
-}
-
-static enum hrtimer_restart ov5648_flash_mode_timer_cb(struct hrtimer *timer)
-{
-	struct ov5648 *ov5648;
-	ov5648 = container_of(timer, struct ov5648, flash_hrtimer);
-
-	if (ov5648->flashmode == V4L2_FLASH_LED_MODE_FLASH)
-		ov5648->flashmode = V4L2_FLASH_LED_MODE_NONE;
-	return HRTIMER_NORESTART;
 }
 
 static int ov5648_set_flash_mode(struct i2c_client *client,
@@ -1889,106 +1859,33 @@ static int ov5648_set_flash_mode(struct i2c_client *client,
 
 	struct ov5648 *ov5648 = to_ov5648(client);
 
-	pr_debug("%s() mode=%s intensity=%d timeout=%d",
+	pr_info("%s() mode=%s intensity=%d timeout=%d\n",
 		__func__,
 		flashmode_str[mode],
 		ov5648->flash_intensity,
 		ov5648->flash_timeout);
 
+	/* check if lamp is presented */
+	if (0 == ov5648->has_lamp)
+		return -1;
+	/* check if lamp is in requested mode */
 	if (ov5648->flashmode == mode)
 		return 0;
-#ifdef CONFIG_VIDEO_AS3643
-	switch (mode) {
-	case V4L2_FLASH_LED_MODE_NONE:
-		ov5648_reg_write(client, 0x3B00, 0x00);
-		as3643_clear_all();
-		as3643_gpio_toggle(0);
-		break;
 
-	case V4L2_FLASH_LED_MODE_TORCH:
-		as3643_gpio_toggle(1);
-		usleep_range(25, 30);
-		as3643_set_torch_flash(0x80);
-		break;
-
-	case V4L2_FLASH_LED_MODE_FLASH:
-		/* turn flash on */
-		as3643_gpio_toggle(1);
-		usleep_range(25, 30);
-		as3643_set_ind_led(ov5648->flash_intensity,
-					ov5648->flash_timeout);
-		ov5648_reg_write(client, 0x3B00, 0x83);
-		break;
-
-	case V4L2_FLASH_LED_MODE_FLASH_AUTO:
-		as3643_gpio_toggle(1);
-		usleep_range(25, 30);
-		as3643_set_ind_led(0x80, 30000);
-		ov5648_reg_write(client, 0x3B00, 0x83);
-		break;
-
-	default:
-	/* Not yet implemented */
-		return -EINVAL;
+	/* apply new mode */
+	ov5648->lamp.set_mode(mode);
+	if (V4L2_FLASH_LED_MODE_NONE != mode) {
+		ov5648->lamp.set_intensity(ov5648->flash_intensity/5);
+		ov5648->lamp.set_duration(ov5648->flash_timeout +
+			2 * (ov5648->vts * ov5648->line_length)/1000);
+		ov5648->lamp.enable();
+	} else {
+		ov5648->lamp.disable();
 	}
 
+	/* update mode */
 	ov5648->flashmode = mode;
-#endif
 
-#if defined(CONFIG_MACH_JAVA_C_LC1)
-		if (mode == V4L2_FLASH_LED_MODE_NONE) {
-			del_timer(&timer);
-			gpio_set_value(TORCH_EN, 0);
-			gpio_set_value(FLASH_EN, 0);
-		} else if (mode == V4L2_FLASH_LED_MODE_TORCH) {
-			gpio_set_value(TORCH_EN, 1);
-			gpio_set_value(FLASH_EN, 0);
-		} else if (mode == V4L2_FLASH_LED_MODE_FLASH) {
-			ov5648->flash_timeout =
-				3 * (ov5648->vts * ov5648->line_length)/1000;
-			if (ov5648->flash_timeout < 250000)
-				ov5648->flash_timeout = 4 *
-						(ov5648->flash_timeout/3);
-			timer.data = (unsigned long) msg;
-			timer.expires = jiffies
-				+ (ov5648->flash_timeout*HZ)/1000000;
-			timer.function = print_func;
-			add_timer(&timer);
-			pr_debug("flash_timeout=%d mode_id %d",
-				ov5648->flash_timeout, ov5648->mode_idx);
-			gpio_set_value(TORCH_EN, 1);
-			gpio_set_value(FLASH_EN, 1);
-		} else if (mode == V4L2_FLASH_LED_MODE_FLASH_AUTO) {
-			ov5648->flash_timeout =
-				3 * (ov5648->vts * ov5648->line_length)/1000;
-			if (ov5648->flash_timeout < 250000)
-				ov5648->flash_timeout = 4 *
-					(ov5648->flash_timeout/3);
-			timer.data = (unsigned long) msg;
-			timer.expires =
-				jiffies + (ov5648->flash_timeout*HZ)/1000000;
-			timer.function = print_func;
-			add_timer(&timer);
-			gpio_set_value(TORCH_EN, 1);
-			gpio_set_value(FLASH_EN, 1);
-		} else {
-			return -EINVAL;
-		}
-	ov5648->flashmode = mode;
-#endif
-
-	switch (mode) {
-	case V4L2_FLASH_LED_MODE_FLASH:
-		hrtimer_start(&ov5648->flash_hrtimer,
-				ns_to_ktime(ov5648->flash_timeout * 1000),
-				HRTIMER_MODE_REL);
-		break;
-	case V4L2_FLASH_LED_MODE_NONE:
-		hrtimer_cancel(&ov5648->flash_hrtimer);
-		break;
-	default:
-		break;
-	}
 	return 0;
 }
 
@@ -2037,6 +1934,7 @@ static long ov5648_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 					(struct v4l2_frame_info *)arg;
 			ret = -EINVAL;
 			if (!timespec_valid(&fi_usr->timestamp)) {
+				ov5648->flashmode = ov5648->lamp.get_mode();
 				fi_usr->flash_mode = ov5648->flashmode;
 				ov5648_get_gain(client, &fi_usr->an_gain, NULL);
 				ov5648_get_exposure(client,
@@ -2163,13 +2061,6 @@ static int ov5648_init(struct i2c_client *client)
 	 *  Exposure should be DEFAULT_EXPO * line_length / 1000
 	 *  Since we don't have line_length yet, just estimate
 	 */
-#if defined(CONFIG_MACH_JAVA_C_LC1)
-	init_timer(&timer);
-#endif
-
-	hrtimer_init(&ov5648->flash_hrtimer,
-		CLOCK_MONOTONIC, HRTIMER_MODE_REL);
-	ov5648->flash_hrtimer.function = &ov5648_flash_mode_timer_cb;
 
 	ov5648->exposure_current  = DEFAULT_EXPO;
 	ov5648->aecpos_delay      = 1;
@@ -2183,6 +2074,10 @@ static int ov5648_init(struct i2c_client *client)
 		ov5648->exp_read_buf[i] = \
 		(ov5648->exposure_current * 1000 / ov5648->line_length) << 4;
 		ov5648->gain_read_buf[i] = ov5648->gain_current >> 4;
+	}
+	if (0 == get_flash_lamp(&ov5648->lamp)) {
+		ov5648->has_lamp = 1;
+		ov5648->lamp.reset();
 	}
 	dev_dbg(&client->dev, "Sensor initialized\n");
 	return ret;

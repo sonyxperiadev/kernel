@@ -18,6 +18,7 @@ obj-$(CONFIG_SOC_CAMERA_OV8825)		+= ov8825.o
 obj-$(CONFIG_SOC_CAMERA_OV7692)		+= ov7692.o
 obj-$(CONFIG_VIDEO_AS3643)		+= as3643.o
 obj-$(CONFIG_VIDEO_A3907)		+= a3907.o
+obj-$(CONFIG_VIDEO_FLASH_GPIO)		+= flash_gpio.o
 obj-$(CONFIG_SOC_CAMERA_MAIN_S5K4ECGX)	+= camdrv_ss.o  camdrv_ss_s5k4ecgx.o
 obj-$(CONFIG_SOC_CAMERA_SUB_S5K4ECGX)	+= camdrv_ss.o  camdrv_ss_s5k4ecgx.o
 obj-$(CONFIG_SOC_CAMERA_MAIN_S5K5CCGX)	+= camdrv_ss.o  camdrv_ss_s5k5ccgx.o

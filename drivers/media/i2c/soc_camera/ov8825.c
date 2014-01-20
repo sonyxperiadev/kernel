@@ -29,17 +29,10 @@
 #include <media/v4l2-chip-ident.h>
 #include <media/soc_camera.h>
 #include <linux/videodev2_brcm.h>
+#include "flash_lamp.h"
 #include "ov8825.h"
 #ifdef CONFIG_VIDEO_A3907
 #include <media/a3907.h>
-#endif
-
-#ifdef CONFIG_VIDEO_AS3643
-#include "as3643.h"
-#endif
-
-#ifdef CONFIG_GPIO_FLASH
-#include "flash_gpio.h"
 #endif
 
 static int is_snap_to_prev_expo;
@@ -65,7 +58,7 @@ static const struct ov8825_datafmt ov8825_fmts[] = {
 };
 
 enum ov8825_mode {
-	OV8825_MODE_1280x960P30  = 0,
+	OV8825_MODE_1280x960P30	 = 0,
 	OV8825_MODE_3264x2448P15,
 	OV8825_MODE_MAX,
 };
@@ -196,6 +189,8 @@ struct ov8825 {
 	enum v4l2_flash_led_mode flashmode;
 	int flash_intensity;
 	int flash_timeout;
+	int has_lamp;
+	struct flash_lamp_s lamp;
 	struct ov8825_otp otp;
 	int calibrated;
 
@@ -946,19 +941,19 @@ static const struct ov8825_reg ov8825_regdif[OV8825_MODE_MAX][128] = {
 static const struct ov8825_reg ov8825_reg_state[OV8825_STATE_MAX][4] = {
 	{
 		/* to power down */
-		{0x0100, 0x00},     /* disable streaming  */
-		{0x3018, 0x10},     /* disable mipi */
+		{0x0100, 0x00},		/* disable streaming  */
+		{0x3018, 0x10},		/* disable mipi */
 		{0xFFFF, 0x00}
 	},
 	{
 		/* to streaming */
-		{0x3018, 0x00},	    /* enable mipi */
-		{0x0100, 0x01},     /* enable streaming */
+		{0x3018, 0x00},		/* enable mipi */
+		{0x0100, 0x01},		/* enable streaming */
 		{0xFFFF, 0x00}
 	},
 };
 
-static int set_flash_mode(struct i2c_client *client, int mode);
+static int ov8825_set_flash_mode(struct i2c_client *client, int mode);
 static int ov8825_set_mode(struct i2c_client *client, int new_mode_idx);
 static int ov8825_set_state(struct i2c_client *client, int new_state);
 static int ov8825_init(struct i2c_client *client);
@@ -1169,45 +1164,6 @@ static const struct v4l2_ctrl_config ov8825_controls[] = {
 		.max = OV8825_LENS_MAX,
 		.step = OV8825_LENS_STEP,
 		.def = DEFAULT_LENS_POS,
-	},
-	{
-		.ops = &ov8825_ctrl_ops,
-		.id = V4L2_CID_CAMERA_FLASH_MODE,
-		.type = V4L2_CTRL_TYPE_INTEGER,
-#ifdef CONFIG_VIDEO_AS3643
-		.name = "AS3643-flash",
-#endif
-
-#ifdef CONFIG_GPIO_FLASH
-		.name = "GPIO-flash",
-#endif
-		.min = FLASH_MODE_OFF,
-		.max = (1 << FLASH_MODE_OFF) |
-					(1 << FLASH_MODE_ON) |
-					(1 << FLASH_MODE_TORCH_OFF) |
-					(1 << FLASH_MODE_TORCH_ON),
-		.step = 1,
-		.def = FLASH_MODE_OFF,
-	},
-	{
-		.ops = &ov8825_ctrl_ops,
-		.id = V4L2_CID_FLASH_INTENSITY,
-		.type = V4L2_CTRL_TYPE_INTEGER,
-		.name = "Intensity in mA",
-		.min = OV8825_FLASH_INTENSITY_MIN,
-		.max = OV8825_FLASH_INTENSITY_MAX,
-		.step = OV8825_FLASH_INTENSITY_STEP,
-		.def = OV8825_FLASH_INTENSITY_DEFAULT,
-	},
-	{
-		.ops = &ov8825_ctrl_ops,
-		.id = V4L2_CID_FLASH_TIMEOUT,
-		.type = V4L2_CTRL_TYPE_INTEGER,
-		.name = "Flash timeout in us",
-		.min = OV8825_FLASH_TIMEOUT_MIN,
-		.max = OV8825_FLASH_TIMEOUT_MAX,
-		.step = OV8825_FLASH_TIMEOUT_STEP,
-		.def = OV8825_FLASH_TIMEOUT_DEFAULT,
 	},
 	{
 		.ops = &ov8825_ctrl_ops,
@@ -1573,10 +1529,10 @@ static int ov8825_rbgains_update(struct i2c_client *client)
 #endif
 
 /* ov8825 use internal vcm driver, the same i2c client */
-#define OV8825_VCM_STEP_PERIOD_US		100    /* in microseconds */
-#define OV8825_VCM_MAX_POSITION   1023
+#define OV8825_VCM_STEP_PERIOD_US		100	   /* in microseconds */
+#define OV8825_VCM_MAX_POSITION	  1023
 #define OV8825_VCM_START_POINT 100
-#define OV8825_VCM_MIN_POSITION   0
+#define OV8825_VCM_MIN_POSITION	  0
 #define OV8825_DAC_A_VCM_LOW 0x3618
 #define OV8825_DAC_A_VCM_MID0 0x3619
 
@@ -1588,7 +1544,7 @@ static int ov8825_rbgains_update(struct i2c_client *client)
 static int ov8825_vcm_position_code(struct ov8825 *ov8825,
 		uint8_t *code1, uint8_t *code2)
 {
-	int  pos = ov8825->position;
+	int	 pos = ov8825->position;
 
 	*code1 = ((pos & 0xF)  << 4) | 0x2;
 	*code2 = (pos >> 4) & 0x3F;
@@ -1761,7 +1717,7 @@ static void ov8825_set_framerate_hi(struct i2c_client *client, int framerate)
 static int ov8825_calc_gain(struct i2c_client *client, int gain_value,
 					int *gain_code_p)
 {
-	int gain_code = (gain_value  & 0x3fff) >> 4;
+	int gain_code = (gain_value	 & 0x3fff) >> 4;
 	int actual_gain = gain_code << 4;
 
 	if (gain_code_p)
@@ -2027,7 +1983,7 @@ static int ov8825_set_mode(struct i2c_client *client, int new_mode_idx)
 		ov8825->mode_idx, ov8825_mode[ov8825->mode_idx].name,
 		new_mode_idx, ov8825_mode[new_mode_idx].name);
 		ov8825_init(client);
-		ret  = ov8825_reg_writes(client, ov8825_regtbl[new_mode_idx]);
+		ret = ov8825_reg_writes(client, ov8825_regtbl[new_mode_idx]);
 	} else {
 		pr_debug("ov8825_set_mode: diff init from mode[%d]=%s to mode[%d]=%s",
 			ov8825->mode_idx, ov8825_mode[ov8825->mode_idx].name,
@@ -2043,7 +1999,7 @@ static int ov8825_set_mode(struct i2c_client *client, int new_mode_idx)
 		}
 
 	ov8825->mode_idx = new_mode_idx;
-	ov8825->line_length  = ov8825_mode[new_mode_idx].line_length_ns;
+	ov8825->line_length	 = ov8825_mode[new_mode_idx].line_length_ns;
 	ov8825->vts = ov8825_mode[new_mode_idx].vts;
 	ov8825->framerate_lo_absolute = F24p8(1.0);
 	ov8825->framerate_hi_absolute = ov8825_mode[new_mode_idx].fps;
@@ -2171,7 +2127,7 @@ static int ov8825_g_ctrl(struct v4l2_ctrl *ctrl)
 			&ov8825->time_to_destination);
 		ctrl->val = ov8825->current_position;
 		break;
-	case V4L2_CID_CAMERA_FLASH_MODE:
+	case V4L2_CID_FLASH_LED_MODE:
 		ctrl->val = ov8825->flashmode;
 		break;
 	case V4L2_CID_FLASH_INTENSITY:
@@ -2318,8 +2274,8 @@ static int ov8825_s_ctrl(struct v4l2_ctrl *ctrl)
 			return -EINVAL;
 		ov8825_lens_set_position(client, ctrl->val);
 		break;
-	case V4L2_CID_CAMERA_FLASH_MODE:
-		set_flash_mode(client, ctrl->val);
+	case V4L2_CID_FLASH_LED_MODE:
+		ov8825_set_flash_mode(client, ctrl->val);
 		break;
 	case V4L2_CID_FLASH_INTENSITY:
 		ov8825->flash_intensity = ctrl->val;
@@ -2333,61 +2289,33 @@ static int ov8825_s_ctrl(struct v4l2_ctrl *ctrl)
 	return ret;
 }
 
-int set_flash_mode(struct i2c_client *client, int mode)
+int ov8825_set_flash_mode(struct i2c_client *client, int mode)
 {
 	struct ov8825 *ov8825 = to_ov8825(client);
+	pr_debug("%s: newmode:%d oldmode:%d\n",
+		__func__, mode, ov8825->flashmode);
+
+	/* check if lamp is presented */
+	if (0 == ov8825->has_lamp)
+		return -1;
+
+	/* check if lamp is in requested mode */
 	if (ov8825->flashmode == mode)
 		return 0;
-#ifdef CONFIG_VIDEO_AS3643
-	if ((mode == FLASH_MODE_OFF) || (mode == FLASH_MODE_TORCH_OFF)) {
-		if (ov8825->flashmode != FLASH_MODE_OFF) {
-			ov8825_reg_write(client, 0x3B00, 0x00);
-			as3643_clear_all();
-			as3643_gpio_toggle(0);
-		}
-	} else if (mode == FLASH_MODE_TORCH_ON) {
-		as3643_gpio_toggle(1);
-		usleep_range(25, 30);
-		as3643_set_torch_flash(0x80);
-	} else if (mode == FLASH_MODE_ON) {
-		ov8825_reg_write(client, 0x3B00, 0x83);
-		as3643_gpio_toggle(1);
-		usleep_range(25, 30);
-		/* FIXME: timeout should be vts*line_length/1000+constant? */
-		as3643_set_ind_led(ov8825->flash_intensity / 5,
-				ov8825->flash_timeout);
-	} else if (mode == FLASH_MODE_AUTO) {
-		as3643_gpio_toggle(1);
-		usleep_range(25, 30);
-		as3643_set_ind_led(0x80, 30000);
-		ov8825_reg_write(client, 0x3B00, 0x83);
-	/* Not yet implemented */
+
+	/* apply new mode */
+	ov8825->lamp.set_mode(mode);
+	if (V4L2_FLASH_LED_MODE_NONE != mode) {
+		ov8825->lamp.set_intensity(ov8825->flash_intensity/5);
+		ov8825->lamp.set_duration(ov8825->flash_timeout +
+				2 * (ov8825->vts * ov8825->line_length)/1000);
+		ov8825->lamp.enable();
 	} else {
-		return -EINVAL;
+		ov8825->lamp.disable();
 	}
-	ov8825->flashmode = mode;
-#endif
 
-#ifdef CONFIG_GPIO_FLASH
-		if ((mode == FLASH_MODE_OFF)
-			|| (mode == FLASH_MODE_TORCH_OFF)) {
-			gpio_flash_torch_off();
-		} else if (mode == FLASH_MODE_TORCH_ON) {
-			gpio_flash_torch_on();
-		} else if (mode == FLASH_MODE_ON) {
-			ov8825->flash_timeout =
-				3 * (ov8825->vts * ov8825->line_length)/1000;
-			gpio_flash_flash_on(ov8825->flash_timeout);
-		} else if (mode == FLASH_MODE_AUTO) {
-			ov8825->flash_timeout =
-				3 * (ov8825->vts * ov8825->line_length)/1000;
-			gpio_flash_flash_on(ov8825->flash_timeout);
-		} else {
-			return -EINVAL;
-		}
+	/* update mode */
 	ov8825->flashmode = mode;
-#endif
-
 
 	return 0;
 }
@@ -2437,6 +2365,7 @@ static long ov8825_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 					(struct v4l2_frame_info *)arg;
 			ret = -EINVAL;
 			if (!timespec_valid(&fi_usr->timestamp)) {
+				ov8825->flashmode = ov8825->lamp.get_mode();
 				fi_usr->flash_mode = ov8825->flashmode;
 				ov8825_get_gain(client, &fi_usr->an_gain, NULL);
 				ov8825_get_exposure(client,
@@ -2568,14 +2497,19 @@ static int ov8825_init(struct i2c_client *client)
 	ov8825->gain_read_buf[1] =	(ov8825->gain_current  & 0x3fff) >> 4;
 	ov8825->aecpos_delay	  = 1;
 	ov8825->lenspos_delay	  = 0;
-	ov8825->flashmode		  = FLASH_MODE_OFF;
-	ov8825->flash_intensity   = OV8825_FLASH_INTENSITY_DEFAULT;
+	ov8825->flashmode		  = V4L2_FLASH_LED_MODE_NONE;
+	ov8825->flash_intensity	  = OV8825_FLASH_INTENSITY_DEFAULT;
 	ov8825->flash_timeout	  = OV8825_FLASH_TIMEOUT_DEFAULT;
 
 	ov8825->position = 0;
 	ov8825->dac_code = 0;
 	ov8825->position = 0;
 	ov8825->timing_step_us = 0xf;
+
+	if (0 == get_flash_lamp(&ov8825->lamp)) {
+		ov8825->has_lamp = 1;
+		ov8825->lamp.reset();
+	}
 
 	dev_dbg(&client->dev, "Sensor initialized\n");
 	return ret;
@@ -2627,8 +2561,6 @@ out:
 
 static struct v4l2_subdev_core_ops ov8825_subdev_core_ops = {
 	.g_chip_ident = ov8825_g_chip_ident,
-	.g_ctrl = ov8825_g_ctrl,
-	.s_ctrl = ov8825_s_ctrl,
 	.ioctl = ov8825_ioctl,
 #ifdef CONFIG_VIDEO_ADV_DEBUG
 	.g_register = ov8825_g_register,
@@ -2836,6 +2768,14 @@ static int ov8825_probe(struct i2c_client *client,
 	v4l2_ctrl_new_std_menu(&ov8825->hdl, &ov8825_ctrl_ops,
 		V4L2_CID_FLASH_LED_MODE, V4L2_FLASH_LED_MODE_TORCH,
 		0, V4L2_FLASH_LED_MODE_FLASH);
+	v4l2_ctrl_new_std(&ov8825->hdl,	&ov8825_ctrl_ops,
+			V4L2_CID_FLASH_INTENSITY, OV8825_FLASH_INTENSITY_MIN,
+			OV8825_FLASH_INTENSITY_MAX, OV8825_FLASH_INTENSITY_STEP,
+			OV8825_FLASH_INTENSITY_DEFAULT);
+	v4l2_ctrl_new_std(&ov8825->hdl,	&ov8825_ctrl_ops,
+			V4L2_CID_FLASH_TIMEOUT, OV8825_FLASH_TIMEOUT_MIN,
+			OV8825_FLASH_TIMEOUT_MAX, OV8825_FLASH_TIMEOUT_STEP,
+			OV8825_FLASH_TIMEOUT_DEFAULT);
 
 	if (ov8825->hdl.error) {
 		dev_err(&client->dev,
@@ -2902,9 +2842,9 @@ vid_probe_fail:
 static int ov8825_remove(struct i2c_client *client)
 {
 	struct ov8825 *ov8825 = to_ov8825(client);
-	struct soc_camera_device *icd = client->dev.platform_data;
 
 	pr_debug(" remove");
+	v4l2_device_unregister_subdev(&ov8825->subdev);
 #ifdef CONFIG_VIDEO_A3907
 	pr_debug("A3907 i2c_unregister_device");
 	if (a3907_i2c_client)

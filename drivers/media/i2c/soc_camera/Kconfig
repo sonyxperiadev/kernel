@@ -122,14 +122,77 @@ config SOC_CAMERA_TW9910
 	help
 	  This is a tw9910 video driver
 
-comment "Flash devices"
+comment "Flash lamp devices"
+
+config VIDEO_FLASHLAMP
+	tristate "Flash lamp support"
+	depends on SOC_CAMERA && I2C
+	---help---
+	  This enables flash lamp support for the target system.
+	  The abstract flash lamp interface is used for camera
+	  sensor drivers and implemented by following flash lamp
+	  drivers
 
 config VIDEO_AS3643
 	tristate "AS3643 flash driver support"
-	depends on SOC_CAMERA && I2C
+	depends on SOC_CAMERA && I2C && VIDEO_FLASHLAMP
 	---help---
-	  This is a driver for the AS3643 flash controller. It has
-	  built in control for flash and torch modes.
+	  This is a driver for the AS3643 flash lamp controller.
+	  It has built in control for flash and torch modes.
+	  The operation is done via I2C.
+
+config VIDEO_AS3643_STROBE
+	int "STROBE pin of AS3643 flash lamp chip"
+	depends on VIDEO_AS3643
+	default 11
+	---help---
+	  Static GPIO number of STROBE pin of AS3643 flash lamp chip.
+	  The STROBE pin controls  strobe time for flash function with
+	  pulldown.
+
+config VIDEO_AS3643_TXMASK
+	int "TXMASK pin of AS3643 flash lamp chip"
+	depends on VIDEO_AS3643
+	default 34
+	---help---
+	  Static GPIO number of TXMASK pin of AS3643 flash lamp chip.
+	  The TXMASK pin controls torch current level without using
+	  I2C to operate the torch, or it can be connected to RF PA
+	  enable signal to reduce current during flash to avoid system
+	  shutdown.
+
+config VIDEO_FLASH_GPIO
+	tristate "GPIO based flash driver support"
+	depends on SOC_CAMERA && I2C && VIDEO_FLASHLAMP
+	---help---
+	  This is a driver for the gpio flash controller. It has
+	  simple control for flash and torch mode by two pins:
+	  "ENABLE" and "MODE". "ENABLE" activates flash driver.
+	  "MODE" controls the activated mode: torch or flash.
+
+config VIDEO_FLASH_GPIO_EN
+	int "ENABLE pin of GPIO based flash lamp chip"
+	depends on VIDEO_FLASH_GPIO
+	default 10
+	help
+	  Static GPIO number of ENABLE pin of GPIO based flash lamp chip.
+
+	  The ENABLE pin controls flash activation and de-activation.
+
+config VIDEO_FLASH_GPIO_MODE
+	int "MODE pin of GPIO based flash lamp chip"
+	depends on VIDEO_FLASH_GPIO
+	default 11
+	help
+	  Static GPIO number of MODE pin of GPIO based flash lamp chip.
+
+	  The MODE pin controls active mode for flash chip: FLASH/TORCH.
+	  When the MODE is set to FLASH, and ENABLE pin is set, the chip
+	  works in FLASH mode.
+	  When the MODE is set to TORCH, and ENABLE pin is set, the chip
+	  works in TORCH mode.
+
+comment "Camera sensors"
 
 config SOC_CAMERA_MAIN_S5K4ECGX
 	tristate "s5k4ecgx main camera support"
