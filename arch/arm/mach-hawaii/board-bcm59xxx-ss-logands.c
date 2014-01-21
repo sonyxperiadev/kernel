@@ -162,6 +162,9 @@ static struct bcmpmu59xxx_rw_data __initdata register_init_data[] = {
 	{.addr = PMU_REG_OTGCTRL1 , .val = 0x18, .mask = 0xFF},
 #endif
 
+	/* BOOST control by OFFVBUSb only */
+	{.addr = PMU_REG_OTG_BOOSTCTRL3 , .val = 0xC0, .mask = 0xC0},
+
 	/* MMSR LPM voltage - 0.88V */
 	{.addr = PMU_REG_MMSRVOUT2 , .val = 0x4, .mask = 0x3F},
 	/* SDSR1 NM1 voltage - 1.24V */
@@ -298,9 +301,9 @@ static struct regulator_init_data bcm59xxx_simldo2_data = {
 };
 
 __weak struct regulator_consumer_supply sd_supply[] = {
-	{.supply = "sd_vcc"},
+	{.supply = "sdlo_uc"},
 	REGULATOR_SUPPLY("vddmmc", "sdhci.3"), /* 0x3f1b0000.sdhci */
-	{.supply = "dummy"},
+	{.supply = "vdd_sdio"},
 };
 static struct regulator_init_data bcm59xxx_sdldo_data = {
 	.constraints = {
@@ -310,14 +313,16 @@ static struct regulator_init_data bcm59xxx_sdldo_data = {
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
 			.always_on = 0,
+			.initial_mode = REGULATOR_MODE_NORMAL,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(sd_supply),
 	.consumer_supplies = sd_supply,
 };
 __weak struct regulator_consumer_supply sdx_supply[] = {
-	{.supply = "sdx_vcc"},
+	{.supply = "sdxldo_uc"},
 	REGULATOR_SUPPLY("vddo", "sdhci.3"), /* 0x3f1b0000.sdhci */
-	{.supply = "dummy"},
+	{.supply = "vdd_sdxc"},
+	{.supply = "sddat_debug_bus"},
 };
 static struct regulator_init_data bcm59xxx_sdxldo_data = {
 	.constraints = {
