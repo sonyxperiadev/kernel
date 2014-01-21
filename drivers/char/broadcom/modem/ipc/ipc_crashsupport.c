@@ -1040,15 +1040,18 @@ void DUMP_CP_assert_log(void)
 	}
 
 	RpcDbgDumpHistoryLogging(2, 1);
-
+#ifdef CONFIG_CDEBUGGER
 	if (!ramdump_enable) {
+#endif
 		IPC_DEBUG(DBG_ERROR, "Starting CP RAM dump - do not power down...\n");
 
 		/* dump all CP memory to log */
 		DUMP_CPMemoryByList(dumped_crash_summary_ptr->mem_dump);
 
 		IPC_DEBUG(DBG_ERROR, "CP RAM dump complete\n");
+#ifdef CONFIG_CDEBUGGER
 	}
+#endif
 	/* resume normal logging activities... */
 	BCMLOG_EndCpCrashDump();
 
@@ -1058,7 +1061,11 @@ void DUMP_CP_assert_log(void)
 	IPC_DEBUG(DBG_ERROR, "CP crash dump complete\n");
 
 #ifdef CONFIG_FB_BRCM_CP_CRASH_DUMP_IMAGE_SUPPORT
-if (!ramdump_enable && !cpReset)
+	if (
+#ifdef CONFIG_CDEBUGGER
+	!ramdump_enable &&
+#endif
+	!cpReset)
 	kona_display_crash_image(GENERIC_DUMP_END);
 #endif
 
