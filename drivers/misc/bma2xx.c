@@ -3202,7 +3202,7 @@ static void bma2xx_late_resume(struct early_suspend *h)
 }
 #endif
 
-static int __devexit bma2xx_remove(struct i2c_client *client)
+static int bma2xx_remove(struct i2c_client *client)
 {
 	struct bma2xx_data *data = i2c_get_clientdata(client);
 
@@ -3280,7 +3280,7 @@ static struct i2c_driver bma2xx_driver = {
 	.resume = bma2xx_resume,
 	.id_table = bma2xx_id,
 	.probe = bma2xx_probe,
-	.remove = __devexit_p(bma2xx_remove),
+	.remove = bma2xx_remove,
 
 };
 

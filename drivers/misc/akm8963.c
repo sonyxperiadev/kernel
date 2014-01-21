@@ -34,6 +34,7 @@
 #include <linux/of.h>
 #include <linux/of_fdt.h>
 #include <linux/of_platform.h>
+#include <linux/of_gpio.h>
 #ifdef CONFIG_HAS_EARLYSUSPEND
 #include <linux/earlysuspend.h>
 #endif
@@ -1469,12 +1470,16 @@ int akm_compass_probe(struct i2c_client *client, const struct i2c_device_id *id)
 		   Layout and information should be set by each application. */
 		if (client->dev.of_node) {
 			np = client->dev.of_node;
-			if (of_property_read_u32(np, "gpio-irq-pin", &val)) {
-				pr_err("akm8963: irq is not set in dts\n");
-				goto err_read;
+			s_akm->irq_gpio =
+				of_get_named_gpio(np, "gpio-irq-pin", 0);
+			if (!gpio_is_valid(s_akm->irq_gpio)) {
+				dev_err(&client->dev,
+					"%s: ERROR Invalid gpio-irq-pin\n",
+					__func__);
+				s_akm->irq_gpio = 0;
 			}
-			s_akm->irq_gpio = val;
-			s_akm->irq = gpio_to_irq(val);
+
+			s_akm->irq = gpio_to_irq(s_akm->irq_gpio);
 			if (of_property_read_u32(np, "gpio_RST", &val)) {
 				pr_info("akm8963: rst is not set in dts\n");
 				s_akm->gpio_rstn = 0;
