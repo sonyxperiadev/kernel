@@ -110,6 +110,12 @@ config SOC_CAMERA_OV7692
 	help
 	  This is a ov7692 camera driver
 
+config SOC_CAMERA_OV7695
+	tristate "ov7695 camera support"
+	depends on SOC_CAMERA && I2C
+	help
+	  This is a ov7695 0.3M camera driver
+
 config SOC_CAMERA_RJ54N1
 	tristate "rj54n1cb0c support"
 	depends on SOC_CAMERA && I2C

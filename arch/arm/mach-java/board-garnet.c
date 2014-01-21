@@ -847,7 +847,6 @@ static int hawaii_camera_power_front(struct device *dev, int on)
 			return -1;
 		}
 
-#ifdef CONFIG_SOC_CAMERA_OV7692
 		d_lvldo2_cam1_1v8 = regulator_get(NULL,
 			frontcam_regulator_data[0].supply);
 		if (IS_ERR_OR_NULL(d_lvldo2_cam1_1v8))
@@ -870,7 +869,6 @@ static int hawaii_camera_power_front(struct device *dev, int on)
 			if (IS_ERR_OR_NULL(d_gpsr_cam0_1v8))
 				pr_err("Fl d_gpsr_cam0_1v8 get	fail");
 		}
-#endif
 	}
 
 	ret = -1;
@@ -1079,6 +1077,14 @@ static struct i2c_board_info ov7692_board_info = {
 static const char ov7692_name[] = "ov7692";
 #endif
 
+#ifdef CONFIG_SOC_CAMERA_OV7695
+#define OV7695_I2C_ADDRESS              (0x21)
+static struct i2c_board_info ov7695_board_info = {
+	I2C_BOARD_INFO("ov7695", OV7695_I2C_ADDRESS)
+};
+static const char ov7695_name[] = "ov7695";
+#endif
+
 #define _CAM_JOIN(cam, cstruct)   cam##cstruct
 #define CAM_JOIN(cam, cstruct)   _CAM_JOIN(cam, cstruct)
 
@@ -1094,7 +1100,7 @@ static const char ov7692_name[] = "ov7692";
 #endif /* CONFIG_MACH_JAVA_GARNET_C_EDN000 */
 #ifdef CONFIG_MACH_JAVA_C_LC1
 #define BACK_CAM    ov5648
-#define FRONT_CAM   ov7692
+#define FRONT_CAM   ov7695
 #endif /* CONFIG_MACH_JAVA_C_LC1 */
 
 /* cam interface descriptor */
@@ -1281,12 +1287,8 @@ struct platform_device *hawaii_common_plat_devices[] __initdata = {
 #endif
 #ifdef CONFIG_UNICAM_CAMERA
 	&hawaii_camera_device,
-#ifdef CONFIG_SOC_CAMERA_OV5648
 	&hawaii_camera_back,
-#endif
-#ifdef CONFIG_SOC_CAMERA_OV7692
 	&hawaii_camera_front,
-#endif
 #endif
 
 #ifdef CONFIG_SND_BCM_SOC
