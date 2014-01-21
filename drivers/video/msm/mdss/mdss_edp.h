@@ -293,6 +293,7 @@ struct mdss_edp_drv_pdata {
 	struct clk *pixel_clk;
 	struct clk *ahb_clk;
 	struct clk *link_clk;
+	struct clk *mdp_core_clk;
 	int clk_on;
 
 	/* gpios */
@@ -314,6 +315,7 @@ struct mdss_edp_drv_pdata {
 	struct completion idle_comp;
 	struct completion video_comp;
 	struct mutex aux_mutex;
+	struct mutex train_mutex;
 	u32 aux_cmd_busy;
 	u32 aux_cmd_i2c;
 	int aux_trans_num;
