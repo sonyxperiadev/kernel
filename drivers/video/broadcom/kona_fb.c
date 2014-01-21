@@ -1078,7 +1078,21 @@ static struct kona_fb_platform_data * __init get_of_data(struct device_node *np)
 		goto of_fail;
 	fb_data->rotation = val;
 
-	fb_data->detect.gpio = of_get_named_gpio(np, "detect-gpio", 0);
+	if (!(of_property_read_u32(np, "detect-gpio", &val))) {
+		fb_data->detect.gpio = val;
+		if (of_property_read_u32(np, "detect-gpio-val", &val))
+			goto of_fail;
+		fb_data->detect.gpio_val = val;
+
+		fb_data->detect.active = gpio_get_value(fb_data->detect.gpio);
+		if (fb_data->detect.active != fb_data->detect.gpio_val) {
+			konafb_error("gpio %d value failed for panel %s\n",
+					fb_data->detect.gpio, fb_data->name);
+			goto of_fail;
+		}
+	}
+/*
+	 fb_data->detect.gpio = of_get_named_gpio(np, "detect-gpio", 0);
 	if (gpio_is_valid(fb_data->detect.gpio)) {
 		if (of_property_read_u32(np,
 			"detect-gpio-val", &val))
@@ -1095,7 +1109,7 @@ static struct kona_fb_platform_data * __init get_of_data(struct device_node *np)
 			goto of_fail;
 		}
 	}
-
+*/
 	if (of_property_read_bool(np, "vmode"))
 		fb_data->vmode = true;
 	else
