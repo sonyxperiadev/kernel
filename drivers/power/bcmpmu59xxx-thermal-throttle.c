@@ -460,7 +460,6 @@ static int bcmpmu_throttle_event_handler(struct notifier_block *nb,
 				pr_throttle(FLOW,
 					"Charging Disabled, Disabling Thermal Throttling\n");
 				cancel_delayed_work_sync(&tdata->throttle_work);
-				tdata->acld_algo_finished = false;
 				tdata->throttle_scheduled = false;
 				tdata->acld_wait_count = 0;
 			}

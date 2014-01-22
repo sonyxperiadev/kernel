@@ -484,12 +484,21 @@ static int _set_icc_fc(struct bcmpmu_accy_data *di, int curr)
 
 	if (curr < 0)
 		return -EINVAL;
+	/*
+	 * For SDP since we don't have 500mA setting, we are setting to
+	 * 400mA and trimming up to 500mA. But if USB stack sets to 100mA
+	 * it will overdraw due to trimup. So set trim to OTP before setting
+	 * current for SDP and then trim up if needed in
+	 * PMU_ACCY_EVT_OUT_CHRG_CURR notifier.
+	*/
+	if (di->chrgr_type == PMU_CHRGR_TYPE_SDP)
+		bcmpmu_restore_cc_500_trim_otp(di->bcmpmu);
 
 	val = _curr_to_pmu_reg_idx(di, curr);
 	ret = bcmpmu->write_dev(bcmpmu, PMU_REG_MBCCTRL10, (val & 0xF));
 	if (ret)
 		return ret;
-	di->charging_curr = val;
+	di->charging_curr = curr;
 	bcmpmu_accy_queue_event(di, PMU_ACCY_EVT_OUT_CHRG_CURR,
 			&di->charging_curr);
 
@@ -1767,6 +1776,21 @@ static int debugfs_set_usb_host_en(void *data, u64 enable)
 DEFINE_SIMPLE_ATTRIBUTE(usb_host_en_fops,
 		debugfs_get_usb_host_en, debugfs_set_usb_host_en, "%llu\n");
 
+static int debugfs_get_chrg_curr(void *data, u64 *chrg_curr)
+{
+	struct bcmpmu_accy_data *di = (struct bcmpmu_accy_data *)data;
+	*chrg_curr = bcmpmu_get_icc_fc(di->bcmpmu);
+	return 0;
+}
+static int debugfs_set_chrg_curr(void *data, u64 curr)
+{
+	struct bcmpmu_accy_data *di = (struct bcmpmu_accy_data *)data;
+	bcmpmu_set_icc_fc(di->bcmpmu, curr);
+	return 0;
+}
+DEFINE_SIMPLE_ATTRIBUTE(set_chrg_curr_fops,
+		debugfs_get_chrg_curr, debugfs_set_chrg_curr, "%llu\n");
+
 static void bcmpmu_accy_debugfs_init(struct bcmpmu_accy_data *di)
 {
 	struct dentry *dentry_dir;
@@ -1795,6 +1819,12 @@ static void bcmpmu_accy_debugfs_init(struct bcmpmu_accy_data *di)
 			dentry_dir, di, &usb_host_en_fops);
 	if (!dentry_file)
 		goto clean_debugfs;
+
+	dentry_file = debugfs_create_file("set_chrg_curr", DEBUG_FS_PERMISSIONS,
+			dentry_dir, di, &set_chrg_curr_fops);
+	if (!dentry_file)
+		goto clean_debugfs;
+
 	return;
 clean_debugfs:
 	debugfs_remove_recursive(dentry_dir);

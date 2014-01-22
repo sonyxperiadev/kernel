@@ -643,6 +643,13 @@ static const struct file_operations bcmpmu_fops = {
 static struct miscdevice bcmpmu_device = {
 	MISC_DYNAMIC_MINOR, "bcmpmu", &bcmpmu_fops
 };
+
+void bcmpmu_restore_cc_500_trim_otp(struct bcmpmu59xxx *bcmpmu)
+{
+	bcmpmu->write_dev(bcmpmu,
+			PMU_REG_MBCCTRL20, mbc_cc_trim.cc_500_trim);
+
+}
 /*
  * bcmpmu_restore_cc_trim_otp - Restore trim register to OTP.
  */
