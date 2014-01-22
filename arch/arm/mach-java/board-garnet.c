@@ -509,7 +509,10 @@ static struct cameracfg_s *getcameracfg(const char *cameraname)
 
 /* target board related cam power supplies */
 #if defined(CONFIG_MACH_JAVA_GARNET_C_EDN000) || \
-	defined(CONFIG_MACH_JAVA_C_LC1)
+	defined(CONFIG_MACH_JAVA_C_LC1) || \
+	defined(CONFIG_MACH_JAVA_C_LC2) || \
+	defined(CONFIG_MACH_JAVA_C_5609A) || \
+	defined(CONFIG_MACH_JAVA_C_5606)
 static struct regulator_bulk_data backcam_regulator_data[] = {
 	[0] = {
 		.supply = "lvldo1_uc",
@@ -615,7 +618,6 @@ static int hawaii_camera_power(struct device *dev, int on)
 		}
 	#endif
 
-#ifdef CONFIG_SOC_CAMERA_OV5648
 		/*MMC1 VCC */
 		d_1v8_mmc1_vcc = regulator_get(NULL,
 					backcam_regulator_data[1].supply);
@@ -635,7 +637,6 @@ static int hawaii_camera_power(struct device *dev, int on)
 			if (IS_ERR_OR_NULL(d_lvldo2_cam1_1v8))
 				pr_err("Fd_lvldo2_cam1_1v8 cam\n");
 		}
-#endif
 	}
 
 	ret = -1;
@@ -1101,6 +1102,10 @@ static const char ov7695_name[] = "ov7695";
 #ifdef CONFIG_MACH_JAVA_C_LC1
 #define BACK_CAM    ov5648
 #define FRONT_CAM   ov7695
+#endif /* CONFIG_MACH_JAVA_C_LC1 */
+#ifdef CONFIG_MACH_JAVA_C_LC2
+#define BACK_CAM    ov8825
+#define FRONT_CAM   ov7692
 #endif /* CONFIG_MACH_JAVA_C_LC1 */
 
 /* cam interface descriptor */

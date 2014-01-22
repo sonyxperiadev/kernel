@@ -35,10 +35,12 @@
 #include <media/a3907.h>
 #endif
 
+/*
 static int is_snap_to_prev_expo;
 static int is_snap_to_prev_gain;
+*/
 
-#define OV8825_DEBUG 1
+#define OV8825_DEBUG 0
 
 /* OV5648 has only one fixed colorspace per pixelcode */
 struct ov8825_datafmt {
@@ -1772,17 +1774,14 @@ static int ov8825_get_gain(struct i2c_client *client,
 	u8 gain_buf[2];
 	int i;
 
-/*
-	ov8825_reg_read_multi(client, OV8825_REG_AGC_HI, gain_buf, 2);
-	gain_code = ((gain_buf[0] & 0x3f) << 8) + gain_buf[1];
-	*/
-
 	gain_code = ov8825->gain_current >> 4;
 
+/*
 	if (is_snap_to_prev_gain == 1) {
 		gain_code = ov8825->gain_read_buf[0];
 		is_snap_to_prev_gain = 0;
 		}
+*/
 
 	if (ov8825->aecpos_delay > 0) {
 		ov8825->gain_read_buf[ov8825->aecpos_delay] = gain_code;
@@ -1808,20 +1807,15 @@ static int ov8825_get_exposure(struct i2c_client *client,
 	int i, ret = 0;
 	int exp_code;
 	u8 exp_buf[3];
-/*
-	ov8825_reg_read_multi(client, OV8825_REG_EXP_HI, exp_buf, 3);
-	exp_code =
-		((exp_buf[0] & 0xf) << 16) +
-		((exp_buf[1] & 0xff) << 8) +
-		(exp_buf[2] & 0xf0);
-		*/
 
 	exp_code = (ov8825->exposure_current * 1000 / ov8825->line_length) << 4;
 
+/*
 	if (is_snap_to_prev_expo == 1) {
 		exp_code = ov8825->exp_read_buf[0];
 		is_snap_to_prev_expo = 0;
 		}
+*/
 
 	if (ov8825->aecpos_delay > 0) {
 		ov8825->exp_read_buf[ov8825->aecpos_delay] = exp_code;
@@ -1870,7 +1864,7 @@ static int ov8825_calc_exposure(struct i2c_client *client,
 		*vts_ptr = vts;
 
 	exposure_value = integration_lines * ov8825->line_length /
-		(unsigned long)1000;
+		(binning_factor * (unsigned long)1000);
 	return exposure_value;
 }
 
@@ -1993,10 +1987,12 @@ static int ov8825_set_mode(struct i2c_client *client, int new_mode_idx)
 	if (ret)
 		return ret;
 
+/*
 	if (new_mode_idx == 1) {
 		is_snap_to_prev_expo = 1;
 		is_snap_to_prev_gain = 1;
 		}
+*/
 
 	ov8825->mode_idx = new_mode_idx;
 	ov8825->line_length	 = ov8825_mode[new_mode_idx].line_length_ns;
