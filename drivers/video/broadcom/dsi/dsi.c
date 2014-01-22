@@ -224,11 +224,31 @@ static int DSI_ReadPanelIDs(DispDrv_PANEL_t *pPanel)
 		goto exit;
 	cmd = *p++;
 
+	/* debugging */
+	reg = 0xDA;
+	rc = DSI_DCS_Read(pPanel, reg, &rd_buff, buff_len);
+	pr_info("%s(%d): TMP reg:0x%x, rd_buff=0x%x\n",
+					__func__, __LINE__, reg, rd_buff);
+	reg = 0xDB;
+	rc = DSI_DCS_Read(pPanel, reg, &rd_buff, buff_len);
+	pr_info("%s(%d): TMP reg:0x%x, rd_buff=0x%x\n",
+					__func__, __LINE__, reg, rd_buff);
+	reg = 0xDC;
+	rc = DSI_DCS_Read(pPanel, reg, &rd_buff, buff_len);
+	pr_info("%s(%d): TMP reg:0x%x, rd_buff=0x%x\n",
+					__func__, __LINE__, reg, rd_buff);
+	reg = 0x04;
+	UInt8 tmp_buff[3];
+	int tmp_len = 3;
+	rc = DSI_DCS_Read(pPanel, reg, tmp_buff, tmp_len);
+	pr_info("%s(%d): TMP reg:0x%x, tmp_buff=0x%x%x%x\n",
+		__func__, __LINE__, reg, tmp_buff[0], tmp_buff[1], tmp_buff[2]);
+
 	while (cmd != DISPCTRL_LIST_END) {
 		reg = *p++;
 		data = *p++;
 		rc = DSI_DCS_Read(pPanel, reg, &rd_buff, buff_len);
-		pr_debug("%s(%d): cmd:0x%x, reg:0x%x, data=0x%x rd_buff=0x%x\n",
+		pr_info("%s(%d): cmd:0x%x, reg:0x%x, data=0x%x rd_buff=0x%x\n",
 				__func__, __LINE__, cmd, reg, data, rd_buff);
 		if (data != rd_buff) {
 			DSI_ERR("cmd:0x%x, reg:0x%x, data=0x%x rd_buff=0x%x\n",
