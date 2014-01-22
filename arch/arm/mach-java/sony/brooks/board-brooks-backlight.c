@@ -10,8 +10,8 @@
 #define BMU_NFC_I2C_BUS_ID 1
 
 static struct lm3630_platform_data lm3630_bmu_platform_data = {
-	.max_brt_led1 = 127,
-	.init_brt_led1 = 64,
+	.max_brt_led1 = 255,
+	.init_brt_led1 = 128,
 	.pwm_ctrl = PWM_CTRL_DISABLE,
 	.pwm_active = PWM_ACTIVE_HIGH,
 	.bank_a_ctrl = BANK_A_CTRL_LED1,
