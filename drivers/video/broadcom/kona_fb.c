@@ -100,7 +100,7 @@ struct kona_fb {
 	atomic_t buff_idx;
 	atomic_t is_fb_registered;
 	atomic_t is_graphics_started;
-	int rotation;
+	int rotate;
 	int is_display_found;
 #ifdef CONFIG_FRAMEBUFFER_FPS
 	struct fb_fps_info *fps_info;
@@ -134,6 +134,8 @@ struct kona_fb {
 	struct delayed_work esd_check_work;
 	struct completion tectl_gpio_done_sem;
 	int esd_failure_cnt;
+	/* user count */
+	unsigned short open_count;
 };
 
 static struct completion vsync_event;
@@ -489,7 +491,7 @@ static void kona_fb_unpack_888rle(void *dst, void *src, uint32_t image_size,
 	y_margin = (fb->var.yres - img_h) / 2;
 
 	/*If rotation is enabled, move to the end of buffer*/
-	if (fb->var.rotate) {
+	if (g_kona_fb->rotate == FB_ROTATE_UD) {
 		pos = (fb->var.xres * fb->var.yres - 1);
 		dir = -1;
 	} else {
@@ -1508,7 +1510,31 @@ void release_dispdrv_info(DISPDRV_INFO_T *info)
 	kfree(info);
 }
 
+static int kona_fb_open(struct fb_info *info, int user)
+{
+	struct kona_fb *fb = container_of(info, struct kona_fb, fb);
+	fb->open_count++;
+	return 0;
+}
+
+static int kona_fb_release(struct fb_info *info, int user)
+{
+	struct kona_fb *fb = container_of(info, struct kona_fb, fb);
+	fb->open_count--;
+
+	if (fb->open_count < 0)
+		return -EIO;
+	/* If the open count goes 0, then restore the rotation parameter so that
+	 * user space can again get to know the rotation parameter. */
+	if (fb->open_count == 0)
+		info->var.rotate = fb->rotate;
+
+	return 0;
+}
+
 static struct fb_ops kona_fb_ops = {
+	.fb_open = kona_fb_open,
+	.fb_release = kona_fb_release,
 	.owner = THIS_MODULE,
 	.fb_check_var = kona_fb_check_var,
 	.fb_set_par = kona_fb_set_par,
@@ -1521,6 +1547,7 @@ static struct fb_ops kona_fb_ops = {
 	.fb_sync = kona_fb_sync,
 	.fb_blank = kona_fb_blank,
 };
+
 
 static const struct file_operations proc_fops = {
 	.write = proc_write_fb_test,
@@ -1698,6 +1725,7 @@ static int __ref kona_fb_probe(struct platform_device *pdev)
 	fb->fb.var.pixclock = pixclock_64;
 	fb->fb.var.rotate = fb_data->rotation == 180 ?
 						FB_ROTATE_UD : FB_ROTATE_UR;
+	fb->rotate = fb->fb.var.rotate;
 
 	switch (fb->display_info->in_fmt) {
 	case DISPDRV_FB_FORMAT_RGB666P:
