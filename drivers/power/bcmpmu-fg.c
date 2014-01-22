@@ -106,6 +106,7 @@
 #define GUARD_BAND_LOW_THRLD		10
 #define CRIT_CUTOFF_CNT_THRD		3
 #define LOW_VOLT_CNT_THRD		2
+#define FG_DUMMY_BAT_CAP		30
 
 #define ESR_VL_PER_MARGIN		105
 #define ESR_VF_PER_MARGIN		95
@@ -336,6 +337,7 @@ struct bcmpmu_fg_data {
 	int eoc_cnt;
 	int cap_inc_dec_cnt;
 	int accumulator;
+	int dummy_bat_cap_lmt;
 
 	/* for debugging only */
 	int lock_cnt;
@@ -2603,10 +2605,11 @@ static void bcmpmu_fg_periodic_work(struct work_struct *work)
 
 		/* compensate the volt line dropping
 		   QA camera app still can be run @ low batt  */
-		if (fg->capacity_info.percentage < 10) {
-			pr_fg(FLOW, "actual capty=%d, limit 10\n",
-					fg->capacity_info.percentage);
-			fg->capacity_info.percentage = 10;
+		if (fg->capacity_info.percentage < fg->dummy_bat_cap_lmt) {
+			pr_fg(FLOW, "actual capty=%d, limit %d\n",
+				fg->capacity_info.percentage,
+						fg->dummy_bat_cap_lmt);
+			fg->capacity_info.percentage = fg->dummy_bat_cap_lmt;
 		}
 
 		fg->capacity_info.prev_percentage
@@ -3200,6 +3203,25 @@ static int debugfs_set_capacity(void *data, u64 capacity)
 DEFINE_SIMPLE_ATTRIBUTE(fg_capacity_fops,
 	debugfs_get_capacity, debugfs_set_capacity, "%llu\n");
 
+static int debugfs_get_dummy_cap(void *data, u64 *capacity)
+{
+	struct bcmpmu_fg_data *fg = data;
+	*capacity = fg->dummy_bat_cap_lmt;
+	return 0;
+}
+
+static int debugfs_set_dummy_cap(void *data, u64 capacity)
+{
+	struct bcmpmu_fg_data *fg = data;
+	fg->dummy_bat_cap_lmt = capacity;
+	cancel_delayed_work_sync(&fg->fg_periodic_work);
+	queue_delayed_work(fg->fg_wq, &fg->fg_periodic_work, 0);
+	bcmpmu_fg_update_psy(fg, true);
+	return 0;
+}
+DEFINE_SIMPLE_ATTRIBUTE(fg_dummy_bat_fops,
+	debugfs_get_dummy_cap, debugfs_set_dummy_cap, "%llu\n");
+
 static void bcmpmu_fg_debugfs_init(struct bcmpmu_fg_data *fg)
 {
 	struct dentry *dentry_fg_dir;
@@ -3279,6 +3301,11 @@ static void bcmpmu_fg_debugfs_init(struct bcmpmu_fg_data *fg)
 		goto debugfs_clean;
 	dentry_fg_file = debugfs_create_u32("debug_mask", DEBUG_FS_PERMISSIONS,
 			dentry_fg_dir, &debug_mask);
+	if (IS_ERR_OR_NULL(dentry_fg_file))
+		goto debugfs_clean;
+	dentry_fg_file = debugfs_create_file("dummy_bat_cap_lmt",
+			DEBUG_FS_PERMISSIONS, dentry_fg_dir, fg,
+				&fg_dummy_bat_fops);
 	if (IS_ERR_OR_NULL(dentry_fg_file))
 		goto debugfs_clean;
 
@@ -3411,6 +3438,7 @@ static int bcmpmu_fg_probe(struct platform_device *pdev)
 	fg->flags.batt_status = POWER_SUPPLY_STATUS_UNKNOWN;
 	fg->flags.prev_batt_status = POWER_SUPPLY_STATUS_UNKNOWN;
 	fg->discharge_state = DISCHARG_STATE_HIGH_BATT;
+	fg->dummy_bat_cap_lmt = FG_DUMMY_BAT_CAP;
 
 	fg->flags.init_capacity = true;
 	fg->crit_cutoff_cap = -1;
