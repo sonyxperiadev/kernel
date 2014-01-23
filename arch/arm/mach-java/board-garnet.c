@@ -509,6 +509,7 @@ static struct cameracfg_s *getcameracfg(const char *cameraname)
 
 /* target board related cam power supplies */
 #if defined(CONFIG_MACH_JAVA_GARNET_C_EDN000) || \
+	defined(CONFIG_MACH_JAVA_GARNET_EDN000) || \
 	defined(CONFIG_MACH_JAVA_C_LC1) || \
 	defined(CONFIG_MACH_JAVA_C_LC2) || \
 	defined(CONFIG_MACH_JAVA_C_5609A) || \
@@ -1095,9 +1096,14 @@ static const char ov7695_name[] = "ov7695";
 #define frontcam_board_info     CAM_JOIN(FRONT_CAM, _board_info)
 
 /* target board related camera configurations */
-#ifdef CONFIG_MACH_JAVA_GARNET_C_EDN000
+#if defined(CONFIG_MACH_JAVA_GARNET_C_EDN000) || \
+	defined(CONFIG_MACH_JAVA_GARNET_EDN000)
+#ifdef CONFIG_SOC_CAMERA_OV5648
 #define BACK_CAM    ov5648
+#endif
+#ifdef CONFIG_SOC_CAMERA_OV7692
 #define FRONT_CAM   ov7692
+#endif
 #endif /* CONFIG_MACH_JAVA_GARNET_C_EDN000 */
 #ifdef CONFIG_MACH_JAVA_C_LC1
 #define BACK_CAM    ov5648
@@ -1106,7 +1112,7 @@ static const char ov7695_name[] = "ov7695";
 #ifdef CONFIG_MACH_JAVA_C_LC2
 #define BACK_CAM    ov8825
 #define FRONT_CAM   ov7692
-#endif /* CONFIG_MACH_JAVA_C_LC1 */
+#endif /* CONFIG_MACH_JAVA_C_LC2 */
 
 /* cam interface descriptor */
 static struct v4l2_subdev_sensor_interface_parms backcam_if_params = {
@@ -1134,6 +1140,8 @@ static struct v4l2_subdev_sensor_interface_parms frontcam_if_params = {
 	},
 };
 
+/* back camera is specified */
+#ifdef BACK_CAM
 /* soc camera descriptor for back camera */
 static struct soc_camera_desc iclink_back = {
 	.host_desc = {
@@ -1156,7 +1164,10 @@ static struct platform_device hawaii_camera_back = {
 		.platform_data = &iclink_back,
 	},
 };
+#endif /* BACK_CAM */
 
+/* front camera is specified */
+#ifdef FRONT_CAM
 /* soc camera descriptor for front camera */
 static struct soc_camera_desc iclink_front = {
 	.host_desc = {
@@ -1178,6 +1189,7 @@ static struct platform_device hawaii_camera_front = {
 		.platform_data = &iclink_front,
 	},
 };
+#endif /* FRONT_CAM */
 #endif /* CONFIG_UNICAM_CAMERA */
 
 static struct spi_kona_platform_data hawaii_ssp0_info = {
@@ -1292,8 +1304,12 @@ struct platform_device *hawaii_common_plat_devices[] __initdata = {
 #endif
 #ifdef CONFIG_UNICAM_CAMERA
 	&hawaii_camera_device,
+	#ifdef BACK_CAM
 	&hawaii_camera_back,
+	#endif
+	#ifdef FRONT_CAM
 	&hawaii_camera_front,
+	#endif
 #endif
 
 #ifdef CONFIG_SND_BCM_SOC
