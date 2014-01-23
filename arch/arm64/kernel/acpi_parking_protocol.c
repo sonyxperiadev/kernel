@@ -144,10 +144,11 @@ static void acpi_parking_protocol_cpu_postboot(void)
 	iounmap(mailbox);
 }
 
-const struct cpu_operations acpi_parking_protocol_ops = {
+static const struct cpu_operations acpi_parking_protocol_ops = {
 	.name		= "parking-protocol",
 	.cpu_init	= acpi_parking_protocol_cpu_init,
 	.cpu_prepare	= acpi_parking_protocol_cpu_prepare,
 	.cpu_boot	= acpi_parking_protocol_cpu_boot,
 	.cpu_postboot	= acpi_parking_protocol_cpu_postboot
 };
+CPU_METHOD_OF_DECLARE(acpi_parking, &acpi_parking_protocol_ops);

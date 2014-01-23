@@ -71,4 +71,14 @@ static inline void __init cpu_read_bootcpu_ops(void)
 	cpu_read_ops(0);
 }
 
+struct of_cpu_method {
+	const char *method;
+	struct cpu_operations *ops;
+};
+
+#define CPU_METHOD_OF_DECLARE(name, _method, _ops)			\
+	static const struct of_cpu_method __cpu_method_of_table_##name	\
+		__used __section(__cpu_method_of_table)			\
+		= { .method = _method, .ops = _ops }
+
 #endif /* ifndef __ASM_CPU_OPS_H */
