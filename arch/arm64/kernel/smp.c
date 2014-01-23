@@ -715,6 +715,11 @@ void arch_send_wakeup_ipi_mask(const struct cpumask *mask)
 {
 	smp_cross_call(mask, IPI_WAKEUP);
 }
+#else
+void arch_send_wakeup_ipi_mask(const struct cpumask *mask)
+{
+        smp_cross_call_common(mask, IPI_WAKEUP);
+}
 #endif
 
 #ifdef CONFIG_IRQ_WORK
