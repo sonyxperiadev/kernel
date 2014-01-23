@@ -25,12 +25,17 @@
 #include <linux/delay.h>
 #include <linux/gpio.h>
 #include <linux/spinlock_types.h>
+#ifdef CONFIG_THERMAL
+#include <linux/thermal.h>
+#endif
 
+#define IC_MAX_BR 32
 struct sgm_bl_data {
 	struct device		*dev;
 	unsigned int bl_gpio;
 	unsigned int max_brightness;
 	unsigned int dft_brightness;
+	unsigned int		*levels;
 	unsigned int shutdown_time;
 	unsigned int ready_time;
 	unsigned int interval_time;
@@ -47,8 +52,54 @@ struct sgm_bl_data {
 	struct spinlock sgm_spin_lock;
 };
 
-#define IC_MAX_BR 32
+/* Thermal cooling device helper functions */
+enum {
+	GET_COOLING_LEVEL,
+	GET_BACKLIGHT_LEVEL,
+};
+static int bl_get_property(struct thermal_cooling_device *cdev,
+		int in, int *out, int property)
+{
+	struct backlight_device *bl = cdev->devdata;
+	struct sgm_bl_data *pb = bl_get_data(bl);
+	int idx, ret = 0, ascending = 0;
 
+	if (pb->levels[0] < pb->levels[1])
+		ascending = 1;
+
+	switch (property) {
+	case GET_COOLING_LEVEL:
+		for (idx = 0; idx <= bl->props.max_brightness; idx++) {
+			if (pb->levels[idx] == in) {
+				*out = ascending ?
+					(bl->props.max_brightness - idx) : idx;
+				break;
+			}
+		}
+		break;
+	case GET_BACKLIGHT_LEVEL:
+		*out = ascending ? (bl->props.max_brightness - in) : in;
+		break;
+	default:
+		dev_err(pb->dev, "invalid backlight cooling property\n");
+		ret = -EINVAL;
+		break;
+	}
+
+	return ret;
+}
+
+u32 backlight_cooling_get_level(struct thermal_cooling_device *cdev,
+			u32 brightness)
+{
+	u32 level;
+
+	if (bl_get_property(cdev, brightness, &level, GET_COOLING_LEVEL))
+		return THERMAL_CSTATE_INVALID;
+
+	return level;
+}
+EXPORT_SYMBOL_GPL(backlight_cooling_get_level);
 static int sgm3727_backlight_update_status(struct backlight_device *bl)
 {
 	struct sgm_bl_data *pb = dev_get_drvdata(&bl->dev);
@@ -173,7 +224,9 @@ static int sgm3727_backlight_probe(struct platform_device *pdev)
 	struct platform_sgm3727_backlight_data *data = NULL;
 	struct backlight_device *bl;
 	struct sgm_bl_data *pb;
+	struct property *prop;
 	int ret;
+	int length;
 	int bl_delay_on = 0;
 
 	if (pdev->dev.platform_data)
@@ -185,6 +238,36 @@ static int sgm3727_backlight_probe(struct platform_device *pdev)
 				GFP_KERNEL);
 		if (!data)
 			return -ENOMEM;
+
+			/* determine the number of brightness levels */
+		prop = of_find_property(pdev->dev.of_node, "brightness-levels", &length);
+		if (!prop)
+			return -EINVAL;
+
+		data->max_brightness = length / sizeof(u32);
+
+		/* read brightness levels from DT property */
+		if (data->max_brightness > 0) {
+			size_t size = sizeof(*data->levels) * data->max_brightness;
+
+			data->levels = devm_kzalloc(&pdev->dev, size, GFP_KERNEL);
+			if (!data->levels)
+				return -ENOMEM;
+
+			ret = of_property_read_u32_array(pdev->dev.of_node, "brightness-levels",
+							 data->levels,
+							 data->max_brightness);
+			if (ret < 0)
+				return ret;
+
+			ret = of_property_read_u32(pdev->dev.of_node, "dft-brightness",
+						   &val);
+			if (ret < 0)
+				return ret;
+
+			data->dft_brightness = val;
+			data->max_brightness--;
+		}
 
 		if (of_property_read_u32(pdev->dev.of_node,
 				"backlight-gpio", &val)) {
@@ -199,13 +282,6 @@ static int sgm3727_backlight_probe(struct platform_device *pdev)
 			goto err_read;
 		}
 		data->max_brightness = val;
-
-		if (of_property_read_u32(pdev->dev.of_node,
-				"dft-brightness", &val)) {
-			ret = -EINVAL;
-			goto err_read;
-		}
-		data->dft_brightness = val;
 
 		if (of_property_read_u32(pdev->dev.of_node,
 				"shutdown-time", &val)) {
@@ -247,21 +323,19 @@ static int sgm3727_backlight_probe(struct platform_device *pdev)
 		if (ret < 0)
 			return ret;
 	}
-
 	pb = devm_kzalloc(&pdev->dev, sizeof(*pb), GFP_KERNEL);
 	if (!pb) {
 		dev_err(&pdev->dev, "no memory for state\n");
 		ret = -ENOMEM;
 		goto err_alloc;
 	}
-
 	pb->bl_gpio = data->bl_gpio;
 	pb->max_brightness = data->max_brightness;
 	pb->dft_brightness = data->dft_brightness;
 	pb->shutdown_time = data->shutdown_time;
 	pb->ready_time = data->ready_time;
 	pb->interval_time = data->interval_time;
-
+	pb->levels = data->levels;
 	pb->notify = data->notify;
 	pb->notify_after = data->notify_after;
 	pb->check_fb = data->check_fb;
