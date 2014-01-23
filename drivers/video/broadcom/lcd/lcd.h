@@ -70,6 +70,7 @@ struct lcd_config {
 	uint8_t vs, vbp, vfp;
 };
 
+void panel_write(UInt8 *buff);
 void panel_read(UInt8 reg, UInt8 *rxBuff, UInt8 buffLen);
 
 #endif

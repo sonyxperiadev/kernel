@@ -761,6 +761,94 @@ static void vsync_work_smart(struct work_struct *work)
 	schedule_work(&fb->vsync_smart);
 }
 
+static ssize_t kona_fb_panel_name_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct kona_fb *fb = dev_get_drvdata(dev);
+	char const *name =  fb->fb_data->name ?
+			fb->fb_data->name : "NoName";
+	return scnprintf(buf, PAGE_SIZE, "Panel: %s\n", name);
+}
+
+static ssize_t kona_fb_panel_id_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	int len = 1;
+	UInt8 buff1, buff2, buff3;
+	uint8_t reg;
+
+	reg = 0xDA;
+	panel_read(reg, &buff1, len);
+	reg = 0xDB;
+	panel_read(reg, &buff2, len);
+	reg = 0xDC;
+	panel_read(reg, &buff3, len);
+	return scnprintf(buf, PAGE_SIZE, "Panel ID: 0x%.2x 0x%.2x 0x%.2x\n",
+			buff1, buff2, buff3);
+}
+
+static ssize_t kona_fb_panel_mode_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	return scnprintf(buf, PAGE_SIZE, "%s\n", "Not Implemented!");
+}
+
+static ssize_t kona_fb_panel_mode_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	int ret = count;
+	uint32_t val;
+	DISPCTRL_REC_T idle_mode_cmd[] = {
+		{DISPCTRL_WR_CMND, 0x39},
+		{DISPCTRL_LIST_END, 0}
+		};
+	DISPCTRL_REC_T normal_mode_cmd[] = {
+		{DISPCTRL_WR_CMND, 0x38},
+		{DISPCTRL_LIST_END, 0}
+		};
+
+	if (sscanf(buf, "%4i", &val) != 1) {
+		pr_err("%s: Error, buf = %s\n", __func__, buf);
+		ret = -EINVAL;
+	} else {
+		dev_info(dev, "%s: panel mode %i\n", __func__, val);
+		if (val)
+			panel_write((UInt8 *)idle_mode_cmd);
+		else
+			panel_write((UInt8 *)normal_mode_cmd);
+	}
+	return ret;
+}
+
+static struct device_attribute panel_attributes[] = {
+	__ATTR(panel_name, S_IRUGO, kona_fb_panel_name_show, NULL),
+	__ATTR(panel_id, S_IRUGO, kona_fb_panel_id_show, NULL),
+	__ATTR(panel_mode, S_IRUGO|S_IWUSR|S_IWGRP,
+					kona_fb_panel_mode_show,
+					kona_fb_panel_mode_store),
+};
+
+static int register_attributes(struct device *dev)
+{
+	int i;
+	for (i = 0; i < ARRAY_SIZE(panel_attributes); i++)
+		if (device_create_file(dev, panel_attributes + i))
+			goto error;
+	return 0;
+error:
+	dev_err(dev, "%s: Unable to create interface\n", __func__);
+	for (--i; i >= 0; i--)
+		device_remove_file(dev, panel_attributes + i);
+	return -ENODEV;
+}
+
+static void remove_attributes(struct device *dev)
+{
+	int i;
+	for (i = 0; i < ARRAY_SIZE(panel_attributes); i++)
+		device_remove_file(dev, panel_attributes + i);
+}
+
 static int enable_display(struct kona_fb *fb)
 {
 	int ret = 0;
@@ -1806,6 +1894,11 @@ static int __ref kona_fb_probe(struct platform_device *pdev)
 	fb->die_nb.notifier_call = kona_fb_die_cb;
 	register_die_notifier(&fb->die_nb);
 #endif
+	ret = register_attributes(&pdev->dev);
+	if (ret)
+		dev_err(&pdev->dev, "%s: failed to register attributes\n",
+								__func__);
+
 	pr_info("%s(%d): Probe success. Panel: %s\n",
 					__func__, __LINE__, fb->fb_data->name);
 	return 0;
@@ -1893,6 +1986,7 @@ static int kona_fb_remove(struct platform_device *pdev)
 	struct kona_fb_platform_data *pdata = (struct kona_fb_platform_data *)
 						pdev->dev.platform_data;
 
+	remove_attributes(&pdev->dev);
 #ifdef CONFIG_FRAMEBUFFER_FPS
 	fb_fps_unregister(fb->fps_info);
 #endif
