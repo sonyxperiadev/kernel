@@ -469,7 +469,7 @@ static const struct v4l2_ctrl_config ov7692_controls[] = {
 		.name = "Framerate control",
 		.min = FRAME_RATE_AUTO,
 		.max = (1 << FRAME_RATE_AUTO |
-				1 << FRAME_RATE_10 | 1 << FRAME_RATE_30),
+				1 << FRAME_RATE_30),
 		.step = 1,
 		.def = FRAME_RATE_AUTO,
 		.flags = V4L2_CTRL_FLAG_VOLATILE,
@@ -933,41 +933,60 @@ static int ov7692_s_power(struct v4l2_subdev *sd, int on)
 static int ov7692_video_probe(struct i2c_client *client)
 {
 	int ret = 0;
-    u8 value = 0;
+	u8 value = 0;
 
-    ret = ov7692_read_smbus(client, 0x1c, &value);
-    printk(KERN_INFO "%s: REG_MIDH = 0x%x\n", __func__, value);
-    if (ret < 0)
-        return ret;  
-    if (value != 0x7f) /* OV manuf. id. */
-        return -ENODEV;
+	struct v4l2_subdev *subdev = i2c_get_clientdata(client);
 
-    ret = ov7692_read_smbus(client, 0x1d, &value);
-    printk(KERN_INFO "%s: REG_MIDL = 0x%x\n", __func__, value);
-    if (ret < 0)
-        return ret;
-    if (value != 0xa2)
-        return -ENODEV; 
-    
-    /*
-     * OK, we know we have an OmniVision chip...but which one?
-     */
-    ret = ov7692_read_smbus(client, 0x0a, &value);
-    printk(KERN_INFO "%s: REG_PID = 0x%x\n", __func__, value);
-    if (ret < 0)
-        return ret;
-    if (value != 0x76)  /* PID + VER = 0x76 / 0x92 */
-      return -ENODEV;
+	ret = ov7692_s_power(subdev, 1);
+	if (ret < 0)
+		return ret;
 
-    ret = ov7692_read_smbus(client, 0x0b, &value);
-    printk(KERN_INFO "%s: REG_VER = 0x%x\n", __func__, value);
-    if (ret < 0)
-        return ret;
-    if (value != 0x92)  /* PID + VER = 0x76 / 0x92 */
-        return -ENODEV;
+	ret = ov7692_read_smbus(client, 0x1c, &value);
+	pr_info("%s: REG_MIDH = 0x%x\n", __func__, value);
+	if (ret < 0)
+		goto ei2c;
+	if (value != 0x7f) { /* OV manuf. id. */
+		ret = -ENODEV;
+		goto ei2c;
+	}
 
+	ret = ov7692_read_smbus(client, 0x1d, &value);
+	pr_info("%s: REG_MIDL = 0x%x\n", __func__, value);
+	if (ret < 0)
+		goto ei2c;
+	if (value != 0xa2) {
+		ret = -ENODEV;
+		goto ei2c;
+	}
 
-    /* TODO: Do something like ov7692_init */
+	/*
+	 * OK, we know we have an OmniVision chip...but which one?
+	 */
+	ret = ov7692_read_smbus(client, 0x0a, &value);
+	pr_info("%s: REG_PID = 0x%x\n", __func__, value);
+	if (ret < 0)
+		goto ei2c;
+	if (value != 0x76) { /* PID + VER = 0x76 / 0x92 */
+		ret = -ENODEV;
+		goto ei2c;
+	}
+
+	ret = ov7692_read_smbus(client, 0x0b, &value);
+	pr_info("%s: REG_VER = 0x%x\n", __func__, value);
+	if (ret < 0)
+		goto ei2c;
+	if (value != 0x92) { /* PID + VER = 0x76 / 0x92 */
+		ret = -ENODEV;
+		goto ei2c;
+	}
+
+	/* Init the sensor here */
+	ret = ov7692_init(client);
+	if (ret)
+		dev_err(&client->dev, "Failed to initialize camera\n");
+
+ei2c:
+	ov7692_s_power(subdev, 0);
 	return ret;
 }
 
@@ -1032,11 +1051,7 @@ static int ov7692_enum_frameintervals(struct v4l2_subdev *sd,
 		interval->discrete.denominator = 24;
 		break;
 	}
-/*	printk(KERN_ERR"%s: width=%d height=%d fi=%d/%d\n", __func__,
-			interval->width,
-			interval->height, interval->discrete.numerator,
-			interval->discrete.denominator);
-			*/
+
 	return 0;
 }
 
@@ -1164,8 +1179,6 @@ static int ov7692_probe(struct i2c_client *client,
 		return -ENOMEM;
 
 	v4l2_i2c_subdev_init(&ov7692->subdev, client, &ov7692_subdev_ops);
-	/* Change this to &ov7692->subdev */
-	struct v4l2_subdev *subdev = i2c_get_clientdata(client);
 
 	ov7692->i_size = OV7692_SIZE_VGA;
 	ov7692->i_fmt = 0;	/* First format in the list */
@@ -1201,9 +1214,14 @@ static int ov7692_probe(struct i2c_client *client,
 	}
 
 	/* register standard menu controls */
+	/*
+	 * Max value of some controls communicates the supported enums for that
+	 * control to the HAL.
+	 */
 	v4l2_ctrl_new_std_menu(&ov7692->hdl, &ov7692_ctrl_ops,
-		V4L2_CID_COLORFX, V4L2_COLORFX_NEGATIVE, 0,
-		V4L2_COLORFX_NONE);
+		V4L2_CID_COLORFX, (1 << V4L2_COLORFX_NONE) |
+		(1 << V4L2_COLORFX_NEGATIVE) | (1 << V4L2_COLORFX_SEPIA) |
+		(1 << V4L2_COLORFX_BW), 0, V4L2_COLORFX_NONE);
 
 	v4l2_ctrl_new_std_menu(&ov7692->hdl, &ov7692_ctrl_ops,
 		V4L2_CID_POWER_LINE_FREQUENCY,
@@ -1233,28 +1251,16 @@ static int ov7692_probe(struct i2c_client *client,
 		goto ctrl_hdl_err;
 	}
 
-	ret = ov7692_s_power(subdev, 1);
-	if (ret < 0)
-		return ret;
-
-
 	ret = ov7692_video_probe(client);
 	if (ret) {
 		pr_err("ov7692_video_probe: failed to probe the sensor\n");
 		goto vid_probe_fail;
 	}
 
-	/* init the sensor here */
-	ret = ov7692_init(client);
-	if (ret) {
-		dev_err(&client->dev, "Failed to initialize sensor\n");
-		goto init_fail;
-	}
 
 	return ret;
 
 ctrl_hdl_err:
-init_fail:
 vid_probe_fail:
 	v4l2_ctrl_handler_free(&ov7692->hdl);
 	kfree(ov7692);

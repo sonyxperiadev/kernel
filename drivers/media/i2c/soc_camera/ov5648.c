@@ -2297,6 +2297,12 @@ static int ov5648_video_probe(struct i2c_client *client)
 	u8 revision = 0, id_high, id_low;
 	u16 id;
 
+	struct v4l2_subdev *subdev = i2c_get_clientdata(client);
+
+	ret = ov5648_s_power(subdev, 1);
+	if (ret < 0)
+		return ret;
+
 	/*
 	 * We must have a parent by now. And it cannot be a wrong one.
 	 * So this entire test is completely redundant.
@@ -2305,7 +2311,7 @@ static int ov5648_video_probe(struct i2c_client *client)
 	ret = ov5648_reg_read(client, 0x302A, &revision);
 	if (ret) {
 		dev_err(&client->dev, "Failure to detect OV5648 chip\n");
-		goto out;
+		goto ei2c;
 	}
 
 	revision &= 0xF;
@@ -2315,23 +2321,33 @@ static int ov5648_video_probe(struct i2c_client *client)
 	/* Read sensor Model ID */
 	ret = ov5648_reg_read(client, OV5648_REG_CHIP_ID_HIGH, &id_high);
 	if (ret < 0)
-		return ret;
+		goto ei2c;
 
 	id = id_high << 8;
 
 	ret = ov5648_reg_read(client, OV5648_REG_CHIP_ID_LOW, &id_low);
 	if (ret < 0)
-		return ret;
+		goto ei2c;
 
 	id |= id_low;
 
-	if (id != 0x5648)
-		return -ENODEV;
+	if (id != 0x5648) {
+		ret = -ENODEV;
+		goto ei2c;
+	}
 
 	dev_info(&client->dev, "Detected a OV5648 chip 0x%04x, revision %x\n",
 		 id, revision);
 
-out:
+	/* Init the sensor here */
+	ret = ov5648_init(client);
+	if (ret) {
+		dev_err(&client->dev, "Failed to initialize camera\n");
+		ret = -EINVAL;
+	}
+
+ei2c:
+	ov5648_s_power(subdev, 0);
 	return ret;
 }
 
@@ -2530,8 +2546,6 @@ static int ov5648_probe(struct i2c_client *client,
 	ov5648->i_fmt = 0;	/* First format in the list */
 	ov5648->plat_parms = sdesc->drv_priv;
 
-	struct v4l2_subdev *subdev = i2c_get_clientdata(client);
-
 	v4l2_i2c_subdev_init(&ov5648->subdev, client, &ov5648_subdev_ops);
 
 	v4l2_ctrl_handler_init(&ov5648->hdl,  ARRAY_SIZE(ov5648_controls) + 6);
@@ -2593,21 +2607,9 @@ static int ov5648_probe(struct i2c_client *client,
 		goto ctrl_hdl_err;
 	}
 
-	ret = ov5648_s_power(subdev, 1);
-	if (ret < 0)
-		return ret;
-
 	ret = ov5648_video_probe(client);
 	if (ret) {
 		goto vid_probe_fail;
-	}
-
-	/* init the sensor here */
-	ret = ov5648_init(client);
-	if (ret) {
-		dev_err(&client->dev, "Failed to initialize sensor\n");
-		ret = -EINVAL;
-		goto init_fail;
 	}
 
 #ifdef CONFIG_VIDEO_A3907
@@ -2644,7 +2646,6 @@ static int ov5648_probe(struct i2c_client *client,
 	return ret;
 
 ctrl_hdl_err:
-init_fail:
 vid_probe_fail:
 	v4l2_ctrl_handler_free(&ov5648->hdl);
 	kfree(ov5648);

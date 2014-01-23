@@ -1299,14 +1299,6 @@ static int unicam_camera_add_device(struct soc_camera_device *icd)
 		err = -ENODEV;
 		goto eirq;
 	}
-	err = v4l2_subdev_call(sd, core, s_power, 1);
-	if (err < 0 && err != -ENOIOCTLCMD && err != -ENODEV) {
-		dev_err(icd->parent, "cound not power up subdevice\n");
-		return err;
-	} else {
-		err = 0;
-	}
-
 
 	unicam_dev->icd = icd;
 
@@ -1340,8 +1332,6 @@ static void unicam_camera_remove_device(struct soc_camera_device *icd)
 		/* we should call streamoff from queue operations */
 		unicam_videobuf_stop_streaming(&icd->vb2_vidq);
 	}
-
-	v4l2_subdev_call(sd, core, s_power, 0);
 
 	free_irq(unicam_dev->irq, unicam_dev);
 
