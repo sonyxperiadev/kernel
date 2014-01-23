@@ -34,7 +34,7 @@ struct mm_core {
 	bool mm_core_idle;
 	/* job list. will be Unique for SMP*/
 	struct timer_list dev_timer;
-	struct plist_head job_list;
+	struct list_head job_list;
 	uint32_t device_job_id;
 	struct notifier_block notifier_block;
 };
@@ -49,7 +49,7 @@ static inline void mm_core_add_job(
 		&job->core_list, \
 		job->core_list.next, \
 		job->core_list.prev);*/
-	plist_add(&(job->core_list), &(core_dev->job_list));
+	list_add_tail(&(job->core_list), &(core_dev->job_list));
 	job->added2core = true;
 	if (core_dev->mm_core_idle)
 		SCHEDULER_WORK(core_dev, &core_dev->job_scheduler);
@@ -63,7 +63,7 @@ static inline void mm_core_remove_job(
 {
 	if (job->added2core == false)
 		return;
-	plist_del(&job->core_list, &(core_dev->job_list));
+	list_del_init(&job->core_list);
 	job->added2core = false;
 }
 

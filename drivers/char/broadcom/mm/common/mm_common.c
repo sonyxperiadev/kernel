@@ -114,7 +114,7 @@ static struct dev_job_list *mm_common_alloc_job(\
 	job->predecessor = NULL;
 	INIT_WORK(&(job->work), func);
 	INIT_LIST_HEAD(&job->file_list);
-	plist_node_init(&job->core_list, private->prio);
+	INIT_LIST_HEAD(&job->core_list);
 	job->job.type = INTERLOCK_WAITING_JOB;
 	job->job.id = 0;
 	job->job.data = NULL;
