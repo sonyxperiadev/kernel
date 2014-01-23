@@ -1746,11 +1746,13 @@ static int ov5648_g_chip_ident(struct v4l2_subdev *sd,
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 
+/*
 	if (id->match.type != V4L2_CHIP_MATCH_I2C_ADDR)
 		return -EINVAL;
 
 	if (id->match.addr != client->addr)
 		return -ENODEV;
+*/
 
 	id->ident = V4L2_IDENT_OV5648;
 	id->revision = 0;
