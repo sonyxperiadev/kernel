@@ -251,6 +251,7 @@
 		compatible = "bcm,ion-config";
 		/* No separate mask needed for hwwr if M4U is enabled */
 		mask_hwwr = <0>;
+		mask_fast = <0>;
 	};
 
 	ion-system {
