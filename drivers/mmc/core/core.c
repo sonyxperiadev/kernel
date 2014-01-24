@@ -330,8 +330,12 @@ EXPORT_SYMBOL(mmc_start_bkops);
  */
 static void mmc_wait_data_done(struct mmc_request *mrq)
 {
+	unsigned long flags;
+
+	local_irq_save(flags);
 	mrq->host->context_info.is_done_rcv = true;
 	wake_up_interruptible(&mrq->host->context_info.wait);
+	local_irq_restore(flags);
 }
 
 static void mmc_wait_done(struct mmc_request *mrq)
