@@ -381,6 +381,7 @@ struct bcmpmu_adc_pdata {
 	unsigned int lut_len;
 	char *name;
 	u32 reg;
+	int compensation_val;
 };
 
 
