@@ -1,4 +1,4 @@
-/* Copyright (c) 2013, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -1701,7 +1701,7 @@
 	qcom,dec-ocmem-ab-ib = <0 0>,
 		<176000 519000>,
 		<456000 519000>,
-		<864000 519000>,
+		<864000 629000>,
 		<1728000 1038000>,
 		<2766000 1661000>,
 		<3456000 2076000>,
@@ -1750,4 +1750,8 @@
 &memory_hole {
 	qcom,memblock-remove = <0x05a00000 0x7800000
 				0x0fa00000 0x500000>; /* Address and size of the hole */
+};
+
+&gdsc_venus {
+	qcom,skip-logic-collapse;
 };
