@@ -754,10 +754,12 @@ err:
 
 static int ov5648_s_ctrl(struct v4l2_ctrl *);
 static int ov5648_g_ctrl(struct v4l2_ctrl *);
+static int ov5648_try_ctrl(struct v4l2_ctrl *);
 
 static struct v4l2_ctrl_ops ov5648_ctrl_ops = {
 	.s_ctrl = ov5648_s_ctrl,
 	.g_volatile_ctrl = ov5648_g_ctrl,
+	.try_ctrl = ov5648_try_ctrl,
 };
 
 static const struct v4l2_ctrl_config ov5648_controls[] = {
@@ -1554,6 +1556,7 @@ static int ov5648_set_mode(struct i2c_client *client, int new_mode_idx)
 	ov5648->framerate_hi_absolute = ov5648_mode[new_mode_idx].fps;
 	ov5648_set_framerate_lo(client, ov5648->framerate_lo_absolute);
 	ov5648_set_framerate_hi(client, ov5648->framerate_hi_absolute);
+	ov5648->framerate = FRAME_RATE_AUTO;
 	ov5648_set_exposure(client, ov5648->exposure_current);
 	ov5648_set_gain(client, ov5648->gain_current);
 	return 0;
@@ -1690,6 +1693,22 @@ static int ov5648_g_ctrl(struct v4l2_ctrl *ctrl)
 		break;
 	}
 	return 0;
+}
+
+/* try_ctrl - Used to validate controls. Checks if the value
+ * in the control is valid and updates if necessary.
+ * Manipulate the current value and not the new value (to be set).
+ */
+static int ov5648_try_ctrl(struct v4l2_ctrl *ctrl)
+{
+	struct ov5648 *ov5648 = container_of(ctrl->handler, struct ov5648, hdl);
+	int ret = 0;
+	switch (ctrl->id) {
+	case V4L2_CID_CAMERA_FRAME_RATE:
+		ctrl->cur.val = ov5648->framerate;
+		break;
+	}
+	return ret;
 }
 
 static int ov5648_s_ctrl(struct v4l2_ctrl *ctrl)
