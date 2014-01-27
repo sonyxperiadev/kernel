@@ -721,7 +721,7 @@ static int PcmCaptureOpen(struct snd_pcm_substream *substream)
 
 	if (((substream_number + 1) == CTL_STREAM_PANEL_PCMIN)
 		|| ((substream_number + 1) == CTL_STREAM_PANEL_PCM_IN)) {
-		aError("Inside HQ capture init\n");
+		aTrace(LOG_ALSA_INTERFACE, "Inside HQ capture init\n");
 		chip->streamCtl[substream_number].dev_prop.c.drv_type =
 		    AUDIO_DRIVER_CAPT_HQ;
 		runtime->hw = brcm_capture_hw;
@@ -735,7 +735,7 @@ static int PcmCaptureOpen(struct snd_pcm_substream *substream)
 		if (err < 0)
 			return err;
 	} else if ((substream_number + 1) == CTL_STREAM_PANEL_SPEECHIN) {
-		aError("Inside speecin init\n");
+		aTrace(LOG_ALSA_INTERFACE, "Inside speecin init\n");
 		chip->streamCtl[substream_number].dev_prop.c.drv_type =
 		    AUDIO_DRIVER_CAPT_VOICE;
 		runtime->hw = brcm_voice_capture_hw;
