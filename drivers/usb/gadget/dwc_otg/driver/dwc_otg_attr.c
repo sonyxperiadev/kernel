@@ -1033,31 +1033,6 @@ static ssize_t regdump_show(struct device *_dev,
 DEVICE_ATTR(regdump, S_IRUGO, regdump_show, 0);
 
 /**
- * Dump global registers and either host or device registers (depending on the
- * current mode of the core).
- */
-static ssize_t spramdump_show(struct device *_dev,
-			      struct device_attribute *attr, char *buf)
-{
-#ifdef LM_INTERFACE
-	struct lm_device *lm_dev = container_of(_dev, struct lm_device, dev);
-	dwc_otg_device_t *otg_dev = lm_get_drvdata(lm_dev);
-#elif defined(PCI_INTERFACE)
-	dwc_otg_device_t *otg_dev = dev_get_drvdata(_dev);
-#else
-	struct platform_device *platform_dev =
-	    container_of(_dev, struct platform_device, dev);
-	dwc_otg_device_t *otg_dev = platform_get_drvdata(platform_dev);
-#endif
-
-	dwc_otg_dump_spram(otg_dev->core_if);
-
-	return snprintf(buf, PAGE_SIZE, "SPRAM Dump\n");
-}
-
-DEVICE_ATTR(spramdump, S_IRUGO, spramdump_show, 0);
-
-/**
  * Dump the current hcd state.
  */
 static ssize_t hcddump_show(struct device *_dev,
@@ -1403,7 +1378,6 @@ void dwc_otg_attr_create(
 	error = device_create_file(&dev->dev, &dev_attr_rem_wakeup_pwrdn);
 	error = device_create_file(&dev->dev, &dev_attr_disconnect_us);
 	error = device_create_file(&dev->dev, &dev_attr_regdump);
-	error = device_create_file(&dev->dev, &dev_attr_spramdump);
 	error = device_create_file(&dev->dev, &dev_attr_hcddump);
 	error = device_create_file(&dev->dev, &dev_attr_hcd_frrem);
 	error = device_create_file(&dev->dev, &dev_attr_rd_reg_test);
@@ -1458,7 +1432,6 @@ void dwc_otg_attr_remove(
 	device_remove_file(&dev->dev, &dev_attr_rem_wakeup_pwrdn);
 	device_remove_file(&dev->dev, &dev_attr_disconnect_us);
 	device_remove_file(&dev->dev, &dev_attr_regdump);
-	device_remove_file(&dev->dev, &dev_attr_spramdump);
 	device_remove_file(&dev->dev, &dev_attr_hcddump);
 	device_remove_file(&dev->dev, &dev_attr_hcd_frrem);
 	device_remove_file(&dev->dev, &dev_attr_rd_reg_test);

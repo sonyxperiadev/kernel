@@ -4905,34 +4905,6 @@ void dwc_otg_dump_dev_registers(dwc_otg_core_if_t *core_if)
 }
 
 /**
- * This functions reads the SPRAM and prints its content
- *
- * @param core_if Programming view of DWC_otg controller.
- */
-void dwc_otg_dump_spram(dwc_otg_core_if_t *core_if)
-{
-	volatile uint8_t *addr, *start_addr, *end_addr;
-
-	DWC_PRINTF("SPRAM Data:\n");
-	start_addr = (void *)core_if->core_global_regs;
-	DWC_PRINTF("Base Address: 0x%8X\n", (uint32_t)start_addr);
-	start_addr += 0x00028000;
-	end_addr = (void *)core_if->core_global_regs;
-	end_addr += 0x000280e0;
-
-	for (addr = start_addr; addr < end_addr; addr += 16) {
-		DWC_PRINTF
-		    ("0x%8X:\t%2X %2X %2X %2X %2X %2X %2X %2X%2X %2X %2X %2X %2X %2X %2X %2X\n",
-		     (uint32_t)addr, addr[0], addr[1], addr[2], addr[3],
-		     addr[4], addr[5], addr[6], addr[7], addr[8], addr[9],
-		     addr[10], addr[11], addr[12], addr[13], addr[14], addr[15]
-		    );
-	}
-
-	return;
-}
-
-/**
  * This function reads the host registers and prints them
  *
  * @param core_if Programming view of DWC_otg controller.
