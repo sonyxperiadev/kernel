@@ -317,8 +317,8 @@ static int bl_cooling_get_max_state(struct thermal_cooling_device *cdev,
 			unsigned long *state)
 {
 	struct backlight_device *bl = cdev->devdata;
-
-	return bl->props.max_brightness;
+	*state = bl->props.max_brightness;
+	return 0;
 }
 
 static int bl_cooling_get_cur_state(struct thermal_cooling_device *cdev,

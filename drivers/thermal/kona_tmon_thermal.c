@@ -40,7 +40,7 @@
 /* Flag to control writability of trip threshold limits */
 #define TMON_ENABLE_DEBUG			1
 #if (TMON_ENABLE_DEBUG == 1)
-#define TRIP_UPDATE_MASK			0x0FE
+#define TRIP_UPDATE_MASK			0x07E
 #else
 #define TRIP_UPDATE_MASK			0x0
 #endif
