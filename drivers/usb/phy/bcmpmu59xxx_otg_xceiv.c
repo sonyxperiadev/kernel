@@ -141,8 +141,16 @@ static void bcmpmu_otg_xceiv_shutdown(struct usb_phy *phy)
 	struct bcmpmu_otg_xceiv_data *xceiv_data = dev_get_drvdata(phy->dev);
 
 	if (xceiv_data) {
-		/* De-initialize OTG core and PHY */
-		bcm_hsotgctrl_phy_deinit();
+		/* If the Phy is initialized, then De-initialize. Otherwise
+		 * calling bcm_hsotgctrl_phy_deinit() will cause clocks
+		 * inbalance.
+		 * If we do not have this check, if we Plug IN and Plug OUT
+		 * the USB cable continuously, end up having the clock
+		 * inbalance.
+		 */
+		if (xceiv_data->otg_xceiver.phy.state != OTG_STATE_UNDEFINED)
+			bcm_hsotgctrl_phy_deinit();
+
 		xceiv_data->otg_xceiver.phy.state = OTG_STATE_UNDEFINED;
 		if (!xceiv_data->otg_enabled) {
 			if (xceiv_data->bcm_hsotg_regulator &&
@@ -199,14 +207,11 @@ static int bcmpmu_otg_xceiv_start(struct usb_phy *phy)
 		}
 	}
 
-	/* Give 2ms to ramp up USBLDO */
-	mdelay(USBLDO_RAMP_UP_DELAY_IN_MS);
-	xceiv_data->regulator_enabled = true;
-
 	id_default_host = bcmpmu_otg_xceiv_check_id_gnd(xceiv_data) ||
 		bcmpmu_otg_xceiv_check_id_rid_a(xceiv_data);
-	/* Initialize OTG core and PHY */
-	bcm_hsotgctrl_phy_init(!id_default_host);
+	/* Initialize OTG PHY, if it is not */
+	if (xceiv_data->otg_xceiver.phy.state == OTG_STATE_UNDEFINED)
+		bcm_hsotgctrl_phy_init(!id_default_host);
 
 	bcmpmu_otg_xceiv_set_def_state(xceiv_data, id_default_host);
 
@@ -847,12 +852,12 @@ static void bcmpmu_otg_xceiv_id_change_handler(struct work_struct *work)
 		msleep(HOST_TO_PERIPHERAL_DELAY_MS);
 
 	if (id_gnd || id_rid_a || id_rid_c) {
-		bcm_hsotgctrl_phy_deinit();
-		xceiv_data->otg_xceiver.phy.state = OTG_STATE_UNDEFINED;
-		atomic_notifier_call_chain(&xceiv_data->otg_xceiver.phy.
+		if (xceiv_data->otg_xceiver.phy.state ==
+				OTG_STATE_UNDEFINED)
+			atomic_notifier_call_chain(&xceiv_data->otg_xceiver.phy.
 					   notifier, USB_EVENT_ID, NULL);
 	} else if (bcmpmu_otg_xceiv_check_id_rid_float(xceiv_data) &&
-		(xceiv_data->otg_xceiver.phy.state >= OTG_STATE_A_IDLE)) {
+		(xceiv_data->otg_xceiver.phy.state != OTG_STATE_UNDEFINED)) {
 		atomic_notifier_call_chain(&xceiv_data->otg_xceiver.phy.
 					   notifier, USB_EVENT_NONE, NULL);
 	}

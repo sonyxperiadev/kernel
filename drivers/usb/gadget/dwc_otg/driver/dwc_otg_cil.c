@@ -194,7 +194,10 @@ void w_shutdown_core(void *p)
 		if (core_if->xceiver->shutdown)
 			usb_phy_shutdown(core_if->xceiver);
 #endif
-	core_if->xceiver->state = OTG_STATE_UNDEFINED;
+	/*
+	 * Do not update the phy state in DWC_USB drivers.
+	 * USB OTG states are handled in otg_xceive driver.
+	 */
 }
 
 void w_vbus_draw(void *p)
