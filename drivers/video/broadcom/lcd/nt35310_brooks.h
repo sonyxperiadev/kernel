@@ -143,6 +143,62 @@ __initdata DISPCTRL_REC_T nt35310_brooks_init_panel_cmd[] = {
 	{DISPCTRL_LIST_END, 0}
 };
 
+__initdata DISPCTRL_REC_T nt35310_brooks_idle_mode_panel_cmd[] = {
+	/* Partial Idle Mode 1 */
+	{DISPCTRL_WR_CMND, 0x12}, /* Partial Mode On */
+	{DISPCTRL_WR_CMND, 0x30}, /* Partial mode area */
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x01},
+	{DISPCTRL_WR_DATA, 0x3F},
+	{DISPCTRL_WR_CMND, 0x39}, /* Idle Mode */
+	{DISPCTRL_WR_CMND, 0xED}, /* Unlock CMD2 */
+	{DISPCTRL_WR_DATA, 0x01},
+	{DISPCTRL_WR_DATA, 0xFE},
+	{DISPCTRL_WR_CMND, 0xB0}, /* Hi-Z */
+	{DISPCTRL_WR_DATA, 0x03},
+	{DISPCTRL_WR_CMND, 0xB4}, /* 4 dot inversion */
+	{DISPCTRL_WR_DATA, 0x2A},
+	{DISPCTRL_WR_CMND, 0xC2}, /* Power Setting */
+	{DISPCTRL_WR_DATA, 0x66},
+	{DISPCTRL_WR_DATA, 0x66},
+	{DISPCTRL_WR_DATA, 0x66},
+	{DISPCTRL_WR_CMND, 0xC6}, /* Power Setting */
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0xAA},
+	{DISPCTRL_WR_DATA, 0xAA},
+	{DISPCTRL_WR_DATA, 0xAA},
+	{DISPCTRL_LIST_END, 0}
+};
+
+__initdata DISPCTRL_REC_T nt35310_brooks_normal_mode_panel_cmd[] = {
+	/* Partial Idle Mode 1 */
+	{DISPCTRL_WR_CMND, 0x12}, /* Partial Mode On */
+	{DISPCTRL_WR_CMND, 0x30}, /* Partial mode area */
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x01},
+	{DISPCTRL_WR_DATA, 0x3F},
+	{DISPCTRL_WR_CMND, 0x38}, /* Normal Mode */
+	{DISPCTRL_WR_CMND, 0xED}, /* Unlock CMD2 */
+	{DISPCTRL_WR_DATA, 0x01},
+	{DISPCTRL_WR_DATA, 0xFE},
+	{DISPCTRL_WR_CMND, 0xB0}, /* Hi-Z */
+	{DISPCTRL_WR_DATA, 0x03},
+	{DISPCTRL_WR_CMND, 0xB4}, /* 4 dot inversion */
+	{DISPCTRL_WR_DATA, 0x2A},
+	{DISPCTRL_WR_CMND, 0xC2}, /* Power Setting */
+	{DISPCTRL_WR_DATA, 0x66},
+	{DISPCTRL_WR_DATA, 0x66},
+	{DISPCTRL_WR_DATA, 0x66},
+	{DISPCTRL_WR_CMND, 0xC6}, /* Power Setting */
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0xAA},
+	{DISPCTRL_WR_DATA, 0xAA},
+	{DISPCTRL_WR_DATA, 0xAA},
+	{DISPCTRL_LIST_END, 0}
+};
+
 void nt35310_brooks_winset(char *msgData, DISPDRV_WIN_t *p_win)
 {
 	int i = 0;
@@ -193,6 +249,10 @@ __initdata struct lcd_config nt35310_brooks_cfg = {
 	.vs = 0,
 	.vbp = 0,
 	.vfp = 0,
+	.special_mode_panel = true,
+	.special_mode_on = false,
+	.special_mode_on_cmd_seq = &nt35310_brooks_idle_mode_panel_cmd[0],
+	.special_mode_off_cmd_seq = &nt35310_brooks_normal_mode_panel_cmd[0],
 };
 
 #endif

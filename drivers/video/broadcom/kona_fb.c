@@ -773,6 +773,10 @@ static ssize_t kona_fb_panel_name_show(struct device *dev,
 static ssize_t kona_fb_panel_id_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
+	return scnprintf(buf, PAGE_SIZE, "%s\n", "Not supported");
+/*
+ * TODO: Fix this!
+ * This doesn't work, as we get read timeoput errors. Need to investigate.
 	int len = 1;
 	UInt8 buff1, buff2, buff3;
 	uint8_t reg;
@@ -785,37 +789,39 @@ static ssize_t kona_fb_panel_id_show(struct device *dev,
 	panel_read(reg, &buff3, len);
 	return scnprintf(buf, PAGE_SIZE, "Panel ID: 0x%.2x 0x%.2x 0x%.2x\n",
 			buff1, buff2, buff3);
+*/
 }
 
 static ssize_t kona_fb_panel_mode_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
-	return scnprintf(buf, PAGE_SIZE, "%s\n", "Not Implemented!");
+	struct kona_fb *fb = dev_get_drvdata(dev);
+	if (fb->display_info->special_mode_panel)
+		return scnprintf(buf, PAGE_SIZE, "%d\n",
+					fb->display_info->special_mode_on);
+	else
+		return scnprintf(buf, PAGE_SIZE, "%s\n", "Not supported");
 }
 
 static ssize_t kona_fb_panel_mode_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t count)
 {
 	int ret = count;
+	struct kona_fb *fb = dev_get_drvdata(dev);
 	uint32_t val;
-	DISPCTRL_REC_T idle_mode_cmd[] = {
-		{DISPCTRL_WR_CMND, 0x39},
-		{DISPCTRL_LIST_END, 0}
-		};
-	DISPCTRL_REC_T normal_mode_cmd[] = {
-		{DISPCTRL_WR_CMND, 0x38},
-		{DISPCTRL_LIST_END, 0}
-		};
 
-	if (sscanf(buf, "%4i", &val) != 1) {
+	if (sscanf(buf, "%i", &val) != 1) {
 		pr_err("%s: Error, buf = %s\n", __func__, buf);
 		ret = -EINVAL;
 	} else {
-		dev_info(dev, "%s: panel mode %i\n", __func__, val);
-		if (val)
-			panel_write((UInt8 *)idle_mode_cmd);
-		else
-			panel_write((UInt8 *)normal_mode_cmd);
+		if (fb->display_info->special_mode_panel) {
+			dev_info(dev, "%s: panel mode %i\n", __func__, val);
+			if (val)
+				fb->display_info->special_mode_on = 1;
+			else
+				fb->display_info->special_mode_on = 0;
+		} else
+			pr_err("%s: Not supported\n", __func__);
 	}
 	return ret;
 }
@@ -1500,6 +1506,22 @@ static int __init populate_dispdrv_cfg(struct kona_fb *fb,
 			goto err_win_seq;
 	}
 
+	/* Panel special mode */
+	if (cfg->special_mode_panel) {
+		info->special_mode_on_seq =
+					get_seq(cfg->special_mode_on_cmd_seq);
+		if (!info->special_mode_on_seq)
+			goto err_special_mode_seq;
+		info->special_mode_off_seq =
+					get_seq(cfg->special_mode_off_cmd_seq);
+		if (!info->special_mode_off_seq)
+			goto err_special_mode_seq;
+		info->special_mode_on = cfg->special_mode_on;
+		info->special_mode_panel = cfg->special_mode_panel;
+		pr_info("%s(%d): Panel special mode: %d\n",
+				__func__, __LINE__, info->special_mode_on);
+	}
+
 	/* burst mode changes to be taken care here or PV? */
 	info->hs_bps = (pd->hs_bps > cfg->max_hs_bps) ?
 				 cfg->max_hs_bps : pd->hs_bps;
@@ -1514,6 +1536,11 @@ static int __init populate_dispdrv_cfg(struct kona_fb *fb,
 	fb->display_info = info;
 	return 0;
 
+err_special_mode_seq:
+	if (cfg->special_mode_panel) {
+		kfree(info->special_mode_on_seq);
+		kfree(info->special_mode_off_seq);
+	}
 err_win_seq:
 	kfree(info->init_seq);
 err_init_seq:

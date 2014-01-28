@@ -243,6 +243,7 @@ __initdata struct lcd_config nt35310_mesona_cfg = {
 	.vs = 0,
 	.vbp = 0,
 	.vfp = 0,
+	.special_mode_panel = false,
 };
 
 #endif

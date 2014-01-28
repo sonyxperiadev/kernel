@@ -59,6 +59,10 @@ struct lcd_config {
 	DISPCTRL_REC_T *scrn_on_seq;
 	DISPCTRL_REC_T *scrn_off_seq;
 	DISPCTRL_REC_T *id_seq;
+	DISPCTRL_REC_T *special_mode_on_cmd_seq; /* Panel special mode */
+	DISPCTRL_REC_T *special_mode_off_cmd_seq; /* Panel normal mode */
+	bool special_mode_on; /* Turn special mode on or off */
+	bool special_mode_panel; /* Panel supports special mode */
 	bool verify_id;
 	void (*updt_win_fn)(char *buff, DISPDRV_WIN_t *p_win);
 	uint32_t updt_win_seq_len;

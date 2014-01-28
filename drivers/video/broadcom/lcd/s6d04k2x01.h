@@ -308,6 +308,7 @@ __initdata struct lcd_config s6d04k2x01_cfg = {
 	.vs = 0,
 	.vbp = 0,
 	.vfp = 0,
+	.special_mode_panel = false,
 };
 
 #endif
