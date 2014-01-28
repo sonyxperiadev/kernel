@@ -43,7 +43,6 @@ struct gpio_flash_state_s {
 	enum v4l2_flash_led_mode mode;
 	int duration;
 	int intensity;
-	struct timer_list timer;
 };
 static struct gpio_flash_state_s gpio_flash_state;
 
@@ -51,7 +50,6 @@ static void gpio_flash_timeout_func(unsigned long lparam)
 {
 	gpio_set_value(GPIO_MODE_SEL, 0);
 	gpio_set_value(GPIO_FLASH_EN, 0);
-	del_timer(&gpio_flash_state.timer);
 	gpio_flash_state.mode = V4L2_FLASH_LED_MODE_NONE;
 }
 
@@ -70,11 +68,6 @@ static int gpio_flash_enable(void)
 	case V4L2_FLASH_LED_MODE_FLASH_AUTO:
 		gpio_set_value(GPIO_MODE_SEL, 1);
 		gpio_set_value(GPIO_FLASH_EN, 1);
-		gpio_flash_state.timer.data = (unsigned long)NULL;
-		gpio_flash_state.timer.expires = jiffies +
-			(gpio_flash_state.duration * HZ)/1000000;
-		gpio_flash_state.timer.function = gpio_flash_timeout_func;
-		add_timer(&gpio_flash_state.timer);
 		break;
 	case V4L2_FLASH_LED_MODE_TORCH:
 		gpio_set_value(GPIO_MODE_SEL, 0);
@@ -193,7 +186,6 @@ static int __init gpio_flash_mod_init(void)
 		return -1;
 	}
 	memset(&gpio_flash_state, sizeof(struct flash_lamp_s), 0);
-	init_timer(&gpio_flash_state.timer);
 
 	return 0;
 }
