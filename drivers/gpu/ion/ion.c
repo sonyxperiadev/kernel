@@ -133,7 +133,8 @@ static int ion_debug_heap_freelist(struct ion_heap *heap);
  * Memory (in bytes) held by the client from the heap
  */
 static size_t ion_debug_heap_total(struct ion_client *client,
-		unsigned int id, size_t *shared);
+		unsigned int id, size_t *shared,
+		size_t *pss);
 
 /**
  * Print the status of all the heaps
@@ -385,7 +386,12 @@ static void ion_handle_destroy(struct kref *kref)
 	struct ion_handle *handle = container_of(kref, struct ion_handle, ref);
 	struct ion_client *client = handle->client;
 	struct ion_buffer *buffer = handle->buffer;
+	char task_comm[TASK_COMM_LEN];
+	pid_t pid, client_pid;
 
+	client_pid = client->pid;
+	get_task_comm(task_comm, current->group_leader);
+	pid = task_pid_nr(current->group_leader);
 	mutex_lock(&buffer->lock);
 	while (handle->kmap_cnt)
 		ion_handle_kmap_put(handle);
@@ -395,6 +401,10 @@ static void ion_handle_destroy(struct kref *kref)
 		rb_erase(&handle->node, &client->handles);
 
 	ion_buffer_remove_from_handle(buffer);
+	pr_debug("(%16.s:%d) Freed handle(pid:%d) to buffer(%p) da(%#x) size(%d)KB flags(%#lx) from heap(%16.s) used(%d)KB\n",
+		task_comm, pid, client_pid, buffer,
+		buffer->dma_addr, buffer->size>>10, buffer->flags,
+		buffer->heap->name, buffer->heap->used>>10);
 	ion_buffer_put(buffer);
 
 	kfree(handle);
@@ -523,15 +533,17 @@ static void ion_debug_print_per_heap(struct ion_heap *heap)
 	size_t total_shared_size = 0;
 	int free_heap = 1;
 
-	pr_info("%16.s %16.s %16.s %16.s %16.s\n",
-			"client", "pid", "size", "shared", "oom_score_adj");
+	pr_info("%16.s %16.s %16.s %16.s %16.s %16.s\n",
+		"client", "pid", "size", "shared", "pss", "oom_score_adj");
 	pr_info("----------------------------------------------------\n");
 
 	for (n = rb_first(&dev->clients); n; n = rb_next(n)) {
 		size_t shared;
+		size_t pss;
 		struct ion_client *client = rb_entry(n, struct ion_client,
 						     node);
-		size_t size = ion_debug_heap_total(client, heap->id, &shared);
+		size_t size = ion_debug_heap_total(client, heap->id,
+						   &shared, &pss);
 		if (!size)
 			continue;
 		free_heap = 0;
@@ -539,14 +551,14 @@ static void ion_debug_print_per_heap(struct ion_heap *heap)
 			char task_comm[TASK_COMM_LEN];
 
 			get_task_comm(task_comm, client->task);
-			pr_info("%16.s %16u %13u KB %13u KB %16d\n",
+			pr_info("%16.s %16u %13u KB %13u KB %13u KB %16d\n",
 					task_comm, client->pid, (size>>10),
-					(shared>>10),
+					(shared>>10), (pss>>10),
 					client->task->signal->oom_score_adj);
 		} else {
-			pr_info("%16.s %16u %13u KB %13u KB\n",
+			pr_info("%16.s %16u %13u KB %13u KB %13u KB\n",
 					client->name, client->pid, (size>>10),
-					(shared>>10));
+					(shared>>10), (pss>>10));
 		}
 	}
 	if (free_heap)
@@ -620,6 +632,7 @@ static int ion_shrink(struct ion_device *dev, unsigned int heap_id_mask,
 	plist_for_each_entry(heap, &dev->heaps, node) {
 		struct ion_client *client;
 		int shared;
+		int pss;
 
 		/* if the caller didn't specify this heap id type */
 		if (!((1 << heap->id) & heap_id_mask))
@@ -647,7 +660,8 @@ static int ion_shrink(struct ion_device *dev, unsigned int heap_id_mask,
 			}
 			if (p->signal->oom_score_adj < min_oom_score_adj)
 				continue;
-			size = ion_debug_heap_total(client, heap->id, &shared);
+			size = ion_debug_heap_total(client, heap->id,
+						    &shared, &pss);
 			if (!size)
 				continue;
 			if (selected_client) {
@@ -1443,8 +1457,12 @@ int ion_share_dma_buf_fd(struct ion_client *client, struct ion_handle *handle)
 		return PTR_ERR(dmabuf);
 
 	fd = dma_buf_fd(dmabuf, O_CLOEXEC);
-	if (fd < 0)
+	if (fd < 0) {
+		pr_err("(%d:%d) Share/Map failed - ran out of fds\n",
+				task_pid_nr(current->group_leader),
+				task_pid_nr(current));
 		dma_buf_put(dmabuf);
+	}
 
 	return fd;
 }
@@ -1455,7 +1473,11 @@ struct ion_handle *ion_import_dma_buf(struct ion_client *client, int fd)
 	struct dma_buf *dmabuf;
 	struct ion_buffer *buffer;
 	struct ion_handle *handle;
+	char client_name[TASK_COMM_LEN];
+	pid_t pid;
 
+	get_task_comm(client_name, client->task);
+	pid = task_pid_nr(client->task);
 	dmabuf = dma_buf_get(fd);
 	if (IS_ERR_OR_NULL(dmabuf))
 		return ERR_PTR(PTR_ERR(dmabuf));
@@ -1483,6 +1505,10 @@ struct ion_handle *ion_import_dma_buf(struct ion_client *client, int fd)
 end:
 	mutex_unlock(&client->lock);
 	dma_buf_put(dmabuf);
+	pr_debug("(%16.s:%d) Imported buffer(%p) da(%#x) size(%d)KB flags(%#lx) from heap(%16.s) used(%d)KB\n",
+		client_name, pid, buffer, buffer->dma_addr,
+		buffer->size>>10, buffer->flags,
+		buffer->heap->name, buffer->heap->used>>10);
 	return handle;
 }
 EXPORT_SYMBOL(ion_import_dma_buf);
@@ -1642,12 +1668,14 @@ static const struct file_operations ion_fops = {
 };
 
 static size_t ion_debug_heap_total(struct ion_client *client,
-				   unsigned int id, size_t *shared)
+				   unsigned int id, size_t *shared,
+				   size_t *pss)
 {
 	size_t size = 0;
 	struct rb_node *n;
 
 	*shared = 0;
+	*pss = 0;
 	mutex_lock(&client->lock);
 	for (n = rb_first(&client->handles); n; n = rb_next(n)) {
 		struct ion_handle *handle = rb_entry(n,
@@ -1655,6 +1683,8 @@ static size_t ion_debug_heap_total(struct ion_client *client,
 						     node);
 		if (handle->buffer->heap->id == id) {
 			size += handle->buffer->size;
+			*pss += handle->buffer->size
+				/ handle->buffer->handle_count;
 			if (handle->buffer->handle_count > 1)
 				*shared += handle->buffer->size;
 		}
@@ -1674,15 +1704,17 @@ static int ion_debug_heap_show(struct seq_file *s, void *unused)
 	int free_heap = 1;
 
 	seq_printf(s, "%s:\n", heap->name);
-	seq_printf(s, "%16.s %16.s %16.s %16.s %16.s\n",
-			"client", "pid", "size", "shared", "oom_score_adj");
+	seq_printf(s, "%16.s %16.s %16.s %16.s %16.s %16.s\n",
+		   "client", "pid", "size", "shared", "pss", "oom_score_adj");
 	seq_printf(s, "----------------------------------------------------\n");
 
 	for (n = rb_first(&dev->clients); n; n = rb_next(n)) {
 		size_t shared;
+		size_t pss;
 		struct ion_client *client = rb_entry(n, struct ion_client,
 						     node);
-		size_t size = ion_debug_heap_total(client, heap->id, &shared);
+		size_t size = ion_debug_heap_total(client, heap->id,
+						   &shared, &pss);
 		if (!size)
 			continue;
 		free_heap = 0;
@@ -1690,14 +1722,14 @@ static int ion_debug_heap_show(struct seq_file *s, void *unused)
 			char task_comm[TASK_COMM_LEN];
 
 			get_task_comm(task_comm, client->task);
-			seq_printf(s, "%16.s %16u %13u KB %13u KB %16d\n",
+			seq_printf(s, "%16.s %16u %13u KB %13u KB %13u KB %16d\n",
 					task_comm, client->pid, (size>>10),
-					(shared>>10),
+					(shared>>10), (pss>>10),
 					client->task->signal->oom_score_adj);
 		} else {
-			seq_printf(s, "%16.s %16u %13u KB %13u KB\n",
+			seq_printf(s, "%16.s %16u %13u KB %13u KB %13u KB\n",
 					client->name, client->pid, (size>>10),
-					(shared>>10));
+					(shared>>10), (pss>>10));
 		}
 	}
 	if (free_heap)
