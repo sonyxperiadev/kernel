@@ -23,47 +23,55 @@ static struct workqueue_struct *autosleep_wq;
 static DEFINE_MUTEX(autosleep_lock);
 static struct wakeup_source *autosleep_ws;
 
+static void try_to_suspend(struct work_struct *work);
+static DECLARE_WORK(suspend_work, try_to_suspend);
+
 static void try_to_suspend(struct work_struct *work)
 {
 	unsigned int initial_count, final_count;
 
-	if (!pm_get_wakeup_count(&initial_count, true))
-		goto out;
-
-	mutex_lock(&autosleep_lock);
-
-	if (!pm_save_wakeup_count(initial_count) ||
-		system_state != SYSTEM_RUNNING) {
-		mutex_unlock(&autosleep_lock);
-		goto out;
-	}
-
-	if (autosleep_state == PM_SUSPEND_ON) {
-		mutex_unlock(&autosleep_lock);
-		return;
-	}
-	if (autosleep_state >= PM_SUSPEND_MAX)
-		hibernate();
-	else
+	if (pm_is_forced_sleep()) {
+		mutex_lock(&autosleep_lock);
 		pm_suspend(autosleep_state);
+		mutex_unlock(&autosleep_lock);
+		try_to_suspend(&suspend_work);
+	} else {
+		if (!pm_get_wakeup_count(&initial_count, true))
+			goto out;
 
-	mutex_unlock(&autosleep_lock);
+		mutex_lock(&autosleep_lock);
 
-	if (!pm_get_wakeup_count(&final_count, false))
-		goto out;
+		if (!pm_save_wakeup_count(initial_count) ||
+				system_state != SYSTEM_RUNNING) {
+			mutex_unlock(&autosleep_lock);
+			goto out;
+		}
 
-	/*
-	 * If the wakeup occured for an unknown reason, wait to prevent the
-	 * system from trying to suspend and waking up in a tight loop.
-	 */
-	if (final_count == initial_count)
-		schedule_timeout_uninterruptible(HZ / 2);
+		if (autosleep_state == PM_SUSPEND_ON) {
+			mutex_unlock(&autosleep_lock);
+			return;
+		}
+		if (autosleep_state >= PM_SUSPEND_MAX)
+			hibernate();
+		else
+			pm_suspend(autosleep_state);
 
+		mutex_unlock(&autosleep_lock);
+
+		if (!pm_get_wakeup_count(&final_count, false))
+			goto out;
+
+		/*
+		 * If the wakeup occured for an unknown reason, wait to prevent
+		 * system from trying to suspend and waking up in a tight loop.
+		 */
+		if (final_count == initial_count)
+			schedule_timeout_uninterruptible(HZ / 2);
  out:
 	queue_up_suspend_work();
+	}
 }
 
-static DECLARE_WORK(suspend_work, try_to_suspend);
 
 void queue_up_suspend_work(void)
 {
@@ -104,7 +112,12 @@ int pm_autosleep_set_state(suspend_state_t state)
 
 	if (state > PM_SUSPEND_ON) {
 		pm_wakep_autosleep_enabled(true);
-		queue_up_suspend_work();
+		if (pm_is_forced_sleep()) {
+			mutex_unlock(&autosleep_lock);
+			try_to_suspend(&suspend_work);
+			return 0;
+		} else
+			queue_up_suspend_work();
 	} else {
 		pm_wakep_autosleep_enabled(false);
 	}

@@ -203,7 +203,7 @@ static void cmd_force_sleep(const char *p)
 
 	pr_info("%s: Forcing system to state: %d\n", __func__,
 			force_sleep_state);
-	kona_pm_reg_pm_enter_handler(&force_sleep);
+	pm_force_sleep_reg_handler(&force_sleep);
 
 	request_suspend_state(PM_SUSPEND_MEM);
 }

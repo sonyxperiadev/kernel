@@ -78,6 +78,8 @@ static inline void device_pm_init(struct device *dev)
 	pm_runtime_init(dev);
 }
 
+extern int pm_is_forced_sleep(void);
+
 #ifdef CONFIG_PM
 
 /*
