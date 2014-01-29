@@ -89,7 +89,7 @@ struct file_private_data {
 struct dev_job_list {
 	struct work_struct work;
 
-	struct plist_node core_list;
+	struct list_head core_list;
 	bool added2core;
 
 	struct list_head file_list;

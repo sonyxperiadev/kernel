@@ -120,10 +120,10 @@
 #ifndef FUSE_AP_BSP
 #ifdef VMF_INCLUDE_NEW
 #define VMF_PAGE1_OFFSET                       0x1A00000
-#define VMF_PAGE2_OFFSET                       0x1B00000
+#define VMF_PAGE2_OFFSET                       0x1A80000
 #define VMF_PAGE1_BASE                         (EXT_RAM_BASE_ADDR + VMF_PAGE1_OFFSET)
 #define VMF_PAGE2_BASE                         (EXT_RAM_BASE_ADDR + VMF_PAGE2_OFFSET)
-#define VMF_PAGE_SIZE                                          0x00100000      /* Increasing size to 1MB for each instance for future use in Phase-3 */
+#define VMF_PAGE_SIZE                          0x00080000
 #define VMF_TOTAL_SIZE                                         2 * VMF_PAGE_SIZE
 #endif
 #endif
@@ -132,7 +132,7 @@
 
 #define EXCEPTSTACK_SIZE                                       0x00004000
 
-#define ER_UNCACHE_OFFSET                       0x1C00000
+#define ER_UNCACHE_OFFSET                      0x1700000
 #define ER_UNCACHE_BASE                       (EXT_RAM_BASE_ADDR + ER_UNCACHE_OFFSET)
 
 /* MM data region size and 1M alignment */

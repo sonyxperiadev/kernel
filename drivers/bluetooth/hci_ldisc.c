@@ -123,18 +123,12 @@ static inline struct sk_buff *hci_uart_dequeue(struct hci_uart *hu)
 	return skb;
 }
 
-int hci_uart_tx_wakeup(struct hci_uart *hu)
+static void hci_uart_tx_deferred_wakeup(unsigned long arg)
 {
+	struct hci_uart *hu = (struct hci_uart *)arg;
 	struct tty_struct *tty = hu->tty;
 	struct hci_dev *hdev = hu->hdev;
 	struct sk_buff *skb;
-
-	if (test_and_set_bit(HCI_UART_SENDING, &hu->tx_state)) {
-		set_bit(HCI_UART_TX_WAKEUP, &hu->tx_state);
-		return 0;
-	}
-
-	BT_DBG("");
 
 restart:
 	clear_bit(HCI_UART_TX_WAKEUP, &hu->tx_state);
@@ -160,6 +154,15 @@ restart:
 		goto restart;
 
 	clear_bit(HCI_UART_SENDING, &hu->tx_state);
+}
+
+int hci_uart_tx_wakeup(struct hci_uart *hu)
+{
+	if (test_and_set_bit(HCI_UART_SENDING, &hu->tx_state)) {
+		set_bit(HCI_UART_TX_WAKEUP, &hu->tx_state);
+		return 0;
+	}
+	tasklet_schedule(&hu->tx_tasklet);
 	return 0;
 }
 
@@ -302,6 +305,8 @@ static int hci_uart_tty_open(struct tty_struct *tty)
 	INIT_WORK(&hu->init_ready, hci_uart_init_work);
 
 	spin_lock_init(&hu->rx_lock);
+	tasklet_init(&hu->tx_tasklet, hci_uart_tx_deferred_wakeup,
+			(unsigned long)hu);
 
 	/* Flush any pending characters in the driver and line discipline. */
 
@@ -332,6 +337,8 @@ static void hci_uart_tty_close(struct tty_struct *tty)
 
 	if (!hu)
 		return;
+
+	tasklet_kill(&hu->tx_tasklet);
 
 	hdev = hu->hdev;
 	if (hdev)

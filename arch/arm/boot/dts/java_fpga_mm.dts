@@ -9,12 +9,12 @@
 	compatible = "bcm,java";
 
 	chosen {
-		bootargs = "console=ttyS0,115200n8 gpt mem=96M pmem=0 carveout=0 ap_only_boot root=/dev/ram0 rw rootfstype=rootfs initrd=0x84000000,4M init=/linuxrc"; /*lpj=10461184*/
+		bootargs = "console=ttyS0,115200n8 gpt mem=98M pmem=0 carveout=0 ap_only_boot root=/dev/ram0 rw rootfstype=rootfs initrd=0x84000000,4M init=/linuxrc"; /*lpj=10461184*/
 	};
 
-	memory@82000000 {
+	memory@81e00000 {
 		device_type = "memory";
-		reg = <0x82000000 0x6000000>; /* 96 MB */
+		reg = <0x81e00000 0x6200000>; /* 98 MB */
 	};
 
 	wd-tapper {
@@ -139,6 +139,7 @@
 		is-8bit = <1>;
 		devtype = <2>;		/*SDIO_DEV_TYPE_EMMC*/
 		flags = <1>;		/*KONA_SDIO_FLAGS_DEVICE_NON_REMOVABLE*/
+		pm_caps = <1>;		/*MMC_PM_KEEP_POWER*/
 		peri-clk-name = "sdio2_clk";
 		ahb-clk-name = "sdio2_ahb_clk";
 		sleep-clk-name = "sdio2_sleep_clk";

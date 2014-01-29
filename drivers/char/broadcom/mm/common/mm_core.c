@@ -131,12 +131,11 @@ static void mm_fmwk_job_scheduler(struct work_struct *work)
 					job_scheduler);
 	MM_CORE_HW_IFC *hw_ifc = &core_dev->mm_device;
 
-	if (plist_head_empty(&core_dev->job_list))
+	if (list_empty(&core_dev->job_list))
 		return;
 
-	job_list_elem = plist_first_entry(\
-			&(core_dev->job_list), \
-			struct dev_job_list, core_list);
+	job_list_elem = list_first_entry(
+		&(core_dev->job_list), struct dev_job_list, core_list);
 
 	if (job_list_elem->job.status == MM_JOB_STATUS_READY)
 			clean_cnt++;
@@ -250,7 +249,7 @@ void *mm_core_init(struct mm_common *mm_common, \
 
 	/* Init structure */
 	INIT_WORK(&(core_dev->job_scheduler), mm_fmwk_job_scheduler);
-	plist_head_init(&(core_dev->job_list));
+	INIT_LIST_HEAD(&(core_dev->job_list));
 	core_dev->device_job_id = 1;
 	core_dev->mm_core_idle = true;
 	core_dev->mm_common_ifc.mm_hw_is_on = false;

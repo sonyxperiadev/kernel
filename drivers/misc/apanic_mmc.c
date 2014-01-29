@@ -492,8 +492,15 @@ static int apanic(struct notifier_block *this, unsigned long event,
 	pr_debug("Thread data is stored from block number %d \r\n",
 		 threads_offset);
 
+	/* Below two functions are removed by Linaro so commented out.
+	* It will generate the compilation errors if ramdump is not enabled.
+	* If ramdump is not supported but need to support APANIC thread info
+	* then APANIC rework is required to use RAM.c instead of Android ram
+	* console. Also need to rework log_bug_clear() */
+#ifdef CONFIG_ANDROID_RAM_CONSOLE
 	ram_console_enable_console(0);
 	log_buf_clear();
+#endif
 	show_state_filter(0);
 
 	threads_len_bytes = apanic_write_console_mmc(threads_offset);

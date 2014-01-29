@@ -52,7 +52,6 @@ int bcm_hsotgctrl_phy_wakeup_condition(bool set);
 int bcm_hsotgctrl_handle_bus_suspend(void);
 int bcm_hsotgctrl_register_wakeup_cb(send_core_event_cb_t wakeup_core_cb, void* arg);
 int bcm_hsotgctrl_unregister_wakeup_cb(void);
-int bcm_hsotgctrl_get_clk_count(void);
 int bcm_hsotgctrl_is_suspend_allowed(bool *suspend_allowed);
 void bcm_hsotgctrl_wakeup_core(void);
 

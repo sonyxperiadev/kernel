@@ -31,15 +31,28 @@
  * the assembler won't change IT instructions which are explicitly present
  * in the input.
  */
+#ifdef CONFIG_USE_JAVA_SPINLOCK
+#define WFE(cond)	ALT_SMP(		\
+	"it " cond "\n\t"			\
+	"nop" cond ".n",			\
+						\
+	"nop.w"					\
+)
+#else
 #define WFE(cond)	ALT_SMP(		\
 	"it " cond "\n\t"			\
 	"wfe" cond ".n",			\
 						\
 	"nop.w"					\
 )
+#endif
 #else
 #define SEV		ALT_SMP("sev", "nop")
+#ifdef CONFIG_USE_JAVA_SPINLOCK
+#define WFE(cond)	ALT_SMP("nop" cond, "nop")
+#else
 #define WFE(cond)	ALT_SMP("wfe" cond, "nop")
+#endif
 #endif
 
 static inline void dsb_sev(void)

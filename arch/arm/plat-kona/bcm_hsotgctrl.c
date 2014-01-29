@@ -32,7 +32,6 @@
 #include <mach/rdb/brcm_rdb_chipreg.h>
 #include <mach/memory.h>
 #include <plat/pi_mgr.h>
-#include <plat/clock.h>
 #include <linux/usb/bcm_hsotgctrl.h>
 #include <linux/usb/bcm_hsotgctrl_phy_mdio.h>
 #include <linux/of.h>
@@ -138,10 +137,12 @@ int bcm_hsotgctrl_en_clock(bool on)
 
 	if (on) {
 		atomic_inc(&bcm_hsotgctrl_handle->no_suspend_count);
-		pr_info("hsotgctrl_clk=on\n");
+		pr_info("hsotgctrl_clk=on called from %pS\n",
+			__builtin_return_address(0));
 		rc = clk_enable(bcm_hsotgctrl_handle->otg_clk);
 	} else {
-		pr_info("hsotgctrl_clk=off\n");
+		pr_info("hsotgctrl_clk=off called from %pS\n",
+			__builtin_return_address(0));
 		clk_disable(bcm_hsotgctrl_handle->otg_clk);
 		atomic_dec(&bcm_hsotgctrl_handle->no_suspend_count);
 	}
@@ -505,8 +506,13 @@ static void bcm_hsotgctrl_delayed_wakeup_handler(struct work_struct *work)
 
 	dev_info(bcm_hsotgctrl_handle->dev, "Do HSOTGCTRL wakeup\n");
 
+	/* bcm_hsotgctrl_wakeup_core() expects the clock to be enabled */
+	bcm_hsotgctrl_en_clock(true);
+
 	/* Use the PHY-core wakeup sequence */
 	bcm_hsotgctrl_wakeup_core();
+
+	bcm_hsotgctrl_en_clock(false);
 }
 
 static irqreturn_t bcm_hsotgctrl_wake_irq(int irq, void *dev)
@@ -528,21 +534,6 @@ static irqreturn_t bcm_hsotgctrl_wake_irq(int irq, void *dev)
 
 	return IRQ_HANDLED;
 }
-
-int bcm_hsotgctrl_get_clk_count(void)
-{
-	struct bcm_hsotgctrl_drv_data *bcm_hsotgctrl_handle =
-		local_hsotgctrl_handle;
-
-	if (NULL == local_hsotgctrl_handle)
-		return -ENODEV;
-
-	if (!bcm_hsotgctrl_handle->dev)
-		return -EIO;
-
-	return clk_get_usage(bcm_hsotgctrl_handle->otg_clk);
-}
-EXPORT_SYMBOL_GPL(bcm_hsotgctrl_get_clk_count);
 
 int bcm_hsotgctrl_handle_bus_suspend(void)
 {
@@ -568,12 +559,8 @@ int bcm_hsotgctrl_handle_bus_suspend(void)
 	/* Clear PHY clock request */
 	bcm_hsotgctrl_set_phy_clk_request(false);
 
-
 	/* Enable wakeup interrupt */
 	bcm_hsotgctrl_phy_wakeup_condition(true);
-
-	/* Disable OTG AHB clock */
-	bcm_hsotgctrl_en_clock(false);
 
 	if (bcm_hsotgctrl_handle->irq_enabled == false) {
 		/* Enable wake IRQ */

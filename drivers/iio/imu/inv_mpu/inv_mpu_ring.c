@@ -509,6 +509,11 @@ irqreturn_t inv_read_fifo_mpu3050(int irq, void *dev_id)
 	u32 copied;
 	s64 timestamp;
 	struct inv_reg_map_s *reg;
+
+	mutex_lock(&indio_dev->mlock);
+	if (!iio_buffer_enabled(indio_dev))
+		goto end_session;
+
 	reg = &st->reg;
 	/* It is impossible that chip is asleep or enable is
 	zero when interrupt is on
@@ -571,12 +576,15 @@ irqreturn_t inv_read_fifo_mpu3050(int irq, void *dev_id)
 	}
 
 end_session:
+	mutex_unlock(&indio_dev->mlock);
 	return IRQ_HANDLED;
 
 flush_fifo:
 	/* Flush HW and SW FIFOs. */
 	inv_reset_fifo(indio_dev);
 	inv_clear_kfifo(st);
+
+	mutex_unlock(&indio_dev->mlock);
 	return IRQ_HANDLED;
 }
 

@@ -30,7 +30,6 @@
         .global dmb     
         .global wfi_loop
         .global wfi     
-        .global wfe     
         .global sev     
         .global copy_words  
         .global appf_memcpy     
@@ -72,13 +71,8 @@ wfi_loop:                .func
 wfi:                .func   
         wfi     
         bx	lr   
-        .endfunc    
-        
-wfe:                .func   
-        wfe     
-        bx	lr   
-        .endfunc    
-        
+        .endfunc
+
 sev:                .func   
         sev     
         bx	lr   

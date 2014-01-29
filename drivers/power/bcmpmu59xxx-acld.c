@@ -75,7 +75,7 @@ static u32 debug_mask = 0xFF; /* BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT | \
 #define ADC_VBUS_AVG_SAMPLES_8		8
 #define ADC_VBUS_AVG_SAMPLES_4		4
 #define ADC_READ_TRIES			10
-#define ADC_RETRY_DELAY			20 /* 20ms */
+#define ADC_RETRY_DELAY			30 /* 30ms */
 #define CHRGR_RETRIES			10
 #define CHRGR_EFFICIENCY		85
 #define VBUS_VBAT_DELTA			1000 /* mV */

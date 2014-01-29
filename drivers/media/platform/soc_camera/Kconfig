@@ -8,6 +8,27 @@ config SOC_CAMERA
 	  over a bus like PCI or USB. For example some i2c camera connected
 	  directly to the data bus of an SoC.
 
+config SOC_MAIN_CAMERA
+	tristate "SoC Main support"
+	depends on VIDEO_V4L2 && HAS_DMA && I2C && SOC_CAMERA
+	select VIDEOBUF_GEN
+	select VIDEOBUF2_CORE
+	help
+	  SoC sub Camera is a common API to several cameras, not connecting
+	  over a bus like PCI or USB. For example some i2c camera connected
+	  directly to the data bus of an SoC.
+
+config SOC_SUB_CAMERA
+	tristate "SoC sub support"
+	depends on VIDEO_V4L2 && HAS_DMA && I2C && SOC_CAMERA
+	select VIDEOBUF_GEN
+	select VIDEOBUF2_CORE
+	help
+	  SoC sub Camera is a common API to several cameras, not connecting
+	  over a bus like PCI or USB. For example some i2c camera connected
+	  directly to the data bus of an SoC.
+
+
 config SOC_CAMERA_PLATFORM
 	tristate "platform camera support"
 	depends on SOC_CAMERA

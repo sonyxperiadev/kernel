@@ -1269,7 +1269,9 @@ static inline uint32_t dwc_otg_read_common_intr(dwc_otg_core_if_t *core_if)
 	gintmsk_data_t gintmsk_common = {.d32 = 0 };
 	gintmsk_common.b.wkupintr = 1;
 	gintmsk_common.b.sessreqintr = 1;
+#ifdef CONFIG_USB_OTG
 	gintmsk_common.b.conidstschng = 1;
+#endif
 	gintmsk_common.b.otgintr = 1;
 	gintmsk_common.b.modemismatch = 1;
 	gintmsk_common.b.disconnect = 1;

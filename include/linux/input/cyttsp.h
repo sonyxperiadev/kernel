@@ -29,6 +29,8 @@
 #ifndef _CYTTSP_H_
 #define _CYTTSP_H_
 
+#include <linux/i2c-kona.h>
+
 #define CY_SPI_NAME "cyttsp-spi"
 #define CY_I2C_NAME "cyttsp-i2c"
 /* Active Power state scanning/processing refresh interval */
@@ -41,6 +43,7 @@
 #define CY_ACT_DIST_DFLT 0xF8 /* pixels */
 
 struct cyttsp_platform_data {
+	struct i2c_slave_platform_data i2c_pdata;
 	u32 maxx;
 	u32 maxy;
 	bool use_hndshk;

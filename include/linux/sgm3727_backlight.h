@@ -9,6 +9,7 @@
 struct platform_sgm3727_backlight_data {
 	unsigned int bl_gpio;
 	unsigned int max_brightness;
+	unsigned int *levels;
 	unsigned int dft_brightness;
 	unsigned int shutdown_time;
 	unsigned int ready_time;

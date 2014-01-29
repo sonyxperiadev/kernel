@@ -76,6 +76,7 @@ struct hci_uart {
 	struct sk_buff		*tx_skb;
 	unsigned long		tx_state;
 	spinlock_t		rx_lock;
+	struct tasklet_struct	tx_tasklet;
 };
 
 /* HCI_UART flag bits */

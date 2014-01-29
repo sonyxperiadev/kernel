@@ -1946,7 +1946,7 @@ static ssize_t bcmtch_os_cli(
 }
 
 static struct device_attribute bcmtch_cli_attr =
-		__ATTR(cli, S_IWUGO, NULL, bcmtch_os_cli);
+		__ATTR(cli, S_IWUSR|S_IWGRP, NULL, bcmtch_os_cli);
 
 
 /* ------------------------------------------- */

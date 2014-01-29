@@ -10,12 +10,12 @@
 	compatible = "bcm,java";
 
 	chosen {
-		bootargs = "console=ttyS0,115200n8 mem=480M gpt androidboot.console=ttyS0 crash_ramdump=1 logbuf_nocache=1";
+		bootargs = "console=ttyS0,115200n8 mem=482M gpt androidboot.console=ttyS0 crash_ramdump=1 logbuf_nocache=1";
 	};
 
 	memory@82000000 {
 		device_type = "memory";
-		reg = <0x82000000 0x1e000000>; /* 480 MB */
+		reg = <0x81e00000 0x1e200000>; /* 482 MB */
 	};
 
 	wd-tapper {
@@ -257,7 +257,8 @@
 	ion-config {
 		compatible = "bcm,ion-config";
 		/* Workaround: Use a separate iova pool for hwwr buffers */
-		mask_hwwr = <0x4>;
+		mask_hwwr = <0>;
+		mask_fast = <0>;
 		mask_256M = <0x221>;
 	};
 
@@ -519,6 +520,7 @@
 		is-8bit = <1>;
 		devtype = <2>;		/*SDIO_DEV_TYPE_EMMC*/
 		flags = <1>;		/*KONA_SDIO_FLAGS_DEVICE_NON_REMOVABLE*/
+		pm_caps = <1>;		/*MMC_PM_KEEP_POWER*/
 		peri-clk-name = "sdio2_clk";
 		ahb-clk-name = "sdio2_ahb_clk";
 		sleep-clk-name = "sdio2_sleep_clk";

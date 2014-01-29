@@ -100,7 +100,7 @@ struct kona_fb {
 	atomic_t buff_idx;
 	atomic_t is_fb_registered;
 	atomic_t is_graphics_started;
-	int rotation;
+	int rotate;
 	int is_display_found;
 #ifdef CONFIG_FRAMEBUFFER_FPS
 	struct fb_fps_info *fps_info;
@@ -134,6 +134,8 @@ struct kona_fb {
 	struct delayed_work esd_check_work;
 	struct completion tectl_gpio_done_sem;
 	int esd_failure_cnt;
+	/* user count */
+	unsigned short open_count;
 };
 
 static struct completion vsync_event;
@@ -489,7 +491,7 @@ static void kona_fb_unpack_888rle(void *dst, void *src, uint32_t image_size,
 	y_margin = (fb->var.yres - img_h) / 2;
 
 	/*If rotation is enabled, move to the end of buffer*/
-	if (fb->var.rotate) {
+	if (g_kona_fb->rotate == FB_ROTATE_UD) {
 		pos = (fb->var.xres * fb->var.yres - 1);
 		dir = -1;
 	} else {
@@ -528,6 +530,9 @@ void kona_display_crash_image(enum crash_dump_image_idx image_idx)
 	unsigned long flags, image_size, img_w, img_h;
 	void *image_buf;
 	static bool crash_displayed;
+
+	if (panic_timeout == 1)
+		return;
 
 	pr_err("%s:%d image_idx=%d\n", __func__, __LINE__, image_idx);
 	atomic_set(&g_kona_fb->force_update, 1);
@@ -639,12 +644,57 @@ static void kona_display_done_cb(int status)
 	complete(&g_kona_fb->prev_buf_done_sem);
 }
 
+/* This function peforms the in-place rotation of the buffer */
+int kona_fb_rotate_buffer(void *buffer, int deg, unsigned width,
+				unsigned height, unsigned char bytes_per_pixel)
+{
+	int i = 0;
+	unsigned int total_num_pixels = width * height;
+	unsigned short *Bottom_2Bpp;
+	unsigned short *Top_2Bpp;
+	unsigned short temp_2Bpp;
+	unsigned int *Bottom_4Bpp;
+	unsigned int *Top_4Bpp;
+	unsigned int temp_4Bpp;
+
+	if (bytes_per_pixel == 2) {
+		/* point to the first pixel */
+		Top_2Bpp = buffer;
+		/* point to the last pixel */
+		Bottom_2Bpp = Top_2Bpp + (width * height) - 1;
+
+		for (i = 0; i < total_num_pixels / 2; ++i) {
+			/* swap pixels from top-left in forward direction
+			   to pixels in bottom-right in reverse direction */
+			temp_2Bpp = *Top_2Bpp;
+			*Top_2Bpp++ = *Bottom_2Bpp;
+			*Bottom_2Bpp-- = temp_2Bpp;
+		}
+	} else {
+	/* if Bpp = 4 */
+		/* point to the first pixel */
+		Top_4Bpp = buffer;
+		/* point to the last pixel */
+		Bottom_4Bpp = Top_4Bpp + (width * height) - 1;
+
+		for (i = 0; i < total_num_pixels / 2; ++i) {
+			/* swap pixels from top-left in forward direction
+			   to pixels in bottom-right in reverse direction */
+			temp_4Bpp = *Top_4Bpp;
+			*Top_4Bpp++ = *Bottom_4Bpp;
+			*Bottom_4Bpp-- = temp_4Bpp;
+		}
+	}
+	return 0;
+}
+
 static int kona_fb_pan_display(struct fb_var_screeninfo *var,
 			       struct fb_info *info)
 {
 	int ret = 0;
 	struct kona_fb *fb = container_of(info, struct kona_fb, fb);
 	uint32_t buff_idx;
+	int bytes_per_pixel = 0;
 #ifdef CONFIG_FRAMEBUFFER_FPS
 	void *dst;
 #endif
@@ -652,6 +702,22 @@ static int kona_fb_pan_display(struct fb_var_screeninfo *var,
 
 	buff_idx = var->yoffset ? 1 : 0;
 
+	if (var->rotate == FB_ROTATE_UD) {
+		bytes_per_pixel = var->bits_per_pixel / 8;
+		konafb_debug("Rotating inside kernel\n");
+
+		if (buff_idx == 1) {
+			if (kona_fb_rotate_buffer(fb->fb.screen_base +
+				(fb->buff1 - fb->buff0), FB_ROTATE_UD ,
+				var->xres, var->yres, bytes_per_pixel))
+				konafb_error("Unable to rotate !!\n");
+		} else {
+			if (kona_fb_rotate_buffer(fb->fb.screen_base,
+				FB_ROTATE_UD, var->xres, var->yres,
+							bytes_per_pixel))
+				konafb_error("Unable to rotate !!\n");
+		}
+	}
 	konafb_debug("kona %s with buff_idx =%d\n", __func__, buff_idx);
 
 	if (mutex_lock_killable(&fb->update_sem))
@@ -1573,7 +1639,31 @@ void release_dispdrv_info(DISPDRV_INFO_T *info)
 	kfree(info);
 }
 
+static int kona_fb_open(struct fb_info *info, int user)
+{
+	struct kona_fb *fb = container_of(info, struct kona_fb, fb);
+	fb->open_count++;
+	return 0;
+}
+
+static int kona_fb_release(struct fb_info *info, int user)
+{
+	struct kona_fb *fb = container_of(info, struct kona_fb, fb);
+	fb->open_count--;
+
+	if (fb->open_count < 0)
+		return -EIO;
+	/* If the open count goes 0, then restore the rotation parameter so that
+	 * user space can again get to know the rotation parameter. */
+	if (fb->open_count == 0)
+		info->var.rotate = fb->rotate;
+
+	return 0;
+}
+
 static struct fb_ops kona_fb_ops = {
+	.fb_open = kona_fb_open,
+	.fb_release = kona_fb_release,
 	.owner = THIS_MODULE,
 	.fb_check_var = kona_fb_check_var,
 	.fb_set_par = kona_fb_set_par,
@@ -1586,6 +1676,7 @@ static struct fb_ops kona_fb_ops = {
 	.fb_sync = kona_fb_sync,
 	.fb_blank = kona_fb_blank,
 };
+
 
 static const struct file_operations proc_fops = {
 	.write = proc_write_fb_test,
@@ -1761,7 +1852,9 @@ static int __ref kona_fb_probe(struct platform_device *pdev)
 	pixclock_64 = div_u64(1000000000000LLU,
 				width * height * fb->display_info->fps);
 	fb->fb.var.pixclock = pixclock_64;
-	fb->fb.var.rotate = fb_data->rotation;
+	fb->fb.var.rotate = fb_data->rotation == 180 ?
+						FB_ROTATE_UD : FB_ROTATE_UR;
+	fb->rotate = fb->fb.var.rotate;
 
 	switch (fb->display_info->in_fmt) {
 	case DISPDRV_FB_FORMAT_RGB666P:

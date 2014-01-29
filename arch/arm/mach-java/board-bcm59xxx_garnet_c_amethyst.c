@@ -38,6 +38,14 @@
 #if defined(CONFIG_BCMPMU_THERMAL_THROTTLE)
 #include <linux/power/bcmpmu59xxx-thermal-throttle.h>
 #endif
+#if defined(CONFIG_BCMPMU_DIETEMP_THERMAL)
+#include <linux/broadcom/bcmpmu59xxx-dietemp-thermal.h>
+#endif
+
+#if defined(CONFIG_BCMPMU_CHARGER_COOLANT)
+#include <linux/bcmpmu-charger-coolant.h>
+#endif
+
 #include <linux/of_platform.h>
 #include <linux/of.h>
 #include <linux/of_fdt.h>
@@ -62,7 +70,7 @@ static struct bcmpmu59xxx_rw_data __initdata register_init_data[] = {
 	 * AUXONb Wakeup disabled */
 	{.addr = PMU_REG_GPIOCTRL1, .val = 0x75, .mask = 0xFF},
 	/*  enable PC3 function */
-	{.addr = PMU_REG_GPIOCTRL2, .val = 0x0E, .mask = 0xFF},
+	{.addr = PMU_REG_GPIOCTRL2, .val = 0x0F, .mask = 0xFF},
 	/* Mask Interrupt */
 	{.addr = PMU_REG_INT1MSK, .val = 0xFF, .mask = 0xFF},
 	{.addr = PMU_REG_INT2MSK, .val = 0xFF, .mask = 0xFF},
@@ -89,14 +97,14 @@ static struct bcmpmu59xxx_rw_data __initdata register_init_data[] = {
 	/* Enable BC12_EN */
 	{.addr = PMU_REG_MBCCTRL5, .val = 0x01, .mask = 0x01},
 	/* Max VFLOAT to 4.2*/
-	/*  ICCMAX to 1500mA*/
-	{.addr = PMU_REG_MBCCTRL8, .val = 0x09, .mask = 0xFF},
+	/*  ICCMAX set to MAX value(1755)mA*/
+	{.addr = PMU_REG_MBCCTRL8, .val = 0x0B, .mask = 0xFF},
 	/* Set curr to 100mA during boot*/
-	{.addr = PMU_REG_MBCCTRL10, .val = 0x0, .mask = 0xF},
-	/* NTC Hot Temperature Comparator set to 45C */
-	{.addr = PMU_REG_CMPCTRL5, .val = 0x70, .mask = 0xFF},
-	/* NTC Hot Temperature Comparator set to 40C*/
-	{.addr = PMU_REG_CMPCTRL6, .val = 0x84, .mask = 0xFF},
+	/*{.addr = PMU_REG_MBCCTRL10, .val = 0x0, .mask = 0xF},*/
+	/* NTC Hot Temperature Comparator set to 55C */
+	{.addr = PMU_REG_CMPCTRL5, .val = 0x4C, .mask = 0xFF},
+	/* NTC Hot Temperature Comparator set to 50C*/
+	{.addr = PMU_REG_CMPCTRL6, .val = 0x5C, .mask = 0xFF},
 	/* NTC Cold Temperature Comparator set to 0C*/
 	{.addr = PMU_REG_CMPCTRL7, .val = 0xF4, .mask = 0xFF},
 	/* NTC Cold Temperature Comparator set to 5C*/
@@ -116,49 +124,72 @@ static struct bcmpmu59xxx_rw_data __initdata register_init_data[] = {
 /* Regulator configuration */
 /* TODO regulator */
 	{.addr = PMU_REG_FG_EOC_TH, .val = 0x64, .mask = 0xFF},
-	{.addr = PMU_REG_RTC_C2C1_XOTRIM, .val = 0xEE, .mask = 0xFF},
-	{.addr = PMU_REG_FGOCICCTRL, .val = 0x02, .mask = 0xFF},
+	{.addr = PMU_REG_RTC_C2C1_XOTRIM, .val = 0xFF, .mask = 0xFF},
+	/*{.addr = PMU_REG_FGOCICCTRL, .val = 0x02, .mask = 0xFF},*/
 	 /* FG power down */
-	{.addr = PMU_REG_FGCTRL1, .val = 0x00, .mask = 0xFF},
+	/*{.addr = PMU_REG_FGCTRL1, .val = 0x00, .mask = 0xFF},*/
 	/* Enable operation mode for PC3PC2PC1 */
-	{.addr = PMU_REG_GPLDO2PMCTRL2, .val = 0x00, .mask = 0xFF},
+	/*{.addr = PMU_REG_GPLDO2PMCTRL2, .val = 0x00, .mask = 0xFF},*/
 	 /* PWMLED blovk powerdown */
 	{.addr =  PMU_REG_PWMLEDCTRL1, .val = 0x23, .mask = 0xFF},
 	{.addr = PMU_REG_HSCP3, .val = 0x00, .mask = 0xFF},
 	 /* HS audio powerdown feedback path */
 	{.addr =  PMU_REG_IHF_NGMISC, .val = 0x0C, .mask = 0xFF},
 	/* NTC BiasSynchronous Mode,Host Enable Control NTC_PM0 Disable*/
-	{.addr =  PMU_REG_CMPCTRL14, .val = 0x13, .mask = 0xFF},
-	{.addr =  PMU_REG_CMPCTRL15, .val = 0x01, .mask = 0xFF},
+	{.addr =  PMU_REG_CMPCTRL14, .val = 0x12, .mask = 0xFF},
+	{.addr =  PMU_REG_CMPCTRL15, .val = 0x0, .mask = 0xFF},
 	/* BSI Bias Host Control, Synchronous Mode Enable */
 
-	{.addr =  PMU_REG_CMPCTRL16, .val = 0x13, .mask = 0xFF},
+	{.addr =  PMU_REG_CMPCTRL16, .val = 0x12, .mask = 0xFF},
 	/* MBUV host enable control*/
 	{.addr =  PMU_REG_CMPCTRL17, .val = 0x40, .mask = 0x7F},
 	/* Mask RTM conversion */
-	{.addr =  PMU_REG_ADCCTRL1, .val = 0x08, .mask = 0x08},
+	/*{.addr =  PMU_REG_ADCCTRL1, .val = 0x08, .mask = 0x08},*/
 	/* EN_SESS_VALID  enable ID detection */
 	{.addr = PMU_REG_OTGCTRL1 , .val = 0x18, .mask = 0xFF},
 
 	/* SDSR2 NM1 voltage - 1.24 */
 	{.addr = PMU_REG_SDSR2VOUT1 , .val = 0x28, .mask = 0x3F},
 	/* SDSR2 LPM voltage - 1.24V */
-	{.addr = PMU_REG_SDSR2VOUT2 , .val = 0x28, .mask = 0x3F},
+	{.addr = PMU_REG_SDSR2VOUT2 , .val = 0x24, .mask = 0x3F},
 	/* IOSR1 LPM voltage - 1.8V */
 	{.addr = PMU_REG_IOSR1VOUT2 , .val = 0x3E, .mask = 0x3F},
+	/* CSR LPM voltage - 0.7 V */
+	{.addr = PMU_REG_CSRVOUT2 , .val = 0x00, .mask = 0x3F},
 
 	/* PASRCTRL MobC00256738*/
-	{.addr = PMU_REG_PASRCTRL1 , .val = 0x00, .mask = 0x06},
+	/*{.addr = PMU_REG_PASRCTRL1 , .val = 0x00, .mask = 0x06},*/
 	{.addr = PMU_REG_PASRCTRL6 , .val = 0x00, .mask = 0xF0},
 	{.addr = PMU_REG_PASRCTRL7 , .val = 0x00, .mask = 0x3F},
+
+	/*otg boost ctrl1-2*/
+	{.addr = OTG_BOOSTCTRL1 , .val = 0xD4, .mask = 0xFF},
+	{.addr = OTG_BOOSTCTRL2 , .val = 0x1B, .mask = 0xFF},
+
+	/*MBC_CC_BOOST*/
+	{.addr = PMU_REG_MBCCTRL29 , .val = 0x05, .mask = 0x0F},
+
+	/*otgctrl1 disable boost bydefault*/
+	{.addr = PMU_REG_OTGCTRL1 , .val = 0x00, .mask = 0x04},
+
+	/*turn of synthesizer when no PLL request */
+	{.addr = PMU_REG_PLLPMCTRL , .val = 0xFE, .mask = 0xFF},
 
 	/*RFLDO and AUDLDO pulldown disable MobC00290043*/
 	{.addr = PMU_REG_RFLDOCTRL , .val = 0x40, .mask = 0x40},
 	{.addr = PMU_REG_AUDLDOCTRL , .val = 0x40, .mask = 0x40},
+
+	/*LVLDO1 voltage - 1.786V */
+	{.addr = PMU_REG_LVLDO1CTRL , .val = 0xB8, .mask = 0xFF},
+
+	/*SIMLDO2 enable pulldown MobC00298660*/
+	{.addr = PMU_REG_SIMLDO2CTRL , .val = 0x00, .mask = 0x40},
+
 };
 
 static struct bcmpmu59xxx_rw_data register_exit_data[] = {
 	{.addr = PMU_REG_GPIOCTRL1, .val = 0x5, .mask = 0xFF},
+	/* Disable turbo*/
 	{.addr = PMU_REG_OTG_BOOSTCTRL3, .val = 0x0, .mask = 0x10},
 };
 
@@ -232,6 +263,7 @@ static struct regulator_init_data bcm59xxx_simldo1_data = {
 						REGULATOR_MODE_IDLE |
 						REGULATOR_MODE_STANDBY,
 			.always_on = 0,
+			.initial_mode = REGULATOR_MODE_IDLE,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(sim1_supply),
 	.consumer_supplies = sim1_supply,
@@ -252,15 +284,16 @@ static struct regulator_init_data bcm59xxx_simldo2_data = {
 						REGULATOR_MODE_IDLE |
 						REGULATOR_MODE_STANDBY,
 			.always_on = 0,
+			.initial_mode = REGULATOR_MODE_IDLE,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(sim2_supply),
 	.consumer_supplies = sim2_supply,
 };
 
 __weak struct regulator_consumer_supply sd_supply[] = {
-	{.supply = "sd_vcc"},
+	{.supply = "sdldo_uc"},
 	REGULATOR_SUPPLY("vddmmc", "sdhci.3"), /* 0x3f1b0000.sdhci */
-	{.supply = "dummy"},
+	{.supply = "vdd_sdio"},
 };
 static struct regulator_init_data bcm59xxx_sdldo_data = {
 	.constraints = {
@@ -275,15 +308,16 @@ static struct regulator_init_data bcm59xxx_sdldo_data = {
 						REGULATOR_MODE_STANDBY,
 
 			.always_on = 0,
+			.initial_mode = REGULATOR_MODE_NORMAL,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(sd_supply),
 	.consumer_supplies = sd_supply,
 };
 __weak struct regulator_consumer_supply sdx_supply[] = {
-	{.supply = "sdx_vcc"},
+	{.supply = "sdxldo_uc"},
 	REGULATOR_SUPPLY("vddo", "sdhci.3"), /* 0x3f1b0000.sdhci */
-	{.supply = "dummy"},
-	{.supply = "dummy"},
+	{.supply = "vdd_sdxc"},
+	{.supply = "sddat_debug_bus"},
 };
 static struct regulator_init_data bcm59xxx_sdxldo_data = {
 	.constraints = {
@@ -293,6 +327,7 @@ static struct regulator_init_data bcm59xxx_sdxldo_data = {
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
 			.always_on = 0,
+			.initial_mode = REGULATOR_MODE_NORMAL,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(sdx_supply),
 	.consumer_supplies = sdx_supply,
@@ -309,6 +344,7 @@ static struct regulator_init_data bcm59xxx_mmcldo1_data = {
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
 			.always_on = 0,
+			.initial_mode = REGULATOR_MODE_NORMAL,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(mmc1_supply),
 	.consumer_supplies = mmc1_supply,
@@ -325,6 +361,7 @@ static struct regulator_init_data bcm59xxx_mmcldo2_data = {
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
 			.always_on = 0,
+			.initial_mode = REGULATOR_MODE_NORMAL,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(mmc2_supply),
 	.consumer_supplies = mmc2_supply,
@@ -353,6 +390,7 @@ static struct regulator_init_data bcm59xxx_audldo_data = {
 
 __weak struct regulator_consumer_supply usb_supply[] = {
 	{.supply = "usb_vcc"},
+	{.supply = "bc_vcc"},
 };
 static struct regulator_init_data bcm59xxx_usbldo_data = {
 	.constraints = {
@@ -362,6 +400,7 @@ static struct regulator_init_data bcm59xxx_usbldo_data = {
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
 			.always_on = 0,
+			.initial_mode = REGULATOR_MODE_NORMAL,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(usb_supply),
 	.consumer_supplies = usb_supply,
@@ -378,6 +417,7 @@ static struct regulator_init_data bcm59xxx_micldo_data = {
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
 			.always_on = 0,
+			.initial_mode = REGULATOR_MODE_NORMAL,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(mic_supply),
 	.consumer_supplies = mic_supply,
@@ -394,6 +434,7 @@ static struct regulator_init_data bcm59xxx_vibldo_data = {
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
 			.always_on = 0,
+			.initial_mode = REGULATOR_MODE_NORMAL,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(vib_supply),
 	.consumer_supplies = vib_supply,
@@ -410,6 +451,7 @@ static struct regulator_init_data bcm59xxx_gpldo1_data = {
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
 			.always_on = 0,
+			.initial_mode = REGULATOR_MODE_NORMAL,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(gpldo1_supply),
 	.consumer_supplies = gpldo1_supply,
@@ -426,6 +468,7 @@ static struct regulator_init_data bcm59xxx_gpldo2_data = {
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
 			.always_on = 0,
+			.initial_mode = REGULATOR_MODE_NORMAL,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(gpldo2_supply),
 	.consumer_supplies = gpldo2_supply,
@@ -441,7 +484,8 @@ static struct regulator_init_data bcm59xxx_gpldo3_data = {
 			.max_uV = 3300000,
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
-			.always_on = 0,
+			.always_on = 1,
+			.initial_mode = REGULATOR_MODE_IDLE,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(gpldo3_supply),
 	.consumer_supplies = gpldo3_supply,
@@ -475,7 +519,7 @@ static struct regulator_init_data bcm59xxx_lvldo1_data = {
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
 			.always_on = 0,
-			},
+		},
 	.num_consumer_supplies = ARRAY_SIZE(lvldo1_supply),
 	.consumer_supplies = lvldo1_supply,
 };
@@ -506,7 +550,8 @@ static struct regulator_init_data bcm59xxx_vsr_data = {
 			.max_uV = 1800000,
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
-			.always_on = 0,
+			.always_on = 1,
+			.initial_mode = REGULATOR_MODE_STANDBY,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(vsr_supply),
 	.consumer_supplies = vsr_supply,
@@ -610,6 +655,7 @@ static struct regulator_init_data bcm59xxx_iosr2_data = {
 			.max_uV = 1800000,
 			.valid_ops_mask = REGULATOR_CHANGE_STATUS,
 			.always_on = 0,
+			.initial_mode = REGULATOR_MODE_STANDBY,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(iosr2_supply),
 	.consumer_supplies = iosr2_supply,
@@ -737,7 +783,7 @@ struct bcmpmu59xxx_regulator_init_data
 		[BCMPMU_REGULATOR_GPLDO3] = {
 			.id = BCMPMU_REGULATOR_GPLDO3,
 			.initdata = &bcm59xxx_gpldo3_data,
-			.pc_pins_map = PCPIN_MAP_ENC(0, PMU_PC2),
+			.pc_pins_map = PCPIN_MAP_ENC(0, PMU_PC2|PMU_PC3),
 			.name = "gp3",
 			.req_volt = 0,
 		},
@@ -752,7 +798,8 @@ struct bcmpmu59xxx_regulator_init_data
 		[BCMPMU_REGULATOR_LVLDO1] = {
 			.id = BCMPMU_REGULATOR_LVLDO1,
 			.initdata = &bcm59xxx_lvldo1_data,
-			.pc_pins_map = PCPIN_MAP_ENC(0, 0), /*Not used*/
+			.pc_pins_map =
+				PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
 			.name = "lv1",
 			.req_volt = 0,
 		},
@@ -770,7 +817,7 @@ struct bcmpmu59xxx_regulator_init_data
 			.pc_pins_map =
 				PCPIN_MAP_ENC(0, PMU_PC1|PMU_PC2|PMU_PC3),
 			.name = "vsr",
-			.req_volt = 0,
+			.req_volt = 1630000,
 		},
 		[BCMPMU_REGULATOR_CSR] = {
 			.id = BCMPMU_REGULATOR_CSR,
@@ -1010,10 +1057,18 @@ struct bcmpmu_adc_pdata adc_pdata[PMU_ADC_CHANN_MAX] = {
 					.reg = PMU_REG_ADCCTRL25,
 	},
 };
+
+int bcmpmu_acld_chargers[] = {
+	PMU_CHRGR_TYPE_DCP,
+	PMU_CHRGR_TYPE_SDP,
+	PMU_CHRGR_TYPE_TYPE2,
+};
+
 struct bcmpmu_acld_pdata acld_pdata = {
 	.acld_vbus_margin = 200,	/*mV*/
 	.acld_vbus_thrs = 5950,
 	.acld_vbat_thrs = 3500,
+	.usbrm_vbus_thrs = 4000,
 	.i_sat = 3000,			/* saturation current in mA
 						for chrgr while using ACLD */
 	.i_def_dcp = 700,
@@ -1022,6 +1077,8 @@ struct bcmpmu_acld_pdata acld_pdata = {
 				  If customer defines any other value
 				  chage accordingly*/
 	.otp_cc_trim = 0x1F,
+	.acld_chrgrs = bcmpmu_acld_chargers,
+	.acld_chrgrs_list_size = ARRAY_SIZE(bcmpmu_acld_chargers),
 };
 
 static struct batt_volt_cap_map ys_05_volt_cap_lut[] = {
@@ -1071,9 +1128,9 @@ static struct batt_cutoff_cap_map ys_05_cutoff_cap_lut[] = {
 
 #if defined(CONFIG_BCMPMU_THERMAL_THROTTLE)
 static struct batt_temp_curr_map ys_05_temp_curr_lut[] = {
-		{400, 510},
-		{500, 270},
-		{580,  0},
+		{540, 510},
+		{580, 270},
+		{630,  0},
 };
 #endif
 
@@ -1239,7 +1296,7 @@ static struct bcmpmu_throttle_pdata throttle_pdata = {
 	.temp_curr_lut_sz = ARRAY_SIZE(ys_05_temp_curr_lut),
 	/* ADC channel and mode selection */
 	.temp_adc_channel = PMU_ADC_CHANN_DIE_TEMP,
-	.temp_adc_req_mode = PMU_ADC_REQ_SAR_MODE,
+	.temp_adc_req_mode = PMU_ADC_REQ_RTM_MODE,
 	/* Registers to store/restore while throttling*/
 	.chrgr_trim_reg_lut = chrgr_def_trim_reg_lut,
 	.chrgr_trim_reg_lut_sz = ARRAY_SIZE(chrgr_def_trim_reg_lut),
@@ -1248,6 +1305,47 @@ static struct bcmpmu_throttle_pdata throttle_pdata = {
 };
 #endif
 
+#ifdef CONFIG_BCMPMU_DIETEMP_THERMAL
+struct bcmpmu_dietemp_trip dietemp_trip_points[] = {
+	{.temp = 0, .type = THERMAL_TRIP_ACTIVE,
+					.max_curr = MAX_CHARGE_CURRENT,},
+	{.temp = 540, .type = THERMAL_TRIP_ACTIVE, .max_curr = 510,},
+	{.temp = 580, .type = THERMAL_TRIP_ACTIVE, .max_curr = 270,},
+	{.temp = 630, .type = THERMAL_TRIP_ACTIVE,
+					.max_curr = MIN_CHARGE_CURRENT,},
+};
+
+struct bcmpmu_dietemp_pdata dtemp_zone_pdata = {
+	.poll_rate_ms = 5000,
+	.hysteresis = 30,
+	/* ADC channel and mode selection */
+	.temp_adc_channel = PMU_ADC_CHANN_DIE_TEMP,
+	.temp_adc_req_mode = PMU_ADC_REQ_RTM_MODE,
+	.trip_cnt = ARRAY_SIZE(dietemp_trip_points),
+	.trips = dietemp_trip_points,
+};
+#endif
+
+#ifdef CONFIG_BCMPMU_CHARGER_COOLANT
+static struct chrgr_trim_reg_data chrgr_trim_reg_lut[] = {
+	{.addr = PMU_REG_MBCCTRL18, .def_val = 0x00},
+	{.addr = PMU_REG_MBCCTRL19, .def_val = 0x03},
+	{.addr = PMU_REG_MBCCTRL20, .def_val = 0x02},
+};
+
+static unsigned int charger_coolant_state[] = {
+	1755, 1378, 1185, 935, 765, 695, 650, 550, 510, 400, 270, 84, 0,
+};
+struct bcmpmu_cc_pdata ccool_pdata = {
+	.state_no = ARRAY_SIZE(charger_coolant_state),
+	.states = charger_coolant_state,
+	/* Registers to store/restore while throttling*/
+	.chrgr_trim_reg_lut = chrgr_trim_reg_lut,
+	.chrgr_trim_reg_lut_sz = ARRAY_SIZE(chrgr_trim_reg_lut),
+	.coolant_poll_time = 10000,/* 10 seconds*/
+};
+
+#endif
 
 #ifdef CONFIG_CHARGER_BCMPMU_SPA
 struct bcmpmu59xxx_spa_pb_pdata spa_pb_pdata = {
@@ -1374,6 +1472,23 @@ static struct mfd_cell pmu59xxx_devs[] = {
 		.pdata_size = sizeof(throttle_pdata),
 	},
 #endif
+#if defined(CONFIG_BCMPMU_DIETEMP_THERMAL)
+	{
+		.name = "bcmpmu_dietemp_thermal",
+		.id = -1,
+		.platform_data = &dtemp_zone_pdata,
+		.pdata_size = sizeof(dtemp_zone_pdata),
+	},
+#endif
+#if defined(CONFIG_BCMPMU_CHARGER_COOLANT)
+	{
+		.name = "bcmpmu_charger_coolant",
+		.id = -1,
+		.platform_data = &ccool_pdata,
+		.pdata_size = sizeof(ccool_pdata),
+	},
+#endif
+
 };
 
 static struct i2c_board_info pmu_i2c_companion_info[] = {
@@ -1459,6 +1574,21 @@ static const struct of_device_id bcmpmu_adc_dt_ids[] __initconst = {
 	{ },
 };
 
+#ifdef CONFIG_BCMPMU_DIETEMP_THERMAL
+static const struct of_device_id bcmpmu_dietemp_dt[] __initconst = {
+	{ .compatible = "Broadcom,dietemp-thermal" },
+	{ },
+};
+#endif
+
+#ifdef CONFIG_BCMPMU_CHARGER_COOLANT
+static const struct of_device_id bcmpmu_chrgr_coolant_dt[] __initconst = {
+	{ .compatible = "Broadcom,charger-coolant" },
+	{ },
+};
+#endif
+
+#ifdef CONFIG_OF
 static int __init bcmpmu_update_pdata(char *name,
 		struct bcmpmu59xxx_platform_data *bcmpmu_i2c_pdata, int init)
 {
@@ -1468,7 +1598,6 @@ static int __init bcmpmu_update_pdata(char *name,
 	int max = 0;
 	uint32_t *p, *p1;
 	struct bcmpmu59xxx_rw_data *tbl, *data;
-
 	np = of_find_matching_node(NULL, matches);
 	if (np) {
 		prop = of_find_property(np, name, &size);
@@ -1505,6 +1634,7 @@ static int __init bcmpmu_update_pdata(char *name,
 	}
 	return ret;
 }
+#endif
 
 int __init bcmpmu_reg_init(void)
 {
@@ -1512,19 +1642,21 @@ int __init bcmpmu_reg_init(void)
 	int updt = 0;
 	struct property *prop;
 	const char *model;
-
+#ifdef CONFIG_OF
 	updt = bcmpmu_update_pdata("initdata", &bcmpmu_i2c_pdata, 1);
+#endif
 	if (!updt) {
 		bcmpmu_i2c_pdata.init_data =  register_init_data;
 		bcmpmu_i2c_pdata.init_max = ARRAY_SIZE(register_init_data);
 	}
-
+#ifdef CONFIG_OF
 	updt = bcmpmu_update_pdata("exitdata", &bcmpmu_i2c_pdata, 0);
+#endif
 	if (!updt) {
 		bcmpmu_i2c_pdata.exit_data =  register_exit_data;
 		bcmpmu_i2c_pdata.exit_max = ARRAY_SIZE(register_exit_data);
 	}
-
+#ifdef CONFIG_OF
 	np = of_find_matching_node(NULL, matches);
 	if (np) {
 		prop = of_find_property(np, "model", NULL);
@@ -1540,10 +1672,11 @@ int __init bcmpmu_reg_init(void)
 		pr_info("Board id from dtb %x\n",
 				bcmpmu_i2c_pdata.board_id);
 	}
-
+#endif
 	return 0;
 }
 
+#ifdef CONFIG_OF
 int __init rgltr_init(void)
 {
 	int i, j, k, int_val;
@@ -1602,6 +1735,7 @@ int __init rgltr_init(void)
 			rgltr_pdata.bcmpmu_rgltr[i].req_volt = int_val;
 		}
 	}
+
 /* Workaround for VDDFIX leakage during deepsleep.
    Will be fixed in Java A1 revision */
 	if (is_pm_erratum(ERRATUM_VDDFIX_LEAKAGE))
@@ -1609,7 +1743,9 @@ int __init rgltr_init(void)
 			REGULATOR_MODE_IDLE;
 	return 0;
 }
+#endif
 
+#ifdef CONFIG_OF
 int __init adc_init(void)
 {
 	int i, j;
@@ -1624,7 +1760,6 @@ int __init adc_init(void)
 		pr_err("device tree support for adc not found\n");
 		return 0;
 	}
-
 	for (i = 0; i < PMU_ADC_CHANN_MAX; i++) {
 		/* coverity[secure_coding] */
 		sprintf(buf, "channel%d", i);
@@ -1653,14 +1788,132 @@ int __init adc_init(void)
 	}
 	return 0;
 }
+#endif
+
+#ifdef CONFIG_OF
+#ifdef CONFIG_BCMPMU_DIETEMP_THERMAL
+int __init dietemp_zone_init(void)
+{
+	struct device_node *of_node, *child;
+	int idx = 0;
+	const char *str_val;
+
+	of_node = of_find_matching_node(NULL, bcmpmu_dietemp_dt);
+	if (!of_node) {
+		pr_err("device tree support for dietemp_thermal not found\n");
+		return 0;
+	}
+
+	if (of_property_read_u32(of_node, "hysteresis",
+				&dtemp_zone_pdata.hysteresis))
+		goto out;
+
+	if (of_property_read_u32(of_node, "poll_rate_ms",
+				&dtemp_zone_pdata.poll_rate_ms))
+		goto out;
+
+	dtemp_zone_pdata.trip_cnt = of_get_child_count(of_node);
+
+	if (!dtemp_zone_pdata.trip_cnt)
+		goto out;
+
+	if (of_property_read_string(of_node, "temp_adc_channel", &str_val))
+		goto out;
+	if (!strcmp(str_val, "PMU_ADC_CHANN_DIE_TEMP"))
+		dtemp_zone_pdata.temp_adc_channel = PMU_ADC_CHANN_DIE_TEMP;
+
+	if (of_property_read_string(of_node, "temp_adc_req_mode", &str_val))
+		goto out;
+	if (!strcmp(str_val, "PMU_ADC_REQ_RTM_MODE"))
+		dtemp_zone_pdata.temp_adc_req_mode = PMU_ADC_REQ_RTM_MODE;
+
+	for_each_child_of_node(of_node, child) {
+		if (of_property_read_string(child, "type", &str_val))
+			goto out;
+		if (!strcmp(str_val, "active"))
+			dietemp_trip_points[idx].type = THERMAL_TRIP_ACTIVE;
+		else if (!strcmp(str_val, "passive"))
+			dietemp_trip_points[idx].type = THERMAL_TRIP_PASSIVE;
+		else if (!strcmp(str_val, "hot"))
+			dietemp_trip_points[idx].type = THERMAL_TRIP_HOT;
+		else if (!strcmp(str_val, "critical"))
+			dietemp_trip_points[idx].type = THERMAL_TRIP_CRITICAL;
+
+		if (of_property_read_u32(child, "temp",
+					&dietemp_trip_points[idx].temp))
+			goto out;
+
+		of_property_read_u32(child, "max_curr",
+					&dietemp_trip_points[idx].max_curr);
+
+		idx++;
+	}
+	return 0;
+out:
+	return -ENODEV;
+}
+#endif
+
+#ifdef CONFIG_BCMPMU_CHARGER_COOLANT
+int __init charger_coolant_init(void)
+{
+	struct device_node *of_node, *child;
+	struct property *prop;
+	int length, idx = 0;
+	u32 addr, value;
+
+	of_node = of_find_matching_node(NULL, bcmpmu_chrgr_coolant_dt);
+	if (!of_node) {
+		pr_err("device tree support for dietemp_thermal not found\n");
+		return 0;
+	}
+	if (of_property_read_u32(of_node, "coolant_poll_time",
+					&ccool_pdata.coolant_poll_time))
+		goto out;
+
+	prop = of_find_property(of_node, "charger_coolant_state", &length);
+	if (!prop)
+		return -EINVAL;
+
+	ccool_pdata.state_no = length / sizeof(u32);
+
+	/* read current levels from DT property */
+	if (ccool_pdata.state_no > 0)
+		if (of_property_read_u32_array(of_node, "charger_coolant_state",
+				ccool_pdata.states, ccool_pdata.state_no))
+			goto out;
+
+	for_each_child_of_node(of_node, child) {
+		if (of_property_read_u32(child, "def_val", &value))
+			goto out;
+		ccool_pdata.chrgr_trim_reg_lut[idx].def_val = (u8)value;
+		of_property_read_u32(child, "addr", &addr);
+		ccool_pdata.chrgr_trim_reg_lut[idx].addr =
+			ENC_PMU_REG(FIFO_MODE, 0, (unsigned long)addr);
+		idx++;
+	}
+	return 0;
+out:
+	return -ENODEV;
+}
+#endif
+#endif
 
 int __init board_bcm59xx_init(void)
 {
 	int             ret = 0;
 	int             irq;
 	bcmpmu_reg_init();
+#ifdef CONFIG_OF
 	rgltr_init();
 	adc_init();
+#ifdef CONFIG_BCMPMU_DIETEMP_THERMAL
+	dietemp_zone_init();
+#endif
+#ifdef CONFIG_BCMPMU_CHARGER_COOLANT
+	charger_coolant_init();
+#endif
+#endif
 	bcmpmu_set_pullup_reg();
 	ret = gpio_request(PMU_DEVICE_INT_GPIO, "bcmpmu59xxx-irq");
 	if (ret < 0) {
