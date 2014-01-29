@@ -2377,7 +2377,7 @@ CONFIG_VIDEO_AS3643_TXMASK=34
 #
 # vcm devices
 #
-# CONFIG_VIDEO_A3907 is not set
+CONFIG_VIDEO_A3907=y
 
 #
 # soc camera host driver
