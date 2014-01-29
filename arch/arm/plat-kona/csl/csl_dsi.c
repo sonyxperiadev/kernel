@@ -1331,7 +1331,9 @@ CSL_LCD_RES_T CSL_DSI_SendPacket(CSL_LCD_HANDLE client,
 		u32 dsi_stat, int_status, int_en_mask;
 		int retry;
 		unsigned long pkt_flags;
-		pv_change_state(PV_PAUSE_STREAM_SYNC, dsiH->pvCfg);
+		if (pv_change_state(PV_PAUSE_STREAM_SYNC, dsiH->pvCfg) ==
+									-EINVAL)
+			pr_err("%s: pv_change_state Error!", __func__);
 		local_irq_save(pkt_flags);
 		udelay(WAIT_FOR_FIFO_FLUSH_US);
 		dsi_stat = chal_dsi_get_status(dsiH->chalH);
@@ -2670,6 +2672,9 @@ CSL_LCD_RES_T CSL_DSI_Init(const pCSL_DSI_CFG dsiCfg)
 
 	csl_dsi_set_chal_api_clks(dsiH, dsiCfg);
 	videoEnabled = g_display_enabled;
+	/* The workaround intended out of this is not
+	   for command mode */
+	videoEnabled &= dsiH->vmode;
 	if (!g_display_enabled)
 		cslDsiAfeLdoSetState(dsiH, DSI_LDO_HP);
 
