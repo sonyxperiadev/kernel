@@ -1,4 +1,4 @@
-/* Copyright (c) 2013, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -21,6 +21,22 @@
 
 		qcom,max-bandwidth-low-kbps = <1660000>;
 		qcom,max-bandwidth-high-kbps = <1660000>;
+
+		/* Bus Scale Settings */
+		qcom,msm-bus,name = "mdss_mdp";
+		qcom,msm-bus,num-cases = <3>;
+		qcom,msm-bus,num-paths = <1>;
+		qcom,msm-bus,vectors-KBps =
+			<22 512 0 0>,
+			<22 512 0 6400000>,
+			<22 512 0 6400000>;
+
+		/* Fudge factors */
+		qcom,mdss-ab-factor = <2 1>;		/* 2 times    */
+		qcom,mdss-ib-factor = <3 2>;		/* 1.5 times  */
+		qcom,mdss-high-ib-factor = <2 1>;	/* 2 times    */
+		qcom,mdss-clk-factor = <5 4>;		/* 1.25 times */
+
 		qcom,max-clk-rate = <200000000>;
 		qcom,mdss-pipe-vig-off = <0x00001200>;
 		qcom,mdss-pipe-rgb-off = <0x00001E00>;
