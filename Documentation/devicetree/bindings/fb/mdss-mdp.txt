@@ -117,6 +117,39 @@ Required properties
 				- "edp"
 				- "hdmi"
 
+Bus Scaling Data:
+- qcom,msm-bus,name:		String property describing MDSS client.
+- qcom,msm-bus,num-cases:	This is the the number of Bus Scaling use cases
+				defined in the vectors property. This must be
+				set to <3> for MDSS driver where use-case 0 is
+				used to take off MDSS BW votes from the system.
+				And use-case 1 & 2 are used in ping-pong fashion
+				to generate run-time BW requests.
+- qcom,msm-bus,active-only:	A boolean flag indicating if it is active only.
+- qcom,msm-bus,num-paths:	This represents the number of paths in each
+				Bus Scaling Usecase. This value depends on
+				how many number of AXI master ports are
+				dedicated to MDSS for particular chipset.
+- qcom,msm-bus,vectors-KBps:	* A series of 4 cell properties, with a format
+				of (src, dst, ab, ib) which is defined at
+				Documentation/devicetree/bindings/arm/msm/msm_bus.txt
+				* Current values of src & dst are defined at
+				arch/arm/mach-msm/msm_bus_board.h
+				src values allowed for MDSS are:
+					22 = MSM_BUS_MASTER_MDP_PORT0
+					23 = MSM_BUS_MASTER_MDP_PORT1
+				dst values allowed for MDSS are:
+					512 = MSM_BUS_SLAVE_EBI_CH0
+				ab: Represents aggregated bandwidth.
+				ib: Represents instantaneous bandwidth.
+				* Total number of 4 cell properties will be
+				(number of use-cases * number of paths).
+				* These values will be overridden by the driver
+				based on the run-time requirements. So initial
+				ab and ib values defined here are random and
+				bare no logic except for the use-case 0 where ab
+				and ib values needs to be 0.
+
 Optional properties:
 - vdd-cx-supply :	Phandle for vdd CX regulator device node.
 - batfet-supply :	Phandle for battery FET regulator device node.
@@ -170,6 +203,30 @@ Optional properties:
 				applied in scenarios where panel interface can
 				be more tolerant to memory latency such as
 				command mode panels.
+
+Fudge Factors:			Fudge factors are used to boost demand for
+				resources like bus bandswidth, clk rate etc. to
+				overcome system inefficiencies and avoid any
+				glitches. These fudge factors are expressed in
+				terms of numerator and denominator. First value
+				is numerator followed by denominator. They all
+				are optional but highly recommended.
+				Ex:
+				x = value to be fudged
+				a = numerator, default value is 1
+				b = denominator, default value is 1
+				FUDGE(x, a, b) = ((x * a) / b)
+- qcom,mdss-ib-factor:		This fudge factor is applied to calculated ib
+				values in default conditions.
+- qcom,mdss-high-ib-factor:	This fudge factor is applied to calculated ib
+				values. Use of this factor is determined by the
+				driver and open new use-cases.
+- qcom,mdss-clk-factor:		This fudge factor is applied to calculated mdp
+				clk rate in default conditions.
+- qcom,mdss-highest-bank-bit: Property to indicate tile format as opposed to usual
+				linear format. The value tells the GPU highest memory
+				 bank bit used.
+
 Optional subnodes:
 Child nodes representing the frame buffer virtual devices.
 
@@ -218,6 +275,21 @@ Example:
 
 		qcom,max-bandwidth-low-kbps = <2300000>;
 		qcom,max-bandwidth-high-kbps = <3000000>;
+
+		/* Bus Scale Settings */
+		qcom,msm-bus,name = "mdss_mdp";
+		qcom,msm-bus,num-cases = <3>;
+		qcom,msm-bus,num-paths = <2>;
+		qcom,msm-bus,vectors-KBps =
+			<22 512 0 0>, <23 512 0 0>,
+			<22 512 0 6400000>, <23 512 0 6400000>,
+			<22 512 0 6400000>, <23 512 0 6400000>;
+
+		/* Fudge factors */
+		qcom,mdss-ab-factor = <2 1>;		/* 2 times    */
+		qcom,mdss-ib-factor = <3 2>;		/* 1.5 times  */
+		qcom,mdss-high-ib-factor = <2 1>;	/* 2 times    */
+		qcom,mdss-clk-factor = <5 4>;		/* 1.25 times */
 
 		qcom,max-clk-rate = <320000000>;
 		qcom,vbif-settings = <0x0004 0x00000001>,
