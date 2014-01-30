@@ -698,15 +698,13 @@ static int bcm_hsotgctrl_phy_mdio_probe(struct platform_device *pdev)
 	struct bcm_hsotgctrl_platform_data *plat_data = NULL;
 
 	if (pdev->dev.platform_data)
-		plat_data = (struct bcm_hsotgctrl_platform_data *)
-			pdev->dev.platform_data;
+		plat_data = pdev->dev.platform_data;
 	else if (pdev->dev.of_node) {
 		int val;
 		const char *rstring;
 		struct resource *resource;
 
-		plat_data = kzalloc(sizeof(struct bcm_hsotgctrl_platform_data),
-			GFP_KERNEL);
+		plat_data = kzalloc(sizeof(*plat_data), GFP_KERNEL);
 		if (!plat_data) {
 			dev_err(&pdev->dev,
 				"%s: memory allocation failed.", __func__);
@@ -714,44 +712,48 @@ static int bcm_hsotgctrl_phy_mdio_probe(struct platform_device *pdev)
 			goto err_ret;
 		}
 		resource = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-		if (resource->start)
+		if (resource && resource->start) {
 			plat_data->hsotgctrl_virtual_mem_base =
 				HW_IO_PHYS_TO_VIRT(resource->start);
-		else {
+		} else {
 			pr_info("Invalid hsotgctrl_virtual_mem_base from DT\n");
+			error = -ENXIO;
 			goto err_read;
 		}
 
-		if (of_property_read_u32(pdev->dev.of_node,
-				"chipreg-virtual-mem-base", &val)) {
-			error = -EINVAL;
-			dev_err(&pdev->dev, "chipreg-virtual-mem-base read failed\n");
+		error = of_property_read_u32(pdev->dev.of_node,
+					     "chipreg-virtual-mem-base", &val);
+		if (error) {
+			dev_err(&pdev->dev,
+				"chipreg-virtual-mem-base read failed %d\n",
+				error);
 			goto err_read;
 		}
 		plat_data->chipreg_virtual_mem_base = HW_IO_PHYS_TO_VIRT(val);
 
 		resource = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
-		if (resource->start)
+		if (resource && resource->start) {
 			plat_data->irq = resource->start;
-		else {
+		} else {
 			pr_info("Invalid irq from DT\n");
+			error = -ENXIO;
 			goto err_read;
 		}
 
-		if (of_property_read_string(pdev->dev.of_node,
-				"usb-ahb-clk-name",
-			&rstring) != 0) {
-			error = -EINVAL;
-			dev_err(&pdev->dev, "usb-ahb-clk-name read failed\n");
+		error = of_property_read_string(pdev->dev.of_node,
+						"usb-ahb-clk-name", &rstring);
+		if (error) {
+			dev_err(&pdev->dev,
+				"usb-ahb-clk-name read failed %d\n", error);
 			goto err_read;
 		}
 		plat_data->usb_ahb_clk_name = (char *)rstring;
 
-		if (of_property_read_string(pdev->dev.of_node,
-				"mdio-mstr-clk-name",
-			&rstring) != 0) {
-			error = -EINVAL;
-			dev_err(&pdev->dev, "mdio-mstr-clk-name read failed\n");
+		error = of_property_read_string(pdev->dev.of_node,
+						"mdio-mstr-clk-name", &rstring);
+		if (error) {
+			dev_err(&pdev->dev,
+				"mdio-mstr-clk-name read failed %d\n", error);
 			goto err_read;
 		}
 		plat_data->mdio_mstr_clk_name = (char *)rstring;
@@ -810,9 +812,8 @@ static int bcm_hsotgctrl_phy_mdio_probe(struct platform_device *pdev)
 
 	TxCurrent_index = 0;
 	RxSensitivity_index = 0;
-	TxCurrent_table_size = sizeof(USB_Tx_Current)/sizeof(USB_Tx_Current[0]);
-	RxSensitivity_table_size =
-		sizeof(USB_Rx_Sensitivity)/sizeof(USB_Rx_Sensitivity[0]);
+	TxCurrent_table_size = ARRAY_SIZE(USB_Tx_Current);
+	RxSensitivity_table_size = ARRAY_SIZE(USB_Rx_Sensitivity);
 
 	CTableSize = true;
 	STableSize = true;
