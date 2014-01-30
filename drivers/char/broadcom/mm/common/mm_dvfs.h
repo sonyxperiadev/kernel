@@ -69,6 +69,15 @@ DEFINE_SIMPLE_ATTRIBUTE(mm_dvfs_debugfs_##name, \
 		(S_IWUSR | S_IWGRP | S_IRUSR | S_IRGRP), \
 		root->dir, root, &mm_dvfs_debugfs_##var##_##name); } \
 
+struct mm_prof_buff {
+	dvfs_mode_e current_mode;
+	dvfs_mode_e requested_mode;
+	int curr_usage;
+	int switch_case;
+	int time;
+	int data[NUM_DVFS_PROF_SAMPLES];
+};
+#define BUFF_SIZE 16
 struct _mm_dvfs {
 	struct _mm_common_ifc *mm_common_ifc;
 	struct notifier_block mm_fmwk_notifier_blk;
@@ -79,6 +88,7 @@ struct _mm_dvfs {
 	struct dentry *dvfs_dir;
 	struct dentry *__on;
 	struct dentry *__ts;
+	struct dentry *__dvfsprof;
 
 	struct dentry *eco_ns_high;
 	struct dentry *nor_ns_high;
@@ -120,6 +130,8 @@ struct _mm_dvfs {
 	s64 hw_on_dur;
 	unsigned int jobs_done;
 	unsigned int jobs_pend;
+	struct mm_prof_buff buff[BUFF_SIZE];
+	int write_ptr;
 #ifdef CONFIG_MEMC_DFS
 	struct kona_memc_node *memc_node;
 #endif
