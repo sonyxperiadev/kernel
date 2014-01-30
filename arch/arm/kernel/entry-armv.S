@@ -481,13 +481,20 @@ ENDPROC(__und_usr)
  */
 	.pushsection .fixup, "ax"
 	.align	2
-4:	mov	pc, r9
+und_usr_arm_fixup:
+	sub	r2, r2, #4
+	str	r2, [sp, #S_PC]
+	mov	pc, r9
+und_usr_thumb_fixup:
+	sub	r2, r2, #2
+	str	r2, [sp, #S_PC]
+	mov	pc, r9
 	.popsection
 	.pushsection __ex_table,"a"
-	.long	1b, 4b
+	.long	1b, und_usr_arm_fixup
 #if CONFIG_ARM_THUMB && __LINUX_ARM_ARCH__ >= 6 && CONFIG_CPU_V7
-	.long	2b, 4b
-	.long	3b, 4b
+	.long	2b, und_usr_thumb_fixup
+	.long	3b, und_usr_thumb_fixup
 #endif
 	.popsection
 
