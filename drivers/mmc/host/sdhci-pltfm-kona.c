@@ -977,9 +977,7 @@ static int sdhci_pltfm_probe(struct platform_device *pdev)
 		host->mmc->caps |= MMC_CAP_1_8V_DDR;
 #endif
 
-
-	/* enable & init runtime power management */
-	dev->runtime_pm_enabled = 1;
+	dev->runtime_pm_enabled = hw_cfg->flags & KONA_SDIO_FLAGS_DEVICE_RPM_EN;
 	sdhci_pltfm_runtime_pm_init(dev->dev);
 
 	ret = sdhci_add_host(host);
