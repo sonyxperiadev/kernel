@@ -665,7 +665,7 @@ static int sdhci_pltfm_probe(struct platform_device *pdev)
 		hw_cfg->flags = val;
 
 		if (of_property_read_u32(pdev->dev.of_node, "quirks", &val)) {
-			dev_warn(&pdev->dev, "quirks not available in %s\n",
+			dev_warn(&pdev->dev, "No quirks found via DT in %s\n",
 			__func__);
 			val = 0;
 		}
@@ -673,7 +673,7 @@ static int sdhci_pltfm_probe(struct platform_device *pdev)
 		hw_cfg->quirks = val;
 
 		if (of_property_read_u32(pdev->dev.of_node, "quirks2", &val)) {
-			dev_warn(&pdev->dev, "quirks2 not available in %s\n",
+			dev_warn(&pdev->dev, "No quirks2 found via DT in %s\n",
 			__func__);
 			val = 0;
 		}
@@ -681,7 +681,7 @@ static int sdhci_pltfm_probe(struct platform_device *pdev)
 		hw_cfg->quirks2 = val;
 
 		if (of_property_read_u32(pdev->dev.of_node, "pm_caps", &val)) {
-			dev_warn(&pdev->dev, "pm_caps not available in %s\n",
+			dev_warn(&pdev->dev, "No pm_caps found via DT in %s\n",
 			__func__);
 			val = 0;
 		}
