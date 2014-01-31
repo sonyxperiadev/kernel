@@ -1779,23 +1779,6 @@ int clk_set_rate(struct clk *clk, unsigned long rate)
 
 EXPORT_SYMBOL(clk_set_rate);
 
-int clk_get_usage(struct clk *clk)
-{
-	unsigned long flags;
-	int ret;
-
-	if (IS_ERR_OR_NULL(clk))
-		return -EINVAL;
-	 clk_dbg("%s - %s\n", __func__, clk->name);
-	clk_lock(clk, &flags);
-	ret = clk_use_cnt(clk);
-	clk_unlock(clk, &flags);
-
-	return ret;
-}
-
-EXPORT_SYMBOL(clk_get_usage);
-
 static int clk_is_enabled(struct clk *clk)
 {
 	return (!!clk->use_cnt);
@@ -2318,11 +2301,15 @@ int ccu_print_sleep_prevent_clks(struct clk *clk)
 	int use_cnt;
 	int sleep_prevent = 0;
 	int num_active = 0;
+	unsigned long flags;
+
 	if (!clk || (clk->clk_type != CLK_TYPE_CCU))
 		return -EINVAL;
 	ccu_clk = to_ccu_clk(clk);
 	list_for_each_entry(clk_iter, &ccu_clk->clk_list, list) {
-		use_cnt = clk_get_usage(clk_iter);
+		clk_lock(clk_iter, &flags);
+		use_cnt = clk_iter->use_cnt;
+		clk_unlock(clk_iter, &flags);
 		switch (clk_iter->clk_type) {
 		case CLK_TYPE_REF:
 			/**
