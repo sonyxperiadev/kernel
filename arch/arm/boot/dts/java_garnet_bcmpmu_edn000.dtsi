@@ -238,5 +238,236 @@
 			};
 	};
 
+	bcmpmu_fg {
+		compatible = "Broadcom,bcmpmu_fg";
+		sns_resist = <10>;
+		sys_impedence = <33>;
+		eoc_current = <85>;/* End of charge current in mA */
+		hw_maintenance_charging = <0>;/* enable HW EOC of PMU */
+		sleep_current_ua = <2000>; /* floor during sleep */
+		sleep_sample_rate = <32000>;
+		fg_factor = <976>;
+		poll_rate_low_batt = <20000>;
+		poll_rate_crit_batt = <5000>;
+		ntc_high_temp = <680>;
+			batt_prop {
+				model = "BRCM YS-05";
+				min_volt = <3000>;
+				max_volt = <4200>;
+				full_cap = <6120000>; /*1700 * 3600*/
+				one_c_rate = <1700>;
+				volt_cap_lut = <4200 100
+						4146 95
+						4089 89
+						4047 84
+						3996 78
+						3964 73
+						3926 67
+						3892 62
+						3856 57
+						3824 51
+						3806 46
+						3791 40
+						3781 35
+						3771 29
+						3758 24
+						3740 19
+						3708 13
+						3689 8
+						3550 2
+						3488 1
+						3400 0>;
+				eoc_cap_lut = <290 90
+						270 91
+						250 92
+						228 93
+						208 94
+						185 95
+						165 96
+						145 97
+						125 98
+						105 99
+						85 100
+						0 100>;
+				cutoff_cap_lut = <3460 2
+						3430 1
+						3350 0>;
+				esr_temp_lut0 {
+					 temp = <(-200)>;
+					 reset = <0>;
+					 fct = <254>;
+					 guardband = <50>;
+					 esr_vl_lvl = <3781>;
+					 esr_vm_lvl = <3805>;
+					 esr_vh_lvl = <4141>;
+					 esr_vl_slope = <(-16793)>;
+					 esr_vl_offset = <65207>;
+					 esr_vm_slope = <(-6920)>;
+					 esr_vm_offset = <27882>;
+					 esr_vh_slope = <(-441)>;
+					 esr_vh_offset = <3228>;
+					 esr_vf_slope = <(-2635)>;
+					 esr_vf_offset = <12313>;
+				};
+				esr_temp_lut1 {
+					 temp = <(-150)>;
+					 reset = <0>;
+					 fct = <456>;/*<456.5>; */
+					 guardband = <50>;
+					 esr_vl_lvl = <3708>;
+					 esr_vm_lvl = <3805>;
+					 esr_vh_lvl = <3998>;
+					 esr_vl_slope = <(-19711)>;
+					 esr_vl_offset = <74373>;
+					 esr_vm_slope = <(-3819)>;
+					 esr_vm_offset = <15439>;
+					 esr_vh_slope = <166>;
+					 esr_vh_offset = <275>;
+					 esr_vf_slope = <(-669)>;
+					 esr_vf_offset = <3613>;
+				};
+				esr_temp_lut2 {
+					 temp = <(-100)>;
+					 reset = <0>;
+					 fct = <659>;
+					 guardband = <50>;
+					 esr_vl_lvl = <3708>;
+					 esr_vm_lvl = <3805>;
+					 esr_vh_lvl = <3998>;
+					 esr_vl_slope = <(-19711)>;
+					 esr_vl_offset = <74373>;
+					 esr_vm_slope = <(-3819)>;
+					 esr_vm_offset = <15439>;
+					 esr_vh_slope = <166>;
+					 esr_vh_offset = <275>;
+					 esr_vf_slope = <(-669)>;
+					 esr_vf_offset = <3613>;
+				};
+				esr_temp_lut3 {
+					 temp = <(-50)>;
+					 reset = <0>;
+					 fct = <772>;/*<772.5>; */
+					 guardband = <50>;
+					 esr_vl_lvl = <3708>;
+					 esr_vm_lvl = <3825>;
+					 esr_vh_lvl = <3998>;
+					 esr_vl_slope = <(-6386)>;
+					 esr_vl_offset = <24399>;
+					 esr_vm_slope = <(-1475)>;
+					 esr_vm_offset = <6188>;
+					 esr_vh_slope = <325>;
+					 esr_vh_offset = <(-697)>;
+					 esr_vf_slope = <(-489)>;
+					 esr_vf_offset = <2557>;
+				};
+				esr_temp_lut4 {
+					 temp = <0>;
+					 reset = <0>;
+					 fct = <886>;
+					 guardband = <30>;
+					 esr_vl_lvl = <3708>;
+					 esr_vm_lvl = <3825>;
+					 esr_vh_lvl = <3998>;
+					 esr_vl_slope = <(-6386)>;
+					 esr_vl_offset = <24399>;
+					 esr_vm_slope = <(-1475)>;
+					 esr_vm_offset = <6188>;
+					 esr_vh_slope = <325>;
+					 esr_vh_offset = <(-697)>;
+					 esr_vf_slope = <(-489)>;
+					 esr_vf_offset = <2557>;
+				};
+				esr_temp_lut5 {
+					 temp = <50>;
+					 reset = <0>;
+					 fct = <923>;/*<923.5>; */
+					 guardband = <30>;
+					 esr_vl_lvl = <3708>;
+					 esr_vm_lvl = <3825>;
+					 esr_vh_lvl = <3928>;
+					 esr_vl_slope = <(-3170)>;
+					 esr_vl_offset = <12161>;
+					 esr_vm_slope = <(-506)>;
+					 esr_vm_offset = <2282>;
+					 esr_vh_slope = <517>;
+					 esr_vh_offset = <(-1630)>;
+					 esr_vf_slope = <(-306)>;
+					 esr_vf_offset = <1603>;
+				};
+				esr_temp_lut6 {
+					 temp = <100>;
+					 reset = <0>;
+					 fct = <961>;
+					 guardband = <30>;
+					 esr_vl_lvl = <3708>;
+					 esr_vm_lvl = <3825>;
+					 esr_vh_lvl = <3928>;
+					 esr_vl_slope = <(-3170)>;
+					 esr_vl_offset = <12161>;
+					 esr_vm_slope = <(-506)>;
+					 esr_vm_offset = <2282>;
+					 esr_vh_slope = <517>;
+					 esr_vh_offset = <(-1630)>;
+					 esr_vf_slope = <(-306)>;
+					 esr_vf_offset = <1603>;
+				};
+				esr_temp_lut7 {
+					 temp = <150>;
+					 reset = <0>;
+					 fct = <980>;/*<980.5>; */
+					 guardband = <30>;
+					 esr_vl_lvl = <3500>;
+					 esr_vm_lvl = <3708>;
+					 esr_vh_lvl = <3928>;
+					 esr_vl_slope = <(-4327)>;
+					 esr_vl_offset = <15680>;
+					 esr_vm_slope = <(-1432)>;
+					 esr_vm_offset = <5547>;
+					 esr_vh_slope = <129>;
+					 esr_vh_offset = <(-242)>;
+					 esr_vf_slope = <(-228)>;
+					 esr_vf_offset = <1161>;
+				};
+				esr_temp_lut8 {
+					 temp = <200>;
+					 reset = <0>;
+					 fct = <1000>;
+					 guardband = <30>;
+					 esr_vl_lvl = <3500>;
+					 esr_vm_lvl = <3708>;
+					 esr_vh_lvl = <3928>;
+					 esr_vl_slope = <(-4327)>;
+					 esr_vl_offset = <15680>;
+					 esr_vm_slope = <(-1432)>;
+					 esr_vm_offset = <5547>;
+					 esr_vh_slope = <129>;
+					 esr_vh_offset = <(-242)>;
+					 esr_vf_slope = <(-228)>;
+					 esr_vf_offset = <1161>;
+				};
+			};
+			cap_levels {
+				critical = <5>;
+				low = <15>;
+				normal = <75>;
+				high = <95>;
+			};
+			volt_levels {
+				critical = <3400>;
+				low = <3500>;
+				normal = <3700>;
+				high = <4165>;
+				/*high should be ~60mv less than vfloat_lvl */
+				crit_cutoff_cnt = <3>;
+				vfloat_lvl = <0xE>;
+				vfloat_max = <0xE>;
+				vfloat_gap = <100>; /* in mV */
+			};
+			cal_data {
+				volt_low = <3550>;
+				cap_low = <30>;
+			};
+	};
+
 };
 
