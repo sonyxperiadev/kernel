@@ -274,8 +274,6 @@
 		module-name = "NT35310_Brooks";
 		reg-name = "cam2";
 		rst-gpio = <&gpio 2 0>;
-		detect-gpio = <&gpio 8 0>;
-		detect-gpio-val = <0>;
 		rst-setup = <2000>;
 		rst-pulse = <11000>;
 		rst-hold = <11000>;
