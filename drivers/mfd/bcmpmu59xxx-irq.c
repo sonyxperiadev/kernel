@@ -262,7 +262,7 @@ int bcmpmu59xxx_set_irq_mask(struct bcmpmu59xxx *pmu, int irq, bool mask)
 	addr = irq_reg + PMU_REG_INT1MSK;
 
 	bit = 1 << irq_num ;
-	pr_info("%s: addr %d bit %d\n", __func__, addr, bit);
+	pr_info("%s: addr %x bit %d\n", __func__, addr, bit);
 	ret =
 	    pmu->read_dev(pmu, addr, &temp);
 	if (ret < 0)
@@ -440,7 +440,7 @@ static int __init bcmpmu59xxx_irq_init(void)
 {
 	return platform_driver_register(&bcmpmu59xxx_irq_driver);
 }
-subsys_initcall(bcmpmu59xxx_irq_init);
+arch_initcall(bcmpmu59xxx_irq_init);
 
 static void __exit bcmpmu59xxx_irq_exit(void)
 {

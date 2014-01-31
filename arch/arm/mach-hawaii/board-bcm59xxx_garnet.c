@@ -905,6 +905,7 @@ struct bcmpmu59xxx_rpc_pdata rpc_pdata = {
 struct bcmpmu59xxx_regulator_pdata rgltr_pdata = {
 	.bcmpmu_rgltr = bcm59xxx_regulators,
 	.num_rgltr = ARRAY_SIZE(bcm59xxx_regulators),
+	.flags = RGLTR_OVERI_SHDWN_ENABLE,
 };
 
 static int chrgr_curr_lmt[PMU_CHRGR_TYPE_MAX] = {
