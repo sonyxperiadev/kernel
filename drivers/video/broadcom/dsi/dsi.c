@@ -333,7 +333,7 @@ static int DSI_ReadReg(DISPDRV_HANDLE_T drvH, UInt8 reg, UInt8 *rxBuff)
  *   Description:   Set Window
  *
  */
-Int32 DSI_WinSet(
+static Int32 DSI_WinSet(
 	DISPDRV_HANDLE_T drvH,
 	Boolean update,
 	DISPDRV_WIN_t *p_win)
@@ -366,7 +366,7 @@ done_vid:
  *   Description:   Reset windowing to full screen size.
  *		    Typically, only used in boot code environment
  */
-Int32 DSI_WinReset(DISPDRV_HANDLE_T drvH)
+static Int32 DSI_WinReset(DISPDRV_HANDLE_T drvH)
 {
 	Int32 res;
 	DispDrv_PANEL_t *pPanel = (DispDrv_PANEL_t *) drvH;
@@ -423,7 +423,7 @@ DISPDRV_T *DISP_DRV_GetFuncTable(void)
  *   Description:   Setup / Verify display driver init interface
  *
  */
-Int32 DSI_Init(DISPDRV_INFO_T *info, DISPDRV_HANDLE_T *handle)
+static Int32 DSI_Init(DISPDRV_INFO_T *info, DISPDRV_HANDLE_T *handle)
 {
 	Int32 res = 0;
 	DispDrv_PANEL_t	*pPanel;
@@ -547,7 +547,7 @@ Int32 DSI_Init(DISPDRV_INFO_T *info, DISPDRV_HANDLE_T *handle)
  *   Description:
  *
  */
-Int32 DSI_Exit(DISPDRV_HANDLE_T drvH)
+static Int32 DSI_Exit(DISPDRV_HANDLE_T drvH)
 {
 	DispDrv_PANEL_t *pPanel;
 
@@ -564,7 +564,7 @@ Int32 DSI_Exit(DISPDRV_HANDLE_T drvH)
  *  Description:   disp bus ON
  *
  */
-Int32 DSI_Open(DISPDRV_HANDLE_T drvH)
+static Int32 DSI_Open(DISPDRV_HANDLE_T drvH)
 {
 	Int32 res = 0;
 	DispDrv_PANEL_t	*pPanel;
@@ -636,7 +636,11 @@ Int32 DSI_Open(DISPDRV_HANDLE_T drvH)
 		}
 		if (g_display_enabled) {
 			/* Increase the ref_count, disp_reg power on already */
-			regulator_enable(disp_reg);
+			res = regulator_enable(disp_reg);
+			if (res) {
+				DSI_ERR("failed to enable regulator\n");
+				goto err_reg_enable;
+			}
 		}
 	}
 	res = gpio_request(pPanel->disp_info->rst->gpio, "LCD_RST");
@@ -670,6 +674,7 @@ Int32 DSI_Open(DISPDRV_HANDLE_T drvH)
 err_id_read:
 	gpio_free(pPanel->disp_info->rst->gpio);
 err_gpio_request:
+err_reg_enable:
 err_reg_init:
 err_dma_init:
 	CSL_DSI_CloseCmVc(pPanel->dsiCmVcHandle);
@@ -692,7 +697,7 @@ err_te_on:
  *  Description:   disp bus OFF
  *
  */
-Int32 DSI_Close(DISPDRV_HANDLE_T drvH)
+static Int32 DSI_Close(DISPDRV_HANDLE_T drvH)
 {
 	Int32 res = 0;
 	DispDrv_PANEL_t	*pPanel	= (DispDrv_PANEL_t *)drvH;
@@ -945,7 +950,7 @@ static Int32 DSI_DCS_Read(DispDrv_PANEL_t *pPanel,
  *   Description:	  Display Module Control
  *
  */
-Int32 DSI_PowerControl(
+static Int32 DSI_PowerControl(
 	DISPDRV_HANDLE_T drvH,
 	DISPLAY_POWER_STATE_T state)
 {
@@ -1080,7 +1085,7 @@ Int32 DSI_PowerControl(
  *  Description:
  *
  */
-Int32 DSI_Start(
+static Int32 DSI_Start(
 	DISPDRV_HANDLE_T drvH,
 	struct pi_mgr_dfs_node *dfs_node)
 {
@@ -1106,7 +1111,7 @@ Int32 DSI_Start(
  *   Description:
  *
  */
-Int32 DSI_Stop(DISPDRV_HANDLE_T drvH, struct pi_mgr_dfs_node *dfs_node)
+static Int32 DSI_Stop(DISPDRV_HANDLE_T drvH, struct pi_mgr_dfs_node *dfs_node)
 {
 	DispDrv_PANEL_t *pPanel = (DispDrv_PANEL_t *)drvH;
 
@@ -1155,7 +1160,7 @@ static void DSI_Cb(CSL_LCD_RES_T cslRes, pCSL_LCD_CB_REC pCbRec)
  *  Description:
  *
  */
-Int32 DSI_Update(
+static Int32 DSI_Update(
 	DISPDRV_HANDLE_T drvH,
 	void *buff,
 	DISPDRV_WIN_t *p_win,
@@ -1225,7 +1230,7 @@ Int32 DSI_Update(
  *  Description:
  *
  */
-Int32 DSI_Atomic_Update(
+static Int32 DSI_Atomic_Update(
 	DISPDRV_HANDLE_T drvH,
 	void			*buff,
 	DISPDRV_WIN_t		*p_win)
