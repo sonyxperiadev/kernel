@@ -591,6 +591,8 @@ static int bcmpmu_accy_detect_probe(struct platform_device *pdev)
 	wake_lock_init(&accy_d->notify_wake_lock,
 		WAKE_LOCK_SUSPEND, "notify_lock");
 #endif
+	/*MobC00367095*/
+	bcmpmu_enable_bc_regl(accy_d, true);
 	accy_d_set_ldo_bit(accy_d, 1);
 	bcmpmu_accy_set_pmu_BC12(accy_d->bcmpmu, 1);
 	reset_bc(accy_d);
