@@ -33,8 +33,7 @@
 
 		/* Fudge factors */
 		qcom,mdss-ab-factor = <2 1>;		/* 2 times    */
-		qcom,mdss-ib-factor = <3 2>;		/* 1.5 times  */
-		qcom,mdss-high-ib-factor = <2 1>;	/* 2 times    */
+		qcom,mdss-ib-factor = <6 5>;		/* 1.2 times  */
 		qcom,mdss-clk-factor = <5 4>;		/* 1.25 times */
 
 		qcom,max-clk-rate = <200000000>;
@@ -67,6 +66,15 @@
 				     <0x124 0x00000003>;
 		qcom,mdp-settings = <0x02E0 0x000000A5>,
 				    <0x02E4 0x00000055>;
+
+		/* buffer parameters to calculate prefill bandwidth */
+		qcom,mdss-prefill-outstanding-buffer-bytes = <1024>;
+		qcom,mdss-prefill-y-buffer-bytes = <0>;
+		qcom,mdss-prefill-scaler-buffer-lines-bilinear = <2>;
+		qcom,mdss-prefill-scaler-buffer-lines-caf = <4>;
+		qcom,mdss-prefill-post-scaler-buffer-pixels = <0>;
+		qcom,mdss-prefill-pingpong-buffer-pixels = <4096>;
+		qcom,mdss-prefill-fbc-lines = <0>;
 
 		mdss_fb0: qcom,mdss_fb_primary {
 			cell-index = <0>;
