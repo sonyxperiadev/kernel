@@ -455,7 +455,7 @@ static int bmg160_probe(struct i2c_client *ic_dev,
 		goto probe_err_reg;
 	}
 
-	rc = add_sysfs_interfaces(&bd->ic_dev->dev);
+	rc = add_sysfs_interfaces(&bd->ip_dev->dev);
 	if (rc)
 		goto probe_err_sysfs;
 
