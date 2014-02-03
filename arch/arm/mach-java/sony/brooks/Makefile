@@ -7,3 +7,4 @@ obj-$(CONFIG_BACKLIGHT_LM3630) += board-brooks-backlight.o
 obj-$(CONFIG_SENSORS_BMP18X_I2C) += board-brooks-barometer.o
 obj-$(CONFIG_INPUT_APDS9702) += board-brooks-proximity.o
 obj-$(CONFIG_TOUCHSCREEN_SYNAPTICS_I2C_RMI4_2) += board-brooks-touch.o
+obj-$(CONFIG_SENSORS_BH1721FVC) += board-brooks-als.o
