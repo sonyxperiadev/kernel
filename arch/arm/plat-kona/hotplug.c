@@ -143,7 +143,7 @@ int platform_cpu_kill(unsigned int cpu)
  *
  * Called with IRQs disabled
  */
-void kona_platform_cpu_die(unsigned int cpu)
+void __ref kona_platform_cpu_die(unsigned int cpu)
 {
 	int spurious = 0;
 #ifdef DEBUG

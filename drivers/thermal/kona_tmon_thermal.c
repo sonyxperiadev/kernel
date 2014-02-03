@@ -1296,7 +1296,7 @@ static const struct of_device_id kona_tmon_match[] = {
 };
 #endif
 
-static struct platform_driver kona_thermal_driver = {
+static struct platform_driver __refdata kona_thermal_driver = {
 	.driver = {
 		.owner = THIS_MODULE,
 		.name = "kona_tmon_thermal",

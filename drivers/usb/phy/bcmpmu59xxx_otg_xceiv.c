@@ -988,7 +988,8 @@ static int __init bcmpmu_otg_xceiv_probe(struct platform_device *pdev)
 	xceiv_data->otg_xceiver.phy.otg->set_otg_enable =
 	    bcmpmu_otg_xceiv_set_otg_enable;
 	xceiv_data->otg_xceiver.phy.notify_connect = bcmpmu_otg_xceiv_connect;
-	xceiv_data->otg_xceiver.phy.notify_disconnect = bcmpmu_otg_xceiv_disconnect; 
+	xceiv_data->otg_xceiver.phy.notify_disconnect =
+		bcmpmu_otg_xceiv_disconnect;
 
 	xceiv_data->otg_xceiver.phy.set_suspend =
 	    bcmpmu_otg_xceiv_set_suspend;
@@ -1173,7 +1174,7 @@ static int bcmpmu_otg_xceiv_pm_resume(struct platform_device *pdev)
 	return 0;
 }
 
-static struct platform_driver bcmpmu_otg_xceiv_driver = {
+static struct platform_driver __refdata bcmpmu_otg_xceiv_driver = {
 	.probe = bcmpmu_otg_xceiv_probe,
 	.remove = __exit_p(bcmpmu_otg_xceiv_remove),
 	.suspend = bcmpmu_otg_xceiv_pm_suspend,

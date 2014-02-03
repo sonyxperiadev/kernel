@@ -529,7 +529,7 @@ err_alloc:
 	return ret;
 }
 
-static int pwm_backlight_remove(struct platform_device *pdev)
+static int __exit pwm_backlight_remove(struct platform_device *pdev)
 {
 	struct backlight_device *bl = platform_get_drvdata(pdev);
 	struct pwm_bl_data *pb = bl_get_data(bl);
