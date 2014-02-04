@@ -30,8 +30,10 @@
 
 struct qca199x_platform_data {
 	unsigned int irq_gpio;
+	unsigned int	irq_gpio_clk_req;
+	unsigned int	clk_req_irq_num;
 	unsigned int dis_gpio;
-	unsigned int ven_gpio;
+	unsigned int clkreq_gpio;
 	unsigned int reg;
 	const char *clk_src_name;
 	unsigned int clk_src_gpio;
@@ -52,32 +54,48 @@ MODULE_DEVICE_TABLE(of, msm_match_table);
 #define MAX_PACKET_SIZE			(PACKET_HEADER_SIZE_NCI + 255)
 #define MAX_QCA_REG				(116)
 /* will timeout in approx. 100ms as 10us steps */
+#define NFC_RF_CLK_FREQ			(19200000)
 #define NTF_TIMEOUT				(10000)
 #define	CORE_RESET_RSP_GID		(0x60)
 #define	CORE_RESET_OID			(0x00)
 #define CORE_RST_NTF_LENGTH			(0x02)
 
+static void clk_req_update(struct work_struct *work);
 
 struct qca199x_dev {
 	wait_queue_head_t read_wq;
-	struct mutex read_mutex;
-	struct i2c_client *client;
-	struct miscdevice qca199x_device;
-	unsigned int irq_gpio;
-	unsigned int dis_gpio;
-	unsigned int ven_gpio;
-	bool irq_enabled;
-	bool sent_first_nci_write;
-	spinlock_t irq_enabled_lock;
-	unsigned int count_irq;
+	struct	mutex		read_mutex;
+	struct	i2c_client	*client;
+	struct	miscdevice	qca199x_device;
+	/* NFC_IRQ new NCI data available */
+	unsigned int		irq_gpio;
+	/* CLK_REQ IRQ to signal the state has changed */
+	unsigned int		irq_gpio_clk_req;
+	/* Actual IRQ no. assigned to CLK_REQ */
+	unsigned int		clk_req_irq_num;
+	unsigned int		dis_gpio;
+	unsigned int		clkreq_gpio;
+	/* NFC_IRQ state */
+	bool			irq_enabled;
+	bool			sent_first_nci_write;
+	spinlock_t		irq_enabled_lock;
+	unsigned int		count_irq;
+	/* CLK_REQ IRQ state */
+	bool			irq_enabled_clk_req;
+	spinlock_t		irq_enabled_lock_clk_req;
+	unsigned int		count_irq_clk_req;
 	enum	nfcc_state	state;
-	unsigned int clk_src_gpio;
-	const char *clk_src_name;
-	struct clk *s_clk;
-	bool clk_run;
+	/* CLK control */
+	unsigned int		clk_src_gpio;
+	const	char		*clk_src_name;
+	struct	clk		*s_clk;
+	bool			clk_run;
+	struct work_struct	msm_clock_controll_work;
+	struct workqueue_struct *my_wq;
 };
 
 static int nfc_i2c_write(struct i2c_client *client, u8 *buf, int len);
+static int nfcc_hw_check(struct i2c_client *client, unsigned short curr_addr);
 static int nfcc_initialise(struct i2c_client *client, unsigned short curr_addr);
 static int qca199x_clock_select(struct qca199x_dev *qca199x_dev);
 static int qca199x_clock_deselect(struct qca199x_dev *qca199x_dev);
@@ -92,9 +110,10 @@ static int logging_level;
 /*
  * FTM-RAW-I2C RD/WR MODE
  */
-static struct	devicemode	device_mode;
-static int	ftm_raw_write_mode;
-static int	ftm_werr_code;
+static struct devicemode	device_mode;
+static int					ftm_raw_write_mode;
+static int					ftm_werr_code;
+
 
 static void qca199x_init_stat(struct qca199x_dev *qca199x_dev)
 {
@@ -154,6 +173,95 @@ static unsigned int nfc_poll(struct file *filp, poll_table *wait)
 	spin_unlock_irqrestore(&qca199x_dev->irq_enabled_lock, flags);
 
 	return mask;
+}
+
+/* Handlers for CLK_REQ */
+static void qca199x_disable_irq_clk_req(struct qca199x_dev *qca199x_dev)
+{
+	unsigned long flags;
+
+	spin_lock_irqsave(&qca199x_dev->irq_enabled_lock_clk_req, flags);
+	if (qca199x_dev->irq_enabled_clk_req) {
+		disable_irq_nosync(qca199x_dev->clk_req_irq_num);
+		qca199x_dev->irq_enabled_clk_req = false;
+	}
+	spin_unlock_irqrestore(&qca199x_dev->irq_enabled_lock_clk_req, flags);
+}
+
+
+static void qca199x_enable_irq_clk_req(struct qca199x_dev *qca199x_dev)
+{
+	unsigned long flags;
+
+	spin_lock_irqsave(&qca199x_dev->irq_enabled_lock_clk_req, flags);
+	if (!qca199x_dev->irq_enabled_clk_req) {
+		qca199x_dev->irq_enabled_clk_req = true;
+		enable_irq(qca199x_dev->clk_req_irq_num);
+	}
+	spin_unlock_irqrestore(&qca199x_dev->irq_enabled_lock_clk_req, flags);
+}
+
+
+static irqreturn_t qca199x_dev_irq_handler_clk_req(int irq, void *dev_id)
+{
+	struct qca199x_dev *qca199x_dev = dev_id;
+	unsigned long flags;
+
+	spin_lock_irqsave(&qca199x_dev->irq_enabled_lock_clk_req, flags);
+	qca199x_dev->count_irq_clk_req++;
+	spin_unlock_irqrestore(&qca199x_dev->irq_enabled_lock_clk_req, flags);
+
+	queue_work(qca199x_dev->my_wq, &qca199x_dev->msm_clock_controll_work);
+
+	return IRQ_HANDLED;
+}
+
+
+static struct gpiomux_setting nfc_clk_on = {
+	.func = GPIOMUX_FUNC_2,
+	.drv  = GPIOMUX_DRV_2MA,
+	.pull = GPIOMUX_PULL_NONE,
+};
+static struct gpiomux_setting nfc_clk_on_suspend = {
+	.func = GPIOMUX_FUNC_2,
+	.drv  = GPIOMUX_DRV_2MA,
+	.pull = GPIOMUX_PULL_DOWN,
+};
+static struct gpiomux_setting nfc_clk_off = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv  = GPIOMUX_DRV_2MA,
+	.pull = GPIOMUX_PULL_DOWN,
+};
+
+static void clk_req_update(struct work_struct *work)
+{
+	struct	i2c_client *client;
+	struct	qca199x_dev *qca199x_dev;
+	int		gpio_clk_req_level = 0;
+
+	qca199x_dev =	container_of(work, struct qca199x_dev,
+			msm_clock_controll_work);
+	client =	qca199x_dev->client;
+
+	/* Read status level of CLK_REQ from NFC Controller, QCA199_x */
+	gpio_clk_req_level = gpio_get_value(qca199x_dev->irq_gpio_clk_req);
+	if (gpio_clk_req_level == 1) {
+		if (qca199x_dev->clk_run == false) {
+			msm_gpiomux_write(qca199x_dev->clk_src_gpio,
+				GPIOMUX_ACTIVE, &nfc_clk_on, NULL);
+			msm_gpiomux_write(qca199x_dev->clk_src_gpio,
+				GPIOMUX_SUSPENDED, &nfc_clk_on_suspend, NULL);
+			qca199x_dev->clk_run = true;
+			}
+	} else{
+		if (qca199x_dev->clk_run == true) {
+			msm_gpiomux_write(qca199x_dev->clk_src_gpio,
+				GPIOMUX_ACTIVE, &nfc_clk_off, NULL);
+			msm_gpiomux_write(qca199x_dev->clk_src_gpio,
+				GPIOMUX_SUSPENDED, &nfc_clk_off, NULL);
+			qca199x_dev->clk_run = false;
+		}
+	}
 }
 
 /*
@@ -396,7 +504,14 @@ static int nfc_open(struct inode *inode, struct file *filp)
 
 	filp->private_data = qca199x_dev;
 	qca199x_init_stat(qca199x_dev);
+	/* Enable interrupts from NFCC NFC_INT new NCI data available */
 	qca199x_enable_irq(qca199x_dev);
+
+	if ((!strcmp(qca199x_dev->clk_src_name, "GPCLK")) ||
+		(!strcmp(qca199x_dev->clk_src_name, "GPCLK2"))) {
+		/* Enable interrupts from NFCC CLK_REQ */
+		qca199x_enable_irq_clk_req(qca199x_dev);
+	}
 	dev_dbg(&qca199x_dev->client->dev,
 			"%d,%d\n", imajor(inode), iminor(inode));
 	return ret;
@@ -759,6 +874,33 @@ static int nfc_i2c_write(struct i2c_client *client, u8 *buf, int len)
 	return r;
 }
 
+/* Check for availability of qca199x_ NFC controller hardware */
+static int nfcc_hw_check(struct i2c_client *client, unsigned short curr_addr)
+{
+	int r = 0;
+	unsigned char buf = 0;
+
+	client->addr = curr_addr;
+	/* Set-up Addr 0. No data written */
+	r = i2c_master_send(client, &buf, 1);
+	if (r < 0)
+		goto err_presence_check;
+	buf = 0;
+	/* Read back from Addr 0 */
+	r = i2c_master_recv(client, &buf, 1);
+	if (r < 0)
+		goto err_presence_check;
+
+	r = 0;
+	return r;
+
+err_presence_check:
+	r = -ENXIO;
+	dev_err(&client->dev,
+		"nfc-nci nfcc_presence check - no NFCC available\n");
+	return r;
+}
+/* Initialise qca199x_ NFC controller hardware */
 static int nfcc_initialise(struct i2c_client *client, unsigned short curr_addr)
 {
 	int r = 0;
@@ -949,6 +1091,14 @@ static int qca199x_clock_select(struct qca199x_dev *qca199x_dev)
 		goto err_invalid_dis_gpio;
 	}
 	if (qca199x_dev->clk_run == false) {
+		/* Set clock rate */
+		if ((!strcmp(qca199x_dev->clk_src_name, "GPCLK")) ||
+			(!strcmp(qca199x_dev->clk_src_name, "GPCLK2"))) {
+			r = clk_set_rate(qca199x_dev->s_clk, NFC_RF_CLK_FREQ);
+			if (r)
+				goto err_invalid_clk;
+		}
+
 		r = clk_prepare_enable(qca199x_dev->s_clk);
 		if (r)
 			goto err_invalid_clk;
@@ -990,10 +1140,6 @@ static int nfc_parse_dt(struct device *dev, struct qca199x_platform_data *pdata)
 	if (r)
 		return -EINVAL;
 
-	r = of_property_read_u32(np, "qcom,clk-gpio", &pdata->ven_gpio);
-	if (r)
-		return -EINVAL;
-
 	pdata->dis_gpio = of_get_named_gpio(np, "qcom,dis-gpio", 0);
 	if ((!gpio_is_valid(pdata->dis_gpio)))
 		return -EINVAL;
@@ -1004,11 +1150,24 @@ static int nfc_parse_dt(struct device *dev, struct qca199x_platform_data *pdata)
 
 	r = of_property_read_string(np, "qcom,clk-src", &pdata->clk_src_name);
 
-	if ((!strcmp(pdata->clk_src_name, "GPCLK")) ||
-	    (!strcmp(pdata->clk_src_name, "GPCLK2")))
-		pdata->clk_src_gpio = of_get_named_gpio(np,
-				"qcom,clk-en-gpio", 0);
+	if (strcmp(pdata->clk_src_name, "GPCLK2")) {
+		r = of_property_read_u32(np, "qcom,clk-gpio",
+					&pdata->clkreq_gpio);
+		if (r)
+			return -EINVAL;
+	}
 
+	if ((!strcmp(pdata->clk_src_name, "GPCLK")) ||
+	    (!strcmp(pdata->clk_src_name, "GPCLK2"))) {
+			pdata->clk_src_gpio = of_get_named_gpio(np,
+					"qcom,clk-src-gpio", 0);
+			if ((!gpio_is_valid(pdata->clk_src_gpio)))
+				return -EINVAL;
+			pdata->irq_gpio_clk_req = of_get_named_gpio(np,
+					"qcom,clk-req-gpio", 0);
+			if ((!gpio_is_valid(pdata->irq_gpio_clk_req)))
+				return -EINVAL;
+	}
 	if (r)
 		return -EINVAL;
 	return r;
@@ -1057,40 +1216,23 @@ static int qca199x_probe(struct i2c_client *client,
 		return -ENOMEM;
 	}
 	qca199x_dev->client = client;
-	if (gpio_is_valid(platform_data->irq_gpio)) {
-		r = gpio_request(platform_data->irq_gpio, "nfc_irq_gpio");
-		if (r) {
-			dev_err(&client->dev, "unable to request gpio [%d]\n",
-				platform_data->irq_gpio);
-			goto err_free_dev;
-		}
-		r = gpio_direction_input(platform_data->irq_gpio);
-		if (r) {
 
-			dev_err(&client->dev,
-			"unable to set direction for gpio [%d]\n",
-				platform_data->irq_gpio);
-			goto err_irq;
-		}
-		gpio_to_irq(0);
-		irqn = gpio_to_irq(platform_data->irq_gpio);
-		if (irqn < 0) {
-			r = irqn;
-			goto err_irq;
-		}
-		client->irq = irqn;
+	/*
+	 * To be efficient we need to test whether nfcc hardware is physically
+	 * present before attempting further hardware initialisation.
+	 * For this we need to be sure the device is in ULPM state by
+	 * setting disable line low early on.
+	 *
+	 */
 
-	} else {
-		dev_err(&client->dev, "irq gpio not provided\n");
-		goto err_free_dev;
-	}
+
 	if (gpio_is_valid(platform_data->dis_gpio)) {
 		r = gpio_request(platform_data->dis_gpio, "nfc_reset_gpio");
 		if (r) {
 			dev_err(&client->dev,
 			"NFC: unable to request gpio [%d]\n",
 				platform_data->dis_gpio);
-			goto err_irq;
+			goto err_free_dev;
 		}
 		r = gpio_direction_output(platform_data->dis_gpio, 1);
 		if (r) {
@@ -1101,7 +1243,75 @@ static int qca199x_probe(struct i2c_client *client,
 		}
 	} else {
 		dev_err(&client->dev, "dis gpio not provided\n");
-		goto err_irq;
+		goto err_free_dev;
+	}
+
+	/* Put device in ULPM */
+	gpio_set_value(platform_data->dis_gpio, 0);
+	r = nfcc_hw_check(client, platform_data->reg);
+	if (r) {
+		/* We don't think there is hardware but just in case HPD */
+		gpio_set_value(platform_data->dis_gpio, 1);
+		goto err_dis_gpio;
+	}
+
+	if (gpio_is_valid(platform_data->irq_gpio)) {
+		r = gpio_request(platform_data->irq_gpio, "nfc_irq_gpio");
+		if (r) {
+			dev_err(&client->dev, "unable to request gpio [%d]\n",
+				platform_data->irq_gpio);
+			goto err_dis_gpio;
+		}
+		r = gpio_direction_input(platform_data->irq_gpio);
+		if (r) {
+
+			dev_err(&client->dev,
+			"unable to set direction for gpio [%d]\n",
+				platform_data->irq_gpio);
+			goto err_irq;
+		}
+		irqn = gpio_to_irq(platform_data->irq_gpio);
+		if (irqn < 0) {
+			r = irqn;
+			goto err_irq;
+		}
+		client->irq = irqn;
+
+	} else {
+		dev_err(&client->dev, "irq gpio not provided\n");
+		goto err_dis_gpio;
+	}
+	/* Interrupt from NFCC CLK_REQ to handle REF_CLK
+		o/p gating/selection */
+	if ((!strcmp(platform_data->clk_src_name, "GPCLK")) ||
+		(!strcmp(platform_data->clk_src_name, "GPCLK2"))) {
+		if (gpio_is_valid(platform_data->irq_gpio_clk_req)) {
+			r = gpio_request(platform_data->irq_gpio_clk_req,
+				"nfc_irq_gpio_clk_en");
+			if (r) {
+				dev_err(&client->dev, "unable to request CLK_EN gpio [%d]\n",
+					platform_data->irq_gpio_clk_req);
+				goto err_irq;
+			}
+			r = gpio_direction_input(
+					platform_data->irq_gpio_clk_req);
+			if (r) {
+				dev_err(&client->dev,
+					"unable to set direction for CLK_EN gpio [%d]\n",
+					platform_data->irq_gpio_clk_req);
+				goto err_irq_clk;
+			}
+			gpio_to_irq(0);
+			irqn = gpio_to_irq(platform_data->irq_gpio_clk_req);
+			if (irqn < 0) {
+				r = irqn;
+				goto err_irq_clk;
+			}
+			platform_data->clk_req_irq_num = irqn;
+		} else {
+			dev_err(&client->dev, "irq CLK_EN gpio not provided\n");
+			goto err_irq;
+		}
 	}
 	/* Get the clock source name and gpio from from Device Tree */
 	qca199x_dev->clk_src_name = platform_data->clk_src_name;
@@ -1112,37 +1322,49 @@ static int qca199x_probe(struct i2c_client *client,
 		if (r == -1)
 			goto err_clk;
 		else
-			goto err_dis_gpio;
+			goto err_irq_clk;
 	}
-	platform_data->ven_gpio = of_get_named_gpio(node,
-						"qcom,clk-gpio", 0);
 
-	if (gpio_is_valid(platform_data->ven_gpio)) {
-		r = gpio_request(platform_data->ven_gpio, "nfc_ven_gpio");
-		if (r) {
-			dev_err(&client->dev, "unable to request gpio [%d]\n",
-						platform_data->ven_gpio);
-			goto err_ven_gpio;
+	if (strcmp(platform_data->clk_src_name, "GPCLK2")) {
+		platform_data->clkreq_gpio =
+			of_get_named_gpio(node, "qcom,clk-gpio", 0);
+
+		if (gpio_is_valid(platform_data->clkreq_gpio)) {
+			r = gpio_request(platform_data->clkreq_gpio,
+				"nfc_clkreq_gpio");
+			if (r) {
+				dev_err(&client->dev, "unable to request gpio [%d]\n",
+						platform_data->clkreq_gpio);
+				goto err_clkreq_gpio;
+			}
+			r = gpio_direction_input(platform_data->clkreq_gpio);
+			if (r) {
+				dev_err(&client->dev,
+						"unable to set direction for gpio [%d]\n",
+						platform_data->clkreq_gpio);
+				goto err_clkreq_gpio;
+			}
+		} else {
+			dev_err(&client->dev, "clkreq gpio not provided\n");
+			goto err_clk;
 		}
-		r = gpio_direction_input(platform_data->ven_gpio);
-		if (r) {
-			dev_err(&client->dev,
-			"unable to set direction for gpio [%d]\n",
-						platform_data->ven_gpio);
-			goto err_ven_gpio;
-		}
-	} else {
-		dev_err(&client->dev, "ven gpio not provided\n");
-		goto err_clk;
+		qca199x_dev->clkreq_gpio = platform_data->clkreq_gpio;
 	}
 	qca199x_dev->dis_gpio = platform_data->dis_gpio;
 	qca199x_dev->irq_gpio = platform_data->irq_gpio;
-	qca199x_dev->ven_gpio = platform_data->ven_gpio;
+	if ((!strcmp(platform_data->clk_src_name, "GPCLK")) ||
+		(!strcmp(platform_data->clk_src_name, "GPCLK2"))) {
+			qca199x_dev->irq_gpio_clk_req	=
+						platform_data->irq_gpio_clk_req;
+			qca199x_dev->clk_req_irq_num		=
+						platform_data->clk_req_irq_num;
+	}
 
 	/* init mutex and queues */
 	init_waitqueue_head(&qca199x_dev->read_wq);
 	mutex_init(&qca199x_dev->read_mutex);
 	spin_lock_init(&qca199x_dev->irq_enabled_lock);
+	spin_lock_init(&qca199x_dev->irq_enabled_lock_clk_req);
 
 	qca199x_dev->qca199x_device.minor = MISC_DYNAMIC_MINOR;
 	qca199x_dev->qca199x_device.name = "nfc-nci";
@@ -1154,6 +1376,27 @@ static int qca199x_probe(struct i2c_client *client,
 		goto err_misc_register;
 	}
 
+
+	/*
+	 * Reboot the NFCC now that all resources are ready
+	 *
+	 * The NFCC takes time to transition between power states.
+	 * We wait 20uS for the NFCC to shutdown. (HPD)
+	 * We wait 100uS for the NFCC to boot into ULPM.
+	 */
+	gpio_set_value(platform_data->dis_gpio, 1);/* HPD */
+	msleep(20);
+	gpio_set_value(platform_data->dis_gpio, 0);/* ULPM */
+	msleep(100);
+
+
+	/* Here we perform a second presence check. */
+	r = nfcc_hw_check(client, platform_data->reg);
+	if (r) {
+		/* We don't think there is hardware but just in case HPD */
+		gpio_set_value(platform_data->dis_gpio, 1);
+		goto err_nfcc_not_present;
+	}
 	regulators.regulator = regulator_get(&client->dev, regulators.name);
 	if (IS_ERR(regulators.regulator)) {
 		r = PTR_ERR(regulators.regulator);
@@ -1172,6 +1415,7 @@ static int qca199x_probe(struct i2c_client *client,
 	* for reading.  It is cleared when all data has been read.
 	*/
 	device_mode.handle_flavour = UNSOLICITED_MODE;
+	/* NFC_INT IRQ */
 	qca199x_dev->irq_enabled = true;
 	r = request_irq(client->irq, qca199x_dev_irq_handler,
 			  IRQF_TRIGGER_RISING, client->name, qca199x_dev);
@@ -1180,6 +1424,31 @@ static int qca199x_probe(struct i2c_client *client,
 		goto err_request_irq_failed;
 	}
 	qca199x_disable_irq(qca199x_dev);
+	/* CLK_REQ IRQ */
+	if ((!strcmp(platform_data->clk_src_name, "GPCLK")) ||
+		(!strcmp(platform_data->clk_src_name, "GPCLK2"))) {
+		r = request_irq(qca199x_dev->clk_req_irq_num,
+				qca199x_dev_irq_handler_clk_req,
+				(IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING),
+						client->name, qca199x_dev);
+		if (r) {
+			dev_err(&client->dev,
+			"nfc-nci probe: request_irq failed. irq no = %d\n, main irq =  %d",
+				qca199x_dev->clk_req_irq_num, client->irq);
+			goto err_request_irq_failed;
+		}
+		qca199x_dev->irq_enabled_clk_req = true;
+		qca199x_disable_irq_clk_req(qca199x_dev);
+
+
+		qca199x_dev->my_wq =
+			create_singlethread_workqueue("qca1990x_CLK_REQ_queue");
+		if (!qca199x_dev->my_wq)
+			goto err_create_workq;
+
+		INIT_WORK(&qca199x_dev->msm_clock_controll_work,
+			clk_req_update);
+	}
 	i2c_set_clientdata(client, qca199x_dev);
 	gpio_set_value(platform_data->dis_gpio, 1);
 	dev_dbg(&client->dev,
@@ -1187,28 +1456,33 @@ static int qca199x_probe(struct i2c_client *client,
 		 __func__);
 	return 0;
 
+err_create_workq:
+	dev_err(&client->dev,
+	"nfc-nci probe: %s, work_queue creation failure\n",
+		 __func__);
+	free_irq(client->irq, qca199x_dev);
+err_nfcc_not_present:
 err_request_irq_failed:
 	misc_deregister(&qca199x_dev->qca199x_device);
 err_misc_register:
 	mutex_destroy(&qca199x_dev->read_mutex);
-err_ven_gpio:
-	gpio_free(platform_data->ven_gpio);
+err_clkreq_gpio:
+	if (strcmp(platform_data->clk_src_name, "GPCLK2"))
+		gpio_free(platform_data->clkreq_gpio);
 err_clk:
 		qca199x_clock_deselect(qca199x_dev);
-err_dis_gpio:
-	r = gpio_direction_input(platform_data->dis_gpio);
-	if (r)
-		dev_err(&client->dev, "nfc-nci probe: Unable to set direction\n");
+err_irq_clk:
 	if ((!strcmp(platform_data->clk_src_name, "GPCLK")) ||
-            (!strcmp(platform_data->clk_src_name, "GPCLK2"))) {
-		r = gpio_direction_input(platform_data->clk_src_gpio);
+		(!strcmp(platform_data->clk_src_name, "GPCLK2"))) {
+		r = gpio_direction_input(platform_data->irq_gpio_clk_req);
 		if (r)
 			dev_err(&client->dev, "nfc-nci probe: Unable to set direction\n");
-		gpio_free(platform_data->clk_src_gpio);
+		gpio_free(platform_data->irq_gpio_clk_req);
 	}
-	gpio_free(platform_data->dis_gpio);
 err_irq:
 	gpio_free(platform_data->irq_gpio);
+err_dis_gpio:
+	gpio_free(platform_data->dis_gpio);
 err_free_dev:
 	kfree(qca199x_dev);
 	return r;
@@ -1223,8 +1497,13 @@ static int qca199x_remove(struct i2c_client *client)
 	misc_deregister(&qca199x_dev->qca199x_device);
 	mutex_destroy(&qca199x_dev->read_mutex);
 	gpio_free(qca199x_dev->irq_gpio);
+	if ((!strcmp(qca199x_dev->clk_src_name, "GPCLK")) ||
+		(!strcmp(qca199x_dev->clk_src_name, "GPCLK2"))) {
+		gpio_free(qca199x_dev->irq_gpio_clk_req);
+	}
 	gpio_free(qca199x_dev->dis_gpio);
-	gpio_free(qca199x_dev->ven_gpio);
+	if (strcmp(qca199x_dev->clk_src_name, "GPCLK2"))
+		gpio_free(qca199x_dev->clkreq_gpio);
 	kfree(qca199x_dev);
 
 	return 0;
