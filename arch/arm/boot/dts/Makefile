@@ -216,6 +216,7 @@ dtb-$(CONFIG_ARCH_HAWAII) += hawaii_garnet_edn020.dtb \
 	hawaii_garnet_edn020_4Gb.dtb \
 	hawaii_garnet_edn020_soc_4Gb.dtb \
 	hawaii_garnet_edn020_soc_2Gb.dtb \
+        hawaii_garnet_edn020_wvga.dtb \
 	hawaii_ss_logands_rev01.dtb \
 	hawaii_ss_heat3g_rev00.dtb \
 	hawaii_ss_heat3g_rev01.dtb
