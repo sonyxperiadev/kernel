@@ -10,12 +10,12 @@
 	compatible = "bcm,java";
 
 	chosen {
-		bootargs = "console=ttyS0,115200n8 mem=482M gpt androidboot.console=ttyS0 crash_ramdump=1 logbuf_nocache=1 vmalloc=136M";
+		bootargs = "console=ttyS0,115200n8 mem=994M gpt androidboot.console=ttyS0 crash_ramdump=1 logbuf_nocache=1 vmalloc=136M";
 	};
 
-	memory@81e00000{
+	memory@81e00000 {
 		device_type = "memory";
-		reg = <0x81e00000 0x1e200000>; /* 482 MB */
+		reg = <0x81e00000 0x3e200000>; /* 994 MB */
 	};
 
 	wd-tapper {
