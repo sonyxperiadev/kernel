@@ -238,25 +238,16 @@ late_initcall(dis_disp_clks);
 int brcm_init_lcd_clocks(u32 dsi_bus)
 {
 	struct clk *dsi_axi;
-	int dsi_axi_usage;
 
 	dsi_axi = clk_get(NULL, dsi_bus_clk[dsi_bus].dsi_axi);
 	BUG_ON(IS_ERR(dsi_axi));
-	dsi_axi_usage = clk_get_usage(dsi_axi);
 
-	if (0 == dsi_axi_usage) {
-		/*
-		Sometimes DSI axi bus may get hang if
-		TX (CSL_DSI_SendPacket) busy,
-		doing a clk_reset to recovery from this error
-		*/
-		clk_reset(dsi_axi);
-	} else {
-		printk(KERN_DEBUG "dsi_axi enabled before init, usage %d\n",
-				dsi_axi_usage);
-	}
-
-	return 0;
+	/*
+	 * Sometimes DSI axi bus may get hang if
+	 * TX (CSL_DSI_SendPacket) busy,
+	 * doing a clk_reset to recovery from this error
+	 */
+	return clk_reset(dsi_axi);
 }
 
 #ifdef __DSI_USE_CLK_API__
