@@ -733,8 +733,7 @@ static int bcmpmu_fg_volt_to_cap(struct bcmpmu_fg_data *fg, int volt)
 		if (volt > lut[idx].volt)
 			break;
 	}
-
-	if (idx > 0) {
+	if ((idx > 0) && (idx < lut_sz)) {
 		cap_percentage = INTERPOLATE_LINEAR(volt,
 				lut[idx].volt,
 				lut[idx].cap,
@@ -2391,7 +2390,8 @@ static void bcmpmu_fg_charging_algo(struct bcmpmu_fg_data *fg)
 	}
 
 	if (fg->flags.coulb_dis) {
-		pr_fg(FLOW, "%s: enable coulomb counter\n");
+		pr_fg(FLOW, "%s: enable coulomb counter\n",
+			__func__);
 		bcmpmu_fg_enable_coulb_counter(fg, true);
 	}
 
