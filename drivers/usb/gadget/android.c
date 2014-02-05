@@ -373,6 +373,11 @@ static void functionfs_closed_callback(struct ffs_data *ffs)
 	config->data = NULL;
 
 	functionfs_unbind(ffs);
+	/* Workaround to decrement the next_string_id
+	 * Issue: The next_string_id was never decremented
+	 * and when next_string_id = 254 USB connection fails
+	 */
+	dev->cdev->next_string_id -= ffs->strings_count;
 
 	mutex_unlock(&dev->mutex);
 }
