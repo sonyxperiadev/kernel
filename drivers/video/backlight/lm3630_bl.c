@@ -176,6 +176,10 @@ static int lm3630_bank_a_update_status(struct backlight_device *bl)
 		if (ret < 0)
 			goto out;
 		return bl->props.brightness;
+	} else {
+		ret = regmap_update_bits(pchip->regmap, REG_CTRL, 0x04, 0x04);
+		if (ret < 0)
+			goto out;
 	}
 
 	/* pwm control */
