@@ -5341,6 +5341,13 @@ static int pll_chnl_clk_set_rate(struct clk *clk, u32 rate)
 	       CCU_REG_ADDR(pll_chnl_clk->ccu_clk,
 			    pll_chnl_clk->cfg_reg_offset));
 
+/* Write the mdiv value, clear and set load_en_mask(trigger) */
+	reg_val = readl(CCU_REG_ADDR(pll_chnl_clk->ccu_clk,
+				pll_chnl_clk->pll_load_ch_en_offset));
+	reg_val &= ~pll_chnl_clk->load_en_mask;
+	writel(reg_val, CCU_REG_ADDR(pll_chnl_clk->ccu_clk,
+			    pll_chnl_clk->pll_load_ch_en_offset));
+
 	reg_val =
 	    readl(CCU_REG_ADDR
 		  (pll_chnl_clk->ccu_clk, pll_chnl_clk->pll_load_ch_en_offset));
