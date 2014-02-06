@@ -1744,8 +1744,6 @@ static int ov5648_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 static int ov5648_g_chip_ident(struct v4l2_subdev *sd,
 			       struct v4l2_dbg_chip_ident *id)
 {
-	struct i2c_client *client = v4l2_get_subdevdata(sd);
-
 /*
 	if (id->match.type != V4L2_CHIP_MATCH_I2C_ADDR)
 		return -EINVAL;
@@ -2375,7 +2373,7 @@ static int ov5648_procfs_read(struct file *flip, char __user *user_buf,
 		      "lens           = %d\n"
 		      "af             = %s\n"
 		      "flash_delay    = %d\n"
-		      "fps            = %d\n",
+		      "fps/fcnt       = %d %d\n",
 		      ov5648_mode[ov5648->mode_idx].name,
 		      ov5648->gain_current,
 		      ov5648->gain_current >> 8, ov5648->gain_current & 0xFF,
@@ -2389,7 +2387,7 @@ static int ov5648_procfs_read(struct file *flip, char __user *user_buf,
 		      lens_position,
 		      ov5648->af_on ? "on" : "off",
 		      ov5648->flash_delay,
-		      ov5648->fps
+		      ov5648->fps, ov5648->fcnt
 		      );
 	len = simple_read_from_buffer(user_buf, count, ppos, buf, len);
 	return len;
