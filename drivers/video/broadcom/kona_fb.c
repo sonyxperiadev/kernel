@@ -62,6 +62,13 @@
 #include <linux/of_platform.h>
 #include <linux/of_gpio.h>
 
+#ifdef CONFIG_DEBUG_FS
+#include <linux/debugfs.h>
+#include <linux/kobject.h>
+#include <linux/seq_file.h>
+#include <linux/ctype.h>
+#endif /*  CONFIG_DEBUG_FS */
+
 #ifdef CONFIG_FB_BRCM_CP_CRASH_DUMP_IMAGE_SUPPORT
 #include <video/kona_fb_image_dump.h>
 #include "lcd/dump_start_img.h"
@@ -75,6 +82,10 @@
 #include <linux/iommu.h>
 #include <plat/bcm_iommu.h>
 #endif
+
+#ifdef CONFIG_DEBUG_FS
+#define DBGFS_MAX_BUFF_SIZE 30
+#endif /* CONFIG_DEBUG_FS */
 
 /*#define KONA_FB_DEBUG */
 /*#define PARTIAL_UPDATE_SUPPORT */
@@ -136,6 +147,10 @@ struct kona_fb {
 	int esd_failure_cnt;
 	/* user count */
 	unsigned short open_count;
+
+#ifdef CONFIG_DEBUG_FS
+	struct dentry *dbgfs_dir;
+#endif
 };
 
 static struct completion vsync_event;
@@ -920,6 +935,254 @@ static void remove_attributes(struct device *dev)
 	for (i = 0; i < ARRAY_SIZE(panel_attributes); i++)
 		device_remove_file(dev, panel_attributes + i);
 }
+
+#ifdef CONFIG_DEBUG_FS
+/*
+ * Usage:
+ * echo <reg> <nbr_bytes> > panel_read
+ * reg in hex
+ * nbr_bytes in decimal
+ * example: echo 0xDA 1 > panel_read
+ */
+static ssize_t dbgfs_reg_read(struct file *file, const char __user *ubuf,
+						size_t count, loff_t *ppos)
+{
+	int ret = 0;
+	struct seq_file *s = file->private_data;
+	struct kona_fb *fb = s->private;
+	int len;
+	UInt8 *buff;
+	uint8_t reg;
+	char *kbuf = NULL;
+	char *p;
+	int i;
+
+	kbuf = kzalloc(sizeof(char) * count, GFP_KERNEL);
+	if (!kbuf) {
+		pr_err("%s: Failed to allocate buffer\n", __func__);
+		ret = -ENOMEM;
+		goto fail_exit_2;
+	}
+
+	if (copy_from_user(kbuf, ubuf, count)) {
+		pr_err("%s: Failed to copy from user\n", __func__);
+		ret = -EFAULT;
+		goto fail_exit_2;
+	}
+
+	p = kbuf;
+	p = p + 2;
+	if (sscanf(p, "%2hhx", &reg) != 1) {
+		pr_err("%s: Parameter error\n", __func__);
+		ret = -EINVAL;
+		goto fail_exit_2;
+	}
+	p = p + 2;
+	if (sscanf(p, "%d", &len) != 1) {
+		pr_err("%s: Parameter error\n", __func__);
+		ret = -EINVAL;
+		goto fail_exit_2;
+	}
+
+
+	buff = kzalloc(sizeof(char) * len, GFP_KERNEL);
+	if (!buff) {
+		pr_err("%s: Failed to allocate buffer\n", __func__);
+		ret = -ENOMEM;
+		goto fail_exit_1;
+	}
+
+	/* TODO: Check why clock is needed. Should not be needed in LP */
+	if (!fb->display_info->vmode)
+		kona_clock_start(fb);
+
+	panel_read(reg, buff, len);
+	pr_info("%s: reg 0x%.2x, len %d\n", __func__, reg, len);
+	for (i = 0; i < len; i++)
+		pr_info("%s: buff[%i] 0x%.2x\n", __func__, i, buff[i]);
+
+fail_exit_1:
+	kfree(buff);
+fail_exit_2:
+	kfree(kbuf);
+	return count;
+}
+
+static int dbgfs_read_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, NULL, inode->i_private);
+}
+
+static const struct file_operations dbgfs_read_fops = {
+	.owner			= THIS_MODULE,
+	.open			= dbgfs_read_open,
+	.write			= dbgfs_reg_read,
+	.llseek			= seq_lseek,
+	.release		= single_release,
+};
+
+/*
+ * Usage:
+ * echo <type> <reg> <data, data, ...> > panel_write
+ * type: dcs gen
+ * reg in hex
+ * data in hex
+ * example: echo dcs 0x29 0 > panel_write
+ */
+static ssize_t dbgfs_reg_write(struct file *file, const char __user *ubuf,
+						size_t count, loff_t *ppos)
+{
+	int ret = 0;
+	u8 reg;
+	char *kbuf = NULL;
+	char *p;
+	DISPCTRL_T cmd;
+	u8 rec[DBGFS_MAX_BUFF_SIZE];
+	int rec_len = 0;
+	u8 data;
+
+	kbuf = kzalloc(sizeof(char) * count, GFP_KERNEL);
+	if (!kbuf) {
+		pr_err("%s: Failed to allocate buffer\n", __func__);
+		ret = -ENOMEM;
+		goto fail_exit;
+	}
+
+	if (copy_from_user(kbuf, ubuf, count)) {
+		pr_err("%s: Failed to copy from user\n", __func__);
+		ret = -EFAULT;
+		goto fail_exit;
+	}
+
+	p = kbuf;
+
+	/* Get type of command */
+	if (!strncmp(kbuf, "dcs", 3))
+		cmd = DISPCTRL_WR_CMND;
+	else if (!strncmp(kbuf, "gen", 3))
+		cmd = DISPCTRL_GEN_WR_CMND;
+	else {
+		pr_err("%s: Parameter error\n", __func__);
+		ret = -EFAULT;
+		goto fail_exit;
+	}
+	p = p + 3;
+	rec[rec_len] = (u8)cmd;
+	rec_len++;
+
+	/* Get  to next parameter */
+	while (isspace(*p) || *p == '0' || (*p == 'x')) {
+		p++;
+	}
+
+	if (iscntrl(*p)) { /* end of string? */
+		ret = -EINVAL;
+		goto fail_exit;
+	}
+
+	/* Get register */
+	if (sscanf(p, "%2hhx", &reg) != 1) {
+		pr_err("%s: Parameter error\n", __func__);
+		ret = -EINVAL;
+		goto fail_exit;
+	}
+	p = p + 2;
+	rec[rec_len] = reg;
+	rec_len++;
+
+	/* Get data */
+	while(true) {
+		while (isspace(*p) || (*p == ','))
+			p++;
+		if (iscntrl(*p))
+			break;
+		if (isxdigit(*p)) {
+			if (sscanf(p, "%2hhx", &data) == 1) {
+				rec[rec_len] = data;
+				rec_len++;
+			}
+		}
+		p++;
+	}
+
+	panel_write(rec);
+
+fail_exit:
+	kfree(kbuf);
+	return count;
+}
+
+static int dbgfs_write_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, NULL, inode->i_private);
+}
+
+static const struct file_operations dbgfs_write_fops = {
+	.owner			= THIS_MODULE,
+	.open			= dbgfs_write_open,
+	.write			= dbgfs_reg_write,
+	.llseek			= seq_lseek,
+	.release		= single_release,
+};
+
+void __init kona_fb_create_debugfs(struct platform_device *pdev)
+{
+	struct kona_fb *fb;
+	struct device *dev;
+
+	if (!pdev) {
+		pr_err("%s: no device\n", __func__);
+		return;
+	}
+
+	dev = &pdev->dev;
+
+	fb = platform_get_drvdata(pdev);
+	if (!fb) {
+		dev_err(dev, "%s: failed to get drvdata\n", __func__);
+		return;
+	}
+	if (!&dev->kobj) {
+		dev_err(dev, "%s: no &dev->kobj\n", __func__);
+		return;
+	}
+
+	fb->dbgfs_dir = debugfs_create_dir(kobject_name(&dev->kobj), 0);
+	if (!fb->dbgfs_dir) {
+		dev_err(dev, "%s: dbgfs create dir failed\n", __func__);
+	} else {
+		if (!debugfs_create_file("panel_read", S_IWUSR, fb->dbgfs_dir,
+							fb, &dbgfs_read_fops)) {
+			dev_err(dev, "%s: failed to create dbgfs read file\n",
+								__func__);
+			return;
+		}
+		if (!debugfs_create_file("panel_write", S_IWUSR, fb->dbgfs_dir,
+						fb, &dbgfs_write_fops)) {
+			dev_err(dev, "%s: failed to create dbgfs write file\n",
+								__func__);
+			return;
+		}
+	}
+}
+
+void __exit kona_fb_remove_debugfs(struct platform_device *pdev)
+{
+	struct kona_fb *fb;
+
+	if (!pdev || !&pdev->dev) {
+		pr_err("%s: no device\n", __func__);
+		return;
+	}
+
+	fb = platform_get_drvdata(pdev);
+	if (!fb) {
+		dev_err(&pdev->dev, "%s: failed to get drvdata\n", __func__);
+		return;
+	}
+	debugfs_remove_recursive(fb->dbgfs_dir);
+}
+#endif /* CONFIG_DEBUG_FS */
 
 static int enable_display(struct kona_fb *fb)
 {
@@ -2004,6 +2267,9 @@ static int __ref kona_fb_probe(struct platform_device *pdev)
 	if (ret)
 		dev_err(&pdev->dev, "%s: failed to register attributes\n",
 								__func__);
+#ifdef CONFIG_DEBUG_FS
+	kona_fb_create_debugfs(pdev);
+#endif
 
 	pr_info("%s(%d): Probe success. Panel: %s\n",
 					__func__, __LINE__, fb->fb_data->name);
@@ -2093,6 +2359,9 @@ static int kona_fb_remove(struct platform_device *pdev)
 						pdev->dev.platform_data;
 
 	remove_attributes(&pdev->dev);
+#ifdef CONFIG_DEBUG_FS
+	kona_fb_remove_debugfs(pdev);
+#endif
 #ifdef CONFIG_FRAMEBUFFER_FPS
 	fb_fps_unregister(fb->fps_info);
 #endif
