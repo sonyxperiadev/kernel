@@ -1860,7 +1860,7 @@ static ssize_t bma2xx_int_mode_store(struct device *dev,
 	struct i2c_client *client = to_i2c_client(dev);
 	struct bma2xx_data *bma2xx = i2c_get_clientdata(client);
 
-	data = kstrtoul(buf, NULL, 10);
+	data = kstrtoul(buf, 10, NULL);
 
 	if (bma2xx_set_Int_Mode(bma2xx->bma2xx_client, data) < 0)
 		return -EINVAL;
@@ -2716,7 +2716,7 @@ static ssize_t bma2xx_set_offset(struct device *dev,
 	int err = -EINVAL;
 	struct i2c_client *client = to_i2c_client(dev);
 	struct bma2xx_data *dd = i2c_get_clientdata(client);
-	struct input_dev *input_dev = dd->input;
+
 	err = sscanf(buf, "%d %d %d", &x, &y, &z);
 	if (err != 3) {
 		pr_err("invalid parameter number: %d\n", err);
