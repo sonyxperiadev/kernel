@@ -16,6 +16,7 @@ the GPL, without Broadcom's express prior written consent.
 #include <linux/mutex.h>
 #include <linux/fb.h>
 #include <linux/suspend.h>
+#include <linux/rtc.h>
 
 /* Debug logs enabled by default */
 enum {
@@ -40,6 +41,21 @@ enum {
 };
 static int state;
 
+static void show_rtc_time(bool suspend)
+{
+	if (debug_mask & DEBUG_ENABLE) {
+		struct timespec ts;
+		struct rtc_time tm;
+		getnstimeofday(&ts);
+		rtc_time_to_tm(ts.tv_sec, &tm);
+		ES_DBG("%s at %lld (%d-%02d-%02d %02d:%02d:%02d.%09lu UTC)\n",
+			suspend ? "early suspend" : "late resume",
+			ktime_to_ns(ktime_get()),
+			tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
+			tm.tm_hour, tm.tm_min, tm.tm_sec, ts.tv_nsec);
+	}
+}
+
 static int is_blank(int blank)
 {
 	switch (blank) {
@@ -59,6 +75,7 @@ static void early_suspend_func(unsigned long event)
 {
 	struct early_suspend *pos;
 
+	show_rtc_time(true);
 	ES_DBG("early_suspend: call handlers on event = %lu\n", event);
 	list_for_each_entry(pos, &early_suspend_handlers, link) {
 		if ((event == FB_EVENT_BLANK) && (pos->level <
@@ -79,6 +96,8 @@ static void early_suspend_func(unsigned long event)
 static void late_resume_func(unsigned long event)
 {
 	struct early_suspend *pos;
+
+	show_rtc_time(false);
 	ES_DBG("late_resume: call handlers on event = %lu\n", event);
 	list_for_each_entry_reverse(pos, &early_suspend_handlers, link) {
 		if ((event == FB_EARLY_EVENT_BLANK) && pos->level >=
