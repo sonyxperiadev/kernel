@@ -1031,6 +1031,15 @@ config BCM_BT_GPS_SELFTEST
 	  discpline, say Y.
 	  If no GPS combo, say N.
 
+config BCM_GPS_KERNEL
+       bool "BCM GPS Kernel Driver"
+       default n
+       help
+         This driver adds kernel level support for GPS application process.
+		 Geofencing feature will be supported with this kernel driver.
+		 Set this Y if GPS chip supports Geofencing feature
+		 If not sure, set N.
+
 config BCM_USERFAULT_HANDLER
 	bool "BCM User fault handler"
 	default n

@@ -536,4 +536,14 @@
 			gpios = <&gpio 9 0>;
 		};
 	};
+
+	/*
+	This is sample , not actual GPIO assigned to GPS HostWake
+	bcm-gps {
+		compatible = "bcm,bcm-gps";
+		bcm-gps-hostwake = <&gpio 0 0>;
+		bcm-gps-regpu-gpio = <&gpio 11 0>;
+	};
+	*/
+
 };
