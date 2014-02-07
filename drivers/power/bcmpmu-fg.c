@@ -730,7 +730,7 @@ static int bcmpmu_fg_volt_to_cap(struct bcmpmu_fg_data *fg, int volt)
 	lut_sz = fg->pdata->batt_prop->volt_cap_lut_sz;
 
 	for (idx = 0; idx < lut_sz; idx++) {
-		if (volt > lut[idx].volt)
+		if (volt >= lut[idx].volt)
 			break;
 	}
 	if ((idx > 0) && (idx < lut_sz)) {
