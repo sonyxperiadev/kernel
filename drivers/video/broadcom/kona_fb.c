@@ -854,23 +854,21 @@ static ssize_t kona_fb_panel_name_show(struct device *dev,
 static ssize_t kona_fb_panel_id_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
-	return scnprintf(buf, PAGE_SIZE, "%s\n", "Not supported");
-/*
- * TODO: Fix this!
- * This doesn't work, as we get read timeoput errors. Need to investigate.
-	int len = 1;
-	UInt8 buff1, buff2, buff3;
-	uint8_t reg;
+	struct kona_fb *fb = dev_get_drvdata(dev);
+	uint8_t res_da = 0;
+	uint8_t res_db = 0;
+	uint8_t res_dc = 0;
 
-	reg = 0xDA;
-	panel_read(reg, &buff1, len);
-	reg = 0xDB;
-	panel_read(reg, &buff2, len);
-	reg = 0xDC;
-	panel_read(reg, &buff3, len);
+	if (!fb->display_info->vmode)
+		kona_clock_start(fb);
+	panel_read(0xDA, &res_da, 1);
+	panel_read(0xDB, &res_db, 1);
+	panel_read(0xDC, &res_dc, 1);
+	if (!fb->display_info->vmode)
+		kona_clock_stop(fb);
+
 	return scnprintf(buf, PAGE_SIZE, "Panel ID: 0x%.2x 0x%.2x 0x%.2x\n",
-			buff1, buff2, buff3);
-*/
+							res_da, res_db, res_dc);
 }
 
 static ssize_t kona_fb_panel_mode_show(struct device *dev,
