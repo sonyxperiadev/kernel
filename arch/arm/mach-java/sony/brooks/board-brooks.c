@@ -891,8 +891,8 @@ defined(CONFIG_TOUCHSCREEN_BCMTCH15XXX_MODULE)
 		ARRAY_SIZE(bcmtch15xxx_i2c_boardinfo));
 #endif
 
-#if defined(CONFIG_INPUT_LSM303DLH_MAGNETOMETER)
-	//kivu_add_magnetometer();
+#if defined(CONFIG_INPUT_AKM09911)
+	brooks_add_compass();
 #endif
 #if defined(CONFIG_INPUT_BMG160)
 	kivu_add_gyro();
