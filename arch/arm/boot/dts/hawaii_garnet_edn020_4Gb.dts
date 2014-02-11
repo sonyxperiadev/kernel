@@ -15,7 +15,7 @@
 
 	memory@81e00000 {
 		device_type = "memory";
-		reg = <0x81e00000 0x20000000>; /* 480 MB */
+		reg = <0x81e00000 0x1e200000>; /* 482 MB */
 	};
 
 	wd-tapper {
