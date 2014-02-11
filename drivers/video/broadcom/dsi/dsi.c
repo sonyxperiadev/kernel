@@ -66,6 +66,7 @@ typedef struct {
 	CSL_DSI_CM_VC_t *cmnd_mode;
 	CSL_DSI_CFG_t *dsi_cfg;
 	DISPDRV_INFO_T		*disp_info;
+	bool panel_identified;
 	UInt8 maxRetPktSize;
 } DispDrv_PANEL_t;
 
@@ -701,9 +702,12 @@ Int32 DSI_Open(DISPDRV_HANDLE_T drvH)
 	if (STATE_PWR_OFF == pPanel->pwrState)
 		hw_reset(drvH, FALSE);
 
-	if (DSI_ReadPanelIDs(pPanel) < 0) {
-		DSI_ERR("ID read failed\n");
-		goto err_id_read;
+	if (!pPanel->panel_identified) {
+		if (DSI_ReadPanelIDs(pPanel) < 0) {
+			DSI_ERR("ID read failed\n");
+			goto err_id_read;
+		}
+		pPanel->panel_identified = true;
 	}
 
 	pPanel->win_dim.l = 0;
