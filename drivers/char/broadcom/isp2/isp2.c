@@ -39,10 +39,10 @@ the GPL, without Broadcom's express prior written consent.
 #include <plat/pi_mgr.h>
 #include <plat/scu.h>
 #include <linux/delay.h>
+#include <linux/ktime.h>
 
 /* TODO - define the major device ID */
 #define ISP2_DEV_MAJOR    0
-
 #define JAVA_ISP2_BASE_PERIPHERAL_ADDRESS    ISP2_BASE_ADDR
 #define JAVA_MM_CLK_BASE_ADDRESS            MM2_CLK_BASE_ADDR
 #define IRQ_ISP2         (217+32)
@@ -109,15 +109,24 @@ static irqreturn_t isp2_isr(int irq, void *dev_id)
 	struct isp2_t *dev;
 	unsigned long flags;
 	u32 tilestat;
+	u32 status;
 
 	dev = (struct isp2_t *) dev_id;
 	spin_lock_irqsave(&dev->lock, flags);
-	dev->isp2_status.status = reg_read(isp2_base, ISP2_STATUS_OFFSET);
-	if (dev->isp2_status.status & ISP_INT_MASK)
+	status = reg_read(isp2_base, ISP2_STATUS_OFFSET);
+	status &= ISP_INT_MASK;
+	if (status & ISP_INT_MASK) {
+		dev->isp2_status.status |= status;
 		reg_write(isp2_base, ISP2_STATUS_OFFSET,
 			  dev->isp2_status.status & ISP_INT_MASK);
+		status = reg_read(isp2_base, ISP2_STATUS_OFFSET);
+	}
 	spin_unlock_irqrestore(&dev->lock, flags);
 	tilestat = reg_read(isp2_base, ISP2_TILE_STATUS_OFFSET);
+	pr_debug("%s(): ctrl=0x%0X stat=0x%0X rb stat=0x%08X", __func__,
+		 reg_read(isp2_base, ISP2_CTRL_OFFSET),
+		 dev->isp2_status.status,
+		 status);
 	if ((dev->isp2_status.status & ISP_INT_MASK) == 0) {
 		if (tilestat > 0)
 			dev->isp2_status.status |= ISP_EOT_INT;
@@ -130,13 +139,19 @@ static irqreturn_t isp2_isr(int irq, void *dev_id)
 	if (dev->isp2_status.status & ISP_STATS_INT)
 		complete(&dev->stats_sem);
 	dev->hist_idx = (dev->hist_idx + 1) % ISP_HIST;
+#if ISP_DEBUGFS
 	return IRQ_WAKE_THREAD;
+#else
+	return IRQ_HANDLED;
+#endif
 }
 
 static irqreturn_t isp2_isr_bh(int irq, void *arg)
 {
 	struct isp2_t *dev;
 	struct isp_reg *reg;
+	ktime_t kt;
+	s64 t;
 
 	dev = (struct isp2_t *) arg;
 	reg = dev->reg + dev->hist_idx;
@@ -145,8 +160,11 @@ static irqreturn_t isp2_isr_bh(int irq, void *arg)
 	reg->tile_stat = reg_read(isp2_base, ISP2_TILE_STATUS_OFFSET);
 	reg->td_stat   = reg_read(isp2_base, ISP2_TD_STATUS_OFFSET);
 	reg->tile_ctrl = reg_read(isp2_base, ISP2_TILE_CTRL_OFFSET);
+	reg->td_stat   = reg_read(isp2_base, ISP2_TD_STATUS_OFFSET);
 	reg->ycbcr_en  = reg_read(isp2_base, ISP2_FR_BAYER_EN_OFFSET);
-	reg->idx       = dev->hist_idx;
+	kt = ktime_get();
+	t  = ktime_to_ns(kt);
+	reg->idx       = (u32)t;
 	return IRQ_HANDLED;
 }
 
@@ -165,13 +183,13 @@ static int isp2_procfs_read(struct file *flip, char __user *user_buf,
 	buf = kmalloc(ISP_MAX_PROC, GFP_KERNEL);
 	dev = (struct isp2_t *)PDE_DATA(file_inode(flip));
 	len  = sprintf(buf,
-	"   ctrl     stat     tilectrl tilestat tileaddr td_ctrl td_stat   fr_size  fr_ctrl  ycbcr_en\n");
+	"           ctrl     stat     tilectrl tilestat tileaddr td_ctrl td_stat   fr_size  fr_ctrl  ycbcr_en\n");
 	len += sprintf(buf + len,
-	"--------------------------------------------------------------------------------------------\n");
+	"----------------------------------------------------------------------------------------------------\n");
 	for (i = 0; i < ISP_HIST; i++) {
 		reg = dev->reg + (dev->hist_idx  + 1 + i) % ISP_HIST;
 		len += sprintf(buf + len,
-			       "%02d %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %c\n",
+			       "%08u %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %c\n",
 			       reg->idx,
 			       reg->ctrl,
 			       reg->stat,
@@ -396,6 +414,7 @@ static long isp2_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 				pr_err("%s(): copy_to_user failed\n", __func__);
 				ret = -EFAULT;
 			}
+			dev->isp2_status.status = 0;
 		}
 		break;
 
