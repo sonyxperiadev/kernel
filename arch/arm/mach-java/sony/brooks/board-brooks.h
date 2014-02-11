@@ -12,8 +12,8 @@
 *  consent.
 *
 *****************************************************************************/
-#if defined(CONFIG_INPUT_LSM303DLH_MAGNETOMETER)
-void __init kivu_add_magnetometer(void);
+#if defined(CONFIG_INPUT_AKM09911)
+void __init brooks_add_compass(void);
 #endif
 #if defined(CONFIG_INPUT_BMG160)
 void __init kivu_add_gyro(void);
