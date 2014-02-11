@@ -959,13 +959,13 @@ static ssize_t dbgfs_reg_read(struct file *file, const char __user *ubuf,
 	if (!kbuf) {
 		pr_err("%s: Failed to allocate buffer\n", __func__);
 		ret = -ENOMEM;
-		goto fail_exit_2;
+		goto exit;
 	}
 
 	if (copy_from_user(kbuf, ubuf, count)) {
 		pr_err("%s: Failed to copy from user\n", __func__);
 		ret = -EFAULT;
-		goto fail_exit_2;
+		goto fail_exit;
 	}
 
 	p = kbuf;
@@ -973,13 +973,13 @@ static ssize_t dbgfs_reg_read(struct file *file, const char __user *ubuf,
 	if (sscanf(p, "%2hhx", &reg) != 1) {
 		pr_err("%s: Parameter error\n", __func__);
 		ret = -EINVAL;
-		goto fail_exit_2;
+		goto fail_exit;
 	}
 	p = p + 2;
 	if (sscanf(p, "%d", &len) != 1) {
 		pr_err("%s: Parameter error\n", __func__);
 		ret = -EINVAL;
-		goto fail_exit_2;
+		goto fail_exit;
 	}
 
 
@@ -987,22 +987,25 @@ static ssize_t dbgfs_reg_read(struct file *file, const char __user *ubuf,
 	if (!buff) {
 		pr_err("%s: Failed to allocate buffer\n", __func__);
 		ret = -ENOMEM;
-		goto fail_exit_1;
+		goto fail_exit;
 	}
 
-	/* TODO: Check why clock is needed. Should not be needed in LP */
 	if (!fb->display_info->vmode)
 		kona_clock_start(fb);
 
 	panel_read(reg, buff, len);
+
+	if (!fb->display_info->vmode)
+		kona_clock_stop(fb);
+
 	pr_info("%s: reg 0x%.2x, len %d\n", __func__, reg, len);
 	for (i = 0; i < len; i++)
 		pr_info("%s: buff[%i] 0x%.2x\n", __func__, i, buff[i]);
 
-fail_exit_1:
 	kfree(buff);
-fail_exit_2:
+fail_exit:
 	kfree(kbuf);
+exit:
 	return count;
 }
 
