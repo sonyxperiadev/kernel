@@ -417,7 +417,7 @@
 		trip2 {
 			type = "active";
 			temp = <58>;
-			max_freq = <1200000>;
+			max_freq = <800000>;
 			max_brightness = <0>;
 		};
 		trip3 {
@@ -429,22 +429,16 @@
 		trip4 {
 			type = "active";
 			temp = <65>;
-			max_freq = <800000>;
+			max_freq = <600000>;
 			max_brightness = <0>;
 		};
 		trip5 {
 			type = "active";
 			temp = <70>;
-			max_freq = <600000>;
+			max_freq = <312000>;
 			max_brightness = <22>;
 		};
 		trip6 {
-			type = "active";
-			temp = <80>;
-			max_freq = <312000>;
-			max_brightness = <0>;
-		};
-		trip7 {
 			type = "critical";
 			temp = <115>;
 			max_freq = <0>;
@@ -478,6 +472,7 @@
 		is-8bit = <1>;
 		devtype = <2>;		/*SDIO_DEV_TYPE_EMMC*/
 		flags = <3>;		/*NON_REMOVABLE | RPM_EN*/
+		pm_caps = <1>;		/*MMC_PM_KEEP_POWER*/
 		peri-clk-name = "sdio2_clk";
 		ahb-clk-name = "sdio2_ahb_clk";
 		sleep-clk-name = "sdio2_sleep_clk";
