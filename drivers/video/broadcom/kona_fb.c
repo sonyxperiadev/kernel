@@ -1097,10 +1097,12 @@ __setup("lcd_panel=", lcd_panel_setup);
 
 static int __init lcd_boot_mode(char *mode)
 {
+#ifndef CONFIG_FB_NEED_PAGE_ALIGNMENT
 	if (mode && strlen(mode)) {
 		if (!strcmp(mode, "recovery") || !strcmp(mode, "charger"))
 			need_page_alignment = 0;
 	}
+#endif
 	return 1;
 }
 __setup("androidboot.mode=", lcd_boot_mode);
