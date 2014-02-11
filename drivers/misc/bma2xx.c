@@ -2803,13 +2803,13 @@ static ssize_t bma2xx_set_allow_wake(struct device *dev,
 
 	if (!strncmp(buf, "allow", 5)) {
 		error = bma2xx_allow_wake(bma2xx, true);
-	} else if (!strncmp(buf, "deny", 5)) {
+	} else if (!strncmp(buf, "deny", 4)) {
 		error = bma2xx_allow_wake(bma2xx, false);
 	} else if (!strncmp(buf, "suspend_allow", 13)) {
 		mutex_lock(&bma2xx->enable_mutex);
 		bma2xx->enable |= BMA_FUNC(BMA_EN_WAKE_ON_EARLY_SUSPEND);
 		mutex_unlock(&bma2xx->enable_mutex);
-	} else if (!strncmp(buf, "suspend_deny", 13)) {
+	} else if (!strncmp(buf, "suspend_deny", 12)) {
 		mutex_lock(&bma2xx->enable_mutex);
 		bma2xx->enable &= ~BMA_FUNC(BMA_EN_WAKE_ON_EARLY_SUSPEND);
 		mutex_unlock(&bma2xx->enable_mutex);
