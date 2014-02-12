@@ -986,6 +986,11 @@ static ssize_t dbgfs_reg_read(struct file *file, const char __user *ubuf,
 		goto fail_exit;
 	}
 
+	if (len == 0) {
+		pr_err("%s: Parameter error (len = 0)\n", __func__);
+		ret = -EINVAL;
+		goto fail_exit;
+	}
 
 	buff = kzalloc(sizeof(char) * len, GFP_KERNEL);
 	if (!buff) {
@@ -1041,7 +1046,6 @@ static ssize_t dbgfs_reg_write(struct file *file, const char __user *ubuf,
 	u8 reg;
 	char *kbuf = NULL;
 	char *p;
-	DISPCTRL_T cmd;
 	u8 rec[DBGFS_MAX_BUFF_SIZE];
 	int rec_len = 0;
 	u8 data;
@@ -1050,7 +1054,7 @@ static ssize_t dbgfs_reg_write(struct file *file, const char __user *ubuf,
 	if (!kbuf) {
 		pr_err("%s: Failed to allocate buffer\n", __func__);
 		ret = -ENOMEM;
-		goto fail_exit;
+		goto exit;
 	}
 
 	if (copy_from_user(kbuf, ubuf, count)) {
@@ -1062,18 +1066,18 @@ static ssize_t dbgfs_reg_write(struct file *file, const char __user *ubuf,
 	p = kbuf;
 
 	/* Get type of command */
-	if (!strncmp(kbuf, "dcs", 3))
-		cmd = DISPCTRL_WR_CMND;
-	else if (!strncmp(kbuf, "gen", 3))
-		cmd = DISPCTRL_GEN_WR_CMND;
-	else {
+	if (!strncmp(kbuf, "dcs", 3)) {
+		rec[0] = DISPCTRL_WR_CMND;
+		rec_len = 1;
+	} else if (!strncmp(kbuf, "gen", 3)) {
+		rec[0] = DISPCTRL_TAG_GEN_WR;
+		rec_len = 2; /* save one slot for length */
+	} else {
 		pr_err("%s: Parameter error\n", __func__);
 		ret = -EFAULT;
 		goto fail_exit;
 	}
 	p = p + 3;
-	rec[rec_len] = (u8)cmd;
-	rec_len++;
 
 	/* Get  to next parameter */
 	while (isspace(*p) || *p == '0' || (*p == 'x')) {
@@ -1086,34 +1090,60 @@ static ssize_t dbgfs_reg_write(struct file *file, const char __user *ubuf,
 	}
 
 	/* Get register */
-	if (sscanf(p, "%2hhx", &reg) != 1) {
+	if (sscanf(p, "%4hhx", &reg) != 1) {
 		pr_err("%s: Parameter error\n", __func__);
 		ret = -EINVAL;
 		goto fail_exit;
 	}
-	p = p + 2;
 	rec[rec_len] = reg;
 	rec_len++;
 
+	while (!isspace(*p) && !(*p == ',') && !iscntrl(*p))
+		p++;
+
 	/* Get data */
-	while(true) {
-		while (isspace(*p) || (*p == ','))
+	while (!iscntrl(*p)) {
+		if (isspace(*p) || (*p == ',')) {
 			p++;
-		if (iscntrl(*p))
-			break;
-		if (isxdigit(*p)) {
-			if (sscanf(p, "%2hhx", &data) == 1) {
+		} else if (isxdigit(*p)) {
+			if (sscanf(p, "%4hhx", &data) == 1) {
 				rec[rec_len] = data;
 				rec_len++;
+				if (rec_len >= DBGFS_MAX_BUFF_SIZE) {
+					pr_info("%s: too many parameters\n",
+								__func__);
+					ret = -EINVAL;
+					goto fail_exit;
+				}
 			}
+			while (!isspace(*p) && !(*p == ',') && !iscntrl(*p))
+				p++;
+		} else {
+			pr_info("%s: parameter parsing error\n", __func__);
+			ret = -EINVAL;
+			goto fail_exit;
 		}
-		p++;
 	}
 
+	rec[rec_len] = 0; /* record must end with null */
+	if (rec[0] == DISPCTRL_WR_CMND) {
+		/* DCS has length in idx 0. command is not included */
+		rec[0] = rec_len - 1;
+	} else {
+		if (rec_len <= 3) {
+			pr_info("%s: generic command must have one parameter\n",
+								__func__);
+			ret = -EINVAL;
+			goto fail_exit;
+		}
+		/* GEN has command in idx 0 and length in idx 1 */
+		rec[1] = rec_len - 2;
+	}
 	panel_write(rec);
 
 fail_exit:
 	kfree(kbuf);
+exit:
 	return count;
 }
 
