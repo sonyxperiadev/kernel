@@ -16,7 +16,6 @@
 #include <linux/module.h>
 #include <linux/videodev2.h>
 #include <linux/slab.h>
-#include <linux/log2.h>
 #include <linux/delay.h>
 #include <linux/io.h>
 #include <linux/gpio.h>
@@ -39,7 +38,6 @@
 #endif
 
 struct gpio_flash_state_s {
-	struct i2c_client *client;
 	enum v4l2_flash_led_mode mode;
 	int duration;
 	int intensity;
@@ -53,8 +51,20 @@ static void gpio_flash_timeout_func(unsigned long lparam)
 	gpio_flash_state.mode = V4L2_FLASH_LED_MODE_NONE;
 }
 
-
 /* flash lamp interface implementation */
+static int gpio_flash_setup(enum v4l2_flash_led_mode mode,
+		int duration_in_us, int intensity)
+{
+	int ret = 0;
+
+	gpio_flash_state.mode = mode;
+	gpio_flash_state.duration = duration_in_us;
+	/* gpio based flash doesn't support intensity */
+	gpio_flash_state.intensity = intensity;
+
+	return ret;
+}
+
 static int gpio_flash_enable(void)
 {
 	int ret = 0;
@@ -90,44 +100,15 @@ static int gpio_flash_disable(void)
 	return ret;
 }
 
-static int gpio_flash_set_mode(enum v4l2_flash_led_mode mode)
-{
-	int ret = 0;
-
-	gpio_flash_state.mode = mode;
-
-	return ret;
-}
-
 static enum v4l2_flash_led_mode gpio_flash_get_mode(void)
 {
 	return gpio_flash_state.mode;
-}
-
-/* set duration for curent mode */
-static int gpio_flash_set_duration(int duration_in_us)
-{
-	int ret = 0;
-
-	gpio_flash_state.duration = duration_in_us;
-
-	return ret;
 }
 
 /* get duration associated with current mode */
 static int gpio_flash_get_duration(void)
 {
 	return gpio_flash_state.duration;
-}
-
-static int gpio_flash_set_intensity(int intensity)
-{
-	int ret = 0;
-
-	/* gpio based flash doesn't support intensity */
-	gpio_flash_state.intensity = intensity;
-
-	return ret;
 }
 
 static int gpio_flash_get_intensity(void)
@@ -142,9 +123,9 @@ static int gpio_flash_reset(void)
 	gpio_flash_state.mode = V4L2_FLASH_LED_MODE_NONE;
 	gpio_flash_state.duration = 0;
 	gpio_flash_state.intensity = 0;
-	ret += gpio_flash_set_intensity(gpio_flash_state.intensity);
-	ret += gpio_flash_set_duration(gpio_flash_state.duration);
-	ret += gpio_flash_set_mode(gpio_flash_state.mode);
+	ret += gpio_flash_setup(gpio_flash_state.mode,
+			gpio_flash_state.duration,
+			gpio_flash_state.intensity);
 	ret += gpio_flash_disable();
 
 	return ret;
@@ -160,13 +141,11 @@ int get_flash_lamp(struct flash_lamp_s *lamp)
 
 	/* initialize flash lamp instance */
 	lamp->name = "gpio-flash";
-	lamp->set_duration = gpio_flash_set_duration;
-	lamp->set_mode = gpio_flash_set_mode;
 	lamp->get_duration = gpio_flash_get_duration;
 	lamp->get_mode = gpio_flash_get_mode;
-	lamp->set_intensity = gpio_flash_set_intensity;
 	lamp->get_intensity = gpio_flash_get_intensity;
 	lamp->reset = gpio_flash_reset;
+	lamp->setup = gpio_flash_setup;
 	lamp->enable = gpio_flash_enable;
 	lamp->disable = gpio_flash_disable;
 

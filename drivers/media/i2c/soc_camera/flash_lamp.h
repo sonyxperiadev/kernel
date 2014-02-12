@@ -19,25 +19,22 @@
 
 #include <linux/videodev2.h>
 
-typedef int (*set_flashlamp_mode)(enum v4l2_flash_led_mode mode);
 typedef enum v4l2_flash_led_mode (*get_flashamp_mode)(void);
-typedef int (*set_flashamp_duration)(int duration_in_us);
 typedef int (*get_flashamp_duration)(void);
-typedef int (*set_flashlamp_intensity)(int intensity);
 typedef int (*get_flashlamp_intensity)(void);
 typedef int (*reset_flashamp)(void);
+typedef int (*setup_flashlamp)(enum v4l2_flash_led_mode mode,
+		int duration_in_us, int intensity);
 typedef int (*enable_flashlamp)(void);
 typedef int (*disable_flashlamp)(void);
 
 struct flash_lamp_s {
 	char *name;
-	reset_flashamp          reset;
-	set_flashlamp_mode      set_mode;
 	get_flashamp_mode       get_mode;
-	set_flashamp_duration   set_duration;
 	get_flashamp_duration   get_duration;
-	set_flashlamp_intensity set_intensity;
 	get_flashlamp_intensity get_intensity;
+	reset_flashamp          reset;
+	setup_flashlamp         setup;
 	enable_flashlamp        enable;
 	disable_flashlamp       disable;
 };
