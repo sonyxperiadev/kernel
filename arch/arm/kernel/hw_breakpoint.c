@@ -928,7 +928,7 @@ static bool core_has_os_save_restore(void)
 static void reset_ctrl_regs(void *unused)
 {
 	int i, raw_num_brps, err = 0, cpu = smp_processor_id();
-	u32 val;
+	u32 val, dscr;
 
 	/*
 	 * v7 debug contains save and restore registers so that debug state
@@ -990,6 +990,14 @@ clear_vcr:
 		pr_warn_once("CPU %d failed to disable vector catch\n", cpu);
 		return;
 	}
+
+	/*
+	 * Do not reset the control/value register pairs if in halting
+	 * debug mode.
+	 */
+	ARM_DBG_READ(c0, c1, 0, dscr);
+	if (dscr & ARM_DSCR_HDBGEN)
+		goto out_mdbgen;
 
 	/*
 	 * The control/value register pairs are UNKNOWN out of reset so

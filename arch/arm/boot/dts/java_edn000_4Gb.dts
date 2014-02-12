@@ -459,7 +459,7 @@
 		trip2 {
 			type = "active";
 			temp = <58>;
-			max_freq = <1200000>;
+			max_freq = <800000>;
 			max_brightness = <0>;
 		};
 		trip3 {
@@ -471,22 +471,16 @@
 		trip4 {
 			type = "active";
 			temp = <65>;
-			max_freq = <800000>;
+			max_freq = <600000>;
 			max_brightness = <0>;
 		};
 		trip5 {
 			type = "active";
 			temp = <70>;
-			max_freq = <600000>;
+			max_freq = <312000>;
 			max_brightness = <22>;
 		};
 		trip6 {
-			type = "active";
-			temp = <80>;
-			max_freq = <312000>;
-			max_brightness = <0>;
-		};
-		trip7 {
 			type = "critical";
 			temp = <115>;
 			max_freq = <0>;
@@ -613,6 +607,7 @@
 		brightness-levels = <0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17
 							18 19 20 21 22 23 24 25 26 27 28 29 30 31 32>; /* Android calibrates to 32 levels */
 		default-brightness-level = <32>; /* Array index */
+		pb_enable_adapt_bright = <1>;
 	};
 
 	gpio-leds {

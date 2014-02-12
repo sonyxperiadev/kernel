@@ -61,6 +61,7 @@ static const struct ov8825_datafmt ov8825_fmts[] = {
 
 enum ov8825_mode {
 	OV8825_MODE_1280x960P30	 = 0,
+	OV8825_MODE_1920x1080P30,
 	OV8825_MODE_3264x2448P15,
 	OV8825_MODE_MAX,
 };
@@ -108,6 +109,19 @@ struct sensor_mode ov8825_mode[OV8825_MODE_MAX + 1] = {
 		.binning_factor = 1,
 	},
 	{
+		.name			= "1920x1080_2lane_30Fps",
+		.height			= 1080,
+		.width			= 1920,
+		.hts			= 3568,
+		.vts			= 2016,
+		.vts_max		= 32767 - 6,
+		.line_length_ns = 16468,
+		.bayer			= BAYER_BGGR,
+		.bpp			= 10,
+		.fps			= F24p8(30.0),
+		.binning_factor = 1,
+	},
+	{
 		.name			= "3264x2448_2lane_15Fps",
 		.height			= 2448,
 		.width			= 3264,
@@ -148,6 +162,13 @@ struct ov8825_otp {
 	u16 light_bg;
 };
 
+
+#define EXP_DELAY_MAX 8
+#define GAIN_DELAY_MAX 8
+#define LENS_READ_DELAY 4
+#define FLASH_DELAY_MAX 4
+#define V4L2_FRAME_INFO_CACHE 4
+
 struct ov8825 {
 	struct v4l2_subdev subdev;
 	struct v4l2_subdev_sensor_interface_parms *plat_parms;
@@ -180,25 +201,28 @@ struct ov8825 {
 	 */
 	atomic_t focus_status;
 	int aecpos_delay;
-#define EXP_DELAY_MAX 8
-#define GAIN_DELAY_MAX 8
-#define LENS_READ_DELAY 4
 	int exp_read_buf[EXP_DELAY_MAX];
 	int gain_read_buf[GAIN_DELAY_MAX];
 	int lens_read_buf[LENS_READ_DELAY];
 	int lenspos_delay;
 
 	enum v4l2_flash_led_mode flashmode;
+	int flash_mode;
 	int flash_intensity;
 	int flash_timeout;
+	int flash_delay;
+	int flash_on;
+	int flash_int_buf[FLASH_DELAY_MAX];
+	int flash_mod_buf[FLASH_DELAY_MAX];
+
 	int has_lamp;
 	struct flash_lamp_s lamp;
 	struct ov8825_otp otp;
 	int calibrated;
 
-#define V4L2_FRAME_INFO_CACHE 4
 	int frame_info_size;
 	struct v4l2_frame_info frame_info[V4L2_FRAME_INFO_CACHE];
+	int fps, fcnt, fps_t0;
 
 	int powerdown;
 	int position;
@@ -223,336 +247,7 @@ struct ov8825_reg {
 	u8	pad;
 };
 
-
-static const struct ov8825_reg ov8825_regtbl[OV8825_MODE_MAX][512] = {
-	{
-		{0x0100, 0x00},
-		{0x3000, 0x16},
-		{0x3001, 0x00},
-		{0x3002, 0x6c},
-		{0x3003, 0xce},
-		{0x3004, 0xd4},
-		{0x3005, 0x00},
-		{0x3006, 0x10},
-		{0x3007, 0x3b},
-		{0x300d, 0x00},
-		{0x301f, 0x09},
-		{0x3020, 0x01},
-		{0x3010, 0x00},
-		{0x3011, 0x01},
-		{0x3012, 0x80},
-		{0x3013, 0x39},
-		{0x3018, 0x00},
-		{0x3104, 0x20},
-		{0x3106, 0x15},
-		{0x3300, 0x00},
-		{0x3500, 0x00},
-		{0x3501, 0x4e},
-		{0x3502, 0xa0},
-		{0x3503, 0x07},
-		{0x3509, 0x10},
-		{0x350b, 0x1f},
-		{0x3600, 0x06},
-		{0x3601, 0x34},
-		{0x3602, 0x42},
-		{0x3603, 0x5c},
-		{0x3604, 0x98},
-		{0x3605, 0xf5},
-		{0x3609, 0xb4},
-		{0x360a, 0x7c},
-		{0x360b, 0xc9},
-		{0x360c, 0x0b},
-		{0x3612, 0x00},
-		{0x3613, 0x02},
-		{0x3614, 0x0f},
-		{0x3615, 0x00},
-		{0x3616, 0x03},
-		{0x3617, 0xa1},
-		{0x3618, 0x0f},
-		{0x3619, 0x00},
-		{0x361a, 0x8a},
-		{0x361b, 0x02},
-		{0x361c, 0x07},
-		{0x3700, 0x20},
-		{0x3701, 0x44},
-		{0x3702, 0x50},
-		{0x3703, 0xcc},
-		{0x3704, 0x19},
-		{0x3705, 0x32},
-		{0x3706, 0x4b},
-		{0x3707, 0x63},
-		{0x3708, 0x84},
-		{0x3709, 0x40},
-		{0x370a, 0x33},
-		{0x370b, 0x01},
-		{0x370c, 0x50},
-		{0x370d, 0x00},
-		{0x370e, 0x00},
-		{0x3711, 0x0f},
-		{0x3712, 0x9c},
-		{0x3724, 0x01},
-		{0x3725, 0x92},
-		{0x3726, 0x01},
-		{0x3727, 0xc7},
-		{0x3800, 0x00},
-		{0x3801, 0x00},
-		{0x3802, 0x00},
-		{0x3803, 0x00},
-		{0x3804, 0x0c},
-		{0x3805, 0xdf},
-		{0x3806, 0x09},
-		{0x3807, 0x9b},
-		{0x3808, 0x06},
-		{0x3809, 0x60},
-		{0x380a, 0x04},
-		{0x380b, 0xc8},
-		{0x380c, 0x0d},
-		{0x380d, 0xbc},
-		{0x380e, 0x04},
-		{0x380f, 0xf0},
-		{0x3810, 0x00},
-		{0x3811, 0x08},
-		{0x3812, 0x00},
-		{0x3813, 0x04},
-		{0x3814, 0x31},
-		{0x3815, 0x31},
-		{0x3816, 0x02},
-		{0x3817, 0x40},
-		{0x3818, 0x00},
-		{0x3819, 0x40},
-		{0x3820, 0x87},
-		{0x3821, 0x11},
-		{0x3b1f, 0x00},
-		{0x3d00, 0x00},
-		{0x3d01, 0x00},
-		{0x3d02, 0x00},
-		{0x3d03, 0x00},
-		{0x3d04, 0x00},
-		{0x3d05, 0x00},
-		{0x3d06, 0x00},
-		{0x3d07, 0x00},
-		{0x3d08, 0x00},
-		{0x3d09, 0x00},
-		{0x3d0a, 0x00},
-		{0x3d0b, 0x00},
-		{0x3d0c, 0x00},
-		{0x3d0d, 0x00},
-		{0x3d0e, 0x00},
-		{0x3d0f, 0x00},
-		{0x3d10, 0x00},
-		{0x3d11, 0x00},
-		{0x3d12, 0x00},
-		{0x3d13, 0x00},
-		{0x3d14, 0x00},
-		{0x3d15, 0x00},
-		{0x3d16, 0x00},
-		{0x3d17, 0x00},
-		{0x3d18, 0x00},
-		{0x3d19, 0x00},
-		{0x3d1a, 0x00},
-		{0x3d1b, 0x00},
-		{0x3d1c, 0x00},
-		{0x3d1d, 0x00},
-		{0x3d1e, 0x00},
-		{0x3d1f, 0x00},
-		{0x3d80, 0x00},
-		{0x3d81, 0x00},
-		{0x3d84, 0x00},
-		{0x3f00, 0x00},
-		{0x3f01, 0xfc},
-		{0x3f05, 0x10},
-		{0x3f06, 0x00},
-		{0x3f07, 0x00},
-		{0x4000, 0x29},
-		{0x4001, 0x02},
-		{0x4002, 0x45},
-		{0x4003, 0x08},
-		{0x4004, 0x04},
-		{0x4005, 0x18},
-		{0x404e, 0x37},
-		{0x404f, 0x8f},
-		{0x4300, 0xff},
-		{0x4303, 0x00},
-		{0x4304, 0x08},
-		{0x4307, 0x00},
-		{0x4600, 0x04},
-		{0x4601, 0x00},
-		{0x4602, 0x30},
-		{0x4800, 0x04},
-		{0x4801, 0x0f},
-		{0x4837, 0x28},
-		{0x4843, 0x02},
-		{0x5000, 0x06},
-		{0x5001, 0x00},
-		{0x5002, 0x00},
-		{0x5068, 0x00},
-		{0x506a, 0x00},
-		{0x501f, 0x00},
-		{0x5780, 0xfc},
-		{0x5c00, 0x80},
-		{0x5c01, 0x00},
-		{0x5c02, 0x00},
-		{0x5c03, 0x00},
-		{0x5c04, 0x00},
-		{0x5c05, 0x00},
-		{0x5c06, 0x00},
-		{0x5c07, 0x80},
-		{0x5c08, 0x10},
-		{0x6700, 0x05},
-		{0x6701, 0x19},
-		{0x6702, 0xfd},
-		{0x6703, 0xd7},
-		{0x6704, 0xff},
-		{0x6705, 0xff},
-		{0x6800, 0x10},
-		{0x6801, 0x02},
-		{0x6802, 0x90},
-		{0x6803, 0x10},
-		{0x6804, 0x59},
-		{0x6900, 0x60},
-		{0x6901, 0x04},
-		{0x5800, 0x0f},
-		{0x5801, 0x0d},
-		{0x5802, 0x09},
-		{0x5803, 0x0a},
-		{0x5804, 0x0d},
-		{0x5805, 0x14},
-		{0x5806, 0x0a},
-		{0x5807, 0x04},
-		{0x5808, 0x03},
-		{0x5809, 0x03},
-		{0x580a, 0x05},
-		{0x580b, 0x0a},
-		{0x580c, 0x05},
-		{0x580d, 0x02},
-		{0x580e, 0x00},
-		{0x580f, 0x00},
-		{0x5810, 0x03},
-		{0x5811, 0x05},
-		{0x5812, 0x09},
-		{0x5813, 0x03},
-		{0x5814, 0x01},
-		{0x5815, 0x01},
-		{0x5816, 0x04},
-		{0x5817, 0x09},
-		{0x5818, 0x09},
-		{0x5819, 0x08},
-		{0x581a, 0x06},
-		{0x581b, 0x06},
-		{0x581c, 0x08},
-		{0x581d, 0x06},
-		{0x581e, 0x33},
-		{0x581f, 0x11},
-		{0x5820, 0x0e},
-		{0x5821, 0x0f},
-		{0x5822, 0x11},
-		{0x5823, 0x3f},
-		{0x5824, 0x08},
-		{0x5825, 0x46},
-		{0x5826, 0x46},
-		{0x5827, 0x46},
-		{0x5828, 0x46},
-		{0x5829, 0x46},
-		{0x582a, 0x42},
-		{0x582b, 0x42},
-		{0x582c, 0x44},
-		{0x582d, 0x46},
-		{0x582e, 0x46},
-		{0x582f, 0x60},
-		{0x5830, 0x62},
-		{0x5831, 0x42},
-		{0x5832, 0x46},
-		{0x5833, 0x46},
-		{0x5834, 0x44},
-		{0x5835, 0x44},
-		{0x5836, 0x44},
-		{0x5837, 0x48},
-		{0x5838, 0x28},
-		{0x5839, 0x46},
-		{0x583a, 0x48},
-		{0x583b, 0x68},
-		{0x583c, 0x28},
-		{0x583d, 0xae},
-		{0x5842, 0x00},
-		{0x5843, 0xef},
-		{0x5844, 0x01},
-		{0x5845, 0x3f},
-		{0x5846, 0x01},
-		{0x5847, 0x3f},
-		{0x5848, 0x00},
-		{0x5849, 0xd5},
-		{0x3400, 0x04},
-		{0x3401, 0x00},
-		{0x3402, 0x04},
-		{0x3403, 0x00},
-		{0x3404, 0x04},
-		{0x3405, 0x00},
-		{0x3406, 0x01},
-		{0x5001, 0x01},
-		{0x5000, 0x86},
-		{0x301a, 0x71},
-		{0x301c, 0xf4},
-		{0x0100, 0x01},
-		{0x0100, 0x00},
-		{0x3003, 0xcc},
-		{0x3004, 0xd8},
-		{0x3006, 0x10},
-		{0x3007, 0x49},
-		{0x3020, 0x01},
-		{0x3501, 0x4e},
-		{0x3502, 0xa0},
-		{0x3700, 0x20},
-		{0x3702, 0x50},
-		{0x3703, 0xcc},
-		{0x3704, 0x19},
-		{0x3705, 0x32},
-		{0x3706, 0x4b},
-		{0x3708, 0x84},
-		{0x3709, 0x40},
-		{0x370a, 0x33},
-		{0x3711, 0x0f},
-		{0x3712, 0x9c},
-		{0x3724, 0x01},
-		{0x3725, 0x92},
-		{0x3726, 0x01},
-		{0x3727, 0xc7},
-		{0x3800, 0x00},
-		{0x3801, 0x00},
-		{0x3802, 0x00},
-		{0x3803, 0x00},
-		{0x3804, 0x0c},
-		{0x3805, 0xdf},
-		{0x3806, 0x09},
-		{0x3807, 0x9b},
-		{0x3808, 0x05},
-		{0x3809, 0x00},
-		{0x380a, 0x03},
-		{0x380b, 0xc0},
-		{0x380c, 0x0d},
-		{0x380d, 0xbc},
-		{0x380e, 0x04},
-		{0x380f, 0xfa},
-		{0x3811, 0x08},
-		{0x3813, 0x04},
-		{0x3814, 0x31},
-		{0x3815, 0x31},
-		{0x3820, 0x87},
-		{0x3821, 0x11},
-		{0x3f00, 0x00},
-		{0x4005, 0x18},
-		{0x4601, 0x00},
-		{0x4602, 0x30},
-		{0x4837, 0x16},
-		{0x5068, 0x5a},
-		{0x506a, 0x5a},
-
-		{0x0100, 0x01},
-		{0x301c, 0xf0},
-		{0x301a, 0x70},
-
-		{ 0xFFFF, 0x00}	/* end of the list */
-	},
-	{
+static const struct ov8825_reg ov8825_reginit[512] = {
 		{0x0100, 0x00},
 		{0x3000, 0x16},
 		{0x3001, 0x00},
@@ -822,10 +517,9 @@ static const struct ov8825_reg ov8825_regtbl[OV8825_MODE_MAX][512] = {
 		{0x301c, 0xf4},
 		{0x0100, 0x01},
 		{0xFFFF, 0x00}
-	}
 };
 
-static const struct ov8825_reg ov8825_regdif[OV8825_MODE_MAX][128] = {
+static const struct ov8825_reg ov8825_regdif[OV8825_MODE_MAX][256] = {
 	{
 		{0x0100, 0x00},
 		{0x3003, 0xcc},
@@ -836,6 +530,10 @@ static const struct ov8825_reg ov8825_regdif[OV8825_MODE_MAX][128] = {
 		{0x3020, 0x01},
 		{0x3501, 0x4e},
 		{0x3502, 0xa0},
+		{0x3509, 0x10},
+		{0x3618, 0x0f},
+		{0x361a, 0x8a},
+		{0x361b, 0x02},
 		{0x3700, 0x20},
 		{0x3702, 0x50},
 		{0x3703, 0xcc},
@@ -876,13 +574,70 @@ static const struct ov8825_reg ov8825_regdif[OV8825_MODE_MAX][128] = {
 		{0x4837, 0x16},
 		{0x5068, 0x5a},
 		{0x506a, 0x5a},
-
 		{0x0100, 0x01},
 		{0x301c, 0xf0},
 		{0x301a, 0x70},
 		{0xFFFF, 0x00}
 	},
 
+	{
+		{0x0100, 0x00},
+		{0x3003, 0xcc},
+		{0x3004, 0xd8},
+		{0x3006, 0x00},
+		{0x3007, 0x39},
+		{0x3020, 0x01},
+		{0x3501, 0x74},
+		{0x3502, 0x60},
+		{0x3700, 0x20},
+		{0x3702, 0x50},
+		{0x3703, 0xcc},
+		{0x3704, 0x19},
+		{0x3705, 0x32},
+		{0x3706, 0x4b},
+		{0x3708, 0x84},
+		{0x3709, 0x40},
+		{0x370a, 0x31},
+		{0x3711, 0x0f},
+		{0x3712, 0x9c},
+		{0x3724, 0x01},
+		{0x3725, 0x92},
+		{0x3726, 0x01},
+		{0x3727, 0xc7},
+		{0x3800, 0x00},
+		{0x3801, 0x00},
+		{0x3804, 0x0c},
+		{0x3805, 0xdf},
+		{0x3802, 0x01},
+		{0x3803, 0x30},
+		{0x3806, 0x08},
+		{0x3807, 0x67},
+		{0x3808, 0x07},
+		{0x3809, 0x80},
+		{0x380a, 0x04},
+		{0x380b, 0x38},
+		{0x380c, 0x0d},
+		{0x380d, 0xf0},
+		{0x380e, 0x07},
+		{0x380f, 0xe0},
+		{0x3811, 0x10},
+		{0x3813, 0x06},
+		{0x3814, 0x11},
+		{0x3815, 0x11},
+		{0x3820, 0x86},
+		{0x3821, 0x10},
+		{0x3f00, 0x02},
+		{0x4005, 0x18},
+		{0x4601, 0x01},
+		{0x4602, 0x00},
+		{0x4837, 0x1e},
+		{0x5068, 0x53},
+		{0x506a, 0x53},
+		{0x0100, 0x01},
+		{0x301c, 0xf0},
+		{0x301a, 0x70},
+		{0xFFFF, 0x00}
+	},
 	{
 		{0x0100, 0x00},
 		{0x3003, 0xcc},
@@ -893,6 +648,10 @@ static const struct ov8825_reg ov8825_regdif[OV8825_MODE_MAX][128] = {
 		{0x3020, 0x81},
 		{0x3501, 0x9a},
 		{0x3502, 0xa0},
+		{0x3509, 0x10},
+		{0x3618, 0x0f},
+		{0x361a, 0x8a},
+		{0x361b, 0x02},
 		{0x3700, 0x10},
 		{0x3702, 0x28},
 		{0x3703, 0x6c},
@@ -940,18 +699,16 @@ static const struct ov8825_reg ov8825_regdif[OV8825_MODE_MAX][128] = {
 	},
 };
 
-static const struct ov8825_reg ov8825_reg_state[OV8825_STATE_MAX][4] = {
-	{
-		/* to power down */
-		{0x0100, 0x00},		/* disable streaming  */
-		{0x3018, 0x10},		/* disable mipi */
-		{0xFFFF, 0x00}
+static const struct ov8825_reg ov8825_reg_state[OV8825_STATE_MAX][3] = {
+	{ /* to power down */
+	{0x0100, 0x00},	       /* disable streaming  */
+	{0x3018, 0x10},        /* disable mipi */
+	{0xFFFF, 0x00}
 	},
-	{
-		/* to streaming */
-		{0x3018, 0x00},		/* enable mipi */
-		{0x0100, 0x01},		/* enable streaming */
-		{0xFFFF, 0x00}
+	{ /* to streaming */
+	{0x3018, 0x00},         /* enable mipi */
+	{0x0100, 0x01},		/* enable streaming */
+	{0xFFFF, 0x00}
 	},
 };
 
@@ -1856,8 +1613,8 @@ static int ov8825_calc_exposure(struct i2c_client *client,
 		integration_lines = ov8825->vts_max - INTEGRATION_OFFSET;
 	vts = min(integration_lines + INTEGRATION_OFFSET,
 		  (unsigned int)ov8825_mode[ov8825->mode_idx].vts_max);
-	vts = max(vts, ov8825_mode[ov8825->mode_idx].vts);
-	vts = max(vts, ov8825->vts_min);
+	vts = max_t(u16, vts, ov8825_mode[ov8825->mode_idx].vts);
+	vts = max_t(u16, vts, ov8825->vts_min);
 	if (coarse_int_lines)
 		*coarse_int_lines = integration_lines;
 	if (vts_ptr)
@@ -1865,6 +1622,13 @@ static int ov8825_calc_exposure(struct i2c_client *client,
 
 	exposure_value = integration_lines * ov8825->line_length /
 		(binning_factor * (unsigned long)1000);
+
+	pr_debug("%s(): integration_lines=%d vts_min=%d mode_vts_max=%d",
+		__func__,
+		integration_lines,
+		ov8825->vts_min,
+		ov8825_mode[ov8825->mode_idx].vts_max);
+
 	return exposure_value;
 }
 
@@ -1917,6 +1681,79 @@ static void ov8825_set_exposure(struct i2c_client *client, int exp_value)
 		return;
 	}
 }
+
+
+/*
+ *
+ */
+static int ov8825_frame_irq(struct v4l2_subdev *sd, u32 irq)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	struct ov8825 *ov8825 = to_ov8825(client);
+	int i;
+
+	/* flash_timeout mean frame counts with flash on
+	assume frame end irq only */
+	if (0 == ov8825->flash_on) {
+		if (ov8825->flash_mode == V4L2_FLASH_LED_MODE_FLASH) {
+			if (ov8825->flash_timeout > 0 &&
+			    ov8825->flash_intensity > 0) {
+				ov8825->lamp.enable();
+				ov8825->flash_on = ov8825->flash_timeout;
+				pr_debug("%s(): flash_on: 0->%d;",
+					 __func__,
+					 ov8825->flash_on);
+			} else {
+				ov8825->flash_mode = V4L2_FLASH_LED_MODE_NONE;
+			}
+		}
+	} else {
+		if (ov8825->flash_mode == V4L2_FLASH_LED_MODE_FLASH) {
+			if (ov8825->flash_on == 1) {
+				ov8825->lamp.disable();
+				ov8825->flash_on = 0;
+				ov8825->flash_mode = V4L2_FLASH_LED_MODE_NONE;
+				pr_debug("%s(): flash_off", __func__);
+			} else {
+				pr_debug("%s(): flash_on: %d->%d",
+					 __func__,
+					 ov8825->flash_on,
+					 ov8825->flash_on - 1);
+				ov8825->flash_on -= 1;
+			}
+		}
+	}
+
+	/* shift frame info */
+	for (i = 0; i < ov8825->flash_delay; i++) {
+		ov8825->flash_int_buf[i] =
+			ov8825->flash_int_buf[i + 1];
+		ov8825->flash_mod_buf[i] =
+			ov8825->flash_mod_buf[i + 1];
+	}
+	ov8825->flash_int_buf[ov8825->flash_delay] =
+		ov8825->flash_on ? ov8825->flash_intensity : 0;
+	ov8825->flash_mod_buf[ov8825->flash_delay] =
+		ov8825->flash_mode;
+
+	/* count fps */
+	if (ov8825->fcnt >= 30) {
+
+		int fps = ov8825->fcnt * 1000 /
+			(jiffies_to_msecs(jiffies) - ov8825->fps_t0);
+		pr_debug("%s(): fps=%d",
+			 __func__, fps);
+		if (fps > 0)
+			ov8825->fps = fps;
+		ov8825->fcnt = 1;
+		ov8825->fps_t0 = jiffies_to_msecs(jiffies);
+	} else {
+		ov8825->fcnt += 1;
+	}
+
+	return 0;
+}
+
 
 static int ov8825_s_stream(struct v4l2_subdev *sd, int enable)
 {
@@ -1977,7 +1814,8 @@ static int ov8825_set_mode(struct i2c_client *client, int new_mode_idx)
 		ov8825->mode_idx, ov8825_mode[ov8825->mode_idx].name,
 		new_mode_idx, ov8825_mode[new_mode_idx].name);
 		ov8825_init(client);
-		ret = ov8825_reg_writes(client, ov8825_regtbl[new_mode_idx]);
+		ret = ov8825_reg_writes(client, ov8825_reginit);
+		ret  = ov8825_reg_writes(client, ov8825_regdif[new_mode_idx]);
 	} else {
 		pr_debug("ov8825_set_mode: diff init from mode[%d]=%s to mode[%d]=%s",
 			ov8825->mode_idx, ov8825_mode[ov8825->mode_idx].name,
@@ -2065,11 +1903,13 @@ static int ov8825_g_chip_ident(struct v4l2_subdev *sd,
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 
+/*
 	if (id->match.type != V4L2_CHIP_MATCH_I2C_ADDR)
 		return -EINVAL;
 
 	if (id->match.addr != client->addr)
 		return -ENODEV;
+*/
 
 	id->ident = V4L2_IDENT_OV8825;
 	id->revision = 0;
@@ -2296,22 +2136,23 @@ int ov8825_set_flash_mode(struct i2c_client *client, int mode)
 		return -1;
 
 	/* check if lamp is in requested mode */
-	if (ov8825->flashmode == mode)
+	if (ov8825->flash_mode == mode)
 		return 0;
 
 	/* apply new mode */
 	ov8825->lamp.set_mode(mode);
-	if (V4L2_FLASH_LED_MODE_NONE != mode) {
-		ov8825->lamp.set_intensity(ov8825->flash_intensity/5);
-		ov8825->lamp.set_duration(ov8825->flash_timeout +
-				2 * (ov8825->vts * ov8825->line_length)/1000);
+	if (V4L2_FLASH_LED_MODE_TORCH == mode)
 		ov8825->lamp.enable();
-	} else {
+	else if (V4L2_FLASH_LED_MODE_NONE == mode) {
 		ov8825->lamp.disable();
+		ov8825->flash_on = 0;
+	} else {
+		ov8825->lamp.set_intensity(ov8825->flash_intensity/5);
+		ov8825->lamp.set_duration(ov8825->flash_timeout);
 	}
 
 	/* update mode */
-	ov8825->flashmode = mode;
+	ov8825->flash_mode = mode;
 
 	return 0;
 }
@@ -2341,17 +2182,18 @@ static long ov8825_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 			struct v4l2_sensor_optical_info *p =
 				(struct v4l2_sensor_optical_info *)arg;
 			/* assuming 67.5 degree diagonal viewing angle */
-			p->hor_angle.numerator = 5401;
+			p->hor_angle.numerator = 6110;
 			p->hor_angle.denominator = 100;
-			p->ver_angle.numerator = 3608;
+			p->ver_angle.numerator = 4790;
 			p->ver_angle.denominator = 100;
 			p->focus_distance[0] = 10; /* near focus in cm */
 			p->focus_distance[1] = 100; /* optimal focus in cm */
 			p->focus_distance[2] = -1; /* infinity */
-			p->focal_length.numerator = 342;
+			p->focal_length.numerator = 385;
 			p->focal_length.denominator = 100;
 			break;
 		}
+
 	case VIDIOC_SENSOR_G_FRAME_INFO:
 		{
 			int i, j;
@@ -2361,13 +2203,15 @@ static long ov8825_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 					(struct v4l2_frame_info *)arg;
 			ret = -EINVAL;
 			if (!timespec_valid(&fi_usr->timestamp)) {
-				ov8825->flashmode = ov8825->lamp.get_mode();
-				fi_usr->flash_mode = ov8825->flashmode;
+				fi_usr->flash_mode =
+					ov8825->flash_mod_buf[0];
+				fi_usr->flash_intensity =
+					ov8825->flash_int_buf[0];
 				ov8825_get_gain(client, &fi_usr->an_gain, NULL);
 				ov8825_get_exposure(client,
 						&fi_usr->exposure, NULL);
 				ov8825_lens_get_position(client,
-						&fi_usr->focus, &i);
+						&fi_usr->lens_pos, &i);
 				ret = 0;
 				break;
 			}
@@ -2405,6 +2249,12 @@ static long ov8825_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 			fi_dst[ov8825->frame_info_size++] = *fi_src;
 			break;
 		}
+	case VIDIOC_SENSOR_FRAME_IRQ:
+		{
+			ov8825_frame_irq(sd, (u32)arg);
+			break;
+		}
+
 	default:
 		ret = -ENOIOCTLCMD;
 		break;
@@ -2496,6 +2346,10 @@ static int ov8825_init(struct i2c_client *client)
 	ov8825->flashmode		  = V4L2_FLASH_LED_MODE_NONE;
 	ov8825->flash_intensity	  = OV8825_FLASH_INTENSITY_DEFAULT;
 	ov8825->flash_timeout	  = OV8825_FLASH_TIMEOUT_DEFAULT;
+
+	ov8825->flash_mode = V4L2_FLASH_LED_MODE_NONE;
+	ov8825->flash_delay = 0;
+	ov8825->fcnt = 1;
 
 	ov8825->position = 0;
 	ov8825->dac_code = 0;
@@ -2607,6 +2461,7 @@ static int ov8825_enum_frameintervals(struct v4l2_subdev *sd,
 		interval->discrete.numerator = 1;
 		interval->discrete.denominator = 15;
 		break;
+	case OV8825_MODE_1920x1080P30:
 	case OV8825_MODE_1280x960P30:
 	default:
 		interval->discrete.numerator = 1;
@@ -2637,6 +2492,7 @@ static int ov8825_g_parm(struct v4l2_subdev *sd, struct v4l2_streamparm *param)
 		cparm->timeperframe.numerator = 1;
 		cparm->timeperframe.denominator = 15;
 		break;
+	case OV8825_MODE_1920x1080P30:
 	case OV8825_MODE_1280x960P30:
 	default:
 		cparm->timeperframe.numerator = 1;

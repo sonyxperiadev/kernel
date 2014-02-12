@@ -1,0 +1,46 @@
+menu  "ALPS e-compass sensor fusion support"
+	depends on I2C && INPUT_POLLDEV
+
+config SENSORS_HSCD_INPUT
+	tristate "ALPS input infrastructure"
+	default n
+        help
+		This option enables alps input
+		infrastructure
+
+                If you say yes here, you will enable
+                ALPS own input
+
+config SENSORS_HSCDTD007A
+	depends on SENSORS_HSCD_INPUT
+	tristate "ALPS geomagnetic sensor HSCDTD007/HSCDTD008"
+	default n
+        help
+		This option enables hscd alps HSCDTD007a
+		magnetometer driver.
+
+		If you say yes, you will get support for
+		HSCDTD007 and HSCDTD008.
+
+config SENSORS_HSCD_BMA222
+	depends on SENSORS_HSCD_INPUT
+	tristate "BMA222/BMA222E Acceleration Sensor Driver"
+	default n
+	help
+		This option enables bma222/bma222e accelerometer
+		driver with alps sensor fusion infrastructure.
+
+		If you say yes here you get support for Bosch-Sensortec
+		bma222/bma222e Acceleration Sensor
+
+config SENSORS_HSCD_KXTF9
+	depends on SENSORS_HSCD_INPUT
+	tristate "Kionix Acceleration Sensor Driver"
+	default n
+	help
+		This option enables kionix accelerometer driver
+		with alps sensor fusion infrastructure.
+
+		If you say yes here you get support for Kionix
+		kxtik1004/kxtj2-1009/kxtjk-1013 Acceleration Sensor.
+endmenu

@@ -2986,13 +2986,18 @@ static int ov5640_video_probe(struct i2c_client *client)
 	int ret = 0;
 	u8 id_high, id_low, revision = 0;
 
+	struct v4l2_subdev *subdev = i2c_get_clientdata(client);
+
+	ret = ov5640_s_power(subdev, 1);
+	if (ret < 0)
+		return ret;
 
 	ret = ov5640_reg_read(client, OV5640_CHIP_ID_HIGH, &id_high);
 	ret += ov5640_reg_read(client, OV5640_CHIP_ID_LOW, &id_low);
 	ret += ov5640_reg_read(client, 0x302A, &revision);
 	if (ret) {
 		dev_err(&client->dev, "Failure to detect OV5640 chip\n");
-		goto out;
+		goto ei2c;
 	}
 
 	revision &= 0xF;
@@ -3000,7 +3005,13 @@ static int ov5640_video_probe(struct i2c_client *client)
 	dev_info(&client->dev, "Detected a OV5640 chip, revision %x\n",
 		 revision);
 
-out:
+	/* init the sensor here */
+	ret = ov5640_init(client);
+	if (ret)
+		dev_err(&client->dev, "Failed to initialize sensor\n");
+
+ei2c:
+	ov5640_s_power(subdev, 0);
 	return ret;
 }
 
@@ -3249,9 +3260,6 @@ static int ov5640_probe(struct i2c_client *client,
 	ov5640->i_fmt	= 0;	/* First format in the list */
 	ov5640->plat_parms = ssd->drv_priv;
 
-	struct v4l2_subdev *subdev = i2c_get_clientdata(client); // change this to &ov5640->subdev
-
-
 	v4l2_i2c_subdev_init(&ov5640->subdev, client, &ov5640_subdev_ops);
 
 	v4l2_ctrl_handler_init(&ov5640->hdl, ARRAY_SIZE(ov5640_controls) +
@@ -3358,27 +3366,15 @@ static int ov5640_probe(struct i2c_client *client,
 		goto ctrl_hdl_err;
 	}
 
-	ret = ov5640_s_power(subdev, 1);
-	if (ret < 0)
-		return ret;
-
 	ret = ov5640_video_probe(client);
 	if (ret) {
 		pr_err("ov5640_probe: failed to probe the sensor\n");
 		goto vid_probe_fail;
 	}
 
-	/* init the sensor here */
-	ret = ov5640_init(client);
-	if (ret) {
-		dev_err(&client->dev, "Failed to initialize sensor\n");
-		goto init_fail;
-	}
-
 	return ret;
 
 ctrl_hdl_err:
-init_fail:
 vid_probe_fail:
 	v4l2_ctrl_handler_free(&ov5640->hdl);
 	kfree(ov5640);

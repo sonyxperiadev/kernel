@@ -218,12 +218,5 @@ extern struct pwrmgr_init_param pwrmgr_init_param;
 bool is_pm_erratum(u32 erratum);
 int __init pm_params_init(void);
 
-#define CONFIG_A9_PLL_2GHZ	1
-#define CONFIG_A9_PLL_2P4GHZ	2
-#define CONFIG_A9_PLL_2P8GHZ	3
-/*Wake up PM policy*/
-#define PM_WKP          7
-int mach_config_arm_pll(int turbo_val, int update_volt_tbl);
-
 #endif	/*__PM_PARAMS_H__*/
 

@@ -48,7 +48,6 @@ struct pm_info {
 	int keep_xtl_on;
 	int clk_dbg_dsm;
 	int wfi_syspll_cnt;
-	int force_sleep;
 	u32 dormant_enable;
 	u32 log_mask;
 	struct ccu_clk *proc_ccu;
@@ -62,7 +61,6 @@ static struct pm_info pm_info = {
 	.keep_xtl_on = 0,
 	.clk_dbg_dsm = 0,
 	.wfi_syspll_cnt = 0,
-	.force_sleep = 0,
 	.dormant_enable = 1,
 	.log_mask = 0,
 };
@@ -260,7 +258,7 @@ static void config_wakeup_interrupts(void)
 {
 	/*all enabled interrupts can trigger COMMON_INT_TO_AC_EVENT*/
 
-	if (pm_info.force_sleep)
+	if (pm_is_forced_sleep())
 		return;
 
 	writel_relaxed(readl(KONA_GICDIST_VA+GICDIST_ENABLE_SET1_OFFSET),
@@ -387,7 +385,7 @@ int enter_dormant_state(u32 ctrl_params)
 
 int disable_all_interrupts(void)
 {
-	if (pm_info.force_sleep) {
+	if (pm_is_forced_sleep()) {
 		writel(0xFFFFFFFF, KONA_GICDIST_VA +
 				GICDIST_ENABLE_CLR1_OFFSET);
 		writel(0xFFFFFFFF, KONA_GICDIST_VA +
@@ -480,8 +478,6 @@ int hawaii_force_sleep(suspend_state_t state)
 		local_fiq_enable();
 		return -EINVAL;
 	}
-
-	pm_info.force_sleep = 1;
 
 	while (1) {
 		for (i = 0; i < PWR_MGR_NUM_EVENTS; i++) {

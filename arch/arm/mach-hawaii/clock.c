@@ -7825,6 +7825,12 @@ static void change_arm_pll_config(int mdiv)
 	pll_chnl_clk = &clk_a9_pll_chnl0;
 
 	reg_val = readl(CCU_REG_ADDR(pll_chnl_clk->ccu_clk,
+				pll_chnl_clk->pll_load_ch_en_offset));
+	reg_val &= ~pll_chnl_clk->load_en_mask;
+	writel(reg_val, CCU_REG_ADDR(pll_chnl_clk->ccu_clk,
+				pll_chnl_clk->pll_load_ch_en_offset));
+
+	reg_val = readl(CCU_REG_ADDR(pll_chnl_clk->ccu_clk,
 					pll_chnl_clk->cfg_reg_offset));
 	reg_val &= ~pll_chnl_clk->mdiv_mask;
 	reg_val |= mdiv << pll_chnl_clk->mdiv_shift;

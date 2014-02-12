@@ -234,7 +234,7 @@ static void print_card_speed_class(unsigned int class_code, unsigned int pm)
 		param = "reserved!";
 		break;
 	}
-	pr_info("SD card speed class:%s,Performace Move:%d\n", param, pm);
+	pr_info("SD card speed class:%s, Performance Move:%d\n", param, pm);
 }
 
 /*

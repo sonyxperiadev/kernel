@@ -1,4 +1,4 @@
-obj-$(CONFIG_MACH_JAVA_GARNET_SONY_KIVU2) += board-bcm59xxx_kivu.o \
+obj-$(CONFIG_MACH_JAVA_KIVU) += board-bcm59xxx_kivu.o \
 	board-kivu.o
 
 obj-$(CONFIG_INPUT_LSM303DLHC_ACCELEROMETER) += board-kivu-accel.o

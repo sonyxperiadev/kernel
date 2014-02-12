@@ -600,7 +600,7 @@
 		reg = <0x0 0x0>;
 		pwm-id = <2>;
 		polarity = <1>;		/* Inverted polarity */
-		pwm-period-ns = <99900>; /* ~10010 Hz */
+		pwm-period-ns = <50000>; /* ~20000 Hz */
 		pwm-request-label = "backlight";
 		bl-on-delay = <7000>;
 		pwm_pin_name = <39>;	/*GPIO24, enum PIN_NAME defined in chip_pinmux.h*/

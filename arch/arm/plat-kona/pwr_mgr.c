@@ -238,7 +238,8 @@ static struct pwr_mgr pwr_mgr;
 
 static void pwr_mgr_dump_i2c_cmd_regs(void);
 
-#ifdef CONFIG_MACH_HAWAII
+#ifdef CONFIG_ARCH_HAWAII
+
 static void dump_gic_registers(void)
 {
 #ifdef CONFIG_KONA_I2C_SEQUENCER_LOG

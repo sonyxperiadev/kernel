@@ -4924,8 +4924,16 @@ void idle_task_exit(void)
 
 	BUG_ON(cpu_online(smp_processor_id()));
 
-	if (mm != &init_mm)
+	if (mm != &init_mm) {
 		switch_mm(mm, &init_mm, current);
+		/*
+		 * current->active_mm may be freed below, making it dangling
+		 * pointer. But active_mm is being used in cpu resume sequence.
+		 * So assign it with init_mm. As cpu is going to die, no harm
+		 * in doing this.
+		 */
+		current->active_mm = &init_mm;
+	}
 	mmdrop(mm);
 }
 

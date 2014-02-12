@@ -692,10 +692,14 @@ static void print_active_wakeup_sources(void)
  * since the old value was stored.  Also return true if the current number of
  * wakeup events being processed is different from zero.
  */
+
 bool pm_wakeup_pending(void)
 {
 	unsigned long flags;
 	bool ret = false;
+
+	if (pm_is_forced_sleep())
+		return 0;
 
 	spin_lock_irqsave(&events_lock, flags);
 	if (events_check_enabled) {
@@ -725,6 +729,7 @@ bool pm_wakeup_pending(void)
  * Return 'false' if the current number of wakeup events being processed is
  * nonzero.  Otherwise return 'true'.
  */
+
 bool pm_get_wakeup_count(unsigned int *count, bool block)
 {
 	unsigned int cnt, inpr;
@@ -738,7 +743,6 @@ bool pm_get_wakeup_count(unsigned int *count, bool block)
 			split_counters(&cnt, &inpr);
 			if (inpr == 0 || signal_pending(current))
 				break;
-
 			schedule();
 		}
 		finish_wait(&wakeup_count_wait_queue, &wait);

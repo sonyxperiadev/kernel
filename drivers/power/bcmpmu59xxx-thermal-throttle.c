@@ -51,7 +51,7 @@ static u32 debug_mask = BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT | \
 
 #define TEMP_MULTI_FACTOR			10
 #define ADC_READ_TRIES				10
-#define ADC_RETRY_DELAY				50 /* 50ms */
+#define ADC_RETRY_DELAY				100 /* 100ms */
 #define TEMP_READ_DEBOUNCE			3
 #define ACLD_MAX_WAIT_COUNT			10
 #define TEMP_OFFSET				50
@@ -460,7 +460,6 @@ static int bcmpmu_throttle_event_handler(struct notifier_block *nb,
 				pr_throttle(FLOW,
 					"Charging Disabled, Disabling Thermal Throttling\n");
 				cancel_delayed_work_sync(&tdata->throttle_work);
-				tdata->acld_algo_finished = false;
 				tdata->throttle_scheduled = false;
 				tdata->acld_wait_count = 0;
 			}

@@ -2,5 +2,5 @@
 # Makefile for the Sony Boards
 #
 
-obj-$(CONFIG_MACH_JAVA_GARNET_SONY_KIVU2) += kivu/
-obj-$(CONFIG_MACH_JAVA_GARNET_SONY_BROOKS) += brooks/
+obj-$(CONFIG_MACH_JAVA_KIVU) += kivu/
+obj-$(CONFIG_MACH_JAVA_BROOKS) += brooks/

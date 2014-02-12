@@ -85,6 +85,7 @@ obj-$(CONFIG_SENSORS_ST480)	+= st480.o
 obj-$(CONFIG_SENSORS_AK8975_BRCM)	+= akm8975_brcm.o
 obj-$(CONFIG_SENSORS_GP2AP002)	+= gp2ap002.o 
 obj-$(CONFIG_SENSORS_BMC150)    += bmc150/
+obj-$(CONFIG_SENSORS_HSCDTD00X)	+= hscdtd00x/
 obj-$(CONFIG_SENSORS_TMG399X)	+= tmg399x/
 obj-$(CONFIG_INTER_PROCESSOR_COMM)	+= ipc.o
 obj-$(CONFIG_STM_TRACE)         += stm.o

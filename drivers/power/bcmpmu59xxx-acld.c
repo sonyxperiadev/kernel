@@ -82,6 +82,7 @@ static u32 debug_mask = 0xFF; /* BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT | \
 #define DIVIDE_20			20
 #define TRIM_MARGIN_5			5
 #define TRIM_MARGIN_0			0
+#define USB_FC_CC_455MA			4
 
 struct bcmpmu_acld {
 	struct bcmpmu59xxx *bcmpmu;
@@ -92,6 +93,7 @@ struct bcmpmu_acld {
 	struct notifier_block usb_det_nb;
 	struct notifier_block tml_trtle_nb;
 	struct notifier_block fg_eoc_nb;
+	struct notifier_block chrg_curr_nb;
 	struct dentry *dty_acld_dir;
 	ktime_t last_sample_tm;
 	enum bcmpmu_chrgr_type_t chrgr_type;
@@ -103,6 +105,7 @@ struct bcmpmu_acld {
 	int vbus_vbat_delta_deb;
 	int mbc_cv_clr_cnt;
 	int i_sys;
+	int chrg_curr;
 	int safe_one_c;
 	int acld_wrk_poll_time;
 	unsigned int msleep_ms;
@@ -1014,10 +1017,14 @@ static void bcmpmu_acld_work(struct work_struct *work)
 	bool eoc_status;
 
 	if ((!bcmpmu_is_acld_supported(acld->bcmpmu, acld->chrgr_type)) ||
-		(acld->fg_eoc))
+			(acld->fg_eoc))
 		return;
 	bcmpmu_clr_sw_ctrl_chrgr_timer(acld);
 
+	if (acld->chrgr_type == PMU_CHRGR_TYPE_SDP) {
+		bcmpmu_post_acld_end_event(acld);
+		return;
+	}
 
 	if (!acld->usb_mbc_fault) {
 		pr_acld(VERBOSE, "USB/MBC Fault check\n");
@@ -1041,23 +1048,6 @@ static void bcmpmu_acld_work(struct work_struct *work)
 		}
 
 		acld->volt_thrs_check = true;
-	}
-	if (acld->chrgr_type == PMU_CHRGR_TYPE_SDP) {
-		bcmpmu_post_acld_start_event(acld);
-		if (bcmpmu_is_usb_valid(acld)) {
-			acld->bcmpmu->write_dev(acld->bcmpmu,
-					PMU_REG_MBCCTRL20,
-					USB_TRIM_INX_24PER);
-			bcmpmu_acld_enable(acld, true);
-			pr_acld(FLOW, "MBC_TURBO enabled for SDP\n");
-		} else if (acld->acld_rtry_cnt++ < ACLD_RETRIES) {
-			pr_acld(FLOW, "acld_rtry_cnt = %d\n",
-					acld->acld_rtry_cnt);
-			goto q_work;
-
-		}
-		bcmpmu_post_acld_end_event(acld);
-		return;
 	}
 
 	if ((!acld->acld_init || acld->acld_re_init) && !acld->fg_eoc) {
@@ -1211,6 +1201,27 @@ static int bcmpmu_acld_event_handler(struct notifier_block *nb,
 			bcmpmu_acld_enable(acld, true);
 			bcmpmu_en_sw_ctrl_chrgr_timer(acld, true);
 			queue_delayed_work(acld->acld_wq, &acld->acld_work, 0);
+		}
+		break;
+	case PMU_ACCY_EVT_OUT_CHRG_CURR:
+		acld = to_bcmpmu_acld_data(nb, chrg_curr_nb);
+		acld->chrg_curr  = *(int *)data;
+		if ((acld->chrgr_type != PMU_CHRGR_TYPE_SDP) ||
+				(acld->tml_trtle_stat) ||
+				(!bcmpmu_is_acld_supported(acld->bcmpmu,
+							   acld->chrgr_type)))
+			break;
+		pr_acld(FLOW, "PMU_ACCY_EVT_OUT_CHRG_CURR: %d\n",
+				acld->chrg_curr);
+		if (acld->chrg_curr == PMU_MAX_SDP_CURR) {
+			bcmpmu_acld_enable(acld, true);
+			acld->bcmpmu->write_dev(acld->bcmpmu,
+					PMU_REG_MBCCTRL10,
+					USB_FC_CC_455MA);
+			pr_acld(FLOW, "MBC_TURBO enabled for SDP\n");
+		} else {
+			bcmpmu_acld_enable(acld, false);
+			pr_acld(FLOW, "MBC_TURBO disabled for SDP\n");
 		}
 		break;
 	}
@@ -1489,7 +1500,7 @@ static int bcmpmu_acld_probe(struct platform_device *pdev)
 	if (IS_ERR_OR_NULL(acld->acld_wq)) {
 		ret = PTR_ERR(acld->acld_wq);
 		pr_acld(ERROR, "%s Failed to create WQ\n", __func__);
-		goto unreg_usb_det_nb;
+		goto exit;
 	}
 
 	INIT_DELAYED_WORK(&acld->acld_work, bcmpmu_acld_work);
@@ -1500,7 +1511,7 @@ static int bcmpmu_acld_probe(struct platform_device *pdev)
 	if (ret) {
 		pr_acld(ERROR, "%s Failed to add notifier:%d\n",
 				__func__, __LINE__);
-		goto destroy_workq;
+		goto unreg_nb;
 	}
 	acld->tml_trtle_nb.notifier_call = bcmpmu_acld_event_handler;
 	ret = bcmpmu_add_notifier(PMU_THEMAL_THROTTLE_STATUS,
@@ -1508,7 +1519,7 @@ static int bcmpmu_acld_probe(struct platform_device *pdev)
 	if (ret) {
 		pr_acld(ERROR, "%s Failed to add notifier:%d\n",
 				__func__, __LINE__);
-		goto unreg_usb_det_nb;
+		goto unreg_nb;
 	}
 	acld->fg_eoc_nb.notifier_call = bcmpmu_acld_event_handler;
 	ret = bcmpmu_add_notifier(PMU_FG_EVT_EOC,
@@ -1516,7 +1527,15 @@ static int bcmpmu_acld_probe(struct platform_device *pdev)
 	if (ret) {
 		pr_acld(ERROR, "%s Failed to add notifier:%d\n",
 				__func__, __LINE__);
-		goto unreg_thermal_nb;
+		goto unreg_nb;
+	}
+	acld->chrg_curr_nb.notifier_call = bcmpmu_acld_event_handler;
+	ret = bcmpmu_add_notifier(PMU_ACCY_EVT_OUT_CHRG_CURR,
+			&acld->chrg_curr_nb);
+	if (ret) {
+		pr_acld(ERROR, "%s Failed to add notifier:%d\n",
+				__func__, __LINE__);
+		goto unreg_nb;
 	}
 #ifdef CONFIG_DEBUG_FS
 	bcmpmu_acld_debugfs_init(acld);
@@ -1534,14 +1553,17 @@ static int bcmpmu_acld_probe(struct platform_device *pdev)
 
 	return 0;
 
-unreg_thermal_nb:
+unreg_nb:
 	bcmpmu_remove_notifier(PMU_THEMAL_THROTTLE_STATUS,
 			&acld->tml_trtle_nb);
-unreg_usb_det_nb:
 	bcmpmu_remove_notifier(PMU_ACCY_EVT_OUT_CHRGR_TYPE,
 			&acld->usb_det_nb);
-destroy_workq:
+	bcmpmu_remove_notifier(PMU_FG_EVT_EOC,
+			&acld->fg_eoc_nb);
+	bcmpmu_remove_notifier(PMU_ACCY_EVT_OUT_CHRG_CURR,
+			&acld->chrg_curr_nb);
 	destroy_workqueue(acld->acld_wq);
+exit:
 	kfree(acld);
 	return 0;
 }

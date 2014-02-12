@@ -546,6 +546,7 @@ int kona_timer_set_match_start(struct kona_timer *kt, unsigned long load)
 	struct kona_timer_module *ktm;
 	unsigned long flags;
 	unsigned long reg, lsw;
+	s32 next_lsw;
 
 	if (NULL == kt)
 		return -1;
@@ -600,6 +601,45 @@ int kona_timer_set_match_start(struct kona_timer *kt, unsigned long load)
 	reg |= (1 << (kt->ch_num + KONA_GPTIMER_STCS_COMPARE_ENABLE_SHIFT));
 	writel(reg, ktm->reg_base + KONA_GPTIMER_STCS_OFFSET);
 
+	/*
+	 * Skip the wrap around check logic for slower timer channels since
+	 * the CPU penalty for reading/syncing the slower timers is much
+	 * higher. Furthermore, the 32KHz timers run slow enough for the
+	 * "minimum delta" to provide adequate protection against the
+	 * wrapping.
+	 */
+	if (ktm->rate < 1000000)
+		goto out;
+
+	/*
+	 * Gracefully handle the case where the programmed match value is
+	 * within 65K counts of the counter wrap around value and the counter
+	 * wraps before the match syncing/enabling logic kicks in.
+	 */
+	if (kt->expire >= 0xFFFEFC00) {
+#ifdef CONFIG_GP_TIMER_COMPARATOR_LOAD_DELAY
+		__wait_for_compare_enable_sync(ktm->reg_base, kt->ch_num);
+#endif
+		reg = readl(ktm->reg_base + KONA_GPTIMER_STCS_OFFSET);
+		if (reg & (1 << (kt->ch_num +
+		    KONA_GPTIMER_STCS_TIMER_MATCH_SHIFT)))
+			goto out;
+
+		next_lsw = (s32)__get_counter(ktm->reg_base);
+		if ((next_lsw >= 0) && ((s32)(lsw) < 0)) {
+			__disable_channel(ktm->reg_base, kt->ch_num);
+			writel(next_lsw, ktm->reg_base +
+			       KONA_GPTIMER_STCM0_OFFSET + (kt->ch_num * 4));
+#ifdef CONFIG_GP_TIMER_COMPARATOR_LOAD_DELAY
+			__wait_for_compare_val_sync(ktm->reg_base, kt->ch_num);
+#endif
+			reg &= ~KONA_GPTIMER_STCS_TIMER_MATCH_MASK;
+			reg |= (1 << (kt->ch_num +
+				KONA_GPTIMER_STCS_COMPARE_ENABLE_SHIFT));
+			writel(reg, ktm->reg_base + KONA_GPTIMER_STCS_OFFSET);
+		}
+	}
+out:
 	spin_unlock_irqrestore(&ktm->lock, flags);
 
 	return 0;

@@ -665,7 +665,7 @@ static int sdhci_pltfm_probe(struct platform_device *pdev)
 		hw_cfg->flags = val;
 
 		if (of_property_read_u32(pdev->dev.of_node, "quirks", &val)) {
-			dev_warn(&pdev->dev, "quirks not available in %s\n",
+			dev_warn(&pdev->dev, "No quirks found via DT in %s\n",
 			__func__);
 			val = 0;
 		}
@@ -673,7 +673,7 @@ static int sdhci_pltfm_probe(struct platform_device *pdev)
 		hw_cfg->quirks = val;
 
 		if (of_property_read_u32(pdev->dev.of_node, "quirks2", &val)) {
-			dev_warn(&pdev->dev, "quirks2 not available in %s\n",
+			dev_warn(&pdev->dev, "No quirks2 found via DT in %s\n",
 			__func__);
 			val = 0;
 		}
@@ -681,7 +681,7 @@ static int sdhci_pltfm_probe(struct platform_device *pdev)
 		hw_cfg->quirks2 = val;
 
 		if (of_property_read_u32(pdev->dev.of_node, "pm_caps", &val)) {
-			dev_warn(&pdev->dev, "pm_caps not available in %s\n",
+			dev_warn(&pdev->dev, "No pm_caps found via DT in %s\n",
 			__func__);
 			val = 0;
 		}
@@ -977,20 +977,10 @@ static int sdhci_pltfm_probe(struct platform_device *pdev)
 		host->mmc->caps |= MMC_CAP_1_8V_DDR;
 #endif
 
-	/*
-	 * This has to be done before sdhci_add_host.
-	 * As soon as we add the host, request
-	 * starts. If we dont enable this here, the
-	 * runtime get and put of sdhci will fallback to
-	 * clk_enable and clk_disable which will conflict
-	 * with the PM runtime when it gets enabled just
-	 * after sdhci_add_host. Now with this, the RPM
-	 * calls will fail until RPM is enabled, but things
-	 * will work well, as we have clocks enabled till the
-	 * probe ends.
-	 */
 
+	/* enable & init runtime power management */
 	dev->runtime_pm_enabled = 1;
+	sdhci_pltfm_runtime_pm_init(dev->dev);
 
 	ret = sdhci_add_host(host);
 	if (ret)
@@ -999,9 +989,6 @@ static int sdhci_pltfm_probe(struct platform_device *pdev)
 	ret = device_create_file(&pdev->dev, &dev_attr_card_ctrl);
 	if (ret)
 		goto err_rm_host;
-
-	/* Should be done only after sdhci_add_host */
-	sdhci_pltfm_runtime_pm_init(dev->dev);
 
 	if (dev->devtype == SDIO_DEV_TYPE_SDMMC) {
 		/* support SD card detect interrupts for insert/removal */
@@ -1234,44 +1221,6 @@ static int sdhci_pltfm_remove(struct platform_device *pdev)
 	return 0;
 }
 
-static void sdhci_pltfm_shutdown(struct platform_device *pdev)
-{
-	u16 clk;
-	int ret;
-	struct sdio_dev *dev = platform_get_drvdata(pdev);
-	struct sdhci_host *host = dev->host;
-
-	if (sdhci_pltfm_rpm_enabled(dev)) {
-		pm_runtime_get_sync(dev->dev);
-	} else {
-		ret = sdhci_pltfm_clk_enable(dev, 1);
-		if (ret)
-			dev_err(dev->dev,
-			"enable clock during shutdown failed\n");
-	}
-
-	/* Certain cards don't like abrupt clock
-	 * shutdown, and they go insane if we do so.
-	 * When PM runtime autosuspend is enabled,
-	 * it takes time for the clock to be cut,
-	 * but during this time, the system reboot
-	 * can abruptly cut it off. Avoid that by
-	 * disabling the clock to the card.
-	 */
-	clk = sdhci_readw(host, SDHCI_CLOCK_CONTROL);
-	clk &= ~SDHCI_CLOCK_CARD_EN;
-	sdhci_writew(host, clk, SDHCI_CLOCK_CONTROL);
-
-	if (sdhci_pltfm_rpm_enabled(dev)) {
-		pm_runtime_put_sync_suspend(dev->dev);
-	} else {
-		ret = sdhci_pltfm_clk_enable(dev, 0);
-		if (ret)
-			dev_err(dev->dev,
-			"disable clock during shutdown failed\n");
-	}
-}
-
 #ifdef CONFIG_PM
 static int sdhci_pltfm_suspend(struct device *device)
 {
@@ -1399,7 +1348,6 @@ static struct platform_driver sdhci_pltfm_driver = {
 		   },
 	.probe = sdhci_pltfm_probe,
 	.remove = sdhci_pltfm_remove,
-	.shutdown = sdhci_pltfm_shutdown,
 };
 
 static int __init sdhci_drv_init(void)

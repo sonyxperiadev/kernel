@@ -61,4 +61,6 @@ int kona_pm_get_num_cstates(void);
 char *kona_pm_get_cstate_name(int state_inx);
 int cstate_notifier_register(struct notifier_block *nb);
 int cstate_notifier_unregister(struct notifier_block *nb);
+int pm_is_forced_sleep(void);
+
 #endif /*__KONA_PM_H__*/

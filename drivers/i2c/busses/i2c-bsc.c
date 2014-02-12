@@ -1926,6 +1926,10 @@ static int bsc_probe(struct platform_device *pdev)
 			&prop))
 			goto err_free_priv_data_mem;
 
+		/* Retries */
+		if (of_property_read_u32(pdev->dev.of_node, "retries", &val))
+			goto err_free_priv_data_mem;
+
 		hw_cfg->retries = val;
 
 		if (of_property_read_u32(pdev->dev.of_node, "is-pmu-i2c", &val))
@@ -2065,7 +2069,7 @@ static int bsc_probe(struct platform_device *pdev)
 	 * Variant. The same was fixed in the B1 variant where a bit in the CRC
 	 * main register needs to be set. */
 	/* Check for RheaB1 onwards */
-	if (hw_cfg && !hw_cfg->is_pmu_i2c && 
+	if (hw_cfg && !hw_cfg->is_pmu_i2c &&
 		(get_chip_id() >= KONA_CHIP_ID_RHEA_B1))
 		bsc_enable_thigh_ctrl((uint32_t)dev->virt_base, true);
 	else

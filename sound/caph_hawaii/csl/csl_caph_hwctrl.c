@@ -2803,6 +2803,7 @@ static void csl_caph_start_blocks
 	/*ihf call, dsp starts dma.*/
 	if (!(path->source == CSL_CAPH_DEV_DSP_throughMEM &&
 		path->sink[sinkNo] == CSL_CAPH_DEV_IHF)) {
+#if defined(CONFIG_BCM_MODEM)
 		if ((path->source == CSL_CAPH_DEV_MEMORY &&
 			path->sink[sinkNo] == CSL_CAPH_DEV_DSP_throughMEM)) {
 			aTrace(LOG_AUDIO_CSL,
@@ -2813,6 +2814,7 @@ static void csl_caph_start_blocks
 			if (path->arm2sp_instance ==  VORENDER_ARM2SP_INSTANCE2)
 				CSL_ARM2SP2_Init();
 		}
+#endif
 		for (i = 0; i < MAX_BLOCK_NUM; i++) {
 			dma = path->dma[sinkNo][i];
 			if (!dma)

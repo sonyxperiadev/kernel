@@ -210,7 +210,7 @@ static void cmd_force_sleep(const char *p)
 #if defined(CONFIG_MACH_HAWAII_SS_COMMON)
 	uas_jig_force_sleep();
 #endif
-	kona_pm_reg_pm_enter_handler(&hawaii_force_sleep);
+	pm_force_sleep_reg_handler(&hawaii_force_sleep);
 
 	request_suspend_state(PM_SUSPEND_MEM);
 }

@@ -51,7 +51,6 @@
 struct pm_info {
 	int keep_xtl_on;
 	int clk_dbg_dsm;
-	int force_sleep;
 	u32 dormant_enable;
 	u32 log_mask;
 	struct ccu_clk *proc_ccu;
@@ -62,7 +61,6 @@ struct pm_info {
 static struct pm_info pm_info = {
 	.keep_xtl_on = 0,
 	.clk_dbg_dsm = 0,
-	.force_sleep = 0,
 	.dormant_enable = 0x0, /* Enable dormant for all 4 cores */
 	.log_mask = 0,
 };
@@ -248,8 +246,6 @@ int force_sleep(suspend_state_t state)
 		return -EINVAL;
 	}
 
-	pm_info.force_sleep = 1;
-
 	while (1) {
 		for (i = 0; i < PWR_MGR_NUM_EVENTS; i++) {
 			int test = 0;
@@ -399,11 +395,6 @@ static struct pm_init_param pm_init = {
 	.num_states = ARRAY_SIZE(idle_states),
 	.suspend_state =  ARRAY_SIZE(idle_states)-1,
 };
-
-int pm_is_forced_sleep()
-{
-	return !!pm_info.force_sleep;
-}
 
 int __init __pm_init(void)
 {

@@ -317,8 +317,8 @@ static int bl_cooling_get_max_state(struct thermal_cooling_device *cdev,
 			unsigned long *state)
 {
 	struct backlight_device *bl = cdev->devdata;
-
-	return bl->props.max_brightness;
+	*state = bl->props.max_brightness;
+	return 0;
 }
 
 static int bl_cooling_get_cur_state(struct thermal_cooling_device *cdev,
@@ -529,7 +529,7 @@ err_alloc:
 	return ret;
 }
 
-static int pwm_backlight_remove(struct platform_device *pdev)
+static int __exit pwm_backlight_remove(struct platform_device *pdev)
 {
 	struct backlight_device *bl = platform_get_drvdata(pdev);
 	struct pwm_bl_data *pb = bl_get_data(bl);

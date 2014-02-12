@@ -56,12 +56,10 @@ struct avs_info {
 	struct avs_pdata *pdata;
 	struct avs_handshake *avs_handshake;
 	u32 handshake_version;
-	u32 kernel_freq_id;
 };
 
 struct avs_info avs_info = {
 	.handshake_version = AVS_HANDSHAKE_VERSION,
-	.kernel_freq_id = ARM_FREQ_1200_MHZ,
 	.avs_handshake = NULL,
 };
 
@@ -395,6 +393,8 @@ static ssize_t avs_debug_read_spm_val(struct file *file, char __user
 		"spm5: %u\n", avs_info.avs_handshake->spm5);
 	len += snprintf(buf + len, sizeof(buf) - len,
 		"IRDROP: %u\n", avs_info.avs_handshake->irdrop_1v2);
+	len += snprintf(buf + len, sizeof(buf) - len,
+		"silicon_type:: %u\n", avs_info.avs_handshake->silicon_type);
 
 	return simple_read_from_buffer(user_buf, count, ppos, buf, len);
 }
@@ -495,8 +495,6 @@ static int avs_drv_probe(struct platform_device *pdev)
 			pdata->avs_info_base_addr);
 
 	BUG_ON(avs_info.handshake_version != avs_info.avs_handshake->version);
-	BUG_ON(avs_info.kernel_freq_id != avs_info.avs_handshake->arm_freq);
-
 
 #ifdef CONFIG_MM_312M_SOURCE_CLK
 	BUG_ON(!(avs_info.avs_handshake->status &

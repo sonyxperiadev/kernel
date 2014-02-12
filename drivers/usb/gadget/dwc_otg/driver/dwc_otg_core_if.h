@@ -483,7 +483,6 @@ extern int32_t dwc_otg_get_param_otg_enable(dwc_otg_core_if_t *core_if);
  * Dump core registers and SPRAM
  */
 extern void dwc_otg_dump_dev_registers(dwc_otg_core_if_t *_core_if);
-extern void dwc_otg_dump_spram(dwc_otg_core_if_t *_core_if);
 extern void dwc_otg_dump_host_registers(dwc_otg_core_if_t *_core_if);
 extern void dwc_otg_dump_global_registers(dwc_otg_core_if_t *_core_if);
 

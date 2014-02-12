@@ -160,6 +160,37 @@ static int kona_cpufreq_cstate_stats_update(int cpu, int state, int enter)
 	return 0;
 }
 
+static int cpufreq_cstate_notify_handler(struct notifier_block *nb,
+					     unsigned long val,
+					     void *data)
+{
+	struct kona_cpufreq_stats *stats;
+	int cpu = get_cpu();
+	int state = *(int *)data;
+
+	BUG_ON(!kona_cpufreq);
+
+	stats = &kona_cpufreq->stats;
+	switch (val) {
+	case CSTATE_ENTER:
+		stats->cpu_in_idle[cpu] = state;
+		if (stats->stats_en)
+			kona_cpufreq_cstate_stats_update(cpu, state, 1);
+		break;
+	case CSTATE_EXIT:
+		stats->cpu_in_idle[cpu] = CPU_ACTIVE;
+		if (stats->stats_en)
+			kona_cpufreq_cstate_stats_update(cpu, state, 0);
+		break;
+	}
+	put_cpu();
+	return 0;
+}
+
+static struct notifier_block kona_cpufreq_cstate_nb = {
+	.notifier_call = cpufreq_cstate_notify_handler,
+};
+
 static int kona_cpufreq_freq_stats_enable(int en)
 {
 	struct kona_cpufreq_stats *stats;
@@ -191,8 +222,11 @@ static int kona_cpufreq_freq_stats_enable(int en)
 		put_cpu();
 		stats->stats_en = 1;
 		kona_cpufreq_freq_stats_update(freq_inx);
-	} else if (!en && stats->stats_en)
+		cstate_notifier_register(&kona_cpufreq_cstate_nb);
+	} else if (!en && stats->stats_en) {
+		cstate_notifier_unregister(&kona_cpufreq_cstate_nb);
 		stats->stats_en = 0;
+	}
 	return 0;
 }
 
@@ -263,37 +297,6 @@ percentage:
 			cur_time - stats->start_time);
 	return simple_read_from_buffer(user_buf, count, ppos, buf, len);
 }
-
-static int cpufreq_cstate_notify_handler(struct notifier_block *nb,
-					     unsigned long val,
-					     void *data)
-{
-	struct kona_cpufreq_stats *stats;
-	int cpu = get_cpu();
-	int state = *(int *)data;
-
-	BUG_ON(!kona_cpufreq);
-
-	stats = &kona_cpufreq->stats;
-	switch (val) {
-	case CSTATE_ENTER:
-		stats->cpu_in_idle[cpu] = state;
-		if (stats->stats_en)
-			kona_cpufreq_cstate_stats_update(cpu, state, 1);
-		break;
-	case CSTATE_EXIT:
-		stats->cpu_in_idle[cpu] = CPU_ACTIVE;
-		if (stats->stats_en)
-			kona_cpufreq_cstate_stats_update(cpu, state, 0);
-		break;
-	}
-	put_cpu();
-	return 0;
-}
-
-static struct notifier_block kona_cpufreq_cstate_nb = {
-	.notifier_call = cpufreq_cstate_notify_handler,
-};
 
 #ifdef CONFIG_KONA_TMON
 static int cpufreq_set_init_thold_freq(struct kona_cpufreq *kona_cpufreq)
@@ -1095,13 +1098,16 @@ static int cpufreq_drv_probe(struct platform_device *pdev)
 		stats->stats[i] = kzalloc(sizeof(u64) * ((pdata->num_freqs) +
 				kona_cpufreq->num_cstates), GFP_KERNEL);
 
-	cstate_notifier_register(&kona_cpufreq_cstate_nb);
 	return ret;
 }
 
 static int cpufreq_drv_remove(struct platform_device *pdev)
 {
 	int ret = 0;
+
+	if (kona_cpufreq->stats.stats_en)
+		cstate_notifier_unregister(&kona_cpufreq_cstate_nb);
+
 	if (cpufreq_unregister_driver(&kona_cpufreq_driver) != 0)
 		kcf_dbg("%s: cpufreq unregister failed\n", __func__);
 
@@ -1113,7 +1119,7 @@ static int cpufreq_drv_remove(struct platform_device *pdev)
 	kfree(kona_cpufreq->freq_map);
 	kfree(kona_cpufreq);
 	kona_cpufreq = NULL;
-	cstate_notifier_unregister(&kona_cpufreq_cstate_nb);
+
 	return 0;
 }
 

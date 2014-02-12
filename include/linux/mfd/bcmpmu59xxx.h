@@ -92,7 +92,7 @@
 #define USB_TRIM_INX_24PER	8
 #define USB_DEF_TRIM_INX	1
 #define PMU_TYP_SAT_CURR	1600 /*mA*/
-
+#define PMU_MAX_SDP_CURR	500 /*mA*/
 /*helper macros to manage regulator PC pin map*/
 /*
 SET0 holds ORed list of PC pin - regualtor will be enabled if
@@ -622,6 +622,7 @@ enum bcmpmu_usb_ctrl_t {
 	BCMPMU_USB_CTRL_SW_UP,
 	BCMPMU_USB_CTRL_TPROBE_MAX,
 	BCMPMU_USB_CTRL_ALLOW_BC_DETECT,
+	BCMPMU_USB_OTG_SESSION,
 };
 
 struct bcmpmu59xxx_rw_data {
@@ -1016,7 +1017,7 @@ int bcmpmu_remove_notifier(u32 event_id, struct notifier_block *notifier);
 
 void bcmpmu_call_notifier(struct bcmpmu59xxx *pmu,
 					enum bcmpmu_event_t event, void *para);
-
+void bcmpmu_restore_cc_500_trim_otp(struct bcmpmu59xxx *bcmpmu);
 int bcmpmu_usb_get(struct bcmpmu59xxx *bcmpmu,
 			int ctrl, void *data);
 

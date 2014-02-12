@@ -1,4 +1,4 @@
-obj-$(CONFIG_MACH_JAVA_GARNET_SONY_BROOKS) += board-bcm59xxx_brooks.o \
+obj-$(CONFIG_MACH_JAVA_BROOKS) += board-bcm59xxx_brooks.o \
 	board-brooks.o
 
 obj-$(CONFIG_INPUT_AKM09911) += board-brooks-magnetometer.o

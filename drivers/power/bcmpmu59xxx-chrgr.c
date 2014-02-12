@@ -478,6 +478,14 @@ static int charger_event_handler(struct notifier_block *nb,
 		chrgr_curr = *(int *)para;
 		bcmpmu_usb_get(bcmpmu,
 			BCMPMU_USB_CTRL_GET_CHRGR_TYPE, &chrgr_type);
+		if ((chrgr_type == PMU_CHRGR_TYPE_SDP) &&
+				(chrgr_curr == PMU_MAX_SDP_CURR) &&
+				(!bcmpmu_is_acld_supported(di->bcmpmu,
+							   chrgr_type)))
+			bcmpmu->write_dev(bcmpmu,
+					PMU_REG_MBCCTRL20,
+					USB_TRIM_INX_20PER);
+
 		if ((chrgr_type < PMU_CHRGR_TYPE_MAX) &&
 				(chrgr_type >  PMU_CHRGR_TYPE_NONE)) {
 			if ((get_supply_type_str(chrgr_type) != NULL) &&

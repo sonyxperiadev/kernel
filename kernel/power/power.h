@@ -64,6 +64,8 @@ static inline void hibernate_image_size_init(void) {}
 
 extern int pfn_is_nosave(unsigned long);
 
+extern int pm_is_forced_sleep(void);
+
 #define power_attr(_name) \
 static struct kobj_attribute _name##_attr = {	\
 	.attr	= {				\

@@ -596,7 +596,6 @@ enum v4l2_af_preflash {
 
 #define V4L2_CID_CAMERA_READ_MODE_CHANGE_REG	(V4L2_CID_PRIVATE_BASE + 135)
 #define V4L2_CID_CAM_SET_MODE			(V4L2_CID_PRIVATE_BASE + 136)
-
 #define V4L2_CID_CAMERA_LENS_POSITION		(V4L2_CID_USER_BASE | 0x1009)
 #define V4L2_CID_CAM_MOUNTING			(V4L2_CID_USER_BASE | 0x1008)
 
@@ -872,8 +871,9 @@ struct v4l2_sensor_optical_info {
 struct v4l2_frame_info {
 	int exposure;
 	int an_gain;
-	int focus;
+	int lens_pos;
 	int flash_mode;
+	int flash_intensity;
 	struct timespec timestamp;
 };
 
@@ -881,6 +881,8 @@ struct v4l2_frame_info {
 	_IOWR('V', BASE_VIDIOC_PRIVATE+9, struct v4l2_frame_info)
 #define VIDIOC_SENSOR_S_FRAME_INFO \
 	_IOWR('V', BASE_VIDIOC_PRIVATE+10, struct v4l2_frame_info)
+#define VIDIOC_SENSOR_FRAME_IRQ \
+	_IOWR('V', BASE_VIDIOC_PRIVATE+11, __u32)
 
 #else
 
@@ -1758,6 +1760,8 @@ struct v4l2_frame_info {
 	_IOWR('V', BASE_VIDIOC_PRIVATE+9, struct v4l2_frame_info)
 #define VIDIOC_SENSOR_S_FRAME_INFO \
 	_IOWR('V', BASE_VIDIOC_PRIVATE+10, struct v4l2_frame_info)
+#define VIDIOC_SENSOR_FRAME_IRQ \
+	_IOWR('V', BASE_VIDIOC_PRIVATE+11, __u32)
 #endif /*#if !defined(CONFIG_SOC_MAIN_CAMERA) || !defined(CONFIG_SOC_SUB_CAMERA) */
 
 #endif /* __LINUX_VIDEODEV2_BRCM_H */

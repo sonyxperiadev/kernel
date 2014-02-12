@@ -1574,6 +1574,11 @@ static const struct of_device_id bcmpmu_adc_dt_ids[] __initconst = {
 	{ },
 };
 
+static const struct of_device_id bcmpmu_fg_dt[] __initconst = {
+	{ .compatible = "Broadcom,bcmpmu_fg" },
+	{ },
+};
+
 #ifdef CONFIG_BCMPMU_DIETEMP_THERMAL
 static const struct of_device_id bcmpmu_dietemp_dt[] __initconst = {
 	{ .compatible = "Broadcom,dietemp-thermal" },
@@ -1602,15 +1607,12 @@ static int __init bcmpmu_update_pdata(char *name,
 	if (np) {
 		prop = of_find_property(np, name, &size);
 		if (prop == NULL) {
-			printk(KERN_INFO "%s pmu data not found\n",
-					__func__);
+			pr_err("%s pmu data not found\n", __func__);
 			return ret;
 		}
 		tbl = kzalloc(size, GFP_KERNEL);
 		if (tbl == NULL) {
-			printk(KERN_INFO
-					"%s Failed  alloc bcmpmu data\n"
-					, __func__);
+			pr_err("%s Failed  alloc bcmpmu data\n", __func__);
 			return ret;
 		}
 		p = (uint32_t *)prop->value;
@@ -1791,6 +1793,191 @@ int __init adc_init(void)
 #endif
 
 #ifdef CONFIG_OF
+int __init bcmpmu_fg_init(void)
+{
+	struct device_node *of_node, *of_child, *child;
+	int size, value, idx;
+	int *val;
+	const char *str_val;
+
+	pr_info("%s Parsing DT\n", __func__);
+	of_node = of_find_matching_node(NULL, bcmpmu_fg_dt);
+	if (!of_node) {
+		pr_err("device tree support for bcmpmu_fg not found\n");
+		return 0;
+	}
+
+	if (of_property_read_u32(of_node, "sns_resist",	&fg_pdata.sns_resist))
+		goto out;
+	if (of_property_read_u32(of_node, "sys_impedence",
+						&fg_pdata.sys_impedence))
+		goto out;
+	if (of_property_read_u32(of_node, "eoc_current",
+						&fg_pdata.eoc_current))
+		goto out;
+	if (of_property_read_u32(of_node, "hw_maintenance_charging", &value))
+		goto out;
+	fg_pdata.hw_maintenance_charging = (bool)value;
+	if (of_property_read_u32(of_node, "sleep_current_ua",
+						&fg_pdata.sleep_current_ua))
+		goto out;
+	if (of_property_read_u32(of_node, "sleep_sample_rate",
+						&fg_pdata.sleep_sample_rate))
+		goto out;
+	if (of_property_read_u32(of_node, "fg_factor", &fg_pdata.fg_factor))
+		goto out;
+	if (of_property_read_u32(of_node, "poll_rate_low_batt",
+						&fg_pdata.poll_rate_low_batt))
+		goto out;
+	if (of_property_read_u32(of_node, "poll_rate_crit_batt",
+						&fg_pdata.poll_rate_crit_batt))
+		goto out;
+	if (of_property_read_u32(of_node, "ntc_high_temp",
+						&fg_pdata.ntc_high_temp))
+		goto out;
+
+	of_child = of_find_node_by_name(NULL, "batt_prop");
+	if (of_property_read_string(of_child, "model", &str_val))
+		goto out;
+	ys_05_props.model = str_val;
+	if (of_property_read_u32(of_child, "min_volt", &ys_05_props.min_volt))
+		goto out;
+	if (of_property_read_u32(of_child, "max_volt", &ys_05_props.max_volt))
+		goto out;
+	if (of_property_read_u32(of_child, "full_cap", &ys_05_props.full_cap))
+		goto out;
+	if (of_property_read_u32(of_child, "one_c_rate",
+						&ys_05_props.one_c_rate))
+		goto out;
+
+	val = (int *)of_get_property(of_child, "volt_cap_lut", &size);
+	ys_05_props.volt_cap_lut_sz = size / (2 * sizeof(*val));
+	for (idx = 0; idx < ys_05_props.volt_cap_lut_sz; idx++) {
+		ys_05_volt_cap_lut[idx].volt = be32_to_cpu(*val++);
+		ys_05_volt_cap_lut[idx].cap = be32_to_cpu(*val++);
+	}
+
+	val = (int *)of_get_property(of_child, "eoc_cap_lut", &size);
+	ys_05_props.eoc_cap_lut_sz = size / (2 * sizeof(*val));
+	for (idx = 0; idx < ys_05_props.eoc_cap_lut_sz; idx++) {
+		ys_05_eoc_cap_lut[idx].eoc_curr = be32_to_cpu(*val++);
+		ys_05_eoc_cap_lut[idx].capacity = be32_to_cpu(*val++);
+	}
+
+	val = (int *)of_get_property(of_child, "cutoff_cap_lut", &size);
+	ys_05_props.cutoff_cap_lut_sz = size / (2 * sizeof(*val));
+	for (idx = 0; idx < ys_05_props.cutoff_cap_lut_sz; idx++) {
+		ys_05_cutoff_cap_lut[idx].volt = be32_to_cpu(*val++);
+		ys_05_cutoff_cap_lut[idx].cap = be32_to_cpu(*val++);
+	}
+
+	ys_05_props.esr_temp_lut_sz = of_get_child_count(of_child);
+	if (!ys_05_props.esr_temp_lut_sz)
+		goto out;
+	idx = 0;
+	for_each_child_of_node(of_child, child) {
+		if (of_property_read_u32(child, "temp",
+					&ys_05_esr_temp_lut[idx].temp))
+			goto out;
+		if (of_property_read_u32(child, "reset",
+					&ys_05_esr_temp_lut[idx].reset))
+			goto out;
+		if (of_property_read_u32(child, "fct",
+					&ys_05_esr_temp_lut[idx].fct))
+			goto out;
+		if (of_property_read_u32(child, "guardband",
+				&ys_05_esr_temp_lut[idx].guardband))
+			goto out;
+		if (of_property_read_u32(child, "esr_vl_lvl",
+				&ys_05_esr_temp_lut[idx].esr_vl_lvl))
+			goto out;
+		if (of_property_read_u32(child, "esr_vm_lvl",
+				&ys_05_esr_temp_lut[idx].esr_vm_lvl))
+			goto out;
+		if (of_property_read_u32(child, "esr_vh_lvl",
+				&ys_05_esr_temp_lut[idx].esr_vh_lvl))
+			goto out;
+		if (of_property_read_u32(child, "esr_vl_slope",
+				&ys_05_esr_temp_lut[idx].esr_vl_slope))
+			goto out;
+		if (of_property_read_u32(child, "esr_vl_offset",
+				&ys_05_esr_temp_lut[idx].esr_vl_offset))
+			goto out;
+		if (of_property_read_u32(child, "esr_vm_slope",
+				&ys_05_esr_temp_lut[idx].esr_vm_slope))
+			goto out;
+		if (of_property_read_u32(child, "esr_vm_offset",
+				&ys_05_esr_temp_lut[idx].esr_vm_offset))
+			goto out;
+		if (of_property_read_u32(child, "esr_vh_slope",
+				&ys_05_esr_temp_lut[idx].esr_vh_slope))
+			goto out;
+		if (of_property_read_u32(child, "esr_vh_offset",
+				&ys_05_esr_temp_lut[idx].esr_vh_offset))
+			goto out;
+		if (of_property_read_u32(child, "esr_vf_slope",
+				&ys_05_esr_temp_lut[idx].esr_vf_slope))
+			goto out;
+		if (of_property_read_u32(child, "esr_vf_offset",
+				&ys_05_esr_temp_lut[idx].esr_vf_offset))
+			goto out;
+		idx++;
+	}
+	of_node_put(of_child);
+
+	of_child = of_find_node_by_name(NULL, "cap_levels");
+	if (of_property_read_u32(of_child, "critical",
+						&ys_05_cap_levels.critical))
+		goto out;
+	if (of_property_read_u32(of_child, "low", &ys_05_cap_levels.low))
+		goto out;
+	if (of_property_read_u32(of_child, "normal", &ys_05_cap_levels.normal))
+		goto out;
+	if (of_property_read_u32(of_child, "high", &ys_05_cap_levels.high))
+		goto out;
+	of_node_put(of_child);
+
+	of_child = of_find_node_by_name(NULL, "volt_levels");
+	if (of_property_read_u32(of_child, "critical",
+						&ys_05_volt_levels.critical))
+		goto out;
+	if (of_property_read_u32(of_child, "low", &ys_05_volt_levels.low))
+		goto out;
+	if (of_property_read_u32(of_child, "normal", &ys_05_volt_levels.normal))
+		goto out;
+	if (of_property_read_u32(of_child, "high", &ys_05_volt_levels.high))
+		goto out;
+	if (of_property_read_u32(of_child, "crit_cutoff_cnt",
+					&ys_05_volt_levels.crit_cutoff_cnt))
+		goto out;
+	if (of_property_read_u32(of_child, "vfloat_lvl",
+						&ys_05_volt_levels.vfloat_lvl))
+		goto out;
+	if (of_property_read_u32(of_child, "vfloat_max",
+						&ys_05_volt_levels.vfloat_max))
+		goto out;
+	if (of_property_read_u32(of_child, "vfloat_gap",
+						&ys_05_volt_levels.vfloat_gap))
+		goto out;
+	of_node_put(of_child);
+
+	of_child = of_find_node_by_name(NULL, "cal_data");
+	if (of_property_read_u32(of_child, "volt_low",
+						&ys_05_cal_data.volt_low))
+		goto out;
+	if (of_property_read_u32(of_child, "cap_low",
+						&ys_05_cal_data.cap_low))
+		goto out;
+	of_node_put(of_child);
+
+	return 0;
+out:
+	pr_info("%s filed to parse dt\n", __func__);
+	return -ENODEV;
+}
+#endif
+
+#ifdef CONFIG_OF
 #ifdef CONFIG_BCMPMU_DIETEMP_THERMAL
 int __init dietemp_zone_init(void)
 {
@@ -1907,6 +2094,7 @@ int __init board_bcm59xx_init(void)
 #ifdef CONFIG_OF
 	rgltr_init();
 	adc_init();
+	bcmpmu_fg_init();
 #ifdef CONFIG_BCMPMU_DIETEMP_THERMAL
 	dietemp_zone_init();
 #endif
@@ -1917,14 +2105,13 @@ int __init board_bcm59xx_init(void)
 	bcmpmu_set_pullup_reg();
 	ret = gpio_request(PMU_DEVICE_INT_GPIO, "bcmpmu59xxx-irq");
 	if (ret < 0) {
-		printk(KERN_ERR "<%s> failed at gpio_request\n", __func__);
+		pr_err("<%s> failed at gpio_request\n", __func__);
 		goto exit;
 	}
 	ret = gpio_direction_input(PMU_DEVICE_INT_GPIO);
 	if (ret < 0) {
 
-		printk(KERN_ERR "%s filed at gpio_direction_input.\n",
-				__func__);
+		pr_err("%s filed at gpio_direction_input.\n", __func__);
 		goto exit;
 	}
 	irq = gpio_to_irq(PMU_DEVICE_INT_GPIO);

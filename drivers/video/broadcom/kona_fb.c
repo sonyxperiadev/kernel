@@ -166,6 +166,10 @@ static int kona_fb_reboot_cb(struct notifier_block *, unsigned long, void *);
 static int kona_fb_die_cb(struct notifier_block *, unsigned long, void *);
 #endif
 
+static int lcd_boot_mode(char *);
+static int lcd_panel_setup(char *);
+
+static int need_page_alignment = 1;
 static char g_disp_str[DISPDRV_NAME_SZ];
 int g_display_enabled;
 
@@ -1448,6 +1452,17 @@ static int __init lcd_panel_setup(char *panel)
 }
 __setup("lcd_panel=", lcd_panel_setup);
 
+
+static int __init lcd_boot_mode(char *mode)
+{
+	if (mode && strlen(mode)) {
+		if (!strcmp(mode, "recovery") || !strcmp(mode, "charger"))
+			need_page_alignment = 0;
+	}
+	return 1;
+}
+__setup("androidboot.mode=", lcd_boot_mode);
+
 #ifdef CONFIG_OF
 static struct kona_fb_platform_data * __init get_of_data(struct device_node *np)
 {
@@ -2023,7 +2038,11 @@ static int __ref kona_fb_probe(struct platform_device *pdev)
 
 	framesize = fb->display_info->width * fb->display_info->height *
 	    fb->display_info->Bpp;
-	framesize = PAGE_ALIGN(framesize) * 2;
+
+	if (need_page_alignment)
+		framesize = PAGE_ALIGN(framesize);
+	framesize *= 2;
+
 	/* Workaround: One page extra allocated and mapped via m4u to avoid
 	 * v3d write faulting in m4u doing extra access */
 	framesize_alloc = PAGE_ALIGN(framesize + 4096);

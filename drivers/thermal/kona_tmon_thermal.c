@@ -15,6 +15,7 @@
 #include <linux/cpu_cooling.h>
 #ifdef CONFIG_DEBUG_FS
 #include <linux/debugfs.h>
+#include <linux/uaccess.h>
 #endif
 #include <linux/delay.h>
 #include <linux/io.h>
@@ -40,7 +41,7 @@
 /* Flag to control writability of trip threshold limits */
 #define TMON_ENABLE_DEBUG			1
 #if (TMON_ENABLE_DEBUG == 1)
-#define TRIP_UPDATE_MASK			0x0FE
+#define TRIP_UPDATE_MASK			0x07E
 #else
 #define TRIP_UPDATE_MASK			0x0
 #endif
@@ -80,6 +81,7 @@ static u32 suspend_poweroff;
 struct kona_tmon_thermal {
 	struct thermal_zone_device *tz;
 	struct thermal_cooling_device *freq_cdev;
+	struct thermal_cooling_device *bl_cdev;
 	struct work_struct isr_work;
 	struct delayed_work polling_work;
 	struct kona_tmon_pdata *pdata;
@@ -144,6 +146,7 @@ static int kona_tmon_tz_cdev_bind(struct thermal_zone_device *tz,
 			if (!TRIP_MAXBL(bdx))
 				continue;
 
+			thermal->bl_cdev = cdev;
 			level = backlight_cooling_get_level(cdev,
 						TRIP_MAXBL(bdx));
 
@@ -180,6 +183,12 @@ static int kona_tmon_tz_cdev_unbind(struct thermal_zone_device *tz,
 	int idx, ret = 0;
 
 	for (idx = 0; idx < TRIP_CNT; idx++) {
+		if (thermal->freq_cdev == cdev)
+			if (!TRIP_MAXFREQ(idx))
+				continue;
+		if (!strcmp(cdev->type, BACKLIGHT_CDEV_NAME))
+			if (!TRIP_MAXBL(idx))
+				continue;
 		ret = thermal_zone_unbind_cooling_device(tz, idx, cdev);
 		if (ret)
 			tmon_dbg(TMON_LOG_ERR, "unbinding colling device (%s) on trip %d: failed\n",
@@ -611,6 +620,13 @@ static irqreturn_t kona_tmon_isr(int irq, void *data)
 #ifdef CONFIG_DEBUG_FS
 struct dentry *dentry_tmon_dir;
 
+static int bcmpmu_tmon_debugfs_open(struct inode *inode, struct file *file)
+{
+	file->private_data = inode->i_private;
+	return 0;
+}
+
+
 static int debugfs_get_sensor(void *data, u64 *sensor)
 {
 	struct kona_tmon_thermal *thermal = data;
@@ -714,6 +730,192 @@ static int debugfs_get_temp(void *data, u64 *temp)
 DEFINE_SIMPLE_ATTRIBUTE(debugfs_temp_fops, debugfs_get_temp,
 		NULL, "%llu\n");
 
+static ssize_t bcmpmu_tmon_debugfs_show_table(struct file *file,
+			char __user *user_buf, size_t count, loff_t *ppos)
+{
+	struct kona_tmon_thermal *thermal = file->private_data;
+	char out_str[500];
+	u32 len = 0;
+	u8 loop;
+
+	memset(out_str, 0, sizeof(out_str));
+
+	len += snprintf(out_str+len, sizeof(out_str)-len,
+			"TMON Lookup table:\n");
+	len += snprintf(out_str+len, sizeof(out_str)-len,
+		"Trip no.\tTemperature\tMax Freq\tBrightness\n");
+	for (loop = 0; loop < TRIP_CNT; loop++)
+		len += snprintf(out_str+len, sizeof(out_str)-len,
+			"  %d\t\t%d\t\t%d\t\t%d\n", loop, TRIP_TEMP(loop),
+				TRIP_MAXFREQ(loop), TRIP_MAXBL(loop));
+	len += snprintf(out_str+len, sizeof(out_str)-len,
+		"To Update table, use the below format\n");
+	len += snprintf(out_str+len, sizeof(out_str)-len,
+		"echo <trip no.> <temp> > set_trip_temp\n");
+	len += snprintf(out_str+len, sizeof(out_str)-len,
+		"echo <trip no.> <freq> > set_trip_freq\n");
+	len += snprintf(out_str+len, sizeof(out_str)-len,
+		"echo <trip no.> <brightness> > set_trip_brightness\n");
+	len += snprintf(out_str+len, sizeof(out_str)-len,
+	"Note:Temp should be in ascending order,");
+	len += snprintf(out_str+len, sizeof(out_str)-len,
+		"freq and brightness should be in descending order\n");
+	return simple_read_from_buffer(user_buf, count, ppos, out_str, len);
+}
+static const struct file_operations debugfs_table_fops = {
+	.open = bcmpmu_tmon_debugfs_open,
+	.read = bcmpmu_tmon_debugfs_show_table,
+};
+
+static ssize_t bcmpmu_tmon_debugfs_set_temp(struct file *file,
+			char const __user *buf, size_t count, loff_t *offset)
+{
+	struct kona_tmon_thermal *thermal = file->private_data;
+	u32 idx, temp;
+	char *str_ptr;
+	char input_str[100];
+
+	memset(input_str, 0, 100);
+
+	if (copy_from_user(input_str, buf, count))
+		return -EFAULT;
+	str_ptr = &input_str[0];
+	input_str[count-1] = '\0';
+
+	tmon_dbg(TMON_LOG_ALERT, "input_str:%s:length=%d\n", input_str, count);
+	sscanf(str_ptr, "%d%d", &idx, &temp);
+	tmon_dbg(TMON_LOG_ALERT, "trip=%d\ttemp=%d\n", idx, temp);
+
+	if (idx < 0 || idx >= TRIP_CNT) {
+		tmon_dbg(TMON_LOG_ERR, "Invalid Trip count\n");
+		return count;
+	}
+
+	if (((idx > 0) && (temp < TRIP_TEMP(idx-1))) ||
+		((idx < TRIP_CNT - 1) && (temp > TRIP_TEMP(idx+1)))) {
+		tmon_dbg(TMON_LOG_ERR, "Temperatue not in ascending order\n");
+		return count;
+	}
+	kona_tmon_tz_set_trip_temp(thermal->tz, idx, temp);
+	tmon_dbg(TMON_LOG_ALERT, "Temperature of trip:%d updated to:%d\n",
+			idx, temp);
+	return count;
+}
+static const struct file_operations debugfs_set_trip_temp_fops = {
+	.open = bcmpmu_tmon_debugfs_open,
+	.write = bcmpmu_tmon_debugfs_set_temp,
+};
+
+static ssize_t bcmpmu_tmon_debugfs_set_freq(struct file *file,
+			char const __user *buf, size_t count, loff_t *offset)
+{
+	struct kona_tmon_thermal *thermal = file->private_data;
+	u32 idx, freq;
+	char *str_ptr;
+	int level = 0;
+	char input_str[100];
+
+	memset(input_str, 0, 100);
+
+	if (copy_from_user(input_str, buf, count))
+		return -EFAULT;
+	str_ptr = &input_str[0];
+	input_str[count-1] = '\0';
+
+	tmon_dbg(TMON_LOG_ALERT, "input_str:%s:length=%d\n", input_str, count);
+	sscanf(str_ptr, "%d%d", &idx, &freq);
+	tmon_dbg(TMON_LOG_ALERT, "trip=%d\tfreq=%d\n", idx, freq);
+
+	if (idx < 0 || idx >= TRIP_CNT) {
+		tmon_dbg(TMON_LOG_ERR, "Invalid Trip count\n");
+		return count;
+	}
+
+	/*If freq value needs to be changed, check whether the current value
+	 *is valid.Then unregister and register to change freq value */
+	if (freq != TRIP_MAXFREQ(idx)) {
+		if (freq)
+			level = cpufreq_cooling_get_level(0, freq);
+		if (level >= 0) {
+			thermal_zone_device_unregister(thermal->tz);
+			TRIP_MAXFREQ(idx) = freq;
+			thermal->tz  = thermal_zone_device_register("tmon",
+				thermal->pdata->trip_cnt, TRIP_UPDATE_MASK,
+					thermal, &tmon_ops, NULL, 0, 0);
+			tmon_dbg(TMON_LOG_ALERT,
+			"Frequency of trip%d updated to %dHz\n", idx, freq);
+		} else {
+			tmon_dbg(TMON_LOG_ERR,
+				"No match for entered frequency\n");
+			tmon_dbg(TMON_LOG_ERR,
+				"Retaining previous freq value:%dHz\n",
+							TRIP_MAXFREQ(idx));
+		}
+	}
+	return count;
+}
+static const struct file_operations debugfs_set_trip_freq_fops = {
+	.open = bcmpmu_tmon_debugfs_open,
+	.write = bcmpmu_tmon_debugfs_set_freq,
+};
+
+static ssize_t bcmpmu_tmon_debugfs_set_bright(struct file *file,
+			char const __user *buf, size_t count, loff_t *offset)
+{
+	struct kona_tmon_thermal *thermal = file->private_data;
+	u32 idx, bright;
+	char *str_ptr;
+	unsigned long max_state;
+	int level;
+	char input_str[100];
+
+	memset(input_str, 0, 100);
+
+	if (copy_from_user(input_str, buf, count))
+		return -EFAULT;
+	str_ptr = &input_str[0];
+	input_str[count-1] = '\0';
+
+	tmon_dbg(TMON_LOG_ALERT, "input_str:%s:length=%d\n", input_str, count);
+	sscanf(str_ptr, "%d%d", &idx, &bright);
+	tmon_dbg(TMON_LOG_ALERT, "trip=%d\tbrightness=%d\n", idx, bright);
+
+	if (idx < 0 || idx >= TRIP_CNT) {
+		tmon_dbg(TMON_LOG_ERR, "Invalid Trip count\n");
+		return count;
+	}
+
+	/*If brightness value needs to be changed, check whether the current
+	 * value is valid.Then unregister and register to change value */
+	if (bright != TRIP_MAXBL(idx)) {
+		thermal->bl_cdev->ops->get_max_state(thermal->bl_cdev,
+								&max_state);
+		level = backlight_cooling_get_level(thermal->bl_cdev, bright);
+		if ((level >= 0) && (level <= max_state)) {
+			thermal_zone_device_unregister(thermal->tz);
+			TRIP_MAXBL(idx) = bright;
+			thermal->tz  = thermal_zone_device_register("tmon",
+				thermal->pdata->trip_cnt, TRIP_UPDATE_MASK,
+					thermal, &tmon_ops, NULL, 0, 0);
+			tmon_dbg(TMON_LOG_ALERT,
+			"Brightness of trip%d updated to %d\n", idx, bright);
+		} else {
+			tmon_dbg(TMON_LOG_ERR,
+				"No match for entered brightness\n");
+			tmon_dbg(TMON_LOG_ERR,
+				"Retaining previous brightness value:%d\n",
+							TRIP_MAXBL(idx));
+		}
+	}
+	return count;
+}
+static const struct file_operations debugfs_set_trip_bright_fops = {
+	.open = bcmpmu_tmon_debugfs_open,
+	.write = bcmpmu_tmon_debugfs_set_bright,
+};
+
+
+
 static int __init kona_tmon_debugfs_init(struct kona_tmon_thermal *thermal)
 {
 	struct dentry *dentry_tmon_file;
@@ -783,6 +985,34 @@ static int __init kona_tmon_debugfs_init(struct kona_tmon_thermal *thermal)
 
 	dentry_tmon_file = debugfs_create_file("temp", TMON_FILE_PERM,
 			dentry_tmon_dir, thermal, &debugfs_temp_fops);
+	if (IS_ERR_OR_NULL(dentry_tmon_file)) {
+		ret = PTR_ERR(dentry_tmon_file);
+		goto err;
+	}
+
+	dentry_tmon_file = debugfs_create_file("tmon_table", S_IRUSR,
+			dentry_tmon_dir, thermal, &debugfs_table_fops);
+	if (IS_ERR_OR_NULL(dentry_tmon_file)) {
+		ret = PTR_ERR(dentry_tmon_file);
+		goto err;
+	}
+
+	dentry_tmon_file = debugfs_create_file("set_trip_temp", S_IWUSR,
+			dentry_tmon_dir, thermal, &debugfs_set_trip_temp_fops);
+	if (IS_ERR_OR_NULL(dentry_tmon_file)) {
+		ret = PTR_ERR(dentry_tmon_file);
+		goto err;
+	}
+
+	dentry_tmon_file = debugfs_create_file("set_trip_freq", S_IWUSR,
+			dentry_tmon_dir, thermal, &debugfs_set_trip_freq_fops);
+	if (IS_ERR_OR_NULL(dentry_tmon_file)) {
+		ret = PTR_ERR(dentry_tmon_file);
+		goto err;
+	}
+
+	dentry_tmon_file = debugfs_create_file("set_trip_brightness", S_IWUSR,
+		dentry_tmon_dir, thermal, &debugfs_set_trip_bright_fops);
 	if (IS_ERR_OR_NULL(dentry_tmon_file)) {
 		ret = PTR_ERR(dentry_tmon_file);
 		goto err;
@@ -1066,7 +1296,7 @@ static const struct of_device_id kona_tmon_match[] = {
 };
 #endif
 
-static struct platform_driver kona_thermal_driver = {
+static struct platform_driver __refdata kona_thermal_driver = {
 	.driver = {
 		.owner = THIS_MODULE,
 		.name = "kona_tmon_thermal",

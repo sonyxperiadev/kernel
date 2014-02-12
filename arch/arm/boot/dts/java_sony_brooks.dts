@@ -81,9 +81,9 @@
 		fs-ref-frequency = <13000000>;
 		hs-ref-frequency = <104000000>;
 
-		broadcom_nfc@77 {
+		broadcom_nfc@76 {
 			compatible = "bcm,nfc-i2c";
-			reg = <0x77>;
+			reg = <0x76>;
 			wake_gpio = <25>;
 			en_gpio = <100>;
 			irq_gpio = <43>;
