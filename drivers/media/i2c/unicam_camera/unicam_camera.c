@@ -1477,7 +1477,7 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 			if (unicam_dev->active) {
 				dma_addr = vb2_plane_dma_addr(
 					unicam_dev->active, 0);
-				if (!dma_addr) {
+				if (!dma_addr || dma_addr & 0xF) {
 					unicam_dev->active = NULL;
 					pr_err("ISR: No valid address.skip capture\n");
 					goto out;
@@ -1488,13 +1488,16 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 				im0.ls = unicam_dev->icd->user_width * 2;
 				if (unicam_dev->icd->current_fmt->code !=
 					V4L2_MBUS_FMT_JPEG_1X8) {
-					mm_csi0_update_one(&im0,
+					ret = mm_csi0_update_one(&im0,
 						unicam_dev->curr, IMAGE_BUFFER);
 				} else {
-					mm_csi0_update_one(&im0,
+					ret = mm_csi0_update_one(&im0,
 						unicam_dev->curr, DATA_BUFFER);
 				}
-				unicam_camera_capture(unicam_dev);
+				if (!ret)
+					unicam_camera_capture(unicam_dev);
+				else
+					pr_err("Unicam Camera: mm_csi0_update_one fail\n");
 			} else {
 				pr_err("ran out of buffers\n");
 			}

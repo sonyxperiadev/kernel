@@ -773,7 +773,8 @@ int mm_csi0_update_one(struct buffer_desc *im, int buf_num,
 	}
 	if ((im->start & 0xF) || ((im->start + im->size) & 0xF) ||
 			(im->ls & 0xF)) {
-		pr_info("Wrong allignment\n");
+		pr_info("Wrong allignment start: 0x%x size: 0x%x ls: 0x%x\n",
+				im->start, im->size, im->ls);
 		return -EINVAL;
 	}
 	if (type == IMAGE_BUFFER) {
