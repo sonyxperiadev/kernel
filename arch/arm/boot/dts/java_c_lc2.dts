@@ -3,7 +3,7 @@
 /dts-v1/;
 
 /include/ "java.dtsi"
-/include/ "java_garnet_bcmpmu_edn000.dtsi"
+/include/ "java_bcmpmu_c_a21.dtsi"
 
 / {
 	model = "Javagarnet LC2";

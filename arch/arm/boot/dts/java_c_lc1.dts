@@ -3,10 +3,10 @@
 /dts-v1/;
 
 /include/ "java.dtsi"
-/include/ "java_garnet_bcmpmu_edn000.dtsi"
+/include/ "java_bcmpmu_c_lc1.dtsi"
 
 / {
-	model = "Javagarnet C_LC1";
+	model = "Javagarnet C LC1";
 	compatible = "bcm,java";
 
 	chosen {
