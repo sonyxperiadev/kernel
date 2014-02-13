@@ -888,7 +888,8 @@ static net_drvr_info_t *bcm_fuse_net_device_pdp_lookup(uint8_t pdp_context_id)
 		}
 	}
 
-	BNET_DEBUG(DBG_ERROR,
+	if (printk_ratelimit())
+		BNET_DEBUG(DBG_ERROR,
 		   "%s: No network device mapping for PDP context id[%d]\n",
 		   __FUNCTION__, pdp_context_id);
 
