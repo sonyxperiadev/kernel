@@ -27,6 +27,7 @@
 #include <linux/of_fdt.h>
 #include <linux/of_platform.h>
 #include <linux/regulator/consumer.h>
+#include <linux/spinlock.h>
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
 #include <linux/earlysuspend.h>
@@ -65,6 +66,12 @@ enum bma2xx_func {
 	BMA_EN_WAKE_ON_EARLY_SUSPEND,
 };
 
+enum bma2xx_state {
+	DEV_SUSPENDED = 1 << 0,
+	IRQ1_PENDING  = 1 << 1,
+	IRQ2_PENDING  = 1 << 2,
+};
+
 #define BMA_FUNC(bit) (1 << (bit))
 #define WAKE_SET(enable) \
 	((enable & (BMA_FUNC(BMA_LAST_REAL_WAKE + 1) - 1)) != 0)
@@ -90,6 +97,8 @@ struct bma2xx_data {
 	u32 orientation;
 	struct regulator *regulator;
 	struct input_dev *wake_idev;
+	spinlock_t lock;
+	int state;
 };
 
 #ifdef BMA2XX_SW_CALIBRATION
@@ -3138,6 +3147,7 @@ static irqreturn_t bma2xx_irq_handler(int irq, void *handle)
 {
 
 	struct bma2xx_data *data = handle;
+	unsigned long f;
 
 	if (data == NULL)
 		return IRQ_HANDLED;
@@ -3145,7 +3155,14 @@ static irqreturn_t bma2xx_irq_handler(int irq, void *handle)
 		return IRQ_HANDLED;
 
 	bma2xx_report_wake_key(data);
-	schedule_work(&data->irq_work);
+	spin_lock_irqsave(&data->lock, f);
+	if (data->state & DEV_SUSPENDED) {
+		data->state |= IRQ1_PENDING;
+	} else {
+		data->state &= ~IRQ1_PENDING;
+		schedule_work(&data->irq_work);
+	}
+	spin_unlock_irqrestore(&data->lock, f);
 	return IRQ_HANDLED;
 }
 #endif /* defined(BMA2XX_ENABLE_INT1)||defined(BMA2XX_ENABLE_INT2) */
@@ -3318,6 +3335,7 @@ static int bma2xx_probe(struct i2c_client *client,
 	register_early_suspend(&data->early_suspend);
 #endif
 
+	spin_lock_init(&data->lock);
 	mutex_init(&data->value_mutex);
 	mutex_init(&data->mode_mutex);
 	mutex_init(&data->enable_mutex);
@@ -3378,6 +3396,12 @@ static int bma2xx_remove(struct i2c_client *client)
 static int bma2xx_suspend(struct i2c_client *client, pm_message_t mesg)
 {
 	struct bma2xx_data *data = i2c_get_clientdata(client);
+	unsigned long f;
+
+	spin_lock_irqsave(&data->lock, f);
+	data->state |= DEV_SUSPENDED;
+	spin_unlock_irqrestore(&data->lock, f);
+	flush_work(&data->irq_work);
 
 	mutex_lock(&data->enable_mutex);
 	bma2xx_set_optimal_mode_locked(data, true);
@@ -3388,7 +3412,6 @@ static int bma2xx_suspend(struct i2c_client *client, pm_message_t mesg)
 		dev_info(&data->bma2xx_client->dev, "set IRQ %d wake = %d\n",
 			data->IRQ, rc);
 	}
-
 	mutex_unlock(&data->enable_mutex);
 	return 0;
 }
@@ -3396,6 +3419,7 @@ static int bma2xx_suspend(struct i2c_client *client, pm_message_t mesg)
 static int bma2xx_resume(struct i2c_client *client)
 {
 	struct bma2xx_data *data = i2c_get_clientdata(client);
+	unsigned long f;
 
 	mutex_lock(&data->enable_mutex);
 	bma2xx_set_optimal_mode_locked(data, false);
@@ -3403,6 +3427,15 @@ static int bma2xx_resume(struct i2c_client *client)
 			WAKE_SET(data->enable) && WAKE_ENABLED(data->enable))
 		(void)irq_set_irq_wake(data->IRQ, 0);
 	mutex_unlock(&data->enable_mutex);
+
+	spin_lock_irqsave(&data->lock, f);
+	data->state &= ~DEV_SUSPENDED;
+	if (data->state & IRQ1_PENDING) {
+		data->state &= ~IRQ1_PENDING;
+		schedule_work(&data->irq_work);
+	}
+	spin_unlock_irqrestore(&data->lock, f);
+
 	return 0;
 }
 
