@@ -111,6 +111,7 @@
 			compatible = "bcm,bma2xx";
 			reg = <0x18>;
 			gpio-irq-pin = <1>;
+			gpio-data-irq-pin = <4>;
 			orientation = <11>;
 			regulator = "gpldo1_uc";
 		};
