@@ -74,6 +74,13 @@ enum bma2xx_state {
 	IRQ2_PENDING  = 1 << 2,
 };
 
+enum bma2xx_range {
+	BOSCH_ACCEL_SENSOR_RANGE_2G = 3,
+	BOSCH_ACCEL_SENSOR_RANGE_4G = 5,
+	BOSCH_ACCEL_SENSOR_RANGE_8G = 8,
+	BOSCH_ACCEL_SENSOR_RANGE_16G = 12,
+};
+
 #define BMA_FUNC(bit) (1 << (bit))
 #define WAKE_SET(enable) \
 	((enable & (BMA_FUNC(BMA_LAST_REAL_WAKE + 1) - 1)) != 0)
@@ -634,19 +641,22 @@ static int bma2xx_set_range(struct i2c_client *client, unsigned char Range)
 		switch (Range) {
 		case 0:
 			data1 =
-			    BMA2XXX_SET_BITSLICE(data1, BMA2XXX_RANGE_SEL, 0);
+			    BMA2XXX_SET_BITSLICE(data1, BMA2XXX_RANGE_SEL,
+					BOSCH_ACCEL_SENSOR_RANGE_2G);
 			break;
 		case 1:
 			data1 =
-			    BMA2XXX_SET_BITSLICE(data1, BMA2XXX_RANGE_SEL, 5);
+			    BMA2XXX_SET_BITSLICE(data1, BMA2XXX_RANGE_SEL,
+					BOSCH_ACCEL_SENSOR_RANGE_4G);
 			break;
 		case 2:
 			data1 =
-			    BMA2XXX_SET_BITSLICE(data1, BMA2XXX_RANGE_SEL, 8);
+			    BMA2XXX_SET_BITSLICE(data1, BMA2XXX_RANGE_SEL,
+					BOSCH_ACCEL_SENSOR_RANGE_8G);
 			break;
 		case 3:
-			data1 = BMA2XXX_SET_BITSLICE(data1,
-						     BMA2XXX_RANGE_SEL, 12);
+			data1 = BMA2XXX_SET_BITSLICE(data1, BMA2XXX_RANGE_SEL,
+					BOSCH_ACCEL_SENSOR_RANGE_16G);
 			break;
 		default:
 			break;
@@ -1735,16 +1745,15 @@ static void bma2xx_work_func(struct work_struct *work)
 	bma2xx_map_axes(bma2xx, &acc, xyz);
 
 #ifdef BMA2XX_SW_CALIBRATION
-	input_report_abs(bma2xx->input, ABS_X, xyz[0]-bma2xx_offset[0]);
-	input_report_abs(bma2xx->input, ABS_Y, xyz[1]-bma2xx_offset[1]);
-	input_report_abs(bma2xx->input, ABS_Z, xyz[2]-bma2xx_offset[2]);
-#else
-
-	input_report_abs(bma2xx->input, ABS_X, xyz[0]);
-	input_report_abs(bma2xx->input, ABS_Y, xyz[1]);
-	input_report_abs(bma2xx->input, ABS_Z, xyz[2]);
+	xyz[0] -= bma2xx_offset[0];
+	xyz[1] -= bma2xx_offset[1];
+	xyz[2] -= bma2xx_offset[2];
 #endif
+	input_event(bma2xx->input, EV_MSC, MSC_SERIAL, xyz[0]);
+	input_event(bma2xx->input, EV_MSC, MSC_PULSELED, xyz[1]);
+	input_event(bma2xx->input, EV_MSC, MSC_GESTURE, xyz[2]);
 	input_sync(bma2xx->input);
+
 	mutex_lock(&bma2xx->value_mutex);
 	bma2xx->value = acc;
 	mutex_unlock(&bma2xx->value_mutex);
@@ -1815,9 +1824,9 @@ static int bma2xx_fifo_read(struct bma2xx_data *bma)
 		xyz[1] -= bma2xx_offset[1];
 		xyz[2] -= bma2xx_offset[2];
 #endif
-		input_report_abs(bma->input, ABS_X, xyz[0]);
-		input_report_abs(bma->input, ABS_Y, xyz[1]);
-		input_report_abs(bma->input, ABS_Z, xyz[2]);
+		input_event(bma->input, EV_MSC, MSC_SERIAL, xyz[0]);
+		input_event(bma->input, EV_MSC, MSC_PULSELED, xyz[1]);
+		input_event(bma->input, EV_MSC, MSC_GESTURE, xyz[2]);
 	}
 	input_sync(bma->input);
 err:
@@ -3532,13 +3541,9 @@ static int bma2xx_probe(struct i2c_client *client,
 	input_set_capability(dev, EV_REL, SINGLE_TAP_INTERRUPT);
 	input_set_capability(dev, EV_ABS, ORIENT_INTERRUPT);
 	input_set_capability(dev, EV_ABS, FLAT_INTERRUPT);
-	input_set_abs_params(dev, ABS_X, ABSMIN, ABSMAX, 0, 0);
-	input_set_abs_params(dev, ABS_Y, ABSMIN, ABSMAX, 0, 0);
-	input_set_abs_params(dev, ABS_Z, ABSMIN, ABSMAX, 0, 0);
-	set_bit(EV_REL, dev->evbit);
-	set_bit(ABS_X, dev->relbit);
-	set_bit(ABS_Y, dev->relbit);
-	set_bit(ABS_Z, dev->relbit);
+	input_set_capability(dev, EV_MSC, MSC_SERIAL);
+	input_set_capability(dev, EV_MSC, MSC_PULSELED);
+	input_set_capability(dev, EV_MSC, MSC_GESTURE);
 
 	input_set_drvdata(dev, data);
 
