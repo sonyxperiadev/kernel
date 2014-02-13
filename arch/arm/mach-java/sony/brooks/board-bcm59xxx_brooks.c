@@ -1016,11 +1016,11 @@ struct bcmpmu_acld_pdata acld_pdata = {
 	.acld_vbus_margin = 200,	/*mV*/
 	.acld_vbus_thrs = 5950,
 	.acld_vbat_thrs = 3500,
-	.i_sat = 3000,			/* saturation current in mA
+	.i_sat = 400,			/* saturation current in mA
 						for chrgr while using ACLD */
 	.i_def_dcp = 700,
-	.i_max_cc = 2200,
-	.acld_cc_lmt = 1360,    /*In general this is 80% of 1C.
+	.i_max_cc = 400,
+	.acld_cc_lmt = 360,    /*In general this is 80% of 1C.
 				  If customer defines any other value
 				  chage accordingly*/
 	.otp_cc_trim = 0x1F,
@@ -1169,8 +1169,8 @@ static struct bcmpmu_batt_property ys_05_props = {
 	.model = "BRCM YS-05",
 	.min_volt = 3000,
 	.max_volt = 4200,
-	.full_cap = 1700 * 3600,
-	.one_c_rate = 1700,
+	.full_cap = 400 * 3600,
+	.one_c_rate = 400,
 	.volt_cap_lut = ys_05_volt_cap_lut,
 	.volt_cap_lut_sz = ARRAY_SIZE(ys_05_volt_cap_lut),
 	.esr_temp_lut = ys_05_esr_temp_lut,
