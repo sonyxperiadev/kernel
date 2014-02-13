@@ -540,8 +540,8 @@
 		data-pullup = <0>;
 		is-8bit = <1>;
 		devtype = <2>;		/*SDIO_DEV_TYPE_EMMC*/
-		pm_caps = <1>;		/*MMC_PM_KEEP_POWER*/
 		flags = <3>;		/*NON_REMOVABLE | RPM_EN*/
+		pm_caps = <1>;		/*MMC_PM_KEEP_POWER*/
 		peri-clk-name = "sdio2_clk";
 		ahb-clk-name = "sdio2_ahb_clk";
 		sleep-clk-name = "sdio2_sleep_clk";
@@ -572,6 +572,7 @@
 		cd-gpio = <&gpio 91 0>;		/*SD_CARDDET_GPIO_PIN*/
 		devtype = <0>;		/*SDIO_DEV_TYPE_SDMMC*/
 		flags = <2>;		/*REMOVABLE | RPM_EN*/
+		pm_caps = <1>;		/*MMC_PM_KEEP_POWER*/
 		peri-clk-name = "sdio1_clk";
 		ahb-clk-name = "sdio1_ahb_clk";
 		sleep-clk-name = "sdio1_sleep_clk";
@@ -634,6 +635,7 @@
 		brightness-levels = <0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17
 							18 19 20 21 22 23 24 25 26 27 28 29 30 31 32>; /* Android calibrates to 32 levels */
 		default-brightness-level = <32>; /* Array index */
+		pb_enable_adapt_bright = <1>;
 	};
 
 	gpio-leds {
