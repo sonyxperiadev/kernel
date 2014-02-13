@@ -509,11 +509,28 @@ static int bma2xx_enable_func_locked(struct bma2xx_data *bma2xx,
 		struct i2c_client *client = bma2xx->bma2xx_client;
 
 		rc = bma2xx_set_Int_Enable(client, sel, state);
-		rc = rc ? rc : bma2xx_set_int1_pad_sel(client, sel, state);
-		rc = rc ? rc : bma2xx_set_int2_pad_sel(client, sel, state);
+		if (rc)
+			goto err;
+		switch (state) {
+		case 1:
+			rc = bma2xx_set_int1_pad_sel(client, sel, 1);
+			break;
+		case 2:
+			rc = bma2xx_set_int2_pad_sel(client, sel, 1);
+			break;
+		case 0:
+			rc = bma2xx_set_int1_pad_sel(client, sel, 0);
+			rc = rc ? rc :
+				bma2xx_set_int2_pad_sel(client, sel, 0);
+			break;
+		default:
+			rc = -EINVAL;
+			break;
+		}
 	} else {
 		rc = 0;
 	}
+err:
 	return rc;
 }
 
