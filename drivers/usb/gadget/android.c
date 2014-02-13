@@ -217,11 +217,17 @@ static void android_disable(struct android_dev *dev)
 	BUG_ON(!mutex_is_locked(&dev->mutex));
 
 	if (dev->disable_depth++ == 0) {
-		android_disconnect(cdev);
 		usb_gadget_disconnect(cdev->gadget);
 		/* Cancel pending control requests */
 		usb_ep_dequeue(cdev->gadget->ep0, cdev->req);
 		usb_remove_config(cdev, &android_config_driver);
+		/*
+		 * Moving the disconnect uevent to after
+		 * cdev->config is made NULL. Else, if the
+		 * android_work is scheduled before cdev->config
+		 * is made NULL we may miss out the disconnect uevent.
+		 */
+		android_disconnect(cdev);
 #ifdef CONFIG_USB_PCD_SETTINGS
 		usb_pcd_disable(cdev->gadget);
 #endif
