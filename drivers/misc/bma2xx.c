@@ -33,6 +33,7 @@
 #include <linux/earlysuspend.h>
 #endif
 
+#define BMA2X2_MAX_FIFO_LEVEL 32
 #define BMA2XX_SW_CALIBRATION 1
 
 #define BMA2XXX_GET_BITSLICE(regvar, bitname)\
@@ -64,6 +65,7 @@ enum bma2xx_func {
 	BMA_POLL_DATA,
 	BMA_ENABLE_WAKE,
 	BMA_EN_WAKE_ON_EARLY_SUSPEND,
+	BMA_FIFO_WM,
 };
 
 enum bma2xx_state {
@@ -76,6 +78,8 @@ enum bma2xx_state {
 #define WAKE_SET(enable) \
 	((enable & (BMA_FUNC(BMA_LAST_REAL_WAKE + 1) - 1)) != 0)
 #define WAKE_ENABLED(enable) ((enable & BMA_FUNC(BMA_ENABLE_WAKE)) != 0)
+#define DATA_ENABLED(enable) ((enable & \
+	(BMA_FUNC(BMA_POLL_DATA) | BMA_FUNC(BMA_FIFO_WM))) != 0)
 
 struct bma2xx_data {
 	struct i2c_client *bma2xx_client;
@@ -99,6 +103,8 @@ struct bma2xx_data {
 	struct input_dev *wake_idev;
 	spinlock_t lock;
 	int state;
+	struct work_struct fifo_work;
+	int data_irq;
 };
 
 #ifdef BMA2XX_SW_CALIBRATION
@@ -115,8 +121,10 @@ static int bma2xx_smbus_read_byte(struct i2c_client *client,
 {
 	s32 dummy;
 	dummy = i2c_smbus_read_byte_data(client, reg_addr);
-	if (dummy < 0)
-		return -1;
+	if (dummy < 0) {
+		dev_err(&client->dev, "%s: err %d\n", __func__, dummy);
+		return dummy;
+	}
 	*data = dummy & 0x000000ff;
 
 	return 0;
@@ -127,8 +135,12 @@ static int bma2xx_smbus_write_byte(struct i2c_client *client,
 {
 	s32 dummy;
 	dummy = i2c_smbus_write_byte_data(client, reg_addr, *data);
-	if (dummy < 0)
-		return -1;
+	if (dummy < 0) {
+		dev_err(&client->dev, "%s: err %d\n", __func__, dummy);
+		return dummy;
+	}
+	dev_dbg(&client->dev, "%s: 0x%02x -> [0x%02x] = %d\n",
+			__func__, reg_addr, *data, dummy);
 	return 0;
 }
 
@@ -138,9 +150,36 @@ static int bma2xx_smbus_read_byte_block(struct i2c_client *client,
 {
 	s32 dummy;
 	dummy = i2c_smbus_read_i2c_block_data(client, reg_addr, len, data);
-	if (dummy < 0)
-		return -1;
+	if (dummy < 0) {
+		dev_err(&client->dev, "%s: err %d\n", __func__, dummy);
+		return dummy;
+	}
 	return 0;
+}
+
+static int bma2xx_big_block_read(struct i2c_client *cl, u8 addr,
+	int len, char *rec_buf)
+{
+	int rc;
+	struct i2c_msg msg[2] = {
+		[0] =  {
+			.addr = cl->addr,
+			.flags = cl->flags & I2C_M_TEN,
+			.len = 1,
+			.buf = &addr,
+		},
+		[1] =  {
+			.addr = cl->addr,
+			.flags = (cl->flags & I2C_M_TEN) | I2C_M_RD,
+			.len = len,
+			.buf = rec_buf,
+		},
+	};
+	rc = i2c_transfer(cl->adapter, msg, ARRAY_SIZE(msg));
+	if (rc == ARRAY_SIZE(msg))
+		return 0;
+	dev_err(&cl->dev, "%s: rc %d\n", __func__, rc);
+	return rc < 0 ? rc : -EIO;
 }
 
 static int bma2xx_set_mode(struct i2c_client *client, unsigned char Mode)
@@ -287,6 +326,18 @@ static int bma2xx_set_int1_pad_sel(struct i2c_client *client,
 					    BMA2XXX_EN_INT1_PAD_FLAT__REG,
 					    &data);
 		break;
+	case BMA_FIFO_WM:
+		comres =
+		    bma2xx_smbus_read_byte(client,
+					   BMA2XXX_EN_INT1_PAD_FIFOWM__REG,
+					   &data);
+		data = BMA2XXX_SET_BITSLICE(data,
+				BMA2XXX_EN_INT1_PAD_FIFOWM, state);
+		comres =
+		    bma2xx_smbus_write_byte(client,
+					    BMA2XXX_EN_INT1_PAD_FIFOWM__REG,
+					    &data);
+		break;
 	default:
 		break;
 	}
@@ -396,11 +447,33 @@ static int bma2xx_set_int2_pad_sel(struct i2c_client *client,
 					    BMA2XXX_EN_INT2_PAD_FLAT__REG,
 					    &data);
 		break;
+	case BMA_FIFO_WM:
+		comres =
+		    bma2xx_smbus_read_byte(client,
+					   BMA2XXX_EN_INT2_PAD_FIFOWM__REG,
+					   &data);
+		data = BMA2XXX_SET_BITSLICE(data,
+				BMA2XXX_EN_INT2_PAD_FIFOWM, state);
+		comres =
+		    bma2xx_smbus_write_byte(client,
+					    BMA2XXX_EN_INT2_PAD_FIFOWM__REG,
+					    &data);
+		break;
 	default:
 		break;
 	}
 #endif /* BMA2XX_ENABLE_INT2 */
 	return comres;
+}
+
+static int bma2xx_set_pad_sel(struct i2c_client *client,
+	enum bma2xx_func int2sel, int state, int pad)
+{
+	if (pad == 1)
+		return bma2xx_set_int1_pad_sel(client, int2sel, state);
+	if (pad == 2)
+		return bma2xx_set_int2_pad_sel(client, int2sel, state);
+	return -EINVAL;
 }
 
 static int bma2xx_set_Int_Enable(struct i2c_client *client,
@@ -487,6 +560,11 @@ static int bma2xx_set_Int_Enable(struct i2c_client *client,
 		/* Flat Interrupt */
 
 		data1 = BMA2XXX_SET_BITSLICE(data1, BMA2XXX_EN_FLAT_INT, value);
+		break;
+	case BMA_FIFO_WM:
+		/* FIFO watermark Interrupt */
+		data2 = BMA2XXX_SET_BITSLICE(data2,
+				BMA2XXX_EN_FIFOWM_INT, value);
 		break;
 	default:
 		break;
@@ -1572,95 +1650,99 @@ static int bma2xx_read_accel_xyz(struct i2c_client *client,
 	return comres;
 }
 
+static void bma2xx_map_axes(struct bma2xx_data *bma2xx,
+	struct bma2xxacc *acc, int *xyz)
+{
+	switch (bma2xx->orientation) {
+	case BMA_ORI_100_010_001:
+		xyz[0] = acc->x;
+		xyz[1] = acc->y;
+		xyz[2] = acc->z;
+		break;
+	case BMA_ORI_010_100_001:
+		xyz[0] = acc->y;
+		xyz[1] = acc->x;
+		xyz[2] = acc->z;
+		break;
+	case BMA_ORI_f00_010_001:
+		xyz[0] = -acc->x;
+		xyz[1] = acc->y;
+		xyz[2] = acc->z;
+		break;
+	case BMA_ORI_f00_0f0_001:
+		xyz[0] = -acc->x;
+		xyz[1] = -acc->y;
+		xyz[2] = acc->z;
+		break;
+	case BMA_ORI_100_0f0_001:
+		xyz[0] = acc->x;
+		xyz[1] = -acc->y;
+		xyz[2] = acc->z;
+		break;
+	case BMA_ORI_100_010_00f:
+		xyz[0] = acc->x;
+		xyz[1] = acc->y;
+		xyz[2] = -acc->z;
+		break;
+	case BMA_ORI_010_100_00f:
+		xyz[0] = acc->y;
+		xyz[1] = acc->x;
+		xyz[2] = -acc->z;
+		break;
+	case BMA_ORI_f00_010_00f:
+		xyz[0] = -acc->x;
+		xyz[1] = acc->y;
+		xyz[2] = -acc->z;
+		break;
+	case BMA_ORI_f00_0f0_00f:
+		xyz[0] = -acc->x;
+		xyz[1] = -acc->y;
+		xyz[2] = -acc->z;
+		break;
+	case BMA_ORI_100_0f0_00f:
+		xyz[0] = acc->x;
+		xyz[1] = -acc->y;
+		xyz[2] = -acc->z;
+		break;
+	case BMA_ORI_010_f00_00f:
+		xyz[0] = acc->y;
+		xyz[1] = -acc->x;
+		xyz[2] = -acc->z;
+		break;
+	case BMA_ORI_0f0_100_00f:
+		xyz[0] = -acc->y;
+		xyz[1] = acc->x;
+		xyz[2] = -acc->z;
+		break;
+	case BMA_ORI_0f0_100_001:
+	default:
+		xyz[0] = -acc->y;
+		xyz[1] = acc->x;
+		xyz[2] = acc->z;
+		break;
+	}
+}
+
 static void bma2xx_work_func(struct work_struct *work)
 {
 	struct bma2xx_data *bma2xx = container_of((struct delayed_work *)work,
 						  struct bma2xx_data, work);
 	static struct bma2xxacc acc;
-	int X, Y, Z;
+	int xyz[3];
 	unsigned long delay = msecs_to_jiffies(atomic_read(&bma2xx->delay));
-	X = 0;
-	Y = 0;
-	Z = 0;
+
 	bma2xx_read_accel_xyz(bma2xx->bma2xx_client, &acc);
-	switch (bma2xx->orientation) {
-	case BMA_ORI_100_010_001:
-		X = acc.x;
-		Y = acc.y;
-		Z = acc.z;
-		break;
-	case BMA_ORI_010_100_001:
-		X = acc.y;
-		Y = acc.x;
-		Z = acc.z;
-		break;
-	case BMA_ORI_f00_010_001:
-		X = -acc.x;
-		Y = acc.y;
-		Z = acc.z;
-		break;
-	case BMA_ORI_f00_0f0_001:
-		X = -acc.x;
-		Y = -acc.y;
-		Z = acc.z;
-		break;
-	case BMA_ORI_100_0f0_001:
-		X = acc.x;
-		Y = -acc.y;
-		Z = acc.z;
-		break;
-	case BMA_ORI_100_010_00f:
-		X = acc.x;
-		Y = acc.y;
-		Z = -acc.z;
-		break;
-	case BMA_ORI_010_100_00f:
-		X = acc.y;
-		Y = acc.x;
-		Z = -acc.z;
-		break;
-	case BMA_ORI_f00_010_00f:
-		X = -acc.x;
-		Y = acc.y;
-		Z = -acc.z;
-		break;
-	case BMA_ORI_f00_0f0_00f:
-		X = -acc.x;
-		Y = -acc.y;
-		Z = -acc.z;
-		break;
-	case BMA_ORI_100_0f0_00f:
-		X = acc.x;
-		Y = -acc.y;
-		Z = -acc.z;
-		break;
-	case BMA_ORI_010_f00_00f:
-		X = acc.y;
-		Y = -acc.x;
-		Z = -acc.z;
-		break;
-	case BMA_ORI_0f0_100_00f:
-		X = -acc.y;
-		Y = acc.x;
-		Z = -acc.z;
-		break;
-	case BMA_ORI_0f0_100_001:
-		X = -acc.y;
-		Y = acc.x;
-		Z = acc.z;
-		break;
-	default:
-		break;
-	}
+	bma2xx_map_axes(bma2xx, &acc, xyz);
+
 #ifdef BMA2XX_SW_CALIBRATION
-	input_report_abs(bma2xx->input, ABS_X, X-bma2xx_offset[0]);
-	input_report_abs(bma2xx->input, ABS_Y, Y-bma2xx_offset[1]);
-	input_report_abs(bma2xx->input, ABS_Z, Z-bma2xx_offset[2]);
+	input_report_abs(bma2xx->input, ABS_X, xyz[0]-bma2xx_offset[0]);
+	input_report_abs(bma2xx->input, ABS_Y, xyz[1]-bma2xx_offset[1]);
+	input_report_abs(bma2xx->input, ABS_Z, xyz[2]-bma2xx_offset[2]);
 #else
 
-	input_report_abs(bma2xx->input, ABS_X, X);
-	input_report_abs(bma2xx->input, ABS_Y, Y);
-	input_report_abs(bma2xx->input, ABS_Z, Z);
+	input_report_abs(bma2xx->input, ABS_X, xyz[0]);
+	input_report_abs(bma2xx->input, ABS_Y, xyz[1]);
+	input_report_abs(bma2xx->input, ABS_Z, xyz[2]);
 #endif
 	input_sync(bma2xx->input);
 	mutex_lock(&bma2xx->value_mutex);
@@ -1669,12 +1751,85 @@ static void bma2xx_work_func(struct work_struct *work)
 	schedule_delayed_work(&bma2xx->work, delay);
 }
 
+static int bma2xx_fifo_config(struct bma2xx_data *bma, int wm, int pad)
+{
+	int rc;
+	unsigned char data = 0;
+	struct i2c_client *cl = bma->bma2xx_client;
+
+	data = BMA2XXX_SET_BITSLICE(data, BMA2XXX_FIFO_DATA_SEL, FIFO_DATA_XYZ);
+	data = BMA2XXX_SET_BITSLICE(data, BMA2XXX_FIFO_MODE, FIFO_MODE_STREAM);
+	rc = bma2xx_smbus_write_byte(cl, BMA2XXX_FIFO_DATA_SEL__REG, &data);
+	if (rc)
+		goto err;
+	data = 0;
+	data = BMA2XXX_SET_BITSLICE(data, BMA2XXX_FIFO_WM, wm);
+	rc = bma2xx_smbus_write_byte(cl, BMA2XXX_FIFO_WM__REG, &data);
+	if (rc)
+		goto err;
+	if (wm) {
+		rc = bma2xx_set_pad_sel(cl, BMA_FIFO_WM, 1, pad);
+		rc = rc ? rc : bma2xx_set_Int_Enable(cl, BMA_FIFO_WM, 1);
+	} else {
+		rc = bma2xx_set_Int_Enable(cl, BMA_FIFO_WM, 0);
+		rc = rc ? rc : bma2xx_set_pad_sel(cl, BMA_FIFO_WM, 0, 1);
+		rc = rc ? rc : bma2xx_set_pad_sel(cl, BMA_FIFO_WM, 0, 2);
+	}
+err:
+	return rc;
+}
+
+static int bma2xx_fifo_read(struct bma2xx_data *bma)
+{
+	struct i2c_client *cl = bma->bma2xx_client;
+	unsigned char frame_cnt;
+	struct bma2xxacc acc[BMA2X2_MAX_FIFO_LEVEL];
+	int xyz[3];
+	unsigned i;
+
+	int rc = bma2xx_smbus_read_byte(cl,
+			BMA2XXX_FIFO_STATUS_REG, &frame_cnt);
+	if (rc)
+		goto err;
+	frame_cnt = BMA2XXX_GET_BITSLICE(frame_cnt, BMA2XXX_FIFO_FRAME);
+
+	dev_dbg(&cl->dev, "%s: %d frames\n", __func__, frame_cnt);
+
+	rc = bma2xx_big_block_read(cl, BMA2XXX_FIFO_DATA_REG,
+			frame_cnt * 6, (char *)acc);
+	if (rc)
+		goto err;
+
+	for (i = 0; i < frame_cnt; i++) {
+#ifdef __BIG_ENDIAN
+		acc[i].x = swab16(acc[i].x);
+		acc[i].y = swab16(acc[i].y);
+		acc[i].z = swab16(acc[i].z);
+#endif
+		acc[i].x >>= 4;
+		acc[i].y >>= 4;
+		acc[i].z >>= 4;
+		bma2xx_map_axes(bma, &acc[i], xyz);
+#ifdef BMA2XX_SW_CALIBRATION
+		xyz[0] -= bma2xx_offset[0];
+		xyz[1] -= bma2xx_offset[1];
+		xyz[2] -= bma2xx_offset[2];
+#endif
+		input_report_abs(bma->input, ABS_X, xyz[0]);
+		input_report_abs(bma->input, ABS_Y, xyz[1]);
+		input_report_abs(bma->input, ABS_Z, xyz[2]);
+	}
+	input_sync(bma->input);
+err:
+	return rc;
+}
+
 static int bma2xx_set_optimal_mode_locked(struct bma2xx_data *data,
 	bool in_suspend)
 {
 	int power_mode;
 
-	power_mode = !in_suspend && (data->enable & BMA_FUNC(BMA_POLL_DATA)) ?
+	power_mode = !in_suspend && DATA_ENABLED(data->enable) ?
 			BMA2XXX_MODE_NORMAL :
 			WAKE_SET(data->enable) && WAKE_ENABLED(data->enable) ?
 			BMA2XXX_MODE_LOWPOWER :
@@ -1724,10 +1879,10 @@ static ssize_t bma2xx_register_show(struct device *dev,
 	struct bma2xx_data *bma2xx = i2c_get_clientdata(client);
 
 	size_t count = 0;
-	u8 reg[0x3d];
+	u8 reg[0x40];
 	int i;
 
-	for (i = 0; i < 0x3d; i++) {
+	for (i = 0; i < sizeof(reg); i++) {
 		bma2xx_smbus_read_byte(bma2xx->bma2xx_client, i, reg + i);
 
 		count += sprintf(&buf[count], "0x%x: %d\n", i, reg[i]);
@@ -1884,6 +2039,12 @@ static ssize_t bma2xx_enable_show(struct device *dev,
 
 }
 
+/*
+ * enable = 0 - no data produced
+ * enable = 1 - timer polling mode
+ * enable > 0  && < 32 - FIFO mode
+ * enable >= 32 - not allowed value
+ */
 static int bma2xx_set_enable(struct device *dev, int enable)
 {
 	struct i2c_client *client = to_i2c_client(dev);
@@ -1891,20 +2052,33 @@ static int bma2xx_set_enable(struct device *dev, int enable)
 	int rc;
 
 	mutex_lock(&bma2xx->enable_mutex);
-	rc = bma2xx_enable_func_locked(bma2xx, BMA_POLL_DATA, enable);
-	rc = rc ? rc : bma2xx_set_optimal_mode_locked(bma2xx, false);
-	if (rc)
-		goto err;
-	if (enable) {
-		dev_dbg(&bma2xx->bma2xx_client->dev,
-				"%s: start polling\n", __func__);
-		schedule_delayed_work(&bma2xx->work,
-				msecs_to_jiffies(atomic_read(&bma2xx->delay)));
+	if (!enable) {
+		bma2xx_enable_func_locked(bma2xx, BMA_FIFO_WM, 0);
+		bma2xx_enable_func_locked(bma2xx, BMA_POLL_DATA, 0);
+	} else if (enable == 1) {
+		/* timer polling mode */
+		bma2xx_enable_func_locked(bma2xx, BMA_POLL_DATA, 1);
+		bma2xx_enable_func_locked(bma2xx, BMA_FIFO_WM, 0);
 	} else {
+		/* enable < BMA2X2_MAX_FIFO_LEVEL : FIFO mode */
+		bma2xx_enable_func_locked(bma2xx, BMA_POLL_DATA, 0);
+		bma2xx_enable_func_locked(bma2xx, BMA_FIFO_WM, 1);
+	}
+	if (enable != 1) {
 		dev_dbg(&bma2xx->bma2xx_client->dev,
 				"%s: stop polling\n", __func__);
 		cancel_delayed_work_sync(&bma2xx->work);
 	}
+	rc = bma2xx_set_optimal_mode_locked(bma2xx, false);
+	if (rc)
+		goto err;
+	if (enable == 1) {
+		dev_dbg(&bma2xx->bma2xx_client->dev,
+				"%s: start polling\n", __func__);
+		schedule_delayed_work(&bma2xx->work,
+				msecs_to_jiffies(atomic_read(&bma2xx->delay)));
+	}
+	rc = bma2xx_fifo_config(bma2xx, enable > 1 ? enable : 0, 2);
 err:
 	mutex_unlock(&bma2xx->enable_mutex);
 	return rc;
@@ -1920,9 +2094,10 @@ static ssize_t bma2xx_enable_store(struct device *dev,
 	error = kstrtoul(buf, 10, &data);
 	if (error)
 		return error;
-	if ((data == 0) || (data == 1))
+	if (data < BMA2X2_MAX_FIFO_LEVEL)
 		error = bma2xx_set_enable(dev, data);
-
+	else
+		error = -EINVAL;
 	return error ? error : count;
 }
 
@@ -3151,6 +3326,29 @@ static void bma2xx_irq_work_func(struct work_struct *work)
 
 }
 
+static void bma2xx_fifo_work_func(struct work_struct *work)
+{
+	struct bma2xx_data *bma2xx = container_of(work, struct bma2xx_data,
+			fifo_work);
+	unsigned char data;
+	int rc;
+
+	while (true) {
+		rc = bma2xx_smbus_read_byte(bma2xx->bma2xx_client,
+				BMA2XXX_FIFOWM_S__REG, &data);
+		if (rc)
+			break;
+		if (!BMA2XXX_GET_BITSLICE(data, BMA2XXX_FIFOWM_S))
+			break;
+		(void)bma2xx_fifo_read(bma2xx);
+		data = BMA2XXX_SET_BITSLICE(0, BMA2XXX_INT_RESET_LATCHED, 1);
+		rc = bma2xx_smbus_write_byte(bma2xx->bma2xx_client,
+				BMA2XXX_INT_RESET_LATCHED__REG, &data);
+		if (rc)
+			break;
+	}
+}
+
 static void bma2xx_report_wake_key(struct bma2xx_data *bma)
 {
 	if (WAKE_ENABLED(bma->enable)) {
@@ -3182,6 +3380,25 @@ static irqreturn_t bma2xx_irq_handler(int irq, void *handle)
 	spin_unlock_irqrestore(&data->lock, f);
 	return IRQ_HANDLED;
 }
+
+static irqreturn_t bma2xx_fifo_irq_handler(int irq, void *handle)
+{
+	struct bma2xx_data *data = handle;
+	unsigned long f;
+
+	if (data && data->bma2xx_client) {
+		spin_lock_irqsave(&data->lock, f);
+		if (data->state & DEV_SUSPENDED) {
+			data->state |= IRQ2_PENDING;
+		} else {
+			data->state &= ~IRQ2_PENDING;
+			schedule_work(&data->fifo_work);
+		}
+		spin_unlock_irqrestore(&data->lock, f);
+	}
+	return IRQ_HANDLED;
+}
+
 #endif /* defined(BMA2XX_ENABLE_INT1)||defined(BMA2XX_ENABLE_INT2) */
 
 
@@ -3274,6 +3491,10 @@ static int bma2xx_probe(struct i2c_client *client,
 			data->orientation = 11;
 		else
 			data->orientation = val;
+		if (of_property_read_u32(np, "gpio-data-irq-pin", &val))
+			data->data_irq = -EINVAL;
+		else
+			data->data_irq = val;
 	}
 #if defined(BMA2XX_ENABLE_INT1) || defined(BMA2XX_ENABLE_INT2)
 	data->IRQ = gpio_to_irq(client->irq);
@@ -3282,8 +3503,17 @@ static int bma2xx_probe(struct i2c_client *client,
 			IRQF_NO_SUSPEND, "bma2xx", data);
 	if (err)
 		printk(KERN_ERR "could not request irq\n");
+
+	if (data->data_irq != -EINVAL) {
+		data->data_irq = gpio_to_irq(data->data_irq);
+		err = request_irq(data->data_irq, bma2xx_fifo_irq_handler,
+				IRQF_TRIGGER_RISING, "bma2xx_fifo", data);
+		if (err)
+			dev_err(&client->dev, "could not request fifo irq\n");
+	}
 	device_init_wakeup(&client->dev, 1);
 	INIT_WORK(&data->irq_work, bma2xx_irq_work_func);
+	INIT_WORK(&data->fifo_work, bma2xx_fifo_work_func);
 #endif
 
 	INIT_DELAYED_WORK(&data->work, bma2xx_work_func);
@@ -3419,6 +3649,7 @@ static int bma2xx_suspend(struct i2c_client *client, pm_message_t mesg)
 	data->state |= DEV_SUSPENDED;
 	spin_unlock_irqrestore(&data->lock, f);
 	flush_work(&data->irq_work);
+	flush_work(&data->fifo_work);
 
 	mutex_lock(&data->enable_mutex);
 	bma2xx_set_optimal_mode_locked(data, true);
@@ -3426,7 +3657,7 @@ static int bma2xx_suspend(struct i2c_client *client, pm_message_t mesg)
 	if (device_may_wakeup(&data->bma2xx_client->dev) &&
 			WAKE_SET(data->enable) && WAKE_ENABLED(data->enable)) {
 		int rc = irq_set_irq_wake(data->IRQ, 1);
-		dev_info(&data->bma2xx_client->dev, "set IRQ %d wake = %d\n",
+		dev_dbg(&data->bma2xx_client->dev, "set IRQ %d wake = %d\n",
 			data->IRQ, rc);
 	}
 	mutex_unlock(&data->enable_mutex);
@@ -3451,8 +3682,11 @@ static int bma2xx_resume(struct i2c_client *client)
 		data->state &= ~IRQ1_PENDING;
 		schedule_work(&data->irq_work);
 	}
+	if (data->state & IRQ2_PENDING) {
+		data->state &= ~IRQ2_PENDING;
+		schedule_work(&data->fifo_work);
+	}
 	spin_unlock_irqrestore(&data->lock, f);
-
 	return 0;
 }
 

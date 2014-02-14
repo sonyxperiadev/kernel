@@ -88,6 +88,7 @@
 #define BMA2XXX_STATUS2_REG	0x0A
 #define BMA2XXX_STATUS_TAP_SLOPE_REG	0x0B
 #define BMA2XXX_STATUS_ORIENT_HIGH_REG	0x0C
+#define BMA2XXX_FIFO_STATUS_REG 0x0E
 #define BMA2XXX_RANGE_SEL_REG	0x0F
 #define BMA2XXX_BW_SEL_REG	0x10
 #define BMA2XXX_MODE_CTRL_REG                    0x11
@@ -115,6 +116,7 @@
 #define BMA2XXX_THETA_BLOCK_REG                  0x2D
 #define BMA2XXX_THETA_FLAT_REG                   0x2E
 #define BMA2XXX_FLAT_HOLD_TIME_REG               0x2F
+#define BMA2XXX_FIFO_CFG0_REG                    0x30
 #define BMA2XXX_STATUS_LOW_POWER_REG             0x31
 #define BMA2XXX_SELF_TEST_REG                    0x32
 #define BMA2XXX_EEPROM_CTRL_REG                  0x33
@@ -128,8 +130,8 @@
 #define BMA2XXX_OFFSET_UNFILT_X_REG              0x3B
 #define BMA2XXX_OFFSET_UNFILT_Y_REG              0x3C
 #define BMA2XXX_OFFSET_UNFILT_Z_REG              0x3D
-#define BMA2XXX_SPARE_0_REG                      0x3E
-#define BMA2XXX_SPARE_1_REG                      0x3F
+#define BMA2XXX_FIFO_CFG1_REG                    0x3E
+#define BMA2XXX_FIFO_DATA_REG                    0x3F
 
 #define BMA2XXX_ACC_X_LSB__POS           6
 #define BMA2XXX_ACC_X_LSB__LEN           2
@@ -301,6 +303,11 @@
 #define BMA2XXX_FLAT_S__MSK               0x80
 #define BMA2XXX_FLAT_S__REG               BMA2XXX_STATUS_ORIENT_HIGH_REG
 
+#define BMA2XXX_FIFOWM_S__POS             6
+#define BMA2XXX_FIFOWM_S__LEN             1
+#define BMA2XXX_FIFOWM_S__MSK             (1 << BMA2XXX_FIFOWM_S__POS)
+#define BMA2XXX_FIFOWM_S__REG             BMA2XXX_STATUS2_REG
+
 #define BMA2XXX_EN_SLOPE_X_INT__POS         0
 #define BMA2XXX_EN_SLOPE_X_INT__LEN         1
 #define BMA2XXX_EN_SLOPE_X_INT__MSK         0x01
@@ -370,6 +377,11 @@
 #define BMA2XXX_EN_NEW_DATA_INT__LEN        1
 #define BMA2XXX_EN_NEW_DATA_INT__MSK        0x10
 #define BMA2XXX_EN_NEW_DATA_INT__REG        BMA2XXX_INT_ENABLE2_REG
+
+#define BMA2XXX_EN_FIFOWM_INT__POS          6
+#define BMA2XXX_EN_FIFOWM_INT__LEN          1
+#define BMA2XXX_EN_FIFOWM_INT__MSK          (1 << 6)
+#define BMA2XXX_EN_FIFOWM_INT__REG          BMA2XXX_INT_ENABLE2_REG
 
 #define BMA2XXX_EN_INT1_PAD_LOWG__POS        0
 #define BMA2XXX_EN_INT1_PAD_LOWG__LEN        1
@@ -450,6 +462,16 @@
 #define BMA2XXX_EN_INT2_PAD_NEWDATA__LEN     1
 #define BMA2XXX_EN_INT2_PAD_NEWDATA__MSK     0x80
 #define BMA2XXX_EN_INT2_PAD_NEWDATA__REG     BMA2XXX_INT_DATA_SEL_REG
+
+#define BMA2XXX_EN_INT1_PAD_FIFOWM__POS      1
+#define BMA2XXX_EN_INT1_PAD_FIFOWM__LEN      1
+#define BMA2XXX_EN_INT1_PAD_FIFOWM__MSK      0x01
+#define BMA2XXX_EN_INT1_PAD_FIFOWM__REG      BMA2XXX_INT_DATA_SEL_REG
+
+#define BMA2XXX_EN_INT2_PAD_FIFOWM__POS      6
+#define BMA2XXX_EN_INT2_PAD_FIFOWM__LEN      1
+#define BMA2XXX_EN_INT2_PAD_FIFOWM__MSK      (1 << 6)
+#define BMA2XXX_EN_INT2_PAD_FIFOWM__REG      BMA2XXX_INT_DATA_SEL_REG
 
 #define BMA2XXX_UNFILT_INT_SRC_LOWG__POS        0
 #define BMA2XXX_UNFILT_INT_SRC_LOWG__LEN        1
@@ -650,6 +672,50 @@
 #define BMA2XXX_COMP_TARGET_OFFSET_Z__LEN        2
 #define BMA2XXX_COMP_TARGET_OFFSET_Z__MSK        0x60
 #define BMA2XXX_COMP_TARGET_OFFSET_Z__REG        BMA2XXX_OFFSET_PARAMS_REG
+
+#define BMA2XXX_FIFO_WM__POS                     0
+#define BMA2XXX_FIFO_WM__LEN                     6
+#define BMA2XXX_FIFO_WM__MSK                     0x3f
+#define BMA2XXX_FIFO_WM__REG                     BMA2XXX_FIFO_CFG0_REG
+
+#define BMA2XXX_FIFO_MODE__POS                   6
+#define BMA2XXX_FIFO_MODE__LEN                   2
+#define BMA2XXX_FIFO_MODE__MSK                   (3 << 6)
+#define BMA2XXX_FIFO_MODE__REG                   BMA2XXX_FIFO_CFG1_REG
+
+#define BMA2XXX_FIFO_DATA_SEL__POS               0
+#define BMA2XXX_FIFO_DATA_SEL__LEN               2
+#define BMA2XXX_FIFO_DATA_SEL__MSK               0x03
+#define BMA2XXX_FIFO_DATA_SEL__REG               BMA2XXX_FIFO_CFG1_REG
+
+#define BMA2XXX_FIFO_DATA__POS                   0
+#define BMA2XXX_FIFO_DATA__LEN                   8
+#define BMA2XXX_FIFO_DATA__MSK                   0xff
+#define BMA2XXX_FIFO_DATA__REG                   BMA2XXX_FIFO_DATA_REG
+
+#define BMA2XXX_FIFO_FRAME__POS                  0
+#define BMA2XXX_FIFO_FRAME__LEN                  7
+#define BMA2XXX_FIFO_FRAME__MSK                  0x7f
+#define BMA2XXX_FIFO_FRAME__REG                  BMA2XXX_FIFO_STATUS_REG
+
+#define BMA2XXX_FIFO_OVR__POS                    7
+#define BMA2XXX_FIFO_OVR__LEN                    1
+#define BMA2XXX_FIFO_OVR__MSK                    (1 << 7)
+#define BMA2XXX_FIFO_OVR__REG                    BMA2XXX_FIFO_STATUS_REG
+
+enum bma2xx_fifo_mode {
+	FIFO_MODE_BYPASS,
+	FIFO_MODE_FIFO,
+	FIFO_MODE_STREAM,
+	FIFO_MODE_RESERVED,
+};
+
+enum bma2xx_fifo_data {
+	FIFO_DATA_XYZ,
+	FIFO_DATA_X,
+	FIFO_DATA_Y,
+	FIFO_DATA_Z,
+};
 
 #define BMA2XXX_RANGE_2G                 0
 #define BMA2XXX_RANGE_4G                 1
