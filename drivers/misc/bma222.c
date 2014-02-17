@@ -1010,8 +1010,11 @@ static int bma222_accl_probe(struct i2c_client *client,
 
 		pdata = kzalloc(sizeof(struct bma222_accl_platform_data),
 				GFP_KERNEL);
-		if (!pdata)
-			return -ENOMEM;
+		if (!pdata) {
+			rc = -ENOMEM;
+			goto err_kzalloc_pdata;
+		}
+
 		bma222_accl_client->dev.platform_data = pdata;
 		np = client->dev.of_node;
 		rc = of_property_read_u32(np, "gpio-irq-pin", &val);
@@ -1073,13 +1076,6 @@ static int bma222_accl_probe(struct i2c_client *client,
 		printk(KERN_ERR "bma222 misc_device register failed\n");
 		goto probe_err_reg_misc;
 	}
-	/* bma222 sensor initial */
-	if (rc < 0) {
-		printk(KERN_ERR
-		       "bma222_accl_probe: Error configuring device rc=%d\n",
-		       rc);
-		goto probe_err_smbcfg;
-	}
 
 	dd->bma222_accl_mode = 200;	/* NORMAL Mode */
 	i2c_set_clientdata(client, dd);
@@ -1112,38 +1108,42 @@ static int bma222_accl_probe(struct i2c_client *client,
 #ifdef BMA222_CALIBRATION
 	rc = sysfs_create_group(&client->dev.kobj, &bma222_attr_grp);
 	if (rc != 0)
-		goto probe_err_setmode;
+		goto err_create_grp0;
 #endif
 #ifdef BMA222_SW_CALIBRATION
 	rc = sysfs_create_group(&client->dev.kobj, &bma222_attr_swcal_grp);
 	if (rc != 0)
-		goto probe_err_setmode;
+		goto err_create_grp1;
 #endif
 	printk(KERN_INFO "- %s\n", __func__);
 
 	return rc;
 
-probe_err_setmode:
-#ifdef BMA222_CALIBRATION
-	sysfs_remove_group(&bma222_accl_client->dev.kobj, &bma222_attr_grp);
-#endif
 #ifdef BMA222_SW_CALIBRATION
-	sysfs_remove_group(&bma222_accl_client->dev.kobj,
-				&bma222_attr_swcal_grp);
+	sysfs_remove_group(&client->dev.kobj, &bma222_attr_swcal_grp);
+err_create_grp1:
 #endif
-probe_err_smbcfg:
+#ifdef BMA222_CALIBRATION
+	sysfs_remove_group(&client->dev.kobj, &bma222_attr_grp);
+err_create_grp0:
+#endif
+	del_timer_sync(&bma_wakeup_timer);
+probe_err_setmode:
 	misc_deregister(&bma222_accl_misc_device);
 probe_err_reg_misc:
-
 #ifdef BMA222_INPUT_DEVICE
 	input_unregister_device(dd->ip_dev);
-probe_err_reg_dev:
-	input_free_device(dd->ip_dev);
 	dd->ip_dev = NULL;
+probe_err_reg_dev:
+	if (dd->ip_dev)
+		input_free_device(dd->ip_dev);
+
+probe_err_reg:
 #endif
 err_read:
-	pr_info("bma dts error read\n");
-probe_err_reg:
+	if (client->dev.of_node)
+		kfree(pdata);
+err_kzalloc_pdata:
 	mutex_lock(&bma222_accl_dd_lock);
 	list_del(&dd->next_dd);
 	mutex_unlock(&bma222_accl_dd_lock);
