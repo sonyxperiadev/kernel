@@ -965,7 +965,6 @@ static int kona_fb_ioctl(struct fb_info *info, unsigned int cmd,
 static int kona_fb_blank(int blank_mode, struct fb_info *info)
 {
 	struct kona_fb *fb = container_of(info, struct kona_fb, fb);
-	int framesize;
 
 	switch (blank_mode) {
 	case FB_BLANK_POWERDOWN:
@@ -976,6 +975,12 @@ static int kona_fb_blank(int blank_mode, struct fb_info *info)
 			konafb_error("Display already in blank state\n");
 			break;
 		}
+
+		if (fb->fb_data->esdcheck) {
+			/* cancel the esd check routine */
+			cancel_delayed_work(&fb->esd_check_work);
+		}
+
 		mutex_lock(&fb->update_sem);
 		fb->g_stop_drawing = 1;
 		/* In case of video mode, DSI commands can be sent out-of-sync
@@ -1021,9 +1026,6 @@ static int kona_fb_blank(int blank_mode, struct fb_info *info)
 		if (enable_display(fb))
 			konafb_error("Failed to enable this display device\n");
 
-		framesize = fb->display_info->width * fb->display_info->height *
-			fb->display_info->Bpp * 2;
-		memset(fb->fb.screen_base, 0, framesize);
 		if (!fb->display_info->vmode) {
 			if (wait_for_completion_timeout(
 			&fb->prev_buf_done_sem,	msecs_to_jiffies(10000)) <= 0)
@@ -1067,6 +1069,12 @@ static int kona_fb_blank(int blank_mode, struct fb_info *info)
 		if (atomic_read(&g_kona_fb->force_update))
 			kona_display_crash_image(CP_CRASH_DUMP_START);
 #endif
+		if (fb->fb_data->esdcheck) {
+			/* schedule the esd check routine */
+			queue_delayed_work(fb->esd_check_wq,
+					&fb->esd_check_work,
+			msecs_to_jiffies(fb->fb_data->esdcheck_period_ms));
+		}
 		fb->blank_state = KONA_FB_UNBLANK;
 		break;
 
@@ -1075,6 +1083,78 @@ static int kona_fb_blank(int blank_mode, struct fb_info *info)
 	}
 
 	return 0;
+}
+
+static irqreturn_t kona_fb_esd_irq(int irq, void *dev_id)
+{
+	struct kona_fb *fb = (struct kona_fb *)dev_id;
+	complete(&fb->tectl_gpio_done_sem);
+	return IRQ_HANDLED;
+}
+
+
+
+static void kona_fb_esd_check(struct work_struct *data)
+{
+	struct kona_fb *fb = container_of((struct delayed_work *)data,
+			struct kona_fb, esd_check_work);
+	int esd_result = -EIO;
+	uint32_t tectl_gpio = fb->fb_data->tectl_gpio;
+
+	if (g_display_enabled) {
+		/* Wait fb initial completed */
+		queue_delayed_work(fb->esd_check_wq, &fb->esd_check_work,
+			msecs_to_jiffies(fb->fb_data->esdcheck_period_ms));
+		return;
+	}
+
+	if (fb->g_stop_drawing)
+		return;
+
+	if (tectl_gpio > 0) {
+		unsigned long jiff_in = 0;
+
+		/* mark as incomplete before waiting the esd signal */
+		INIT_COMPLETION(fb->tectl_gpio_done_sem);
+		enable_irq(gpio_to_irq(tectl_gpio));
+		jiff_in = wait_for_completion_timeout(&fb->tectl_gpio_done_sem,
+				msecs_to_jiffies(200));
+		if (!jiff_in) {
+			konafb_error("Wait esd gpio irq timeout\n");
+			esd_result = -EIO;
+		} else
+			esd_result = 0;
+		disable_irq(gpio_to_irq(tectl_gpio));
+	} else {
+		mutex_lock(&fb->update_sem);
+		if (fb->display_info->esd_check_fn)
+			esd_result = fb->display_info->esd_check_fn();
+		if (esd_result < 0) /* stop drawing till error is recovered */
+			fb->g_stop_drawing = 1;
+		mutex_unlock(&fb->update_sem);
+	}
+
+	konafb_debug("esd_result %d\n", esd_result);
+
+	if (esd_result < 0) {
+		konafb_error("result %d failure_cnt %d\n", esd_result,
+				fb->esd_failure_cnt);
+
+		fb->esd_failure_cnt++;
+		if (fb->esd_failure_cnt > fb->fb_data->esdcheck_retry) {
+			konafb_error("too many fail %d, disable esd check\n",
+					fb->esd_failure_cnt);
+			fb->fb_data->esdcheck = FALSE;
+			cancel_delayed_work(&fb->esd_check_work);
+			destroy_workqueue(fb->esd_check_wq);
+		}
+	} else {
+		fb->esd_failure_cnt = 0;
+		queue_delayed_work(fb->esd_check_wq, &fb->esd_check_work,
+			msecs_to_jiffies(fb->fb_data->esdcheck_period_ms));
+	}
+
+	return;
 }
 
 void free_platform_data(struct device *dev)
@@ -1895,6 +1975,32 @@ static int __ref kona_fb_probe(struct platform_device *pdev)
 	mutex_unlock(&fb->update_sem);
 #endif
 
+	if (fb->fb_data->esdcheck) {
+		uint32_t tectl_gpio = fb->fb_data->tectl_gpio;
+		konafb_info("Enable esd check function for lcd\n");
+		if (tectl_gpio > 0) {
+			konafb_info("Enable TECTL gpio check\n");
+			gpio_request(tectl_gpio, "tectl_gpio");
+			gpio_direction_input(tectl_gpio);
+			ret = request_irq(gpio_to_irq(tectl_gpio),
+					kona_fb_esd_irq, IRQF_TRIGGER_FALLING,
+					"tectl_gpio", fb);
+			if (ret < 0) {
+				konafb_error("Request esd gpio irq fail\n");
+				goto err_fb_register_failed;
+			}
+		}
+		disable_irq(gpio_to_irq(tectl_gpio));
+		init_completion(&fb->tectl_gpio_done_sem);
+
+		fb->esd_check_wq =
+			create_singlethread_workqueue("lcd_esd_check");
+		INIT_DELAYED_WORK(&fb->esd_check_work, kona_fb_esd_check);
+		queue_delayed_work(fb->esd_check_wq, &fb->esd_check_work,
+			msecs_to_jiffies(fb->fb_data->esdcheck_period_ms));
+	}
+
+
 	fb->proc_entry = proc_create_data("fb_debug", 0666, NULL,
 						&proc_fops, NULL);
 	if (NULL == fb->proc_entry)
@@ -1990,6 +2096,13 @@ static int kona_fb_remove(struct platform_device *pdev)
 	struct kona_fb *fb = platform_get_drvdata(pdev);
 	struct kona_fb_platform_data *pdata = (struct kona_fb_platform_data *)
 						pdev->dev.platform_data;
+
+	if (fb->fb_data->esdcheck) {
+		uint32_t tectl_gpio = fb->fb_data->tectl_gpio;
+		if (tectl_gpio > 0)
+			free_irq(gpio_to_irq(tectl_gpio), fb);
+		destroy_workqueue(fb->esd_check_wq);
+	}
 
 #ifdef CONFIG_FRAMEBUFFER_FPS
 	fb_fps_unregister(fb->fps_info);
