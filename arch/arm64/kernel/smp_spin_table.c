@@ -29,10 +29,6 @@
 #include <asm/io.h>
 #include <asm/smp_plat.h>
 
-extern void secondary_holding_pen(void);
-volatile unsigned long __section(".mmuoff.data.read")
-secondary_holding_pen_release = INVALID_HWID;
-
 static phys_addr_t cpu_release_addr[NR_CPUS];
 
 /*

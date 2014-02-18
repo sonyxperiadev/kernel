@@ -68,6 +68,8 @@ EXPORT_PER_CPU_SYMBOL(cpu_number);
  * where to place its SVC stack
  */
 struct secondary_data secondary_data;
+volatile unsigned long __section(".mmuoff.data.read")
+secondary_holding_pen_release = INVALID_HWID;
 /* Number of CPUs which aren't online, but looping in kernel text. */
 int cpus_stuck_in_kernel;
 
