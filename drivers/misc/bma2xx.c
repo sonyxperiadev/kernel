@@ -81,6 +81,11 @@ enum bma2xx_range {
 	BOSCH_ACCEL_SENSOR_RANGE_16G = 12,
 };
 
+enum bma2xx_chip_id {
+	ID_BMA250 = 3,
+	ID_BMA255 = 250,
+};
+
 #define BMA_FUNC(bit) (1 << (bit))
 #define WAKE_SET(enable) \
 	((enable & (BMA_FUNC(BMA_LAST_REAL_WAKE + 1) - 1)) != 0)
@@ -112,6 +117,7 @@ struct bma2xx_data {
 	int state;
 	struct work_struct fifo_work;
 	int data_irq;
+	u8 r_shift;
 };
 
 #ifdef BMA2XX_SW_CALIBRATION
@@ -1548,115 +1554,49 @@ static int bma2xx_set_selftest_stn(struct i2c_client *client, unsigned char stn)
 
 	return comres;
 }
-static int bma2xx_read_accel_x(struct i2c_client *client, short *a_x)
+
+static int bma2xx_read_axis(struct i2c_client *client, short *acc, int axis)
 {
-	int comres;
-	unsigned char data[2];
+	struct bma2xx_data *bma = i2c_get_clientdata(client);
+	int comres = bma2xx_smbus_read_byte_block(client,
+			BMA2XXX_ACC_X_LSB__REG + axis * 2, (char *)acc,
+			sizeof(*acc));
 
-	comres =
-	    bma2xx_smbus_read_byte_block(client, BMA2XXX_ACC_X_LSB__REG, data,
-					 2);
-	*a_x =
-	    BMA2XXX_GET_BITSLICE(data[0],
-				 BMA2XXX_ACC_X_LSB) |
-	    (BMA2XXX_GET_BITSLICE(data[1], BMA2XXX_ACC_X_MSB) <<
-	     BMA2XXX_ACC_X_LSB__LEN);
-	*a_x =
-	    *a_x << (sizeof(short) * 8 -
-		     (BMA2XXX_ACC_X_LSB__LEN + BMA2XXX_ACC_X_MSB__LEN));
-	*a_x =
-	    *a_x >> (sizeof(short) * 8 -
-		     (BMA2XXX_ACC_X_LSB__LEN + BMA2XXX_ACC_X_MSB__LEN));
-
+#ifdef __BIG_ENDIAN
+	*acc = swab16(*acc);
+#endif
+	*acc >>= bma->r_shift;
 	return comres;
 }
+
+static int bma2xx_read_accel_x(struct i2c_client *client, short *a_x)
+{
+	return bma2xx_read_axis(client, a_x, 0);
+}
+
 static int bma2xx_read_accel_y(struct i2c_client *client, short *a_y)
 {
-	int comres;
-	unsigned char data[2];
-
-	comres =
-	    bma2xx_smbus_read_byte_block(client, BMA2XXX_ACC_Y_LSB__REG, data,
-					 2);
-	*a_y =
-	    BMA2XXX_GET_BITSLICE(data[0],
-				 BMA2XXX_ACC_Y_LSB) |
-	    (BMA2XXX_GET_BITSLICE(data[1], BMA2XXX_ACC_Y_MSB) <<
-	     BMA2XXX_ACC_Y_LSB__LEN);
-	*a_y =
-	    *a_y << (sizeof(short) * 8 -
-		     (BMA2XXX_ACC_Y_LSB__LEN + BMA2XXX_ACC_Y_MSB__LEN));
-	*a_y =
-	    *a_y >> (sizeof(short) * 8 -
-		     (BMA2XXX_ACC_Y_LSB__LEN + BMA2XXX_ACC_Y_MSB__LEN));
-
-	return comres;
+	return bma2xx_read_axis(client, a_y, 1);
 }
 
 static int bma2xx_read_accel_z(struct i2c_client *client, short *a_z)
 {
-	int comres;
-	unsigned char data[2];
-
-	comres =
-	    bma2xx_smbus_read_byte_block(client, BMA2XXX_ACC_Z_LSB__REG, data,
-					 2);
-	*a_z =
-	    BMA2XXX_GET_BITSLICE(data[0],
-				 BMA2XXX_ACC_Z_LSB) |
-	    BMA2XXX_GET_BITSLICE(data[1], BMA2XXX_ACC_Z_MSB)
-	    << BMA2XXX_ACC_Z_LSB__LEN;
-	*a_z =
-	    *a_z << (sizeof(short) * 8 -
-		     (BMA2XXX_ACC_Z_LSB__LEN + BMA2XXX_ACC_Z_MSB__LEN));
-	*a_z =
-	    *a_z >> (sizeof(short) * 8 -
-		     (BMA2XXX_ACC_Z_LSB__LEN + BMA2XXX_ACC_Z_MSB__LEN));
-
-	return comres;
+	return bma2xx_read_axis(client, a_z, 2);
 }
 
-static int bma2xx_read_accel_xyz(struct i2c_client *client,
-				 struct bma2xxacc *acc)
+static int bma2xx_read_accel_xyz(struct bma2xx_data *bma, struct bma2xxacc *acc)
 {
-	int comres;
-	unsigned char data[6];
+	int comres = bma2xx_smbus_read_byte_block(bma->bma2xx_client,
+			BMA2XXX_ACC_X_LSB__REG, (char *)acc, sizeof(*acc));
 
-	comres = bma2xx_smbus_read_byte_block(client,
-					      BMA2XXX_ACC_X_LSB__REG, data, 6);
-
-	acc->x = BMA2XXX_GET_BITSLICE(data[0], BMA2XXX_ACC_X_LSB)
-	    | (BMA2XXX_GET_BITSLICE(data[1],
-				    BMA2XXX_ACC_X_MSB) <<
-	       BMA2XXX_ACC_X_LSB__LEN);
-	acc->x =
-	    acc->x << (sizeof(short) * 8 -
-		       (BMA2XXX_ACC_X_LSB__LEN + BMA2XXX_ACC_X_MSB__LEN));
-	acc->x =
-	    acc->x >> (sizeof(short) * 8 -
-		       (BMA2XXX_ACC_X_LSB__LEN + BMA2XXX_ACC_X_MSB__LEN));
-	acc->y = BMA2XXX_GET_BITSLICE(data[2], BMA2XXX_ACC_Y_LSB)
-	    | (BMA2XXX_GET_BITSLICE(data[3],
-				    BMA2XXX_ACC_Y_MSB) <<
-	       BMA2XXX_ACC_Y_LSB__LEN);
-	acc->y =
-	    acc->y << (sizeof(short) * 8 -
-		       (BMA2XXX_ACC_Y_LSB__LEN + BMA2XXX_ACC_Y_MSB__LEN));
-	acc->y =
-	    acc->y >> (sizeof(short) * 8 -
-		       (BMA2XXX_ACC_Y_LSB__LEN + BMA2XXX_ACC_Y_MSB__LEN));
-
-	acc->z = BMA2XXX_GET_BITSLICE(data[4], BMA2XXX_ACC_Z_LSB)
-	    | (BMA2XXX_GET_BITSLICE(data[5],
-				    BMA2XXX_ACC_Z_MSB) <<
-	       BMA2XXX_ACC_Z_LSB__LEN);
-	acc->z =
-	    acc->z << (sizeof(short) * 8 -
-		       (BMA2XXX_ACC_Z_LSB__LEN + BMA2XXX_ACC_Z_MSB__LEN));
-	acc->z =
-	    acc->z >> (sizeof(short) * 8 -
-		       (BMA2XXX_ACC_Z_LSB__LEN + BMA2XXX_ACC_Z_MSB__LEN));
-
+#ifdef __BIG_ENDIAN
+	acc->x = swab16(acc->x);
+	acc->y = swab16(acc->y);
+	acc->z = swab16(acc->z);
+#endif
+	acc->x >>= bma->r_shift;
+	acc->y >>= bma->r_shift;
+	acc->z >>= bma->r_shift;
 	return comres;
 }
 
@@ -1741,7 +1681,7 @@ static void bma2xx_work_func(struct work_struct *work)
 	int xyz[3];
 	unsigned long delay = msecs_to_jiffies(atomic_read(&bma2xx->delay));
 
-	bma2xx_read_accel_xyz(bma2xx->bma2xx_client, &acc);
+	bma2xx_read_accel_xyz(bma2xx, &acc);
 	bma2xx_map_axes(bma2xx, &acc, xyz);
 
 #ifdef BMA2XX_SW_CALIBRATION
@@ -1815,9 +1755,9 @@ static int bma2xx_fifo_read(struct bma2xx_data *bma)
 		acc[i].y = swab16(acc[i].y);
 		acc[i].z = swab16(acc[i].z);
 #endif
-		acc[i].x >>= 4;
-		acc[i].y >>= 4;
-		acc[i].z >>= 4;
+		acc[i].x >>= bma->r_shift;
+		acc[i].y >>= bma->r_shift;
+		acc[i].z >>= bma->r_shift;
 		bma2xx_map_axes(bma, &acc[i], xyz);
 #ifdef BMA2XX_SW_CALIBRATION
 		xyz[0] -= bma2xx_offset[0];
@@ -3465,8 +3405,20 @@ static int bma2xx_probe(struct i2c_client *client,
 
 	/* read chip id */
 	tempvalue = i2c_smbus_read_byte_data(client, BMA2XXX_CHIP_ID_REG);
-
-	pr_info("bma2xx chip id is %d\n", tempvalue);
+	switch (tempvalue) {
+	case ID_BMA250:
+		dev_info(&client->dev, "bma250 chip found\n");
+		data->r_shift = 6;
+		break;
+	case ID_BMA255:
+		dev_info(&client->dev, "bma255 chip found\n");
+		data->r_shift = 4;
+		break;
+	default:
+		dev_info(&client->dev, "bma2xx chip id is %d\n", tempvalue);
+		data->r_shift = 4;
+		break;
+	}
 	i2c_set_clientdata(client, data);
 	data->bma2xx_client = client;
 	mutex_init(&data->value_mutex);
@@ -3544,6 +3496,7 @@ static int bma2xx_probe(struct i2c_client *client,
 	input_set_capability(dev, EV_MSC, MSC_SERIAL);
 	input_set_capability(dev, EV_MSC, MSC_PULSELED);
 	input_set_capability(dev, EV_MSC, MSC_GESTURE);
+	input_set_events_per_packet(dev, BMA2X2_MAX_FIFO_LEVEL * 3);
 
 	input_set_drvdata(dev, data);
 
