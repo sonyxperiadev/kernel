@@ -222,14 +222,13 @@ dtb-$(CONFIG_ARCH_HAWAII) += hawaii_garnet_edn020.dtb \
 	hawaii_ss_heat3g_rev01.dtb
 dtb-$(CONFIG_ARCH_JAVA) += java_edn000.dtb \
 	java_edn000_4Gb.dtb \
-	sony_babble.dtb \
-	sony_brooks.dtb \
 	java_edn000_2Gb.dtb \
 	java_c_edn000_4Gb.dtb \
 	java_c_edn000.dtb \
 	java_c_edn000_2Gb.dtb \
 	java_sony_kivu.dtb \
 	java_sony_brooks.dtb \
+	java_sony_brooks_020.dtb \
 	java_c_lc1.dtb \
 	java_c_lc1_4Gb.dtb \
 	java_c_lc2.dtb \
