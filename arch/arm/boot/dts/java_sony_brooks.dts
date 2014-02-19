@@ -262,24 +262,24 @@
 	};
 
 	kona-fb {
-		module-name = "S6D04K2X01";
+		module-name = "NT35310_Brooks";
 		reg-name = "cam2";
 		rst-gpio = <&gpio 2 0>;
-		rst-setup = <1000>;
-		rst-pulse = <10000>;
-		rst-hold = <10000>;
+		rst-setup = <2000>;
+		rst-pulse = <11000>;
+		rst-hold = <11000>;
 		/* rst-active-high; */	/* Commented => Active Low */
-		col-mod-i = <2>;
-		col-mod-o = <2>;
-		width = <220>;   /*old 280, 176 */
-		height = <176>;
+		col-mod-i = <3>;
+		col-mod-o = <3>;
+		width = <320>;
+		height = <320>;
 		/* vmode; */
 		/* vburst; */	/* Non-burst mode */
-		te-ctrl;		/* Tearing Effect Control enabled */
+		/* te-ctrl; */		/* Tearing Effect Control enabled */
 		fps = <60>;
 		lanes = <1>;
 		/*cmnd-LP;		 Commands in LP mode*/
-		hs-bitrate = <150000000>;	/* bps */
+		hs-bitrate = <333000000>;	/* bps */
 		lp-bitrate =   <8000000>;	/* bps */
 		desense-offset = <2400000>;  /* +2.4Mbps */
 		iommu = <&iommu_mm>;
