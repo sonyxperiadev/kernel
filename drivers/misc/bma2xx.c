@@ -241,7 +241,6 @@ static int bma2xx_set_int1_pad_sel(struct i2c_client *client,
 				   enum bma2xx_func int1sel, int state)
 {
 	int comres = 0;
-#ifdef BMA2XX_ENABLE_INT1
 	unsigned char data;
 	state &= 0x01;
 
@@ -354,7 +353,6 @@ static int bma2xx_set_int1_pad_sel(struct i2c_client *client,
 	default:
 		break;
 	}
-#endif /* BMA2XX_ENABLE_INT1 */
 	return comres;
 }
 
@@ -362,7 +360,6 @@ static int bma2xx_set_int2_pad_sel(struct i2c_client *client,
 				   enum bma2xx_func int2sel, int state)
 {
 	int comres = 0;
-#ifdef BMA2XX_ENABLE_INT2
 	unsigned char data;
 	state &= 0x01;
 
@@ -475,7 +472,6 @@ static int bma2xx_set_int2_pad_sel(struct i2c_client *client,
 	default:
 		break;
 	}
-#endif /* BMA2XX_ENABLE_INT2 */
 	return comres;
 }
 
@@ -757,7 +753,6 @@ static int bma2xx_get_bandwidth(struct i2c_client *client, unsigned char *BW)
 	return comres;
 }
 
-#if defined(BMA2XX_ENABLE_INT1) || defined(BMA2XX_ENABLE_INT2)
 static int bma2xx_get_interruptstatus1(struct i2c_client *client,
 				       unsigned char *intstatus)
 {
@@ -901,7 +896,7 @@ static int bma2xx_get_orient_flat_status(struct i2c_client *client,
 
 	return comres;
 }
-#endif /* defined(BMA2XX_ENABLE_INT1)||defined(BMA2XX_ENABLE_INT2) */
+
 static int bma2xx_set_Int_Mode(struct i2c_client *client, unsigned char Mode)
 {
 	int comres = 0;
@@ -3111,7 +3106,6 @@ static struct attribute_group bma2xx_attribute_group = {
 	.attrs = bma2xx_attributes
 };
 
-#if defined(BMA2XX_ENABLE_INT1) || defined(BMA2XX_ENABLE_INT2)
 unsigned char *orient[] = { "upward looking portrait upright",
 	"upward looking portrait upside-down",
 	"upward looking landscape left",
@@ -3348,9 +3342,6 @@ static irqreturn_t bma2xx_fifo_irq_handler(int irq, void *handle)
 	return IRQ_HANDLED;
 }
 
-#endif /* defined(BMA2XX_ENABLE_INT1)||defined(BMA2XX_ENABLE_INT2) */
-
-
 static int bma2xx_probe(struct i2c_client *client,
 			const struct i2c_device_id *id)
 {
@@ -3427,9 +3418,7 @@ static int bma2xx_probe(struct i2c_client *client,
 	bma2xx_set_bandwidth(client, BMA2XXX_BW_SET);
 	bma2xx_set_range(client, BMA2XXX_RANGE_SET);
 
-#if defined(BMA2XX_ENABLE_INT1) || defined(BMA2XX_ENABLE_INT2)
 	bma2xx_set_Int_Mode(client, 1);	/*latch interrupt 250ms */
-#endif
 	/***************
 	1,high g x
 	2,high g y
@@ -3446,8 +3435,9 @@ static int bma2xx_probe(struct i2c_client *client,
 	if (client->dev.of_node) {
 		np = client->dev.of_node;
 		if (of_property_read_u32(np, "gpio-irq-pin", &val))
-			goto err_read;
-		client->irq = val;
+			client->irq = -EINVAL;
+		else
+			client->irq = val;
 		if (of_property_read_u32(np, "orientation", &val))
 			data->orientation = 11;
 		else
@@ -3457,25 +3447,25 @@ static int bma2xx_probe(struct i2c_client *client,
 		else
 			data->data_irq = val;
 	}
-#if defined(BMA2XX_ENABLE_INT1) || defined(BMA2XX_ENABLE_INT2)
-	data->IRQ = gpio_to_irq(client->irq);
-	err =
-	    request_irq(data->IRQ, bma2xx_irq_handler, IRQF_TRIGGER_RISING |
-			IRQF_NO_SUSPEND, "bma2xx", data);
-	if (err)
-		printk(KERN_ERR "could not request irq\n");
-
+	if (client->irq != -EINVAL) {
+		data->IRQ = gpio_to_irq(client->irq);
+		err = request_irq(data->IRQ, bma2xx_irq_handler,
+				IRQF_TRIGGER_RISING | IRQF_NO_SUSPEND,
+			"	bma2xx", data);
+		if (err)
+			dev_err(&client->dev, "could not request irq\n");
+	}
 	if (data->data_irq != -EINVAL) {
 		data->data_irq = gpio_to_irq(data->data_irq);
 		err = request_irq(data->data_irq, bma2xx_fifo_irq_handler,
 				IRQF_TRIGGER_RISING, "bma2xx_fifo", data);
 		if (err)
 			dev_err(&client->dev, "could not request fifo irq\n");
+		else
+			device_init_wakeup(&client->dev, 1);
 	}
-	device_init_wakeup(&client->dev, 1);
 	INIT_WORK(&data->irq_work, bma2xx_irq_work_func);
 	INIT_WORK(&data->fifo_work, bma2xx_fifo_work_func);
-#endif
 
 	INIT_DELAYED_WORK(&data->work, bma2xx_work_func);
 	atomic_set(&data->delay, BMA2XXX_MAX_DELAY);
@@ -3547,7 +3537,7 @@ static int bma2xx_probe(struct i2c_client *client,
 	bma2xx_set_mode(data->bma2xx_client, BMA2XXX_MODE_SUSPEND);
 
 	return 0;
-err_read:
+
 error_sysfs:
 	input_unregister_device(data->wake_idev);
 kfree_exit_unregister:
