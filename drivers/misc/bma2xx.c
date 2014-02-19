@@ -116,8 +116,10 @@ struct bma2xx_data {
 	spinlock_t lock;
 	int state;
 	struct work_struct fifo_work;
+	struct work_struct flush_work;
 	int data_irq;
 	u8 r_shift;
+	bool fflush;
 };
 
 #ifdef BMA2XX_SW_CALIBRATION
@@ -1730,14 +1732,19 @@ static int bma2xx_fifo_read(struct bma2xx_data *bma)
 	struct bma2xxacc acc[BMA2X2_MAX_FIFO_LEVEL];
 	int xyz[3];
 	unsigned i;
+	int rc;
 
-	int rc = bma2xx_smbus_read_byte(cl,
+	mutex_lock(&bma->value_mutex);
+	rc = bma2xx_smbus_read_byte(cl,
 			BMA2XXX_FIFO_STATUS_REG, &frame_cnt);
 	if (rc)
 		goto err;
 	frame_cnt = BMA2XXX_GET_BITSLICE(frame_cnt, BMA2XXX_FIFO_FRAME);
 
 	dev_dbg(&cl->dev, "%s: %d frames\n", __func__, frame_cnt);
+
+	if (!frame_cnt)
+		goto err;
 
 	rc = bma2xx_big_block_read(cl, BMA2XXX_FIFO_DATA_REG,
 			frame_cnt * 6, (char *)acc);
@@ -1765,6 +1772,7 @@ static int bma2xx_fifo_read(struct bma2xx_data *bma)
 	}
 	input_sync(bma->input);
 err:
+	mutex_unlock(&bma->value_mutex);
 	return rc;
 }
 
@@ -2044,6 +2052,36 @@ static ssize_t bma2xx_enable_store(struct device *dev,
 		error = -EINVAL;
 	return error ? error : count;
 }
+
+static void bma2xx_fifo_flush_func(struct work_struct *w)
+{
+	struct bma2xx_data *bma2xx = container_of(w,
+			struct bma2xx_data, flush_work);
+	bma2xx_fifo_read(bma2xx);
+	input_event(bma2xx->input, EV_SYN, SYN_CONFIG, 0);
+	input_sync(bma2xx->input);
+}
+
+static ssize_t bma2xx_fflush_store(struct device *dev,
+				   struct device_attribute *attr,
+				   const char *buf, size_t count)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	struct bma2xx_data *bma2xx = i2c_get_clientdata(client);
+	unsigned long data;
+	int error;
+
+	error = kstrtoul(buf, 10, &data);
+	if (error)
+		goto err;
+	if (data == 1)
+		schedule_work(&bma2xx->flush_work);
+	else
+		error = -EINVAL;
+err:
+	return error ? error : count;
+}
+
 
 static ssize_t bma2xx_enable_int_store(struct device *dev,
 				       struct device_attribute *attr,
@@ -3063,6 +3101,9 @@ static DEVICE_ATTR(fast_calibration_z, S_IRUGO | S_IWUSR | S_IWGRP | S_IWOTH,
 		   bma2xx_fast_calibration_z_store);
 static DEVICE_ATTR(selftest, S_IRUGO | S_IWUSR | S_IWGRP | S_IWOTH,
 		   bma2xx_selftest_show, bma2xx_selftest_store);
+static DEVICE_ATTR(fflush, S_IWUSR | S_IWGRP,
+		   NULL, bma2xx_fflush_store);
+
 
 static struct attribute *bma2xx_attributes[] = {
 	&dev_attr_range.attr,
@@ -3099,6 +3140,7 @@ static struct attribute *bma2xx_attributes[] = {
 	&dev_attr_offset.attr,
 #endif
 	&dev_attr_wake_allow.attr,
+	&dev_attr_fflush.attr,
 	NULL
 };
 
@@ -3466,6 +3508,7 @@ static int bma2xx_probe(struct i2c_client *client,
 	}
 	INIT_WORK(&data->irq_work, bma2xx_irq_work_func);
 	INIT_WORK(&data->fifo_work, bma2xx_fifo_work_func);
+	INIT_WORK(&data->flush_work, bma2xx_fifo_flush_func);
 
 	INIT_DELAYED_WORK(&data->work, bma2xx_work_func);
 	atomic_set(&data->delay, BMA2XXX_MAX_DELAY);
