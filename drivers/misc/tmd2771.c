@@ -2261,6 +2261,8 @@ static long taos_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		/* add delay so that the internal oscillator of chip can
 		   be more stable after PON is asserted */
 		usleep_range(3000, 4000);
+		input_report_abs(taos_datap->input_dev_prox, ABS_DISTANCE, -1);
+		input_sync(taos_datap->input_dev_prox);
 		taos_prox_threshold_set();
 		break;
 
