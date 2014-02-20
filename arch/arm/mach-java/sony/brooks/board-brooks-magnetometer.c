@@ -2,10 +2,9 @@
 #include <linux/delay.h>
 #include <linux/err.h>
 #include <linux/platform_device.h>
-#include <linux/akm09911.h>
 #include "board-brooks.h"
 
-#define AKM_DEV_NAME
+#define AKM_I2C_NAME "akm09911"
 #define SENSOR_I2C_BUS_ID 2
 
 static struct i2c_board_info __initdata akm09911_i2c_boardinfo[] = {
