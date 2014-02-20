@@ -164,6 +164,16 @@ config MSM_MHI
 	  memory. The MHI driver manages the shared memory by use of logical
 	  unidirectional channels.
 
+config MSM_MHI_UCI
+	 tristate "MHI Usperspace Control Interface Driver"
+	 depends on MSM_MHI
+	 help
+	  This modules enables userspace software clients to communicate
+	  with devices supporting the MHI protocol. Userspace clients
+	  may open the device nodes exposed by MHI UCI and perform
+	  read, write and ioctl operations to communicate with the
+	  attached device.
+
 config QCA1530
 	tristate "QCA1530 SoC GNSS Driver"
 	depends on REGULATOR && OF
