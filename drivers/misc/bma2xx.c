@@ -1670,13 +1670,11 @@ static void bma2xx_map_axes(struct bma2xx_data *bma2xx,
 	}
 }
 
-static void bma2xx_work_func(struct work_struct *work)
+static void bma2xx_report_data(struct bma2xx_data *bma2xx,
+		struct input_dev *dev)
 {
-	struct bma2xx_data *bma2xx = container_of((struct delayed_work *)work,
-						  struct bma2xx_data, work);
 	static struct bma2xxacc acc;
 	int xyz[3];
-	unsigned long delay = msecs_to_jiffies(atomic_read(&bma2xx->delay));
 
 	bma2xx_read_accel_xyz(bma2xx, &acc);
 	bma2xx_map_axes(bma2xx, &acc, xyz);
@@ -1686,14 +1684,22 @@ static void bma2xx_work_func(struct work_struct *work)
 	xyz[1] -= bma2xx_offset[1];
 	xyz[2] -= bma2xx_offset[2];
 #endif
-	input_event(bma2xx->input, EV_MSC, MSC_SERIAL, xyz[0]);
-	input_event(bma2xx->input, EV_MSC, MSC_PULSELED, xyz[1]);
-	input_event(bma2xx->input, EV_MSC, MSC_GESTURE, xyz[2]);
-	input_sync(bma2xx->input);
-
+	input_event(dev, EV_MSC, MSC_SERIAL, xyz[0]);
+	input_event(dev, EV_MSC, MSC_PULSELED, xyz[1]);
+	input_event(dev, EV_MSC, MSC_GESTURE, xyz[2]);
 	mutex_lock(&bma2xx->value_mutex);
 	bma2xx->value = acc;
 	mutex_unlock(&bma2xx->value_mutex);
+}
+
+static void bma2xx_work_func(struct work_struct *work)
+{
+	struct bma2xx_data *bma2xx = container_of((struct delayed_work *)work,
+						  struct bma2xx_data, work);
+	unsigned long delay = msecs_to_jiffies(atomic_read(&bma2xx->delay));
+
+	bma2xx_report_data(bma2xx, bma2xx->input);
+	input_sync(bma2xx->input);
 	schedule_delayed_work(&bma2xx->work, delay);
 }
 
@@ -3167,14 +3173,16 @@ static void bma2xx_irq_work_func(struct work_struct *work)
 	unsigned char i;
 	unsigned char first_value = 0;
 	unsigned char sign_value = 0;
+	struct input_dev *idev = bma2xx->wake_idev;
 
+	bma2xx_report_data(bma2xx, idev);
 	bma2xx_get_interruptstatus1(bma2xx->bma2xx_client, &status);
 
 	switch (status) {
 
 	case 0x01:
 		pr_info("Low G interrupt happened\n");
-		input_report_rel(bma2xx->input, LOW_G_INTERRUPT,
+		input_report_rel(idev, LOW_G_INTERRUPT,
 				 LOW_G_INTERRUPT_HAPPENED);
 		break;
 	case 0x02:
@@ -3188,28 +3196,28 @@ static void bma2xx_irq_work_func(struct work_struct *work)
 
 				if (sign_value == 1) {
 					if (i == 0)
-						input_report_rel(bma2xx->input,
+						input_report_rel(idev,
 					HIGH_G_INTERRUPT,
 					HIGH_G_INTERRUPT_X_NEGATIVE_HAPPENED);
 					if (i == 1)
-						input_report_rel(bma2xx->input,
+						input_report_rel(idev,
 					HIGH_G_INTERRUPT,
 					HIGH_G_INTERRUPT_Y_NEGATIVE_HAPPENED);
 					if (i == 2)
-						input_report_rel(bma2xx->input,
+						input_report_rel(idev,
 					HIGH_G_INTERRUPT,
 					HIGH_G_INTERRUPT_Z_NEGATIVE_HAPPENED);
 				} else {
 					if (i == 0)
-						input_report_rel(bma2xx->input,
+						input_report_rel(idev,
 						HIGH_G_INTERRUPT,
 						HIGH_G_INTERRUPT_X_HAPPENED);
 					if (i == 1)
-						input_report_rel(bma2xx->input,
+						input_report_rel(idev,
 						HIGH_G_INTERRUPT,
 						HIGH_G_INTERRUPT_Y_HAPPENED);
 					if (i == 2)
-						input_report_rel(bma2xx->input,
+						input_report_rel(idev,
 						HIGH_G_INTERRUPT,
 						HIGH_G_INTERRUPT_Z_HAPPENED);
 
@@ -3229,28 +3237,28 @@ static void bma2xx_irq_work_func(struct work_struct *work)
 
 				if (sign_value == 1) {
 					if (i == 0)
-						input_report_rel(bma2xx->input,
+						input_report_rel(idev,
 					SLOP_INTERRUPT,
 					SLOPE_INTERRUPT_X_NEGATIVE_HAPPENED);
 					else if (i == 1)
-						input_report_rel(bma2xx->input,
+						input_report_rel(idev,
 					SLOP_INTERRUPT,
 					SLOPE_INTERRUPT_Y_NEGATIVE_HAPPENED);
 					else if (i == 2)
-						input_report_rel(bma2xx->input,
+						input_report_rel(idev,
 					SLOP_INTERRUPT,
 					SLOPE_INTERRUPT_Z_NEGATIVE_HAPPENED);
 				} else {
 					if (i == 0)
-						input_report_rel(bma2xx->input,
+						input_report_rel(idev,
 						SLOP_INTERRUPT,
 						SLOPE_INTERRUPT_X_HAPPENED);
 					else if (i == 1)
-						input_report_rel(bma2xx->input,
+						input_report_rel(idev,
 						SLOP_INTERRUPT,
 						SLOPE_INTERRUPT_Y_HAPPENED);
 					else if (i == 2)
-						input_report_rel(bma2xx->input,
+						input_report_rel(idev,
 						SLOP_INTERRUPT,
 						SLOPE_INTERRUPT_Z_HAPPENED);
 
@@ -3261,53 +3269,54 @@ static void bma2xx_irq_work_func(struct work_struct *work)
 		break;
 
 	case 0x10:
-		input_report_rel(bma2xx->input, DOUBLE_TAP_INTERRUPT,
+		input_report_rel(idev, DOUBLE_TAP_INTERRUPT,
 				 DOUBLE_TAP_INTERRUPT_HAPPENED);
 		break;
 	case 0x20:
-		input_report_rel(bma2xx->input, SINGLE_TAP_INTERRUPT,
+		input_report_rel(idev, SINGLE_TAP_INTERRUPT,
 				 SINGLE_TAP_INTERRUPT_HAPPENED);
 		break;
 	case 0x40:
 		bma2xx_get_orient_status(bma2xx->bma2xx_client, &first_value);
 		if (first_value == 0)
-			input_report_abs(bma2xx->input, ORIENT_INTERRUPT,
+			input_report_abs(idev, ORIENT_INTERRUPT,
 			UPWARD_PORTRAIT_UP_INTERRUPT_HAPPENED);
 		else if (first_value == 1)
-			input_report_abs(bma2xx->input, ORIENT_INTERRUPT,
+			input_report_abs(idev, ORIENT_INTERRUPT,
 			UPWARD_PORTRAIT_DOWN_INTERRUPT_HAPPENED);
 		else if (first_value == 2)
-			input_report_abs(bma2xx->input, ORIENT_INTERRUPT,
+			input_report_abs(idev, ORIENT_INTERRUPT,
 			UPWARD_LANDSCAPE_LEFT_INTERRUPT_HAPPENED);
 		else if (first_value == 3)
-			input_report_abs(bma2xx->input, ORIENT_INTERRUPT,
+			input_report_abs(idev, ORIENT_INTERRUPT,
 			UPWARD_LANDSCAPE_RIGHT_INTERRUPT_HAPPENED);
 		else if (first_value == 4)
-			input_report_abs(bma2xx->input, ORIENT_INTERRUPT,
+			input_report_abs(idev, ORIENT_INTERRUPT,
 			DOWNWARD_PORTRAIT_UP_INTERRUPT_HAPPENED);
 		else if (first_value == 5)
-			input_report_abs(bma2xx->input, ORIENT_INTERRUPT,
+			input_report_abs(idev, ORIENT_INTERRUPT,
 			DOWNWARD_PORTRAIT_DOWN_INTERRUPT_HAPPENED);
 		else if (first_value == 6)
-			input_report_abs(bma2xx->input, ORIENT_INTERRUPT,
+			input_report_abs(idev, ORIENT_INTERRUPT,
 			DOWNWARD_LANDSCAPE_LEFT_INTERRUPT_HAPPENED);
 		else if (first_value == 7)
-			input_report_abs(bma2xx->input, ORIENT_INTERRUPT,
+			input_report_abs(idev, ORIENT_INTERRUPT,
 			DOWNWARD_LANDSCAPE_RIGHT_INTERRUPT_HAPPENED);
 		break;
 	case 0x80:
 		bma2xx_get_orient_flat_status(bma2xx->bma2xx_client,
 					      &sign_value);
 		if (sign_value == 1)
-			input_report_abs(bma2xx->input, FLAT_INTERRUPT,
+			input_report_abs(idev, FLAT_INTERRUPT,
 					 FLAT_INTERRUPT_TURE_HAPPENED);
 		else
-			input_report_abs(bma2xx->input, FLAT_INTERRUPT,
+			input_report_abs(idev, FLAT_INTERRUPT,
 					 FLAT_INTERRUPT_FALSE_HAPPENED);
 		break;
 	default:
 		break;
 	}
+	input_sync(idev);
 
 }
 
@@ -3519,13 +3528,6 @@ static int bma2xx_probe(struct i2c_client *client,
 	dev->name = SENSOR_NAME;
 	dev->id.bustype = BUS_I2C;
 
-	input_set_capability(dev, EV_REL, LOW_G_INTERRUPT);
-	input_set_capability(dev, EV_REL, HIGH_G_INTERRUPT);
-	input_set_capability(dev, EV_REL, SLOP_INTERRUPT);
-	input_set_capability(dev, EV_REL, DOUBLE_TAP_INTERRUPT);
-	input_set_capability(dev, EV_REL, SINGLE_TAP_INTERRUPT);
-	input_set_capability(dev, EV_ABS, ORIENT_INTERRUPT);
-	input_set_capability(dev, EV_ABS, FLAT_INTERRUPT);
 	input_set_capability(dev, EV_MSC, MSC_SERIAL);
 	input_set_capability(dev, EV_MSC, MSC_PULSELED);
 	input_set_capability(dev, EV_MSC, MSC_GESTURE);
@@ -3551,7 +3553,17 @@ static int bma2xx_probe(struct i2c_client *client,
 	data->wake_idev->name = "gesture_wake";
 	data->wake_idev->id.bustype = BUS_I2C;
 
+	input_set_capability(data->wake_idev, EV_REL, LOW_G_INTERRUPT);
+	input_set_capability(data->wake_idev, EV_REL, HIGH_G_INTERRUPT);
+	input_set_capability(data->wake_idev, EV_REL, SLOP_INTERRUPT);
+	input_set_capability(data->wake_idev, EV_REL, DOUBLE_TAP_INTERRUPT);
+	input_set_capability(data->wake_idev, EV_REL, SINGLE_TAP_INTERRUPT);
+	input_set_capability(data->wake_idev, EV_ABS, ORIENT_INTERRUPT);
+	input_set_capability(data->wake_idev, EV_ABS, FLAT_INTERRUPT);
 	input_set_capability(data->wake_idev, EV_KEY, KEY_POWER);
+	input_set_capability(data->wake_idev, EV_MSC, MSC_SERIAL);
+	input_set_capability(data->wake_idev, EV_MSC, MSC_PULSELED);
+	input_set_capability(data->wake_idev, EV_MSC, MSC_GESTURE);
 	input_set_drvdata(data->wake_idev, data);
 
 	err = input_register_device(data->wake_idev);
