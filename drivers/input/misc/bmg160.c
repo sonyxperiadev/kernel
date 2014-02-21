@@ -258,8 +258,8 @@ static ssize_t bmg160_chip_id_show(struct device *dev,
 }
 
 static struct device_attribute attributes[] = {
-	__ATTR(bmg160_rate, 0644, bmg160_rate_show, bmg160_rate_store),
-	__ATTR(bmg160_chip_id, 0444, bmg160_chip_id_show, NULL),
+	__ATTR(delay, 0644, bmg160_rate_show, bmg160_rate_store),
+	__ATTR(chip_id, 0444, bmg160_chip_id_show, NULL),
 };
 
 static int add_sysfs_interfaces(struct device *dev)
