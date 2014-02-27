@@ -62,5 +62,5 @@ kernelconfig: $(KERNEL_OUT) $(KERNEL_CONFIG)
 	$(MAKE) -C kernel O=../$(KERNEL_OUT) ARCH=arm CROSS_COMPILE=arm-eabi- savedefconfig
 	cp $(KERNEL_OUT)/defconfig kernel/arch/arm/configs/$(KERNEL_DEFCONFIG)
 
-%.dtb: $(KERNEL_CONFIG)
-	$(MAKE) -C kernel O=../$(KERNEL_OUT) ARCH=arm CROSS_COMPILE=arm-eabi- $(@F)
+%.dtb: $(TARGET_PREBUILT_INT_KERNEL)
+	cp $(KERNEL_OUT)/arch/arm/boot/dts/$(@F) $(PRODUCT_OUT)/$(@F)
