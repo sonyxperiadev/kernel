@@ -39,9 +39,12 @@
 #define AKM09911_CNTL2_REG	0x31
 #define AKM09911_ST1_REG	0x10
 #define AKM09911_DATA_REG	0x11
+#define AKM09911_FUSE_ROM_REG	0x60
 
 #define AKM09911_POWER_DOWN_MODE	0x00
 #define AKM09911_SINGLE_MEASURE		0x01
+#define AKM09911_FUSE_ACCESS		0x1F
+
 #define AKM09911_DRDY_BIT	1
 
 #define AKM09911_AUTO_DELAY	1000
@@ -59,7 +62,17 @@ struct akm09911_sensor {
 	struct delayed_work work;
 
 	unsigned long delay;
+	u8 rom[3];
 };
+
+static ssize_t akm09911_show_rom(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct akm09911_sensor *sensor = i2c_get_clientdata(to_i2c_client(dev));
+
+	return sprintf(buf, "%d %d %d\n", sensor->rom[0], sensor->rom[1],
+			sensor->rom[2]);
+}
 
 static ssize_t akm09911_show_delay(struct device *dev,
 		struct device_attribute *attr, char *buf)
@@ -87,9 +100,12 @@ static ssize_t akm09911_store_delay(struct device *dev,
 
 static DEVICE_ATTR(delay, S_IWUSR | S_IRUGO,
 		akm09911_show_delay, akm09911_store_delay);
+static DEVICE_ATTR(rom, S_IRUGO,
+		akm09911_show_rom, NULL);
 
 static struct attribute *akm09911_attributes[] = {
 	&dev_attr_delay.attr,
+	&dev_attr_rom.attr,
 	NULL
 };
 
@@ -134,9 +150,9 @@ static int akm09911_read_reg(struct i2c_client *client,
  *
  *	Put device to normal-power mode or low-power mode.
  */
-static void akm09911_set_power_mode(struct i2c_client *client, u8 val)
+static int akm09911_set_power_mode(struct i2c_client *client, u8 val)
 {
-	i2c_smbus_write_byte_data(client, AKM09911_CNTL2_REG, val & 0x1F);
+	return i2c_smbus_write_byte_data(client, AKM09911_CNTL2_REG, val & 0x1F);
 }
 
 /**
@@ -151,8 +167,11 @@ static int akm09911_read_xyz(struct akm09911_sensor *sensor,
 {
 	u8 status;
 	u16 buffer[3];
+	int ret;
 
-	akm09911_set_power_mode(sensor->client, AKM09911_SINGLE_MEASURE);
+	ret = akm09911_set_power_mode(sensor->client, AKM09911_SINGLE_MEASURE);
+	if (ret < 0)
+		return ret;
 
 	msleep(2); /* Measurement period */
 
@@ -231,6 +250,31 @@ static void akm09911_work_thread(struct work_struct *work)
 	schedule_delayed_work(&sensor->work, msecs_to_jiffies(sensor->delay));
 }
 
+static int akm09911_init_chip(struct i2c_client *client,
+			      struct akm09911_sensor *sensor)
+{
+	int ret;
+
+	ret = i2c_smbus_read_byte_data(client, AKM09911_WHO_AM_I_2_REG);
+	if (ret < 0)
+		return ret;
+
+	if (ret != AKM09911_CHIP_ID)
+		return -ENXIO;
+
+	/* get FUSE rom content */
+	ret = akm09911_set_power_mode(client, AKM09911_FUSE_ACCESS);
+	if (ret < 0)
+		return ret;
+
+	ret = akm09911_read_reg(sensor->client, AKM09911_FUSE_ROM_REG,
+				sensor->rom, sizeof(sensor->rom));
+	if (ret < 0)
+		return ret;
+
+	return akm09911_set_power_mode(client, AKM09911_POWER_DOWN_MODE);
+}
+
 /**
  *	akm09911_probe - device detection callback
  *	@client: i2c client of found device
@@ -261,15 +305,9 @@ static int akm09911_probe(struct i2c_client *client,
 	sensor->dev = &client->dev;
 	sensor->idev = idev;
 
-	ret = i2c_smbus_read_byte_data(client, AKM09911_WHO_AM_I_2_REG);
+	ret = akm09911_init_chip(client, sensor);
 	if (ret < 0) {
 		dev_err(&client->dev, "failed to detect device\n");
-		error = -ENXIO;
-		goto err_free_mem;
-	}
-
-	if (ret != AKM09911_CHIP_ID) {
-		dev_err(&client->dev, "unsupported chip id: %d\n", ret);
 		error = -ENXIO;
 		goto err_free_mem;
 	}
@@ -346,7 +384,7 @@ static int akm09911_suspend(struct device *dev)
 {
 	struct i2c_client *client = to_i2c_client(dev);
 
-	akm09911_set_power_mode(client, AKM09911_POWER_DOWN_MODE);
+	(void) akm09911_set_power_mode(client, AKM09911_POWER_DOWN_MODE);
 
 	return 0;
 }
