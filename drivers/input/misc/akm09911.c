@@ -38,6 +38,7 @@
 #define AKM09911_WHO_AM_I_2_REG	0x01
 #define AKM09911_CNTL2_REG	0x31
 #define AKM09911_ST1_REG	0x10
+#define AKM09911_ST2_REG	0x18
 #define AKM09911_DATA_REG	0x11
 #define AKM09911_FUSE_ROM_REG	0x60
 
@@ -53,6 +54,10 @@ struct axis_data {
 	s16 x;
 	s16 y;
 	s16 z;
+
+	/* status registers */
+	u8 st1;
+	u8 st2;
 };
 
 struct akm09911_sensor {
@@ -152,7 +157,8 @@ static int akm09911_read_reg(struct i2c_client *client,
  */
 static int akm09911_set_power_mode(struct i2c_client *client, u8 val)
 {
-	return i2c_smbus_write_byte_data(client, AKM09911_CNTL2_REG, val & 0x1F);
+	return i2c_smbus_write_byte_data(client,
+					 AKM09911_CNTL2_REG, val & 0x1F);
 }
 
 /**
@@ -165,7 +171,6 @@ static int akm09911_set_power_mode(struct i2c_client *client, u8 val)
 static int akm09911_read_xyz(struct akm09911_sensor *sensor,
 			     struct axis_data *coords)
 {
-	u8 status;
 	u16 buffer[3];
 	int ret;
 
@@ -175,11 +180,24 @@ static int akm09911_read_xyz(struct akm09911_sensor *sensor,
 
 	msleep(2); /* Measurement period */
 
-	akm09911_read_reg(sensor->client, AKM09911_ST1_REG, &status, 1);
-	if ((status & AKM09911_DRDY_BIT) == 0)
+	ret = akm09911_read_reg(sensor->client, AKM09911_ST1_REG,
+				&coords->st1, 1);
+	if (ret < 0)
+		return ret;
+
+	if ((coords->st1 & AKM09911_DRDY_BIT) == 0)
 		return -EAGAIN;
 
-	akm09911_read_reg(sensor->client, AKM09911_DATA_REG, (u8 *)buffer, 6);
+	ret = akm09911_read_reg(sensor->client, AKM09911_ST2_REG,
+				&coords->st2, 1);
+	if (ret < 0)
+		return ret;
+
+	ret = akm09911_read_reg(sensor->client, AKM09911_DATA_REG,
+				(u8 *)buffer, 6);
+	if (ret < 0)
+		return ret;
+
 	coords->x = le16_to_cpu(buffer[0]);
 	coords->y = le16_to_cpu(buffer[1]);
 	coords->z = le16_to_cpu(buffer[2]);
@@ -245,6 +263,8 @@ static void akm09911_work_thread(struct work_struct *work)
 	input_event(sensor->idev, EV_MSC, MSC_SERIAL, axis.x);
 	input_event(sensor->idev, EV_MSC, MSC_PULSELED, axis.y);
 	input_event(sensor->idev, EV_MSC, MSC_GESTURE, axis.z);
+	input_event(sensor->idev, EV_MSC, MSC_RAW, axis.st1);
+	input_event(sensor->idev, EV_MSC, MSC_SCAN, axis.st2);
 	input_sync(sensor->idev);
 
 	schedule_delayed_work(&sensor->work, msecs_to_jiffies(sensor->delay));
