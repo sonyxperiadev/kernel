@@ -76,3 +76,4 @@ obj-$(CONFIG_INPUT_L3G4200D)		+= l3g4200d_gyr_sysfs.o
 obj-$(CONFIG_INPUT_APDS9702)	        += apds9702.o
 obj-$(CONFIG_INPUT_BMG160)             += bmg160.o
 obj-$(CONFIG_INPUT_AKM09911)		+= akm09911.o
+obj-$(CONFIG_BMP280)     += bmp280/
