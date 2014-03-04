@@ -27,7 +27,7 @@ void __init kivu_add_backlight(void);
 #if defined(CONFIG_BACKLIGHT_LM3630A)
 void __init brooks_add_backlight(void);
 #endif
-#if defined(CONFIG_SENSORS_BMP18X_I2C)
+#if defined(CONFIG_SENSORS_BMP18X_I2C) || defined(CONFIG_BMP280_I2C)
 void __init kivu_add_barometer(void);
 #endif
 #if defined(CONFIG_INPUT_APDS9702)

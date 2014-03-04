@@ -913,7 +913,7 @@ defined(CONFIG_TOUCHSCREEN_BCMTCH15XXX_MODULE)
 #if defined(CONFIG_BACKLIGHT_LM3630A)
 	brooks_add_backlight();
 #endif
-#if defined(CONFIG_SENSORS_BMP18X_I2C)
+#if defined(CONFIG_SENSORS_BMP18X_I2C) || defined(CONFIG_BMP280_I2C)
 	kivu_add_barometer();
 #endif
 #if defined(CONFIG_INPUT_APDS9702)
