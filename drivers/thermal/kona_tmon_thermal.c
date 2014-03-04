@@ -586,6 +586,9 @@ static void kona_tmon_irq_work(struct work_struct *work)
 	struct kona_tmon_pdata *pdata = thermal->pdata;
 	long temp_val;
 
+	/* Set threshold to next level */
+	cancel_delayed_work_sync(&thermal->polling_work);
+
 	mutex_lock(&thermal->lock);
 	temp_val = kona_tmon_get_current_temp(thermal->pdata, true, true);
 	thermal->cur_temp = get_positive_temp(temp_val);
@@ -597,8 +600,6 @@ static void kona_tmon_irq_work(struct work_struct *work)
 	tmon_dbg(TMON_LOG_ALERT, "soc threshold (%d)C exceeded, cur temp is %ldC\n",
 			TRIP_TEMP(thermal->cur_trip), thermal->cur_temp);
 
-	/* Set threshold to next level */
-	cancel_delayed_work_sync(&thermal->polling_work);
 
 	if (thermal->cur_trip < (TRIP_CNT - 1))
 		thermal->cur_trip++;
@@ -607,9 +608,9 @@ static void kona_tmon_irq_work(struct work_struct *work)
 
 	thermal_zone_device_update(thermal->tz);
 
+out:
 	schedule_delayed_work(&thermal->polling_work,
 			msecs_to_jiffies(pdata->poll_rate_ms));
-out:
 	mutex_unlock(&thermal->lock);
 	enable_irq(thermal->pdata->irq);
 }
