@@ -1401,7 +1401,7 @@ static struct bcmpmu59xxx_platform_data bcmpmu_i2c_pdata = {
 #ifdef CONFIG_CHARGER_BCMPMU_SPA
 .flags = (BCMPMU_SPA_EN | BCMPMU_ACLD_EN),
 #else
-.flags = BCMPMU_ACLD_EN,
+.flags = 0,
 #endif
 };
 
