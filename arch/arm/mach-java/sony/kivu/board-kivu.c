@@ -907,8 +907,11 @@ defined(CONFIG_TOUCHSCREEN_BCMTCH15XXX_MODULE)
 #if defined(CONFIG_INPUT_L3G4200D)
 	kivu_add_gyro();
 #endif
-#if defined(CONFIG_LEDS_LM3530) || defined(CONFIG_BACKLIGHT_LM3630)
+#if defined(CONFIG_LEDS_LM3530)
 	kivu_add_backlight();
+#endif
+#if defined(CONFIG_BACKLIGHT_LM3630A)
+	brooks_add_backlight();
 #endif
 #if defined(CONFIG_SENSORS_BMP18X_I2C)
 	kivu_add_barometer();

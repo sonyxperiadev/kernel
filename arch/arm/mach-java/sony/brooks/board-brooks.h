@@ -18,8 +18,8 @@ void __init brooks_add_compass(void);
 #if defined(CONFIG_INPUT_BMG160)
 void __init kivu_add_gyro(void);
 #endif
-#if defined(CONFIG_BACKLIGHT_LM3630)
-void __init kivu_add_backlight(void);
+#if defined(CONFIG_BACKLIGHT_LM3630A)
+void __init brooks_add_backlight(void);
 #endif
 #if defined(CONFIG_SENSORS_BMP18X_I2C)
 void __init kivu_add_barometer(void);

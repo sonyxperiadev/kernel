@@ -24,6 +24,9 @@ void __init kivu_add_gyro(void);
 #if defined(CONFIG_LEDS_LM3530)
 void __init kivu_add_backlight(void);
 #endif
+#if defined(CONFIG_BACKLIGHT_LM3630A)
+void __init brooks_add_backlight(void);
+#endif
 #if defined(CONFIG_SENSORS_BMP18X_I2C)
 void __init kivu_add_barometer(void);
 #endif
