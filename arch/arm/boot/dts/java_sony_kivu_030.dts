@@ -297,6 +297,58 @@
 		rotation = <0>;
 	};
 
+        kona-fb-2 {
+                module-name = "NT35310_Mesona";
+                reg-name = "cam2";
+                rst-gpio = <&gpio 8 0>;
+                rst-setup = <2000>;
+                rst-pulse = <11000>;
+                rst-hold = <11000>;
+                /* rst-active-high; */  /* Commented => Active Low */
+                col-mod-i = <3>;
+                col-mod-o = <3>;
+                width = <320>;
+                height = <480>;
+                /* vmode; */
+                /* vburst; */   /* Non-burst mode */
+                /* te-ctrl; */  /* Tearing Effect Control enabled */
+                fps = <60>;
+                lanes = <1>;
+                /*cmnd-LP;      Commands in LP mode*/
+                hs-bitrate = <333000000>;       /* bps */
+                lp-bitrate =   <8000000>;       /* bps */
+                desense-offset = <2400000>;     /* +2.4Mbps */
+                iommu = <&iommu_mm>;
+                iovmm = <&iovmm_mm>;
+                rotation = <0>;
+        };
+
+        kona-fb-3 {
+                module-name = "S6D04K2X01";
+                reg-name = "cam2";
+                rst-gpio = <&gpio 8 0>;
+                rst-setup = <1000>;
+                rst-pulse = <10000>;
+                rst-hold = <10000>;
+                /* rst-active-high; */  /* Commented => Active Low */
+                col-mod-i = <2>;
+                col-mod-o = <2>;
+                width = <220>;
+                height = <176>;
+                /* vmode; */
+                /* vburst; */   /* Non-burst mode */
+                te-ctrl;                /* Tearing Effect Control enabled */
+                fps = <60>;
+                lanes = <1>;
+                /*cmnd-LP;               Commands in LP mode*/
+                hs-bitrate = <150000000>;       /* bps */
+                lp-bitrate =   <8000000>;       /* bps */
+                desense-offset = <2400000>;     /* +2.4Mbps */
+                iommu = <&iommu_mm>;
+                iovmm = <&iovmm_mm>;
+                rotation = <0>;
+        };
+
 
 	tmon@0x34008000 {
 		compatible = "bcm,tmon";
