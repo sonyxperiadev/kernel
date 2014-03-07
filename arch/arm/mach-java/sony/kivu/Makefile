@@ -12,3 +12,4 @@ obj-$(CONFIG_INPUT_AKM09911) += board-kivu3-magnetometer.o
 obj-$(CONFIG_INPUT_BMG160) += board-kivu3-gyro.o
 obj-$(CONFIG_BACKLIGHT_LM3630) += board-kivu3-backlight.o
 obj-$(CONFIG_SENSORS_BH1721FVC) += board-kivu3-als.o
+obj-$(CONFIG_TOUCHSCREEN_SYNAPTICS_I2C_RMI4_2) += board-kivu3-touch.o

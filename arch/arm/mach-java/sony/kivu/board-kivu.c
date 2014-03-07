@@ -920,7 +920,7 @@ defined(CONFIG_TOUCHSCREEN_BCMTCH15XXX_MODULE)
 	kivu_add_proximity();
 #endif
 #if defined(CONFIG_TOUCHSCREEN_SYNAPTICS_I2C_RMI4_2)
-	brooks_add_touch();
+	kivu_add_touch();
 #endif
 #if defined(CONFIG_SENSORS_BH1721FVC)
 	brooks_add_als();

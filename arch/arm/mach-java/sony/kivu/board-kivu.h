@@ -43,7 +43,7 @@ void __init kivu_add_gyro(void);
 void __init kivu_add_backlight(void);
 #endif
 #if defined(CONFIG_TOUCHSCREEN_SYNAPTICS_I2C_RMI4_2)
-void __init brooks_add_touch(void);
+void __init kivu_add_touch(void);
 #endif
 #if defined(CONFIG_SENSORS_BH1721FVC)
 void __init brooks_add_als(void);
