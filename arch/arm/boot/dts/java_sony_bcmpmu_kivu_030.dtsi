@@ -132,7 +132,7 @@
 		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, initial_mode = REGULATOR_MODE_NORMAL*/
 		sd   = "3", "sdldo_uc", "vddmmc", "vdd_sdio", "0", "7", "2", "0", "0";
 		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, initial_mode = REGULATOR_MODE_NORMAL*/
-		sdx  = "4", "sdxldo_uc", "vddo", "vdd_sdxc", "sddat_debug_bus","0","7", "2", "0", "0";
+		sdx  = "4", "sdxldo_uc", "vddo", "vdd_sdxc", "sddat_debug_bus","1","7", "2", "0", "0";
 		/*pc_map = 0, initial_mode = REGULATOR_MODE_STANDY*/
 		mmc1 = "1", "mmc1_vcc","0","0", "8", "0", "0";
 		/*pc_map = 0, initial_mode = REGULATOR_MODE_STANDBY*/
