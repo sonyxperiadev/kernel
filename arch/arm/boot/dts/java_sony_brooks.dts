@@ -116,6 +116,12 @@
 			regulator = "gpldo1_uc";
 		};
 
+		bmg160@68 {
+			compatible = "bmg160";
+			reg = <0x68>;
+			regulator = "gpldo1_uc";
+			range = <0>; /* BMG160_RANGE_2000 */
+		};
 	};
 
 	i2c3: i2c@3e01c000 {
