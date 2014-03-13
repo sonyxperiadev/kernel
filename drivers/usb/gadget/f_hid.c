@@ -560,7 +560,7 @@ const struct file_operations f_hidg_fops = {
 	.llseek		= noop_llseek,
 };
 
-static int __init hidg_bind(struct usb_configuration *c, struct usb_function *f)
+static int /*__init*/ hidg_bind(struct usb_configuration *c, struct usb_function *f)
 {
 	struct usb_ep		*ep;
 	struct f_hidg		*hidg = func_to_hidg(f);
@@ -689,7 +689,7 @@ static struct usb_gadget_strings *ct_func_strings[] = {
 /*-------------------------------------------------------------------------*/
 /*                             usb_configuration                           */
 
-int __init hidg_bind_config(struct usb_configuration *c,
+int /*__init*/ hidg_bind_config(struct usb_configuration *c,
 			    struct hidg_func_descriptor *fdesc, int index)
 {
 	struct f_hidg *hidg;

@@ -30,6 +30,7 @@
 
 #include "gadget_chips.h"
 
+#include "f_hid.c"
 #include "f_fs.c"
 #ifdef CONFIG_SOUND
 #include "f_audio_source.c"
@@ -1288,6 +1289,95 @@ static struct android_usb_function audio_source_function = {
 };
 #endif
 
+struct hid_function_config {
+	struct hidg_func_descriptor *fdesc;
+	int index;
+};
+
+/* hid descriptor for a keyboard */
+static struct hidg_func_descriptor hid_keyboard_fdesc = {
+	.subclass		= 0, /* No subclass */
+	.protocol		= 1, /* Keyboard */
+	.report_length		= 8,
+	.report_desc_length	= 63,
+	.report_desc		= {
+		0x05, 0x01,	/* USAGE_PAGE (Generic Desktop)	          */
+		0x09, 0x06,	/* USAGE (Keyboard)                       */
+		0xa1, 0x01,	/* COLLECTION (Application)               */
+		0x05, 0x07,	/*   USAGE_PAGE (Keyboard)                */
+		0x19, 0xe0,	/*   USAGE_MINIMUM (Keyboard LeftControl) */
+		0x29, 0xe7,	/*   USAGE_MAXIMUM (Keyboard Right GUI)   */
+		0x15, 0x00,	/*   LOGICAL_MINIMUM (0)                  */
+		0x25, 0x01,	/*   LOGICAL_MAXIMUM (1)                  */
+		0x75, 0x01,	/*   REPORT_SIZE (1)                      */
+		0x95, 0x08,	/*   REPORT_COUNT (8)                     */
+		0x81, 0x02,	/*   INPUT (Data,Var,Abs)                 */
+		0x95, 0x01,	/*   REPORT_COUNT (1)                     */
+		0x75, 0x08,	/*   REPORT_SIZE (8)                      */
+		0x81, 0x03,	/*   INPUT (Cnst,Var,Abs)                 */
+		0x95, 0x05,	/*   REPORT_COUNT (5)                     */
+		0x75, 0x01,	/*   REPORT_SIZE (1)                      */
+		0x05, 0x08,	/*   USAGE_PAGE (LEDs)                    */
+		0x19, 0x01,	/*   USAGE_MINIMUM (Num Lock)             */
+		0x29, 0x05,	/*   USAGE_MAXIMUM (Kana)                 */
+		0x91, 0x02,	/*   OUTPUT (Data,Var,Abs)                */
+		0x95, 0x01,	/*   REPORT_COUNT (1)                     */
+		0x75, 0x03,	/*   REPORT_SIZE (3)                      */
+		0x91, 0x03,	/*   OUTPUT (Cnst,Var,Abs)                */
+		0x95, 0x06,	/*   REPORT_COUNT (6)                     */
+		0x75, 0x08,	/*   REPORT_SIZE (8)                      */
+		0x15, 0x00,	/*   LOGICAL_MINIMUM (0)                  */
+		0x25, 0x65,	/*   LOGICAL_MAXIMUM (101)                */
+		0x05, 0x07,	/*   USAGE_PAGE (Keyboard)                */
+		0x19, 0x00,	/*   USAGE_MINIMUM (Reserved)             */
+		0x29, 0x65,	/*   USAGE_MAXIMUM (Keyboard Application) */
+		0x81, 0x00,	/*   INPUT (Data,Ary,Abs)                 */
+		0xc0		/* END_COLLECTION                         */
+	}
+};
+
+static int hid_function_init(struct android_usb_function *f,
+			struct usb_composite_dev *cdev)
+{
+	struct hid_function_config *config;
+	int status = 0;
+
+	config = kzalloc(sizeof(struct hid_function_config), GFP_KERNEL);
+	if (!config)
+		return -ENOMEM;
+	config->fdesc = &hid_keyboard_fdesc;
+	config->index = 0;
+	f->config = config;
+
+	/* set up HID */
+	status = ghid_setup(cdev->gadget, 1);
+	if (status < 0)
+		return status;
+
+	return 0;
+}
+
+static void hid_function_cleanup(struct android_usb_function *f)
+{
+	ghid_cleanup();
+	kfree(f->config);
+}
+
+static int hid_function_bind_config(struct android_usb_function *f,
+						struct usb_configuration *c)
+{
+	struct hid_function_config *config = f->config;
+
+	return hidg_bind_config(c, config->fdesc, config->index);
+}
+
+static struct android_usb_function hid_function = {
+	.name		= "hid",
+	.init		= hid_function_init,
+	.cleanup	= hid_function_cleanup,
+	.bind_config	= hid_function_bind_config,
+};
+
 static struct android_usb_function *supported_functions[] = {
 	&ffs_function,
 	&acm_function,
@@ -1303,6 +1393,7 @@ static struct android_usb_function *supported_functions[] = {
 	&audio_source_function,
 #endif
 	&ncm_function,
+	&hid_function,
 	NULL
 };
 
