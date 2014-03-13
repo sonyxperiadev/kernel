@@ -15,7 +15,7 @@
 
 	memory@81e00000 {
 		device_type = "memory";
-		reg = <0x81e00000 0x20000000>; /* 480 MB */
+		reg = <0x81e00000 0x1e200000>; /* 482 MB */
 	};
 
 	wd-tapper {
@@ -434,7 +434,7 @@
 		data-pullup = <0>;
 		is-8bit = <1>;
 		devtype = <2>;		/*SDIO_DEV_TYPE_EMMC*/
-		flags = <1>;		/*KONA_SDIO_FLAGS_DEVICE_NON_REMOVABLE*/
+		flags = <3>;		/*NON_REMOVABLE | RPM_EN*/
 		pm_caps = <1>;		/*MMC_PM_KEEP_POWER*/
 		peri-clk-name = "sdio2_clk";
 		ahb-clk-name = "sdio2_ahb_clk";
@@ -450,7 +450,7 @@
 		id = <2>;
 		data-pullup = <0>;
 		devtype = <1>;		/*SDIO_DEV_TYPE_WIFI*/
-		flags = <0>;		/*KONA_SDIO_FLAGS_DEVICE_REMOVABLE*/
+		flags = <2>;		/*REMOVABLE | RPM_EN*/
 		peri-clk-name = "sdio3_clk";
 		ahb-clk-name = "sdio3_ahb_clk";
 		sleep-clk-name = "sdio3_sleep_clk";
@@ -465,7 +465,7 @@
 		data-pullup = <0>;
 		cd-gpio = <&gpio 91 0>;		/*SD_CARDDET_GPIO_PIN*/
 		devtype = <0>;		/*SDIO_DEV_TYPE_SDMMC*/
-		flags = <0>;		/*KONA_SDIO_FLAGS_DEVICE_REMOVABLE*/
+		flags = <2>;		/*REMOVABLE | RPM_EN*/
 		peri-clk-name = "sdio1_clk";
 		ahb-clk-name = "sdio1_ahb_clk";
 		sleep-clk-name = "sdio1_sleep_clk";
@@ -536,4 +536,14 @@
 			gpios = <&gpio 9 0>;
 		};
 	};
+
+	/*
+	This is sample , not actual GPIO assigned to GPS HostWake
+	bcm-gps {
+		compatible = "bcm,bcm-gps";
+		bcm-gps-hostwake = <&gpio 0 0>;
+		bcm-gps-regpu-gpio = <&gpio 11 0>;
+	};
+	*/
+
 };

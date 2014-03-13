@@ -505,12 +505,6 @@ static int ov7692_g_volatile_ctrl(struct v4l2_ctrl *ctrl)
 	case V4L2_CID_COLORFX:
 		ctrl->val = ov7692->colorlevel;
 		break;
-	case V4L2_CID_SATURATION:
-		ctrl->val = ov7692->saturation;
-		break;
-	case V4L2_CID_SHARPNESS:
-		ctrl->val = ov7692->sharpness;
-		break;
 	case V4L2_CID_POWER_LINE_FREQUENCY:
 		ctrl->val = ov7692->antibanding;
 		break;
@@ -623,52 +617,6 @@ static int ov7692_s_ctrl(struct v4l2_ctrl *ctrl)
 		default:
 			ret = ov7692_write_smbuss(client,
 					ov7692_effect_normal_tbl);
-			break;
-		}
-		if (ret)
-			return ret;
-		break;
-	case V4L2_CID_SATURATION:
-
-		if (ctrl->val > OV7692_SATURATION_MAX)
-			return -EINVAL;
-
-		ov7692->saturation = ctrl->val;
-		switch (ov7692->saturation) {
-		case OV7692_SATURATION_MIN:
-			ret = ov7692_write_smbuss(client,
-					ov7692_saturation_lv0_tbl);
-			break;
-		case OV7692_SATURATION_MAX:
-			ret = ov7692_write_smbuss(client,
-					ov7692_saturation_lv5_tbl);
-			break;
-		default:
-			ret = ov7692_write_smbuss(client,
-					ov7692_saturation_default_lv3_tbl);
-			break;
-		}
-		if (ret)
-			return ret;
-		break;
-	case V4L2_CID_SHARPNESS:
-
-		if (ctrl->val > OV7692_SHARPNESS_MAX)
-			return -EINVAL;
-
-		ov7692->sharpness = ctrl->val;
-		switch (ov7692->sharpness) {
-		case OV7692_SHARPNESS_MIN:
-			ret = ov7692_write_smbuss(client,
-					ov7692_sharpness_lv0_tbl);
-			break;
-		case OV7692_SHARPNESS_MAX:
-			ret = ov7692_write_smbuss(client,
-					ov7692_sharpness_lv3_tbl);
-			break;
-		default:
-			ret = ov7692_write_smbuss(client,
-					ov7692_sharpness_default_lv2_tbl);
 			break;
 		}
 		if (ret)
@@ -1196,14 +1144,6 @@ static int ov7692_probe(struct i2c_client *client,
 
 	v4l2_ctrl_new_std(&ov7692->hdl, &ov7692_ctrl_ops, V4L2_CID_CONTRAST,
 			CONTRAST_MINUS_2, CONTRAST_PLUS_2, 1, CONTRAST_DEFAULT);
-
-	v4l2_ctrl_new_std(&ov7692->hdl, &ov7692_ctrl_ops, V4L2_CID_SATURATION,
-			OV7692_SATURATION_MIN, OV7692_SATURATION_MAX,
-			OV7692_SATURATION_STEP, OV7692_SATURATION_DEF);
-
-	v4l2_ctrl_new_std(&ov7692->hdl, &ov7692_ctrl_ops, V4L2_CID_SHARPNESS,
-			OV7692_SHARPNESS_MIN, OV7692_SHARPNESS_MAX,
-			OV7692_SHARPNESS_STEP, OV7692_SHARPNESS_DEF);
 
 	if (ov7692->hdl.error) {
 		dev_err(&client->dev,

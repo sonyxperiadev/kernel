@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: bcmsdh_sdmmc_linux.c 342895 2012-07-04 11:36:15Z $
+ * $Id: bcmsdh_sdmmc_linux.c 381545 2013-01-28 17:04:40Z $
  */
 
 #include <typedefs.h>
@@ -136,6 +136,8 @@ static int bcmsdh_sdmmc_probe(struct sdio_func *func,
 	#endif
 			sd_trace(("F2 found, calling bcmsdh_probe...\n"));
 			ret = bcmsdh_probe(&func->dev);
+			if (ret < 0 && gInstance)
+				gInstance->func[2] = NULL;
 		}
 	} else {
 		ret = -ENODEV;
@@ -153,10 +155,12 @@ static void bcmsdh_sdmmc_remove(struct sdio_func *func)
 		sd_info(("sdio_device: 0x%04x\n", func->device));
 		sd_info(("Function#: 0x%04x\n", func->num));
 
-		if (func->num == 2) {
+		if (gInstance->func[2]) {
 			sd_trace(("F2 found, calling bcmsdh_remove...\n"));
 			bcmsdh_remove(&func->dev);
-		} else if (func->num == 1) {
+			gInstance->func[2] = NULL;
+		}
+		if (func->num == 1) {
 			sdio_claim_host(func);
 			sdio_disable_func(func);
 			sdio_release_host(func);
@@ -192,8 +196,7 @@ static int bcmsdh_sdmmc_suspend(struct device *pdev)
 	if (func->num != 2)
 		return 0;
 
-	sd_trace(("%s Enter\n", __FUNCTION__));
-
+	printk(("%s Enter\n", __FUNCTION__));
 	if (dhd_os_check_wakelock(bcmsdh_get_drvdata()))
 		return -EBUSY;
 
@@ -210,10 +213,16 @@ static int bcmsdh_sdmmc_suspend(struct device *pdev)
 		sd_err(("%s: error while trying to keep power\n", __FUNCTION__));
 		return ret;
 	}
+
+#if !defined(CUSTOMER_HW4)
 #if defined(OOB_INTR_ONLY)
 	bcmsdh_oob_intr_set(0);
 #endif	/* defined(OOB_INTR_ONLY) */
+#endif  /* !defined(CUSTOMER_HW4) */
 	dhd_mmc_suspend = TRUE;
+#if defined(CUSTOMER_HW4) && defined(CONFIG_ARCH_TEGRA)
+	irq_set_irq_wake(390, 1);
+#endif
 	smp_mb();
 
 	return 0;
@@ -221,16 +230,24 @@ static int bcmsdh_sdmmc_suspend(struct device *pdev)
 
 static int bcmsdh_sdmmc_resume(struct device *pdev)
 {
+#if !defined(CUSTOMER_HW4)
 #if defined(OOB_INTR_ONLY)
 	struct sdio_func *func = dev_to_sdio_func(pdev);
-#endif
-	sd_trace(("%s Enter\n", __FUNCTION__));
+#endif /* defined(OOB_INTR_ONLY) */
+#endif /* defined(CUSTOMER_HW4) */
+
+	printk(("%s Enter\n", __FUNCTION__));
 	dhd_mmc_suspend = FALSE;
+#if !defined(CUSTOMER_HW4)
 #if defined(OOB_INTR_ONLY)
 	if ((func->num == 2) && dhd_os_check_if_up(bcmsdh_get_drvdata()))
 		bcmsdh_oob_intr_set(1);
 #endif /* (OOB_INTR_ONLY) */
-
+#endif /* !(CUSTOMER_HW4) */
+#if defined(CUSTOMER_HW4) && defined(CONFIG_ARCH_TEGRA)
+	if (func->num == 2)
+		irq_set_irq_wake(390, 0);
+#endif
 	smp_mb();
 	return 0;
 }
@@ -365,7 +382,7 @@ static int __init
 bcmsdh_module_init(void)
 {
 	int error = 0;
-	sdio_function_init();
+	error = sdio_function_init();
 	return error;
 }
 
@@ -396,6 +413,10 @@ int sdio_function_init(void)
 		return -ENOMEM;
 
 	error = sdio_register_driver(&bcmsdh_sdmmc_driver);
+	if (error && gInstance) {
+		kfree(gInstance);
+		gInstance = 0;
+	}
 
 	return error;
 }

@@ -959,6 +959,7 @@ void kona_timer_save_state(bool print_state)
 	kona_dbg_get_timer_state(CORE_TIMER);
 #endif
 	kona_dump_timer_regs(print_state, HUB_TIMER);
+	kona_dump_timer_regs(print_state, SLAVE_TIMER);
 #ifdef CONFIG_ARCH_JAVA
 	kona_dump_timer_regs(print_state, CORE_TIMER);
 #endif

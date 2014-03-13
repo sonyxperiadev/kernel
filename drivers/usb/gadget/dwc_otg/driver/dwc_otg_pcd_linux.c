@@ -924,6 +924,10 @@ static const struct usb_gadget_ops dwc_otg_pcd_ops = {
 	.set_selfpowered = set_selfpowered,
 	.udc_start = dwc_udc_start,
 	.udc_stop = dwc_udc_stop,
+#ifdef CONFIG_USB_PCD_SETTINGS
+	.pcd_start_clean = pcd_start_clean,
+#endif
+
 };
 
 static int _setup(dwc_otg_pcd_t *pcd, uint8_t *bytes)

@@ -168,4 +168,6 @@ int bcmpmu_fg_get_batt_volt(struct bcmpmu59xxx *bcmpmu);
 int bcmpmu_fg_get_avg_volt(struct bcmpmu59xxx *bcmpmu);
 int bcmpmu_fg_get_batt_curr(struct bcmpmu59xxx *bcmpmu, int *curr);
 int bcmpmu_fg_get_one_c_rate(struct bcmpmu59xxx *bcmpmu, int *one_c_rate);
+int bcmpmu_fg_get_cur(struct bcmpmu59xxx *bcmpmu);
+
 #endif

@@ -155,7 +155,7 @@
 			prox_wait_time_param = <238>;
 			prox_intr_filter_param = <17>;
 			prox_config_param = <0>;
-			prox_pulse_cnt_param = <96>;
+			prox_pulse_cnt_param = <21>;
 			prox_gain_param = <34>;
 			prox_win_sw = <100>;
 		};
@@ -426,10 +426,10 @@
 		col-mod-o = <2>;
 		width = <720>;
 		height = <1280>;
-		fps = <58>;
+		fps = <60>;
 		lanes = <4>;
-		hs-bitrate = <388000000>;
-		lp-bitrate = <5000000>;	/* 5mbps */
+		hs-bitrate = <400000000>;
+		lp-bitrate = <8000000>;	/* 8mbps */
 		iommu = <&iommu_mm>;
 		iovmm = <&iovmm_mm>;
 		rotation = <180>;
@@ -540,7 +540,7 @@
 		data-pullup = <0>;
 		is-8bit = <1>;
 		devtype = <2>;		/*SDIO_DEV_TYPE_EMMC*/
-		flags = <1>;		/*KONA_SDIO_FLAGS_DEVICE_NON_REMOVABLE*/
+		flags = <3>;		/*NON_REMOVABLE | RPM_EN*/
 		pm_caps = <1>;		/*MMC_PM_KEEP_POWER*/
 		peri-clk-name = "sdio2_clk";
 		ahb-clk-name = "sdio2_ahb_clk";
@@ -556,7 +556,7 @@
 		id = <2>;
 		data-pullup = <0>;
 		devtype = <1>;		/*SDIO_DEV_TYPE_WIFI*/
-		flags = <0>;		/*KONA_SDIO_FLAGS_DEVICE_REMOVABLE*/
+		flags = <2>;		/*REMOVABLE | RPM_EN*/
 		peri-clk-name = "sdio3_clk";
 		ahb-clk-name = "sdio3_ahb_clk";
 		sleep-clk-name = "sdio3_sleep_clk";
@@ -571,7 +571,8 @@
 		data-pullup = <0>;
 		cd-gpio = <&gpio 91 0>;		/*SD_CARDDET_GPIO_PIN*/
 		devtype = <0>;		/*SDIO_DEV_TYPE_SDMMC*/
-		flags = <0>;		/*KONA_SDIO_FLAGS_DEVICE_REMOVABLE*/
+		flags = <2>;		/*REMOVABLE | RPM_EN*/
+		pm_caps = <1>;		/*MMC_PM_KEEP_POWER*/
 		peri-clk-name = "sdio1_clk";
 		ahb-clk-name = "sdio1_ahb_clk";
 		sleep-clk-name = "sdio1_sleep_clk";

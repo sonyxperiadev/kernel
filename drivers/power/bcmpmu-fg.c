@@ -730,11 +730,10 @@ static int bcmpmu_fg_volt_to_cap(struct bcmpmu_fg_data *fg, int volt)
 	lut_sz = fg->pdata->batt_prop->volt_cap_lut_sz;
 
 	for (idx = 0; idx < lut_sz; idx++) {
-		if (volt > lut[idx].volt)
+		if (volt >= lut[idx].volt)
 			break;
 	}
-
-	if (idx > 0) {
+	if ((idx > 0) && (idx < lut_sz)) {
 		cap_percentage = INTERPOLATE_LINEAR(volt,
 				lut[idx].volt,
 				lut[idx].cap,
@@ -1239,6 +1238,18 @@ int bcmpmu_fg_get_batt_curr(struct bcmpmu59xxx *bcmpmu, int *curr)
 	return 0;
 }
 
+
+int bcmpmu_fg_get_cur(struct bcmpmu59xxx *bcmpmu)
+{
+	struct bcmpmu_fg_data *fg = (struct bcmpmu_fg_data *)bcmpmu->fg;
+
+	if (!fg)
+		return 0;
+
+	return fg->adc_data.curr_inst;
+}
+EXPORT_SYMBOL(bcmpmu_fg_get_cur);
+
 /**
  * bcmpmu_fg_get_load_comp_capacity - Get Battery open circuit capacity
  *
@@ -1254,9 +1265,9 @@ static int bcmpmu_fg_get_load_comp_capacity(struct bcmpmu_fg_data *fg,
 	int vbat_oc = 0;
 	int capacity_percentage = 0;
 
-	fg->adc_data.temp = bcmpmu_fg_get_batt_temp(fg);
 	fg->adc_data.volt = bcmpmu_fg_get_batt_volt(fg->bcmpmu);
 	fg->adc_data.curr_inst = bcmpmu_fg_get_curr_inst(fg);
+	fg->adc_data.temp = bcmpmu_fg_get_batt_temp(fg);
 
 	if (abs(fg->adc_data.curr_inst) > FG_CURR_SAMPLE_MAX)
 		fg->adc_data.curr_inst = 0;
@@ -2391,7 +2402,8 @@ static void bcmpmu_fg_charging_algo(struct bcmpmu_fg_data *fg)
 	}
 
 	if (fg->flags.coulb_dis) {
-		pr_fg(FLOW, "%s: enable coulomb counter\n");
+		pr_fg(FLOW, "%s: enable coulomb counter\n",
+			__func__);
 		bcmpmu_fg_enable_coulb_counter(fg, true);
 	}
 

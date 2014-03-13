@@ -65,7 +65,7 @@ struct bcmpmu_chrgr_trim_reg {
 
 struct bcmpmu_throttle_data {
 	struct bcmpmu59xxx *bcmpmu;
-	struct mutex mutex;
+	struct mutex mutex_work;
 	struct bcmpmu_throttle_pdata *pdata;
 	struct workqueue_struct *throttle_wq;
 	struct delayed_work throttle_work;
@@ -367,7 +367,9 @@ static void bcmpmu_throttle_work(struct work_struct *work)
 
 	pr_throttle(VERBOSE, "%s called, charger type = %d\n",
 		__func__, tdata->chrgr_type);
+	mutex_lock(&tdata->mutex_work);
 	tdata->throttle_scheduled = true;
+	mutex_unlock(&tdata->mutex_work);
 	if (bcmpmu_is_acld_supported(tdata->bcmpmu, tdata->chrgr_type)) {
 		if (tdata->acld_algo_finished) {
 			bcmpmu_throttle_algo(tdata);
@@ -401,6 +403,7 @@ static int bcmpmu_throttle_event_handler(struct notifier_block *nb,
 	struct bcmpmu_throttle_data *tdata;
 	bool enable;
 	pr_throttle(FLOW, "%s:event:%lu\n", __func__, event);
+
 	switch (event) {
 	case PMU_ACCY_EVT_OUT_CHRGR_TYPE:
 		tdata = to_bcmpmu_throttle_data(nb, usb_det_nb);
@@ -447,6 +450,7 @@ static int bcmpmu_throttle_event_handler(struct notifier_block *nb,
 		pr_throttle(FLOW, "%s: ===== chrgr_status %d\n",
 			__func__, enable);
 		tdata = to_bcmpmu_throttle_data(nb, chrgr_status_nb);
+		mutex_lock(&tdata->mutex_work);
 		if (enable && tdata->chrgr_type &&
 				tdata->throttle_algo_enabled &&
 				(!tdata->throttle_scheduled)) {
@@ -463,10 +467,22 @@ static int bcmpmu_throttle_event_handler(struct notifier_block *nb,
 				tdata->throttle_scheduled = false;
 				tdata->acld_wait_count = 0;
 			}
+		} else {
+			/* dump status */
+			pr_throttle(ERROR,
+				"Charger Status Wrong! l=%d\n", __LINE__);
+			pr_throttle(ERROR, "enable=%d chrgr_type=%d\n",
+				enable, tdata->chrgr_type);
+			pr_throttle(ERROR, "throttle_algo_enabled=%d\n",
+				tdata->throttle_algo_enabled);
+			pr_throttle(ERROR, "throttle_scheduled=%d\n",
+				tdata->throttle_scheduled);
 		}
+		mutex_unlock(&tdata->mutex_work);
 		break;
 
 	}
+
 	return 0;
 }
 
@@ -858,6 +874,8 @@ static int bcmpmu_throttle_probe(struct platform_device *pdev)
 	tdata->temp_algo_running = false;
 	tdata->throttle_scheduled = false;
 	tdata->cooling = false;
+
+	mutex_init(&tdata->mutex_work);
 
 	tdata->throttle_wq =
 		create_singlethread_workqueue("bcmpmu_throttle_wq");

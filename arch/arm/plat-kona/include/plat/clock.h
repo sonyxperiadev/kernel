@@ -775,7 +775,6 @@ int __init clock_debug_add_ccu(struct clk *c, bool is_root_ccu);
 
 int clk_init(struct clk *clk);
 int clk_reset(struct clk *clk);
-int clk_get_usage(struct clk *clk);
 int clk_register(struct clk_lookup *clk_lkup, int num_clks);
 int peri_clk_set_hw_gating_ctrl(struct clk *clk, int gating_ctrl);
 int peri_clk_hyst_enable(struct peri_clk *peri_clk, int enable, int delay);

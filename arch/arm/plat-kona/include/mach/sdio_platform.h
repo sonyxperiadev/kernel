@@ -56,6 +56,7 @@ struct sdio_wifi_gpio_cfg {
 enum kona_sdio_plat_flags {
 	KONA_SDIO_FLAGS_DEVICE_REMOVABLE = 0,
 	KONA_SDIO_FLAGS_DEVICE_NON_REMOVABLE = 1 << 0,
+	KONA_SDIO_FLAGS_DEVICE_RPM_EN = 1 << 1,
 	/* More flags can be added here */
 };
 

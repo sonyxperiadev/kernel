@@ -3,7 +3,7 @@
 /dts-v1/;
 
 /include/ "java.dtsi"
-/include/ "java_garnet_bcmpmu_edn000.dtsi"
+/include/ "java_bcmpmu_c_a21.dtsi"
 
 / {
 	model = "Javagarnet LC2";
@@ -374,7 +374,7 @@
 		trip2 {
 			type = "active";
 			temp = <58>;
-			max_freq = <1200000>;
+			max_freq = <800000>;
 			max_brightness = <0>;
 		};
 		trip3 {
@@ -386,22 +386,16 @@
 		trip4 {
 			type = "active";
 			temp = <65>;
-			max_freq = <800000>;
+			max_freq = <600000>;
 			max_brightness = <0>;
 		};
 		trip5 {
 			type = "active";
 			temp = <70>;
-			max_freq = <600000>;
+			max_freq = <312000>;
 			max_brightness = <22>;
 		};
 		trip6 {
-			type = "active";
-			temp = <80>;
-			max_freq = <312000>;
-			max_brightness = <0>;
-		};
-		trip7 {
 			type = "critical";
 			temp = <115>;
 			max_freq = <0>;
@@ -434,7 +428,8 @@
 		data-pullup = <0>;
 		is-8bit = <1>;
 		devtype = <2>;		/*SDIO_DEV_TYPE_EMMC*/
-		flags = <1>;		/*KONA_SDIO_FLAGS_DEVICE_NON_REMOVABLE*/
+		flags = <3>;		/*NON_REMOVABLE | RPM_EN*/
+		pm_caps = <1>;		/*MMC_PM_KEEP_POWER*/
 		peri-clk-name = "sdio2_clk";
 		ahb-clk-name = "sdio2_ahb_clk";
 		sleep-clk-name = "sdio2_sleep_clk";
@@ -449,7 +444,7 @@
 		id = <2>;
 		data-pullup = <0>;
 		devtype = <1>;		/*SDIO_DEV_TYPE_WIFI*/
-		flags = <0>;		/*KONA_SDIO_FLAGS_DEVICE_REMOVABLE*/
+		flags = <2>;		/*REMOVABLE | RPM_EN*/
 		peri-clk-name = "sdio3_clk";
 		ahb-clk-name = "sdio3_ahb_clk";
 		sleep-clk-name = "sdio3_sleep_clk";
@@ -464,7 +459,7 @@
 		data-pullup = <0>;
 		cd-gpio = <&gpio 0xFFFFFFFF 0>;		/*SD_CARDDET_GPIO_PIN*/
 		devtype = <0>;		/*SDIO_DEV_TYPE_SDMMC*/
-		flags = <0>;		/*KONA_SDIO_FLAGS_DEVICE_REMOVABLE*/
+		flags = <2>;		/*REMOVABLE | RPM_EN*/
 		quirks2 = <2>; 		/* SDHCI_QUIRK2_HOST_DISABLE_DDR */
 		pm_caps = <1>;		/*MMC_PM_KEEP_POWER*/
 		peri-clk-name = "sdio1_clk";

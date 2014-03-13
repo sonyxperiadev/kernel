@@ -872,6 +872,7 @@ struct bcmpmu59xxx_rpc_pdata rpc_pdata = {
 struct bcmpmu59xxx_regulator_pdata rgltr_pdata = {
 	.bcmpmu_rgltr = bcm59xxx_regulators,
 	.num_rgltr = ARRAY_SIZE(bcm59xxx_regulators),
+	.flags = RGLTR_OVERI_SHDWN_ENABLE,
 };
 
 static struct bcmpmu_adc_lut batt_temp_map[] = {

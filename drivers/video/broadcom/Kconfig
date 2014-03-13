@@ -72,3 +72,9 @@ config DSI_PKT_VID_SIMULTANEOUS
 	  Y, the packets are sending simultaneously.
 	  N, suspend video stram firstly, then sending packets.
 
+config FB_NEED_PAGE_ALIGNMENT
+	bool "Each buffer need page alignment"
+	default N
+	help
+	  This is used for do page align for each frame .
+	  If it is tk project, please say 'Y' here.

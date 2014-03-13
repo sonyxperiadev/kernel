@@ -901,6 +901,7 @@ struct bcmpmu59xxx_rpc_pdata rpc_pdata = {
 struct bcmpmu59xxx_regulator_pdata rgltr_pdata = {
 	.bcmpmu_rgltr = bcm59xxx_regulators,
 	.num_rgltr = ARRAY_SIZE(bcm59xxx_regulators),
+	.flags = RGLTR_OVERI_SHDWN_ENABLE,
 };
 
 static int chrgr_curr_lmt[PMU_CHRGR_TYPE_MAX] = {
@@ -1001,6 +1002,7 @@ struct bcmpmu_adc_pdata adc_pdata[PMU_ADC_CHANN_MAX] = {
 					.lut_len = ARRAY_SIZE(batt_temp_map),
 					.name = "ntc",
 					.reg = PMU_REG_ADCCTRL13,
+					.compensation_val = 30,
 	},
 	[PMU_ADC_CHANN_BSI] = {
 					.flag = 0,

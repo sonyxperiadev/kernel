@@ -1553,6 +1553,38 @@ static void __iommu_unmap_sg(struct device *dev, struct scatterlist *sg,
 }
 
 /**
+ * arm_coherent_iommu_unmap_sg - unmap a set of SG buffers mapped by dma_map_sg
+ * @dev: valid struct device pointer
+ * @sg: list of buffers
+ * @nents: number of buffers to unmap (same as was passed to dma_map_sg)
+ * @dir: DMA transfer direction (same as was passed to dma_map_sg)
+ *
+ * Unmap a set of streaming mode DMA translations.  Again, CPU access
+ * rules concerning calls here are the same as for dma_unmap_single().
+ */
+void arm_coherent_iommu_unmap_sg(struct device *dev, struct scatterlist *sg,
+		int nents, enum dma_data_direction dir, struct dma_attrs *attrs)
+{
+	__iommu_unmap_sg(dev, sg, nents, dir, attrs, true);
+}
+
+/**
+ * arm_iommu_unmap_sg - unmap a set of SG buffers mapped by dma_map_sg
+ * @dev: valid struct device pointer
+ * @sg: list of buffers
+ * @nents: number of buffers to unmap (same as was passed to dma_map_sg)
+ * @dir: DMA transfer direction (same as was passed to dma_map_sg)
+ *
+ * Unmap a set of streaming mode DMA translations.  Again, CPU access
+ * rules concerning calls here are the same as for dma_unmap_single().
+ */
+void arm_iommu_unmap_sg(struct device *dev, struct scatterlist *sg, int nents,
+			enum dma_data_direction dir, struct dma_attrs *attrs)
+{
+	__iommu_unmap_sg(dev, sg, nents, dir, attrs, false);
+}
+
+/**
  * arm_iommu_sync_sg_for_cpu
  * @dev: valid struct device pointer
  * @sg: list of buffers

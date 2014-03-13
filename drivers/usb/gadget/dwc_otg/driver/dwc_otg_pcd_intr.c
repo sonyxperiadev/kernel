@@ -38,6 +38,12 @@
 #include "dwc_otg_cfi.h"
 #endif
 
+/*
+ * USB Pre-configuration current.
+ * Maximum current in mA a device can draw before it is configured.
+ */
+#define USB_PRE_CONFIGURATION_CURRENT   100
+
 #ifdef DWC_UTE_PER_IO
 extern void complete_xiso_ep(dwc_otg_pcd_ep_t *ep);
 #endif
@@ -880,6 +886,20 @@ int32_t dwc_otg_pcd_handle_usb_reset_intr(dwc_otg_pcd_t *pcd)
 
 	core_if->lx_state = DWC_OTG_L0;
 	core_if->device_speed = 0;
+
+	/*
+	 * USB unconfigured state current is high.
+	 * Android gadget dirver does not support to set unconfigured current.
+	 * Once the SET_CONFIGURATION happens, according to the configuration
+	 * descriptor, the vbus is set. For disconnect and suspend,
+	 * android gadget driver has support for setting the vbus.
+	 *
+	 * If the USB state is DEFAULT or ADDRESSED, maximum current a device
+	 * can draw is 100 mA.
+	 */
+	core_if->vbus_ma = USB_PRE_CONFIGURATION_CURRENT;
+	DWC_WORKQ_SCHEDULE(core_if->wq_otg, w_vbus_draw, core_if,
+			"set max vbus current draw");
 
 	DWC_PRINTF("USB RESET\n");
 #ifdef DWC_EN_ISOC

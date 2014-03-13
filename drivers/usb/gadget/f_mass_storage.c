@@ -2604,6 +2604,7 @@ static int fsg_main_thread(void *common_)
 /*************************** DEVICE ATTRIBUTES ***************************/
 
 static DEVICE_ATTR(ro, 0644, fsg_show_ro, fsg_store_ro);
+static DEVICE_ATTR(cdrom, 0644, fsg_show_cdrom, fsg_store_cdrom);
 static DEVICE_ATTR(nofua, 0644, fsg_show_nofua, fsg_store_nofua);
 static DEVICE_ATTR(file, 0644, fsg_show_file, fsg_store_file);
 
@@ -2738,6 +2739,11 @@ static struct fsg_common *fsg_common_init(struct fsg_common *common,
 				      : &dev_attr_file_nonremovable);
 		if (rc)
 			goto error_luns;
+
+		rc = device_create_file(&curlun->dev, &dev_attr_cdrom);
+		if (rc)
+			goto error_luns;
+
 		rc = device_create_file(&curlun->dev, &dev_attr_nofua);
 		if (rc)
 			goto error_luns;
@@ -2867,6 +2873,7 @@ static void fsg_common_release(struct kref *ref)
 			device_remove_file(&lun->dev, &dev_attr_perf);
 #endif
 			device_remove_file(&lun->dev, &dev_attr_nofua);
+
 			device_remove_file(&lun->dev,
 					   lun->cdrom
 					 ? &dev_attr_ro_cdrom
@@ -2875,6 +2882,7 @@ static void fsg_common_release(struct kref *ref)
 					   lun->removable
 					 ? &dev_attr_file
 					 : &dev_attr_file_nonremovable);
+			device_remove_file(&lun->dev, &dev_attr_cdrom);
 			fsg_lun_close(lun);
 			device_unregister(&lun->dev);
 		}

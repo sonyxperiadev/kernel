@@ -17,7 +17,6 @@
 #include <linux/videodev2.h>
 #include <linux/slab.h>
 #include <linux/i2c.h>
-#include <linux/log2.h>
 #include <linux/delay.h>
 #include <linux/module.h>
 #include <linux/io.h>
@@ -214,9 +213,8 @@ struct ov8825 {
 	int flash_on;
 	int flash_int_buf[FLASH_DELAY_MAX];
 	int flash_mod_buf[FLASH_DELAY_MAX];
-
-	int has_lamp;
 	struct flash_lamp_s lamp;
+
 	struct ov8825_otp otp;
 	int calibrated;
 
@@ -2128,11 +2126,9 @@ static int ov8825_s_ctrl(struct v4l2_ctrl *ctrl)
 int ov8825_set_flash_mode(struct i2c_client *client, int mode)
 {
 	struct ov8825 *ov8825 = to_ov8825(client);
-	pr_debug("%s: newmode:%d oldmode:%d\n",
-		__func__, mode, ov8825->flashmode);
 
 	/* check if lamp is presented */
-	if (0 == ov8825->has_lamp)
+	if (NULL == ov8825->lamp.name)
 		return -1;
 
 	/* check if lamp is in requested mode */
@@ -2140,15 +2136,32 @@ int ov8825_set_flash_mode(struct i2c_client *client, int mode)
 		return 0;
 
 	/* apply new mode */
-	ov8825->lamp.set_mode(mode);
-	if (V4L2_FLASH_LED_MODE_TORCH == mode)
-		ov8825->lamp.enable();
-	else if (V4L2_FLASH_LED_MODE_NONE == mode) {
+	switch (mode) {
+	case V4L2_FLASH_LED_MODE_NONE:
+		ov8825->lamp.setup(mode, 0, 0);
 		ov8825->lamp.disable();
 		ov8825->flash_on = 0;
-	} else {
-		ov8825->lamp.set_intensity(ov8825->flash_intensity/5);
-		ov8825->lamp.set_duration(ov8825->flash_timeout);
+		break;
+
+	case V4L2_FLASH_LED_MODE_TORCH:
+		ov8825->lamp.setup(mode, 0, 255);
+		ov8825->lamp.enable();
+		break;
+
+	case V4L2_FLASH_LED_MODE_FLASH:
+	case V4L2_FLASH_LED_MODE_FLASH_AUTO:
+	{
+		int flash_timeout_us =
+			ov8825->flash_timeout *
+			ov8825->line_length *
+			ov8825->vts / 1000;
+		ov8825->lamp.setup(mode, flash_timeout_us,
+					ov8825->flash_intensity);
+		break;
+	}
+
+	default:
+		return -EINVAL;
 	}
 
 	/* update mode */
@@ -2357,8 +2370,10 @@ static int ov8825_init(struct i2c_client *client)
 	ov8825->timing_step_us = 0xf;
 
 	if (0 == get_flash_lamp(&ov8825->lamp)) {
-		ov8825->has_lamp = 1;
 		ov8825->lamp.reset();
+	} else {
+	    /* no flashlamp */
+	    ov8825->lamp.name = NULL;
 	}
 
 	dev_dbg(&client->dev, "Sensor initialized\n");

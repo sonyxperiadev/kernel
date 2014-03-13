@@ -332,6 +332,11 @@ enum {
 	/* HV7131R CMOS sensor: just ident 46000 */
 	V4L2_IDENT_HV7131R		= 46000,
 
+	/* GalaxyCore CMOS sensors: reserved range 48000~48500 */
+	V4L2_IDENT_GC2035		= 48000,
+	/* Toshiba CMOS sensors: reserved range 49000~49500 */
+	V4L2_IDENT_TCM9516 = 49000,
+
 	/* Sharp RJ54N1CB0C, 0xCB0C = 51980 */
 	V4L2_IDENT_RJ54N1CB0C = 51980,
 

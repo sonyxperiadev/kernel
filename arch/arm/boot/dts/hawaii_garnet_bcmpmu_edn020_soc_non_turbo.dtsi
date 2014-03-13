@@ -1,0 +1,197 @@
+/ {
+	bcmpmu {
+	compatible = "Broadcom,bcmpmu";
+	initdata = <
+	     /* Add  Val  Mask Map */
+		0x14 0x75 0xFF 0
+		/*  enable PC3 function */
+		0x15 0x0E 0xFF 0
+		 /* Selecting 0.87V */
+		0xC9 0x30 0xFF 0
+		  /* Mask Interrupt */
+		0x30 0xFF 0xFF 0
+		0x31 0xFF 0xFF 0
+		0x32 0xFF 0xFF 0
+		0x33 0xFF 0xFF 0
+		0x34 0xFF 0xFF 0
+		0x35 0xFF 0xFF 0
+		0x36 0xFF 0xFF 0
+		0x37 0xFF 0xFF 0
+		0x38 0xFF 0xFF 0
+		0x39 0xFF 0xFF 0
+		0x3A 0xFF 0xFF 0
+		0x3B 0xFF 0xFF 0
+		0x3C 0xFF 0xFF 0
+		0x3D 0xFF 0xFF 0
+		0x3E 0xFF 0xFF 0
+		0x3F 0xFF 0xFF 0
+		 /* Trickle charging timer setting */
+		0x40 0x38 0x38 0
+		 /*  disable software charger timer */
+		0x41 0x0 0x04 0
+		 /* SWUP */
+		0x42 0x04 0x04 0
+		 /* Enable BC12_EN */
+		0x44 0x01 0x01 0
+		  /*  ICCMAX to 1500mA*/
+		0x47 0x0B 0xFF 0
+		  /* NTC Hot Temperature Comparator rising = 45C*/
+		0xCC 0x70 0xFF 1
+		  /* NTC Hot Temperature Comparator falling = 40C*/
+		0xCD 0x84 0xFF 1
+		  /* NTC Cold Temperature Comparator rising = 0C*/
+		0xCE 0xF4 0xFF 1
+		  /* NTC Cold Temperature Comparator falling = 5C*/
+		0xCF 0xB8 0xFF 1
+		  /* NTC Hot Temperature Comparator bit 9,8 */
+		0xD0 0x05 0xFF 1
+		 /*MBCCTRL11*/
+		0x4A 0x0F 0xff 0
+		 /* ID detection ,current source Trimming */
+		0x47 0xD2 0xFF 1
+		0x48 0x98 0xFF 1
+		0x49 0xF0 0xFF 1
+		 /*ADP_THR_RATIO*/
+		0x4A 0x58 0xFF 1
+		 /* Enable ADP_PRB  ADP_DSCHG comparators */
+		0x4B 0xC3 0xFF 1
+		/*FG EOC CURR TH*/
+		0xBF 0x64 0xFF 1
+		/*RTC_C2C1_XOTRIM*/
+		0xEF 0xEE 0xFF 1
+		/* PWMLEDCTRL1 */
+		0x00 0x23 0xFF 1
+		/* HSCP3*/
+		0x82 0x00 0xFF 1
+		 /* HS audio powerdown feedback path */
+		 0x7B 0x0C 0xFF 1
+		 /* NTC BiasSynchronous Mode,Host Enable Control NTC_PM0 Disable*/
+		 0xD5 0x12 0xFF 1
+		 0xD6 0x0 0xFF 1
+		 0xD7 0x12 0xFF 1
+		 /* MBUV host enable control */
+		 0xD8 0x40 0x7F 1
+		 /* EN_SESS_VALID  enable ID detection */
+		 0x40 0x18 0xFF 1
+		 /* MMSR LPM voltage - 0.88V */
+		 0xCA 0x04 0x3F 0
+		 /* SDSR1 NM1 voltage - 1.24V*/
+		 0xCC 0x28 0x3F 0
+		 /* SDSR1 LPM voltage - 0.9V*/
+		 0xCD 0x06 0x3F 0
+		 /* SDSR2 NM1 voltage - 1.24*/
+		 0xCF 0x28 0x3F 0
+		 /* SDSR2 LPM voltage - 1.2V */
+		 0xD0 0x24 0x3F 0
+		 /* IOSR1 LPM voltage - 1.8V */
+		 0xC4 0x3E 0x3f 0
+		 /* CSR NM1 voltage - 1.24V */
+		 0xC0 0x28 0x3F 0
+		 /* PASRCTRL MobC00256738*/
+		 0x08 0x00 0x06 1
+		 0x0D 0x00 0xF0 1
+		 0x0E 0x00 0x3F 1
+		 /*otg boost ctrl1-2*/
+		 0x4c 0xd4 0xFF 1
+		 0x4d 0x1b 0xFF 1
+		 /*MBC_CC_BOOST*/
+		 0x5c 0x5 0x0F 0
+		 /*otgctrl1 disable boost bydefault*/
+		 0x40 0x0 0x4 1
+		 /*turn of synthesizer when no PLL request */
+		 0x1A 0xfe 0xff 0
+		/*RFLDO pulldown disable MobC00290043*/
+		 0x96 0x40 0x40 0
+		 /*AUDLDO pulldown disable*/
+		 0x9f 0x40 0x40 0
+		 /*LVLDO1 voltage - 1.786V */
+		 0x1E 0xb8 0xff 1
+		 /*SIMLDO2 enable pulldown MobC00298660*/
+		 0x9a 0x00 0x40 0
+		>;
+
+	exitdata = <
+		/* Address Value Mask Map*/
+		0x14 0x5 0xFF 0
+		0x53 0x1 0xFF 0
+		>;
+	};
+
+	bcmpmu_rgltrs {
+		compatible = "Broadcom,rgltr";
+		/*num_of_consumer_supp, consumer_supply, always_on, pc_map, initial_mode, boot_on req_volt(in uV)*/
+		/*pc_map = PMU_PC2, initial_mode = REGULATOR_MODE_STANDBY*/
+		rf   = "1", "rf", "0", "2", "8", "0", "0";
+		/*pc_map = PMU_PC2|PMU_PC3, initial_mode = REGULATOR_MODE_IDLE*/
+		cam1 = "1", "cam1", "1", "6", "4", "0", "0";
+		/*pc_map = PMU_PC2|PMU_PC3, initial_mode = REGULATOR_MODE_IDLE*/
+		cam2 = "1", "cam2", "1", "6", "4", "0", "0";
+		/*pc_map = PMU_PC2, initial_mode = REGULATOR_MODE_IDLE*/
+		sim1 = "1", "sim_vcc", "0", "2", "4", "0", "0";
+		/*pc_map = PMU_PC2, initial_mode = REGULATOR_MODE_IDLE*/
+		sim2 = "1", "sim2_vcc", "0", "2", "4", "0", "0";
+		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, initial_mode = REGULATOR_MODE_NORMAL*/
+		sd   = "3", "sdldo_uc", "vddmmc", "vdd_sdio", "0", "7", "2", "0", "0";
+		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, initial_mode = REGULATOR_MODE_NORMAL*/
+		sdx  = "4", "sdxldo_uc", "vddo", "vdd_sdxc", "sddat_debug_bus","0","7", "2", "0", "0";
+		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, initial_mode = REGULATOR_MODE_NORMAL*/
+		mmc1 = "1", "mmc1_vcc","0","7", "2", "0", "0";
+		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, initial_mode = REGULATOR_MODE_NORMAL*/
+		mmc2 = "1", "mmc2_vcc", "0", "7", "2", "0", "0";
+		/*pc_map = PMU_PC2|PMU_PC3, initial_mode = REGULATOR_MODE_STANDBY*/
+		aud  = "1", "audldo_uc", "1", "6", "8", "0", "0";
+		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, initial_mode = REGULATOR_MODE_NORMAL*/
+		usb  = "1", "usb_vcc", "0", "7", "2", "0", "0";
+		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, initial_mode = REGULATOR_MODE_NORMAL*/
+		mic  = "1", "micldo_uc", "0","7", "2", "0", "0";
+		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, initial_mode = REGULATOR_MODE_NORMAL*/
+		vib  = "1", "vibldo_uc", "0", "7", "2", "0", "0";
+		/*pc_map = 0, initial_mode = REGULATOR_MODE_NORMAL*/
+		gp1  = "1", "gpldo1_uc","0", "0", "2", "0", "0";
+		/*pc_map = 0, initial_mode = REGULATOR_MODE_NORMAL*/
+		gp2  = "1", "gpldo2_uc", "0", "0", "2", "0", "0";
+		/*pc_map = PMU_PC2|PMU_PC3, initial_mode = REGULATOR_MODE_IDLE*/
+		gp3  = "1", "sim3_vcc", "1", "6", "4", "0", "0";
+		/*pc_map = 0, initial_mode = REGULATOR_MODE_NORMAL*/
+		tcx  = "1", "tcxldo_uc", "0", "0", "2", "0", "0";
+		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, initial_mode = REGULATOR_MODE_NORMAL*/
+		lv1  = "1", "lvldo1_uc", "0", "7", "2", "0", "0";
+		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, initial_mode = REGULATOR_MODE_NORMAL*/
+		lv2  = "1", "lvldo2_uc", "0", "7", "2", "0", "0";
+		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, initial_mode = REGULATOR_MODE_STANDBY*/
+		vsr  = "1", "vsr_uc", "1", "7", "8", "0", "1700000";
+		/*pc_map = PMU_PC3, initial_mode = REGULATOR_MODE_STANDBY*/
+		csr  = "1", "csr_uc", "1", "4", "8", "0", "0";
+		/*pc_map = PMU_PC2, initial_mode = REGULATOR_MODE_IDLE*/
+		mmsr = "1", "mmsr_uc", "1", "2", "4", "0", "0";
+		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, initial_mode = REGULATOR_MODE_IDLE*/
+		sdsr1 = "1", "sdsr1_uc", "1", "7", "4", "0", "0";
+		/*pc_map = PMU_PC2|PMU_PC3, initial_mode = REGULATOR_MODE_IDLE*/
+		sdsr2 = "1", "sdsr2_uc", "1", "6", "4", "0", "0";
+		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, initial_mode = REGULATOR_MODE_IDLE*/
+		iosr1 = "1", "iosr1_uc", "1", "7", "4", "0", "0";
+		/*pc_map = 0, initial_mode = REGULATOR_MODE_STANDBY*/
+		iosr2 = "1", "iosr2_uc", "0", "0", "8", "0", "0";
+	};
+
+	bcmpmu_adc {
+		compatible = "Broadcom,adc";
+		/*name flag volt_range adc_offset addr_offset*/
+		channel0 = "vmbatt", "0", "4800", "0", "0x2";
+		channel1 = "vbbatt", "0", "4800", "0", "0x4";
+		channel2 = "0";
+		channel3 = "vbus", "0", "14400", "0", "0x8";
+		channel4 = "idin", "0", "1200", "0", "0xa";
+		channel5 = "ntc", "0", "1200", "0", "0xc";
+		channel6 = "bsi", "0", "1200", "0", "0xe";
+		channel7 = "bom", "0", "1200", "0", "0x10";
+		channel8 = "32ktemp", "0", "1200", "0","0x12";
+		channel9 = "patemp", "0", "1200", "0", "0x14";
+		channel10 = "als", "0", "1200", "0", "0x16";
+		channel11 = "0";
+		channel12 = "0";
+		channel13 = "0";
+		channel14 = "dietemp", "0", "1200", "0", "0x18";
+		channel15 = "0";
+	};
+};

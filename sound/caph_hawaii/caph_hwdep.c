@@ -280,12 +280,11 @@ static void HWDEP_VOIP_FillDL_CB(
 static int voip_open(struct inode *voipinode , struct file *filp)
 {
 	voipdev *pvoipchrdevpvtdata;
-	/* aTrace(LOG_ALSA_INTERFACE , "voip_open\n"); */
-	aError("voip_pen\n");
+	aTrace(LOG_ALSA_INTERFACE, "voip_open\n");
 	pvoipchrdevpvtdata =
 		container_of(voipinode->i_cdev, voipdev, voipcdev);
 	filp->private_data = pvoipchrdevpvtdata;
-	aError("filp->private_data = 0x%x, filp = 0x%x\n",
+	aTrace(LOG_ALSA_INTERFACE, "filp->private_data = 0x%x, filp = 0x%x\n",
 		(unsigned int)filp->private_data, (unsigned int)filp);
 	return 0;
 
@@ -483,7 +482,7 @@ static long voip_ioctl(struct file *hw, unsigned int cmd, unsigned long arg)
 		/* ret = put_user(BrcmAACEncVersion, (int __user *)arg); */
 		break;
 	case VoIP_Ioctl_Start:
-		aError("m:inside ioctl start\n");
+		aTrace(LOG_ALSA_INTERFACE, "m:inside ioctl start\n");
 		get_user(data, (int __user *)arg);
 		if (voipinstcnt == 0) { /* start VoIP only once */
 			BRCM_AUDIO_Param_RateChange_t param_rate_change;
@@ -711,7 +710,8 @@ static long voip_ioctl(struct file *hw, unsigned int cmd, unsigned long arg)
 		break;
 
 	case VoIP_Ioctl_SetCodecType:
-		aError("M:Inside VoIP_Ioctl_SetCodecType\n");
+		aTrace(LOG_ALSA_INTERFACE,
+				"M:Inside VoIP_Ioctl_SetCodecType\n");
 		copy_from_user(&val, (int __user *)arg,
 				   sizeof(voip_codec_type_data_t));
 		if (val.ul_dl_type == VoIP_UL) {
@@ -815,7 +815,8 @@ static long voip_ioctl(struct file *hw, unsigned int cmd, unsigned long arg)
 		}
 		break;
 	case VoIP_Ioctl_GetCodecType:
-		aError("voip_ioctl in VoIP_Ioctl_GetCodecType");
+		aTrace(LOG_ALSA_INTERFACE,
+			"voip_ioctl in VoIP_Ioctl_GetCodecType");
 		copy_from_user(&val, (int __user *)arg,
 				   sizeof(voip_codec_type_data_t));
 		if (val.ul_dl_type == VoIP_UL)

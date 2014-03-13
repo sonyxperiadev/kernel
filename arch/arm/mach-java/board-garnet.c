@@ -142,6 +142,11 @@
 #include <linux/akm8975.h>
 #endif
 
+#if defined(CONFIG_SENSORS_BMA222)
+#include <linux/bma222.h>
+#endif
+
+
 #ifdef CONFIG_BACKLIGHT_PWM
 #include <linux/pwm_backlight.h>
 #endif
@@ -998,7 +1003,7 @@ static int hawaii_camera_power_front(struct device *dev, int on)
 		msleep(30);
 	#ifdef CONFIG_SOC_CAMERA_GC2035
 		gpio_set_value(SENSOR_1_GPIO_RST,
-			thisCfg->rst_active ? 0 : 1);
+			thiscfg->rst_active ? 0 : 1);
 	#endif
 	} else {
 		gpio_set_value(SENSOR_1_GPIO_PWRDN, thiscfg->pwdn_active);
@@ -1087,6 +1092,14 @@ static struct i2c_board_info ov7695_board_info = {
 static const char ov7695_name[] = "ov7695";
 #endif
 
+#ifdef CONFIG_SOC_CAMERA_GC2035
+#define GC2035_I2C_ADDRESS              (0x3c)
+static struct i2c_board_info gc2035_board_info = {
+	I2C_BOARD_INFO("gc2035", GC2035_I2C_ADDRESS)
+};
+static const char gc2035_name[] = "gc2035";
+#endif
+
 #define _CAM_JOIN(cam, cstruct)   cam##cstruct
 #define CAM_JOIN(cam, cstruct)   _CAM_JOIN(cam, cstruct)
 
@@ -1111,7 +1124,7 @@ static const char ov7695_name[] = "ov7695";
 #endif /* CONFIG_MACH_JAVA_C_LC1 */
 #ifdef CONFIG_MACH_JAVA_C_LC2
 #define BACK_CAM    ov8825
-#define FRONT_CAM   ov7692
+#define FRONT_CAM   gc2035
 #endif /* CONFIG_MACH_JAVA_C_LC2 */
 
 /* cam interface descriptor */
@@ -2127,7 +2140,7 @@ static struct i2c_board_info __initdata akm8975_info[] = {
 
 #if defined(CONFIG_SENSORS_BMA222)
 static struct bma222_accl_platform_data bma_pdata = {
-	.orientation = BMA_ROT_90,
+	.orientation = BMA_ORI_XYSWITCH_NOINVERSE,
 	.invert = false,
 };
 #endif

@@ -158,7 +158,7 @@ static int unicam_videobuf_setup(struct vb2_queue *vq,
 						     icd->
 						     current_fmt->host_fmt);
 
-	pr_debug("-enter");
+	pr_debug("%s(): -enter\n", __func__);
 
 	if (bytes_per_line < 0)
 		return bytes_per_line;
@@ -175,9 +175,9 @@ static int unicam_videobuf_setup(struct vb2_queue *vq,
 	if (!*count)
 		*count = 2;
 
-	pr_debug("no_of_buf=%d size=%u", *count, sizes[0]);
+	pr_debug("%s(): no_of_buf=%d size=%u\n", __func__, *count, sizes[0]);
 
-	pr_debug("-exit");
+	pr_debug("%s(): -exit\n", __func__);
 	return 0;
 }
 
@@ -190,14 +190,14 @@ static int unicam_videobuf_prepare(struct vb2_buffer *vb)
 						     current_fmt->host_fmt);
 	unsigned long size;
 
-	pr_debug("-enter");
+	pr_debug("%s(): vb=0x%p buf=0x%p, size=%lu\n",
+		 __func__,
+		 vb,
+		 (void *)vb2_plane_dma_addr(vb, 0),
+		 vb2_get_plane_payload(vb, 0));
+
 	if (bytes_per_line < 0)
 		return bytes_per_line;
-
-	pr_debug("vb=0x%p buf=0x%p, size=%lu", vb,
-			(void *)vb2_plane_dma_addr(vb, 0),
-			vb2_get_plane_payload(vb, 0));
-
 	size = icd->user_height * bytes_per_line;
 
 	if (vb2_plane_size(vb, 0) < size) {
@@ -207,7 +207,7 @@ static int unicam_videobuf_prepare(struct vb2_buffer *vb)
 	}
 	vb2_set_plane_payload(vb, 0, size);
 
-	pr_debug("-exit");
+	pr_debug("%s(): -exit\n", __func__);
 	return 0;
 }
 
@@ -224,7 +224,7 @@ static int unicam_camera_update_buf(struct unicam_camera_dev *unicam_dev)
 	struct v4l2_pix_format *pix;
 	int thumb = 0, ret;
 
-	pr_debug("-enter");
+	pr_debug("%s(): -enter\n", __func__);
 
 	if (!unicam_dev->active) {
 		pr_err("%s: Invalid buffer to Update", __func__);
@@ -232,7 +232,8 @@ static int unicam_camera_update_buf(struct unicam_camera_dev *unicam_dev)
 	}
 
 	phys_addr = vb2_plane_dma_addr(unicam_dev->active, 0);
-	pr_debug("updating buffer phys=0x%p", (void *)phys_addr);
+	pr_debug("%s(): updating buffer phys=0x%p",
+		 __func__, (void *)phys_addr);
 	if (!phys_addr) {
 		unicam_dev->active = NULL;
 		pr_err("No valid address. skip capture\n");
@@ -272,8 +273,10 @@ static int unicam_camera_update_buf(struct unicam_camera_dev *unicam_dev)
 			mm_csi0_update_addr(&im0, &im1, NULL, NULL);
 		} else { */
 		mm_csi0_update_addr(&im0, NULL, NULL, NULL);
-		pr_debug("Adr 0x%x ls 0x%x size 0x%x\n", im0.start,
-				im0.ls, im0.size);
+		pr_debug("%s(): Adr 0x%x ls 0x%x size 0x%x\n",
+			 __func__,
+			 im0.start,
+			 im0.ls, im0.size);
 		/* } */
 	} else {
 		/* JPEG section always in DAT0 */
@@ -326,7 +329,7 @@ static int unicam_camera_capture(struct unicam_camera_dev *unicam_dev)
 
 	int ret = 0;
 	struct int_desc i_desc;
-	pr_debug("-enter");
+	pr_debug("%s(): -enter\n", __func__);
 
 	if (!unicam_dev->active) {
 		pr_debug("no active buffer");
@@ -347,7 +350,7 @@ static int unicam_camera_capture(struct unicam_camera_dev *unicam_dev)
 				jiffies + msecs_to_jiffies(UC_TIMEOUT_MS));
 	}
 */
-	pr_debug("-exit()");
+	pr_debug("%s(): -exit()\n", __func__);
 	return ret;
 }
 
@@ -361,15 +364,18 @@ static void unicam_videobuf_queue(struct vb2_buffer *vb)
 	unsigned long flags;
 	struct int_desc idesc;
 
-	pr_debug("-enter");
-	pr_debug("vb=0x%p pbuf=0x%p size=%lu", vb,
-			(void *)vb2_plane_dma_addr(vb, 0),
-			vb2_get_plane_payload(vb, 0));
+	pr_debug("%s(): vb=0x%p pbuf=0x%p size=%lu if_mode=%d streaming=%d\n",
+		 __func__,
+		 vb,
+		 (void *)vb2_plane_dma_addr(vb, 0),
+		 vb2_get_plane_payload(vb, 0),
+		 unicam_dev->if_params.if_mode,
+		 unicam_dev->streaming);
 	/* pr_info("Q 0x%x\n", vb2_plane_paddr(vb, 0)); */
 	spin_lock_irqsave(&unicam_dev->lock, flags);
 	list_add_tail(&buf->queue, &unicam_dev->capture);
 	if (unicam_dev->cap_mode && unicam_dev->cap_done) {
-		pr_info("Capture mode and already captured\n");
+		pr_info("%s(): Capture mode and already captured\n", __func__);
 		spin_unlock_irqrestore(&unicam_dev->lock, flags);
 		return;
 	}
@@ -399,7 +405,7 @@ static void unicam_videobuf_queue(struct vb2_buffer *vb)
 		}
 	}
 	spin_unlock_irqrestore(&unicam_dev->lock, flags);
-	pr_debug("-exit");
+	pr_debug("%s(): -exit", __func__);
 }
 
 static void unicam_videobuf_release(struct vb2_buffer *vb)
@@ -411,11 +417,13 @@ static void unicam_videobuf_release(struct vb2_buffer *vb)
 	struct unicam_camera_buffer *buf = to_unicam_camera_vb(vb);
 	unsigned long flags;
 
-	pr_debug("-enter");
+	pr_debug("%s(): -enter\n", __func__);
 
-	pr_debug("vb=0x%p pbuf=0x%p size=%lu", vb,
-			(void *)vb2_plane_dma_addr(vb, 0),
-			vb2_get_plane_payload(vb, 0));
+	pr_debug("%s(): vb=0x%p pbuf=0x%p size=%lu\n",
+		 __func__,
+		 vb,
+		 (void *)vb2_plane_dma_addr(vb, 0),
+		 vb2_get_plane_payload(vb, 0));
 	spin_lock_irqsave(&unicam_dev->lock, flags);
 
 	if (buf->magic == UNICAM_BUF_MAGIC)
@@ -448,7 +456,8 @@ static void unicam_camera_get_frame_info_int(struct unicam_camera_dev *ucdev)
 			&ucdev->frame_info);
 	if (ret < 0)
 		ucdev->frame_info_en = 0;
-	pr_debug("%s(): fi: exp=%d ag=%d lens=%d flash=[%d %d] tv=%ld",
+	/*
+	  pr_debug("%s(): fi: exp=%d ag=%d lens=%d flash=[%d %d] tv=%ld",
 		 __func__,
 		 ucdev->frame_info.exposure,
 		 ucdev->frame_info.an_gain,
@@ -456,6 +465,7 @@ static void unicam_camera_get_frame_info_int(struct unicam_camera_dev *ucdev)
 		 ucdev->frame_info.flash_mode,
 		 ucdev->frame_info.flash_intensity,
 		 ucdev->frame_info.timestamp.tv_nsec);
+	*/
 }
 
 static void unicam_camera_set_frame_info_int(struct unicam_camera_dev *ucdev)
@@ -470,6 +480,7 @@ static void unicam_camera_set_frame_info_int(struct unicam_camera_dev *ucdev)
 		return;
 	ucdev->frame_info.timestamp =
 		(struct timespec){tv->tv_sec, tv->tv_usec * 1000};
+	/*
 	pr_debug("%s(): fi: exp=%d ag=%d lens=%d flash=[%d %d] tv=%ld",
 		 __func__,
 		 ucdev->frame_info.exposure,
@@ -478,6 +489,7 @@ static void unicam_camera_set_frame_info_int(struct unicam_camera_dev *ucdev)
 		 ucdev->frame_info.flash_mode,
 		 ucdev->frame_info.flash_intensity,
 		 ucdev->frame_info.timestamp.tv_nsec);
+	*/
 	ret = v4l2_subdev_call(sd, core, ioctl, VIDIOC_SENSOR_S_FRAME_INFO,
 			&ucdev->frame_info);
 	if (ret < 0)
@@ -506,8 +518,7 @@ static int unicam_videobuf_start_streaming_int(struct unicam_camera_dev \
 	struct int_desc idesc;
 	struct lane_timing timing;
 
-	pr_debug("-enter");
-	pr_debug("enabling csi");
+	pr_debug("%s(): +", __func__);
 	unicam_dev->panic_count = 0;
 	atomic_set(&unicam_dev->cam_triggered, 0);
 
@@ -821,6 +832,7 @@ int unicam_videobuf_start_streaming(struct vb2_queue *q, unsigned int count)
 	struct unicam_camera_dev *unicam_dev = ici->priv;
 	int ret = 0;
 
+	pr_debug("%s(): starting\n", __func__);
 	if (!atomic_read(&unicam_dev->streaming))
 		ret = unicam_videobuf_start_streaming_int(unicam_dev, count);
 	else
@@ -841,9 +853,7 @@ static int unicam_videobuf_stop_streaming_int(struct unicam_camera_dev \
 
 	/* grab the lock */
 	spin_lock_irqsave(&unicam_dev->lock, flags);
-	pr_debug("-enter");
-	pr_debug("disabling csi");
-	pr_debug("stopping stream");
+	pr_debug("%s(): stopping stream\n", __func__);
 	if (!atomic_read(&unicam_dev->streaming)) {
 		pr_err("stream already turned off\n");
 		goto out;
@@ -855,7 +865,8 @@ static int unicam_videobuf_stop_streaming_int(struct unicam_camera_dev \
 				msecs_to_jiffies(500));
 		atomic_set(&unicam_dev->stopping, 0);
 		if (ret == -ETIME) {
-			pr_err("Unicam: semaphore timed out waiting to STOP\n");
+			pr_err("%s(): semaphore timed out waiting to STOP\n",
+			       __func__);
 #ifdef UNICAM_DEBUG
 			unicam_reg_dump_dbg();
 #endif
@@ -879,7 +890,7 @@ static int unicam_videobuf_stop_streaming_int(struct unicam_camera_dev \
 	unicam_dev->cap_mode = 0;
 
 out:
-	pr_debug("-exit");
+	pr_debug("%s(): -exit", __func__);
 	atomic_set(&unicam_dev->cam_triggered, 0);
 	spin_unlock_irqrestore(&unicam_dev->lock, flags);
 
@@ -925,7 +936,7 @@ static int unicam_camera_init_videobuf(struct vb2_queue *q,
 				       struct soc_camera_device *icd)
 {
 
-	pr_debug("-enter");
+	pr_debug("%s(): -enter\n", __func__);
 	q->type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 	q->io_modes = VB2_MMAP | VB2_USERPTR | VB2_READ;
 	q->drv_priv = icd;
@@ -955,13 +966,13 @@ static int unicam_camera_querycap(struct soc_camera_host *ici,
 				  struct v4l2_capability *cap)
 {
 
-	pr_debug("-enter");
+	pr_debug("%s(): -enter\n", __func__);
 	/* cap->name is set by the firendly caller:-> */
 	strlcpy(cap->card, "Unicam Camera", sizeof(cap->card));
 	cap->version = KERNEL_VERSION(0, 1, 0);
 	cap->capabilities = V4L2_CAP_VIDEO_CAPTURE | V4L2_CAP_STREAMING;
 
-	pr_debug("-exit");
+	pr_debug("%s(): -exit\n", __func__);
 	return 0;
 }
 
@@ -970,8 +981,8 @@ static unsigned int unicam_camera_poll(struct file *file, poll_table *pt)
 
 	struct soc_camera_device *icd = file->private_data;
 
-	pr_debug("-enter");
-	pr_debug("-exit");
+	pr_debug("%s(): -enter\n", __func__);
+	pr_debug("%s(): -exit\n", __func__);
 	return vb2_poll(&icd->vb2_vidq, file, pt);
 }
 
@@ -989,7 +1000,7 @@ static int unicam_camera_try_fmt(struct soc_camera_device *icd,
 	int thumb = 0;
 	int ret;
 
-	pr_debug("-enter");
+	pr_debug("%s(): -enter\n", __func__);
 	xlate = soc_camera_xlate_by_fourcc(icd, pixfmt);
 	if (!xlate) {
 		dev_warn(icd->parent, "Format %x not found\n", pixfmt);
@@ -1088,9 +1099,10 @@ static int unicam_camera_try_fmt(struct soc_camera_device *icd,
 		return -EINVAL;
 	}
 
-	pr_debug("trying format=%c%c%c%c res=%dx%d success=%d",
-		pixfmtstr(pixfmt), mf.width, mf.height, ret);
-	pr_debug("-exit");
+	pr_debug("%s(): trying format=%c%c%c%c res=%dx%d success=%d\n",
+		 __func__,
+		 pixfmtstr(pixfmt), mf.width, mf.height, ret);
+	pr_debug("%s(): -exit\n", __func__);
 	return ret;
 }
 
@@ -1291,7 +1303,6 @@ static int unicam_camera_add_device(struct soc_camera_device *icd)
 
 	struct soc_camera_host *ici = to_soc_camera_host(icd->parent);
 	struct unicam_camera_dev *unicam_dev = ici->priv;
-	struct v4l2_subdev *sd = soc_camera_to_subdev(icd);
 	int err = 0;
 
 	if (unicam_dev->icd) {
@@ -1336,7 +1347,6 @@ static void unicam_camera_remove_device(struct soc_camera_device *icd)
 
 	struct soc_camera_host *ici = to_soc_camera_host(icd->parent);
 	struct unicam_camera_dev *unicam_dev = ici->priv;
-	struct v4l2_subdev *sd = soc_camera_to_subdev(icd);
 
 	BUG_ON(icd != unicam_dev->icd);
 	pr_err("unicam_camera_remove_device\n");
@@ -1395,8 +1405,8 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 		goto out;
 	} else if (rx.is) {
 		isr_status = mm_csi0_get_int_stat(&idesc, 1);
-		pr_debug("%s(): fsi=%d fei=%d",
-			 __func__, idesc.fsi, idesc.fei);
+		pr_debug("%s(): fsi=%d fei=%d lci=%d\n",
+			 __func__, idesc.fsi, idesc.fei, idesc.lci);
 		if (idesc.fsi) {
 			if (rx.ps)
 				pr_info("Panic at frame start\n");
@@ -1408,7 +1418,7 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 			if (rx.ps)
 				pr_info("Panic at frame or lineend\n");
 			atomic_set(&unicam_dev->cam_triggered, 0);
-			pr_debug("frame received");
+			pr_debug("frame received\n");
 			if (!vb)
 				goto out;
 
@@ -1447,10 +1457,10 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 					unicam_dev->active = NULL;
 				} else if (!list_empty(&unicam_dev->capture)) {
 					unicam_dev->active =
-					    &list_entry(unicam_dev->
-							capture.next, struct
-							unicam_camera_buffer,
-							queue)->vb;
+					       &list_entry(unicam_dev->
+							   capture.next, struct
+							   unicam_camera_buffer,
+							   queue)->vb;
 				} else {
 					unicam_dev->active = NULL;
 				}
@@ -1467,7 +1477,7 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 			if (unicam_dev->active) {
 				dma_addr = vb2_plane_dma_addr(
 					unicam_dev->active, 0);
-				if (!dma_addr) {
+				if (!dma_addr || dma_addr & 0xF) {
 					unicam_dev->active = NULL;
 					pr_err("ISR: No valid address.skip capture\n");
 					goto out;
@@ -1478,13 +1488,16 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 				im0.ls = unicam_dev->icd->user_width * 2;
 				if (unicam_dev->icd->current_fmt->code !=
 					V4L2_MBUS_FMT_JPEG_1X8) {
-					mm_csi0_update_one(&im0,
+					ret = mm_csi0_update_one(&im0,
 						unicam_dev->curr, IMAGE_BUFFER);
 				} else {
-					mm_csi0_update_one(&im0,
+					ret = mm_csi0_update_one(&im0,
 						unicam_dev->curr, DATA_BUFFER);
 				}
-				unicam_camera_capture(unicam_dev);
+				if (!ret)
+					unicam_camera_capture(unicam_dev);
+				else
+					pr_err("Unicam Camera: mm_csi0_update_one fail\n");
 			} else {
 				pr_err("ran out of buffers\n");
 			}
@@ -1494,7 +1507,8 @@ static irqreturn_t unicam_camera_isr(int irq, void *arg)
 			/* notify driver there's frame end*/
 			ret = v4l2_subdev_call(sd, core, ioctl,
 					       VIDIOC_SENSOR_FRAME_IRQ,
-					       isr_status & CAM_ISTA_FEI_MASK);
+					       (void *)(isr_status &
+						       CAM_ISTA_FEI_MASK));
 		}
 
 	}
@@ -1615,4 +1629,3 @@ module_exit(unicam_camera_exit);
 
 MODULE_DESCRIPTION("Unicam Camera Host driver");
 MODULE_AUTHOR("Broadcom Corporation");
-

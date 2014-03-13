@@ -34,9 +34,6 @@
 #ifdef CONFIG_VIDEO_DW9714
 #include <media/dw9714.h>
 #endif
-#ifdef CONFIG_VIDEO_AS3643
-#include "as3643.h"
-#endif
 
 #include "flash_lamp.h"
 #include "ov5648.h"
@@ -239,6 +236,7 @@ struct ov5648 {
 	int flash_on;
 	int flash_int_buf[FLASH_DELAY_MAX];
 	int flash_mod_buf[FLASH_DELAY_MAX];
+	struct flash_lamp_s lamp;
 
 	struct ov5648_otp otp;
 	int calibrated;
@@ -610,7 +608,7 @@ static int ov5648_set_flash_mode(struct i2c_client *client, int mode);
 static int ov5648_set_mode(struct i2c_client *client, int new_mode_idx);
 static int ov5648_set_state(struct i2c_client *client, int new_state);
 static int ov5648_init(struct i2c_client *client);
-
+/*
 #ifdef CONFIG_VIDEO_AS3643
 
 #define flash_gpio_on()    as3643_gpio_strobe(1)
@@ -657,6 +655,7 @@ static int ov5648_init(struct i2c_client *client);
 #define torch_stop()
 
 #endif
+*/
 
 /*
  * Find a data format by a pixel code in an array
@@ -1539,24 +1538,24 @@ static int ov5648_frame_irq(struct v4l2_subdev *sd, u32 irq)
 
 	/* assume frame end irq only */
 	if (0 == ov5648->flash_on) {
-		if (ov5648->flash_mode == FLASH_MODE_ON) {
+		if (ov5648->flash_mode == V4L2_FLASH_LED_MODE_FLASH) {
 			if (ov5648->flash_timeout > 0 &&
 			    ov5648->flash_intensity > 0) {
-				flash_gpio_on();
+				ov5648->lamp.enable();
 				ov5648->flash_on = ov5648->flash_timeout;
 				pr_debug("%s(): flash_on: 0->%d;",
 					 __func__,
 					 ov5648->flash_on);
 			} else {
-				ov5648->flash_mode = FLASH_MODE_OFF;
+				ov5648->flash_mode = V4L2_FLASH_LED_MODE_NONE;
 			}
 		}
 	} else {
-		if (ov5648->flash_mode == FLASH_MODE_ON) {
+		if (ov5648->flash_mode == V4L2_FLASH_LED_MODE_FLASH) {
 			if (ov5648->flash_on == 1) {
-				flash_gpio_off();
+				ov5648->lamp.disable();
 				ov5648->flash_on = 0;
-				ov5648->flash_mode = FLASH_MODE_OFF;
+				ov5648->flash_mode = V4L2_FLASH_LED_MODE_NONE;
 				pr_debug("%s(): flash_off", __func__);
 			} else {
 				pr_debug("%s(): flash_on: %d->%d",
@@ -1744,8 +1743,6 @@ static int ov5648_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 static int ov5648_g_chip_ident(struct v4l2_subdev *sd,
 			       struct v4l2_dbg_chip_ident *id)
 {
-	struct i2c_client *client = v4l2_get_subdevdata(sd);
-
 /*
 	if (id->match.type != V4L2_CHIP_MATCH_I2C_ADDR)
 		return -EINVAL;
@@ -1991,14 +1988,15 @@ static int ov5648_s_ctrl(struct v4l2_ctrl *ctrl)
 				FLASH_MAIN_OFF,
 				FLASH_MODE_REDEYE,
 				FLASH_MODE_MAX,
-		*/
+
 		static const int mode[4] = {
 			FLASH_MODE_OFF,
 			FLASH_MODE_ON,
 			FLASH_MODE_AUTO,
 			FLASH_MODE_TORCH_ON
 		};
-		ov5648_set_flash_mode(client, mode[ctrl->val % 4]);
+		*/
+		ov5648_set_flash_mode(client, ctrl->val);
 		pr_debug("%s() V4L2_CID_FLASH_LED_MODE val=%d",
 			 __func__, ctrl->val);
 		break;
@@ -2022,56 +2020,50 @@ static int ov5648_set_flash_mode(struct i2c_client *client,
 				 int mode)
 {
 	static const char * const flashmode_str[] = {
-		"FLASH_MODE_BASE",
-		"FLASH_MODE_OFF",
-		"FLASH_MODE_AUTO",
-		"FLASH_MODE_ON",
-		"FLASH_MODE_TORCH_ON",
-		"FLASH_MODE_TORCH_OFF",
-		"FLASH_MAIN_OFF",
-		"FLASH_MODE_REDEYE",
-		"FLASH_MODE_MAX",
+		"V4L2_FLASH_LED_MODE_NONE",
+		"V4L2_FLASH_LED_MODE_FLASH",
+		"V4L2_FLASH_LED_MODE_FLASH_AUTO",
+		"V4L2_FLASH_LED_MODE_TORCH",
 	};
 	struct ov5648 *ov5648 = to_ov5648(client);
 
+	/* check if lamp is presented */
+	if (NULL == ov5648->lamp.name)
+		return -1;
+
+	/* check if lamp is in requested mode */
 	if (ov5648->flash_mode == mode)
 		return 0;
 
+	/* apply new mode */
 	switch (mode) {
-	case FLASH_MODE_OFF:
-		flash_gpio_off();
-		flash_stop();
+	case V4L2_FLASH_LED_MODE_NONE:
+		ov5648->lamp.setup(mode, 0, 0);
+		ov5648->lamp.disable();
 		ov5648->flash_on = 0;
 		pr_debug("%s(): FLASH_MODE_OFF", __func__);
 		break;
 
-	case FLASH_MODE_TORCH_OFF:
-		torch_gpio_off();
-		torch_stop();
-		ov5648->flash_on = 0;
-		pr_debug("%s(): FLASH_MODE_TORCH_OFF", __func__);
-		break;
-
-	case FLASH_MODE_TORCH_ON:
-		torch_start();
-		torch_gpio_on();
+	case V4L2_FLASH_LED_MODE_TORCH:
+		ov5648->lamp.setup(mode, 0, 255);
+		ov5648->lamp.enable();
 		pr_debug("%s(): FLASH_MODE_TORCH_ON", __func__);
 		break;
 
-	case FLASH_MODE_ON:
-	case FLASH_MODE_AUTO:
+	case V4L2_FLASH_LED_MODE_FLASH:
+	case V4L2_FLASH_LED_MODE_FLASH_AUTO:
 	{
-		int flash_timeout_ms =
+		int flash_timeout_us =
 			ov5648->flash_timeout *
 			ov5648->line_length *
-			ov5648->vts / 1000000;
-		flash_start(ov5648->flash_intensity,
-			    flash_timeout_ms);
+			ov5648->vts / 1000;
+		ov5648->lamp.setup(mode, flash_timeout_us,
+					ov5648->flash_intensity);
 		pr_debug("%s(): FLASH_MODE_ON int=%d timeout: %d frames %d ms",
 			 __func__,
 			 ov5648->flash_intensity,
 			 ov5648->flash_timeout,
-			 flash_timeout_ms);
+			 flash_timeout_us/1000);
 		break;
 	}
 
@@ -2079,8 +2071,9 @@ static int ov5648_set_flash_mode(struct i2c_client *client,
 		return -EINVAL;
 	}
 
+	/* update mode */
 	ov5648->flash_mode = mode;
-	pr_debug("%s() mode=%s intensity=%d timeout=%d",
+	pr_debug("%s() mode=%s intensity=%d timeout=%d\n",
 		 __func__,
 		 flashmode_str[mode],
 		 ov5648->flash_intensity,
@@ -2310,7 +2303,7 @@ static int ov5648_init(struct i2c_client *client)
 	ov5648->exposure_current  = DEFAULT_EXPO;
 	ov5648->aecpos_delay      = 1;
 	ov5648->lenspos_delay     = 0;
-	ov5648->flash_mode        = FLASH_MODE_OFF;
+	ov5648->flash_mode        = V4L2_FLASH_LED_MODE_NONE;
 	ov5648->flash_intensity   = OV5648_FLASH_INTENSITY_DEFAULT;
 	ov5648->flash_timeout     = OV5648_FLASH_TIMEOUT_DEFAULT;
 	ov5648->flash_delay       = 0;
@@ -2321,6 +2314,14 @@ static int ov5648_init(struct i2c_client *client)
 		ov5648->exp_read_buf[i] = \
 		(ov5648->exposure_current * 1000 / ov5648->line_length) << 4;
 		ov5648->gain_read_buf[i] = ov5648->gain_current >> 4;
+	}
+
+	/* get flashlamp */
+	if (0 == get_flash_lamp(&ov5648->lamp)) {
+		ov5648->lamp.reset();
+	} else {
+	    /* no flashlamp */
+	    ov5648->lamp.name = NULL;
 	}
 	dev_dbg(&client->dev, "Sensor initialized\n");
 	return ret;
@@ -2375,7 +2376,7 @@ static int ov5648_procfs_read(struct file *flip, char __user *user_buf,
 		      "lens           = %d\n"
 		      "af             = %s\n"
 		      "flash_delay    = %d\n"
-		      "fps            = %d\n",
+		      "fps/fcnt       = %d %d\n",
 		      ov5648_mode[ov5648->mode_idx].name,
 		      ov5648->gain_current,
 		      ov5648->gain_current >> 8, ov5648->gain_current & 0xFF,
@@ -2389,7 +2390,7 @@ static int ov5648_procfs_read(struct file *flip, char __user *user_buf,
 		      lens_position,
 		      ov5648->af_on ? "on" : "off",
 		      ov5648->flash_delay,
-		      ov5648->fps
+		      ov5648->fps, ov5648->fcnt
 		      );
 	len = simple_read_from_buffer(user_buf, count, ppos, buf, len);
 	return len;
@@ -2510,12 +2511,13 @@ static int ov5648_procfs_write(struct file *flip,
 		ov5648->flash_intensity = val;
 		ov5648->flash_timeout   = val2;
 		if (ov5648->flash_intensity > 0) {
-			ov5648_set_flash_mode(client, FLASH_MODE_ON);
+			ov5648_set_flash_mode(client,
+				V4L2_FLASH_LED_MODE_FLASH);
 			val2 = val2 *
 				ov5648->line_length *
 				ov5648->vts / 1000;
 		} else {
-			ov5648_set_flash_mode(client, FLASH_MODE_OFF);
+			ov5648_set_flash_mode(client, V4L2_FLASH_LED_MODE_NONE);
 		}
 	} else if (strncmp(str, "flash_delay=", 12) == 0) {
 		val = 0;

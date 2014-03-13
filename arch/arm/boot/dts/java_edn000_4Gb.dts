@@ -513,7 +513,7 @@
 		data-pullup = <0>;
 		is-8bit = <1>;
 		devtype = <2>;		/*SDIO_DEV_TYPE_EMMC*/
-		flags = <1>;		/*KONA_SDIO_FLAGS_DEVICE_NON_REMOVABLE*/
+		flags = <3>;		/*NON_REMOVABLE | RPM_EN*/
 		pm_caps = <1>;		/*MMC_PM_KEEP_POWER*/
 		peri-clk-name = "sdio2_clk";
 		ahb-clk-name = "sdio2_ahb_clk";
@@ -529,7 +529,7 @@
 		id = <2>;
 		data-pullup = <0>;
 		devtype = <1>;		/*SDIO_DEV_TYPE_WIFI*/
-		flags = <0>;		/*KONA_SDIO_FLAGS_DEVICE_REMOVABLE*/
+		flags = <2>;		/*REMOVABLE | RPM_EN*/
 		peri-clk-name = "sdio3_clk";
 		ahb-clk-name = "sdio3_ahb_clk";
 		sleep-clk-name = "sdio3_sleep_clk";
@@ -544,7 +544,7 @@
 		data-pullup = <0>;
 		cd-gpio = <&gpio 91 0>;		/*SD_CARDDET_GPIO_PIN*/
 		devtype = <0>;		/*SDIO_DEV_TYPE_SDMMC*/
-		flags = <0>;		/*KONA_SDIO_FLAGS_DEVICE_REMOVABLE*/
+		flags = <2>;		/*REMOVABLE | RPM_EN*/
 		peri-clk-name = "sdio1_clk";
 		ahb-clk-name = "sdio1_ahb_clk";
 		sleep-clk-name = "sdio1_sleep_clk";
@@ -632,4 +632,15 @@
 	secure_watchdog {
 		compatible = "bcm,secure_watchdog";
 	};
+
+
+	/*
+	This is sample , not actual GPIO assigned to GPS HostWake
+	bcm-gps {
+		compatible = "bcm,bcm-gps";
+		bcm-gps-hostwake = <&gpio 0 0>;
+		bcm-gps-regpu-gpio = <&gpio 11 0>;
+	};
+	*/
+
 };

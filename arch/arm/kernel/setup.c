@@ -880,6 +880,9 @@ static int c_show(struct seq_file *m, void *v)
 	int i, j;
 	u32 cpuid;
 
+	seq_printf(m, "Processor\t: %s rev %d (%s)\n",
+		cpu_name, read_cpuid_id() & 15, elf_platform);
+
 	for_each_online_cpu(i) {
 		/*
 		 * glibc reads /proc/cpuinfo to determine the number of

@@ -189,6 +189,15 @@ choice
 		Garnet
 		edn020
 
+	config MACH_HAWAII_GARNET_EDN020_NON_TURBO
+	bool "GARNET EDN020 Non-Turbo"
+	select RESERVED_MEM_SPEC1
+	help
+	  Support for
+		Hawaii based
+		Garnet
+		edn020_non_turbo
+
 	config MACH_HAWAII_GARNET_C_EDN020
 	bool "GARNET C_EDN020"
 	help
@@ -220,6 +229,14 @@ choice
 		Hawaii based
 		Garnet
 		edn020
+
+	config MACH_HAWAII_GARNET_EDN020_SOC_NON_TURBO
+	bool "GARNET EDN020_SOC Non-Turbo"
+	help
+	  Support for
+		Hawaii based
+		Garnet
+		edn020_soc_non_turbo
 
 	config MACH_HAWAII_GARNET_C_EDN020_SIMHOTSWAP
 	bool "GARNET C_EDN020_SIMHOTSWAP"

@@ -47,6 +47,7 @@ struct pwm_bl_data {
 #ifdef CONFIG_THERMAL
 	struct thermal_cooling_device *bl_cdev;
 	int thermal_max_brightness;
+	int curr_state;
 #endif
 };
 
@@ -328,9 +329,13 @@ static int bl_cooling_get_cur_state(struct thermal_cooling_device *cdev,
 	struct pwm_bl_data *pb = bl_get_data(bl);
 	u32 cur_level;
 
-	cur_level = pwm_backlight_get_brightness(bl);
-	bl_get_property(cdev, pb->levels[cur_level], (int *)state,
+	if (pb->curr_state >= 0) {
+		*state = pb->curr_state;
+	} else {
+		cur_level = pwm_backlight_get_brightness(bl);
+		bl_get_property(cdev, pb->levels[cur_level], (int *)state,
 			GET_COOLING_LEVEL);
+	}
 
 	return 0;
 }
@@ -351,6 +356,9 @@ static int bl_cooling_set_cur_state(struct thermal_cooling_device *cdev,
 	if (state < 0 || state > bl->props.max_brightness)
 		return -EINVAL;
 
+	if (pb->curr_state == state)
+		return 0;
+
 	/* remap cooling device state to backlight device state */
 	if (bl_get_property(cdev, state, &bl_level, GET_BACKLIGHT_LEVEL))
 		return -EINVAL;
@@ -360,6 +368,8 @@ static int bl_cooling_set_cur_state(struct thermal_cooling_device *cdev,
 		return 0;
 
 	pb->thermal_max_brightness = bl_level;
+	pr_info("ADB: BBIC, state %lu Action:BL : %u\n", state, bl_level);
+	pb->curr_state = state;
 	backlight_update_status(bl);
 
 	return 0;
@@ -376,6 +386,7 @@ static int bl_brightness_coolant_register(struct backlight_device *bl)
 	struct pwm_bl_data *pb = bl_get_data(bl);
 
 	pb->thermal_max_brightness = bl->props.max_brightness;
+	pb->curr_state = -1;
 	if (!pb->pb_enable_adapt_bright)
 		return 0;
 

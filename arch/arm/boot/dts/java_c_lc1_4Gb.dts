@@ -102,69 +102,30 @@
 		is-pmu-i2c = <0>;
 		fs-ref-frequency = <13000000>;
 		hs-ref-frequency = <104000000>;
-		mpu3050@68 {
-			compatible = "bcm,mpu3050";
-			reg = <0x68>;
-			gpio-irq-pin = <&gpio 33 0>;
-			int-config = <0x10>;
-			level-shifter = <0>;
-			orientation = <0 0xFFFFFFFF 0
-					0xFFFFFFFF 0 0
-					0 0 0xFFFFFFFF>;
-		};
-		akm8975@0c {
-			compatible = "bcm,akm8975";
-			reg = <0x0c>;
-			gpio-irq-pin = <&gpio 4 0>;
-			layout = <6>;
+
+		bma222_accl@18 {
+			compatible = "bcm,bma222_accl";
+			reg = <0x18>;
+			gpio-irq-pin = <0xFFFFFFFF>;
+			orientation  = <12>;
+
 		};
 
-		kxtik@0f {
-                        compatible = "bcm,kxtik";
-                        reg = <0x0f>;
-			/* Add gpio-irq-pin if using the same */
-                        min_interval = <5>;
-                        poll_interval = <200>;
-                        axis_map_x = <0>;
-                        axis_map_y = <1>;
-                        axis_map_z = <2>;
-                        negate_x = <1>;
-                        negate_y = <0>;
-                        negate_z = <1>;
-                        res_12bit = <64>;
-                        g_range = <0>;
-                };
-
-		tmd2771@39 {
-			compatible = "bcm,tmd2771";
-			reg = <0x39>;
+		isl290xx@44 {
+			compatible = "bcm,isl290xx";
+			reg = <0x44>;
 			gpio-irq-pin = <&gpio 89 0>;
-			calibrate_target_param = <300000>;
-			als_time_param = <200>;
-			scale_factor_param = <1>;
-			gain_trim_param = <512>;
-			filter_history_param = <3>;
-			filter_count_param = <1>;
-			gain_param = <2>;
-			prox_threshold_hi_param = <646>;
-			prox_threshold_lo_param = <638>;
-			als_threshold_hi_param = <1>;
-			als_threshold_lo_param = <0>;
-			prox_int_time_param = <238>;
-			prox_adc_time_param = <255>;
-			prox_wait_time_param = <238>;
-			prox_intr_filter_param = <17>;
-			prox_config_param = <0>;
-			prox_pulse_cnt_param = <96>;
-			prox_gain_param = <34>;
-			prox_win_sw = <100>;
+			prox_threshold_hi_param = <112>;
+			prox_threshold_lo_param = <90>;
+			aps_config_param = <0xec>;
+			aps_config1_param = <0x87>;
+			aps_config2_param = <0x0>;
+			aps_intr_param = <0x20>;
+			prox_offset_param = <0>;
+			prox_boot_cali = <0>;
+			scale_factor = <1000>;
 		};
 
-		bmp18x@77 {
-                         compatible = "bcm,bmp18x";
-                         reg = <0x77>;
-			 regulator-name = "cam2";
-		};
 	};
 
 	i2c3: i2c@3e01c000 {
@@ -456,7 +417,7 @@
 		trip2 {
 			type = "active";
 			temp = <58>;
-			max_freq = <1200000>;
+			max_freq = <800000>;
 			max_brightness = <0>;
 		};
 		trip3 {
@@ -468,22 +429,16 @@
 		trip4 {
 			type = "active";
 			temp = <65>;
-			max_freq = <800000>;
+			max_freq = <600000>;
 			max_brightness = <0>;
 		};
 		trip5 {
 			type = "active";
 			temp = <70>;
-			max_freq = <600000>;
+			max_freq = <312000>;
 			max_brightness = <22>;
 		};
 		trip6 {
-			type = "active";
-			temp = <80>;
-			max_freq = <312000>;
-			max_brightness = <0>;
-		};
-		trip7 {
 			type = "critical";
 			temp = <115>;
 			max_freq = <0>;
@@ -516,7 +471,8 @@
 		data-pullup = <0>;
 		is-8bit = <1>;
 		devtype = <2>;		/*SDIO_DEV_TYPE_EMMC*/
-		flags = <1>;		/*KONA_SDIO_FLAGS_DEVICE_NON_REMOVABLE*/
+		flags = <3>;		/*NON_REMOVABLE | RPM_EN*/
+		pm_caps = <1>;		/*MMC_PM_KEEP_POWER*/
 		peri-clk-name = "sdio2_clk";
 		ahb-clk-name = "sdio2_ahb_clk";
 		sleep-clk-name = "sdio2_sleep_clk";
@@ -531,7 +487,7 @@
 		id = <2>;
 		data-pullup = <0>;
 		devtype = <1>;		/*SDIO_DEV_TYPE_WIFI*/
-		flags = <0>;		/*KONA_SDIO_FLAGS_DEVICE_REMOVABLE*/
+		flags = <2>;		/*REMOVABLE | RPM_EN*/
 		peri-clk-name = "sdio3_clk";
 		ahb-clk-name = "sdio3_ahb_clk";
 		sleep-clk-name = "sdio3_sleep_clk";
@@ -545,7 +501,8 @@
 		id = <0>;
 		data-pullup = <0>;
 		devtype = <0>;		/*SDIO_DEV_TYPE_SDMMC*/
-		flags = <0>;		/*KONA_SDIO_FLAGS_DEVICE_REMOVABLE*/
+		flags = <2>;		/*REMOVABLE | RPM_EN*/
+		pm_caps = <1>;		/*MMC_PM_KEEP_POWER*/
 		peri-clk-name = "sdio1_clk";
 		ahb-clk-name = "sdio1_ahb_clk";
 		sleep-clk-name = "sdio1_sleep_clk";
@@ -608,6 +565,7 @@
 		brightness-levels = <0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17
 							18 19 20 21 22 23 24 25 26 27 28 29 30 31 32>; /* Android calibrates to 32 levels */
 		default-brightness-level = <32>; /* Array index */
+		pb_enable_adapt_bright = <1>;
 	};
 
 	gpio-leds {

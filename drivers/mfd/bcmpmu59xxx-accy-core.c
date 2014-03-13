@@ -366,7 +366,8 @@ static int _usb_host_en(struct bcmpmu_accy_data *di, int enable)
 	}
 
 	if (di->chrgr_type)
-	        pr_accy(FLOW, "%s:Enabling Charging: usb_host_en=%d\n", __func__, di->usb_host_en);
+		pr_accy(FLOW, "%s:Enabling Charging: usb_host_en=%d\n",
+			__func__, di->usb_host_en);
 	else
 		pr_accy(FLOW, "%s:No Charger\n", __func__);
 
@@ -627,10 +628,17 @@ static int bcmpmu_accy_chrgr_type_handler(struct bcmpmu_accy_data *di,
 			PMU_ACCY_EVT_OUT_CHRGR_TYPE,
 			&gp_accy_data->chrgr_type);
 
-	if (gp_accy_data->chrgr_type == PMU_CHRGR_TYPE_NONE)
+	if (gp_accy_data->chrgr_type == PMU_CHRGR_TYPE_NONE) {
 		bcmpmu_accy_pm_qos_request(gp_accy_data, false);
-	else
+		if (gp_accy_data->otg_session) {
+			gp_accy_data->otg_session = false;
+			bcmpmu_accy_queue_event(gp_accy_data,
+					PMU_ACCY_EVT_OUT_SESSION_INVALID,
+					NULL);
+		}
+	} else {
 		bcmpmu_accy_pm_qos_request(gp_accy_data, true);
+	}
 
 	return 0;
 }

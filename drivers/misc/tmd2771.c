@@ -389,7 +389,8 @@ static int taos_get_data(void)
 		ret = taos_prox_threshold_set();
 		if (ret >= 0)
 			ReadEnable = 1;
-	} else if ((status & 0x10) == 0x10) {
+	}
+	if ((status & 0x10) == 0x10) {
 		ReadEnable = 1;
 		taos_als_threshold_set();
 		ret = taos_als_get_data();
@@ -624,7 +625,8 @@ static int taos_prox_threshold_set(void)
 		input_report_abs(taos_datap->input_dev_prox, ABS_DISTANCE,
 				 data);
 		input_sync(taos_datap->input_dev_prox);
-		pr_taos(INFO, " proximity: no object detected\n");
+		pr_taos(INFO, " proximity: no object detected, proxdata: %d\n",
+				proxdata);
 	} else if (proxdata
 		> (taos_cfgp->prox_threshold_hi + taos_cfgp->prox_win_sw)) {
 		pr_taos(DEBUG, "====cleardata = %d sat_als = %d\n",
@@ -639,7 +641,8 @@ static int taos_prox_threshold_set(void)
 		input_report_abs(taos_datap->input_dev_prox, ABS_DISTANCE,
 				 data);
 		input_sync(taos_datap->input_dev_prox);
-		pr_taos(DEBUG, "proximity: object detected\n");
+		pr_taos(INFO, "proximity: object detected,proxdata: %d\n",
+				proxdata);
 	}
 	PROX_STATE = data;
 	for (mcount = 0; mcount < 4; mcount++) {
@@ -2254,6 +2257,12 @@ static long taos_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 						TAOS_TRITON_CNTRL, reg_cntrl);
 		if (ret < 0)
 			goto out;
+
+		/* add delay so that the internal oscillator of chip can
+		   be more stable after PON is asserted */
+		usleep_range(3000, 4000);
+		input_report_abs(taos_datap->input_dev_prox, ABS_DISTANCE, -1);
+		input_sync(taos_datap->input_dev_prox);
 		taos_prox_threshold_set();
 		break;
 

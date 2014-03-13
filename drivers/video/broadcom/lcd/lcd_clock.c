@@ -55,37 +55,39 @@ struct
 };
 #endif
 
-int en_disp_clks(void);
-int dis_disp_clks(void);
-
 int brcm_enable_smi_lcd_clocks(struct pi_mgr_dfs_node *dfs_node)
 {
 #ifndef CONFIG_MACH_BCM_FPGA
 	struct clk *smi_axi;
 	struct clk *smi;
+	int err;
 
-	if (pi_mgr_dfs_request_update(dfs_node, PI_OPP_ECONOMY)) {
+	err = pi_mgr_dfs_request_update(dfs_node, PI_OPP_ECONOMY);
+	if (err) {
 		printk(KERN_ERR "Failed to update dfs request for SMI LCD at enable\n");
-		return  -EIO;
+		return err;
 	}
 
 	smi_axi = clk_get (NULL, "smi_axi_clk");
 	smi = clk_get (NULL, "smi_clk");
-	BUG_ON(IS_ERR_OR_NULL(smi_axi) || IS_ERR_OR_NULL(smi));
+	BUG_ON(IS_ERR(smi_axi) || IS_ERR(smi));
 
-	if (clk_set_rate(smi, 250000000)) {
+	err = clk_set_rate(smi, 250000000);
+	if (err) {
 		printk(KERN_ERR "Failed to set the SMI peri clock to 250MHZ");
-		return -EIO;
+		return err;
 	}
 
-	if (clk_enable(smi)) {
+	err = clk_enable(smi);
+	if (err) {
 		printk(KERN_ERR "Failed to enable the SMI peri clock");
-		return -EIO;
+		return err;
 	}
 
-	if (clk_enable (smi_axi)) {
+	err = clk_enable(smi_axi);
+	if (err) {
 		printk(KERN_ERR "Failed to enable the SMI bus clock");
-		return -EIO;
+		return err;
 	}
 #endif
 	return 0;
@@ -99,7 +101,7 @@ int brcm_disable_smi_lcd_clocks(struct pi_mgr_dfs_node* dfs_node)
 
 	smi_axi = clk_get (NULL, "smi_axi_clk");
 	smi = clk_get (NULL, "smi_clk");
-	BUG_ON(IS_ERR_OR_NULL(smi_axi) || IS_ERR_OR_NULL(smi));
+	BUG_ON(IS_ERR(smi_axi) || IS_ERR(smi));
 
 	clk_disable(smi);
 	clk_disable(smi_axi);
@@ -116,14 +118,16 @@ int brcm_disable_smi_lcd_clocks(struct pi_mgr_dfs_node* dfs_node)
 
 static int dsi_axi_clk(int bus, bool on)
 {
-	struct clk *dsi_axi;
-	dsi_axi = clk_get(NULL, dsi_bus_clk[bus].dsi_axi);
-	BUG_ON(IS_ERR_OR_NULL(dsi_axi));
+	int err;
+	struct clk *dsi_axi = clk_get(NULL, dsi_bus_clk[bus].dsi_axi);
+
+	BUG_ON(IS_ERR(dsi_axi));
 	if (on) {
-		if (clk_enable(dsi_axi)) {
+		err = clk_enable(dsi_axi);
+		if (err) {
 			pr_err("Failed to enable the DSI[%d] AXI clock\n",
 			bus);
-		return -EIO;
+		return err;
 		}
 	} else {
 		clk_disable(dsi_axi);
@@ -133,20 +137,23 @@ static int dsi_axi_clk(int bus, bool on)
 
 static int dsi_esc_clk(int bus, u32 esc_clk_hz, bool on)
 {
-	struct	clk *dsi_esc;
-	dsi_esc = clk_get(NULL, dsi_bus_clk[bus].dsi_esc);
-	BUG_ON(IS_ERR_OR_NULL(dsi_esc));
+	int err;
+	struct	clk *dsi_esc = clk_get(NULL, dsi_bus_clk[bus].dsi_esc);
+
+	BUG_ON(IS_ERR(dsi_esc));
 
 	if (on) {
-		if (clk_set_rate(dsi_esc, esc_clk_hz)) {
+		err = clk_set_rate(dsi_esc, esc_clk_hz);
+		if (err) {
 			pr_err("Failed to set the DSI[%d] ESC clk to %d Hz\n",
 				bus, esc_clk_hz);
-			return -EIO;
+			return err;
 		}
-		if (clk_enable(dsi_esc)) {
+		err = clk_enable(dsi_esc);
+		if (err) {
 			pr_err("Failed to enable the DSI[%d] ESC clk\n",
 				bus);
-			return -EIO;
+			return err;
 		}
 	} else {
 		clk_disable(dsi_esc);
@@ -154,12 +161,13 @@ static int dsi_esc_clk(int bus, u32 esc_clk_hz, bool on)
 	return 0;
 }
 
-int en_disp_clks()
+static int en_disp_clks(void)
 {
 	struct clk *dsi_axi;
 	struct clk *dsi_esc;
 	struct clk *dsi_pll;
 	struct clk *dsi_pll_ch;
+	int err;
 
 	if (!g_display_enabled)
 		return -1;
@@ -167,34 +175,38 @@ int en_disp_clks()
 	pr_err("Enabling display clocks\n");
 	dsi_axi	= clk_get(NULL, dsi_bus_clk[0].dsi_axi);
 	dsi_esc	= clk_get(NULL, dsi_bus_clk[0].dsi_esc);
-	BUG_ON(IS_ERR_OR_NULL(dsi_axi) || IS_ERR_OR_NULL(dsi_esc));
-	if (clk_enable(dsi_axi)) {
+	BUG_ON(IS_ERR(dsi_axi) || IS_ERR(dsi_esc));
+	err = clk_enable(dsi_axi);
+	if (err) {
 		pr_err("Error while enabling DSI AXI clk\n");
-		return -1;
+		return err;
 	}
 
-	if (clk_enable(dsi_esc)) {
+	err = clk_enable(dsi_esc);
+	if (err) {
 		pr_err("Error while enabling DSI ESC clk\n");
-		return -1;
+		return err;
 	}
 
 	dsi_pll     = clk_get(NULL, "dsi_pll");
 	dsi_pll_ch  = clk_get(NULL, dsi_bus_clk[0].dsi_pll_ch);
-	BUG_ON(IS_ERR_OR_NULL(dsi_pll) || IS_ERR_OR_NULL(dsi_pll_ch));
-	if (clk_enable(dsi_pll)) {
+	BUG_ON(IS_ERR(dsi_pll) || IS_ERR(dsi_pll_ch));
+	err = clk_enable(dsi_pll);
+	if (err) {
 		pr_err("Error while enabling pll\n");
-		return -1;
+		return err;
 	}
 
-	if (clk_enable(dsi_pll_ch)) {
+	err = clk_enable(dsi_pll_ch);
+	if (err) {
 		pr_err("Error while enabling pll ch\n");
-		return -1;
+		return err;
 	}
 	return 0;
 }
 subsys_initcall(en_disp_clks);
 
-int dis_disp_clks()
+static int dis_disp_clks(void)
 {
 	struct clk *dsi_axi;
 	struct clk *dsi_esc;
@@ -207,13 +219,13 @@ int dis_disp_clks()
 	pr_err("Disabling display clocks\n");
 	dsi_axi	= clk_get(NULL, dsi_bus_clk[0].dsi_axi);
 	dsi_esc	= clk_get(NULL, dsi_bus_clk[0].dsi_esc);
-	BUG_ON(IS_ERR_OR_NULL(dsi_axi) || IS_ERR_OR_NULL(dsi_esc));
+	BUG_ON(IS_ERR(dsi_axi) || IS_ERR(dsi_esc));
 	clk_disable(dsi_axi);
 	clk_disable(dsi_esc);
 
 	dsi_pll     = clk_get(NULL, "dsi_pll");
 	dsi_pll_ch  = clk_get(NULL, dsi_bus_clk[0].dsi_pll_ch);
-	BUG_ON(IS_ERR_OR_NULL(dsi_pll) || IS_ERR_OR_NULL(dsi_pll_ch));
+	BUG_ON(IS_ERR(dsi_pll) || IS_ERR(dsi_pll_ch));
 	clk_disable(dsi_pll);
 	clk_disable(dsi_pll_ch);
 
@@ -226,25 +238,16 @@ late_initcall(dis_disp_clks);
 int brcm_init_lcd_clocks(u32 dsi_bus)
 {
 	struct clk *dsi_axi;
-	int dsi_axi_usage;
 
 	dsi_axi = clk_get(NULL, dsi_bus_clk[dsi_bus].dsi_axi);
-	BUG_ON(IS_ERR_OR_NULL(dsi_axi));
-	dsi_axi_usage = clk_get_usage(dsi_axi);
+	BUG_ON(IS_ERR(dsi_axi));
 
-	if (0 == dsi_axi_usage) {
-		/*
-		Sometimes DSI axi bus may get hang if
-		TX (CSL_DSI_SendPacket) busy,
-		doing a clk_reset to recovery from this error
-		*/
-		clk_reset(dsi_axi);
-	} else {
-		printk(KERN_DEBUG "dsi_axi enabled before init, usage %d\n",
-				dsi_axi_usage);
-	}
-
-	return 0;
+	/*
+	 * Sometimes DSI axi bus may get hang if
+	 * TX (CSL_DSI_SendPacket) busy,
+	 * doing a clk_reset to recovery from this error
+	 */
+	return clk_reset(dsi_axi);
 }
 
 #ifdef __DSI_USE_CLK_API__
@@ -284,10 +287,11 @@ int brcm_enable_dsi_pll_clocks(
         u32	dsi_pll_ch_hz;
 	u32	dsi_pll_ch_hz_csl;
 	int dsi_pll_desense_offset;
+	int err;
 
 	dsi_pll = clk_get(NULL, "dsi_pll");
 	dsi_pll_ch = clk_get(NULL, dsi_bus_clk[dsi_bus].dsi_pll_ch);
-	BUG_ON(IS_ERR_OR_NULL(dsi_pll) || IS_ERR_OR_NULL(dsi_pll_ch));
+	BUG_ON(IS_ERR(dsi_pll) || IS_ERR(dsi_pll_ch));
 
 	printk(KERN_INFO "brcm_enable_dsi_pll_clocks\n");
 	/* DSI timing is set-up in CSL/cHal using req. clock values */
@@ -296,35 +300,40 @@ int brcm_enable_dsi_pll_clocks(
 #ifdef __PREVENT_MM_RETENTION
 	dsi_axi_clk(dsi_bus, true);
 #endif
-	if (clk_set_rate(dsi_pll, dsi_pll_hz)) {
+	err = clk_set_rate(dsi_pll, dsi_pll_hz);
+	if (err) {
 		printk(KERN_ERR "Failed to set the DSI[%d] PLL to %d Hz\n", 
                 	dsi_bus, dsi_pll_hz);
-		return -EIO;
+		return err;
 	}
-	if (clk_enable(dsi_pll)) {
+	err = clk_enable(dsi_pll);
+	if (err) {
 		printk(KERN_ERR "Failed to enable the DSI[%d] PLL\n", dsi_bus);
-		return -EIO;
+		return err;
 	}
 	
         dsi_pll_ch_hz = clk_get_rate(dsi_pll) / dsi_pll_ch_div;
 	
-	if (clk_set_rate(dsi_pll_ch, dsi_pll_ch_hz)) {
+	err = clk_set_rate(dsi_pll_ch, dsi_pll_ch_hz);
+	if (err) {
 		printk(KERN_ERR "Failed to set the DSI[%d] PLL CH to %d Hz\n", 
                 	dsi_bus, dsi_pll_ch_hz);
-		return -EIO;
+		return err;
 	}
 
 	dsi_pll_desense_offset = dsi_pll_ch_desense_offset * dsi_pll_ch_div;
 	pr_err("Requesting desense offset = %d\n", dsi_pll_desense_offset);
-	if (pll_set_desense_offset(dsi_pll, dsi_pll_desense_offset)) {
+	err = pll_set_desense_offset(dsi_pll, dsi_pll_desense_offset);
+	if (err) {
 		pr_err("Failed to set desense offset to %dHz\n",
 		dsi_pll_desense_offset);
-		return -EIO;
+		return err;
 	}
 
-	if (clk_enable(dsi_pll_ch)) {
+	err = clk_enable(dsi_pll_ch);
+	if (err) {
 		printk(KERN_ERR "Failed to enable DSI[%d] PLL CH\n", dsi_bus);
-		return -EIO;
+		return err;
 	}
 
 #if 0 /* RDB doesn't recommend using DDR2 clock */
@@ -344,12 +353,12 @@ int brcm_enable_dsi_pll_clocks(
 		pixel_pll_val = DSI_TXDDRCLK;
 #endif
 
-        if (mm_ccu_set_pll_select(dsi_bus_clk[dsi_bus].pixel_pll_sel,
-        	pixel_pll_val)) {
-                
+	err = mm_ccu_set_pll_select(dsi_bus_clk[dsi_bus].pixel_pll_sel,
+		pixel_pll_val);
+	if (err) {
 		printk(KERN_ERR "Failed to set DSI[%d] PIXEL PLL Sel to %d\n", 
                 	dsi_bus, pixel_pll_val);
-		return -EIO;
+		return err;
         }
 #endif
 
@@ -383,7 +392,7 @@ int brcm_disable_dsi_pll_clocks(u32 dsi_bus)
 
 	dsi_pll    = clk_get (NULL, "dsi_pll");
 	dsi_pll_ch = clk_get (NULL, dsi_bus_clk[dsi_bus].dsi_pll_ch);
-	BUG_ON(IS_ERR_OR_NULL(dsi_pll) || IS_ERR_OR_NULL(dsi_pll_ch));
+	BUG_ON(IS_ERR(dsi_pll) || IS_ERR(dsi_pll_ch));
 
 	mm_ccu_set_pll_select(dsi_bus_clk[dsi_bus].pixel_pll_sel, DSI_NO_CLOCK);
 	clk_disable(dsi_pll_ch);

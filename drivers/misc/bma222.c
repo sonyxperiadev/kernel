@@ -939,8 +939,6 @@ static ssize_t bma222_set_offset(struct device *dev,
 	int x, y, z;
 	int err = -EINVAL;
 	struct i2c_client *client = to_i2c_client(dev);
-	struct drv_data *dd = i2c_get_clientdata(client);
-	struct input_dev *input_dev = dd->ip_dev;
 	err = sscanf(buf, "%d %d %d", &x, &y, &z);
 	if (err != 3) {
 		pr_err("invalid parameter number: %d\n", err);
@@ -968,7 +966,7 @@ static struct attribute_group bma222_attr_swcal_grp = {
 
 #endif
 
-static int __devinit bma222_accl_probe(struct i2c_client *client,
+static int bma222_accl_probe(struct i2c_client *client,
 				       const struct i2c_device_id *id)
 {
 	struct drv_data *dd;
@@ -1012,8 +1010,11 @@ static int __devinit bma222_accl_probe(struct i2c_client *client,
 
 		pdata = kzalloc(sizeof(struct bma222_accl_platform_data),
 				GFP_KERNEL);
-		if (!pdata)
-			return -ENOMEM;
+		if (!pdata) {
+			rc = -ENOMEM;
+			goto err_kzalloc_pdata;
+		}
+
 		bma222_accl_client->dev.platform_data = pdata;
 		np = client->dev.of_node;
 		rc = of_property_read_u32(np, "gpio-irq-pin", &val);
@@ -1075,13 +1076,6 @@ static int __devinit bma222_accl_probe(struct i2c_client *client,
 		printk(KERN_ERR "bma222 misc_device register failed\n");
 		goto probe_err_reg_misc;
 	}
-	/* bma222 sensor initial */
-	if (rc < 0) {
-		printk(KERN_ERR
-		       "bma222_accl_probe: Error configuring device rc=%d\n",
-		       rc);
-		goto probe_err_smbcfg;
-	}
 
 	dd->bma222_accl_mode = 200;	/* NORMAL Mode */
 	i2c_set_clientdata(client, dd);
@@ -1114,38 +1108,42 @@ static int __devinit bma222_accl_probe(struct i2c_client *client,
 #ifdef BMA222_CALIBRATION
 	rc = sysfs_create_group(&client->dev.kobj, &bma222_attr_grp);
 	if (rc != 0)
-		goto probe_err_setmode;
+		goto err_create_grp0;
 #endif
 #ifdef BMA222_SW_CALIBRATION
 	rc = sysfs_create_group(&client->dev.kobj, &bma222_attr_swcal_grp);
 	if (rc != 0)
-		goto probe_err_setmode;
+		goto err_create_grp1;
 #endif
 	printk(KERN_INFO "- %s\n", __func__);
 
 	return rc;
 
-probe_err_setmode:
-#ifdef BMA222_CALIBRATION
-	sysfs_remove_group(&bma222_accl_client->dev.kobj, &bma222_attr_grp);
-#endif
 #ifdef BMA222_SW_CALIBRATION
-	sysfs_remove_group(&bma222_accl_client->dev.kobj,
-				&bma222_attr_swcal_grp);
+	sysfs_remove_group(&client->dev.kobj, &bma222_attr_swcal_grp);
+err_create_grp1:
 #endif
-probe_err_smbcfg:
+#ifdef BMA222_CALIBRATION
+	sysfs_remove_group(&client->dev.kobj, &bma222_attr_grp);
+err_create_grp0:
+#endif
+	del_timer_sync(&bma_wakeup_timer);
+probe_err_setmode:
 	misc_deregister(&bma222_accl_misc_device);
 probe_err_reg_misc:
-
 #ifdef BMA222_INPUT_DEVICE
 	input_unregister_device(dd->ip_dev);
-probe_err_reg_dev:
-	input_free_device(dd->ip_dev);
 	dd->ip_dev = NULL;
+probe_err_reg_dev:
+	if (dd->ip_dev)
+		input_free_device(dd->ip_dev);
+
+probe_err_reg:
 #endif
 err_read:
-	pr_info("bma dts error read\n");
-probe_err_reg:
+	if (client->dev.of_node)
+		kfree(pdata);
+err_kzalloc_pdata:
 	mutex_lock(&bma222_accl_dd_lock);
 	list_del(&dd->next_dd);
 	mutex_unlock(&bma222_accl_dd_lock);
@@ -1154,7 +1152,7 @@ probe_exit:
 	return rc;
 }
 
-static int __devexit bma222_accl_remove(struct i2c_client *client)
+static int bma222_accl_remove(struct i2c_client *client)
 {
 	struct drv_data *dd;
 	int rc;
@@ -1208,7 +1206,7 @@ static struct i2c_driver bma222_accl_driver = {
 		   },
 	.id_table = bma222_accl_idtable,
 	.probe = bma222_accl_probe,
-	.remove = __devexit_p(bma222_accl_remove),
+	.remove = bma222_accl_remove,
 #ifndef CONFIG_HAS_EARLYSUSPEND
 	.suspend = bma222_accl_suspend,
 	.resume = bma222_accl_resume,

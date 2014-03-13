@@ -114,6 +114,100 @@ struct pwr_mode_reg rgltr_pmode_buf[BCMPMU_REGULATOR_MAX];
 #endif
 static int force_enable;
 
+static int bcmpmu_rgltr_irq[] = {
+	PMU_IRQ_CSROVRI,
+	PMU_IRQ_VSROVRI,
+	PMU_IRQ_MSROVRI,
+	PMU_IRQ_SDSR1OVRI,
+	PMU_IRQ_SDSR2OVRI,
+	PMU_IRQ_IOSR1OVRI,
+	PMU_IRQ_IOSR2OVRI,
+	PMU_IRQ_RFLDO_OVRI,
+	PMU_IRQ_AUDLDO_OVRI,
+	PMU_IRQ_USBLDO_OVR,
+	PMU_IRQ_SDXLDO_OVRI,
+	PMU_IRQ_MICLDO_OVRI,
+	PMU_IRQ_SIMLDO1_OVRI,
+	PMU_IRQ_SIMLDO2_OVRI,
+	PMU_IRQ_MMCLDO1_OVRI,
+	PMU_IRQ_MMCLDO2_OVRI,
+	PMU_IRQ_CAMLDO1_OVRI,
+	PMU_IRQ_CAMLDO2_OVRI,
+	PMU_IRQ_VIBLDO_OVRI,
+	PMU_IRQ_SDLDO_OVRI,
+	PMU_IRQ_GPLDO1_OVRI,
+	PMU_IRQ_GPLDO2_OVRI,
+	PMU_IRQ_GPLDO3_OVRI,
+	PMU_IRQ_AUDLDO_SHD,
+	PMU_IRQ_USBLDO_SHD,
+	PMU_IRQ_SDXLDO_SHD,
+	PMU_IRQ_MICLDO_SHD,
+	PMU_IRQ_SIMLDO1_SHD,
+	PMU_IRQ_SIMLDO2_SHD,
+	PMU_IRQ_MMCLDO1_SHD,
+	PMU_IRQ_MMCLDO2_SHD,
+	PMU_IRQ_CAMLDO1_SHD,
+	PMU_IRQ_CAMLDO2_SHD,
+	PMU_IRQ_VIBLDO_SHD,
+	PMU_IRQ_SDLDO_SHD,
+	PMU_IRQ_GPLDO1_SHD,
+	PMU_IRQ_GPLDO2_SHD,
+	PMU_IRQ_GPLDO3_SHD,
+	PMU_IRQ_TCXLDO_OVRI,
+	PMU_IRQ_LVLDO1_OVRI,
+	PMU_IRQ_LVLDO2_OVRI,
+	PMU_IRQ_TCXLDO_SHD,
+	PMU_IRQ_LVLDO1_SHD,
+	PMU_IRQ_LVLDO2_SHD,
+};
+
+#define NUM_RGLTR_IRQS	ARRAY_SIZE(bcmpmu_rgltr_irq)
+
+static void bcmpmu_rgltr_isr(enum bcmpmu59xxx_irq irq, void *data)
+{
+	pr_rgltr(INIT, "======= OVER Current ISR %s: IRQ: %d===\n",
+		__func__, irq);
+	WARN_ON(1);
+}
+
+static int bcmpmu_rgltr_register_irqs(struct bcmpmu59xxx *bcmpmu)
+{
+	int ret = 0;
+	int i, j;
+
+	for (i = 0; i < NUM_RGLTR_IRQS; i++) {
+		ret = bcmpmu->register_irq(bcmpmu,
+				bcmpmu_rgltr_irq[i],
+				bcmpmu_rgltr_isr, bcmpmu);
+		if (ret)
+			break;
+	}
+	if (i == NUM_RGLTR_IRQS) {
+		for (i = 0; i < NUM_RGLTR_IRQS; i++)
+			ret = bcmpmu->unmask_irq(bcmpmu, bcmpmu_rgltr_irq[i]);
+	} else {
+		for (j = i; j < 1; j--)
+			bcmpmu->unregister_irq(bcmpmu, bcmpmu_rgltr_irq[i]);
+		pr_rgltr(ERROR, "Rgltr IRQ failed to register\n");
+	}
+	return ret;
+}
+
+
+static int bcmpmu_rgltr_setup_overi_handler(struct bcmpmu59xxx *bcmpmu)
+{
+	int ret;
+	u8 val;
+
+	ret = bcmpmu->read_dev(bcmpmu, PMU_REG_PWR_GRP_DLY, &val);
+	val |= PWR_GRP_LDO_OVERI_SHDWN_MASK;
+	ret |= bcmpmu->write_dev(bcmpmu, PMU_REG_PWR_GRP_DLY, val);
+
+	if (!ret)
+		ret = bcmpmu_rgltr_register_irqs(bcmpmu);
+	return ret;
+}
+
 static u32 rmode_to_pmmode(u32 rmode)
 {
 	u32 pmmode = PMMODE_ON;
@@ -1335,6 +1429,7 @@ static int bcmpmu_regulator_probe(struct platform_device *pdev)
 	int num_rgltr;
 	int rgltr_id, ret = 0;
 
+
 	pdata = (struct  bcmpmu59xxx_regulator_pdata *)
 		pdev->dev.platform_data;
 	BUG_ON(pdata == NULL);
@@ -1406,7 +1501,13 @@ static int bcmpmu_regulator_probe(struct platform_device *pdev)
 		} else
 			regl[i] = NULL;
 	}
+
 	regulator_has_full_constraints();
+	if (param->pdata->flags &
+			RGLTR_OVERI_SHDWN_ENABLE) {
+		if (!bcmpmu_rgltr_setup_overi_handler(bcmpmu))
+			pr_rgltr(INIT, "RGLTR OVER I handler enabled\n");
+	}
 
 #ifdef CONFIG_DEBUG_FS
 	bcmpmu59xxx_debug_init(param);

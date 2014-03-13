@@ -332,6 +332,7 @@ CONFIG_BRD_NAME="java_ss_victor3g"
 # CONFIG_MACH_JAVA_STONE is not set
 # CONFIG_MACH_JAVA_GARNET is not set
 # CONFIG_MACH_JAVA_KIVU is not set
+# CONFIG_MACH_JAVA_BROOKS is not set
 # CONFIG_MACH_JAVA_SS_EVAL is not set
 CONFIG_MACH_JAVA_SS_VICTOR3G=y
 # CONFIG_MACH_JAVA_SS_BAFFINLITE is not set
@@ -1488,10 +1489,10 @@ CONFIG_TARGET_LOCALE_CHN=y
 # CONFIG_B43 is not set
 # CONFIG_B43LEGACY is not set
 # CONFIG_BCMDHD_4334 is not set
-CONFIG_BCM4330=y
-CONFIG_BCMDHD_FW_PATH="/system/vendor/firmware/fw_wifi_4330.bin"
-CONFIG_BCMDHD_NVRAM_PATH="/system/vendor/firmware/fw_wifi_nvram_4330.txt"
-# CONFIG_BCMDHD is not set
+CONFIG_BCMDHD=y
+CONFIG_BCMDHD_FW_PATH_4330="/system/vendor/firmware/fw_wifi_4330.bin"
+CONFIG_BCMDHD_NVRAM_PATH_4330="/system/vendor/firmware/fw_wifi_nvram_4330.txt"
+# CONFIG_BCM4330 is not set
 # CONFIG_BRCMFMAC is not set
 # CONFIG_HOSTAP is not set
 # CONFIG_LIBERTAS is not set
@@ -2430,6 +2431,7 @@ CONFIG_FB_BRCM_KONA=y
 # CONFIG_FB_BRCM_LCD_EXIST_CHECK is not set
 # CONFIG_LDI_MDNIE_SUPPORT is not set
 # CONFIG_DSI_PKT_VID_SIMULTANEOUS is not set
+# CONFIG_FB_NEED_PAGE_ALIGNMENT is not set
 # CONFIG_FB_SSD1307 is not set
 CONFIG_SOUND=y
 # CONFIG_SOUND_OSS_CORE is not set

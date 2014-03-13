@@ -1,4 +1,4 @@
-/* Java_garet_edn000 Dts file */
+/* Java_garnet_edn000 Dts file */
 
 /dts-v1/;
 
@@ -35,6 +35,7 @@
 		usb-ahb-clk-name = "usb_otg_clk";
 		mdio-mstr-clk-name = "mdiomaster";
 	};
+
 
 	uart@3e000000 {
 		clock-frequency = <26000000>;
@@ -200,6 +201,12 @@
 		hs-ref-frequency = <26000000>;
 	};
 
+        bcm-bt-btlpm {
+                compatible = "bcm,bcm-bt-lpm";
+                bt-wake-gpio = <&gpio 32 0>;
+                host-wake-gpio = <&gpio 72 0>;
+        };
+
 	spi0: spi@0x3E004000 {
 		enable-dma = <1>;
 		cs-line = <1>;
@@ -212,12 +219,6 @@
 			spi-loop = <0x20>;
 		};
 	};
-
-        bcm-bt-btlpm {
-                compatible = "bcm,bcm-bt-lpm";
-                bt-wake-gpio = <&gpio 32 0>;
-                host-wake-gpio = <&gpio 72 0>;
-        };
 
         bcm-bt-rfkill {
                 compatible = "bcm,bcm-bt-rfkill";
@@ -310,6 +311,44 @@
 		lmk_min_free = <32>;
 		iommu = <&iommu_mm>;
 		iovmm = <&iovmm_mm_256mb>;
+	};
+
+	soc-back-camera {
+		compatible = "bcm,soc-camera";
+		reg = <0x36 0x0>;
+		bus-id = <0>;
+		i2c-type = "ov5648";
+		i2c-addr = <0x36>;
+		i2c-adapter-id = <0>;
+		module-name = "ov5648";
+		if-type = <1>;
+		if-mode = <3>;
+		orientation = <1>;
+		facing = <1>;
+		lanes = <2>;
+		channel = <0>;
+		phy-rate = <0>;
+		pix-clk = <0>;
+		regulators = "lvldo1_uc", "mmc1_vcc", "mmc2_vcc", "lvldo2_uc";
+	};
+
+	soc-front-camera {
+		compatible = "bcm,soc-camera";
+		reg = <0x3e 0x0>;
+		bus-id = <0>;
+		i2c-type = "ov7692";	/* i2c_board_info type */
+		i2c-addr = <0x3e>;	/* i2c_board_info addr */
+		i2c-adapter-id = <0>;
+		module-name = "ov7692";
+		if-type = <1>;		/* V4L2_SUBDEV_SENSOR_SERIAL */
+		if-mode = <3>;		/* V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2 */
+		orientation = <1>;	/* V4L2_SUBDEV_SENSOR_LANDSCAPE */
+		facing = <0>;		/* V4L2_SUBDEV_SENSOR_FRONT */
+		lanes = <1>;
+		channel = <1>;
+		phy-rate = <0>;
+		pix-clk = <0>;
+		regulators = "lvldo2_uc", "mmc1_vcc", "mmc2_vcc", "lvldo1_uc";
 	};
 
 	kona-fb {
@@ -473,7 +512,7 @@
 		data-pullup = <0>;
 		is-8bit = <1>;
 		devtype = <2>;		/*SDIO_DEV_TYPE_EMMC*/
-		flags = <1>;		/*KONA_SDIO_FLAGS_DEVICE_NON_REMOVABLE*/
+		flags = <3>;		/*NON_REMOVABLE | RPM_EN*/
 		pm_caps = <1>;		/*MMC_PM_KEEP_POWER*/
 		peri-clk-name = "sdio2_clk";
 		ahb-clk-name = "sdio2_ahb_clk";
@@ -489,7 +528,7 @@
 		id = <2>;
 		data-pullup = <0>;
 		devtype = <1>;		/*SDIO_DEV_TYPE_WIFI*/
-		flags = <0>;		/*KONA_SDIO_FLAGS_DEVICE_REMOVABLE*/
+		flags = <2>;		/*REMOVABLE | RPM_EN*/
 		peri-clk-name = "sdio3_clk";
 		ahb-clk-name = "sdio3_ahb_clk";
 		sleep-clk-name = "sdio3_sleep_clk";
@@ -504,7 +543,7 @@
 		data-pullup = <0>;
 		cd-gpio = <&gpio 91 0>;		/*SD_CARDDET_GPIO_PIN*/
 		devtype = <0>;		/*SDIO_DEV_TYPE_SDMMC*/
-		flags = <0>;		/*KONA_SDIO_FLAGS_DEVICE_REMOVABLE*/
+		flags = <2>;		/*REMOVABLE | RPM_EN*/
 		peri-clk-name = "sdio1_clk";
 		ahb-clk-name = "sdio1_ahb_clk";
 		sleep-clk-name = "sdio1_sleep_clk";

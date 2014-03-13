@@ -286,6 +286,12 @@ __initdata DISPCTRL_REC_T otm1281a_init_panel_cmd[] = {
 	{DISPCTRL_WR_DATA, 0x04},
 	{DISPCTRL_WR_DATA, 0x00},
 
+	{DISPCTRL_WR_CMND, 0x00},/* OSCILLATOR 70HZ */
+	{DISPCTRL_WR_DATA, 0x82},
+
+	{DISPCTRL_WR_CMND, 0xC1},/*OSCILLATOR 70HZ */
+	{DISPCTRL_WR_DATA, 0x09},
+
 	{DISPCTRL_WR_CMND, 0x00},
 	{DISPCTRL_WR_DATA, 0x00},
 
@@ -368,7 +374,7 @@ __initdata struct lcd_config otm1281a_cfg = {
 	.phy_timing = &otm1281a_timing[0],
 	.max_lanes = 4,
 	.max_hs_bps = 550000000,
-	.max_lp_bps = 5000000,
+	.max_lp_bps = 9000000,
 	.phys_width = 56,
 	.phys_height = 99,
 	.esd_check_fn = otm1281a_esd_check_fn,

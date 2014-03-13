@@ -28,6 +28,7 @@
 #include <linux/io.h>
 #include <mach/io_map.h>
 #include <mach/rdb/brcm_rdb_padctrlreg.h>
+#include <linux/power/bcmpmu-fg.h>
 
 #ifdef CONFIG_DEBUG_FS
 #include <linux/debugfs.h>
@@ -206,9 +207,28 @@ int bcmpmu_adc_convert(struct bcmpmu59xxx *bcmpmu,
 		bool to_raw)
 {
 	struct bcmpmu_adc *adc = (struct bcmpmu_adc *)bcmpmu->adc;
+
 	int ret;
+	int curr;
+	int compensation_val;
 
 	BUG_ON(!adc);
+
+	if (channel == PMU_ADC_CHANN_NTC &&
+		adc->pdata[PMU_ADC_CHANN_NTC].compensation_val) {
+
+		pr_hwmon(ERROR, "%s PMU_ADC_CHANN_NTC raw = %d, %d mV\n",
+			__func__, result->raw, result->raw * 1200 / 1024);
+
+		curr = bcmpmu_fg_get_cur(bcmpmu);
+		compensation_val = adc->pdata[PMU_ADC_CHANN_NTC].compensation_val;
+
+		result->raw = result->raw - (853 * curr * compensation_val / 100 / 1000 / 10);
+		/* result->raw = result->raw - ((85333 * curr) / 10000 / 1000); */
+
+		pr_hwmon(ERROR, "%s PMU_ADC_CHANN_NTC raw_fixed = %d, %d mV, curr=%d\n",
+		__func__, result->raw, result->raw * 1200 / 1024, curr);
+	}
 
 	if (to_raw)
 		ret = bcmpmu_adc_actual_to_raw(adc, channel,
