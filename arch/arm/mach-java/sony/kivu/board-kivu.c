@@ -182,13 +182,11 @@ extern void java_timer_init(void);
 #endif
 
 #include "board-kivu.h"
+/* Some Brooks components reused in Kivu3 */
+#include "../brooks/board-brooks.h"
 
 /* SD */
 #define SD_CARDDET_GPIO_PIN	91
-
-#ifndef CONFIG_BRD_NAME
-#define CONFIG_BRD_NAME "hawaii"
-#endif
 
 /* Touch */
 #define TSC_GPIO_IRQ_PIN			73
@@ -912,12 +910,22 @@ defined(CONFIG_TOUCHSCREEN_BCMTCH15XXX_MODULE)
 #if defined(CONFIG_LEDS_LM3530)
 	kivu_add_backlight();
 #endif
-#if defined(CONFIG_SENSORS_BMP18X_I2C)
+#if defined(CONFIG_BACKLIGHT_LM3630A)
+	brooks_add_backlight();
+#endif
+#if defined(CONFIG_SENSORS_BMP18X_I2C) || defined(CONFIG_BMP280_I2C)
 	kivu_add_barometer();
 #endif
 #if defined(CONFIG_INPUT_APDS9702)
 	kivu_add_proximity();
 #endif
+#if defined(CONFIG_TOUCHSCREEN_SYNAPTICS_I2C_RMI4_2)
+	kivu_add_touch();
+#endif
+#if defined(CONFIG_SENSORS_BH1721FVC)
+	brooks_add_als();
+#endif
+
 }
 
 #ifdef CONFIG_ION_BCM_NO_DT

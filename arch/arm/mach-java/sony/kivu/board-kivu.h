@@ -24,9 +24,27 @@ void __init kivu_add_gyro(void);
 #if defined(CONFIG_LEDS_LM3530)
 void __init kivu_add_backlight(void);
 #endif
-#if defined(CONFIG_SENSORS_BMP18X_I2C)
+#if defined(CONFIG_BACKLIGHT_LM3630A)
+void __init brooks_add_backlight(void);
+#endif
+#if defined(CONFIG_SENSORS_BMP18X_I2C) || defined(CONFIG_BMP280_I2C)
 void __init kivu_add_barometer(void);
 #endif
 #if defined(CONFIG_INPUT_APDS9702)
 void __init kivu_add_proximity(void);
+#endif
+#if defined(CONFIG_INPUT_AKM09911)
+void __init brooks_add_compass(void);
+#endif
+#if defined(CONFIG_INPUT_BMG160)
+void __init kivu_add_gyro(void);
+#endif
+#if defined(CONFIG_BACKLIGHT_LM3630)
+void __init kivu_add_backlight(void);
+#endif
+#if defined(CONFIG_TOUCHSCREEN_SYNAPTICS_I2C_RMI4_2)
+void __init kivu_add_touch(void);
+#endif
+#if defined(CONFIG_SENSORS_BH1721FVC)
+void __init brooks_add_als(void);
 #endif

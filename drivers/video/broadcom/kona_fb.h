@@ -68,6 +68,7 @@ extern unsigned ramdump_enable;
 #include "lcd/simulator.h"
 #include "lcd/s6e63m0x3.h"
 #include "lcd/s6d04k2x01.h"
+#include "lcd/nt35310_mesona.h"
 #include "lcd/nt35310_brooks.h"
 
 static struct lcd_config *cfgs[] __initdata = {
@@ -104,6 +105,7 @@ static struct lcd_config *cfgs[] __initdata = {
 	&r63311_cfg,
 	&simulator_cfg,
 	&s6d04k2x01_cfg,
+	&nt35310_mesona_cfg,
 	&nt35310_brooks_cfg,
 };
 

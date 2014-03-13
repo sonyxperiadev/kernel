@@ -10,7 +10,7 @@
 	compatible = "bcm,java";
 
 	chosen {
-		bootargs = "console=ttyS0,115200n8 mem=482M gpt androidboot.console=ttyS0 crash_ramdump=1 logbuf_nocache=1 vmalloc=136M";
+		bootargs = "console=ttyS0,115200n8 mem=480M gpt androidboot.console=ttyS0 crash_ramdump=1 logbuf_nocache=1 vmalloc=136M androidboot.hardware=tetra";
 	};
 
 	memory@81e00000{
@@ -106,6 +106,16 @@
 		is-pmu-i2c = <0>;
 		fs-ref-frequency = <13000000>;
 		hs-ref-frequency = <104000000>;
+
+		bma2xx@18 {
+			compatible = "bcm,bma2xx";
+			reg = <0x18>;
+			gpio-irq-pin = <1>;
+			gpio-data-irq-pin = <4>;
+			orientation = <11>;
+			regulator = "gpldo1_uc";
+		};
+
 	};
 
 	i2c3: i2c@3e01c000 {
@@ -287,6 +297,7 @@
 		rotation = <0>;
 	};
 
+
 	tmon@0x34008000 {
 		compatible = "bcm,tmon";
 		reg = <0x34008000 0x1000>;
@@ -419,23 +430,6 @@
 		ahb-clk-name = "sdio3_ahb_clk";
 		sleep-clk-name = "sdio3_sleep_clk";
 		peri-clk-rate = <48000000>;
-	};
-
-	sdio0 {
-		compatible = "bcm,sdhci";
-		reg = <0x3F180000 10000>;
-		interrupts = <0 77 0x04>;
-		id = <0>;
-		data-pullup = <0>;
-		cd-gpio = <&gpio 91 0>;		/*SD_CARDDET_GPIO_PIN*/
-		devtype = <0>;		/*SDIO_DEV_TYPE_SDMMC*/
-		flags = <2>;		/*REMOVABLE | RPM_EN*/
-		peri-clk-name = "sdio1_clk";
-		ahb-clk-name = "sdio1_ahb_clk";
-		sleep-clk-name = "sdio1_sleep_clk";
-		peri-clk-rate = <48000000>;
-		vddo-regulator-name = "vdd_sdio";
-		vddsdxc-regulator-name = "vdd_sdxc";
 	};
 
 	timer {

@@ -1,0 +1,5 @@
+source "arch/arm/mach-java/sony/kivu/Kconfig"
+source "arch/arm/mach-java/sony/brooks/Kconfig"
+
+config MACH_SONY_DUMMY
+	bool "NONE (No device)"

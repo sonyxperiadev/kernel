@@ -20,12 +20,6 @@
 #include "display_drv.h"
 #include "lcd.h"
 
-#define NT35310_BROOKS_CMD_SLPIN	0x10
-#define NT35310_BROOKS_CMD_SLPOUT	0x11
-#define NT35310_BROOKS_CMD_DISPOFF	0x28
-#define NT35310_BROOKS_CMD_DISPON	0x29
-
-
 #define NT35310_BROOKS_UPDT_WIN_SEQ_LEN 13 /* (6 + 6 + 1) */
 
 __initdata struct DSI_COUNTER nt35310_brooks_timing[] = {
@@ -102,13 +96,13 @@ __initdata struct DSI_COUNTER nt35310_brooks_timing[] = {
 };
 
 __initdata DISPCTRL_REC_T nt35310_brooks_scrn_on[] = {
-	{DISPCTRL_WR_CMND, NT35310_BROOKS_CMD_DISPON},
+	{DISPCTRL_WR_CMND, 0x29},
 	{DISPCTRL_WR_DATA, 0x00},
 	{DISPCTRL_LIST_END, 0}
 };
 
 __initdata DISPCTRL_REC_T nt35310_brooks_scrn_off[] = {
-	{DISPCTRL_WR_CMND, NT35310_BROOKS_CMD_DISPOFF},
+	{DISPCTRL_WR_CMND, 0x28},
 	{DISPCTRL_WR_DATA, 0x00},
 	{DISPCTRL_LIST_END, 0}
 };
@@ -116,80 +110,92 @@ __initdata DISPCTRL_REC_T nt35310_brooks_scrn_off[] = {
 __initdata DISPCTRL_REC_T nt35310_Brooks_id[] = {
 	{DISPCTRL_WR_CMND, 0xDA},
 	{DISPCTRL_WR_DATA, 0x26},
-/*	{DISPCTRL_WR_CMND, 0xDB},
-	{DISPCTRL_WR_DATA, 0x11},
-	{DISPCTRL_WR_CMND, 0xDC},
+	{DISPCTRL_WR_CMND, 0xDB},
+	{DISPCTRL_WR_DATA, 0x91},
+/*	{DISPCTRL_WR_CMND, 0xDC},
 	{DISPCTRL_WR_DATA, 0x00},
 */	{DISPCTRL_LIST_END, 0}
 };
 
 __initdata DISPCTRL_REC_T nt35310_brooks_slp_in[] = {
-	{DISPCTRL_WR_CMND, NT35310_BROOKS_CMD_DISPOFF},
+	{DISPCTRL_WR_CMND, 0x28},
 	{DISPCTRL_WR_DATA, 0x00},
-	{DISPCTRL_WR_CMND, NT35310_BROOKS_CMD_SLPIN},
+	{DISPCTRL_SLEEP_MS, 11},
+	{DISPCTRL_WR_CMND, 0x10},
 	{DISPCTRL_WR_DATA, 0x00},
-	{DISPCTRL_SLEEP_MS, 120},
+	{DISPCTRL_SLEEP_MS, 101},
 	{DISPCTRL_LIST_END, 0}
 };
 
 __initdata DISPCTRL_REC_T nt35310_brooks_slp_out[] = {
-	{DISPCTRL_WR_CMND, NT35310_BROOKS_CMD_SLPOUT},
+	{DISPCTRL_WR_CMND, 0x11},
 	{DISPCTRL_WR_DATA, 0x00},
-	{DISPCTRL_SLEEP_MS, 240},
+	{DISPCTRL_SLEEP_MS, 101},
 	{DISPCTRL_LIST_END, 0}
 };
 
 __initdata DISPCTRL_REC_T nt35310_brooks_init_panel_cmd[] = {
-	{DISPCTRL_WR_CMND, NT35310_BROOKS_CMD_SLPOUT},
+	{DISPCTRL_WR_CMND, 0x11},
 	{DISPCTRL_WR_DATA, 0x00},
-
-	{DISPCTRL_WR_CMND, 0x35},
-	{DISPCTRL_WR_DATA, 0x00},
-
-	{DISPCTRL_WR_CMND, 0xED},
-	{DISPCTRL_WR_DATA, 0x01},
-	{DISPCTRL_WR_DATA, 0xFE},
-
-	{DISPCTRL_WR_CMND, 0xB4},
-	{DISPCTRL_WR_DATA, 0x15},
-
-	{DISPCTRL_WR_CMND, 0xB7},
-	{DISPCTRL_WR_DATA, 0x20},
-
-	{DISPCTRL_WR_CMND, 0xC2},
-	{DISPCTRL_WR_DATA, 0x24},
-	{DISPCTRL_WR_DATA, 0x24},
-	{DISPCTRL_WR_DATA, 0x24},
-
-	{DISPCTRL_WR_CMND, 0xC6},
-	{DISPCTRL_WR_DATA, 0x00},
-	{DISPCTRL_WR_DATA, 0xE4},
-	{DISPCTRL_WR_DATA, 0xE4},
-	{DISPCTRL_WR_DATA, 0xE4},
-
-	{DISPCTRL_WR_CMND, 0xBF},
-	{DISPCTRL_WR_DATA, 0xAA},
-
-	/* ToDo: Add Gamma here... */
-
-	{DISPCTRL_WR_CMND, 0xC1}, /* ToDo: Remove? */
-	{DISPCTRL_WR_DATA, 0x20}, /* ToDo: Remove? */
-	{DISPCTRL_WR_DATA, 0x00}, /* ToDo: Remove? */
-	{DISPCTRL_WR_DATA, 0x01}, /* ToDo: Remove? */
-	{DISPCTRL_WR_DATA, 0x00}, /* ToDo: Remove? */
-
-	{DISPCTRL_WR_CMND, 0x00},
-	{DISPCTRL_WR_DATA, 0xAA},
-
+	{DISPCTRL_SLEEP_MS, 121},
 	{DISPCTRL_WR_CMND, 0x29},
 	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_LIST_END, 0}
+};
 
-	{DISPCTRL_WR_CMND, 0x53},
-	{DISPCTRL_WR_DATA, 0x24},
-
-	{DISPCTRL_WR_CMND, 0x51},
+__initdata DISPCTRL_REC_T nt35310_brooks_idle_mode_panel_cmd[] = {
+	/* Partial Idle Mode 1 */
+	{DISPCTRL_WR_CMND, 0x12}, /* Partial Mode On */
+	{DISPCTRL_WR_CMND, 0x30}, /* Partial mode area */
 	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x01},
+	{DISPCTRL_WR_DATA, 0x3F},
+	{DISPCTRL_WR_CMND, 0x39}, /* Idle Mode */
+	{DISPCTRL_WR_CMND, 0xED}, /* Unlock CMD2 */
+	{DISPCTRL_WR_DATA, 0x01},
+	{DISPCTRL_WR_DATA, 0xFE},
+	{DISPCTRL_WR_CMND, 0xB0}, /* Hi-Z */
+	{DISPCTRL_WR_DATA, 0x03},
+	{DISPCTRL_WR_CMND, 0xB4}, /* 4 dot inversion */
+	{DISPCTRL_WR_DATA, 0x2A},
+	{DISPCTRL_WR_CMND, 0xC2}, /* Power Setting */
+	{DISPCTRL_WR_DATA, 0x66},
+	{DISPCTRL_WR_DATA, 0x66},
+	{DISPCTRL_WR_DATA, 0x66},
+	{DISPCTRL_WR_CMND, 0xC6}, /* Power Setting */
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0xAA},
+	{DISPCTRL_WR_DATA, 0xAA},
+	{DISPCTRL_WR_DATA, 0xAA},
+	{DISPCTRL_LIST_END, 0}
+};
 
+__initdata DISPCTRL_REC_T nt35310_brooks_normal_mode_panel_cmd[] = {
+	/* Partial Idle Mode 1 */
+	{DISPCTRL_WR_CMND, 0x12}, /* Partial Mode On */
+	{DISPCTRL_WR_CMND, 0x30}, /* Partial mode area */
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x01},
+	{DISPCTRL_WR_DATA, 0x3F},
+	{DISPCTRL_WR_CMND, 0x38}, /* Normal Mode */
+	{DISPCTRL_WR_CMND, 0xED}, /* Unlock CMD2 */
+	{DISPCTRL_WR_DATA, 0x01},
+	{DISPCTRL_WR_DATA, 0xFE},
+	{DISPCTRL_WR_CMND, 0xB0}, /* Hi-Z */
+	{DISPCTRL_WR_DATA, 0x03},
+	{DISPCTRL_WR_CMND, 0xB4}, /* 4 dot inversion */
+	{DISPCTRL_WR_DATA, 0x2A},
+	{DISPCTRL_WR_CMND, 0xC2}, /* Power Setting */
+	{DISPCTRL_WR_DATA, 0x66},
+	{DISPCTRL_WR_DATA, 0x66},
+	{DISPCTRL_WR_DATA, 0x66},
+	{DISPCTRL_WR_CMND, 0xC6}, /* Power Setting */
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0xAA},
+	{DISPCTRL_WR_DATA, 0xAA},
+	{DISPCTRL_WR_DATA, 0xAA},
 	{DISPCTRL_LIST_END, 0}
 };
 
@@ -243,6 +249,10 @@ __initdata struct lcd_config nt35310_brooks_cfg = {
 	.vs = 0,
 	.vbp = 0,
 	.vfp = 0,
+	.special_mode_panel = true,
+	.special_mode_on = false,
+	.special_mode_on_cmd_seq = &nt35310_brooks_idle_mode_panel_cmd[0],
+	.special_mode_off_cmd_seq = &nt35310_brooks_normal_mode_panel_cmd[0],
 };
 
 #endif

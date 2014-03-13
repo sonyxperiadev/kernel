@@ -113,6 +113,11 @@ config USB_GADGET_STORAGE_NUM_BUFFERS
 	   a module parameter as well.
 	   If unsure, say 2.
 
+config USB_GADGET_GG
+	boolean "Enable Gordon's Gate gadget driver"
+	help
+	   Enables the Gordon's Gate bulk device gadget function (gg).
+
 #
 # USB Peripheral Controller Support
 #

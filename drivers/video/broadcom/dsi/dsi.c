@@ -66,6 +66,7 @@ typedef struct {
 	CSL_DSI_CM_VC_t *cmnd_mode;
 	CSL_DSI_CFG_t *dsi_cfg;
 	DISPDRV_INFO_T		*disp_info;
+	bool panel_identified;
 	UInt8 maxRetPktSize;
 } DispDrv_PANEL_t;
 
@@ -202,6 +203,58 @@ static int DSI_panel_turn_on(DispDrv_PANEL_t *pPanel)
 
 	res = CSL_DSI_SendPacket(pPanel->clientH, &msg, FALSE);
 	return res;
+}
+
+/*
+ * Read panel ID from register 0xDA, 0xDB and 0xDC
+ *
+ * ID list must end with DISPCTRL_LIST_END
+ */
+static int DSI_ReadPanelIDs(DispDrv_PANEL_t *pPanel)
+{
+	int rc = 0;
+	char *p;
+	int buff_len = 1;
+	UInt8 rd_buff;
+	uint8_t cmd;
+	uint8_t reg;
+	uint8_t data;
+
+	p = pPanel->disp_info->id_seq;
+	if (!p)
+		goto exit;
+	cmd = *p++;
+
+	/* debugging */
+	reg = 0xDA;
+	rc = DSI_DCS_Read(pPanel, reg, &rd_buff, buff_len);
+	pr_info("%s(%d): TMP reg:0x%x, rd_buff=0x%x\n",
+					__func__, __LINE__, reg, rd_buff);
+	reg = 0xDB;
+	rc = DSI_DCS_Read(pPanel, reg, &rd_buff, buff_len);
+	pr_info("%s(%d): TMP reg:0x%x, rd_buff=0x%x\n",
+					__func__, __LINE__, reg, rd_buff);
+	reg = 0xDC;
+	rc = DSI_DCS_Read(pPanel, reg, &rd_buff, buff_len);
+	pr_info("%s(%d): TMP reg:0x%x, rd_buff=0x%x\n",
+					__func__, __LINE__, reg, rd_buff);
+
+	while (cmd != DISPCTRL_LIST_END) {
+		reg = *p++;
+		data = *p++;
+		rc = DSI_DCS_Read(pPanel, reg, &rd_buff, buff_len);
+		pr_info("%s(%d): cmd:0x%x, reg:0x%x, data=0x%x rd_buff=0x%x\n",
+				__func__, __LINE__, cmd, reg, data, rd_buff);
+		if (data != rd_buff) {
+			DSI_ERR("cmd:0x%x, reg:0x%x, data=0x%x rd_buff=0x%x\n",
+						cmd, reg, data, rd_buff);
+			rc = -1;
+			break;
+		}
+		cmd = *p++;
+	}
+exit:
+	return rc;
 }
 
 static int DSI_ReadPanelID(DispDrv_PANEL_t *pPanel)
@@ -653,9 +706,12 @@ static Int32 DSI_Open(DISPDRV_HANDLE_T drvH)
 	if (STATE_PWR_OFF == pPanel->pwrState)
 		hw_reset(drvH, FALSE);
 
-	if (DSI_ReadPanelID(pPanel) < 0) {
-		DSI_ERR("ID read failed\n");
-		goto err_id_read;
+	if (!pPanel->panel_identified) {
+		if (DSI_ReadPanelIDs(pPanel) < 0) {
+			DSI_ERR("ID read failed\n");
+			goto err_id_read;
+		}
+		pPanel->panel_identified = true;
 	}
 
 	pPanel->win_dim.l = 0;
@@ -944,6 +1000,27 @@ static Int32 DSI_DCS_Read(DispDrv_PANEL_t *pPanel,
 }
 
 /*
+ * Send sequence to enter normal or special mode.
+ */
+static void DSI_SpecialModeControl(DispDrv_PANEL_t *pPanel,
+							DISPDRV_INFO_T *info)
+{
+	if (info->special_mode_panel) {
+		if (info->special_mode_on) {
+			pr_info("%s(%d): Panel special mode: %d\n",
+				__func__, __LINE__, info->special_mode_on);
+			DSI_ExecCmndList(pPanel, info->special_mode_on_seq);
+		} else {
+			pr_info("%s(%d): Panel special mode: %d\n",
+				__func__, __LINE__, info->special_mode_on);
+			DSI_ExecCmndList(pPanel, info->special_mode_off_seq);
+		}
+	} else
+		pr_err("%s(%d): Panel special mode not supported\n",
+							__func__, __LINE__);
+}
+
+/*
  *
  *   Function Name: DSI_PowerControl
  *
@@ -974,6 +1051,7 @@ static Int32 DSI_PowerControl(
 			if (info->init_fn)
 				info->init_fn();
 			DSI_ExecCmndList(pPanel, info->init_seq);
+			DSI_SpecialModeControl(pPanel, info);
 			DSI_WinSet(drvH, TRUE, &pPanel->win_dim);
 			pPanel->pwrState = STATE_SCREEN_OFF;
 			DSI_INFO("INIT-SEQ\n");

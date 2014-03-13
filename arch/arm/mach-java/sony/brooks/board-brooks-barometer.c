@@ -5,7 +5,7 @@
 #include <linux/platform_device.h>
 #include <linux/regulator/consumer.h>
 #include <linux/bmp18x.h>
-#include "board-kivu.h"
+#include "board-brooks.h"
 
 #define SENSOR_I2C_BUS_ID 2
 

@@ -7,6 +7,7 @@
 #include <linux/platform_data/lm3630_bl.h>
 #include "board-kivu.h"
 
+
 #define BMU_I2C_BUS_ID 1
 #define BMU_HW_EN 24
 

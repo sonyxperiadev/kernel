@@ -580,11 +580,10 @@ static int bh1721fvc_probe(struct i2c_client *client,
 	}
 	bh1721fvc->client = client;
 	i2c_set_clientdata(client, bh1721fvc);
+	bh1721fvc->measure_mode = AUTO_MEASURE;
 	if (client->dev.of_node) {
 		err = of_property_read_u32(np, "measure_mode", &val);
-		if (err)
-			bh1721fvc->measure_mode = AUTO_MEASURE;
-		else
+		if (!err)
 			bh1721fvc->measure_mode = val;
 	}
 	mutex_init(&bh1721fvc->lock);

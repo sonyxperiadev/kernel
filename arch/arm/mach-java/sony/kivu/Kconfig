@@ -1,0 +1,23 @@
+config MACH_JAVA_KIVU
+	depends on MACH_JAVA_SONY
+	select MACH_SONY
+	bool "Kivu 2.0"
+	help
+	  Support for the Sony Kivu device.
+
+choice
+	prompt "Java Kivu type"
+	depends on MACH_JAVA_KIVU
+	default MACH_JAVA_KIVU_020
+
+	config MACH_JAVA_KIVU_020
+	bool "JAVA KIVU 020"
+	help
+	  Support for Java Kivu2.
+
+	config MACH_JAVA_KIVU_030
+	bool "JAVA KIVU 030"
+	help
+	  Support for Java Kivu3.
+
+endchoice

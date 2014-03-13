@@ -1,0 +1,6 @@
+#
+# Makefile for the Sony Boards
+#
+
+obj-$(CONFIG_MACH_JAVA_KIVU) += kivu/
+obj-$(CONFIG_MACH_JAVA_BROOKS) += brooks/

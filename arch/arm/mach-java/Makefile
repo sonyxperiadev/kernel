@@ -17,8 +17,8 @@ obj-$(CONFIG_ARCH_JAVA) += clock.o
 obj-$(CONFIG_MACH_JAVA_RAY) += java.o board-java.o java_wifi.o
 obj-$(CONFIG_MACH_JAVA_STONE) += java.o board-java.o java_wifi.o
 obj-$(CONFIG_MACH_JAVA_GARNET) += java.o board-garnet.o java_wifi.o
-obj-$(CONFIG_MACH_JAVA_KIVU) += java.o board-kivu.o java_wifi.o
-obj-$(CONFIG_MACH_JAVA_BROOKS) += java.o board-kivu.o java_wifi.o
+obj-$(CONFIG_MACH_JAVA_KIVU) += java.o java_wifi.o
+obj-$(CONFIG_MACH_JAVA_BROOKS) += java.o java_wifi.o
 obj-$(CONFIG_MACH_JAVA_SS_EVAL) += java.o board-ss_eval.o java_ss_eval_wifi.o
 obj-$(CONFIG_MACH_JAVA_SS_VICTOR3G) += java.o board-ss_victor3g.o java_ss_victor3g_wifi.o
 obj-$(CONFIG_MACH_JAVA_SS_BAFFINLITE) += java.o board-ss_baffinlite.o java_ss_baffinlite_wifi.o
@@ -65,10 +65,7 @@ obj-y += board-bcm59xxx_garnet_c_amethyst.o
 else
 obj-y += board-bcm59xxx_garnet.o
 endif
-else ifeq ($(CONFIG_MACH_JAVA_KIVU), y)
-obj-y += board-bcm59xxx_sony_kivu.o
-else ifeq ($(CONFIG_MACH_JAVA_BROOKS), y)
-obj-y += board-bcm59xxx_sony_brooks.o
+else ifeq ($(CONFIG_MACH_JAVA_SONY), y)
 else ifeq ($(CONFIG_MACH_JAVA_SS_EVAL), y)
 obj-y += board-bcm59xxx_ss_eval.o
 else
@@ -84,20 +81,6 @@ endif
 endif
 endif
 
-ifeq ($(CONFIG_MACH_JAVA_KIVU), y)
-obj-$(CONFIG_INPUT_LSM303DLHC_ACCELEROMETER) += board-kivu-accel.o
-obj-$(CONFIG_INPUT_LSM303DLH_MAGNETOMETER) += board-kivu-magnetometer.o
-obj-$(CONFIG_INPUT_L3G4200D) += board-kivu-gyro.o
-obj-$(CONFIG_LEDS_LM3530) += board-kivu-backlight.o
-obj-$(CONFIG_SENSORS_BMP18X_I2C) += board-kivu-barometer.o
-obj-$(CONFIG_INPUT_APDS9702) += board-kivu-proximity.o
-else ifeq ($(CONFIG_MACH_JAVA_BROOKS), y)
-obj-$(CONFIG_INPUT_LSM303DLHC_ACCELEROMETER) += board-kivu-accel.o
-obj-$(CONFIG_INPUT_LSM303DLH_MAGNETOMETER) += board-kivu-magnetometer.o
-obj-$(CONFIG_INPUT_L3G4200D) += board-kivu-gyro.o
-obj-$(CONFIG_LEDS_LM3530) += board-kivu-backlight.o
-obj-$(CONFIG_SENSORS_BMP18X_I2C) += board-kivu-barometer.o
-obj-$(CONFIG_INPUT_APDS9702) += board-kivu-proximity.o
-endif
+obj-$(CONFIG_MACH_JAVA_SONY) += java.o java_wifi.o sony/
 
 CFLAGS_dm.o :=$(call as-instr,.arch_extension sec,-DSMC_INSTR=1)

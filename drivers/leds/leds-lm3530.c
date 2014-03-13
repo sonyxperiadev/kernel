@@ -193,13 +193,6 @@ static int lm3530_led_enable(struct lm3530_data *drvdata)
 
 	if (drvdata->enable)
 		return 0;
-
-	ret = regulator_enable(drvdata->regulator);
-	if (ret) {
-		dev_err(drvdata->led_dev.dev, "Failed to enable vin:%d\n", ret);
-		return ret;
-	}
-
 	drvdata->enable = true;
 	return 0;
 }
@@ -210,14 +203,6 @@ static void lm3530_led_disable(struct lm3530_data *drvdata)
 
 	if (!drvdata->enable)
 		return;
-
-	ret = regulator_disable(drvdata->regulator);
-	if (ret) {
-		dev_err(drvdata->led_dev.dev, "Failed to disable vin:%d\n",
-			ret);
-		return;
-	}
-
 	drvdata->enable = false;
 }
 
@@ -438,15 +423,6 @@ static int lm3530_probe(struct i2c_client *client,
 	drvdata->led_dev.max_brightness = MAX_BRIGHTNESS;
 
 	i2c_set_clientdata(client, drvdata);
-
-	drvdata->regulator = devm_regulator_get(&client->dev, "vin");
-	if (IS_ERR(drvdata->regulator)) {
-		dev_err(&client->dev, "regulator get failed\n");
-		err = PTR_ERR(drvdata->regulator);
-		drvdata->regulator = NULL;
-		return err;
-	}
-
 	if (drvdata->pdata->brt_val) {
 		err = lm3530_init_registers(drvdata);
 		if (err < 0) {
