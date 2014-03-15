@@ -776,7 +776,8 @@ void cnss_wlan_unregister_driver(struct cnss_wlan_driver *driver)
 		return;
 	}
 
-	msm_bus_scale_client_update_request(penv->bus_client, 0);
+	if (penv->bus_client)
+		msm_bus_scale_client_update_request(penv->bus_client, 0);
 
 	if (!pdev) {
 		pr_err("%d: invalid pdev\n", __LINE__);
@@ -1295,14 +1296,18 @@ static int cnss_probe(struct platform_device *pdev)
 	if (ret)
 		goto err_pci_reg;
 
+	penv->bus_scale_table = 0;
 	penv->bus_scale_table = msm_bus_cl_get_pdata(pdev);
-	if (!penv->bus_scale_table)
-		goto err_bus_scale;
 
-	penv->bus_client = msm_bus_scale_register_client
-	    (penv->bus_scale_table);
-	if (!penv->bus_client)
-		goto err_bus_reg;
+	if (penv->bus_scale_table)  {
+		penv->bus_client =
+			msm_bus_scale_register_client(penv->bus_scale_table);
+
+		if (!penv->bus_client) {
+			pr_err("Failed to register with bus_scale client\n");
+			goto err_bus_reg;
+		}
+	}
 
 	cnss_pm_wake_lock_init(&penv->ws, "cnss_wlock");
 
@@ -1319,9 +1324,8 @@ static int cnss_probe(struct platform_device *pdev)
 	return ret;
 
 err_bus_reg:
-	msm_bus_cl_clear_pdata(penv->bus_scale_table);
-
-err_bus_scale:
+	if (penv->bus_scale_table)
+		msm_bus_cl_clear_pdata(penv->bus_scale_table);
 	pci_unregister_driver(&cnss_wlan_pci_driver);
 
 err_pci_reg:
@@ -1354,7 +1358,11 @@ static int cnss_remove(struct platform_device *pdev)
 	struct cnss_wlan_vreg_info *vreg_info = &penv->vreg_info;
 	struct cnss_wlan_gpio_info *gpio_info = &penv->gpio_info;
 
-	cnss_pm_wake_lock_destroy(&penv->ws);
+	if (penv->bus_client)
+		msm_bus_scale_unregister_client(penv->bus_client);
+
+	if (penv->bus_scale_table)
+		msm_bus_cl_clear_pdata(penv->bus_scale_table);
 
 	cnss_wlan_gpio_set(gpio_info, WLAN_EN_LOW);
 	if (cnss_wlan_vreg_set(vreg_info, VREG_OFF))
@@ -1416,8 +1424,11 @@ int cnss_request_bus_bandwidth(int bandwidth)
 {
 	int ret = 0;
 
-	if (!penv || !penv->bus_client)
+	if (!penv)
 		return -ENODEV;
+
+	if (!penv->bus_client)
+		return -ENOSYS;
 
 	switch (bandwidth) {
 	case CNSS_BUS_WIDTH_NONE:
@@ -1425,7 +1436,7 @@ int cnss_request_bus_bandwidth(int bandwidth)
 	case CNSS_BUS_WIDTH_MEDIUM:
 	case CNSS_BUS_WIDTH_HIGH:
 		ret = msm_bus_scale_client_update_request(penv->bus_client,
-							  bandwidth);
+				bandwidth);
 		if (ret)
 			pr_err("%s: could not set bus bandwidth %d, ret = %d\n",
 			       __func__, bandwidth, ret);
