@@ -499,6 +499,10 @@
 		compatible = "qcom,msm-pcm-loopback";
 	};
 
+	qcom,msm-voice-svc {
+		compatible = "qcom,msm-voice-svc";
+	};
+
 	qcom,msm-dai-q6 {
 		compatible = "qcom,msm-dai-q6";
 		qcom,msm-dai-q6-sb-0-rx {
@@ -1264,8 +1268,8 @@
                 qcom,msm-bus,num-cases = <2>;
                 qcom,msm-bus,num-paths = <1>;
                 qcom,msm-bus,vectors-KBps =
-                                <1 618 0 0>,
-                                <1 618 0 800>;
+                                <54 618 0 0>,
+                                <54 618 0 800>;
 	};
 
 	qcom,tz-log@fe805720 {
