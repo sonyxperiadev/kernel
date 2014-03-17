@@ -90,6 +90,9 @@ GET_RANDOM(arch_get_random_int, unsigned int, RDRAND_INT, ASM_NOP4);
 GET_SEED(arch_get_random_seed_long, unsigned long, RDSEED_LONG, ASM_NOP5);
 GET_SEED(arch_get_random_seed_int, unsigned int, RDSEED_INT, ASM_NOP4);
 
+#define arch_has_random()	static_cpu_has(X86_FEATURE_RDRAND)
+#define arch_has_random_seed()	static_cpu_has(X86_FEATURE_RDSEED)
+
 #else
 
 GET_RANDOM(arch_get_random_long, unsigned long, RDRAND_LONG, ASM_NOP3);
