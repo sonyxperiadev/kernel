@@ -514,6 +514,18 @@ config INPUT_BMG160
 	 Say Y here if you want support for the BMG160 gyroscope
 	 device. This driver only supports I2C communication.
 
+config BMG160_FIFO
+	tristate "Bosch BMG160 gyroscope with HW FIFO"
+	default n
+	depends on I2C
+	help
+	 Say Y here if you want support for the BMG160 gyroscope
+	 device with HW FIFO enabled.
+	 This driver only supports I2C communication.
+
+         To compile this driver as a module, choose M here: the
+	 module will be called bmg160_fifo.
+
 config INPUT_AKM09911
 	tristate "AKM 09911 eCompass"
 	default n
