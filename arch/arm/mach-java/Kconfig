@@ -156,6 +156,41 @@ endchoice
 
 
 choice
+	prompt "Java Kivu type"
+	depends on MACH_JAVA_KIVU
+	default MACH_JAVA_KIVU_020
+
+	config MACH_JAVA_KIVU_020
+	bool "JAVA KIVU 020"
+	help
+	  Support for Java Kivu2
+
+	config MACH_JAVA_KIVU_030
+	bool "JAVA KIVU 030"
+	help
+	  Support for Java Kivu3
+
+endchoice
+
+choice
+	prompt "Java Brooks type"
+	depends on MACH_JAVA_BROOKS
+	default MACH_JAVA_BROOKS_000
+
+	config MACH_JAVA_BROOKS_000
+	bool "JAVA BROOKS 000"
+	help
+	  Support for Java Brooks
+
+	config MACH_JAVA_BROOKS_020
+	bool "JAVA BROOKS 020"
+	help
+	  Support for Java Brooks DP2
+
+endchoice
+
+
+choice
 	prompt "Java FPGA type"
 	depends on MACH_BCM_FPGA || MACH_BCM_FPGA_E
 
