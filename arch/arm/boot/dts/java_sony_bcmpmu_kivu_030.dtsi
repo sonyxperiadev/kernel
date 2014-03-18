@@ -104,6 +104,8 @@
 		 0x9a 0x00 0x40 0
 		 /*CMPCTRL12 set Die over temparature to 130C*/
 		 0xD3 0x18 0xFF 1
+		 /* Change SDXLDO voltage to 1.8 V */
+		 0x9C 0x8 0x38 0
 		>;
 
 	exitdata = <
