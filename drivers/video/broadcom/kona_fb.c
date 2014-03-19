@@ -84,7 +84,7 @@
 #endif
 
 #ifdef CONFIG_DEBUG_FS
-#define DBGFS_MAX_BUFF_SIZE 30
+#define DBGFS_MAX_BUFF_SIZE 200
 #endif /* CONFIG_DEBUG_FS */
 
 /*#define KONA_FB_DEBUG */
