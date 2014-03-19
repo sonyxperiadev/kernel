@@ -925,6 +925,14 @@ static int __maybe_unused gpio_keys_suspend(struct device *dev)
 	struct input_dev *input = ddata->input;
 	int i, ret;
 
+	if (ddata->key_pinctrl) {
+		ret = gpio_keys_pinctrl_configure(ddata, false);
+		if (ret) {
+			dev_err(dev, "failed to put the pin in suspend state\n");
+			return ret;
+		}
+	}
+
 	if (device_may_wakeup(dev)) {
 		for (i = 0; i < ddata->pdata->nbuttons; i++) {
 			struct gpio_button_data *bdata = &ddata->data[i];
@@ -939,14 +947,6 @@ static int __maybe_unused gpio_keys_suspend(struct device *dev)
 		mutex_unlock(&input->mutex);
 	}
 
-	if (ddata->key_pinctrl) {
-		ret = gpio_keys_pinctrl_configure(ddata, false);
-		if (ret) {
-			dev_err(dev, "failed to put the pin in suspend state\n");
-			return ret;
-		}
-	}
-
 	return 0;
 }
 
@@ -956,6 +956,14 @@ static int __maybe_unused gpio_keys_resume(struct device *dev)
 	struct input_dev *input = ddata->input;
 	int error = 0;
 	int i;
+
+	if (ddata->key_pinctrl) {
+		error = gpio_keys_pinctrl_configure(ddata, true);
+		if (error) {
+			dev_err(dev, "failed to put the pin in resume state\n");
+			return error;
+		}
+	}
 
 	if (device_may_wakeup(dev)) {
 		for (i = 0; i < ddata->pdata->nbuttons; i++) {
@@ -973,15 +981,6 @@ static int __maybe_unused gpio_keys_resume(struct device *dev)
 
 	if (error)
 		return error;
-
-	if (ddata->key_pinctrl) {
-		error = gpio_keys_pinctrl_configure(ddata, true);
-		if (error) {
-			dev_err(dev, "failed to put the pin in resume state\n");
-			return error;
-		}
-	}
-
 
 	gpio_keys_report_state(ddata);
 	return 0;
