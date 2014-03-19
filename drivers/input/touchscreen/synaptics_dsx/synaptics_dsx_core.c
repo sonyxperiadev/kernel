@@ -2029,7 +2029,7 @@ static void synaptics_rmi4_set_params(struct synaptics_rmi4_data *rmi4_data)
 
 #ifdef TYPE_B_PROTOCOL
 	input_mt_init_slots(rmi4_data->input_dev,
-			rmi4_data->num_of_fingers);
+			rmi4_data->num_of_fingers, INPUT_MT_DIRECT);
 #endif
 
 	f1a = NULL;
@@ -2506,7 +2506,7 @@ exit:
 }
 EXPORT_SYMBOL(synaptics_rmi4_new_function);
 
-static int __devinit synaptics_rmi4_probe(struct platform_device *pdev)
+static int synaptics_rmi4_probe(struct platform_device *pdev)
 {
 	int retval;
 	unsigned char attr_count;
@@ -2679,7 +2679,7 @@ err_get_reg:
 	return retval;
 }
 
-static int __devexit synaptics_rmi4_remove(struct platform_device *pdev)
+static int synaptics_rmi4_remove(struct platform_device *pdev)
 {
 	unsigned char attr_count;
 	struct synaptics_rmi4_data *rmi4_data = platform_get_drvdata(pdev);
@@ -2890,12 +2890,17 @@ static int synaptics_rmi4_resume(struct device *dev)
 	struct synaptics_rmi4_data *rmi4_data = dev_get_drvdata(dev);
 	const struct synaptics_dsx_board_data *bdata =
 			rmi4_data->hw_if->board_data;
+	int rc;
 
 	if (rmi4_data->stay_awake)
 		return 0;
 
 	if (rmi4_data->pwr_reg) {
-		regulator_enable(rmi4_data->pwr_reg);
+		rc = regulator_enable(rmi4_data->pwr_reg);
+		if (rc) {
+			dev_err(dev, "unable to enable regulator (%d)", rc);
+			return rc;
+		}
 		msleep(bdata->power_delay_ms);
 		rmi4_data->current_page = MASK_8BIT;
 		if (rmi4_data->hw_if->ui_hw_init)
@@ -2931,7 +2936,7 @@ static struct platform_driver synaptics_rmi4_driver = {
 #endif
 	},
 	.probe = synaptics_rmi4_probe,
-	.remove = __devexit_p(synaptics_rmi4_remove),
+	.remove = synaptics_rmi4_remove,
 };
 
 static int __init synaptics_rmi4_init(void)
