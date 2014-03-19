@@ -101,3 +101,4 @@ $(TARGET_MODULE)-objs := icn83xx.o flash.o
 obj-$(CONFIG_TOUCHSCREEN_MSG21XX)	+= msg_21xx_selfcap.o
 obj-$(CONFIG_TOUCHSCREEN_MELFAS_MMS144)		+= MMS144/
 obj-$(CONFIG_TOUCHSCREEN_MELFAS_MMS144)		+= sec-common.o
+obj-$(CONFIG_TOUCHSCREEN_SYNAPTICS_DSX)		+= synaptics_dsx/
