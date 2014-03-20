@@ -2516,13 +2516,6 @@ static int kona_fb_remove(struct platform_device *pdev)
 	struct kona_fb_platform_data *pdata = (struct kona_fb_platform_data *)
 						pdev->dev.platform_data;
 
-	if (fb->fb_data->esdcheck) {
-		uint32_t tectl_gpio = fb->fb_data->tectl_gpio;
-		if (tectl_gpio > 0)
-			free_irq(gpio_to_irq(tectl_gpio), fb);
-		destroy_workqueue(fb->esd_check_wq);
-	}
-
 	remove_attributes(&pdev->dev);
 #ifdef CONFIG_DEBUG_FS
 	kona_fb_remove_debugfs(pdev);
