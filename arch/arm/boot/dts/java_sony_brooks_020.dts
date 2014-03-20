@@ -127,6 +127,22 @@
 		is-pmu-i2c = <0>;
 		fs-ref-frequency = <13000000>;
 		hs-ref-frequency = <104000000>;
+
+		synaptics_dsx@20 {
+			compatible = "synaptics,dsx";
+			reg = <0x20>;
+			interrupt-parent = <&gpio>;
+			interrupts = <73 0x2>;
+			synaptics,pwr-reg-name = "cam2";
+			synaptics,bus-reg-name = "gpldo2_uc";
+			synaptics,irq-gpio = <&gpio 73 0x00>;
+			synaptics,irq-flags = <0x2002>;
+			synaptics,reset-gpio = <&gpio 70 0x00>;
+			synaptics,reset-on-state = <0>;
+			synaptics,power-delay-ms = <160>;
+			synaptics,reset-delay-ms = <100>;
+		};
+
 	};
 
 	i2c4: i2c@3500d000 {
