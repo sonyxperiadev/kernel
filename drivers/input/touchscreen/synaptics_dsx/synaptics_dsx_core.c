@@ -2195,7 +2195,7 @@ static int synaptics_rmi4_get_reg(struct synaptics_rmi4_data *rmi4_data,
 	}
 
 	if ((bdata->pwr_reg_name != NULL) && (*bdata->pwr_reg_name != 0)) {
-		rmi4_data->pwr_reg = regulator_get(rmi4_data->pdev->dev.parent,
+		rmi4_data->pwr_reg = regulator_get(NULL,
 				bdata->pwr_reg_name);
 		if (IS_ERR(rmi4_data->pwr_reg)) {
 			dev_err(rmi4_data->pdev->dev.parent,
@@ -2207,7 +2207,7 @@ static int synaptics_rmi4_get_reg(struct synaptics_rmi4_data *rmi4_data,
 	}
 
 	if ((bdata->bus_reg_name != NULL) && (*bdata->bus_reg_name != 0)) {
-		rmi4_data->bus_reg = regulator_get(rmi4_data->pdev->dev.parent,
+		rmi4_data->bus_reg = regulator_get(NULL,
 				bdata->bus_reg_name);
 		if (IS_ERR(rmi4_data->bus_reg)) {
 			dev_err(rmi4_data->pdev->dev.parent,
