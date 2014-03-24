@@ -1128,5 +1128,5 @@ config TOUCHSCREEN_MSG21XX
 source "drivers/input/touchscreen/coreriver_touchkey/Kconfig"
 
 source "drivers/input/touchscreen/MMS144/Kconfig"
-
+source "drivers/input/touchscreen/synaptics_dsx/Kconfig"
 endif
