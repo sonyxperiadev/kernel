@@ -434,8 +434,8 @@ __weak struct regulator_consumer_supply gpldo3_supply[] = {
 static struct regulator_init_data bcm59xxx_gpldo3_data = {
 	.constraints = {
 			.name = "gpldo3",
-			.min_uV = 1200000,
-			.max_uV = 3300000,
+			.min_uV = 1800000,
+			.max_uV = 1800000,
 			.valid_ops_mask =
 			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
 			.always_on = 0,
