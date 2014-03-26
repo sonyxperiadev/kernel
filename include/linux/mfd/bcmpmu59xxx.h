@@ -417,6 +417,7 @@ struct bcmpmu_acld_pdata {
 	int acld_cc_lmt;
 	int otp_cc_trim;
 	int one_c_rate;
+	unsigned int max_charge_c_rate_percent;
 	int *acld_chrgrs;
 	int acld_chrgrs_list_size;
 	bool qa_required; /* Set this to true if

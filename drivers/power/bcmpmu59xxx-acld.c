@@ -48,13 +48,14 @@ static u32 debug_mask = 0xFF; /* BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT | \
 #define to_bcmpmu_acld_data(ptr, mem)	container_of((ptr), \
 		struct bcmpmu_acld, mem)
 
-/* Battery should not be chrged more than 80% 1C rate for better lifecycle
+/* Battery should not be chrged more than <rate>% 1C rate for better lifecycle
  * */
-#define safe_one_c_rate(one_c) ((one_c * 80) / 100)
+#define safe_c_rate(one_c, rate) ((one_c * rate) / 100)
 
 #define ACLD_USE_PMU_FG_EOC_SIGNAL	0
 
 #define BATT_ONE_C_RATE_DEF		1500
+#define BATT_MAX_CHARGE_C_RATE_DEF	80
 #define ACLD_WORK_POLL_5S		5000
 #define ACLD_WORK_POLL_2M		120000
 #define ACLD_DELAY_500			500
@@ -106,7 +107,7 @@ struct bcmpmu_acld {
 	int mbc_cv_clr_cnt;
 	int i_sys;
 	int chrg_curr;
-	int safe_one_c;
+	int safe_c;
 	int acld_wrk_poll_time;
 	unsigned int msleep_ms;
 	atomic_t in_acld_algo;
@@ -356,17 +357,18 @@ static void bcmpmu_acld_update_min_input(struct bcmpmu_acld *acld)
 	if ((retries <= 0) || (!one_c_rate))
 		BUG_ON(1);
 
-	acld->safe_one_c = safe_one_c_rate(one_c_rate);
+	acld->safe_c = safe_c_rate(one_c_rate,
+		acld->pdata->max_charge_c_rate_percent);
 
-	/* 1C rate, Max CC and ISat are the inputs for
+	/* C rate, Max CC and ISat are the inputs for
 	 * ACLD. CC  should not excedd the minimum of
 	 * above three inputs
 	 * */
-	acld->acld_min_input = min3(acld->safe_one_c, acld->pdata->i_max_cc,
+	acld->acld_min_input = min3(acld->safe_c, acld->pdata->i_max_cc,
 			acld->pdata->i_sat);
 
-	pr_acld(INIT, "safe_one_c: %d, i_max_cc: %d i_sat: %d\n",
-			acld->safe_one_c, acld->pdata->i_max_cc,
+	pr_acld(INIT, "safe_c: %d, i_max_cc: %d i_sat: %d\n",
+			acld->safe_c, acld->pdata->i_max_cc,
 			acld->pdata->i_sat);
 	pr_acld(INIT, "acld min input = %d\n", acld->acld_min_input);
 }
@@ -391,7 +393,7 @@ static int bcmpmu_acld_get_batt_curr(struct bcmpmu_acld *acld)
 }
 /**
  * bcmpmu_check_battery_current_limit - Check if battery is charging with in
- * safe limits, i.e lessthan min(80%of1C, i_inductance, i_sat)
+ * safe limits, i.e lessthan min(<rate>%of1C, i_inductance, i_sat)
  */
 static void bcmpmu_check_battery_current_limit(struct bcmpmu_acld *acld)
 {
@@ -1481,6 +1483,9 @@ static int bcmpmu_acld_probe(struct platform_device *pdev)
 		acld->pdata->usbrm_vbus_thrs = USBRM_VBUS_THRS;
 	if (!acld->pdata->otp_cc_trim)
 		acld->pdata->otp_cc_trim = PMU_OTP_CC_TRIM;
+	if (!acld->pdata->max_charge_c_rate_percent)
+		acld->pdata->max_charge_c_rate_percent =
+			BATT_MAX_CHARGE_C_RATE_DEF;
 	if ((!acld->pdata->acld_chrgrs) ||
 			(!acld->pdata->acld_chrgrs_list_size)) {
 		acld->pdata->acld_chrgrs = acld_chargers;
@@ -1489,11 +1494,11 @@ static int bcmpmu_acld_probe(struct platform_device *pdev)
 	}
 
 	bcmpmu_acld_update_min_input(acld);
-	if (acld->pdata->acld_cc_lmt > acld->safe_one_c) {
-		pr_acld(ERROR, "acld_cc_lmt: %d > safe_one_c: %d\n",
-				acld->pdata->acld_cc_lmt, acld->safe_one_c);
+	if (acld->pdata->acld_cc_lmt > acld->safe_c) {
+		pr_acld(ERROR, "acld_cc_lmt: %d > safe_c: %d\n",
+				acld->pdata->acld_cc_lmt, acld->safe_c);
 		WARN_ON(1);
-		acld->pdata->acld_cc_lmt = acld->safe_one_c;
+		acld->pdata->acld_cc_lmt = acld->safe_c;
 	}
 
 	acld->acld_wq = create_singlethread_workqueue("bcmpmu_acld_wq");
