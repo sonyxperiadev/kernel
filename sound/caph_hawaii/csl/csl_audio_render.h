@@ -55,6 +55,8 @@ struct _CSL_CAPH_Render_Drv_t {
 	CSL_AUDRENDER_CB dmaCB;
 	CSL_CAPH_DMA_CHNL_e dmaCH;
 	UInt8 *ringBuffer;
+	UInt16 *dma_area;
+	AUDIO_SAMPLING_RATE_t samplingRate;
 	UInt32 numBlocks;
 	UInt32 blockSize;
 	UInt32 readyBlockStatus;

@@ -68,7 +68,7 @@ the GPL, without Broadcom's express prior written consent.
 #define	NUM_CAPTURE_SUBDEVICE	3
 
 /* limitation for RHEA - only two blocks */
-#define	PCM_MAX_PLAYBACK_BUF_BYTES			(128*1024)
+#define	PCM_MAX_PLAYBACK_BUF_BYTES			(32*1024)
 #define	PCM_MIN_PLAYBACK_PERIOD_BYTES		(256)
 #define	PCM_MAX_PLAYBACK_PERIOD_BYTES		(PCM_MAX_PLAYBACK_BUF_BYTES/2)
 
@@ -92,6 +92,8 @@ the GPL, without Broadcom's express prior written consent.
 (PCM_MAX_CAPTURE_BUF_BYTES+PCM_MAX_VOICE_PLAYBACK_BUF_BYTES)
 
 #define SNDDRV_PCM_FORMAT(x) (1ULL << (x))
+#define MP3DECODEBUF_SRAM_PHYS_ADDR 0x34046000
+
 static void AUDIO_DRIVER_InterruptPeriodCB(void *pPrivate);
 static void AUDIO_DRIVER_CaptInterruptPeriodCB(void *pPrivate);
 
@@ -194,8 +196,12 @@ static int PcmHwParams(struct snd_pcm_substream *substream,
 {
 /*DEBUG("\n %lx:hw_params %d\n",jiffies,(int)substream->stream);
  */
+	brcm_pcm_device_t *pcm_device = snd_pcm_substream_chip(substream);
+	int substream_number = pcm_device->stream_number;
+	size_t bytes = params_buffer_bytes(hw_params);
+	int ret = -1;
 
-	/*aTrace
+/*	aTrace
 	    (LOG_ALSA_INTERFACE, "ALSA-CAPH params_access=%d params_format=%d,"
 	     "params_subformat=%d params_channels=%d,"
 	     "params_rate=%d, buffer bytes=%d\n",
@@ -203,8 +209,27 @@ static int PcmHwParams(struct snd_pcm_substream *substream,
 	     params_subformat(hw_params), params_channels(hw_params),
 	     params_rate(hw_params), params_buffer_bytes(hw_params));*/
 
-	return snd_pcm_lib_malloc_pages(substream,
+	if ((substream_number == CTL_STREAM_PANEL_PCMOUT2 - 1) &&
+		(substream->stream == SNDRV_PCM_STREAM_PLAYBACK)) {
+		aTrace(LOG_ALSA_INTERFACE, "\n PcmHwParams before IoRemap\n");
+		substream->runtime->dma_addr = MP3DECODEBUF_SRAM_PHYS_ADDR;
+		substream->runtime->dma_bytes = bytes;
+		substream->runtime->dma_area = ioremap_nocache(
+			substream->runtime->dma_addr,
+			substream->runtime->dma_bytes);
+		if (!substream->runtime->dma_area) {
+			aError("\n ioremap_nocache FAILED\n");
+			return -1;
+			}
+		return 1;
+	}	else {
+	    ret = snd_pcm_lib_malloc_pages(substream,
 					params_buffer_bytes(hw_params));
+		aTrace(LOG_ALSA_INTERFACE,
+		"PcmHwParams Memory allocation return value -> %d\n", ret);
+			return ret;
+		}
+
 }
 
 /*+++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -264,7 +289,15 @@ static int PcmHwFree(struct snd_pcm_substream *substream)
 			return 0;/*return without releasing DMA buffer*/
 	}
 
-	res = snd_pcm_lib_free_pages(substream);
+	if ((substream_number == CTL_STREAM_PANEL_PCMOUT2 - 1) &&
+	   (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)) {
+		aTrace(LOG_ALSA_INTERFACE, "PcmHwFree before iounmap\n");
+		iounmap(substream->runtime->dma_area);
+	}	else {
+		res = snd_pcm_lib_free_pages(substream);
+		aTrace(LOG_ALSA_INTERFACE,
+		"PcmHwFree Memory free  pages return value -> %d\n", res);
+		}
 	return res;
 }
 
@@ -316,7 +349,6 @@ static int PcmPlaybackOpen(struct snd_pcm_substream *substream)
 		       jiffies, substream_number);
 		return -1;
 	}
-
 	substream->runtime->private_data = drv_handle;
 	aTrace(LOG_ALSA_INTERFACE,
 	       "chip-0x%lx substream-0x%lx drv_handle-0x%lx\n",
@@ -1434,21 +1466,6 @@ int PcmDeviceNew(struct snd_card *card)
 	pcm_device->chip = pChip;
 	pcm_device->stream_number = 1;
 	pcm_playback_pcmout2->info_flags = 0;
-	substream = pcm_playback_pcmout2->streams[0].substream;
-	for (; substream; substream = substream->next) {
-
-		err =
-		    snd_pcm_lib_preallocate_pages(substream, SNDRV_DMA_TYPE_DEV,
-						  0,
-						  (IS_PCM_MEM_PREALLOCATED) ?
-						  PCM_MAX_PLAYBACK_BUF_BYTES :
-						  0,
-						  PCM_MAX_PLAYBACK_BUF_BYTES);
-		if (err)
-			aError
-			("Error in allocate memory err=%d\n", err);
-	}
-
 	substream = pcm_playback_pcmout2->streams[1].substream;
 	pcm_playback_pcmout2->info_flags |= 0x10000000;
 	for (; substream; substream = substream->next) {

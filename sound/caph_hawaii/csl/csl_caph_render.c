@@ -45,7 +45,6 @@
 /***************************************************************************/
 /*                       G L O B A L   S E C T I O N                       */
 /***************************************************************************/
-
 /***************************************************************************/
 /*lobal variable definitions                                               */
 /***************************************************************************/
@@ -148,6 +147,12 @@ Result_t csl_audio_render_deinit(UInt32 streamID)
 	audDrv->numBlocks = 0;
 	audDrv->blockSize = 0;
 
+	if (0xac44 == audDrv->samplingRate) {
+		aTrace
+		(LOG_ALSA_INTERFACE, "csl_audio_render_deinit b4 iounmap\n");
+		iounmap(audDrv->dma_area);
+		audDrv->dma_area = NULL;
+	}
 	spin_lock_irqsave(&audDrv->readyStatusLock, flags);
 	audDrv->readyBlockStatus = CSL_CAPH_READY_NONE;
 	spin_unlock_irqrestore(&audDrv->readyStatusLock, flags);
@@ -192,7 +197,7 @@ Result_t csl_audio_render_configure(AUDIO_SAMPLING_RATE_t sampleRate,
 
 	if (audDrv == NULL)
 		return RESULT_ERROR;
-
+	audDrv->samplingRate = sampleRate;
 	/*audDrv->numChannels = numChannels;
 	audDrv->bitsPerSample = bitsPerSample;
 	audDrv->sampleRate = sampleRate;*/
@@ -237,6 +242,17 @@ Result_t csl_audio_render_configure(AUDIO_SAMPLING_RATE_t sampleRate,
 	audDrv->numBlocks = numBlocks;
 	audDrv->blockSize = blockSize;
 
+	if (0xac44 == sampleRate) {
+		aTrace(LOG_ALSA_INTERFACE,
+		"csl_audio_render_configure before iounmap\n");
+		audDrv->dma_area =
+		ioremap_nocache(audDrv->ringBuffer, audDrv->blockSize);
+		if (!audDrv->dma_area) {
+			aError("ioremap_nocache FAILED!! ringBuffer ->0x%x\n",
+			audDrv->ringBuffer);
+			return RESULT_ERROR;
+		}
+	}
 	/* assume everytime it starts, the first 2 buffers will be filled
 	when the interrupt comes, it will start from buffer 2
 	*/
@@ -453,11 +469,15 @@ static void audio_sil_frm_detect(CSL_CAPH_Render_Drv_t *audDrv)
 
 		if (csl_caph_dma_get_sdm_reset_mode(audDrv->dmaCH) ==
 			SDM_RESET_MODE_ENABLED) {
-
-			addr = audDrv->ringBuffer +
+			if (0xac44 == audDrv->samplingRate) {
+				aTrace(LOG_ALSA_INTERFACE,
+					"Let me point to the SRAM mapped DMA area\n");
+				ptr = audDrv->dma_area;
+			}	else {
+				addr = audDrv->ringBuffer +
 				audDrv->blockIndex * audDrv->blockSize;
-
-			ptr = phys_to_virt((UInt32)addr);
+				ptr = phys_to_virt((UInt32)addr);
+			}
 			for (i = 0; i < audDrv->blockSize; i += 1) {
 
 				if ((i & 0x1) == 0 && !left_sig) {
@@ -734,8 +754,14 @@ static void AUDIO_DMA_CB(CSL_CAPH_DMA_CHNL_e chnl)
 		if (fifo_status == CSL_CAPH_READY_NONE) {
 			addr = audDrv->ringBuffer +
 			   audDrv->blockIndex * audDrv->blockSize;
-			memset(phys_to_virt((UInt32)addr),
+			if (0xac44 == audDrv->samplingRate) {
+				aTrace(LOG_AUDIO_CSL, "before memset change\n");
+				memset(audDrv->dma_area,
 				0, audDrv->blockSize);
+				}	else {
+				memset(phys_to_virt((UInt32)addr),
+				0, audDrv->blockSize);
+				}
 			csl_caph_dma_set_lobuffer_address(chnl, addr);
 		}
 
