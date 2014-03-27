@@ -227,10 +227,6 @@ dtb-$(CONFIG_ARCH_JAVA) += java_edn000.dtb \
 	javam_c_edn000_4Gb.dtb \
 	java_c_edn000.dtb \
 	java_c_edn000_2Gb.dtb \
-	java_sony_kivu.dtb \
-	java_sony_kivu_030.dtb \
-	java_sony_brooks.dtb \
-	java_sony_brooks_020.dtb \
 	java_c_lc1.dtb \
 	java_c_lc1_4Gb.dtb \
 	java_c_lc2.dtb \
@@ -238,6 +234,10 @@ dtb-$(CONFIG_ARCH_JAVA) += java_edn000.dtb \
 dtb-$(CONFIG_MACH_JAVA_SS_EVAL) += java_ss_eval_rev00.dtb
 dtb-$(CONFIG_MACH_JAVA_SS_VICTOR3G) += java_ss_victor3g_rev00.dtb
 dtb-$(CONFIG_MACH_JAVA_SS_BAFFINLITE) += java_ss_baffinlite_rev02.dtb
+dtb-$(CONFIG_MACH_JAVA_SONY) += java_sony_kivu.dtb \
+	java_sony_kivu_030.dtb \
+	java_sony_brooks.dtb \
+	java_sony_brooks_020.dtb
 
 DTB_NAMES := $(subst $\",,$(CONFIG_BUILD_ARM_APPENDED_DTB_IMAGE_NAMES))
 ifneq ($(DTB_NAMES),)

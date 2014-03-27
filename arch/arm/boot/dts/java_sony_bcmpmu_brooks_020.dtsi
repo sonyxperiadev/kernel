@@ -35,8 +35,10 @@
 		0x42 0x04 0x04 0
 		 /* Enable BC12_EN */
 		0x44 0x01 0x01 0
-		  /*  ICCMAX to 1500mA*/
-		0x47 0x0B 0xFF 0
+		  /*  ICCMAX to 652mA*/
+		0x47 0x07 0xFF 0
+		  /*  USB_FC to 652mA*/
+		0x49 0x07 0xFF 0
 		  /* NTC Hot Temperature Comparator rising = 55C*/
 		0xCC 0x4C 0xFF 1
 		  /* NTC Hot Temperature Comparator falling = 50C*/
@@ -139,8 +141,8 @@
 		mmc2 = "1", "mmc2_vcc", "0", "0", "8", "0", "0";
 		/*pc_map = PMU_PC2|PMU_PC3, initial_mode = REGULATOR_MODE_STANDBY*/
 		aud  = "1", "audldo_uc", "1", "6", "8", "0", "0";
-		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, initial_mode = REGULATOR_MODE_NORMAL*/
-		usb  = "2", "usb_vcc", "bc_vcc", "0", "7", "2", "0", "0";
+		/*pc_map = PMU_PC3, initial_mode = REGULATOR_MODE_IDLE*/
+		usb  = "2", "usb_vcc", "bc_vcc", "0", "4", "4", "0", "0";
 		/*pc_map = 0, initial_mode = REGULATOR_MODE_STANDBY*/
 		mic  = "1", "micldo_uc", "0","0", "8", "0", "0";
 		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, initial_mode = REGULATOR_MODE_NORMAL*/
