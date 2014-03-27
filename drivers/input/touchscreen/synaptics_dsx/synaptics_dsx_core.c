@@ -24,6 +24,8 @@
 #include <linux/input.h>
 #include <linux/gpio.h>
 #include <linux/platform_device.h>
+#include <linux/hrtimer.h>
+#include <linux/ktime.h>
 #include <linux/regulator/consumer.h>
 #include <linux/input/synaptics_dsx_new.h>
 #include "synaptics_dsx_core.h"
@@ -124,6 +126,9 @@ static ssize_t synaptics_rmi4_0dbutton_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t count);
 
 static ssize_t synaptics_rmi4_suspend_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count);
+
+static ssize_t synaptics_rmi4_poll_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t count);
 
 struct synaptics_rmi4_f01_device_status {
@@ -356,6 +361,9 @@ static struct device_attribute attrs[] = {
 	__ATTR(suspend, S_IWUGO,
 			synaptics_rmi4_show_error,
 			synaptics_rmi4_suspend_store),
+	__ATTR(poll, S_IWUGO,
+			synaptics_rmi4_show_error,
+			synaptics_rmi4_poll_store),
 };
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
@@ -526,6 +534,22 @@ static ssize_t synaptics_rmi4_suspend_store(struct device *dev,
 	else
 		return -EINVAL;
 
+	return count;
+}
+
+
+static ssize_t synaptics_rmi4_poll_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	unsigned long t;
+	struct synaptics_rmi4_data *rmi4_data = dev_get_drvdata(dev);
+	int rc;
+
+	rc = kstrtoul(buf, 10, &t);
+	if (rc)
+		return rc;
+	rmi4_data->poll = t;
+	rmi4_data->ktime = ktime_set(0, t * 1000000L);
 	return count;
 }
 
@@ -1069,10 +1093,41 @@ static irqreturn_t synaptics_rmi4_irq(int irq, void *data)
 	if (gpio_get_value(bdata->irq_gpio) != bdata->irq_on_state)
 		goto exit;
 
-	synaptics_rmi4_sensor_report(rmi4_data);
+	if (!rmi4_data->poll)
+		synaptics_rmi4_sensor_report(rmi4_data);
 
 exit:
 	return IRQ_HANDLED;
+}
+
+static enum hrtimer_restart synaptics_rmi4_hrtimer(struct hrtimer *timer)
+{
+	struct synaptics_rmi4_data *rmi4_data =
+		container_of(timer, struct synaptics_rmi4_data, hr_timer);
+
+	if (rmi4_data->poll) {
+		schedule_work(&rmi4_data->poll_work);
+		hrtimer_start(&rmi4_data->hr_timer,
+				rmi4_data->ktime, HRTIMER_MODE_REL);
+	}
+	return HRTIMER_NORESTART;
+}
+
+static void synaptics_rmi4_data_poll(struct work_struct *work)
+{
+	struct synaptics_rmi4_data *rmi4_data =
+		container_of(work, struct synaptics_rmi4_data, poll_work);
+	struct synaptics_rmi4_fn *fhandler;
+	struct synaptics_rmi4_device_info *rmi = &(rmi4_data->rmi4_mod_info);
+
+	if (!list_empty(&rmi->support_fn_list)) {
+		list_for_each_entry(fhandler, &rmi->support_fn_list, link) {
+			if (fhandler->num_of_data_sources) {
+				synaptics_rmi4_report_touch(rmi4_data,
+						fhandler);
+			}
+		}
+	}
 }
 
 static int synaptics_rmi4_int_enable(struct synaptics_rmi4_data *rmi4_data,
@@ -1143,11 +1198,18 @@ static int synaptics_rmi4_irq_enable(struct synaptics_rmi4_data *rmi4_data,
 			return retval;
 
 		rmi4_data->irq_enabled = true;
+		if (rmi4_data->poll)
+			hrtimer_start(&rmi4_data->hr_timer,
+					rmi4_data->ktime, HRTIMER_MODE_REL);
 	} else {
 		if (rmi4_data->irq_enabled) {
 			disable_irq(rmi4_data->irq);
 			free_irq(rmi4_data->irq, rmi4_data);
 			rmi4_data->irq_enabled = false;
+			if (rmi4_data->poll) {
+				hrtimer_cancel(&rmi4_data->hr_timer);
+				cancel_work_sync(&rmi4_data->poll_work);
+			}
 		}
 	}
 
@@ -2551,6 +2613,9 @@ static int synaptics_rmi4_probe(struct platform_device *pdev)
 	mutex_init(&(rmi4_data->rmi4_reset_mutex));
 	mutex_init(&(rmi4_data->rmi4_report_mutex));
 	mutex_init(&(rmi4_data->rmi4_io_ctrl_mutex));
+	hrtimer_init(&rmi4_data->hr_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
+	INIT_WORK(&rmi4_data->poll_work, synaptics_rmi4_data_poll);
+	rmi4_data->hr_timer.function = synaptics_rmi4_hrtimer;
 
 	platform_set_drvdata(pdev, rmi4_data);
 

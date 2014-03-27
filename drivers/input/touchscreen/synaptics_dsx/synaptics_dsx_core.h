@@ -24,6 +24,8 @@
 #define SYNAPTICS_DSX_DRIVER_PRODUCT (SYNAPTICS_DS4 | SYNAPTICS_DS5)
 #define SYNAPTICS_DSX_DRIVER_VERSION 0x2002
 
+#include <linux/hrtimer.h>
+#include <linux/ktime.h>
 #include <linux/version.h>
 #ifdef CONFIG_HAS_EARLYSUSPEND
 #include <linux/earlysuspend.h>
@@ -268,6 +270,10 @@ struct synaptics_rmi4_data {
 	bool stay_awake;
 	int (*irq_enable)(struct synaptics_rmi4_data *rmi4_data, bool enable);
 	int (*reset_device)(struct synaptics_rmi4_data *rmi4_data);
+	struct hrtimer hr_timer;
+	struct work_struct poll_work;
+	ktime_t ktime;
+	int poll;
 };
 
 struct synaptics_dsx_bus_access {
