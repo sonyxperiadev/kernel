@@ -449,20 +449,6 @@ static int bh1721fvc_get_luxvalue(struct bh1721fvc_data *bh1721fvc, u16 *value)
 
 	return 0;
 }
-static u32 g_LuxValues[9] = {
-	0, 10, 160, 225, 320,
-	640, 1280, 2600, 10240
-};
-
-static u32 bh1721fvc_filter_als(u32 rawdata)
-{
-	int i;
-	for (i = 1; i < 9; i++) {
-		if (rawdata >= g_LuxValues[i-1] && rawdata < g_LuxValues[i])
-			return g_LuxValues[i-1];
-	}
-	return g_LuxValues[8];
-}
 
 static void bh1721fvc_work_func_light(struct work_struct *work)
 {
@@ -479,8 +465,7 @@ static void bh1721fvc_work_func_light(struct work_struct *work)
 		result = (result * 10) / 12;
 		result = result * 139 / 13;
 		bh1721fvc_dbmsg("lux 0x%0X (%d)\n", result, result);
-		result = bh1721fvc_filter_als(result);
-		input_report_abs(bh1721fvc->input_dev, ABS_MISC, result + 1);
+		input_report_abs(bh1721fvc->input_dev, ABS_MISC, result);
 		input_sync(bh1721fvc->input_dev);
 	} else
 		pr_err("%s: read word failed! (errno=%d)\n", __func__, err);
