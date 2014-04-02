@@ -72,6 +72,9 @@ struct lcd_config {
 	bool sync_pulses; /* Non burst mode with sync pulses or events */
 	uint8_t hs, hbp, hfp, hbllp;
 	uint8_t vs, vbp, vfp;
+	bool clear_panel_ram;
+	uint16_t clear_ram_row_start;
+	uint16_t clear_ram_row_end;
 };
 
 void panel_write(UInt8 *buff);

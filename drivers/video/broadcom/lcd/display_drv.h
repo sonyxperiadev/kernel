@@ -137,7 +137,9 @@ extern "C" {
 		struct DSI_COUNTER phy_timing[18];
 		uint8_t hs, hbp, hfp, hbllp;
 		uint8_t vs, vbp, vfp;
-
+		bool clear_panel_ram;
+		uint16_t clear_ram_row_start;
+		uint16_t clear_ram_row_end;
 		uint32_t hs_bps;
 		uint32_t lp_bps;
 		int desense_offset;

@@ -1355,6 +1355,45 @@ static int kona_fb_ioctl(struct fb_info *info, unsigned int cmd,
 	return ret;
 }
 
+static int clear_panel_ram(struct kona_fb *fb)
+{
+	int ret = 0;
+	DISPDRV_WIN_t p_win;
+	void *black_buf;
+	size_t fsize, black_ram_size;
+	dma_addr_t phys_base;
+	struct platform_device *pdev = fb->pdev;
+	uint16_t black_ram_lines;
+
+	pr_info("%s: fill RAM with black\n", __func__);
+	/* Workaround: One page extra allocated and mapped via m4u to avoid
+	* v3d write faulting in m4u doing extra access */
+	black_ram_lines = fb->display_info->clear_ram_row_end -
+				fb->display_info->clear_ram_row_start + 1;
+	black_ram_size = fb->display_info->width * black_ram_lines *
+							fb->display_info->Bpp;
+	fsize = PAGE_ALIGN(4096 + black_ram_size);
+
+	black_buf = dma_alloc_writecombine(&pdev->dev, fsize, &phys_base,
+								GFP_KERNEL);
+	if (black_buf == NULL) {
+		ret = -ENOMEM;
+		konafb_error("Unable to allocate black framebuffer\n");
+	} else {
+		memset(black_buf, 0, fsize);
+		p_win.l = 0;
+		p_win.r = fb->display_info->width - 1;
+		p_win.t = fb->display_info->clear_ram_row_start - 1;
+		p_win.b = fb->display_info->clear_ram_row_end - 1;
+		p_win.h = fb->display_info->clear_ram_row_end;
+		p_win.w = fb->display_info->width;
+		ret = fb->display_ops->update(fb->display_hdl, black_buf,
+								&p_win, NULL);
+		dma_free_writecombine(&pdev->dev, fsize, black_buf, phys_base);
+	}
+	return ret;
+}
+
 static int kona_fb_blank(int blank_mode, struct fb_info *info)
 {
 	struct kona_fb *fb = container_of(info, struct kona_fb, fb);
@@ -1427,6 +1466,8 @@ static int kona_fb_blank(int blank_mode, struct fb_info *info)
 
 			kona_clock_start(fb);
 		}
+		if (fb->display_info->clear_panel_ram)
+			(void)clear_panel_ram(fb);
 		fb->display_ops->update(fb->display_hdl,
 				fb->fb.var.yoffset ? fb->buff1 : fb->buff0,
 				NULL,
@@ -1970,6 +2011,10 @@ static int __init populate_dispdrv_cfg(struct kona_fb *fb,
 				__func__, __LINE__, info->special_mode_on);
 	}
 
+	info->clear_panel_ram = cfg->clear_panel_ram;
+	info->clear_ram_row_start = cfg->clear_ram_row_start;
+	info->clear_ram_row_end = cfg->clear_ram_row_end;
+
 	/* burst mode changes to be taken care here or PV? */
 	info->hs_bps = (pd->hs_bps > cfg->max_hs_bps) ?
 				 cfg->max_hs_bps : pd->hs_bps;
@@ -2308,6 +2353,8 @@ static int __ref kona_fb_probe(struct platform_device *pdev)
 			/* update display with 1:1 map */
 			if (!fb->display_info->vmode)
 				kona_clock_start(fb);
+			if (fb->display_info->clear_panel_ram)
+				(void)clear_panel_ram(fb);
 			ret = fb->display_ops->update(fb->display_hdl,
 				(void *)phys_fbbase +
 				(framesize / 2), NULL, NULL);
@@ -2334,6 +2381,8 @@ static int __ref kona_fb_probe(struct platform_device *pdev)
 	if (g_display_enabled && !fb->display_info->vmode) {
 		/* Keep the boot display for command display */
 	} else {
+		if (fb->display_info->clear_panel_ram)
+			(void)clear_panel_ram(fb);
 		ret = fb->display_ops->update(fb->display_hdl,
 				fb->buff1, NULL, NULL);
 	}
