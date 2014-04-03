@@ -145,6 +145,13 @@ static int parse_dt(struct device *dev, struct synaptics_dsx_board_data *bdata)
 		bdata->cap_button_map->map = NULL;
 	}
 
+	retval = of_property_read_string(np, "synaptics,fw-name", &name);
+	if (retval == -EINVAL)
+		bdata->fw_name = NULL;
+	else if (retval < 0)
+		return retval;
+	else
+		bdata->fw_name = name;
 	return 0;
 }
 #endif

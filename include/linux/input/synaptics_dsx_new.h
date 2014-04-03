@@ -57,6 +57,7 @@ struct synaptics_dsx_cap_button_map {
  * @pwr_reg_name: pointer to name of regulator for power control
  * @bus_reg_name: pointer to name of regulator for bus pullup control
  * @cap_button_map: pointer to 0D button map
+ * @fw_name: name of fw image file located at kernel/firmware/
  */
 struct synaptics_dsx_board_data {
 	bool x_flip;
@@ -80,5 +81,6 @@ struct synaptics_dsx_board_data {
 	const char *pwr_reg_name;
 	const char *bus_reg_name;
 	struct synaptics_dsx_cap_button_map *cap_button_map;
+	const char *fw_name;
 };
 #endif
