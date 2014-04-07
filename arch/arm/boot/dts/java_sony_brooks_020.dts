@@ -145,8 +145,10 @@
 			synaptics,irq-flags = <0x2002>;
 			synaptics,reset-gpio = <&gpio 70 0x00>;
 			synaptics,reset-on-state = <0>;
+			synaptics,reset-active-ms = <20>;
 			synaptics,power-delay-ms = <160>;
 			synaptics,reset-delay-ms = <100>;
+			synaptics,fw-name = "synaptics/PR1427033.img";
 		};
 
 	};
