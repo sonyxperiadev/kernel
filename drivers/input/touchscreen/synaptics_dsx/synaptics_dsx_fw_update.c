@@ -28,9 +28,7 @@
 #include "synaptics_dsx_core.h"
 
 #define FW_IMAGE_NAME "synaptics/startup_fw_update.img"
-/*
-#define DO_STARTUP_FW_UPDATE
-*/
+
 #define FORCE_UPDATE false
 #define DO_LOCKDOWN false
 
@@ -1359,7 +1357,10 @@ static int fwu_start_reflash(void)
 	if (fwu->ext_data_source) {
 		fw_image = fwu->ext_data_source;
 	} else {
-		strncpy(fwu->image_name, FW_IMAGE_NAME, MAX_IMAGE_NAME_LEN);
+		const char *fw_name = rmi4_data->hw_if->board_data->fw_name ?
+				rmi4_data->hw_if->board_data->fw_name :
+				FW_IMAGE_NAME;
+		strncpy(fwu->image_name, fw_name, MAX_IMAGE_NAME_LEN);
 		dev_dbg(rmi4_data->pdev->dev.parent,
 				"%s: Requesting firmware image %s\n",
 				__func__, fwu->image_name);
@@ -1502,14 +1503,12 @@ int synaptics_fw_updater(unsigned char *fw_data)
 }
 EXPORT_SYMBOL(synaptics_fw_updater);
 
-#ifdef DO_STARTUP_FW_UPDATE
 static void fwu_startup_fw_update_work(struct work_struct *work)
 {
 	synaptics_fw_updater(NULL);
 
 	return;
 }
-#endif
 
 static ssize_t fwu_sysfs_show_image(struct file *data_file,
 		struct kobject *kobj, struct bin_attribute *attributes,
@@ -1827,12 +1826,13 @@ static int synaptics_rmi4_fwu_init(struct synaptics_rmi4_data *rmi4_data)
 		}
 	}
 
-#ifdef DO_STARTUP_FW_UPDATE
-	fwu->fwu_workqueue = create_singlethread_workqueue("fwu_workqueue");
-	INIT_WORK(&fwu->fwu_work, fwu_startup_fw_update_work);
-	queue_work(fwu->fwu_workqueue,
-			&fwu->fwu_work);
-#endif
+	if (rmi4_data->hw_if->board_data->fw_name) {
+		fwu->fwu_workqueue =
+				create_singlethread_workqueue("fwu_workqueue");
+		INIT_WORK(&fwu->fwu_work, fwu_startup_fw_update_work);
+		queue_work(fwu->fwu_workqueue,
+				&fwu->fwu_work);
+	}
 
 	return 0;
 
@@ -1862,11 +1862,11 @@ static void synaptics_rmi4_fwu_remove(struct synaptics_rmi4_data *rmi4_data)
 	if (!fwu)
 		goto exit;
 
-#ifdef DO_STARTUP_FW_UPDATE
-	cancel_work_sync(&fwu->fwu_work);
-	flush_workqueue(fwu->fwu_workqueue);
-	destroy_workqueue(fwu->fwu_workqueue);
-#endif
+	if (rmi4_data->hw_if->board_data->fw_name) {
+		cancel_work_sync(&fwu->fwu_work);
+		flush_workqueue(fwu->fwu_workqueue);
+		destroy_workqueue(fwu->fwu_workqueue);
+	}
 
 	for (attr_count = 0; attr_count < ARRAY_SIZE(attrs); attr_count++) {
 		sysfs_remove_file(&rmi4_data->input_dev->dev.kobj,
