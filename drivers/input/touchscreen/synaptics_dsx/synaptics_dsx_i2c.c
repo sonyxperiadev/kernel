@@ -152,6 +152,21 @@ static int parse_dt(struct device *dev, struct synaptics_dsx_board_data *bdata)
 		return retval;
 	else
 		bdata->fw_name = name;
+
+	bdata->large_obj_size = -EINVAL;
+	if (of_property_read_bool(np, "synaptics,large-obj-size")) {
+		retval = of_property_read_u32(np, "synaptics,large-obj-size",
+				&value);
+		dev_dbg(dev, "%s:synaptics,large-obj-size = %u\n",
+				__func__, value);
+		if (retval < 0)
+			return retval;
+		else if (value >= 0 && value < 128)
+			bdata->large_obj_size = value;
+	} else {
+		dev_dbg(dev, "%s:synaptics,large-obj-size not set\n", __func__);
+	}
+
 	return 0;
 }
 #endif
@@ -212,6 +227,9 @@ static int synaptics_rmi4_i2c_read(struct synaptics_rmi4_data *rmi4_data,
 
 	buf = addr & MASK_8BIT;
 
+	dev_dbg(rmi4_data->pdev->dev.parent, "Read %d bytes from addr 0x%04x\n",
+			length, addr);
+
 	mutex_lock(&rmi4_data->rmi4_io_ctrl_mutex);
 
 	retval = synaptics_rmi4_i2c_set_page(rmi4_data, addr);
@@ -259,6 +277,9 @@ static int synaptics_rmi4_i2c_write(struct synaptics_rmi4_data *rmi4_data,
 			.buf = buf,
 		}
 	};
+
+	dev_dbg(rmi4_data->pdev->dev.parent, "Write %d bytes to addr 0x%04x\n",
+			length, addr);
 
 	mutex_lock(&rmi4_data->rmi4_io_ctrl_mutex);
 

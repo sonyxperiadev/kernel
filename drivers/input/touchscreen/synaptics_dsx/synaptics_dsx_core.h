@@ -274,6 +274,10 @@ struct synaptics_rmi4_data {
 	struct work_struct poll_work;
 	ktime_t ktime;
 	int poll;
+	unsigned char f11_ctrl_58_offs;
+	unsigned char f11_data_28_offs;
+	bool has_large_obj_det;
+	unsigned char large_obj_size;
 };
 
 struct synaptics_dsx_bus_access {

@@ -58,6 +58,7 @@ struct synaptics_dsx_cap_button_map {
  * @bus_reg_name: pointer to name of regulator for bus pullup control
  * @cap_button_map: pointer to 0D button map
  * @fw_name: name of fw image file located at kernel/firmware/
+ * @large_obj_size: size of large obect to detct [0-127], set -1 to skip
  */
 struct synaptics_dsx_board_data {
 	bool x_flip;
@@ -82,5 +83,6 @@ struct synaptics_dsx_board_data {
 	const char *bus_reg_name;
 	struct synaptics_dsx_cap_button_map *cap_button_map;
 	const char *fw_name;
+	int large_obj_size;
 };
 #endif

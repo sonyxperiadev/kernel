@@ -131,6 +131,12 @@ static ssize_t synaptics_rmi4_suspend_store(struct device *dev,
 static ssize_t synaptics_rmi4_poll_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t count);
 
+static ssize_t synaptics_palm_size_show(struct device *dev,
+		struct device_attribute *attr, char *buf);
+
+static ssize_t synaptics_palm_size_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count);
+
 struct synaptics_rmi4_f01_device_status {
 	union {
 		struct {
@@ -364,7 +370,96 @@ static struct device_attribute attrs[] = {
 	__ATTR(poll, S_IWUGO,
 			synaptics_rmi4_show_error,
 			synaptics_rmi4_poll_store),
+	__ATTR(palm_size,  S_IRUGO | S_IWUSR | S_IWGRP,
+			synaptics_palm_size_show,
+			synaptics_palm_size_store),
 };
+
+static ssize_t synaptics_palm_size_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct synaptics_rmi4_data *rmi4_data = dev_get_drvdata(dev);
+	struct synaptics_rmi4_fn *fhandler;
+	struct synaptics_rmi4_device_info *rmi;
+
+	if (!rmi4_data->has_large_obj_det)
+		return -EPERM;
+	rmi = &(rmi4_data->rmi4_mod_info);
+	if (list_empty(&rmi->support_fn_list))
+		return -ENODEV;
+	list_for_each_entry(fhandler, &rmi->support_fn_list, link) {
+		if (fhandler->fn_number == SYNAPTICS_RMI4_F11) {
+			unsigned char control58;
+			int retval = synaptics_rmi4_reg_read(rmi4_data,
+				fhandler->full_addr.ctrl_base +
+				rmi4_data->f11_ctrl_58_offs,
+				&control58, sizeof(control58));
+			if (retval <= 0)
+				return -EIO;
+			return scnprintf(buf, PAGE_SIZE, "%u\n",
+					control58 & 0x7f);
+		}
+	}
+	return -ENODEV;
+}
+
+static int f11_set_large_obj_size(struct synaptics_rmi4_data *rmi4_data)
+{
+	struct synaptics_rmi4_fn *fhandler;
+	struct synaptics_rmi4_device_info *rmi;
+	int obj_size;
+
+	dev_dbg(rmi4_data->pdev->dev.parent, "%s: %u\n", __func__, obj_size);
+	if (!rmi4_data->has_large_obj_det)
+		return -EPERM;
+
+	obj_size = rmi4_data->hw_if->board_data->large_obj_size;
+
+	if (obj_size < 0 || (unsigned)obj_size == rmi4_data->large_obj_size)
+		return 0;
+
+	rmi = &(rmi4_data->rmi4_mod_info);
+	if (list_empty(&rmi->support_fn_list))
+		return -ENODEV;
+	list_for_each_entry(fhandler, &rmi->support_fn_list, link) {
+		if (fhandler->fn_number == SYNAPTICS_RMI4_F11) {
+			unsigned char control58;
+			int retval = synaptics_rmi4_reg_read(rmi4_data,
+				fhandler->full_addr.ctrl_base +
+				rmi4_data->f11_ctrl_58_offs,
+				&control58, sizeof(control58));
+			if (retval <= 0)
+				goto err;
+			control58 = (control58 & ~0x7f) | obj_size;
+			retval = synaptics_rmi4_reg_write(rmi4_data,
+				fhandler->full_addr.ctrl_base +
+				rmi4_data->f11_ctrl_58_offs,
+				&control58, sizeof(control58));
+			if (retval <= 0)
+				goto err;
+			dev_dbg(rmi4_data->pdev->dev.parent,
+					"Large object size changed to %u\n",
+					obj_size);
+			return 0;
+		}
+	}
+err:
+	return -EIO;
+}
+
+static ssize_t synaptics_palm_size_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	unsigned long obj_size;
+	int rc;
+	struct synaptics_rmi4_data *rmi4_data = dev_get_drvdata(dev);
+
+	if (kstrtoul(buf, 10, &obj_size) || obj_size > 0x7f)
+		return -EINVAL;
+	rmi4_data->hw_if->board_data->large_obj_size = obj_size;
+	rc = f11_set_large_obj_size(rmi4_data);
+	return rc ? rc : count;
+}
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
 static ssize_t synaptics_rmi4_full_pm_cycle_show(struct device *dev,
@@ -567,6 +662,7 @@ static int synaptics_rmi4_f11_abs_report(struct synaptics_rmi4_data *rmi4_data,
 	unsigned char data_reg_blk_size;
 	unsigned char finger_status_reg[3];
 	unsigned char data[F11_STD_DATA_LEN];
+	unsigned char data28;
 	unsigned short data_addr;
 	unsigned short data_offset;
 	int x;
@@ -592,6 +688,20 @@ static int synaptics_rmi4_f11_abs_report(struct synaptics_rmi4_data *rmi4_data,
 			num_of_finger_status_regs);
 	if (retval < 0)
 		return 0;
+
+	if (rmi4_data->has_large_obj_det) {
+		retval = synaptics_rmi4_reg_read(rmi4_data,
+				data_addr + rmi4_data->f11_data_28_offs,
+				&data28, sizeof(data28));
+		if (retval >= 0) {
+			dev_dbg(rmi4_data->pdev->dev.parent,
+					"Large object present = %d",
+					!!(data28 & 0x02));
+			input_report_key(rmi4_data->input_dev, KEY_SLEEP,
+					!!(data28 & 0x02));
+			input_sync(rmi4_data->input_dev);
+		}
+	}
 
 	mutex_lock(&(rmi4_data->rmi4_report_mutex));
 
@@ -1269,6 +1379,7 @@ static int synaptics_rmi4_f11_init(struct synaptics_rmi4_data *rmi4_data,
 	unsigned char abs_data_blk_size;
 	unsigned char query[F11_STD_QUERY_LEN];
 	unsigned char control[F11_STD_CTRL_LEN];
+	unsigned char control58;
 
 	fhandler->fn_number = fd->fn_number;
 	fhandler->num_of_data_sources = fd->intr_src_count;
@@ -1285,6 +1396,17 @@ static int synaptics_rmi4_f11_init(struct synaptics_rmi4_data *rmi4_data,
 		fhandler->num_of_data_points = (query[1] & MASK_3BIT) + 1;
 	else if ((query[1] & MASK_3BIT) == 5)
 		fhandler->num_of_data_points = 10;
+
+	rmi4_data->has_large_obj_det = (query[5] & (1 << 6)) != 0;
+	if (rmi4_data->has_large_obj_det) {
+		dev_dbg(rmi4_data->pdev->dev.parent,
+				"Large object suppression supported\n");
+		/* TODO:
+		 * this should be calculated via F11 query registers
+		 */
+		rmi4_data->f11_ctrl_58_offs = 0x61 - 0x3b;
+		rmi4_data->f11_data_28_offs = 0x30 - 0x15;
+	}
 
 	rmi4_data->num_of_fingers = fhandler->num_of_data_points;
 
@@ -1305,6 +1427,18 @@ static int synaptics_rmi4_f11_init(struct synaptics_rmi4_data *rmi4_data,
 			__func__, fhandler->fn_number,
 			rmi4_data->sensor_max_x,
 			rmi4_data->sensor_max_y);
+	if (rmi4_data->has_large_obj_det) {
+		retval = synaptics_rmi4_reg_read(rmi4_data,
+				fhandler->full_addr.ctrl_base +
+				rmi4_data->f11_ctrl_58_offs,
+				&control58, sizeof(control58));
+		rmi4_data->large_obj_size = control58 & 0x7f;
+		dev_dbg(rmi4_data->pdev->dev.parent,
+				"Large object size = %d\n",
+				rmi4_data->large_obj_size);
+		dev_dbg(rmi4_data->pdev->dev.parent,
+				"Suppress ATTN = %d\n", !!(control58 & 0x80));
+	}
 
 	rmi4_data->max_touch_width = MAX_F11_TOUCH_WIDTH;
 
@@ -2111,6 +2245,8 @@ static void synaptics_rmi4_set_params(struct synaptics_rmi4_data *rmi4_data)
 		}
 	}
 
+	f11_set_large_obj_size(rmi4_data);
+
 	return;
 }
 
@@ -2148,6 +2284,8 @@ static int synaptics_rmi4_set_input_dev(struct synaptics_rmi4_data *rmi4_data)
 	set_bit(EV_ABS, rmi4_data->input_dev->evbit);
 	set_bit(BTN_TOUCH, rmi4_data->input_dev->keybit);
 	set_bit(BTN_TOOL_FINGER, rmi4_data->input_dev->keybit);
+	if (rmi4_data->has_large_obj_det)
+		set_bit(KEY_SLEEP, rmi4_data->input_dev->keybit);
 #ifdef INPUT_PROP_DIRECT
 	set_bit(INPUT_PROP_DIRECT, rmi4_data->input_dev->propbit);
 #endif
@@ -2970,6 +3108,8 @@ static int synaptics_rmi4_resume(struct device *dev)
 		rmi4_data->current_page = MASK_8BIT;
 		if (rmi4_data->hw_if->ui_hw_init)
 			rmi4_data->hw_if->ui_hw_init(rmi4_data);
+
+		f11_set_large_obj_size(rmi4_data);
 	}
 
 	synaptics_rmi4_sensor_wake(rmi4_data);
