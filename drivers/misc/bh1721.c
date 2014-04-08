@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2010 Samsung Electronics. All rights reserved.
+ * Copyright (C) 2014 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -45,7 +46,7 @@
 #define LUX_MIN_VALUE		0
 #define LUX_MAX_VALUE		65528
 
-#define ALS_BUFFER_NUM	10
+#define ALS_MAX_BUFFER_NUM	50
 
 #define bh1721fvc_dbmsg(str, args...) pr_debug("%s: " str, __func__, ##args)
 
@@ -80,8 +81,10 @@ struct bh1721fvc_data {
 	enum BH1721FVC_STATE state;
 	u8 measure_mode;
 	bool als_buf_initialized;
-	int als_value_buf[ALS_BUFFER_NUM];
-	int als_index_count;
+	int als_value_buf[ALS_MAX_BUFFER_NUM];
+	int als_index;
+	u8 average_samples;
+	u8 num_valid_values;
 #ifdef CONFIG_HAS_EARLYSUSPEND
 	struct early_suspend early_suspend_desc;
 #endif
@@ -162,6 +165,42 @@ static int bh1721fvc_disable(struct bh1721fvc_data *bh1721fvc)
 		pr_err("%s: Failed to write byte (POWER_DOWN)\n", __func__);
 
 	return err;
+}
+
+static ssize_t bh1721fvc_average_samples_show(struct device *dev,
+					 struct device_attribute *attr,
+					 char *buf)
+{
+	struct bh1721fvc_data *bh1721fvc = dev_get_drvdata(dev);
+
+	return snprintf(buf, PAGE_SIZE, "%d\n", bh1721fvc->average_samples);
+}
+
+static ssize_t bh1721fvc_average_samples_store(struct device *dev,
+					  struct device_attribute *attr,
+					  const char *buf, size_t size)
+{
+	int err;
+	u8 new_val;
+	struct bh1721fvc_data *bh1721fvc = dev_get_drvdata(dev);
+
+	err = kstrtou8(buf, 10, &new_val);
+	if (err < 0)
+		return err;
+
+	mutex_lock(&bh1721fvc->lock);
+	if ((new_val > ALS_MAX_BUFFER_NUM) || new_val == 0) {
+		pr_err("%s: Wrong buffer size (%d), max is %d\n", __func__,
+						new_val, ALS_MAX_BUFFER_NUM);
+		return -EINVAL;
+	}
+	if (bh1721fvc->average_samples != new_val) {
+		bh1721fvc->als_buf_initialized = false;
+		bh1721fvc->average_samples = new_val;
+	}
+	mutex_unlock(&bh1721fvc->lock);
+
+	return size;
 }
 
 static ssize_t bh1721fvc_poll_delay_show(struct device *dev,
@@ -306,6 +345,9 @@ static ssize_t bh1721fvc_light_sensor_mode_store(struct device *dev,
 	return size;
 }
 
+static DEVICE_ATTR(average_samples, S_IRUGO | S_IWUSR | S_IWGRP,
+	bh1721fvc_average_samples_show, bh1721fvc_average_samples_store);
+
 static DEVICE_ATTR(delay, S_IRUGO | S_IWUSR | S_IWGRP,
 		   bh1721fvc_poll_delay_show, bh1721fvc_poll_delay_store);
 
@@ -317,6 +359,7 @@ static DEVICE_ATTR(enable_als, S_IRUGO | S_IWUSR | S_IWGRP,
 		   bh1721fvc_light_enable_show, bh1721fvc_light_enable_store);
 
 static struct attribute *bh1721fvc_sysfs_attrs[] = {
+	&dev_attr_average_samples.attr,
 	&dev_attr_enable_als.attr,
 	&dev_attr_delay.attr,
 	&dev_attr_sensor_mode.attr,
@@ -404,7 +447,6 @@ static int bh1721fvc_get_luxvalue(struct bh1721fvc_data *bh1721fvc, u16 *value)
 	int i = 0;
 	int j = 0;
 	unsigned int als_total = 0;
-	unsigned int als_index = 0;
 	unsigned int als_max = 0;
 	unsigned int als_min = 0;
 
@@ -420,20 +462,28 @@ static int bh1721fvc_get_luxvalue(struct bh1721fvc_data *bh1721fvc, u16 *value)
 		return -EIO;
 	}
 
-	als_index = (bh1721fvc->als_index_count++) % ALS_BUFFER_NUM;
-
-	/*ALS buffer initialize (light sensor off ---> light sensor on) */
+	mutex_lock(&bh1721fvc->lock);
+	/* ALS buffer initialize (light sensor off ---> light sensor on) */
 	if (!bh1721fvc->als_buf_initialized) {
 		bh1721fvc->als_buf_initialized = true;
-		for (j = 0; j < ALS_BUFFER_NUM; j++)
-			bh1721fvc->als_value_buf[j] = *value;
-	} else
-		bh1721fvc->als_value_buf[als_index] = *value;
+		bh1721fvc->als_index = 0;
+		bh1721fvc->num_valid_values = 0;
+		for (j = 0; j < bh1721fvc->average_samples; j++)
+			bh1721fvc->als_value_buf[j] = 0;
+	} else {
+		bh1721fvc->als_index =
+			(bh1721fvc->als_index + 1) % bh1721fvc->average_samples;
+	}
+	bh1721fvc_dbmsg("%s: new value = %d\n", *value);
+	bh1721fvc->als_value_buf[bh1721fvc->als_index] = *value;
+
+	if (bh1721fvc->num_valid_values < bh1721fvc->average_samples)
+		bh1721fvc->num_valid_values++;
 
 	als_max = bh1721fvc->als_value_buf[0];
 	als_min = bh1721fvc->als_value_buf[0];
 
-	for (i = 0; i < ALS_BUFFER_NUM; i++) {
+	for (i = 0; i < bh1721fvc->num_valid_values; i++) {
 		als_total += bh1721fvc->als_value_buf[i];
 
 		if (als_max < bh1721fvc->als_value_buf[i])
@@ -442,11 +492,13 @@ static int bh1721fvc_get_luxvalue(struct bh1721fvc_data *bh1721fvc, u16 *value)
 		if (als_min > bh1721fvc->als_value_buf[i])
 			als_min = bh1721fvc->als_value_buf[i];
 	}
-	*value = (als_total - (als_max + als_min)) / (ALS_BUFFER_NUM - 2);
 
-	if (bh1721fvc->als_index_count >= ALS_BUFFER_NUM)
-		bh1721fvc->als_index_count = 0;
-
+	if (bh1721fvc->num_valid_values >= 3)
+		*value = (als_total - als_max - als_min) /
+					(bh1721fvc->num_valid_values - 2);
+	else
+		*value = als_total / bh1721fvc->num_valid_values;
+	mutex_unlock(&bh1721fvc->lock);
 	return 0;
 }
 
@@ -583,6 +635,7 @@ static int bh1721fvc_probe(struct i2c_client *client,
 
 	hrtimer_init(&bh1721fvc->timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
 
+	bh1721fvc->average_samples = 10;
 	bh1721fvc->light_poll_delay = ns_to_ktime(200 * NSEC_PER_MSEC);
 	bh1721fvc->timer.function = bh1721fvc_timer_func;
 
