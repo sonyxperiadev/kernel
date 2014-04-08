@@ -514,8 +514,6 @@ static void bh1721fvc_work_func_light(struct work_struct *work)
 	err = bh1721fvc_get_luxvalue(bh1721fvc, &lux);
 	if (!err) {
 		result = lux;
-		result = (result * 10) / 12;
-		result = result * 139 / 13;
 		bh1721fvc_dbmsg("lux 0x%0X (%d)\n", result, result);
 		input_report_abs(bh1721fvc->input_dev, ABS_MISC, result);
 		input_sync(bh1721fvc->input_dev);
