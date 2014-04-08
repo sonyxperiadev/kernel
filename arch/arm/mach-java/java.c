@@ -51,6 +51,8 @@
 #include <plat/scu.h>
 #include <plat/kona_reset_reason.h>
 #include <mach/sec_api.h>
+#include <mach/sram_config.h>
+#include <asm/cacheflush.h>
 
 static void hawaii_poweroff(void)
 {
@@ -67,8 +69,110 @@ static void hawaii_poweroff(void)
 	while (1) ;
 }
 
+/* Register for panic to know the reason for rebooting */
+static int in_panic;
+static int panic_prep_restart(struct notifier_block *this,
+			      unsigned long event, void *ptr)
+{
+	in_panic = 1;
+	return NOTIFY_DONE;
+}
+
+static struct notifier_block panic_blk = {
+	.notifier_call	= panic_prep_restart,
+};
+
+/* Mapping between restart cmd and S1 restart reason code */
+struct sony_restart_reason_table {
+	const char *cmd;
+	unsigned int reason;
+};
+
+/* Structure of Sony restart reason block (defined by S1) */
+#define SONY_RESTART_REASON_ADDR SRAM_CUST_REBOOT_REASON_BASE
+#define SONY_RESTART_REASON_MAGIC 0xDEADBEEF
+struct sony_restart_reason {
+	unsigned int magic;
+	unsigned int reason;
+};
+
+/* Restart reason table (defined by S1) */
+#define SOMC_WARMBOOT_CLEAR       0xABADBABE
+#define SOMC_WARMBOOT_NONE        0x00000000
+#define SOMC_WARMBOOT_S1          0x6F656D53
+#define SOMC_WARMBOOT_FB          0x77665500
+#define SOMC_WARMBOOT_FOTA        0x6F656D46
+#define SOMC_WARMBOOT_RECOVERY    (SOMC_WARMBOOT_FOTA)
+#define SOMC_WARMBOOT_FOTA_CACHE  0x6F656D50
+#define SOMC_WARMBOOT_NORMAL      0x77665501
+#define SOMC_WARMBOOT_CRASH       0xC0DEDEAD
+
+/*
+ * Restart reason table
+ *
+ * This table maps the various commands supplied to the machine restart
+ * call to the corresponding Sony restart reason recognized by S1 boot.
+ *
+ * Add more restart reasons to this table as needed!
+ */
+static const struct sony_restart_reason_table rrt[] = {
+	{"ramdump", SOMC_WARMBOOT_CRASH},
+};
+
+/*
+ * Update Sony restart reason block with correct code
+ *
+ * This function will update the Sony restart reason block with the
+ * correct structure to allow S1 boot to choose correct boot mode
+ * on next warmboot. It will check the command specified by cmd and
+ * match it against the rrt table above. If there is no match,
+ * it will make a qualified guess based on whether a panic has occured
+ * or not.
+ *
+ * mode: Not used
+ * cmd: Checked against rrt table to determine S1 warmboot code.
+ */
+static void sony_set_restart_reason(char mode, const char *cmd)
+{
+	void *sony_restart_reason_base =
+		ioremap(SONY_RESTART_REASON_ADDR,
+			sizeof(struct sony_restart_reason));
+	struct sony_restart_reason *srr = sony_restart_reason_base;
+	int i;
+
+	/* Check cmd against restart reason table */
+	for (i = 0; i < ARRAY_SIZE(rrt); i++) {
+		if (cmd && !strncmp(cmd, rrt[i].cmd, strlen(rrt[i].cmd))) {
+			srr->reason = rrt[i].reason;
+			break;
+		}
+	}
+
+	/*
+	 * If the cmd did not match any value in the table, or was null,
+	 * make a qualified guess
+	 */
+	if (i == ARRAY_SIZE(rrt)) {
+		/* No ramdump cmd specified, check if a panic has occured */
+		if (in_panic)
+			srr->reason = SOMC_WARMBOOT_CRASH;
+		else
+			srr->reason = SOMC_WARMBOOT_NORMAL;
+	}
+	/* Make sure the magic is correct */
+	srr->magic = SONY_RESTART_REASON_MAGIC;
+	iounmap(sony_restart_reason_base);
+
+	/* Make sure to flush caches before rebooting */
+	flush_cache_all();	/* L1 to L2 */
+	outer_flush_all();	/* L2 to Ram */
+}
+
 void hawaii_restart(char mode, const char *cmd)
 {
+	/* Fill in the Sony restart reason block for S1 boot */
+	sony_set_restart_reason(mode, cmd);
+
 #if defined(CONFIG_MFD_BCMPMU) || defined(CONFIG_MFD_BCM_PMU59xxx)
 	if (hard_reset_reason)
 		bcmpmu_client_hard_reset(hard_reset_reason);
@@ -209,6 +313,9 @@ static void block_mm_access_to_hub(void)
 static int __init hawaii_init(void)
 {
 	pm_power_off = hawaii_poweroff;
+
+	/* Register to know when a panic has occured */
+	atomic_notifier_chain_register(&panic_notifier_list, &panic_blk);
 
 	cpu_info_verbose();
 	pinmux_init();
