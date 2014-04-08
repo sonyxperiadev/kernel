@@ -155,6 +155,7 @@
 			synaptics,power-delay-ms = <160>;
 			synaptics,reset-delay-ms = <100>;
 			synaptics,fw-name = "synaptics/PR1427033.img";
+			synaptics,wakeup-gest-key = <116>; /* KEY_POWER*/
 		};
 
 	};
