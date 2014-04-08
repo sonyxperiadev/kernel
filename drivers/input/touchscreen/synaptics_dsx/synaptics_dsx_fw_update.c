@@ -90,6 +90,7 @@
 #define MIN_SLEEP_TIME_US 50
 #define MAX_SLEEP_TIME_US 100
 
+#define INT_DISABLE_WAIT_MS 20
 #define ENTER_FLASH_PROG_WAIT_MS 20
 
 static int fwu_do_reflash(void);
@@ -937,6 +938,12 @@ static int fwu_enter_flash_prog(void)
 	struct f01_device_status f01_device_status;
 	struct f01_device_control f01_device_control;
 	struct synaptics_rmi4_data *rmi4_data = fwu->rmi4_data;
+
+	retval = rmi4_data->irq_enable(rmi4_data, false, true);
+	if (retval < 0)
+		return retval;
+
+	msleep(INT_DISABLE_WAIT_MS);
 
 	retval = fwu_write_bootloader_id();
 	if (retval < 0)

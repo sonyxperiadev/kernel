@@ -261,7 +261,7 @@ static ssize_t rmidev_sysfs_open_store(struct device *dev,
 	if (input != 1)
 		return -EINVAL;
 
-	rmi4_data->irq_enable(rmi4_data, false);
+	rmi4_data->irq_enable(rmi4_data, false, false);
 	rmidev_sysfs_irq_enable(rmi4_data, true);
 
 	dev_dbg(rmi4_data->pdev->dev.parent,
@@ -284,7 +284,7 @@ static ssize_t rmidev_sysfs_release_store(struct device *dev,
 		return -EINVAL;
 
 	rmidev_sysfs_irq_enable(rmi4_data, false);
-	rmi4_data->irq_enable(rmi4_data, true);
+	rmi4_data->irq_enable(rmi4_data, true, false);
 
 	dev_dbg(rmi4_data->pdev->dev.parent,
 			"%s: Attention interrupt enabled\n",
@@ -534,7 +534,7 @@ static int rmidev_open(struct inode *inp, struct file *filp)
 
 	mutex_lock(&(dev_data->file_mutex));
 
-	rmi4_data->irq_enable(rmi4_data, false);
+	rmi4_data->irq_enable(rmi4_data, false, false);
 	dev_dbg(rmi4_data->pdev->dev.parent,
 			"%s: Attention interrupt disabled\n",
 			__func__);
@@ -564,7 +564,7 @@ static int rmidev_release(struct inode *inp, struct file *filp)
 	if (dev_data->ref_count < 0)
 		dev_data->ref_count = 0;
 
-	rmi4_data->irq_enable(rmi4_data, true);
+	rmi4_data->irq_enable(rmi4_data, true, false);
 	dev_dbg(rmi4_data->pdev->dev.parent,
 			"%s: Attention interrupt enabled\n",
 			__func__);
