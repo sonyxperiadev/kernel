@@ -91,7 +91,7 @@ struct bcmpmu_throttle_data {
 	u8 high_temp_db_cnt;
 	bool acld_algo_finished;
 	u8 acld_wait_count;
-	bool cooling;
+	bool recovering;
 };
 
 int bcmpmu_throttle_get_temp(struct bcmpmu_throttle_data *tdata, u8 channel,
@@ -210,11 +210,26 @@ static void bcmpmu_set_chrgr_trim_default(struct bcmpmu_throttle_data *tdata)
 
 static void bcmpmu_throttle_post_event(struct bcmpmu_throttle_data *tdata)
 {
+	struct thermal_throttle_event_data data;
+	struct batt_temp_curr_map *temp_curr_lut = tdata->pdata->temp_curr_lut;
 
 	pr_throttle(FLOW, "%s Posting Status %d\n",
 		__func__, tdata->temp_algo_running);
+
+	data.algo_running = tdata->temp_algo_running;
+	if (tdata->temp_algo_running) {
+		data.vfloat_lvl = temp_curr_lut[tdata->zone_index].vfloat_lvl;
+		data.vfloat_eoc = temp_curr_lut[tdata->zone_index].vfloat_eoc;
+		data.eoc_curr = temp_curr_lut[tdata->zone_index].eoc_curr;
+	}
 	bcmpmu_call_notifier(tdata->bcmpmu,
-		PMU_THEMAL_THROTTLE_STATUS, &tdata->temp_algo_running);
+		PMU_THEMAL_THROTTLE_STATUS, &data);
+}
+
+static bool
+bcmpmu_throttle_support_normal_zone(struct bcmpmu_throttle_data *tdata)
+{
+	return tdata->pdata->normal_temp_curr_lut_idx >= 0;
 }
 
 static void bcmpmu_throttle_algo(struct bcmpmu_throttle_data *tdata)
@@ -241,7 +256,7 @@ static void bcmpmu_throttle_algo(struct bcmpmu_throttle_data *tdata)
 				temp_curr_lut[tdata->zone_index].temp);
 		pr_throttle(FLOW,
 			"Dir: %s, Curr Temp: %d, Action: %s, Current Limit: %d\n",
-			tdata->cooling ? "Fall" : "Rise",
+			tdata->recovering ? "Fall" : "Rise",
 			temp,
 			(tdata->zone_index == (lut_sz - 1)) ?
 				"Dis-Charging" : "Charging",
@@ -286,7 +301,18 @@ static void bcmpmu_throttle_algo(struct bcmpmu_throttle_data *tdata)
 	}
 
 	if (index > tdata->zone_index) {
-		tdata->high_temp_db_cnt++;
+		bool recover = false;
+
+		if (bcmpmu_throttle_support_normal_zone(tdata) &&
+			index <= tdata->pdata->normal_temp_curr_lut_idx)
+			recover = true;
+
+		if (!recover || !tdata->zone_index)
+			tdata->high_temp_db_cnt++;
+		else if (temp > (temp_curr_lut[tdata->zone_index].temp +
+			tdata->pdata->hysteresis_temp))
+			tdata->high_temp_db_cnt++;
+
 		tdata->temp_db_cnt = 0;
 
 		if (tdata->high_temp_db_cnt >= TEMP_READ_DEBOUNCE) {
@@ -301,30 +327,41 @@ static void bcmpmu_throttle_algo(struct bcmpmu_throttle_data *tdata)
 				"Zone changed,High temp Debounce : %d\n",
 				tdata->high_temp_db_cnt);
 			tdata->previous_index = index;
-			return;
+			if (tdata->zone_index != -1)
+				return;
 		}
-		tdata->cooling = false;
+		tdata->recovering = recover;
 	} else if (index < tdata->zone_index) {
-		if (temp < (temp_curr_lut[tdata->zone_index].temp -
+		bool recover = true;
+
+		if (bcmpmu_throttle_support_normal_zone(tdata) &&
+			index < tdata->pdata->normal_temp_curr_lut_idx) {
+			recover = false;
+		}
+
+		if (!recover)
+			tdata->temp_db_cnt++;
+		else if (temp < (temp_curr_lut[tdata->zone_index].temp -
 				tdata->pdata->hysteresis_temp))
 			tdata->temp_db_cnt++;
 
 		tdata->high_temp_db_cnt = 0;
 
-		if (tdata->temp_db_cnt < TEMP_READ_DEBOUNCE) {
+		if (tdata->temp_db_cnt < TEMP_READ_DEBOUNCE &&
+			tdata->zone_index != -1) {
 			pr_throttle(FLOW,
 				"Zone changed,Hyst Debounce : %d\n",
 				tdata->temp_db_cnt);
 			return;
 		}
-		tdata->cooling = true;
+		tdata->recovering = recover;
 	}
 
 	tdata->zone_index = index;
 	tdata->temp_db_cnt = 0;
 	tdata->high_temp_db_cnt = 0;
 
-	if (index == -1) {
+	if (index == -1 || index == tdata->pdata->normal_temp_curr_lut_idx) {
 		pr_throttle(FLOW,
 			"Normal Temp Zone, Throttling will be Stopped\n");
 		if (tdata->temp_algo_running) {
@@ -349,7 +386,7 @@ static void bcmpmu_throttle_algo(struct bcmpmu_throttle_data *tdata)
 
 	bcmpmu_set_chrgr_trim_default(tdata);
 	cc_curr = bcmpmu_get_icc_fc(tdata->bcmpmu);
-	if (tdata->cooling)
+	if (tdata->recovering)
 		bcmpmu_set_icc_fc(bcmpmu, temp_curr_lut[index].curr);
 	else if (cc_curr > temp_curr_lut[index].curr)
 		bcmpmu_set_icc_fc(bcmpmu, temp_curr_lut[index].curr);
@@ -419,6 +456,7 @@ static int bcmpmu_throttle_event_handler(struct notifier_block *nb,
 			if (tdata->temp_algo_running) {
 				bcmpmu_throttle_restore_charger_state(tdata);
 				tdata->temp_algo_running = false;
+				bcmpmu_throttle_post_event(tdata);
 			}
 			cancel_delayed_work_sync(&tdata->throttle_work);
 			tdata->acld_algo_finished = false;
@@ -448,42 +486,6 @@ static int bcmpmu_throttle_event_handler(struct notifier_block *nb,
 			tdata->acld_algo_finished = true;
 			pr_throttle(FLOW, "ACLD algo FINISH Event Received\n");
 		}
-		break;
-
-	case PMU_CHRGR_EVT_CHRG_STATUS:
-		enable = *(bool *)data;
-		pr_throttle(FLOW, "%s: ===== chrgr_status %d\n",
-			__func__, enable);
-		tdata = to_bcmpmu_throttle_data(nb, chrgr_status_nb);
-		mutex_lock(&tdata->mutex_work);
-		if (enable && tdata->chrgr_type &&
-				tdata->throttle_algo_enabled &&
-				(!tdata->throttle_scheduled)) {
-			queue_delayed_work(tdata->throttle_wq,
-					&tdata->throttle_work, 0);
-			pr_throttle(FLOW,
-				"Charger Connected, Enabling Thermal Throttling\n");
-		} else if ((!enable) && tdata->throttle_scheduled) {
-			if (tdata->zone_index !=
-				(tdata->pdata->temp_curr_lut_sz - 1)) {
-				pr_throttle(FLOW,
-					"Charging Disabled, Disabling Thermal Throttling\n");
-				cancel_delayed_work_sync(&tdata->throttle_work);
-				tdata->throttle_scheduled = false;
-				tdata->acld_wait_count = 0;
-			}
-		} else {
-			/* dump status */
-			pr_throttle(ERROR,
-				"Charger Status Wrong! l=%d\n", __LINE__);
-			pr_throttle(ERROR, "enable=%d chrgr_type=%d\n",
-				enable, tdata->chrgr_type);
-			pr_throttle(ERROR, "throttle_algo_enabled=%d\n",
-				tdata->throttle_algo_enabled);
-			pr_throttle(ERROR, "throttle_scheduled=%d\n",
-				tdata->throttle_scheduled);
-		}
-		mutex_unlock(&tdata->mutex_work);
 		break;
 
 	}
@@ -878,7 +880,7 @@ static int bcmpmu_throttle_probe(struct platform_device *pdev)
 	tdata->acld_algo_finished = false;
 	tdata->temp_algo_running = false;
 	tdata->throttle_scheduled = false;
-	tdata->cooling = false;
+	tdata->recovering = false;
 
 	mutex_init(&tdata->mutex_work);
 
@@ -909,14 +911,6 @@ static int bcmpmu_throttle_probe(struct platform_device *pdev)
 		goto unreg_usb_det_nb;
 	}
 	tdata->chrgr_status_nb.notifier_call = bcmpmu_throttle_event_handler;
-	ret = bcmpmu_add_notifier(PMU_CHRGR_EVT_CHRG_STATUS,
-			&tdata->chrgr_status_nb);
-	if (ret) {
-		pr_throttle(FLOW,
-			"%s Failed to add chrgr st notifier\n", __func__);
-		goto unreg_acld_nb;
-	}
-
 
 	bcmpmu_usb_get(bcmpmu, BCMPMU_USB_CTRL_GET_CHRGR_TYPE, &charger_type);
 	if (charger_type != PMU_CHRGR_TYPE_NONE)
@@ -930,9 +924,6 @@ static int bcmpmu_throttle_probe(struct platform_device *pdev)
 	return 0;
 unreg_usb_det_nb:
 	bcmpmu_remove_notifier(PMU_ACCY_EVT_OUT_CHRGR_TYPE,
-				&tdata->usb_det_nb);
-unreg_acld_nb:
-	bcmpmu_remove_notifier(PMU_ACLD_EVT_ACLD_STATUS,
 				&tdata->usb_det_nb);
 destroy_workq:
 	destroy_workqueue(tdata->throttle_wq);
