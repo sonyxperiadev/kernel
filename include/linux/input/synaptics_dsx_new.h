@@ -61,6 +61,7 @@ struct synaptics_dsx_button_map {
  * @vir_button_map: pointer to virtual button map
  * @fw_name: name of fw image file located at kernel/firmware/
  * @large_obj_size: size of large obect to detct [0-127], set -1 to skip
+ * @wakeup_gest_key: key code to report upon wakeup gesture, set -1 to skip
  */
 struct synaptics_dsx_board_data {
 	bool x_flip;
@@ -88,6 +89,7 @@ struct synaptics_dsx_board_data {
 	struct synaptics_dsx_button_map *vir_button_map;
 	const char *fw_name;
 	int large_obj_size;
+	int wakeup_gest_key;
 };
 
 #endif

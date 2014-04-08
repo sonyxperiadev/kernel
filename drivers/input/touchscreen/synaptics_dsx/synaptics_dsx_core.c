@@ -913,9 +913,11 @@ static int synaptics_rmi4_f11_abs_report(struct synaptics_rmi4_data *rmi4_data,
 			return 0;
 
 		if (detected_gestures) {
-			input_report_key(rmi4_data->input_dev, KEY_POWER, 1);
+			int key = rmi4_data->hw_if->board_data->wakeup_gest_key;
+
+			input_report_key(rmi4_data->input_dev, key, 1);
 			input_sync(rmi4_data->input_dev);
-			input_report_key(rmi4_data->input_dev, KEY_POWER, 0);
+			input_report_key(rmi4_data->input_dev, key, 0);
 			input_sync(rmi4_data->input_dev);
 			rmi4_data->suspend = false;
 		}
@@ -1085,9 +1087,10 @@ static int synaptics_rmi4_f12_abs_report(struct synaptics_rmi4_data *rmi4_data,
 			return 0;
 
 		if (detected_gestures) {
-			input_report_key(rmi4_data->input_dev, KEY_POWER, 1);
+			int key = rmi4_data->hw_if->board_data->wakeup_gest_key;
+			input_report_key(rmi4_data->input_dev, key, 1);
 			input_sync(rmi4_data->input_dev);
-			input_report_key(rmi4_data->input_dev, KEY_POWER, 0);
+			input_report_key(rmi4_data->input_dev, key, 0);
 			input_sync(rmi4_data->input_dev);
 			rmi4_data->suspend = false;
 		}
@@ -2606,10 +2609,13 @@ flash_prog_mode:
 		}
 	}
 
-	if (rmi4_data->f11_wakeup_gesture || rmi4_data->f12_wakeup_gesture)
-		rmi4_data->enable_wakeup_gesture = WAKEUP_GESTURE;
-	else
+	if (rmi4_data->f11_wakeup_gesture || rmi4_data->f12_wakeup_gesture) {
+		const struct synaptics_dsx_board_data *bdata =
+				rmi4_data->hw_if->board_data;
+		rmi4_data->enable_wakeup_gesture = bdata->wakeup_gest_key > 0;
+	} else {
 		rmi4_data->enable_wakeup_gesture = false;
+	}
 
 	synaptics_rmi4_set_configured(rmi4_data);
 
@@ -2703,8 +2709,9 @@ static void synaptics_rmi4_set_params(struct synaptics_rmi4_data *rmi4_data)
 	}
 
 	if (rmi4_data->f11_wakeup_gesture || rmi4_data->f12_wakeup_gesture) {
-		set_bit(KEY_POWER, rmi4_data->input_dev->keybit);
-		input_set_capability(rmi4_data->input_dev, EV_KEY, KEY_POWER);
+		int key = rmi4_data->hw_if->board_data->wakeup_gest_key;
+		if (key > 0)
+			input_set_capability(rmi4_data->input_dev, EV_KEY, key);
 	}
 
 	return;
