@@ -125,6 +125,28 @@ struct header {
 
 #define IO_BUF_SIZE (FIFO_MAX * (sizeof(struct frame) + sizeof(struct header)))
 
+enum bmg160_orientation {
+	ORI_X_Y_Z,
+	ORI_Y_NX_Z,
+	ORI_NX_NY_Z,
+	ORI_NY_X_Z,
+	ORI_Y_X_NZ,
+	ORI_X_NY_NZ,
+	ORI_NY_NX_NZ,
+	ORI_NX_Y_NZ,
+};
+
+static const char * const orientation_id[] = {
+	"ORI_X_Y_Z",
+	"ORI_Y_NX_Z",
+	"ORI_NX_NY_Z",
+	"ORI_NY_X_Z",
+	"ORI_Y_X_NZ",
+	"ORI_X_NY_NZ",
+	"ORI_NY_NX_NZ",
+	"ORI_NX_Y_NZ",
+};
+
 struct bmg160_data {
 	struct i2c_client           *ic_dev;
 	u8                           chip_id;
@@ -147,6 +169,7 @@ struct bmg160_data {
 	struct hrtimer               hr_timer;
 	ktime_t                      ktime;
 	bool                         flush_complete_req;
+	enum bmg160_orientation      orientation;
 };
 
 static int bmg160_ic_read(struct i2c_client *ic_dev, u8 reg, u8 *buf, int len)
@@ -598,6 +621,63 @@ static unsigned int bmg160_cdev_poll(struct file *filp,
 	return mask;
 }
 
+static enum bmg160_orientation bmg160_get_orientation(const char *name)
+{
+	unsigned i;
+	for (i = 0; i < ARRAY_SIZE(orientation_id); i++)
+		if (!strcmp(name, orientation_id[i]))
+			return i;
+	return -1;
+}
+
+static void bmg160_map_and_scale(struct bmg160_data *bd, struct frame *p)
+{
+	unsigned sh = bd->shift;
+	switch (bd->orientation) {
+	case ORI_X_Y_Z:
+		p->x = le16_to_cpu(p->x) << sh;
+		p->y = le16_to_cpu(p->y) << sh;
+		p->z = le16_to_cpu(p->z) << sh;
+		break;
+	case ORI_Y_NX_Z:
+		p->x = le16_to_cpu(p->y) << sh;
+		p->y = -(le16_to_cpu(p->x) << sh);
+		p->z = le16_to_cpu(p->z) << sh;
+		break;
+	case ORI_NX_NY_Z:
+		p->x = -(le16_to_cpu(p->x) << sh);
+		p->y = -(le16_to_cpu(p->y) << sh);
+		p->z = le16_to_cpu(p->z) << sh;
+		break;
+	case ORI_NY_X_Z:
+		p->x = -(le16_to_cpu(p->y) << sh);
+		p->y = le16_to_cpu(p->x) << sh;
+		p->z = le16_to_cpu(p->z) << sh;
+		break;
+	case ORI_Y_X_NZ:
+		p->x = le16_to_cpu(p->y) << sh;
+		p->y = le16_to_cpu(p->x) << sh;
+		p->z = -(le16_to_cpu(p->z) << sh);
+		break;
+	case ORI_X_NY_NZ:
+		p->x = le16_to_cpu(p->x) << sh;
+		p->y = -(le16_to_cpu(p->y) << sh);
+		p->z = -(le16_to_cpu(p->z) << sh);
+		break;
+	case ORI_NY_NX_NZ:
+		p->x = -(le16_to_cpu(p->y) << sh);
+		p->y = -(le16_to_cpu(p->x) << sh);
+		p->z = -(le16_to_cpu(p->z) << sh);
+		break;
+	default:
+	case ORI_NX_Y_NZ:
+		p->x = -(le16_to_cpu(p->x) << sh);
+		p->y = le16_to_cpu(p->y) << sh;
+		p->z = -(le16_to_cpu(p->z) << sh);
+		break;
+	}
+}
+
 static ssize_t bmg160_cdev_read(struct file *filp, char __user *buf,
 		size_t size, loff_t *offs)
 {
@@ -608,7 +688,6 @@ static ssize_t bmg160_cdev_read(struct file *filp, char __user *buf,
 	unsigned i;
 	struct miscdevice *c = filp->private_data;
 	struct bmg160_data *bd = container_of(c, struct bmg160_data, cdev);
-	unsigned sh = bd->shift;
 	struct header *header;
 
 	spin_lock_irqsave(&bd->data_lock, flags);
@@ -633,11 +712,9 @@ static ssize_t bmg160_cdev_read(struct file *filp, char __user *buf,
 		dev_dbg(&bd->ic_dev->dev, "%s: %d frames\n", __func__,
 				header->cnt);
 
-		for (i = 0, p = header->data; i < header->cnt; i++, p++) {
-			p->x = le16_to_cpu(p->x) << sh;
-			p->y = le16_to_cpu(p->y) << sh;
-			p->z = le16_to_cpu(p->z) << sh;
-		}
+		for (i = 0, p = header->data; i < header->cnt; i++, p++)
+			bmg160_map_and_scale(bd, p);
+
 		len -= sizeof(*header) + header->cnt * sizeof(struct frame);
 		header = (struct header *)p;
 	}
@@ -716,10 +793,17 @@ skip_regulator:
 			bd->range = BMG160_RANGE_2000;
 		else
 			bd->range = val;
+
+		if (of_property_read_string(np, "orientation", &regname))
+			bd->orientation =
+				bmg160_get_orientation("ORI_X_Y_Z");
+		else
+			bd->orientation = bmg160_get_orientation(regname);
+
 	} else {
 		bd->range = BMG160_RANGE_2000;
+		bd->orientation = bmg160_get_orientation("ORI_X_Y_Z");
 	}
-
 	bd->ic_dev = ic_dev;
 	bd->shift = bmg160_range2shift(bd->range);
 	INIT_WORK(&bd->work, bmg160_report_data);
