@@ -112,7 +112,7 @@
 			reg = <0x18>;
 			gpio-irq-pin = <1>;
 			gpio-data-irq-pin = <4>;
-			orientation = <11>;
+			orientation = "ORI_Y_NX_Z"; /* y,-x, z */
 			regulator = "gpldo1_uc";
 		};
 
@@ -121,6 +121,7 @@
 			reg = <0x68>;
 			regulator = "gpldo1_uc";
 			range = <0>; /* BMG160_RANGE_2000 */
+			orientation = "ORI_Y_NX_Z"; /* y,-x, z */
 		};
 	};
 
