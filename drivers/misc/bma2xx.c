@@ -42,6 +42,28 @@
 #define BMA2XXX_SET_BITSLICE(regvar, bitname, val)\
 	((regvar & ~bitname##__MSK) | ((val<<bitname##__POS)&bitname##__MSK))
 
+enum bma2xx_orientation {
+	ORI_X_Y_Z,
+	ORI_Y_NX_Z,
+	ORI_NX_NY_Z,
+	ORI_NY_X_Z,
+	ORI_Y_X_NZ,
+	ORI_X_NY_NZ,
+	ORI_NY_NX_NZ,
+	ORI_NX_Y_NZ,
+};
+
+static const char * const orientation_id[] = {
+	"ORI_X_Y_Z",
+	"ORI_Y_NX_Z",
+	"ORI_NX_NY_Z",
+	"ORI_NY_X_Z",
+	"ORI_Y_X_NZ",
+	"ORI_X_NY_NZ",
+	"ORI_NY_NX_NZ",
+	"ORI_NX_Y_NZ",
+};
+
 struct bma2xxacc {
 	s16 x, y, z;
 };
@@ -110,7 +132,7 @@ struct bma2xx_data {
 	struct early_suspend early_suspend;
 #endif
 	int IRQ;
-	u32 orientation;
+	enum bma2xx_orientation orientation;
 	struct regulator *regulator;
 	struct input_dev *wake_idev;
 	spinlock_t lock;
@@ -1597,75 +1619,59 @@ static int bma2xx_read_accel_xyz(struct bma2xx_data *bma, struct bma2xxacc *acc)
 	return comres;
 }
 
+static enum bma2xx_orientation bma2xx_get_orientation(const char *name)
+{
+	unsigned i;
+	for (i = 0; i < ARRAY_SIZE(orientation_id); i++)
+		if (!strcmp(name, orientation_id[i]))
+			return i;
+	return -1;
+}
+
 static void bma2xx_map_axes(struct bma2xx_data *bma2xx,
 	struct bma2xxacc *acc, int *xyz)
 {
 	switch (bma2xx->orientation) {
-	case BMA_ORI_100_010_001:
+	case ORI_X_Y_Z:
 		xyz[0] = acc->x;
 		xyz[1] = acc->y;
 		xyz[2] = acc->z;
 		break;
-	case BMA_ORI_010_100_001:
+	case ORI_Y_NX_Z:
 		xyz[0] = acc->y;
+		xyz[1] = -acc->x;
+		xyz[2] = acc->z;
+		break;
+	case ORI_NX_NY_Z:
+		xyz[0] = -acc->x;
+		xyz[1] = -acc->y;
+		xyz[2] = acc->z;
+		break;
+	case ORI_NY_X_Z:
+		xyz[0] = -acc->y;
 		xyz[1] = acc->x;
 		xyz[2] = acc->z;
 		break;
-	case BMA_ORI_f00_010_001:
-		xyz[0] = -acc->x;
-		xyz[1] = acc->y;
-		xyz[2] = acc->z;
-		break;
-	case BMA_ORI_f00_0f0_001:
-		xyz[0] = -acc->x;
-		xyz[1] = -acc->y;
-		xyz[2] = acc->z;
-		break;
-	case BMA_ORI_100_0f0_001:
-		xyz[0] = acc->x;
-		xyz[1] = -acc->y;
-		xyz[2] = acc->z;
-		break;
-	case BMA_ORI_100_010_00f:
-		xyz[0] = acc->x;
-		xyz[1] = acc->y;
-		xyz[2] = -acc->z;
-		break;
-	case BMA_ORI_010_100_00f:
+	case ORI_Y_X_NZ:
 		xyz[0] = acc->y;
 		xyz[1] = acc->x;
 		xyz[2] = -acc->z;
 		break;
-	case BMA_ORI_f00_010_00f:
-		xyz[0] = -acc->x;
-		xyz[1] = acc->y;
-		xyz[2] = -acc->z;
-		break;
-	case BMA_ORI_f00_0f0_00f:
-		xyz[0] = -acc->x;
-		xyz[1] = -acc->y;
-		xyz[2] = -acc->z;
-		break;
-	case BMA_ORI_100_0f0_00f:
+	case ORI_X_NY_NZ:
 		xyz[0] = acc->x;
 		xyz[1] = -acc->y;
 		xyz[2] = -acc->z;
 		break;
-	case BMA_ORI_010_f00_00f:
-		xyz[0] = acc->y;
+	case ORI_NY_NX_NZ:
+		xyz[0] = -acc->y;
 		xyz[1] = -acc->x;
 		xyz[2] = -acc->z;
 		break;
-	case BMA_ORI_0f0_100_00f:
-		xyz[0] = -acc->y;
-		xyz[1] = acc->x;
-		xyz[2] = -acc->z;
-		break;
-	case BMA_ORI_0f0_100_001:
 	default:
-		xyz[0] = -acc->y;
-		xyz[1] = acc->x;
-		xyz[2] = acc->z;
+	case ORI_NX_Y_NZ:
+		xyz[0] = -acc->x;
+		xyz[1] = acc->y;
+		xyz[2] = -acc->z;
 		break;
 	}
 }
@@ -3484,15 +3490,20 @@ static int bma2xx_probe(struct i2c_client *client,
 	***************/
 
 	if (client->dev.of_node) {
+		const char *str;
+
 		np = client->dev.of_node;
 		if (of_property_read_u32(np, "gpio-irq-pin", &val))
 			client->irq = -EINVAL;
 		else
 			client->irq = val;
-		if (of_property_read_u32(np, "orientation", &val))
-			data->orientation = 11;
+
+		if (of_property_read_string(np, "orientation", &str))
+			data->orientation =
+				bma2xx_get_orientation("ORI_X_Y_Z");
 		else
-			data->orientation = val;
+			data->orientation = bma2xx_get_orientation(str);
+
 		if (of_property_read_u32(np, "gpio-data-irq-pin", &val))
 			data->data_irq = -EINVAL;
 		else
