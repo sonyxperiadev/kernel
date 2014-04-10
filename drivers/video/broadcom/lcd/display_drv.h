@@ -130,6 +130,8 @@ extern "C" {
 		bool special_mode_on;
 		char *special_mode_on_seq;
 		char *special_mode_off_seq;
+		char *cabc_seq;
+		bool cabc_enabled;
 		char *id_seq;
 		char *win_seq;
 		void (*updt_win_fn)(char *buff, DISPDRV_WIN_t *p_win);

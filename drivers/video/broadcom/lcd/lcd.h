@@ -61,6 +61,8 @@ struct lcd_config {
 	DISPCTRL_REC_T *id_seq;
 	DISPCTRL_REC_T *special_mode_on_cmd_seq; /* Panel special mode */
 	DISPCTRL_REC_T *special_mode_off_cmd_seq; /* Panel normal mode */
+	DISPCTRL_REC_T *cabc_seq;
+	bool cabc_enabled;
 	bool special_mode_on; /* Turn special mode on or off */
 	bool special_mode_panel; /* Panel supports special mode */
 	bool verify_id;

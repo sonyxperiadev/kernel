@@ -2011,6 +2011,13 @@ static int __init populate_dispdrv_cfg(struct kona_fb *fb,
 				__func__, __LINE__, info->special_mode_on);
 	}
 
+	info->cabc_enabled = cfg->cabc_enabled;
+	if (info->cabc_enabled) {
+		info->cabc_seq = get_seq(cfg->cabc_seq);
+		if (!info->cabc_seq)
+			goto err_cabc_seq;
+	}
+
 	info->clear_panel_ram = cfg->clear_panel_ram;
 	info->clear_ram_row_start = cfg->clear_ram_row_start;
 	info->clear_ram_row_end = cfg->clear_ram_row_end;
@@ -2029,6 +2036,8 @@ static int __init populate_dispdrv_cfg(struct kona_fb *fb,
 	fb->display_info = info;
 	return 0;
 
+err_cabc_seq:
+	kfree(info->cabc_seq);
 err_special_mode_seq:
 	kfree(info->special_mode_on_seq);
 	kfree(info->special_mode_off_seq);
@@ -2055,6 +2064,7 @@ err_cfg:
 void release_dispdrv_info(DISPDRV_INFO_T *info)
 {
 	BUG_ON(ZERO_OR_NULL_PTR(info));
+	kfree(info->cabc_seq);
 	kfree(info->special_mode_on_seq);
 	kfree(info->special_mode_off_seq);
 	kfree(info->init_seq);

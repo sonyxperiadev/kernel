@@ -1030,6 +1030,8 @@ static Int32 DSI_PowerControl(
 			if (info->init_fn)
 				info->init_fn();
 			DSI_ExecCmndList(pPanel, info->init_seq);
+			if (info->cabc_enabled)
+				DSI_ExecCmndList(pPanel, info->cabc_seq);
 			DSI_WinSet(drvH, TRUE, &pPanel->win_dim);
 			pPanel->pwrState = STATE_SCREEN_OFF;
 			DSI_INFO("INIT-SEQ\n");
