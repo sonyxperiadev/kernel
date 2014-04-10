@@ -34,10 +34,15 @@
 
 #define MAX_EVENTS		20
 
+#ifdef DEBUG
+#define DEBUG_MASK (BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT | BCMPMU_PRINT_FLOW)
+#else
+#define DEBUG_MASK (BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT)
+#endif
+
 char *get_supply_type_str(int chrgr_type);
 static int icc_fcc;
-static int debug_mask = (BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT |
-			BCMPMU_PRINT_FLOW);
+static int debug_mask = DEBUG_MASK;
 module_param_named(dbgmsk, debug_mask, int, S_IRUGO | S_IWUSR | S_IWGRP);
 #define pr_chrgr(debug_level, args...) \
 	do { \

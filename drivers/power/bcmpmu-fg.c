@@ -347,8 +347,13 @@ struct bcmpmu_fg_data {
 #define DEBUG_FS_PERMISSIONS	(S_IRUSR | S_IWUSR | S_IROTH | S_IRGRP)
 #endif
 
-static u32 debug_mask = BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT | \
-			BCMPMU_PRINT_FLOW;
+#ifdef DEBUG
+#define DEBUG_MASK (BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT | BCMPMU_PRINT_FLOW)
+#else
+#define DEBUG_MASK (BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT)
+#endif
+
+static u32 debug_mask = DEBUG_MASK;
 #define pr_fg(debug_level, args...) \
 	do { \
 		if (debug_mask & BCMPMU_PRINT_##debug_level) { \
