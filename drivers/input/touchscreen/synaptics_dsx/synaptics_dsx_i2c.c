@@ -199,6 +199,16 @@ static int parse_dt(struct device *dev, struct synaptics_dsx_board_data *bdata)
 	} else {
 		dev_dbg(dev, "%s:synaptics,large-obj-size not set\n", __func__);
 	}
+	bdata->wakeup_gest_key = -EINVAL;
+	if (of_property_read_bool(np, "synaptics,wakeup-gest-key")) {
+		retval = of_property_read_u32(np, "synaptics,wakeup-gest-key",
+				&value);
+		dev_dbg(dev, "%s:synaptics,wakeup-gest-key = %d\n",
+				__func__, value);
+		if (retval < 0)
+			return retval;
+		bdata->wakeup_gest_key = value;
+	}
 	return 0;
 }
 #endif
