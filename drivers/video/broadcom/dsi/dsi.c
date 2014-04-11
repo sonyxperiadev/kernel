@@ -1000,27 +1000,6 @@ static Int32 DSI_DCS_Read(DispDrv_PANEL_t *pPanel,
 }
 
 /*
- * Send sequence to enter normal or special mode.
- */
-static void DSI_SpecialModeControl(DispDrv_PANEL_t *pPanel,
-							DISPDRV_INFO_T *info)
-{
-	if (info->special_mode_panel) {
-		if (info->special_mode_on) {
-			pr_info("%s(%d): Panel special mode: %d\n",
-				__func__, __LINE__, info->special_mode_on);
-			DSI_ExecCmndList(pPanel, info->special_mode_on_seq);
-		} else {
-			pr_info("%s(%d): Panel special mode: %d\n",
-				__func__, __LINE__, info->special_mode_on);
-			DSI_ExecCmndList(pPanel, info->special_mode_off_seq);
-		}
-	} else
-		pr_err("%s(%d): Panel special mode not supported\n",
-							__func__, __LINE__);
-}
-
-/*
  *
  *   Function Name: DSI_PowerControl
  *
@@ -1051,7 +1030,6 @@ static Int32 DSI_PowerControl(
 			if (info->init_fn)
 				info->init_fn();
 			DSI_ExecCmndList(pPanel, info->init_seq);
-			DSI_SpecialModeControl(pPanel, info);
 			DSI_WinSet(drvH, TRUE, &pPanel->win_dim);
 			pPanel->pwrState = STATE_SCREEN_OFF;
 			DSI_INFO("INIT-SEQ\n");
