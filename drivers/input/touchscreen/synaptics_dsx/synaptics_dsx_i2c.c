@@ -209,6 +209,32 @@ static int parse_dt(struct device *dev, struct synaptics_dsx_board_data *bdata)
 			return retval;
 		bdata->wakeup_gest_key = value;
 	}
+	retval = of_property_count_strings(np, "synaptics,extra-registers");
+	if (retval > 0) {
+		int i;
+		int n;
+		struct register_info *info;
+
+		info = devm_kzalloc(dev, sizeof(*info) * retval, GFP_KERNEL);
+		if (!info)
+			return -ENOMEM;
+
+		for (i = 0, n = 0; i < retval; i++) {
+			if (of_property_read_string_index(np,
+					"synaptics,extra-registers", i, &name))
+				continue;
+			if (1 == sscanf(name, "%*s %i", &info[n].addr)) {
+				info[n].name = name;
+				n++;
+				dev_dbg(dev, "%s = %x", name, info[n].addr);
+			}
+		}
+		bdata->extra_regs.size = n;
+		bdata->extra_regs.info = info;
+
+	} else {
+		bdata->extra_regs.size = 0;
+	}
 	return 0;
 }
 #endif

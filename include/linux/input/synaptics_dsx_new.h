@@ -34,6 +34,16 @@ struct synaptics_dsx_button_map {
 	unsigned int *map;
 };
 
+struct register_info {
+	const char *name;
+	unsigned addr;
+};
+
+struct register_map {
+	int size;
+	struct register_info *info;
+};
+
 /*
  * struct synaptics_dsx_board_data - DSX board data
  * @x_flip: x flip flag
@@ -90,6 +100,7 @@ struct synaptics_dsx_board_data {
 	const char *fw_name;
 	int large_obj_size;
 	int wakeup_gest_key;
+	struct register_map extra_regs;
 };
 
 #endif

@@ -549,25 +549,41 @@ static struct kobj_attribute virtual_key_map_attr = {
 	},
 	.show = synaptics_rmi4_virtual_key_map_show,
 };
+
+static int extra_reg_addr(struct synaptics_rmi4_data *rmi4_data,
+		const char *reg_name)
+{
+	int i;
+	const struct synaptics_dsx_board_data *bdata =
+			rmi4_data->hw_if->board_data;
+	for (i = 0; i < bdata->extra_regs.size; i++)
+		if (!strncmp(bdata->extra_regs.info[i].name,
+				reg_name, strlen(reg_name)))
+			return bdata->extra_regs.info[i].addr;
+	return -EINVAL;
+}
+
 static ssize_t synaptics_palm_size_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
 	struct synaptics_rmi4_data *rmi4_data = dev_get_drvdata(dev);
 	struct synaptics_rmi4_fn *fhandler;
 	struct synaptics_rmi4_device_info *rmi;
+	int f11_ctrl_58;
 
 	if (!rmi4_data->has_large_obj_det)
 		return -EPERM;
 	rmi = &(rmi4_data->rmi4_mod_info);
 	if (list_empty(&rmi->support_fn_list))
 		return -ENODEV;
+
+	f11_ctrl_58 = extra_reg_addr(rmi4_data, "f11_ctrl_58");
+
 	list_for_each_entry(fhandler, &rmi->support_fn_list, link) {
 		if (fhandler->fn_number == SYNAPTICS_RMI4_F11) {
 			unsigned char control58;
 			int retval = synaptics_rmi4_reg_read(rmi4_data,
-				fhandler->full_addr.ctrl_base +
-				rmi4_data->f11_ctrl_58_offs,
-				&control58, sizeof(control58));
+				f11_ctrl_58, &control58, sizeof(control58));
 			if (retval <= 0)
 				return -EIO;
 			return scnprintf(buf, PAGE_SIZE, "%u\n",
@@ -598,17 +614,16 @@ static int f11_set_large_obj_size(struct synaptics_rmi4_data *rmi4_data)
 	list_for_each_entry(fhandler, &rmi->support_fn_list, link) {
 		if (fhandler->fn_number == SYNAPTICS_RMI4_F11) {
 			unsigned char control58;
+			int f11_ctrl_58 = extra_reg_addr(rmi4_data,
+					"f11_ctrl_58");
 			int retval = synaptics_rmi4_reg_read(rmi4_data,
-				fhandler->full_addr.ctrl_base +
-				rmi4_data->f11_ctrl_58_offs,
-				&control58, sizeof(control58));
+				f11_ctrl_58, &control58, sizeof(control58));
+
 			if (retval <= 0)
 				goto err;
 			control58 = (control58 & ~0x7f) | obj_size;
 			retval = synaptics_rmi4_reg_write(rmi4_data,
-				fhandler->full_addr.ctrl_base +
-				rmi4_data->f11_ctrl_58_offs,
-				&control58, sizeof(control58));
+				f11_ctrl_58, &control58, sizeof(control58));
 			if (retval <= 0)
 				goto err;
 			dev_dbg(rmi4_data->pdev->dev.parent,
@@ -934,7 +949,7 @@ static int synaptics_rmi4_f11_abs_report(struct synaptics_rmi4_data *rmi4_data,
 
 	if (rmi4_data->has_large_obj_det) {
 		retval = synaptics_rmi4_reg_read(rmi4_data,
-				data_addr + rmi4_data->f11_data_28_offs,
+				rmi4_data->f11_data_28,
 				&data28, sizeof(data28));
 		if (retval >= 0) {
 			dev_dbg(rmi4_data->pdev->dev.parent,
@@ -1654,6 +1669,8 @@ static int synaptics_rmi4_f11_init(struct synaptics_rmi4_data *rmi4_data,
 	struct synaptics_rmi4_f11_query_27 query_27;
 	struct synaptics_rmi4_f11_ctrl_6_9 control_6_9;
 	unsigned char control58;
+	int f11_ctrl_58;
+	int f11_data_28;
 
 	fhandler->fn_number = fd->fn_number;
 	fhandler->num_of_data_sources = fd->intr_src_count;
@@ -1673,17 +1690,17 @@ static int synaptics_rmi4_f11_init(struct synaptics_rmi4_data *rmi4_data,
 	else if (query_0_5.num_of_fingers == 5)
 		fhandler->num_of_data_points = 10;
 
-	rmi4_data->has_large_obj_det =
+	f11_ctrl_58 = extra_reg_addr(rmi4_data, "f11_ctrl_58");
+	f11_data_28 = extra_reg_addr(rmi4_data, "f11_data_28");
+	rmi4_data->has_large_obj_det = f11_ctrl_58 != -EINVAL &&
+			f11_data_28 != -EINVAL &&
 			query_0_5.has_large_object_suppression;
-	if (rmi4_data->has_large_obj_det) {
-		dev_dbg(rmi4_data->pdev->dev.parent,
-				"Large object suppression supported\n");
-		/* TODO:
-		 * this should be calculated via F11 query registers
-		 */
-		rmi4_data->f11_ctrl_58_offs = 0x61 - 0x3b;
-		rmi4_data->f11_data_28_offs = 0x30 - 0x15;
-	}
+	rmi4_data->f11_data_28 = f11_data_28;
+
+	dev_dbg(rmi4_data->pdev->dev.parent,
+			"Large object supported = %d (data_28 %x, ctrl_58 %x)",
+			rmi4_data->has_large_obj_det,
+			f11_data_28, f11_ctrl_58);
 
 	rmi4_data->num_of_fingers = fhandler->num_of_data_points;
 
@@ -1705,9 +1722,7 @@ static int synaptics_rmi4_f11_init(struct synaptics_rmi4_data *rmi4_data,
 			rmi4_data->sensor_max_x,
 			rmi4_data->sensor_max_y);
 	if (rmi4_data->has_large_obj_det) {
-		retval = synaptics_rmi4_reg_read(rmi4_data,
-				fhandler->full_addr.ctrl_base +
-				rmi4_data->f11_ctrl_58_offs,
+		retval = synaptics_rmi4_reg_read(rmi4_data, f11_ctrl_58,
 				&control58, sizeof(control58));
 		rmi4_data->large_obj_size = control58 & 0x7f;
 		dev_dbg(rmi4_data->pdev->dev.parent,
