@@ -95,49 +95,41 @@ __initdata struct DSI_COUNTER nt35310_brooks_timing[] = {
 		5, 0, 0, 0, 0, 0, 0, 0, 0x000000FF, 1, 1, 0},
 };
 
-__initdata DISPCTRL_REC_T nt35310_brooks_scrn_on[] = {
-	{DISPCTRL_WR_CMND, 0x29},
-	{DISPCTRL_WR_DATA, 0x00},
-	{DISPCTRL_LIST_END, 0}
-};
-
-__initdata DISPCTRL_REC_T nt35310_brooks_scrn_off[] = {
-	{DISPCTRL_WR_CMND, 0x28},
-	{DISPCTRL_WR_DATA, 0x00},
-	{DISPCTRL_LIST_END, 0}
-};
-
 __initdata DISPCTRL_REC_T nt35310_Brooks_id[] = {
 	{DISPCTRL_WR_CMND, 0xDA},
 	{DISPCTRL_WR_DATA, 0x26},
 	{DISPCTRL_WR_CMND, 0xDB},
 	{DISPCTRL_WR_DATA, 0x91},
-/*	{DISPCTRL_WR_CMND, 0xDC},
-	{DISPCTRL_WR_DATA, 0x00},
-*/	{DISPCTRL_LIST_END, 0}
+	{DISPCTRL_LIST_END, 0}
+};
+
+__initdata DISPCTRL_REC_T nt35310_brooks_scrn_on[] = {
+	{DISPCTRL_WR_CMND, 0x29},
+	{DISPCTRL_SLEEP_MS, 16}, /* 16ms*1 frames = 16 ms */
+	{DISPCTRL_LIST_END, 0}
+};
+
+__initdata DISPCTRL_REC_T nt35310_brooks_scrn_off[] = {
+	{DISPCTRL_WR_CMND, 0x28},
+	{DISPCTRL_SLEEP_MS, 16}, /* 16ms*1 frames = 16 ms */
+	{DISPCTRL_LIST_END, 0}
 };
 
 __initdata DISPCTRL_REC_T nt35310_brooks_slp_in[] = {
-	{DISPCTRL_WR_CMND, 0x28},
-	{DISPCTRL_WR_DATA, 0x00},
-	{DISPCTRL_SLEEP_MS, 11},
 	{DISPCTRL_WR_CMND, 0x10},
-	{DISPCTRL_WR_DATA, 0x00},
-	{DISPCTRL_SLEEP_MS, 101},
+	{DISPCTRL_SLEEP_MS, 64}, /* 16ms*4 frames = 64 ms */
 	{DISPCTRL_LIST_END, 0}
 };
 
 __initdata DISPCTRL_REC_T nt35310_brooks_slp_out[] = {
 	{DISPCTRL_WR_CMND, 0x11},
-	{DISPCTRL_WR_DATA, 0x00},
-	{DISPCTRL_SLEEP_MS, 101},
+	{DISPCTRL_SLEEP_MS, 96}, /* 16ms*6 frames = 96 ms */
 	{DISPCTRL_LIST_END, 0}
 };
 
 __initdata DISPCTRL_REC_T nt35310_brooks_init_panel_cmd[] = {
 	{DISPCTRL_WR_CMND, 0x11},
-	{DISPCTRL_WR_DATA, 0x00},
-	{DISPCTRL_SLEEP_MS, 96}, /* 16 * 6 frames (16 ms) */
+	{DISPCTRL_SLEEP_MS, 96}, /* 16ms*6 frames = 96 ms */
 	{DISPCTRL_LIST_END, 0}
 };
 
