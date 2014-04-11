@@ -118,13 +118,24 @@ static int parse_dt(struct device *dev, struct synaptics_dsx_board_data *bdata)
 		bdata->reset_delay_ms = 0;
 	}
 
+	if (of_property_read_bool(np, "synaptics,max-y-for-2d")) {
+		retval = of_property_read_u32(np, "synaptics,max-y-for-2d",
+				&value);
+		if (retval < 0)
+			return retval;
+		else
+			bdata->max_y_for_2d = value;
+	} else {
+		bdata->max_y_for_2d = -1;
+	}
+
 	bdata->swap_axes = of_property_read_bool(np, "synaptics,swap-axes");
 
 	bdata->x_flip = of_property_read_bool(np, "synaptics,x-flip");
 
 	bdata->y_flip = of_property_read_bool(np, "synaptics,y-flip");
 
-	prop = of_find_property(np, "synaptics,cap-button-map", NULL);
+	prop = of_find_property(np, "synaptics,cap-button-codes", NULL);
 	if (prop && prop->length) {
 		bdata->cap_button_map->map = devm_kzalloc(dev,
 				prop->length,
@@ -133,7 +144,7 @@ static int parse_dt(struct device *dev, struct synaptics_dsx_board_data *bdata)
 			return -ENOMEM;
 		bdata->cap_button_map->nbuttons = prop->length / sizeof(u32);
 		retval = of_property_read_u32_array(np,
-				"synaptics,cap-button-map",
+				"synaptics,cap-button-codes",
 				bdata->cap_button_map->map,
 				bdata->cap_button_map->nbuttons);
 		if (retval < 0) {
@@ -143,6 +154,28 @@ static int parse_dt(struct device *dev, struct synaptics_dsx_board_data *bdata)
 	} else {
 		bdata->cap_button_map->nbuttons = 0;
 		bdata->cap_button_map->map = NULL;
+	}
+
+	prop = of_find_property(np, "synaptics,vir-button-codes", NULL);
+	if (prop && prop->length) {
+		bdata->vir_button_map->map = devm_kzalloc(dev,
+				prop->length,
+				GFP_KERNEL);
+		if (!bdata->vir_button_map->map)
+			return -ENOMEM;
+		bdata->vir_button_map->nbuttons = prop->length / sizeof(u32);
+		bdata->vir_button_map->nbuttons /= 5;
+		retval = of_property_read_u32_array(np,
+				"synaptics,vir-button-codes",
+				bdata->vir_button_map->map,
+				bdata->vir_button_map->nbuttons * 5);
+		if (retval < 0) {
+			bdata->vir_button_map->nbuttons = 0;
+			bdata->vir_button_map->map = NULL;
+		}
+	} else {
+		bdata->vir_button_map->nbuttons = 0;
+		bdata->vir_button_map->map = NULL;
 	}
 
 	retval = of_property_read_string(np, "synaptics,fw-name", &name);
@@ -166,7 +199,6 @@ static int parse_dt(struct device *dev, struct synaptics_dsx_board_data *bdata)
 	} else {
 		dev_dbg(dev, "%s:synaptics,large-obj-size not set\n", __func__);
 	}
-
 	return 0;
 }
 #endif
@@ -368,11 +400,20 @@ static int synaptics_rmi4_i2c_probe(struct i2c_client *client,
 			return -ENOMEM;
 		}
 		hw_if.board_data->cap_button_map = devm_kzalloc(&client->dev,
-				sizeof(struct synaptics_dsx_cap_button_map),
+				sizeof(struct synaptics_dsx_button_map),
 				GFP_KERNEL);
 		if (!hw_if.board_data->cap_button_map) {
 			dev_err(&client->dev,
-					"%s: Failed to allocate memory for button map\n",
+					"%s: Failed to allocate memory for 0D button map\n",
+					__func__);
+			return -ENOMEM;
+		}
+		hw_if.board_data->vir_button_map = devm_kzalloc(&client->dev,
+				sizeof(struct synaptics_dsx_button_map),
+				GFP_KERNEL);
+		if (!hw_if.board_data->vir_button_map) {
+			dev_err(&client->dev,
+					"%s: Failed to allocate memory for virtual button map\n",
 					__func__);
 			return -ENOMEM;
 		}

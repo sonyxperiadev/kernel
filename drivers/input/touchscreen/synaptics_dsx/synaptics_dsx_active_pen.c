@@ -50,6 +50,28 @@ struct synaptics_rmi4_f12_query_8 {
 	};
 };
 
+struct apen_data_8b_pressure {
+	union {
+		struct {
+			unsigned char status_pen:1;
+			unsigned char status_invert:1;
+			unsigned char status_barrel:1;
+			unsigned char status_reserved:5;
+			unsigned char x_lsb;
+			unsigned char x_msb;
+			unsigned char y_lsb;
+			unsigned char y_msb;
+			unsigned char pressure_msb;
+			unsigned char battery_state;
+			unsigned char pen_id_0_7;
+			unsigned char pen_id_8_15;
+			unsigned char pen_id_16_23;
+			unsigned char pen_id_24_31;
+		} __packed;
+		unsigned char data[11];
+	};
+};
+
 struct apen_data {
 	union {
 		struct {
@@ -63,20 +85,27 @@ struct apen_data {
 			unsigned char y_msb;
 			unsigned char pressure_lsb;
 			unsigned char pressure_msb;
+			unsigned char battery_state;
+			unsigned char pen_id_0_7;
+			unsigned char pen_id_8_15;
+			unsigned char pen_id_16_23;
+			unsigned char pen_id_24_31;
 		} __packed;
-		unsigned char data[7];
+		unsigned char data[12];
 	};
 };
 
 struct synaptics_rmi4_apen_handle {
 	bool apen_present;
 	unsigned char intr_mask;
+	unsigned char battery_state;
 	unsigned short query_base_addr;
 	unsigned short control_base_addr;
 	unsigned short data_base_addr;
 	unsigned short command_base_addr;
 	unsigned short apen_data_addr;
 	unsigned short max_pressure;
+	unsigned int pen_id;
 	struct input_dev *apen_dev;
 	struct apen_data *apen_data;
 	struct synaptics_rmi4_data *rmi4_data;
@@ -104,6 +133,7 @@ static void apen_report(void)
 	int y;
 	int pressure;
 	static int invert = -1;
+	struct apen_data_8b_pressure *apen_data_8b;
 	struct synaptics_rmi4_data *rmi4_data = apen->rmi4_data;
 
 	retval = synaptics_rmi4_reg_read(rmi4_data,
@@ -148,8 +178,19 @@ static void apen_report(void)
 	if (apen->max_pressure == ACTIVE_PEN_MAX_PRESSURE_16BIT) {
 		pressure = (apen->apen_data->pressure_msb << 8) |
 				apen->apen_data->pressure_lsb;
+		apen->battery_state = apen->apen_data->battery_state;
+		apen->pen_id = (apen->apen_data->pen_id_24_31 << 24) |
+				(apen->apen_data->pen_id_16_23 << 16) |
+				(apen->apen_data->pen_id_8_15 << 8) |
+				apen->apen_data->pen_id_0_7;
 	} else {
-		pressure = apen->apen_data->pressure_lsb;
+		apen_data_8b = (struct apen_data_8b_pressure *)apen->apen_data;
+		pressure = apen_data_8b->pressure_msb;
+		apen->battery_state = apen_data_8b->battery_state;
+		apen->pen_id = (apen_data_8b->pen_id_24_31 << 24) |
+				(apen_data_8b->pen_id_16_23 << 16) |
+				(apen_data_8b->pen_id_8_15 << 8) |
+				apen_data_8b->pen_id_0_7;
 	}
 
 	input_report_key(apen->apen_dev, BTN_TOUCH, pressure > 0 ? 1 : 0);

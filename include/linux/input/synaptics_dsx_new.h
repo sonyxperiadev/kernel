@@ -25,11 +25,11 @@
 #define SPI_DRIVER_NAME "synaptics_dsx_spi"
 
 /*
- * struct synaptics_dsx_cap_button_map - 0D button map
- * @nbuttons: number of 0D buttons
- * @map: pointer to array of button types
+ * struct synaptics_dsx_button_map - button map
+ * @nbuttons: number of buttons
+ * @map: pointer to array of button codes
  */
-struct synaptics_dsx_cap_button_map {
+struct synaptics_dsx_button_map {
 	unsigned char nbuttons;
 	unsigned int *map;
 };
@@ -45,6 +45,7 @@ struct synaptics_dsx_cap_button_map {
  * @power_on_state: power switch active state
  * @reset_gpio: reset GPIO
  * @reset_on_state: reset active state
+ * @max_y_for_2d: maximum y value for 2D area when virtual buttons are present
  * @irq_flags: IRQ flags
  * @device_descriptor_addr: HID device descriptor address
  * @panel_x: x-axis resolution of display panel
@@ -57,6 +58,7 @@ struct synaptics_dsx_cap_button_map {
  * @pwr_reg_name: pointer to name of regulator for power control
  * @bus_reg_name: pointer to name of regulator for bus pullup control
  * @cap_button_map: pointer to 0D button map
+ * @vir_button_map: pointer to virtual button map
  * @fw_name: name of fw image file located at kernel/firmware/
  * @large_obj_size: size of large obect to detct [0-127], set -1 to skip
  */
@@ -70,6 +72,7 @@ struct synaptics_dsx_board_data {
 	int power_on_state;
 	int reset_gpio;
 	int reset_on_state;
+	int max_y_for_2d;
 	unsigned long irq_flags;
 	unsigned short device_descriptor_addr;
 	unsigned int panel_x;
@@ -81,8 +84,10 @@ struct synaptics_dsx_board_data {
 	unsigned int block_delay_us;
 	const char *pwr_reg_name;
 	const char *bus_reg_name;
-	struct synaptics_dsx_cap_button_map *cap_button_map;
+	struct synaptics_dsx_button_map *cap_button_map;
+	struct synaptics_dsx_button_map *vir_button_map;
 	const char *fw_name;
 	int large_obj_size;
 };
+
 #endif
