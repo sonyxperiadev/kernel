@@ -896,16 +896,21 @@ static ssize_t kona_fb_panel_mode_store(struct device *dev,
 	if (sscanf(buf, "%i", &val) != 1) {
 		pr_err("%s: Error, buf = %s\n", __func__, buf);
 		ret = -EINVAL;
-	} else {
-		if (fb->display_info->special_mode_panel) {
-			dev_info(dev, "%s: panel mode %i\n", __func__, val);
-			if (val)
-				fb->display_info->special_mode_on = 1;
-			else
-				fb->display_info->special_mode_on = 0;
-		} else
-			pr_err("%s: Not supported\n", __func__);
+		goto exit;
 	}
+	if (fb->display_info->special_mode_panel) {
+		dev_info(dev, "%s: panel mode %i\n", __func__, val);
+		if (val) {
+			panel_write(fb->display_info->special_mode_on_seq);
+			fb->display_info->special_mode_on = true;
+		} else {
+			panel_write(fb->display_info->special_mode_off_seq);
+			fb->display_info->special_mode_on = false;
+		}
+	} else {
+		pr_err("%s: Not supported\n", __func__);
+	}
+exit:
 	return ret;
 }
 
@@ -1980,10 +1985,8 @@ static int __init populate_dispdrv_cfg(struct kona_fb *fb,
 	return 0;
 
 err_special_mode_seq:
-	if (cfg->special_mode_panel) {
-		kfree(info->special_mode_on_seq);
-		kfree(info->special_mode_off_seq);
-	}
+	kfree(info->special_mode_on_seq);
+	kfree(info->special_mode_off_seq);
 err_win_seq:
 	kfree(info->init_seq);
 err_init_seq:
@@ -2007,6 +2010,8 @@ err_cfg:
 void release_dispdrv_info(DISPDRV_INFO_T *info)
 {
 	BUG_ON(ZERO_OR_NULL_PTR(info));
+	kfree(info->special_mode_on_seq);
+	kfree(info->special_mode_off_seq);
 	kfree(info->init_seq);
 	kfree(info->slp_in_seq);
 	kfree(info->slp_out_seq);
