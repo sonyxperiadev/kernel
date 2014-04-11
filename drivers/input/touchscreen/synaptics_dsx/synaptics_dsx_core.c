@@ -926,7 +926,8 @@ static int synaptics_rmi4_f11_abs_report(struct synaptics_rmi4_data *rmi4_data,
 				sizeof(detected_gestures));
 		if (retval < 0)
 			return 0;
-
+		dev_dbg(rmi4_data->pdev->dev.parent, "detected_gestures 0x%x\n",
+				detected_gestures);
 		if (detected_gestures) {
 			int key = rmi4_data->hw_if->board_data->wakeup_gest_key;
 
@@ -1577,9 +1578,19 @@ static int synaptics_rmi4_irq_enable(struct synaptics_rmi4_data *rmi4_data,
 		/* Process and clear interrupts */
 		synaptics_rmi4_sensor_report(rmi4_data);
 
-		retval = request_threaded_irq(rmi4_data->irq, NULL,
+		if (rmi4_data->enable_wakeup_gesture) {
+			retval = request_threaded_irq(rmi4_data->irq, NULL,
+				synaptics_rmi4_irq, bdata->irq_flags |
+				IRQF_NO_SUSPEND,
+				PLATFORM_DRIVER_NAME, rmi4_data);
+			if (retval < 0)
+				irq_set_irq_wake(rmi4_data->irq, 1);
+		} else {
+			retval = request_threaded_irq(rmi4_data->irq, NULL,
 				synaptics_rmi4_irq, bdata->irq_flags,
 				PLATFORM_DRIVER_NAME, rmi4_data);
+		}
+
 		if (retval < 0) {
 			dev_err(rmi4_data->pdev->dev.parent,
 					"%s: Failed to create irq thread\n",
@@ -2631,6 +2642,8 @@ flash_prog_mode:
 	} else {
 		rmi4_data->enable_wakeup_gesture = false;
 	}
+	if (rmi4_data->enable_wakeup_gesture)
+		device_init_wakeup(rmi4_data->pdev->dev.parent, 1);
 
 	synaptics_rmi4_set_configured(rmi4_data);
 
@@ -3459,6 +3472,9 @@ static void synaptics_rmi4_f11_wg(struct synaptics_rmi4_data *rmi4_data,
 	unsigned char reporting_control;
 	struct synaptics_rmi4_fn *fhandler;
 	struct synaptics_rmi4_device_info *rmi;
+
+	dev_dbg(rmi4_data->pdev->dev.parent,
+			"%s: enable %d\n", __func__, enable);
 
 	rmi = &(rmi4_data->rmi4_mod_info);
 
