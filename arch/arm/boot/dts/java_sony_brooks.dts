@@ -117,7 +117,7 @@
 			reg = <0x18>;
 			gpio-irq-pin = <1>;
 			gpio-data-irq-pin = <4>;
-			orientation = <11>;
+			orientation = "ORI_Y_NX_Z"; /* y,-x, z */
 			regulator = "gpldo1_uc";
 		};
 
@@ -126,6 +126,7 @@
 			reg = <0x68>;
 			regulator = "gpldo1_uc";
 			range = <0>; /* BMG160_RANGE_2000 */
+			orientation = "ORI_Y_NX_Z"; /* y,-x, z */
 		};
 	};
 
@@ -153,6 +154,10 @@
 			synaptics,reset-active-ms = <20>;
 			synaptics,power-delay-ms = <160>;
 			synaptics,reset-delay-ms = <100>;
+			synaptics,fw-name = "synaptics/PR1638646.img";
+			synaptics,wakeup-gest-key = <116>; /* KEY_POWER*/
+			synaptics,extra-registers = "f11_ctrl_58 0x62",
+				"f11_data_28 0x30";
 		};
 
 	};

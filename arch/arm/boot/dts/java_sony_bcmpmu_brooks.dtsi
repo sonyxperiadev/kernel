@@ -3,7 +3,7 @@
 	compatible = "Broadcom,bcmpmu";
 	initdata = <
 	     /* Add  Val  Mask Map */
-		0x14 0x75 0xFF 0
+		0x14 0xC5 0xFF 0
 		/*  enable PC3 function */
 		0x15 0x0F 0xFF 0
 		/*Enable PASR_EN*/
@@ -35,22 +35,24 @@
 		0x42 0x04 0x04 0
 		 /* Enable BC12_EN */
 		0x44 0x01 0x01 0
-		  /*  ICCMAX to 652mA*/
-		0x47 0x07 0xFF 0
-		  /*  USB_FC to 652mA*/
-		0x49 0x07 0xFF 0
-		  /* NTC Hot Temperature Comparator rising = 55C*/
-		0xCC 0x4C 0xFF 1
-		  /* NTC Hot Temperature Comparator falling = 50C*/
-		0xCD 0x5C 0xFF 1
-		  /* NTC Cold Temperature Comparator rising = 0C*/
-		0xCE 0xF4 0xFF 1
-		  /* NTC Cold Temperature Comparator falling = 5C*/
-		0xCF 0xB8 0xFF 1
+		 /* VFLOATMAX to 4.375V */
+		0x45 0x34 0x3F 0
+		  /* ICCMAX to 771 +/- 5% mA */
+		0x47 0x17 0x1F 0
+		  /*  USB_FC to 100mA */
+		0x49 0x00 0x0F 0
+		 /* Enable NTC for HW and SW charging */
+		0x4A 0x0F 0x0F 0
+		  /* NTC Hot Temperature Comparator rising = 55C */
+		0xCC 0x4E 0xFF 1
+		  /* NTC Hot Temperature Comparator falling = 52C */
+		0xCD 0x58 0xFF 1
+		  /* NTC Cold Temperature Comparator rising = 5C */
+		0xCE 0x86 0xFF 1
+		  /* NTC Cold Temperature Comparator falling = 8C */
+		0xCF 0x91 0xFF 1
 		  /* NTC Hot Temperature Comparator bit 9,8 */
 		0xD0 0x05 0xFF 1
-		 /*MBCCTRL11*/
-		0x4A 0x0F 0xff 0
 		 /* ID detection ,current source Trimming */
 		0x47 0xD2 0xFF 1
 		0x48 0x98 0xFF 1
@@ -104,11 +106,16 @@
 		 0x1E 0xb8 0xff 1
 		 /*SIMLDO2 enable pulldown MobC00298660*/
 		 0x9a 0x00 0x40 0
+		 /*CMPCTRL12 set Die over temparature to 130C*/
+		 0xD3 0x18 0xFF 1
 		>;
 
 	exitdata = <
 		/* Address Value Mask Map*/
-		0x14 0x5 0xFF 0
+		/* reset to STAT1/STAT2 for VBUS detection */
+		0x14 0x0 0x70 0
+		/* Disable Thermal Shutdown */
+		0x15 0x0 0x01 0
 		0x4E 0x0 0x10 1
 		>;
 	};
@@ -136,8 +143,8 @@
 		mmc2 = "1", "mmc2_vcc", "0", "0", "8", "0", "0";
 		/*pc_map = PMU_PC2|PMU_PC3, initial_mode = REGULATOR_MODE_STANDBY*/
 		aud  = "1", "audldo_uc", "1", "6", "8", "0", "0";
-		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, initial_mode = REGULATOR_MODE_NORMAL*/
-		usb  = "2", "usb_vcc", "bc_vcc", "0", "7", "2", "0", "0";
+		/*pc_map = PMU_PC3, initial_mode = REGULATOR_MODE_IDLE*/
+		usb  = "2", "usb_vcc", "bc_vcc", "0", "4", "4", "0", "0";
 		/*pc_map = 0, initial_mode = REGULATOR_MODE_STANDBY*/
 		mic  = "1", "micldo_uc", "0","0", "8", "0", "0";
 		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, initial_mode = REGULATOR_MODE_NORMAL*/

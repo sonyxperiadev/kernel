@@ -236,8 +236,7 @@ dtb-$(CONFIG_MACH_JAVA_SS_VICTOR3G) += java_ss_victor3g_rev00.dtb
 dtb-$(CONFIG_MACH_JAVA_SS_BAFFINLITE) += java_ss_baffinlite_rev02.dtb
 dtb-$(CONFIG_MACH_JAVA_SONY) += java_sony_kivu.dtb \
 	java_sony_kivu_030.dtb \
-	java_sony_brooks.dtb \
-	java_sony_brooks_020.dtb
+	java_sony_brooks.dtb
 
 DTB_NAMES := $(subst $\",,$(CONFIG_BUILD_ARM_APPENDED_DTB_IMAGE_NAMES))
 ifneq ($(DTB_NAMES),)
