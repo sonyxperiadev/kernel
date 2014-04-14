@@ -152,6 +152,11 @@ static ssize_t synaptics_palm_size_show(struct device *dev,
 static ssize_t synaptics_palm_size_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t count);
 
+static ssize_t synaptics_mode_show(struct device *dev,
+		struct device_attribute *attr, char *buf);
+
+static ssize_t synaptics_mode_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count);
 
 struct synaptics_rmi4_f01_device_status {
 	union {
@@ -540,6 +545,9 @@ static struct device_attribute attrs[] = {
 	__ATTR(palm_size,  S_IRUGO | S_IWUSR | S_IWGRP,
 			synaptics_palm_size_show,
 			synaptics_palm_size_store),
+	__ATTR(mode, S_IRUGO | S_IWUSR | S_IWGRP,
+			synaptics_mode_show,
+			synaptics_mode_store),
 };
 
 static struct kobj_attribute virtual_key_map_attr = {
@@ -3573,6 +3581,41 @@ static void synaptics_rmi4_wakeup_gesture(struct synaptics_rmi4_data *rmi4_data,
 		synaptics_rmi4_f12_wg(rmi4_data, enable);
 
 	return;
+}
+
+static ssize_t synaptics_mode_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct synaptics_rmi4_data *rmi4_data = dev_get_drvdata(dev);
+	return scnprintf(buf, PAGE_SIZE, "%s", rmi4_data->suspend &&
+			rmi4_data->enable_wakeup_gesture ?
+			"doze" : "on");
+}
+
+static ssize_t synaptics_mode_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	int rc;
+	struct synaptics_rmi4_data *rmi4_data = dev_get_drvdata(dev);
+
+	if (!rmi4_data->enable_wakeup_gesture)
+		return -EINVAL;
+	if (!strncmp(buf, "doze", strlen("doze"))) {
+		if (!rmi4_data->suspend) {
+			synaptics_rmi4_wakeup_gesture(rmi4_data, true);
+			rmi4_data->suspend = true;
+		}
+		rc = 0;
+	} else if (!strncmp(buf, "on", strlen("on"))) {
+		if (rmi4_data->suspend) {
+			synaptics_rmi4_wakeup_gesture(rmi4_data, false);
+			rmi4_data->suspend = false;
+		 }
+		rc = 0;
+	} else {
+		rc = -EINVAL;
+	}
+	return rc ? rc : count;
 }
 
 static void synaptics_rmi4_sensor_sleep(struct synaptics_rmi4_data *rmi4_data)
