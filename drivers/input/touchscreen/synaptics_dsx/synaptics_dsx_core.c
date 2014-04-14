@@ -2781,7 +2781,6 @@ static int synaptics_rmi4_set_input_dev(struct synaptics_rmi4_data *rmi4_data)
 	rmi4_data->input_dev->phys = INPUT_PHYS_NAME;
 	rmi4_data->input_dev->id.product = SYNAPTICS_DSX_DRIVER_PRODUCT;
 	rmi4_data->input_dev->id.version = SYNAPTICS_DSX_DRIVER_VERSION;
-	rmi4_data->input_dev->dev.parent = rmi4_data->pdev->dev.parent;
 	input_set_drvdata(rmi4_data->input_dev, rmi4_data);
 
 	set_bit(EV_SYN, rmi4_data->input_dev->evbit);
