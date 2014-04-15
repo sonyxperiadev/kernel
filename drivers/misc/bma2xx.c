@@ -142,11 +142,14 @@ struct bma2xx_data {
 	int data_irq;
 	u8 r_shift;
 	bool fflush;
+	int axis_num_map[3];
 };
 
 #ifdef BMA2XX_SW_CALIBRATION
 static int bma2xx_offset[3];
 #endif
+
+static const struct bma2xxacc axis_num = {1, 2, 3};
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
 static void bma2xx_early_suspend(struct early_suspend *h);
@@ -509,12 +512,58 @@ static int bma2xx_set_pad_sel(struct i2c_client *client,
 	return -EINVAL;
 }
 
+struct bma_func_map {
+	union {
+		struct {
+			int x, y, z;
+		};
+		enum bma2xx_func slope_xyz[3];
+	};
+};
+
+static struct bma_func_map bma_func_map[] = {
+	[ORI_X_Y_Z] = { .x = BMA_WAKE_SLOPE_X, .y = BMA_WAKE_SLOPE_Y,
+			.z = BMA_WAKE_SLOPE_Z },
+	[ORI_NX_NY_Z] = { .x = BMA_WAKE_SLOPE_X, .y = BMA_WAKE_SLOPE_Y,
+			.z = BMA_WAKE_SLOPE_Z },
+	[ORI_X_NY_NZ] = { .x = BMA_WAKE_SLOPE_X, .y = BMA_WAKE_SLOPE_Y,
+			.z = BMA_WAKE_SLOPE_Z },
+	[ORI_NX_Y_NZ] = { .x = BMA_WAKE_SLOPE_X, .y = BMA_WAKE_SLOPE_Y,
+			.z = BMA_WAKE_SLOPE_Z },
+	[ORI_Y_NX_Z] = { .x = BMA_WAKE_SLOPE_Y, .y = BMA_WAKE_SLOPE_X,
+			.z = BMA_WAKE_SLOPE_Z },
+	[ORI_NY_X_Z] = { .x = BMA_WAKE_SLOPE_Y, .y = BMA_WAKE_SLOPE_X,
+			.z = BMA_WAKE_SLOPE_Z },
+	[ORI_Y_X_NZ] = { .x = BMA_WAKE_SLOPE_Y, .y = BMA_WAKE_SLOPE_X,
+			.z = BMA_WAKE_SLOPE_Z },
+	[ORI_NY_NX_NZ] = { .x = BMA_WAKE_SLOPE_Y, .y = BMA_WAKE_SLOPE_X,
+			.z = BMA_WAKE_SLOPE_Z },
+};
+
+static enum bma2xx_func bma2xx_map_interrupt_type(
+		struct bma2xx_data *bma2xx,
+		enum bma2xx_func irq_type)
+{
+	int n;
+
+	switch (irq_type) {
+	case BMA_WAKE_SLOPE_X:
+	case BMA_WAKE_SLOPE_Y:
+	case BMA_WAKE_SLOPE_Z:
+		n = irq_type - BMA_WAKE_SLOPE_X;
+		return bma_func_map[bma2xx->orientation].slope_xyz[n];
+	default:
+		return irq_type;
+	}
+}
+
 static int bma2xx_set_Int_Enable(struct i2c_client *client,
 				 enum bma2xx_func interrupt_type,
 				 unsigned char value)
 {
 	int comres = 0;
 	unsigned char data1, data2;
+	struct bma2xx_data *bma2xx = i2c_get_clientdata(client);
 
 	comres =
 	    bma2xx_smbus_read_byte(client, BMA2XXX_INT_ENABLE1_REG, &data1);
@@ -522,6 +571,8 @@ static int bma2xx_set_Int_Enable(struct i2c_client *client,
 	    bma2xx_smbus_read_byte(client, BMA2XXX_INT_ENABLE2_REG, &data2);
 
 	value = value & 1;
+	interrupt_type = bma2xx_map_interrupt_type(bma2xx, interrupt_type);
+
 	switch (interrupt_type) {
 	case BMA_WAKE_LOWG:
 		/* Low G Interrupt  */
@@ -1629,7 +1680,7 @@ static enum bma2xx_orientation bma2xx_get_orientation(const char *name)
 }
 
 static void bma2xx_map_axes(struct bma2xx_data *bma2xx,
-	struct bma2xxacc *acc, int *xyz)
+	const struct bma2xxacc *acc, int *xyz)
 {
 	switch (bma2xx->orientation) {
 	case ORI_X_Y_Z:
@@ -3244,29 +3295,29 @@ static void bma2xx_irq_work_func(struct work_struct *work)
 				if (sign_value == 1) {
 					if (i == 0)
 						input_report_rel(idev,
-					SLOP_INTERRUPT,
-					SLOPE_INTERRUPT_X_NEGATIVE_HAPPENED);
+						SLOP_INTERRUPT,
+						-bma2xx->axis_num_map[0]);
 					else if (i == 1)
 						input_report_rel(idev,
-					SLOP_INTERRUPT,
-					SLOPE_INTERRUPT_Y_NEGATIVE_HAPPENED);
+						SLOP_INTERRUPT,
+						-bma2xx->axis_num_map[1]);
 					else if (i == 2)
 						input_report_rel(idev,
-					SLOP_INTERRUPT,
-					SLOPE_INTERRUPT_Z_NEGATIVE_HAPPENED);
+						SLOP_INTERRUPT,
+						-bma2xx->axis_num_map[2]);
 				} else {
 					if (i == 0)
 						input_report_rel(idev,
 						SLOP_INTERRUPT,
-						SLOPE_INTERRUPT_X_HAPPENED);
+						-bma2xx->axis_num_map[0]);
 					else if (i == 1)
 						input_report_rel(idev,
 						SLOP_INTERRUPT,
-						SLOPE_INTERRUPT_Y_HAPPENED);
+						-bma2xx->axis_num_map[1]);
 					else if (i == 2)
 						input_report_rel(idev,
 						SLOP_INTERRUPT,
-						SLOPE_INTERRUPT_Z_HAPPENED);
+						-bma2xx->axis_num_map[2]);
 
 				}
 			}
@@ -3532,6 +3583,8 @@ static int bma2xx_probe(struct i2c_client *client,
 
 	INIT_DELAYED_WORK(&data->work, bma2xx_work_func);
 	atomic_set(&data->delay, BMA2XXX_MAX_DELAY);
+
+	bma2xx_map_axes(data, &axis_num, data->axis_num_map);
 
 	dev = input_allocate_device();
 	if (!dev)
