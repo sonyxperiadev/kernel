@@ -547,6 +547,6 @@
 	bcm-gps {
 		compatible = "bcm,bcm-gps";
 		bcm-gps-hostwake = <&gpio 89 0>;
-		bcm-gps-regpu-gpio = <&gpio 100 0>;
+		bcm-gps-regpu-gpio = <&gpio 23 0>;
 	};
 };
