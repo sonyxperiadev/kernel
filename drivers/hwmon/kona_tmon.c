@@ -66,6 +66,7 @@ struct kona_tmon {
 };
 
 static struct kona_tmon *kona_tmon;
+static int tmon_init(struct kona_tmon *tmon, int flags);
 
 static int tmon_dbg_mask;
 enum {
@@ -292,6 +293,17 @@ static void tmon_poll_work(struct work_struct *ws)
 	struct kona_tmon *tmon = container_of((struct delayed_work *)ws,
 			struct kona_tmon, poll_work);
 	struct kona_tmon_pdata *pdata = tmon->pdata;
+
+	/* coming out of suspend */
+	if (!atomic_dec_if_positive(&tmon->suspend)) {
+		/* Init TMON and turn on the clocks */
+		if (kona_tmon->pdata->flags & TMON_SUSPEND_POWEROFF) {
+			clk_enable(kona_tmon->tmon_1m_clk);
+			tmon_init(kona_tmon, kona_tmon->vtmon_sel);
+		}
+		if (tmon->poll_inx == INVALID_INX)
+			return;
+	}
 
 	BUG_ON(tmon->poll_inx == INVALID_INX);
 	curr_temp = tmon_get_current_temp(CELCIUS, true);
@@ -794,19 +806,10 @@ static int kona_tmon_suspend(struct platform_device *pdev, pm_message_t state)
 
 static int kona_tmon_resume(struct platform_device *pdev)
 {
-	atomic_set(&kona_tmon->suspend, 0);
-
-	/* Init TMON and turn on the clocks */
-	if (kona_tmon->pdata->flags & TMON_SUSPEND_POWEROFF) {
-		clk_enable(kona_tmon->tmon_1m_clk);
-		tmon_init(kona_tmon, kona_tmon->vtmon_sel);
-	}
-
-	if (kona_tmon->poll_inx != INVALID_INX) {
-		queue_delayed_work(kona_tmon->wqueue, &kona_tmon->poll_work,
+	queue_delayed_work(kona_tmon->wqueue, &kona_tmon->poll_work,
 				msecs_to_jiffies(0));
-		tmon_dbg(TMON_LOG_DBG, "%s: starting work queue\n", __func__);
-	}
+	tmon_dbg(TMON_LOG_DBG, "%s: starting work queue\n", __func__);
+
 	return 0;
 }
 
