@@ -158,6 +158,9 @@ static ssize_t synaptics_mode_show(struct device *dev,
 static ssize_t synaptics_mode_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t count);
 
+static void synaptics_rmi4_f11_wg(struct synaptics_rmi4_data *, bool);
+static void synaptics_rmi4_f12_wg(struct synaptics_rmi4_data *, bool);
+
 struct synaptics_rmi4_f01_device_status {
 	union {
 		struct {
@@ -945,7 +948,7 @@ static int synaptics_rmi4_f11_abs_report(struct synaptics_rmi4_data *rmi4_data,
 			input_sync(rmi4_data->input_dev);
 			rmi4_data->suspend = false;
 		}
-
+		synaptics_rmi4_f11_wg(rmi4_data, false);
 		return 0;
 	}
 
@@ -1118,7 +1121,7 @@ static int synaptics_rmi4_f12_abs_report(struct synaptics_rmi4_data *rmi4_data,
 			input_sync(rmi4_data->input_dev);
 			rmi4_data->suspend = false;
 		}
-
+		synaptics_rmi4_f12_wg(rmi4_data, false);
 		return 0;
 	}
 
