@@ -3400,15 +3400,6 @@ static void bma2xx_fifo_work_func(struct work_struct *work)
 	}
 }
 
-static void bma2xx_report_wake_key(struct bma2xx_data *bma)
-{
-	if (WAKE_ENABLED(bma->enable)) {
-		input_report_key(bma->wake_idev, KEY_POWER, 1);
-		input_report_key(bma->wake_idev, KEY_POWER, 0);
-		input_sync(bma->wake_idev);
-	}
-}
-
 static irqreturn_t bma2xx_irq_handler(int irq, void *handle)
 {
 
@@ -3420,7 +3411,6 @@ static irqreturn_t bma2xx_irq_handler(int irq, void *handle)
 	if (data->bma2xx_client == NULL)
 		return IRQ_HANDLED;
 
-	bma2xx_report_wake_key(data);
 	spin_lock_irqsave(&data->lock, f);
 	if (data->state & DEV_SUSPENDED) {
 		data->state |= IRQ1_PENDING;
