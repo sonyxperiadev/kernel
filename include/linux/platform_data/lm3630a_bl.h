@@ -36,6 +36,8 @@ enum lm3630a_ledb_ctrl {
 	LM3630A_LEDB_ENABLE_LINEAR = 0x0A,
 };
 
+#define A_MAX_CURR_DEFAULT 0x1F
+#define B_MAX_CURR_DEFAULT 0x1F
 #define LM3630A_MAX_BRIGHTNESS 255
 /*
  *@leda_init_brt : led a init brightness. 4~255
@@ -44,8 +46,12 @@ enum lm3630a_ledb_ctrl {
  *@ledb_init_brt : led b init brightness. 4~255
  *@ledb_max_brt  : led b max brightness.  4~255
  *@ledb_ctrl     : led b disable, enable linear, enable exponential
- *@pwm_period    : pwm period
  *@pwm_ctrl      : pwm disable, bank a or b, active high or low
+ *@pwm_filter_strength : Register value for filter strength
+ *@a_max_curr    : Register value for max current bank A
+ *@b_max_curr    : Register value for max current bank B
+ *@ramp_on_off   : Register value for ramp on off
+ *@ramp_run      : Register value for ramp run
  */
 struct lm3630a_platform_data {
 
@@ -58,8 +64,13 @@ struct lm3630a_platform_data {
 	int ledb_max_brt;
 	enum lm3630a_ledb_ctrl ledb_ctrl;
 	/* pwm config. */
-	unsigned int pwm_period;
 	enum lm3630a_pwm_ctrl pwm_ctrl;
+	int pwm_filter_strength;
+	/* register settings */
+	int a_max_curr;
+	int b_max_curr;
+	int ramp_on_off;
+	int ramp_run;
 };
 
 #endif /* __LINUX_LM3630A_H */
