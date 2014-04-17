@@ -1,0 +1,18 @@
+#
+# MMC polling mode configuration
+
+menuconfig MMCPOLL
+	bool "Polling mode MMC stack"
+	help
+	  This selects MultiMediaCard support APIs that work on polling
+	  mode. These APIs can be called from exception handler context
+	  to write data into eMMC Flash (other MMC devices) without interrrupts, DMA etc.
+
+menuconfig MMCPOLL_TEST
+	tristate "Test module to verify polling mode MMC stack APIs"
+	depends on MMCPOLL
+	help
+	  This selects the test code to validate polling mode MMC driver
+	  Gives sysfs interface to initialize, read and write into the MMC
+	  kpanic partition using MMC Poll APIs.
+	  Disable the config as default.

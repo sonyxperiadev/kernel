@@ -1,0 +1,93 @@
+config BCMDHD
+	tristate "Broadcom wireless cards support"
+	depends on WLAN
+	---help---
+	  This module adds support for wireless adapters based on
+	  Broadcom WLAN chipset.
+
+
+choice
+	prompt "---Enable chip specific options"
+	depends on BCMDHD
+	---help---
+		Enable specific chip.
+
+config BCMDHD_GENERIC_CHIP_SUPPORT
+	bool "No chip specific options"
+	depends on BCMDHD
+	---help---
+		Disable any chip specific options.
+
+config BCM4330
+	bool "Broadcom BCM4330 support only"
+	depends on BCMDHD
+	---help---
+		Enable any BCM4330 specific options.
+		
+config BCM4334
+	bool "Broadcom BCM4334 support only"
+	depends on BCMDHD
+	---help---
+		Enable any BCM4334 specific options.
+
+config BCM4335
+	bool "Broadcom BCM4335 support only"
+	depends on BCMDHD
+	---help---
+		Enable any BCM4335 specific options.
+
+config BCM4339
+	bool "Broadcom BCM4339 support only"
+	depends on BCMDHD
+	---help---
+		Enable any BCM4339 specific options.
+
+config BCM43241
+	bool "Broadcom BCM43241 support only"
+	depends on BCMDHD
+	---help---
+		Enable any BCM43241 specific options.
+
+config BCM43341
+	bool "Broadcom BCM43341 support only"
+	depends on BCMDHD
+	---help---
+		Enable any BCM43341 specific options.
+				
+endchoice
+
+config BCMDHD_FW_PATH
+	depends on BCMDHD
+	string "Firmware path"
+	default "/system/etc/firmware/fw_bcmdhd.bin"
+	---help---
+	  Path to the firmware file.
+
+config BCMDHD_NVRAM_PATH
+	depends on BCMDHD
+	string "NVRAM path"
+	default "/system/etc/wifi/bcmdhd.cal"
+	---help---
+	  Path to the calibration file.
+
+config BCMDHD_WEXT
+	bool "Enable WEXT support"
+	depends on BCMDHD && CFG80211 = n
+	select WIRELESS_EXT
+	select WEXT_PRIV
+	help
+	  Enables WEXT support
+
+config DHD_USE_STATIC_BUF
+	bool "Enable memory preallocation"
+	depends on BCMDHD
+	default n
+	---help---
+	  Use memory preallocated in platform
+
+config DHD_USE_SCHED_SCAN
+	bool "Use CFG80211 sched scan"
+	depends on BCMDHD && CFG80211
+	default n
+	---help---
+	  Use CFG80211 sched scan

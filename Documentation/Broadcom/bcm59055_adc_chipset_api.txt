@@ -1,0 +1,38 @@
+ADC chipset API
+
+int bcm59055_hal_adc_raw_read (u8 channel, u32 *value, HAL_ADC_CALLBACK *callback, void * context)
+
+Return values:
+HAL_ADC_ERR_SUCCESS
+HAL_ADC_ERR_NOTSUP
+-ENOMEM
+
+The reading is returned in the caller supplied value input parameter. If callback is specified, 
+the function will be called.
+
+
+int bcm59055_hal_adc_unit_convert (u8 channel, u32 value);
+
+Return value:
+
+The unit converted value, depending on channel.
+
+
+Channels:
+
+The following channels can be specified so far:
+
+HAL_ADC_VBAT		(unit: mV)
+HAL_ADC_VCHAR		(unit: mV)
+HAL_ADC_VBACK		(unit: mV)
+HAL_ADC_VCHAR		(unit: mV)
+
+HAL_ADC_BSI		(unit: HOhm)
+
+HAL_ADC_BTEMP		(unit: K)
+HAL_ADC_PATEMP		(unit: K)
+HAL_ADC_VCXOTEMP	(unit: K)
+
+HAL_ADC_IBAT_FAST	(unit: mA)
+
+More channels are defined, but they are not supported.

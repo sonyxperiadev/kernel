@@ -1,0 +1,13 @@
+comment "soc camera host driver"
+config VIDEOBUF2_VMALLOC
+	select VIDEOBUF2_CORE
+config UNICAM_CAMERA
+	tristate "Broadcom Unicam camera host interface driver"
+	depends on VIDEO_V4L2 && VIDEO_V4L2_SUBDEV_API
+	select VIDEOBUF2_DMA_RESERVED
+	---help---
+	  This is a v4l2 driver for Broadcom Unicam host interface.
+
+	  To compile this driver as a modulem choose M here: the
+	  module will be called unicam_camera
+

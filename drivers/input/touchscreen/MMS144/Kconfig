@@ -1,0 +1,16 @@
+#
+# touch driver configuration
+#
+
+config TOUCHSCREEN_MELFAS_MMS144
+	tristate "Melfas MMS144 I2C Touchscreen"
+	depends on I2C
+	help
+	  Say Y here if you have Melfas MMS144 I2C touchscreen,
+	  such as MMS144, connected to your system.
+
+	  If unsure, say N.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called MMS144.
+

@@ -1,0 +1,347 @@
+/* Hawaii_edn01X Dts file */
+
+/dts-v1/;
+
+/include/ "java.dtsi"
+
+/ {
+	model = "javafpga_eve";
+	compatible = "bcm,java";
+
+	chosen {
+		bootargs = "console=ttyS0,115200n8 gpt mem=736M ap_only_boot root=/dev/ram0 rw rootfstype=rootfs initrd=0x83000000,4M init=/linuxrc"; /*lpj=10461184*/
+	};
+
+	memory@82000000 {
+		device_type = "memory";
+		reg = <0x82000000 0x2e000000>; /* 736 MB */
+	};
+
+	wd-tapper {
+		count = <120>; /* Time in seconds */
+		ch-num = <1>; /* Kona hub timer Channel number */
+		timer-name = "aon-timer";
+		status = "disabled";
+	};
+
+	usb-phy@0x3F130000 {
+		interrupts = <0 128 0x04>;
+		chipreg-virtual-mem-base = <0x35004000>;
+		usb-ahb-clk-name = "usb_otg_clk";
+		mdio-mstr-clk-name = "mdiomaster";
+	};
+	usb-hsotgctrl@0x3F130000 {
+		chipreg-virtual-mem-base = <0x35004000>;
+		usb-ahb-clk-name = "usb_otg_clk";
+		mdio-mstr-clk-name = "mdiomaster";
+	};
+
+
+	uart@3e000000 {
+		clock-frequency = <13000000>;
+		port-name = "console";
+		clk-name = "uartb_clk";
+	};
+
+	uart@3e001000 {
+		clock-frequency = <48000000>;
+		port-name = "bluetooth";
+		clk-name = "uartb2_clk";
+		status = "disabled";
+	};
+
+	uart@3e002000 {
+		clock-frequency = <26000000>;
+		port-name = "gps";
+		clk-name = "uartb3_clk";
+		status = "disabled";
+	};
+
+	i2c0: i2c@3e016000 {
+		speed = <5>; /* BSC_BUS_SPEED_400 K */
+		dynamic-speed = <1>;
+		bsc-clk = "bsc1_clk";
+		bsc-apb-clk = "bsc1_apb_clk";
+		retries = <1>;
+		is-pmu-i2c = <0>;
+		fs-ref-frequency = <13000000>;
+		hs-ref-frequency = <104000000>;
+		status = "disabled";
+	};
+
+	i2c1: i2c@3e017000 {
+		speed = <5>; /* BSC_BUS_SPEED_400 K */
+		dynamic-speed = <1>;
+		bsc-clk = "bsc2_clk";
+		bsc-apb-clk = "bsc2_apb_clk";
+		retries = <3>;
+		is-pmu-i2c = <0>;
+		fs-ref-frequency = <13000000>;
+		hs-ref-frequency = <104000000>;
+		status = "disabled";
+	};
+
+	i2c2: i2c@3e018000 {
+		speed = <5>; /* BSC_BUS_SPEED_400 K */
+		dynamic-speed = <1>;
+		bsc-clk = "bsc3_clk";
+		bsc-apb-clk = "bsc3_apb_clk";
+		retries = <1>;
+		is-pmu-i2c = <0>;
+		fs-ref-frequency = <13000000>;
+		hs-ref-frequency = <104000000>;
+		status = "disabled";
+	};
+
+	i2c3: i2c@3e01c000 {
+		speed = <5>; /* BSC_BUS_SPEED_400 K */
+		dynamic-speed = <1>;
+		bsc-clk = "bsc4_clk";
+		bsc-apb-clk = "bsc4_apb_clk";
+		retries = <1>;
+		is-pmu-i2c = <0>;
+		fs-ref-frequency = <13000000>;
+		hs-ref-frequency = <104000000>;
+		status = "disabled";
+
+		tango_ts@46 {
+			compatible = "bcm,tango_ts";
+			reg = <0x46>;
+			gpio-irq-pin = <73>;
+			gpio-reset-pin = <70>;
+			x-max-value = <480>;
+			y-max-value = <800>;
+			layout = <1>;
+			num-bytes-to-read = <14>;
+			is-multi-touch = <1>;
+			is-resetable = <1>;
+			num-fingers-idx = <0>;
+			old-touching-idx = <1>;
+			x1-lo-idx = <2>;
+			x1-hi-idx = <3>;
+			y1-lo-idx = <4>;
+			y1-hi-idx = <5>;
+			x2-lo-idx = <6>;
+			x2-hi-idx = <7>;
+			y2-lo-idx = <8>;
+			y2-hi-idx = <9>;
+			x1-width-idx = <10>;
+			y1-width-idx = <11>;
+			x2-width-idx = <12>;
+			y2-width-idx = <13>;
+			power-mode-idx = <20>;
+			int-mode-idx = <21>;
+			int-width-idx = <22>;
+			min-finger-val = <0>;
+			max-finger-val = <2>;
+			panel-width = <56>;
+		};
+	};
+
+	i2c4: i2c@3500d000 {
+		speed = <7>; /* BSC_BUS_SPEED_HS */
+		dynamic-speed = <0>;
+		bsc-clk = "pmu_bsc_clk";
+		bsc-apb-clk = "pmu_bsc_apb";
+		retries = <5>;
+		is-pmu-i2c = <1>;
+		fs-ref-frequency = <13000000>;
+		hs-ref-frequency = <26000000>;
+		status = "disabled";
+	};
+
+	spi0: spi@0x3E004000 {
+		enable-dma = <1>;
+		cs-line = <1>;
+		mode = <0x23>;
+
+		spidev@0x0 {
+			compatible = "bcm,spidev";
+			reg = <0x0>;
+			spi-max-frequency = <13000000>;
+			spi-loop = <0x20>;
+		};
+	};
+
+
+	iommu_mm: iommu-mm {
+		compatible = "bcm,iommu-m4u";
+		iova_begin  = <0x80000000>;
+		iova_size   = <0x80000000>;
+		errbuf_size = <0x00001000>;
+	};
+
+	iovmm_mm: iovmm-mm {
+		compatible = "bcm,iovmm";
+		base = <0xc0000000>;
+		size = <0x20000000>;
+		order = <0>;
+	};
+
+	iovmm_mm_256mb: iovmm-mm-256mb {
+		compatible = "bcm,iovmm";
+		base = <0xe0000000>;
+		size = <0x10000000>;
+		order = <0>;
+	};
+
+	ion-system {
+		compatible = "bcm,ion";
+		id = <0>;
+		type = <0>;
+		iommu = <&iommu_mm>;
+		iovmm = <&iovmm_mm_256mb>;
+	};
+
+	ion-carveout {
+		compatible = "bcm,ion";
+		id = <3>;
+		type = <2>;
+		base  = <0xa0000000>;
+		limit = <0xb0000000>;
+		size  = <0x04000000>;
+		lmk_enable = <0>;
+		lmk_min_score_adj = <411>;
+		lmk_min_free = <32>;
+		iommu = <&iommu_mm>;
+		iovmm = <&iovmm_mm_256mb>;
+	};
+
+	ion-cma {
+		compatible = "bcm,ion";
+		id = <2>;
+		type = <4>;
+		base  = <0xa0000000>;
+		limit = <0xb0000000>;
+		size  = <0x0c000000>;
+		lmk_enable = <1>;
+		lmk_min_score_adj = <411>;
+		lmk_min_free = <32>;
+		iommu = <&iommu_mm>;
+		iovmm = <&iovmm_mm_256mb>;
+	};
+
+	kona-fb {
+		module-name = "SIMULATOR";
+		reg-name = "cam2";
+		rst-gpio = <&gpio 22 0>;
+		rst-setup = <5>;	/* 5us */
+		rst-pulse = <15>;	/* 15us */
+		rst-hold = <10000>;	/* 10ms */
+		col-mod-i = <2>;	/* KONA_CM_I_XBGR888 */
+		col-mod-o = <3>;	/* KONA_CM_O_RGB888 */
+		width = <480>;
+		height = <800>;
+		fps = <60>;
+		lanes = <3>;
+		hs-bitrate = <1000000000>;	/* 330mbps */
+		lp-bitrate = <5000000>;	/* 5mbps */
+		iommu = <&iommu_mm>;
+		iovmm = <&iovmm_mm>;
+		rotation = <0>;
+	};
+
+	tmon@0x34008000 {
+		compatible = "bcm,tmon";
+		reg = <0x34008000 0x1000>;
+		interrupts = <0 183 4>;
+		chipreg_addr = <0x35004000 0x1000>;
+		thold_size = <5>; /*number of threshold levels*/
+		poll_rate_ms = <30000>;
+		hysteresis = <0>;
+		flags = <1>;
+		interval_ms = <5>;
+		/*sw shdwn temp is 120*/
+		thold = <85 1
+			95 1
+			105 1
+			120 4
+			125 2>;
+		tmon_apb_clk = "tmon_apb";
+		tmon_1m_clk = "tmon_1m_clk";
+		falling = <5>; /*fall back temperature offset*/
+		status = "disabled";
+	};
+
+	memc@35008000 {
+		compatible = "bcm,memc";
+		reg = <0x35008000 0x1000>;
+		interrupts = <0 61 4>;
+		flags = <0xF3>;
+		chipreg_base = <0x35004000 0x1000>;
+		memc0_aphy_base = <0x35008400 0x1000>;
+		seq_busy_val = <2>;
+		max_pwr = <3>;
+		temp_period = <0xA09E6C>; /*400ms*/
+		temp_tholds = <7 1>;
+		num_thold = <1>;
+		statuc = "disabled";
+	};
+
+	sdio0 {
+		compatible = "bcm,sdhci";
+		reg = <0x3F180000 10000>;
+		interrupts = <0 77 0x04>;
+		id = <0>;
+		data-pullup = <0>;
+		cd-gpio = <&gpio 91 0>;		/*SD_CARDDET_GPIO_PIN*/
+		devtype = <0>;		/*SDIO_DEV_TYPE_SDMMC*/
+		flags = <2>;		/*REMOVABLE | RPM_EN*/
+		peri-clk-name = "sdio1_clk";
+		ahb-clk-name = "sdio1_ahb_clk";
+		sleep-clk-name = "sdio1_sleep_clk";
+		peri-clk-rate = <48000000>;
+		vddo-regulator-name = "vdd_sdio";
+		vddsdxc-regulator-name = "vdd_sdxc";
+		quirks	= <0x00000040>;		/*SDHCI_QUIRK_BROKEN_ADMA (1 << 6)*/
+		quirks2	= <0x00000008>;		/*SDHCI_QUIRK2_HOST_MASK_HS_BIT (1<<3)*/
+		status = "disabled";
+	};
+
+	sdio1 {
+		compatible = "bcm,sdhci";
+		reg = <0x3F190000 10000>;
+		interrupts = <0 76 0x04>;
+		id = <1>;
+		data-pullup = <0>;
+		is-8bit = <1>;
+		devtype = <2>;		/*SDIO_DEV_TYPE_EMMC*/
+		flags = <3>;		/*NON_REMOVABLE | RPM_EN*/
+		pm_caps = <1>;		/*MMC_PM_KEEP_POWER*/
+		peri-clk-name = "sdio2_clk";
+		ahb-clk-name = "sdio2_ahb_clk";
+		sleep-clk-name = "sdio2_sleep_clk";
+		peri-clk-rate = <96000000>;
+	};
+
+	sdio2 {
+		compatible = "bcm,sdhci";
+		reg = <0x3F1A0000 10000>;
+		interrupts = <0 74 0x04>;
+		id = <2>;
+		data-pullup = <0>;
+		devtype = <1>;		/*SDIO_DEV_TYPE_WIFI*/
+		flags = <2>;		/*REMOVABLE | RPM_EN*/
+		peri-clk-name = "sdio3_clk";
+		ahb-clk-name = "sdio3_ahb_clk";
+		sleep-clk-name = "sdio3_sleep_clk";
+		peri-clk-rate = <48000000>;
+		status = "disabled";
+	};
+	pwm-backlight {
+		compatible = "bcm,pwm-backlight";
+		reg = <0x0 0x0>;
+		pwm-id = <2>;
+		max-brightness = <32>;	/* Android calibrates to 32 levels */
+		dft-brightness = <32>;
+		polarity = <1>;		/* Inverted polarity */
+		pwm-period-ns = <1000000>;
+		pwm-request-label = "backlight";
+	};
+        timer {
+		compatible = "arm,armv7-timer";
+		interrupts = <1 13 0xf08>,
+			     <1 14 0xf08>;
+		status = "disabled";
+	};
+};

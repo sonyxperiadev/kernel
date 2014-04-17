@@ -1,0 +1,831 @@
+/************************************************************************************************/
+/*                                                                                              */
+/*  Copyright 2013  Broadcom Corporation                                                        */
+/*                                                                                              */
+/*     Unless you and Broadcom execute a separate written software license agreement governing  */
+/*     use of this software, this software is licensed to you under the terms of the GNU        */
+/*     General Public License version 2 (the GPL), available at                                 */
+/*                                                                                              */
+/*          http://www.broadcom.com/licenses/GPLv2.php                                          */
+/*                                                                                              */
+/*     with the following added to such license:                                                */
+/*                                                                                              */
+/*     As a special exception, the copyright holders of this software give you permission to    */
+/*     link this software with independent modules, and to copy and distribute the resulting    */
+/*     executable under terms of your choice, provided that you also meet, for each linked      */
+/*     independent module, the terms and conditions of the license of that module.              */
+/*     An independent module is a module which is not derived from this software.  The special  */
+/*     exception does not apply to any modifications of the software.                           */
+/*                                                                                              */
+/*     Notwithstanding the above, under no circumstances may you combine this software in any   */
+/*     way with any other Broadcom software provided under a license other than the GPL,        */
+/*     without Broadcom's express prior written consent.                                        */
+/*                                                                                              */
+/*     Date     : Generated on 3/4/2013 11:52:5                                             */
+/*     RDB file : //JAVA/                                                                   */
+/************************************************************************************************/
+
+#ifndef __BRCM_RDB_KPROC_CLK_MGR_REG_H__
+#define __BRCM_RDB_KPROC_CLK_MGR_REG_H__
+
+#define KPROC_CLK_MGR_REG_WR_ACCESS_OFFSET                                0x00000000
+#define KPROC_CLK_MGR_REG_WR_ACCESS_TYPE                                  UInt32
+#define KPROC_CLK_MGR_REG_WR_ACCESS_RESERVED_MASK                         0x7F0000FE
+#define    KPROC_CLK_MGR_REG_WR_ACCESS_PRIV_ACCESS_MODE_SHIFT             31
+#define    KPROC_CLK_MGR_REG_WR_ACCESS_PRIV_ACCESS_MODE_MASK              0x80000000
+#define    KPROC_CLK_MGR_REG_WR_ACCESS_PASSWORD_SHIFT                     8
+#define    KPROC_CLK_MGR_REG_WR_ACCESS_PASSWORD_MASK                      0x00FFFF00
+#define    KPROC_CLK_MGR_REG_WR_ACCESS_CLKMGR_ACC_SHIFT                   0
+#define    KPROC_CLK_MGR_REG_WR_ACCESS_CLKMGR_ACC_MASK                    0x00000001
+
+#define KPROC_CLK_MGR_REG_POLICY_FREQ_OFFSET                              0x00000008
+#define KPROC_CLK_MGR_REG_POLICY_FREQ_TYPE                                UInt32
+#define KPROC_CLK_MGR_REG_POLICY_FREQ_RESERVED_MASK                       0x78F8F8F8
+#define    KPROC_CLK_MGR_REG_POLICY_FREQ_PRIV_ACCESS_MODE_SHIFT           31
+#define    KPROC_CLK_MGR_REG_POLICY_FREQ_PRIV_ACCESS_MODE_MASK            0x80000000
+#define    KPROC_CLK_MGR_REG_POLICY_FREQ_POLICY3_FREQ_SHIFT               24
+#define    KPROC_CLK_MGR_REG_POLICY_FREQ_POLICY3_FREQ_MASK                0x07000000
+#define    KPROC_CLK_MGR_REG_POLICY_FREQ_POLICY2_FREQ_SHIFT               16
+#define    KPROC_CLK_MGR_REG_POLICY_FREQ_POLICY2_FREQ_MASK                0x00070000
+#define    KPROC_CLK_MGR_REG_POLICY_FREQ_POLICY1_FREQ_SHIFT               8
+#define    KPROC_CLK_MGR_REG_POLICY_FREQ_POLICY1_FREQ_MASK                0x00000700
+#define    KPROC_CLK_MGR_REG_POLICY_FREQ_POLICY0_FREQ_SHIFT               0
+#define    KPROC_CLK_MGR_REG_POLICY_FREQ_POLICY0_FREQ_MASK                0x00000007
+
+#define KPROC_CLK_MGR_REG_POLICY_CTL_OFFSET                               0x0000000C
+#define KPROC_CLK_MGR_REG_POLICY_CTL_TYPE                                 UInt32
+#define KPROC_CLK_MGR_REG_POLICY_CTL_RESERVED_MASK                        0x7FFFFEF0
+#define    KPROC_CLK_MGR_REG_POLICY_CTL_PRIV_ACCESS_MODE_SHIFT            31
+#define    KPROC_CLK_MGR_REG_POLICY_CTL_PRIV_ACCESS_MODE_MASK             0x80000000
+#define    KPROC_CLK_MGR_REG_POLICY_CTL_WFI_EN_SHIFT                      8
+#define    KPROC_CLK_MGR_REG_POLICY_CTL_WFI_EN_MASK                       0x00000100
+#define    KPROC_CLK_MGR_REG_POLICY_CTL_TGT_VLD_SHIFT                     3
+#define    KPROC_CLK_MGR_REG_POLICY_CTL_TGT_VLD_MASK                      0x00000008
+#define    KPROC_CLK_MGR_REG_POLICY_CTL_GO_ATL_SHIFT                      2
+#define    KPROC_CLK_MGR_REG_POLICY_CTL_GO_ATL_MASK                       0x00000004
+#define    KPROC_CLK_MGR_REG_POLICY_CTL_GO_AC_SHIFT                       1
+#define    KPROC_CLK_MGR_REG_POLICY_CTL_GO_AC_MASK                        0x00000002
+#define    KPROC_CLK_MGR_REG_POLICY_CTL_GO_SHIFT                          0
+#define    KPROC_CLK_MGR_REG_POLICY_CTL_GO_MASK                           0x00000001
+
+#define KPROC_CLK_MGR_REG_POLICY0_MASK_OFFSET                             0x00000010
+#define KPROC_CLK_MGR_REG_POLICY0_MASK_TYPE                               UInt32
+#define KPROC_CLK_MGR_REG_POLICY0_MASK_RESERVED_MASK                      0x7FCFFFFF
+#define    KPROC_CLK_MGR_REG_POLICY0_MASK_PRIV_ACCESS_MODE_SHIFT          31
+#define    KPROC_CLK_MGR_REG_POLICY0_MASK_PRIV_ACCESS_MODE_MASK           0x80000000
+#define    KPROC_CLK_MGR_REG_POLICY0_MASK_CCI_POLICY0_MASK_SHIFT          21
+#define    KPROC_CLK_MGR_REG_POLICY0_MASK_CCI_POLICY0_MASK_MASK           0x00200000
+#define    KPROC_CLK_MGR_REG_POLICY0_MASK_ARM_POLICY0_MASK_SHIFT          20
+#define    KPROC_CLK_MGR_REG_POLICY0_MASK_ARM_POLICY0_MASK_MASK           0x00100000
+
+#define KPROC_CLK_MGR_REG_POLICY1_MASK_OFFSET                             0x00000014
+#define KPROC_CLK_MGR_REG_POLICY1_MASK_TYPE                               UInt32
+#define KPROC_CLK_MGR_REG_POLICY1_MASK_RESERVED_MASK                      0x7FCFFFFF
+#define    KPROC_CLK_MGR_REG_POLICY1_MASK_PRIV_ACCESS_MODE_SHIFT          31
+#define    KPROC_CLK_MGR_REG_POLICY1_MASK_PRIV_ACCESS_MODE_MASK           0x80000000
+#define    KPROC_CLK_MGR_REG_POLICY1_MASK_CCI_POLICY1_MASK_SHIFT          21
+#define    KPROC_CLK_MGR_REG_POLICY1_MASK_CCI_POLICY1_MASK_MASK           0x00200000
+#define    KPROC_CLK_MGR_REG_POLICY1_MASK_ARM_POLICY1_MASK_SHIFT          20
+#define    KPROC_CLK_MGR_REG_POLICY1_MASK_ARM_POLICY1_MASK_MASK           0x00100000
+
+#define KPROC_CLK_MGR_REG_POLICY2_MASK_OFFSET                             0x00000018
+#define KPROC_CLK_MGR_REG_POLICY2_MASK_TYPE                               UInt32
+#define KPROC_CLK_MGR_REG_POLICY2_MASK_RESERVED_MASK                      0x7FCFFFFF
+#define    KPROC_CLK_MGR_REG_POLICY2_MASK_PRIV_ACCESS_MODE_SHIFT          31
+#define    KPROC_CLK_MGR_REG_POLICY2_MASK_PRIV_ACCESS_MODE_MASK           0x80000000
+#define    KPROC_CLK_MGR_REG_POLICY2_MASK_CCI_POLICY2_MASK_SHIFT          21
+#define    KPROC_CLK_MGR_REG_POLICY2_MASK_CCI_POLICY2_MASK_MASK           0x00200000
+#define    KPROC_CLK_MGR_REG_POLICY2_MASK_ARM_POLICY2_MASK_SHIFT          20
+#define    KPROC_CLK_MGR_REG_POLICY2_MASK_ARM_POLICY2_MASK_MASK           0x00100000
+
+#define KPROC_CLK_MGR_REG_POLICY3_MASK_OFFSET                             0x0000001C
+#define KPROC_CLK_MGR_REG_POLICY3_MASK_TYPE                               UInt32
+#define KPROC_CLK_MGR_REG_POLICY3_MASK_RESERVED_MASK                      0x7FCFFFFF
+#define    KPROC_CLK_MGR_REG_POLICY3_MASK_PRIV_ACCESS_MODE_SHIFT          31
+#define    KPROC_CLK_MGR_REG_POLICY3_MASK_PRIV_ACCESS_MODE_MASK           0x80000000
+#define    KPROC_CLK_MGR_REG_POLICY3_MASK_CCI_POLICY3_MASK_SHIFT          21
+#define    KPROC_CLK_MGR_REG_POLICY3_MASK_CCI_POLICY3_MASK_MASK           0x00200000
+#define    KPROC_CLK_MGR_REG_POLICY3_MASK_ARM_POLICY3_MASK_SHIFT          20
+#define    KPROC_CLK_MGR_REG_POLICY3_MASK_ARM_POLICY3_MASK_MASK           0x00100000
+
+#define KPROC_CLK_MGR_REG_INTEN_OFFSET                                    0x00000020
+#define KPROC_CLK_MGR_REG_INTEN_TYPE                                      UInt32
+#define KPROC_CLK_MGR_REG_INTEN_RESERVED_MASK                             0x7FFFFFFC
+#define    KPROC_CLK_MGR_REG_INTEN_PRIV_ACCESS_MODE_SHIFT                 31
+#define    KPROC_CLK_MGR_REG_INTEN_PRIV_ACCESS_MODE_MASK                  0x80000000
+#define    KPROC_CLK_MGR_REG_INTEN_INTEN_ACT_INT_EN_SHIFT                 1
+#define    KPROC_CLK_MGR_REG_INTEN_INTEN_ACT_INT_EN_MASK                  0x00000002
+#define    KPROC_CLK_MGR_REG_INTEN_INTEN_TGT_INT_EN_SHIFT                 0
+#define    KPROC_CLK_MGR_REG_INTEN_INTEN_TGT_INT_EN_MASK                  0x00000001
+
+#define KPROC_CLK_MGR_REG_INTSTAT_OFFSET                                  0x00000024
+#define KPROC_CLK_MGR_REG_INTSTAT_TYPE                                    UInt32
+#define KPROC_CLK_MGR_REG_INTSTAT_RESERVED_MASK                           0x7FFFFFFC
+#define    KPROC_CLK_MGR_REG_INTSTAT_PRIV_ACCESS_MODE_SHIFT               31
+#define    KPROC_CLK_MGR_REG_INTSTAT_PRIV_ACCESS_MODE_MASK                0x80000000
+#define    KPROC_CLK_MGR_REG_INTSTAT_INTSTAT_ACT_INT_SHIFT                1
+#define    KPROC_CLK_MGR_REG_INTSTAT_INTSTAT_ACT_INT_MASK                 0x00000002
+#define    KPROC_CLK_MGR_REG_INTSTAT_INTSTAT_TGT_INT_SHIFT                0
+#define    KPROC_CLK_MGR_REG_INTSTAT_INTSTAT_TGT_INT_MASK                 0x00000001
+
+#define KPROC_CLK_MGR_REG_LVM_EN_OFFSET                                   0x00000034
+#define KPROC_CLK_MGR_REG_LVM_EN_TYPE                                     UInt32
+#define KPROC_CLK_MGR_REG_LVM_EN_RESERVED_MASK                            0x7FFFFFFE
+#define    KPROC_CLK_MGR_REG_LVM_EN_PRIV_ACCESS_MODE_SHIFT                31
+#define    KPROC_CLK_MGR_REG_LVM_EN_PRIV_ACCESS_MODE_MASK                 0x80000000
+#define    KPROC_CLK_MGR_REG_LVM_EN_POLICY_CONFIG_EN_SHIFT                0
+#define    KPROC_CLK_MGR_REG_LVM_EN_POLICY_CONFIG_EN_MASK                 0x00000001
+
+#define KPROC_CLK_MGR_REG_LVM0_3_OFFSET                                   0x00000038
+#define KPROC_CLK_MGR_REG_LVM0_3_TYPE                                     UInt32
+#define KPROC_CLK_MGR_REG_LVM0_3_RESERVED_MASK                            0x7FFF0000
+#define    KPROC_CLK_MGR_REG_LVM0_3_PRIV_ACCESS_MODE_SHIFT                31
+#define    KPROC_CLK_MGR_REG_LVM0_3_PRIV_ACCESS_MODE_MASK                 0x80000000
+#define    KPROC_CLK_MGR_REG_LVM0_3_LVM0_3_MD_03_SHIFT                    12
+#define    KPROC_CLK_MGR_REG_LVM0_3_LVM0_3_MD_03_MASK                     0x0000F000
+#define    KPROC_CLK_MGR_REG_LVM0_3_LVM0_3_MD_02_SHIFT                    8
+#define    KPROC_CLK_MGR_REG_LVM0_3_LVM0_3_MD_02_MASK                     0x00000F00
+#define    KPROC_CLK_MGR_REG_LVM0_3_LVM0_3_MD_01_SHIFT                    4
+#define    KPROC_CLK_MGR_REG_LVM0_3_LVM0_3_MD_01_MASK                     0x000000F0
+#define    KPROC_CLK_MGR_REG_LVM0_3_LVM0_3_MD_00_SHIFT                    0
+#define    KPROC_CLK_MGR_REG_LVM0_3_LVM0_3_MD_00_MASK                     0x0000000F
+
+#define KPROC_CLK_MGR_REG_LVM4_7_OFFSET                                   0x0000003C
+#define KPROC_CLK_MGR_REG_LVM4_7_TYPE                                     UInt32
+#define KPROC_CLK_MGR_REG_LVM4_7_RESERVED_MASK                            0x7FFF0000
+#define    KPROC_CLK_MGR_REG_LVM4_7_PRIV_ACCESS_MODE_SHIFT                31
+#define    KPROC_CLK_MGR_REG_LVM4_7_PRIV_ACCESS_MODE_MASK                 0x80000000
+#define    KPROC_CLK_MGR_REG_LVM4_7_LVM4_7_MD_07_SHIFT                    12
+#define    KPROC_CLK_MGR_REG_LVM4_7_LVM4_7_MD_07_MASK                     0x0000F000
+#define    KPROC_CLK_MGR_REG_LVM4_7_LVM4_7_MD_06_SHIFT                    8
+#define    KPROC_CLK_MGR_REG_LVM4_7_LVM4_7_MD_06_MASK                     0x00000F00
+#define    KPROC_CLK_MGR_REG_LVM4_7_LVM4_7_MD_05_SHIFT                    4
+#define    KPROC_CLK_MGR_REG_LVM4_7_LVM4_7_MD_05_MASK                     0x000000F0
+#define    KPROC_CLK_MGR_REG_LVM4_7_LVM4_7_MD_04_SHIFT                    0
+#define    KPROC_CLK_MGR_REG_LVM4_7_LVM4_7_MD_04_MASK                     0x0000000F
+
+#define KPROC_CLK_MGR_REG_VLT0_3_OFFSET                                   0x00000040
+#define KPROC_CLK_MGR_REG_VLT0_3_TYPE                                     UInt32
+#define KPROC_CLK_MGR_REG_VLT0_3_RESERVED_MASK                            0x70F0F0F0
+#define    KPROC_CLK_MGR_REG_VLT0_3_PRIV_ACCESS_MODE_SHIFT                31
+#define    KPROC_CLK_MGR_REG_VLT0_3_PRIV_ACCESS_MODE_MASK                 0x80000000
+#define    KPROC_CLK_MGR_REG_VLT0_3_VLT0_3_VV_03_SHIFT                    24
+#define    KPROC_CLK_MGR_REG_VLT0_3_VLT0_3_VV_03_MASK                     0x0F000000
+#define    KPROC_CLK_MGR_REG_VLT0_3_VLT0_3_VV_02_SHIFT                    16
+#define    KPROC_CLK_MGR_REG_VLT0_3_VLT0_3_VV_02_MASK                     0x000F0000
+#define    KPROC_CLK_MGR_REG_VLT0_3_VLT0_3_VV_01_SHIFT                    8
+#define    KPROC_CLK_MGR_REG_VLT0_3_VLT0_3_VV_01_MASK                     0x00000F00
+#define    KPROC_CLK_MGR_REG_VLT0_3_VLT0_3_VV_00_SHIFT                    0
+#define    KPROC_CLK_MGR_REG_VLT0_3_VLT0_3_VV_00_MASK                     0x0000000F
+
+#define KPROC_CLK_MGR_REG_VLT4_7_OFFSET                                   0x00000044
+#define KPROC_CLK_MGR_REG_VLT4_7_TYPE                                     UInt32
+#define KPROC_CLK_MGR_REG_VLT4_7_RESERVED_MASK                            0x70F0F0F0
+#define    KPROC_CLK_MGR_REG_VLT4_7_PRIV_ACCESS_MODE_SHIFT                31
+#define    KPROC_CLK_MGR_REG_VLT4_7_PRIV_ACCESS_MODE_MASK                 0x80000000
+#define    KPROC_CLK_MGR_REG_VLT4_7_VLT4_7_VV_07_SHIFT                    24
+#define    KPROC_CLK_MGR_REG_VLT4_7_VLT4_7_VV_07_MASK                     0x0F000000
+#define    KPROC_CLK_MGR_REG_VLT4_7_VLT4_7_VV_06_SHIFT                    16
+#define    KPROC_CLK_MGR_REG_VLT4_7_VLT4_7_VV_06_MASK                     0x000F0000
+#define    KPROC_CLK_MGR_REG_VLT4_7_VLT4_7_VV_05_SHIFT                    8
+#define    KPROC_CLK_MGR_REG_VLT4_7_VLT4_7_VV_05_MASK                     0x00000F00
+#define    KPROC_CLK_MGR_REG_VLT4_7_VLT4_7_VV_04_SHIFT                    0
+#define    KPROC_CLK_MGR_REG_VLT4_7_VLT4_7_VV_04_MASK                     0x0000000F
+
+#define KPROC_CLK_MGR_REG_BUS_QUIESC_OFFSET                               0x00000100
+#define KPROC_CLK_MGR_REG_BUS_QUIESC_TYPE                                 UInt32
+#define KPROC_CLK_MGR_REG_BUS_QUIESC_RESERVED_MASK                        0x7FFFBFFF
+#define    KPROC_CLK_MGR_REG_BUS_QUIESC_PRIV_ACCESS_MODE_SHIFT            31
+#define    KPROC_CLK_MGR_REG_BUS_QUIESC_PRIV_ACCESS_MODE_MASK             0x80000000
+#define    KPROC_CLK_MGR_REG_BUS_QUIESC_AXI_REQGNT_INH_SHIFT              14
+#define    KPROC_CLK_MGR_REG_BUS_QUIESC_AXI_REQGNT_INH_MASK               0x00004000
+
+#define KPROC_CLK_MGR_REG_CORE0_CLKGATE_OFFSET                            0x00000200
+#define KPROC_CLK_MGR_REG_CORE0_CLKGATE_TYPE                              UInt32
+#define KPROC_CLK_MGR_REG_CORE0_CLKGATE_RESERVED_MASK                     0x7FFEFCFC
+#define    KPROC_CLK_MGR_REG_CORE0_CLKGATE_PRIV_ACCESS_MODE_SHIFT         31
+#define    KPROC_CLK_MGR_REG_CORE0_CLKGATE_PRIV_ACCESS_MODE_MASK          0x80000000
+#define    KPROC_CLK_MGR_REG_CORE0_CLKGATE_ARM_STPRSTS_SHIFT              16
+#define    KPROC_CLK_MGR_REG_CORE0_CLKGATE_ARM_STPRSTS_MASK               0x00010000
+#define    KPROC_CLK_MGR_REG_CORE0_CLKGATE_ARM_HYST_EN_SHIFT              9
+#define    KPROC_CLK_MGR_REG_CORE0_CLKGATE_ARM_HYST_EN_MASK               0x00000200
+#define    KPROC_CLK_MGR_REG_CORE0_CLKGATE_ARM_HYST_VAL_SHIFT             8
+#define    KPROC_CLK_MGR_REG_CORE0_CLKGATE_ARM_HYST_VAL_MASK              0x00000100
+#define    KPROC_CLK_MGR_REG_CORE0_CLKGATE_ARM_HW_SW_GATING_SEL_SHIFT     1
+#define    KPROC_CLK_MGR_REG_CORE0_CLKGATE_ARM_HW_SW_GATING_SEL_MASK      0x00000002
+#define    KPROC_CLK_MGR_REG_CORE0_CLKGATE_ARM_CLK_EN_SHIFT               0
+#define    KPROC_CLK_MGR_REG_CORE0_CLKGATE_ARM_CLK_EN_MASK                0x00000001
+
+#define KPROC_CLK_MGR_REG_CORE1_CLKGATE_OFFSET                            0x00000204
+#define KPROC_CLK_MGR_REG_CORE1_CLKGATE_TYPE                              UInt32
+#define KPROC_CLK_MGR_REG_CORE1_CLKGATE_RESERVED_MASK                     0x7FFEFCFC
+#define    KPROC_CLK_MGR_REG_CORE1_CLKGATE_PRIV_ACCESS_MODE_SHIFT         31
+#define    KPROC_CLK_MGR_REG_CORE1_CLKGATE_PRIV_ACCESS_MODE_MASK          0x80000000
+#define    KPROC_CLK_MGR_REG_CORE1_CLKGATE_A9_CORE_1_STPRSTS_SHIFT        16
+#define    KPROC_CLK_MGR_REG_CORE1_CLKGATE_A9_CORE_1_STPRSTS_MASK         0x00010000
+#define    KPROC_CLK_MGR_REG_CORE1_CLKGATE_A9_CORE_1_HYST_EN_SHIFT        9
+#define    KPROC_CLK_MGR_REG_CORE1_CLKGATE_A9_CORE_1_HYST_EN_MASK         0x00000200
+#define    KPROC_CLK_MGR_REG_CORE1_CLKGATE_A9_CORE_1_HYST_VAL_SHIFT       8
+#define    KPROC_CLK_MGR_REG_CORE1_CLKGATE_A9_CORE_1_HYST_VAL_MASK        0x00000100
+#define    KPROC_CLK_MGR_REG_CORE1_CLKGATE_A9_CORE_1_HW_SW_GATING_SEL_SHIFT 1
+#define    KPROC_CLK_MGR_REG_CORE1_CLKGATE_A9_CORE_1_HW_SW_GATING_SEL_MASK 0x00000002
+#define    KPROC_CLK_MGR_REG_CORE1_CLKGATE_A9_CORE_1_CLK_EN_SHIFT         0
+#define    KPROC_CLK_MGR_REG_CORE1_CLKGATE_A9_CORE_1_CLK_EN_MASK          0x00000001
+
+#define KPROC_CLK_MGR_REG_AXI_CLKGATE_OFFSET                              0x00000210
+#define KPROC_CLK_MGR_REG_AXI_CLKGATE_TYPE                                UInt32
+#define KPROC_CLK_MGR_REG_AXI_CLKGATE_RESERVED_MASK                       0x7FFEFCFC
+#define    KPROC_CLK_MGR_REG_AXI_CLKGATE_PRIV_ACCESS_MODE_SHIFT           31
+#define    KPROC_CLK_MGR_REG_AXI_CLKGATE_PRIV_ACCESS_MODE_MASK            0x80000000
+#define    KPROC_CLK_MGR_REG_AXI_CLKGATE_AXI_STPRSTS_SHIFT                16
+#define    KPROC_CLK_MGR_REG_AXI_CLKGATE_AXI_STPRSTS_MASK                 0x00010000
+#define    KPROC_CLK_MGR_REG_AXI_CLKGATE_AXI_HYST_EN_SHIFT                9
+#define    KPROC_CLK_MGR_REG_AXI_CLKGATE_AXI_HYST_EN_MASK                 0x00000200
+#define    KPROC_CLK_MGR_REG_AXI_CLKGATE_AXI_HYST_VAL_SHIFT               8
+#define    KPROC_CLK_MGR_REG_AXI_CLKGATE_AXI_HYST_VAL_MASK                0x00000100
+#define    KPROC_CLK_MGR_REG_AXI_CLKGATE_AXI_HW_SW_GATING_SEL_SHIFT       1
+#define    KPROC_CLK_MGR_REG_AXI_CLKGATE_AXI_HW_SW_GATING_SEL_MASK        0x00000002
+#define    KPROC_CLK_MGR_REG_AXI_CLKGATE_AXI_CLK_EN_SHIFT                 0
+#define    KPROC_CLK_MGR_REG_AXI_CLKGATE_AXI_CLK_EN_MASK                  0x00000001
+
+#define KPROC_CLK_MGR_REG_ARM_PERIPH_CLKGATE_OFFSET                       0x00000300
+#define KPROC_CLK_MGR_REG_ARM_PERIPH_CLKGATE_TYPE                         UInt32
+#define KPROC_CLK_MGR_REG_ARM_PERIPH_CLKGATE_RESERVED_MASK                0x7FFEFCFC
+#define    KPROC_CLK_MGR_REG_ARM_PERIPH_CLKGATE_PRIV_ACCESS_MODE_SHIFT    31
+#define    KPROC_CLK_MGR_REG_ARM_PERIPH_CLKGATE_PRIV_ACCESS_MODE_MASK     0x80000000
+#define    KPROC_CLK_MGR_REG_ARM_PERIPH_CLKGATE_ARM_PERIPH_STPRSTS_SHIFT  16
+#define    KPROC_CLK_MGR_REG_ARM_PERIPH_CLKGATE_ARM_PERIPH_STPRSTS_MASK   0x00010000
+#define    KPROC_CLK_MGR_REG_ARM_PERIPH_CLKGATE_ARM_PERIPH_HYST_EN_SHIFT  9
+#define    KPROC_CLK_MGR_REG_ARM_PERIPH_CLKGATE_ARM_PERIPH_HYST_EN_MASK   0x00000200
+#define    KPROC_CLK_MGR_REG_ARM_PERIPH_CLKGATE_ARM_PERIPH_HYST_VAL_SHIFT 8
+#define    KPROC_CLK_MGR_REG_ARM_PERIPH_CLKGATE_ARM_PERIPH_HYST_VAL_MASK  0x00000100
+#define    KPROC_CLK_MGR_REG_ARM_PERIPH_CLKGATE_ARM_PERIPH_HW_SW_GATING_SEL_SHIFT 1
+#define    KPROC_CLK_MGR_REG_ARM_PERIPH_CLKGATE_ARM_PERIPH_HW_SW_GATING_SEL_MASK 0x00000002
+#define    KPROC_CLK_MGR_REG_ARM_PERIPH_CLKGATE_ARM_PERIPH_CLK_EN_SHIFT   0
+#define    KPROC_CLK_MGR_REG_ARM_PERIPH_CLKGATE_ARM_PERIPH_CLK_EN_MASK    0x00000001
+
+#define KPROC_CLK_MGR_REG_CCI_CLKGATE_OFFSET                              0x00000400
+#define KPROC_CLK_MGR_REG_CCI_CLKGATE_TYPE                                UInt32
+#define KPROC_CLK_MGR_REG_CCI_CLKGATE_RESERVED_MASK                       0x7FFEFCFC
+#define    KPROC_CLK_MGR_REG_CCI_CLKGATE_PRIV_ACCESS_MODE_SHIFT           31
+#define    KPROC_CLK_MGR_REG_CCI_CLKGATE_PRIV_ACCESS_MODE_MASK            0x80000000
+#define    KPROC_CLK_MGR_REG_CCI_CLKGATE_CCI_STPRSTS_SHIFT                16
+#define    KPROC_CLK_MGR_REG_CCI_CLKGATE_CCI_STPRSTS_MASK                 0x00010000
+#define    KPROC_CLK_MGR_REG_CCI_CLKGATE_CCI_HYST_EN_SHIFT                9
+#define    KPROC_CLK_MGR_REG_CCI_CLKGATE_CCI_HYST_EN_MASK                 0x00000200
+#define    KPROC_CLK_MGR_REG_CCI_CLKGATE_CCI_HYST_VAL_SHIFT               8
+#define    KPROC_CLK_MGR_REG_CCI_CLKGATE_CCI_HYST_VAL_MASK                0x00000100
+#define    KPROC_CLK_MGR_REG_CCI_CLKGATE_CCI_HW_SW_GATING_SEL_SHIFT       1
+#define    KPROC_CLK_MGR_REG_CCI_CLKGATE_CCI_HW_SW_GATING_SEL_MASK        0x00000002
+#define    KPROC_CLK_MGR_REG_CCI_CLKGATE_CCI_CLK_EN_SHIFT                 0
+#define    KPROC_CLK_MGR_REG_CCI_CLKGATE_CCI_CLK_EN_MASK                  0x00000001
+
+#define KPROC_CLK_MGR_REG_ALL_CLK_IDLE_OFFSET                             0x00000404
+#define KPROC_CLK_MGR_REG_ALL_CLK_IDLE_TYPE                               UInt32
+#define KPROC_CLK_MGR_REG_ALL_CLK_IDLE_RESERVED_MASK                      0x7FFFFFFE
+#define    KPROC_CLK_MGR_REG_ALL_CLK_IDLE_PRIV_ACCESS_MODE_SHIFT          31
+#define    KPROC_CLK_MGR_REG_ALL_CLK_IDLE_PRIV_ACCESS_MODE_MASK           0x80000000
+#define    KPROC_CLK_MGR_REG_ALL_CLK_IDLE_ALL_CLK_IDLE_EN_SHIFT           0
+#define    KPROC_CLK_MGR_REG_ALL_CLK_IDLE_ALL_CLK_IDLE_EN_MASK            0x00000001
+
+#define KPROC_CLK_MGR_REG_PL310_DIV_OFFSET                                0x00000A00
+#define KPROC_CLK_MGR_REG_PL310_DIV_TYPE                                  UInt32
+#define KPROC_CLK_MGR_REG_PL310_DIV_RESERVED_MASK                         0x7FFFFFCC
+#define    KPROC_CLK_MGR_REG_PL310_DIV_PRIV_ACCESS_MODE_SHIFT             31
+#define    KPROC_CLK_MGR_REG_PL310_DIV_PRIV_ACCESS_MODE_MASK              0x80000000
+#define    KPROC_CLK_MGR_REG_PL310_DIV_ARM_PL310_TRAM_DIV_SHIFT           4
+#define    KPROC_CLK_MGR_REG_PL310_DIV_ARM_PL310_TRAM_DIV_MASK            0x00000030
+#define    KPROC_CLK_MGR_REG_PL310_DIV_ARM_PL310_DRAM_DIV_SHIFT           0
+#define    KPROC_CLK_MGR_REG_PL310_DIV_ARM_PL310_DRAM_DIV_MASK            0x00000003
+
+#define KPROC_CLK_MGR_REG_PL310_TRIGGER_OFFSET                            0x00000A04
+#define KPROC_CLK_MGR_REG_PL310_TRIGGER_TYPE                              UInt32
+#define KPROC_CLK_MGR_REG_PL310_TRIGGER_RESERVED_MASK                     0x7FFFFFFC
+#define    KPROC_CLK_MGR_REG_PL310_TRIGGER_PRIV_ACCESS_MODE_SHIFT         31
+#define    KPROC_CLK_MGR_REG_PL310_TRIGGER_PRIV_ACCESS_MODE_MASK          0x80000000
+#define    KPROC_CLK_MGR_REG_PL310_TRIGGER_ARM_PL310_TRAM_OVERRIDE_SHIFT  1
+#define    KPROC_CLK_MGR_REG_PL310_TRIGGER_ARM_PL310_TRAM_OVERRIDE_MASK   0x00000002
+#define    KPROC_CLK_MGR_REG_PL310_TRIGGER_ARM_PL310_DRAM_OVERRIDE_SHIFT  0
+#define    KPROC_CLK_MGR_REG_PL310_TRIGGER_ARM_PL310_DRAM_OVERRIDE_MASK   0x00000001
+
+#define KPROC_CLK_MGR_REG_AXI_DIV_FID7_OFFSET                             0x00000A08
+#define KPROC_CLK_MGR_REG_AXI_DIV_FID7_TYPE                               UInt32
+#define KPROC_CLK_MGR_REG_AXI_DIV_FID7_RESERVED_MASK                      0x7FFFFFF8
+#define    KPROC_CLK_MGR_REG_AXI_DIV_FID7_PRIV_ACCESS_MODE_SHIFT          31
+#define    KPROC_CLK_MGR_REG_AXI_DIV_FID7_PRIV_ACCESS_MODE_MASK           0x80000000
+#define    KPROC_CLK_MGR_REG_AXI_DIV_FID7_AXI_CLK_DIV_SHIFT               0
+#define    KPROC_CLK_MGR_REG_AXI_DIV_FID7_AXI_CLK_DIV_MASK                0x00000007
+
+#define KPROC_CLK_MGR_REG_AXI_TRIGGER_FID7_OFFSET                         0x00000A0C
+#define KPROC_CLK_MGR_REG_AXI_TRIGGER_FID7_TYPE                           UInt32
+#define KPROC_CLK_MGR_REG_AXI_TRIGGER_FID7_RESERVED_MASK                  0x7FFFFFFE
+#define    KPROC_CLK_MGR_REG_AXI_TRIGGER_FID7_PRIV_ACCESS_MODE_SHIFT      31
+#define    KPROC_CLK_MGR_REG_AXI_TRIGGER_FID7_PRIV_ACCESS_MODE_MASK       0x80000000
+#define    KPROC_CLK_MGR_REG_AXI_TRIGGER_FID7_AXI_CLK_OVERRIDE_SHIFT      0
+#define    KPROC_CLK_MGR_REG_AXI_TRIGGER_FID7_AXI_CLK_OVERRIDE_MASK       0x00000001
+
+#define KPROC_CLK_MGR_REG_CCI_DIV_FID7_OFFSET                             0x00000A10
+#define KPROC_CLK_MGR_REG_CCI_DIV_FID7_TYPE                               UInt32
+#define KPROC_CLK_MGR_REG_CCI_DIV_FID7_RESERVED_MASK                      0x7FFFFFF8
+#define    KPROC_CLK_MGR_REG_CCI_DIV_FID7_PRIV_ACCESS_MODE_SHIFT          31
+#define    KPROC_CLK_MGR_REG_CCI_DIV_FID7_PRIV_ACCESS_MODE_MASK           0x80000000
+#define    KPROC_CLK_MGR_REG_CCI_DIV_FID7_CCI_CLK_DIV_SHIFT               0
+#define    KPROC_CLK_MGR_REG_CCI_DIV_FID7_CCI_CLK_DIV_MASK                0x00000007
+
+#define KPROC_CLK_MGR_REG_CCI_DIV_TRIGGER_FID7_OFFSET                     0x00000A14
+#define KPROC_CLK_MGR_REG_CCI_DIV_TRIGGER_FID7_TYPE                       UInt32
+#define KPROC_CLK_MGR_REG_CCI_DIV_TRIGGER_FID7_RESERVED_MASK              0x7FFFFFFE
+#define    KPROC_CLK_MGR_REG_CCI_DIV_TRIGGER_FID7_PRIV_ACCESS_MODE_SHIFT  31
+#define    KPROC_CLK_MGR_REG_CCI_DIV_TRIGGER_FID7_PRIV_ACCESS_MODE_MASK   0x80000000
+#define    KPROC_CLK_MGR_REG_CCI_DIV_TRIGGER_FID7_CCI_CLK_OVERRIDE_SHIFT  0
+#define    KPROC_CLK_MGR_REG_CCI_DIV_TRIGGER_FID7_CCI_CLK_OVERRIDE_MASK   0x00000001
+
+#define KPROC_CLK_MGR_REG_AXI_DIV_FID6_OFFSET                             0x00000A18
+#define KPROC_CLK_MGR_REG_AXI_DIV_FID6_TYPE                               UInt32
+#define KPROC_CLK_MGR_REG_AXI_DIV_FID6_RESERVED_MASK                      0x7FFFFFF8
+#define    KPROC_CLK_MGR_REG_AXI_DIV_FID6_PRIV_ACCESS_MODE_SHIFT          31
+#define    KPROC_CLK_MGR_REG_AXI_DIV_FID6_PRIV_ACCESS_MODE_MASK           0x80000000
+#define    KPROC_CLK_MGR_REG_AXI_DIV_FID6_AXI_CLK_DIV_FID6_SHIFT          0
+#define    KPROC_CLK_MGR_REG_AXI_DIV_FID6_AXI_CLK_DIV_FID6_MASK           0x00000007
+
+#define KPROC_CLK_MGR_REG_AXI_TRIGGER_FID6_OFFSET                         0x00000A1C
+#define KPROC_CLK_MGR_REG_AXI_TRIGGER_FID6_TYPE                           UInt32
+#define KPROC_CLK_MGR_REG_AXI_TRIGGER_FID6_RESERVED_MASK                  0x7FFFFFFE
+#define    KPROC_CLK_MGR_REG_AXI_TRIGGER_FID6_PRIV_ACCESS_MODE_SHIFT      31
+#define    KPROC_CLK_MGR_REG_AXI_TRIGGER_FID6_PRIV_ACCESS_MODE_MASK       0x80000000
+#define    KPROC_CLK_MGR_REG_AXI_TRIGGER_FID6_AXI_CLK_OVERRIDE_FID6_SHIFT 0
+#define    KPROC_CLK_MGR_REG_AXI_TRIGGER_FID6_AXI_CLK_OVERRIDE_FID6_MASK  0x00000001
+
+#define KPROC_CLK_MGR_REG_CCI_DIV_FID6_OFFSET                             0x00000A20
+#define KPROC_CLK_MGR_REG_CCI_DIV_FID6_TYPE                               UInt32
+#define KPROC_CLK_MGR_REG_CCI_DIV_FID6_RESERVED_MASK                      0x7FFFFFF8
+#define    KPROC_CLK_MGR_REG_CCI_DIV_FID6_PRIV_ACCESS_MODE_SHIFT          31
+#define    KPROC_CLK_MGR_REG_CCI_DIV_FID6_PRIV_ACCESS_MODE_MASK           0x80000000
+#define    KPROC_CLK_MGR_REG_CCI_DIV_FID6_CCI_CLK_DIV_FID6_SHIFT          0
+#define    KPROC_CLK_MGR_REG_CCI_DIV_FID6_CCI_CLK_DIV_FID6_MASK           0x00000007
+
+#define KPROC_CLK_MGR_REG_CCI_DIV_TRIGGER_FID6_OFFSET                     0x00000A24
+#define KPROC_CLK_MGR_REG_CCI_DIV_TRIGGER_FID6_TYPE                       UInt32
+#define KPROC_CLK_MGR_REG_CCI_DIV_TRIGGER_FID6_RESERVED_MASK              0x7FFFFFFE
+#define    KPROC_CLK_MGR_REG_CCI_DIV_TRIGGER_FID6_PRIV_ACCESS_MODE_SHIFT  31
+#define    KPROC_CLK_MGR_REG_CCI_DIV_TRIGGER_FID6_PRIV_ACCESS_MODE_MASK   0x80000000
+#define    KPROC_CLK_MGR_REG_CCI_DIV_TRIGGER_FID6_CCI_CLK_OVERRIDE_FID6_SHIFT 0
+#define    KPROC_CLK_MGR_REG_CCI_DIV_TRIGGER_FID6_CCI_CLK_OVERRIDE_FID6_MASK 0x00000001
+
+#define KPROC_CLK_MGR_REG_SS_STRETCH_OFFSET                               0x00000A28
+#define KPROC_CLK_MGR_REG_SS_STRETCH_TYPE                                 UInt32
+#define KPROC_CLK_MGR_REG_SS_STRETCH_RESERVED_MASK                        0x7FFFFFFC
+#define    KPROC_CLK_MGR_REG_SS_STRETCH_PRIV_ACCESS_MODE_SHIFT            31
+#define    KPROC_CLK_MGR_REG_SS_STRETCH_PRIV_ACCESS_MODE_MASK             0x80000000
+#define    KPROC_CLK_MGR_REG_SS_STRETCH_CCI_SSCLK_STRECH_SHIFT            1
+#define    KPROC_CLK_MGR_REG_SS_STRETCH_CCI_SSCLK_STRECH_MASK             0x00000002
+#define    KPROC_CLK_MGR_REG_SS_STRETCH_AXI_SSCLK_STRECH_SHIFT            0
+#define    KPROC_CLK_MGR_REG_SS_STRETCH_AXI_SSCLK_STRECH_MASK             0x00000001
+
+#define KPROC_CLK_MGR_REG_AXI_DIV_FID5_OFFSET                             0x00000A2C
+#define KPROC_CLK_MGR_REG_AXI_DIV_FID5_TYPE                               UInt32
+#define KPROC_CLK_MGR_REG_AXI_DIV_FID5_RESERVED_MASK                      0x7FFFFFF8
+#define    KPROC_CLK_MGR_REG_AXI_DIV_FID5_PRIV_ACCESS_MODE_SHIFT          31
+#define    KPROC_CLK_MGR_REG_AXI_DIV_FID5_PRIV_ACCESS_MODE_MASK           0x80000000
+#define    KPROC_CLK_MGR_REG_AXI_DIV_FID5_AXI_CLK_DIV_FID5_SHIFT          0
+#define    KPROC_CLK_MGR_REG_AXI_DIV_FID5_AXI_CLK_DIV_FID5_MASK           0x00000007
+
+#define KPROC_CLK_MGR_REG_AXI_TRIGGER_FID5_OFFSET                         0x00000A30
+#define KPROC_CLK_MGR_REG_AXI_TRIGGER_FID5_TYPE                           UInt32
+#define KPROC_CLK_MGR_REG_AXI_TRIGGER_FID5_RESERVED_MASK                  0x7FFFFFFE
+#define    KPROC_CLK_MGR_REG_AXI_TRIGGER_FID5_PRIV_ACCESS_MODE_SHIFT      31
+#define    KPROC_CLK_MGR_REG_AXI_TRIGGER_FID5_PRIV_ACCESS_MODE_MASK       0x80000000
+#define    KPROC_CLK_MGR_REG_AXI_TRIGGER_FID5_AXI_CLK_OVERRIDE_FID5_SHIFT 0
+#define    KPROC_CLK_MGR_REG_AXI_TRIGGER_FID5_AXI_CLK_OVERRIDE_FID5_MASK  0x00000001
+
+#define KPROC_CLK_MGR_REG_CCI_DIV_FID5_OFFSET                             0x00000A34
+#define KPROC_CLK_MGR_REG_CCI_DIV_FID5_TYPE                               UInt32
+#define KPROC_CLK_MGR_REG_CCI_DIV_FID5_RESERVED_MASK                      0x7FFFFFF8
+#define    KPROC_CLK_MGR_REG_CCI_DIV_FID5_PRIV_ACCESS_MODE_SHIFT          31
+#define    KPROC_CLK_MGR_REG_CCI_DIV_FID5_PRIV_ACCESS_MODE_MASK           0x80000000
+#define    KPROC_CLK_MGR_REG_CCI_DIV_FID5_CCI_CLK_DIV_FID5_SHIFT          0
+#define    KPROC_CLK_MGR_REG_CCI_DIV_FID5_CCI_CLK_DIV_FID5_MASK           0x00000007
+
+#define KPROC_CLK_MGR_REG_CCI_DIV_TRIGGER_FID5_OFFSET                     0x00000A38
+#define KPROC_CLK_MGR_REG_CCI_DIV_TRIGGER_FID5_TYPE                       UInt32
+#define KPROC_CLK_MGR_REG_CCI_DIV_TRIGGER_FID5_RESERVED_MASK              0x7FFFFFFE
+#define    KPROC_CLK_MGR_REG_CCI_DIV_TRIGGER_FID5_PRIV_ACCESS_MODE_SHIFT  31
+#define    KPROC_CLK_MGR_REG_CCI_DIV_TRIGGER_FID5_PRIV_ACCESS_MODE_MASK   0x80000000
+#define    KPROC_CLK_MGR_REG_CCI_DIV_TRIGGER_FID5_CCI_CLK_OVERRIDE_FID5_SHIFT 0
+#define    KPROC_CLK_MGR_REG_CCI_DIV_TRIGGER_FID5_CCI_CLK_OVERRIDE_FID5_MASK 0x00000001
+
+#define KPROC_CLK_MGR_REG_PLLARMA_OFFSET                                  0x00000C00
+#define KPROC_CLK_MGR_REG_PLLARMA_TYPE                                    UInt32
+#define KPROC_CLK_MGR_REG_PLLARMA_RESERVED_MASK                           0x68000004
+#define    KPROC_CLK_MGR_REG_PLLARMA_PRIV_ACCESS_MODE_SHIFT               31
+#define    KPROC_CLK_MGR_REG_PLLARMA_PRIV_ACCESS_MODE_MASK                0x80000000
+#define    KPROC_CLK_MGR_REG_PLLARMA_PLLARM_LOCK_SHIFT                    28
+#define    KPROC_CLK_MGR_REG_PLLARMA_PLLARM_LOCK_MASK                     0x10000000
+#define    KPROC_CLK_MGR_REG_PLLARMA_PLLARM_PDIV_SHIFT                    24
+#define    KPROC_CLK_MGR_REG_PLLARMA_PLLARM_PDIV_MASK                     0x07000000
+#define    KPROC_CLK_MGR_REG_PLLARMA_PLLARM_NDIV_INT_SHIFT                8
+#define    KPROC_CLK_MGR_REG_PLLARMA_PLLARM_NDIV_INT_MASK                 0x0003FF00
+#define    KPROC_CLK_MGR_REG_PLLARMA_PLLARM_LOCK_RAW_SHIFT                7
+#define    KPROC_CLK_MGR_REG_PLLARMA_PLLARM_LOCK_RAW_MASK                 0x00000080
+#define    KPROC_CLK_MGR_REG_PLLARMA_PLLARM_LOCK_LATCH_SHIFT              6
+#define    KPROC_CLK_MGR_REG_PLLARMA_PLLARM_LOCK_LATCH_MASK               0x00000040
+#define    KPROC_CLK_MGR_REG_PLLARMA_PLLARM_FLOCK_SHIFT                   5
+#define    KPROC_CLK_MGR_REG_PLLARMA_PLLARM_FLOCK_MASK                    0x00000020
+#define    KPROC_CLK_MGR_REG_PLLARMA_WAVE_SPARE_IN_SHIFT                  25
+#define    KPROC_CLK_MGR_REG_PLLARMA_WAVE_SPARE_IN_MASK                   0x06000000
+#define    KPROC_CLK_MGR_REG_PLLARMA_WAVE_FREQ_TRACK_DISABLE_SHIFT        24
+#define    KPROC_CLK_MGR_REG_PLLARMA_WAVE_FREQ_TRACK_DISABLE_MASK         0x01000000
+#define    KPROC_CLK_MGR_REG_PLLARMA_WAVE_PDIV1_SHIFT                     14
+#define    KPROC_CLK_MGR_REG_PLLARMA_WAVE_PDIV1_MASK                      0x0001C000
+#define    KPROC_CLK_MGR_REG_PLLARMA_WAVE_SLOW_FERR_SCALE1_SHIFT          11
+#define    KPROC_CLK_MGR_REG_PLLARMA_WAVE_SLOW_FERR_SCALE1_MASK           0x00003800
+#define    KPROC_CLK_MGR_REG_PLLARMA_WAVE_FAST_FERR_SCALE1_SHIFT          8
+#define    KPROC_CLK_MGR_REG_PLLARMA_WAVE_FAST_FERR_SCALE1_MASK           0x00000700
+#define    KPROC_CLK_MGR_REG_PLLARMA_WAVE_LOCK_RAW_SHIFT                  7
+#define    KPROC_CLK_MGR_REG_PLLARMA_WAVE_LOCK_RAW_MASK                   0x00000080
+#define    KPROC_CLK_MGR_REG_PLLARMA_WAVE_LOCK_LATCH_SHIFT                6
+#define    KPROC_CLK_MGR_REG_PLLARMA_WAVE_LOCK_LATCH_MASK                 0x00000040
+#define    KPROC_CLK_MGR_REG_PLLARMA_WAVE_FLOCK_SHIFT                     5
+#define    KPROC_CLK_MGR_REG_PLLARMA_WAVE_FLOCK_MASK                      0x00000020
+#define    KPROC_CLK_MGR_REG_PLLARMA_PLLARM_IDLE_PWRDWN_SW_OVRRIDE_SHIFT  4
+#define    KPROC_CLK_MGR_REG_PLLARMA_PLLARM_IDLE_PWRDWN_SW_OVRRIDE_MASK   0x00000010
+#define    KPROC_CLK_MGR_REG_PLLARMA_PLLARM_PWRDWN_SHIFT                  3
+#define    KPROC_CLK_MGR_REG_PLLARMA_PLLARM_PWRDWN_MASK                   0x00000008
+#define    KPROC_CLK_MGR_REG_PLLARMA_PLLARM_SOFT_POST_RESETB_SHIFT        1
+#define    KPROC_CLK_MGR_REG_PLLARMA_PLLARM_SOFT_POST_RESETB_MASK         0x00000002
+#define    KPROC_CLK_MGR_REG_PLLARMA_PLLARM_SOFT_RESETB_SHIFT             0
+#define    KPROC_CLK_MGR_REG_PLLARMA_PLLARM_SOFT_RESETB_MASK              0x00000001
+
+#define KPROC_CLK_MGR_REG_PLLARMB_OFFSET                                  0x00000C04
+#define KPROC_CLK_MGR_REG_PLLARMB_TYPE                                    UInt32
+#define KPROC_CLK_MGR_REG_PLLARMB_RESERVED_MASK                           0x7FF00000
+#define    KPROC_CLK_MGR_REG_PLLARMB_PRIV_ACCESS_MODE_SHIFT               31
+#define    KPROC_CLK_MGR_REG_PLLARMB_PRIV_ACCESS_MODE_MASK                0x80000000
+#define    KPROC_CLK_MGR_REG_PLLARMB_PLLARM_NDIV_FRAC_SHIFT               0
+#define    KPROC_CLK_MGR_REG_PLLARMB_PLLARM_NDIV_FRAC_MASK                0x000FFFFF
+#define    KPROC_CLK_MGR_REG_PLLARMB_WAVE_NDIV0_SHIFT                     10
+#define    KPROC_CLK_MGR_REG_PLLARMB_WAVE_NDIV0_MASK                      0x000FFC00
+#define    KPROC_CLK_MGR_REG_PLLARMB_WAVE_NDIV1_SHIFT                     0
+#define    KPROC_CLK_MGR_REG_PLLARMB_WAVE_NDIV1_MASK                      0x000003FF
+
+#define KPROC_CLK_MGR_REG_PLLARMC_OFFSET                                  0x00000C08
+#define KPROC_CLK_MGR_REG_PLLARMC_TYPE                                    UInt32
+#define KPROC_CLK_MGR_REG_PLLARMC_RESERVED_MASK                           0x7FFF8000
+#define    KPROC_CLK_MGR_REG_PLLARMC_PRIV_ACCESS_MODE_SHIFT               31
+#define    KPROC_CLK_MGR_REG_PLLARMC_PRIV_ACCESS_MODE_MASK                0x80000000
+#define    KPROC_CLK_MGR_REG_PLLARMC_PLLARM_MDEL_SHIFT                    12
+#define    KPROC_CLK_MGR_REG_PLLARMC_PLLARM_MDEL_MASK                     0x00007000
+#define    KPROC_CLK_MGR_REG_PLLARMC_PLLARM_LOAD_EN_SHIFT                 11
+#define    KPROC_CLK_MGR_REG_PLLARMC_PLLARM_LOAD_EN_MASK                  0x00000800
+#define    KPROC_CLK_MGR_REG_PLLARMC_PLLARM_HOLD_SHIFT                    10
+#define    KPROC_CLK_MGR_REG_PLLARMC_PLLARM_HOLD_MASK                     0x00000400
+#define    KPROC_CLK_MGR_REG_PLLARMC_PLLARM_ENB_CLKOUT_SHIFT              9
+#define    KPROC_CLK_MGR_REG_PLLARMC_PLLARM_ENB_CLKOUT_MASK               0x00000200
+#define    KPROC_CLK_MGR_REG_PLLARMC_PLLARM_BYPCLK_EN_SHIFT               8
+#define    KPROC_CLK_MGR_REG_PLLARMC_PLLARM_BYPCLK_EN_MASK                0x00000100
+#define    KPROC_CLK_MGR_REG_PLLARMC_PLLARM_MDIV_SHIFT                    0
+#define    KPROC_CLK_MGR_REG_PLLARMC_PLLARM_MDIV_MASK                     0x000000FF
+
+#define KPROC_CLK_MGR_REG_PLLARMCTRL0_OFFSET                              0x00000C0C
+#define KPROC_CLK_MGR_REG_PLLARMCTRL0_TYPE                                UInt32
+#define KPROC_CLK_MGR_REG_PLLARMCTRL0_RESERVED_MASK                       0x7F000000
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL0_PRIV_ACCESS_MODE_SHIFT           31
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL0_PRIV_ACCESS_MODE_MASK            0x80000000
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL0_WAVE_CLK_SEL_SHIFT               23
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL0_WAVE_CLK_SEL_MASK                0x00800000
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL0_PLLARM_KP_SHIFT                  19
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL0_PLLARM_KP_MASK                   0x00780000
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL0_PLLARM_KI_SHIFT                  16
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL0_PLLARM_KI_MASK                   0x00070000
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL0_PLLARM_KA_SHIFT                  13
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL0_PLLARM_KA_MASK                   0x0000E000
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL0_PLLARM_FB_PHASE_EN_SHIFT         12
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL0_PLLARM_FB_PHASE_EN_MASK          0x00001000
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL0_PLLARM_FB_OFFSET_SHIFT           0
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL0_PLLARM_FB_OFFSET_MASK            0x00000FFF
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL0_WAVE_WAVE_CLK_EN_SHIFT           22
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL0_WAVE_WAVE_CLK_EN_MASK            0x00400000
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL0_WAVE_PDIV0_SHIFT                 19
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL0_WAVE_PDIV0_MASK                  0x00380000
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL0_WAVE_SLOW_FERR_SCALE0_SHIFT      16
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL0_WAVE_SLOW_FERR_SCALE0_MASK       0x00070000
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL0_WAVE_FAST_FERR_SCALE0_SHIFT      13
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL0_WAVE_FAST_FERR_SCALE0_MASK       0x0000E000
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL0_WAVE_WRITE_EN_SHIFT              12
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL0_WAVE_WRITE_EN_MASK               0x00001000
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL0_WAVE_WDATA_SHIFT                 0
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL0_WAVE_WDATA_MASK                  0x00000FFF
+
+#define KPROC_CLK_MGR_REG_PLLARMCTRL1_OFFSET                              0x00000C10
+#define KPROC_CLK_MGR_REG_PLLARMCTRL1_TYPE                                UInt32
+#define KPROC_CLK_MGR_REG_PLLARMCTRL1_RESERVED_MASK                       0x7FFE0000
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL1_PRIV_ACCESS_MODE_SHIFT           31
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL1_PRIV_ACCESS_MODE_MASK            0x80000000
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL1_PLLARM_SSC_MODE_SHIFT            16
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL1_PLLARM_SSC_MODE_MASK             0x00010000
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL1_PLLARM_SSC_STEP_SHIFT            0
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL1_PLLARM_SSC_STEP_MASK             0x0000FFFF
+
+#define KPROC_CLK_MGR_REG_PLLARMCTRL2_OFFSET                              0x00000C14
+#define KPROC_CLK_MGR_REG_PLLARMCTRL2_TYPE                                UInt32
+#define KPROC_CLK_MGR_REG_PLLARMCTRL2_RESERVED_MASK                       0x7C000000
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL2_PRIV_ACCESS_MODE_SHIFT           31
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL2_PRIV_ACCESS_MODE_MASK            0x80000000
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL2_PLLARM_SSC_LIMIT_SHIFT           0
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL2_PLLARM_SSC_LIMIT_MASK            0x03FFFFFF
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL2_WAVE_LVT_SPD_ADJ_LIMIT_SHIFT     16
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL2_WAVE_LVT_SPD_ADJ_LIMIT_MASK      0x03FF0000
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL2_WAVE_HVT_SPD_ADJ_LIMIT_SHIFT     6
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL2_WAVE_HVT_SPD_ADJ_LIMIT_MASK      0x0000FFC0
+
+#define KPROC_CLK_MGR_REG_PLLARMCTRL3_OFFSET                              0x00000C18
+#define KPROC_CLK_MGR_REG_PLLARMCTRL3_TYPE                                UInt32
+#define KPROC_CLK_MGR_REG_PLLARMCTRL3_RESERVED_MASK                       0x70000000
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL3_PRIV_ACCESS_MODE_SHIFT           31
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL3_PRIV_ACCESS_MODE_MASK            0x80000000
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL3_PLLARM_PLL_CONFIG_CTRL_SHIFT     0
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL3_PLLARM_PLL_CONFIG_CTRL_MASK      0x0FFFFFFF
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL3_WAVE_PLL_CONFIG_CTRL_X_SHIFT     24
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL3_WAVE_PLL_CONFIG_CTRL_X_MASK      0x0F000000
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL3_WAVE_UNUSED_SHIFT                23
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL3_WAVE_UNUSED_MASK                 0x00800000
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL3_WAVE_PLL_CONFIG_CTRL_Y_SHIFT     13
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL3_WAVE_PLL_CONFIG_CTRL_Y_MASK      0x007FE000
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL3_WAVE_PHASE_HIGH_EXTEND_SHIFT     11
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL3_WAVE_PHASE_HIGH_EXTEND_MASK      0x00001800
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL3_WAVE_PHASE_LOW_EXTEND_SHIFT      9
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL3_WAVE_PHASE_LOW_EXTEND_MASK       0x00000600
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL3_WAVE_DUTY_CYCLE_MON_EN_SHIFT     8
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL3_WAVE_DUTY_CYCLE_MON_EN_MASK      0x00000100
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL3_WAVE_ADDR_SHIFT                  3
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL3_WAVE_ADDR_MASK                   0x000000F8
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL3_WAVE_READ_EN_SHIFT               2
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL3_WAVE_READ_EN_MASK                0x00000004
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL3_WAVE_REG_RESETB_SHIFT            1
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL3_WAVE_REG_RESETB_MASK             0x00000002
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL3_WAVE_RESETB_SHIFT                0
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL3_WAVE_RESETB_MASK                 0x00000001
+
+#define KPROC_CLK_MGR_REG_PLLARMCTRL4_OFFSET                              0x00000C1C
+#define KPROC_CLK_MGR_REG_PLLARMCTRL4_TYPE                                UInt32
+#define KPROC_CLK_MGR_REG_PLLARMCTRL4_RESERVED_MASK                       0x7FFFF000
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL4_PRIV_ACCESS_MODE_SHIFT           31
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL4_PRIV_ACCESS_MODE_MASK            0x80000000
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL4_PLLARM_STAT_OUT_SHIFT            0
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL4_PLLARM_STAT_OUT_MASK             0x00000FFF
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL4_WAVE_RDATA_SHIFT                 0
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL4_WAVE_RDATA_MASK                  0x00000FFF
+
+#define KPROC_CLK_MGR_REG_PLLARMCTRL5_OFFSET                              0x00000C20
+#define KPROC_CLK_MGR_REG_PLLARMCTRL5_TYPE                                UInt32
+#define KPROC_CLK_MGR_REG_PLLARMCTRL5_RESERVED_MASK                       0x7FFF8000
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL5_PRIV_ACCESS_MODE_SHIFT           31
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL5_PRIV_ACCESS_MODE_MASK            0x80000000
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL5_PLLARM_H_MDEL_SHIFT              12
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL5_PLLARM_H_MDEL_MASK               0x00007000
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL5_PLLARM_H_LOAD_EN_SHIFT           11
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL5_PLLARM_H_LOAD_EN_MASK            0x00000800
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL5_PLLARM_H_HOLD_SHIFT              10
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL5_PLLARM_H_HOLD_MASK               0x00000400
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL5_WAVE_SPARE_IN_SHIFT              10
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL5_WAVE_SPARE_IN_MASK               0x00007C00
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL5_PLLARM_H_ENB_CLKOUT_SHIFT        9
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL5_PLLARM_H_ENB_CLKOUT_MASK         0x00000200
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL5_PLLARM_H_BYPCLK_EN_SHIFT         8
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL5_PLLARM_H_BYPCLK_EN_MASK          0x00000100
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL5_PLLARM_H_MDIV_SHIFT              0
+#define    KPROC_CLK_MGR_REG_PLLARMCTRL5_PLLARM_H_MDIV_MASK               0x000000FF
+
+#define KPROC_CLK_MGR_REG_PLLARM_OFFSET_OFFSET                            0x00000C24
+#define KPROC_CLK_MGR_REG_PLLARM_OFFSET_TYPE                              UInt32
+#define KPROC_CLK_MGR_REG_PLLARM_OFFSET_RESERVED_MASK                     0x40000000
+#define    KPROC_CLK_MGR_REG_PLLARM_OFFSET_PRIV_ACCESS_MODE_SHIFT         31
+#define    KPROC_CLK_MGR_REG_PLLARM_OFFSET_PRIV_ACCESS_MODE_MASK          0x80000000
+#define    KPROC_CLK_MGR_REG_PLLARM_OFFSET_PLLARM_OFFSET_SW_CTL_SHIFT     29
+#define    KPROC_CLK_MGR_REG_PLLARM_OFFSET_PLLARM_OFFSET_SW_CTL_MASK      0x20000000
+#define    KPROC_CLK_MGR_REG_PLLARM_OFFSET_PLLARM_OFFSET_MODE_SHIFT       28
+#define    KPROC_CLK_MGR_REG_PLLARM_OFFSET_PLLARM_OFFSET_MODE_MASK        0x10000000
+#define    KPROC_CLK_MGR_REG_PLLARM_OFFSET_PLLARM_NDIV_INT_OFFSET_SHIFT   20
+#define    KPROC_CLK_MGR_REG_PLLARM_OFFSET_PLLARM_NDIV_INT_OFFSET_MASK    0x0FF00000
+#define    KPROC_CLK_MGR_REG_PLLARM_OFFSET_PLLARM_NDIV_FRAC_OFFSET_SHIFT  0
+#define    KPROC_CLK_MGR_REG_PLLARM_OFFSET_PLLARM_NDIV_FRAC_OFFSET_MASK   0x000FFFFF
+#define    KPROC_CLK_MGR_REG_PLLARM_OFFSET_WAVE_DESENSE_PDIV1_SHIFT       26
+#define    KPROC_CLK_MGR_REG_PLLARM_OFFSET_WAVE_DESENSE_PDIV1_MASK        0x0C000000
+#define    KPROC_CLK_MGR_REG_PLLARM_OFFSET_WAVE_DESENSE_SLOW_FERR_SCALE1_SHIFT 23
+#define    KPROC_CLK_MGR_REG_PLLARM_OFFSET_WAVE_DESENSE_SLOW_FERR_SCALE1_MASK 0x03800000
+#define    KPROC_CLK_MGR_REG_PLLARM_OFFSET_WAVE_DESENSE_FAST_FERR_SCALE1_SHIFT 20
+#define    KPROC_CLK_MGR_REG_PLLARM_OFFSET_WAVE_DESENSE_FAST_FERR_SCALE1_MASK 0x00700000
+#define    KPROC_CLK_MGR_REG_PLLARM_OFFSET_WAVE_DESENSE_NDIV0_SHIFT       10
+#define    KPROC_CLK_MGR_REG_PLLARM_OFFSET_WAVE_DESENSE_NDIV0_MASK        0x000FFC00
+#define    KPROC_CLK_MGR_REG_PLLARM_OFFSET_WAVE_DESENSE_NDIV1_SHIFT       0
+#define    KPROC_CLK_MGR_REG_PLLARM_OFFSET_WAVE_DESENSE_NDIV1_MASK        0x000003FF
+
+#define KPROC_CLK_MGR_REG_ARM_DIV_OFFSET                                  0x00000E00
+#define KPROC_CLK_MGR_REG_ARM_DIV_TYPE                                    UInt32
+#define KPROC_CLK_MGR_REG_ARM_DIV_RESERVED_MASK                           0x7FFFC700
+#define    KPROC_CLK_MGR_REG_ARM_DIV_PRIV_ACCESS_MODE_SHIFT               31
+#define    KPROC_CLK_MGR_REG_ARM_DIV_PRIV_ACCESS_MODE_MASK                0x80000000
+#define    KPROC_CLK_MGR_REG_ARM_DIV_CORE_CLOCK_OFF_SHIFT                 12
+#define    KPROC_CLK_MGR_REG_ARM_DIV_CORE_CLOCK_OFF_MASK                  0x00003000
+#define    KPROC_CLK_MGR_REG_ARM_DIV_CCI_FREE_DIV_OVERRIDE_SHIFT          11
+#define    KPROC_CLK_MGR_REG_ARM_DIV_CCI_FREE_DIV_OVERRIDE_MASK           0x00000800
+#define    KPROC_CLK_MGR_REG_ARM_DIV_AXI_DIV_OVERRIDE_SHIFT               7
+#define    KPROC_CLK_MGR_REG_ARM_DIV_AXI_DIV_OVERRIDE_MASK                0x00000080
+#define    KPROC_CLK_MGR_REG_ARM_DIV_AXI_DIV_SHIFT                        5
+#define    KPROC_CLK_MGR_REG_ARM_DIV_AXI_DIV_MASK                         0x00000060
+#define    KPROC_CLK_MGR_REG_ARM_DIV_ARM_PLL_SELECT_OVERRIDE_SHIFT        4
+#define    KPROC_CLK_MGR_REG_ARM_DIV_ARM_PLL_SELECT_OVERRIDE_MASK         0x00000010
+#define    KPROC_CLK_MGR_REG_ARM_DIV_ARM_PLL_SELECT_SHIFT                 0
+#define    KPROC_CLK_MGR_REG_ARM_DIV_ARM_PLL_SELECT_MASK                  0x0000000F
+
+#define KPROC_CLK_MGR_REG_ARM_SEG_TRG_OFFSET                              0x00000E04
+#define KPROC_CLK_MGR_REG_ARM_SEG_TRG_TYPE                                UInt32
+#define KPROC_CLK_MGR_REG_ARM_SEG_TRG_RESERVED_MASK                       0x7FFFFFFE
+#define    KPROC_CLK_MGR_REG_ARM_SEG_TRG_PRIV_ACCESS_MODE_SHIFT           31
+#define    KPROC_CLK_MGR_REG_ARM_SEG_TRG_PRIV_ACCESS_MODE_MASK            0x80000000
+#define    KPROC_CLK_MGR_REG_ARM_SEG_TRG_ARM_TRIGGER_SHIFT                0
+#define    KPROC_CLK_MGR_REG_ARM_SEG_TRG_ARM_TRIGGER_MASK                 0x00000001
+
+#define KPROC_CLK_MGR_REG_ARM_SEG_TRG_OVERRIDE_OFFSET                     0x00000E08
+#define KPROC_CLK_MGR_REG_ARM_SEG_TRG_OVERRIDE_TYPE                       UInt32
+#define KPROC_CLK_MGR_REG_ARM_SEG_TRG_OVERRIDE_RESERVED_MASK              0x7FFFFFFE
+#define    KPROC_CLK_MGR_REG_ARM_SEG_TRG_OVERRIDE_PRIV_ACCESS_MODE_SHIFT  31
+#define    KPROC_CLK_MGR_REG_ARM_SEG_TRG_OVERRIDE_PRIV_ACCESS_MODE_MASK   0x80000000
+#define    KPROC_CLK_MGR_REG_ARM_SEG_TRG_OVERRIDE_ARM_TRIGGER_OVERRIDE_SHIFT 0
+#define    KPROC_CLK_MGR_REG_ARM_SEG_TRG_OVERRIDE_ARM_TRIGGER_OVERRIDE_MASK 0x00000001
+
+#define KPROC_CLK_MGR_REG_ARM_SYS_IDLE_DLY_OFFSET                         0x00000E0C
+#define KPROC_CLK_MGR_REG_ARM_SYS_IDLE_DLY_TYPE                           UInt32
+#define KPROC_CLK_MGR_REG_ARM_SYS_IDLE_DLY_RESERVED_MASK                  0x7FFFFFFE
+#define    KPROC_CLK_MGR_REG_ARM_SYS_IDLE_DLY_PRIV_ACCESS_MODE_SHIFT      31
+#define    KPROC_CLK_MGR_REG_ARM_SYS_IDLE_DLY_PRIV_ACCESS_MODE_MASK       0x80000000
+#define    KPROC_CLK_MGR_REG_ARM_SYS_IDLE_DLY_KPROC_CCU_ARM_SYS_IDLE_SEL_SHIFT 0
+#define    KPROC_CLK_MGR_REG_ARM_SYS_IDLE_DLY_KPROC_CCU_ARM_SYS_IDLE_SEL_MASK 0x00000001
+
+#define KPROC_CLK_MGR_REG_PLL_DEBUG_OFFSET                                0x00000E10
+#define KPROC_CLK_MGR_REG_PLL_DEBUG_TYPE                                  UInt32
+#define KPROC_CLK_MGR_REG_PLL_DEBUG_RESERVED_MASK                         0x7FFFFFF8
+#define    KPROC_CLK_MGR_REG_PLL_DEBUG_PRIV_ACCESS_MODE_SHIFT             31
+#define    KPROC_CLK_MGR_REG_PLL_DEBUG_PRIV_ACCESS_MODE_MASK              0x80000000
+#define    KPROC_CLK_MGR_REG_PLL_DEBUG_PLLARM_TIMER_LOCK_EN_SHIFT         2
+#define    KPROC_CLK_MGR_REG_PLL_DEBUG_PLLARM_TIMER_LOCK_EN_MASK          0x00000004
+#define    KPROC_CLK_MGR_REG_PLL_DEBUG_PLLARM_LOCK_LOST_SHIFT             1
+#define    KPROC_CLK_MGR_REG_PLL_DEBUG_PLLARM_LOCK_LOST_MASK              0x00000002
+#define    KPROC_CLK_MGR_REG_PLL_DEBUG_PLLARM_LOCK_IGNORE_SHIFT           0
+#define    KPROC_CLK_MGR_REG_PLL_DEBUG_PLLARM_LOCK_IGNORE_MASK            0x00000001
+
+#define KPROC_CLK_MGR_REG_ACTIVITY_MON1_OFFSET                            0x00000E20
+#define KPROC_CLK_MGR_REG_ACTIVITY_MON1_TYPE                              UInt32
+#define KPROC_CLK_MGR_REG_ACTIVITY_MON1_RESERVED_MASK                     0x7FFF8780
+#define    KPROC_CLK_MGR_REG_ACTIVITY_MON1_PRIV_ACCESS_MODE_SHIFT         31
+#define    KPROC_CLK_MGR_REG_ACTIVITY_MON1_PRIV_ACCESS_MODE_MASK          0x80000000
+#define    KPROC_CLK_MGR_REG_ACTIVITY_MON1_VAR_52M_ACTVSTS_SHIFT          14
+#define    KPROC_CLK_MGR_REG_ACTIVITY_MON1_VAR_52M_ACTVSTS_MASK           0x00004000
+#define    KPROC_CLK_MGR_REG_ACTIVITY_MON1_VAR_104M_ACTVSTS_SHIFT         13
+#define    KPROC_CLK_MGR_REG_ACTIVITY_MON1_VAR_104M_ACTVSTS_MASK          0x00002000
+#define    KPROC_CLK_MGR_REG_ACTIVITY_MON1_VAR_208M_ACTVSTS_SHIFT         12
+#define    KPROC_CLK_MGR_REG_ACTIVITY_MON1_VAR_208M_ACTVSTS_MASK          0x00001000
+#define    KPROC_CLK_MGR_REG_ACTIVITY_MON1_VAR_156M_ACTVSTS_SHIFT         11
+#define    KPROC_CLK_MGR_REG_ACTIVITY_MON1_VAR_156M_ACTVSTS_MASK          0x00000800
+#define    KPROC_CLK_MGR_REG_ACTIVITY_MON1_CCI_ACTVSTS_SHIFT              6
+#define    KPROC_CLK_MGR_REG_ACTIVITY_MON1_CCI_ACTVSTS_MASK               0x00000040
+#define    KPROC_CLK_MGR_REG_ACTIVITY_MON1_CCI_FREE_ACTVSTS_SHIFT         5
+#define    KPROC_CLK_MGR_REG_ACTIVITY_MON1_CCI_FREE_ACTVSTS_MASK          0x00000020
+#define    KPROC_CLK_MGR_REG_ACTIVITY_MON1_ARM_PERIPH_ACTVSTS_SHIFT       4
+#define    KPROC_CLK_MGR_REG_ACTIVITY_MON1_ARM_PERIPH_ACTVSTS_MASK        0x00000010
+#define    KPROC_CLK_MGR_REG_ACTIVITY_MON1_AXI_ACTVSTS_SHIFT              3
+#define    KPROC_CLK_MGR_REG_ACTIVITY_MON1_AXI_ACTVSTS_MASK               0x00000008
+#define    KPROC_CLK_MGR_REG_ACTIVITY_MON1_PL310_DATA_CLK_ACTVSTS_SHIFT   2
+#define    KPROC_CLK_MGR_REG_ACTIVITY_MON1_PL310_DATA_CLK_ACTVSTS_MASK    0x00000004
+#define    KPROC_CLK_MGR_REG_ACTIVITY_MON1_PL310_TAG_CLK_ACTVSTS_SHIFT    1
+#define    KPROC_CLK_MGR_REG_ACTIVITY_MON1_PL310_TAG_CLK_ACTVSTS_MASK     0x00000002
+#define    KPROC_CLK_MGR_REG_ACTIVITY_MON1_ARM_ACTVSTS_SHIFT              0
+#define    KPROC_CLK_MGR_REG_ACTIVITY_MON1_ARM_ACTVSTS_MASK               0x00000001
+
+#define KPROC_CLK_MGR_REG_ACTIVITY_MON2_OFFSET                            0x00000E24
+#define KPROC_CLK_MGR_REG_ACTIVITY_MON2_TYPE                              UInt32
+#define KPROC_CLK_MGR_REG_ACTIVITY_MON2_RESERVED_MASK                     0x7FFFFF00
+#define    KPROC_CLK_MGR_REG_ACTIVITY_MON2_PRIV_ACCESS_MODE_SHIFT         31
+#define    KPROC_CLK_MGR_REG_ACTIVITY_MON2_PRIV_ACCESS_MODE_MASK          0x80000000
+#define    KPROC_CLK_MGR_REG_ACTIVITY_MON2_DFT_SCAN7_ACTVSTS_SHIFT        7
+#define    KPROC_CLK_MGR_REG_ACTIVITY_MON2_DFT_SCAN7_ACTVSTS_MASK         0x00000080
+#define    KPROC_CLK_MGR_REG_ACTIVITY_MON2_DFT_SCAN0_ACTVSTS_SHIFT        6
+#define    KPROC_CLK_MGR_REG_ACTIVITY_MON2_DFT_SCAN0_ACTVSTS_MASK         0x00000040
+#define    KPROC_CLK_MGR_REG_ACTIVITY_MON2_DFT_SCAN1_ACTVSTS_SHIFT        5
+#define    KPROC_CLK_MGR_REG_ACTIVITY_MON2_DFT_SCAN1_ACTVSTS_MASK         0x00000020
+#define    KPROC_CLK_MGR_REG_ACTIVITY_MON2_DFT_SCAN6_ACTVSTS_SHIFT        4
+#define    KPROC_CLK_MGR_REG_ACTIVITY_MON2_DFT_SCAN6_ACTVSTS_MASK         0x00000010
+#define    KPROC_CLK_MGR_REG_ACTIVITY_MON2_DFT_SCAN5_ACTVSTS_SHIFT        3
+#define    KPROC_CLK_MGR_REG_ACTIVITY_MON2_DFT_SCAN5_ACTVSTS_MASK         0x00000008
+#define    KPROC_CLK_MGR_REG_ACTIVITY_MON2_DFT_SCAN4_ACTVSTS_SHIFT        2
+#define    KPROC_CLK_MGR_REG_ACTIVITY_MON2_DFT_SCAN4_ACTVSTS_MASK         0x00000004
+#define    KPROC_CLK_MGR_REG_ACTIVITY_MON2_DFT_SCAN3_ACTVSTS_SHIFT        1
+#define    KPROC_CLK_MGR_REG_ACTIVITY_MON2_DFT_SCAN3_ACTVSTS_MASK         0x00000002
+#define    KPROC_CLK_MGR_REG_ACTIVITY_MON2_DFT_SCAN2_ACTVSTS_SHIFT        0
+#define    KPROC_CLK_MGR_REG_ACTIVITY_MON2_DFT_SCAN2_ACTVSTS_MASK         0x00000001
+
+#define KPROC_CLK_MGR_REG_CLKGATE_DBG_OFFSET                              0x00000E40
+#define KPROC_CLK_MGR_REG_CLKGATE_DBG_TYPE                                UInt32
+#define KPROC_CLK_MGR_REG_CLKGATE_DBG_RESERVED_MASK                       0x7FFFFFF3
+#define    KPROC_CLK_MGR_REG_CLKGATE_DBG_PRIV_ACCESS_MODE_SHIFT           31
+#define    KPROC_CLK_MGR_REG_CLKGATE_DBG_PRIV_ACCESS_MODE_MASK            0x80000000
+#define    KPROC_CLK_MGR_REG_CLKGATE_DBG_AXI_POLICY_OVERRIDE_SHIFT        3
+#define    KPROC_CLK_MGR_REG_CLKGATE_DBG_AXI_POLICY_OVERRIDE_MASK         0x00000008
+#define    KPROC_CLK_MGR_REG_CLKGATE_DBG_AXI_POLICY_OVERRIDE_VALUE_SHIFT  2
+#define    KPROC_CLK_MGR_REG_CLKGATE_DBG_AXI_POLICY_OVERRIDE_VALUE_MASK   0x00000004
+
+#define KPROC_CLK_MGR_REG_CCI_CLKGATE_DBG1_OFFSET                         0x00000E48
+#define KPROC_CLK_MGR_REG_CCI_CLKGATE_DBG1_TYPE                           UInt32
+#define KPROC_CLK_MGR_REG_CCI_CLKGATE_DBG1_RESERVED_MASK                  0x7FFFFCFC
+#define    KPROC_CLK_MGR_REG_CCI_CLKGATE_DBG1_PRIV_ACCESS_MODE_SHIFT      31
+#define    KPROC_CLK_MGR_REG_CCI_CLKGATE_DBG1_PRIV_ACCESS_MODE_MASK       0x80000000
+#define    KPROC_CLK_MGR_REG_CCI_CLKGATE_DBG1_CCI_POLICY_OVERRIDE_SHIFT   9
+#define    KPROC_CLK_MGR_REG_CCI_CLKGATE_DBG1_CCI_POLICY_OVERRIDE_MASK    0x00000200
+#define    KPROC_CLK_MGR_REG_CCI_CLKGATE_DBG1_CCI_POLICY_OVERRIDE_VALUE_SHIFT 8
+#define    KPROC_CLK_MGR_REG_CCI_CLKGATE_DBG1_CCI_POLICY_OVERRIDE_VALUE_MASK 0x00000100
+#define    KPROC_CLK_MGR_REG_CCI_CLKGATE_DBG1_ARM_PERIPH_POLICY_OVERRIDE_SHIFT 1
+#define    KPROC_CLK_MGR_REG_CCI_CLKGATE_DBG1_ARM_PERIPH_POLICY_OVERRIDE_MASK 0x00000002
+#define    KPROC_CLK_MGR_REG_CCI_CLKGATE_DBG1_ARM_PERIPH_POLICY_OVERRIDE_VALUE_SHIFT 0
+#define    KPROC_CLK_MGR_REG_CCI_CLKGATE_DBG1_ARM_PERIPH_POLICY_OVERRIDE_VALUE_MASK 0x00000001
+
+#define KPROC_CLK_MGR_REG_CLKMON_OFFSET                                   0x00000E64
+#define KPROC_CLK_MGR_REG_CLKMON_TYPE                                     UInt32
+#define KPROC_CLK_MGR_REG_CLKMON_RESERVED_MASK                            0x7FFFFC00
+#define    KPROC_CLK_MGR_REG_CLKMON_PRIV_ACCESS_MODE_SHIFT                31
+#define    KPROC_CLK_MGR_REG_CLKMON_PRIV_ACCESS_MODE_MASK                 0x80000000
+#define    KPROC_CLK_MGR_REG_CLKMON_CLKMON_CTL_SHIFT                      8
+#define    KPROC_CLK_MGR_REG_CLKMON_CLKMON_CTL_MASK                       0x00000300
+#define    KPROC_CLK_MGR_REG_CLKMON_CLKMON_SEL_SHIFT                      0
+#define    KPROC_CLK_MGR_REG_CLKMON_CLKMON_SEL_MASK                       0x000000FF
+
+#define KPROC_CLK_MGR_REG_KPROC_CCU_PROF_CTL_OFFSET                       0x00000E90
+#define KPROC_CLK_MGR_REG_KPROC_CCU_PROF_CTL_TYPE                         UInt32
+#define KPROC_CLK_MGR_REG_KPROC_CCU_PROF_CTL_RESERVED_MASK                0x7FFFE08E
+#define    KPROC_CLK_MGR_REG_KPROC_CCU_PROF_CTL_PRIV_ACCESS_MODE_SHIFT    31
+#define    KPROC_CLK_MGR_REG_KPROC_CCU_PROF_CTL_PRIV_ACCESS_MODE_MASK     0x80000000
+#define    KPROC_CLK_MGR_REG_KPROC_CCU_PROF_CTL_KPROC_CCU_PROF_CNT_PREDIV_SHIFT 8
+#define    KPROC_CLK_MGR_REG_KPROC_CCU_PROF_CTL_KPROC_CCU_PROF_CNT_PREDIV_MASK 0x00001F00
+#define    KPROC_CLK_MGR_REG_KPROC_CCU_PROF_CTL_KPROC_CCU_PROF_CNT_CTRL_SHIFT 4
+#define    KPROC_CLK_MGR_REG_KPROC_CCU_PROF_CTL_KPROC_CCU_PROF_CNT_CTRL_MASK 0x00000070
+#define    KPROC_CLK_MGR_REG_KPROC_CCU_PROF_CTL_KPROC_CCU_PROF_CNT_START_SHIFT 0
+#define    KPROC_CLK_MGR_REG_KPROC_CCU_PROF_CTL_KPROC_CCU_PROF_CNT_START_MASK 0x00000001
+
+#define KPROC_CLK_MGR_REG_KPROC_CCU_PROF_SEL_OFFSET                       0x00000E94
+#define KPROC_CLK_MGR_REG_KPROC_CCU_PROF_SEL_TYPE                         UInt32
+#define KPROC_CLK_MGR_REG_KPROC_CCU_PROF_SEL_RESERVED_MASK                0x7FC0F0FC
+#define    KPROC_CLK_MGR_REG_KPROC_CCU_PROF_SEL_PRIV_ACCESS_MODE_SHIFT    31
+#define    KPROC_CLK_MGR_REG_KPROC_CCU_PROF_SEL_PRIV_ACCESS_MODE_MASK     0x80000000
+#define    KPROC_CLK_MGR_REG_KPROC_CCU_PROF_SEL_KPROC_CCU_PROF_CLK_REQ_SEL_SHIFT 16
+#define    KPROC_CLK_MGR_REG_KPROC_CCU_PROF_SEL_KPROC_CCU_PROF_CLK_REQ_SEL_MASK 0x003F0000
+#define    KPROC_CLK_MGR_REG_KPROC_CCU_PROF_SEL_KPROC_CCU_PROF_POLICY_SEL_SHIFT 8
+#define    KPROC_CLK_MGR_REG_KPROC_CCU_PROF_SEL_KPROC_CCU_PROF_POLICY_SEL_MASK 0x00000F00
+#define    KPROC_CLK_MGR_REG_KPROC_CCU_PROF_SEL_KPROC_CCU_PROF_AUTOGATING_SEL_SHIFT 0
+#define    KPROC_CLK_MGR_REG_KPROC_CCU_PROF_SEL_KPROC_CCU_PROF_AUTOGATING_SEL_MASK 0x00000003
+
+#define KPROC_CLK_MGR_REG_KPROC_CCU_PROF_CNT_OFFSET                       0x00000E98
+#define KPROC_CLK_MGR_REG_KPROC_CCU_PROF_CNT_TYPE                         UInt32
+#define KPROC_CLK_MGR_REG_KPROC_CCU_PROF_CNT_RESERVED_MASK                0x00000000
+#define    KPROC_CLK_MGR_REG_KPROC_CCU_PROF_CNT_PRIV_ACCESS_MODE_SHIFT    31
+#define    KPROC_CLK_MGR_REG_KPROC_CCU_PROF_CNT_PRIV_ACCESS_MODE_MASK     0x80000000
+#define    KPROC_CLK_MGR_REG_KPROC_CCU_PROF_CNT_KPROC_CCU_PROF_CNT_SHIFT  0
+#define    KPROC_CLK_MGR_REG_KPROC_CCU_PROF_CNT_KPROC_CCU_PROF_CNT_MASK   0x7FFFFFFF
+
+#define KPROC_CLK_MGR_REG_KPROC_CCU_PROF_DBG_OFFSET                       0x00000E9C
+#define KPROC_CLK_MGR_REG_KPROC_CCU_PROF_DBG_TYPE                         UInt32
+#define KPROC_CLK_MGR_REG_KPROC_CCU_PROF_DBG_RESERVED_MASK                0x7FFF0000
+#define    KPROC_CLK_MGR_REG_KPROC_CCU_PROF_DBG_PRIV_ACCESS_MODE_SHIFT    31
+#define    KPROC_CLK_MGR_REG_KPROC_CCU_PROF_DBG_PRIV_ACCESS_MODE_MASK     0x80000000
+#define    KPROC_CLK_MGR_REG_KPROC_CCU_PROF_DBG_KPROC_CCU_PROF_DEBUG_BUS_SHIFT 0
+#define    KPROC_CLK_MGR_REG_KPROC_CCU_PROF_DBG_KPROC_CCU_PROF_DEBUG_BUS_MASK 0x0000FFFF
+
+#define KPROC_CLK_MGR_REG_POLICY_DBG_OFFSET                               0x00000EC0
+#define KPROC_CLK_MGR_REG_POLICY_DBG_TYPE                                 UInt32
+#define KPROC_CLK_MGR_REG_POLICY_DBG_RESERVED_MASK                        0x7FFF88CC
+#define    KPROC_CLK_MGR_REG_POLICY_DBG_PRIV_ACCESS_MODE_SHIFT            31
+#define    KPROC_CLK_MGR_REG_POLICY_DBG_PRIV_ACCESS_MODE_MASK             0x80000000
+#define    KPROC_CLK_MGR_REG_POLICY_DBG_ACT_FREQ_SHIFT                    12
+#define    KPROC_CLK_MGR_REG_POLICY_DBG_ACT_FREQ_MASK                     0x00007000
+#define    KPROC_CLK_MGR_REG_POLICY_DBG_TGT_FREQ_SHIFT                    8
+#define    KPROC_CLK_MGR_REG_POLICY_DBG_TGT_FREQ_MASK                     0x00000700
+#define    KPROC_CLK_MGR_REG_POLICY_DBG_ACT_POLICY_SHIFT                  4
+#define    KPROC_CLK_MGR_REG_POLICY_DBG_ACT_POLICY_MASK                   0x00000030
+#define    KPROC_CLK_MGR_REG_POLICY_DBG_TGT_POLICY_SHIFT                  0
+#define    KPROC_CLK_MGR_REG_POLICY_DBG_TGT_POLICY_MASK                   0x00000003
+
+#define KPROC_CLK_MGR_REG_TGTMASK_DBG1_OFFSET                             0x00000EC4
+#define KPROC_CLK_MGR_REG_TGTMASK_DBG1_TYPE                               UInt32
+#define KPROC_CLK_MGR_REG_TGTMASK_DBG1_RESERVED_MASK                      0x7FFFF87F
+#define    KPROC_CLK_MGR_REG_TGTMASK_DBG1_PRIV_ACCESS_MODE_SHIFT          31
+#define    KPROC_CLK_MGR_REG_TGTMASK_DBG1_PRIV_ACCESS_MODE_MASK           0x80000000
+#define    KPROC_CLK_MGR_REG_TGTMASK_DBG1_CCI_ACTIVE_MASK_SHIFT           10
+#define    KPROC_CLK_MGR_REG_TGTMASK_DBG1_CCI_ACTIVE_MASK_MASK            0x00000400
+#define    KPROC_CLK_MGR_REG_TGTMASK_DBG1_ARM_ACTIVE_MASK_SHIFT           9
+#define    KPROC_CLK_MGR_REG_TGTMASK_DBG1_ARM_ACTIVE_MASK_MASK            0x00000200
+#define    KPROC_CLK_MGR_REG_TGTMASK_DBG1_CCI_TARGET_MASK_SHIFT           8
+#define    KPROC_CLK_MGR_REG_TGTMASK_DBG1_CCI_TARGET_MASK_MASK            0x00000100
+#define    KPROC_CLK_MGR_REG_TGTMASK_DBG1_ARM_TARGET_MASK_SHIFT           7
+#define    KPROC_CLK_MGR_REG_TGTMASK_DBG1_ARM_TARGET_MASK_MASK            0x00000080
+
+#endif /* __BRCM_RDB_KPROC_CLK_MGR_REG_H__ */
+
+

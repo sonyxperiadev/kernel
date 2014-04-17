@@ -1,0 +1,188 @@
+/* Hawaii_edn01X Dts file */
+
+/dts-v1/;
+
+/include/ "java.dtsi"
+
+/ {
+	model = "javafpga_eve";
+	compatible = "bcm,java";
+
+	chosen {
+		bootargs = "console=ttyS0,115200n8 gpt mem=98M pmem=0 carveout=0 ap_only_boot root=/dev/ram0 rw rootfstype=rootfs initrd=0x84000000,4M init=/linuxrc"; /*lpj=10461184*/
+	};
+
+	memory@81e00000 {
+		device_type = "memory";
+		reg = <0x81e00000 0x6200000>; /* 98 MB */
+	};
+
+	wd-tapper {
+		count = <120>; /* Time in seconds */
+		ch-num = <1>; /* Kona hub timer Channel number */
+		timer-name = "aon-timer";
+		status = "disabled";
+	};
+
+	usb-phy@0x3F130000 {
+		interrupts = <0 128 0x04>;
+		chipreg-virtual-mem-base = <0x35004000>;
+		usb-ahb-clk-name = "usb_otg_clk";
+		mdio-mstr-clk-name = "mdiomaster";
+	};
+	usb-hsotgctrl@0x3F130000 {
+		chipreg-virtual-mem-base = <0x35004000>;
+		usb-ahb-clk-name = "usb_otg_clk";
+		mdio-mstr-clk-name = "mdiomaster";
+	};
+
+
+	uart@3e000000 {
+		clock-frequency = <13000000>;
+		port-name = "console";
+		clk-name = "fpga";
+	};
+
+	uart@3e001000 {
+		clock-frequency = <13000000>;
+		port-name = "bluetooth";
+		clk-name = "fpga";
+		status = "disabled";
+	};
+
+	uart@3e002000 {
+		clock-frequency = <13000000>;
+		port-name = "gps";
+		clk-name = "fpga";
+		status = "disabled";
+	};
+
+	i2c0: i2c@3e016000 {
+		speed = <5>; /* BSC_BUS_SPEED_400 K */
+		dynamic-speed = <1>;
+		bsc-clk = "bsc1_clk";
+		bsc-apb-clk = "bsc1_apb_clk";
+		retries = <1>;
+		is-pmu-i2c = <0>;
+		fs-ref-frequency = <13000000>;
+		hs-ref-frequency = <104000000>;
+	};
+
+	i2c1: i2c@3e017000 {
+		speed = <5>; /* BSC_BUS_SPEED_400 K */
+		dynamic-speed = <1>;
+		bsc-clk = "bsc2_clk";
+		bsc-apb-clk = "bsc2_apb_clk";
+		retries = <3>;
+		is-pmu-i2c = <0>;
+		fs-ref-frequency = <13000000>;
+		hs-ref-frequency = <104000000>;
+	};
+
+	i2c2: i2c@3e018000 {
+		speed = <5>; /* BSC_BUS_SPEED_400 K */
+		dynamic-speed = <1>;
+		bsc-clk = "bsc3_clk";
+		bsc-apb-clk = "bsc3_apb_clk";
+		retries = <1>;
+		is-pmu-i2c = <0>;
+		fs-ref-frequency = <13000000>;
+		hs-ref-frequency = <104000000>;
+		status = "disabled";
+	};
+
+	i2c3: i2c@3e01c000 {
+		speed = <5>; /* BSC_BUS_SPEED_400 K */
+		dynamic-speed = <1>;
+		bsc-clk = "bsc4_clk";
+		bsc-apb-clk = "bsc4_apb_clk";
+		retries = <1>;
+		is-pmu-i2c = <0>;
+		fs-ref-frequency = <13000000>;
+		hs-ref-frequency = <104000000>;
+		status = "disabled";
+	};
+
+	i2c4: i2c@3500d000 {
+		speed = <7>; /* BSC_BUS_SPEED_HS */
+		dynamic-speed = <0>;
+		bsc-clk = "pmu_bsc_clk";
+		bsc-apb-clk = "pmu_bsc_apb";
+		retries = <5>;
+		is-pmu-i2c = <1>;
+		fs-ref-frequency = <13000000>;
+		hs-ref-frequency = <26000000>;
+		status = "disabled";
+	};
+
+	spi0: spi@0x3E004000 {
+		enable-dma = <1>;
+		cs-line = <1>;
+		mode = <0x23>;
+
+		spidev@0x0 {
+			compatible = "bcm,spidev";
+			reg = <0x0>;
+			spi-max-frequency = <13000000>;
+			spi-loop = <0x20>;
+		};
+	};
+
+	sdio1 {
+		compatible = "bcm,sdhci";
+		reg = <0x3F190000 10000>;
+		interrupts = <0 76 0x04>;
+		id = <1>;
+		data-pullup = <0>;
+		is-8bit = <1>;
+		devtype = <2>;		/*SDIO_DEV_TYPE_EMMC*/
+		flags = <3>;		/*NON_REMOVABLE | RPM_EN*/
+		pm_caps = <1>;		/*MMC_PM_KEEP_POWER*/
+		peri-clk-name = "sdio2_clk";
+		ahb-clk-name = "sdio2_ahb_clk";
+		sleep-clk-name = "sdio2_sleep_clk";
+		peri-clk-rate = <52000000>;
+		status = "disabled";
+	};
+
+	sdio2 {
+		compatible = "bcm,sdhci";
+		reg = <0x3F1A0000 10000>;
+		interrupts = <0 74 0x04>;
+		id = <2>;
+		data-pullup = <0>;
+		devtype = <1>;		/*SDIO_DEV_TYPE_WIFI*/
+		flags = <2>;		/*REMOVABLE | RPM_EN*/
+		peri-clk-name = "sdio3_clk";
+		ahb-clk-name = "sdio3_ahb_clk";
+		sleep-clk-name = "sdio3_sleep_clk";
+		peri-clk-rate = <48000000>;
+		status = "disabled";
+	};
+
+	sdio0 {
+		compatible = "bcm,sdhci";
+		reg = <0x3F180000 10000>;
+		interrupts = <0 77 0x04>;
+		id = <0>;
+		data-pullup = <0>;
+		cd-gpio = <&gpio 91 0>;		/*SD_CARDDET_GPIO_PIN*/
+		devtype = <0>;		/*SDIO_DEV_TYPE_SDMMC*/
+		flags = <2>;		/*REMOVABLE | RPM_EN*/
+		peri-clk-name = "sdio1_clk";
+		ahb-clk-name = "sdio1_ahb_clk";
+		sleep-clk-name = "sdio1_sleep_clk";
+		peri-clk-rate = <48000000>;
+		vddo-regulator-name = "vdd_sdio";
+		vddsdxc-regulator-name = "vdd_sdxc";
+		quirks	= <0x00000040>;		/*SDHCI_QUIRK_BROKEN_ADMA (1 << 6)*/
+		quirks2	= <0x00000008>;		/*SDHCI_QUIRK2_HOST_MASK_HS_BIT (1<<3)*/
+	};
+        timer {
+		compatible = "arm,armv7-timer";
+		interrupts = <1 13 0xf08>,
+			     <1 14 0xf08>;
+		status = "disabled";
+	};
+
+};

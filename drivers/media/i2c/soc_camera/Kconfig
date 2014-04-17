@@ -1,0 +1,350 @@
+comment "soc_camera sensor drivers"
+
+config SOC_CAMERA_IMX074
+	tristate "imx074 support"
+	depends on SOC_CAMERA && I2C
+	help
+	  This driver supports IMX074 cameras from Sony
+
+config SOC_CAMERA_MT9M001
+	tristate "mt9m001 support"
+	depends on SOC_CAMERA && I2C
+	help
+	  This driver supports MT9M001 cameras from Micron, monochrome
+	  and colour models.
+
+config SOC_CAMERA_MT9M111
+	tristate "mt9m111, mt9m112 and mt9m131 support"
+	depends on SOC_CAMERA && I2C
+	help
+	  This driver supports MT9M111, MT9M112 and MT9M131 cameras from
+	  Micron/Aptina
+
+config SOC_CAMERA_MT9T031
+	tristate "mt9t031 support"
+	depends on SOC_CAMERA && I2C
+	help
+	  This driver supports MT9T031 cameras from Micron.
+
+config SOC_CAMERA_MT9T112
+	tristate "mt9t112 support"
+	depends on SOC_CAMERA && I2C
+	help
+	  This driver supports MT9T112 cameras from Aptina.
+
+config SOC_CAMERA_MT9V022
+	tristate "mt9v022 and mt9v024 support"
+	depends on SOC_CAMERA && I2C
+	help
+	  This driver supports MT9V022 cameras from Micron
+
+config SOC_CAMERA_OV2640
+	tristate "ov2640 camera support"
+	depends on SOC_CAMERA && I2C
+	help
+	  This is a ov2640 camera driver
+
+config SOC_CAMERA_OV5642
+	tristate "ov5642 camera support"
+	depends on SOC_CAMERA && I2C
+	help
+	  This is a V4L2 camera driver for the OmniVision OV5642 sensor
+
+config SOC_CAMERA_OV6650
+	tristate "ov6650 sensor support"
+	depends on SOC_CAMERA && I2C
+	---help---
+	  This is a V4L2 SoC camera driver for the OmniVision OV6650 sensor
+
+config SOC_CAMERA_OV772X
+	tristate "ov772x camera support"
+	depends on SOC_CAMERA && I2C
+	help
+	  This is a ov772x camera driver
+
+config SOC_CAMERA_OV9640
+	tristate "ov9640 camera support"
+	depends on SOC_CAMERA && I2C
+	help
+	  This is a ov9640 camera driver
+
+config SOC_CAMERA_OV9740
+	tristate "ov9740 camera support"
+	depends on SOC_CAMERA && I2C
+	help
+	  This is a ov9740 camera driver
+
+config SOC_CAMERA_OV5640
+	tristate "ov5640 camera support"
+	depends on SOC_CAMERA && I2C
+	help
+	  Omnivision OV5640 camera driver.
+
+config SOC_CAMERA_OV5648
+	tristate "ov5648 camera support"
+	depends on SOC_CAMERA && I2C
+	help
+	  Omnivision OV5648 camera driver.
+          The OV5648 is a 5Mpix image sensor
+          with a small, restricted set of SOC
+          camera features such as black level
+          correction and defective pixel
+          canceling. The OV5648 only supports
+          raw Bayer output formats.
+
+config SOC_CAMERA_OV8825
+	tristate "ov8825 camera support"
+	depends on SOC_CAMERA && I2C
+	help
+	  Omnivision OV8825 camera driver.
+          The OV8825 is a 5Mpix image sensor
+          with a small, restricted set of SOC
+          camera features such as black level
+          correction and defective pixel
+          canceling. The OV5648 only supports
+          raw Bayer output formats.
+
+config SOC_CAMERA_OV7692
+	tristate "ov7692 camera support"
+	depends on SOC_CAMERA && I2C
+	help
+	  This is a ov7692 camera driver
+
+config SOC_CAMERA_OV7695
+	tristate "ov7695 camera support"
+	depends on SOC_CAMERA && I2C
+	help
+	  This is a ov7695 0.3M camera driver
+
+config SOC_CAMERA_GC2035
+	tristate "gc2035 camera support"
+	depends on SOC_CAMERA && I2C
+	help
+	  This is a gc2035 2MP camera driver
+
+config SOC_CAMERA_RJ54N1
+	tristate "rj54n1cb0c support"
+	depends on SOC_CAMERA && I2C
+	help
+	  This is a rj54n1cb0c video driver
+
+config SOC_CAMERA_TW9910
+	tristate "tw9910 support"
+	depends on SOC_CAMERA && I2C
+	help
+	  This is a tw9910 video driver
+
+comment "Flash lamp devices"
+
+config VIDEO_FLASHLAMP
+	tristate "Flash lamp support"
+	depends on SOC_CAMERA && I2C
+	---help---
+	  This enables flash lamp support for the target system.
+	  The abstract flash lamp interface is used for camera
+	  sensor drivers and implemented by following flash lamp
+	  drivers
+
+config VIDEO_AS3643
+	tristate "AS3643 flash driver support"
+	depends on SOC_CAMERA && I2C && VIDEO_FLASHLAMP
+	---help---
+	  This is a driver for the AS3643 flash lamp controller.
+	  It has built in control for flash and torch modes.
+	  The operation is done via I2C.
+
+config VIDEO_AS3643_STROBE
+	int "STROBE pin of AS3643 flash lamp chip"
+	depends on VIDEO_AS3643
+	default 11
+	---help---
+	  Static GPIO number of STROBE pin of AS3643 flash lamp chip.
+	  The STROBE pin controls  strobe time for flash function with
+	  pulldown.
+
+config VIDEO_AS3643_TXMASK
+	int "TXMASK pin of AS3643 flash lamp chip"
+	depends on VIDEO_AS3643
+	default 34
+	---help---
+	  Static GPIO number of TXMASK pin of AS3643 flash lamp chip.
+	  The TXMASK pin controls torch current level without using
+	  I2C to operate the torch, or it can be connected to RF PA
+	  enable signal to reduce current during flash to avoid system
+	  shutdown.
+
+config VIDEO_FLASH_GPIO
+	tristate "GPIO based flash driver support"
+	depends on SOC_CAMERA && I2C && VIDEO_FLASHLAMP
+	---help---
+	  This is a driver for the gpio flash controller. It has
+	  simple control for flash and torch mode by two pins:
+	  "ENABLE" and "MODE". "ENABLE" activates flash driver.
+	  "MODE" controls the activated mode: torch or flash.
+
+config VIDEO_FLASH_GPIO_EN
+	int "ENABLE pin of GPIO based flash lamp chip"
+	depends on VIDEO_FLASH_GPIO
+	default 10
+	help
+	  Static GPIO number of ENABLE pin of GPIO based flash lamp chip.
+
+	  The ENABLE pin controls flash activation and de-activation.
+
+config VIDEO_FLASH_GPIO_MODE
+	int "MODE pin of GPIO based flash lamp chip"
+	depends on VIDEO_FLASH_GPIO
+	default 11
+	help
+	  Static GPIO number of MODE pin of GPIO based flash lamp chip.
+
+	  The MODE pin controls active mode for flash chip: FLASH/TORCH.
+	  When the MODE is set to FLASH, and ENABLE pin is set, the chip
+	  works in FLASH mode.
+	  When the MODE is set to TORCH, and ENABLE pin is set, the chip
+	  works in TORCH mode.
+
+comment "Camera sensors"
+
+config SOC_CAMERA_MAIN_S5K4ECGX
+	tristate "s5k4ecgx main camera support"
+	depends on SOC_CAMERA && I2C
+	help
+	  This is a s5k4ecgx main camera driver.
+	  5MP Camera interfaced to camera host driver.
+	  I2C controlled. Data out over the
+	  MIPI Lanes.
+
+config SOC_CAMERA_SUB_S5K4ECGX
+	tristate "s5k4ecgx sub camera support"
+	depends on SOC_CAMERA && I2C
+	help
+	  This is a s5k4ecgx sub camera driver.
+	  5MP Camera interfaced to camera host driver.
+	  I2C controlled. Data out over the
+	  MIPI Lanes.
+
+config SOC_CAMERA_MAIN_DB8V61M
+	tristate "db8v61m main camera support"
+	depends on SOC_CAMERA && I2C
+	help
+	  This is a db8v61m main camera driver.
+	  3MP Camera interfaced to camera host driver.
+	  I2C controlled. Data out over the
+	  MIPI Lanes.
+
+config SOC_CAMERA_SUB_DB8V61M
+	tristate "db8v61m sub camera support"
+	depends on SOC_CAMERA && I2C
+	help
+	  This is a db8v61m sub camera driver.
+	  3MP Camera interfaced to camera host driver.
+	  I2C controlled. Data out over the
+	  MIPI Lanes.
+
+config SOC_CAMERA_MAIN_SR130
+	tristate "sr130 main camera support"
+	depends on SOC_CAMERA && I2C
+	help
+	  This is a sr130 main camera driver.
+	  1.3MP Camera interfaced to camera host driver.
+	  I2C controlled. Data out over the
+	  MIPI Lanes.
+
+config SOC_CAMERA_SUB_SR130
+	tristate "sr130 sub camera support"
+	depends on SOC_CAMERA && I2C
+	help
+	  This is a sr130 sub camera driver.
+	  1.3MP Camera interfaced to camera host driver.
+	  I2C controlled. Data out over the
+	  MIPI Lanes.
+
+config SOC_CAMERA_MAIN_SR300PC20
+	tristate "sr300pc20 main camera support"
+	depends on SOC_CAMERA && I2C
+	help
+	  This is a sr300pc20 main camera driver.
+	  3MP Camera interfaced to camera host driver.
+	  I2C controlled. Data out over the
+	  MIPI Lanes.
+
+config SOC_CAMERA_SUB_SR300PC20
+	tristate "sr300pc20 sub camera support"
+	depends on SOC_CAMERA && I2C
+	help
+	  This is a sr300pc20 sub camera driver.
+	  3MP Camera interfaced to camera host driver.
+	  I2C controlled. Data out over the
+	  MIPI Lanes.
+
+config SOC_CAMERA_MAIN_SR030PC50
+	tristate "sr030pc50 main camera support"
+	depends on SOC_CAMERA && I2C
+	help
+	  This is a sr030pc50 main camera driver.
+	  VGA Camera interfaced to camera host driver.
+	  I2C controlled. Data out over the
+	  MIPI Lanes.
+
+config SOC_CAMERA_SUB_SR030PC50
+	tristate "sr030pc50 sub camera support"
+	depends on SOC_CAMERA && I2C
+	help
+	  This is a sr030pc50 sub camera driver.
+	  VGA Camera interfaced to camera host driver.
+	  I2C controlled. Data out over the
+	  MIPI Lanes.
+
+config SOC_CAMERA_MAIN_SR200PC20M
+	tristate "sr200pc20m main camera support"
+	depends on SOC_CAMERA && I2C
+	help
+	  This is a sr200pc20m main camera driver.
+	  VGA Camera interfaced to camera host driver.
+	  I2C controlled. Data out over the
+	  MIPI Lanes.
+
+config SOC_CAMERA_SUB_SR200PC20M
+	tristate "sr200pc20m sub camera support"
+	depends on SOC_CAMERA && I2C
+	help
+	  This is a sr200pc20m sub camera driver.
+	  VGA Camera interfaced to camera host driver.
+	  I2C controlled. Data out over the
+	  MIPI Lanes.
+
+config SOC_CAMERA_MAIN_SR352
+	tristate "sr352 main camera support"
+	depends on SOC_CAMERA && I2C
+	help
+	  This is a sr352 main camera driver
+	  3MP Camera interfaced to camera host driver.
+	  I2C controlled. Data out over the
+	  MIPI Lanes.
+
+config SOC_CAMERA_SUB_SR352
+	tristate "sr352 sub camera support"
+	depends on SOC_CAMERA && I2C
+	help
+	  This is a sr352 sub camera driver
+	  3MP Camera interfaced to camera host driver.
+	  I2C controlled. Data out over the
+	  MIPI Lanes.
+
+config SOC_CAMERA_POWER_USE_ASR
+	bool "Support Broadcom Rhea SS Lucas 03 Ivory 02 board"
+	default n
+	help
+	  Support for the Broadcom Rhea SS Lucas 03 Ivory 02 board.
+
+comment "vcm devices"
+
+config VIDEO_A3907
+	tristate "A3907 flash driver support"
+	depends on SOC_CAMERA && I2C
+	---help---
+	   This is a driver for the A3907 flash controller.
+	   The Allegro A3907 is a coil motor driver for linear
+	   control of small form factor voice coil motors.
+	   It is used with the OV5648 as a camera focus motor.

@@ -1,0 +1,80 @@
+config FB_BRCM_KONA
+	tristate "Broadcom KONA Platform Framebuffer support"
+	depends on FB && ARM && ARCH_KONA
+	select FB_CFB_FILLRECT
+	select FB_CFB_COPYAREA
+	select FB_CFB_IMAGEBLIT
+	select KONA_DSI
+	select KONA_VC4LITE
+	select KONA_SMI
+	help
+	  This framebuffer device driver is for the Broadcom KONA platform.
+
+config FB_BRCM_CP_CRASH_DUMP_IMAGE_SUPPORT
+	bool "CP Crash Dump Image Support"
+	depends on FB_BRCM_KONA && BCM_MODEM
+	default Y
+	help
+	  This is used for LCD to show that cp goes into crahs dump state.
+	  If you do not know about this config, please just say 'N' here.
+
+config LCD_HX8369_SUPPORT
+        tristate "LCD Panel- HX8369 controller"
+        help
+	  WVGA LCD panel (HX8369 controller)
+
+config LCD_HX8369_CS02_SUPPORT
+        tristate "LCD Panel- HX8369 controller"
+        default N
+        help
+	  WVGA LCD panel (HX8369 controller)
+
+config LCD_SC7798_CS02_SUPPORT
+        tristate "LCD Panel- HX8369 controller"
+        default N
+        help
+	  WVGA LCD panel (HX8369 controller)
+
+config LCD_S6E63M0X_SUPPORT
+        tristate "LCD Panel- S6E63M0X controller"
+        default N
+        help
+	  WVGA LCD panel (S6E63M0X controller)
+
+config LCD_NT35510_SUPPORT
+        tristate "LCD Panel- NT35510 controller"
+        default N
+        help
+	  WVGA LCD panel (NT35510 controller)
+
+config LCD_NT35512_SUPPORT
+        tristate "LCD Panel- NT35512 controller"
+        default N
+        help
+	  WVGA LCD panel (NT35512 controller)
+
+config FB_BRCM_LCD_EXIST_CHECK
+		bool "Enable LCD exist check code"
+	help
+	  Say Y here to enable LCD exist check code
+
+config LDI_MDNIE_SUPPORT
+	  tristate "LDI mDNIe Driver"
+	help
+		LDI mDNIe Driver
+
+config DSI_PKT_VID_SIMULTANEOUS
+	tristate "Broadcom DSI simulataneous packet, video mode"
+	depends on FB_BRCM_KONA
+	default N
+	help
+	  the way DSI sending packet while video stream is active.
+	  Y, the packets are sending simultaneously.
+	  N, suspend video stram firstly, then sending packets.
+
+config FB_NEED_PAGE_ALIGNMENT
+	bool "Each buffer need page alignment"
+	default N
+	help
+	  This is used for do page align for each frame .
+	  If it is tk project, please say 'Y' here.

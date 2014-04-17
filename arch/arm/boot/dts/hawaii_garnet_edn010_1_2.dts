@@ -1,0 +1,491 @@
+/* Hawaii_edn01X Dts file */
+
+/dts-v1/;
+
+/include/ "bcm_21664.dtsi"
+/include/ "hawaii_garnet_bcmpmu_edn010.dtsi"
+
+/ {
+	model = "Hawaiigarnet EDN01x";
+	compatible = "bcm,hawaii";
+
+	chosen {
+		bootargs = "console=ttyS0,115200n8 mem=992M gpt androidboot.console=ttyS0 crash_ramdump=1 logbuf_nocache=1";
+	};
+
+	memory@82000000 {
+		device_type = "memory";
+		reg = <0x82000000 0x2e000000>; /* 736 MB */
+	};
+
+	wd-tapper {
+		count = <300>; /* Time in seconds */
+		ch-num = <1>; /* Kona hub timer Channel number */
+		timer-name = "aon-timer";
+	};
+
+	usb-phy@0x3F130000 {
+		interrupts = <0 128 0x04>;
+		chipreg-virtual-mem-base = <0x35004000>;
+		usb-ahb-clk-name = "usb_otg_clk";
+		mdio-mstr-clk-name = "mdiomaster";
+	};
+	usb-hsotgctrl@0x3F130000 {
+		chipreg-virtual-mem-base = <0x35004000>;
+		usb-ahb-clk-name = "usb_otg_clk";
+		mdio-mstr-clk-name = "mdiomaster";
+	};
+
+
+	uart@3e000000 {
+		clock-frequency = <26000000>;
+		port-name = "console";
+		clk-name = "uartb_clk";
+	};
+
+	uart@3e001000 {
+		clock-frequency = <48000000>;
+		port-name = "bluetooth";
+		clk-name = "uartb2_clk";
+	};
+
+	uart@3e002000 {
+		clock-frequency = <26000000>;
+		port-name = "gps";
+		clk-name = "uartb3_clk";
+		/*If power-save-enable is set Change
+		* PADCTRL_UBRTSN from UART3_RTSN to
+		* UBRTSN (Debug UART) when GPS is inactive.*/
+		power-save-enable = <1>;
+
+	};
+
+	i2c0: i2c@3e016000 {
+		speed = <5>; /* BSC_BUS_SPEED_400 K */
+		dynamic-speed = <1>;
+		bsc-clk = "bsc1_clk";
+		bsc-apb-clk = "bsc1_apb_clk";
+		retries = <1>;
+		is-pmu-i2c = <0>;
+		fs-ref-frequency = <13000000>;
+		hs-ref-frequency = <104000000>;
+	};
+
+	i2c1: i2c@3e017000 {
+		speed = <5>; /* BSC_BUS_SPEED_400 K */
+		dynamic-speed = <1>;
+		bsc-clk = "bsc2_clk";
+		bsc-apb-clk = "bsc2_apb_clk";
+		retries = <3>;
+		is-pmu-i2c = <0>;
+		fs-ref-frequency = <13000000>;
+		hs-ref-frequency = <104000000>;
+
+		broadcom_nfc@77 {
+			compatible = "bcm,nfc-i2c";
+			reg = <0x77>;
+			wake_gpio = <25>;
+			en_gpio = <100>;
+			irq_gpio = <90>;
+			enable_txfifo = <1>;
+			enable_rxfifo = <1>;
+		};
+
+	};
+
+	i2c2: i2c@3e018000 {
+		speed = <5>; /* BSC_BUS_SPEED_400 K */
+		dynamic-speed = <1>;
+		bsc-clk = "bsc3_clk";
+		bsc-apb-clk = "bsc3_apb_clk";
+		retries = <1>;
+		is-pmu-i2c = <0>;
+		fs-ref-frequency = <13000000>;
+		hs-ref-frequency = <104000000>;
+		mpu3050@68 {
+			compatible = "bcm,mpu3050";
+			reg = <0x68>;
+			gpio-irq-pin = <&gpio 33 0>;
+			int-config = <0x10>;
+			level-shifter = <0>;
+			orientation = <0 0xFFFFFFFF 0
+					0xFFFFFFFF 0 0
+					0 0 0xFFFFFFFF>;
+		};
+		akm8975@0c {
+			compatible = "bcm,akm8975";
+			reg = <0x0c>;
+			gpio-irq-pin = <&gpio 4 0>;
+			layout = <6>;
+		};
+
+		kxtik@0f {
+                        compatible = "bcm,kxtik";
+                        reg = <0x0f>;
+                        gpio-irq-pin = <&gpio 1 0>;
+                        min_interval = <5>;
+                        poll_interval = <200>;
+                        axis_map_x = <0>;
+                        axis_map_y = <1>;
+                        axis_map_z = <2>;
+                        negate_x = <1>;
+                        negate_y = <0>;
+                        negate_z = <1>;
+                        res_12bit = <64>;
+                        g_range = <0>;
+                };
+
+		tmd2771@39 {
+			compatible = "bcm,tmd2771";
+			reg = <0x39>;
+			gpio-irq-pin = <&gpio 89 0>;
+			calibrate_target_param = <300000>;
+			als_time_param = <200>;
+			scale_factor_param = <1>;
+			gain_trim_param = <512>;
+			filter_history_param = <3>;
+			filter_count_param = <1>;
+			gain_param = <2>;
+			prox_threshold_hi_param = <646>;
+			prox_threshold_lo_param = <638>;
+			als_threshold_hi_param = <1>;
+			als_threshold_lo_param = <0>;
+			prox_int_time_param = <238>;
+			prox_adc_time_param = <255>;
+			prox_wait_time_param = <238>;
+			prox_intr_filter_param = <17>;
+			prox_config_param = <0>;
+			prox_pulse_cnt_param = <96>;
+			prox_gain_param = <34>;
+			prox_win_sw = <100>;
+		};
+
+		bmp18x@77 {
+                         compatible = "bcm,bmp18x";
+                         reg = <0x77>;
+			 regulator-name = "cam2";
+		};
+	};
+
+	i2c3: i2c@3e01c000 {
+		speed = <5>; /* BSC_BUS_SPEED_400 K */
+		dynamic-speed = <1>;
+		bsc-clk = "bsc4_clk";
+		bsc-apb-clk = "bsc4_apb_clk";
+		retries = <1>;
+		is-pmu-i2c = <0>;
+		fs-ref-frequency = <13000000>;
+		hs-ref-frequency = <104000000>;
+
+		FocalTech-Ft5306@46 {
+			compatible = "bcm,FocalTech-Ft5306";
+			reg = <0x38>;
+			gpio-irq-pin = <&gpio 73 0>;
+			gpio-reset-pin = <&gpio 70 0>;
+			gpio-wakeup-pin = <&gpio 70 0>;
+			x-max-value = <720>;
+			y-max-value = <1280>;
+			use-irq = <1>;
+			power = "camldo2";
+		};
+	};
+
+	i2c4: i2c@3500d000 {
+		speed = <7>; /* BSC_BUS_SPEED_HS */
+		dynamic-speed = <0>;
+		bsc-clk = "pmu_bsc_clk";
+		bsc-apb-clk = "pmu_bsc_apb";
+		retries = <5>;
+		is-pmu-i2c = <1>;
+		fs-ref-frequency = <13000000>;
+		hs-ref-frequency = <26000000>;
+	};
+	spi0: spi@0x3E004000 {
+		enable-dma = <1>;
+		cs-line = <1>;
+		mode = <0x23>;
+
+		spidev@0x0 {
+			compatible = "bcm,spidev";
+			reg = <0x0>;
+			spi-max-frequency = <13000000>;
+			spi-loop = <0x20>;
+		};
+	};
+
+
+	bluetooth-btlpm {
+		compatible = "bcm,btlpm";
+		bt-wake-gpio = <32>;
+		host-wake-gpio = <72>;
+		bt-uart-port = <1>;
+	};
+
+	bcmbt-rfkill {
+		compatible = "bcm,bcmbt-rfkill";
+		verg-gpio = <28>;
+		n-reset-gpio = <0xFFFFFFFF>;
+		aux0-gpio = <0xFFFFFFFF>; /* CLK32 */
+		aux1-gpio = <0xFFFFFFFF>; /* UARTB_SEL,probably not required */
+	};
+
+	iommu_mm: iommu-mm {
+		compatible = "bcm,iommu-m4u";
+		iova_begin  = <0x80000000>;
+		iova_size   = <0x80000000>;
+		errbuf_size = <0x00001000>;
+	};
+
+	iovmm_mm: iovmm-mm {
+		compatible = "bcm,iovmm";
+		base = <0xc0000000>;
+		size = <0x20000000>;
+		order = <0>;
+	};
+
+	iovmm_mm_256mb: iovmm-mm-256mb {
+		compatible = "bcm,iovmm";
+		base = <0xe0000000>;
+		size = <0x10000000>;
+		order = <0>;
+	};
+
+	ion-system {
+		compatible = "bcm,ion";
+		id = <0>;
+		type = <0>;
+		iommu = <&iommu_mm>;
+		iovmm = <&iovmm_mm_256mb>;
+	};
+
+	ion-carveout {
+		compatible = "bcm,ion";
+		id = <3>;
+		type = <2>;
+		base  = <0xa0000000>;
+		limit = <0xb0000000>;
+		size  = <0x04000000>;
+		lmk_enable = <0>;
+		lmk_min_score_adj = <411>;
+		lmk_min_free = <32>;
+		iommu = <&iommu_mm>;
+		iovmm = <&iovmm_mm_256mb>;
+	};
+
+	ion-cma {
+		compatible = "bcm,ion";
+		id = <2>;
+		type = <4>;
+		base  = <0xa0000000>;
+		limit = <0xb0000000>;
+		size  = <0x0c000000>;
+		lmk_enable = <1>;
+		lmk_min_score_adj = <411>;
+		lmk_min_free = <32>;
+		iommu = <&iommu_mm>;
+		iovmm = <&iovmm_mm_256mb>;
+	};
+
+	soc-back-camera {
+		compatible = "bcm,soc-camera";
+		reg = <0x3c 0x0>;
+		bus-id = <0>;
+		i2c-type = "ov5640";	/* i2c_board_info type */
+		i2c-addr = <0x3c>;	/* i2c_board_info addr */
+		i2c-adapter-id = <0>;
+		module-name = "ov5640";
+		if-type = <1>;		/* V4L2_SUBDEV_SENSOR_SERIAL */
+		if-mode = <3>;		/* V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2 */
+		orientation = <1>;	/* V4L2_SUBDEV_SENSOR_LANDSCAPE */
+		facing = <1>;		/* V4L2_SUBDEV_SENSOR_BACK */
+		lanes = <2>;
+		channel = <0>;
+		phy-rate = <0>;
+		pix-clk = <0>;
+		regulators = "lvldo1_uc", "mmc1_vcc", "mmc2_vcc", "lvldo2_uc";
+	};
+
+	soc-front-camera {
+		compatible = "bcm,soc-camera";
+		reg = <0x3e 0x0>;
+		bus-id = <0>;
+		i2c-type = "ov7692";	/* i2c_board_info type */
+		i2c-addr = <0x3e>;	/* i2c_board_info addr */
+		i2c-adapter-id = <0>;
+		module-name = "ov7692";
+		if-type = <1>;		/* V4L2_SUBDEV_SENSOR_SERIAL */
+		if-mode = <3>;		/* V4L2_SUBDEV_SENSOR_MODE_SERIAL_CSI2 */
+		orientation = <1>;	/* V4L2_SUBDEV_SENSOR_LANDSCAPE */
+		facing = <0>;		/* V4L2_SUBDEV_SENSOR_FRONT */
+		lanes = <1>;
+		channel = <1>;
+		phy-rate = <0>;
+		pix-clk = <0>;
+		regulators = "lvldo2_uc", "mmc1_vcc", "mmc2_vcc", "lvldo1_uc";
+	};
+
+	kona-fb {
+		module-name = "NT35512";
+		reg-name = "cam2";
+		rst-gpio = <&gpio 8 0>;
+		detect-gpio = <&gpio 10 0>;
+		rst-setup = <700>;	/* 700us */
+		rst-pulse = <1000>;	/* 1ms */
+		rst-hold = <100000>;	/* 100ms */
+		col-mod-i = <3>;
+		col-mod-o = <2>;
+		width = <480>;
+		height = <854>;
+		/* rst-active-high */	/* Commented => Active Low */
+		vmode;
+		/* vburst */	/* Non-burst mode */
+		/* te-ctrl; */		/* Tearing Effect Control disabled */
+		fps = <60>;
+		lanes = <2>;
+		cmnd-LP;		/* Commands in LP mode*/
+		hs-bitrate = <440000000>;
+		lp-bitrate = <8000000>;	/* 8mbps */
+		iommu = <&iommu_mm>;
+		iovmm = <&iovmm_mm>;
+		rotation = <180>;
+	};
+
+	tmon@0x34008000 {
+		compatible = "bcm,tmon";
+		reg = <0x34008000 0x1000>;
+		interrupts = <0 183 4>;
+		chipreg_addr = <0x35004000 0x1000>;
+		thold_size = <4>; /*number of threshold levels*/
+		poll_rate_ms = <30000>;
+		hysteresis = <0>;
+		flags = <1>;
+		interval_ms = <5>;
+		/*critical temp is 115*/
+		thold = <70 1
+			85 1
+			100 1
+			115 2>;
+		tmon_apb_clk = "tmon_apb";
+		tmon_1m_clk = "tmon_1m_clk";
+		falling = <5>;
+	};
+
+	memc@35008000 {
+		compatible = "bcm,memc";
+		reg = <0x35008000 0x1000>;
+		flags = <0x3B>;
+		chipreg_base = <0x35004000 0x1000>;
+		memc0_aphy_base = <0x35008400 0x1000>;
+		seq_busy_val = <2>;
+		max_pwr = <3>;
+	};
+
+	sdio1 {
+		compatible = "bcm,sdhci";
+		reg = <0x3F190000 10000>;
+		interrupts = <0 76 0x04>;
+		id = <1>;
+		data-pullup = <0>;
+		is-8bit = <1>;
+		devtype = <2>;		/*SDIO_DEV_TYPE_EMMC*/
+		flags = <3>;		/*NON_REMOVABLE | RPM_EN*/
+		pm_caps = <1>;		/*MMC_PM_KEEP_POWER*/
+		peri-clk-name = "sdio2_clk";
+		ahb-clk-name = "sdio2_ahb_clk";
+		sleep-clk-name = "sdio2_sleep_clk";
+		peri-clk-rate = <52000000>;
+		vddsdmmc-regulator-name = "cam1";
+	};
+
+	sdio2 {
+		compatible = "bcm,sdhci";
+		reg = <0x3F1A0000 10000>;
+		interrupts = <0 74 0x04>;
+		id = <2>;
+		data-pullup = <0>;
+		devtype = <1>;		/*SDIO_DEV_TYPE_WIFI*/
+		flags = <2>;		/*REMOVABLE | RPM_EN*/
+		peri-clk-name = "sdio3_clk";
+		ahb-clk-name = "sdio3_ahb_clk";
+		sleep-clk-name = "sdio3_sleep_clk";
+		peri-clk-rate = <48000000>;
+	};
+
+	sdio0 {
+		compatible = "bcm,sdhci";
+		reg = <0x3F180000 10000>;
+		interrupts = <0 77 0x04>;
+		id = <0>;
+		data-pullup = <0>;
+		cd-gpio = <&gpio 91 0>;		/*SD_CARDDET_GPIO_PIN*/
+		devtype = <0>;		/*SDIO_DEV_TYPE_SDMMC*/
+		flags = <2>;		/*REMOVABLE | RPM_EN*/
+		peri-clk-name = "sdio1_clk";
+		ahb-clk-name = "sdio1_ahb_clk";
+		sleep-clk-name = "sdio1_sleep_clk";
+		peri-clk-rate = <48000000>;
+		vddo-regulator-name = "vdd_sdio";
+		vddsdxc-regulator-name = "vdd_sdxc";
+	};
+
+	wifi-driver {
+		compatible = "bcm,bcm_wifi";
+		wl-reset-gpio = <3>;
+		host-wake-gpio = <74>;
+		board-nvram-file = "/system/vendor/firmware/fw_wifi_nvram_4330.txt";
+		module-name = "bcmdhd_4330";
+	};
+
+	keypad {
+		row-num = <2>;
+		col-num = <3>;
+		row-col-count = <8>;
+		key-name = "Vol Down Key", "Vol Up Key", "unused", "unused",
+			"unused", "unused", "unused", "unused", "Camera Focus Key",
+			"Camera Key", "unused", "unused", "unused", "unused",
+			"unused", "unused", "unused", "unused", "unused",
+			"unused", "unused", "unused", "unused", "unused",
+			"unused", "unused", "unused", "unused", "unused",
+			"unused", "unused", "unused", "unused", "unused",
+			"unused", "unused", "unused", "unused", "unused",
+			"unused", "unused", "unused", "unused", "unused",
+			"unused", "unused", "unused", "unused", "unused",
+			"unused", "unused", "unused", "unused", "unused",
+			"unused", "unused", "unused", "unused", "unused",
+			"unused", "unused", "unused", "unused", "unused";
+		key-code = <114 115 0 0 0 0 0 0
+			528 212 0 0 0 0 0 0
+			0 0 0 0 0 0 0 0
+			0 0 0 0 0 0 0 0
+			0 0 0 0 0 0 0 0
+			0 0 0 0 0 0 0 0
+			0 0 0 0 0 0 0 0
+			0 0 0 0 0 0 0 0>;
+	};
+
+	pwm-backlight {
+		compatible = "bcm,pwm-backlight";
+		reg = <0x0 0x0>;
+		pwm-id = <2>;
+		max-brightness = <32>;	/* Android calibrates to 32 levels */
+		dft-brightness = <32>;
+		polarity = <1>;		/* Inverted polarity */
+		pwm-period-ns = <99900>; /* ~10010 Hz */
+		pwm-request-label = "backlight";
+		bl-on-delay = <7000>;
+	};
+
+	gpio-leds {
+		compatible = "gpio-leds";
+
+		blue {
+			label = "blue";
+			gpios = <&gpio 22 0>;
+		};
+
+		green {
+			label = "green";
+			gpios = <&gpio 9 0>;
+		};
+	};
+};

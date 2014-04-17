@@ -1,0 +1,473 @@
+/ {
+	bcmpmu {
+	compatible = "Broadcom,bcmpmu";
+	initdata = <
+	     /* Add  Val  Mask Map */
+		0x14 0x75 0xFF 0
+		/*  enable PC3 function */
+		0x15 0x0F 0xFF 0
+		/*Enable PASR_EN*/
+		0x16 0x2 0x2 0
+		/*Enable PASR_MODE*/
+		0x08 0x1 0x1 1
+		  /* Mask Interrupt */
+		0x30 0xFF 0xFF 0
+		0x31 0xFF 0xFF 0
+		0x32 0xFF 0xFF 0
+		0x33 0xFF 0xFF 0
+		0x34 0xFF 0xFF 0
+		0x35 0xFF 0xFF 0
+		0x36 0xFF 0xFF 0
+		0x37 0xFF 0xFF 0
+		0x38 0xFF 0xFF 0
+		0x39 0xFF 0xFF 0
+		0x3A 0xFF 0xFF 0
+		0x3B 0xFF 0xFF 0
+		0x3C 0xFF 0xFF 0
+		0x3D 0xFF 0xFF 0
+		0x3E 0xFF 0xFF 0
+		0x3F 0xFF 0xFF 0
+		 /* Trickle charging timer setting */
+		0x40 0x38 0x38 0
+		 /*  disable software charger timer */
+		0x41 0x0 0x04 0
+		 /* SWUP */
+		0x42 0x04 0x04 0
+		 /* Enable BC12_EN */
+		0x44 0x01 0x01 0
+		  /*  ICCMAX to 1500mA*/
+		0x47 0x0B 0xFF 0
+		  /* NTC Hot Temperature Comparator rising = 55C*/
+		0xCC 0x4C 0xFF 1
+		  /* NTC Hot Temperature Comparator falling = 50C*/
+		0xCD 0x5C 0xFF 1
+		  /* NTC Cold Temperature Comparator rising = 0C*/
+		0xCE 0xF4 0xFF 1
+		  /* NTC Cold Temperature Comparator falling = 5C*/
+		0xCF 0xB8 0xFF 1
+		  /* NTC Hot Temperature Comparator bit 9,8 */
+		0xD0 0x05 0xFF 1
+		 /*MBCCTRL11*/
+		0x4A 0x0F 0xff 0
+		 /* ID detection ,current source Trimming */
+		0x47 0xD2 0xFF 1
+		0x48 0x98 0xFF 1
+		0x49 0xF0 0xFF 1
+		 /*ADP_THR_RATIO*/
+		0x4A 0x58 0xFF 1
+		 /* Enable ADP_PRB  ADP_DSCHG comparators */
+		0x4B 0xC3 0xFF 1
+		/*FG EOC CURR TH*/
+		0xBF 0x64 0xFF 1
+		/*RTC_C2C1_XOTRIM*/
+		0xEF 0xFF 0xFF 1
+		/* PWMLEDCTRL1 */
+		0x00 0x23 0xFF 1
+		/* HSCP3*/
+		0x82 0x00 0xFF 1
+		 /* HS audio powerdown feedback path */
+		 0x7B 0x0C 0xFF 1
+		 /* NTC BiasSynchronous Mode,Host Enable Control NTC_PM0 Disable*/
+		 0xD5 0x12 0xFF 1
+		 0xD6 0x0 0xFF 1
+		 0xD7 0x12 0xFF 1
+		 /* MBUV host enable control */
+		 0xD8 0x40 0x7F 1
+		 /* EN_SESS_VALID  enable ID detection */
+		 0x40 0x18 0xFF 1
+		 /* SDSR2 NM1 voltage - 1.24*/
+		 0xCF 0x28 0x3F 0
+		 /* SDSR2 LPM voltage - 1.2V */
+		 0xD0 0x24 0x3F 0
+		 /* IOSR1 LPM voltage - 1.8V */
+		 0xC4 0x3E 0x3f 0
+		 /* CSR LPM voltage - 0.7 V */
+		 0xC1 0x0 0x3F 0
+		 0x0D 0x00 0xF0 1
+		 0x0E 0x00 0x3F 1
+		 /*otg boost ctrl1-2*/
+		 0x4c 0xd4 0xFF 1
+		 0x4d 0x1b 0xFF 1
+		 /*MBC_CC_BOOST*/
+		 0x5c 0x5 0x0F 0
+		 /*otgctrl1 disable boost bydefault*/
+		 0x40 0x0 0x4 1
+		 /*turn of synthesizer when no PLL request */
+		 0x1A 0xfe 0xff 0
+		/*RFLDO pulldown disable MobC00290043*/
+		 0x96 0x40 0x40 0
+		 /*AUDLDO pulldown disable*/
+		 0x9f 0x40 0x40 0
+		 /*LVLDO1 voltage - 1.786V */
+		 0x1E 0xb8 0xff 1
+		 /*SIMLDO2 enable pulldown MobC00298660*/
+		 0x9a 0x00 0x40 0
+		>;
+
+	exitdata = <
+		/* Address Value Mask Map*/
+		0x14 0x5 0xFF 0
+		/* Disable turbo*/
+		0x4E 0x0 0x10 1
+		>;
+	};
+
+	bcmpmu_rgltrs {
+		compatible = "Broadcom,rgltr";
+		/*num_of_consumer_supp, consumer_supply, always_on, pc_map, initial_mode, boot_on req_volt(in uV)*/
+		/*pc_map = PMU_PC2, initial_mode = REGULATOR_MODE_STANDBY*/
+		rf   = "1", "rf", "0", "2", "8", "0", "0";
+		/*pc_map = PMU_PC2|PMU_PC3, initial_mode = REGULATOR_MODE_IDLE*/
+		cam1 = "1", "cam1", "1", "6", "4", "0", "0";
+		/*pc_map = PMU_PC2|PMU_PC3, initial_mode = REGULATOR_MODE_IDLE*/
+		cam2 = "1", "cam2", "1", "6", "4", "0", "0";
+		/*pc_map = PMU_PC2, initial_mode = REGULATOR_MODE_IDLE*/
+		sim1 = "1", "sim_vcc", "0", "2", "4", "0", "0";
+		/*pc_map = PMU_PC2, initial_mode = REGULATOR_MODE_IDLE*/
+		sim2 = "1", "sim2_vcc", "0", "2", "4", "0", "0";
+		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, initial_mode = REGULATOR_MODE_NORMAL*/
+		sd   = "3", "sdldo_uc", "vddmmc", "vdd_sdio", "0", "7", "2", "0", "0";
+		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, initial_mode = REGULATOR_MODE_NORMAL*/
+		sdx  = "4", "sdxldo_uc", "vddo", "vdd_sdxc", "sddat_debug_bus","0","7", "2", "0", "0";
+		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, initial_mode = REGULATOR_MODE_NORMAL*/
+		mmc1 = "1", "mmc1_vcc","0","7", "0", "0", "0";
+		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, initial_mode = REGULATOR_MODE_NORMAL*/
+		mmc2 = "1", "mmc2_vcc", "0", "7", "2", "0", "0";
+		/*pc_map = PMU_PC2|PMU_PC3, initial_mode = REGULATOR_MODE_STANDBY*/
+		aud  = "1", "audldo_uc", "1", "6", "8", "0", "0";
+		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, initial_mode = REGULATOR_MODE_NORMAL*/
+		usb  = "2", "usb_vcc", "bc_vcc", "0", "7", "2", "0", "0";
+		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, initial_mode = REGULATOR_MODE_NORMAL*/
+		mic  = "1", "micldo_uc", "0","7", "2", "0", "0";
+		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, initial_mode = REGULATOR_MODE_NORMAL*/
+		vib  = "1", "vibldo_uc", "0", "7", "2", "0", "0";
+		/*pc_map = 0, initial_mode = REGULATOR_MODE_NORMAL*/
+		gp1  = "1", "gpldo1_uc","0", "0", "2", "0", "0";
+		/*pc_map = 0, initial_mode = REGULATOR_MODE_NORMAL*/
+		gp2  = "1", "gpldo2_uc", "0", "0", "2", "0", "0";
+		/*pc_map = PMU_PC2|PMU_PC3, initial_mode = REGULATOR_MODE_IDLE*/
+		gp3  = "1", "sim3_vcc", "1", "6", "4", "0", "0";
+		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, initial_mode = REGULATOR_MODE_STANDBY*/
+		tcx  = "1", "tcxldo_uc", "1", "7", "8", "0", "0";
+		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, initial_mode = REGULATOR_MODE_NORMAL*/
+		lv1  = "1", "lvldo1_uc", "0", "7", "0", "0", "0";
+		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, initial_mode = REGULATOR_MODE_NORMAL*/
+		lv2  = "1", "lvldo2_uc", "0", "7", "0", "0", "0";
+		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, initial_mode = REGULATOR_MODE_STANDBY*/
+		vsr  = "1", "vsr_uc", "1", "7", "8", "0", "1700000";
+		/*pc_map = PMU_PC3, initial_mode = REGULATOR_MODE_STANDBY*/
+		csr  = "1", "csr_uc", "1", "4", "8", "0", "0";
+		/*pc_map = PMU_PC2, initial_mode = REGULATOR_MODE_IDLE*/
+		mmsr = "1", "mmsr_uc", "1", "2", "4", "0", "0";
+		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, initial_mode = REGULATOR_MODE_IDLE*/
+		sdsr1 = "1", "sdsr1_uc", "1", "7", "4", "0", "0";
+		/*pc_map = PMU_PC2|PMU_PC3, initial_mode = REGULATOR_MODE_IDLE*/
+		sdsr2 = "1", "sdsr2_uc", "1", "6", "4", "0", "0";
+		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, initial_mode = REGULATOR_MODE_IDLE*/
+		iosr1 = "1", "iosr1_uc", "1", "7", "4", "0", "0";
+		/*pc_map = 0, initial_mode = REGULATOR_MODE_STANDBY*/
+		iosr2 = "1", "iosr2_uc", "0", "0", "8", "0", "0";
+	};
+
+	bcmpmu_adc {
+		compatible = "Broadcom,adc";
+		/*name flag volt_range adc_offset addr_offset*/
+		channel0 = "vmbatt", "0", "4800", "0", "0x2";
+		channel1 = "vbbatt", "0", "4800", "0", "0x4";
+		channel2 = "0";
+		channel3 = "vbus", "0", "14400", "0", "0x8";
+		channel4 = "idin", "0", "1200", "0", "0xa";
+		channel5 = "ntc", "0", "1200", "0", "0xc";
+		channel6 = "bsi", "0", "1200", "0", "0xe";
+		channel7 = "bom", "0", "1200", "0", "0x10";
+		channel8 = "32ktemp", "0", "1200", "0","0x12";
+		channel9 = "patemp", "0", "1200", "0", "0x14";
+		channel10 = "als", "0", "1200", "0", "0x16";
+		channel11 = "0";
+		channel12 = "0";
+		channel13 = "0";
+		channel14 = "dietemp", "0", "1200", "0", "0x18";
+		channel15 = "0";
+	};
+
+	pmu-dietemp-thermal {
+		compatible = "Broadcom,dietemp-thermal";
+		poll_rate_ms = <5000>;
+		hysteresis = <30>;
+		temp_adc_channel = "PMU_ADC_CHANN_DIE_TEMP";
+		temp_adc_req_mode = "PMU_ADC_REQ_RTM_MODE";
+
+			trip0 {
+				type = "active";
+				temp = <0>;
+				max_curr = <1755>;
+			};
+			trip1 {
+				type = "active";
+				temp = <540>;
+				max_curr = <510>;
+			};
+			trip2 {
+				type = "active";
+				temp = <580>;
+				max_curr = <270>;
+			};
+			trip3 {
+				type = "active";
+				temp = <630>;
+				max_curr = <0>;
+			};
+	};
+
+	dietemp-charger-coolant {
+		compatible = "Broadcom,charger-coolant";
+		coolant_poll_time = <10000>;
+		charger_coolant_state = <1755 1378 1185 935 765 695 650 550 510
+		400 270 84 0>;
+			trim_reg0 {
+				addr = <0x51>;/*0x51 : PMU_REG_MBCCTRL18*/
+				def_val = <0x00>;
+			};
+			trim_reg1 {
+				addr = <0x52>;/*0x52 : PMU_REG_MBCCTRL19*/
+				def_val = <0x03>;
+			};
+			trim_reg2 {
+				addr = <0x53>;/*0x53 : PMU_REG_MBCCTRL20*/
+				def_val = <0x02>;
+			};
+	};
+
+	bcmpmu_fg {
+		compatible = "Broadcom,bcmpmu_fg";
+		sns_resist = <10>;
+		sys_impedence = <33>;
+		eoc_current = <85>;/* End of charge current in mA */
+		hw_maintenance_charging = <0>;/* enable HW EOC of PMU */
+		sleep_current_ua = <2000>; /* floor during sleep */
+		sleep_sample_rate = <32000>;
+		fg_factor = <976>;
+		poll_rate_low_batt = <20000>;
+		poll_rate_crit_batt = <5000>;
+		ntc_high_temp = <680>;
+			batt_prop {
+				model = "BRCM YS-05";
+				min_volt = <3000>;
+				max_volt = <4200>;
+				full_cap = <6120000>; /*1700 * 3600*/
+				one_c_rate = <1700>;
+				volt_cap_lut = <4200 100
+						4146 95
+						4089 89
+						4047 84
+						3996 78
+						3964 73
+						3926 67
+						3892 62
+						3856 57
+						3824 51
+						3806 46
+						3791 40
+						3781 35
+						3771 29
+						3758 24
+						3740 19
+						3708 13
+						3689 8
+						3550 2
+						3488 1
+						3400 0>;
+				eoc_cap_lut = <290 90
+						270 91
+						250 92
+						228 93
+						208 94
+						185 95
+						165 96
+						145 97
+						125 98
+						105 99
+						85 100
+						0 100>;
+				cutoff_cap_lut = <3460 2
+						3430 1
+						3350 0>;
+				esr_temp_lut0 {
+					 temp = <(-200)>;
+					 reset = <0>;
+					 fct = <254>;
+					 guardband = <50>;
+					 esr_vl_lvl = <3781>;
+					 esr_vm_lvl = <3805>;
+					 esr_vh_lvl = <4141>;
+					 esr_vl_slope = <(-16793)>;
+					 esr_vl_offset = <65207>;
+					 esr_vm_slope = <(-6920)>;
+					 esr_vm_offset = <27882>;
+					 esr_vh_slope = <(-441)>;
+					 esr_vh_offset = <3228>;
+					 esr_vf_slope = <(-2635)>;
+					 esr_vf_offset = <12313>;
+				};
+				esr_temp_lut1 {
+					 temp = <(-150)>;
+					 reset = <0>;
+					 fct = <456>;/*<456.5>; */
+					 guardband = <50>;
+					 esr_vl_lvl = <3708>;
+					 esr_vm_lvl = <3805>;
+					 esr_vh_lvl = <3998>;
+					 esr_vl_slope = <(-19711)>;
+					 esr_vl_offset = <74373>;
+					 esr_vm_slope = <(-3819)>;
+					 esr_vm_offset = <15439>;
+					 esr_vh_slope = <166>;
+					 esr_vh_offset = <275>;
+					 esr_vf_slope = <(-669)>;
+					 esr_vf_offset = <3613>;
+				};
+				esr_temp_lut2 {
+					 temp = <(-100)>;
+					 reset = <0>;
+					 fct = <659>;
+					 guardband = <50>;
+					 esr_vl_lvl = <3708>;
+					 esr_vm_lvl = <3805>;
+					 esr_vh_lvl = <3998>;
+					 esr_vl_slope = <(-19711)>;
+					 esr_vl_offset = <74373>;
+					 esr_vm_slope = <(-3819)>;
+					 esr_vm_offset = <15439>;
+					 esr_vh_slope = <166>;
+					 esr_vh_offset = <275>;
+					 esr_vf_slope = <(-669)>;
+					 esr_vf_offset = <3613>;
+				};
+				esr_temp_lut3 {
+					 temp = <(-50)>;
+					 reset = <0>;
+					 fct = <772>;/*<772.5>; */
+					 guardband = <50>;
+					 esr_vl_lvl = <3708>;
+					 esr_vm_lvl = <3825>;
+					 esr_vh_lvl = <3998>;
+					 esr_vl_slope = <(-6386)>;
+					 esr_vl_offset = <24399>;
+					 esr_vm_slope = <(-1475)>;
+					 esr_vm_offset = <6188>;
+					 esr_vh_slope = <325>;
+					 esr_vh_offset = <(-697)>;
+					 esr_vf_slope = <(-489)>;
+					 esr_vf_offset = <2557>;
+				};
+				esr_temp_lut4 {
+					 temp = <0>;
+					 reset = <0>;
+					 fct = <886>;
+					 guardband = <30>;
+					 esr_vl_lvl = <3708>;
+					 esr_vm_lvl = <3825>;
+					 esr_vh_lvl = <3998>;
+					 esr_vl_slope = <(-6386)>;
+					 esr_vl_offset = <24399>;
+					 esr_vm_slope = <(-1475)>;
+					 esr_vm_offset = <6188>;
+					 esr_vh_slope = <325>;
+					 esr_vh_offset = <(-697)>;
+					 esr_vf_slope = <(-489)>;
+					 esr_vf_offset = <2557>;
+				};
+				esr_temp_lut5 {
+					 temp = <50>;
+					 reset = <0>;
+					 fct = <923>;/*<923.5>; */
+					 guardband = <30>;
+					 esr_vl_lvl = <3708>;
+					 esr_vm_lvl = <3825>;
+					 esr_vh_lvl = <3928>;
+					 esr_vl_slope = <(-3170)>;
+					 esr_vl_offset = <12161>;
+					 esr_vm_slope = <(-506)>;
+					 esr_vm_offset = <2282>;
+					 esr_vh_slope = <517>;
+					 esr_vh_offset = <(-1630)>;
+					 esr_vf_slope = <(-306)>;
+					 esr_vf_offset = <1603>;
+				};
+				esr_temp_lut6 {
+					 temp = <100>;
+					 reset = <0>;
+					 fct = <961>;
+					 guardband = <30>;
+					 esr_vl_lvl = <3708>;
+					 esr_vm_lvl = <3825>;
+					 esr_vh_lvl = <3928>;
+					 esr_vl_slope = <(-3170)>;
+					 esr_vl_offset = <12161>;
+					 esr_vm_slope = <(-506)>;
+					 esr_vm_offset = <2282>;
+					 esr_vh_slope = <517>;
+					 esr_vh_offset = <(-1630)>;
+					 esr_vf_slope = <(-306)>;
+					 esr_vf_offset = <1603>;
+				};
+				esr_temp_lut7 {
+					 temp = <150>;
+					 reset = <0>;
+					 fct = <980>;/*<980.5>; */
+					 guardband = <30>;
+					 esr_vl_lvl = <3500>;
+					 esr_vm_lvl = <3708>;
+					 esr_vh_lvl = <3928>;
+					 esr_vl_slope = <(-4327)>;
+					 esr_vl_offset = <15680>;
+					 esr_vm_slope = <(-1432)>;
+					 esr_vm_offset = <5547>;
+					 esr_vh_slope = <129>;
+					 esr_vh_offset = <(-242)>;
+					 esr_vf_slope = <(-228)>;
+					 esr_vf_offset = <1161>;
+				};
+				esr_temp_lut8 {
+					 temp = <200>;
+					 reset = <0>;
+					 fct = <1000>;
+					 guardband = <30>;
+					 esr_vl_lvl = <3500>;
+					 esr_vm_lvl = <3708>;
+					 esr_vh_lvl = <3928>;
+					 esr_vl_slope = <(-4327)>;
+					 esr_vl_offset = <15680>;
+					 esr_vm_slope = <(-1432)>;
+					 esr_vm_offset = <5547>;
+					 esr_vh_slope = <129>;
+					 esr_vh_offset = <(-242)>;
+					 esr_vf_slope = <(-228)>;
+					 esr_vf_offset = <1161>;
+				};
+			};
+			cap_levels {
+				critical = <5>;
+				low = <15>;
+				normal = <75>;
+				high = <95>;
+			};
+			volt_levels {
+				critical = <3400>;
+				low = <3500>;
+				normal = <3700>;
+				high = <4165>;
+				/*high should be ~60mv less than vfloat_lvl */
+				crit_cutoff_cnt = <3>;
+				vfloat_lvl = <0xE>;
+				vfloat_max = <0xE>;
+				vfloat_gap = <100>; /* in mV */
+			};
+			cal_data {
+				volt_low = <3550>;
+				cap_low = <30>;
+			};
+	};
+
+};
+

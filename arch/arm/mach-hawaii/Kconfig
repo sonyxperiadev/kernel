@@ -1,0 +1,588 @@
+menu	"Hawaii SoC based Machine types"
+	depends on ARCH_HAWAII
+
+choice
+	prompt "Choose Hawaii SOC Silicon Version"
+	default ARCH_HAWAII_A0
+
+config	ARCH_HAWAII_A0
+	bool "Hawaii SOC Version - A0"
+
+endchoice
+
+choice
+	prompt "Hawaii SoC based board type"
+	default y
+
+config	MACH_HAWAII_FPGA
+		bool "MACH_HAWAII_FPGA"
+	select MACH_BCM_FPGA
+        help
+	  "This config
+	  option will enable support
+	  for FPGA platform like
+	  Chip-it where CCU is absent."
+
+config	MACH_HAWAII_FPGA_E
+		bool "MACH_HAWAII_FPGA_E"
+	select MACH_BCM_FPGA_E
+	help
+		This config option will
+		enable support for
+		FPGA platform like
+		Eve where CCU is present.
+
+config	MACH_HAWAII_RAY
+		bool  "MACH_HAWAII_RAY"
+	help
+		Support for
+		the Broadcom
+		Hawaii Ray
+		board.
+
+config	MACH_HAWAII_STONE
+		bool "MACH_HAWAII_STONE"
+	select MACH_BCM_STONE
+	help
+	  Support for
+	  the Broadcom
+	  Hawaii Stone
+	  board.
+
+config	MACH_HAWAII_GARNET
+		bool "MACH_HAWAII_GARNET"
+	select MACH_BCM_GARNET
+	help
+	  Support for
+	  Broadcom Hawaii
+	  garnet
+	  board.
+
+config	MACH_HAWAII_SS_EVAL_REV00
+		bool "Support Broadcom Hawaii SS eval board"
+		help
+		Support for
+		Broadcom Hawaii
+		SS eval
+		board
+
+config	MACH_HAWAII_SS_LOGAN_REV00
+	bool "Support Broadcom Hawaii SS logan board"
+	help
+	  Support for the Broadcom Hawaii SS logan board.
+	  This the first real FFB for the joint Hawaii program.
+	  Relative to SS Eval, swaps two GPIOs.
+	  Assumes that MACH_HAWAII_SS_LOGAN is also set.
+
+config	MACH_HAWAII_SS_LOGAN_REV01
+	bool "Support Broadcom Hawaii SS logan board"
+	help
+	  Support for the Broadcom Hawaii SS logan board.
+	  Relative to Logan R0.0, has a voltage change to drive
+	  sensors.
+	  Assumes that MACH_HAWAII_SS_LOGAN is also set.
+
+config	MACH_HAWAII_SS_LOGAN_REV02
+	bool "Support Broadcom Hawaii SS logan board"
+	help
+	  Support for the Broadcom Hawaii SS logan board.
+	  Relative to Logan R0.1, has several GPIO changes for
+	  keyboard, flash, and band selects.
+	  Assumes that MACH_HAWAII_SS_LOGAN is also set.
+
+config	MACH_HAWAII_SS_LOGANDS_REV00
+	bool "Support Broadcom Hawaii SS logands board"
+	help
+      Support for the Broadcom Hawaii SS logands board.
+	  Relative to Logan DSR 0.0, has several GPIO changes for
+	  keyboard, flash, and band selects.
+	  Assumes that MACH_HAWAII_SS_LOGAN is also set.
+
+config	MACH_HAWAII_SS_LOGANDS_REV01
+	bool "Support Broadcom Hawaii SS logands board"
+	help
+	  Support for the Broadcom Hawaii SS logands board.
+	  Relative to Logan DS R0.1, has several GPIO changes for
+	  keyboard, flash, and band selects.
+	  Assumes that MACH_HAWAII_SS_LOGAN is also set.
+
+config  MACH_HAWAII_SS_HEAT3G_REV00
+        bool "Support Broadcom Hawaii SS heat3g board"
+        help
+          Support for the Broadcom Hawaii SS heat3g board.
+          Relative to heat3g 0.0, has several GPIO changes for
+          keyboard, flash, and band selects.
+          Assumes that MACH_HAWAII_SS_HEAT3G is also set.
+
+config  MACH_HAWAII_SS_HEAT3G_REV01
+	bool "Support Broadcom Hawaii SS heat3g board"
+	help
+	  Support for the Broadcom Hawaii SS heat3g board.
+	  Relative to heat3g 0.0, has several GPIO changes for
+	  keyboard, flash, and band selects.
+	  Assumes that MACH_HAWAII_SS_HEAT3G is also set.
+
+config  MACH_HAWAII_SS_CS02_REV00
+	bool "Support Broadcom Hawaii SS cs02 board"
+	help
+	  Support for the Broadcom Hawaii SS cs02 board.
+	  Assumes that MACH_HAWAII_SS_CS02 is also set.
+
+config	MACH_HAWAII_SS_LOGANDS_COMBINED
+	bool "Support Broadcom Hawaii SS logands COMBINED board"
+	help
+	  Support for the Broadcom Hawaii SS logands COMBINED boa
+	  Relative to Logan DS Combined, has several GPIO changes for
+	  keyboard, flash, and band selects.
+	  Assumes that MACH_HAWAII_SS_LOGAN is also set.
+
+config	MACH_HAWAII_SS_LOGANDS_REV00_POWER
+	bool "Support Broadcom Hawaii SS logands power board"
+	help
+	  Support for
+	  the Broadcom
+	  Hawaii SS logands
+	  power board.
+
+config	MACH_HAWAII_SS_GOLDENVEN_REV01
+	bool "Support Broadcom Hawaii SS GoldenVE N board"
+	help
+	  Support for
+	  the Broadcom
+	  Hawaii SS GoldenVE
+	  N board.
+
+config	MACH_HAWAII_SS_GOLDENVEN_REV02
+	bool "Support Broadcom Hawaii SS GoldenVE N board"
+	help
+	  Support for the Broadcom Hawaii SS GoldenVE N board.
+
+endchoice
+
+choice
+	prompt "Hawaii GARNET type"
+	depends on MACH_HAWAII_GARNET
+	default MACH_HAWAII_GARNET_EDN000
+
+	config MACH_HAWAII_GARNET_EDN000
+	bool "GARNET EDN000"
+	help
+	  Support for
+		Hawaii based
+		Garnet
+		edn000
+
+	config MACH_HAWAII_GARNET_EDN010
+	bool "GARNET EDN010"
+	help
+	  Support for
+		Hawaii based
+		Garnet
+		edn010
+
+	config MACH_HAWAII_GARNET_EDN020
+	bool "GARNET EDN020"
+	select RESERVED_MEM_SPEC1
+	help
+	  Support for
+		Hawaii based
+		Garnet
+		edn020
+
+	config MACH_HAWAII_GARNET_EDN020_NON_TURBO
+	bool "GARNET EDN020 Non-Turbo"
+	select RESERVED_MEM_SPEC1
+	help
+	  Support for
+		Hawaii based
+		Garnet
+		edn020_non_turbo
+
+	config MACH_HAWAII_GARNET_C_EDN020
+	bool "GARNET C_EDN020"
+	help
+	  Support for
+		Hawaii based
+		Garnet
+		c_edn020
+
+	config MACH_HAWAII_GARNET_C_EDN020_SOC
+	bool "GARNET C_EDN020_SOC"
+	help
+	  Support for
+		Hawaii based
+		Garnet
+		c_edn020_soc
+
+	config MACH_HAWAII_GARNET_EDN020_SOC
+	bool "GARNET EDN020_SOC"
+	help
+	  Support for
+		Hawaii based
+		Garnet
+		edn020_soc
+
+	config MACH_HAWAII_GARNET_EDN020_SINGLESIM
+	bool "GARNET EDN020 SingleSime"
+	help
+	  Support for
+		Hawaii based
+		Garnet
+		edn020
+
+	config MACH_HAWAII_GARNET_EDN020_SOC_NON_TURBO
+	bool "GARNET EDN020_SOC Non-Turbo"
+	help
+	  Support for
+		Hawaii based
+		Garnet
+		edn020_soc_non_turbo
+
+	config MACH_HAWAII_GARNET_C_EDN020_SIMHOTSWAP
+	bool "GARNET C_EDN020_SIMHOTSWAP"
+	help
+	  Support for
+		Hawaii based
+		Garnet
+		c_edn020_simhotswap
+
+	config MACH_HAWAII_GARNET_C_A18
+	bool "GARNET A18"
+	help
+	  Support for
+		Hawaii based
+		Garnet
+		A18
+
+	config MACH_HAWAII_GARNET_C_UP823
+	bool "GARNET UP823"
+	help
+	  Support for
+		Hawaii based
+		Garnet
+		UP823
+
+	config MACH_HAWAII_GARNET_C_UP828_T
+	bool "GARNET C_UP828_T"
+	help
+	  Support for
+		Hawaii based
+		Garnet
+		c_up828_t
+
+	config MACH_HAWAII_GARNET_C_W68
+	bool "GARNET W68"
+	help
+	  Support for
+		Garnet_c_w68 based
+		Garnet
+		c_edn010
+
+	config MACH_HAWAII_GARNET_C_W81
+	bool "GARNET W81"
+	help
+	  Support for
+		Garnet_c_w81 based
+		Garnet
+		c_edn010
+
+
+        config MACH_HAWAII_GARNET_C_5606
+        bool "GARNET 5606"
+        help
+	  Support for
+		Garnet_c_5606 based
+		Garnet
+		c_edn010
+
+
+	config MACH_HAWAII_GARNET_C_M530
+	bool "GARNET M530"
+	help
+	  Support for Garnet M530
+endchoice
+choice
+	prompt "Hawaii FPGA type"
+	depends on MACH_BCM_FPGA || MACH_BCM_FPGA_E
+
+config	MACH_HAWAII_FPGA_PERI_V1
+	bool "Support Hawaii BSP FPGA Image with dual A9"
+	select MACH_BCM_FPGA_PERI_V1
+	depends on MACH_BCM_FPGA_E
+	help
+	  "Support Following BSP FPGA Images :
+	  HAWAII_Peri_v1.0.0
+	  HAWAII_Peri_v1.0.1
+	  Hawaii_PERI_FREEZE_1p52_16APR2012_v2.0.0"
+
+config	MACH_HAWAII_FPGA_MM_V1
+	bool "Support Hawaii MM FPGA Image without M4U & AXI-PV"
+	select MACH_BCM_FPGA_MM_V1
+	depends on MACH_BCM_FPGA
+	help
+	  "Support Following MM FPGA Images :
+          HAWAII_MM_v1.0.0
+          HAWAII_MM_v2.0.0
+          HAWAII_MM_v2.0.0_fix"
+
+config	MACH_HAWAII_FPGA_USB_V1
+	bool "Support Hawaii USB FPGA Image with dual A9"
+	select MACH_BCM_FPGA_USB_V1
+	help
+	  "Support Following USB FPGA Images :
+	  HAWAII_USB_v2.0.0
+endchoice
+
+
+config	MACH_HAWAII_SS_COMMON
+	bool "Support Broadcom Hawaii SS Common Features"
+	default n
+	help
+	  Support for the Broadcom Hawaii SS Common Features.
+	  Use of this configuration option has been depricated
+	  and will be removed in the next release.  Prior to removal
+	  need to veriy that the customer is no longer using it.
+
+config	MACH_HAWAII_SS_LOGAN
+	bool "Support Broadcom Hawaii Samsung Logan board"
+	default n
+	help
+	  Support for the Broadcom Hawaii Samsung Logan board.
+	  This option is used to enable features that apply to all
+	  existing and future revisions of Hawaii-Logan form-factor
+	  boards.
+
+config  MACH_HAWAII_SS_LOGANDS
+        bool "Support Broadcom Hawaii Samsung Logan DS board"
+	default n
+        help
+          Support for the Broadcom Hawaii Samsung Logan DS board.
+
+config  MACH_HAWAII_SS_HEAT3G
+        bool "Support Broadcom Hawaii Samsung Heat3g board"
+        default n
+        help
+          Support for the Broadcom Hawaii Samsung Heat3g board.
+
+config  MACH_HAWAII_SS_CS02
+        bool "Support Broadcom Hawaii Samsung CS02 board"
+        default n
+        help
+          Support for the Broadcom Hawaii Samsung CS02 board.
+
+config	IGNORE_DAP_POWERUP_REQ
+	bool "Ignore Powerup request from DAP"
+	depends on KONA_POWER_MGR
+	default n
+	help
+	  Say Y to ignore powerup request from DAP. So, the power domains will
+	  continue to be in their state. If this is not set, on attaching JTAG
+	  PI policy will change to 7 always. This feature enables the system to
+	  retain the states as is, even after attaching JTAG.
+
+config	HAWAII_L2X0_PREFETCH
+	bool "Enable L2 cache prefetching for Hawaii platform"
+	default n
+	help
+	  Say Y if you want to enable L2 cache prefetching
+	  for the Hawaii platform. This enables both, data and
+	  instruction prefetching that have been shown to improve
+	  performance especially in multimedia use cases.
+
+config	DELAYED_PM_INIT
+	depends on ARCH_HAWAII
+	bool "Enable support for delayed PM init."
+	default n
+	help
+	  Say Y if you want to enable support for delayed PM init. Android/user
+	  space can complete the PM init by writing to sysfs. Once this trigger
+	  is recieved, all the PIs start changing policies, arm can enter LPM and
+	  arm dfs is allowed.
+
+config	PWRMGR_1P2GHZ_OPS_SET_SELECT
+	depends on ARCH_HAWAII && KONA_POWER_MGR
+	bool "Reconfigure the pll for OPS set with Turbo at 1.2GHz"
+	default n
+	help
+	  Say Y if you want to reconfigure the pll for Turbo at 1.2G. All other
+	  ops gets adjusted accordingly. If this is not selected,
+	  default OPP set is with Turbo at 1GHz.
+
+config	PI_MGR_MM_STURBO_ENABLE
+	depends on ARCH_HAWAII && KONA_PI_MGR
+	bool "Enable super turbo OPP for MM Power Island"
+	default n
+	help
+	  Say Y to enable super turbo DFS OPP for MM power Island
+	  MM super turbo OPP frequency is set to 312MHz. Total 4
+	  OPPs will be defined for MM if the support is enabled
+
+config	MM_312M_SOURCE_CLK
+	depends on ARCH_HAWAII && KONA_PI_MGR
+	bool "Derive MM AXI clock from 312MHz"
+	default n
+	help
+	  Say Y to switch MM AXI source clock to 312MHz
+	  OPPs will be 104, 156, 208, 312Mhz
+	  500MHz clock source will be used otherwise
+	  OPPs will be 83, 166, 250, 312Mhz
+
+config	PWRMGR_DUMMY_SEQUENCER
+	bool "Use dummy PWRMGR HW I2C sequencer"
+	default n
+	help
+	  Say Y if you want to use dummy PWRMGR HW I2C sequencer
+
+config	KONA_PMU_BSC_CLKPAD_CTRL
+	bool "Kona PMU_BSC CLKPAD Control feature"
+	depends on MFD_BCM_PWRMGR_SW_SEQUENCER
+	default y
+	help
+	   Enable to save the leakage current due to BSC CLKPAD. If enabled
+	   Sequencer will disable the PMU BSC CLK pad at the end of each
+	   i2c transaction which will save the leakage current on the pad pi
+
+config MM_V3D_TIMEOUT_ERRATUM
+	bool "Enable MM V3D timeout erratum workaround"
+	default y
+	help
+	 Say Y to enable MM V3D timeout(HWHAWAII-207) workaround
+	 Refer JIRA DB for more info
+
+config PLL1_8PHASE_OFF_ERRATUM
+	bool "Enable workaround for PLL1 8phase off erratum"
+	default y
+	help
+	 Say Y to enable workaround for PLL1 8phase off erratum (HWHAWAII-73)
+	 Refer JIRA DB for more info
+
+config MM_POWER_OK_ERRATUM
+	bool "Enable MM power ok mask erratum workaround"
+	default y
+	help
+	 Say Y to enable workaround for MM power ok mask erratum(HWRHEA-2272)
+	 Refer JIRA DB for more info
+
+config MM_FREEZE_VAR500M_ERRATUM
+	bool "Disable autogating for Varvdd500M clock to resolve MM freeze"
+	default y
+	help
+	 Say Y to enable workaround for MM freeze with varvdd500 autogating
+	 enabled erratum(HWHAWAII-73)
+	 Refer JIRA DB for more info
+
+config	HAWAIILC_2093
+	bool "Enable HawaiiLC&2093"
+	default n
+        help
+           Enable HawaiiLC&2093.
+
+config	PI_MGR_DISABLE_POLICY_CHANGE
+	bool "Enable debug flag to disable PI policy change by default"
+	depends on KONA_PI_MGR
+	default n
+	help
+	  Debug flag to diable PI policy change by default. All PI
+	  policy will be set to wakeup policy 7
+
+config KONA_AVS
+       bool "Enable AVS driver"
+       help
+	Say Y if you want to enable AVS driver
+	AVS driver helps pick the correct voltage table
+	by identifying the silicon type thereby saving
+	power by giving only reqd voltage & not excess.
+
+config	CDEBUGGER
+	depends on ARCH_HAWAII
+	bool "Enable Ramdump dump Feature on Hawaii"
+	default n
+
+config	59055_SIM_EM_SHDWN
+	bool "Enable Emergency SIM shutdown"
+	default n
+	help
+	  For 59055 supported emergency sim shutdown
+
+config	MACH_HAWAII_SS_EMMC_EXTLDO
+	depends on !MACH_HAWAII_FPGA && !MACH_HAWAII_FPGA_E
+	bool "Enable SS EMMC external LDO"
+	default y
+	help
+	  For SS EMMC memory external LDO
+
+config CPU_SYSPLL_WFI_CSTATE
+	bool "Enable CPU WFI idle state using system PLL"
+	default n
+	help
+	 Option to enable special ARM WFI cpuidle state.
+	 PROC policy is changed to use FID 0-4 which comes
+	 from system PLL when all the cores are in this
+	 state. This way, ARM internal PLL can be turned
+	 off to save power.
+
+config	A9_RETENTION_CSTATE
+	bool "Turn ON A9 retention state"
+	default n
+	help
+	  Option to enable A9 retention state for cpuidle. A9 retention
+	  results in A9 domain voltage being lowered, resulting in better
+	  power savings during idle.
+
+config A9_DORMANT_MODE
+       bool "Enable A9 dormant state"
+       default n
+       help
+         Option to enable A9 dormant state for cpuidle and suspend. A9 dormant
+         mode results in A9 domain voltage being shutoff, resulting in better
+         power savings during idle.
+
+config  DSM_IN_SUSPEND_ONLY
+	bool "Allow system deep sleep only in suspend"
+	default n
+	help
+	 Option to enable deep sleep only in linux suspend case and do
+	 not allow system deep sleep in cpu idle case. This means as
+	 long as system is not in suspended, device will not enter
+	 deep sleep
+
+config KONA_SECURE_MONITOR_CALL
+	bool "Execute in non-secure mode using Kona secure monitor"
+	default y
+	help
+	  Select this option if you are running with a bootloader that
+	  has configured the ARM to run in non-secure mode and provides
+	  a secure monitor implementation to access secure registers
+	  and peripherals.
+
+config HAWAII_PTM
+	bool "Enable PTM"
+	depends on ARCH_KONA
+	select ARM_AMBA
+	select OC_ETM
+	help
+	  Say Y here to enable PTM hardware on hawaii.
+
+config RESERVED_MEM_SPEC1
+	bool "platform shared spec 1"
+	default n
+	help
+	  There can be different memory arrangements
+	  and this deatil has to be shared between AP
+	  and CP. Select this option to define spec 1
+	  category of arrangement.
+
+config BRD_NAME
+	string "customer board name"
+	default "hawaii"
+
+config BCM_HWCAPRI_1605_A2
+	bool "Enable HWCAPRI_1605 workaround"
+	default n
+	help
+	  Enable HWCAPRI_1605 workaround
+	  to set L2 divider to 2 for normal
+	  case should be 3 wait for ASIC fix
+	  Refer JIRA DB for more infor on this
+	  JIRA
+endmenu

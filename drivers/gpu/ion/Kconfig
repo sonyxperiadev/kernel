@@ -1,0 +1,45 @@
+menuconfig ION
+	tristate "Ion Memory Manager"
+	depends on ARM
+	select GENERIC_ALLOCATOR
+	select DMA_SHARED_BUFFER
+	help
+	  Chose this option to enable the ION Memory Manager.
+
+config ION_TEGRA
+	tristate "Ion for Tegra"
+	depends on ARCH_TEGRA && ION
+	help
+	  Choose this option if you wish to use ion on an nVidia Tegra.
+
+config ION_BCM
+	tristate "Ion for Broadcom Processor"
+	depends on ARCH_KONA && ION
+	help
+	  Choose this option if you wish to use ion on a Broadcom
+	  processor.
+	  OOM/LMK killer is optional. Custom features like cache management
+	  are present. The debugfs output is modified to print more details.
+
+config ION_OOM_KILLER
+	bool "Ion lowmem/oom killer"
+	depends on ION_BCM
+	help
+	  This config enables lowmemkiller options which can be set on per heap
+	  basis or for entire heap mask. The parameters can be set in platform
+	  file at compile time or via debugfs at runtime.
+	  This config also enables oom killer for ION
+	  Choose this option if you wish to enable lowmemkiller and oom killer
+	  in ion.
+
+config ION_BCM_NO_DT
+	bool "Ion heap info without DTB file"
+	depends on ION_BCM
+	help
+	Choose this option if you wish to use ION without DTB file.
+	The driver will support platform device registration via DT and
+	board, irrespective of this macro. The memory reserve parameters
+	are read from platform data defined in board file and device
+	registration is done via platform_device_register() if this
+	macro is enabled.
+

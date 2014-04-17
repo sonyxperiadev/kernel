@@ -1,0 +1,192 @@
+               MIPI System Trace Module driver
+               ===============================
+
+Copyright (C) ST-Ericsson SA 2011
+  Authors:   Pierre Peiffer <pierre dot peiffer at stericsson dot com>
+             Philippe Langlais <philippe dot langlais at linaro dot org>
+  License:   The GNU Free Documentation License, Version 1.2
+               (dual licensed under the GPL v2)
+
+Hardware overview
+=================
+  This hardware collects and provides simple tracepoints,
+  so a system processor (in our case the main ARM CPU,
+  or some small CPUs and DSPs) can write some data,
+  up to 8 bytes, into a register and out comes a log entry
+  with a time stamp (20ns resolution) on one of 256 channels. Also
+  hardware tracepoints are supported.
+
+  This module external interface is a pad on the chip
+  which complies to the MIPI System Trace Protocol v1.0
+  (see http://www.mipi.org/specifications/debug)
+  and the actual trace output can be read by an
+  electronic probe, not by software so it cannot be intercepted by
+  the CPU and reach Linux userspace.
+
+  Bandwidth depends on number of lines & bus frequency (for example on ux500
+  SoC 4 lines at max 100MHz eg max 400Mbit/s shared between 7 cores).
+  Transmit FIFO size: 256 samples up to 8 bytes.
+  On ux500 platform there is 2 contiguous STM blocks (eg 512 channels)
+
+Software Overview
+=================
+  Write atomicity and write order on STM trace channels is ensured by the fact
+  we try to allocate one channel by execution thread (no concurrent access).
+  There is 2 modes one lossless but intrusive aka Software mode and
+  another lossy mode less intrusive aka Hardware mode, by default
+  all sources are configured in Hardware mode and enabled.
+  The end of data packet is marked by a time stamp on latest byte(s) only.
+
+Kernel API
+----------
+  Configuration functions:
+    output trace clock frequency, trace mode, output port configuration
+    and enable/disable STM trace sources
+    Expose a debugfs interface too for STM trace control
+
+  Alloc/free STM trace channel functions
+
+  Set of low level atomic trace functions for 1, 2, 4 or 8 bytes
+  with & w/o time stamp
+
+  Higher level lockless trace functions:
+  stm_trace_buffer:
+     allocate a channel in 128 highest channels available
+     output the trace buffer with arbitrary length
+     (latest byte(s) automatically time stamped) then free the channel
+  stm_trace_buffer_onchannel:
+     use given channel to output the trace buffer
+     with arbitrary length (latest byte(s) automatically time stamped)
+
+  File IO output console like interface (open, close, write)
+
+  See <trace/stm.h> & drivers/misc/stm.c for more detail
+
+debugfs API
+-----------
+clockdiv:
+       This is used to set or display the current clock divisor
+       that is configured
+
+connection:
+       This is used to set or display the current output connector
+       that is configured (common values, 0 not connected, 1 for default
+       connection, 3 on Ux500 for APE MIPI34 connection)
+
+free_channels:
+       This is used to display the total number of free channels
+
+masters_enable:
+       This sets or displays whether the STM trace sources
+       are activated. Each bits represent the state of corresponding source:
+       0 for disable or 1 to enable it.
+
+masters_modes:
+       This sets or displays the STM trace sources modes.
+       Each bits represent the mode of corresponding source:
+       0 for Sofware lossless mode or 1 for Hardware lossy mode.
+
+User API
+--------
+  IOCTLs or debugfs for controls
+  2 levels API for tracing:
+     - Standard write function, in this case a channel is automatically
+       allocated at first write, after you can channel number
+       with IOCTL STM_GET_CHANNEL_NO
+     - mmap for direct access of all STM trace channels port plus
+       a set of IOCTLs for alloc/free channels, in this case you can
+       write your own lib to easiest its usage
+
+Examples of using the STM
+=========================
+First mount debugfs with:
+mount -t debugfs none /sys/kernel/debug
+
+In a shell scipt
+----------------
+It's as easy as:
+  echo "My trace point" > /dev/stm0
+
+To avoid trace overflow, increase STM clock by decreasing the clockdiv with:
+  echo 1 >/sys/kernel/debug/stm/clockdiv  # now use DIV2 instead of default DIV8
+If not enough you can disable some sources with:
+  echo YourEnableSources > /sys/kernel/debug/stm/masters_enable
+If always not enough the ultime intrusive way is to change the sources mode
+and set the corresponding sources in Software mode (set corresponding source
+bit to 0) with:
+  echo YourModeSources > /sys/kernel/debug/stm/masters_modes
+  (be aware some source doesn't support Software mode => keep it in HW mode)
+
+NB: on Ux500 platform, first you have to configure STM output port to switch
+APE tracing on MIPI34 connector with:
+  echo 3 > /sys/kernel/debug/stm/connection
+
+In C language
+-------------
+
+The easy way more intrusive (with STM buffer recopy):
+
+#include <trace/stm.h>
+
+int fd, i;
+char buf[1024];  // Try to align this buffer on 64 bits if possible
+
+  fd = open("/dev/stm0", O_WRONLY);
+  snprintf(buf, 1024, "STM0 Hello world\n");
+  write(fd, buf, strlen(buf));
+  ioctl(fd, STM_GET_CHANNEL_NO, &i);
+  snprintf(buf, 1024, "Use channel #%d\n", i);
+  write(fd, buf, strlen(buf));
+  close(fd);
+
+NB: You can call open("/dev/stm0", O_WRONLY) as many times as necessary
+to allocate a different channel to avoid concurrency in your
+multithreaded application.
+
+The more efficient way, use mmap'ed STM channels memory (to put in a lib):
+
+#include <trace/stm.h>
+
+int fd, i, c, l, maxChannels;
+char buf[1024]; // Try to align this buffer on 64 bits if possible
+volatile struct stm_channel *channels;  // mmap'ed channels area
+
+  fd = open("/dev/stm0", O_RDWR);
+  ioctl(fd0, STM_GET_NB_MAX_CHANNELS, &maxChannels);
+  channels = (struct stm_channel *)mmap(0, maxChannels*sizeof(*channels),
+       PROT_WRITE, MAP_SHARED, fd, 0);
+  assert(channels != MAP_FAILED);
+
+  if (!ioctl(fd, STM_GET_FREE_CHANNEL, &c)) {
+       l = snprintf(buf, 1024, "STM0 Hello world on channel #%d\n", c);
+       // lazy implementation you have to send buffer by 8 Bytes when possible
+       // and be sure you don't share this channel with others threads
+       for (i=0; i<l; i++) {
+               channels[c].stamp8 = buf[i];
+       }
+       ioctl(fd, STM_RELEASE_CHANNEL, c);
+  }
+  munmap((void *)channels, maxChannels*sizeof(*channels));
+  close(fd);
+
+Kernel Internal usages
+======================
+Dynamically channels dedicated for the kernel are allocated
+in the 128 highest ones
+
+Via menuconfig you can:
+- Duplicate printk output on a STM dedicated channel (255)
+- Have realtime ftrace output to a STM dedicated channel (254),
+  if corresponding TRACER is enabled
+- Have realtime sched context switch & sched wakeup output on dedicated channels
+  (253, 252),  if corresponding TRACER is enabled
+- Have Stack Trace on dedicated channels (251)
+- Duplicate trace_printk output on dedicated channels (250 & 249)
+
+
+And in the future:
+------------------
+- Use it in standard kernel tracing infrastucture,
+  possibilities:
+    - Insert other STM trace calls before trace ring buffer write
+    - Substitute time stamping & trace ring buffer by STM

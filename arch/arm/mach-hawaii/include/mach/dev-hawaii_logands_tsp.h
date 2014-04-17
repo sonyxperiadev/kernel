@@ -1,0 +1,4 @@
+#ifndef __ARM_ARCH_DEV_HAWII_LOGANDS_TSP_H
+#define __ARM_ARCH_DEV_HAWII_LOGANDS_TSP_H
+void __init hawaii_touchscreen_init(void);
+#endif

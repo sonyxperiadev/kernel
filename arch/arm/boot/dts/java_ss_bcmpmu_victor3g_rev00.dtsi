@@ -1,0 +1,183 @@
+/ {
+	bcmpmu {
+	compatible = "Broadcom,bcmpmu";
+	initdata = <
+	     /* Add  Val  Mask Map */
+		0x14 0x75 0xFF 0
+		/*  enable PC3 function */
+		0x15 0x0E 0xFF 0
+		/*Enable PASR_EN*/
+		0x16 0x2 0x2 0
+		/*Enable PASR_MODE*/
+		0x08 0x1 0x1 1
+		  /* Mask Interrupt */
+		0x30 0xFF 0xFF 0
+		0x31 0xFF 0xFF 0
+		0x32 0xFF 0xFF 0
+		0x33 0xFF 0xFF 0
+		0x34 0xFF 0xFF 0
+		0x35 0xFF 0xFF 0
+		0x36 0xFF 0xFF 0
+		0x37 0xFF 0xFF 0
+		0x38 0xFF 0xFF 0
+		0x39 0xFF 0xFF 0
+		0x3A 0xFF 0xFF 0
+		0x3B 0xFF 0xFF 0
+		0x3C 0xFF 0xFF 0
+		0x3D 0xFF 0xFF 0
+		0x3E 0xFF 0xFF 0
+		0x3F 0xFF 0xFF 0
+		 /* Trickle charging timer setting */
+		0x40 0x38 0x38 0
+		 /*  disable software charger timer */
+		0x41 0x0 0x04 0
+		 /* SWUP */
+		0x42 0x04 0x04 0
+		 /* Enable BC12_EN */
+		0x44 0x01 0x01 0
+		  /*  ICCMAX to 1500mA*/
+		0x47 0x0B 0xFF 0
+		  /* NTC Hot Temperature Comparator rising = 60C*/
+		0xCC 0x40 0xFF 1
+		  /* NTC Hot Temperature Comparator falling = 50C*/
+		0xCD 0x5C 0xFF 1
+		  /* NTC Cold Temperature Comparator rising = 0C*/
+		0xCE 0xF4 0xFF 1
+		  /* NTC Cold Temperature Comparator falling = 5C*/
+		0xCF 0xB8 0xFF 1
+		  /* NTC Hot Temperature Comparator bit 9,8 */
+		0xD0 0x05 0xFF 1
+		 /*MBCCTRL11*/
+		0x4A 0x0F 0xff 0
+		 /* ID detection ,current source Trimming */
+		0x47 0xD2 0xFF 1
+		0x48 0x98 0xFF 1
+		0x49 0xF0 0xFF 1
+		 /*ADP_THR_RATIO*/
+		0x4A 0x58 0xFF 1
+		 /* Enable ADP_PRB  ADP_DSCHG comparators */
+		0x4B 0xC3 0xFF 1
+		/*FG EOC CURR TH*/
+		0xBF 0x64 0xFF 1
+		/*RTC_C2C1_XOTRIM*/
+		0xEF 0xFF 0xFF 1
+		/* PWMLEDCTRL1 */
+		0x00 0x23 0xFF 1
+		/* HSCP3*/
+		0x82 0x00 0xFF 1
+		 /* HS audio powerdown feedback path */
+		 0x7B 0x0C 0xFF 1
+		 /* NTC BiasSynchronous Mode,Host Enable Control NTC_PM0 Disable*/
+		 0xD5 0x12 0xFF 1
+		 0xD6 0x0 0xFF 1
+		 0xD7 0x12 0xFF 1
+		 /* MBUV host enable control */
+		 0xD8 0x40 0x7F 1
+		 /* EN_SESS_VALID  enable ID detection */
+		 0x40 0x18 0xFF 1
+		 /* SDSR2 NM1 voltage - 1.24*/
+		 0xCF 0x28 0x3F 0
+		 /* SDSR2 LPM voltage - 1.2V */
+		 0xD0 0x24 0x3F 0
+		 /* IOSR1 LPM voltage - 1.8V */
+		 0xC4 0x3E 0x3f 0
+		 0x0D 0x00 0xF0 1
+		 0x0E 0x00 0x3F 1
+		 /*otg boost ctrl1-2*/
+		 0x4c 0xd4 0xFF 1
+		 0x4d 0x1b 0xFF 1
+		 /*MBC_CC_BOOST*/
+		 0x5c 0x5 0x0F 0
+		 /*otgctrl1 disable boost bydefault*/
+		 0x40 0x0 0x4 1
+		 /*turn of synthesizer when no PLL request */
+		 0x1A 0xfe 0xff 0
+		/*RFLDO pulldown disable MobC00290043*/
+		 0x96 0x40 0x40 0
+		 /*AUDLDO pulldown disable*/
+		 0x9f 0x40 0x40 0
+		 /*LVLDO1 voltage - 1.786V */
+		 0x1E 0xb8 0xff 1
+		 /*SIMLDO2 enable pulldown MobC00298660*/
+		 0x9a 0x00 0x40 0
+		>;
+	};
+
+	bcmpmu_rgltrs {
+		compatible = "Broadcom,rgltr";
+		/*num_of_consumer_supp, consumer_supply, always_on, pc_map, dsm_mode, boot_on req_volt(in uV)*/
+		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, dsm_mode = BCMPMU_REGL_OFF_IN_DSM*/
+		rf   = "1", "rf", "1", "7", "2", "0", "0";
+		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, dsm_mode = BCMPMU_REGL_LPM_IN_DSM*/
+		cam1 = "1", "cam1", "1", "7", "1", "0", "0";
+		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, dsm_mode = BCMPMU_REGL_LPM_IN_DSM*/
+		cam2 = "1", "cam2", "1", "7", "1", "0", "0";
+		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, dsm_mode = BCMPMU_REGL_LPM_IN_DSM*/
+		sim1 = "1", "sim_vcc", "1", "7", "1", "0", "0";
+		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, dsm_mode = BCMPMU_REGL_LPM_IN_DSM*/
+		sim2 = "1", "sim2_vcc", "1", "7", "1", "0", "0";
+		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, dsm_mode = BCMPMU_REGL_ON_IN_DSM*/
+		sd   = "3", "sdldo_uc", "vddmmc", "vdd_sdio", "1", "7", "0", "0", "0";
+		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, dsm_mode = BCMPMU_REGL_ON_IN_DSM*/
+		sdx  = "4", "sdxldo_uc", "vddo", "vdd_sdxc", "sddat_debug_bus","1","7", "0", "0", "0";
+		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, dsm_mode = BCMPMU_REGL_ON_IN_DSM*/
+		mmc1 = "1", "mmc1_vcc","1","7", "0", "0", "0";
+		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, dsm_mode = BCMPMU_REGL_ON_IN_DSM*/
+		mmc2 = "1", "mmc2_vcc", "1", "7", "0", "0", "0";
+		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, dsm_mode = BCMPMU_REGL_OFF_IN_DSM*/
+		aud  = "1", "audldo_uc", "1", "7", "2", "0", "0";
+		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, dsm_mode = BCMPMU_REGL_ON_IN_DSM*/
+		usb  = "1", "usb_vcc", "1", "7", "0", "0", "0";
+		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, dsm_mode = BCMPMU_REGL_ON_IN_DSM*/
+		mic  = "1", "micldo_uc", "1","7", "0", "0", "0";
+		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, dsm_mode = BCMPMU_REGL_ON_IN_DSM*/
+		vib  = "1", "vibldo_uc", "1", "7", "0", "0", "0";
+		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, dsm_mode = BCMPMU_REGL_ON_IN_DSM*/
+		gp1  = "1", "gpldo1_uc","1", "7", "0", "0", "0";
+		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, dsm_mode = BCMPMU_REGL_ON_IN_DSM*/
+		gp2  = "1", "gpldo2_uc", "1", "7", "0", "0", "0";
+		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, dsm_mode = BCMPMU_REGL_LPM_IN_DSM*/
+		gp3  = "1", "sim3_vcc", "1", "7", "1", "0", "0";
+		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, dsm_mode = BCMPMU_REGL_ON_IN_DSM*/
+		tcx  = "1", "tcxldo_uc", "1", "7", "0", "0", "0";
+		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, dsm_mode = BCMPMU_REGL_ON_IN_DSM*/
+		lv1  = "1", "lvldo1_uc", "1", "7", "0", "0", "0";
+		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, dsm_mode = BCMPMU_REGL_ON_IN_DSM*/
+		lv2  = "1", "lvldo2_uc", "1", "7", "0", "0", "0";
+		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, dsm_mode = BCMPMU_REGL_OFF_IN_DSM*/
+		vsr  = "1", "vsr_uc", "1", "7", "2", "0", "1630000";
+		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, dsm_mode = BCMPMU_REGL_OFF_IN_DSM*/
+		csr  = "1", "csr_uc", "1", "7", "2", "0", "0";
+		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, dsm_mode = BCMPMU_REGL_LPM_IN_DSM*/
+		mmsr = "1", "mmsr_uc", "1", "7", "1", "0", "0";
+		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, dsm_mode = BCMPMU_REGL_LPM_IN_DSM*/
+		sdsr1 = "1", "sdsr1_uc", "1", "7", "1", "0", "0";
+		/*pc_map = PMU_PC2|PMU_PC3, dsm_mode = BCMPMU_REGL_LPM_IN_DSM*/
+		sdsr2 = "1", "sdsr2_uc", "1", "6", "1", "0", "0";
+		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, dsm_mode = BCMPMU_REGL_LPM_IN_DSM*/
+		iosr1 = "1", "iosr1_uc", "1", "7", "1", "0", "0";
+		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, dsm_mode = BCMPMU_REGL_ON_IN_DSM*/
+		iosr2 = "1", "iosr2_uc", "1", "7", "0", "0", "0";
+	};
+
+	bcmpmu_adc {
+		compatible = "Broadcom,adc";
+		/*name flag volt_range adc_offset addr_offset*/
+		channel0 = "vmbatt", "0", "4800", "0", "0x2";
+		channel1 = "vbbatt", "0", "4800", "0", "0x4";
+		channel2 = "0";
+		channel3 = "vbus", "0", "14400", "0", "0x8";
+		channel4 = "idin", "0", "1200", "0", "0xa";
+		channel5 = "ntc", "0", "1200", "0", "0xc";
+		channel6 = "bsi", "0", "1200", "0", "0xe";
+		channel7 = "bom", "0", "1200", "0", "0x10";
+		channel8 = "32ktemp", "0", "1200", "0","0x12";
+		channel9 = "patemp", "0", "1200", "0", "0x14";
+		channel10 = "als", "0", "1200", "0", "0x16";
+		channel11 = "0";
+		channel12 = "0";
+		channel13 = "0";
+		channel14 = "0";
+		channel15 = "0";
+	};
+};

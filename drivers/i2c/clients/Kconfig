@@ -1,0 +1,5 @@
+config I2C_DAC6571
+	tristate "I2C driver for DAC6571"
+	default n
+	help
+	  Say Y here if you want support for a DAC6571 attached to the I2C bus.

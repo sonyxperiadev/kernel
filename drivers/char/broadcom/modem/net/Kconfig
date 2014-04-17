@@ -1,0 +1,7 @@
+config BRCM_FUSE_NET
+	#tristate "Broadcom FUSE NET drivers"
+	boolean "Broadcom FUSE NET drivers"
+	depends on BRCM_MODULES && BRCM_MODULES_PRIV
+	default N
+	---help---
+	  Broadcom FUSE NET drivers

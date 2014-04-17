@@ -1,0 +1,807 @@
+/************************************************************************************************/
+/*                                                                                              */
+/*  Copyright 2012  Broadcom Corporation                                                        */
+/*                                                                                              */
+/*     Unless you and Broadcom execute a separate written software license agreement governing  */
+/*     use of this software, this software is licensed to you under the terms of the GNU        */
+/*     General Public License version 2 (the GPL), available at                                 */
+/*                                                                                              */
+/*          http://www.broadcom.com/licenses/GPLv2.php                                          */
+/*                                                                                              */
+/*     with the following added to such license:                                                */
+/*                                                                                              */
+/*     As a special exception, the copyright holders of this software give you permission to    */
+/*     link this software with independent modules, and to copy and distribute the resulting    */
+/*     executable under terms of your choice, provided that you also meet, for each linked      */
+/*     independent module, the terms and conditions of the license of that module.              */
+/*     An independent module is a module which is not derived from this software.  The special  */
+/*     exception does not apply to any modifications of the software.                           */
+/*                                                                                              */
+/*     Notwithstanding the above, under no circumstances may you combine this software in any   */
+/*     way with any other Broadcom software provided under a license other than the GPL,        */
+/*     without Broadcom's express prior written consent.                                        */
+/*                                                                                              */
+/*     Date     : Generated on 2/10/2012 15:44:22                                             */
+/*     RDB file : //RHEA/                                                                   */
+/************************************************************************************************/
+
+#ifndef __BRCM_RDB_ISP_H__
+#define __BRCM_RDB_ISP_H__
+
+#define ISP_ISP_CTRL_OFFSET                                               0x00000000
+#define ISP_ISP_CTRL_TYPE                                                 UInt32
+#define ISP_ISP_CTRL_RESERVED_MASK                                        0xFFEEFE80
+#define    ISP_ISP_CTRL_FORCE_CLKEN_SHIFT                                 20
+#define    ISP_ISP_CTRL_FORCE_CLKEN_MASK                                  0x00100000
+#define    ISP_ISP_CTRL_TRANSFER_SHIFT                                    16
+#define    ISP_ISP_CTRL_TRANSFER_MASK                                     0x00010000
+#define    ISP_ISP_CTRL_STATS_IMASK_SHIFT                                 8
+#define    ISP_ISP_CTRL_STATS_IMASK_MASK                                  0x00000100
+#define    ISP_ISP_CTRL_SW_IMASK_SHIFT                                    6
+#define    ISP_ISP_CTRL_SW_IMASK_MASK                                     0x00000040
+#define    ISP_ISP_CTRL_EOD_IMASK_SHIFT                                   5
+#define    ISP_ISP_CTRL_EOD_IMASK_MASK                                    0x00000020
+#define    ISP_ISP_CTRL_EOT_IMASK_SHIFT                                   4
+#define    ISP_ISP_CTRL_EOT_IMASK_MASK                                    0x00000010
+#define    ISP_ISP_CTRL_ERROR_IMASK_SHIFT                                 3
+#define    ISP_ISP_CTRL_ERROR_IMASK_MASK                                  0x00000008
+#define    ISP_ISP_CTRL_CLR_STATS_SHIFT                                   2
+#define    ISP_ISP_CTRL_CLR_STATS_MASK                                    0x00000004
+#define    ISP_ISP_CTRL_FLUSH_SHIFT                                       1
+#define    ISP_ISP_CTRL_FLUSH_MASK                                        0x00000002
+#define    ISP_ISP_CTRL_ENABLE_SHIFT                                      0
+#define    ISP_ISP_CTRL_ENABLE_MASK                                       0x00000001
+
+#define ISP_ISP_STATUS_OFFSET                                             0x00000004
+#define ISP_ISP_STATUS_TYPE                                               UInt32
+#define ISP_ISP_STATUS_RESERVED_MASK                                      0xFFFFFE84
+#define    ISP_ISP_STATUS_STATS_INT_SHIFT                                 8
+#define    ISP_ISP_STATUS_STATS_INT_MASK                                  0x00000100
+#define    ISP_ISP_STATUS_SW_INT_SHIFT                                    6
+#define    ISP_ISP_STATUS_SW_INT_MASK                                     0x00000040
+#define    ISP_ISP_STATUS_EOD_INT_SHIFT                                   5
+#define    ISP_ISP_STATUS_EOD_INT_MASK                                    0x00000020
+#define    ISP_ISP_STATUS_EOT_INT_SHIFT                                   4
+#define    ISP_ISP_STATUS_EOT_INT_MASK                                    0x00000010
+#define    ISP_ISP_STATUS_ERROR_INT_SHIFT                                 3
+#define    ISP_ISP_STATUS_ERROR_INT_MASK                                  0x00000008
+#define    ISP_ISP_STATUS_STATE_SHIFT                                     0
+#define    ISP_ISP_STATUS_STATE_MASK                                      0x00000003
+
+#define ISP_ISP_ID_OFFSET                                                 0x00000008
+#define ISP_ISP_ID_TYPE                                                   UInt32
+#define ISP_ISP_ID_RESERVED_MASK                                          0x00000000
+#define    ISP_ISP_ID_SIGNATURE_SHIFT                                     16
+#define    ISP_ISP_ID_SIGNATURE_MASK                                      0xFFFF0000
+#define    ISP_ISP_ID_VERSION_SHIFT                                       8
+#define    ISP_ISP_ID_VERSION_MASK                                        0x0000FF00
+#define    ISP_ISP_ID_REVISION_SHIFT                                      0
+#define    ISP_ISP_ID_REVISION_MASK                                       0x000000FF
+
+#define ISP_ISP_TILE_CTRL_OFFSET                                          0x00000010
+#define ISP_ISP_TILE_CTRL_TYPE                                            UInt32
+#define ISP_ISP_TILE_CTRL_RESERVED_MASK                                   0xFFFFF000
+#define    ISP_ISP_TILE_CTRL_TILE_COUNT_SHIFT                             0
+#define    ISP_ISP_TILE_CTRL_TILE_COUNT_MASK                              0x00000FFF
+
+#define ISP_ISP_TILE_STATUS_OFFSET                                        0x00000018
+#define ISP_ISP_TILE_STATUS_TYPE                                          UInt32
+#define ISP_ISP_TILE_STATUS_RESERVED_MASK                                 0xFFFFF000
+#define    ISP_ISP_TILE_STATUS_INT_COUNT_SHIFT                            0
+#define    ISP_ISP_TILE_STATUS_INT_COUNT_MASK                             0x00000FFF
+
+#define ISP_ISP_TILE_ADDR_OFFSET                                          0x0000001C
+#define ISP_ISP_TILE_ADDR_TYPE                                            UInt32
+#define ISP_ISP_TILE_ADDR_RESERVED_MASK                                   0x0000001F
+#define    ISP_ISP_TILE_ADDR_ADDRESS_SHIFT                                5
+#define    ISP_ISP_TILE_ADDR_ADDRESS_MASK                                 0xFFFFFFE0
+
+#define ISP_ISPFR_MOSAIC_OFFSET                                           0x00000050
+#define ISP_ISPFR_MOSAIC_TYPE                                             UInt32
+#define ISP_ISPFR_MOSAIC_RESERVED_MASK                                    0xFFFFFFFF
+
+#define ISP_ISPFR_CTRL_OFFSET                                             0x00000084
+#define ISP_ISPFR_CTRL_TYPE                                               UInt32
+#define ISP_ISPFR_CTRL_RESERVED_MASK                                      0xFFFFFFFF
+
+#define ISP_ISPWG_RED_OFFSET                                              0x00000090
+#define ISP_ISPWG_RED_TYPE                                                UInt32
+#define ISP_ISPWG_RED_RESERVED_MASK                                       0xFFFF0000
+#define    ISP_ISPWG_RED_GAIN_SHIFT                                       0
+#define    ISP_ISPWG_RED_GAIN_MASK                                        0x0000FFFF
+
+#define ISP_ISPWG_BLUE_OFFSET                                             0x00000094
+#define ISP_ISPWG_BLUE_TYPE                                               UInt32
+#define ISP_ISPWG_BLUE_RESERVED_MASK                                      0xFFFF0000
+#define    ISP_ISPWG_BLUE_GAIN_SHIFT                                      0
+#define    ISP_ISPWG_BLUE_GAIN_MASK                                       0x0000FFFF
+
+#define ISP_ISPWG_OFFSETG_OFFSET                                          0x00000098
+#define ISP_ISPWG_OFFSETG_TYPE                                            UInt32
+#define ISP_ISPWG_OFFSETG_RESERVED_MASK                                   0xFFFFE000
+#define    ISP_ISPWG_OFFSETG_OFFSET_SHIFT                                 0
+#define    ISP_ISPWG_OFFSETG_OFFSET_MASK                                  0x00001FFF
+
+#define ISP_ISPWG_GAIN_OFFSET                                             0x0000009C
+#define ISP_ISPWG_GAIN_TYPE                                               UInt32
+#define ISP_ISPWG_GAIN_RESERVED_MASK                                      0xFFFF0000
+#define    ISP_ISPWG_GAIN_GAIN_SHIFT                                      0
+#define    ISP_ISPWG_GAIN_GAIN_MASK                                       0x0000FFFF
+
+#define ISP_ISPWG_THRESH_OFFSET                                           0x000000A0
+#define ISP_ISPWG_THRESH_TYPE                                             UInt32
+#define ISP_ISPWG_THRESH_RESERVED_MASK                                    0xFFFFC000
+#define    ISP_ISPWG_THRESH_THRESH_SHIFT                                  0
+#define    ISP_ISPWG_THRESH_THRESH_MASK                                   0x00003FFF
+
+#define ISP_ISPWG_OFFSETR_OFFSET                                          0x000000A4
+#define ISP_ISPWG_OFFSETR_TYPE                                            UInt32
+#define ISP_ISPWG_OFFSETR_RESERVED_MASK                                   0xFFFFE000
+#define    ISP_ISPWG_OFFSETR_OFFSET_SHIFT                                 0
+#define    ISP_ISPWG_OFFSETR_OFFSET_MASK                                  0x00001FFF
+
+#define ISP_ISPWG_OFFSETB_OFFSET                                          0x000000A8
+#define ISP_ISPWG_OFFSETB_TYPE                                            UInt32
+#define ISP_ISPWG_OFFSETB_RESERVED_MASK                                   0xFFFFE000
+#define    ISP_ISPWG_OFFSETB_OFFSET_SHIFT                                 0
+#define    ISP_ISPWG_OFFSETB_OFFSET_MASK                                  0x00001FFF
+
+#define ISP_ISPYG_Y_OFFSET                                                0x000000D0
+#define ISP_ISPYG_Y_TYPE                                                  UInt32
+#define ISP_ISPYG_Y_RESERVED_MASK                                         0x00000000
+#define    ISP_ISPYG_Y_COEFF1_SHIFT                                       16
+#define    ISP_ISPYG_Y_COEFF1_MASK                                        0xFFFF0000
+#define    ISP_ISPYG_Y_COEFF0_SHIFT                                       0
+#define    ISP_ISPYG_Y_COEFF0_MASK                                        0x0000FFFF
+
+#define ISP_ISPII_CTRL_OFFSET                                             0x00000100
+#define ISP_ISPII_CTRL_TYPE                                               UInt32
+#define ISP_ISPII_CTRL_RESERVED_MASK                                      0xF00060FF
+#define    ISP_ISPII_CTRL_STRIDE_SHIFT                                    15
+#define    ISP_ISPII_CTRL_STRIDE_MASK                                     0x0FFF8000
+#define    ISP_ISPII_CTRL_FORMAT_SHIFT                                    8
+#define    ISP_ISPII_CTRL_FORMAT_MASK                                     0x00001F00
+
+#define ISP_ISPII_ADDRESS_OFFSET                                          0x00000104
+#define ISP_ISPII_ADDRESS_TYPE                                            UInt32
+#define ISP_ISPII_ADDRESS_RESERVED_MASK                                   0x0000001F
+#define    ISP_ISPII_ADDRESS_ADDRESS_SHIFT                                5
+#define    ISP_ISPII_ADDRESS_ADDRESS_MASK                                 0xFFFFFFE0
+
+#define ISP_ISPII_ENDADDR_OFFSET                                          0x00000108
+#define ISP_ISPII_ENDADDR_TYPE                                            UInt32
+#define ISP_ISPII_ENDADDR_RESERVED_MASK                                   0x0000001F
+#define    ISP_ISPII_ENDADDR_ENDADDR_SHIFT                                5
+#define    ISP_ISPII_ENDADDR_ENDADDR_MASK                                 0xFFFFFFE0
+
+#define ISP_ISPII_DPCM_OFFSET                                             0x0000010C
+#define ISP_ISPII_DPCM_TYPE                                               UInt32
+#define ISP_ISPII_DPCM_RESERVED_MASK                                      0xFFFFE000
+#define    ISP_ISPII_DPCM_MODE_SHIFT                                      9
+#define    ISP_ISPII_DPCM_MODE_MASK                                       0x00001E00
+#define    ISP_ISPII_DPCM_BLOCKLEN_SHIFT                                  0
+#define    ISP_ISPII_DPCM_BLOCKLEN_MASK                                   0x000001FF
+
+#define ISP_ISPII_FIFO_OFFSET                                             0x00000110
+#define ISP_ISPII_FIFO_TYPE                                               UInt32
+#define ISP_ISPII_FIFO_RESERVED_MASK                                      0xFFFFC0C0
+#define    ISP_ISPII_FIFO_MIN3_SHIFT                                      8
+#define    ISP_ISPII_FIFO_MIN3_MASK                                       0x00003F00
+#define    ISP_ISPII_FIFO_MIN2_SHIFT                                      0
+#define    ISP_ISPII_FIFO_MIN2_MASK                                       0x0000003F
+
+#define ISP_ISPDI_ADDRESS_OFFSET                                          0x00000130
+#define ISP_ISPDI_ADDRESS_TYPE                                            UInt32
+#define ISP_ISPDI_ADDRESS_RESERVED_MASK                                   0x0000001F
+#define    ISP_ISPDI_ADDRESS_ADDRESS_SHIFT                                5
+#define    ISP_ISPDI_ADDRESS_ADDRESS_MASK                                 0xFFFFFFE0
+
+#define ISP_ISPDI_ENDADDR_OFFSET                                          0x00000134
+#define ISP_ISPDI_ENDADDR_TYPE                                            UInt32
+#define ISP_ISPDI_ENDADDR_RESERVED_MASK                                   0x0000001F
+#define    ISP_ISPDI_ENDADDR_ENDADDR_SHIFT                                5
+#define    ISP_ISPDI_ENDADDR_ENDADDR_MASK                                 0xFFFFFFE0
+
+#define ISP_ISPBL_ABSC_R_OFFSET                                           0x00000160
+#define ISP_ISPBL_ABSC_R_TYPE                                             UInt32
+#define ISP_ISPBL_ABSC_R_RESERVED_MASK                                    0x00000000
+#define    ISP_ISPBL_ABSC_R_ABSCISSA1_SHIFT                               16
+#define    ISP_ISPBL_ABSC_R_ABSCISSA1_MASK                                0xFFFF0000
+#define    ISP_ISPBL_ABSC_R_ABSCISSA0_SHIFT                               0
+#define    ISP_ISPBL_ABSC_R_ABSCISSA0_MASK                                0x0000FFFF
+
+#define ISP_ISPBL_ABSC_GR_OFFSET                                          0x00000180
+#define ISP_ISPBL_ABSC_GR_TYPE                                            UInt32
+#define ISP_ISPBL_ABSC_GR_RESERVED_MASK                                   0x00000000
+#define    ISP_ISPBL_ABSC_GR_ABSCISSA1_SHIFT                              16
+#define    ISP_ISPBL_ABSC_GR_ABSCISSA1_MASK                               0xFFFF0000
+#define    ISP_ISPBL_ABSC_GR_ABSCISSA0_SHIFT                              0
+#define    ISP_ISPBL_ABSC_GR_ABSCISSA0_MASK                               0x0000FFFF
+
+#define ISP_ISPBL_ABSC_B_OFFSET                                           0x000001A0
+#define ISP_ISPBL_ABSC_B_TYPE                                             UInt32
+#define ISP_ISPBL_ABSC_B_RESERVED_MASK                                    0x00000000
+#define    ISP_ISPBL_ABSC_B_ABSCISSA1_SHIFT                               16
+#define    ISP_ISPBL_ABSC_B_ABSCISSA1_MASK                                0xFFFF0000
+#define    ISP_ISPBL_ABSC_B_ABSCISSA0_SHIFT                               0
+#define    ISP_ISPBL_ABSC_B_ABSCISSA0_MASK                                0x0000FFFF
+
+#define ISP_ISPBL_ORD_SLOPE_R_OFFSET                                      0x000001C0
+#define ISP_ISPBL_ORD_SLOPE_R_TYPE                                        UInt32
+#define ISP_ISPBL_ORD_SLOPE_R_RESERVED_MASK                               0x00000000
+#define    ISP_ISPBL_ORD_SLOPE_R_ORDINATE_SHIFT                           16
+#define    ISP_ISPBL_ORD_SLOPE_R_ORDINATE_MASK                            0xFFFF0000
+#define    ISP_ISPBL_ORD_SLOPE_R_SLOPE_SHIFT                              0
+#define    ISP_ISPBL_ORD_SLOPE_R_SLOPE_MASK                               0x0000FFFF
+
+#define ISP_ISPBL_ORD_SLOPE_GR_OFFSET                                     0x00000200
+#define ISP_ISPBL_ORD_SLOPE_GR_TYPE                                       UInt32
+#define ISP_ISPBL_ORD_SLOPE_GR_RESERVED_MASK                              0x00000000
+#define    ISP_ISPBL_ORD_SLOPE_GR_ORDINATE_SHIFT                          16
+#define    ISP_ISPBL_ORD_SLOPE_GR_ORDINATE_MASK                           0xFFFF0000
+#define    ISP_ISPBL_ORD_SLOPE_GR_SLOPE_SHIFT                             0
+#define    ISP_ISPBL_ORD_SLOPE_GR_SLOPE_MASK                              0x0000FFFF
+
+#define ISP_ISPBL_ORD_SLOPE_B_OFFSET                                      0x00000240
+#define ISP_ISPBL_ORD_SLOPE_B_TYPE                                        UInt32
+#define ISP_ISPBL_ORD_SLOPE_B_RESERVED_MASK                               0x00000000
+#define    ISP_ISPBL_ORD_SLOPE_B_ORDINATE_SHIFT                           16
+#define    ISP_ISPBL_ORD_SLOPE_B_ORDINATE_MASK                            0xFFFF0000
+#define    ISP_ISPBL_ORD_SLOPE_B_SLOPE_SHIFT                              0
+#define    ISP_ISPBL_ORD_SLOPE_B_SLOPE_MASK                               0x0000FFFF
+
+#define ISP_ISPBL_TB_OFFSET                                               0x00000280
+#define ISP_ISPBL_TB_TYPE                                                 UInt32
+#define ISP_ISPBL_TB_RESERVED_MASK                                        0x0000FF00
+#define    ISP_ISPBL_TB_BOTTOM_SHIFT                                      16
+#define    ISP_ISPBL_TB_BOTTOM_MASK                                       0xFFFF0000
+#define    ISP_ISPBL_TB_TOP_SHIFT                                         0
+#define    ISP_ISPBL_TB_TOP_MASK                                          0x000000FF
+
+#define ISP_ISPBL_LR_OFFSET                                               0x00000284
+#define ISP_ISPBL_LR_TYPE                                                 UInt32
+#define ISP_ISPBL_LR_RESERVED_MASK                                        0x0000FF00
+#define    ISP_ISPBL_LR_RIGHT_SHIFT                                       16
+#define    ISP_ISPBL_LR_RIGHT_MASK                                        0xFFFF0000
+#define    ISP_ISPBL_LR_LEFT_SHIFT                                        0
+#define    ISP_ISPBL_LR_LEFT_MASK                                         0x000000FF
+
+#define ISP_ISPBL_MT_OFFSET                                               0x00000288
+#define ISP_ISPBL_MT_TYPE                                                 UInt32
+#define ISP_ISPBL_MT_RESERVED_MASK                                        0x00000000
+#define    ISP_ISPBL_MT_THRESHOLD_SHIFT                                   16
+#define    ISP_ISPBL_MT_THRESHOLD_MASK                                    0xFFFF0000
+#define    ISP_ISPBL_MT_MULTIPLIER_SHIFT                                  0
+#define    ISP_ISPBL_MT_MULTIPLIER_MASK                                   0x0000FFFF
+
+#define ISP_ISPBL_SHIFT_OFFSET                                            0x0000028C
+#define ISP_ISPBL_SHIFT_TYPE                                              UInt32
+#define ISP_ISPBL_SHIFT_RESERVED_MASK                                     0xFFFEFEFE
+#define    ISP_ISPBL_SHIFT_SHIFT_B_SHIFT                                  16
+#define    ISP_ISPBL_SHIFT_SHIFT_B_MASK                                   0x00010000
+#define    ISP_ISPBL_SHIFT_SHIFT_G_SHIFT                                  8
+#define    ISP_ISPBL_SHIFT_SHIFT_G_MASK                                   0x00000100
+#define    ISP_ISPBL_SHIFT_SHIFT_R_SHIFT                                  0
+#define    ISP_ISPBL_SHIFT_SHIFT_R_MASK                                   0x00000001
+
+#define ISP_ISPBL_SUM_LO_OFFSET                                           0x00000290
+#define ISP_ISPBL_SUM_LO_TYPE                                             UInt32
+#define ISP_ISPBL_SUM_LO_RESERVED_MASK                                    0x00000000
+#define    ISP_ISPBL_SUM_LO_SUM_LO_SHIFT                                  0
+#define    ISP_ISPBL_SUM_LO_SUM_LO_MASK                                   0xFFFFFFFF
+
+#define ISP_ISPBL_SUM_HI_OFFSET                                           0x00000294
+#define ISP_ISPBL_SUM_HI_TYPE                                             UInt32
+#define ISP_ISPBL_SUM_HI_RESERVED_MASK                                    0xFFFF0000
+#define    ISP_ISPBL_SUM_HI_SUM_HI_SHIFT                                  0
+#define    ISP_ISPBL_SUM_HI_SUM_HI_MASK                                   0x0000FFFF
+
+#define ISP_ISPBL_COUNT_OFFSET                                            0x00000298
+#define ISP_ISPBL_COUNT_TYPE                                              UInt32
+#define ISP_ISPBL_COUNT_RESERVED_MASK                                     0x00000000
+#define    ISP_ISPBL_COUNT_COUNT_SHIFT                                    0
+#define    ISP_ISPBL_COUNT_COUNT_MASK                                     0xFFFFFFFF
+
+#define ISP_ISPDP_HI_OFFSET                                               0x000002D0
+#define ISP_ISPDP_HI_TYPE                                                 UInt32
+#define ISP_ISPDP_HI_RESERVED_MASK                                        0xF000C0FF
+#define    ISP_ISPDP_HI_OFFSET_SHIFT                                      16
+#define    ISP_ISPDP_HI_OFFSET_MASK                                       0x0FFF0000
+#define    ISP_ISPDP_HI_SCALE_SHIFT                                       8
+#define    ISP_ISPDP_HI_SCALE_MASK                                        0x00003F00
+
+#define ISP_ISPDP_LO_OFFSET                                               0x000002DC
+#define ISP_ISPDP_LO_TYPE                                                 UInt32
+#define ISP_ISPDP_LO_RESERVED_MASK                                        0xF000C0FF
+#define    ISP_ISPDP_LO_OFFSET_SHIFT                                      16
+#define    ISP_ISPDP_LO_OFFSET_MASK                                       0x0FFF0000
+#define    ISP_ISPDP_LO_SCALE_SHIFT                                       8
+#define    ISP_ISPDP_LO_SCALE_MASK                                        0x00003F00
+
+#define ISP_ISPDP_REPLO_OFFSET                                            0x000002E8
+#define ISP_ISPDP_REPLO_TYPE                                              UInt32
+#define ISP_ISPDP_REPLO_RESERVED_MASK                                     0xFFF0F00F
+#define    ISP_ISPDP_REPLO_INDEX_SHIFT                                    16
+#define    ISP_ISPDP_REPLO_INDEX_MASK                                     0x000F0000
+#define    ISP_ISPDP_REPLO_SCALE_SHIFT                                    4
+#define    ISP_ISPDP_REPLO_SCALE_MASK                                     0x00000FF0
+
+#define ISP_ISPDP_REPHI_OFFSET                                            0x000002EC
+#define ISP_ISPDP_REPHI_TYPE                                              UInt32
+#define ISP_ISPDP_REPHI_RESERVED_MASK                                     0xFFF0F00F
+#define    ISP_ISPDP_REPHI_INDEX_SHIFT                                    16
+#define    ISP_ISPDP_REPHI_INDEX_MASK                                     0x000F0000
+#define    ISP_ISPDP_REPHI_SCALE_SHIFT                                    4
+#define    ISP_ISPDP_REPHI_SCALE_MASK                                     0x00000FF0
+
+#define ISP_ISPBL_ABSC_GB_OFFSET                                          0x00000300
+#define ISP_ISPBL_ABSC_GB_TYPE                                            UInt32
+#define ISP_ISPBL_ABSC_GB_RESERVED_MASK                                   0x00000000
+#define    ISP_ISPBL_ABSC_GB_ABSCISSA1_SHIFT                              16
+#define    ISP_ISPBL_ABSC_GB_ABSCISSA1_MASK                               0xFFFF0000
+#define    ISP_ISPBL_ABSC_GB_ABSCISSA0_SHIFT                              0
+#define    ISP_ISPBL_ABSC_GB_ABSCISSA0_MASK                               0x0000FFFF
+
+#define ISP_ISPBL_ORD_SLOPE_GB_OFFSET                                     0x00000340
+#define ISP_ISPBL_ORD_SLOPE_GB_TYPE                                       UInt32
+#define ISP_ISPBL_ORD_SLOPE_GB_RESERVED_MASK                              0x00000000
+#define    ISP_ISPBL_ORD_SLOPE_GB_ORDINATE_SHIFT                          16
+#define    ISP_ISPBL_ORD_SLOPE_GB_ORDINATE_MASK                           0xFFFF0000
+#define    ISP_ISPBL_ORD_SLOPE_GB_SLOPE_SHIFT                             0
+#define    ISP_ISPBL_ORD_SLOPE_GB_SLOPE_MASK                              0x0000FFFF
+
+#define ISP_ISPTD_CTRL_OFFSET                                             0x00000440
+#define ISP_ISPTD_CTRL_TYPE                                               UInt32
+#define ISP_ISPTD_CTRL_RESERVED_MASK                                      0xFFFFF000
+#define    ISP_ISPTD_CTRL_DESC_COUNT_SHIFT                                0
+#define    ISP_ISPTD_CTRL_DESC_COUNT_MASK                                 0x00000FFF
+
+#define ISP_ISPTD_STATUS_OFFSET                                           0x00000444
+#define ISP_ISPTD_STATUS_TYPE                                             UInt32
+#define ISP_ISPTD_STATUS_RESERVED_MASK                                    0xFFFFF000
+#define    ISP_ISPTD_STATUS_INT_COUNT_SHIFT                               0
+#define    ISP_ISPTD_STATUS_INT_COUNT_MASK                                0x00000FFF
+
+#define ISP_ISPTD_ADDR_OFFSET                                             0x00000448
+#define ISP_ISPTD_ADDR_TYPE                                               UInt32
+#define ISP_ISPTD_ADDR_RESERVED_MASK                                      0x0000001F
+#define    ISP_ISPTD_ADDR_ADDRESS_SHIFT                                   5
+#define    ISP_ISPTD_ADDR_ADDRESS_MASK                                    0xFFFFFFE0
+
+#define ISP_ISPTD_DESC_OFFSET                                             0x0000044C
+#define ISP_ISPTD_DESC_TYPE                                               UInt256
+#define ISP_ISPTD_DESC_RESERVED_MASK                                      0x00000000
+#define    ISP_ISPTD_DESC_DESC_SHIFT                                      0
+#define    ISP_ISPTD_DESC_DESC_MASK                                       0xFFFFFFFFFFFFFFFF
+
+#define ISP_ISPTD_INIT0_OFFSET                                            0x0000046C
+#define ISP_ISPTD_INIT0_TYPE                                              UInt32
+#define ISP_ISPTD_INIT0_RESERVED_MASK                                     0x70007000
+#define    ISP_ISPTD_INIT0_LS_SET_SHIFT                                   31
+#define    ISP_ISPTD_INIT0_LS_SET_MASK                                    0x80000000
+#define    ISP_ISPTD_INIT0_LS_COUNT_SHIFT                                 16
+#define    ISP_ISPTD_INIT0_LS_COUNT_MASK                                  0x0FFF0000
+#define    ISP_ISPTD_INIT0_SET_SHIFT                                      15
+#define    ISP_ISPTD_INIT0_SET_MASK                                       0x00008000
+#define    ISP_ISPTD_INIT0_COUNT_SHIFT                                    0
+#define    ISP_ISPTD_INIT0_COUNT_MASK                                     0x00000FFF
+
+#define ISP_ISPTD_INIT1_OFFSET                                            0x00000470
+#define ISP_ISPTD_INIT1_TYPE                                              UInt32
+#define ISP_ISPTD_INIT1_RESERVED_MASK                                     0x70007000
+#define    ISP_ISPTD_INIT1_GD_SET_SHIFT                                   31
+#define    ISP_ISPTD_INIT1_GD_SET_MASK                                    0x80000000
+#define    ISP_ISPTD_INIT1_GD_COUNT_SHIFT                                 16
+#define    ISP_ISPTD_INIT1_GD_COUNT_MASK                                  0x0FFF0000
+#define    ISP_ISPTD_INIT1_ST_SET_SHIFT                                   15
+#define    ISP_ISPTD_INIT1_ST_SET_MASK                                    0x00008000
+#define    ISP_ISPTD_INIT1_ST_COUNT_SHIFT                                 0
+#define    ISP_ISPTD_INIT1_ST_COUNT_MASK                                  0x00000FFF
+
+#define ISP_ISPTD_INIT2_OFFSET                                            0x00000474
+#define ISP_ISPTD_INIT2_TYPE                                              UInt32
+#define ISP_ISPTD_INIT2_RESERVED_MASK                                     0xFFFF7000
+#define    ISP_ISPTD_INIT2_PP_SET_SHIFT                                   15
+#define    ISP_ISPTD_INIT2_PP_SET_MASK                                    0x00008000
+#define    ISP_ISPTD_INIT2_PP_COUNT_SHIFT                                 0
+#define    ISP_ISPTD_INIT2_PP_COUNT_MASK                                  0x00000FFF
+
+#define ISP_ISPLS_CTRL_OFFSET                                             0x000004D0
+#define ISP_ISPLS_CTRL_TYPE                                               UInt32
+#define ISP_ISPLS_CTRL_RESERVED_MASK                                      0xFC00FF00
+#define    ISP_ISPLS_CTRL_PITCH_SHIFT                                     16
+#define    ISP_ISPLS_CTRL_PITCH_MASK                                      0x03FF0000
+#define    ISP_ISPLS_CTRL_CELL_SZ_POW_Y_SHIFT                             4
+#define    ISP_ISPLS_CTRL_CELL_SZ_POW_Y_MASK                              0x000000F0
+#define    ISP_ISPLS_CTRL_CELL_SZ_POW_X_SHIFT                             0
+#define    ISP_ISPLS_CTRL_CELL_SZ_POW_X_MASK                              0x0000000F
+
+#define ISP_ISPLS_OFFSETS_OFFSET                                          0x000004D4
+#define ISP_ISPLS_OFFSETS_TYPE                                            UInt32
+#define ISP_ISPLS_OFFSETS_RESERVED_MASK                                   0x00000000
+#define    ISP_ISPLS_OFFSETS_Y_OFFSET_SHIFT                               16
+#define    ISP_ISPLS_OFFSETS_Y_OFFSET_MASK                                0xFFFF0000
+#define    ISP_ISPLS_OFFSETS_X_OFFSET_SHIFT                               0
+#define    ISP_ISPLS_OFFSETS_X_OFFSET_MASK                                0x0000FFFF
+
+#define ISP_ISPDN_CTRL_OFFSET                                             0x00000580
+#define ISP_ISPDN_CTRL_TYPE                                               UInt32
+#define ISP_ISPDN_CTRL_RESERVED_MASK                                      0xFFFFFFFF
+
+#define ISP_ISPSW_DWRITE_OFFSET                                           0x0000069C
+#define ISP_ISPSW_DWRITE_TYPE                                             UInt32
+#define ISP_ISPSW_DWRITE_RESERVED_MASK                                    0xFFFFC000
+#define    ISP_ISPSW_DWRITE_DWRITE_SHIFT                                  0
+#define    ISP_ISPSW_DWRITE_DWRITE_MASK                                   0x00003FFF
+
+#define ISP_ISPSW_SREAD_OFFSET                                            0x000006A8
+#define ISP_ISPSW_SREAD_TYPE                                              UInt32
+#define ISP_ISPSW_SREAD_RESERVED_MASK                                     0xFFFFC000
+#define    ISP_ISPSW_SREAD_SREAD_SHIFT                                    0
+#define    ISP_ISPSW_SREAD_SREAD_MASK                                     0x00003FFF
+
+#define ISP_ISPDM_CTRL_OFFSET                                             0x000006D0
+#define ISP_ISPDM_CTRL_TYPE                                               UInt32
+#define ISP_ISPDM_CTRL_RESERVED_MASK                                      0xF00FF0FC
+#define    ISP_ISPDM_CTRL_HV_BIAS_SHIFT                                   20
+#define    ISP_ISPDM_CTRL_HV_BIAS_MASK                                    0x0FF00000
+#define    ISP_ISPDM_CTRL_G_OFF_SH_SHIFT                                  8
+#define    ISP_ISPDM_CTRL_G_OFF_SH_MASK                                   0x00000F00
+#define    ISP_ISPDM_CTRL_V_COSITED_SHIFT                                 1
+#define    ISP_ISPDM_CTRL_V_COSITED_MASK                                  0x00000002
+#define    ISP_ISPDM_CTRL_H_COSITED_SHIFT                                 0
+#define    ISP_ISPDM_CTRL_H_COSITED_MASK                                  0x00000001
+
+#define ISP_ISPYI_CTRL_OFFSET                                             0x00000700
+#define ISP_ISPYI_CTRL_TYPE                                               UInt32
+#define ISP_ISPYI_CTRL_RESERVED_MASK                                      0xFCFFEC08
+#define    ISP_ISPYI_CTRL_COL_WIDTH_SHIFT                                 24
+#define    ISP_ISPYI_CTRL_COL_WIDTH_MASK                                  0x03000000
+#define    ISP_ISPYI_CTRL_COL_MODE_SHIFT                                  12
+#define    ISP_ISPYI_CTRL_COL_MODE_MASK                                   0x00001000
+#define    ISP_ISPYI_CTRL_CC_ORDER_SHIFT                                  7
+#define    ISP_ISPYI_CTRL_CC_ORDER_MASK                                   0x00000380
+#define    ISP_ISPYI_CTRL_DATA_FORMAT_SHIFT                               4
+#define    ISP_ISPYI_CTRL_DATA_FORMAT_MASK                                0x00000070
+#define    ISP_ISPYI_CTRL_BYTES_SAMPLE_SHIFT                              2
+#define    ISP_ISPYI_CTRL_BYTES_SAMPLE_MASK                               0x00000004
+#define    ISP_ISPYI_CTRL_CS_FORMAT_SHIFT                                 0
+#define    ISP_ISPYI_CTRL_CS_FORMAT_MASK                                  0x00000003
+
+#define ISP_ISPYI_RY_ADDR_OFFSET                                          0x00000704
+#define ISP_ISPYI_RY_ADDR_TYPE                                            UInt32
+#define ISP_ISPYI_RY_ADDR_RESERVED_MASK                                   0x0000001F
+#define    ISP_ISPYI_RY_ADDR_ADDRESS_SHIFT                                5
+#define    ISP_ISPYI_RY_ADDR_ADDRESS_MASK                                 0xFFFFFFE0
+
+#define ISP_ISPYI_GU_ADDR_OFFSET                                          0x00000708
+#define ISP_ISPYI_GU_ADDR_TYPE                                            UInt32
+#define ISP_ISPYI_GU_ADDR_RESERVED_MASK                                   0x0000001F
+#define    ISP_ISPYI_GU_ADDR_ADDRESS_SHIFT                                5
+#define    ISP_ISPYI_GU_ADDR_ADDRESS_MASK                                 0xFFFFFFE0
+
+#define ISP_ISPYI_BV_ADDR_OFFSET                                          0x0000070C
+#define ISP_ISPYI_BV_ADDR_TYPE                                            UInt32
+#define ISP_ISPYI_BV_ADDR_RESERVED_MASK                                   0x0000001F
+#define    ISP_ISPYI_BV_ADDR_ADDRESS_SHIFT                                5
+#define    ISP_ISPYI_BV_ADDR_ADDRESS_MASK                                 0xFFFFFFE0
+
+#define ISP_ISPYI_STRIDE1_OFFSET                                          0x00000710
+#define ISP_ISPYI_STRIDE1_TYPE                                            UInt32
+#define ISP_ISPYI_STRIDE1_RESERVED_MASK                                   0xFFF0001F
+#define    ISP_ISPYI_STRIDE1_Y_STRIDE_SHIFT                               5
+#define    ISP_ISPYI_STRIDE1_Y_STRIDE_MASK                                0x000FFFE0
+
+#define ISP_ISPYI_STRIDE2_OFFSET                                          0x00000714
+#define ISP_ISPYI_STRIDE2_TYPE                                            UInt32
+#define ISP_ISPYI_STRIDE2_RESERVED_MASK                                   0xFFF0000F
+#define    ISP_ISPYI_STRIDE2_UV_STRIDE_SHIFT                              4
+#define    ISP_ISPYI_STRIDE2_UV_STRIDE_MASK                               0x000FFFF0
+
+#define ISP_ISPYI_COL_STRIDE1_OFFSET                                      0x00000718
+#define ISP_ISPYI_COL_STRIDE1_TYPE                                        UInt32
+#define ISP_ISPYI_COL_STRIDE1_RESERVED_MASK                               0xFE0001FF
+#define    ISP_ISPYI_COL_STRIDE1_STRIDE_SHIFT                             9
+#define    ISP_ISPYI_COL_STRIDE1_STRIDE_MASK                              0x01FFFE00
+
+#define ISP_ISPYI_COL_STRIDE2_OFFSET                                      0x0000071C
+#define ISP_ISPYI_COL_STRIDE2_TYPE                                        UInt32
+#define ISP_ISPYI_COL_STRIDE2_RESERVED_MASK                               0xFE0001FF
+#define    ISP_ISPYI_COL_STRIDE2_STRIDE_SHIFT                             9
+#define    ISP_ISPYI_COL_STRIDE2_STRIDE_MASK                              0x01FFFE00
+
+#define ISP_ISPYI_RY_EADDR_OFFSET                                         0x00000720
+#define ISP_ISPYI_RY_EADDR_TYPE                                           UInt32
+#define ISP_ISPYI_RY_EADDR_RESERVED_MASK                                  0x0000001F
+#define    ISP_ISPYI_RY_EADDR_ENDADDR_SHIFT                               5
+#define    ISP_ISPYI_RY_EADDR_ENDADDR_MASK                                0xFFFFFFE0
+
+#define ISP_ISPYI_GU_EADDR_OFFSET                                         0x00000724
+#define ISP_ISPYI_GU_EADDR_TYPE                                           UInt32
+#define ISP_ISPYI_GU_EADDR_RESERVED_MASK                                  0x0000001F
+#define    ISP_ISPYI_GU_EADDR_ENDADDR_SHIFT                               5
+#define    ISP_ISPYI_GU_EADDR_ENDADDR_MASK                                0xFFFFFFE0
+
+#define ISP_ISPYI_BV_EADDR_OFFSET                                         0x00000728
+#define ISP_ISPYI_BV_EADDR_TYPE                                           UInt32
+#define ISP_ISPYI_BV_EADDR_RESERVED_MASK                                  0x0000001F
+#define    ISP_ISPYI_BV_EADDR_ENDADDR_SHIFT                               5
+#define    ISP_ISPYI_BV_EADDR_ENDADDR_MASK                                0xFFFFFFE0
+
+#define ISP_ISPYC_MATRIX_OFFSET                                           0x00000750
+#define ISP_ISPYC_MATRIX_TYPE                                             UInt32
+#define ISP_ISPYC_MATRIX_RESERVED_MASK                                    0x80018001
+#define    ISP_ISPYC_MATRIX_ELEMENT1_SHIFT                                17
+#define    ISP_ISPYC_MATRIX_ELEMENT1_MASK                                 0x7FFE0000
+#define    ISP_ISPYC_MATRIX_ELEMENT0_SHIFT                                1
+#define    ISP_ISPYC_MATRIX_ELEMENT0_MASK                                 0x00007FFE
+
+#define ISP_ISPYC_OFFSET_OFFSET                                           0x00000764
+#define ISP_ISPYC_OFFSET_TYPE                                             UInt32
+#define ISP_ISPYC_OFFSET_RESERVED_MASK                                    0xFFFE0000
+#define    ISP_ISPYC_OFFSET_OFFSET_SHIFT                                  0
+#define    ISP_ISPYC_OFFSET_OFFSET_MASK                                   0x0001FFFF
+
+#define ISP_ISPLR_TSCALEX_OFFSET                                          0x00000B30
+#define ISP_ISPLR_TSCALEX_TYPE                                            UInt32
+#define ISP_ISPLR_TSCALEX_RESERVED_MASK                                   0xFFC0000F
+#define    ISP_ISPLR_TSCALEX_SCALE_SHIFT                                  4
+#define    ISP_ISPLR_TSCALEX_SCALE_MASK                                   0x003FFFF0
+
+#define ISP_ISPLR_TSCALEY_OFFSET                                          0x00000B34
+#define ISP_ISPLR_TSCALEY_TYPE                                            UInt32
+#define ISP_ISPLR_TSCALEY_RESERVED_MASK                                   0xFFC0000F
+#define    ISP_ISPLR_TSCALEY_SCALE_SHIFT                                  4
+#define    ISP_ISPLR_TSCALEY_SCALE_MASK                                   0x003FFFF0
+
+#define ISP_ISPLR_NORM_0_1_OFFSET                                         0x00000B38
+#define ISP_ISPLR_NORM_0_1_TYPE                                           UInt32
+#define ISP_ISPLR_NORM_0_1_RESERVED_MASK                                  0xF000F000
+#define    ISP_ISPLR_NORM_0_1_NORM_Y_SHIFT                                16
+#define    ISP_ISPLR_NORM_0_1_NORM_Y_MASK                                 0x0FFF0000
+#define    ISP_ISPLR_NORM_0_1_NORM_X_SHIFT                                0
+#define    ISP_ISPLR_NORM_0_1_NORM_X_MASK                                 0x00000FFF
+
+#define ISP_ISPLR_NORM_2_3_OFFSET                                         0x00000B3C
+#define ISP_ISPLR_NORM_2_3_TYPE                                           UInt32
+#define ISP_ISPLR_NORM_2_3_RESERVED_MASK                                  0xF000F000
+#define    ISP_ISPLR_NORM_2_3_NORM_Y_SHIFT                                16
+#define    ISP_ISPLR_NORM_2_3_NORM_Y_MASK                                 0x0FFF0000
+#define    ISP_ISPLR_NORM_2_3_NORM_X_SHIFT                                0
+#define    ISP_ISPLR_NORM_2_3_NORM_X_MASK                                 0x00000FFF
+
+#define ISP_ISPLR_SHIFT_OFFSET                                            0x00000B40
+#define ISP_ISPLR_SHIFT_TYPE                                              UInt32
+#define ISP_ISPLR_SHIFT_RESERVED_MASK                                     0xFFFFFEF0
+#define    ISP_ISPLR_SHIFT_RB_SWAP_SHIFT                                  8
+#define    ISP_ISPLR_SHIFT_RB_SWAP_MASK                                   0x00000100
+#define    ISP_ISPLR_SHIFT_SHIFT_SHIFT                                    0
+#define    ISP_ISPLR_SHIFT_SHIFT_MASK                                     0x0000000F
+
+#define ISP_ISPST_FOC_CTRL_OFFSET                                         0x00000B80
+#define ISP_ISPST_FOC_CTRL_TYPE                                           UInt32
+#define ISP_ISPST_FOC_CTRL_RESERVED_MASK                                  0xFFFFFFFE
+#define    ISP_ISPST_FOC_CTRL_R_B_MODE_SHIFT                              0
+#define    ISP_ISPST_FOC_CTRL_R_B_MODE_MASK                               0x00000001
+
+#define ISP_ISPST_FOC_FILTEX_OFFSET                                       0x00000B84
+#define ISP_ISPST_FOC_FILTEX_TYPE                                         UInt32
+#define ISP_ISPST_FOC_FILTEX_RESERVED_MASK                                0xFF00FF00
+#define    ISP_ISPST_FOC_FILTEX_COEFF1_SHIFT                              16
+#define    ISP_ISPST_FOC_FILTEX_COEFF1_MASK                               0x00FF0000
+#define    ISP_ISPST_FOC_FILTEX_COEFF0_SHIFT                              0
+#define    ISP_ISPST_FOC_FILTEX_COEFF0_MASK                               0x000000FF
+
+#define ISP_ISPST_SHIFT_OFFSET                                            0x00000BA0
+#define ISP_ISPST_SHIFT_TYPE                                              UInt32
+#define ISP_ISPST_SHIFT_RESERVED_MASK                                     0xFCFFFFE0
+#define    ISP_ISPST_SHIFT_PIX_SHIFT_SHIFT                                24
+#define    ISP_ISPST_SHIFT_PIX_SHIFT_MASK                                 0x03000000
+#define    ISP_ISPST_SHIFT_SHIFT_SHIFT                                    0
+#define    ISP_ISPST_SHIFT_SHIFT_MASK                                     0x0000001F
+
+#define ISP_ISPST_R_OFF_OFFSET                                            0x00000BA4
+#define ISP_ISPST_R_OFF_TYPE                                              UInt32
+#define ISP_ISPST_R_OFF_RESERVED_MASK                                     0x00010001
+#define    ISP_ISPST_R_OFF_Y_OFFSET_SHIFT                                 17
+#define    ISP_ISPST_R_OFF_Y_OFFSET_MASK                                  0xFFFE0000
+#define    ISP_ISPST_R_OFF_X_OFFSET_SHIFT                                 1
+#define    ISP_ISPST_R_OFF_X_OFFSET_MASK                                  0x0000FFFE
+
+#define ISP_ISPST_R_RECT_OFFSET                                           0x00000C24
+#define ISP_ISPST_R_RECT_TYPE                                             UInt32
+#define ISP_ISPST_R_RECT_RESERVED_MASK                                    0x00010001
+#define    ISP_ISPST_R_RECT_HEIGHT_SHIFT                                  17
+#define    ISP_ISPST_R_RECT_HEIGHT_MASK                                   0xFFFE0000
+#define    ISP_ISPST_R_RECT_WIDTH_SHIFT                                   1
+#define    ISP_ISPST_R_RECT_WIDTH_MASK                                    0x0000FFFE
+
+#define ISP_ISPST_HMASK0_OFFSET                                           0x00000CA4
+#define ISP_ISPST_HMASK0_TYPE                                             UInt32
+#define ISP_ISPST_HMASK0_RESERVED_MASK                                    0xFFFFFFE0
+#define    ISP_ISPST_HMASK0_HIST0_SHIFT                                   0
+#define    ISP_ISPST_HMASK0_HIST0_MASK                                    0x0000001F
+
+#define ISP_ISPST_FOC_FILT_OFFSET                                         0x00000CAC
+#define ISP_ISPST_FOC_FILT_TYPE                                           UInt32
+#define ISP_ISPST_FOC_FILT_RESERVED_MASK                                  0xFF00FF00
+#define    ISP_ISPST_FOC_FILT_COEFF1_SHIFT                                16
+#define    ISP_ISPST_FOC_FILT_COEFF1_MASK                                 0x00FF0000
+#define    ISP_ISPST_FOC_FILT_COEFF0_SHIFT                                0
+#define    ISP_ISPST_FOC_FILT_COEFF0_MASK                                 0x000000FF
+
+#define ISP_ISPST_FILT_GAINS_OFFSET                                       0x00000CD0
+#define ISP_ISPST_FILT_GAINS_TYPE                                         UInt32
+#define ISP_ISPST_FILT_GAINS_RESERVED_MASK                                0xFF00FF00
+#define    ISP_ISPST_FILT_GAINS_GAIN1_SHIFT                               16
+#define    ISP_ISPST_FILT_GAINS_GAIN1_MASK                                0x00FF0000
+#define    ISP_ISPST_FILT_GAINS_GAIN0_SHIFT                               0
+#define    ISP_ISPST_FILT_GAINS_GAIN0_MASK                                0x000000FF
+
+#define ISP_ISPST_FILT_TH_OFFSET                                          0x00000CD4
+#define ISP_ISPST_FILT_TH_TYPE                                            UInt32
+#define ISP_ISPST_FILT_TH_RESERVED_MASK                                   0xFFFF0000
+#define    ISP_ISPST_FILT_TH_THRESHOLD_SHIFT                              0
+#define    ISP_ISPST_FILT_TH_THRESHOLD_MASK                               0x0000FFFF
+
+#define ISP_ISPST_R_TH_OFFSET                                             0x00000CE0
+#define ISP_ISPST_R_TH_TYPE                                               UInt32
+#define ISP_ISPST_R_TH_RESERVED_MASK                                      0x00000000
+#define    ISP_ISPST_R_TH_HI_SHIFT                                        16
+#define    ISP_ISPST_R_TH_HI_MASK                                         0xFFFF0000
+#define    ISP_ISPST_R_TH_LO_SHIFT                                        0
+#define    ISP_ISPST_R_TH_LO_MASK                                         0x0000FFFF
+
+#define ISP_ISPST_G_TH_OFFSET                                             0x00000CEC
+#define ISP_ISPST_G_TH_TYPE                                               UInt32
+#define ISP_ISPST_G_TH_RESERVED_MASK                                      0x00000000
+#define    ISP_ISPST_G_TH_HI_SHIFT                                        16
+#define    ISP_ISPST_G_TH_HI_MASK                                         0xFFFF0000
+#define    ISP_ISPST_G_TH_LO_SHIFT                                        0
+#define    ISP_ISPST_G_TH_LO_MASK                                         0x0000FFFF
+
+#define ISP_ISPST_B_TH_OFFSET                                             0x00000CF8
+#define ISP_ISPST_B_TH_TYPE                                               UInt32
+#define ISP_ISPST_B_TH_RESERVED_MASK                                      0x00000000
+#define    ISP_ISPST_B_TH_HI_SHIFT                                        16
+#define    ISP_ISPST_B_TH_HI_MASK                                         0xFFFF0000
+#define    ISP_ISPST_B_TH_LO_SHIFT                                        0
+#define    ISP_ISPST_B_TH_LO_MASK                                         0x0000FFFF
+
+#define ISP_ISPST_R_G_TH_OFFSET                                           0x00000D04
+#define ISP_ISPST_R_G_TH_TYPE                                             UInt32
+#define ISP_ISPST_R_G_TH_RESERVED_MASK                                    0x00000000
+#define    ISP_ISPST_R_G_TH_HI_SHIFT                                      16
+#define    ISP_ISPST_R_G_TH_HI_MASK                                       0xFFFF0000
+#define    ISP_ISPST_R_G_TH_LO_SHIFT                                      0
+#define    ISP_ISPST_R_G_TH_LO_MASK                                       0x0000FFFF
+
+#define ISP_ISPST_B_G_TH_OFFSET                                           0x00000D10
+#define ISP_ISPST_B_G_TH_TYPE                                             UInt32
+#define ISP_ISPST_B_G_TH_RESERVED_MASK                                    0x00000000
+#define    ISP_ISPST_B_G_TH_HI_SHIFT                                      16
+#define    ISP_ISPST_B_G_TH_HI_MASK                                       0xFFFF0000
+#define    ISP_ISPST_B_G_TH_LO_SHIFT                                      0
+#define    ISP_ISPST_B_G_TH_LO_MASK                                       0x0000FFFF
+
+#define ISP_ISPST_GROUP_0_X_OFFSET                                        0x00000D1C
+#define ISP_ISPST_GROUP_0_X_TYPE                                          UInt32
+#define ISP_ISPST_GROUP_0_X_RESERVED_MASK                                 0x00010001
+#define    ISP_ISPST_GROUP_0_X_X1_SHIFT                                   17
+#define    ISP_ISPST_GROUP_0_X_X1_MASK                                    0xFFFE0000
+#define    ISP_ISPST_GROUP_0_X_X0_SHIFT                                   1
+#define    ISP_ISPST_GROUP_0_X_X0_MASK                                    0x0000FFFE
+
+#define ISP_ISPST_GROUP_0_Y_OFFSET                                        0x00000D40
+#define ISP_ISPST_GROUP_0_Y_TYPE                                          UInt32
+#define ISP_ISPST_GROUP_0_Y_RESERVED_MASK                                 0x00010001
+#define    ISP_ISPST_GROUP_0_Y_Y1_SHIFT                                   17
+#define    ISP_ISPST_GROUP_0_Y_Y1_MASK                                    0xFFFE0000
+#define    ISP_ISPST_GROUP_0_Y_Y0_SHIFT                                   1
+#define    ISP_ISPST_GROUP_0_Y_Y0_MASK                                    0x0000FFFE
+
+#define ISP_ISPST_GRP0_CTRL_OFFSET                                        0x00000D64
+#define ISP_ISPST_GRP0_CTRL_TYPE                                          UInt32
+#define ISP_ISPST_GRP0_CTRL_RESERVED_MASK                                 0xFFFFFFC0
+#define    ISP_ISPST_GRP0_CTRL_PITCH_SHIFT                                0
+#define    ISP_ISPST_GRP0_CTRL_PITCH_MASK                                 0x0000003F
+
+#define ISP_ISPLO_CTRL_OFFSET                                             0x00000DC0
+#define ISP_ISPLO_CTRL_TYPE                                               UInt32
+#define ISP_ISPLO_CTRL_RESERVED_MASK                                      0xFCE1A0FF
+#define    ISP_ISPLO_CTRL_COL_WIDTH_SHIFT                                 24
+#define    ISP_ISPLO_CTRL_COL_WIDTH_MASK                                  0x03000000
+#define    ISP_ISPLO_CTRL_SHIFT_SHIFT                                     17
+#define    ISP_ISPLO_CTRL_SHIFT_MASK                                      0x001E0000
+#define    ISP_ISPLO_CTRL_VFLIP_SHIFT                                     14
+#define    ISP_ISPLO_CTRL_VFLIP_MASK                                      0x00004000
+#define    ISP_ISPLO_CTRL_COL_MODE_SHIFT                                  12
+#define    ISP_ISPLO_CTRL_COL_MODE_MASK                                   0x00001000
+#define    ISP_ISPLO_CTRL_DATA_FORMAT_SHIFT                               9
+#define    ISP_ISPLO_CTRL_DATA_FORMAT_MASK                                0x00000E00
+#define    ISP_ISPLO_CTRL_OUTPUT_WIDTH_SHIFT                              8
+#define    ISP_ISPLO_CTRL_OUTPUT_WIDTH_MASK                               0x00000100
+
+#define ISP_ISPLO_COL_STRIDE1_OFFSET                                      0x00000DC4
+#define ISP_ISPLO_COL_STRIDE1_TYPE                                        UInt32
+#define ISP_ISPLO_COL_STRIDE1_RESERVED_MASK                               0xFE0001FF
+#define    ISP_ISPLO_COL_STRIDE1_STRIDE_SHIFT                             9
+#define    ISP_ISPLO_COL_STRIDE1_STRIDE_MASK                              0x01FFFE00
+
+#define ISP_ISPLO_COL_STRIDE2_OFFSET                                      0x00000DC8
+#define ISP_ISPLO_COL_STRIDE2_TYPE                                        UInt32
+#define ISP_ISPLO_COL_STRIDE2_RESERVED_MASK                               0xFE0001FF
+#define    ISP_ISPLO_COL_STRIDE2_STRIDE_SHIFT                             9
+#define    ISP_ISPLO_COL_STRIDE2_STRIDE_MASK                              0x01FFFE00
+
+#define ISP_ISPLO_ADDRESS1_OFFSET                                         0x00000DCC
+#define ISP_ISPLO_ADDRESS1_TYPE                                           UInt32
+#define ISP_ISPLO_ADDRESS1_RESERVED_MASK                                  0x0000001F
+#define    ISP_ISPLO_ADDRESS1_ADDRESS_SHIFT                               5
+#define    ISP_ISPLO_ADDRESS1_ADDRESS_MASK                                0xFFFFFFE0
+
+#define ISP_ISPLO_ADDRESS2_OFFSET                                         0x00000DD0
+#define ISP_ISPLO_ADDRESS2_TYPE                                           UInt32
+#define ISP_ISPLO_ADDRESS2_RESERVED_MASK                                  0x0000001F
+#define    ISP_ISPLO_ADDRESS2_ADDRESS_SHIFT                               5
+#define    ISP_ISPLO_ADDRESS2_ADDRESS_MASK                                0xFFFFFFE0
+
+#define ISP_ISPLO_ADDRESS3_OFFSET                                         0x00000DD4
+#define ISP_ISPLO_ADDRESS3_TYPE                                           UInt32
+#define ISP_ISPLO_ADDRESS3_RESERVED_MASK                                  0x0000001F
+#define    ISP_ISPLO_ADDRESS3_ADDRESS_SHIFT                               5
+#define    ISP_ISPLO_ADDRESS3_ADDRESS_MASK                                0xFFFFFFE0
+
+#define ISP_ISPLO_STRIDE1_OFFSET                                          0x00000DD8
+#define ISP_ISPLO_STRIDE1_TYPE                                            UInt32
+#define ISP_ISPLO_STRIDE1_RESERVED_MASK                                   0xFFE0001F
+#define    ISP_ISPLO_STRIDE1_STRIDE_SHIFT                                 5
+#define    ISP_ISPLO_STRIDE1_STRIDE_MASK                                  0x001FFFE0
+
+#define ISP_ISPLO_STRIDE2_OFFSET                                          0x00000DDC
+#define ISP_ISPLO_STRIDE2_TYPE                                            UInt32
+#define ISP_ISPLO_STRIDE2_RESERVED_MASK                                   0xFFE0000F
+#define    ISP_ISPLO_STRIDE2_STRIDE_SHIFT                                 4
+#define    ISP_ISPLO_STRIDE2_STRIDE_MASK                                  0x001FFFF0
+
+#define ISP_ISPLS_CV_OFFSET                                               0x00001000
+#define ISP_ISPLS_CV_TYPE                                                 UInt64
+#define ISP_ISPLS_CV_RESERVED_MASK                                        0xF000F000F000F
+#define    ISP_ISPLS_CV_GB_SHIFT                                          52
+#define    ISP_ISPLS_CV_GB_MASK                                           0xFFF0000000000000
+#define    ISP_ISPLS_CV_B_SHIFT                                           36
+#define    ISP_ISPLS_CV_B_MASK                                            0xFFF000000000
+#define    ISP_ISPLS_CV_GR_SHIFT                                          20
+#define    ISP_ISPLS_CV_GR_MASK                                           0xFFF00000
+#define    ISP_ISPLS_CV_R_SHIFT                                           4
+#define    ISP_ISPLS_CV_R_MASK                                            0x0000FFF0
+
+#define ISP_ISPGM_SLOPE_R_OFFSET                                          0x00003400
+#define ISP_ISPGM_SLOPE_R_TYPE                                            UInt32
+#define ISP_ISPGM_SLOPE_R_RESERVED_MASK                                   0xFFFE0000
+#define    ISP_ISPGM_SLOPE_R_SLOPE_SHIFT                                  0
+#define    ISP_ISPGM_SLOPE_R_SLOPE_MASK                                   0x0001FFFF
+
+#define ISP_ISPGM_SLOPE_G_OFFSET                                          0x00003440
+#define ISP_ISPGM_SLOPE_G_TYPE                                            UInt32
+#define ISP_ISPGM_SLOPE_G_RESERVED_MASK                                   0xFFFE0000
+#define    ISP_ISPGM_SLOPE_G_SLOPE_SHIFT                                  0
+#define    ISP_ISPGM_SLOPE_G_SLOPE_MASK                                   0x0001FFFF
+
+#define ISP_ISPGM_SLOPE_B_OFFSET                                          0x00003480
+#define ISP_ISPGM_SLOPE_B_TYPE                                            UInt32
+#define ISP_ISPGM_SLOPE_B_RESERVED_MASK                                   0xFFFE0000
+#define    ISP_ISPGM_SLOPE_B_SLOPE_SHIFT                                  0
+#define    ISP_ISPGM_SLOPE_B_SLOPE_MASK                                   0x0001FFFF
+
+#define ISP_ISPGD_CV_OFFSET                                               0x00004000
+#define ISP_ISPGD_CV_TYPE                                                 UInt32
+#define ISP_ISPGD_CV_RESERVED_MASK                                        0x00000000
+#define    ISP_ISPGD_CV_Y_SHIFT                                           16
+#define    ISP_ISPGD_CV_Y_MASK                                            0xFFFF0000
+#define    ISP_ISPGD_CV_X_SHIFT                                           0
+#define    ISP_ISPGD_CV_X_MASK                                            0x0000FFFF
+
+#endif /* __BRCM_RDB_ISP_H__ */
+
+
