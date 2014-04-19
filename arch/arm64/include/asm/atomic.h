@@ -4,6 +4,7 @@
  * Copyright (C) 1996 Russell King.
  * Copyright (C) 2002 Deep Blue Solutions Ltd.
  * Copyright (C) 2012 ARM Ltd.
+ * Copyright (C) 2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -37,6 +38,7 @@
  */
 #define atomic_read(v)	(*(volatile int *)&(v)->counter)
 #define atomic_set(v,i)	(((v)->counter) = (i))
+#define cpu_relaxed_read_atomic(v)	ldax32((volatile int *)&(v->counter))
 
 /*
  * AArch64 UP and SMP safe atomic ops.  We use load exclusive and
