@@ -1925,19 +1925,20 @@ static int bma2xx_allow_wake(struct bma2xx_data *bma, bool allow)
 	return rc;
 }
 
+#define attr_to_bma2xx(dev) \
+	((struct bma2xx_data *)input_get_drvdata(to_input_dev(dev)))
+
 static ssize_t bma2xx_register_store(struct device *dev,
 				     struct device_attribute *attr,
 				     const char *buf, size_t count)
 {
 	int address, value;
-	struct i2c_client *client = to_i2c_client(dev);
-	struct bma2xx_data *bma2xx = i2c_get_clientdata(client);
+	struct i2c_client *client = attr_to_bma2xx(dev)->bma2xx_client;
 
 	sscanf(buf, "%d%d", &address, &value);
 
-	if (bma2xx_write_reg
-	    (bma2xx->bma2xx_client, (unsigned char)address,
-	     (unsigned char *)&value) < 0)
+	if (bma2xx_write_reg(client, (unsigned char)address,
+			(unsigned char *)&value) < 0)
 		return -EINVAL;
 
 	return count;
@@ -1945,16 +1946,14 @@ static ssize_t bma2xx_register_store(struct device *dev,
 static ssize_t bma2xx_register_show(struct device *dev,
 				    struct device_attribute *attr, char *buf)
 {
-
-	struct i2c_client *client = to_i2c_client(dev);
-	struct bma2xx_data *bma2xx = i2c_get_clientdata(client);
+	struct i2c_client *client = attr_to_bma2xx(dev)->bma2xx_client;
 
 	size_t count = 0;
 	u8 reg[0x40];
 	int i;
 
 	for (i = 0; i < sizeof(reg); i++) {
-		bma2xx_smbus_read_byte(bma2xx->bma2xx_client, i, reg + i);
+		bma2xx_smbus_read_byte(client, i, reg + i);
 
 		count += sprintf(&buf[count], "0x%x: %d\n", i, reg[i]);
 	}
@@ -1965,10 +1964,9 @@ static ssize_t bma2xx_range_show(struct device *dev,
 				 struct device_attribute *attr, char *buf)
 {
 	unsigned char data;
-	struct i2c_client *client = to_i2c_client(dev);
-	struct bma2xx_data *bma2xx = i2c_get_clientdata(client);
+	struct i2c_client *client = attr_to_bma2xx(dev)->bma2xx_client;
 
-	if (bma2xx_get_range(bma2xx->bma2xx_client, &data) < 0)
+	if (bma2xx_get_range(client, &data) < 0)
 		return sprintf(buf, "Read error\n");
 
 	return sprintf(buf, "%d\n", data);
@@ -1980,13 +1978,12 @@ static ssize_t bma2xx_range_store(struct device *dev,
 {
 	unsigned long data;
 	int error;
-	struct i2c_client *client = to_i2c_client(dev);
-	struct bma2xx_data *bma2xx = i2c_get_clientdata(client);
+	struct i2c_client *client = attr_to_bma2xx(dev)->bma2xx_client;
 
 	error = kstrtoul(buf, 10, &data);
 	if (error)
 		return error;
-	if (bma2xx_set_range(bma2xx->bma2xx_client, (unsigned char)data) < 0)
+	if (bma2xx_set_range(client, (unsigned char)data) < 0)
 		return -EINVAL;
 
 	return count;
@@ -1996,10 +1993,9 @@ static ssize_t bma2xx_bandwidth_show(struct device *dev,
 				     struct device_attribute *attr, char *buf)
 {
 	unsigned char data;
-	struct i2c_client *client = to_i2c_client(dev);
-	struct bma2xx_data *bma2xx = i2c_get_clientdata(client);
+	struct i2c_client *client = attr_to_bma2xx(dev)->bma2xx_client;
 
-	if (bma2xx_get_bandwidth(bma2xx->bma2xx_client, &data) < 0)
+	if (bma2xx_get_bandwidth(client, &data) < 0)
 		return sprintf(buf, "Read error\n");
 
 	return sprintf(buf, "%d\n", data);
@@ -2012,14 +2008,12 @@ static ssize_t bma2xx_bandwidth_store(struct device *dev,
 {
 	unsigned long data;
 	int error;
-	struct i2c_client *client = to_i2c_client(dev);
-	struct bma2xx_data *bma2xx = i2c_get_clientdata(client);
+	struct i2c_client *client = attr_to_bma2xx(dev)->bma2xx_client;
 
 	error = kstrtoul(buf, 10, &data);
 	if (error)
 		return error;
-	if (bma2xx_set_bandwidth(bma2xx->bma2xx_client,
-				 (unsigned char)data) < 0)
+	if (bma2xx_set_bandwidth(client, (unsigned char)data) < 0)
 		return -EINVAL;
 
 	return count;
@@ -2029,10 +2023,9 @@ static ssize_t bma2xx_mode_show(struct device *dev,
 				struct device_attribute *attr, char *buf)
 {
 	unsigned char data;
-	struct i2c_client *client = to_i2c_client(dev);
-	struct bma2xx_data *bma2xx = i2c_get_clientdata(client);
+	struct i2c_client *client = attr_to_bma2xx(dev)->bma2xx_client;
 
-	if (bma2xx_get_mode(bma2xx->bma2xx_client, &data) < 0)
+	if (bma2xx_get_mode(client, &data) < 0)
 		return sprintf(buf, "Read error\n");
 
 	return sprintf(buf, "%d\n", data);
@@ -2044,13 +2037,12 @@ static ssize_t bma2xx_mode_store(struct device *dev,
 {
 	unsigned long data;
 	int error;
-	struct i2c_client *client = to_i2c_client(dev);
-	struct bma2xx_data *bma2xx = i2c_get_clientdata(client);
+	struct i2c_client *client = attr_to_bma2xx(dev)->bma2xx_client;
 
 	error = kstrtoul(buf, 10, &data);
 	if (error)
 		return error;
-	if (bma2xx_set_mode(bma2xx->bma2xx_client, (unsigned char)data) < 0)
+	if (bma2xx_set_mode(client, (unsigned char)data) < 0)
 		return -EINVAL;
 
 	return count;
@@ -2074,8 +2066,7 @@ static ssize_t bma2xx_value_show(struct device *dev,
 static ssize_t bma2xx_delay_show(struct device *dev,
 				 struct device_attribute *attr, char *buf)
 {
-	struct i2c_client *client = to_i2c_client(dev);
-	struct bma2xx_data *bma2xx = i2c_get_clientdata(client);
+	struct bma2xx_data *bma2xx = attr_to_bma2xx(dev);
 
 	return sprintf(buf, "%d\n", atomic_read(&bma2xx->delay));
 
@@ -2087,8 +2078,7 @@ static ssize_t bma2xx_delay_store(struct device *dev,
 {
 	unsigned long data;
 	int error;
-	struct i2c_client *client = to_i2c_client(dev);
-	struct bma2xx_data *bma2xx = i2c_get_clientdata(client);
+	struct bma2xx_data *bma2xx = attr_to_bma2xx(dev);
 
 	error = kstrtoul(buf, 10, &data);
 	if (error)
@@ -2103,8 +2093,8 @@ static ssize_t bma2xx_delay_store(struct device *dev,
 static ssize_t bma2xx_enable_show(struct device *dev,
 				  struct device_attribute *attr, char *buf)
 {
-	struct i2c_client *client = to_i2c_client(dev);
-	struct bma2xx_data *bma2xx = i2c_get_clientdata(client);
+
+	struct bma2xx_data *bma2xx = attr_to_bma2xx(dev);
 
 	return sprintf(buf, "0x%x\n", bma2xx->enable);
 
@@ -2118,8 +2108,7 @@ static ssize_t bma2xx_enable_show(struct device *dev,
  */
 static int bma2xx_set_enable(struct device *dev, int enable)
 {
-	struct i2c_client *client = to_i2c_client(dev);
-	struct bma2xx_data *bma2xx = i2c_get_clientdata(client);
+	struct bma2xx_data *bma2xx = attr_to_bma2xx(dev);
 	int rc;
 
 	mutex_lock(&bma2xx->enable_mutex);
@@ -2185,8 +2174,7 @@ static ssize_t bma2xx_fflush_store(struct device *dev,
 				   struct device_attribute *attr,
 				   const char *buf, size_t count)
 {
-	struct i2c_client *client = to_i2c_client(dev);
-	struct bma2xx_data *bma2xx = i2c_get_clientdata(client);
+	struct bma2xx_data *bma2xx = attr_to_bma2xx(dev);
 	unsigned long data;
 	int error;
 
@@ -2207,8 +2195,7 @@ static ssize_t bma2xx_enable_int_store(struct device *dev,
 				       const char *buf, size_t count)
 {
 	int type, value;
-	struct i2c_client *client = to_i2c_client(dev);
-	struct bma2xx_data *bma2xx = i2c_get_clientdata(client);
+	struct bma2xx_data *bma2xx = attr_to_bma2xx(dev);
 	int rc;
 
 	rc = sscanf(buf, "%d%d", &type, &value);
@@ -2217,7 +2204,8 @@ static ssize_t bma2xx_enable_int_store(struct device *dev,
 		rc = bma2xx_enable_func_locked(bma2xx, type, value);
 		mutex_unlock(&bma2xx->enable_mutex);
 	} else {
-		dev_err(&client->dev, "%s Invalid argument\n", __func__);
+		dev_err(&bma2xx->bma2xx_client->dev, "%s Invalid argument\n",
+				__func__);
 		rc = -EINVAL;
 	}
 	return rc ? rc : count;
@@ -2227,10 +2215,9 @@ static ssize_t bma2xx_int_mode_show(struct device *dev,
 				    struct device_attribute *attr, char *buf)
 {
 	unsigned char data;
-	struct i2c_client *client = to_i2c_client(dev);
-	struct bma2xx_data *bma2xx = i2c_get_clientdata(client);
+	struct i2c_client *client = attr_to_bma2xx(dev)->bma2xx_client;
 
-	if (bma2xx_get_Int_Mode(bma2xx->bma2xx_client, &data) < 0)
+	if (bma2xx_get_Int_Mode(client, &data) < 0)
 		return sprintf(buf, "Read error\n");
 
 	return sprintf(buf, "%d\n", data);
@@ -2241,12 +2228,11 @@ static ssize_t bma2xx_int_mode_store(struct device *dev,
 				     const char *buf, size_t count)
 {
 	unsigned long data;
-	struct i2c_client *client = to_i2c_client(dev);
-	struct bma2xx_data *bma2xx = i2c_get_clientdata(client);
+	struct i2c_client *client = attr_to_bma2xx(dev)->bma2xx_client;
 
 	data = kstrtoul(buf, 10, NULL);
 
-	if (bma2xx_set_Int_Mode(bma2xx->bma2xx_client, data) < 0)
+	if (bma2xx_set_Int_Mode(client, data) < 0)
 		return -EINVAL;
 
 	return count;
@@ -2256,10 +2242,9 @@ static ssize_t bma2xx_slope_duration_show(struct device *dev,
 					  char *buf)
 {
 	unsigned char data;
-	struct i2c_client *client = to_i2c_client(dev);
-	struct bma2xx_data *bma2xx = i2c_get_clientdata(client);
+	struct i2c_client *client = attr_to_bma2xx(dev)->bma2xx_client;
 
-	if (bma2xx_get_slope_duration(bma2xx->bma2xx_client, &data) < 0)
+	if (bma2xx_get_slope_duration(client, &data) < 0)
 		return sprintf(buf, "Read error\n");
 
 	return sprintf(buf, "%d\n", data);
@@ -2272,15 +2257,13 @@ static ssize_t bma2xx_slope_duration_store(struct device *dev,
 {
 	unsigned long data;
 	int error;
-	struct i2c_client *client = to_i2c_client(dev);
-	struct bma2xx_data *bma2xx = i2c_get_clientdata(client);
+	struct i2c_client *client = attr_to_bma2xx(dev)->bma2xx_client;
 
 	error = kstrtoul(buf, 10, &data);
 	if (error)
 		return error;
 
-	if (bma2xx_set_slope_duration
-	    (bma2xx->bma2xx_client, (unsigned char)data) < 0)
+	if (bma2xx_set_slope_duration(client, (unsigned char)data) < 0)
 		return -EINVAL;
 
 	return count;
@@ -2291,10 +2274,9 @@ static ssize_t bma2xx_slope_threshold_show(struct device *dev,
 					   char *buf)
 {
 	unsigned char data;
-	struct i2c_client *client = to_i2c_client(dev);
-	struct bma2xx_data *bma2xx = i2c_get_clientdata(client);
+	struct i2c_client *client = attr_to_bma2xx(dev)->bma2xx_client;
 
-	if (bma2xx_get_slope_threshold(bma2xx->bma2xx_client, &data) < 0)
+	if (bma2xx_get_slope_threshold(client, &data) < 0)
 		return sprintf(buf, "Read error\n");
 
 	return sprintf(buf, "%d\n", data);
@@ -2307,22 +2289,16 @@ static ssize_t bma2xx_slope_threshold_store(struct device *dev,
 {
 	unsigned long data;
 	int error;
-	struct i2c_client *client = to_i2c_client(dev);
-	struct bma2xx_data *bma2xx = i2c_get_clientdata(client);
+	struct i2c_client *client = attr_to_bma2xx(dev)->bma2xx_client;
 
 	error = kstrtoul(buf, 10, &data);
 	if (error)
 		return error;
-	if (bma2xx_set_slope_threshold
-	    (bma2xx->bma2xx_client, (unsigned char)data) < 0)
+	if (bma2xx_set_slope_threshold(client, (unsigned char)data) < 0)
 		return -EINVAL;
 
 	return count;
 }
-
-
-#define attr_to_bma2xx(dev) \
-	((struct bma2xx_data *)input_get_drvdata(to_input_dev(dev)))
 
 static ssize_t bma2xx_nomot_duration_show(struct device *dev,
 					  struct device_attribute *attr,
@@ -2406,10 +2382,9 @@ static ssize_t bma2xx_high_g_duration_show(struct device *dev,
 					   char *buf)
 {
 	unsigned char data;
-	struct i2c_client *client = to_i2c_client(dev);
-	struct bma2xx_data *bma2xx = i2c_get_clientdata(client);
+	struct i2c_client *client = attr_to_bma2xx(dev)->bma2xx_client;
 
-	if (bma2xx_get_high_g_duration(bma2xx->bma2xx_client, &data) < 0)
+	if (bma2xx_get_high_g_duration(client, &data) < 0)
 		return sprintf(buf, "Read error\n");
 
 	return sprintf(buf, "%d\n", data);
@@ -2422,15 +2397,12 @@ static ssize_t bma2xx_high_g_duration_store(struct device *dev,
 {
 	unsigned long data;
 	int error;
-	struct i2c_client *client = to_i2c_client(dev);
-	struct bma2xx_data *bma2xx = i2c_get_clientdata(client);
-
+	struct i2c_client *client = attr_to_bma2xx(dev)->bma2xx_client;
 	error = kstrtoul(buf, 10, &data);
 	if (error)
 		return error;
 
-	if (bma2xx_set_high_g_duration
-	    (bma2xx->bma2xx_client, (unsigned char)data) < 0)
+	if (bma2xx_set_high_g_duration(client, (unsigned char)data) < 0)
 		return -EINVAL;
 
 	return count;
@@ -2441,10 +2413,9 @@ static ssize_t bma2xx_high_g_threshold_show(struct device *dev,
 					    char *buf)
 {
 	unsigned char data;
-	struct i2c_client *client = to_i2c_client(dev);
-	struct bma2xx_data *bma2xx = i2c_get_clientdata(client);
+	struct i2c_client *client = attr_to_bma2xx(dev)->bma2xx_client;
 
-	if (bma2xx_get_high_g_threshold(bma2xx->bma2xx_client, &data) < 0)
+	if (bma2xx_get_high_g_threshold(client, &data) < 0)
 		return sprintf(buf, "Read error\n");
 
 	return sprintf(buf, "%d\n", data);
@@ -2457,14 +2428,12 @@ static ssize_t bma2xx_high_g_threshold_store(struct device *dev,
 {
 	unsigned long data;
 	int error;
-	struct i2c_client *client = to_i2c_client(dev);
-	struct bma2xx_data *bma2xx = i2c_get_clientdata(client);
+	struct i2c_client *client = attr_to_bma2xx(dev)->bma2xx_client;
 
 	error = kstrtoul(buf, 10, &data);
 	if (error)
 		return error;
-	if (bma2xx_set_high_g_threshold
-	    (bma2xx->bma2xx_client, (unsigned char)data) < 0)
+	if (bma2xx_set_high_g_threshold(client, (unsigned char)data) < 0)
 		return -EINVAL;
 
 	return count;
@@ -2475,10 +2444,9 @@ static ssize_t bma2xx_low_g_duration_show(struct device *dev,
 					  char *buf)
 {
 	unsigned char data;
-	struct i2c_client *client = to_i2c_client(dev);
-	struct bma2xx_data *bma2xx = i2c_get_clientdata(client);
+	struct i2c_client *client = attr_to_bma2xx(dev)->bma2xx_client;
 
-	if (bma2xx_get_low_g_duration(bma2xx->bma2xx_client, &data) < 0)
+	if (bma2xx_get_low_g_duration(client, &data) < 0)
 		return sprintf(buf, "Read error\n");
 
 	return sprintf(buf, "%d\n", data);
@@ -2491,15 +2459,13 @@ static ssize_t bma2xx_low_g_duration_store(struct device *dev,
 {
 	unsigned long data;
 	int error;
-	struct i2c_client *client = to_i2c_client(dev);
-	struct bma2xx_data *bma2xx = i2c_get_clientdata(client);
+	struct i2c_client *client = attr_to_bma2xx(dev)->bma2xx_client;
 
 	error = kstrtoul(buf, 10, &data);
 	if (error)
 		return error;
 
-	if (bma2xx_set_low_g_duration
-	    (bma2xx->bma2xx_client, (unsigned char)data) < 0)
+	if (bma2xx_set_low_g_duration(client, (unsigned char)data) < 0)
 		return -EINVAL;
 
 	return count;
@@ -2510,10 +2476,9 @@ static ssize_t bma2xx_low_g_threshold_show(struct device *dev,
 					   char *buf)
 {
 	unsigned char data;
-	struct i2c_client *client = to_i2c_client(dev);
-	struct bma2xx_data *bma2xx = i2c_get_clientdata(client);
+	struct i2c_client *client = attr_to_bma2xx(dev)->bma2xx_client;
 
-	if (bma2xx_get_low_g_threshold(bma2xx->bma2xx_client, &data) < 0)
+	if (bma2xx_get_low_g_threshold(client, &data) < 0)
 		return sprintf(buf, "Read error\n");
 
 	return sprintf(buf, "%d\n", data);
@@ -2526,14 +2491,12 @@ static ssize_t bma2xx_low_g_threshold_store(struct device *dev,
 {
 	unsigned long data;
 	int error;
-	struct i2c_client *client = to_i2c_client(dev);
-	struct bma2xx_data *bma2xx = i2c_get_clientdata(client);
+	struct i2c_client *client = attr_to_bma2xx(dev)->bma2xx_client;
 
 	error = kstrtoul(buf, 10, &data);
 	if (error)
 		return error;
-	if (bma2xx_set_low_g_threshold
-	    (bma2xx->bma2xx_client, (unsigned char)data) < 0)
+	if (bma2xx_set_low_g_threshold(client, (unsigned char)data) < 0)
 		return -EINVAL;
 
 	return count;
@@ -2543,10 +2506,9 @@ static ssize_t bma2xx_tap_threshold_show(struct device *dev,
 					 char *buf)
 {
 	unsigned char data;
-	struct i2c_client *client = to_i2c_client(dev);
-	struct bma2xx_data *bma2xx = i2c_get_clientdata(client);
+	struct i2c_client *client = attr_to_bma2xx(dev)->bma2xx_client;
 
-	if (bma2xx_get_tap_threshold(bma2xx->bma2xx_client, &data) < 0)
+	if (bma2xx_get_tap_threshold(client, &data) < 0)
 		return sprintf(buf, "Read error\n");
 
 	return sprintf(buf, "%d\n", data);
@@ -2559,13 +2521,12 @@ static ssize_t bma2xx_tap_threshold_store(struct device *dev,
 {
 	unsigned long data;
 	int error;
-	struct i2c_client *client = to_i2c_client(dev);
-	struct bma2xx_data *bma2xx = i2c_get_clientdata(client);
+	struct i2c_client *client = attr_to_bma2xx(dev)->bma2xx_client;
 
 	error = kstrtoul(buf, 10, &data);
 	if (error)
 		return error;
-	if (bma2xx_set_tap_threshold(bma2xx->bma2xx_client, (unsigned char)data)
+	if (bma2xx_set_tap_threshold(client, (unsigned char)data)
 	    < 0)
 		return -EINVAL;
 
@@ -2576,10 +2537,9 @@ static ssize_t bma2xx_tap_duration_show(struct device *dev,
 					char *buf)
 {
 	unsigned char data;
-	struct i2c_client *client = to_i2c_client(dev);
-	struct bma2xx_data *bma2xx = i2c_get_clientdata(client);
+	struct i2c_client *client = attr_to_bma2xx(dev)->bma2xx_client;
 
-	if (bma2xx_get_tap_duration(bma2xx->bma2xx_client, &data) < 0)
+	if (bma2xx_get_tap_duration(client, &data) < 0)
 		return sprintf(buf, "Read error\n");
 
 	return sprintf(buf, "%d\n", data);
@@ -2592,14 +2552,13 @@ static ssize_t bma2xx_tap_duration_store(struct device *dev,
 {
 	unsigned long data;
 	int error;
-	struct i2c_client *client = to_i2c_client(dev);
-	struct bma2xx_data *bma2xx = i2c_get_clientdata(client);
+	struct i2c_client *client = attr_to_bma2xx(dev)->bma2xx_client;
 
 	error = kstrtoul(buf, 10, &data);
 	if (error)
 		return error;
 
-	if (bma2xx_set_tap_duration(bma2xx->bma2xx_client, (unsigned char)data)
+	if (bma2xx_set_tap_duration(client, (unsigned char)data)
 	    < 0)
 		return -EINVAL;
 
@@ -2609,10 +2568,9 @@ static ssize_t bma2xx_tap_quiet_show(struct device *dev,
 				     struct device_attribute *attr, char *buf)
 {
 	unsigned char data;
-	struct i2c_client *client = to_i2c_client(dev);
-	struct bma2xx_data *bma2xx = i2c_get_clientdata(client);
+	struct i2c_client *client = attr_to_bma2xx(dev)->bma2xx_client;
 
-	if (bma2xx_get_tap_quiet(bma2xx->bma2xx_client, &data) < 0)
+	if (bma2xx_get_tap_quiet(client, &data) < 0)
 		return sprintf(buf, "Read error\n");
 
 	return sprintf(buf, "%d\n", data);
@@ -2625,15 +2583,13 @@ static ssize_t bma2xx_tap_quiet_store(struct device *dev,
 {
 	unsigned long data;
 	int error;
-	struct i2c_client *client = to_i2c_client(dev);
-	struct bma2xx_data *bma2xx = i2c_get_clientdata(client);
+	struct i2c_client *client = attr_to_bma2xx(dev)->bma2xx_client;
 
 	error = kstrtoul(buf, 10, &data);
 	if (error)
 		return error;
 
-	if (bma2xx_set_tap_quiet(bma2xx->bma2xx_client, (unsigned char)data) <
-	    0)
+	if (bma2xx_set_tap_quiet(client, (unsigned char)data) < 0)
 		return -EINVAL;
 
 	return count;
@@ -2643,10 +2599,9 @@ static ssize_t bma2xx_tap_shock_show(struct device *dev,
 				     struct device_attribute *attr, char *buf)
 {
 	unsigned char data;
-	struct i2c_client *client = to_i2c_client(dev);
-	struct bma2xx_data *bma2xx = i2c_get_clientdata(client);
+	struct i2c_client *client = attr_to_bma2xx(dev)->bma2xx_client;
 
-	if (bma2xx_get_tap_shock(bma2xx->bma2xx_client, &data) < 0)
+	if (bma2xx_get_tap_shock(client, &data) < 0)
 		return sprintf(buf, "Read error\n");
 
 	return sprintf(buf, "%d\n", data);
@@ -2659,14 +2614,13 @@ static ssize_t bma2xx_tap_shock_store(struct device *dev,
 {
 	unsigned long data;
 	int error;
-	struct i2c_client *client = to_i2c_client(dev);
-	struct bma2xx_data *bma2xx = i2c_get_clientdata(client);
+	struct i2c_client *client = attr_to_bma2xx(dev)->bma2xx_client;
 
 	error = kstrtoul(buf, 10, &data);
 	if (error)
 		return error;
 
-	if (bma2xx_set_tap_shock(bma2xx->bma2xx_client, (unsigned char)data) <
+	if (bma2xx_set_tap_shock(client, (unsigned char)data) <
 	    0)
 		return -EINVAL;
 
@@ -2677,10 +2631,9 @@ static ssize_t bma2xx_tap_samp_show(struct device *dev,
 				    struct device_attribute *attr, char *buf)
 {
 	unsigned char data;
-	struct i2c_client *client = to_i2c_client(dev);
-	struct bma2xx_data *bma2xx = i2c_get_clientdata(client);
+	struct i2c_client *client = attr_to_bma2xx(dev)->bma2xx_client;
 
-	if (bma2xx_get_tap_samp(bma2xx->bma2xx_client, &data) < 0)
+	if (bma2xx_get_tap_samp(client, &data) < 0)
 		return sprintf(buf, "Read error\n");
 
 	return sprintf(buf, "%d\n", data);
@@ -2693,14 +2646,13 @@ static ssize_t bma2xx_tap_samp_store(struct device *dev,
 {
 	unsigned long data;
 	int error;
-	struct i2c_client *client = to_i2c_client(dev);
-	struct bma2xx_data *bma2xx = i2c_get_clientdata(client);
+	struct i2c_client *client = attr_to_bma2xx(dev)->bma2xx_client;
 
 	error = kstrtoul(buf, 10, &data);
 	if (error)
 		return error;
 
-	if (bma2xx_set_tap_samp(bma2xx->bma2xx_client, (unsigned char)data) < 0)
+	if (bma2xx_set_tap_samp(client, (unsigned char)data) < 0)
 		return -EINVAL;
 
 	return count;
@@ -2710,10 +2662,9 @@ static ssize_t bma2xx_orient_mode_show(struct device *dev,
 				       struct device_attribute *attr, char *buf)
 {
 	unsigned char data;
-	struct i2c_client *client = to_i2c_client(dev);
-	struct bma2xx_data *bma2xx = i2c_get_clientdata(client);
+	struct i2c_client *client = attr_to_bma2xx(dev)->bma2xx_client;
 
-	if (bma2xx_get_orient_mode(bma2xx->bma2xx_client, &data) < 0)
+	if (bma2xx_get_orient_mode(client, &data) < 0)
 		return sprintf(buf, "Read error\n");
 
 	return sprintf(buf, "%d\n", data);
@@ -2726,15 +2677,13 @@ static ssize_t bma2xx_orient_mode_store(struct device *dev,
 {
 	unsigned long data;
 	int error;
-	struct i2c_client *client = to_i2c_client(dev);
-	struct bma2xx_data *bma2xx = i2c_get_clientdata(client);
+	struct i2c_client *client = attr_to_bma2xx(dev)->bma2xx_client;
 
 	error = kstrtoul(buf, 10, &data);
 	if (error)
 		return error;
 
-	if (bma2xx_set_orient_mode(bma2xx->bma2xx_client, (unsigned char)data) <
-	    0)
+	if (bma2xx_set_orient_mode(client, (unsigned char)data) < 0)
 		return -EINVAL;
 
 	return count;
@@ -2745,10 +2694,9 @@ static ssize_t bma2xx_orient_blocking_show(struct device *dev,
 					   char *buf)
 {
 	unsigned char data;
-	struct i2c_client *client = to_i2c_client(dev);
-	struct bma2xx_data *bma2xx = i2c_get_clientdata(client);
+	struct i2c_client *client = attr_to_bma2xx(dev)->bma2xx_client;
 
-	if (bma2xx_get_orient_blocking(bma2xx->bma2xx_client, &data) < 0)
+	if (bma2xx_get_orient_blocking(client, &data) < 0)
 		return sprintf(buf, "Read error\n");
 
 	return sprintf(buf, "%d\n", data);
@@ -2761,15 +2709,13 @@ static ssize_t bma2xx_orient_blocking_store(struct device *dev,
 {
 	unsigned long data;
 	int error;
-	struct i2c_client *client = to_i2c_client(dev);
-	struct bma2xx_data *bma2xx = i2c_get_clientdata(client);
+	struct i2c_client *client = attr_to_bma2xx(dev)->bma2xx_client;
 
 	error = kstrtoul(buf, 10, &data);
 	if (error)
 		return error;
 
-	if (bma2xx_set_orient_blocking
-	    (bma2xx->bma2xx_client, (unsigned char)data) < 0)
+	if (bma2xx_set_orient_blocking(client, (unsigned char)data) < 0)
 		return -EINVAL;
 
 	return count;
@@ -2778,10 +2724,9 @@ static ssize_t bma2xx_orient_hyst_show(struct device *dev,
 				       struct device_attribute *attr, char *buf)
 {
 	unsigned char data;
-	struct i2c_client *client = to_i2c_client(dev);
-	struct bma2xx_data *bma2xx = i2c_get_clientdata(client);
+	struct i2c_client *client = attr_to_bma2xx(dev)->bma2xx_client;
 
-	if (bma2xx_get_orient_hyst(bma2xx->bma2xx_client, &data) < 0)
+	if (bma2xx_get_orient_hyst(client, &data) < 0)
 		return sprintf(buf, "Read error\n");
 
 	return sprintf(buf, "%d\n", data);
@@ -2794,15 +2739,13 @@ static ssize_t bma2xx_orient_hyst_store(struct device *dev,
 {
 	unsigned long data;
 	int error;
-	struct i2c_client *client = to_i2c_client(dev);
-	struct bma2xx_data *bma2xx = i2c_get_clientdata(client);
+	struct i2c_client *client = attr_to_bma2xx(dev)->bma2xx_client;
 
 	error = kstrtoul(buf, 10, &data);
 	if (error)
 		return error;
 
-	if (bma2xx_set_orient_hyst(bma2xx->bma2xx_client, (unsigned char)data) <
-	    0)
+	if (bma2xx_set_orient_hyst(client, (unsigned char)data) < 0)
 		return -EINVAL;
 
 	return count;
@@ -2813,10 +2756,9 @@ static ssize_t bma2xx_orient_theta_show(struct device *dev,
 					char *buf)
 {
 	unsigned char data;
-	struct i2c_client *client = to_i2c_client(dev);
-	struct bma2xx_data *bma2xx = i2c_get_clientdata(client);
+	struct i2c_client *client = attr_to_bma2xx(dev)->bma2xx_client;
 
-	if (bma2xx_get_theta_blocking(bma2xx->bma2xx_client, &data) < 0)
+	if (bma2xx_get_theta_blocking(client, &data) < 0)
 		return sprintf(buf, "Read error\n");
 
 	return sprintf(buf, "%d\n", data);
@@ -2829,15 +2771,13 @@ static ssize_t bma2xx_orient_theta_store(struct device *dev,
 {
 	unsigned long data;
 	int error;
-	struct i2c_client *client = to_i2c_client(dev);
-	struct bma2xx_data *bma2xx = i2c_get_clientdata(client);
+	struct i2c_client *client = attr_to_bma2xx(dev)->bma2xx_client;
 
 	error = kstrtoul(buf, 10, &data);
 	if (error)
 		return error;
 
-	if (bma2xx_set_theta_blocking
-	    (bma2xx->bma2xx_client, (unsigned char)data) < 0)
+	if (bma2xx_set_theta_blocking(client, (unsigned char)data) < 0)
 		return -EINVAL;
 
 	return count;
@@ -2847,10 +2787,9 @@ static ssize_t bma2xx_flat_theta_show(struct device *dev,
 				      struct device_attribute *attr, char *buf)
 {
 	unsigned char data;
-	struct i2c_client *client = to_i2c_client(dev);
-	struct bma2xx_data *bma2xx = i2c_get_clientdata(client);
+	struct i2c_client *client = attr_to_bma2xx(dev)->bma2xx_client;
 
-	if (bma2xx_get_theta_flat(bma2xx->bma2xx_client, &data) < 0)
+	if (bma2xx_get_theta_flat(client, &data) < 0)
 		return sprintf(buf, "Read error\n");
 
 	return sprintf(buf, "%d\n", data);
@@ -2863,15 +2802,13 @@ static ssize_t bma2xx_flat_theta_store(struct device *dev,
 {
 	unsigned long data;
 	int error;
-	struct i2c_client *client = to_i2c_client(dev);
-	struct bma2xx_data *bma2xx = i2c_get_clientdata(client);
+	struct i2c_client *client = attr_to_bma2xx(dev)->bma2xx_client;
 
 	error = kstrtoul(buf, 10, &data);
 	if (error)
 		return error;
 
-	if (bma2xx_set_theta_flat(bma2xx->bma2xx_client, (unsigned char)data) <
-	    0)
+	if (bma2xx_set_theta_flat(client, (unsigned char)data) < 0)
 		return -EINVAL;
 
 	return count;
@@ -2881,10 +2818,9 @@ static ssize_t bma2xx_flat_hold_time_show(struct device *dev,
 					  char *buf)
 {
 	unsigned char data;
-	struct i2c_client *client = to_i2c_client(dev);
-	struct bma2xx_data *bma2xx = i2c_get_clientdata(client);
+	struct i2c_client *client = attr_to_bma2xx(dev)->bma2xx_client;
 
-	if (bma2xx_get_flat_hold_time(bma2xx->bma2xx_client, &data) < 0)
+	if (bma2xx_get_flat_hold_time(client, &data) < 0)
 		return sprintf(buf, "Read error\n");
 
 	return sprintf(buf, "%d\n", data);
@@ -2897,15 +2833,13 @@ static ssize_t bma2xx_flat_hold_time_store(struct device *dev,
 {
 	unsigned long data;
 	int error;
-	struct i2c_client *client = to_i2c_client(dev);
-	struct bma2xx_data *bma2xx = i2c_get_clientdata(client);
+	struct i2c_client *client = attr_to_bma2xx(dev)->bma2xx_client;
 
 	error = kstrtoul(buf, 10, &data);
 	if (error)
 		return error;
 
-	if (bma2xx_set_flat_hold_time
-	    (bma2xx->bma2xx_client, (unsigned char)data) < 0)
+	if (bma2xx_set_flat_hold_time(client, (unsigned char)data) < 0)
 		return -EINVAL;
 
 	return count;
@@ -2917,10 +2851,9 @@ static ssize_t bma2xx_fast_calibration_x_show(struct device *dev,
 {
 
 	unsigned char data;
-	struct i2c_client *client = to_i2c_client(dev);
-	struct bma2xx_data *bma2xx = i2c_get_clientdata(client);
+	struct i2c_client *client = attr_to_bma2xx(dev)->bma2xx_client;
 
-	if (bma2xx_get_offset_target_x(bma2xx->bma2xx_client, &data) < 0)
+	if (bma2xx_get_offset_target_x(client, &data) < 0)
 		return sprintf(buf, "Read error\n");
 
 	return sprintf(buf, "%d\n", data);
@@ -2935,23 +2868,21 @@ static ssize_t bma2xx_fast_calibration_x_store(struct device *dev,
 	signed char tmp;
 	unsigned char timeout = 0;
 	int error;
-	struct i2c_client *client = to_i2c_client(dev);
-	struct bma2xx_data *bma2xx = i2c_get_clientdata(client);
+	struct i2c_client *client = attr_to_bma2xx(dev)->bma2xx_client;
 
 	error = kstrtoul(buf, 10, &data);
 	if (error)
 		return error;
 
-	if (bma2xx_set_offset_target_x
-	    (bma2xx->bma2xx_client, (unsigned char)data) < 0)
+	if (bma2xx_set_offset_target_x(client, (unsigned char)data) < 0)
 		return -EINVAL;
 
-	if (bma2xx_set_cal_trigger(bma2xx->bma2xx_client, 1) < 0)
+	if (bma2xx_set_cal_trigger(client, 1) < 0)
 		return -EINVAL;
 
 	do {
 		mdelay(2);
-		bma2xx_get_cal_ready(bma2xx->bma2xx_client, &tmp);
+		bma2xx_get_cal_ready(client, &tmp);
 
 		printk(KERN_INFO "wait 2ms and got cal ready flag is %d\n",
 		       tmp);
@@ -2973,10 +2904,9 @@ static ssize_t bma2xx_fast_calibration_y_show(struct device *dev,
 {
 
 	unsigned char data;
-	struct i2c_client *client = to_i2c_client(dev);
-	struct bma2xx_data *bma2xx = i2c_get_clientdata(client);
+	struct i2c_client *client = attr_to_bma2xx(dev)->bma2xx_client;
 
-	if (bma2xx_get_offset_target_y(bma2xx->bma2xx_client, &data) < 0)
+	if (bma2xx_get_offset_target_y(client, &data) < 0)
 		return sprintf(buf, "Read error\n");
 
 	return sprintf(buf, "%d\n", data);
@@ -2991,23 +2921,21 @@ static ssize_t bma2xx_fast_calibration_y_store(struct device *dev,
 	signed char tmp;
 	unsigned char timeout = 0;
 	int error;
-	struct i2c_client *client = to_i2c_client(dev);
-	struct bma2xx_data *bma2xx = i2c_get_clientdata(client);
+	struct i2c_client *client = attr_to_bma2xx(dev)->bma2xx_client;
 
 	error = kstrtoul(buf, 10, &data);
 	if (error)
 		return error;
 
-	if (bma2xx_set_offset_target_y
-	    (bma2xx->bma2xx_client, (unsigned char)data) < 0)
+	if (bma2xx_set_offset_target_y(client, (unsigned char)data) < 0)
 		return -EINVAL;
 
-	if (bma2xx_set_cal_trigger(bma2xx->bma2xx_client, 2) < 0)
+	if (bma2xx_set_cal_trigger(client, 2) < 0)
 		return -EINVAL;
 
 	do {
 		mdelay(2);
-		bma2xx_get_cal_ready(bma2xx->bma2xx_client, &tmp);
+		bma2xx_get_cal_ready(client, &tmp);
 
 		printk(KERN_INFO "wait 2ms and got cal ready flag is %d\n",
 		       tmp);
@@ -3029,10 +2957,9 @@ static ssize_t bma2xx_fast_calibration_z_show(struct device *dev,
 {
 
 	unsigned char data;
-	struct i2c_client *client = to_i2c_client(dev);
-	struct bma2xx_data *bma2xx = i2c_get_clientdata(client);
+	struct i2c_client *client = attr_to_bma2xx(dev)->bma2xx_client;
 
-	if (bma2xx_get_offset_target_z(bma2xx->bma2xx_client, &data) < 0)
+	if (bma2xx_get_offset_target_z(client, &data) < 0)
 		return sprintf(buf, "Read error\n");
 
 	return sprintf(buf, "%d\n", data);
@@ -3047,23 +2974,21 @@ static ssize_t bma2xx_fast_calibration_z_store(struct device *dev,
 	signed char tmp;
 	unsigned char timeout = 0;
 	int error;
-	struct i2c_client *client = to_i2c_client(dev);
-	struct bma2xx_data *bma2xx = i2c_get_clientdata(client);
+	struct i2c_client *client = attr_to_bma2xx(dev)->bma2xx_client;
 
 	error = kstrtoul(buf, 10, &data);
 	if (error)
 		return error;
 
-	if (bma2xx_set_offset_target_z
-	    (bma2xx->bma2xx_client, (unsigned char)data) < 0)
+	if (bma2xx_set_offset_target_z(client, (unsigned char)data) < 0)
 		return -EINVAL;
 
-	if (bma2xx_set_cal_trigger(bma2xx->bma2xx_client, 3) < 0)
+	if (bma2xx_set_cal_trigger(client, 3) < 0)
 		return -EINVAL;
 
 	do {
 		mdelay(2);
-		bma2xx_get_cal_ready(bma2xx->bma2xx_client, &tmp);
+		bma2xx_get_cal_ready(client, &tmp);
 
 		printk(KERN_INFO "wait 2ms and got cal ready flag is %d\n",
 		       tmp);
@@ -3082,9 +3007,7 @@ static ssize_t bma2xx_fast_calibration_z_store(struct device *dev,
 static ssize_t bma2xx_selftest_show(struct device *dev,
 				    struct device_attribute *attr, char *buf)
 {
-
-	struct i2c_client *client = to_i2c_client(dev);
-	struct bma2xx_data *bma2xx = i2c_get_clientdata(client);
+	struct bma2xx_data *bma2xx = attr_to_bma2xx(dev);
 
 	return sprintf(buf, "%d\n", atomic_read(&bma2xx->selftest_result));
 
@@ -3102,8 +3025,8 @@ static ssize_t bma2xx_selftest_store(struct device *dev,
 	short value2 = 0;
 	short diff = 0;
 	unsigned long result = 0;
-	struct i2c_client *client = to_i2c_client(dev);
-	struct bma2xx_data *bma2xx = i2c_get_clientdata(client);
+	struct bma2xx_data *bma2xx = attr_to_bma2xx(dev);
+	struct i2c_client *client = bma2xx->bma2xx_client;
 
 	error = kstrtoul(buf, 10, &data);
 	if (error)
@@ -3112,18 +3035,18 @@ static ssize_t bma2xx_selftest_store(struct device *dev,
 	if (data != 1)
 		return -EINVAL;
 	/* set to 2 G range */
-	if (bma2xx_set_range(bma2xx->bma2xx_client, 0) < 0)
+	if (bma2xx_set_range(client, 0) < 0)
 		return -EINVAL;
 
-	bma2xx_write_reg(bma2xx->bma2xx_client, 0x32, &clear_value);
+	bma2xx_write_reg(client, 0x32, &clear_value);
 
-	bma2xx_set_selftest_st(bma2xx->bma2xx_client, 1);
-	bma2xx_set_selftest_stn(bma2xx->bma2xx_client, 0);
+	bma2xx_set_selftest_st(client, 1);
+	bma2xx_set_selftest_stn(client, 0);
 	mdelay(10);
-	bma2xx_read_accel_x(bma2xx->bma2xx_client, &value1);
-	bma2xx_set_selftest_stn(bma2xx->bma2xx_client, 1);
+	bma2xx_read_accel_x(client, &value1);
+	bma2xx_set_selftest_stn(client, 1);
 	mdelay(10);
-	bma2xx_read_accel_x(bma2xx->bma2xx_client, &value2);
+	bma2xx_read_accel_x(client, &value2);
 	diff = value1 - value2;
 
 	printk(KERN_INFO "diff x is %d,value1 is %d, value2 is %d\n",
@@ -3132,26 +3055,26 @@ static ssize_t bma2xx_selftest_store(struct device *dev,
 	if (abs(diff) < 204)
 		result |= 1;
 
-	bma2xx_set_selftest_st(bma2xx->bma2xx_client, 2);
-	bma2xx_set_selftest_stn(bma2xx->bma2xx_client, 0);
+	bma2xx_set_selftest_st(client, 2);
+	bma2xx_set_selftest_stn(client, 0);
 	mdelay(10);
-	bma2xx_read_accel_y(bma2xx->bma2xx_client, &value1);
-	bma2xx_set_selftest_stn(bma2xx->bma2xx_client, 1);
+	bma2xx_read_accel_y(client, &value1);
+	bma2xx_set_selftest_stn(client, 1);
 	mdelay(10);
-	bma2xx_read_accel_y(bma2xx->bma2xx_client, &value2);
+	bma2xx_read_accel_y(client, &value2);
 	diff = value1 - value2;
 	printk(KERN_INFO "diff y is %d,value1 is %d, value2 is %d\n",
 		diff, value1, value2);
 	if (abs(diff) < 204)
 		result |= 2;
 
-	bma2xx_set_selftest_st(bma2xx->bma2xx_client, 3);
-	bma2xx_set_selftest_stn(bma2xx->bma2xx_client, 0);
+	bma2xx_set_selftest_st(client, 3);
+	bma2xx_set_selftest_stn(client, 0);
 	mdelay(10);
-	bma2xx_read_accel_z(bma2xx->bma2xx_client, &value1);
-	bma2xx_set_selftest_stn(bma2xx->bma2xx_client, 1);
+	bma2xx_read_accel_z(client, &value1);
+	bma2xx_set_selftest_stn(client, 1);
 	mdelay(10);
-	bma2xx_read_accel_z(bma2xx->bma2xx_client, &value2);
+	bma2xx_read_accel_z(client, &value2);
 	diff = value1 - value2;
 
 	printk(KERN_INFO "diff z is %d,value1 is %d, value2 is %d\n", diff,
@@ -3171,7 +3094,7 @@ static ssize_t bma2xx_get_allow_wake(struct device *dev,
 			struct device_attribute *attr,
 			char *buf)
 {
-	struct bma2xx_data *bma2xx = i2c_get_clientdata(to_i2c_client(dev));
+	struct bma2xx_data *bma2xx = attr_to_bma2xx(dev);
 	return scnprintf(buf, PAGE_SIZE, "allow %d, suspend_allow %d\n",
 			!!(bma2xx->enable & BMA_FUNC(BMA_ENABLE_WAKE)),
 			!!(bma2xx->enable &
@@ -3182,7 +3105,7 @@ static ssize_t bma2xx_set_allow_wake(struct device *dev,
 				struct device_attribute *attr,
 				const char *buf, size_t count)
 {
-	struct bma2xx_data *bma2xx = i2c_get_clientdata(to_i2c_client(dev));
+	struct bma2xx_data *bma2xx = attr_to_bma2xx(dev);
 	int error = 0;
 
 	if (!strncmp(buf, "allow", 5)) {
