@@ -38,6 +38,7 @@
 #define SLOP_INTERRUPT			REL_DIAL
 #define DOUBLE_TAP_INTERRUPT		REL_WHEEL
 #define SINGLE_TAP_INTERRUPT		REL_MISC
+#define NOMOTION_INTERRUPT              REL_X
 #define ORIENT_INTERRUPT		ABS_PRESSURE
 #define FLAT_INTERRUPT			ABS_DISTANCE
 
@@ -66,6 +67,8 @@
 #define FLAT_INTERRUPT_TURE_HAPPENED			23
 #define FLAT_INTERRUPT_FALSE_HAPPENED			24
 #define LOW_G_INTERRUPT_HAPPENED			25
+#define NOMOTION_INTERRUPT_HAPPENED			26
+#define SLOWMOTION_INTERRUPT_HAPPENED			27
 
 #define PAD_LOWG	0
 #define PAD_HIGHG	1
@@ -97,6 +100,7 @@
 #define BMA2XXX_RESET_REG                        0x14
 #define BMA2XXX_INT_ENABLE1_REG                  0x16
 #define BMA2XXX_INT_ENABLE2_REG                  0x17
+#define BMA2XXX_INT_ENABLE3_REG                  0x18
 #define BMA2XXX_INT1_PAD_SEL_REG                 0x19
 #define BMA2XXX_INT_DATA_SEL_REG                 0x1A
 #define BMA2XXX_INT2_PAD_SEL_REG                 0x1B
@@ -110,6 +114,7 @@
 #define BMA2XXX_HIGH_THRES_REG                   0x26
 #define BMA2XXX_SLOPE_DURN_REG                   0x27
 #define BMA2XXX_SLOPE_THRES_REG                  0x28
+#define BMA2XXX_NOMOT_THRES_REG                  0x29
 #define BMA2XXX_TAP_PARAM_REG                    0x2A
 #define BMA2XXX_TAP_THRES_REG                    0x2B
 #define BMA2XXX_ORIENT_PARAM_REG                 0x2C
@@ -328,6 +333,11 @@
 #define BMA2XXX_EN_SLOPE_XYZ_INT__MSK         0x07
 #define BMA2XXX_EN_SLOPE_XYZ_INT__REG         BMA2XXX_INT_ENABLE1_REG
 
+#define BMA2XXX_EN_NOMOT_XYZ_INT__POS         0
+#define BMA2XXX_EN_NOMOT_XYZ_INT__LEN         4
+#define BMA2XXX_EN_NOMOT_XYZ_INT__MSK         0x0f
+#define BMA2XXX_EN_NOMOT_XYZ_INT__REG         BMA2XXX_INT_ENABLE2_REG
+
 #define BMA2XXX_EN_DOUBLE_TAP_INT__POS      4
 #define BMA2XXX_EN_DOUBLE_TAP_INT__LEN      1
 #define BMA2XXX_EN_DOUBLE_TAP_INT__MSK      0x10
@@ -398,6 +408,11 @@
 #define BMA2XXX_EN_INT1_PAD_SLOPE__MSK       0x04
 #define BMA2XXX_EN_INT1_PAD_SLOPE__REG       BMA2XXX_INT1_PAD_SEL_REG
 
+#define BMA2XXX_EN_INT1_PAD_NOMOT__POS       3
+#define BMA2XXX_EN_INT1_PAD_NOMOT__LEN       1
+#define BMA2XXX_EN_INT1_PAD_NOMOT__MSK       (1 << 3)
+#define BMA2XXX_EN_INT1_PAD_NOMOT__REG       BMA2XXX_INT1_PAD_SEL_REG
+
 #define BMA2XXX_EN_INT1_PAD_DB_TAP__POS      4
 #define BMA2XXX_EN_INT1_PAD_DB_TAP__LEN      1
 #define BMA2XXX_EN_INT1_PAD_DB_TAP__MSK      0x10
@@ -432,6 +447,11 @@
 #define BMA2XXX_EN_INT2_PAD_SLOPE__LEN       1
 #define BMA2XXX_EN_INT2_PAD_SLOPE__MSK       0x04
 #define BMA2XXX_EN_INT2_PAD_SLOPE__REG       BMA2XXX_INT2_PAD_SEL_REG
+
+#define BMA2XXX_EN_INT2_PAD_NOMOT__POS       3
+#define BMA2XXX_EN_INT2_PAD_NOMOT__LEN       1
+#define BMA2XXX_EN_INT2_PAD_NOMOT__MSK       (1 << 3)
+#define BMA2XXX_EN_INT2_PAD_NOMOT__REG       BMA2XXX_INT2_PAD_SEL_REG
 
 #define BMA2XXX_EN_INT2_PAD_DB_TAP__POS      4
 #define BMA2XXX_EN_INT2_PAD_DB_TAP__LEN      1
@@ -568,10 +588,20 @@
 #define BMA2XXX_SLOPE_DUR__MSK                    0x03
 #define BMA2XXX_SLOPE_DUR__REG                    BMA2XXX_SLOPE_DURN_REG
 
+#define BMA2XXX_NOMOT_DUR__POS                    2
+#define BMA2XXX_NOMOT_DUR__LEN                    6
+#define BMA2XXX_NOMOT_DUR__MSK                    (0x3F << 2)
+#define BMA2XXX_NOMOT_DUR__REG                    BMA2XXX_SLOPE_DURN_REG
+
 #define BMA2XXX_SLOPE_THRES__POS                  0
 #define BMA2XXX_SLOPE_THRES__LEN                  8
 #define BMA2XXX_SLOPE_THRES__MSK                  0xFF
 #define BMA2XXX_SLOPE_THRES__REG                  BMA2XXX_SLOPE_THRES_REG
+
+#define BMA2XXX_NOMOT_THRES__POS                  0
+#define BMA2XXX_NOMOT_THRES__LEN                  8
+#define BMA2XXX_NOMOT_THRES__MSK                  0xFF
+#define BMA2XXX_NOMOT_THRES__REG                  BMA2XXX_NOMOT_THRES_REG
 
 #define BMA2XXX_TAP_DUR__POS                    0
 #define BMA2XXX_TAP_DUR__LEN                    3

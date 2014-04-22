@@ -232,6 +232,7 @@ static int bmg160_power_down(struct bmg160_data *bd)
 	(void)bmg160_ic_write(bd->ic_dev, BMG160_MODE_CTRL_REG,
 			BMG160_MODE_DEEPSUSPEND);
 	if (!IS_ERR_OR_NULL(bd->regulator)) {
+		dev_dbg(&bd->ic_dev->dev, "%s: disable regulator\n", __func__);
 		rc = regulator_disable(bd->regulator);
 		if (rc)
 			dev_err(&bd->ic_dev->dev,
@@ -246,6 +247,7 @@ static int bmg160_power_up(struct bmg160_data *bd)
 	int rc;
 
 	if (!IS_ERR_OR_NULL(bd->regulator)) {
+		dev_dbg(&bd->ic_dev->dev, "%s: enable regulator\n", __func__);
 		rc = regulator_enable(bd->regulator);
 		if (rc) {
 			dev_err(&bd->ic_dev->dev,
@@ -456,7 +458,8 @@ static ssize_t bmg160_enable_show(struct device *dev,
 					char *buf)
 {
 	struct bmg160_data *bd = dev_get_drvdata(dev);
-	return scnprintf(buf, PAGE_SIZE, "%d\n", bd->wm_level);
+	return scnprintf(buf, PAGE_SIZE, "%d\n", bd->enabled ?
+			bd->wm_level : 0);
 }
 
 static ssize_t bmg160_enable_store(struct device *dev,
