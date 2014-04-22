@@ -2393,8 +2393,9 @@ static int __ref kona_fb_probe(struct platform_device *pdev)
 	} else {
 		if (fb->display_info->clear_panel_ram)
 			(void)clear_panel_ram(fb);
-		ret = fb->display_ops->update(fb->display_hdl,
-				fb->buff1, NULL, NULL);
+		else
+			ret = fb->display_ops->update(fb->display_hdl,
+						fb->buff1, NULL, NULL);
 	}
 	if (ret) {
 		konafb_error("Can not enable the LCD!\n");
