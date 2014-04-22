@@ -18,6 +18,7 @@
 #include <linux/slab.h>
 #include <linux/fs.h>
 
+#include "backport.h"
 #include "match.h"
 
 /* Provide our own test for whether a write lock is held for asserts
