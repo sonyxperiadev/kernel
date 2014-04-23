@@ -175,17 +175,12 @@ endchoice
 choice
 	prompt "Java Brooks type"
 	depends on MACH_JAVA_BROOKS
-	default MACH_JAVA_BROOKS_000
-
-	config MACH_JAVA_BROOKS_000
-	bool "JAVA BROOKS 000"
-	help
-	  Support for Java Brooks
+	default MACH_JAVA_BROOKS_020
 
 	config MACH_JAVA_BROOKS_020
-	bool "JAVA BROOKS 020"
+	bool "JAVA BROOKS"
 	help
-	  Support for Java Brooks DP2
+	  Support for Java Brooks
 
 endchoice
 
