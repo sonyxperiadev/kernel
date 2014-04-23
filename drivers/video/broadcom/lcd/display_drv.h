@@ -177,6 +177,8 @@ extern "C" {
 			struct pi_mgr_dfs_node *dfs_node);
 		Int32(*power_control) (DISPDRV_HANDLE_T handle,
 			DISPLAY_POWER_STATE_T powerState);
+		Int32(*suspend_link) (DISPDRV_HANDLE_T handle);
+		Int32(*resume_link) (DISPDRV_HANDLE_T handle);
 		Int32(*update_no_os) (DISPDRV_HANDLE_T handle, void *buff,
 			DISPDRV_WIN_t *p_win);
 		Int32(*update) (DISPDRV_HANDLE_T handle, void *buff,
