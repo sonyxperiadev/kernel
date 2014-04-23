@@ -182,6 +182,11 @@ choice
 	help
 	  Support for Java Brooks
 
+	config MACH_JAVA_BROOKS_020
+	bool "JAVA BROOKS 020"
+	help
+	  Support for Java Brooks DP2
+
 endchoice
 
 
