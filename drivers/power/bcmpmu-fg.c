@@ -3451,7 +3451,7 @@ static int bcmpmu_fg_suspend(struct platform_device *pdev, pm_message_t state)
 	fg->flags.reschedule_work = false;
 	FG_UNLOCK(fg);
 
-	flush_delayed_work(&fg->fg_periodic_work);
+	cancel_delayed_work_sync(&fg->fg_periodic_work);
 	return 0;
 }
 #else
