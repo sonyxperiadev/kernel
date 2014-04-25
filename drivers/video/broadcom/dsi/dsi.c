@@ -88,6 +88,10 @@ static Int32 DSI_Close(DISPDRV_HANDLE_T drvH);
 
 static void DSI_ExecCmndList(DispDrv_PANEL_t *pPanel, char *buff);
 
+static Int32 DSI_SuspendLink(DISPDRV_HANDLE_T drvH);
+
+static Int32 DSI_ResumeLink(DISPDRV_HANDLE_T drvH);
+
 static Int32 DSI_Start(
 	DISPDRV_HANDLE_T drvH,
 	struct pi_mgr_dfs_node *dfs_node);
@@ -129,6 +133,8 @@ static DISPDRV_T disp_drv_dsi = {
 	.exit = &DSI_Exit,
 	.open = &DSI_Open,
 	.close = &DSI_Close,
+	.suspend_link = &DSI_SuspendLink,
+	.resume_link = &DSI_ResumeLink,
 	.start = &DSI_Start,
 	.stop = &DSI_Stop,
 	.power_control = &DSI_PowerControl,
@@ -609,35 +615,25 @@ static Int32 DSI_Exit(DISPDRV_HANDLE_T drvH)
 	return 0;
 }
 
-
 /*
  *
- *  Function Name: DSI_Open
+ *  Function Name: DSI_ResumeLink
  *
- *  Description:   disp bus ON
+ *  Description:   Start/Resume DSI link
  *
  */
-static Int32 DSI_Open(DISPDRV_HANDLE_T drvH)
+static Int32 DSI_ResumeLink(DISPDRV_HANDLE_T drvH)
 {
 	Int32 res = 0;
-	DispDrv_PANEL_t	*pPanel;
+	DispDrv_PANEL_t *pPanel;
 
 	pPanel = (DispDrv_PANEL_t *) drvH;
-
-	DSI_INFO("enter\n");
-
-	if (pPanel->drvState !=	DRV_STATE_INIT)	{
-		DSI_ERR("ERROR State != Init\n");
-		return -1;
-	}
-
 	if (brcm_enable_dsi_pll_clocks(pPanel->busNo,
-		pPanel->dsi_cfg->hsBitClk.clkIn_MHz * 1000000,
-		pPanel->dsi_cfg->hsBitClk.clkInDiv,
-		pPanel->disp_info->desense_offset,
-		pPanel->dsi_cfg->escClk.clkIn_MHz   * 1000000
-		/ pPanel->dsi_cfg->escClk.clkInDiv)) {
-
+			pPanel->dsi_cfg->hsBitClk.clkIn_MHz * 1000000,
+			pPanel->dsi_cfg->hsBitClk.clkInDiv,
+			pPanel->disp_info->desense_offset,
+			pPanel->dsi_cfg->escClk.clkIn_MHz * 1000000 /
+				pPanel->dsi_cfg->escClk.clkInDiv)) {
 		DSI_ERR("ERROR enabling clock\n");
 	}
 
@@ -651,7 +647,7 @@ static Int32 DSI_Open(DISPDRV_HANDLE_T drvH)
 		goto err_dsi_init;
 	}
 
-	if (CSL_DSI_OpenClient(pPanel->busNo, &pPanel->clientH)	!= CSL_LCD_OK) {
+	if (CSL_DSI_OpenClient(pPanel->busNo, &pPanel->clientH) != CSL_LCD_OK) {
 		DSI_ERR("CSL_DSI_OpenClient Failed\n");
 		goto err_dsi_open_cl;
 	}
@@ -680,6 +676,48 @@ static Int32 DSI_Open(DISPDRV_HANDLE_T drvH)
 			goto err_dma_init;
 		}
 	}
+
+	return res;
+
+err_dma_init:
+	CSL_DSI_CloseCmVc(pPanel->dsiCmVcHandle);
+err_dsi_open_cm:
+err_dsi_ulps:
+	CSL_DSI_CloseClient(pPanel->clientH);
+err_dsi_open_cl:
+	CSL_DSI_Close(pPanel->busNo);
+err_dsi_init:
+	if (pPanel->isTE)
+		DSI_TeOff(pPanel);
+err_te_on:
+	return -1;
+}
+
+/*
+ *
+ *  Function Name: DSI_Open
+ *
+ *  Description:   disp bus ON
+ *
+ */
+static Int32 DSI_Open(DISPDRV_HANDLE_T drvH)
+{
+	Int32 res = 0;
+	DispDrv_PANEL_t	*pPanel;
+
+	pPanel = (DispDrv_PANEL_t *) drvH;
+
+	DSI_INFO("enter\n");
+
+	if (pPanel->drvState !=	DRV_STATE_INIT)	{
+		DSI_ERR("ERROR State != Init\n");
+		return -1;
+	}
+
+	res = DSI_ResumeLink(drvH);
+	if (res < 0)
+		goto err_resume_link;
+
 	if (!disp_reg) {
 		/*CAM2 LDO */
 		disp_reg = regulator_get(NULL, pPanel->disp_info->reg_name);
@@ -732,18 +770,53 @@ err_id_read:
 err_gpio_request:
 err_reg_enable:
 err_reg_init:
-err_dma_init:
-	CSL_DSI_CloseCmVc(pPanel->dsiCmVcHandle);
-err_dsi_open_cm:
-err_dsi_ulps:
-	CSL_DSI_CloseClient(pPanel->clientH);
-err_dsi_open_cl:
-	CSL_DSI_Close(pPanel->busNo);
-err_dsi_init:
+err_resume_link:
+	return -1;
+}
+
+/*
+ *
+ *  Function Name: DSI_SuspendLink
+ *
+ *  Description:   Suspend/Close the DSI link and shutoff clocks.
+ *
+ */
+static Int32 DSI_SuspendLink(DISPDRV_HANDLE_T drvH)
+{
+	Int32 res = 0;
+	DispDrv_PANEL_t *pPanel = (DispDrv_PANEL_t *)drvH;
+
+	if (pPanel->disp_info->vmode)
+		CSL_DSI_Suspend(pPanel->dsiCmVcHandle);
+
+	if (CSL_DSI_CloseCmVc(pPanel->dsiCmVcHandle)) {
+		DSI_ERR("Closing Command Mode Handle\n");
+		return -1;
+	}
+
+	if (CSL_DSI_Ulps(pPanel->clientH, TRUE) != CSL_LCD_OK) {
+		DSI_ERR("ERR enter DSI Ulps\n");
+		return -1;
+	}
+
+	if (CSL_DSI_CloseClient(pPanel->clientH) != CSL_LCD_OK) {
+		DSI_ERR("Closing DSI Client\n");
+		return -1;
+	}
+
+	if (CSL_DSI_Close(pPanel->busNo) != CSL_LCD_OK) {
+		DSI_ERR("ERR Closing DSI Controller\n");
+		return -1;
+	}
+
 	if (pPanel->isTE)
 		DSI_TeOff(pPanel);
-err_te_on:
-	return -1;
+
+	if (brcm_disable_dsi_pll_clocks(pPanel->busNo)) {
+		DSI_ERR("ERROR disabling the pll clock\n");
+		return -1;
+	}
+	return res;
 }
 
 /*
@@ -757,45 +830,19 @@ static Int32 DSI_Close(DISPDRV_HANDLE_T drvH)
 {
 	Int32 res = 0;
 	DispDrv_PANEL_t	*pPanel	= (DispDrv_PANEL_t *)drvH;
+
 	DSI_ExecCmndList(pPanel, pPanel->disp_info->slp_in_seq);
-
 	pPanel->drvState = DRV_STATE_INIT;
-	if (pPanel->disp_info->vmode)
-		CSL_DSI_Suspend(pPanel->dsiCmVcHandle);
 
-	if (CSL_DSI_CloseCmVc(pPanel->dsiCmVcHandle)) {
-		DSI_ERR("Closing Command Mode Handle\n");
-		return -1;
-	}
-
-	if (CSL_DSI_Ulps(pPanel->clientH, TRUE) != CSL_LCD_OK)	{
-		DSI_ERR("ERR enter DSI Ulps\n");
-		return -1;
-	}
-
-	if (CSL_DSI_CloseClient(pPanel->clientH) != CSL_LCD_OK)	{
-		DSI_ERR("Closing DSI Client\n");
-		return -1;
-	}
-
-	if (CSL_DSI_Close(pPanel->busNo) != CSL_LCD_OK)	{
-		DSI_ERR("ERR Closing DSI Controller\n");
-		return -1;
-	}
-
-	if (pPanel->isTE)
-		DSI_TeOff(pPanel);
-
-	if (brcm_disable_dsi_pll_clocks(pPanel->busNo))	{
-		DSI_ERR("ERROR disabling the pll clock\n");
-		return -1;
-	}
+	res = DSI_SuspendLink(drvH);
+	if (res < 0)
+		goto exit;
 
 	gpio_free(pPanel->disp_info->rst->gpio);
 
 	pPanel->drvState = DRV_STATE_INIT;
 	DSI_INFO("OK\n");
-
+exit:
 	return res;
 }
 
