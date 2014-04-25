@@ -108,6 +108,12 @@ static int lm3630a_chip_init(struct lm3630a_chip *pchip)
 	rval |= lm3630a_write(pchip, REG_BRT_A, pdata->leda_init_brt);
 	rval |= lm3630a_write(pchip, REG_BRT_B, pdata->ledb_init_brt);
 
+	/* Disable feedback */
+	if (pdata->leda_ctrl == LM3630A_LEDA_DISABLE)
+		rval |= regmap_update_bits(pchip->regmap, REG_CONFIG, 0x08, 0);
+	if (pdata->ledb_ctrl == LM3630A_LEDB_DISABLE)
+		rval |= regmap_update_bits(pchip->regmap, REG_CONFIG, 0x10, 0);
+
 	if (rval < 0)
 		dev_err(pchip->dev, "i2c failed to access register\n");
 	return rval;
