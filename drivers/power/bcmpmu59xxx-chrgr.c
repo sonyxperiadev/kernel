@@ -443,10 +443,6 @@ static int charger_event_handler(struct notifier_block *nb,
 				(chrgr_type > PMU_CHRGR_TYPE_NONE)) {
 			bcmpmu_set_icc_fc(bcmpmu,
 					di->chrgr_curr_tbl[chrgr_type]);
-			if (chrgr_type == PMU_CHRGR_TYPE_SDP)
-				bcmpmu->write_dev(bcmpmu,
-						PMU_REG_MBCCTRL20,
-						USB_TRIM_INX_20PER);
 			bcmpmu_chrgr_usb_en(bcmpmu, 1);
 			if ((get_supply_type_str(chrgr_type) != NULL) &&
 					(strcmp(get_supply_type_str(chrgr_type),
