@@ -892,6 +892,7 @@ struct bcmpmu59xxx_led_pdata {
 enum {
 	BCMPMU_SPA_EN = 1 << 0,
 	BCMPMU_ACLD_EN = 1 << 1,
+	BCMPMU_FG_VF_CTRL = 1 << 2,
 };
 /* Board id enum */
 enum {

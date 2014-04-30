@@ -142,6 +142,13 @@ struct bcmpmu_batt_cal_data {
 	int volt_high;
 };
 
+struct bcmpmu_fg_vf_data {
+	int temp; /* deci C */
+	u8 vfloat_lvl; /* register value */
+	u16 vfloat_eoc; /* voltage level where EOC can start mV */
+	int eoc_curr;
+};
+
 struct bcmpmu_fg_pdata {
 	struct bcmpmu_batt_property *batt_prop;
 
@@ -160,7 +167,11 @@ struct bcmpmu_fg_pdata {
 	int poll_rate_low_batt;
 	int poll_rate_crit_batt;
 	int ntc_high_temp;
+	struct bcmpmu_fg_vf_data *vfd;
+	int hysteresis;
+	u8 vfd_sz;
 };
+
 int bcmpmu_fg_set_sw_eoc_current(struct bcmpmu59xxx *bcmpmu, int eoc_current);
 int bcmpmu_fg_calibrate_battery(struct bcmpmu59xxx *bcmpmu);
 int bcmpmu_fg_get_current_capacity(struct bcmpmu59xxx *bcmpmu);
