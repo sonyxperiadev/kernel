@@ -10,6 +10,9 @@
 */
 #include <linux/module.h>
 #include <linux/slab.h>
+#ifdef CONFIG_THERMAL
+#include <linux/thermal.h>
+#endif
 #include <linux/i2c.h>
 #include <linux/backlight.h>
 #include <linux/err.h>
@@ -324,6 +327,15 @@ out_i2c_err:
 	dev_err(pchip->dev, "i2c failed to access register\n");
 	return 0;
 }
+
+#ifdef CONFIG_THERMAL
+u32 backlight_cooling_get_level(struct thermal_cooling_device *cdev,
+				u32 brightness)
+{
+	return THERMAL_CSTATE_INVALID;
+}
+EXPORT_SYMBOL(backlight_cooling_get_level);
+#endif
 
 static const struct backlight_ops lm3630a_bank_b_ops = {
 	.options = BL_CORE_SUSPENDRESUME,
