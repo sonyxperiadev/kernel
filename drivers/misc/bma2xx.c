@@ -146,6 +146,7 @@ struct bma2xx_data {
 	bool fflush;
 	int axis_num_map[3];
 	bool nomotion;
+	bool wuff;
 };
 
 #ifdef BMA2XX_SW_CALIBRATION
@@ -1900,15 +1901,15 @@ static int bma2xx_set_optimal_mode_locked(struct bma2xx_data *data,
 {
 	int power_mode;
 
-	power_mode = !in_suspend && DATA_ENABLED(data->enable) ?
+	power_mode = (!in_suspend || data->wuff) && DATA_ENABLED(data->enable) ?
 			BMA2XXX_MODE_NORMAL :
 			WAKE_SET(data->enable) && WAKE_ENABLED(data->enable) ?
 			BMA2XXX_MODE_LOWPOWER :
 			BMA2XXX_MODE_SUSPEND;
 
 	dev_dbg(&data->bma2xx_client->dev,
-			"%s: in suspend %d enable 0x%x, power mode %d\n",
-			__func__, in_suspend, data->enable, power_mode);
+		"%s: in suspend %d wuff %d enable 0x%x, power mode %d\n",
+		__func__, in_suspend, data->wuff, data->enable, power_mode);
 	return bma2xx_set_mode(data->bma2xx_client, power_mode);
 }
 
@@ -3129,6 +3130,31 @@ static DEVICE_ATTR(wake_allow,  S_IRUGO | S_IWUSR | S_IWGRP,
 		bma2xx_get_allow_wake, bma2xx_set_allow_wake);
 
 
+static ssize_t bma2xx_get_fifo_wake(struct device *dev,
+			struct device_attribute *attr,
+			char *buf)
+{
+	struct bma2xx_data *bma2xx = attr_to_bma2xx(dev);
+	return scnprintf(buf, PAGE_SIZE, "%d\n", bma2xx->wuff);
+}
+
+static ssize_t bma2xx_set_fifo_wake(struct device *dev,
+				struct device_attribute *attr,
+				const char *buf, size_t count)
+{
+	struct bma2xx_data *bma2xx = attr_to_bma2xx(dev);
+	unsigned long wuff;
+
+	int error = kstrtoul(buf, 10, &wuff);
+	if (error)
+		return error;
+	bma2xx->wuff = !!wuff;
+	return count;
+}
+static DEVICE_ATTR(fifo_wake, S_IRUGO | S_IWUSR | S_IWGRP,
+		bma2xx_get_fifo_wake, bma2xx_set_fifo_wake);
+
+
 #ifdef BMA2XX_SW_CALIBRATION
 static ssize_t bma2xx_get_offset(struct device *dev,
 			struct device_attribute *attr,
@@ -3270,6 +3296,7 @@ static struct attribute *bma2xx_attributes[] = {
 	&dev_attr_fflush.attr,
 	&dev_attr_nomot_duration.attr,
 	&dev_attr_nomot_threshold.attr,
+	&dev_attr_fifo_wake.attr,
 	NULL
 };
 
@@ -3643,7 +3670,8 @@ static int bma2xx_probe(struct i2c_client *client,
 	if (data->data_irq != -EINVAL) {
 		data->data_irq = gpio_to_irq(data->data_irq);
 		err = request_irq(data->data_irq, bma2xx_fifo_irq_handler,
-				IRQF_TRIGGER_RISING, "bma2xx_fifo", data);
+				IRQF_TRIGGER_RISING | IRQF_NO_SUSPEND,
+				"bma2xx_fifo", data);
 		if (err)
 			dev_err(&client->dev, "could not request fifo irq\n");
 		else
@@ -3794,11 +3822,18 @@ static int bma2xx_suspend(struct i2c_client *client, pm_message_t mesg)
 	mutex_lock(&data->enable_mutex);
 	bma2xx_set_optimal_mode_locked(data, true);
 
-	if (device_may_wakeup(&data->bma2xx_client->dev) &&
-			WAKE_SET(data->enable) && WAKE_ENABLED(data->enable)) {
-		int rc = irq_set_irq_wake(data->IRQ, 1);
-		dev_dbg(&data->bma2xx_client->dev, "set IRQ %d wake = %d\n",
-			data->IRQ, rc);
+	if (device_may_wakeup(&data->bma2xx_client->dev)) {
+		if (WAKE_SET(data->enable) && WAKE_ENABLED(data->enable)) {
+			int rc = irq_set_irq_wake(data->IRQ, 1);
+			dev_dbg(&data->bma2xx_client->dev,
+				"set IRQ %d wake = %d\n", data->IRQ, rc);
+		}
+		if (data->wuff) {
+			int rc = irq_set_irq_wake(data->data_irq, 1);
+			dev_dbg(&data->bma2xx_client->dev,
+					"set fifo irq %d wake = %d\n",
+					data->data_irq, rc);
+		}
 	}
 	mutex_unlock(&data->enable_mutex);
 	return 0;
@@ -3811,18 +3846,23 @@ static int bma2xx_resume(struct i2c_client *client)
 
 	mutex_lock(&data->enable_mutex);
 	bma2xx_set_optimal_mode_locked(data, false);
-	if (device_may_wakeup(&data->bma2xx_client->dev) &&
-			WAKE_SET(data->enable) && WAKE_ENABLED(data->enable))
-		(void)irq_set_irq_wake(data->IRQ, 0);
+	if (device_may_wakeup(&data->bma2xx_client->dev)) {
+		if (WAKE_SET(data->enable) && WAKE_ENABLED(data->enable))
+			(void)irq_set_irq_wake(data->IRQ, 0);
+		if (data->wuff)
+			(void)irq_set_irq_wake(data->data_irq, 0);
+	}
 	mutex_unlock(&data->enable_mutex);
 
 	spin_lock_irqsave(&data->lock, f);
 	data->state &= ~DEV_SUSPENDED;
 	if (data->state & IRQ1_PENDING) {
+		dev_dbg(&data->bma2xx_client->dev, "gesture irq pending\n");
 		data->state &= ~IRQ1_PENDING;
 		schedule_work(&data->irq_work);
 	}
 	if (data->state & IRQ2_PENDING) {
+		dev_dbg(&data->bma2xx_client->dev, "fifo irq pending\n");
 		data->state &= ~IRQ2_PENDING;
 		schedule_work(&data->fifo_work);
 	}
