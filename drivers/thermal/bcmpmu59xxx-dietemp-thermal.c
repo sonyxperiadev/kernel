@@ -143,8 +143,10 @@ static int dietemp_thermal_tz_get_temp(struct thermal_zone_device *tz,
 
 	/* Report the same temperature measured while zone polling to thermal
 	 * framework so that the effect of glitching can be minimized*/
-	*temp = tdata->curr_temp;
-
+	if (tdata->curr_temp < 0)
+		*temp = 0;
+	else
+		*temp = tdata->curr_temp;
 	return 0;
 }
 

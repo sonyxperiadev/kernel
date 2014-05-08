@@ -386,10 +386,15 @@ static int interquartile_mean(unsigned long *data, int count)
 	return avg;
 }
 
+static inline long get_positive_temp(long temp)
+{
+	return (temp < 0) ? 0 : temp;
+}
+
 static long kona_tmon_get_current_temp(struct kona_tmon_pdata *pdata,
 				bool celcius, bool avg)
 {
-	unsigned long raw_temp, samples[AVG_SAMPLES_COUNT];
+	long raw_temp, samples[AVG_SAMPLES_COUNT];
 	int i = 0;
 
 	BUG_ON(!pdata);
@@ -503,6 +508,7 @@ static inline int kona_tmon_init_with_polling(struct kona_tmon_thermal *thermal)
 static int kona_tmon_init(struct kona_tmon_thermal *thermal)
 {
 	u32 val, idx;
+	long temp_val;
 	struct kona_tmon_pdata *pdata = thermal->pdata;
 	void __iomem *base_addr = pdata->chipreg_addr;
 
@@ -525,7 +531,8 @@ static int kona_tmon_init(struct kona_tmon_thermal *thermal)
 	kona_tmon_enable(thermal, true);
 
 	/* set initial thresholds for monitoring */
-	thermal->cur_temp = kona_tmon_get_current_temp(pdata, true, true);
+	temp_val = kona_tmon_get_current_temp(pdata, true, true);
+	thermal->cur_temp = get_positive_temp(temp_val);
 	for (idx = 0; idx < TRIP_CNT; idx++) {
 		if (thermal->cur_temp < TRIP_TEMP(idx)) {
 			thermal->cur_trip = idx;
@@ -544,10 +551,12 @@ static void kona_tmon_polling_work(struct work_struct *work)
 			struct kona_tmon_thermal, polling_work);
 	struct kona_tmon_pdata *pdata = thermal->pdata;
 	unsigned long cur_temp, falling_temp;
+	long temp_val;
 	int idx, tz_update = 0;
 
 	mutex_lock(&thermal->lock);
-	cur_temp = kona_tmon_get_current_temp(pdata, true, true);
+	temp_val = kona_tmon_get_current_temp(pdata, true, true);
+	cur_temp = get_positive_temp(temp_val);
 	/* check how far current temp is down wrt to current theshold */
 	for (idx = thermal->cur_trip - 1; idx >= 1; idx--) {
 		falling_temp = TRIP_TEMP(idx) - pdata->hysteresis;
@@ -575,10 +584,11 @@ static void kona_tmon_irq_work(struct work_struct *work)
 	struct kona_tmon_thermal *thermal = container_of(work,
 					struct kona_tmon_thermal, isr_work);
 	struct kona_tmon_pdata *pdata = thermal->pdata;
+	long temp_val;
 
 	mutex_lock(&thermal->lock);
-	thermal->cur_temp = kona_tmon_get_current_temp(
-			thermal->pdata, true, true);
+	temp_val = kona_tmon_get_current_temp(thermal->pdata, true, true);
+	thermal->cur_temp = get_positive_temp(temp_val);
 	/* Interrupt is triggered twice sometimes. As an workaround,
 	 * check if current temp is less than the threshold value */
 	if (thermal->cur_temp < TRIP_TEMP(thermal->cur_trip))
