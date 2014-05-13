@@ -117,6 +117,8 @@ struct sony_restart_reason {
  */
 static const struct sony_restart_reason_table rrt[] = {
 	{"ramdump", SOMC_WARMBOOT_CRASH},
+	{"bootloader", SOMC_WARMBOOT_FB},
+	{"recovery", SOMC_WARMBOOT_RECOVERY},
 };
 
 /*
