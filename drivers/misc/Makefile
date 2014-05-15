@@ -122,3 +122,4 @@ obj-$(CONFIG_SENSORS_BMA222)    += bma222.o
 obj-$(CONFIG_SRAM)		+= sram.o
 obj-$(CONFIG_SENSORS_BMA2XX)	+= bma2xx.o
 obj-$(CONFIG_BCM_GPS_KERNEL)    += bcm-gps.o
+obj-y				+= modem_shutdown.o
