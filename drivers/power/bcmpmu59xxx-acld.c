@@ -34,9 +34,6 @@
 #include <linux/mfd/bcmpmu59xxx.h>
 #include <linux/mfd/bcmpmu59xxx_reg.h>
 #include <linux/power/bcmpmu-fg.h>
-#ifdef CONFIG_BCMPMU_THERMAL_THROTTLE
-#include <linux/power/bcmpmu59xxx-thermal-throttle.h>
-#endif
 
 #ifdef DEBUG
 #define DEBUG_MASK (BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT | \
@@ -1176,10 +1173,8 @@ static int bcmpmu_acld_event_handler(struct notifier_block *nb,
 		}
 		break;
 	case PMU_THEMAL_THROTTLE_STATUS:
-#ifdef CONFIG_BCMPMU_THERMAL_THROTTLE
 		acld = to_bcmpmu_acld_data(nb, tml_trtle_nb);
-		acld->tml_trtle_stat =
-		((struct thermal_throttle_event_data *)data)->algo_running;
+		acld->tml_trtle_stat = *(bool *)data;
 		pr_acld(FLOW, "PMU_THEMAL_THROTTLE_STATUS:%d\n",
 				acld->tml_trtle_stat);
 		if (acld->tml_trtle_stat == true) {
@@ -1195,7 +1190,6 @@ static int bcmpmu_acld_event_handler(struct notifier_block *nb,
 			bcmpmu_en_sw_ctrl_chrgr_timer(acld, true);
 			queue_delayed_work(acld->acld_wq, &acld->acld_work, 0);
 		}
-#endif
 		break;
 	case PMU_FG_EVT_EOC:
 		acld = to_bcmpmu_acld_data(nb, fg_eoc_nb);

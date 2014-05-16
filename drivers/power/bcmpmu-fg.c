@@ -34,9 +34,6 @@
 #include <linux/mfd/bcmpmu59xxx.h>
 #include <linux/mfd/bcmpmu59xxx_reg.h>
 #include <linux/power/bcmpmu-fg.h>
-#ifdef CONFIG_BCMPMU_THERMAL_THROTTLE
-#include <linux/power/bcmpmu59xxx-thermal-throttle.h>
-#endif
 #ifdef CONFIG_WD_TAPPER
 #include <linux/broadcom/wd-tapper.h>
 #else
@@ -105,7 +102,6 @@
 #define BATT_LI_ION_MIN_VOLT		2100
 #define BATT_LI_ION_MAX_VOLT		4200
 #define BATT_VFLOAT_DEFAULT		0xC
-#define BATT_MIN_EOC_VOLT		4116
 #define CAL_CNT_THRESHOLD		3
 #define GUARD_BAND_LOW_THRLD		10
 #define CRIT_CUTOFF_CNT_THRD		3
@@ -302,7 +298,6 @@ struct bcmpmu_fg_data {
 	struct notifier_block usb_det_nb;
 	struct notifier_block chrgr_status_nb;
 	struct notifier_block chrgr_current_nb;
-	struct notifier_block thermal_throttle_nb;
 
 	struct bcmpmu_batt_cap_info capacity_info;
 	struct bcmpmu_fg_status_flags flags;
@@ -328,9 +323,6 @@ struct bcmpmu_fg_data {
 	enum bcmpmu_chrgr_type_t chrgr_type;
 	int eoc_adj_fct;
 	int eoc_cap_delta;
-	int eoc_current;
-	int vfloat_lvl;
-	int vfloat_eoc;
 	int low_cal_adj_fct;
 	int high_cal_adj_fct;
 	int low_volt_cnt;
@@ -1264,18 +1256,6 @@ int bcmpmu_fg_get_cur(struct bcmpmu59xxx *bcmpmu)
 EXPORT_SYMBOL(bcmpmu_fg_get_cur);
 
 /**
- * bcmpmu_fg_can_battery_be_full - Can battery be full?
- * @bcmpmu_fg_data:	Pointer to bcmpmu_fg_data struct
- *
- * Determine if battery can be fully charged i.e. to its
- * maximum allowed voltage.
- */
-static bool bcmpmu_fg_can_battery_be_full(struct bcmpmu_fg_data *fg)
-{
-	return fg->vfloat_lvl == fg->pdata->volt_levels->vfloat_lvl;
-}
-
-/**
  * bcmpmu_fg_get_load_comp_capacity - Get Battery open circuit capacity
  *
  * @bcmpmu_fg_data:		Pointer to bcmpmu_fg_data struct
@@ -1340,8 +1320,7 @@ static int bcmpmu_fg_get_adj_factor(struct bcmpmu_fg_data *fg)
 			capacity_eoc =
 				bcmpmu_fg_eoc_curr_to_capacity(fg,
 						adc->curr_inst);
-			if (bcmpmu_fg_can_battery_be_full(fg) &&
-				capacity < CAPACITY_PERCENTAGE_FULL)
+			if (capacity < CAPACITY_PERCENTAGE_FULL)
 				adj_factor = (((capacity_eoc - capacity) *
 							100) /
 						(capacity - 100));
@@ -1969,6 +1948,10 @@ static int bcmpmu_fg_event_handler(struct notifier_block *nb,
 			pr_fg(FLOW, "charging disabled\n");
 		}
 		FG_UNLOCK(fg);
+		if (cancel_n_resch_work) {
+			cancel_delayed_work_sync(&fg->fg_periodic_work);
+			queue_delayed_work(fg->fg_wq, &fg->fg_periodic_work, 0);
+		}
 		break;
 	case PMU_ACCY_EVT_OUT_CHRG_CURR:
 		fg = to_bcmpmu_fg_data(nb, chrgr_current_nb);
@@ -1984,55 +1967,10 @@ static int bcmpmu_fg_event_handler(struct notifier_block *nb,
 		}
 		FG_UNLOCK(fg);
 		break;
-	case PMU_THEMAL_THROTTLE_STATUS:
-	{
-#ifdef CONFIG_BCMPMU_THERMAL_THROTTLE
-		struct thermal_throttle_event_data *thermal = data;
-		u8 vfloat_lvl;
-		u16 vfloat_eoc;
-		u16 eoc;
-
-		fg = to_bcmpmu_fg_data(nb, thermal_throttle_nb);
-		if (thermal->algo_running) {
-			vfloat_lvl = min_t(u8, thermal->vfloat_lvl,
-					fg->pdata->volt_levels->vfloat_lvl);
-			vfloat_eoc = min_t(u16, thermal->vfloat_eoc,
-					fg->pdata->volt_levels->high);
-			eoc = max_t(u16, thermal->eoc_curr,
-				fg->pdata->eoc_current);
-		} else {
-			vfloat_lvl = fg->pdata->volt_levels->vfloat_lvl;
-			vfloat_eoc = fg->pdata->volt_levels->high;
-			eoc = fg->pdata->eoc_current;
-		}
-
-		if (fg->vfloat_lvl != vfloat_lvl ||
-			fg->vfloat_eoc != vfloat_eoc ||
-			fg->eoc_current != eoc) {
-			fg->vfloat_lvl = vfloat_lvl;
-			fg->vfloat_eoc = vfloat_eoc;
-			fg->eoc_current = eoc;
-			fg->eoc_cnt = 0;
-
-			pr_fg(FLOW, "Updated: Vfloat_lvl 0x%02x, EOC %u mA\n",
-				fg->vfloat_lvl, fg->eoc_current);
-
-			bcmpmu_fg_set_vfloat_level(fg, fg->vfloat_lvl);
-			cancel_n_resch_work = true;
-		}
-#endif
-	}
-	break;
 
 	default:
 		BUG_ON(1);
 	}
-
-	if (cancel_n_resch_work) {
-		cancel_delayed_work_sync(&fg->fg_periodic_work);
-		queue_delayed_work(fg->fg_wq, &fg->fg_periodic_work, 0);
-	}
-
 	return 0;
 }
 
@@ -2047,7 +1985,7 @@ static int bcmpmu_fg_hw_maint_charging_init(struct bcmpmu_fg_data *fg)
 		return ret;
 	}
 
-	ret = bcmpmu_fg_set_eoc_thrd(fg, fg->eoc_current);
+	ret = bcmpmu_fg_set_eoc_thrd(fg, fg->pdata->eoc_current);
 	ret = bcmpmu_fg_set_maintenance_chrgr_mode(fg,
 			HW_MAINTENANCE_CHARGING);
 	ret = fg->bcmpmu->unmask_irq(fg->bcmpmu, PMU_IRQ_EOC);
@@ -2216,7 +2154,7 @@ static int bcmpmu_fg_sw_maint_charging_algo(struct bcmpmu_fg_data *fg)
 	int curr;
 	bool eoc_condition = false;
 
-	vfloat_volt = fg->vfloat_eoc;
+	vfloat_volt = fg->pdata->volt_levels->high;
 	volt_thrld = vfloat_volt - volt_levels->vfloat_gap;
 	cap_percentage = fg->capacity_info.percentage;
 	volt = fg->adc_data.volt;
@@ -2246,12 +2184,11 @@ static int bcmpmu_fg_sw_maint_charging_algo(struct bcmpmu_fg_data *fg)
 			(!fg->eoc_cap_delta) &&
 			(volt >= vfloat_volt) &&
 			((curr > 0) &&
-			 (curr <= fg->eoc_current)) &&
+			 (curr <= fg->pdata->eoc_current)) &&
 			(fg->eoc_cnt++ > FG_EOC_CNT_THRLD)) {
 		pr_fg(FLOW, "eoc_cnt hit\n");
 		fg->eoc_cnt = 0;
-		if (cap_percentage != CAPACITY_PERCENTAGE_FULL &&
-		    bcmpmu_fg_can_battery_be_full(fg)) {
+		if (cap_percentage != CAPACITY_PERCENTAGE_FULL) {
 			fg->eoc_cap_delta =
 				CAPACITY_PERCENTAGE_FULL - cap_percentage;
 			pr_fg(FLOW, "eoc_cap_delta: %d\n", fg->eoc_cap_delta);
@@ -2263,7 +2200,7 @@ static int bcmpmu_fg_sw_maint_charging_algo(struct bcmpmu_fg_data *fg)
 			eoc_condition = true;
 	} else if ((!flags->fg_eoc) && fg->eoc_cnt &&
 			((volt < vfloat_volt) ||
-			 (curr > fg->eoc_current))) {
+			 (curr > fg->pdata->eoc_current))) {
 		pr_fg(FLOW, "clear EOC counter\n");
 		fg->eoc_cnt = 0;
 	} else if (!flags->fg_eoc && (fg->eoc_cap_delta > 0) &&
@@ -2285,13 +2222,9 @@ static int bcmpmu_fg_sw_maint_charging_algo(struct bcmpmu_fg_data *fg)
 		pr_fg(FLOW, "sw_maint_chrgr: SW EOC tripped\n");
 		fg->eoc_cap_delta = 0;
 		flags->fg_eoc = true;
+		flags->fully_charged = true;
 		flags->prev_batt_status = flags->batt_status;
-		if (bcmpmu_fg_can_battery_be_full(fg)) {
-			flags->fully_charged = true;
-			flags->batt_status = POWER_SUPPLY_STATUS_FULL;
-		} else {
-			flags->batt_status = POWER_SUPPLY_STATUS_NOT_CHARGING;
-		}
+		flags->batt_status = POWER_SUPPLY_STATUS_FULL;
 		/**
 		 * Tell PMU that EOC condition has happened
 		 * so that safetly timers can be cleared
@@ -2490,13 +2423,10 @@ static void bcmpmu_fg_charging_algo(struct bcmpmu_fg_data *fg)
 	 * but we will always show 100%
 	 */
 	if (fg->flags.fg_eoc) {
-		if (bcmpmu_fg_can_battery_be_full(fg)) {
-			fg->capacity_info.capacity =
-				fg->capacity_info.full_charge;
-			fg->capacity_info.percentage = CAPACITY_PERCENTAGE_FULL;
-			fg->capacity_info.prev_percentage =
-				CAPACITY_PERCENTAGE_FULL;
-		}
+		fg->capacity_info.capacity = fg->capacity_info.full_charge;
+		fg->capacity_info.percentage = CAPACITY_PERCENTAGE_FULL;
+		fg->capacity_info.prev_percentage = CAPACITY_PERCENTAGE_FULL;
+
 	} else if ((fg->capacity_info.prev_percentage ==
 				CAPACITY_PERCENTAGE_FULL - 1) &&
 			(fg->capacity_info.percentage ==
@@ -2768,10 +2698,7 @@ static void bcmpmu_fg_periodic_work(struct work_struct *work)
 		fg->flags.reschedule_work = true;
 		queue_delayed_work(fg->fg_wq, &fg->fg_periodic_work, 0);
 	} else if ((fg->flags.batt_status == POWER_SUPPLY_STATUS_CHARGING) ||
-			(fg->flags.batt_status == POWER_SUPPLY_STATUS_FULL) ||
-			(fg->flags.batt_status ==
-				POWER_SUPPLY_STATUS_NOT_CHARGING &&
-			!bcmpmu_fg_can_battery_be_full(fg)))
+			(fg->flags.batt_status == POWER_SUPPLY_STATUS_FULL))
 		bcmpmu_fg_charging_algo(fg);
 	else
 		bcmpmu_fg_discharging_algo(fg);
@@ -3009,17 +2936,8 @@ static int bcmpmu_fg_register_notifiers(struct bcmpmu_fg_data *fg)
 	if (ret)
 		goto unreg_chrgr_current_nb;
 
-	fg->thermal_throttle_nb.notifier_call = bcmpmu_fg_event_handler;
-	ret = bcmpmu_add_notifier(PMU_THEMAL_THROTTLE_STATUS,
-			&fg->thermal_throttle_nb);
-	if (ret)
-		goto unreg_thermal_throttle_nb;
 
 	return 0;
-
-unreg_thermal_throttle_nb:
-	bcmpmu_remove_notifier(PMU_ACCY_EVT_OUT_CHRG_CURR,
-			&fg->chrgr_current_nb);
 unreg_chrgr_current_nb:
 	bcmpmu_remove_notifier(PMU_ACCY_EVT_OUT_CHRG_RESUME_VBUS,
 			&fg->accy_nb);
@@ -3056,7 +2974,6 @@ static int bcmpmu_fg_set_platform_data(struct bcmpmu_fg_data *fg,
 		return -EINVAL;
 	if (!pdata->eoc_current)
 		pdata->eoc_current = FG_EOC_CURRENT;
-	fg->eoc_current = pdata->eoc_current;
 	if (!pdata->sleep_current_ua)
 		pdata->sleep_current_ua = FG_SLEEP_CURR_UA;
 	if (!pdata->sleep_sample_rate)
@@ -3080,14 +2997,10 @@ static int bcmpmu_fg_set_platform_data(struct bcmpmu_fg_data *fg,
 	/**
 	 * set VFLOAT levels
 	 */
-	if (!fg->pdata->volt_levels->vfloat_lvl)
-		fg->pdata->volt_levels->vfloat_lvl = BATT_VFLOAT_DEFAULT;
-	fg->vfloat_lvl = pdata->volt_levels->vfloat_lvl;
-	bcmpmu_fg_set_vfloat_level(fg, pdata->volt_levels->vfloat_lvl);
-
-	if (!fg->pdata->volt_levels->high)
-		fg->pdata->volt_levels->high = BATT_MIN_EOC_VOLT;
-	fg->vfloat_eoc = fg->pdata->volt_levels->high;
+	if (fg->pdata->volt_levels->vfloat_lvl)
+		bcmpmu_fg_set_vfloat_level(fg, pdata->volt_levels->vfloat_lvl);
+	else
+		bcmpmu_fg_set_vfloat_level(fg, BATT_VFLOAT_DEFAULT);
 	return 0;
 }
 
@@ -3103,7 +3016,7 @@ int bcmpmu_fg_set_sw_eoc_current(struct bcmpmu59xxx *bcmpmu, int eoc_current)
 
 	pr_fg(FLOW, "set sw eoc current level to: %d\n", eoc_current);
 	FG_LOCK(fg);
-	fg->eoc_current = eoc_current;
+	fg->pdata->eoc_current = eoc_current;
 	FG_UNLOCK(fg);
 	return 0;
 }
@@ -3362,13 +3275,13 @@ static void bcmpmu_fg_debugfs_init(struct bcmpmu_fg_data *fg)
 
 	dentry_fg_file = debugfs_create_u32("eoc_curr", DEBUG_FS_PERMISSIONS,
 				dentry_fg_dir,
-				&fg->eoc_current);
+				&fg->pdata->eoc_current);
 	if (IS_ERR_OR_NULL(dentry_fg_file))
 		goto debugfs_clean;
 
 	dentry_fg_file = debugfs_create_u32("vfloat", DEBUG_FS_PERMISSIONS,
 			dentry_fg_dir,
-			&fg->vfloat_lvl);
+			&fg->pdata->volt_levels->vfloat_lvl);
 	if (IS_ERR_OR_NULL(dentry_fg_file))
 		goto debugfs_clean;
 
