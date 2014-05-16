@@ -76,6 +76,7 @@ struct bh1721fvc_data {
 	struct work_struct work_light;
 	struct hrtimer timer;
 	struct mutex lock;
+	struct mutex data_lock;
 	struct workqueue_struct *wq;
 	ktime_t light_poll_delay;
 	enum BH1721FVC_STATE state;
@@ -188,17 +189,17 @@ static ssize_t bh1721fvc_average_samples_store(struct device *dev,
 	if (err < 0)
 		return err;
 
-	mutex_lock(&bh1721fvc->lock);
 	if ((new_val > ALS_MAX_BUFFER_NUM) || new_val == 0) {
 		pr_err("%s: Wrong buffer size (%d), max is %d\n", __func__,
 						new_val, ALS_MAX_BUFFER_NUM);
 		return -EINVAL;
 	}
+	mutex_lock(&bh1721fvc->data_lock);
 	if (bh1721fvc->average_samples != new_val) {
 		bh1721fvc->als_buf_initialized = false;
 		bh1721fvc->average_samples = new_val;
 	}
-	mutex_unlock(&bh1721fvc->lock);
+	mutex_unlock(&bh1721fvc->data_lock);
 
 	return size;
 }
@@ -274,6 +275,7 @@ static ssize_t bh1721fvc_light_enable_store(struct device *dev,
 
 	mutex_lock(&bh1721fvc->lock);
 	if (new_value && (!bh1721fvc_is_measuring(bh1721fvc))) {
+		bh1721fvc->als_buf_initialized = false;
 		err = bh1721fvc_enable(bh1721fvc);
 		if (!err)
 			bh1721fvc->state = bh1721fvc->measure_mode;
@@ -281,7 +283,6 @@ static ssize_t bh1721fvc_light_enable_store(struct device *dev,
 			pr_err("%s: couldn't enable", __func__);
 			bh1721fvc->state = POWER_DOWN;
 		}
-		bh1721fvc->als_buf_initialized = false;
 	} else if (!new_value && (bh1721fvc_is_measuring(bh1721fvc))) {
 		err = bh1721fvc_disable(bh1721fvc);
 		if (!err)
@@ -462,7 +463,7 @@ static int bh1721fvc_get_luxvalue(struct bh1721fvc_data *bh1721fvc, u16 *value)
 		return -EIO;
 	}
 
-	mutex_lock(&bh1721fvc->lock);
+	mutex_lock(&bh1721fvc->data_lock);
 	/* ALS buffer initialize (light sensor off ---> light sensor on) */
 	if (!bh1721fvc->als_buf_initialized) {
 		bh1721fvc->als_buf_initialized = true;
@@ -498,7 +499,7 @@ static int bh1721fvc_get_luxvalue(struct bh1721fvc_data *bh1721fvc, u16 *value)
 					(bh1721fvc->num_valid_values - 2);
 	else
 		*value = als_total / bh1721fvc->num_valid_values;
-	mutex_unlock(&bh1721fvc->lock);
+	mutex_unlock(&bh1721fvc->data_lock);
 	return 0;
 }
 
@@ -622,6 +623,7 @@ static int bh1721fvc_probe(struct i2c_client *client,
 			bh1721fvc->measure_mode = val;
 	}
 	mutex_init(&bh1721fvc->lock);
+	mutex_init(&bh1721fvc->data_lock);
 	bh1721fvc->state = POWER_DOWN;
 
 	err = bh1721fvc_test_luxvalue(bh1721fvc);
@@ -707,6 +709,7 @@ err_input_allocate_device_light:
 err_create_workqueue:
 err_test_lightsensor:
 	mutex_destroy(&bh1721fvc->lock);
+	mutex_destroy(&bh1721fvc->data_lock);
 err_reset_failed:
 err_reset_null:
 	kfree(bh1721fvc);
@@ -733,6 +736,7 @@ static int bh1721fvc_remove(struct i2c_client *client)
 
 	destroy_workqueue(bh1721fvc->wq);
 	mutex_destroy(&bh1721fvc->lock);
+	mutex_destroy(&bh1721fvc->data_lock);
 	kfree(bh1721fvc);
 	bh1721fvc_dbmsg("bh1721fvc_remove -\n");
 	return 0;
