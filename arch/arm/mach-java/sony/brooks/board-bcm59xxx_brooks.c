@@ -38,11 +38,20 @@
 #if defined(CONFIG_BCMPMU_THERMAL_THROTTLE)
 #include <linux/power/bcmpmu59xxx-thermal-throttle.h>
 #endif
+#if defined(CONFIG_BCMPMU_DIETEMP_THERMAL)
+#include <linux/broadcom/bcmpmu59xxx-dietemp-thermal.h>
+#endif
+#if defined(CONFIG_BCMPMU_CHARGER_COOLANT)
+#include <linux/bcmpmu-charger-coolant.h>
+#endif
+
 #include <linux/of_platform.h>
 #include <linux/of.h>
 #include <linux/of_fdt.h>
 #include "pm_params.h"
 #include <plat/cpu.h>
+
+#define MIN(x, y) ((x) < (y) ? (x) : (y))
 
 #define BOARD_EDN010 "Hawaiistone EDN010"
 #define BOARD_EDN01x "Hawaiistone EDN01x"
@@ -51,6 +60,29 @@
 #define PMU_DEVICE_I2C_ADDR1	0x0c
 #define PMU_DEVICE_INT_GPIO	29
 #define PMU_DEVICE_I2C_BUSNO 4
+
+#define SONY_BATTERY_C	420 /* C_min [mAh] */
+#define SONY_BATTERY_CURRENT_COOL ((SONY_BATTERY_C * 6) / 10)
+#define SONY_BATTERY_CURRENT_NORMAL (2 * SONY_BATTERY_C)
+#define SONY_BATTERY_CURRENT_WARM (SONY_BATTERY_C / 2)
+
+/* {min,typ,max} = {4.315, 4.345, 4.375} */
+#define SONY_BATTERY_MAX_VFLOAT_REG 0x14
+#define SONY_BATTERY_MAX_MIN_VFLOAT 4315 /* mV */
+
+
+/* Temperature boundaries for charging:
+ * Cold <= 5
+ * 5 < Cool <= 17
+ * 17 < Normal < 43
+ * 43 <= Warm < 55
+ * Overheat >= 55
+ * Temperatures in deci Celcius */
+#define SONY_BATTERY_TEMP_COOL 51
+#define SONY_BATTERY_TEMP_NORMAL 171
+#define SONY_BATTERY_TEMP_WARM 430
+#define SONY_BATTERY_TEMP_OVERHEAT 550
+#define SONY_BATTERY_TEMP_HYST 30
 
 static int bcmpmu_init_platform_hw(struct bcmpmu59xxx *bcmpmu);
 static int bcmpmu_exit_platform_hw(struct bcmpmu59xxx *bcmpmu);
@@ -88,20 +120,23 @@ static struct bcmpmu59xxx_rw_data __initdata register_init_data[] = {
 	{.addr = PMU_REG_MBCCTRL3, .val = 0x04, .mask = 0x04},
 	/* Enable BC12_EN */
 	{.addr = PMU_REG_MBCCTRL5, .val = 0x01, .mask = 0x01},
-	/* Max VFLOAT to 4.2*/
-	/*  ICCMAX to 1500mA*/
-	{.addr = PMU_REG_MBCCTRL8, .val = 0x09, .mask = 0xFF},
+	/* VFLOATMAX to 4.375V */
+	{.addr = PMU_REG_MBCCTRL6, .val = 0x34, .mask = 0x3F},
+	/*  ICCMAX to 771 +/- 5% mA */
+	{.addr = PMU_REG_MBCCTRL8, .val = 0x17, .mask = 0x1F},
 	/* Set curr to 100mA during boot*/
 	{.addr = PMU_REG_MBCCTRL10, .val = 0x0, .mask = 0xF},
-	/* NTC Hot Temperature Comparator set to 45C */
-	{.addr = PMU_REG_CMPCTRL5, .val = 0x70, .mask = 0xFF},
-	/* NTC Hot Temperature Comparator set to 40C*/
-	{.addr = PMU_REG_CMPCTRL6, .val = 0x84, .mask = 0xFF},
-	/* NTC Cold Temperature Comparator set to 0C*/
-	{.addr = PMU_REG_CMPCTRL7, .val = 0xF4, .mask = 0xFF},
-	/* NTC Cold Temperature Comparator set to 5C*/
-	{.addr = PMU_REG_CMPCTRL8, .val = 0xB8, .mask = 0xFF},
-	/* NTC Hot Temperature Comparator bit 9,8 */
+	/* NTC Hot/Cold enable for HW and SW charging */
+	{.addr = PMU_REG_MBCCTRL11, .val = 0x0F, .mask = 0x0F},
+	/* NTC Hot Temperature Comparator rising set to 55C */
+	{.addr = PMU_REG_CMPCTRL5, .val = 0x4F, .mask = 0xFF},
+	/* NTC Hot Temperature Comparator falling set to 52C*/
+	{.addr = PMU_REG_CMPCTRL6, .val = 0x58, .mask = 0xFF},
+	/* NTC Cold Temperature Comparator rising set to 5C*/
+	{.addr = PMU_REG_CMPCTRL7, .val = 0xB6, .mask = 0xFF},
+	/* NTC Cold Temperature Comparator falling set to 8C*/
+	{.addr = PMU_REG_CMPCTRL8, .val = 0x91, .mask = 0xFF},
+	/* NTC Hot/Cold Temperature Comparator bit 9,8 */
 	{.addr = PMU_REG_CMPCTRL9, .val = 0x05, .mask = 0xFF},
 	/* ID detection method selection
 	 *  current source Trimming */
@@ -853,14 +888,14 @@ struct bcmpmu59xxx_regulator_pdata rgltr_pdata = {
 
 static int chrgr_curr_lmt[PMU_CHRGR_TYPE_MAX] = {
 	[PMU_CHRGR_TYPE_NONE] = 0,
-	[PMU_CHRGR_TYPE_SDP] = 500,
-	[PMU_CHRGR_TYPE_CDP] = 1500,
-	[PMU_CHRGR_TYPE_DCP] = 700,
-	[PMU_CHRGR_TYPE_TYPE1] = 700,
-	[PMU_CHRGR_TYPE_TYPE2] = 700,
-	[PMU_CHRGR_TYPE_PS2] = 100,
-	[PMU_CHRGR_TYPE_ACA_DOCK] = 700,
-	[PMU_CHRGR_TYPE_ACA] = 700,
+	[PMU_CHRGR_TYPE_SDP] = MIN(500, SONY_BATTERY_CURRENT_NORMAL),
+	[PMU_CHRGR_TYPE_CDP] = MIN(1500, SONY_BATTERY_CURRENT_NORMAL),
+	[PMU_CHRGR_TYPE_DCP] = MIN(1500, SONY_BATTERY_CURRENT_NORMAL),
+	[PMU_CHRGR_TYPE_TYPE1] = MIN(700, SONY_BATTERY_CURRENT_NORMAL),
+	[PMU_CHRGR_TYPE_TYPE2] = MIN(700, SONY_BATTERY_CURRENT_NORMAL),
+	[PMU_CHRGR_TYPE_PS2] = MIN(100, SONY_BATTERY_CURRENT_NORMAL),
+	[PMU_CHRGR_TYPE_ACA_DOCK] = MIN(700, SONY_BATTERY_CURRENT_NORMAL),
+	[PMU_CHRGR_TYPE_ACA] = MIN(700, SONY_BATTERY_CURRENT_NORMAL),
 };
 
 struct bcmpmu59xxx_accy_pdata accy_pdata = {
@@ -872,38 +907,44 @@ struct bcmpmu_chrgr_pdata chrgr_pdata = {
 	.chrgr_curr_lmt_tbl = chrgr_curr_lmt,
 };
 
-
 static struct bcmpmu_adc_lut batt_temp_map[] = {
-	{16, 1000},			/* 100 C */
-	{20, 950},			/* 95 C */
-	{24, 900},			/* 90 C */
-	{28, 850},			/* 85 C */
-	{32, 800},			/* 80 C */
-	{36, 750},			/* 75 C */
-	{44, 700},			/* 70 C */
-	{52, 650},			/* 65 C */
-	{64, 600},			/* 60 C */
-	{76, 550},			/* 55 C */
-	{92, 500},			/* 50 C */
-	{112, 450},			/* 45 C */
-	{132, 400},			/* 40 C */
-	{160, 350},			/* 35 C */
-	{192, 300},			/* 30 C */
-	{228, 250},			/* 25 C */
-	{272, 200},			/* 20 C */
-	{324, 150},			/* 15 C */
-	{376, 100},			/* 10 C */
-	{440, 50},			/* 5 C */
-	{500, 0},			/* 0 C */
-	{568, -50},			/* -5 C */
-	{636, -100},			/* -10 C */
-	{704, -150},			/* -15 C */
-	{760, -200},			/* -20 C */
-	{816, -250},			/* -25 C */
-	{860, -300},			/* -30 C */
-	{900, -350},			/* -35 C */
-	{932, -400},			/* -40 C */
+	{34, 800},	/* 80 C */
+	{40, 750},	/* 75 C */
+	{47, 700},	/* 70 C */
+	{56, 650},	/* 65 C */
+	{66, 600},	/* 60 C */
+	{79, 550},	/* 55 C */
+	{82, 540},	/* 54 C */
+	{85, 530},	/* 53 C */
+	{88, 520},	/* 52 C */
+	{94, 500},	/* 50 C */
+	{113, 450},	/* 45 C */
+	{117, 440},	/* 44 C */
+	{121, 430},	/* 43 C */
+	{126, 420},	/* 42 C */
+	{135, 400},	/* 40 C */
+	{162, 350},	/* 35 C */
+	{193, 300},	/* 30 C */
+	{230, 250},	/* 25 C */
+	{273, 200},	/* 20 C */
+	{292, 180},	/* 18 C */
+	{302, 170},	/* 17 C */
+	{312, 160},	/* 16 C */
+	{323, 150},	/* 15 C */
+	{378, 100},	/* 10 C */
+	{401, 80},	/* 8 C */
+	{413, 70},	/* 7 C */
+	{425, 60},	/* 6 C */
+	{438, 50},	/* 5 C */
+	{502, 0},	/* 0 C */
+	{568, -50},	/* -5 C */
+	{634, -100},	/* -10 C */
+	{698, -150},	/* -15 C */
+	{758, -200},	/* -20 C */
+	{812, -250},	/* -25 C */
+	{858, -300},	/* -30 C */
 };
+
 struct bcmpmu_adc_pdata adc_pdata[PMU_ADC_CHANN_MAX] = {
 	[PMU_ADC_CHANN_VMBATT] = {
 					.flag = 0,
@@ -1016,61 +1057,72 @@ struct bcmpmu_acld_pdata acld_pdata = {
 	.acld_vbus_margin = 200,	/*mV*/
 	.acld_vbus_thrs = 5950,
 	.acld_vbat_thrs = 3500,
-	.i_sat = 400,			/* saturation current in mA
+	.i_sat = SONY_BATTERY_CURRENT_NORMAL,	/* saturation current in mA
 						for chrgr while using ACLD */
-	.i_def_dcp = 700,
-	.i_max_cc = 400,
-	.acld_cc_lmt = 360,    /*In general this is 80% of 1C.
-				  If customer defines any other value
-				  chage accordingly*/
+	.i_def_dcp = SONY_BATTERY_CURRENT_NORMAL,
+	.i_max_cc = SONY_BATTERY_CURRENT_NORMAL,
+	.acld_cc_lmt = SONY_BATTERY_CURRENT_NORMAL,
 	.otp_cc_trim = 0x1F,
+	.max_charge_c_rate_percent =
+		(100 * SONY_BATTERY_CURRENT_NORMAL) / SONY_BATTERY_C,
 	.acld_chrgrs = bcmpmu_acld_chargers,
 	.acld_chrgrs_list_size = ARRAY_SIZE(bcmpmu_acld_chargers),
 };
 
 static struct batt_volt_cap_map ys_05_volt_cap_lut[] = {
-	{4200, 100},
-	{4146, 95},
-	{4089, 89},
-	{4047, 84},
-	{3996, 78},
-	{3964, 73},
-	{3926, 67},
-	{3892, 62},
-	{3856, 57},
-	{3824, 51},
-	{3806, 46},
-	{3791, 40},
-	{3781, 35},
-	{3771, 29},
-	{3758, 24},
-	{3740, 19},
-	{3708, 13},
-	{3689, 8},
-	{3550, 2},
-	{3488, 1},
+	{4329, 100},
+	{4273, 95},
+	{4221, 90},
+	{4172, 85},
+	{4124, 80},
+	{4082, 75},
+	{4027, 70},
+	{3979, 65},
+	{3946, 60},
+	{3902, 55},
+	{3867, 50},
+	{3841, 45},
+	{3821, 40},
+	{3803, 35},
+	{3788, 30},
+	{3766, 25},
+	{3743, 20},
+	{3710, 15},
+	{3694, 10},
+	{3692, 9},
+	{3690, 8},
+	{3687, 7},
+	{3683, 6},
+	{3659, 5},
+	{3635, 4},
+	{3598, 3},
+	{3548, 2},
+	{3498, 1},
 	{3400, 0},
 };
 
 static struct batt_eoc_curr_cap_map ys_05_eoc_cap_lut[] = {
-	{290, 90},
-	{270, 91},
-	{250, 92},
-	{228, 93},
-	{208, 94},
-	{185, 95},
-	{165, 96},
-	{145, 97},
-	{125, 98},
-	{105, 99},
-	{85, 100},
+	{239, 90},
+	{215, 91},
+	{191, 92},
+	{167, 93},
+	{144, 94},
+	{121, 95},
+	{99, 96},
+	{78, 97},
+	{58, 98},
+	{39, 99},
+	{22, 100},
 	{0, 100},
 };
 
 static struct batt_cutoff_cap_map ys_05_cutoff_cap_lut[] = {
-	{3460, 2},
-	{3430, 1},
-	{3350, 0},
+	{3659, 5},
+	{3635, 4},
+	{3598, 3},
+	{3548, 2},
+	{3498, 1},
+	{3400, 0},
 };
 
 #if defined(CONFIG_BCMPMU_THERMAL_THROTTLE)
@@ -1083,94 +1135,68 @@ static struct batt_temp_curr_map ys_05_temp_curr_lut[] = {
 
 static struct batt_esr_temp_lut ys_05_esr_temp_lut[] = {
 	{
-	 .temp = -200,
-	 .reset = 0, .fct = 254, .guardband = 50,
-	 .esr_vl_lvl = 3781, .esr_vm_lvl = 3805, .esr_vh_lvl = 4141,
-	 .esr_vl_slope = -16793, .esr_vl_offset = 65207,
-	 .esr_vm_slope = -6920, .esr_vm_offset = 27882,
-	 .esr_vh_slope = -441, .esr_vh_offset = 3228,
-	 .esr_vf_slope = -2635, .esr_vf_offset = 12313,
-	 },
+		.temp = -200,
+		.reset = 0, .fct = 715, .guardband = 50,
+		.esr_vl_lvl = 3674, .esr_vl_slope = -4339,
+		.esr_vl_offset = 24405,
+		.esr_vm_lvl = 3755, .esr_vm_slope = -25315,
+		.esr_vm_offset = 101473,
+		.esr_vh_lvl = 3786, .esr_vh_slope = -89672,
+		.esr_vh_offset = 343156,
+		.esr_vf_slope = 357, .esr_vf_offset = 2317,
+	},
 	{
-	 .temp = -150,
-	 .reset = 0, .fct = 456.5, .guardband = 50,
-	 .esr_vl_lvl = 3708, .esr_vm_lvl = 3805, .esr_vh_lvl = 3998,
-	 .esr_vl_slope = -19711, .esr_vl_offset = 74373,
-	 .esr_vm_slope = -3819, .esr_vm_offset = 15439,
-	 .esr_vh_slope = 166, .esr_vh_offset = 275,
-	 .esr_vf_slope = -669, .esr_vf_offset = 3613,
-	 },
+		.temp = -100,
+		.reset = 0, .fct = 854, .guardband = 50,
+		.esr_vl_lvl = 3702, .esr_vl_slope = -6020,
+		.esr_vl_offset = 26914,
+		.esr_vm_lvl = 3808, .esr_vm_slope = -20753,
+		.esr_vm_offset = 81452,
+		.esr_vh_lvl = 4266, .esr_vh_slope = 677,
+		.esr_vh_offset = -154,
+		.esr_vf_slope = -5056, .esr_vf_offset = 24300,
+	},
 	{
-	 .temp = -100,
-	 .reset = 0, .fct = 659, .guardband = 50,
-	 .esr_vl_lvl = 3708, .esr_vm_lvl = 3805, .esr_vh_lvl = 3998,
-	 .esr_vl_slope = -19711, .esr_vl_offset = 74373,
-	 .esr_vm_slope = -3819, .esr_vm_offset = 15439,
-	 .esr_vh_slope = 166, .esr_vh_offset = 275,
-	 .esr_vf_slope = -669, .esr_vf_offset = 3613,
-	 },
+		.temp = 0,
+		.reset = 0, .fct = 982, .guardband = 30,
+		.esr_vl_lvl = 3635, .esr_vl_slope = -2123,
+		.esr_vl_offset = 9886,
+		.esr_vm_lvl = 3822, .esr_vm_slope = -5292,
+		.esr_vm_offset = 21405,
+		.esr_vh_lvl = 4122, .esr_vh_slope = 324,
+		.esr_vh_offset = -53,
+		.esr_vf_slope = -478, .esr_vf_offset = 3250
+	},
 	{
-	 .temp = -50,
-	 .reset = 0, .fct = 772.5, .guardband = 50,
-	 .esr_vl_lvl = 3708, .esr_vm_lvl = 3825, .esr_vh_lvl = 3998,
-	 .esr_vl_slope = -6386, .esr_vl_offset = 24399,
-	 .esr_vm_slope = -1475, .esr_vm_offset = 6188,
-	 .esr_vh_slope = 325, .esr_vh_offset = -697,
-	 .esr_vf_slope = -489, .esr_vf_offset = 2557,
-	 },
+		.temp = 100,
+		.reset = 0, .fct = 992, .guardband = 30,
+		.esr_vl_lvl = 3479, .esr_vl_slope = -9655,
+		.esr_vl_offset = 34730,
+		.esr_vm_lvl = 3743, .esr_vm_slope = -1718,
+		.esr_vm_offset = 7118,
+		.esr_vh_lvl = 4035, .esr_vh_slope = 10,
+		.esr_vh_offset = 649,
+		.esr_vf_slope = -333, .esr_vf_offset = 2033,
+	},
 	{
-	 .temp = 0,
-	 .reset = 0, .fct = 886, .guardband = 30,
-	 .esr_vl_lvl = 3708, .esr_vm_lvl = 3825, .esr_vh_lvl = 3998,
-	 .esr_vl_slope = -6386, .esr_vl_offset = 24399,
-	 .esr_vm_slope = -1475, .esr_vm_offset = 6188,
-	 .esr_vh_slope = 325, .esr_vh_offset = -697,
-	 .esr_vf_slope = -489, .esr_vf_offset = 2557,
-	 },
-	{
-	 .temp = 50,
-	 .reset = 0, .fct = 923.5, .guardband = 30,
-	 .esr_vl_lvl = 3708, .esr_vm_lvl = 3825, .esr_vh_lvl = 3928,
-	 .esr_vl_slope = -3170, .esr_vl_offset = 12161,
-	 .esr_vm_slope = -506, .esr_vm_offset = 2282,
-	 .esr_vh_slope = 517, .esr_vh_offset = -1630,
-	 .esr_vf_slope = -306, .esr_vf_offset = 1603,
-	 },
-	{
-	 .temp = 100,
-	 .reset = 0, .fct = 961, .guardband = 30,
-	 .esr_vl_lvl = 3708, .esr_vm_lvl = 3825, .esr_vh_lvl = 3928,
-	 .esr_vl_slope = -3170, .esr_vl_offset = 12161,
-	 .esr_vm_slope = -506, .esr_vm_offset = 2282,
-	 .esr_vh_slope = 517, .esr_vh_offset = -1630,
-	 .esr_vf_slope = -306, .esr_vf_offset = 1603,
-	 },
-	{
-	 .temp = 150,
-	 .reset = 0, .fct = 980.5, .guardband = 30,
-	 .esr_vl_lvl = 3500, .esr_vm_lvl = 3708, .esr_vh_lvl = 3928,
-	 .esr_vl_slope = -4327, .esr_vl_offset = 15680,
-	 .esr_vm_slope = -1432, .esr_vm_offset = 5547,
-	 .esr_vh_slope = 129, .esr_vh_offset = -242,
-	 .esr_vf_slope = -228, .esr_vf_offset = 1161,
-	 },
-	{
-	 .temp = 200,
-	 .reset = 0, .fct = 1000, .guardband = 30,
-	 .esr_vl_lvl = 3500, .esr_vm_lvl = 3708, .esr_vh_lvl = 3928,
-	 .esr_vl_slope = -4327, .esr_vl_offset = 15680,
-	 .esr_vm_slope = -1432, .esr_vm_offset = 5547,
-	 .esr_vh_slope = 129, .esr_vh_offset = -242,
-	 .esr_vf_slope = -228, .esr_vf_offset = 1161,
+		.temp = 200,
+		.reset = 0, .fct = 1000, .guardband = 30,
+		.esr_vl_lvl = 3496, .esr_vl_slope = -6973,
+		.esr_vl_offset = 25242,
+		.esr_vm_lvl = 3737, .esr_vm_slope = -1713,
+		.esr_vm_offset = 6850,
+		.esr_vh_lvl = 4022, .esr_vh_slope = 158,
+		.esr_vh_offset = -142,
+		.esr_vf_slope = -302, .esr_vf_offset = 1710,
 	 },
 };
 
 static struct bcmpmu_batt_property ys_05_props = {
-	.model = "BRCM YS-05",
-	.min_volt = 3000,
-	.max_volt = 4200,
-	.full_cap = 400 * 3600,
-	.one_c_rate = 400,
+	.model = "Sony",
+	.min_volt = 3400,
+	.max_volt = 4350,
+	.full_cap = SONY_BATTERY_C * 3600,
+	.one_c_rate = SONY_BATTERY_C,
 	.volt_cap_lut = ys_05_volt_cap_lut,
 	.volt_cap_lut_sz = ARRAY_SIZE(ys_05_volt_cap_lut),
 	.esr_temp_lut = ys_05_esr_temp_lut,
@@ -1179,7 +1205,6 @@ static struct bcmpmu_batt_property ys_05_props = {
 	.eoc_cap_lut_sz = ARRAY_SIZE(ys_05_eoc_cap_lut),
 	.cutoff_cap_lut = ys_05_cutoff_cap_lut,
 	.cutoff_cap_lut_sz = ARRAY_SIZE(ys_05_cutoff_cap_lut),
-
 };
 
 static struct bcmpmu_batt_cap_levels ys_05_cap_levels = {
@@ -1190,13 +1215,13 @@ static struct bcmpmu_batt_cap_levels ys_05_cap_levels = {
 };
 
 static struct bcmpmu_batt_volt_levels ys_05_volt_levels = {
-	.critical = 3400,
-	.low = 3500,
-	.normal = 3700,
-	.high = 4165,		/* should be ~60mv less than vfloat_lvl */
+	.critical = 3659, /* 5% LUT level */
+	.low = 3710, /* 15% LUT level */
+	.normal = 3800,
+	.high = SONY_BATTERY_MAX_MIN_VFLOAT,
 	.crit_cutoff_cnt = 3,
-	.vfloat_lvl = 0xE,
-	.vfloat_max = 0xE,
+	.vfloat_lvl = SONY_BATTERY_MAX_VFLOAT_REG,
+	.vfloat_max = SONY_BATTERY_MAX_VFLOAT_REG,
 	.vfloat_gap = 100, /* in mV */
 };
 
@@ -1204,21 +1229,36 @@ static struct bcmpmu_batt_cal_data ys_05_cal_data = {
 	.volt_low = 3550,
 	.cap_low = 30,
 };
+
+/* temp, vfloat_lvl, vfloat_eoc, ibat_eoc */
+static struct bcmpmu_fg_vf_data ys_05_vf_data[] = {
+	{INT_MIN, 0, 0, USHRT_MAX},
+	/* EOC@4.35V,0.05C_min */
+	{SONY_BATTERY_TEMP_COOL, SONY_BATTERY_MAX_VFLOAT_REG,
+	 SONY_BATTERY_MAX_MIN_VFLOAT, SONY_BATTERY_C / 20},
+	/* EOC@4.1V,no CV */
+	{SONY_BATTERY_TEMP_WARM, 0x08, 4018, USHRT_MAX},
+	{SONY_BATTERY_TEMP_OVERHEAT, 0, 0, USHRT_MAX},
+};
+
 static struct bcmpmu_fg_pdata fg_pdata = {
 	.batt_prop = &ys_05_props,
 	.cap_levels = &ys_05_cap_levels,
 	.volt_levels = &ys_05_volt_levels,
 	.cal_data = &ys_05_cal_data,
 	.sns_resist = 10,
-	.sys_impedence = 33,
-	.eoc_current = 85, /* End of charge current in mA */
+	.sys_impedence = 33, /* Not used in bcmpmu-fg.c */
+	.eoc_current = SONY_BATTERY_C / 20, /* End of charge current in mA */
 	.hw_maintenance_charging = false, /* enable HW EOC of PMU */
 	.sleep_current_ua = 2000, /* floor during sleep */
 	.sleep_sample_rate = 32000,
-	.fg_factor = 976,
+	.fg_factor = 679,
 	.poll_rate_low_batt = 20000,	/* every 20 seconds */
 	.poll_rate_crit_batt = 5000,	/* every 5 Seconds */
 	.ntc_high_temp = 680, /*battery too hot shdwn temp*/
+	.vfd = &ys_05_vf_data,
+	.vfd_sz = ARRAY_SIZE(ys_05_vf_data),
+	.hysteresis = SONY_BATTERY_TEMP_HYST,
 };
 
 #if defined(CONFIG_LEDS_BCM_PMU59xxx)
@@ -1252,6 +1292,54 @@ static struct bcmpmu_throttle_pdata throttle_pdata = {
 };
 #endif
 
+#ifdef CONFIG_BCMPMU_DIETEMP_THERMAL
+struct bcmpmu_dietemp_trip dietemp_trip_points[] = {
+	{.temp = 0, .type = THERMAL_TRIP_ACTIVE, .max_curr = 0,},
+	{.temp = SONY_BATTERY_TEMP_COOL, .type = THERMAL_TRIP_ACTIVE,
+	 .max_curr = SONY_BATTERY_CURRENT_COOL,},
+	{.temp = SONY_BATTERY_TEMP_NORMAL, .type = THERMAL_TRIP_ACTIVE,
+	 .max_curr = SONY_BATTERY_CURRENT_NORMAL,},
+	{.temp = SONY_BATTERY_TEMP_WARM, .type = THERMAL_TRIP_ACTIVE,
+	 .max_curr = SONY_BATTERY_CURRENT_WARM,},
+	{.temp = SONY_BATTERY_TEMP_OVERHEAT, .type = THERMAL_TRIP_ACTIVE,
+	 .max_curr = 0,},
+};
+
+struct bcmpmu_dietemp_pdata dtemp_zone_pdata = {
+	.poll_rate_ms = 5000,
+	.hysteresis = SONY_BATTERY_TEMP_HYST,
+	/* ADC channel and mode selection */
+	.temp_adc_channel = PMU_ADC_CHANN_NTC,
+	.temp_adc_req_mode = PMU_ADC_REQ_RTM_MODE,
+	.trip_cnt = ARRAY_SIZE(dietemp_trip_points),
+	.trips = dietemp_trip_points,
+};
+#endif
+
+#ifdef CONFIG_BCMPMU_CHARGER_COOLANT
+static struct chrgr_trim_reg_data chrgr_trim_reg_lut[] = {
+	{.addr = PMU_REG_MBCCTRL18, .def_val = 0x00},
+	{.addr = PMU_REG_MBCCTRL19, .def_val = 0x03},
+	{.addr = PMU_REG_MBCCTRL20, .def_val = 0x02},
+};
+
+static unsigned int charger_coolant_state[] = {
+	0,
+	SONY_BATTERY_CURRENT_COOL,
+	SONY_BATTERY_CURRENT_NORMAL,
+	SONY_BATTERY_CURRENT_WARM,
+	0
+};
+
+struct bcmpmu_cc_pdata ccool_pdata = {
+	.state_no = ARRAY_SIZE(charger_coolant_state),
+	.states = charger_coolant_state,
+	/* Registers to store/restore while throttling*/
+	.chrgr_trim_reg_lut = chrgr_trim_reg_lut,
+	.chrgr_trim_reg_lut_sz = ARRAY_SIZE(chrgr_trim_reg_lut),
+	.coolant_poll_time = 10000,/* 10 seconds*/
+};
+#endif
 
 #ifdef CONFIG_CHARGER_BCMPMU_SPA
 struct bcmpmu59xxx_spa_pb_pdata spa_pb_pdata = {
@@ -1378,6 +1466,22 @@ static struct mfd_cell pmu59xxx_devs[] = {
 		.pdata_size = sizeof(throttle_pdata),
 	},
 #endif
+#if defined(CONFIG_BCMPMU_DIETEMP_THERMAL)
+	{
+		.name = "bcmpmu_dietemp_thermal",
+		.id = -1,
+		.platform_data = &dtemp_zone_pdata,
+		.pdata_size = sizeof(dtemp_zone_pdata),
+	},
+#endif
+#if defined(CONFIG_BCMPMU_CHARGER_COOLANT)
+	{
+		.name = "bcmpmu_charger_coolant",
+		.id = -1,
+		.platform_data = &ccool_pdata,
+		.pdata_size = sizeof(ccool_pdata),
+	},
+#endif
 };
 
 static struct i2c_board_info pmu_i2c_companion_info[] = {
@@ -1406,7 +1510,7 @@ static struct bcmpmu59xxx_platform_data bcmpmu_i2c_pdata = {
 #ifdef CONFIG_CHARGER_BCMPMU_SPA
 .flags = (BCMPMU_SPA_EN | BCMPMU_ACLD_EN),
 #else
-.flags = BCMPMU_ACLD_EN,
+.flags = BCMPMU_FG_VF_CTRL,
 #endif
 };
 
@@ -1486,7 +1590,7 @@ static int __init bcmpmu_update_pdata(char *name,
 			pr_info(
 					"%s Failed  alloc bcmpmu data\n"
 					, __func__);
-			return ret;
+			return -ENOMEM;
 		}
 		p = (uint32_t *)prop->value;
 		p1 = (uint32_t *)tbl;
