@@ -19,4 +19,5 @@ struct bcmpmu_cc_pdata {
 };
 
 int charger_cooling_get_level(struct thermal_cooling_device *cdev,
+							int level_offset,
 							u32 trip_current);

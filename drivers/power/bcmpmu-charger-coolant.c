@@ -32,9 +32,16 @@
 #define ACLD_MAX_WAIT_COUNT	10
 #define TRIM_MARGIN_0		0
 
-static u32 debug_mask = BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT |
-			BCMPMU_PRINT_FLOW | BCMPMU_PRINT_DATA |
-			BCMPMU_PRINT_WARNING | BCMPMU_PRINT_VERBOSE;
+#ifdef DEBUG
+#define DEBUG_MASK (BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT |		\
+			BCMPMU_PRINT_FLOW | BCMPMU_PRINT_DATA |		\
+			BCMPMU_PRINT_WARNING | BCMPMU_PRINT_VERBOSE)
+#else
+#define DEBUG_MASK (BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT |	\
+			BCMPMU_PRINT_WARNING)
+#endif
+
+static u32 debug_mask = DEBUG_MASK;
 
 #define pr_ccool(debug_level, args...) \
 	do { \
@@ -88,13 +95,14 @@ static void bcmpmu_coolant_post_event(struct bcmpmu_cc_data *cdata)
 }
 
 int charger_cooling_get_level(struct thermal_cooling_device *cdev,
+							int level_offset,
 							u32 trip_current)
 {
 	struct bcmpmu_cc_data *cdata = cdev->devdata;
 	int i;
 
 	pr_ccool(VERBOSE, "%s:Trip_curr:%u\n", __func__, trip_current);
-	for (i = 0; i < cdata->pdata->state_no; i++) {
+	for (i = level_offset; i < cdata->pdata->state_no; i++) {
 		if (cdata->pdata->states[i] == trip_current)
 			return i;
 	}
@@ -184,6 +192,7 @@ static void bcmpmu_set_curr(struct bcmpmu_cc_data *cdata, unsigned long state)
 	} else if (cdata->charging_halted) {
 		cdata->charging_halted = false;
 	}
+	pr_ccool(FLOW, "Set current to %d mA\n", cdata->pdata->states[state]);
 	bcmpmu_set_icc_fc(cdata->bcmpmu, cdata->pdata->states[state]);
 }
 

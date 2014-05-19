@@ -40,9 +40,17 @@
 
 #define ADC_READ_TRIES				10
 #define ADC_RETRY_DELAY				100 /* 100ms */
-static u32 debug_mask = BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT |
-			BCMPMU_PRINT_FLOW | BCMPMU_PRINT_DATA |
-			BCMPMU_PRINT_WARNING | BCMPMU_PRINT_VERBOSE;
+
+#ifdef DEBUG
+#define DEBUG_MASK (BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT |		\
+			BCMPMU_PRINT_FLOW | BCMPMU_PRINT_DATA |		\
+			BCMPMU_PRINT_WARNING | BCMPMU_PRINT_VERBOSE)
+#else
+#define DEBUG_MASK (BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT |	\
+			BCMPMU_PRINT_WARNING)
+#endif
+
+static u32 debug_mask = DEBUG_MASK;
 #define pr_dtemp(debug_level, args...) \
 	do { \
 		if (debug_mask & BCMPMU_PRINT_##debug_level) { \
@@ -81,7 +89,7 @@ static int dietemp_thermal_tz_cdev_bind(struct thermal_zone_device *tz,
 		struct thermal_cooling_device *cdev)
 {
 	struct bcmpmu_dietemp_thermal *tdata = tz->devdata;
-	int bdx, level, ret = 0;
+	int bdx, level = 0, ret = 0;
 	pr_dtemp(FLOW, "%s\n", __func__);
 
 	if (!strcmp(cdev->type, CHARGER_CDEV_NAME)) {
@@ -89,6 +97,7 @@ static int dietemp_thermal_tz_cdev_bind(struct thermal_zone_device *tz,
 		/* Bind Charger cooling device to thermal zone */
 		for (bdx = 0; bdx < tdata->active_cnt; bdx++) {
 			level = charger_cooling_get_level(cdev,
+					level,
 					tdata->pdata->trips[bdx].max_curr);
 			ret = thermal_zone_bind_cooling_device(tz, bdx,
 						cdev, level, 0);
@@ -241,6 +250,8 @@ static void dietemp_thermal_polling_work(struct work_struct *work)
 	struct bcmpmu_dietemp_pdata *pdata = tdata->pdata;
 	int index;
 	int lut_sz = tdata->pdata->trip_cnt;
+	bool allow_update = false;
+	bool recovering = false;
 
 	tdata->curr_temp = dietemp_thermal_get_current_temp(tdata,
 				tdata->pdata->temp_adc_channel,
@@ -248,8 +259,9 @@ static void dietemp_thermal_polling_work(struct work_struct *work)
 	pr_dtemp(VERBOSE, "PMU Die Temp %d, zone_idx:%d\n",
 		tdata->curr_temp, tdata->cur_idx);
 
-	if (tdata->curr_temp < pdata->trips[0].temp)
-		index = -1;
+	if ((tdata->curr_temp <= 0) ||
+			(tdata->curr_temp < pdata->trips[0].temp))
+		index = 0;
 	else if (tdata->curr_temp >= pdata->trips[lut_sz-1].temp)
 		index = lut_sz - 1;
 	else {
@@ -265,20 +277,37 @@ static void dietemp_thermal_polling_work(struct work_struct *work)
 			"Same as previous index(%d), so no thermal update\n",
 							tdata->cur_idx);
 	} else if (index > tdata->cur_idx) {
+		if (pdata->trips[index].max_curr >
+			pdata->trips[tdata->cur_idx].max_curr) {
+			if (tdata->curr_temp >=
+				(pdata->trips[index].temp +
+					pdata->hysteresis)) {
+				allow_update = true;
+				recovering = true;
+			}
+		} else {
+			allow_update = true;
+		}
+	} else if (index < tdata->cur_idx) {
+		if (pdata->trips[index].max_curr >
+			pdata->trips[tdata->cur_idx].max_curr) {
+			if (tdata->curr_temp <=
+				(pdata->trips[tdata->cur_idx].temp -
+					pdata->hysteresis)) {
+				allow_update = true;
+				recovering = true;
+			}
+		} else {
+			allow_update = true;
+		}
+	}
+
+	if (allow_update) {
 		tdata->cur_idx = index;
 		pr_dtemp(FLOW,
-		"Thermal Zone Update Triggered:Rise,tdata->cur_idx=%d\n",
-							tdata->cur_idx);
+			"Thermal Zone Update Triggered:%s,tdata->cur_idx=%d\n",
+			recovering ? "Fall" : "Rise", tdata->cur_idx);
 		thermal_zone_device_update(tdata->tz);
-	} else if (index < tdata->cur_idx) {
-		if (tdata->curr_temp <=
-		(pdata->trips[tdata->cur_idx].temp - pdata->hysteresis)) {
-			tdata->cur_idx = index;
-			pr_dtemp(FLOW,
-			"Thermal Zone Update Triggered:Fall,current idx=%d\n",
-								tdata->cur_idx);
-			thermal_zone_device_update(tdata->tz);
-		}
 	}
 
 	queue_delayed_work(tdata->dietemp_wq,
@@ -397,7 +426,7 @@ static ssize_t bcmpmu_dietemp_debugfs_set_table(struct file *file,
 	/*If current value needs to be changed, check whether the current value
 	 *is valid.Then unregister and register to change current value */
 	if (curr != tdata->pdata->trips[idx].max_curr) {
-		level = charger_cooling_get_level(tdata->curr_cdev, curr);
+		level = charger_cooling_get_level(tdata->curr_cdev, 0, curr);
 		if (level >= 0) {
 			tdata->pdata->trips[idx].max_curr = curr;
 			thermal_zone_device_unregister(tdata->tz);
@@ -761,7 +790,7 @@ static int dietemp_thermal_suspend(struct platform_device *pdev,
 			pm_message_t state)
 {
 	struct bcmpmu_dietemp_thermal *tdata = platform_get_drvdata(pdev);
-	flush_delayed_work(&tdata->polling_work);
+	cancel_delayed_work_sync(&tdata->polling_work);
 	return 0;
 }
 
@@ -769,8 +798,7 @@ static int dietemp_thermal_resume(struct platform_device *pdev)
 {
 	struct bcmpmu_dietemp_thermal *tdata = platform_get_drvdata(pdev);
 	if (tdata->dietemp_coolant_enabled && tdata->chrgr_present)
-		queue_delayed_work(tdata->dietemp_wq, &tdata->polling_work,
-				msecs_to_jiffies(tdata->pdata->poll_rate_ms));
+		queue_delayed_work(tdata->dietemp_wq, &tdata->polling_work, 0);
 	return 0;
 }
 
