@@ -19,11 +19,8 @@
 
 
 struct batt_temp_curr_map {
-	int temp; /* deci C */
-	u16 curr; /* mA */
-	u8 vfloat_lvl; /* register value */
-	u16 vfloat_eoc; /* voltage level where EOC can start mV */
-	u16 eoc_curr;  /* mA */
+	int temp;
+	int curr;
 };
 
 struct chrgr_def_trim_reg_data {
@@ -31,22 +28,9 @@ struct chrgr_def_trim_reg_data {
 	u8 val;
 };
 
-struct thermal_throttle_event_data {
-	bool algo_running;
-	u8 vfloat_lvl; /* register value */
-	u16 vfloat_eoc; /* mV */
-	u16 eoc_curr; /* mA */
-};
-
-/**
- * struct bcmpmu_throttle_pdata
- * @normal_temp_curr_lut_idx:	index of temp_curr_lut where no throttling is
- *				made. Inactivate by setting -1.
- */
 struct bcmpmu_throttle_pdata {
 	struct batt_temp_curr_map *temp_curr_lut;
 	u32 temp_curr_lut_sz;
-	int normal_temp_curr_lut_idx;
 	u8 temp_adc_channel;
 	u8 temp_adc_req_mode;
 	struct chrgr_def_trim_reg_data *chrgr_trim_reg_lut;
