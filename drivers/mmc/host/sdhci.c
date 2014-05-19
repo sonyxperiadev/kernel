@@ -2178,9 +2178,12 @@ static void sdhci_card_event(struct mmc_host *mmc)
 
 			host->mrq->cmd->error = -ENOMEDIUM;
 			tasklet_schedule(&host->finish_tasklet);
-#ifdef CONFIG_MMC_BCM_SD
+
 			pr_info("SD Card Removed\n");
-		} else {
+		}
+
+#ifdef CONFIG_MMC_BCM_SD
+		else {
 			/*
 			 * Though we do the same stuff here as above,
 			 * this is seperated out to deal cleanly with
