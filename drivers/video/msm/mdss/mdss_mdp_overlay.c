@@ -80,36 +80,20 @@ static int mdss_mdp_overlay_sd_ctrl(struct msm_fb_data_type *mfd,
 	return resp;
 }
 
-static struct mdss_mdp_pipe *__overlay_find_pipe(
-		struct msm_fb_data_type *mfd, u32 ndx)
-{
-	struct mdss_overlay_private *mdp5_data = mfd_to_mdp5_data(mfd);
-	struct mdss_mdp_pipe *tmp, *pipe = NULL;
-
-	mutex_lock(&mfd->lock);
-	list_for_each_entry(tmp, &mdp5_data->pipes_used, used_list) {
-		if (tmp->ndx == ndx) {
-			pipe = tmp;
-			break;
-		}
-	}
-	mutex_unlock(&mfd->lock);
-
-	return pipe;
-}
-
 static int mdss_mdp_overlay_get(struct msm_fb_data_type *mfd,
 				struct mdp_overlay *req)
 {
 	struct mdss_mdp_pipe *pipe;
+	struct mdss_data_type *mdata = mfd_to_mdata(mfd);
 
-	pipe = __overlay_find_pipe(mfd, req->id);
-	if (!pipe) {
+	pipe = mdss_mdp_pipe_get(mdata, req->id);
+	if (IS_ERR_OR_NULL(pipe)) {
 		pr_err("invalid pipe ndx=%x\n", req->id);
 		return pipe ? PTR_ERR(pipe) : -ENODEV;
 	}
 
 	*req = pipe->req_data;
+	mdss_mdp_pipe_unmap(pipe);
 
 	return 0;
 }
@@ -459,17 +443,10 @@ static int mdss_mdp_overlay_pipe_setup(struct msm_fb_data_type *mfd,
 		pipe->pid = current->tgid;
 		pipe->play_cnt = 0;
 	} else {
-		pipe = __overlay_find_pipe(mfd, req->id);
-		if (!pipe) {
+		pipe = mdss_mdp_pipe_get(mdp5_data->mdata, req->id);
+		if (IS_ERR_OR_NULL(pipe)) {
 			pr_err("invalid pipe ndx=%x\n", req->id);
-			return -ENODEV;
-		}
-
-		ret = mdss_mdp_pipe_map(pipe);
-		if (IS_ERR_VALUE(ret)) {
-			pr_err("Unable to map used pipe%d ndx=%x\n",
-					pipe->num, pipe->ndx);
-			return ret;
+			return pipe ? PTR_ERR(pipe) : -ENODEV;
 		}
 
 		if (pipe->mixer != mixer) {
@@ -991,8 +968,11 @@ int mdss_mdp_overlay_kickoff(struct msm_fb_data_type *mfd,
 		return ret;
 	}
 
-	if (ctl->shared_lock)
+	if (ctl->shared_lock){
+		mdss_mdp_ctl_notify(ctl, MDP_NOTIFY_FRAME_BEGIN);
+		mdss_mdp_ctl_notify(ctl, MDP_NOTIFY_FRAME_READY);
 		mutex_lock(ctl->shared_lock);
+	}
 
 	mutex_lock(&mdp5_data->ov_lock);
 	mutex_lock(&mfd->lock);
@@ -1016,7 +996,9 @@ int mdss_mdp_overlay_kickoff(struct msm_fb_data_type *mfd,
 			mdp5_data->sd_enabled = 0;
 	}
 
-	mdss_mdp_ctl_notify(ctl, MDP_NOTIFY_FRAME_BEGIN);
+	if (!ctl->shared_lock)
+		mdss_mdp_ctl_notify(ctl, MDP_NOTIFY_FRAME_BEGIN);
+
 	mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_ON, false);
 
 	if (data)
@@ -1092,18 +1074,14 @@ int mdss_mdp_overlay_kickoff(struct msm_fb_data_type *mfd,
 	else
 		ret = mdss_mdp_display_commit(mdp5_data->ctl, NULL);
 
-	atomic_set(&mfd->kickoff_pending, 0);
-	wake_up_all(&mfd->kickoff_wait_q);
 	mutex_unlock(&mfd->lock);
 
 	if (IS_ERR_VALUE(ret))
 		goto commit_fail;
 
-	mutex_unlock(&mdp5_data->ov_lock);
 	mdss_mdp_overlay_update_pm(mdp5_data);
 
 	ret = mdss_mdp_display_wait4comp(mdp5_data->ctl);
-	mutex_lock(&mdp5_data->ov_lock);
 
 	if (ret == 0) {
 		mutex_lock(&mfd->lock);
@@ -1292,17 +1270,10 @@ static int mdss_mdp_overlay_queue(struct msm_fb_data_type *mfd,
 	u32 flags;
 	struct mdss_data_type *mdata = mfd_to_mdata(mfd);
 
-	pipe = __overlay_find_pipe(mfd, req->id);
-	if (!pipe) {
+	pipe = mdss_mdp_pipe_get(mdata, req->id);
+	if (IS_ERR_OR_NULL(pipe)) {
 		pr_err("pipe ndx=%x doesn't exist\n", req->id);
-		return -ENODEV;
-	}
-
-	ret = mdss_mdp_pipe_map(pipe);
-	if (IS_ERR_VALUE(ret)) {
-		pr_err("Unable to map used pipe%d ndx=%x\n",
-				pipe->num, pipe->ndx);
-		return ret;
+		return pipe ? PTR_ERR(pipe) : -ENODEV;
 	}
 
 	pr_debug("ov queue pnum=%d\n", pipe->num);
@@ -3030,7 +3001,6 @@ int mdss_mdp_overlay_init(struct msm_fb_data_type *mfd)
 		goto init_fail;
 	}
 	mfd->mdp.private1 = mdp5_data;
-	mfd->wait_for_kickoff = true;
 
 	rc = mdss_mdp_overlay_fb_parse_dt(mfd);
 	if (rc)
