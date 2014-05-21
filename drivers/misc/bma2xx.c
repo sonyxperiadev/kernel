@@ -3729,6 +3729,7 @@ static int bma2xx_probe(struct i2c_client *client,
 	input_set_capability(data->wake_idev, EV_MSC, MSC_PULSELED);
 	input_set_capability(data->wake_idev, EV_MSC, MSC_GESTURE);
 	input_set_capability(data->wake_idev, EV_REL, NOMOTION_INTERRUPT);
+	input_alloc_absinfo(data->wake_idev);
 	input_set_drvdata(data->wake_idev, data);
 
 	err = input_register_device(data->wake_idev);
