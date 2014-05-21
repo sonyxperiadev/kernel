@@ -3395,15 +3395,15 @@ static void bma2xx_process_statusbit(struct bma2xx_data *bma2xx, int bit)
 					if (i == 0)
 						input_report_rel(idev,
 						SLOP_INTERRUPT,
-						-bma2xx->axis_num_map[0]);
+						bma2xx->axis_num_map[0]);
 					else if (i == 1)
 						input_report_rel(idev,
 						SLOP_INTERRUPT,
-						-bma2xx->axis_num_map[1]);
+						bma2xx->axis_num_map[1]);
 					else if (i == 2)
 						input_report_rel(idev,
 						SLOP_INTERRUPT,
-						-bma2xx->axis_num_map[2]);
+						bma2xx->axis_num_map[2]);
 
 				}
 			}
