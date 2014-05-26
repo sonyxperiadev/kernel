@@ -61,15 +61,46 @@
 #define PMU_DEVICE_INT_GPIO	29
 #define PMU_DEVICE_I2C_BUSNO 4
 
-#define SONY_BATTERY_C	420 /* C_min [mAh] */
-#define SONY_BATTERY_CURRENT_COOL ((SONY_BATTERY_C * 6) / 10)
-#define SONY_BATTERY_CURRENT_NORMAL (2 * SONY_BATTERY_C)
-#define SONY_BATTERY_CURRENT_WARM (SONY_BATTERY_C / 2)
+#define PMU_DEVICE_BATTERY_SELECTION_GPIO	22
+
+/* START Specific battery parameters for "Sony_0" */
+#define SONY0_BATTERY_C	390 /* C_min [mAh] */
+#define SONY0_BATTERY_CURRENT_COOL (SONY0_BATTERY_C / 2)
+#define SONY0_BATTERY_CURRENT_NORMAL ((SONY0_BATTERY_C * 80) / 39)
+#define SONY0_BATTERY_CURRENT_WARM (SONY0_BATTERY_C / 2)
 
 /* {min,typ,max} = {4.315, 4.345, 4.375} */
-#define SONY_BATTERY_MAX_VFLOAT_REG 0x14
-#define SONY_BATTERY_MAX_MIN_VFLOAT 4315 /* mV */
+#define SONY0_BATTERY_MAX_VFLOAT_REG 0x14
+#define SONY0_BATTERY_MAX_MIN_VFLOAT 4315 /* mV */
+/* {min,typ,max} = {4.165 4.195 4.225} */
+#define SONY0_BATTERY_WARM_VFLOAT_REG 0x0E
+#define SONY0_BATTERY_WARM_VFLOAT 4165 /* mV */
 
+/* Temperature boundaries for charging:
+ * Cold <= 5
+ * 5 < Cool <= 12
+ * 12 < Normal < 43
+ * 43 <= Warm < 55
+ * Overheat >= 55
+ * Temperatures in deci Celcius */
+#define SONY0_BATTERY_TEMP_COOL 51
+#define SONY0_BATTERY_TEMP_NORMAL 121
+#define SONY0_BATTERY_TEMP_WARM 430
+#define SONY0_BATTERY_TEMP_OVERHEAT 550
+/* END Specific battery parameters for "Sony_0" */
+
+/* START Specific battery parameters for "Sony_1" */
+#define SONY1_BATTERY_C	420 /* C_min [mAh] */
+#define SONY1_BATTERY_CURRENT_COOL ((SONY1_BATTERY_C * 6) / 10)
+#define SONY1_BATTERY_CURRENT_NORMAL (2 * SONY1_BATTERY_C)
+#define SONY1_BATTERY_CURRENT_WARM (SONY1_BATTERY_C / 2)
+
+/* {min,typ,max} = {4.315, 4.345, 4.375} */
+#define SONY1_BATTERY_MAX_VFLOAT_REG 0x14
+#define SONY1_BATTERY_MAX_MIN_VFLOAT 4315 /* mV */
+/* {min,typ,max} = {4.043, 4.084, 4.125} */
+#define SONY1_BATTERY_WARM_VFLOAT_REG 0x09
+#define SONY1_BATTERY_WARM_VFLOAT 4043 /* mV */
 
 /* Temperature boundaries for charging:
  * Cold <= 5
@@ -78,10 +109,13 @@
  * 43 <= Warm < 55
  * Overheat >= 55
  * Temperatures in deci Celcius */
-#define SONY_BATTERY_TEMP_COOL 51
-#define SONY_BATTERY_TEMP_NORMAL 171
-#define SONY_BATTERY_TEMP_WARM 430
-#define SONY_BATTERY_TEMP_OVERHEAT 550
+#define SONY1_BATTERY_TEMP_COOL 51
+#define SONY1_BATTERY_TEMP_NORMAL 171
+#define SONY1_BATTERY_TEMP_WARM 430
+#define SONY1_BATTERY_TEMP_OVERHEAT 550
+/* END Specific battery parameters for "Sony_1" */
+
+/* Generic Sony battery parameters */
 #define SONY_BATTERY_TEMP_HYST 30
 
 static int bcmpmu_init_platform_hw(struct bcmpmu59xxx *bcmpmu);
@@ -886,16 +920,31 @@ struct bcmpmu59xxx_regulator_pdata rgltr_pdata = {
 	.num_rgltr = ARRAY_SIZE(bcm59xxx_regulators),
 };
 
-static int chrgr_curr_lmt[PMU_CHRGR_TYPE_MAX] = {
-	[PMU_CHRGR_TYPE_NONE] = 0,
-	[PMU_CHRGR_TYPE_SDP] = MIN(500, SONY_BATTERY_CURRENT_NORMAL),
-	[PMU_CHRGR_TYPE_CDP] = MIN(1500, SONY_BATTERY_CURRENT_NORMAL),
-	[PMU_CHRGR_TYPE_DCP] = MIN(1500, SONY_BATTERY_CURRENT_NORMAL),
-	[PMU_CHRGR_TYPE_TYPE1] = MIN(700, SONY_BATTERY_CURRENT_NORMAL),
-	[PMU_CHRGR_TYPE_TYPE2] = MIN(700, SONY_BATTERY_CURRENT_NORMAL),
-	[PMU_CHRGR_TYPE_PS2] = MIN(100, SONY_BATTERY_CURRENT_NORMAL),
-	[PMU_CHRGR_TYPE_ACA_DOCK] = MIN(700, SONY_BATTERY_CURRENT_NORMAL),
-	[PMU_CHRGR_TYPE_ACA] = MIN(700, SONY_BATTERY_CURRENT_NORMAL),
+static int chrgr_curr_lmt[BATT_MAX][PMU_CHRGR_TYPE_MAX] = {
+	[BATT_0] = {
+		[PMU_CHRGR_TYPE_NONE] = 0,
+		[PMU_CHRGR_TYPE_SDP] = MIN(500, SONY0_BATTERY_CURRENT_NORMAL),
+		[PMU_CHRGR_TYPE_CDP] = MIN(1500, SONY0_BATTERY_CURRENT_NORMAL),
+		[PMU_CHRGR_TYPE_DCP] = MIN(1500, SONY0_BATTERY_CURRENT_NORMAL),
+		[PMU_CHRGR_TYPE_TYPE1] = MIN(700, SONY0_BATTERY_CURRENT_NORMAL),
+		[PMU_CHRGR_TYPE_TYPE2] = MIN(700, SONY0_BATTERY_CURRENT_NORMAL),
+		[PMU_CHRGR_TYPE_PS2] = MIN(100, SONY0_BATTERY_CURRENT_NORMAL),
+		[PMU_CHRGR_TYPE_ACA_DOCK] = MIN(700,
+						SONY0_BATTERY_CURRENT_NORMAL),
+		[PMU_CHRGR_TYPE_ACA] = MIN(700, SONY0_BATTERY_CURRENT_NORMAL),
+	},
+	[BATT_1] = {
+		[PMU_CHRGR_TYPE_NONE] = 0,
+		[PMU_CHRGR_TYPE_SDP] = MIN(500, SONY1_BATTERY_CURRENT_NORMAL),
+		[PMU_CHRGR_TYPE_CDP] = MIN(1500, SONY1_BATTERY_CURRENT_NORMAL),
+		[PMU_CHRGR_TYPE_DCP] = MIN(1500, SONY1_BATTERY_CURRENT_NORMAL),
+		[PMU_CHRGR_TYPE_TYPE1] = MIN(700, SONY1_BATTERY_CURRENT_NORMAL),
+		[PMU_CHRGR_TYPE_TYPE2] = MIN(700, SONY1_BATTERY_CURRENT_NORMAL),
+		[PMU_CHRGR_TYPE_PS2] = MIN(100, SONY1_BATTERY_CURRENT_NORMAL),
+		[PMU_CHRGR_TYPE_ACA_DOCK] = MIN(700,
+						SONY1_BATTERY_CURRENT_NORMAL),
+		[PMU_CHRGR_TYPE_ACA] = MIN(700, SONY1_BATTERY_CURRENT_NORMAL),
+	}
 };
 
 struct bcmpmu59xxx_accy_pdata accy_pdata = {
@@ -904,7 +953,7 @@ struct bcmpmu59xxx_accy_pdata accy_pdata = {
 };
 
 struct bcmpmu_chrgr_pdata chrgr_pdata = {
-	.chrgr_curr_lmt_tbl = chrgr_curr_lmt,
+	.chrgr_curr_lmt_tbl = chrgr_curr_lmt[0],
 };
 
 static struct bcmpmu_adc_lut batt_temp_map[] = {
@@ -931,6 +980,9 @@ static struct bcmpmu_adc_lut batt_temp_map[] = {
 	{302, 170},	/* 17 C */
 	{312, 160},	/* 16 C */
 	{323, 150},	/* 15 C */
+	{333, 140},	/* 14 C */
+	{344, 130},	/* 13 C */
+	{355, 120},	/* 12 C */
 	{378, 100},	/* 10 C */
 	{401, 80},	/* 8 C */
 	{413, 70},	/* 7 C */
@@ -1053,23 +1105,36 @@ int bcmpmu_acld_chargers[] = {
 	PMU_CHRGR_TYPE_TYPE2,
 };
 
+struct bcmpmu_acld_current_data limits[BATT_MAX] = {
+	[BATT_0] = {
+		.i_sat = SONY0_BATTERY_CURRENT_NORMAL,
+		.i_def_dcp = SONY0_BATTERY_CURRENT_NORMAL,
+		.i_max_cc = SONY0_BATTERY_CURRENT_NORMAL,
+		.acld_cc_lmt = SONY0_BATTERY_CURRENT_NORMAL,
+		.max_charge_c_rate_percent =
+		(100 * SONY0_BATTERY_CURRENT_NORMAL) / SONY0_BATTERY_C,
+	},
+	[BATT_1] = {
+		.i_sat = SONY1_BATTERY_CURRENT_NORMAL,
+		.i_def_dcp = SONY1_BATTERY_CURRENT_NORMAL,
+		.i_max_cc = SONY1_BATTERY_CURRENT_NORMAL,
+		.acld_cc_lmt = SONY1_BATTERY_CURRENT_NORMAL,
+		.max_charge_c_rate_percent =
+		(100 * SONY1_BATTERY_CURRENT_NORMAL) / SONY1_BATTERY_C,
+	}
+};
+
 struct bcmpmu_acld_pdata acld_pdata = {
 	.acld_vbus_margin = 200,	/*mV*/
 	.acld_vbus_thrs = 5950,
 	.acld_vbat_thrs = 3500,
-	.i_sat = SONY_BATTERY_CURRENT_NORMAL,	/* saturation current in mA
-						for chrgr while using ACLD */
-	.i_def_dcp = SONY_BATTERY_CURRENT_NORMAL,
-	.i_max_cc = SONY_BATTERY_CURRENT_NORMAL,
-	.acld_cc_lmt = SONY_BATTERY_CURRENT_NORMAL,
+	.acld_currents = limits,
 	.otp_cc_trim = 0x1F,
-	.max_charge_c_rate_percent =
-		(100 * SONY_BATTERY_CURRENT_NORMAL) / SONY_BATTERY_C,
 	.acld_chrgrs = bcmpmu_acld_chargers,
 	.acld_chrgrs_list_size = ARRAY_SIZE(bcmpmu_acld_chargers),
 };
 
-static struct batt_volt_cap_map ys_05_volt_cap_lut[] = {
+static struct batt_volt_cap_map sony1_volt_cap_lut[] = {
 	{4329, 100},
 	{4273, 95},
 	{4221, 90},
@@ -1101,7 +1166,7 @@ static struct batt_volt_cap_map ys_05_volt_cap_lut[] = {
 	{3400, 0},
 };
 
-static struct batt_eoc_curr_cap_map ys_05_eoc_cap_lut[] = {
+static struct batt_eoc_curr_cap_map sony1_eoc_cap_lut[] = {
 	{239, 90},
 	{215, 91},
 	{191, 92},
@@ -1116,7 +1181,7 @@ static struct batt_eoc_curr_cap_map ys_05_eoc_cap_lut[] = {
 	{0, 100},
 };
 
-static struct batt_cutoff_cap_map ys_05_cutoff_cap_lut[] = {
+static struct batt_cutoff_cap_map sony1_cutoff_cap_lut[] = {
 	{3659, 5},
 	{3635, 4},
 	{3598, 3},
@@ -1133,7 +1198,7 @@ static struct batt_temp_curr_map ys_05_temp_curr_lut[] = {
 };
 #endif
 
-static struct batt_esr_temp_lut ys_05_esr_temp_lut[] = {
+static struct batt_esr_temp_lut sony1_esr_temp_lut[] = {
 	{
 		.temp = -200,
 		.reset = 0, .fct = 715, .guardband = 50,
@@ -1191,64 +1256,169 @@ static struct batt_esr_temp_lut ys_05_esr_temp_lut[] = {
 	 },
 };
 
-static struct bcmpmu_batt_property ys_05_props = {
-	.model = "Sony",
-	.min_volt = 3400,
-	.max_volt = 4350,
-	.full_cap = SONY_BATTERY_C * 3600,
-	.one_c_rate = SONY_BATTERY_C,
-	.volt_cap_lut = ys_05_volt_cap_lut,
-	.volt_cap_lut_sz = ARRAY_SIZE(ys_05_volt_cap_lut),
-	.esr_temp_lut = ys_05_esr_temp_lut,
-	.esr_temp_lut_sz = ARRAY_SIZE(ys_05_esr_temp_lut),
-	.eoc_cap_lut = ys_05_eoc_cap_lut,
-	.eoc_cap_lut_sz = ARRAY_SIZE(ys_05_eoc_cap_lut),
-	.cutoff_cap_lut = ys_05_cutoff_cap_lut,
-	.cutoff_cap_lut_sz = ARRAY_SIZE(ys_05_cutoff_cap_lut),
+static struct bcmpmu_batt_property ys_05_props[BATT_MAX] = {
+	[BATT_0] =  {
+		.model = "Sony_0",
+		.min_volt = 3400,
+		.max_volt = 4350,
+		.full_cap = SONY0_BATTERY_C * 3600,
+		.one_c_rate = SONY0_BATTERY_C,
+		.volt_cap_lut = sony1_volt_cap_lut,
+		.volt_cap_lut_sz = ARRAY_SIZE(sony1_volt_cap_lut),
+		.esr_temp_lut = sony1_esr_temp_lut,
+		.esr_temp_lut_sz = ARRAY_SIZE(sony1_esr_temp_lut),
+		.eoc_cap_lut = sony1_eoc_cap_lut,
+		.eoc_cap_lut_sz = ARRAY_SIZE(sony1_eoc_cap_lut),
+		.cutoff_cap_lut = sony1_cutoff_cap_lut,
+		.cutoff_cap_lut_sz = ARRAY_SIZE(sony1_cutoff_cap_lut),
+	},
+	[BATT_1] = {
+		.model = "Sony_1",
+		.min_volt = 3400,
+		.max_volt = 4350,
+		.full_cap = SONY1_BATTERY_C * 3600,
+		.one_c_rate = SONY1_BATTERY_C,
+		.volt_cap_lut = sony1_volt_cap_lut,
+		.volt_cap_lut_sz = ARRAY_SIZE(sony1_volt_cap_lut),
+		.esr_temp_lut = sony1_esr_temp_lut,
+		.esr_temp_lut_sz = ARRAY_SIZE(sony1_esr_temp_lut),
+		.eoc_cap_lut = sony1_eoc_cap_lut,
+		.eoc_cap_lut_sz = ARRAY_SIZE(sony1_eoc_cap_lut),
+		.cutoff_cap_lut = sony1_cutoff_cap_lut,
+		.cutoff_cap_lut_sz = ARRAY_SIZE(sony1_cutoff_cap_lut),
+	}
 };
 
-static struct bcmpmu_batt_cap_levels ys_05_cap_levels = {
-	.critical = 5,
-	.low = 15,
-	.normal = 75,
-	.high = 95,
+static struct bcmpmu_batt_cap_levels ys_05_cap_levels[BATT_MAX] = {
+	[BATT_0] = {
+		.critical = 5,
+		.low = 15,
+		.normal = 75,
+		.high = 95,
+	},
+	[BATT_1] = {
+		.critical = 5,
+		.low = 15,
+		.normal = 75,
+		.high = 95,
+	},
 };
 
-static struct bcmpmu_batt_volt_levels ys_05_volt_levels = {
-	.critical = 3659, /* 5% LUT level */
-	.low = 3710, /* 15% LUT level */
-	.normal = 3800,
-	.high = SONY_BATTERY_MAX_MIN_VFLOAT,
-	.crit_cutoff_cnt = 3,
-	.vfloat_lvl = SONY_BATTERY_MAX_VFLOAT_REG,
-	.vfloat_max = SONY_BATTERY_MAX_VFLOAT_REG,
-	.vfloat_gap = 100, /* in mV */
+static struct bcmpmu_batt_volt_levels ys_05_volt_levels[BATT_MAX] = {
+	[BATT_0] = {
+		.critical = 3659, /* 5% LUT level */
+		.low = 3710, /* 15% LUT level */
+		.normal = 3800,
+		.high = SONY0_BATTERY_MAX_MIN_VFLOAT,
+		.crit_cutoff_cnt = 3,
+		.vfloat_lvl = SONY0_BATTERY_MAX_VFLOAT_REG,
+		.vfloat_max = SONY0_BATTERY_MAX_VFLOAT_REG,
+		.vfloat_gap = 100, /* in mV */
+	},
+	[BATT_1] = {
+		.critical = 3659, /* 5% LUT level */
+		.low = 3710, /* 15% LUT level */
+		.normal = 3800,
+		.high = SONY1_BATTERY_MAX_MIN_VFLOAT,
+		.crit_cutoff_cnt = 3,
+		.vfloat_lvl = SONY1_BATTERY_MAX_VFLOAT_REG,
+		.vfloat_max = SONY1_BATTERY_MAX_VFLOAT_REG,
+		.vfloat_gap = 100, /* in mV */
+	},
 };
 
-static struct bcmpmu_batt_cal_data ys_05_cal_data = {
-	.volt_low = 3550,
-	.cap_low = 30,
+static struct bcmpmu_batt_cal_data ys_05_cal_data[BATT_MAX] = {
+	[BATT_0] = {
+		.volt_low = 3550,
+		.cap_low = 30,
+	},
+	[BATT_1] = {
+		.volt_low = 3550,
+		.cap_low = 30,
+	},
 };
 
 /* temp, vfloat_lvl, vfloat_eoc, ibat_eoc */
-static struct bcmpmu_fg_vf_data ys_05_vf_data[] = {
+static struct bcmpmu_fg_vf_data sony0_vf_data[] = {
 	{INT_MIN, 0, 0, USHRT_MAX},
 	/* EOC@4.35V,0.05C_min */
-	{SONY_BATTERY_TEMP_COOL, SONY_BATTERY_MAX_VFLOAT_REG,
-	 SONY_BATTERY_MAX_MIN_VFLOAT, SONY_BATTERY_C / 20},
-	/* EOC@4.1V,no CV */
-	{SONY_BATTERY_TEMP_WARM, 0x08, 4018, USHRT_MAX},
-	{SONY_BATTERY_TEMP_OVERHEAT, 0, 0, USHRT_MAX},
+	{SONY0_BATTERY_TEMP_NORMAL, SONY0_BATTERY_MAX_VFLOAT_REG,
+	 SONY0_BATTERY_MAX_MIN_VFLOAT, SONY0_BATTERY_C / 20},
+	/* EOC@4.2V,0.05C_min */
+	{SONY0_BATTERY_TEMP_WARM, SONY0_BATTERY_WARM_VFLOAT_REG,
+	 SONY0_BATTERY_WARM_VFLOAT, SONY0_BATTERY_C / 20},
+	{SONY0_BATTERY_TEMP_OVERHEAT, 0, 0, USHRT_MAX},
 };
 
+/* temp, vfloat_lvl, vfloat_eoc, ibat_eoc */
+static struct bcmpmu_fg_vf_data sony1_vf_data[] = {
+	{INT_MIN, 0, 0, USHRT_MAX},
+	/* EOC@4.35V,0.05C_min */
+	{SONY1_BATTERY_TEMP_COOL, SONY1_BATTERY_MAX_VFLOAT_REG,
+	 SONY1_BATTERY_MAX_MIN_VFLOAT, SONY1_BATTERY_C / 20},
+	/* EOC@4.1V,no CV */
+	{SONY1_BATTERY_TEMP_WARM, SONY1_BATTERY_WARM_VFLOAT_REG,
+	 SONY1_BATTERY_WARM_VFLOAT, USHRT_MAX},
+	{SONY1_BATTERY_TEMP_OVERHEAT, 0, 0, USHRT_MAX},
+};
+
+static struct bcmpmu_battery_data sony_batteries[] = {
+	[BATT_0] = {
+		.batt_prop = &ys_05_props[BATT_0],
+		.cap_levels = &ys_05_cap_levels[BATT_0],
+		.volt_levels = &ys_05_volt_levels[BATT_0],
+		.cal_data = &ys_05_cal_data[BATT_0],
+		.eoc_current = SONY0_BATTERY_C / 20,
+		.vfd = sony0_vf_data,
+		.vfd_sz = ARRAY_SIZE(sony0_vf_data),
+	},
+	[BATT_1] = {
+		.batt_prop = &ys_05_props[BATT_1],
+		.cap_levels = &ys_05_cap_levels[BATT_1],
+		.volt_levels = &ys_05_volt_levels[BATT_1],
+		.cal_data = &ys_05_cal_data[BATT_1],
+		.eoc_current = SONY1_BATTERY_C / 20,
+		.vfd = sony1_vf_data,
+		.vfd_sz = ARRAY_SIZE(sony1_vf_data),
+	}
+};
+
+enum battery_type get_battery_type(void)
+{
+	static enum battery_type type = BATT_0;
+	static bool found_battery;
+	int ret;
+
+	if (found_battery)
+		return type;
+
+	ret = gpio_request_one(PMU_DEVICE_BATTERY_SELECTION_GPIO,
+			GPIOF_IN,
+			"battery_selection");
+	if (ret < 0) {
+		pr_err("%s: failed requesting GPIO %d\n",
+			__func__, PMU_DEVICE_BATTERY_SELECTION_GPIO);
+		goto exit;
+	}
+
+	if (gpio_get_value(PMU_DEVICE_BATTERY_SELECTION_GPIO))
+		type = BATT_1;
+
+	pr_info("Found Sony battery type %d\n", type);
+	found_battery = true;
+
+	gpio_free(PMU_DEVICE_BATTERY_SELECTION_GPIO);
+
+exit:
+	return type;
+}
+
 static struct bcmpmu_fg_pdata fg_pdata = {
-	.batt_prop = &ys_05_props,
-	.cap_levels = &ys_05_cap_levels,
-	.volt_levels = &ys_05_volt_levels,
-	.cal_data = &ys_05_cal_data,
+	.batt_data = sony_batteries,
+	.batt_data_sz = ARRAY_SIZE(sony_batteries),
+
 	.sns_resist = 10,
 	.sys_impedence = 33, /* Not used in bcmpmu-fg.c */
-	.eoc_current = SONY_BATTERY_C / 20, /* End of charge current in mA */
 	.hw_maintenance_charging = false, /* enable HW EOC of PMU */
 	.sleep_current_ua = 2000, /* floor during sleep */
 	.sleep_sample_rate = 32000,
@@ -1256,8 +1426,6 @@ static struct bcmpmu_fg_pdata fg_pdata = {
 	.poll_rate_low_batt = 20000,	/* every 20 seconds */
 	.poll_rate_crit_batt = 5000,	/* every 5 Seconds */
 	.ntc_high_temp = 680, /*battery too hot shdwn temp*/
-	.vfd = &ys_05_vf_data,
-	.vfd_sz = ARRAY_SIZE(ys_05_vf_data),
 	.hysteresis = SONY_BATTERY_TEMP_HYST,
 };
 
@@ -1293,16 +1461,39 @@ static struct bcmpmu_throttle_pdata throttle_pdata = {
 #endif
 
 #ifdef CONFIG_BCMPMU_DIETEMP_THERMAL
-struct bcmpmu_dietemp_trip dietemp_trip_points[] = {
+struct bcmpmu_dietemp_trip dietemp_trip_points_batt0[] = {
 	{.temp = 0, .type = THERMAL_TRIP_ACTIVE, .max_curr = 0,},
-	{.temp = SONY_BATTERY_TEMP_COOL, .type = THERMAL_TRIP_ACTIVE,
-	 .max_curr = SONY_BATTERY_CURRENT_COOL,},
-	{.temp = SONY_BATTERY_TEMP_NORMAL, .type = THERMAL_TRIP_ACTIVE,
-	 .max_curr = SONY_BATTERY_CURRENT_NORMAL,},
-	{.temp = SONY_BATTERY_TEMP_WARM, .type = THERMAL_TRIP_ACTIVE,
-	 .max_curr = SONY_BATTERY_CURRENT_WARM,},
-	{.temp = SONY_BATTERY_TEMP_OVERHEAT, .type = THERMAL_TRIP_ACTIVE,
+	{.temp = SONY0_BATTERY_TEMP_COOL, .type = THERMAL_TRIP_ACTIVE,
+	 .max_curr = SONY0_BATTERY_CURRENT_COOL,},
+	{.temp = SONY0_BATTERY_TEMP_NORMAL, .type = THERMAL_TRIP_ACTIVE,
+	 .max_curr = SONY0_BATTERY_CURRENT_NORMAL,},
+	{.temp = SONY0_BATTERY_TEMP_WARM, .type = THERMAL_TRIP_ACTIVE,
+	 .max_curr = SONY0_BATTERY_CURRENT_WARM,},
+	{.temp = SONY0_BATTERY_TEMP_OVERHEAT, .type = THERMAL_TRIP_ACTIVE,
 	 .max_curr = 0,},
+};
+
+struct bcmpmu_dietemp_trip dietemp_trip_points_batt1[] = {
+	{.temp = 0, .type = THERMAL_TRIP_ACTIVE, .max_curr = 0,},
+	{.temp = SONY1_BATTERY_TEMP_COOL, .type = THERMAL_TRIP_ACTIVE,
+	 .max_curr = SONY1_BATTERY_CURRENT_COOL,},
+	{.temp = SONY1_BATTERY_TEMP_NORMAL, .type = THERMAL_TRIP_ACTIVE,
+	 .max_curr = SONY1_BATTERY_CURRENT_NORMAL,},
+	{.temp = SONY1_BATTERY_TEMP_WARM, .type = THERMAL_TRIP_ACTIVE,
+	 .max_curr = SONY1_BATTERY_CURRENT_WARM,},
+	{.temp = SONY1_BATTERY_TEMP_OVERHEAT, .type = THERMAL_TRIP_ACTIVE,
+	 .max_curr = 0,},
+};
+
+struct bcmpmu_dietemp_temp_zones dietemp_zones[BATT_MAX] = {
+	[BATT_0] = {
+		.trips = dietemp_trip_points_batt0,
+		.trip_cnt = ARRAY_SIZE(dietemp_trip_points_batt0),
+	},
+	[BATT_1] = {
+		.trips = dietemp_trip_points_batt1,
+		.trip_cnt = ARRAY_SIZE(dietemp_trip_points_batt1),
+	}
 };
 
 struct bcmpmu_dietemp_pdata dtemp_zone_pdata = {
@@ -1311,8 +1502,7 @@ struct bcmpmu_dietemp_pdata dtemp_zone_pdata = {
 	/* ADC channel and mode selection */
 	.temp_adc_channel = PMU_ADC_CHANN_NTC,
 	.temp_adc_req_mode = PMU_ADC_REQ_RTM_MODE,
-	.trip_cnt = ARRAY_SIZE(dietemp_trip_points),
-	.trips = dietemp_trip_points,
+	.dtzones = dietemp_zones,
 };
 #endif
 
@@ -1323,17 +1513,35 @@ static struct chrgr_trim_reg_data chrgr_trim_reg_lut[] = {
 	{.addr = PMU_REG_MBCCTRL20, .def_val = 0x02},
 };
 
-static unsigned int charger_coolant_state[] = {
+static unsigned int charger_coolant_state_batt0[] = {
 	0,
-	SONY_BATTERY_CURRENT_COOL,
-	SONY_BATTERY_CURRENT_NORMAL,
-	SONY_BATTERY_CURRENT_WARM,
+	SONY0_BATTERY_CURRENT_COOL,
+	SONY0_BATTERY_CURRENT_NORMAL,
+	SONY0_BATTERY_CURRENT_WARM,
 	0
 };
 
+static unsigned int charger_coolant_state_batt1[] = {
+	0,
+	SONY1_BATTERY_CURRENT_COOL,
+	SONY1_BATTERY_CURRENT_NORMAL,
+	SONY1_BATTERY_CURRENT_WARM,
+	0
+};
+
+struct charger_coolant_states coolant_states[BATT_MAX] = {
+	[BATT_0] = {
+		.state_no = ARRAY_SIZE(charger_coolant_state_batt0),
+		.states = charger_coolant_state_batt0,
+	},
+	[BATT_1] = {
+		.state_no = ARRAY_SIZE(charger_coolant_state_batt1),
+		.states = charger_coolant_state_batt1,
+	},
+};
+
 struct bcmpmu_cc_pdata ccool_pdata = {
-	.state_no = ARRAY_SIZE(charger_coolant_state),
-	.states = charger_coolant_state,
+	.coolant_states = coolant_states,
 	/* Registers to store/restore while throttling*/
 	.chrgr_trim_reg_lut = chrgr_trim_reg_lut,
 	.chrgr_trim_reg_lut_sz = ARRAY_SIZE(chrgr_trim_reg_lut),
