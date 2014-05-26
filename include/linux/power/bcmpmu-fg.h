@@ -149,17 +149,25 @@ struct bcmpmu_fg_vf_data {
 	int eoc_curr;
 };
 
-struct bcmpmu_fg_pdata {
+struct bcmpmu_battery_data {
 	struct bcmpmu_batt_property *batt_prop;
 
-	/* Threasholds */
+	/* Thresholds */
 	struct bcmpmu_batt_cap_levels *cap_levels;
 	struct bcmpmu_batt_volt_levels *volt_levels;
 	struct bcmpmu_batt_cal_data *cal_data;
 
+	int eoc_current; /* EOC current */
+	struct bcmpmu_fg_vf_data *vfd;
+	u8 vfd_sz;
+};
+
+struct bcmpmu_fg_pdata {
+	struct bcmpmu_battery_data *batt_data;
+	u8 batt_data_sz;
+
 	int sns_resist;	/* FG sense resistor in Ohm */
 	int sys_impedence;
-	int eoc_current; /* EOC current */
 	int sleep_current_ua; /*sleep current when PC1,PC2,PC3 = 0,0,0 */
 	int sleep_sample_rate; /* sampling rate during sleep mode */
 	int fg_factor;
@@ -167,9 +175,7 @@ struct bcmpmu_fg_pdata {
 	int poll_rate_low_batt;
 	int poll_rate_crit_batt;
 	int ntc_high_temp;
-	struct bcmpmu_fg_vf_data *vfd;
 	int hysteresis;
-	u8 vfd_sz;
 };
 
 int bcmpmu_fg_set_sw_eoc_current(struct bcmpmu59xxx *bcmpmu, int eoc_current);

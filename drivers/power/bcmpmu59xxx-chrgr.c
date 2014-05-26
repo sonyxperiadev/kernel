@@ -635,10 +635,13 @@ static int bcmpmu_chrgr_probe(struct platform_device *pdev)
 	if (!pdata)
 		return -ENODEV;
 
-	if (pdata->chrgr_curr_lmt_tbl)
-		di->chrgr_curr_tbl = pdata->chrgr_curr_lmt_tbl;
-	else
+	if (pdata->chrgr_curr_lmt_tbl) {
+		enum battery_type btype = get_battery_type();
+		di->chrgr_curr_tbl = (int *)(pdata->chrgr_curr_lmt_tbl +
+					btype * PMU_CHRGR_TYPE_MAX);
+	} else {
 		di->chrgr_curr_tbl = chrgr_curr_lmt_default;
+	}
 
 	di->pflags = pdata->flags;
 

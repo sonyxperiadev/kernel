@@ -65,6 +65,7 @@ struct bcmpmu_cc_data {
 	struct notifier_block usb_det_nb;
 	struct notifier_block acld_nb;
 	struct notifier_block chrgr_status_nb;
+	struct charger_coolant_states *ccs;
 	enum bcmpmu_chrgr_type_t chrgr_type;
 	bool dietemp_coolant_running;
 	/* Variables for restoring charger state */
@@ -102,8 +103,8 @@ int charger_cooling_get_level(struct thermal_cooling_device *cdev,
 	int i;
 
 	pr_ccool(VERBOSE, "%s:Trip_curr:%u\n", __func__, trip_current);
-	for (i = level_offset; i < cdata->pdata->state_no; i++) {
-		if (cdata->pdata->states[i] == trip_current)
+	for (i = level_offset; i < cdata->ccs->state_no; i++) {
+		if (cdata->ccs->states[i] == trip_current)
 			return i;
 	}
 	return -EINVAL;
@@ -186,14 +187,14 @@ static void bcmpmu_set_chrgr_trim_default(struct bcmpmu_cc_data *cdata)
 
 static void bcmpmu_set_curr(struct bcmpmu_cc_data *cdata, unsigned long state)
 {
-	if (!cdata->pdata->states[state]) {
+	if (!cdata->ccs->states[state]) {
 		cdata->charging_halted = true;
 		pr_ccool(FLOW, "%s:Charging halted by coolant\n", __func__);
 	} else if (cdata->charging_halted) {
 		cdata->charging_halted = false;
 	}
-	pr_ccool(FLOW, "Set current to %d mA\n", cdata->pdata->states[state]);
-	bcmpmu_set_icc_fc(cdata->bcmpmu, cdata->pdata->states[state]);
+	pr_ccool(FLOW, "Set current to %d mA\n", cdata->ccs->states[state]);
+	bcmpmu_set_icc_fc(cdata->bcmpmu, cdata->ccs->states[state]);
 }
 
 static void bcmpmu_coolant_set_optimal_curr(struct bcmpmu_cc_data *cdata,
@@ -203,7 +204,7 @@ static void bcmpmu_coolant_set_optimal_curr(struct bcmpmu_cc_data *cdata,
 		bcmpmu_coolant_store_charger_state(cdata);
 
 	if (cdata->total_cur_saved <
-			cdata->pdata->states[state]) {
+			cdata->ccs->states[state]) {
 		pr_ccool(VERBOSE,
 			"%s:Normal charging curr < curr to set\n", __func__);
 		if (cdata->dietemp_coolant_running) {
@@ -281,7 +282,7 @@ static int bcmpmu_ccoolant_set_cur_state(struct thermal_cooling_device *cdev,
 	if ((cdata->is_charging || cdata->charging_halted) &&
 					cdata->acld_algo_finished) {
 		pr_ccool(VERBOSE, "%s called, state:%lu\tcurr = %u\n",
-			__func__, state, cdata->pdata->states[state]);
+			__func__, state, cdata->ccs->states[state]);
 		bcmpmu_coolant_set_optimal_curr(cdata, state);
 	}
 	return 0;
@@ -423,13 +424,15 @@ static int bcmpmu_ccoolant_probe(struct platform_device *pdev)
 			cdata->pdata->chrgr_trim_reg_lut[i].def_val;
 	}
 
+	cdata->ccs = &cdata->pdata->coolant_states[get_battery_type()];
+
 	cdata->acld_algo_finished = false;
 	cdata->dietemp_coolant_running = false;
 	cdata->is_charging = false;
 	cdata->charging_halted = false;
-	cdata->max_state = cdata->pdata->state_no - 1;
+	cdata->max_state = cdata->ccs->state_no - 1;
 	cdata->curr_state = 0;
-	cdata->icc_fc_saved = cdata->pdata->states[cdata->max_state];
+	cdata->icc_fc_saved = cdata->ccs->states[cdata->max_state];
 
 	cdata->coolant_wq =
 		create_singlethread_workqueue("bcmpmu_coolant_wq");

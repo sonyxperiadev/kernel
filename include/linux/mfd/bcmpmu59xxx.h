@@ -406,18 +406,23 @@ enum bcmpmu_adc_timing_t {
 	PMU_ADC_TM_MAX,
 };
 
+struct bcmpmu_acld_current_data {
+	int i_sat;
+	int i_def_dcp; /* Default DCP current */
+	int i_max_cc;
+	int acld_cc_lmt;
+	unsigned int max_charge_c_rate_percent;
+};
+
 struct bcmpmu_acld_pdata {
 	int acld_vbus_margin;
 	int acld_vbus_thrs;
 	int acld_vbat_thrs;
 	int usbrm_vbus_thrs;
-	int i_sat;
-	int i_def_dcp; /* Default DCP current */
-	int i_max_cc;
-	int acld_cc_lmt;
+
 	int otp_cc_trim;
 	int one_c_rate;
-	unsigned int max_charge_c_rate_percent;
+	struct bcmpmu_acld_current_data *acld_currents;
 	int *acld_chrgrs;
 	int acld_chrgrs_list_size;
 	bool qa_required; /* Set this to true if
@@ -1003,7 +1008,13 @@ static inline int interquartile_mean(int *data, int num)
 	return avg;
 }
 
+enum battery_type {
+	BATT_0 = 0,
+	BATT_1,
+	BATT_MAX
+};
 
+enum battery_type get_battery_type(void);
 int bcmpmu_get_pmu_mfd_cell(struct mfd_cell **);
 void bcmpmu_restore_cc_trim_otp(struct bcmpmu59xxx *bcmpmu);
 void bcmpmu_store_cc_trim_otp(struct bcmpmu59xxx *bcmpmu);

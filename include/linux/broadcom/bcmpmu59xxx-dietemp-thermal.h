@@ -41,13 +41,17 @@ struct bcmpmu_dietemp_trip {
 	enum thermal_trip_type type;
 };
 
+struct bcmpmu_dietemp_temp_zones {
+	struct bcmpmu_dietemp_trip *trips;
+	int trip_cnt;
+};
+
 struct bcmpmu_dietemp_pdata {
 	u32 poll_rate_ms;
 	int hysteresis;
-	int trip_cnt;
 	u8 temp_adc_channel;
 	u8 temp_adc_req_mode;
-	struct bcmpmu_dietemp_trip *trips;
+	struct bcmpmu_dietemp_temp_zones *dtzones;
 };
 
 #endif

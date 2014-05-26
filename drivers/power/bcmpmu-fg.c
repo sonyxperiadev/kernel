@@ -322,6 +322,7 @@ struct bcmpmu_fg_data {
 	enum bcmpmu_fg_sample_rate sample_rate;
 
 	enum bcmpmu_chrgr_type_t chrgr_type;
+	struct bcmpmu_battery_data *bdata;
 	int eoc_adj_fct;
 	int eoc_cap_delta;
 	int eoc_current;
@@ -736,8 +737,8 @@ static int bcmpmu_fg_volt_to_cap(struct bcmpmu_fg_data *fg, int volt)
 	int cap_percentage = 0;
 	int idx;
 
-	lut = fg->pdata->batt_prop->volt_cap_lut;
-	lut_sz = fg->pdata->batt_prop->volt_cap_lut_sz;
+	lut = fg->bdata->batt_prop->volt_cap_lut;
+	lut_sz = fg->bdata->batt_prop->volt_cap_lut_sz;
 
 	for (idx = 0; idx < lut_sz; idx++) {
 		if (volt >= lut[idx].volt)
@@ -758,8 +759,8 @@ static int bcmpmu_fg_volt_to_cap(struct bcmpmu_fg_data *fg, int volt)
 
 static int bcmpmu_fg_get_temp_factor(struct bcmpmu_fg_data *fg)
 {
-	struct batt_esr_temp_lut *lut = fg->pdata->batt_prop->esr_temp_lut;
-	int lut_sz = fg->pdata->batt_prop->esr_temp_lut_sz;
+	struct batt_esr_temp_lut *lut =	fg->bdata->batt_prop->esr_temp_lut;
+	int lut_sz = fg->bdata->batt_prop->esr_temp_lut_sz;
 	int idx;
 	int temp;
 	int temp_fact;
@@ -801,8 +802,8 @@ static int bcmpmu_fg_get_temp_factor(struct bcmpmu_fg_data *fg)
 }
 static int bcmpmu_fg_get_esr_guardband(struct bcmpmu_fg_data *fg)
 {
-	struct batt_esr_temp_lut *lut = fg->pdata->batt_prop->esr_temp_lut;
-	int lut_sz = fg->pdata->batt_prop->esr_temp_lut_sz;
+	struct batt_esr_temp_lut *lut =	fg->bdata->batt_prop->esr_temp_lut;
+	int lut_sz = fg->bdata->batt_prop->esr_temp_lut_sz;
 	int idx;
 	int temp;
 
@@ -821,8 +822,8 @@ static int bcmpmu_fg_get_esr_guardband(struct bcmpmu_fg_data *fg)
 
 static int bcmpmu_fg_get_cutoff_capacity(struct bcmpmu_fg_data *fg, int volt)
 {
-	struct batt_cutoff_cap_map *lut = fg->pdata->batt_prop->cutoff_cap_lut;
-	int lut_sz = fg->pdata->batt_prop->cutoff_cap_lut_sz;
+	struct batt_cutoff_cap_map *lut = fg->bdata->batt_prop->cutoff_cap_lut;
+	int lut_sz = fg->bdata->batt_prop->cutoff_cap_lut_sz;
 	int idx;
 	int cutoff_cap;
 
@@ -844,8 +845,8 @@ static int bcmpmu_fg_get_cutoff_capacity(struct bcmpmu_fg_data *fg, int volt)
 
 static int bcmpmu_fg_eoc_curr_to_capacity(struct bcmpmu_fg_data *fg, int curr)
 {
-	struct batt_eoc_curr_cap_map *lut = fg->pdata->batt_prop->eoc_cap_lut;
-	u32 lut_sz = fg->pdata->batt_prop->eoc_cap_lut_sz;
+	struct batt_eoc_curr_cap_map *lut = fg->bdata->batt_prop->eoc_cap_lut;
+	u32 lut_sz = fg->bdata->batt_prop->eoc_cap_lut_sz;
 	int idx;
 
 	if (!lut)
@@ -861,8 +862,8 @@ static int bcmpmu_fg_eoc_curr_to_capacity(struct bcmpmu_fg_data *fg, int curr)
 #if 0
 static int bcmpmu_fg_get_batt_esr(struct bcmpmu_fg_data *fg, int volt, int temp)
 {
-	struct batt_esr_temp_lut *lut = fg->pdata->batt_prop->esr_temp_lut;
-	int lut_sz = fg->pdata->batt_prop->esr_temp_lut_sz;
+	struct batt_esr_temp_lut *lut = fg->bdata->batt_prop->esr_temp_lut;
+	int lut_sz = fg->bdata->batt_prop->esr_temp_lut_sz;
 	int slope, offset, esr;
 	int idx;
 
@@ -941,8 +942,8 @@ static int bcmpmu_fg_get_esr_from_ocv(int ocv, int offset, int slope,
 static int bcmpmu_fg_get_batt_ocv(struct bcmpmu_fg_data *fg, int volt, int curr,
 		int temp)
 {
-	struct batt_esr_temp_lut *lut = fg->pdata->batt_prop->esr_temp_lut;
-	int lut_sz = fg->pdata->batt_prop->esr_temp_lut_sz;
+	struct batt_esr_temp_lut *lut = fg->bdata->batt_prop->esr_temp_lut;
+	int lut_sz = fg->bdata->batt_prop->esr_temp_lut_sz;
 	int slope, offset, ocv;
 	int idx;
 	int min_volt;
@@ -954,8 +955,8 @@ static int bcmpmu_fg_get_batt_ocv(struct bcmpmu_fg_data *fg, int volt, int curr,
 		return 0;
 	}
 
-	min_volt = fg->pdata->batt_prop->min_volt;
-	max_volt = fg->pdata->batt_prop->max_volt;
+	min_volt = fg->bdata->batt_prop->min_volt;
+	max_volt = fg->bdata->batt_prop->max_volt;
 	ocv = 0;
 
 	/*find esr zone */
@@ -1101,9 +1102,9 @@ int bcmpmu_fg_get_avg_volt(struct bcmpmu59xxx *bcmpmu)
 		 * voltage too high?? may be wrong ADC
 		 * sample or connected to power supply > 4.2V
 		 */
-		if (volt_samples[i] > fg->pdata->batt_prop->max_volt) {
+		if (volt_samples[i] > fg->bdata->batt_prop->max_volt) {
 			pr_fg(ERROR, "VBAT > MAX_VOLT");
-			volt_samples[i] = fg->pdata->batt_prop->max_volt;
+			volt_samples[i] = fg->bdata->batt_prop->max_volt;
 		}
 
 		volt_sum += volt_samples[i];
@@ -1211,7 +1212,7 @@ int bcmpmu_fg_get_one_c_rate(struct bcmpmu59xxx *bcmpmu, int *one_c_rate)
 	if (!fg)
 		return -EAGAIN;
 
-	*one_c_rate = fg->pdata->batt_prop->one_c_rate;
+	*one_c_rate = fg->bdata->batt_prop->one_c_rate;
 
 	return 0;
 }
@@ -1269,7 +1270,7 @@ EXPORT_SYMBOL(bcmpmu_fg_get_cur);
  */
 static bool bcmpmu_fg_can_battery_be_full(struct bcmpmu_fg_data *fg)
 {
-	return fg->vfloat_lvl == fg->pdata->volt_levels->vfloat_lvl;
+	return fg->vfloat_lvl == fg->bdata->volt_levels->vfloat_lvl;
 }
 
 /**
@@ -1318,9 +1319,9 @@ static int bcmpmu_fg_get_load_comp_capacity(struct bcmpmu_fg_data *fg,
 
 static int bcmpmu_fg_get_adj_factor(struct bcmpmu_fg_data *fg)
 {
-	struct bcmpmu_fg_pdata *pdata = fg->pdata;
+	struct bcmpmu_battery_data *bdata = fg->bdata;
 	struct batt_adc_data *adc = &fg->adc_data;
-	struct batt_eoc_curr_cap_map *lut = pdata->batt_prop->eoc_cap_lut;
+	struct batt_eoc_curr_cap_map *lut = bdata->batt_prop->eoc_cap_lut;
 	int capacity = fg->capacity_info.percentage;
 	int capacity_eoc;
 	int adj_factor = 0;
@@ -1421,8 +1422,8 @@ static void bcmpmu_fg_update_adj_factor(struct bcmpmu_fg_data *fg)
 	volt_oc = bcmpmu_fg_get_batt_ocv(fg, fg->adc_data.volt,
 			fg->adc_data.curr_inst, fg->adc_data.temp);
 
-	cal_volt_low = fg->pdata->cal_data->volt_low;
-	cal_cap_low = fg->pdata->cal_data->cap_low;
+	cal_volt_low = fg->bdata->cal_data->volt_low;
+	cal_cap_low = fg->bdata->cal_data->cap_low;
 	guardband = bcmpmu_fg_get_esr_guardband(fg);
 
 	if (fg->eoc_adj_fct) {
@@ -2158,7 +2159,7 @@ static int bcmpmu_fg_get_init_cap(struct bcmpmu_fg_data *fg)
 	 * and wait for discharging algorithm to run which calculates critrical
 	 * cutoff capacity based on the terminal voltage
 	 */
-	cutoff_cap = fg->pdata->batt_prop->cutoff_cap_lut[0].cap;
+	cutoff_cap = fg->bdata->batt_prop->cutoff_cap_lut[0].cap;
 
 	if (cap_percentage <= cutoff_cap) {
 		pr_fg(FLOW, "capacity below crit cutoff\n");
@@ -2175,8 +2176,8 @@ static int bcmpmu_fg_get_vf_zone_idx(struct bcmpmu_fg_data *fg)
 	u8 vfd_sz, zone = 0;
 	bool allow_new_zone = false;
 
-	vfd = fg->pdata->vfd;
-	vfd_sz = fg->pdata->vfd_sz;
+	vfd = fg->bdata->vfd;
+	vfd_sz = fg->bdata->vfd_sz;
 
 	temp = fg->adc_data.temp;
 	if (temp < 0 || temp < vfd[0].temp) {
@@ -2211,12 +2212,12 @@ static void bcmpmu_fg_update_vf_zone(struct bcmpmu_fg_data *fg)
 
 	zone_idx = bcmpmu_fg_get_vf_zone_idx(fg);
 	if (zone_idx != fg->vf_zone) {
-		u8 vfloat_lvl = min_t(u8, fg->pdata->vfd[zone_idx].vfloat_lvl,
-				fg->pdata->volt_levels->vfloat_lvl);
-		u16 vfloat_eoc = min_t(u16, fg->pdata->vfd[zone_idx].vfloat_eoc,
-				fg->pdata->volt_levels->high);
-		u16 eoc = max_t(u16, fg->pdata->vfd[zone_idx].eoc_curr,
-				fg->pdata->eoc_current);
+		u8 vfloat_lvl = min_t(u8, fg->bdata->vfd[zone_idx].vfloat_lvl,
+				fg->bdata->volt_levels->vfloat_lvl);
+		u16 vfloat_eoc = min_t(u16, fg->bdata->vfd[zone_idx].vfloat_eoc,
+				fg->bdata->volt_levels->high);
+		u16 eoc = max_t(u16, fg->bdata->vfd[zone_idx].eoc_curr,
+				fg->bdata->eoc_current);
 
 		if (fg->vfloat_lvl != vfloat_lvl ||
 				fg->vfloat_eoc != vfloat_eoc ||
@@ -2237,7 +2238,7 @@ static void bcmpmu_fg_update_vf_zone(struct bcmpmu_fg_data *fg)
 
 static int bcmpmu_fg_sw_maint_charging_algo(struct bcmpmu_fg_data *fg)
 {
-	struct bcmpmu_batt_volt_levels *volt_levels = fg->pdata->volt_levels;
+	struct bcmpmu_batt_volt_levels *volt_levels = fg->bdata->volt_levels;
 	struct bcmpmu_fg_status_flags *flags = &fg->flags;
 	int vfloat_volt;
 	int volt_thrld;
@@ -2245,7 +2246,7 @@ static int bcmpmu_fg_sw_maint_charging_algo(struct bcmpmu_fg_data *fg)
 	int volt;
 	int curr;
 	bool eoc_condition = false;
-	if ((fg->bcmpmu->flags & BCMPMU_FG_VF_CTRL) && fg->pdata->vfd_sz)
+	if ((fg->bcmpmu->flags & BCMPMU_FG_VF_CTRL) && fg->bdata->vfd_sz)
 		bcmpmu_fg_update_vf_zone(fg);
 	vfloat_volt = fg->vfloat_eoc;
 	volt_thrld = vfloat_volt - volt_levels->vfloat_gap;
@@ -2574,10 +2575,10 @@ static void bcmpmu_fg_discharging_algo(struct bcmpmu_fg_data *fg)
 	pr_fg(FLOW, "discharging_algo: state %s\n",
 			discharge_state_dbg[fg->discharge_state]);
 
-	volt_levels = fg->pdata->volt_levels;
-	cap_levels = fg->pdata->cap_levels;
+	volt_levels = fg->bdata->volt_levels;
+	cap_levels = fg->bdata->cap_levels;
 	cap_info = &fg->capacity_info;
-	cutoff_lut = fg->pdata->batt_prop->cutoff_cap_lut;
+	cutoff_lut = fg->bdata->batt_prop->cutoff_cap_lut;
 
 	bcmpmu_fg_get_coulomb_counter(fg);
 
@@ -2832,13 +2833,13 @@ static int bcmpmu_fg_get_capacity_level(struct bcmpmu_fg_data *fg)
 	int cap_percentage = fg->capacity_info.prev_percentage;
 	int level;
 
-	if (cap_percentage <= fg->pdata->cap_levels->critical)
+	if (cap_percentage <= fg->bdata->cap_levels->critical)
 		level = POWER_SUPPLY_CAPACITY_LEVEL_CRITICAL;
-	else if (cap_percentage <= fg->pdata->cap_levels->low)
+	else if (cap_percentage <= fg->bdata->cap_levels->low)
 		level = POWER_SUPPLY_CAPACITY_LEVEL_LOW;
-	else if (cap_percentage < fg->pdata->cap_levels->normal)
+	else if (cap_percentage < fg->bdata->cap_levels->normal)
 		level = POWER_SUPPLY_CAPACITY_LEVEL_NORMAL;
-	else if (cap_percentage <= fg->pdata->cap_levels->high)
+	else if (cap_percentage <= fg->bdata->cap_levels->high)
 		level = POWER_SUPPLY_CAPACITY_LEVEL_HIGH;
 	else
 		level = POWER_SUPPLY_CAPACITY_LEVEL_FULL;
@@ -2901,11 +2902,11 @@ static int bcmpmu_fg_get_properties(struct power_supply *psy,
 			val->intval = POWER_SUPPLY_HEALTH_GOOD;
 		break;
 	case POWER_SUPPLY_PROP_FULL_BAT:
-		val->intval =  fg->pdata->batt_prop->one_c_rate;
+		val->intval =  fg->bdata->batt_prop->one_c_rate;
 		break;
 	case POWER_SUPPLY_PROP_MODEL_NAME:
-		if (fg->pdata->batt_prop->model)
-			val->strval = fg->pdata->batt_prop->model;
+		if (fg->bdata->batt_prop->model)
+			val->strval = fg->bdata->batt_prop->model;
 		else
 			val->strval = "Li-Ion Battery";
 		break;
@@ -3058,17 +3059,22 @@ static int bcmpmu_fg_set_platform_data(struct bcmpmu_fg_data *fg,
 		struct bcmpmu_fg_pdata *pdata)
 {
 	struct bcmpmu_batt_property *prop;
+	struct bcmpmu_battery_data *bdata;
+	enum battery_type batt_type;
 
-	if (!pdata)
+	if (!pdata || !pdata->batt_data)
 		return -EINVAL;
 
 	fg->pdata = pdata;
 
-	if ((!pdata->batt_prop) || (!pdata->cap_levels) ||
-			!(pdata->volt_levels))
+	batt_type = get_battery_type();
+	bdata = &pdata->batt_data[batt_type];
+
+	if (!bdata->batt_prop || !bdata->cap_levels || !bdata->volt_levels)
 		return -EINVAL;
 
-	prop = pdata->batt_prop;
+	fg->bdata = bdata;
+	prop = bdata->batt_prop;
 
 	/**
 	 * verify mandatory fields from platform data
@@ -3076,9 +3082,9 @@ static int bcmpmu_fg_set_platform_data(struct bcmpmu_fg_data *fg,
 	if ((prop->full_cap == 0) || (!prop->volt_cap_lut) ||
 			(!prop->esr_temp_lut))
 		return -EINVAL;
-	if (!pdata->eoc_current)
-		pdata->eoc_current = FG_EOC_CURRENT;
-	fg->eoc_current = pdata->eoc_current;
+	if (!bdata->eoc_current)
+		bdata->eoc_current = FG_EOC_CURRENT;
+	fg->eoc_current = bdata->eoc_current;
 	if (!pdata->sleep_current_ua)
 		pdata->sleep_current_ua = FG_SLEEP_CURR_UA;
 	if (!pdata->sleep_sample_rate)
@@ -3090,11 +3096,11 @@ static int bcmpmu_fg_set_platform_data(struct bcmpmu_fg_data *fg,
 	if (prop->max_volt == 0)
 		prop->max_volt = BATT_LI_ION_MAX_VOLT;
 
-	fg->capacity_info.max_design = pdata->batt_prop->full_cap;
+	fg->capacity_info.max_design = bdata->batt_prop->full_cap;
 
-	if (fg->pdata->volt_levels->vfloat_max)
+	if (bdata->volt_levels->vfloat_max)
 		bcmpmu_fg_set_vfloat_max_level(fg,
-				pdata->volt_levels->vfloat_max);
+				bdata->volt_levels->vfloat_max);
 	else
 		bcmpmu_fg_set_vfloat_max_level(fg, BATT_VFLOAT_DEFAULT);
 
@@ -3102,15 +3108,20 @@ static int bcmpmu_fg_set_platform_data(struct bcmpmu_fg_data *fg,
 	/**
 	 * set VFLOAT levels
 	 */
-	if (!fg->pdata->volt_levels->vfloat_lvl)
-		fg->pdata->volt_levels->vfloat_lvl = BATT_VFLOAT_DEFAULT;
-	fg->vfloat_lvl = pdata->volt_levels->vfloat_lvl;
-	bcmpmu_fg_set_vfloat_level(fg, pdata->volt_levels->vfloat_lvl);
+	if (!bdata->volt_levels->vfloat_lvl)
+		bdata->volt_levels->vfloat_lvl = BATT_VFLOAT_DEFAULT;
+	fg->vfloat_lvl = bdata->volt_levels->vfloat_lvl;
+	bcmpmu_fg_set_vfloat_level(fg, bdata->volt_levels->vfloat_lvl);
 
-	if (!fg->pdata->volt_levels->high)
-		fg->pdata->volt_levels->high = BATT_MIN_EOC_VOLT;
-	fg->vfloat_eoc = fg->pdata->volt_levels->high;
+	if (!bdata->volt_levels->high)
+		bdata->volt_levels->high = BATT_MIN_EOC_VOLT;
+	fg->vfloat_eoc = bdata->volt_levels->high;
 	return 0;
+}
+
+__weak enum battery_type get_battery_type(void)
+{
+	return BATT_0;
 }
 
 int bcmpmu_fg_set_sw_eoc_current(struct bcmpmu59xxx *bcmpmu, int eoc_current)
@@ -3623,7 +3634,7 @@ static int bcmpmu_fg_probe(struct platform_device *pdev)
 	ret = fg->bcmpmu->unmask_irq(fg->bcmpmu, PMU_IRQ_MBTEMPLOW);
 
 	if ((fg->bcmpmu->flags & BCMPMU_FG_VF_CTRL) &&
-			fg->pdata->vfd_sz)
+			fg->bdata->vfd_sz)
 		fg->vf_zone = -1;
 
 	/**

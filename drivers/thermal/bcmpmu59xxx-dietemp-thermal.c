@@ -65,6 +65,7 @@ struct bcmpmu_dietemp_thermal {
 	struct workqueue_struct *dietemp_wq;
 	struct delayed_work polling_work;
 	struct bcmpmu_dietemp_pdata *pdata;
+	struct bcmpmu_dietemp_temp_zones *zone;
 	struct thermal_cooling_device *curr_cdev;
 	struct notifier_block chrgr_det_nb;
 	struct mutex lock;
@@ -98,7 +99,7 @@ static int dietemp_thermal_tz_cdev_bind(struct thermal_zone_device *tz,
 		for (bdx = 0; bdx < tdata->active_cnt; bdx++) {
 			level = charger_cooling_get_level(cdev,
 					level,
-					tdata->pdata->trips[bdx].max_curr);
+					tdata->zone->trips[bdx].max_curr);
 			ret = thermal_zone_bind_cooling_device(tz, bdx,
 						cdev, level, 0);
 			if (ret) {
@@ -156,10 +157,10 @@ static int dietemp_thermal_tz_get_trip_temp(struct thermal_zone_device *tz,
 	struct bcmpmu_dietemp_thermal *tdata = tz->devdata;
 	pr_dtemp(FLOW, "%s\n", __func__);
 
-	if (trip < 0 || trip >= tdata->pdata->trip_cnt)
+	if (trip < 0 || trip >= tdata->zone->trip_cnt)
 		return -EINVAL;
 
-	*temp = tdata->pdata->trips[trip].temp;
+	*temp = tdata->zone->trips[trip].temp;
 
 	return 0;
 }
@@ -172,7 +173,7 @@ static int dietemp_thermal_tz_get_trend(struct thermal_zone_device *tz,
 	int ret;
 
 	pr_dtemp(FLOW, "%s, trip:%d\n", __func__, trip);
-	if (trip < 0 || trip >= tdata->pdata->trip_cnt)
+	if (trip < 0 || trip >= tdata->zone->trip_cnt)
 		return -EINVAL;
 
 	ret = dietemp_thermal_tz_get_trip_temp(tz, trip, &trip_temp);
@@ -193,12 +194,12 @@ static int dietemp_thermal_tz_get_trip_type(struct thermal_zone_device *tz,
 {
 	struct bcmpmu_dietemp_thermal *tdata = tz->devdata;
 	pr_dtemp(FLOW, "%s,type:%d\n",
-			__func__, tdata->pdata->trips[trip].type);
+			__func__, tdata->zone->trips[trip].type);
 
-	if (trip < 0 || trip >= tdata->pdata->trip_cnt)
+	if (trip < 0 || trip >= tdata->zone->trip_cnt)
 		return -EINVAL;
 
-	*type = tdata->pdata->trips[trip].type;
+	*type = tdata->zone->trips[trip].type;
 
 	return 0;
 }
@@ -218,8 +219,8 @@ static inline int dietemp_thermal_active_trip_cnt
 {
 	int idx, cnt = 0;
 
-	for (idx = 0; idx < tdata->pdata->trip_cnt; idx++) {
-		if (tdata->pdata->trips[idx].type == THERMAL_TRIP_ACTIVE)
+	for (idx = 0; idx < tdata->zone->trip_cnt; idx++) {
+		if (tdata->zone->trips[idx].type == THERMAL_TRIP_ACTIVE)
 			cnt++;
 	}
 
@@ -250,8 +251,9 @@ static void dietemp_thermal_polling_work(struct work_struct *work)
 			(struct delayed_work *)work,
 			struct bcmpmu_dietemp_thermal, polling_work);
 	struct bcmpmu_dietemp_pdata *pdata = tdata->pdata;
+	struct bcmpmu_dietemp_temp_zones *zone = tdata->zone;
 	int index;
-	int lut_sz = tdata->pdata->trip_cnt;
+	int lut_sz = tdata->zone->trip_cnt;
 	bool allow_update = false;
 	bool recovering = false;
 
@@ -262,14 +264,14 @@ static void dietemp_thermal_polling_work(struct work_struct *work)
 		tdata->curr_temp, tdata->cur_idx);
 
 	if ((tdata->curr_temp <= 0) ||
-			(tdata->curr_temp < pdata->trips[0].temp))
+			(tdata->curr_temp < zone->trips[0].temp))
 		index = 0;
-	else if (tdata->curr_temp >= pdata->trips[lut_sz-1].temp)
+	else if (tdata->curr_temp >= zone->trips[lut_sz-1].temp)
 		index = lut_sz - 1;
 	else {
 		for (index = 0; index < lut_sz; index++) {
-			if ((tdata->curr_temp >= pdata->trips[index].temp) &&
-				(tdata->curr_temp < pdata->trips[index+1].temp))
+			if ((tdata->curr_temp >= zone->trips[index].temp) &&
+				(tdata->curr_temp < zone->trips[index+1].temp))
 					break;
 		}
 	}
@@ -279,10 +281,10 @@ static void dietemp_thermal_polling_work(struct work_struct *work)
 			"Same as previous index(%d), so no thermal update\n",
 							tdata->cur_idx);
 	} else if (index > tdata->cur_idx) {
-		if (pdata->trips[index].max_curr >
-			pdata->trips[tdata->cur_idx].max_curr) {
+		if (zone->trips[index].max_curr >
+			zone->trips[tdata->cur_idx].max_curr) {
 			if (tdata->curr_temp >=
-				(pdata->trips[index].temp +
+				(zone->trips[index].temp +
 					pdata->hysteresis)) {
 				allow_update = true;
 				recovering = true;
@@ -291,10 +293,10 @@ static void dietemp_thermal_polling_work(struct work_struct *work)
 			allow_update = true;
 		}
 	} else if (index < tdata->cur_idx) {
-		if (pdata->trips[index].max_curr >
-			pdata->trips[tdata->cur_idx].max_curr) {
+		if (zone->trips[index].max_curr >
+			zone->trips[tdata->cur_idx].max_curr) {
 			if (tdata->curr_temp <=
-				(pdata->trips[tdata->cur_idx].temp -
+				(zone->trips[tdata->cur_idx].temp -
 					pdata->hysteresis)) {
 				allow_update = true;
 				recovering = true;
@@ -362,7 +364,7 @@ static int bcmpmu_dietemp_debugfs_enable(void *data, u64 coolant_enable)
 		 * normal charging state before disabling the dietemp coolant*/
 			if (tdata->cur_idx) {
 				tdata->cur_idx = 0;
-				tdata->curr_temp = tdata->pdata->trips[1].temp -
+				tdata->curr_temp = tdata->zone->trips[1].temp -
 						tdata->pdata->hysteresis;
 				thermal_zone_device_update(tdata->tz);
 			}
@@ -404,36 +406,36 @@ static ssize_t bcmpmu_dietemp_debugfs_set_table(struct file *file,
 	sscanf(str_ptr, "%d%d%d", &idx, &temp, &curr);
 	pr_dtemp(VERBOSE, "idx=%d\ttemp=%d\tcurr=%d\n", idx, temp, curr);
 
-	if (idx < 0 || idx >= tdata->pdata->trip_cnt) {
+	if (idx < 0 || idx >= tdata->zone->trip_cnt) {
 		pr_dtemp(ERROR, "Invalid Index Argument\n");
 		return count;
 	}
 
-	if (((idx > 0) && (temp < tdata->pdata->trips[idx-1].temp)) ||
-			((idx < tdata->pdata->trip_cnt - 1) &&
-				(temp > tdata->pdata->trips[idx+1].temp))) {
+	if (((idx > 0) && (temp < tdata->zone->trips[idx-1].temp)) ||
+			((idx < tdata->zone->trip_cnt - 1) &&
+				(temp > tdata->zone->trips[idx+1].temp))) {
 		pr_dtemp(ERROR, "Temperatue not in ascending order\n");
 		return count;
 	}
-	tdata->pdata->trips[idx].temp = temp;
+	tdata->zone->trips[idx].temp = temp;
 	pr_dtemp(VERBOSE, "Temperature of index:%d updated to:%d\n",
 			idx, temp);
 
-	if (((idx > 0) && (curr > tdata->pdata->trips[idx-1].max_curr)) ||
-		((idx < tdata->pdata->trip_cnt - 1) &&
-			(curr < tdata->pdata->trips[idx+1].max_curr))) {
+	if (((idx > 0) && (curr > tdata->zone->trips[idx-1].max_curr)) ||
+		((idx < tdata->zone->trip_cnt - 1) &&
+			(curr < tdata->zone->trips[idx+1].max_curr))) {
 		pr_dtemp(ERROR, "Current not in descending order\n");
 		return count;
 	}
 	/*If current value needs to be changed, check whether the current value
 	 *is valid.Then unregister and register to change current value */
-	if (curr != tdata->pdata->trips[idx].max_curr) {
+	if (curr != tdata->zone->trips[idx].max_curr) {
 		level = charger_cooling_get_level(tdata->curr_cdev, 0, curr);
 		if (level >= 0) {
-			tdata->pdata->trips[idx].max_curr = curr;
+			tdata->zone->trips[idx].max_curr = curr;
 			thermal_zone_device_unregister(tdata->tz);
 			tdata->tz = thermal_zone_device_register("dietemp",
-				tdata->pdata->trip_cnt, TRIP_UPDATE_MASK,
+				tdata->zone->trip_cnt, TRIP_UPDATE_MASK,
 				tdata, &dietemp_ops, NULL, 0, 0);
 			pr_dtemp(VERBOSE, "Current updated to %dmA\n", curr);
 		} else {
@@ -441,7 +443,7 @@ static ssize_t bcmpmu_dietemp_debugfs_set_table(struct file *file,
 				"No match for entered current in coolant\n");
 			pr_dtemp(ERROR,
 				"Retaining previous current value:%dmA\n",
-					tdata->pdata->trips[idx].max_curr);
+					tdata->zone->trips[idx].max_curr);
 		}
 	}
 	return count;
@@ -461,11 +463,11 @@ static ssize_t bcmpmu_dietemp_debugfs_get_table(struct file *file,
 			"Temperature current Lookup table:\n");
 	len += snprintf(out_str+len, sizeof(out_str)-len,
 		"Index\tTemp\tCurrent\n");
-	for (loop = 0; loop < tdata->pdata->trip_cnt; loop++)
+	for (loop = 0; loop < tdata->zone->trip_cnt; loop++)
 		len += snprintf(out_str+len, sizeof(out_str)-len,
 			"  %d\t %d\t %d\n", loop,
-				tdata->pdata->trips[loop].temp,
-				tdata->pdata->trips[loop].max_curr);
+				tdata->zone->trips[loop].temp,
+				tdata->zone->trips[loop].max_curr);
 	len += snprintf(out_str+len, sizeof(out_str)-len,
 		"To Update table, use the below format\n");
 	len += snprintf(out_str+len, sizeof(out_str)-len,
@@ -741,11 +743,13 @@ static int dietemp_thermal_probe(struct platform_device *pdev)
 		goto err_tz_reg;
 	}
 
+	tdata->zone = &pdata->dtzones[get_battery_type()];
+
 	tdata->active_cnt = dietemp_thermal_active_trip_cnt(tdata);
 	tdata->cur_idx = -1;
 
 	tdata->tz  = thermal_zone_device_register("dietemp",
-			tdata->pdata->trip_cnt, TRIP_UPDATE_MASK, tdata,
+			tdata->zone->trip_cnt, TRIP_UPDATE_MASK, tdata,
 			&dietemp_ops, NULL, 0, 0);
 	if (IS_ERR(tdata->tz)) {
 		pr_dtemp(ERROR, "thermal zone registration failed:%ld\n",

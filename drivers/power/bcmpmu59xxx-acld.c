@@ -102,6 +102,7 @@ struct bcmpmu_acld {
 	struct dentry *dty_acld_dir;
 	ktime_t last_sample_tm;
 	enum bcmpmu_chrgr_type_t chrgr_type;
+	enum battery_type batt_type;
 	int acld_min_input;
 	int acld_rtry_cnt;
 	int batt_curr_err_cnt;
@@ -351,6 +352,8 @@ static void bcmpmu_acld_update_min_input(struct bcmpmu_acld *acld)
 	int one_c_rate = 0;
 	int retries = ADC_READ_TRIES;
 	int ret;
+	struct bcmpmu_acld_current_data *limits =
+		&acld->pdata->acld_currents[acld->batt_type];
 
 	while (retries--) {
 		ret = bcmpmu_fg_get_one_c_rate(acld->bcmpmu, &one_c_rate);
@@ -362,18 +365,18 @@ static void bcmpmu_acld_update_min_input(struct bcmpmu_acld *acld)
 		BUG_ON(1);
 
 	acld->safe_c = safe_c_rate(one_c_rate,
-		acld->pdata->max_charge_c_rate_percent);
+		limits->max_charge_c_rate_percent);
 
 	/* C rate, Max CC and ISat are the inputs for
 	 * ACLD. CC  should not excedd the minimum of
 	 * above three inputs
 	 * */
-	acld->acld_min_input = min3(acld->safe_c, acld->pdata->i_max_cc,
-			acld->pdata->i_sat);
+	acld->acld_min_input = min3(acld->safe_c, limits->i_max_cc,
+				limits->i_sat);
 
 	pr_acld(INIT, "safe_c: %d, i_max_cc: %d i_sat: %d\n",
-			acld->safe_c, acld->pdata->i_max_cc,
-			acld->pdata->i_sat);
+			acld->safe_c, limits->i_max_cc,
+			limits->i_sat);
 	pr_acld(INIT, "acld min input = %d\n", acld->acld_min_input);
 }
 /**
@@ -658,11 +661,13 @@ static void bcmpmu_trim_to_adapter_cc_lmt(struct bcmpmu_acld *acld,
 	int ttl_cur;
 	int nxt_ttl_cur;
 	int ret;
+	struct bcmpmu_acld_current_data *limits =
+		&acld->pdata->acld_currents[acld->batt_type];
 
 	adapter_cc_lmt = max((acld->pdata->adapter_pout_spec / vbus_chrg_off),
 			acld->pdata->i_adaptor_spec_min);
-	if (adapter_cc_lmt > acld->pdata->acld_cc_lmt)
-		adapter_cc_lmt = acld->pdata->acld_cc_lmt;
+	if (adapter_cc_lmt > limits->acld_cc_lmt)
+		adapter_cc_lmt = limits->acld_cc_lmt;
 	usb_fc_cc = bcmpmu_get_icc_fc(acld->bcmpmu);
 	trim = bcmpmu_get_trim_curr(acld->bcmpmu, TRIM_MARGIN_0);
 	usb_fc_cc_trim0 = ((usb_fc_cc * 100) / (100 + (trim)));
@@ -711,6 +716,8 @@ static int bcmpmu_acld_algo(struct bcmpmu_acld *acld)
 	int usb_fc_cc_reached;
 	int usb_fc_cc_prev;
 	int usb_fc_cc_next;
+	struct bcmpmu_acld_current_data *limits =
+		&acld->pdata->acld_currents[acld->batt_type];
 
 	pr_acld(INIT, "%s\n", __func__);
 	bcmpmu_clr_sw_ctrl_chrgr_timer(acld);
@@ -800,7 +807,7 @@ static int bcmpmu_acld_algo(struct bcmpmu_acld *acld)
 			break;
 		} else {
 			if (bcmpmu_get_next_icc_fc(acld->bcmpmu) >=
-					acld->pdata->acld_cc_lmt) {
+					limits->acld_cc_lmt) {
 				acld_cc_lmt_hit = true;
 				pr_acld(INIT, "ACLD CC lmt hit\n");
 				break;
@@ -890,7 +897,7 @@ static int bcmpmu_acld_algo(struct bcmpmu_acld *acld)
 		} else {
 			if ((usb_fc_cc_reached + bcmpmu_get_next_trim_curr(
 					acld->bcmpmu, TRIM_MARGIN_0)) >=
-					acld->pdata->acld_cc_lmt) {
+					limits->acld_cc_lmt) {
 				pr_acld(INIT, "ACLD CC lmt hit.Exit T Tuing\n");
 				break;
 			}
@@ -969,10 +976,12 @@ static void bcmpmu_acld_periodic_monitor(struct bcmpmu_acld *acld)
 	if (((bcmpmu_is_usb_host_enabled(acld->bcmpmu)) &&
 			(!bcmpmu_is_usb_valid(acld))) ||
 			(!bcmpmu_get_ubpd_int(acld))) {
+		struct bcmpmu_acld_current_data *limits =
+			&acld->pdata->acld_currents[acld->batt_type];
 		bcmpmu_acld_enable(acld, false);
 		acld->acld_en = false;
 		bcmpmu_restore_cc_trim_otp(acld->bcmpmu);
-		bcmpmu_set_icc_fc(acld->bcmpmu, acld->pdata->i_def_dcp);
+		bcmpmu_set_icc_fc(acld->bcmpmu, limits->i_def_dcp);
 		pr_acld(FLOW, "%s:USB Fault, start ACLD from scratch\n",
 				__func__);
 		bcmpmu_reset_acld_flags(acld);
@@ -1330,6 +1339,8 @@ static void bcmpmu_acld_debugfs_init(struct bcmpmu_acld *acld)
 {
 	struct dentry *dentry_acld_dir;
 	struct dentry *dentry_acld_file;
+	struct bcmpmu_acld_current_data *limits =
+		&acld->pdata->acld_currents[acld->batt_type];
 	struct bcmpmu59xxx *bcmpmu = acld->bcmpmu;
 	if (!bcmpmu || !bcmpmu->dent_bcmpmu) {
 		pr_acld(ERROR, "%s: dentry_bcmpmu is NULL", __func__);
@@ -1385,7 +1396,7 @@ static void bcmpmu_acld_debugfs_init(struct bcmpmu_acld *acld)
 
 	dentry_acld_file = debugfs_create_u32("acld_cc_lmt",
 			S_IWUSR | S_IRUSR, dentry_acld_dir,
-			&acld->pdata->acld_cc_lmt);
+			&limits->acld_cc_lmt);
 	if (IS_ERR_OR_NULL(dentry_acld_file))
 		goto debugfs_clean;
 
@@ -1444,6 +1455,7 @@ static int bcmpmu_acld_probe(struct platform_device *pdev)
 {
 	struct bcmpmu59xxx *bcmpmu = dev_get_drvdata(pdev->dev.parent);
 	struct bcmpmu_acld *acld;
+	struct bcmpmu_acld_current_data *limits;
 	int ret = 0;
 
 	pr_acld(INIT, "%s: called\n", __func__);
@@ -1469,14 +1481,17 @@ static int bcmpmu_acld_probe(struct platform_device *pdev)
 
 	acld->vbus_vbat_delta = VBUS_VBAT_DELTA;
 
-	if (!acld->pdata->i_max_cc)
-		acld->pdata->i_max_cc = PMU_MAX_CC_CURR;
-	if (!acld->pdata->i_sat)
-		acld->pdata->i_sat = PMU_TYP_SAT_CURR;
-	if (!acld->pdata->acld_cc_lmt)
-		acld->pdata->acld_cc_lmt = ACLD_CC_LIMIT;
-	if (!acld->pdata->i_def_dcp)
-		acld->pdata->i_def_dcp = PMU_DCP_DEF_CURR_LMT;
+	acld->batt_type = get_battery_type();
+	limits = &acld->pdata->acld_currents[acld->batt_type];
+
+	if (!limits->i_max_cc)
+		limits->i_max_cc = PMU_MAX_CC_CURR;
+	if (!limits->i_sat)
+		limits->i_sat = PMU_TYP_SAT_CURR;
+	if (!limits->acld_cc_lmt)
+		limits->acld_cc_lmt = ACLD_CC_LIMIT;
+	if (!limits->i_def_dcp)
+		limits->i_def_dcp = PMU_DCP_DEF_CURR_LMT;
 	if (!acld->pdata->acld_vbus_margin)
 		acld->pdata->acld_vbus_margin = ACLD_VBUS_MARGIN;
 	if (!acld->pdata->acld_vbus_thrs)
@@ -1487,8 +1502,8 @@ static int bcmpmu_acld_probe(struct platform_device *pdev)
 		acld->pdata->usbrm_vbus_thrs = USBRM_VBUS_THRS;
 	if (!acld->pdata->otp_cc_trim)
 		acld->pdata->otp_cc_trim = PMU_OTP_CC_TRIM;
-	if (!acld->pdata->max_charge_c_rate_percent)
-		acld->pdata->max_charge_c_rate_percent =
+	if (!limits->max_charge_c_rate_percent)
+		limits->max_charge_c_rate_percent =
 			BATT_MAX_CHARGE_C_RATE_DEF;
 	if ((!acld->pdata->acld_chrgrs) ||
 			(!acld->pdata->acld_chrgrs_list_size)) {
@@ -1498,11 +1513,11 @@ static int bcmpmu_acld_probe(struct platform_device *pdev)
 	}
 
 	bcmpmu_acld_update_min_input(acld);
-	if (acld->pdata->acld_cc_lmt > acld->safe_c) {
+	if (limits->acld_cc_lmt > acld->safe_c) {
 		pr_acld(ERROR, "acld_cc_lmt: %d > safe_c: %d\n",
-				acld->pdata->acld_cc_lmt, acld->safe_c);
+				limits->acld_cc_lmt, acld->safe_c);
 		WARN_ON(1);
-		acld->pdata->acld_cc_lmt = acld->safe_c;
+		limits->acld_cc_lmt = acld->safe_c;
 	}
 
 	acld->acld_wq = create_singlethread_workqueue("bcmpmu_acld_wq");
