@@ -456,7 +456,7 @@ static struct regulator_init_data bcm59xxx_gpldo2_data = {
 			.min_uV = 1200000,
 			.max_uV = 3300000,
 			.valid_ops_mask =
-			REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_VOLTAGE,
+			0,
 			.always_on = 0,
 			},
 	.num_consumer_supplies = ARRAY_SIZE(gpldo2_supply),

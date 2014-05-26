@@ -146,7 +146,6 @@
 			interrupt-parent = <&gpio>;
 			interrupts = <73 0x2>;
 			synaptics,pwr-reg-name = "cam2";
-			synaptics,bus-reg-name = "gpldo2_uc";
 			synaptics,irq-gpio = <&gpio 73 0x00>;
 			synaptics,irq-flags = <0x2002>;
 			synaptics,reset-gpio = <&gpio 70 0x00>;

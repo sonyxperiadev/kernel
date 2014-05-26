@@ -151,12 +151,12 @@
 		vib  = "1", "vibldo_uc", "0", "7", "2", "0", "0";
 		/*pc_map = 0, initial_mode = REGULATOR_MODE_NORMAL*/
 		gp1  = "1", "gpldo1_uc","1", "0", "2", "0", "0";
-		/*pc_map = 0, initial_mode = REGULATOR_MODE_NORMAL*/
-		gp2  = "1", "gpldo2_uc", "0", "0", "2", "0", "0";
+		/*pc_map = 0, initial_mode = REGULATOR_MODE_IDLE*/
+		gp2  = "1", "gpldo2_uc", "0", "0", "4", "0", "0";
 		/*pc_map = PMU_PC2|PMU_PC3, initial_mode = REGULATOR_MODE_IDLE*/
 		gp3  = "1", "sim3_vcc", "1", "6", "4", "0", "0";
-		/*pc_map = PMU_PC1|PMU_PC2|PMU_PC3, initial_mode = REGULATOR_MODE_STANDBY*/
-		tcx  = "1", "tcxldo_uc", "1", "7", "8", "0", "0";
+		/*pc_map = 0, initial_mode = REGULATOR_MODE_IDLE*/
+		tcx  = "1", "tcxldo_uc", "0", "0", "4", "0", "0";
 		/*pc_map = 0, initial_mode = REGULATOR_MODE_STANDBY*/
 		lv1  = "1", "lvldo1_uc", "0", "0", "8", "0", "0";
 		/*pc_map = 0, initial_mode = REGULATOR_MODE_STANDBY*/
