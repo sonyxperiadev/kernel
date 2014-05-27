@@ -174,6 +174,7 @@ static int kona_fb_die_cb(struct notifier_block *, unsigned long, void *);
 
 static int lcd_boot_mode(char *);
 static int lcd_panel_setup(char *);
+static int kona_fb_blank(int blank_mode, struct fb_info *info);
 
 static int need_page_alignment = 1;
 static char g_disp_str[DISPDRV_NAME_SZ];
@@ -1283,6 +1284,63 @@ static const struct file_operations dbgfs_write_fops = {
 	.release		= single_release,
 };
 
+static ssize_t dbgfs_cabc_write(struct file *file, const char __user *ubuf,
+						size_t count, loff_t *ppos)
+{
+	int ret = 0;
+	char *kbuf = NULL;
+	struct seq_file *s = file->private_data;
+	struct kona_fb *fb = s->private;
+
+	kbuf = kzalloc(sizeof(char) * count, GFP_KERNEL);
+	if (!kbuf) {
+		pr_err("%s: Failed to allocate buffer\n", __func__);
+		ret = -ENOMEM;
+		goto exit;
+	}
+
+	if (copy_from_user(kbuf, ubuf, count)) {
+		pr_err("%s: Failed to copy from user\n", __func__);
+		ret = -EFAULT;
+		goto fail_exit;
+	}
+
+	if (!strncmp(kbuf, "0", 1)) {
+		fb->display_info->cabc_enabled = false;
+		fb->display_info->clear_panel_ram = false;
+		if (fb->blank_state != KONA_FB_BLANK) {
+			(void)kona_fb_blank(FB_BLANK_NORMAL, &fb->fb);
+			(void)kona_fb_blank(FB_BLANK_UNBLANK, &fb->fb);
+		}
+		pr_info("%s: CABC turned off\n", __func__);
+	} else {
+		fb->display_info->cabc_enabled = true;
+		fb->display_info->clear_panel_ram = true;
+		if (fb->blank_state != KONA_FB_BLANK) {
+			(void)kona_fb_blank(FB_BLANK_NORMAL, &fb->fb);
+			(void)kona_fb_blank(FB_BLANK_UNBLANK, &fb->fb);
+		}
+		pr_info("%s: CABC turned on\n", __func__);
+	}
+fail_exit:
+	kfree(kbuf);
+exit:
+	return count;
+}
+
+static int dbgfs_cabc_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, NULL, inode->i_private);
+}
+
+static const struct file_operations dbgfs_cabc_fops = {
+	.owner			= THIS_MODULE,
+	.open			= dbgfs_cabc_open,
+	.write			= dbgfs_cabc_write,
+	.llseek			= seq_lseek,
+	.release		= single_release,
+};
+
 void __init kona_fb_create_debugfs(struct platform_device *pdev)
 {
 	struct kona_fb *fb;
@@ -1318,6 +1376,12 @@ void __init kona_fb_create_debugfs(struct platform_device *pdev)
 		if (!debugfs_create_file("panel_write", S_IWUSR, fb->dbgfs_dir,
 						fb, &dbgfs_write_fops)) {
 			dev_err(dev, "%s: failed to create dbgfs write file\n",
+								__func__);
+			return;
+		}
+		if (!debugfs_create_file("cabc", S_IWUSR, fb->dbgfs_dir,
+						fb, &dbgfs_cabc_fops)) {
+			dev_err(dev, "%s: failed to create dbgfs cabc file\n",
 								__func__);
 			return;
 		}
