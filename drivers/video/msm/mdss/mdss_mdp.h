@@ -358,6 +358,11 @@ struct mdss_mdp_pipe_smp_map {
 	DECLARE_BITMAP(fixed, MAX_DRV_SUP_MMB_BLKS);
 };
 
+struct mdss_mdp_shared_reg_ctrl {
+	u32 reg_off;
+	u32 bit_off;
+};
+
 struct mdss_mdp_pipe {
 	u32 num;
 	u32 type;
@@ -366,6 +371,9 @@ struct mdss_mdp_pipe {
 	u32 ftch_id;
 	u32 xin_id;
 	struct kref kref;
+	struct mdss_mdp_shared_reg_ctrl clk_ctrl;
+	struct mdss_mdp_shared_reg_ctrl clk_status;
+
 	u32 play_cnt;
 	int pid;
 	bool is_handed_off;
@@ -566,6 +574,7 @@ struct mdss_mdp_pipe *mdss_mdp_mixer_stage_pipe(struct mdss_mdp_ctl *ctl,
 						int mux, int stage);
 int mdss_mdp_mixer_pipe_update(struct mdss_mdp_pipe *pipe, int params_changed);
 int mdss_mdp_mixer_pipe_unstage(struct mdss_mdp_pipe *pipe);
+void mdss_mdp_mixer_unstage_all(struct mdss_mdp_mixer *mixer);
 int mdss_mdp_display_commit(struct mdss_mdp_ctl *ctl, void *arg);
 int mdss_mdp_display_wait4comp(struct mdss_mdp_ctl *ctl);
 int mdss_mdp_display_wait4pingpong(struct mdss_mdp_ctl *ctl);
@@ -639,10 +648,10 @@ int mdss_mdp_mixer_addr_setup(struct mdss_data_type *mdata, u32 *mixer_offsets,
 int mdss_mdp_ctl_addr_setup(struct mdss_data_type *mdata, u32 *ctl_offsets,
 		u32 *wb_offsets, u32 len);
 
+int mdss_mdp_pipe_fetch_halt(struct mdss_mdp_pipe *pipe);
 int mdss_mdp_pipe_destroy(struct mdss_mdp_pipe *pipe);
 int mdss_mdp_pipe_queue_data(struct mdss_mdp_pipe *pipe,
 			     struct mdss_mdp_data *src_data);
-int mdss_mdp_pipe_fetch_halt(struct mdss_mdp_pipe *pipe);
 
 int mdss_mdp_data_check(struct mdss_mdp_data *data,
 			struct mdss_mdp_plane_sizes *ps);
