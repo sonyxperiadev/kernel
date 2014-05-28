@@ -635,7 +635,7 @@ static int bh1721fvc_probe(struct i2c_client *client,
 
 	hrtimer_init(&bh1721fvc->timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
 
-	bh1721fvc->average_samples = 10;
+	bh1721fvc->average_samples = 1;
 	bh1721fvc->light_poll_delay = ns_to_ktime(200 * NSEC_PER_MSEC);
 	bh1721fvc->timer.function = bh1721fvc_timer_func;
 
