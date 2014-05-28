@@ -541,9 +541,9 @@ __initdata DISPCTRL_REC_T nt35310_brooks_idle_mode_on[] = {
 	{DISPCTRL_WR_DATA, 0xFE},
 	{DISPCTRL_WR_CMND, 0xB0}, /* Hi-Z */
 	{DISPCTRL_WR_DATA, 0x03},
-	{DISPCTRL_WR_CMND, 0xB2}, /* Idle mode 40 Hz */
+	{DISPCTRL_WR_CMND, 0xB2}, /* Idle mode 36 Hz */
 	{DISPCTRL_WR_DATA, 0x8D},
-	{DISPCTRL_WR_DATA, 0xD3},
+	{DISPCTRL_WR_DATA, 0xEB},
 	{DISPCTRL_WR_DATA, 0x8D},
 	{DISPCTRL_LIST_END, 0}
 };
