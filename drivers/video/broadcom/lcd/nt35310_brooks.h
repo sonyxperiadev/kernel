@@ -130,6 +130,15 @@ __initdata DISPCTRL_REC_T nt35310_brooks_slp_out[] = {
 __initdata DISPCTRL_REC_T nt35310_brooks_init_panel_cmd[] = {
 	{DISPCTRL_WR_CMND, 0x11},
 	{DISPCTRL_SLEEP_MS, 96}, /* 16ms*6 frames = 96 ms */
+	{DISPCTRL_WR_CMND, 0xED}, /* Unlock CMD2 */
+	{DISPCTRL_WR_DATA, 0x01},
+	{DISPCTRL_WR_DATA, 0xFE},
+	{DISPCTRL_WR_CMND, 0xBF}, /* CMD 2 Page 1 */
+	{DISPCTRL_WR_DATA, 0xAA},
+	{DISPCTRL_WR_CMND, 0xB4}, /* Normal: 2-pixel inv, Idle: Col inv */
+	{DISPCTRL_WR_DATA, 0x0D},
+	{DISPCTRL_WR_CMND, 0xEF}, /* Back CMD1 */
+	{DISPCTRL_WR_DATA, 0xAA},
 	{DISPCTRL_LIST_END, 0}
 };
 
