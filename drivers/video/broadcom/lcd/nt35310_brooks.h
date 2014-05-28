@@ -133,13 +133,11 @@ __initdata DISPCTRL_REC_T nt35310_brooks_init_panel_cmd[] = {
 	{DISPCTRL_LIST_END, 0}
 };
 
-__initdata DISPCTRL_REC_T nt35310_brooks_cabc[] = {
+__initdata DISPCTRL_REC_T nt35310_brooks_cabc_init[] = {
 	{DISPCTRL_WR_CMND, 0x51}, /* Write Display Brightness */
 	{DISPCTRL_WR_DATA, 0xFF},
 	{DISPCTRL_WR_CMND, 0x53}, /* Write CTRL Display */
 	{DISPCTRL_WR_DATA, 0x2C},
-	{DISPCTRL_WR_CMND, 0x55}, /* Moving Mode */
-	{DISPCTRL_WR_DATA, 0x03},
 	{DISPCTRL_WR_CMND, 0xED}, /* Unlock CMD2 */
 	{DISPCTRL_WR_DATA, 0x01},
 	{DISPCTRL_WR_DATA, 0xFE},
@@ -296,6 +294,17 @@ __initdata DISPCTRL_REC_T nt35310_brooks_cabc[] = {
 	{DISPCTRL_LIST_END, 0}
 };
 
+__initdata DISPCTRL_REC_T nt35310_brooks_cabc_on[] = {
+	{DISPCTRL_WR_CMND, 0x55}, /* Moving Mode */
+	{DISPCTRL_WR_DATA, 0x03},
+};
+
+__initdata DISPCTRL_REC_T nt35310_brooks_cabc_off[] = {
+	{DISPCTRL_WR_CMND, 0x55}, /* CABC off */
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_LIST_END, 0}
+};
+
 __initdata DISPCTRL_REC_T nt35310_brooks_idle_mode_on[] = {
 	{DISPCTRL_WR_CMND, 0x12}, /* Partial Mode On */
 	{DISPCTRL_WR_CMND, 0x30}, /* Partial mode area */
@@ -359,7 +368,9 @@ __initdata struct lcd_config nt35310_brooks_cfg = {
 	.slp_out_seq = &nt35310_brooks_slp_out[0],
 	.scrn_on_seq = &nt35310_brooks_scrn_on[0],
 	.scrn_off_seq = &nt35310_brooks_scrn_off[0],
-	.cabc_seq = &nt35310_brooks_cabc[0],
+	.cabc_init_seq = &nt35310_brooks_cabc_init[0],
+	.cabc_on_seq = &nt35310_brooks_cabc_on[0],
+	.cabc_off_seq = &nt35310_brooks_cabc_off[0],
 	.cabc_enabled = true,
 	.id_seq = &nt35310_Brooks_id[0],
 	.verify_id = false,

@@ -965,6 +965,8 @@ static ssize_t kona_fb_panel_mode_store(struct device *dev,
 						msecs_to_jiffies(10000)) <= 0)
 			konafb_error("timed out waiting for completion\n");
 		kona_clock_start(fb);
+		if (fb->display_info->cabc_enabled)
+			panel_write(fb->display_info->cabc_off_seq);
 		panel_write(fb->display_info->special_mode_on_seq);
 		kona_clock_stop(fb);
 		link_control(fb, SUSPEND_LINK);
@@ -992,6 +994,8 @@ static ssize_t kona_fb_panel_mode_store(struct device *dev,
 		complete(&g_kona_fb->prev_buf_done_sem);
 		kona_clock_start(fb);
 		panel_write(fb->display_info->special_mode_off_seq);
+		if (fb->display_info->cabc_enabled)
+			panel_write(fb->display_info->cabc_on_seq);
 		kona_clock_stop(fb);
 		schedule_work(&fb->vsync_smart);
 		if (fb->fb_data->esdcheck)
@@ -2221,8 +2225,14 @@ static int __init populate_dispdrv_cfg(struct kona_fb *fb,
 
 	info->cabc_enabled = cfg->cabc_enabled;
 	if (info->cabc_enabled) {
-		info->cabc_seq = get_seq(cfg->cabc_seq);
-		if (!info->cabc_seq)
+		info->cabc_init_seq = get_seq(cfg->cabc_init_seq);
+		if (!info->cabc_init_seq)
+			goto err_cabc_seq;
+		info->cabc_on_seq = get_seq(cfg->cabc_on_seq);
+		if (!info->cabc_on_seq)
+			goto err_cabc_seq;
+		info->cabc_off_seq = get_seq(cfg->cabc_off_seq);
+		if (!info->cabc_off_seq)
 			goto err_cabc_seq;
 	}
 
@@ -2245,7 +2255,9 @@ static int __init populate_dispdrv_cfg(struct kona_fb *fb,
 	return 0;
 
 err_cabc_seq:
-	kfree(info->cabc_seq);
+	kfree(info->cabc_init_seq);
+	kfree(info->cabc_on_seq);
+	kfree(info->cabc_off_seq);
 err_special_mode_seq:
 	kfree(info->special_mode_on_seq);
 	kfree(info->special_mode_off_seq);
@@ -2272,7 +2284,9 @@ err_cfg:
 void release_dispdrv_info(DISPDRV_INFO_T *info)
 {
 	BUG_ON(ZERO_OR_NULL_PTR(info));
-	kfree(info->cabc_seq);
+	kfree(info->cabc_init_seq);
+	kfree(info->cabc_on_seq);
+	kfree(info->cabc_off_seq);
 	kfree(info->special_mode_on_seq);
 	kfree(info->special_mode_off_seq);
 	kfree(info->init_seq);

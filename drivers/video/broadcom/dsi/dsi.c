@@ -1144,8 +1144,10 @@ static Int32 DSI_PowerControl(
 	case CTRL_SCREEN_ON:
 		switch (pPanel->pwrState) {
 		case STATE_SCREEN_OFF:
-			if (info->cabc_enabled)
-				DSI_ExecCmndList(pPanel, info->cabc_seq);
+			if (info->cabc_enabled) {
+				DSI_ExecCmndList(pPanel, info->cabc_init_seq);
+				DSI_ExecCmndList(pPanel, info->cabc_on_seq);
+			}
 			if (info->vmode && info->vid_cmnds)
 				DSI_panel_turn_on(pPanel);
 			else
