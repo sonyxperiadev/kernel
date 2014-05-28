@@ -185,7 +185,8 @@ __initdata DISPCTRL_REC_T nt35310_brooks_cabc_init[] = {
 	{DISPCTRL_WR_DATA, 0x00},
 	{DISPCTRL_WR_DATA, 0xE6},
 	{DISPCTRL_WR_DATA, 0x00},
-	{DISPCTRL_WR_CMND, 0xAA}, /* Gamma Liner */
+	{DISPCTRL_WR_CMND, 0xE9}, /* Gamma Liner */
+	{DISPCTRL_WR_DATA, 0xAA},
 	{DISPCTRL_WR_DATA, 0x00},
 	{DISPCTRL_WR_DATA, 0x00},
 	{DISPCTRL_WR_DATA, 0x00},
