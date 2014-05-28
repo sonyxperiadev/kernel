@@ -121,12 +121,6 @@ __initdata DISPCTRL_REC_T nt35310_brooks_slp_in[] = {
 	{DISPCTRL_LIST_END, 0}
 };
 
-__initdata DISPCTRL_REC_T nt35310_brooks_slp_out[] = {
-	{DISPCTRL_WR_CMND, 0x11},
-	{DISPCTRL_SLEEP_MS, 96}, /* 16ms*6 frames = 96 ms */
-	{DISPCTRL_LIST_END, 0}
-};
-
 __initdata DISPCTRL_REC_T nt35310_brooks_init_panel_cmd[] = {
 	{DISPCTRL_WR_CMND, 0x11},
 	{DISPCTRL_SLEEP_MS, 96}, /* 16ms*6 frames = 96 ms */
@@ -597,7 +591,7 @@ __initdata struct lcd_config nt35310_brooks_cfg = {
 	.init_cmd_seq = &nt35310_brooks_init_panel_cmd[0],
 	.init_vid_seq = NULL,
 	.slp_in_seq = &nt35310_brooks_slp_in[0],
-	.slp_out_seq = &nt35310_brooks_slp_out[0],
+	.slp_out_seq = &nt35310_brooks_init_panel_cmd[0], /* same as init */
 	.scrn_on_seq = &nt35310_brooks_scrn_on[0],
 	.scrn_off_seq = &nt35310_brooks_scrn_off[0],
 	.cabc_init_seq = &nt35310_brooks_cabc_init[0],
