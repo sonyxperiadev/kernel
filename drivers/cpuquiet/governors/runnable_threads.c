@@ -227,11 +227,29 @@ static void runnables_stop(void)
 
 static int runnables_start(void)
 {
-	int i, err, arch_specific_sample_rate;
+	int err;
 
 	err = runnables_sysfs_init();
 	if (err)
 		return err;
+
+	runnables_enabled = true;
+
+	runnables_avg_sampler(0);
+
+	return 0;
+}
+
+static struct cpuquiet_governor runnables_governor = {
+	.name			= "runnable",
+	.start			= runnables_start,
+	.stop			= runnables_stop,
+	.owner			= THIS_MODULE,
+};
+
+static int __init init_runnables(void)
+{
+	int i, arch_specific_sample_rate;
 
 	INIT_WORK(&runnables_work, runnables_work_func);
 
@@ -256,22 +274,6 @@ static int runnables_start(void)
 				NR_FSHIFT / default_threshold_level;
 	}
 
-	runnables_enabled = true;
-
-	runnables_avg_sampler(0);
-
-	return 0;
-}
-
-static struct cpuquiet_governor runnables_governor = {
-	.name			= "runnable",
-	.start			= runnables_start,
-	.stop			= runnables_stop,
-	.owner			= THIS_MODULE,
-};
-
-static int __init init_runnables(void)
-{
 	return cpuquiet_register_governor(&runnables_governor);
 }
 
