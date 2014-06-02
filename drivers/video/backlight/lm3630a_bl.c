@@ -14,6 +14,7 @@
 #include <linux/thermal.h>
 #endif
 #include <linux/i2c.h>
+#include <linux/gpio.h>
 #include <linux/backlight.h>
 #include <linux/err.h>
 #include <linux/delay.h>
@@ -87,6 +88,12 @@ static int lm3630a_chip_init(struct lm3630a_chip *pchip)
 {
 	int rval;
 	struct lm3630a_platform_data *pdata = pchip->pdata;
+
+	if (gpio_request_one(pdata->enable_gpio , GPIOF_OUT_INIT_HIGH, "bl_enable") < 0) {
+		pr_err("can't get bl_enable GPIO\n");
+		return -EINVAL;
+	}
+	gpio_set_value(pdata->enable_gpio, 1);
 
 	usleep_range(1000, 2000);
 	/* set Filter Strength Register */
@@ -186,15 +193,20 @@ static int lm3630a_bank_a_update_status(struct backlight_device *bl)
 	int ret;
 	struct lm3630a_chip *pchip = bl_get_data(bl);
 
+	gpio_set_value(pchip->pdata->enable_gpio, 1);
+	usleep_range(1000, 2000);
+
 	/* disable sleep */
 	ret = lm3630a_update(pchip, REG_CTRL, 0x80, 0x00);
 	if (ret < 0)
 		goto out_i2c_err;
 	usleep_range(1000, 2000);
+
 	/* minimum brightness is 0x04 */
 	ret = lm3630a_write(pchip, REG_BRT_A, bl->props.brightness);
 	if (bl->props.brightness < 0x4) {
 		ret |= lm3630a_update(pchip, REG_CTRL, LM3630A_LEDA_ENABLE, 0);
+		gpio_set_value(pchip->pdata->enable_gpio, 0);
 	} else {
 		if (bl->props.brightness >= LM3630A_MAX_BRIGHTNESS)
 			ret |= lm3630a_update(pchip, REG_I_A,
@@ -263,15 +275,20 @@ static int lm3630a_bank_b_update_status(struct backlight_device *bl)
 	int ret;
 	struct lm3630a_chip *pchip = bl_get_data(bl);
 
+	gpio_set_value(pchip->pdata->enable_gpio, 1);
+	usleep_range(1000, 2000);
+
 	/* disable sleep */
 	ret = lm3630a_update(pchip, REG_CTRL, 0x80, 0x00);
 	if (ret < 0)
 		goto out_i2c_err;
 	usleep_range(1000, 2000);
+
 	/* minimum brightness is 0x04 */
 	ret = lm3630a_write(pchip, REG_BRT_B, bl->props.brightness);
 	if (bl->props.brightness < 0x4) {
 		ret |= lm3630a_update(pchip, REG_CTRL, LM3630A_LEDB_ENABLE, 0);
+		gpio_set_value(pchip->pdata->enable_gpio, 1);
 	} else {
 		if (bl->props.brightness >= LM3630A_MAX_BRIGHTNESS)
 			ret |= lm3630a_update(pchip, REG_I_A,

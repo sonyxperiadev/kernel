@@ -8,6 +8,7 @@
 #include "board-brooks.h"
 
 #define BMU_NFC_I2C_BUS_ID 1
+#define BMU_HW_EN 24
 
 static struct lm3630a_platform_data lm3630a_bmu_platform_data = {
 	.leda_init_brt = 128,
@@ -20,6 +21,7 @@ static struct lm3630a_platform_data lm3630a_bmu_platform_data = {
 	.b_max_curr = B_MAX_CURR_DEFAULT,
 	.ramp_on_off = 0x12,
 	.ramp_run = 0x09,
+	.enable_gpio = BMU_HW_EN,
 };
 
 static struct i2c_board_info __initdata lm3630a_i2c_boardinfo[] = {

@@ -71,6 +71,7 @@ struct lm3630a_platform_data {
 	int b_max_curr;
 	int ramp_on_off;
 	int ramp_run;
+	int enable_gpio;
 };
 
 #endif /* __LINUX_LM3630A_H */
