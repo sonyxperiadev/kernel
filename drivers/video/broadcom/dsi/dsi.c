@@ -726,18 +726,6 @@ static Int32 DSI_Open(DISPDRV_HANDLE_T drvH)
 		goto err_gpio_request;
 	}
 
-	/* do hw_reset in power off state only */
-	if (STATE_PWR_OFF == pPanel->pwrState)
-		hw_reset(drvH, FALSE);
-
-	if (!pPanel->panel_identified) {
-		if (DSI_ReadPanelIDs(pPanel) < 0) {
-			DSI_ERR("ID read failed\n");
-			goto err_id_read;
-		}
-		pPanel->panel_identified = true;
-	}
-
 	pPanel->win_dim.l = 0;
 	pPanel->win_dim.r = pPanel->disp_info->width-1;
 	pPanel->win_dim.t = 0;
@@ -751,8 +739,6 @@ static Int32 DSI_Open(DISPDRV_HANDLE_T drvH)
 
 	return res;
 
-err_id_read:
-	gpio_free(pPanel->disp_info->rst->gpio);
 err_gpio_request:
 err_reg_enable:
 err_reg_init:
@@ -1060,6 +1046,17 @@ static Int32 DSI_PowerControl(
 				break;
 			}
 			usleep_range(1000, 1010);
+			hw_reset(drvH, FALSE);
+
+			if (!pPanel->panel_identified) {
+				if (DSI_ReadPanelIDs(pPanel) < 0) {
+					DSI_ERR("ID read failed\n");
+					res = -1;
+					break;
+				}
+				pPanel->panel_identified = true;
+			}
+
 			if (info->init_fn)
 				info->init_fn();
 			DSI_ExecCmndList(pPanel, info->init_seq);
