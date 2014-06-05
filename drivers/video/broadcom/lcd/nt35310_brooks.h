@@ -124,6 +124,11 @@ __initdata DISPCTRL_REC_T nt35310_brooks_slp_in[] = {
 __initdata DISPCTRL_REC_T nt35310_brooks_init_panel_cmd[] = {
 	{DISPCTRL_WR_CMND, 0x11},
 	{DISPCTRL_SLEEP_MS, 96}, /* 16ms*6 frames = 96 ms */
+	{DISPCTRL_WR_CMND, 0x35},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_CMND, 0x44},
+	{DISPCTRL_WR_DATA, 0x00},
+	{DISPCTRL_WR_DATA, 0x00},
 	{DISPCTRL_WR_CMND, 0xED}, /* Unlock CMD2 */
 	{DISPCTRL_WR_DATA, 0x01},
 	{DISPCTRL_WR_DATA, 0xFE},
@@ -618,6 +623,7 @@ __initdata struct lcd_config nt35310_brooks_cfg = {
 	.clear_ram_row_start = 1,
 	.clear_ram_row_end = 480,
 	.clear_panel_ram = true,
+	.no_te_in_sleep = true,
 };
 
 #endif
