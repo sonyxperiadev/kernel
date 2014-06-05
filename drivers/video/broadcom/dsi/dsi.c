@@ -300,7 +300,7 @@ static int DSI_TeOn(DispDrv_PANEL_t	*pPanel)
 	TECTL_CFG_t teCfg;
 
 	teCfg.te_mode	  = TE_VC4L_MODE_VSYNC;
-	teCfg.sync_pol	  = TE_VC4L_ACT_POL_LO;
+	teCfg.sync_pol	  = TE_VC4L_ACT_POL_HI;
 	teCfg.vsync_width = 0;
 	teCfg.hsync_line  = 0;
 
