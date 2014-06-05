@@ -317,7 +317,7 @@
 		height = <320>;
 		/* vmode; */
 		/* vburst; */	/* Non-burst mode */
-		/* te-ctrl; */		/* Tearing Effect Control enabled */
+		te-ctrl;		/* Tearing Effect Control enabled */
 		fps = <60>;
 		lanes = <1>;
 		/*cmnd-LP;		 Commands in LP mode*/
