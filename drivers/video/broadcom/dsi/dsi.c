@@ -1263,6 +1263,8 @@ static Int32 DSI_Update(
 	CSL_LCD_UPD_REQ_T req;
 	Int32 res  = 0;
 	uint32_t offset;
+	DISPDRV_INFO_T *info = pPanel->disp_info;
+	bool use_te = true;
 
 	DSI_DBG("+\n");
 	if (pPanel->pwrState ==	STATE_PWR_OFF) {
@@ -1300,11 +1302,15 @@ static Int32 DSI_Update(
 	else
 		req.cslLcdCb = NULL;
 
+	if ((info->no_te_in_sleep && (pPanel->pwrState == STATE_SCREEN_OFF)) ||
+				!pPanel->isTE)
+		use_te = false;
+
 	if (pPanel->disp_info->vmode)
 		res = CSL_DSI_UpdateVmVc(pPanel->dsiCmVcHandle, &req);
 	else
-		res = CSL_DSI_UpdateCmVc(pPanel->dsiCmVcHandle, &req,
-							pPanel->isTE);
+		res = CSL_DSI_UpdateCmVc(pPanel->dsiCmVcHandle, &req, use_te);
+
 	if (res != CSL_LCD_OK)	{
 		DSI_ERR("ERROR ret by CSL_DSI_UpdateCmVc\n");
 		res = -1;

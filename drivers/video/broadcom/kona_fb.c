@@ -2239,6 +2239,7 @@ static int __init populate_dispdrv_cfg(struct kona_fb *fb,
 	info->clear_panel_ram = cfg->clear_panel_ram;
 	info->clear_ram_row_start = cfg->clear_ram_row_start;
 	info->clear_ram_row_end = cfg->clear_ram_row_end;
+	info->no_te_in_sleep = cfg->no_te_in_sleep;
 
 	/* burst mode changes to be taken care here or PV? */
 	info->hs_bps = (pd->hs_bps > cfg->max_hs_bps) ?

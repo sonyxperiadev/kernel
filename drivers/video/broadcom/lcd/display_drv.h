@@ -144,6 +144,7 @@ extern "C" {
 		bool clear_panel_ram;
 		uint16_t clear_ram_row_start;
 		uint16_t clear_ram_row_end;
+		bool no_te_in_sleep;
 		uint32_t hs_bps;
 		uint32_t lp_bps;
 		int desense_offset;

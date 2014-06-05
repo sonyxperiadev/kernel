@@ -79,6 +79,7 @@ struct lcd_config {
 	bool clear_panel_ram;
 	uint16_t clear_ram_row_start;
 	uint16_t clear_ram_row_end;
+	bool no_te_in_sleep;
 };
 
 void panel_write(UInt8 *buff);
