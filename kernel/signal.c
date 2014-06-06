@@ -704,11 +704,8 @@ void signal_wake_up_state(struct task_struct *t, unsigned int state)
  * Returns 1 if any signals were found.
  *
  * All callers must be holding the siglock.
- *
- * This version takes a sigset mask and looks at all signals,
- * not just those in the first mask word.
  */
-static int rm_from_queue_full(sigset_t *mask, struct sigpending *s)
+static int flush_sigqueue_mask(sigset_t *mask, struct sigpending *s)
 {
 	struct sigqueue *q, *n;
 	sigset_t m;
@@ -850,18 +847,18 @@ static bool prepare_signal(int sig, struct task_struct *p, bool force)
 		 * This is a stop signal.  Remove SIGCONT from all queues.
 		 */
 		siginitset(&flush, sigmask(SIGCONT));
-		rm_from_queue_full(&flush, &signal->shared_pending);
+		flush_sigqueue_mask(&flush, &signal->shared_pending);
 		for_each_thread(p, t)
-			rm_from_queue_full(&flush, &t->pending);
+			flush_sigqueue_mask(&flush, &t->pending);
 	} else if (sig == SIGCONT) {
 		unsigned int why;
 		/*
 		 * Remove all stop signals from all queues, wake all threads.
 		 */
 		siginitset(&flush, SIG_KERNEL_STOP_MASK);
-		rm_from_queue_full(&flush, &signal->shared_pending);
+		flush_sigqueue_mask(&flush, &signal->shared_pending);
 		for_each_thread(p, t) {
-			rm_from_queue_full(&flush, &t->pending);
+			flush_sigqueue_mask(&flush, &t->pending);
 			task_clear_jobctl_pending(t, JOBCTL_STOP_PENDING);
 			if (likely(!(t->ptrace & PT_SEIZED)))
 				wake_up_state(t, __TASK_STOPPED);
@@ -3100,11 +3097,10 @@ int do_sigaction(int sig, struct k_sigaction *act, struct k_sigaction *oact)
 		if (sig_handler_ignored(sig_handler(t, sig), sig)) {
 			sigemptyset(&mask);
 			sigaddset(&mask, sig);
-			rm_from_queue_full(&mask, &t->signal->shared_pending);
+			flush_sigqueue_mask(&mask, &t->signal->shared_pending);
 			do {
-				rm_from_queue_full(&mask, &t->pending);
-				t = next_thread(t);
-			} while (t != current);
+				flush_sigqueue_mask(&mask, &t->pending);
+			} while_each_thread(current, t);
 		}
 	}
 
@@ -3112,7 +3108,7 @@ int do_sigaction(int sig, struct k_sigaction *act, struct k_sigaction *oact)
 	return 0;
 }
 
-static int 
+static int
 do_sigaltstack (const stack_t __user *uss, stack_t __user *uoss, unsigned long sp)
 {
 	stack_t oss;
