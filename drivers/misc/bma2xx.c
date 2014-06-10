@@ -226,6 +226,17 @@ static int bma2xx_big_block_read(struct i2c_client *cl, u8 addr,
 	return rc < 0 ? rc : -EIO;
 }
 
+static int bma2xx_sw_reset(struct i2c_client *client)
+{
+	int comres;
+	unsigned char data = 0xB6;
+
+	comres = bma2xx_smbus_write_byte(client,
+						  BMA2XXX_RESET_REG,
+						  &data);
+	return comres;
+}
+
 static int bma2xx_set_mode(struct i2c_client *client, unsigned char Mode)
 {
 	int comres = 0;
@@ -3583,7 +3594,6 @@ static int bma2xx_probe(struct i2c_client *client,
 			data->regulator = NULL;
 			printk("Failed to get regulator from OF DT\n");
 		} else {
-			msleep(2000);
 			data->regulator = regulator_get(NULL, regname);
 			if ( data->regulator != NULL ) {
 				rc = regulator_set_voltage(data->regulator, 2800000, 2800000);
@@ -3596,6 +3606,7 @@ static int bma2xx_probe(struct i2c_client *client,
 				if (rc) {
 					printk("Failed to enable regulator\n");
 				}
+				usleep_range(10000, 10000);
 			}
 		}
 		printk("bma2xx: Regulator=%p\n",data->regulator);
@@ -3622,6 +3633,9 @@ static int bma2xx_probe(struct i2c_client *client,
 	mutex_init(&data->value_mutex);
 	mutex_init(&data->mode_mutex);
 	mutex_init(&data->enable_mutex);
+	bma2xx_set_mode(client, BMA2XXX_MODE_NORMAL);
+	bma2xx_sw_reset(client);
+	usleep_range(5000, 5000);
 	bma2xx_set_bandwidth(client, BMA2XXX_BW_SET);
 	bma2xx_set_range(client, BMA2XXX_RANGE_SET);
 
@@ -3658,24 +3672,6 @@ static int bma2xx_probe(struct i2c_client *client,
 			data->data_irq = -EINVAL;
 		else
 			data->data_irq = val;
-	}
-	if (client->irq != -EINVAL) {
-		data->IRQ = gpio_to_irq(client->irq);
-		err = request_irq(data->IRQ, bma2xx_irq_handler,
-				IRQF_TRIGGER_RISING | IRQF_NO_SUSPEND,
-			"	bma2xx", data);
-		if (err)
-			dev_err(&client->dev, "could not request irq\n");
-	}
-	if (data->data_irq != -EINVAL) {
-		data->data_irq = gpio_to_irq(data->data_irq);
-		err = request_irq(data->data_irq, bma2xx_fifo_irq_handler,
-				IRQF_TRIGGER_RISING | IRQF_NO_SUSPEND,
-				"bma2xx_fifo", data);
-		if (err)
-			dev_err(&client->dev, "could not request fifo irq\n");
-		else
-			device_init_wakeup(&client->dev, 1);
 	}
 	INIT_WORK(&data->irq_work, bma2xx_irq_work_func);
 	INIT_WORK(&data->fifo_work, bma2xx_fifo_work_func);
@@ -3755,6 +3751,24 @@ static int bma2xx_probe(struct i2c_client *client,
 	mutex_init(&data->value_mutex);
 	mutex_init(&data->mode_mutex);
 	mutex_init(&data->enable_mutex);
+	if (client->irq != -EINVAL) {
+		data->IRQ = gpio_to_irq(client->irq);
+		err = request_irq(data->IRQ, bma2xx_irq_handler,
+				IRQF_TRIGGER_RISING | IRQF_NO_SUSPEND,
+			"	bma2xx", data);
+		if (err)
+			dev_err(&client->dev, "could not request irq\n");
+	}
+	if (data->data_irq != -EINVAL) {
+		data->data_irq = gpio_to_irq(data->data_irq);
+		err = request_irq(data->data_irq, bma2xx_fifo_irq_handler,
+				IRQF_TRIGGER_RISING | IRQF_NO_SUSPEND,
+				"bma2xx_fifo", data);
+		if (err)
+			dev_err(&client->dev, "could not request fifo irq\n");
+		else
+			device_init_wakeup(&client->dev, 1);
+	}
 	bma2xx_set_mode(data->bma2xx_client, BMA2XXX_MODE_SUSPEND);
 
 	return 0;
