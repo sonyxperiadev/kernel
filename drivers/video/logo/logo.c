@@ -112,6 +112,7 @@ const struct linux_logo * __init_refok fb_find_logo(int depth)
 		/* CHINA UNICOM 480*854 Linux logo */
 		logo = &logo_unicom_480_800_clut224;
 #endif
+		logo = &logo_sony_clut224;
 	}
 	return logo;
 }
