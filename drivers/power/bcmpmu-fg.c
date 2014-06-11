@@ -281,6 +281,15 @@ struct avg_sample_buff {
 	bool dirty;
 };
 
+#ifdef CONFIG_DEBUG_FS
+struct fg_probes {
+	int volt_avg;
+	int adj_factor;
+	int temp_factor;
+	int capacity_delta;
+};
+#endif
+
 /**
  * FG private data
  */
@@ -347,6 +356,10 @@ struct bcmpmu_fg_data {
 
 	/* for debugging only */
 	int lock_cnt;
+
+#ifdef CONFIG_DEBUG_FS
+	struct fg_probes probes;
+#endif
 };
 
 #ifdef CONFIG_DEBUG_FS
@@ -1363,6 +1376,10 @@ static int bcmpmu_fg_get_adj_factor(struct bcmpmu_fg_data *fg)
 			adj_factor = fg->low_cal_adj_fct;
 	}
 
+#ifdef CONFIG_DEBUG_FS
+	fg->probes.adj_factor = adj_factor;
+#endif
+
 	return adj_factor;
 }
 
@@ -1595,6 +1612,9 @@ static void bcmpmu_fg_get_coulomb_counter(struct bcmpmu_fg_data *fg)
 	 */
 	capacity_delta = bcmpmu_fg_accumulator_to_capacity(fg, fg->accumulator,
 			sample_count, sleep_count);
+#ifdef CONFIG_DEBUG_FS
+	fg->probes.capacity_delta = capacity_delta;
+#endif
 	capacity_adj = (capacity_delta -
 			(capacity_delta * adj_factor / 100));
 
@@ -1602,6 +1622,9 @@ static void bcmpmu_fg_get_coulomb_counter(struct bcmpmu_fg_data *fg)
 	temp_factor = bcmpmu_fg_get_temp_factor(fg);
 	if (temp_factor)
 		capacity_adj = (capacity_adj * 1000) / temp_factor;
+#ifdef CONFIG_DEBUG_FS
+	fg->probes.temp_factor = temp_factor;
+#endif
 
 	fg->capacity_info.capacity += capacity_adj;
 
@@ -2586,6 +2609,9 @@ static void bcmpmu_fg_discharging_algo(struct bcmpmu_fg_data *fg)
 	cap_per = cap_info->percentage;
 
 	volt_avg = interquartile_mean(fg->avg_sample.volt, AVG_SAMPLES);
+#ifdef CONFIG_DEBUG_FS
+	fg->probes.volt_avg = volt_avg;
+#endif
 	pr_fg(FLOW, "vbat_avg: %d\n", volt_avg);
 
 	switch (fg->discharge_state) {
@@ -3364,6 +3390,51 @@ static int debugfs_set_dummy_cap(void *data, u64 capacity)
 DEFINE_SIMPLE_ATTRIBUTE(fg_dummy_bat_fops,
 	debugfs_get_dummy_cap, debugfs_set_dummy_cap, "%llu\n");
 
+static int debugfs_get_adj_factor(struct file *file, char __user *buf,
+		size_t len, loff_t *ppos)
+{
+	struct bcmpmu_fg_data *fg = file->private_data;
+	char buff[6];
+
+	snprintf(buff, sizeof buff, "%d\n", fg->probes.adj_factor);
+
+	return simple_read_from_buffer(buf, len, ppos, buff, strlen(buff));
+}
+static const struct file_operations fg_adj_factor_fops = {
+	.open = debugfs_fg_open,
+	.read = debugfs_get_adj_factor,
+};
+
+static int debugfs_get_temp_factor(struct file *file, char __user *buf,
+		size_t len, loff_t *ppos)
+{
+	struct bcmpmu_fg_data *fg = file->private_data;
+	char buff[6];
+
+	snprintf(buff, sizeof buff, "%d\n", fg->probes.temp_factor);
+
+	return simple_read_from_buffer(buf, len, ppos, buff, strlen(buff));
+}
+static const struct file_operations fg_temp_factor_fops = {
+	.open = debugfs_fg_open,
+	.read = debugfs_get_temp_factor,
+};
+
+static int debugfs_get_capacity_delta(struct file *file, char __user *buf,
+		size_t len, loff_t *ppos)
+{
+	struct bcmpmu_fg_data *fg = file->private_data;
+	char buff[16];
+
+	snprintf(buff, sizeof buff, "%d\n", fg->probes.capacity_delta);
+
+	return simple_read_from_buffer(buf, len, ppos, buff, strlen(buff));
+}
+static const struct file_operations fg_capacity_delta_fops = {
+	.open = debugfs_fg_open,
+	.read = debugfs_get_capacity_delta,
+};
+
 static void bcmpmu_fg_debugfs_init(struct bcmpmu_fg_data *fg)
 {
 	struct dentry *dentry_fg_dir;
@@ -3448,6 +3519,52 @@ static void bcmpmu_fg_debugfs_init(struct bcmpmu_fg_data *fg)
 	dentry_fg_file = debugfs_create_file("dummy_bat_cap_lmt",
 			DEBUG_FS_PERMISSIONS, dentry_fg_dir, fg,
 				&fg_dummy_bat_fops);
+	if (IS_ERR_OR_NULL(dentry_fg_file))
+		goto debugfs_clean;
+
+	dentry_fg_file = debugfs_create_u32("initial", DEBUG_FS_PERMISSIONS,
+			dentry_fg_dir, (u32 *)&fg->capacity_info.initial);
+	if (IS_ERR_OR_NULL(dentry_fg_file))
+		goto debugfs_clean;
+
+	dentry_fg_file = debugfs_create_u32("capacity_mas", DEBUG_FS_PERMISSIONS,
+			dentry_fg_dir, (u32 *)&fg->capacity_info.capacity);
+	if (IS_ERR_OR_NULL(dentry_fg_file))
+		goto debugfs_clean;
+
+	dentry_fg_file = debugfs_create_u32("full_charge", DEBUG_FS_PERMISSIONS,
+			dentry_fg_dir, (u32 *)&fg->capacity_info.full_charge);
+	if (IS_ERR_OR_NULL(dentry_fg_file))
+		goto debugfs_clean;
+
+	dentry_fg_file = debugfs_create_u8("ocv_cap", DEBUG_FS_PERMISSIONS,
+			dentry_fg_dir, (u8 *)&fg->capacity_info.ocv_cap);
+	if (IS_ERR_OR_NULL(dentry_fg_file))
+		goto debugfs_clean;
+
+	dentry_fg_file = debugfs_create_u8("discharge_state",
+			DEBUG_FS_PERMISSIONS, dentry_fg_dir,
+			(u8 *)&fg->discharge_state);
+	if (IS_ERR_OR_NULL(dentry_fg_file))
+		goto debugfs_clean;
+
+	dentry_fg_file = debugfs_create_u16("volt_avg", DEBUG_FS_PERMISSIONS,
+			dentry_fg_dir, (u16 *)&fg->probes.volt_avg);
+	if (IS_ERR_OR_NULL(dentry_fg_file))
+		goto debugfs_clean;
+
+	dentry_fg_file = debugfs_create_file("adj_factor", DEBUG_FS_PERMISSIONS,
+			dentry_fg_dir, fg, &fg_adj_factor_fops);
+	if (IS_ERR_OR_NULL(dentry_fg_file))
+		goto debugfs_clean;
+
+	dentry_fg_file = debugfs_create_file("temp_factor", DEBUG_FS_PERMISSIONS,
+			dentry_fg_dir, fg, &fg_temp_factor_fops);
+	if (IS_ERR_OR_NULL(dentry_fg_file))
+		goto debugfs_clean;
+
+	dentry_fg_file = debugfs_create_file("capacity_delta", DEBUG_FS_PERMISSIONS,
+			dentry_fg_dir, fg, &fg_capacity_delta_fops);
 	if (IS_ERR_OR_NULL(dentry_fg_file))
 		goto debugfs_clean;
 
