@@ -516,9 +516,8 @@ static void _mix_pool_bytes(struct entropy_store *r, const void *in,
 	tap4 = r->poolinfo->tap4;
 	tap5 = r->poolinfo->tap5;
 
-	smp_rmb();
-	input_rotate = ACCESS_ONCE(r->input_rotate);
-	i = ACCESS_ONCE(r->add_ptr);
+	input_rotate = r->input_rotate;
+	i = r->add_ptr;
 
 	/* mix one byte at a time to simplify size handling and churn faster */
 	while (nbytes--) {
@@ -545,9 +544,8 @@ static void _mix_pool_bytes(struct entropy_store *r, const void *in,
 		input_rotate += i ? 7 : 14;
 	}
 
-	ACCESS_ONCE(r->input_rotate) = input_rotate;
-	ACCESS_ONCE(r->add_ptr) = i;
-	smp_wmb();
+	r->input_rotate = input_rotate;
+	r->add_ptr = i;
 
 	if (out)
 		for (j = 0; j < 16; j++)
@@ -872,7 +870,7 @@ void add_interrupt_randomness(int irq, int irq_flags)
 	__u32			input[4], c_high, j_high;
 	__u64			ip;
 	unsigned long		seed;
-	int			credit;
+	int			credit = 0;
 
 	c_high = (sizeof(cycles) > 4) ? cycles >> 32 : 0;
 	j_high = (sizeof(now) > 4) ? now >> 32 : 0;
@@ -887,25 +885,13 @@ void add_interrupt_randomness(int irq, int irq_flags)
 	if ((fast_pool->count & 63) && !time_after(now, fast_pool->last + HZ))
 		return;
 
-	fast_pool->last = now;
-
 	r = nonblocking_pool.initialized ? &input_pool : &nonblocking_pool;
-	__mix_pool_bytes(r, &fast_pool->pool, sizeof(fast_pool->pool), NULL);
-
-	/*
-	 * If we don't have a valid cycle counter, and we see
-	 * back-to-back timer interrupts, then skip giving credit for
-	 * any entropy, otherwise credit 1 bit.
-	 */
-	credit = 1;
-	if (cycles == 0) {
-		if (irq_flags & __IRQF_TIMER) {
-			if (fast_pool->last_timer_intr)
-				credit = 0;
-			fast_pool->last_timer_intr = 1;
-		} else
-			fast_pool->last_timer_intr = 0;
+	if (!spin_trylock(&r->lock)) {
+		fast_pool->count--;
+		return;
 	}
+	fast_pool->last = now;
+	__mix_pool_bytes(r, &fast_pool->pool, sizeof(fast_pool->pool), NULL);
 
 	/*
 	 * If we have architectural seed generator, produce a seed and
@@ -915,6 +901,22 @@ void add_interrupt_randomness(int irq, int irq_flags)
 	if (arch_get_random_seed_long(&seed)) {
 		__mix_pool_bytes(r, &seed, sizeof(seed), NULL);
 		credit += sizeof(seed) * 4;
+	}
+	spin_unlock(&r->lock);
+
+	/*
+	 * If we don't have a valid cycle counter, and we see
+	 * back-to-back timer interrupts, then skip giving credit for
+	 * any entropy, otherwise credit 1 bit.
+	 */
+	credit++;
+	if (cycles == 0) {
+		if (irq_flags & __IRQF_TIMER) {
+			if (fast_pool->last_timer_intr)
+				credit--;
+			fast_pool->last_timer_intr = 1;
+		} else
+			fast_pool->last_timer_intr = 0;
 	}
 
 	credit_entropy_bits(r, credit);
