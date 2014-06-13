@@ -790,5 +790,6 @@ config KONA_HEADSET_DEFAULT_STATE
 endchoice
 
 source "drivers/input/misc/bmp280/Kconfig"
+source "drivers/input/misc/em718x/Kconfig"
 
 endif
