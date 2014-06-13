@@ -652,8 +652,6 @@ config INPUT_PCAP
 	  To compile this driver as a module, choose M here: the
 	  module will be called pcap_keys.
 
-source "drivers/input/misc/em7180/Kconfig"
-
 config INPUT_ADXL34X
 	tristate "Analog Devices ADXL34x Three-Axis Digital Accelerometer"
 	default n
