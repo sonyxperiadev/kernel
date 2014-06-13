@@ -3396,7 +3396,7 @@ static int debugfs_get_adj_factor(struct file *file, char __user *buf,
 	struct bcmpmu_fg_data *fg = file->private_data;
 	char buff[6];
 
-	snprintf(buff, sizeof buff, "%d\n", fg->probes.adj_factor);
+	snprintf(buff, sizeof(buff), "%d\n", fg->probes.adj_factor);
 
 	return simple_read_from_buffer(buf, len, ppos, buff, strlen(buff));
 }
@@ -3411,7 +3411,7 @@ static int debugfs_get_temp_factor(struct file *file, char __user *buf,
 	struct bcmpmu_fg_data *fg = file->private_data;
 	char buff[6];
 
-	snprintf(buff, sizeof buff, "%d\n", fg->probes.temp_factor);
+	snprintf(buff, sizeof(buff), "%d\n", fg->probes.temp_factor);
 
 	return simple_read_from_buffer(buf, len, ppos, buff, strlen(buff));
 }
@@ -3426,7 +3426,7 @@ static int debugfs_get_capacity_delta(struct file *file, char __user *buf,
 	struct bcmpmu_fg_data *fg = file->private_data;
 	char buff[16];
 
-	snprintf(buff, sizeof buff, "%d\n", fg->probes.capacity_delta);
+	snprintf(buff, sizeof(buff), "%d\n", fg->probes.capacity_delta);
 
 	return simple_read_from_buffer(buf, len, ppos, buff, strlen(buff));
 }
@@ -3527,8 +3527,9 @@ static void bcmpmu_fg_debugfs_init(struct bcmpmu_fg_data *fg)
 	if (IS_ERR_OR_NULL(dentry_fg_file))
 		goto debugfs_clean;
 
-	dentry_fg_file = debugfs_create_u32("capacity_mas", DEBUG_FS_PERMISSIONS,
-			dentry_fg_dir, (u32 *)&fg->capacity_info.capacity);
+	dentry_fg_file = debugfs_create_u32("capacity_mas",
+			DEBUG_FS_PERMISSIONS, dentry_fg_dir,
+			(u32 *)&fg->capacity_info.capacity);
 	if (IS_ERR_OR_NULL(dentry_fg_file))
 		goto debugfs_clean;
 
@@ -3558,13 +3559,15 @@ static void bcmpmu_fg_debugfs_init(struct bcmpmu_fg_data *fg)
 	if (IS_ERR_OR_NULL(dentry_fg_file))
 		goto debugfs_clean;
 
-	dentry_fg_file = debugfs_create_file("temp_factor", DEBUG_FS_PERMISSIONS,
-			dentry_fg_dir, fg, &fg_temp_factor_fops);
+	dentry_fg_file = debugfs_create_file("temp_factor",
+			DEBUG_FS_PERMISSIONS, dentry_fg_dir,
+			fg, &fg_temp_factor_fops);
 	if (IS_ERR_OR_NULL(dentry_fg_file))
 		goto debugfs_clean;
 
-	dentry_fg_file = debugfs_create_file("capacity_delta", DEBUG_FS_PERMISSIONS,
-			dentry_fg_dir, fg, &fg_capacity_delta_fops);
+	dentry_fg_file = debugfs_create_file("capacity_delta",
+			DEBUG_FS_PERMISSIONS, dentry_fg_dir,
+			fg, &fg_capacity_delta_fops);
 	if (IS_ERR_OR_NULL(dentry_fg_file))
 		goto debugfs_clean;
 
