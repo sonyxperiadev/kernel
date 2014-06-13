@@ -33,3 +33,6 @@ void __init brooks_add_touch(void);
 #if defined(CONFIG_SENSORS_BH1721FVC)
 void __init brooks_add_als(void);
 #endif
+#if defined(CONFIG_INPUT_EMMICRO)
+void __init brooks_add_sensor_hub(void);
+#endif

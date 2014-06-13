@@ -916,6 +916,9 @@ defined(CONFIG_TOUCHSCREEN_BCMTCH15XXX_MODULE)
 #if defined(CONFIG_SENSORS_BH1721FVC)
 	brooks_add_als();
 #endif
+#if defined(CONFIG_INPUT_EMMICRO)
+	brooks_add_sensor_hub();
+#endif
 }
 
 #ifdef CONFIG_ION_BCM_NO_DT
