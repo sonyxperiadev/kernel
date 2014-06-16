@@ -54,7 +54,7 @@ static u32 debug_mask = DEBUG_MASK;
 
 /* Battery should not be chrged more than <rate>% 1C rate for better lifecycle
  * */
-#define safe_c_rate(one_c, rate) ((one_c * rate) / 100)
+#define safe_c_rate(one_c, rate) DIV_ROUND_CLOSEST(one_c * rate, 100)
 
 #define ACLD_USE_PMU_FG_EOC_SIGNAL	0
 
