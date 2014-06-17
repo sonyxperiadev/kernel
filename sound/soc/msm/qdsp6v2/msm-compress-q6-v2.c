@@ -505,11 +505,11 @@ static int msm_compr_send_media_format_block(struct snd_compr_stream *cstream,
 		pr_debug("SND_AUDIOCODEC_PCM\n");
 		if (prtd->codec_param.codec.format == SNDRV_PCM_FORMAT_S24_LE)
 			bit_width = 24;
-		ret = q6asm_media_format_block_pcm_format_support(
+		ret = q6asm_media_format_block_pcm_format_support_v2(
 							prtd->audio_client,
 							prtd->sample_rate,
 							prtd->num_channels,
-							bit_width);
+							bit_width, stream_id);
 		if (ret < 0)
 			pr_err("%s: CMD Format block failed\n", __func__);
 
@@ -1604,11 +1604,17 @@ static int msm_compr_get_caps(struct snd_compr_stream *cstream,
 {
 	struct snd_compr_runtime *runtime = cstream->runtime;
 	struct msm_compr_audio *prtd = runtime->private_data;
+	int ret = 0;
 
 	pr_debug("%s\n", __func__);
-	memcpy(arg, &prtd->compr_cap, sizeof(struct snd_compr_caps));
+	if ((arg != NULL) && (prtd != NULL)) {
+		memcpy(arg, &prtd->compr_cap, sizeof(struct snd_compr_caps));
+	} else {
+		ret = -EINVAL;
+		pr_err("%s: arg (0x%p), prtd (0x%p)\n", __func__, arg, prtd);
+	}
 
-	return 0;
+	return ret;
 }
 
 static int msm_compr_get_codec_caps(struct snd_compr_stream *cstream,

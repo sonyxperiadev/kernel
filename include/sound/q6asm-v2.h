@@ -109,8 +109,11 @@ enum {
 	SOFT_PAUSE_CURVE_LOG,
 };
 
-#define SOFT_VOLUME_PERIOD       30   /* ramp up/down for 30ms    */
-#define SOFT_VOLUME_STEP         0 /* Step value 0ms or 0us */
+/* ramp up/down for 30ms    */
+#define SOFT_VOLUME_PERIOD       30
+/* Step value 0ms or 0us */
+#define SOFT_VOLUME_STEP         0
+
 enum {
 	SOFT_VOLUME_CURVE_LINEAR = 0,
 	SOFT_VOLUME_CURVE_EXP,
@@ -331,6 +334,10 @@ int q6asm_media_format_block_pcm(struct audio_client *ac,
 int q6asm_media_format_block_pcm_format_support(struct audio_client *ac,
 			uint32_t rate, uint32_t channels,
 			uint16_t bits_per_sample);
+
+int q6asm_media_format_block_pcm_format_support_v2(struct audio_client *ac,
+				uint32_t rate, uint32_t channels,
+				uint16_t bits_per_sample, int stream_id);
 
 int q6asm_media_format_block_multi_ch_pcm(struct audio_client *ac,
 			uint32_t rate, uint32_t channels,

@@ -850,6 +850,8 @@ static void dwc3_prepare_one_trb(struct dwc3_ep *dep,
 {
 	struct dwc3		*dwc = dep->dwc;
 	struct dwc3_trb		*trb;
+	bool			zlp_appended = false;
+	unsigned		rlen;
 
 	dev_vdbg(dwc->dev, "%s: req %p dma %08llx length %d%s%s\n",
 			dep->name, req, (unsigned long long) dma,
@@ -917,13 +919,18 @@ update_trb:
 
 	trb->ctrl |= DWC3_TRB_CTRL_HWO;
 
-	if (req->request.zero && length &&
-			(length % usb_endpoint_maxp(dep->endpoint.desc) == 0)) {
+	rlen = req->request.length;
+	if (!zlp_appended && !chain &&
+		req->request.zero && rlen &&
+		(rlen % usb_endpoint_maxp(dep->endpoint.desc) == 0)) {
+
+		zlp_appended = true;
 		/* Skip the LINK-TRB on ISOC */
 		if (((dep->free_slot & DWC3_TRB_MASK) == DWC3_TRB_NUM - 1) &&
 			usb_endpoint_xfer_isoc(dep->endpoint.desc))
 			dep->free_slot++;
 
+		trb->ctrl |= DWC3_TRB_CTRL_CHN;
 		trb = &dep->trb_pool[dep->free_slot & DWC3_TRB_MASK];
 		dep->free_slot++;
 
@@ -952,6 +959,11 @@ static void dwc3_prepare_trbs(struct dwc3_ep *dep, bool starting)
 	u32			trbs_left;
 	u32			max;
 	unsigned int		last_one = 0;
+	int			maxpkt_size;
+	bool			isoc;
+
+	maxpkt_size = usb_endpoint_maxp(dep->endpoint.desc);
+	isoc = usb_endpoint_xfer_isoc(dep->endpoint.desc);
 
 	BUILD_BUG_ON_NOT_POWER_OF_2(DWC3_TRB_NUM);
 
@@ -994,16 +1006,30 @@ static void dwc3_prepare_trbs(struct dwc3_ep *dep, bool starting)
 		}
 	}
 
-	/* The last TRB is a link TRB, not used for xfer */
-	if ((trbs_left <= 1) && usb_endpoint_xfer_isoc(dep->endpoint.desc))
-		return;
-
 	list_for_each_entry_safe(req, n, &dep->request_list, list) {
 		unsigned	length;
 		dma_addr_t	dma;
 		bool		last_req = list_is_last(&req->list,
 							&dep->request_list);
+		int		num_trbs_required = 0;
+
 		last_one = false;
+
+		/* The last TRB is a link TRB, not used for xfer */
+		if (isoc)
+			num_trbs_required++;
+
+		if (req->request.num_mapped_sgs)
+			num_trbs_required += req->request.num_mapped_sgs;
+		else
+			num_trbs_required++;
+
+		if (req->request.zero && req->request.length &&
+				(req->request.length % maxpkt_size == 0))
+			num_trbs_required++;
+
+		if (trbs_left < num_trbs_required)
+			break;
 
 		if (req->request.num_mapped_sgs > 0) {
 			struct usb_request *request = &req->request;
@@ -1019,11 +1045,45 @@ static void dwc3_prepare_trbs(struct dwc3_ep *dep, bool starting)
 
 				if (i == (request->num_mapped_sgs - 1) ||
 						sg_is_last(s)) {
-					if (last_req)
-						last_one = true;
+					unsigned temp = 0;
+					unsigned len;
+					struct dwc3_request *nreq = n;
+					struct usb_request *ureq;
+					bool mpkt = false;
+
 					chain = false;
+					if (last_req) {
+						last_one = true;
+						goto start_trb_queuing;
+					}
+
+					/*
+					 * check if trbs sufficient for next
+					 * request to set the last bit
+					 */
+					ureq = &nreq->request;
+					len  = ureq->length;
+
+					if (len % maxpkt_size == 0)
+						mpkt = true;
+
+					if (ureq->zero && len && mpkt)
+						temp++;
+
+					if (ureq->num_mapped_sgs)
+						temp +=
+						ureq->num_mapped_sgs;
+					else
+						temp++;
+
+					if (isoc)
+						temp++;
+
+					if (trbs_left <= temp)
+						last_one = true;
 				}
 
+start_trb_queuing:
 				trbs_left--;
 				if (!trbs_left)
 					last_one = true;

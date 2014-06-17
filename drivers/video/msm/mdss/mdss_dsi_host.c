@@ -1244,7 +1244,9 @@ int mdss_dsi_cmdlist_commit(struct mdss_dsi_ctrl_pdata *ctrl, int from_mdp)
 	struct dcs_cmd_req *req;
 	int ret = -EINVAL;
 
-	mutex_lock(&ctrl->cmd_mutex);
+	if (from_mdp)	/* from mdp kickoff */
+		mutex_lock(&ctrl->cmd_mutex);
+
 	req = mdss_dsi_cmdlist_get(ctrl);
 
 	MDSS_XLOG(ctrl->ndx, from_mdp, ctrl->mdp_busy, current->pid,
@@ -1253,7 +1255,8 @@ int mdss_dsi_cmdlist_commit(struct mdss_dsi_ctrl_pdata *ctrl, int from_mdp)
 	/* make sure dsi_cmd_mdp is idle */
 	mdss_dsi_cmd_mdp_busy(ctrl);
 
-	pr_debug("%s:  from_mdp=%d pid=%d\n", __func__, from_mdp, current->pid);
+	pr_debug("%s: ctrl=%d from_mdp=%d pid=%d\n", __func__,
+				ctrl->ndx, from_mdp, current->pid);
 
 	if (req == NULL)
 		goto need_lock;
@@ -1285,12 +1288,19 @@ int mdss_dsi_cmdlist_commit(struct mdss_dsi_ctrl_pdata *ctrl, int from_mdp)
 
 need_lock:
 
-	if (from_mdp) /* from pipe_commit */
-		mdss_dsi_cmd_mdp_start(ctrl);
+	MDSS_XLOG(ctrl->ndx, from_mdp, ctrl->mdp_busy, current->pid,
+							XLOG_FUNC_EXIT);
+
+	if (from_mdp) { /* from mdp kickoff */
+		/* acquire lock only has new frame update */
+		if (ctrl->roi.w != 0 || ctrl->roi.h != 0)
+			mdss_dsi_cmd_mdp_start(ctrl);
+
+		mutex_unlock(&ctrl->cmd_mutex);
+	}
 
 	MDSS_XLOG(ctrl->ndx, from_mdp, ctrl->mdp_busy, current->pid,
 							XLOG_FUNC_EXIT);
-	mutex_unlock(&ctrl->cmd_mutex);
 	return ret;
 }
 

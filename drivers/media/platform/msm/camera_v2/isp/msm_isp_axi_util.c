@@ -1238,7 +1238,8 @@ static int msm_isp_stop_axi_stream(struct vfe_device *vfe_dev,
 			/* We dont get reg update IRQ for raw snapshot
 			 * so frame skip cant be ocnfigured
 			*/
-			wait_for_complete = 1;
+			if (camif_update != DISABLE_CAMIF_IMMEDIATELY)
+				wait_for_complete = 1;
 		} else if (stream_info->stream_type == BURST_STREAM &&
 				stream_info->runtime_num_burst_capture == 0) {
 			/* Configure AXI writemasters to stop immediately
@@ -1254,7 +1255,8 @@ static int msm_isp_stop_axi_stream(struct vfe_device *vfe_dev,
 			stream_info->state = INACTIVE;
 			}
 		} else {
-			wait_for_complete = 1;
+			if (camif_update != DISABLE_CAMIF_IMMEDIATELY)
+				wait_for_complete = 1;
 		}
 	}
 	if (wait_for_complete) {
@@ -1263,8 +1265,11 @@ static int msm_isp_stop_axi_stream(struct vfe_device *vfe_dev,
 			pr_err("%s: wait for config done failed\n", __func__);
 			return rc;
 		}
+	} else {
+		msm_isp_axi_stream_enable_cfg(vfe_dev, stream_info);
+		stream_info->state = INACTIVE;
 	}
-	msm_isp_update_stream_bandwidth(vfe_dev);
+
 	if (camif_update == DISABLE_CAMIF)
 		vfe_dev->hw_info->vfe_ops.core_ops.
 			update_camif_state(vfe_dev, DISABLE_CAMIF);
@@ -1272,6 +1277,7 @@ static int msm_isp_stop_axi_stream(struct vfe_device *vfe_dev,
 		vfe_dev->hw_info->vfe_ops.core_ops.
 			update_camif_state(vfe_dev, DISABLE_CAMIF_IMMEDIATELY);
 	msm_isp_update_camif_output_count(vfe_dev, stream_cfg_cmd);
+	msm_isp_update_stream_bandwidth(vfe_dev);
 
 	for (i = 0; i < stream_cfg_cmd->num_streams; i++) {
 		stream_info = &axi_data->stream_info[
@@ -1445,6 +1451,7 @@ void msm_isp_process_axi_irq(struct vfe_device *vfe_dev,
 		vfe_dev->hw_info->vfe_ops.axi_ops.get_pingpong_status(vfe_dev);
 
 	for (i = 0; i < axi_data->hw_info->num_comp_mask; i++) {
+		rc = 0;
 		comp_info = &axi_data->composite_info[i];
 		if (comp_mask & (1 << i)) {
 			if (!comp_info->stream_handle) {
