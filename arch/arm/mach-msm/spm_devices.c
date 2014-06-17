@@ -72,6 +72,11 @@ static void msm_spm_smp_set_vdd(void *data)
 		put_cpu();
 }
 
+void msm_spm_dump_regs(unsigned int cpu)
+{
+	dump_regs(&per_cpu(msm_cpu_spm_device, cpu).reg_data, cpu);
+}
+
 /**
  * msm_spm_set_vdd(): Set core voltage
  * @cpu: core id
