@@ -3579,6 +3579,64 @@ debugfs_clean:
 }
 #endif
 
+static ssize_t show_fg_factor(struct device *dev, struct device_attribute *attr,
+			char *buf)
+{
+	struct power_supply *psy = dev_get_drvdata(dev);
+	struct bcmpmu_fg_data *fg = container_of(psy, struct bcmpmu_fg_data, psy);
+
+	return scnprintf(buf, PAGE_SIZE, "%d", fg->pdata->fg_factor);
+}
+
+static ssize_t store_fg_factor(struct device *dev, struct device_attribute *attr,
+			 const char *buf, size_t count)
+{
+	struct power_supply *psy = dev_get_drvdata(dev);
+	struct bcmpmu_fg_data *fg = container_of(psy, struct bcmpmu_fg_data, psy);
+	int factor;
+	int ret;
+
+	ret = sscanf(buf, "%4d", &factor);
+	if (!ret) {
+		pr_fg(ERROR, "Can not calibrate fg_factor\n");
+		return -EBADMSG;
+	}
+
+	fg->pdata->fg_factor = factor;
+
+	return strlen(buf);
+}
+
+static struct device_attribute sysfs_attrs[] = {
+	__ATTR(fg_factor, S_IRUGO|S_IWUSR, show_fg_factor, store_fg_factor),
+};
+
+static int sysfs_create_attrs(struct device *dev)
+{
+	unsigned int i;
+
+	for (i = 0; i < ARRAY_SIZE(sysfs_attrs); i++)
+		if (device_create_file(dev, &sysfs_attrs[i]))
+			goto sysfs_create_attrs_failed;
+
+	return 0;
+
+sysfs_create_attrs_failed:
+	pr_fg(ERROR, "Failed creating sysfs attrs.\n");
+	while (i--)
+		(void)device_remove_file(dev, &sysfs_attrs[i]);
+
+	return -EIO;
+}
+
+static void sysfs_remove_attrs(struct device *dev)
+{
+	unsigned int i;
+
+	for (i = 0; i < ARRAY_SIZE(sysfs_attrs); i++)
+		(void)device_remove_file(dev, &sysfs_attrs[i]);
+}
+
 #if CONFIG_PM
 static int bcmpmu_fg_resume(struct platform_device *pdev)
 {
@@ -3618,6 +3676,8 @@ static int bcmpmu_fg_remove(struct platform_device *pdev)
 
 	fg->bcmpmu->unregister_irq(fg->bcmpmu, PMU_IRQ_MBTEMPHIGH);
 	fg->bcmpmu->unregister_irq(fg->bcmpmu, PMU_IRQ_MBTEMPLOW);
+
+	sysfs_remove_attrs(fg->psy.dev);
 
 	/* Disable FG */
 	bcmpmu_fg_enable(fg, false);
@@ -3747,6 +3807,12 @@ static int bcmpmu_fg_probe(struct platform_device *pdev)
 			bcmpmu_fg_irq_handler, fg);
 	if (ret) {
 		pr_fg(ERROR, "Failed to register PMU_IRQ_MBTEMPLOW\n");
+		goto destroy_workq;
+	}
+
+	ret = sysfs_create_attrs(fg->psy.dev);
+	if (ret) {
+		pr_fg(ERROR, "Complete sysfs support failed\n");
 		goto destroy_workq;
 	}
 
