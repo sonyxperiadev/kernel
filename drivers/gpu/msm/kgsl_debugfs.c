@@ -159,7 +159,7 @@ static char get_cacheflag(const struct kgsl_memdesc *m)
 
 static void print_mem_entry(struct seq_file *s, struct kgsl_mem_entry *entry)
 {
-	char flags[6];
+	char flags[7];
 	char usage[16];
 	struct kgsl_memdesc *m = &entry->memdesc;
 
@@ -168,11 +168,12 @@ static void print_mem_entry(struct seq_file *s, struct kgsl_mem_entry *entry)
 	flags[2] = get_alignflag(m);
 	flags[3] = get_cacheflag(m);
 	flags[4] = kgsl_memdesc_use_cpu_map(m) ? 'p' : '-';
-	flags[5] = '\0';
+	flags[5] = (m->useraddr) ? 'Y' : 'N';
+	flags[6] = '\0';
 
 	kgsl_get_memory_usage(usage, sizeof(usage), m->flags);
 
-	seq_printf(s, "%pK %pK %8zd %5d %5s %10s %16s %5d\n",
+	seq_printf(s, "%pK %pK %8zd %5d %6s %10s %16s %5d\n",
 			(unsigned long *)(uintptr_t) m->gpuaddr,
 			(unsigned long *) m->useraddr,
 			m->size, entry->id, flags,
@@ -187,7 +188,7 @@ static int process_mem_print(struct seq_file *s, void *unused)
 	struct kgsl_process_private *private = s->private;
 	int next = 0;
 
-	seq_printf(s, "%8s %8s %8s %5s %5s %10s %16s %5s\n",
+	seq_printf(s, "%8s %8s %8s %5s %6s %10s %16s %5s\n",
 		   "gpuaddr", "useraddr", "size", "id", "flags", "type",
 		   "usage", "sglen");
 
@@ -216,24 +217,26 @@ static int process_mem_print(struct seq_file *s, void *unused)
 
 static int process_mem_open(struct inode *inode, struct file *file)
 {
-	struct kgsl_process_private *private = inode->i_private;
+	int ret;
+	pid_t pid = (pid_t) (unsigned long) inode->i_private;
+	struct kgsl_process_private *private = NULL;
 
-	/*
-	 * Hold a reference count on the process while open
-	 * in case the process tries to die in the meantime.
-	 * If the process is already dying we cannot get a
-	 * refcount, print nothing.
-	 */
+	private = kgsl_process_private_find(pid);
 
-	if (!private || !kgsl_process_private_get(private))
+	if (!private)
 		return -ENODEV;
 
-	return single_open(file, process_mem_print, private);
+	ret = single_open(file, process_mem_print, private);
+	if (ret)
+		kgsl_process_private_put(private);
+
+	return ret;
 }
 
 static int process_mem_release(struct inode *inode, struct file *file)
 {
-	struct kgsl_process_private *private = inode->i_private;
+	struct kgsl_process_private *private =
+		((struct seq_file *)file->private_data)->private;
 
 	if (private)
 		kgsl_process_private_put(private);
@@ -284,8 +287,8 @@ kgsl_process_init_debugfs(struct kgsl_process_private *private)
 	 * So if debugfs is disabled in kernel, return as
 	 * success.
 	 */
-	dentry = debugfs_create_file("mem", 0444, private->debug_root, private,
-			    &process_mem_fops);
+	dentry = debugfs_create_file("mem", 0444, private->debug_root,
+		(void *) ((unsigned long) private->pid), &process_mem_fops);
 
 	if (IS_ERR(dentry)) {
 		ret = PTR_ERR(dentry);

@@ -428,12 +428,27 @@ static ssize_t mdss_fb_get_panel_info(struct device *dev,
 	int ret;
 
 	ret = scnprintf(buf, PAGE_SIZE,
-			"pu_en=%d\nxalign=%d\nwalign=%d\nystart=%d\nhalign=%d\n"
-			"min_w=%d\nmin_h=%d",
+			"pu_en=%d\nxstart=%d\nwalign=%d\nystart=%d\nhalign=%d\n"
+			"min_w=%d\nmin_h=%d\nroi_merge=%d",
 			pinfo->partial_update_enabled, pinfo->xstart_pix_align,
 			pinfo->width_pix_align, pinfo->ystart_pix_align,
 			pinfo->height_pix_align, pinfo->min_width,
-			pinfo->min_height);
+			pinfo->min_height, pinfo->partial_update_roi_merge);
+
+	return ret;
+}
+
+static ssize_t mdss_fb_get_src_split_info(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	struct fb_info *fbi = dev_get_drvdata(dev);
+	struct msm_fb_data_type *mfd = fbi->par;
+	int ret = 0;
+
+	if (mfd->split_display && (fbi->var.yres > 2048) &&
+		(fbi->var.yres > fbi->var.xres))
+		ret = scnprintf(buf, PAGE_SIZE,
+			"src_split_always\n");
 
 	return ret;
 }
@@ -446,6 +461,8 @@ static DEVICE_ATTR(idle_time, S_IRUGO | S_IWUSR | S_IWGRP,
 	mdss_fb_get_idle_time, mdss_fb_set_idle_time);
 static DEVICE_ATTR(idle_notify, S_IRUGO, mdss_fb_get_idle_notify, NULL);
 static DEVICE_ATTR(msm_fb_panel_info, S_IRUGO, mdss_fb_get_panel_info, NULL);
+static DEVICE_ATTR(msm_fb_src_split_info, S_IRUGO, mdss_fb_get_src_split_info,
+	NULL);
 
 static struct attribute *mdss_fb_attrs[] = {
 	&dev_attr_msm_fb_type.attr,
@@ -454,6 +471,7 @@ static struct attribute *mdss_fb_attrs[] = {
 	&dev_attr_idle_time.attr,
 	&dev_attr_idle_notify.attr,
 	&dev_attr_msm_fb_panel_info.attr,
+	&dev_attr_msm_fb_src_split_info.attr,
 	NULL,
 };
 
@@ -1027,6 +1045,7 @@ void mdss_fb_free_fb_ion_memory(struct msm_fb_data_type *mfd)
 	}
 
 	mfd->fbi->screen_base = NULL;
+	mfd->fbi->fix.smem_start = 0;
 	mfd->fbi->fix.smem_len = 0;
 
 	ion_unmap_kernel(mfd->fb_ion_client, mfd->fb_ion_handle);
@@ -1099,6 +1118,7 @@ int mdss_fb_alloc_fb_ion_memory(struct msm_fb_data_type *mfd)
 			&mfd->iova, mfd->index);
 
 	mfd->fbi->screen_base = (char *) vaddr;
+	mfd->fbi->fix.smem_start = (unsigned int) mfd->iova;
 	mfd->fbi->fix.smem_len = size;
 
 	return rc;

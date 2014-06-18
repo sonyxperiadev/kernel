@@ -441,8 +441,10 @@ static void dwc3_ext_event_notify(struct usb_otg *otg,
 			}
 		}
 	} else if (event == DWC3_EVENT_XCEIV_STATE) {
-		if (pm_runtime_status_suspended(phy->dev)) {
-			dev_warn(phy->dev, "PHY_STATE event in LPM!!!!\n");
+		if (pm_runtime_status_suspended(phy->dev) ||
+			atomic_read(&phy->dev->power.usage_count) == 0) {
+			dev_dbg(phy->dev, "ext XCEIV_STATE while runtime_status=%d\n",
+				phy->dev->power.runtime_status);
 			ret = pm_runtime_get(phy->dev);
 			if (ret < 0)
 				dev_warn(phy->dev, "pm_runtime_get failed!!\n");
@@ -885,7 +887,7 @@ static void dwc3_otg_sm_work(struct work_struct *w)
 		} else {
 			dev_dbg(phy->dev, "still in a_host state. Resuming root hub.\n");
 			pm_runtime_resume(&dotg->dwc->xhci->dev);
-			pm_runtime_put(phy->dev);
+			pm_runtime_put_noidle(phy->dev);
 		}
 		break;
 

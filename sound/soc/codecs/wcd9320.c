@@ -57,6 +57,10 @@ static atomic_t kp_taiko_priv;
 static int spkr_drv_wrnd_param_set(const char *val,
 				   const struct kernel_param *kp);
 static int spkr_drv_wrnd = 1;
+static int high_perf_mode;
+module_param(high_perf_mode, int,
+			S_IRUGO | S_IWUSR | S_IWGRP);
+MODULE_PARM_DESC(high_perf_mode, "enable/disable class AB config for hph");
 
 static struct kernel_param_ops spkr_drv_wrnd_param_ops = {
 	.set = spkr_drv_wrnd_param_set,
@@ -3296,10 +3300,17 @@ static int taiko_hphl_dac_event(struct snd_soc_dapm_widget *w,
 	case SND_SOC_DAPM_PRE_PMU:
 		snd_soc_update_bits(codec, TAIKO_A_CDC_CLK_RDAC_CLK_EN_CTL,
 							0x02, 0x02);
-		wcd9xxx_clsh_fsm(codec, &taiko_p->clsh_d,
+		if (!high_perf_mode) {
+			wcd9xxx_clsh_fsm(codec, &taiko_p->clsh_d,
 						 WCD9XXX_CLSH_STATE_HPHL,
 						 WCD9XXX_CLSH_REQ_ENABLE,
 						 WCD9XXX_CLSH_EVENT_PRE_DAC);
+		} else {
+			wcd9xxx_enable_high_perf_mode(codec, &taiko_p->clsh_d,
+						WCD9XXX_CLSAB_STATE_HPHL,
+						WCD9XXX_CLSAB_REQ_ENABLE);
+		}
+
 		ret = wcd9xxx_mbhc_get_impedance(&taiko_p->mbhc,
 					&impedl, &impedr);
 		if (!ret)
@@ -3328,10 +3339,17 @@ static int taiko_hphr_dac_event(struct snd_soc_dapm_widget *w,
 		snd_soc_update_bits(codec, TAIKO_A_CDC_CLK_RDAC_CLK_EN_CTL,
 							0x04, 0x04);
 		snd_soc_update_bits(codec, w->reg, 0x40, 0x40);
-		wcd9xxx_clsh_fsm(codec, &taiko_p->clsh_d,
+
+		if (!high_perf_mode) {
+			wcd9xxx_clsh_fsm(codec, &taiko_p->clsh_d,
 						 WCD9XXX_CLSH_STATE_HPHR,
 						 WCD9XXX_CLSH_REQ_ENABLE,
 						 WCD9XXX_CLSH_EVENT_PRE_DAC);
+		} else {
+			wcd9xxx_enable_high_perf_mode(codec, &taiko_p->clsh_d,
+						WCD9XXX_CLSAB_STATE_HPHR,
+						WCD9XXX_CLSAB_REQ_ENABLE);
+		}
 		break;
 	case SND_SOC_DAPM_POST_PMD:
 		snd_soc_update_bits(codec, TAIKO_A_CDC_CLK_RDAC_CLK_EN_CTL,
@@ -3451,6 +3469,7 @@ static int taiko_hph_pa_event(struct snd_soc_dapm_widget *w,
 	struct taiko_priv *taiko = snd_soc_codec_get_drvdata(codec);
 	enum wcd9xxx_notify_event e_pre_on, e_post_off;
 	u8 req_clsh_state;
+	u8 req_clsab_state;
 	u32 pa_settle_time = TAIKO_HPH_PA_SETTLE_COMP_OFF;
 
 	pr_debug("%s: %s event = %d\n", __func__, w->name, event);
@@ -3458,10 +3477,12 @@ static int taiko_hph_pa_event(struct snd_soc_dapm_widget *w,
 		e_pre_on = WCD9XXX_EVENT_PRE_HPHL_PA_ON;
 		e_post_off = WCD9XXX_EVENT_POST_HPHL_PA_OFF;
 		req_clsh_state = WCD9XXX_CLSH_STATE_HPHL;
+		req_clsab_state = WCD9XXX_CLSAB_STATE_HPHL;
 	} else if (w->shift == 4) {
 		e_pre_on = WCD9XXX_EVENT_PRE_HPHR_PA_ON;
 		e_post_off = WCD9XXX_EVENT_POST_HPHR_PA_OFF;
 		req_clsh_state = WCD9XXX_CLSH_STATE_HPHR;
+		req_clsab_state = WCD9XXX_CLSAB_STATE_HPHR;
 	} else {
 		pr_err("%s: Invalid w->shift %d\n", __func__, w->shift);
 		return -EINVAL;
@@ -3480,11 +3501,13 @@ static int taiko_hph_pa_event(struct snd_soc_dapm_widget *w,
 		usleep_range(pa_settle_time, pa_settle_time + 1000);
 		pr_debug("%s: sleep %d us after %s PA enable\n", __func__,
 				pa_settle_time, w->name);
-		wcd9xxx_clsh_fsm(codec, &taiko->clsh_d,
+
+		if (!high_perf_mode) {
+			wcd9xxx_clsh_fsm(codec, &taiko->clsh_d,
 						 req_clsh_state,
 						 WCD9XXX_CLSH_REQ_ENABLE,
 						 WCD9XXX_CLSH_EVENT_POST_PA);
-
+		}
 		break;
 
 	case SND_SOC_DAPM_POST_PMD:
@@ -3495,10 +3518,16 @@ static int taiko_hph_pa_event(struct snd_soc_dapm_widget *w,
 		/* Let MBHC module know PA turned off */
 		wcd9xxx_resmgr_notifier_call(&taiko->resmgr, e_post_off);
 
-		wcd9xxx_clsh_fsm(codec, &taiko->clsh_d,
+		if (!high_perf_mode) {
+			wcd9xxx_clsh_fsm(codec, &taiko->clsh_d,
 						 req_clsh_state,
 						 WCD9XXX_CLSH_REQ_DISABLE,
 						 WCD9XXX_CLSH_EVENT_POST_PA);
+		} else {
+			wcd9xxx_enable_high_perf_mode(codec, &taiko->clsh_d,
+						req_clsab_state,
+						WCD9XXX_CLSAB_REQ_DISABLE);
+		}
 
 		break;
 	}
@@ -6588,7 +6617,7 @@ static int taiko_setup_zdet(struct wcd9xxx_mbhc *mbhc,
 
 	switch (stage) {
 
-	case PRE_MEAS:
+	case MBHC_ZDET_PRE_MEASURE:
 		INIT_LIST_HEAD(&taiko->reg_save_restore);
 		wcd9xxx_prepare_static_pa(mbhc, &taiko->reg_save_restore);
 		wcd9xxx_enable_static_pa(mbhc, true);
@@ -6632,7 +6661,7 @@ static int taiko_setup_zdet(struct wcd9xxx_mbhc *mbhc,
 		/* Set HPH_MBHC for zdet */
 		__wr(WCD9XXX_A_MBHC_HPH, 0xB3, 0x80);
 		break;
-	case POST_MEAS:
+	case MBHC_ZDET_POST_MEASURE:
 		/* Phase 2 */
 		/* Start the PA ramp on HPH L and R */
 		snd_soc_write(codec, WCD9XXX_A_CDC_PA_RAMP_B2_CTL, 0x05);
@@ -6646,7 +6675,7 @@ static int taiko_setup_zdet(struct wcd9xxx_mbhc *mbhc,
 		usleep_range(ramp_wait_us,
 				ramp_wait_us + WCD9XXX_USLEEP_RANGE_MARGIN_US);
 		break;
-	case PA_DISABLE:
+	case MBHC_ZDET_PA_DISABLE:
 		/* Ramp HPH L & R back to Zero */
 		snd_soc_write(codec, WCD9XXX_A_CDC_PA_RAMP_B2_CTL, 0x0A);
 		/* Ramp generator takes ~17ms */
@@ -6661,13 +6690,18 @@ static int taiko_setup_zdet(struct wcd9xxx_mbhc *mbhc,
 			wcd9xxx_enable_static_pa(mbhc, false);
 		wcd9xxx_restore_registers(codec, &taiko->reg_save_restore);
 		break;
+	default:
+		dev_dbg(codec->dev, "%s: Case %d not supported\n",
+			__func__, stage);
+		break;
 	}
 #undef __wr
 
 	return ret;
 }
 
-static void taiko_compute_impedance(s16 *l, s16 *r, uint32_t *zl, uint32_t *zr)
+static void taiko_compute_impedance(struct wcd9xxx_mbhc *mbhc, s16 *l, s16 *r,
+					uint32_t *zl, uint32_t *zr)
 {
 
 	int64_t rl, rr = 0; /* milliohm */
@@ -6676,6 +6710,11 @@ static void taiko_compute_impedance(s16 *l, s16 *r, uint32_t *zl, uint32_t *zr)
 	const int beta = 3855; /* 0.011765 * 5 * 65536 = 3855.15 */
 	const int rref = 11333; /* not scaled up */
 	const int shift = 16;
+
+	if (!mbhc) {
+		pr_err("%s: NULL pointer for MBHC", __func__);
+		return;
+	}
 
 	rl = (int)(l[0] - l[1]) * 1000 / (l[0] - l[2]);
 	rl = rl * rref * alphal;
@@ -6771,7 +6810,10 @@ static int taiko_post_reset_cb(struct wcd9xxx *wcd9xxx)
 		else
 			taiko_hs_detect(codec, taiko->mbhc.mbhc_cfg);
 	}
-	taiko->machine_codec_event_cb(codec, WCD9XXX_CODEC_EVENT_CODEC_UP);
+
+	if (taiko->machine_codec_event_cb)
+		taiko->machine_codec_event_cb(codec,
+				      WCD9XXX_CODEC_EVENT_CODEC_UP);
 
 	taiko_cleanup_irqs(taiko);
 	ret = taiko_setup_irqs(taiko);
