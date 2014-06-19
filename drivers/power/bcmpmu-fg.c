@@ -2375,10 +2375,8 @@ static void bcmpmu_fg_cal_force_algo(struct bcmpmu_fg_data *fg)
 			FG_CAL_CAPACITY_AVG_SAMPLES);
 
 	fg->capacity_info.capacity = percentage_to_capacity(fg, cap_percentage);
-	fg->capacity_info.prev_percentage = capacity_to_percentage(fg,
+	fg->capacity_info.percentage = capacity_to_percentage(fg,
 			fg->capacity_info.capacity);
-	fg->capacity_info.percentage =
-		fg->capacity_info.prev_percentage;
 
 	pr_fg(FLOW, "force_cal_algo: prev capacity: %d new capacity: %d\n",
 			fg->capacity_info.prev_percentage,
@@ -2549,8 +2547,6 @@ static void bcmpmu_fg_charging_algo(struct bcmpmu_fg_data *fg)
 			fg->capacity_info.capacity =
 				fg->capacity_info.full_charge;
 			fg->capacity_info.percentage = CAPACITY_PERCENTAGE_FULL;
-			fg->capacity_info.prev_percentage =
-				CAPACITY_PERCENTAGE_FULL;
 		}
 	} else if ((fg->capacity_info.prev_percentage ==
 				CAPACITY_PERCENTAGE_FULL - 1) &&
@@ -2562,8 +2558,6 @@ static void bcmpmu_fg_charging_algo(struct bcmpmu_fg_data *fg)
 		 * capacity is, we hold is to 99%
 		 */
 		fg->capacity_info.percentage = CAPACITY_PERCENTAGE_FULL - 1;
-		fg->capacity_info.prev_percentage =
-			fg->capacity_info.percentage;
 		fg->capacity_info.capacity = percentage_to_capacity(fg,
 				fg->capacity_info.percentage);
 	}
@@ -2648,8 +2642,7 @@ static void bcmpmu_fg_discharging_algo(struct bcmpmu_fg_data *fg)
 
 		if ((fg->crit_cutoff_delta > 0) &&
 				(cap_info->percentage > 0)) {
-			cap_info->prev_percentage =
-				cap_info->percentage--;
+			cap_info->percentage--;
 			cap_info->capacity = percentage_to_capacity(fg,
 					cap_info->percentage);
 			if (--fg->crit_cutoff_delta == 0)
@@ -2762,15 +2755,15 @@ static void bcmpmu_fg_periodic_work(struct work_struct *work)
 			fg->capacity_info.percentage = fg->dummy_bat_cap_lmt;
 		}
 
-		fg->capacity_info.prev_percentage
-			= fg->capacity_info.percentage;
-
-		if (fg->bcmpmu->flags & BCMPMU_SPA_EN)
+		if (fg->bcmpmu->flags & BCMPMU_SPA_EN) {
+			fg->capacity_info.prev_percentage
+				= fg->capacity_info.percentage;
 			bcmpmu_post_spa_event_to_queue(fg->bcmpmu,
 				PMU_FG_EVT_CAPACITY,
 				fg->capacity_info.prev_percentage);
-		else
+		} else {
 			bcmpmu_fg_update_psy(fg, false);
+		}
 		queue_delayed_work(fg->fg_wq, &fg->fg_periodic_work,
 				msecs_to_jiffies(FAKE_BATT_POLL_TIME_MS));
 #ifndef CONFIG_WD_TAPPER
@@ -2783,19 +2776,19 @@ static void bcmpmu_fg_periodic_work(struct work_struct *work)
 	if (fg->flags.init_capacity) {
 		fg->capacity_info.initial = bcmpmu_fg_get_init_cap(fg);
 		fg->capacity_info.capacity = fg->capacity_info.initial;
-		fg->capacity_info.prev_percentage = capacity_to_percentage(fg,
+		fg->capacity_info.percentage = capacity_to_percentage(fg,
 				fg->capacity_info.capacity);
-		fg->capacity_info.percentage =
-			fg->capacity_info.prev_percentage;
 
 		fg->flags.init_capacity = false;
 		pr_fg(FLOW, "Initial battery capacity %d\n",
 				fg->capacity_info.percentage);
-		if (fg->bcmpmu->flags & BCMPMU_SPA_EN)
+		if (fg->bcmpmu->flags & BCMPMU_SPA_EN) {
+			fg->capacity_info.prev_percentage
+				= fg->capacity_info.percentage;
 			bcmpmu_post_spa_event_to_queue(fg->bcmpmu,
 				PMU_FG_EVT_CAPACITY,
 				fg->capacity_info.prev_percentage);
-		else {
+		} else {
 			/*
 			 * fg->psy.external_power_changed(&fg->psy);
 			 * */
@@ -3583,16 +3576,19 @@ static ssize_t show_fg_factor(struct device *dev, struct device_attribute *attr,
 			char *buf)
 {
 	struct power_supply *psy = dev_get_drvdata(dev);
-	struct bcmpmu_fg_data *fg = container_of(psy, struct bcmpmu_fg_data, psy);
+	struct bcmpmu_fg_data *fg =
+		container_of(psy, struct bcmpmu_fg_data, psy);
 
 	return scnprintf(buf, PAGE_SIZE, "%d", fg->pdata->fg_factor);
 }
 
-static ssize_t store_fg_factor(struct device *dev, struct device_attribute *attr,
-			 const char *buf, size_t count)
+static ssize_t store_fg_factor(struct device *dev,
+			struct device_attribute *attr,
+			const char *buf, size_t count)
 {
 	struct power_supply *psy = dev_get_drvdata(dev);
-	struct bcmpmu_fg_data *fg = container_of(psy, struct bcmpmu_fg_data, psy);
+	struct bcmpmu_fg_data *fg =
+		container_of(psy, struct bcmpmu_fg_data, psy);
 	int factor;
 	int ret;
 

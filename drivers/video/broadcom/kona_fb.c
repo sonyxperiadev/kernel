@@ -2241,6 +2241,10 @@ static int __init populate_dispdrv_cfg(struct kona_fb *fb,
 	info->clear_ram_row_end = cfg->clear_ram_row_end;
 	info->no_te_in_sleep = cfg->no_te_in_sleep;
 
+	if (info->clear_panel_ram)	/* Override kernel command line ... */
+		g_display_enabled = 0;	/* ... and force re-init of display */
+
+
 	/* burst mode changes to be taken care here or PV? */
 	info->hs_bps = (pd->hs_bps > cfg->max_hs_bps) ?
 				 cfg->max_hs_bps : pd->hs_bps;
