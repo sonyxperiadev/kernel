@@ -14,6 +14,7 @@ fb-objs                           := $(fb-y)
 
 obj-$(CONFIG_FRAMEBUFFER_FPS)	+= fb_fps.o
 
+obj-$(CONFIG_ADF)		  += adf/
 obj-$(CONFIG_VT)		  += console/
 obj-$(CONFIG_LOGO)		  += logo/
 obj-y				  += backlight/
