@@ -1134,6 +1134,7 @@ struct bcmpmu_acld_pdata acld_pdata = {
 	.acld_chrgrs_list_size = ARRAY_SIZE(bcmpmu_acld_chargers),
 };
 
+/* OCV LUT */
 static struct batt_volt_cap_map sony1_volt_cap_lut[] = {
 	{4329, 100},
 	{4273, 95},
@@ -1181,12 +1182,12 @@ static struct batt_eoc_curr_cap_map sony1_eoc_cap_lut[] = {
 	{0, 100},
 };
 
+/* Loaded OCV LUT table with 175 mA of discharge load
+ * Cutoff = OCV - ESR(OCV, 20 degC) * 175mA
+ */
 static struct batt_cutoff_cap_map sony1_cutoff_cap_lut[] = {
-	{3659, 5},
-	{3635, 4},
-	{3598, 3},
-	{3548, 2},
-	{3498, 1},
+	{3478, 2},
+	{3413, 1},
 	{3400, 0},
 };
 
@@ -1306,9 +1307,10 @@ static struct bcmpmu_batt_cap_levels ys_05_cap_levels[BATT_MAX] = {
 
 static struct bcmpmu_batt_volt_levels ys_05_volt_levels[BATT_MAX] = {
 	[BATT_0] = {
-		.critical = 3659, /* 5% LUT level */
-		.low = 3710, /* 15% LUT level */
-		.normal = 3800,
+		.critical = 3557, /* Not used in bcmpmu-fg.c,
+				     5% loaded OCV LUT level */
+		.low = 3623, /* 15% loaded OCV LUT level */
+		.normal = 3800, /* Not used in bcmpmu-fg.c */
 		.high = SONY0_BATTERY_MAX_MIN_VFLOAT,
 		.crit_cutoff_cnt = 3,
 		.vfloat_lvl = SONY0_BATTERY_MAX_VFLOAT_REG,
@@ -1316,9 +1318,10 @@ static struct bcmpmu_batt_volt_levels ys_05_volt_levels[BATT_MAX] = {
 		.vfloat_gap = 100, /* in mV */
 	},
 	[BATT_1] = {
-		.critical = 3659, /* 5% LUT level */
-		.low = 3710, /* 15% LUT level */
-		.normal = 3800,
+		.critical = 3557, /* Not used in bcmpmu-fg.c,
+				     5% loaded OCV LUT level */
+		.low = 3623, /* 15% loaded OCV LUT level */
+		.normal = 3800, /* Not used in bcmpmu-fg.c */
 		.high = SONY1_BATTERY_MAX_MIN_VFLOAT,
 		.crit_cutoff_cnt = 3,
 		.vfloat_lvl = SONY1_BATTERY_MAX_VFLOAT_REG,
@@ -1329,12 +1332,12 @@ static struct bcmpmu_batt_volt_levels ys_05_volt_levels[BATT_MAX] = {
 
 static struct bcmpmu_batt_cal_data ys_05_cal_data[BATT_MAX] = {
 	[BATT_0] = {
-		.volt_low = 3550,
-		.cap_low = 30,
+		.volt_low = 3623, /* 15% loaded OCV LUT level */
+		.cap_low = 30, /* Not used in bcmpmu-fg.c */
 	},
 	[BATT_1] = {
-		.volt_low = 3550,
-		.cap_low = 30,
+		.volt_low = 3623, /* 15% loaded OCV LUT level */
+		.cap_low = 30, /* Not used in bcmpmu-fg.c */
 	},
 };
 
@@ -1416,8 +1419,7 @@ exit:
 static struct bcmpmu_fg_pdata fg_pdata = {
 	.batt_data = sony_batteries,
 	.batt_data_sz = ARRAY_SIZE(sony_batteries),
-
-	.sns_resist = 10,
+	.sns_resist = 10, /* Not used in bcmpmu-fg.c */
 	.sys_impedence = 33, /* Not used in bcmpmu-fg.c */
 	.hw_maintenance_charging = false, /* enable HW EOC of PMU */
 	.sleep_current_ua = 2000, /* floor during sleep */
