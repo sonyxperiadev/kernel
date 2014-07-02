@@ -153,7 +153,7 @@
 			synaptics,reset-active-ms = <20>;
 			synaptics,power-delay-ms = <160>;
 			synaptics,reset-delay-ms = <100>;
-			synaptics,fw-name = "synaptics/PR1638646.img";
+			synaptics,fw-name = "synaptics/PR1640536.img";
 			synaptics,wakeup-gest-key = <116>; /* KEY_POWER*/
 			synaptics,extra-registers = "f11_ctrl_58 0x62",
 				"f11_data_28 0x30";
