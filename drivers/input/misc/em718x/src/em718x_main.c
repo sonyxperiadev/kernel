@@ -694,7 +694,7 @@ static int em718x_load_firmware( struct em718x * emdev, const char * device_name
 	u32 size;
 	char filename[128];
 
-	snprintf(filename, 127, "%s.fw", device_name);
+	snprintf(filename, 127, "em718x/%s.fw", device_name);
 	filename[127] = 0;
 
 	em718x_lock(emdev);

@@ -139,6 +139,7 @@ fw-shipped-$(CONFIG_TOUCHSCREEN_SYNAPTICS_DSX_NEW_FW_UPDATE) += \
 				synaptics/PR1427033.img \
 				synaptics/PR1638646.img \
 				synaptics/PR1640536.img
+fw-shipped-$(CONFIG_INPUT_EM718X) += em718x/em7180.fw
 
 fw-shipped-all := $(fw-shipped-y) $(fw-shipped-m) $(fw-shipped-)
 
