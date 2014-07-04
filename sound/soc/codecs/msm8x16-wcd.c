@@ -2487,6 +2487,7 @@ static const struct msm8x16_wcd_reg_mask_val msm8x16_wcd_reg_defaults[] = {
 	MSM8X16_WCD_REG_VAL(MSM8X16_WCD_A_ANALOG_TX_2_EN, 0x32),
 	MSM8X16_WCD_REG_VAL(MSM8X16_WCD_A_DIGITAL_CDC_DIG_CLK_CTL, 0x10),
 	*/
+	MSM8X16_WCD_REG_VAL(MSM8X16_WCD_A_ANALOG_SPKR_OCP_CTL, 0xE1),
 };
 
 static void msm8x16_wcd_update_reg_defaults(struct snd_soc_codec *codec)
