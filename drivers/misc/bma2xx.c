@@ -3613,7 +3613,12 @@ static int bma2xx_probe(struct i2c_client *client,
 	}
 
 	/* read chip id */
-	tempvalue = i2c_smbus_read_byte_data(client, BMA2XXX_CHIP_ID_REG);
+	err = i2c_smbus_read_byte_data(client, BMA2XXX_CHIP_ID_REG);
+	if (err < 0) {
+		dev_err(&client->dev, "bma2xx not conected\n");
+		goto err_regulator_disable;
+	}
+	tempvalue = err;
 	switch (tempvalue) {
 	case ID_BMA250:
 		dev_info(&client->dev, "bma250 chip found\n");
@@ -3777,7 +3782,11 @@ error_sysfs:
 	input_unregister_device(data->wake_idev);
 kfree_exit_unregister:
 	input_unregister_device(data->input);
-
+err_regulator_disable:
+	if (data->regulator) {
+		regulator_disable(data->regulator);
+		regulator_put(data->regulator);
+	}
 kfree_exit:
 	kfree(data);
 exit:
