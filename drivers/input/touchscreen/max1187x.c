@@ -43,6 +43,10 @@
 #include <linux/regulator/consumer.h>
 #include <linux/slab.h>
 #include <linux/types.h>
+#ifdef CONFIG_FB
+#include <linux/fb.h>
+#include <linux/notifier.h>
+#endif
 
 #define NWORDS(a)    (sizeof(a) / sizeof(u16))
 #define BYTE_SIZE(a) ((a) * sizeof(u16))
@@ -2217,6 +2221,18 @@ static int probe(struct i2c_client *client, const struct i2c_device_id *id)
 	}
 #endif
 
+	/* configure suspend/resume */
+#ifdef CONFIG_FB
+	ts->fb_notif.notifier_call = fb_notifier_callback;
+	ret = fb_register_client(&ts->fb_notif);
+	if (ret) {
+		dev_err(dev, "Unable to register fb_notifier");
+	} else {
+		INIT_WORK(&ts->notify_resume, notify_resume);
+		INIT_WORK(&ts->notify_suspend, notify_suspend);
+	}
+#endif
+
 	ts->is_suspended = false;
 	ts->pm_suspended = false;
 	ts->irq_on_suspend = false;
@@ -2272,6 +2288,10 @@ static void shutdown(struct i2c_client *client)
 	struct device *dev = &client->dev;
 	struct data *ts = i2c_get_clientdata(client);
 
+#ifdef CONFIG_FB
+	struct device *dev = &client->dev;
+#endif
+
 	if (ts == NULL)
 		return;
 
@@ -2284,6 +2304,13 @@ static void shutdown(struct i2c_client *client)
 
 	if (ts->sysfs_created && ts->sysfs_created--)
 		device_remove_bin_file(&client->dev, &dev_attr_report);
+
+#ifdef CONFIG_FB
+	if (fb_unregister_client(&ts->fb_notif))
+		dev_err(dev, "Error occurred while unregistering fb_notifier.");
+	cancel_work_sync(&ts->notify_resume);
+	cancel_work_sync(&ts->notify_suspend);
+#endif
 
 #ifdef CONFIG_FB
 	if (fb_unregister_client(&ts->fb_notif))
@@ -2582,6 +2609,49 @@ static int suspend_noirq(struct device *dev)
 
 	return 0;
 }
+
+#ifdef CONFIG_FB
+static void notify_resume(struct work_struct *work)
+{
+	struct data *ts  = container_of(work, struct data, notify_resume);
+
+	if (ts->is_suspended)
+		set_resume_mode(ts);
+}
+
+static void notify_suspend(struct work_struct *work)
+{
+	struct data *ts  = container_of(work, struct data, notify_suspend);
+
+	if (!ts->is_suspended)
+		set_suspend_mode(ts);
+}
+
+static int fb_notifier_callback(struct notifier_block *self,
+				unsigned long event, void *data)
+{
+	struct fb_event *evdata = data;
+	int *blank;
+	struct data *ts = container_of(self, struct data, fb_notif);
+
+	if (evdata && evdata->data && event == FB_EVENT_BLANK && ts &&
+			ts->client) {
+		blank = evdata->data;
+		if (*blank != FB_BLANK_UNBLANK) {
+			dev_dbg(&ts->client->dev, "FB_BLANK_BLANKED\n");
+			cancel_work_sync(&ts->notify_resume);
+			cancel_work_sync(&ts->notify_suspend);
+			schedule_work(&ts->notify_suspend);
+		} else if (*blank == FB_BLANK_UNBLANK) {
+			dev_dbg(&ts->client->dev, "FB_BLANK_UNBLANK\n");
+			cancel_work_sync(&ts->notify_suspend);
+			cancel_work_sync(&ts->notify_resume);
+			schedule_work(&ts->notify_resume);
+		}
+	}
+	return 0;
+}
+#endif
 
 static int suspend(struct device *dev)
 {
