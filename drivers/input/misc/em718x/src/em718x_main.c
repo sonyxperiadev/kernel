@@ -64,13 +64,13 @@
 #include <linux/seq_file.h>
 #include <linux/time.h>
 #include <linux/jiffies.h>
+#include <linux/em718x_input_events.h>
 
 
 #include <em718x_main.h>
 #include <em718x_core.h>
 #include <em718x_host.h>
 #include <em718x_eeprom.h>
-#include <em718x_input_events.h>
 
 #define FIRMWARE_FILENAME	"em718x.fw"
 
