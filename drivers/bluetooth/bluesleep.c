@@ -42,6 +42,7 @@
 #include <linux/version.h>
 #include <linux/workqueue.h>
 #include <linux/platform_device.h>
+#include <linux/rfkill.h>
 
 #include <linux/irq.h>
 #include <linux/ioport.h>
@@ -53,6 +54,7 @@
 #include <linux/of_gpio.h>
 #include <linux/serial_core.h>
 #include <mach/msm_serial_hs.h>
+#include <linux/regulator/consumer.h>
 
 #include <net/bluetooth/bluetooth.h>
 #include <net/bluetooth/hci_core.h> /* event notifications */
@@ -72,7 +74,7 @@
 #define POLARITY_LOW 0
 #define POLARITY_HIGH 1
 
-#define BT_PORT_ID	99
+#define BT_PORT_ID	0
 
 /* enable/disable wake-on-bluetooth */
 #define BT_ENABLE_IRQ_WAKE 1
@@ -90,6 +92,7 @@ static int debug_mask = DEBUG_USER_STATE;
 module_param_named(debug_mask, debug_mask, int, S_IRUGO | S_IWUSR | S_IWGRP);
 
 struct bluesleep_info {
+	unsigned bt_reg_on;
 	unsigned host_wake;
 	unsigned ext_wake;
 	unsigned host_wake_irq;
@@ -98,6 +101,9 @@ struct bluesleep_info {
 	int irq_polarity;
 	int has_ext_wake;
 };
+
+static struct regulator *bt_batfet;
+static bool bt_enabled;
 
 /* work function */
 static void bluesleep_sleep_work(struct work_struct *work);
@@ -160,6 +166,7 @@ static DEFINE_TIMER(tx_timer, bluesleep_tx_timer_expire, 0, 0);
 
 /** Lock for state transitions */
 static spinlock_t rw_lock;
+static struct rfkill *bt_rfkill;
 
 #if !BT_BLUEDROID_SUPPORT
 /** Notifier block for HCI events */
@@ -216,6 +223,53 @@ void bluesleep_sleep_wakeup(void)
 		hsuart_power(1);
 	}
 }
+
+
+static int bluesleep_rfkill_set_power(void *data, bool blocked)
+{
+	int regOnGpio;
+
+	BT_DBG("Bluetooth device set power\n");
+
+	regOnGpio = gpio_get_value(bsi->bt_reg_on);
+	if (!bt_batfet) {
+		bt_batfet = regulator_get(NULL, "batfet");
+		if (IS_ERR_OR_NULL(bt_batfet)) {
+			pr_debug("unable to get batfet reg. rc=%d\n",
+				PTR_RET(bt_batfet));
+			bt_batfet = NULL;
+		}
+	}
+
+	/* rfkill_ops callback. Turn transmitter on when blocked is false */
+	if (!blocked) {
+		if (regOnGpio) {
+			BT_DBG("Bluetooth device is already power on:%d\n",
+				regOnGpio);
+			return 0;
+		}
+		if (bt_batfet)
+			regulator_enable(bt_batfet);
+		gpio_set_value(bsi->bt_reg_on, 1);
+		gpio_set_value(bsi->ext_wake, 1);
+	} else {
+		if (!regOnGpio) {
+			BT_DBG("Bluetooth device is already power off:%d\n",
+				regOnGpio);
+			return 0;
+		}
+		gpio_set_value(bsi->bt_reg_on, 0);
+		if (bt_batfet)
+			regulator_disable(bt_batfet);
+	}
+	bt_enabled = !blocked;
+
+	return 0;
+}
+
+static const struct rfkill_ops bluesleep_rfkill_ops = {
+	.set_block = bluesleep_rfkill_set_power,
+};
 
 /**
  * @brief@  main sleep work handling function which update the flags
@@ -729,9 +783,18 @@ static int bluesleep_populate_dt_pinfo(struct platform_device *pdev)
 	if (bsi->has_ext_wake)
 		bsi->ext_wake = tmp;
 
-	BT_INFO("bt_host_wake %d, bt_ext_wake %d",
+
+	tmp = of_get_named_gpio(np, "bt_reg_on", 0);
+	if (tmp < 0) {
+		BT_ERR("couldn't find bt_reg_on gpio");
+		return -ENODEV;
+	}
+	bsi->bt_reg_on = tmp;
+
+	BT_INFO("bt_host_wake %d, bt_ext_wake %d, bt_reg_on %d",
 			bsi->host_wake,
-			bsi->ext_wake);
+			bsi->ext_wake,
+			bsi->bt_reg_on);
 	return 0;
 }
 
@@ -763,7 +826,7 @@ static int bluesleep_populate_pinfo(struct platform_device *pdev)
 static int bluesleep_probe(struct platform_device *pdev)
 {
 	struct resource *res;
-	int ret;
+	int ret,rc;
 
 	bsi = kzalloc(sizeof(struct bluesleep_info), GFP_KERNEL);
 	if (!bsi)
@@ -833,6 +896,30 @@ static int bluesleep_probe(struct platform_device *pdev)
 	ret = request_irq(bsi->host_wake_irq, bluesleep_hostwake_isr,
 			IRQF_DISABLED | IRQF_TRIGGER_FALLING,
 			"bluetooth hostwake", NULL);
+
+
+
+	bt_rfkill = rfkill_alloc("bluesleep Bluetooth", &pdev->dev,
+				RFKILL_TYPE_BLUETOOTH, &bluesleep_rfkill_ops,
+				NULL);
+
+	if (unlikely(!bt_rfkill)) {
+		ret = -ENOMEM;
+		dev_err(&pdev->dev, "bcm4339_bluetooth_probe rfkill_alloc fail\n");
+		goto  free_bt_ext_wake;
+	}
+
+	rfkill_set_states(bt_rfkill, true, false);
+	rc = rfkill_register(bt_rfkill);
+
+	if (unlikely(rc)) {
+		rfkill_destroy(bt_rfkill);
+		ret = -ENOMEM;
+		dev_err(&pdev->dev, "bcm4339_bluetooth_probe rfkill_register fail\n");
+		goto  free_bt_ext_wake;
+	}
+
+
 	if (ret  < 0) {
 		BT_ERR("Couldn't acquire BT_HOST_WAKE IRQ");
 		goto free_bt_ext_wake;
@@ -885,6 +972,13 @@ static int bluesleep_suspend(struct platform_device *pdev, pm_message_t state)
 	return 0;
 }
 
+// For msm_serial_hs
+void bcm_bt_lpm_exit_lpm_locked(struct uart_port *uport)
+{
+	bsi->uport = uport;
+}
+EXPORT_SYMBOL(bcm_bt_lpm_exit_lpm_locked);
+
 static struct of_device_id bluesleep_match_table[] = {
 	{ .compatible = "qcom,bluesleep" },
 	{}
@@ -910,6 +1004,8 @@ static int __init bluesleep_init(void)
 {
 	int retval;
 	struct proc_dir_entry *ent;
+
+	bt_enabled = false;
 
 	BT_INFO("BlueSleep Mode Driver Ver %s", VERSION);
 
