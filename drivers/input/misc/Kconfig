@@ -761,6 +761,20 @@ config INPUT_BCM2850_MIC_DETECT
 
      To compile this driver as a module, choose M here.
 
+config INPUT_EM718X_HUB
+	tristate "EM718x Sensor Hub"
+	depends on I2C
+	default n
+	help
+	  Say Y here if you have a EM Microelectronic 718x Sensor module, and
+	  your board-specific initialization code includes that in its
+	  table of devices.
+
+	  If unsure, say N (but it's safe to say "Y").
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called em718x.
+
 choice
 	prompt "Broadcom Kona Headset drivers"
 	depends on ARCH_KONA

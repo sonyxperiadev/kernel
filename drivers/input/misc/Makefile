@@ -79,3 +79,4 @@ obj-$(CONFIG_BMG160_FIFO)              += bmg160_fifo.o
 obj-$(CONFIG_INPUT_AKM09911)		+= akm09911.o
 obj-$(CONFIG_BMP280)     += bmp280/
 obj-$(CONFIG_INPUT_EMMICRO)	+= em718x/
+obj-$(CONFIG_INPUT_EM718X_HUB)	+= em718x.o
