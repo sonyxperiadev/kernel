@@ -1616,6 +1616,9 @@ bool di_enable_sensor_interrupts(DI_INSTANCE_T *instance, DI_SENSOR_TYPE_T *sens
 
 	di_shutdown_request(instance);	
 
+	/* Keep interrupts disabled until interrupt handling issue is fixed */
+	instance->events.reg = 0;
+
    debug_log("setting interrupts sources to 0x%x\n", instance->events.reg);
 
    if (!i2c_blocking_write(instance->i2c_handle, SR_ENABLE_EVENTS, &instance->events.reg, 1))
