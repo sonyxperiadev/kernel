@@ -108,6 +108,10 @@
 		 0x9a 0x00 0x40 0
 		 /*CMPCTRL12 set Die over temparature to 130C*/
 		 0xD3 0x18 0xFF 1
+		 /*Set PON_T1_ACT to NOP int, PON_T1D_DLY to 50MS and PON_T1_DEB to 2s*/
+		 0x09 0xC2 0xFF 0
+		 /*Set PON_T2_ACT to NOP int, PON_T2D_DLY to 50MS and PON_T2_DEB to 2s*/
+		 0x0A 0xC2 0xFF 0
 		>;
 
 	exitdata = <
