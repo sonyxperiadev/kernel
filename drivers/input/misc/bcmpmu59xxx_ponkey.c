@@ -178,6 +178,8 @@ static int param_get_simulate_ponkey(char *buffer,
 static void bcmpmu_ponkey_isr(u32 irq, void *data)
 {
 	struct bcmpmu_ponkey *ponkey = data;
+	struct bcmpmu59xxx *bcmpmu = ponkey->bcmpmu;
+	u8 val = 0;
 
 	switch (irq) {
 	case PMU_IRQ_POK_PRESSED:
@@ -189,6 +191,17 @@ static void bcmpmu_ponkey_isr(u32 irq, void *data)
 	case PMU_IRQ_POK_T1:
 		ponkey->ponkey_state = 1;
 		pr_info("PMU_IRQ_POK_T1\n");
+		break;
+
+	case PMU_IRQ_POK_T3:
+		/* Disable PMU SHUTDOWN feature to get Smart Reset to work */
+		if (bcmpmu->read_dev(bcmpmu, PMU_REG_GPIOCTRL2, &val) != 0) {
+			val = 0x02;
+		} else {
+			val &= 0xFE;
+		}
+		bcmpmu->write_dev(bcmpmu, PMU_REG_GPIOCTRL2, val);
+		pr_info("PMU_IRQ_POK_T3\n");
 		break;
 
 	case PMU_IRQ_POK_RELEASED:
@@ -366,9 +379,11 @@ static int bcmpmu59xxx_ponkey_probe(struct platform_device *pdev)
 	bcmpmu->register_irq(bcmpmu, PMU_IRQ_POK_RELEASED, bcmpmu_ponkey_isr,
 			     ponkey);
 	bcmpmu->register_irq(bcmpmu, PMU_IRQ_POK_T1, bcmpmu_ponkey_isr, ponkey);
+	bcmpmu->register_irq(bcmpmu, PMU_IRQ_POK_T3, bcmpmu_ponkey_isr, ponkey);
 
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_POK_PRESSED);
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_POK_RELEASED);
+	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_POK_T3);
 
 	error = input_register_device(ponkey->idev);
 	if (error) {
@@ -409,6 +424,7 @@ static int bcmpmu59xxx_ponkey_remove(struct platform_device *pdev)
 	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_POK_PRESSED);
 	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_POK_RELEASED);
 	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_POK_T1);
+	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_POK_T3);
 	input_unregister_device(ponkey->idev);
 	kobject_put(ponkey_kobj);
 	kfree(ponkey);
