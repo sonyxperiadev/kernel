@@ -930,23 +930,22 @@ static int synaptics_rmi4_f11_abs_report(struct synaptics_rmi4_data *rmi4_data,
 
 	extra_data = (struct synaptics_rmi4_f11_extra_data *)fhandler->extra;
 
-	if (rmi4_data->suspend && rmi4_data->enable_wakeup_gesture) {
+	if (rmi4_data->wakeup_gesture_active) {
 		retval = synaptics_rmi4_reg_read(rmi4_data,
 				data_addr + extra_data->data38_offset,
 				&detected_gestures,
 				sizeof(detected_gestures));
 		if (retval < 0)
 			return 0;
-		dev_dbg(rmi4_data->pdev->dev.parent, "detected_gestures 0x%x\n",
-				detected_gestures);
 		if (detected_gestures) {
 			int key = rmi4_data->hw_if->board_data->wakeup_gest_key;
 
+			dev_info(rmi4_data->pdev->dev.parent, "detected_gestures\n",
+				detected_gestures);
 			input_report_key(rmi4_data->input_dev, key, 1);
 			input_sync(rmi4_data->input_dev);
 			input_report_key(rmi4_data->input_dev, key, 0);
 			input_sync(rmi4_data->input_dev);
-			rmi4_data->suspend = false;
 		}
 		synaptics_rmi4_f11_wg(rmi4_data, false);
 		return 0;
@@ -1105,7 +1104,7 @@ static int synaptics_rmi4_f12_abs_report(struct synaptics_rmi4_data *rmi4_data,
 	extra_data = (struct synaptics_rmi4_f12_extra_data *)fhandler->extra;
 	size_of_2d_data = sizeof(struct synaptics_rmi4_f12_finger_data);
 
-	if (rmi4_data->suspend && rmi4_data->enable_wakeup_gesture) {
+	if (rmi4_data->wakeup_gesture_active) {
 		retval = synaptics_rmi4_reg_read(rmi4_data,
 				data_addr + extra_data->data4_offset,
 				&detected_gestures,
@@ -1119,9 +1118,8 @@ static int synaptics_rmi4_f12_abs_report(struct synaptics_rmi4_data *rmi4_data,
 			input_sync(rmi4_data->input_dev);
 			input_report_key(rmi4_data->input_dev, key, 0);
 			input_sync(rmi4_data->input_dev);
-			rmi4_data->suspend = false;
+			synaptics_rmi4_f12_wg(rmi4_data, false);
 		}
-		synaptics_rmi4_f12_wg(rmi4_data, false);
 		return 0;
 	}
 
@@ -3316,6 +3314,8 @@ static int synaptics_rmi4_probe(struct platform_device *pdev)
 		goto err_set_input_dev;
 	}
 
+	rmi4_data->stay_awake = rmi4_data->enable_wakeup_gesture;
+
 #ifdef CONFIG_HAS_EARLYSUSPEND
 	rmi4_data->early_suspend.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN + 1;
 	rmi4_data->early_suspend.suspend = synaptics_rmi4_early_suspend;
@@ -3483,7 +3483,7 @@ static void synaptics_rmi4_f11_wg(struct synaptics_rmi4_data *rmi4_data,
 	struct synaptics_rmi4_fn *fhandler;
 	struct synaptics_rmi4_device_info *rmi;
 
-	dev_dbg(rmi4_data->pdev->dev.parent,
+	dev_info(rmi4_data->pdev->dev.parent,
 			"%s: enable %d\n", __func__, enable);
 
 	rmi = &(rmi4_data->rmi4_mod_info);
@@ -3520,6 +3520,8 @@ static void synaptics_rmi4_f11_wg(struct synaptics_rmi4_data *rmi4_data,
 				__func__);
 		return;
 	}
+
+	rmi4_data->wakeup_gesture_active = enable;
 
 	return;
 }
@@ -3571,6 +3573,8 @@ static void synaptics_rmi4_f12_wg(struct synaptics_rmi4_data *rmi4_data,
 		return;
 	}
 
+	rmi4_data->wakeup_gesture_active = enable;
+
 	return;
 }
 
@@ -3590,9 +3594,9 @@ static ssize_t synaptics_mode_show(struct device *dev,
 {
 	struct synaptics_rmi4_data *rmi4_data = dev_get_drvdata(dev);
 
-	if ( rmi4_data->suspend && rmi4_data->off_mode )
+	if (!rmi4_data->stay_awake)
 		return scnprintf(buf, PAGE_SIZE, "%s\n", "off");
-	else if ( rmi4_data->suspend && rmi4_data->enable_wakeup_gesture )
+	else if (rmi4_data->wakeup_gesture_active)
 		return scnprintf(buf, PAGE_SIZE, "%s\n", "doze");
 	else
 		return scnprintf(buf, PAGE_SIZE, "%s\n", "on");
@@ -3608,29 +3612,20 @@ static ssize_t synaptics_mode_store(struct device *dev,
 		return -EINVAL;
 
 	if (!strncmp(buf, "doze", strlen("doze"))) {
-		if (!rmi4_data->suspend) {
-			synaptics_rmi4_wakeup_gesture(rmi4_data, true);
-			rmi4_data->suspend = true;
-			rmi4_data->off_mode = false;
-			dev_dbg(rmi4_data->pdev->dev.parent, "Setting touch to doze");
-		}
+		synaptics_rmi4_wakeup_gesture(rmi4_data, true);
+		rmi4_data->stay_awake = true;
+		dev_info(rmi4_data->pdev->dev.parent, "Setting touch to doze");
 		rc = 0;
 	} else if (!strncmp(buf, "on", strlen("on"))) {
-		if (rmi4_data->suspend) {
-			synaptics_rmi4_resume(dev);
-			synaptics_rmi4_wakeup_gesture(rmi4_data, false);
-			rmi4_data->suspend = false;
-			rmi4_data->off_mode = false;
-			dev_dbg(rmi4_data->pdev->dev.parent, "Setting touch to on");
-		 }
+		synaptics_rmi4_wakeup_gesture(rmi4_data, false);
+		rmi4_data->stay_awake = true;
+		dev_info(rmi4_data->pdev->dev.parent, "Setting touch to on");
 		rc = 0;
 	} else if (!strncmp(buf, "off", strlen("off"))) {
 		/* Turn off wake up gestures */
 		synaptics_rmi4_wakeup_gesture(rmi4_data, false);
-		rmi4_data->off_mode = true;
-		dev_dbg(rmi4_data->pdev->dev.parent, "Setting touch to off");
-		/* Enter suspend mode and turn off regulator */
-		synaptics_rmi4_suspend(dev);
+		rmi4_data->stay_awake = false;
+		dev_info(rmi4_data->pdev->dev.parent, "Setting touch to off");
 	} else {
 		rc = -EINVAL;
 	}
@@ -3791,16 +3786,9 @@ static int synaptics_rmi4_suspend(struct device *dev)
 	if (rmi4_data->stay_awake)
 		return 0;
 
-	if (rmi4_data->enable_wakeup_gesture && !rmi4_data->off_mode) {
-		synaptics_rmi4_wakeup_gesture(rmi4_data, true);
-		goto exit;
-	}
-
-	if (!rmi4_data->suspend) {
-		synaptics_rmi4_irq_enable(rmi4_data, false, false);
-		synaptics_rmi4_sensor_sleep(rmi4_data);
-		synaptics_rmi4_free_fingers(rmi4_data);
-	}
+	synaptics_rmi4_irq_enable(rmi4_data, false, false);
+	synaptics_rmi4_sensor_sleep(rmi4_data);
+	synaptics_rmi4_free_fingers(rmi4_data);
 
 	mutex_lock(&exp_data.mutex);
 	if (!list_empty(&exp_data.list)) {
@@ -3826,11 +3814,6 @@ static int synaptics_rmi4_resume(struct device *dev)
 
 	if (rmi4_data->stay_awake)
 		return 0;
-
-	if (rmi4_data->enable_wakeup_gesture && !rmi4_data->off_mode) {
-		synaptics_rmi4_wakeup_gesture(rmi4_data, false);
-		goto exit;
-	}
 
 	synaptics_rmi4_sensor_wake(rmi4_data);
 	synaptics_rmi4_irq_enable(rmi4_data, true, false);
