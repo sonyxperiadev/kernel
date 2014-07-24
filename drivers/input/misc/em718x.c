@@ -18,6 +18,8 @@
 #include <linux/of_fdt.h>
 #include <linux/of_platform.h>
 #include <linux/slab.h>
+#include <linux/suspend.h>
+#include <linux/wakelock.h>
 #include <linux/workqueue.h>
 
 struct fw_header_flags {
@@ -264,9 +266,13 @@ struct em718x {
 	u8 num_features;
 	u8 algo_ctl;
 	u8 enabled_sns;
+	u8 suspend_enabled_sns;
 	u32 sns_rate[SNS_CNT];
 	struct feature_desc f_desc[MAX_FEATURES_ACTIVE];
 	struct firmware fw;
+	struct wake_lock w_lock;
+	struct notifier_block nb;
+	bool suspend_prepared;
 };
 
 enum sns_event_codes {
@@ -461,7 +467,8 @@ static int em718x_set_sensor_report(struct em718x *em718x,
 		dev_dbg(dev, "%s: '%s' disable report\n",
 				__func__, sns_id[sns]);
 	}
-	return em718x_update_event_ena_reg(em718x, em718x->enabled_sns);
+	return em718x->suspend_prepared ? 0 :
+		em718x_update_event_ena_reg(em718x, em718x->enabled_sns);
 }
 
 static int em718x_set_sensor_rate(struct em718x *em718x,
@@ -780,6 +787,7 @@ static irqreturn_t em718x_irq_handler(int irq, void *handle)
 	int rc;
 	struct em718x_status status;
 
+	wake_lock(&em718x->w_lock);
 	mutex_lock(&em718x->lock);
 	rc = smbus_read_byte_block(em718x->client, R8_EV_STATUS,
 			(u8 *)&status, sizeof(status));
@@ -822,6 +830,7 @@ static irqreturn_t em718x_irq_handler(int irq, void *handle)
 			em718x_process_amgf(em718x, &amgf, status.event_status);
 	}
 exit:
+	wake_unlock(&em718x->w_lock);
 	mutex_unlock(&em718x->lock);
 	return IRQ_HANDLED;
 }
@@ -874,6 +883,9 @@ static int em718x_parse_features(struct em718x *em718x)
 	if (!np)
 		return -EINVAL;
 
+	em718x->suspend_enabled_sns &= ~((1 << SNS_F0) | (1 << SNS_F1) |
+			(1 << SNS_F2));
+
 	for (i = 0; i < ARRAY_SIZE(em718x->f_desc); i++) {
 		char name[32];
 		const char *s;
@@ -907,6 +919,17 @@ static int em718x_parse_features(struct em718x *em718x)
 		em718x->f_desc[i].present =
 				em718x->f_desc[i].data_idx >= 0;
 
+		if (em718x->f_desc[i].present) {
+			switch (ft) {
+			case F_ANY_MOTION:
+			case F_TILT:
+				em718x->suspend_enabled_sns |=
+						1 << (i + SNS_F0);
+				break;
+			default:
+				break;
+			}
+		}
 		dev_info(dev, "feature %d '%s' present %d\n",
 			i, feature_type_id[ft], em718x->f_desc[i].present);
 	}
@@ -1214,6 +1237,50 @@ exit:
 	return;
 }
 
+static int em718x_suspend_notifier(struct notifier_block *nb,
+		unsigned long event, void *dummy)
+{
+	struct em718x *em718x = container_of(nb, struct em718x, nb);
+	(void)dummy;
+
+	switch (event) {
+	case PM_SUSPEND_PREPARE:
+		mutex_lock(&em718x->lock);
+
+		dev_dbg(&em718x->client->dev,
+			"PM_SUSPEND_PREPARE: report enable mask 0x%02x\n",
+			em718x->enabled_sns & em718x->suspend_enabled_sns);
+
+		em718x_update_event_ena_reg(em718x, em718x->enabled_sns &
+				em718x->suspend_enabled_sns);
+
+		em718x->suspend_prepared = true;
+
+		mutex_unlock(&em718x->lock);
+		synchronize_irq(em718x->irq);
+
+		dev_dbg(&em718x->client->dev, "no non-wakeup IRQs from now\n");
+		if (wake_lock_active(&em718x->w_lock))
+			dev_warn(&em718x->client->dev, "wake_lock_active!\n");
+
+		break;
+	case PM_POST_SUSPEND:
+		mutex_lock(&em718x->lock);
+
+		dev_dbg(&em718x->client->dev,
+			"PM_POST_SUSPEND: report enable mask 0x%02x\n",
+			em718x->enabled_sns);
+		em718x_update_event_ena_reg(em718x, em718x->enabled_sns);
+
+		em718x->suspend_prepared = false;
+		mutex_unlock(&em718x->lock);
+		break;
+	default:
+		break;
+	}
+	return NOTIFY_DONE;
+}
+
 static int em718x_probe(struct i2c_client *client,
 			const struct i2c_device_id *id)
 {
@@ -1238,6 +1305,7 @@ static int em718x_probe(struct i2c_client *client,
 	INIT_WORK(&em718x->startup_work, em718x_startup_work_func);
 	INIT_DELAYED_WORK(&em718x->reset_work, em718x_reset_work_func);
 	mutex_init(&em718x->lock);
+	wake_lock_init(&em718x->w_lock, WAKE_LOCK_SUSPEND, dev_name(dev));
 	rc = em718x_check_id(em718x);
 	if (rc)
 		goto exit;
@@ -1275,6 +1343,8 @@ static int em718x_probe(struct i2c_client *client,
 		rc = -EINVAL;
 		goto exit;
 	}
+	em718x->nb.notifier_call = em718x_suspend_notifier;
+	register_pm_notifier(&em718x->nb);
 	schedule_work(&em718x->startup_work);
 exit:
 	return rc;
@@ -1282,34 +1352,18 @@ exit:
 
 static int em718x_remove(struct i2c_client *client)
 {
+	struct em718x *em718x = dev_get_drvdata(&client->dev);
+	unregister_pm_notifier(&em718x->nb);
 	sysfs_remove_group(&client->dev.kobj, &em718x_attribute_group);
+	wake_lock_destroy(&em718x->w_lock);
 	return 0;
 }
 
 static int em718x_suspend(struct device *dev)
 {
 	struct em718x *em718x = dev_get_drvdata(dev);
-	u8 suspend_enabled = 0;
-	size_t i;
-
 	mutex_lock(&em718x->lock);
 	dev_dbg(dev, "%s\n", __func__);
-
-	for (i = 0; i < ARRAY_SIZE(em718x->f_desc); i++) {
-		u8 sns = i + SNS_F0;
-		if (enabled(em718x, sns)) {
-			switch (em718x->f_desc[i].type) {
-			case F_ANY_MOTION:
-			case F_TILT:
-				suspend_enabled |= 1 << sns;
-				break;
-			default:
-				break;
-			}
-		}
-	}
-	dev_dbg(dev, "%s: enable mask 0x%02x\n", __func__, suspend_enabled);
-	em718x_update_event_ena_reg(em718x, suspend_enabled);
 	return 0;
 }
 
@@ -1317,7 +1371,6 @@ static int em718x_resume(struct device *dev)
 {
 	struct em718x *em718x = dev_get_drvdata(dev);
 	dev_dbg(dev, "%s\n", __func__);
-	em718x_update_event_ena_reg(em718x, em718x->enabled_sns);
 	mutex_unlock(&em718x->lock);
 	return 0;
 }
