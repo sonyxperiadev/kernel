@@ -71,9 +71,11 @@ enum em718x_reg {
 	R8_CENTRAL_STATUS = 0x37,
 	R8_EV_STATUS = 0x35,
 	RX_SNS_DATA = 0x12,
+	RX_FEAT_SNS_DATA = 0x2a,
 	RX_QUAT_DATA = 0,
 	R8_RESET = 0x9b,
 	R8_ERR_REGISTER = 0x50,
+	R16_DATA_EXTENTION_REG = 0x43,
 };
 
 enum em718x_features {
@@ -676,6 +678,35 @@ static const struct attribute_group em718x_attribute_group = {
 	.attrs = em718x_attributes
 };
 
+static int step_cntr_get_32(struct em718x *em718x, int *ext_steps, int idx)
+{
+	int i;
+	for (i = 0; i < 3; i++) {
+		u16 ext, temp;
+		struct feature_data fd;
+		int rc = smbus_read_byte_block(em718x->client,
+				R16_DATA_EXTENTION_REG,
+				(void *)&ext, sizeof(ext));
+		if (rc)
+			break;
+		rc = smbus_read_byte_block(em718x->client,
+				RX_FEAT_SNS_DATA, (void *)&fd, sizeof(fd));
+		if (rc)
+			break;
+		rc = smbus_read_byte_block(em718x->client,
+				R16_DATA_EXTENTION_REG,
+				(void *)&temp, sizeof(temp));
+		if (rc)
+			break;
+		if (temp == ext) {
+			*ext_steps = (ext << 16) + fd.d[idx];
+			return 0;
+		}
+	}
+	dev_err(&em718x->client->dev, "unable to read steps extension\n");
+	return -EINVAL;
+}
+
 static void em718x_process_amgf(struct em718x *em718x,
 	struct em718x_amgf_result *amgf, u8 ev_status)
 {
@@ -730,6 +761,8 @@ static void em718x_process_amgf(struct em718x *em718x,
 
 			switch (em718x->f_desc[i].type) {
 			case F_STEP_CNTR:
+				if (step_cntr_get_32(em718x, &val, idx))
+					break;
 				dev_dbg(dev, "feature-%d: step %d\n", i, val);
 				input_event(idev, EV_ABS, EV_STEP, val);
 				input_sync(idev);
