@@ -209,9 +209,16 @@ config BRCM_FUSE_VSP
 	---help---
 	  Broadcom FUSE VSP drivers
 
+config BCM_SIM_PRESENT
+	bool
+	prompt "Enable SIM operations"
+	default y if BCM_MODEM && ! MACH_JAVA_BROOKS
+	---help---
+	 Say N if you are compiling for Brooks/Tetra
+
 config BCM_SIMLOCK
 	bool "Broadcom SIM lock driver"
-	depends on BCM_MODEM
+	depends on BCM_MODEM && BCM_SIM_PRESENT
 	default y
 	help
 	  Say Y here to enable the Broadcom back-end for SIM locking.

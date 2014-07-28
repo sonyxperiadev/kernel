@@ -327,6 +327,8 @@ Result_t SYS_GenCommsMsgHnd(RPC_Msg_t *pReqMsg, SYS_ReqRep_t *req)
 	switch ((unsigned)pReqMsg->msgId) {
 
 #if defined(FUSE_APPS_PROCESSOR)
+#ifdef CONFIG_BCM_SIM_PRESENT
+
 	case MSG_PMU_IS_SIM_READY_REQ:
 		result =
 		    Handle_CAPI2_SYSRPC_PMU_IsSIMReady(pReqMsg,
@@ -334,6 +336,7 @@ Result_t SYS_GenCommsMsgHnd(RPC_Msg_t *pReqMsg, SYS_ReqRep_t *req)
 						       CAPI2_SYSRPC_PMU_IsSIMReady_Req.
 						       simldo);
 		break;
+
 	case MSG_PMU_ACTIVATE_SIM_REQ:
 		result =
 		    Handle_CAPI2_SYSRPC_PMU_ActivateSIM(pReqMsg,
@@ -344,6 +347,15 @@ Result_t SYS_GenCommsMsgHnd(RPC_Msg_t *pReqMsg, SYS_ReqRep_t *req)
 							CAPI2_SYSRPC_PMU_ActivateSIM_Req.
 							volt);
 		break;
+#else
+
+	case MSG_PMU_IS_SIM_READY_REQ:
+	case MSG_PMU_ACTIVATE_SIM_REQ:
+		result = -ENODEV;
+
+		break;
+#endif
+
 	case MSG_CPPS_CONTROL_REQ:
 		result =
 		    Handle_CAPI2_CPPS_Control(pReqMsg,
