@@ -1324,14 +1324,11 @@ static int em718x_probe(struct i2c_client *client,
 	rc = i2c_check_functionality(client->adapter, I2C_FUNC_I2C);
 	if (!rc) {
 		dev_err(dev, "i2c_check_functionality error\n");
-		rc = -ENODEV;
-		goto exit;
+		return -ENODEV;
 	}
 	em718x = devm_kzalloc(dev, sizeof(*em718x), GFP_KERNEL);
-	if (!em718x) {
-		rc = -ENOMEM;
-		goto exit;
-	}
+	if (!em718x)
+		return -ENOMEM;
 
 	i2c_set_clientdata(client, em718x);
 	em718x->client = client;
@@ -1379,7 +1376,9 @@ static int em718x_probe(struct i2c_client *client,
 	em718x->nb.notifier_call = em718x_suspend_notifier;
 	register_pm_notifier(&em718x->nb);
 	schedule_work(&em718x->startup_work);
+	return 0;
 exit:
+	wake_lock_destroy(&em718x->w_lock);
 	return rc;
 }
 
