@@ -529,8 +529,8 @@ static irqreturn_t bcm_hsotgctrl_wake_irq(int irq, void *dev)
 	/* Disable the IRQ since already waking up */
 	disable_irq_nosync(bcm_hsotgctrl_handle->hsotgctrl_irq);
 	bcm_hsotgctrl_handle->irq_enabled = false;
-	schedule_delayed_work(&bcm_hsotgctrl_handle->wakeup_work,
-	  msecs_to_jiffies(BCM_HSOTGCTRL_WAKEUP_PROCESSING_DELAY));
+
+	schedule_delayed_work(&bcm_hsotgctrl_handle->wakeup_work, 0);
 
 	return IRQ_HANDLED;
 }
