@@ -707,6 +707,8 @@ static int bcm_hsotgctrl_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, hsotgctrl_drvdata);
 
+	bcm_hsotgctrl_en_clock(true);
+
 	mdelay(HSOTGCTRL_STEP_DELAY_IN_MS);
 
 	/* clear bit 15 RDB error */
@@ -808,6 +810,9 @@ static int bcm_hsotgctrl_probe(struct platform_device *pdev)
 	val |= 1 << HSOTG_CTRL_USBOTGCONTROL_BVALID_CLR_SHIFT;
 	writel(val, hsotgctrl_drvdata->hsotg_ctrl_base +
 			HSOTG_CTRL_USBOTGCONTROL_OFFSET);
+
+	bcm_hsotgctrl_en_clock(false);
+
 	/* request_irq enables irq */
 	hsotgctrl_drvdata->irq_enabled = true;
 	error = request_irq(hsotgctrl_drvdata->hsotgctrl_irq,
@@ -823,6 +828,7 @@ static int bcm_hsotgctrl_probe(struct platform_device *pdev)
 	return 0;
 
 Error_bcm_hsotgctrl_probe:
+	bcm_hsotgctrl_en_clock(false);
 	clk_put(hsotgctrl_drvdata->mdio_master_clk);
 error_get_master_clk:
 	clk_put(hsotgctrl_drvdata->otg_clk);
