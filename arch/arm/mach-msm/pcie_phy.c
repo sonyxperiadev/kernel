@@ -145,7 +145,7 @@ void pcie_phy_init(struct msm_pcie_dev_t *dev)
 	write_phy(dev->phy, QSERDES_RX_RX_TERM_HIGHZ_CM_AC_COUPLE,	0x87);
 	write_phy(dev->phy, QSERDES_RX_RX_EQ_GAIN12,		0x54);
 	write_phy(dev->phy, PCIE_PHY_POWER_STATE_CONFIG1,		0xa3);
-	write_phy(dev->phy, PCIE_PHY_POWER_STATE_CONFIG2,		0xcb);
+	write_phy(dev->phy, PCIE_PHY_POWER_STATE_CONFIG2,		0x4b);
 	write_phy(dev->phy, QSERDES_COM_PLL_RXTXEPCLK_EN,		0x10);
 	write_phy(dev->phy, PCIE_PHY_ENDPOINT_REFCLK_DRIVE,		0x10);
 	write_phy(dev->phy, PCIE_PHY_SW_RESET,			0x00);
