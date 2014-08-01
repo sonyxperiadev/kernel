@@ -169,6 +169,7 @@ struct audio_client {
 	/* Relative or absolute TS */
 	atomic_t	       time_flag;
 	atomic_t	       nowait_cmd_cnt;
+	atomic_t               mem_state;
 	void		       *priv;
 	uint32_t               io_mode;
 	uint64_t	       time_stamp;
@@ -180,6 +181,7 @@ struct audio_client {
 	struct audio_port_data port[2];
 	wait_queue_head_t      cmd_wait;
 	wait_queue_head_t      time_wait;
+	wait_queue_head_t      mem_wait;
 	int                    perf_mode;
 	int					   stream_id;
 	/* audio cache operations fptr*/
@@ -221,6 +223,9 @@ int q6asm_open_write_v2(struct audio_client *ac, uint32_t format,
 int q6asm_stream_open_write_v2(struct audio_client *ac, uint32_t format,
 				uint16_t bits_per_sample, int32_t stream_id,
 				bool is_gapless_mode);
+
+int q6asm_open_write_compressed(struct audio_client *ac, uint32_t format,
+				uint32_t passthrough_flag);
 
 int q6asm_open_read_write(struct audio_client *ac,
 			uint32_t rd_format,
@@ -369,6 +374,10 @@ int q6asm_media_format_block_amrwbplus(struct audio_client *ac,
 
 int q6asm_ds1_set_endp_params(struct audio_client *ac,
 				int param_id, int param_value);
+
+/* Send stream based end params */
+int q6asm_ds1_set_stream_endp_params(struct audio_client *ac, int param_id,
+				     int param_value, int stream_id);
 
 /* PP specific */
 int q6asm_equalizer(struct audio_client *ac, void *eq);

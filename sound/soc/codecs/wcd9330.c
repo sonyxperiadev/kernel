@@ -2254,6 +2254,9 @@ static const struct snd_kcontrol_new lineout4_ground_switch =
 static const struct snd_kcontrol_new aif4_mad_switch =
 	SOC_DAPM_SINGLE("Switch", TOMTOM_A_SVASS_CLKRST_CTL, 0, 1, 0);
 
+static const struct snd_kcontrol_new aif4_vi_switch =
+	SOC_DAPM_SINGLE("Switch", TOMTOM_A_SPKR1_PROT_EN, 3, 1, 0);
+
 /* virtual port entries */
 static int slim_tx_mixer_get(struct snd_kcontrol *kcontrol,
 			     struct snd_ctl_elem_value *ucontrol)
@@ -2562,6 +2565,8 @@ static int tomtom_codec_enable_adc(struct snd_soc_dapm_widget *w,
 {
 	struct snd_soc_codec *codec = w->codec;
 	u16 adc_reg;
+	u16 tx_fe_clkdiv_reg;
+	u8 tx_fe_clkdiv_mask;
 	u8 init_bit_shift;
 
 	pr_debug("%s %d\n", __func__, event);
@@ -2569,27 +2574,39 @@ static int tomtom_codec_enable_adc(struct snd_soc_dapm_widget *w,
 	switch (w->reg) {
 	case TOMTOM_A_TX_1_GAIN:
 		adc_reg = TOMTOM_A_TX_1_2_TEST_CTL;
+		tx_fe_clkdiv_reg = TOMTOM_A_TX_1_2_TXFE_CLKDIV;
+		tx_fe_clkdiv_mask = 0x0F;
 		init_bit_shift = 7;
 		break;
 	case TOMTOM_A_TX_2_GAIN:
 		adc_reg = TOMTOM_A_TX_1_2_TEST_CTL;
+		tx_fe_clkdiv_reg = TOMTOM_A_TX_1_2_TXFE_CLKDIV;
+		tx_fe_clkdiv_mask = 0xF0;
 		init_bit_shift = 6;
 		break;
 	case TOMTOM_A_TX_3_GAIN:
 		adc_reg = TOMTOM_A_TX_3_4_TEST_CTL;
 		init_bit_shift = 7;
+		tx_fe_clkdiv_reg = TOMTOM_A_TX_3_4_TXFE_CKDIV;
+		tx_fe_clkdiv_mask = 0x0F;
 		break;
 	case TOMTOM_A_TX_4_GAIN:
 		adc_reg = TOMTOM_A_TX_3_4_TEST_CTL;
 		init_bit_shift = 6;
+		tx_fe_clkdiv_reg = TOMTOM_A_TX_3_4_TXFE_CKDIV;
+		tx_fe_clkdiv_mask = 0xF0;
 		break;
 	case TOMTOM_A_TX_5_GAIN:
 		adc_reg = TOMTOM_A_TX_5_6_TEST_CTL;
 		init_bit_shift = 7;
+		tx_fe_clkdiv_reg = TOMTOM_A_TX_5_6_TXFE_CKDIV;
+		tx_fe_clkdiv_mask = 0x0F;
 		break;
 	case TOMTOM_A_TX_6_GAIN:
 		adc_reg = TOMTOM_A_TX_5_6_TEST_CTL;
 		init_bit_shift = 6;
+		tx_fe_clkdiv_reg = TOMTOM_A_TX_5_6_TXFE_CKDIV;
+		tx_fe_clkdiv_mask = 0xF0;
 		break;
 	default:
 		pr_err("%s: Error, invalid adc register\n", __func__);
@@ -2598,6 +2615,8 @@ static int tomtom_codec_enable_adc(struct snd_soc_dapm_widget *w,
 
 	switch (event) {
 	case SND_SOC_DAPM_PRE_PMU:
+		snd_soc_update_bits(codec, tx_fe_clkdiv_reg, tx_fe_clkdiv_mask,
+				    0x0);
 		tomtom_codec_enable_adc_block(codec, 1);
 		snd_soc_update_bits(codec, adc_reg, 1 << init_bit_shift,
 				1 << init_bit_shift);
@@ -2728,9 +2747,10 @@ static int tomtom_codec_enable_lineout(struct snd_soc_dapm_widget *w,
 						 WCD9XXX_CLSH_STATE_LO,
 						 WCD9XXX_CLSH_REQ_ENABLE,
 						 WCD9XXX_CLSH_EVENT_POST_PA);
-		pr_debug("%s: sleeping 3 ms after %s PA turn on\n",
+		pr_debug("%s: sleeping 5 ms after %s PA turn on\n",
 				__func__, w->name);
-		usleep_range(3000, 3100);
+		/* Wait for CnP time after PA enable */
+		usleep_range(5000, 5100);
 		break;
 	case SND_SOC_DAPM_POST_PMD:
 		wcd9xxx_clsh_fsm(codec, &tomtom->clsh_d,
@@ -2738,6 +2758,10 @@ static int tomtom_codec_enable_lineout(struct snd_soc_dapm_widget *w,
 						 WCD9XXX_CLSH_REQ_DISABLE,
 						 WCD9XXX_CLSH_EVENT_POST_PA);
 		snd_soc_update_bits(codec, lineout_gain_reg, 0x40, 0x00);
+		pr_debug("%s: sleeping 5 ms after %s PA turn off\n",
+			 __func__, w->name);
+		/* Wait for CnP time after PA disable */
+		usleep_range(5000, 5100);
 		break;
 	}
 	return 0;
@@ -3122,6 +3146,16 @@ static void tx_hpf_corner_freq_callback(struct work_struct *work)
 	pr_debug("%s(): decimator %u hpf_cut_of_freq 0x%x\n", __func__,
 		hpf_work->decimator, (unsigned int)hpf_cut_of_freq);
 
+	/*
+	 * Restore TXFE ClkDiv registers to default.
+	 * If any of these registers are modified during analog
+	 * front-end enablement, they will be restored back to the
+	 * default
+	 */
+	snd_soc_update_bits(codec, TOMTOM_A_TX_1_2_TXFE_CLKDIV, 0xFF, 0x55);
+	snd_soc_update_bits(codec, TOMTOM_A_TX_3_4_TXFE_CKDIV, 0xFF, 0x55);
+	snd_soc_update_bits(codec, TOMTOM_A_TX_5_6_TXFE_CKDIV, 0xFF, 0x55);
+
 	snd_soc_update_bits(codec, tx_mux_ctl_reg, 0x30, hpf_cut_of_freq << 4);
 }
 
@@ -3431,6 +3465,14 @@ static int tomtom_hphl_dac_event(struct snd_soc_dapm_widget *w,
 			dev_dbg(codec->dev, "%s: Failed to get mbhc impedance %d\n",
 						__func__, ret);
 		break;
+	case SND_SOC_DAPM_POST_PMU:
+		snd_soc_update_bits(codec, TOMTOM_A_CDC_RX1_B3_CTL, 0xBC, 0x94);
+		snd_soc_update_bits(codec, TOMTOM_A_CDC_RX1_B4_CTL, 0x30, 0x10);
+		break;
+	case SND_SOC_DAPM_PRE_PMD:
+		snd_soc_update_bits(codec, TOMTOM_A_CDC_RX1_B3_CTL, 0xBC, 0x00);
+		snd_soc_update_bits(codec, TOMTOM_A_CDC_RX1_B4_CTL, 0x30, 0x00);
+		break;
 	case SND_SOC_DAPM_POST_PMD:
 		break;
 	}
@@ -3458,6 +3500,14 @@ static int tomtom_hphr_dac_event(struct snd_soc_dapm_widget *w,
 						WCD9XXX_CLSAB_STATE_HPHR,
 						WCD9XXX_CLSAB_REQ_ENABLE);
 		}
+		break;
+	case SND_SOC_DAPM_POST_PMU:
+		snd_soc_update_bits(codec, TOMTOM_A_CDC_RX2_B3_CTL, 0xBC, 0x94);
+		snd_soc_update_bits(codec, TOMTOM_A_CDC_RX2_B4_CTL, 0x30, 0x10);
+		break;
+	case SND_SOC_DAPM_PRE_PMD:
+		snd_soc_update_bits(codec, TOMTOM_A_CDC_RX2_B3_CTL, 0xBC, 0x00);
+		snd_soc_update_bits(codec, TOMTOM_A_CDC_RX2_B4_CTL, 0x30, 0x00);
 		break;
 	case SND_SOC_DAPM_POST_PMD:
 		snd_soc_update_bits(codec, w->reg, 0x40, 0x00);
@@ -3737,7 +3787,10 @@ static const struct snd_soc_dapm_route audio_map[] = {
 	{"AIF1 CAP", NULL, "AIF1_CAP Mixer"},
 	{"AIF2 CAP", NULL, "AIF2_CAP Mixer"},
 	{"AIF3 CAP", NULL, "AIF3_CAP Mixer"},
-	{"AIF4 VI", NULL, "SPK_OUT"},
+
+	/* VI Feedback */
+	{"AIF4 VI", NULL, "VIONOFF"},
+	{"VIONOFF", "Switch", "VIINPUT"},
 
 	/* MAD */
 	{"MADONOFF", "Switch", "MADINPUT"},
@@ -5503,6 +5556,16 @@ static int tomtom_codec_enable_slimvi_feedback(struct snd_soc_dapm_widget *w,
 		if (ret)
 			pr_err("%s error in close_slim_sch_tx %d\n",
 				__func__, ret);
+		if (!dai->bus_down_in_recovery)
+			ret = tomtom_codec_enable_slim_chmask(dai, false);
+		if (ret < 0) {
+			ret = wcd9xxx_disconnect_port(core,
+				&dai->wcd9xxx_ch_list,
+				dai->grph);
+			pr_debug("%s: Disconnect TX port, ret = %d\n",
+				__func__, ret);
+		}
+
 		snd_soc_update_bits(codec, TOMTOM_A_CDC_CLK_TX_CLK_EN_B2_CTL,
 				0xC, 0x0);
 		/*Disable V&I sensing*/
@@ -5793,7 +5856,8 @@ static const struct snd_soc_dapm_widget tomtom_dapm_widgets[] = {
 		SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_POST_PMD),
 	SND_SOC_DAPM_MIXER_E("HPHL DAC", TOMTOM_A_RX_HPH_L_DAC_CTL, 7, 0,
 		hphl_switch, ARRAY_SIZE(hphl_switch), tomtom_hphl_dac_event,
-		SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
+		SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMU |
+		SND_SOC_DAPM_PRE_PMD | SND_SOC_DAPM_POST_PMD),
 
 	SND_SOC_DAPM_PGA_E("HPHR", TOMTOM_A_RX_HPH_CNP_EN, 4, 0, NULL, 0,
 		tomtom_hph_pa_event, SND_SOC_DAPM_PRE_PMU |
@@ -5801,7 +5865,8 @@ static const struct snd_soc_dapm_widget tomtom_dapm_widgets[] = {
 
 	SND_SOC_DAPM_DAC_E("HPHR DAC", NULL, TOMTOM_A_RX_HPH_R_DAC_CTL, 7, 0,
 		tomtom_hphr_dac_event,
-		SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
+		SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMU |
+		SND_SOC_DAPM_PRE_PMD | SND_SOC_DAPM_POST_PMD),
 
 	/* Speaker */
 	SND_SOC_DAPM_OUTPUT("LINEOUT1"),
@@ -6261,6 +6326,11 @@ static const struct snd_soc_dapm_widget tomtom_dapm_widgets[] = {
 
 	SND_SOC_DAPM_MIXER("LINEOUT4_PA_MIXER", SND_SOC_NOPM, 0, 0,
 		lineout4_pa_mix, ARRAY_SIZE(lineout4_pa_mix)),
+
+	SND_SOC_DAPM_SWITCH("VIONOFF", SND_SOC_NOPM, 0, 0,
+			    &aif4_vi_switch),
+
+	SND_SOC_DAPM_INPUT("VIINPUT"),
 };
 
 static irqreturn_t tomtom_slimbus_irq(int irq, void *data)
@@ -6933,8 +7003,11 @@ static void tomtom_init_slim_slave_cfg(struct snd_soc_codec *codec)
 static int tomtom_device_down(struct wcd9xxx *wcd9xxx)
 {
 	struct snd_soc_codec *codec;
+	struct tomtom_priv *priv;
 
 	codec = (struct snd_soc_codec *)(wcd9xxx->ssr_priv);
+	priv = snd_soc_codec_get_drvdata(codec);
+	wcd_cpe_ssr_event(priv->cpe_core, WCD_CPE_BUS_DOWN_EVENT);
 	snd_soc_card_change_online_state(codec->card, 0);
 
 	return 0;
@@ -7410,7 +7483,7 @@ static int tomtom_post_reset_cb(struct wcd9xxx *wcd9xxx)
 
 	tomtom_init_slim_slave_cfg(codec);
 	tomtom_slim_interface_init_reg(codec);
-
+	wcd_cpe_ssr_event(tomtom->cpe_core, WCD_CPE_BUS_UP_EVENT);
 	wcd9xxx_resmgr_post_ssr(&tomtom->resmgr);
 
 	if (tomtom->mbhc_started) {

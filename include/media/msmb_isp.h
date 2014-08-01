@@ -187,6 +187,7 @@ enum msm_vfe_axi_stream_update_type {
 	ENABLE_STREAM_BUF_DIVERT,
 	DISABLE_STREAM_BUF_DIVERT,
 	UPDATE_STREAM_FRAMEDROP_PATTERN,
+	UPDATE_STREAM_STATS_FRAMEDROP_PATTERN,
 	UPDATE_STREAM_AXI_CONFIG,
 	UPDATE_STREAM_REQUEST_FRAMES,
 };
@@ -202,6 +203,20 @@ struct msm_vfe_axi_stream_cfg_update_info {
 	uint32_t request_frm_num;
 	enum msm_vfe_frame_skip_pattern skip_pattern;
 	struct msm_vfe_axi_plane_cfg plane_cfg[MAX_PLANES_PER_STREAM];
+};
+
+struct msm_vfe_axi_halt_cmd {
+	uint32_t stop_camif;
+	uint32_t overflow_detected;
+};
+
+struct msm_vfe_axi_reset_cmd {
+	uint32_t blocking;
+	unsigned long frame_id;
+};
+
+struct msm_vfe_axi_restart_cmd {
+	uint32_t enable_camif;
 };
 
 struct msm_vfe_axi_stream_update_cmd {
@@ -237,6 +252,7 @@ struct msm_vfe_stats_stream_request_cmd {
 	enum msm_isp_stats_type stats_type;
 	uint32_t composite_flag;
 	uint32_t framedrop_pattern;
+	uint32_t init_frame_drop; /*MAX 31 Frames*/
 	uint32_t irq_subsample_pattern;
 	uint32_t buffer_offset;
 	uint32_t stream_handle;
@@ -388,6 +404,11 @@ struct msm_isp_stream_ack {
 	uint32_t handle;
 };
 
+struct msm_isp_error_info {
+	/* 1 << msm_isp_event_idx */
+	uint32_t error_mask;
+};
+
 struct msm_isp_event_data {
 	/*Wall clock except for buffer divert events
 	 *which use monotonic clock
@@ -400,6 +421,7 @@ struct msm_isp_event_data {
 	union {
 		struct msm_isp_stats_event stats;
 		struct msm_isp_buf_event buf_done;
+		struct msm_isp_error_info error_info;
 	} u; /* union can have max 52 bytes */
 };
 
@@ -465,5 +487,17 @@ struct msm_isp_event_data {
 
 #define VIDIOC_MSM_ISP_SMMU_ATTACH \
 	_IOWR('V', BASE_VIDIOC_PRIVATE+15, struct msm_vfe_smmu_attach_cmd)
+
+#define VIDIOC_MSM_ISP_UPDATE_STATS_STREAM \
+	_IOWR('V', BASE_VIDIOC_PRIVATE+16, struct msm_vfe_axi_stream_update_cmd)
+
+#define VIDIOC_MSM_ISP_AXI_HALT \
+	_IOWR('V', BASE_VIDIOC_PRIVATE+17, struct msm_vfe_axi_halt_cmd)
+
+#define VIDIOC_MSM_ISP_AXI_RESET \
+	_IOWR('V', BASE_VIDIOC_PRIVATE+18, struct msm_vfe_axi_reset_cmd)
+
+#define VIDIOC_MSM_ISP_AXI_RESTART \
+	_IOWR('V', BASE_VIDIOC_PRIVATE+19, struct msm_vfe_axi_restart_cmd)
 
 #endif /* __MSMB_ISP__ */

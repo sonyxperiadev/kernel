@@ -19,11 +19,13 @@
 #include <linux/dma-mapping.h>
 #include <linux/delay.h>
 #include <linux/sort.h>
+#include <linux/clk.h>
 
 #include "mdss_fb.h"
 #include "mdss_mdp.h"
 #include "mdss_debug.h"
 #include "mdss_mdp_trace.h"
+#include "mdss_debug.h"
 
 static void mdss_mdp_xlog_mixer_reg(struct mdss_mdp_ctl *ctl);
 static inline u64 fudge_factor(u64 val, u32 numer, u32 denom)
@@ -333,6 +335,19 @@ u32 mdss_mdp_perf_calc_pipe_prefill_single(struct mdss_mdp_prefill_params
 	return prefill_bytes;
 }
 
+static u32 mdss_mdp_get_bw_vote_mode(struct mdss_mdp_pipe *pipe)
+{
+	u32 bw_mode = MDSS_MDP_BW_MODE_NONE;
+
+	if (pipe->src_fmt->is_yuv) {
+		if ((pipe->img_width > 2560) || (pipe->img_height > 2560))
+			bw_mode = MDSS_MDP_BW_MODE_UHD;
+		else if ((pipe->img_width <= 2560) && (pipe->img_width > 1920))
+			bw_mode = MDSS_MDP_BW_MODE_QHD;
+	}
+	return bw_mode;
+}
+
 /**
  * mdss_mdp_perf_calc_pipe() - calculate performance numbers required by pipe
  * @pipe:	Source pipe struct containing updated pipe params
@@ -357,8 +372,9 @@ int mdss_mdp_perf_calc_pipe(struct mdss_mdp_pipe *pipe,
 	struct mdss_rect src, dst;
 	bool is_fbc = false;
 	struct mdss_mdp_prefill_params prefill_params;
+	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
 
-	if (!pipe || !perf || !pipe->mixer_left)
+	if (!pipe || !perf || !pipe->mixer_left || !mdata)
 		return -EINVAL;
 
 	mixer = pipe->mixer_left;
@@ -367,6 +383,8 @@ int mdss_mdp_perf_calc_pipe(struct mdss_mdp_pipe *pipe,
 	src = pipe->src;
 
 	if (mixer->rotator_mode) {
+		if (mdata->traffic_shaper_en)
+			fps = DEFAULT_ROTATOR_FRAME_RATE;
 		v_total = pipe->flags & MDP_ROT_90 ? pipe->dst.w : pipe->dst.h;
 	} else if (mixer->type == MDSS_MDP_MIXER_TYPE_INTF) {
 		struct mdss_panel_info *pinfo;
@@ -454,6 +472,9 @@ int mdss_mdp_perf_calc_pipe(struct mdss_mdp_pipe *pipe,
 	prefill_params.is_hflip = pipe->flags & MDP_FLIP_LR;
 	prefill_params.is_cmd = !mixer->ctl->is_video_mode;
 
+	if (mixer->ctl->is_video_mode)
+		perf->bw_vote_mode = mdss_mdp_get_bw_vote_mode(pipe);
+
 	if (is_single_layer)
 		perf->prefill_bytes =
 			mdss_mdp_perf_calc_pipe_prefill_single(&prefill_params);
@@ -464,9 +485,9 @@ int mdss_mdp_perf_calc_pipe(struct mdss_mdp_pipe *pipe,
 		perf->prefill_bytes =
 			mdss_mdp_perf_calc_pipe_prefill_cmd(&prefill_params);
 
-	pr_debug("mixer=%d pnum=%d clk_rate=%u bw_overlap=%llu prefill=%d\n",
+	pr_debug("mixer=%d pnum=%d clk_rate=%u bw_overlap=%llu prefill=%d mode=%d\n",
 		 mixer->num, pipe->num, perf->mdp_clk_rate, perf->bw_overlap,
-		 perf->prefill_bytes);
+		 perf->prefill_bytes, perf->bw_vote_mode);
 
 	return 0;
 }
@@ -497,6 +518,7 @@ static void mdss_mdp_perf_calc_mixer(struct mdss_mdp_mixer *mixer,
 	u32 prefill_bytes = 0;
 	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
 	bool apply_fudge = true;
+	u32 bw_vote_mode = MDSS_MDP_BW_MODE_NONE;
 
 	BUG_ON(num_pipes > MAX_PIPES_PER_LM);
 
@@ -558,6 +580,9 @@ static void mdss_mdp_perf_calc_mixer(struct mdss_mdp_mixer *mixer,
 
 	for (i = 0; i < num_pipes; i++) {
 		struct mdss_mdp_perf_params tmp;
+
+		memset(&tmp, 0, sizeof(tmp));
+
 		pipe = pipe_list[i];
 		if (pipe == NULL)
 			continue;
@@ -574,6 +599,7 @@ static void mdss_mdp_perf_calc_mixer(struct mdss_mdp_mixer *mixer,
 			apply_fudge, (num_pipes == 1)))
 			continue;
 
+		bw_vote_mode |= tmp.bw_vote_mode;
 		prefill_bytes += tmp.prefill_bytes;
 		bw_overlap[i] = tmp.bw_overlap;
 		v_region[2*i] = pipe->dst.y;
@@ -616,13 +642,15 @@ static void mdss_mdp_perf_calc_mixer(struct mdss_mdp_mixer *mixer,
 	perf->bw_overlap += bw_overlap_max;
 	perf->prefill_bytes += prefill_bytes;
 
+	perf->bw_vote_mode = bw_vote_mode;
+
 	if (max_clk_rate > perf->mdp_clk_rate)
 		perf->mdp_clk_rate = max_clk_rate;
 
 exit:
-	pr_debug("final mixer=%d video=%d clk_rate=%u bw=%llu prefill=%d\n",
+	pr_debug("final mixer=%d video=%d clk_rate=%u bw=%llu prefill=%d mode:%d\n",
 		mixer->num, mixer->ctl->is_video_mode, perf->mdp_clk_rate,
-		perf->bw_overlap, perf->prefill_bytes);
+		perf->bw_overlap, perf->prefill_bytes, perf->bw_vote_mode);
 }
 
 static u32 mdss_mdp_get_vbp_factor(struct mdss_mdp_ctl *ctl)
@@ -678,6 +706,7 @@ static void __mdss_mdp_perf_calc_ctl_helper(struct mdss_mdp_ctl *ctl,
 	if (ctl->mixer_left) {
 		mdss_mdp_perf_calc_mixer(ctl->mixer_left, &tmp,
 				left_plist, left_cnt);
+		perf->bw_vote_mode = tmp.bw_vote_mode;
 		perf->bw_overlap += tmp.bw_overlap;
 		perf->prefill_bytes += tmp.prefill_bytes;
 		perf->mdp_clk_rate = tmp.mdp_clk_rate;
@@ -686,6 +715,7 @@ static void __mdss_mdp_perf_calc_ctl_helper(struct mdss_mdp_ctl *ctl,
 	if (ctl->mixer_right) {
 		mdss_mdp_perf_calc_mixer(ctl->mixer_right, &tmp,
 				right_plist, right_cnt);
+		perf->bw_vote_mode |= tmp.bw_vote_mode;
 		perf->bw_overlap += tmp.bw_overlap;
 		perf->prefill_bytes += tmp.prefill_bytes;
 		if (tmp.mdp_clk_rate > perf->mdp_clk_rate)
@@ -815,8 +845,9 @@ static void mdss_mdp_perf_calc_ctl(struct mdss_mdp_ctl *ctl,
 				&mdss_res->ib_factor);
 	}
 	pr_debug("ctl=%d clk_rate=%u\n", ctl->num, perf->mdp_clk_rate);
-	pr_debug("bw_overlap=%llu bw_prefill=%llu prefill_bytes=%d\n",
-		 perf->bw_overlap, perf->bw_prefill, perf->prefill_bytes);
+	pr_debug("bw_overlap=%llu bw_prefill=%llu prefill_bytes=%d mode:%d\n",
+		 perf->bw_overlap, perf->bw_prefill, perf->prefill_bytes,
+		 perf->bw_vote_mode);
 }
 
 static void set_status(u32 *value, bool status, u32 bit_num)
@@ -902,6 +933,17 @@ u32 mdss_mdp_ctl_perf_get_transaction_status(struct mdss_mdp_ctl *ctl)
 	unsigned long flags;
 	u32 transaction_status;
 
+	if (!ctl)
+		return PERF_STATUS_BUSY;
+
+	/*
+	 * If Rotator mode and bandwidth has been released; return STATUS_DONE
+	 * so the bandwidth is re-calculated.
+	 */
+	if (ctl->mixer_left && ctl->mixer_left->rotator_mode &&
+		!ctl->perf_release_ctl_bw)
+			return PERF_STATUS_DONE;
+
 	/*
 	 * If Video Mode or not valid data to determine the status, return busy
 	 * status, so the bandwidth cannot be freed by the caller
@@ -918,31 +960,95 @@ u32 mdss_mdp_ctl_perf_get_transaction_status(struct mdss_mdp_ctl *ctl)
 	return transaction_status;
 }
 
-static inline void mdss_mdp_ctl_perf_update_bus(struct mdss_mdp_ctl *ctl)
+static inline void mdss_mdp_ctl_perf_bus_override(struct mdss_data_type *mdata,
+	u64 *bus_ib_quota, u32 bw_vote_mode)
+{
+	if (MDSS_MDP_BW_MODE_UHD & bw_vote_mode) {
+		if (mdata->perf_tune.min_uhd_bus_vote > 0)
+			*bus_ib_quota = max((*bus_ib_quota),
+				mdata->perf_tune.min_uhd_bus_vote);
+		else
+			*bus_ib_quota = max((*bus_ib_quota),
+				(u64)5000000000ULL);
+	} else if (MDSS_MDP_BW_MODE_QHD & bw_vote_mode) {
+		if (mdata->perf_tune.min_qhd_bus_vote > 0)
+			*bus_ib_quota = max((*bus_ib_quota),
+				mdata->perf_tune.min_qhd_bus_vote);
+		else
+			*bus_ib_quota = max((*bus_ib_quota),
+				(u64)2500000000ULL);
+	}
+}
+
+/**
+ * @ mdss_mdp_ctl_perf_update_traffic_shaper_bw  -
+ *				Apply BW fudge factor to rotator
+ *				if mdp clock increased during
+ *				rotation session.
+ * @ctl - pointer to the controller
+ * @mdp_clk - new mdp clock
+ *
+ * If mdp clock increased and traffic shaper is enabled, we need to
+ * account for the additional bandwidth that will be requested by
+ * the rotator when running at a higher clock, so we apply a fudge
+ * factor proportional to the mdp clock increment.
+ */
+static void mdss_mdp_ctl_perf_update_traffic_shaper_bw(struct mdss_mdp_ctl *ctl,
+		u32 mdp_clk)
+{
+	if ((mdp_clk > 0) && (mdp_clk > ctl->traffic_shaper_mdp_clk)) {
+		ctl->cur_perf.bw_ctl = fudge_factor(ctl->cur_perf.bw_ctl,
+			mdp_clk, ctl->traffic_shaper_mdp_clk);
+		pr_debug("traffic shaper bw:%llu, clk: %d,  mdp_clk:%d\n",
+			ctl->cur_perf.bw_ctl, ctl->traffic_shaper_mdp_clk,
+				mdp_clk);
+	}
+}
+
+static inline void mdss_mdp_ctl_perf_update_bus(struct mdss_data_type *mdata,
+		u32 mdp_clk)
 {
 	u64 bw_sum_of_intfs = 0;
 	u64 bus_ab_quota, bus_ib_quota;
-	struct mdss_data_type *mdata;
 	int i;
+	u32 bw_vote_mode = MDSS_MDP_BW_MODE_NONE;
 
-	if (!ctl || !ctl->mdata)
-		return;
-
-	mdata = ctl->mdata;
+	ATRACE_BEGIN(__func__);
 	for (i = 0; i < mdata->nctl; i++) {
 		struct mdss_mdp_ctl *ctl;
 		ctl = mdata->ctl_off + i;
 		if (ctl->power_on) {
+			if (ctl->cur_perf.bw_vote_mode)
+				bw_vote_mode |= ctl->cur_perf.bw_vote_mode;
+
+			/*
+			 * If traffic shaper is enabled we must check
+			 * if additional bandwidth is required.
+			 */
+			if (ctl->traffic_shaper_enabled)
+				mdss_mdp_ctl_perf_update_traffic_shaper_bw
+					(ctl, mdp_clk);
+
 			bw_sum_of_intfs += ctl->cur_perf.bw_ctl;
-			pr_debug("c=%d bw=%llu\n", ctl->num,
-				ctl->cur_perf.bw_ctl);
+			pr_debug("c=%d bw=%llu mode=%d\n", ctl->num,
+				ctl->cur_perf.bw_ctl,
+				ctl->cur_perf.bw_vote_mode);
 		}
 	}
 	bus_ib_quota = max(bw_sum_of_intfs, mdata->perf_tune.min_bus_vote);
 	bus_ab_quota = apply_fudge_factor(bus_ib_quota,
 		&mdss_res->ab_factor);
-	mdss_mdp_bus_scale_set_quota(bus_ab_quota, bus_ib_quota);
-	pr_debug("ab=%llu ib=%llu\n", bus_ab_quota, bus_ib_quota);
+
+	if ((bw_vote_mode != MDSS_MDP_BW_MODE_NONE) &&
+		IS_MDSS_MAJOR_MINOR_SAME(mdata->mdp_rev, MDSS_MDP_HW_REV_103))
+		mdss_mdp_ctl_perf_bus_override(mdata, &bus_ib_quota,
+			bw_vote_mode);
+
+	ATRACE_INT("bus_quota", bus_ib_quota);
+	mdss_bus_scale_set_quota(MDSS_HW_MDP, bus_ab_quota, bus_ib_quota);
+	pr_debug("ab=%llu ib=%llu mode=%d\n", bus_ab_quota, bus_ib_quota,
+		bw_vote_mode);
+	ATRACE_END(__func__);
 }
 
 /**
@@ -971,9 +1077,9 @@ void mdss_mdp_ctl_perf_release_bw(struct mdss_mdp_ctl *ctl)
 	 * released.
 	 */
 	for (i = 0; i < mdata->nctl; i++) {
-		struct mdss_mdp_ctl *ctl = mdata->ctl_off + i;
+		struct mdss_mdp_ctl *ctl_local = mdata->ctl_off + i;
 
-		if (ctl->power_on && ctl->is_video_mode)
+		if (ctl_local->power_on && ctl_local->is_video_mode)
 			goto exit;
 	}
 
@@ -981,14 +1087,63 @@ void mdss_mdp_ctl_perf_release_bw(struct mdss_mdp_ctl *ctl)
 	pr_debug("transaction_status=0x%x\n", transaction_status);
 
 	/*Release the bandwidth only if there are no transactions pending*/
-	if (!transaction_status) {
-		ctl->cur_perf.bw_ctl = 0;
-		ctl->new_perf.bw_ctl = 0;
-		pr_debug("Release BW ctl=%d\n", ctl->num);
-		mdss_mdp_ctl_perf_update_bus(ctl);
+	if (!transaction_status && mdata->enable_bw_release) {
+		/*
+		 * for splitdisplay if release_bw is called using secondary
+		 * then find the main ctl and release BW for main ctl because
+		 * BW is always calculated/stored using main ctl.
+		 */
+		struct mdss_mdp_ctl *ctl_local =
+			mdss_mdp_get_main_ctl(ctl) ? : ctl;
+
+		ctl_local->cur_perf.bw_ctl = 0;
+		ctl_local->new_perf.bw_ctl = 0;
+		pr_debug("Release BW ctl=%d\n", ctl_local->num);
+		mdss_mdp_ctl_perf_update_bus(mdata, 0);
 	}
 exit:
 	mutex_unlock(&mdss_mdp_ctl_lock);
+}
+
+static void mdss_mdp_perf_release_ctl_bw(struct mdss_mdp_ctl *ctl,
+	struct mdss_mdp_perf_params *perf)
+{
+	/* Set to zero controller bandwidth. */
+	memset(perf, 0, sizeof(*perf));
+	ctl->perf_release_ctl_bw = false;
+}
+
+u32 mdss_mdp_get_mdp_clk_rate(struct mdss_data_type *mdata)
+{
+	u32 clk_rate = 0;
+	uint i;
+	struct clk *clk = mdss_mdp_get_clk(MDSS_CLK_MDP_SRC);
+
+	for (i = 0; i < mdata->nctl; i++) {
+		struct mdss_mdp_ctl *ctl;
+		ctl = mdata->ctl_off + i;
+		if (ctl->power_on) {
+			clk_rate = max(ctl->cur_perf.mdp_clk_rate,
+							clk_rate);
+			clk_rate = clk_round_rate(clk, clk_rate);
+		}
+	}
+
+	pr_debug("clk:%u nctl:%d\n", clk_rate, mdata->nctl);
+	return clk_rate;
+}
+
+static bool is_traffic_shaper_enabled(struct mdss_data_type *mdata)
+{
+	uint i;
+	for (i = 0; i < mdata->nctl; i++) {
+		struct mdss_mdp_ctl *ctl;
+		ctl = mdata->ctl_off + i;
+		if (ctl->power_on)
+			if (ctl->traffic_shaper_enabled)
+				return true;
+	}
+	return false;
 }
 
 static void mdss_mdp_ctl_perf_update(struct mdss_mdp_ctl *ctl,
@@ -998,10 +1153,11 @@ static void mdss_mdp_ctl_perf_update(struct mdss_mdp_ctl *ctl,
 	int update_bus = 0, update_clk = 0;
 	struct mdss_data_type *mdata;
 	bool is_bw_released;
+	u32 clk_rate = 0;
 
 	if (!ctl || !ctl->mdata)
 		return;
-
+	ATRACE_BEGIN(__func__);
 	mutex_lock(&mdss_mdp_ctl_lock);
 
 	mdata = ctl->mdata;
@@ -1010,30 +1166,41 @@ static void mdss_mdp_ctl_perf_update(struct mdss_mdp_ctl *ctl,
 
 	/*
 	 * We could have released the bandwidth if there were no transactions
-	 * pending, so we want to re-calculate the bandwidth in this situation
+	 * pending, so we want to re-calculate the bandwidth in this situation.
 	 */
 	is_bw_released = !mdss_mdp_ctl_perf_get_transaction_status(ctl);
 
 	if (ctl->power_on) {
-		if (is_bw_released || params_changed)
+		if (ctl->perf_release_ctl_bw &&
+			mdata->enable_rotator_bw_release)
+			mdss_mdp_perf_release_ctl_bw(ctl, new);
+		else if (is_bw_released || params_changed)
 			mdss_mdp_perf_calc_ctl(ctl, new);
 		/*
-		 * if params have just changed delay the update until
+		 * If params have just changed delay the update until
 		 * later once the hw configuration has been flushed to
-		 * MDP
+		 * MDP.
 		 */
 		if ((params_changed && (new->bw_ctl > old->bw_ctl)) ||
-		    (!params_changed && (new->bw_ctl < old->bw_ctl))) {
-			pr_debug("c=%d p=%d new_bw=%llu,old_bw=%llu\n",
+		    (!params_changed && (new->bw_ctl < old->bw_ctl)) ||
+		    (new->bw_vote_mode != MDSS_MDP_BW_MODE_NONE)) {
+			pr_debug("c=%d p=%d new_bw=%llu,old_bw=%llu mode=%d\n",
 				ctl->num, params_changed, new->bw_ctl,
-				old->bw_ctl);
+				old->bw_ctl, new->bw_vote_mode);
 			old->bw_ctl = new->bw_ctl;
+			old->bw_vote_mode = new->bw_vote_mode;
 			update_bus = 1;
 		}
 
+		/*
+		 * If traffic shaper is enabled, we do not decrease the clock,
+		 * otherwise we would increase traffic shaper latency. Clock
+		 * would be decreased after traffic shaper is done.
+		 */
 		if ((params_changed && (new->mdp_clk_rate > old->mdp_clk_rate))
-		    || (!params_changed && (new->mdp_clk_rate <
-					    old->mdp_clk_rate))) {
+			 || (!params_changed &&
+			 (new->mdp_clk_rate < old->mdp_clk_rate) &&
+			(false == is_traffic_shaper_enabled(mdata)))) {
 			old->mdp_clk_rate = new->mdp_clk_rate;
 			update_clk = 1;
 		}
@@ -1044,25 +1211,29 @@ static void mdss_mdp_ctl_perf_update(struct mdss_mdp_ctl *ctl,
 		update_clk = 1;
 	}
 
+	/*
+	 * Calculate mdp clock before bandwidth calculation. If traffic shaper
+	 * is enabled and clock increased, the bandwidth calculation can
+	 * use the new clock for the rotator bw calculation.
+	 */
+	if (update_clk)
+		clk_rate = mdss_mdp_get_mdp_clk_rate(mdata);
+
 	if (update_bus)
-		mdss_mdp_ctl_perf_update_bus(ctl);
+		mdss_mdp_ctl_perf_update_bus(mdata, clk_rate);
 
+	/*
+	 * Update the clock after bandwidth vote to ensure
+	 * bandwidth is available before clock rate is increased.
+	 */
 	if (update_clk) {
-		u32 clk_rate = 0;
-		int i;
-
-		for (i = 0; i < mdata->nctl; i++) {
-			struct mdss_mdp_ctl *ctl;
-			ctl = mdata->ctl_off + i;
-			if (ctl->power_on)
-				clk_rate = max(ctl->cur_perf.mdp_clk_rate,
-					       clk_rate);
-		}
+		ATRACE_INT("mdp_clk", clk_rate);
 		mdss_mdp_set_clk_rate(clk_rate);
 		pr_debug("update clk rate = %d HZ\n", clk_rate);
 	}
 
 	mutex_unlock(&mdss_mdp_ctl_lock);
+	ATRACE_END(__func__);
 }
 
 static struct mdss_mdp_ctl *mdss_mdp_ctl_alloc(struct mdss_data_type *mdata,
@@ -1572,6 +1743,7 @@ struct mdss_mdp_ctl *mdss_mdp_ctl_init(struct mdss_panel_data *pdata,
 	ctl->mfd = mfd;
 	ctl->panel_data = pdata;
 	ctl->is_video_mode = false;
+	ctl->perf_release_ctl_bw = false;
 
 	switch (pdata->panel_info.type) {
 	case EDP_PANEL:
@@ -1794,13 +1966,12 @@ static void mdss_mdp_ctl_restore_sub(struct mdss_mdp_ctl *ctl)
 {
 	u32 temp;
 
-	mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_ON, false);
 	temp = readl_relaxed(ctl->mdata->mdp_base +
 		MDSS_MDP_REG_DISP_INTF_SEL);
 	temp |= (ctl->intf_type << ((ctl->intf_num - MDSS_MDP_INTF0) * 8));
 	writel_relaxed(temp, ctl->mdata->mdp_base +
 		MDSS_MDP_REG_DISP_INTF_SEL);
-	mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_OFF, false);
+	mdss_mdp_pp_resume(ctl, ctl->mixer_left->num);
 }
 
 /*
@@ -1816,11 +1987,13 @@ void mdss_mdp_ctl_restore(struct mdss_mdp_ctl *ctl)
 	struct mdss_mdp_ctl *sctl;
 
 	sctl = mdss_mdp_get_split_ctl(ctl);
+	mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_ON, false);
 	mdss_mdp_ctl_restore_sub(ctl);
 	if (sctl) {
 		mdss_mdp_ctl_restore_sub(sctl);
 		mdss_mdp_ctl_split_display_enable(1, ctl, sctl);
 	}
+	mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_OFF, false);
 }
 
 static int mdss_mdp_ctl_start_sub(struct mdss_mdp_ctl *ctl, bool handoff)
@@ -1963,14 +2136,20 @@ int mdss_mdp_ctl_stop(struct mdss_mdp_ctl *ctl)
 
 	mdss_mdp_hist_intr_setup(&mdata->hist_intr, MDSS_IRQ_SUSPEND);
 
-	if (ctl->stop_fnc)
+	if (ctl->stop_fnc) {
 		ret = ctl->stop_fnc(ctl);
-	else
+		if (ctl->panel_data->panel_info.fbc.enabled)
+			mdss_mdp_ctl_fbc_enable(0, ctl->mixer_left,
+				&ctl->panel_data->panel_info);
+	} else {
 		pr_warn("no stop func for ctl=%d\n", ctl->num);
+	}
 
 	if (sctl && sctl->stop_fnc) {
 		ret = sctl->stop_fnc(sctl);
-
+		if (ctl->panel_data->panel_info.fbc.enabled)
+			mdss_mdp_ctl_fbc_enable(0, sctl->mixer_left,
+				&sctl->panel_data->panel_info);
 		mdss_mdp_ctl_split_display_enable(0, ctl, sctl);
 	}
 
@@ -2089,19 +2268,17 @@ void mdss_mdp_set_roi(struct mdss_mdp_ctl *ctl,
 	r_roi.w = data->r_roi.w;
 	r_roi.h = data->r_roi.h;
 
-
 	/* Reset ROI when we have (1) invalid ROI (2) feature disabled */
 	if ((!l_roi.w && l_roi.h) || (l_roi.w && !l_roi.h) ||
 		(!r_roi.w && r_roi.h) || (r_roi.w && !r_roi.h) ||
 		(!l_roi.w && !l_roi.h && !r_roi.w && !r_roi.h) ||
 		!ctl->panel_data->panel_info.partial_update_enabled) {
 		l_roi = (struct mdss_rect)
-		{0, 0, ctl->mixer_left->width,
-			ctl->mixer_left->height};
+		{0, 0, ctl->mixer_left->width, ctl->mixer_left->height};
 
 		if (ctl->mixer_right) {
 			r_roi = (struct mdss_rect)
-			{0, 0, ctl->mixer_right->width,
+				{0, 0, ctl->mixer_right->width,
 				ctl->mixer_right->height};
 		}
 	}
@@ -2671,8 +2848,10 @@ int mdss_mdp_display_wait4comp(struct mdss_mdp_ctl *ctl)
 		return 0;
 	}
 
+	ATRACE_BEGIN("wait_fnc");
 	if (ctl->wait_fnc)
 		ret = ctl->wait_fnc(ctl, NULL);
+	ATRACE_END("wait_fnc");
 
 	trace_mdp_commit(ctl);
 
@@ -2718,7 +2897,8 @@ int mdss_mdp_display_wait4pingpong(struct mdss_mdp_ctl *ctl)
 	return ret;
 }
 
-int mdss_mdp_display_commit(struct mdss_mdp_ctl *ctl, void *arg)
+int mdss_mdp_display_commit(struct mdss_mdp_ctl *ctl, void *arg,
+	struct mdss_mdp_commit_cb *commit_cb)
 {
 	struct mdss_mdp_ctl *sctl = NULL;
 	int ret = 0;
@@ -2764,13 +2944,16 @@ int mdss_mdp_display_commit(struct mdss_mdp_ctl *ctl, void *arg)
 	if (is_bw_released || ctl->force_screen_state ||
 		(ctl->mixer_left && ctl->mixer_left->params_changed) ||
 		(ctl->mixer_right && ctl->mixer_right->params_changed)) {
+		ATRACE_BEGIN("prepare_fnc");
 		if (ctl->prepare_fnc)
 			ret = ctl->prepare_fnc(ctl, arg);
+		ATRACE_END("prepare_fnc");
 		if (ret) {
 			pr_err("error preparing display\n");
 			goto done;
 		}
 
+		ATRACE_BEGIN("mixer_programming");
 		mdss_mdp_ctl_perf_update(ctl, 1);
 
 		mdss_mdp_mixer_setup(ctl, MDSS_MDP_MIXER_MUX_LEFT);
@@ -2784,21 +2967,18 @@ int mdss_mdp_display_commit(struct mdss_mdp_ctl *ctl, void *arg)
 					sctl->opmode);
 			sctl->flush_bits |= BIT(17);
 		}
+		ATRACE_END("mixer_programming");
 	}
 
+	ATRACE_BEGIN("frame_ready");
 	mdss_mdp_ctl_notify(ctl, MDP_NOTIFY_FRAME_READY);
-
-	if (ctl->wait_pingpong)
-		ctl->wait_pingpong(ctl, NULL);
+	ATRACE_END("frame_ready");
 
 	ctl->roi_bkup.w = ctl->roi.w;
 	ctl->roi_bkup.h = ctl->roi.h;
 
-	if (sctl && sctl->wait_pingpong)
-		sctl->wait_pingpong(sctl, NULL);
-
-	/* 
-	 *With partial frame update, enable split display bit only
+	/*
+	 * With partial frame update, enable split display bit only
 	 * when validity of ROI's on both the DSI's are identical
 	 */
 	if (sctl) {
@@ -2806,6 +2986,7 @@ int mdss_mdp_display_commit(struct mdss_mdp_ctl *ctl, void *arg)
 		mdss_mdp_ctl_split_display_enable(split_enable, ctl, sctl);
 	}
 
+	ATRACE_BEGIN("postproc_programming");
 	if (ctl->mfd && ctl->mfd->dcm_state != DTM_ENTER)
 		/* postprocessing setup, including dspp */
 		mdss_mdp_pp_setup_locked(ctl);
@@ -2814,7 +2995,9 @@ int mdss_mdp_display_commit(struct mdss_mdp_ctl *ctl, void *arg)
 		ctl->flush_bits |= sctl->flush_bits;
 		sctl->flush_bits = 0;
 	}
+	ATRACE_END("postproc_programming");
 
+	ATRACE_BEGIN("flush_kickoff");
 	mdss_mdp_ctl_write(ctl, MDSS_MDP_REG_CTL_FLUSH, ctl->flush_bits);
 	if (sctl && sctl->flush_bits) {
 		mdss_mdp_ctl_write(sctl, MDSS_MDP_REG_CTL_FLUSH,
@@ -2826,6 +3009,35 @@ int mdss_mdp_display_commit(struct mdss_mdp_ctl *ctl, void *arg)
 	ctl->flush_bits = 0;
 
 	mdss_mdp_xlog_mixer_reg(ctl);
+
+	if (ctl->panel_data &&
+			ctl->panel_data->panel_info.partial_update_enabled) {
+		/*
+		 * update roi of panel_info which will be
+		 * used by dsi to set col_page addr of panel
+		 */
+		ctl->panel_data->panel_info.roi = ctl->roi;
+		if (sctl && sctl->panel_data)
+			sctl->panel_data->panel_info.roi = sctl->roi;
+	}
+
+	if (ctl->wait_pingpong) {
+		if (commit_cb)
+			commit_cb->commit_cb_fnc(
+				MDP_COMMIT_STAGE_WAIT_FOR_PINGPONG,
+				commit_cb->data);
+
+		ATRACE_BEGIN("wait_pingpong");
+		ctl->wait_pingpong(ctl, NULL);
+
+		if (sctl && sctl->wait_pingpong)
+			sctl->wait_pingpong(sctl, NULL);
+		ATRACE_END("wait_pingpong");
+
+		if (commit_cb)
+			commit_cb->commit_cb_fnc(MDP_COMMIT_STAGE_PINGPONG_DONE,
+				commit_cb->data);
+	}
 
 	if (sctl && !ctl->valid_roi && sctl->valid_roi) {
 		/*
@@ -2848,6 +3060,7 @@ int mdss_mdp_display_commit(struct mdss_mdp_ctl *ctl, void *arg)
 		pr_warn("error displaying frame\n");
 
 	ctl->play_cnt++;
+	ATRACE_END("flush_kickoff");
 
 done:
 	mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_OFF, false);

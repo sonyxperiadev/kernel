@@ -28,6 +28,7 @@
 		qcom,model = "apq8084-taiko-liquid-snd-card";
 
 		qcom,audio-routing =
+			"AIF4 VI", "MCLK",
 			"RX_BIAS", "MCLK",
 			"LDO_H", "MCLK",
 			"Lineout_1 amp", "LINEOUT1",
@@ -190,6 +191,12 @@
 	qcom,dsi-pref-prim-pan = <&dsi_dual_jdi_video_1>;
 };
 
+&uart6 {
+	qcom,inject-rx-on-wakeup;
+	qcom,rx-char-to-inject = <0xfd>;
+	status = "ok";
+};
+
 &blsp2_uart1 {
 	status = "ok";
 };
@@ -342,10 +349,6 @@
 };
 
 &hsphy1 {
-	status = "ok";
-};
-
-&ssphy1 {
 	status = "ok";
 };
 

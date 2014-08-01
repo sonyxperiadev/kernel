@@ -59,6 +59,9 @@ struct mdss_mdp_writeback_ctx {
 
 	spinlock_t wb_lock;
 	struct list_head vsync_handlers;
+
+	ktime_t start_time;
+	ktime_t end_time;
 };
 
 static struct mdss_mdp_writeback_ctx wb_ctx_list[MDSS_MDP_MAX_WRITEBACK] = {
@@ -432,10 +435,100 @@ static void mdss_mdp_writeback_intr_done(void *arg)
 	complete_all(&ctx->wb_comp);
 }
 
+static bool mdss_mdp_traffic_shaper_helper(struct mdss_mdp_ctl *ctl,
+					 struct mdss_mdp_writeback_ctx *ctx,
+					 bool enable)
+{
+	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
+	bool traffic_shaper_enabled = false;
+	struct mdss_mdp_mixer *mixer = ctl->mixer_left;
+	int i;
+	u32 clk_rate;
+	u64 bw_rate;
+
+	if (!mixer)
+		return traffic_shaper_enabled;
+
+	/* currently only for rotator pipes */
+	if (!mixer->rotator_mode)
+		return traffic_shaper_enabled;
+
+	for (i = 0; i < MDSS_MDP_MAX_STAGE; i++) {
+		struct mdss_mdp_pipe *pipe;
+		struct mdss_mdp_perf_params perf;
+		u32 traffic_shaper;
+		pipe = mixer->stage_pipe[i];
+
+		if (pipe == NULL)
+			continue;
+
+		if (enable) {
+			if (mdss_mdp_perf_calc_pipe(pipe, &perf, &mixer->roi,
+				false, true))
+				continue;
+
+			clk_rate = max(mdss_mdp_get_mdp_clk_rate(ctl->mdata),
+					perf.mdp_clk_rate);
+			ctl->traffic_shaper_mdp_clk = clk_rate;
+			bw_rate = perf.bw_overlap;
+
+			/*
+			 * Bandwidth vote accounts for both read and write
+			 * rotator, divide by 2 to get only the write bandwidth.
+			 */
+			do_div(bw_rate, 2);
+
+			/*
+			 * Calculating bytes per clock in 4.4 form
+			 * allowing up to 1/16 granularity.
+			 */
+			do_div(bw_rate,
+				(clk_rate >>
+				 MDSS_MDP_REG_TRAFFIC_SHAPER_FIXPOINT_FACTOR));
+
+			traffic_shaper = lower_32_bits(bw_rate) + 1;
+			traffic_shaper |= MDSS_MDP_REG_TRAFFIC_SHAPER_EN;
+			traffic_shaper_enabled = true;
+
+			pr_debug("pnum=%d inum:%d bw=%lld clk_rate=%u shaper=0x%x ena:%d\n",
+				pipe->num, ctx->intf_num, perf.bw_overlap,
+				clk_rate, traffic_shaper, enable);
+
+		} else {
+			traffic_shaper = 0;
+
+			pr_debug("inum:%d shaper=0x%x, ena:%d\n",
+				ctx->intf_num, traffic_shaper, enable);
+		}
+
+		writel_relaxed(traffic_shaper, mdata->mdp_base +
+			MDSS_MDP_REG_TRAFFIC_SHAPER_WR_CLIENT(ctx->intf_num));
+	}
+
+	return traffic_shaper_enabled;
+}
+
+static void mdss_mdp_traffic_shaper(struct mdss_mdp_ctl *ctl,
+		struct mdss_mdp_writeback_ctx *ctx, bool enable)
+{
+	bool traffic_shaper_enabled = 0;
+
+	if (ctl->power_on) {
+		traffic_shaper_enabled = mdss_mdp_traffic_shaper_helper
+			(ctl, ctx, enable);
+	}
+
+	ctl->traffic_shaper_enabled = traffic_shaper_enabled;
+
+	pr_debug("traffic shapper ctl:%d ena:%d\n", ctl->num,
+		ctl->traffic_shaper_enabled);
+}
+
 static int mdss_mdp_wb_wait4comp(struct mdss_mdp_ctl *ctl, void *arg)
 {
 	struct mdss_mdp_writeback_ctx *ctx;
 	int rc = 0;
+	u64 rot_time;
 
 	ctx = (struct mdss_mdp_writeback_ctx *) ctl->priv_data;
 	if (!ctx) {
@@ -457,13 +550,31 @@ static int mdss_mdp_wb_wait4comp(struct mdss_mdp_ctl *ctl, void *arg)
 		WARN(1, "writeback kickoff timed out (%d) ctl=%d\n",
 						rc, ctl->num);
 	} else {
+		ctx->end_time = ktime_get();
 		mdss_mdp_ctl_notify(ctl, MDP_NOTIFY_FRAME_DONE);
 		rc = 0;
 	}
 
+	/* once operation is done, disable traffic shaper */
+	if (ctl->traffic_shaper_enabled)
+		mdss_mdp_traffic_shaper(ctl, ctx, false);
+
+	mdss_iommu_ctrl(0);
 	mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_OFF, false); /* clock off */
 
+	/* Set flag to release Controller Bandwidth */
+	ctl->perf_release_ctl_bw = true;
+	mdss_bus_bandwidth_ctrl(false);
+
 	ctx->comp_cnt--;
+
+	if (!rc) {
+		rot_time = (u64)ktime_to_us(ctx->end_time) -
+				(u64)ktime_to_us(ctx->start_time);
+		pr_debug("ctx%d type:%d xin_id:%d intf_num:%d took %llu microsecs\n",
+			ctx->wb_num, ctx->type, ctx->xin_id,
+				ctx->intf_num, rot_time);
+	}
 
 	return rc;
 }
@@ -509,6 +620,10 @@ static int mdss_mdp_writeback_display(struct mdss_mdp_ctl *ctl, void *arg)
 	if (!wb_args)
 		return -ENOENT;
 
+	if (ctx->type == MDSS_MDP_WRITEBACK_TYPE_ROTATOR
+			&& ctl->mdata->traffic_shaper_en)
+		mdss_mdp_traffic_shaper(ctl, ctx, true);
+
 	ret = mdss_mdp_writeback_addr_setup(ctx, wb_args->data);
 	if (ret) {
 		pr_err("writeback data setup error ctl=%d\n", ctl->num);
@@ -525,9 +640,19 @@ static int mdss_mdp_writeback_display(struct mdss_mdp_ctl *ctl, void *arg)
 	INIT_COMPLETION(ctx->wb_comp);
 	mdss_mdp_irq_enable(ctx->intr_type, ctx->intf_num);
 
+	ret = mdss_iommu_ctrl(1);
+	if (IS_ERR_VALUE(ret)) {
+		pr_err("IOMMU attach failed\n");
+		return ret;
+	}
 	mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_ON, false);
+	ctx->start_time = ktime_get();
+	mdss_bus_bandwidth_ctrl(true);
 	mdss_mdp_ctl_write(ctl, MDSS_MDP_REG_CTL_START, 1);
 	wmb();
+
+	pr_debug("ctx%d type:%d xin_id:%d intf_num:%d start\n",
+		ctx->wb_num, ctx->type, ctx->xin_id, ctx->intf_num);
 
 	ctx->comp_cnt++;
 
@@ -590,5 +715,5 @@ int mdss_mdp_writeback_display_commit(struct mdss_mdp_ctl *ctl, void *arg)
 			ctl->mixer_right->params_changed++;
 	}
 
-	return mdss_mdp_display_commit(ctl, arg);
+	return mdss_mdp_display_commit(ctl, arg, NULL);
 }
