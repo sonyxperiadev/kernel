@@ -43,7 +43,7 @@
 #define REG_FILTER_STRENGTH	0x50
 #define REG_MAX			REG_FILTER_STRENGTH
 
-#define HYSTERESIS_MASK_REG_I_A	0x08
+#define HYSTERESIS_MASK_REG_I_A	0x80
 #define INT_DEBOUNCE_MSEC	10
 struct lm3630a_chip {
 	struct device *dev;
@@ -193,9 +193,6 @@ static int lm3630a_bank_a_update_status(struct backlight_device *bl)
 	int ret;
 	struct lm3630a_chip *pchip = bl_get_data(bl);
 
-	gpio_set_value(pchip->pdata->enable_gpio, 1);
-	usleep_range(1000, 2000);
-
 	/* disable sleep */
 	ret = lm3630a_update(pchip, REG_CTRL, 0x80, 0x00);
 	if (ret < 0)
@@ -206,7 +203,8 @@ static int lm3630a_bank_a_update_status(struct backlight_device *bl)
 	ret = lm3630a_write(pchip, REG_BRT_A, bl->props.brightness);
 	if (bl->props.brightness < 0x4) {
 		ret |= lm3630a_update(pchip, REG_CTRL, LM3630A_LEDA_ENABLE, 0);
-		gpio_set_value(pchip->pdata->enable_gpio, 0);
+		/* enable sleep */
+		ret |= lm3630a_update(pchip, REG_CTRL, 0x80, 0x80);
 	} else {
 		if (bl->props.brightness >= LM3630A_MAX_BRIGHTNESS)
 			ret |= lm3630a_update(pchip, REG_I_A,
@@ -275,9 +273,6 @@ static int lm3630a_bank_b_update_status(struct backlight_device *bl)
 	int ret;
 	struct lm3630a_chip *pchip = bl_get_data(bl);
 
-	gpio_set_value(pchip->pdata->enable_gpio, 1);
-	usleep_range(1000, 2000);
-
 	/* disable sleep */
 	ret = lm3630a_update(pchip, REG_CTRL, 0x80, 0x00);
 	if (ret < 0)
@@ -288,7 +283,8 @@ static int lm3630a_bank_b_update_status(struct backlight_device *bl)
 	ret = lm3630a_write(pchip, REG_BRT_B, bl->props.brightness);
 	if (bl->props.brightness < 0x4) {
 		ret |= lm3630a_update(pchip, REG_CTRL, LM3630A_LEDB_ENABLE, 0);
-		gpio_set_value(pchip->pdata->enable_gpio, 1);
+		/* enable sleep */
+		ret |= lm3630a_update(pchip, REG_CTRL, 0x80, 0x80);
 	} else {
 		if (bl->props.brightness >= LM3630A_MAX_BRIGHTNESS)
 			ret |= lm3630a_update(pchip, REG_I_A,
