@@ -842,6 +842,8 @@ static irqreturn_t em718x_irq_handler(int irq, void *handle)
 		smbus_read_byte(em718x->client, R8_ERR_REGISTER, &err);
 		dev_info(dev, "sensor status 0x%02x, err 0x%02x\n",
 				status.s[1], err);
+		(void)smbus_write_byte(em718x->client, R8_RESET, 0x01);
+		goto exit;
 	}
 
 	input_event(em718x->idev, EV_MSC, EV_STATUS, status.s[3]);
