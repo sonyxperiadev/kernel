@@ -947,7 +947,6 @@ static int synaptics_rmi4_f11_abs_report(struct synaptics_rmi4_data *rmi4_data,
 			input_report_key(rmi4_data->input_dev, key, 0);
 			input_sync(rmi4_data->input_dev);
 		}
-		synaptics_rmi4_f11_wg(rmi4_data, false);
 		return 0;
 	}
 
