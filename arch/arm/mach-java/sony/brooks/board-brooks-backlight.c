@@ -15,12 +15,12 @@ static struct lm3630a_platform_data lm3630a_bmu_platform_data = {
 	.leda_max_brt = 255,
 	.leda_ctrl = LM3630A_LEDA_ENABLE_LINEAR,
 	.ledb_ctrl = LM3630A_LEDB_DISABLE,
-	.pwm_ctrl = LM3630A_PWM_BANK_A_ACT_LOW,
+	.pwm_ctrl = LM3630A_PWM_BANK_A,
 	.pwm_filter_strength = 0x03,
 	.a_max_curr = 0x14,
 	.b_max_curr = B_MAX_CURR_DEFAULT,
-	.ramp_on_off = 0x12,
-	.ramp_run = 0x09,
+	.ramp_on_off = 0x0,
+	.ramp_run = 0x0,
 	.enable_gpio = BMU_HW_EN,
 };
 
