@@ -277,6 +277,11 @@ struct em718x {
 	bool suspend_prepared;
 };
 
+enum sns_event_types {
+	EV_ADEV = EV_MSC,
+	EV_IDEV = EV_ABS,
+};
+
 enum sns_event_codes {
 	EV_SNS_FIRST = ABS_X,
 	EV_MAG_X = EV_SNS_FIRST,
@@ -298,7 +303,7 @@ enum sns_event_codes {
 };
 
 enum wake_event_codes {
-	EV_WAKE_FIRST = ABS_X,
+	EV_WAKE_FIRST = MSC_SERIAL,
 	EV_TILT_X = EV_WAKE_FIRST,
 	EV_TILT_Y,
 	EV_TILT_Z,
@@ -716,25 +721,25 @@ static void em718x_process_amgf(struct em718x *em718x,
 	if ((ev_status & EV_ACC) && enabled(em718x, SNS_ACC)) {
 		dev_vdbg(dev, "acc[%u] %d, %d, %d\n", amgf->acc.t, -amgf->acc.x,
 				-amgf->acc.y, -amgf->acc.z);
-		input_event(idev, EV_ABS, EV_ACC_X, -amgf->acc.x);
-		input_event(idev, EV_ABS, EV_ACC_Y, -amgf->acc.y);
-		input_event(idev, EV_ABS, EV_ACC_Z, -amgf->acc.z);
+		input_event(idev, EV_IDEV, EV_ACC_X, -amgf->acc.x);
+		input_event(idev, EV_IDEV, EV_ACC_Y, -amgf->acc.y);
+		input_event(idev, EV_IDEV, EV_ACC_Z, -amgf->acc.z);
 		input_sync(idev);
 	}
 	if ((ev_status & EV_MAG) && enabled(em718x, SNS_MAG)) {
 		dev_vdbg(dev, "mag[%u] %d, %d, %d\n", amgf->mag.t, amgf->mag.x,
 				amgf->mag.y, amgf->mag.z);
-		input_event(idev, EV_ABS, EV_MAG_X, amgf->mag.x);
-		input_event(idev, EV_ABS, EV_MAG_Y, amgf->mag.y);
-		input_event(idev, EV_ABS, EV_MAG_Z, amgf->mag.z);
+		input_event(idev, EV_IDEV, EV_MAG_X, amgf->mag.x);
+		input_event(idev, EV_IDEV, EV_MAG_Y, amgf->mag.y);
+		input_event(idev, EV_IDEV, EV_MAG_Z, amgf->mag.z);
 		input_sync(idev);
 	}
 	if ((ev_status & EV_GYRO) && enabled(em718x, SNS_GYRO)) {
 		dev_vdbg(dev, "gyro[%u] %d, %d, %d\n", amgf->gyro.t,
 				amgf->gyro.x, amgf->gyro.y, amgf->gyro.z);
-		input_event(idev, EV_ABS, EV_GYRO_X, amgf->gyro.x);
-		input_event(idev, EV_ABS, EV_GYRO_Y, amgf->gyro.y);
-		input_event(idev, EV_ABS, EV_GYRO_Z, amgf->gyro.z);
+		input_event(idev, EV_IDEV, EV_GYRO_X, amgf->gyro.x);
+		input_event(idev, EV_IDEV, EV_GYRO_Y, amgf->gyro.y);
+		input_event(idev, EV_IDEV, EV_GYRO_Z, amgf->gyro.z);
 		input_sync(idev);
 	}
 	if (ev_status & EV_FEATURE) {
@@ -764,7 +769,11 @@ static void em718x_process_amgf(struct em718x *em718x,
 				if (step_cntr_get_32(em718x, &val, idx))
 					break;
 				dev_dbg(dev, "feature-%d: step %d\n", i, val);
-				input_event(idev, EV_ABS, EV_STEP, val);
+				if (val == 0) {
+					dev_dbg(dev, "Skip it\n");
+					break;
+				}
+				input_event(idev, EV_IDEV, EV_STEP, val);
 				input_sync(idev);
 				break;
 			case F_TILT:
@@ -772,17 +781,27 @@ static void em718x_process_amgf(struct em718x *em718x,
 						i, val,
 						-amgf->acc.x, -amgf->acc.y,
 						-amgf->acc.z);
-				input_event(adev, EV_ABS, EV_TILT_X,
+				if (val == 0) {
+					dev_dbg(dev, "Skip it\n");
+					break;
+				}
+				input_event(adev, EV_ADEV, EV_TILT_X,
 						-amgf->acc.x);
-				input_event(adev, EV_ABS, EV_TILT_Y,
+				input_event(adev, EV_ADEV, EV_TILT_Y,
 						-amgf->acc.y);
-				input_event(adev, EV_ABS, EV_TILT_Z,
+				input_event(adev, EV_ADEV, EV_TILT_Z,
 						-amgf->acc.z);
 				input_sync(adev);
 				break;
 			case F_ANY_MOTION:
-				dev_dbg(dev, "feature-%d: amd %d\n", i, !val);
-				input_event(adev, EV_ABS, EV_AMD, !val);
+				if (!(val & ~1)) {
+					dev_info(dev, "Skip amd %d\n", val);
+					break;
+				}
+				dev_info(dev, "feature-%d: amd %d (%d)\n",
+					i, !(val & 1), val >> 1);
+				val &= 1;
+				input_event(adev, EV_ADEV, EV_AMD, !val);
 				input_sync(adev);
 				break;
 			default:
@@ -805,10 +824,10 @@ static void em718x_process_q(struct em718x *em718x,
 				quat->t, quat->d[0],
 				quat->d[1], quat->d[2], quat->d[3]);
 
-		input_event(idev, EV_ABS, EV_QUAT_X, quat->d[0]);
-		input_event(idev, EV_ABS, EV_QUAT_Y, quat->d[1]);
-		input_event(idev, EV_ABS, EV_QUAT_Z, quat->d[2]);
-		input_event(idev, EV_ABS, EV_QUAT_W, quat->d[3]);
+		input_event(idev, EV_IDEV, EV_QUAT_X, quat->d[0]);
+		input_event(idev, EV_IDEV, EV_QUAT_Y, quat->d[1]);
+		input_event(idev, EV_IDEV, EV_QUAT_Z, quat->d[2]);
+		input_event(idev, EV_IDEV, EV_QUAT_W, quat->d[3]);
 		input_sync(idev);
 	}
 }
@@ -846,7 +865,7 @@ static irqreturn_t em718x_irq_handler(int irq, void *handle)
 		goto exit;
 	}
 
-	input_event(em718x->idev, EV_MSC, EV_STATUS, status.s[3]);
+	input_event(em718x->idev, EV_IDEV, EV_STATUS, status.s[3]);
 
 	if (status.ev_st.quaternion) {
 		struct data_quat quat;
@@ -1213,7 +1232,7 @@ static void em718x_startup_work_func(struct work_struct *work)
 	}
 
 	for (i = EV_SNS_FIRST; i < EV_SNS_MAX; i++) {
-		input_set_capability(em718x->idev, EV_ABS, i);
+		input_set_capability(em718x->idev, EV_IDEV, i);
 		input_set_abs_params(em718x->idev, i, INT_MIN, INT_MAX, 0, 0);
 	}
 
@@ -1231,10 +1250,8 @@ static void em718x_startup_work_func(struct work_struct *work)
 		goto exit;
 	}
 
-	for (i = EV_WAKE_FIRST; i < EV_WAKE_MAX; i++) {
-		input_set_capability(em718x->adev, EV_ABS, i);
-		input_set_abs_params(em718x->adev, i, INT_MIN, INT_MAX, 0, 0);
-	}
+	for (i = EV_WAKE_FIRST; i < EV_WAKE_MAX; i++)
+		input_set_capability(em718x->adev, EV_ADEV, i);
 
 	rc = em718x_parse_features(em718x);
 	if (rc)
