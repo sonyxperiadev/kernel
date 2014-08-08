@@ -610,11 +610,11 @@ static int f11_set_large_obj_size(struct synaptics_rmi4_data *rmi4_data)
 	struct synaptics_rmi4_device_info *rmi;
 	int obj_size;
 
-	dev_dbg(rmi4_data->pdev->dev.parent, "%s: %u\n", __func__, obj_size);
 	if (!rmi4_data->has_large_obj_det)
 		return -EPERM;
 
 	obj_size = rmi4_data->hw_if->board_data->large_obj_size;
+	dev_dbg(rmi4_data->pdev->dev.parent, "%s: obj_size=%u\n", __func__, obj_size);
 
 	if (obj_size < 0 || (unsigned)obj_size == rmi4_data->large_obj_size)
 		return 0;
@@ -624,12 +624,13 @@ static int f11_set_large_obj_size(struct synaptics_rmi4_data *rmi4_data)
 		return -ENODEV;
 	list_for_each_entry(fhandler, &rmi->support_fn_list, link) {
 		if (fhandler->fn_number == SYNAPTICS_RMI4_F11) {
+			int retval;
 			unsigned char control58;
-			int f11_ctrl_58 = extra_reg_addr(rmi4_data,
-					"f11_ctrl_58");
-			int retval = synaptics_rmi4_reg_read(rmi4_data,
-				f11_ctrl_58, &control58, sizeof(control58));
+			int f11_ctrl_58;
 
+			f11_ctrl_58  = extra_reg_addr(rmi4_data, "f11_ctrl_58");
+			retval = synaptics_rmi4_reg_read(rmi4_data,
+				f11_ctrl_58, &control58, sizeof(control58));
 			if (retval <= 0)
 				goto err;
 			control58 = (control58 & ~0x7f) | obj_size;
@@ -940,7 +941,7 @@ static int synaptics_rmi4_f11_abs_report(struct synaptics_rmi4_data *rmi4_data,
 		if (detected_gestures) {
 			int key = rmi4_data->hw_if->board_data->wakeup_gest_key;
 
-			dev_info(rmi4_data->pdev->dev.parent, "detected_gestures\n",
+			dev_info(rmi4_data->pdev->dev.parent, "detected_gestures %d\n",
 				detected_gestures);
 			input_report_key(rmi4_data->input_dev, key, 1);
 			input_sync(rmi4_data->input_dev);
@@ -1740,9 +1741,16 @@ static int synaptics_rmi4_f11_init(struct synaptics_rmi4_data *rmi4_data,
 			__func__, fhandler->fn_number,
 			rmi4_data->sensor_max_x,
 			rmi4_data->sensor_max_y);
+
 	if (rmi4_data->has_large_obj_det) {
 		retval = synaptics_rmi4_reg_read(rmi4_data, f11_ctrl_58,
 				&control58, sizeof(control58));
+		if (rmi4_data->hw_if->board_data->large_obj_size >= 0) {
+			int los = rmi4_data->hw_if->board_data->large_obj_size;
+			control58 = (control58 & ~0x7f) | los;
+			retval = synaptics_rmi4_reg_write(rmi4_data,
+				f11_ctrl_58, &control58, sizeof(control58));
+		}
 		rmi4_data->large_obj_size = control58 & 0x7f;
 		dev_dbg(rmi4_data->pdev->dev.parent,
 				"Large object size = %d\n",
@@ -3797,7 +3805,6 @@ static int synaptics_rmi4_suspend(struct device *dev)
 	}
 	mutex_unlock(&exp_data.mutex);
 
-exit:
 	rmi4_data->suspend = true;
 
 	return 0;
@@ -3807,9 +3814,6 @@ static int synaptics_rmi4_resume(struct device *dev)
 {
 	struct synaptics_rmi4_exp_fhandler *exp_fhandler;
 	struct synaptics_rmi4_data *rmi4_data = dev_get_drvdata(dev);
-	const struct synaptics_dsx_board_data *bdata =
-			rmi4_data->hw_if->board_data;
-	int rc;
 
 	if (rmi4_data->stay_awake)
 		return 0;
@@ -3825,7 +3829,6 @@ static int synaptics_rmi4_resume(struct device *dev)
 	}
 	mutex_unlock(&exp_data.mutex);
 
-exit:
 	rmi4_data->suspend = false;
 
 	return 0;
