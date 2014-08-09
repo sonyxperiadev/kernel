@@ -248,6 +248,7 @@ struct msm_vidc_core_capability {
 	struct hal_capability_supported ltr_count;
 	u32 capability_set;
 	enum buffer_mode_type buffer_mode[MAX_PORT_NUM];
+	u32 buffer_size_limit;
 };
 
 struct msm_vidc_core {
