@@ -637,6 +637,8 @@ static enum flash_area fwu_go_nogo(struct image_header_data *header)
 	char *strptr;
 	char *firmware_id;
 	struct synaptics_rmi4_data *rmi4_data = fwu->rmi4_data;
+	bool update_ui = false;
+	bool update_config = false;
 
 	if (fwu->force_update) {
 		flash_area = UI_FIRMWARE;
@@ -690,16 +692,12 @@ static enum flash_area fwu_go_nogo(struct image_header_data *header)
 			"%s: Image firmware ID = %d\n",
 			__func__, (unsigned int)image_fw_id);
 
-	if (image_fw_id == device_fw_id) {
-		flash_area = NONE;
-		goto exit;
+	if (image_fw_id != device_fw_id) {
+		dev_dbg(rmi4_data->pdev->dev.parent,
+			"%s: Image firmware ID %s Device firmware ID\n",
+			__func__, image_fw_id > device_fw_id ? ">" : "<");
+		update_ui = true;
 	}
-	flash_area = UI_FIRMWARE;
-	if (image_fw_id < device_fw_id)
-		dev_warn(rmi4_data->pdev->dev.parent,
-			"%s: Image firmware ID older than device firmware ID\n",
-			__func__);
-	goto exit;
 
 	/* Get device config ID */
 	retval = synaptics_rmi4_reg_read(rmi4_data,
@@ -732,12 +730,20 @@ static enum flash_area fwu_go_nogo(struct image_header_data *header)
 			fwu->config_data[2],
 			fwu->config_data[3]);
 
-	if (image_config_id > device_config_id) {
-		flash_area = CONFIG_AREA;
-		goto exit;
+	if (image_config_id != device_config_id) {
+		dev_dbg(rmi4_data->pdev->dev.parent,
+			"%s: Image config ID %s Device config ID\n",
+			__func__,
+			image_config_id > device_config_id ? ">" : "<");
+		update_config = true;
 	}
 
-	flash_area = NONE;
+	if (update_ui)
+		flash_area = UI_FIRMWARE;
+	else if (update_config)
+		flash_area = CONFIG_AREA;
+	else
+		flash_area = NONE;
 
 exit:
 	if (flash_area == NONE) {
