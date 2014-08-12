@@ -156,7 +156,7 @@ __initdata DISPCTRL_REC_T nt35310_brooks_cabc_init[] = {
 	{DISPCTRL_WR_CMND, 0xBA}, /* LEDPWM polarity active LOW */
 	{DISPCTRL_WR_DATA, 0x24}, /* default */
 	{DISPCTRL_WR_DATA, 0x00}, /* default */
-	{DISPCTRL_WR_DATA, 0x20}, /* LEDPWM polarity bit */
+	{DISPCTRL_WR_DATA, 0x00}, /* LEDPWM polarity bit */
 	{DISPCTRL_WR_DATA, 0x00}, /* default */
 	{DISPCTRL_WR_CMND, 0xC1}, /* PWM frequency 25.3K */
 	{DISPCTRL_WR_DATA, 0x20},
