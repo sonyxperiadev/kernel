@@ -220,15 +220,17 @@ proc_write_fb_test(struct file *file, const char __user *buffer,
 
 	num = simple_strtoul(value, NULL, 0);
 
+#ifdef CONFIG_FB_BRCM_CP_CRASH_DUMP_IMAGE_SUPPORT
 	if (num == 1)
 		kona_display_crash_image(0);
 	else
 		kona_display_crash_image(1);
+#endif
 
 	i = kona_fb_profile_cnt;
 	for (cnt = 0; cnt < KONA_PROF_N_RECORDS; cnt++) {
 		if (i != 0)
-			printk(KERN_ERR "%8u,%8u,%8u,%8u,%8u,%d, %d",
+			printk(KERN_ERR "%8lu,%8lu,%8lu,%8lu,%8lu,%d, %d",
 			kona_fb_profile[i].prev_time.tv_sec,
 			kona_fb_profile[i].prev_time.tv_usec,
 			kona_fb_profile[i].curr_time.tv_sec,
@@ -2610,7 +2612,6 @@ static int __ref kona_fb_probe(struct platform_device *pdev)
 	if (bcm_iommu_enable(&pdev->dev) < 0)
 		konafb_error("bcm_iommu_enable failed\n");
 #endif
-
 	if (!fb->display_info->vmode)
 		kona_clock_start(fb);
 	/* Paint it black (assuming default fb contents are all zero) */
@@ -2632,6 +2633,21 @@ static int __ref kona_fb_probe(struct platform_device *pdev)
 			kona_clock_stop(fb);
 		goto err_fb_register_failed;
 	}
+
+#ifdef CONFIG_LOGO
+	logo_rotate = fb->fb.var.rotate ? FB_ROTATE_UD : FB_ROTATE_UR;
+	fb_prepare_logo(&fb->fb, logo_rotate);
+	fb_show_logo(&fb->fb, logo_rotate);
+	mutex_lock(&fb->update_sem);
+	if (!fb->display_info->vmode) {
+		kona_clock_start(fb);
+		fb->display_ops->update(fb->display_hdl, fb->buff0, NULL, NULL);
+		kona_clock_stop(fb);
+	} else {
+		fb->display_ops->update(fb->display_hdl, fb->buff0, NULL, NULL);
+	}
+	mutex_unlock(&fb->update_sem);
+#endif
 
 	/* Display on after painted blank */
 	fb->display_ops->power_control(fb->display_hdl, CTRL_SCREEN_ON);
@@ -2660,21 +2676,6 @@ static int __ref kona_fb_probe(struct platform_device *pdev)
 
 	atomic_set(&fb->is_fb_registered, 1);
 	konafb_info("kona Framebuffer probe successfull\n");
-
-#ifdef CONFIG_LOGO
-	logo_rotate = fb->fb.var.rotate ? FB_ROTATE_UD : FB_ROTATE_UR;
-	fb_prepare_logo(&fb->fb, logo_rotate);
-	fb_show_logo(&fb->fb, logo_rotate);
-	mutex_lock(&fb->update_sem);
-	if (!fb->display_info->vmode) {
-		kona_clock_start(fb);
-		fb->display_ops->update(fb->display_hdl, fb->buff0, NULL, NULL);
-		kona_clock_stop(fb);
-	} else {
-		fb->display_ops->update(fb->display_hdl, fb->buff0, NULL, NULL);
-	}
-	mutex_unlock(&fb->update_sem);
-#endif
 
 	if (fb->fb_data->esdcheck) {
 		uint32_t tectl_gpio = fb->fb_data->tectl_gpio;
