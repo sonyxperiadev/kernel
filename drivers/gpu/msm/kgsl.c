@@ -57,6 +57,13 @@
 #define pgprot_writethroughcache(_prot)	(_prot)
 #endif
 
+/*
+ * To accommodate legacy GPU address mmapping we need to make sure that the GPU
+ * object won't conflict with the address space so define the IDs to start
+ * at the top of the user address space region
+ */
+#define KGSL_GPUOBJ_ID_MIN    (TASK_SIZE >> PAGE_SHIFT)
+
 static char *ksgl_mmu_type;
 module_param_named(mmutype, ksgl_mmu_type, charp, 0);
 MODULE_PARM_DESC(ksgl_mmu_type,
@@ -76,6 +83,11 @@ static int kgsl_setup_dma_buf(struct kgsl_mem_entry *entry,
 				struct dma_buf *dmabuf);
 
 static const struct file_operations kgsl_fops;
+
+static int __kgsl_check_collision(struct kgsl_process_private *private,
+			struct kgsl_mem_entry *entry,
+			unsigned long *gpuaddr, unsigned long len,
+			int flag_top_down);
 
 static int kgsl_memfree_hist_init(void)
 {
@@ -270,8 +282,13 @@ kgsl_mem_entry_track_gpuaddr(struct kgsl_process_private *process,
 	int ret = 0;
 	struct rb_node **node;
 	struct rb_node *parent = NULL;
+	struct kgsl_pagetable *pagetable = process->pagetable;
+	size_t size = entry->memdesc.size;
 
 	assert_spin_locked(&process->mem_lock);
+
+	if (kgsl_memdesc_has_guard_page(&entry->memdesc))
+		size += PAGE_SIZE;
 	/*
 	 * If cpu=gpu map is used then caller needs to set the
 	 * gpu address
@@ -284,11 +301,9 @@ kgsl_mem_entry_track_gpuaddr(struct kgsl_process_private *process,
 		ret = -EINVAL;
 		goto done;
 	}
-	if (!kgsl_memdesc_use_cpu_map(&entry->memdesc)) {
-		ret = kgsl_mmu_get_gpuaddr(process->pagetable, &entry->memdesc);
-		if (ret)
-			goto done;
-	}
+	ret = kgsl_mmu_get_gpuaddr(pagetable, &entry->memdesc);
+	if (ret)
+		goto done;
 
 	node = &process->mem_rb.rb_node;
 
@@ -325,7 +340,8 @@ kgsl_mem_entry_untrack_gpuaddr(struct kgsl_process_private *process,
 {
 	assert_spin_locked(&process->mem_lock);
 	if (entry->memdesc.gpuaddr) {
-		kgsl_mmu_put_gpuaddr(process->pagetable, &entry->memdesc);
+		kgsl_mmu_put_gpuaddr(entry->memdesc.pagetable,
+					&entry->memdesc);
 		rb_erase(&entry->node, &entry->priv->mem_rb);
 	}
 }
@@ -355,7 +371,8 @@ kgsl_mem_entry_attach_process(struct kgsl_mem_entry *entry,
 		return -EBADF;
 	idr_preload(GFP_KERNEL);
 	spin_lock(&process->mem_lock);
-	id = idr_alloc(&process->mem_idr, entry, 1, 0, GFP_NOWAIT);
+	id = idr_alloc(&process->mem_idr, entry, KGSL_GPUOBJ_ID_MIN, 0,
+		GFP_NOWAIT);
 	spin_unlock(&process->mem_lock);
 	idr_preload_end();
 
@@ -1269,6 +1286,19 @@ kgsl_sharedmem_find_id(struct kgsl_process_private *process, unsigned int id)
 }
 
 /**
+ * kgsl_mem_entry_unset_pend() - Unset the pending free flag of an entry
+ * @entry - The memory entry
+ */
+static inline void kgsl_mem_entry_unset_pend(struct kgsl_mem_entry *entry)
+{
+	if (entry == NULL)
+		return;
+	spin_lock(&entry->priv->mem_lock);
+	entry->pending_free = 0;
+	spin_unlock(&entry->priv->mem_lock);
+}
+
+/**
  * kgsl_mem_entry_set_pend() - Set the pending free flag of a memory entry
  * @entry - The memory entry
  *
@@ -1463,11 +1493,13 @@ static void _kgsl_cmdbatch_timer(unsigned long data)
 	if (cmdbatch == NULL || cmdbatch->context == NULL)
 		return;
 
+	spin_lock(&cmdbatch->lock);
+	if (list_empty(&cmdbatch->synclist))
+		goto done;
+
 	pr_err("kgsl: possible gpu syncpoint deadlock for context %d timestamp %d\n",
 		cmdbatch->context->id, cmdbatch->timestamp);
 	pr_err(" Active sync points:\n");
-
-	spin_lock(&cmdbatch->lock);
 
 	/* Print all the pending sync objects */
 	list_for_each_entry(event, &cmdbatch->synclist, node) {
@@ -1493,6 +1525,7 @@ static void _kgsl_cmdbatch_timer(unsigned long data)
 		}
 	}
 
+done:
 	spin_unlock(&cmdbatch->lock);
 }
 
@@ -1551,8 +1584,9 @@ static void kgsl_cmdbatch_sync_expire(struct kgsl_device *device,
 	struct kgsl_cmdbatch_sync_event *e, *tmp;
 	int sched = 0;
 	int removed = 0;
+	unsigned long flags;
 
-	spin_lock(&event->cmdbatch->lock);
+	spin_lock_irqsave(&event->cmdbatch->lock, flags);
 
 	/*
 	 * sync events that are contained by a cmdbatch which has been
@@ -1568,15 +1602,11 @@ static void kgsl_cmdbatch_sync_expire(struct kgsl_device *device,
 	}
 
 	sched = list_empty(&event->cmdbatch->synclist) ? 1 : 0;
+	spin_unlock_irqrestore(&event->cmdbatch->lock, flags);
 
-	/*
-	 * If the list is empty delete the canary timer while
-	 * still holding the lock
-	 */
+	/* If the list is empty delete the canary timer */
 	if (sched)
 		del_timer_sync(&event->cmdbatch->timer);
-
-	spin_unlock(&event->cmdbatch->lock);
 
 	/*
 	 * if this is the last event in the list then tell
@@ -1621,10 +1651,10 @@ void kgsl_cmdbatch_destroy(struct kgsl_cmdbatch *cmdbatch)
 	LIST_HEAD(cancel_synclist);
 	int sched = 0;
 
-	spin_lock(&cmdbatch->lock);
-
 	/* Zap the canary timer */
 	del_timer_sync(&cmdbatch->timer);
+
+	spin_lock(&cmdbatch->lock);
 
 	/* Empty the synclist before canceling events */
 	list_splice_init(&cmdbatch->synclist, &cancel_synclist);
@@ -1696,6 +1726,7 @@ static int kgsl_cmdbatch_add_sync_fence(struct kgsl_device *device,
 {
 	struct kgsl_cmd_syncpoint_fence *sync = priv;
 	struct kgsl_cmdbatch_sync_event *event;
+	unsigned long flags;
 
 	event = kzalloc(sizeof(*event), GFP_KERNEL);
 
@@ -1722,10 +1753,10 @@ static int kgsl_cmdbatch_add_sync_fence(struct kgsl_device *device,
 	 * removing from the synclist.
 	 */
 
-	spin_lock(&cmdbatch->lock);
 	kref_get(&event->refcount);
+	spin_lock_irqsave(&cmdbatch->lock, flags);
 	list_add(&event->node, &cmdbatch->synclist);
-	spin_unlock(&cmdbatch->lock);
+	spin_unlock_irqrestore(&cmdbatch->lock, flags);
 
 	/*
 	 * Increment the reference count for the async callback.
@@ -1745,10 +1776,10 @@ static int kgsl_cmdbatch_add_sync_fence(struct kgsl_device *device,
 		kgsl_cmdbatch_sync_event_put(event);
 
 		/* Remove event from the synclist */
-		spin_lock(&cmdbatch->lock);
+		spin_lock_irqsave(&cmdbatch->lock, flags);
 		list_del(&event->node);
+		spin_unlock_irqrestore(&cmdbatch->lock, flags);
 		kgsl_cmdbatch_sync_event_put(event);
-		spin_unlock(&cmdbatch->lock);
 
 		/* Event no longer needed by this function */
 		kgsl_cmdbatch_sync_event_put(event);
@@ -2281,6 +2312,10 @@ long kgsl_ioctl_cmdstream_freememontimestamp_ctxtid(
 		param->timestamp);
 	result = kgsl_add_event(dev_priv->device, &context->events,
 		param->timestamp, kgsl_freemem_event_cb, entry);
+
+	if (result)
+		kgsl_mem_entry_unset_pend(entry);
+
 	kgsl_mem_entry_put(entry);
 
 out:
@@ -3618,10 +3653,14 @@ get_mmap_entry(struct kgsl_process_private *private,
 	int ret = 0;
 	struct kgsl_mem_entry *entry;
 
-	entry = kgsl_sharedmem_find_id(private, pgoff);
-	if (entry == NULL) {
+	/*
+	 * GPU object IDs start at TASK_SIZE >> PAGE_SHIFT.  Anything
+	 * less is legacy GPU memory being mapped by address
+	 */
+	if (pgoff >= KGSL_GPUOBJ_ID_MIN)
+		entry = kgsl_sharedmem_find_id(private, pgoff);
+	else
 		entry = kgsl_sharedmem_find(private, pgoff << PAGE_SHIFT);
-	}
 
 	if (!entry)
 		return -EINVAL;
@@ -3633,12 +3672,28 @@ get_mmap_entry(struct kgsl_process_private *private,
 		goto err_put;
 	}
 
+	/* External memory cannot be mapped */
+	if ((KGSL_MEMFLAGS_USERMEM_MASK & entry->memdesc.flags) != 0) {
+		ret = -EINVAL;
+		goto err_put;
+	}
+
 	if (entry->memdesc.useraddr != 0) {
 		ret = -EBUSY;
 		goto err_put;
 	}
 
-	if (len != kgsl_memdesc_mmapsize(&entry->memdesc)) {
+	if (kgsl_memdesc_use_cpu_map(&entry->memdesc)) {
+		if (len != kgsl_memdesc_mmapsize(&entry->memdesc)) {
+			ret = -ERANGE;
+			goto err_put;
+		}
+	} else if (len != kgsl_memdesc_mmapsize(&entry->memdesc) &&
+		len != entry->memdesc.size) {
+		/*
+		 * If cpu_map != gpumap then user can map either the
+		 * mmapsize or the entry size
+		 */
 		ret = -ERANGE;
 		goto err_put;
 	}
@@ -3655,6 +3710,95 @@ mmap_range_valid(unsigned long addr, unsigned long len)
 {
 	return ((ULONG_MAX - addr) > len) && ((addr + len) <
 		TASK_SIZE);
+}
+
+/**
+ * __kgsl_check_collision() - Find a non colliding gpuaddr for the process
+ * @private: Process private pointer contaning the list of allocations
+ * @entry: The entry colliding with given address
+ * @gpuaddr: In out parameter. The In parameter contains the desired gpuaddr
+ * if the gpuaddr collides then the out parameter contains the non colliding
+ * address
+ * @len: Length of address range
+ * @flag_top_down: Indicates whether free address range should be checked in
+ * top down or bottom up fashion
+ */
+static int __kgsl_check_collision(struct kgsl_process_private *private,
+			struct kgsl_mem_entry *entry,
+			unsigned long *gpuaddr, unsigned long len,
+			int flag_top_down)
+{
+	int ret = 0;
+	unsigned long addr = *gpuaddr;
+	struct kgsl_mem_entry *collision_entry = entry;
+	struct rb_node *node, *node_first, *node_last;
+
+	if (!collision_entry)
+		return -ENOENT;
+
+	node = &(collision_entry->node);
+	node_first = rb_first(&private->mem_rb);
+	node_last = rb_last(&private->mem_rb);
+
+	while (1) {
+		/*
+		 * If top down search then next address to consider
+		 * is lower. The highest lower address possible is the
+		 * colliding entry address - the length of
+		 * allocation
+		 */
+		if (flag_top_down) {
+			addr = collision_entry->memdesc.gpuaddr - len;
+			/* Check for loopback */
+			if (addr > collision_entry->memdesc.gpuaddr || !addr) {
+				*gpuaddr = TASK_SIZE;
+				ret = -EAGAIN;
+				break;
+			}
+			if (node == node_first) {
+				collision_entry = NULL;
+			} else {
+				node = rb_prev(&collision_entry->node);
+				collision_entry = container_of(node,
+					struct kgsl_mem_entry, node);
+			}
+		} else {
+			/*
+			 * Bottom up mode the next address to consider
+			 * is higher. The lowest higher address possible
+			 * colliding entry address + the size of the
+			 * colliding entry
+			 */
+			addr = collision_entry->memdesc.gpuaddr +
+				kgsl_memdesc_mmapsize(
+					&collision_entry->memdesc);
+			/* overflow check */
+			if (addr < collision_entry->memdesc.gpuaddr ||
+				!mmap_range_valid(addr, len)) {
+				*gpuaddr = TASK_SIZE;
+				ret = -EAGAIN;
+				break;
+			}
+			if (node == node_last) {
+				collision_entry = NULL;
+			} else {
+				node = rb_next(&collision_entry->node);
+				collision_entry = container_of(node,
+					struct kgsl_mem_entry, node);
+			}
+		}
+
+		if (!collision_entry ||
+			!kgsl_addr_range_overlap(addr, len,
+			collision_entry->memdesc.gpuaddr,
+			kgsl_memdesc_mmapsize(&collision_entry->memdesc))) {
+			/* success */
+			*gpuaddr = addr;
+			break;
+		}
+	}
+
+	return ret;
 }
 
 /**
@@ -3718,56 +3862,13 @@ static int kgsl_check_gpu_addr_collision(
 		 */
 		len += 1 << align;
 
-		/*
-		 * Loop through the gpu map address space to find an unmapped
-		 * region of size len, lopping is done either top down or bottom
-		 * up based on flag_top_down setting
-		 */
-		do {
-			if (!collision_entry) {
-				ret = -ENOENT;
-				break;
-			}
-			if (flag_top_down) {
-				addr = collision_entry->memdesc.gpuaddr - len;
-				if (addr > collision_entry->memdesc.gpuaddr) {
-					KGSL_CORE_ERR_ONCE(
-					"Underflow err ent:%x/%zx, addr:%lx/%lx align:%u",
-					collision_entry->memdesc.gpuaddr,
-					kgsl_memdesc_mmapsize(
-						&collision_entry->memdesc),
-					addr, len, align);
-					*gpumap_free_addr =
-						TASK_SIZE;
-					ret = -EAGAIN;
-					break;
-				}
-			} else {
-				addr = collision_entry->memdesc.gpuaddr +
-					kgsl_memdesc_mmapsize(
-						&collision_entry->memdesc);
-				/* overflow check */
-				if (addr < collision_entry->memdesc.gpuaddr ||
-					!mmap_range_valid(addr, len)) {
-					KGSL_CORE_ERR_ONCE(
-					"Overflow err ent:%x/%zx, addr:%lx/%lx align:%u",
-					collision_entry->memdesc.gpuaddr,
-					kgsl_memdesc_mmapsize(
-						&collision_entry->memdesc),
-					addr, len, align);
-					*gpumap_free_addr =
-						TASK_SIZE;
-					ret = -EAGAIN;
-					break;
-				}
-			}
-			collision_entry = NULL;
-			if (kgsl_sharedmem_region_empty(private, addr, len,
-							&collision_entry)) {
-				*gpumap_free_addr = addr;
-				break;
-			}
-		} while (1);
+		ret = __kgsl_check_collision(private, collision_entry, &addr,
+						len, flag_top_down);
+		if (!ret || -EAGAIN == ret) {
+			*gpumap_free_addr = addr;
+			ret = -EAGAIN;
+		}
+
 		spin_unlock(&private->mem_lock);
 	}
 	return ret;
@@ -4266,11 +4367,11 @@ int kgsl_device_platform_probe(struct kgsl_device *device)
 		goto error_dest_work_q;
 	}
 
-	status = kgsl_allocate_contiguous(device, &device->memstore,
-		KGSL_MEMSTORE_SIZE);
+	status = kgsl_allocate_global(device, &device->memstore,
+		KGSL_MEMSTORE_SIZE, 0);
 
 	if (status != 0) {
-		KGSL_DRV_ERR(device, "kgsl_allocate_contiguous failed %d\n",
+		KGSL_DRV_ERR(device, "kgsl_allocate_global failed %d\n",
 				status);
 		goto error_close_mmu;
 	}
@@ -4324,7 +4425,7 @@ void kgsl_device_platform_remove(struct kgsl_device *device)
 
 	idr_destroy(&device->context_idr);
 
-	kgsl_sharedmem_free(&device->memstore);
+	kgsl_free_global(&device->memstore);
 
 	kgsl_mmu_close(device);
 

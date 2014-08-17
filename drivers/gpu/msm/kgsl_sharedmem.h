@@ -144,7 +144,8 @@ memdesc_sg_phys(struct kgsl_memdesc *memdesc,
 	if (memdesc->sg == NULL)
 		return -ENOMEM;
 
-	kmemleak_not_leak(memdesc->sg);
+	if (!is_vmalloc_addr(memdesc->sg))
+		kmemleak_not_leak(memdesc->sg);
 
 	memdesc->sglen = 1;
 	sg_init_table(memdesc->sg, 1);
@@ -200,8 +201,7 @@ static inline size_t
 kgsl_memdesc_mmapsize(const struct kgsl_memdesc *memdesc)
 {
 	size_t size = memdesc->size;
-	if (kgsl_memdesc_use_cpu_map(memdesc) &&
-		kgsl_memdesc_has_guard_page(memdesc))
+	if (kgsl_memdesc_has_guard_page(memdesc))
 		size += SZ_4K;
 	return size;
 }
@@ -239,6 +239,52 @@ kgsl_allocate_contiguous(struct kgsl_device *device,
 
 	memdesc->flags |= (KGSL_MEMTYPE_KERNEL << KGSL_MEMTYPE_SHIFT);
 	return ret;
+}
+
+/*
+ * kgsl_allocate_global() - Allocate GPU accessible memory that will be global
+ * across all processes
+ * @device: The device pointer to which the memdesc belongs
+ * @memdesc: Pointer to a KGSL memory descriptor for the memory allocation
+ * @size: size of the allocation
+ * @flags: Allocation flags that control how the memory is mapped
+ *
+ * Allocate contiguous memory for internal use and add the allocation to the
+ * list of global pagetable entries that will be mapped at the same address in
+ * all pagetables.  This is for use for device wide GPU allocations such as
+ * ringbuffers.
+ */
+static inline int kgsl_allocate_global(struct kgsl_device *device,
+	struct kgsl_memdesc *memdesc, size_t size, unsigned int flags)
+{
+	int ret;
+
+	memdesc->flags = flags;
+
+	ret = kgsl_allocate_contiguous(device, memdesc, size);
+
+	if (!ret) {
+		ret = kgsl_add_global_pt_entry(device, memdesc);
+		if (ret)
+			kgsl_sharedmem_free(memdesc);
+	}
+
+	return ret;
+}
+
+/**
+ * kgsl_free_global() - Free a device wide GPU allocation and remove it from the
+ * global pagetable entry list
+ *
+ * @memdesc: Pointer to the GPU memory descriptor to free
+ *
+ * Remove the specific memory descriptor from the global pagetable entry list
+ * and free it
+ */
+static inline void kgsl_free_global(struct kgsl_memdesc *memdesc)
+{
+	kgsl_remove_global_pt_entry(memdesc);
+	kgsl_sharedmem_free(memdesc);
 }
 
 #endif /* __KGSL_SHAREDMEM_H */

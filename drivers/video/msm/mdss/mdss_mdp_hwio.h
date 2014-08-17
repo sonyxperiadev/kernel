@@ -395,6 +395,7 @@ enum mdss_mdp_writeback_index {
 
 #define MDSS_MDP_MAX_AD_AL	65535
 #define MDSS_MDP_MAX_AD_STR	255
+#define MDSS_MDP_AD_BL_SCALE	4095
 
 #define MDSS_MDP_REG_AD_BYPASS				0x000
 #define MDSS_MDP_REG_AD_CTRL_0				0x004
@@ -602,5 +603,10 @@ enum mdss_mdp_pingpong_index {
 #define MMSS_VBIF_XIN_HALT_CTRL1	0x204
 #define MMSS_VBIF_AXI_HALT_CTRL0	0x208
 #define MMSS_VBIF_AXI_HALT_CTRL1	0x20C
+
+#define MDSS_MDP_REG_TRAFFIC_SHAPER_EN			BIT(31)
+#define MDSS_MDP_REG_TRAFFIC_SHAPER_RD_CLIENT(num)	(0x030 + (num * 4))
+#define MDSS_MDP_REG_TRAFFIC_SHAPER_WR_CLIENT(num)	(0x060 + (num * 4))
+#define MDSS_MDP_REG_TRAFFIC_SHAPER_FIXPOINT_FACTOR	4
 
 #endif

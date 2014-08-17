@@ -258,7 +258,7 @@ static void diag_read_hsic_dci_work_fn(struct work_struct *work)
 static void diag_hsic_read_complete_callback(void *ctxt, char *buf,
 					int buf_size, int actual_size)
 {
-	int err = -2;
+	int err = 0;
 	int index = (int)ctxt;
 	static DEFINE_RATELIMIT_STATE(rl, 10*HZ, 1);
 
@@ -287,10 +287,14 @@ static void diag_hsic_read_complete_callback(void *ctxt, char *buf,
 			 * appropriate device, e.g. USB MDM channel
 			 */
 			diag_bridge[index].write_len = actual_size;
+			if (driver->logging_mode == MEMORY_DEVICE_MODE)
+				diag_ws_on_notify();
 			err = diag_device_write((void *)buf, index+HSIC_DATA,
 									NULL);
 			/* If an error, return buffer to the pool */
 			if (err) {
+				if (driver->logging_mode == MEMORY_DEVICE_MODE)
+					diag_ws_release();
 				diagmem_free(driver, buf, index +
 							POOL_TYPE_HSIC);
 				if (__ratelimit(&rl))
@@ -310,13 +314,15 @@ static void diag_hsic_read_complete_callback(void *ctxt, char *buf,
 	}
 
 	/*
-	 * If for some reason there was no HSIC data to write to the
-	 * mdm channel, set up another read
+	 * Actual Size is a negative error value when read complete
+	 * fails. Don't queue a read in this case. Doing so will not let
+	 * HSIC to goto suspend.
+	 *
+	 * Queue another read only when the read completes successfully
+	 * and Diag is either in Memory device mode or USB is connected.
 	 */
-	if (err &&
-		((driver->logging_mode == MEMORY_DEVICE_MODE) ||
-		(diag_bridge[index].usb_connected &&
-		!diag_hsic[index].hsic_suspend))) {
+	if (actual_size >= 0 && (driver->logging_mode == MEMORY_DEVICE_MODE ||
+				 diag_bridge[index].usb_connected)) {
 		queue_work(diag_bridge[index].wq,
 				 &diag_hsic[index].diag_read_hsic_work);
 	}
@@ -342,7 +348,7 @@ static void diag_hsic_dci_read_complete_callback(void *ctxt, char *buf,
 		if (!buf) {
 			pr_err("diag: Out of diagmem for HSIC\n");
 		} else {
-			diag_dci_try_activate_wakeup_source();
+			diag_ws_on_notify();
 			diag_hsic_dci[index].data_len = actual_size;
 			diag_hsic_dci[index].data_buf = buf;
 			memcpy(diag_hsic_dci[index].data, buf, actual_size);
@@ -422,14 +428,6 @@ static int diag_hsic_suspend(void *ctxt)
 
 	/* Don't allow suspend if a write in the HSIC is in progress */
 	if (diag_hsic[index].in_busy_hsic_write)
-		return -EBUSY;
-
-	/*
-	 * Don't allow suspend if in MEMORY_DEVICE_MODE and if there
-	 * has been hsic data requested
-	 */
-	if (driver->logging_mode == MEMORY_DEVICE_MODE &&
-				diag_hsic[index].hsic_ch)
 		return -EBUSY;
 
 	diag_hsic[index].hsic_suspend = 1;

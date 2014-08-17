@@ -983,6 +983,15 @@ static int kgsl_iommu_init_sync_lock(struct kgsl_mmu *mmu)
 		return status;
 	}
 
+	/* Add the entry to the global PT list */
+	status = kgsl_add_global_pt_entry(mmu->device, &iommu->sync_lock_desc);
+	if (status) {
+		kgsl_sg_free(iommu->sync_lock_desc.sg,
+			iommu->sync_lock_desc.sglen);
+		iommu_access_ops = NULL;
+		return status;
+	}
+
 	/* Flag Sync Lock is Initialized  */
 	iommu->sync_lock_initialized = 1;
 
@@ -1184,6 +1193,9 @@ static int kgsl_set_register_map(struct kgsl_mmu *mmu)
 		if (ret)
 			goto err;
 
+		/* Add the register map to the global PT list */
+		kgsl_add_global_pt_entry(mmu->device, &iommu_unit->reg_map);
+
 		if (!msm_soc_version_supports_iommu_v0())
 			iommu_unit->iommu_halt_enable = 1;
 
@@ -1199,6 +1211,8 @@ err:
 	/* Unmap any mapped IOMMU regions */
 	for (; i >= 0; i--) {
 		iommu_unit = &iommu->iommu_units[i];
+
+		kgsl_remove_global_pt_entry(&iommu_unit->reg_map);
 		iounmap(iommu_unit->reg_map.hostptr);
 		iommu_unit->reg_map.size = 0;
 		iommu_unit->reg_map.physaddr = 0;
@@ -1273,75 +1287,6 @@ static int kgsl_iommu_setstate(struct kgsl_mmu *mmu,
 }
 
 /*
- * kgsl_iommu_setup_regs - map iommu registers into a pagetable
- * @mmu: Pointer to mmu structure
- * @pt: the pagetable
- *
- * To do pagetable switches from the GPU command stream, the IOMMU
- * registers need to be mapped into the GPU's pagetable. This function
- * is used differently on different targets. On 8960, the registers
- * are mapped into every pagetable during kgsl_setup_pt(). On
- * all other targets, the registers are mapped only into the second
- * context bank.
- *
- * Return - 0 on success else error code
- */
-static int kgsl_iommu_setup_regs(struct kgsl_mmu *mmu,
-				    struct kgsl_pagetable *pt)
-{
-	int status;
-	int i = 0;
-	struct kgsl_iommu *iommu = mmu->priv;
-
-	if (!msm_soc_version_supports_iommu_v0())
-		return 0;
-
-	for (i = 0; i < iommu->unit_count; i++) {
-		status = kgsl_mmu_map_global(pt,
-				&(iommu->iommu_units[i].reg_map));
-		if (status)
-			goto err;
-	}
-
-	/* Map Lock variables to GPU pagetable */
-	if (iommu->sync_lock_initialized) {
-		status = kgsl_mmu_map_global(pt, &iommu->sync_lock_desc);
-		if (status)
-			goto err;
-	}
-
-	return 0;
-err:
-	for (i--; i >= 0; i--)
-		kgsl_mmu_unmap(pt,
-				&(iommu->iommu_units[i].reg_map));
-
-	return status;
-}
-
-/*
- * kgsl_iommu_cleanup_regs - unmap iommu registers from a pagetable
- * @mmu: Pointer to mmu structure
- * @pt: the pagetable
- *
- * Removes mappings created by kgsl_iommu_setup_regs().
- *
- * Return - 0 on success else error code
- */
-static void kgsl_iommu_cleanup_regs(struct kgsl_mmu *mmu,
-					struct kgsl_pagetable *pt)
-{
-	struct kgsl_iommu *iommu = mmu->priv;
-	int i;
-	for (i = 0; i < iommu->unit_count; i++)
-		kgsl_mmu_unmap(pt, &(iommu->iommu_units[i].reg_map));
-
-	if (iommu->sync_lock_desc.gpuaddr)
-		kgsl_mmu_unmap(pt, &iommu->sync_lock_desc);
-}
-
-
-/*
  * kgsl_iommu_get_reg_ahbaddr - Returns the ahb address of the register
  * @mmu - Pointer to mmu structure
  * @iommu_unit - The iommu unit for which base address is requested
@@ -1398,26 +1343,9 @@ static int kgsl_iommu_init(struct kgsl_mmu *mmu)
 				(msm_soc_version_supports_iommu_v0() ||
 				 iommu->iommu_units[0].iommu_halt_enable);
 
-	/*
-	 * For IOMMU per-process pagetables, the allocatable range
-	 * and the kernel global range must both be outside
-	 * the userspace address range. There is a 1Mb gap
-	 * between these address ranges to make overrun
-	 * detection easier.
-	 * For the shared pagetable case use 2GB and because
-	 * mirroring the CPU address space is not possible and
-	 * we're better off with extra room.
-	 */
-	if (mmu->pt_per_process) {
-		mmu->pt_base = PAGE_OFFSET;
-		mmu->pt_size = KGSL_IOMMU_GLOBAL_MEM_BASE
-				- kgsl_mmu_get_base_addr(mmu) - SZ_1M;
-		mmu->use_cpu_map = true;
-	} else {
-		mmu->pt_base = KGSL_PAGETABLE_BASE;
-		mmu->pt_size = SZ_2G;
-		mmu->use_cpu_map = false;
-	}
+	mmu->pt_base = KGSL_MMU_MAPPED_MEM_BASE;
+	mmu->pt_size = KGSL_MMU_MAPPED_MEM_SIZE;
+	mmu->use_cpu_map = mmu->pt_per_process;
 
 	status = kgsl_iommu_init_sync_lock(mmu);
 	if (status)
@@ -1483,9 +1411,6 @@ static int kgsl_iommu_setup_defaultpagetable(struct kgsl_mmu *mmu)
 			status = -ENOMEM;
 			goto err;
 		}
-		status = kgsl_iommu_setup_regs(mmu, mmu->priv_bank_table);
-		if (status)
-			goto err;
 	}
 	mmu->defaultpagetable = kgsl_mmu_getpagetable(mmu, KGSL_MMU_GLOBAL_PT);
 	/* Return error if the default pagetable doesn't exist */
@@ -1496,7 +1421,6 @@ static int kgsl_iommu_setup_defaultpagetable(struct kgsl_mmu *mmu)
 	return status;
 err:
 	if (mmu->priv_bank_table) {
-		kgsl_iommu_cleanup_regs(mmu, mmu->priv_bank_table);
 		kgsl_mmu_putpagetable(mmu->priv_bank_table);
 		mmu->priv_bank_table = NULL;
 	}
@@ -1883,10 +1807,8 @@ static int kgsl_iommu_close(struct kgsl_mmu *mmu)
 	struct kgsl_iommu *iommu = mmu->priv;
 	int i;
 
-	if (mmu->priv_bank_table != NULL) {
-		kgsl_iommu_cleanup_regs(mmu, mmu->priv_bank_table);
+	if (mmu->priv_bank_table != NULL)
 		kgsl_mmu_putpagetable(mmu->priv_bank_table);
-	}
 
 	if (mmu->defaultpagetable != NULL)
 		kgsl_mmu_putpagetable(mmu->defaultpagetable);
@@ -1894,12 +1816,17 @@ static int kgsl_iommu_close(struct kgsl_mmu *mmu)
 	for (i = 0; i < iommu->unit_count; i++) {
 		struct kgsl_memdesc *reg_map = &iommu->iommu_units[i].reg_map;
 
+		/* Remove the reg_map from the global list */
+		kgsl_remove_global_pt_entry(reg_map);
+
 		if (reg_map->hostptr)
 			iounmap(reg_map->hostptr);
 		kgsl_free(reg_map->sg);
 		reg_map->priv &= ~KGSL_MEMDESC_GLOBAL;
 	}
 	/* clear IOMMU GPU CPU sync structures */
+
+	kgsl_remove_global_pt_entry(&iommu->sync_lock_desc);
 	kgsl_free(iommu->sync_lock_desc.sg);
 	memset(&iommu->sync_lock_desc, 0, sizeof(iommu->sync_lock_desc));
 	iommu->sync_lock_vars = NULL;
@@ -2221,8 +2148,6 @@ struct kgsl_mmu_ops iommu_ops = {
 	.mmu_get_pt_base_addr = kgsl_iommu_get_pt_base_addr,
 	.mmu_hw_halt_supported = kgsl_iommu_hw_halt_supported,
 	/* These callbacks will be set on some chipsets */
-	.mmu_setup_pt = NULL,
-	.mmu_cleanup_pt = NULL,
 	.mmu_sync_lock = kgsl_iommu_sync_lock,
 	.mmu_sync_unlock = kgsl_iommu_sync_unlock,
 	.mmu_set_pf_policy = kgsl_iommu_set_pf_policy,

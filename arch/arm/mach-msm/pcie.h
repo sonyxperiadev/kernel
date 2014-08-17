@@ -67,7 +67,6 @@
 #define PM_GPIO                  0x4
 #define PM_VREG                  0x8
 #define PM_PIPE_CLK              0x10
-#define PM_EXPT                  0x80000000
 #define PM_ALL (PM_IRQ | PM_CLK | PM_GPIO | PM_VREG | PM_PIPE_CLK)
 
 #define PCIE_CONF_SPACE_DW		      1024
@@ -215,10 +214,9 @@ struct msm_pcie_dev_t {
 	uint32_t                     rc_idx;
 	bool                         enumerated;
 	struct work_struct	     handle_wake_work;
-	struct work_struct	     handle_linkdown_work;
-	int                          handling_linkdown;
-	bool                         recovery_pending;
 	struct mutex                 recovery_lock;
+	spinlock_t                   linkdown_lock;
+	spinlock_t                   wakeup_lock;
 	ulong                        linkdown_counter;
 	bool                         suspending;
 	ulong                        wake_counter;
@@ -238,25 +236,10 @@ extern void msm_pcie_config_msi_controller(struct msm_pcie_dev_t *dev);
 extern int32_t msm_pcie_irq_init(struct msm_pcie_dev_t *dev);
 extern void msm_pcie_irq_deinit(struct msm_pcie_dev_t *dev);
 extern int msm_pcie_get_debug_mask(void);
+extern bool msm_pcie_confirm_linkup(struct msm_pcie_dev_t *dev,
+		bool check_sw_stts, bool check_ep);
 
 extern void pcie_phy_init(struct msm_pcie_dev_t *dev);
 extern bool pcie_phy_is_ready(struct msm_pcie_dev_t *dev);
-
-static inline bool msm_pcie_confirm_linkup(struct msm_pcie_dev_t *dev)
-{
-	if (dev->link_status != MSM_PCIE_LINK_ENABLED)
-		return false;
-
-	if (!(readl_relaxed(dev->dm_core + 0x80) & BIT(29)))
-		return false;
-
-	if (readl_relaxed(dev->dm_core) == PCIE_LINK_DOWN)
-		return false;
-
-	if (readl_relaxed(dev->conf) == PCIE_LINK_DOWN)
-		return false;
-
-	return true;
-}
 
 #endif

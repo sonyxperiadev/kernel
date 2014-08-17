@@ -476,7 +476,7 @@ static int _ringbuffer_start_common(struct adreno_ringbuffer *rb)
 		return status;
 
 	/* idle device to validate ME INIT */
-	status = adreno_idle(device);
+	status = adreno_spin_idle(device);
 
 	if (status == 0)
 		rb->flags |= KGSL_FLAGS_STARTED;
@@ -603,6 +603,7 @@ int adreno_ringbuffer_init(struct kgsl_device *device)
 	struct adreno_device *adreno_dev = ADRENO_DEVICE(device);
 	struct adreno_ringbuffer *rb = &adreno_dev->ringbuffer;
 
+	rb->global_ts = 0;
 	rb->device = device;
 	/*
 	 * It is silly to convert this to words and then back to bytes
@@ -611,26 +612,20 @@ int adreno_ringbuffer_init(struct kgsl_device *device)
 	 */
 	rb->sizedwords = KGSL_RB_SIZE >> 2;
 
-	rb->buffer_desc.flags = KGSL_MEMFLAGS_GPUREADONLY;
-	/* allocate memory for ringbuffer */
-	status = kgsl_allocate_contiguous(device, &rb->buffer_desc,
-		(rb->sizedwords << 2));
+	status = kgsl_allocate_global(device, &rb->buffer_desc,
+		KGSL_RB_SIZE, KGSL_MEMFLAGS_GPUREADONLY);
 
-	if (status != 0) {
+	if (status)
 		adreno_ringbuffer_close(rb);
-		return status;
-	}
 
-	rb->global_ts = 0;
-
-	return 0;
+	return status;
 }
 
 void adreno_ringbuffer_close(struct adreno_ringbuffer *rb)
 {
 	struct adreno_device *adreno_dev = ADRENO_DEVICE(rb->device);
 
-	kgsl_sharedmem_free(&rb->buffer_desc);
+	kgsl_free_global(&rb->buffer_desc);
 
 	kfree(adreno_dev->pfp_fw);
 	kfree(adreno_dev->pm4_fw);
@@ -1352,16 +1347,18 @@ int adreno_ringbuffer_submitcmd(struct adreno_device *adreno_dev,
 	/* Set the constraints before adding to ringbuffer */
 	adreno_ringbuffer_set_constraint(device, cmdbatch);
 
+	/* CFF stuff executed only if CFF is enabled */
+	kgsl_cffdump_capture_ib_desc(device, context, ibdesc, numibs);
+
 	ret = adreno_ringbuffer_addcmds(&adreno_dev->ringbuffer,
 					drawctxt,
 					flags,
 					&link[0], (cmds - link),
 					cmdbatch->timestamp);
 
-	/* CFF stuff executed only if CFF is enabled */
-	kgsl_cffdump_capture_ib_desc(device, context, ibdesc, numibs);
-	kgsl_cff_core_idle(device);
-
+	kgsl_cffdump_regpoll(device,
+		adreno_getreg(adreno_dev, ADRENO_REG_RBBM_STATUS) << 2,
+		0x00000000, 0x80000000);
 done:
 	device->pwrctrl.irq_last = 0;
 	trace_kgsl_issueibcmds(device, context->id, cmdbatch,

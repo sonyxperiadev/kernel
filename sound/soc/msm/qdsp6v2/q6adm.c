@@ -499,6 +499,13 @@ int adm_get_params(int port_id, uint32_t module_id, uint32_t param_id,
 		rc = -EINVAL;
 		goto adm_get_param_return;
 	}
+
+	if (adm_get_parameters[0] < 0) {
+		pr_err("%s: Size is invalid %d\n", __func__,
+			adm_get_parameters[0]);
+		rc = -EINVAL;
+		goto adm_get_param_return;
+	}
 	if (params_data) {
 		for (i = 0; i < adm_get_parameters[0]; i++)
 			params_data[i] = adm_get_parameters[1+i];
@@ -700,6 +707,7 @@ static int32_t adm_callback(struct apr_client_data *data, void *priv)
 			case ADM_CMD_DEVICE_CLOSE_V5:
 			case ADM_CMD_SHARED_MEM_UNMAP_REGIONS:
 			case ADM_CMD_MATRIX_MAP_ROUTINGS_V5:
+			case ADM_CMD_STREAM_DEVICE_MAP_ROUTINGS_V5:
 			case ADM_CMD_ADD_TOPOLOGIES:
 				pr_debug("%s: Basic callback received, wake up.\n",
 					__func__);
@@ -789,13 +797,21 @@ static int32_t adm_callback(struct apr_client_data *data, void *priv)
 					data->payload_size))
 				break;
 
-			if (data->payload_size > (4 * sizeof(uint32_t))) {
-				adm_get_parameters[0] = payload[3];
-				pr_debug("GET_PP PARAM:received parameter length: 0x%x\n",
+			if (payload[0] == 0) {
+				if (data->payload_size >
+				    (4 * sizeof(uint32_t))) {
+					adm_get_parameters[0] = payload[3];
+					pr_debug("GET_PP PARAM:received parameter length: 0x%x\n",
 						adm_get_parameters[0]);
-				/* storing param size then params */
-				for (i = 0; i < payload[3]; i++)
-					adm_get_parameters[1+i] = payload[4+i];
+					/* storing param size then params */
+					for (i = 0; i < payload[3]; i++)
+						adm_get_parameters[1+i] =
+								payload[4+i];
+				}
+			} else {
+				adm_get_parameters[0] = -1;
+				pr_err("%s: GET_PP_PARAMS failed, setting size to %d\n",
+					__func__, adm_get_parameters[0]);
 			}
 			atomic_set(&this_adm.copp_stat[index], 1);
 			wake_up(&this_adm.wait[index]);
@@ -945,7 +961,8 @@ static int send_adm_cal_block(int port_id, struct acdb_cal_block *aud_cal,
 		return 0;
 	}
 
-	pr_debug("%s: Port id 0x%x, index %d\n", __func__, port_id, index);
+	pr_debug("%s: Port id 0x%x, index %d, perf_mode %d, topo 0x%x\n",
+		 __func__, port_id, index, perf_mode, this_adm.topology[index]);
 
 	if (!aud_cal || aud_cal->cal_size == 0) {
 		pr_debug("%s: No ADM cal send for port_id = 0x%x!\n",
@@ -956,8 +973,8 @@ static int send_adm_cal_block(int port_id, struct acdb_cal_block *aud_cal,
 
 	if (perf_mode == LEGACY_PCM_MODE &&
 		this_adm.topology[index] == DS2_ADM_COPP_TOPOLOGY_ID) {
-		pr_err("%s: perf_mode %d, topology 0x%x", __func__, perf_mode,
-			this_adm.topology[index]);
+		pr_info("%s: perf_mode %d, topology 0x%x\n", __func__,
+			perf_mode, this_adm.topology[index]);
 		goto done;
 	}
 
@@ -1321,7 +1338,7 @@ int adm_open(int port_id, int path, int rate, int channel_mode, int topology,
 	int index;
 	int tmp_port = q6audio_get_port_id(port_id);
 
-	pr_debug("%s: port 0x%x path:%d rate:%d mode:%d perf_mode:%d topo_id %d\n",
+	pr_debug("%s: port 0x%x path:%d rate:%d mode:%d perf_mode:%d topo_id 0x%x\n",
 		 __func__,
 		port_id, path, rate, channel_mode, perf_mode, topology);
 
@@ -1350,7 +1367,8 @@ int adm_open(int port_id, int path, int rate, int channel_mode, int topology,
 
 	if (perf_mode == LEGACY_PCM_MODE) {
 		atomic_set(&this_adm.copp_perf_mode[index], 0);
-		send_adm_custom_topology(port_id);
+		if (path != ADM_PATH_COMPRESSED_RX)
+			send_adm_custom_topology(port_id);
 	} else {
 		atomic_set(&this_adm.copp_perf_mode[index], 1);
 	}
@@ -1367,7 +1385,104 @@ int adm_open(int port_id, int path, int rate, int channel_mode, int topology,
 		(perf_mode != LEGACY_PCM_MODE &&
 		(atomic_read(&this_adm.copp_low_latency_cnt[index]) == 0))) {
 		pr_debug("%s: opening ADM: perf_mode: %d\n", __func__,
-			perf_mode);
+			 perf_mode);
+		memset(open.dev_channel_mapping, 0, ADM_MAX_CHANNELS);
+		if (path == ADM_PATH_COMPRESSED_RX) {
+			pr_debug("%s: compressed passthrough default topo\n",
+				 __func__);
+			open.flags = 0;
+			open.topology_id =
+				COMPRESSED_PASSTHROUGH_DEFAULT_TOPOLOGY;
+			open.bit_width = 16;
+			open.dev_num_channel = 2;
+			open.sample_rate  = rate;
+		} else {
+			if (perf_mode == ULTRA_LOW_LATENCY_PCM_MODE)
+				open.flags =
+					ADM_ULTRA_LOW_LATENCY_DEVICE_SESSION;
+			else if (perf_mode == LOW_LATENCY_PCM_MODE)
+				open.flags = ADM_LOW_LATENCY_DEVICE_SESSION;
+			else
+				open.flags = ADM_LEGACY_DEVICE_SESSION;
+
+			open.topology_id = topology;
+			if ((open.topology_id ==
+				VPM_TX_SM_ECNS_COPP_TOPOLOGY) ||
+				(open.topology_id ==
+				VPM_TX_DM_FLUENCE_COPP_TOPOLOGY))
+					rate = 16000;
+
+			if (perf_mode == ULTRA_LOW_LATENCY_PCM_MODE) {
+				open.topology_id = NULL_COPP_TOPOLOGY;
+				rate = ULL_SUPPORTED_SAMPLE_RATE;
+			} else if (perf_mode == LOW_LATENCY_PCM_MODE) {
+				if ((open.topology_id ==
+					DOLBY_ADM_COPP_TOPOLOGY_ID) ||
+					(open.topology_id ==
+					SRS_TRUMEDIA_TOPOLOGY_ID) ||
+					(open.topology_id ==
+					DS2_ADM_COPP_TOPOLOGY_ID))
+					open.topology_id =
+						DEFAULT_COPP_TOPOLOGY;
+			} else
+				this_adm.topology[index] = open.topology_id;
+
+			open.dev_num_channel = channel_mode & 0xFF;
+			open.bit_width = bits_per_sample;
+			WARN_ON(perf_mode == ULTRA_LOW_LATENCY_PCM_MODE &&
+							(rate != 48000));
+			open.sample_rate  = rate;
+			memset(open.dev_channel_mapping, 0, ADM_MAX_CHANNELS);
+
+			if (channel_mode == 1) {
+				open.dev_channel_mapping[0] = PCM_CHANNEL_FC;
+			} else if (channel_mode == 2) {
+				open.dev_channel_mapping[0] = PCM_CHANNEL_FL;
+				open.dev_channel_mapping[1] = PCM_CHANNEL_FR;
+			} else if (channel_mode == 3) {
+				open.dev_channel_mapping[0] = PCM_CHANNEL_FL;
+				open.dev_channel_mapping[1] = PCM_CHANNEL_FR;
+				open.dev_channel_mapping[2] = PCM_CHANNEL_FC;
+			} else if (channel_mode == 4) {
+				open.dev_channel_mapping[0] = PCM_CHANNEL_FL;
+				open.dev_channel_mapping[1] = PCM_CHANNEL_FR;
+				open.dev_channel_mapping[2] = PCM_CHANNEL_RB;
+				open.dev_channel_mapping[3] = PCM_CHANNEL_LB;
+			} else if (channel_mode == 5) {
+				open.dev_channel_mapping[0] = PCM_CHANNEL_FL;
+				open.dev_channel_mapping[1] = PCM_CHANNEL_FR;
+				open.dev_channel_mapping[2] = PCM_CHANNEL_FC;
+				open.dev_channel_mapping[3] = PCM_CHANNEL_LB;
+				open.dev_channel_mapping[4] = PCM_CHANNEL_RB;
+			} else if (channel_mode == 6) {
+				open.dev_channel_mapping[0] = PCM_CHANNEL_FL;
+				open.dev_channel_mapping[1] = PCM_CHANNEL_FR;
+				open.dev_channel_mapping[2] = PCM_CHANNEL_LFE;
+				open.dev_channel_mapping[3] = PCM_CHANNEL_FC;
+				open.dev_channel_mapping[4] = PCM_CHANNEL_LS;
+				open.dev_channel_mapping[5] = PCM_CHANNEL_RS;
+			} else if (channel_mode == 8) {
+				open.dev_channel_mapping[0] = PCM_CHANNEL_FL;
+				open.dev_channel_mapping[1] = PCM_CHANNEL_FR;
+				open.dev_channel_mapping[2] = PCM_CHANNEL_LFE;
+				open.dev_channel_mapping[3] = PCM_CHANNEL_FC;
+				open.dev_channel_mapping[4] = PCM_CHANNEL_LB;
+				open.dev_channel_mapping[5] = PCM_CHANNEL_RB;
+				open.dev_channel_mapping[6] = PCM_CHANNEL_FLC;
+				open.dev_channel_mapping[7] = PCM_CHANNEL_FRC;
+			} else {
+				pr_err("%s: invalid num_chan %d\n", __func__,
+						channel_mode);
+				ret = -EINVAL;
+				goto fail_cmd;
+			}
+			if ((open.dev_num_channel > 2) &&
+				multi_ch_map.set_channel_map)
+				memcpy(open.dev_channel_mapping,
+					multi_ch_map.channel_mapping,
+					PCM_FORMAT_MAX_NUM_CHANNEL);
+		}
+
 		open.hdr.hdr_field = APR_HDR_FIELD(APR_MSG_TYPE_SEQ_CMD,
 				APR_HDR_LEN(APR_HDR_SIZE), APR_PKT_VER);
 		open.hdr.pkt_size = sizeof(open);
@@ -1379,12 +1494,6 @@ int adm_open(int port_id, int path, int rate, int channel_mode, int topology,
 		open.hdr.dest_port = tmp_port;
 		open.hdr.token = port_id;
 		open.hdr.opcode = ADM_CMD_DEVICE_OPEN_V5;
-		if (perf_mode == ULTRA_LOW_LATENCY_PCM_MODE)
-			open.flags = ADM_ULTRA_LOW_LATENCY_DEVICE_SESSION;
-		else if (perf_mode == LOW_LATENCY_PCM_MODE)
-			open.flags = ADM_LOW_LATENCY_DEVICE_SESSION;
-		else
-			open.flags = ADM_LEGACY_DEVICE_SESSION;
 
 		open.mode_of_operation = path;
 		open.endpoint_id_1 = tmp_port;
@@ -1396,74 +1505,6 @@ int adm_open(int port_id, int path, int rate, int channel_mode, int topology,
 			this_adm.ec_ref_rx = -1;
 		}
 
-		open.topology_id = topology;
-		if ((open.topology_id == VPM_TX_SM_ECNS_COPP_TOPOLOGY) ||
-			(open.topology_id == VPM_TX_DM_FLUENCE_COPP_TOPOLOGY))
-				rate = 16000;
-
-		if (perf_mode == ULTRA_LOW_LATENCY_PCM_MODE) {
-			open.topology_id = NULL_COPP_TOPOLOGY;
-			rate = ULL_SUPPORTED_SAMPLE_RATE;
-		} else if (perf_mode == LOW_LATENCY_PCM_MODE) {
-			if ((open.topology_id == DOLBY_ADM_COPP_TOPOLOGY_ID) ||
-			    (open.topology_id == SRS_TRUMEDIA_TOPOLOGY_ID) ||
-				(open.topology_id == DS2_ADM_COPP_TOPOLOGY_ID))
-				open.topology_id = DEFAULT_COPP_TOPOLOGY;
-		}
-
-		open.dev_num_channel = channel_mode & 0x00FF;
-		open.bit_width = bits_per_sample;
-		WARN_ON(perf_mode == ULTRA_LOW_LATENCY_PCM_MODE &&
-							(rate != 48000));
-		open.sample_rate  = rate;
-		memset(open.dev_channel_mapping, 0, 8);
-
-		if (channel_mode == 1)	{
-			open.dev_channel_mapping[0] = PCM_CHANNEL_FC;
-		} else if (channel_mode == 2) {
-			open.dev_channel_mapping[0] = PCM_CHANNEL_FL;
-			open.dev_channel_mapping[1] = PCM_CHANNEL_FR;
-		} else if (channel_mode == 3)	{
-			open.dev_channel_mapping[0] = PCM_CHANNEL_FL;
-			open.dev_channel_mapping[1] = PCM_CHANNEL_FR;
-			open.dev_channel_mapping[2] = PCM_CHANNEL_FC;
-		} else if (channel_mode == 4) {
-			open.dev_channel_mapping[0] = PCM_CHANNEL_FL;
-			open.dev_channel_mapping[1] = PCM_CHANNEL_FR;
-			open.dev_channel_mapping[2] = PCM_CHANNEL_RB;
-			open.dev_channel_mapping[3] = PCM_CHANNEL_LB;
-		} else if (channel_mode == 5) {
-			open.dev_channel_mapping[0] = PCM_CHANNEL_FL;
-			open.dev_channel_mapping[1] = PCM_CHANNEL_FR;
-			open.dev_channel_mapping[2] = PCM_CHANNEL_FC;
-			open.dev_channel_mapping[3] = PCM_CHANNEL_LB;
-			open.dev_channel_mapping[4] = PCM_CHANNEL_RB;
-		} else if (channel_mode == 6) {
-			open.dev_channel_mapping[0] = PCM_CHANNEL_FL;
-			open.dev_channel_mapping[1] = PCM_CHANNEL_FR;
-			open.dev_channel_mapping[2] = PCM_CHANNEL_LFE;
-			open.dev_channel_mapping[3] = PCM_CHANNEL_FC;
-			open.dev_channel_mapping[4] = PCM_CHANNEL_LS;
-			open.dev_channel_mapping[5] = PCM_CHANNEL_RS;
-		} else if (channel_mode == 8) {
-			open.dev_channel_mapping[0] = PCM_CHANNEL_FL;
-			open.dev_channel_mapping[1] = PCM_CHANNEL_FR;
-			open.dev_channel_mapping[2] = PCM_CHANNEL_LFE;
-			open.dev_channel_mapping[3] = PCM_CHANNEL_FC;
-			open.dev_channel_mapping[4] = PCM_CHANNEL_LB;
-			open.dev_channel_mapping[5] = PCM_CHANNEL_RB;
-			open.dev_channel_mapping[6] = PCM_CHANNEL_FLC;
-			open.dev_channel_mapping[7] = PCM_CHANNEL_FRC;
-		} else {
-			pr_err("%s: invalid num_chan %d\n", __func__,
-					channel_mode);
-			return -EINVAL;
-		}
-		if ((open.dev_num_channel > 2) &&
-			multi_ch_map.set_channel_map)
-			memcpy(open.dev_channel_mapping,
-				multi_ch_map.channel_mapping,
-				PCM_FORMAT_MAX_NUM_CHANNEL);
 
 		pr_debug("%s: port_id=0x%x rate=%d topology_id=0x%X\n",
 			__func__, open.endpoint_id_1, open.sample_rate,
@@ -1496,14 +1537,14 @@ int adm_open(int port_id, int path, int rate, int channel_mode, int topology,
 			atomic_read(&this_adm.copp_low_latency_id[index]));
 	} else {
 		atomic_inc(&this_adm.copp_cnt[index]);
-		this_adm.topology[index] = open.topology_id;
-		pr_debug("%s: index: %d coppid: %d", __func__, index,
+		pr_debug("%s: index: %d coppid: %d\n", __func__, index,
 			atomic_read(&this_adm.copp_id[index]));
 	}
 	return 0;
 
 fail_cmd:
 
+	this_adm.topology[index] = 0;
 	return ret;
 }
 
@@ -1566,16 +1607,27 @@ int adm_matrix_map(int session_id, int path, int num_copps,
 		route->hdr.dest_port = atomic_read(&this_adm.copp_id[index]);
 	}
 	route->hdr.token = copp_id;
-	route->hdr.opcode = ADM_CMD_MATRIX_MAP_ROUTINGS_V5;
+	if (path == ADM_PATH_COMPRESSED_RX) {
+		pr_debug("ADM_CMD_STREAM_DEVICE_MAP_ROUTINGS_V5 0x%x\n",
+			  ADM_CMD_STREAM_DEVICE_MAP_ROUTINGS_V5);
+		route->hdr.opcode = ADM_CMD_STREAM_DEVICE_MAP_ROUTINGS_V5;
+	} else {
+		pr_debug("ADM_CMD_MATRIX_MAP_ROUTINGS_V5 0x%x\n",
+			ADM_CMD_MATRIX_MAP_ROUTINGS_V5);
+		route->hdr.opcode = ADM_CMD_MATRIX_MAP_ROUTINGS_V5;
+	}
 	route->num_sessions = 1;
 
 	switch (path) {
-	case 0x1:
+	case ADM_PATH_PLAYBACK:
 		route->matrix_id = ADM_MATRIX_ID_AUDIO_RX;
 		break;
-	case 0x2:
-	case 0x3:
+	case ADM_PATH_LIVE_REC:
+	case ADM_PATH_NONLIVE_REC:
 		route->matrix_id = ADM_MATRIX_ID_AUDIO_TX;
+		break;
+	case ADM_PATH_COMPRESSED_RX:
+		route->matrix_id = ADM_MATRIX_ID_COMPRESSED_AUDIO_RX;
 		break;
 	default:
 		pr_err("%s: Wrong path set[%d]\n", __func__, path);
@@ -1629,7 +1681,8 @@ int adm_matrix_map(int session_id, int path, int num_copps,
 		goto fail_cmd;
 	}
 
-	if (perf_mode != ULTRA_LOW_LATENCY_PCM_MODE) {
+	if (perf_mode != ULTRA_LOW_LATENCY_PCM_MODE &&
+		 path != ADM_PATH_COMPRESSED_RX) {
 		for (i = 0; i < num_copps; i++)
 			send_adm_cal(port_id[i], path, perf_mode);
 
@@ -1896,7 +1949,6 @@ int adm_close(int port_id, int perf_mode)
 			goto fail_cmd;
 		}
 		atomic_dec(&this_adm.copp_cnt[index]);
-		this_adm.topology[index] = 0;
 	}
 	if ((perf_mode == LEGACY_PCM_MODE &&
 		!(atomic_read(&this_adm.copp_cnt[index]))) ||
@@ -1945,6 +1997,7 @@ int adm_close(int port_id, int perf_mode)
 				atomic_read(&this_adm.copp_cnt[index]));
 			atomic_set(&this_adm.copp_id[index],
 				RESET_COPP_ID);
+			this_adm.topology[index] = 0;
 		}
 
 		ret = apr_send_pkt(this_adm.apr, (uint32_t *)&close);
@@ -2083,6 +2136,10 @@ int adm_set_softvolume(int port_id,
 	audproc_softvol.period = softvol_param->period;
 	audproc_softvol.step = softvol_param->step;
 	audproc_softvol.ramping_curve = softvol_param->rampingcurve;
+
+	pr_debug("%s: period %d, step %d, curve %d\n", __func__,
+		 audproc_softvol.period, audproc_softvol.step,
+		 audproc_softvol.ramping_curve);
 
 	atomic_set(&this_adm.copp_stat[index], 0);
 	rc = apr_send_pkt(this_adm.apr, (uint32_t *)&audproc_softvol);
@@ -2395,6 +2452,133 @@ int adm_get_topology_id(int port_id)
 
 }
 
+int adm_send_compressed_device_mute(int port_id, bool mute_on)
+{
+	struct adm_set_compressed_device_mute mute_params;
+	int index, ret = 0;
+
+	pr_debug("%s port_id: 0x%x, mute_on: %d\n", __func__, port_id, mute_on);
+	index = afe_get_port_index(port_id);
+	if (index < 0 || index >= AFE_MAX_PORTS) {
+		pr_err("%s: invalid port idx 0x%x portid 0x%x\n",
+			__func__, index, port_id);
+		ret = -EINVAL;
+		goto end;
+	}
+
+	mute_params.command.hdr.hdr_field =
+			APR_HDR_FIELD(APR_MSG_TYPE_SEQ_CMD,
+			APR_HDR_LEN(APR_HDR_SIZE), APR_PKT_VER);
+	mute_params.command.hdr.pkt_size =
+			sizeof(struct adm_set_compressed_device_mute);
+	mute_params.command.hdr.src_svc = APR_SVC_ADM;
+	mute_params.command.hdr.src_domain = APR_DOMAIN_APPS;
+	mute_params.command.hdr.src_port = port_id;
+	mute_params.command.hdr.dest_svc = APR_SVC_ADM;
+	mute_params.command.hdr.dest_domain = APR_DOMAIN_ADSP;
+	mute_params.command.hdr.dest_port =
+			atomic_read(&this_adm.copp_id[index]);
+	mute_params.command.hdr.token = port_id;
+	mute_params.command.hdr.opcode = ADM_CMD_SET_PP_PARAMS_V5;
+	mute_params.command.payload_addr_lsw = 0;
+	mute_params.command.payload_addr_msw = 0;
+	mute_params.command.mem_map_handle = 0;
+	mute_params.command.payload_size = sizeof(mute_params) -
+						sizeof(mute_params.command);
+	mute_params.params.module_id = AUDPROC_MODULE_ID_COMPRESSED_MUTE;
+	mute_params.params.param_id = AUDPROC_PARAM_ID_COMPRESSED_MUTE;
+	mute_params.params.param_size = mute_params.command.payload_size -
+					sizeof(mute_params.params);
+	mute_params.params.reserved = 0;
+	mute_params.mute_on = mute_on;
+
+	atomic_set(&this_adm.copp_stat[index], 0);
+	ret = apr_send_pkt(this_adm.apr, (uint32_t *)&mute_params);
+	if (ret < 0) {
+		pr_err("%s: send device mute for port %d failed, ret %d\n",
+			__func__, port_id, ret);
+		ret = -EINVAL;
+		goto end;
+	}
+
+	/* Wait for the callback */
+	ret = wait_event_timeout(this_adm.wait[index],
+		atomic_read(&this_adm.copp_stat[index]),
+		msecs_to_jiffies(TIMEOUT_MS));
+	if (!ret) {
+		pr_err("%s: send device mute for port %d failed\n", __func__,
+			port_id);
+		ret = -EINVAL;
+		goto end;
+	}
+	ret = 0;
+end:
+	return ret;
+}
+
+int adm_send_compressed_device_latency(int port_id, int latency)
+{
+	struct adm_set_compressed_device_latency latency_params;
+	int index, ret = 0;
+
+	pr_debug("%s port_id: 0x%x, latency: %d\n", __func__, port_id, latency);
+	index = afe_get_port_index(port_id);
+	if (index < 0 || index >= AFE_MAX_PORTS) {
+		pr_err("%s: invalid port idx 0x%x portid 0x%x\n",
+			__func__, index, port_id);
+		ret = -EINVAL;
+		goto end;
+	}
+
+	latency_params.command.hdr.hdr_field =
+			APR_HDR_FIELD(APR_MSG_TYPE_SEQ_CMD,
+			APR_HDR_LEN(APR_HDR_SIZE), APR_PKT_VER);
+	latency_params.command.hdr.pkt_size =
+			sizeof(struct adm_set_compressed_device_latency);
+	latency_params.command.hdr.src_svc = APR_SVC_ADM;
+	latency_params.command.hdr.src_domain = APR_DOMAIN_APPS;
+	latency_params.command.hdr.src_port = port_id;
+	latency_params.command.hdr.dest_svc = APR_SVC_ADM;
+	latency_params.command.hdr.dest_domain = APR_DOMAIN_ADSP;
+	latency_params.command.hdr.dest_port =
+			atomic_read(&this_adm.copp_id[index]);
+	latency_params.command.hdr.token = port_id;
+	latency_params.command.hdr.opcode = ADM_CMD_SET_PP_PARAMS_V5;
+	latency_params.command.payload_addr_lsw = 0;
+	latency_params.command.payload_addr_msw = 0;
+	latency_params.command.mem_map_handle = 0;
+	latency_params.command.payload_size = sizeof(latency_params) -
+						sizeof(latency_params.command);
+	latency_params.params.module_id = AUDPROC_MODULE_ID_COMPRESSED_LATENCY;
+	latency_params.params.param_id = AUDPROC_PARAM_ID_COMPRESSED_LATENCY;
+	latency_params.params.param_size = latency_params.command.payload_size -
+					sizeof(latency_params.params);
+	latency_params.params.reserved = 0;
+	latency_params.latency = latency;
+
+	atomic_set(&this_adm.copp_stat[index], 0);
+	ret = apr_send_pkt(this_adm.apr, (uint32_t *)&latency_params);
+	if (ret < 0) {
+		pr_err("%s: send device latency for port %d failed, ret %d\n",
+			__func__, port_id, ret);
+		ret = -EINVAL;
+		goto end;
+	}
+
+	/* Wait for the callback */
+	ret = wait_event_timeout(this_adm.wait[index],
+		atomic_read(&this_adm.copp_stat[index]),
+		msecs_to_jiffies(TIMEOUT_MS));
+	if (!ret) {
+		pr_err("%s: send device latency for port %d failed\n", __func__,
+			port_id);
+		ret = -EINVAL;
+		goto end;
+	}
+	ret = 0;
+end:
+	return ret;
+}
 static int __init adm_init(void)
 {
 	int i = 0;

@@ -11,6 +11,7 @@
  */
 
 /memreserve/ 0x00000000 0x00001000;
+/memreserve/ 0xac1c0000 0x00001000;
 
 #include "skeleton64.dtsi"
 
@@ -231,6 +232,11 @@
 						1 &intc 0 238 0
 						2 &msmgpio 44 0>;
 
+		qcom,tx-gpio = <&msmgpio 43 0x00>;
+		qcom,rx-gpio = <&msmgpio 44 0x00>;
+		qcom,cts-gpio = <&msmgpio 45 0x00>;
+		qcom,rfr-gpio = <&msmgpio 46 0x00>;
+
 		qcom,bam-tx-ep-pipe-index = <10>;
 		qcom,bam-rx-ep-pipe-index = <11>;
 		qcom,msm-bus,name = "uart6";
@@ -239,6 +245,7 @@
 		qcom,msm-bus,vectors-KBps =
 				<86 512 0 0>,
 				<86 512 500 800>;
+		status = "disabled";
 	};
 
 	blsp2_uart4: uart@f9961000 { /* BLSP2 UART4 */
@@ -352,13 +359,14 @@
 			"iface_clk", "bus_clk", "sleep_clk", "cxo_clk",
 			"maple_bus_clk", "prng_clk";
 		qcom,bus-load-vector-tbl = <0 0 0>,
-			<36000  208000  303000>,
-			<110400 536000  303000>,
-			<244800 1012000 303000>,
-			<489000 2024000 606000>,
-			<783360 3240000 970000>,
-			<979200 4048000 1212000>,
-			<9792000 4264000 1279000>;
+			<4000000   4000000  4000000>,
+			<8000000   8000000  8000000>,
+			<16000000 16000000 16000000>,
+			<20000000 20000000 20000000>,
+			<24000000 24000000 24000000>,
+			<28000000 28000000 28000000>,
+			<33600000 33600000 33600000>,
+			<48000000 48000000 48000000>;
 		qcom,vbif-reg-presets = <0x00b0 0x10101010>,
 			<0x00b4 0x00001010>,
 			<0x00b8 0x00000000>,
@@ -416,7 +424,7 @@
 		interrupt-names = "hc_irq", "pwr_irq";
 
 		qcom,bus-width = <8>;
-		qcom,cpu-dma-latency-us = <701>;
+		qcom,cpu-dma-latency-us = <200>;
 
 		qcom,msm-bus,name = "sdhc1";
 		qcom,msm-bus,num-cases = <9>;
@@ -474,7 +482,6 @@
 		interrupt-names = "hc_irq", "pwr_irq";
 
 		qcom,bus-width = <4>;
-		qcom,cpu-dma-latency-us = <701>;
 
 		qcom,msm-bus,name = "sdhc2";
 		qcom,msm-bus,num-cases = <8>;
@@ -4324,30 +4331,37 @@
 			tx-fifo-resize;
 			usb-phy = <&hsphy0>, <&ssphy0>;
 		};
+	};
 
-		usb3_sec: ssusb@f9400000 {
-			compatible = "qcom,dwc-usb3-msm";
+	usb3_sec: ssusb@f9400000 {
+		compatible = "qcom,dwc-usb3-msm";
+		reg = <0xf9400000 0xfc000>;
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+		interrupt-parent = <&intc>;
+		interrupts = <0 261 4>;
+		interrupt-names = "hs_phy_irq";
+		USB3_GDSC-supply = <&gdsc_usb30_sec>;
+		qcom,restore-sec-cfg-for-scm-dev-id = <10>;
+		qcom,charging-disabled;
+		status = "disabled";
+
+		qcom,msm-bus,name = "usb3_sec";
+		qcom,msm-bus,num-cases = <2>;
+		qcom,msm-bus,num-paths = <1>;
+		qcom,msm-bus,vectors-KBps =
+				<61 512 0 0>,
+				<61 512 240000 1920000>;
+
+		dwc3@f9400000 {
+			compatible = "synopsys,dwc3";
 			reg = <0xf9400000 0xfc000>;
-			#address-cells = <1>;
-			#size-cells = <1>;
-			ranges;
 			interrupt-parent = <&intc>;
-			interrupts = <0 261 4>;
-			interrupt-names = "hs_phy_irq";
-			USB3_GDSC-supply = <&gdsc_usb30_sec>;
-			qcom,restore-sec-cfg-for-scm-dev-id = <10>;
-			qcom,charging-disabled;
-			status = "disabled";
-
-			dwc3@f9400000 {
-				compatible = "synopsys,dwc3";
-				reg = <0xf9400000 0xfc000>;
-				interrupt-parent = <&intc>;
-				interrupts = <0 258 4>, <0 262 4>;
-				interrupt-names = "irq", "otg_irq";
-				usb-phy = <&hsphy1>, <&ssphy1>;
-				host-only-mode;
-			};
+			interrupts = <0 258 4>, <0 262 4>;
+			interrupt-names = "irq", "otg_irq";
+			usb-phy = <&hsphy1>, <&ssphy0>;
+			host-only-mode;
 		};
 	};
 
@@ -4395,16 +4409,6 @@
 		qcom,ext-vbus-id;
 		qcom,num-ports = <3>;
 		qcom,primary-phy = <&hsphy0>;
-		status = "disabled";
-	};
-
-	ssphy1: ssphy@f94f8800 {
-		compatible = "qcom,usb-ssphy";
-		reg = <0xf94f8800 0x3ff>;
-		vdd-supply = <&pma8084_s1>;
-		vdda18-supply = <&pma8084_l6>;
-		qcom,vdd-voltage-level = <0 900000 1050000>;
-		qcom,primary-phy = <&ssphy0>;
 		status = "disabled";
 	};
 
@@ -4960,9 +4964,9 @@
 					<68 604 456000 519000>,
 					<68 604 864000 519000>,
 					<68 604 1728000 3640000>,
-					<68 604 2766000 1661000>,
-					<68 604 3456000 2076000>,
-					<68 604 3662000 2198000>;
+					<68 604 2766000 3640000>,
+					<68 604 3456000 3640000>,
+					<68 604 3662000 3640000>;
 				qcom,bus-configs = <0x30fcfff>;
 			};
 		};
@@ -5439,6 +5443,7 @@
 };
 
 &gdsc_usb30_sec{
+	parent-supply = <&gdsc_usb30>;
 	status = "ok";
 };
 

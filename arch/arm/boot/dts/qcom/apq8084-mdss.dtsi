@@ -197,6 +197,16 @@
 				qcom,supply-enable-load = <100000>;
 				qcom,supply-disable-load = <100>;
 			};
+
+			qcom,ctrl-supply-entry@1 {
+				reg = <1>;
+				qcom,supply-name = "vddio";
+				qcom,supply-min-voltage = <1800000>;
+				qcom,supply-max-voltage = <1800000>;
+				qcom,supply-enable-load = <100000>;
+				qcom,supply-disable-load = <100>;
+				qcom,supply-post-on-sleep = <20>;
+			};
 		};
 
 		qcom,panel-supply-entries {
@@ -275,6 +285,16 @@
 				qcom,supply-enable-load = <100000>;
 				qcom,supply-disable-load = <100>;
 			};
+
+			qcom,ctrl-supply-entry@1 {
+				reg = <1>;
+				qcom,supply-name = "vddio";
+				qcom,supply-min-voltage = <1800000>;
+				qcom,supply-max-voltage = <1800000>;
+				qcom,supply-enable-load = <100000>;
+				qcom,supply-disable-load = <100>;
+				qcom,supply-post-on-sleep = <20>;
+			};
 		};
 
 		qcom,panel-supply-entries {
@@ -337,5 +357,19 @@
 		qcom,mdss_pan_res = <1920 1080>;
 		qcom,mdss_pan_bpp = <24>;
 		qcom,mdss-fb-map = <&mdss_fb2>;
+	};
+
+	mdss_edp: qcom,mdss_edp@fd923400 {
+		compatible = "qcom,mdss-edp";
+		reg = <0xfd923400 0x700>,
+			<0xfd8c2000 0x1000>;
+		reg-names = "edp_base", "mmss_cc_base";
+		vdda-supply = <&pma8084_l12>;
+		gpio-panel-en = <&msmgpio 137 0>;
+		gpio-lvl-en = <&msmgpio 91 0>;		/* to receive hpd */
+		qcom,mdss-fb-map = <&mdss_fb0>;
+		gpio-panel-hpd = <&msmgpio 103 0>;
+		qcom,panel-lpg-channel = <2>; /* pma8084 gpio #7, LPG Channel 3 */
+		qcom,panel-pwm-period = <53>;
 	};
 };
