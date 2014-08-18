@@ -35,6 +35,7 @@
 #include <linux/wakelock.h>
 #include <linux/mfd/bcmpmu59xxx.h>
 #include <linux/mfd/bcmpmu59xxx_reg.h>
+#include <plat/kona_reset_reason.h>
 
 struct bcmpmu_ponkey {
 	struct input_dev *idev;
@@ -363,6 +364,12 @@ static int bcmpmu59xxx_ponkey_probe(struct platform_device *pdev)
 	if (__ponkey_init_timer_func(bcmpmu, PKEY_TIMER_T2, pkey->t2)) {
 		error =  -EINVAL;
 		goto out_input;
+	}
+	if (bcmpmu->read_dev(bcmpmu, PMU_REG_ENV8, &val))
+		return -EINVAL;
+	if (is_charging_state() || (val & ENV8_UBPD_WAKE)) {
+		pkey->t3->action = PKEY_ACTION_NOP;
+		pr_info("Charging mode clear T3 action\n");
 	}
 	if (__ponkey_init_timer_func(bcmpmu, PKEY_TIMER_T3, pkey->t3)) {
 		error =  -EINVAL;
