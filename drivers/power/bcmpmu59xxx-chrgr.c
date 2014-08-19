@@ -114,6 +114,7 @@ static char *chrgr_names[PMU_CHRGR_TYPE_MAX] = {
 	[PMU_CHRGR_TYPE_TYPE1]	= "type1",
 	[PMU_CHRGR_TYPE_TYPE2]	= "type2",
 	[PMU_CHRGR_TYPE_ACA]	= "aca",
+	[PMU_CHRGR_TYPE_MISC]	= "misc",
 };
 
 static int chrgr_curr_lmt_default[PMU_CHRGR_TYPE_MAX] = {
@@ -126,6 +127,7 @@ static int chrgr_curr_lmt_default[PMU_CHRGR_TYPE_MAX] = {
 	[PMU_CHRGR_TYPE_PS2] = 100,
 	[PMU_CHRGR_TYPE_ACA_DOCK] = 700,
 	[PMU_CHRGR_TYPE_ACA] = 700,
+	[PMU_CHRGR_TYPE_MISC] = 500,
 };
 
 char *supplies_to[] = {

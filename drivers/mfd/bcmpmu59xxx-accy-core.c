@@ -150,6 +150,7 @@ static char *chrgr_types_str[PMU_CHRGR_TYPE_MAX] = {
 	[PMU_CHRGR_TYPE_TYPE2]	= "type2",
 	[PMU_CHRGR_TYPE_ACA_DOCK]	= "aca_dock",
 	[PMU_CHRGR_TYPE_ACA]	= "aca",
+	[PMU_CHRGR_TYPE_MISC]	= "misc",
 };
 
 static const int bcmpmu_usb_id_map[PMU_USB_ID_LVL_MAX] = {
@@ -311,6 +312,7 @@ static bool _chrgr_type_usb(int chrgr_type)
 	case PMU_CHRGR_TYPE_TYPE2:
 	case PMU_CHRGR_TYPE_PS2:
 	case PMU_CHRGR_TYPE_ACA_DOCK:
+	case PMU_CHRGR_TYPE_MISC:
 		is_usb = false;
 	default:
 		is_usb = false;

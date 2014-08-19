@@ -115,10 +115,13 @@ static void reset_bc(struct accy_det *accy_d)
 static int is_bb_detection_done(u32 status)
 {
 	int ret_status = 0;
+	u32 type;
 	if (status & BB_BC_STS_BC_DONE_MSK) {
+		type = status & 0x7F;
 		/*Make sure that only one type bit is set*/
-		u32 type = status & 0x7F;
-		if (type && ((type & (type - 1)) == 0))
+		if (type && (type & (type - 1)))
+			ret_status = 0;
+		else
 			ret_status = 1;
 	}
 
@@ -278,8 +281,12 @@ static int bcmpmu_accy_detect_func(struct accy_det *accy_d)
 			__func__, vbus_status);
 
 	if (accy_d->retry_cnt >= BC_RETRIES) {
-		pr_acd(ERROR, "---No accy detected\n");
-		state = STATE_IDLE;
+		if (accy_d->chrgr_type)
+			state = STATE_CONNECTED;
+		else {
+			pr_acd(ERROR, "---No accy detected\n");
+			state = STATE_IDLE;
+		}
 		goto err;
 	}
 
@@ -297,15 +304,16 @@ static int bcmpmu_accy_detect_func(struct accy_det *accy_d)
 
 	if ((id_status == PMU_USB_ID_FLOAT) && vbus_status) {
 		bc_status = get_bc_status(accy_d);
-		if (bc_status)
+		if (bc_status & 0x7F) {
 			chrgr_type = get_chrgr_type(accy_d, bc_status);
-
-		pr_acd(FLOW, "%s, bc_status=0x%x, chrgr_type=%d retry=%d\n",
+			pr_acd(FLOW, "%s, bc=0x%x, chrgr=%d, retry=%d\n",
 				__func__, bc_status, chrgr_type,
 				accy_d->retry_cnt);
+		}
 
 		if ((!bc_status) || (!chrgr_type)) {
-			pr_acd(ERROR, "--- bc_status/chrgr_type nt valid\n");
+			if (bc_status)
+				accy_d->chrgr_type = PMU_CHRGR_TYPE_MISC;
 			goto err;
 		}
 		if ((chrgr_type == PMU_CHRGR_TYPE_TYPE2) &&
@@ -353,8 +361,12 @@ void bcmpmu_enable_bc_regl(struct accy_det *accy_d, bool en)
 
 static void bcmpmu_notify_charger_state(struct accy_det *accy_d)
 {
+	static int chrgr_t;
 	pr_acd(VERBOSE, "===chrgr_type %d\n", accy_d->chrgr_type);
-	bcmpmu_accy_chrgr_type_notify(accy_d->chrgr_type);
+	if (chrgr_t != accy_d->chrgr_type) {
+		bcmpmu_accy_chrgr_type_notify(accy_d->chrgr_type);
+		chrgr_t = accy_d->chrgr_type;
+	}
 }
 
 static void bcmpmu_accy_handle_state(struct accy_det *accy_d)
@@ -487,11 +499,14 @@ static void bcmpmu_detect_wq(struct work_struct *work)
 					accy_d->state);
 			bcmpmu_accy_handle_state(accy_d);
 		} else {
+			if (accy_d->chrgr_type)
+				bcmpmu_notify_charger_state(accy_d);
 			reset_bc(accy_d);
 			accy_d->reschedule =  true;
 		}
 	} else if (accy_d->act == ACT_ACCY_RM) {
-		if (accy_d->state == STATE_CONNECTED) {
+		if ((accy_d->state == STATE_CONNECTED) ||
+				accy_d->chrgr_type) {
 			accy_d->state = STATE_DISCONNECTED;
 			bcmpmu_accy_handle_state(accy_d);
 		} else if (accy_d->state == STATE_DETECT) {
