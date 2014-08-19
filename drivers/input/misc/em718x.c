@@ -280,6 +280,7 @@ struct em718x {
 enum sns_event_types {
 	EV_ADEV = EV_MSC,
 	EV_IDEV = EV_ABS,
+	EV_IDEV_GYRO = EV_MSC,
 };
 
 enum sns_event_codes {
@@ -290,9 +291,6 @@ enum sns_event_codes {
 	EV_ACC_X,
 	EV_ACC_Y,
 	EV_ACC_Z,
-	EV_GYRO_X,
-	EV_GYRO_Y,
-	EV_GYRO_Z,
 	EV_QUAT_X,
 	EV_QUAT_Y,
 	EV_QUAT_Z,
@@ -300,6 +298,14 @@ enum sns_event_codes {
 	EV_STATUS,
 	EV_STEP,
 	EV_SNS_MAX
+};
+
+enum sns_event_codes_gyro {
+	EV_GYRO_FIRST = MSC_SERIAL,
+	EV_GYRO_X = EV_GYRO_FIRST,
+	EV_GYRO_Y,
+	EV_GYRO_Z,
+	EV_GYRO_MAX
 };
 
 enum wake_event_codes {
@@ -737,9 +743,9 @@ static void em718x_process_amgf(struct em718x *em718x,
 	if ((ev_status & EV_GYRO) && enabled(em718x, SNS_GYRO)) {
 		dev_vdbg(dev, "gyro[%u] %d, %d, %d\n", amgf->gyro.t,
 				amgf->gyro.x, amgf->gyro.y, amgf->gyro.z);
-		input_event(idev, EV_IDEV, EV_GYRO_X, amgf->gyro.x);
-		input_event(idev, EV_IDEV, EV_GYRO_Y, amgf->gyro.y);
-		input_event(idev, EV_IDEV, EV_GYRO_Z, amgf->gyro.z);
+		input_event(idev, EV_IDEV_GYRO, EV_GYRO_X, amgf->gyro.x);
+		input_event(idev, EV_IDEV_GYRO, EV_GYRO_Y, amgf->gyro.y);
+		input_event(idev, EV_IDEV_GYRO, EV_GYRO_Z, amgf->gyro.z);
 		input_sync(idev);
 	}
 	if (ev_status & EV_FEATURE) {
@@ -1235,6 +1241,9 @@ static void em718x_startup_work_func(struct work_struct *work)
 		input_set_capability(em718x->idev, EV_IDEV, i);
 		input_set_abs_params(em718x->idev, i, INT_MIN, INT_MAX, 0, 0);
 	}
+
+	for (i = EV_GYRO_FIRST; i < EV_GYRO_MAX; i++)
+		input_set_capability(em718x->idev, EV_IDEV_GYRO, i);
 
 	em718x->idev->name = "em718x-sns";
 	em718x->idev->id.bustype = BUS_I2C;
