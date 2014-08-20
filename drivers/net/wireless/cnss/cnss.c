@@ -391,6 +391,8 @@ void cnss_setup_fw_files(u16 revision)
 			CNSS_MAX_FILE_NAME);
 		strlcpy(penv->fw_files.utf_board_data, "utfbd11.bin",
 			CNSS_MAX_FILE_NAME);
+		strlcpy(penv->fw_files.epping_file, "epping11.bin",
+			CNSS_MAX_FILE_NAME);
 		break;
 
 	case QCA6174_FW_1_3:
@@ -403,6 +405,8 @@ void cnss_setup_fw_files(u16 revision)
 		strlcpy(penv->fw_files.utf_file, "utf13.bin",
 			CNSS_MAX_FILE_NAME);
 		strlcpy(penv->fw_files.utf_board_data, "utfbd13.bin",
+			CNSS_MAX_FILE_NAME);
+		strlcpy(penv->fw_files.epping_file, "epping13.bin",
 			CNSS_MAX_FILE_NAME);
 		break;
 
@@ -417,6 +421,8 @@ void cnss_setup_fw_files(u16 revision)
 			CNSS_MAX_FILE_NAME);
 		strlcpy(penv->fw_files.utf_board_data, "utfbd20.bin",
 			CNSS_MAX_FILE_NAME);
+		strlcpy(penv->fw_files.epping_file, "epping20.bin",
+			CNSS_MAX_FILE_NAME);
 		break;
 
 	case QCA6174_FW_3_0:
@@ -430,6 +436,8 @@ void cnss_setup_fw_files(u16 revision)
 			CNSS_MAX_FILE_NAME);
 		strlcpy(penv->fw_files.utf_board_data, "utfbd30.bin",
 			CNSS_MAX_FILE_NAME);
+		strlcpy(penv->fw_files.epping_file, "epping30.bin",
+			CNSS_MAX_FILE_NAME);
 		break;
 
 	default:
@@ -442,6 +450,8 @@ void cnss_setup_fw_files(u16 revision)
 		strlcpy(penv->fw_files.utf_file, "utf.bin",
 			CNSS_MAX_FILE_NAME);
 		strlcpy(penv->fw_files.utf_board_data, "utfbd.bin",
+			CNSS_MAX_FILE_NAME);
+		strlcpy(penv->fw_files.epping_file, "epping.bin",
 			CNSS_MAX_FILE_NAME);
 		break;
 	}
