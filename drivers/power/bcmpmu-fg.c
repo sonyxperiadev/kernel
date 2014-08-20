@@ -1428,7 +1428,7 @@ static int bcmpmu_fg_get_uuc(struct bcmpmu_fg_data *fg)
 		*/
 		esr = bcmpmu_fg_get_batt_esr(fg, fg->adc_data.volt,
 					fg->adc_data.temp);
-		if ((fg->adc_data.volt - esr * curr_avg) >
+		if ((fg->adc_data.volt - (esr * curr_avg) / 1000) >
 			fg->bdata->batt_prop->max_volt) {
 			clear_avg_sample_buff(fg);
 		} else {
