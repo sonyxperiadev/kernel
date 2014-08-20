@@ -77,5 +77,19 @@ config TEGRA_CPUQUIET
 	  If unsure, say N.
 endmenu
 
+menu "X86 CPUquiet Driver"
+depends on X86
+
+config X86_CPUQUIET
+	bool "X86"
+	depends on HOTPLUG_CPU && X86
+	default n
+	help
+	  This is the CPUquiet driver for X86 CPUs and SoCs. It supports
+	  auto hotplug of CPU cores using the CPUquiet governor.
+
+	  If unsure, say N.
+endmenu
+
 endif
 endmenu
