@@ -748,19 +748,23 @@ int mdss_mdp_cmd_restore(struct mdss_mdp_ctl *ctl)
 	return 0;
 }
 
-int mdss_mdp_cmd_stop(struct mdss_mdp_ctl *ctl, int panel_power_state)
+static void mdss_mdp_cmd_stop_sub(struct mdss_mdp_ctl *ctl,
+		int panel_power_state)
 {
 	struct mdss_mdp_cmd_ctx *ctx;
 	unsigned long flags;
 	struct mdss_mdp_vsync_handler *tmp, *handle;
 	int need_wait = 0;
-	int ret = 0;
 
 	ctx = (struct mdss_mdp_cmd_ctx *) ctl->priv_data;
 	if (!ctx) {
 		pr_err("invalid ctx\n");
-		return -ENODEV;
+		return;
 	}
+
+	/* if power state already updated, skip this */
+	if (ctx->panel_power_state == panel_power_state)
+		return;
 
 	list_for_each_entry_safe(handle, tmp, &ctx->vsync_handlers, list)
 		mdss_mdp_cmd_remove_vsync_handler(ctl, handle);
@@ -789,8 +793,24 @@ int mdss_mdp_cmd_stop(struct mdss_mdp_ctl *ctl, int panel_power_state)
 	mdss_mdp_cmd_clk_off(ctx);
 	flush_work(&ctx->pp_done_work);
 	ctx->panel_power_state = panel_power_state;
+}
 
-	if (ctl->num == 0) {
+int mdss_mdp_cmd_stop(struct mdss_mdp_ctl *ctl, int panel_power_state)
+{
+	struct mdss_mdp_cmd_ctx *ctx = ctl->priv_data;
+	struct mdss_mdp_ctl *sctl = mdss_mdp_get_split_ctl(ctl);
+	int ret = 0;
+
+	if (!ctx) {
+		pr_err("invalid ctx\n");
+		return -ENODEV;
+	}
+
+	if (ctx->panel_power_state != panel_power_state) {
+		mdss_mdp_cmd_stop_sub(ctl, panel_power_state);
+		if (sctl)
+			mdss_mdp_cmd_stop_sub(sctl, panel_power_state);
+
 		ret = mdss_mdp_ctl_intf_event(ctl, MDSS_EVENT_BLANK,
 				(void *) (long int) panel_power_state);
 		WARN(ret, "intf %d unblank error (%d)\n", ctl->intf_num, ret);
