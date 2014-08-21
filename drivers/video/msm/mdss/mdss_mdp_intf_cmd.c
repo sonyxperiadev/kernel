@@ -49,6 +49,7 @@ struct mdss_mdp_cmd_ctx {
 	atomic_t pp_done_cnt;
 	struct mdss_panel_recovery recovery;
 	struct mdss_mdp_cmd_ctx *sync_ctx;	/* for left + right, partial update */
+	u32 pp_timeout_report_cnt;
 };
 
 struct mdss_mdp_cmd_ctx mdss_mdp_cmd_ctx_list[MAX_SESSIONS];
@@ -554,14 +555,18 @@ static int mdss_mdp_cmd_wait4pingpong(struct mdss_mdp_ctl *ctl, void *arg)
 			atomic_read(&ctx->koff_cnt));
 
 		if (rc <= 0) {
-			WARN(1, "cmd kickoff timed out (%d) ctl=%d\n",
+			if (!ctx->pp_timeout_report_cnt) {
+				WARN(1, "cmd kickoff timed out (%d) ctl=%d\n",
 						rc, ctl->num);
-			MDSS_XLOG_TOUT_HANDLER("mdp", "dsi0", "dsi1",
+				MDSS_XLOG_TOUT_HANDLER("mdp", "dsi0", "dsi1",
 						"edp", "hdmi", "panic");
+			}
+			ctx->pp_timeout_report_cnt++;
 			rc = -EPERM;
 			mdss_mdp_ctl_notify(ctl, MDP_NOTIFY_FRAME_TIMEOUT);
 		} else {
 			rc = 0;
+			ctx->pp_timeout_report_cnt = 0;
 		}
 	}
 
@@ -876,6 +881,7 @@ int mdss_mdp_cmd_start(struct mdss_mdp_ctl *ctl)
 
 	ctx->ctl = ctl;
 	ctx->pp_num = mixer->num;
+	ctx->pp_timeout_report_cnt = 0;
 	init_completion(&ctx->pp_comp);
 	init_completion(&ctx->stop_comp);
 	spin_lock_init(&ctx->clk_lock);
