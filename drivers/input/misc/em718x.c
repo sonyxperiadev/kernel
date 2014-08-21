@@ -6,6 +6,7 @@
  * All Rights Reserved
  */
 
+#include <linux/delay.h>
 #include <linux/firmware.h>
 #include <linux/gpio.h>
 #include <linux/i2c.h>
@@ -76,6 +77,9 @@ enum em718x_reg {
 	R8_RESET = 0x9b,
 	R8_ERR_REGISTER = 0x50,
 	R16_DATA_EXTENTION_REG = 0x43,
+	R32_PARAMETER_READ_REG = 0x3b,
+	R8_PARAMETER_REQ_REG = 0x64,
+	R8_PARAMETER_ACK_REG = 0x3a,
 };
 
 enum em718x_features {
@@ -275,6 +279,8 @@ struct em718x {
 	struct wake_lock w_lock;
 	struct notifier_block nb;
 	bool suspend_prepared;
+	u32 *parameter_buf;
+	int parameter_num;
 };
 
 enum sns_event_types {
@@ -511,6 +517,102 @@ static int em718x_set_sensor_rate(struct em718x *em718x,
 	return rc;
 }
 
+#define PARAM_READ_RETRY_NUM 3
+static int em718x_parameters_read(struct em718x *em718x, u32 *buf, int from,
+	size_t num)
+{
+	int rc;
+	u8 ack;
+
+	rc = smbus_write_byte(em718x->client, R8_PARAMETER_REQ_REG, from);
+	if (rc)
+		return rc;
+	em718x->algo_ctl |= 1 << 7;
+	rc = smbus_write_byte(em718x->client, R8_ALGO_CTL, em718x->algo_ctl);
+	if (rc)
+		return rc;
+	do {
+		int i;
+		for (i = 0; i < PARAM_READ_RETRY_NUM; i++) {
+			usleep_range(5000, 6000);
+			rc = smbus_read_byte(em718x->client,
+					R8_PARAMETER_ACK_REG, &ack);
+			if (rc)
+				goto exit;
+			if (ack == from) {
+				dev_info(&em718x->client->dev, "%s: ack %d\n",
+						__func__, i);
+				goto acked;
+			}
+		}
+		dev_err(&em718x->client->dev, "%s: no ack\n", __func__);
+		goto exit;
+acked:
+		rc = smbus_read_byte_block(em718x->client,
+				R32_PARAMETER_READ_REG, (u8 *)buf,
+				sizeof(*buf));
+		if (rc)
+			goto exit;
+		buf++;
+		rc = smbus_write_byte(em718x->client,
+				R8_PARAMETER_REQ_REG, ++from);
+		if (rc)
+			goto exit;
+	} while (--num);
+exit:
+	em718x->algo_ctl &= ~(1 << 7);
+	(void)smbus_write_byte(em718x->client, R8_ALGO_CTL, em718x->algo_ctl);
+	return rc;
+}
+
+static ssize_t em718x_set_parameters_read(struct device *dev,
+				struct device_attribute *attr,
+				const char *buf, size_t count)
+{
+	struct em718x *em718x = dev_get_drvdata(dev);
+	s32 from;
+	s32 num;
+	int rc;
+
+	if (2 != sscanf(buf, "%i,%i", &from, &num))
+		return -EINVAL;
+	if (!num || from < 1 || (from + num - 1) > 127)
+		return -EINVAL;
+	if (em718x->parameter_buf)
+		kfree(em718x->parameter_buf);
+	em718x->parameter_buf =
+			kzalloc(num * sizeof(*em718x->parameter_buf),
+			GFP_KERNEL);
+	if (!em718x->parameter_buf)
+		return -ENOMEM;
+	em718x->parameter_num = num;
+	rc = em718x_parameters_read(em718x, em718x->parameter_buf, from, num);
+	return rc ? rc : count;
+}
+
+static ssize_t em718x_get_parameters_read(struct device *dev,
+			struct device_attribute *attr,
+			char *buf)
+{
+	struct em718x *em718x = dev_get_drvdata(dev);
+	int i;
+	char *p = buf;
+
+	if (!em718x->parameter_buf)
+		return -EINVAL;
+	for (i = 0; i < em718x->parameter_num; i++) {
+		p += scnprintf(p, PAGE_SIZE - (p - buf), "0x%08x ",
+				em718x->parameter_buf[i]);
+	}
+	kfree(em718x->parameter_buf);
+	em718x->parameter_buf = NULL;
+	p += scnprintf(p, PAGE_SIZE - (p - buf), "\n");
+	return (ssize_t)(p - buf);
+}
+
+static DEVICE_ATTR(parameter_read, S_IWUSR | S_IRUSR,
+		em718x_get_parameters_read, em718x_set_parameters_read);
+
 static ssize_t em718x_set_register(struct device *dev,
 				struct device_attribute *attr,
 				const char *buf, size_t count)
@@ -682,6 +784,7 @@ static struct attribute *em718x_attributes[] = {
 	&dev_attr_rate.attr,
 	&dev_attr_report.attr,
 	&dev_attr_reset.attr,
+	&dev_attr_parameter_read.attr,
 	NULL
 };
 
