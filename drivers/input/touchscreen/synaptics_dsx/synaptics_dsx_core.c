@@ -158,6 +158,12 @@ static ssize_t synaptics_mode_show(struct device *dev,
 static ssize_t synaptics_mode_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t count);
 
+static ssize_t synaptics_wake_event_on_touch_show(struct device *dev,
+		struct device_attribute *attr, char *buf);
+
+static ssize_t synaptics_wake_event_on_touch_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count);
+
 static void synaptics_rmi4_f11_wg(struct synaptics_rmi4_data *, bool);
 static void synaptics_rmi4_f12_wg(struct synaptics_rmi4_data *, bool);
 
@@ -551,6 +557,9 @@ static struct device_attribute attrs[] = {
 	__ATTR(mode, S_IRUGO | S_IWUSR | S_IWGRP,
 			synaptics_mode_show,
 			synaptics_mode_store),
+	__ATTR(wake_event_on_touch, S_IRUGO | S_IWUSR | S_IWGRP,
+			synaptics_wake_event_on_touch_show,
+			synaptics_wake_event_on_touch_store),
 };
 
 static struct kobj_attribute virtual_key_map_attr = {
@@ -918,6 +927,7 @@ static int synaptics_rmi4_f11_abs_report(struct synaptics_rmi4_data *rmi4_data,
 	int temp;
 	struct synaptics_rmi4_f11_data_1_5 data;
 	struct synaptics_rmi4_f11_extra_data *extra_data;
+	int large_object_detected = 0;
 
 	/*
 	 * The number of finger status registers is determined by the
@@ -963,11 +973,12 @@ static int synaptics_rmi4_f11_abs_report(struct synaptics_rmi4_data *rmi4_data,
 				rmi4_data->f11_data_28,
 				&data28, sizeof(data28));
 		if (retval >= 0) {
+			large_object_detected = !!(data28 & 0x02);
 			dev_dbg(rmi4_data->pdev->dev.parent,
 					"Large object present = %d",
-					!!(data28 & 0x02));
+					large_object_detected);
 			input_report_key(rmi4_data->input_dev, KEY_SLEEP,
-					!!(data28 & 0x02));
+					large_object_detected);
 			input_sync(rmi4_data->input_dev);
 		}
 	}
@@ -1066,9 +1077,20 @@ static int synaptics_rmi4_f11_abs_report(struct synaptics_rmi4_data *rmi4_data,
 #ifndef TYPE_B_PROTOCOL
 		input_mt_sync(rmi4_data->input_dev);
 #endif
+		rmi4_data->wakeup_sent = false;
 	}
 
 	input_sync(rmi4_data->input_dev);
+
+	if (!rmi4_data->wakeup_sent && touch_count > 0 &&
+			!large_object_detected &&
+			rmi4_data->hw_if->board_data->wake_event_on_touch) {
+		input_report_key(rmi4_data->input_dev, KEY_WAKEUP, 1);
+		input_sync(rmi4_data->input_dev);
+		input_report_key(rmi4_data->input_dev, KEY_WAKEUP, 0);
+		input_sync(rmi4_data->input_dev);
+		rmi4_data->wakeup_sent = true;
+	}
 
 exit:
 	mutex_unlock(&(rmi4_data->rmi4_report_mutex));
@@ -2758,6 +2780,8 @@ static void synaptics_rmi4_set_params(struct synaptics_rmi4_data *rmi4_data)
 			input_set_capability(rmi4_data->input_dev, EV_KEY, key);
 	}
 
+	input_set_capability(rmi4_data->input_dev, EV_KEY, KEY_WAKEUP);
+
 	return;
 }
 
@@ -3633,6 +3657,37 @@ static ssize_t synaptics_mode_store(struct device *dev,
 		synaptics_rmi4_wakeup_gesture(rmi4_data, false);
 		rmi4_data->stay_awake = false;
 		dev_info(rmi4_data->pdev->dev.parent, "Setting touch to off");
+	} else {
+		rc = -EINVAL;
+	}
+	return rc ? rc : count;
+}
+
+static ssize_t synaptics_wake_event_on_touch_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct synaptics_rmi4_data *rmi4_data = dev_get_drvdata(dev);
+
+	if (rmi4_data->hw_if->board_data->wake_event_on_touch)
+		return scnprintf(buf, PAGE_SIZE, "%s\n", "on");
+	else
+		return scnprintf(buf, PAGE_SIZE, "%s\n", "off");
+}
+
+static ssize_t synaptics_wake_event_on_touch_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	int rc = 0;
+	struct synaptics_rmi4_data *rmi4_data = dev_get_drvdata(dev);
+
+	if (!strncmp(buf, "on", strlen("on"))) {
+		rmi4_data->hw_if->board_data->wake_event_on_touch = true;
+		dev_info(rmi4_data->pdev->dev.parent,
+					"Setting wake_event_on_touch to on");
+	} else if (!strncmp(buf, "off", strlen("off"))) {
+		rmi4_data->hw_if->board_data->wake_event_on_touch = false;
+		dev_info(rmi4_data->pdev->dev.parent,
+					"Setting wake_event_on_touch to off");
 	} else {
 		rc = -EINVAL;
 	}

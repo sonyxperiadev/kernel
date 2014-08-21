@@ -209,6 +209,10 @@ static int parse_dt(struct device *dev, struct synaptics_dsx_board_data *bdata)
 			return retval;
 		bdata->wakeup_gest_key = value;
 	}
+
+	bdata->wake_event_on_touch = of_property_read_bool(np,
+					"synaptics,wake-event-on-touch");
+
 	retval = of_property_count_strings(np, "synaptics,extra-registers");
 	if (retval > 0) {
 		int i;

@@ -100,6 +100,7 @@ struct synaptics_dsx_board_data {
 	const char *fw_name;
 	int large_obj_size;
 	int wakeup_gest_key;
+	bool wake_event_on_touch;
 	struct register_map extra_regs;
 };
 
