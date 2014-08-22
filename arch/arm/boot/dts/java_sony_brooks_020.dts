@@ -168,6 +168,7 @@
 			synaptics,reset-delay-ms = <100>;
 			synaptics,fw-name = "synaptics/PR1640536.img";
 			synaptics,wakeup-gest-key = <116>; /* KEY_POWER*/
+			synaptics,wake-event-on-touch;
 			synaptics,large-obj-size = <60>; /* Palm Detect Size */
 			synaptics,extra-registers = "f11_ctrl_58 0x62",
 				"f11_data_28 0x30";
