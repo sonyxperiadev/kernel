@@ -3636,7 +3636,7 @@ static ssize_t synaptics_mode_show(struct device *dev,
 static ssize_t synaptics_mode_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t count)
 {
-	int rc;
+	int rc = 0;
 	struct synaptics_rmi4_data *rmi4_data = dev_get_drvdata(dev);
 
 	if (!rmi4_data->enable_wakeup_gesture)
@@ -3646,12 +3646,10 @@ static ssize_t synaptics_mode_store(struct device *dev,
 		synaptics_rmi4_wakeup_gesture(rmi4_data, true);
 		rmi4_data->stay_awake = true;
 		dev_info(rmi4_data->pdev->dev.parent, "Setting touch to doze");
-		rc = 0;
 	} else if (!strncmp(buf, "on", strlen("on"))) {
 		synaptics_rmi4_wakeup_gesture(rmi4_data, false);
 		rmi4_data->stay_awake = true;
 		dev_info(rmi4_data->pdev->dev.parent, "Setting touch to on");
-		rc = 0;
 	} else if (!strncmp(buf, "off", strlen("off"))) {
 		/* Turn off wake up gestures */
 		synaptics_rmi4_wakeup_gesture(rmi4_data, false);
