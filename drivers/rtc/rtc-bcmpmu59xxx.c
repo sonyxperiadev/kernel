@@ -27,7 +27,7 @@
 #include "rtc-core.h"
 
 static int dbg_mask = BCMPMU_PRINT_ERROR |
-		BCMPMU_PRINT_INIT | BCMPMU_PRINT_DATA;
+		BCMPMU_PRINT_INIT | BCMPMU_PRINT_DATA | BCMPMU_PRINT_FLOW;
 
 #define SEC_YEAR_BASE 			13  /* 2013 */
 
@@ -115,11 +115,14 @@ static int bcmpmu_alarm_irq_enable(struct device *dev,
 	struct bcmpmu_rtc *rdata = dev_get_drvdata(dev);
 	int ret = 0;
 	mutex_lock(&rdata->lock);
+
+	pr_rtc(FLOW, "%s: RTC alarm %d\n", __func__, enabled);
 	if (enabled)
 		ret = rdata->bcmpmu->unmask_irq(rdata->bcmpmu,
-							PMU_IRQ_RTC_ALARM);
+						PMU_IRQ_RTC_ALARM);
 	else {
-		ret = rdata->bcmpmu->mask_irq(rdata->bcmpmu, PMU_IRQ_RTC_ALARM);
+		ret = rdata->bcmpmu->mask_irq(rdata->bcmpmu,
+				PMU_IRQ_RTC_ALARM);
 		if (unlikely(ret))
 			goto err;
 
@@ -127,37 +130,38 @@ static int bcmpmu_alarm_irq_enable(struct device *dev,
 		 * clear the alarm time here to avoid the alarm
 		 * firing at unwanted time.
 		 */
-		ret = rdata->bcmpmu->write_dev(rdata->bcmpmu, PMU_REG_RTCYR_A1,
-					(u8)0xFF);
+		ret = rdata->bcmpmu->write_dev(rdata->bcmpmu,
+				PMU_REG_RTCYR_A1, (u8)0xFF);
 		if (unlikely(ret))
 			goto err;
 
-		ret = rdata->bcmpmu->write_dev(rdata->bcmpmu, PMU_REG_RTCMT_A1,
-					1);
+		ret = rdata->bcmpmu->write_dev(rdata->bcmpmu,
+				PMU_REG_RTCMT_A1, 1);
 		if (unlikely(ret))
 			goto err;
 
-		ret = rdata->bcmpmu->write_dev(rdata->bcmpmu, PMU_REG_RTCDT_A1,
-					0);
+		ret = rdata->bcmpmu->write_dev(rdata->bcmpmu,
+				PMU_REG_RTCDT_A1, 0);
 		if (unlikely(ret))
 			goto err;
 
-		ret = rdata->bcmpmu->write_dev(rdata->bcmpmu, PMU_REG_RTCHR_A1,
-					0);
+		ret = rdata->bcmpmu->write_dev(rdata->bcmpmu,
+				PMU_REG_RTCHR_A1, 0);
 		if (unlikely(ret))
 			goto err;
 
-		ret = rdata->bcmpmu->write_dev(rdata->bcmpmu, PMU_REG_RTCMN_A1,
-					0);
+		ret = rdata->bcmpmu->write_dev(rdata->bcmpmu,
+				PMU_REG_RTCMN_A1, 0);
 		if (unlikely(ret))
 			goto err;
 
-		ret = rdata->bcmpmu->write_dev(rdata->bcmpmu, PMU_REG_RTCSC_A1,
-					0);
+		ret = rdata->bcmpmu->write_dev(rdata->bcmpmu,
+				PMU_REG_RTCSC_A1, 0);
 	}
 
 	if (unlikely(ret))
 		goto err;
+
 	rdata->alarm_irq_enabled = enabled;
 err:
 	mutex_unlock(&rdata->lock);
@@ -424,7 +428,6 @@ static int bcmpmu_set_alarm(struct device *dev, struct rtc_wkalrm *alarm)
 		__func__, alarm->time.tm_year, alarm->time.tm_mon,
 		alarm->time.tm_mday, alarm->time.tm_hour,
 		alarm->time.tm_min, alarm->time.tm_sec);
-
 	mutex_lock(&rdata->lock);
 
 	ret = rdata->bcmpmu->write_dev(rdata->bcmpmu, PMU_REG_RTCYR_A1,
@@ -457,12 +460,14 @@ static int bcmpmu_set_alarm(struct device *dev, struct rtc_wkalrm *alarm)
 	if (unlikely(ret))
 		goto err;
 
+#ifdef CONFIG_BCM_RTC_ALARM_BOOT
 	if (alarm->enabled)
 		ret = rdata->bcmpmu->unmask_irq(rdata->bcmpmu,
 				PMU_IRQ_RTC_ALARM);
 	else
 		ret = rdata->bcmpmu->mask_irq(rdata->bcmpmu, PMU_IRQ_RTC_ALARM);
 	rdata->alarm_irq_enabled = alarm->enabled;
+#endif
 err:
 	mutex_unlock(&rdata->lock);
 	return ret;
@@ -611,6 +616,10 @@ static int bcmpmu_rtc_suspend(struct platform_device *pdev, pm_message_t state)
 {
 	/* no action required */
 	pr_rtc(FLOW, "%s: ####\n", __func__);
+#ifndef CONFIG_BCM_RTC_ALARM_BOOT
+	bcmpmu_alarm_irq_enable(&pdev->dev, true);
+#endif
+
 	return 0;
 }
 
@@ -626,7 +635,17 @@ static int bcmpmu_rtc_resume(struct platform_device *pdev)
 	return 0;
 }
 
+static void bcmpmu_rtc_shutdown(struct platform_device *pdev)
+{
+	pr_rtc(FLOW, "%s: ####\n", __func__);
+#ifndef CONFIG_BCM_RTC_ALARM_BOOT
+	bcmpmu_alarm_irq_enable(&pdev->dev, false);
+#endif
+}
+
+
 static struct platform_driver bcmpmu_rtc_driver = {
+	.shutdown = bcmpmu_rtc_shutdown,
 	.driver = {
 		.name = "bcmpmu59xxx_rtc",
 	},
