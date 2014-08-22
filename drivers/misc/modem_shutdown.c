@@ -10,20 +10,19 @@
 #include <asm/irq.h>
 #include <linux/delay.h>
 #include <linux/wakelock.h>
-#include <linux/kmod.h>i
+#include <linux/kmod.h>
 #include <linux/workqueue.h>
 static struct timer_list my_timer;
 struct wake_lock modem_power_wake_lock;
-static struct workqueue_struct *wq;
+static struct delayed_work work_modem_init;
 
-static void kmod_work_handler(struct work_struct *w);
-static DECLARE_DELAYED_WORK(kmod_work, kmod_work_handler);
+static void kmod_work_handler(struct work_struct *work);
 
 MODULE_LICENSE("GPL");
 
 
 static void
-kmod_work_handler(struct work_struct *w)
+kmod_work_handler(struct work_struct *work)
 {
 	char *path = "/system/bin/capi2test";
 	char *argv[] = {"/system/bin/capi2test", "2", NULL };
@@ -44,9 +43,6 @@ kmod_work_handler(struct work_struct *w)
 	wake_lock_destroy(&modem_power_wake_lock);
 
 	del_timer(&my_timer);
-
-	if (wq)
-		destroy_workqueue(wq);
 }
 
 
@@ -54,9 +50,8 @@ kmod_work_handler(struct work_struct *w)
 void my_timer_callback(unsigned long data)
 {
 	printk(KERN_ERR"%s-> QUEUE Modem Shutdown Work\n", __func__);
-	if (wq)
-		queue_delayed_work(wq, &kmod_work,
-				msecs_to_jiffies(4000));
+	schedule_delayed_work(&work_modem_init,
+			msecs_to_jiffies(4000));
 }
 
 static int __init modem_shutdown_init(void)
@@ -70,9 +65,7 @@ static int __init modem_shutdown_init(void)
 	wake_lock_init(&modem_power_wake_lock,
 		WAKE_LOCK_SUSPEND, "modem_wakelock");
 
-	if (!wq)
-		wq = create_singlethread_workqueue("kmod");
-
+	INIT_DELAYED_WORK(&work_modem_init, kmod_work_handler);
 	mod_timer(&my_timer, jiffies + msecs_to_jiffies(20000));
 	printk(KERN_ERR"%s  Modem Shutdown Timer Set DONE\n", __func__);
 	return status;
