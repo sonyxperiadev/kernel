@@ -41,6 +41,8 @@
 		0x47 0x17 0x1F 0
 		 /* Enable NTC for HW and SW charging */
 		0x4A 0x0F 0x0F 0
+		 /* LOWBAT @ 3.40V */
+		0xCA 0xC0 0xE0 1
 		 /* NTC Hot Temperature Comparator rising = 55C */
 		0xCC 0x4F 0xFF 1
 		  /* NTC Hot Temperature Comparator falling = 52C */

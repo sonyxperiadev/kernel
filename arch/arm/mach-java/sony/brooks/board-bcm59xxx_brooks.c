@@ -160,6 +160,8 @@ static struct bcmpmu59xxx_rw_data __initdata register_init_data[] = {
 	{.addr = PMU_REG_MBCCTRL8, .val = 0x17, .mask = 0x1F},
 	/* NTC Hot/Cold enable for HW and SW charging */
 	{.addr = PMU_REG_MBCCTRL11, .val = 0x0F, .mask = 0x0F},
+	/* LOWBAT @ 3.40V */
+	{.addr = PMU_REG_CMPCTRL3, .val = 0xC0, .mask = 0xE0},
 	/* NTC Hot Temperature Comparator rising set to 55C */
 	{.addr = PMU_REG_CMPCTRL5, .val = 0x4F, .mask = 0xFF},
 	/* NTC Hot Temperature Comparator falling set to 52C*/
