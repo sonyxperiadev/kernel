@@ -36,6 +36,9 @@
 #include <linux/mfd/bcmpmu59xxx.h>
 #include <linux/mfd/bcmpmu59xxx_reg.h>
 #include <plat/kona_reset_reason.h>
+#ifdef CONFIG_CRASH_NOTES
+#include <asm/crash_notes.h>
+#endif
 
 struct bcmpmu_ponkey {
 	struct input_dev *idev;
@@ -176,6 +179,37 @@ static int param_get_simulate_ponkey(char *buffer,
 	return 0;
 }
 
+/*
+  Similar to ipi_cpu_stop() in smp.c except there's no locking of
+  stop_lock since either
+
+  - the other cores have let it go a long time ago or
+
+  - they're very unlikely to ever release it
+
+*/
+static void cpu_stop(unsigned int cpu)
+{
+	if (system_state == SYSTEM_BOOTING ||
+	    system_state == SYSTEM_RUNNING) {
+		printk(KERN_CRIT "CPU%u: stopping\n", cpu);
+		dump_stack();
+	}
+
+	set_cpu_online(cpu, false);
+
+	local_fiq_disable();
+	local_irq_disable();
+
+#ifdef CONFIG_CRASH_NOTES
+	if (system_state == SYSTEM_BOOTING || system_state == SYSTEM_RUNNING)
+		crash_notes_save_this_cpu(CRASH_NOTE_STOPPING,
+					smp_processor_id());
+#endif
+	while (1)
+		cpu_relax();
+}
+
 static void bcmpmu_ponkey_isr(u32 irq, void *data)
 {
 	struct bcmpmu_ponkey *ponkey = data;
@@ -203,6 +237,19 @@ static void bcmpmu_ponkey_isr(u32 irq, void *data)
 		}
 		bcmpmu->write_dev(bcmpmu, PMU_REG_GPIOCTRL2, val);
 		pr_info("PMU_IRQ_POK_T3\n");
+
+		/* If smart reset is enabled we're making this the
+		   point of no return. No time for a full panic, sysrq
+		   'c'-style, before the smart reset strikes. Just
+		   make sure the caches are clean and stop. */
+		if (bcmpmu->read_dev(bcmpmu, PMU_REG_PONKEYCTRL6, &val) == 0) {
+			if (val & PONKEY_SMART_RST_EN_MASK) {
+				/* The other online cores */
+				smp_send_stop();
+				/* This core */
+				cpu_stop(smp_processor_id());
+			}
+		}
 		break;
 
 	case PMU_IRQ_POK_RELEASED:
