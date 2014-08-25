@@ -1975,6 +1975,17 @@ static void  bcmpmu_fg_irq_handler(u32 irq, void *data)
 			__func__, irq);
 		bcmpmu_chrgr_usb_en(fg->bcmpmu, 0);
 	}
+
+	if (irq == PMU_IRQ_LOWBAT) {
+		pr_fg(FLOW, "%s: Low batt IRQ triggered\n", __func__);
+		if (fg->discharge_state == DISCHARG_STATE_HIGH_BATT)
+			clear_avg_sample_buff(fg);
+		else
+			fg->bcmpmu->mask_irq(fg->bcmpmu, PMU_IRQ_LOWBAT);
+
+		cancel_delayed_work_sync(&fg->fg_periodic_work);
+		queue_delayed_work(fg->fg_wq, &fg->fg_periodic_work, 0);
+	}
 }
 
 static int bcmpmu_fg_event_handler(struct notifier_block *nb,
@@ -2602,6 +2613,7 @@ static void bcmpmu_fg_charging_algo(struct bcmpmu_fg_data *fg)
 				TAPPER_DEFAULT_TIMEOUT);
 #endif
 		fg->discharge_state = DISCHARG_STATE_HIGH_BATT;
+		fg->bcmpmu->unmask_irq(fg->bcmpmu, PMU_IRQ_LOWBAT);
 	}
 
 	if (fg->flags.coulb_dis) {
@@ -2689,10 +2701,14 @@ static void bcmpmu_fg_discharging_algo(struct bcmpmu_fg_data *fg)
 	switch (fg->discharge_state) {
 	case DISCHARG_STATE_HIGH_BATT:
 		if ((volt_avg <= volt_levels->low) ||
-				(cap_per <= cap_levels->low))
+				(cap_per <= cap_levels->low)) {
 				fg->discharge_state = DISCHARG_STATE_LOW_BATT;
-		else
+				fg->bcmpmu->mask_irq(fg->bcmpmu,
+						PMU_IRQ_LOWBAT);
+				/* fall through */
+		} else {
 			break;
+		}
 	case DISCHARG_STATE_LOW_BATT:
 		cap_cutoff = bcmpmu_fg_get_cutoff_capacity(fg, volt_avg);
 		if ((cap_cutoff >= 0) ||
@@ -2703,14 +2719,22 @@ static void bcmpmu_fg_discharging_algo(struct bcmpmu_fg_data *fg)
 			 */
 			bcmpmu_fg_enable_coulb_counter(fg, false);
 			fg->discharge_state = DISCHARG_STATE_CRIT_BATT;
-			poll_time = fg->pdata->poll_rate_crit_batt;
+			poll_time = 0;
 			config_tapper = true;
 		} else if (volt_avg <= volt_levels->low) {
-			poll_time = fg->pdata->poll_rate_low_batt;
-			config_tapper = true;
+			int usable_cap =
+				bcmpmu_fg_get_usable_cap_from_ocv_cap(
+					fg->capacity_info.ocv_cap,
+					fg->capacity_info.uuc);
+			if (usable_cap < cap_info->percentage) {
+				poll_time = fg->pdata->poll_rate_low_batt;
+				config_tapper = true;
+			}
 		}
 		break;
 	case DISCHARG_STATE_CRIT_BATT:
+		poll_time = fg->pdata->poll_rate_crit_batt;
+		config_tapper = true;
 		cap_cutoff = bcmpmu_fg_get_cutoff_capacity(fg, volt_avg);
 		pr_fg(FLOW, "cutoff_cap: %d cutoff_delta: %d cutoff_prev: %d\n",
 				fg->crit_cutoff_cap,
@@ -2725,31 +2749,36 @@ static void bcmpmu_fg_discharging_algo(struct bcmpmu_fg_data *fg)
 					cap_info->percentage);
 			if (--fg->crit_cutoff_delta == 0)
 				fg->crit_cutoff_cap = -1;
-			poll_time = fg->pdata->poll_rate_crit_batt;
-			config_tapper = true;
 			break;
 		}
 		if ((cap_cutoff >= 0) && (fg->crit_cutoff_cap < 0))
 			fg->crit_cutoff_cap = cap_cutoff;
 
 		if ((cap_cutoff >= 0) &&
-				(cap_cutoff == fg->crit_cutoff_cap) &&
-				(fg->cutoff_cap_cnt++ >
-				 CRIT_CUTOFF_CNT_THRD)) {
-			if ((fg->crit_cutoff_cap_prev < 0) ||
+			(cap_cutoff == fg->crit_cutoff_cap)) {
+			if (fg->crit_cutoff_cap != fg->crit_cutoff_cap_prev)
+				poll_time = min(500,
+						fg->pdata->poll_rate_crit_batt);
+			if (++fg->cutoff_cap_cnt > CRIT_CUTOFF_CNT_THRD) {
+				if ((fg->crit_cutoff_cap_prev < 0) ||
 					(fg->crit_cutoff_cap <
-					 fg->crit_cutoff_cap_prev)) {
-				pr_fg(FLOW, "crit_cutoff threshold: %d\n",
+						fg->crit_cutoff_cap_prev)) {
+					pr_fg(FLOW,
+						"crit_cutoff threshold: %d\n",
 						fg->crit_cutoff_cap);
-				fg->crit_cutoff_cap_prev = fg->crit_cutoff_cap;
-				fg->crit_cutoff_delta =
-					cap_info->percentage - cap_cutoff;
-				fg->cutoff_cap_cnt = 0;
-			}
-			if (fg->crit_cutoff_delta <= 0) {
-				fg->crit_cutoff_delta = 0;
-				fg->crit_cutoff_cap = -1;
-				fg->cutoff_cap_cnt = 0;
+					fg->crit_cutoff_cap_prev =
+						fg->crit_cutoff_cap;
+					fg->crit_cutoff_delta =
+						cap_info->percentage -
+						cap_cutoff;
+					fg->cutoff_cap_cnt = 0;
+					poll_time = 0;
+				}
+				if (fg->crit_cutoff_delta <= 0) {
+					fg->crit_cutoff_delta = 0;
+					fg->crit_cutoff_cap = -1;
+					fg->cutoff_cap_cnt = 0;
+				}
 			}
 		} else if (((cap_cutoff < 0) &&
 					(fg->cutoff_cap_cnt > 0)) ||
@@ -2760,8 +2789,6 @@ static void bcmpmu_fg_discharging_algo(struct bcmpmu_fg_data *fg)
 			fg->crit_cutoff_cap = -1;
 			fg->crit_cutoff_delta = 0;
 		}
-		poll_time = fg->pdata->poll_rate_crit_batt;
-		config_tapper = true;
 		break;
 	default:
 		BUG();
@@ -3906,6 +3933,13 @@ static int bcmpmu_fg_probe(struct platform_device *pdev)
 		goto destroy_workq;
 	}
 
+	ret = fg->bcmpmu->register_irq(fg->bcmpmu, PMU_IRQ_LOWBAT,
+			bcmpmu_fg_irq_handler, fg);
+	if (ret) {
+		pr_fg(ERROR, "Failed to register PMU_IRQ_LOWBAT\n");
+		goto destroy_workq;
+	}
+
 	ret = sysfs_create_attrs(fg->psy.dev);
 	if (ret) {
 		pr_fg(ERROR, "Complete sysfs support failed\n");
@@ -3914,6 +3948,7 @@ static int bcmpmu_fg_probe(struct platform_device *pdev)
 
 	ret = fg->bcmpmu->unmask_irq(fg->bcmpmu, PMU_IRQ_MBTEMPHIGH);
 	ret = fg->bcmpmu->unmask_irq(fg->bcmpmu, PMU_IRQ_MBTEMPLOW);
+	ret = fg->bcmpmu->unmask_irq(fg->bcmpmu, PMU_IRQ_LOWBAT);
 
 	if ((fg->bcmpmu->flags & BCMPMU_FG_VF_CTRL) &&
 			fg->bdata->vfd_sz)
