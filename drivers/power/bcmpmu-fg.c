@@ -356,6 +356,7 @@ struct bcmpmu_fg_data {
 	int dummy_bat_cap_lmt;
 	int prev_cap_delta;
 	int max_discharge_current;
+	bool used_init_cap;
 
 	/* for debugging only */
 	int lock_cnt;
@@ -2217,8 +2218,8 @@ static int bcmpmu_fg_get_init_cap(struct bcmpmu_fg_data *fg)
 	BUG_ON(init_cap > 100);
 	BUG_ON(init_cap < 0);
 
-	pr_fg(INIT, "saved capacity: %d open circuit cap: %d\n",
-			saved_cap, init_cap);
+	pr_fg(INIT, "saved capacity: %d open circuit cap: %d, fg_factor: %d\n",
+			saved_cap, init_cap, fg->pdata->fg_factor);
 
 	if (!full_charge_cap)
 		fg->capacity_info.full_charge = fg->capacity_info.max_design;
@@ -2231,15 +2232,20 @@ static int bcmpmu_fg_get_init_cap(struct bcmpmu_fg_data *fg)
 			full_charge_cap,
 			fg->capacity_info.full_charge);
 	if (saved_cap == CAPACITY_ZERO_ALIAS) {
-		if (init_cap >= FG_CAP_DELTA_THRLD)
+		if (init_cap >= FG_CAP_DELTA_THRLD || fg->used_init_cap) {
 			cap_percentage = init_cap;
-		else
+			fg->used_init_cap = true;
+		} else {
 			cap_percentage = 0;
+		}
 	} else if (saved_cap > 0) {
-		if (abs(saved_cap - init_cap) < FG_CAP_DELTA_THRLD)
+		if (abs(saved_cap - init_cap) < FG_CAP_DELTA_THRLD
+			&& !fg->used_init_cap) {
 			cap_percentage = saved_cap;
-		else
+		} else {
 			cap_percentage = init_cap;
+			fg->used_init_cap = true;
+		}
 	} else
 		cap_percentage = init_cap;
 
@@ -3687,6 +3693,11 @@ static ssize_t store_fg_factor(struct device *dev,
 					fg->pdata->fg_factor);
 		fg->pdata->fg_factor = factor;
 		pr_fg(INIT, "fg_factor updated to %d\n", factor);
+		if (!fg->flags.init_capacity) {
+			fg->flags.init_capacity = true;
+			cancel_delayed_work_sync(&fg->fg_periodic_work);
+			queue_delayed_work(fg->fg_wq, &fg->fg_periodic_work, 0);
+		}
 	}
 
 	return strlen(buf);
