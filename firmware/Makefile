@@ -140,7 +140,7 @@ fw-shipped-$(CONFIG_TOUCHSCREEN_SYNAPTICS_DSX_NEW_FW_UPDATE) += \
 				synaptics/PR1638646.img \
 				synaptics/PR1640536.img
 fw-shipped-$(CONFIG_INPUT_EM718X) += em718x/em7180.fw
-fw-shipped-$(CONFIG_INPUT_EM718X_HUB) += em718x/Sony_BMI055_AK09911_pedometerSOMC_tiltSOMC-di02.1.4.4837-6.fw
+fw-shipped-$(CONFIG_INPUT_EM718X_HUB) += em718x/Sony_BMI055_AK09911_pedometerSOMC_tiltSOMC-di02.1.4.5478-7.fw
 
 fw-shipped-all := $(fw-shipped-y) $(fw-shipped-m) $(fw-shipped-)
 
