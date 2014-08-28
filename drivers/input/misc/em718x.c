@@ -285,12 +285,12 @@ struct em718x {
 
 enum sns_event_types {
 	EV_ADEV = EV_MSC,
-	EV_IDEV = EV_ABS,
+	EV_IDEV = EV_REL,
 	EV_IDEV_GYRO = EV_MSC,
 };
 
 enum sns_event_codes {
-	EV_SNS_FIRST = ABS_X,
+	EV_SNS_FIRST = REL_X,
 	EV_MAG_X = EV_SNS_FIRST,
 	EV_MAG_Y,
 	EV_MAG_Z,
@@ -1340,10 +1340,8 @@ static void em718x_startup_work_func(struct work_struct *work)
 		goto exit;
 	}
 
-	for (i = EV_SNS_FIRST; i < EV_SNS_MAX; i++) {
+	for (i = EV_SNS_FIRST; i < EV_SNS_MAX; i++)
 		input_set_capability(em718x->idev, EV_IDEV, i);
-		input_set_abs_params(em718x->idev, i, INT_MIN, INT_MAX, 0, 0);
-	}
 
 	for (i = EV_GYRO_FIRST; i < EV_GYRO_MAX; i++)
 		input_set_capability(em718x->idev, EV_IDEV_GYRO, i);
