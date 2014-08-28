@@ -367,7 +367,13 @@ static int bcmpmu59xxx_ponkey_probe(struct platform_device *pdev)
 	}
 	if (bcmpmu->read_dev(bcmpmu, PMU_REG_ENV8, &val))
 		return -EINVAL;
-	if (is_charging_state() || (val & ENV8_UBPD_WAKE)) {
+
+	/* Do T3 NOP when NOT charing and No soft reset
+	* This is workaround need to be removed after
+	* we get real fix
+	*/
+	if ((is_charging_state() || (val & ENV8_UBPD_WAKE)) &&
+			!is_soft_reset()) {
 		pkey->t3->action = PKEY_ACTION_NOP;
 		pr_info("Charging mode clear T3 action\n");
 	}
