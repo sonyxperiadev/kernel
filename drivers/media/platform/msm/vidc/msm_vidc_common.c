@@ -65,16 +65,7 @@ static inline bool is_turbo_session(struct msm_vidc_inst *inst)
 
 static inline bool is_thumbnail_session(struct msm_vidc_inst *inst)
 {
-	if (inst->session_type == MSM_VIDC_DECODER) {
-		int rc = 0;
-		struct v4l2_control ctrl = {
-			.id = V4L2_CID_MPEG_VIDC_VIDEO_SYNC_FRAME_DECODE
-		};
-		rc = v4l2_g_ctrl(&inst->ctrl_handler, &ctrl);
-		if (!rc && ctrl.value)
-			return true;
-	}
-	return false;
+	return !!(inst->flags & VIDC_THUMBNAIL);
 }
 
 enum multi_stream msm_comm_get_stream_output_mode(struct msm_vidc_inst *inst)
@@ -1447,7 +1438,8 @@ static void handle_fbd(enum command_response cmd, void *data)
 		default:
 			break;
 		}
-		if (msm_vidc_dcvs_mode && inst->dcvs_mode) {
+		if (msm_vidc_dcvs_mode && inst->dcvs_mode &&
+			fill_buf_done->filled_len1) {
 			msm_comm_monitor_ftb(inst);
 			rc = msm_comm_scale_clocks_dcvs(inst, true);
 			if (rc)
@@ -1862,10 +1854,10 @@ static int msm_comm_scale_clocks_dcvs(struct msm_vidc_inst *inst, bool fbd)
 		* more than high threshold
 		*/
 		if (!dcvs->change_initial_freq &&
-			buffers_outside_fw > dcvs->threshold_disp_buf_high)
+			buffers_outside_fw >= dcvs->threshold_disp_buf_high)
 			dcvs->change_initial_freq = true;
 
-		if (buffers_outside_fw > dcvs->threshold_disp_buf_high &&
+		if (buffers_outside_fw >= dcvs->threshold_disp_buf_high &&
 			!dcvs->prev_freq_increased) {
 			dcvs->load = dcvs->load_low;
 			dcvs->prev_freq_lowered = true;
@@ -3574,6 +3566,40 @@ void msm_comm_flush_dynamic_buffers(struct msm_vidc_inst *inst)
 	mutex_unlock(&inst->lock);
 }
 
+void msm_comm_flush_pending_dynamic_buffers(struct msm_vidc_inst *inst)
+{
+	struct buffer_info *binfo = NULL;
+	struct list_head *list = NULL;
+
+	if (!inst)
+		return;
+
+	if (inst->buffer_mode_set[CAPTURE_PORT] != HAL_BUFFER_MODE_DYNAMIC)
+		return;
+
+	if (list_empty(&inst->pendingq) || list_empty(&inst->registered_bufs))
+		return;
+
+	list = &inst->registered_bufs;
+
+	/*
+	* Dynamic Buffer mode - Since pendingq is not empty
+	* no output buffers have been sent to firmware yet.
+	* Hence remove reference to all pendingq o/p buffers
+	* before flushing them.
+	*/
+
+	list_for_each_entry(binfo, list, list) {
+		if (binfo && binfo->type ==
+			V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) {
+			dprintk(VIDC_DBG,
+				"%s: binfo = %p device_addr = 0x%pa\n",
+				__func__, binfo, &binfo->device_addr[0]);
+			buf_ref_put(inst, binfo);
+		}
+	}
+}
+
 int msm_comm_flush(struct msm_vidc_inst *inst, u32 flags)
 {
 	int rc =  0;
@@ -3639,6 +3665,8 @@ int msm_comm_flush(struct msm_vidc_inst *inst, u32 flags)
 
 	} else {
 		if (!list_empty(&inst->pendingq)) {
+			msm_comm_flush_pending_dynamic_buffers(inst);
+
 			/*If flush is called after queueing buffers but before
 			 * streamon driver should flush the pending queue*/
 			list_for_each_safe(ptr, next, &inst->pendingq) {

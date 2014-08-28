@@ -80,8 +80,8 @@
 #define DCVS_BUFFER_SAFEGUARD 1
 /* Considering one output buffer in transition after decode */
 #define DCVS_BUFFER_RELEASED_DEC 1
-/* Considering atleast one FTB between each FBD */
-#define DCVS_MIN_DRAIN_RATE 1
+/* Considering at least two FTB's between each FBD */
+#define DCVS_MIN_DRAIN_RATE 2
 /* Ensures difference of 4 between min and max threshold always*/
 #define DCVS_MIN_THRESHOLD_DIFF 4
 /* Maintains the number of FTB's between each FBD over a window */
@@ -233,6 +233,7 @@ struct msm_vidc_debug {
 enum msm_vidc_modes {
 	VIDC_SECURE = 1 << 0,
 	VIDC_TURBO = 1 << 1,
+	VIDC_THUMBNAIL = 1 << 2,
 };
 
 struct msm_vidc_core_capability {
@@ -247,6 +248,7 @@ struct msm_vidc_core_capability {
 	struct hal_capability_supported ltr_count;
 	u32 capability_set;
 	enum buffer_mode_type buffer_mode[MAX_PORT_NUM];
+	u32 buffer_size_limit;
 };
 
 struct msm_vidc_core {
