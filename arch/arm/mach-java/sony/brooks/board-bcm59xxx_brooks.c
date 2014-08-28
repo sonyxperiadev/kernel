@@ -64,10 +64,16 @@
 #define PMU_DEVICE_BATTERY_SELECTION_GPIO	22
 
 /* START Specific battery parameters for "Sony_0" */
+/* Currents for COOL and WARM set to nearest upper closest HW setting.
+ * It is safe since system will also consume current and the current
+ * going into the battery will be slightly lesser than the targeted.
+ * This is a temporary solution until dynamic system compensation
+ * will be introduced.
+ */
 #define SONY0_BATTERY_C	390 /* C_min [mAh] */
-#define SONY0_BATTERY_CURRENT_COOL (SONY0_BATTERY_C / 2)
+#define SONY0_BATTERY_CURRENT_COOL 265 /* (SONY0_BATTERY_C / 2) */
 #define SONY0_BATTERY_CURRENT_NORMAL ((SONY0_BATTERY_C * 80) / 39)
-#define SONY0_BATTERY_CURRENT_WARM (SONY0_BATTERY_C / 2)
+#define SONY0_BATTERY_CURRENT_WARM 265 /* (SONY0_BATTERY_C / 2) */
 
 /* {min,typ,max} = {4.315, 4.345, 4.375} */
 #define SONY0_BATTERY_MAX_VFLOAT_REG 0x14
@@ -90,10 +96,16 @@
 /* END Specific battery parameters for "Sony_0" */
 
 /* START Specific battery parameters for "Sony_1" */
+/* Currents for COOL and WARM set to nearest upper closest HW setting.
+ * It is safe since system will also consume current and the current
+ * going into the battery will be slightly lesser than the targeted.
+ * This is a temporary solution until dynamic system compensation
+ * will be introduced.
+ */
 #define SONY1_BATTERY_C	420 /* C_min [mAh] */
-#define SONY1_BATTERY_CURRENT_COOL ((SONY1_BATTERY_C * 6) / 10)
+#define SONY1_BATTERY_CURRENT_COOL 265 /* ((SONY1_BATTERY_C * 6) / 10) */
 #define SONY1_BATTERY_CURRENT_NORMAL (2 * SONY1_BATTERY_C)
-#define SONY1_BATTERY_CURRENT_WARM (SONY1_BATTERY_C / 2)
+#define SONY1_BATTERY_CURRENT_WARM 265 /* (SONY1_BATTERY_C / 2) */
 
 /* {min,typ,max} = {4.315, 4.345, 4.375} */
 #define SONY1_BATTERY_MAX_VFLOAT_REG 0x14
