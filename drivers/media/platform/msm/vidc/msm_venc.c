@@ -968,12 +968,12 @@ static int msm_venc_queue_setup(struct vb2_queue *q,
 		}
 
 		if (*num_buffers < MIN_NUM_CAPTURE_BUFFERS ||
-				*num_buffers > VIDEO_MAX_FRAME) {
+				*num_buffers > VB2_MAX_FRAME) {
 			int temp = *num_buffers;
 
 			*num_buffers = clamp_val(*num_buffers,
 					MIN_NUM_CAPTURE_BUFFERS,
-					VIDEO_MAX_FRAME);
+					VB2_MAX_FRAME);
 			dprintk(VIDC_INFO,
 				"Changing buffer count on CAPTURE_MPLANE from %d to %d for best effort encoding\n",
 				temp, *num_buffers);
@@ -2205,6 +2205,7 @@ static int try_set_ctrl(struct msm_vidc_inst *inst, struct v4l2_ctrl *ctrl)
 			break;
 		}
 
+		msm_comm_scale_clocks_and_bus(inst);
 		break;
 	case V4L2_CID_MPEG_VIDC_VIDEO_H264_VUI_BITSTREAM_RESTRICT:
 		property_id = HAL_PARAM_VENC_H264_VUI_BITSTREAM_RESTRC;
