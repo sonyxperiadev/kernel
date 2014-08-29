@@ -303,6 +303,7 @@ struct bcmpmu_fg_data {
 	/* works and workQ */
 	struct workqueue_struct *fg_wq;
 	struct delayed_work fg_periodic_work;
+	struct work_struct low_batt_irq_work;
 
 	/* Notifier blocks */
 	struct notifier_block accy_nb;
@@ -1983,8 +1984,7 @@ static void  bcmpmu_fg_irq_handler(u32 irq, void *data)
 		else
 			fg->bcmpmu->mask_irq(fg->bcmpmu, PMU_IRQ_LOWBAT);
 
-		cancel_delayed_work_sync(&fg->fg_periodic_work);
-		queue_delayed_work(fg->fg_wq, &fg->fg_periodic_work, 0);
+		queue_work(fg->fg_wq, &fg->low_batt_irq_work);
 	}
 }
 
@@ -2952,6 +2952,15 @@ static void bcmpmu_fg_periodic_work(struct work_struct *work)
 #endif
 }
 
+static void bcmpmu_fg_low_batt_irq_work(struct work_struct *work)
+{
+	struct bcmpmu_fg_data *fg = to_bcmpmu_fg_data(work,
+						low_batt_irq_work);
+
+	cancel_delayed_work_sync(&fg->fg_periodic_work);
+	queue_delayed_work(fg->fg_wq, &fg->fg_periodic_work, 0);
+}
+
 static int bcmpmu_fg_get_capacity_level(struct bcmpmu_fg_data *fg)
 {
 	int cap_percentage = fg->capacity_info.prev_percentage;
@@ -3861,6 +3870,7 @@ static int bcmpmu_fg_probe(struct platform_device *pdev)
 	 * Dont want to keep CPU busy with this work when CPU is idle
 	 */
 	INIT_DELAYED_WORK(&fg->fg_periodic_work, bcmpmu_fg_periodic_work);
+	INIT_WORK(&fg->low_batt_irq_work, bcmpmu_fg_low_batt_irq_work);
 
 	mutex_init(&fg->mutex);
 	ret = bcmpmu_fg_register_notifiers(fg);
