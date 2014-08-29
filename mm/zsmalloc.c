@@ -400,6 +400,7 @@ static struct zpool_driver zs_zpool_driver = {
 	.total_size =	zs_zpool_total_size,
 };
 
+MODULE_ALIAS("zpool-zsmalloc");
 #endif /* CONFIG_ZPOOL */
 
 static unsigned int get_maxobj_per_zspage(int size, int pages_per_zspage)
