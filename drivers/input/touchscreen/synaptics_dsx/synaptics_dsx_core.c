@@ -942,6 +942,11 @@ static int synaptics_rmi4_f11_abs_report(struct synaptics_rmi4_data *rmi4_data,
 	extra_data = (struct synaptics_rmi4_f11_extra_data *)fhandler->extra;
 
 	if (rmi4_data->wakeup_gesture_active) {
+		if (rmi4_data->wg_sent) {
+			dev_dbg(rmi4_data->pdev->dev.parent,
+				"wg already sent\n");
+			return 0;
+		}
 		retval = synaptics_rmi4_reg_read(rmi4_data,
 				data_addr + extra_data->data38_offset,
 				&detected_gestures,
@@ -957,6 +962,7 @@ static int synaptics_rmi4_f11_abs_report(struct synaptics_rmi4_data *rmi4_data,
 			input_sync(rmi4_data->input_dev);
 			input_report_key(rmi4_data->input_dev, key, 0);
 			input_sync(rmi4_data->input_dev);
+			rmi4_data->wg_sent = true;
 		}
 		return 0;
 	}
@@ -3552,6 +3558,7 @@ static void synaptics_rmi4_f11_wg(struct synaptics_rmi4_data *rmi4_data,
 		return;
 	}
 
+	rmi4_data->wg_sent = false;
 	rmi4_data->wakeup_gesture_active = enable;
 
 	return;
