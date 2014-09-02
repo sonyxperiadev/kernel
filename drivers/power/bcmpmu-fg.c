@@ -2242,23 +2242,61 @@ static int bcmpmu_fg_get_init_cap(struct bcmpmu_fg_data *fg)
 	pr_fg(FLOW, "saved full_charge: %d full_charge_cap: %d\n",
 			full_charge_cap,
 			fg->capacity_info.full_charge);
-	if (saved_cap == CAPACITY_ZERO_ALIAS) {
-		if (init_cap >= FG_CAP_DELTA_THRLD || fg->used_init_cap) {
-			cap_percentage = init_cap;
-			fg->used_init_cap = true;
-		} else {
-			cap_percentage = 0;
+
+	if (saved_cap > 0 || saved_cap == CAPACITY_ZERO_ALIAS) {
+		bool force_saved = false;
+
+		if (saved_cap == CAPACITY_ZERO_ALIAS)
+			saved_cap = 0;
+
+		if (bcmpmu_fg_get_curr_inst(fg) > 0 &&
+			init_cap > saved_cap) {
+			/* Assume charged from boot.
+			 * Calculate the amount of average current flow into
+			 * the battery since boot based from the newly
+			 * estimated capacity compared to the saved one.
+			 * If average current is higher than the charge
+			 * current set, then the saved capacity is used.
+			 */
+			int volt = bcmpmu_fg_get_batt_volt(fg->bcmpmu);
+
+			if (volt < fg->vfloat_eoc) {
+				/* In CC mode */
+				struct timespec ts;
+				int iavg;
+				int imax = bcmpmu_get_icc_fc(fg->bcmpmu);
+
+				get_monotonic_boottime(&ts);
+				iavg = ((init_cap - saved_cap) *
+					fg->capacity_info.full_charge) /
+					(100 * ts.tv_sec);
+
+				if (iavg > imax) {
+					pr_fg(FLOW, "Iavg > Imax (%d > %d)\n",
+						iavg, imax);
+					force_saved = true;
+				}
+			}
 		}
-	} else if (saved_cap > 0) {
-		if (abs(saved_cap - init_cap) < FG_CAP_DELTA_THRLD
-			&& !fg->used_init_cap) {
+
+		if (fg->used_init_cap && !force_saved) {
+			cap_percentage = init_cap;
+		} else if ((fg->bdata->batt_prop->enable_flat_ocv_soc &&
+				init_cap <=
+				fg->bdata->batt_prop->flat_ocv_soc_high &&
+				init_cap >=
+				fg->bdata->batt_prop->flat_ocv_soc_low) ||
+			force_saved ||
+			(abs(saved_cap - init_cap) < FG_CAP_DELTA_THRLD)) {
+			pr_fg(INIT, "Limiting to saved cap\n");
 			cap_percentage = saved_cap;
 		} else {
 			cap_percentage = init_cap;
 			fg->used_init_cap = true;
 		}
-	} else
+	} else {
 		cap_percentage = init_cap;
+	}
 
 	/**
 	 * Very low initial capacity because VBAT is very low. And at this

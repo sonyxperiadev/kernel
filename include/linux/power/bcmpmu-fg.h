@@ -62,6 +62,9 @@ struct bcmpmu_batt_property {
 	int max_volt; /* max volt in mV */
 	int full_cap; /* full capacity in milli amp seconds */
 	int one_c_rate;
+	bool enable_flat_ocv_soc; /* Switch for enabling flat OCV check */
+	u8 flat_ocv_soc_high; /* Upper part of flat OCV area in percent */
+	u8 flat_ocv_soc_low; /* Lower part of flat OCV area in percent */
 
 	/* lookup tables */
 	struct batt_volt_cap_map *volt_cap_lut;
