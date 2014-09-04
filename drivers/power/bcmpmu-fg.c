@@ -2943,7 +2943,7 @@ static void bcmpmu_fg_periodic_work(struct work_struct *work)
 							__func__, chrgr_type);
 			if ((chrgr_type > PMU_CHRGR_TYPE_NONE &&
 				chrgr_type < PMU_CHRGR_TYPE_MAX) &&
-				!bcmpmu_is_usb_host_enabled(fg->bcmpmu) &&
+				bcmpmu_is_usb_host_enabled(fg->bcmpmu) &&
 				bcmpmu_get_icc_fc(fg->bcmpmu)) {
 
 				fg->flags.prev_batt_status =
