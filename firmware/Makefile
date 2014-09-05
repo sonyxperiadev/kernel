@@ -136,9 +136,7 @@ fw-shipped-$(CONFIG_USB_VICAM) += vicam/firmware.fw
 fw-shipped-$(CONFIG_VIDEO_CPIA2) += cpia2/stv0672_vp4.bin
 fw-shipped-$(CONFIG_YAM) += yam/1200.bin yam/9600.bin
 fw-shipped-$(CONFIG_TOUCHSCREEN_SYNAPTICS_DSX_NEW_FW_UPDATE) += \
-				synaptics/PR1427033.img \
-				synaptics/PR1638646.img \
-				synaptics/PR1640536.img
+				synaptics/PR1640536_09051401.img
 fw-shipped-$(CONFIG_INPUT_EM718X) += em718x/em7180.fw
 fw-shipped-$(CONFIG_INPUT_EM718X_HUB) += em718x/Sony_BMI055_AK09911_pedometerSOMC_tiltSOMC-di02.1.4.5478-9.fw
 
