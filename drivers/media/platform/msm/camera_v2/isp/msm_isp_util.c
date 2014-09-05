@@ -26,6 +26,7 @@ static struct msm_isp_bandwidth_mgr isp_bandwidth_mgr;
 
 #define MSM_ISP_MIN_AB 300000000
 #define MSM_ISP_MIN_IB 450000000
+#define AVTIMER_TICK_RES_PER_USEC 27
 
 #define VFE_AVTIMER_LSW 0
 #define VFE_AVTIMER_MSW 4
