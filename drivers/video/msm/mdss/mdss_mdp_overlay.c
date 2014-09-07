@@ -1162,6 +1162,8 @@ int mdss_mdp_overlay_start(struct msm_fb_data_type *mfd)
 
 	pr_debug("starting fb%d overlay\n", mfd->index);
 
+	mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_ON, false);
+
 	/*
 	 * If idle pc feature is not enabled, then get a reference to the
 	 * runtime device which will be released when overlay is turned off
@@ -1188,7 +1190,7 @@ int mdss_mdp_overlay_start(struct msm_fb_data_type *mfd)
 			rc = mdss_iommu_ctrl(1);
 			if (IS_ERR_VALUE(rc)) {
 				pr_err("iommu attach failed rc=%d\n", rc);
-				return rc;
+				goto end;
 			}
 			mdss_hw_init(mdss_res);
 			mdss_iommu_ctrl(0);
@@ -1219,6 +1221,7 @@ ctl_error:
 	atomic_dec(&mdp5_data->mdata->active_intf_cnt);
 	mdp5_data->ctl = NULL;
 end:
+	mdss_mdp_clk_ctrl(MDP_BLOCK_POWER_OFF, false);
 	return rc;
 }
 
