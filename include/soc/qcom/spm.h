@@ -102,7 +102,7 @@ int msm_spm_turn_on_cpu_rail(unsigned long base, unsigned int cpu);
 void msm_spm_reinit(void);
 int msm_spm_init(struct msm_spm_platform_data *data, int nr_devs);
 int msm_spm_device_init(void);
-
+void msm_spm_dump_regs(unsigned int cpu);
 #if defined(CONFIG_MSM_L2_SPM)
 
 /* Public functions */
@@ -168,6 +168,11 @@ static inline void msm_spm_reinit(void)
 static inline int msm_spm_turn_on_cpu_rail(unsigned long base, unsigned int cpu)
 {
 	return -ENOSYS;
+}
+
+static void msm_spm_dump_regs(unsigned int cpu)
+{
+	return;
 }
 
 static inline int msm_spm_device_init(void)
