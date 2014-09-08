@@ -11,6 +11,8 @@
 #ifndef __LINUX_LM3630A_H
 #define __LINUX_LM3630A_H
 
+#include <linux/notifier.h>
+
 #define LM3630A_NAME "lm3630a_bl"
 
 enum lm3630a_pwm_ctrl {
@@ -39,6 +41,16 @@ enum lm3630a_ledb_ctrl {
 #define A_MAX_CURR_DEFAULT 0x1F
 #define B_MAX_CURR_DEFAULT 0x1F
 #define LM3630A_MAX_BRIGHTNESS 255
+
+struct lm3630a_first_frame_ctrl {
+	int(*register_notifier)(struct notifier_block *nb);
+	unsigned long notifier_event;
+	int backlight_value;
+	int ramp_on_off;
+	bool leda_ctrl;
+	bool ledb_ctrl;
+};
+
 /*
  *@leda_init_brt : led a init brightness. 4~255
  *@leda_max_brt  : led a max brightness.  4~255
@@ -72,6 +84,7 @@ struct lm3630a_platform_data {
 	int ramp_on_off;
 	int ramp_run;
 	int enable_gpio;
+	struct lm3630a_first_frame_ctrl *first_frame_ctrl;
 };
 
 #endif /* __LINUX_LM3630A_H */

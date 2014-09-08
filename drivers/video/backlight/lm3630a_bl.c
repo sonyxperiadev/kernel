@@ -23,6 +23,7 @@
 #include <linux/regmap.h>
 #include <linux/pwm.h>
 #include <linux/platform_data/lm3630a_bl.h>
+#include <linux/notifier.h>
 
 #define REG_CTRL		0x00
 #define REG_CONFIG		0x01
@@ -56,6 +57,11 @@ struct lm3630a_chip {
 	struct backlight_device *bledb;
 	struct regmap *regmap;
 	struct pwm_device *pwmd;
+	struct notifier_block first_frame_nb;
+	bool block_a;
+	bool block_b;
+	int old_brightness_a;
+	int old_brightness_b;
 };
 
 /* i2c access */
@@ -196,6 +202,24 @@ static int lm3630a_bank_a_update_status(struct backlight_device *bl)
 {
 	int ret;
 	struct lm3630a_chip *pchip = bl_get_data(bl);
+	struct lm3630a_first_frame_ctrl *ff_data =
+						pchip->pdata->first_frame_ctrl;
+
+	if (pchip->block_a) {
+		if (!ff_data) {
+			pchip->block_a = false;
+		} else if (bl->props.brightness > ff_data->backlight_value ||
+			bl->props.brightness == 0 ||
+			(bl->props.brightness <= pchip->old_brightness_a)) {
+			pchip->block_a = false;
+			lm3630a_write(pchip, REG_ON_OFF_RAMP,
+						pchip->pdata->ramp_on_off);
+		} else {
+			if (bl->props.brightness < ff_data->backlight_value)
+				pchip->old_brightness_a = bl->props.brightness;
+			bl->props.brightness = ff_data->backlight_value;
+		}
+	}
 
 	/* disable sleep */
 	ret = lm3630a_update(pchip, REG_CTRL, 0x80, 0x00);
@@ -276,6 +300,23 @@ static int lm3630a_bank_b_update_status(struct backlight_device *bl)
 {
 	int ret;
 	struct lm3630a_chip *pchip = bl_get_data(bl);
+	struct lm3630a_first_frame_ctrl *ff_data =
+						pchip->pdata->first_frame_ctrl;
+	if (pchip->block_b) {
+		if (!ff_data) {
+			pchip->block_b = false;
+		} else if (bl->props.brightness > ff_data->backlight_value ||
+			bl->props.brightness == 0 ||
+			(bl->props.brightness <= pchip->old_brightness_b)) {
+			pchip->block_b = false;
+			lm3630a_write(pchip, REG_ON_OFF_RAMP,
+						pchip->pdata->ramp_on_off);
+		} else {
+			if (bl->props.brightness < ff_data->backlight_value)
+				pchip->old_brightness_b = bl->props.brightness;
+			bl->props.brightness = ff_data->backlight_value;
+		}
+	}
 
 	/* disable sleep */
 	ret = lm3630a_update(pchip, REG_CTRL, 0x80, 0x00);
@@ -359,6 +400,38 @@ static const struct backlight_ops lm3630a_bank_b_ops = {
 	.update_status = lm3630a_bank_b_update_status,
 	.get_brightness = lm3630a_bank_b_get_brightness,
 };
+
+static int lm3630a_first_frame_event(struct notifier_block *nb,
+				     unsigned long event,
+				     void *ptr)
+{
+	struct lm3630a_chip *pchip = container_of(nb, struct lm3630a_chip,
+								first_frame_nb);
+	struct lm3630a_first_frame_ctrl *ff_data;
+
+	if (!pchip || !pchip->pdata || !pchip->pdata->first_frame_ctrl) {
+		pr_err("%s: no lm3630a chip data\n", __func__);
+		goto exit;
+	}
+
+	ff_data = pchip->pdata->first_frame_ctrl;
+	if (event == ff_data->notifier_event) {
+		pchip->bleda->props.brightness = ff_data->backlight_value;
+		lm3630a_write(pchip, REG_ON_OFF_RAMP, ff_data->ramp_on_off);
+		if (ff_data->leda_ctrl) {
+			pchip->block_a = true;
+			pchip->old_brightness_a = 0;
+			lm3630a_bank_a_update_status(pchip->bleda);
+		}
+		if (ff_data->ledb_ctrl) {
+			pchip->block_b = true;
+			pchip->old_brightness_b = 0;
+			lm3630a_bank_b_update_status(pchip->bledb);
+		}
+	}
+exit:
+	return NOTIFY_DONE;
+}
 
 static int lm3630a_backlight_register(struct lm3630a_chip *pchip)
 {
@@ -456,6 +529,14 @@ static int lm3630a_probe(struct i2c_client *client,
 	if (rval < 0) {
 		dev_err(&client->dev, "fail : backlight register.\n");
 		return rval;
+	}
+
+	/* first frame notifier */
+	if (pdata->first_frame_ctrl &&
+				pdata->first_frame_ctrl->register_notifier) {
+		pchip->first_frame_nb.notifier_call = lm3630a_first_frame_event;
+		rval = pdata->first_frame_ctrl->
+				register_notifier(&pchip->first_frame_nb);
 	}
 
 	/* interrupt enable  : irq 0 is not allowed */
