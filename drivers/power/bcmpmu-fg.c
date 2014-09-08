@@ -2220,7 +2220,6 @@ static int bcmpmu_fg_get_init_cap(struct bcmpmu_fg_data *fg)
 	int full_charge_cap;
 	int init_cap = 0;
 	int cap_percentage;
-	int cutoff_cap;
 
 	saved_cap = bcmpmu_fg_get_saved_cap(fg);
 	full_charge_cap = bcmpmu_fg_get_saved_cap_full_charge(fg);
@@ -2305,11 +2304,9 @@ static int bcmpmu_fg_get_init_cap(struct bcmpmu_fg_data *fg)
 	 * and wait for discharging algorithm to run which calculates critrical
 	 * cutoff capacity based on the terminal voltage
 	 */
-	cutoff_cap = fg->bdata->batt_prop->cutoff_cap_lut[0].cap;
-
-	if (cap_percentage <= cutoff_cap) {
+	if (!cap_percentage) {
 		pr_fg(FLOW, "capacity below crit cutoff\n");
-		cap_percentage = cutoff_cap;
+		cap_percentage = 1;
 	}
 
 	return percentage_to_capacity(fg, cap_percentage);
