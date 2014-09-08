@@ -34,6 +34,7 @@
 #include <plat/csl/csl_tectl_vc4lite.h>
 #include <linux/regulator/consumer.h>
 #include <video/kona_fb.h>
+#include <linux/notifier.h>
 
 #define DSI_ERR(fmt, args...) \
 	printk(KERN_ERR "%s:%d " fmt, __func__, __LINE__, ##args)
@@ -68,6 +69,7 @@ typedef struct {
 	DISPDRV_INFO_T		*disp_info;
 	bool panel_identified;
 	UInt8 maxRetPktSize;
+	bool notify_first_frame;
 } DispDrv_PANEL_t;
 
 #if 0
@@ -117,6 +119,8 @@ static Int32 DSI_Update(
 
 static Int32 DSI_WinReset(DISPDRV_HANDLE_T drvH);
 
+static void dsi_enable_notify_first_frame(DISPDRV_HANDLE_T drvH);
+
 static int DSI_ReadReg(DISPDRV_HANDLE_T drvH, UInt8 reg, UInt8 *rxBuff);
 
 static Int32 DSI_DCS_Read(DispDrv_PANEL_t *pPanel,
@@ -141,6 +145,7 @@ static DISPDRV_T disp_drv_dsi = {
 	.update_no_os = &DSI_Atomic_Update,
 	.update = &DSI_Update,
 	.reset_win = &DSI_WinReset,
+	.enable_notify_first_frame = &dsi_enable_notify_first_frame,
 };
 
 
@@ -418,6 +423,18 @@ static Int32 DSI_WinReset(DISPDRV_HANDLE_T drvH)
 
 	res = DSI_WinSet(drvH, TRUE, &pPanel->win_dim);
 	return res;
+}
+
+/*
+ * Set flag that we need to send notifier on the next frame update.
+ * Call to this function is protected in kona_fb.c by update-mutex,
+ * so there is no need to protect it here.
+ */
+static void dsi_enable_notify_first_frame(DISPDRV_HANDLE_T handle)
+{
+	DispDrv_PANEL_t *panel = (DispDrv_PANEL_t *)handle;
+
+	panel->notify_first_frame = true;
 }
 
 /*
@@ -1314,6 +1331,11 @@ static Int32 DSI_Update(
 		DSI_Cb(res, &req.cslLcdCbRec);
 	}
 
+	if (pPanel->notify_first_frame) {
+		blocking_notifier_call_chain(&kona_fb_notifier_chain,
+					KONA_FB_EVENT_FIRST_FRAME, NULL);
+		panel->notify_first_frame = false;
+	}
 	DSI_DBG("-\n");
 
 	return res;
