@@ -426,9 +426,8 @@ static inline void fill_avg_sample_buff(struct bcmpmu_fg_data *fg)
 	fg->avg_sample.idx = 0;
 
 	for (i = 0; i < AVG_SAMPLES; i++) {
-		fg->avg_sample.volt[i] = bcmpmu_fg_get_batt_volt(fg->bcmpmu);
-		msleep(bcmpmu_fg_sample_rate_to_time(fg->sample_rate));
 		fg->avg_sample.curr[i] = bcmpmu_fg_get_curr_inst(fg);
+		fg->avg_sample.volt[i] = bcmpmu_fg_get_batt_volt(fg->bcmpmu);
 		fg->avg_sample.idx++;
 	}
 }
@@ -1183,7 +1182,6 @@ static int bcmpmu_fg_get_curr_inst(struct bcmpmu_fg_data *fg)
 	int ret = 0;
 	u8 reg;
 	u8 smpl_cal[2];
-	int last_curr_sample;
 
 	FG_LOCK(fg);
 	/**
@@ -1193,21 +1191,11 @@ static int bcmpmu_fg_get_curr_inst(struct bcmpmu_fg_data *fg)
 	t_now = kona_hubtimer_get_counter();
 	t_ms = ((t_now - fg->last_curr_sample_tm) * 1000)/CLOCK_TICK_RATE;
 
-	if (t_ms < bcmpmu_fg_sample_rate_to_time(fg->sample_rate)) {
-		last_curr_sample = fg->last_curr_sample;
-		FG_UNLOCK(fg);
-		pr_fg(FLOW,
-			"Read time(%llu) < FG samp time(%d)\n",
-			t_ms, bcmpmu_fg_sample_rate_to_time(fg->sample_rate));
-		pr_fg(FLOW, "%s:latch curr_sample=%d\n",
-			__func__, last_curr_sample);
-		return last_curr_sample;
-	}
+	if (t_ms < bcmpmu_fg_sample_rate_to_time(fg->sample_rate))
+		msleep(bcmpmu_fg_sample_rate_to_time(fg->sample_rate) - t_ms);
 
-	fg->last_curr_sample_tm = t_now;
 
 	ret = fg->bcmpmu->read_dev(fg->bcmpmu, PMU_REG_FGCTRL2, &reg);
-
 	/**
 	 * Write 1  to FGFRZSMPL bit to latch the current sample to
 	 * FGSMPL_CAL registers
@@ -1219,6 +1207,7 @@ static int bcmpmu_fg_get_curr_inst(struct bcmpmu_fg_data *fg)
 			2);
 	BUG_ON(ret != 0);
 
+	fg->last_curr_sample_tm = kona_hubtimer_get_counter();
 	fg->last_curr_sample =
 		bcmpmu_fgsmpl_to_curr(fg, smpl_cal[1], smpl_cal[0]);
 	FG_UNLOCK(fg);
@@ -1310,8 +1299,8 @@ static int bcmpmu_fg_get_load_comp_capacity(struct bcmpmu_fg_data *fg,
 	int vbat_oc = 0;
 	int capacity_percentage = 0;
 
-	fg->adc_data.volt = bcmpmu_fg_get_batt_volt(fg->bcmpmu);
 	fg->adc_data.curr_inst = bcmpmu_fg_get_curr_inst(fg);
+	fg->adc_data.volt = bcmpmu_fg_get_batt_volt(fg->bcmpmu);
 	fg->adc_data.temp = bcmpmu_fg_get_batt_temp(fg);
 
 	if (abs(fg->adc_data.curr_inst) > FG_CURR_SAMPLE_MAX)
@@ -2158,7 +2147,7 @@ static int bcmpmu_fg_get_ocv_avg_capacity(struct bcmpmu_fg_data *fg,
 	pr_fg(VERBOSE, "%s\n", __func__);
 
 	do {
-		msleep(bcmpmu_fg_sample_rate_to_time(fg->sample_rate));
+		msleep(FG_INIT_CAPACITY_SAMPLE_DELAY);
 		cap_samples[i] = bcmpmu_fg_get_load_comp_capacity(fg, true);
 		i++;
 	} while (i < samples);
