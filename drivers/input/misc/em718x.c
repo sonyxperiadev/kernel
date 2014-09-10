@@ -262,13 +262,11 @@ struct em718x {
 	struct i2c_client *client;
 	int irq_gpio;
 	int irq;
-	struct work_struct startup_work;
 	struct delayed_work reset_work;
 	struct mutex lock;
 	struct input_dev *idev;
 	struct input_dev *adev;
 	const char *fw_image_name;
-	bool init_complete;
 	u8 num_features;
 	u8 algo_ctl;
 	u8 enabled_sns;
@@ -1273,13 +1271,16 @@ static void em718x_reset_work_func(struct work_struct *work)
 	if (!(STATUS_INITIALIZED & status)) {
 		dev_warn(dev, "not in initialized state yet\n");
 		schedule_delayed_work(&em718x->reset_work,
-				msecs_to_jiffies(50));
+				msecs_to_jiffies(10));
 		goto exit_rescheduled;
 	}
 
 	rc = em718x_load_firmware(em718x);
-	if (rc)
+	if (rc) {
+		dev_warn(dev, "triggering device reset\n");
+		rc = smbus_write_byte(em718x->client, R8_RESET, 0x01);
 		goto exit;
+	}
 	rc = em718x_standby(em718x, true);
 	if (rc)
 		goto exit;
@@ -1306,96 +1307,6 @@ exit:
 	(void)em718x_host_ctl(em718x, 0);
 	dev_info(dev, "reset finished with errors, device in shutdown state\n");
 	mutex_unlock(&em718x->lock);
-	return;
-}
-
-
-
-static void em718x_startup_work_func(struct work_struct *work)
-{
-	struct em718x *em718x = container_of(work, struct em718x, startup_work);
-	struct device *dev = &em718x->client->dev;
-	int rc;
-	u8 status;
-	int i;
-
-	dev_dbg(&em718x->client->dev, "%s\n", __func__);
-	rc = em718x_load_firmware(em718x);
-	if (rc)
-		goto exit;
-
-	rc = em718x_standby(em718x, true);
-	if (rc)
-		goto exit;
-	rc = em718x_host_ctl(em718x, RUN_ENABLE);
-	if (rc)
-		goto exit;
-	(void)smbus_read_byte(em718x->client, R8_CENTRAL_STATUS, &status);
-	dev_info(dev, "switched to stanby state, sentral status 0x%02x\n",
-			status);
-
-	em718x->idev = devm_input_allocate_device(dev);
-	if (!em718x->idev) {
-		dev_err(dev, "could not allocate input device\n");
-		goto exit;
-	}
-
-	for (i = EV_SNS_FIRST; i < EV_SNS_MAX; i++)
-		input_set_capability(em718x->idev, EV_IDEV, i);
-
-	for (i = EV_GYRO_FIRST; i < EV_GYRO_MAX; i++)
-		input_set_capability(em718x->idev, EV_IDEV_GYRO, i);
-
-	em718x->idev->name = "em718x-sns";
-	em718x->idev->id.bustype = BUS_I2C;
-	rc = input_register_device(em718x->idev);
-	if (rc < 0) {
-		dev_err(dev, "could not register input device\n");
-		goto exit;
-	}
-
-	em718x->adev = devm_input_allocate_device(dev);
-	if (!em718x->adev) {
-		dev_err(dev, "could not allocate input device\n");
-		goto exit;
-	}
-
-	for (i = EV_WAKE_FIRST; i < EV_WAKE_MAX; i++)
-		input_set_capability(em718x->adev, EV_ADEV, i);
-
-	rc = em718x_parse_features(em718x);
-	if (rc)
-		goto exit;
-	em718x->adev->name = "em718x-feature";
-	em718x->adev->id.bustype = BUS_I2C;
-	rc = input_register_device(em718x->adev);
-	if (rc < 0) {
-		dev_err(dev, "could not register input device\n");
-		goto exit;
-	}
-	rc = sysfs_create_bin_file(&dev->kobj, &em718x_firmware);
-	if (rc < 0)
-		dev_err(dev, "could not create bin sysfs\n");
-
-	rc = sysfs_create_group(&dev->kobj, &em718x_attribute_group);
-	if (rc < 0)
-		dev_err(dev, "could not create sysfs\n");
-
-	rc = devm_request_threaded_irq(dev, em718x->irq, NULL,
-			em718x_irq_handler, IRQF_TRIGGER_RISING | IRQF_ONESHOT,
-			dev_name(dev), em718x);
-	if (rc) {
-		dev_err(dev, "could not request irq %d\n",
-				em718x->irq);
-		goto exit;
-	}
-	device_init_wakeup(dev, 1);
-	em718x->init_complete = true;
-	dev_info(dev, "init finished with no errors\n");
-	return;
-exit:
-	(void)em718x_host_ctl(em718x, 0);
-	dev_info(dev, "init finished with errors, device in shutdown state\n");
 	return;
 }
 
@@ -1449,6 +1360,7 @@ static int em718x_probe(struct i2c_client *client,
 	int rc;
 	struct em718x *em718x;
 	struct device *dev = &client->dev;
+	int i;
 
 	rc = i2c_check_functionality(client->adapter, I2C_FUNC_I2C);
 	if (!rc) {
@@ -1461,7 +1373,6 @@ static int em718x_probe(struct i2c_client *client,
 
 	i2c_set_clientdata(client, em718x);
 	em718x->client = client;
-	INIT_WORK(&em718x->startup_work, em718x_startup_work_func);
 	INIT_DELAYED_WORK(&em718x->reset_work, em718x_reset_work_func);
 	mutex_init(&em718x->lock);
 	wake_lock_init(&em718x->w_lock, WAKE_LOCK_SUSPEND, dev_name(dev));
@@ -1502,9 +1413,62 @@ static int em718x_probe(struct i2c_client *client,
 		rc = -EINVAL;
 		goto exit;
 	}
+
+	em718x->idev = devm_input_allocate_device(dev);
+	if (!em718x->idev) {
+		dev_err(dev, "could not allocate input device\n");
+		goto exit;
+	}
+	for (i = EV_SNS_FIRST; i < EV_SNS_MAX; i++)
+		input_set_capability(em718x->idev, EV_IDEV, i);
+
+	for (i = EV_GYRO_FIRST; i < EV_GYRO_MAX; i++)
+		input_set_capability(em718x->idev, EV_IDEV_GYRO, i);
+	em718x->idev->name = "em718x-sns";
+	em718x->idev->id.bustype = BUS_I2C;
+	rc = input_register_device(em718x->idev);
+	if (rc < 0) {
+		dev_err(dev, "could not register input device\n");
+		goto exit;
+	}
+
+	em718x->adev = devm_input_allocate_device(dev);
+	if (!em718x->adev) {
+		dev_err(dev, "could not allocate input device\n");
+		goto exit;
+	}
+	for (i = EV_WAKE_FIRST; i < EV_WAKE_MAX; i++)
+		input_set_capability(em718x->adev, EV_ADEV, i);
+	em718x->adev->name = "em718x-feature";
+	em718x->adev->id.bustype = BUS_I2C;
+	rc = input_register_device(em718x->adev);
+	if (rc < 0) {
+		dev_err(dev, "could not register input device\n");
+		goto exit;
+	}
+
+	rc = sysfs_create_bin_file(&dev->kobj, &em718x_firmware);
+	if (rc < 0)
+		dev_err(dev, "could not create bin sysfs\n");
+
+	rc = sysfs_create_group(&dev->kobj, &em718x_attribute_group);
+	if (rc < 0)
+		dev_err(dev, "could not create sysfs\n");
+
+	rc = devm_request_threaded_irq(dev, em718x->irq, NULL,
+			em718x_irq_handler, IRQF_TRIGGER_RISING | IRQF_ONESHOT,
+			dev_name(dev), em718x);
+	if (rc) {
+		dev_err(dev, "could not request irq %d\n",
+				em718x->irq);
+		goto exit;
+	}
+	device_init_wakeup(dev, 1);
+	dev_info(dev, "init finished with no errors, make reset to load FW\n");
+
 	em718x->nb.notifier_call = em718x_suspend_notifier;
 	register_pm_notifier(&em718x->nb);
-	schedule_work(&em718x->startup_work);
+
 	return 0;
 exit:
 	wake_lock_destroy(&em718x->w_lock);
