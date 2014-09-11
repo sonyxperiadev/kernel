@@ -61,6 +61,8 @@
 			linux,code = <116>;
 		};
 
+/* Disable RESIN shutdown here, we set it in boot code */
+/*
 		qcom,pon_2 {
 			qcom,pon-type = <1>;
 			qcom,support-reset = <1>;
@@ -71,7 +73,7 @@
 			linux,code = <114>;
 			qcom,use-bark;
 		};
-
+*/
 		qcom,pon_3 {
 			qcom,pon-type = <3>;
 			qcom,support-reset = <1>;
@@ -140,6 +142,10 @@
 		qcom,bms-vadc = <&pm8941_vadc>;
 		qcom,bms-iadc = <&pm8941_iadc>;
 		qcom,bms-adc_tm = <&pm8941_adc_tm>;
+
+		qcom,batt-pres-status@1208 {
+			reg = <0x1208 0x1>;
+		};
 
 		qcom,bms-iadc@3800 {
 			reg = <0x3800 0x100>;

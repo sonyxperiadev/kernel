@@ -1,4 +1,5 @@
 /* Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2014 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -89,11 +90,19 @@
 	};
 };
 
-&gdsc_mdss {
+&gdsc_venus {
+	qcom,skip-logic-collapse;
 	qcom,retain-periph;
 	qcom,retain-mem;
 };
 
-&gdsc_venus {
+&gdsc_mdss {
 	qcom,skip-logic-collapse;
+	qcom,retain-periph;
+	qcom,retain-mem;
+};
+
+&gdsc_oxili_gx {
+	qcom,retain-mem;
+	qcom,retain-periph;
 };

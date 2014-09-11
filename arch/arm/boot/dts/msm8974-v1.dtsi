@@ -56,6 +56,9 @@
 /* I2C clock frequency overrides */
 &i2c_0 {
 	qcom,i2c-src-freq = <19200000>;
+	sii8334@72 {
+		somc,device-discovery = <1>;
+	};
 };
 
 &i2c_2 {

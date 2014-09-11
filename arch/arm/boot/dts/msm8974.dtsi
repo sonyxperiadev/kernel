@@ -1,4 +1,5 @@
 /* Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -325,7 +326,7 @@
 
 		qcom,pad-pull-on = <0x0 0x3 0x3>; /* no-pull, pull-up, pull-up */
 		qcom,pad-pull-off = <0x0 0x3 0x3>; /* no-pull, pull-up, pull-up */
-		qcom,pad-drv-on = <0x4 0x4 0x4>; /* 10mA, 10mA, 10mA */
+		qcom,pad-drv-on = <0x7 0x4 0x4>; /* 16mA, 10mA, 10mA */
 		qcom,pad-drv-off = <0x0 0x0 0x0>; /* 2mA, 2mA, 2mA */
 
 		qcom,clk-rates = <400000 20000000 25000000 50000000 100000000 200000000>;
@@ -370,7 +371,7 @@
 
 		qcom,pad-pull-on = <0x0 0x3 0x3>; /* no-pull, pull-up, pull-up */
 		qcom,pad-pull-off = <0x0 0x3 0x3>; /* no-pull, pull-up, pull-up */
-		qcom,pad-drv-on = <0x4 0x4 0x4>; /* 10mA, 10mA, 10mA */
+		qcom,pad-drv-on = <0x7 0x4 0x4>; /* 16mA, 10mA, 10mA */
 		qcom,pad-drv-off = <0x0 0x0 0x0>; /* 2mA, 2mA, 2mA */
 
 		qcom,clk-rates = <400000 20000000 25000000 50000000 100000000 200000000>;
@@ -493,6 +494,12 @@
 		reg-names = "hc_mem", "core_mem";
 		interrupts = <0 123 0>, <0 138 0>;
 		interrupt-names = "hc_irq", "pwr_irq";
+
+		qcom,pad-pull-on = <0x0 0x3 0x3>; /* no-pull, pull-up, pull-up */
+		qcom,pad-pull-off = <0x0 0x3 0x3>; /* no-pull, pull-up, pull-up */
+		qcom,pad-drv-on = <0x7 0x4 0x4>; /* 16mA, 10mA, 10mA */
+		qcom,pad-drv-off = <0x0 0x0 0x0>; /* 2mA, 2mA, 2mA */
+
 		qcom,clk-rates = <400000 20000000 25000000 50000000 100000000 200000000>;
 		qcom,bus-speed-mode = "HS200_1p8v", "DDR_1p8v";
 		qcom,cpu-dma-latency-us = <200>;
@@ -518,6 +525,11 @@
 		reg-names = "hc_mem", "core_mem";
 		interrupts = <0 125 0>, <0 221 0>;
 		interrupt-names = "hc_irq", "pwr_irq";
+
+		qcom,pad-pull-on = <0x0 0x3 0x3>; /* no-pull, pull-up, pull-up */
+		qcom,pad-pull-off = <0x0 0x3 0x3>; /* no-pull, pull-up, pull-up */
+		qcom,pad-drv-on = <0x7 0x4 0x4>; /* 16mA, 10mA, 10mA */
+		qcom,pad-drv-off = <0x0 0x0 0x0>; /* 2mA, 2mA, 2mA */
 
 		qcom,clk-rates = <400000 20000000 25000000 50000000 100000000 200000000>;
 		qcom,bus-width = <4>;
@@ -796,6 +808,9 @@
 
 		qcom,cdc-mclk-gpios = <&pm8941_gpios 15 0>;
 		qcom,taiko-mclk-clk-freq = <9600000>;
+
+		qcom,hdmi-audio-rx;
+
 		qcom,prim-auxpcm-gpio-clk  = <&msmgpio 65 0>;
 		qcom,prim-auxpcm-gpio-sync = <&msmgpio 66 0>;
 		qcom,prim-auxpcm-gpio-din  = <&msmgpio 67 0>;
@@ -2196,11 +2211,11 @@
 		compatible = "qcom,msm-thermal";
 		qcom,sensor-id = <5>;
 		qcom,poll-ms = <250>;
-		qcom,limit-temp = <60>;
+		qcom,limit-temp = <80>;
 		qcom,temp-hysteresis = <10>;
 		qcom,freq-step = <2>;
 		qcom,freq-control-mask = <0xf>;
-		qcom,core-limit-temp = <80>;
+		qcom,core-limit-temp = <85>;
 		qcom,core-temp-hysteresis = <10>;
 		qcom,core-control-mask = <0xe>;
 		qcom,hotplug-temp = <110>;
@@ -2247,8 +2262,7 @@
 
         memory_hole: qcom,msm-mem-hole {
                 compatible = "qcom,msm-mem-hole";
-                qcom,memblock-remove = <0x5d00000 0x7d00000
-					0xfa00000 0x500000>; /* Address and Size of Hole */
+                qcom,memblock-remove = <0x5d00000 0xa200000>; /* Address and Size of Hole */
         };
 
 	uart7: uart@f995d000 { /*BLSP #2, UART #7 */

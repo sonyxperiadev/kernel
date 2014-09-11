@@ -287,6 +287,7 @@ config ARCH_MSM8974
 	select ARCH_WANT_KMAP_ATOMIC_FLUSH
 	select KRAIT_REGULATOR
 	select ENABLE_VMALLOC_SAVINGS
+	select HAVE_NMI_WATCHDOG if MSM_WATCHDOG_V2
 
 config ARCH_APQ8084
 	bool "APQ8084"
@@ -1075,6 +1076,33 @@ config MACH_MSM9615_MTP
 	bool "MSM9615 MTP"
 	help
 	  Support for the Qualcomm MSM9615 MTP device.
+
+config MACH_SONY_TOGARI_ROW
+	depends on ARCH_MSM8974
+	bool "Sony Mobile Togari ROW"
+	help
+	  Support for the SONY Mobile Togari ROW device.
+	  It is based on QCOM MSM8974 chipset.
+	  If you enable this config,
+	  Please use SONY Mobile source tree.
+
+config MACH_SONY_HONAMI_ROW
+	depends on ARCH_MSM8974
+	bool "Sony Mobile Honami ROW"
+	help
+	  Support for the SONY Mobile Honami ROW device.
+	  It is based on QCOM MSM8974 chipset.
+	  If you enable this config,
+	  Please use SONY Mobile source tree.
+
+config MACH_SONY_AMAMI_ROW
+	depends on ARCH_MSM8974
+	bool "Sony Mobile Amami ROW"
+	help
+	  Support for the SONY Mobile Amami ROW device.
+	  It is based on QCOM MSM8974 chipset.
+	  If you enable this config,
+	  Please use SONY Mobile source tree.
 
 config MSM_USE_TSIF1
 	depends on ARCH_MSM8X60
@@ -3053,4 +3081,12 @@ config KRAIT_REGULATOR
 	 line from the PMIC. This supply line is powered by multiple
 	 regulators running in ganged mode inside the PMIC. Enable
 	 this option to support such configurations.
+
+config MSM_MODEM_SUBSYSTEM_RESTART_MONITOR
+	bool "MSM Modem Subsystem Restart Monitor"
+	default n
+	depends on MSM_SUBSYSTEM_RESTART
+	help
+	  This option enables a module which can notify user-space
+	  applications of modem subsystem power up/down event via uevent.
 endif
