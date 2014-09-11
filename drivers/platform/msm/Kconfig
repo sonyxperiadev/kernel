@@ -130,4 +130,13 @@ config SSM
 	  This driver uses Secure Channel Manager interface for trustzone
 	  communication and communicates with modem over SMD channel.
 
+config POWERKEY_FORCECRASH
+	boolean "QPNP power key forcecrash support"
+	default n
+	depends on QPNP_POWER_ON && ARCH_MSM8974
+	help
+	  Say Y here if you want support forcecrash functionality through
+	  qpnp power key. Triggers panic if power key is hold for more
+	  than 10secs.
+
 endmenu

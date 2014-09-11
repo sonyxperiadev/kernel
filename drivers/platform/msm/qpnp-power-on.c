@@ -1,4 +1,5 @@
 /* Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013, Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -26,6 +27,9 @@
 
 /* Common PNP defines */
 #define QPNP_PON_REVISION2(base)		(base + 0x01)
+#ifdef CONFIG_POWERKEY_FORCECRASH
+#include "forcecrash.h"
+#endif
 
 /* PON common register addresses */
 #define QPNP_PON_RT_STS(base)			(base + 0x10)
@@ -55,6 +59,10 @@
 #define QPNP_PON_TRIGGER_EN(base)		(base + 0x80)
 #define QPNP_PON_S3_DBC_CTL(base)		(base + 0x75)
 
+#define QPNP_PON_SW_RESET_S2_CTL(base)	(base + 0x62)
+#define QPNP_PON_SW_RESET_S2_CTL2(base)	(base + 0x63)
+#define QPNP_PON_SW_RESET_GO(base)	(base + 0x64)
+
 #define QPNP_PON_WARM_RESET_TFT			BIT(4)
 
 #define QPNP_PON_RESIN_PULL_UP			BIT(0)
@@ -79,6 +87,12 @@
 #define QPNP_PON_RESET_EN			BIT(7)
 #define QPNP_PON_POWER_OFF_MASK			0xF
 
+#define QPNP_PON_SW_RESET_S2_CTL_MASK			(0xFF)
+#define QPNP_PON_SW_RESET_S2_CTL_DVDD_HARD_RESET	(0x88)
+#define QPNP_PON_SW_RESET_S2_CTL2_RESET_EN_MASK		BIT(7)
+#define QPNP_PON_SW_RESET_GO_MASK			(0xFF)
+#define QPNP_PON_SW_RESET_GO_VAL			(0xA5)
+
 /* Ranges */
 #define QPNP_PON_S1_TIMER_MAX			10256
 #define QPNP_PON_S2_TIMER_MAX			2000
@@ -90,6 +104,11 @@
 
 #define QPNP_KEY_STATUS_DELAY			msecs_to_jiffies(250)
 #define QPNP_PON_REV_B				0x01
+
+#ifdef CONFIG_POWERKEY_FORCECRASH
+static int forcecrash_on;
+module_param(forcecrash_on, int, S_IRUGO | S_IWUSR);
+#endif
 
 enum pon_type {
 	PON_KPDPWR,
@@ -331,6 +350,79 @@ int qpnp_pon_trigger_config(enum pon_trigger_source pon_src, bool enable)
 }
 EXPORT_SYMBOL(qpnp_pon_trigger_config);
 
+bool qpnp_pon_is_initialized(void)
+{
+	return sys_reset_dev != NULL;
+}
+EXPORT_SYMBOL(qpnp_pon_is_initialized);
+
+int qpnp_pon_dvdd_reset(void)
+{
+	int rc;
+	struct qpnp_pon *pon = sys_reset_dev;
+
+	if (!pon)
+		return -ENODEV;
+
+	rc = qpnp_pon_masked_write(pon, QPNP_PON_SW_RESET_S2_CTL(pon->base),
+			QPNP_PON_SW_RESET_S2_CTL_MASK,
+			QPNP_PON_SW_RESET_S2_CTL_DVDD_HARD_RESET);
+	if (rc)
+		dev_err(&pon->spmi->dev,
+			"Unable to write to addr=%x, rc(%d)\n",
+				QPNP_PON_SW_RESET_S2_CTL(pon->base), rc);
+
+	rc = qpnp_pon_masked_write(pon, QPNP_PON_SW_RESET_S2_CTL2(pon->base),
+			QPNP_PON_SW_RESET_S2_CTL2_RESET_EN_MASK,
+			QPNP_PON_SW_RESET_S2_CTL2_RESET_EN_MASK);
+	if (rc)
+		dev_err(&pon->spmi->dev,
+			"Unable to write to addr=%x, rc(%d)\n",
+				QPNP_PON_SW_RESET_S2_CTL2(pon->base), rc);
+
+	/* Wait for printouts */
+	msleep(2000);
+
+	rc = qpnp_pon_masked_write(pon, QPNP_PON_SW_RESET_GO(pon->base),
+			QPNP_PON_SW_RESET_GO_MASK,
+			QPNP_PON_SW_RESET_GO_VAL);
+	if (rc)
+		dev_err(&pon->spmi->dev,
+			"Unable to write to addr=%x, rc(%d)\n",
+				QPNP_PON_SW_RESET_GO(pon->base), rc);
+	return rc;
+}
+EXPORT_SYMBOL(qpnp_pon_dvdd_reset);
+
+int qpnp_get_pmic_version(void)
+{
+	struct qpnp_pon *pon = sys_reset_dev;
+	u8 reg102, reg103;
+	int rc;
+
+	/* Read PMIC version fropm registers 0x102 and 0x103 */
+	rc = spmi_ext_register_readl(pon->spmi->ctrl, pon->spmi->sid,
+				0x102, &reg102, 1);
+	if (rc) {
+		dev_err(&pon->spmi->dev,
+			"Unable to read addr 0x102, rc(%d)\n", rc);
+		return rc;
+	}
+	rc = spmi_ext_register_readl(pon->spmi->ctrl, pon->spmi->sid,
+				0x103, &reg103, 1);
+	if (rc) {
+		dev_err(&pon->spmi->dev,
+			"Unable to read addr 0x103, rc(%d)\n", rc);
+		return rc;
+	}
+
+	rc = (reg103 << 4) | reg102;
+	dev_dbg(&pon->spmi->dev, "PMIC version: %X\n", rc);
+
+	return rc;
+}
+EXPORT_SYMBOL(qpnp_get_pmic_version);
+
 static struct qpnp_pon_config *
 qpnp_get_cfg(struct qpnp_pon *pon, u32 pon_type)
 {
@@ -370,6 +462,11 @@ qpnp_pon_input_dispatch(struct qpnp_pon *pon, u32 pon_type)
 	switch (cfg->pon_type) {
 	case PON_KPDPWR:
 		pon_rt_bit = QPNP_PON_KPDPWR_N_SET;
+#ifdef CONFIG_POWERKEY_FORCECRASH
+		if (forcecrash_on)
+			qpnp_powerkey_forcecrash_timer_setup(pon_rt_sts &
+					pon_rt_bit);
+#endif
 		break;
 	case PON_RESIN:
 		pon_rt_bit = QPNP_PON_RESIN_N_SET;
@@ -1123,6 +1220,10 @@ static int __devinit qpnp_pon_probe(struct spmi_device *spmi)
 
 	INIT_DELAYED_WORK(&pon->bark_work, bark_work_func);
 
+#ifdef CONFIG_POWERKEY_FORCECRASH
+	qpnp_powerkey_forcecrash_init(spmi, pon->base);
+#endif
+
 	/* register the PON configurations */
 	rc = qpnp_pon_config_init(pon);
 	if (rc) {
@@ -1142,6 +1243,10 @@ static int qpnp_pon_remove(struct spmi_device *spmi)
 
 	if (pon->pon_input)
 		input_unregister_device(pon->pon_input);
+
+#ifdef CONFIG_POWERKEY_FORCECRASH
+	qpnp_powerkey_forcecrash_exit(spmi);
+#endif
 
 	return 0;
 }
