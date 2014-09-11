@@ -374,7 +374,7 @@
         compatible = "bcm,tmon-thermal";
         reg  = <0x34008000 0x1000>, <0x35004000 0x1000>;
         interrupts = <0 183 4>;
-        hysteresis = <5>;
+        hysteresis = <10>;
         flags = <5>;
         interval_ms = <5>;
         poll_rate_ms = <30000>;
@@ -390,38 +390,38 @@
 		};
 		trip1 {
 			type = "active";
-			temp = <55>;
-			max_freq = <0>;
+			temp = <47>;
+			max_freq = <800000>;
 			max_brightness = <28>;
 		};
 		trip2 {
 			type = "active";
-			temp = <58>;
-			max_freq = <1200000>;
+			temp = <52>;
+			max_freq = <600000>;
 			max_brightness = <0>;
 		};
 		trip3 {
 			type = "active";
-			temp = <63>;
-			max_freq = <0>;
+			temp = <57>;
+			max_freq = <312000>;
 			max_brightness = <25>;
 		};
 		trip4 {
 			type = "active";
 			temp = <65>;
-			max_freq = <800000>;
+			max_freq = <312000>;
 			max_brightness = <0>;
 		};
 		trip5 {
 			type = "active";
 			temp = <70>;
-			max_freq = <600000>;
+			max_freq = <0>;
 			max_brightness = <22>;
 		};
 		trip6 {
 			type = "active";
 			temp = <80>;
-			max_freq = <312000>;
+			max_freq = <0>;
 			max_brightness = <0>;
 		};
 		trip7 {
