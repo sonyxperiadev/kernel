@@ -63,11 +63,4 @@ struct kona_fb_platform_data {
 	uint32_t tectl_gpio;
 };
 
-
-extern struct blocking_notifier_head kona_fb_notifier_chain;
-
-#define KONA_FB_EVENT_FIRST_FRAME 0x01
-
-int kona_fb_register_notifier(struct notifier_block *nb);
-
 #endif /* KONA_FB_H_ */

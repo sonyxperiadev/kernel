@@ -1006,7 +1006,6 @@ static ssize_t kona_fb_panel_mode_store(struct device *dev,
 				msecs_to_jiffies(
 					fb->fb_data->esdcheck_period_ms));
 
-		fb->display_ops->enable_notify_first_frame(fb->display_hdl);
 		fb->display_info->special_mode_on = false;
 		fb->blank_state = KONA_FB_UNBLANK;
 		konafb_debug("Special mode OFF\n");
@@ -2884,13 +2883,6 @@ static void __exit kona_fb_exit(void)
 {
 	platform_driver_unregister(&kona_fb_driver);
 	printk(KERN_INFO "BRCM Framebuffer exit OK\n");
-}
-
-BLOCKING_NOTIFIER_HEAD(kona_fb_notifier_chain);
-
-int kona_fb_register_notifier(struct notifier_block *nb)
-{
-	return blocking_notifier_chain_register(&kona_fb_notifier_chain, nb);
 }
 
 module_init(kona_fb_init);
