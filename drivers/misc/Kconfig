@@ -697,6 +697,13 @@ config AD7146
 	  If you say yes here you get support for the AD7146 chip.
 	  This is used as a proximity sensor.
 
+config NFC_PN544
+	tristate "NFC driver for PN544"
+	default n
+	depends on I2C
+	help
+	  This option enables support for PN544.
+
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"
 source "drivers/misc/cb710/Kconfig"
