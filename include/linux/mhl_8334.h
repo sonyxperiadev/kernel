@@ -1,4 +1,5 @@
-/* Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2013 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -9,6 +10,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
+ * NOTE: This file has been modified by Sony Mobile Communications AB.
+ * Modifications are licensed under the License.
  */
 
 #ifndef __MHL_MSM_H__
@@ -127,6 +130,7 @@ struct mhl_tx_platform_data {
 	struct dss_vreg *vregs[MHL_TX_MAX_VREG];
 	int irq;
 	struct platform_device *hdmi_pdev;
+	u32 device_discovery;
 };
 
 struct mhl_tx_ctrl {
@@ -137,37 +141,52 @@ struct mhl_tx_ctrl {
 	uint8_t chip_rev_id;
 	int mhl_mode;
 	struct completion rgnd_done;
+	struct timer_list discovery_timer;
+	struct work_struct timer_work;
+	bool notify_usb_online_plugged;
+	bool discovering;
 	void (*notify_usb_online)(void *ctx, int online);
 	void *notify_ctx;
 	struct usb_ext_notification *mhl_info;
 	bool disc_enabled;
 	struct power_supply mhl_psy;
+	struct power_supply *batt_psy;
 	bool vbus_active;
 	int current_val;
+	int max_current_val;
 	struct completion msc_cmd_done;
 	uint8_t devcap[16];
 	uint16_t devcap_state;
 	uint8_t status[2];
 	uint8_t path_en_state;
 	uint8_t tmds_en_state;
+	bool tmds_ctrl_en;
+	bool screen_mode;
+	int screen_control;
+	struct work_struct screen_work;
 	void *hdmi_mhl_ops;
 	struct work_struct mhl_msc_send_work;
 	struct list_head list_cmd;
 	struct input_dev *input;
 	struct workqueue_struct *msc_send_workqueue;
-	struct workqueue_struct *mhl_workq;
-	struct work_struct mhl_intr_work;
 	u16 *rcp_key_code_tbl;
 	size_t rcp_key_code_tbl_len;
 	struct scrpd_struct scrpd;
 	int scrpd_busy;
 	int wr_burst_pending;
 	struct completion req_write_done;
-	spinlock_t lock;
-	bool tx_powered_off;
-	uint8_t dwnstream_hpd;
-	bool mhl_det_discon;
-	bool irq_req_done;
+	struct work_struct rcp_key_release_work;
+	int rcp_key_release;
+	int rcp_pre_input_key;
+	struct timer_list rcp_key_release_timer;
+	/* BRAVIA sync */
+	struct work_struct scratchpad_work;
+
+	bool mouse_mode;
+	struct device dev;
+
+	int mouse_move_distance_dx;
+	int mouse_move_distance_dy;
 };
 
 int mhl_i2c_reg_read(struct i2c_client *client,
@@ -196,6 +215,7 @@ enum mhl_st_type {
 	POWER_STATE_D0_NO_MHL = 0,
 	POWER_STATE_D0_MHL    = 2,
 	POWER_STATE_D3        = 3,
+	POWER_STATE_DELAY_D3  = 4,
 };
 
 enum {

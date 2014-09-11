@@ -1,4 +1,5 @@
 /* Copyright (c) 2010-2013, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2013 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -9,6 +10,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
+ * NOTE: This file has been modified by Sony Mobile Communications AB.
+ * Modifications are licensed under the License.
  */
 
 #include <linux/io.h>
@@ -119,14 +122,6 @@ void hdmi_setup_video_mode_lut(void)
 	/* Add all supported CEA modes to the lut */
 	MSM_HDMI_MODES_SET_SUPP_TIMINGS(
 		hdmi_supported_video_mode_lut, MSM_HDMI_MODES_CEA);
-
-	/* Add all supported extended hdmi modes to the lut */
-	MSM_HDMI_MODES_SET_SUPP_TIMINGS(
-		hdmi_supported_video_mode_lut, MSM_HDMI_MODES_XTND);
-
-	/* Add any other specific DVI timings (DVI modes, etc.) */
-	MSM_HDMI_MODES_SET_SUPP_TIMINGS(
-		hdmi_supported_video_mode_lut, MSM_HDMI_MODES_DVI);
 } /* hdmi_setup_video_mode_lut */
 
 const char *hdmi_get_single_video_3d_fmt_2string(u32 format)
@@ -406,7 +401,7 @@ void hdmi_ddc_config(struct hdmi_tx_ddc_ctrl *ddc_ctrl)
 	DSS_REG_W_ND(ddc_ctrl->io, HDMI_DDC_SETUP, 0xFF000000);
 
 	/* Enable reference timer to 19 micro-seconds */
-	DSS_REG_W_ND(ddc_ctrl->io, HDMI_DDC_REF, (1 << 16) | (19 << 0));
+	DSS_REG_W_ND(ddc_ctrl->io, HDMI_DDC_REF, (1 << 16) | (32 << 0));
 } /* hdmi_ddc_config */
 
 int hdmi_ddc_isr(struct hdmi_tx_ddc_ctrl *ddc_ctrl)

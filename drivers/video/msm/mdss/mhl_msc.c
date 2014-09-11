@@ -1,4 +1,5 @@
 /* Copyright (c) 2013, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2013 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -9,6 +10,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
+ * NOTE: This file has been modified by Sony Mobile Communications AB.
+ * Modifications are licensed under the License.
  */
 
 #include <linux/types.h>
@@ -18,9 +21,51 @@
 #include "mhl_msc.h"
 #include "mdss_hdmi_mhl.h"
 
+#define PRINT_DEVCAP
+
+#define MHL_TX_EVENT_DSCR_CHG	1
+#define MHL_ADOPTER_ID_SOMC		0x03A7
+#define MHL_OSD_NAME_SIZE		12
+#define MHL_OSD_NAME			"Xperia"	/* len : 1<=n<=12 */
+#define MHL_SCPD_GIVE_OSD_NAME		0xA1
+#define MHL_SCPD_SET_OSD_NAME		0xA2
+
+struct mhl_osd_msg {
+	u16 adopter_id;
+	u8 command_id;
+	u8 data[MHL_OSD_NAME_SIZE];
+	u8 decrement_cnt;
+};
+
 static struct mhl_tx_ctrl *mhl_ctrl;
 static DEFINE_MUTEX(msc_send_workqueue_mutex);
+struct workqueue_struct *scratchpad_workqueue;
+struct workqueue_struct *screen_ctrl_workqueue;
 
+static void mhl_notify_event(struct mhl_tx_ctrl *mhl_ctrl, int event);
+
+/*
+ * Android defines [DEFAULT_LONG_PRESS_TIMEOUT = 500].
+ * 450ms is enought not to let system detect LongPress.
+ */
+#define RCP_KEY_RELEASE_TIME1	450
+
+/*
+ * In samsung dongle case, cursor moves a lot than normal situation with
+ * pressing direction key twice in a short time.
+ * Please add following explanation after "twice" .
+ * Android defines [DEFAULT_LONG_PRESS_TIMEOUT = 500], so if release event is
+ * not injected within 500ms, then the time out occurs and system become to
+ * detect the event as LongPress. For that reason, we set the release timer as
+ * 200ms not to let system judge it is LongPress.
+ */
+#define RCP_KEY_RELEASE_TIME2	200
+#define RCP_KEY_INVALID			-1
+
+static DEFINE_MUTEX(rcp_key_release_mutex);
+struct workqueue_struct *rcp_key_release_workqueue;
+
+#ifdef PRINT_DEVCAP
 const char *devcap_reg_name[] = {
 	"DEV_STATE       ",
 	"MHL_VERSION     ",
@@ -40,53 +85,48 @@ const char *devcap_reg_name[] = {
 	"Reserved        ",
 };
 
-static bool mhl_check_tmds_enabled(struct mhl_tx_ctrl *mhl_ctrl)
-{
-	if (mhl_ctrl && mhl_ctrl->hdmi_mhl_ops) {
-		struct msm_hdmi_mhl_ops *ops = mhl_ctrl->hdmi_mhl_ops;
-		struct platform_device *pdev = mhl_ctrl->pdata->hdmi_pdev;
-		return (ops->tmds_enabled(pdev) == true);
-	} else {
-		pr_err("%s: invalid input\n", __func__);
-		return false;
-	}
-}
-
 static void mhl_print_devcap(u8 offset, u8 devcap)
 {
 	switch (offset) {
 	case DEVCAP_OFFSET_DEV_CAT:
-		pr_debug("DCAP: %02X %s: %02X DEV_TYPE=%X POW=%s\n",
+		pr_info("DCAP: %02X %s: %02X DEV_TYPE=%X POW=%s\n",
 			offset, devcap_reg_name[offset], devcap,
 			devcap & 0x0F, (devcap & 0x10) ? "y" : "n");
 		break;
 	case DEVCAP_OFFSET_FEATURE_FLAG:
-		pr_debug("DCAP: %02X %s: %02X RCP=%s RAP=%s SP=%s\n",
+		pr_info("DCAP: %02X %s: %02X RCP=%s RAP=%s SP=%s\n",
 			offset, devcap_reg_name[offset], devcap,
 			(devcap & 0x01) ? "y" : "n",
 			(devcap & 0x02) ? "y" : "n",
 			(devcap & 0x04) ? "y" : "n");
 		break;
 	default:
-		pr_debug("DCAP: %02X %s: %02X\n",
+		pr_info("DCAP: %02X %s: %02X\n",
 			offset, devcap_reg_name[offset], devcap);
 		break;
 	}
 }
+#else
+static inline void mhl_print_devcap(u8 offset, u8 devcap) {}
+#endif
 
 static bool mhl_qualify_path_enable(struct mhl_tx_ctrl *mhl_ctrl)
 {
 	int rc = false;
 
-	if (!mhl_ctrl)
-		return rc;
-
-	if (mhl_ctrl->tmds_en_state ||
-	    /* Identify sink with non-standard INT STAT SIZE */
-	    (mhl_ctrl->devcap[DEVCAP_OFFSET_MHL_VERSION] == 0x10 &&
-	     mhl_ctrl->devcap[DEVCAP_OFFSET_INT_STAT_SIZE] == 0x44))
+	/* The points to distinguish whether it is Samsung MHL 1.0 Sink
+	 * Devices are as follows.
+	 * 1.MHL_VERSION = 0x10
+	 * 2.INT_STAT_SIZE = 0x44
+	 *   In SOMC investigation, only this Samsung model has this
+	 *   INT_STAT_SIZE value. This value is not compliant with MHL spec.
+	 *   It means illegal. So, other model product wouldn't have the 0x44.
+	 */
+	if (mhl_ctrl->tmds_en_state)
 		rc = true;
-
+	else if (mhl_ctrl->devcap[DEVCAP_OFFSET_MHL_VERSION] == 0x10 &&
+		mhl_ctrl->devcap[DEVCAP_OFFSET_INT_STAT_SIZE] == 0x44)
+		rc = true;
 	return rc;
 }
 
@@ -212,7 +252,9 @@ static int mhl_update_devcap(struct mhl_tx_ctrl *mhl_ctrl,
 	if (offset < 0 || offset > 15)
 		return -EFAULT;
 	mhl_ctrl->devcap[offset] = devcap;
+#ifdef PRINT_DEVCAP
 	mhl_print_devcap(offset, mhl_ctrl->devcap[offset]);
+#endif
 
 	return 0;
 }
@@ -224,6 +266,7 @@ int mhl_msc_clear(struct mhl_tx_ctrl *mhl_ctrl)
 
 	memset(mhl_ctrl->devcap, 0, 16);
 	mhl_ctrl->devcap_state = 0;
+	mhl_ctrl->tmds_ctrl_en = false;
 	mhl_ctrl->path_en_state = 0;
 	mhl_ctrl->status[0] = 0;
 	mhl_ctrl->status[1] = 0;
@@ -231,6 +274,22 @@ int mhl_msc_clear(struct mhl_tx_ctrl *mhl_ctrl)
 	mhl_ctrl->wr_burst_pending = 0;
 
 	return 0;
+}
+
+static int mhl_rap_send_msc_msg(struct mhl_tx_ctrl *mhl_ctrl, u8 cmd_data)
+{
+	struct msc_command_struct req;
+
+	if ((mhl_ctrl->devcap[DEVCAP_OFFSET_FEATURE_FLAG] &
+		MHL_FEATURE_RAP_SUPPORT) == 0 ||
+		!mhl_ctrl->screen_mode)
+		return -ENXIO;
+
+	req.command = MHL_MSC_MSG;
+	req.offset = 0;
+	req.payload.data[0] = MHL_MSC_MSG_RAP;
+	req.payload.data[1] = cmd_data;
+	return mhl_queue_msc_command(mhl_ctrl, &req, MSC_NORMAL_SEND);
 }
 
 int mhl_msc_command_done(struct mhl_tx_ctrl *mhl_ctrl,
@@ -243,8 +302,10 @@ int mhl_msc_command_done(struct mhl_tx_ctrl *mhl_ctrl,
 			    & MHL_STATUS_PATH_ENABLED) {
 				/* Enable TMDS output */
 				mhl_tmds_ctrl(mhl_ctrl, TMDS_ENABLE);
-				if (mhl_ctrl->devcap_state == MHL_DEVCAP_ALL)
+				if (mhl_ctrl->devcap_state == MHL_DEVCAP_ALL) {
 					mhl_drive_hpd(mhl_ctrl, HPD_UP);
+					mhl_ctrl->tmds_ctrl_en = true;
+				}
 			} else {
 				/* Disable TMDS output */
 				mhl_tmds_ctrl(mhl_ctrl, TMDS_DISABLE);
@@ -264,15 +325,18 @@ int mhl_msc_command_done(struct mhl_tx_ctrl *mhl_ctrl,
 			else
 				pr_debug("%s: devcap pow bit unset\n",
 					 __func__);
+			power_supply_set_present(&mhl_ctrl->mhl_psy,
+				!!(req->retval & MHL_DEV_CATEGORY_POW_BIT));
+			break;
+		case DEVCAP_OFFSET_FEATURE_FLAG:
+			mhl_rap_send_msc_msg(mhl_ctrl, MHL_RAP_CONTENT_ON);
 			break;
 		case DEVCAP_OFFSET_RESERVED:
-			mhl_tmds_ctrl(mhl_ctrl, TMDS_ENABLE);
-			mhl_drive_hpd(mhl_ctrl, HPD_UP);
-			break;
-		case DEVCAP_OFFSET_MHL_VERSION:
-		case DEVCAP_OFFSET_INT_STAT_SIZE:
-			if (mhl_qualify_path_enable(mhl_ctrl))
+			if (mhl_qualify_path_enable(mhl_ctrl)) {
 				mhl_tmds_ctrl(mhl_ctrl, TMDS_ENABLE);
+				mhl_drive_hpd(mhl_ctrl, HPD_UP);
+				mhl_ctrl->tmds_ctrl_en = true;
+			}
 			break;
 		}
 		break;
@@ -336,6 +400,37 @@ int mhl_msc_send_msc_msg(struct mhl_tx_ctrl *mhl_ctrl,
 	return mhl_queue_msc_command(mhl_ctrl, &req, MSC_NORMAL_SEND);
 }
 
+void mhl_screen_notify(struct mhl_tx_ctrl *mhl_ctrl, int screen_mode)
+{
+	if (!mhl_ctrl) {
+		pr_err("%s: invalid input\n", __func__);
+		return;
+	}
+
+	if (screen_mode) {
+		mhl_ctrl->screen_mode = true;
+		if (mhl_ctrl->cur_state == POWER_STATE_D0_MHL) {
+			if (mhl_ctrl->tmds_ctrl_en) {
+				mhl_tmds_ctrl(mhl_ctrl, TMDS_ENABLE);
+				mhl_drive_hpd(mhl_ctrl, HPD_UP);
+			}
+			mhl_rap_send_msc_msg(mhl_ctrl, MHL_RAP_CONTENT_ON);
+		}
+	} else {
+		if (!mhl_ctrl->tmds_en_state || !mhl_ctrl->screen_mode) {
+			mhl_ctrl->screen_mode = false;
+			return;
+		}
+		if (mhl_ctrl->cur_state == POWER_STATE_D0_MHL) {
+			mhl_drive_hpd(mhl_ctrl, HPD_DOWN);
+			mhl_tmds_ctrl(mhl_ctrl, TMDS_DISABLE);
+			mhl_rap_send_msc_msg(mhl_ctrl, MHL_RAP_CONTENT_OFF);
+		}
+		/* NACK any RAP call until chagne to screen on */
+		mhl_ctrl->screen_mode = false;
+	}
+}
+
 /*
  * Certain MSC msgs such as RCPK, RCPE and RAPK
  * should be transmitted as a high priority
@@ -377,15 +472,157 @@ int mhl_msc_read_devcap_all(struct mhl_tx_ctrl *mhl_ctrl)
 	return ret;
 }
 
+void mhl_rcp_key_release_work(struct work_struct *work)
+{
+	struct mhl_tx_ctrl *mhl_ctrl =
+		container_of(work, struct mhl_tx_ctrl, rcp_key_release_work);
+
+	if (!mhl_ctrl)
+		return;
+
+	mutex_lock(&rcp_key_release_mutex);
+	if (mhl_ctrl->rcp_key_release != true) {
+		mutex_unlock(&rcp_key_release_mutex);
+		return;
+	}
+	if (mhl_ctrl->rcp_pre_input_key == RCP_KEY_INVALID) {
+		mutex_unlock(&rcp_key_release_mutex);
+		return;
+	}
+	input_report_key(mhl_ctrl->input, mhl_ctrl->rcp_pre_input_key, 0);
+	input_sync(mhl_ctrl->input);
+	mhl_ctrl->rcp_key_release = false;
+	mhl_ctrl->rcp_pre_input_key = RCP_KEY_INVALID;
+	mutex_unlock(&rcp_key_release_mutex);
+}
+
+void mhl_rcp_key_release_timer(unsigned long data)
+{
+	struct mhl_tx_ctrl *mhl_ctrl = (struct mhl_tx_ctrl *)data;
+	if (!mhl_ctrl)
+		return;
+
+	queue_work(rcp_key_release_workqueue, &mhl_ctrl->rcp_key_release_work);
+}
+
+void mhl_set_mouse_move_distance_dx(struct mhl_tx_ctrl *mhl_ctrl,
+				    int mouse_move_distance_dx)
+{
+	if (!mhl_ctrl) {
+		pr_err("%s: invalid input\n", __func__);
+		return;
+	}
+
+	mhl_ctrl->mouse_move_distance_dx = mouse_move_distance_dx;
+}
+
+void mhl_set_mouse_move_distance_dy(struct mhl_tx_ctrl *mhl_ctrl,
+				    int mouse_move_distance_dy)
+{
+	if (!mhl_ctrl) {
+		pr_err("%s: invalid input\n", __func__);
+		return;
+	}
+
+	mhl_ctrl->mouse_move_distance_dy = mouse_move_distance_dy;
+}
+
 static void mhl_handle_input(struct mhl_tx_ctrl *mhl_ctrl,
 			     u8 key_code, u16 input_key_code)
 {
+	int axis = REL_X, distance = -1;
+	bool mouse_event = false;
 	int key_press = (key_code & 0x80) == 0;
+
+	if (mhl_ctrl->mouse_mode) {
+		switch (input_key_code) {
+		case KEY_UP:
+			axis = REL_Y;
+			distance = -mhl_ctrl->mouse_move_distance_dy;
+			mouse_event = true;
+			break;
+		case KEY_DOWN:
+			axis = REL_Y;
+			distance = mhl_ctrl->mouse_move_distance_dy;
+			mouse_event = true;
+			break;
+		case KEY_LEFT:
+			axis = REL_X;
+			distance = -mhl_ctrl->mouse_move_distance_dx;
+			mouse_event = true;
+			break;
+		case KEY_RIGHT:
+			axis = REL_X;
+			distance = mhl_ctrl->mouse_move_distance_dx;
+			mouse_event = true;
+			break;
+		case KEY_ENTER:
+			axis = -1;
+			distance = 0;
+			mouse_event = true;
+			break;
+		case KEY_BLUE:
+			input_key_code = KEY_EXIT;
+			break;
+		default:
+			break;
+		}
+	}
+
+	if (mouse_event) {
+		if (axis >= 0 && key_press) {
+			input_report_rel(mhl_ctrl->input, axis, distance);
+			input_sync(mhl_ctrl->input);
+			return;
+		} else {
+			input_key_code = BTN_LEFT;
+		}
+	}
+
+	if (key_press) {
+		mutex_lock(&rcp_key_release_mutex);
+		if (mhl_ctrl->rcp_pre_input_key != input_key_code &&
+			mhl_ctrl->rcp_key_release) {
+			/* Release previous press key code if current press key
+			 * differs from previous press key.
+			 */
+			input_report_key(mhl_ctrl->input,
+				mhl_ctrl->rcp_pre_input_key, 0);
+			input_sync(mhl_ctrl->input);
+		}
+		mhl_ctrl->rcp_key_release = true;
+		mhl_ctrl->rcp_pre_input_key = input_key_code;
+		mutex_unlock(&rcp_key_release_mutex);
+		/* rcp key release timer start */
+		switch (input_key_code) {
+		case KEY_UP:
+		case KEY_DOWN:
+		case KEY_LEFT:
+		case KEY_RIGHT:
+		case BTN_LEFT:
+			mod_timer(&mhl_ctrl->rcp_key_release_timer,
+				jiffies +
+				msecs_to_jiffies(RCP_KEY_RELEASE_TIME2));
+			break;
+		default:
+			mod_timer(&mhl_ctrl->rcp_key_release_timer,
+				jiffies +
+				msecs_to_jiffies(RCP_KEY_RELEASE_TIME1));
+			break;
+		}
+	} else {
+		mutex_lock(&rcp_key_release_mutex);
+		mhl_ctrl->rcp_key_release = false;
+		mhl_ctrl->rcp_pre_input_key = RCP_KEY_INVALID;
+		mutex_unlock(&rcp_key_release_mutex);
+	}
 
 	pr_debug("%s: send key events[%x][%x][%d]\n",
 		 __func__, key_code, input_key_code, key_press);
+	mutex_lock(&rcp_key_release_mutex);
 	input_report_key(mhl_ctrl->input, input_key_code, key_press);
 	input_sync(mhl_ctrl->input);
+	mutex_unlock(&rcp_key_release_mutex);
 }
 
 int mhl_rcp_recv(struct mhl_tx_ctrl *mhl_ctrl, u8 key_code)
@@ -426,21 +663,62 @@ int mhl_rcp_recv(struct mhl_tx_ctrl *mhl_ctrl, u8 key_code)
 	return 0;
 }
 
+
+static void mhl_screen_control_work(struct work_struct *work)
+{
+	struct mhl_tx_ctrl *mhl_ctrl = container_of
+		(work, struct mhl_tx_ctrl, screen_work);
+	bool mode;
+	int timeout = 50;
+
+	if (!mhl_ctrl)
+		return;
+
+	/* Currently, if same screen mode, no action */
+	if (mhl_ctrl->screen_control == MHL_RAP_CONTENT_ON)
+		mode = true;
+	else
+		mode = false;
+	if (mhl_ctrl->screen_mode == mode) {
+		pr_debug("%s: same screen mode\n", __func__);
+		return;
+	}
+
+	/* send power key event */
+	input_report_key(mhl_ctrl->input, KEY_VENDOR, 1);
+	input_sync(mhl_ctrl->input);
+	input_report_key(mhl_ctrl->input, KEY_VENDOR, 0);
+	input_sync(mhl_ctrl->input);
+
+	/* wait until contorl mode matches screen_mode */
+	do {
+		if (mode) {
+			if (mhl_ctrl->screen_mode == true)
+				break;
+		} else {
+			if (mhl_ctrl->screen_mode == false)
+				break;
+		}
+		msleep(20);
+	} while (--timeout);
+	if (!timeout)
+		pr_warn("screen_mode change timeout!\n");
+}
+
 static int mhl_rap_action(struct mhl_tx_ctrl *mhl_ctrl, u8 action_code)
 {
 	switch (action_code) {
 	case MHL_RAP_CONTENT_ON:
 		mhl_tmds_ctrl(mhl_ctrl, TMDS_ENABLE);
+		mhl_drive_hpd(mhl_ctrl, HPD_UP);
+		mhl_ctrl->screen_control = MHL_RAP_CONTENT_ON;
+		queue_work(screen_ctrl_workqueue, &mhl_ctrl->screen_work);
 		break;
 	case MHL_RAP_CONTENT_OFF:
-		/*
-		 * instead of only disabling tmds
-		 * send power button press - CONTENT_OFF
-		 */
-		input_report_key(mhl_ctrl->input, KEY_VENDOR, 1);
-		input_sync(mhl_ctrl->input);
-		input_report_key(mhl_ctrl->input, KEY_VENDOR, 0);
-		input_sync(mhl_ctrl->input);
+		mhl_drive_hpd(mhl_ctrl, HPD_DOWN);
+		mhl_tmds_ctrl(mhl_ctrl, TMDS_DISABLE);
+		mhl_ctrl->screen_control = MHL_RAP_CONTENT_OFF;
+		queue_work(screen_ctrl_workqueue, &mhl_ctrl->screen_work);
 		break;
 	default:
 		break;
@@ -451,24 +729,13 @@ static int mhl_rap_action(struct mhl_tx_ctrl *mhl_ctrl, u8 action_code)
 static int mhl_rap_recv(struct mhl_tx_ctrl *mhl_ctrl, u8 action_code)
 {
 	u8 error_code;
-	bool tmds_en;
 
-	tmds_en = mhl_check_tmds_enabled(mhl_ctrl);
 	switch (action_code) {
 	case MHL_RAP_POLL:
-		if (tmds_en)
-			error_code = MHL_RAPK_NO_ERROR;
-		else
-			error_code = MHL_RAPK_UNSUPPORTED_ACTION_CODE;
-		break;
 	case MHL_RAP_CONTENT_ON:
 	case MHL_RAP_CONTENT_OFF:
-		if (tmds_en) {
-			mhl_rap_action(mhl_ctrl, action_code);
-			error_code = MHL_RAPK_NO_ERROR;
-		} else {
-			error_code = MHL_RAPK_UNSUPPORTED_ACTION_CODE;
-		}
+		mhl_rap_action(mhl_ctrl, action_code);
+		error_code = MHL_RAPK_NO_ERROR;
 		break;
 	default:
 		error_code = MHL_RAPK_UNRECOGNIZED_ACTION_CODE;
@@ -528,6 +795,7 @@ int mhl_msc_recv_set_int(struct mhl_tx_ctrl *mhl_ctrl,
 			pr_debug("%s: dscr chg\n", __func__);
 			mhl_read_scratchpad(mhl_ctrl);
 			mhl_ctrl->scrpd_busy = false;
+			mhl_notify_event(mhl_ctrl, MHL_TX_EVENT_DSCR_CHG);
 		}
 		if (set_int & MHL_INT_REQ_WRT) {
 			/* SET_INT: REQ_WRT */
@@ -572,8 +840,6 @@ int mhl_msc_recv_set_int(struct mhl_tx_ctrl *mhl_ctrl,
 int mhl_msc_recv_write_stat(struct mhl_tx_ctrl *mhl_ctrl,
 			    u8 offset, u8 value)
 {
-	bool tmds_en;
-
 	if (offset >= 2)
 		return -EFAULT;
 
@@ -604,18 +870,9 @@ int mhl_msc_recv_write_stat(struct mhl_tx_ctrl *mhl_ctrl,
 		 * changed and PATH ENABLED
 		 * bit set
 		 */
-		tmds_en = mhl_check_tmds_enabled(mhl_ctrl);
 		if ((value ^ mhl_ctrl->status[offset])
-		    & MHL_STATUS_PATH_ENABLED) {
+			& MHL_STATUS_PATH_ENABLED) {
 			if (value & MHL_STATUS_PATH_ENABLED) {
-				if (tmds_en &&
-				    (mhl_ctrl->devcap[offset] &
-				     MHL_FEATURE_RAP_SUPPORT)) {
-					mhl_msc_send_msc_msg(
-						mhl_ctrl,
-						MHL_MSC_MSG_RAP,
-						MHL_RAP_CONTENT_ON);
-				}
 				mhl_ctrl->path_en_state
 					|= (MHL_STATUS_PATH_ENABLED |
 					    MHL_STATUS_CLK_MODE_NORMAL);
@@ -623,6 +880,8 @@ int mhl_msc_recv_write_stat(struct mhl_tx_ctrl *mhl_ctrl,
 					mhl_ctrl,
 					MHL_STATUS_REG_LINK_MODE,
 					mhl_ctrl->path_en_state);
+				mhl_rap_send_msc_msg(
+					mhl_ctrl, MHL_RAP_CONTENT_ON);
 			} else {
 				mhl_ctrl->path_en_state
 					&= ~(MHL_STATUS_PATH_ENABLED |
@@ -709,4 +968,104 @@ int mhl_write_scratchpad(struct mhl_tx_ctrl *mhl_ctrl,
 	rc = mhl_request_write_burst(mhl_ctrl, offset, length, data);
 
 	return rc;
+}
+
+static void mhl_scratchpad_send_work(struct work_struct *work)
+{
+	struct mhl_tx_ctrl *mhl_ctrl =
+		container_of(work, struct mhl_tx_ctrl, scratchpad_work);
+
+
+	int retryCount = 0;
+	int rc;
+	u8 offset = mhl_ctrl->scrpd.offset;
+	u8 length = mhl_ctrl->scrpd.length;
+	u8 *data = mhl_ctrl->scrpd.data;
+
+	do {
+		rc = mhl_request_write_burst(mhl_ctrl, offset, length, data);
+		switch (rc) {
+		case -EBUSY:
+			pr_debug("%s: scratchpad write busy\n", __func__);
+			break;
+		default:
+			pr_debug("%s: scratchpad write error:%d\n",
+				__func__, rc);
+			break;
+		}
+		msleep(100);
+	} while ((retryCount++ < 5) && rc);
+}
+
+static void mhl_set_osd_name_send(struct mhl_tx_ctrl *mhl_ctrl, u8 *osd_name)
+{
+	unsigned char buf[MHL_OSD_NAME_SIZE];
+	int i;
+
+	memset(buf, 0, sizeof(buf));
+	mhl_ctrl->scrpd.data[0] =
+		mhl_ctrl->devcap[DEVCAP_OFFSET_ADOPTER_ID_H];
+	mhl_ctrl->scrpd.data[1] =
+		mhl_ctrl->devcap[DEVCAP_OFFSET_ADOPTER_ID_L];
+	mhl_ctrl->scrpd.data[2] = MHL_SCPD_SET_OSD_NAME;
+	for (i = 0; i < MHL_OSD_NAME_SIZE; i++) {
+		if ('\0' == osd_name[i])
+			break;
+		mhl_ctrl->scrpd.data[3+i] = osd_name[i];
+	}
+	mhl_ctrl->scrpd.offset = 0;
+	mhl_ctrl->scrpd.length = MHL_SCRATCHPAD_SIZE;
+
+	queue_work(scratchpad_workqueue, &mhl_ctrl->scratchpad_work);
+}
+
+static void mhl_notify_event(struct mhl_tx_ctrl *mhl_ctrl, int event)
+{
+	struct mhl_osd_msg osd;
+
+	switch (event) {
+	case MHL_TX_EVENT_DSCR_CHG:
+		osd.adopter_id = (mhl_ctrl->scrpd.data[0] << 8) |
+				  mhl_ctrl->scrpd.data[1];
+		osd.command_id = mhl_ctrl->scrpd.data[2];
+
+		if (MHL_ADOPTER_ID_SOMC != osd.adopter_id) {
+			pr_info("%s: adopter_id is mismatched(%04x)",
+				__func__, osd.adopter_id);
+		}
+
+		if (osd.command_id == MHL_SCPD_GIVE_OSD_NAME)
+			mhl_set_osd_name_send(mhl_ctrl, (u8 *)MHL_OSD_NAME);
+		else
+			pr_debug("%s: unknown command_id=(%#x)\n",
+				__func__, osd.command_id);
+		break;
+	default:
+		break;
+	}
+}
+
+int mhl_msc_init(struct mhl_tx_ctrl *mhl_ctrl)
+{
+	/* RCP release */
+	init_timer(&mhl_ctrl->rcp_key_release_timer);
+	mhl_ctrl->rcp_key_release_timer.function =
+		mhl_rcp_key_release_timer;
+	mhl_ctrl->rcp_key_release_timer.data = (unsigned long)mhl_ctrl;
+	mhl_ctrl->rcp_key_release_timer.expires = 0xffffffffL;
+	add_timer(&mhl_ctrl->rcp_key_release_timer);
+	mhl_ctrl->rcp_key_release = false;
+	mhl_ctrl->rcp_pre_input_key = RCP_KEY_INVALID;
+	rcp_key_release_workqueue = create_singlethread_workqueue
+					("mhl_rcp_key_release");
+	INIT_WORK(&mhl_ctrl->rcp_key_release_work, mhl_rcp_key_release_work);
+
+	scratchpad_workqueue = create_singlethread_workqueue("mhl_scratchpad");
+	INIT_WORK(&mhl_ctrl->scratchpad_work, mhl_scratchpad_send_work);
+
+	screen_ctrl_workqueue = create_singlethread_workqueue
+					("mhl_screencontrol");
+	INIT_WORK(&mhl_ctrl->screen_work, mhl_screen_control_work);
+
+	return 0;
 }

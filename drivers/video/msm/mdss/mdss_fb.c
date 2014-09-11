@@ -3,6 +3,7 @@
  *
  * Copyright (C) 2007 Google Incorporated
  * Copyright (c) 2008-2014, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2013 Sony Mobile Communications AB.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -44,6 +45,7 @@
 #include <linux/file.h>
 #include <linux/memory_alloc.h>
 #include <linux/kthread.h>
+#include <linux/input.h>
 
 #include <mach/board.h>
 #include <mach/memory.h>
@@ -52,6 +54,8 @@
 #include <mach/msm_memtypes.h>
 
 #include "mdss_fb.h"
+#include "mdss_mdp.h"
+#include "mdss_dsi.h"
 
 #ifdef CONFIG_FB_MSM_TRIPLE_BUFFER
 #define MDSS_FB_NUM 3
@@ -95,6 +99,88 @@ static int __mdss_fb_display_thread(void *data);
 static int mdss_fb_pan_idle(struct msm_fb_data_type *mfd);
 static int mdss_fb_send_panel_event(struct msm_fb_data_type *mfd,
 					int event, void *arg);
+
+static void mdss_background_unblank(struct work_struct *ws);
+
+static int pwr_pressed;
+
+static void
+mdss_input_event(struct input_handle *handle, unsigned int type,
+		unsigned int code, int value)
+{
+	/* only react on key down events */
+	if (code == KEY_POWER && value == 1) {
+		pr_debug("power key pressed!");
+		pwr_pressed = true;
+	}
+}
+
+static int
+mdss_input_connect(struct input_handler *handler,
+		struct input_dev *dev, const struct input_device_id *id)
+{
+	struct input_handle *handle;
+	int error;
+
+	handle = kzalloc(sizeof(struct input_handle), GFP_KERNEL);
+	if (!handle)
+		return -ENOMEM;
+
+	handle->dev = dev;
+	handle->handler = handler;
+	handle->name = "mdss_fb";
+	pr_debug("registering %s handle for %s",
+			  handle->name, dev->name);
+
+	error = input_register_handle(handle);
+	if (error)
+		goto err2;
+
+	error = input_open_device(handle);
+	if (error)
+		goto err1;
+
+	return 0;
+err1:
+	input_unregister_handle(handle);
+err2:
+	kfree(handle);
+	return error;
+}
+
+static void
+mdss_input_disconnect(struct input_handle *handle)
+{
+	input_close_device(handle);
+	input_unregister_handle(handle);
+	kfree(handle);
+}
+
+static const struct input_device_id mdss_ids[] = {
+	{
+		.flags = INPUT_DEVICE_ID_MATCH_KEYBIT,
+		.keybit = { [BIT_WORD(KEY_POWER)] = BIT_MASK(KEY_POWER) },
+	},
+	{ },
+};
+
+static void mdss_ensure_kworker_done(struct workqueue_struct *wq)
+{
+	if (wq) {
+		pr_debug("wait for unblank work");
+		flush_workqueue(wq);
+		pr_debug("done waiting for unblank work");
+	}
+}
+
+static struct input_handler mds_input_handler = {
+	.event		= mdss_input_event,
+	.connect	= mdss_input_connect,
+	.disconnect	= mdss_input_disconnect,
+	.name		= "mdss_fb",
+	.id_table	= mdss_ids,
+};
+
 void mdss_fb_no_update_notify_timer_cb(unsigned long data)
 {
 	struct msm_fb_data_type *mfd = (struct msm_fb_data_type *)data;
@@ -150,6 +236,7 @@ static int mdss_fb_notify_update(struct msm_fb_data_type *mfd,
 	return ret;
 }
 
+#ifndef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
 static int mdss_fb_splash_thread(void *data)
 {
 	struct msm_fb_data_type *mfd = data;
@@ -190,6 +277,7 @@ splash_err:
 end:
 	return ret;
 }
+#endif	/* CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL */
 
 static int lcd_backlight_registered;
 
@@ -396,6 +484,8 @@ static int mdss_fb_probe(struct platform_device *pdev)
 		mfd->split_display = true;
 	mfd->mdp = *mdp_instance;
 	INIT_LIST_HEAD(&mfd->proc_list);
+	mfd->unblank_kworker = NULL;
+	INIT_WORK(&mfd->unblank_work, mdss_background_unblank);
 
 	mutex_init(&mfd->lock);
 	mutex_init(&mfd->bl_lock);
@@ -443,18 +533,63 @@ static int mdss_fb_probe(struct platform_device *pdev)
 		 mfd->mdp_sync_pt_data.timeline =
 				sw_sync_timeline_create(timeline_name);
 		if (mfd->mdp_sync_pt_data.timeline == NULL) {
-			pr_err("%s: cannot create time line", __func__);
+			pr_err("cannot create release fence time line\n");
 			return -ENOMEM;
 		}
 		mfd->mdp_sync_pt_data.notifier.notifier_call =
 			__mdss_fb_sync_buf_done_callback;
 	}
-	if ((mfd->panel.type == WRITEBACK_PANEL) ||
-			(mfd->panel.type == MIPI_CMD_PANEL))
-		mfd->mdp_sync_pt_data.threshold = 1;
-	else
-		mfd->mdp_sync_pt_data.threshold = 2;
 
+	switch (mfd->panel.type) {
+	case WRITEBACK_PANEL:
+		mfd->mdp_sync_pt_data.threshold = 1;
+		mfd->mdp_sync_pt_data.retire_threshold = 0;
+		break;
+	case MIPI_CMD_PANEL:
+		mfd->mdp_sync_pt_data.threshold = 1;
+		mfd->mdp_sync_pt_data.retire_threshold = 1;
+		break;
+	default:
+		mfd->mdp_sync_pt_data.threshold = 2;
+		mfd->mdp_sync_pt_data.retire_threshold = 0;
+		break;
+	}
+
+	if ((mfd->panel_info->type == MIPI_VIDEO_PANEL) ||
+		(mfd->panel_info->type == MIPI_CMD_PANEL))
+		mipi_dsi_panel_create_debugfs(mfd);
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+	if (mfd->index == 0) {
+		struct mdss_dsi_ctrl_pdata *ctrl;
+
+		/* only the primary panel, index 0, uses this kworker */
+		mfd->unblank_kworker =
+			create_singlethread_workqueue("unblanker");
+
+		ctrl = container_of(pdata, struct mdss_dsi_ctrl_pdata,
+			panel_data);
+		if (!ctrl) {
+			pr_err("%s: Invalid input data\n", __func__);
+			return -EINVAL;
+		}
+		if (ctrl->spec_pdata) {
+			if (ctrl->spec_pdata->panel_detect) {
+				mdss_fb_blank_sub(FB_BLANK_UNBLANK, mfd->fbi,
+					mfd->op_enable);
+				if (pdata->detect)
+					pdata->detect(pdata);
+				if (ctrl->spec_pdata->pcc_setup)
+					ctrl->spec_pdata->pcc_setup(mfd);
+				mdss_fb_blank_sub(FB_BLANK_POWERDOWN, mfd->fbi,
+					mfd->op_enable);
+				if (pdata->update_panel)
+					pdata->update_panel(pdata);
+			} else {
+				ctrl->spec_pdata->detected = true;
+			}
+		}
+	}
+#else
 	if (mfd->splash_logo_enabled) {
 		mfd->splash_thread = kthread_run(mdss_fb_splash_thread, mfd,
 				"mdss_fb_splash");
@@ -464,7 +599,7 @@ static int mdss_fb_probe(struct platform_device *pdev)
 			mfd->splash_thread = NULL;
 		}
 	}
-
+#endif	/* CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL */
 	return rc;
 }
 
@@ -526,6 +661,7 @@ static int mdss_fb_suspend_sub(struct msm_fb_data_type *mfd)
 		return 0;
 
 	pr_debug("mdss_fb suspend index=%d\n", mfd->index);
+	mdss_ensure_kworker_done(mfd->unblank_kworker);
 
 	mdss_fb_pan_idle(mfd);
 	ret = mdss_fb_send_panel_event(mfd, MDSS_EVENT_SUSPEND, NULL);
@@ -547,6 +683,8 @@ static int mdss_fb_suspend_sub(struct msm_fb_data_type *mfd)
 		mfd->op_enable = false;
 		fb_set_suspend(mfd->fbi, FBINFO_STATE_SUSPENDED);
 	}
+
+	pwr_pressed = false;
 
 	return 0;
 }
@@ -572,7 +710,13 @@ static int mdss_fb_resume_sub(struct msm_fb_data_type *mfd)
 	/* resume state var recover */
 	mfd->op_enable = mfd->suspend.op_enable;
 
-	if (mfd->suspend.panel_power_on) {
+	/* unblank phone display if we
+	 * resume because of power key press
+	 */
+	if (mfd->unblank_kworker && pwr_pressed) {
+		pr_debug("starting unblank async from resume");
+		queue_work(mfd->unblank_kworker, &mfd->unblank_work);
+	} else if (mfd->suspend.panel_power_on) {
 		ret = mdss_fb_blank_sub(FB_BLANK_UNBLANK, mfd->fbi,
 					mfd->op_enable);
 		if (ret)
@@ -769,6 +913,11 @@ static int mdss_fb_blank_sub(int blank_mode, struct fb_info *info,
 
 	switch (blank_mode) {
 	case FB_BLANK_UNBLANK:
+		mdss_ensure_kworker_done(mfd->unblank_kworker);
+		/* if kworker was successful we are done...
+		 * but let's check and retry if not.
+		 */
+
 		if (!mfd->panel_power_on && mfd->mdp.on_fnc) {
 			ret = mfd->mdp.on_fnc(mfd);
 			if (ret == 0) {
@@ -813,6 +962,31 @@ static int mdss_fb_blank_sub(int blank_mode, struct fb_info *info,
 	}
 
 	return ret;
+}
+
+static void mdss_background_unblank(struct work_struct *ws)
+{
+	int ret = -EPERM;
+	struct msm_fb_data_type *mfd;
+	mfd = container_of(ws, struct msm_fb_data_type, unblank_work);
+
+	pr_debug("unblank work running");
+
+	if (!mfd->panel_power_on && mfd->mdp.on_fnc) {
+		ret = mfd->mdp.on_fnc(mfd);
+		if (ret == 0) {
+			mfd->panel_power_on = true;
+			mfd->panel_info->panel_dead = false;
+		}
+		mutex_lock(&mfd->update.lock);
+		mfd->update.type = NOTIFY_TYPE_UPDATE;
+		mutex_unlock(&mfd->update.lock);
+	}
+
+	if (ret)
+		pr_warn("can't turn on display!\n");
+	else
+		fb_set_suspend(mfd->fbi, FBINFO_STATE_RUNNING);
 }
 
 static int mdss_fb_blank(int blank_mode, struct fb_info *info)
@@ -991,16 +1165,32 @@ static int mdss_fb_register(struct msm_fb_data_type *mfd)
 	fix->mmio_len = 0;	/* No MMIO Address */
 	fix->accel = FB_ACCEL_NONE;/* FB_ACCEL_MSM needes to be added in fb.h */
 
-	var->xoffset = 0,	/* Offset from virtual to visible */
-	var->yoffset = 0,	/* resolution */
-	var->grayscale = 0,	/* No graylevels */
-	var->nonstd = 0,	/* standard pixel format */
-	var->activate = FB_ACTIVATE_VBL,	/* activate it at vsync */
-	var->height = -1,	/* height of picture in mm */
-	var->width = -1,	/* width of picture in mm */
-	var->accel_flags = 0,	/* acceleration flags */
-	var->sync = 0,	/* see FB_SYNC_* */
-	var->rotate = 0,	/* angle we rotate counter clockwise */
+	var->xoffset = 0;	/* Offset from virtual to visible */
+	var->yoffset = 0;	/* resolution */
+	var->grayscale = 0;	/* No graylevels */
+	var->nonstd = 0;	/* standard pixel format */
+	var->activate = FB_ACTIVATE_VBL;	/* activate it at vsync */
+
+	/* height&width of picture in mm */
+	if (panel_info) {
+		if (panel_info->height)
+			var->height = panel_info->height;
+		else
+			var->height = -1;
+		if (panel_info->width)
+			var->width = panel_info->width;
+		else
+			var->width = -1;
+	} else {
+		var->height = -1;
+		var->width = -1;
+		pr_err("%s panel_info null\n", __func__);
+		return ret;
+	}
+
+	var->accel_flags = 0;	/* acceleration flags */
+	var->sync = 0;	/* see FB_SYNC_* */
+	var->rotate = 0;	/* angle we rotate counter clockwise */
 	mfd->op_enable = false;
 
 	switch (mfd->fb_imgType) {
@@ -1358,6 +1548,8 @@ static int mdss_fb_release_all(struct fb_info *info, bool release_all)
 			mfd->disp_thread = NULL;
 		}
 
+		mdss_ensure_kworker_done(mfd->unblank_kworker);
+
 		ret = mdss_fb_blank_sub(FB_BLANK_POWERDOWN, info,
 			mfd->op_enable);
 		if (ret) {
@@ -1679,6 +1871,7 @@ static int __mdss_fb_perform_commit(struct msm_fb_data_type *mfd)
 		else
 			pr_warn("no kickoff function setup for fb%d\n",
 					mfd->index);
+		mdss_dsi_panel_fps_data_update(mfd);
 	} else {
 		ret = mdss_fb_pan_display_sub(&fb_backup->disp_commit.var,
 				&fb_backup->info);
@@ -1997,42 +2190,37 @@ static int mdss_fb_set_lut(struct fb_info *info, void __user *p)
 }
 
 /**
- * mdss_fb_sync_get_rel_fence() - get release fence from sync pt timeline
- * @sync_pt_data:	Sync pt structure holding timeline and fence info.
+ * mdss_fb_sync_get_fence() - get fence from timeline
+ * @timeline:	Timeline to create the fence on
+ * @fence_name:	Name of the fence that will be created for debugging
+ * @val:	Timeline value at which the fence will be signaled
  *
- * Function returns a release fence on the timeline associated with the
- * sync pt struct given and it's associated information. The release fence
- * created can be used to signal when buffers provided will be released.
+ * Function returns a fence on the timeline given with the name provided.
+ * The fence created will be signaled when the timeline is advanced.
  */
-static struct sync_fence *__mdss_fb_sync_get_rel_fence(
-		struct msm_sync_pt_data *sync_pt_data)
+struct sync_fence *mdss_fb_sync_get_fence(struct sw_sync_timeline *timeline,
+		const char *fence_name, int val)
 {
-	struct sync_pt *rel_sync_pt;
-	struct sync_fence *rel_fence;
-	int val;
+	struct sync_pt *sync_pt;
+	struct sync_fence *fence;
 
-	val = sync_pt_data->timeline_value + sync_pt_data->threshold +
-		atomic_read(&sync_pt_data->commit_cnt);
+	pr_debug("%s: buf sync fence timeline=%d\n", fence_name, val);
 
-	pr_debug("%s: buf sync rel fence timeline=%d\n",
-		sync_pt_data->fence_name, val);
-
-	rel_sync_pt = sw_sync_pt_create(sync_pt_data->timeline, val);
-	if (rel_sync_pt == NULL) {
-		pr_err("%s: cannot create sync point\n",
-				sync_pt_data->fence_name);
+	sync_pt = sw_sync_pt_create(timeline, val);
+	if (sync_pt == NULL) {
+		pr_err("%s: cannot create sync point\n", fence_name);
 		return NULL;
 	}
 
 	/* create fence */
-	rel_fence = sync_fence_create(sync_pt_data->fence_name, rel_sync_pt);
-	if (rel_fence == NULL) {
-		sync_pt_free(rel_sync_pt);
-		pr_err("%s: cannot create fence\n", sync_pt_data->fence_name);
+	fence = sync_fence_create(fence_name, sync_pt);
+	if (fence == NULL) {
+		sync_pt_free(sync_pt);
+		pr_err("%s: cannot create fence\n", fence_name);
 		return NULL;
 	}
 
-	return rel_fence;
+	return fence;
 }
 
 static int mdss_fb_handle_buf_sync_ioctl(struct msm_sync_pt_data *sync_pt_data,
@@ -2040,8 +2228,10 @@ static int mdss_fb_handle_buf_sync_ioctl(struct msm_sync_pt_data *sync_pt_data,
 {
 	int i, ret = 0;
 	int acq_fen_fd[MDP_MAX_FENCE_FD];
-	struct sync_fence *fence, *rel_fence;
+	struct sync_fence *fence, *rel_fence, *retire_fence;
 	int rel_fen_fd;
+	int retire_fen_fd;
+	int val;
 
 	if ((buf_sync->acq_fen_fd_cnt > MDP_MAX_FENCE_FD) ||
 				(sync_pt_data->timeline == NULL))
@@ -2078,7 +2268,12 @@ static int mdss_fb_handle_buf_sync_ioctl(struct msm_sync_pt_data *sync_pt_data,
 	if (ret)
 		goto buf_sync_err_1;
 
-	rel_fence = __mdss_fb_sync_get_rel_fence(sync_pt_data);
+	val = sync_pt_data->timeline_value + sync_pt_data->threshold +
+			atomic_read(&sync_pt_data->commit_cnt);
+
+	/* Set release fence */
+	rel_fence = mdss_fb_sync_get_fence(sync_pt_data->timeline,
+			sync_pt_data->fence_name, val);
 	if (IS_ERR_OR_NULL(rel_fence)) {
 		pr_err("%s: unable to retrieve release fence\n",
 				sync_pt_data->fence_name);
@@ -2102,6 +2297,50 @@ static int mdss_fb_handle_buf_sync_ioctl(struct msm_sync_pt_data *sync_pt_data,
 		pr_err("%s: copy_to_user failed\n", sync_pt_data->fence_name);
 		goto buf_sync_err_3;
 	}
+
+	if (!(buf_sync->flags & MDP_BUF_SYNC_FLAG_RETIRE_FENCE))
+		goto skip_retire_fence;
+
+	if (sync_pt_data->get_retire_fence)
+		retire_fence = sync_pt_data->get_retire_fence(sync_pt_data);
+	else
+		retire_fence = NULL;
+
+	if (IS_ERR_OR_NULL(retire_fence)) {
+		val += sync_pt_data->retire_threshold;
+		retire_fence = mdss_fb_sync_get_fence(
+			sync_pt_data->timeline, "mdp-retire", val);
+	}
+
+	if (IS_ERR_OR_NULL(retire_fence)) {
+		pr_err("%s: unable to retrieve retire fence\n",
+				sync_pt_data->fence_name);
+		ret = retire_fence ? PTR_ERR(rel_fence) : -ENOMEM;
+		goto buf_sync_err_3;
+	}
+	retire_fen_fd = get_unused_fd_flags(0);
+
+	if (retire_fen_fd < 0) {
+		pr_err("%s: get_unused_fd_flags failed for retire fence\n",
+				sync_pt_data->fence_name);
+		ret = -EIO;
+		sync_fence_put(retire_fence);
+		goto buf_sync_err_3;
+	}
+
+	sync_fence_install(retire_fence, retire_fen_fd);
+
+	ret = copy_to_user(buf_sync->retire_fen_fd, &retire_fen_fd,
+			sizeof(int));
+	if (ret) {
+		pr_err("%s: copy_to_user failed for retire fence\n",
+				sync_pt_data->fence_name);
+		put_unused_fd(retire_fen_fd);
+		sync_fence_put(retire_fence);
+		goto buf_sync_err_3;
+	}
+
+skip_retire_fence:
 	mutex_unlock(&sync_pt_data->sync_mutex);
 
 	if (buf_sync->flags & MDP_BUF_SYNC_FLAG_WAIT)
@@ -2353,6 +2592,9 @@ int __init mdss_fb_init(void)
 	int rc = -ENODEV;
 
 	if (platform_driver_register(&mdss_fb_driver))
+		return rc;
+
+	if (input_register_handler(&mds_input_handler))
 		return rc;
 
 	return 0;

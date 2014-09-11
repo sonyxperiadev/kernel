@@ -1,4 +1,5 @@
 /* Copyright (c) 2013, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2013 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -9,6 +10,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
+ * NOTE: This file has been modified by Sony Mobile Communications AB.
+ * Modifications are licensed under the License.
  */
 
 #ifndef __MHL_MSC_H__
@@ -47,6 +50,18 @@ int mhl_msc_recv_msc_msg(struct mhl_tx_ctrl *mhl_ctrl,
 			 u8 sub_cmd, u8 cmd_data);
 void mhl_msc_send_work(struct work_struct *work);
 
+void mhl_rcp_key_release_work(struct work_struct *work);
+
+void mhl_rcp_key_release_timer(unsigned long data);
+
+void mhl_screen_notify(struct mhl_tx_ctrl *mhl_ctrl, int screen_mode);
+
+void mhl_set_mouse_move_distance_dx(struct mhl_tx_ctrl *mhl_ctrl,
+				    int mouse_move_distance_dx);
+
+void mhl_set_mouse_move_distance_dy(struct mhl_tx_ctrl *mhl_ctrl,
+				    int mouse_move_distance_dy);
+
 /******************************************************************/
 /* Tx should implement these APIs */
 int mhl_send_msc_command(struct mhl_tx_ctrl *mhl_ctrl,
@@ -57,5 +72,6 @@ void mhl_tmds_ctrl(struct mhl_tx_ctrl *ctrl, uint8_t on);
 /******************************************************************/
 /* MHL driver registers ctrl with MSC */
 void mhl_register_msc(struct mhl_tx_ctrl *ctrl);
+int mhl_msc_init(struct mhl_tx_ctrl *mhl_ctrl);
 
 #endif /* __MHL_MSC_H__ */

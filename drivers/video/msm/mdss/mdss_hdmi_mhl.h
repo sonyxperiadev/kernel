@@ -1,4 +1,5 @@
 /* Copyright (c) 2013, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2013 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -9,6 +10,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
+ * NOTE: This file has been modified by Sony Mobile Communications AB.
+ * Modifications are licensed under the License.
  */
 
 #ifndef __MDSS_HDMI_MHL_H__
@@ -19,9 +22,9 @@
 struct msm_hdmi_mhl_ops {
 	u8 (*tmds_enabled)(struct platform_device *pdev);
 	int (*set_mhl_max_pclk)(struct platform_device *pdev, u32 max_val);
-	int (*set_upstream_hpd)(struct platform_device *pdev, uint8_t on);
 };
 
 int msm_hdmi_register_mhl(struct platform_device *pdev,
-			  struct msm_hdmi_mhl_ops *ops, void *data);
+			  struct msm_hdmi_mhl_ops *ops);
+
 #endif /* __MDSS_HDMI_MHL_H__ */

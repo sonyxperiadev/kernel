@@ -1,4 +1,5 @@
-/* Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2013 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -9,6 +10,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
+ * NOTE: This file has been modified by Sony Mobile Communications AB.
+ * Modifications are licensed under the License.
  */
 
 #include <linux/bitops.h>
@@ -36,13 +39,26 @@
 #define COMPATIBLE_NAME "qcom,mhl-sii8334"
 #define MAX_CURRENT 700000
 
+/* 400msec is enough to wait the RGND interruption. */
+#define DISCOVERY_TIME 400
+
+/* VMIN */
+#define VMIN_MHL 4300000
+#define MAX_WAIT_GET_BATTERY 30
+
 #define pr_debug_intr(...)
+#define REMOVE_CLEAR_INTRS
 
 #define MSC_START_BIT_MSC_CMD        (0x01 << 0)
 #define MSC_START_BIT_VS_CMD        (0x01 << 1)
 #define MSC_START_BIT_READ_REG        (0x01 << 2)
 #define MSC_START_BIT_WRITE_REG        (0x01 << 3)
 #define MSC_START_BIT_WRITE_BURST        (0x01 << 4)
+
+static int mouse_mode;
+static int screen_status;
+static int mouse_move_distance_dx;
+static int mouse_move_distance_dy;
 
 /* supported RCP key code */
 u16 support_rcp_key_code_tbl[] = {
@@ -190,11 +206,9 @@ uint8_t slave_addrs[MAX_PAGES] = {
 
 static irqreturn_t mhl_tx_isr(int irq, void *dev_id);
 static void switch_mode(struct mhl_tx_ctrl *mhl_ctrl,
-			enum mhl_st_type to_mode, bool hpd_off);
+			enum mhl_st_type to_mode);
 static void mhl_init_reg_settings(struct mhl_tx_ctrl *mhl_ctrl,
 				  bool mhl_disc_en);
-static int mhl_gpio_config(struct mhl_tx_ctrl *mhl_ctrl, int on);
-static int mhl_vreg_config(struct mhl_tx_ctrl *mhl_ctrl, uint8_t on);
 
 int mhl_i2c_reg_read(struct i2c_client *client,
 			    uint8_t slave_addr_index, uint8_t reg_offset)
@@ -336,6 +350,10 @@ static int mhl_tx_get_dt_data(struct device *dev,
 
 	pdata->hdmi_pdev = hdmi_pdev;
 
+	/* get porperty for enabled device discovery of MHL when MSM v1 */
+	of_property_read_u32(of_node, "somc,device-discovery",
+		&pdata->device_discovery);
+
 	return 0;
 error:
 	pr_err("%s: ret due to err\n", __func__);
@@ -359,96 +377,28 @@ static int mhl_sii_reset_pin(struct mhl_tx_ctrl *mhl_ctrl, int on)
 static int mhl_sii_wait_for_rgnd(struct mhl_tx_ctrl *mhl_ctrl)
 {
 	int timeout;
-
+	/* let isr handle RGND interrupt */
 	pr_debug("%s:%u\n", __func__, __LINE__);
-
-	if (mhl_ctrl->mhl_mode) {
-		pr_debug("%s: already in mhl mode\n", __func__);
-		return 0;
-	}
-
 	INIT_COMPLETION(mhl_ctrl->rgnd_done);
-	/*
-	 * after toggling reset line and enabling disc
-	 * tx can take a while to generate intr
-	 */
 	timeout = wait_for_completion_timeout
 		(&mhl_ctrl->rgnd_done, HZ * 3);
 	if (!timeout) {
-		/*
-		 * most likely nothing plugged in USB
-		 * USB HOST connected or already in USB mode
-		 */
+		if (mhl_ctrl->cur_state != POWER_STATE_D3)
+			switch_mode(mhl_ctrl, POWER_STATE_D3);
+		/* most likely nothing plugged in USB */
+		/* USB HOST connected or already in USB mode */
 		pr_warn("%s:%u timedout\n", __func__, __LINE__);
 		return -ENODEV;
 	}
-
-	return 0;
-}
-
-static int mhl_sii_config(struct mhl_tx_ctrl *mhl_ctrl, bool on)
-{
-	int rc = 0;
-	struct i2c_client *client = NULL;
-
-	if (!mhl_ctrl) {
-		pr_err("%s: ctrl is NULL\n", __func__);
-		return -EINVAL;
-	}
-
-	client = mhl_ctrl->i2c_handle;
-
-	if (on) {
-		rc = mhl_vreg_config(mhl_ctrl, 1);
-		if (rc) {
-			pr_err("%s: vreg init failed [%d]\n",
-				__func__, rc);
-			return -ENODEV;
-		}
-
-		rc = mhl_gpio_config(mhl_ctrl, 1);
-		if (rc) {
-			pr_err("%s: gpio init failed [%d]\n",
-				__func__, rc);
-			return -ENODEV;
-		}
-
-		rc = request_threaded_irq(mhl_ctrl->i2c_handle->irq, NULL,
-			&mhl_tx_isr, IRQF_TRIGGER_LOW | IRQF_ONESHOT,
-			client->dev.driver->name, mhl_ctrl);
-		if (rc) {
-			pr_err("%s: request_threaded_irq failed, status: %d\n",
-			       __func__, rc);
-			return -ENODEV;
-		} else {
-			mhl_ctrl->irq_req_done = true;
-		}
-	} else {
-		free_irq(mhl_ctrl->i2c_handle->irq, mhl_ctrl);
-		mhl_gpio_config(mhl_ctrl, 0);
-		mhl_vreg_config(mhl_ctrl, 0);
-		mhl_ctrl->irq_req_done = false;
-	}
-
-	return rc;
-}
-
-static void mhl_sii_disc_intr_work(struct work_struct *work)
-{
-	struct mhl_tx_ctrl *mhl_ctrl = NULL;
-
-	mhl_ctrl = container_of(work, struct mhl_tx_ctrl, mhl_intr_work);
-
-	mhl_sii_config(mhl_ctrl, false);
+	return mhl_ctrl->mhl_mode ? 0 : 1;
 }
 
 /*  USB_HANDSHAKING FUNCTIONS */
 static int mhl_sii_device_discovery(void *data, int id,
 			     void (*usb_notify_cb)(void *, int), void *ctx)
 {
-	int rc;
+	int rc, timeout_count;
 	struct mhl_tx_ctrl *mhl_ctrl = data;
-	unsigned long flags;
 
 	if (id) {
 		/* When MHL cable is disconnected we get a sii8334
@@ -469,51 +419,34 @@ static int mhl_sii_device_discovery(void *data, int id,
 		mhl_ctrl->notify_ctx = ctx;
 	}
 
-	flush_work(&mhl_ctrl->mhl_intr_work);
-
-	if (!mhl_ctrl->irq_req_done) {
-		rc = mhl_sii_config(mhl_ctrl, true);
-		if (rc) {
-			pr_err("%s: Failed to config vreg/gpio\n", __func__);
-			return rc;
-		}
-
-		/* wait for i2c interrupt line to be activated */
-		msleep(100);
+	timeout_count = MAX_WAIT_GET_BATTERY;
+	while (!mhl_ctrl->batt_psy && --timeout_count) {
+		/* acquire "the chager driver's power_supply" to change VMIN */
+		mhl_ctrl->batt_psy = power_supply_get_by_name("battery");
+		if (!mhl_ctrl->batt_psy)
+			msleep(100);
 	}
+	if (!timeout_count)
+		pr_warn("%s:power_supply_get_by_name failed\n", __func__);
 
 	if (!mhl_ctrl->disc_enabled) {
-		spin_lock_irqsave(&mhl_ctrl->lock, flags);
-		mhl_ctrl->tx_powered_off = false;
-		spin_unlock_irqrestore(&mhl_ctrl->lock, flags);
+		mhl_ctrl->cur_state = POWER_STATE_D0_MHL;
 		mhl_sii_reset_pin(mhl_ctrl, 0);
 		msleep(50);
 		mhl_sii_reset_pin(mhl_ctrl, 1);
-		/* chipset PR recommends waiting for at least 100 ms
-		 * the chipset needs longer to come out of D3 state.
-		 */
+		/* TX PR-guide requires a 100 ms wait here */
 		msleep(100);
 		mhl_init_reg_settings(mhl_ctrl, true);
-		/* allow tx to enable dev disc after D3 state */
-		msleep(100);
-		if (mhl_sii_wait_for_rgnd(mhl_ctrl)) {
-			pr_err("%s: discovery timeout\n", __func__);
-
-			mhl_sii_config(mhl_ctrl, false);
-
-			return -EAGAIN;
-		}
+		rc = mhl_sii_wait_for_rgnd(mhl_ctrl);
 	} else {
 		if (mhl_ctrl->cur_state == POWER_STATE_D3) {
-			mhl_sii_wait_for_rgnd(mhl_ctrl);
+			rc = mhl_sii_wait_for_rgnd(mhl_ctrl);
 		} else {
 			/* in MHL mode */
 			pr_debug("%s:%u\n", __func__, __LINE__);
+			rc = 0;
 		}
 	}
-
-	rc = mhl_ctrl->mhl_mode ? 0 : 1;
-
 	pr_debug("%s: ret result: %s\n", __func__, rc ? "usb" : " mhl");
 	return rc;
 }
@@ -552,16 +485,62 @@ static int mhl_power_set_property(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_PRESENT:
 		mhl_ctrl->vbus_active = val->intval;
 		if (mhl_ctrl->vbus_active)
-			mhl_ctrl->current_val = MAX_CURRENT;
+			mhl_ctrl->current_val = mhl_ctrl->max_current_val;
 		else
 			mhl_ctrl->current_val = 0;
 		power_supply_changed(psy);
 		break;
-	case POWER_SUPPLY_PROP_ONLINE:
 	case POWER_SUPPLY_PROP_CURRENT_MAX:
+		/*
+		 * The max value stored in "current_val" is reset to 0 at the
+		 * event of "POWER_SUPPLY_PROP_PRESENT" at removing MHL cable.
+		 * And the max_current_val is used in next MHL connection again.
+		 * So, max_current_val must keep the current max value even MHL
+		 * cable is removed.
+		 * Furthermore, the POWER_SUPPLY_PROP_CURRENT_MAX is called when
+		 * a sysfs value of sysmon is changed. So, this isn't guaranteed
+		 * to be called when MHL cable is connected.
+		 */
+		if (val->intval > MAX_CURRENT)
+			mhl_ctrl->max_current_val = MAX_CURRENT;
+		else
+			mhl_ctrl->max_current_val = val->intval;
+		mhl_ctrl->current_val = mhl_ctrl->max_current_val;
+		/*
+		 * In short, the power_supply_changed shouldn't be called when
+		 * MHL is not connected since MHL is not charging at the
+		 * situation, but USB can be.
+		 * The POWER_SUPPLY_PROP_CURRENT_MAX is called even MHL is not
+		 * connected. When the power_supply_changed() is called during
+		 * MHL is not connected to an external device,
+		 * dwc3_msm_external_power_changed() in dwc3-msm.c is called
+		 * and online status "enable" is set to 0 at
+		 * power_supply_set_online() in the same file. It causes that
+		 * MAX charging current value doesn't vary in phone.
+		 * power_supply_set_online is also called by USB in other
+		 * place, it means that the API is shared by both USB and MHL.
+		 * Even MHL is not used, USB can be used by a user.
+		 */
+		if (mhl_ctrl->vbus_active && mhl_ctrl->mhl_mode)
+			power_supply_changed(psy);
+		break;
+	case POWER_SUPPLY_PROP_ONLINE:
 		break;
 	default:
 		return -EINVAL;
+	}
+
+	return 0;
+}
+
+static int mhl_power_property_is_writeable(struct power_supply *psy,
+					   enum power_supply_property psp)
+{
+	switch (psp) {
+	case POWER_SUPPLY_PROP_CURRENT_MAX:
+		return 1;
+	default:
+		break;
 	}
 
 	return 0;
@@ -577,14 +556,39 @@ static enum power_supply_property mhl_pm_power_props[] = {
 	POWER_SUPPLY_PROP_CURRENT_MAX,
 };
 
+static void mhl_msm_vmin_change(struct mhl_tx_ctrl *mhl_ctrl, bool on)
+{
+	union power_supply_propval vmin;
+
+	if (!mhl_ctrl->batt_psy) {
+		mhl_ctrl->batt_psy = power_supply_get_by_name("battery");
+		if (!mhl_ctrl->batt_psy) {
+			pr_warn("%s: batt_psy is NULL\n", __func__);
+			return;
+		}
+	}
+
+	if (on) {
+		/*  VMIN change to MHL Spec value */
+		vmin.intval = VMIN_MHL;
+		mhl_ctrl->batt_psy->set_property(mhl_ctrl->batt_psy,
+			POWER_SUPPLY_PROP_VOLTAGE_MIN, &vmin);
+		pr_info("%s: vmin.intval=%d\n", __func__, vmin.intval);
+	} else {
+		/* VMIN change to DEFAULT value */
+		mhl_ctrl->batt_psy->get_property(mhl_ctrl->batt_psy,
+			POWER_SUPPLY_PROP_VOLTAGE_MIN_DESIGN, &vmin);
+
+		mhl_ctrl->batt_psy->set_property(mhl_ctrl->batt_psy,
+			POWER_SUPPLY_PROP_VOLTAGE_MIN, &vmin);
+		pr_info("%s: vmin.intval=%d\n", __func__, vmin.intval);
+	}
+}
+
 static void cbus_reset(struct mhl_tx_ctrl *mhl_ctrl)
 {
 	uint8_t i;
 	struct i2c_client *client = mhl_ctrl->i2c_handle;
-
-	/* Read the chip rev ID */
-	mhl_ctrl->chip_rev_id = MHL_SII_PAGE0_RD(0x04);
-	pr_debug("MHL: chip rev ID read=[%x]\n", mhl_ctrl->chip_rev_id);
 
 	/*
 	 * REG_SRST
@@ -757,8 +761,8 @@ static void mhl_init_reg_settings(struct mhl_tx_ctrl *mhl_ctrl,
 	/* Rx PLL Bandwidth value from I2C */
 	MHL_SII_PAGE2_WR(0x0045, 0x06);
 	MHL_SII_PAGE2_WR(0x004B, 0x06);
-	MHL_SII_PAGE2_WR(0x004C, 0x60);
 	/* Manual zone control */
+	MHL_SII_PAGE2_WR(0x004C, 0x60);
 	MHL_SII_PAGE2_WR(0x004C, 0xE0);
 	/* PLL Mode value */
 	MHL_SII_PAGE2_WR(0x004D, 0x00);
@@ -796,8 +800,8 @@ static void mhl_init_reg_settings(struct mhl_tx_ctrl *mhl_ctrl,
 
 	MHL_SII_PAGE3_WR(0x3C, 0x80);
 
-	MHL_SII_REG_NAME_MOD(REG_INT_CTRL,
-			     (BIT6 | BIT5 | BIT4), (BIT6 | BIT4));
+	if (mhl_ctrl->cur_state != POWER_STATE_D3)
+		MHL_SII_REG_NAME_MOD(REG_INT_CTRL, BIT6 | BIT5 | BIT4, BIT4);
 
 	/* Enable Auto Soft RESET */
 	MHL_SII_REG_NAME_WR(REG_SRST, 0x084);
@@ -809,18 +813,9 @@ static void mhl_init_reg_settings(struct mhl_tx_ctrl *mhl_ctrl,
 }
 
 
-static void switch_mode(struct mhl_tx_ctrl *mhl_ctrl, enum mhl_st_type to_mode,
-			bool hpd_off)
+static void switch_mode(struct mhl_tx_ctrl *mhl_ctrl, enum mhl_st_type to_mode)
 {
 	struct i2c_client *client = mhl_ctrl->i2c_handle;
-	unsigned long flags;
-	int rc;
-	struct msm_hdmi_mhl_ops *hdmi_mhl_ops = mhl_ctrl->hdmi_mhl_ops;
-
-	pr_debug("%s: tx pwr on\n", __func__);
-	spin_lock_irqsave(&mhl_ctrl->lock, flags);
-	mhl_ctrl->tx_powered_off = false;
-	spin_unlock_irqrestore(&mhl_ctrl->lock, flags);
 
 	switch (to_mode) {
 	case POWER_STATE_D0_NO_MHL:
@@ -837,11 +832,8 @@ static void switch_mode(struct mhl_tx_ctrl *mhl_ctrl, enum mhl_st_type to_mode,
 		mhl_ctrl->cur_state = to_mode;
 		break;
 	case POWER_STATE_D3:
-		if (mhl_ctrl->cur_state == POWER_STATE_D3) {
-			pr_debug("%s: mhl tx already in low power mode\n",
-				__func__);
+		if (mhl_ctrl->cur_state == POWER_STATE_D3)
 			break;
-		}
 
 		/* Force HPD to 0 when not in MHL mode.  */
 		mhl_drive_hpd(mhl_ctrl, HPD_DOWN);
@@ -854,36 +846,30 @@ static void switch_mode(struct mhl_tx_ctrl *mhl_ctrl, enum mhl_st_type to_mode,
 		msleep(50);
 		if (!mhl_ctrl->disc_enabled)
 			MHL_SII_REG_NAME_MOD(REG_DISC_CTRL1, BIT1 | BIT0, 0x00);
-		if (hdmi_mhl_ops && hpd_off) {
-			rc = hdmi_mhl_ops->set_upstream_hpd(
-				mhl_ctrl->pdata->hdmi_pdev, 0);
-			pr_debug("%s: hdmi unset hpd %s\n", __func__,
-				 rc ? "failed" : "passed");
-		}
+		pr_debug("%s: set to D3 state\n", __func__);
+		MHL_SII_PAGE1_MOD(0x003D, BIT0, 0x00);
 		mhl_ctrl->cur_state = POWER_STATE_D3;
-		mhl_ctrl->mhl_mode = 0;
+		break;
+	case POWER_STATE_DELAY_D3:
+		if (mhl_ctrl->cur_state == POWER_STATE_D3)
+			break;
+
+		/* Force HPD to 0 when not in MHL mode.  */
+		mhl_drive_hpd(mhl_ctrl, HPD_DOWN);
+		mhl_tmds_ctrl(mhl_ctrl, TMDS_DISABLE);
+		/*
+		 * Change TMDS termination to high impedance
+		 * on disconnection.
+		 */
+		MHL_SII_REG_NAME_WR(REG_MHLTX_CTL1, 0xD0);
+		msleep(50);
+		mhl_ctrl->cur_state = POWER_STATE_DELAY_D3;
 		break;
 	default:
 		break;
 	}
 }
 
-static bool is_mhl_powered(void *mhl_ctx)
-{
-	struct mhl_tx_ctrl *mhl_ctrl = (struct mhl_tx_ctrl *)mhl_ctx;
-	unsigned long flags;
-	bool r = false;
-
-	spin_lock_irqsave(&mhl_ctrl->lock, flags);
-	if (mhl_ctrl->tx_powered_off)
-		r = false;
-	else
-		r = true;
-	spin_unlock_irqrestore(&mhl_ctrl->lock, flags);
-
-	pr_debug("%s: ret pwr state as %x\n", __func__, r);
-	return r;
-}
 
 void mhl_tmds_ctrl(struct mhl_tx_ctrl *mhl_ctrl, uint8_t on)
 {
@@ -901,7 +887,6 @@ void mhl_tmds_ctrl(struct mhl_tx_ctrl *mhl_ctrl, uint8_t on)
 void mhl_drive_hpd(struct mhl_tx_ctrl *mhl_ctrl, uint8_t to_state)
 {
 	struct i2c_client *client = mhl_ctrl->i2c_handle;
-	unsigned long flags;
 
 	pr_debug("%s: To state=[0x%x]\n", __func__, to_state);
 	if (to_state == HPD_UP) {
@@ -912,13 +897,10 @@ void mhl_drive_hpd(struct mhl_tx_ctrl *mhl_ctrl, uint8_t to_state)
 		 * propogate to src let HPD float by clearing
 		 * HPD OUT OVRRD EN
 		 */
-		spin_lock_irqsave(&mhl_ctrl->lock, flags);
-		mhl_ctrl->tx_powered_off = false;
-		spin_unlock_irqrestore(&mhl_ctrl->lock, flags);
-		MHL_SII_REG_NAME_MOD(REG_INT_CTRL, BIT4, 0);
+		MHL_SII_REG_NAME_MOD(REG_INT_CTRL, BIT4, 0x00);
 	} else {
 		/* Drive HPD to DOWN state */
-		MHL_SII_REG_NAME_MOD(REG_INT_CTRL, (BIT4 | BIT5), BIT4);
+		MHL_SII_REG_NAME_MOD(REG_INT_CTRL, BIT4, BIT4);
 	}
 }
 
@@ -935,7 +917,9 @@ static void mhl_msm_connection(struct mhl_tx_ctrl *mhl_ctrl)
 		pr_err("%s: cur st not D0\n", __func__);
 		return;
 	}
-	switch_mode(mhl_ctrl, POWER_STATE_D0_MHL, true);
+	/* spin_lock_irqsave(&mhl_state_lock, flags); */
+	switch_mode(mhl_ctrl, POWER_STATE_D0_MHL);
+	/* spin_unlock_irqrestore(&mhl_state_lock, flags); */
 
 	MHL_SII_REG_NAME_WR(REG_MHLTX_CTL1, 0x10);
 	MHL_SII_CBUS_WR(0x07, 0xF2);
@@ -960,32 +944,30 @@ static void mhl_msm_connection(struct mhl_tx_ctrl *mhl_ctrl)
 	mhl_msc_send_set_int(mhl_ctrl,
 			     MHL_RCHANGE_INT,
 			     MHL_INT_DCAP_CHG,
-			     MSC_PRIORITY_SEND);
+			     MSC_NORMAL_SEND);
 
 }
 
 static void mhl_msm_disconnection(struct mhl_tx_ctrl *mhl_ctrl)
 {
 	struct i2c_client *client = mhl_ctrl->i2c_handle;
+	/*
+	 * MHL TX CTL1
+	 * Disabling Tx termination
+	 */
+	MHL_SII_PAGE3_WR(0x30, 0xD0);
 
-	/* disabling Tx termination */
-	MHL_SII_REG_NAME_WR(REG_MHLTX_CTL1, 0xD0);
-	switch_mode(mhl_ctrl, POWER_STATE_D3, true);
+	if (mhl_ctrl->discovering)
+		switch_mode(mhl_ctrl, POWER_STATE_DELAY_D3);
+	else
+		switch_mode(mhl_ctrl, POWER_STATE_D3);
 	mhl_msc_clear(mhl_ctrl);
 }
 
-static int mhl_msm_read_rgnd_int(struct mhl_tx_ctrl *mhl_ctrl)
+static int  mhl_msm_read_rgnd_int(struct mhl_tx_ctrl *mhl_ctrl)
 {
 	uint8_t rgnd_imp;
 	struct i2c_client *client = mhl_ctrl->i2c_handle;
-	struct msm_hdmi_mhl_ops *hdmi_mhl_ops = mhl_ctrl->hdmi_mhl_ops;
-	unsigned long flags;
-	int rc;
-
-	spin_lock_irqsave(&mhl_ctrl->lock, flags);
-	mhl_ctrl->tx_powered_off = false;
-	spin_unlock_irqrestore(&mhl_ctrl->lock, flags);
-
 	/* DISC STATUS REG 2 */
 	rgnd_imp = (mhl_i2c_reg_read(client, TX_PAGE_3, 0x001C) &
 		    (BIT1 | BIT0));
@@ -993,20 +975,23 @@ static int mhl_msm_read_rgnd_int(struct mhl_tx_ctrl *mhl_ctrl)
 
 	if (0x02 == rgnd_imp) {
 		pr_debug("%s: mhl sink\n", __func__);
-		if (hdmi_mhl_ops) {
-			rc = hdmi_mhl_ops->set_upstream_hpd(
-				mhl_ctrl->pdata->hdmi_pdev, 1);
-			pr_debug("%s: hdmi set hpd %s\n", __func__,
-				 rc ? "failed" : "passed");
-		}
+		if (timer_pending(&mhl_ctrl->discovery_timer))
+			del_timer(&mhl_ctrl->discovery_timer);
 		mhl_ctrl->mhl_mode = 1;
-		power_supply_changed(&mhl_ctrl->mhl_psy);
-		if (mhl_ctrl->notify_usb_online)
-			mhl_ctrl->notify_usb_online(mhl_ctrl->notify_ctx, 1);
+		if (!mhl_ctrl->discovering) {
+			mhl_msm_vmin_change(mhl_ctrl, true);
+			power_supply_changed(&mhl_ctrl->mhl_psy);
+			if (mhl_ctrl->notify_usb_online) {
+				mhl_ctrl->notify_usb_online_plugged = true;
+				mhl_ctrl->notify_usb_online(
+					mhl_ctrl->notify_ctx, 1);
+			}
+		}
 	} else {
 		pr_debug("%s: non-mhl sink\n", __func__);
 		mhl_ctrl->mhl_mode = 0;
-		switch_mode(mhl_ctrl, POWER_STATE_D3, true);
+		mhl_ctrl->discovering = false;
+		switch_mode(mhl_ctrl, POWER_STATE_D3);
 	}
 	complete(&mhl_ctrl->rgnd_done);
 	return mhl_ctrl->mhl_mode ?
@@ -1059,10 +1044,43 @@ static void scdt_st_chg(struct i2c_client *client)
 	}
 }
 
+static void mhl_discovery_timeout_work(struct work_struct *work)
+{
+	struct mhl_tx_ctrl *mhl_ctrl = container_of
+		(work, struct mhl_tx_ctrl, timer_work);
+
+	if (!mhl_ctrl)
+		return;
+
+	if (mhl_ctrl->discovering) {
+		mhl_ctrl->discovering = false;
+		switch_mode(mhl_ctrl, POWER_STATE_D3);
+	}
+
+	if (mhl_ctrl->notify_usb_online_plugged) {
+		mhl_msm_vmin_change(mhl_ctrl, false);
+		power_supply_changed(&mhl_ctrl->mhl_psy);
+		if (mhl_ctrl->notify_usb_online) {
+			mhl_ctrl->notify_usb_online_plugged = false;
+			mhl_ctrl->notify_usb_online(mhl_ctrl->notify_ctx, 0);
+		}
+		del_timer(&mhl_ctrl->discovery_timer);
+	}
+}
+
+static void mhl_discovery_timer(unsigned long data)
+{
+	struct mhl_tx_ctrl *mhl_ctrl = (struct mhl_tx_ctrl *)data;
+
+	if (!mhl_ctrl)
+		return;
+
+	schedule_work(&mhl_ctrl->timer_work);
+}
 
 static int dev_detect_isr(struct mhl_tx_ctrl *mhl_ctrl)
 {
-	uint8_t status, reg;
+	uint8_t status, reg ;
 	struct i2c_client *client = mhl_ctrl->i2c_handle;
 
 	/* INTR_STATUS4 */
@@ -1071,12 +1089,12 @@ static int dev_detect_isr(struct mhl_tx_ctrl *mhl_ctrl)
 
 	if ((0x00 == status) &&\
 	    (mhl_ctrl->cur_state == POWER_STATE_D3)) {
-		pr_warn("%s: invalid intr\n", __func__);
+		pr_err("%s: invalid intr\n", __func__);
 		return 0;
 	}
 
 	if (0xFF == status) {
-		pr_warn("%s: invalid intr 0xff\n", __func__);
+		pr_debug("%s: invalid intr 0xff\n", __func__);
 		MHL_SII_REG_NAME_WR(REG_INTR4, status);
 		return 0;
 	}
@@ -1093,38 +1111,43 @@ static int dev_detect_isr(struct mhl_tx_ctrl *mhl_ctrl)
 	if (status & BIT2) {
 		pr_debug("%s: mhl_est st=%02X\n", __func__,
 			 (int) status);
+		if (timer_pending(&mhl_ctrl->discovery_timer))
+			del_timer(&mhl_ctrl->discovery_timer);
 		mhl_msm_connection(mhl_ctrl);
 	} else if (status & BIT3) {
 		pr_debug("%s: uUSB-a type dev detct\n", __func__);
-		power_supply_changed(&mhl_ctrl->mhl_psy);
-		mhl_drive_hpd(mhl_ctrl, HPD_DOWN);
-		return 0;
+		mod_timer(&mhl_ctrl->discovery_timer,
+			jiffies + msecs_to_jiffies(DISCOVERY_TIME));
+		mhl_ctrl->discovering = true;
+
+		MHL_SII_REG_NAME_WR(REG_INTR4, status);
+		/* Short RGND */
+		MHL_SII_REG_NAME_MOD(REG_DISC_STAT2, BIT0 | BIT1, 0x00);
+		mhl_msm_disconnection(mhl_ctrl);
+		return -EACCES;
 	}
 
 	if (status & BIT5) {
 		/* clr intr - reg int4 */
 		pr_debug("%s: mhl discon: int4 st=%02X\n", __func__,
 			 (int)status);
-		mhl_ctrl->mhl_det_discon = true;
-
+		mod_timer(&mhl_ctrl->discovery_timer,
+			jiffies + msecs_to_jiffies(DISCOVERY_TIME));
 		reg = MHL_SII_REG_NAME_RD(REG_INTR4);
 		MHL_SII_REG_NAME_WR(REG_INTR4, reg);
+		mhl_ctrl->discovering = true;
 		mhl_msm_disconnection(mhl_ctrl);
-		power_supply_changed(&mhl_ctrl->mhl_psy);
-		if (mhl_ctrl->notify_usb_online)
-			mhl_ctrl->notify_usb_online(mhl_ctrl->notify_ctx, 0);
-
-		queue_work(mhl_ctrl->mhl_workq, &mhl_ctrl->mhl_intr_work);
-
-		return 0;
+		return -EACCES;
 	}
 
 	if ((mhl_ctrl->cur_state != POWER_STATE_D0_NO_MHL) &&\
 	    (status & BIT6)) {
 		/* rgnd rdy Intr */
 		pr_debug("%s: rgnd ready intr\n", __func__);
-		switch_mode(mhl_ctrl, POWER_STATE_D0_NO_MHL, true);
+		switch_mode(mhl_ctrl, POWER_STATE_D0_NO_MHL);
 		mhl_msm_read_rgnd_int(mhl_ctrl);
+		if (mhl_ctrl->cur_state == POWER_STATE_D3)
+			return -EACCES;
 	}
 
 	/* Can't succeed at these in D3 */
@@ -1157,41 +1180,12 @@ static void mhl_misc_isr(struct mhl_tx_ctrl *mhl_ctrl)
 	MHL_SII_REG_NAME_WR(REG_INTR5,  intr_5_stat);
 }
 
-static void mhl_tx_down(struct mhl_tx_ctrl *mhl_ctrl)
-{
-	struct i2c_client *client = mhl_ctrl->i2c_handle;
-	unsigned long flags;
-	uint8_t reg;
-
-	switch_mode(mhl_ctrl, POWER_STATE_D3, true);
-
-	reg = MHL_SII_REG_NAME_RD(REG_INTR1);
-	MHL_SII_REG_NAME_WR(REG_INTR1, reg);
-
-	reg = MHL_SII_REG_NAME_RD(REG_INTR4);
-	MHL_SII_REG_NAME_WR(REG_INTR4, reg);
-
-	/* disable INTR1 and INTR4 */
-	MHL_SII_REG_NAME_MOD(REG_INTR1_MASK, BIT6, 0x0);
-	MHL_SII_REG_NAME_MOD(REG_INTR4_MASK,
-		(BIT0 | BIT1 | BIT2 | BIT3 | BIT4 | BIT5 | BIT6), 0x0);
-
-	MHL_SII_PAGE1_MOD(0x003D, BIT0, 0x00);
-	spin_lock_irqsave(&mhl_ctrl->lock, flags);
-	mhl_ctrl->tx_powered_off = true;
-	spin_unlock_irqrestore(&mhl_ctrl->lock, flags);
-	pr_debug("%s: disabled\n", __func__);
-	disable_irq_nosync(client->irq);
-}
 
 static void mhl_hpd_stat_isr(struct mhl_tx_ctrl *mhl_ctrl)
 {
-	uint8_t intr_1_stat, cbus_stat, t;
-	unsigned long flags;
+	uint8_t intr_1_stat;
+	uint8_t cbus_stat;
 	struct i2c_client *client = mhl_ctrl->i2c_handle;
-
-	if (!is_mhl_powered(mhl_ctrl))
-		return;
 
 	/* INTR STATUS 1 */
 	intr_1_stat = MHL_SII_PAGE0_RD(0x0071);
@@ -1201,7 +1195,6 @@ static void mhl_hpd_stat_isr(struct mhl_tx_ctrl *mhl_ctrl)
 
 	/* Clear interrupts */
 	MHL_SII_PAGE0_WR(0x0071, intr_1_stat);
-
 	if (BIT6 & intr_1_stat) {
 		/*
 		 * HPD status change event is pending
@@ -1209,30 +1202,6 @@ static void mhl_hpd_stat_isr(struct mhl_tx_ctrl *mhl_ctrl)
 		 * MSC REQ ABRT REASON
 		 */
 		cbus_stat = MHL_SII_CBUS_RD(0x0D);
-		pr_debug("%s: cbus_stat=[0x%02x] cur_pwr=[%u]\n",
-			 __func__, cbus_stat, mhl_ctrl->cur_state);
-
-		spin_lock_irqsave(&mhl_ctrl->lock, flags);
-		t = mhl_ctrl->dwnstream_hpd;
-		pr_debug("%s: %u: dwnstrm_hpd=0x%02x\n",
-			 __func__, __LINE__, mhl_ctrl->dwnstream_hpd);
-		spin_unlock_irqrestore(&mhl_ctrl->lock, flags);
-
-		if (BIT6 & (cbus_stat ^ t)) {
-			u8 status = cbus_stat & BIT6;
-			mhl_drive_hpd(mhl_ctrl, status ? HPD_UP : HPD_DOWN);
-			if (!status && mhl_ctrl->mhl_det_discon) {
-				pr_debug("%s:%u: power_down\n",
-					 __func__, __LINE__);
-				mhl_tx_down(mhl_ctrl);
-			}
-			spin_lock_irqsave(&mhl_ctrl->lock, flags);
-			mhl_ctrl->dwnstream_hpd = cbus_stat;
-			pr_debug("%s: %u: dwnstrm_hpd=0x%02x\n",
-				 __func__, __LINE__, mhl_ctrl->dwnstream_hpd);
-			spin_unlock_irqrestore(&mhl_ctrl->lock, flags);
-			mhl_ctrl->mhl_det_discon = false;
-		}
 	}
 }
 
@@ -1271,10 +1240,14 @@ int mhl_send_msc_command(struct mhl_tx_ctrl *mhl_ctrl,
 	struct i2c_client *client = mhl_ctrl->i2c_handle;
 
 	if (mhl_ctrl->cur_state != POWER_STATE_D0_MHL) {
-		pr_debug("%s: power_state:%02x CBUS(0x0A):%02x\n",
-			 __func__,
-			 mhl_ctrl->cur_state,
-			 MHL_SII_REG_NAME_RD(REG_CBUS_BUS_STATUS));
+		if (mhl_ctrl->cur_state == POWER_STATE_D3)
+			pr_debug("%s: power_state:%02x\n",
+				 __func__, mhl_ctrl->cur_state);
+		else
+			pr_debug("%s: power_state:%02x CBUS(0x0A):%02x\n",
+				 __func__,
+				 mhl_ctrl->cur_state,
+				 MHL_SII_REG_NAME_RD(REG_CBUS_BUS_STATUS));
 		return -EFAULT;
 	}
 
@@ -1385,7 +1358,6 @@ static void mhl_cbus_isr(struct mhl_tx_ctrl *mhl_ctrl)
 	uint8_t cmd_data = 0x0;
 	int msc_msg_recved = 0;
 	int rc = -1;
-	unsigned long flags;
 	struct i2c_client *client = mhl_ctrl->i2c_handle;
 
 	regval = MHL_SII_REG_NAME_RD(REG_CBUS_INTR_STATUS);
@@ -1426,14 +1398,6 @@ static void mhl_cbus_isr(struct mhl_tx_ctrl *mhl_ctrl)
 		intr = MHL_SII_REG_NAME_RD(REG_CBUS_SET_INT_0);
 		MHL_SII_REG_NAME_WR(REG_CBUS_SET_INT_0, intr);
 		mhl_msc_recv_set_int(mhl_ctrl, 0, intr);
-		if (intr & MHL_INT_DCAP_CHG) {
-			/* No need to go to low power mode */
-			spin_lock_irqsave(&mhl_ctrl->lock, flags);
-			mhl_ctrl->dwnstream_hpd = 0x00;
-			pr_debug("%s: %u: dwnstrm_hpd=0x%02x\n",
-				 __func__, __LINE__, mhl_ctrl->dwnstream_hpd);
-			spin_unlock_irqrestore(&mhl_ctrl->lock, flags);
-		}
 
 		pr_debug("%s: MHL_INT_0 = %02x\n", __func__, intr);
 		intr = MHL_SII_REG_NAME_RD(REG_CBUS_SET_INT_1);
@@ -1465,6 +1429,9 @@ static void mhl_cbus_isr(struct mhl_tx_ctrl *mhl_ctrl)
 	/* received MSC_MSG */
 	if (msc_msg_recved) {
 		/*mhl msc recv msc msg*/
+
+		mhl_ctrl->mouse_mode = mouse_mode != 0;
+
 		rc = mhl_msc_recv_msc_msg(mhl_ctrl, sub_cmd, cmd_data);
 		if (rc)
 			pr_err("MHL: mhl msc recv msc msg failed(%d)!\n", rc);
@@ -1475,186 +1442,190 @@ static void mhl_cbus_isr(struct mhl_tx_ctrl *mhl_ctrl)
 
 }
 
+static void clear_all_intrs(struct i2c_client *client)
+{
+	uint8_t regval = 0x00;
+
+	pr_debug_intr("********* exiting isr mask check ?? *************\n");
+	pr_debug_intr("int1 mask = %02X\n",
+		(int) MHL_SII_REG_NAME_RD(REG_INTR1));
+	pr_debug_intr("int3 mask = %02X\n",
+		(int) MHL_SII_PAGE0_RD(0x0077));
+	pr_debug_intr("int4 mask = %02X\n",
+		(int) MHL_SII_REG_NAME_RD(REG_INTR4));
+	pr_debug_intr("int5 mask = %02X\n",
+		(int) MHL_SII_REG_NAME_RD(REG_INTR5));
+	pr_debug_intr("cbus1 mask = %02X\n",
+		(int) MHL_SII_CBUS_RD(0x0009));
+	pr_debug_intr("cbus2 mask = %02X\n",
+		(int) MHL_SII_CBUS_RD(0x001F));
+	pr_debug_intr("********* end of isr mask check *************\n");
+
+	regval = MHL_SII_REG_NAME_RD(REG_INTR1);
+	pr_debug_intr("int1 st = %02X\n", (int)regval);
+	MHL_SII_REG_NAME_WR(REG_INTR1, regval);
+
+	regval =  MHL_SII_REG_NAME_RD(REG_INTR2);
+	pr_debug_intr("int2 st = %02X\n", (int)regval);
+	MHL_SII_REG_NAME_WR(REG_INTR2, regval);
+
+	regval =  MHL_SII_PAGE0_RD(0x0073);
+	pr_debug_intr("int3 st = %02X\n", (int)regval);
+	MHL_SII_PAGE0_WR(0x0073, regval);
+#ifdef REMOVE_CLEAR_INTRS
+#else /* REMOVE_CLEAR_INTRS */
+	regval =  MHL_SII_REG_NAME_RD(REG_INTR4);
+	pr_debug_intr("int4 st = %02X\n", (int)regval);
+	MHL_SII_REG_NAME_WR(REG_INTR4, regval);
+
+	regval =  MHL_SII_REG_NAME_RD(REG_INTR5);
+	pr_debug_intr("int5 st = %02X\n", (int)regval);
+	MHL_SII_REG_NAME_WR(REG_INTR5, regval);
+
+	regval =  MHL_SII_CBUS_RD(0x0008);
+	pr_debug_intr("cbusInt st = %02X\n", (int)regval);
+	MHL_SII_CBUS_WR(0x0008, regval);
+
+	regval =  MHL_SII_CBUS_RD(0x001E);
+	pr_debug_intr("CBUS intR_2: %d\n", (int)regval);
+	MHL_SII_CBUS_WR(0x001E, regval);
+
+	regval =  MHL_SII_CBUS_RD(0x00A0);
+	pr_debug_intr("A0 int set = %02X\n", (int)regval);
+	MHL_SII_CBUS_WR(0x00A0, regval);
+
+	regval =  MHL_SII_CBUS_RD(0x00A1);
+	pr_debug_intr("A1 int set = %02X\n", (int)regval);
+	MHL_SII_CBUS_WR(0x00A1, regval);
+
+	regval =  MHL_SII_CBUS_RD(0x00A2);
+	pr_debug_intr("A2 int set = %02X\n", (int)regval);
+	MHL_SII_CBUS_WR(0x00A2, regval);
+
+	regval =  MHL_SII_CBUS_RD(0x00A3);
+	pr_debug_intr("A3 int set = %02X\n", (int)regval);
+	MHL_SII_CBUS_WR(0x00A3, regval);
+
+	regval =  MHL_SII_CBUS_RD(0x00B0);
+	pr_debug_intr("B0 st set = %02X\n", (int)regval);
+	MHL_SII_CBUS_WR(0x00B0, regval);
+
+	regval =  MHL_SII_CBUS_RD(0x00B1);
+	pr_debug_intr("B1 st set = %02X\n", (int)regval);
+	MHL_SII_CBUS_WR(0x00B1, regval);
+
+	regval =  MHL_SII_CBUS_RD(0x00B2);
+	pr_debug_intr("B2 st set = %02X\n", (int)regval);
+	MHL_SII_CBUS_WR(0x00B2, regval);
+
+	regval =  MHL_SII_CBUS_RD(0x00B3);
+	pr_debug_intr("B3 st set = %02X\n", (int)regval);
+	MHL_SII_CBUS_WR(0x00B3, regval);
+
+	regval =  MHL_SII_CBUS_RD(0x00E0);
+	pr_debug_intr("E0 st set = %02X\n", (int)regval);
+	MHL_SII_CBUS_WR(0x00E0, regval);
+
+	regval =  MHL_SII_CBUS_RD(0x00E1);
+	pr_debug_intr("E1 st set = %02X\n", (int)regval);
+	MHL_SII_CBUS_WR(0x00E1, regval);
+
+	regval =  MHL_SII_CBUS_RD(0x00E2);
+	pr_debug_intr("E2 st set = %02X\n", (int)regval);
+	MHL_SII_CBUS_WR(0x00E2, regval);
+
+	regval =  MHL_SII_CBUS_RD(0x00E3);
+	pr_debug_intr("E3 st set = %02X\n", (int)regval);
+	MHL_SII_CBUS_WR(0x00E3, regval);
+
+	regval =  MHL_SII_CBUS_RD(0x00F0);
+	pr_debug_intr("F0 int set = %02X\n", (int)regval);
+	MHL_SII_CBUS_WR(0x00F0, regval);
+
+	regval =  MHL_SII_CBUS_RD(0x00F1);
+	pr_debug_intr("F1 int set = %02X\n", (int)regval);
+	MHL_SII_CBUS_WR(0x00F1, regval);
+
+	regval =  MHL_SII_CBUS_RD(0x00F2);
+	pr_debug_intr("F2 int set = %02X\n", (int)regval);
+	MHL_SII_CBUS_WR(0x00F2, regval);
+
+	regval =  MHL_SII_CBUS_RD(0x00F3);
+	pr_debug_intr("F3 int set = %02X\n", (int)regval);
+	MHL_SII_CBUS_WR(0x00F3, regval);
+#endif /* REMOVE_CLEAR_INTRS */
+	pr_debug_intr("********* end of exiting in isr *************\n");
+}
+
 static irqreturn_t mhl_tx_isr(int irq, void *data)
 {
-	int rc;
 	struct mhl_tx_ctrl *mhl_ctrl = (struct mhl_tx_ctrl *)data;
-	unsigned long flags;
-
+	int rc;
 	pr_debug("%s: Getting Interrupts\n", __func__);
-
-	spin_lock_irqsave(&mhl_ctrl->lock, flags);
-	if (mhl_ctrl->tx_powered_off) {
-		pr_warn("%s: powered off\n", __func__);
-		spin_unlock_irqrestore(&mhl_ctrl->lock, flags);
-		return IRQ_HANDLED;
-	}
-	spin_unlock_irqrestore(&mhl_ctrl->lock, flags);
 
 	/*
 	 * Check RGND, MHL_EST, CBUS_LOCKOUT, SCDT
 	 * interrupts. In D3, we get only RGND
 	 */
 	rc = dev_detect_isr(mhl_ctrl);
-	if (rc)
+	if (rc) {
 		pr_debug("%s: dev_detect_isr rc=[%d]\n", __func__, rc);
+		return IRQ_HANDLED;
+	}
 
 	pr_debug("%s: cur pwr state is [0x%x]\n",
 		 __func__, mhl_ctrl->cur_state);
+	if (mhl_ctrl->cur_state == POWER_STATE_D0_MHL) {
+		/*
+		 * If dev_detect_isr() didn't move the tx to D3
+		 * on disconnect, continue to check other
+		 * interrupt sources.
+		 */
+		mhl_misc_isr(mhl_ctrl);
 
-	/*
-	 * If dev_detect_isr() didn't move the tx to D3
-	 * on disconnect, continue to check other
-	 * interrupt sources.
-	 */
-	mhl_misc_isr(mhl_ctrl);
+		/*
+		 * Check for any peer messages for DCAP_CHG, MSC etc
+		 * Dispatch to have the CBUS module working only
+		 * once connected.
+		 */
+		mhl_cbus_isr(mhl_ctrl);
+		mhl_hpd_stat_isr(mhl_ctrl);
+	}
 
-	/*
-	 * Check for any peer messages for DCAP_CHG, MSC etc
-	 * Dispatch to have the CBUS module working only
-	 * once connected.
-	 */
-	mhl_cbus_isr(mhl_ctrl);
-	mhl_hpd_stat_isr(mhl_ctrl);
+	clear_all_intrs(mhl_ctrl->i2c_handle);
 
 	return IRQ_HANDLED;
 }
 
+static int mhl_tx_chip_init(struct mhl_tx_ctrl *mhl_ctrl)
+{
+	uint8_t chip_rev_id = 0x00;
+	struct i2c_client *client = mhl_ctrl->i2c_handle;
+
+	/* Reset the TX chip */
+	mhl_sii_reset_pin(mhl_ctrl, 0);
+	msleep(20);
+	mhl_sii_reset_pin(mhl_ctrl, 1);
+	/* TX PR-guide requires a 100 ms wait here */
+	msleep(100);
+
+	/* Read the chip rev ID */
+	chip_rev_id = MHL_SII_PAGE0_RD(0x04);
+	pr_debug("MHL: chip rev ID read=[%x]\n", chip_rev_id);
+	mhl_ctrl->chip_rev_id = chip_rev_id;
+
+	/*
+	 * Need to disable MHL discovery if
+	 * MHL-USB handshake is implemented
+	 */
+	mhl_init_reg_settings(mhl_ctrl, true);
+	switch_mode(mhl_ctrl, POWER_STATE_D3);
+	return 0;
+}
 
 static int mhl_sii_reg_config(struct i2c_client *client, bool enable)
 {
-	static struct regulator *reg_8941_l24;
-	static struct regulator *reg_8941_l02;
-	static struct regulator *reg_8941_smps3a;
-	static struct regulator *reg_8941_vdda;
-	int rc = -EINVAL;
-
-	pr_debug("%s\n", __func__);
-
-	if (!enable) {
-		regulator_disable(reg_8941_vdda);
-		regulator_put(reg_8941_vdda);
-		reg_8941_vdda = NULL;
-
-		regulator_disable(reg_8941_smps3a);
-		regulator_put(reg_8941_smps3a);
-		reg_8941_smps3a = NULL;
-
-		regulator_disable(reg_8941_l02);
-		regulator_put(reg_8941_l02);
-		reg_8941_l02 = NULL;
-
-		regulator_disable(reg_8941_l24);
-		regulator_put(reg_8941_l24);
-		reg_8941_l24 = NULL;
-
-		return 0;
-	}
-
-	if (!reg_8941_l24) {
-		reg_8941_l24 = regulator_get(&client->dev,
-			"avcc_18");
-		if (IS_ERR(reg_8941_l24)) {
-			pr_err("could not get 8941 l24, rc = %ld\n",
-				PTR_ERR(reg_8941_l24));
-			return -ENODEV;
-		}
-		if (enable)
-			rc = regulator_enable(reg_8941_l24);
-		else
-			rc = regulator_disable(reg_8941_l24);
-		if (rc) {
-			pr_err("'%s' regulator config[%u] failed, rc=%d\n",
-			       "avcc_1.8V", enable, rc);
-			goto l24_fail;
-		} else {
-			pr_debug("%s: vreg L24 %s\n",
-				 __func__, (enable ? "enabled" : "disabled"));
-		}
-	}
-
-	if (!reg_8941_l02) {
-		reg_8941_l02 = regulator_get(&client->dev,
-			"avcc_12");
-		if (IS_ERR(reg_8941_l02)) {
-			pr_err("could not get reg_8941_l02, rc = %ld\n",
-				PTR_ERR(reg_8941_l02));
-			goto l24_fail;
-		}
-		if (enable)
-			rc = regulator_enable(reg_8941_l02);
-		else
-			rc = regulator_disable(reg_8941_l02);
-		if (rc) {
-			pr_debug("'%s' regulator configure[%u] failed, rc=%d\n",
-				 "avcc_1.2V", enable, rc);
-			goto l02_fail;
-		} else {
-			pr_debug("%s: vreg L02 %s\n",
-				 __func__, (enable ? "enabled" : "disabled"));
-		}
-	}
-
-	if (!reg_8941_smps3a) {
-		reg_8941_smps3a = regulator_get(&client->dev,
-			"smps3a");
-		if (IS_ERR(reg_8941_smps3a)) {
-			pr_err("could not get vreg smps3a, rc = %ld\n",
-				PTR_ERR(reg_8941_smps3a));
-			goto l02_fail;
-		}
-		if (enable)
-			rc = regulator_enable(reg_8941_smps3a);
-		else
-			rc = regulator_disable(reg_8941_smps3a);
-		if (rc) {
-			pr_err("'%s' regulator config[%u] failed, rc=%d\n",
-			       "SMPS3A", enable, rc);
-			goto smps3a_fail;
-		} else {
-			pr_debug("%s: vreg SMPS3A %s\n",
-				 __func__, (enable ? "enabled" : "disabled"));
-		}
-	}
-
-	if (!reg_8941_vdda) {
-		reg_8941_vdda = regulator_get(&client->dev,
-			"vdda");
-		if (IS_ERR(reg_8941_vdda)) {
-			pr_err("could not get vreg vdda, rc = %ld\n",
-				PTR_ERR(reg_8941_vdda));
-			goto smps3a_fail;
-		}
-		if (enable)
-			rc = regulator_enable(reg_8941_vdda);
-		else
-			rc = regulator_disable(reg_8941_vdda);
-		if (rc) {
-			pr_err("'%s' regulator config[%u] failed, rc=%d\n",
-			       "VDDA", enable, rc);
-			goto vdda_fail;
-		} else {
-			pr_debug("%s: vreg VDDA %s\n",
-				 __func__, (enable ? "enabled" : "disabled"));
-		}
-	}
-
-	return rc;
-
-vdda_fail:
-	regulator_disable(reg_8941_vdda);
-	regulator_put(reg_8941_vdda);
-smps3a_fail:
-	regulator_disable(reg_8941_smps3a);
-	regulator_put(reg_8941_smps3a);
-l02_fail:
-	regulator_disable(reg_8941_l02);
-	regulator_put(reg_8941_l02);
-l24_fail:
-	regulator_disable(reg_8941_l24);
-	regulator_put(reg_8941_l24);
-
-	return -EINVAL;
+	return 0;
 }
 
 
@@ -1755,6 +1726,107 @@ static int mhl_gpio_config(struct mhl_tx_ctrl *mhl_ctrl, int on)
 	return 0;
 }
 
+static ssize_t mhl_sysfs_wta_mouse_mode(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	sscanf(buf, "%d", &mouse_mode);
+	pr_debug("%s: mouse_mode = %d\n", __func__, mouse_mode);
+	return count;
+}
+
+static ssize_t mhl_sysfs_rta_screen_status(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	pr_debug("%s: screen_status = %d\n", __func__, screen_status);
+	return snprintf(buf, PAGE_SIZE, "%d", screen_status);
+}
+
+static ssize_t mhl_sysfs_wta_screen_status(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct mhl_tx_ctrl *mhl_ctrl =
+		container_of(dev, struct mhl_tx_ctrl, dev);
+
+	sscanf(buf, "%d", &screen_status);
+	pr_debug("%s: screen_status = %d\n", __func__, screen_status);
+	mhl_screen_notify(mhl_ctrl, screen_status);
+	return count;
+}
+
+static ssize_t mhl_sysfs_wta_mouse_move_distance_dx(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct mhl_tx_ctrl *mhl_ctrl =
+		container_of(dev, struct mhl_tx_ctrl, dev);
+
+	sscanf(buf, "%d", &mouse_move_distance_dx);
+	pr_debug("%s: mouse_move_distance_dx = %d\n",
+		 __func__, mouse_move_distance_dx);
+	mhl_set_mouse_move_distance_dx(mhl_ctrl, mouse_move_distance_dx);
+	return count;
+}
+
+static ssize_t mhl_sysfs_wta_mouse_move_distance_dy(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct mhl_tx_ctrl *mhl_ctrl =
+		container_of(dev, struct mhl_tx_ctrl, dev);
+
+	sscanf(buf, "%d", &mouse_move_distance_dy);
+	pr_debug("%s: mouse_move_distance_dy = %d\n",
+		 __func__, mouse_move_distance_dy);
+	mhl_set_mouse_move_distance_dy(mhl_ctrl, mouse_move_distance_dy);
+	return count;
+}
+
+static struct device_attribute mhl_class_attributes[] = {
+	__ATTR(mouse_mode, 0660,
+		NULL,
+		mhl_sysfs_wta_mouse_mode),
+	__ATTR(screen_status, 0660,
+		mhl_sysfs_rta_screen_status,
+		mhl_sysfs_wta_screen_status),
+	__ATTR(mouse_move_distance_dx, 0660,
+		NULL,
+		mhl_sysfs_wta_mouse_move_distance_dx),
+	__ATTR(mouse_move_distance_dy, 0660,
+		NULL,
+		mhl_sysfs_wta_mouse_move_distance_dy),
+	__ATTR_NULL,
+};
+
+static int mhl_sysfs_init(struct mhl_tx_ctrl *mhl_ctrl, struct device *parent)
+{
+	int rc;
+	struct class *cls;
+
+	cls = class_create(THIS_MODULE, "mhl");
+
+	if (IS_ERR(cls)) {
+		pr_debug("%s: failed to create class", __func__);
+		return -ENOMEM;
+	}
+
+	cls->dev_attrs = mhl_class_attributes;
+	mhl_ctrl->dev.class = cls;
+	mhl_ctrl->dev.parent = parent;
+	dev_set_name(&mhl_ctrl->dev, MHL_DRIVER_NAME);
+
+	rc = device_register(&mhl_ctrl->dev);
+	if (rc) {
+		class_destroy(mhl_ctrl->dev.class);
+		pr_err("%s: failed to register device", __func__);
+		return -ENOMEM;
+	}
+
+	return 0;
+}
+
+static void mhl_sysfs_exit(struct mhl_tx_ctrl *mhl_ctrl)
+{
+	class_destroy(mhl_ctrl->dev.class);
+}
+
 static int mhl_i2c_probe(struct i2c_client *client,
 			 const struct i2c_device_id *id)
 {
@@ -1792,20 +1864,43 @@ static int mhl_i2c_probe(struct i2c_client *client,
 	}
 
 	/*
+	 * Regulator init
+	 */
+	rc = mhl_vreg_config(mhl_ctrl, 1);
+	if (rc) {
+		pr_err("%s: vreg init failed [%d]\n",
+			__func__, rc);
+		goto failed_probe;
+	}
+
+	/*
+	 * GPIO init
+	 */
+	rc = mhl_gpio_config(mhl_ctrl, 1);
+	if (rc) {
+		pr_err("%s: gpio init failed [%d]\n",
+			__func__, rc);
+		goto failed_probe;
+	}
+
+	/*
 	 * Other initializations
 	 * such tx specific
 	 */
-	mhl_ctrl->disc_enabled = false;
+	if (mhl_ctrl->pdata->device_discovery)
+		mhl_ctrl->disc_enabled = true;
+	else
+		mhl_ctrl->disc_enabled = false;
 	INIT_WORK(&mhl_ctrl->mhl_msc_send_work, mhl_msc_send_work);
 	mhl_ctrl->cur_state = POWER_STATE_D0_MHL;
 	INIT_LIST_HEAD(&mhl_ctrl->list_cmd);
 	init_completion(&mhl_ctrl->msc_cmd_done);
-	spin_lock_init(&mhl_ctrl->lock);
 	mhl_ctrl->msc_send_workqueue = create_singlethread_workqueue
 		("mhl_msc_cmd_queue");
-	mhl_ctrl->mhl_workq = create_singlethread_workqueue("mhl_workq");
 
-	INIT_WORK(&mhl_ctrl->mhl_intr_work, mhl_sii_disc_intr_work);
+	mhl_msc_init(mhl_ctrl);
+
+	mhl_ctrl->mouse_mode = false;
 
 	mhl_ctrl->input = input_allocate_device();
 	if (mhl_ctrl->input) {
@@ -1838,7 +1933,11 @@ static int mhl_i2c_probe(struct i2c_client *client,
 		input->keycodesize = sizeof(u16);
 		input->keycodemax = ARRAY_SIZE(support_rcp_key_code_tbl);
 
-		input->evbit[0] = EV_KEY;
+		input->evbit[0] = EV_KEY | EV_REP | EV_REL;
+		input_set_capability(input, EV_REL, REL_X);
+		input_set_capability(input, EV_REL, REL_Y);
+		input_set_capability(input, EV_KEY, BTN_LEFT);
+
 		for (i = 0; i < ARRAY_SIZE(support_rcp_key_code_tbl); i++) {
 			if (support_rcp_key_code_tbl[i] > 1)
 				input_set_capability(input, EV_KEY,
@@ -1853,12 +1952,45 @@ static int mhl_i2c_probe(struct i2c_client *client,
 		}
 	}
 
-	mhl_ctrl->dwnstream_hpd = 0;
-	mhl_ctrl->tx_powered_off = false;
+	rc = mhl_sysfs_init(mhl_ctrl, &client->dev);
+	if (rc) {
+		pr_err("%s: mhl_sysfs_init failed.rc=%d\n",
+			__func__, rc);
+		goto failed_probe;
+	}
 
+	rc = mhl_tx_chip_init(mhl_ctrl);
+	if (rc) {
+		pr_err("%s: tx chip init failed [%d]\n",
+			__func__, rc);
+		goto failed_probe;
+	}
 
 	init_completion(&mhl_ctrl->rgnd_done);
+	INIT_WORK(&mhl_ctrl->timer_work, mhl_discovery_timeout_work);
 
+	init_timer(&mhl_ctrl->discovery_timer);
+	mhl_ctrl->discovery_timer.function =
+		mhl_discovery_timer;
+	mhl_ctrl->discovery_timer.data = (unsigned long)mhl_ctrl;
+	mhl_ctrl->discovery_timer.expires = 0xffffffffL;
+	add_timer(&mhl_ctrl->discovery_timer);
+
+	pr_debug("%s: IRQ from GPIO INTR = %d\n",
+		__func__, mhl_ctrl->i2c_handle->irq);
+	pr_debug("%s: Driver name = [%s]\n", __func__,
+		client->dev.driver->name);
+	rc = request_threaded_irq(mhl_ctrl->i2c_handle->irq, NULL,
+				   &mhl_tx_isr,
+				  IRQF_TRIGGER_LOW | IRQF_ONESHOT,
+				 client->dev.driver->name, mhl_ctrl);
+	if (rc) {
+		pr_err("request_threaded_irq failed, status: %d\n",
+		       rc);
+		goto failed_probe;
+	} else {
+		pr_debug("request_threaded_irq succeeded\n");
+	}
 
 	mhl_ctrl->mhl_psy.name = "ext-vbus";
 	mhl_ctrl->mhl_psy.type = POWER_SUPPLY_TYPE_USB_DCP;
@@ -1869,6 +2001,9 @@ static int mhl_i2c_probe(struct i2c_client *client,
 	mhl_ctrl->mhl_psy.num_properties = ARRAY_SIZE(mhl_pm_power_props);
 	mhl_ctrl->mhl_psy.get_property = mhl_power_get_property;
 	mhl_ctrl->mhl_psy.set_property = mhl_power_set_property;
+	mhl_ctrl->mhl_psy.property_is_writeable =
+			mhl_power_property_is_writeable;
+	mhl_ctrl->max_current_val = MAX_CURRENT;
 
 	rc = power_supply_register(&client->dev, &mhl_ctrl->mhl_psy);
 	if (rc < 0) {
@@ -1889,7 +2024,7 @@ static int mhl_i2c_probe(struct i2c_client *client,
 	pr_debug("%s: i2c client addr is [%x]\n", __func__, client->addr);
 	if (mhl_ctrl->pdata->hdmi_pdev) {
 		rc = msm_hdmi_register_mhl(mhl_ctrl->pdata->hdmi_pdev,
-					   hdmi_mhl_ops, mhl_ctrl);
+					   hdmi_mhl_ops);
 		if (rc) {
 			pr_err("%s: register with hdmi failed\n", __func__);
 			rc = -EPROBE_DEFER;
@@ -1928,12 +2063,17 @@ static int mhl_i2c_probe(struct i2c_client *client,
 	}
 	mhl_ctrl->mhl_info = mhl_info;
 	mhl_register_msc(mhl_ctrl);
+
 	return 0;
 
 failed_probe_pwr:
 	power_supply_unregister(&mhl_ctrl->mhl_psy);
 failed_probe:
-	mhl_sii_config(mhl_ctrl, false);
+	del_timer(&mhl_ctrl->discovery_timer);
+	free_irq(mhl_ctrl->i2c_handle->irq, mhl_ctrl);
+	mhl_gpio_config(mhl_ctrl, 0);
+	mhl_vreg_config(mhl_ctrl, 0);
+	mhl_sysfs_exit(mhl_ctrl);
 	/* do not deep-free */
 	if (mhl_info)
 		devm_kfree(&client->dev, mhl_info);
@@ -1960,14 +2100,16 @@ static int mhl_i2c_remove(struct i2c_client *client)
 		return -EINVAL;
 	}
 
-	mhl_sii_config(mhl_ctrl, false);
-
-	destroy_workqueue(mhl_ctrl->mhl_workq);
-
+	free_irq(mhl_ctrl->i2c_handle->irq, mhl_ctrl);
+	mhl_gpio_config(mhl_ctrl, 0);
+	mhl_vreg_config(mhl_ctrl, 0);
 	if (mhl_ctrl->mhl_info)
 		devm_kfree(&client->dev, mhl_ctrl->mhl_info);
 	if (mhl_ctrl->pdata)
 		devm_kfree(&client->dev, mhl_ctrl->pdata);
+
+	mhl_sysfs_exit(mhl_ctrl);
+
 	devm_kfree(&client->dev, mhl_ctrl);
 	return 0;
 }
@@ -1985,30 +2127,36 @@ static int mhl_i2c_suspend_sub(struct i2c_client *client)
 {
 	struct mhl_tx_ctrl *mhl_ctrl = i2c_get_clientdata(client);
 
-	pr_debug("%s\n", __func__);
-
 	if (!mhl_ctrl) {
-		pr_err("%s: invalid ctrl data\n", __func__);
-		return 0;
+		pr_warn("%s: i2c get client data failed\n", __func__);
+		return -EINVAL;
 	}
+	flush_work_sync(&mhl_ctrl->timer_work);
 
-	if (mhl_ctrl->mhl_mode)	{
-		mhl_ctrl->mhl_mode = 0;
+	/* enable_irq_wake to setup this irq for wakeup trigger */
+	/*
+	 * Keep the interrupt wake so that interrupt from SiI8334 executes.
+	 * It results that the registered Interrupt handler will be called.
+	 */
+	enable_irq_wake(client->irq);
 
-		power_supply_changed(&mhl_ctrl->mhl_psy);
-		if (mhl_ctrl->notify_usb_online)
-			mhl_ctrl->notify_usb_online(mhl_ctrl->notify_ctx, 0);
-
-		mhl_sii_config(mhl_ctrl, false);
-	}
-
+	/* this is needed isr not to be executed before i2c resume */
+	/*
+	 * Disable ISR (interrupt service routine), it means disabling
+	 * interrupt handler, until i2c is resumed. If the handler is
+	 * executed before i2c is resumed, crash occurs since the handler
+	 * tries to access i2c and the procedure never finished (watchdog
+	 * timer expires!). When enable_irq is called during the interrupt
+	 * is active, the handler will be called.
+	 */
+	disable_irq(client->irq);
 	return 0;
 }
 
 static int mhl_i2c_resume_sub(struct i2c_client *client)
 {
-	pr_debug("%s\n", __func__);
-
+	disable_irq_wake(client->irq);
+	enable_irq(client->irq);
 	return 0;
 }
 #endif /* defined(CONFIG_PM) || defined(CONFIG_PM_SLEEP) */

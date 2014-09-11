@@ -1,4 +1,5 @@
 /* Copyright (c) 2010-2014, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2013 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -8,12 +9,17 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
+ *
+ * NOTE: This file has been modified by Sony Mobile Communications AB.
+ * Modifications are licensed under the License.
  */
 
 #include <linux/io.h>
 #include <linux/types.h>
 #include <mach/board.h>
 #include "mdss_hdmi_edid.h"
+
+#define EDID_DUMP
 
 #define DBC_START_OFFSET 4
 
@@ -405,6 +411,24 @@ static struct attribute_group hdmi_edid_fs_attrs_group = {
 	.attrs = hdmi_edid_fs_attrs,
 };
 
+#ifdef EDID_DUMP
+static void hdmi_edid_block_dump(int block, u8 *buf)
+{
+	int ndx;
+	char tmp_buff[16];
+
+	DEV_INFO("EDID BLK=%d\n", block);
+	for (ndx = 0; ndx < 0x80; ndx += 16) {
+		memset(tmp_buff, '\0', sizeof(tmp_buff));
+		snprintf(tmp_buff, 16, "%02X | ", ndx);
+		print_hex_dump(KERN_INFO, tmp_buff, DUMP_PREFIX_NONE, 16, 1,
+				(void *)&buf[ndx], 0x10, false);
+	}
+}
+#else
+static inline void hdmi_edid_block_dump(int block, u8 *buf) {}
+#endif
+
 static int hdmi_edid_read_block(struct hdmi_edid_ctrl *edid_ctrl, int block,
 	u8 *edid_buf)
 {
@@ -456,6 +480,8 @@ read_retry:
 
 	if (status)
 		goto error;
+
+	hdmi_edid_block_dump(block, edid_buf);
 
 	/* Calculate checksum */
 	check_sum = 0;
@@ -615,7 +641,26 @@ static void hdmi_edid_extract_3d_present(struct hdmi_edid_ctrl *edid_ctrl,
 		return;
 	}
 
+	if (len < 8) {
+		DEV_DBG("%s: No HDMI Video present\n", __func__);
+		return;
+	}
+
+	/* Check HDMI_Video_present. */
+	if (!(vsd[8] & BIT(5))) {
+		DEV_DBG("%s: 3D present is not found\n",
+			__func__);
+		return;
+	}
+
 	offset = HDMI_VSDB_3D_EVF_DATA_OFFSET(vsd);
+
+	if (offset+1 > len) {
+		DEV_DBG("%s: 3D present or HDMI_3D_LEN is not found\n",
+			__func__);
+		return;
+	}
+
 	DEV_DBG("%s: EDID: 3D present @ 0x%x = %02x\n", __func__,
 		offset, vsd[offset]);
 
@@ -705,8 +750,18 @@ static void hdmi_edid_extract_latency_fields(struct hdmi_edid_ctrl *edid_ctrl,
 	vsd = hdmi_edid_find_block(in_buf, DBC_START_OFFSET,
 		VENDOR_SPECIFIC_DATA_BLOCK, &len);
 
-	if (vsd == NULL || len == 0 || len > MAX_DATA_BLOCK_SIZE ||
-		!(vsd[8] & BIT(7))) {
+	if (vsd == NULL || len == 0 || len > MAX_DATA_BLOCK_SIZE) {
+		DEV_DBG("%s: No/Invalid vendor Specific Data Block\n",
+			__func__);
+		return;
+	}
+
+	if (len < 8) {
+		DEV_DBG("%s: No Latency Fields present\n", __func__);
+		return;
+	}
+
+	if ((len < 10) || !(vsd[8] & BIT(7))) {
 		edid_ctrl->video_latency = (u16)-1;
 		edid_ctrl->audio_latency = (u16)-1;
 		DEV_DBG("%s: EDID: No audio/video latency present\n", __func__);
@@ -731,15 +786,20 @@ static u32 hdmi_edid_extract_ieee_reg_id(struct hdmi_edid_ctrl *edid_ctrl,
 	}
 
 	vsd = hdmi_edid_find_block(in_buf, DBC_START_OFFSET,
-		VENDOR_SPECIFIC_DATA_BLOCK, &len);
-
+				   VENDOR_SPECIFIC_DATA_BLOCK, &len);
 	if (vsd == NULL || len == 0 || len > MAX_DATA_BLOCK_SIZE) {
 		DEV_DBG("%s: No/Invalid Vendor Specific Data Block\n",
-			__func__);
+		  __func__);
 		return 0;
 	}
 
-	DEV_DBG("%s: EDID: VSD PhyAddr=%04x, MaxTMDS=%dMHz\n", __func__,
+	if (len < 7)
+		DEV_DBG("%s: EDID: VSD len=%d,PhyAddr=%04x, MaxTMDS=%dMHz\n",
+		__func__, len,
+		((u32)vsd[4] << 8) + (u32)vsd[5], (u32)0);
+	else
+		DEV_DBG("%s: EDID: VSD len=%d,PhyAddr=%04x, MaxTMDS=%dMHz\n",
+		__func__, len,
 		((u32)vsd[4] << 8) + (u32)vsd[5], (u32)vsd[7] * 5);
 
 	edid_ctrl->physical_address = ((u16)vsd[4] << 8) + (u16)vsd[5];
@@ -943,6 +1003,10 @@ static int hdmi_edid_get_display_vsd_3d_mode(const u8 *data_buf,
 		return -ENXIO;
 	}
 
+	/* 3D_EVF_DATA_OFFSET is 8 */
+	if (len < 8)
+		return -ETOOSMALL;
+
 	offset = HDMI_VSDB_3D_EVF_DATA_OFFSET(vsd);
 	if (offset >= len - 1)
 		return -ETOOSMALL;
@@ -1092,6 +1156,11 @@ static void hdmi_edid_get_extended_video_formats(
 		return;
 	}
 
+	if (db_len < 8) {
+		DEV_DBG("%s: No HDMI Video present\n", __func__);
+		return;
+	}
+
 	/* check if HDMI_Video_present flag is set or not */
 	if (!(vsd[8] & BIT(5))) {
 		DEV_DBG("%s: extended vfmts are not supported by the sink.\n",
@@ -1100,11 +1169,22 @@ static void hdmi_edid_get_extended_video_formats(
 	}
 
 	offset = HDMI_VSDB_3D_EVF_DATA_OFFSET(vsd);
+	if (offset+1 > db_len) {
+		DEV_DBG("%s: Video present or HDMI_VIC_LEN is not found\n",
+			__func__);
+		return;
+	}
 
 	hdmi_vic_len = vsd[offset + 1] >> 5;
 	if (hdmi_vic_len) {
 		DEV_DBG("%s: EDID: EVFRMT @ 0x%x of block 3, len = %02x\n",
 			__func__, offset, hdmi_vic_len);
+
+		if ((offset+1 + hdmi_vic_len) > db_len) {
+			DEV_DBG("%s: HDMI_VIC_M is length shortage\n",
+				__func__);
+			return;
+		}
 
 		for (i = 0; i < hdmi_vic_len; i++) {
 			video_format = HDMI_VFRMT_END + vsd[offset + 2 + i];
