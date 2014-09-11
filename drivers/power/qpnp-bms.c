@@ -1,4 +1,5 @@
-/* Copyright (c) 2011-2014, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2011-2013, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2013-2014 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -137,6 +138,19 @@ struct bms_wakeup_source {
 	unsigned long		disabled;
 };
 
+struct qpnp_somc_params {
+	int		last_good_ocv_uv;
+	int		pc_unusable_original;
+	int		soc_original;
+	int64_t		cc_raw;
+	int		output_batt_log;
+	int		clamp_soc_count;
+	int		clamp_soc_max_count;
+	bool		soc_update_request;
+	bool		soc_update_request_once;
+	bool		done_adjust_soc_params;
+};
+
 struct qpnp_bms_chip {
 	struct device			*dev;
 	struct power_supply		bms_psy;
@@ -230,7 +244,6 @@ struct qpnp_bms_chip {
 	int				last_soc;
 	int				last_soc_est;
 	int				last_soc_unbound;
-	bool				was_charging_at_sleep;
 	int				charge_start_tm_sec;
 	int				catch_up_time_sec;
 	struct single_row_lut		*adjusted_fcc_temp_lut;
@@ -285,7 +298,21 @@ struct qpnp_bms_chip {
 	struct qpnp_vadc_chip		*vadc_dev;
 	struct qpnp_iadc_chip		*iadc_dev;
 	struct qpnp_adc_tm_chip		*adc_tm_dev;
+	struct qpnp_somc_params		somc_params;
 };
+
+static int qpnp_bms_property_is_writeable(struct power_supply *psy,
+					enum power_supply_property psp)
+{
+	int ret = 0;
+
+	if (psp == POWER_SUPPLY_PROP_SOC_UPDATE_REQUEST)
+		ret = 1;
+	else
+		ret = 0;
+
+	return ret;
+}
 
 static struct of_device_id qpnp_bms_match_table[] = {
 	{ .compatible = QPNP_BMS_DEV_NAME },
@@ -306,6 +333,7 @@ static enum power_supply_property msm_bms_power_props[] = {
 	POWER_SUPPLY_PROP_CHARGE_FULL_DESIGN,
 	POWER_SUPPLY_PROP_CHARGE_FULL,
 	POWER_SUPPLY_PROP_CYCLE_COUNT,
+	POWER_SUPPLY_PROP_SOC_UPDATE_REQUEST,
 };
 
 static int discard_backup_fcc_data(struct qpnp_bms_chip *chip);
@@ -765,20 +793,7 @@ static int get_battery_status(struct qpnp_bms_chip *chip)
 
 static bool is_battery_charging(struct qpnp_bms_chip *chip)
 {
-	union power_supply_propval ret = {0,};
-
-	if (chip->batt_psy == NULL)
-		chip->batt_psy = power_supply_get_by_name("battery");
-	if (chip->batt_psy) {
-		/* if battery has been registered, use the status property */
-		chip->batt_psy->get_property(chip->batt_psy,
-					POWER_SUPPLY_PROP_CHARGE_TYPE, &ret);
-		return ret.intval != POWER_SUPPLY_CHARGE_TYPE_NONE;
-	}
-
-	/* Default to false if the battery power supply is not registered. */
-	pr_debug("battery power supply is not registered\n");
-	return false;
+	return get_battery_status(chip) == POWER_SUPPLY_STATUS_CHARGING;
 }
 
 static bool is_battery_full(struct qpnp_bms_chip *chip)
@@ -786,34 +801,9 @@ static bool is_battery_full(struct qpnp_bms_chip *chip)
 	return get_battery_status(chip) == POWER_SUPPLY_STATUS_FULL;
 }
 
-#define BAT_PRES_BIT		BIT(7)
 static bool is_battery_present(struct qpnp_bms_chip *chip)
 {
-	union power_supply_propval ret = {0,};
-	int rc;
-	u8 batt_pres;
-
-	/* first try to use the batt_pres register if given */
-	if (chip->batt_pres_addr) {
-		rc = qpnp_read_wrapper(chip, &batt_pres,
-				chip->batt_pres_addr, 1);
-		if (!rc && (batt_pres & BAT_PRES_BIT))
-			return true;
-		else
-			return false;
-	}
-	if (chip->batt_psy == NULL)
-		chip->batt_psy = power_supply_get_by_name("battery");
-	if (chip->batt_psy) {
-		/* if battery has been registered, use the present property */
-		chip->batt_psy->get_property(chip->batt_psy,
-					POWER_SUPPLY_PROP_PRESENT, &ret);
-		return ret.intval;
-	}
-
-	/* Default to false if the battery power supply is not registered. */
-	pr_debug("battery power supply is not registered\n");
-	return false;
+	return true;
 }
 
 static int get_battery_insertion_ocv_uv(struct qpnp_bms_chip *chip)
@@ -1089,6 +1079,7 @@ static int read_soc_params_raw(struct qpnp_bms_chip *chip,
 	pr_debug("last_good_ocv_raw= 0x%x, last_good_ocv_uv= %duV\n",
 			raw->last_good_ocv_raw, raw->last_good_ocv_uv);
 	pr_debug("cc_raw= 0x%llx\n", raw->cc);
+	chip->somc_params.last_good_ocv_uv = raw->last_good_ocv_uv;
 	return 0;
 }
 
@@ -1300,6 +1291,7 @@ static int calculate_termination_uuc(struct qpnp_bms_chip *chip,
 					uuc_rbatt_mohm, unusable_uv,
 					pc_unusable, i, uuc_uah);
 	*ret_pc_unusable = pc_unusable;
+	chip->somc_params.pc_unusable_original = pc_unusable;
 	return uuc_uah;
 }
 
@@ -1807,8 +1799,7 @@ static int report_cc_based_soc(struct qpnp_bms_chip *chip)
 	calculate_delta_time(&last_change_sec, &time_since_last_change_sec);
 
 	charging = is_battery_charging(chip);
-	charging_since_last_report = charging || (chip->last_soc_unbound
-			&& chip->was_charging_at_sleep);
+	charging_since_last_report = charging;
 	/*
 	 * account for charge time - limit it to SOC_CATCHUP_SEC to
 	 * avoid overflows when charging continues for extended periods
@@ -1877,6 +1868,11 @@ static int report_cc_based_soc(struct qpnp_bms_chip *chip)
 			soc = chip->last_soc + soc_change;
 	}
 
+	if (chip->somc_params.done_adjust_soc_params) {
+		soc = chip->calculated_soc;
+		chip->somc_params.done_adjust_soc_params = false;
+	}
+
 	if (chip->last_soc != soc && !chip->last_soc_unbound)
 		chip->last_soc_change_sec = last_change_sec;
 
@@ -1913,6 +1909,11 @@ static int charging_adjustments(struct qpnp_bms_chip *chip,
 	int chg_soc, soc_ibat, batt_terminal_uv, weight_ibat, weight_cc;
 
 	batt_terminal_uv = vbat_uv + (ibat_ua * chip->r_conn_mohm) / 1000;
+
+	if (chip->somc_params.soc_update_request) {
+		chip->soc_at_cv = -EINVAL;
+		chip->prev_chg_soc = -EINVAL;
+	}
 
 	if (chip->soc_at_cv == -EINVAL) {
 		if (batt_terminal_uv >= chip->max_voltage_uv - VDD_MAX_ERR) {
@@ -2213,6 +2214,48 @@ static int clamp_soc_based_on_voltage(struct qpnp_bms_chip *chip, int soc)
 	}
 }
 
+static int clamp_soc_based_on_voltage_with_max_count(struct qpnp_bms_chip *chip,
+							int soc)
+{
+	int rc, vbat_uv;
+	bool force = false;
+	int new_soc = soc;
+	struct qpnp_somc_params *sp = &chip->somc_params;
+
+	rc = get_battery_voltage(chip, &vbat_uv);
+	if (rc < 0) {
+		pr_err("adc vbat failed err = %d\n", rc);
+		goto out;
+	}
+
+	pr_debug("soc = %d, vbat = %d uV\n", soc, vbat_uv);
+
+	if (vbat_uv < chip->v_cutoff_uv) {
+		if (++sp->clamp_soc_count >= sp->clamp_soc_max_count) {
+			pr_info("Forced soc to 0 " \
+				"since detected low battery %d times.\n",
+				sp->clamp_soc_count);
+			force = true;
+		}
+	} else {
+		force = false;
+		sp->clamp_soc_count = 0;
+	}
+
+	if (soc <= 0 && !force) {
+		new_soc = 1;
+		pr_info("clamping soc to 1, vbat (%d) > cutoff (%d)\n",
+						vbat_uv, chip->v_cutoff_uv);
+	} else if (force) {
+		new_soc = 0;
+		pr_info("forcing soc to 0, vbat (%d) < cutoff (%d)\n",
+						vbat_uv, chip->v_cutoff_uv);
+	}
+
+out:
+	return new_soc;
+}
+
 static int64_t convert_cc_uah_to_raw(struct qpnp_bms_chip *chip, int64_t cc_uah)
 {
 	int64_t cc_uv, cc_pvh, cc_raw;
@@ -2319,6 +2362,8 @@ static int calculate_raw_soc(struct qpnp_bms_chip *chip,
 	soc = DIV_ROUND_CLOSEST((remaining_usable_charge_uah * 100),
 				(params->fcc_uah - params->uuc_uah));
 
+	chip->somc_params.soc_original = soc;
+
 	if (chip->first_time_calc_soc && soc > BAD_SOC_THRESH && soc < 0) {
 		/*
 		 * first time calcualtion and the pon ocv  is too low resulting
@@ -2388,8 +2433,9 @@ static int calculate_state_of_charge(struct qpnp_bms_chip *chip,
 	mutex_lock(&chip->soc_invalidation_mutex);
 	shutdown_soc = chip->shutdown_soc;
 
-	if (chip->first_time_calc_soc && soc != shutdown_soc
-			&& !chip->shutdown_soc_invalid) {
+	if ((chip->first_time_calc_soc && soc != shutdown_soc
+			&& !chip->shutdown_soc_invalid) ||
+			chip->somc_params.soc_update_request) {
 		/*
 		 * soc for the first time - use shutdown soc
 		 * to adjust pon ocv since it is a small percent away from
@@ -2419,8 +2465,14 @@ static int calculate_state_of_charge(struct qpnp_bms_chip *chip,
 	new_calculated_soc = adjust_soc(chip, &params, soc, batt_temp);
 
 	/* always clamp soc due to BMS hw/sw immaturities */
-	new_calculated_soc = clamp_soc_based_on_voltage(chip,
+	if (chip->somc_params.clamp_soc_max_count != 0)
+		new_calculated_soc =
+			 clamp_soc_based_on_voltage_with_max_count(chip,
+						new_calculated_soc);
+	else
+		new_calculated_soc = clamp_soc_based_on_voltage(chip,
 					new_calculated_soc);
+
 	/*
 	 * If the battery is full, configure the cc threshold so the system
 	 * wakes up after SoC changes
@@ -2436,6 +2488,10 @@ done_calculating:
 	mutex_lock(&chip->last_soc_mutex);
 	previous_soc = chip->calculated_soc;
 	chip->calculated_soc = new_calculated_soc;
+	if (chip->somc_params.soc_update_request) {
+		chip->somc_params.soc_update_request = false;
+		chip->somc_params.done_adjust_soc_params = true;
+	}
 	pr_debug("CC based calculated SOC = %d\n", chip->calculated_soc);
 	if (chip->last_soc_invalid) {
 		chip->last_soc_invalid = false;
@@ -2459,7 +2515,8 @@ done_calculating:
 	mutex_unlock(&chip->last_soc_mutex);
 	wake_up_interruptible(&chip->bms_wait_queue);
 
-	if (new_calculated_soc != previous_soc && chip->bms_psy_registered) {
+	if ((new_calculated_soc != previous_soc && chip->bms_psy_registered)
+			|| chip->somc_params.output_batt_log) {
 		power_supply_changed(&chip->bms_psy);
 		pr_debug("power supply changed\n");
 	} else {
@@ -3392,9 +3449,46 @@ static int qpnp_bms_power_get_property(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_CYCLE_COUNT:
 		val->intval = chip->charge_cycles;
 		break;
+	case POWER_SUPPLY_PROP_SOC_UPDATE_REQUEST:
+		val->intval = chip->somc_params.soc_update_request_once;
+		break;
 	default:
 		return -EINVAL;
 	}
+	return 0;
+}
+
+#define SOC_MAX 100
+static int qpnp_bms_power_set_property(struct power_supply *psy,
+					enum power_supply_property psp,
+					const union power_supply_propval *val)
+{
+	struct qpnp_bms_chip *chip = container_of(psy, struct qpnp_bms_chip,
+							bms_psy);
+
+	if (psp == POWER_SUPPLY_PROP_SOC_UPDATE_REQUEST) {
+		pr_debug("soc update request\n");
+		if (chip->somc_params.soc_update_request_once)
+			goto out;
+		chip->somc_params.soc_update_request_once = true;
+
+		if (val->intval == 1 &&
+			!chip->shutdown_soc_invalid &&
+			chip->shutdown_soc << 1 <= SOC_MAX) {
+			chip->shutdown_soc =
+				bound_soc(chip->shutdown_soc << 1);
+			pr_debug("update shutdown_soc to %d\n",
+						chip->shutdown_soc);
+
+			cancel_delayed_work_sync(
+				&chip->calculate_soc_delayed_work);
+			chip->somc_params.soc_update_request = true;
+			schedule_delayed_work(
+				&chip->calculate_soc_delayed_work, 0);
+		}
+	}
+
+out:
 	return 0;
 }
 
@@ -3783,6 +3877,8 @@ static inline int bms_read_properties(struct qpnp_bms_chip *chip)
 			"ocv-voltage-low-threshold-uv", rc);
 	SPMI_PROP_READ(low_voltage_threshold, "low-voltage-threshold", rc);
 	SPMI_PROP_READ(temperature_margin, "tm-temp-margin", rc);
+	SPMI_PROP_READ(somc_params.clamp_soc_max_count,
+			"clamp-soc-max-count", rc);
 
 	chip->use_external_rsense = of_property_read_bool(
 			chip->spmi->dev.of_node,
@@ -4149,6 +4245,241 @@ static int setup_die_temp_monitoring(struct qpnp_bms_chip *chip)
 	return 0;
 }
 
+enum {
+	SHUTDOWN_SOC_INVALID = 0,
+	SHUTDOWN_SOC,
+	SHUTDOWN_IAVG_MA,
+	PREV_LAST_GOOD_OCV_RAW,
+	LAST_OCV_UV,
+	LAST_CC_UAH,
+	LAST_SOC,
+	LAST_SOC_EST,
+	VADC_V0625,
+	VADC_V1250,
+	PREV_UUC_IAVG_MA,
+	PREV_PC_UNUSABLE,
+	IBAT_AT_CV_UA,
+	SOC_AT_CV,
+	PREV_CHG_SOC,
+	CALCULATED_SOC,
+	LAST_GOOD_OCV_UV,
+	PC_UNUSABLE_ORIGINAL,
+	SOC_ORIGINAL,
+	CC_RAW_DIRECT,
+	CC_RAW,
+	V_CUTOFF_UV,
+	OUTPUT_BATT_LOG,
+	FCC_NEW_MAH,
+	FCC_SAMPLES,
+};
+
+static ssize_t qpnp_bms_param_show(struct device *dev,
+				struct device_attribute *attr,
+				char *buf);
+
+static ssize_t qpnp_bms_param_store(struct device *dev,
+				struct device_attribute *attr,
+				const char *buf, size_t count);
+
+static struct device_attribute qpnp_bms_attrs[] = {
+	__ATTR(shutdown_soc_invalid, S_IRUGO, qpnp_bms_param_show, NULL),
+	__ATTR(shutdown_soc, S_IRUGO, qpnp_bms_param_show, NULL),
+	__ATTR(shutdown_iavg_ma, S_IRUGO, qpnp_bms_param_show, NULL),
+	__ATTR(prev_last_good_ocv_raw, S_IRUGO, qpnp_bms_param_show, NULL),
+	__ATTR(last_ocv_uv, S_IRUGO, qpnp_bms_param_show, NULL),
+	__ATTR(last_cc_uah, S_IRUGO, qpnp_bms_param_show, NULL),
+	__ATTR(last_soc, S_IRUGO, qpnp_bms_param_show, NULL),
+	__ATTR(last_soc_est, S_IRUGO, qpnp_bms_param_show, NULL),
+	__ATTR(vadc_v0625, S_IRUGO, qpnp_bms_param_show, NULL),
+	__ATTR(vadc_v1250, S_IRUGO, qpnp_bms_param_show, NULL),
+	__ATTR(prev_uuc_iavg_ma, S_IRUGO, qpnp_bms_param_show, NULL),
+	__ATTR(prev_pc_unusable, S_IRUGO, qpnp_bms_param_show, NULL),
+	__ATTR(ibat_at_cv_ua, S_IRUGO, qpnp_bms_param_show, NULL),
+	__ATTR(soc_at_cv, S_IRUGO, qpnp_bms_param_show, NULL),
+	__ATTR(prev_chg_soc, S_IRUGO, qpnp_bms_param_show, NULL),
+	__ATTR(calculated_soc, S_IRUGO, qpnp_bms_param_show, NULL),
+	__ATTR(last_good_ocv_uv, S_IRUGO, qpnp_bms_param_show, NULL),
+	__ATTR(pc_unusable_original, S_IRUGO, qpnp_bms_param_show, NULL),
+	__ATTR(soc_original, S_IRUGO, qpnp_bms_param_show, NULL),
+	__ATTR(cc_raw_direct, S_IRUGO, qpnp_bms_param_show, NULL),
+	__ATTR(cc_raw, S_IRUGO, qpnp_bms_param_show, NULL),
+	__ATTR(v_cutoff_uv, S_IRUGO|S_IWUSR, qpnp_bms_param_show,
+						qpnp_bms_param_store),
+	__ATTR(output_batt_log, S_IRUGO|S_IWUSR, qpnp_bms_param_show,
+						qpnp_bms_param_store),
+	__ATTR(fcc_new_mah, S_IRUGO, qpnp_bms_param_show, NULL),
+	__ATTR(fcc_samples, S_IRUGO, qpnp_bms_param_show, NULL),
+};
+
+static ssize_t qpnp_bms_param_show(struct device *dev,
+				struct device_attribute *attr,
+				char *buf)
+{
+	int rc;
+	int64_t cc;
+	ssize_t size = 0;
+	const ptrdiff_t off = attr - qpnp_bms_attrs;
+	struct qpnp_bms_chip *chip = dev_get_drvdata(dev);
+	int i;
+
+	switch (off) {
+	case SHUTDOWN_SOC_INVALID:
+		size = scnprintf(buf, PAGE_SIZE, "%d\n",
+				chip->shutdown_soc_invalid);
+		break;
+	case SHUTDOWN_SOC:
+		size = scnprintf(buf, PAGE_SIZE, "%d\n", chip->shutdown_soc);
+		break;
+	case SHUTDOWN_IAVG_MA:
+		size = scnprintf(buf, PAGE_SIZE, "%d\n",
+				chip->shutdown_iavg_ma);
+		break;
+	case PREV_LAST_GOOD_OCV_RAW:
+		size = scnprintf(buf, PAGE_SIZE, "%d\n",
+				chip->prev_last_good_ocv_raw);
+		break;
+	case LAST_OCV_UV:
+		size = scnprintf(buf, PAGE_SIZE, "%d\n", chip->last_ocv_uv);
+		break;
+	case LAST_CC_UAH:
+		size = scnprintf(buf, PAGE_SIZE, "%d\n", chip->last_cc_uah);
+		break;
+	case LAST_SOC:
+		size = scnprintf(buf, PAGE_SIZE, "%d\n", chip->last_soc);
+		break;
+	case LAST_SOC_EST:
+		size = scnprintf(buf, PAGE_SIZE, "%d\n", chip->last_soc_est);
+		break;
+	case VADC_V0625:
+		size = scnprintf(buf, PAGE_SIZE, "%d\n", chip->vadc_v0625);
+		break;
+	case VADC_V1250:
+		size = scnprintf(buf, PAGE_SIZE, "%d\n", chip->vadc_v1250);
+		break;
+	case PREV_UUC_IAVG_MA:
+		size = scnprintf(buf, PAGE_SIZE, "%d\n",
+				chip->prev_uuc_iavg_ma);
+		break;
+	case PREV_PC_UNUSABLE:
+		size = scnprintf(buf, PAGE_SIZE, "%d\n",
+				chip->prev_pc_unusable);
+		break;
+	case IBAT_AT_CV_UA:
+		size = scnprintf(buf, PAGE_SIZE, "%d\n", chip->ibat_at_cv_ua);
+		break;
+	case SOC_AT_CV:
+		size = scnprintf(buf, PAGE_SIZE, "%d\n", chip->soc_at_cv);
+		break;
+	case PREV_CHG_SOC:
+		size = scnprintf(buf, PAGE_SIZE, "%d\n", chip->prev_chg_soc);
+		break;
+	case CALCULATED_SOC:
+		size = scnprintf(buf, PAGE_SIZE, "%d\n", chip->calculated_soc);
+		break;
+	case LAST_GOOD_OCV_UV:
+		size = scnprintf(buf, PAGE_SIZE, "%d\n",
+				chip->somc_params.last_good_ocv_uv);
+		break;
+	case PC_UNUSABLE_ORIGINAL:
+		size = scnprintf(buf, PAGE_SIZE, "%d\n",
+				chip->somc_params.pc_unusable_original);
+		break;
+	case SOC_ORIGINAL:
+		size = scnprintf(buf, PAGE_SIZE, "%d\n",
+				chip->somc_params.soc_original);
+		break;
+	case CC_RAW_DIRECT:
+		rc = read_cc_raw(chip, &cc, CC);
+		if (!rc)
+			size = scnprintf(buf, PAGE_SIZE, "%lld\n", cc);
+		break;
+	case CC_RAW:
+		size = scnprintf(buf, PAGE_SIZE, "%lld\n",
+				chip->somc_params.cc_raw);
+		break;
+	case V_CUTOFF_UV:
+		size = scnprintf(buf, PAGE_SIZE, "%d\n", chip->v_cutoff_uv);
+		break;
+	case OUTPUT_BATT_LOG:
+		size = scnprintf(buf, PAGE_SIZE, "%d\n",
+				chip->somc_params.output_batt_log);
+		break;
+	case FCC_NEW_MAH:
+		size = scnprintf(buf, PAGE_SIZE, "%d\n", chip->fcc_new_mah);
+		break;
+	case FCC_SAMPLES:
+		for (i = 0; i < chip->min_fcc_learning_samples &&
+			size < PAGE_SIZE; i++)
+			size += scnprintf(buf + size,
+					PAGE_SIZE - size, "%d/",
+					chip->fcc_learning_samples[i].fcc_new);
+		break;
+	default:
+		size = 0;
+		break;
+	}
+
+	return size;
+}
+
+static ssize_t qpnp_bms_param_store(struct device *dev,
+				struct device_attribute *attr,
+				const char *buf, size_t count)
+{
+	const ptrdiff_t off = attr - qpnp_bms_attrs;
+	struct qpnp_bms_chip *chip = dev_get_drvdata(dev);
+	int ret;
+	unsigned long val;
+
+	switch (off) {
+	case V_CUTOFF_UV:
+		ret = kstrtoint(buf, 10, &chip->v_cutoff_uv);
+		if (ret) {
+			pr_err("kstrtoul failed: %d\n", ret);
+			return ret;
+		}
+		break;
+	case OUTPUT_BATT_LOG:
+		if (kstrtoul(buf, 2, &val))
+			return -EINVAL;
+
+		val == 0 ? (chip->somc_params.output_batt_log = 0) :
+			(chip->somc_params.output_batt_log = 1);
+		break;
+	default:
+		break;
+	}
+
+	return count;
+}
+
+static int create_sysfs_entries(struct qpnp_bms_chip *chip)
+{
+	int i, rc;
+
+	for (i = 0; i < ARRAY_SIZE(qpnp_bms_attrs); i++) {
+		rc = device_create_file(chip->dev, &qpnp_bms_attrs[i]);
+		if (rc < 0)
+			goto revert;
+	}
+
+	return 0;
+
+revert:
+	for (; i >= 0; i--)
+		device_remove_file(chip->dev, &qpnp_bms_attrs[i]);
+
+	return rc;
+}
+
+static void remove_sysfs_entries(struct qpnp_bms_chip *chip)
+{
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(qpnp_bms_attrs); i++)
+		device_remove_file(chip->dev, &qpnp_bms_attrs[i]);
+}
+
 static int __devinit qpnp_bms_probe(struct spmi_device *spmi)
 {
 	struct qpnp_bms_chip *chip;
@@ -4305,6 +4636,9 @@ static int __devinit qpnp_bms_probe(struct spmi_device *spmi)
 	chip->bms_psy.properties = msm_bms_power_props;
 	chip->bms_psy.num_properties = ARRAY_SIZE(msm_bms_power_props);
 	chip->bms_psy.get_property = qpnp_bms_power_get_property;
+	chip->bms_psy.set_property = qpnp_bms_power_set_property;
+	chip->bms_psy.property_is_writeable =
+			qpnp_bms_property_is_writeable;
 	chip->bms_psy.external_power_changed =
 		qpnp_bms_external_power_changed;
 	chip->bms_psy.supplied_to = qpnp_bms_supplicants;
@@ -4332,6 +4666,10 @@ static int __devinit qpnp_bms_probe(struct spmi_device *spmi)
 		goto unregister_dc;
 	}
 
+	rc = create_sysfs_entries(chip);
+	if (rc < 0)
+		pr_err("sysfs create failed rc = %d\n", rc);
+
 	pr_info("probe success: soc =%d vbatt = %d ocv = %d r_sense_uohm = %u warm_reset = %d\n",
 			get_prop_bms_capacity(chip), vbatt, chip->last_ocv_uv,
 			chip->r_sense_uohm, warm_reset);
@@ -4352,6 +4690,9 @@ error_read:
 
 static int qpnp_bms_remove(struct spmi_device *spmi)
 {
+	struct qpnp_bms_chip *chip = dev_get_drvdata(&spmi->dev);
+
+	remove_sysfs_entries(chip);
 	dev_set_drvdata(&spmi->dev, NULL);
 	return 0;
 }
@@ -4361,7 +4702,6 @@ static int bms_suspend(struct device *dev)
 	struct qpnp_bms_chip *chip = dev_get_drvdata(dev);
 
 	cancel_delayed_work_sync(&chip->calculate_soc_delayed_work);
-	chip->was_charging_at_sleep = is_battery_charging(chip);
 	return 0;
 }
 
