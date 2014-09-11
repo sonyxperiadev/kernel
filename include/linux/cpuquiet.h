@@ -21,6 +21,7 @@
 
 #include <linux/kobject.h>
 #include <linux/sysfs.h>
+#include <linux/platform_device.h>
 
 #define CPUQUIET_NAME_LEN 16
 
@@ -47,6 +48,11 @@ extern int cpuquiet_wake_cpu(unsigned int cpunumber, bool sync);
 extern int cpuquiet_register_driver(struct cpuquiet_driver *drv);
 extern void cpuquiet_unregister_driver(struct cpuquiet_driver *drv);
 extern int cpuquiet_get_avg_hotplug_latency(void);
+extern int cpuquiet_cpu_up(unsigned int cpunumber, bool sync);
+extern int cpuquiet_cpu_down(unsigned int cpunumber, bool sync);
+extern int cpuquiet_remove_common(struct platform_device *pdev);
+extern int cpuquiet_probe_common(struct platform_device *pdev);
+extern int cpuquiet_probe_common_post(struct platform_device *pdev);
 
 #ifdef CONFIG_CPU_QUIET_STATS
 /* Sysfs support */
