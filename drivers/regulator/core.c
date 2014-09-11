@@ -3,6 +3,7 @@
  *
  * Copyright 2007, 2008 Wolfson Microelectronics PLC.
  * Copyright 2008 SlimLogic Ltd.
+ * Copyright (C) 2013 Sony Mobile Communications AB.
  *
  * Author: Liam Girdwood <lrg@slimlogic.co.uk>
  *
@@ -2418,6 +2419,33 @@ out:
 	return ret;
 }
 EXPORT_SYMBOL_GPL(regulator_set_optimum_mode);
+
+/**
+ * regulator_register_ocp_notification - register ocp notification
+ * @regulator: regulator source
+ * @notification: pointer of client ocp_notification
+ *
+ */
+int regulator_register_ocp_notification(struct regulator *regulator,
+			struct regulator_ocp_notification *notification)
+{
+	struct regulator_dev *rdev = regulator->rdev;
+	int ret;
+
+	mutex_lock(&rdev->mutex);
+
+	/* sanity check */
+	if (!rdev->desc->ops->register_ocp_notification) {
+		ret = -EINVAL;
+		goto out;
+	}
+
+	ret = rdev->desc->ops->register_ocp_notification(rdev, notification);
+out:
+	mutex_unlock(&rdev->mutex);
+	return ret;
+}
+EXPORT_SYMBOL_GPL(regulator_register_ocp_notification);
 
 /**
  * regulator_register_notifier - register regulator event notifier
