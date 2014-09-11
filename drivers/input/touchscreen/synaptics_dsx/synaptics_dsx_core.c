@@ -953,6 +953,7 @@ static int synaptics_rmi4_f11_abs_report(struct synaptics_rmi4_data *rmi4_data,
 			input_report_key(rmi4_data->input_dev, key, 0);
 			input_sync(rmi4_data->input_dev);
 			rmi4_data->wg_sent = true;
+			rmi4_data->block_until_no_finger = true;
 		}
 		return 0;
 	}
@@ -976,6 +977,20 @@ static int synaptics_rmi4_f11_abs_report(struct synaptics_rmi4_data *rmi4_data,
 					!!(data28 & 0x02));
 			input_sync(rmi4_data->input_dev);
 		}
+	}
+
+	if (rmi4_data->block_until_no_finger) {
+		finger = 0;
+		finger_status = 0;
+		while (finger < fingers_supported) {
+			reg_index = finger / 4;
+			finger_shift = (finger % 4) * 2;
+			if ((finger_status_reg[reg_index] >> finger_shift) &
+								MASK_2BIT)
+				return 0;
+			finger++;
+		}
+		rmi4_data->block_until_no_finger = false;
 	}
 
 	mutex_lock(&(rmi4_data->rmi4_report_mutex));
