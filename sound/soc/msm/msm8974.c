@@ -1,5 +1,5 @@
 /* Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
- * Copyright (C) 2013 Sony Mobile Communications AB.
+ * Copyright (C) 2013-2014 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -48,6 +48,7 @@
 
 static int slim0_rx_bit_format = SNDRV_PCM_FORMAT_S16_LE;
 static int hdmi_rx_bit_format = SNDRV_PCM_FORMAT_S16_LE;
+static int mi2s_rx_bit_format = SNDRV_PCM_FORMAT_S16_LE;
 
 #define SAMPLING_RATE_48KHZ 48000
 #define SAMPLING_RATE_96KHZ 96000
@@ -59,9 +60,9 @@ static int msm8974_auxpcm_rate = 8000;
 #define LO_2_SPK_AMP	0x4
 #define LO_4_SPK_AMP	0x8
 
+
 #define I2S_PCM_SEL 1
 #define I2S_PCM_SEL_OFFSET 1
-
 
 #define WCD9XXX_MBHC_DEF_BUTTONS 4
 #define WCD9XXX_MBHC_DEF_RLOADS 5
@@ -78,6 +79,74 @@ static int msm8974_auxpcm_rate = 8000;
 #define EXT_CLASS_AB_DELAY_DELTA 1000
 
 #define NUM_OF_AUXPCM_GPIOS 4
+
+
+#ifdef CONFIG_MACH_SONY_SIRIUS
+#define LPAIF_PRI_MODE_MUXSEL (LPAIF_OFFSET + 0x2C000)
+#define LPAIF_SEC_MODE_MUXSEL (LPAIF_OFFSET + 0x2D000)
+#define LPAIF_TER_MODE_MUXSEL (LPAIF_OFFSET + 0x2E000)
+#define LPAIF_QUAD_MODE_MUXSEL (LPAIF_OFFSET + 0x2F000)
+
+#define GPIO_QUAT_MI2S_SCK   58
+#define GPIO_QUAT_MI2S_WS    59
+#define GPIO_QUAT_MI2S_DATA0 60
+#define GPIO_QUAT_MI2S_DATA1 61
+
+struct request_gpio {
+	unsigned gpio_no;
+	char *gpio_name;
+};
+
+static struct request_gpio quat_mi2s_gpio[] = {
+	{
+		.gpio_no = GPIO_QUAT_MI2S_SCK,
+		.gpio_name = "QUAT_MI2S_SCK",
+	},
+	{
+		.gpio_no = GPIO_QUAT_MI2S_WS,
+		.gpio_name = "QUAT_MI2S_WS",
+	},
+
+	{
+		.gpio_no = GPIO_QUAT_MI2S_DATA0,
+		.gpio_name = "QUAT_MI2S_DATA0",
+	},
+	{
+		.gpio_no = GPIO_QUAT_MI2S_DATA1,
+		.gpio_name = "QUAT_MI2S_DATA1",
+	},
+};
+
+/* MI2S clock */
+struct mi2s_clk {
+	struct clk *core_clk;
+	struct clk *osr_clk;
+	struct clk *bit_clk;
+	atomic_t mi2s_rsc_ref;
+};
+
+static struct mi2s_clk quat_mi2s_clk;
+
+static struct afe_clk_cfg lpass_mi2s_enable = {
+	AFE_API_VERSION_I2S_CONFIG,
+	Q6AFE_LPASS_IBIT_CLK_1_P536_MHZ,
+	Q6AFE_LPASS_OSR_CLK_12_P288_MHZ,
+	Q6AFE_LPASS_CLK_SRC_INTERNAL,
+	Q6AFE_LPASS_CLK_ROOT_DEFAULT,
+	Q6AFE_LPASS_MODE_BOTH_VALID,
+	0,
+};
+
+static struct afe_clk_cfg lpass_mi2s_disable = {
+	AFE_API_VERSION_I2S_CONFIG,
+	0,
+	0,
+	Q6AFE_LPASS_CLK_SRC_INTERNAL,
+	Q6AFE_LPASS_CLK_ROOT_DEFAULT,
+	Q6AFE_LPASS_MODE_BOTH_VALID,
+	0,
+};
+#endif
 
 static void *adsp_state_notifier;
 
@@ -123,11 +192,20 @@ static struct wcd9xxx_mbhc_config mbhc_cfg = {
 	.mclk_rate = TAIKO_EXT_CLK_RATE,
 	.gpio = 0,
 	.gpio_irq = 0,
+#ifdef CONFIG_MACH_SONY_SIRIUS
+	.gpio_level_insert = 0,
+#else
 	.gpio_level_insert = 1,
+#endif
 	.detect_extn_cable = true,
 	.micbias_enable_flags = 1 << MBHC_MICBIAS_ENABLE_THRESHOLD_HEADSET,
 	.insert_detect = true,
 	.swap_gnd_mic = NULL,
+#ifdef CONFIG_MACH_SONY_SIRIUS
+	.cs_enable_flags = (1 << MBHC_CS_ENABLE_POLLING |
+			    1 << MBHC_CS_ENABLE_INSERTION |
+			    1 << MBHC_CS_ENABLE_REMOVAL),
+#endif
 	.do_recalibration = true,
 	.use_vddio_meas = true,
 };
@@ -1300,6 +1378,95 @@ static struct snd_soc_ops msm_sec_auxpcm_be_ops = {
 	.shutdown = msm_sec_auxpcm_shutdown,
 };
 
+#ifdef CONFIG_MACH_SONY_SIRIUS
+static int msm8974_configure_quat_mi2s_gpio(void)
+{
+	int ret;
+	int i;
+	for (i = 0; i < ARRAY_SIZE(quat_mi2s_gpio); i++) {
+
+		ret = gpio_request(quat_mi2s_gpio[i].gpio_no,
+				quat_mi2s_gpio[i].gpio_name);
+
+		pr_info("%s: gpio = %d, gpio name = %s, rtn = %d\n", __func__,
+		quat_mi2s_gpio[i].gpio_no, quat_mi2s_gpio[i].gpio_name, ret);
+		gpio_set_value(quat_mi2s_gpio[i].gpio_no, 1);
+
+		if (ret) {
+			pr_err("%s: Failed to request gpio %d\n",
+				__func__, quat_mi2s_gpio[i].gpio_no);
+			while (i >= 0) {
+				gpio_free(quat_mi2s_gpio[i].gpio_no);
+				i--;
+			}
+			break;
+		}
+	}
+
+	return ret;
+}
+
+static int msm8974_quat_mi2s_free_gpios(void)
+{
+	int i;
+	for (i = 0; i < ARRAY_SIZE(quat_mi2s_gpio); i++)
+		gpio_free(quat_mi2s_gpio[i].gpio_no);
+	return 0;
+}
+
+static int msm8974_mi2s_startup(struct snd_pcm_substream *substream)
+{
+	int ret = 0;
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
+	struct snd_soc_dai *codec_dai = rtd->codec_dai;
+
+	pr_info("%s: dai name %s %p\n", __func__, cpu_dai->name, cpu_dai->dev);
+
+	if (atomic_inc_return(&quat_mi2s_clk.mi2s_rsc_ref) == 1) {
+		pr_info("%s: acquire mi2s resources\n", __func__);
+		msm8974_configure_quat_mi2s_gpio();
+		ret = afe_set_lpass_clock(AFE_PORT_ID_QUATERNARY_MI2S_RX,
+						&lpass_mi2s_enable);
+		if (ret < 0) {
+			pr_err("%s: afe_set_lpass_clock failed\n", __func__);
+			return ret;
+		}
+
+		ret = snd_soc_dai_set_fmt(cpu_dai, SND_SOC_DAIFMT_CBS_CFS);
+		if (ret < 0)
+			dev_err(cpu_dai->dev, "set format for CPU dai failed\n");
+
+		ret = snd_soc_dai_set_fmt(codec_dai, SND_SOC_DAIFMT_CBS_CFS);
+		if (ret < 0)
+			dev_err(codec_dai->dev, "set format for codec dai failed\n");
+
+		ret  = 0;
+	}
+	return ret;
+}
+
+static void msm8974_mi2s_shutdown(struct snd_pcm_substream *substream)
+{
+	int ret = 0;
+
+	if (atomic_dec_return(&quat_mi2s_clk.mi2s_rsc_ref) == 0) {
+		pr_info("%s: free mi2s resources\n", __func__);
+		ret = afe_set_lpass_clock(AFE_PORT_ID_QUATERNARY_MI2S_RX,
+						&lpass_mi2s_disable);
+		if (ret < 0)
+			pr_err("%s: afe_set_lpass_clock failed\n", __func__);
+
+		msm8974_quat_mi2s_free_gpios();
+	}
+}
+
+static struct snd_soc_ops msm8974_mi2s_be_ops = {
+	.startup = msm8974_mi2s_startup,
+	.shutdown = msm8974_mi2s_shutdown
+};
+#endif
+
 static int msm_slim_0_rx_be_hw_params_fixup(struct snd_soc_pcm_runtime *rtd,
 					    struct snd_pcm_hw_params *params)
 {
@@ -1389,8 +1556,20 @@ static int msm_be_hw_params_fixup(struct snd_soc_pcm_runtime *rtd,
 	struct snd_interval *rate = hw_param_interval(params,
 					SNDRV_PCM_HW_PARAM_RATE);
 
+#ifdef CONFIG_MACH_SONY_SIRIUS
+	struct snd_interval *channels =
+	    hw_param_interval(params, SNDRV_PCM_HW_PARAM_CHANNELS);
+#endif
+
 	pr_debug("%s()\n", __func__);
+#ifdef CONFIG_MACH_SONY_SIRIUS
+	param_set_mask(params, SNDRV_PCM_HW_PARAM_FORMAT,
+				   mi2s_rx_bit_format);
+#endif
 	rate->min = rate->max = 48000;
+#ifdef CONFIG_MACH_SONY_SIRIUS
+	channels->min = channels->max = 2;
+#endif
 
 	return 0;
 }
@@ -1712,7 +1891,7 @@ void *def_taiko_mbhc_cal(void)
 #undef S
 #define S(X, Y) ((WCD9XXX_MBHC_CAL_PLUG_TYPE_PTR(taiko_cal)->X) = (Y))
 	S(v_no_mic, 50);
-	S(v_hs_max, 2550);
+	S(v_hs_max, 2450);
 #undef S
 #define S(X, Y) ((WCD9XXX_MBHC_CAL_BTN_DET_PTR(taiko_cal)->X) = (Y))
 	S(c[0], 62);
@@ -2262,6 +2441,23 @@ static struct snd_soc_dai_link msm8974_common_dai_links[] = {
 		.ignore_pmdown_time = 1,
 		.be_id = MSM_FRONTEND_DAI_MULTIMEDIA6,
 	},
+#ifdef CONFIG_MACH_SONY_SIRIUS
+	/* Voice Stub For Loopback */
+	{
+		.name = "Voice Stub",
+		.stream_name = "Voice Stub",
+		.cpu_dai_name = "VOICE_STUB",
+		.platform_name = "msm-pcm-hostless",
+		.dynamic = 1,
+		.trigger = {SND_SOC_DPCM_TRIGGER_POST,
+			SND_SOC_DPCM_TRIGGER_POST},
+		.no_host_mode = SND_SOC_DAI_LINK_NO_HOST,
+		.ignore_suspend = 1,
+		.ignore_pmdown_time = 1,
+		.codec_dai_name = "snd-soc-dummy-dai",
+		.codec_name = "snd-soc-dummy",
+	},
+#endif
 	{
 		.name = LPASS_BE_SLIMBUS_4_TX,
 		.stream_name = "Slimbus4 Capture",
@@ -2590,6 +2786,34 @@ static struct snd_soc_dai_link msm8974_common_dai_links[] = {
 		.be_hw_params_fixup = msm_be_hw_params_fixup,
 		.ignore_suspend = 1,
 	},
+#ifdef CONFIG_MACH_SONY_SIRIUS
+	/* MI2S Playback BACK END DAI Link */
+	{
+		.name = LPASS_BE_QUAT_MI2S_RX,
+		.stream_name = "Quaternary MI2S Playback",
+		.cpu_dai_name = "msm-dai-q6-mi2s.3",
+		.platform_name = "msm-pcm-routing",
+		.codec_name     = "tfa98xx-codec.1",
+		.codec_dai_name = "tfa98xx-rx",
+		.no_pcm = 1,
+		.be_id = MSM_BACKEND_DAI_QUATERNARY_MI2S_RX,
+		.be_hw_params_fixup = msm_be_hw_params_fixup,
+		.ops = &msm8974_mi2s_be_ops,
+	},
+	/* MI2S Capture BACK END DAI Link */
+	{
+		.name = LPASS_BE_QUAT_MI2S_TX,
+		.stream_name = "Quaternary MI2S Capture",
+		.cpu_dai_name = "msm-dai-q6-mi2s.3",
+		.platform_name = "msm-pcm-routing",
+		.codec_name     = "msm-stub-codec.1",
+		.codec_dai_name = "msm-stub-tx",
+		.no_pcm = 1,
+		.be_id = MSM_BACKEND_DAI_QUATERNARY_MI2S_TX,
+		.be_hw_params_fixup = msm_be_hw_params_fixup,
+		.ops = &msm8974_mi2s_be_ops,
+	},
+#endif
 };
 
 static struct snd_soc_dai_link msm8974_hdmi_dai_link[] = {
