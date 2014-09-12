@@ -237,6 +237,13 @@ struct cpuquiet_driver *cpuquiet_get_driver(void)
 	return cpuquiet_curr_driver;
 }
 
+int cpuquiet_get_avg_hotplug_latency(void)
+{
+	if (cpuquiet_curr_driver)
+		return cpuquiet_curr_driver->avg_hotplug_latency_ms;
+	return 0;
+}
+
 int cpuquiet_register_driver(struct cpuquiet_driver *drv)
 {
 	int err = 0;
