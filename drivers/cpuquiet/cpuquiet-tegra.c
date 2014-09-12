@@ -28,6 +28,7 @@
 #include <linux/sched.h>
 
 #define DEFAULT_HOTPLUG_DELAY_MS	100
+#define TEGRA_AVG_HOTPLUG_LATENCY_MS	2
 
 static DEFINE_MUTEX(tegra_cpu_lock);
 
@@ -103,9 +104,10 @@ static int tegra_wake_cpu(unsigned int cpunumber, bool sync)
 }
 
 static struct cpuquiet_driver tegra_cpuquiet_driver = {
-	.name		= "tegra",
-	.quiesce_cpu	= tegra_quiesce_cpu,
-	.wake_cpu	= tegra_wake_cpu,
+	.name			= "tegra",
+	.quiesce_cpu		= tegra_quiesce_cpu,
+	.wake_cpu		= tegra_wake_cpu,
+	.avg_hotplug_latency_ms	= TEGRA_AVG_HOTPLUG_LATENCY_US,
 };
 
 static void __cpuinit tegra_cpuquiet_work_func(struct work_struct *work)
