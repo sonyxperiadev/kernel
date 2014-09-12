@@ -18,6 +18,8 @@
 #include <linux/workqueue.h>
 #include <linux/interrupt.h>
 #include <linux/gpio.h>
+#include <linux/kobject.h>
+#include <linux/platform_device.h>
 #include <plat/osabstract/osinterrupt.h>
 #include <plat/osabstract/ostask.h>
 #include <plat/csl/csl_dma_vc4lite.h>
@@ -68,6 +70,8 @@ typedef struct {
 	DISPDRV_INFO_T		*disp_info;
 	bool panel_identified;
 	UInt8 maxRetPktSize;
+	bool send_first_frame_event;
+	struct platform_device *pdev;
 } DispDrv_PANEL_t;
 
 #if 0
@@ -78,7 +82,7 @@ static void DispDrv_WrCmndP0(
 #endif
 
 /* DRV INTERFACE FUNCTIONs */
-static Int32 DSI_Init(DISPDRV_INFO_T *, DISPDRV_HANDLE_T *);
+static Int32 DSI_Init(DISPDRV_INFO_T *, DISPDRV_HANDLE_T *, struct platform_device *);
 
 static Int32 DSI_Exit(DISPDRV_HANDLE_T drvH);
 
@@ -117,6 +121,8 @@ static Int32 DSI_Update(
 
 static Int32 DSI_WinReset(DISPDRV_HANDLE_T drvH);
 
+static void dsi_enable_send_first_frame_event(DISPDRV_HANDLE_T drvH);
+
 static int DSI_ReadReg(DISPDRV_HANDLE_T drvH, UInt8 reg, UInt8 *rxBuff);
 
 static Int32 DSI_DCS_Read(DispDrv_PANEL_t *pPanel,
@@ -141,6 +147,7 @@ static DISPDRV_T disp_drv_dsi = {
 	.update_no_os = &DSI_Atomic_Update,
 	.update = &DSI_Update,
 	.reset_win = &DSI_WinReset,
+	.enable_send_first_frame_event = &dsi_enable_send_first_frame_event,
 };
 
 
@@ -421,6 +428,18 @@ static Int32 DSI_WinReset(DISPDRV_HANDLE_T drvH)
 }
 
 /*
+ * Set flag that we need to send uevent on the next frame update.
+ * Call to this function is protected in kona_fb.c by update-mutex,
+ * so there is no need to protect it here.
+ */
+static void dsi_enable_send_first_frame_event(DISPDRV_HANDLE_T handle)
+{
+	DispDrv_PANEL_t *panel = (DispDrv_PANEL_t *)handle;
+
+	panel->send_first_frame_event = true;
+}
+
+/*
  *
  *   Function Name: hw_reset
  *
@@ -468,12 +487,13 @@ DISPDRV_T *DISP_DRV_GetFuncTable(void)
  *   Description:   Setup / Verify display driver init interface
  *
  */
-static Int32 DSI_Init(DISPDRV_INFO_T *info, DISPDRV_HANDLE_T *handle)
+static Int32 DSI_Init(DISPDRV_INFO_T *info, DISPDRV_HANDLE_T *handle, struct platform_device *pdev)
 {
 	Int32 res = 0;
 	DispDrv_PANEL_t	*pPanel;
 
 	pPanel = &panel[0];
+	pPanel->pdev = pdev;
 
 	if (g_display_enabled)
 		DSI_ERR("Skipping hardware initialisation\n");
@@ -1314,6 +1334,14 @@ static Int32 DSI_Update(
 		DSI_Cb(res, &req.cslLcdCbRec);
 	}
 
+	if (pPanel->send_first_frame_event) {
+		char *envp[2] = {"FIRST FRAME", NULL};
+
+		if (kobject_uevent_env(&pPanel->pdev->dev.kobj, KOBJ_CHANGE,
+									envp))
+			pr_err("%s: Failed to send FIRST FRAME\n", __func__);
+		panel->send_first_frame_event = false;
+	}
 	DSI_DBG("-\n");
 
 	return res;

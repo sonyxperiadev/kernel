@@ -19,6 +19,7 @@
 extern "C" {
 #endif
 
+#include <linux/platform_device.h>
 #include "dsi_timing.h"
 
 /**
@@ -170,7 +171,8 @@ extern "C" {
 *****************************************************************************/
 	typedef struct {
 		Int32(*init) (DISPDRV_INFO_T *display_info,
-			DISPDRV_HANDLE_T *handle);
+			DISPDRV_HANDLE_T *handle,
+			struct platform_device *pdev);
 		Int32(*exit) (DISPDRV_HANDLE_T handle);
 		Int32(*open) (DISPDRV_HANDLE_T handle);
 		Int32(*close) (DISPDRV_HANDLE_T handle);
@@ -187,6 +189,7 @@ extern "C" {
 		Int32(*update) (DISPDRV_HANDLE_T handle, void *buff,
 			DISPDRV_WIN_t *p_win, DISPDRV_CB_T apiCb);
 		Int32(*reset_win) (DISPDRV_HANDLE_T handle);
+		void(*enable_send_first_frame_event) (DISPDRV_HANDLE_T handle);
 	} DISPDRV_T;
 
 #ifdef __cplusplus

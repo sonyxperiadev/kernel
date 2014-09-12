@@ -1006,6 +1006,7 @@ static ssize_t kona_fb_panel_mode_store(struct device *dev,
 				msecs_to_jiffies(
 					fb->fb_data->esdcheck_period_ms));
 
+		fb->display_ops->enable_send_first_frame_event(fb->display_hdl);
 		fb->display_info->special_mode_on = false;
 		fb->blank_state = KONA_FB_UNBLANK;
 		konafb_debug("Special mode OFF\n");
@@ -1416,7 +1417,7 @@ static int enable_display(struct kona_fb *fb)
 {
 	int ret = 0;
 
-	ret = fb->display_ops->init(fb->display_info, &fb->display_hdl);
+	ret = fb->display_ops->init(fb->display_info, &fb->display_hdl, fb->pdev);
 	if (ret != 0) {
 		konafb_error("Failed to init this display device!\n");
 		goto fail_to_init;
