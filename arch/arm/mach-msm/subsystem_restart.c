@@ -1,4 +1,5 @@
 /* Copyright (c) 2011-2013, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2013 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -33,7 +34,8 @@
 #include <linux/miscdevice.h>
 #include <linux/interrupt.h>
 #include <linux/of_gpio.h>
-
+#include <linux/poll.h>
+#include <linux/wait.h>
 #include <asm/current.h>
 
 #include <mach/socinfo.h>
@@ -157,6 +159,10 @@ struct subsys_device {
 	struct subsys_soc_restart_order *restart_order;
 #ifdef CONFIG_DEBUG_FS
 	struct dentry *dentry;
+	struct dentry *reason_dentry;
+	char crash_reason[SUBSYS_CRASH_REASON_LEN];
+	int data_ready;
+	wait_queue_head_t subsys_debug_q;
 #endif
 	bool do_ramdump_on_put;
 	struct miscdevice misc_dev;
@@ -214,6 +220,14 @@ int subsys_get_restart_level(struct subsys_device *dev)
 	return dev->restart_level;
 }
 EXPORT_SYMBOL(subsys_get_restart_level);
+
+void subsys_set_restart_level(struct subsys_device *dev, int new_level)
+{
+	if (new_level == RESET_SOC || new_level == RESET_SUBSYS_COUPLED)
+		dev->restart_level = new_level;
+	else
+		pr_err("Incorrect restart level %d\n", new_level);
+}
 
 static void subsys_set_state(struct subsys_device *subsys,
 			     enum subsys_state state)
@@ -791,6 +805,17 @@ int subsystem_restart(const char *name)
 }
 EXPORT_SYMBOL(subsystem_restart);
 
+int subsystem_crash_reason(const char *name, char *msg)
+{
+	struct subsys_device *dev = find_subsys(name);
+
+	if (!dev)
+		return -ENODEV;
+	update_crash_reason(dev, msg, SUBSYS_CRASH_REASON_LEN);
+	return 0;
+}
+EXPORT_SYMBOL(subsystem_crash_reason);
+
 int subsystem_crashed(const char *name)
 {
 	struct subsys_device *dev = find_subsys(name);
@@ -873,17 +898,70 @@ static const struct file_operations subsys_debugfs_fops = {
 	.write	= subsys_debugfs_write,
 };
 
+void update_crash_reason(struct subsys_device *subsys,
+				char *smem_reason, int size)
+{
+	memcpy(subsys->crash_reason, smem_reason, size);
+	subsys->data_ready = 1;
+	wake_up(&subsys->subsys_debug_q);
+}
+
+static ssize_t subsys_debugfs_reason_read(struct file *filp, char __user *ubuf,
+		size_t cnt, loff_t *ppos)
+{
+	int r;
+	char buf[81];
+	ssize_t size;
+	struct subsys_device *subsys = filp->private_data;
+
+	r = snprintf(buf, sizeof(buf), "%s\n", subsys->crash_reason);
+	size = simple_read_from_buffer(ubuf, cnt, ppos, buf, r);
+	if (*ppos == r) {
+		memset(subsys->crash_reason, 0, sizeof(subsys->crash_reason));
+		subsys->data_ready = 0;
+	}
+
+	return size;
+}
+
+static unsigned int subsys_debugfs_reason_poll(struct file *filp,
+					struct poll_table_struct *wait)
+{
+	struct subsys_device *subsys = filp->private_data;
+	unsigned int mask = 0;
+
+	if (subsys->data_ready)
+		mask |= (POLLIN | POLLRDNORM);
+
+	poll_wait(filp, &subsys->subsys_debug_q, wait);
+	return mask;
+}
+
+static const struct file_operations subsys_debugfs_reason_fops = {
+	.open	= simple_open,
+	.read	= subsys_debugfs_reason_read,
+	.poll   = subsys_debugfs_reason_poll,
+	.llseek  = default_llseek,
+};
+
 static struct dentry *subsys_base_dir;
+static struct dentry *subsys_reason_dir;
 
 static int __init subsys_debugfs_init(void)
 {
 	subsys_base_dir = debugfs_create_dir("msm_subsys", NULL);
+	if (subsys_base_dir)
+		subsys_reason_dir = debugfs_create_dir("crash_reason",
+							subsys_base_dir);
 	return !subsys_base_dir ? -ENOMEM : 0;
 }
 
 static void subsys_debugfs_exit(void)
 {
+	if (subsys_reason_dir)
+		debugfs_remove_recursive(subsys_reason_dir);
 	debugfs_remove_recursive(subsys_base_dir);
+
 }
 
 static int subsys_debugfs_add(struct subsys_device *subsys)
@@ -894,11 +972,16 @@ static int subsys_debugfs_add(struct subsys_device *subsys)
 	subsys->dentry = debugfs_create_file(subsys->desc->name,
 				S_IRUGO | S_IWUSR, subsys_base_dir,
 				subsys, &subsys_debugfs_fops);
+	if (subsys_reason_dir)
+		subsys->reason_dentry = debugfs_create_file(subsys->desc->name,
+				S_IRUGO | S_IWUSR, subsys_reason_dir,
+				subsys, &subsys_debugfs_reason_fops);
 	return !subsys->dentry ? -ENOMEM : 0;
 }
 
 static void subsys_debugfs_remove(struct subsys_device *subsys)
 {
+	debugfs_remove(subsys->reason_dentry);
 	debugfs_remove(subsys->dentry);
 }
 #else
@@ -1153,6 +1236,8 @@ struct subsys_device *subsys_register(struct subsys_desc *desc)
 	ret = subsys_debugfs_add(subsys);
 	if (ret)
 		goto err_debugfs;
+
+	init_waitqueue_head(&subsys->subsys_debug_q);
 
 	ret = device_register(&subsys->dev);
 	if (ret) {

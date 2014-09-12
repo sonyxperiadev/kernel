@@ -1,4 +1,5 @@
 /* Copyright (c) 2011-2013, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2013 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -18,6 +19,7 @@
 #include <linux/interrupt.h>
 
 #define SUBSYS_NAME_MAX_LENGTH 40
+#define SUBSYS_CRASH_REASON_LEN 81
 
 struct subsys_device;
 
@@ -72,6 +74,7 @@ struct subsys_desc {
 #if defined(CONFIG_MSM_SUBSYSTEM_RESTART)
 
 extern int subsys_get_restart_level(struct subsys_device *dev);
+extern void subsys_set_restart_level(struct subsys_device *dev, int new_level);
 extern int subsystem_restart_dev(struct subsys_device *dev);
 extern int subsystem_restart(const char *name);
 extern int subsystem_crashed(const char *name);
@@ -85,14 +88,28 @@ extern void subsys_unregister(struct subsys_device *dev);
 extern void subsys_default_online(struct subsys_device *dev);
 extern void subsys_set_crash_status(struct subsys_device *dev, bool crashed);
 extern bool subsys_get_crash_status(struct subsys_device *dev);
-
+extern void update_crash_reason(struct subsys_device *dev, char *, int);
+extern int subsystem_crash_reason(const char *name, char *reason);
+#if defined(CONFIG_DEBUG_FS)
+extern void update_crash_reason(struct subsys_device *dev, char *, int);
 #else
+static inline void update_crash_reason(struct subsys_device *dev,
+						char *reason, int size) { }
+#endif
+#else
+static inline void update_crash_reason(struct subsys_device *dev,
+						char *reason, int size) { }
 
+static inline int subsystem_crash_reason(const char *name, char *reason)
+{
+	return 0;
+}
 static inline int subsys_get_restart_level(struct subsys_device *dev)
 {
 	return 0;
 }
-
+static inline void subsys_set_restart_level(struct subsys_device *dev,
+						int new_level) {}
 static inline int subsystem_restart_dev(struct subsys_device *dev)
 {
 	return 0;

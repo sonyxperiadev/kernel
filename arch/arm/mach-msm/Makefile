@@ -311,6 +311,9 @@ else ifdef CONFIG_MACH_SONY_HONAMI_ROW
 	obj-$(CONFIG_MACH_SONY_HONAMI_ROW) += board-sony_honami_row-gpiomux.o bms-batterydata-salomon.o
 else ifdef CONFIG_MACH_SONY_AMAMI_ROW
 	obj-$(CONFIG_MACH_SONY_AMAMI_ROW) += board-sony_amami_row-gpiomux.o bms-batterydata-ray.o
+else ifdef CONFIG_MACH_SONY_SIRIUS
+	obj-$(CONFIG_MACH_SONY_SIRIUS) += board-sony_sirius-gpiomux.o board-sony_shinano-nfc.o bms-batterydata-gouf.o
+	obj-$(CONFIG_ARCH_MSM8974) += board-8974-wifi.o
 else
 	obj-$(CONFIG_ARCH_MSM8974) += board-8974-gpiomux.o
 endif

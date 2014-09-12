@@ -55,6 +55,7 @@ endif
    dtb-$(CONFIG_MACH_SONY_TOGARI_ROW)	+= msm8974-v2.2-rhine_togari_row.dtb
    dtb-$(CONFIG_MACH_SONY_AMAMI_ROW)	+= msm8974-v2.0-1-rhine_amami_row.dtb
    dtb-$(CONFIG_MACH_SONY_AMAMI_ROW)	+= msm8974-v2.2-rhine_amami_row.dtb
+   dtb-$(CONFIG_MACH_SONY_SIRIUS)	+= msm8974pro-ab-shinano_sirius.dtb
 
 # APQ8084
    zreladdr-$(CONFIG_ARCH_APQ8084)	:= 0x00008000

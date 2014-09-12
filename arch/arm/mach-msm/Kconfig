@@ -1114,6 +1114,15 @@ config MACH_SONY_AMAMI_ROW
 	  If you enable this config,
 	  Please use SONY Mobile source tree.
 
+config MACH_SONY_SIRIUS
+	depends on ARCH_MSM8974
+	bool "Sony Mobile Sirius"
+	help
+	  Support for the SONY Mobile Sirius device.
+	  It is based on QCOM MSM8974 AB chipset.
+	  If you enable this config,
+	  Please use SONY Mobile source tree.
+
 config MSM_USE_TSIF1
 	depends on ARCH_MSM8X60
 	bool "MSM8x60 use TSIF1"
