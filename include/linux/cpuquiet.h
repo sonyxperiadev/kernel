@@ -37,6 +37,7 @@ struct cpuquiet_driver {
 	char			name[CPUQUIET_NAME_LEN];
 	int (*quiesce_cpu)	(unsigned int cpunumber, bool sync);
 	int (*wake_cpu)		(unsigned int cpunumber, bool sync);
+	int			avg_hotplug_latency_ms;
 };
 
 extern int cpuquiet_register_governor(struct cpuquiet_governor *gov);
@@ -45,6 +46,7 @@ extern int cpuquiet_quiesce_cpu(unsigned int cpunumber, bool sync);
 extern int cpuquiet_wake_cpu(unsigned int cpunumber, bool sync);
 extern int cpuquiet_register_driver(struct cpuquiet_driver *drv);
 extern void cpuquiet_unregister_driver(struct cpuquiet_driver *drv);
+extern int cpuquiet_get_avg_hotplug_latency(void);
 
 #ifdef CONFIG_CPU_QUIET_STATS
 /* Sysfs support */

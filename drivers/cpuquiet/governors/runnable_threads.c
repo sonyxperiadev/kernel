@@ -30,7 +30,7 @@ static struct timer_list runnables_timer;
 
 static bool runnables_enabled;
 /* configurable parameters */
-static unsigned int sample_rate = 20;	  /* msec */
+static unsigned int sample_rate = 200;	  /* msec */
 
 #define NR_FSHIFT_EXP  3
 #define NR_FSHIFT      (1 << NR_FSHIFT_EXP)
@@ -146,8 +146,8 @@ static void runnables_avg_sampler(unsigned long data)
 	}
 
 	nr_run_last = nr_run;
-
 	action = get_action(nr_run);
+
 	if (action != 0)
 		schedule_work(&runnables_work);
 }
@@ -243,7 +243,7 @@ static void runnables_stop(void)
 
 static int runnables_start(void)
 {
-	int i, err;
+	int i, err, arch_specific_sample_rate;
 
 	err = runnables_sysfs_init();
 	if (err)
@@ -253,6 +253,14 @@ static int runnables_start(void)
 
 	init_timer(&runnables_timer);
 	runnables_timer.function = runnables_avg_sampler;
+
+	arch_specific_sample_rate = cpuquiet_get_avg_hotplug_latency();
+	if (arch_specific_sample_rate)
+		/*
+		 * Sample at least 10 times as slowly as overhead for one
+		 * hotplug event.
+		 */
+		sample_rate = arch_specific_sample_rate * 10;
 
 	for (i = 0; i < ARRAY_SIZE(nr_run_thresholds); ++i) {
 		if (i < ARRAY_SIZE(default_thresholds))
