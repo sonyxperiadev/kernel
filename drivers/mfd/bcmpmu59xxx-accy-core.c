@@ -1430,11 +1430,15 @@ int  bcmpmu_get_next_trim_curr(struct bcmpmu59xxx *bcmpmu, int add)
 {
 	int curr;
 	int icc_fc;
+	int next_trim;
 	u8 trim = 0;
 
 	icc_fc = bcmpmu_get_icc_fc(bcmpmu);
 	trim = bcmpmu_get_cc_trim(bcmpmu);
-	curr = ((icc_fc * (trim_to_per[trim + 1].perc + add)) / 100);
+	next_trim = __get_cc_trim_up_reg(trim);
+	if (next_trim < 0)
+		return INT_MAX;
+	curr = ((icc_fc * (trim_to_per[next_trim].perc + add)) / 100);
 
 	return curr;
 }
