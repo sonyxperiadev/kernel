@@ -679,6 +679,13 @@ config NFC_PN544
 	help
 	  This option enables support for PN544.
 
+config NFC_PN547
+	tristate "NFC driver for PN547"
+	default n
+	depends on I2C
+	help
+	  This option enables support for PN547.
+
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"
 source "drivers/misc/cb710/Kconfig"
