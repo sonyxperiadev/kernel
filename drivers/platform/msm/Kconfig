@@ -139,4 +139,11 @@ config POWERKEY_FORCECRASH
 	  qpnp power key. Triggers panic if power key is hold for more
 	  than 10secs.
 
+config MPMTIME
+	tristate "Expose mpm time"
+	default y
+	depends on ARCH_MSM8974
+	help
+	  Expose the time since last power reset in /proc/mpmtime.
+
 endmenu
