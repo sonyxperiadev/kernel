@@ -526,8 +526,8 @@ __initdata DISPCTRL_REC_T nt35310_brooks_cabc_init[] = {
 };
 
 __initdata DISPCTRL_REC_T nt35310_brooks_cabc_on[] = {
-	{DISPCTRL_WR_CMND, 0x55}, /* Moving Mode + Image Enhancement*/
-	{DISPCTRL_WR_DATA, 0x83},
+	{DISPCTRL_WR_CMND, 0x55}, /* Moving Mode */
+	{DISPCTRL_WR_DATA, 0x03},
 };
 
 __initdata DISPCTRL_REC_T nt35310_brooks_cabc_off[] = {
