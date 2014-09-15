@@ -5,7 +5,7 @@
  *  Copyright © 2007  Anton Vorontsov <cbou@mail.ru>
  *  Copyright © 2004  Szabolcs Gyurko
  *  Copyright © 2003  Ian Molton <spyro@f2s.com>
- *  Copyright (C) 2013-2014 Sony Mobile Communications AB.
+ *  Copyright (C) 2013 Sony Mobile Communications AB.
  *
  *  Modified: 2004, Oct     Szabolcs Gyurko
  *
@@ -46,7 +46,7 @@ static ssize_t power_supply_show_property(struct device *dev,
 					  char *buf) {
 	static char *type_text[] = {
 		"Unknown", "Battery", "UPS", "Mains", "USB",
-		"USB_DCP", "USB_CDP", "USB_ACA"
+		"USB_DCP", "USB_CDP", "USB_ACA", "Wireless"
 	};
 	static char *status_text[] = {
 		"Unknown", "Charging", "Discharging", "Not charging", "Full"
@@ -187,8 +187,8 @@ static struct device_attribute power_supply_attrs[] = {
 	POWER_SUPPLY_ATTR(scope),
 	POWER_SUPPLY_ATTR(system_temp_level),
 	POWER_SUPPLY_ATTR(resistance),
-	POWER_SUPPLY_ATTR(enable_stop_charging_at_low_battery),
-	POWER_SUPPLY_ATTR(soc_update_request),
+	POWER_SUPPLY_ATTR(enable_shutdown_at_low_battery),
+	POWER_SUPPLY_ATTR(batt_aging),
 	/* Properties of type `const char *' */
 	POWER_SUPPLY_ATTR(model_name),
 	POWER_SUPPLY_ATTR(manufacturer),
