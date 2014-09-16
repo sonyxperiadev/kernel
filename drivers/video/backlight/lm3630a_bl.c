@@ -403,6 +403,77 @@ static const struct regmap_config lm3630a_regmap = {
 	.max_register = REG_MAX,
 };
 
+static ssize_t lm3630a_ramp_onoff_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	int rval;
+	struct i2c_client *client;
+	struct lm3630a_chip *pchip;
+
+	client = container_of(dev, struct i2c_client, dev);
+	pchip = i2c_get_clientdata(client);
+
+	if (!pchip)
+		return -ENODEV;
+	rval = lm3630a_read(pchip, REG_ON_OFF_RAMP);
+	if (rval < 0)
+		return rval;
+	return scnprintf(buf, PAGE_SIZE, "%d\n", rval);
+}
+
+static ssize_t lm3630a_ramp_onoff_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	int ret;
+	struct i2c_client *client;
+	struct lm3630a_chip *pchip;
+	uint8_t val;
+
+	client = container_of(dev, struct i2c_client, dev);
+	pchip = i2c_get_clientdata(client);
+
+	if (!pchip)
+		return -ENODEV;
+
+	if (sscanf(buf, "%hhu", &val) != 1) {
+		dev_err(pchip->dev, "Error, buf = %s\n", buf);
+		return -EINVAL;
+	}
+
+	ret = lm3630a_write(pchip, REG_ON_OFF_RAMP, val);
+	if (ret < 0) {
+		dev_err(pchip->dev, "i2c error (%d)\n", ret);
+		return ret;
+	}
+	return count;
+}
+
+static struct device_attribute lm3630a_attributes[] = {
+	__ATTR(ramp_onoff, S_IRUGO|S_IWUSR|S_IWGRP, lm3630a_ramp_onoff_show,
+						lm3630a_ramp_onoff_store),
+};
+
+static int register_attributes(struct device *dev)
+{
+	int i;
+	for (i = 0; i < ARRAY_SIZE(lm3630a_attributes); i++)
+		if (device_create_file(dev, lm3630a_attributes + i))
+			goto error;
+	return 0;
+error:
+	dev_err(dev, "%s: Unable to create interface\n", __func__);
+	for (--i; i >= 0; i--)
+		device_remove_file(dev, lm3630a_attributes + i);
+	return -ENODEV;
+}
+
+static void remove_attributes(struct device *dev)
+{
+	int i;
+	for (i = 0; i < ARRAY_SIZE(lm3630a_attributes); i++)
+		device_remove_file(dev, lm3630a_attributes + i);
+}
+
 static int lm3630a_probe(struct i2c_client *client,
 			 const struct i2c_device_id *id)
 {
@@ -474,6 +545,11 @@ static int lm3630a_probe(struct i2c_client *client,
 	if (pdata->ledb_ctrl != LM3630A_LEDB_DISABLE)
 		lm3630a_bank_b_update_status(pchip->bledb);
 
+	rval = register_attributes(&client->dev);
+	if (rval)
+		dev_err(&client->dev, "%s: failed to register attributes\n",
+								__func__);
+
 	return 0;
 }
 
@@ -482,6 +558,7 @@ static int lm3630a_remove(struct i2c_client *client)
 	int rval;
 	struct lm3630a_chip *pchip = i2c_get_clientdata(client);
 
+	remove_attributes(pchip->dev);
 	rval = lm3630a_write(pchip, REG_BRT_A, 0);
 	if (rval < 0)
 		dev_err(pchip->dev, "i2c failed to access register\n");
