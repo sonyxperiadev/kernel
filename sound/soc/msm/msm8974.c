@@ -81,7 +81,7 @@ static int msm8974_auxpcm_rate = 8000;
 #define NUM_OF_AUXPCM_GPIOS 4
 
 
-#ifdef CONFIG_MACH_SONY_SIRIUS
+#ifdef CONFIG_MACH_SONY_SHINANO
 #define LPAIF_PRI_MODE_MUXSEL (LPAIF_OFFSET + 0x2C000)
 #define LPAIF_SEC_MODE_MUXSEL (LPAIF_OFFSET + 0x2D000)
 #define LPAIF_TER_MODE_MUXSEL (LPAIF_OFFSET + 0x2E000)
@@ -192,7 +192,7 @@ static struct wcd9xxx_mbhc_config mbhc_cfg = {
 	.mclk_rate = TAIKO_EXT_CLK_RATE,
 	.gpio = 0,
 	.gpio_irq = 0,
-#ifdef CONFIG_MACH_SONY_SIRIUS
+#ifdef CONFIG_MACH_SONY_SHINANO
 	.gpio_level_insert = 0,
 #else
 	.gpio_level_insert = 1,
@@ -201,7 +201,7 @@ static struct wcd9xxx_mbhc_config mbhc_cfg = {
 	.micbias_enable_flags = 1 << MBHC_MICBIAS_ENABLE_THRESHOLD_HEADSET,
 	.insert_detect = true,
 	.swap_gnd_mic = NULL,
-#ifdef CONFIG_MACH_SONY_SIRIUS
+#ifdef CONFIG_MACH_SONY_SHINANO
 	.cs_enable_flags = (1 << MBHC_CS_ENABLE_POLLING |
 			    1 << MBHC_CS_ENABLE_INSERTION |
 			    1 << MBHC_CS_ENABLE_REMOVAL),
@@ -1378,7 +1378,7 @@ static struct snd_soc_ops msm_sec_auxpcm_be_ops = {
 	.shutdown = msm_sec_auxpcm_shutdown,
 };
 
-#ifdef CONFIG_MACH_SONY_SIRIUS
+#ifdef CONFIG_MACH_SONY_SHINANO
 static int msm8974_configure_quat_mi2s_gpio(void)
 {
 	int ret;
@@ -1556,18 +1556,18 @@ static int msm_be_hw_params_fixup(struct snd_soc_pcm_runtime *rtd,
 	struct snd_interval *rate = hw_param_interval(params,
 					SNDRV_PCM_HW_PARAM_RATE);
 
-#ifdef CONFIG_MACH_SONY_SIRIUS
+#ifdef CONFIG_MACH_SONY_SHINANO
 	struct snd_interval *channels =
 	    hw_param_interval(params, SNDRV_PCM_HW_PARAM_CHANNELS);
 #endif
 
 	pr_debug("%s()\n", __func__);
-#ifdef CONFIG_MACH_SONY_SIRIUS
+#ifdef CONFIG_MACH_SONY_SHINANO
 	param_set_mask(params, SNDRV_PCM_HW_PARAM_FORMAT,
 				   mi2s_rx_bit_format);
 #endif
 	rate->min = rate->max = 48000;
-#ifdef CONFIG_MACH_SONY_SIRIUS
+#ifdef CONFIG_MACH_SONY_SHINANO
 	channels->min = channels->max = 2;
 #endif
 
@@ -2441,7 +2441,7 @@ static struct snd_soc_dai_link msm8974_common_dai_links[] = {
 		.ignore_pmdown_time = 1,
 		.be_id = MSM_FRONTEND_DAI_MULTIMEDIA6,
 	},
-#ifdef CONFIG_MACH_SONY_SIRIUS
+#ifdef CONFIG_MACH_SONY_SHINANO
 	/* Voice Stub For Loopback */
 	{
 		.name = "Voice Stub",
@@ -2786,7 +2786,7 @@ static struct snd_soc_dai_link msm8974_common_dai_links[] = {
 		.be_hw_params_fixup = msm_be_hw_params_fixup,
 		.ignore_suspend = 1,
 	},
-#ifdef CONFIG_MACH_SONY_SIRIUS
+#ifdef CONFIG_MACH_SONY_SHINANO
 	/* MI2S Playback BACK END DAI Link */
 	{
 		.name = LPASS_BE_QUAT_MI2S_RX,
