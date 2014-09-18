@@ -6186,8 +6186,10 @@ msmsdcc_probe(struct platform_device *pdev)
 		mmc->pm_flags |= MMC_PM_IGNORE_PM_NOTIFY;
 
 	if (plat->use_for_wifi) {
+#ifdef CONFIG_MACH_SONY_SHINANO
 		plat->register_status_notify = shinano_wifi_status_register;
 		plat->status = shinano_wifi_status;
+#endif
 		mmc->pm_caps |= MMC_PM_IGNORE_PM_NOTIFY;
 		mmc->pm_flags |= mmc->pm_caps;
 	}
