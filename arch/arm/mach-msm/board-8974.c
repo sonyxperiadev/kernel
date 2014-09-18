@@ -49,8 +49,7 @@
 #include "modem_notifier.h"
 #include "platsmp.h"
 
-#if (defined(CONFIG_MACH_SONY_SIRIUS) || defined(CONFIG_MACH_SONY_CASTOR) || defined(CONFIG_MACH_SONY_CASTOR_WINDY)) && \
-    (defined(CONFIG_BCMDHD) || defined(CONFIG_BCMDHD_MODULE))
+#if defined(CONFIG_MACH_SONY_SHINANO) && (defined(CONFIG_BCMDHD) || defined(CONFIG_BCMDHD_MODULE))
 #include "board-8974-wifi.h"
 #endif
 
@@ -110,8 +109,7 @@ void __init msm8974_add_drivers(void)
 		msm_clock_init(&msm8974_clock_init_data);
 	tsens_tm_init_driver();
 	msm_thermal_device_init();
-#if (defined(CONFIG_MACH_SONY_SIRIUS) || defined(CONFIG_MACH_SONY_CASTOR) || defined(CONFIG_MACH_SONY_CASTOR_WINDY)) && \
-    (defined(CONFIG_BCMDHD) || defined(CONFIG_BCMDHD_MODULE))
+#if defined(CONFIG_MACH_SONY_SHINANO) && (defined(CONFIG_BCMDHD) || defined(CONFIG_BCMDHD_MODULE))
 	msm_init_wifi();
 #endif
 }
@@ -137,8 +135,7 @@ static struct of_dev_auxdata msm8974_auxdata_lookup[] __initdata = {
 	OF_DEV_AUXDATA("qcom,msm-sdcc", 0xF98A4000, \
 			"msm_sdcc.2", NULL),
 
-#if (defined(CONFIG_MACH_SONY_SIRIUS) || defined(CONFIG_MACH_SONY_CASTOR) || defined(CONFIG_MACH_SONY_CASTOR_WINDY)) && \
-    (defined(CONFIG_BCMDHD) || defined(CONFIG_BCMDHD_MODULE))
+#if defined(CONFIG_MACH_SONY_SHINANO) && (defined(CONFIG_BCMDHD) || defined(CONFIG_BCMDHD_MODULE))
 	OF_DEV_AUXDATA("qcom,msm-sdcc", 0xF9864000, \
 			"msm_sdcc.3", &msm8974_sdc3_data),
 #else
