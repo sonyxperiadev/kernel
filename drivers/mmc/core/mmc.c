@@ -4,6 +4,7 @@
  *  Copyright (C) 2003-2004 Russell King, All Rights Reserved.
  *  Copyright (C) 2005-2007 Pierre Ossman, All Rights Reserved.
  *  MMCv4 support Copyright (C) 2006 Philip Langdale, All Rights Reserved.
+ *  Copyright (C) 2013 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -1760,6 +1761,32 @@ static void mmc_detect(struct mmc_host *host)
 }
 
 /*
+ * Save ios setting
+ */
+static void mmc_save_ios(struct mmc_host *host)
+{
+	BUG_ON(!host);
+
+	mmc_host_clk_hold(host);
+
+	memcpy(&host->saved_ios, &host->ios, sizeof(struct mmc_ios));
+
+	mmc_host_clk_release(host);
+}
+
+/*
+ * Restore ios setting
+ */
+static void mmc_restore_ios(struct mmc_host *host)
+{
+	BUG_ON(!host);
+
+	memcpy(&host->ios, &host->saved_ios, sizeof(struct mmc_ios));
+
+	mmc_set_ios(host);
+}
+
+/*
  * Suspend callback from host.
  */
 static int mmc_suspend(struct mmc_host *host)
@@ -1781,9 +1808,12 @@ static int mmc_suspend(struct mmc_host *host)
 	if (err)
 		goto out;
 
-	if (mmc_card_can_sleep(host))
+	mmc_save_ios(host);
+	if (mmc_card_can_sleep(host)) {
 		err = mmc_card_sleep(host);
-	else if (!mmc_host_is_spi(host))
+		if (!err)
+			mmc_card_set_sleep(host->card);
+	} else if (!mmc_host_is_spi(host))
 		mmc_deselect_cards(host);
 	host->card->state &= ~(MMC_STATE_HIGHSPEED | MMC_STATE_HIGHSPEED_200);
 
@@ -1806,7 +1836,11 @@ static int mmc_resume(struct mmc_host *host)
 	BUG_ON(!host->card);
 
 	mmc_claim_host(host);
-	err = mmc_init_card(host, host->ocr, host->card);
+	if (mmc_card_is_sleep(host->card)) {
+		mmc_restore_ios(host);
+		err = mmc_card_awake(host);
+	} else
+		err = mmc_init_card(host, host->ocr, host->card);
 	mmc_release_host(host);
 
 	/*
@@ -1827,6 +1861,7 @@ static int mmc_power_restore(struct mmc_host *host)
 	mmc_disable_clk_scaling(host);
 
 	host->card->state &= ~(MMC_STATE_HIGHSPEED | MMC_STATE_HIGHSPEED_200);
+	mmc_card_clr_sleep(host->card);
 	mmc_claim_host(host);
 	ret = mmc_init_card(host, host->ocr, host->card);
 	mmc_release_host(host);

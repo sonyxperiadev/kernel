@@ -3,6 +3,13 @@
 
 #include <linux/types.h>
 
+#define OOB_MAGIC_ON 0x4F4F424D
+#define OOB_MAGIC_OFF 0
+
+struct mmc_ioc_oob {
+	__u32 magic;
+};
+
 struct mmc_ioc_cmd {
 	/* Implies direction of data.  true = write, false = read */
 	int write_flag;
@@ -46,6 +53,7 @@ struct mmc_ioc_cmd {
 #define mmc_ioc_cmd_set_data(ic, ptr) ic.data_ptr = (__u64)(unsigned long) ptr
 
 #define MMC_IOC_CMD _IOWR(MMC_BLOCK_MAJOR, 0, struct mmc_ioc_cmd)
+#define MMC_IOC_OOB _IOWR(MMC_BLOCK_MAJOR, 0, struct mmc_ioc_oob)
 
 /**
  * There are four request types that are applicable for rpmb accesses- two

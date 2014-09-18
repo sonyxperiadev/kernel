@@ -4,6 +4,7 @@
  *  Copyright (C) 2007 Google Inc,
  *  Copyright (C) 2003 Deep Blue Solutions, Ltd, All Rights Reserved.
  *  Copyright (c) 2009-2013, The Linux Foundation. All rights reserved.
+ *  Copyright (C) 2013 Sony Mobile Communications AB.
  *
  *
  * This program is free software; you can redistribute it and/or modify
@@ -78,6 +79,8 @@
 
 #define MSM_MMC_BUS_VOTING_DELAY	200 /* msecs */
 #define INVALID_TUNING_PHASE		-1
+
+#define MMC_SDCC3_SLOT_NUMBER		3
 
 #if defined(CONFIG_DEBUG_FS)
 static void msmsdcc_dbg_createhost(struct msmsdcc_host *);
@@ -5864,11 +5867,20 @@ msmsdcc_probe(struct platform_device *pdev)
 	struct resource *dmares = NULL;
 	struct resource *dma_crci_res = NULL;
 	int ret = 0;
+	struct mmc_platform_data *plat_data = NULL;
 
 	if (pdev->dev.of_node) {
 		plat = msmsdcc_populate_pdata(&pdev->dev);
 		of_property_read_u32((&pdev->dev)->of_node,
 				"cell-index", &pdev->id);
+		plat_data = pdev->dev.platform_data;
+		if (plat && plat_data) {
+			if (plat_data->status)
+				plat->status = plat_data->status;
+			if (plat_data->register_status_notify)
+				plat->register_status_notify =
+					plat_data->register_status_notify;
+		}
 	} else {
 		plat = pdev->dev.platform_data;
 	}
@@ -6137,10 +6149,9 @@ msmsdcc_probe(struct platform_device *pdev)
 	mmc->caps2 |= MMC_CAP2_PACKED_WR_CONTROL;
 	mmc->caps2 |= (MMC_CAP2_BOOTPART_NOACC | MMC_CAP2_DETECT_ON_ERR);
 	mmc->caps2 |= MMC_CAP2_SANITIZE;
-	mmc->caps2 |= MMC_CAP2_CACHE_CTRL;
-	mmc->caps2 |= MMC_CAP2_POWEROFF_NOTIFY;
 	mmc->caps2 |= MMC_CAP2_STOP_REQUEST;
 	mmc->caps2 |= MMC_CAP2_ASYNC_SDIO_IRQ_4BIT_MODE;
+	mmc->caps2 |= MMC_CAP2_INIT_BKOPS;
 
 	if (plat->nonremovable)
 		mmc->caps |= MMC_CAP_NONREMOVABLE;
@@ -6148,6 +6159,15 @@ msmsdcc_probe(struct platform_device *pdev)
 
 	if (plat->is_sdio_al_client)
 		mmc->pm_flags |= MMC_PM_IGNORE_PM_NOTIFY;
+
+	/*
+	 * Use "id" parameter to determine whether the mmc slot is used by WiFi.
+	 * MMC_SDCC3_SLOT_NUMBER is used bi WiFi.
+	 */
+	if (pdev->id == MMC_SDCC3_SLOT_NUMBER) {
+		mmc->pm_caps |= MMC_PM_IGNORE_PM_NOTIFY;
+		mmc->pm_flags |= mmc->pm_caps;
+	}
 
 	mmc->max_segs = msmsdcc_get_nr_sg(host);
 	mmc->max_blk_size = MMC_MAX_BLK_SIZE;
@@ -6298,7 +6318,6 @@ msmsdcc_probe(struct platform_device *pdev)
 	mmc->clk_scaling.up_threshold = 35;
 	mmc->clk_scaling.down_threshold = 5;
 	mmc->clk_scaling.polling_delay_ms = 100;
-	mmc->caps2 |= MMC_CAP2_CLK_SCALE;
 
 	pr_info("%s: Qualcomm MSM SDCC-core %pr %pr,%d dma %d dmacrcri %d\n",
 		mmc_hostname(mmc), core_memres, core_irqres,
@@ -6732,10 +6751,13 @@ msmsdcc_runtime_suspend(struct device *dev)
 		 */
 		pm_runtime_get_noresume(dev);
 		/* If there is pending detect work abort runtime suspend */
-		if (unlikely(work_busy(&mmc->detect.work)))
+		if (unlikely(work_busy(&mmc->detect.work))) {
 			rc = -EAGAIN;
-		else
+		} else {
+			if (host->pdev->id == MMC_SDCC3_SLOT_NUMBER)
+				mmc->pm_flags |= MMC_PM_KEEP_POWER;
 			rc = mmc_suspend_host(mmc);
+		}
 		pm_runtime_put_noidle(dev);
 
 		if (!rc) {

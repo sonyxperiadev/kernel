@@ -5,6 +5,7 @@
  *  Copyright (C) 2007-2008 Pierre Ossman
  *  Copyright (C) 2010 Linus Walleij
  *  Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
+ *  Copyright (C) 2013 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -419,6 +420,9 @@ struct mmc_host *mmc_alloc_host(int extra, struct device *dev)
 
 	spin_lock_init(&host->lock);
 	init_waitqueue_head(&host->wq);
+#ifdef CONFIG_MMC_BLOCK_DEFERRED_RESUME
+	init_waitqueue_head(&host->defer_wq);
+#endif
 	host->wlock_name = kasprintf(GFP_KERNEL,
 			"%s_detect", mmc_hostname(host));
 	wake_lock_init(&host->detect_wake_lock, WAKE_LOCK_SUSPEND,
