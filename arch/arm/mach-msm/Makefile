@@ -433,3 +433,11 @@ obj-$(CONFIG_WALL_CLK) += wallclk.o
 obj-$(CONFIG_WALL_CLK_SYSFS) += wallclk_sysfs.o
 obj-$(CONFIG_ARCH_RANDOM) += early_random.o
 obj-$(CONFIG_PERFMAP) += perfmap.o
+
+obj-$(CONFIG_RAMDUMP_TAGS) += board-rdtags.o
+CFLAGS_board-rdtags.o  := \
+	-D"INFO_PRODUCT=\"$(if $(TARGET_PRODUCT),$(TARGET_PRODUCT),unknown)\"" \
+	-D"INFO_VARIANT= \
+	\"$(if $(TARGET_BUILD_VARIANT),$(TARGET_BUILD_VARIANT),unknown)\"" \
+	-D"INFO_BUILDID=\"$(if $(SEMC_SYSTEM_VERSION),$(SEMC_SYSTEM_VERSION),private)\""
+CFLAGS_board-8974-console.o += -Idrivers/staging/android

@@ -1,4 +1,5 @@
 /* Copyright (c) 2010-2013, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2013 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -31,6 +32,10 @@
 #include <linux/idr.h>
 #include <linux/interrupt.h>
 #include <linux/of_gpio.h>
+
+#ifdef CONFIG_RAMDUMP_TAGS
+#include <linux/rdtags.h>
+#endif
 
 #include <asm/uaccess.h>
 #include <asm/setup.h>
@@ -515,7 +520,7 @@ static void pil_release_mmap(struct pil_desc *desc)
 	}
 }
 
-#define IOMAP_SIZE SZ_4M
+#define IOMAP_SIZE SZ_1M
 
 static int pil_load_seg(struct pil_desc *desc, struct pil_seg *seg)
 {
@@ -601,6 +606,36 @@ static void pil_parse_devicetree(struct pil_desc *desc)
 	desc->proxy_unvote_irq = clk_ready;
 }
 
+#ifdef CONFIG_RAMDUMP_TAGS
+/* Tag the subsystem information in rdtags */
+static void pil_tag_subsys_meminfo(const struct pil_priv *priv)
+{
+	char subsys_name[32];
+	char subsys_meminfo[32];
+
+	memset(subsys_name, 0, sizeof(subsys_name));
+	memset(subsys_meminfo, 0, sizeof(subsys_meminfo));
+	snprintf(subsys_name, ARRAY_SIZE(subsys_name),
+			"%s_meminfo", priv->info->name);
+	snprintf(subsys_meminfo, ARRAY_SIZE(subsys_meminfo),
+			"0x%08x:0x%08x", priv->region_start,
+			priv->region_end - priv->region_start);
+
+	rdtags_add_tag_string(subsys_name, subsys_meminfo);
+}
+
+/* Untag the Subsystem information in rdtags */
+static void pil_untag_subsys_meminfo(const struct pil_priv *priv)
+{
+	char subsys_name[32];
+
+	memset(subsys_name, 0, sizeof(subsys_name));
+	snprintf(subsys_name, ARRAY_SIZE(subsys_name),
+			"%s_meminfo", priv->info->name);
+	rdtags_remove_tag(subsys_name);
+}
+#endif
+
 /* Synchronize request_firmware() with suspend */
 static DECLARE_RWSEM(pil_pm_rwsem);
 
@@ -677,6 +712,10 @@ int pil_boot(struct pil_desc *desc)
 		goto release_fw;
 	}
 
+#ifdef CONFIG_RAMDUMP_TAGS
+	pil_tag_subsys_meminfo(priv);
+#endif
+
 	list_for_each_entry(seg, &desc->priv->segs, list) {
 		ret = pil_load_seg(desc, seg);
 		if (ret)
@@ -723,6 +762,10 @@ void pil_shutdown(struct pil_desc *desc)
 
 	if (desc->ops->shutdown)
 		desc->ops->shutdown(desc);
+
+#ifdef CONFIG_RAMDUMP_TAGS
+	pil_untag_subsys_meminfo(priv);
+#endif
 
 	if (desc->proxy_unvote_irq) {
 		disable_irq(desc->proxy_unvote_irq);
