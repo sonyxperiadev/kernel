@@ -1076,8 +1076,16 @@ config MACH_MSM9615_MTP
 	help
 	  Support for the Qualcomm MSM9615 MTP device.
 
+config MACH_SONY_RHINE
+	depends on ARCH_MSM8974
+	bool "Sony Mobile Rhine"
+	help
+	  Support for the SONY Mobile Rhine board.
+	  It is based on QCOM MSM8974 chipset.
+
 config MACH_SONY_TOGARI_ROW
 	depends on ARCH_MSM8974
+	select MACH_SONY_RHINE
 	bool "Sony Mobile Togari ROW"
 	help
 	  Support for the SONY Mobile Togari ROW device.
@@ -1087,6 +1095,7 @@ config MACH_SONY_TOGARI_ROW
 
 config MACH_SONY_HONAMI_ROW
 	depends on ARCH_MSM8974
+	select MACH_SONY_RHINE
 	bool "Sony Mobile Honami ROW"
 	help
 	  Support for the SONY Mobile Honami ROW device.
@@ -1096,6 +1105,7 @@ config MACH_SONY_HONAMI_ROW
 
 config MACH_SONY_AMAMI_ROW
 	depends on ARCH_MSM8974
+	select MACH_SONY_RHINE
 	bool "Sony Mobile Amami ROW"
 	help
 	  Support for the SONY Mobile Amami ROW device.
