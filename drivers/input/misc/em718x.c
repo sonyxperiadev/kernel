@@ -78,6 +78,7 @@ enum em718x_reg {
 	R8_ERR_REGISTER = 0x50,
 	R16_DATA_EXTENTION_REG = 0x43,
 	R32_PARAMETER_READ_REG = 0x3b,
+	R32_PARAMETER_LOAD_REG = 0x60,
 	R8_PARAMETER_REQ_REG = 0x64,
 	R8_PARAMETER_ACK_REG = 0x3a,
 };
@@ -258,6 +259,12 @@ struct feature_desc {
 	bool last_valid;
 };
 
+
+struct em718x_parameters {
+	u32 addr;
+	u32 val;
+};
+
 struct em718x {
 	struct i2c_client *client;
 	int irq_gpio;
@@ -279,6 +286,8 @@ struct em718x {
 	bool suspend_prepared;
 	u32 *parameter_buf;
 	int parameter_num;
+	struct em718x_parameters *dts_parameters;
+	int dts_parameters_num;
 };
 
 enum sns_event_types {
@@ -560,8 +569,56 @@ acked:
 exit:
 	em718x->algo_ctl &= ~(1 << 7);
 	(void)smbus_write_byte(em718x->client, R8_ALGO_CTL, em718x->algo_ctl);
+	(void)smbus_write_byte(em718x->client, R8_PARAMETER_REQ_REG, 0);
 	return rc;
 }
+
+#define PARAM_LOAD_RETRY_NUM 10
+static int em718x_parameter_load(struct em718x *em718x, u32 val, int addr)
+{
+	int rc;
+	u8 ack;
+	int i;
+
+	rc = smbus_write_byte_block(em718x->client, R32_PARAMETER_LOAD_REG,
+			(u8 *)&val, sizeof(val));
+	if (rc)
+		return rc;
+
+	addr |= 1 << 7;
+	rc = smbus_write_byte(em718x->client, R8_PARAMETER_REQ_REG, addr);
+	if (rc)
+		return rc;
+
+	em718x->algo_ctl |= 1 << 7;
+	rc = smbus_write_byte(em718x->client, R8_ALGO_CTL, em718x->algo_ctl);
+	if (rc)
+		return rc;
+
+	for (i = 0; i < PARAM_LOAD_RETRY_NUM; i++) {
+		usleep_range(10000, 11000);
+		rc = smbus_read_byte(em718x->client,
+				R8_PARAMETER_ACK_REG, &ack);
+		if (rc)
+			goto exit;
+
+		if (ack == addr) {
+			dev_info(&em718x->client->dev,
+				"%s: 0x%08x -> 0x%02x ack 0x%02x\n", __func__,
+				val, addr & 0x7f, ack);
+			goto exit;
+		}
+	}
+	dev_err(&em718x->client->dev, "%s: 0x%08x -> 0x%02x NACK 0x%02x\n",
+			__func__, val, addr & 0x7f, ack);
+	rc = -EIO;
+exit:
+	em718x->algo_ctl &= ~(1 << 7);
+	(void)smbus_write_byte(em718x->client, R8_ALGO_CTL, em718x->algo_ctl);
+	(void)smbus_write_byte(em718x->client, R8_PARAMETER_REQ_REG, 0);
+	return rc;
+}
+
 
 static ssize_t em718x_set_parameters_read(struct device *dev,
 				struct device_attribute *attr,
@@ -571,20 +628,32 @@ static ssize_t em718x_set_parameters_read(struct device *dev,
 	s32 from;
 	s32 num;
 	int rc;
+	char op;
 
-	if (2 != sscanf(buf, "%i,%i", &from, &num))
+	if (3 != sscanf(buf, "%c,%i,%i", &op, &from, &num))
 		return -EINVAL;
-	if (!num || from < 1 || (from + num - 1) > 127)
+	if (op == 'r') {
+		if (!num || from < 1 || (from + num - 1) > 127)
+			return -EINVAL;
+		if (em718x->parameter_buf)
+			kfree(em718x->parameter_buf);
+		em718x->parameter_buf =
+				kzalloc(num * sizeof(*em718x->parameter_buf),
+				GFP_KERNEL);
+		if (!em718x->parameter_buf)
+			return -ENOMEM;
+		em718x->parameter_num = num;
+		rc = em718x_parameters_read(em718x, em718x->parameter_buf,
+				from, num);
+	} else if (op == 'w') {
+		if (from < 1 || from > 127)
+			return -EINVAL;
+		mutex_lock(&em718x->lock);
+		rc = em718x_parameter_load(em718x, num, from);
+		mutex_unlock(&em718x->lock);
+	} else {
 		return -EINVAL;
-	if (em718x->parameter_buf)
-		kfree(em718x->parameter_buf);
-	em718x->parameter_buf =
-			kzalloc(num * sizeof(*em718x->parameter_buf),
-			GFP_KERNEL);
-	if (!em718x->parameter_buf)
-		return -ENOMEM;
-	em718x->parameter_num = num;
-	rc = em718x_parameters_read(em718x, em718x->parameter_buf, from, num);
+	}
 	return rc ? rc : count;
 }
 
@@ -608,7 +677,7 @@ static ssize_t em718x_get_parameters_read(struct device *dev,
 	return (ssize_t)(p - buf);
 }
 
-static DEVICE_ATTR(parameter_read, S_IWUSR | S_IRUSR,
+static DEVICE_ATTR(parameters, S_IWUSR | S_IRUSR,
 		em718x_get_parameters_read, em718x_set_parameters_read);
 
 static ssize_t em718x_set_register(struct device *dev,
@@ -782,7 +851,7 @@ static struct attribute *em718x_attributes[] = {
 	&dev_attr_rate.attr,
 	&dev_attr_report.attr,
 	&dev_attr_reset.attr,
-	&dev_attr_parameter_read.attr,
+	&dev_attr_parameters.attr,
 	NULL
 };
 
@@ -1254,6 +1323,25 @@ exit:
 	return rc;
 }
 
+static int em718x_parameters_apply(struct em718x *em718x)
+{
+	int i, n;
+	int rc;
+
+	for (i = 0; i < em718x->dts_parameters_num; i++) {
+		for (n = 0; n < 2; n++) {
+			rc = em718x_parameter_load(em718x,
+					em718x->dts_parameters[i].val,
+					em718x->dts_parameters[i].addr);
+			if (!rc)
+				break;
+		}
+		if (rc)
+			return rc;
+	}
+	return 0;
+}
+
 static void em718x_reset_work_func(struct work_struct *work)
 {
 	struct delayed_work *dw = container_of(work, struct delayed_work,
@@ -1288,6 +1376,7 @@ static void em718x_reset_work_func(struct work_struct *work)
 	if (rc)
 		goto exit;
 
+	em718x_parameters_apply(em718x);
 	em718x_parse_features(em718x);
 
 	for (i = 0; i < ARRAY_SIZE(sns_id); i++) {
@@ -1408,6 +1497,33 @@ static int em718x_probe(struct i2c_client *client,
 			goto exit;
 		}
 		em718x->irq = gpio_to_irq(em718x->irq_gpio);
+
+		rc = of_property_count_strings(np, "parameters");
+		if (rc > 0) {
+			int n;
+			struct em718x_parameters *par;
+			const char *name;
+
+			par = devm_kzalloc(dev, sizeof(*par) * rc, GFP_KERNEL);
+			if (!par)
+				return -ENOMEM;
+			for (i = 0, n = 0; i < rc; i++) {
+				if (of_property_read_string_index(np,
+						"parameters", i, &name))
+					continue;
+				if (2 == sscanf(name, "%i %i", &par[n].addr,
+						&par[n].val)) {
+					dev_info(dev, "parameter %d = 0x%08x",
+						par[n].addr, par[n].val);
+					n++;
+				}
+			}
+			em718x->dts_parameters_num = n;
+			em718x->dts_parameters = par;
+		} else {
+			em718x->dts_parameters_num = 0;
+		}
+
 	} else {
 		dev_err(dev, "could not find dts record\n");
 		rc = -EINVAL;
