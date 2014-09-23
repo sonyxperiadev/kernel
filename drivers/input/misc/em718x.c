@@ -826,26 +826,26 @@ static void em718x_process_amgf(struct em718x *em718x,
 	struct input_dev *idev = em718x->idev;
 
 	if ((ev_status & EV_ACC) && enabled(em718x, SNS_ACC)) {
-		dev_vdbg(dev, "acc[%u] %d, %d, %d\n", amgf->acc.t, -amgf->acc.x,
-				-amgf->acc.y, -amgf->acc.z);
-		input_event(idev, EV_IDEV, EV_ACC_X, -amgf->acc.x);
-		input_event(idev, EV_IDEV, EV_ACC_Y, -amgf->acc.y);
+		dev_vdbg(dev, "acc[%u] %d, %d, %d\n", amgf->acc.t, amgf->acc.x,
+				amgf->acc.y, -amgf->acc.z);
+		input_event(idev, EV_IDEV, EV_ACC_X, amgf->acc.x);
+		input_event(idev, EV_IDEV, EV_ACC_Y, amgf->acc.y);
 		input_event(idev, EV_IDEV, EV_ACC_Z, -amgf->acc.z);
 		input_sync(idev);
 	}
 	if ((ev_status & EV_MAG) && enabled(em718x, SNS_MAG)) {
 		dev_vdbg(dev, "mag[%u] %d, %d, %d\n", amgf->mag.t, amgf->mag.x,
-				amgf->mag.y, amgf->mag.z);
+				amgf->mag.y, -amgf->mag.z);
 		input_event(idev, EV_IDEV, EV_MAG_X, amgf->mag.x);
 		input_event(idev, EV_IDEV, EV_MAG_Y, amgf->mag.y);
-		input_event(idev, EV_IDEV, EV_MAG_Z, amgf->mag.z);
+		input_event(idev, EV_IDEV, EV_MAG_Z, -amgf->mag.z);
 		input_sync(idev);
 	}
 	if ((ev_status & EV_GYRO) && enabled(em718x, SNS_GYRO)) {
 		dev_vdbg(dev, "gyro[%u] %d, %d, %d\n", amgf->gyro.t,
-				amgf->gyro.x, amgf->gyro.y, amgf->gyro.z);
-		input_event(idev, EV_IDEV_GYRO, EV_GYRO_X, amgf->gyro.x);
-		input_event(idev, EV_IDEV_GYRO, EV_GYRO_Y, amgf->gyro.y);
+				-amgf->gyro.x, -amgf->gyro.y, amgf->gyro.z);
+		input_event(idev, EV_IDEV_GYRO, EV_GYRO_X, -amgf->gyro.x);
+		input_event(idev, EV_IDEV_GYRO, EV_GYRO_Y, -amgf->gyro.y);
 		input_event(idev, EV_IDEV_GYRO, EV_GYRO_Z, amgf->gyro.z);
 		input_sync(idev);
 	}
@@ -886,16 +886,16 @@ static void em718x_process_amgf(struct em718x *em718x,
 			case F_TILT:
 				dev_dbg(dev, "feature-%d: tilt (%d) %d %d %d\n",
 						i, val,
-						-amgf->acc.x, -amgf->acc.y,
+						amgf->acc.x, amgf->acc.y,
 						-amgf->acc.z);
 				if (val == 0) {
 					dev_dbg(dev, "Skip it\n");
 					break;
 				}
 				input_event(adev, EV_ADEV, EV_TILT_X,
-						-amgf->acc.x);
+						amgf->acc.x);
 				input_event(adev, EV_ADEV, EV_TILT_Y,
-						-amgf->acc.y);
+						amgf->acc.y);
 				input_event(adev, EV_ADEV, EV_TILT_Z,
 						-amgf->acc.z);
 				input_sync(adev);
