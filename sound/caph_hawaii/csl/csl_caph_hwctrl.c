@@ -84,6 +84,13 @@
 #include <linux/regulator/driver.h>
 #include <mach/memory.h>
 
+#ifdef CONFIG_DEBUG_FS
+#include <linux/debugfs.h>
+#include <linux/seq_file.h>
+#include <linux/uaccess.h>
+static struct dentry *dent_vib;
+#endif
+
 /* gAUD_regulator is being used in the commented part of code hence
 commenting it's declaration to avoid warning*/
 /*static struct regulator *gAUD_regulator;*/
@@ -6132,3 +6139,105 @@ void csl_caph_set_cpreset(Boolean status)
 {
 	cp_reset = status;
 }
+
+
+/* This is only for debugging. Should be removed once vibrator problem is
+ * found */
+#ifdef CONFIG_DEBUG_FS
+
+int debugfs_open(struct inode *inode, struct file *file)
+{
+	file->private_data = inode->i_private;
+	return 0;
+}
+
+static ssize_t debugfs_regread(struct file *file,
+			       char const __user *buf,
+			       size_t count, loff_t *offset)
+{
+	u32 len = 0;
+	u32 reg = 0xFF;
+	u32 reg_val;
+	char input_str[100];
+
+	if (count > 100)
+		len = 100;
+	else
+		len = count;
+
+	if (copy_from_user(input_str, buf, len))
+		return -EFAULT;
+
+	sscanf(input_str, "%x", &reg);
+
+	/* enable clock if it is not enabled. */
+	if (!csl_caph_QueryHWClock())
+		csl_caph_ControlHWClock(TRUE);
+	reg_val = readl((const volatile void *)reg);
+	if (csl_caph_hwctrl_allPathsDisabled())
+		csl_caph_ControlHWClock(FALSE);
+	pr_info("%s: [%x] = %x\n", __func__, reg, reg_val);
+	return count;
+}
+
+static ssize_t debugfs_regwrite(struct file *file,
+			        char const __user *buf,
+			        size_t count, loff_t *offset)
+{
+	u32 len = 0;
+	u32 reg;
+	u32 value;
+	char input_str[100];
+
+	if (count > 100)
+		len = 100;
+	else
+		len = count;
+
+	if (copy_from_user(input_str, buf, len))
+		return -EFAULT;
+	sscanf(input_str, "%x%x", &reg, &value);
+	/* enable clock if it is not enabled. */
+	if (!csl_caph_QueryHWClock())
+		csl_caph_ControlHWClock(TRUE);
+	/* Set the required setting */
+	writel(value, (volatile void *)reg);
+	if (csl_caph_hwctrl_allPathsDisabled())
+		csl_caph_ControlHWClock(FALSE);
+	pr_info("%s: reg:%x val:%x\n", __func__, reg, value);
+	return count;
+}
+
+static const struct file_operations debug_read_fops = {
+	.write = debugfs_regread,
+	.open = debugfs_open,
+};
+
+static const struct file_operations debug_write_fops = {
+	.write = debugfs_regwrite,
+	.open = debugfs_open,
+};
+
+static int __init chal_audio_vibra_dbgfs(void)
+{
+	dent_vib = debugfs_create_dir("vibrator", NULL);
+	if (!dent_vib) {
+		pr_err("%s: Failed to initialize debugfs\n", __func__);
+		return -EACCES;
+	}
+	if (!debugfs_create_file("regread", S_IWUSR | S_IRUSR,
+				dent_vib, NULL,
+				&debug_read_fops)) {
+		pr_err("%s: Failed to create regread debugfs\n", __func__);
+		return -EACCES;
+	}
+	if (!debugfs_create_file("regwrite", S_IWUSR | S_IRUSR,
+				dent_vib, NULL,
+				&debug_write_fops)) {
+		pr_err("%s: Failed to create regwrite debugfs\n", __func__);
+		return -EACCES;
+	}
+	return 0;
+}
+subsys_initcall(chal_audio_vibra_dbgfs);
+#endif
