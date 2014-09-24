@@ -140,6 +140,8 @@
 			feat1-flag = <4>;
 			feat2-type = "tilt";
 			feat2-flag = <5>;
+			parameters = "52 0x40000000", /* slower mag merge time */
+				"60 0x40d00000"; /* less restrictive mag transient rejection */
 		};
 	};
 
