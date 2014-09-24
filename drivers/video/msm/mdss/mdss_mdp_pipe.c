@@ -53,6 +53,18 @@ static inline u32 mdss_mdp_pipe_read(struct mdss_mdp_pipe *pipe, u32 reg)
 	return readl_relaxed(pipe->base + reg);
 }
 
+static inline bool is_unused_smp_allowed(void)
+{
+	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
+
+	switch (MDSS_GET_MAJOR_MINOR(mdata->mdp_rev)) {
+	case MDSS_GET_MAJOR_MINOR(MDSS_MDP_HW_REV_103):
+		return true;
+	default:
+		return false;
+	}
+}
+
 static u32 mdss_mdp_smp_mmb_reserve(struct mdss_mdp_pipe_smp_map *smp_map,
 	size_t n)
 {
@@ -72,7 +84,7 @@ static u32 mdss_mdp_smp_mmb_reserve(struct mdss_mdp_pipe_smp_map *smp_map,
 	 * that calls for change in smp configuration (addition/removal
 	 * of smp blocks), so that fallback solution happens.
 	 */
-	if (i != 0 && n != i) {
+	if (i != 0 && (((n < i) && !is_unused_smp_allowed()) || (n > i))) {
 		pr_debug("Can't change mmb config, num_blks: %d alloc: %d\n",
 			n, i);
 		return 0;
@@ -226,18 +238,6 @@ void mdss_mdp_smp_unreserve(struct mdss_mdp_pipe *pipe)
 	for (i = 0; i < MAX_PLANES; i++)
 		mdss_mdp_smp_mmb_free(pipe->smp_map[i].reserved, false);
 	mutex_unlock(&mdss_mdp_smp_lock);
-}
-
-static inline bool is_unused_smp_allowed(void)
-{
-	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
-
-	switch (MDSS_GET_MAJOR_MINOR(mdata->mdp_rev)) {
-	case MDSS_GET_MAJOR_MINOR(MDSS_MDP_HW_REV_103):
-		return true;
-	default:
-		return false;
-	}
 }
 
 int mdss_mdp_smp_reserve(struct mdss_mdp_pipe *pipe)
