@@ -2862,11 +2862,6 @@ static void bcmpmu_fg_periodic_work(struct work_struct *work)
 	flags = fg->flags;
 	FG_UNLOCK(fg);
 
-	if (!fg->init_notifier) {
-		ret = bcmpmu_fg_register_notifiers(fg);
-		WARN_ON(ret);
-	}
-
 	/**
 	 * No battery Case (BSI/BCL pin is not connected)
 	 * if battery is not present (booting with power supply
@@ -2932,22 +2927,26 @@ static void bcmpmu_fg_periodic_work(struct work_struct *work)
 			chrgr_type = data;
 			pr_fg(FLOW, "%s chrgr_type = %d\n",
 							__func__, chrgr_type);
-			if ((chrgr_type > PMU_CHRGR_TYPE_NONE &&
-				chrgr_type < PMU_CHRGR_TYPE_MAX) &&
-				bcmpmu_is_usb_host_enabled(fg->bcmpmu) &&
-				bcmpmu_get_icc_fc(fg->bcmpmu)) {
-
-				fg->flags.prev_batt_status =
-							fg->flags.batt_status;
-				fg->flags.batt_status =
+			if (chrgr_type > PMU_CHRGR_TYPE_NONE &&
+					chrgr_type < PMU_CHRGR_TYPE_MAX) {
+				fg->chrgr_type = chrgr_type;
+				fg->flags.chrgr_connected = true;
+				if (bcmpmu_is_usb_host_enabled(fg->bcmpmu)) {
+					fg->flags.prev_batt_status =
+						fg->flags.batt_status;
+					fg->flags.batt_status =
 						POWER_SUPPLY_STATUS_CHARGING;
+				}
 			} else {
 				fg->flags.prev_batt_status =
 							fg->flags.batt_status;
 				fg->flags.batt_status =
 						POWER_SUPPLY_STATUS_DISCHARGING;
 			}
-
+		}
+		if (!fg->init_notifier) {
+			ret = bcmpmu_fg_register_notifiers(fg);
+			WARN_ON(ret);
 		}
 		bcmpmu_fg_update_psy(fg, true);
 		fg->flags.reschedule_work = true;
