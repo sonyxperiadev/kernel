@@ -81,6 +81,11 @@ enum em718x_reg {
 	R32_PARAMETER_LOAD_REG = 0x60,
 	R8_PARAMETER_REQ_REG = 0x64,
 	R8_PARAMETER_ACK_REG = 0x3a,
+	R8_APP_CPU_SATE_REG = 0x69,
+};
+
+enum app_cpu_state {
+	APP_CPU_SUSPENDING = 1 << 0,
 };
 
 enum em718x_features {
@@ -408,6 +413,12 @@ static int big_block_read(struct i2c_client *cl, u8 addr,
 		return 0;
 	dev_err(&cl->dev, "%s: rc %d\n", __func__, rc);
 	return rc < 0 ? rc : -EIO;
+}
+
+static int notify_app_cpu_suspended(struct em718x *em718x, bool suspended)
+{
+	return smbus_write_byte(em718x->client, R8_APP_CPU_SATE_REG,
+			suspended ? APP_CPU_SUSPENDING : 0);
 }
 
 static int em718x_standby(struct em718x *em718x, bool standby)
@@ -989,6 +1000,53 @@ static void em718x_process_amgf(struct em718x *em718x,
 	}
 }
 
+static void em718x_step_counter_sync_locked(struct em718x *em718x)
+{
+	int rc;
+	int i;
+	struct em718x_amgf_result amgf;
+	struct device *dev = &em718x->client->dev;
+	struct input_dev *idev = em718x->idev;
+
+	rc = big_block_read(em718x->client, RX_SNS_DATA,
+				sizeof(amgf), (u8 *)&amgf);
+	if (rc)
+		return;
+	for (i = 0; i < ARRAY_SIZE(em718x->f_desc); i++) {
+		int idx;
+		int val;
+
+		if (em718x->f_desc[i].type != F_STEP_CNTR ||
+				!enabled(em718x, SNS_F0 + i) ||
+				!em718x->f_desc[i].present)
+			continue;
+
+		idx = em718x->f_desc[i].data_idx;
+		val = amgf.fd.d[idx];
+
+		dev_dbg(dev, "feature-%d on resume: step %d\n", i, val);
+
+		if (em718x->f_desc[i].value_last == val &&
+				em718x->f_desc[i].last_valid)
+			break;
+
+		em718x->f_desc[i].value_last = val;
+		em718x->f_desc[i].last_valid = true;
+
+		if (step_cntr_get_32(em718x, &val, idx))
+			break;
+
+		dev_dbg(dev, "report steps on resume %d steps\n", val);
+
+		if (val == 0) {
+			dev_dbg(dev, "Skip it\n");
+			break;
+		}
+		input_event(idev, EV_IDEV, EV_STEP, val);
+		input_sync(idev);
+	}
+}
+
 static void em718x_process_q(struct em718x *em718x,
 	struct data_quat *quat)
 {
@@ -1415,7 +1473,7 @@ static int em718x_suspend_notifier(struct notifier_block *nb,
 
 		em718x_update_event_ena_reg(em718x, em718x->enabled_sns &
 				em718x->suspend_enabled_sns);
-
+		(void)notify_app_cpu_suspended(em718x, true);
 		em718x->suspend_prepared = true;
 
 		mutex_unlock(&em718x->lock);
@@ -1433,6 +1491,8 @@ static int em718x_suspend_notifier(struct notifier_block *nb,
 			"PM_POST_SUSPEND: report enable mask 0x%02x\n",
 			em718x->enabled_sns);
 		em718x_update_event_ena_reg(em718x, em718x->enabled_sns);
+		em718x_step_counter_sync_locked(em718x);
+		(void)notify_app_cpu_suspended(em718x, false);
 
 		em718x->suspend_prepared = false;
 		mutex_unlock(&em718x->lock);
