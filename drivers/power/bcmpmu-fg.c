@@ -54,7 +54,8 @@
 #define PMU_FG_CURR_SMPL_SIGN_BIT_MASK		0x8000
 #define PMU_FG_CURR_SMPL_SIGN_BIT_SHIFT		15
 
-#define FG_CAP_DELTA_THRLD		30
+#define FG_CAP_DELTA_THRLD		10
+#define FG_FLAT_CAP_DELTA_THRLD		20
 #define ADC_VBAT_AVG_SAMPLES		8
 #define ADC_NTC_AVG_SAMPLES		8
 #define FG_INIT_CAPACITY_AVG_SAMPLES	8
@@ -379,7 +380,8 @@ struct bcmpmu_fg_data {
 #define DEBUG_MASK (BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT |\
 			BCMPMU_PRINT_FLOW | BCMPMU_PRINT_VERBOSE)
 #else
-#define DEBUG_MASK (BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT)
+#define DEBUG_MASK (BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT |\
+			BCMPMU_PRINT_FLOW)
 #endif
 
 static u32 debug_mask = DEBUG_MASK;
@@ -2268,11 +2270,13 @@ static int bcmpmu_fg_get_init_cap(struct bcmpmu_fg_data *fg)
 
 		if (fg->used_init_cap && !force_saved) {
 			cap_percentage = init_cap;
-		} else if ((fg->bdata->batt_prop->enable_flat_ocv_soc &&
+		} else if (((fg->bdata->batt_prop->enable_flat_ocv_soc &&
 				init_cap <=
 				fg->bdata->batt_prop->flat_ocv_soc_high &&
 				init_cap >=
-				fg->bdata->batt_prop->flat_ocv_soc_low) ||
+				fg->bdata->batt_prop->flat_ocv_soc_low) &&
+				(abs(saved_cap - init_cap) <
+					FG_FLAT_CAP_DELTA_THRLD)) ||
 			force_saved ||
 			(abs(saved_cap - init_cap) < FG_CAP_DELTA_THRLD)) {
 			pr_fg(INIT, "Limiting to saved cap\n");
