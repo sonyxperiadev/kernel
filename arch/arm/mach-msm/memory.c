@@ -141,6 +141,8 @@ static void __init calculate_reserve_limits(void)
 	}
 }
 
+#define DEBUG_MEM_SIZE SZ_1M
+#define MIN_RESERVE_SIZE (0x5000000 - DEBUG_MEM_SIZE)
 static void __init adjust_reserve_sizes(void)
 {
 	int i;
@@ -150,6 +152,11 @@ static void __init adjust_reserve_sizes(void)
 	for (i = 0; i < MEMTYPE_MAX; i++, mt++) {
 		if (mt->flags & MEMTYPE_FLAGS_1M_ALIGN)
 			mt->size = (mt->size + SECTION_SIZE - 1) & SECTION_MASK;
+		if ((i == MEMTYPE_EBI1) && (mt->size < MIN_RESERVE_SIZE)) {
+			pr_warning("%pa size for %s too small, setting to %x\n",
+				&mt->size, memtype_name[i], MIN_RESERVE_SIZE);
+			mt->size = MIN_RESERVE_SIZE;
+		}
 		if (mt->size > mt->limit) {
 			pr_warning("%pa size for %s too large, setting to %pa\n",
 				&mt->size, memtype_name[i], &mt->limit);

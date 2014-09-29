@@ -2,6 +2,7 @@
  * Generic GPIO card-detect helper
  *
  * Copyright (C) 2011, Guennadi Liakhovetski <g.liakhovetski@gmx.de>
+ * Copyright (C) 2013 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -19,11 +20,16 @@
 
 struct mmc_cd_gpio {
 	unsigned int gpio;
-	char label[0];
 	bool status;
+#ifdef CONFIG_MMC_BLOCK_DEFERRED_RESUME
+	int irq_detect;
+#endif
+	char label[0];
+	/* Don't add any fields at the end of this structure as they will
+	 * overwrite the label. */
 };
 
-static int mmc_cd_get_status(struct mmc_host *host)
+int mmc_cd_get_status(struct mmc_host *host)
 {
 	int ret = -ENOSYS;
 	struct mmc_cd_gpio *cd = host->hotplug.handler_priv;
@@ -37,6 +43,30 @@ out:
 	return ret;
 }
 
+#ifdef CONFIG_MMC_BLOCK_DEFERRED_RESUME
+int mmc_cd_slot_status_changed(struct mmc_host *host)
+{
+	int status;
+	struct mmc_cd_gpio *cd = host->hotplug.handler_priv;
+
+	if (!cd)
+		goto out;
+
+	status = mmc_cd_get_status(host);
+	if (unlikely(status < 0))
+		return 1;
+
+	if ((cd->irq_detect && status) || (!status && host->card)) {
+		cd->irq_detect = 0;
+		return 1;
+	}
+
+out:
+	return 0;
+}
+EXPORT_SYMBOL(mmc_cd_slot_status_changed);
+#endif
+
 static irqreturn_t mmc_cd_gpio_irqt(int irq, void *dev_id)
 {
 	struct mmc_host *host = dev_id;
@@ -47,6 +77,10 @@ static irqreturn_t mmc_cd_gpio_irqt(int irq, void *dev_id)
 	if (unlikely(status < 0))
 		goto out;
 
+#ifdef CONFIG_MMC_BLOCK_DEFERRED_RESUME
+	cd->irq_detect = 1;
+#endif
+
 	if (status ^ cd->status) {
 		pr_info("%s: slot status change detected (%d -> %d), GPIO_ACTIVE_%s\n",
 				mmc_hostname(host), cd->status, status,
@@ -54,6 +88,9 @@ static irqreturn_t mmc_cd_gpio_irqt(int irq, void *dev_id)
 				"HIGH" : "LOW");
 		cd->status = status;
 
+#ifdef CONFIG_MMC_BLOCK_DEFERRED_RESUME
+		cd->irq_detect = 0;
+#endif
 		/* Schedule a card detection after a debounce timeout */
 		mmc_detect_change(host, msecs_to_jiffies(100));
 	}
@@ -90,6 +127,9 @@ int mmc_cd_gpio_request(struct mmc_host *host, unsigned int gpio)
 		goto eirqreq;
 
 	cd->status = ret;
+#ifdef CONFIG_MMC_BLOCK_DEFERRED_RESUME
+	cd->irq_detect = 0;
+#endif
 
 	ret = request_threaded_irq(irq, NULL, mmc_cd_gpio_irqt,
 				   IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING,
