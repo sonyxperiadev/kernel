@@ -60,7 +60,15 @@ obj-$(CONFIG_PM8XXX_CCADC)	+= pm8xxx-ccadc.o
 obj-$(CONFIG_PM8921_BMS)	+= pm8921-bms.o
 obj-$(CONFIG_QPNP_BMS)		+= qpnp-bms.o
 obj-$(CONFIG_PM8921_CHARGER)	+= pm8921-charger.o
+
+ifdef CONFIG_MACH_SONY_RHINE
+obj-$(CONFIG_QPNP_CHARGER)	+= qpnp-charger-rhine.o
+else ifdef CONFIG_MACH_SONY_SHINANO
+obj-$(CONFIG_QPNP_CHARGER)	+= qpnp-charger-shinano.o
+else
 obj-$(CONFIG_QPNP_CHARGER)	+= qpnp-charger.o
+endif
+
 obj-$(CONFIG_LTC4088_CHARGER)	+= ltc4088-charger.o
 obj-$(CONFIG_CHARGER_SMB347)	+= smb347-charger.o
 obj-$(CONFIG_BATTERY_BCL)	+= battery_current_limit.o
