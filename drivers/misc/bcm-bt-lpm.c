@@ -36,6 +36,8 @@
 #include <linux/of_platform.h>
 #include <linux/of_gpio.h>
 
+#include <plat/pi_mgr.h>
+
 #ifndef BCM_BT_LPM_BT_WAKE_ASSERT
 #define BCM_BT_LPM_BT_WAKE_ASSERT 0
 #endif
@@ -68,6 +70,8 @@ struct bcm_bt_lpm_entry_struct {
 	struct platform_device *pdev;
 	struct wakeup_source *bt_wake_ws;
 	struct wakeup_source *host_wake_ws;
+	struct pi_mgr_qos_node qos_bt_host_wake;
+	struct pi_mgr_qos_node qos_bt_wake;
 };
 
 struct bcm_bt_lpm_entry_struct *priv_g;
@@ -92,6 +96,8 @@ int bcm_bt_lpm_assert_bt_wake(void)
 	if (unlikely((priv_g->pdata->bt_wake_gpio == -1)))
 		return -EFAULT;
 	__pm_stay_awake(priv_g->bt_wake_ws);
+	pi_mgr_qos_request_update(&priv_g->qos_bt_wake, 0);
+
 	gpio_set_value(priv_g->pdata->bt_wake_gpio,
 					BCM_BT_LPM_BT_WAKE_ASSERT);
 	pr_debug("%s BLUETOOTH: Exit ASSERT BT_WAKE\n", __func__);
@@ -112,6 +118,7 @@ int bcm_bt_lpm_deassert_bt_wake(void)
 					BCM_BT_LPM_BT_WAKE_DEASSERT);
 	pr_debug("%s: BLUETOOTH: BT_WAKE de-asserted.\n", __func__);
 	__pm_relax(priv_g->bt_wake_ws);
+	pi_mgr_qos_request_update(&priv_g->qos_bt_wake, PI_MGR_QOS_DEFAULT_VALUE);
 	return 0;
 }
 
@@ -196,10 +203,14 @@ static irqreturn_t bcm_bt_lpm_host_wake_isr(int irq, void *dev)
 
 	host_wake = gpio_get_value(
 			priv->pdata->host_wake_gpio);
-	if (BCM_BT_LPM_HOST_WAKE_ASSERT == host_wake)
+	if (BCM_BT_LPM_HOST_WAKE_ASSERT == host_wake) {
 		__pm_stay_awake(priv->host_wake_ws);
-	else
+		pi_mgr_qos_request_update(&priv_g->qos_bt_host_wake, 0);
+	}
+	else {
 		__pm_relax(priv->host_wake_ws);
+		pi_mgr_qos_request_update(&priv_g->qos_bt_host_wake, PI_MGR_QOS_DEFAULT_VALUE);
+	}
 
 	spin_unlock_irqrestore(&priv->plpm->bcm_bt_lpm_lock, flags);
 	pr_debug("%s BLUETOOTH:Exiting.\n", __func__);
@@ -516,6 +527,15 @@ static int bcm_bt_lpm_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	spin_lock_init(&priv_g->plpm->bcm_bt_lpm_lock);
+
+	pi_mgr_qos_add_request(&priv_g->qos_bt_host_wake,
+					"bt_host_wake",
+					PI_MGR_PI_ID_ARM_SUB_SYSTEM,
+					PI_MGR_QOS_DEFAULT_VALUE);
+	pi_mgr_qos_add_request(&priv_g->qos_bt_wake,
+					"bt_wake",
+					PI_MGR_PI_ID_ARM_SUB_SYSTEM,
+					PI_MGR_QOS_DEFAULT_VALUE);
 
 #ifndef CONFIG_OF_DEVICE
 	if (pdev->dev.platform_data) {
