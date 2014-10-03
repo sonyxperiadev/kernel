@@ -115,6 +115,12 @@
 				00 02 45 00 00 00 00 01 97];
 		somc,mdss-dsi-disp-on-in-hs = <1>;
 		somc,mdss-dsi-wait-time-before-on-cmd = <120>;
+		somc,lcd-id = <0>;
+		somc,lcd-id-adc = <0 0x7fffffff>;
+		somc,disp-en-on-pre = <25>;
+		somc,pw-on-rst-seq = <0 60>, <1 10>;
+		somc,disp-en-off-post = <50>;
+		somc,pw-off-rst-b-seq = <0 10>;
 	};
 
 	dsi_renesas_sharp_1080_vid: somc,renesas_sharp_1080p_panel {
@@ -221,6 +227,12 @@
 				00 02 45 00 00 00 00 01 97];
 		somc,mdss-dsi-disp-on-in-hs = <1>;
 		somc,mdss-dsi-wait-time-before-on-cmd = <150>;
+		somc,lcd-id = <1>;
+		somc,lcd-id-adc = <0 57000>;
+		somc,disp-en-on-pre = <25>;
+		somc,pw-on-rst-seq = <0 60>, <1 10>;
+		somc,disp-en-off-post = <50>;
+		somc,pw-off-rst-b-seq = <0 10>;
 
 		somc,mdss-dsi-pre-uv-command = [29 01 00 00 00 00 02 B0 04];
 		somc,mdss-dsi-uv-command = [04 01 00 00 00 00 01 EF];
@@ -407,6 +419,13 @@
 				00 c2 45 00 00 00 00 01 75
 				00 02 45 00 00 00 00 01 97];
 		somc,mdss-dsi-disp-on-in-hs = <1>;
+		somc,lcd-id = <1>;
+		somc,lcd-id-adc = <353000 414000>;
+		somc,disp-en-on-pre = <5>;
+		somc,disp-en-on-post = <15>;
+		somc,disp-en-off-post = <70>;
+		somc,pw-on-rst-seq = <1 10>;
+		somc,pw-off-rst-seq = <0 0>;
 		somc,mdss-dsi-wait-time-before-on-cmd = <120>;
 
 		somc,mdss-dsi-pre-uv-command = [29 01 00 00 00 00 02 B0 04];
@@ -971,6 +990,13 @@
 		somc,mdss-dsi-disp-on-in-hs = <1>;
 		somc,mdss-dsi-wait-time-before-on-cmd = <120>;
 		somc,mdss-dsi-init-from-begin = <1>;
+
+		somc,lcd-id = <1>;
+		somc,lcd-id-adc = <1236000 1395000>;
+		somc,disp-en-on-pre = <25>;
+		somc,pw-on-rst-seq = <0 60>, <1 10>;
+		somc,disp-en-off-post = <50>;
+		somc,pw-off-rst-b-seq = <0 10>;
 	};
 
 	dsi_novatek_jdc_1080_vid: somc,novatek_jdc_1080p_panel {
@@ -1447,6 +1473,15 @@
 				00 c2 45 00 00 00 00 01 75
 				00 02 45 00 00 00 00 01 97];
 		somc,mdss-dsi-disp-on-in-hs = <1>;
+		somc,lcd-id = <1>;
+		somc,lcd-id-adc = <1087000 1231000>;
+		somc,disp-en-on-pre = <5>;
+		somc,disp-en-on-post = <20>;
+		somc,disp-en-off-post = <70>;
+		somc,pw-on-rst-seq = <1 10>;
+		somc,pw-off-rst-seq = <0 0>;
+		somc,pw-down-period = <200>;
+
 		somc,mdss-dsi-wait-time-before-on-cmd = <120>;
 		somc,mdss-dsi-init-from-begin = <1>;
 
