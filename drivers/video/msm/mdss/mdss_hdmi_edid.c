@@ -635,7 +635,7 @@ static void hdmi_edid_extract_3d_present(struct hdmi_edid_ctrl *edid_ctrl,
 		VENDOR_SPECIFIC_DATA_BLOCK, &len);
 
 	edid_ctrl->present_3d = 0;
-	if (vsd == NULL || len == 0 || len > MAX_DATA_BLOCK_SIZE) {
+	if (vsd == NULL || len < 5 || len > MAX_DATA_BLOCK_SIZE) {
 		DEV_DBG("%s: No/Invalid vendor Specific Data Block\n",
 			__func__);
 		return;
@@ -750,7 +750,7 @@ static void hdmi_edid_extract_latency_fields(struct hdmi_edid_ctrl *edid_ctrl,
 	vsd = hdmi_edid_find_block(in_buf, DBC_START_OFFSET,
 		VENDOR_SPECIFIC_DATA_BLOCK, &len);
 
-	if (vsd == NULL || len == 0 || len > MAX_DATA_BLOCK_SIZE) {
+	if (vsd == NULL || len < 5 || len > MAX_DATA_BLOCK_SIZE) {
 		DEV_DBG("%s: No/Invalid vendor Specific Data Block\n",
 			__func__);
 		return;
@@ -787,9 +787,9 @@ static u32 hdmi_edid_extract_ieee_reg_id(struct hdmi_edid_ctrl *edid_ctrl,
 
 	vsd = hdmi_edid_find_block(in_buf, DBC_START_OFFSET,
 				   VENDOR_SPECIFIC_DATA_BLOCK, &len);
-	if (vsd == NULL || len == 0 || len > MAX_DATA_BLOCK_SIZE) {
+	if (vsd == NULL || len < 5 || len > MAX_DATA_BLOCK_SIZE) {
 		DEV_DBG("%s: No/Invalid Vendor Specific Data Block\n",
-		  __func__);
+			__func__);
 		return 0;
 	}
 
@@ -997,15 +997,11 @@ static int hdmi_edid_get_display_vsd_3d_mode(const u8 *data_buf,
 			VENDOR_SPECIFIC_DATA_BLOCK, &len) : NULL;
 	int i;
 
-	if (vsd == NULL || len == 0 || len > MAX_DATA_BLOCK_SIZE) {
+	if (vsd == NULL || len < 5 || len > MAX_DATA_BLOCK_SIZE) {
 		DEV_DBG("%s: No/Invalid Vendor Specific Data Block\n",
 			__func__);
 		return -ENXIO;
 	}
-
-	/* 3D_EVF_DATA_OFFSET is 8 */
-	if (len < 8)
-		return -ETOOSMALL;
 
 	offset = HDMI_VSDB_3D_EVF_DATA_OFFSET(vsd);
 	if (offset >= len - 1)
@@ -1150,7 +1146,7 @@ static void hdmi_edid_get_extended_video_formats(
 	vsd = hdmi_edid_find_block(in_buf, DBC_START_OFFSET,
 		VENDOR_SPECIFIC_DATA_BLOCK, &db_len);
 
-	if (vsd == NULL || db_len == 0 || db_len > MAX_DATA_BLOCK_SIZE) {
+	if (vsd == NULL || db_len < 5 || db_len > MAX_DATA_BLOCK_SIZE) {
 		DEV_DBG("%s: No/Invalid Vendor Specific Data Block\n",
 			__func__);
 		return;

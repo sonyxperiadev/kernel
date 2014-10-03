@@ -1,5 +1,5 @@
 /* Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
- * Copyright (C) 2013 Sony Mobile Communications AB.
+ * Copyright (C) 2013-2014 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -146,6 +146,7 @@ enum dsi_lane_map_type {
 #define DSI_CMD_TRIGGER_SW		0x04
 #define DSI_CMD_TRIGGER_SW_SEOF		0x05	/* cmd dma only */
 #define DSI_CMD_TRIGGER_SW_TE		0x06
+#define DSI_CMD_TRIGGER_OVER_RANG	0x07
 
 #define DSI_VIDEO_TERM  BIT(16)
 #define DSI_MDP_TERM    BIT(8)
@@ -200,8 +201,10 @@ struct dsi_clk_desc {
 
 /* panel DriverIC type */
 enum {
-	PANEL_DRIVER_IC_RENESAS,
-	PANEL_DRIVER_IC_NOVATEK,
+	PANEL_DRIVER_IC_R63311,
+	PANEL_DRIVER_IC_NT35596,
+	PANEL_DRIVER_IC_SY35590,
+	PANEL_DRIVER_IC_NT71397,
 	PANEL_DRIVER_IC_NONE,
 };
 
@@ -235,18 +238,32 @@ struct mdss_pcc_color_tbl {
 	u32 b_data;
 } __packed;
 
+#define PCC_STS_UD	0x01	/* update request */
+
 struct mdss_pcc_data {
 	struct mdss_pcc_color_tbl *color_tbl;
 	u32 tbl_size;
 	u8 tbl_idx;
+	u8 pcc_sts;
 	u32 u_data;
 	u32 v_data;
 	int param_type;
 };
 
+struct mdss_panel_power_seq {
+	int disp_en_pre;
+	int disp_en_post;
+	int seq_num;
+	int *rst_seq;
+	int seq_b_num;
+	int *rst_b_seq;
+};
+
 struct mdss_panel_specific_pdata {
 	bool detected;
 	int driver_ic;
+	int32_t lcd_id;
+	int32_t adc_uv;
 	int disp_on_in_hs;
 	int panel_detect;
 	int wait_time_before_on_cmd;
@@ -255,8 +272,6 @@ struct mdss_panel_specific_pdata {
 	int cabc_active;
 
 	struct dsi_panel_cmds cabc_early_on_cmds;
-	struct dsi_panel_cmds cabc_early_on_v3_cmds;
-	struct dsi_panel_cmds cabc_deferred_on_v3_cmds;
 	struct dsi_panel_cmds cabc_on_cmds;
 	struct dsi_panel_cmds cabc_off_cmds[MAX_CMDS];
 	struct dsi_panel_cmds cabc_late_off_cmds[MAX_CMDS];
@@ -273,12 +288,16 @@ struct mdss_panel_specific_pdata {
 	int (*update_panel) (struct mdss_panel_data *pdata);
 	int (*update_fps) (struct msm_fb_data_type *mfd);
 	int (*reset) (struct mdss_panel_data *pdata, int enable);
-	int (*pcc_setup) (struct msm_fb_data_type *mfd);
-
 	struct dsi_panel_cmds pre_uv_read_cmds;
 	struct dsi_panel_cmds uv_read_cmds;
 	struct mdss_pcc_data pcc_data;
+
+	struct mdss_panel_power_seq on_seq;
+	struct mdss_panel_power_seq off_seq;
+	u32 down_period;
+	u32 new_vfp;
 };
+
 
 struct dsi_drv_cm_data {
 	struct regulator *vdd_vreg;
@@ -304,6 +323,7 @@ struct mdss_dsi_ctrl_pdata {
 	int (*partial_update_fnc) (struct mdss_panel_data *pdata);
 	int (*check_status) (struct mdss_dsi_ctrl_pdata *pdata);
 	int (*cmdlist_commit)(struct mdss_dsi_ctrl_pdata *ctrl, int from_mdp);
+	int (*pcc_setup)(struct mdss_panel_data *pdata);
 	struct mdss_panel_data panel_data;
 	unsigned char *ctrl_base;
 	int reg_size;
@@ -405,7 +425,6 @@ void mdss_dsi_clk_deinit(struct mdss_dsi_ctrl_pdata *ctrl_pdata);
 int mdss_dsi_enable_bus_clocks(struct mdss_dsi_ctrl_pdata *ctrl_pdata);
 void mdss_dsi_disable_bus_clocks(struct mdss_dsi_ctrl_pdata *ctrl_pdata);
 void mdss_dsi_panel_reset(struct mdss_panel_data *pdata, int enable);
-
 void mdss_dsi_phy_enable(struct mdss_dsi_ctrl_pdata *ctrl, int on);
 void mdss_dsi_phy_init(struct mdss_panel_data *pdata);
 void mdss_dsi_phy_sw_reset(unsigned char *ctrl_base);

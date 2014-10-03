@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2012, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2010-2013, The Linux Foundation. All rights reserved.
  * Copyright (C) 2013 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -78,6 +78,7 @@ struct hdmi_tx_ctrl {
 	u32 vote_hdmi_core_on;
 	u8  timing_gen_on;
 	u32 mhl_max_pclk;
+	u8  mhl_hpd_on;
 	struct completion hpd_done;
 	struct work_struct hpd_int_work;
 

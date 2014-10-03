@@ -1,5 +1,5 @@
 /* Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
- * Copyright (C) 2013 Sony Mobile Communications AB.
+ * Copyright (C) 2013-2014 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -945,7 +945,7 @@ static int __devinit mdss_dsi_ctrl_probe(struct platform_device *pdev)
 			pr_err("%s: FAILED: cannot alloc dsi ctrl\n",
 			       __func__);
 			rc = -ENOMEM;
-			goto error_no_mem;
+			return rc;
 		}
 		ctrl_pdata->spec_pdata = devm_kzalloc(&pdev->dev,
 			sizeof(struct mdss_panel_specific_pdata),
@@ -1043,6 +1043,14 @@ static int __devinit mdss_dsi_ctrl_probe(struct platform_device *pdev)
 		pr_err("%s: dsi panel dev reg failed\n", __func__);
 		goto error_pan_node;
 	}
+
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+	if (ctrl_pdata->panel_data.panel_info.cont_splash_enabled &&
+		ctrl_pdata->spec_pdata->pcc_data.pcc_sts & PCC_STS_UD) {
+		ctrl_pdata->pcc_setup(&ctrl_pdata->panel_data);
+		ctrl_pdata->spec_pdata->pcc_data.pcc_sts &= ~PCC_STS_UD;
+	}
+#endif	/* CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL */
 
 	pr_debug("%s: Dsi Ctrl->%d initialized\n", __func__, index);
 	return 0;

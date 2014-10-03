@@ -152,29 +152,6 @@ static void reset_hdcp_ddc_failures(struct hdmi_hdcp_ctrl *hdcp_ctrl)
 		__func__, HDCP_STATE_NAME, hdcp_ddc_status, failure, nack0);
 } /* reset_hdcp_ddc_failures */
 
-void hdmi_hdcp_aksv(u8 aksv[5], void *input)
-{
-	struct hdmi_hdcp_ctrl *hdcp_ctrl = (struct hdmi_hdcp_ctrl *)input;
-	u32 qfprom_aksv_lsb, qfprom_aksv_msb;
-
-	if (!hdcp_ctrl) {
-		DEV_ERR("%s: invalid input\n", __func__);
-		return;
-	}
-
-	/* Fetch aksv from QFPROM, this info should be public. */
-	qfprom_aksv_lsb = DSS_REG_R(hdcp_ctrl->init_data.qfprom_io,
-		HDCP_KSV_LSB);
-	qfprom_aksv_msb = DSS_REG_R(hdcp_ctrl->init_data.qfprom_io,
-		HDCP_KSV_MSB);
-
-	aksv[0] =  qfprom_aksv_lsb        & 0xFF;
-	aksv[1] = (qfprom_aksv_lsb >> 8)  & 0xFF;
-	aksv[2] = (qfprom_aksv_lsb >> 16) & 0xFF;
-	aksv[3] = (qfprom_aksv_lsb >> 24) & 0xFF;
-	aksv[4] =  qfprom_aksv_msb        & 0xFF;
-} /* hdmi_hdcp_aksv */
-
 static void hdmi_hdcp_hw_ddc_clean(struct hdmi_hdcp_ctrl *hdcp_ctrl)
 {
 	struct dss_io_data *io = NULL;
@@ -216,6 +193,29 @@ static void hdmi_hdcp_hw_ddc_clean(struct hdmi_hdcp_ctrl *hdcp_ctrl)
 			} while (ddc_hw_not_ready && --timeout_count);
 	}
 } /* hdmi_hdcp_hw_ddc_clean */
+
+void hdmi_hdcp_aksv(u8 aksv[5], void *input)
+{
+	struct hdmi_hdcp_ctrl *hdcp_ctrl = (struct hdmi_hdcp_ctrl *)input;
+	u32 qfprom_aksv_lsb, qfprom_aksv_msb;
+
+	if (!hdcp_ctrl) {
+		DEV_ERR("%s: invalid input\n", __func__);
+		return;
+	}
+
+	/* Fetch aksv from QFPROM, this info should be public. */
+	qfprom_aksv_lsb = DSS_REG_R(hdcp_ctrl->init_data.qfprom_io,
+		HDCP_KSV_LSB);
+	qfprom_aksv_msb = DSS_REG_R(hdcp_ctrl->init_data.qfprom_io,
+		HDCP_KSV_MSB);
+
+	aksv[0] =  qfprom_aksv_lsb        & 0xFF;
+	aksv[1] = (qfprom_aksv_lsb >> 8)  & 0xFF;
+	aksv[2] = (qfprom_aksv_lsb >> 16) & 0xFF;
+	aksv[3] = (qfprom_aksv_lsb >> 24) & 0xFF;
+	aksv[4] =  qfprom_aksv_msb        & 0xFF;
+} /* hdmi_hdcp_aksv */
 
 static int hdmi_hdcp_authentication_part1(struct hdmi_hdcp_ctrl *hdcp_ctrl)
 {
@@ -1077,7 +1077,7 @@ static int hdmi_msm_if_abort_reauth(struct hdmi_hdcp_ctrl *hdcp_ctrl)
 	}
 
 	if (++hdcp_ctrl->auth_retries == AUTH_RETRIES_TIME) {
-		hdmi_hdcp_off(hdcp_ctrl, true);
+		hdmi_hdcp_off(hdcp_ctrl);
 		hdcp_ctrl->auth_retries = 0;
 		ret = -ERANGE;
 	}
@@ -1148,7 +1148,7 @@ int hdmi_hdcp_reauthenticate(void *input)
 	return ret;
 } /* hdmi_hdcp_reauthenticate */
 
-void hdmi_hdcp_off(void *input, bool isCurrentWork)
+void hdmi_hdcp_off(void *input)
 {
 	struct hdmi_hdcp_ctrl *hdcp_ctrl = (struct hdmi_hdcp_ctrl *)input;
 	struct dss_io_data *io;
@@ -1183,14 +1183,10 @@ void hdmi_hdcp_off(void *input, bool isCurrentWork)
 	 * No more reauthentiaction attempts will be scheduled since we
 	 * set the currect state to inactive.
 	 */
-	if (!isCurrentWork) {
-		rc = cancel_delayed_work_sync(&hdcp_ctrl->hdcp_auth_work);
-		if (rc)
-			DEV_DBG("%s: %s: Deleted hdcp auth work\n", __func__,
-				HDCP_STATE_NAME);
-	}
-	hdcp_ctrl->auth_retries = 0;
-
+	rc = cancel_delayed_work_sync(&hdcp_ctrl->hdcp_auth_work);
+	if (rc)
+		DEV_DBG("%s: %s: Deleted hdcp auth work\n", __func__,
+			HDCP_STATE_NAME);
 	rc = cancel_work_sync(&hdcp_ctrl->hdcp_int_work);
 	if (rc)
 		DEV_DBG("%s: %s: Deleted hdcp int work\n", __func__,
