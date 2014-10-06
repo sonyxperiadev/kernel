@@ -1632,8 +1632,8 @@ static int em718x_probe(struct i2c_client *client,
 		dev_err(dev, "could not create sysfs\n");
 
 	rc = devm_request_threaded_irq(dev, em718x->irq, NULL,
-			em718x_irq_handler, IRQF_TRIGGER_RISING | IRQF_ONESHOT,
-			dev_name(dev), em718x);
+			em718x_irq_handler, IRQF_TRIGGER_RISING | IRQF_ONESHOT |
+			IRQF_NO_SUSPEND, dev_name(dev), em718x);
 	if (rc) {
 		dev_err(dev, "could not request irq %d\n",
 				em718x->irq);
