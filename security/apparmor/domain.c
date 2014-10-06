@@ -822,13 +822,6 @@ int aa_change_profile(const char *ns_name, const char *hname, bool onexec,
 	if (error)
 		goto audit;
 
-	if (onexec && !current_is_single_threaded()) {
-		info = "not a single threaded task";
-		error = -EACCES;
-		goto audit;
-	}
-
-
 	if (permtest)
 		goto audit;
 
