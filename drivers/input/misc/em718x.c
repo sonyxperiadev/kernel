@@ -1663,6 +1663,7 @@ static int em718x_remove(struct i2c_client *client)
 static int em718x_suspend(struct device *dev)
 {
 	struct em718x *em718x = dev_get_drvdata(dev);
+	mutex_lock(&em718x->lock);
 	dev_dbg(dev, "%s\n", __func__);
 	return 0;
 }
@@ -1671,6 +1672,7 @@ static int em718x_resume(struct device *dev)
 {
 	struct em718x *em718x = dev_get_drvdata(dev);
 	dev_dbg(dev, "%s\n", __func__);
+	mutex_unlock(&em718x->lock);
 	return 0;
 }
 
