@@ -354,6 +354,9 @@ unsigned long shrink_slab(struct shrink_control *shrink,
 			if (total_scan < batch_size)
 				batch_size = total_scan;
 
+			if (total_scan < batch_size)
+				batch_size = total_scan;
+
 			nr_before = do_shrinker_shrink(shrinker, shrink, 0);
 			shrink_ret = do_shrinker_shrink(shrinker, shrink,
 							batch_size);
