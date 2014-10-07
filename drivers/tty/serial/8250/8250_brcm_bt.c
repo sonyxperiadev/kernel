@@ -32,15 +32,6 @@ bt_serial8250_rx_chars(struct uart_8250_port *up, unsigned char lsr)
 	int n_fifo;
 	int mcr;
 
-	/* Check whether Auto Flow control is enable in Modem control register
-	* */
-	mcr = port->serial_in(port, UART_MCR);
-	if (mcr & UART_MCR_AFE) {
-		afe_status = 1;
-		/* Disabling Auto flow control */
-		port->serial_out(port, UART_MCR, mcr & (~UART_MCR_AFE));
-	}
-
 	/* Handle port gets called from either the interrupt context
 	 * _OR_ from the timeout thread context (serial8250_timeout).
 	 *
@@ -120,36 +111,11 @@ bt_serial8250_rx_chars(struct uart_8250_port *up, unsigned char lsr)
 				flag = TTY_FRAME;
 		}
 
-		if (afe_status) {
-			/* Re-enable AFE if FIFO level go up. (this is not
-			 * common)*/
-			n_fifo = port->serial_in(port, UART_RX_FIFO_LEVEL);
-			/* FIXME: Currently this is added as a workaround for
-			* BT throughput. Received data available interrpt is
-			* generated when FIFO is Half full.
-			* Making sure we have enough time to clear the fifo by
-			* initially disabling the auto flow control. When FIFO
-			* has more than 150 bytes, enable the auto flow
-			* control so that we dont run into overrun condition.
-			* */
-			if (n_fifo >= 150) {
-				mcr = port->serial_in(port, UART_MCR);
-				port->serial_out(port, UART_MCR, mcr | (UART_MCR_AFE));
-				afe_status = 0;
-			}
-		}
-
 		uart_insert_char(&up->port, lsr, UART_LSR_OE, ch, flag);
 ignore_char:
 		lsr = port->serial_in(port, UART_LSR);
 	} while ((lsr & (UART_LSR_DR | UART_LSR_BI)) && (max_count-- > 0));
 
-	/* Keep the Auto flow control to its pervious state.*/
-	if (afe_status) {
-		/* MUST enable AFE when exit this routine */
-		mcr = port->serial_in(port, UART_MCR);
-		port->serial_out(port, UART_MCR, mcr | (UART_MCR_AFE));
-	}
 	spin_unlock(&up->port.lock);
 	tty_flip_buffer_push(&port->state->port);
 	spin_lock(&up->port.lock);
