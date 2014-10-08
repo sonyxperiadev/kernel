@@ -34,6 +34,9 @@
 #include "../base.h"
 #include "power.h"
 
+#define DPM_DEV_ALARMTIMER_NAME		"alarmtimer"
+#define DPM_DEV_ALARMTIMER_NAME_SIZE	((size_t) (sizeof(DPM_DEV_ALARMTIMER_NAME)))
+
 typedef int (*pm_callback_t)(struct device *);
 
 /*
@@ -1346,6 +1349,7 @@ static int device_prepare(struct device *dev, pm_message_t state)
 int dpm_prepare(pm_message_t state)
 {
 	int error = 0;
+	struct device *alarmtimer_dev = NULL;
 
 	might_sleep();
 
@@ -1372,9 +1376,18 @@ int dpm_prepare(pm_message_t state)
 			break;
 		}
 		dev->power.is_prepared = true;
-		if (!list_empty(&dev->power.entry))
+		if (!list_empty(&dev->power.entry)) {
+			if (!memcmp((void *) dev_name(dev), (void *) DPM_DEV_ALARMTIMER_NAME,
+					DPM_DEV_ALARMTIMER_NAME_SIZE ))
+				alarmtimer_dev = dev;
 			list_move_tail(&dev->power.entry, &dpm_prepared_list);
+		}
 		put_device(dev);
+	}
+	if ( alarmtimer_dev != NULL ) {
+		get_device(alarmtimer_dev);
+		list_move_tail(&alarmtimer_dev->power.entry, &dpm_prepared_list);
+		put_device(alarmtimer_dev);
 	}
 	mutex_unlock(&dpm_list_mtx);
 	return error;
