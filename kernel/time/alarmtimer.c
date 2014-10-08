@@ -44,6 +44,7 @@ module_param_named(debug_mask, debug_mask, \
 		} \
 	} while (0)
 
+#define ALARMTIMER_SUSPEND_HOLD_SEC	( 1 )
 
 /**
  * struct alarm_base - Alarm timer bases
@@ -294,8 +295,8 @@ static int alarmtimer_suspend(struct device *dev)
 	if (min.tv64 == 0)
 		return 0;
 
-	if (ktime_to_ns(min) < 2 * NSEC_PER_SEC) {
-		__pm_wakeup_event(ws, 2 * MSEC_PER_SEC);
+	if (ktime_to_ns(min) < ALARMTIMER_SUSPEND_HOLD_SEC * NSEC_PER_SEC) {
+		__pm_wakeup_event(ws, ALARMTIMER_SUSPEND_HOLD_SEC * MSEC_PER_SEC);
 		return -EBUSY;
 	}
 
