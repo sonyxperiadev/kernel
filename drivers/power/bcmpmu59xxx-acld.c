@@ -89,6 +89,15 @@ static u32 debug_mask = DEBUG_MASK;
 #define TRIM_MARGIN_0			0
 #define USB_FC_CC_455MA			4
 
+struct bcmpmu_acld_adaptive {
+	bool enabled;
+	int vbus_res;
+	int vbus_chrg_off;
+	int cc_trim_start;
+	int poll_time_start;
+	u8 cnt;
+};
+
 struct bcmpmu_acld {
 	struct bcmpmu59xxx *bcmpmu;
 	struct mutex mutex;
@@ -131,10 +140,16 @@ struct bcmpmu_acld {
 	bool mbc_in_cv;
 	bool tml_trtle_stat;
 	bool fg_eoc;
+
+	struct bcmpmu_acld_adaptive adaptive;
 };
 
 static int acld_chargers[] = {
 	PMU_CHRGR_TYPE_DCP,
+};
+
+static int acld_curr_lmt[PMU_CHRGR_TYPE_MAX] = {
+	[PMU_CHRGR_TYPE_DCP] = 1500,
 };
 
 static bool bcmpmu_usb_mbc_fault_check(struct bcmpmu_acld *acld);
@@ -218,6 +233,20 @@ bool bcmpmu_is_acld_enabled(struct bcmpmu59xxx *bcmpmu)
 }
 EXPORT_SYMBOL(bcmpmu_is_acld_enabled);
 
+static void bcmpmu_adaptive_disable(struct bcmpmu_acld *acld)
+{
+	struct bcmpmu_acld_adaptive *adaptive = &acld->adaptive;
+
+	if (!adaptive->enabled)
+		return;
+
+	pr_acld(FLOW, "Disabling adaptive tuning\n");
+	adaptive->cnt = 0;
+	adaptive->enabled = false;
+	bcmpmu_set_cc_trim(acld->bcmpmu, adaptive->cc_trim_start);
+	acld->acld_wrk_poll_time = adaptive->poll_time_start;
+}
+
 /**
  * bcmpmu_acld_enable - This function enables/disables turbo
  * @acld - pointer to acld structure
@@ -240,6 +269,9 @@ static int bcmpmu_acld_enable(struct bcmpmu_acld *acld, bool enable)
 					PMU_REG_OTG_BOOSTCTRL3, reg);
 		} else
 			BUG_ON(1);
+
+		if (enable)
+			bcmpmu_adaptive_disable(acld);
 	}
 	return ret;
 }
@@ -769,6 +801,12 @@ static int bcmpmu_acld_algo(struct bcmpmu_acld *acld)
 			ADC_VBUS_AVG_SAMPLES_8);
 	vbus_res = bcmpmu_get_vbus_resistance(acld,
 			vbus_chrg_off, vbus_chrg_on);
+
+	if (acld->pdata->enable_adaptive_batt_curr) {
+		acld->adaptive.vbus_res = vbus_res;
+		acld->adaptive.vbus_chrg_off = vbus_chrg_off;
+	}
+
 	pr_acld(INIT, "vbus_res(uohm) = %d\n", vbus_res);
 	vbus_load = bcmpmu_get_vbus_load(acld, vbus_chrg_off, vbus_res);
 
@@ -943,6 +981,150 @@ chrgr_pre_chk:
 	return 0;
 
 }
+
+static int bcmpmu_adaptive_batt_curr(struct bcmpmu_acld *acld)
+{
+	struct bcmpmu_acld_current_data *limits =
+		&acld->pdata->acld_currents[acld->batt_type];
+	int ibat = bcmpmu_acld_get_batt_curr(acld);
+	int acld_curr = acld->pdata->acld_max_currents[acld->chrgr_type];
+	unsigned int margin = acld->pdata->batt_curr_margin;
+	struct bcmpmu_acld_adaptive *adaptive = &acld->adaptive;
+	bool disable = false;
+	int ret = 0;
+
+	if (!acld_curr || !acld->acld_en)
+		return 0;
+
+	if ((ibat + margin) < limits->i_max_cc) {
+		int vbus_chrg_on;
+		int vbus_load;
+		int usb_fc_cc_reached;
+		int curr;
+		unsigned int i;
+		bool reached_max_trim = false;
+
+		if (adaptive->cnt++ < 2)
+			return 0;
+
+		adaptive->cnt = 0;
+		usb_fc_cc_reached = bcmpmu_get_icc_fc(acld->bcmpmu);
+
+		pr_acld(FLOW, "Adaptive tuning USB_CC_TRIM\n");
+
+		do {
+			bcmpmu_clr_sw_ctrl_chrgr_timer(acld);
+
+			vbus_chrg_on = bcmpmu_get_avg_vbus(acld->bcmpmu,
+						   ADC_VBUS_AVG_SAMPLES_8);
+			vbus_load = bcmpmu_get_vbus_load(acld,
+							adaptive->vbus_chrg_off,
+							adaptive->vbus_res);
+
+			if (!bcmpmu_get_ubpd_int(acld)) {
+				pr_acld(INIT, "USB fault\n");
+				disable = true;
+				ret = -EAGAIN;
+				break;
+			}
+
+			if (bcmpmu_get_mbc_cv_status(acld)) {
+				acld->mbc_in_cv = true;
+				disable = true;
+				pr_acld(INIT, "MBC in CV. Exiting CC Tuning\n");
+				break;
+			}
+
+			if ((vbus_chrg_on < vbus_load) ||
+			    (vbus_chrg_on < ACLD_VBUS_ON_LOW_THRLD)) {
+				if (vbus_chrg_on < vbus_load)
+					pr_acld(INIT,
+						"vbus_chrg_on < vbus_load "
+						"(%d < %d)\n",
+						vbus_chrg_on, vbus_load);
+				else
+					pr_acld(INIT,
+						"VBUS Low Threshold hit\n");
+
+				disable = true;
+				break;
+			}
+
+			curr = bcmpmu_acld_get_batt_curr(acld) + margin;
+
+			if (curr >= limits->i_max_cc) {
+				if (curr > limits->i_max_cc)
+					bcmpmu_cc_trim_down(acld->bcmpmu);
+				pr_acld(FLOW, "Found best tune\n");
+				break;
+			}
+
+			if ((usb_fc_cc_reached +
+				bcmpmu_get_next_trim_curr(acld->bcmpmu,
+						TRIM_MARGIN_0)) > acld_curr) {
+				pr_acld(FLOW,
+					"ACLD curr lmt hit. Exit Tuning\n");
+				break;
+			}
+
+			if (!adaptive->enabled) {
+				adaptive->cc_trim_start =
+					bcmpmu_get_cc_trim(acld->bcmpmu);
+				pr_acld(FLOW,
+					"USB_FC_CC = %d. Trim start 0x%x\n",
+					usb_fc_cc_reached,
+					adaptive->cc_trim_start);
+			}
+
+			/* Increase Trim code */
+			pr_acld(FLOW, "Increasing Trim code by one step\n");
+			if (bcmpmu_cc_trim_up(acld->bcmpmu)) {
+				pr_acld(FLOW, "Reached Maximum Trim code\n");
+				reached_max_trim = true;
+			}
+
+			if (!reached_max_trim && !adaptive->enabled) {
+				adaptive->enabled = true;
+				adaptive->poll_time_start =
+					acld->acld_wrk_poll_time;
+				acld->acld_wrk_poll_time = 500;
+			}
+
+			bcmpmu_clr_sw_ctrl_chrgr_timer(acld);
+
+			for (i = 0; i < (acld->msleep_ms / DIVIDE_20); i++) {
+				acld_msleep(acld->msleep_ms);
+				if ((!bcmpmu_is_usb_valid(acld))) {
+					pr_acld(INIT, "Exit trim tuning\n");
+					bcmpmu_chrg_on_output(acld);
+					ret = -EAGAIN;
+					break;
+				}
+			}
+
+			if (reached_max_trim)
+				break;
+		} while (true);
+	} else {
+		adaptive->cnt = 0;
+
+		if (adaptive->enabled) {
+			if (ibat > limits->i_max_cc) {
+				disable = true;
+			} else if ((ibat + margin / 2) > limits->i_max_cc) {
+				pr_acld(FLOW,
+					"Decreasing Trim code by one step\n");
+				bcmpmu_cc_trim_down(acld->bcmpmu);
+			}
+		}
+	}
+
+	if (disable)
+		bcmpmu_adaptive_disable(acld);
+
+	return ret;
+}
+
 static void bcmpmu_acld_periodic_monitor(struct bcmpmu_acld *acld)
 {
 	bool b_ret;
@@ -981,6 +1163,10 @@ static void bcmpmu_acld_periodic_monitor(struct bcmpmu_acld *acld)
 		bcmpmu_reset_acld_flags(acld);
 	}
 
+	if (acld->pdata->enable_adaptive_batt_curr)
+		if (bcmpmu_adaptive_batt_curr(acld) == -EAGAIN)
+			bcmpmu_reset_acld_flags(acld);
+
 	bcmpmu_clr_sw_ctrl_chrgr_timer(acld);
 }
 
@@ -1015,6 +1201,7 @@ bool bcmpmu_acld_false_usbrm(struct bcmpmu59xxx *bcmpmu)
 	bcmpmu_usb_set(bcmpmu, BCMPMU_USB_CTRL_VBUS_ON_OFF, 0);
 	return false_usbrm;
 }
+
 /**
  * bcmpmu_acld_work - Periodic work to moniter ACLD algorithm.
  */
@@ -1061,6 +1248,10 @@ static void bcmpmu_acld_work(struct work_struct *work)
 
 	if ((!acld->acld_init || acld->acld_re_init) && !acld->fg_eoc) {
 		pr_acld(VERBOSE, "Run ACLD algo\n");
+
+		if (acld->acld_re_init)
+			bcmpmu_adaptive_disable(acld);
+
 		bcmpmu_post_acld_start_event(acld);
 		atomic_set(&acld->in_acld_algo, 1);
 		ret = bcmpmu_acld_algo(acld);
@@ -1127,6 +1318,12 @@ static int bcmpmu_reset_acld_flags(struct bcmpmu_acld *acld)
 	acld->mbc_cv_clr_cnt = 0;
 	acld->batt_curr_err_cnt = 0;
 	acld->vbus_vbat_thrs_err_cnt = 0;
+
+	if (acld->adaptive.enabled) {
+		acld->adaptive.enabled = false;
+		acld->adaptive.cnt = 0;
+		acld->acld_wrk_poll_time = acld->adaptive.poll_time_start;
+	}
 	return 0;
 }
 
@@ -1505,6 +1702,9 @@ static int bcmpmu_acld_probe(struct platform_device *pdev)
 		acld->pdata->acld_chrgrs_list_size =
 			ARRAY_SIZE(acld_chargers);
 	}
+	if (acld->pdata->enable_adaptive_batt_curr &&
+		!acld->pdata->acld_max_currents)
+		acld->pdata->acld_max_currents = acld_curr_lmt;
 
 	bcmpmu_acld_update_min_input(acld);
 	if (limits->acld_cc_lmt > acld->safe_c) {

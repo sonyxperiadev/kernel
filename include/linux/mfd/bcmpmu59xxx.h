@@ -427,6 +427,11 @@ struct bcmpmu_acld_pdata {
 	int acld_chrgrs_list_size;
 	bool qa_required; /* Set this to true if
 			     Ibus is strictly limited to acld_cc_lmt */
+	bool enable_adaptive_batt_curr; /* Set this to true to adaptively
+					   regulate the battery current to
+					   the targeted value of i_max_cc */
+	unsigned int batt_curr_margin; /* Margin to target value of i_max_cc */
+	int *acld_max_currents;
 
 };
 
