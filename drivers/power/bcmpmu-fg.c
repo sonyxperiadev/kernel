@@ -314,6 +314,7 @@ struct bcmpmu_fg_data {
 	struct notifier_block usb_det_nb;
 	struct notifier_block chrgr_status_nb;
 	struct notifier_block chrgr_current_nb;
+	struct notifier_block acld_nb;
 
 	struct bcmpmu_batt_cap_info capacity_info;
 	struct bcmpmu_fg_status_flags flags;
@@ -362,6 +363,7 @@ struct bcmpmu_fg_data {
 	int prev_cap_delta;
 	int max_discharge_current;
 	bool used_init_cap;
+	bool acld_enabled;
 	int init_notifier;
 
 	/* for debugging only */
@@ -2047,7 +2049,9 @@ static int bcmpmu_fg_event_handler(struct notifier_block *nb,
 		enable = *(int *)data;
 		pr_fg(VERBOSE, "PMU_CHRGR_EVENT_CHRG_STATUS\n");
 		FG_LOCK(fg);
-		if (enable && fg->flags.chrgr_connected) {
+		if (fg->acld_enabled && !enable) {
+			pr_fg(VERBOSE, "ACLD temporary disabling charging\n");
+		} else if (enable && fg->flags.chrgr_connected) {
 			fg->flags.charging_enabled = true;
 			if ((fg->bcmpmu->flags & BCMPMU_SPA_EN)
 					&& fg->flags.fg_eoc) {
@@ -2084,6 +2088,11 @@ static int bcmpmu_fg_event_handler(struct notifier_block *nb,
 			pr_fg(FLOW, "charging current enabled\n");
 		}
 		FG_UNLOCK(fg);
+		break;
+
+	case PMU_ACLD_EVT_ACLD_STATUS:
+		fg = to_bcmpmu_fg_data(nb, acld_nb);
+		fg->acld_enabled = *(bool *)data;
 		break;
 
 	default:
@@ -3206,10 +3215,19 @@ static int bcmpmu_fg_register_notifiers(struct bcmpmu_fg_data *fg)
 	if (ret)
 		goto unreg_chrgr_current_nb;
 
+	fg->acld_nb.notifier_call = bcmpmu_fg_event_handler;
+	ret = bcmpmu_add_notifier(PMU_ACLD_EVT_ACLD_STATUS,
+			&fg->acld_nb);
+	if (ret)
+		goto unreg_acld_nb;
+
 	fg->init_notifier = 1;
 
 	return 0;
 
+unreg_acld_nb:
+	bcmpmu_remove_notifier(PMU_ACCY_EVT_OUT_CHRG_CURR,
+			&fg->chrgr_current_nb);
 unreg_chrgr_current_nb:
 	bcmpmu_remove_notifier(PMU_ACCY_EVT_OUT_CHRG_RESUME_VBUS,
 			&fg->accy_nb);
