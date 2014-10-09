@@ -78,11 +78,13 @@ struct bcmpmu_cc_data {
 	bool acld_algo_finished;
 	u8 acld_wait_count;
 	long curr_state;
+	long coolant_off_state;
 	long max_state;
 };
 
 /* Forward declarations */
-static void bcmpmu_coolant_restore_charger_state(struct bcmpmu_cc_data *cdata);
+static void bcmpmu_coolant_restore_charger_state(struct bcmpmu_cc_data *cdata,
+							bool no_cc_trim);
 static void bcmpmu_coolant_store_charger_state(struct bcmpmu_cc_data *cdata);
 static void bcmpmu_set_chrgr_trim_default(struct bcmpmu_cc_data *cdata);
 static void bcmpmu_set_curr(struct bcmpmu_cc_data *cdata, unsigned long state);
@@ -111,7 +113,8 @@ int charger_cooling_get_level(struct thermal_cooling_device *cdev,
 }
 EXPORT_SYMBOL_GPL(charger_cooling_get_level);
 
-static void bcmpmu_coolant_restore_charger_state(struct bcmpmu_cc_data *cdata)
+static void bcmpmu_coolant_restore_charger_state(struct bcmpmu_cc_data *cdata,
+							bool no_cc_trim)
 {
 	struct bcmpmu59xxx *bcmpmu = cdata->bcmpmu;
 	int ret = 0;
@@ -126,6 +129,10 @@ static void bcmpmu_coolant_restore_charger_state(struct bcmpmu_cc_data *cdata)
 	pr_ccool(VERBOSE, "icc_fc=%d\n", cdata->icc_fc_saved);
 
 	for (num = 0; num < cdata->chrgr_trim_reg_sz; num++) {
+		if (no_cc_trim &&
+			cdata->chrgr_trim_reg[num].addr == PMU_REG_MBCCTRL18)
+			continue;
+
 		ret = bcmpmu->write_dev(bcmpmu,
 			cdata->chrgr_trim_reg[num].addr,
 			cdata->chrgr_trim_reg[num].saved_val);
@@ -200,17 +207,22 @@ static void bcmpmu_set_curr(struct bcmpmu_cc_data *cdata, unsigned long state)
 static void bcmpmu_coolant_set_optimal_curr(struct bcmpmu_cc_data *cdata,
 							unsigned long state)
 {
+	bool high_curr_coolant_off = cdata->coolant_off_state == state &&
+		cdata->icc_fc_saved <= cdata->ccs->states[state];
+
 	if (!cdata->dietemp_coolant_running)
 		bcmpmu_coolant_store_charger_state(cdata);
 
 	if (cdata->total_cur_saved <
-			cdata->ccs->states[state]) {
+			cdata->ccs->states[state] || high_curr_coolant_off) {
 		pr_ccool(VERBOSE,
 			"%s:Normal charging curr < curr to set\n", __func__);
 		if (cdata->dietemp_coolant_running) {
+			cdata->coolant_off_state = -1;
 			cdata->dietemp_coolant_running = false;
 			bcmpmu_coolant_post_event(cdata);
-			bcmpmu_coolant_restore_charger_state(cdata);
+			bcmpmu_coolant_restore_charger_state(cdata,
+							high_curr_coolant_off);
 		}
 	} else {
 		if (!cdata->dietemp_coolant_running) {
@@ -277,6 +289,9 @@ static int bcmpmu_ccoolant_set_cur_state(struct thermal_cooling_device *cdev,
 		return -EINVAL;
 	if (cdata->curr_state == state)
 		return 0;
+
+	if (!cdata->dietemp_coolant_running)
+		cdata->coolant_off_state = cdata->curr_state;
 
 	cdata->curr_state = state;
 	if ((cdata->is_charging || cdata->charging_halted) &&
@@ -432,6 +447,7 @@ static int bcmpmu_ccoolant_probe(struct platform_device *pdev)
 	cdata->charging_halted = false;
 	cdata->max_state = cdata->ccs->state_no - 1;
 	cdata->curr_state = 0;
+	cdata->coolant_off_state = -1;
 	cdata->icc_fc_saved = cdata->ccs->states[cdata->max_state];
 
 	cdata->coolant_wq =
