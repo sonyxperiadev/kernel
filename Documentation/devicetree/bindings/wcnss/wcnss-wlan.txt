@@ -28,6 +28,9 @@ Optional properties:
 should be performed during boot up.
 - qcom,wlan-rx-buff-count: WLAN RX buffer count is a configurable value,
 using a smaller count for this buffer will reduce the memory usage.
+- qcom,is-pronto-v3: boolean flag to determine the pronto hardware version
+in use. subsequently correct workqueue will be used by DXE engine to push frames
+in TX data path.
 
 Example:
 
