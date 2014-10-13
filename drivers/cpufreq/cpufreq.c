@@ -32,6 +32,9 @@
 
 #include <trace/events/power.h>
 
+int ref_cpufreq_max = 2457600;
+bool user_changed = true;
+
 /**
  * The "cpufreq driver" - the arch- or hardware-dependent low
  * level driver of CPUFreq support, and its spinlock. This lock
@@ -1827,6 +1830,10 @@ int cpufreq_update_policy(unsigned int cpu)
 	memcpy(&policy, data, sizeof(struct cpufreq_policy));
 	policy.min = data->user_policy.min;
 	policy.max = data->user_policy.max;
+
+	if(user_changed)	
+		ref_cpufreq_max = policy.max;
+
 	policy.policy = data->user_policy.policy;
 	policy.governor = data->user_policy.governor;
 
