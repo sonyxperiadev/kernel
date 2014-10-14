@@ -1310,23 +1310,26 @@ static struct bcmpmu_batt_property ys_05_props[BATT_MAX] = {
 static struct bcmpmu_batt_cap_levels ys_05_cap_levels[BATT_MAX] = {
 	[BATT_0] = {
 		.critical = 5,
-		.low = 15,
+		.low = 20,
 		.normal = 75,
 		.high = 95,
 	},
 	[BATT_1] = {
 		.critical = 5,
-		.low = 15,
+		.low = 20,
 		.normal = 75,
 		.high = 95,
 	},
 };
 
 static struct bcmpmu_batt_volt_levels ys_05_volt_levels[BATT_MAX] = {
+	/* Loaded OCV LUT table with .sleep_current_ua of discharge load
+	 * Voltage = OCV - ESR(OCV, 20 degC) * 2 mA
+	 */
 	[BATT_0] = {
-		.critical = 3557, /* Not used in bcmpmu-fg.c,
+		.critical = 3658, /* Not used in bcmpmu-fg.c,
 				     5% loaded OCV LUT level */
-		.low = 3623, /* 15% loaded OCV LUT level */
+		.low = 3742, /* 20% loaded OCV LUT level */
 		.normal = 3800, /* Not used in bcmpmu-fg.c */
 		.high = SONY0_BATTERY_MAX_MIN_VFLOAT,
 		.crit_cutoff_cnt = 3,
@@ -1335,9 +1338,9 @@ static struct bcmpmu_batt_volt_levels ys_05_volt_levels[BATT_MAX] = {
 		.vfloat_gap = 100, /* in mV */
 	},
 	[BATT_1] = {
-		.critical = 3557, /* Not used in bcmpmu-fg.c,
+		.critical = 3658, /* Not used in bcmpmu-fg.c,
 				     5% loaded OCV LUT level */
-		.low = 3623, /* 15% loaded OCV LUT level */
+		.low = 3742, /* 20% loaded OCV LUT level */
 		.normal = 3800, /* Not used in bcmpmu-fg.c */
 		.high = SONY1_BATTERY_MAX_MIN_VFLOAT,
 		.crit_cutoff_cnt = 3,
@@ -1348,12 +1351,15 @@ static struct bcmpmu_batt_volt_levels ys_05_volt_levels[BATT_MAX] = {
 };
 
 static struct bcmpmu_batt_cal_data ys_05_cal_data[BATT_MAX] = {
+	/* Loaded OCV LUT table with .sleep_current_ua of discharge load
+	 * Voltage = OCV - ESR(OCV, 20 degC) * 2 mA
+	 */
 	[BATT_0] = {
-		.volt_low = 3623, /* 15% loaded OCV LUT level */
+		.volt_low = 3742, /* 20% loaded OCV LUT level */
 		.cap_low = 30, /* Not used in bcmpmu-fg.c */
 	},
 	[BATT_1] = {
-		.volt_low = 3623, /* 15% loaded OCV LUT level */
+		.volt_low = 3742, /* 20% loaded OCV LUT level */
 		.cap_low = 30, /* Not used in bcmpmu-fg.c */
 	},
 };
