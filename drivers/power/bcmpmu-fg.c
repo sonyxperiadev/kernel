@@ -82,6 +82,7 @@
 #define CAPACITY_PERCENTAGE_FULL	100
 #define CAPACITY_PERCENTAGE_EMPTY	0
 #define CAPACITY_ZERO_ALIAS		0xFF
+#define CAPACITY_INIT_CAP_FLAT		0x80
 
 /* Low Battery Calibration Macros */
 #define FG_LOW_BAT_CAP_DELTA_LIMIT	-30
@@ -270,6 +271,7 @@ struct bcmpmu_batt_cap_info {
 	int prev_level; /* previous capacity level */
 	int ocv_cap; /* open circult voltage capacity */
 	int uuc; /* unusable capacity in percent */
+	bool first_boot_init_cap_flat; /* capacity in flat area upon 1st boot */
 };
 
 struct batt_adc_data {
@@ -1738,8 +1740,15 @@ static int bcmpmu_fg_save_cap(struct bcmpmu_fg_data *fg, int cap_percentage)
 {
 	int ret;
 	/* if cap_percentage=0, then ignore BUG_ON since we writing 0xff */
-	if (cap_percentage != CAPACITY_ZERO_ALIAS)
-		BUG_ON((cap_percentage < 0) || (cap_percentage > 100));
+	if (cap_percentage != CAPACITY_ZERO_ALIAS) {
+		BUG_ON((cap_percentage < CAPACITY_PERCENTAGE_EMPTY) ||
+			(cap_percentage > CAPACITY_PERCENTAGE_FULL));
+		cap_percentage = clamp(cap_percentage,
+				CAPACITY_PERCENTAGE_EMPTY,
+				CAPACITY_PERCENTAGE_FULL);
+		if (fg->capacity_info.first_boot_init_cap_flat)
+			cap_percentage |= CAPACITY_INIT_CAP_FLAT;
+	}
 
 	ret = fg->bcmpmu->write_dev(fg->bcmpmu, FG_CAPACITY_SAVE_REG,
 			cap_percentage);
@@ -1754,10 +1763,18 @@ static int bcmpmu_fg_get_saved_cap(struct bcmpmu_fg_data *fg)
 
 	ret = fg->bcmpmu->read_dev(fg->bcmpmu, FG_CAPACITY_SAVE_REG, &reg);
 
-	if (!ret)
+	if (!ret) {
+		if (reg != CAPACITY_ZERO_ALIAS &&
+			reg & CAPACITY_INIT_CAP_FLAT) {
+			reg &= ~CAPACITY_INIT_CAP_FLAT;
+			pr_fg(INIT, "First boot was is flat OCV\n");
+			fg->capacity_info.first_boot_init_cap_flat = true;
+		}
 		cap = reg;
-	else
+	} else {
 		cap = -1;
+	}
+
 	return cap;
 }
 
@@ -2212,6 +2229,17 @@ static void bcmpmu_fg_update_psy(struct bcmpmu_fg_data *fg,
 	}
 }
 
+static bool bcmpmu_fg_is_cap_in_flat(struct bcmpmu_fg_data *fg, int cap)
+{
+	bool ret = false;
+
+	if (fg->bdata->batt_prop->enable_flat_ocv_soc &&
+		cap <= fg->bdata->batt_prop->flat_ocv_soc_high &&
+		cap >= fg->bdata->batt_prop->flat_ocv_soc_low)
+		ret = true;
+
+	return ret;
+}
 
 static int bcmpmu_fg_get_init_cap(struct bcmpmu_fg_data *fg)
 {
@@ -2219,6 +2247,7 @@ static int bcmpmu_fg_get_init_cap(struct bcmpmu_fg_data *fg)
 	int full_charge_cap;
 	int init_cap = 0;
 	int cap_percentage;
+	bool init_cap_flat;
 
 	saved_cap = bcmpmu_fg_get_saved_cap(fg);
 	full_charge_cap = bcmpmu_fg_get_saved_cap_full_charge(fg);
@@ -2240,6 +2269,8 @@ static int bcmpmu_fg_get_init_cap(struct bcmpmu_fg_data *fg)
 	pr_fg(FLOW, "saved full_charge: %d full_charge_cap: %d\n",
 			full_charge_cap,
 			fg->capacity_info.full_charge);
+
+	init_cap_flat = bcmpmu_fg_is_cap_in_flat(fg, init_cap);
 
 	if (saved_cap > 0 || saved_cap == CAPACITY_ZERO_ALIAS) {
 		bool force_saved = false;
@@ -2279,13 +2310,12 @@ static int bcmpmu_fg_get_init_cap(struct bcmpmu_fg_data *fg)
 
 		if (fg->used_init_cap && !force_saved) {
 			cap_percentage = init_cap;
-		} else if (((fg->bdata->batt_prop->enable_flat_ocv_soc &&
-				init_cap <=
-				fg->bdata->batt_prop->flat_ocv_soc_high &&
-				init_cap >=
-				fg->bdata->batt_prop->flat_ocv_soc_low) &&
-				(abs(saved_cap - init_cap) <
-					FG_FLAT_CAP_DELTA_THRLD)) ||
+		} else if ((init_cap_flat &&
+				!fg->capacity_info.first_boot_init_cap_flat) ||
+			(init_cap_flat &&
+				fg->capacity_info.first_boot_init_cap_flat &&
+				abs(saved_cap - init_cap) <
+				FG_FLAT_CAP_DELTA_THRLD) ||
 			force_saved ||
 			(abs(saved_cap - init_cap) < FG_CAP_DELTA_THRLD)) {
 			pr_fg(INIT, "Limiting to saved cap\n");
@@ -2296,6 +2326,8 @@ static int bcmpmu_fg_get_init_cap(struct bcmpmu_fg_data *fg)
 		}
 	} else {
 		cap_percentage = init_cap;
+		fg->capacity_info.first_boot_init_cap_flat = init_cap_flat;
+		pr_fg(INIT, "First boot, no saved capacity\n");
 	}
 
 	/**
@@ -2465,6 +2497,12 @@ static int bcmpmu_fg_sw_maint_charging_algo(struct bcmpmu_fg_data *fg)
 		if (bcmpmu_fg_can_battery_be_full(fg)) {
 			flags->fully_charged = true;
 			flags->batt_status = POWER_SUPPLY_STATUS_FULL;
+			/* Any error in the first estimation is eliminated when
+			 * battery is fully charged.
+			 */
+			if (fg->capacity_info.first_boot_init_cap_flat)
+				fg->capacity_info.first_boot_init_cap_flat =
+					false;
 		} else {
 			flags->batt_status = POWER_SUPPLY_STATUS_NOT_CHARGING;
 		}
@@ -2828,6 +2866,24 @@ static void bcmpmu_fg_discharging_algo(struct bcmpmu_fg_data *fg)
 		break;
 	default:
 		BUG();
+	}
+
+	if (fg->capacity_info.first_boot_init_cap_flat) {
+		int usable_cap = bcmpmu_fg_get_usable_cap_from_ocv_cap(
+			fg->capacity_info.ocv_cap,
+			fg->capacity_info.uuc);
+
+		/* Clear first boot flat capacity area when empty battery
+		 * or the estimated capacity is within the margin of ocv
+		 * based capacity. At these two modes we know that any error
+		 * in the first estimation is eliminated.
+		 */
+		if (!cap_info->percentage ||
+			(!bcmpmu_fg_is_cap_in_flat(fg, usable_cap) &&
+			!bcmpmu_fg_is_cap_in_flat(fg, cap_info->percentage) &&
+			abs(usable_cap - cap_info->percentage) <
+				FG_CAP_DELTA_THRLD))
+			fg->capacity_info.first_boot_init_cap_flat = false;
 	}
 
 #ifdef CONFIG_WD_TAPPER
