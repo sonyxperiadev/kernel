@@ -1462,10 +1462,7 @@ static int bcmpmu_fg_get_uuc(struct bcmpmu_fg_data *fg)
 
 static int bcmpmu_fg_get_usable_cap_from_ocv_cap(int ocv_cap, int uuc)
 {
-	if (!uuc)
-		return ocv_cap;
-
-	return DIV_ROUND_CLOSEST(ocv_cap * (100 - uuc), 100);
+	return max(ocv_cap - uuc, CAPACITY_PERCENTAGE_EMPTY);
 }
 
 static void bcmpmu_fg_update_adj_factor(struct bcmpmu_fg_data *fg)
