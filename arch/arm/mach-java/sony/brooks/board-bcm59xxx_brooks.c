@@ -1324,12 +1324,12 @@ static struct bcmpmu_batt_cap_levels ys_05_cap_levels[BATT_MAX] = {
 
 static struct bcmpmu_batt_volt_levels ys_05_volt_levels[BATT_MAX] = {
 	/* Loaded OCV LUT table with .sleep_current_ua of discharge load
-	 * Voltage = OCV - ESR(OCV, 20 degC) * 2 mA
+	 * Voltage = OCV - ESR(OCV, 20 degC) * 4.5 mA
 	 */
 	[BATT_0] = {
-		.critical = 3658, /* Not used in bcmpmu-fg.c,
+		.critical = 3656, /* Not used in bcmpmu-fg.c,
 				     5% loaded OCV LUT level */
-		.low = 3742, /* 20% loaded OCV LUT level */
+		.low = 3741, /* 20% loaded OCV LUT level */
 		.normal = 3800, /* Not used in bcmpmu-fg.c */
 		.high = SONY0_BATTERY_MAX_MIN_VFLOAT,
 		.crit_cutoff_cnt = 3,
@@ -1338,9 +1338,9 @@ static struct bcmpmu_batt_volt_levels ys_05_volt_levels[BATT_MAX] = {
 		.vfloat_gap = 100, /* in mV */
 	},
 	[BATT_1] = {
-		.critical = 3658, /* Not used in bcmpmu-fg.c,
+		.critical = 3656, /* Not used in bcmpmu-fg.c,
 				     5% loaded OCV LUT level */
-		.low = 3742, /* 20% loaded OCV LUT level */
+		.low = 3741, /* 20% loaded OCV LUT level */
 		.normal = 3800, /* Not used in bcmpmu-fg.c */
 		.high = SONY1_BATTERY_MAX_MIN_VFLOAT,
 		.crit_cutoff_cnt = 3,
@@ -1352,14 +1352,14 @@ static struct bcmpmu_batt_volt_levels ys_05_volt_levels[BATT_MAX] = {
 
 static struct bcmpmu_batt_cal_data ys_05_cal_data[BATT_MAX] = {
 	/* Loaded OCV LUT table with .sleep_current_ua of discharge load
-	 * Voltage = OCV - ESR(OCV, 20 degC) * 2 mA
+	 * Voltage = OCV - ESR(OCV, 20 degC) * 4.5 mA
 	 */
 	[BATT_0] = {
-		.volt_low = 3742, /* 20% loaded OCV LUT level */
+		.volt_low = 3741, /* 20% loaded OCV LUT level */
 		.cap_low = 30, /* Not used in bcmpmu-fg.c */
 	},
 	[BATT_1] = {
-		.volt_low = 3742, /* 20% loaded OCV LUT level */
+		.volt_low = 3741, /* 20% loaded OCV LUT level */
 		.cap_low = 30, /* Not used in bcmpmu-fg.c */
 	},
 };
@@ -1445,7 +1445,7 @@ static struct bcmpmu_fg_pdata fg_pdata = {
 	.sns_resist = 10, /* Not used in bcmpmu-fg.c */
 	.sys_impedence = 33, /* Not used in bcmpmu-fg.c */
 	.hw_maintenance_charging = false, /* enable HW EOC of PMU */
-	.sleep_current_ua = 2000, /* floor during sleep */
+	.sleep_current_ua = 4500, /* floor during sleep */
 	.sleep_sample_rate = 32000,
 	.fg_factor = 679,
 	.poll_rate_low_batt = 20000,	/* every 20 seconds */
