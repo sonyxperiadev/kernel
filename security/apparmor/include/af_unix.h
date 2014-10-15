@@ -27,7 +27,7 @@
 
 #define unix_addr(A) ((struct sockaddr_un *)(A))
 #define unix_addr_anon(A, L) ((A) && unix_addr_len(L) <= 0)
-#define unix_addr_fs(A, L) (!unix_addr_anon(A, L) && unix_addr(A)->sun_path[0] == '/')
+#define unix_addr_fs(A, L) (!unix_addr_anon(A, L) && !addr_unix_abstract_name(unix_addr(A)->sun_path))
 
 #define UNIX_ANONYMOUS(U) (!unix_sk(U)->addr)
 /* from net/unix/af_unix.c */
