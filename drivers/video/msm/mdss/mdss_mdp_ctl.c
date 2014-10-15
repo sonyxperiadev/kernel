@@ -1521,16 +1521,23 @@ static inline int mdss_mdp_set_split_ctl(struct mdss_mdp_ctl *ctl,
 		struct mdss_mdp_ctl *split_ctl)
 {
 	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
+	struct mdss_overlay_private *mdp5_data = NULL;
+	bool mixer_swap = false;
 
 	if (!ctl || !split_ctl || !mdata)
 		return -ENODEV;
+
+	if (ctl->mfd) {
+		mdp5_data = mfd_to_mdp5_data(ctl->mfd);
+		mixer_swap = mdp5_data->mixer_swap;
+	}
 
 	/* setup split ctl mixer as right mixer of original ctl so that
 	 * original ctl can work the same way as dual pipe solution */
 	ctl->mixer_right = split_ctl->mixer_left;
 
 	if ((mdata->mdp_rev >= MDSS_MDP_HW_REV_103) && ctl->is_video_mode)
-		ctl->split_flush_en = true;
+		ctl->split_flush_en = !mixer_swap;
 
 	return 0;
 }
