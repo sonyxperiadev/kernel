@@ -64,6 +64,7 @@ bt_serial8250_rx_chars(struct uart_8250_port *up, unsigned char lsr)
 			jiffies + msecs_to_jiffies(RX_SHUTOFF_DELAY_MSECS));
 
 	do {
+		n_fifo = port->serial_in(port,UART_RX_FIFO_LEVEL);
 		/* Jira-1744 UART Line Status Register's Data Ready bit is not
 		 * updated sometime when data is received in fifo and a Rx
 		 * interrupt is generated.
@@ -110,7 +111,8 @@ bt_serial8250_rx_chars(struct uart_8250_port *up, unsigned char lsr)
 			else if (lsr & UART_LSR_FE)
 				flag = TTY_FRAME;
 		}
-
+		if(n_fifo == 0)
+			goto ignore_char;
 		uart_insert_char(&up->port, lsr, UART_LSR_OE, ch, flag);
 ignore_char:
 		lsr = port->serial_in(port, UART_LSR);
