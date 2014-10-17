@@ -2174,6 +2174,17 @@ void usb_hcd_resume_root_hub (struct usb_hcd *hcd)
 }
 EXPORT_SYMBOL_GPL(usb_hcd_resume_root_hub);
 
+int usb_intf_with_pwr_usage_cnt(struct usb_hcd *hcd)
+{
+	struct usb_device *hdev = hcd->self.root_hub;
+
+	if (!hdev)
+		return -ENXIO;
+
+	return get_intf_with_pwr_usage_count(hdev);
+}
+EXPORT_SYMBOL_GPL(usb_intf_with_pwr_usage_cnt);
+
 #endif	/* CONFIG_PM_RUNTIME */
 
 /*-------------------------------------------------------------------------*/

@@ -1801,12 +1801,37 @@ static int mxhci_hsic_pm_resume(struct device *dev)
 
 	return 0;
 }
+
+static int mxhci_hsic_suspend_late(struct device *dev)
+{
+	struct usb_hcd *hcd = dev_get_drvdata(dev);
+	struct mxhci_hsic_hcd *mxhci = hcd_to_hsic(hcd);
+	int ret;
+
+	dev_dbg(dev, "xhci-msm PM suspend_late\n");
+
+	ret = usb_intf_with_pwr_usage_cnt(hcd);
+	if (ret >= 0) {
+		dev_dbg(dev, "Aborting mxhci_hsic_suspend_late\n");
+		xhci_dbg_log_event(&dbg_hsic, NULL, "intf with usage cnt: ",
+			ret);
+		spin_lock(&mxhci->wakeup_lock);
+		if (!mxhci->pm_usage_cnt) {
+			pm_runtime_get(mxhci->dev);
+			mxhci->pm_usage_cnt = 1;
+		}
+		spin_unlock(&mxhci->wakeup_lock);
+		return -EBUSY;
+	}
+	return 0;
+}
 #endif
 
 static const struct dev_pm_ops xhci_msm_hsic_dev_pm_ops = {
 	SET_SYSTEM_SLEEP_PM_OPS(mxhci_hsic_pm_suspend, mxhci_hsic_pm_resume)
 	SET_RUNTIME_PM_OPS(mxhci_hsic_runtime_suspend,
 			mxhci_hsic_runtime_resume, mxhci_hsic_runtime_idle)
+	.suspend_late = mxhci_hsic_suspend_late,
 };
 
 static const struct of_device_id of_mxhci_hsic_matach[] = {
