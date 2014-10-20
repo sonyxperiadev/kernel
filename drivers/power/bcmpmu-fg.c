@@ -3096,10 +3096,17 @@ static int bcmpmu_fg_get_properties(struct power_supply *psy,
 		val->intval = 1;
 		break;
 	case POWER_SUPPLY_PROP_CAPACITY:
-		if (BATTERY_STATUS_UNKNOWN(flags))
-			val->intval = CAPACITY_PERCENTAGE_FULL;
-		else
+		if (BATTERY_STATUS_UNKNOWN(flags)) {
+			if (flags.init_capacity) {
+				val->intval = fg->capacity_info.percentage;
+				if (!fg->capacity_info.percentage)
+					ret = -EBUSY;
+			} else {
+				val->intval = CAPACITY_PERCENTAGE_FULL;
+			}
+		} else {
 			val->intval = fg->capacity_info.percentage;
+		}
 		pr_fg(FLOW, "POWER_SUPPLY_PROP_CAPACITY = %d\n",
 				val->intval);
 		BUG_ON(val->intval < 0);
