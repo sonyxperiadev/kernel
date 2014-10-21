@@ -36,6 +36,9 @@
 #include <linux/of_platform.h>
 #include <linux/of_gpio.h>
 
+#include <linux/io.h>
+#include <mach/io_map.h>
+
 #include <plat/pi_mgr.h>
 
 #ifndef BCM_BT_LPM_BT_WAKE_ASSERT
@@ -83,6 +86,7 @@ struct bcm_bt_lpm_ldisc_data {
 
 static struct tty_ldisc_ops bcm_bt_lpm_ldisc_ops;
 static struct bcm_bt_lpm_ldisc_data bcm_bt_lpm_ldisc_saved;
+static int hostwake_flag = 0;
 
 int bcm_bt_lpm_assert_bt_wake(void)
 {
@@ -186,11 +190,14 @@ static void bcm_bt_lpm_clean_bt_wake(
 	pr_debug("%s BLUETOOTH:Exiting.\n", __func__);
 }
 
+
 static irqreturn_t bcm_bt_lpm_host_wake_isr(int irq, void *dev)
 {
 	unsigned int host_wake;
 	unsigned long flags;
 	struct bcm_bt_lpm_entry_struct *priv;
+	volatile unsigned int pad_ctrl;
+#define GPIO_PIN20 20
 
 	priv = (struct bcm_bt_lpm_entry_struct *)dev;
 	if (priv == NULL) {
@@ -205,11 +212,23 @@ static irqreturn_t bcm_bt_lpm_host_wake_isr(int irq, void *dev)
 			priv->pdata->host_wake_gpio);
 	if (BCM_BT_LPM_HOST_WAKE_ASSERT == host_wake) {
 		__pm_stay_awake(priv->host_wake_ws);
+		hostwake_flag = 1;
 		pi_mgr_qos_request_update(&priv_g->qos_bt_host_wake, 0);
+		pad_ctrl = readl(KONA_PAD_CTRL_VA + 0x8C);
+       		pad_ctrl |= 0x00000223;
+       		writel(pad_ctrl, KONA_PAD_CTRL_VA + 0x8C);
 	}
 	else {
 		__pm_relax(priv->host_wake_ws);
 		pi_mgr_qos_request_update(&priv_g->qos_bt_host_wake, PI_MGR_QOS_DEFAULT_VALUE);
+		if(hostwake_flag) {
+			pad_ctrl = readl(KONA_PAD_CTRL_VA + 0x8C);
+			pad_ctrl |= 0x00000020;
+		        pad_ctrl &= 0xFFFFF8FF;
+		       	writel(pad_ctrl, KONA_PAD_CTRL_VA + 0x8C);
+			hostwake_flag = 0;
+		}
+		gpio_direction_output(GPIO_PIN20, 1);
 	}
 
 	spin_unlock_irqrestore(&priv->plpm->bcm_bt_lpm_lock, flags);

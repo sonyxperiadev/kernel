@@ -371,7 +371,7 @@ config BRCM_UART_CHANGES
 config BRCM_UART_WAKELOCK_TIMEOUT
 	int "UART SUSPEND wakelock timeout value in milliseconds"
 	depends on BRCM_UART_CHANGES
-	default 5000
+	default 2000
 	help
 	  Set this to number of milliseconds to hold the Suspend Wakelock
 
