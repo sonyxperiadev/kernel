@@ -30,6 +30,7 @@
 #include <sound/tlv.h>
 #include <sound/asound.h>
 #include <sound/pcm_params.h>
+#include <sound/q6core.h>
 #include <linux/slab.h>
 
 #include "msm-pcm-routing-v2.h"
@@ -39,7 +40,6 @@
 #include "msm-dolby-dap-config.h"
 #include "msm-ds2-dap-config.h"
 #include "q6voice.h"
-#include "q6core.h"
 
 #define EC_PORT_ID_PRIMARY_MI2S_TX    1
 #define EC_PORT_ID_SECONDARY_MI2S_TX  2
