@@ -908,7 +908,7 @@ struct pkey_timer_act pkey_t3_action = {
 struct bcmpmu59xxx_pkey_pdata pkey_pdata = {
 	.press_deb = PKEY_DEB_100MS,
 	.release_deb = PKEY_DEB_100MS,
-	.wakeup_deb = PKEY_WUP_DEB_1000MS,
+	.wakeup_deb = PKEY_WUP_DEB_500MS,
 	.t3 = &pkey_t3_action,
 };
 
