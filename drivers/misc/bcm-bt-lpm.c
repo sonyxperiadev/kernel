@@ -436,6 +436,7 @@ static int bcm_bt_lpm_tty_open(struct tty_struct *tty)
 static void bcm_bt_lpm_tty_close(struct tty_struct *tty)
 {
 	struct uart_state *state;
+	volatile unsigned int pad_ctrl;
 
 	pr_debug("%s BLUETOOTH: Entering.\n", __func__);
 	if (!priv_g || !priv_g->plpm) {
@@ -450,6 +451,11 @@ static void bcm_bt_lpm_tty_close(struct tty_struct *tty)
 	bcm_bt_lpm_clean_host_wake(priv_g);
 	wakeup_source_unregister(priv_g->bt_wake_ws);
 	wakeup_source_unregister(priv_g->host_wake_ws);
+
+	pad_ctrl = readl(KONA_PAD_CTRL_VA + 0x8C);
+	pad_ctrl |= 0x00000223;
+	writel(pad_ctrl, KONA_PAD_CTRL_VA + 0x8C);
+
 	pr_debug("bcm_bt_lpm_tty_close(line: %d)::close(): x%p",
 	state->uart_port->line, bcm_bt_lpm_ldisc_saved.close);
 
