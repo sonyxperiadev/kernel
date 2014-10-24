@@ -122,6 +122,11 @@ enum bus_index {
 	BUS_IDX_MAX
 };
 
+enum clock_state {
+	DISABLED_UNPREPARED,
+	ENABLED_PREPARED,
+};
+
 struct vidc_mem_addr {
 	u8 *align_device_addr;
 	u8 *align_virtual_addr;
@@ -169,12 +174,13 @@ struct venus_hfi_device {
 	u32 intr_status;
 	u32 device_id;
 	u32 clk_load;
+	u32 last_packet_type;
 	struct {
 		struct vidc_bus_vote_data *vote_data;
 		u32 vote_data_count;
 	} bus_load;
-	u32 clocks_enabled;
-	u32 power_enabled;
+	enum clock_state clk_state;
+	bool power_enabled;
 	struct mutex read_lock;
 	struct mutex write_lock;
 	struct mutex clk_pwr_lock;
