@@ -187,6 +187,8 @@ static void bcm_bt_lpm_clean_bt_wake(
 	if (b_tty)
 		bcm_bt_lpm_tty_cleanup();
 
+	pi_mgr_qos_request_update(&priv_g->qos_bt_wake, PI_MGR_QOS_DEFAULT_VALUE);
+
 	pr_debug("%s BLUETOOTH:Exiting.\n", __func__);
 }
 
@@ -281,6 +283,9 @@ static void bcm_bt_lpm_clean_host_wake(
 	gpio_free((unsigned)priv->pdata->host_wake_gpio);
 
 	free_irq(priv->plpm->host_irq, priv_g);
+
+	pi_mgr_qos_request_update(&priv_g->qos_bt_host_wake, PI_MGR_QOS_DEFAULT_VALUE);
+
 	pr_debug("%s BLUETOOTH:Exiting.\n", __func__);
 }
 
