@@ -460,6 +460,7 @@ static void bcm_bt_lpm_tty_close(struct tty_struct *tty)
 	pad_ctrl = readl(KONA_PAD_CTRL_VA + 0x8C);
 	pad_ctrl |= 0x00000223;
 	writel(pad_ctrl, KONA_PAD_CTRL_VA + 0x8C);
+	hostwake_flag = 0;
 
 	pr_debug("bcm_bt_lpm_tty_close(line: %d)::close(): x%p",
 	state->uart_port->line, bcm_bt_lpm_ldisc_saved.close);
