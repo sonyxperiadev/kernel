@@ -165,13 +165,21 @@ struct bcmpmu_battery_data {
 	u8 vfd_sz;
 };
 
+enum sleep_current {
+	SLEEP_DEEP,
+	SLEEP_DISPLAY_AMBIENT,
+	SLEEP_MAX,
+};
+
 struct bcmpmu_fg_pdata {
 	struct bcmpmu_battery_data *batt_data;
 	u8 batt_data_sz;
 
 	int sns_resist;	/* FG sense resistor in Ohm */
 	int sys_impedence;
-	int sleep_current_ua; /*sleep current when PC1,PC2,PC3 = 0,0,0 */
+	bool enable_selective_sleep_current;
+	/* sleep current when PC1,PC2,PC3 = 0,0,0 */
+	int sleep_current_ua[SLEEP_MAX];
 	int sleep_sample_rate; /* sampling rate during sleep mode */
 	int fg_factor;
 	bool hw_maintenance_charging;

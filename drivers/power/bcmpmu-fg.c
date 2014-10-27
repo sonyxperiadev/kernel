@@ -40,7 +40,7 @@
 #include <linux/alarmtimer.h>
 #endif
 #include <mach/kona_timer.h>
-
+#include <linux/fb.h>
 
 #ifndef CONFIG_WD_TAPPER
 /* 300 seconds are based on wd_tapper count which is configured in dts file */
@@ -317,6 +317,7 @@ struct bcmpmu_fg_data {
 	struct notifier_block chrgr_status_nb;
 	struct notifier_block chrgr_current_nb;
 	struct notifier_block acld_nb;
+	struct notifier_block display_nb;
 
 	struct bcmpmu_batt_cap_info capacity_info;
 	struct bcmpmu_fg_status_flags flags;
@@ -364,6 +365,7 @@ struct bcmpmu_fg_data {
 	int dummy_bat_cap_lmt;
 	int prev_cap_delta;
 	int max_discharge_current;
+	int sleep_current_ua[2]; /* 0 = in use, 1 = in pending */
 	bool used_init_cap;
 	bool acld_enabled;
 	int init_notifier;
@@ -574,7 +576,7 @@ __weak int bcmpmu_fg_accumulator_to_capacity(struct bcmpmu_fg_data *fg,
 	sample_rate = bcmpmu_fg_sample_rate_to_actual(fg->sample_rate);
 
 	accm_act = ((accm * fg->pdata->fg_factor) / sample_rate);
-	accm_sleep = ((sleep_cnt * fg->pdata->sleep_current_ua) /
+	accm_sleep = ((sleep_cnt * fg->sleep_current_ua[0]) /
 			fg->pdata->sleep_sample_rate);
 
 	cap_mas = accm_act - accm_sleep;
@@ -2003,6 +2005,30 @@ static void  bcmpmu_fg_irq_handler(u32 irq, void *data)
 	}
 }
 
+
+static int display_event_handler(struct notifier_block *nb,
+				unsigned long event, void *data)
+{
+	struct bcmpmu_fg_data *fg = to_bcmpmu_fg_data(nb, display_nb);
+	struct fb_event *evt = (struct fb_event *)data;
+
+	switch (event) {
+	case FB_EVENT_BLANK:
+		if (*(int *)(evt->data) == FB_BLANK_UNBLANK)
+			fg->sleep_current_ua[1] =
+			fg->pdata->sleep_current_ua[SLEEP_DISPLAY_AMBIENT];
+		else
+			fg->sleep_current_ua[1] =
+				fg->pdata->sleep_current_ua[SLEEP_DEEP];
+		break;
+
+	default:
+		break;
+	}
+
+	return 0;
+}
+
 static int bcmpmu_fg_event_handler(struct notifier_block *nb,
 		unsigned long event, void *data)
 {
@@ -3029,6 +3055,12 @@ static void bcmpmu_fg_periodic_work(struct work_struct *work)
 	if (fg->flags.calibration)
 		bcmpmu_fg_batt_cal_algo(fg);
 
+	if (fg->sleep_current_ua[0] != fg->sleep_current_ua[1]) {
+		fg->sleep_current_ua[0] = fg->sleep_current_ua[1];
+		pr_fg(FLOW, "Sleep current changed to %d uA\n",
+			fg->sleep_current_ua[0]);
+	}
+
 	pr_fg(VERBOSE, "flags: %d %d %d %d %d %d %d %d %d %d\n",
 			flags.batt_status,
 			flags.prev_batt_status,
@@ -3281,10 +3313,20 @@ static int bcmpmu_fg_register_notifiers(struct bcmpmu_fg_data *fg)
 	if (ret)
 		goto unreg_acld_nb;
 
+	if (fg->pdata->enable_selective_sleep_current) {
+		fg->display_nb.notifier_call = display_event_handler;
+		ret = fb_register_client(&fg->display_nb);
+		if (ret)
+			goto unreg_display_nb;
+	}
+
 	fg->init_notifier = 1;
 
 	return 0;
 
+unreg_display_nb:
+	bcmpmu_remove_notifier(PMU_ACLD_EVT_ACLD_STATUS,
+			&fg->acld_nb);
 unreg_acld_nb:
 	bcmpmu_remove_notifier(PMU_ACCY_EVT_OUT_CHRG_CURR,
 			&fg->chrgr_current_nb);
@@ -3330,8 +3372,12 @@ static int bcmpmu_fg_set_platform_data(struct bcmpmu_fg_data *fg,
 	if (!bdata->eoc_current)
 		bdata->eoc_current = FG_EOC_CURRENT;
 	fg->eoc_current = bdata->eoc_current;
-	if (!pdata->sleep_current_ua)
-		pdata->sleep_current_ua = FG_SLEEP_CURR_UA;
+	if (!pdata->sleep_current_ua[SLEEP_DEEP]) {
+		pdata->sleep_current_ua[SLEEP_DEEP] = FG_SLEEP_CURR_UA;
+		pdata->enable_selective_sleep_current = false;
+	}
+	fg->sleep_current_ua[0] = pdata->sleep_current_ua[SLEEP_DEEP];
+	fg->sleep_current_ua[1] = fg->sleep_current_ua[0];
 	if (!pdata->sleep_sample_rate)
 		pdata->sleep_sample_rate = SAMPLE_RATE_2HZ;
 	if (!pdata->fg_factor)
@@ -3920,6 +3966,9 @@ static int bcmpmu_fg_remove(struct platform_device *pdev)
 
 	fg->bcmpmu->unregister_irq(fg->bcmpmu, PMU_IRQ_MBTEMPHIGH);
 	fg->bcmpmu->unregister_irq(fg->bcmpmu, PMU_IRQ_MBTEMPLOW);
+
+	if (fg->pdata->enable_selective_sleep_current)
+		fb_unregister_client(&fg->display_nb);
 
 	sysfs_remove_attrs(fg->psy.dev);
 
