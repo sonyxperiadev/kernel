@@ -1445,7 +1445,11 @@ static struct bcmpmu_fg_pdata fg_pdata = {
 	.sns_resist = 10, /* Not used in bcmpmu-fg.c */
 	.sys_impedence = 33, /* Not used in bcmpmu-fg.c */
 	.hw_maintenance_charging = false, /* enable HW EOC of PMU */
-	.sleep_current_ua = 4500, /* floor during sleep */
+	.enable_selective_sleep_current = true,
+	.sleep_current_ua = {
+		[SLEEP_DEEP] = 1450,
+		[SLEEP_DISPLAY_AMBIENT] = 4500,
+	}, /* floor during sleep */
 	.sleep_sample_rate = 32000,
 	.fg_factor = 679,
 	.poll_rate_low_batt = 20000,	/* every 20 seconds */
