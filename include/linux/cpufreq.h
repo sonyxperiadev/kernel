@@ -23,6 +23,8 @@
 
 #define CPUFREQ_NAME_LEN 16
 
+extern int ref_cpufreq_max;
+extern bool user_changed;
 
 /*********************************************************************
  *                     CPUFREQ NOTIFIER INTERFACE                    *
