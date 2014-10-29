@@ -56,9 +56,15 @@ struct mdss_mdp_cmd_ctx mdss_mdp_cmd_ctx_list[MAX_SESSIONS];
 
 static int mdss_mdp_cmd_do_notifier(struct mdss_mdp_cmd_ctx *ctx);
 
-static bool __mdss_mdp_cmd_panel_power_off(struct mdss_mdp_cmd_ctx *ctx)
+static bool __mdss_mdp_cmd_is_panel_power_off(struct mdss_mdp_cmd_ctx *ctx)
 {
 	return mdss_panel_is_power_off(ctx->panel_power_state);
+}
+
+static bool __mdss_mdp_cmd_is_panel_power_on_interactive(
+		struct mdss_mdp_cmd_ctx *ctx)
+{
+	return mdss_panel_is_power_on_interactive(ctx->panel_power_state);
 }
 
 static inline u32 mdss_mdp_cmd_line_count(struct mdss_mdp_ctl *ctl)
@@ -200,7 +206,7 @@ static inline void mdss_mdp_cmd_clk_on(struct mdss_mdp_cmd_ctx *ctx)
 	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
 	int irq_en, rc;
 
-	if (__mdss_mdp_cmd_panel_power_off(ctx))
+	if (__mdss_mdp_cmd_is_panel_power_off(ctx))
 		return;
 
 	mutex_lock(&ctx->clk_mtx);
@@ -634,6 +640,38 @@ static int mdss_mdp_cmd_set_stream_size(struct mdss_mdp_ctl *ctl)
 	return rc;
 }
 
+static int mdss_mdp_cmd_panel_on(struct mdss_mdp_ctl *ctl,
+	struct mdss_mdp_ctl *sctl)
+{
+	struct mdss_mdp_cmd_ctx *ctx, *sctx = NULL;
+	int rc = 0;
+
+	ctx = (struct mdss_mdp_cmd_ctx *) ctl->priv_data;
+	if (!ctx) {
+		pr_err("invalid ctx\n");
+		return -ENODEV;
+	}
+
+	if (sctl)
+		sctx = (struct mdss_mdp_cmd_ctx *) sctl->priv_data;
+
+	if (!__mdss_mdp_cmd_is_panel_power_on_interactive(ctx)) {
+		rc = mdss_mdp_ctl_intf_event(ctl, MDSS_EVENT_UNBLANK, NULL);
+		WARN(rc, "intf %d unblank error (%d)\n", ctl->intf_num, rc);
+
+		rc = mdss_mdp_ctl_intf_event(ctl, MDSS_EVENT_PANEL_ON, NULL);
+		WARN(rc, "intf %d panel on error (%d)\n", ctl->intf_num, rc);
+
+		ctx->panel_power_state = MDSS_PANEL_POWER_ON;
+		if (sctx)
+			sctx->panel_power_state = MDSS_PANEL_POWER_ON;
+	} else {
+		pr_debug("%s: panel already on\n", __func__);
+	}
+
+	return rc;
+}
+
 /*
  * There are 3 partial update possibilities
  * left only ==> enable left pingpong_done
@@ -650,7 +688,6 @@ int mdss_mdp_cmd_kickoff(struct mdss_mdp_ctl *ctl, void *arg)
 {
 	struct mdss_mdp_ctl *sctl = NULL;
 	struct mdss_mdp_cmd_ctx *ctx, *sctx = NULL;
-	int rc;
 
 	ctx = (struct mdss_mdp_cmd_ctx *) ctl->priv_data;
 	if (!ctx) {
@@ -675,17 +712,13 @@ int mdss_mdp_cmd_kickoff(struct mdss_mdp_ctl *ctl, void *arg)
 			PERF_HW_MDP_STATE, PERF_STATUS_BUSY);
 	}
 
-	if (__mdss_mdp_cmd_panel_power_off(ctx)) {
-		rc = mdss_mdp_ctl_intf_event(ctl, MDSS_EVENT_UNBLANK, NULL);
-		WARN(rc, "intf %d unblank error (%d)\n", ctl->intf_num, rc);
-
-		rc = mdss_mdp_ctl_intf_event(ctl, MDSS_EVENT_PANEL_ON, NULL);
-		WARN(rc, "intf %d panel on error (%d)\n", ctl->intf_num, rc);
-
-		ctx->panel_power_state = MDSS_PANEL_POWER_ON;
-		if (sctx)
-			sctx->panel_power_state = MDSS_PANEL_POWER_ON;
-	}
+	/*
+	 * Turn on the panel, if not already. This is because the panel is
+	 * turned on only when we send the first frame and not during cmd
+	 * start. This is to ensure that no artifacts are seen on the panel.
+	 */
+	if (__mdss_mdp_cmd_is_panel_power_off(ctx))
+		mdss_mdp_cmd_panel_on(ctl, sctl);
 
 	MDSS_XLOG(ctl->num, ctl->roi.x, ctl->roi.y, ctl->roi.w,
 						ctl->roi.h);
@@ -758,6 +791,13 @@ static void mdss_mdp_cmd_stop_sub(struct mdss_mdp_ctl *ctl,
 	if (ctx->panel_power_state == panel_power_state)
 		return;
 
+	/*
+	 * If the panel will be left on, then we do not need to turn off
+	 * interface clocks since we may continue to get display updates.
+	 */
+	if (mdss_panel_is_power_on(panel_power_state))
+		return;
+
 	list_for_each_entry_safe(handle, tmp, &ctx->vsync_handlers, list)
 		mdss_mdp_cmd_remove_vsync_handler(ctl, handle);
 	MDSS_XLOG(ctl->num, atomic_read(&ctx->koff_cnt), ctx->clk_enabled,
@@ -784,6 +824,8 @@ static void mdss_mdp_cmd_stop_sub(struct mdss_mdp_ctl *ctl,
 
 	mdss_mdp_cmd_clk_off(ctx);
 	flush_work(&ctx->pp_done_work);
+	mdss_mdp_cmd_tearcheck_setup(ctl, false);
+
 	ctx->panel_power_state = panel_power_state;
 }
 
@@ -810,12 +852,9 @@ int mdss_mdp_cmd_stop(struct mdss_mdp_ctl *ctl, int panel_power_state)
 		ret = mdss_mdp_ctl_intf_event(ctl, MDSS_EVENT_PANEL_OFF,
 				(void *) (long int) panel_power_state);
 		WARN(ret, "intf %d unblank error (%d)\n", ctl->intf_num, ret);
-
-		if (panel_power_state != MDSS_PANEL_POWER_DOZE)
-			mdss_mdp_cmd_tearcheck_setup(ctl, false);
 	}
 
-	if (panel_power_state != MDSS_PANEL_POWER_OFF) {
+	if (mdss_panel_is_power_on(panel_power_state)) {
 		pr_debug("%s: cmd_off with panel always on\n", __func__);
 		goto end;
 	}
@@ -845,8 +884,9 @@ end:
 int mdss_mdp_cmd_start(struct mdss_mdp_ctl *ctl)
 {
 	struct mdss_mdp_cmd_ctx *ctx;
+	struct mdss_mdp_ctl *sctl = NULL;
 	struct mdss_mdp_mixer *mixer;
-	int i, ret;
+	int i, ret = 0;
 
 	pr_debug("%s:+\n", __func__);
 
@@ -854,7 +894,9 @@ int mdss_mdp_cmd_start(struct mdss_mdp_ctl *ctl)
 		return -EINVAL;
 
 	ctx = (struct mdss_mdp_cmd_ctx *) ctl->priv_data;
-	if (ctx && (ctx->panel_power_state != MDSS_PANEL_POWER_OFF)) {
+
+	sctl = mdss_mdp_get_split_ctl(ctl);
+	if (ctx && mdss_panel_is_power_on(ctx->panel_power_state)) {
 		pr_debug("%s: cmd_start with panel always on\n",
 			__func__);
 		/*
@@ -865,7 +907,10 @@ int mdss_mdp_cmd_start(struct mdss_mdp_ctl *ctl)
 		 * enable tearcheck logic.
 		 */
 		mdss_mdp_cmd_restore(ctl);
-		return 0;
+
+		/* Turn on the panel so that it can exit low power mode */
+		ret = mdss_mdp_cmd_panel_on(ctl, sctl);
+		goto end;
 	}
 
 	mixer = mdss_mdp_mixer_get(ctl, MDSS_MDP_MIXER_MUX_LEFT);
@@ -932,8 +977,10 @@ int mdss_mdp_cmd_start(struct mdss_mdp_ctl *ctl)
 	ctl->remove_vsync_handler = mdss_mdp_cmd_remove_vsync_handler;
 	ctl->read_line_cnt_fnc = mdss_mdp_cmd_line_count;
 	ctl->restore_fnc = mdss_mdp_cmd_restore;
+
+end:
 	pr_debug("%s:-\n", __func__);
 
-	return 0;
+	return ret;
 }
 
