@@ -665,7 +665,7 @@ static void handle_event_change(enum command_response cmd, void *data)
 		case HAL_EVENT_RELEASE_BUFFER_REFERENCE:
 			{
 				struct v4l2_event buf_event = {0};
-				struct buffer_info *binfo = NULL;
+				struct buffer_info *binfo = NULL, *temp = NULL;
 				u32 *ptr = NULL;
 
 				dprintk(VIDC_DBG,
@@ -708,8 +708,14 @@ static void handle_event_change(enum command_response cmd, void *data)
 					ptr[0], ptr[1]);
 
 				mutex_lock(&inst->sync_lock);
+
 				/* Decrement buffer reference count*/
-				buf_ref_put(inst, binfo);
+				list_for_each_entry(temp, &inst->registered_bufs, list) {
+					if (temp == binfo) {
+						buf_ref_put(inst, binfo);
+						break;
+					}
+				}
 
 				/*
 				* Release buffer and remove from list
