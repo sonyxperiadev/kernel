@@ -25,6 +25,7 @@
 #include <sound/soc.h>
 #include <sound/initval.h>
 #include <sound/soc-dpcm.h>
+#include "codecs/tfa98xx_if.h"
 
 static int soc_compr_open(struct snd_compr_stream *cstream)
 {
@@ -514,14 +515,16 @@ static int soc_compr_set_params_fe(struct snd_compr_stream *cstream,
 	if (ret < 0)
 		goto out;
 
-	if (stream == SNDRV_PCM_STREAM_PLAYBACK)
+	if (stream == SNDRV_PCM_STREAM_PLAYBACK) {
+		tfa98xx_speaker_amp_enable();
 		dpcm_dapm_stream_event(fe, stream,
 				fe->cpu_dai->driver->playback.stream_name,
 				SND_SOC_DAPM_STREAM_START);
-	else
+	} else {
 		dpcm_dapm_stream_event(fe, stream,
 				fe->cpu_dai->driver->capture.stream_name,
 				SND_SOC_DAPM_STREAM_START);
+	}
 
 	fe->dpcm[stream].state = SND_SOC_DPCM_STATE_PREPARE;
 

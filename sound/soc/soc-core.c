@@ -20,6 +20,10 @@
  *   o More testing with other codecs/machines.
  *   o Add more codecs and platforms to ensure good API coverage.
  *   o Support TDM on PCM and I2S
+ *
+ * NOTE: This file has been modified by Sony Mobile Communications AB.
+ * Modifications are Copyright (c) 2014 Sony Mobile Communications AB,
+ * and licensed under the license of the file.
  */
 
 #include <linux/module.h>
@@ -434,6 +438,9 @@ static const struct file_operations platform_list_fops = {
 
 static void soc_init_card_debugfs(struct snd_soc_card *card)
 {
+	if (card->debugfs_card_root)
+		return;
+
 	card->debugfs_card_root = debugfs_create_dir(card->name,
 						     snd_soc_debugfs_root);
 	if (!card->debugfs_card_root) {
@@ -453,6 +460,7 @@ static void soc_init_card_debugfs(struct snd_soc_card *card)
 static void soc_cleanup_card_debugfs(struct snd_soc_card *card)
 {
 	debugfs_remove_recursive(card->debugfs_card_root);
+	card->debugfs_card_root = NULL;
 }
 
 #else
@@ -3243,7 +3251,6 @@ int snd_soc_register_card(struct snd_soc_card *card)
 	mutex_init(&card->dapm_mutex);
 	ret = snd_soc_instantiate_card(card);
 	if (ret != 0) {
-		soc_cleanup_card_debugfs(card);
 		if (card->rtd)
 			kfree(card->rtd);
 	}

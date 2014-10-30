@@ -5,6 +5,7 @@
  * Copyright 2005 Openedhand Ltd.
  * Copyright (C) 2010 Slimlogic Ltd.
  * Copyright (C) 2010 Texas Instruments Inc.
+ * Copyright (C) 2013, Sony Mobile Communications AB.
  *
  * Authors: Liam Girdwood <lrg@ti.com>
  *          Mark Brown <broonie@opensource.wolfsonmicro.com>       
@@ -31,6 +32,7 @@
 #include <sound/soc.h>
 #include <sound/soc-dpcm.h>
 #include <sound/initval.h>
+#include "codecs/tfa98xx_if.h"
 
 #define MAX_BE_USERS	8	/* adjust if too low for everday use */
 
@@ -1717,14 +1719,16 @@ int soc_dpcm_fe_dai_prepare(struct snd_pcm_substream *substream)
 	}
 
 	/* run the stream event for each BE */
-	if (stream == SNDRV_PCM_STREAM_PLAYBACK)
+	if (stream == SNDRV_PCM_STREAM_PLAYBACK) {
+		tfa98xx_speaker_amp_enable();
 		dpcm_dapm_stream_event(fe, stream,
 				fe->cpu_dai->driver->playback.stream_name,
 				SND_SOC_DAPM_STREAM_START);
-	else
+	} else {
 		dpcm_dapm_stream_event(fe, stream,
 				fe->cpu_dai->driver->capture.stream_name,
 				SND_SOC_DAPM_STREAM_START);
+	}
 
 	fe->dpcm[stream].state = SND_SOC_DPCM_STATE_PREPARE;
 
@@ -1905,14 +1909,16 @@ static int dpcm_run_update_startup(struct snd_soc_pcm_runtime *fe, int stream)
 	}
 
 	/* run the stream event for each BE */
-	if (stream == SNDRV_PCM_STREAM_PLAYBACK)
+	if (stream == SNDRV_PCM_STREAM_PLAYBACK) {
+		tfa98xx_speaker_amp_enable();
 		dpcm_dapm_stream_event(fe, stream,
 				fe->cpu_dai->driver->playback.stream_name,
 				SND_SOC_DAPM_STREAM_NOP);
-	else
+	} else {
 		dpcm_dapm_stream_event(fe, stream,
 				fe->cpu_dai->driver->capture.stream_name,
 				SND_SOC_DAPM_STREAM_NOP);
+	}
 
 	/* keep going if FE state is > prepare */
 	if (fe->dpcm[stream].state == SND_SOC_DPCM_STATE_PREPARE ||
