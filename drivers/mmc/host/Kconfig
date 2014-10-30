@@ -727,3 +727,17 @@ config MMC_USHC
 
 	  Note: These controllers only support SDIO cards and do not
 	  support MMC or SD memory cards.
+
+config MMC_SDHCI_MIMO
+	bool "MIMO support"
+	depends on MMC_SDHCI_MSM
+	default n
+	help
+	  This selects support for SD card bus on MIMO.
+
+config MMC_SDHCI_PROHIBIT_SD_SPEC3
+	bool "SD spec 3.0 prohibit support"
+	depends on MMC_SDHCI_MIMO
+	default n
+	help
+	  This selects support for SD spec 3.0 prohibition on MIMO.
