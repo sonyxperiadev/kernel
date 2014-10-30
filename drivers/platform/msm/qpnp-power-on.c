@@ -33,6 +33,9 @@
 
 /* Common PNP defines */
 #define QPNP_PON_REVISION2(base)		(base + 0x01)
+#ifdef CONFIG_POWERKEY_FORCECRASH
+#include "forcecrash.h"
+#endif
 
 /* PON common register addresses */
 #define QPNP_PON_RT_STS(base)			(base + 0x10)
@@ -104,6 +107,11 @@
 
 #define QPNP_KEY_STATUS_DELAY			msecs_to_jiffies(250)
 #define QPNP_PON_REV_B				0x01
+
+#ifdef CONFIG_POWERKEY_FORCECRASH
+static int forcecrash_on;
+module_param(forcecrash_on, int, S_IRUGO | S_IWUSR);
+#endif
 
 enum pon_type {
 	PON_KPDPWR,
@@ -384,6 +392,11 @@ qpnp_pon_input_dispatch(struct qpnp_pon *pon, u32 pon_type)
 	switch (cfg->pon_type) {
 	case PON_KPDPWR:
 		pon_rt_bit = QPNP_PON_KPDPWR_N_SET;
+#ifdef CONFIG_POWERKEY_FORCECRASH
+		if (forcecrash_on)
+			qpnp_powerkey_forcecrash_timer_setup(pon_rt_sts &
+					pon_rt_bit);
+#endif
 		break;
 	case PON_RESIN:
 		pon_rt_bit = QPNP_PON_RESIN_N_SET;
@@ -1211,6 +1224,10 @@ static int __devinit qpnp_pon_probe(struct spmi_device *spmi)
 
 	INIT_DELAYED_WORK(&pon->bark_work, bark_work_func);
 
+#ifdef CONFIG_POWERKEY_FORCECRASH
+	qpnp_powerkey_forcecrash_init(spmi, pon->base);
+#endif
+
 	/* register the PON configurations */
 	rc = qpnp_pon_config_init(pon);
 	if (rc) {
@@ -1230,6 +1247,10 @@ static int qpnp_pon_remove(struct spmi_device *spmi)
 
 	if (pon->pon_input)
 		input_unregister_device(pon->pon_input);
+
+#ifdef CONFIG_POWERKEY_FORCECRASH
+	qpnp_powerkey_forcecrash_exit(spmi);
+#endif
 
 	return 0;
 }
