@@ -1,6 +1,8 @@
 /*
  *  linux/include/linux/mmc/host.h
  *
+ * Copyright (c) 2013 Sony Mobile Communications Inc.
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
@@ -309,6 +311,9 @@ struct mmc_host {
 #define MMC_CAP2_CORE_PM	(1 << 23)       /* use PM framework */
 #define MMC_CAP2_HS400		(MMC_CAP2_HS400_1_8V | \
 				 MMC_CAP2_HS400_1_2V)
+#ifdef CONFIG_MMC_AWAKE_HS200
+#define MMC_CAP2_AWAKE_SUPP	(1 << 25)	/* use CMD5 awake */
+#endif
 	mmc_pm_flag_t		pm_caps;	/* supported pm features */
 
 	int			clk_requests;	/* internal reference counter */
@@ -334,6 +339,9 @@ struct mmc_host {
 	spinlock_t		lock;		/* lock for claim and bus ops */
 
 	struct mmc_ios		ios;		/* current io bus settings */
+#ifdef CONFIG_MMC_AWAKE_HS200
+	struct mmc_ios		cached_ios;
+#endif
 	u32			ocr;		/* the current OCR setting */
 
 	/* group bitfields together to minimize padding */
@@ -365,7 +373,11 @@ struct mmc_host {
 	unsigned int		bus_resume_flags;
 #define MMC_BUSRESUME_MANUAL_RESUME	(1 << 0)
 #define MMC_BUSRESUME_NEEDS_RESUME	(1 << 1)
+#define MMC_BUSRESUME_IS_RESUMING	(1 << 2)
 
+#ifdef CONFIG_MMC_BLOCK_DEFERRED_RESUME
+	wait_queue_head_t	defer_wq;
+#endif
 	unsigned int		sdio_irqs;
 	struct task_struct	*sdio_irq_thread;
 	bool			sdio_irq_pending;
@@ -412,7 +424,9 @@ struct mmc_host {
 	} perf;
 	bool perf_enable;
 #endif
+#ifndef CONFIG_MMC_AWAKE_HS200
 	struct mmc_ios saved_ios;
+#endif
 	struct {
 		unsigned long	busy_time_us;
 		unsigned long	window_time;
@@ -459,6 +473,7 @@ static inline void *mmc_priv(struct mmc_host *host)
 #define mmc_hostname(x)	(dev_name(&(x)->class_dev))
 #define mmc_bus_needs_resume(host) ((host)->bus_resume_flags & MMC_BUSRESUME_NEEDS_RESUME)
 #define mmc_bus_manual_resume(host) ((host)->bus_resume_flags & MMC_BUSRESUME_MANUAL_RESUME)
+#define mmc_bus_is_resuming(host) ((host)->bus_resume_flags & MMC_BUSRESUME_IS_RESUMING)
 
 static inline void mmc_set_bus_resume_policy(struct mmc_host *host, int manual)
 {

@@ -3,6 +3,7 @@
  *
  *  Copyright (C) 2008 Google, All Rights Reserved.
  *  Copyright (c) 2009-2013, The Linux Foundation. All rights reserved.
+ *  Copyright (C) 2014 Sony Mobile Communications Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -437,6 +438,8 @@ struct msmsdcc_host {
 	struct dentry *debugfs_pio_mode;
 	struct dentry *debugfs_pm_stats;
 	int saved_tuning_phase;
+
+	unsigned int disable_mciclk_pwrsave;
 };
 
 #define MSMSDCC_VERSION_STEP_MASK	0x0000FFFF
