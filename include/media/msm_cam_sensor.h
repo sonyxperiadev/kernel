@@ -120,6 +120,21 @@ enum msm_sensor_resolution_t {
 	MSM_SENSOR_RES_5,
 	MSM_SENSOR_RES_6,
 	MSM_SENSOR_RES_7,
+/* extension begin */
+	MSM_SENSOR_RES_8,
+	MSM_SENSOR_RES_9,
+	MSM_SENSOR_RES_10,
+	MSM_SENSOR_RES_11,
+	MSM_SENSOR_RES_12,
+	MSM_SENSOR_RES_13,
+	MSM_SENSOR_RES_14,
+	MSM_SENSOR_RES_15,
+	MSM_SENSOR_RES_16,
+	MSM_SENSOR_RES_17,
+	MSM_SENSOR_RES_18,
+	MSM_SENSOR_RES_19,
+	MSM_SENSOR_RES_20,
+/* extension end */
 	MSM_SENSOR_INVALID_RES,
 };
 
@@ -276,6 +291,9 @@ struct msm_camera_i2c_seq_reg_setting {
 	uint16_t size;
 	enum msm_camera_i2c_reg_addr_type addr_type;
 	uint16_t delay;
+/* extension begin */
+	uint16_t slave_addr;
+/* extension end */
 };
 
 struct msm_camera_i2c_array_write_config {
@@ -288,6 +306,9 @@ struct msm_camera_i2c_read_config {
 	uint16_t reg_addr;
 	enum msm_camera_i2c_data_type data_type;
 	uint16_t *data;
+/* extension begin */
+	enum msm_camera_i2c_reg_addr_type addr_type;
+/* extension end */
 };
 
 struct msm_camera_csid_vc_cfg {
@@ -458,6 +479,9 @@ enum msm_sensor_cfg_type_t {
 	CFG_WRITE_I2C_ARRAY,
 	CFG_SLAVE_WRITE_I2C_ARRAY,
 	CFG_WRITE_I2C_SEQ_ARRAY,
+/* extension begin */
+	CFG_WRITE_I2C_SEQ_ARRAY_WITH_SID,
+/* extension end */
 	CFG_POWER_UP,
 	CFG_POWER_DOWN,
 	CFG_SET_STOP_STREAM_SETTING,
