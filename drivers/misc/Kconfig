@@ -651,6 +651,16 @@ config QPNP_MISC
 	  and the driver provides an API to check if this interrupt
 	  is available on the current PMIC chip.
 
+config NFC_PN547
+	tristate "NFC driver for PN547"
+	depends on I2C
+	default n
+	help
+	  This option enables device driver for PN547.
+	  GPIO, PMIC GPIO and MPP configurations are controlled.
+	  The sysfs files provides the interface to send and receive
+	  the data, response and notification.
+
 config USB_HSIC_SMSC_HUB
 	tristate "Support for HSIC based MSM on-chip SMSC3503 HUB"
 	depends on USB_EHCI_MSM_HSIC
