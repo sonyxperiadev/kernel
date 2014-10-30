@@ -1,4 +1,5 @@
 /* Copyright (c) 2013, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2014 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -586,7 +587,11 @@ static void msm_vfe40_reg_update(struct vfe_device *vfe_dev)
 static uint32_t msm_vfe40_reset_values[ISP_RST_MAX] =
 {
 	0x1FF, /* ISP_RST_HARD reset everything */
+#if defined(CONFIG_SONY_CAM_V4L2)
+	0x1FF /* ISP_RST_SOFT all modules without registers */
+#else
 	0x1EF /* ISP_RST_SOFT all modules without registers */
+#endif
 };
 
 

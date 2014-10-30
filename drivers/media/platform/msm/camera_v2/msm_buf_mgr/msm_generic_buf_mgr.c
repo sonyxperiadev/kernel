@@ -1,4 +1,5 @@
 /* Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2014 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -100,7 +101,12 @@ static int msm_buf_mngr_put_buf(struct msm_buf_mngr_device *buf_mngr_dev,
 	return ret;
 }
 
+#if defined(CONFIG_SONY_CAM_V4L2)
+static void msm_buf_mngr_sd_shutdown(struct msm_buf_mngr_device *buf_mngr_dev,
+	struct msm_buf_mngr_info *buf_info)
+#else
 static void msm_buf_mngr_sd_shutdown(struct msm_buf_mngr_device *buf_mngr_dev)
+#endif
 {
 	unsigned long flags;
 	struct msm_get_bufs *bufs, *save;
@@ -109,6 +115,10 @@ static void msm_buf_mngr_sd_shutdown(struct msm_buf_mngr_device *buf_mngr_dev)
 	if (!list_empty(&buf_mngr_dev->buf_qhead)) {
 		list_for_each_entry_safe(bufs,
 			save, &buf_mngr_dev->buf_qhead, entry) {
+#if defined(CONFIG_SONY_CAM_V4L2)
+			if (bufs->session_id != buf_info->session_id)
+				continue;
+#endif
 			pr_err("%s: Error delete invalid bufs =%x, ses_id=%d, str_id=%d, idx=%d\n",
 				__func__, (unsigned int)bufs, bufs->session_id,
 				bufs->stream_id, bufs->vb2_buf->v4l2_buf.index);
@@ -175,7 +185,11 @@ static long msm_buf_mngr_subdev_ioctl(struct v4l2_subdev *sd,
 		rc = msm_generic_buf_mngr_close(sd, NULL);
 		break;
 	case MSM_SD_SHUTDOWN:
+#if defined(CONFIG_SONY_CAM_V4L2)
+		msm_buf_mngr_sd_shutdown(buf_mngr_dev, argp);
+#else
 		msm_buf_mngr_sd_shutdown(buf_mngr_dev);
+#endif
 		break;
 	default:
 		return -ENOIOCTLCMD;
