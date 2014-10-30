@@ -1296,6 +1296,7 @@ static int dwc3_msm_suspend(struct dwc3_msm *mdwc)
 	bool host_bus_suspend;
 	bool host_ss_active;
 	bool can_suspend_ssphy;
+	struct dwc3 *dwc = platform_get_drvdata(mdwc->dwc3);
 
 	dev_dbg(mdwc->dev, "%s: entering lpm\n", __func__);
 	dbg_event(0xFF, "Controller Suspend", 0);
@@ -1349,6 +1350,10 @@ static int dwc3_msm_suspend(struct dwc3_msm *mdwc)
 
 	host_bus_suspend = (mdwc->scope == POWER_SUPPLY_SCOPE_SYSTEM);
 	can_suspend_ssphy = !(host_bus_suspend && host_ss_active);
+
+	/* Disable core irq */
+	if (dwc->irq)
+		disable_irq(dwc->irq);
 
 	if (!dcp && !host_bus_suspend)
 		dwc3_msm_write_reg(mdwc->base, QSCRATCH_CTRL_REG,
@@ -1419,6 +1424,7 @@ static int dwc3_msm_resume(struct dwc3_msm *mdwc)
 	bool dcp;
 	bool host_bus_suspend;
 	bool resume_from_core_clk_off = false;
+	struct dwc3 *dwc = platform_get_drvdata(mdwc->dwc3);
 
 	dev_dbg(mdwc->dev, "%s: exiting lpm\n", __func__);
 	dbg_event(0xFF, "Controller Resume", 0);
@@ -1509,6 +1515,10 @@ static int dwc3_msm_resume(struct dwc3_msm *mdwc)
 		enable_irq_wake(mdwc->hs_phy_irq);
 
 	dev_info(mdwc->dev, "DWC3 exited from low power mode\n");
+
+	/* Enable core irq */
+	if (dwc->irq)
+		enable_irq(dwc->irq);
 
 	return 0;
 }
