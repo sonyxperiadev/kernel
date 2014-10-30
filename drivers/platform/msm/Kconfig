@@ -130,4 +130,11 @@ config SSM
 	  This driver uses Secure Channel Manager interface for trustzone
 	  communication and communicates with modem over SMD channel.
 
+config MPMTIME
+	tristate "Expose mpm time"
+	default y
+	depends on ARCH_MSM8974
+	help
+	  Expose the time since last power reset in /proc/mpmtime.
+
 endmenu
