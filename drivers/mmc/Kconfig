@@ -27,6 +27,22 @@ config MMC_PERF_PROFILING
 	  If you say Y here, support will be added for collecting
 	  performance numbers at the MMC Queue and Host layers.
 
+config MMC_CACHE_FEATURE
+	bool "MMC cache control command support"
+	depends on MMC != n
+	default n
+	help
+	  This selects support for MMC cache control commands
+	  on eMMC 5.0 devices.
+
+config MMC_AWAKE_HS200
+	bool "The awake command more than HS200 support"
+	depends on MMC != n
+	default n
+	help
+	  This selects support of the speed modes more than HS200
+	  on eMMC 5.0 devices.
+
 if MMC
 
 source "drivers/mmc/core/Kconfig"

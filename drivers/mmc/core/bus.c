@@ -3,6 +3,7 @@
  *
  *  Copyright (C) 2003 Russell King, All Rights Reserved.
  *  Copyright (C) 2007 Pierre Ossman
+ *  Copyright (C) 2013 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -26,7 +27,11 @@
 #include "bus.h"
 
 #define to_mmc_driver(d)	container_of(d, struct mmc_driver, drv)
+
+/* Default idle timeout for MMC devices: 10 seconds. */
 #define RUNTIME_SUSPEND_DELAY_MS 10000
+/* Default idle timeout for SD cards: 5 minutes. */
+#define RUNTIME_SDCARD_SUSPEND_DELAY_MS 300000
 
 static ssize_t mmc_type_show(struct device *dev,
 	struct device_attribute *attr, char *buf)
@@ -443,8 +448,10 @@ int mmc_add_card(struct mmc_card *card)
 		if (ret)
 			pr_err("%s: %s: creating runtime pm sysfs entry: failed: %d\n",
 			       mmc_hostname(card->host), __func__, ret);
-		/* Default timeout is 10 seconds */
-		card->idle_timeout = RUNTIME_SUSPEND_DELAY_MS;
+		if (mmc_card_sd(card))
+			card->idle_timeout = RUNTIME_SDCARD_SUSPEND_DELAY_MS;
+		else
+			card->idle_timeout = RUNTIME_SUSPEND_DELAY_MS;
 	}
 
 	mmc_card_set_present(card);
