@@ -1,5 +1,7 @@
 /*
  *  arch/arm/include/asm/mach/mmc.h
+ *
+ *  Copyright (c) 2014 Sony Mobile Communications AB.
  */
 #ifndef ASMARM_MACH_MMC_H
 #define ASMARM_MACH_MMC_H
@@ -170,6 +172,7 @@ struct mmc_platform_data {
 	bool disable_cmd23;
 	u32 cpu_dma_latency;
 	struct msm_mmc_bus_voting_data *msm_bus_voting_data;
+	bool use_for_wifi;
 };
 
 #endif
