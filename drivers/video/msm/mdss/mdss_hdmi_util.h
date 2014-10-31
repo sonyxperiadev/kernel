@@ -1,4 +1,5 @@
 /* Copyright (c) 2010-2013, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2014 Sony Mobile Communications Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -8,6 +9,9 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
+ *
+ * NOTE: This file has been modified by Sony Mobile Communications Inc.
+ * Modifications are licensed under the License.
  */
 
 #ifndef __HDMI_UTIL_H__
@@ -260,6 +264,9 @@ ssize_t hdmi_get_video_3d_fmt_2string(u32 format, char *buf, u32 size);
 
 /* todo: Fix this. Right now this is defined in mdss_hdmi_tx.c */
 void *hdmi_get_featuredata_from_sysfs_dev(struct device *device, u32 type);
+
+/* get hdmi panel power is on or not*/
+ssize_t hdmi_tx_is_HDMI_panel_power_on(struct device *device);
 
 /* DDC */
 void hdmi_ddc_config(struct hdmi_tx_ddc_ctrl *);

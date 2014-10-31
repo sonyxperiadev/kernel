@@ -1,4 +1,5 @@
 /* Copyright (c) 2010-2014, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2013 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -8,6 +9,9 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
+ *
+ * NOTE: This file has been modified by Sony Mobile Communications AB.
+ * Modifications are licensed under the License.
  */
 
 #ifndef __MDSS_HDMI_TX_H__
@@ -15,6 +19,7 @@
 
 #include <linux/switch.h>
 #include "mdss_hdmi_util.h"
+#include "mdss_hdmi_hdcp.h"
 
 enum hdmi_tx_io_type {
 	HDMI_TX_CORE_IO,
@@ -85,6 +90,8 @@ struct hdmi_tx_ctrl {
 	bool hdcp_feature_on;
 	bool ds_registered;
 	u32 present_hdcp;
+	u8 aksv[5];
+	enum hdmi_hdcp_state hdcp_status;
 
 	u8 spd_vendor_name[9];
 	u8 spd_product_description[17];

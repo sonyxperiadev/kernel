@@ -1,4 +1,5 @@
 /* Copyright (c) 2008-2014, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014 Sony Mobile Communications Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -161,6 +162,27 @@ struct lcd_panel_info {
 	u32 xres_pad;
 	/* Pad height */
 	u32 yres_pad;
+	u32 fps_default;
+	u32 display_clock;
+	u32 driver_ic_vbp;
+	u32 driver_ic_vfp;
+	u32 chenge_wait_update;
+	u32 chenge_wait_on_60fps;
+	u32 chenge_wait_on_45fps;
+	u32 chenge_wait_off_60fps;
+	u32 chenge_wait_off_45fps;
+	u32 chenge_wait_on_cmds_num;
+	u32 chenge_wait_off_cmds_num;
+	u32 fps_threshold;
+	u32 te_c_update;
+	u32 te_c_mode_60fps_0;
+	u32 te_c_mode_60fps_1;
+	u32 te_c_mode_45fps_0;
+	u32 te_c_mode_45fps_1;
+	u32 te_c_cmds_num;
+	u32 te_c_payload_num;
+	u32 chenge_fps_cmds_num;
+	u32 chenge_fps_payload_num;
 };
 
 
@@ -225,6 +247,8 @@ struct mipi_panel_info {
 
 	char lp11_init;
 	u32  init_delay;
+
+	int input_fpks;
 };
 
 struct edp_panel_info {
@@ -294,6 +318,7 @@ struct mdss_panel_info {
 	u32 roi_y;
 	u32 roi_w;
 	u32 roi_h;
+	u32 rev_u[2], rev_v[2];
 	int bklt_ctrl;	/* backlight ctrl */
 	int pwm_pmic_gpio;
 	int pwm_lpg_chan;
@@ -308,6 +333,10 @@ struct mdss_panel_info {
 	struct ion_handle *splash_ihdl;
 	u32 panel_power_on;
 
+	/* physical size in mm */
+	__u32 width;
+	__u32 height;
+
 	uint32_t panel_dead;
 
 	struct lcd_panel_info lcdc;
@@ -315,12 +344,15 @@ struct mdss_panel_info {
 	struct mipi_panel_info mipi;
 	struct lvds_panel_info lvds;
 	struct edp_panel_info edp;
+	const char *panel_id_name;
 };
 
 struct mdss_panel_data {
 	struct mdss_panel_info panel_info;
+	int (*intf_ready) (struct mdss_panel_data *pdata);
 	void (*set_backlight) (struct mdss_panel_data *pdata, u32 bl_level);
 	unsigned char *mmss_cc_base;
+	struct platform_device *panel_pdev;
 
 	/**
 	 * event_handler() - callback handler for MDP core events
@@ -335,6 +367,8 @@ struct mdss_panel_data {
 	 * and teardown.
 	 */
 	int (*event_handler) (struct mdss_panel_data *pdata, int e, void *arg);
+	int (*detect) (struct mdss_panel_data *pdata);
+	int (*update_panel) (struct mdss_panel_data *pdata);
 
 	struct mdss_panel_data *next;
 };
@@ -443,4 +477,14 @@ int mdss_panel_get_boot_cfg(void);
  * returns true if mdss is ready, else returns false.
  */
 bool mdss_is_ready(void);
+
+struct msm_fb_data_type;
+#if defined(CONFIG_DEBUG_FS) && defined(CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL)
+void mipi_dsi_panel_create_debugfs(struct msm_fb_data_type *mfd);
+#else
+static inline void mipi_dsi_panel_create_debugfs(struct msm_fb_data_type *mfd)
+{
+	/* empty */
+}
+#endif
 #endif /* MDSS_PANEL_H */
