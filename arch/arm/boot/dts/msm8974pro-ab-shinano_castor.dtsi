@@ -1,0 +1,145 @@
+/* arch/arm/boot/dts/msm8974pro-ab-shinano_castor.dtsi
+ *
+ * Copyright (C) 2013 Sony Mobile Communications Inc.
+ *
+ * Author: Shougo Watanabe <Shougo.X.Watanabe@sonymobile.com>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+&soc {
+	/* I2C : BLSP6 */
+	i2c@f9928000 {
+		nfc@28 {
+			compatible = "nxp,pn547";
+			reg = <0x28>;
+			interrupt-parent = <&msmgpio>;
+			interrupts = <24 0x1>;
+			nxp,pvdd_en = <&pm8941_gpios 34 0x01>;
+			nxp,irq_gpio = <&msmgpio 24 0x00>;
+			nxp,dwld_en = <&msmgpio 57 0x00>;
+			nxp,ven = <&pm8941_mpps 2 0x01>;
+			dynamic_config;
+			configure_gpio = <&pm8941_gpios 33 0x00>;
+			configure_mpp = <&pm8941_mpps 2 0x00>;
+		};
+	};
+
+	/* I2C : BLSP11 */
+	i2c@f9967000 {
+		ad7146@2f {
+			compatible = "AD,ad7146";
+			interrupt-parent = <&spmi_bus>;
+			reg = <0x2f 0>;
+			interrupts = <0x0 0xc8 0x0>; /* PM8941 GPIO 9 */
+			interrupt-name = "ad7146_irq_gpio";
+			prox_vdd-supply = <&pm8941_l19>;
+			prox_vdd-supply_name = "prox_vdd";
+			AD,irq_gpio = <&pm8941_gpios 9 0x00>;
+			pad,amb_comp_ctrl0 = <0x30FB>;
+			pad,amb_comp_ctrl1 = <0x01FF>;
+			pad,amb_comp_ctrl2 = <0x05FF>;
+			pad,mod_freq_ctrl = <0x0D01>;
+			pad,stage0-connect1 = <0x3FBF>;
+			pad,stage0-connect2 = <0x1FDF>;
+			pad,stage0-afe = <0x0100>;
+			pad,stage0-sensitivity = <0x5454>;
+			pad,stage0-offset_l = <0x000A>;
+			pad,stage0-offset_h = <0x0018>;
+			pad,stage0-offset_l_clamp = <0x0018>;
+			pad,stage0-offset_h_clamp = <0x000A>;
+			pad,stage0-hysterisis = <40>;
+			pad,stage1-connect1 = <0x37FF>;
+			pad,stage1-connect2 = <0x1BFF>;
+			pad,stage1-afe = <0x1200>;
+			pad,stage1-sensitivity = <0x5454>;
+			pad,stage1-offset_l = <0x000A>;
+			pad,stage1-offset_h = <0x0070>;
+			pad,stage1-offset_l_clamp = <0x0070>;
+			pad,stage1-offset_h_clamp = <0x000A>;
+			pad,stage1-hysterisis = <10>;
+			status = "ok";
+		};
+	};
+
+	gpio_keys {
+		interrupt-parent = <&msmgpio>;
+		interrupts = <9 0>;
+
+		sim_det {
+			label = "sim-detection";
+			gpios = <&msmgpio 9 0x0>;
+			linux,input-type = <5>;
+			linux,code = <7>;
+			gpio-key,wakeup;
+			debounce-interval = <10>;
+		};
+	};
+
+};
+
+&pm8941_lsid0 {
+	pm8941_iadc: iadc@3600 {
+		qcom,rsense = <10000000>;
+	};
+};
+
+&sdcc1 {
+	qcom,bus-speed-mode = "DDR50", "DDR_1p8v";
+};
+
+&sdcc2 {
+	qcom,bus-speed-mode = "SDR12", "SDR25", "SDR50", "DDR50";
+	qcom,current-limit = <400>;
+	qcom,pad-drv-on = <0x7 0x2 0x2>; /* 16mA, 6mA, 6mA */
+};
+
+&sdhc_2 {
+	qcom,vdd-current-level = <400000 400000>;
+	qcom,pad-drv-on = <0x7 0x2 0x2>; /* 16mA, 6mA, 6mA */
+};
+
+&spmi_bus {
+	qcom,pm8941@1 {
+		qcom,leds@d800 {
+			status = "disabled";
+			qcom,wled_0 {
+				label = "wled";
+				linux,name = "wled:backlight";
+				linux,default-trigger = "bkl-trigger";
+				qcom,cs-out-en = <1>;
+				qcom,cabc-en = <0>;
+				qcom,op-fdbck = <0>;
+				qcom,default-state = "on";
+				qcom,max-current = <20>;
+				qcom,ctrl-delay-us = <0>;
+				qcom,boost-curr-lim = <3>;
+				qcom,cp-sel = <0>;
+				qcom,switch-freq = <2>;
+				qcom,ovp-val = <2>;
+				qcom,num-strings = <2>;
+				qcom,id = <0>;
+			};
+		};
+	};
+};
+
+/* Regulator config */
+&pm8941_l9 {
+	status = "ok";
+};
+
+&pm8941_l14 {
+	status = "ok";
+};
+
+&pm8941_l15 {
+	status = "ok";
+};
