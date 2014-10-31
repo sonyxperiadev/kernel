@@ -3,6 +3,7 @@
  *
  * Copyright (C) 2007 Google Incorporated
  * Copyright (c) 2008-2014, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2013-2014 Sony Mobile Communications AB.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -44,6 +45,7 @@
 #include <linux/file.h>
 #include <linux/memory_alloc.h>
 #include <linux/kthread.h>
+#include <linux/input.h>
 
 #include <mach/board.h>
 #include <mach/memory.h>
@@ -52,6 +54,8 @@
 #include <mach/msm_memtypes.h>
 
 #include "mdss_fb.h"
+#include "mdss_mdp.h"
+#include "mdss_dsi.h"
 
 #ifdef CONFIG_FB_MSM_TRIPLE_BUFFER
 #define MDSS_FB_NUM 3
@@ -60,6 +64,10 @@
 #endif
 
 #define MAX_FBI_LIST 32
+
+/* with a define we avoid modifying fb.h's FB-enum */
+#define FB_EARLY_UNBLANK 0xC0FFEE
+
 static struct fb_info *fbi_list[MAX_FBI_LIST];
 static int fbi_list_index;
 
@@ -95,6 +103,88 @@ static int __mdss_fb_display_thread(void *data);
 static int mdss_fb_pan_idle(struct msm_fb_data_type *mfd);
 static int mdss_fb_send_panel_event(struct msm_fb_data_type *mfd,
 					int event, void *arg);
+
+static void mdss_background_unblank(struct work_struct *ws);
+
+static int pwr_pressed;
+
+static void
+mdss_input_event(struct input_handle *handle, unsigned int type,
+		unsigned int code, int value)
+{
+	/* only react on key down events */
+	if (code == KEY_POWER && value == 1) {
+		pr_debug("power key pressed!");
+		pwr_pressed = true;
+	}
+}
+
+static int
+mdss_input_connect(struct input_handler *handler,
+		struct input_dev *dev, const struct input_device_id *id)
+{
+	struct input_handle *handle;
+	int error;
+
+	handle = kzalloc(sizeof(struct input_handle), GFP_KERNEL);
+	if (!handle)
+		return -ENOMEM;
+
+	handle->dev = dev;
+	handle->handler = handler;
+	handle->name = "mdss_fb";
+	pr_debug("registering %s handle for %s",
+			  handle->name, dev->name);
+
+	error = input_register_handle(handle);
+	if (error)
+		goto err2;
+
+	error = input_open_device(handle);
+	if (error)
+		goto err1;
+
+	return 0;
+err1:
+	input_unregister_handle(handle);
+err2:
+	kfree(handle);
+	return error;
+}
+
+static void
+mdss_input_disconnect(struct input_handle *handle)
+{
+	input_close_device(handle);
+	input_unregister_handle(handle);
+	kfree(handle);
+}
+
+static const struct input_device_id mdss_ids[] = {
+	{
+		.flags = INPUT_DEVICE_ID_MATCH_KEYBIT,
+		.keybit = { [BIT_WORD(KEY_POWER)] = BIT_MASK(KEY_POWER) },
+	},
+	{ },
+};
+
+static void mdss_ensure_kworker_done(struct workqueue_struct *wq)
+{
+	if (wq) {
+		pr_debug("wait for unblank work");
+		flush_workqueue(wq);
+		pr_debug("done waiting for unblank work");
+	}
+}
+
+static struct input_handler mds_input_handler = {
+	.event		= mdss_input_event,
+	.connect	= mdss_input_connect,
+	.disconnect	= mdss_input_disconnect,
+	.name		= "mdss_fb",
+	.id_table	= mdss_ids,
+};
+
 void mdss_fb_no_update_notify_timer_cb(unsigned long data)
 {
 	struct msm_fb_data_type *mfd = (struct msm_fb_data_type *)data;
@@ -226,6 +316,7 @@ static struct led_classdev backlight_led = {
 	.name           = "lcd-backlight",
 	.brightness     = MDSS_MAX_BL_BRIGHTNESS,
 	.brightness_set = mdss_fb_set_bl_brightness,
+	.max_brightness = MDSS_MAX_BL_BRIGHTNESS,
 };
 
 static ssize_t mdss_fb_get_type(struct device *dev,
@@ -469,6 +560,8 @@ static int mdss_fb_probe(struct platform_device *pdev)
 		mfd->split_display = true;
 	mfd->mdp = *mdp_instance;
 	INIT_LIST_HEAD(&mfd->proc_list);
+	mfd->unblank_kworker = NULL;
+	INIT_WORK(&mfd->unblank_work, mdss_background_unblank);
 
 	mutex_init(&mfd->lock);
 	mutex_init(&mfd->bl_lock);
@@ -547,6 +640,39 @@ static int mdss_fb_probe(struct platform_device *pdev)
 			mfd->splash_thread = NULL;
 		}
 	}
+	if ((mfd->panel_info->type == MIPI_VIDEO_PANEL) ||
+		(mfd->panel_info->type == MIPI_CMD_PANEL))
+		mipi_dsi_panel_create_debugfs(mfd);
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+	if (mfd->index == 0) {
+		struct mdss_dsi_ctrl_pdata *ctrl_pdata;
+
+		/* only the primary panel, index 0, uses this kworker */
+		mfd->unblank_kworker =
+			create_singlethread_workqueue("unblanker");
+
+		ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
+			panel_data);
+		if (!ctrl_pdata) {
+			pr_err("%s: Invalid input data\n", __func__);
+			return -EINVAL;
+		}
+		if (ctrl_pdata->spec_pdata) {
+			if (ctrl_pdata->spec_pdata->panel_detect) {
+				mdss_fb_blank_sub(FB_BLANK_UNBLANK, mfd->fbi,
+					mfd->op_enable);
+				if (pdata->detect)
+					pdata->detect(pdata);
+				mdss_fb_blank_sub(FB_BLANK_POWERDOWN, mfd->fbi,
+					mfd->op_enable);
+				if (pdata->update_panel)
+					pdata->update_panel(pdata);
+			} else {
+				ctrl_pdata->spec_pdata->detected = true;
+			}
+		}
+	}
+#endif	/* CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL */
 
 	INIT_DELAYED_WORK(&mfd->idle_notify_work, __mdss_fb_idle_notify_work);
 
@@ -611,6 +737,7 @@ static int mdss_fb_suspend_sub(struct msm_fb_data_type *mfd)
 		return 0;
 
 	pr_debug("mdss_fb suspend index=%d\n", mfd->index);
+	mdss_ensure_kworker_done(mfd->unblank_kworker);
 
 	mdss_fb_pan_idle(mfd);
 	ret = mdss_fb_send_panel_event(mfd, MDSS_EVENT_SUSPEND, NULL);
@@ -632,6 +759,8 @@ static int mdss_fb_suspend_sub(struct msm_fb_data_type *mfd)
 		mfd->op_enable = false;
 		fb_set_suspend(mfd->fbi, FBINFO_STATE_SUSPENDED);
 	}
+
+	pwr_pressed = false;
 
 	return 0;
 }
@@ -657,7 +786,13 @@ static int mdss_fb_resume_sub(struct msm_fb_data_type *mfd)
 	/* resume state var recover */
 	mfd->op_enable = mfd->suspend.op_enable;
 
-	if (mfd->suspend.panel_power_on) {
+	/* unblank phone display if we
+	 * resume because of power key press
+	 */
+	if (mfd->unblank_kworker && pwr_pressed) {
+		pr_debug("starting unblank async from resume");
+		queue_work(mfd->unblank_kworker, &mfd->unblank_work);
+	} else if (mfd->suspend.panel_power_on) {
 		ret = mdss_fb_blank_sub(FB_BLANK_UNBLANK, mfd->fbi,
 					mfd->op_enable);
 		if (ret)
@@ -844,6 +979,7 @@ static int mdss_fb_blank_sub(int blank_mode, struct fb_info *info,
 			     int op_enable)
 {
 	struct msm_fb_data_type *mfd = (struct msm_fb_data_type *)info->par;
+	struct mdss_panel_data *pdata;
 	int ret = 0;
 
 	if (!op_enable)
@@ -854,9 +990,24 @@ static int mdss_fb_blank_sub(int blank_mode, struct fb_info *info,
 
 	switch (blank_mode) {
 	case FB_BLANK_UNBLANK:
+		mdss_ensure_kworker_done(mfd->unblank_kworker);
+		/* if kworker was successful we are done...
+		 * but let's check and retry if not. fall thru!
+		 */
+
+	case FB_EARLY_UNBLANK:
 		if (!mfd->panel_power_on && mfd->mdp.on_fnc) {
 			ret = mfd->mdp.on_fnc(mfd);
 			if (ret == 0) {
+				if (backlight_led.brightness) {
+					mutex_lock(&mfd->bl_lock);
+					mfd->unset_bl_level =
+					    backlight_led.brightness >
+					    mfd->panel_info->brightness_max ?
+					    mfd->panel_info->brightness_max :
+					    backlight_led.brightness;
+					mutex_unlock(&mfd->bl_lock);
+				}
 				mfd->panel_power_on = true;
 				mfd->panel_info->panel_dead = false;
 			}
@@ -894,11 +1045,27 @@ static int mdss_fb_blank_sub(int blank_mode, struct fb_info *info,
 			mfd->panel_power_on = false;
 			mfd->bl_updated = 0;
 
+			pdata = dev_get_platdata(&mfd->pdev->dev);
+			if ((pdata) && (pdata->set_backlight)) {
+				mutex_lock(&mfd->bl_lock);
+				mfd->bl_level = 0;
+				pdata->set_backlight(pdata, mfd->bl_level);
+				mutex_unlock(&mfd->bl_lock);
+			}
+
 			ret = mfd->mdp.off_fnc(mfd);
-			if (ret)
+			if (ret) {
 				mfd->panel_power_on = curr_pwr_state;
-			else
+				if ((pdata) && (pdata->set_backlight)) {
+					mutex_lock(&mfd->bl_lock);
+					mfd->bl_level = mfd->bl_level_old;
+					pdata->set_backlight(pdata, mfd->bl_level);
+					mutex_unlock(&mfd->bl_lock);
+				}
+			} else {
 				mdss_fb_release_fences(mfd);
+			}
+			mfd->bl_level_old = mfd->bl_level;
 			mfd->op_enable = true;
 			complete(&mfd->power_off_comp);
 		}
@@ -908,6 +1075,22 @@ static int mdss_fb_blank_sub(int blank_mode, struct fb_info *info,
 	sysfs_notify(&mfd->fbi->dev->kobj, NULL, "show_blank_event");
 
 	return ret;
+}
+
+static void mdss_background_unblank(struct work_struct *ws)
+{
+	int ret = -EPERM;
+	struct msm_fb_data_type *mfd;
+	mfd = container_of(ws, struct msm_fb_data_type, unblank_work);
+
+	pr_debug("unblank work running");
+
+	ret = mdss_fb_blank_sub(FB_EARLY_UNBLANK, mfd->fbi,
+				mfd->op_enable);
+	if (ret)
+		pr_warn("can't turn on display!\n");
+	else
+		fb_set_suspend(mfd->fbi, FBINFO_STATE_RUNNING);
 }
 
 static int mdss_fb_blank(int blank_mode, struct fb_info *info)
@@ -1086,16 +1269,32 @@ static int mdss_fb_register(struct msm_fb_data_type *mfd)
 	fix->mmio_len = 0;	/* No MMIO Address */
 	fix->accel = FB_ACCEL_NONE;/* FB_ACCEL_MSM needes to be added in fb.h */
 
-	var->xoffset = 0,	/* Offset from virtual to visible */
-	var->yoffset = 0,	/* resolution */
-	var->grayscale = 0,	/* No graylevels */
-	var->nonstd = 0,	/* standard pixel format */
-	var->activate = FB_ACTIVATE_VBL,	/* activate it at vsync */
-	var->height = -1,	/* height of picture in mm */
-	var->width = -1,	/* width of picture in mm */
-	var->accel_flags = 0,	/* acceleration flags */
-	var->sync = 0,	/* see FB_SYNC_* */
-	var->rotate = 0,	/* angle we rotate counter clockwise */
+	var->xoffset = 0;	/* Offset from virtual to visible */
+	var->yoffset = 0;	/* resolution */
+	var->grayscale = 0;	/* No graylevels */
+	var->nonstd = 0;	/* standard pixel format */
+	var->activate = FB_ACTIVATE_VBL;	/* activate it at vsync */
+
+	/* height&width of picture in mm */
+	if (panel_info) {
+		if (panel_info->height)
+			var->height = panel_info->height;
+		else
+			var->height = -1;
+		if (panel_info->width)
+			var->width = panel_info->width;
+		else
+			var->width = -1;
+	} else {
+		var->height = -1;
+		var->width = -1;
+		pr_err("%s panel_info null\n", __func__);
+		return ret;
+	}
+
+	var->accel_flags = 0;	/* acceleration flags */
+	var->sync = 0;	/* see FB_SYNC_* */
+	var->rotate = 0;	/* angle we rotate counter clockwise */
 	mfd->op_enable = false;
 
 	switch (mfd->fb_imgType) {
@@ -1461,6 +1660,8 @@ static int mdss_fb_release_all(struct fb_info *info, bool release_all)
 			mfd->disp_thread = NULL;
 		}
 
+		mdss_ensure_kworker_done(mfd->unblank_kworker);
+
 		ret = mdss_fb_blank_sub(FB_BLANK_POWERDOWN, info,
 			mfd->op_enable);
 		if (ret) {
@@ -1793,6 +1994,7 @@ static int __mdss_fb_perform_commit(struct msm_fb_data_type *mfd)
 		else
 			pr_warn("no kickoff function setup for fb%d\n",
 					mfd->index);
+		mdss_dsi_panel_fps_data_update(mfd);
 	} else {
 		ret = mdss_fb_pan_display_sub(&fb_backup->disp_commit.var,
 				&fb_backup->info);
@@ -2526,6 +2728,9 @@ int __init mdss_fb_init(void)
 	int rc = -ENODEV;
 
 	if (platform_driver_register(&mdss_fb_driver))
+		return rc;
+
+	if (input_register_handler(&mds_input_handler))
 		return rc;
 
 	return 0;
