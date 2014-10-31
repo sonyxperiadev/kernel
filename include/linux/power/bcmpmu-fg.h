@@ -187,6 +187,7 @@ struct bcmpmu_fg_pdata {
 	int poll_rate_crit_batt;
 	int ntc_high_temp;
 	int hysteresis;
+	bool disable_full_charge_learning;
 };
 
 int bcmpmu_fg_set_sw_eoc_current(struct bcmpmu59xxx *bcmpmu, int eoc_current);
