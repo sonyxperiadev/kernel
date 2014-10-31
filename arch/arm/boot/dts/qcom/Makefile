@@ -101,6 +101,7 @@ dtb-$(CONFIG_ARCH_APQ8084) += apq8084-v1.0-old-pwr-grid-liquid.dtb \
 	apq8084-v1.1-liquid.dtb \
 	apq8084-v1.0-old-pwr-grid-smb1357-cdp.dtb \
 	apq8084-v1.1-old-pwr-grid-smb1357-cdp.dtb \
+	apq8084-v1.1-old-pwr-grid-smb1357-mdm9x25-cdp.dtb \
 	apq8084-v1.1-smb1357-cdp.dtb \
 	apq8084-v1.0-old-pwr-grid-smb1357-mtp.dtb \
 	apq8084-v1.1-old-pwr-grid-smb1357-mtp.dtb \
