@@ -3107,4 +3107,12 @@ config KRAIT_REGULATOR
 	 line from the PMIC. This supply line is powered by multiple
 	 regulators running in ganged mode inside the PMIC. Enable
 	 this option to support such configurations.
+
+config MSM_MODEM_SUBSYSTEM_RESTART_MONITOR
+	bool "MSM Modem Subsystem Restart Monitor"
+	default n
+	depends on MSM_SUBSYSTEM_RESTART
+	help
+	  This option enables a module which can notify user-space
+	  applications of modem subsystem power up/down event via uevent.
 endif
