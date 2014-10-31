@@ -1,0 +1,33 @@
+/* arch/arm/boot/dts/msm8974pro-ab-shinano_sirius_samba.dts
+ *
+ * Copyright (c) 2013-2014, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2013 Sony Mobile Communications Inc.
+ *
+ * Author: Shougo Watanabe <Shougo.X.Watanabe@sonymobile.com>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+/dts-v1/;
+
+/include/ "msm8974pro-ab-pm8941.dtsi"
+/include/ "msm8974-mtp.dtsi"
+/include/ "msm8974pro-ab-shinano_common.dtsi"
+/include/ "msm8974pro-ab-shinano_sirius_common.dtsi"
+/include/ "msm8974pro-ab-shinano_sirius_samba.dtsi"
+/include/ "dsi-panel-sirius.dtsi"
+
+/ {
+	model = "SoMC Sirius SAMBA";
+	compatible = "somc,sirius-samba", "qcom,msm8974";
+        qcom,board-id = <8 1>;
+	somc,space-no = "1278-9584",
+			"1278-9462";
+};
