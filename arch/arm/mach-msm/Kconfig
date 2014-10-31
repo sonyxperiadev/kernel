@@ -1076,6 +1076,33 @@ config MACH_MSM9615_MTP
 	help
 	  Support for the Qualcomm MSM9615 MTP device.
 
+config MACH_SONY_TOGARI_ROW
+	depends on ARCH_MSM8974
+	bool "Sony Mobile Togari ROW"
+	help
+	  Support for the SONY Mobile Togari ROW device.
+	  It is based on QCOM MSM8974 chipset.
+	  If you enable this config,
+	  Please use SONY Mobile source tree.
+
+config MACH_SONY_HONAMI_ROW
+	depends on ARCH_MSM8974
+	bool "Sony Mobile Honami ROW"
+	help
+	  Support for the SONY Mobile Honami ROW device.
+	  It is based on QCOM MSM8974 chipset.
+	  If you enable this config,
+	  Please use SONY Mobile source tree.
+
+config MACH_SONY_AMAMI_ROW
+	depends on ARCH_MSM8974
+	bool "Sony Mobile Amami ROW"
+	help
+	  Support for the SONY Mobile Amami ROW device.
+	  It is based on QCOM MSM8974 chipset.
+	  If you enable this config,
+	  Please use SONY Mobile source tree.
+
 config MSM_USE_TSIF1
 	depends on ARCH_MSM8X60
 	bool "MSM8x60 use TSIF1"
