@@ -1,0 +1,31 @@
+/* arch/arm/boot/dts/apq8074pro-ab-shinano_castor_windy.dts
+ *
+ * Copyright (c) 2013, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2013 Sony Mobile Communications Inc.
+ *
+ * Author: Kouhei Fujiya <Kouhei.X.Fujiya@sonymobile.com>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+/dts-v1/;
+
+/include/ "msm8974pro-ab-pm8941.dtsi"
+/include/ "msm8974-mtp.dtsi"
+/include/ "msm8974pro-ab-shinano_common.dtsi"
+/include/ "msm8974pro-ab-shinano_castor_common.dtsi"
+/include/ "apq8074pro-ab-shinano_castor_windy.dtsi"
+/include/ "dsi-panel-castor.dtsi"
+
+/ {
+	model = "SoMC Castor WINDY";
+	compatible = "somc,castor-windy", "qcom,apq8074";
+	qcom,board-id = <8 0>, <9 0>;
+};
