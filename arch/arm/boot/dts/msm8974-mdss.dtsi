@@ -139,18 +139,19 @@
 			00 00 00 00 0a 00 00 01 97
 			00 00 00 00 0f 00 00 01 97
 			00 c0 00 00 00 00 00 01 bb];
+		/* unnecessary in castor */
+		//qcom,platform-supply-entry1 {
+		//		qcom,supply-name = "vdd";
+		//		qcom,supply-min-voltage = <3000000>;
+		//		qcom,supply-max-voltage = <3000000>;
+		//		qcom,supply-enable-load = <100000>;
+		//		qcom,supply-disable-load = <100>;
+		//		qcom,supply-pre-on-sleep = <0>;
+		//		qcom,supply-post-on-sleep = <20>;
+		//		qcom,supply-pre-off-sleep = <0>;
+		//		qcom,supply-post-off-sleep = <0>;
+		//};
 		qcom,platform-supply-entry1 {
-				qcom,supply-name = "vdd";
-				qcom,supply-min-voltage = <3000000>;
-				qcom,supply-max-voltage = <3000000>;
-				qcom,supply-enable-load = <100000>;
-				qcom,supply-disable-load = <100>;
-				qcom,supply-pre-on-sleep = <0>;
-				qcom,supply-post-on-sleep = <20>;
-				qcom,supply-pre-off-sleep = <0>;
-				qcom,supply-post-off-sleep = <0>;
-		};
-		qcom,platform-supply-entry2 {
 				qcom,supply-name = "vddio";
 				qcom,supply-min-voltage = <1800000>;
 				qcom,supply-max-voltage = <1800000>;
@@ -161,7 +162,7 @@
 				qcom,supply-pre-off-sleep = <0>;
 				qcom,supply-post-off-sleep = <0>;
 		};
-		qcom,platform-supply-entry3 {
+		qcom,platform-supply-entry2 {
 				qcom,supply-name = "vdda";
 				qcom,supply-min-voltage = <1200000>;
 				qcom,supply-max-voltage = <1200000>;
@@ -244,7 +245,6 @@
 		qcom,hdmi-tx-max-voltage-level = <0 0 1800000 1800000>;
 		qcom,hdmi-tx-peak-current = <0 0 300000 0>;
 
-		qcom,hdmi-tx-cec = <&msmgpio 31 0>;
 		qcom,hdmi-tx-ddc-clk = <&msmgpio 32 0>;
 		qcom,hdmi-tx-ddc-data = <&msmgpio 33 0>;
 		qcom,hdmi-tx-hpd = <&msmgpio 34 0>;
