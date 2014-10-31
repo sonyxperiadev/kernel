@@ -1,4 +1,5 @@
 /* Copyright (c) 2012 The Linux Foundation. All rights reserved.
+ * Copyright (C) 2013 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -8,6 +9,9 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
+ *
+ * NOTE: This file has been modified by Sony Mobile Communications AB.
+ * Modifications are licensed under the License.
  */
 
 #ifndef __MDSS_HDMI_HDCP_H__
@@ -41,4 +45,5 @@ int hdmi_hdcp_isr(void *ptr);
 int hdmi_hdcp_reauthenticate(void *input);
 int hdmi_hdcp_authenticate(void *hdcp_ctrl);
 void hdmi_hdcp_off(void *hdcp_ctrl);
+void hdmi_hdcp_aksv(u8 aksv[5], void *input);
 #endif /* __MDSS_HDMI_HDCP_H__ */
