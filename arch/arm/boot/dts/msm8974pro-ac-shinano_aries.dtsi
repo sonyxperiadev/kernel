@@ -1,0 +1,41 @@
+/* arch/arm/boot/dts/msm8974pro-ac-shinano_aries.dtsi
+ *
+ * Copyright (C) 2014 Sony Mobile Communications AB.
+ *
+ * Author: Kouhei Fujiya <Kouhei.X.Fujiya@sonymobile.com>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+&soc {
+	/* I2C : BLSP6 */
+	i2c@f9928000 {
+		nfc@28 {
+			compatible = "nxp,pn547";
+			reg = <0x28>;
+			interrupt-parent = <&msmgpio>;
+			interrupts = <24 0x1>;
+			nxp,pvdd_en = <&pm8941_gpios 34 0x01>;
+			nxp,irq_gpio = <&msmgpio 24 0x00>;
+			nxp,dwld_en = <&msmgpio 57 0x00>;
+			nxp,ven = <&pm8941_mpps 2 0x01>;
+			dynamic_config;
+			configure_gpio = <&pm8941_gpios 33 0x00>;
+			configure_mpp = <&pm8941_mpps 2 0x00>;
+		};
+	};
+};
+
+&pm8941_bms {
+	qcom,battery-vendor-name = "TDK", "SEND", "SANYO-PANASONIC", "LG", "5TH";
+	qcom,battery-vendor-adc-min = <1450 1330 1230 1110 960>;
+	qcom,battery-vendor-adc-max = <1550 1430 1330 1210 1060>;
+	qcom,battery-vendor-select = <0 1 0 0 0>;
+};
