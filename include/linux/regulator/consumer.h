@@ -2,6 +2,7 @@
  * consumer.h -- SoC Regulator consumer support.
  *
  * Copyright (C) 2007, 2008 Wolfson Microelectronics PLC.
+ * Copyright (C) 2013 Sony Mobile Communications AB.
  *
  * Author: Liam Girdwood <lrg@slimlogic.co.uk>
  *
@@ -136,6 +137,18 @@ struct regulator_bulk_data {
 	int ret;
 };
 
+/**
+ * struct regulator_ocp_notification: event notification structure
+ * @notify: pointer to client function to call when ocp event is detected.
+ *          notify function runs in interrupt context.
+ * @ctxt: client-specific context pointer
+ *
+ */
+struct regulator_ocp_notification {
+	void (*notify)(void *);
+	void *ctxt;
+};
+
 #if defined(CONFIG_REGULATOR)
 
 /* regulator get and put */
@@ -186,6 +199,10 @@ int regulator_get_current_limit(struct regulator *regulator);
 int regulator_set_mode(struct regulator *regulator, unsigned int mode);
 unsigned int regulator_get_mode(struct regulator *regulator);
 int regulator_set_optimum_mode(struct regulator *regulator, int load_uA);
+
+/* regulator register ocp notification */
+int regulator_register_ocp_notification(struct regulator *regulator,
+			struct regulator_ocp_notification *ocp_notification);
 
 /* regulator notifier block */
 int regulator_register_notifier(struct regulator *regulator,
@@ -335,6 +352,13 @@ static inline int regulator_set_optimum_mode(struct regulator *regulator,
 					int load_uA)
 {
 	return REGULATOR_MODE_NORMAL;
+}
+
+static inline int regulator_register_ocp_notification(
+			struct regulator *regulator,
+			struct regulator_ocp_notification *ocp_notification);
+{
+	return 0;
 }
 
 static inline int regulator_register_notifier(struct regulator *regulator,
