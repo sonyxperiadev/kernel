@@ -1,4 +1,5 @@
 /* Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2013-2014 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -49,6 +50,7 @@ static int mdss_dsi_regulator_init(struct platform_device *pdev)
 			ctrl_pdata->power_data.num_vreg, 1);
 }
 
+#ifndef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
 static int mdss_dsi_panel_power_on(struct mdss_panel_data *pdata, int enable)
 {
 	int ret;
@@ -103,6 +105,7 @@ static int mdss_dsi_panel_power_on(struct mdss_panel_data *pdata, int enable)
 error:
 	return ret;
 }
+#endif	/* CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL */
 
 static void mdss_dsi_put_dt_vreg_data(struct device *dev,
 	struct dss_module_power *module_power)
@@ -296,6 +299,21 @@ static int mdss_dsi_get_panel_cfg(char *panel_cfg)
 	return rc;
 }
 
+static int mdss_dsi_intf_ready(struct mdss_panel_data *pdata)
+{
+	struct mdss_dsi_ctrl_pdata *ctrl_pdata;
+
+	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
+				panel_data);
+	if (!ctrl_pdata) {
+		pr_err("%s: Invalid input data\n", __func__);
+		return -EINVAL;
+	}
+	ctrl_pdata->spec_pdata->disp_on(pdata);
+
+	return 0;
+}
+
 static int mdss_dsi_off(struct mdss_panel_data *pdata)
 {
 	int ret = 0;
@@ -332,7 +350,11 @@ static int mdss_dsi_off(struct mdss_panel_data *pdata)
 
 	mdss_dsi_clk_ctrl(ctrl_pdata, 0);
 
+#ifndef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
 	ret = mdss_dsi_panel_power_on(pdata, 0);
+#else
+	ret = ctrl_pdata->spec_pdata->panel_power_on(pdata, 0);
+#endif	/* CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL */
 	if (ret) {
 		pr_err("%s: Panel power off failed\n", __func__);
 		return ret;
@@ -378,12 +400,20 @@ int mdss_dsi_on(struct mdss_panel_data *pdata)
 
 	pinfo = &pdata->panel_info;
 
+#ifndef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
 	ret = msm_dss_enable_vreg(ctrl_pdata->power_data.vreg_config,
 				ctrl_pdata->power_data.num_vreg, 1);
 	if (ret) {
 		pr_err("%s:Failed to enable vregs. rc=%d\n", __func__, ret);
 		return ret;
 	}
+#else
+	ret = ctrl_pdata->spec_pdata->panel_power_on(pdata, 1);
+	if (ret) {
+		pr_err("%s: Panel power on failed\n", __func__);
+		return ret;
+	}
+#endif	/* CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL */
 
 	if (!pdata->panel_info.mipi.lp11_init) {
 		ret = mdss_dsi_panel_reset(pdata, 1);
@@ -397,7 +427,11 @@ int mdss_dsi_on(struct mdss_panel_data *pdata)
 	if (ret) {
 		pr_err("%s: failed to enable bus clocks. rc=%d\n", __func__,
 			ret);
+#ifndef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
 		ret = mdss_dsi_panel_power_on(pdata, 0);
+#else
+		ret = ctrl_pdata->spec_pdata->panel_power_on(pdata, 0);
+#endif  /* CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL */
 		if (ret) {
 			pr_err("%s: Panel reset failed. rc=%d\n",
 					__func__, ret);
@@ -956,6 +990,15 @@ static int __devinit mdss_dsi_ctrl_probe(struct platform_device *pdev)
 			pr_err("%s: FAILED: cannot alloc dsi ctrl\n",
 			       __func__);
 			rc = -ENOMEM;
+			return rc;
+		}
+		ctrl_pdata->spec_pdata = devm_kzalloc(&pdev->dev,
+			sizeof(struct mdss_panel_specific_pdata),
+			GFP_KERNEL);
+		if (!ctrl_pdata->spec_pdata) {
+			pr_err("%s: FAILED: cannot alloc spec pdata\n",
+				__func__);
+			rc = -ENOMEM;
 			goto error_no_mem;
 		}
 		platform_set_drvdata(pdev, ctrl_pdata);
@@ -1046,6 +1089,14 @@ static int __devinit mdss_dsi_ctrl_probe(struct platform_device *pdev)
 		goto error_pan_node;
 	}
 
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+	if (ctrl_pdata->panel_data.panel_info.cont_splash_enabled &&
+		ctrl_pdata->spec_pdata->pcc_data.pcc_sts & PCC_STS_UD) {
+		ctrl_pdata->pcc_setup(&ctrl_pdata->panel_data);
+		ctrl_pdata->spec_pdata->pcc_data.pcc_sts &= ~PCC_STS_UD;
+	}
+#endif	/* CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL */
+
 	pr_debug("%s: Dsi Ctrl->%d initialized\n", __func__, index);
 	return 0;
 
@@ -1056,6 +1107,7 @@ error_vreg:
 error_ioremap:
 	iounmap(mdss_dsi_base);
 error_no_mem:
+	devm_kfree(&pdev->dev, ctrl_pdata->spec_pdata);
 	devm_kfree(&pdev->dev, ctrl_pdata);
 
 	return rc;
@@ -1080,6 +1132,59 @@ static int __devexit mdss_dsi_ctrl_remove(struct platform_device *pdev)
 	iounmap(mdss_dsi_base);
 	return 0;
 }
+
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+int mdss_dsi_panel_power_detect(struct platform_device *pdev, int enable)
+{
+	int ret;
+	static struct regulator *vdd_vreg;
+
+	pr_debug("%s: enable=%d\n", __func__, enable);
+	if (!vdd_vreg) {
+		vdd_vreg = devm_regulator_get(&pdev->dev, "vdd");
+		if (IS_ERR(vdd_vreg)) {
+			pr_err("could not get 8941_lvs3, rc = %ld\n",
+					PTR_ERR(vdd_vreg));
+			return -ENODEV;
+		}
+	}
+
+	if (enable) {
+		ret = regulator_set_optimum_mode(vdd_vreg, 100000);
+		if (ret < 0) {
+			pr_err("%s: vdd_vreg set regulator mode failed.\n",
+						       __func__);
+			return ret;
+		}
+
+		ret = regulator_enable(vdd_vreg);
+		if (ret) {
+			pr_err("%s: Failed to enable regulator.\n", __func__);
+			return ret;
+		}
+
+		msleep(50);
+		wmb();
+	} else {
+		ret = regulator_disable(vdd_vreg);
+		if (ret) {
+			pr_err("%s: Failed to disable regulator.\n", __func__);
+			return ret;
+		}
+
+		ret = regulator_set_optimum_mode(vdd_vreg, 100);
+		if (ret < 0) {
+			pr_err("%s: vdd_vreg set regulator mode failed.\n",
+						       __func__);
+			return ret;
+		}
+
+		msleep(20);
+		devm_regulator_put(vdd_vreg);
+	}
+	return 0;
+}
+#endif	/* CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL */
 
 struct device dsi_dev;
 
@@ -1149,6 +1254,13 @@ int dsi_panel_device_register(struct device_node *pan_node,
 	bool dynamic_fps;
 	const char *data;
 	struct mdss_panel_info *pinfo = &(ctrl_pdata->panel_data.panel_info);
+	struct mdss_panel_specific_pdata *spec_pdata = NULL;
+
+	spec_pdata = ctrl_pdata->spec_pdata;
+	if (!spec_pdata) {
+		pr_err("%s: Invalid input data\n", __func__);
+		return -EINVAL;
+	}
 
 	mipi  = &(pinfo->mipi);
 
@@ -1215,13 +1327,13 @@ int dsi_panel_device_register(struct device_node *pan_node,
 	data = of_get_property(ctrl_pdev->dev.of_node,
 		"qcom,platform-lane-config", &len);
 	if ((!data) || (len != 45)) {
-		pr_err("%s:%d, Unable to read Phy lane configure settings",
+		pr_debug("%s:%d, Unable to read Phy lane configure settings",
 			__func__, __LINE__);
-		return -EINVAL;
-	}
-	for (i = 0; i < len; i++) {
-		pinfo->mipi.dsi_phy_db.lanecfg[i] =
-			data[i];
+	} else {
+		for (i = 0; i < len; i++) {
+			pinfo->mipi.dsi_phy_db.lanecfg[i] =
+				data[i];
+		}
 	}
 
 	ctrl_pdata->shared_pdata.broadcast_enable = of_property_read_bool(
@@ -1349,8 +1461,18 @@ int dsi_panel_device_register(struct device_node *pan_node,
 		return -EPERM;
 	}
 
+	ctrl_pdata->panel_data.intf_ready = mdss_dsi_intf_ready;
 	ctrl_pdata->panel_data.event_handler = mdss_dsi_event_handler;
 	ctrl_pdata->check_status = mdss_dsi_bta_status_check;
+	ctrl_pdata->panel_data.detect = spec_pdata->detect;
+	ctrl_pdata->panel_data.update_panel = spec_pdata->update_panel;
+	ctrl_pdata->panel_data.panel_pdev = ctrl_pdev;
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+	ctrl_pdata->cabc_off_cmds = spec_pdata->cabc_off_cmds[DEFAULT_CMDS];
+	ctrl_pdata->cabc_late_off_cmds =
+				spec_pdata->cabc_late_off_cmds[DEFAULT_CMDS];
+	ctrl_pdata->off_cmds = spec_pdata->off_cmds[DEFAULT_CMDS];
+#endif	/* CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL */
 
 	if (ctrl_pdata->bklt_ctrl == BL_PWM)
 		mdss_dsi_panel_pwm_cfg(ctrl_pdata);
@@ -1369,7 +1491,12 @@ int dsi_panel_device_register(struct device_node *pan_node,
 
 	if (pinfo->cont_splash_enabled) {
 		pinfo->panel_power_on = 1;
+#ifndef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
 		rc = mdss_dsi_panel_power_on(&(ctrl_pdata->panel_data), 1);
+#else
+		rc = ctrl_pdata->spec_pdata->panel_power_on(
+			&(ctrl_pdata->panel_data), 1);
+#endif
 		if (rc) {
 			pr_err("%s: Panel power on failed\n", __func__);
 			return rc;
