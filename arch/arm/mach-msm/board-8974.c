@@ -1,4 +1,5 @@
 /* Copyright (c) 2011-2013, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -24,7 +25,6 @@
 #include <linux/regulator/krait-regulator.h>
 #include <linux/msm_tsens.h>
 #include <linux/msm_thermal.h>
-#include <asm/mach/map.h>
 #include <asm/hardware/gic.h>
 #include <asm/mach/map.h>
 #include <asm/mach/arch.h>
@@ -49,6 +49,11 @@
 #include "modem_notifier.h"
 #include "platsmp.h"
 
+#include <asm/setup.h>
+#include <mach/msm_memory_dump.h>
+#include <linux/memblock.h>
+#include <linux/persistent_ram.h>
+#include "board-8974-console.h"
 
 static struct memtype_reserve msm8974_reserve_table[] __initdata = {
 	[MEMTYPE_SMI] = {
@@ -71,8 +76,112 @@ static struct reserve_info msm8974_reserve_info __initdata = {
 	.paddr_to_memtype = msm8974_paddr_to_memtype,
 };
 
+#ifdef CONFIG_CRASH_LAST_LOGS
+static struct resource lastlogs_resources[] = {
+	[0] = {
+		.name	= "last_kmsg",
+		.flags	= IORESOURCE_MEM,
+	},
+	[1] = {
+		.name	= "last_amsslog",
+		.flags	= IORESOURCE_MEM,
+	},
+};
+
+static struct platform_device lastlogs_device = {
+	.name           = "last_logs",
+	.id             = -1,
+};
+#endif
+
+#define DEBUG_MEM_SIZE SZ_1M
+#define RDTAGS_MEM_SIZE (256 * SZ_1K)
+#define RDTAGS_MEM_DESC_SIZE (256 * SZ_1K)
+#define LAST_LOGS_OFFSET (RDTAGS_MEM_SIZE + RDTAGS_MEM_DESC_SIZE)
+
+#ifdef CONFIG_CRASH_LAST_LOGS
+#define LAST_LOG_HEADER_SIZE 4096
+#define KMSG_LOG_SIZE ((1 << CONFIG_LOG_BUF_SHIFT) + LAST_LOG_HEADER_SIZE)
+#define AMSS_LOG_SIZE ((16 * SZ_1K) + LAST_LOG_HEADER_SIZE)
+#endif
+
+#if defined(CONFIG_CRASH_LAST_LOGS)
+static void reserve_debug_memory(void)
+{
+	struct membank *mb = &meminfo.bank[meminfo.nr_banks - 1];
+	unsigned long bank_end = mb->start + mb->size;
+	unsigned long debug_mem_base = bank_end - DEBUG_MEM_SIZE;
+#ifdef CONFIG_CRASH_LAST_LOGS
+	/*Base address for crash logs memory*/
+	unsigned long lastlogs_base = debug_mem_base + LAST_LOGS_OFFSET;
+#endif
+
+	memblock_free(debug_mem_base, SZ_1M);
+	memblock_remove(debug_mem_base, SZ_1M);
+#ifdef CONFIG_CRASH_LAST_LOGS
+	lastlogs_resources[0].start = lastlogs_base;
+	lastlogs_resources[0].end = lastlogs_base + KMSG_LOG_SIZE - 1;
+	lastlogs_base += KMSG_LOG_SIZE;
+	pr_info("last_kmsg start %x end %x\n", \
+		(unsigned int)lastlogs_resources[0].start, \
+		(unsigned int)lastlogs_resources[0].end);
+
+	lastlogs_resources[1].start = lastlogs_base;
+	lastlogs_resources[1].end = lastlogs_base + AMSS_LOG_SIZE - 1;
+	lastlogs_device.num_resources = ARRAY_SIZE(lastlogs_resources);
+	lastlogs_device.resource = lastlogs_resources;
+	pr_info("last_amsslog start %x end %x\n", \
+		(unsigned int)lastlogs_resources[1].start, \
+		(unsigned int)lastlogs_resources[1].end);
+#endif
+}
+#endif
+
+#ifdef CONFIG_ANDROID_PERSISTENT_RAM
+#define MSM_PERSISTENT_RAM_SIZE (SZ_1M)
+#define MSM_RAM_CONSOLE_SIZE (128 * SZ_1K)
+
+static struct persistent_ram_descriptor pr_desc = {
+#ifdef CONFIG_ANDROID_RAM_CONSOLE
+	.name = "ram_console",
+	.size = MSM_RAM_CONSOLE_SIZE
+#endif
+};
+
+static struct persistent_ram msm_pram = {
+	.size		= MSM_PERSISTENT_RAM_SIZE,
+	.num_descs	= 1,
+	.descs		= &pr_desc
+};
+
+static void reserve_persistent_ram(void)
+{
+	struct membank *mb = &meminfo.bank[meminfo.nr_banks - 1];
+	unsigned long bank_end = mb->start + mb->size;
+
+	msm_pram.start = bank_end - DEBUG_MEM_SIZE - MSM_PERSISTENT_RAM_SIZE;
+	persistent_ram_early_init(&msm_pram);
+}
+#endif
+
+#ifdef CONFIG_ANDROID_RAM_CONSOLE
+static struct platform_device ram_console_device = {
+	.name		= "ram_console",
+	.id		= -1,
+	.dev = {
+		.platform_data = &ram_console_pdata,
+	}
+};
+#endif
+
 void __init msm_8974_reserve(void)
 {
+#if defined(CONFIG_CRASH_LAST_LOGS)
+	reserve_debug_memory();
+#endif
+#ifdef CONFIG_ANDROID_PERSISTENT_RAM
+	reserve_persistent_ram();
+#endif
 	reserve_info = &msm8974_reserve_info;
 	of_scan_flat_dt(dt_scan_for_memory_reserve, msm8974_reserve_table);
 	msm_reserve();
@@ -82,6 +191,16 @@ static void __init msm8974_early_memory(void)
 {
 	reserve_info = &msm8974_reserve_info;
 	of_scan_flat_dt(dt_scan_for_memory_hole, msm8974_reserve_table);
+}
+
+void __init msm8974_add_devices(void)
+{
+#ifdef CONFIG_CRASH_LAST_LOGS
+	platform_device_register(&lastlogs_device);
+#endif
+#ifdef CONFIG_ANDROID_RAM_CONSOLE
+	platform_device_register(&ram_console_device);
+#endif
 }
 
 /*
@@ -173,12 +292,18 @@ void __init msm8974_init(void)
 	msm_8974_init_gpiomux();
 	regulator_has_full_constraints();
 	board_dt_populate(adata);
+	msm8974_add_devices();
 	msm8974_add_drivers();
 }
 
 void __init msm8974_init_very_early(void)
 {
 	msm8974_early_memory();
+}
+
+void __init msm8974_init_early(void)
+{
+	msm_reserve_last_regs();
 }
 
 static const char *msm8974_dt_match[] __initconst = {
@@ -196,6 +321,7 @@ DT_MACHINE_START(MSM8974_DT, "Qualcomm MSM 8974 (Flattened Device Tree)")
 	.dt_compat = msm8974_dt_match,
 	.reserve = msm_8974_reserve,
 	.init_very_early = msm8974_init_very_early,
+	.init_early = msm8974_init_early,
 	.restart = msm_restart,
 	.smp = &msm8974_smp_ops,
 MACHINE_END
