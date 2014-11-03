@@ -1456,6 +1456,8 @@ static struct bcmpmu_fg_pdata fg_pdata = {
 	.poll_rate_crit_batt = 5000,	/* every 5 Seconds */
 	.ntc_high_temp = 680, /*battery too hot shdwn temp*/
 	.hysteresis = SONY_BATTERY_TEMP_HYST,
+	.cap_delta_thrld = 20,
+	.flat_cap_delta_thrld = 20,
 	.disable_full_charge_learning = true,
 };
 
