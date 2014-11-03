@@ -35,9 +35,17 @@
 	i2c_2: i2c@f9924000 {
 		cell-index = <0>;
 		compatible = "qcom,i2c-qup";
+		reg = <0xf9924000 0x1000>;		/* TBV */
+		#address-cells = <1>;
+		#size-cells = <0>;
+		reg-names = "qup_phys_addr";
+		interrupts = <0 96 0>;			/* TBV */
+		interrupt-names = "qup_err_intr";
 		qcom,i2c-bus-freq = <355000>;
+		qcom,i2c-src-freq = <50000000>;		/* TBV */
 		qcom,scl-gpio = <&msmgpio 7 0x00>;
 		qcom,sda-gpio = <&msmgpio 6 0x00>;
+		qcom,master-id = <86>;			/* TBV */
 		status = "ok";
 		synaptics_clearpad@2c {
 			compatible = "synaptics,clearpad";
@@ -47,9 +55,15 @@
 			touch_vdd-supply = <&pm8941_l22>;
 			touch_vio-supply = <&pm8941_s3>;
 			synaptics,irq_gpio = <&msmgpio 61 0x00>;
+			gpio_reset = <85>;		/* TBV */
+			reset_l2h = <0>;		/* TBV */
+			chip_id = <0x38>;		/* TBV */
 			num_sensor_rx = <28>;
 			num_sensor_tx = <15>;
-			pen_enabled = <0>;
+			charger_supported = <0>;
+			pen_supported = <0>;
+			glove_supported = <1>;
+			cover_supported = <1>;
 			touch_pressure_enabled = <1>;
 			touch_size_enabled = <0>;
 			touch_orientation_enabled = <0>;
@@ -58,6 +72,31 @@
 			preset_n_fingers = <10>;
 			preset_n_bytes_per_object = <8>;
 			por_delay_after = <200>;
+			wakeup_gesture_supported = <1>;
+			wakeup_gesture_lpm_disabled = <1>;
+			wakeup_gesture_timeout = <2000>;
+			wakeup_gesture {
+				double_tap {
+					gesture_code = <0x0003>;
+					event_00 {
+						type = <2>; /* LOG */
+						message = "=== DOUBLE TAP ===";
+					};
+					event_01 {
+						type = <1>; /* KEY */
+						code = <531>; /* TOUCHPAD_ON */
+						down = <1>;
+					};
+					event_02 {
+						type = <1>; /* KEY */
+						code = <531>; /* TOUCHPAD_ON */
+						down = <0>;
+					};
+					event_03 {
+						type = <99>; /* END */
+					};
+				};
+			};
 		};
 
 		atmel_mxt_ts@4a {
