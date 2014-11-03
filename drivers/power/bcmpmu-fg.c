@@ -2346,9 +2346,10 @@ static int bcmpmu_fg_get_init_cap(struct bcmpmu_fg_data *fg)
 			(init_cap_flat &&
 				fg->capacity_info.first_boot_init_cap_flat &&
 				abs(saved_cap - init_cap) <
-				FG_FLAT_CAP_DELTA_THRLD) ||
+				fg->pdata->flat_cap_delta_thrld) ||
 			force_saved ||
-			(abs(saved_cap - init_cap) < FG_CAP_DELTA_THRLD)) {
+			(abs(saved_cap - init_cap) <
+				fg->pdata->cap_delta_thrld)) {
 			pr_fg(INIT, "Limiting to saved cap\n");
 			cap_percentage = saved_cap;
 		} else {
@@ -2916,7 +2917,7 @@ static void bcmpmu_fg_discharging_algo(struct bcmpmu_fg_data *fg)
 			(!bcmpmu_fg_is_cap_in_flat(fg, usable_cap) &&
 			!bcmpmu_fg_is_cap_in_flat(fg, cap_info->percentage) &&
 			abs(usable_cap - cap_info->percentage) <
-				FG_CAP_DELTA_THRLD))
+				fg->pdata->cap_delta_thrld))
 			fg->capacity_info.first_boot_init_cap_flat = false;
 	}
 
@@ -3418,6 +3419,11 @@ static int bcmpmu_fg_set_platform_data(struct bcmpmu_fg_data *fg,
 	if (!bdata->volt_levels->high)
 		bdata->volt_levels->high = BATT_MIN_EOC_VOLT;
 	fg->vfloat_eoc = bdata->volt_levels->high;
+
+	if (!pdata->cap_delta_thrld)
+		pdata->cap_delta_thrld = FG_CAP_DELTA_THRLD;
+	if (!pdata->flat_cap_delta_thrld)
+		pdata->flat_cap_delta_thrld = FG_FLAT_CAP_DELTA_THRLD;
 	return 0;
 }
 
