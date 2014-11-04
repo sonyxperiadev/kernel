@@ -2282,20 +2282,12 @@ static int bcmpmu_fg_get_init_cap(struct bcmpmu_fg_data *fg)
 	pr_fg(INIT, "saved capacity: %d open circuit cap: %d, fg_factor: %d\n",
 			saved_cap, init_cap, fg->pdata->fg_factor);
 
-	if (!full_charge_cap) {
+	if (!full_charge_cap)
 		fg->capacity_info.full_charge = fg->capacity_info.max_design;
-	} else {
-		if (fg->pdata->disable_full_charge_learning &&
-			full_charge_cap != 100) {
-			pr_fg(INIT,
-				"Battery learning disabled. Restoring data\n");
-			bcmpmu_fg_save_full_charge_cap(fg, 100);
-			full_charge_cap = 100;
-		}
+	else
 		fg->capacity_info.full_charge =
 			((fg->capacity_info.max_design * full_charge_cap) /
 			 100);
-	}
 
 	pr_fg(FLOW, "saved full_charge: %d full_charge_cap: %d\n",
 			full_charge_cap,
@@ -2618,8 +2610,7 @@ static void bcmpmu_fg_cal_low_batt_algo(struct bcmpmu_fg_data *fg)
 	 */
 	/* Also delta should be in the range of -30 to -1 */
 
-	if (!fg->pdata->disable_full_charge_learning &&
-		(cap_delta < 0) && (cap_delta >= FG_LOW_BAT_CAP_DELTA_LIMIT)
+	if ((cap_delta < 0) && (cap_delta >= FG_LOW_BAT_CAP_DELTA_LIMIT)
 			&& fg->flags.fully_charged) {
 		cap_full_charge = (fg->capacity_info.full_charge *
 				(100 + (u64)cap_delta));
@@ -2637,9 +2628,7 @@ static void bcmpmu_fg_cal_low_batt_algo(struct bcmpmu_fg_data *fg)
 		fg->flags.fully_charged = false;
 	} else if (fg->flags.fully_charged) {
 		fg->flags.fully_charged = false;
-		if (!fg->pdata->disable_full_charge_learning)
-			pr_fg(FLOW,
-				"Low Battery Calib: cap_delta Limit Exceeds\n");
+		pr_fg(FLOW, "Low Battery Calib : cap_delta Limit Exceeds\n");
 	}
 	pr_fg(FLOW, "cap_delta: %d low_cal_fct: %d full_charge_cap: %d\n",
 			cap_delta, fg->low_cal_adj_fct,

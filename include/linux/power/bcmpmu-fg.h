@@ -187,8 +187,6 @@ struct bcmpmu_fg_pdata {
 	int poll_rate_crit_batt;
 	int ntc_high_temp;
 	int hysteresis;
-	int cap_delta_thrld; /* threshold to allow new cap estimations */
-	int flat_cap_delta_thrld; /* same as above but in flat area */
 	bool disable_full_charge_learning;
 };
 
