@@ -954,9 +954,10 @@ static ssize_t kona_fb_panel_mode_store(struct device *dev,
 	if (val) {
 		/* Enter special mode */
 		if (fb->blank_state != KONA_FB_UNBLANK) {
-			konafb_error("Not in UNBLANK state (%d)\n",
+			/* If panel is off, don't do anything with the hw */
+			konafb_debug("Not in UNBLANK state (%d)\n",
 							fb->blank_state);
-			ret = -EINVAL;
+			fb->display_info->special_mode_on = true;
 			goto exit_unlock;
 		}
 		if (fb->fb_data->esdcheck)
@@ -1594,13 +1595,15 @@ static int kona_fb_blank(int blank_mode, struct fb_info *info)
 	case FB_BLANK_NORMAL:
 		mutex_lock(&fb->update_sem);
 		if (fb->blank_state == KONA_FB_BLANK) {
-			konafb_error("Display already in blank state\n");
+			konafb_debug("Display already in blank state. "
+								"Do nothing\n");
 			mutex_unlock(&fb->update_sem);
 			break;
 		}
 
 		if (fb->blank_state == KONA_FB_LINK_SUSPENDED) {
-			konafb_debug("Enter black mode\n");
+			konafb_debug("Link suspended, re-activate to shut down "
+								"display\n");
 			link_control(fb, RESUME_LINK);
 		}
 
@@ -1644,12 +1647,14 @@ static int kona_fb_blank(int blank_mode, struct fb_info *info)
 	case FB_BLANK_UNBLANK:
 		mutex_lock(&fb->update_sem);
 		if (fb->blank_state == KONA_FB_UNBLANK) {
-			konafb_error("Display already in unblank state\n");
+			konafb_debug("Display already in unblank state. "
+								"Do nothing\n");
 			mutex_unlock(&fb->update_sem);
 			break;
 		}
 		if (fb->blank_state == KONA_FB_LINK_SUSPENDED) {
-			konafb_error("Display in link suspended state\n");
+			konafb_debug("Display in link suspended state. "
+								"Do nothing\n");
 			mutex_unlock(&fb->update_sem);
 			break;
 		}
