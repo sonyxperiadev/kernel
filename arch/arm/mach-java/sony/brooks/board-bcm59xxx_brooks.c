@@ -1185,6 +1185,38 @@ struct bcmpmu_acld_pdata acld_pdata = {
 };
 
 /* OCV LUT */
+static struct batt_volt_cap_map sony0_volt_cap_lut[] = {
+	{4331, 100},
+	{4287, 95},
+	{4234, 90},
+	{4182, 85},
+	{4132, 80},
+	{4084, 75},
+	{4039, 70},
+	{3997, 65},
+	{3952, 60},
+	{3906, 55},
+	{3872, 50},
+	{3846, 45},
+	{3824, 40},
+	{3806, 35},
+	{3789, 30},
+	{3767, 25},
+	{3743, 20},
+	{3720, 15},
+	{3690, 10},
+	{3688, 9},
+	{3686, 8},
+	{3683, 7},
+	{3681, 6},
+	{3678, 5},
+	{3664, 4},
+	{3650, 3},
+	{3627, 2},
+	{3595, 1},
+	{3400, 0},
+};
+
 static struct batt_volt_cap_map sony1_volt_cap_lut[] = {
 	{4329, 100},
 	{4273, 95},
@@ -1217,6 +1249,21 @@ static struct batt_volt_cap_map sony1_volt_cap_lut[] = {
 	{3400, 0},
 };
 
+static struct batt_eoc_curr_cap_map sony0_eoc_cap_lut[] = {
+	{196, 90},
+	{172, 91},
+	{149, 92},
+	{129, 93},
+	{109, 94},
+	{92, 95},
+	{76, 96},
+	{61, 97},
+	{46, 98},
+	{33, 99},
+	{22, 100},
+	{0, 100},
+};
+
 static struct batt_eoc_curr_cap_map sony1_eoc_cap_lut[] = {
 	{239, 90},
 	{215, 91},
@@ -1235,6 +1282,12 @@ static struct batt_eoc_curr_cap_map sony1_eoc_cap_lut[] = {
 /* Loaded OCV LUT table with 175 mA of discharge load
  * Cutoff = OCV - ESR(OCV, 20 degC) * 175mA
  */
+static struct batt_cutoff_cap_map sony0_cutoff_cap_lut[] = {
+	{3501, 2},
+	{3452, 1},
+	{3400, 0},
+};
+
 static struct batt_cutoff_cap_map sony1_cutoff_cap_lut[] = {
 	{3478, 2},
 	{3413, 1},
@@ -1248,6 +1301,64 @@ static struct batt_temp_curr_map ys_05_temp_curr_lut[] = {
 		{630,  0},
 };
 #endif
+
+static struct batt_esr_temp_lut sony0_esr_temp_lut[] = {
+	{
+		.temp = -200,
+		.reset = 0, .fct = 290, .guardband = 50,
+		.esr_vl_lvl = 3767, .esr_vl_slope = -14852,
+		.esr_vl_offset = 64186,
+		.esr_vm_lvl = 3857, .esr_vm_slope = -7909,
+		.esr_vm_offset = 38028,
+		.esr_vh_lvl = 4221, .esr_vh_slope = 1575,
+		.esr_vh_offset = 1453,
+		.esr_vf_slope = -173, .esr_vf_offset = 8831,
+	},
+	{
+		.temp = -100,
+		.reset = 0, .fct = 827, .guardband = 50,
+		.esr_vl_lvl = 3750, .esr_vl_slope = -6172,
+		.esr_vl_offset = 27337,
+		.esr_vm_lvl = 3879, .esr_vm_slope = -4231,
+		.esr_vm_offset = 20061,
+		.esr_vh_lvl = 4200, .esr_vh_slope = 1270,
+		.esr_vh_offset = -1280,
+		.esr_vf_slope = -383, .esr_vf_offset = 5662,
+	},
+	{
+		.temp = 0,
+		.reset = 0, .fct = 973, .guardband = 30,
+		.esr_vl_lvl = 3630, .esr_vl_slope = -3702,
+		.esr_vl_offset = 15609,
+		.esr_vm_lvl = 3895, .esr_vm_slope = -1886,
+		.esr_vm_offset = 9018,
+		.esr_vh_lvl = 4029, .esr_vh_slope = 1997,
+		.esr_vh_offset = -6109,
+		.esr_vf_slope = -269, .esr_vf_offset = 3019,
+	},
+	{
+		.temp = 100,
+		.reset = 0, .fct = 989, .guardband = 30,
+		.esr_vl_lvl = 3693, .esr_vl_slope = -2223,
+		.esr_vl_offset = 9159,
+		.esr_vm_lvl = 3912, .esr_vm_slope = -87,
+		.esr_vm_offset = 1269,
+		.esr_vh_lvl = 3975, .esr_vh_slope = 2505,
+		.esr_vh_offset = -8869,
+		.esr_vf_slope = -400, .esr_vf_offset = 2677,
+	},
+	{
+		.temp = 200,
+		.reset = 0, .fct = 1000, .guardband = 30,
+		.esr_vl_lvl = 3700, .esr_vl_slope = -3065,
+		.esr_vl_offset = 11838,
+		.esr_vm_lvl = 3916, .esr_vm_slope = 222,
+		.esr_vm_offset = -323,
+		.esr_vh_lvl = 3985, .esr_vh_slope = 2273,
+		.esr_vh_offset = -8355,
+		.esr_vf_slope = -525, .esr_vf_offset = 2797,
+	 },
+};
 
 static struct batt_esr_temp_lut sony1_esr_temp_lut[] = {
 	{
@@ -1314,14 +1425,17 @@ static struct bcmpmu_batt_property ys_05_props[BATT_MAX] = {
 		.max_volt = 4350,
 		.full_cap = SONY0_BATTERY_C * 3600,
 		.one_c_rate = SONY0_BATTERY_C,
-		.volt_cap_lut = sony1_volt_cap_lut,
-		.volt_cap_lut_sz = ARRAY_SIZE(sony1_volt_cap_lut),
-		.esr_temp_lut = sony1_esr_temp_lut,
-		.esr_temp_lut_sz = ARRAY_SIZE(sony1_esr_temp_lut),
-		.eoc_cap_lut = sony1_eoc_cap_lut,
-		.eoc_cap_lut_sz = ARRAY_SIZE(sony1_eoc_cap_lut),
-		.cutoff_cap_lut = sony1_cutoff_cap_lut,
-		.cutoff_cap_lut_sz = ARRAY_SIZE(sony1_cutoff_cap_lut),
+		.enable_flat_ocv_soc = true,
+		.flat_ocv_soc_high = 50,
+		.flat_ocv_soc_low = 15,
+		.volt_cap_lut = sony0_volt_cap_lut,
+		.volt_cap_lut_sz = ARRAY_SIZE(sony0_volt_cap_lut),
+		.esr_temp_lut = sony0_esr_temp_lut,
+		.esr_temp_lut_sz = ARRAY_SIZE(sony0_esr_temp_lut),
+		.eoc_cap_lut = sony0_eoc_cap_lut,
+		.eoc_cap_lut_sz = ARRAY_SIZE(sony0_eoc_cap_lut),
+		.cutoff_cap_lut = sony0_cutoff_cap_lut,
+		.cutoff_cap_lut_sz = ARRAY_SIZE(sony0_cutoff_cap_lut),
 	},
 	[BATT_1] = {
 		.model = "Sony_1",
@@ -1363,7 +1477,7 @@ static struct bcmpmu_batt_volt_levels ys_05_volt_levels[BATT_MAX] = {
 	 * Voltage = OCV - ESR(OCV, 20 degC) * 4.5 mA
 	 */
 	[BATT_0] = {
-		.critical = 3656, /* Not used in bcmpmu-fg.c,
+		.critical = 3675, /* Not used in bcmpmu-fg.c,
 				     5% loaded OCV LUT level */
 		.low = 3741, /* 20% loaded OCV LUT level */
 		.normal = 3800, /* Not used in bcmpmu-fg.c */
