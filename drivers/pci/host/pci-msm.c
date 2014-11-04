@@ -3506,6 +3506,8 @@ static irqreturn_t handle_aer_irq(int irq, void *data)
 	PCIE_DBG(dev, "AER Interrupt handler fired for RC%d irq %d\n",
 		dev->rc_idx, irq);
 
+	return IRQ_HANDLED;
+
 	uncorr_val = readl_relaxed(dev->dm_core +
 				PCIE20_AER_UNCORR_ERR_STATUS_REG);
 	corr_val = readl_relaxed(dev->dm_core +
