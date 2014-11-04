@@ -703,7 +703,6 @@ static void bcmpmu_trim_to_adapter_cc_lmt(struct bcmpmu_acld *acld,
 static int bcmpmu_acld_algo(struct bcmpmu_acld *acld)
 {
 	bool fault = false;
-	bool acld_cc_lmt_hit = false;
 	bool reached_max_cc = false;
 	bool reached_max_trim = false;
 	int vbus_chrg_off;
@@ -806,9 +805,8 @@ static int bcmpmu_acld_algo(struct bcmpmu_acld *acld)
 				pr_acld(INIT, "VBUS Low Threshold hit\n");
 			break;
 		} else {
-			if (bcmpmu_get_next_icc_fc(acld->bcmpmu) >=
+			if (bcmpmu_get_next_icc_fc(acld->bcmpmu) >
 					limits->acld_cc_lmt) {
-				acld_cc_lmt_hit = true;
 				pr_acld(INIT, "ACLD CC lmt hit\n");
 				break;
 			}
@@ -846,8 +844,9 @@ static int bcmpmu_acld_algo(struct bcmpmu_acld *acld)
 				vbus_res);
 	} while (true);
 
-	if (!acld_cc_lmt_hit)
+	if (acld->i_bus_abv_lmt)
 		bcmpmu_icc_fc_step_down(acld->bcmpmu);
+
 #if 0
 	if (acld->pdata->qa_required) {
 		pr_acld(INIT, "Not true ACLD\n");
@@ -859,12 +858,7 @@ static int bcmpmu_acld_algo(struct bcmpmu_acld *acld)
 	usb_fc_cc_reached = bcmpmu_get_icc_fc(acld->bcmpmu);
 
 	pr_acld(INIT, "Tuning USB_CC_TRIM\n");
-	bcmpmu_cc_trim_up(acld->bcmpmu);
 	bcmpmu_clr_sw_ctrl_chrgr_timer(acld);
-	msleep(ACLD_DELAY_500);
-	vbus_chrg_on = bcmpmu_get_avg_vbus(acld->bcmpmu,
-			ADC_VBUS_AVG_SAMPLES_8);
-	vbus_load = bcmpmu_get_vbus_load(acld, vbus_chrg_off, vbus_res);
 
 	do {
 		bcmpmu_clr_sw_ctrl_chrgr_timer(acld);
@@ -896,7 +890,7 @@ static int bcmpmu_acld_algo(struct bcmpmu_acld *acld)
 			break;
 		} else {
 			if ((usb_fc_cc_reached + bcmpmu_get_next_trim_curr(
-					acld->bcmpmu, TRIM_MARGIN_0)) >=
+					acld->bcmpmu, TRIM_MARGIN_0)) >
 					limits->acld_cc_lmt) {
 				pr_acld(INIT, "ACLD CC lmt hit.Exit T Tuing\n");
 				break;
@@ -926,8 +920,8 @@ static int bcmpmu_acld_algo(struct bcmpmu_acld *acld)
 				vbus_res);
 	} while (true);
 	bcmpmu_clr_sw_ctrl_chrgr_timer(acld);
-	bcmpmu_cc_trim_down(acld->bcmpmu);
-	bcmpmu_cc_trim_down(acld->bcmpmu);
+	if (acld->i_bus_abv_lmt)
+		bcmpmu_cc_trim_down(acld->bcmpmu);
 	bcmpmu_set_icc_fc(acld->bcmpmu, PMU_USB_FC_CC_OTP);
 	msleep(ACLD_DELAY_500);
 	bcmpmu_set_icc_fc(acld->bcmpmu, usb_fc_cc_reached);
