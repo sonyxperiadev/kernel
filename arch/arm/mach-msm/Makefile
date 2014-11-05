@@ -329,8 +329,10 @@ else ifdef CONFIG_MACH_SONY_AMAMI_ROW
 else
 	obj-$(CONFIG_ARCH_MSM8974) += board-8974-gpiomux.o board-sony_shinano-nfc.o bms-batterydata-oem.o
 endif
-obj-$(CONFIG_MACH_SONY_SHINANO) += board-sony_shinano-wifi.o
-obj-$(CONFIG_MACH_SONY_SHINANO) += board-sony_shinano-hw.o sony_gpiomux.o board-sony_shinano-gpiomux-ref.o
+
+obj-$(CONFIG_MACH_SONY_SHINANO) += board-sony_shinano-wifi.o board-sony_shinano-hw.o board-sony_shinano-gpiomux-ref.o
+obj-$(CONFIG_MACH_SONY_RHINE) += board-sony_rhine-gpiomux-ref.o
+obj-$(CONFIG_ARCH_MSM8974) += sony_gpiomux.o
 
 CFLAGS_msm_vibrator.o += -Idrivers/staging/android
 CFLAGS_board-9615.o += -Idrivers/usb/gadget
