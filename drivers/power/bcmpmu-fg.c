@@ -89,7 +89,7 @@
 #define CAPACITY_INIT_CAP_FLAT		0x80
 
 /* Low Battery Calibration Macros */
-#define FG_LOW_BAT_CAP_DELTA_LIMIT	-30
+#define FG_LOW_BAT_CAP_DELTA_LIMIT	30
 
 /* EOC error correction calibration Macros*/
 #define FG_CAL_EOC_SPLIT_CNT		5
@@ -137,9 +137,6 @@
  */
 #define to_bcmpmu_fg_data(ptr, mem)	container_of((ptr), \
 		struct bcmpmu_fg_data, mem)
-
-#define percentage_to_capacity(fg, percentage)	\
-	((fg->capacity_info.full_charge * percentage) / 100)
 
 #define capacity_delta_in_percent(fg, c1, c2) \
 	((((c1 > c2) ? (c1 - c2) : (c2 - c1)) * 100) / \
@@ -432,6 +429,7 @@ static int bcmpmu_fg_freeze_read(struct bcmpmu_fg_data *fg);
 static inline int bcmpmu_fg_sample_rate_to_time(
 		enum bcmpmu_fg_sample_rate rate);
 static int bcmpmu_fg_register_notifiers(struct bcmpmu_fg_data *fg);
+static int bcmpmu_fg_get_temp_factor(struct bcmpmu_fg_data *fg);
 
 /**
  * Math - Utility functions
@@ -480,13 +478,38 @@ long long exponential(int x)
 /**
  * inline function
  */
+
+static inline int percentage_to_capacity(struct bcmpmu_fg_data *fg, int per)
+{
+	u64 capacity, full_cap_tfact, tfact;
+
+	tfact = bcmpmu_fg_get_temp_factor(fg);
+	full_cap_tfact = fg->capacity_info.full_charge;
+	full_cap_tfact = full_cap_tfact * tfact;
+	full_cap_tfact = div64_u64(full_cap_tfact, 1000);
+	capacity = per;
+	capacity = capacity * full_cap_tfact;
+	capacity = div64_u64(capacity, 100);
+	pr_fg(FLOW, "cap %lld\n", capacity);
+	return capacity;
+}
+
 static inline int capacity_to_percentage(struct bcmpmu_fg_data *fg, int cap)
 {
-	u64 capacity;
+	u64 capacity = 0, full_cap_tfact, tfact;
+	int capdelta;
 
-	capacity = cap * 100 + fg->capacity_info.full_charge / 2;
-	capacity = div64_s64(capacity, fg->capacity_info.full_charge);
 
+	tfact = bcmpmu_fg_get_temp_factor(fg);
+	full_cap_tfact = fg->capacity_info.full_charge;
+	full_cap_tfact = (full_cap_tfact * tfact);
+	full_cap_tfact = div64_u64(full_cap_tfact, 1000);
+	capdelta = fg->capacity_info.full_charge - cap;
+	if (full_cap_tfact > capdelta) {
+		capacity = ((full_cap_tfact - capdelta) * 100) +
+			fg->capacity_info.full_charge / 2;
+		capacity = div64_u64(capacity, full_cap_tfact);
+	}
 	return capacity;
 }
 
@@ -870,13 +893,6 @@ static int bcmpmu_fg_get_temp_factor(struct bcmpmu_fg_data *fg)
 	int idx;
 	int temp;
 	int temp_fact;
-	bool charging;
-
-
-	charging = ((fg->flags.batt_status == POWER_SUPPLY_STATUS_CHARGING) ?
-			true : false);
-	if (charging)
-		return 0;
 
 	BUG_ON(!lut);
 
@@ -884,7 +900,7 @@ static int bcmpmu_fg_get_temp_factor(struct bcmpmu_fg_data *fg)
 	if (temp <= lut[0].temp)
 		temp_fact = lut[0].fct;
 	else if (temp >= lut[lut_sz - 1].temp)
-		return 0;
+		temp_fact = lut[lut_sz - 1].fct;
 	else {
 		/*find esr zone */
 		for (idx = 0; idx < lut_sz; idx++) {
@@ -1801,6 +1817,8 @@ static void bcmpmu_fg_get_coulomb_counter(struct bcmpmu_fg_data *fg)
 
 	fg->capacity_info.ocv_cap = bcmpmu_fg_get_load_comp_capacity(fg, true);
 	fg->capacity_info.uuc = bcmpmu_fg_get_uuc(fg);
+	pr_fg(FLOW, "ocv_cap %d uuc %d\n",
+		fg->capacity_info.ocv_cap, fg->capacity_info.uuc);
 
 	/**
 	 * Avoid reading accumulator register earlier than
@@ -1891,10 +1909,6 @@ static void bcmpmu_fg_get_coulomb_counter(struct bcmpmu_fg_data *fg)
 	capacity_adj = (capacity_delta -
 			(capacity_delta * adj_factor / 100));
 
-	/* Adjust coulomb counter wrt temperature */
-	temp_factor = bcmpmu_fg_get_temp_factor(fg);
-	if (temp_factor)
-		capacity_adj = (capacity_adj * 1000) / temp_factor;
 #ifdef CONFIG_DEBUG_FS
 	fg->probes.temp_factor = temp_factor;
 #endif
@@ -1989,7 +2003,6 @@ static int bcmpmu_fg_get_saved_cap(struct bcmpmu_fg_data *fg)
 
 static int bcmpmu_fg_save_full_charge_cap(struct bcmpmu_fg_data *fg, int cap)
 {
-	BUG_ON(cap > 100);
 	return fg->bcmpmu->write_dev(fg->bcmpmu, FG_CAP_FULL_CHARGE_REG,
 			cap);
 }
@@ -2323,6 +2336,7 @@ static int bcmpmu_fg_event_handler(struct notifier_block *nb,
 			pr_fg(VERBOSE, "ACLD temporary disabling charging\n");
 		} else if (enable && fg->flags.chrgr_connected) {
 			fg->flags.charging_enabled = true;
+			fg->flags.fully_charged = false;
 			if ((fg->bcmpmu->flags & BCMPMU_SPA_EN)
 					&& fg->flags.fg_eoc) {
 				fg->flags.eoc_chargr_en = true;
@@ -2482,11 +2496,15 @@ static void bcmpmu_fg_update_psy(struct bcmpmu_fg_data *fg,
 	}
 
 	if (update_psy || force_update) {
-		if (fg->capacity_info.percentage == 0)
+		if (fg->capacity_info.percentage == 0) {
 			bcmpmu_fg_save_cap(fg, CAPACITY_ZERO_ALIAS);
-		else
-			bcmpmu_fg_save_cap(fg, fg->capacity_info.percentage);
-
+		} else {
+			/* save cap w.r.t fully_charge*/
+			int cap = fg->capacity_info.capacity * 100 +
+				fg->capacity_info.full_charge / 2;
+			cap = div64_s64(cap, fg->capacity_info.full_charge);
+			bcmpmu_fg_save_cap(fg, cap);
+		}
 		if (fg->bcmpmu->flags & BCMPMU_SPA_EN)
 			bcmpmu_post_spa_event_to_queue(fg->bcmpmu,
 					PMU_FG_EVT_CAPACITY,
@@ -2886,11 +2904,21 @@ static void bcmpmu_fg_cal_low_batt_algo(struct bcmpmu_fg_data *fg)
 	/* Also delta should be in the range of -30 to -1 */
 
 	if (!fg->pdata->disable_full_charge_learning &&
-		(cap_delta < 0) && (cap_delta >= FG_LOW_BAT_CAP_DELTA_LIMIT)
-			&& fg->flags.fully_charged) {
-		cap_full_charge = (fg->capacity_info.full_charge *
-				(100 + (u64)cap_delta));
+			(abs(cap_delta) <= FG_LOW_BAT_CAP_DELTA_LIMIT) &&
+			fg->flags.fully_charged) {
+		int tfact = bcmpmu_fg_get_temp_factor(fg);
+		pr_fg(FLOW, "%s: temperature factor = %d\n", __func__, tfact);
+		cap_full_charge = (((fg->capacity_info.full_charge *
+					tfact) / 1000) *
+					(100 + (u64)cap_delta));
+		pr_fg(FLOW, "%s..cap_fc %llu\n", __func__, cap_full_charge);
+		cap_full_charge = (cap_full_charge * 1000) / tfact;
+		pr_fg(FLOW, "tfact %d cap_fc %llu\n", tfact, cap_full_charge);
 		cap_full_charge = div_s64(cap_full_charge, 100);
+		cap_delta = ((100 * cap_full_charge) /
+			fg->capacity_info.max_design) - 100;
+		pr_fg(FLOW, "cap_delta %d cap_fc %llu\n",
+				cap_delta, cap_full_charge);
 		pr_fg(FLOW, "Before full_charge update, cap_mAs: %d per: %d\n",
 				fg->capacity_info.capacity,
 				fg->capacity_info.percentage);
@@ -3301,8 +3329,9 @@ static void bcmpmu_fg_periodic_work(struct work_struct *work)
 				fg->capacity_info.capacity);
 
 		fg->flags.init_capacity = false;
-		pr_fg(FLOW, "Initial battery capacity %d\n",
-				fg->capacity_info.percentage);
+		pr_fg(FLOW, "Initial battery capacity %d capmas %d\n",
+				fg->capacity_info.percentage,
+				fg->capacity_info.capacity);
 		if (fg->bcmpmu->flags & BCMPMU_SPA_EN) {
 			fg->capacity_info.prev_percentage
 				= fg->capacity_info.percentage;
