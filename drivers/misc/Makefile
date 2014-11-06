@@ -75,4 +75,5 @@ obj-$(CONFIG_TI_DRV2667) += ti_drv2667.o
 obj-$(CONFIG_QPNP_MISC) += qpnp-misc.o
 obj-$(CONFIG_IR_REMOTE) += ir_remote.o
 obj-$(CONFIG_AD7146) += ad7146.o
+obj-$(CONFIG_RAMDUMP_TAGS) += rdtags.o
 obj-$(CONFIG_CRASH_LAST_LOGS) += lastlogs.o
