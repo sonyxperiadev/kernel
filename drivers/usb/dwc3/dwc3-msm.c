@@ -1354,8 +1354,6 @@ static int dwc3_msm_suspend(struct dwc3_msm *mdwc)
 		dwc3_msm_write_reg(mdwc->base, QSCRATCH_CTRL_REG,
 			mdwc->qscratch_ctl_val);
 
-	/* Cancel block reset work and wait for it to finish */
-	cancel_work_sync(&mdwc->usb_block_reset_work);
 
 	if (can_suspend_ssphy) {
 		usb_phy_set_suspend(mdwc->ss_phy, 1);
@@ -1739,8 +1737,10 @@ static int dwc3_msm_power_set_property_usb(struct power_supply *psy,
 			 * Cancel any block reset in progress during disconnect
 			 * and wait for it to finish.
 			 */
-			if (dwc && dwc->err_evt_seen && !mdwc->ext_xceiv.bsv)
+			if (dwc && dwc->err_evt_seen && !mdwc->ext_xceiv.bsv) {
 				cancel_work_sync(&mdwc->usb_block_reset_work);
+				dwc->err_evt_seen = 0;
+			}
 			/*
 			 * Set debouncing delay to 120ms. Otherwise battery
 			 * charging CDP complaince test fails if delay > 120ms.
