@@ -714,14 +714,14 @@ config NFC_PN544
 	  This option enables support for PN544.
 
 config CRASH_LAST_LOGS
-        bool "export kernel and amss logs in proc"
-        default n
-        depends on ARCH_MSM && MSM_SMD
-        help
-          This driver will export kernel and amss log in proc fs.
-          they can be found in files /proc/last_kmsg
-          and /proc/last_amsslog.This driver is mainly used in
-          Ramdump kernel.
+	bool "export kernel and amss logs in proc"
+	default n
+	depends on ARCH_MSM && MSM_SMD
+	help
+	  This driver will export kernel and amss log in proc fs.
+	  they can be found in files /proc/last_kmsg
+	  and /proc/last_amsslog.This driver is mainly used in
+	  Ramdump kernel.
 
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"
