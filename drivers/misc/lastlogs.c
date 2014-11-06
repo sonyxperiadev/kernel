@@ -12,7 +12,6 @@
 #include <linux/platform_device.h>
 #include <linux/proc_fs.h>
 #include <linux/uaccess.h>
-#include <linux/rdtags.h>
 #include <linux/io.h>
 #include "../../arch/arm/mach-msm/smd_private.h"
 
@@ -200,13 +199,6 @@ static int extract_last_kmsg(void)
 	for (i = 0; i < NR_LOG_INFO; i++) {
 		/* Indicate max size */
 		size = LOG_INFO_LEN;
-		err = rdtags_get_tag_data(logbuf_name[i], log_data[i], &size);
-		if (err < 0) {
-			dev_err(dev, "tag %s not found: %d\n",
-				logbuf_name[i], err);
-			return -EINVAL;
-		}
-
 		err = kstrtoul(log_data[i], 16, &log_addr[i]);
 		if (err < 0) {
 			dev_err(dev, "Failed kstrtoul %s %lx\n",
