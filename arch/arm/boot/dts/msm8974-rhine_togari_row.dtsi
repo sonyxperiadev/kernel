@@ -35,9 +35,17 @@
 	i2c_2: i2c@f9924000 {
 		cell-index = <0>;
 		compatible = "qcom,i2c-qup";
+		reg = <0xf9924000 0x1000>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+		reg-names = "qup_phys_addr";
+		interrupts = <0 96 0>;
+		interrupt-names = "qup_err_intr";
 		qcom,i2c-bus-freq = <355000>;
+		qcom,i2c-src-freq = <50000000>;
 		qcom,scl-gpio = <&msmgpio 7 0x00>;
 		qcom,sda-gpio = <&msmgpio 6 0x00>;
+		qcom,master-id = <86>;
 		status = "ok";
 		synaptics_clearpad@2c {
 			compatible = "synaptics,clearpad";
@@ -60,20 +68,13 @@
 			touch_vdd-supply = <&pm8941_l22>;
 			touch_vdd-supply_name = "touch_vdd";
 			gpio_tirq = <61>;
-			gpio_pwr_en = <85>;
-			num_fw_mappings = <5>;
-			config_id = <0x0460 0x0010 0x0011 0x0012 0x0013>;
-			chip_id = <0x74 0x75 0x74 0x75 0x75>;
-			filename = "touch_chip_id_0x74_config_id_0x0460.bin",
-				   "touch_chip_id_0x75_config_id_0x0010.bin",
-				   "touch_chip_id_0x74_config_id_0x0011.bin",
-				   "touch_chip_id_0x75_config_id_0x0012.bin",
-				   "touch_chip_id_0x75_config_id_0x0013.bin";
-			filesize = <0xC000 0xC000 0xC000 0xC000 0xC000>;
-			file_codesize = <0xC000 0xC000 0xC000 0xC000 0xC000>;
+			gpio_reset = <85>;
+			reset_l2h = <0>;
+			enable_resume_por = <1>;
 			defaults_allow = <0>;
 			default_config_id = <0>;
 			default_chip_id = <0>;
+			fw_name = "touch_chip_id_0x%02x_config_id_0x%%04x.bin";
 			i2c_words = <128>;
 			coordinate_settings = <0x4>;
 			panel_margin_xl = <0>;
@@ -91,7 +92,10 @@
 			touch_pressure_enabled = <1>;
 			touch_size_enabled = <0>;
 			touch_orientation_enabled = <0>;
-			enable_resume_por = <1>;
+			glove_enabled = <0>;
+			report_pen_as_finger = <1>;
+			wakeup_gesture_support = <0>;
+			wakeup_gesture_timeout = <0>;
 		};
 
 		atmel_mxt_ts@4a {
