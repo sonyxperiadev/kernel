@@ -229,13 +229,6 @@ static void bcmpmu_ponkey_isr(u32 irq, void *data)
 		break;
 
 	case PMU_IRQ_POK_T3:
-		/* Disable PMU SHUTDOWN feature to get Smart Reset to work */
-		if (bcmpmu->read_dev(bcmpmu, PMU_REG_GPIOCTRL2, &val) != 0) {
-			val = 0x02;
-		} else {
-			val &= 0xFE;
-		}
-		bcmpmu->write_dev(bcmpmu, PMU_REG_GPIOCTRL2, val);
 		pr_info("PMU_IRQ_POK_T3\n");
 
 		/* If smart reset is enabled we're making this the
