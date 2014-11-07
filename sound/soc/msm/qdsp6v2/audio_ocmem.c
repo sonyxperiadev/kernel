@@ -30,7 +30,7 @@
 #include <mach/msm_bus_board.h>
 #include <mach/ocmem.h>
 #include <mach/msm_memtypes.h>
-#include "q6core.h"
+#include <sound/q6core.h>
 #include "audio_ocmem.h"
 
 

@@ -14,10 +14,10 @@
 #include <linux/bitops.h>
 #include <sound/control.h>
 #include <sound/q6adm-v2.h>
+#include <sound/q6core.h>
 
 #include "msm-ds2-dap-config.h"
 #include "msm-pcm-routing-v2.h"
-#include "q6core.h"
 
 #ifdef CONFIG_DOLBY_DS2
 
