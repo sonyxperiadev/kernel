@@ -1,7 +1,7 @@
 /*
  * BT-AMP support routines
  *
- * Copyright (C) 1999-2012, Broadcom Corporation
+ * Copyright (C) 1999-2014, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -21,11 +21,9 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dhd_bta.c 303834 2011-12-20 06:17:39Z $
+ * $Id: dhd_bta.c 434656 2013-11-07 01:11:33Z $
  */
-#ifndef WLBTAMP
 #error "WLBTAMP is not defined"
-#endif	/* WLBTAMP */
 
 #include <typedefs.h>
 #include <osl.h>
@@ -101,7 +99,6 @@ dhd_bta_flush_hcidata(dhd_pub_t *pub, uint16 llh)
 			void *pkt = pktq_pdeq(q, prec);
 			int ifidx;
 
-			PKTPULL(pub->osh, pkt, dhd_bus_hdrlen(pub->bus));
 			dhd_prot_hdrpull(pub, &ifidx, pkt, NULL, NULL);
 
 			if (PKTLEN(pub->osh, pkt) >= RFC1042_HDR_LEN) {
@@ -129,7 +126,6 @@ dhd_bta_flush_hcidata(dhd_pub_t *pub, uint16 llh)
 			}
 
 			dhd_prot_hdrpush(pub, ifidx, pkt);
-			PKTPUSH(pub->osh, pkt, dhd_bus_hdrlen(pub->bus));
 
 			if (head_pkt == NULL)
 				head_pkt = pkt;
@@ -312,6 +308,9 @@ void
 dhd_bta_doevt(dhd_pub_t *dhdp, void *data_buf, uint data_len)
 {
 	amp_hci_event_t *evt = (amp_hci_event_t *)data_buf;
+
+	ASSERT(dhdp);
+	ASSERT(evt);
 
 	switch (evt->ecode) {
 	case HCI_Command_Complete: {

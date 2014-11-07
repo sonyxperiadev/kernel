@@ -1,14 +1,33 @@
 config BCMDHD
-	tristate "Broadcom 4329/30 wireless cards support"
-	depends on MMC
+	tristate "Broadcom 43xx wireless cards support"
+	depends on MMC && CFG80211
 	---help---
 	  This module adds support for wireless adapters based on
-	  Broadcom 4329/30 chipset.
-
-	  This driver uses the kernel's wireless extensions subsystem.
-
+	  Broadcom 43xx chipset.
+	  This driver uses the kernel's cfg80211 subsystem.
 	  If you choose to build a module, it'll be called dhd. Say M if
 	  unsure.
+
+choice
+	prompt "Select Broadcom wireless card"
+	depends on BCMDHD
+	default BCM4339
+
+config BCM4339
+	bool "Broadcom 4339 wireless card support"
+	depends on BCMDHD
+	---help---
+	  This module adds support for wireless adapters based on
+	  Broadcom 4339 chipset.
+
+config BCM4354
+	bool "Broadcom 4354 wireless card support"
+	depends on BCMDHD
+	---help---
+	  This module adds support for wireless adapters based on
+	  Broadcom 4354 chipset.
+
+endchoice
 
 config BCMDHD_FW_PATH
 	depends on BCMDHD
@@ -24,14 +43,6 @@ config BCMDHD_NVRAM_PATH
 	---help---
 	  Path to the calibration file.
 
-config BCMDHD_WEXT
-	bool "Enable WEXT support"
-	depends on BCMDHD && CFG80211 = n
-	select WIRELESS_EXT
-	select WEXT_PRIV
-	help
-	  Enables WEXT support
-
 config DHD_USE_STATIC_BUF
 	bool "Enable memory preallocation"
 	depends on BCMDHD
@@ -39,9 +50,30 @@ config DHD_USE_STATIC_BUF
 	---help---
 	  Use memory preallocated in platform
 
+config BCMDHD_HW_OOB
+	depends on BCMDHD
+	bool "Use H/W OOB to the Host Wakeup"
+	default y
+	---help---
+	  Use H/W OOB to the Host Wakeup
+
 config DHD_USE_SCHED_SCAN
 	bool "Use CFG80211 sched scan"
 	depends on BCMDHD && CFG80211
 	default n
 	---help---
 	  Use CFG80211 sched scan
+
+config BROADCOM_WIFI_RESERVED_MEM
+	bool "BROADCOM Reserved memory for wifi device"
+	depends on BCMDHD
+	default y
+	---help---
+	  This is a configuration for broadcom WLAN driver.
+
+config BCMDHD_INSMOD_NO_FW_LOAD
+	bool "Disable BROADCOM firmware load"
+	depends on BCMDHD
+	default y
+	---help---
+	  This is a configuration for broadcom WLAN driver.
