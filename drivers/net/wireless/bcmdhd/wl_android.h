@@ -1,7 +1,7 @@
 /*
  * Linux cfg80211 driver - Android related functions
  *
- * Copyright (C) 1999-2012, Broadcom Corporation
+ * Copyright (C) 1999-2014, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -21,12 +21,18 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: wl_android.h 307885 2012-01-12 23:30:48Z $
+ * $Id: wl_android.h 489825 2014-07-08 09:03:49Z $
  */
 
 #include <linux/module.h>
 #include <linux/netdevice.h>
 #include <wldev_common.h>
+
+/* If any feature uses the Generic Netlink Interface, put it here to enable WL_GENL
+ * automatically
+ */
+
+
 
 /**
  * Android platform dependent functions, feel free to add Android specific functions here
@@ -45,13 +51,19 @@ int wl_android_wifi_on(struct net_device *dev);
 int wl_android_wifi_off(struct net_device *dev);
 int wl_android_priv_cmd(struct net_device *net, struct ifreq *ifr, int cmd);
 
-#if defined(CONFIG_WIFI_CONTROL_FUNC)
-int wl_android_wifictrl_func_add(void);
-void wl_android_wifictrl_func_del(void);
-void* wl_android_prealloc(int section, unsigned long size);
+s32 wl_netlink_send_msg(int pid, int type, int seq, void *data, size_t size);
 
-int wifi_get_irq_number(unsigned long *irq_flags_ptr);
-int wifi_set_power(int on, unsigned long msec);
-int wifi_get_mac_addr(unsigned char *buf);
-void *wifi_get_country_code(char *ccode);
-#endif /* CONFIG_WIFI_CONTROL_FUNC */
+/* hostap mac mode */
+#define MACLIST_MODE_DISABLED   0
+#define MACLIST_MODE_DENY       1
+#define MACLIST_MODE_ALLOW      2
+
+/* max number of assoc list */
+#define MAX_NUM_OF_ASSOCLIST    64
+
+/* max number of mac filter list
+ * restrict max number to 10 as maximum cmd string size is 255
+ */
+#define MAX_NUM_MAC_FILT        10
+
+int wl_android_set_ap_mac_list(struct net_device *dev, int macmode, struct maclist *maclist);
