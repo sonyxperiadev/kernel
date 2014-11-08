@@ -610,6 +610,11 @@
 			qcom,memory-reservation-size = <0x6400000>;
 			qcom,ion-heap-type = "CARVEOUT";
 		};
+
+		/* Move PIL HEAP to avoid conflict with ADSP image */
+		qcom,ion-heap@23 { /* OTHER PIL HEAP */
+			qcom,memory-fixed = <0x08900000 0x1e00000>;
+		};
 	};
 
 	sound {
@@ -646,6 +651,11 @@
 	qcom,msm-thermal {
 		qcom,pmic-sw-mode-regs = "vdd_dig";
 	};
+};
+
+/* Increase memory hole since PIL HEAP moved */
+&memory_hole {
+	qcom,memblock-remove = <0x08900000 0x7600000>; /* Address and size of the hole */
 };
 
 &mdss_hdmi_tx {
