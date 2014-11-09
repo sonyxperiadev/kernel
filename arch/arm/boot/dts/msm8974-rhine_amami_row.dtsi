@@ -692,6 +692,10 @@
 	};
 };
 
+&memory_hole {
+	qcom,memblock-remove = <0x5d00000 0xa200000>; /* Address and size of the hole */
+};
+
 &mdss_hdmi_tx {
 	/* rhine doesn't use hpd-5v */
 	qcom,hdmi-tx-supply-names = "hpd-gdsc", "core-vdda", "core-vcc";
