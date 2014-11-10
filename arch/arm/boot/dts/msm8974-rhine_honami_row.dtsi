@@ -731,7 +731,8 @@
 	qcom,low-soc-calculate-soc-ms = <1000>;
 	qcom,calculate-soc-ms = <30000>;
 	qcom,chg-term-ua = <150000>;
-	qcom,use-external-rsense = <1>;
+	qcom,use-external-rsense;
+	qcom,use-ocv-thresholds;
 	qcom,batt-type = <3>;
 	qcom,shutdown-soc-valid-limit = <40>;
 	qcom,clamp-soc-max-count = <2>;
