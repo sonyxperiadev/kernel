@@ -139,6 +139,11 @@
 
 		somc,panel-id = [ff];
 		somc,panel-detect = <1>;
+		somc,disp-en-off-pre = <10>;
+		somc,disp-en-off-post = <10>;
+		somc,disp-en-on-pre = <25>;
+		somc,pw-on-rst-seq = <0 10>, <1 10>;
+		somc,pw-off-rst-seq = <0 10>;
 		somc,driver-ic = <0>;
 		somc,dric-gpio = <&msmgpio 26 0>;
 		somc,mdss-phy-size-mm = <80 143>;
@@ -277,6 +282,11 @@
 
 		somc,panel-id = [12 70 61 57];
 		somc,driver-ic = <0>;
+		somc,disp-en-off-pre = <10>;
+		somc,disp-en-off-post = <10>;
+		somc,disp-en-on-pre = <25>;
+		somc,pw-on-rst-seq = <0 10>, <1 10>;
+		somc,pw-off-rst-seq = <0 10>;
 		somc,dric-gpio = <&msmgpio 26 0>;
 		somc,mdss-phy-size-mm = <80 143>;
 		somc,mdss-dsi-lane-config = [00 c2 ef 00 00 00 00 01 75
@@ -470,8 +480,14 @@
 		qcom,mdss-dsi-pan-fps-update = "dfps_suspend_resume_mode";
 		qcom,mdss-dsi-reset-sequence = <1 20>, <0 200>, <1 20>;
 
+		qcom,mdss-brightness-max-level = <255>;
 		somc,panel-id = [12 74 20 38];
 		somc,driver-ic = <0>;
+		somc,disp-en-off-pre = <10>;
+		somc,disp-en-off-post = <10>;
+		somc,disp-en-on-pre = <25>;
+		somc,pw-on-rst-seq = <0 10>, <1 10>;
+		somc,pw-off-rst-seq = <0 10>;
 		somc,dric-gpio = <&msmgpio 26 0>;
 		somc,mdss-phy-size-mm = <80 143>;
 		somc,mdss-dsi-lane-config = [00 c2 ef 00 00 00 00 01 75
@@ -1000,9 +1016,18 @@
 		qcom,mdss-dsi-pan-enable-dynamic-fps;
 		qcom,mdss-dsi-pan-fps-update = "dfps_suspend_resume_mode";
 		qcom,mdss-dsi-reset-sequence = <1 20>, <0 200>, <1 20>;
+		somc,mdss-dsi-pre-uv-command = [23 01 00 00 00 00 02 B0 04];
 
 		somc,panel-id = [ff];
 		somc,panel-detect = <1>;
+		somc,disp-en-off-pre = <10>;
+		somc,disp-en-off-post = <10>;
+		somc,disp-en-on-pre = <200>;
+		somc,disp-en-on-post = <10>;
+		somc,pw-on-rst-seq = <1 10>, <0 10>, <1 25>;
+		somc,pw-off-rst-seq = <0 10>;
+
+		qcom,mdss-brightness-max-level = <255>;
 		somc,driver-ic = <1>;
 		somc,dric-gpio = <&msmgpio 26 0>;
 		somc,mdss-phy-size-mm = <80 143>;
@@ -1475,6 +1500,12 @@
 
 		somc,panel-id = [12 70 61 56];
 		somc,driver-ic = <1>;
+		somc,disp-en-off-pre = <10>;
+		somc,disp-en-off-post = <10>;
+		somc,disp-en-on-pre = <200>;
+		somc,disp-en-on-post = <10>;
+		somc,pw-on-rst-seq = <1 10>, <0 10>, <1 25>;
+		somc,pw-off-rst-seq = <0 10>;
 		somc,dric-gpio = <&msmgpio 26 0>;
 		somc,mdss-phy-size-mm = <80 143>;
 		somc,mdss-dsi-lane-config = [00 02 ef 00 00 00 00 01 ff
@@ -1485,6 +1516,8 @@
 		somc,mdss-dsi-disp-on-in-hs = <1>;
 		somc,mdss-dsi-wait-time-before-on-cmd = <80>;
 
+		qcom,mdss-brightness-max-level = <255>;
+		somc,mdss-dsi-pre-uv-command = [23 01 00 00 00 00 02 B0 04];
 		somc,mdss-dsi-uv-command = [04 01 00 00 00 00 01 04];
 		somc,mdss-dsi-uv-param-type = <3>;
 		somc,mdss-dsi-pcc-table-size = <52>;
