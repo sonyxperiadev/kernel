@@ -835,7 +835,6 @@
 		qcom,sec-auxpcm-gpio-sync = <&msmgpio 80 0>;
 		qcom,sec-auxpcm-gpio-din  = <&msmgpio 81 0>;
 		qcom,sec-auxpcm-gpio-dout = <&msmgpio 82 0>;
-		qcom,5-pole-jack;
 	};
 
 	spmi_bus: qcom,spmi@fc4c0000 {

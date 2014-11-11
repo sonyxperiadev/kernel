@@ -676,6 +676,7 @@
 			"MIC BIAS1 External", "Secondary Mic",
 			"AMIC6", "MIC BIAS4 External",
 			"MIC BIAS4 External", "Handset FB ANC Mic";
+		qcom,mbhc-audio-jack-type = "4-pole-jack";
 	};
 
 	gpio_hw_ids {
