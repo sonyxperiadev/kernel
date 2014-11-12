@@ -1133,9 +1133,10 @@ static int __devexit mdss_dsi_ctrl_remove(struct platform_device *pdev)
 	return 0;
 }
 
-#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
-int mdss_dsi_panel_power_detect(struct platform_device *pdev, int enable)
+
+void mdss_dsi_panel_power_detect(struct platform_device *pdev, int enable)
 {
+#ifdef CONFIG_MACH_SONY_RHINE
 	int ret;
 	static struct regulator *vdd_vreg;
 
@@ -1182,9 +1183,8 @@ int mdss_dsi_panel_power_detect(struct platform_device *pdev, int enable)
 		msleep(20);
 		devm_regulator_put(vdd_vreg);
 	}
-	return 0;
+#endif	/* CONFIG_MACH_SONY_RHINE */
 }
-#endif	/* CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL */
 
 struct device dsi_dev;
 

@@ -392,7 +392,7 @@ struct mdss_dsi_ctrl_pdata {
 
 int dsi_panel_device_register(struct device_node *pan_node,
 				struct mdss_dsi_ctrl_pdata *ctrl_pdata);
-int mdss_dsi_panel_power_detect(struct platform_device *pdev, int enable);
+void mdss_dsi_panel_power_detect(struct platform_device *pdev, int enable);
 
 int mdss_dsi_cmds_tx(struct mdss_dsi_ctrl_pdata *ctrl,
 		struct dsi_cmd_desc *cmds, int cnt);
