@@ -374,7 +374,7 @@
         compatible = "bcm,tmon-thermal";
         reg  = <0x34008000 0x1000>, <0x35004000 0x1000>;
         interrupts = <0 183 4>;
-        hysteresis = <10>;
+        hysteresis = <5>;
         flags = <5>;
         interval_ms = <5>;
         poll_rate_ms = <30000>;
