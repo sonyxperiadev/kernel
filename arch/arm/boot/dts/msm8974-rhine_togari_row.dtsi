@@ -70,7 +70,7 @@
 			gpio_tirq = <61>;
 			gpio_reset = <85>;
 			reset_l2h = <0>;
-			enable_resume_por = <1>;
+			enable_resume_por = <0>;
 			defaults_allow = <0>;
 			default_config_id = <0>;
 			default_chip_id = <0>;
