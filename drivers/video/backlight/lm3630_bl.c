@@ -1,11 +1,14 @@
 /*
 * Simple driver for Texas Instruments LM3630 Backlight driver chip
 * Copyright (C) 2012 Texas Instruments
+* Copyright (C) 2013 Sony Mobile Communications AB.
 *
 * This program is free software; you can redistribute it and/or modify
 * it under the terms of the GNU General Public License version 2 as
 * published by the Free Software Foundation.
 *
+* NOTE: This file has been modified by Sony Mobile Communications AB.
+* Modifications are licensed under the License.
 */
 #include <linux/module.h>
 #include <linux/slab.h>
@@ -17,6 +20,7 @@
 #include <linux/interrupt.h>
 #include <linux/regmap.h>
 #include <linux/platform_data/lm3630_bl.h>
+#include <linux/gpio.h>
 
 #define REG_CTRL	0x00
 #define REG_CONFIG	0x01
@@ -320,7 +324,7 @@ static int lm3630_backlight_register(struct lm3630_chip_data *pchip,
 		    backlight_device_register(name, pchip->dev, pchip,
 					      &lm3630_bank_a_ops, &props);
 		if (IS_ERR(pchip->bled1))
-			return PTR_ERR(pchip->bled1);
+			return -EIO;
 		break;
 	case BLED_2:
 		props.brightness = pdata->init_brt_led2;
@@ -329,7 +333,7 @@ static int lm3630_backlight_register(struct lm3630_chip_data *pchip,
 		    backlight_device_register(name, pchip->dev, pchip,
 					      &lm3630_bank_b_ops, &props);
 		if (IS_ERR(pchip->bled2))
-			return PTR_ERR(pchip->bled2);
+			return -EIO;
 		break;
 	}
 	return 0;
@@ -349,18 +353,65 @@ static const struct regmap_config lm3630_regmap = {
 	.max_register = REG_MAX,
 };
 
+static void pwm_set_intensity (int brightness, int max_brightness)
+{
+}
+
 static int lm3630_probe(struct i2c_client *client,
 				  const struct i2c_device_id *id)
 {
-	struct lm3630_platform_data *pdata = client->dev.platform_data;
+	struct lm3630_platform_data *pdata = NULL;
 	struct lm3630_chip_data *pchip;
 	int ret;
+
+	ret = gpio_request(27, "backlight_enable");
+	if(ret)
+		dev_err(&client->dev, "Failed to request gpio 27\n");
+	else
+		dev_info(&client->dev, "Success to request gpio 27\n");
+
+	gpio_direction_output(27, 1);
+	gpio_set_value(27,1);
+
+	ret = gpio_request(31, "pmu_enable");
+	if(ret)
+		dev_err(&client->dev, "Failed to request gpio 31\n");
+	else
+		dev_info(&client->dev, "Success to request gpio 31\n");
+
+	gpio_direction_output(31, 1);
+	gpio_set_value(31,1);
 
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C)) {
 		dev_err(&client->dev, "fail : i2c functionality check...\n");
 		return -EOPNOTSUPP;
 	}
 
+	if (client->dev.of_node) {
+		pdata = devm_kzalloc(&client->dev,
+				sizeof(struct lm3630_platform_data),
+				GFP_KERNEL);
+		if (!pdata) {
+			dev_err(&client->dev, "failed to allocate memory\n");
+			return -ENOMEM;
+		}
+//		lm3630_parse_config(&client->dev);
+		pdata->max_brt_led1 = 255;
+		pdata->max_brt_led2 = 255;
+		pdata->init_brt_led1 = 150;
+		pdata->init_brt_led2 = 150;
+		pdata->pwm_ctrl      = PWM_CTRL_DISABLE;
+		pdata->pwm_active    = PWM_ACTIVE_HIGH;
+		pdata->bank_a_ctrl   = BANK_A_CTRL_LED1;
+		pdata->bank_b_ctrl   = BANK_B_CTRL_LED2;
+		pdata->pwm_set_intensity = pwm_set_intensity;
+	} else {
+		pdata = client->dev.platform_data;
+		pdata->max_brt_led1 = 255;
+		pdata->max_brt_led2 = 255;
+		pdata->init_brt_led1 = 150;
+		pdata->init_brt_led2 = 150;
+	}
 	if (pdata == NULL) {
 		dev_err(&client->dev, "fail : no platform data.\n");
 		return -ENODATA;
@@ -458,9 +509,19 @@ static const struct i2c_device_id lm3630_id[] = {
 
 MODULE_DEVICE_TABLE(i2c, lm3630_id);
 
+#ifdef CONFIG_OF
+static struct of_device_id lm3630_bl_match_table[] = {
+	{ .compatible = "ti,lm3630_bl", },
+	{ },
+};
+#else
+#define lm3630_bl_match_table NULL
+#endif
+
 static struct i2c_driver lm3630_i2c_driver = {
 	.driver = {
 		   .name = LM3630_NAME,
+		   .of_match_table = lm3630_bl_match_table,
 		   },
 	.probe = lm3630_probe,
 	.remove = lm3630_remove,
