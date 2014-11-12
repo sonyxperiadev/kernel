@@ -761,6 +761,7 @@ struct dwc3_scratchpad_array {
  * @tx_fifo_size: Available RAM size for TX fifo allocation
  * @err_evt_seen: previous event in queue was erratic error
  * @irq: irq number
+ * @irq_cnt: total irq count
  * @bh: tasklet which handles the interrupt
  * @bh_completion_time: time taken for taklet completion
  * @bh_handled_evt_cnt: no. of events handled by tasklet per interrupt
@@ -873,6 +874,7 @@ struct dwc3 {
 	bool			err_evt_seen;
 	bool			enable_suspend_event;
 	struct dwc3_gadget_events	dbg_gadget_events;
+	unsigned long		irq_cnt;
 
 	/* offload IRQ handling to tasklet */
 	int			irq;

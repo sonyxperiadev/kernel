@@ -972,7 +972,9 @@ static void dwc3_msm_notify_event(struct dwc3 *dwc, unsigned event)
 
 	switch (event) {
 	case DWC3_CONTROLLER_ERROR_EVENT:
-		dev_info(mdwc->dev, "DWC3_CONTROLLER_ERROR_EVENT received\n");
+		dev_info(mdwc->dev,
+			"DWC3_CONTROLLER_ERROR_EVENT received, irq cnt %lu\n",
+			dwc->irq_cnt);
 		dwc3_msm_dump_phy_info(mdwc);
 		dwc3_gadget_disable_irq(dwc);
 		/*
@@ -1053,9 +1055,11 @@ static void dwc3_block_reset_usb_work(struct work_struct *w)
 	unsigned long flags;
 
 	dev_dbg(mdwc->dev, "%s\n", __func__);
-
 	dwc3_msm_block_reset(&mdwc->ext_xceiv, true);
-	dwc3_gadget_enable_irq(dwc);
+	if (mdwc->ext_xceiv.bsv) {
+		dbg_event(0xFF, "Mask EVT", 0);
+		dwc3_gadget_enable_irq(dwc);
+	}
 	spin_lock_irqsave(&dwc->lock, flags);
 	dwc->err_evt_seen = 0;
 	spin_unlock_irqrestore(&dwc->lock, flags);
@@ -1743,12 +1747,15 @@ static int dwc3_msm_power_set_property_usb(struct power_supply *psy,
 		if (mdwc->otg_xceiv && !mdwc->ext_inuse &&
 		    (mdwc->ext_xceiv.otg_capability || !init)) {
 			mdwc->ext_xceiv.bsv = val->intval;
-			/*
-			 * Cancel any block reset in progress during disconnect
-			 * and wait for it to finish.
-			 */
+			/* Disable all events on cable disconnect */
+			if (!mdwc->ext_xceiv.bsv) {
+				dbg_event(0xFF, "Dis EVT", 0);
+				dwc3_gadget_disable_irq(dwc);
+			}
+			/* Flush block reset work during disconnect */
 			if (dwc && dwc->err_evt_seen && !mdwc->ext_xceiv.bsv) {
-				cancel_work_sync(&mdwc->usb_block_reset_work);
+				dbg_event(0xFF, "Flush BR", 0);
+				flush_work(&mdwc->usb_block_reset_work);
 				dwc->err_evt_seen = 0;
 			}
 			/*
