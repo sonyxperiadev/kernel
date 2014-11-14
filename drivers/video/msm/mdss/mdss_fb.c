@@ -325,14 +325,40 @@ static ssize_t mdss_mdp_show_blank_event(struct device *dev,
 	return ret;
 }
 
+#ifdef CONFIG_MACH_SONY_FLAMINGO
+/* [Flamingo] Read LCM ID info. for ATS */
+#define LCM_ID_PIN	27
+extern char temp_buf[];		
+static ssize_t mdss_fb_lcm_module_id(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	ssize_t ret = 0;
+
+	if (*temp_buf != '\0')
+		ret = snprintf(buf, PAGE_SIZE, temp_buf);
+	else
+		ret = snprintf(buf, PAGE_SIZE, "TRULY\n");
+
+	return ret;
+}
+#endif
+
 static DEVICE_ATTR(msm_fb_type, S_IRUGO, mdss_fb_get_type, NULL);
 static DEVICE_ATTR(msm_fb_split, S_IRUGO, mdss_fb_get_split, NULL);
 static DEVICE_ATTR(show_blank_event, S_IRUGO, mdss_mdp_show_blank_event, NULL);
+#ifdef CONFIG_MACH_SONY_FLAMINGO
+/*[Flamingo] Read LCM ID for ATS */
+static DEVICE_ATTR(lcm_module_id, S_IRUGO, mdss_fb_lcm_module_id, NULL);
+#endif
 
 static struct attribute *mdss_fb_attrs[] = {
 	&dev_attr_msm_fb_type.attr,
 	&dev_attr_msm_fb_split.attr,
 	&dev_attr_show_blank_event.attr,
+#ifdef CONFIG_MACH_SONY_FLAMINGO
+/*[Flamingo] Read LCM ID for ATS */
+	&dev_attr_lcm_module_id.attr,
+#endif
 	NULL,
 };
 
