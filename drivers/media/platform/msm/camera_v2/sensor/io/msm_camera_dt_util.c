@@ -113,6 +113,13 @@ int msm_camera_get_dt_power_setting_data(struct device_node *of_node,
 				ps[i].seq_val = SENSOR_GPIO_STANDBY;
 			else if (!strcmp(seq_name, "sensor_gpio_vdig"))
 				ps[i].seq_val = SENSOR_GPIO_VDIG;
+#ifdef CONFIG_MACH_SONY_FLAMINGO
+// [Flamingo] Modify for Rear camera eeprom
+			else if (!strcmp(seq_name, "sensor_gpio_vio"))
+				ps[i].seq_val = SENSOR_GPIO_VIO;
+			else if (!strcmp(seq_name, "sensor_gpio_vana"))
+				ps[i].seq_val = SENSOR_GPIO_VANA;			
+#endif
 			else
 				rc = -EILSEQ;
 			break;
@@ -303,6 +310,43 @@ int32_t msm_camera_init_gpio_pin_tbl(struct device_node *of_node,
 		CDBG("%s qcom,gpio-reset %d\n", __func__,
 			gconf->gpio_num_info->gpio_num[SENSOR_GPIO_VDIG]);
 	}
+
+#ifdef CONFIG_MACH_SONY_FLAMINGO
+// [Flamingo] Modify for Rear camera eeprom
+	if (of_property_read_bool(of_node, "qcom,gpio-vio") == true) {
+		rc = of_property_read_u32(of_node, "qcom,gpio-vio", &val);
+		if (rc < 0) {
+			pr_err("%s:%d read qcom,gpio-vio failed rc %d\n",
+				__func__, __LINE__, rc);
+			goto ERROR;
+		} else if (val >= gpio_array_size) {
+			pr_err("%s:%d qcom,gpio-vio invalid %d\n",
+				__func__, __LINE__, val);
+			goto ERROR;
+		}
+		gconf->gpio_num_info->gpio_num[SENSOR_GPIO_VIO] =
+			gpio_array[val];
+		CDBG("%s qcom,gpio-reset %d\n", __func__,
+			gconf->gpio_num_info->gpio_num[SENSOR_GPIO_VIO]);
+	}
+
+	if (of_property_read_bool(of_node, "qcom,gpio-vana") == true) {
+		rc = of_property_read_u32(of_node, "qcom,gpio-vana", &val);
+		if (rc < 0) {
+			pr_err("%s:%d read qcom,gpio-vana failed rc %d\n",
+				__func__, __LINE__, rc);
+			goto ERROR;
+		} else if (val >= gpio_array_size) {
+			pr_err("%s:%d qcom,gpio-vana invalid %d\n",
+				__func__, __LINE__, val);
+			goto ERROR;
+		}
+		gconf->gpio_num_info->gpio_num[SENSOR_GPIO_VANA] =
+			gpio_array[val];
+		CDBG("%s qcom,gpio-vana %d\n", __func__,
+			gconf->gpio_num_info->gpio_num[SENSOR_GPIO_VANA]);
+	}
+#endif
 
 	if (of_property_read_bool(of_node, "qcom,gpio-reset") == true) {
 		rc = of_property_read_u32(of_node, "qcom,gpio-reset", &val);

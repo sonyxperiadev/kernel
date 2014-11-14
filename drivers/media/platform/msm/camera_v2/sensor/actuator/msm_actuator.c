@@ -27,6 +27,11 @@ DEFINE_MSM_MUTEX(msm_actuator_mutex);
 #define CDBG(fmt, args...) pr_debug(fmt, ##args)
 #endif
 
+#ifdef CONFIG_MACH_SONY_FLAMINGO
+// [Flamingo] Modify for Camera Second source
+extern uint16_t s5k5e2_version;
+#endif
+
 static struct msm_actuator msm_vcm_actuator_table;
 static struct msm_actuator msm_piezo_actuator_table;
 
@@ -580,6 +585,12 @@ static int32_t msm_actuator_config(struct msm_actuator_ctrl_t *a_ctrl,
 	case CFG_GET_ACTUATOR_INFO:
 		cdata->is_af_supported = 1;
 		cdata->cfg.cam_name = a_ctrl->cam_name;
+#ifdef CONFIG_MACH_SONY_FLAMINGO
+// [Flamingo] Modify for Camera Second source
+		if(s5k5e2_version == 0x16)
+			cdata->cfg.cam_name = a_ctrl->cam_name = 6;
+		pr_info("msm_actuator_config: camera name = %d , id = %d\n",cdata->cfg.cam_name,a_ctrl->cam_name);
+#endif
 		break;
 
 	case CFG_SET_ACTUATOR_INFO:
