@@ -1032,4 +1032,15 @@ config TOUCHSCREEN_GT9XX
 
 source "drivers/input/touchscreen/gt9xx/Kconfig"
 
+config TOUCHSCREEN_ELAN_EKTF3135
+	tristate "ELAN EKTF3135 I2C touchscreen"
+	depends on I2C
+	help
+	  Say Y here if you have a ELAN EKTF3135 I2C touchscreen
+	  connected to your system.
+
+	  If unsure, say N.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called synaptics_dsx_i2c.
 endif
