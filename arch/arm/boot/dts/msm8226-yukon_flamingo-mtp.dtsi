@@ -1,0 +1,334 @@
+/* Copyright (c) 2013, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+/include/ "msm8226-yukon_common.dtsi"
+/include/ "msm8226-camera-sensor-mtp.dtsi"
+/include/ "dsi-panel-flamingo.dtsi"
+
+&soc {
+	i2c@f9927000 { /* BLSP1 QUP5 */
+		elan_ktf2k_ts@10{
+			compatible = "elan,ktf2k_ts";
+			reg = <0x10>;
+			interrupt-parent = <&msmgpio>;
+			interrupts = <17 0x2008>;
+			vdd-supply = <&pm8226_l19>;
+			vcc_i2c-supply = <&pm8226_lvs1>;
+			elan,reset-gpio = <&msmgpio 16 0x00>;
+			elan,irq-gpio = <&msmgpio 17 0x2008>;
+			elan,hw-det-gpio = <&msmgpio 27 0x00>;
+			elan,i2c-pull-up;
+		};
+
+		synaptics@20 {
+			compatible = "synaptics,rmi4";
+			reg = <0x20>;
+			interrupt-parent = <&msmgpio>;
+			interrupts = <17 0x2008>;
+			vdd-supply = <&pm8226_l19>;
+			vcc_i2c-supply = <&pm8226_lvs1>;
+			synaptics,reset-gpio = <&msmgpio 16 0x00>;
+			synaptics,irq-gpio = <&msmgpio 17 0x2008>;
+			synaptics,button-map = <139 102 158>;
+			synaptics,fw-image-name = "PR1468813.img";
+			synaptics,i2c-pull-up;
+			synaptics,power-down;
+			synaptics,disable-gpios;
+		};
+	};
+
+	i2c@f9925000 { /* BLSP1 QUP3 */
+		nfc-nci@0e {
+			compatible = "qcom,nfc-nci";
+			reg = <0x0e>;
+			qcom,irq-gpio = <&msmgpio 21 0x00>;
+			qcom,dis-gpio = <&msmgpio 20 0x00>;
+			qcom,clk-src = "BBCLK2";
+			qcom,clk-en-gpio = <&msmgpio 0 0x00>;
+			interrupt-parent = <&msmgpio>;
+			interrupts = <21 0>;
+			qcom,clk-gpio = <&pm8226_gpios 3 0>;
+		};
+
+		pn547@28 {
+			compatible = "nxp,pn547";
+			reg = <0x28>;
+			nxp,irq_gpio = <&msmgpio 21 0x00>;
+			nxp,ven = <&msmgpio 20 0x00>;
+			nxp,dwld_en = <&msmgpio 22 0x00>;
+			interrupt-parent = <&msmgpio>;
+			interrupts = <21 0>;
+		};
+	};
+
+	spi@f9923000 {
+		/delete-node/ ethernet-switch@3;
+	};
+
+	sound {
+		qcom,audio-routing =
+			"RX_BIAS", "MCLK",
+			"LDO_H", "MCLK",
+			"SPK_OUT", "MCLK",
+			"SPK_OUT", "EXT_VDD_SPKR",
+			"AMIC1", "MIC BIAS1 External",
+			"MIC BIAS1 External", "Handset Mic",
+			"AMIC2", "MIC BIAS2 External",
+			"MIC BIAS2 External", "Headset Mic",
+			"AMIC4", "MIC BIAS2 External",
+			"MIC BIAS2 External", "ANCRight Headset Mic",
+			"AMIC5", "MIC BIAS2 External",
+			"MIC BIAS2 External", "ANCLeft Headset Mic";
+
+		qcom,cdc-mclk-gpios = <&pm8226_gpios 1 0>;
+		qcom,cdc-vdd-spkr-gpios = <&pm8226_gpios 2 0>;
+	};
+
+	sound-9302 {
+		qcom,audio-routing =
+			"RX_BIAS", "MCLK",
+			"LDO_H", "MCLK",
+			"SPK_OUT", "MCLK",
+			"SPK_OUT", "EXT_VDD_SPKR",
+			"AMIC1", "MIC BIAS1 External",
+			"MIC BIAS1 External", "Handset Mic",
+			"AMIC2", "MIC BIAS2 External",
+			"MIC BIAS2 External", "Headset Mic",
+			"AMIC3", "MIC BIAS1 External",
+			"MIC BIAS1 External", "Handset Mic";
+
+		qcom,cdc-mclk-gpios = <&pm8226_gpios 1 0>;
+		qcom,cdc-vdd-spkr-gpios = <&pm8226_gpios 2 0>;
+	};
+
+	ram_console {
+		compatible = "qcom,ram-console";
+		qcom,memory-fixed = <0x3f200000 0x40000>;
+	};
+
+	last_radio_log {
+		compatible = "qcom,last-radio-log";
+		qcom,memory-fixed = <0x3f240000 0x40000>;
+	};
+
+	ramdumpinfo {
+		compatible = "qcom,ramdumpinfo";
+		qcom,memory-fixed = <0x3f280000 0x0200>;
+	};
+
+	productinfo {
+		compatible = "qcom,productinfo";
+		qcom,memory-fixed = <0x3f280200 0x0200>;
+	};
+
+	restart_parameters {
+		compatible = "qcom,restart-parameters";
+		qcom,memory-fixed = <0x3f2C0000 0x40000>;
+	};
+};
+
+
+&memory_hole {
+	qcom,memblock-remove = <0x08000000 0x7500000
+		0x3f200000 0x100000 // Add 1M from 0x3f200000 for restart_parameters
+		0x0fa00000 0x500000>; /* Address and size of the hole */
+};
+
+&spmi_bus {
+	qcom,pm8226@0 {
+		qcom,leds@a100 {
+			qcom,led_mpp_2 {
+				qcom,start-idx = <40>;
+				qcom,duty-pcts = [00 00 50 99 99 99 50 00];
+			};
+		};
+
+		qcom,leds@a300 {
+			qcom,led_mpp_4 {
+				linux,name = "led:rgb_red";
+				qcom,start-idx = <20>;
+				qcom,duty-pcts = [00 00 50 99 99 99 50 00];
+			};
+		};
+
+		qcom,leds@a500 {
+			qcom,led_mpp_6 {
+				linux,name = "led:rgb_green";
+				qcom,start-idx = <1>;
+				qcom,duty-pcts = [00 00 50 99 99 99 50 00];
+			};
+		};
+	};
+
+	qcom,pm8226@1 {
+                qcom,leds@d300 {
+                        pm8226_flash0: qcom,flash_0 {
+                                qcom,duration = <400>;
+                                qcom,current = <800>;
+                        };
+                };
+
+		pm8226_s2: spm-regulator@1700 {
+			/delete-property/ qcom,mode;
+		};
+        };
+
+	i2c@f9926000 {
+		qcom,i2c-src-freq = <19200000>;
+		qcom,master-id = <86>;
+	};
+
+	i2c@f9927000 {
+		qcom,master-id = <86>;
+	};
+};
+
+&pm8226_gpios {
+	gpio@c100 { /* GPIO 2 */
+		qcom,mode = <1>;
+		qcom,output-type = <0>;
+		qcom,pull = <5>;
+		qcom,vin-sel = <3>;
+		qcom,out-strength = <3>;
+		qcom,src-sel = <2>;
+		qcom,master-en = <1>;
+	};
+
+	gpio@c200 { /* GPIO 3 */
+		qcom,mode = <0>;		/* QPNP_PIN_MODE_DIG_IN */
+		qcom,pull = <5>;		/* QPNP_PIN_PULL_NO */
+		qcom,vin-sel = <2>;		/* QPNP_PIN_VIN2 */
+		qcom,src-sel = <2>;		/* QPNP_PIN_SEL_FUNC_1 */
+		qcom,master-en = <1>;
+	};
+
+	gpio@c300 { /* GPIO 4 */
+	};
+
+	gpio@c400 { /* GPIO 5 */
+	};
+
+	gpio@c500 { /* GPIO 6 */
+	};
+
+	gpio@c600 { /* GPIO 7 */
+	};
+
+	gpio@c700 { /* GPIO 8 */
+	};
+};
+
+&pm8226_mpps {
+	mpp@a700 { /* MPP 8 */
+		/* PA_THERM1 config */
+		qcom,mode = <4>; /* AIN input */
+		qcom,invert = <1>; /* Enable MPP */
+		qcom,ain-route = <3>; /* AMUX 8 */
+		qcom,master-en = <1>;
+		qcom,src-sel = <0>; /* Function constant */
+	};
+};
+
+&pm8226_vadc {
+	chan@17 {
+		label = "pa_therm1";
+		reg = <0x17>;
+		qcom,decimation = <0>;
+		qcom,pre-div-channel-scaling = <0>;
+		qcom,calibration-type = "ratiometric";
+		qcom,scale-function = <2>;
+		qcom,hw-settle-time = <2>;
+		qcom,fast-avg-setup = <0>;
+	};
+};
+
+&pm8226_chg {
+	qcom,tchg-mins = <240>;
+	qcom,usb-tchg-mins = <480>;
+	qcom,ac-tchg-mins = <240>;
+	qcom,ibatmax-warm-ma = <400>;
+	qcom,warm-bat-decidegc = <450>;
+	qcom,warm-bat-mv = <3900>;
+	qcom,cool-bat-decidegc = <150>;
+	qcom,cool-bat-mv = <4200>;
+	qcom,ibatmax-cool-ma = <1500>;
+	qcom,btc-disabled;
+	qcom,hot-bat-decidegc = <550>;
+	qcom,cold-bat-decidegc = <50>;
+	qcom,charging-timer-enable;
+	qcom,vbatweak-mv = <3400>;
+	qcom,call-bat-mv = <3900>;
+	qcom,resume-soc = <0>;
+	qcom,vbatdet-delta-mv = <50>;
+	qcom,first-maintain-mins = <3600>;
+	qcom,second-maintain-mins = <12000>;
+	qcom,first-maintain-mv = <4150>;
+	qcom,second-maintain-mv = <4100>;
+};
+
+&pm8226_l27 {
+	regulator-min-microvolt = <2050000>;
+	regulator-max-microvolt = <2050000>;
+	qcom,init-voltage = <2050000>;
+	regulator-always-on;
+};
+
+&pm8226_l28 {
+	regulator-min-microvolt = <1800000>;
+	regulator-max-microvolt = <2950000>;
+	qcom,init-voltage = <1800000>;
+};
+
+&slim_msm {
+	tapan_codec {
+		qcom,cdc-micbias1-ext-cap;
+	};
+};
+
+&mdss_dsi0 {
+	qcom,dsi-pref-prim-pan = <&dsi_truly_hx8379c_fwvga_vid>;
+	vdddsi-supply = <&pm8226_lvs1>;
+	qcom,platform-supply-entry3 {
+		qcom,supply-name = "vdddsi";
+		qcom,supply-min-voltage = <1800000>;
+		qcom,supply-max-voltage = <1800000>;
+		qcom,supply-enable-load = <100000>;
+		qcom,supply-disable-load = <100>;
+		qcom,supply-pre-on-sleep = <0>;
+		qcom,supply-post-on-sleep = <0>;
+		qcom,supply-pre-off-sleep = <0>;
+		qcom,supply-post-off-sleep = <0>;
+	};
+	qcom,platform-supply-entry4 {
+		qcom,supply-name = "vdda";
+		qcom,supply-min-voltage = <1200000>;
+		qcom,supply-max-voltage = <1200000>;
+		qcom,supply-enable-load = <100000>;
+		qcom,supply-disable-load = <100>;
+		qcom,supply-pre-on-sleep = <0>;
+		qcom,supply-post-on-sleep = <20>;
+		qcom,supply-pre-off-sleep = <0>;
+		qcom,supply-post-off-sleep = <0>;
+	};
+};
+
+&dsi_truly_hx8379c_fwvga_vid {
+	somc,first-boot-aware;
+	somc,panel-id-read-cmds;
+	qcom,cont-splash-enabled;
+};
+
+&dsi_ofilm_hx8379c_fwvga_vid {
+	somc,first-boot-aware;
+	somc,panel-id-read-cmds;
+	qcom,cont-splash-enabled;
+};

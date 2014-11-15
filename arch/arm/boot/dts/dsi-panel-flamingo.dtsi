@@ -1,0 +1,242 @@
+/* Copyright (c) 2013, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+&mdss_mdp {
+	dsi_truly_hx8379c_fwvga_vid: qcom,mdss_dsi_truly_hx8379c_fwvga_video {
+		compatible = "qcom,mdss-dsi-panel";
+		qcom,mdss-dsi-panel-name = "truly hx8379c fwvga video mode dsi panel";
+		qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
+		qcom,mdss-dsi-panel-type = "dsi_video_mode";
+		somc,driver-ic = <0>;
+		somc,panel-id = [FF];
+		somc,dric-gpio = <&msmgpio 27 0>;
+		qcom,rst-gpio = <&msmgpio 25 0>;
+		qcom,mdss-dsi-panel-width = <480>;
+		qcom,mdss-dsi-panel-height = <854>;
+		qcom,mdss-dsi-bpp = <24>;
+		qcom,mdss-dsi-panel-destination = "display_1";
+		qcom,mdss-dsi-h-front-porch = <32>; 
+		qcom,mdss-dsi-h-back-porch = <32>;
+		qcom,mdss-dsi-h-pulse-width = <32>;
+		qcom,mdss-dsi-h-sync-skew = <0>;
+		qcom,mdss-dsi-v-back-porch = <22>;
+		qcom,mdss-dsi-v-front-porch = <32>;
+		qcom,mdss-dsi-v-pulse-width = <10>;
+		qcom,mdss-dsi-color-order = <0>;
+		qcom,mdss-dsi-underflow-color = <0xff>;
+		qcom,mdss-dsi-h-left-border = <0>;
+		qcom,mdss-dsi-h-right-border = <0>;
+		qcom,mdss-dsi-v-top-border = <0>;
+		qcom,mdss-dsi-v-bottom-border = <0>;
+		qcom,mdss-dsi-border-color = <0>;
+		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
+		qcom,mdss-dsi-bl-min-level = <1>;
+		qcom,mdss-dsi-bl-max-level = <4095>;
+		qcom,mdss-pan-dsi-mode = <0>;
+		qcom,mdss-dsi-h-sync-pulse = <0>;
+		qcom,mdss-pan-dsi-h-power-stop = <0 0 0>;
+		qcom,mdss-dsi-bllp-eof-power-mode;
+		qcom,mdss-dsi-bllp-power-mode;
+		qcom,mdss-dsi-traffic-mode = <1>;
+		qcom,mdss-pan-dsi-dst-format = <3>;
+		qcom,mdss-dsi-virtual-channel-id = <0>;
+		qcom,mdss-pan-dsi-rgb-swap = <0>;
+		qcom,mdss-dsi-lane-0-state;
+		qcom,mdss-dsi-lane-1-state;
+		qcom,mdss-dsi-lane-map = <0>;
+		qcom,mdss-dsi-t-clk-post = <0x04>;
+		qcom,mdss-dsi-t-clk-pre = <0x19>;
+		qcom,mdss-dsi-stream = <0>;
+		qcom,mdss-dsi-mdp-trigger = <0x0>;
+		qcom,mdss-dsi-dma-trigger = <0x04>;
+		qcom,mdss-dsi-panel-framerate = <60>;
+		qcom,platform-reset-gpio = <&msmgpio 25 0>;
+		qcom,mdss-dsi-reset-sequence = <1 10>, <0 10>, <1 120>;
+		somc,lcm-bl-gpio = <&msmgpio 15 0>;
+		qcom,panel-phy-regulatorSettings = [03 0a 04 00 20 00 01]; /* Regulator settings */
+		qcom,mdss-dsi-panel-timings = [75 18 10 00 3A 3E 14 1A 13 03 04 00];
+
+		qcom,panel-phy-strengthCtrl = [ff 06];
+		qcom,panel-phy-bistCtrl = [00 00 b1 ff           /* BIST Ctrl settings */
+					   00 00];
+		qcom,panel-phy-laneConfig = [00 00 00 00 00 00 00 01 97 /* lane0 config */
+					     00 00 00 00 05 00 00 01 97 /* lane1 config */
+					     00 00 00 00 0a 00 00 01 97 /* lane2 config */
+					     00 00 00 00 0f 00 00 01 97 /* lane3 config */
+					     00 c0 00 00 00 00 00 01 bb]; /* Clk ln config */
+		qcom,mdss-dsi-on-command = [
+					39 01 00 00 00 00 04
+						B9 FF 83 79
+					39 01 00 00 00 00 15
+						B1 44 1C 1C 31 51 90 D0 EE 94
+						80 38 38 F8 44 44 42 00 80 30 
+						00
+					39 01 00 00 00 00 0A
+						B2 80 FE 09 0C 00 50 11 42 1D
+					39 01 00 00 00 00 0E
+						B4 01 28 00 34 00 34 06 3F 06 3F B0 00 FF
+					39 01 00 00 00 00 02
+						CC 02
+					39 01 00 00 00 00 02
+						D2 77
+					39 01 00 00 00 00 1E
+						D3 00 06 00 00 00 06 06 32 10 	
+						1A 00 03 03 76 03 5F 00 1F 00
+						08 35 33 1E 07 37 1E 07 37 07
+					39 01 00 00 00 00 21
+						D5 18 18 19 19 18 18 20 21 24
+						25 18 18 18 18 00 01 04 05 02
+						03 06 07 18 18 18 18 18 18 18
+						18 18 18
+					39 01 00 00 00 00 21
+						D6 18 18 18 18 19 19 25 24 21 
+						20 18 18 18 18 05 04 01 00 03 
+						02 07 06 18 18 18 18 18 18 18
+						18 18 18
+
+					39 01 00 00 00 00 2B
+						E0 00 0E 14 35 39 3F 29 4B 06
+						0A 0C 18 10 14 16 14 15 07 11
+						13 16 00 0E 14 35 39 3F 29 4B
+						06 0A 0C 18 10 14 16 14 15 07
+						11 13 16
+
+					05 01 00 00 78 00 01 11
+					05 01 00 00 0A 00 01 29
+					];
+
+		qcom,mdss-dsi-on-command-state = "DSI_LP_MODE";
+		qcom,mdss-dsi-off-command = [
+			05 01 00 00 00 00 01 10
+			];
+		qcom,mdss-dsi-off-command-state = "DSI_LP_MODE";
+		qcom,mdss-dsi-lp11-init = <1>;
+	};
+
+	dsi_ofilm_hx8379c_fwvga_vid: qcom,mdss_dsi_ofilm_hx8379c_fwvga_video {
+		compatible = "qcom,mdss-dsi-panel";
+		qcom,mdss-dsi-panel-name = "O-film hx8379c fwvga video mode dsi panel";
+		qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
+		qcom,mdss-dsi-panel-type = "dsi_video_mode";
+		somc,driver-ic = <1>;
+		somc,panel-id = [FF];
+		somc,dric-gpio = <&msmgpio 27 0>;
+		qcom,rst-gpio = <&msmgpio 25 0>;
+		qcom,mdss-dsi-panel-width = <480>;
+		qcom,mdss-dsi-panel-height = <854>;
+		qcom,mdss-dsi-bpp = <24>;
+		qcom,mdss-dsi-panel-destination = "display_1";
+		qcom,mdss-dsi-h-front-porch = <32>; 
+		qcom,mdss-dsi-h-back-porch = <32>;
+		qcom,mdss-dsi-h-pulse-width = <32>;
+		qcom,mdss-dsi-h-sync-skew = <0>;
+		qcom,mdss-dsi-v-back-porch = <22>;
+		qcom,mdss-dsi-v-front-porch = <32>;
+		qcom,mdss-dsi-v-pulse-width = <10>;
+		qcom,mdss-dsi-color-order = <0>;
+		qcom,mdss-dsi-underflow-color = <0xff>;
+		qcom,mdss-dsi-h-left-border = <0>;
+		qcom,mdss-dsi-h-right-border = <0>;
+		qcom,mdss-dsi-v-top-border = <0>;
+		qcom,mdss-dsi-v-bottom-border = <0>;
+		qcom,mdss-dsi-border-color = <0>;
+		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
+		qcom,mdss-dsi-bl-min-level = <1>;
+		qcom,mdss-dsi-bl-max-level = <4095>;
+		qcom,mdss-pan-dsi-mode = <0>;
+		qcom,mdss-dsi-h-sync-pulse = <0>;
+		qcom,mdss-pan-dsi-h-power-stop = <0 0 0>;
+		qcom,mdss-dsi-bllp-eof-power-mode;
+		qcom,mdss-dsi-bllp-power-mode;
+		qcom,mdss-dsi-traffic-mode = <1>;
+		qcom,mdss-pan-dsi-dst-format = <3>;
+		qcom,mdss-dsi-virtual-channel-id = <0>;
+		qcom,mdss-pan-dsi-rgb-swap = <0>;
+		qcom,mdss-dsi-lane-0-state;
+		qcom,mdss-dsi-lane-1-state;
+		qcom,mdss-dsi-lane-map = <0>;
+		qcom,mdss-dsi-t-clk-post = <0x04>;
+		qcom,mdss-dsi-t-clk-pre = <0x19>;
+		qcom,mdss-dsi-stream = <0>;
+		qcom,mdss-dsi-mdp-trigger = <0x0>;
+		qcom,mdss-dsi-dma-trigger = <0x04>;
+		qcom,mdss-dsi-panel-framerate = <60>;
+		qcom,platform-reset-gpio = <&msmgpio 25 0>;
+		qcom,mdss-dsi-reset-sequence = <1 10>, <0 10>, <1 120>;
+		somc,lcm-bl-gpio = <&msmgpio 15 0>;
+		qcom,panel-phy-regulatorSettings = [03 0a 04 00 20 00 01]; /* Regulator settings */
+		qcom,mdss-dsi-panel-timings = [75 18 10 00 3A 3E 14 1A 13 03 04 00];
+
+		qcom,panel-phy-strengthCtrl = [ff 06];
+		qcom,panel-phy-bistCtrl = [00 00 b1 ff           /* BIST Ctrl settings */
+					   00 00];
+		qcom,panel-phy-laneConfig = [00 00 00 00 00 00 00 01 97 /* lane0 config */
+					     00 00 00 00 05 00 00 01 97 /* lane1 config */
+					     00 00 00 00 0a 00 00 01 97 /* lane2 config */
+					     00 00 00 00 0f 00 00 01 97 /* lane3 config */
+					     00 c0 00 00 00 00 00 01 bb]; /* Clk ln config */
+		qcom,mdss-dsi-on-command = [
+					39 01 00 00 00 00 04
+						B9 FF 83 79
+					39 01 00 00 00 00 15
+						B1 44 18 18 31 31 50 d0 ee 54
+						80 38 38 f8 22 22 22 00 80 30
+						00
+					39 01 00 00 00 00 0A
+						B2 80 FE 0a 04 00 50 11 42 1d
+					39 01 00 00 00 00 0B
+						B4 04 44 00 7b 00 7b 22 84 23 84
+					39 01 00 00 00 00 02
+						CC 02
+					39 01 00 00 00 00 02
+						D2 33
+
+					39 01 00 00 00 00 1E
+						D3 00 07 00 00 01 0a 0a 32 10
+						1C 00 05 03 80 03 69 00 1F 00
+						08 37 33 1E 07 37 1E 07 37 08
+
+					39 01 00 00 00 00 21
+						D5 18 18 18 18 18 18 18
+						18 02 03 00 01 06 07 04
+						05 18 18 20 21 18 18 24
+						25 18 18 18 18 18 18 18
+						18
+					39 01 00 00 00 00 21
+						D6 18 18 18 18 18 18 18
+						18 05 04 07 06 01 00 03
+						02 18 18 25 24 18 18 21
+						20 18 18 18 18 18 18 18
+						18
+
+					39 01 00 00 00 00 2B
+						E0 00 03 08 30 38 3f 14 33 07
+						0b 0c 17 0e 11 13 11 13 07 10
+						11 16 00 03 08 30 38 3f 14 33
+						07 0b 0c 17 0e 11 13 11 13 07
+						10 11 16
+
+					39 01 00 00 00 00 03
+						B6 80 80
+
+					05 01 00 00 78 00 01 11
+					05 01 00 00 0A 00 01 29
+					];
+
+		qcom,mdss-dsi-on-command-state = "DSI_LP_MODE";
+		qcom,mdss-dsi-off-command = [
+			05 01 00 00 00 00 01 10
+			];
+		qcom,mdss-dsi-off-command-state = "DSI_LP_MODE";
+		qcom,mdss-dsi-lp11-init = <1>;
+	};
+};
