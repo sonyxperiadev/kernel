@@ -1,0 +1,126 @@
+/* Copyright (c) 2013, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+&mdss_mdp {
+	dsi_hx8379a_qhd_vid: qcom,mdss_dsi_truly_hx8379a_qhd_video {
+		compatible = "qcom,mdss-dsi-panel";
+		qcom,mdss-dsi-panel-name = "truly hx8379a qhd video mode dsi panel";
+		qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
+		qcom,mdss-dsi-panel-type = "dsi_video_mode";
+		qcom,rst-gpio = <&msmgpio 25 0>;
+		vdda-supply = <&pm8226_l15>;
+		vddio-supply=<&pm8226_l8>;
+		qcom,mdss-dsi-panel-width = <480>;
+		qcom,mdss-dsi-panel-height = <854>;
+		qcom,mdss-dsi-bpp = <24>;
+		qcom,mdss-dsi-panel-destination = "display_1";
+		qcom,mdss-dsi-h-front-porch = <30>;
+		qcom,mdss-dsi-h-back-porch = <30>;
+		qcom,mdss-dsi-h-pulse-width = <30>;
+		qcom,mdss-dsi-h-sync-skew = <0>;
+		qcom,mdss-dsi-v-back-porch = <7>;
+		qcom,mdss-dsi-v-front-porch = <14>;
+		qcom,mdss-dsi-v-pulse-width = <4>;
+		qcom,mdss-dsi-color-order = <0>;
+		qcom,mdss-dsi-underflow-color = <0xff>;
+		qcom,mdss-dsi-h-left-border = <0>;
+		qcom,mdss-dsi-h-right-border = <0>;
+		qcom,mdss-dsi-v-top-border = <0>;
+		qcom,mdss-dsi-v-bottom-border = <0>;
+		qcom,mdss-dsi-border-color = <0>;
+		qcom,mdss-dsi-bl-pmic-control-type = "UNKNOWN_CTRL";
+		qcom,mdss-dsi-bl-min-level = <1>;
+		qcom,mdss-dsi-bl-max-level = <32>;
+		qcom,mdss-pan-dsi-mode = <0>;
+		qcom,mdss-dsi-h-sync-pulse = <0>;
+		qcom,mdss-pan-dsi-h-power-stop = <0 0 0>;
+		qcom,mdss-dsi-bllp-eof-power-mode;
+		qcom,mdss-dsi-bllp-power-mode;
+		qcom,mdss-dsi-traffic-mode = <1>;
+		qcom,mdss-pan-dsi-dst-format = <3>;
+		qcom,mdss-dsi-virtual-channel-id = <0>;
+		qcom,mdss-pan-dsi-rgb-swap = <0>;
+		qcom,mdss-dsi-lane-0-state;
+		qcom,mdss-dsi-lane-1-state;
+		qcom,mdss-dsi-lane-map = <0>;
+		qcom,mdss-dsi-t-clk-post = <0x22>;
+		qcom,mdss-dsi-t-clk-pre = <0x35>;
+		qcom,mdss-dsi-stream = <0>;
+		qcom,mdss-dsi-mdp-trigger = <0x0>;
+		qcom,mdss-dsi-dma-trigger = <0x04>;
+		qcom,mdss-dsi-panel-frame-rate = <60>;
+		qcom,panel-phy-regulatorSettings = [03 0a 04 00 20 00 01]; /* Regualotor settings */
+		qcom,mdss-dsi-panel-timings = [66 26 1c 00 1f 94
+						    1e 8e 1f 03 04 00];
+		qcom,panel-phy-strengthCtrl = [ff 06];
+		qcom,panel-phy-bistCtrl = [00 00 b1 ff           /* BIST Ctrl settings */
+					   00 00];
+		qcom,panel-phy-laneConfig = [00 00 00 00 00 00 00 01 97 /* lane0 config */
+					     00 00 00 00 05 00 00 01 97 /* lane1 config */
+					     00 00 00 00 0a 00 00 01 97 /* lane2 config */
+					     00 00 00 00 0f 00 00 01 97 /* lane3 config */
+					     00 c0 00 00 00 00 00 01 bb]; /* Clk ln config */
+		qcom,mdss-dsi-on-command = [
+					39 01 00 00 00 00 04
+						B9 FF 83 79
+					39 01 00 00 00 00 03
+						BA 51 93
+					39 01 00 00 00 00 15
+						B1 00 50 44 E8 80 08 11
+						11 71 2F 37 BF 3F 42 0B
+						6E F1 00 E6 E6
+					39 01 00 00 00 00 0E
+						B2 00 00 FE 08 0C 19 22
+						00 FF 08 0C 19 20
+					39 01 00 00 00 00 20
+						B4 80 08 00 32 10 05 32
+						13 66 32 10 08 37 01 20
+						07 37 08 28 08 30 30 04
+						00 40 08 28 08 30 30 04
+					39 01 00 00 00 00 30
+						D5 00 00 0A 00 01 05 00
+						0A 00 88 88 89 88 23 01
+						67 45 88 01 88 45 88 88
+						88 88 88 88 88 88 54 76
+						10 32 88 54 88 10 88 88
+						88 88 00 00 00 00 00 00
+					39 01 00 00 00 00 24
+						E0 79 07 12 15 3F 3F 3F
+						1F 3C 08 0D 0E 11 12 10
+						12 0C 1F 07 12 15 3F 3F
+						3F 1F 3C 08 0D 0E 11 12
+						10 12 0C 1F
+					39 01 00 00 00 00 02
+						CC 0A
+					39 01 00 00 00 00 05
+						B6 00 A0 00 A0	
+					39 01 00 00 00 00 02
+						51 FF
+					39 01 00 00 00 00 02
+						53 24
+					39 01 00 00 00 00 02
+						55 01
+					39 01 00 00 00 00 02
+						5E 00				
+					05 01 00 00 78 00 01 11
+					05 01 00 00 64 00 01 29
+					];
+
+		qcom,mdss-dsi-on-command-state = "DSI_LP_MODE";
+		qcom,mdss-dsi-off-command = [
+			39 01 00 00 00 00 02
+				C6 08
+			05 01 00 00 00 00 01 10
+			];
+		qcom,mdss-dsi-off-command-state = "DSI_HS_MODE";
+	};
+};

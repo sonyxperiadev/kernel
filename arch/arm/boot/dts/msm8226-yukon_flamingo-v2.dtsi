@@ -1,0 +1,160 @@
+/include/ "msm8226-yukon_flamingo-v1.dtsi"
+
+/include/ "dsi-panel-truly-hx8379a-pdp2-qhd-video.dtsi"
+/include/ "dsi-panel-truly-hx8379c-fwvga-video.dtsi"
+/include/ "dsi-panel-ofilm-hx8379c-fwvga-video.dtsi"
+/include/ "dsi-panel-tcl-hx8379c-fwvga-video.dtsi"
+
+&spmi_bus {
+	qcom,pm8226@0 {
+		qcom,power-on@800 {
+			qcom,pon_2 {
+				linux,code = <115>;
+			};
+		};
+	};
+};
+
+&mdss_dsi0 {
+	qcom,dsi-pref-prim-pan = <&dsi_hx8379a_pdp2_qhd_vid>;
+};
+
+&dsi_hx8379a_pdp2_qhd_vid {
+	qcom,cont-splash-enabled;
+};
+
+&dsi_truly_hx8379c_fwvga_vid {
+	qcom,cont-splash-enabled;
+};
+
+&dsi_ofilm_hx8379c_fwvga_vid {
+	qcom,cont-splash-enabled;
+};
+
+&dsi_tcl_hx8379c_fwvga_vid {
+	qcom,cont-splash-enabled;
+};
+
+&soc {
+	gpio_keys {
+		vol_up {
+			label = "volume_up";
+			gpios = <&msmgpio 110 0x1>;
+			linux,input-type = <1>;
+			linux,code = <0>;
+			gpio-key,wakeup;
+			debounce-interval = <15>;
+		};
+		
+		vol_down {
+			label = "volume_down";
+			gpios = <&msmgpio 106 0x1>;
+			linux,input-type = <1>;
+			linux,code = <114>;
+			gpio-key,wakeup;
+			debounce-interval = <15>;
+		};
+	};
+	
+	mdss_dsi0: qcom,mdss_dsi@fd922800 {
+		compatible = "qcom,mdss-dsi-ctrl";
+		label = "MDSS DSI CTRL->0";
+		cell-index = <0>;
+		reg = <0xfd922800 0x600>;
+		qcom,mdss-fb-map = <&mdss_fb0>;
+		qcom,mdss-mdp = <&mdss_mdp>;
+		vdd-supply = <&pm8226_l15>;
+		vddio-supply = <&pm8226_l8>;
+		vdddsi-supply = <&pm8226_lvs1>;
+		vdda-supply = <&pm8226_l4>;
+		qcom,platform-reset-gpio = <&msmgpio 25 0>;
+		qcom,platform-te-gpio = <&msmgpio 24 0>;
+		qcom,platform-strength-ctrl = [ff 06];
+		qcom,platform-bist-ctrl = [00 00 b1 ff 00 00];
+		qcom,platform-regulator-settings = [07 09 03 00 20 00 01];
+		qcom,platform-lane-config = [00 00 00 00 00 00 00 01 97
+			00 00 00 00 05 00 00 01 97
+			00 00 00 00 0a 00 00 01 97
+			00 00 00 00 0f 00 00 01 97
+			00 c0 00 00 00 00 00 01 bb];
+		qcom,platform-supply-entry1 {
+			qcom,supply-name = "vdd";
+			qcom,supply-min-voltage = <2800000>;
+			qcom,supply-max-voltage = <2800000>;
+			qcom,supply-enable-load = <100000>;
+			qcom,supply-disable-load = <100>;
+			qcom,supply-pre-on-sleep = <0>;
+			qcom,supply-post-on-sleep = <0>;
+			qcom,supply-pre-off-sleep = <0>;
+			qcom,supply-post-off-sleep = <0>;
+		};
+		qcom,platform-supply-entry2 {
+			qcom,supply-name = "vddio";
+			qcom,supply-min-voltage = <1800000>;
+			qcom,supply-max-voltage = <1800000>;
+			qcom,supply-enable-load = <100000>;
+			qcom,supply-disable-load = <100>;
+			qcom,supply-pre-on-sleep = <0>;
+			qcom,supply-post-on-sleep = <0>;
+			qcom,supply-pre-off-sleep = <0>;
+			qcom,supply-post-off-sleep = <0>;
+		};
+		qcom,platform-supply-entry3 {
+			qcom,supply-name = "vdddsi";
+			qcom,supply-min-voltage = <1800000>;
+			qcom,supply-max-voltage = <1800000>;
+			qcom,supply-enable-load = <100000>;
+			qcom,supply-disable-load = <100>;
+			qcom,supply-pre-on-sleep = <0>;
+			qcom,supply-post-on-sleep = <0>;
+			qcom,supply-pre-off-sleep = <0>;
+			qcom,supply-post-off-sleep = <0>;
+		};
+		qcom,platform-supply-entry4 {
+			qcom,supply-name = "vdda";
+			qcom,supply-min-voltage = <1200000>;
+			qcom,supply-max-voltage = <1200000>;
+			qcom,supply-enable-load = <100000>;
+			qcom,supply-disable-load = <100>;
+			qcom,supply-pre-on-sleep = <0>;
+			qcom,supply-post-on-sleep = <20>;
+			qcom,supply-pre-off-sleep = <0>;
+			qcom,supply-post-off-sleep = <0>;
+		};
+	};
+};
+
+&mtp_batterydata {
+	qcom,rpull-up-kohm = <100>;
+	qcom,vref-batt-therm = <1800000>;
+	/include/ "batterydata-yukon_flamingo.dtsi"
+};
+
+&pm8226_bms {
+	qcom,battery-data = <&mtp_batterydata>;
+};
+
+&pm8226_chg {
+	qcom,battery-data = <&mtp_batterydata>;
+	qcom,tchg-mins = <240>;
+	qcom,usb-tchg-mins = <480>;
+	qcom,ac-tchg-mins = <240>;
+	qcom,ibatmax-warm-ma = <400>;
+	qcom,warm-bat-decidegc = <450>;
+	qcom,warm-bat-mv = <3900>;
+	qcom,cool-bat-decidegc = <150>;
+	qcom,cool-bat-mv = <4200>;
+	qcom,ibatmax-cool-ma = <1500>;
+	qcom,btc-disabled;
+	qcom,hot-bat-decidegc = <550>;
+	qcom,cold-bat-decidegc = <50>;
+	qcom,charging-timer-enable;
+	qcom,vbatweak-mv = <3400>;
+	qcom,call-bat-mv = <3900>;
+	qcom,resume-soc = <0>;
+	qcom,vbatdet-delta-mv = <50>;
+	qcom,first-maintain-mins = <3600>;
+	qcom,second-maintain-mins = <12000>;
+	qcom,first-maintain-mv = <4150>;
+	qcom,second-maintain-mv = <4100>;
+};
