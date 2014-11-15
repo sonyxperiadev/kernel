@@ -616,10 +616,16 @@ extern int hcd_bus_resume(struct usb_device *rhdev, pm_message_t msg);
 
 #ifdef CONFIG_PM_RUNTIME
 extern void usb_hcd_resume_root_hub(struct usb_hcd *hcd);
+extern int usb_intf_with_pwr_usage_cnt(struct usb_hcd *hcd);
 #else
 static inline void usb_hcd_resume_root_hub(struct usb_hcd *hcd)
 {
 	return;
+}
+
+static inline int usb_intf_with_pwr_usage_cnt(struct usb_hcd *hcd)
+{
+	return -ENXIO;
 }
 #endif /* CONFIG_PM_RUNTIME */
 

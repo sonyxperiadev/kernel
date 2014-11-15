@@ -29,8 +29,7 @@
 #include <linux/usb/quirks.h>
 #include <linux/usb/hcd.h>
 
-#include "usb.h"
-
+#include "hub.h"
 
 /*
  * Adds a new dynamic USBdevice ID to this driver,
@@ -1867,6 +1866,37 @@ int usb_set_usb2_hardware_lpm(struct usb_device *udev, int enable)
 	}
 
 	return ret;
+}
+
+int get_intf_with_pwr_usage_count(struct usb_device *hdev)
+{
+	struct usb_interface    *intf;
+	struct usb_hub          *hub;
+	struct usb_port         *port;
+	int i;
+
+	if (!hdev)
+		return -ENXIO;
+
+	hub = usb_hub_to_struct_hub(hdev);
+	if (!hub)
+		return -ENXIO;
+
+	port = *hub->ports;
+	if (!port || !port->child || !port->child->actconfig)
+		return -ENXIO;
+
+	for (i = 0; i < port->child->actconfig->desc.bNumInterfaces; i++) {
+		intf = port->child->actconfig->interface[i];
+		if (atomic_read(&intf->dev.power.usage_count) > 1) {
+			dev_dbg(&port->child->dev,
+				"udev:%s intf: %s usage_cnt is not zero\n",
+				port->child->dev.kobj.name,
+				intf->dev.kobj.name);
+			return i;
+		}
+	}
+	return -ENXIO;
 }
 
 #endif /* CONFIG_PM_RUNTIME */

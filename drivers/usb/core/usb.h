@@ -102,6 +102,7 @@ extern int usb_runtime_suspend(struct device *dev);
 extern int usb_runtime_resume(struct device *dev);
 extern int usb_runtime_idle(struct device *dev);
 extern int usb_set_usb2_hardware_lpm(struct usb_device *udev, int enable);
+extern int get_intf_with_pwr_usage_count(struct usb_device *udev);
 
 #else
 
@@ -119,6 +120,11 @@ static inline int usb_remote_wakeup(struct usb_device *udev)
 static inline int usb_set_usb2_hardware_lpm(struct usb_device *udev, int enable)
 {
 	return 0;
+}
+
+static inline int get_intf_with_pwr_usage_count(struct usb_device *udev)
+{
+	return -ENXIO;
 }
 #endif
 
