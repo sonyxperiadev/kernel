@@ -24,4 +24,22 @@ config SENSORS_HMC5843
 	  To compile this driver as a module, choose M here: the module
 	  will be called hmc5843
 
+config SENSORS_YAS532
+        tristate "Yamaha YAS532 3-Axis Magnetometer"
+        depends on I2C && SYSFS && IIO && IIO_SW_RING && IIO_TRIGGER
+        help
+          Say Y here to add support for the Yamaha YAS532 3-Axis Magnetometer.
+
+config SENSORS_BMA250E
+        tristate "Bosch BMA250E 3-Axis Accelerometer"
+        depends on I2C && SYSFS && IIO && IIO_SW_RING && IIO_TRIGGER
+        help
+          Say Y here to add support for the Bosch BMA250E 3-Axis Accelerometer.
+
+config SENSORS_KXTJ2
+        tristate "Kionix KXTJ2 3-Axis Accelerometer"
+        depends on I2C && SYSFS && IIO && IIO_SW_RING && IIO_TRIGGER
+        help
+          Say Y here to add support for the Kionix KXTJ2 3-Axis Accelerometer.
+
 endmenu
