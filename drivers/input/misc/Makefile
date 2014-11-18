@@ -69,3 +69,4 @@ obj-$(CONFIG_SENSORS_MMA8X5X)	  	+= mma8x5x.o
 obj-$(CONFIG_SENSORS_STK3X1X)		+= stk3x1x.o
 obj-$(CONFIG_SENSORS_CAPELLA_CM36283)	+= cm36283.o
 obj-$(CONFIG_SENSORS_MMC3416XPJ_MAG)	+= mmc3416x.o mecs.o
+obj-$(CONFIG_INPUT_KIONIX_ACCEL)	+= kionix_accel.o
