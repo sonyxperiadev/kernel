@@ -333,6 +333,15 @@ config INPUT_KXTJ9_POLLED_MODE
 	help
 	  Say Y here if you need accelerometer to work in polling mode.
 
+config INPUT_KIONIX_ACCEL
+        tristate "KIONIX_ACCEL"
+        depends on I2C && SYSFS
+        help
+          If you say yes here you get support for the Kionix digital 3-axis
+          accelerometer.
+          This driver can also be built as a module. If so, the module will be
+          called kionix_accel.
+
 config SENSORS_MMC3416XPJ_MAG
 	tristate "MMC3416xPJ magnetic sensor support"
 	depends on I2C=y
