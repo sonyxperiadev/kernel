@@ -828,6 +828,7 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
 	return rc;
 }
 
+#ifndef CONFIG_MACH_SONY_EAGLE
 static struct device_node *mdss_dsi_pref_prim_panel(
 		struct platform_device *pdev)
 {
@@ -842,6 +843,7 @@ static struct device_node *mdss_dsi_pref_prim_panel(
 
 	return dsi_pan_node;
 }
+#endif
 
 /**
  * mdss_dsi_find_panel_of_node(): find device node of dsi panel
@@ -862,10 +864,60 @@ static struct device_node *mdss_dsi_pref_prim_panel(
 /* [Flamingo] Read LCM ID info. for ATS */
 #define TEMP_BUF_LEN		14
 char temp_buf[TEMP_BUF_LEN]={0};
+
+/* [Flamingo] Add function of getting panel name for other kernel module use */
+void mdss_get_panel_name(char *StrBuff)
+{
+	strlcpy(StrBuff, temp_buf, TEMP_BUF_LEN);
+}
+EXPORT_SYMBOL(mdss_get_panel_name);
+
 #endif
+
+#ifdef CONFIG_MACH_SONY_EAGLE
+#define LCD_ID_GPIO 23
+int g_mdss_dsi_lcd_id = 0;
+#endif
+
 static struct device_node *mdss_dsi_find_panel_of_node(
 		struct platform_device *pdev, char *panel_cfg)
 {
+#ifdef CONFIG_MACH_SONY_EAGLE
+  struct device_node *dsi_pan_node = NULL;
+  int status,rc;
+  rc = gpio_request(LCD_ID_GPIO, "disp_lcd_id");
+
+  rc = gpio_tlmm_config(GPIO_CFG(
+		  LCD_ID_GPIO,
+		  0,
+		  GPIO_CFG_INPUT,
+		  GPIO_CFG_NO_PULL,
+		  GPIO_CFG_2MA),
+		  GPIO_CFG_ENABLE);
+
+  status = gpio_get_value(LCD_ID_GPIO);
+  g_mdss_dsi_lcd_id = status;
+  pr_info("%s: LCD_ID = %d\n", __func__, status);
+
+  if(g_mdss_dsi_lcd_id == 0)
+  {
+	  dsi_pan_node = of_parse_phandle(
+		  pdev->dev.of_node,
+		  "qcom,dsi-pref-prim-pan1", 0);
+  }
+  else
+  {
+	  dsi_pan_node = of_parse_phandle(
+		  pdev->dev.of_node,
+		  "qcom,dsi-pref-prim-pan2", 0);
+  }
+
+	if (!dsi_pan_node) {
+		pr_err("%s:can't find panel phandle\n",
+		       __func__);
+		return NULL;
+  }
+#else
 	int len, i;
 	int ctrl_id = pdev->id - 1;
 	char panel_name[MDSS_MAX_PANEL_LEN];
@@ -925,18 +977,10 @@ static struct device_node *mdss_dsi_find_panel_of_node(
 	}
 end:
 	dsi_pan_node = mdss_dsi_pref_prim_panel(pdev);
+#endif
 
 	return dsi_pan_node;
 }
-
-#ifdef CONFIG_MACH_SONY_FLAMINGO
-/* [Flamingo] Add function of getting panel name for other kernel module use */
-void mdss_get_panel_name(char *StrBuff)
-{
-	strlcpy(StrBuff, temp_buf, TEMP_BUF_LEN);
-}
-EXPORT_SYMBOL(mdss_get_panel_name);
-#endif
 
 static int __devinit mdss_dsi_ctrl_probe(struct platform_device *pdev)
 {
@@ -1374,6 +1418,7 @@ int dsi_panel_device_register(struct device_node *pan_node,
 		}
 	}
 
+#ifndef CONFIG_MACH_SONY_EAGLE
 	if (pinfo->type == MIPI_CMD_PANEL) {
 		ctrl_pdata->disp_te_gpio = of_get_named_gpio(ctrl_pdev->dev.of_node,
 						"qcom,platform-te-gpio", 0);
@@ -1416,6 +1461,7 @@ int dsi_panel_device_register(struct device_node *pan_node,
 		pr_debug("%s: te_gpio=%d\n", __func__,
 					ctrl_pdata->disp_te_gpio);
 	}
+#endif
 
 	ctrl_pdata->rst_gpio = of_get_named_gpio(ctrl_pdev->dev.of_node,
 			 "qcom,platform-reset-gpio", 0);
