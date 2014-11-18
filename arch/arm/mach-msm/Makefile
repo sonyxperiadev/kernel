@@ -288,10 +288,8 @@ obj-$(CONFIG_ARCH_MSM9625) += board-9625.o board-9625-gpiomux.o
 obj-$(CONFIG_ARCH_MSM9625) += clock-local2.o clock-pll.o clock-9625.o clock-rpm.o clock-voter.o acpuclock-9625.o acpuclock-cortex.o
 obj-$(CONFIG_ARCH_MPQ8092) += board-8092.o board-8092-gpiomux.o
 obj-$(CONFIG_ARCH_MPQ8092) += clock-8092.o
-
 obj-$(CONFIG_ARCH_MSM8226) += clock-local2.o clock-pll.o clock-8226.o clock-rpm.o clock-voter.o clock-mdss-8974.o
 obj-$(CONFIG_ARCH_MSM8226) += acpuclock-8226.o acpuclock-cortex.o
-
 obj-$(CONFIG_ARCH_MSM8610) += board-8610.o board-8610-gpiomux.o
 obj-$(CONFIG_ARCH_MSM8610) += clock-local2.o clock-pll.o clock-8610.o clock-rpm.o clock-voter.o
 obj-$(CONFIG_ARCH_MSM8610) += acpuclock-8226.o acpuclock-cortex.o
@@ -306,9 +304,11 @@ obj-$(CONFIG_MACH_SAPPHIRE) += board-sapphire-mmc.o board-sapphire-wifi.o
 obj-$(CONFIG_MACH_SAPPHIRE) += board-sapphire-rfkill.o msm_vibrator.o
 
 ifdef CONFIG_MACH_SONY_FLAMINGO
-	obj-$(CONFIG_MACH_SONY_FLAMINGO) += board-8226.o board-8226-yukon_flamingo-gpiomux.o bms-batterydata-oem.o 
+       obj-$(CONFIG_MACH_SONY_FLAMINGO) += board-8226.o board-8226-yukon_flamingo-gpiomux.o  bms-batterydata-oem.o
+else ifdef CONFIG_MACH_SONY_EAGLE
+        obj-$(CONFIG_MACH_SONY_EAGLE) += board-8226-sony_eagle.o board-8226-sony_eagle-gpiomux.o bms-batterydata-eagle.o
 else
-	obj-$(CONFIG_ARCH_MSM8226) += board-8226.o board-8226-gpiomux.o bms-batterydata-oem.o 
+	obj-$(CONFIG_ARCH_MSM8226) += board-8226.o board-8226-gpiomux.o bms-batterydata-oem.o
 endif
 
 CFLAGS_msm_vibrator.o += -Idrivers/staging/android

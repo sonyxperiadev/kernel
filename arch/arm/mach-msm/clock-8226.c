@@ -3427,17 +3427,28 @@ static struct clk_lookup msm_clocks_8226[] = {
 	CLK_LOOKUP("cam_clk", camss_mclk0_clk.c, "6c.qcom,camera"),
 	CLK_LOOKUP("cam_clk", camss_mclk0_clk.c, "20.qcom,camera"),
 
+#if defined (CONFIG_MACH_SONY_EAGLE)
+	CLK_LOOKUP("core_clk", gcc_blsp1_qup3_i2c_apps_clk.c, ""),
+
+	CLK_LOOKUP("iface_clk", gcc_blsp1_ahb_clk.c, "f9924000.i2c"),/* sensor */
+	CLK_LOOKUP("core_clk", gcc_blsp1_qup2_i2c_apps_clk.c, "f9924000.i2c"),/* sensor */
+
+	CLK_LOOKUP("cam_src_clk", mclk1_clk_src.c, "42.qcom,camera"), /* gc0339 */
+	CLK_LOOKUP("cam_clk", camss_mclk1_clk.c, "42.qcom,camera"), /* gc0339 */
+	CLK_LOOKUP("cam_src_clk", mclk0_clk_src.c, "a1.qcom,eeprom"), /* EEPROM*/
+	CLK_LOOKUP("cam_clk", camss_mclk0_clk.c, "a1.qcom,eeprom"), /* EEPROM*/
+#elif defined (CONFIG_MACH_SONY_FLAMINGO)
+       CLK_LOOKUP("cam_src_clk", mclk0_clk_src.c, "20.qcom,eeprom"),
+       CLK_LOOKUP("cam_clk", camss_mclk0_clk.c, "20.qcom,eeprom"),
+#else
 	/* eeprom clocks */
 	CLK_LOOKUP("cam_src_clk", mclk0_clk_src.c, "6c.qcom,eeprom"),
 	CLK_LOOKUP("cam_clk", camss_mclk0_clk.c, "6c.qcom,eeprom"),
+#endif
 	CLK_LOOKUP("cam_src_clk", mclk0_clk_src.c, "18.qcom,eeprom"),
 	CLK_LOOKUP("cam_clk", camss_mclk0_clk.c, "18.qcom,eeprom"),
 	CLK_LOOKUP("cam_src_clk", mclk0_clk_src.c, "6b.qcom,eeprom"),
 	CLK_LOOKUP("cam_clk", camss_mclk0_clk.c, "6b.qcom,eeprom"),
-#ifdef CONFIG_MACH_SONY_FLAMINGO
-	CLK_LOOKUP("cam_src_clk", mclk0_clk_src.c, "20.qcom,eeprom"),
-	CLK_LOOKUP("cam_clk", camss_mclk0_clk.c, "20.qcom,eeprom"),
-#endif
 
 	/* CCI clocks */
 	CLK_LOOKUP("camss_top_ahb_clk", camss_top_ahb_clk.c,
