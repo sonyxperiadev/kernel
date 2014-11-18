@@ -1253,6 +1253,26 @@ config MACH_SONY_SCORPION_WINDY
 	  If you enable this config,
 	  Please use SONY Mobile source tree.
 
+config MACH_SONY_EAGLE
+	depends on ARCH_MSM8226
+	bool "Sony Mobile Eagle"
+        default n
+	help
+	  Support for the SONY Mobile Xperia M2 device.
+	  It is based on QCOM MSM8226 chipset.
+	  If you enable this config,
+	  Please use SONY Mobile source tree.
+
+config MACH_SONY_FLAMINGO
+	depends on ARCH_MSM8226
+	bool "Sony Mobile Flamingo"
+        default n
+	help
+	  Support for the SONY Mobile Xperia E3 device.
+	  It is based on QCOM MSM8226 chipset.
+	  If you enable this config,
+	  Please use SONY Mobile source tree.
+
 endmenu
 
 config MSM_STACKED_MEMORY
@@ -3078,12 +3098,6 @@ config MSM_FIQ
 	  if apps is not responding and holding lock with irqs disabled.
 	  Modem will then generate an raise a FIQ on this line before sending
 	  SMSM reset.
-
-config MACH_SONY_FLAMINGO
-	bool "Support Sony Flamingo"
-	default n
-	help
-	  This enables support for Sony Mobile's 'flamingo' device.
 
 config MSM_USE_USER_ACCESSIBLE_TIMERS
 	bool "Enables mapping an MSM timer counter page to user space."
