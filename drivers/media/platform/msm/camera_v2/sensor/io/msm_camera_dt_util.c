@@ -118,7 +118,7 @@ int msm_camera_get_dt_power_setting_data(struct device_node *of_node,
 			else if (!strcmp(seq_name, "sensor_gpio_vio"))
 				ps[i].seq_val = SENSOR_GPIO_VIO;
 			else if (!strcmp(seq_name, "sensor_gpio_vana"))
-				ps[i].seq_val = SENSOR_GPIO_VANA;			
+				ps[i].seq_val = SENSOR_GPIO_VANA;
 #endif
 			else
 				rc = -EILSEQ;
@@ -533,7 +533,9 @@ int msm_camera_power_up(struct msm_camera_power_ctrl_t *ctrl,
 		ctrl->gpio_conf->cam_gpio_req_tbl_size, 1);
 	if (rc < 0)
 		no_gpio = rc;
-
+#ifdef CONFIG_MACH_SONY_EAGLE
+	gpio_set_value_cansleep(69,1);
+#endif
 	for (index = 0; index < ctrl->power_setting_size; index++) {
 		CDBG("%s index %d\n", __func__, index);
 		power_setting = &ctrl->power_setting[index];
@@ -691,6 +693,9 @@ int msm_camera_power_down(struct msm_camera_power_ctrl_t *ctrl,
 		sensor_i2c_client->i2c_func_tbl->i2c_util(
 			sensor_i2c_client, MSM_CCI_RELEASE);
 
+#ifdef CONFIG_MACH_SONY_EAGLE
+	gpio_set_value_cansleep(69, GPIOF_OUT_INIT_LOW);
+#endif
 	for (index = (ctrl->power_setting_size - 1); index >= 0; index--) {
 		CDBG("%s index %d\n", __func__, index);
 		power_setting = &ctrl->power_setting[index];
