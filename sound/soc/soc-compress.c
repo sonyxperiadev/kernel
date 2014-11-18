@@ -516,7 +516,7 @@ static int soc_compr_set_params_fe(struct snd_compr_stream *cstream,
 		goto out;
 
 	if (stream == SNDRV_PCM_STREAM_PLAYBACK) {
-#ifdef CONFIG_MATCH_SONY_SHINANO
+#ifdef CONFIG_MACH_SONY_SHINANO
 		tfa98xx_speaker_amp_enable();
 #endif
 		dpcm_dapm_stream_event(fe, stream,
