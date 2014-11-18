@@ -1139,6 +1139,25 @@ config MACH_FSM9XXX_SURF
 	  chipset based SURF evaluation board and
 	  FFA board.
 
+config MACH_SONY_EAGLE
+	depends on ARCH_MSM8226
+	bool "Sony Mobile Eagle"
+        default n
+	help
+	  Support for the SONY Mobile Xperia M2 device.
+	  It is based on QCOM MSM8226 chipset.
+	  If you enable this config,
+	  Please use SONY Mobile source tree.
+
+config MACH_SONY_FLAMINGO
+	depends on ARCH_MSM8226
+	bool "Sony Mobile Flamingo"
+        default n
+	help
+	  Support for the SONY Mobile Xperia E3 device.
+	  It is based on QCOM MSM8226 chipset.
+	  If you enable this config,
+	  Please use SONY Mobile source tree.
 endmenu
 
 config MSM_STACKED_MEMORY
@@ -2981,12 +3000,6 @@ config MSM_FIQ
 	  Modem will then generate an raise a FIQ on this line before sending
 	  SMSM reset.
 
-config MACH_SONY_FLAMINGO
-	bool "Support Sony Flamingo"
-	default n
-	help
-	  This enables support for Sony Mobile's 'flamingo' device.
-
 config MSM_USE_USER_ACCESSIBLE_TIMERS
 	bool "Enables mapping an MSM timer counter page to user space."
 	depends on ARM_USE_USER_ACCESSIBLE_TIMERS
@@ -3059,4 +3072,5 @@ config KRAIT_REGULATOR
 	 line from the PMIC. This supply line is powered by multiple
 	 regulators running in ganged mode inside the PMIC. Enable
 	 this option to support such configurations.
+
 endif
