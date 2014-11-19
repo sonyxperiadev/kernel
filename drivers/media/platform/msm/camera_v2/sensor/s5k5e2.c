@@ -144,10 +144,10 @@ static int32_t s5k5e2_platform_probe(struct platform_device *pdev)
 {
 	int32_t rc = 0,ret;
 	const struct of_device_id *match;
-	pr_info("%s:%d\n", __func__, __LINE__);	
+	pr_info("%s:%d\n", __func__, __LINE__);
 	match = of_match_device(s5k5e2_dt_match, &pdev->dev);
 	rc = msm_sensor_platform_probe(pdev, match->data);
-	pr_info("%s:%d\n", __func__, __LINE__);	
+	pr_info("%s:%d\n", __func__, __LINE__);
 	ret = device_create_file(&(pdev->dev), &dev_attr_read_version);
 	if (0 != ret)
 		pr_err("%s:%d creating attribute failed \n", __func__,__LINE__);
