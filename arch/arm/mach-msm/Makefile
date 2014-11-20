@@ -304,9 +304,12 @@ obj-$(CONFIG_MACH_SAPPHIRE) += board-sapphire-mmc.o board-sapphire-wifi.o
 obj-$(CONFIG_MACH_SAPPHIRE) += board-sapphire-rfkill.o msm_vibrator.o
 
 ifdef CONFIG_MACH_SONY_FLAMINGO
-       obj-$(CONFIG_MACH_SONY_FLAMINGO) += board-8226.o board-8226-yukon_flamingo-gpiomux.o  bms-batterydata-oem.o
+	obj-$(CONFIG_MACH_SONY_FLAMINGO) += board-8226.o board-8226-yukon_flamingo-gpiomux.o  bms-batterydata-oem.o
 else ifdef CONFIG_MACH_SONY_EAGLE
-        obj-$(CONFIG_MACH_SONY_EAGLE) += board-8226-sony_eagle.o board-8226-sony_eagle-gpiomux.o bms-batterydata-eagle.o
+	obj-$(CONFIG_MACH_SONY_EAGLE) += board-8226-sony_eagle.o board-8226-sony_eagle-gpiomux.o bms-batterydata-eagle.o
+else ifdef CONFIG_MACH_SONY_TIANCHI
+	obj-$(CONFIG_MACH_SONY_TIANCHI) += board-8226.o board-sony_tianchi-gpiomux.o bms-batterydata-mari.o bms-batterydata-marie.o bms-batterydata-oem.o
+	obj-$(CONFIG_ARCH_MSM8226) += board-8226-console.o
 else
 	obj-$(CONFIG_ARCH_MSM8226) += board-8226.o board-8226-gpiomux.o bms-batterydata-oem.o
 endif
@@ -418,6 +421,7 @@ obj-$(CONFIG_MSM_SMCMOD) += smcmod.o
 obj-$(CONFIG_MSM_CPU_PWRCTL) +=  msm_cpu_pwrctl.o
 
 obj-$(CONFIG_ARCH_MSM8974) += msm_mpmctr.o
+obj-$(CONFIG_ARCH_MSM8226) += msm_mpmctr.o
 obj-$(CONFIG_MSM_CPR_REGULATOR) += cpr-regulator.o
 obj-$(CONFIG_CPU_FREQ_MSM) += cpufreq.o
 obj-$(CONFIG_MSM_DEVFREQ_CPUBW) += devfreq_cpubw.o
