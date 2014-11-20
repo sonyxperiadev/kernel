@@ -1158,6 +1158,17 @@ config MACH_SONY_FLAMINGO
 	  It is based on QCOM MSM8226 chipset.
 	  If you enable this config,
 	  Please use SONY Mobile source tree.
+
+config MACH_SONY_TIANCHI
+	depends on ARCH_MSM8226
+	bool "Sony Mobile Tianchi"
+        default n
+	help
+	  Support for the SONY Mobile Xperia T2 Ultra device.
+	  It is based on QCOM MSM8x26 chipset
+	  If you enable this config,
+	  Please use SONY Mobile source tree.
+
 endmenu
 
 config MSM_STACKED_MEMORY
