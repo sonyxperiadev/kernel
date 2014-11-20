@@ -53,3 +53,12 @@ config FB_MSM_MDSS_MDP3
 	---help---
 	The MDP3 provides support for an older version display controller
 	included in latest display sub-system, known as MDSS.
+
+config FB_MSM_MDSS_HDMI_MHL_SII8620_8061
+	depends on FB_MSM_MDSS_HDMI_PANEL
+	bool 'MHL SII8620 and SII8061 support '
+	default n
+	---help---
+	Support the HDMI to MHL1/2/3 conversion.
+	MHL (Mobile High-Definition Link) technology
+        uses USB connector to output HDMI content
