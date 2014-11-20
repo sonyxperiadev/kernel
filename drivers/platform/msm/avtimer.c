@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
 
 * This program is free software; you can redistribute it and/or modify
 * it under the terms of the GNU General Public License version 2 and
@@ -25,11 +25,15 @@
 #include <linux/wait.h>
 #include <linux/sched.h>
 #include <linux/qdsp6v2/apr.h>
+#include <sound/q6core.h>
 
 #define DEVICE_NAME "avtimer"
 #define TIMEOUT_MS 1000
 #define CORE_CLIENT 1
 #define TEMP_PORT ((CORE_CLIENT << 8) | 0x0001)
+#define SSR_WAKETIME 1000
+#define Q6_READY_RETRY 250
+#define Q6_READY_MAX_RETRIES 40
 
 #define AVCS_CMD_REMOTE_AVTIMER_VOTE_REQUEST 0x00012914
 #define AVCS_CMD_RSP_REMOTE_AVTIMER_VOTE_REQUEST 0x00012915
@@ -53,11 +57,15 @@ struct avtimer_t {
 	struct mutex avtimer_lock;
 	int avtimer_open_cnt;
 	struct dev_avtimer_data avtimer_pdata;
+	struct delayed_work ssr_dwork;
 	wait_queue_head_t adsp_resp_wait;
 	int enable_timer_resp_recieved;
 	int timer_handle;
 	void __iomem *p_avtimer_msw;
 	void __iomem *p_avtimer_lsw;
+	uint32_t clk_div;
+	atomic_t adsp_ready;
+	int num_retries;
 };
 
 static struct avtimer_t avtimer;
@@ -102,6 +110,10 @@ static int32_t aprv2_core_fn_q(struct apr_client_data *data, void *priv)
 		pr_debug("%s: Reset event received in AV timer\n", __func__);
 		apr_reset(avtimer.core_handle_q);
 		avtimer.core_handle_q = NULL;
+		avtimer.avtimer_open_cnt = 0;
+		atomic_set(&avtimer.adsp_ready, 0);
+		schedule_delayed_work(&avtimer.ssr_dwork,
+				  msecs_to_jiffies(SSR_WAKETIME));
 		break;
 	}
 
@@ -239,8 +251,10 @@ int avcs_core_disable_power_collapse(int enable)
 			goto done;
 		}
 		rc = avcs_core_enable_avtimer("timer");
-		if (!rc)
+		if (!rc) {
 			avtimer.avtimer_open_cnt++;
+			atomic_set(&avtimer.adsp_ready, 1);
+		}
 	} else {
 		if (avtimer.avtimer_open_cnt > 0) {
 			avtimer.avtimer_open_cnt--;
@@ -256,6 +270,48 @@ done:
 	return rc;
 }
 EXPORT_SYMBOL(avcs_core_disable_power_collapse);
+
+static void reset_work(struct work_struct *work)
+{
+	if (q6core_is_adsp_ready()) {
+		avcs_core_disable_power_collapse(1);
+		avtimer.num_retries = Q6_READY_MAX_RETRIES;
+		return;
+	}
+	pr_debug("%s:Q6 not ready-retry after sometime\n", __func__);
+	if (--avtimer.num_retries > 0) {
+		schedule_delayed_work(&avtimer.ssr_dwork,
+			  msecs_to_jiffies(Q6_READY_RETRY));
+	} else {
+		pr_err("%s: Q6 failed responding after multiple retries\n",
+							__func__);
+		avtimer.num_retries = Q6_READY_MAX_RETRIES;
+	}
+}
+
+int avcs_core_query_timer(uint64_t *avtimer_tick)
+{
+	uint32_t avtimer_msw = 0, avtimer_lsw = 0;
+	uint32_t res = 0;
+	uint64_t avtimer_tick_temp;
+
+	if (!atomic_read(&avtimer.adsp_ready)) {
+		pr_debug("%s:In SSR, return\n", __func__);
+		return -ENETRESET;
+	}
+	avtimer_lsw = ioread32(avtimer.p_avtimer_lsw);
+	avtimer_msw = ioread32(avtimer.p_avtimer_msw);
+
+	avtimer_tick_temp =
+		(uint64_t)((uint64_t)avtimer_msw << 32)
+			| avtimer_lsw;
+	res = do_div(avtimer_tick_temp, avtimer.clk_div);
+	*avtimer_tick = avtimer_tick_temp;
+	pr_debug("%s:Avtimer: msw: %u, lsw: %u, tick: %llu\n", __func__,
+			avtimer_msw, avtimer_lsw, *avtimer_tick);
+	return 0;
+}
+EXPORT_SYMBOL(avcs_core_query_timer);
 
 static int avtimer_open(struct inode *inode, struct file *file)
 {
@@ -285,6 +341,7 @@ static long avtimer_ioctl(struct file *file, unsigned int ioctl_num,
 			avtimer_msw_2nd = ioread32(avtimer.p_avtimer_msw);
 		} while (avtimer_msw_1st != avtimer_msw_2nd);
 
+		avtimer_lsw = avtimer_lsw/avtimer.clk_div;
 		avtimer_tick =
 		((uint64_t) avtimer_msw_1st << 32) | avtimer_lsw;
 
@@ -317,6 +374,7 @@ static int dev_avtimer_probe(struct platform_device *pdev)
 	dev_t dev = MKDEV(major, 0);
 	struct device *device_handle;
 	struct resource *reg_lsb = NULL, *reg_msb = NULL;
+	uint32_t clk_div_val;
 
 	if (!pdev) {
 		pr_err("%s: Invalid params\n", __func__);
@@ -336,6 +394,8 @@ static int dev_avtimer_probe(struct platform_device *pdev)
 			"avtimer_msb_addr", __func__);
 		return -EINVAL;
 	}
+	INIT_DELAYED_WORK(&avtimer.ssr_dwork, reset_work);
+
 	avtimer.p_avtimer_lsw = devm_ioremap_nocache(&pdev->dev,
 				reg_lsb->start, resource_size(reg_lsb));
 	if (!avtimer.p_avtimer_lsw) {
@@ -351,6 +411,7 @@ static int dev_avtimer_probe(struct platform_device *pdev)
 			__func__);
 		goto unmap;
 	}
+	avtimer.num_retries = Q6_READY_MAX_RETRIES;
 	/* get the device number */
 	if (major)
 		result = register_chrdev_region(dev, 1, DEVICE_NAME);
@@ -360,14 +421,15 @@ static int dev_avtimer_probe(struct platform_device *pdev)
 	}
 
 	if (result < 0) {
-		pr_err("%s: Registering avtimer device failed\n", __func__);
+		dev_err(&pdev->dev, "%s: Registering avtimer device failed\n",
+			__func__);
 		goto unmap;
 	}
 
 	avtimer.avtimer_class = class_create(THIS_MODULE, "avtimer");
 	if (IS_ERR(avtimer.avtimer_class)) {
 		result = PTR_ERR(avtimer.avtimer_class);
-		pr_err("%s: Error creating avtimer class: %d\n",
+		dev_err(&pdev->dev, "%s: Error creating avtimer class: %d\n",
 			__func__, result);
 		goto unregister_chrdev_region;
 	}
@@ -376,7 +438,8 @@ static int dev_avtimer_probe(struct platform_device *pdev)
 	result = cdev_add(&avtimer.myc, dev, 1);
 
 	if (result < 0) {
-		pr_err("%s: Registering file operations failed\n", __func__);
+		dev_err(&pdev->dev, "%s: Registering file operations failed\n",
+			__func__);
 		goto class_destroy;
 	}
 
@@ -394,6 +457,13 @@ static int dev_avtimer_probe(struct platform_device *pdev)
 	pr_debug("%s: Device create done for avtimer major=%d\n",
 			__func__, major);
 
+	if (of_property_read_u32(pdev->dev.of_node,
+			"qcom,clk_div", &clk_div_val))
+		avtimer.clk_div = 1;
+	else
+		avtimer.clk_div = clk_div_val;
+
+	pr_debug("avtimer.clk_div = %d\n", avtimer.clk_div);
 	return 0;
 
 class_destroy:
