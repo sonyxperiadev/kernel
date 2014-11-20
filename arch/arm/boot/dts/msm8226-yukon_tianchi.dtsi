@@ -1,0 +1,146 @@
+/* Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013 Sony Mobile Communications AB.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+/include/ "msm8226.dtsi"
+/include/ "msm8226-yukon_tianchi-mdss.dtsi"
+
+&soc {
+	i2c@f9925000 { /* BLSP-1 QUP-3 */
+		nfc@28 {
+			compatible = "nxp,pn547";
+			reg = <0x28>;
+			interrupt-parent = <&msmgpio>;
+			interrupts = <21 0x0>;
+			nxp,irq_gpio = <&msmgpio 21 0x00>;
+			nxp,dwld_en = <&msmgpio 20 0x00>;
+			nxp,ven = <&pm8226_gpios 2 0x01>;
+			nxp,clk_req = <&pm8226_gpios 3 0x00>;
+		};
+	};
+
+	i2c@f9926000 { /* BLSP-1 QUP-4 */
+		ti_lm3630_bl@36 {
+			compatible = "ti,lm3630_bl";
+			reg = <0x36>;
+			gpio_hw_en = <&msmgpio 27 0>;
+			pwm_feedback = <0x09>;
+			ctl = <0x05>;
+			fsc = <20000 0>;
+			iname = "lm3630-lcd-bl";
+			connected = <0x01 0x00>;
+			bank = <0x00 0x01>;
+			filter_str = <0x03>;
+			ovp_boost = <0x46>;
+			led_fault = <0x00>;
+			intf_name = "lm3630-lcd-bl";
+			brightness = <255 0>;
+		};
+	};
+
+	i2c@f9927000 { /* BLSP1 QUP5 */
+		cypress@24 {
+			compatible = "cy,cyttsp4_i2c_adapter";
+			reg = <0x24>;
+			interrupt-parent = <&msmgpio>;
+			interrupts = <17 0x2>;
+			cy,adapter_id = "cyttsp4_i2c_adapter";
+			vdd-supply = <&pm8226_l19>;
+			vcc_i2c-supply = <&pm8226_lvs1>;
+			vdd_l27-supply = <&pm8226_l27>;
+
+			cy,core {
+				cy,name = "cyttsp4_core";
+				cy,id = "main_ttsp_core";
+
+				cy,irq_gpio = <17>;
+				cy,rst_gpio = <16>;
+
+				/* Enable cy,max_xfer_len to limit max I2C/SPI transfer length */
+				/* cy,max_xfer_len = <0x100>; */
+
+				/* CY_CORE_FLAG_WAKE_ON_GESTURE */
+				cy,flags = <1>;
+				/* CY_CORE_EWG_TAP_TAP | CY_CORE_EWG_TWO_FINGER_SLIDE */
+				cy,easy_wakeup_gesture = <3>;
+				cy,btn_keys = <102 /* KEY_HOME */
+						139 /* KEY_MENU */
+						158 /* KEY_BACK */
+						217 /* KEY_SEARCH */
+						114 /* KEY_VOLUMEDOWN */
+						115 /* KEY_VOLUMEUP */
+						212 /* KEY_CAMERA */
+						116>; /* KEY_POWER */
+				cy,btn_keys-tag = <0>;
+
+				cy,mt {
+					cy,name = "cyttsp4_mt";
+					cy,inp_dev_name = "cyttsp4_mt";
+					/* CY_MT_FLAG_FLIP | CY_MT_FLAG_INV_X | CY_MT_FLAG_INV_Y */
+					cy,flags = <0x0>;
+					cy,abs =
+						/* ABS_MT_POSITION_X, CY_ABS_MIN_X, CY_ABS_MAX_X, 0, 0 */
+						<0x35 0 1080 0 0
+						/* ABS_MT_POSITION_Y, CY_ABS_MIN_Y, CY_ABS_MAX_Y, 0, 0 */
+						0x36 0 1920 0 0
+						/* ABS_MT_PRESSURE, CY_ABS_MIN_P, CY_ABS_MAX_P, 0, 0 */
+						0x3a 0 255 0 0
+						/* CY_IGNORE_VALUE, CY_ABS_MIN_W, CY_ABS_MAX_W, 0, 0 */
+						0xffff 0 255 0 0
+						/* ABS_MT_TRACKING_ID, CY_ABS_MIN_T, CY_ABS_MAX_T, 0, 0 */
+						0x39 0 15 0 0
+						/* ABS_MT_TOUCH_MAJOR, 0, 255, 0, 0 */
+						0x30 0 255 0 0
+						/* ABS_MT_TOUCH_MINOR, 0, 255, 0, 0 */
+						0x31 0 255 0 0
+						/* ABS_MT_ORIENTATION, -128, 127, 0, 0 */
+						0x34 0xfffffed7 127 0 0>;
+
+					cy,vkeys_x = <720>;
+					cy,vkeys_y = <1280>;
+
+					cy,virtual_keys = /* KeyCode CenterX CenterY Width Height */
+						/* KEY_BACK */
+						<158 1360 90 160 180
+						/* KEY_MENU */
+						139 1360 270 160 180
+						/* KEY_HOME */
+						102 1360 450 160 180
+						/* KEY SEARCH */
+						217 1360 630 160 180>;
+				};
+			};
+		};
+	};
+};
+
+&rpm_bus {
+	rpm-regulator-ldoa28 {
+		pm8226_l28: regulator-l28 {
+			regulator-always-on;
+		};
+	};
+};
+
+&mdss_mdp {
+	qcom,mdss-pref-prim-intf = "dsi";
+};
+
+&spmi_bus {
+	qcom,pm8226@1 {
+		qcom,leds@d300 {
+			pm8226_flash0: qcom,flash_0 {
+				qcom,max-current = <625>;
+			};
+		};
+	};
+};
