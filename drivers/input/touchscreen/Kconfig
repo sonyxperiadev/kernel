@@ -539,6 +539,18 @@ config TOUCHSCREEN_CLEARPAD_RMI_DEV
         help
           Say Y here to enable Synaptics ClearPad RMI dev.
 
+config TOUCHSCREEN_MAX1187X
+	tristate "Maxim max1187x Touchscreen"
+	depends on I2C
+	help
+	  Say Y here if you have a Maxim max1187x touchscreen connected
+	  to your system.
+
+	  If unsure, say N.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called max1187x.
+
 config TOUCHSCREEN_TOUCHRIGHT
 	tristate "Touchright serial touchscreen"
 	select SERIO
