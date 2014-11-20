@@ -14,9 +14,10 @@
 *****************************************************************************/
 #ifndef __BCMPMU59xxx_FG_H_
 #define __BCMPMU59xxx_FG_H_
-struct batt_volt_cap_map {
+struct batt_volt_cap_cpt_map {
 	u32 volt;
 	u32 cap;
+	u32 cpt;
 };
 
 struct batt_temp_adc_map {
@@ -67,8 +68,8 @@ struct bcmpmu_batt_property {
 	u8 flat_ocv_soc_low; /* Lower part of flat OCV area in percent */
 
 	/* lookup tables */
-	struct batt_volt_cap_map *volt_cap_lut;
-	u32 volt_cap_lut_sz;
+	struct batt_volt_cap_cpt_map *volt_cap_cpt_lut;
+	u32 volt_cap_cpt_lut_sz;
 	struct batt_temp_adc_map *temp_adc_lut;
 	u32 temp_adc_lut_sz;
 	struct batt_esr_temp_lut *esr_temp_lut;
