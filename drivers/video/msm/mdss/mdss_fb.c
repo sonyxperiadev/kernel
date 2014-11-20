@@ -3,6 +3,7 @@
  *
  * Copyright (C) 2007 Google Incorporated
  * Copyright (c) 2008-2014, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2013 Sony Mobile Communications AB.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -52,6 +53,9 @@
 #include <mach/msm_memtypes.h>
 
 #include "mdss_fb.h"
+#include "mdss_mdp.h"
+#include "mdss_dsi.h"
+#include <linux/gpio.h> 
 
 #ifdef CONFIG_FB_MSM_TRIPLE_BUFFER
 #define MDSS_FB_NUM 3
@@ -154,6 +158,7 @@ static int mdss_fb_notify_update(struct msm_fb_data_type *mfd,
 	return ret;
 }
 
+#ifndef CONFIG_FB_MSM_MDSS_PANEL_SPECIFIC
 static int mdss_fb_splash_thread(void *data)
 {
 	struct msm_fb_data_type *mfd = data;
@@ -194,6 +199,7 @@ splash_err:
 end:
 	return ret;
 }
+#endif	/* CONFIG_FB_MSM_MDSS_PANEL_SPECIFIC */
 
 static int lcd_backlight_registered;
 
@@ -226,6 +232,9 @@ static struct led_classdev backlight_led = {
 	.name           = "lcd-backlight",
 	.brightness     = MDSS_MAX_BL_BRIGHTNESS,
 	.brightness_set = mdss_fb_set_bl_brightness,
+#ifdef CONFIG_FB_MSM_MDSS_PANEL_SPECIFIC
+	.max_brightness = MDSS_MAX_BL_BRIGHTNESS,
+#endif
 };
 
 static ssize_t mdss_fb_get_type(struct device *dev,
@@ -469,6 +478,38 @@ static int mdss_fb_probe(struct platform_device *pdev)
 		break;
 	}
 
+#ifdef CONFIG_DEBUG_FS
+	if ((mfd->panel_info->type == MIPI_VIDEO_PANEL) ||
+		(mfd->panel_info->type == MIPI_CMD_PANEL))
+		mipi_dsi_panel_create_debugfs(mfd);
+#endif
+
+#ifdef CONFIG_FB_MSM_MDSS_PANEL_SPECIFIC
+	if (mfd->index == 0) {
+		struct mdss_dsi_ctrl_pdata *ctrl_pdata;
+
+		ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
+			panel_data);
+		if (!ctrl_pdata) {
+			pr_err("%s: Invalid input data\n", __func__);
+			return -EINVAL;
+		}
+		if (ctrl_pdata->spec_pdata) {
+			if (ctrl_pdata->spec_pdata->panel_detect) {
+				mdss_fb_blank_sub(FB_BLANK_UNBLANK, mfd->fbi,
+					mfd->op_enable);
+				if (pdata->detect)
+					pdata->detect(pdata);
+				mdss_fb_blank_sub(FB_BLANK_POWERDOWN, mfd->fbi,
+					mfd->op_enable);
+				if (pdata->update_panel)
+					pdata->update_panel(pdata);
+			} else {
+				ctrl_pdata->spec_pdata->detected = true;
+			}
+		}
+	}
+#else
 	if (mfd->splash_logo_enabled) {
 		mfd->splash_thread = kthread_run(mdss_fb_splash_thread, mfd,
 				"mdss_fb_splash");
@@ -478,6 +519,7 @@ static int mdss_fb_probe(struct platform_device *pdev)
 			mfd->splash_thread = NULL;
 		}
 	}
+#endif	/* CONFIG_FB_MSM_MDSS_PANEL_SPECIFIC */
 
 	return rc;
 }
@@ -497,6 +539,12 @@ static int mdss_fb_remove(struct platform_device *pdev)
 
 	if (mfd->key != MFD_KEY)
 		return -EINVAL;
+
+#ifdef CONFIG_DEBUG_FS
+	if ((mfd->panel_info->type == MIPI_VIDEO_PANEL) ||
+		(mfd->panel_info->type == MIPI_CMD_PANEL))
+		mipi_dsi_panel_remove_debugfs(mfd);
+#endif
 
 	if (mdss_fb_suspend_sub(mfd))
 		pr_err("msm_fb_remove: can't stop the device %d\n",
@@ -1698,6 +1746,9 @@ static int __mdss_fb_perform_commit(struct msm_fb_data_type *mfd)
 		else
 			pr_warn("no kickoff function setup for fb%d\n",
 					mfd->index);
+#ifdef CONFIG_FB_MSM_MDSS_PANEL_SPECIFIC
+		mdss_dsi_panel_fps_data_update(mfd);
+#endif
 	} else {
 		ret = mdss_fb_pan_display_sub(&fb_backup->disp_commit.var,
 				&fb_backup->info);
@@ -1708,6 +1759,9 @@ static int __mdss_fb_perform_commit(struct msm_fb_data_type *mfd)
 	if (!ret)
 		mdss_fb_update_backlight(mfd);
 
+#ifdef CONFIG_FB_MSM_MDSS_PANEL_SPECIFIC
+		mdss_dsi_panel_fps_data_update(mfd);
+#endif
 	if (IS_ERR_VALUE(ret) || !sync_pt_data->flushed)
 		mdss_fb_signal_timeline(sync_pt_data);
 
