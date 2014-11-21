@@ -418,7 +418,7 @@ exit:
 	return retval;
 }
 
-static int __devinit rmi_dev_probe(struct platform_device *pdev)
+static int rmi_dev_probe(struct platform_device *pdev)
 {
 
 	struct clearpad_data_t *cdata = pdev->dev.platform_data;
@@ -457,7 +457,7 @@ exit:
 	return retval;
 }
 
-static int __devexit rmi_dev_remove(struct platform_device *pdev)
+static int rmi_dev_remove(struct platform_device *pdev)
 {
 	struct rmidev_data *data = dev_get_drvdata(&pdev->dev);
 	dev_set_drvdata(&pdev->dev, NULL);
@@ -471,7 +471,7 @@ static struct platform_driver rmidev_driver = {
 		.owner	= THIS_MODULE,
 	},
 	.probe		= rmi_dev_probe,
-	.remove		= __devexit_p(rmi_dev_remove),
+	.remove		= rmi_dev_remove,
 };
 
 static int __init rmidev_init(void)

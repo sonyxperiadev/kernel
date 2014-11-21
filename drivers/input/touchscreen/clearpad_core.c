@@ -5280,7 +5280,7 @@ exit:
 }
 #endif /* CONFIG_DEBUG_FS */
 
-static int __devinit clearpad_probe(struct platform_device *pdev)
+static int clearpad_probe(struct platform_device *pdev)
 {
 	struct clearpad_data_t *cdata = pdev->dev.platform_data;
 	struct clearpad_t *this;
@@ -5493,7 +5493,7 @@ exit:
 	return rc;
 }
 
-static int __devexit clearpad_remove(struct platform_device *pdev)
+static int clearpad_remove(struct platform_device *pdev)
 {
 #ifdef CONFIG_TOUCHSCREEN_CLEARPAD_RMI_DEV
 	struct clearpad_data_t *cdata = pdev->dev.platform_data;
@@ -5540,7 +5540,7 @@ static struct platform_driver clearpad_driver = {
 		.pm	= &clearpad_pm,
 	},
 	.probe		= clearpad_probe,
-	.remove		= __devexit_p(clearpad_remove),
+	.remove		= clearpad_remove,
 };
 
 static int __init clearpad_init(void)
