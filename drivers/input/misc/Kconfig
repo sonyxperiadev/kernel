@@ -747,4 +747,11 @@ config SENSORS_BMG160
         help
           BMG160 Gyroscope Driver implemented by Bosch-Sensortec.
 
+config SENSORS_BMM050
+	tristate "BMM050 Magnetic Sensor Driver"
+        depends on I2C
+        default n
+        help
+          BMM050 Magnetic Sensor Driver implemented by Bosch-Sensortec.
+
 endif
