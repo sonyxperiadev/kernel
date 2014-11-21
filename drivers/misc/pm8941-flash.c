@@ -738,7 +738,7 @@ static struct device_attribute flash_attr[] = {
 	__ATTR_NULL,
 };
 
-static int __devinit pm8941_flash_initialize(struct pm8941_flash_data *data)
+static int pm8941_flash_initialize(struct pm8941_flash_data *data)
 {
 	int rc;
 	u8 reg;
@@ -887,7 +887,7 @@ static int pm8941_attributes_init(struct pm8941_flash_data *data)
  * Handlers for alternative sources of platform_data
  */
 
-static int __devinit pm8941_get_config_flash(struct pm8941_flash_data *data,
+static int pm8941_get_config_flash(struct pm8941_flash_data *data,
 				struct device_node *node)
 {
 	int rc;
@@ -972,7 +972,7 @@ static int __devinit pm8941_get_config_flash(struct pm8941_flash_data *data,
 	return 0;
 }
 
-static int __devinit pm8941_flash_probe(struct spmi_device *spmi)
+static int pm8941_flash_probe(struct spmi_device *spmi)
 {
 	struct pm8941_flash_data *data;
 	struct resource *flash_resource;
@@ -1055,7 +1055,7 @@ fail_id_check:
 	return rc;
 }
 
-static int __devexit pm8941_flash_remove(struct spmi_device *spmi)
+static int pm8941_flash_remove(struct spmi_device *spmi)
 {
 	struct pm8941_flash_data *data  = dev_get_drvdata(&spmi->dev);
 
@@ -1078,7 +1078,7 @@ static struct spmi_driver pm8941_flash_driver = {
 		.of_match_table = spmi_match_table,
 	},
 	.probe		= pm8941_flash_probe,
-	.remove		= __devexit_p(pm8941_flash_remove),
+	.remove		= pm8941_flash_remove,
 };
 
 static int __init pm8941_flash_init(void)
