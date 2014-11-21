@@ -60,6 +60,7 @@
 #include <linux/of_gpio.h>
 #include <linux/gpio.h>
 #include <linux/ipc_logging.h>
+#include <linux/pinctrl/consumer.h>
 #include <asm/atomic.h>
 #include <asm/irq.h>
 
@@ -2570,6 +2571,7 @@ static int msm_hs_startup(struct uart_port *uport)
 	int ret;
 	int rfr_level;
 	unsigned long flags;
+	unsigned int data;
 	struct msm_hs_port *msm_uport = UARTDM_TO_MSM(uport);
 	struct circ_buf *tx_buf = &uport->state->xmit;
 	struct msm_hs_tx *tx = &msm_uport->tx;
