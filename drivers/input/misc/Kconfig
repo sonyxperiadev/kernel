@@ -740,4 +740,11 @@ config SENSORS_BMA2X2
           If you say yes here you get support for Bosch Sensortec's
           acceleration sensors BMA255/BMA250E/BMA222E/BMA280.
 
+config SENSORS_BMG160
+	tristate "BMG160 Gyroscope Driver"
+        depends on I2C
+        default n
+        help
+          BMG160 Gyroscope Driver implemented by Bosch-Sensortec.
+
 endif
