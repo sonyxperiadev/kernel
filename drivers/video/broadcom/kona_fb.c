@@ -61,6 +61,7 @@
 #include <linux/of_irq.h>
 #include <linux/of_platform.h>
 #include <linux/of_gpio.h>
+#include <linux/wakelock.h>
 
 #ifdef CONFIG_DEBUG_FS
 #include <linux/debugfs.h>
@@ -93,6 +94,8 @@
 #define KONA_IOCTL_SET_BUFFER_AND_UPDATE	_IO('F', 0x80)
 #define KONA_IOCTL_GET_FB_IOVA			_IOR('F', 0x81, u32)
 
+#define SUSPEND_LINK_DELAY_MS 100
+
 static struct pi_mgr_qos_node g_mm_qos_node;
 
 #ifdef CONFIG_FB_BRCM_CP_CRASH_DUMP_IMAGE_SUPPORT
@@ -102,7 +105,6 @@ static DEFINE_SPINLOCK(g_fb_crash_spin_lock);
 enum lcd_state {
 	KONA_FB_UNBLANK,
 	KONA_FB_BLANK,
-	KONA_FB_LINK_SUSPENDED,
 };
 
 enum link_ctrl {
@@ -153,6 +155,11 @@ struct kona_fb {
 	int esd_failure_cnt;
 	/* user count */
 	unsigned short open_count;
+
+	bool link_suspended;
+	bool suspend_link;
+	struct delayed_work link_work;
+	struct wake_lock wlock;
 
 #ifdef CONFIG_DEBUG_FS
 	struct dentry *dbgfs_dir;
@@ -333,23 +340,55 @@ static inline void kona_clock_stop(struct kona_fb *fb)
 	fb->display_ops->stop(fb->display_hdl, &fb->dfs_node);
 }
 
+static void fb_suspend_link_work(struct work_struct *work)
+{
+	struct delayed_work *dw = container_of(work, struct delayed_work, work);
+	struct kona_fb *fb = container_of(dw, struct kona_fb, link_work);
+
+	if (mutex_trylock(&fb->update_sem)) {
+		/* We might have exited special mode */
+		if (!fb->suspend_link) {
+			konafb_info("do not suspend\n");
+		} else if (fb->link_suspended) {
+			konafb_info("link already suspended\n");
+		} else {
+			if (!fb->display_info->vmode)
+				kona_clock_start(fb);
+			fb->display_ops->suspend_link(fb->display_hdl);
+			if (!fb->display_info->vmode)
+				kona_clock_stop(fb);
+			pi_mgr_qos_request_update(&g_mm_qos_node,
+				PI_MGR_QOS_DEFAULT_VALUE);
+			fb->link_suspended = true;
+		}
+		mutex_unlock(&fb->update_sem);
+	} else {
+		konafb_info("mutex locked! link not closed\n");
+	}
+	wake_unlock(&fb->wlock);
+}
+
 static void link_control(struct kona_fb *fb, enum link_ctrl link_ctrl)
 {
 	if (link_ctrl == RESUME_LINK) {
+		if (!fb->link_suspended) {
+			konafb_warning("link already active\n");
+			return;
+		}
+		cancel_delayed_work_sync(&fb->link_work);
+		wake_unlock(&fb->wlock);
 		pi_mgr_qos_request_update(&g_mm_qos_node, 10);
 		if (!fb->display_info->vmode)
 			kona_clock_start(fb);
 		fb->display_ops->resume_link(fb->display_hdl);
 		if (!fb->display_info->vmode)
 			kona_clock_stop(fb);
+		fb->link_suspended = false;
 	} else {
-		if (!fb->display_info->vmode)
-			kona_clock_start(fb);
-		fb->display_ops->suspend_link(fb->display_hdl);
-		if (!fb->display_info->vmode)
-			kona_clock_stop(fb);
-		pi_mgr_qos_request_update(&g_mm_qos_node,
-						PI_MGR_QOS_DEFAULT_VALUE);
+		cancel_delayed_work_sync(&fb->link_work);
+		wake_lock(&fb->wlock);
+		schedule_delayed_work(&fb->link_work,
+				msecs_to_jiffies(SUSPEND_LINK_DELAY_MS));
 	}
 }
 
@@ -786,10 +825,8 @@ static int kona_fb_pan_display(struct fb_var_screeninfo *var,
 	fb_fps_display(fb->fps_info, dst, 5, 2, 0);
 #endif
 
-	if (fb->blank_state == KONA_FB_LINK_SUSPENDED) {
-		konafb_debug("Resume link\n");
+	if (fb->link_suspended)
 		link_control(fb, RESUME_LINK);
-	}
 
 	if (!atomic_read(&fb->is_fb_registered)) {
 		if (!fb->display_info->vmode)
@@ -844,10 +881,9 @@ static int kona_fb_pan_display(struct fb_var_screeninfo *var,
 		}
 	}
 
-	if (fb->blank_state == KONA_FB_LINK_SUSPENDED) {
-		konafb_debug("Suspend link again\n");
+	if (fb->suspend_link)
 		link_control(fb, SUSPEND_LINK);
-	}
+
 skip_drawing:
 	mutex_unlock(&fb->update_sem);
 
@@ -958,6 +994,7 @@ static ssize_t kona_fb_panel_mode_store(struct device *dev,
 			konafb_debug("Not in UNBLANK state (%d)\n",
 							fb->blank_state);
 			fb->display_info->special_mode_on = true;
+			fb->suspend_link = true;
 			goto exit_unlock;
 		}
 		if (fb->fb_data->esdcheck)
@@ -972,10 +1009,10 @@ static ssize_t kona_fb_panel_mode_store(struct device *dev,
 			panel_write(fb->display_info->cabc_off_seq);
 		panel_write(fb->display_info->special_mode_on_seq);
 		kona_clock_stop(fb);
+		fb->suspend_link = true;
 		link_control(fb, SUSPEND_LINK);
 		complete(&g_kona_fb->prev_buf_done_sem);
 		fb->display_info->special_mode_on = true;
-		fb->blank_state = KONA_FB_LINK_SUSPENDED;
 		konafb_debug("Special mode ON\n");
 	} else {
 		/* Exit special mode */
@@ -985,15 +1022,14 @@ static ssize_t kona_fb_panel_mode_store(struct device *dev,
 			   this state the display is already powered off */
 			konafb_debug("Exit black mode\n");
 			fb->display_info->special_mode_on = false;
+			fb->suspend_link = false;
 			goto exit_unlock;
 		}
-		if (fb->blank_state != KONA_FB_LINK_SUSPENDED) {
-			konafb_error("Not in LINK_SUSPENDED state (%d)\n",
-							fb->blank_state);
-			ret = -EINVAL;
-			goto exit_unlock;
-		}
-		link_control(fb, RESUME_LINK);
+		cancel_delayed_work_sync(&fb->link_work);
+		wake_unlock(&fb->wlock);
+		fb->suspend_link = false;
+		if (fb->link_suspended)
+			link_control(fb, RESUME_LINK);
 		complete(&g_kona_fb->prev_buf_done_sem);
 		kona_clock_start(fb);
 		panel_write(fb->display_info->special_mode_off_seq);
@@ -1009,7 +1045,6 @@ static ssize_t kona_fb_panel_mode_store(struct device *dev,
 
 		fb->display_ops->enable_send_first_frame_event(fb->display_hdl);
 		fb->display_info->special_mode_on = false;
-		fb->blank_state = KONA_FB_UNBLANK;
 		konafb_debug("Special mode OFF\n");
 	}
 exit_unlock:
@@ -1068,6 +1103,7 @@ static ssize_t dbgfs_reg_read(struct file *file, const char __user *ubuf,
 	char *p;
 	int i;
 
+	mutex_lock(&fb->update_sem);
 	kbuf = kzalloc(sizeof(char) * count, GFP_KERNEL);
 	if (!kbuf) {
 		pr_err("%s: Failed to allocate buffer\n", __func__);
@@ -1108,10 +1144,8 @@ static ssize_t dbgfs_reg_read(struct file *file, const char __user *ubuf,
 		goto fail_exit;
 	}
 
-	if (fb->blank_state == KONA_FB_LINK_SUSPENDED) {
-		konafb_debug("Resume link\n");
+	if (fb->link_suspended)
 		link_control(fb, RESUME_LINK);
-	}
 
 	if (!fb->display_info->vmode)
 		kona_clock_start(fb);
@@ -1121,10 +1155,8 @@ static ssize_t dbgfs_reg_read(struct file *file, const char __user *ubuf,
 	if (!fb->display_info->vmode)
 		kona_clock_stop(fb);
 
-	if (fb->blank_state == KONA_FB_LINK_SUSPENDED) {
-		konafb_debug("Suspend link again\n");
+	if (fb->suspend_link)
 		link_control(fb, SUSPEND_LINK);
-	}
 
 	pr_info("%s: reg 0x%.2x, len %d\n", __func__, reg, len);
 	for (i = 0; i < len; i++)
@@ -1134,6 +1166,7 @@ static ssize_t dbgfs_reg_read(struct file *file, const char __user *ubuf,
 fail_exit:
 	kfree(kbuf);
 exit:
+	mutex_unlock(&fb->update_sem);
 	return count;
 }
 
@@ -1171,6 +1204,7 @@ static ssize_t dbgfs_reg_write(struct file *file, const char __user *ubuf,
 	struct seq_file *s = file->private_data;
 	struct kona_fb *fb = s->private;
 
+	mutex_lock(&fb->update_sem);
 	kbuf = kzalloc(sizeof(char) * count, GFP_KERNEL);
 	if (!kbuf) {
 		pr_err("%s: Failed to allocate buffer\n", __func__);
@@ -1261,21 +1295,18 @@ static ssize_t dbgfs_reg_write(struct file *file, const char __user *ubuf,
 		rec[1] = rec_len - 2;
 	}
 
-	if (fb->blank_state == KONA_FB_LINK_SUSPENDED) {
-		konafb_debug("Resume link\n");
+	if (fb->link_suspended)
 		link_control(fb, RESUME_LINK);
-	}
 
 	panel_write(rec);
 
-	if (fb->blank_state == KONA_FB_LINK_SUSPENDED) {
-		konafb_debug("Suspend link again\n");
+	if (fb->suspend_link)
 		link_control(fb, SUSPEND_LINK);
-	}
 
 fail_exit:
 	kfree(kbuf);
 exit:
+	mutex_unlock(&fb->update_sem);
 	return count;
 }
 
@@ -1300,6 +1331,7 @@ static ssize_t dbgfs_cabc_write(struct file *file, const char __user *ubuf,
 	struct seq_file *s = file->private_data;
 	struct kona_fb *fb = s->private;
 
+	mutex_lock(&fb->update_sem);
 	kbuf = kzalloc(sizeof(char) * count, GFP_KERNEL);
 	if (!kbuf) {
 		pr_err("%s: Failed to allocate buffer\n", __func__);
@@ -1333,6 +1365,7 @@ static ssize_t dbgfs_cabc_write(struct file *file, const char __user *ubuf,
 fail_exit:
 	kfree(kbuf);
 exit:
+	mutex_unlock(&fb->update_sem);
 	return count;
 }
 
@@ -1430,6 +1463,7 @@ static int enable_display(struct kona_fb *fb)
 		konafb_error("Failed to open this display device!\n");
 		goto fail_to_open;
 	}
+	fb->link_suspended = false;
 	if (fb->fb_data->pm_sleep)
 		ret = fb->display_ops->power_control(fb->display_hdl,
 				CTRL_SLEEP_OUT);
@@ -1474,6 +1508,7 @@ static int disable_display(struct kona_fb *fb)
 		fb->display_ops->power_control(fb->display_hdl,
 			CTRL_PWR_OFF);
 	fb->display_ops->close(fb->display_hdl);
+	fb->link_suspended = true;
 	fb->display_ops->exit(fb->display_hdl);
 	kona_clock_stop(fb);
 	konafb_debug("kona display is disabled successfully\n");
@@ -1601,11 +1636,8 @@ static int kona_fb_blank(int blank_mode, struct fb_info *info)
 			break;
 		}
 
-		if (fb->blank_state == KONA_FB_LINK_SUSPENDED) {
-			konafb_debug("Link suspended, re-activate to shut down "
-								"display\n");
+		if (fb->link_suspended)
 			link_control(fb, RESUME_LINK);
-		}
 
 		if (fb->fb_data->esdcheck) {
 			/* cancel the esd check routine */
@@ -1636,12 +1668,13 @@ static int kona_fb_blank(int blank_mode, struct fb_info *info)
 
 		/* screen goes to sleep mode */
 		disable_display(fb);
-		mutex_unlock(&fb->update_sem);
+
 		/* Ok for MM going to shutdown state */
 		pi_mgr_qos_request_update(&g_mm_qos_node,
 					  PI_MGR_QOS_DEFAULT_VALUE);
 
 		fb->blank_state = KONA_FB_BLANK;
+		mutex_unlock(&fb->update_sem);
 		break;
 
 	case FB_BLANK_UNBLANK:
@@ -1652,12 +1685,7 @@ static int kona_fb_blank(int blank_mode, struct fb_info *info)
 			mutex_unlock(&fb->update_sem);
 			break;
 		}
-		if (fb->blank_state == KONA_FB_LINK_SUSPENDED) {
-			konafb_debug("Display in link suspended state. "
-								"Do nothing\n");
-			mutex_unlock(&fb->update_sem);
-			break;
-		}
+
 		/* Ok for MM going to retention but not shutdown state */
 		pi_mgr_qos_request_update(&g_mm_qos_node, 10);
 		/* screen comes out of sleep */
@@ -1690,7 +1718,7 @@ static int kona_fb_blank(int blank_mode, struct fb_info *info)
 		fb->g_stop_drawing = 0;
 
 		if (fb->display_info->special_mode_on == true) {
-			konafb_debug("Exit black mode. Go to special mode\n");
+			konafb_debug("Go to special mode\n");
 			kona_clock_start(fb);
 			panel_write(fb->display_info->special_mode_on_seq);
 			kona_clock_stop(fb);
@@ -1722,13 +1750,10 @@ static int kona_fb_blank(int blank_mode, struct fb_info *info)
 			msecs_to_jiffies(fb->fb_data->esdcheck_period_ms));
 		}
 
-		if (fb->display_info->special_mode_on == true) {
-			konafb_debug("Exit black mode. Go to link suspend\n");
+		if (fb->suspend_link)
 			link_control(fb, SUSPEND_LINK);
-			fb->blank_state = KONA_FB_LINK_SUSPENDED;
-		} else {
-			fb->blank_state = KONA_FB_UNBLANK;
-		}
+
+		fb->blank_state = KONA_FB_UNBLANK;
 		mutex_unlock(&fb->update_sem);
 		break;
 
@@ -2434,6 +2459,8 @@ static int __ref kona_fb_probe(struct platform_device *pdev)
 	init_completion(&vsync_event);
 	complete(&fb->prev_buf_done_sem);
 	atomic_set(&fb->is_graphics_started, 0);
+	INIT_DELAYED_WORK(&fb->link_work, fb_suspend_link_work);
+	wake_lock_init(&fb->wlock, WAKE_LOCK_SUSPEND, "dsi_link_wakelock");
 
 	ret = enable_display(fb);
 	if (ret) {
@@ -2773,10 +2800,8 @@ static int kona_fb_reboot_cb(struct notifier_block *nb,
 	fb_notifier_call_chain(FB_EVENT_BLANK, &event);
 
 	mutex_lock(&fb->update_sem);
-	if (fb->blank_state == KONA_FB_LINK_SUSPENDED) {
-		konafb_debug("Resume link\n");
+	if (fb->link_suspended)
 		link_control(fb, RESUME_LINK);
-	}
 
 	fb->g_stop_drawing = 1;
 	if (!fb->display_info->vmode) {
@@ -2840,6 +2865,8 @@ static int kona_fb_remove(struct platform_device *pdev)
 		kfree(pdata);
 		pdev->dev.platform_data = NULL;
 	}
+
+	wake_lock_destroy(&fb->wlock);
 
 	kfree(fb);
 	konafb_info("kona FB removed !!\n");
