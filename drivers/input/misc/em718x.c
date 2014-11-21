@@ -1,8 +1,10 @@
 /*
  * This software program is licensed subject to the GNU General Public License
  * (GPL).Version 2,June 1991, available at http://www.fsf.org/copyleft/gpl.html
-
+ *
  * (C) Copyright 2014 Sony Mobile Communications
+ * (C) Copyright 2015 Sony Mobile Communications Inc
+ *
  * All Rights Reserved
  */
 
@@ -90,6 +92,7 @@ enum em718x_reg {
 	R8_FIFO_SIZE_REG = 0x5c,
 	R8_FIFO_SIZE_ACK_REG = 0x4b,
 	RX_ACC_DATA = 0x1a,
+	R16_CAL_STATUS_REG = 0x4d,
 };
 
 enum app_cpu_state {
@@ -286,6 +289,7 @@ enum sensor_type {
 	SENSOR_TYPE_AMD,
 	SENSOR_TYPE_TILT_WRIST,
 	SENSOR_TYPE_STATUS,
+	SENSOR_TYPE_CALSCORE,
 	SENSOR_TYPE_WAKE_UP = 1 << 4,
 	SENSOR_FLUSH_COMPLETE = 1 << 5,
 };
@@ -354,6 +358,7 @@ struct em718x {
 	s64 irq_time;
 	s64 last_samle_t;
 	u32 acc_rate_ns;
+	u8 mcal_status;
 };
 
 static int smbus_read_byte(struct i2c_client *client,
@@ -1213,14 +1218,36 @@ static void em718x_process_amgf(struct em718x *em718x,
 			em718x_queue_event(em718x, &em718x->ev_device, &ev);
 		}
 	}
-	if ((ev_status & EV_MAG) && enabled(em718x, SNS_MAG)) {
-		dev_vdbg(dev, "mag[%u] %d, %d, %d\n", amgf->mag.t, amgf->mag.x,
-				amgf->mag.y, -amgf->mag.z);
-		ev.type = SENSOR_TYPE_MAG;
-		ev.d[0] = amgf->mag.x;
-		ev.d[1] = amgf->mag.y;
-		ev.d[2] = -amgf->mag.z;
-		em718x_queue_event(em718x, &em718x->ev_device, &ev);
+	if (ev_status & EV_MAG) {
+		int rc;
+		u8 cal_status;
+
+		rc = smbus_read_byte_block(em718x->client, R16_CAL_STATUS_REG,
+				(void *)&cal_status, sizeof(cal_status));
+
+		if (!rc && (cal_status != em718x->mcal_status)) {
+			dev_vdbg(dev, "Calibration status/score %u / %u\n",
+					cal_status >> 5, cal_status & 0x1f);
+			em718x->mcal_status = cal_status;
+			ev.type = SENSOR_TYPE_CALSCORE;
+			ev.d[0] = cal_status >> 5;
+			ev.d[1] = cal_status & 0x1f;
+			em718x_queue_event(em718x, &em718x->ev_device, &ev);
+		}
+
+		if (enabled(em718x, SNS_MAG)) {
+
+			dev_vdbg(dev, "mag[%u] %d, %d, %d\n",
+					amgf->mag.t, amgf->mag.x,
+					amgf->mag.y, -amgf->mag.z);
+
+			ev.type = SENSOR_TYPE_MAG;
+			ev.d[0] = amgf->mag.x;
+			ev.d[1] = amgf->mag.y;
+			ev.d[2] = -amgf->mag.z;
+			em718x_queue_event(em718x, &em718x->ev_device, &ev);
+		}
+
 	}
 	if ((ev_status & EV_GYRO) && enabled(em718x, SNS_GYRO)) {
 		dev_vdbg(dev, "gyro[%u] %d, %d, %d\n", amgf->gyro.t,
