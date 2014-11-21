@@ -84,6 +84,9 @@ GTAGS
 *~
 \#*#
 
+# CAF files
+arch/arm/mach-msm/smd_rpc_sym.c
+
 #
 # Leavings from module signing
 #
