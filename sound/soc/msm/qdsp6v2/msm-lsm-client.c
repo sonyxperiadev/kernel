@@ -28,7 +28,44 @@
 #include <sound/control.h>
 #include <sound/q6lsm.h>
 #include <sound/lsm_params.h>
+#include <sound/pcm_params.h>
 #include "msm-pcm-routing-v2.h"
+
+#define CAPTURE_MIN_NUM_PERIODS     2
+#define CAPTURE_MAX_NUM_PERIODS     8
+#define CAPTURE_MAX_PERIOD_SIZE     4096
+#define CAPTURE_MIN_PERIOD_SIZE     320
+
+static struct snd_pcm_hardware msm_pcm_hardware_capture = {
+	.info =                 (SNDRV_PCM_INFO_MMAP |
+				SNDRV_PCM_INFO_BLOCK_TRANSFER |
+				SNDRV_PCM_INFO_INTERLEAVED |
+				SNDRV_PCM_INFO_PAUSE | SNDRV_PCM_INFO_RESUME),
+	.formats =              SNDRV_PCM_FMTBIT_S16_LE,
+	.rates =                SNDRV_PCM_RATE_16000,
+	.rate_min =             16000,
+	.rate_max =             16000,
+	.channels_min =         1,
+	.channels_max =         1,
+	.buffer_bytes_max =     CAPTURE_MAX_NUM_PERIODS *
+				CAPTURE_MAX_PERIOD_SIZE,
+	.period_bytes_min =	CAPTURE_MIN_PERIOD_SIZE,
+	.period_bytes_max =     CAPTURE_MAX_PERIOD_SIZE,
+	.periods_min =          CAPTURE_MIN_NUM_PERIODS,
+	.periods_max =          CAPTURE_MAX_NUM_PERIODS,
+	.fifo_size =            0,
+};
+
+/* Conventional and unconventional sample rate supported */
+static unsigned int supported_sample_rates[] = {
+	16000,
+};
+
+static struct snd_pcm_hw_constraint_list constraints_sample_rates = {
+	.count = ARRAY_SIZE(supported_sample_rates),
+	.list = supported_sample_rates,
+	.mask = 0,
+};
 
 struct lsm_priv {
 	struct snd_pcm_substream *substream;
@@ -536,6 +573,7 @@ static int msm_lsm_open(struct snd_pcm_substream *substream)
 {
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct lsm_priv *prtd;
+	int ret = 0;
 
 	pr_debug("%s\n", __func__);
 	prtd = kzalloc(sizeof(struct lsm_priv), GFP_KERNEL);
@@ -544,15 +582,51 @@ static int msm_lsm_open(struct snd_pcm_substream *substream)
 		       __func__);
 		return -ENOMEM;
 	}
+	spin_lock_init(&prtd->event_lock);
+	init_waitqueue_head(&prtd->event_wait);
 	prtd->substream = substream;
+	runtime->private_data = prtd;
+	runtime->hw = msm_pcm_hardware_capture;
+
+	ret = snd_pcm_hw_constraint_list(runtime, 0,
+				SNDRV_PCM_HW_PARAM_RATE,
+				&constraints_sample_rates);
+	if (ret < 0)
+		pr_info("%s: snd_pcm_hw_constraint_list failed ret %d\n",
+			 __func__, ret);
+	/* Ensure that buffer size is a multiple of period size */
+	ret = snd_pcm_hw_constraint_integer(runtime,
+			    SNDRV_PCM_HW_PARAM_PERIODS);
+	if (ret < 0)
+		pr_info("%s: snd_pcm_hw_constraint_integer failed ret %d\n",
+			__func__, ret);
+
+	ret = snd_pcm_hw_constraint_minmax(runtime,
+		SNDRV_PCM_HW_PARAM_BUFFER_BYTES,
+		CAPTURE_MIN_NUM_PERIODS * CAPTURE_MIN_PERIOD_SIZE,
+		CAPTURE_MAX_NUM_PERIODS * CAPTURE_MAX_PERIOD_SIZE);
+	if (ret < 0)
+		pr_info("%s: constraint for buffer bytes min max ret = %d\n",
+			__func__, ret);
+	ret = snd_pcm_hw_constraint_step(runtime, 0,
+		SNDRV_PCM_HW_PARAM_PERIOD_BYTES, 32);
+	if (ret < 0) {
+		pr_info("%s: constraint for period bytes step ret = %d\n",
+			__func__, ret);
+	}
+	ret = snd_pcm_hw_constraint_step(runtime, 0,
+		SNDRV_PCM_HW_PARAM_BUFFER_BYTES, 32);
+	if (ret < 0)
+		pr_info("%s: constraint for buffer bytes step ret = %d\n",
+			__func__, ret);
 	prtd->lsm_client = q6lsm_client_alloc(
 				(lsm_app_cb)lsm_event_handler, prtd);
 	if (!prtd->lsm_client) {
 		pr_err("%s: Could not allocate memory\n", __func__);
 		kfree(prtd);
+		runtime->private_data = NULL;
 		return -ENOMEM;
 	}
-	runtime->private_data = prtd;
 	return 0;
 }
 
@@ -576,8 +650,6 @@ static int msm_lsm_prepare(struct snd_pcm_substream *substream)
 	pr_debug("%s: Session ID %d\n", __func__,
 		 prtd->lsm_client->session);
 	prtd->lsm_client->started = false;
-	spin_lock_init(&prtd->event_lock);
-	init_waitqueue_head(&prtd->event_wait);
 	runtime->private_data = prtd;
 	return 0;
 }
