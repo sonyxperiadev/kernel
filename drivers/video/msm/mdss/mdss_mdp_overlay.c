@@ -1,4 +1,5 @@
 /* Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2013 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -2662,6 +2663,9 @@ error:
 static int mdss_mdp_overlay_splash_image(struct msm_fb_data_type *mfd,
 						int *pipe_ndx, int splash_event)
 {
+#ifdef CONFIG_FB_MSM_MDSS_PANEL_SPECIFIC
+	return 0;
+#else	/* CONFIG_FB_MSM_MDSS_PANEL_SPECIFIC */
 	struct mdp_overlay req;
 	int rc = 0;
 	struct fb_info *fbi = NULL;
@@ -2714,6 +2718,7 @@ static int mdss_mdp_overlay_splash_image(struct msm_fb_data_type *mfd,
 	}
 
 	return rc;
+#endif	/* CONFIG_FB_MSM_MDSS_PANEL_SPECIFIC */
 }
 
 static void __vsync_retire_handle_vsync(struct mdss_mdp_ctl *ctl, ktime_t t)
