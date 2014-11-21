@@ -18,7 +18,7 @@
 #include <mach/board.h>
 #include <mach/gpio.h>
 #include <mach/gpiomux.h>
-#include <mach/socinfo.h>
+#include <soc/qcom/socinfo.h>
 #include "sony_gpiomux.h"
 
 static struct gpiomux_setting __initdata **qct_sets;
