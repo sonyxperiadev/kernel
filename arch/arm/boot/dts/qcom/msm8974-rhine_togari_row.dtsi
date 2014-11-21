@@ -160,6 +160,10 @@
 			mhl-intr-gpio = <&msmgpio 64 0>;
 			mhl-pwr-gpio = <&msmgpio 60 0>;
 			mhl-rst-gpio = <&msmgpio 16 0>;
+			avcc_18-supply = <&pm8941_l24>;
+			avcc_12-supply = <&pm8941_l2>;
+			smps3a-supply = <&pm8941_s3>;
+			vdda-supply = <&pm8941_l12>;
 			qcom,hdmi-tx-map = <&mdss_hdmi_tx>;
 		};
 
