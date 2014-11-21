@@ -14,7 +14,7 @@
 #include <linux/notifier.h>
 #include <linux/switch.h>
 
-#include <mach/subsystem_notif.h>
+#include <soc/qcom/subsystem_notif.h>
 
 #define MODEM_POWERUP	0
 #define MODEM_SHUTDOWN	1
