@@ -1389,7 +1389,7 @@
 };
 
 /include/ "msm-pm8226-rpm-regulator.dtsi"
-/include/ "msm-pm8226.dtsi"
+/include/ "msm-yukon_eagle-pm8226.dtsi"
 /include/ "msm8226-yukon_eagle-regulator.dtsi"
 
 &pm8226_vadc {
