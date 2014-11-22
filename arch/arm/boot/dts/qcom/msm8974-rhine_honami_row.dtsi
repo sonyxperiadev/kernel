@@ -698,10 +698,10 @@
 
 &mdss_hdmi_tx {
 	/* rhine doesn't use hpd-5v */
-	qcom,hdmi-tx-supply-names = "hpd-gdsc", "core-vdda", "core-vcc";
-	qcom,hdmi-tx-min-voltage-level = <0 1800000 1800000>;
-	qcom,hdmi-tx-max-voltage-level = <0 1800000 1800000>;
-	qcom,hdmi-tx-peak-current = <0 300000 0>;
+	qcom,supply-names = "hpd-gdsc", "core-vdda", "core-vcc";
+	qcom,min-voltage-level = <0 1800000 1800000>;
+	qcom,max-voltage-level = <0 1800000 1800000>;
+	qcom,enable-load = <0 300000 0>;
 };
 
 &pm8941_chg {
@@ -1476,7 +1476,12 @@
 	vdd-supply = <&pm8941_lvs3>;
 	qcom,platform-enable-gpio = <&msmgpio 46 1>;
 	qcom,platform-lane-config = [];
-	qcom,platform-supply-entry1 {
+	qcom,panel-supply-entries {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		qcom,ctrl-supply-entry@0 {
+			reg = <0>;
 			qcom,supply-name = "vdd";
 			qcom,supply-min-voltage = <0>;
 			qcom,supply-max-voltage = <0>;
@@ -1486,8 +1491,8 @@
 			qcom,supply-post-on-sleep = <0>;
 			qcom,supply-pre-off-sleep = <0>;
 			qcom,supply-post-off-sleep = <0>;
-	};
-	qcom,platform-supply-entry2 {
+		};
+		qcom,ctrl-supply-entry@1 {
 			qcom,supply-name = "vddio";
 			qcom,supply-min-voltage = <1800000>;
 			qcom,supply-max-voltage = <1800000>;
@@ -1497,8 +1502,8 @@
 			qcom,supply-post-on-sleep = <0>;
 			qcom,supply-pre-off-sleep = <0>;
 			qcom,supply-post-off-sleep = <0>;
-	};
-	qcom,platform-supply-entry3 {
+		};
+		qcom,ctrl-supply-entry@2 {
 			qcom,supply-name = "vdda";
 			qcom,supply-min-voltage = <1200000>;
 			qcom,supply-max-voltage = <1200000>;
@@ -1508,5 +1513,6 @@
 			qcom,supply-post-on-sleep = <0>;
 			qcom,supply-pre-off-sleep = <0>;
 			qcom,supply-post-off-sleep = <0>;
+		};
 	};
 };
