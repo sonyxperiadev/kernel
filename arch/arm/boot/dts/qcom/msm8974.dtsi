@@ -95,6 +95,13 @@
 			reg = <0 0x614000>;
 			lable = "audio_mem";
 		};
+
+		camera_mem: camera_region@0 {
+			linux,reserve-contiguous-region;
+			linux,reserve-region;
+			reg = <0 0x6400000>;
+			label = "camera_mem";
+		};
 	};
 
 	soc: soc { };
