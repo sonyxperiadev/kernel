@@ -1169,6 +1169,16 @@ config MACH_SONY_TIANCHI
 	  If you enable this config,
 	  Please use SONY Mobile source tree.
 
+config MACH_SONY_SEAGULL
+	depends on ARCH_MSM8226
+	bool "Sony Mobile Seagull"
+        default n
+	help
+	  Support for the SONY Mobile Xperia T3.
+	  It is based on QCOM MSM8x26 chipset
+	  If you enable this config,
+	  Please use SONY Mobile source tree.
+
 endmenu
 
 config MSM_STACKED_MEMORY
