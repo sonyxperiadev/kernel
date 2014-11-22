@@ -1,0 +1,75 @@
+/*
+ * Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
+ * Copyright(C) 2013 Foxconn International Holdings, Ltd. All rights.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+&spmi_bus {
+	qcom,pm8226@1 {
+		qcom,leds@d100 {
+			status = "disabled";
+		};
+
+		qcom,leds@d200 {
+			status = "disabled";
+		};
+
+		qcom,leds@d300 {
+			status = "okay";
+			pm8226_flash0: qcom,flash_0 {
+				qcom,max-current = <1000>;
+				qcom,default-state = "off";
+				qcom,headroom = <3>;
+				qcom,duration = <1280>;
+				qcom,clamp-curr = <200>;
+				qcom,startup-dly = <3>;
+				qcom,safety-timer;
+				label = "flash";
+				linux,default-trigger =
+					"flash0_trigger";
+				qcom,id = <1>;
+				linux,name = "led:flash_0";
+				qcom,current = <550>;
+			};
+
+			pm8226_flash1: qcom,flash_1 {
+				qcom,max-current = <1000>;
+				qcom,default-state = "off";
+				qcom,headroom = <3>;
+				qcom,duration = <1280>;
+				qcom,clamp-curr = <200>;
+				qcom,startup-dly = <3>;
+				qcom,safety-timer;
+				linux,default-trigger =
+					"flash1_trigger";
+				label = "flash";
+				qcom,id = <2>;
+				linux,name = "led:flash_1";
+				qcom,current = <625>;
+			};
+
+			pm8226_torch: qcom,flash_torch {
+				qcom,max-current = <200>;
+				qcom,default-state = "off";
+				qcom,headroom = <0>;
+				qcom,startup-dly = <1>;
+				linux,default-trigger =
+					"torch_trigger";
+				label = "flash";
+				qcom,id = <1>;
+				linux,name = "led:flash_torch";
+				qcom,current = <180>;
+				qcom,torch-enable;
+			};
+		};
+	};
+};
+
