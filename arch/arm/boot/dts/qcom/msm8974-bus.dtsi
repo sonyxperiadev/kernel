@@ -41,6 +41,10 @@
 			qcom,ws = <10000>;
 			qcom,qport = <2 3>;
 			qcom,mas-hw-id = <6>;
+			qcom,bimc,gp = <1000>;
+			qcom,bimc,thmp = <50>;
+			qcom,nr-lim;
+			qcom,floor-bw = <102400>;
 		};
 
 		mas-jpeg {
@@ -67,6 +71,8 @@
 			qcom,qport = <1>;
 			qcom,ws = <10000>;
 			qcom,mas-hw-id = <8>;
+			qcom,rt-mas;
+			qcom,ff = <100>;
 		};
 
 		mas-video-p0 {
@@ -93,6 +99,7 @@
 			qcom,ws = <10000>;
 			qcom,qport = <6>;
 			qcom,mas-hw-id = <11>;
+			qcom,rt-mas;
 		};
 
 		fab-cnoc {
@@ -1154,6 +1161,8 @@
 		qcom,qos-freq = <19200>;
 		qcom,hw-sel = "BIMC";
 		qcom,rpm-en;
+		qcom,nr-lim-thresh = <1638400>;
+		qcom,eff-fact = <60>;
 
 		coresight-id = <55>;
 		coresight-name = "coresight-bimc";
@@ -1180,6 +1189,8 @@
 			qcom,bimc,bw = <300000>;
 			qcom,bimc,gp = <5000>;
 			qcom,bimc,thmp = <50>;
+			qcom,nr-lim;
+			qcom,floor-bw = <1024000>;
 		};
 
 		mas-ampss-m1 {
@@ -1200,6 +1211,8 @@
 			qcom,bimc,bw = <300000>;
 			qcom,bimc,gp = <5000>;
 			qcom,bimc,thmp = <50>;
+			qcom,nr-lim;
+			qcom,floor-bw = <1024000>;
 		};
 
 		mas-mss-proc {
