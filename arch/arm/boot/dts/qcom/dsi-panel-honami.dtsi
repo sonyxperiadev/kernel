@@ -14,6 +14,8 @@
 &mdss_mdp {
 	qcom,mdss-ib-factor = <2 1>;		/* 2 times  */
 	dsi_renesas_default: somc,renesas_default_panel {
+		compatible = "qcom,mdss-dsi-panel";
+
 		qcom,mdss-dsi-panel-name = "default renesas 1080p video";
 		qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
 		qcom,mdss-dsi-panel-type = "dsi_video_mode";
@@ -124,6 +126,8 @@
 	};
 
 	dsi_renesas_sharp_1080_vid: somc,renesas_sharp_1080p_panel {
+		compatible = "qcom,mdss-dsi-panel";
+
 		qcom,mdss-dsi-panel-name = "sharp renesas 1080p video";
 		qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
 		qcom,mdss-dsi-panel-type = "dsi_video_mode";
@@ -320,6 +324,8 @@
 	};
 
 	dsi_renesas_jdc_1080_vid: somc,renesas_jdc_1080p_panel {
+		compatible = "qcom,mdss-dsi-panel";
+
 		qcom,mdss-dsi-panel-name = "jdc renesas 1080p video";
 		qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
 		qcom,mdss-dsi-panel-type = "dsi_video_mode";
@@ -508,6 +514,8 @@
 	};
 
 	dsi_novatek_default: somc,novatek_default_panel {
+		compatible = "qcom,mdss-dsi-panel";
+
 		qcom,mdss-dsi-panel-name = "default novatek 1080p video";
 		qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
 		qcom,mdss-dsi-panel-type = "dsi_video_mode";
@@ -994,6 +1002,8 @@
 	};
 
 	dsi_novatek_jdc_1080_vid: somc,novatek_jdc_1080p_panel {
+		compatible = "qcom,mdss-dsi-panel";
+
 		qcom,mdss-dsi-panel-name = "jdc novatek 1080p video";
 		qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
 		qcom,mdss-dsi-panel-type = "dsi_video_mode";
