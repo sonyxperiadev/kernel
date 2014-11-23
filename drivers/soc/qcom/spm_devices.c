@@ -22,6 +22,7 @@
 #include <linux/err.h>
 #include <linux/platform_device.h>
 #include <linux/err.h>
+#include <asm/smp_plat.h>
 #include <soc/qcom/spm.h>
 #include "spm_driver.h"
 
@@ -154,6 +155,8 @@ static void msm_spm_config_q2s(struct msm_spm_device *dev, unsigned int mode)
 	uint32_t spm_legacy_mode = 0;
 	uint32_t qchannel_ignore = 0;
 	uint32_t val = 0;
+	u32 cpu = cpu_logical_map(smp_processor_id());
+	u32 cluster = MPIDR_AFFINITY_LEVEL(cpu, 1);
 
 	if (!dev->q2s_reg)
 		return;
@@ -161,7 +164,10 @@ static void msm_spm_config_q2s(struct msm_spm_device *dev, unsigned int mode)
 	switch (mode) {
 	case MSM_SPM_MODE_DISABLED:
 	case MSM_SPM_MODE_CLOCK_GATING:
-		qchannel_ignore = 1;
+		if (cluster)
+			qchannel_ignore = 0;
+		else
+			qchannel_ignore = 1;
 		spm_legacy_mode = 0;
 		break;
 	case MSM_SPM_MODE_RETENTION:
