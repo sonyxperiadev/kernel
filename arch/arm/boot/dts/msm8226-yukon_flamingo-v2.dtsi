@@ -3,6 +3,7 @@
 /include/ "dsi-panel-truly-hx8379a-pdp2-qhd-video.dtsi"
 /include/ "dsi-panel-truly-hx8379c-fwvga-video.dtsi"
 /include/ "dsi-panel-ofilm-hx8379c-fwvga-video.dtsi"
+/include/ "dsi-panel-tcl-hx8379c-fwvga-video.dtsi"
 
 &spmi_bus {
 	qcom,pm8226@0 {
@@ -21,11 +22,16 @@
 &dsi_hx8379a_pdp2_qhd_vid {
 	qcom,cont-splash-enabled;
 };
+
 &dsi_truly_hx8379c_fwvga_vid {
 	qcom,cont-splash-enabled;
 };
 
 &dsi_ofilm_hx8379c_fwvga_vid {
+	qcom,cont-splash-enabled;
+};
+
+&dsi_tcl_hx8379c_fwvga_vid {
 	qcom,cont-splash-enabled;
 };
 

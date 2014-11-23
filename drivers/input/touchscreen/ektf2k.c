@@ -181,6 +181,10 @@ static uint8_t file_fw_data_ofilm[] = {
 #include "eKTF2150_E2_OFilm_V5503.i"
 };
 
+static uint8_t file_fw_data_Biel[] = {
+#include "eKTF2150_E2_Biel_V5501.i"
+};
+
 static uint8_t *file_fw_data=NULL;
 
 enum
@@ -2236,8 +2240,8 @@ static int elan_ktf2k_ts_probe(struct i2c_client *client,
 	int fw_err = 0;
 	struct elan_ktf2k_i2c_platform_data *pdata;
 	struct elan_ktf2k_ts_data *ts;
-	int New_FW_ID;	
-	int New_FW_VER;	
+	int New_FW_ID = 0;
+	int New_FW_VER = 0;
 
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C)) {
 		printk(KERN_ERR "[elan] %s: i2c check functionality error\n", __func__);
@@ -2381,6 +2385,8 @@ static int elan_ktf2k_ts_probe(struct i2c_client *client,
 		    file_fw_data = file_fw_data_ofilm;
 	    else if (FW_ID == 0x0498)
 		    file_fw_data = file_fw_data_truly;
+	    else if (FW_ID == 0x049f)
+		    file_fw_data = file_fw_data_Biel;
 	    else
 	    {
 		     printk("%s Normal Mode FW_ID identify error.\n",__func__);
@@ -2389,7 +2395,6 @@ static int elan_ktf2k_ts_probe(struct i2c_client *client,
 		if (file_fw_data == NULL)
 	    {
 		    printk("[ELAN]%s file_fw_data NULL.\n",__func__);
-		    file_fw_data = file_fw_data_truly;
 	    }
 	}
 	ts->input_dev->id.vendor = touch_panel_type;
@@ -2453,23 +2458,26 @@ static int elan_ktf2k_ts_probe(struct i2c_client *client,
 	ts->firmware.mode = S_IFREG|S_IRWXUGO; 
 
 	if (misc_register(&ts->firmware) < 0)
-  		printk("[ELAN]misc_register failed!!");
+  		printk("[ELAN]misc_register failed!!\n");
   	else
-		printk("[ELAN]misc_register finished!!");
+		printk("[ELAN]misc_register finished!!\n");
 // End Firmware Update	
 
 #ifdef IAP_PORTION
-	printk("[ELAN]misc_register finished!!");
+	printk("[ELAN]misc_register finished!!\n");
 	work_lock=1;
 	disable_irq(ts->client->irq);
 	cancel_work_sync(&ts->work);
 	power_lock = 1;
-/* FW ID & FW VER*/
-	printk("[ELAN]  [7d65]=0x%02x,  [7d64]=0x%02x, [0x7d67]=0x%02x, [0x7d66]=0x%02x\n",  file_fw_data[0x7d65],file_fw_data[0x7d64],file_fw_data[0x7d67],file_fw_data[0x7d66]);
-	New_FW_ID = file_fw_data[0x7d67]<<8  | file_fw_data[0x7d66] ;	       
-	New_FW_VER = file_fw_data[0x7d65]<<8  | file_fw_data[0x7d64] ;
-	printk(" FW_ID=0x%x,   New_FW_ID=0x%x \n",  FW_ID, New_FW_ID);   	       
-	printk(" FW_VERSION=0x%x,   New_FW_VER=0x%x \n",  FW_VERSION  , New_FW_VER);  
+
+	if (file_fw_data != NULL) {
+		/* FW ID & FW VER*/
+		printk("[ELAN] [7d65]=0x%02x, [7d64]=0x%02x, [0x7d67]=0x%02x, [0x7d66]=0x%02x\n", file_fw_data[0x7d65], file_fw_data[0x7d64], file_fw_data[0x7d67], file_fw_data[0x7d66]);
+		New_FW_ID = file_fw_data[0x7d67]<<8 | file_fw_data[0x7d66];
+		New_FW_VER = file_fw_data[0x7d65]<<8 | file_fw_data[0x7d64];
+		printk("FW_ID=0x%x, New_FW_ID=0x%x\n", FW_ID, New_FW_ID);
+		printk("FW_VERSION=0x%x, New_FW_VER=0x%x\n", FW_VERSION, New_FW_VER);
+	}
 
 	if (RECOVERY != 0x80)
 	{
@@ -2490,8 +2498,6 @@ static int elan_ktf2k_ts_probe(struct i2c_client *client,
 	}
 	else
 	{
-		printk("RECOVERY MODE Update FW One!");
-		Update_FW_One(client, RECOVERY);
 	}		
 	power_lock = 0;
 	work_lock=0;
