@@ -1480,7 +1480,7 @@
 		#address-cells = <1>;
 		#size-cells = <0>;
 
-		qcom,ctrl-supply-entry@0 {
+		qcom,panel-supply-entry@0 {
 			reg = <0>;
 			qcom,supply-name = "vdd";
 			qcom,supply-min-voltage = <0>;
@@ -1492,7 +1492,7 @@
 			qcom,supply-pre-off-sleep = <0>;
 			qcom,supply-post-off-sleep = <0>;
 		};
-		qcom,ctrl-supply-entry@1 {
+		qcom,panel-supply-entry@1 {
 			qcom,supply-name = "vddio";
 			qcom,supply-min-voltage = <1800000>;
 			qcom,supply-max-voltage = <1800000>;
@@ -1503,7 +1503,7 @@
 			qcom,supply-pre-off-sleep = <0>;
 			qcom,supply-post-off-sleep = <0>;
 		};
-		qcom,ctrl-supply-entry@2 {
+		qcom,panel-supply-entry@2 {
 			qcom,supply-name = "vdda";
 			qcom,supply-min-voltage = <1200000>;
 			qcom,supply-max-voltage = <1200000>;
