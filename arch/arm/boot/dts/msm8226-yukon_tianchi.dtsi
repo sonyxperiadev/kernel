@@ -123,6 +123,14 @@
 	};
 };
 
+&rpm_bus {
+	rpm-regulator-ldoa28 {
+		pm8226_l28: regulator-l28 {
+			regulator-always-on;
+		};
+	};
+};
+
 &mdss_mdp {
 	qcom,mdss-pref-prim-intf = "dsi";
 };
