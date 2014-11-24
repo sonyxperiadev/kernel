@@ -1,13 +1,14 @@
 Configuration files can be found in arch/arm/configs.
 
-    Xperia Z2 D6502/D6503/D6543/L50w       => shinano_sirius_defconfig
-    Xperia Z2 Tablet SGP521/SGP541         => shinano_castor_defconfig
+    Xperia Z2 D6502/D6503/D6543/L50w       => aosp_shinano_sirius_defconfig
+    Xperia Z2 Tablet SGP521/SGP541         => aosp_shinano_castor_defconfig
     Xperia Z2 Tablet SGP551                => shinano_castor_brazil_defconfig
-    Xperia Z2 Tablet SGP511/SGP512         => shinano_castor_windy_defconfig
-    Xperia Z3 D6603/D6653/D6643            => shinano_leo_defconfig
-    Xperia Z3 Compact D5803/D5833          => shinano_aries_defconfig
-    Xperia Z3 Tablet Compact SGP621/SGP641 => shinano_scorpion_defconfig
-    Xperia Z3 Tablet Compact SGP611/SGP612 => shinano_scorpion_windy_defconfig
+    Xperia Z2 Tablet SGP511/SGP512         => aosp_shinano_castor_windy_defconfig
+    
+    Xperia Z3 D6603/D6653/D6643            => aosp_shinano_leo_defconfig
+    Xperia Z3 Compact D5803/D5833          => aosp_shinano_aries_defconfig
+    Xperia Z3 Tablet Compact SGP621/SGP641 => aosp_shinano_scorpion_defconfig
+    Xperia Z3 Tablet Compact SGP611/SGP612 => aosp_shinano_scorpion_windy_defconfig
 
 
 How to build your kernel:
@@ -32,10 +33,10 @@ How to build your kernel:
 
     $ export ARCH=arm
 
-    $ export CROSS_COMPILE=/opt/arm-2010q1/bin/arm-none-eabi-
+    $ export CROSS_COMPILE=[Path from root to ...] ~/.../arm-eabi-4.6/bin/arm-eabi-
       NOTE: Please set the location and the prefix of the ARM cross-compiler.
 
-    $ make shinano_leo_defconfig
+    $ make ARCH=arm CROSS_COMPILE=$CROSS_COMPILE aosp_shinano_leo_defconfig
       NOTE: Please set a configuration file you want to build.
 
     $ make
