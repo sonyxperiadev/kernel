@@ -39,6 +39,88 @@ int lcm_first_boot = 1;
 
 DEFINE_LED_TRIGGER(bl_led_trigger);
 
+#ifdef CONFIG_MACH_SONY_SEAGULL
+#define JDI_NON_PANEL_ID  0x00
+#define JDI_PANEL_ID      0x61
+#define TRULY_PANEL_ID    0x63
+#define TRULY_OTP_PANEL_ID    0x64
+#define INNOLUX_PANEL_ID    0x65
+#define INNOLUX_OTP_PANEL_ID    0x66
+
+static int mdss_dsi_parse_dcs_cmds(struct device_node *np,
+		struct dsi_panel_cmds *pcmds, char *cmd_key, char *link_key);
+
+struct device_node *gMIPIDSInode;
+
+static unsigned char gFirstChange = 0;
+static unsigned char gPanelModel = 0;
+static char manufacture_idDA[2] = {0xDA, 0x00};
+static struct dsi_cmd_desc manufacture_id_cmd = {
+	.dchdr = {
+		DTYPE_DCS_READ, 1, 0, 1, 20, sizeof(manufacture_idDA),
+	},
+	.payload = manufacture_idDA,
+};
+
+unsigned char mdss_manufacture_id_read(void)
+{
+	return gPanelModel;
+}
+
+static void mdss_manufacture_cb(int data)
+{
+	gPanelModel = data;
+	printk("[DISPLAY]%s: pid 0x%x\n", __func__, gPanelModel);
+}
+
+static unsigned char mdss_manufacture_id(struct mdss_dsi_ctrl_pdata *ctrl)
+{
+	struct dcs_cmd_req cmdreq;
+
+	memset(&cmdreq, 0, sizeof(cmdreq));
+	cmdreq.cmds = &manufacture_id_cmd;
+	cmdreq.cmds_cnt = 1;
+	cmdreq.flags = CMD_REQ_RX | CMD_REQ_COMMIT;
+	cmdreq.rlen = 1;
+	cmdreq.cb = mdss_manufacture_cb;
+	mdss_dsi_cmdlist_put(ctrl, &cmdreq);
+
+	return gPanelModel;
+}
+
+static int mdss_change_dcs_cmd(struct device_node *npIn,
+		struct mdss_dsi_ctrl_pdata *ctrl, const char* name, const int id)
+{
+	struct device_node *all_nodes = NULL;
+	struct device_node *np = npIn;
+	char* panel_name = np->properties->value;
+	char cmd_name[30] = {0};
+	int cmd_name_size = sizeof(cmd_name)/sizeof(cmd_name[0]);
+
+	printk("[DISPLAY]%s: %s, id 0x%x\n", __func__, panel_name, id);
+
+	if (strncmp(panel_name, name, strnlen(name, 128)) || !gFirstChange) {
+		all_nodes = of_find_all_nodes(NULL);
+		np = of_find_compatible_node(all_nodes, NULL, name);
+		npIn = np;
+
+		snprintf(cmd_name, cmd_name_size, "qcom,mdss-dsi-on-command-%x", id);
+		mdss_dsi_parse_dcs_cmds(np, &ctrl->on_cmds,
+			cmd_name, "qcom,mdss-dsi-on-command-state");
+
+		mdss_dsi_parse_dcs_cmds(np, &ctrl->off_cmds,
+			"qcom,mdss-dsi-off-command", "qcom,mdss-dsi-off-command-state");
+
+		gFirstChange = 1;
+		panel_name = np->properties->value;
+
+		printk("[DISPLAY]%s: change to %s\n", __func__, panel_name);
+	}
+
+    return 0;
+}
+#endif
+
 void mdss_dsi_panel_pwm_cfg(struct mdss_dsi_ctrl_pdata *ctrl)
 {
 	ctrl->pwm_bl = pwm_request(ctrl->pwm_lpg_chan, "lcd-bklt");
@@ -196,6 +278,40 @@ void mdss_dsi_panel_reset(struct mdss_panel_data *pdata, int enable)
 	pinfo = &(ctrl_pdata->panel_data.panel_info);
 
 	if (enable) {
+#ifdef CONFIG_MACH_SONY_SEAGULL
+		if (gpio_is_valid(ctrl_pdata->disp_en_gpio))
+			gpio_direction_output((ctrl_pdata->disp_en_gpio) , 1);
+		msleep(1);
+		if (gpio_is_valid(ctrl_pdata->disp_p5_gpio))
+			gpio_direction_output((ctrl_pdata->disp_p5_gpio) , 1);
+		msleep(1);
+		if (gpio_is_valid(ctrl_pdata->disp_n5_gpio))
+			gpio_direction_output((ctrl_pdata->disp_n5_gpio) , 1);
+
+		if (ctrl_pdata->ctrl_state & CTRL_STATE_PANEL_INIT) {
+			pr_debug("%s: Panel Not properly turned OFF\n",
+						__func__);
+			ctrl_pdata->ctrl_state &= ~CTRL_STATE_PANEL_INIT;
+			pr_debug("%s: Reset panel done\n", __func__);
+		}
+
+		msleep(10);
+		gpio_direction_output((ctrl_pdata->rst_gpio) , 1);
+		msleep(150);
+	} else {
+		gpio_direction_output((ctrl_pdata->rst_gpio), 0);
+		msleep(1);
+		if (gpio_is_valid(ctrl_pdata->disp_n5_gpio))
+			gpio_direction_output((ctrl_pdata->disp_n5_gpio) , 0);
+		msleep(1);
+		if (gpio_is_valid(ctrl_pdata->disp_p5_gpio))
+			gpio_direction_output((ctrl_pdata->disp_p5_gpio) , 0);
+		msleep(1);
+		if (gpio_is_valid(ctrl_pdata->disp_en_gpio))
+			gpio_direction_output((ctrl_pdata->disp_en_gpio), 0);
+		msleep(10);
+	}
+#else
 #ifdef CONFIG_MACH_SONY_FLAMINGO
 /*[Flamingo] LCM driver porting */
 		gpio_direction_output(SYSTEM_RESET_PIN_TS, 0);	//Touch Screen Reset Pin as Low
@@ -235,6 +351,7 @@ void mdss_dsi_panel_reset(struct mdss_panel_data *pdata, int enable)
 		if (gpio_is_valid(ctrl_pdata->disp_en_gpio))
 			gpio_set_value((ctrl_pdata->disp_en_gpio), 0);
 	}
+#endif
 }
 
 static char caset[] = {0x2a, 0x00, 0x00, 0x03, 0x00};	/* DTYPE_DCS_LWRITE */
@@ -410,6 +527,29 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 	lcm_first_boot=0;
 #endif
 
+#ifdef CONFIG_MACH_SONY_SEAGULL
+	mdss_manufacture_id(ctrl);
+	switch (gPanelModel) {
+		case JDI_NON_PANEL_ID:
+		case JDI_PANEL_ID:
+			mdss_change_dcs_cmd(gMIPIDSInode, ctrl,
+					"qcom,mdss-dsi-panel-jdi", gPanelModel);
+			break;
+		case TRULY_PANEL_ID:
+		case TRULY_OTP_PANEL_ID:
+			mdss_change_dcs_cmd(gMIPIDSInode, ctrl,
+					"qcom,mdss-dsi-panel-truly", gPanelModel);
+			break;
+		case INNOLUX_PANEL_ID:
+		case INNOLUX_OTP_PANEL_ID:
+			mdss_change_dcs_cmd(gMIPIDSInode, ctrl,
+					"qcom,mdss-dsi-panel-innolux", gPanelModel);
+			break;
+		default:
+			printk(KERN_ERR "[DISPLAY] illegal PID <0x%x>\n", gPanelModel);
+			break;
+	}
+#endif
 	if (ctrl->on_cmds.cmd_cnt)
 		mdss_dsi_panel_cmds_send(ctrl, &ctrl->on_cmds);
 
@@ -1043,6 +1183,11 @@ int mdss_dsi_panel_init(struct device_node *node,
 		pr_info("%s: Panel Name = %s\n", __func__, panel_name);
 
 	rc = mdss_panel_parse_dt(node, ctrl_pdata);
+
+#ifdef CONFIG_MACH_SONY_SEAGULL
+	gMIPIDSInode = node;
+#endif
+
 	if (rc) {
 		pr_err("%s:%d panel dt parse failed\n", __func__, __LINE__);
 		return rc;

@@ -289,6 +289,10 @@ struct mdss_dsi_ctrl_pdata {
 	int irq_cnt;
 	int mdss_dsi_clk_on;
 	int rst_gpio;
+#ifdef CONFIG_MACH_SONY_SEAGULL
+	int disp_p5_gpio;
+	int disp_n5_gpio;
+#endif
 	int disp_en_gpio;
 	int disp_te_gpio;
 	int mode_gpio;
@@ -415,4 +419,7 @@ int mdss_dsi_panel_fps_data_update(struct msm_fb_data_type *mfd);
 int mdss_dsi_panel_init(struct device_node *node,
 		struct mdss_dsi_ctrl_pdata *ctrl_pdata,
 		bool cmd_cfg_cont_splash);
+#ifdef CONFIG_MACH_SONY_SEAGULL
+unsigned char mdss_manufacture_id_read(void);
+#endif
 #endif /* MDSS_DSI_H */
