@@ -1004,6 +1004,11 @@ static ssize_t kona_fb_panel_mode_store(struct device *dev,
 		if (wait_for_completion_timeout(&fb->prev_buf_done_sem,
 						msecs_to_jiffies(10000)) <= 0)
 			konafb_error("timed out waiting for completion\n");
+		if (fb->link_suspended) {
+			konafb_debug("Link suspended when entering special "
+								"mode\n");
+			link_control(fb, RESUME_LINK);
+		}
 		kona_clock_start(fb);
 		if (fb->display_info->cabc_enabled)
 			panel_write(fb->display_info->cabc_off_seq);
