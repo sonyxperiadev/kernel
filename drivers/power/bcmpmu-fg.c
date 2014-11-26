@@ -3034,18 +3034,19 @@ static void bcmpmu_fg_periodic_work(struct work_struct *work)
 					chrgr_type < PMU_CHRGR_TYPE_MAX) {
 				fg->chrgr_type = chrgr_type;
 				fg->flags.chrgr_connected = true;
-				if (bcmpmu_is_usb_host_enabled(fg->bcmpmu)) {
-					fg->flags.prev_batt_status =
-						fg->flags.batt_status;
-					fg->flags.batt_status =
-						POWER_SUPPLY_STATUS_CHARGING;
-				}
-			} else {
-				fg->flags.prev_batt_status =
-							fg->flags.batt_status;
-				fg->flags.batt_status =
-						POWER_SUPPLY_STATUS_DISCHARGING;
+				if (bcmpmu_is_usb_host_enabled(fg->bcmpmu))
+					fg->flags.charging_enabled = true;
 			}
+
+			fg->flags.prev_batt_status = fg->flags.batt_status;
+
+			if (fg->flags.chrgr_connected &&
+				fg->flags.charging_enabled)
+				fg->flags.batt_status =
+					POWER_SUPPLY_STATUS_CHARGING;
+			else
+				fg->flags.batt_status =
+					POWER_SUPPLY_STATUS_DISCHARGING;
 		}
 		if (!fg->init_notifier) {
 			ret = bcmpmu_fg_register_notifiers(fg);
