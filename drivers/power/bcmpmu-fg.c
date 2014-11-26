@@ -49,7 +49,16 @@
 
 #define FG_CAPACITY_SAVE_REG		(PMU_REG_FGGNRL1)
 #define FG_CAP_FULL_CHARGE_REG		(PMU_REG_FGGNRL2)
+#define FG_CAP_FULL_CHARGE_REG1		(PMU_REG_FGGNRL3)
 #define FG_LOW_CAL_STATUS_REG		(PMU_REG_FGGNRL3)
+#define FG_FC_SAVE_CAP_MASK	0x80
+#define FG_SAVE_CAP_DELTA_NEGTV 0x40
+#define FG_SAVE_CAP_DELTA_MASK 0x3F
+#define FG_FC_CAP_MASK	0x8000
+#define FG_CAP_MASK 0xFF
+#define FG_FC_MAX_SAMPLES	2
+#define FG_FC_MAX_DEV	7
+#define FG_QF_DELTA	5
 
 #define PMU_FG_CURR_SMPL_SIGN_BIT_MASK		0x8000
 #define PMU_FG_CURR_SMPL_SIGN_BIT_SHIFT		15
@@ -297,7 +306,11 @@ struct avg_sample_buff {
 	int idx;
 	bool dirty;
 };
-
+struct fg_fc_cap_d {
+	u16 cap[FG_FC_MAX_SAMPLES];
+	u16 fg_fc_cap;
+	u16 fc_samples;
+};
 #ifdef CONFIG_DEBUG_FS
 struct fg_probes {
 	int volt_avg;
@@ -394,6 +407,7 @@ struct bcmpmu_fg_data {
 #ifdef CONFIG_DEBUG_FS
 	struct fg_probes probes;
 #endif
+	struct fg_fc_cap_d fcd;
 };
 
 #ifdef CONFIG_DEBUG_FS
@@ -2001,10 +2015,200 @@ static int bcmpmu_fg_get_saved_cap(struct bcmpmu_fg_data *fg)
 	return cap;
 }
 
+
+static void bcmpmu_fg_update_fc_sample(struct bcmpmu_fg_data *fg,
+					int cap, u8 index)
+{
+	u8 last_cap;
+	char cap_delta;
+
+	cap_delta = abs(cap - 100);
+	if (cap <= 100)
+		cap_delta |= FG_SAVE_CAP_DELTA_NEGTV;
+	pr_fg(VERBOSE, "%s saved %d delta abs %ld\n",
+			__func__, cap_delta,  abs(cap - 100));
+	if (fg->pdata->saved_fc_samples > 1) {
+		if (index) {
+			fg->bcmpmu->write_dev(fg->bcmpmu,
+				FG_CAP_FULL_CHARGE_REG1, cap_delta);
+		} else {
+			/* put sample to 1 to  0 and new in 1
+			 * so we will have always old sample in 0
+			 * which to be replaced
+			 */
+			fg->bcmpmu->read_dev(fg->bcmpmu,
+					FG_CAP_FULL_CHARGE_REG1, &last_cap);
+			fg->bcmpmu->write_dev(fg->bcmpmu,
+					FG_CAP_FULL_CHARGE_REG, last_cap);
+			fg->bcmpmu->write_dev(fg->bcmpmu,
+					FG_CAP_FULL_CHARGE_REG1, cap_delta);
+		}
+	} else if (!index) {
+		/* If we have define no ofsaved sample 1 in design then if
+		 * validation fails replace the same
+		 */
+		fg->bcmpmu->write_dev(fg->bcmpmu,
+					FG_CAP_FULL_CHARGE_REG, cap_delta);
+	}
+
+}
+
+/* check whether FC sample meeting Max and Min deviation */
+static bool bcmpmu_fg_qf_fc_cap(struct bcmpmu_fg_data *fg, int runing_fc_cap)
+{
+	int max, min, i;
+	bool fc_cap = false;
+	char cap_delta;
+
+	if (fg->fcd.fc_samples != (fg->pdata->saved_fc_samples))
+		return fc_cap;
+
+	max = min = runing_fc_cap;
+	for (i = 0; i < fg->fcd.fc_samples; i++) {
+		if (max <  (fg->fcd.cap[i] & FG_CAP_MASK))
+			max = (fg->fcd.cap[i] & FG_CAP_MASK);
+		if (min >  (fg->fcd.cap[i] & FG_CAP_MASK))
+			min = (fg->fcd.cap[i] & FG_CAP_MASK);
+	}
+
+	pr_fg(VERBOSE, "%s max %d min %d FG_QF_DELTA %d\n",
+		__func__, max, min, FG_QF_DELTA);
+	fc_cap = max - min <= FG_QF_DELTA ? true : false;
+	/* if Qualified QF sample is mean if all samples */
+	if (fc_cap) {
+		fg->fcd.fg_fc_cap = runing_fc_cap;
+		for (i = 0; i < fg->fcd.fc_samples; i++)
+			fg->fcd.fg_fc_cap +=  fg->fcd.cap[i] & FG_CAP_MASK;
+
+		fg->fcd.fg_fc_cap = DIV_ROUND_CLOSEST(fg->fcd.fg_fc_cap, ++i);
+
+		cap_delta = abs(fg->fcd.fg_fc_cap - 100);
+		if (fg->fcd.fg_fc_cap <= 100)
+			cap_delta |= FG_SAVE_CAP_DELTA_NEGTV;
+		cap_delta |= FG_FC_SAVE_CAP_MASK;
+		pr_fg(FLOW, "%s fg fc_cap %d\n", __func__,  cap_delta);
+		/* update FC Sample in reg : mean of latch samples with QF
+		 * Flag set */
+		fg->bcmpmu->write_dev(fg->bcmpmu,
+				FG_CAP_FULL_CHARGE_REG, cap_delta);
+	}
+
+	return fc_cap;
+}
+/* Check whether FC sample still meeting Max deviation criteria */
+static bool bcmpmu_fg_validate_fc_cap(struct bcmpmu_fg_data *fg,
+					int runing_fc_cap)
+{
+	int dev, fc_cap, i;
+	u8 cnt = 0;
+
+	fc_cap = fg->fcd.cap[0] & FG_CAP_MASK;
+
+	for (i = 1; i < fg->fcd.fc_samples; i++) {
+		dev = fc_cap - (fg->fcd.cap[i] & FG_CAP_MASK);
+		if (abs(dev) >  FG_FC_MAX_DEV)
+			cnt++;
+	}
+
+	dev = fc_cap - runing_fc_cap;
+	if (abs(dev) >  FG_FC_MAX_DEV)
+		cnt++;
+
+	pr_fg(VERBOSE, "%s fg sample %d max dev %d\n"
+		, __func__, cnt, dev);
+	/* Check for  max FG_CAP max dev allowed */
+	return cnt >= fg->fcd.fc_samples ? 0 : 1;
+
+}
+
+/* Count the no. of samples present*/
+static void bcmpmu_fg_get_saved_fc_caps(struct bcmpmu_fg_data *fg)
+{
+	int i, c = 0;
+	int ret;
+	short cap = 0;
+	char saved_cap[FG_FC_MAX_SAMPLES];
+
+	memset(fg->fcd.cap, 0, sizeof(struct fg_fc_cap_d));
+	ret = fg->bcmpmu->read_dev_bulk(fg->bcmpmu,
+			FG_CAP_FULL_CHARGE_REG, saved_cap,
+			fg->pdata->saved_fc_samples);
+	if (ret) {
+		pr_fg(ERROR, "%s bulk read failed\n", __func__);
+		return;
+	}
+	/* cap is saved in 8 bits bit 7 is for Qualified FC cap
+	 * bit 5-0 is delta of cap , cap is 100 + delta
+	 * bit 6 is sign of delta. When restoring cap is saved
+	 * in 16 bit bit 15 is  for Qualified FC cap and rest bits
+	 * is for actual cap
+	 */
+	for (i = 0; i < fg->pdata->saved_fc_samples; i++) {
+		if (saved_cap[i]) {
+			cap = saved_cap[i] & FG_SAVE_CAP_DELTA_MASK;
+			if (saved_cap[i] & FG_SAVE_CAP_DELTA_NEGTV)
+				cap = 100 - cap;
+			else
+				cap = 100 + cap;
+			fg->fcd.cap[i] = cap;
+			if (saved_cap[i] & FG_FC_SAVE_CAP_MASK)
+				fg->fcd.cap[i] |= FG_FC_CAP_MASK;
+			pr_fg(FLOW, "%s fc[%d] fcd_cap %d cap %d\n",
+				__func__, i, fg->fcd.cap[i], cap);
+			c++;
+		}
+	}
+	fg->fcd.fc_samples = c;
+
+}
+
+/* read latch value and check for FG_FC flasg */
+static int bcmpmu_fg_get_fc_cap(struct bcmpmu_fg_data *fg)
+{
+	int fc_cap = 0;
+
+	bcmpmu_fg_get_saved_fc_caps(fg);
+	if (fg->fcd.cap[0] & FG_FC_CAP_MASK)
+		fc_cap = fg->fcd.cap[0] & FG_CAP_MASK;
+	pr_fg(FLOW, "%s qfc_cap %d\n", __func__, fc_cap);
+	return fc_cap;
+
+}
+
 static int bcmpmu_fg_save_full_charge_cap(struct bcmpmu_fg_data *fg, int cap)
 {
-	return fg->bcmpmu->write_dev(fg->bcmpmu, FG_CAP_FULL_CHARGE_REG,
-			cap);
+	int ret = 0;
+	bool qf_cap;
+	u8 update_index = 0;
+	/* old way */
+	if (!fg->pdata->full_cap_qf_sample)
+		ret = fg->bcmpmu->write_dev(fg->bcmpmu,
+				FG_CAP_FULL_CHARGE_REG, cap);
+	/* newbie */
+	else {
+		pr_fg(FLOW, "%s cap %d\n", __func__, cap);
+		/* check for latch QF FC CAP */
+		if (bcmpmu_fg_get_fc_cap(fg)) {
+
+			if (bcmpmu_fg_validate_fc_cap(fg, cap))
+				/* replace FC with Cap */
+				update_index = 1;
+
+			bcmpmu_fg_update_fc_sample(fg, cap, update_index);
+
+		} else  {
+			/* if No QF FC check for no. of latch samples
+			 * If we have max samples check for QF of FC*/
+			qf_cap  = bcmpmu_fg_qf_fc_cap(fg, cap);
+			/* if we got qf_cap update running cap with
+			 * last sample storein reg1 else place last sample
+			 * from reg1 to reg0 and running sample to reg1*/
+			if (qf_cap)
+				update_index = 1;
+			bcmpmu_fg_update_fc_sample(fg, cap, update_index);
+		}
+	}
+	return ret;
 }
 
 static int bcmpmu_fg_get_saved_cap_full_charge(struct bcmpmu_fg_data *fg)
@@ -2013,39 +2217,19 @@ static int bcmpmu_fg_get_saved_cap_full_charge(struct bcmpmu_fg_data *fg)
 	int cap;
 	u8 reg;
 
-	ret = fg->bcmpmu->read_dev(fg->bcmpmu, FG_CAP_FULL_CHARGE_REG, &reg);
+	if (!fg->pdata->full_cap_qf_sample) {
+		ret = fg->bcmpmu->read_dev(fg->bcmpmu,
+			FG_CAP_FULL_CHARGE_REG, &reg);
+		if (ret)
+			cap = 0;
+		else
+			cap = reg;
+	} else {
+		cap = bcmpmu_fg_get_fc_cap(fg);
 
-	if (ret)
-		cap = 0;
-	else
-		cap = reg;
+	}
 	return cap;
 }
-
-static int bcmpmu_fg_save_cal_status(struct bcmpmu_fg_data *fg,
-		bool status)
-{
-	return fg->bcmpmu->write_dev(fg->bcmpmu, FG_LOW_CAL_STATUS_REG,
-			status);
-}
-
-#if 0
-static bool bcmpmu_fg_get_saved_cal_status(struct bcmpmu_fg_data *fg)
-{
-	int ret;
-	bool status;
-	u8 reg;
-
-	ret = fg->bcmpmu->read_dev(fg->bcmpmu, FG_LOW_CAL_STATUS_REG,
-			&reg);
-	if (ret)
-		status = false;
-	else
-		status = (reg ? true : false);
-
-	return status;
-}
-#endif
 
 static int bcmpmu_fg_set_sync_mode(struct bcmpmu_fg_data *fg, bool sync)
 {
@@ -2886,8 +3070,6 @@ static void bcmpmu_fg_cal_low_batt_algo(struct bcmpmu_fg_data *fg)
 	else if ((fg->low_cal_adj_fct < 0) &&
 			(fg->low_cal_adj_fct < -FG_MAX_ADJ_FACTOR))
 		fg->low_cal_adj_fct = -FG_MAX_ADJ_FACTOR;
-
-	bcmpmu_fg_save_cal_status(fg, true);
 
 	/**
 	 * full charge -> full discharge cycle
@@ -4038,6 +4220,22 @@ static const struct file_operations fg_capacity_delta_fops = {
 	.read = debugfs_get_capacity_delta,
 };
 
+static int debugfs_get_qfc(void *data, u64 *capacity)
+{
+	struct bcmpmu_fg_data *fg = data;
+	*capacity = bcmpmu_fg_get_saved_cap_full_charge(fg);
+	return 0;
+}
+
+static int debugfs_save_qfc(void *data, u64 capacity)
+{
+	struct bcmpmu_fg_data *fg = data;
+	bcmpmu_fg_save_full_charge_cap(fg, capacity);
+	return 0;
+}
+DEFINE_SIMPLE_ATTRIBUTE(fg_qfc_fops,
+	debugfs_get_qfc, debugfs_save_qfc, "%llu\n");
+
 static void bcmpmu_fg_debugfs_init(struct bcmpmu_fg_data *fg)
 {
 	struct dentry *dentry_fg_dir;
@@ -4176,6 +4374,12 @@ static void bcmpmu_fg_debugfs_init(struct bcmpmu_fg_data *fg)
 	dentry_fg_file = debugfs_create_file("capacity_delta",
 			DEBUG_FS_PERMISSIONS, dentry_fg_dir,
 			fg, &fg_capacity_delta_fops);
+	if (IS_ERR_OR_NULL(dentry_fg_file))
+		goto debugfs_clean;
+
+	dentry_fg_file = debugfs_create_file("qfc_cap",
+			DEBUG_FS_PERMISSIONS, dentry_fg_dir, fg,
+				&fg_qfc_fops);
 	if (IS_ERR_OR_NULL(dentry_fg_file))
 		goto debugfs_clean;
 
@@ -4470,6 +4674,16 @@ static int bcmpmu_fg_probe(struct platform_device *pdev)
 	if ((fg->bcmpmu->flags & BCMPMU_FG_VF_CTRL) &&
 			fg->bdata->vfd_sz)
 		fg->vf_zone = -1;
+
+	if (fg->pdata->full_cap_qf_sample) {
+		if (!fg->pdata->saved_fc_samples ||
+				fg->pdata->saved_fc_samples >
+					FG_FC_MAX_SAMPLES) {
+			WARN_ON(1);
+			pr_fg(ERROR, "FG Plat data not correct\n");
+			fg->pdata->saved_fc_samples = FG_FC_MAX_SAMPLES;
+		}
+	}
 
 	/**
 	 * Run FG algorithm now

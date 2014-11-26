@@ -1610,7 +1610,9 @@ static struct bcmpmu_fg_pdata fg_pdata = {
 	.hysteresis = SONY_BATTERY_TEMP_HYST,
 	.cap_delta_thrld = 20,
 	.flat_cap_delta_thrld = 20,
-	.disable_full_charge_learning = true,
+	.disable_full_charge_learning = false,
+	.full_cap_qf_sample = true,
+	.saved_fc_samples = 2,
 };
 
 #if defined(CONFIG_LEDS_BCM_PMU59xxx)

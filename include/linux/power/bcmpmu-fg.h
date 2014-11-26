@@ -191,6 +191,8 @@ struct bcmpmu_fg_pdata {
 	int cap_delta_thrld; /* threshold to allow new cap estimations */
 	int flat_cap_delta_thrld; /* same as above but in flat area */
 	bool disable_full_charge_learning;
+	bool full_cap_qf_sample;
+	int saved_fc_samples;
 };
 
 int bcmpmu_fg_set_sw_eoc_current(struct bcmpmu59xxx *bcmpmu, int eoc_current);
