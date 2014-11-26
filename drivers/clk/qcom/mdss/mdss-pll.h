@@ -60,6 +60,9 @@ struct mdss_pll_resources {
 	void __iomem	*gdsc_base;
 	void __iomem	*dyn_pll_base;
 
+	s64	vco_current_rate;
+	s64	vco_ref_clk_rate;
+
 	/*
 	 * Certain pll's needs to update the same vco rate after resume in
 	 * suspend/resume scenario. Cached the vco rate for such plls.
@@ -104,7 +107,7 @@ struct mdss_pll_resources {
 	/*
 	 * caching the pll trim codes in the case of dynamic refresh
 	 */
-	int		cache_pll_trim_codes[5];
+	int		cache_pll_trim_codes[2];
 
 	/*
 	 * for maintaining the status of saving trim codes
