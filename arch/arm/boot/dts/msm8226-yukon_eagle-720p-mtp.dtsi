@@ -295,6 +295,14 @@
 		};
 	};
 
+	rpm-regulator-ldoa27 {
+		pm8226_l27: regulator-l27 {
+			regulator-min-microvolt = <2100000>;
+			regulator-max-microvolt = <2100000>;
+			qcom,init-voltage = <2100000>;
+		};
+	};
+
 	rpm-regulator-ldoa28 {
 		pm8226_l28: regulator-l28 {
 			qcom,init-voltage = <2850000>;
