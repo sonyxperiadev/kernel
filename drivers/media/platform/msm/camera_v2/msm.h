@@ -1,5 +1,4 @@
 /* Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
- * Copyright (C) 2013 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -31,11 +30,7 @@
 #include <media/videobuf2-msm-mem.h>
 #include <media/msmb_camera.h>
 
-#if defined(CONFIG_SONY_CAM_V4L2)
-#define MSM_POST_EVT_TIMEOUT 4000
-#else
 #define MSM_POST_EVT_TIMEOUT 5000
-#endif
 #define MSM_POST_EVT_NOTIMEOUT 0xFFFFFFFF
 
 struct msm_video_device {
