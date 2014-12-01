@@ -94,6 +94,15 @@
 			};
 		};
 	};
+
+	i2c@f9926000 {
+		qcom,i2c-src-freq = <19200000>;
+		qcom,master-id = <86>;
+	};
+
+	i2c@f9927000 {
+		qcom,master-id = <86>;
+	};
 };
 
 &pm8226_l27{

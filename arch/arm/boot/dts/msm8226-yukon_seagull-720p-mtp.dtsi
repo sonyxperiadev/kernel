@@ -275,6 +275,14 @@
 	};
 };
 
+&rpm_bus {
+	rpm-regulator-ldoa19 {
+		pm8226_l19: regulator-l19 {
+			regulator-always-on;
+		};
+	};
+};
+
 &usb_otg {
 	#address-cells = <0>;
 	interrupt-parent = <&usb_otg>;
