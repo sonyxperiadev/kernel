@@ -26,17 +26,6 @@
 
 #define DT_CMD_HDR 6
 
-#ifdef CONFIG_MACH_SONY_FLAMINGO
-#define SYSTEM_RESET_PIN_TS 16	// Touch Screen HW Reset Pin
-#endif
-
-/* [Flamingo] LCM driver porting */
-#ifdef CONFIG_MACH_SONY_FLAMINGO
-#define TRULY_MIPI_DISP_RST_N 25
-#define TRULY_LCM_BL_EN 15
-int lcm_first_boot = 1;
-#endif
-
 DEFINE_LED_TRIGGER(bl_led_trigger);
 
 #ifdef CONFIG_MACH_SONY_SEAGULL
@@ -250,10 +239,6 @@ void mdss_dsi_panel_reset(struct mdss_panel_data *pdata, int enable)
 {
 	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
 	struct mdss_panel_info *pinfo = NULL;
-#ifndef CONFIG_MACH_SONY_FLAMINGO
-/* [Flamingo] LCM driver porting */
-	int i;
-#endif
 
 	if (pdata == NULL) {
 		pr_err("%s: Invalid input data\n", __func__);
@@ -312,17 +297,6 @@ void mdss_dsi_panel_reset(struct mdss_panel_data *pdata, int enable)
 		msleep(10);
 	}
 #else
-#ifdef CONFIG_MACH_SONY_FLAMINGO
-/*[Flamingo] LCM driver porting */
-		gpio_direction_output(SYSTEM_RESET_PIN_TS, 0);	//Touch Screen Reset Pin as Low
-		gpio_set_value((ctrl_pdata->rst_gpio), 1);
-		msleep(10);
-		gpio_set_value((ctrl_pdata->rst_gpio), 0);
-		msleep(10);
-		gpio_set_value((ctrl_pdata->rst_gpio), 1);
-		gpio_direction_output(SYSTEM_RESET_PIN_TS, 1);	//Touch Screen Reset Pin as High
-		msleep(120);
-#else
 		if (gpio_is_valid(ctrl_pdata->disp_en_gpio))
 			gpio_set_value((ctrl_pdata->disp_en_gpio), 1);
 
@@ -332,7 +306,6 @@ void mdss_dsi_panel_reset(struct mdss_panel_data *pdata, int enable)
 			if (pdata->panel_info.rst_seq[++i])
 				usleep(pdata->panel_info.rst_seq[i] * 1000);
 		}
-#endif
 
 		if (gpio_is_valid(ctrl_pdata->mode_gpio)) {
 			if (pinfo->mode_gpio_state == MODE_GPIO_HIGH)
@@ -409,30 +382,6 @@ static int mdss_dsi_panel_partial_update(struct mdss_panel_data *pdata)
 	return rc;
 }
 
-#ifdef CONFIG_MACH_SONY_FLAMINGO
-/*[Flamingo] LCM driver porting */
-static int aat1430_backlight_control(struct mdss_dsi_ctrl_pdata *ctrl, int bl_level)
-{
-	int i = 0;
-	int set_bl; 
-	set_bl = abs(ctrl->panel_data.panel_info.bl_max-bl_level)+1;
-	pr_info("[R]%s:++,bl_level %d \n", __func__,bl_level);
-	for (i=0;i<set_bl;i++)
-		{
-			gpio_set_value(TRULY_LCM_BL_EN, 1);
-			udelay(10);
-			gpio_set_value(TRULY_LCM_BL_EN, 0);
-			udelay(10);
-		}
-	if(bl_level==0)
-		gpio_set_value(TRULY_LCM_BL_EN, 0);
-	else
-		gpio_set_value(TRULY_LCM_BL_EN, 1);
-		udelay(500);
-	return 0;
-}
-#endif
-
 static struct mdss_dsi_ctrl_pdata *get_rctrl_data(struct mdss_panel_data *pdata)
 {
 	if (!pdata || !pdata->next) {
@@ -448,12 +397,6 @@ static void mdss_dsi_panel_bl_ctrl(struct mdss_panel_data *pdata,
 							u32 bl_level)
 {
 	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
-
-#ifdef CONFIG_MACH_SONY_FLAMINGO
-/*[Flamingo] LCM driver porting */
-	unsigned long flags;
-	pr_info("[R][%s](%d):bl_level:%d\n", __func__, __LINE__,bl_level);
-#endif
 
 	if (pdata == NULL) {
 		pr_err("%s: Invalid input data\n", __func__);
@@ -496,12 +439,6 @@ static void mdss_dsi_panel_bl_ctrl(struct mdss_panel_data *pdata,
 		pr_err("%s: Unknown bl_ctrl configuration\n",
 			__func__);
 
-#ifdef CONFIG_MACH_SONY_FLAMINGO
-/*[Flamingo] LCM driver porting */
-		spin_lock_irqsave(&ctrl_pdata->irq_lock, flags);
-		aat1430_backlight_control(ctrl_pdata, bl_level);
-		spin_unlock_irqrestore(&ctrl_pdata->irq_lock, flags);		
-#endif
 		break;
 	}
 }
@@ -521,11 +458,6 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 	mipi  = &pdata->panel_info.mipi;
 
 	pr_debug("%s: ctrl=%p ndx=%d\n", __func__, ctrl, ctrl->ndx);
-
-#ifdef CONFIG_MACH_SONY_FLAMINGO
-/*[Flamingo] LCM driver porting */
-	lcm_first_boot=0;
-#endif
 
 #ifdef CONFIG_MACH_SONY_SEAGULL
 	mdss_manufacture_id(ctrl);
@@ -576,14 +508,6 @@ static int mdss_dsi_panel_off(struct mdss_panel_data *pdata)
 
 	if (ctrl->off_cmds.cmd_cnt)
 		mdss_dsi_panel_cmds_send(ctrl, &ctrl->off_cmds);
-
-#ifdef CONFIG_MACH_SONY_FLAMINGO
-/*[Flamingo] LCM driver porting */
-	if (lcm_first_boot == 0)	{
-		gpio_set_value(TRULY_MIPI_DISP_RST_N, 0);
-		msleep(120);
-	}
-#endif
 
 	pr_debug("%s:-\n", __func__);
 	return 0;
@@ -1008,12 +932,6 @@ static int mdss_panel_parse_dt(struct device_node *np,
 		} else if (!strncmp(data, "bl_ctrl_dcs", 11)) {
 			ctrl_pdata->bklt_ctrl = BL_DCS_CMD;
 		}
-#ifdef CONFIG_MACH_SONY_FLAMINGO
-/*[Flamingo] LCM driver porting */
-		else {
-			ctrl_pdata ->bklt_ctrl = pinfo->bklt_ctrl;
-		}
-#endif
 	}
 	rc = of_property_read_u32(np, "qcom,mdss-brightness-max-level", &tmp);
 	pinfo->brightness_max = (!rc ? tmp : MDSS_MAX_BL_BRIGHTNESS);
@@ -1220,17 +1138,6 @@ int mdss_dsi_panel_init(struct device_node *node,
 		ctrl_pdata->panel_data.panel_info.partial_update_enabled = 0;
 		ctrl_pdata->partial_update_fnc = NULL;
 	}
-
-#ifdef CONFIG_MACH_SONY_FLAMINGO
-/*[Flamingo] LCM driver porting */
-	rc =gpio_request(TRULY_LCM_BL_EN,"BL EN PIN");
-	if (rc) {
-		pr_info("gpio15 request failed: %d\n", rc);
-	} else {
-		udelay(10);
-		msleep(1);
-	}
-#endif
 
 	ctrl_pdata->on = mdss_dsi_panel_on;
 	ctrl_pdata->off = mdss_dsi_panel_off;

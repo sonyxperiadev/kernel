@@ -22,6 +22,11 @@
 		qcom,mdss-dsi-panel-type = "dsi_video_mode";
 		qcom,mdss-dsi-panel-destination = "display_1";
 		qcom,mdss-dsi-panel-framerate = <60>;
+		somc,driver-ic = <0>;
+		somc,panel-id = [FF];
+		somc,vsp-gpio = <&msmgpio 15 0>;
+		somc,dric-gpio = <&msmgpio 27 0>;
+		qcom,rst-gpio = <&msmgpio 25 0>;
 		qcom,mdss-dsi-virtual-channel-id = <0>;
 		qcom,mdss-dsi-stream = <0>;
 		qcom,mdss-dsi-panel-width = <720>;
@@ -528,6 +533,8 @@
 		qcom,mdss-dsi-reset-sequence = <1 20>, <0 1>, <1 20>;
 		qcom,mdss-pan-physical-width-dimension = <59>;
 		qcom,mdss-pan-physical-height-dimension = <104>;
-
+		qcom,platform-reset-gpio = <&msmgpio 25 0>;
+		somc,lcm-bl-gpio = <&msmgpio 15 0>;
+		somc,mipi-rst-gpio = <&msmgpio 25 0>;
 	};
 };
