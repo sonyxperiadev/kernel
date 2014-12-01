@@ -1,4 +1,5 @@
 /*  Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
+ *  Copyright (C) 2013 Sony Mobile Communications Inc. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -4393,6 +4394,7 @@ int voc_disable_cvp(uint32_t session_id)
 	mutex_lock(&v->lock);
 
 	if (v->voc_state == VOC_RUN) {
+
 		rtac_remove_voice(voice_get_cvs_handle(v));
 		/* send cmd to dsp to disable vocproc */
 		ret = voice_send_disable_vocproc_cmd(v);
@@ -4566,6 +4568,26 @@ int voc_set_tx_mute(uint32_t session_id, uint32_t dir, uint32_t mute,
 			break;
 		}
 	}
+
+	return ret;
+}
+
+int voc_get_tx_device_mute(uint32_t session_id)
+{
+	struct voice_data *v = voice_get_session(session_id);
+	int ret = 0;
+
+	if (v == NULL) {
+		pr_err("%s: invalid session_id 0x%x\n", __func__, session_id);
+
+		return -EINVAL;
+	}
+
+	mutex_lock(&v->lock);
+
+	ret = v->dev_tx.dev_mute;
+
+	mutex_unlock(&v->lock);
 
 	return ret;
 }
@@ -4871,6 +4893,7 @@ int voc_standby_voice_call(uint32_t session_id)
 		pr_err("%s: v is NULL\n", __func__);
 		return -EINVAL;
 	}
+
 	if (v->voc_state == VOC_RUN) {
 		apr_mvm = common.apr_q6_mvm;
 		if (!apr_mvm) {
