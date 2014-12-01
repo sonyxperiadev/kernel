@@ -16,6 +16,10 @@
 		qcom,mdss-dsi-panel-name = "truly hx8379a PDP2 qhd video mode dsi panel";
 		qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
 		qcom,mdss-dsi-panel-type = "dsi_video_mode";
+		somc,driver-ic = <0>;
+		somc,panel-id = [FF];
+		somc,vsp-gpio = <&msmgpio 15 0>;
+		somc,dric-gpio = <&msmgpio 27 0>;
 		qcom,rst-gpio = <&msmgpio 25 0>;
 		qcom,mdss-dsi-panel-width = <480>;
 		qcom,mdss-dsi-panel-height = <854>;
@@ -56,6 +60,10 @@
 		qcom,mdss-dsi-mdp-trigger = <0x0>;
 		qcom,mdss-dsi-dma-trigger = <0x04>;
 		qcom,mdss-dsi-panel-framerate = <60>;
+		qcom,platform-reset-gpio = <&msmgpio 25 0>;
+		qcom,mdss-dsi-reset-sequence = <1 10>, <0 10>, <1 120>;
+		somc,lcm-bl-gpio = <&msmgpio 15 0>;
+		somc,mipi-rst-gpio = <&msmgpio 25 0>;
 		qcom,panel-phy-regulatorSettings = [03 0a 04 00 20 00 01]; /* Regualotor settings */
 		qcom,mdss-dsi-panel-timings = [75 18 10 00 3A 3E 14 1A 13 03 04 00];
 
