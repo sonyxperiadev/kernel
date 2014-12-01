@@ -382,6 +382,10 @@
 			qcom,vib-timeout-ms = <15000>;
 			qcom,vib-vtg-level-mV = <3100>;
 		};
+
+		pm8226_s2: spm-regulator@1700 {
+			/delete-property/ qcom,mode;
+		};
 	};
 };
 
