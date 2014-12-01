@@ -2623,7 +2623,9 @@ static int elan_ktf2k_ts_resume(struct i2c_client *client)
 		return 0;
 	}
 #endif
-	
+
+	elan_ktf2k_ts_hw_reset(private_ts->client);
+
 	mutex_lock(&private_ts->lock);
 	if(power_lock==0)   /* The power_lock can be removed when firmware upgrade procedure will not be enter into suspend mode.  */
 	{
