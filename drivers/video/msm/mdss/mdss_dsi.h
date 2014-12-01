@@ -84,6 +84,7 @@ enum dsi_panel_bl_ctrl {
 	BL_PWM,
 	BL_WLED,
 	BL_DCS_CMD,
+	BL_AAT1430,
 	UNKNOWN_CTRL,
 };
 
@@ -227,6 +228,8 @@ struct mdss_panel_specific_pdata {
 	int panel_detect;
 	int cabc_enabled;
 	int cabc_active;
+	int lcm_bl_gpio;
+	int mipi_rst;
 
 	struct dsi_panel_cmds einit_cmds;
 	struct dsi_panel_cmds init_cmds;
