@@ -1354,31 +1354,7 @@ int dsi_panel_device_register(struct device_node *pan_node,
 			return -ENODEV;
 		}
 	}
-#ifdef CONFIG_MACH_SONY_SEAGULL
-	ctrl_pdata->disp_p5_gpio = of_get_named_gpio(ctrl_pdev->dev.of_node,
-		"qcom,platform-p5-gpio", 0);
-	if (!gpio_is_valid(ctrl_pdata->disp_p5_gpio)) {
-		printk("%s:%d, Disp_p5 gpio not specified\n",
-						__func__, __LINE__);
-	} else {
-		rc = gpio_request(ctrl_pdata->disp_p5_gpio, "disp_p5");
-		if (rc) {
-			printk("request p5 gpio failed, rc=%d\n",
-				   rc);
-			gpio_free(ctrl_pdata->disp_p5_gpio);
-			return -ENODEV;
-		}
-		rc = gpio_tlmm_config(GPIO_CFG(
-				ctrl_pdata->disp_p5_gpio, 0,
-				GPIO_CFG_OUTPUT,
-				GPIO_CFG_PULL_DOWN,
-				GPIO_CFG_2MA),
-				GPIO_CFG_ENABLE);
-		if (rc)
-			printk("[DISPLAY]%s: gpio %d fail, rc %d\n", __func__, ctrl_pdata->disp_p5_gpio, rc);
-	}
 
-#endif
 	if (pinfo->type == MIPI_CMD_PANEL) {
 		ctrl_pdata->disp_te_gpio = of_get_named_gpio(ctrl_pdev->dev.of_node,
 						"qcom,platform-te-gpio", 0);
