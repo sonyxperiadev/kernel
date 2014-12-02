@@ -15,7 +15,8 @@
  */
 
 /dts-v1/;
-/include/ "msm8926-yukon_tianchi.dtsi"
+/include/ "msm8226-yukon_tianchi.dtsi"
+/include/ "msm8926.dtsi"
 /include/ "msm8226-yukon_tianchi_dsds.dtsi"
 /include/ "dsi-yukon_tianchi_dsds-panel.dtsi"
 /include/ "msm8226-yukon_tianchi-camera-sensor.dtsi"
