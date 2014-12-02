@@ -432,6 +432,7 @@ int mdss_register_panel(struct platform_device *pdev,
 struct msm_fb_data_type;
 void mipi_dsi_panel_create_debugfs(struct msm_fb_data_type *mfd);
 void mipi_dsi_panel_remove_debugfs(struct msm_fb_data_type *mfd);
+bool mdss_dsi_panel_flip_ud(void);
 #endif
 /**
  * mdss_panel_intf_type: - checks if a given intf type is primary
