@@ -816,6 +816,11 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
 		ctrl_pdata->ctrl_state |= CTRL_STATE_MDP_ACTIVE;
 		if (ctrl_pdata->on_cmds.link_state == DSI_HS_MODE)
 			rc = mdss_dsi_unblank(pdata);
+#if (defined(CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL) && defined(CONFIG_MACH_SONY_YUKON))
+		if (ctrl_pdata->spec_pdata->disp_on_in_hs
+			&& ctrl_pdata->spec_pdata->disp_on)
+			rc = ctrl_pdata->spec_pdata->disp_on(pdata);
+#endif
 		break;
 	case MDSS_EVENT_BLANK:
 		if (ctrl_pdata->off_cmds.link_state == DSI_HS_MODE)
@@ -1134,7 +1139,7 @@ static int __devexit mdss_dsi_ctrl_remove(struct platform_device *pdev)
 }
 
 
-void mdss_dsi_panel_power_detect(struct platform_device *pdev, int enable)
+int mdss_dsi_panel_power_detect(struct platform_device *pdev, int enable)
 {
 #ifdef CONFIG_MACH_SONY_RHINE
 	int ret;
@@ -1184,6 +1189,55 @@ void mdss_dsi_panel_power_detect(struct platform_device *pdev, int enable)
 		devm_regulator_put(vdd_vreg);
 	}
 #endif	/* CONFIG_MACH_SONY_RHINE */
+#ifdef CONFIG_MACH_SONY_YUKON
+	int ret;
+	static struct regulator *vddio_vreg;
+
+	if (!vddio_vreg) {
+
+		vddio_vreg = devm_regulator_get(&pdev->dev, "vddio");
+		if (IS_ERR(vddio_vreg)) {
+			pr_err("could not get 8941_lvs3, rc = %ld\n",
+					PTR_ERR(vddio_vreg));
+			return -ENODEV;
+		}
+	}
+
+	if (enable) {
+		ret = regulator_set_optimum_mode(vddio_vreg, 100000);
+		if (ret < 0) {
+			pr_err("%s: vdd_vreg set regulator mode failed.\n",
+						       __func__);
+			return ret;
+		}
+
+		ret = regulator_enable(vddio_vreg);
+		if (ret) {
+			pr_err("%s: Failed to enable regulator.\n", __func__);
+			return ret;
+		}
+
+		msleep(50);
+		wmb();
+	} else {
+		ret = regulator_disable(vddio_vreg);
+		if (ret) {
+			pr_err("%s: Failed to disable regulator.\n", __func__);
+			return ret;
+		}
+
+		ret = regulator_set_optimum_mode(vddio_vreg, 100);
+		if (ret < 0) {
+			pr_err("%s: vdd_vreg set regulator mode failed.\n",
+						       __func__);
+			return ret;
+		}
+
+		usleep_range(9000, 10000);
+		devm_regulator_put(vddio_vreg);
+	}
+	return 0;
+#endif
 }
 
 struct device dsi_dev;

@@ -270,6 +270,10 @@ struct mdss_panel_specific_pdata {
 	int init_from_begin;
 	int cabc_enabled;
 	int cabc_active;
+	int lcm_bl_gpio;
+	int mipi_rst;
+	int disp_p5;
+	int disp_n5;
 
 	struct dsi_panel_cmds cabc_early_on_cmds;
 	struct dsi_panel_cmds cabc_on_cmds;
@@ -392,7 +396,7 @@ struct mdss_dsi_ctrl_pdata {
 
 int dsi_panel_device_register(struct device_node *pan_node,
 				struct mdss_dsi_ctrl_pdata *ctrl_pdata);
-void mdss_dsi_panel_power_detect(struct platform_device *pdev, int enable);
+int mdss_dsi_panel_power_detect(struct platform_device *pdev, int enable);
 
 int mdss_dsi_cmds_tx(struct mdss_dsi_ctrl_pdata *ctrl,
 		struct dsi_cmd_desc *cmds, int cnt);

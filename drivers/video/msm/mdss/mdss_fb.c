@@ -1994,7 +1994,9 @@ static int __mdss_fb_perform_commit(struct msm_fb_data_type *mfd)
 		else
 			pr_warn("no kickoff function setup for fb%d\n",
 					mfd->index);
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
 		mdss_dsi_panel_fps_data_update(mfd);
+#endif
 	} else {
 		ret = mdss_fb_pan_display_sub(&fb_backup->disp_commit.var,
 				&fb_backup->info);
