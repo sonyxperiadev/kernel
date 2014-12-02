@@ -368,6 +368,11 @@
 		qcom,mdss-pan-physical-height-dimension = <104>;
     qcom,mdss-dsi-lp11-init;
     qcom,mdss-dsi-init-delay-us = <1>;
+
+		qcom,platform-reset-gpio = <&msmgpio 25 0>;
+		somc,dric-gpio = <&msmgpio 23 0>;
+		somc,driver-ic = <1>;
+		somc,panel-id = [FF];
 	};
 };
 

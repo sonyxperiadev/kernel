@@ -696,10 +696,14 @@
 };
 
 &dsi_innolux_qhd_vid {
+	somc,no-vsn-gpio;
+	somc,no-vsp-gpio;
 	qcom,cont-splash-disabled;
 };
 
 &dsi_truly_qhd_vid {
+	somc,no-vsn-gpio;
+	somc,no-vsp-gpio;
 	qcom,cont-splash-disabled;
 };
 
