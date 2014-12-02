@@ -230,6 +230,8 @@ struct mdss_panel_specific_pdata {
 	int cabc_active;
 	int lcm_bl_gpio;
 	int mipi_rst;
+	int disp_p5;
+	int disp_n5;
 
 	struct dsi_panel_cmds einit_cmds;
 	struct dsi_panel_cmds init_cmds;
