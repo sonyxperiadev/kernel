@@ -691,8 +691,7 @@
 };
 
 &mdss_dsi0 {
-	qcom,dsi-pref-prim-pan1 = <&dsi_innolux_qhd_vid>;
-	qcom,dsi-pref-prim-pan2 = <&dsi_truly_qhd_vid>;
+	qcom,dsi-pref-prim-pan = <&dsi_innolux_qhd_vid>;
 };
 
 &dsi_innolux_qhd_vid {
