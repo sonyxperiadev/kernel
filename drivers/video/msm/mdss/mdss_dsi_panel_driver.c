@@ -531,7 +531,7 @@ static int mdss_dsi_panel_detect(struct mdss_panel_data *pdata)
 			spec_pdata->driver_ic, ctrl_pdata->rx_buf.data);
 	else
 		rc = mdss_panel_parse_dt(np, ctrl_pdata,
-			spec_pdata->driver_ic, (char*)panel_id);
+			spec_pdata->driver_ic, &panel_id);
 
 	return 0;
 }
