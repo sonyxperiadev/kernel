@@ -925,6 +925,18 @@ static int mdss_mdp_image_setup(struct mdss_mdp_pipe *pipe,
 	src_size = (src.h << 16) | src.w;
 	src_xy = (src.y << 16) | src.x;
 	dst_size = (dst.h << 16) | dst.w;
+
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+	if (mdss_dsi_panel_flip_ud()) {
+		if (pipe->mfd && pipe->mfd->panel_info &&
+			pipe->mfd->panel_info->pdest == DISPLAY_1)
+			dst_xy = ((pipe->mixer->height -
+				   (pipe->dst.y + pipe->dst.h)) << 16) |
+				pipe->dst.x;
+		else
+			dst_xy = (pipe->dst.y << 16) | pipe->dst.x;
+	} else
+#endif
 	dst_xy = (dst.y << 16) | dst.x;
 
 	ystride0 =  (pipe->src_planes.ystride[0]) |
@@ -1028,6 +1040,16 @@ static int mdss_mdp_format_setup(struct mdss_mdp_pipe *pipe)
 
 	if (pipe->scale.enable_pxl_ext)
 		opmode |= (1 << 31);
+
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+	if (mdss_dsi_panel_flip_ud()) {
+		if (pipe->mfd && pipe->mfd->panel_info &&
+			pipe->mfd->panel_info->pdest == DISPLAY_1) {
+			opmode ^= MDSS_MDP_OP_FLIP_LR;
+			opmode ^= MDSS_MDP_OP_FLIP_UD;
+			}
+	}
+#endif
 
 	if (fmt->tile && mdata->highest_bank_bit) {
 		mdss_mdp_pipe_write(pipe, MDSS_MDP_REG_SSPP_FETCH_CONFIG,
