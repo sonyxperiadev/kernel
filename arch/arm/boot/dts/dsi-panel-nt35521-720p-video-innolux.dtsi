@@ -284,7 +284,14 @@
 		qcom,mdss-dsi-dma-trigger = <4>;
 		qcom,mdss-dsi-mdp-trigger = <0>;
 		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
-		qcom,mdss-dsi-reset-sequence = <1 20>, <0 1>, <1 20>;
-
+		qcom,platform-reset-gpio = <&msmgpio 25 0>;
+		qcom,mdss-dsi-reset-sequence = <1 150>;
+		somc,panel-id = [65];
+		somc,pwr-positive5-gpio = <&msmgpio 2 0>;
+		somc,pwr-negative5-gpio = <&msmgpio 3 0>;
+		somc,panel-detect = <1>;
+		somc,alt-panelid-cmd;
+		somc,no-vsn-gpio;
+		somc,no-vsp-gpio;
 	};
 };
