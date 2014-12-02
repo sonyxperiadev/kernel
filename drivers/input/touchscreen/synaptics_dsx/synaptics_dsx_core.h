@@ -292,6 +292,7 @@ struct synaptics_rmi4_data {
 	bool enable_wakeup_gesture;
 	bool wakeup_gesture_active;
 	bool wg_sent;
+	bool wg_ongoing;
 	bool block_until_no_finger;
 	int (*reset_device)(struct synaptics_rmi4_data *rmi4_data);
 	int (*irq_enable)(struct synaptics_rmi4_data *rmi4_data, bool enable,
