@@ -481,6 +481,7 @@ bool mdss_is_ready(void);
 struct msm_fb_data_type;
 #if defined(CONFIG_DEBUG_FS) && defined(CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL)
 void mipi_dsi_panel_create_debugfs(struct msm_fb_data_type *mfd);
+bool mdss_dsi_panel_flip_ud(void);
 #else
 static inline void mipi_dsi_panel_create_debugfs(struct msm_fb_data_type *mfd)
 {

@@ -198,7 +198,15 @@ struct dsi_clk_desc {
 	u32 pre_div_func;
 };
 
+struct dsi_panel_cmds {
+	char *buf;
+	int blen;
+	struct dsi_cmd_desc *cmds;
+	int cmd_cnt;
+	int link_state;
+};
 
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
 /* panel DriverIC type */
 enum {
 	PANEL_DRIVER_IC_R63311,
@@ -208,23 +216,9 @@ enum {
 	PANEL_DRIVER_IC_NONE,
 };
 
-struct dsi_panel_cmds {
-	char *buf;
-	int blen;
-	struct dsi_cmd_desc *cmds;
-	int cmd_cnt;
-	int link_state;
-};
-
 #define DEFAULT_CMDS	0
 #define DETECTED_CMDS	1
 #define MAX_CMDS	2
-
-struct dsi_kickoff_action {
-	struct list_head act_entry;
-	void (*action) (void *);
-	void *data;
-};
 
 struct mdss_pcc_color_tbl {
 	u32 color_type;
@@ -270,6 +264,11 @@ struct mdss_panel_specific_pdata {
 	int init_from_begin;
 	int cabc_enabled;
 	int cabc_active;
+	int lcm_bl_gpio;
+	int mipi_rst;
+	int disp_p5;
+	int disp_n5;
+	bool dsi_seq_hack;
 
 	struct dsi_panel_cmds cabc_early_on_cmds;
 	struct dsi_panel_cmds cabc_on_cmds;
@@ -297,7 +296,13 @@ struct mdss_panel_specific_pdata {
 	u32 down_period;
 	u32 new_vfp;
 };
+#endif
 
+struct dsi_kickoff_action {
+	struct list_head act_entry;
+	void (*action) (void *);
+	void *data;
+};
 
 struct dsi_drv_cm_data {
 	struct regulator *vdd_vreg;
@@ -392,7 +397,7 @@ struct mdss_dsi_ctrl_pdata {
 
 int dsi_panel_device_register(struct device_node *pan_node,
 				struct mdss_dsi_ctrl_pdata *ctrl_pdata);
-void mdss_dsi_panel_power_detect(struct platform_device *pdev, int enable);
+int mdss_dsi_panel_power_detect(struct platform_device *pdev, int enable);
 
 int mdss_dsi_cmds_tx(struct mdss_dsi_ctrl_pdata *ctrl,
 		struct dsi_cmd_desc *cmds, int cnt);
