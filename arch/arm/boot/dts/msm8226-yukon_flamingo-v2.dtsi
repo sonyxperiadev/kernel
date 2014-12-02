@@ -20,18 +20,26 @@
 };
 
 &dsi_hx8379a_pdp2_qhd_vid {
+	somc,no-vsn-gpio;
+	somc,first-boot-aware;
 	qcom,cont-splash-enabled;
 };
 
 &dsi_truly_hx8379c_fwvga_vid {
+	somc,no-vsn-gpio;
+	somc,first-boot-aware;
 	qcom,cont-splash-enabled;
 };
 
 &dsi_ofilm_hx8379c_fwvga_vid {
+	somc,no-vsn-gpio;
+	somc,first-boot-aware;
 	qcom,cont-splash-enabled;
 };
 
 &dsi_tcl_hx8379c_fwvga_vid {
+	somc,no-vsn-gpio;
+	somc,first-boot-aware;
 	qcom,cont-splash-enabled;
 };
 

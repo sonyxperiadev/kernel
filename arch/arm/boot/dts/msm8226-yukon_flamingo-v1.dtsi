@@ -155,6 +155,8 @@
 };
 
 &dsi_hx8379a_qhd_vid { 
+	somc,no-vsn-gpio;
+	somc,first-boot-aware;
 	qcom,cont-splash-enabled;
 };
 
