@@ -72,6 +72,7 @@ DEFINE_LED_TRIGGER(bl_led_trigger);
 static int lcd_id;
 static int lcm_first_boot = -1;
 bool no_vsn_gpio;
+bool no_vsp_gpio;
 static int mdss_dsi_panel_detect(struct mdss_panel_data *pdata);
 static int mdss_panel_parse_dt(struct device_node *np,
 				struct mdss_dsi_ctrl_pdata *ctrl_pdata,
@@ -1893,23 +1894,27 @@ int mdss_dsi_panel_init(struct device_node *node,
 		gpio_direction_output(vsn_gpio, 0);
 	}
 
-	vsp_gpio = of_get_named_gpio(node, "somc,vsp-gpio", 0);
-	
-	if (!gpio_is_valid(vsp_gpio)) {
-		dev_err(&virtdev, "%s: vsp_gpio=%d Invalid\n",
-				__func__, vsp_gpio);
-		rc = -EINVAL;
-		goto error;
-	}
+	no_vsp_gpio = of_property_read_bool(node,
+			"somc,no-vsp-gpio");
+	if (!no_vsp_gpio)
+	{
+		vsp_gpio = of_get_named_gpio(node, "somc,vsp-gpio", 0);
+		if (!gpio_is_valid(vsp_gpio)) {
+			dev_err(&virtdev, "%s: vsp_gpio=%d Invalid\n",
+					__func__, vsp_gpio);
+			rc = -EINVAL;
+			goto error;
+		}
 
-	rc = gpio_request(vsp_gpio, "lcd_vsp");
-	if (rc) {
-		dev_info(&virtdev, "%s: Error requesting VSP GPIO %d\n",
-				__func__, rc);
-		gpio_free(vsn_gpio);
-		goto error;
+		rc = gpio_request(vsp_gpio, "lcd_vsp");
+		if (rc) {
+			dev_info(&virtdev, "%s: Error requesting VSP GPIO %d\n",
+					__func__, rc);
+			gpio_free(vsn_gpio);
+			goto error;
+		}
+		gpio_direction_output(vsp_gpio, 0);
 	}
-	gpio_direction_output(vsp_gpio, 0);
 
 	lcd_id = of_get_named_gpio(node, "somc,dric-gpio", 0);
 	if (!gpio_is_valid(lcd_id)) {
