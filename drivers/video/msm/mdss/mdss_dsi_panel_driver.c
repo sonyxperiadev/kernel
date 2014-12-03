@@ -70,7 +70,7 @@ static struct fps_data {
 DEFINE_LED_TRIGGER(bl_led_trigger);
 
 static int lcd_id;
-static unsigned char panel_id;
+static unsigned char panel_id[1];
 static int lcm_first_boot = -1;
 bool no_vsn_gpio;
 bool no_vsp_gpio;
@@ -96,7 +96,7 @@ static struct dsi_cmd_desc dcs_read_cmd_DA = {
 
 static void panel_id_store(int data)
 {
-	panel_id = data;
+	panel_id[0] = data;
 }
 
 u32 mdss_dsi_dcs_read(struct mdss_dsi_ctrl_pdata *ctrl,
@@ -515,7 +515,7 @@ static int mdss_dsi_panel_detect(struct mdss_panel_data *pdata)
 			ctrl_pdata->rx_buf.data[4], ctrl_pdata->rx_buf.data[5],
 			ctrl_pdata->rx_buf.data[6], ctrl_pdata->rx_buf.data[7]);
 	} else {
-		pr_debug("0x%02X \n", panel_id);
+		pr_debug("0x%02X \n", panel_id[0]);
 	}
 
 	np = of_parse_phandle(
@@ -531,7 +531,7 @@ static int mdss_dsi_panel_detect(struct mdss_panel_data *pdata)
 			spec_pdata->driver_ic, ctrl_pdata->rx_buf.data);
 	else
 		rc = mdss_panel_parse_dt(np, ctrl_pdata,
-			spec_pdata->driver_ic, &panel_id);
+			spec_pdata->driver_ic, (char*)panel_id);
 
 	return 0;
 }
