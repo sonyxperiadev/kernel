@@ -49,6 +49,16 @@
 			<&msmgpio 96 0>; /* BT_DEV_WAKE */
 	};
 
+	bluesleep {
+		compatible = "qcom,bluesleep";
+		bt_host_wake = <&msmgpio 95 0>;
+		bt_ext_wake = <&msmgpio 96 0>;
+		bt_reg_on = <&pm8941_gpios 16 0>;
+		interrupt-parent = <&msmgpio>;
+		interrupts = <95 0>;
+		interrupt-names = "host_wake";
+	};
+
 	/* I2C : BLSP2 */
 	i2c@f9924000 {
 		status = "disabled";
