@@ -75,6 +75,7 @@ static int lcm_first_boot = -1;
 bool no_vsn_gpio;
 bool no_vsp_gpio;
 bool alt_panelid_cmd;
+static bool mdss_panel_flip_ud = false;
 static int mdss_dsi_panel_detect(struct mdss_panel_data *pdata);
 static int mdss_panel_parse_dt(struct device_node *np,
 				struct mdss_dsi_ctrl_pdata *ctrl_pdata,
@@ -1397,6 +1398,11 @@ static int mdss_dsi_panel_off(struct mdss_panel_data *pdata)
 	return 0;
 }
 
+bool mdss_dsi_panel_flip_ud(void)
+{
+	return mdss_panel_flip_ud;
+}
+
 static int mdss_panel_parse_dt(struct device_node *np,
 			struct mdss_dsi_ctrl_pdata *ctrl_pdata,
 			int driver_ic, char *id_data)
@@ -1473,6 +1479,11 @@ static int mdss_panel_parse_dt(struct device_node *np,
 			"somc,first-boot-aware");
 		if (tmp)
 			lcm_first_boot = tmp;
+
+		mdss_panel_flip_ud = of_property_read_bool(next,
+					"qcom,mdss-pan-flip-ud");
+		if (mdss_panel_flip_ud)
+			pr_info("%s: Detected upside down panel\n", __func__);
 
 		rc = of_property_read_u32(next,
 			"qcom,mdss-dsi-panel-width", &tmp);
