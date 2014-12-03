@@ -90,15 +90,14 @@
 			synaptics,disable-gpios;
 		};
 
-		tsc@24 {
+		cypress@24 {
 			compatible = "cy,cyttsp4_i2c_adapter";
 			reg = <0x24>;
 			/* GPIO 38, high-to-low edge triggered */
 			interrupts = <17 0x2008>;
 			interrupt-parent = <&msmgpio>;
 			cy,adapter_id = "cyttsp4_i2c_adapter";
-			vddd-supply = <&pm8226_l6>;
-			vdda-supply = <&pm8226_l19>;
+			vdd-supply = <&pm8226_l19>;
 			vcc_i2c-supply = <&pm8226_l6>;
 			qcom,module_adc-vadc = <&pm8226_vadc>;
 
