@@ -1253,8 +1253,17 @@ config MACH_SONY_SCORPION_WINDY
 	  If you enable this config,
 	  Please use SONY Mobile source tree.
 
+config MACH_SONY_YUKON
+	depends on ARCH_MSM8226
+	bool "Sony Mobile Yukon"
+	default n
+	help
+	  Support for the SONY Mobile Yukon board.
+	  It is based on QCOM MSM8226 chipset.
+
 config MACH_SONY_EAGLE
 	depends on ARCH_MSM8226
+	select MACH_SONY_YUKON
 	bool "Sony Mobile Eagle"
         default n
 	help
@@ -1265,6 +1274,7 @@ config MACH_SONY_EAGLE
 
 config MACH_SONY_FLAMINGO
 	depends on ARCH_MSM8226
+	select MACH_SONY_YUKON
 	bool "Sony Mobile Flamingo"
         default n
 	help
@@ -1275,6 +1285,7 @@ config MACH_SONY_FLAMINGO
 
 config MACH_SONY_TIANCHI
 	depends on ARCH_MSM8226
+	select MACH_SONY_YUKON
 	bool "Sony Mobile Tianchi"
         default n
 	help
@@ -1285,6 +1296,7 @@ config MACH_SONY_TIANCHI
 
 config MACH_SONY_SEAGULL
 	depends on ARCH_MSM8226
+	select MACH_SONY_YUKON
 	bool "Sony Mobile Seagull"
         default n
 	help
