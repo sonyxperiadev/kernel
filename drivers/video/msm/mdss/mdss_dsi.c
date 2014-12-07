@@ -1139,7 +1139,7 @@ static int __devexit mdss_dsi_ctrl_remove(struct platform_device *pdev)
 }
 
 
-void mdss_dsi_panel_power_detect(struct platform_device *pdev, int enable)
+int mdss_dsi_panel_power_detect(struct platform_device *pdev, int enable)
 {
 #ifdef CONFIG_MACH_SONY_RHINE
 	int ret;
