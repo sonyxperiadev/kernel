@@ -23,8 +23,13 @@
 	serial@f991f000 {
 		status = "ok";
 	};
+
+	/delete-node/ i2c@f9926000;
+
 	/* PERI-FG-SENSOR_PORTING-00+[ */
 	i2c@f9924000 { /* BLSP1 QUP2 */
+		qcom,scl-gpio = <&msmgpio 7 0>;
+		qcom,sda-gpio = <&msmgpio 6 0>;
 
 		bosch@10 {
 			compatible = "bosch,bma2x2";
@@ -278,6 +283,20 @@
 	rpm-regulator-ldoa19 {
 		pm8226_l19: regulator-l19 {
 			regulator-always-on;
+		};
+	};
+
+	rpm-regulator-ldoa25 {
+		pm8226_l25: regulator-l25 {
+			qcom,init-voltage = <2075000>;
+		 };
+	};
+
+	rpm-regulator-ldoa26 {
+		pm8226_l26: regulator-l26 {
+			regulator-min-microvolt = <1225000>;
+			regulator-max-microvolt = <1225000>;
+			qcom,init-voltage = <1225000>;
 		};
 	};
 };
