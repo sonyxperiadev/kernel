@@ -1044,8 +1044,10 @@ static int mdss_mdp_format_setup(struct mdss_mdp_pipe *pipe)
 #ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
 	if (mdss_dsi_panel_flip_ud()) {
 		if (pipe->mfd && pipe->mfd->panel_info &&
-			pipe->mfd->panel_info->pdest == DISPLAY_1)
+			pipe->mfd->panel_info->pdest == DISPLAY_1) {
+			opmode ^= MDSS_MDP_OP_FLIP_LR;
 			opmode ^= MDSS_MDP_OP_FLIP_UD;
+			}
 	}
 #endif
 
