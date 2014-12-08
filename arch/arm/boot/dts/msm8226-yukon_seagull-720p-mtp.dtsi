@@ -11,9 +11,13 @@
  * GNU General Public License for more details.
  */
 
-/include/ "dsi-panel-nt35521-720p-video-truly.dtsi"
-/include/ "dsi-panel-nt35521-720p-video-jdi.dtsi"
-/include/ "dsi-panel-nt35521-720p-video-innolux.dtsi"
+/include/ "dsi-panel-seagull.dtsi"
+
+/ {
+	aliases {
+		/delete-property/ spi0;
+	};
+};
 
 &soc {
 	fih_hwid {
@@ -25,6 +29,7 @@
 	};
 
 	/delete-node/ i2c@f9926000;
+	/delete-node/ spi@f9923000;
 
 	/* PERI-FG-SENSOR_PORTING-00+[ */
 	i2c@f9924000 { /* BLSP1 QUP2 */
@@ -689,9 +694,6 @@
 };
 
 &mdss_dsi0 {
-	qcom,dsi-pref-prim-pan = <&dsi_nt35521_720_vid_truly>;
-};
-
-&dsi_nt35521_720_vid_truly {
-//	qcom,cont-splash-enabled;
+	qcom,platform-enable-gpio = <&msmgpio 52 0>;
+	qcom,dsi-pref-prim-pan = <&dsi_nt35521_720_vid_truly63>;
 };
