@@ -29,12 +29,18 @@
 #include <linux/of_platform.h>
 #include <linux/of_gpio.h>
 #include <linux/spinlock.h>
+#ifdef CONFIG_MACH_SONY_EAGLE
+#include <linux/wakelock.h>
+#endif
 
 struct gpio_button_data {
 	const struct gpio_keys_button *button;
 	struct input_dev *input;
 	struct timer_list timer;
 	struct work_struct work;
+#ifdef CONFIG_MACH_SONY_EAGLE
+	struct wake_lock gpio_keys_wake_lock;
+#endif
 	unsigned int timer_debounce;	/* in msecs */
 	unsigned int irq;
 	spinlock_t lock;
@@ -335,6 +341,9 @@ static void gpio_keys_gpio_report_event(struct gpio_button_data *bdata)
 		if (state)
 			input_event(input, type, button->code, button->value);
 	} else {
+#ifdef CONFIG_MACH_SONY_EAGLE
+		wake_lock_timeout(&bdata->gpio_keys_wake_lock, HZ*3);
+#endif
 		input_event(input, type, button->code, !!state);
 	}
 	input_sync(input);
@@ -473,6 +482,9 @@ static int __devinit gpio_keys_setup_key(struct platform_device *pdev,
 			    gpio_keys_gpio_timer, (unsigned long)bdata);
 
 		isr = gpio_keys_gpio_isr;
+#ifdef CONFIG_MACH_SONY_EAGLE
+		wake_lock_init(&bdata->gpio_keys_wake_lock, WAKE_LOCK_SUSPEND, "gpio_keys_wake_lock");
+#endif
 		irqflags = IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING;
 
 	} else {
