@@ -184,6 +184,7 @@ static struct dsi_cmd_desc dcs_read_cmd_DA = {
 
 static void panel_id_store(int data)
 {
+	pr_info("panel_id_store data 0x%x pid 0x%x\n", data, panel_id[0]);
 	panel_id[0] = data;
 }
 
@@ -200,6 +201,7 @@ u32 mdss_dsi_panel_cmd_read(struct mdss_dsi_ctrl_pdata *ctrl, char cmd0,
 	cmdreq.cmds_cnt = 1;
 	cmdreq.flags = CMD_REQ_RX | CMD_REQ_COMMIT;
 	cmdreq.rlen = len;
+	cmdreq.rbuf = ctrl->rx_buf.data;
 	cmdreq.cb = fxn; /* call back */
 	mdss_dsi_cmdlist_put(ctrl, &cmdreq);
 	/*
@@ -253,6 +255,51 @@ static void mdss_dsi_panel_bklt_dcs(struct mdss_dsi_ctrl_pdata *ctrl, int level)
 	mdss_dsi_cmdlist_put(ctrl, &cmdreq);
 }
 
+static int mdss_dsi_request_gpios(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
+{
+	int rc = 0;
+	static bool requested;
+
+	if (requested)
+		return 0;
+
+	if (gpio_is_valid(ctrl_pdata->disp_en_gpio)) {
+		rc = gpio_request(ctrl_pdata->disp_en_gpio,
+						"disp_enable");
+		if (rc) {
+			pr_err("request disp_en gpio failed, rc=%d\n",
+				       rc);
+			goto disp_en_gpio_err;
+		}
+	}
+	rc = gpio_request(ctrl_pdata->rst_gpio, "disp_rst_n");
+	if (rc) {
+		pr_err("request reset gpio failed, rc=%d\n",
+			rc);
+		goto rst_gpio_err;
+	}
+	if (gpio_is_valid(ctrl_pdata->mode_gpio)) {
+		rc = gpio_request(ctrl_pdata->mode_gpio, "panel_mode");
+		if (rc) {
+			pr_err("request panel mode gpio failed,rc=%d\n",
+								rc);
+			goto mode_gpio_err;
+		}
+	}
+
+	requested = true;
+	return rc;
+
+mode_gpio_err:
+	gpio_free(ctrl_pdata->rst_gpio);
+rst_gpio_err:
+	if (gpio_is_valid(ctrl_pdata->disp_en_gpio))
+		gpio_free(ctrl_pdata->disp_en_gpio);
+disp_en_gpio_err:
+	return rc;
+}
+
+
 static void mdss_dsi_panel_set_gpio_seq(
 		int gpio, int seq_num, const int *seq)
 {
@@ -296,6 +343,8 @@ static int mdss_dsi_panel_reset_seq(struct mdss_panel_data *pdata, int enable)
 	pr_debug("%s: enable=%d\n", __func__, enable);
 	pinfo = &ctrl_pdata->panel_data.panel_info;
 
+	mdss_dsi_request_gpios(ctrl_pdata);
+
 	pw_seq = (enable) ? &ctrl_pdata->spec_pdata->on_seq :
 				&ctrl_pdata->spec_pdata->off_seq;
 	mdss_dsi_panel_set_gpio_seq(ctrl_pdata->rst_gpio,
@@ -305,6 +354,7 @@ static int mdss_dsi_panel_reset_seq(struct mdss_panel_data *pdata, int enable)
 				pw_seq->disp_en_pre * 1000 + 100);
 	if (gpio_is_valid(ctrl_pdata->disp_en_gpio))
 		gpio_set_value(ctrl_pdata->disp_en_gpio, enable);
+
 	if (pw_seq->disp_en_post)
 		usleep_range(pw_seq->disp_en_post * 1000,
 				pw_seq->disp_en_post * 1000 + 100);
@@ -317,19 +367,36 @@ static int mdss_dsi_panel_reset_seq(struct mdss_panel_data *pdata, int enable)
 
 	if (alt_panelid_cmd)
 	{
-		msleep(1);
-		if (gpio_is_valid(spec_pdata->disp_p5)) {
-			gpio_direction_output((spec_pdata->disp_p5), enable);
+		if (enable) {
 			msleep(1);
-		}
-		if (gpio_is_valid(spec_pdata->disp_n5)) {
-			gpio_direction_output((spec_pdata->disp_n5), enable);
+			if (gpio_is_valid(spec_pdata->disp_p5)) {
+				gpio_direction_output((spec_pdata->disp_p5), 1);
+				msleep(1);
+			}
+			if (gpio_is_valid(spec_pdata->disp_n5)) {
+				gpio_direction_output((spec_pdata->disp_n5), 1);
+				msleep(10);
+			}
+
+			if (ctrl_pdata->ctrl_state & CTRL_STATE_PANEL_INIT) {
+				pr_info("panel not properly turned off\n");
+				ctrl_pdata->ctrl_state &= ~CTRL_STATE_PANEL_INIT;
+				pr_info("reset panel done\n");
+			}
+
+			gpio_direction_output(ctrl_pdata->rst_gpio, 1);
+			msleep(150);
+		} else {
+			gpio_direction_output(ctrl_pdata->rst_gpio, 0);
+			msleep(1);
+			gpio_direction_output(spec_pdata->disp_n5, 0);
+			msleep(1);
+			gpio_direction_output(spec_pdata->disp_p5, 0);
 			msleep(10);
 		}
-	}
-
-	mdss_dsi_panel_set_gpio_seq(ctrl_pdata->rst_gpio,
-		pw_seq->seq_num, pw_seq->rst_seq);
+	} else
+		mdss_dsi_panel_set_gpio_seq(ctrl_pdata->rst_gpio,
+			pw_seq->seq_num, pw_seq->rst_seq);
 
 	return 0;
 }
@@ -2100,18 +2167,18 @@ static int mdss_panel_parse_dt(struct device_node *np,
 						id_data[i], data[i]);
 					if ((id_data[i] != data[i]) &&
 						(data[i] != PANEL_SKIP_ID))
-						if ((!alt_panelid_cmd) &&
-							(id_data[i]+0x01 != data[i]))
-						{
-							rc = -ENODEV;
-							break;
-						}
+					{
+						rc = -ENODEV;
+						break;
+					}
+
 					rc = 0;
 				}
 				if (rc)
 					continue;
 			} else if (data && !id_data) {
-				if ((len != 1) || (data[0] != PANEL_SKIP_ID))
+				if (((len != 1) || (data[0] != PANEL_SKIP_ID)) 
+								&& !alt_panelid_cmd)
 					continue;
 				else {
 					rc = of_property_read_u32(next
@@ -2683,33 +2750,64 @@ static int mdss_panel_parse_dt(struct device_node *np,
 		else
 			pr_warn("%s:%d Unable to get valid GPIO for MIPI RST\n",
 								__func__, __LINE__);
-
-		alt_panelid_cmd = of_property_read_bool(next,
-                        "somc,alt-panelid-cmd");
-		if (alt_panelid_cmd) {
-			rc = of_get_named_gpio(next,
-					"somc,pwr-positive5-gpio", 0);
-			if (gpio_is_valid(rc))
-				spec_pdata->disp_p5 = rc;
-			else
-				pr_warn("%s:%d Unable to get valid DISP P5 GPIO\n",
-								__func__, __LINE__);
-
-			rc = of_get_named_gpio(next,
-					"somc,pwr-negative5-gpio", 0);
-			if (gpio_is_valid(rc))
-				spec_pdata->disp_n5 = rc;
-			else
-				pr_warn("%s:%d Unable to get valid DISP N5 GPIO\n",
-								__func__, __LINE__);
-		}
-
 		break;
 	}
 	return 0;
 
 error:
 	return -EINVAL;
+}
+
+int mdss_dsi_panel_gpios(struct device_node *node,
+		struct mdss_dsi_ctrl_pdata *ctrl_pdata)
+{
+	struct mdss_panel_specific_pdata *spec_pdata = ctrl_pdata->spec_pdata;
+	int rc = 0;
+
+	rc = of_get_named_gpio(node,
+			"somc,pwr-positive5-gpio", 0);
+	if (gpio_is_valid(rc)) {
+		spec_pdata->disp_p5 = rc;
+
+		rc = gpio_request(spec_pdata->disp_p5, "disp_p5");
+		if (rc)
+			pr_warn("Error requesting P5 GPIO\n");
+
+		rc = gpio_tlmm_config(GPIO_CFG(
+			spec_pdata->disp_p5, 0,
+			GPIO_CFG_OUTPUT,
+			GPIO_CFG_PULL_DOWN,
+			GPIO_CFG_2MA),
+			GPIO_CFG_ENABLE);
+		if (rc)
+			pr_err("Unable to configure P5 GPIO TLMM\n");
+
+	} else
+		pr_warn("%s:%d Unable to get valid DISP P5 GPIO\n",
+						__func__, __LINE__);
+
+	rc = of_get_named_gpio(node,
+			"somc,pwr-negative5-gpio", 0);
+	if (gpio_is_valid(rc)) {
+		spec_pdata->disp_n5 = rc;
+
+		rc = gpio_request(spec_pdata->disp_n5, "disp_n5");
+		if (rc)
+			pr_warn("Error requesting N5 GPIO\n");
+
+		rc = gpio_tlmm_config(GPIO_CFG(
+			spec_pdata->disp_n5, 0,
+			GPIO_CFG_OUTPUT,
+			GPIO_CFG_PULL_DOWN,
+			GPIO_CFG_2MA),
+			GPIO_CFG_ENABLE);
+		if (rc)
+			pr_err("Unable to configure N5 GPIO TLMM\n");
+	} else
+		pr_warn("%s:%d Unable to get valid DISP N5 GPIO\n",
+						__func__, __LINE__);
+
+	return rc;
 }
 
 int mdss_dsi_panel_init(struct device_node *node,
@@ -2788,7 +2886,7 @@ int mdss_dsi_panel_init(struct device_node *node,
 	spec_pdata->driver_ic = PANEL_DRIVER_IC_NONE;
 	lcd_id = of_get_named_gpio(node, "somc,dric-gpio", 0);
 	if (!gpio_is_valid(lcd_id)) {
-		pr_err("%s:%d, Disp_en gpio not specified\n",
+		pr_err("%s:%d, DriverIC gpio not specified\n",
 						__func__, __LINE__);
 		goto exit_lcd_id;
 	}
@@ -2827,6 +2925,12 @@ exit_lcd_id:
 		spec_pdata->adc_uv = lcdid_adc * scal;
 		pr_info("%s: physical:%d\n", __func__, spec_pdata->adc_uv);
 	}
+
+
+	alt_panelid_cmd = of_property_read_bool(node,
+						"somc,alt-panelid-cmd");
+	if (alt_panelid_cmd)
+		mdss_dsi_panel_gpios(node, ctrl_pdata);
 
 	rc = mdss_panel_parse_dt(node, ctrl_pdata,
 		spec_pdata->driver_ic, NULL);

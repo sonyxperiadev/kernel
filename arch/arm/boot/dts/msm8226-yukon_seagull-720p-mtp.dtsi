@@ -11,9 +11,13 @@
  * GNU General Public License for more details.
  */
 
-/include/ "dsi-panel-nt35521-720p-video-truly.dtsi"
-/include/ "dsi-panel-nt35521-720p-video-jdi.dtsi"
-/include/ "dsi-panel-nt35521-720p-video-innolux.dtsi"
+/include/ "dsi-panel-seagull.dtsi"
+
+/ {
+	aliases {
+		/delete-property/ spi0;
+	};
+};
 
 &soc {
 	fih_hwid {
@@ -23,8 +27,16 @@
 	serial@f991f000 {
 		status = "ok";
 	};
+
+	/delete-node/ i2c@f9926000;
+	/delete-node/ spi@f9923000;
+
 	/* PERI-FG-SENSOR_PORTING-00+[ */
 	i2c@f9924000 { /* BLSP1 QUP2 */
+		#address-cells = <1>;
+		#size-cells = <0>;
+		qcom,scl-gpio = <&msmgpio 7 0>;
+		qcom,sda-gpio = <&msmgpio 6 0>;
 
 		bosch@10 {
 			compatible = "bosch,bma2x2";
@@ -278,6 +290,20 @@
 	rpm-regulator-ldoa19 {
 		pm8226_l19: regulator-l19 {
 			regulator-always-on;
+		};
+	};
+
+	rpm-regulator-ldoa25 {
+		pm8226_l25: regulator-l25 {
+			qcom,init-voltage = <2075000>;
+		 };
+	};
+
+	rpm-regulator-ldoa26 {
+		pm8226_l26: regulator-l26 {
+			regulator-min-microvolt = <1225000>;
+			regulator-max-microvolt = <1225000>;
+			qcom,init-voltage = <1225000>;
 		};
 	};
 };
@@ -670,9 +696,6 @@
 };
 
 &mdss_dsi0 {
-	qcom,dsi-pref-prim-pan = <&dsi_nt35521_720_vid_truly>;
-};
-
-&dsi_nt35521_720_vid_truly {
-//	qcom,cont-splash-enabled;
+	qcom,platform-enable-gpio = <&msmgpio 52 0>;
+	qcom,dsi-pref-prim-pan = <&dsi_nt35521_720_vid_truly63>;
 };
