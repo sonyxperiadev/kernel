@@ -33,6 +33,8 @@
 
 	/* PERI-FG-SENSOR_PORTING-00+[ */
 	i2c@f9924000 { /* BLSP1 QUP2 */
+		#address-cells = <1>;
+		#size-cells = <0>;
 		qcom,scl-gpio = <&msmgpio 7 0>;
 		qcom,sda-gpio = <&msmgpio 6 0>;
 
