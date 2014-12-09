@@ -255,7 +255,6 @@
 &mtp_batterydata {
 	qcom,rpull-up-kohm = <100>;
 	qcom,vref-batt-therm = <1800000>;
-	/include/ "batterydata-yukon_flamingo.dtsi"
 };
 
 &pm8226_bms {
