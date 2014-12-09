@@ -306,7 +306,7 @@ obj-$(CONFIG_MACH_SAPPHIRE) += board-sapphire-mmc.o board-sapphire-wifi.o
 obj-$(CONFIG_MACH_SAPPHIRE) += board-sapphire-rfkill.o msm_vibrator.o
 
 ifdef CONFIG_MACH_SONY_FLAMINGO
-	obj-$(CONFIG_MACH_SONY_FLAMINGO) += board-8226.o board-8226-yukon_flamingo-gpiomux.o  bms-batterydata-oem.o
+	obj-$(CONFIG_MACH_SONY_FLAMINGO) += board-8226.o board-8226-yukon_flamingo-gpiomux.o  bms-batterydata-flamingo.o
 else ifdef CONFIG_MACH_SONY_EAGLE
         obj-$(CONFIG_MACH_SONY_EAGLE) += board-8226.o board-8226-yukon_eagle-gpiomux.o bms-batterydata-eagle.o
 else ifdef CONFIG_MACH_SONY_TIANCHI
