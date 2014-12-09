@@ -263,26 +263,26 @@ static int __devinit cyttsp4_i2c_probe(struct i2c_client *client,
 	if (IS_ERR(vreg_l27))
 	{
 		printk("[TP] regulator_get(8226_l27) vreg_l27 fail.\n");
-	}
+	} else {
+		retval = regulator_set_voltage(vreg_l27,  2100000, 2100000);
+		if (retval) {
+			printk("[TP] regulator set_voltage failed rc=%d\n", retval);
+		}
 
-	retval = regulator_set_voltage(vreg_l27,  2100000, 2100000);
-	if (retval) {
-		printk("[TP] regulator set_voltage failed rc=%d\n", retval);
-	}
+		retval = regulator_set_optimum_mode(vreg_l27, 15000);
+		if (retval < 0) {
+			printk("[TP] regulator 8226_l27 set_optimum_mode failed rc=%d\n", retval);
+			regulator_put(vreg_l27);
+		}
 
-	retval = regulator_set_optimum_mode(vreg_l27, 15000);
-	if (retval < 0) {
-		printk("[TP] regulator 8226_l27 set_optimum_mode failed rc=%d\n", retval);
-		regulator_put(vreg_l27);
+		retval = regulator_enable(vreg_l27);
+		if (retval)
+		{
+			printk("[TP] regulator_enable(8226_l27) vreg_l27 fail.\n");
+			regulator_put(vreg_l27);
+		}
+		/* [Optical][Touch] Touch driver bring up, 20130717, Add End */
 	}
-
-	retval = regulator_enable(vreg_l27);
-	if (retval)
-	{
-		printk("[TP] regulator_enable(8226_l27) vreg_l27 fail.\n");
-		regulator_put(vreg_l27);
-	}
-	/* [Optical][Touch] Touch driver bring up, 20130717, Add End */
 
 	pm_runtime_enable(&client->dev);
 

@@ -149,6 +149,14 @@ config TOUCHSCREEN_CYPRESS_CYTTSP4_MANUAL_TTCONFIG_UPGRADE
           Provides a SysFs interface to upgrade TrueTouch
           Configuration with a binary configuration file.
 
+config TOUCHSCREEN_CYPRESS_CYTTSP4_PLATFORM_YUKON
+	bool "Yukon: Disable cyttsp4 in-kernel firmware"
+	depends on TOUCHSCREEN_CYPRESS_CYTTSP4_LOADER
+	default n
+	help
+	  Say Y to make sure we won't overwrite the
+	  ts firmware with something bad on Yukon.
+
 config TOUCHSCREEN_CYPRESS_CYTTSP4_DEBUG_MODULE
         tristate "Cypress TrueTouch Gen4 MultiTouch Debug Module"
         depends on TOUCHSCREEN_CYPRESS_CYTTSP4
