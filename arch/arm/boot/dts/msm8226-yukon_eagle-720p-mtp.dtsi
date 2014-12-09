@@ -408,7 +408,7 @@
 			qcom,wled_0 {
 				label = "wled";
 				linux,name = "wled:backlight";
-				linux,default-trigger = "bkl-trigger";
+				linux,default-trigger = "none";
 				qcom,cs-out-en;
 				qcom,op-fdbck = <1>;
 				qcom,default-state = "on";
