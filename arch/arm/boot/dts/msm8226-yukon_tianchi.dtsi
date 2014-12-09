@@ -12,7 +12,7 @@
  */
 
 /include/ "msm8226.dtsi"
-/include/ "msm8226-yukon_tianchi-mdss.dtsi"
+/include/ "msm8226-mdss.dtsi"
 
 &soc {
 	i2c@f9925000 { /* BLSP-1 QUP-3 */
