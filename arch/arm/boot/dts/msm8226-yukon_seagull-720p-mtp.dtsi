@@ -393,6 +393,11 @@
 				qcom,pwm-channel = <3>;
 			};
 		};
+		qcom,power-on@800 {
+			qcom,pon_2 {
+				linux,code = <115>;
+			};
+		};
 	};
 
 	qcom,pm8226@1 {
