@@ -1078,11 +1078,15 @@ static void tsens_scheduler_fn(struct work_struct *work)
 	tmdev->tsens_wq_dbg.idx++;
 
 	mb();
+
+	enable_irq(tmdev->tsens_irq);
 }
 
 static irqreturn_t tsens_isr(int irq, void *data)
 {
 	uint32_t idx = 0;
+
+	disable_irq_nosync(tmdev->tsens_irq);
 
 	/* debug */
 	idx = tmdev->tsens_irq_dbg.idx;
@@ -3157,7 +3161,7 @@ static int _tsens_register_thermal(void)
 	}
 
 	rc = request_irq(tmdev->tsens_irq, tsens_isr,
-		IRQF_TRIGGER_RISING, "tsens_interrupt", tmdev);
+		IRQF_TRIGGER_HIGH, "tsens_interrupt", tmdev);
 	if (rc < 0) {
 		pr_err("%s: request_irq FAIL: %d\n", __func__, rc);
 		for (i = 0; i < tmdev->tsens_num_sensor; i++)
