@@ -27,6 +27,10 @@
 		somc,mdss-dsi-id-read-command = [06 01 00 01 05 00 02 A1 00];
 		somc,panel-id = [12 66 03 22];
 		qcom,mdss-dsi-reset-sequence = <0 10>, <1 15>;
+		somc,pw-on-rst-seq = <0 10>, <1 15>;
+		somc,pw-off-rst-b-seq = <1 6>, <0 1>;
+		somc,disp-en-on-pre = <15>;
+		somc,disp-en-on-post = <21>;
 		qcom,mdss-dsi-panel-width =  <720>;
 		qcom,mdss-dsi-panel-height = <1280>;
 		qcom,mdss-pan-physical-width-dimension = <53>;
@@ -93,6 +97,7 @@
 		somc,mdss-dsi-disp-on-in-hs = <0>;
 		somc,panel-detect = <1>;
 		somc,mdss-dsi-cabc-enabled = <1>;
+		somc,mdss-dsi-wait-time-before-on-cmd = <20>;
 	};
 
 	dsi_novatek_jdi: somc,novatek_jdi_panel {
@@ -110,6 +115,10 @@
 		somc,mdss-dsi-id-read-command = [06 01 00 01 05 00 02 A1 00];
 		somc,panel-id = [FF];
 		qcom,mdss-dsi-reset-sequence = <1 5>, <0 5>, <1 5>, <0 5>, <1 11>;
+		somc,pw-on-rst-seq = <1 5>, <0 5>, <1 5>, <0 5>, <1 11>;
+		somc,pw-off-rst-b-seq = <1 6>, <0 1>;
+		somc,disp-en-on-pre = <15>;
+		somc,disp-en-on-post = <21>;
 		qcom,mdss-dsi-panel-width =  <720>;
 		qcom,mdss-dsi-panel-height = <1280>;
 		qcom,mdss-pan-physical-width-dimension = <80>;
@@ -193,6 +202,7 @@
 		somc,mdss-dsi-disp-on-in-hs = <1>;
 		somc,panel-detect = <1>;
 		somc,mdss-dsi-cabc-enabled = <1>;
+		somc,mdss-dsi-wait-time-before-on-cmd = <20>;
 	};
 
 	novatek_720p_video_tianma: somc,novatek_tianma_panel {
@@ -210,6 +220,10 @@
 		somc,mdss-dsi-id-read-command = [06 01 00 01 05 00 01 A1];
 		somc,panel-id = [77 12 23 49];
 		qcom,mdss-dsi-reset-sequence = <0 6>, <1 16>;
+		somc,pw-on-rst-seq = <0 6>, <1 16>;
+		somc,pw-off-rst-b-seq = <1 6>, <0 1>;
+		somc,disp-en-on-pre = <15>;
+		somc,disp-en-on-post = <21>;
 		qcom,mdss-dsi-panel-width =  <720>;
 		qcom,mdss-dsi-panel-height = <1280>;
 		qcom,mdss-pan-physical-width-dimension = <80>;
@@ -277,6 +291,7 @@
 		somc,mdss-dsi-disp-on-in-hs = <1>;
 		somc,panel-detect = <1>;
 		somc,mdss-dsi-cabc-enabled = <1>;
+		somc,mdss-dsi-wait-time-before-on-cmd = <20>;
 	};
 	renesas_720p_video_lgd: somc,renesas_LG_panel {
 		qcom,mdss-dsi-panel-name = "R63313 LG 720p video mode panel";
@@ -293,6 +308,10 @@
 		somc,mdss-dsi-id-read-command = [06 01 00 01 06 00 01 A1];
 		somc,panel-id = [FF];
 		qcom,mdss-dsi-reset-sequence = <0 6>, <1 16>;
+		somc,pw-on-rst-seq = <0 6>, <1 16>;
+		somc,pw-off-rst-b-seq = <1 6>, <0 1>;
+		somc,disp-en-on-pre = <15>;
+		somc,disp-en-on-post = <21>;
 		qcom,mdss-dsi-panel-width =  <720>;
 		qcom,mdss-dsi-panel-height = <1280>;
 		qcom,mdss-pan-physical-width-dimension = <80>;
@@ -364,5 +383,6 @@
 		somc,mdss-dsi-disp-on-in-hs = <1>;
 		somc,panel-detect = <1>;
 		somc,mdss-dsi-cabc-enabled = <1>;
+		somc,mdss-dsi-wait-time-before-on-cmd = <20>;
 	};
 };
