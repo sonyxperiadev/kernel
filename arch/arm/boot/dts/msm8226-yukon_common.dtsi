@@ -218,6 +218,8 @@
 	qcom,min-fcc-ocv-pc = <30>;
 	qcom,min-fcc-learning-samples = <5>;
 	qcom,fcc-resolution = <10>;
+
+	qcom,clamp-soc-max-count = <0>;
 };
 
 &mdss_mdp {
