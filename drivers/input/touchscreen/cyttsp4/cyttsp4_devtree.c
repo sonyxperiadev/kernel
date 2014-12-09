@@ -642,7 +642,11 @@ static struct cyttsp4_core_platform_data *create_and_get_core_pdata(
 #endif
 	pdata->irq_stat = cyttsp4_irq_stat;
 
+#ifdef CONFIG_TOUCHSCREEN_CYPRESS_CYTTSP4_PLATFORM_YUKON
+	pdata->loader_pdata = &_cyttsp4_loader_platform_data;
+#else
         pdata->loader_pdata = &_cyttsp4_loader_platform_data_vy58;
+#endif
 
 	return pdata;
 

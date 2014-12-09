@@ -61,6 +61,7 @@ static struct cyttsp4_touch_firmware cyttsp4_firmware = {
 /* [Optical][Touch] Implement FW upgrade, 20130808, Del Start */
 //#ifdef CONFIG_TOUCHSCREEN_CYPRESS_CYTTSP4_PLATFORM_TTCONFIG_UPGRADE
 /* [Optical][Touch] Implement FW upgrade, 20130808, Del End */
+#ifndef CONFIG_TOUCHSCREEN_CYPRESS_CYTTSP4_PLATFORM_YUKON
 #include "cyttsp4_params.h"
 static struct touch_settings cyttsp4_sett_param_regs = {
 	.data = (uint8_t *)&cyttsp4_param_regs[0],
@@ -99,28 +100,24 @@ static struct cyttsp4_touch_config cyttsp4_ttconfig_vy58 = {
 	.fw_ver = ttconfig_fw_ver_vy58,
 	.fw_vsize = ARRAY_SIZE(ttconfig_fw_ver_vy58),
 };
-/* [Optical][Touch] Implement FW upgrade, 20130808, Del Start */
-//#else
-#if 0
+
+struct cyttsp4_loader_platform_data _cyttsp4_loader_platform_data_vy58 = {
+	.fw = &cyttsp4_firmware_vy58,
+	.ttconfig = &cyttsp4_ttconfig_vy58,
+	.flags = CY_LOADER_FLAG_NONE,
+};
+#else
 static struct cyttsp4_touch_config cyttsp4_ttconfig = {
 	.param_regs = NULL,
 	.param_size = NULL,
 	.fw_ver = NULL,
 	.fw_vsize = 0,
 };
-//#endif
 #endif
-/* [Optical][Touch] Implement FW upgrade, 20130808, Del End */
 
 struct cyttsp4_loader_platform_data _cyttsp4_loader_platform_data = {
 	.fw = &cyttsp4_firmware,
 	.ttconfig = &cyttsp4_ttconfig,
-	.flags = CY_LOADER_FLAG_NONE,
-};
-
-struct cyttsp4_loader_platform_data _cyttsp4_loader_platform_data_vy58 = {
-	.fw = &cyttsp4_firmware_vy58,
-	.ttconfig = &cyttsp4_ttconfig_vy58,
 	.flags = CY_LOADER_FLAG_NONE,
 };
 
