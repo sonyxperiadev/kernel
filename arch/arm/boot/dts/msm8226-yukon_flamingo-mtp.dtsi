@@ -12,11 +12,24 @@
 
 /include/ "msm8226-yukon_common.dtsi"
 /include/ "msm8226-camera-sensor-mtp.dtsi"
+/include/ "dsi-panel-truly-hx8379c-fwvga-video.dtsi"
+/include/ "dsi-panel-ofilm-hx8379c-fwvga-video.dtsi"
 
 &soc {
-
-
 	i2c@f9927000 { /* BLSP1 QUP5 */
+		elan_ktf2k_ts@10{
+			compatible = "elan,ktf2k_ts";
+			reg = <0x10>;
+			interrupt-parent = <&msmgpio>;
+			interrupts = <17 0x2008>;
+			vdd-supply = <&pm8226_l19>;
+			vcc_i2c-supply = <&pm8226_lvs1>;
+			elan,reset-gpio = <&msmgpio 16 0x00>;
+			elan,irq-gpio = <&msmgpio 17 0x2008>;
+			elan,hw-det-gpio = <&msmgpio 27 0x00>;
+			elan,i2c-pull-up;
+		};
+
 		synaptics@20 {
 			compatible = "synaptics,rmi4";
 			reg = <0x20>;
@@ -46,6 +59,16 @@
 			interrupts = <21 0>;
 			qcom,clk-gpio = <&pm8226_gpios 3 0>;
 		};
+
+		pn544@28 {
+			compatible = "nxp,nfc-pn544";
+			reg = <0x28>;
+			nxp,irq-gpio = <&msmgpio 21 0x00>;
+			nxp,ven-gpio = <&msmgpio 20 0x00>;
+			nxp,firm-gpio = <&msmgpio 22 0x00>;
+			interrupt-parent = <&msmgpio>;
+			interrupts = <21 0>;
+		};
 	};
 	gpio_keys {
 		compatible = "gpio-keys";
@@ -71,31 +94,26 @@
 
 		vol_up {
 			label = "volume_up";
+			gpios = <&msmgpio 110 0x1>;
+			linux,input-type = <1>;
+			linux,code = <0>;
+			gpio-key,wakeup;
+			debounce-interval = <15>;
+		};
+
+		vol_down {
+			label = "volume_down";
 			gpios = <&msmgpio 106 0x1>;
 			linux,input-type = <1>;
-			linux,code = <115>;
+			linux,code = <114>;
 			gpio-key,wakeup;
 			debounce-interval = <15>;
 		};
 	};
 
 	spi@f9923000 {
-/*[Flamingo] NMI326 dtv function porting */
-/*
-		ethernet-switch@3 {
-			compatible = "micrel,ks8851";
-			reg = <3>;
-			interrupt-parent = <&msmgpio>;
-			interrupts = <115 0x8>;
-			spi-max-frequency = <4800000>;
-			rst-gpio = <&msmgpio 114 0>;
-			vdd-io-supply = <&pm8226_lvs1>;
-			vdd-phy-supply = <&pm8226_lvs1>;
-		};
-*/
+		/delete-node/ ethernet-switch@3;
 	};
-
-
 
 	sound {
 		qcom,audio-routing =
@@ -122,8 +140,8 @@
 			"LDO_H", "MCLK",
 			"SPK_OUT", "MCLK",
 			"SPK_OUT", "EXT_VDD_SPKR",
-			"AMIC1", "MIC BIAS1 Internal1",
-			"MIC BIAS1 Internal1", "Handset Mic",
+			"AMIC1", "MIC BIAS1 External",
+			"MIC BIAS1 External", "Handset Mic",
 			"AMIC2", "MIC BIAS2 External",
 			"MIC BIAS2 External", "Headset Mic",
 			"AMIC3", "MIC BIAS1 External",
@@ -159,21 +177,34 @@
 	};
 };
 
+
+&memory_hole {
+	qcom,memblock-remove = <0x08000000 0x7500000
+		0x3f200000 0x100000 // Add 1M from 0x3f200000 for restart_parameters
+		0x0fa00000 0x500000>; /* Address and size of the hole */
+};
+
 &spmi_bus {
 	qcom,pm8226@0 {
 		qcom,leds@a100 {
 			status = "okay";
 			qcom,led_mpp_2 {
 				label = "mpp";
-				linux,name = "button-backlight";
+				linux,name = "led:rgb_blue";
 				linux,default-trigger = "none";
 				qcom,default-state = "off";
 				qcom,max-current = <40>;
 				qcom,current-setting = <5>;
 				qcom,id = <6>;
-				qcom,mode = "manual";
-				qcom,source-sel = <1>;
+				qcom,mode = "pwm";
+				qcom,pwm-us = <1000>;
+				qcom,source-sel = <14>;
 				qcom,mode-ctrl = <0x60>;
+				qcom,pwm-channel = <3>;
+				qcom,start-idx = <40>;
+				qcom,ramp-step-ms = <120>;
+				qcom,duty-pcts = [00 00 50 99 99 99 50 00];
+				qcom,use-blink;
 			};
 		};
 
@@ -181,7 +212,7 @@
 			status = "okay";
 			qcom,led_mpp_4 {
 				label = "mpp";
-				linux,name = "led:rgb_green";
+				linux,name = "led:rgb_red";
 				linux,default-trigger = "none";
 				qcom,default-state = "off";
 				qcom,max-current = <40>;
@@ -192,13 +223,9 @@
 				qcom,source-sel = <8>;
 				qcom,mode-ctrl = <0x60>;
 				qcom,pwm-channel = <0>;
-				qcom,start-idx = <1>;
+				qcom,start-idx = <20>;
 				qcom,ramp-step-ms = <120>;
-				qcom,duty-pcts = [00 00 00 00 00
-						  00 00 00 00 00
-						  50 00 00 00 00
-						  00 00 00 00 00
-						  00];
+				qcom,duty-pcts = [00 00 50 99 99 99 50 00];
 				qcom,use-blink;
 			};
 		};
@@ -207,7 +234,7 @@
 			status = "okay";
 			qcom,led_mpp_6 {
 				label = "mpp";
-				linux,name = "led:rgb_red";
+				linux,name = "led:rgb_green";
 				linux,default-trigger = "none";
 				qcom,default-state = "off";
 				qcom,max-current = <40>;
@@ -220,12 +247,14 @@
 				qcom,pwm-channel = <5>;
 				qcom,start-idx = <1>;
 				qcom,ramp-step-ms = <120>;
-				qcom,duty-pcts = [00 00 00 00 00
-						  00 00 00 00 00
-						  50 00 00 00 00
-						  00 00 00 00 00
-						  00];
+				qcom,duty-pcts = [00 00 50 99 99 99 50 00];
 				qcom,use-blink;
+			};
+		};
+
+		qcom,power-on@800 {
+			qcom,pon_2 {
+				linux,code = <115>;
 			};
 		};
 	};
@@ -258,6 +287,15 @@
 		pm8226_s2: spm-regulator@1700 {
 			/delete-property/ qcom,mode;
 		};
+	};
+
+	i2c@f9926000 {
+		qcom,i2c-src-freq = <19200000>;
+		qcom,master-id = <86>;
+	};
+
+	i2c@f9927000 {
+		qcom,master-id = <86>;
 	};
 };
 
@@ -320,19 +358,41 @@
 	};
 };
 
-/ {
-	mtp_batterydata: qcom,battery-data {
-		qcom,rpull-up-kohm = <100>;
-		qcom,vref-batt-therm = <1800000>;
-	};
-};
-
-&pm8226_bms {
-	qcom,battery-data = <&mtp_batterydata>;
-};
-
 &pm8226_chg {
-	qcom,battery-data = <&mtp_batterydata>;
+	qcom,tchg-mins = <240>;
+	qcom,usb-tchg-mins = <480>;
+	qcom,ac-tchg-mins = <240>;
+	qcom,ibatmax-warm-ma = <400>;
+	qcom,warm-bat-decidegc = <450>;
+	qcom,warm-bat-mv = <3900>;
+	qcom,cool-bat-decidegc = <150>;
+	qcom,cool-bat-mv = <4200>;
+	qcom,ibatmax-cool-ma = <1500>;
+	qcom,btc-disabled;
+	qcom,hot-bat-decidegc = <550>;
+	qcom,cold-bat-decidegc = <50>;
+	qcom,charging-timer-enable;
+	qcom,vbatweak-mv = <3400>;
+	qcom,call-bat-mv = <3900>;
+	qcom,resume-soc = <0>;
+	qcom,vbatdet-delta-mv = <50>;
+	qcom,first-maintain-mins = <3600>;
+	qcom,second-maintain-mins = <12000>;
+	qcom,first-maintain-mv = <4150>;
+	qcom,second-maintain-mv = <4100>;
+};
+
+&pm8226_l27 {
+	regulator-min-microvolt = <2050000>;
+	regulator-max-microvolt = <2050000>;
+	qcom,init-voltage = <2050000>;
+	regulator-always-on;
+};
+
+&pm8226_l28 {
+	regulator-min-microvolt = <1800000>;
+	regulator-max-microvolt = <2950000>;
+	qcom,init-voltage = <1800000>;
 };
 
 &slim_msm {
@@ -342,9 +402,40 @@
 };
 
 &mdss_dsi0 {
-	qcom,dsi-pref-prim-pan = <&dsi_nt35590_720_vid>;
+	qcom,dsi-pref-prim-pan = <&dsi_truly_hx8379c_fwvga_vid>;
+	vdddsi-supply = <&pm8226_lvs1>;
+	qcom,platform-supply-entry3 {
+		qcom,supply-name = "vdddsi";
+		qcom,supply-min-voltage = <1800000>;
+		qcom,supply-max-voltage = <1800000>;
+		qcom,supply-enable-load = <100000>;
+		qcom,supply-disable-load = <100>;
+		qcom,supply-pre-on-sleep = <0>;
+		qcom,supply-post-on-sleep = <0>;
+		qcom,supply-pre-off-sleep = <0>;
+		qcom,supply-post-off-sleep = <0>;
+	};
+	qcom,platform-supply-entry4 {
+		qcom,supply-name = "vdda";
+		qcom,supply-min-voltage = <1200000>;
+		qcom,supply-max-voltage = <1200000>;
+		qcom,supply-enable-load = <100000>;
+		qcom,supply-disable-load = <100>;
+		qcom,supply-pre-on-sleep = <0>;
+		qcom,supply-post-on-sleep = <20>;
+		qcom,supply-pre-off-sleep = <0>;
+		qcom,supply-post-off-sleep = <0>;
+	};
 };
 
-&dsi_nt35590_720_vid {
+&dsi_truly_hx8379c_fwvga_vid {
+	somc,first-boot-aware;
+	somc,panel-id-read-cmds;
+	qcom,cont-splash-enabled;
+};
+
+&dsi_ofilm_hx8379c_fwvga_vid {
+	somc,first-boot-aware;
+	somc,panel-id-read-cmds;
 	qcom,cont-splash-enabled;
 };

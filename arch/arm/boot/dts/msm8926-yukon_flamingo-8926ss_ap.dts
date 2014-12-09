@@ -13,7 +13,7 @@
 
 /dts-v1/;
 /include/ "msm8926.dtsi"
-/include/ "msm8226-yukon_flamingo.dtsi"
+/include/ "msm8226-yukon_flamingo-mtp.dtsi"
 /include/ "msm8226-yukon_flamingo-camera-sensor.dtsi"
 
 / {
