@@ -182,7 +182,7 @@
 			qcom,led_mpp_4 {
 				label = "mpp";
 				linux,name = "led:rgb_green";
-				linux,default-trigger = "battery-full";
+				linux,default-trigger = "none";
 				qcom,default-state = "off";
 				qcom,max-current = <40>;
 				qcom,current-setting = <5>;
@@ -208,7 +208,7 @@
 			qcom,led_mpp_6 {
 				label = "mpp";
 				linux,name = "led:rgb_red";
-				linux,default-trigger = "battery-charging";
+				linux,default-trigger = "none";
 				qcom,default-state = "off";
 				qcom,max-current = <40>;
 				qcom,current-setting = <5>;
@@ -240,7 +240,7 @@
 			qcom,wled_0 {
 				label = "wled";
 				linux,name = "wled:backlight";
-				linux,default-trigger = "bkl-trigger";
+				linux,default-trigger = "none";
 				qcom,cs-out-en;
 				qcom,op-fdbck = <1>;
 				qcom,default-state = "on";
