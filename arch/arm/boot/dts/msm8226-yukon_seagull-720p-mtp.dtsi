@@ -299,153 +299,15 @@
 };
 
 &spmi_bus {
-	qcom,pm8226@0 {
-		qcom,leds@a100 {
-			status = "okay";
-			qcom,led_mpp_6 {
-				fih,base = <0xa500>;
-				fih,use_hw = <1>;
-				fih,current_sink = <3>;
-				fih,on_off_pwm = <255>;
-				fih,fade_in_out_pwm =<510>;
-				fih,interval = <1000>;
-				fih,ramp_loop      = <1>;
-				fih,ramp_up_down   = <1>;
-				fih,toggle_up_down = <1>;
-				fih,blinking_pwm1 = <0>;
-				fih,blinking_pwm2 = <511>;
-				fih,blinking_time1 = <1000>;
-				fih,blinking_time2 = <1000>;
-
-				label = "mpp";
-				linux,name = "led:rgb_red";
-				linux,default-trigger = "none";
-				qcom,default-state = "off";
-				//qcom,max-current = <25>;
-				qcom,id = <6>;
-				qcom,source-sel = <10>;
-				qcom,mode-ctrl = <0x60>;
-				qcom,pwm-channel = <5>;
-			};
-
-			qcom,led_mpp_4 {
-				fih,base = <0xa300>;
-				fih,use_hw = <1>;
-				fih,current_sink = <3>;
-				fih,on_off_pwm = <255>;
-				fih,fade_in_out_pwm =<510>;
-				fih,interval = <1000>;
-				fih,ramp_loop      = <1>;
-				fih,ramp_up_down   = <1>;
-				fih,toggle_up_down = <1>;
-				fih,blinking_pwm1 = <0>;
-				fih,blinking_pwm2 = <511>;
-				fih,blinking_time1 = <1000>;
-				fih,blinking_time2 = <1000>;
-
-				label = "mpp";
-				linux,name = "led:rgb_green";
-				linux,default-trigger = "none";
-				qcom,default-state = "off";
-				//qcom,max-current = <25>;
-				qcom,id = <6>;
-				qcom,source-sel = <8>;
-				qcom,mode-ctrl = <0x60>;
-				qcom,pwm-channel = <0>;
-			};
-
-			qcom,led_mpp_2 {
-				fih,base = <0xa100>;
-				fih,use_hw = <1>;
-				fih,current_sink = <3>;
-				fih,on_off_pwm = <255>;
-				fih,fade_in_out_pwm =<510>;
-				fih,interval = <1000>;
-				fih,ramp_loop      = <1>;
-				fih,ramp_up_down   = <1>;
-				fih,toggle_up_down = <1>;
-				fih,blinking_pwm1 = <0>;
-				fih,blinking_pwm2 = <511>;
-				fih,blinking_time1 = <1000>;
-				fih,blinking_time2 = <1000>;
-
-				label = "mpp";
-				linux,name = "led:rgb_blue";
-				linux,default-trigger = "none";
-				qcom,default-state = "off";
-				//qcom,max-current = <25>;
-				qcom,id = <6>;
-				qcom,source-sel = <14>;
-				qcom,mode-ctrl = <0x60>;
-				qcom,pwm-channel = <3>;
-			};
-		};
-		qcom,power-on@800 {
-			qcom,pon_2 {
-				linux,code = <115>;
-			};
-		};
-	};
-
 	qcom,pm8226@1 {
-                qcom,leds@d100 {
-                        status = "disabled";
-                };
-
-                qcom,leds@d200 {
-                        status = "disabled";
-                };
-
                 qcom,leds@d300 {
-                        status = "okay";
                         pm8226_flash0: qcom,flash_0 {
-                                qcom,max-current = <1000>;
-                                qcom,default-state = "off";
-                                qcom,headroom = <3>;
-                                qcom,duration = <1280>;
-                                qcom,clamp-curr = <200>;
-                                qcom,startup-dly = <3>;
-                                qcom,safety-timer;
-                                label = "flash";
-                                linux,default-trigger =
-                                        "flash0_trigger";
-                                qcom,id = <1>;
-                                linux,name = "led:flash_0";
                                 qcom,current = <550>;
-                        };
-
-                        pm8226_torch: qcom,flash_torch {
-                                qcom,max-current = <200>;
-                                qcom,default-state = "off";
-                                qcom,headroom = <0>;
-                                qcom,startup-dly = <1>;
-                                linux,default-trigger =
-                                        "torch_trigger";
-                                label = "flash";
-                                qcom,id = <1>;
-                                linux,name = "led:flash_torch";
-                                qcom,current = <180>;
-                                qcom,torch-enable;
                         };
                 };
 
 		qcom,leds@d800 {
-			status = "okay";
-			qcom,wled_0 {
-				label = "wled";
-				linux,name = "wled:backlight";
-				linux,default-trigger = "none";
-				qcom,op-fdbck = <1>;
-				qcom,default-state = "off";
-				qcom,max-current = <0>;
-				qcom,ctrl-delay-us = <0>;
-				qcom,boost-curr-lim = <3>;
-				qcom,cp-sel = <0>;
-				qcom,switch-freq = <11>;
-				qcom,ovp-val = <0>;
-				qcom,num-strings = <0>;
-				qcom,id = <0>;
-			};
+			status = "disabled";
 		};
 	};
 };
