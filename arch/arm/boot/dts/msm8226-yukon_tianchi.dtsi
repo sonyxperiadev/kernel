@@ -53,13 +53,13 @@
 			pwm_feedback = <0x09>;
 			ctl = <0x05>;
 			fsc = <20000 0>;
-			iname = "lm3630-lcd-bl";
+			iname = "wled:backlight";
 			connected = <0x01 0x00>;
 			bank = <0x00 0x01>;
 			filter_str = <0x03>;
 			ovp_boost = <0x46>;
 			led_fault = <0x00>;
-			intf_name = "lm3630-lcd-bl";
+			intf_name = "wled:backlight";
 			brightness = <255 0>;
 		};
 	};
