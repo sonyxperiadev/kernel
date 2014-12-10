@@ -168,34 +168,6 @@
 			qcom,clk-gpio = <&pm8226_gpios 3 0>;
 		};
 	};
-	gpio_keys {
-		camera_focus {
-			label = "camera_focus";
-			gpios = <&msmgpio 108 0x1>;
-			linux,input-type = <1>;
-			linux,code = <0x210>;
-			//gpio-key,wakeup;
-			debounce-interval = <15>;
-		};
-
-		camera_snapshot {
-			label = "camera_snapshot";
-			gpios = <&msmgpio 107 0x1>;
-			linux,input-type = <1>;
-			linux,code = <0x2fe>;
-			gpio-key,wakeup;
-			debounce-interval = <15>;
-		};
-
-		vol_down {
-			label = "volume_down";
-			gpios = <&msmgpio 106 0x1>;
-			linux,input-type = <1>;
-			linux,code = <114>;
-			gpio-key,wakeup;
-			debounce-interval = <15>;
-		};
-	};
 
 	spi@f9923000 {
 		ethernet-switch@3 {
