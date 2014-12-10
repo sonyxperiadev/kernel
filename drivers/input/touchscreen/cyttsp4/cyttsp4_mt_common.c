@@ -144,11 +144,9 @@ static void cyttsp4_get_mt_touches(struct cyttsp4_mt_data *md, int num_cur_rec)
 				if(md->ttsp->core->dbg_msg_level & 0x2)
 					dev_dbg(dev, "%s: t=%d e=%d lift-off\n",
 						__func__, t, tch.abs[CY_TCH_E]);
-				else
-					printk("[TP] lift-off.\n");
 				/* [Optical][Touch] Driver porting, 20130717, Add Start */
-				if (IS_TTSP_VER_GE(si, 2, 3))
-					if(md->ttsp->core->dbg_msg_level & 0x2)
+				if (IS_TTSP_VER_GE(si, 2, 3)) {
+					if(md->ttsp->core->dbg_msg_level & 0x2) {
 						dev_dbg(dev,
 							"%s: t=%d x=%d y=%d z=%d M=%d m=%d o=%d e=%d\n",
 							__func__, t,
@@ -159,17 +157,8 @@ static void cyttsp4_get_mt_touches(struct cyttsp4_mt_data *md, int num_cur_rec)
 							tch.abs[CY_TCH_MIN],
 							tch.abs[CY_TCH_OR],
 							tch.abs[CY_TCH_E]);
-					else
-						printk("[TP] t=%d x=%d y=%d z=%d M=%d m=%d o=%d e=%d\n",
-							t,
-							tch.abs[CY_TCH_X],
-							tch.abs[CY_TCH_Y],
-							tch.abs[CY_TCH_P],
-							tch.abs[CY_TCH_MAJ],
-							tch.abs[CY_TCH_MIN],
-							tch.abs[CY_TCH_OR],
-							tch.abs[CY_TCH_E]);
-				else
+					}
+				} else {
 					if(md->ttsp->core->dbg_msg_level & 0x2)
 						dev_dbg(dev,
 							"%s: t=%d x=%d y=%d z=%d e=%d\n",
@@ -178,14 +167,9 @@ static void cyttsp4_get_mt_touches(struct cyttsp4_mt_data *md, int num_cur_rec)
 							tch.abs[CY_TCH_Y],
 							tch.abs[CY_TCH_P],
 							tch.abs[CY_TCH_E]);
-					else
-						printk("[TP] t=%d x=%d y=%d z=%d e=%d\n",
-							t,
-							tch.abs[CY_TCH_X],
-							tch.abs[CY_TCH_Y],
-							tch.abs[CY_TCH_P],
-							tch.abs[CY_TCH_E]);
+				}
 				/* [Optical][Touch] Driver porting, 20130717, Add End */
+
 				goto cyttsp4_get_mt_touches_pr_tch;
 			}
 			if (md->mt_function.input_report)
