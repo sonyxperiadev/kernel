@@ -2750,6 +2750,10 @@ static int mdss_panel_parse_dt(struct device_node *np,
 		else
 			pr_warn("%s:%d Unable to get valid GPIO for MIPI RST\n",
 								__func__, __LINE__);
+
+		spec_pdata->dsi_seq_hack = of_property_read_bool(next,
+						"somc,dsi-restart-hack");
+
 		break;
 	}
 	return 0;

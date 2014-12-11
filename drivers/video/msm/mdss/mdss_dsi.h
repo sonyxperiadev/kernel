@@ -274,6 +274,7 @@ struct mdss_panel_specific_pdata {
 	int mipi_rst;
 	int disp_p5;
 	int disp_n5;
+	bool dsi_seq_hack;
 
 	struct dsi_panel_cmds cabc_early_on_cmds;
 	struct dsi_panel_cmds cabc_on_cmds;

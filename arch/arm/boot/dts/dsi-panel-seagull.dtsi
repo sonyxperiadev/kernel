@@ -236,6 +236,7 @@
 		somc,panel-detect = <1>;
 		somc,panel-id-read-cmds;
 		somc,alt-panelid-cmd;
+		somc,dsi-restart-hack;
 		somc,no-vsn-gpio;
 		somc,no-vsp-gpio;
 	};
@@ -316,6 +317,7 @@
 		somc,panel-detect = <1>;
 		somc,panel-id-read-cmds;
 		somc,alt-panelid-cmd;
+		somc,dsi-restart-hack;
 		somc,no-vsn-gpio;
 		somc,no-vsp-gpio;
 	};
@@ -592,6 +594,7 @@
 		somc,panel-detect = <1>;
 		somc,panel-id-read-cmds;
 		somc,alt-panelid-cmd;
+		somc,dsi-restart-hack;
 		somc,no-vsn-gpio;
 		somc,no-vsp-gpio;
 	};
@@ -672,6 +675,7 @@
 		somc,panel-detect = <1>;
 		somc,panel-id-read-cmds;
 		somc,alt-panelid-cmd;
+		somc,dsi-restart-hack;
 		somc,no-vsn-gpio;
 		somc,no-vsp-gpio;
 	};
@@ -930,6 +934,7 @@
 		somc,driver-ic = <4>;
 		somc,panel-detect = <1>;
 		somc,alt-panelid-cmd;
+		somc,dsi-restart-hack;
 		somc,panel-id-read-cmds;
 		somc,no-vsn-gpio;
 		somc,no-vsp-gpio;
@@ -1011,6 +1016,7 @@
 		somc,driver-ic = <4>;
 		somc,panel-detect = <1>;
 		somc,alt-panelid-cmd;
+		somc,dsi-restart-hack;
 		somc,panel-id-read-cmds;
 		somc,no-vsn-gpio;
 		somc,no-vsp-gpio;
