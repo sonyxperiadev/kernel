@@ -248,14 +248,6 @@
 		compatible = "qcom,spi-qup-v2";
 		status = "disabled";
 	};
-
-	cci,illumination_led@0 {
-		compatible = "kinet,ktd2024";
-		label = "illumination_led";
-		/* cci,enable_gpio = <62>; */
-		cci,control_gpio = <0>;
-	};
-
 };
 
 &rpm_bus {
