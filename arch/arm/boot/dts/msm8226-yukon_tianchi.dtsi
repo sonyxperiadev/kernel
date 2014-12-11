@@ -33,7 +33,7 @@
 	};
 
 	i2c@f9925000 { /* BLSP-1 QUP-3 */
-		nfc@28 {
+		pn547@28 {
 			compatible = "nxp,pn547";
 			reg = <0x28>;
 			interrupt-parent = <&msmgpio>;

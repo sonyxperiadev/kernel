@@ -178,14 +178,14 @@
 	};
 
 	i2c@f9925000 { /* BLSP1 QUP3 */
-		nxp@28 {
-			compatible = "nxp,pn544";
+		pn547@28 {
+			compatible = "nxp,pn547";
 			reg = <0x28>;
 			interrupt-parent = <&msmgpio>;
 			interrupts = <21 0x2>;
-			nxp,irq-gpio=<&msmgpio 21 0>;
-			nxp,vengpio= <&msmgpio 23 0>;
-			nxp,firmgpio=<&msmgpio 20 0>;
+			nxp,irq_gpio = <&msmgpio 21 0>;
+			nxp,ven = <&msmgpio 23 0>;
+			nxp,dwld_en = <&msmgpio 20 0>;
 		};
 	};
 	
