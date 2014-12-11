@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -56,6 +56,42 @@ static struct msm_gpiomux_config msm_hsic_configs[] = {
 	},
 };
 #endif
+
+static struct gpiomux_setting smsc_hub_act_cfg = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_8MA,
+	.pull = GPIOMUX_PULL_NONE,
+};
+
+static struct gpiomux_setting smsc_hub_susp_cfg = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_2MA,
+	.pull = GPIOMUX_PULL_NONE,
+};
+
+static struct msm_gpiomux_config smsc_hub_configs[] = {
+	{
+		.gpio = 114, /* reset_n */
+		.settings = {
+			[GPIOMUX_ACTIVE] = &smsc_hub_act_cfg,
+			[GPIOMUX_SUSPENDED] = &smsc_hub_susp_cfg,
+		},
+	},
+	{
+		.gpio = 8, /* clk_en */
+		.settings = {
+			[GPIOMUX_ACTIVE] = &smsc_hub_act_cfg,
+			[GPIOMUX_SUSPENDED] = &smsc_hub_susp_cfg,
+		},
+	},
+	{
+		.gpio = 9, /* int_n */
+		.settings = {
+			[GPIOMUX_ACTIVE] = &smsc_hub_act_cfg,
+			[GPIOMUX_SUSPENDED] = &smsc_hub_susp_cfg,
+		},
+	},
+};
 
 #define KS8851_IRQ_GPIO 115
 
@@ -117,33 +153,6 @@ static struct gpiomux_setting fih_sensors_active = {
 	.drv = GPIOMUX_DRV_6MA,
 	.pull = GPIOMUX_PULL_UP,
 };
-
-/* MM-KW-DISPLAY-panel-00+{ */
-#if 0
-static struct gpiomux_setting gpio_spi_act_config = {
-	.func = GPIOMUX_FUNC_1,
-	.drv = GPIOMUX_DRV_8MA,
-	.pull = GPIOMUX_PULL_NONE,
-};
-
-static struct gpiomux_setting gpio_spi_cs_act_config = {
-	.func = GPIOMUX_FUNC_1,
-	.drv = GPIOMUX_DRV_6MA,
-	.pull = GPIOMUX_PULL_DOWN,
-};
-static struct gpiomux_setting gpio_spi_susp_config = {
-	.func = GPIOMUX_FUNC_GPIO,
-	.drv = GPIOMUX_DRV_2MA,
-	.pull = GPIOMUX_PULL_DOWN,
-};
-
-static struct gpiomux_setting gpio_spi_cs_eth_config = {
-	.func = GPIOMUX_FUNC_4,
-	.drv = GPIOMUX_DRV_6MA,
-	.pull = GPIOMUX_PULL_DOWN,
-};
-#endif
-/* MM-KW-DISPLAY-panel-00-} */
 
 static struct gpiomux_setting wcnss_5wire_suspend_cfg = {
 	.func = GPIOMUX_FUNC_GPIO,
@@ -220,7 +229,6 @@ static struct msm_gpiomux_config fih_sensor_configs[] __initdata = {
 	},
 };
 
-/* MM-KW-DISPLAY-panel-00+{ */
 static struct gpiomux_setting lcd_rst_act_cfg = {
 	.func = GPIOMUX_FUNC_GPIO,
 	.drv = GPIOMUX_DRV_8MA,
@@ -291,105 +299,28 @@ static struct msm_gpiomux_config msm_lcd_configs[] __initdata = {
 	{
 		.gpio = 52,
 		.settings = {
-			[GPIOMUX_ACTIVE]    = &lcd_pwr_1p8_act_cfg,
+			[GPIOMUX_ACTIVE] = &lcd_pwr_1p8_act_cfg,
 			[GPIOMUX_SUSPENDED] = &lcd_pwr_1p8_sus_cfg,
 		},
 	},
 	{
 		.gpio = 2,
 		.settings = {
-			[GPIOMUX_ACTIVE]    = &lcd_ext_pwr_positive5_act_cfg,
+			[GPIOMUX_ACTIVE] = &lcd_ext_pwr_positive5_act_cfg,
 			[GPIOMUX_SUSPENDED] = &lcd_ext_pwr_positive5_sus_cfg,
 		},
 	},
 	{
 		.gpio = 3,
 		.settings = {
-			[GPIOMUX_ACTIVE]    = &lcd_ext_pwr_negative5_act_cfg,
+			[GPIOMUX_ACTIVE] = &lcd_ext_pwr_negative5_act_cfg,
 			[GPIOMUX_SUSPENDED] = &lcd_ext_pwr_negative5_sus_cfg,
 		},
 	}
 };
-/* MM-KW-DISPLAY-panel-00-} */
-/* MM-AY-Audio-speaker-00-[+ */
-static struct gpiomux_setting speaker_pwr_act_cfg = {
-	.func = GPIOMUX_FUNC_GPIO,
-	.drv = GPIOMUX_DRV_8MA,
-	.pull = GPIOMUX_PULL_DOWN,
-	.dir = GPIOMUX_OUT_LOW,
-};
 
-static struct gpiomux_setting speaker_pwr_sus_cfg = {
-	.func = GPIOMUX_FUNC_GPIO,
-	.drv = GPIOMUX_DRV_2MA,
-	.pull = GPIOMUX_PULL_DOWN,
-};
-
-static struct gpiomux_setting hac_act_cfg = {
-	.func = GPIOMUX_FUNC_GPIO,
-	.drv = GPIOMUX_DRV_8MA,
-	.pull = GPIOMUX_PULL_DOWN,
-	.dir = GPIOMUX_OUT_LOW,
-};
-
-static struct gpiomux_setting hac_sus_cfg = {
-	.func = GPIOMUX_FUNC_GPIO,
-	.drv = GPIOMUX_DRV_2MA,
-	.pull = GPIOMUX_PULL_DOWN,
-};
-
-static struct msm_gpiomux_config audio_act_cfgs[] __initdata = {
-	{
-		.gpio = 0,
-		.settings = {
-			[GPIOMUX_ACTIVE]    = &speaker_pwr_act_cfg,
-			[GPIOMUX_SUSPENDED] = &speaker_pwr_sus_cfg,
-		},
-	},
-	{
-		.gpio = 108,
-		.settings = {
-			[GPIOMUX_ACTIVE]    = &hac_act_cfg,
-			[GPIOMUX_SUSPENDED] = &hac_sus_cfg,
-		},
-	},
-};
-/* MM-AY-Audio-speaker-00-]- */
 
 static struct msm_gpiomux_config msm_blsp_configs[] __initdata = {
-/* MM-KW-DISPLAY-panel-00+{ */
-#if 0
-
-	{
-		.gpio      = 0,		/* BLSP1 QUP1 SPI_DATA_MOSI */
-		.settings = {
-			[GPIOMUX_ACTIVE] = &gpio_spi_act_config,
-			[GPIOMUX_SUSPENDED] = &gpio_spi_susp_config,
-		},
-	},
-	{
-		.gpio      = 1,		/* BLSP1 QUP1 SPI_DATA_MISO */
-		.settings = {
-			[GPIOMUX_ACTIVE] = &gpio_spi_act_config,
-			[GPIOMUX_SUSPENDED] = &gpio_spi_susp_config,
-		},
-	},
-	{
-		.gpio      = 2,		/* BLSP1 QUP1 SPI_CS1 */
-		.settings = {
-			[GPIOMUX_ACTIVE] = &gpio_spi_cs_act_config,
-			[GPIOMUX_SUSPENDED] = &gpio_spi_susp_config,
-		},
-	},
-	{
-		.gpio      = 3,		/* BLSP1 QUP1 SPI_CLK */
-		.settings = {
-			[GPIOMUX_ACTIVE] = &gpio_spi_act_config,
-			[GPIOMUX_SUSPENDED] = &gpio_spi_susp_config,
-		},
-	},
-#endif
-/* MM-KW-DISPLAY-panel-00-} */
 	{
 		.gpio      = 6,		/* BLSP1 QUP2 I2C_SDA */
 		.settings = {
@@ -418,15 +349,6 @@ static struct msm_gpiomux_config msm_blsp_configs[] __initdata = {
 			[GPIOMUX_SUSPENDED] = &gpio_i2c_config,
 		},
 	},
-/* MM-VH-DISPLAY-I400- */
-#if 0
-	{
-		.gpio      = 22,		/* BLSP1 QUP1 SPI_CS_ETH */
-		.settings = {
-			[GPIOMUX_SUSPENDED] = &gpio_spi_cs_eth_config,
-		},
-	},
-#endif
 	{					/*  NFC   */
 		.gpio      = 10,		/* BLSP1 QUP3 I2C_DAT */
 		.settings = {
@@ -439,6 +361,16 @@ static struct msm_gpiomux_config msm_blsp_configs[] __initdata = {
 		.settings = {
 			[GPIOMUX_ACTIVE] = &gpio_i2c_config,
 			[GPIOMUX_SUSPENDED] = &gpio_i2c_config,
+		},
+	},
+};
+
+static struct msm_gpiomux_config msm_blsp_spi_cs_config[] __initdata = {
+	{
+		.gpio      = 2,		/* BLSP1 QUP1 SPI_CS1 */
+		.settings = {
+			[GPIOMUX_ACTIVE] = &gpio_spi_cs_act_config,
+			[GPIOMUX_SUSPENDED] = &gpio_spi_susp_config,
 		},
 	},
 };
@@ -647,7 +579,6 @@ static struct msm_gpiomux_config sd_card_det __initdata = {
 	},
 };
 
-/* MM-MC-AddCameraSwitchMechanismForSecondSource+{ */
 static struct gpiomux_setting cam_front_det_active_config = {
 	.func = GPIOMUX_FUNC_GPIO,
 	.drv = GPIOMUX_DRV_2MA,
@@ -669,7 +600,6 @@ static struct msm_gpiomux_config cam_front_det __initdata = {
 		[GPIOMUX_SUSPENDED] = &cam_front_det_sleep_config,
 	},
 };
-/* MM-MC-AddCameraSwitchMechanismForSecondSource+} */
 
 static struct msm_gpiomux_config wcnss_5wire_interface[] = {
 	{
@@ -793,7 +723,7 @@ static struct gpiomux_setting cam_settings[] = {
 	},
 };
 
-/*MM-SL-BringUpCameraSensorIMX134-00*{ */
+
 static struct msm_gpiomux_config msm_sensor_configs[] __initdata = {
 	{
 		.gpio = 26, /* CAM_MCLK0 */
@@ -862,25 +792,48 @@ static struct msm_gpiomux_config msm_sensor_configs[] __initdata = {
 
 };
 
-#if 0
-static struct msm_gpiomux_config msm_sensor_configs_skuf_plus[] __initdata = {
+static struct gpiomux_setting speaker_pwr_act_cfg = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_8MA,
+	.pull = GPIOMUX_PULL_DOWN,
+	.dir = GPIOMUX_OUT_LOW,
+};
+
+static struct gpiomux_setting speaker_pwr_sus_cfg = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_2MA,
+	.pull = GPIOMUX_PULL_DOWN,
+};
+
+static struct gpiomux_setting hac_act_cfg = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_8MA,
+	.pull = GPIOMUX_PULL_DOWN,
+	.dir = GPIOMUX_OUT_LOW,
+};
+
+static struct gpiomux_setting hac_sus_cfg = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_2MA,
+	.pull = GPIOMUX_PULL_DOWN,
+};
+
+static struct msm_gpiomux_config msm_auxpcm_configs[] __initdata = {
 	{
-		.gpio = 22, /* CAM1_VDD */
+		.gpio = 0,
 		.settings = {
-			[GPIOMUX_ACTIVE]    = &cam_settings[3],
-			[GPIOMUX_SUSPENDED] = &cam_settings[4],
+			[GPIOMUX_SUSPENDED] = &speaker_pwr_sus_cfg,
+			[GPIOMUX_ACTIVE] = &speaker_pwr_act_cfg,
 		},
 	},
 	{
-		.gpio = 34, /* CAM1 VCM_PWDN */
+		.gpio = 108,
 		.settings = {
-			[GPIOMUX_ACTIVE]    = &cam_settings[3],
-			[GPIOMUX_SUSPENDED] = &cam_settings[4],
+			[GPIOMUX_SUSPENDED] = &hac_sus_cfg,
+			[GPIOMUX_ACTIVE] = &hac_act_cfg,
 		},
 	},
 };
-#endif
-/*MM-SL-BringUpCameraSensorIMX134-00*} */
 
 static struct gpiomux_setting usb_otg_sw_cfg = {
 	.func = GPIOMUX_FUNC_GPIO,
@@ -995,7 +948,6 @@ void __init msm8226_init_gpiomux(void)
 #if defined(CONFIG_KS8851) || defined(CONFIG_KS8851_MODULE)
 	msm_gpiomux_install(msm_eth_configs, ARRAY_SIZE(msm_eth_configs));
 #endif
-
 	msm_gpiomux_install(msm_keypad_configs,
 			ARRAY_SIZE(msm_keypad_configs));
 
@@ -1004,9 +956,13 @@ void __init msm8226_init_gpiomux(void)
 	if (of_board_is_skuf())
 		msm_gpiomux_install(msm_skuf_blsp_configs,
 			ARRAY_SIZE(msm_skuf_blsp_configs));
-	else
+	else {
 		msm_gpiomux_install(msm_blsp_configs,
 			ARRAY_SIZE(msm_blsp_configs));
+		if (machine_is_msm8226())
+			msm_gpiomux_install(msm_blsp_spi_cs_config,
+				ARRAY_SIZE(msm_blsp_spi_cs_config));
+	}
 
 	msm_gpiomux_install(wcnss_5wire_interface,
 				ARRAY_SIZE(wcnss_5wire_interface));
@@ -1016,9 +972,14 @@ void __init msm8226_init_gpiomux(void)
 		msm_gpiomux_install(msm_skuf_goodix_configs,
 				ARRAY_SIZE(msm_skuf_goodix_configs));
 	else
+#if defined(CONFIG_TOUCHSCREEN_ELAN_EKTF3135)
+		msm_gpiomux_install(elan_ektf3135_io_configs,
+				ARRAY_SIZE(elan_ektf3135_io_configs));
+#endif
+#if defined(CONFIG_TOUCHSCREEN_CYPRESS_CYTTSP4)
 		msm_gpiomux_install(msm_synaptics_configs,
 				ARRAY_SIZE(msm_synaptics_configs));
-
+#endif
 	if (of_board_is_skuf())
 		msm_gpiomux_install(msm_skuf_nfc_configs,
 				ARRAY_SIZE(msm_skuf_nfc_configs));
@@ -1028,17 +989,11 @@ void __init msm8226_init_gpiomux(void)
 
 	msm_gpiomux_install(msm_sensor_configs, ARRAY_SIZE(msm_sensor_configs));
 
-/*MM-SL-BringUpCameraSensorIMX134-00-{ */
-#if 0
-	if (of_board_is_skuf())
-		msm_gpiomux_install(msm_sensor_configs_skuf_plus,
-			ARRAY_SIZE(msm_sensor_configs_skuf_plus));
-#endif
-/*MM-SL-BringUpCameraSensorIMX134-00-} */
 
-	msm_gpiomux_install(audio_act_cfgs,
-			ARRAY_SIZE(audio_act_cfgs));
-	msm_gpiomux_install(&cam_front_det, 1);/* MM-MC-AddCameraSwitchMechanismForSecondSource+ */
+	msm_gpiomux_install(msm_auxpcm_configs,
+			ARRAY_SIZE(msm_auxpcm_configs));
+
+	msm_gpiomux_install(&cam_front_det, 1);
 
 	if (of_board_is_cdp() || of_board_is_mtp() || of_board_is_xpm())
 		msm_gpiomux_install(usb_otg_sw_configs,
@@ -1058,6 +1013,9 @@ void __init msm8226_init_gpiomux(void)
 	}
 	msm_gpiomux_install(msm_hsic_configs, ARRAY_SIZE(msm_hsic_configs));
 #endif
+	if (machine_is_msm8926() && of_board_is_mtp())
+		msm_gpiomux_install(smsc_hub_configs,
+			ARRAY_SIZE(smsc_hub_configs));
 }
 
 static void wcnss_switch_to_gpio(void)
