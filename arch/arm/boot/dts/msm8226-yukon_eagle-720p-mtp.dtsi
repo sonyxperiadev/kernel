@@ -276,6 +276,9 @@
 
 &spmi_bus {
 	qcom,pm8226@1 {
+		qcom,leds@d800 {
+			status = "disabled";
+		};
 		qcom,vibrator@c000 {
 			qcom,vib-vtg-level-mV = <3000>;
 		};
