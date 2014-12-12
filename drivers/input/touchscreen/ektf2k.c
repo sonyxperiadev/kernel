@@ -1689,7 +1689,7 @@ static int elan_ktf2k_ts_hw_reset(struct i2c_client *client)
 	gpio_direction_output(SYSTEM_RESET_PIN_SR, 0);
 	usleep_range(1000,1500);
 	gpio_direction_output(SYSTEM_RESET_PIN_SR, 1);
-	msleep(5);
+	usleep_range(5000,5500);
 	return 0;
 }
 
