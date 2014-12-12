@@ -46,6 +46,24 @@ enum {
 		},						\
 	}
 
+#define FMT_RGB_565_TILE(fmt, e0, e1, e2)				\
+	{							\
+		.format = (fmt),				\
+		.fetch_planes = MDSS_MDP_PLANE_INTERLEAVED,	\
+		.unpack_tight = 1,				\
+		.unpack_align_msb = 0,				\
+		.alpha_enable = 0,				\
+		.unpack_count = 3,				\
+		.bpp = 2,					\
+		.tile = 1,					\
+		.element = { (e0), (e1), (e2) },		\
+		.bits = {					\
+			[C2_R_Cr] = COLOR_5BIT,			\
+			[C0_G_Y] = COLOR_6BIT,			\
+			[C1_B_Cb] = COLOR_5BIT,			\
+		},						\
+	}
+
 #define FMT_RGB_888(fmt, e0, e1, e2)				\
 	{							\
 		.format = (fmt),				\

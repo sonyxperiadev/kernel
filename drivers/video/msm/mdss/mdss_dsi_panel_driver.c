@@ -1090,7 +1090,7 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 		return -EINVAL;
 	}
 
-	if (!spec_pdata->detected && !spec_pdata->init_from_begin)
+	if (!spec_pdata->detected && !spec_pdata->init_from_begin && !alt_panelid_cmd)
 		return 0;
 
 	mipi = &pdata->panel_info.mipi;

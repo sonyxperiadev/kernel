@@ -811,15 +811,6 @@ static int mdss_dsi_event_handler(struct mdss_panel_data *pdata,
 							pdata);
 		if (ctrl_pdata->on_cmds.link_state == DSI_LP_MODE)
 			rc = mdss_dsi_unblank(pdata);
-#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
-		if (ctrl_pdata->spec_pdata->dsi_seq_hack) {
-			mdss_dsi_off(pdata);
-			usleep(2000);
-			mdss_dsi_off(pdata);
-			usleep(2000);
-			ctrl_pdata->spec_pdata->dsi_seq_hack = 0;
-		}
-#endif
 		break;
 	case MDSS_EVENT_PANEL_ON:
 		ctrl_pdata->ctrl_state |= CTRL_STATE_MDP_ACTIVE;
