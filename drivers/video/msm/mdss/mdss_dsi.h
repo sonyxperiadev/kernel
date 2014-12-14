@@ -198,7 +198,15 @@ struct dsi_clk_desc {
 	u32 pre_div_func;
 };
 
+struct dsi_panel_cmds {
+	char *buf;
+	int blen;
+	struct dsi_cmd_desc *cmds;
+	int cmd_cnt;
+	int link_state;
+};
 
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
 /* panel DriverIC type */
 enum {
 	PANEL_DRIVER_IC_R63311,
@@ -208,23 +216,9 @@ enum {
 	PANEL_DRIVER_IC_NONE,
 };
 
-struct dsi_panel_cmds {
-	char *buf;
-	int blen;
-	struct dsi_cmd_desc *cmds;
-	int cmd_cnt;
-	int link_state;
-};
-
 #define DEFAULT_CMDS	0
 #define DETECTED_CMDS	1
 #define MAX_CMDS	2
-
-struct dsi_kickoff_action {
-	struct list_head act_entry;
-	void (*action) (void *);
-	void *data;
-};
 
 struct mdss_pcc_color_tbl {
 	u32 color_type;
@@ -302,7 +296,13 @@ struct mdss_panel_specific_pdata {
 	u32 down_period;
 	u32 new_vfp;
 };
+#endif
 
+struct dsi_kickoff_action {
+	struct list_head act_entry;
+	void (*action) (void *);
+	void *data;
+};
 
 struct dsi_drv_cm_data {
 	struct regulator *vdd_vreg;
