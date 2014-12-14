@@ -898,7 +898,7 @@ static int nl_portid_hash_rehash(struct nl_portid_hash *hash, int grow)
 	hash->table = table;
 	hash->mask = mask;
 	hash->shift = shift;
-	get_random_bytes(&hash->rnd, sizeof(hash->rnd));
+	prandom_bytes(&hash->rnd, sizeof(hash->rnd));
 
 	for (i = 0; i <= omask; i++) {
 		struct sock *sk;

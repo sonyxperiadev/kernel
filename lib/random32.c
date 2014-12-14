@@ -220,7 +220,7 @@ static void __prandom_timer(unsigned long dontcare)
 	u32 entropy;
 	unsigned long expires;
 
-	get_random_bytes(&entropy, sizeof(entropy));
+	erandom_get_random_bytes((char *)&entropy, sizeof(entropy));
 	prandom_seed(entropy);
 
 	/* reseed every ~60 seconds, in [40 .. 80) interval with slack */

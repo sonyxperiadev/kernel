@@ -311,7 +311,7 @@ out_entries:
 
 static void neigh_get_hash_rnd(u32 *x)
 {
-	get_random_bytes(x, sizeof(*x));
+	prandom_bytes(x, sizeof(*x));
 	*x |= 1;
 }
 
