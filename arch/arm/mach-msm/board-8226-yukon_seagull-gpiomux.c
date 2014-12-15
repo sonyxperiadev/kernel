@@ -17,7 +17,7 @@
 #include <mach/board.h>
 #include <mach/gpio.h>
 #include <mach/gpiomux.h>
-#include <mach/socinfo.h>
+#include <soc/qcom/socinfo.h>
 
 #define WLAN_CLK	44
 #define WLAN_SET	43
