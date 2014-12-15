@@ -42,7 +42,9 @@
 #include <linux/module.h>
 #include <linux/input.h>
 #include <linux/interrupt.h>
+#ifdef CONFIG_HAS_EARLYSUSPEND
 #include <linux/earlysuspend.h>
+#endif
 #include <linux/platform_device.h>
 #include <linux/i2c.h>
 #include <linux/delay.h>
@@ -208,7 +210,9 @@ struct elan_ktf2k_ts_data {
 	struct work_struct work;
 	struct delayed_work check_work;
 	struct mutex lock;
+#ifdef CONFIG_HAS_EARLYSUSPEND
 	struct early_suspend early_suspend;
+#endif
 	int irq_gpio;
 	int reset_gpio;
 	bool i2c_pull_up;
@@ -2551,8 +2555,9 @@ static int elan_ktf2k_ts_remove(struct i2c_client *client)
 	if (fb_unregister_client(&ts->fb_notif))
 		dev_err(&client->dev, "Error occurred while unregistering fb_notifier.\n");
 #endif /* CONFIG_FB */
-
+#ifdef CONFIG_HAS_EARLYSUSPEND
 	unregister_early_suspend(&ts->early_suspend);
+#endif
 	free_irq(client->irq, ts);
 
 	if (ts->elan_wq)
