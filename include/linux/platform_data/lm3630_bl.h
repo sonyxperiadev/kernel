@@ -1,11 +1,14 @@
 /*
 * Simple driver for Texas Instruments LM3630 LED Flash driver chip
 * Copyright (C) 2012 Texas Instruments
+* Copyright (C) 2014 Sony Mobile Communications AB.
 *
 * This program is free software; you can redistribute it and/or modify
 * it under the terms of the GNU General Public License version 2 as
 * published by the Free Software Foundation.
 *
+* NOTE: This file has been modified by Sony Mobile Communications AB.
+* Modifications are licensed under the License.
 */
 
 #ifndef __LINUX_LM3630_H
