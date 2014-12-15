@@ -12,9 +12,10 @@
 
 
 /dts-v1/;
-/include/ "msm8926.dtsi"
-/include/ "msm8226-yukon_seagull-720p-mtp.dtsi"
-/include/ "msm8226-yukon_seagull-camera-sensor.dtsi"
+
+#include "msm8926.dtsi"
+#include "msm8226-yukon_seagull-720p-mtp.dtsi"
+#include "msm8226-yukon_seagull-camera-sensor.dtsi"
 
 
 / {
