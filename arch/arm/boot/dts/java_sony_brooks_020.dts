@@ -380,7 +380,7 @@
         poll_rate_ms = <30000>;
         tmon_apb_clk = "tmon_apb";
         tmon_1m_clk = "tmon_1m_clk";
-        shutdown_temp = <120>;
+        shutdown_temp = <88>;
 
 		trip0 {
 			type = "active";
@@ -396,13 +396,13 @@
 		};
 		trip2 {
 			type = "active";
-			temp = <52>;
+			temp = <53>;
 			max_freq = <600000>;
 			max_brightness = <0>;
 		};
 		trip3 {
 			type = "active";
-			temp = <57>;
+			temp = <59>;
 			max_freq = <312000>;
 			max_brightness = <25>;
 		};
@@ -426,7 +426,7 @@
 		};
 		trip7 {
 			type = "critical";
-			temp = <115>;
+			temp = <85>;
 			max_freq = <0>;
 			max_brightness = <0>;
 		};
