@@ -1,0 +1,434 @@
+/* Copyright (c) 2013, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2013 Foxconn International Holdings, Ltd. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+/include/ "msm8226-yukon_common.dtsi"
+/include/ "dsi-panel-seagull.dtsi"
+
+/ {
+	aliases {
+		/delete-property/ spi0;
+	};
+};
+
+&soc {
+	fih_hwid {
+		compatible = "fih,hwid";
+		qcom,hwid-vadc = <&pm8226_vadc>;
+	};
+
+
+	/delete-node/ i2c@f9926000;
+	/delete-node/ spi@f9923000;
+
+	i2c@f9924000 { /* BLSP1 QUP2 */
+		#address-cells = <1>;
+		#size-cells = <0>;
+		qcom,scl-gpio = <&msmgpio 7 0>;
+		qcom,sda-gpio = <&msmgpio 6 0>;
+
+		bosch@10 {
+			compatible = "bosch,bma2x2";
+			reg = <0x10>;
+			bosch,int_pin = <&msmgpio 63 0x00>;
+			bosch,layout=<0x0>;
+			bmavdd-supply = <&pm8226_l19>;
+			bosch,vdd-current-level = <1 210>;
+		};
+
+		bosch@12 {
+			compatible = "bosch,bmm050";
+			reg = <0x12>;
+			bosch,layout=<0x0>;
+			bmmvdd-supply = <&pm8226_l19>;
+			bosch,vdd-current-level = <1 255>;
+		};
+
+		sensortek@48 {
+			compatible = "sensortek,stk3x1x";
+			reg = <0x48>;
+			stkvdd-supply = <&pm8226_l19>;/* PERI-BJ-Add_Regular_Optimum_feature-00+ */
+			sensortek,vdd-current-level = <1 120>;/* PERI-BJ-Add_Regular_Optimum_feature-00+ */
+			sensortek,slave-addr = <0x48>;
+			sensortek,int_pin = <&msmgpio 65 0x00>;
+			sensortek,state_reg = <0x0>;
+			sensortek,psctrl_reg = <0x31>;
+			sensortek,alsctrl_reg = <0x38>;
+			sensortek,ledctrl_reg = <0xFF>;
+			sensortek,wait_reg = <0x7>;
+			sensortek,ps_thd_h = <0x370>;//880
+			sensortek,ps_thd_l = <0x33E>;//830
+			sensortek,ps_thd_h_dp = <0x3D4>;//980
+			sensortek,ps_thd_l_dp = <0x3A2>;//930
+			sensortek,ps_thd_h_sp = <0x370>;//880
+			sensortek,ps_thd_l_sp = <0x33E>;//830
+			sensortek,transmittance = <0x2BC>;//700
+		};
+
+		bosch@68 {
+			compatible = "bosch,bmg160";
+			reg = <0x68>;
+			bosch,layout=<0x5>;
+			bmgvdd-supply = <&pm8226_l19>;
+			bosch,vdd-current-level = <1 255>;
+		};
+	};
+
+	i2c@f9927000 { /* BLSP1 QUP5 */
+		synaptics@20 {
+			compatible = "synaptics,rmi4";
+			reg = <0x20>;
+			interrupt-parent = <&msmgpio>;
+			interrupts = <17 0x2008>;
+			vdd-supply = <&pm8226_l19>;
+			vcc_i2c-supply = <&pm8226_lvs1>;
+			synaptics,reset-gpio = <&msmgpio 16 0x00>;
+			synaptics,irq-gpio = <&msmgpio 17 0x2008>;
+			synaptics,button-map = <139 102 158>;
+			synaptics,fw-image-name = "PR1468813.img";
+			synaptics,i2c-pull-up;
+			synaptics,power-down;
+			synaptics,disable-gpios;
+		};
+
+		cypress@24 {
+			compatible = "cy,cyttsp4_i2c_adapter";
+			reg = <0x24>;
+			/* GPIO 38, high-to-low edge triggered */
+			interrupts = <17 0x2008>;
+			interrupt-parent = <&msmgpio>;
+			cy,adapter_id = "cyttsp4_i2c_adapter";
+			vdd-supply = <&pm8226_l19>;
+			vcc_i2c-supply = <&pm8226_l6>;
+			qcom,module_adc-vadc = <&pm8226_vadc>;
+
+			cy,core {
+				cy,name = "cyttsp4_core";
+				cy,id = "main_ttsp_core";
+
+				cy,irq_gpio = <17>;
+				cy,rst_gpio = <16>;
+
+				/* Enable cy,max_xfer_len to limit max I2C/SPI transfer length */
+				/* cy,max_xfer_len = <0x100>; */
+
+				/* CY_CORE_FLAG_WAKE_ON_GESTURE */
+				cy,flags = <1>;
+				/* CY_CORE_EWG_TAP_TAP | CY_CORE_EWG_TWO_FINGER_SLIDE */
+				cy,easy_wakeup_gesture = <3>;
+				cy,btn_keys = <102 /* KEY_HOME */
+					       139 /* KEY_MENU */
+					       158 /* KEY_BACK */
+					       217 /* KEY_SEARCH */
+					       114 /* KEY_VOLUMEDOWN */
+					       115 /* KEY_VOLUMEUP */
+					       212 /* KEY_CAMERA */
+					       116>; /* KEY_POWER */
+				cy,btn_keys-tag = <0>;
+
+				cy,mt {
+					cy,name = "cyttsp4_mt";
+
+					cy,inp_dev_name = "cyttsp4_mt";
+					/* CY_MT_FLAG_FLIP | CY_MT_FLAG_INV_X | CY_MT_FLAG_INV_Y */
+					cy,flags = <0x8>;
+					cy,abs =
+						/* ABS_MT_POSITION_X, CY_ABS_MIN_X, CY_ABS_MAX_X, 0, 0 */
+						<0x35 0 1080 0 0
+						/* ABS_MT_POSITION_Y, CY_ABS_MIN_Y, CY_ABS_MAX_Y, 0, 0 */
+						0x36 0 1920 0 0
+						/* ABS_MT_PRESSURE, CY_ABS_MIN_P, CY_ABS_MAX_P, 0, 0 */
+						0x3a 0 255 0 0
+						/* CY_IGNORE_VALUE, CY_ABS_MIN_W, CY_ABS_MAX_W, 0, 0 */
+						0xffff 0 255 0 0
+						/* ABS_MT_TRACKING_ID, CY_ABS_MIN_T, CY_ABS_MAX_T, 0, 0 */
+						0x39 0 15 0 0
+						/* ABS_MT_TOUCH_MAJOR, 0, 255, 0, 0 */
+						0x30 0 255 0 0
+						/* ABS_MT_TOUCH_MINOR, 0, 255, 0, 0 */
+						0x31 0 255 0 0
+						/* ABS_MT_ORIENTATION, -128, 127, 0, 0 */
+						0x34 0xfffffed7 127 0 0>;
+
+					cy,vkeys_x = <720>;
+					cy,vkeys_y = <1280>;
+
+					cy,virtual_keys = /* KeyCode CenterX CenterY Width Height */
+						/* KEY_BACK */
+						<158 1360 90 160 180
+						/* KEY_MENU */
+						139 1360 270 160 180
+						/* KEY_HOME */
+						102 1360 450 160 180
+						/* KEY SEARCH */
+						217 1360 630 160 180>;
+				};
+			};
+		};
+		
+	};
+
+	i2c@f9925000 { /* BLSP1 QUP3 */
+		pn547@28 {
+			compatible = "nxp,pn547";
+			reg = <0x28>;
+			interrupt-parent = <&msmgpio>;
+			interrupts = <21 0x2>;
+			nxp,irq_gpio = <&msmgpio 21 0>;
+			nxp,ven = <&msmgpio 23 0>;
+			nxp,dwld_en = <&msmgpio 20 0>;
+		};
+	};
+	
+	gpio_keys {
+
+		camera_focus {
+			gpios = <&msmgpio 49 0x1>;
+		};
+
+		camera_snapshot {
+			gpios = <&msmgpio 50 0x1>;
+		};
+
+		hall_sensor {
+			label = "hall_sensor";
+			gpios = <&msmgpio 66 0x1>;
+			linux,input-type = <5>;
+			linux,code = <0>;
+			gpio-key,wakeup;
+			debounce-interval = <100>;
+		};
+	};
+
+	sound {
+		qcom,audio-routing =
+			"RX_BIAS", "MCLK",
+			"LDO_H", "MCLK",
+			"SPK_OUT", "MCLK",
+			"SPK_OUT", "EXT_VDD_SPKR",
+			"AMIC1", "MIC BIAS1 External",
+			"MIC BIAS1 External", "Handset Mic",
+			"AMIC2", "MIC BIAS2 External",
+			"MIC BIAS2 External", "Headset Mic",
+			"AMIC4", "MIC BIAS2 External",
+			"MIC BIAS2 External", "ANCRight Headset Mic",
+			"AMIC5", "MIC BIAS2 External",
+			"MIC BIAS2 External", "ANCLeft Headset Mic";
+
+		qcom,cdc-mclk-gpios = <&pm8226_gpios 1 0>;
+		qcom,cdc-vdd-spkr-gpios = <&pm8226_gpios 2 0>;
+	};
+
+	sound-9302 {
+		qcom,audio-routing =
+			"RX_BIAS", "MCLK",
+			"LDO_H", "MCLK",
+			"SPK_OUT", "MCLK",
+			"SPK_OUT", "EXT_VDD_SPKR",
+			"AMIC1", "MIC BIAS1 External",
+			"MIC BIAS1 Internal1", "Handset Mic",
+			"AMIC2", "MIC BIAS2 External",
+			"MIC BIAS2 External", "Headset Mic",
+			"AMIC3", "MIC BIAS1 External",
+			"MIC BIAS1 External", "Handset Mic";
+
+		qcom,cdc-mclk-gpios = <&pm8226_gpios 1 0>;
+		qcom,cdc-vdd-spkr-gpios = <&msmgpio 0 0>;
+		qcom,cdc-rev-en-gpios = <&msmgpio 108 0>;
+		qcom,headset-jack-type-NC;
+	};
+};
+
+&rpm_bus {
+	rpm-regulator-smpa3 {
+		pm8226_s3: regulator-s3 {
+			regulator-min-microvolt = <1100000>;
+			regulator-max-microvolt = <1100000>;
+			qcom,init-voltage = <1100000>;
+		};
+	};
+
+	rpm-regulator-ldoa19 {
+		pm8226_l19: regulator-l19 {
+			regulator-always-on;
+		};
+	};
+
+	rpm-regulator-ldoa25 {
+		pm8226_l25: regulator-l25 {
+			qcom,init-voltage = <2075000>;
+		 };
+	};
+
+	rpm-regulator-ldoa26 {
+		pm8226_l26: regulator-l26 {
+			regulator-min-microvolt = <1200000>;
+			regulator-max-microvolt = <1200000>;
+			qcom,init-voltage = <1200000>;
+		};
+	};
+};
+
+&sdhc_2 {
+	qcom,clk-rates = <400000 25000000 50000000 100000000>;
+};
+
+&spmi_bus {
+	qcom,pm8226@1 {
+                qcom,leds@d300 {
+                        pm8226_flash0: qcom,flash_0 {
+                                qcom,current = <550>;
+                        };
+                };
+
+		qcom,leds@d800 {
+			status = "disabled";
+		};
+	};
+};
+
+&pm8226_gpios {
+	gpio@c000 { /* GPIO 1 */
+		/* XO_PMIC_CDC_MCLK enable for tapan codec */
+		qcom,master-en = <0>;	/* Enable GPIO */
+	};
+
+	gpio@c100 { /* GPIO 2 */
+	};
+
+	gpio@c200 { /* GPIO 3 */
+		/* FIH HWID settings */
+		qcom,mode = <0>;		/* Digital input */
+		qcom,output-type = <1>;	/* OPEN_DRAIN_NMOS logic */
+		qcom,pull = <5>;		/* QPNP_PIN_PULL_NO*/
+		qcom,out-strength = <3>;/* QPNP_PIN_OUT_STRENGTH_HIGH */
+		qcom,src-sel = <0>;		/* Function constant */
+		qcom,master-en = <0>;	/* Disable GPIO */
+	};
+
+	gpio@c300 { /* GPIO 4 */
+	};
+
+	gpio@c400 { /* GPIO 5 */
+		/* FIH HWID settings */
+		qcom,mode = <0>;		/* Digital input */
+		qcom,output-type = <1>;	/* OPEN_DRAIN_NMOS logic */
+		qcom,pull = <5>;		/* QPNP_PIN_PULL_NO*/
+		qcom,out-strength = <3>;/* QPNP_PIN_OUT_STRENGTH_HIGH */
+		qcom,src-sel = <0>;		/* Function constant */
+		qcom,master-en = <0>;	/* Disable GPIO */
+	};
+
+	gpio@c500 { /* GPIO 6 */
+		/* FIH HWID settings */
+		qcom,mode = <0>;		/* Digital input */
+		qcom,output-type = <1>;	/* OPEN_DRAIN_NMOS logic */
+		qcom,pull = <5>;		/* QPNP_PIN_PULL_NO*/
+		qcom,out-strength = <3>;/* QPNP_PIN_OUT_STRENGTH_HIGH */
+		qcom,src-sel = <0>;		/* Function constant */
+		qcom,master-en = <0>;	/* Disable GPIO */
+	};
+
+	gpio@c600 { /* GPIO 7 */
+	};
+
+	gpio@c700 { /* GPIO 8 */
+	};
+};
+
+&pm8226_mpps {
+	mpp@a600 { /* MPP 7 */
+		/* FIH HWID settings */
+		qcom,mode = <4>; /* AIN input */
+		qcom,invert = <1>; /* Enable MPP */
+		qcom,ain-route = <2>; /* AMUX 7 */
+		qcom,master-en = <1>;
+		qcom,src-sel = <0>; /* Function constant */
+	};
+};
+
+&pm8226_bms {
+	status = "ok";
+
+	qcom,v-cutoff-uv = <3200000>;
+	qcom,max-voltage-uv = <4350000>;
+	qcom,shutdown-soc-valid-limit = <40>;
+	qcom,low-soc-calculate-soc-threshold = <5>;
+	qcom,low-soc-calculate-soc-ms = <1000>;
+	qcom,calculate-soc-ms = <30000>;
+	qcom,batt-type = <3>;
+	qcom,use-external-rsense;
+	qcom,ocv-voltage-high-threshold-uv = <3800000>;
+	qcom,ocv-voltage-low-threshold-uv = <3750000>;
+	qcom,clamp-soc-max-count = <2>;
+	qcom,chg-term-ua = <150000>;
+
+	qcom,bms-bms@4000 {
+		status = "ok";
+	};
+};
+
+&pm8226_chg {
+	status = "ok";
+
+	qcom,vddmax-mv = <4350>;
+	qcom,vddsafe-mv = <4380>;
+	qcom,ibatterm-ma = <100>;
+	qcom,tchg-mins = <300>;
+	qcom,thermal-mitigation = <1500 1500 1100 900 700 500 300 200 100 0>;
+	qcom,ibatmax-cool-ma = <900>;
+	qcom,cool-bat-decidegc = <0>;
+	qcom,cool-bat-mv = <4100>;
+	qcom,ibatmax-warm-ma = <400>;
+	qcom,warm-bat-decidegc = <800>;
+	qcom,warm-bat-mv = <4000>;
+	qcom,vbatdet-delta-mv = <100>;
+	qcom,vbatdet-delta-soc = <1>;
+	qcom,ibatmax-cool-ma = <900>;
+	qcom,batt-hot-percentage = <25>;
+	qcom,btc-disabled = <1>;
+
+	qcom,chgr@1000 {
+		status = "ok";
+	};
+
+	qcom,buck@1100 {
+		status = "ok";
+	};
+
+	qcom,bat-if@1200 {
+		status = "ok";
+	};
+
+	qcom,usb-chgpth@1300 {
+		status = "ok";
+	};
+
+	qcom,boost@1500 {
+		status = "ok";
+	};
+
+	qcom,chg-misc@1600 {
+		status = "ok";
+	};
+};
+
+&slim_msm {
+	tapan_codec {
+		qcom,cdc-micbias1-ext-cap;
+	};
+};
+
+&mdss_dsi0 {
+	qcom,platform-enable-gpio = <&msmgpio 52 0>;
+	qcom,dsi-pref-prim-pan = <&dsi_nt35521_720_vid_truly63>;
+};
