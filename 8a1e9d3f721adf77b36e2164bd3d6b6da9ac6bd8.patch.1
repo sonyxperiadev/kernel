@@ -1,0 +1,33 @@
+From 8a1e9d3f721adf77b36e2164bd3d6b6da9ac6bd8 Mon Sep 17 00:00:00 2001
+From: Alin Jerpelea <alin.jerpelea@sonymobile.com>
+Date: Tue, 17 Feb 2015 11:46:54 +0100
+Subject: [PATCH] lm3630: fix wrong permissions
+
+driver had wrong permissions set causing 3.10 kernel to
+spam kmsg
+
+this patch fixes
+[    4.664587] ------------[ cut here ]------------
+[    4.669192] WARNING: at drivers/base/core.c:576 device_create_file+0x64/0x8c()
+[    4.676386] Attribute pwm: write permission without 'store'
+[    4.687634] Modules linked in:
+[    4.863721] ---[ end trace 12cba087214c58fe ]---
+
+Signed-off-by: Alin Jerpelea <alin.jerpelea@sonymobile.com>
+---
+ drivers/leds/leds-lm3630_ng.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/leds/leds-lm3630_ng.c b/drivers/leds/leds-lm3630_ng.c
+index 455dc06..638e148 100644
+--- a/drivers/leds/leds-lm3630_ng.c
++++ b/drivers/leds/leds-lm3630_ng.c
+@@ -748,7 +748,7 @@ static ssize_t lm3630_cabc_show(struct device *ldev,
+ 
+ static struct device_attribute led_ctl_attr[] = {
+ 	__ATTR(fsc, 0600, lm3630_fsc_show, lm3630_fsc_set),
+-	__ATTR(pwm, 0600, lm3630_pwm_show, NULL),
++	__ATTR(pwm, 0400, lm3630_pwm_show, NULL),
+ 	__ATTR(cabc, 0660, lm3630_cabc_show, lm3630_cabc_store),
+ 	__ATTR_NULL,
+ };
