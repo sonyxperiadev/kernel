@@ -2099,6 +2099,74 @@ static struct snd_soc_card *populate_snd_card_dailinks(struct device *dev)
 	return card;
 }
 
+#define MSM_8226_HWID_0		109
+#define MSM_8226_HWID_1		2
+#define MSM_8226_HWID_2		3
+#define MSM_8226_RFID_0		50
+#define MSM_8226_RFID_1		51
+#define MSM_8226_RFID_2		52
+static int msm8226_get_gpio_value(int gpio, char *name)
+{
+	int rc = 0;
+	rc = gpio_request(gpio, name);
+	if (rc) {
+		pr_err("gpio request failed for GPIO %d\n", gpio);
+		goto fail_request_gpio;
+	}
+
+	rc = gpio_get_value_cansleep(gpio);
+	gpio_free(gpio);
+
+fail_request_gpio:
+	return rc;
+}
+
+static bool msm8226_change_audiojack_type_to_no(void)
+{
+	int rc = 0;
+	int hw_id[3], rf_id[3];
+
+	rc = msm8226_get_gpio_value(MSM_8226_HWID_2, "HWID_2");
+	if (rc < 0)
+		goto fail_get_gpio_value;
+	hw_id[2] = rc;
+
+	rc = msm8226_get_gpio_value(MSM_8226_HWID_1, "HWID_1");
+	if (rc < 0)
+		goto fail_get_gpio_value;
+	hw_id[1] = rc;
+
+	rc = msm8226_get_gpio_value(MSM_8226_HWID_0, "HWID_0");
+	if (rc < 0)
+		goto fail_get_gpio_value;
+	hw_id[0] = rc;
+
+	rc = msm8226_get_gpio_value(MSM_8226_RFID_2, "RFID_2");
+	if (rc < 0)
+		goto fail_get_gpio_value;
+	rf_id[2] = rc;
+
+	rc = msm8226_get_gpio_value(MSM_8226_RFID_1, "RFID_1");
+	if (rc < 0)
+		goto fail_get_gpio_value;
+	rf_id[1] = rc;
+
+	rc = msm8226_get_gpio_value(MSM_8226_RFID_0, "RFID_0");
+	if (rc < 0)
+		goto fail_get_gpio_value;
+	rf_id[0] = rc;
+
+	pr_info("%s: hw_id: %d %d %d; rf_id: %d %d %d;\n", __func__,
+		hw_id[2], hw_id[1], hw_id[0], rf_id[2], rf_id[1], rf_id[0]);
+	if (hw_id[1] == 1 && hw_id[0] == 1 &&
+		rf_id[2] == 0 && rf_id[1] == 1 && rf_id[0] == 0) {
+		return true;
+	}
+
+fail_get_gpio_value:
+	return false;
+}
+
 static __devinit int msm8226_asoc_machine_probe(struct platform_device *pdev)
 {
 	struct snd_soc_card *card;
@@ -2169,6 +2237,10 @@ static __devinit int msm8226_asoc_machine_probe(struct platform_device *pdev)
 
 	mbhc_cfg.gpio_level_insert = of_property_read_bool(pdev->dev.of_node,
 					"qcom,headset-jack-type-NC");
+	if (msm8226_change_audiojack_type_to_no()) {
+		pr_info("%s, set audio jack to no for rita ap\n", __func__);
+		mbhc_cfg.gpio_level_insert = 0;
+	}
 
 	ret = snd_soc_register_card(card);
 	if (ret == -EPROBE_DEFER)
