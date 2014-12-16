@@ -322,7 +322,6 @@ int brcm_enable_dsi_pll_clocks(
 	}
 
 	dsi_pll_desense_offset = dsi_pll_ch_desense_offset * dsi_pll_ch_div;
-	pr_err("Requesting desense offset = %d\n", dsi_pll_desense_offset);
 	err = pll_set_desense_offset(dsi_pll, dsi_pll_desense_offset);
 	if (err) {
 		pr_err("Failed to set desense offset to %dHz\n",
