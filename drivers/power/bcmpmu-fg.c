@@ -91,6 +91,9 @@
 /* Low Battery Calibration Macros */
 #define FG_LOW_BAT_CAP_DELTA_LIMIT	-30
 
+/* EOC error correction calibration Macros*/
+#define FG_CAL_EOC_SPLIT_CNT		5
+#define FG_CAL_EOC_POINT		80
 
 /**
  * FG scaling factor = 1024LSB = 1000mA
@@ -160,10 +163,12 @@ enum bcmpmu_fg_cal_state {
 };
 
 enum bcmpmu_fg_cal_mode {
+	CAL_MODE_NONE,
 	CAL_MODE_FORCE,
 	CAL_MODE_LOW_BATT,
 	CAL_MODE_HI_BATT,
 	CAL_MODE_TEMP,
+	CAL_MODE_EOC_ADJ,
 };
 
 enum bcmpmu_mbc_state {
@@ -261,6 +266,7 @@ struct bcmpmu_fg_status_flags {
 	bool coulb_dis;
 	bool init_ocv;
 	bool cv_entered;
+	bool cal_eoc_adj;
 };
 
 #define BATTERY_STATUS_UNKNOWN(flag)	\
@@ -278,6 +284,7 @@ struct bcmpmu_batt_cap_info {
 	int ocv_cap; /* open circult voltage capacity */
 	int uuc; /* unusable capacity in percent */
 	bool first_boot_init_cap_flat; /* capacity in flat area upon 1st boot */
+	int cap_at_eoc;
 };
 
 struct batt_adc_data {
@@ -357,6 +364,7 @@ struct bcmpmu_fg_data {
 	int vfloat_eoc;
 	int low_cal_adj_fct;
 	int high_cal_adj_fct;
+	int cal_eoc_adj_fct;
 	int low_volt_cnt;
 	int cutoff_cap_cnt;
 	int crit_cutoff_cap_prev;
@@ -366,6 +374,7 @@ struct bcmpmu_fg_data {
 	int cal_high_bat_cnt;
 	int cal_low_clr_cnt;
 	int cal_high_clr_cnt;
+	int cal_eoc_adj_cal_cnt;
 	int eoc_cnt;
 	int cap_inc_dec_cnt;
 	int accumulator;
@@ -379,6 +388,8 @@ struct bcmpmu_fg_data {
 	int prev_ocv;
 	int ibat_avg;
 	long int delta_volt;
+	int delta_cap_mas;
+	int cal_eoc_point;
 
 	/* for debugging only */
 	int lock_cnt;
@@ -1581,6 +1592,8 @@ static void bcmpmu_fg_reset_adj_factors(struct bcmpmu_fg_data *fg)
 	fg->cal_low_bat_cnt = 0;
 	fg->low_cal_adj_fct = 0;
 	fg->high_cal_adj_fct = 0;
+	fg->cal_eoc_adj_fct = 0;
+	fg->cal_eoc_adj_cal_cnt = 0;
 	fg->cal_high_clr_cnt = 0;
 	fg->cal_low_clr_cnt = 0;
 	fg->prev_cap_delta = 0;
@@ -1725,6 +1738,13 @@ static void bcmpmu_fg_update_adj_factor(struct bcmpmu_fg_data *fg)
 		fg->flags.calibration = true;
 		fg->cal_high_bat_cnt = 0;
 		fg->flags.high_bat_cal = true;
+		fg->flags.cal_eoc_adj = false;
+		fg->flags.fully_charged = false;
+	} else if (fg->flags.cal_eoc_adj &&
+			(fg->delta_cap_mas > 0) &&
+			(fg->capacity_info.percentage < fg->cal_eoc_point)) {
+		fg->cal_mode = CAL_MODE_EOC_ADJ;
+		fg->flags.calibration = true;
 	} else if ((fg->cal_high_bat_cnt > 0) &&
 			(capacity_delta < guardband)) {
 		fg->cal_high_bat_cnt = 0;
@@ -1864,6 +1884,10 @@ static void bcmpmu_fg_get_coulomb_counter(struct bcmpmu_fg_data *fg)
 #ifdef CONFIG_DEBUG_FS
 	fg->probes.capacity_delta = capacity_delta;
 #endif
+
+	if (fg->flags.cal_eoc_adj && fg->cal_eoc_adj_fct)
+		capacity_delta = capacity_delta - fg->cal_eoc_adj_fct;
+
 	capacity_adj = (capacity_delta -
 			(capacity_delta * adj_factor / 100));
 
@@ -1877,6 +1901,14 @@ static void bcmpmu_fg_get_coulomb_counter(struct bcmpmu_fg_data *fg)
 
 	fg->capacity_info.capacity += capacity_adj;
 
+	if (fg->flags.fully_charged &&
+			fg->flags.chrgr_connected) {
+		fg->capacity_info.cap_at_eoc =
+			clamp(fg->capacity_info.cap_at_eoc +
+				capacity_adj, 0, fg->capacity_info.full_charge);
+		pr_fg(FLOW, "cap_at_eoc: %d\n", fg->capacity_info.cap_at_eoc);
+	}
+
 	if (fg->capacity_info.capacity > fg->capacity_info.full_charge)
 		fg->capacity_info.capacity = fg->capacity_info.full_charge;
 	else if (fg->capacity_info.capacity < 0)
@@ -1886,9 +1918,10 @@ static void bcmpmu_fg_get_coulomb_counter(struct bcmpmu_fg_data *fg)
 			fg->capacity_info.capacity);
 	bcmpmu_fg_update_adj_factor(fg);
 
-	pr_fg(VERBOSE, "accm: %d accm_adj: %d\n",
+	pr_fg(VERBOSE, "accm: %d accm_adj: %d cal_eoc_adj_fct: %d\n",
 			capacity_delta,
-			capacity_adj);
+			capacity_adj,
+			fg->cal_eoc_adj_fct);
 
 	pr_fg(FLOW, "cap_mAs: %d percentage: %d\n",
 			fg->capacity_info.capacity,
@@ -2241,7 +2274,21 @@ static int bcmpmu_fg_event_handler(struct notifier_block *nb,
 			pr_fg(FLOW, "charger disconnected!!\n");
 			fg->flags.prev_batt_status = fg->flags.batt_status;
 			fg->flags.batt_status = POWER_SUPPLY_STATUS_DISCHARGING;
+
+			if (fg->flags.fully_charged) {
+				fg->delta_cap_mas =
+					fg->capacity_info.full_charge -
+					fg->capacity_info.cap_at_eoc;
+				pr_fg(FLOW, "%s: fg->delta_cap_mas : %d\n",
+					__func__,
+					fg->delta_cap_mas);
+
+				BUG_ON(fg->delta_cap_mas < 0);
+				if (fg->delta_cap_mas > 0)
+					fg->flags.cal_eoc_adj = true;
+			}
 			fg->flags.fg_eoc = false;
+			fg->capacity_info.cap_at_eoc = 0;
 			fg->eoc_cap_delta = 0;
 			fg->flags.chrgr_connected = false;
 			poll_time = DISCHARGE_ALGO_POLL_TIME_MS;
@@ -2252,6 +2299,9 @@ static int bcmpmu_fg_event_handler(struct notifier_block *nb,
 				fg->chrgr_type < PMU_CHRGR_TYPE_MAX) {
 			pr_fg(FLOW, "charger connected!!\n");
 			fg->flags.chrgr_connected = true;
+			fg->flags.fully_charged = false;
+			fg->flags.cal_eoc_adj = false;
+			fg->capacity_info.cap_at_eoc = 0;
 			bcmpmu_fg_reset_adj_factors(fg);
 			bcmpmu_fg_reset_cutoff_cnts(fg);
 			bcmpmu_fg_enable_coulb_counter(fg, true);
@@ -2740,7 +2790,11 @@ static int bcmpmu_fg_sw_maint_charging_algo(struct bcmpmu_fg_data *fg)
 		flags->fg_eoc = true;
 		flags->prev_batt_status = flags->batt_status;
 		if (bcmpmu_fg_can_battery_be_full(fg)) {
+			pr_fg(FLOW, "sw_maint_chrgr: Fully Charged\n");
 			flags->fully_charged = true;
+			fg->capacity_info.cap_at_eoc =
+				fg->capacity_info.capacity =
+					fg->capacity_info.full_charge;
 			flags->batt_status = POWER_SUPPLY_STATUS_FULL;
 			/* Any error in the first estimation is eliminated when
 			 * battery is fully charged.
@@ -2891,6 +2945,23 @@ static void bcmpmu_fg_cal_high_batt_algo(struct bcmpmu_fg_data *fg)
 			fg->high_cal_adj_fct);
 }
 
+static void bcmpmu_fg_cal_eoc_adj_batt_algo(struct bcmpmu_fg_data *fg)
+{
+	pr_fg(FLOW, "%s: fg->cal_eoc_adj_cal_cnt:%d\n",
+		__func__, fg->cal_eoc_adj_cal_cnt);
+
+	if (fg->cal_eoc_adj_cal_cnt == FG_CAL_EOC_SPLIT_CNT) {
+		fg->flags.cal_eoc_adj = false;
+		fg->cal_eoc_adj_cal_cnt = 0;
+		fg->cal_eoc_adj_fct = 0;
+		fg->delta_cap_mas = 0;
+		fg->cal_mode = CAL_MODE_NONE;
+	} else {
+		fg->cal_eoc_adj_fct = fg->delta_cap_mas/FG_CAL_EOC_SPLIT_CNT;
+		fg->cal_eoc_adj_cal_cnt++;
+	}
+}
+
 static void bcmpmu_fg_batt_cal_algo(struct bcmpmu_fg_data *fg)
 {
 	switch (fg->cal_mode) {
@@ -2903,6 +2974,10 @@ static void bcmpmu_fg_batt_cal_algo(struct bcmpmu_fg_data *fg)
 	case CAL_MODE_HI_BATT:
 		bcmpmu_fg_cal_high_batt_algo(fg);
 		break;
+	case CAL_MODE_EOC_ADJ:
+		bcmpmu_fg_cal_eoc_adj_batt_algo(fg);
+		break;
+
 	default:
 		break;
 	}
@@ -2956,9 +3031,9 @@ static void bcmpmu_fg_charging_algo(struct bcmpmu_fg_data *fg)
 	 */
 	if (fg->flags.fg_eoc) {
 		if (bcmpmu_fg_can_battery_be_full(fg)) {
+			fg->capacity_info.percentage = CAPACITY_PERCENTAGE_FULL;
 			fg->capacity_info.capacity =
 				fg->capacity_info.full_charge;
-			fg->capacity_info.percentage = CAPACITY_PERCENTAGE_FULL;
 		}
 	} else if ((fg->capacity_info.prev_percentage ==
 				CAPACITY_PERCENTAGE_FULL - 1) &&
@@ -3287,7 +3362,7 @@ static void bcmpmu_fg_periodic_work(struct work_struct *work)
 			fg->sleep_current_ua[0]);
 	}
 
-	pr_fg(VERBOSE, "flags: %d %d %d %d %d %d %d %d %d %d %d\n",
+	pr_fg(VERBOSE, "flags: %d %d %d %d %d %d %d %d %d %d %d %d\n",
 			flags.batt_status,
 			flags.prev_batt_status,
 			flags.chrgr_connected,
@@ -3298,7 +3373,8 @@ static void bcmpmu_fg_periodic_work(struct work_struct *work)
 			flags.eoc_chargr_en,
 			flags.calibration,
 			fg->flags.cv_entered,
-			flags.fully_charged);
+			flags.fully_charged,
+			flags.cal_eoc_adj);
 
 #ifndef CONFIG_WD_TAPPER
 	if (wake_lock_active(&fg->fg_alarm_wake_lock))
@@ -4074,6 +4150,13 @@ static void bcmpmu_fg_debugfs_init(struct bcmpmu_fg_data *fg)
 	if (IS_ERR_OR_NULL(dentry_fg_file))
 		goto debugfs_clean;
 
+	dentry_fg_file = debugfs_create_u32("cal_eoc_point",
+			DEBUG_FS_PERMISSIONS, dentry_fg_dir,
+			(u32 *)&fg->cal_eoc_point);
+	if (IS_ERR_OR_NULL(dentry_fg_file))
+		goto debugfs_clean;
+
+
 	return;
 
 debugfs_clean:
@@ -4294,6 +4377,7 @@ static int bcmpmu_fg_probe(struct platform_device *pdev)
 	fg->flags.init_ocv = false;
 	fg->ibat_avg = FAKE_IBAT_INTIAL_AVG;
 	fg->flags.cv_entered = false;
+	fg->cal_eoc_point = FG_CAL_EOC_POINT;
 
 	if (bcmpmu_fg_is_batt_present(fg)) {
 		pr_fg(INIT, "main battery present\n");
