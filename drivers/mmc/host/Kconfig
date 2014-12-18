@@ -566,6 +566,22 @@ config MMC_MSM_SPS_SUPPORT
 	help
 	  Select Y to use SPS BAM as data mover
 
+config MMC_MSM_POWEROFF_NOTIFY
+	bool "Notify poweroff to eMMC"
+	depends on MMC_MSM
+	default n
+	help
+	  Select Y to enable MMC_CAP2_POWEROFF_NOTIFY and
+	  notify the poweroff to eMMC cards that support
+	  this functionality.
+
+config MMC_MSM_CLK_SCALE
+	bool "MMC clock scaling"
+	depends on MMC_MSM
+	default n
+	help
+	  Select Y to enable MMC clock scaling.
+
 config MMC_TMIO
 	tristate "Toshiba Mobile IO Controller (TMIO) MMC/SD function support"
 	depends on MFD_TMIO || MFD_ASIC3

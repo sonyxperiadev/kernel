@@ -2978,6 +2978,10 @@ static int __devinit sdhci_msm_probe(struct platform_device *pdev)
 #ifdef CONFIG_MMC_CACHE_FEATURE
 	msm_host->mmc->caps2 |= MMC_CAP2_CACHE_CTRL;
 #endif
+// ETENRITYPROJECT ------ MMC RESTORE FOR SONY YUKON --- START
+	msm_host->mmc->caps2 |= MMC_CAP2_POWEROFF_NOTIFY;
+	msm_host->mmc->caps2 |= MMC_CAP2_CLK_SCALE;
+// ETERNITYPROJECT ------ MMC RESTORE FOR SONY YUKON --- END
 	msm_host->mmc->caps2 |= MMC_CAP2_STOP_REQUEST;
 	msm_host->mmc->caps2 |= MMC_CAP2_INIT_BKOPS;
 	msm_host->mmc->caps2 |= MMC_CAP2_ASYNC_SDIO_IRQ_4BIT_MODE;
