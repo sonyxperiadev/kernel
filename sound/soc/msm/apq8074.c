@@ -627,6 +627,35 @@ static int apq8074_mclk_event(struct snd_soc_dapm_widget *w,
 	return 0;
 }
 
+#ifdef CONFIG_MACH_SONY_RHINE
+static const struct snd_soc_dapm_widget apq8074_dapm_widgets[] = {
+
+	SND_SOC_DAPM_SUPPLY("MCLK",  SND_SOC_NOPM, 0, 0,
+	apq8074_mclk_event, SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),
+
+	SND_SOC_DAPM_SPK("Ext Spk Bottom Pos", msm_ext_spkramp_event),
+	SND_SOC_DAPM_SPK("Ext Spk Bottom Neg", msm_ext_spkramp_event),
+
+	SND_SOC_DAPM_SPK("Ext Spk Top Pos", msm_ext_spkramp_event),
+	SND_SOC_DAPM_SPK("Ext Spk Top Neg", msm_ext_spkramp_event),
+
+	SND_SOC_DAPM_SPK("Lineout_1 amp", msm_ext_spkramp_event),
+	SND_SOC_DAPM_SPK("Lineout_3 amp", msm_ext_spkramp_event),
+
+	SND_SOC_DAPM_SPK("Lineout_2 amp", msm_ext_spkramp_event),
+	SND_SOC_DAPM_SPK("Lineout_4 amp", msm_ext_spkramp_event),
+	SND_SOC_DAPM_SPK("SPK_ultrasound amp",
+					 msm_ext_spkramp_ultrasound_event),
+	
+	SND_SOC_DAPM_MIC("Handset Mic", NULL),
+	SND_SOC_DAPM_MIC("Headset Mic", NULL),
+	SND_SOC_DAPM_MIC("Secondary Mic", NULL),
+	SND_SOC_DAPM_MIC("Handset FB ANC Mic", NULL),
+	SND_SOC_DAPM_MIC("ANCRight Headset Mic", NULL),
+	SND_SOC_DAPM_MIC("ANCLeft Headset Mic", NULL),
+
+};
+#else
 static const struct snd_soc_dapm_widget apq8074_dapm_widgets[] = {
 
 	SND_SOC_DAPM_SUPPLY("MCLK",  SND_SOC_NOPM, 0, 0,
@@ -655,6 +684,7 @@ static const struct snd_soc_dapm_widget apq8074_dapm_widgets[] = {
 	SND_SOC_DAPM_MIC("Digital Mic5", NULL),
 	SND_SOC_DAPM_MIC("Digital Mic6", NULL),
 };
+#endif
 
 static const char *const spk_function[] = {"Off", "On"};
 static const char *const slim0_rx_ch_text[] = {"One", "Two"};
