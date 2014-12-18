@@ -469,7 +469,7 @@
 		qcom,mdss-dsi-reset-sequence = <1 20>, <0 200>, <1 20>;
 
 		qcom,mdss-dsi-panel-clockrate = <428000000>;
-		qcom,mdss-brightness-max-level = <255>;
+		qcom,mdss-brightness-max-level = <4095>;
 		somc,panel-id = [ff];
 		somc,disp-en-off-pre = <10>;
 		somc,disp-en-off-post = <10>;
@@ -947,7 +947,7 @@
 		qcom,mdss-dsi-reset-sequence = <1 20>, <0 200>, <1 20>;
 
 		qcom,mdss-dsi-panel-clockrate = <428000000>;
-		qcom,mdss-brightness-max-level = <255>;
+		qcom,mdss-brightness-max-level = <4095>;
 		somc,panel-id = [ff ff ff 57];
 		somc,disp-en-off-pre = <10>;
 		somc,disp-en-off-post = <10>;
@@ -1562,7 +1562,7 @@
 		qcom,mdss-dsi-reset-sequence = <1 20>, <0 200>, <1 20>;
 
 		qcom,mdss-dsi-panel-clockrate = <428000000>;
-		qcom,mdss-brightness-max-level = <255>;
+		qcom,mdss-brightness-max-level = <4095>;
 		somc,panel-id = [ff ff ff 00];
 		somc,disp-en-off-pre = <10>;
 		somc,disp-en-off-post = <10>;
@@ -2177,7 +2177,7 @@
 		qcom,mdss-dsi-reset-sequence = <1 20>, <0 200>, <1 20>;
 
 		qcom,mdss-dsi-panel-clockrate = <428000000>;
-		qcom,mdss-brightness-max-level = <255>;
+		qcom,mdss-brightness-max-level = <4095>;
 		somc,panel-id = [ff ff ff 43];
 		somc,disp-en-off-pre = <10>;
 		somc,disp-en-off-post = <10>;
