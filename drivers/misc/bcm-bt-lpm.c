@@ -40,6 +40,7 @@
 #include <mach/io_map.h>
 
 #include <plat/pi_mgr.h>
+#include <mach/pinmux.h>
 
 #ifndef BCM_BT_LPM_BT_WAKE_ASSERT
 #define BCM_BT_LPM_BT_WAKE_ASSERT 0
@@ -200,7 +201,32 @@ static irqreturn_t bcm_bt_lpm_host_wake_isr(int irq, void *dev)
 	struct bcm_bt_lpm_entry_struct *priv;
 	volatile unsigned int pad_ctrl;
 #define GPIO_PIN20 20
-
+static struct pin_config uartb2_config[2] = {
+	{
+		.name = PN_GPIO20,
+		.func = PF_GPIO20,
+		.reg.b = {
+			.drv_sth = 3,
+			.input_dis = 0,
+			.slew_rate_ctrl = 0,
+			.pull_up = 0,
+			.pull_dn = 0,
+			.hys_en = 0,
+		},
+	},
+	{
+		.name = PN_GPIO20,
+		.func = PF_UB2RTSN,
+		.reg.b = {
+			.drv_sth = 3,
+			.input_dis = 0,
+			.slew_rate_ctrl = 0,
+			.pull_up = 1,
+			.pull_dn = 0,
+			.hys_en = 0,
+		},
+	},
+	};
 	priv = (struct bcm_bt_lpm_entry_struct *)dev;
 	if (priv == NULL) {
 		pr_err(
@@ -216,18 +242,13 @@ static irqreturn_t bcm_bt_lpm_host_wake_isr(int irq, void *dev)
 		__pm_stay_awake(priv->host_wake_ws);
 		hostwake_flag = 1;
 		pi_mgr_qos_request_update(&priv_g->qos_bt_host_wake, 0);
-		pad_ctrl = readl(KONA_PAD_CTRL_VA + 0x8C);
-       		pad_ctrl |= 0x00000223;
-       		writel(pad_ctrl, KONA_PAD_CTRL_VA + 0x8C);
+		pinmux_set_pin_config(&uartb2_config[1]);
 	}
 	else {
 		__pm_relax(priv->host_wake_ws);
 		pi_mgr_qos_request_update(&priv_g->qos_bt_host_wake, PI_MGR_QOS_DEFAULT_VALUE);
 		if(hostwake_flag) {
-			pad_ctrl = readl(KONA_PAD_CTRL_VA + 0x8C);
-			pad_ctrl |= 0x00000020;
-		        pad_ctrl &= 0xFFFFF8FF;
-		       	writel(pad_ctrl, KONA_PAD_CTRL_VA + 0x8C);
+			pinmux_set_pin_config(&uartb2_config[0]);
 			hostwake_flag = 0;
 		}
 		gpio_direction_output(GPIO_PIN20, 1);
@@ -264,6 +285,9 @@ static int bcm_bt_lpm_init_hostwake(struct bcm_bt_lpm_entry_struct *priv)
 		return rc;
 	}
 	gpio_direction_input(priv->pdata->host_wake_gpio);
+	rc = gpio_request(GPIO_PIN20, "serial_pin_20");
+	if (rc)
+		pr_info("%s : GPIO 20 already requested\n", __func__);
 
 	pr_debug("%s BLUETOOTH:Exiting.\n", __func__);
 	return rc;
