@@ -58,6 +58,7 @@
 #include "pm.h"
 #include "modem_notifier.h"
 #include "spm-regulator.h"
+#include "sony_board.h"
 
 static struct memtype_reserve msm8226_reserve_table[] __initdata = {
 	[MEMTYPE_SMI] = {
@@ -118,6 +119,23 @@ static void __init msm8226_reserve(void)
 	msm_reserve();
 }
 
+void __init msm8226_clocks_config(void)
+{
+	if (of_board_is_rumi()) {
+		msm_clock_init(&msm8226_rumi_clock_init_data);
+		return;
+	};
+
+	msm_clock_init(&msm8226_clock_init_data);
+
+	if (of_machine_is_compatible("somc,eagle"))
+		msm_clock_init(&msm8226_eagle_clock_init_data);
+	else if (of_machine_is_compatible("somc,flamingo"))
+		msm_clock_init(&msm8226_flamingo_clock_init_data);
+	else if (of_machine_is_compatible("somc,seagull"))
+		msm_clock_init(&msm8226_seagull_clock_init_data);
+}
+
 /*
  * Used to satisfy dependencies for devices that need to be
  * run early or in a particular order. Most likely your device doesn't fall
@@ -135,10 +153,7 @@ void __init msm8226_add_drivers(void)
 	rpm_regulator_smd_driver_init();
 	qpnp_regulator_init();
 	spm_regulator_init();
-	if (of_board_is_rumi())
-		msm_clock_init(&msm8226_rumi_clock_init_data);
-	else
-		msm_clock_init(&msm8226_clock_init_data);
+	msm8226_clocks_config();
 	msm_bus_fabric_init_driver();
 	qup_i2c_init_driver();
 	ncp6335d_regulator_init();
