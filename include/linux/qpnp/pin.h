@@ -151,6 +151,9 @@
  * @cs_out:		Set the the amount of current to sync in mA. This
  *			parameter should be of type QPNP_PIN_CS_OUT_*. This
  *			parameter only applies to mpp pins.
+ * @keep_high_at_init	Initialize this pin to HIGH (invert = 1). To be used
+ *			if pin is needed to be kept high if it has been set to
+ *			high during boot, for example for display panel pins.
  */
 struct qpnp_pin_cfg {
 	int mode;
@@ -164,6 +167,7 @@ struct qpnp_pin_cfg {
 	int aout_ref;
 	int ain_route;
 	int cs_out;
+	int keep_high_at_init;
 };
 
 /**
