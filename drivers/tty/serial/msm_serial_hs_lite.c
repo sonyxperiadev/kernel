@@ -3,6 +3,7 @@
  *
  * Copyright (C) 2007 Google, Inc.
  * Copyright (c) 2010-2014, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2013 Sony Mobile Communications AB.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -98,6 +99,7 @@ struct msm_hsl_port {
 
 #define UARTDM_VERSION_11_13	0
 #define UARTDM_VERSION_14	1
+#define UARTDM_VERSION_14_IRDA	2
 
 #define UART_TO_MSM(uart_port)	((struct msm_hsl_port *) uart_port)
 #define is_console(port)	((port)->cons && \
@@ -124,6 +126,7 @@ static const unsigned int regmap[][UARTDM_LAST] = {
 		[UARTDM_DMEN] = UARTDM_DMEN_ADDR,
 		[UARTDM_TXFS] = UARTDM_TXFS_ADDR,
 		[UARTDM_RXFS] = UARTDM_RXFS_ADDR,
+		[UARTDM_IRDA] = 0xffff, /* unsupported */
 	},
 	[UARTDM_VERSION_14] = {
 		[UARTDM_MR1] = 0x0,
@@ -145,12 +148,38 @@ static const unsigned int regmap[][UARTDM_LAST] = {
 		[UARTDM_DMEN] = 0x3c,
 		[UARTDM_TXFS] = 0x4c,
 		[UARTDM_RXFS] = 0x50,
+		[UARTDM_IRDA] = 0xffff, /* unsupported */
+	},
+	[UARTDM_VERSION_14_IRDA] = {
+		[UARTDM_MR1] = 0x0,
+		[UARTDM_MR2] = 0x4,
+		[UARTDM_IMR] = 0xb0,
+		[UARTDM_SR] = 0xa4,
+		[UARTDM_CR] = 0xa8,
+		[UARTDM_CSR] = 0xa0,
+		[UARTDM_IPR] = 0x18,
+		[UARTDM_ISR] = 0xb4,
+		[UARTDM_RX_TOTAL_SNAP] = 0xbc,
+		[UARTDM_TFWR] = 0x1c,
+		[UARTDM_RFWR] = 0x20,
+		[UARTDM_RF] = 0x140,
+		[UARTDM_TF] = 0x100,
+		[UARTDM_MISR] = 0xac,
+		[UARTDM_DMRX] = 0x34,
+		[UARTDM_NCF_TX] = 0x40,
+		[UARTDM_DMEN] = 0x3c,
+		[UARTDM_TXFS] = 0x4c,
+		[UARTDM_RXFS] = 0x50,
+		[UARTDM_IRDA] = 0xb8, /* supported */
 	},
 };
 
 static struct of_device_id msm_hsl_match_table[] = {
 	{	.compatible = "qcom,msm-lsuart-v14",
 		.data = (void *)UARTDM_VERSION_14,
+	},
+	{	.compatible = "qcom,msm-lsuart-v14-irda",
+		.data = (void *)UARTDM_VERSION_14_IRDA
 	},
 	{}
 };
