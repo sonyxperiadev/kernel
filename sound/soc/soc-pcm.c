@@ -5,6 +5,7 @@
  * Copyright 2005 Openedhand Ltd.
  * Copyright (C) 2010 Slimlogic Ltd.
  * Copyright (C) 2010 Texas Instruments Inc.
+ * Copyright (C) 2013, Sony Mobile Communications AB.
  *
  * Authors: Liam Girdwood <lrg@ti.com>
  *          Mark Brown <broonie@opensource.wolfsonmicro.com>       
@@ -31,6 +32,7 @@
 #include <sound/soc.h>
 #include <sound/soc-dpcm.h>
 #include <sound/initval.h>
+#include "codecs/tfa98xx_if.h"
 
 static const struct snd_pcm_hardware no_host_hardware = {
 	.info			= SNDRV_PCM_INFO_MMAP |
@@ -1936,6 +1938,10 @@ static int dpcm_fe_dai_prepare(struct snd_pcm_substream *substream)
 	}
 
 	/* run the stream event for each BE */
+#ifdef CONFIG_MACH_SONY_SHINANO
+	if (stream == SNDRV_PCM_STREAM_PLAYBACK)
+		tfa98xx_speaker_amp_enable();
+#endif
 	dpcm_dapm_stream_event(fe, stream, SND_SOC_DAPM_STREAM_START);
 
 	fe->dpcm[stream].state = SND_SOC_DPCM_STATE_PREPARE;
@@ -2050,6 +2056,10 @@ static int dpcm_run_update_startup(struct snd_soc_pcm_runtime *fe, int stream)
 		goto hw_free;
 
 	/* run the stream event for each BE */
+#ifdef CONFIG_MACH_SONY_SHINANO
+	if (stream == SNDRV_PCM_STREAM_PLAYBACK)
+		tfa98xx_speaker_amp_enable();
+#endif
 	dpcm_dapm_stream_event(fe, stream, SND_SOC_DAPM_STREAM_NOP);
 
 	/* keep going if FE state is > prepare */
