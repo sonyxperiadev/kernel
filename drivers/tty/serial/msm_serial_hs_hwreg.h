@@ -1,6 +1,7 @@
 /* drivers/serial/msm_serial_hs_hwreg.h
  *
  * Copyright (c) 2007-2009, 2012-2014,The Linux Foundation. All rights reserved.
+ * Copyright (C) 2013 Sony Mobile Communications AB.
  * 
  * All source code in this file is licensed under the following license
  * except where indicated.
@@ -57,6 +58,7 @@ enum msm_hsl_regs {
 	UARTDM_BCR,
 	UARTDM_TXFS,
 	UARTDM_RXFS,
+	UARTDM_IRDA,
 	UARTDM_LAST,
 };
 
