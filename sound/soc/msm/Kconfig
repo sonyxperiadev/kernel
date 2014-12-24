@@ -262,6 +262,7 @@ config SND_SOC_MSMSAMARIUM
 	select SND_DYNAMIC_MINORS
 	select AUDIO_OCMEM
 	select DOLBY_DAP
+	select SND_SOC_TFA98XX
 	help
 	 To add support for SoC audio on MSMSAMARIUM.
 
