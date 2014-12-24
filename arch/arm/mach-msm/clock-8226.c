@@ -3416,7 +3416,7 @@ static struct clk_lookup msm_clocks_8226[] = {
 	CLK_LOOKUP("cam_clk", camss_mclk0_clk.c, "0.qcom,camera"),
 	CLK_LOOKUP("cam_clk", camss_mclk0_clk.c, "1.qcom,camera"),
 
-#if !defined(CONFIG_MACH_SONY_YUKON) && !defined(CONFIG_MACH_SONY_TIANCHI)
+#if !defined(CONFIG_MACH_SONY_YUKON) || defined(CONFIG_MACH_SONY_TIANCHI)
 	CLK_LOOKUP("iface_clk", gcc_blsp1_ahb_clk.c, "f9926000.i2c"),
 	CLK_LOOKUP("core_clk", gcc_blsp1_qup4_i2c_apps_clk.c, "f9926000.i2c"),
 
