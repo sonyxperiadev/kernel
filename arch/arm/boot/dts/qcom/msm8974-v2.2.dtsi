@@ -96,4 +96,6 @@
 
 &gdsc_venus {
 	qcom,skip-logic-collapse;
+	qcom,retain-periph;
+	qcom,retain-mem;
 };

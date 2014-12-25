@@ -35,6 +35,7 @@ config ARCH_MSM8974
 	select USB_ARCH_HAS_XHCI
 	select ENABLE_VMALLOC_SAVINGS
 	select MSM_IRQ
+	select HAVE_NMI_WATCHDOG if MSM_WATCHDOG_V2
 
 config ARCH_APQ8084
 	bool "APQ8084"
@@ -387,6 +388,69 @@ config MSM_REMOTE_SPINLOCK_LDREX
 	bool
 config MSM_REMOTE_SPINLOCK_SFPB
 	bool
+
+config MACH_SONY_SIRIUS
+	depends on ARCH_MSM8974
+	bool "Sony Mobile Sirius"
+	help
+	  Support for the SONY Mobile Sirius device.
+	  It is based on QCOM MSM8974 AB chipset.
+	  If you enable this config,
+	  Please use SONY Mobile source tree.
+
+config MACH_SONY_CASTOR
+	depends on ARCH_MSM8974
+	bool "Sony Mobile Castor"
+	help
+	  Support for the SONY Mobile Castor device.
+	  It is based on QCOM MSM8974 AB chipset.
+	  If you enable this config,
+	  Please use SONY Mobile source tree.
+
+config MACH_SONY_CASTOR_WINDY
+	depends on ARCH_MSM8974
+	bool "Sony Mobile Castor Windy"
+	help
+	  Support for the SONY Mobile Castor Windy device.
+	  It is based on QCOM APQ8074 AB chipset.
+	  If you enable this config,
+	  Please use SONY Mobile source tree.
+
+config MACH_SONY_LEO
+	depends on ARCH_MSM8974
+	bool "Sony Mobile Leo"
+	help
+	  Support for the SONY Mobile Leo device.
+	  It is based on QCOM MSM8974 AC chipset.
+	  If you enable this config,
+	  Please use SONY Mobile source tree.
+
+config MACH_SONY_ARIES
+	depends on ARCH_MSM8974
+	bool "Sony Mobile Aries"
+	help
+	  Support for the SONY Mobile Aries device.
+	  It is based on QCOM MSM8974 AC chipset.
+	  If you enable this config,
+	  Please use SONY Mobile source tree.
+
+config MACH_SONY_SCORPION
+	depends on ARCH_MSM8974
+	bool "Sony Mobile Scorpion"
+	help
+	  Support for the SONY Mobile Scorpion device.
+	  It is based on QCOM MSM8974 AC chipset.
+	  If you enable this config,
+	  Please use SONY Mobile source tree.
+
+config MACH_SONY_SCORPION_WINDY
+	depends on ARCH_MSM8974
+	bool "Sony Mobile Scorpion Windy"
+	help
+	  Support for the SONY Mobile Scorpion Windy device.
+	  It is based on QCOM APQ8074 AC chipset.
+	  If you enable this config,
+	  Please use SONY Mobile source tree.
 
 config MSM_STACKED_MEMORY
 	bool "Stacked Memory"

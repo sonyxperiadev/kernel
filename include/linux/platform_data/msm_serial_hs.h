@@ -49,6 +49,7 @@ struct msm_serial_hs_platform_data {
 	unsigned bam_tx_ep_pipe_index;
 	unsigned bam_rx_ep_pipe_index;
 	bool no_suspend_delay;
+	void (*exit_lpm_cb)(struct uart_port *);
 };
 
 /* return true when tx is empty */
