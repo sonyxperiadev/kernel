@@ -504,6 +504,16 @@ choice
 		bool "6.2.20 + New ADSP"
 endchoice
 
+config MSM_MODEM_SUBSYSTEM_RESTART_MONITOR
+	bool "MSM Modem Subsystem Restart Monitor"
+	default n
+	depends on MSM_SUBSYSTEM_RESTART
+	help
+	  This option enables a module which can notify user-space
+	  applications of modem subsystem power up/down event via uevent.
+endif
+
+
 config MSM_HAS_DEBUG_UART_HS
 	bool
 	help
