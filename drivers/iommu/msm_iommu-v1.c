@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -215,7 +215,7 @@ static int __check_vbif_state(struct msm_iommu_drvdata const *drvdata)
 
 	if (base) {
 		__dump_vbif_state(drvdata->base, base);
-		__halt_vbif_xin(drvdata->base);
+		__halt_vbif_xin(base);
 		__dump_vbif_state(drvdata->base, base);
 		iounmap(base);
 	} else {
