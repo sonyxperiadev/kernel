@@ -4,6 +4,15 @@ config FB_MSM_MDSS_WRITEBACK
 	The MDSS Writeback Panel provides support for routing the output of
 	MDSS frame buffer driver and MDP processing to memory.
 
+config FB_MSM_MDSS_SPECIFIC_PANEL
+	depends on FB_MSM_MDSS
+	bool
+	prompt "MDSS Specific panel"
+	default n
+	---help---
+	The MDSS Specific Panel provides support for specific panel driver
+	file.
+
 config FB_MSM_MDSS_HDMI_PANEL
 	depends on FB_MSM_MDSS
 	bool "MDSS HDMI Tx Panel"
