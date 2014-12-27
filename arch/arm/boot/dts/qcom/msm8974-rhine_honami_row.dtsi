@@ -1431,8 +1431,11 @@
 	};
 };
 
-&usb3 {
-	qcom,dwc-hsphy-init = <0x00D0CC27>;
+//&usb3 {
+//	qcom,dwc-hsphy-init = <0x00D0CC27>;
+//};
+&hsphy {
+	qcom,hsphy-init = <0x00D0CC27>;
 };
 
 &spmi_bus {
