@@ -1472,7 +1472,6 @@ int dsi_panel_device_register(struct device_node *pan_node,
 	if ((!data) || (len != 45)) {
 		pr_debug("%s:%d, Unable to read Phy lane configure settings",
 			__func__, __LINE__);
-		return -EINVAL;
 	} else {
 		for (i = 0; i < len; i++) {
 			pinfo->mipi.dsi_phy_db.lanecfg[i] =
