@@ -217,7 +217,7 @@ static int prepare_for_reg_access(struct msm_fb_data_type *mfd)
 
 	mdss_dsi_cmd_mdp_busy(ctrl_pdata);
 	mdss_bus_bandwidth_ctrl(1);
-	mdss_dsi_clk_ctrl(ctrl_pdata, 1);
+	mdss_dsi_clk_ctrl(ctrl_pdata, DSI_ALL_CLKS, 1);
 
 	mdss_dsi_op_mode_config(DSI_CMD_MODE, pdata);
 
@@ -239,7 +239,7 @@ static int post_reg_access(struct msm_fb_data_type *mfd)
 	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
 				panel_data);
 
-	mdss_dsi_clk_ctrl(ctrl_pdata, 0);
+	mdss_dsi_clk_ctrl(ctrl_pdata, DSI_ALL_CLKS, 0);
 	mdss_bus_bandwidth_ctrl(0);
 	mdss_dsi_op_mode_config(pdata->panel_info.mipi.mode, pdata);
 
