@@ -33,50 +33,50 @@
 #include <linux/atomic.h>
 #include <media/radio-iris-commands.h>
 
-#define MIN_TX_TONE_VAL = 0x00;
-#define MAX_TX_TONE_VAL = 0x07;
-#define MIN_HARD_MUTE_VAL = 0x00;
-#define MAX_HARD_MUTE_VAL = 0x03;
-#define MIN_SRCH_MODE = 0x00;
-#define MAX_SRCH_MODE = 0x09;
-#define MIN_SCAN_DWELL = 0x00;
-#define MAX_SCAN_DWELL = 0x0F;
-#define MIN_SIG_TH = 0x00;
-#define MAX_SIG_TH = 0x03;
-#define MIN_PTY = 0X00;
-#define MAX_PTY = 0x1F;
-#define MIN_PI = 0x0000;
-#define MAX_PI = 0xFFFF;
-#define MIN_SRCH_STATIONS_CNT = 0x00;
-#define MAX_SRCH_STATIONS_CNT = 0x14;
-#define MIN_CHAN_SPACING = 0x00;
-#define MAX_CHAN_SPACING = 0x02;
-#define MIN_EMPHASIS = 0x00;
-#define MAX_EMPHASIS = 0x01;
-#define MIN_RDS_STD = 0x00;
-#define MAX_RDS_STD = 0x02;
-#define MIN_ANTENNA_VAL = 0x00;
-#define MAX_ANTENNA_VAL = 0x01;
-#define MIN_TX_PS_REPEAT_CNT = 0x01;
-#define MAX_TX_PS_REPEAT_CNT = 0x0F;
-#define MIN_SOFT_MUTE = 0x00;
-#define MAX_SOFT_MUTE = 0x01;
-#define MIN_PEEK_ACCESS_LEN = 0x01;
-#define MAX_PEEK_ACCESS_LEN = 0xF9;
-#define MIN_RESET_CNTR = 0x00;
-#define MAX_RESET_CNTR = 0x01;
-#define MIN_HLSI = 0x00;
-#define MAX_HLSI = 0x02;
-#define MIN_NOTCH_FILTER = 0x00;
-#define MAX_NOTCH_FILTER = 0x02;
-#define MIN_INTF_DET_OUT_LW_TH = 0x00;
-#define MAX_INTF_DET_OUT_LW_TH = 0xFF;
-#define MIN_INTF_DET_OUT_HG_TH = 0x00;
-#define MAX_INTF_DET_OUT_HG_TH = 0xFF;
-#define MIN_SINR_TH = -128;
-#define MAX_SINR_TH = 127;
-#define MIN_SINR_SAMPLES = 0x01;
-#define MAX_SINR_SAMPLES = 0xFF;
+#define MIN_TX_TONE_VAL	0x00
+#define MAX_TX_TONE_VAL	0x07
+#define MIN_HARD_MUTE_VAL	0x00
+#define MAX_HARD_MUTE_VAL	0x03
+#define MIN_SRCH_MODE	0x00
+#define MAX_SRCH_MODE	0x09
+#define MIN_SCAN_DWELL	0x00
+#define MAX_SCAN_DWELL	0x0F
+#define MIN_SIG_TH	0x00
+#define MAX_SIG_TH	0x03
+#define MIN_PTY	0X00
+#define MAX_PTY	0x1F
+#define MIN_PI	0x0000
+#define MAX_PI	0xFFFF
+#define MIN_SRCH_STATIONS_CNT	0x00
+#define MAX_SRCH_STATIONS_CNT	0x14
+#define MIN_CHAN_SPACING	0x00
+#define MAX_CHAN_SPACING	0x02
+#define MIN_EMPHASIS	0x00
+#define MAX_EMPHASIS	0x01
+#define MIN_RDS_STD	0x00
+#define MAX_RDS_STD	0x02
+#define MIN_ANTENNA_VAL	0x00
+#define MAX_ANTENNA_VAL	0x01
+#define MIN_TX_PS_REPEAT_CNT	0x01
+#define MAX_TX_PS_REPEAT_CNT	0x0F
+#define MIN_SOFT_MUTE	0x00
+#define MAX_SOFT_MUTE	0x01
+#define MIN_PEEK_ACCESS_LEN	0x01
+#define MAX_PEEK_ACCESS_LEN	0xF9
+#define MIN_RESET_CNTR	0x00
+#define MAX_RESET_CNTR	0x01
+#define MIN_HLSI	0x00
+#define MAX_HLSI	0x02
+#define MIN_NOTCH_FILTER	0x00
+#define MAX_NOTCH_FILTER	0x02
+#define MIN_INTF_DET_OUT_LW_TH	0x00
+#define MAX_INTF_DET_OUT_LW_TH	0xFF
+#define MIN_INTF_DET_OUT_HG_TH	0x00
+#define MAX_INTF_DET_OUT_HG_TH	0xFF
+#define MIN_SINR_TH	-128
+#define MAX_SINR_TH	127
+#define MIN_SINR_SAMPLES	0x01
+#define MAX_SINR_SAMPLES	0xFF
 
 /* ---- HCI Packet structures ---- */
 #define RADIO_HCI_COMMAND_HDR_SIZE sizeof(struct radio_hci_command_hdr)
