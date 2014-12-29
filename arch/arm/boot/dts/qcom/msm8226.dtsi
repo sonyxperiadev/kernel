@@ -359,7 +359,7 @@
 	};
 
 	hsic_host: hsic@f9a00000 {
-		status = "ok";
+		status = "disabled";
 		compatible = "qcom,hsic-host";
 		reg = <0xf9a00000 0x400>;
 		#address-cells = <0>;
