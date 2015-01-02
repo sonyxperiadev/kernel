@@ -64,7 +64,7 @@ DECLARE_PER_CPU(struct aa_buffers, aa_buffers);
 #define __get_buffer(N) ({					\
 	struct aa_buffers *__cpu_var; \
 	AA_BUG_PREEMPT_ENABLED("__get_buffer without preempt disabled");  \
-	__cpu_var = &__get_cpu_var(aa_buffers);			\
+	__cpu_var = this_cpu_ptr(&aa_buffers);			\
         __cpu_var->buf[(N)]; })
 
 #define __get_buffers(X...)		\
