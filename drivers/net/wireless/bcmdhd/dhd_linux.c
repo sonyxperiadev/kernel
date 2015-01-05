@@ -3903,34 +3903,13 @@ bool dhd_update_fw_nv_path(dhd_info_t *dhdinfo)
 	 */
 
 	/* set default firmware and nvram path for built-in type driver */
-	if (!dhd_download_fw_on_driverload) {
 #ifdef CONFIG_BCMDHD_FW_PATH
 		fw = CONFIG_BCMDHD_FW_PATH;
 #endif /* CONFIG_BCMDHD_FW_PATH */
 #ifdef CONFIG_BCMDHD_NVRAM_PATH
 		nv = CONFIG_BCMDHD_NVRAM_PATH;
 #endif /* CONFIG_BCMDHD_NVRAM_PATH */
-	}
 
-	/* check if we need to initialize the path */
-	if (dhdinfo->fw_path[0] == '\0') {
-		if (adapter && adapter->fw_path && adapter->fw_path[0] != '\0')
-			fw = adapter->fw_path;
-
-	}
-	if (dhdinfo->nv_path[0] == '\0') {
-		if (adapter && adapter->nv_path && adapter->nv_path[0] != '\0')
-			nv = adapter->nv_path;
-	}
-
-	/* Use module parameter if it is valid, EVEN IF the path has not been initialized
-	 *
-	 * TODO: need a solution for multi-chip, can't use the same firmware for all chips
-	 */
-	if (firmware_path[0] != '\0')
-		fw = firmware_path;
-	if (nvram_path[0] != '\0')
-		nv = nvram_path;
 
 	if (fw && fw[0] != '\0') {
 		fw_len = strlen(fw);
