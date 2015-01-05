@@ -76,7 +76,7 @@ static bool adc_det;
 static bool display_on_in_boot;
 static bool display_onoff_state;
 static unsigned char panel_id[1];
-static int lcm_first_boot = -1;
+static int lcm_first_boot = 0;
 bool alt_panelid_cmd;
 static bool mdss_panel_flip_ud = false;
 static int mdss_dsi_panel_detect(struct mdss_panel_data *pdata);
