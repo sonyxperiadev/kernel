@@ -134,23 +134,6 @@ static const char *const intra_refresh_modes[] = {
 	"Random"
 };
 
-enum msm_venc_ctrl_cluster {
-	MSM_VENC_CTRL_CLUSTER_QP = 1 << 0,
-	MSM_VENC_CTRL_CLUSTER_INTRA_PERIOD = 1 << 1,
-	MSM_VENC_CTRL_CLUSTER_H264_PROFILE_LEVEL = 1 << 2,
-	MSM_VENC_CTRL_CLUSTER_MPEG_PROFILE_LEVEL = 1 << 3,
-	MSM_VENC_CTRL_CLUSTER_H263_PROFILE_LEVEL = 1 << 4,
-	MSM_VENC_CTRL_CLUSTER_H264_ENTROPY = 1 << 5,
-	MSM_VENC_CTRL_CLUSTER_SLICING = 1 << 6,
-	MSM_VENC_CTRL_CLUSTER_INTRA_REFRESH = 1 << 7,
-	MSM_VENC_CTRL_CLUSTER_BITRATE = 1 << 8,
-	MSM_VENC_CTRL_CLUSTER_TIMING = 1 << 9,
-	MSM_VENC_CTRL_CLUSTER_VP8_PROFILE_LEVEL = 1 << 10,
-	MSM_VENC_CTRL_CLUSTER_DEINTERLACE = 1 << 11,
-	MSM_VENC_CTRL_CLUSTER_USE_LTRFRAME = 1 << 12,
-	MSM_VENC_CTRL_CLUSTER_MAX = 1 << 13,
-};
-
 static struct msm_vidc_ctrl msm_venc_ctrls[] = {
 	{
 		.id = V4L2_CID_MPEG_VIDC_VIDEO_IDR_PERIOD,
@@ -662,9 +645,9 @@ static struct msm_vidc_ctrl msm_venc_ctrls[] = {
 			(1 << V4L2_MPEG_VIDC_EXTRADATA_MULTISLICE_INFO) |
 			(1 << V4L2_MPEG_VIDC_EXTRADATA_NUM_CONCEALED_MB) |
 			(1 << V4L2_MPEG_VIDC_EXTRADATA_METADATA_FILLER) |
-			(1 << V4L2_MPEG_VIDC_INDEX_EXTRADATA_INPUT_CROP) |
-			(1 << V4L2_MPEG_VIDC_INDEX_EXTRADATA_DIGITAL_ZOOM) |
-			(1 << V4L2_MPEG_VIDC_INDEX_EXTRADATA_ASPECT_RATIO) |
+			(1 << V4L2_MPEG_VIDC_EXTRADATA_INPUT_CROP) |
+			(1 << V4L2_MPEG_VIDC_EXTRADATA_DIGITAL_ZOOM) |
+			(1 << V4L2_MPEG_VIDC_EXTRADATA_ASPECT_RATIO) |
 			(1 << V4L2_MPEG_VIDC_EXTRADATA_LTR) |
 			(1 << V4L2_MPEG_VIDC_EXTRADATA_METADATA_MBI)
 			),
@@ -770,6 +753,16 @@ static struct msm_vidc_ctrl msm_venc_ctrls[] = {
 		.maximum = 3,
 		.default_value = 0,
 		.step = 1,
+		.qmenu = NULL,
+	},
+	{
+		.id = V4L2_CID_MPEG_VIDC_VIDEO_VPX_ERROR_RESILIENCE,
+		.name = "VP8 Error Resilience mode",
+		.type = V4L2_CTRL_TYPE_BUTTON,
+		.minimum = 0,
+		.maximum = 0,
+		.default_value = 0,
+		.step = 0,
 		.qmenu = NULL,
 	},
 	{
@@ -991,11 +984,50 @@ static int msm_venc_queue_setup(struct vb2_queue *q,
 	return rc;
 }
 
+static int msm_venc_toggle_hier_p(struct msm_vidc_inst *inst, bool enable)
+{
+	int num_enh_layers = 0;
+	u32 property_id = 0;
+	struct hfi_device *hdev = NULL;
+	int rc = 0;
+
+	if (!inst || !inst->core || !inst->core->device) {
+		dprintk(VIDC_ERR, "%s invalid parameters\n", __func__);
+		return -EINVAL;
+	}
+
+	if (inst->fmts[CAPTURE_PORT]->fourcc != V4L2_PIX_FMT_VP8)
+		return 0;
+
+	num_enh_layers = enable ? inst->capability.hier_p.max - 1 : 0;
+
+	dprintk(VIDC_DBG, "%s Hier-P in firmware\n",
+			num_enh_layers ? "Enable" : "Disable");
+
+	hdev = inst->core->device;
+	property_id = HAL_PARAM_VENC_HIER_P_MAX_ENH_LAYERS;
+
+	rc = call_hfi_op(hdev, session_set_property,
+			(void *)inst->session, property_id,
+			(void *)&num_enh_layers);
+	if (rc) {
+		dprintk(VIDC_ERR,
+			"%s: failed with error = %d\n", __func__, rc);
+	}
+	return rc;
+}
+
 static inline int start_streaming(struct msm_vidc_inst *inst)
 {
 	int rc = 0;
 	struct vb2_buf_entry *temp;
 	struct list_head *ptr, *next;
+
+	if (!inst || !inst->core || !inst->core->device) {
+		dprintk(VIDC_ERR, "%s invalid parameters\n", __func__);
+		return -EINVAL;
+	}
+
 	if (inst->capability.pixelprocess_capabilities &
 		HAL_VIDEO_ENCODER_SCALING_CAPABILITY)
 		rc = msm_comm_check_scaling_supported(inst);
@@ -2140,6 +2172,9 @@ static int try_set_ctrl(struct msm_vidc_inst *inst, struct v4l2_ctrl *ctrl)
 	case V4L2_CID_MPEG_VIDC_VIDEO_HIER_P_NUM_LAYERS:
 		property_id = HAL_PARAM_VENC_HIER_P_NUM_FRAMES;
 		hier_p_layers = ctrl->val;
+		rc = msm_venc_toggle_hier_p(inst, hier_p_layers ? true : false);
+		if (rc)
+			break;
 		if (hier_p_layers > (inst->capability.hier_p.max - 1)) {
 			dprintk(VIDC_ERR,
 				"Error setting hier p num layers = %d max supported by f/w = %d\n",
@@ -2149,6 +2184,11 @@ static int try_set_ctrl(struct msm_vidc_inst *inst, struct v4l2_ctrl *ctrl)
 			break;
 		}
 		pdata = &hier_p_layers;
+		break;
+	case V4L2_CID_MPEG_VIDC_VIDEO_VPX_ERROR_RESILIENCE:
+		property_id = HAL_PARAM_VENC_VPX_ERROR_RESILIENCE_MODE;
+		enable.enable = 1;
+		pdata = &enable;
 		break;
 	default:
 		dprintk(VIDC_ERR, "Unsupported index: %x\n", ctrl->id);
@@ -2192,6 +2232,13 @@ static int try_set_ext_ctrl(struct msm_vidc_inst *inst,
 	for (i = 0; i < ctrl->count; i++) {
 		switch (control[i].id) {
 		case V4L2_CID_MPEG_VIDC_VIDEO_LTRMODE:
+			if (control[i].value !=
+			V4L2_MPEG_VIDC_VIDEO_LTR_MODE_DISABLE) {
+				rc = msm_venc_toggle_hier_p(inst,
+						false);
+				if (rc)
+					break;
+			}
 			ltrmode.ltrmode = control[i].value;
 			ltrmode.trustmode = 1;
 			property_id = HAL_PARAM_VENC_LTRMODE;

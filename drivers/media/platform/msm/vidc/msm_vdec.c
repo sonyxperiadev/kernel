@@ -28,10 +28,6 @@
 #define TZ_FEATURE_VERSION(major, minor, patch) \
 	(((major & 0x3FF) << 22) | ((minor & 0x3FF) << 12) | (patch & 0xFFF))
 
-enum msm_vdec_ctrl_cluster {
-	MSM_VDEC_CTRL_CLUSTER_MAX = 1 << 0,
-};
-
 static const char *const mpeg_video_vidc_divx_format[] = {
 	"DIVX Format 3",
 	"DIVX Format 4",
@@ -229,9 +225,9 @@ static struct msm_vidc_ctrl msm_vdec_ctrls[] = {
 			(1 << V4L2_MPEG_VIDC_EXTRADATA_MULTISLICE_INFO) |
 			(1 << V4L2_MPEG_VIDC_EXTRADATA_NUM_CONCEALED_MB) |
 			(1 << V4L2_MPEG_VIDC_EXTRADATA_METADATA_FILLER) |
-			(1 << V4L2_MPEG_VIDC_INDEX_EXTRADATA_INPUT_CROP) |
-			(1 << V4L2_MPEG_VIDC_INDEX_EXTRADATA_DIGITAL_ZOOM) |
-			(1 << V4L2_MPEG_VIDC_INDEX_EXTRADATA_ASPECT_RATIO) |
+			(1 << V4L2_MPEG_VIDC_EXTRADATA_INPUT_CROP) |
+			(1 << V4L2_MPEG_VIDC_EXTRADATA_DIGITAL_ZOOM) |
+			(1 << V4L2_MPEG_VIDC_EXTRADATA_ASPECT_RATIO) |
 			(1 << V4L2_MPEG_VIDC_EXTRADATA_MPEG2_SEQDISP) |
 			(1 << V4L2_MPEG_VIDC_EXTRADATA_FRAME_QP) |
 			(1 << V4L2_MPEG_VIDC_EXTRADATA_FRAME_BITS_INFO)
