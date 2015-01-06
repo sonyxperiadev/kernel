@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -250,12 +250,10 @@ static int msm_compr_set_volume(struct snd_compr_stream *cstream,
 	if (rc < 0)
 		pr_err("%s: Send vol gain command failed rc=%d\n",
 		       __func__, rc);
-	else {
-		if (msm_dts_eagle_set_stream_gain(prtd->audio_client,
+	else if (msm_dts_eagle_set_stream_gain(prtd->audio_client,
 						volume_l, volume_r))
-			pr_err("%s: DTS_EAGLE send stream gain failed\n",
+			pr_debug("%s: DTS_EAGLE send stream gain failed\n",
 				__func__);
-	}
 	return rc;
 }
 
