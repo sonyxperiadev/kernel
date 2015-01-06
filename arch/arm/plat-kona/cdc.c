@@ -508,7 +508,7 @@ DEFINE_SIMPLE_ATTRIBUTE(cdc_dbg_bus_ops, cdc_dbg_get_dbg_bus,
 static int cdc_dbg_init(struct cdc *cdc_info)
 {
 	int i;
-	char buf[10];
+	char buf[20];
 	cdc_info->cdc_dir = debugfs_create_dir("cdc", 0);
 
 	if (!cdc_info->cdc_dir)
