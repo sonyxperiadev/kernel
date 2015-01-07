@@ -999,7 +999,6 @@ static ssize_t kona_fb_panel_mode_store(struct device *dev,
 		}
 		if (fb->fb_data->esdcheck)
 			cancel_delayed_work(&fb->esd_check_work);
-		cancel_work_sync(&fb->vsync_smart);
 
 		if (wait_for_completion_timeout(&fb->prev_buf_done_sem,
 						msecs_to_jiffies(10000)) <= 0)
@@ -1041,7 +1040,6 @@ static ssize_t kona_fb_panel_mode_store(struct device *dev,
 		if (fb->display_info->cabc_enabled)
 			panel_write(fb->display_info->cabc_on_seq);
 		kona_clock_stop(fb);
-		schedule_work(&fb->vsync_smart);
 		if (fb->fb_data->esdcheck)
 			queue_delayed_work(fb->esd_check_wq,
 				&fb->esd_check_work,
