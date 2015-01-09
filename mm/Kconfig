@@ -271,6 +271,18 @@ config COMPACTION
           it and then we would be really interested to hear about that at
           linux-mm@kvack.org.
 
+config PROCESS_RECLAIM
+	bool "Enable process reclaim"
+	depends on PROC_FS
+	default n
+	help
+	 It allows to reclaim pages of the process by /proc/pid/reclaim.
+
+	 (echo file > /proc/PID/reclaim) reclaims file-backed pages only.
+	 (echo anon > /proc/PID/reclaim) reclaims anonymous pages only.
+	 (echo all > /proc/PID/reclaim) reclaims all pages.
+
+	 Any other value is ignored.
 #
 # support for page migration
 #
