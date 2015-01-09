@@ -2815,7 +2815,7 @@
 		qcom,msm-bus,num-paths = <1>;
 		qcom,msm-bus,vectors-KBps =
 				<55 512 0 0>,
-				<55 512 3936000 393600>;
+				<55 512 393600 393600>;
 		clock-names = "core_clk_src", "iface_clk", "bus_clk";
 		clocks = <&clock_rpm clk_qcrypto_ce2_clk>,
 			 <&clock_rpm clk_gcc_ce2_ahb_m_clk>,
@@ -2843,7 +2843,7 @@
 		qcom,msm-bus,num-paths = <1>;
 		qcom,msm-bus,vectors-KBps =
 				<55 512 0 0>,
-				<55 512 3936000 393600>;
+				<55 512 393600 393600>;
 		clock-names = "core_clk_src", "iface_clk", "bus_clk";
 		clocks = <&clock_rpm clk_qcrypto_ce3_clk>,
 			 <&clock_rpm clk_gcc_ce3_ahb_m_clk>,
@@ -2871,7 +2871,7 @@
 		qcom,msm-bus,num-paths = <1>;
 		qcom,msm-bus,vectors-KBps =
 				<55 512 0 0>,
-				<55 512 3936000 393600>;
+				<55 512 393600 393600>;
 		clock-names = "core_clk_src", "iface_clk", "bus_clk";
 		clocks = <&clock_rpm clk_qcrypto_ce2_clk>,
 			 <&clock_rpm clk_gcc_ce2_ahb_m_clk>,
@@ -2899,7 +2899,7 @@
 		qcom,msm-bus,num-paths = <1>;
 		qcom,msm-bus,vectors-KBps =
 				<55 512 0 0>,
-				<55 512 3936000 393600>;
+				<55 512 393600 393600>;
 		clock-names = "core_clk_src", "iface_clk", "bus_clk";
 		clocks = <&clock_rpm clk_qcrypto_ce3_clk>,
 			 <&clock_rpm clk_gcc_ce3_ahb_m_clk>,
@@ -2927,7 +2927,7 @@
 		qcom,msm-bus,num-paths = <1>;
 		qcom,msm-bus,vectors-KBps =
 				<55 512 0 0>,
-				<55 512 3936000 393600>;
+				<55 512 393600 393600>;
 		clock-names = "core_clk_src", "iface_clk", "bus_clk";
 		clocks = <&clock_rpm clk_qcedev_ce2_clk>,
 			 <&clock_rpm clk_gcc_ce2_ahb_m_clk>,
