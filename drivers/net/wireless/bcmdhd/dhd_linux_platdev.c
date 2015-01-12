@@ -238,6 +238,20 @@ int wifi_platform_bus_enumerate(wifi_adapter_info_t *adapter, bool device_presen
 
 }
 
+int wifi_platform_get_wake_irq(wifi_adapter_info_t *adapter)
+{
+	struct wifi_platform_data *plat_data;
+
+	if (!adapter || !adapter->wifi_plat_data)
+		return -1;
+	plat_data = adapter->wifi_plat_data;
+#ifdef CONFIG_DHD_WAKE_STATUS
+	if (plat_data->get_wake_irq)
+		return plat_data->get_wake_irq();
+#endif
+	return -1;
+}
+
 int wifi_platform_get_mac_addr(wifi_adapter_info_t *adapter, unsigned char *buf)
 {
 	struct wifi_platform_data *plat_data;
