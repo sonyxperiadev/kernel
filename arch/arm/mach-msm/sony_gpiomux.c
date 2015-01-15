@@ -95,6 +95,10 @@ int __init sony_init_gpiomux(struct msm_gpiomux_config *configs,
 		return rc;
 	}
 
+#if defined(CONFIG_SONY_CAM_V4L2) && defined(CONFIG_MACH_SONY_RHINE)
+	msm_tlmm_misc_reg_write(TLMM_SPARE_REG, 0x5);
+#endif
+
 	of_gpio_node = of_find_compatible_node(NULL, NULL, "qcom,msm-gpio");
 	if (!of_gpio_node) {
 		pr_err("%s: Failed to find qcom,msm-gpio node\n", __func__);
