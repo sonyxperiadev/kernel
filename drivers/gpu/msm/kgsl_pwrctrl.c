@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2014, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2010-2015, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -205,7 +205,7 @@ void kgsl_pwrctrl_buslevel_update(struct kgsl_device *device,
 	 * otherwise request bus level 0, off.
 	 */
 	if (on) {
-		buslevel = min_t(int, pwr->pwrlevels[0].bus_freq,
+		buslevel = min_t(int, pwr->pwrlevels[0].bus_max,
 				cur + pwr->bus_mod);
 		buslevel = max_t(int, buslevel, 1);
 	} else {
