@@ -82,8 +82,6 @@
 #define MSM_MMC_BUS_VOTING_DELAY	200 /* msecs */
 #define INVALID_TUNING_PHASE		-1
 
-#define MSM_SDCC_PM_QOS_TIMEOUT		10000 /* usecs */
-
 #ifdef CONFIG_WIFI_CONTROL_FUNC
 extern int wcf_status_register(
 		void (*cb)(int card_present, void *dev), void *dev);
@@ -210,9 +208,8 @@ static void msmsdcc_pm_qos_update_latency(struct msmsdcc_host *host, int vote)
 		pm_qos_update_request(&host->pm_qos_req_dma,
 				host->cpu_dma_latency);
 	else
-		pm_qos_update_request_timeout(&host->pm_qos_req_dma,
-				host->cpu_dma_latency,
-				MSM_SDCC_PM_QOS_TIMEOUT);
+		pm_qos_update_request(&host->pm_qos_req_dma,
+					PM_QOS_DEFAULT_VALUE);
 }
 
 #ifdef CONFIG_MMC_MSM_SPS_SUPPORT
@@ -534,11 +531,6 @@ msmsdcc_request_end(struct msmsdcc_host *host, struct mmc_request *mrq)
 	/* Clear current request information as current request has ended */
 	memset(&host->curr, 0, sizeof(struct msmsdcc_curr_req));
 
-	if (host->disable_mciclk_pwrsave) {
-		host->disable_mciclk_pwrsave = 0;
-		msmsdcc_set_pwrsave(host->mmc, 1);
-	}
-
 	/*
 	 * Need to drop the host lock here; mmc_request_done may call
 	 * back into the driver...
@@ -711,11 +703,6 @@ msmsdcc_dma_complete_tlet(unsigned long data)
 			memset(&host->curr, 0, sizeof(struct msmsdcc_curr_req));
 			spin_unlock_irqrestore(&host->lock, flags);
 
-			if (host->disable_mciclk_pwrsave) {
-				host->disable_mciclk_pwrsave = 0;
-				msmsdcc_set_pwrsave(host->mmc, 1);
-			}
-
 			mmc_request_done(host->mmc, mrq);
 			return;
 		} else if (mrq->data->stop && ((mrq->sbc && mrq->data->error)
@@ -870,11 +857,6 @@ static void msmsdcc_sps_complete_tlet(unsigned long data)
 			 */
 			memset(&host->curr, 0, sizeof(struct msmsdcc_curr_req));
 			spin_unlock_irqrestore(&host->lock, flags);
-
-			if (host->disable_mciclk_pwrsave) {
-				host->disable_mciclk_pwrsave = 0;
-				msmsdcc_set_pwrsave(host->mmc, 1);
-			}
 
 			mmc_request_done(host->mmc, mrq);
 			return;
@@ -1492,10 +1474,6 @@ msmsdcc_data_err(struct msmsdcc_host *host, struct mmc_data *data,
 	if (host->dummy_52_needed)
 		host->dummy_52_needed = 0;
 
-	if (host->disable_mciclk_pwrsave) {
-		host->disable_mciclk_pwrsave = 0;
-		msmsdcc_set_pwrsave(host->mmc, 1);
-	}
 }
 
 static int
@@ -2360,10 +2338,6 @@ card_ejected:
 	if (mrq->data) {
 		mrq->data->error = -error;
 		mrq->data->bytes_xfered = 0;
-	}
-	if (host->disable_mciclk_pwrsave) {
-		host->disable_mciclk_pwrsave = 0;
-		msmsdcc_set_pwrsave(host->mmc, 1);
 	}
 	mmc_request_done(mmc, mrq);
 }
