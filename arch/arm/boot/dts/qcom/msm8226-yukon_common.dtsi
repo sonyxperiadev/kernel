@@ -57,6 +57,22 @@
 
 };
 
+&rpm_bus {
+	rpm-regulator-ldoa3 {
+		pm8226_l3: regulator-l3 {
+			regulator-max-microvolt = <1337500>;
+                };
+
+		pm8226_l3_ao: regulator-3-ao {
+			regulator-max-microvolt = <1337500>;
+		};
+
+		pm8226_l3_so: regulator-l3-so {
+			regulator-max-microvolt = <1337500>;
+		};
+	};
+};
+
 &usb_otg {
 	#address-cells = <0>;
 	interrupt-parent = <&usb_otg>;
