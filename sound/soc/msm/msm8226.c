@@ -32,6 +32,9 @@
 #include "../codecs/wcd9xxx-common.h"
 #include "../codecs/wcd9306.h"
 
+#include <linux/qpnp/pin.h>
+#include <linux/qpnp/qpnp-adc.h>
+
 #define SAMPLING_RATE_48KHZ 48000
 #define SAMPLING_RATE_96KHZ 96000
 #define SAMPLING_RATE_192KHZ 192000
@@ -162,6 +165,18 @@ static int msm_proxy_rx_ch = 2;
 static int slim0_rx_sample_rate = SAMPLING_RATE_48KHZ;
 static int slim0_rx_bit_format = SNDRV_PCM_FORMAT_S16_LE;
 
+static int rev_en_gpio = -1;
+static struct qpnp_pin_cfg pmgpio1 =
+{
+ .mode = QPNP_PIN_MODE_DIG_OUT,
+ .output_type = QPNP_PIN_OUT_BUF_CMOS,
+ .pull = QPNP_PIN_GPIO_PULL_NO,
+ .vin_sel = QPNP_PIN_VIN3,
+ .out_strength = QPNP_PIN_OUT_STRENGTH_HIGH,
+ .src_sel = QPNP_PIN_SEL_FUNC_1,
+ .master_en = QPNP_PIN_MASTER_ENABLE,
+};
+
 static inline int param_is_mask(int p)
 {
 	return ((p >= SNDRV_PCM_HW_PARAM_FIRST_MASK) &&
@@ -189,6 +204,7 @@ static int msm_snd_enable_codec_ext_clk(struct snd_soc_codec *codec, int enable,
 					bool dapm)
 {
 	int ret = 0;
+	int pmic_idx = -1;
 	pr_debug("%s: enable = %d clk_users = %d\n",
 		__func__, enable, clk_users);
 
@@ -205,6 +221,12 @@ static int msm_snd_enable_codec_ext_clk(struct snd_soc_codec *codec, int enable,
 		if (clk_users != 1)
 			goto exit;
 		if (codec_clk) {
+			if (rev_en_gpio != -1) {
+				pmic_idx = qpnp_pin_map("pm8226-gpio", 1);
+				ret = qpnp_pin_config(pmic_idx, &pmgpio1);
+				if (ret)
+					pr_err("tapan mclk gpio config  failed, rc=%d\n", ret);
+			}
 			clk_prepare_enable(codec_clk);
 			tapan_mclk_enable(codec, 1, dapm);
 		} else {
@@ -774,6 +796,55 @@ static struct snd_soc_ops msm_auxpcm_be_ops = {
 	.shutdown = msm_auxpcm_shutdown,
 };
 
+static int tapan_get_hac_func(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	return 0;
+}
+
+static int tapan_put_hac_func(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	if (ucontrol->value.integer.value[0]) {
+		if (rev_en_gpio >= 0) {
+			pr_info("enable hac");
+			gpio_direction_output(rev_en_gpio, 1);
+			}
+
+	} else {
+		if (rev_en_gpio >= 0) {
+			pr_info("disable hac");
+			gpio_direction_output(rev_en_gpio, 0);
+			}
+	}
+
+	return 0;
+}
+static int tapan_get_adsp_status(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	int adsp_ready = 0;
+
+	pr_debug("%s\n", __func__);
+
+	if (!q6core_is_adsp_ready()) {
+		pr_err("%s: ADSP Audio isn't ready\n", __func__);
+	} else {
+		pr_debug("%s: ADSP Audio is ready\n", __func__);
+		adsp_ready = 1;
+	}
+
+	ucontrol->value.integer.value[0] = adsp_ready;
+
+	return 0;
+}
+
+static int tapan_put_adsp_status(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	return 0;
+}
+
 static int msm_slim_0_rx_be_hw_params_fixup(struct snd_soc_pcm_runtime *rtd,
 					    struct snd_pcm_hw_params *params)
 {
@@ -844,6 +915,13 @@ static const struct soc_enum msm_snd_enum[] = {
 	SOC_ENUM_SINGLE_EXT(3, slim0_rx_sample_rate_text),
 };
 
+static const char *const tapan_hac_func_text[] = {"OFF", "ON"};
+static const struct soc_enum tapan_hac_func_enum =
+		SOC_ENUM_SINGLE_EXT(2, tapan_hac_func_text);
+static const char *const tapan_adsp_status_text[] = {"NOTREADY", "READY"};
+static const struct soc_enum tapan_adsp_status_enum =
+		SOC_ENUM_SINGLE_EXT(2, tapan_adsp_status_text);
+
 static const struct snd_kcontrol_new msm_snd_controls[] = {
 	SOC_ENUM_EXT("SLIM_0_RX Channels", msm_snd_enum[0],
 		     msm_slim_0_rx_ch_get, msm_slim_0_rx_ch_put),
@@ -859,6 +937,11 @@ static const struct snd_kcontrol_new msm_snd_controls[] = {
 			slim0_rx_bit_format_get, slim0_rx_bit_format_put),
 	SOC_ENUM_EXT("SLIM_0_RX SampleRate", msm_snd_enum[4],
 			slim0_rx_sample_rate_get, slim0_rx_sample_rate_put),
+
+	SOC_ENUM_EXT("HAC Function", tapan_hac_func_enum, tapan_get_hac_func,
+		tapan_put_hac_func),
+	SOC_ENUM_EXT("ADSP status", tapan_adsp_status_enum, tapan_get_adsp_status,
+		tapan_put_adsp_status),
 };
 
 static int msm_afe_set_config(struct snd_soc_codec *codec)
@@ -1073,8 +1156,13 @@ void *def_tapan_mbhc_cal(void)
 	S(t_ins_retry, 200);
 #undef S
 #define S(X, Y) ((WCD9XXX_MBHC_CAL_PLUG_TYPE_PTR(tapan_cal)->X) = (Y))
-	S(v_no_mic, 30);
-	S(v_hs_max, 2450);
+	if (rev_en_gpio != -1) {
+		S(v_no_mic, 400);
+		S(v_hs_max, 2600);
+	} else {
+		S(v_no_mic, 30);
+		S(v_hs_max, 2450);
+	}
 #undef S
 #define S(X, Y) ((WCD9XXX_MBHC_CAL_BTN_DET_PTR(tapan_cal)->X) = (Y))
 	S(c[0], 62);
@@ -1093,21 +1181,32 @@ void *def_tapan_mbhc_cal(void)
 	btn_high = wcd9xxx_mbhc_cal_btn_det_mp(btn_cfg,
 					       MBHC_BTN_DET_V_BTN_HIGH);
 	btn_low[0] = -50;
-	btn_high[0] = 20;
-	btn_low[1] = 21;
-	btn_high[1] = 61;
-	btn_low[2] = 62;
-	btn_high[2] = 104;
-	btn_low[3] = 105;
-	btn_high[3] = 148;
-	btn_low[4] = 149;
-	btn_high[4] = 189;
-	btn_low[5] = 190;
-	btn_high[5] = 228;
-	btn_low[6] = 229;
-	btn_high[6] = 269;
-	btn_low[7] = 270;
-	btn_high[7] = 500;
+	if (rev_en_gpio != -1) {
+		btn_high[0] = 100;
+		btn_low[1] = 101;
+		btn_high[1] = 250;
+		btn_low[2] = 251;
+		btn_high[2] = 550;
+		btn_low[3] = 551;
+		btn_high[3] = 950;
+	} else {
+		btn_high[0] = 20;
+		btn_low[1] = 21;
+		btn_high[1] = 61;
+		btn_low[2] = 62;
+		btn_high[2] = 104;
+		btn_low[3] = 105;
+		btn_high[3] = 148;
+		btn_low[4] = 149;
+		btn_high[4] = 189;
+		btn_low[5] = 190;
+		btn_high[5] = 228;
+		btn_low[6] = 229;
+		btn_high[6] = 269;
+		btn_low[7] = 270;
+		btn_high[7] = 500;
+	}
+
 	n_ready = wcd9xxx_mbhc_cal_btn_det_mp(btn_cfg, MBHC_BTN_DET_N_READY);
 	n_ready[0] = 80;
 	n_ready[1] = 12;
@@ -2408,6 +2507,24 @@ static __devinit int msm8226_asoc_machine_probe(struct platform_device *pdev)
 				"%s: Failed to request tapan amp spkr gpio %d\n",
 				__func__, ext_spk_amp_gpio);
 			goto err_vdd_spkr;
+		}
+	}
+
+	rev_en_gpio = of_get_named_gpio(pdev->dev.of_node,
+				"qcom,cdc-rev-en-gpios", 0);
+	if (rev_en_gpio < 0) {
+		dev_err(&pdev->dev,
+			"Looking up %s property in node %s failed %d\n",
+			"qcom, cdc-rev-en-gpios",
+			pdev->dev.of_node->full_name, vdd_spkr_gpio);
+	} else {
+		ret = gpio_request(rev_en_gpio, "CDC_REV_EN");
+		if (ret) {
+			/* GPIO to enable HAC exists, but failed request */
+			dev_err(card->dev,
+					"%s: Failed to request tapan CDC_REV_EN gpio %d\n",
+					__func__, rev_en_gpio);
+			rev_en_gpio = -1;
 		}
 	}
 
