@@ -800,7 +800,8 @@
 	vdd-io-supply = <&pm8941_s3>;
 	qcom,vdd-io-voltage-level = <1800000 1800000>;
 	qcom,vdd-io-current-level = <6 22000>;
-	somc,use-for-wifi;
+	qcom,wifi-control-func;
+	qcom,nonremovable;
 
 	/delete-property/ vdd-supply;
 	/delete-property/ qcom,vdd-voltage-level;
