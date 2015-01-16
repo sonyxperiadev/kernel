@@ -1,19 +1,28 @@
 config BCMDHD
-	tristate "Broadcom 4329/30 wireless cards support"
-	depends on MMC
+	tristate "Broadcom FullMAC wireless cards support"
 	---help---
 	  This module adds support for wireless adapters based on
-	  Broadcom 4329/30 chipset.
-
-	  This driver uses the kernel's wireless extensions subsystem.
+	  Broadcom FullMAC chipset.
 
 	  If you choose to build a module, it'll be called dhd. Say M if
 	  unsure.
 
+config BCMDHD_SDIO
+	bool "SDIO bus interface support"
+	depends on BCMDHD && MMC
+
+config BCMDHD_PCIE
+	bool "PCIe bus interface support"
+	depends on BCMDHD && PCI && !BCMDHD_SDIO
+
+config BCM4354
+	tristate "BCM4354 support"
+	depends on BCMDHD
+
 config BCMDHD_FW_PATH
 	depends on BCMDHD
 	string "Firmware path"
-	default "/system/etc/firmware/fw_bcmdhd.bin"
+	default "/system/vendor/firmware/fw_bcmdhd.bin"
 	---help---
 	  Path to the firmware file.
 

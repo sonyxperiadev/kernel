@@ -1,27 +1,52 @@
 /*
  * SD-SPI Protocol Conversion - BCMSDH->gSPI Translation Layer
  *
- * Copyright (C) 2012, Broadcom Corporation
- * All Rights Reserved.
+ * Copyright (C) 1999-2014, Broadcom Corporation
  * 
- * This is UNPUBLISHED PROPRIETARY SOURCE CODE of Broadcom Corporation;
- * the contents of this file may not be disclosed to third parties, copied
- * or duplicated in any form, in whole or in part, without the prior
- * written permission of Broadcom Corporation.
+ *      Unless you and Broadcom execute a separate written software license
+ * agreement governing use of this software, this software is licensed to you
+ * under the terms of the GNU General Public License version 2 (the "GPL"),
+ * available at http://www.broadcom.com/licenses/GPLv2.php, with the
+ * following added to such license:
+ * 
+ *      As a special exception, the copyright holders of this software give you
+ * permission to link this software with independent modules, and to copy and
+ * distribute the resulting executable under terms of your choice, provided that
+ * you also meet, for each linked independent module, the terms and conditions of
+ * the license of that module.  An independent module is a module which is not
+ * derived from this software.  The special exception does not apply to any
+ * modifications of the software.
+ * 
+ *      Notwithstanding the above, under no circumstances may you combine this
+ * software in any way with any other Broadcom software provided under a license
+ * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: bcmspibrcm.h 241182 2011-02-17 21:50:03Z $
+ * $Id: bcmspibrcm.h 373331 2012-12-07 04:46:22Z $
  */
 #ifndef	_BCM_SPI_BRCM_H
 #define	_BCM_SPI_BRCM_H
 
+#ifndef SPI_MAX_IOFUNCS
+/* Maximum number of I/O funcs */
+#define SPI_MAX_IOFUNCS		4
+#endif
 /* global msglevel for debug messages - bitvals come from sdiovar.h */
 
+#if defined(DHD_DEBUG)
+#define sd_err(x)	do { if (sd_msglevel & SDH_ERROR_VAL) printf x; } while (0)
+#define sd_trace(x)	do { if (sd_msglevel & SDH_TRACE_VAL) printf x; } while (0)
+#define sd_info(x)	do { if (sd_msglevel & SDH_INFO_VAL)  printf x; } while (0)
+#define sd_debug(x)	do { if (sd_msglevel & SDH_DEBUG_VAL) printf x; } while (0)
+#define sd_data(x)	do { if (sd_msglevel & SDH_DATA_VAL)  printf x; } while (0)
+#define sd_ctrl(x)	do { if (sd_msglevel & SDH_CTRL_VAL)  printf x; } while (0)
+#else
 #define sd_err(x)
 #define sd_trace(x)
 #define sd_info(x)
 #define sd_debug(x)
 #define sd_data(x)
 #define sd_ctrl(x)
+#endif
 
 #define sd_log(x)
 
@@ -48,13 +73,12 @@
 #define USE_MULTIBLOCK		0x4
 
 struct sdioh_info {
-	uint 		cfg_bar;		/* pci cfg address for bar */
+	uint		cfg_bar;		/* pci cfg address for bar */
 	uint32		caps;			/* cached value of capabilities reg */
 	void		*bar0;			/* BAR0 for PCI Device */
-	osl_t 		*osh;			/* osh handler */
+	osl_t		*osh;			/* osh handler */
 	void		*controller;	/* Pointer to SPI Controller's private data struct */
-
-	uint		lockcount; 		/* nest count of spi_lock() calls */
+	uint		lockcount;		/* nest count of spi_lock() calls */
 	bool		client_intr_enabled;	/* interrupt connnected flag */
 	bool		intr_handler_valid;	/* client driver interrupt handler valid */
 	sdioh_cb_fn_t	intr_handler;		/* registered interrupt handler */
@@ -63,12 +87,11 @@ struct sdioh_info {
 	uint32		target_dev;		/* Target device ID */
 	uint32		intmask;		/* Current active interrupts */
 	void		*sdos_info;		/* Pointer to per-OS private data */
-
 	uint32		controller_type;	/* Host controller type */
 	uint8		version;		/* Host Controller Spec Compliance Version */
-	uint 		irq;			/* Client irq */
-	uint32 		intrcount;		/* Client interrupts */
-	uint32 		local_intrcount;	/* Controller interrupts */
+	uint		irq;			/* Client irq */
+	uint32		intrcount;		/* Client interrupts */
+	uint32		local_intrcount;	/* Controller interrupts */
 	bool 		host_init_done;		/* Controller initted */
 	bool 		card_init_done;		/* Client SDIO interface initted */
 	bool 		polled_mode;		/* polling for command completion */

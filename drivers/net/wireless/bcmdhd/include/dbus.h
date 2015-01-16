@@ -2,7 +2,7 @@
  * Dongle BUS interface Abstraction layer
  *   target serial buses like USB, SDIO, SPI, etc.
  *
- * Copyright (C) 1999-2012, Broadcom Corporation
+ * Copyright (C) 1999-2014, Broadcom Corporation
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -22,7 +22,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dbus.h 323680 2012-03-26 17:52:31Z $
+ * $Id: dbus.h 423346 2013-09-11 22:38:40Z $
  */
 
 #ifndef __DBUS_H__
@@ -33,7 +33,6 @@
 #define DBUSTRACE(args)
 #define DBUSERR(args)
 #define DBUSINFO(args)
-#define DBUSTRACE(args)
 #define DBUSDBGLOCK(args)
 
 enum {
@@ -77,8 +76,8 @@ enum {
 #define DBUS_TX_RETRY_LIMIT		3		/* retries for failed txirb */
 #define DBUS_TX_TIMEOUT_INTERVAL	250		/* timeout for txirb complete, in ms */
 
-#define DBUS_BUFFER_SIZE_TX	16000
-#define DBUS_BUFFER_SIZE_RX	5000
+#define DBUS_BUFFER_SIZE_TX	32000
+#define DBUS_BUFFER_SIZE_RX	24000
 
 #define DBUS_BUFFER_SIZE_TX_NOAGG	2048
 #define DBUS_BUFFER_SIZE_RX_NOAGG	2048
@@ -144,8 +143,21 @@ typedef struct {
 /*
  * Configurable BUS parameters
  */
+enum {
+	DBUS_CONFIG_ID_RXCTL_DEFERRES = 1,
+	DBUS_CONFIG_ID_TXRXQUEUE
+};
 typedef struct {
-	bool rxctl_deferrespok;
+	uint32 config_id;
+	union {
+		bool rxctl_deferrespok;
+		struct {
+			int maxrxq;
+			int rxbufsize;
+			int maxtxq;
+			int txbufsize;
+		} txrxqueue;
+	};
 } dbus_config_t;
 
 /*
@@ -296,7 +308,6 @@ extern int dbus_send_ctl(dbus_pub_t *pub, uint8 *buf, int len);
 extern int dbus_recv_ctl(dbus_pub_t *pub, uint8 *buf, int len);
 extern int dbus_recv_bulk(dbus_pub_t *pub, uint32 ep_idx);
 extern int dbus_poll_intr(dbus_pub_t *pub);
-
 extern int dbus_get_stats(dbus_pub_t *pub, dbus_stats_t *stats);
 extern int dbus_get_attrib(dbus_pub_t *pub, dbus_attrib_t *attrib);
 extern int dbus_get_device_speed(dbus_pub_t *pub);
