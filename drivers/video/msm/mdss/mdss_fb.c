@@ -850,7 +850,9 @@ static int mdss_fb_suspend_sub(struct msm_fb_data_type *mfd)
 		return 0;
 
 	pr_debug("mdss_fb suspend index=%d\n", mfd->index);
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
 	mdss_ensure_kworker_done(mfd->unblank_kworker);
+#endif
 
 	mdss_fb_pan_idle(mfd);
 	ret = mdss_fb_send_panel_event(mfd, MDSS_EVENT_SUSPEND, NULL);
@@ -880,7 +882,9 @@ static int mdss_fb_suspend_sub(struct msm_fb_data_type *mfd)
 		fb_set_suspend(mfd->fbi, FBINFO_STATE_SUSPENDED);
 	}
 
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
 	pwr_pressed = false;
+#endif
 
 	return 0;
 }
@@ -906,13 +910,16 @@ static int mdss_fb_resume_sub(struct msm_fb_data_type *mfd)
 	/* resume state var recover */
 	mfd->op_enable = mfd->suspend.op_enable;
 
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
 	/* unblank phone display if we
 	 * resume because of power key press
 	 */
 	if (mfd->unblank_kworker && pwr_pressed) {
 		pr_debug("starting unblank async from resume");
 		queue_work(mfd->unblank_kworker, &mfd->unblank_work);
-	} else if (mdss_panel_is_power_on(mfd->suspend.panel_power_state)) {
+	} else if (mdss_panel_is_power_on(mfd->suspend.panel_power_state))
+#endif
+	{
 		ret = mdss_fb_blank_sub(FB_BLANK_UNBLANK, mfd->fbi,
 					mfd->op_enable);
 		if (ret)
@@ -1263,12 +1270,14 @@ static int mdss_fb_blank_sub(int blank_mode, struct fb_info *info,
 	switch (blank_mode) {
 	case FB_BLANK_UNBLANK:
 		pr_debug("unblank called. cur pwr state=%d\n", cur_power_state);
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
 		mdss_ensure_kworker_done(mfd->unblank_kworker);
 		/* if kworker was successful we are done...
 		 * but let's check and retry if not. fall thru!
 		 */
 
 	case FB_EARLY_UNBLANK:
+#endif
 		ret = mdss_fb_unblank_sub(mfd);
 		break;
 
@@ -1329,14 +1338,14 @@ static int mdss_fb_blank_sub(int blank_mode, struct fb_info *info,
 				mfd->panel_power_state = cur_power_state;
 				if ((pdata) && (pdata->set_backlight)) {
 					mutex_lock(&mfd->bl_lock);
-					mfd->bl_level = mfd->bl_level_old;
+					mfd->bl_level = mfd->bl_level_scaled;
 					pdata->set_backlight(pdata, mfd->bl_level);
 					mutex_unlock(&mfd->bl_lock);
 				}
 			} else {
 				mdss_fb_release_fences(mfd);
 			}
-			mfd->bl_level_old = mfd->bl_level;
+			mfd->bl_level_scaled = mfd->bl_level;
 			mfd->op_enable = true;
 			complete(&mfd->power_off_comp);
 		}
@@ -1662,7 +1671,7 @@ static int mdss_fb_register(struct msm_fb_data_type *mfd)
 	var->yoffset = 0,	/* resolution */
 	var->grayscale = 0,	/* No graylevels */
 	var->nonstd = 0,	/* standard pixel format */
-	var->activate = FB_ACTIVATE_VBL,	/* activate it at vsync */
+	var->activate = FB_ACTIVATE_VBL;	/* activate it at vsync */
 
 #ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
 	/* height&width of picture in mm */
@@ -1682,8 +1691,8 @@ static int mdss_fb_register(struct msm_fb_data_type *mfd)
 		return ret;
 	}
 #else
-	var->height = -1,	/* height of picture in mm */
-	var->width = -1,	/* width of picture in mm */
+	var->height = -1;	/* height of picture in mm */
+	var->width = -1;	/* width of picture in mm */
 #endif
 
 	var->accel_flags = 0,	/* acceleration flags */
@@ -3352,8 +3361,10 @@ int __init mdss_fb_init(void)
 	if (platform_driver_register(&mdss_fb_driver))
 		return rc;
 
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
 	if (input_register_handler(&mds_input_handler))
 		return rc;
+#endif
 
 	return 0;
 }

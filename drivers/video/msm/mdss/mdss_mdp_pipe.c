@@ -1072,7 +1072,7 @@ static int mdss_mdp_image_setup(struct mdss_mdp_pipe *pipe,
 	if (mdss_dsi_panel_flip_ud()) {
 		if (pipe->mfd && pipe->mfd->panel_info &&
 			pipe->mfd->panel_info->pdest == DISPLAY_1)
-			dst_xy = ((pipe->mixer->height -
+			dst_xy = ((pipe->mixer_left->height -
 				   (pipe->dst.y + pipe->dst.h)) << 16) |
 				pipe->dst.x;
 		else

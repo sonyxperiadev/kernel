@@ -167,16 +167,19 @@ static int mdss_dsi_panel_power_ctrl(struct mdss_panel_data *pdata,
 {
 	int ret;
 	struct mdss_panel_info *pinfo;
-
-#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
-	return ctrl_pdata->spec_pdata->panel_power_on(pdata, power_state);
-#endif
+	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
 
 	if (pdata == NULL) {
 		pr_err("%s: Invalid input data\n", __func__);
 		return -EINVAL;
 	}
 
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
+	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
+						panel_data);
+
+	return ctrl_pdata->spec_pdata->panel_power_on(pdata, power_state);
+#else
 	pinfo = &pdata->panel_info;
 	pr_debug("%s: cur_power_state=%d req_power_state=%d\n", __func__,
 		pinfo->panel_power_state, power_state);
@@ -209,6 +212,7 @@ static int mdss_dsi_panel_power_ctrl(struct mdss_panel_data *pdata,
 		pinfo->panel_power_state = power_state;
 
 	return ret;
+#endif
 }
 
 static void mdss_dsi_put_dt_vreg_data(struct device *dev,
@@ -417,6 +421,7 @@ static int mdss_dsi_get_panel_cfg(char *panel_cfg)
 
 static int mdss_dsi_intf_ready(struct mdss_panel_data *pdata)
 {
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
 	struct mdss_dsi_ctrl_pdata *ctrl_pdata;
 
 	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
@@ -426,7 +431,7 @@ static int mdss_dsi_intf_ready(struct mdss_panel_data *pdata)
 		return -EINVAL;
 	}
 	ctrl_pdata->spec_pdata->disp_on(pdata);
-
+#endif
 	return 0;
 }
 
@@ -1073,7 +1078,7 @@ static int mdss_dsi_ctrl_probe(struct platform_device *pdev)
 			rc = -ENOMEM;
 			return rc;
 		}
-
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
 		ctrl_pdata->spec_pdata = devm_kzalloc(&pdev->dev,
 			sizeof(struct mdss_panel_specific_pdata),
 			GFP_KERNEL);
@@ -1083,6 +1088,7 @@ static int mdss_dsi_ctrl_probe(struct platform_device *pdev)
 			rc = -ENOMEM;
 			goto error_no_mem;
 		}
+#endif
 		platform_set_drvdata(pdev, ctrl_pdata);
 	}
 
@@ -1391,11 +1397,13 @@ int dsi_panel_device_register(struct device_node *pan_node,
 	bool dynamic_fps;
 	const char *data;
 
+#ifdef CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL
 	spec_pdata = ctrl_pdata->spec_pdata;
 	if (!spec_pdata) {
 		pr_err("%s: Invalid input data\n", __func__);
 		return -EINVAL;
 	}
+#endif
 
 	mipi  = &(pinfo->mipi);
 

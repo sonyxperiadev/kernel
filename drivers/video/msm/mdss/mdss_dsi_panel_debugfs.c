@@ -264,7 +264,7 @@ static ssize_t reg_read(struct file *file, const char __user *ubuf,
 	struct dsi_cmd_desc dsi;
 	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
 
-	if (!mfd->panel_power_on) {
+	if (!mdss_fb_is_power_on(mfd)) {
 		pr_err("%s: panel is NOT on\n", __func__);
 		goto exit;
 	}
@@ -385,7 +385,7 @@ static ssize_t reg_write(struct file *file, const char __user *ubuf,
 	struct dsi_cmd_desc dsi;
 	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
 
-	if (!mfd->panel_power_on) {
+	if (!mdss_fb_is_power_on(mfd)) {
 		pr_err("%s: panel is NOT on\n", __func__);
 		goto exit;
 	}
