@@ -2342,12 +2342,6 @@ msmsdcc_request(struct mmc_host *mmc, struct mmc_request *mrq)
 			host->curr.use_wr_data_pend = true;
 	}
 
-	if (mrq->cmd->opcode == SD_IO_RW_EXTENDED &&
-		host->plat->use_for_wifi) {
-		host->disable_mciclk_pwrsave = 1;
-		msmsdcc_set_pwrsave(host->mmc, 0);
-	}
-
 	msmsdcc_request_start(host, mrq);
 	spin_unlock_irqrestore(&host->lock, flags);
 	return;
@@ -5825,8 +5819,6 @@ static struct mmc_platform_data *msmsdcc_populate_pdata(struct device *dev)
 		pdata->disable_cmd23 = true;
 	of_property_read_u32(np, "qcom,dat1-mpm-int",
 					&pdata->mpm_sdiowakeup_int);
-	if (of_get_property(np, "somc,use-for-wifi", NULL))
-		pdata->use_for_wifi = true;
 	return pdata;
 err:
 	return NULL;
@@ -6126,15 +6118,6 @@ msmsdcc_probe(struct platform_device *pdev)
 
 	if (plat->is_sdio_al_client)
 		mmc->pm_flags |= MMC_PM_IGNORE_PM_NOTIFY;
-
-	if (plat->use_for_wifi) {
-#ifdef CONFIG_MACH_SONY_SHINANO
-		plat->register_status_notify = shinano_wifi_status_register;
-		plat->status = shinano_wifi_status;
-#endif
-		mmc->pm_caps |= MMC_PM_IGNORE_PM_NOTIFY;
-		mmc->pm_flags |= mmc->pm_caps;
-	}
 
 	mmc->max_segs = msmsdcc_get_nr_sg(host);
 	mmc->max_blk_size = MMC_MAX_BLK_SIZE;
@@ -6721,8 +6704,6 @@ msmsdcc_runtime_suspend(struct device *dev)
 		if (unlikely(work_busy(&mmc->detect.work))) {
 			rc = -EAGAIN;
 		} else {
-			if (host->plat->use_for_wifi)
-				mmc->pm_flags |= MMC_PM_KEEP_POWER;
 			rc = mmc_suspend_host(mmc);
 		}
 		pm_runtime_put_noidle(dev);
