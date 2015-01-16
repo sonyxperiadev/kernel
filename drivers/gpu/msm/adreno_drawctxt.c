@@ -351,7 +351,7 @@ adreno_drawctxt_create(struct kgsl_device_private *dev_priv,
 	if (!kgsl_mmu_is_secured(&dev_priv->device->mmu) &&
 			(local & KGSL_CONTEXT_SECURE)) {
 		KGSL_DEV_ERR_ONCE(device, "Secure context not supported\n");
-		return ERR_PTR(-EINVAL);
+		return ERR_PTR(-EOPNOTSUPP);
 	}
 
 	drawctxt = kzalloc(sizeof(struct adreno_context), GFP_KERNEL);

@@ -3131,7 +3131,7 @@ long kgsl_ioctl_map_user_mem(struct kgsl_device_private *dev_priv,
 		if (!kgsl_mmu_is_secured(&dev_priv->device->mmu)) {
 			dev_WARN_ONCE(dev_priv->device->dev, 1,
 				"Secure buffer not supported");
-			return -EINVAL;
+			return -EOPNOTSUPP;
 		}
 
 		/* Can't use CPU map with secure buffers */
@@ -3549,7 +3549,7 @@ _gpumem_alloc(struct kgsl_device_private *dev_priv,
 			(flags & KGSL_MEMFLAGS_SECURE)) {
 		dev_WARN_ONCE(dev_priv->device->dev, 1,
 				"Secure memory not supported");
-		return -EINVAL;
+		return -EOPNOTSUPP;
 	}
 
 	/* Cap the alignment bits to the highest number we can handle */
