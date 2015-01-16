@@ -74,7 +74,7 @@ static bool adc_det;
 static bool display_on_in_boot;
 static bool display_onoff_state;
 static unsigned char panel_id[1];
-static int lcm_first_boot = -1;
+static int lcm_first_boot = 0;
 bool alt_panelid_cmd;
 static bool mdss_panel_flip_ud = false;
 static int mdss_dsi_panel_detect(struct mdss_panel_data *pdata);
@@ -1364,7 +1364,6 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 		}
 	}
 
-	pinfo->blank_state = MDSS_PANEL_BLANK_UNBLANK;
 	pr_debug("%s:-\n", __func__);
 	return 0;
 }
@@ -1442,7 +1441,6 @@ static int mdss_dsi_panel_off(struct mdss_panel_data *pdata)
 		pr_info("%s: vsyncs_per_ksecs is invalid\n", __func__);
 	}
 
-	pinfo->blank_state = MDSS_PANEL_BLANK_BLANK;
 	pr_debug("%s: Done\n", __func__);
 
 	return 0;
@@ -1454,6 +1452,8 @@ static int mdss_dsi_panel_low_power_config(struct mdss_panel_data *pdata,
 {
 	struct mdss_dsi_ctrl_pdata *ctrl = NULL;
 	struct mdss_panel_info *pinfo;
+
+	return 0;
 
 	if (pdata == NULL) {
 		pr_err("%s: Invalid input data\n", __func__);
@@ -2166,7 +2166,8 @@ static int mdss_dsi_parse_dcs_cmds(struct device_node *np,
 			pcmds->link_state = DSI_HS_MODE;
 		else
 			pcmds->link_state = DSI_LP_MODE;
-	}
+	} else
+		pcmds->link_state = DSI_LP_MODE;
 
 	pr_debug("%s: dcs_cmd=%x len=%d, cmd_cnt=%d link_state=%d\n", __func__,
 		pcmds->buf[0], pcmds->blen, pcmds->cmd_cnt, pcmds->link_state);

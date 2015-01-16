@@ -119,7 +119,7 @@ static int mdss_mdp_cmd_tearcheck_cfg(struct mdss_mdp_ctl *ctl,
 	struct mdss_mdp_pp_tear_check *te = NULL;
 	struct mdss_panel_info *pinfo;
 	u32 vsync_clk_speed_hz, total_lines, vclks_line, cfg = 0;
-	u32 height;
+	u32 vporch, height;
 
 	if (IS_ERR_OR_NULL(ctl->panel_data)) {
 		pr_err("no panel data\n");
@@ -156,7 +156,11 @@ static int mdss_mdp_cmd_tearcheck_cfg(struct mdss_mdp_ctl *ctl,
 
 		cfg |= vclks_line;
 
-//		height = (ctx->height + ctx->vporch) * 2;
+		vporch = pinfo->lcdc.v_back_porch +
+			 pinfo->lcdc.v_front_porch +
+			 pinfo->lcdc.v_pulse_width;
+
+		height = (pinfo->yres + vporch) * 2;
 
 		pr_debug("%s: yres=%d vclks=%x height=%d init=%d rd=%d start=%d ",
 			__func__, pinfo->yres, vclks_line, te->sync_cfg_height,
@@ -166,9 +170,7 @@ static int mdss_mdp_cmd_tearcheck_cfg(struct mdss_mdp_ctl *ctl,
 	}
 
 	mdss_mdp_pingpong_write(mixer, MDSS_MDP_REG_PP_SYNC_CONFIG_VSYNC, cfg);
-	mdss_mdp_pingpong_write(mixer, MDSS_MDP_REG_PP_SYNC_CONFIG_HEIGHT,
-		te ? te->sync_cfg_height : 0);
-	//height);
+	mdss_mdp_pingpong_write(mixer, MDSS_MDP_REG_PP_SYNC_CONFIG_HEIGHT, height);
 	mdss_mdp_pingpong_write(mixer, MDSS_MDP_REG_PP_VSYNC_INIT_VAL,
 		te ? te->vsync_init_val : 0);
 	mdss_mdp_pingpong_write(mixer, MDSS_MDP_REG_PP_RD_PTR_IRQ,

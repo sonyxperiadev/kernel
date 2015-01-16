@@ -1470,7 +1470,7 @@ int dsi_panel_device_register(struct device_node *pan_node,
 	data = of_get_property(ctrl_pdev->dev.of_node,
 		"qcom,platform-lane-config", &len);
 	if ((!data) || (len != 45)) {
-		pr_debug("%s:%d, Unable to read Phy lane configure settings",
+		pr_info("%s:%d, Unable to read Phy lane configure settings",
 			__func__, __LINE__);
 	} else {
 		for (i = 0; i < len; i++) {

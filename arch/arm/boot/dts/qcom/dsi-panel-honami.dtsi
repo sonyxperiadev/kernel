@@ -108,6 +108,8 @@
 		somc,panel-id = [ff];
 		somc,panel-detect = <1>;
 		somc,driver-ic = <0>;
+		somc,panel-id-read-cmds;
+		somc,dsi-restart-hack;
 		somc,dric-gpio = <&msmgpio 26 0>;
 		somc,mdss-phy-size-mm = <62 110>;
 		somc,mdss-dsi-lane-config = [00 c2 45 00 00 00 00 01 75
@@ -982,6 +984,7 @@
 		somc,panel-id = [ff];
 		somc,panel-detect = <1>;
 		somc,driver-ic = <1>;
+		somc,panel-id-read-cmds;
 		somc,dric-gpio = <&msmgpio 26 0>;
 		somc,mdss-phy-size-mm = <62 110>;
 		somc,mdss-dsi-lane-config = [00 c2 45 00 00 00 00 01 75
