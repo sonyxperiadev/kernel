@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: sbsocram.h 481592 2014-05-29 22:10:51Z $
+ * $Id: sbsocram.h 271781 2011-07-13 20:00:06Z $
  */
 
 #ifndef	_SBSOCRAM_H
@@ -57,8 +57,7 @@ typedef volatile struct sbsocramregs {
 	uint32	cambankmaskreg;
 	uint32	PAD[1];
 	uint32	bankinfo;	/* corev 8 */
-	uint32	bankpda;
-	uint32	PAD[14];
+	uint32	PAD[15];
 	uint32	extmemconfig;
 	uint32	extmemparitycsr;
 	uint32	extmemparityerrdata;

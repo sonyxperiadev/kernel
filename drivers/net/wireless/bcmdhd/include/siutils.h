@@ -22,7 +22,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: siutils.h 481592 2014-05-29 22:10:51Z $
+ * $Id: siutils.h 433599 2013-11-01 18:31:27Z $
  */
 
 #ifndef	_siutils_h_
@@ -217,7 +217,6 @@ extern bool si_deviceremoved(si_t *sih);
 extern uint32 si_socram_size(si_t *sih);
 extern uint32 si_socdevram_size(si_t *sih);
 extern uint32 si_socram_srmem_size(si_t *sih);
-extern void si_socram_set_bankpda(si_t *sih, uint32 bankidx, uint32 bankpda);
 extern void si_socdevram(si_t *sih, bool set, uint8 *ennable, uint8 *protect, uint8 *remap);
 extern bool si_socdevram_pkg(si_t *sih);
 extern bool si_socdevram_remap_isenb(si_t *sih);

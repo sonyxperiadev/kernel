@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: wl_android.h 489825 2014-07-08 09:03:49Z $
+ * $Id: wl_android.h 440870 2013-12-04 05:23:45Z $
  */
 
 #include <linux/module.h>
@@ -50,20 +50,3 @@ void wl_android_post_init(void);
 int wl_android_wifi_on(struct net_device *dev);
 int wl_android_wifi_off(struct net_device *dev);
 int wl_android_priv_cmd(struct net_device *net, struct ifreq *ifr, int cmd);
-
-s32 wl_netlink_send_msg(int pid, int type, int seq, void *data, size_t size);
-
-/* hostap mac mode */
-#define MACLIST_MODE_DISABLED   0
-#define MACLIST_MODE_DENY       1
-#define MACLIST_MODE_ALLOW      2
-
-/* max number of assoc list */
-#define MAX_NUM_OF_ASSOCLIST    64
-
-/* max number of mac filter list
- * restrict max number to 10 as maximum cmd string size is 255
- */
-#define MAX_NUM_MAC_FILT        10
-
-int wl_android_set_ap_mac_list(struct net_device *dev, int macmode, struct maclist *maclist);

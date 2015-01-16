@@ -5,7 +5,7 @@
  * JTAG, 0/1/2 UARTs, clock frequency control, a watchdog interrupt timer,
  * GPIO interface, extbus, and support for serial and parallel flashes.
  *
- * $Id: sbchipc.h 468568 2014-04-08 05:33:12Z $
+ * $Id: sbchipc.h 433333 2013-10-31 10:34:27Z $
  *
  * Copyright (C) 1999-2014, Broadcom Corporation
  * 
@@ -2562,54 +2562,6 @@ typedef volatile struct {
 #define PMU43602_CC3_ARMCR4_DBG_CLK	(1 << 29)
 
 
-/* 43430 PMU resources based on pmu_params.xls */
-#define RES43430_LPLDO_PU				0
-#define RES43430_BG_PU					1
-#define RES43430_PMU_SLEEP				2
-#define RES43430_RSVD_3					3
-#define RES43430_CBUCK_LPOM_PU			4
-#define RES43430_CBUCK_PFM_PU			5
-#define RES43430_COLD_START_WAIT		6
-#define RES43430_RSVD_7					7
-#define RES43430_LNLDO_PU				8
-#define RES43430_RSVD_9					9
-#define RES43430_LDO3P3_PU				10
-#define RES43430_OTP_PU					11
-#define RES43430_XTAL_PU				12
-#define RES43430_SR_CLK_START			13
-#define RES43430_LQ_AVAIL				14
-#define RES43430_LQ_START				15
-#define RES43430_RSVD_16				16
-#define RES43430_WL_CORE_RDY			17
-#define RES43430_ILP_REQ				18
-#define RES43430_ALP_AVAIL				19
-#define RES43430_MINI_PMU				20
-#define RES43430_RADIO_PU				21
-#define RES43430_SR_CLK_STABLE			22
-#define RES43430_SR_SAVE_RESTORE		23
-#define RES43430_SR_PHY_PWRSW			24
-#define RES43430_SR_VDDM_PWRSW			25
-#define RES43430_SR_SUBCORE_PWRSW		26
-#define RES43430_SR_SLEEP				27
-#define RES43430_HT_START				28
-#define RES43430_HT_AVAIL				29
-#define RES43430_MACPHY_CLK_AVAIL		30
-
-/* 43430 chip status bits */
-#define CST43430_SDIO_MODE				0x00000001
-#define CST43430_GSPI_MODE				0x00000002
-#define CST43430_RSRC_INIT_MODE_0		0x00000080
-#define CST43430_RSRC_INIT_MODE_1		0x00000100
-#define CST43430_SEL0_SDIO				0x00000200
-#define CST43430_SEL1_SDIO				0x00000400
-#define CST43430_SEL2_SDIO				0x00000800
-#define CST43430_BBPLL_LOCKED			0x00001000
-#define CST43430_DBG_INST_DETECT		0x00004000
-#define CST43430_CLB2WL_BT_READY		0x00020000
-#define CST43430_JTAG_MODE				0x00100000
-#define CST43430_HOST_IFACE				0x00400000
-#define CST43430_TRIM_EN				0x00800000
-#define CST43430_DIN_PACKAGE_OPTION		0x10000000
 
 /* defines to detect active host interface in use */
 #define CHIP_HOSTIF_PCIEMODE	0x1

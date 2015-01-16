@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: bcmtcp.h 457888 2014-02-25 03:34:39Z $
+ * $Id: bcmtcp.h 434656 2013-11-07 01:11:33Z $
  */
 
 #ifndef _bcmtcp_h_
@@ -80,11 +80,5 @@ BWL_PRE_PACKED_STRUCT struct bcmtcp_hdr
 
 /* This marks the end of a packed structure section. */
 #include <packed_section_end.h>
-
-/* To address round up by 32bit. */
-#define IS_TCPSEQ_GE(a, b) ((a - b) < NBITVAL(31))		/* a >= b */
-#define IS_TCPSEQ_LE(a, b) ((b - a) < NBITVAL(31))		/* a =< b */
-#define IS_TCPSEQ_GT(a, b) !IS_TCPSEQ_LE(a, b)		/* a > b */
-#define IS_TCPSEQ_LT(a, b) !IS_TCPSEQ_GE(a, b)		/* a < b */
 
 #endif	/* #ifndef _bcmtcp_h_ */

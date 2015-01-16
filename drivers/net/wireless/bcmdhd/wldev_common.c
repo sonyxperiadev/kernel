@@ -2,7 +2,6 @@
  * Common function shared by Linux WEXT, cfg80211 and p2p drivers
  *
  * Copyright (C) 1999-2014, Broadcom Corporation
- * Copyright (C) 2013 Sony Mobile Communications AB
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -326,7 +325,6 @@ int wldev_get_band(
 int wldev_set_band(
 	struct net_device *dev, uint band)
 {
-#ifndef SEMC_WLAN_BAND
 	int error = -1;
 
 	if ((band == WLC_BAND_AUTO) || (band == WLC_BAND_5G) || (band == WLC_BAND_2G)) {
@@ -335,9 +333,6 @@ int wldev_set_band(
 			dhd_bus_band_set(dev, band);
 	}
 	return error;
-#else
-	return 0;
-#endif /* SEMC_WLAN_BAND */
 }
 
 int wldev_set_country(

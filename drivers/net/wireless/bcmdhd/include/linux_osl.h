@@ -282,8 +282,13 @@ extern int osl_error(int bcmerror);
 #include <linuxver.h>		/* use current 2.4.x calling conventions */
 
 /* packet primitives */
+#ifdef BCMDBG_CTRACE
+#define	PKTGET(osh, len, send)		osl_pktget((osh), (len), __LINE__, __FILE__)
+#define	PKTDUP(osh, skb)		osl_pktdup((osh), (skb), __LINE__, __FILE__)
+#else
 #define	PKTGET(osh, len, send)		osl_pktget((osh), (len))
 #define	PKTDUP(osh, skb)		osl_pktdup((osh), (skb))
+#endif /* BCMDBG_CTRACE */
 #define PKTLIST_DUMP(osh, buf)		BCM_REFERENCE(osh)
 #define PKTDBG_TRACE(osh, pkt, bit)	BCM_REFERENCE(osh)
 #define	PKTFREE(osh, skb, send)		osl_pktfree((osh), (skb), (send))
@@ -343,6 +348,44 @@ extern int osl_error(int bcmerror);
 #define PKTSETID(skb, id)       ({BCM_REFERENCE(skb); BCM_REFERENCE(id);})
 #define PKTSHRINK(osh, m)		({BCM_REFERENCE(osh); m;})
 
+#ifdef BCMDBG_CTRACE
+#define	DEL_CTRACE(zosh, zskb) { \
+	unsigned long zflags; \
+	spin_lock_irqsave(&(zosh)->ctrace_lock, zflags); \
+	list_del(&(zskb)->ctrace_list); \
+	(zosh)->ctrace_num--; \
+	(zskb)->ctrace_start = 0; \
+	(zskb)->ctrace_count = 0; \
+	spin_unlock_irqrestore(&(zosh)->ctrace_lock, zflags); \
+}
+
+#define	UPDATE_CTRACE(zskb, zfile, zline) { \
+	struct sk_buff *_zskb = (struct sk_buff *)(zskb); \
+	if (_zskb->ctrace_count < CTRACE_NUM) { \
+		_zskb->func[_zskb->ctrace_count] = zfile; \
+		_zskb->line[_zskb->ctrace_count] = zline; \
+		_zskb->ctrace_count++; \
+	} \
+	else { \
+		_zskb->func[_zskb->ctrace_start] = zfile; \
+		_zskb->line[_zskb->ctrace_start] = zline; \
+		_zskb->ctrace_start++; \
+		if (_zskb->ctrace_start >= CTRACE_NUM) \
+			_zskb->ctrace_start = 0; \
+	} \
+}
+
+#define	ADD_CTRACE(zosh, zskb, zfile, zline) { \
+	unsigned long zflags; \
+	spin_lock_irqsave(&(zosh)->ctrace_lock, zflags); \
+	list_add(&(zskb)->ctrace_list, &(zosh)->ctrace_list); \
+	(zosh)->ctrace_num++; \
+	UPDATE_CTRACE(zskb, zfile, zline); \
+	spin_unlock_irqrestore(&(zosh)->ctrace_lock, zflags); \
+}
+
+#define PKTCALLER(zskb)	UPDATE_CTRACE((struct sk_buff *)zskb, (char *)__FUNCTION__, __LINE__)
+#endif /* BCMDBG_CTRACE */
 
 #ifdef CTFPOOL
 #define	CTFPOOL_REFILL_THRESH	3
@@ -571,11 +614,27 @@ extern void osl_pktfree(osl_t *osh, void *skb, bool send);
 extern void *osl_pktget_static(osl_t *osh, uint len);
 extern void osl_pktfree_static(osl_t *osh, void *skb, bool send);
 
+#ifdef BCMDBG_CTRACE
+#define PKT_CTRACE_DUMP(osh, b)	osl_ctrace_dump((osh), (b))
+extern void *osl_pktget(osl_t *osh, uint len, int line, char *file);
+extern void *osl_pkt_frmnative(osl_t *osh, void *skb, int line, char *file);
+extern int osl_pkt_is_frmnative(osl_t *osh, struct sk_buff *pkt);
+extern void *osl_pktdup(osl_t *osh, void *skb, int line, char *file);
+struct bcmstrbuf;
+extern void osl_ctrace_dump(osl_t *osh, struct bcmstrbuf *b);
+#else
 extern void *osl_pkt_frmnative(osl_t *osh, void *skb);
 extern void *osl_pktget(osl_t *osh, uint len);
 extern void *osl_pktdup(osl_t *osh, void *skb);
+#endif /* BCMDBG_CTRACE */
 extern struct sk_buff *osl_pkt_tonative(osl_t *osh, void *pkt);
+#ifdef BCMDBG_CTRACE
+#define PKTFRMNATIVE(osh, skb)  osl_pkt_frmnative(((osl_t *)osh), \
+				(struct sk_buff*)(skb), __LINE__, __FILE__)
+#define	PKTISFRMNATIVE(osh, skb) osl_pkt_is_frmnative((osl_t *)(osh), (struct sk_buff *)(skb))
+#else
 #define PKTFRMNATIVE(osh, skb)	osl_pkt_frmnative(((osl_t *)osh), (struct sk_buff*)(skb))
+#endif /* BCMDBG_CTRACE */
 #define PKTTONATIVE(osh, pkt)		osl_pkt_tonative((osl_t *)(osh), (pkt))
 
 #define	PKTLINK(skb)			(((struct sk_buff*)(skb))->prev)

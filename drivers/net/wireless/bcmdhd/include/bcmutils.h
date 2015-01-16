@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: bcmutils.h 489825 2014-07-08 09:03:49Z $
+ * $Id: bcmutils.h 434656 2013-11-07 01:11:33Z $
  */
 
 #ifndef	_bcmutils_h_
@@ -877,6 +877,12 @@ DECLARE_MAP_API(4,  3, 2,  7U, 0x000F) /* setbit4() and getbit4() */
 #define MAC2STRDBG(ea) (ea)[0], (ea)[4], (ea)[5]
 #endif /* SIMPLE_MAC_PRINT */
 
+#define IPv4_ADDR_STR "%d.%d.%d.%d"
+#define IPv4_ADDR_TO_STR(addr)	((uint32)addr & 0xff000000) >> 24, \
+								((uint32)addr & 0x00ff0000) >> 16, \
+								((uint32)addr & 0x0000ff00) >> 8, \
+								((uint32)addr & 0x000000ff)
+
 /* bcm_format_flags() bit description structure */
 typedef struct bcm_bit_desc {
 	uint32	bit;
@@ -1124,20 +1130,5 @@ void bcm_sub_64(uint32* r_hi, uint32* r_lo, uint32 offset);
 #ifdef __cplusplus
 	}
 #endif
-
-#ifdef DEBUG_COUNTER
-#define CNTR_TBL_MAX 10
-typedef struct _counter_tbl_t {
-	char name[16];				/* name of this counter table */
-	uint32 prev_log_print;		/* Internal use. Timestamp of the previous log print */
-	uint log_print_interval;	/* Desired interval to print logs in ms */
-	uint needed_cnt;			/* How many counters need to be used */
-	uint32 cnt[CNTR_TBL_MAX];		/* Counting entries to increase at desired places */
-	bool enabled;				/* Whether to enable printing log */
-} counter_tbl_t;
-
-
-void counter_printlog(counter_tbl_t *ctr_tbl);
-#endif /* DEBUG_COUNTER */
 
 #endif	/* _bcmutils_h_ */

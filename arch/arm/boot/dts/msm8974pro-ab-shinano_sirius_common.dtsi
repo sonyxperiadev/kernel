@@ -652,7 +652,8 @@
 			1 &intc 0 223 0>;
 	interrupt-names = "core_irq", "bam_irq";
 	qcom,sup-voltages = <1800 2950>;
-	somc,use-for-wifi;
+	qcom,wifi-control-func;
+	qcom,nonremovable;
 	status = "ok";
 };
 

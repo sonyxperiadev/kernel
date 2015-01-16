@@ -24,19 +24,18 @@
  * $Id: wl_cfg80211.c,v 1.1.4.1.2.14 2011/02/09 01:40:07 Exp $
  */
 
-#include <linux/vmalloc.h>
 #include <net/rtnetlink.h>
 
 #include <bcmutils.h>
 #include <wldev_common.h>
 #include <wl_cfg80211.h>
-#include <brcm_nl80211.h>
 #include <dhd_cfg80211.h>
 
 #ifdef PKT_FILTER_SUPPORT
 #include <dngl_stats.h>
 #include <dhd.h>
 #endif
+
 extern struct bcm_cfg80211 *g_bcm_cfg;
 
 #ifdef PKT_FILTER_SUPPORT
@@ -126,29 +125,6 @@ int wl_cfg80211_remove_if(struct bcm_cfg80211 *cfg, int ifidx, struct net_device
 	return dhd_remove_if(cfg->pub, ifidx, FALSE);
 }
 
-struct net_device * dhd_cfg80211_netdev_free(struct net_device *ndev)
-{
-	if (ndev) {
-		if (ndev->ieee80211_ptr) {
-			kfree(ndev->ieee80211_ptr);
-			ndev->ieee80211_ptr = NULL;
-		}
-		free_netdev(ndev);
-		return NULL;
-	}
-
-	return ndev;
-}
-
-void dhd_netdev_free(struct net_device *ndev)
-{
-#ifdef WL_CFG80211
-	ndev = dhd_cfg80211_netdev_free(ndev);
-#endif
-	if (ndev)
-		free_netdev(ndev);
-}
-
 static s32 wl_dongle_up(struct net_device *ndev, u32 up)
 {
 	s32 err = 0;
@@ -190,29 +166,15 @@ default_conf_out:
 }
 
 #ifdef CONFIG_NL80211_TESTMODE
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 11, 0))
-int dhd_cfg80211_testmode_cmd(struct wiphy *wiphy, struct wireless_dev *wdev, void *data, int len)
-#else
 int dhd_cfg80211_testmode_cmd(struct wiphy *wiphy, void *data, int len)
-#endif  /* LINUX_VERSION_CODE >= KERNEL_VERSION(3, 11, 0) */
 {
 	struct sk_buff *reply;
 	struct bcm_cfg80211 *cfg;
 	dhd_pub_t *dhd;
-	struct bcm_nlmsg_hdr *nlioc = data;
-	dhd_ioctl_t ioc = { 0 };
+	dhd_ioctl_t *ioc = data;
 	int err = 0;
-	void *buf = NULL, *cur;
-	u16 buflen;
-	u16 maxmsglen = PAGE_SIZE - 0x100;
-	bool newbuf = false;
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 11, 0))
-	int8 index = 0;
-	struct net_device *ndev = NULL;
-#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(3, 11, 0) */
-
-	WL_TRACE(("entry: cmd = %d\n", nlioc->cmd));
+	WL_TRACE(("entry: cmd = %d\n", ioc->cmd));
 	cfg = wiphy_priv(wiphy);
 	dhd = cfg->pub;
 
@@ -226,75 +188,16 @@ int dhd_cfg80211_testmode_cmd(struct wiphy *wiphy, void *data, int len)
 		return OSL_ERROR(BCME_DONGLE_DOWN);
 	}
 
-	len -= sizeof(struct bcm_nlmsg_hdr);
-
-	if (nlioc->len > 0) {
-		if (nlioc->len <= len) {
-			buf = (void *)nlioc + nlioc->offset;
-			*(char *)(buf + nlioc->len) = '\0';
-		} else {
-			if (nlioc->len > DHD_IOCTL_MAXLEN)
-				nlioc->len = DHD_IOCTL_MAXLEN;
-			buf = vzalloc(nlioc->len);
-			if (!buf)
-				return -ENOMEM;
-			newbuf = true;
-			memcpy(buf, (void *)nlioc + nlioc->offset, len);
-			*(char *)(buf + len) = '\0';
-		}
-	}
-
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 11, 0))
-	ndev = wdev_to_wlc_ndev(wdev, cfg);
-	index = dhd_net2idx(dhd->info, ndev);
-	if (index == DHD_BAD_IF) {
-	WL_ERR(("Bad ifidx from wdev:%p\n", wdev));
-		return BCME_ERROR;
-}
-#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(3, 11, 0) */
-
-	ioc.cmd = nlioc->cmd;
-	ioc.len = nlioc->len;
-	ioc.set = nlioc->set;
-	ioc.driver = nlioc->magic;
-	err = dhd_ioctl_process(dhd, 0, &ioc, buf);
-	if (err) {
-		WL_TRACE(("dhd_ioctl_process return err %d\n", err));
-		err = OSL_ERROR(err);
+	/* currently there is only one wiphy for ifidx 0 */
+	err = dhd_ioctl_process(dhd, 0, ioc);
+	if (err)
 		goto done;
-	}
 
-	cur = buf;
-	while (nlioc->len > 0) {
-		buflen = nlioc->len > maxmsglen ? maxmsglen : nlioc->len;
-		nlioc->len -= buflen;
-		reply = cfg80211_testmode_alloc_reply_skb(wiphy, buflen+4);
-		if (!reply) {
-			WL_ERR(("Failed to allocate reply msg\n"));
-			err = -ENOMEM;
-			break;
-		}
-
-		if (nla_put(reply, BCM_NLATTR_DATA, buflen, cur) ||
-			nla_put_u16(reply, BCM_NLATTR_LEN, buflen)) {
-			kfree_skb(reply);
-			err = -ENOBUFS;
-			break;
-		}
-
-		do {
-			err = cfg80211_testmode_reply(reply);
-		} while (err == -EAGAIN);
-		if (err) {
-			WL_ERR(("testmode reply failed:%d\n", err));
-			break;
-		}
-		cur += buflen;
-	}
-
+	/* response data is in ioc->buf so return ioc here */
+	reply = cfg80211_testmode_alloc_reply_skb(wiphy, sizeof(*ioc));
+	nla_put(reply, NL80211_ATTR_TESTDATA, sizeof(*ioc), ioc);
+	err = cfg80211_testmode_reply(reply);
 done:
-	if (newbuf)
-		vfree(buf);
 	DHD_OS_WAKE_UNLOCK(dhd);
 	return err;
 }

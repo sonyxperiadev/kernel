@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: linux_osl.c 476208 2014-05-08 05:18:26Z $
+ * $Id: linux_osl.c 433009 2013-10-30 09:13:49Z $
  */
 
 #define LINUX_PORT
@@ -120,6 +120,11 @@ struct osl_info {
 	osl_cmn_t *cmn; /* Common OSL related data shred between two OSH's */
 
 	void *bus_handle;
+#ifdef BCMDBG_CTRACE
+	spinlock_t ctrace_lock;
+	struct list_head ctrace_list;
+	int ctrace_num;
+#endif /* BCMDBG_CTRACE */
 };
 
 #define OSL_PKTTAG_CLEAR(p) \
@@ -281,6 +286,11 @@ osl_attach(void *pdev, uint bustype, bool pkttag)
 			break;
 	}
 
+#ifdef BCMDBG_CTRACE
+	spin_lock_init(&osh->ctrace_lock);
+	INIT_LIST_HEAD(&osh->ctrace_list);
+	osh->ctrace_num = 0;
+#endif /* BCMDBG_CTRACE */
 
 
 	return osh;
@@ -612,6 +622,9 @@ struct sk_buff * BCMFASTPATH
 osl_pkt_tonative(osl_t *osh, void *pkt)
 {
 	struct sk_buff *nskb;
+#ifdef BCMDBG_CTRACE
+	struct sk_buff *nskb1, *nskb2;
+#endif
 
 	if (osh->pub.pkttag)
 		OSL_PKTTAG_CLEAR(pkt);
@@ -620,6 +633,17 @@ osl_pkt_tonative(osl_t *osh, void *pkt)
 	for (nskb = (struct sk_buff *)pkt; nskb; nskb = nskb->next) {
 		atomic_sub(PKTISCHAINED(nskb) ? PKTCCNT(nskb) : 1, &osh->cmn->pktalloced);
 
+#ifdef BCMDBG_CTRACE
+		for (nskb1 = nskb; nskb1 != NULL; nskb1 = nskb2) {
+			if (PKTISCHAINED(nskb1)) {
+				nskb2 = PKTCLINK(nskb1);
+			}
+			else
+				nskb2 = NULL;
+
+			DEL_CTRACE(osh, nskb1);
+		}
+#endif /* BCMDBG_CTRACE */
 	}
 	return (struct sk_buff *)pkt;
 }
@@ -628,10 +652,18 @@ osl_pkt_tonative(osl_t *osh, void *pkt)
  * In the process, native packet is destroyed, there is no copying
  * Also, a packettag is zeroed out
  */
+#ifdef BCMDBG_CTRACE
+void * BCMFASTPATH
+osl_pkt_frmnative(osl_t *osh, void *pkt, int line, char *file)
+#else
 void * BCMFASTPATH
 osl_pkt_frmnative(osl_t *osh, void *pkt)
+#endif /* BCMDBG_CTRACE */
 {
 	struct sk_buff *nskb;
+#ifdef BCMDBG_CTRACE
+	struct sk_buff *nskb1, *nskb2;
+#endif
 
 	if (osh->pub.pkttag)
 		OSL_PKTTAG_CLEAR(pkt);
@@ -640,13 +672,29 @@ osl_pkt_frmnative(osl_t *osh, void *pkt)
 	for (nskb = (struct sk_buff *)pkt; nskb; nskb = nskb->next) {
 		atomic_add(PKTISCHAINED(nskb) ? PKTCCNT(nskb) : 1, &osh->cmn->pktalloced);
 
+#ifdef BCMDBG_CTRACE
+		for (nskb1 = nskb; nskb1 != NULL; nskb1 = nskb2) {
+			if (PKTISCHAINED(nskb1)) {
+				nskb2 = PKTCLINK(nskb1);
+			}
+			else
+				nskb2 = NULL;
+
+			ADD_CTRACE(osh, nskb1, file, line);
+		}
+#endif /* BCMDBG_CTRACE */
 	}
 	return (void *)pkt;
 }
 
 /* Return a new packet. zero out pkttag */
+#ifdef BCMDBG_CTRACE
+void * BCMFASTPATH
+osl_pktget(osl_t *osh, uint len, int line, char *file)
+#else
 void * BCMFASTPATH
 osl_pktget(osl_t *osh, uint len)
+#endif /* BCMDBG_CTRACE */
 {
 	struct sk_buff *skb;
 
@@ -661,6 +709,9 @@ osl_pktget(osl_t *osh, uint len)
 		skb->len  += len;
 		skb->priority = 0;
 
+#ifdef BCMDBG_CTRACE
+		ADD_CTRACE(osh, skb, file, line);
+#endif
 		atomic_inc(&osh->cmn->pktalloced);
 	}
 
@@ -732,6 +783,9 @@ osl_pktfree(osl_t *osh, void *p, bool send)
 		nskb = skb->next;
 		skb->next = NULL;
 
+#ifdef BCMDBG_CTRACE
+		DEL_CTRACE(osh, skb);
+#endif
 
 
 #ifdef CTFPOOL
@@ -1195,8 +1249,13 @@ osl_sleep(uint ms)
 /* Clone a packet.
  * The pkttag contents are NOT cloned.
  */
+#ifdef BCMDBG_CTRACE
+void *
+osl_pktdup(osl_t *osh, void *skb, int line, char *file)
+#else
 void *
 osl_pktdup(osl_t *osh, void *skb)
+#endif /* BCMDBG_CTRACE */
 {
 	void * p;
 
@@ -1244,9 +1303,70 @@ osl_pktdup(osl_t *osh, void *skb)
 
 	/* Increment the packet counter */
 	atomic_inc(&osh->cmn->pktalloced);
+#ifdef BCMDBG_CTRACE
+	ADD_CTRACE(osh, (struct sk_buff *)p, file, line);
+#endif
 	return (p);
 }
 
+#ifdef BCMDBG_CTRACE
+int osl_pkt_is_frmnative(osl_t *osh, struct sk_buff *pkt)
+{
+	unsigned long flags;
+	struct sk_buff *skb;
+	int ck = FALSE;
+
+	spin_lock_irqsave(&osh->ctrace_lock, flags);
+
+	list_for_each_entry(skb, &osh->ctrace_list, ctrace_list) {
+		if (pkt == skb) {
+			ck = TRUE;
+			break;
+		}
+	}
+
+	spin_unlock_irqrestore(&osh->ctrace_lock, flags);
+	return ck;
+}
+
+void osl_ctrace_dump(osl_t *osh, struct bcmstrbuf *b)
+{
+	unsigned long flags;
+	struct sk_buff *skb;
+	int idx = 0;
+	int i, j;
+
+	spin_lock_irqsave(&osh->ctrace_lock, flags);
+
+	if (b != NULL)
+		bcm_bprintf(b, " Total %d sbk not free\n", osh->ctrace_num);
+	else
+		printk(" Total %d sbk not free\n", osh->ctrace_num);
+
+	list_for_each_entry(skb, &osh->ctrace_list, ctrace_list) {
+		if (b != NULL)
+			bcm_bprintf(b, "[%d] skb %p:\n", ++idx, skb);
+		else
+			printk("[%d] skb %p:\n", ++idx, skb);
+
+		for (i = 0; i < skb->ctrace_count; i++) {
+			j = (skb->ctrace_start + i) % CTRACE_NUM;
+			if (b != NULL)
+				bcm_bprintf(b, "    [%s(%d)]\n", skb->func[j], skb->line[j]);
+			else
+				printk("    [%s(%d)]\n", skb->func[j], skb->line[j]);
+		}
+		if (b != NULL)
+			bcm_bprintf(b, "\n");
+		else
+			printk("\n");
+	}
+
+	spin_unlock_irqrestore(&osh->ctrace_lock, flags);
+
+	return;
+}
+#endif /* BCMDBG_CTRACE */
 
 
 /*

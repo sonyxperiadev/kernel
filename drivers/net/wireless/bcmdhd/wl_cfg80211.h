@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: wl_cfg80211.h 489825 2014-07-08 09:03:49Z $
+ * $Id: wl_cfg80211.h 449122 2014-01-16 07:23:11Z $
  */
 
 #ifndef _wl_cfg80211_h_
@@ -172,12 +172,6 @@ do {									\
 
 #define WL_PM_ENABLE_TIMEOUT 10000
 
-#ifdef WLAIBSS
-/* Custom AIBSS beacon parameters */
-#define AIBSS_INITIAL_MIN_BCN_DUR	500
-#define AIBSS_MIN_BCN_DUR		5000
-#define AIBSS_BCN_FLOOD_DUR		5000
-#endif /* WLAIBSS */
 
 /* driver status */
 enum wl_status {
@@ -409,10 +403,8 @@ struct ap_info {
 /* Structure to hold WPS, WPA IEs for a AP */
 	u8   probe_res_ie[VNDR_IES_MAX_BUF_LEN];
 	u8   beacon_ie[VNDR_IES_MAX_BUF_LEN];
-	u8   assoc_res_ie[VNDR_IES_MAX_BUF_LEN];
 	u32 probe_res_ie_len;
 	u32 beacon_ie_len;
-	u32 assoc_res_ie_len;
 	u8 *wpa_ie;
 	u8 *rsn_ie;
 	u8 *wps_ie;
@@ -455,9 +447,6 @@ struct parsed_ies {
 #ifdef WL11U
 /* Max length of Interworking element */
 #define IW_IES_MAX_BUF_LEN 		9
-#endif
-#ifdef WLFBT
-#define FBT_KEYLEN		32
 #endif
 #define MAX_EVENT_BUF_NUM 16
 typedef struct wl_eventmsg_buf {
@@ -581,21 +570,7 @@ struct bcm_cfg80211 {
 	struct delayed_work pm_enable_work;
 	vndr_ie_setbuf_t *ibss_vsie;	/* keep the VSIE for IBSS */
 	int ibss_vsie_len;
-#ifdef WLAIBSS
-	u32 aibss_txfail_pid;
-	u32 aibss_txfail_seq;
-#endif /* WLAIBSS */
-	u32 rmc_event_pid;
-	u32 rmc_event_seq;
 	bool roam_offload;
-#ifdef WLFBT
-	uint8 fbt_key[FBT_KEYLEN];
-#endif
-#ifdef WLTDLS
-	u8 *tdls_mgmt_frame;
-	u32 tdls_mgmt_frame_len;
-	s32 tdls_mgmt_freq;
-#endif /* WLTDLS */
 };
 
 
@@ -637,6 +612,10 @@ wl_dealloc_netinfo(struct bcm_cfg80211 *cfg, struct net_device *ndev)
 		if (ndev && (_net_info->ndev == ndev)) {
 			list_del(&_net_info->list);
 			cfg->iface_cnt--;
+			if (_net_info->wdev) {
+				kfree(_net_info->wdev);
+				ndev->ieee80211_ptr = NULL;
+			}
 			kfree(_net_info);
 		}
 	}
@@ -795,24 +774,35 @@ wl_get_netinfo_by_netdev(struct bcm_cfg80211 *cfg, struct net_device *ndev)
 #define ndev_to_wlc_ndev(ndev, cfg)	(ndev)
 #endif /* WL_ENABLE_P2P_IF */
 
-#if defined(WL_ENABLE_P2P_IF)
+#if defined(WL_CFG80211_P2P_DEV_IF)
+#define wdev_to_wlc_ndev(wdev, cfg)	\
+	((wdev->iftype == NL80211_IFTYPE_P2P_DEVICE) ? \
+	bcmcfg_to_prmry_ndev(cfg) : wdev_to_ndev(wdev))
+#define cfgdev_to_wlc_ndev(cfgdev, cfg)	wdev_to_wlc_ndev(cfgdev, cfg)
+#elif defined(WL_ENABLE_P2P_IF)
 #define cfgdev_to_wlc_ndev(cfgdev, cfg)	ndev_to_wlc_ndev(cfgdev, cfg)
-#define bcmcfg_to_prmry_cfgdev(cfgdev, cfg) bcmcfg_to_prmry_ndev(cfg)
 #else
 #define cfgdev_to_wlc_ndev(cfgdev, cfg)	(cfgdev)
-#define bcmcfg_to_prmry_cfgdev(cfgdev, cfg) (cfgdev)
-#endif 
+#endif /* WL_CFG80211_P2P_DEV_IF */
 
+#if defined(WL_CFG80211_P2P_DEV_IF)
+#define ndev_to_cfgdev(ndev)	ndev_to_wdev(ndev)
+#define discover_cfgdev(cfgdev, cfg) (cfgdev->iftype == NL80211_IFTYPE_P2P_DEVICE)
+#else
 #define ndev_to_cfgdev(ndev)	(ndev)
 #define discover_cfgdev(cfgdev, cfg) (cfgdev == cfg->p2p_net)
+#endif /* WL_CFG80211_P2P_DEV_IF */
 
-#if defined(WL_ENABLE_P2P_IF)
+#if defined(WL_CFG80211_P2P_DEV_IF)
+#define scan_req_match(cfg)	(((cfg) && (cfg->scan_request) && \
+	(cfg->scan_request->wdev == cfg->p2p_wdev)) ? true : false)
+#elif defined(WL_ENABLE_P2P_IF)
 #define scan_req_match(cfg)	(((cfg) && (cfg->scan_request) && \
 	(cfg->scan_request->dev == cfg->p2p_net)) ? true : false)
 #else
 #define scan_req_match(cfg)	(((cfg) && p2p_is_on(cfg) && p2p_scan(cfg)) ? \
 	true : false)
-#endif 
+#endif /* WL_CFG80211_P2P_DEV_IF */
 
 #define wl_to_sr(w) (w->scan_req_int)
 #if defined(STATIC_WL_PRIV_STRUCT)
@@ -928,14 +918,6 @@ extern void wl_cfg80211_update_power_mode(struct net_device *dev);
 
 extern void wl_cfg80211_ibss_vsie_set_buffer(vndr_ie_setbuf_t *ibss_vsie, int ibss_vsie_len);
 extern s32 wl_cfg80211_ibss_vsie_delete(struct net_device *dev);
-#ifdef WLAIBSS
-extern void wl_cfg80211_set_txfail_pid(int pid);
-#endif /* WLAIBSS */
-extern void wl_cfg80211_set_rmc_pid(int pid);
-
-#ifdef WLFBT
-extern void wl_cfg80211_get_fbt_key(uint8 *key);
-#endif
 
 /* Action frame specific functions */
 extern u8 wl_get_action_category(void *frame, u32 frame_len);
@@ -946,7 +928,5 @@ extern int wl_cfg80211_enable_roam_offload(struct net_device *dev, bool enable);
 #ifdef WL_CFG80211_VSDB_PRIORITIZE_SCAN_REQUEST
 struct net_device *wl_cfg80211_get_remain_on_channel_ndev(struct bcm_cfg80211 *cfg);
 #endif /* WL_CFG80211_VSDB_PRIORITIZE_SCAN_REQUEST */
-
-extern int wl_cfg80211_get_ioctl_version(void);
 
 #endif				/* _wl_cfg80211_h_ */

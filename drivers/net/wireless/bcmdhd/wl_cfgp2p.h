@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: wl_cfgp2p.h 476678 2014-05-09 14:46:37Z $
+ * $Id: wl_cfgp2p.h 444054 2013-12-18 11:33:42Z $
  */
 #ifndef _wl_cfgp2p_h_
 #define _wl_cfgp2p_h_
@@ -199,20 +199,24 @@ enum wl_cfgp2p_status {
 #endif
 #endif /* (LINUX_VERSION >= VERSION(3, 8, 0)) */
 
-#ifdef WL_NEWCFG_PRIVCMD_SUPPORT
-#undef WL_NEWCFG_PRIVCMD_SUPPORT
-#endif
+#ifndef WL_CFG80211_P2P_DEV_IF
+#endif /* WL_CFG80211_P2P_DEV_IF */
 
-#if defined(WL_ENABLE_P2P_IF) && (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 8, 0))
+#if defined(WL_ENABLE_P2P_IF) && (defined(WL_CFG80211_P2P_DEV_IF) || \
+	(LINUX_VERSION_CODE >= KERNEL_VERSION(3, 8, 0)))
 #error Disable 'WL_ENABLE_P2P_IF', if 'WL_CFG80211_P2P_DEV_IF' is enabled \
 	or kernel version is 3.8.0 or above
-#endif 
+#endif /* WL_ENABLE_P2P_IF && (WL_CFG80211_P2P_DEV_IF || (LINUX_VERSION >= VERSION(3, 8, 0))) */
 
-#if !defined(WLP2P) && defined(WL_ENABLE_P2P_IF)
+#if !defined(WLP2P) && (defined(WL_ENABLE_P2P_IF) || defined(WL_CFG80211_P2P_DEV_IF))
 #error WLP2P not defined
-#endif 
+#endif /* !WLP2P && (WL_ENABLE_P2P_IF || WL_CFG80211_P2P_DEV_IF) */
 
+#if defined(WL_CFG80211_P2P_DEV_IF)
+#define bcm_struct_cfgdev	struct wireless_dev
+#else
 #define bcm_struct_cfgdev	struct net_device
+#endif /* WL_CFG80211_P2P_DEV_IF */
 
 extern void
 wl_cfgp2p_listen_expired(unsigned long data);
@@ -353,6 +357,19 @@ wl_cfgp2p_unregister_ndev(struct bcm_cfg80211 *cfg);
 extern bool
 wl_cfgp2p_is_ifops(const struct net_device_ops *if_ops);
 
+#if defined(WL_CFG80211_P2P_DEV_IF)
+extern struct wireless_dev *
+wl_cfgp2p_add_p2p_disc_if(struct bcm_cfg80211 *cfg);
+
+extern int
+wl_cfgp2p_start_p2p_device(struct wiphy *wiphy, struct wireless_dev *wdev);
+
+extern void
+wl_cfgp2p_stop_p2p_device(struct wiphy *wiphy, struct wireless_dev *wdev);
+
+extern int
+wl_cfgp2p_del_p2p_disc_if(struct wireless_dev *wdev, struct bcm_cfg80211 *cfg);
+#endif /* WL_CFG80211_P2P_DEV_IF */
 
 /* WiFi Direct */
 #define SOCIAL_CHAN_1 1

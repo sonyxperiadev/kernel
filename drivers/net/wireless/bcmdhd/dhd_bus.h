@@ -24,7 +24,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dhd_bus.h 457888 2014-02-25 03:34:39Z $
+ * $Id: dhd_bus.h 442838 2013-12-13 00:56:44Z $
  */
 
 #ifndef _dhd_bus_h_
@@ -110,7 +110,7 @@ extern void *dhd_bus_pub(struct dhd_bus *bus);
 extern void *dhd_bus_txq(struct dhd_bus *bus);
 extern void *dhd_bus_sih(struct dhd_bus *bus);
 extern uint dhd_bus_hdrlen(struct dhd_bus *bus);
-extern void dhd_bus_set_dotxinrx(struct dhd_bus *bus, bool val);
+
 
 #define DHD_SET_BUS_STATE_DOWN(_bus)  do { \
 	(_bus)->dhd->busstate = DHD_BUS_DOWN; \

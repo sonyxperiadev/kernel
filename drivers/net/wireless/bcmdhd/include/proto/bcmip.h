@@ -21,7 +21,7 @@
  *
  * Fundamental constants relating to IP Protocol
  *
- * $Id: bcmip.h 457888 2014-02-25 03:34:39Z $
+ * $Id: bcmip.h 407335 2013-06-12 16:32:12Z $
  */
 
 #ifndef _bcmip_h_
@@ -221,11 +221,5 @@ ipv6_exthdr_len(uint8 *h, uint8 *proto)
 
 /* This marks the end of a packed structure section. */
 #include <packed_section_end.h>
-
-#define IPV4_ADDR_STR "%d.%d.%d.%d"
-#define IPV4_ADDR_TO_STR(addr)	((uint32)addr & 0xff000000) >> 24, \
-								((uint32)addr & 0x00ff0000) >> 16, \
-								((uint32)addr & 0x0000ff00) >> 8, \
-								((uint32)addr & 0x000000ff)
 
 #endif	/* _bcmip_h_ */

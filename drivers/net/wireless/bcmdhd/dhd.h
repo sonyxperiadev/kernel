@@ -5,7 +5,6 @@
  * DHD OS, bus, and protocol modules.
  *
  * Copyright (C) 1999-2014, Broadcom Corporation
- * Copyright (C) 2013 Sony Mobile Communications AB
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -25,7 +24,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dhd.h 487060 2014-06-24 13:42:01Z $
+ * $Id: dhd.h 448418 2014-01-14 07:57:52Z $
  */
 
 /****************
@@ -53,20 +52,12 @@
 struct task_struct;
 struct sched_param;
 int setScheduler(struct task_struct *p, int policy, struct sched_param *param);
-int get_scheduler_policy(struct task_struct *p);
 
 #define ALL_INTERFACES	0xff
 
 #include <wlioctl.h>
 #include <wlfc_proto.h>
 
-#ifdef CONFIG_SONY_SUBSYS_RAMDUMP
-#include <linux/sony_subsys_ramdump.h>
-#endif
-
-#if defined(WL11U) && !defined(MFP)
-#define MFP /* Applying interaction with MFP by spec HS2.0 REL2 */
-#endif /* WL11U */
 
 #if defined(KEEP_ALIVE)
 /* Default KEEP_ALIVE Period is 55 sec to prevent AP from sending Keep Alive probe frame */
@@ -166,15 +157,14 @@ typedef struct reorder_info {
 } reorder_info_t;
 
 #ifdef DHDTCPACK_SUPPRESS
-#define TCPACK_SUP_OFF		0	/* TCPACK suppress off */
-/* Replace TCPACK in txq when new coming one has higher ACK number. */
-#define TCPACK_SUP_REPLACE	1
-/* TCPACK_SUP_REPLACE + delayed TCPACK TX unless ACK to PSH DATA.
- * This will give benefits to Half-Duplex bus interface(e.g. SDIO) that
- * 1. we are able to read TCP DATA packets first from the bus
- * 2. TCPACKs that do not need to hurry delivered remains longer in TXQ so can be suppressed.
- */
-#define TCPACK_SUP_DELAYTX	2
+/* Max number of TCP streams that have own src/dst IP addrs and TCP ports */
+#define MAXTCPSTREAMS 4	/* Keep this to be power of 2 */
+typedef struct tcp_ack_info {
+	void *pkt_in_q;			/* TCP ACK packet that is already in txq or DelayQ */
+	void *pkt_ether_hdr;	/* Ethernet header pointer of pkt_in_q */
+} tcp_ack_info_t;
+
+void dhd_onoff_tcpack_sup(void *pub, bool on);
 #endif /* DHDTCPACK_SUPPRESS */
 
 /* Common structure for module and instance linkage */
@@ -279,15 +269,12 @@ typedef struct dhd_pub {
 	0 - Do not do any proptxtstatus flow control
 	1 - Use implied credit from a packet status
 	2 - Use explicit credit
-	3 - Only AMPDU hostreorder used. no wlfc.
 	*/
 	uint8	proptxstatus_mode;
 	bool	proptxstatus_txoff;
 	bool	proptxstatus_module_ignore;
 	bool	proptxstatus_credit_ignore;
 	bool	proptxstatus_txstatus_ignore;
-
-	bool	wlfc_rxpkt_chk;
 	/*
 	 * implement below functions in each platform if needed.
 	 */
@@ -322,19 +309,19 @@ typedef struct dhd_pub {
 	uint32 store_idx;
 	uint32 sent_idx;
 #ifdef DHDTCPACK_SUPPRESS
-	uint8 tcpack_sup_mode;		/* TCPACK suppress mode */
-	void *tcpack_sup_module;	/* TCPACK suppress module */
+	bool tcpack_sup_enabled;
+	int tcp_ack_info_cnt;
+	tcp_ack_info_t tcp_ack_info_tbl[MAXTCPSTREAMS];
 #endif /* DHDTCPACK_SUPPRESS */
 #if defined(ARP_OFFLOAD_SUPPORT)
 	uint32 arp_version;
 #endif
-#if defined(CUSTOMER_HW5)
-	bool dhd_bug_on;
-#endif
+#ifdef CUSTOM_SET_CPUCORE
+	struct task_struct * current_dpc;
+	struct task_struct * current_rxf;
+	bool chan_isvht80;
+#endif /* CUSTOM_SET_CPUCORE */
 } dhd_pub_t;
-#if defined(CUSTOMER_HW5)
-#define MAX_RESCHED_CNT 600
-#endif
 
 
 	#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 27)) && defined(CONFIG_PM_SLEEP)
@@ -439,6 +426,8 @@ inline static void MUTEX_UNLOCK_SOFTAP_SET(dhd_pub_t * dhdp)
 
 #define DHD_OS_WAKE_LOCK(pub)			dhd_os_wake_lock(pub)
 #define DHD_OS_WAKE_UNLOCK(pub)		dhd_os_wake_unlock(pub)
+#define DHD_OS_WD_WAKE_LOCK(pub)		dhd_os_wd_wake_lock(pub)
+#define DHD_OS_WD_WAKE_UNLOCK(pub)		dhd_os_wd_wake_unlock(pub)
 #define DHD_OS_WAKE_LOCK_TIMEOUT(pub)		dhd_os_wake_lock_timeout(pub)
 #define DHD_OS_WAKE_LOCK_RX_TIMEOUT_ENABLE(pub, val) \
 	dhd_os_wake_lock_rx_timeout_enable(pub, val)
@@ -446,9 +435,6 @@ inline static void MUTEX_UNLOCK_SOFTAP_SET(dhd_pub_t * dhdp)
 	dhd_os_wake_lock_ctrl_timeout_enable(pub, val)
 #define DHD_OS_WAKE_LOCK_CTRL_TIMEOUT_CANCEL(pub) \
 	dhd_os_wake_lock_ctrl_timeout_cancel(pub)
-
-#define DHD_OS_WD_WAKE_LOCK(pub)		dhd_os_wd_wake_lock(pub)
-#define DHD_OS_WD_WAKE_UNLOCK(pub)		dhd_os_wd_wake_unlock(pub)
 #define DHD_PACKET_TIMEOUT_MS	500
 #define DHD_EVENT_TIMEOUT_MS	1500
 
@@ -547,9 +533,6 @@ extern void dhd_os_tcpackunlock(dhd_pub_t *pub);
 
 extern int dhd_customer_oob_irq_map(void *adapter, unsigned long *irq_flags_ptr);
 extern int dhd_customer_gpio_wlan_ctrl(void *adapter, int onoff);
-#ifdef GET_CUSTOM_MAC_ENABLE
-extern int somc_get_mac_address(unsigned char *buf);
-#endif /* GET_CUSTOM_MAC_ENABLE */
 extern int dhd_custom_get_mac_address(void *adapter, unsigned char *buf);
 extern void get_customized_country_code(void *adapter, char *country_iso_code, wl_country_t *cspec);
 extern void dhd_os_sdunlock_sndup_rxq(dhd_pub_t * pub);
@@ -561,6 +544,9 @@ extern void dhd_set_version_info(dhd_pub_t *pub, char *fw);
 extern bool dhd_os_check_if_up(dhd_pub_t *pub);
 extern int dhd_os_check_wakelock(dhd_pub_t *pub);
 
+#ifdef CUSTOM_SET_CPUCORE
+extern void dhd_set_cpucore(dhd_pub_t *dhd, int set);
+#endif /* CUSTOM_SET_CPUCORE */
 
 #if defined(KEEP_ALIVE)
 extern int dhd_keep_alive_onoff(dhd_pub_t *dhd);
@@ -807,13 +793,6 @@ extern uint dhd_pktgen_len;
 #define MAX_PKTGEN_LEN 1800
 #endif
 
-#ifdef CONFIG_SONY_SUBSYS_RAMDUMP
-struct crash_msg {
-	char crash_buf[SUBSYS_CRASH_REASON_LEN];
-	char version_info[128];
-};
-extern struct crash_msg subsys;
-#endif
 
 /* optionally set by a module_param_string() */
 #define MOD_PARAM_PATHLEN	2048
@@ -860,7 +839,7 @@ int dhd_ndo_enable(dhd_pub_t * dhd, int ndo_enable);
 int dhd_ndo_add_ip(dhd_pub_t *dhd, char* ipaddr, int idx);
 int dhd_ndo_remove_ip(dhd_pub_t *dhd, int idx);
 /* ioctl processing for nl80211 */
-int dhd_ioctl_process(dhd_pub_t *pub, int ifidx, struct dhd_ioctl *ioc, void *data_buf);
+int dhd_ioctl_process(dhd_pub_t *pub, int ifidx, struct dhd_ioctl *ioc);
 
 void dhd_bus_update_fw_nv_path(struct dhd_bus *bus, char *pfw_path, char *pnv_path);
 void dhd_set_bus_state(void *bus, uint32 state);
@@ -872,7 +851,6 @@ extern bool dhd_prec_drop_pkts(dhd_pub_t *dhdp, struct pktq *pq, int prec, f_dro
 #ifdef PROP_TXSTATUS
 int dhd_os_wlfc_block(dhd_pub_t *pub);
 int dhd_os_wlfc_unblock(dhd_pub_t *pub);
-extern const uint8 prio2fifo[];
 #endif /* PROP_TXSTATUS */
 
 uint8* dhd_os_prealloc(dhd_pub_t *dhdpub, int section, uint size, bool kmalloc_if_fail);

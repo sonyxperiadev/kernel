@@ -20,7 +20,7 @@
  *      Notwithstanding the above, under no circumstances may you combine this
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
- * $Id: bcmevent.c 487870 2014-06-27 07:37:35Z $
+ * $Id: bcmevent.c 440870 2013-12-04 05:23:45Z $
  */
 
 #include <typedefs.h>
@@ -94,10 +94,6 @@ const bcmevent_name_t bcmevent_names[] = {
 	BCMEVENT_NAME(WLC_E_ACTION_FRAME_RX),
 	BCMEVENT_NAME(WLC_E_ACTION_FRAME_COMPLETE),
 #endif
-#ifdef BCMWAPI_WAI
-	BCMEVENT_NAME(WLC_E_WAI_STA_EVENT),
-	BCMEVENT_NAME(WLC_E_WAI_MSG),
-#endif /* BCMWAPI_WAI */
 	BCMEVENT_NAME(WLC_E_ESCAN_RESULT),
 	BCMEVENT_NAME(WLC_E_ACTION_FRAME_OFF_CHAN_COMPLETE),
 #ifdef WLP2P
@@ -149,10 +145,6 @@ const bcmevent_name_t bcmevent_names[] = {
 	BCMEVENT_NAME(WLC_E_BCMC_CREDIT_SUPPORT),
 #endif
 	BCMEVENT_NAME(WLC_E_TXFAIL_THRESH),
-#ifdef WLAIBSS
-	BCMEVENT_NAME(WLC_E_AIBSS_TXFAIL),
-#endif /* WLAIBSS */
-	BCMEVENT_NAME(WLC_E_RMC_EVENT),
 };
 
 const int bcmevent_names_size = ARRAYSIZE(bcmevent_names);

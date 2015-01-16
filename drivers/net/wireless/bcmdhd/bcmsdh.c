@@ -22,7 +22,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: bcmsdh.c 455573 2014-02-14 17:49:31Z $
+ * $Id: bcmsdh.c 432245 2013-10-26 22:45:40Z $
  */
 
 /**
@@ -72,7 +72,7 @@ bcmsdh_enable_hw_oob_intr(bcmsdh_info_t *sdh, bool enable)
  * @return bcmsdh_info_t Handle to BCMSDH context.
  */
 bcmsdh_info_t *
-bcmsdh_attach(osl_t *osh, void *sdioh, ulong *regsva)
+bcmsdh_attach(osl_t *osh, void *sdioh, uint32 *regsva)
 {
 	bcmsdh_info_t *bcmsdh;
 

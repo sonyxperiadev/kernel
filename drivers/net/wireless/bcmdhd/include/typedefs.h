@@ -18,7 +18,7 @@
  *      Notwithstanding the above, under no circumstances may you combine this
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
- * $Id: typedefs.h 453696 2014-02-06 01:10:20Z $
+ * $Id: typedefs.h 409715 2013-06-26 16:10:24Z $
  */
 
 #ifndef _TYPEDEFS_H_
@@ -65,7 +65,7 @@
 
 #endif	/* ! __cplusplus */
 
-#if defined(__LP64__)
+#if defined(__x86_64__)
 #define TYPEDEF_UINTPTR
 typedef unsigned long long int uintptr;
 #endif

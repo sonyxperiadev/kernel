@@ -24,7 +24,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: wlioctl.h 489825 2014-07-08 09:03:49Z $
+ * $Id: wlioctl.h 433418 2013-10-31 20:16:40Z $
  */
 
 #ifndef _wlioctl_h_
@@ -37,7 +37,6 @@
 #include <proto/bcmip.h>
 #include <proto/bcmevent.h>
 #include <proto/802.11.h>
-#include <proto/802.1d.h>
 #include <bcmwifi_channels.h>
 #include <bcmwifi_rates.h>
 #include <devctrl_if/wlioctl_defs.h>
@@ -717,29 +716,6 @@ typedef struct wl_rm_rep {
 } wl_rm_rep_t;
 #define WL_RM_REP_FIXED_LEN	8
 
-#ifdef BCMCCX
-
-#define LEAP_USER_MAX		32
-#define LEAP_DOMAIN_MAX		32
-#define LEAP_PASSWORD_MAX	32
-
-typedef struct wl_leap_info {
-	wlc_ssid_t ssid;
-	uint8 user_len;
-	uchar user[LEAP_USER_MAX];
-	uint8 password_len;
-	uchar password[LEAP_PASSWORD_MAX];
-	uint8 domain_len;
-	uchar domain[LEAP_DOMAIN_MAX];
-} wl_leap_info_t;
-
-typedef struct wl_leap_list {
-	uint32 buflen;
-	uint32 version;
-	uint32 count;
-	wl_leap_info_t leap_info[1];
-} wl_leap_list_t;
-#endif	/* BCMCCX */
 
 typedef enum sup_auth_status {
 	/* Basic supplicant authentication states */
@@ -1053,16 +1029,6 @@ typedef struct wl_ioctl {
 	uint used;	/* bytes read or written (optional) */
 	uint needed;	/* bytes needed (optional) */
 } wl_ioctl_t;
-#ifdef CONFIG_COMPAT
-typedef struct compat_wl_ioctl {
-	uint cmd;	/* common ioctl definition */
-	uint32 buf;	/* pointer to user buffer */
-	uint len;	/* length of user buffer */
-	uint8 set;		/* 1=set IOCTL; 0=query IOCTL */
-	uint used;	/* bytes read or written (optional) */
-	uint needed;	/* bytes needed (optional) */
-} compat_wl_ioctl_t;
-#endif /* CONFIG_COMPAT */
 
 
 /*
@@ -2222,12 +2188,6 @@ struct ampdu_tid_control {
 	uint8 enable;			/* enable/disable */
 };
 
-/* struct for per-tid, per-mode ampdu control */
-struct ampdu_tid_control_mode {
-	struct ampdu_tid_control control[NUMPRIO]; /* tid will be 0xff for not used element */
-	char mode_name[8]; /* supported mode : AIBSS */
-};
-
 /* structure for identifying ea/tid for sending addba/delba */
 struct ampdu_ea_tid {
 	struct ether_addr ea;		/* Station address */
@@ -2669,6 +2629,308 @@ typedef struct wl_keep_alive_pkt {
 
 #define WL_KEEP_ALIVE_FIXED_LEN		OFFSETOF(wl_keep_alive_pkt_t, data)
 
+typedef struct awdl_config_params {
+	uint32	version;
+	uint8	awdl_chan;		/* awdl channel */
+	uint8	guard_time;		/* Guard Time */
+	uint16	aw_period;		/* AW interval period */
+	uint16  aw_cmn_length;		/* Radio on Time AW */
+	uint16	action_frame_period;	/* awdl action frame period */
+	uint16  awdl_pktlifetime;	/* max packet life time in msec for awdl action frames  */
+	uint16  awdl_maxnomaster;	/* max master missing time */
+	uint16  awdl_extcount;		/* Max extended period count for traffic  */
+	uint16	aw_ext_length;		/* AW ext period */
+	uint16	awdl_nmode;	        /* Operation mode of awdl interface; * 0 - Legacy mode
+					 * 1 - 11n rate only   * 2 - 11n + ampdu rx/tx
+					 */
+	struct ether_addr ea;		/* destination bcast/mcast  address to which action frame
+					 * need to be sent
+					 */
+} awdl_config_params_t;
+
+typedef struct wl_awdl_action_frame {
+	uint16	len_bytes;
+	uint8	awdl_action_frame_data[1];
+} wl_awdl_action_frame_t;
+
+#define WL_AWDL_ACTION_FRAME_FIXED_LEN		OFFSETOF(wl_awdl_action_frame_t, awdl_sync_frame)
+
+typedef struct awdl_peer_node {
+	uint32	type_state;		/* Master, slave , etc.. */
+	uint16	aw_counter;		/* avail window counter */
+	int8	rssi;			/* rssi last af was received at */
+	int8	last_rssi;		/* rssi in the last AF */
+	uint16	tx_counter;
+	uint16	tx_delay;		/* ts_hw - ts_fw */
+	uint16	period_tu;
+	uint16	aw_period;
+	uint16	aw_cmn_length;
+	uint16	aw_ext_length;
+	uint32	self_metrics;		/* Election Metric */
+	uint32	top_master_metrics;	/* Top Master Metric */
+	struct ether_addr	addr;
+	struct ether_addr	top_master;
+	uint8	dist_top;		/* Distance from Top */
+} awdl_peer_node_t;
+
+typedef struct awdl_peer_table {
+	uint16  version;
+	uint16	len;
+	uint8 peer_nodes[1];
+} awdl_peer_table_t;
+
+typedef struct awdl_af_hdr {
+	struct ether_addr dst_mac;
+	uint8 action_hdr[4]; /* Category + OUI[3] */
+} awdl_af_hdr_t;
+
+typedef struct awdl_oui {
+	uint8 oui[3];	/* default: 0x00 0x17 0xf2 */
+	uint8 oui_type; /* AWDL: 0x08 */
+} awdl_oui_t;
+
+typedef BWL_PRE_PACKED_STRUCT struct awdl_hdr {
+	uint8	type;		/* 0x08 AWDL */
+	uint8	version;
+	uint8	sub_type;	/* Sub type */
+	uint8	rsvd;		/* Reserved */
+	uint32	phy_timestamp;	/* PHY Tx time */
+	uint32	fw_timestamp;	/* Target Tx time */
+} BWL_POST_PACKED_STRUCT awdl_hdr_t;
+
+typedef BWL_PRE_PACKED_STRUCT struct awdl_oob_af_params {
+	struct ether_addr bssid;
+	struct ether_addr dst_mac;
+	uint32 channel;
+	uint32 dwell_time;
+	uint32 flags;
+	uint32 pkt_lifetime;
+	uint32 tx_rate;
+	uint32 max_retries; /* for unicast frames only */
+	uint16 payload_len;
+	uint8  payload[1]; /* complete AF payload */
+} BWL_POST_PACKED_STRUCT awdl_oob_af_params_t;
+
+typedef BWL_PRE_PACKED_STRUCT struct awdl_sync_params {
+	uint8	type;			/* Type */
+	uint16	param_len;		/* sync param length */
+	uint8	tx_chan;		/* tx channel */
+	uint16	tx_counter;		/* tx down counter */
+	uint8	master_chan;		/* master home channel */
+	uint8	guard_time;		/* Gaurd Time */
+	uint16	aw_period;		/* AW period */
+	uint16	action_frame_period;	/* awdl action frame period */
+	uint16	awdl_flags;		/* AWDL Flags */
+	uint16	aw_ext_length;		/* AW extention len */
+	uint16	aw_cmn_length;		/* AW common len */
+	uint16	aw_remaining;		/* Remaining AW length */
+	uint8	min_ext;		/* Minimum Extention count */
+	uint8	max_ext_multi;		/* Max multicast Extention count */
+	uint8	max_ext_uni;		/* Max unicast Extention count */
+	uint8	max_ext_af;		/* Max af Extention count */
+	struct ether_addr current_master;	/* Current Master mac addr */
+	uint8	presence_mode;		/* Presence mode */
+	uint8	reserved;
+	uint16	aw_counter;		/* AW seq# */
+	uint16	ap_bcn_alignment_delta;	/* AP Beacon alignment delta  */
+} BWL_POST_PACKED_STRUCT awdl_sync_params_t;
+
+typedef BWL_PRE_PACKED_STRUCT struct awdl_channel_sequence {
+	uint8	aw_seq_len;		/* AW seq length */
+	uint8	aw_seq_enc;		/* AW seq encoding */
+	uint8	aw_seq_duplicate_cnt;	/* AW seq dupilcate count */
+	uint8	seq_step_cnt;		/* Seq spet count */
+	uint16	seq_fill_chan;		/* channel to fill in; 0xffff repeat current channel */
+	uint8	chan_sequence[1];	/* Variable list of channel Sequence */
+} BWL_POST_PACKED_STRUCT awdl_channel_sequence_t;
+#define WL_AWDL_CHAN_SEQ_FIXED_LEN   OFFSETOF(awdl_channel_sequence_t, chan_sequence)
+
+typedef BWL_PRE_PACKED_STRUCT struct awdl_election_info {
+	uint8	election_flags;	/* Election Flags */
+	uint16	election_ID;	/* Election ID */
+	uint32	self_metrics;
+} BWL_POST_PACKED_STRUCT awdl_election_info_t;
+
+typedef BWL_PRE_PACKED_STRUCT struct awdl_election_tree_info {
+	uint8	election_flags;	/* Election Flags */
+	uint16	election_ID;	/* Election ID */
+	uint32	self_metrics;
+	int8 master_sync_rssi_thld;
+	int8 slave_sync_rssi_thld;
+	int8 edge_sync_rssi_thld;
+	int8 close_range_rssi_thld;
+	int8 mid_range_rssi_thld;
+	uint8 max_higher_masters_close_range;
+	uint8 max_higher_masters_mid_range;
+	uint8 max_tree_depth;
+	/* read only */
+	struct ether_addr top_master;	/* top Master mac addr */
+	uint32 top_master_self_metric;
+	uint8  current_tree_depth;
+} BWL_POST_PACKED_STRUCT awdl_election_tree_info_t;
+
+typedef BWL_PRE_PACKED_STRUCT struct awdl_election_params_tlv {
+	uint8	type;			/* Type */
+	uint16	param_len;		/* Election param length */
+	uint8	election_flags;	/* Election Flags */
+	uint16	election_ID;	/* Election ID */
+	uint8	dist_top;	/* Distance from Top */
+	uint8	rsvd;		/* Reserved */
+	struct ether_addr top_master;	/* Top Master mac addr */
+	uint32	top_master_metrics;
+	uint32	self_metrics;
+	uint8	pad[2];		/* Padding  */
+} BWL_POST_PACKED_STRUCT awdl_election_params_tlv_t;
+
+typedef struct awdl_payload {
+	uint32	len;		/* Payload length */
+	uint8	payload[1];	/* Payload */
+} awdl_payload_t;
+
+typedef struct awdl_long_payload {
+	uint8   long_psf_period;      /* transmit every long_psf_perios AWs */
+	uint8   long_psf_tx_offset;   /* delay from aw_start */
+	uint16	len;		          /* Payload length */
+	uint8	payload[1];           /* Payload */
+} BWL_POST_PACKED_STRUCT awdl_long_payload_t;
+
+typedef BWL_PRE_PACKED_STRUCT struct awdl_opmode {
+	uint8	mode;		/* 0 - Auto; 1 - Fixed */
+	uint8	role;		/* 0 - slave; 1 - non-elect master; 2 - master */
+	uint16	bcast_tu; /* Bcasting period(TU) for non-elect master */
+	struct ether_addr master; /* Address of master to sync to */
+	uint16	cur_bcast_tu;	/* Current Bcasting Period(TU) */
+} BWL_PRE_PACKED_STRUCT awdl_opmode_t;
+
+typedef BWL_PRE_PACKED_STRUCT struct awdl_extcount {
+	uint8	minExt;			/* Min extension count */
+	uint8	maxExtMulti;	/* Max extension count for mcast packets */
+	uint8	maxExtUni;		/* Max extension count for unicast packets */
+	uint8	maxAfExt;			/* Max extension count */
+} BWL_PRE_PACKED_STRUCT awdl_extcount_t;
+
+/* peer add/del operation */
+typedef struct awdl_peer_op {
+	uint8 version;
+	uint8 opcode;	/* see opcode definition */
+	struct ether_addr addr;
+	uint8 mode;
+} awdl_peer_op_t;
+
+/* peer op table */
+typedef struct awdl_peer_op_tbl {
+	uint16	len;		/* length */
+	uint8	tbl[1];	/* Peer table */
+} awdl_peer_op_tbl_t;
+
+typedef BWL_PRE_PACKED_STRUCT struct awdl_peer_op_node {
+	struct ether_addr addr;
+	uint32 flags;	/* Flags to indicate various states */
+} BWL_POST_PACKED_STRUCT awdl_peer_op_node_t;
+
+#define AWDL_PEER_OP_CUR_VER	0
+
+/* AWDL related statistics */
+typedef BWL_PRE_PACKED_STRUCT struct awdl_stats {
+	uint32	afrx;
+	uint32	aftx;
+	uint32	datatx;
+	uint32	datarx;
+	uint32	txdrop;
+	uint32	rxdrop;
+	uint32	monrx;
+	uint32	lostmaster;
+	uint32	misalign;
+	uint32	aws;
+	uint32	aw_dur;
+	uint32	debug;
+	uint32  txsupr;
+	uint32	afrxdrop;
+	uint32  awdrop;
+	uint32  noawchansw;
+	uint32  rx80211;
+	uint32  peeropdrop;
+} BWL_POST_PACKED_STRUCT awdl_stats_t;
+
+typedef BWL_PRE_PACKED_STRUCT struct awdl_uct_stats {
+	uint32 aw_proc_in_aw_sched;
+	uint32 aw_upd_in_pre_aw_proc;
+	uint32 pre_aw_proc_in_aw_set;
+	uint32 ignore_pre_aw_proc;
+	uint32 miss_pre_aw_intr;
+	uint32 aw_dur_zero;
+	uint32 aw_sched;
+	uint32 aw_proc;
+	uint32 pre_aw_proc;
+	uint32 not_init;
+	uint32 null_awdl;
+} BWL_POST_PACKED_STRUCT awdl_uct_stats_t;
+
+typedef struct awdl_pw_opmode {
+	struct ether_addr top_master;	/* Peer mac addr */
+	uint8 mode; /* 0 - normal; 1 - fast mode */
+} awdl_pw_opmode_t;
+
+/* i/f request */
+typedef struct wl_awdl_if {
+	int32 cfg_idx;
+	int32 up;
+	struct ether_addr if_addr;
+	struct ether_addr bssid;
+} wl_awdl_if_t;
+
+typedef struct _aw_start {
+	uint8 role;
+	struct ether_addr	master;
+	uint8	aw_seq_num;
+} aw_start_t;
+
+typedef struct _aw_extension_start {
+	uint8 aw_ext_num;
+} aw_extension_start_t;
+
+typedef struct _awdl_peer_state {
+	struct ether_addr peer;
+	uint8	state;
+} awdl_peer_state_t;
+
+typedef struct _awdl_sync_state_changed {
+	uint8	new_role;
+	struct ether_addr master;
+} awdl_sync_state_changed_t;
+
+typedef struct _awdl_sync_state {
+	uint8	role;
+	struct ether_addr master;
+	uint32 continuous_election_enable;
+} awdl_sync_state_t;
+
+typedef struct _awdl_aw_ap_alignment {
+	uint32	enabled;
+	int32	offset;
+	uint32	align_on_dtim;
+} awdl_aw_ap_alignment_t;
+
+typedef struct _awdl_peer_stats {
+	uint32 version;
+	struct ether_addr address;
+	uint8 clear;
+	int8 rssi;
+	int8 avg_rssi;
+	uint8 txRate;
+	uint8 rxRate;
+	uint32 numTx;
+	uint32 numTxRetries;
+	uint32 numTxFailures;
+} awdl_peer_stats_t;
+
+#define MAX_NUM_AWDL_KEYS 4
+typedef struct _awdl_aes_key {
+	uint32 version;
+	int32 enable;
+	struct ether_addr awdl_peer;
+	uint8 keys[MAX_NUM_AWDL_KEYS][16];
+} awdl_aes_key_t;
 
 /*
  * Dongle pattern matching filter.
@@ -3375,20 +3637,6 @@ typedef BWL_PRE_PACKED_STRUCT struct {
 #define LOGRRC_FIX_LEN	8
 #define IOBUF_ALLOWED_NUM_OF_LOGREC(type, len) ((len - LOGRRC_FIX_LEN)/sizeof(type))
 
-#ifdef BCMWAPI_WAI
-#define IV_LEN 16
-	struct wapi_sta_msg_t
-	{
-		uint16	msg_type;
-		uint16	datalen;
-		uint8	vap_mac[6];
-		uint8	reserve_data1[2];
-		uint8	sta_mac[6];
-		uint8	reserve_data2[2];
-		uint8	gsn[IV_LEN];
-		uint8	wie[256];
-	};
-#endif /* BCMWAPI_WAI */
 
 	/* chanim acs record */
 	typedef struct {

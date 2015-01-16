@@ -84,6 +84,12 @@
 
 #define MSM_SDCC_PM_QOS_TIMEOUT		10000 /* usecs */
 
+#ifdef CONFIG_WIFI_CONTROL_FUNC
+extern int wcf_status_register(
+		void (*cb)(int card_present, void *dev), void *dev);
+extern unsigned int wcf_status(struct device *dev);
+#endif
+
 #if defined(CONFIG_DEBUG_FS)
 static void msmsdcc_dbg_createhost(struct msmsdcc_host *);
 static struct dentry *debugfs_dir;
@@ -2341,12 +2347,6 @@ msmsdcc_request(struct mmc_host *mmc, struct mmc_request *mrq)
 		    ((mrq->cmd->opcode == SD_IO_RW_EXTENDED) &&
 		     is_data_pend_for_cmd53(host)))
 			host->curr.use_wr_data_pend = true;
-	}
-
-	if (mrq->cmd->opcode == SD_IO_RW_EXTENDED &&
-		host->plat->use_for_wifi) {
-		host->disable_mciclk_pwrsave = 1;
-		msmsdcc_set_pwrsave(host->mmc, 0);
 	}
 
 	msmsdcc_request_start(host, mrq);
@@ -5877,10 +5877,12 @@ static struct mmc_platform_data *msmsdcc_populate_pdata(struct device *dev)
 		pdata->nonremovable = true;
 	if (of_get_property(np, "qcom,disable-cmd23", NULL))
 		pdata->disable_cmd23 = true;
+#ifdef CONFIG_WIFI_CONTROL_FUNC
+	if (of_get_property(np, "qcom,wifi-control-func", NULL))
+		pdata->wifi_control_func = true;
+#endif
 	of_property_read_u32(np, "qcom,dat1-mpm-int",
 					&pdata->mpm_sdiowakeup_int);
-	if (of_get_property(np, "somc,use-for-wifi", NULL))
-		pdata->use_for_wifi = true;
 	return pdata;
 err:
 	return NULL;
@@ -6185,15 +6187,6 @@ msmsdcc_probe(struct platform_device *pdev)
 	if (plat->is_sdio_al_client)
 		mmc->pm_flags |= MMC_PM_IGNORE_PM_NOTIFY;
 
-	if (plat->use_for_wifi) {
-#ifdef CONFIG_MACH_SONY_SHINANO
-		plat->register_status_notify = shinano_wifi_status_register;
-		plat->status = shinano_wifi_status;
-#endif
-		mmc->pm_caps |= MMC_PM_IGNORE_PM_NOTIFY;
-		mmc->pm_flags |= mmc->pm_caps;
-	}
-
 	mmc->max_segs = msmsdcc_get_nr_sg(host);
 	mmc->max_blk_size = MMC_MAX_BLK_SIZE;
 	mmc->max_blk_count = MMC_MAX_BLK_CNT;
@@ -6267,6 +6260,15 @@ msmsdcc_probe(struct platform_device *pdev)
 	/*
 	 * Setup card detect change
 	 */
+
+#ifdef CONFIG_WIFI_CONTROL_FUNC
+	pr_info("%s: id %d, nonremovable %d\n", mmc_hostname(mmc),
+			host->pdev->id, plat->nonremovable);
+	if (plat->wifi_control_func) {
+		plat->register_status_notify = wcf_status_register;
+		plat->status = wcf_status;
+	}
+#endif
 
 	if (!plat->status_gpio)
 		plat->status_gpio = -ENOENT;
@@ -6779,8 +6781,6 @@ msmsdcc_runtime_suspend(struct device *dev)
 		if (unlikely(work_busy(&mmc->detect.work))) {
 			rc = -EAGAIN;
 		} else {
-			if (host->plat->use_for_wifi)
-				mmc->pm_flags |= MMC_PM_KEEP_POWER;
 			rc = mmc_suspend_host(mmc);
 		}
 		pm_runtime_put_noidle(dev);

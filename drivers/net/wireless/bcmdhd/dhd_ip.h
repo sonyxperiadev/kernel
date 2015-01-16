@@ -23,7 +23,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dhd_ip.h 457888 2014-02-25 03:34:39Z $
+ * $Id: dhd_ip.h 434656 2013-11-07 01:11:33Z $
  */
 
 #ifndef _dhd_ip_h_
@@ -50,22 +50,10 @@ extern pkt_frag_t pkt_frag_info(osl_t *osh, void *p);
 /* Size of MAX possible TCP ACK packet. Extra bytes for IP/TCP option fields */
 #define	TCPACKSZMAX	(TCPACKSZMIN + 100)
 
-/* Max number of TCP streams that have own src/dst IP addrs and TCP ports */
-#define TCPACK_INFO_MAXNUM 4
-#define TCPDATA_INFO_MAXNUM 4
-#define TCPDATA_PSH_INFO_MAXNUM (8 * TCPDATA_INFO_MAXNUM)
-
-#define TCPDATA_INFO_TIMEOUT 5000	/* Remove tcpdata_info if inactive for this time (in ms) */
-
-extern int dhd_tcpack_suppress_set(dhd_pub_t *dhdp, uint8 on);
+extern void dhd_tcpack_suppress_set(dhd_pub_t *dhdp, bool on);
 extern void dhd_tcpack_info_tbl_clean(dhd_pub_t *dhdp);
 extern int dhd_tcpack_check_xmit(dhd_pub_t *dhdp, void *pkt);
 extern bool dhd_tcpack_suppress(dhd_pub_t *dhdp, void *pkt);
-extern bool dhd_tcpdata_info_get(dhd_pub_t *dhdp, void *pkt);
-
-#if defined(DEBUG_COUNTER) && defined(DHDTCPACK_SUP_DBG)
-extern counter_tbl_t tack_tbl;
-#endif /* DEBUG_COUNTER && DHDTCPACK_SUP_DBG */
 #endif /* DHDTCPACK_SUPPRESS */
 
 #endif /* _dhd_ip_h_ */

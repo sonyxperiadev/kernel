@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dhd_common.c 482932 2014-06-05 13:34:21Z $
+ * $Id: dhd_common.c 439205 2013-11-26 00:41:18Z $
  */
 #include <typedefs.h>
 #include <osl.h>
@@ -137,7 +137,6 @@ enum {
 	IOV_PROPTXSTATUS_MODULE_IGNORE,
 	IOV_PROPTXSTATUS_CREDIT_IGNORE,
 	IOV_PROPTXSTATUS_TXSTATUS_IGNORE,
-	IOV_PROPTXSTATUS_RXPKT_CHK,
 #endif /* PROP_TXSTATUS */
 	IOV_BUS_TYPE,
 #ifdef WLMEDIA_HTSF
@@ -180,7 +179,6 @@ const bcm_iovar_t dhd_iovars[] = {
 	{"pmodule_ignore", IOV_PROPTXSTATUS_MODULE_IGNORE, 0, IOVT_BOOL, 0 },
 	{"pcredit_ignore", IOV_PROPTXSTATUS_CREDIT_IGNORE, 0, IOVT_BOOL, 0 },
 	{"ptxstatus_ignore", IOV_PROPTXSTATUS_TXSTATUS_IGNORE, 0, IOVT_BOOL, 0 },
-	{"rxpkt_chk", IOV_PROPTXSTATUS_RXPKT_CHK, 0, IOVT_BOOL, 0 },
 #endif /* PROP_TXSTATUS */
 	{"bustype", IOV_BUS_TYPE, 0, IOVT_UINT32, 0},
 #ifdef WLMEDIA_HTSF
@@ -190,7 +188,7 @@ const bcm_iovar_t dhd_iovars[] = {
 	{"host_reorder_flows", IOV_HOSTREORDER_FLOWS, 0, IOVT_BUFFER,
 	(WLHOST_REORDERDATA_MAXFLOWS + 1) },
 #ifdef DHDTCPACK_SUPPRESS
-	{"tcpack_suppress",	IOV_TCPACK_SUPPRESS,	0,	IOVT_UINT8,	0 },
+	{"tcpack_suppress",	IOV_TCPACK_SUPPRESS,	0,	IOVT_BOOL,	0 },
 #endif /* DHDTCPACK_SUPPRESS */
 	{NULL, 0, 0, 0, 0 }
 };
@@ -480,18 +478,6 @@ dhd_doiovar(dhd_pub_t *dhd_pub, const bcm_iovar_t *vi, uint32 actionid, const ch
 	case IOV_SVAL(IOV_PROPTXSTATUS_TXSTATUS_IGNORE):
 		dhd_wlfc_set_txstatus_ignore(dhd_pub, int_val);
 		break;
-
-	case IOV_GVAL(IOV_PROPTXSTATUS_RXPKT_CHK):
-		bcmerror = dhd_wlfc_get_rxpkt_chk(dhd_pub, &int_val);
-		if (bcmerror != BCME_OK)
-			goto exit;
-		bcopy(&int_val, arg, val_size);
-		break;
-
-	case IOV_SVAL(IOV_PROPTXSTATUS_RXPKT_CHK):
-		dhd_wlfc_set_rxpkt_chk(dhd_pub, int_val);
-		break;
-
 #endif /* PROP_TXSTATUS */
 
 	case IOV_GVAL(IOV_BUS_TYPE):
@@ -543,12 +529,12 @@ dhd_doiovar(dhd_pub_t *dhd_pub, const bcm_iovar_t *vi, uint32 actionid, const ch
 	}
 #ifdef DHDTCPACK_SUPPRESS
 	case IOV_GVAL(IOV_TCPACK_SUPPRESS): {
-		int_val = (uint32)dhd_pub->tcpack_sup_mode;
+		int_val = dhd_pub->tcpack_sup_enabled ? 1 : 0;
 		bcopy(&int_val, arg, val_size);
 		break;
 	}
 	case IOV_SVAL(IOV_TCPACK_SUPPRESS): {
-		bcmerror = dhd_tcpack_suppress_set(dhd_pub, (uint8)int_val);
+		dhd_tcpack_suppress_set(dhd_pub, int_val ? TRUE : FALSE);
 		break;
 	}
 #endif /* DHDTCPACK_SUPPRESS */
@@ -618,7 +604,7 @@ dhd_prec_enq(dhd_pub_t *dhdp, struct pktq *q, void *pkt, int prec)
 		if (dhd_tcpack_check_xmit(dhdp, p) == BCME_ERROR) {
 			DHD_ERROR(("%s %d: tcpack_suppress ERROR!!! Stop using it\n",
 				__FUNCTION__, __LINE__));
-			dhd_tcpack_suppress_set(dhdp, TCPACK_SUP_OFF);
+			dhd_tcpack_suppress_set(dhdp, FALSE);
 		}
 #endif /* DHDTCPACK_SUPPRESS */
 		PKTFREE(dhdp->osh, p, TRUE);
@@ -661,7 +647,6 @@ dhd_prec_drop_pkts(dhd_pub_t *dhdp, struct pktq *pq, int prec, f_droppkt_t fn)
 			if (first) {
 				/* No last frag pkt, use prev as last */
 				last = prev;
-				break;
 			} else {
 				first = p;
 				prev_first = prev;
@@ -711,8 +696,6 @@ dhd_prec_drop_pkts(dhd_pub_t *dhdp, struct pktq *pq, int prec, f_droppkt_t fn)
 			q->tail = NULL;
 	} else {
 		PKTSETLINK(prev_first, next);
-		if (!next)
-			q->tail = prev_first;
 	}
 
 	return TRUE;
@@ -1068,10 +1051,10 @@ wl_show_host_event(wl_event_msg_t *event, void *event_data)
 			p = (char *)&buf[MSGTRACE_HDRLEN];
 		while (*p != '\0' && (s = strstr(p, "\n")) != NULL) {
 				*s = '\0';
-				printf("WLC_E_TRACE: %s\n", p);
+				printf("%s\n", p);
 				p = s+1;
 			}
-			if (*p) printf("WLC_E_TRACE: %s", p);
+			if (*p) printf("%s", p);
 
 			/* Reset datalen to avoid display below */
 			datalen = 0;
@@ -1199,7 +1182,7 @@ wl_host_event(dhd_pub_t *dhd_pub, int *ifidx, void *pktdata,
 		/* Ignore the event if NOIF is set */
 		if (ifevent->reserved & WLC_E_IF_FLAGS_BSSCFG_NOIF) {
 			DHD_ERROR(("WLC_E_IF: NO_IF set, event Ignored\r\n"));
-			return (BCME_UNSUPPORTED);
+			return (BCME_OK);
 		}
 
 #ifdef PROP_TXSTATUS
@@ -1949,6 +1932,12 @@ dhd_get_suspend_bcn_li_dtim(dhd_pub_t *dhd)
 	if ((ret = dhd_wl_ioctl_cmd(dhd, WLC_GET_BCNPRD,
 		&ap_beacon, sizeof(ap_beacon), FALSE, 0)) < 0) {
 		DHD_ERROR(("%s get beacon failed code %d\n", __FUNCTION__, ret));
+		goto exit;
+	}
+
+	/* if associated APs Beacon more  that 100msec do no dtim skip */
+	if (ap_beacon > MAX_DTIM_SKIP_BEACON_INTERVAL) {
+		DHD_ERROR(("%s NO dtim skip for AP with beacon %d ms\n", __FUNCTION__, ap_beacon));
 		goto exit;
 	}
 
