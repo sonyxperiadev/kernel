@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -31,6 +31,9 @@
 #define CCI_PINCTRL_STATE_SLEEP "cci_suspend"
 
 #define CCI_NUM_CLK_MAX	16
+#define MSM_CCI_WRITE_DATA_PAYLOAD_SIZE_10 10
+#define MSM_CCI_WRITE_DATA_PAYLOAD_SIZE_11 11
+#define BURST_MIN_FREE_SIZE 8
 
 enum cci_i2c_queue_t {
 	QUEUE_0,
@@ -148,6 +151,8 @@ struct cci_device {
 	uint8_t cci_pinctrl_status;
 	struct regulator *reg_ptr;
 	uint32_t cycles_per_us;
+	uint8_t payload_size;
+	uint8_t support_seq_write;
 };
 
 enum msm_cci_i2c_cmd_type {
