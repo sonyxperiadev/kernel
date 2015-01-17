@@ -3146,13 +3146,10 @@ static struct clk_lookup msm_clocks_8226[] = {
 	CLK_LOOKUP("bus_clk", gcc_mss_q6_bimc_axi_clk.c, "fc880000.qcom,mss"),
 	CLK_LOOKUP("iface_clk",   gcc_mss_cfg_ahb_clk.c, "fc880000.qcom,mss"),
 	CLK_LOOKUP("mem_clk",    gcc_boot_rom_ahb_clk.c, "fc880000.qcom,mss"),
-#ifdef CONFIG_NFC_PN547
-	/* NFC */
-	CLK_LOOKUP("nfc_clk",            cxo_d1_pin.c, "2-0028"),
-#else
+
 	/* NFC */
 	CLK_LOOKUP("ref_clk",            cxo_d1_a_pin.c, "2-000e"),
-#endif
+
 	/* PIL-PRONTO */
 	CLK_LOOKUP("xo", cxo_pil_pronto_clk.c, "fb21b000.qcom,pronto"),
 
@@ -3697,6 +3694,10 @@ static struct clk_lookup msm_clocks_8226_seagull[] = {
 	CLK_LOOKUP("cam_clk", camss_mclk1_clk.c, "6e.qcom,camera"),
 };
 
+static struct clk_lookup msm_clocks_8226_tianchi[] = {
+	CLK_LOOKUP("nfc_clk", cxo_d1_pin.c, "2-0028"),
+};
+
 struct clock_init_data msm8226_eagle_clock_init_data __initdata = {
 	.table = msm_clocks_8226_eagle,
 	.size = ARRAY_SIZE(msm_clocks_8226_eagle),
@@ -3710,6 +3711,11 @@ struct clock_init_data msm8226_flamingo_clock_init_data __initdata = {
 struct clock_init_data msm8226_seagull_clock_init_data __initdata = {
 	.table = msm_clocks_8226_seagull,
 	.size = ARRAY_SIZE(msm_clocks_8226_seagull),
+};
+
+struct clock_init_data msm8226_tianchi_clock_init_data __initdata = {
+	.table = msm_clocks_8226_tianchi,
+	.size = ARRAY_SIZE(msm_clocks_8226_tianchi),
 };
 
 static void __init reg_init(void)

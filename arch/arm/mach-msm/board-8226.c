@@ -134,6 +134,8 @@ void __init msm8226_clocks_config(void)
 		msm_clock_init(&msm8226_flamingo_clock_init_data);
 	else if (of_machine_is_compatible("somc,seagull"))
 		msm_clock_init(&msm8226_seagull_clock_init_data);
+	else if (of_machine_is_compatible("somc,tianchi"))
+		msm_clock_init(&msm8226_tianchi_clock_init_data);
 }
 
 /*
