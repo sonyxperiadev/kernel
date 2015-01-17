@@ -16,5 +16,6 @@
 extern struct clock_init_data msm8226_eagle_clock_init_data __initdata;
 extern struct clock_init_data msm8226_flamingo_clock_init_data __initdata;
 extern struct clock_init_data msm8226_seagull_clock_init_data __initdata;
+extern struct clock_init_data msm8226_tianchi_clock_init_data __initdata;
 
 #endif
