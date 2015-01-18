@@ -186,6 +186,7 @@
 			nxp,irq_gpio = <&msmgpio 21 0>;
 			nxp,ven = <&msmgpio 23 0>;
 			nxp,dwld_en = <&msmgpio 20 0>;
+			nxp,use_pn544;
 		};
 	};
 	
