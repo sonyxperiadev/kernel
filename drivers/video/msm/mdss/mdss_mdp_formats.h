@@ -66,7 +66,6 @@ enum {
 		},						\
 	}
 
-
 #define FMT_RGB_888(fmt, e0, e1, e2)				\
 	{							\
 		.format = (fmt),				\

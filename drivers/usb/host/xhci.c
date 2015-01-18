@@ -806,10 +806,6 @@ static void xhci_msix_sync_irqs(struct xhci_hcd *xhci)
 			synchronize_irq(xhci->msix_entries[i].vector);
 	}
 }
-#else
-static void xhci_msix_sync_irqs(struct xhci_hcd *xhci)
-{
-}
 #endif /* CONFIG_PCI */
 
 static void xhci_save_registers(struct xhci_hcd *xhci)

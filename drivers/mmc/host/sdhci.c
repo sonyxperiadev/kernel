@@ -2,6 +2,7 @@
  *  linux/drivers/mmc/host/sdhci.c - Secure Digital Host Controller Interface driver
  *
  *  Copyright (C) 2005-2008 Pierre Ossman, All Rights Reserved.
+ *  Copyright (C) 2013 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -3435,6 +3436,12 @@ int sdhci_add_host(struct sdhci_host *host)
 	host->version = sdhci_readw(host, SDHCI_HOST_VERSION);
 	host->version = (host->version & SDHCI_SPEC_VER_MASK)
 				>> SDHCI_SPEC_VER_SHIFT;
+
+#ifdef CONFIG_MMC_SDHCI_PROHIBIT_SD_SPEC3
+	if (!(mmc->caps & MMC_CAP_NONREMOVABLE))
+		host->version = SDHCI_SPEC_200;
+#endif
+
 	if (host->version > SDHCI_SPEC_300) {
 		pr_err("%s: Unknown controller version (%d). "
 			"You may experience problems.\n", mmc_hostname(mmc),
@@ -3681,7 +3688,7 @@ int sdhci_add_host(struct sdhci_host *host)
 
 	/* SDR104 supports also implies SDR50 support */
 	if (caps[1] & SDHCI_SUPPORT_SDR104)
-		mmc->caps |= MMC_CAP_UHS_SDR104 | MMC_CAP_UHS_SDR50;
+		mmc->caps |=  MMC_CAP_UHS_SDR104 | MMC_CAP_UHS_SDR50;
 	else if (caps[1] & SDHCI_SUPPORT_SDR50)
 		mmc->caps |= MMC_CAP_UHS_SDR50;
 
@@ -3776,6 +3783,15 @@ int sdhci_add_host(struct sdhci_host *host)
 				(curr << SDHCI_MAX_CURRENT_180_SHIFT);
 		}
 	}
+
+#ifdef CONFIG_MMC_SDHCI_MIMO
+	/* Custom: An external level shifter on SDC3 */
+	if (strcmp(host->hw_name, "msm_sdcc.3") == 0) {
+		caps[0] |= (SDHCI_CAN_VDD_330 |
+			SDHCI_CAN_VDD_300 |
+			SDHCI_CAN_VDD_180);
+	}
+#endif
 
 	if (caps[0] & SDHCI_CAN_VDD_330) {
 		ocr_avail |= MMC_VDD_32_33 | MMC_VDD_33_34;

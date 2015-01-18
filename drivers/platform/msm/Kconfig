@@ -194,4 +194,20 @@ config MSM_SPSS
 	help
 	  Support for Standby Processing Sub-System (SPSS) module.
 
+config POWERKEY_FORCECRASH
+	boolean "QPNP power key forcecrash support"
+	default n
+	depends on QPNP_POWER_ON && ARCH_MSM8974
+	help
+	  Say Y here if you want support forcecrash functionality through
+	  qpnp power key. Triggers panic if power key is hold for more
+	  than 10secs.
+
+config MPMTIME
+	tristate "Expose mpm time"
+	default y
+	depends on ARCH_MSM8974
+	help
+	  Expose the time since last power reset in /proc/mpmtime.
+
 endmenu

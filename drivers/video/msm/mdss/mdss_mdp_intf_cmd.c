@@ -26,7 +26,8 @@
 /* wait for at most 2 vsync for lowest refresh rate (24hz) */
 #define KOFF_TIMEOUT msecs_to_jiffies(84)
 
-#define STOP_TIMEOUT msecs_to_jiffies(16 * (VSYNC_EXPIRE_TICK + 2))
+#define STOP_TIMEOUT(hz) \
+	msecs_to_jiffies(2 * (1000 / hz) * (VSYNC_EXPIRE_TICK + 2))
 #define POWER_COLLAPSE_TIME msecs_to_jiffies(100)
 
 struct mdss_mdp_cmd_ctx {
@@ -118,6 +119,7 @@ static int mdss_mdp_cmd_tearcheck_cfg(struct mdss_mdp_ctl *ctl,
 	struct mdss_mdp_pp_tear_check *te = NULL;
 	struct mdss_panel_info *pinfo;
 	u32 vsync_clk_speed_hz, total_lines, vclks_line, cfg = 0;
+	u32 vporch, height;
 
 	if (IS_ERR_OR_NULL(ctl->panel_data)) {
 		pr_err("no panel data\n");
@@ -154,6 +156,12 @@ static int mdss_mdp_cmd_tearcheck_cfg(struct mdss_mdp_ctl *ctl,
 
 		cfg |= vclks_line;
 
+		vporch = pinfo->lcdc.v_back_porch +
+			 pinfo->lcdc.v_front_porch +
+			 pinfo->lcdc.v_pulse_width;
+
+		height = (pinfo->yres + vporch) * 2;
+
 		pr_debug("%s: yres=%d vclks=%x height=%d init=%d rd=%d start=%d ",
 			__func__, pinfo->yres, vclks_line, te->sync_cfg_height,
 			 te->vsync_init_val, te->rd_ptr_irq, te->start_pos);
@@ -162,8 +170,7 @@ static int mdss_mdp_cmd_tearcheck_cfg(struct mdss_mdp_ctl *ctl,
 	}
 
 	mdss_mdp_pingpong_write(mixer, MDSS_MDP_REG_PP_SYNC_CONFIG_VSYNC, cfg);
-	mdss_mdp_pingpong_write(mixer, MDSS_MDP_REG_PP_SYNC_CONFIG_HEIGHT,
-		te ? te->sync_cfg_height : 0);
+	mdss_mdp_pingpong_write(mixer, MDSS_MDP_REG_PP_SYNC_CONFIG_HEIGHT, height);
 	mdss_mdp_pingpong_write(mixer, MDSS_MDP_REG_PP_VSYNC_INIT_VAL,
 		te ? te->vsync_init_val : 0);
 	mdss_mdp_pingpong_write(mixer, MDSS_MDP_REG_PP_RD_PTR_IRQ,
@@ -661,10 +668,6 @@ static int mdss_mdp_cmd_panel_on(struct mdss_mdp_ctl *ctl,
 
 		rc = mdss_mdp_ctl_intf_event(ctl, MDSS_EVENT_PANEL_ON, NULL);
 		WARN(rc, "intf %d panel on error (%d)\n", ctl->intf_num, rc);
-
-		ctx->panel_power_state = MDSS_PANEL_POWER_ON;
-		if (sctx)
-			sctx->panel_power_state = MDSS_PANEL_POWER_ON;
 	} else {
 		pr_debug("%s: panel already on\n", __func__);
 	}
@@ -759,6 +762,24 @@ int mdss_mdp_cmd_kickoff(struct mdss_mdp_ctl *ctl, void *arg)
 	mb();
 	MDSS_XLOG(ctl->num,  atomic_read(&ctx->koff_cnt), ctx->clk_enabled,
 						ctx->rdptr_enabled);
+
+	if (!__mdss_mdp_cmd_is_panel_power_on_interactive(ctx)) {
+		if (ctl->mfd) {
+			struct mdss_panel_data *pdata;
+			pdata = dev_get_platdata(&ctl->mfd->pdev->dev);
+			if (!pdata) {
+				pr_err("no panel connected\n");
+				return -ENODEV;
+			}
+
+			if (pdata->intf_ready)
+				pdata->intf_ready(pdata);
+		}
+		ctx->panel_power_state = MDSS_PANEL_POWER_ON;
+		if (sctx)
+			sctx->panel_power_state = MDSS_PANEL_POWER_ON;
+	}
+
 	return 0;
 }
 
@@ -811,7 +832,7 @@ static void mdss_mdp_cmd_stop_sub(struct mdss_mdp_ctl *ctl,
 	spin_unlock_irqrestore(&ctx->clk_lock, flags);
 
 	if (need_wait && (wait_for_completion_timeout(&ctx->stop_comp,
-		STOP_TIMEOUT) == 0)) {
+		STOP_TIMEOUT(mdss_panel_get_framerate(&ctl->panel_data->panel_info))) == 0)) {
 		WARN(1, "stop cmd time out\n");
 		mdss_mdp_irq_disable(MDSS_MDP_IRQ_PING_PONG_RD_PTR,
 			ctx->pp_num);

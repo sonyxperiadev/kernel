@@ -199,7 +199,7 @@ static int gpiochip_find_base(int ngpio)
 	}
 
 	if (gpio_is_valid(base)) {
-		pr_debug("%s: found new base at %d\n", __func__, base);
+		pr_info("%s: found new base at %d\n", __func__, base);
 		return base;
 	} else {
 		pr_err("%s: cannot find free range\n", __func__);
@@ -1230,7 +1230,7 @@ unlock:
 	if (status)
 		goto fail;
 
-	pr_debug("gpiochip_add: registered GPIOs %d to %d on device: %s\n",
+	pr_info("gpiochip_add: registered GPIOs %d to %d on device: %s\n",
 		chip->base, chip->base + chip->ngpio - 1,
 		chip->label ? : "generic");
 

@@ -251,4 +251,14 @@ config MSM_BT_POWER
 	  Provides a parameter to switch on/off power from PMIC
 	  to Bluetooth device.
 
+config BT_BCM4339
+	tristate "Broadcom BCM4339 control driver"
+	depends on SERIAL_MSM_HS
+	help
+	  This enables the Bluetooth driver for Broadcom BCM4339.
+	  This driver controls BT power/HOST_WAKE and BT_WAKE via GPIO.
+
+	  Say Y here to compile support for"Broadcom BCM4339 control driver
+	  into the kernel or say M to compile it as module.
+
 endmenu

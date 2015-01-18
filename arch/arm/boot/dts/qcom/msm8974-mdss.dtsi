@@ -50,14 +50,14 @@
 		qcom,mdss-pipe-rgb-xin-id = <1 5 9>;
 		qcom,mdss-pipe-dma-xin-id = <2 10>;
 
-		qcom,mdss-pipe-vig-clk-ctrl-offsets = <0x2AC 0 0>,
-						      <0x2B4 0 0>,
-						      <0x2BC 0 0>;
-		qcom,mdss-pipe-rgb-clk-ctrl-offsets = <0x2AC 4 8>,
-						      <0x2B4 4 8>,
-						      <0x2BC 4 8>;
-		qcom,mdss-pipe-dma-clk-ctrl-offsets = <0x2AC 8 12>,
-						      <0x2B4 8 12>;
+		qcom,mdss-pipe-vig-clk-ctrl-offsets = <0x3AC 0 0>,
+						      <0x3B4 0 0>,
+						      <0x3BC 0 0>;
+		qcom,mdss-pipe-rgb-clk-ctrl-offsets = <0x3AC 4 8>,
+						      <0x3B4 4 8>,
+						      <0x3BC 4 8>;
+		qcom,mdss-pipe-dma-clk-ctrl-offsets = <0x3AC 8 12>,
+						      <0x3B4 8 12>;
 
 		qcom,mdss-smp-data = <22 4096>;
 
@@ -72,7 +72,7 @@
 		qcom,mdss-intf-off = <0x00021100 0x00021300
 					   0x00021500 0x00021700>;
 
-		qcom,mdss-wfd-mode = "intf";
+		qcom,mdss-wfd-mode = "shared";
 		qcom,vbif-settings = <0x0004 0x00000001>,
 				     <0x00D8 0x00000707>,
 				     <0x00F0 0x00000030>,
@@ -168,16 +168,6 @@
 				qcom,supply-enable-load = <100000>;
 				qcom,supply-disable-load = <100>;
 			};
-
-			qcom,ctrl-supply-entry@1 {
-				reg = <1>;
-				qcom,supply-name = "vddio";
-				qcom,supply-min-voltage = <1800000>;
-				qcom,supply-max-voltage = <1800000>;
-				qcom,supply-enable-load = <100000>;
-				qcom,supply-disable-load = <100>;
-				qcom,supply-post-on-sleep = <20>;
-			};
 		};
 
 		qcom,panel-supply-entries {
@@ -259,16 +249,6 @@
 				qcom,supply-enable-load = <100000>;
 				qcom,supply-disable-load = <100>;
 			};
-
-			qcom,ctrl-supply-entry@1 {
-				reg = <1>;
-				qcom,supply-name = "vddio";
-				qcom,supply-min-voltage = <1800000>;
-				qcom,supply-max-voltage = <1800000>;
-				qcom,supply-enable-load = <100000>;
-				qcom,supply-disable-load = <100>;
-				qcom,supply-post-on-sleep = <20>;
-			};
 		};
 
 		qcom,panel-supply-entries {
@@ -315,7 +295,6 @@
 		qcom,enable-load = <0 0 300000 0>;
 		qcom,disable-load = <0 0 0 0>;
 
-		qcom,hdmi-tx-cec = <&msmgpio 31 0>;
 		qcom,hdmi-tx-ddc-clk = <&msmgpio 32 0>;
 		qcom,hdmi-tx-ddc-data = <&msmgpio 33 0>;
 		qcom,hdmi-tx-hpd = <&msmgpio 34 0>;

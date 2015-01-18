@@ -95,6 +95,11 @@
 	};
 };
 
+&usb3 {
+	qcom,usbin-vadc = <&pm8941_vadc>;
+	qcom,utmi-clk-rate = <24000000>;
+};
+
 /* GPU overrides */
 &msm_gpu {
 	/* Updated chip ID */

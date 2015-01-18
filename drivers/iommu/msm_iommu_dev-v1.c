@@ -154,11 +154,11 @@ static void get_secure_id(struct device_node *node,
 			  struct msm_iommu_drvdata *drvdata)
 {
 	if (msm_iommu_get_scm_call_avail()) {
-		if (!is_vfe_smmu(drvdata->name) || is_vfe_secure())
+//		if (!is_vfe_smmu(drvdata->name) || is_vfe_secure())
 			of_property_read_u32(node, "qcom,iommu-secure-id",
 					     &drvdata->sec_id);
-		else
-			pr_info("vfe_iommu: Keeping vfe non-secure\n");
+//		else
+//			pr_info("vfe_iommu: Keeping vfe non-secure\n");
 	}
 }
 
@@ -168,12 +168,12 @@ static void get_secure_ctx(struct device_node *node,
 {
 	u32 secure_ctx = 0;
 
-	if (msm_iommu_get_scm_call_avail()) {
-		if (!is_vfe_smmu(iommu_drvdata->name) || is_vfe_secure()) {
+//	if (msm_iommu_get_scm_call_avail()) {
+//		if (!is_vfe_smmu(iommu_drvdata->name) || is_vfe_secure()) {
 			secure_ctx =
 			of_property_read_bool(node, "qcom,secure-context");
-		}
-	}
+//		}
+//	}
 	ctx_drvdata->secure_context = secure_ctx;
 }
 #endif

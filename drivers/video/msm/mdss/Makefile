@@ -21,7 +21,14 @@ dsi-v2-objs = dsi_v2.o dsi_host_v2.o dsi_io_v2.o
 obj-$(CONFIG_FB_MSM_MDSS_MDP3) += dsi-v2.o
 
 mdss-dsi-objs := mdss_dsi.o mdss_dsi_host.o mdss_dsi_cmd.o
+ifeq ($(CONFIG_FB_MSM_MDSS_SPECIFIC_PANEL),y)
+mdss-dsi-objs += mdss_dsi_panel_driver.o
+ifeq ($(CONFIG_DEBUG_FS),y)
+mdss-dsi-objs += mdss_dsi_panel_debugfs.o
+endif
+else
 mdss-dsi-objs += mdss_dsi_panel.o
+endif
 mdss-dsi-objs += msm_mdss_io_8974.o
 obj-$(CONFIG_FB_MSM_MDSS) += mdss-dsi.o
 obj-$(CONFIG_FB_MSM_MDSS_EDP_PANEL) += mdss_edp.o
@@ -33,7 +40,14 @@ obj-$(CONFIG_FB_MSM_MDSS_HDMI_PANEL) += mdss_hdmi_util.o
 obj-$(CONFIG_FB_MSM_MDSS_HDMI_PANEL) += mdss_hdmi_edid.o
 obj-$(CONFIG_FB_MSM_MDSS_HDMI_PANEL) += mdss_hdmi_hdcp.o
 obj-$(CONFIG_FB_MSM_MDSS_HDMI_PANEL) += mdss_hdmi_cec.o
+
+ifeq ($(CONFIG_FB_MSM_MDSS_HDMI_MHL_SII8620_8061),y)
+# MHL1/2/3
+obj-y += mhl_sii8620_8061_drv/
+else ifeq ($(CONFIG_FB_MSM_MDSS_HDMI_MHL_SII8334),y)
+# MHL1
 obj-$(CONFIG_FB_MSM_MDSS_HDMI_MHL_SII8334) += mhl_sii8334.o mhl_msc.o
+endif
 
 obj-$(CONFIG_FB_MSM_MDSS_WRITEBACK) += mdss_wb.o
 

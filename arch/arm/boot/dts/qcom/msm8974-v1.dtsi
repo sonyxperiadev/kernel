@@ -94,6 +94,9 @@
 /* I2C clock frequency overrides */
 &i2c_0 {
 	qcom,i2c-src-freq = <19200000>;
+	sii8334@72 {
+		somc,device-discovery = <1>;
+	};
 };
 
 &i2c_2 {
@@ -215,6 +218,10 @@
 
 &usb_otg {
 	qcom,hsusb-otg-pnoc-errata-fix;
+};
+
+&usb3 {
+	qcom,usbin-vadc = <&pm8941_vadc>;
 };
 
 &gdsc_venus {

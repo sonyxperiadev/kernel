@@ -1,4 +1,5 @@
 /* Copyright (c) 2011-2013, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2014 Sony Mobile Communications Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -108,3 +109,6 @@ struct bms_battery_data oem_batt_data = {
 	.flat_ocv_threshold_uv	= 3800000,
 	.battery_type		= "oem_batt_data",
 };
+
+struct bms_battery_data *bms_batt_data = &oem_batt_data;
+int bms_batt_data_num = 1;
