@@ -100,6 +100,7 @@ enum wcd9xxx_mbhc_plug_type {
 	PLUG_TYPE_HIGH_HPH,
 	PLUG_TYPE_GND_MIC_SWAP,
 	PLUG_TYPE_ANC_HEADPHONE,
+	PLUG_TYPE_STEREO_MICROPHONE,
 };
 
 enum wcd9xxx_mbhc_micbias_type {
@@ -411,8 +412,8 @@ struct wcd9xxx_mbhc {
 	u32 rco_clk_rate;
 
 	bool update_z;
-
 	u8   scaling_mux_in;
+
 	/* Holds codec specific interrupt mapping */
 	const struct wcd9xxx_mbhc_intr *intr_ids;
 
