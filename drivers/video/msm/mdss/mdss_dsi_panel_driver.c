@@ -1305,6 +1305,8 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
 				panel_data);
 
+	pinfo = &ctrl_pdata->panel_data.panel_info;
+
 	spec_pdata = ctrl_pdata->spec_pdata;
 	if (!spec_pdata) {
 		pr_err("%s: Invalid input data\n", __func__);
@@ -1353,7 +1355,6 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 
 	if (ctrl_pdata->panel_data.panel_info.mipi.mode == DSI_CMD_MODE) {
 		if (ctrl_pdata->fps_cmds.cmd_cnt) {
-			pinfo = &ctrl_pdata->panel_data.panel_info;
 			fps_cmds = pinfo->lcdc.chenge_fps_cmds_num;
 			fps_payload = pinfo->lcdc.chenge_fps_payload_num;
 			rtn = CHENGE_FPS_REG(fps_cmds, fps_payload);
@@ -1364,13 +1365,13 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 		}
 	}
 
+	pinfo->blank_state = MDSS_PANEL_BLANK_UNBLANK;
 	pr_debug("%s:-\n", __func__);
 	return 0;
 }
 
 static int mdss_dsi_panel_off(struct mdss_panel_data *pdata)
 {
-	struct mipi_panel_info *mipi;
 	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
 	struct mdss_panel_specific_pdata *spec_pdata = NULL;
 	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
@@ -1406,8 +1407,6 @@ static int mdss_dsi_panel_off(struct mdss_panel_data *pdata)
 		cancel_work_sync(&ctrl_pdata->cabc_work);
 	}
 
-	mipi = &pdata->panel_info.mipi;
-
 	if (ctrl_pdata->off_cmds.cmd_cnt) {
 		mdss_dsi_panel_wait_change(ctrl_pdata, false);
 		mdss_dsi_panel_cmds_send(ctrl_pdata, &ctrl_pdata->off_cmds);
@@ -1441,6 +1440,8 @@ static int mdss_dsi_panel_off(struct mdss_panel_data *pdata)
 		pr_info("%s: vsyncs_per_ksecs is invalid\n", __func__);
 	}
 
+	mdss_dsi_panel_reset(pdata, 0);
+	pinfo->blank_state = MDSS_PANEL_BLANK_BLANK;
 	pr_debug("%s: Done\n", __func__);
 
 	return 0;
@@ -1452,8 +1453,6 @@ static int mdss_dsi_panel_low_power_config(struct mdss_panel_data *pdata,
 {
 	struct mdss_dsi_ctrl_pdata *ctrl = NULL;
 	struct mdss_panel_info *pinfo;
-
-	return 0;
 
 	if (pdata == NULL) {
 		pr_err("%s: Invalid input data\n", __func__);
@@ -1563,6 +1562,7 @@ static int mdss_dsi_panel_power_on_ex(struct mdss_panel_data *pdata, int enable)
 	int ret = -EINVAL;
 	struct mdss_dsi_ctrl_pdata *ctrl_pdata = NULL;
 	struct mdss_panel_specific_pdata *spec_pdata = NULL;
+	struct mdss_panel_info *pinfo = NULL;
 	static int display_power_on;
 	static int skip_first_off = 1;
 	static u32 down;
@@ -1583,6 +1583,8 @@ static int mdss_dsi_panel_power_on_ex(struct mdss_panel_data *pdata, int enable)
 		goto error;
 	}
 
+	pinfo = &pdata->panel_info;
+
 	ret = 0;
 	if (enable && !display_power_on) {
 		if (spec_pdata->down_period) {
@@ -1596,6 +1598,8 @@ static int mdss_dsi_panel_power_on_ex(struct mdss_panel_data *pdata, int enable)
 		}
 		
 		for (i = 0; !ret && (i < DSI_MAX_PM); i++) {
+			if (DSI_CORE_PM == i)
+				continue;
 			ret = msm_dss_enable_vreg(
 				ctrl_pdata->power_data[i].vreg_config,
 				ctrl_pdata->power_data[i].num_vreg, 1);
@@ -1618,6 +1622,20 @@ static int mdss_dsi_panel_power_on_ex(struct mdss_panel_data *pdata, int enable)
 							__func__);
 		}
 
+		/*
+		 * If continuous splash screen feature is enabled, then we need to
+		 * request all the GPIOs that have already been configured in the
+		 * bootloader. This needs to be done irresepective of whether
+		 * the lp11_init flag is set or not.
+		 */
+		if (pdata->panel_info.cont_splash_enabled ||
+			!pdata->panel_info.mipi.lp11_init) {
+			ret = mdss_dsi_panel_reset(pdata, 1);
+			if (ret)
+				pr_err("%s: Panel reset failed. rc=%d\n",
+						__func__, ret);
+		}
+
 		display_power_on = 1;
 	} else if (!enable && skip_first_off && spec_pdata->panel_detect) {
 		skip_first_off = 0;
@@ -1635,6 +1653,8 @@ static int mdss_dsi_panel_power_on_ex(struct mdss_panel_data *pdata, int enable)
 		}
 
 		for (i = 0; !ret && (i < DSI_MAX_PM); i++) {
+			if (DSI_CORE_PM == i)
+				continue;
 			ret = msm_dss_enable_vreg(
 				ctrl_pdata->power_data[i].vreg_config,
 				ctrl_pdata->power_data[i].num_vreg, 0);
@@ -1648,6 +1668,14 @@ static int mdss_dsi_panel_power_on_ex(struct mdss_panel_data *pdata, int enable)
 		display_power_on = 0;
 	}
 error:
+	if (ret) {
+		for (; i >= 0; i--)
+			msm_dss_enable_vreg(
+				ctrl_pdata->power_data[i].vreg_config,
+				ctrl_pdata->power_data[i].num_vreg, 0);
+	}
+
+	pinfo->panel_power_state = enable;
 	return ret;
 }
 
@@ -2455,8 +2483,8 @@ static int mdss_dsi_parse_panel_features(struct device_node *np,
 
 	pinfo = &ctrl->panel_data.panel_info;
 
-	pinfo->cont_splash_enabled = of_property_read_bool(np,
-		"qcom,cont-splash-enabled");
+//	pinfo->cont_splash_enabled = of_property_read_bool(np,
+//		"qcom,cont-splash-enabled");
 
 	if (pinfo->mipi.mode == DSI_CMD_MODE) {
 		pinfo->partial_update_enabled = of_property_read_bool(np,
@@ -3357,20 +3385,22 @@ exit_lcd_id:
 		display_onoff_state = true;
 	}
 
-	partial_update_enabled = of_property_read_bool(node,
-						"qcom,partial-update-enabled");
-	if (partial_update_enabled) {
-		pr_info("%s:%d Partial update enabled.\n", __func__, __LINE__);
-		ctrl_pdata->panel_data.panel_info.partial_update_enabled = 1;
-		//ctrl_pdata->partial_update_fnc = mdss_dsi_panel_partial_update;
-		ctrl_pdata->set_col_page_addr = mdss_dsi_set_col_page_addr;
-		ctrl_pdata->panel_data.panel_info.partial_update_roi_merge =
-					of_property_read_bool(node, "qcom,partial-update-roi-merge");
-	} else {
-		pr_info("%s:%d Partial update disabled.\n", __func__, __LINE__);
-		ctrl_pdata->panel_data.panel_info.partial_update_enabled = 0;
-		//ctrl_pdata->partial_update_fnc = NULL;
-	}
+/*
+ *	partial_update_enabled = of_property_read_bool(node,
+ *						"qcom,partial-update-enabled");
+ *	if (partial_update_enabled) {
+ *		pr_info("%s:%d Partial update enabled.\n", __func__, __LINE__);
+ *		ctrl_pdata->panel_data.panel_info.partial_update_enabled = 1;
+ *		//ctrl_pdata->partial_update_fnc = mdss_dsi_panel_partial_update;
+ *		ctrl_pdata->set_col_page_addr = mdss_dsi_set_col_page_addr;
+ *		ctrl_pdata->panel_data.panel_info.partial_update_roi_merge =
+ *					of_property_read_bool(node, "qcom,partial-update-roi-merge");
+ *	} else {
+ *		pr_info("%s:%d Partial update disabled.\n", __func__, __LINE__);
+ *		ctrl_pdata->panel_data.panel_info.partial_update_enabled = 0;
+ *		//ctrl_pdata->partial_update_fnc = NULL;
+ *	}
+ */
 
 	if (!adc_det) {
 		spec_pdata->detect = mdss_dsi_panel_detect;
@@ -3383,7 +3413,7 @@ exit_lcd_id:
 
 	ctrl_pdata->on = mdss_dsi_panel_on;
 	ctrl_pdata->off = mdss_dsi_panel_off;
-	ctrl_pdata->low_power_config = mdss_dsi_panel_low_power_config;
+//	ctrl_pdata->low_power_config = mdss_dsi_panel_low_power_config;
 	ctrl_pdata->pcc_setup = mdss_dsi_panel_pcc_setup;
 	ctrl_pdata->panel_data.set_backlight = mdss_dsi_panel_bl_ctrl;
 
