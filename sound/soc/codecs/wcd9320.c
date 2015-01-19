@@ -1870,8 +1870,14 @@ static const struct soc_enum anc1_fb_mux_enum =
 static const struct soc_enum iir1_inp1_mux_enum =
 	SOC_ENUM_SINGLE(TAIKO_A_CDC_CONN_EQ1_B1_CTL, 0, 18, iir_inp1_text);
 
+static const struct soc_enum iir1_inp2_mux_enum =
+	SOC_ENUM_SINGLE(TAIKO_A_CDC_CONN_EQ1_B2_CTL, 0, 18, iir_inp1_text);
+
 static const struct soc_enum iir2_inp1_mux_enum =
 	SOC_ENUM_SINGLE(TAIKO_A_CDC_CONN_EQ2_B1_CTL, 0, 18, iir_inp1_text);
+
+static const struct soc_enum iir2_inp2_mux_enum =
+	SOC_ENUM_SINGLE(TAIKO_A_CDC_CONN_EQ2_B2_CTL, 0, 18, iir_inp1_text);
 
 static const struct snd_kcontrol_new rx_mix1_inp1_mux =
 	SOC_DAPM_ENUM("RX1 MIX1 INP1 Mux", rx_mix1_inp1_chain_enum);
@@ -6777,7 +6783,9 @@ static int taiko_setup_zdet(struct wcd9xxx_mbhc *mbhc,
 		/* Clean up starts */
 		/* Turn off PA ramp generator */
 		snd_soc_write(codec, WCD9XXX_A_CDC_PA_RAMP_B1_CTL, 0x0);
-		if (!mbhc->hph_pa_dac_state)
+		if (!mbhc->hph_pa_dac_state &&
+		    (!(test_bit(MBHC_EVENT_PA_HPHL, &mbhc->event_state) ||
+		       test_bit(MBHC_EVENT_PA_HPHR, &mbhc->event_state))))
 			wcd9xxx_enable_static_pa(mbhc, false);
 		wcd9xxx_restore_registers(codec, &taiko->reg_save_restore);
 		break;
