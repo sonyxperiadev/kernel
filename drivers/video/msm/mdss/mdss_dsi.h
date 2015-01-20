@@ -265,9 +265,9 @@ struct mdss_panel_specific_pdata {
 	int cabc_enabled;
 	int cabc_active;
 	int lcm_bl_gpio;
-	int mipi_rst;
 	int disp_p5;
 	int disp_n5;
+	bool pwron_reset;
 	bool dsi_seq_hack;
 
 	struct dsi_panel_cmds cabc_early_on_cmds;
