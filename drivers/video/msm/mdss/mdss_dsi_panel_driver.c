@@ -1354,6 +1354,9 @@ static int mdss_dsi_panel_power_on_ex(struct mdss_panel_data *pdata, int enable)
 
 			gpio_set_value(vsn_gpio, 1);
 			gpio_set_value(vsp_gpio, 1);
+		}
+
+		if (spec_pdata->pwron_reset) {
 			ret = mdss_dsi_panel_reset_seq(pdata, 1);
 			if (ret)
 				pr_err("%s: Failed to enable gpio.\n",
@@ -2743,13 +2746,8 @@ static int mdss_panel_parse_dt(struct device_node *np,
 			"somc,chenge-fps-payload-num", &tmp);
 		pinfo->lcdc.chenge_fps_payload_num = !rc ? tmp : 0;
 
-		rc = of_get_named_gpio(next,
-				"somc,mipi-rst-gpio", 0);
-		if (gpio_is_valid(rc))
-			spec_pdata->mipi_rst = rc;
-		else
-			pr_warn("%s:%d Unable to get valid GPIO for MIPI RST\n",
-								__func__, __LINE__);
+		spec_pdata->pwron_reset = of_property_read_bool(next,
+					"somc,panel-pwron-reset");
 
 		spec_pdata->dsi_seq_hack = of_property_read_bool(next,
 						"somc,dsi-restart-hack");

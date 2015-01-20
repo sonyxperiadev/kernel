@@ -324,11 +324,13 @@
 &dsi_truly_hx8379c_fwvga_vid {
 	somc,first-boot-aware;
 	somc,panel-id-read-cmds;
+	somc,panel-pwron-reset;
 	qcom,cont-splash-enabled;
 };
 
 &dsi_ofilm_hx8379c_fwvga_vid {
 	somc,first-boot-aware;
 	somc,panel-id-read-cmds;
+	somc,panel-pwron-reset;
 	qcom,cont-splash-enabled;
 };
