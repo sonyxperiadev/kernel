@@ -3101,7 +3101,7 @@ static struct i2c_driver driver = {
 };
 
 #ifndef MODULE
-void __devinit max1187x_init_async(void *unused, async_cookie_t cookie)
+void max1187x_init_async(void *unused, async_cookie_t cookie)
 {
 	int rc;
 
@@ -3111,7 +3111,7 @@ void __devinit max1187x_init_async(void *unused, async_cookie_t cookie)
 }
 #endif
 
-static int __devinit max1187x_init(void)
+static int __init max1187x_init(void)
 {
 #ifdef MODULE
 	return i2c_add_driver(&driver);
