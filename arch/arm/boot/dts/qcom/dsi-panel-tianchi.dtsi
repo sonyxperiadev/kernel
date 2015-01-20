@@ -98,6 +98,7 @@
 		somc,panel-detect = <1>;
 		somc,mdss-dsi-cabc-enabled = <1>;
 		somc,mdss-dsi-wait-time-before-on-cmd = <20>;
+		somc,panel-pwron-reset;
 	};
 
 	dsi_novatek_jdi: somc,novatek_jdi_panel {
@@ -203,6 +204,7 @@
 		somc,panel-detect = <1>;
 		somc,mdss-dsi-cabc-enabled = <1>;
 		somc,mdss-dsi-wait-time-before-on-cmd = <20>;
+		somc,panel-pwron-reset;
 	};
 
 	novatek_720p_video_tianma: somc,novatek_tianma_panel {
@@ -292,6 +294,7 @@
 		somc,panel-detect = <1>;
 		somc,mdss-dsi-cabc-enabled = <1>;
 		somc,mdss-dsi-wait-time-before-on-cmd = <20>;
+		somc,panel-pwron-reset;
 	};
 	renesas_720p_video_lgd: somc,renesas_LG_panel {
 		qcom,mdss-dsi-panel-name = "R63313 LG 720p video mode panel";
@@ -384,5 +387,6 @@
 		somc,panel-detect = <1>;
 		somc,mdss-dsi-cabc-enabled = <1>;
 		somc,mdss-dsi-wait-time-before-on-cmd = <20>;
+		somc,panel-pwron-reset;
 	};
 };
