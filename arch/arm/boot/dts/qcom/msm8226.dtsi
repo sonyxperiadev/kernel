@@ -405,7 +405,7 @@
 		reg = <0xfe12f000 0x35000>,
 			  <0xfe104000 0x20000>;
 		reg-names = "slimbus_physical", "slimbus_bam_physical";
-		interrupts = <0 163 0>, <0 164 0>;
+		interrupts = <0 163 0 0 164 0>;
 		interrupt-names = "slimbus_irq", "slimbus_bam_irq";
 
 		tapan_codec {
