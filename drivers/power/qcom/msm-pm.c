@@ -794,7 +794,7 @@ static int msm_pm_clk_init(struct platform_device *pdev)
 			if (cpu && synced_clocks)
 				return 0;
 			else
-				return PTR_ERR(clk);
+				clk = NULL;
 		}
 		per_cpu(cpu_clks, cpu) = clk;
 	}
