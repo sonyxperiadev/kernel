@@ -319,6 +319,7 @@
 &labibb {
 	status = "ok";
 	qpnp,qpnp-labibb-mode = "lcd";
+	qcom,qpnp-ibb-discharge-resistor = <32>;
 };
 
 &dsi_dual_sharp_video_0 {
