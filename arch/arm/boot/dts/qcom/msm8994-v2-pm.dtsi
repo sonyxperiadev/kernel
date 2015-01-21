@@ -624,14 +624,9 @@
 		#size-cells = <1>;
 		ranges;
 		reg = <0xfe87f664 0x40>;
-		clock-names = "cpu0_clk", "cpu1_clk", "cpu2_clk",
-				"cpu3_clk", "cpu4_clk", "cpu5_clk",
-				"cpu6_clk", "cpu7_clk", "l2_clk";
-		clocks = <&clock_cpu clk_a53_clk>,
-			 <&clock_cpu clk_a53_clk>,
-			 <&clock_cpu clk_a53_clk>,
-			 <&clock_cpu clk_a53_clk>,
-			 <&clock_cpu clk_a57_clk>,
+		clock-names = "cpu4_clk", "cpu5_clk", "cpu6_clk",
+				"cpu7_clk", "l2_clk";
+		clocks = <&clock_cpu clk_a57_clk>,
 			 <&clock_cpu clk_a57_clk>,
 			 <&clock_cpu clk_a57_clk>,
 			 <&clock_cpu clk_a57_clk>,
