@@ -1230,8 +1230,10 @@ vector_addrexcptn:
 vector_fiq:
 	subs	pc, lr, #4
 
+#ifdef CONFIG_MSM_KRAIT_WFE_FIXUP
 .krait_fixup:
 	.word	msm_krait_need_wfe_fixup
+#endif
 
 	.globl	vector_fiq_offset
 	.equ	vector_fiq_offset, vector_fiq
