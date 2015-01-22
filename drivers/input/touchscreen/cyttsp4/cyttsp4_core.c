@@ -5397,8 +5397,8 @@ static struct device_attribute attributes[] = {
 	__ATTR(baseline, S_IRUGO, cyttsp4_baseline_data_show, NULL),
 	__ATTR(diff_cnt, S_IRUGO, cyttsp4_diff_count_show, NULL),
 	__ATTR(cal_command, S_IRUGO, cyttsp4_execute_calibration_show, NULL),
-	__ATTR(test_ping, 0664, cyttsp4_test_ping_show, NULL),
-	__ATTR(ping, 0664, cyttsp4_ping_show, NULL),
+	__ATTR(test_ping, S_IRUSR|S_IRGRP|S_IROTH, cyttsp4_test_ping_show, NULL),
+	__ATTR(ping, S_IRUSR|S_IRGRP|S_IROTH, cyttsp4_ping_show, NULL),
 /* [Optical][Touch] Implement T2 test function, 20130724, Add End */
 /**/
 	__ATTR(enable_touch, 0664, cyttsp4_enable_touch_show, cyttsp4_enable_touch_store),
@@ -5407,11 +5407,11 @@ static struct device_attribute attributes[] = {
 	__ATTR(enable_dbg_msg, 0664, cyttsp4_enable_dbg_msg_show, cyttsp4_enable_dbg_msg_store),
 /**/
 /* [OPT] Implement T2 self test, 20131002, Add Start */
-	__ATTR(selftest, 0664, cyttsp4_self_test_show, NULL),
-	__ATTR(short_test, 0664, cyttsp4_short_test_show, NULL),
-	__ATTR(sillicon_id, 0664, cyttsp4_sillicon_id_show, NULL),
-	__ATTR(check_fw, 0664, cyttsp4_firmware_check_show, NULL),
-	__ATTR(panel_info, 0664, cyttsp4_panel_info_show, NULL),
+	__ATTR(selftest, S_IRUSR|S_IRGRP|S_IROTH, cyttsp4_self_test_show, NULL),
+	__ATTR(short_test, S_IRUSR|S_IRGRP|S_IROTH, cyttsp4_short_test_show, NULL),
+	__ATTR(sillicon_id, S_IRUSR|S_IRGRP|S_IROTH, cyttsp4_sillicon_id_show, NULL),
+	__ATTR(check_fw, S_IRUSR|S_IRGRP|S_IROTH, cyttsp4_firmware_check_show, NULL),
+	__ATTR(panel_info, S_IRUSR|S_IRGRP|S_IROTH, cyttsp4_panel_info_show, NULL),
 /* [OPT] Implement T2 self test, 20131002, Add End */
 };
 
