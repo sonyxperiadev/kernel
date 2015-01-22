@@ -648,6 +648,10 @@ int32_t msm_sensor_driver_probe(void *setting,
 		pr_err("failed: no memory slave_info %p", slave_info);
 		return -ENOMEM;
 	}
+
+	/* Set session_id to zero since this indicates error case when ioctl
+	 * returns to userspace. session_id will be set if probe succeedes */
+	probed_info->session_id = 0;
 #ifdef CONFIG_COMPAT
 	if (is_compat_task()) {
 		struct msm_camera_sensor_slave_info32 setting32;
