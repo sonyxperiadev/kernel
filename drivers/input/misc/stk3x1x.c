@@ -2486,7 +2486,6 @@ static irqreturn_t stk_oss_irq_handler(int irq, void *data)
 	return IRQ_HANDLED;
 }
 #endif	/*	#if (!defined(STK_POLL_PS) || !defined(STK_POLL_ALS))	*/
-
 static int32_t stk3x1x_init_all_setting(struct i2c_client *client, struct stk3x1x_platform_data *plat_data)
 {
     int32_t ret;
@@ -2506,7 +2505,6 @@ static int32_t stk3x1x_init_all_setting(struct i2c_client *client, struct stk3x1
     ret = stk3x1x_init_all_reg(ps_data, plat_data);
     if(ret < 0)
         return ret;
-
     ps_data->re_enable_als = false;
     ps_data->ir_code = 0;
     ps_data->als_correct_factor = 1000;
@@ -2531,607 +2529,523 @@ static int32_t stk3x1x_init_all_setting(struct i2c_client *client, struct stk3x1
 #ifdef STK_POLL_PS
     ps_data->debounce_counter = 0;
 #endif
-
     return 0;
 }
 
 #if (!defined(STK_POLL_PS) || !defined(STK_POLL_ALS))
 static int stk3x1x_setup_irq(struct i2c_client *client)
 {
-	int irq, err = -EIO;
-	struct stk3x1x_data *ps_data = i2c_get_clientdata(client);
+    int irq, err = -EIO;
+    struct stk3x1x_data *ps_data = i2c_get_clientdata(client);
 
-	irq = gpio_to_irq(ps_data->int_pin);
-#ifdef STK_DEBUG_PRINTF
-	printk(KERN_INFO "%s: int pin #=%d, irq=%d\n",__func__, ps_data->int_pin, irq);
-#endif
-	if (irq <= 0)
-	{
-		printk(KERN_ERR "irq number is not specified, irq # = %d, int pin=%d\n",irq, ps_data->int_pin);
-		return irq;
-	}
-	ps_data->irq = irq;
-	err = gpio_request(ps_data->int_pin,"stk-int");
-	if(err < 0)
-	{
-		printk(KERN_ERR "%s: gpio_request, err=%d", __func__, err);
-		return err;
-	}
-	err = gpio_direction_input(ps_data->int_pin);
-	if(err < 0)
-	{
-		printk(KERN_ERR "%s: gpio_direction_input, err=%d", __func__, err);
-		return err;
-	}
-#if ((STK_INT_PS_MODE == 0x03) || (STK_INT_PS_MODE	== 0x02))
-	err = request_any_context_irq(irq, stk_oss_irq_handler, IRQF_TRIGGER_FALLING|IRQF_TRIGGER_RISING, DEVICE_NAME, ps_data);
+#ifdef SPREADTRUM_PLATFORM
+    irq = sprd_alloc_gpio_irq(ps_data->int_pin);
 #else
-	err = request_any_context_irq(irq, stk_oss_irq_handler, IRQF_TRIGGER_LOW, DEVICE_NAME, ps_data);
+    irq = gpio_to_irq(ps_data->int_pin);
 #endif
-	if (err < 0)
-	{
-		printk(KERN_WARNING "%s: request_any_context_irq(%d) failed for (%d)\n", __func__, irq, err);
-		goto err_request_any_context_irq;
-	}
-	disable_irq(irq);
+#ifdef STK_DEBUG_PRINTF
+    printk(KERN_INFO "%s: int pin #=%d, irq=%d\n",__func__, ps_data->int_pin, irq);
+#endif
+    if (irq <= 0)
+    {
+        printk(KERN_ERR "irq number is not specified, irq # = %d, int pin=%d\n",irq, ps_data->int_pin);
+        return irq;
+    }
+    ps_data->irq = irq;
+    err = gpio_request(ps_data->int_pin,"stk-int");
+    if(err < 0)
+    {
+        printk(KERN_ERR "%s: gpio_request, err=%d", __func__, err);
+        return err;
+    }
+    err = gpio_direction_input(ps_data->int_pin);
+    if(err < 0)
+    {
+        printk(KERN_ERR "%s: gpio_direction_input, err=%d", __func__, err);
+        return err;
+    }
+#if ((STK_INT_PS_MODE == 0x03) || (STK_INT_PS_MODE	== 0x02))
+    err = request_any_context_irq(irq, stk_oss_irq_handler, IRQF_TRIGGER_FALLING|IRQF_TRIGGER_RISING, DEVICE_NAME, ps_data);
+#else
+    err = request_any_context_irq(irq, stk_oss_irq_handler, IRQF_TRIGGER_LOW, DEVICE_NAME, ps_data);
+#endif
+    if (err < 0)
+    {
+        printk(KERN_WARNING "%s: request_any_context_irq(%d) failed for (%d)\n", __func__, irq, err);
+        goto err_request_any_context_irq;
+    }
+    disable_irq(irq);
 
-	return 0;
-err_request_any_context_irq:
-	gpio_free(ps_data->int_pin);
-	return err;
+    return 0;
+    err_request_any_context_irq:
+#ifdef SPREADTRUM_PLATFORM
+    sprd_free_gpio_irq(ps_data->int_pin);
+#else
+    gpio_free(ps_data->int_pin);
+#endif
+    return err;
 }
 #endif
+
+
+static int stk3x1x_suspend(struct device *dev)
+{
+    struct stk3x1x_data *ps_data = dev_get_drvdata(dev);
+#ifndef STK_POLL_PS
+    struct i2c_client *client = to_i2c_client(dev);
+    int err;
+#endif
+
+    printk(KERN_INFO "%s", __func__);
+#ifndef SPREADTRUM_PLATFORM
+    mutex_lock(&ps_data->io_lock);
+    if(ps_data->als_enabled)
+    {
+        stk3x1x_enable_als(ps_data, 0);
+        ps_data->re_enable_als = true;
+    }
+#endif
+    printk(KERN_INFO "%s:proximity sensor enable(%d)", __func__,ps_data->ps_enabled);
+    if(ps_data->ps_enabled)
+    {
+#ifdef STK_POLL_PS
+        wake_lock(&ps_data->ps_nosuspend_wl);
+#else
+        if(device_may_wakeup(&client->dev))
+        {
+            err = enable_irq_wake(ps_data->irq);
+            if (err)
+            printk(KERN_INFO "%s: set_irq_wake(%d) failed, err=(%d)\n", __func__, ps_data->irq, err);
+        }
+        else
+        {
+           printk(KERN_ERR "%s: not support wakeup source", __func__);
+        }
+#endif
+    }
+#ifndef SPREADTRUM_PLATFORM
+    mutex_unlock(&ps_data->io_lock);
+#endif
+    return 0;
+}
+
+static int stk3x1x_resume(struct device *dev)
+{
+    struct stk3x1x_data *ps_data = dev_get_drvdata(dev);
+#ifndef STK_POLL_PS
+    struct i2c_client *client = to_i2c_client(dev);
+    int err;
+#endif
+
+    printk(KERN_INFO "%s", __func__);
+#ifndef SPREADTRUM_PLATFORM
+    mutex_lock(&ps_data->io_lock);
+    if(ps_data->re_enable_als)
+    {
+        stk3x1x_enable_als(ps_data, 1);
+        ps_data->re_enable_als = false;
+    }
+#endif
+    if(ps_data->ps_enabled)
+    {
+#ifdef STK_POLL_PS
+        wake_unlock(&ps_data->ps_nosuspend_wl);
+#else
+        if(device_may_wakeup(&client->dev))
+        {
+            err = disable_irq_wake(ps_data->irq);
+            if (err)
+                printk(KERN_WARNING "%s: disable_irq_wake(%d) failed, err=(%d)\n", __func__, ps_data->irq, err);
+        }
+#endif
+    }
+#ifndef SPREADTRUM_PLATFORM
+    mutex_unlock(&ps_data->io_lock);
+#endif
+    return 0;
+}
+
+static const struct dev_pm_ops stk3x1x_pm_ops = {
+    SET_SYSTEM_SLEEP_PM_OPS(stk3x1x_suspend, stk3x1x_resume)
+};
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
 static void stk3x1x_early_suspend(struct early_suspend *h)
 {
-	struct stk3x1x_data *ps_data = container_of(h, struct stk3x1x_data, stk_early_suspend);
+    struct stk3x1x_data *ps_data = container_of(h, struct stk3x1x_data, stk_early_suspend);
 #ifndef STK_POLL_PS
-	int err;
+    int err;
 #endif
 
+    printk(KERN_INFO "%s", __func__);
+#ifndef SPREADTRUM_PLATFORM
     mutex_lock(&ps_data->io_lock);
-	if(ps_data->als_enabled)
-	{
-		stk3x1x_enable_als(ps_data, 0);
-		ps_data->als_enabled = true;
-	}
-	if(ps_data->ps_enabled)
-	{
-#ifdef STK_POLL_PS
-		wake_lock(&ps_data->ps_nosuspend_wl);
-#else
-		err = enable_irq_wake(ps_data->irq);
-		if (err)
-			printk(KERN_WARNING "%s: set_irq_wake(%d) failed, err=(%d)\n", __func__, ps_data->irq, err);
+    if(ps_data->als_enabled)
+    {
+        stk3x1x_enable_als(ps_data, 0);
+        ps_data->re_enable_als = true;
+    }
 #endif
-	}
-	mutex_unlock(&ps_data->io_lock);
-	return;
+    if(ps_data->ps_enabled)
+    {
+#ifdef STK_POLL_PS
+        wake_lock(&ps_data->ps_nosuspend_wl);
+#else
+        err = enable_irq_wake(ps_data->irq);
+        if (err)
+            printk(KERN_WARNING "%s: set_irq_wake(%d) failed, err=(%d)\n", __func__, ps_data->irq, err);
+#endif
+    }
+#ifndef SPREADTRUM_PLATFORM
+    mutex_unlock(&ps_data->io_lock);
+#endif
+    return;
 }
 
 static void stk3x1x_late_resume(struct early_suspend *h)
 {
-	struct stk3x1x_data *ps_data = container_of(h, struct stk3x1x_data, stk_early_suspend);
+    struct stk3x1x_data *ps_data = container_of(h, struct stk3x1x_data, stk_early_suspend);
 #ifndef STK_POLL_PS
-	int err;
+    int err;
 #endif
 
+    printk(KERN_INFO "%s", __func__);
+#ifndef SPREADTRUM_PLATFORM
     mutex_lock(&ps_data->io_lock);
-	if(ps_data->als_enabled)
-		stk3x1x_enable_als(ps_data, 1);
-
-	if(ps_data->ps_enabled)
-	{
-#ifdef STK_POLL_PS
-		wake_lock(&ps_data->ps_nosuspend_wl);
-#else
-		err = disable_irq_wake(ps_data->irq);
-		if (err)
-			printk(KERN_WARNING "%s: disable_irq_wake(%d) failed, err=(%d)\n", __func__, ps_data->irq, err);
+    if(ps_data->re_enable_als)
+    {
+        stk3x1x_enable_als(ps_data, 1);
+        ps_data->re_enable_als = false;
+    }
 #endif
-	}
-	mutex_unlock(&ps_data->io_lock);
-	return;
+    if(ps_data->ps_enabled)
+    {
+#ifdef STK_POLL_PS
+        wake_unlock(&ps_data->ps_nosuspend_wl);
+#else
+        err = disable_irq_wake(ps_data->irq);
+        if (err)
+            printk(KERN_WARNING "%s: disable_irq_wake(%d) failed, err=(%d)\n", __func__, ps_data->irq, err);
+#endif
+    }
+#ifndef SPREADTRUM_PLATFORM
+    mutex_unlock(&ps_data->io_lock);
+#endif
+    return;
 }
 #endif	//#ifdef CONFIG_HAS_EARLYSUSPEND
 
-static int stk3x1x_power_ctl(struct stk3x1x_data *data, bool on)
-{
-	int ret = 0;
-
-	if (!on && data->power_enabled) {
-		ret = regulator_disable(data->vdd);
-		if (ret) {
-			dev_err(&data->client->dev,
-				"Regulator vdd disable failed ret=%d\n", ret);
-			return ret;
-		}
-
-		ret = regulator_disable(data->vio);
-		if (ret) {
-			dev_err(&data->client->dev,
-				"Regulator vio disable failed ret=%d\n", ret);
-			ret = regulator_enable(data->vdd);
-			if (ret) {
-				dev_err(&data->client->dev,
-					"Regulator vdd enable failed ret=%d\n",
-					ret);
-			}
-			return ret;
-		}
-		data->power_enabled = on;
-		dev_dbg(&data->client->dev, "stk3x1x_power_ctl on=%d\n",
-				on);
-	} else if (on && !data->power_enabled) {
-
-		ret = regulator_enable(data->vdd);
-		if (ret) {
-			dev_err(&data->client->dev,
-				"Regulator vdd enable failed ret=%d\n", ret);
-			return ret;
-		}
-
-		ret = regulator_enable(data->vio);
-		if (ret) {
-			dev_err(&data->client->dev,
-				"Regulator vio enable failed ret=%d\n", ret);
-			regulator_disable(data->vdd);
-			return ret;
-		}
-		data->power_enabled = on;
-		dev_dbg(&data->client->dev, "stk3x1x_power_ctl on=%d\n",
-				on);
-	} else {
-		dev_warn(&data->client->dev,
-				"Power on=%d. enabled=%d\n",
-				on, data->power_enabled);
-	}
-
-	return ret;
-}
-
-static int stk3x1x_power_init(struct stk3x1x_data *data, bool on)
-{
-	int ret;
-
-	if (!on) {
-		if (regulator_count_voltages(data->vdd) > 0)
-			regulator_set_voltage(data->vdd,
-					0, STK3X1X_VDD_MAX_UV);
-
-		regulator_put(data->vdd);
-
-		if (regulator_count_voltages(data->vio) > 0)
-			regulator_set_voltage(data->vio,
-					0, STK3X1X_VIO_MAX_UV);
-
-		regulator_put(data->vio);
-	} else {
-		data->vdd = regulator_get(&data->client->dev, "vdd");
-		if (IS_ERR(data->vdd)) {
-			ret = PTR_ERR(data->vdd);
-			dev_err(&data->client->dev,
-				"Regulator get failed vdd ret=%d\n", ret);
-			return ret;
-		}
-
-		if (regulator_count_voltages(data->vdd) > 0) {
-			ret = regulator_set_voltage(data->vdd,
-					STK3X1X_VDD_MIN_UV,
-					STK3X1X_VDD_MAX_UV);
-			if (ret) {
-				dev_err(&data->client->dev,
-					"Regulator set failed vdd ret=%d\n",
-					ret);
-				goto reg_vdd_put;
-			}
-		}
-
-		data->vio = regulator_get(&data->client->dev, "vio");
-		if (IS_ERR(data->vio)) {
-			ret = PTR_ERR(data->vio);
-			dev_err(&data->client->dev,
-				"Regulator get failed vio ret=%d\n", ret);
-			goto reg_vdd_set;
-		}
-
-		if (regulator_count_voltages(data->vio) > 0) {
-			ret = regulator_set_voltage(data->vio,
-					STK3X1X_VIO_MIN_UV,
-					STK3X1X_VIO_MAX_UV);
-			if (ret) {
-				dev_err(&data->client->dev,
-				"Regulator set failed vio ret=%d\n", ret);
-				goto reg_vio_put;
-			}
-		}
-	}
-
-	return 0;
-
-reg_vio_put:
-	regulator_put(data->vio);
-reg_vdd_set:
-	if (regulator_count_voltages(data->vdd) > 0)
-		regulator_set_voltage(data->vdd, 0, STK3X1X_VDD_MAX_UV);
-reg_vdd_put:
-	regulator_put(data->vdd);
-	return ret;
-}
-
-static int stk3x1x_device_ctl(struct stk3x1x_data *ps_data, bool enable)
-{
-	int ret;
-	struct device *dev = &ps_data->client->dev;
-
-	if (enable && !ps_data->power_enabled) {
-		ret = stk3x1x_power_ctl(ps_data, true);
-		if (ret) {
-			dev_err(dev, "Failed to enable device power\n");
-			goto err_exit;
-		}
-		ret = stk3x1x_init_all_setting(ps_data->client, ps_data->pdata);
-		if (ret < 0) {
-			stk3x1x_power_ctl(ps_data, false);
-			dev_err(dev, "Failed to re-init device setting\n");
-			goto err_exit;
-		}
-	} else if (!enable && ps_data->power_enabled) {
-		if (!ps_data->als_enabled && !ps_data->ps_enabled) {
-			ret = stk3x1x_power_ctl(ps_data, false);
-			if (ret) {
-				dev_err(dev, "Failed to disable device power\n");
-				goto err_exit;
-			}
-		} else {
-			dev_dbg(dev, "device control: als_enabled=%d, ps_enabled=%d\n",
-				ps_data->als_enabled, ps_data->ps_enabled);
-		}
-	} else {
-		dev_dbg(dev, "device control: enable=%d, power_enabled=%d\n",
-			enable, ps_data->power_enabled);
-	}
-	return 0;
-
-err_exit:
-	return ret;
-}
-#ifdef CONFIG_OF
 static int stk3x1x_parse_dt(struct device *dev,
-			struct stk3x1x_platform_data *pdata)
+				struct stk3x1x_platform_data *pdata)
 {
-	int rc;
-	struct device_node *np = dev->of_node;
-	u32 temp_val;
+    struct device_node *np = dev->of_node;
+    unsigned int temp_val=0;
+    const __be32 *prop; /* PERI-BJ-Add_Regular_Optimum_feature-00+ */
 
-	pdata->int_pin = of_get_named_gpio_flags(np, "stk,irq-gpio",
-				0, &pdata->int_flags);
-	if (pdata->int_pin < 0) {
-		dev_err(dev, "Unable to read irq-gpio\n");
-		return pdata->int_pin;
-	}
+    of_property_read_u32(np, "sensortek,slave-addr",&temp_val);
+    //pdata->slave_addr = temp_val;
+    pdata->int_pin = of_get_named_gpio_flags(np,"sensortek,int_pin", 0, &temp_val);
+    of_property_read_u32(np, "sensortek,state_reg",&temp_val);
+    pdata->state_reg = temp_val;
+    of_property_read_u32(np, "sensortek,psctrl_reg",&temp_val);
+    pdata->psctrl_reg = temp_val;
+    of_property_read_u32(np, "sensortek,alsctrl_reg",&temp_val);
+    pdata->alsctrl_reg = temp_val;
+    of_property_read_u32(np, "sensortek,ledctrl_reg",&temp_val);
+    pdata->ledctrl_reg = temp_val;
+    of_property_read_u32(np, "sensortek,wait_reg",&temp_val);
+    pdata->wait_reg = temp_val;
 
-	rc = of_property_read_u32(np, "stk,transmittance", &temp_val);
-	if (!rc)
-		pdata->transmittance = temp_val;
-	else {
-		dev_err(dev, "Unable to read transmittance\n");
-		return rc;
-	}
+    of_property_read_u32(np, "sensortek,ps_thd_h",&temp_val);
+    pdata->ps_thd_h = temp_val;
+    of_property_read_u32(np, "sensortek,ps_thd_l",&temp_val);
+    pdata->ps_thd_l = temp_val;
 
-	rc = of_property_read_u32(np, "stk,state-reg", &temp_val);
-	if (!rc)
-		pdata->state_reg = temp_val;
-	else {
-		dev_err(dev, "Unable to read state-reg\n");
-		return rc;
-	}
+    of_property_read_u32(np, "sensortek,transmittance",&temp_val);
+    pdata->transmittance = temp_val;
 
-	rc = of_property_read_u32(np, "stk,psctrl-reg", &temp_val);
-	if (!rc)
-		pdata->psctrl_reg = (u8)temp_val;
-	else {
-		dev_err(dev, "Unable to read psctrl-reg\n");
-		return rc;
-	}
-
-	rc = of_property_read_u32(np, "stk,alsctrl-reg", &temp_val);
-	if (!rc)
-		pdata->alsctrl_reg = (u8)temp_val;
-	else {
-		dev_err(dev, "Unable to read alsctrl-reg\n");
-		return rc;
-	}
-
-	rc = of_property_read_u32(np, "stk,ledctrl-reg", &temp_val);
-	if (!rc)
-		pdata->ledctrl_reg = (u8)temp_val;
-	else {
-		dev_err(dev, "Unable to read ledctrl-reg\n");
-		return rc;
-	}
-
-	rc = of_property_read_u32(np, "stk,wait-reg", &temp_val);
-	if (!rc)
-		pdata->wait_reg = (u8)temp_val;
-	else {
-		dev_err(dev, "Unable to read wait-reg\n");
-		return rc;
-	}
-
-	rc = of_property_read_u32(np, "stk,ps-thdh", &temp_val);
-	if (!rc)
-		pdata->ps_thd_h = (u16)temp_val;
-	else {
-		dev_err(dev, "Unable to read ps-thdh\n");
-		return rc;
-	}
-
-	rc = of_property_read_u32(np, "stk,ps-thdl", &temp_val);
-	if (!rc)
-		pdata->ps_thd_l = (u16)temp_val;
-	else {
-		dev_err(dev, "Unable to read ps-thdl\n");
-		return rc;
-	}
-
-	pdata->use_fir = of_property_read_bool(np, "stk,use-fir");
-
-	return 0;
+/* PERI-BJ-Add_Regular_Optimum_feature-00+{ */
+    prop = of_get_property(np, "sensortek,vdd-current-level",&temp_val);
+    if (!prop || (temp_val != (2 * sizeof(__be32))))
+    {
+        printk(KERN_ERR "%s, %s sensortek,vdd-current-level property.\n", __func__, prop ? "invalid format" : "no");
+        return -ENODEV;
+    }
+    else
+    {
+        pdata->lpm_uA = be32_to_cpup(&prop[0]);
+        pdata->hpm_uA = be32_to_cpup(&prop[1]);
+        printk(KERN_DEBUG"%s: pdata->lpm_uA=%d, pdata->hpm_uA=%d\n",__func__, pdata->lpm_uA, pdata->hpm_uA);
+    }
+/* PERI-BJ-Add_Regular_Optimum_feature-00+} */
+    printk(KERN_ERR "%s: GPIO = %d\n", __func__,pdata->int_pin);
+    return 0;
 }
-#else
-static int stk3x1x_parse_dt(struct device *dev,
-			struct stk3x1x_platform_data *pdata)
-{
-	return -ENODEV;
-}
-#endif /* !CONFIG_OF */
 
 static int stk3x1x_probe(struct i2c_client *client,
                         const struct i2c_device_id *id)
 {
     int err = -ENODEV;
     struct stk3x1x_data *ps_data;
-	struct stk3x1x_platform_data *plat_data;
+    struct stk3x1x_platform_data *plat_data;
     printk(KERN_INFO "%s: driver version = %s\n", __func__, DRIVER_VERSION);
 
-    if (!i2c_check_functionality(client->adapter, I2C_FUNC_SMBUS_BYTE_DATA))
+    if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C))
     {
-        printk(KERN_ERR "%s: No Support for I2C_FUNC_SMBUS_BYTE_DATA\n", __func__);
-        return -ENODEV;
-    }
-    if (!i2c_check_functionality(client->adapter, I2C_FUNC_SMBUS_WORD_DATA))
-    {
-        printk(KERN_ERR "%s: No Support for I2C_FUNC_SMBUS_WORD_DATA\n", __func__);
+        printk(KERN_ERR "%s: No Support for I2C_FUNC_I2C\n", __func__);
         return -ENODEV;
     }
 
-	ps_data = kzalloc(sizeof(struct stk3x1x_data),GFP_KERNEL);
-	if(!ps_data)
-	{
-		printk(KERN_ERR "%s: failed to allocate stk3x1x_data\n", __func__);
-		return -ENOMEM;
-	}
-	ps_data->client = client;
-	i2c_set_clientdata(client,ps_data);
-	mutex_init(&ps_data->io_lock);
-	wake_lock_init(&ps_data->ps_wakelock,WAKE_LOCK_SUSPEND, "stk_input_wakelock");
+    if (client->dev.of_node)
+    {
+        plat_data = devm_kzalloc(&client->dev,
+        sizeof(*plat_data),
+        GFP_KERNEL);
+        if (!plat_data)
+        {
+            pr_err("Failed to allocate memory\n");
+            return -ENOMEM;
+        }
+        stk3x1x_parse_dt(&client->dev, plat_data);
+    }
+    else
+    {
+        plat_data = client->dev.platform_data;
+    }
+
+    ps_data = kzalloc(sizeof(struct stk3x1x_data),GFP_KERNEL);
+    if(!ps_data)
+    {
+        printk(KERN_ERR "%s: failed to allocate stk3x1x_data\n", __func__);
+        return -ENOMEM;
+    }
+    ps_data->client = client;
+    i2c_set_clientdata(client,ps_data);
+    mutex_init(&ps_data->io_lock);
+    wake_lock_init(&ps_data->ps_wakelock,WAKE_LOCK_SUSPEND, "stk_input_wakelock");
 
 #ifdef STK_POLL_PS
-	wake_lock_init(&ps_data->ps_nosuspend_wl,WAKE_LOCK_SUSPEND, "stk_nosuspend_wakelock");
+    wake_lock_init(&ps_data->ps_nosuspend_wl,WAKE_LOCK_SUSPEND, "stk_nosuspend_wakelock");
 #endif
-	if (client->dev.of_node) {
-		plat_data = devm_kzalloc(&client->dev,
-			sizeof(struct stk3x1x_platform_data), GFP_KERNEL);
-		if (!plat_data) {
-			dev_err(&client->dev, "Failed to allocate memory\n");
-			return -ENOMEM;
-		}
+    if(plat_data!=NULL)
+    {
 
-		err = stk3x1x_parse_dt(&client->dev, plat_data);
-		dev_err(&client->dev,
-			"%s: stk3x1x_parse_dt ret=%d\n", __func__, err);
-		if (err)
-			return err;
-	} else
-		plat_data = client->dev.platform_data;
+/* PERI-BJ-Add_Regular_Optimum_feature-00+{ */
+        ps_data->lpm_uA = plat_data->lpm_uA;
+        ps_data->hpm_uA = plat_data->hpm_uA;
+/* PERI-BJ-Add_Regular_Optimum_feature-00+} */
+        ps_data->als_transmittance = plat_data->transmittance;
+        ps_data->int_pin = plat_data->int_pin;
+        if(ps_data->als_transmittance == 0)
+        {
+            printk(KERN_ERR "%s: Please set als_transmittance in platform data\n", __func__);
+            goto err_als_input_allocate;
+        }
+    }
+    else
+    {
+        printk(KERN_ERR "%s: no stk3x1x platform data!\n", __func__);
+        goto err_als_input_allocate;
+    }
 
-	if (!plat_data) {
-		dev_err(&client->dev,
-			"%s: no stk3x1x platform data!\n", __func__);
-		goto err_als_input_allocate;
-	}
-	ps_data->als_transmittance = plat_data->transmittance;
-	ps_data->int_pin = plat_data->int_pin;
-	ps_data->use_fir = plat_data->use_fir;
-	ps_data->pdata = plat_data;
+    ps_data->als_input_dev = input_allocate_device();
+    if (ps_data->als_input_dev==NULL)
+    {
+        printk(KERN_ERR "%s: could not allocate als device\n", __func__);
+        err = -ENOMEM;
+        goto err_als_input_allocate;
+    }
+    ps_data->ps_input_dev = input_allocate_device();
+    if (ps_data->ps_input_dev==NULL)
+    {
+        printk(KERN_ERR "%s: could not allocate ps device\n", __func__);
+        err = -ENOMEM;
+        goto err_ps_input_allocate;
+    }
+    ps_data->als_input_dev->name = ALS_NAME;
+    ps_data->ps_input_dev->name = PS_NAME;
+    set_bit(EV_ABS, ps_data->als_input_dev->evbit);
+    set_bit(EV_ABS, ps_data->ps_input_dev->evbit);
+    input_set_abs_params(ps_data->als_input_dev, ABS_MISC, 0, stk_alscode2lux(ps_data, (1<<16)-1), 0, 0);
+    input_set_abs_params(ps_data->ps_input_dev, ABS_DISTANCE, 0,1, 0, 0);
+    err = input_register_device(ps_data->als_input_dev);
+    if (err<0)
+    {
+        printk(KERN_ERR "%s: can not register als input device\n", __func__);
+        goto err_als_input_register;
+    }
+    err = input_register_device(ps_data->ps_input_dev);
+    if (err<0)
+    {
+        printk(KERN_ERR "%s: can not register ps input device\n", __func__);
+        goto err_ps_input_register;
+    }
 
-	if (ps_data->als_transmittance == 0) {
-		dev_err(&client->dev,
-			"%s: Please set als_transmittance\n", __func__);
-		goto err_als_input_allocate;
-	}
-
-	ps_data->als_input_dev = input_allocate_device();
-	if (ps_data->als_input_dev==NULL)
-	{
-		printk(KERN_ERR "%s: could not allocate als device\n", __func__);
-		err = -ENOMEM;
-		goto err_als_input_allocate;
-	}
-	ps_data->ps_input_dev = input_allocate_device();
-	if (ps_data->ps_input_dev==NULL)
-	{
-		printk(KERN_ERR "%s: could not allocate ps device\n", __func__);
-		err = -ENOMEM;
-		goto err_ps_input_allocate;
-	}
-	ps_data->als_input_dev->name = ALS_NAME;
-	ps_data->ps_input_dev->name = PS_NAME;
-	set_bit(EV_ABS, ps_data->als_input_dev->evbit);
-	set_bit(EV_ABS, ps_data->ps_input_dev->evbit);
-	input_set_abs_params(ps_data->als_input_dev, ABS_MISC, 0, stk_alscode2lux(ps_data, (1<<16)-1), 0, 0);
-	input_set_abs_params(ps_data->ps_input_dev, ABS_DISTANCE, 0,1, 0, 0);
-	err = input_register_device(ps_data->als_input_dev);
-	if (err<0)
-	{
-		printk(KERN_ERR "%s: can not register als input device\n", __func__);
-		goto err_als_input_register;
-	}
-	err = input_register_device(ps_data->ps_input_dev);
-	if (err<0)
-	{
-		printk(KERN_ERR "%s: can not register ps input device\n", __func__);
-		goto err_ps_input_register;
-	}
-
-	err = sysfs_create_group(&ps_data->als_input_dev->dev.kobj, &stk_als_attribute_group);
-	if (err < 0)
-	{
-		printk(KERN_ERR "%s:could not create sysfs group for als\n", __func__);
-		goto err_als_sysfs_create_group;
-	}
-	err = sysfs_create_group(&ps_data->ps_input_dev->dev.kobj, &stk_ps_attribute_group);
-	if (err < 0)
-	{
-		printk(KERN_ERR "%s:could not create sysfs group for ps\n", __func__);
-		goto err_ps_sysfs_create_group;
-	}
-	input_set_drvdata(ps_data->als_input_dev, ps_data);
-	input_set_drvdata(ps_data->ps_input_dev, ps_data);
+    err = sysfs_create_group(&ps_data->als_input_dev->dev.kobj, &stk_als_attribute_group);
+    if (err < 0)
+    {
+        printk(KERN_ERR "%s:could not create sysfs group for als\n", __func__);
+        goto err_als_sysfs_create_group;
+    }
+    err = sysfs_create_group(&ps_data->ps_input_dev->dev.kobj, &stk_ps_attribute_group);
+    if (err < 0)
+    {
+        printk(KERN_ERR "%s:could not create sysfs group for ps\n", __func__);
+        goto err_ps_sysfs_create_group;
+    }
+    input_set_drvdata(ps_data->als_input_dev, ps_data);
+    input_set_drvdata(ps_data->ps_input_dev, ps_data);
 
 #ifdef STK_POLL_ALS
-	ps_data->stk_als_wq = create_singlethread_workqueue("stk_als_wq");
-	INIT_WORK(&ps_data->stk_als_work, stk_als_work_func);
-	hrtimer_init(&ps_data->als_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
-	ps_data->als_poll_delay = ns_to_ktime(110 * NSEC_PER_MSEC);
-	ps_data->als_timer.function = stk_als_timer_func;
+    ps_data->stk_als_wq = create_singlethread_workqueue("stk_als_wq");
+    INIT_WORK(&ps_data->stk_als_work, stk_als_poll_work_func);
+    hrtimer_init(&ps_data->als_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
+    ps_data->als_poll_delay = ns_to_ktime(110 * NSEC_PER_MSEC);
+    ps_data->als_timer.function = stk_als_timer_func;
 #endif
 
-	ps_data->stk_ps_wq = create_singlethread_workqueue("stk_ps_wq");
-	INIT_WORK(&ps_data->stk_ps_work, stk_ps_work_func);
-	hrtimer_init(&ps_data->ps_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
-	ps_data->ps_poll_delay = ns_to_ktime(110 * NSEC_PER_MSEC);
-	ps_data->ps_timer.function = stk_ps_timer_func;
+#ifdef STK_POLL_PS
+    ps_data->stk_ps_wq = create_singlethread_workqueue("stk_ps_wq");
+    INIT_WORK(&ps_data->stk_ps_work, stk_ps_poll_work_func);
+    hrtimer_init(&ps_data->ps_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
+    ps_data->ps_poll_delay = ns_to_ktime(60 * NSEC_PER_MSEC);
+    ps_data->ps_timer.function = stk_ps_timer_func;
+#endif
+
+#ifdef STK_TUNE0
+    ps_data->stk_ps_tune0_wq = create_singlethread_workqueue("stk_ps_tune0_wq");
+    INIT_WORK(&ps_data->stk_ps_tune0_work, stk_ps_tune0_work_func);
+    hrtimer_init(&ps_data->ps_tune0_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
+    ps_data->ps_tune0_delay = ns_to_ktime(60 * NSEC_PER_MSEC);
+    ps_data->ps_tune0_timer.function = stk_ps_tune0_timer_func;
+#endif
+
 #if (!defined(STK_POLL_ALS) || !defined(STK_POLL_PS))
-	ps_data->stk_wq = create_singlethread_workqueue("stk_wq");
-	INIT_WORK(&ps_data->stk_work, stk_work_func);
-	err = stk3x1x_setup_irq(client);
-	if(err < 0)
-		goto err_stk3x1x_setup_irq;
+    ps_data->stk_wq = create_singlethread_workqueue("stk_wq");
+    INIT_WORK(&ps_data->stk_work, stk_work_func);
+
+    err = stk3x1x_setup_irq(client);
+    if(err < 0)
+        goto err_stk3x1x_setup_irq;
 #endif
 
-	err = stk3x1x_power_init(ps_data, true);
-	if (err)
-		goto err_power_init;
+/* PERI-BJ-Add_Regular_Optimum_feature-00+{ */
+    err = stk3x1x_power_init(ps_data);
+    if (err)
+        goto err_power_init;
 
-	err = stk3x1x_power_ctl(ps_data, true);
-	if (err)
-		goto err_power_on;
-
-	ps_data->als_enabled = false;
-	ps_data->ps_enabled = false;
+    err = stk3x1x_power_enable(ps_data, 1);
+    if (err)
+        goto err_power_init;
+/* PERI-BJ-Add_Regular_Optimum_feature-00+} */
+    device_init_wakeup(&client->dev, true);
+    err = stk3x1x_init_all_setting(client, plat_data);
+    if(err < 0)
+        goto err_init_all_setting;
 #ifdef CONFIG_HAS_EARLYSUSPEND
-	ps_data->stk_early_suspend.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN + 1;
-	ps_data->stk_early_suspend.suspend = stk3x1x_early_suspend;
-	ps_data->stk_early_suspend.resume = stk3x1x_late_resume;
-	register_early_suspend(&ps_data->stk_early_suspend);
+    ps_data->stk_early_suspend.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN + 1;
+    ps_data->stk_early_suspend.suspend = stk3x1x_early_suspend;
+    ps_data->stk_early_suspend.resume = stk3x1x_late_resume;
+    register_early_suspend(&ps_data->stk_early_suspend);
 #endif
-	/* make sure everything is ok before registering the class device */
-	ps_data->als_cdev = sensors_light_cdev;
-	ps_data->als_cdev.sensors_enable = stk_als_enable_set;
-	ps_data->als_cdev.sensors_poll_delay = stk_als_poll_delay_set;
-	err = sensors_classdev_register(&client->dev, &ps_data->als_cdev);
-	if (err)
-		goto err_power_on;
-
-	ps_data->ps_cdev = sensors_proximity_cdev;
-	ps_data->ps_cdev.sensors_enable = stk_ps_enable_set;
-	err = sensors_classdev_register(&client->dev, &ps_data->ps_cdev);
-	if (err)
-		goto err_class_sysfs;
-
-	/* enable device power only when it is enabled */
-	err = stk3x1x_power_ctl(ps_data, false);
-	if (err)
-		goto err_init_all_setting;
-
-	dev_dbg(&client->dev, "%s: probe successfully", __func__);
-	return 0;
+/* PERI-BJ-Add_Regular_Optimum_feature-00+{ */
+    //enable device power only when it is enabled
+    stk3x1x_power_enable(ps_data, 0);
+/* PERI-BJ-Add_Regular_Optimum_feature-00+} */
+    printk(KERN_INFO "%s: probe successfully", __func__);
+    return 0;
 
 err_init_all_setting:
-	stk3x1x_power_ctl(ps_data, false);
-	sensors_classdev_unregister(&ps_data->ps_cdev);
-err_class_sysfs:
-	sensors_classdev_unregister(&ps_data->als_cdev);
-err_power_on:
-	stk3x1x_power_init(ps_data, false);
+    device_init_wakeup(&client->dev, false);
+/* PERI-BJ-Add_Regular_Optimum_feature-00+{ */
+    stk3x1x_power_enable(ps_data, 0);
 err_power_init:
+/* PERI-BJ-Add_Regular_Optimum_feature-00+} */
 #ifndef STK_POLL_PS
-	free_irq(ps_data->irq, ps_data);
-	gpio_free(plat_data->int_pin);
-#endif
+    free_irq(ps_data->irq, ps_data);
+    #ifdef SPREADTRUM_PLATFORM
+    sprd_free_gpio_irq(ps_data->int_pin);
+    #else
+    gpio_free(ps_data->int_pin);
+    #endif
+#endif	/* #ifndef STK_POLL_PS	*/
 #if (!defined(STK_POLL_ALS) || !defined(STK_POLL_PS))
 err_stk3x1x_setup_irq:
 #endif
 #ifdef STK_POLL_ALS
-	hrtimer_try_to_cancel(&ps_data->als_timer);
-	destroy_workqueue(ps_data->stk_als_wq);
+    hrtimer_try_to_cancel(&ps_data->als_timer);
+    destroy_workqueue(ps_data->stk_als_wq);
 #endif
-	destroy_workqueue(ps_data->stk_ps_wq);
+#ifdef STK_TUNE0
+    destroy_workqueue(ps_data->stk_ps_tune0_wq);
+#endif
+#ifdef STK_POLL_PS
+    hrtimer_try_to_cancel(&ps_data->ps_timer);
+    destroy_workqueue(ps_data->stk_ps_wq);
+#endif
 #if (!defined(STK_POLL_ALS) || !defined(STK_POLL_PS))
-	destroy_workqueue(ps_data->stk_wq);
+    destroy_workqueue(ps_data->stk_wq);
 #endif
-	sysfs_remove_group(&ps_data->ps_input_dev->dev.kobj, &stk_ps_attribute_group);
+    sysfs_remove_group(&ps_data->ps_input_dev->dev.kobj, &stk_ps_attribute_group);
 err_ps_sysfs_create_group:
-	sysfs_remove_group(&ps_data->als_input_dev->dev.kobj, &stk_als_attribute_group);
+    sysfs_remove_group(&ps_data->als_input_dev->dev.kobj, &stk_als_attribute_group);
 err_als_sysfs_create_group:
-	input_unregister_device(ps_data->ps_input_dev);
+    input_unregister_device(ps_data->ps_input_dev);
 err_ps_input_register:
-	input_unregister_device(ps_data->als_input_dev);
+    input_unregister_device(ps_data->als_input_dev);
 err_als_input_register:
-	input_free_device(ps_data->ps_input_dev);
+    input_free_device(ps_data->ps_input_dev);
 err_ps_input_allocate:
-	input_free_device(ps_data->als_input_dev);
+    input_free_device(ps_data->als_input_dev);
 err_als_input_allocate:
 #ifdef STK_POLL_PS
     wake_lock_destroy(&ps_data->ps_nosuspend_wl);
 #endif
     wake_lock_destroy(&ps_data->ps_wakelock);
     mutex_destroy(&ps_data->io_lock);
-	kfree(ps_data);
+    kfree(ps_data);
     return err;
 }
 
 
 static int stk3x1x_remove(struct i2c_client *client)
 {
-	struct stk3x1x_data *ps_data = i2c_get_clientdata(client);
+    struct stk3x1x_data *ps_data = i2c_get_clientdata(client);
+    device_init_wakeup(&client->dev, false);
 #ifndef STK_POLL_PS
-	free_irq(ps_data->irq, ps_data);
-	gpio_free(ps_data->int_pin);
-#endif
+    free_irq(ps_data->irq, ps_data);
+	#ifdef SPREADTRUM_PLATFORM
+    sprd_free_gpio_irq(ps_data->int_pin);
+	#else
+    gpio_free(ps_data->int_pin);
+	#endif
+#endif	/* #ifndef STK_POLL_PS */
 #ifdef STK_POLL_ALS
-	hrtimer_try_to_cancel(&ps_data->als_timer);
-	destroy_workqueue(ps_data->stk_als_wq);
+    hrtimer_try_to_cancel(&ps_data->als_timer);
+    destroy_workqueue(ps_data->stk_als_wq);
 #endif
-	destroy_workqueue(ps_data->stk_ps_wq);
-#if (!defined(STK_POLL_ALS) || !defined(STK_POLL_PS))
-	destroy_workqueue(ps_data->stk_wq);
+#ifdef STK_TUNE0
+    destroy_workqueue(ps_data->stk_ps_tune0_wq);
 #endif
-	sysfs_remove_group(&ps_data->ps_input_dev->dev.kobj, &stk_ps_attribute_group);
-	sysfs_remove_group(&ps_data->als_input_dev->dev.kobj, &stk_als_attribute_group);
-	input_unregister_device(ps_data->ps_input_dev);
-	input_unregister_device(ps_data->als_input_dev);
-	input_free_device(ps_data->ps_input_dev);
-	input_free_device(ps_data->als_input_dev);
 #ifdef STK_POLL_PS
-	wake_lock_destroy(&ps_data->ps_nosuspend_wl);
+    hrtimer_try_to_cancel(&ps_data->ps_timer);
+    destroy_workqueue(ps_data->stk_ps_wq);
 #endif
-	wake_lock_destroy(&ps_data->ps_wakelock);
+#if (!defined(STK_POLL_ALS) || !defined(STK_POLL_PS))
+    destroy_workqueue(ps_data->stk_wq);
+#endif
+    sysfs_remove_group(&ps_data->ps_input_dev->dev.kobj, &stk_ps_attribute_group);
+    sysfs_remove_group(&ps_data->als_input_dev->dev.kobj, &stk_als_attribute_group);
+    input_unregister_device(ps_data->ps_input_dev);
+    input_unregister_device(ps_data->als_input_dev);
+    input_free_device(ps_data->ps_input_dev);
+    input_free_device(ps_data->als_input_dev);
+#ifdef STK_POLL_PS
+    wake_lock_destroy(&ps_data->ps_nosuspend_wl);
+#endif
+    wake_lock_destroy(&ps_data->ps_wakelock);
     mutex_destroy(&ps_data->io_lock);
-	kfree(ps_data);
+    kfree(ps_data);
 
     return 0;
 }
