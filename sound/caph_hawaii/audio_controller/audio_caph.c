@@ -40,6 +40,8 @@ the GPL, without Broadcom's express prior written consent.
 #include <linux/dma-mapping.h>
 #include <linux/irq.h>
 #include <mach/cpu.h>
+#include <plat/pi_mgr.h>
+
 
 #include "mobcom_types.h"
 #include "resultcode.h"
@@ -125,6 +127,10 @@ struct TAudioHalThreadData {
 	spinlock_t m_lock_out;
 };
 #endif
+
+/*voice rec qos node to conrol ARM core idle*/
+static struct pi_mgr_qos_node voice_recorder_qos_node;
+static bool voice_qos_state;
 
 #if 0
 static char action_names[ACTION_AUD_TOTAL][40] = {
@@ -333,8 +339,21 @@ static void CPResetHandler(Boolean cp_reset)
  */
 void caph_audio_init(void)
 {
+	int result;
 	AUDDRV_RegisterRateChangeCallback(AudioCodecIdHander);
 	AUDDRV_RegisterHandleCPResetCB(CPResetHandler);
+
+	/*request a QOS node for voice rec*/
+	result = pi_mgr_qos_add_request(&voice_recorder_qos_node,
+				"voice_recorder_qos", PI_MGR_PI_ID_ARM_CORE,
+				PI_MGR_QOS_DEFAULT_VALUE);
+	if (result) {
+		aError("Voice Rec QOS node req failed\n");
+		voice_qos_state = FALSE;
+	}
+	else
+		voice_qos_state = TRUE;
+
 #ifndef CONFIG_ARCH_JAVA
 	init_completion(&complete_kfifo);
 #endif
@@ -1207,6 +1226,11 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 			 * AUDCTRL_EnableRecord enables HW path, reads SYSPARM
 			 * and sets HW gains as defined in SYSPARM.
 			 */
+
+			/* We prevent core idle untill rec is active */
+			if (voice_qos_state)
+				pi_mgr_qos_request_update(&voice_recorder_qos_node, 0);
+
 			AUDCTRL_EnableRecord(param_start->pdev_prop->c.
 					     source,
 					     param_start->pdev_prop->c.
@@ -1257,6 +1281,10 @@ static void AUDIO_Ctrl_Process(BRCM_AUDIO_ACTION_en_t action_code,
 					param_stop->pdev_prop->c.sink,
 					pathID[param_stop->stream]);
 			pathID[param_stop->stream] = 0;
+			/*Re-enable core idle*/
+			if (voice_qos_state)
+				pi_mgr_qos_request_update(&voice_recorder_qos_node,
+						PI_MGR_QOS_DEFAULT_VALUE);
 		}
 		break;
 	case ACTION_AUD_OpenRecord:
