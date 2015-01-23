@@ -94,7 +94,10 @@ static inline void dsb_sev(void)
 
 static inline void arch_spin_lock(arch_spinlock_t *lock)
 {
-	unsigned long tmp, flags = 0;
+	unsigned long tmp;
+#ifdef CONFIG_MSM_KRAIT_WFE_FIXUP
+	unsigned long flags = 0;
+#endif
 	u32 newval;
 	arch_spinlock_t lockval;
 
@@ -109,6 +112,7 @@ static inline void arch_spin_lock(arch_spinlock_t *lock)
 	: "cc");
 
 	while (lockval.tickets.next != lockval.tickets.owner) {
+#ifdef CONFIG_MSM_KRAIT_WFE_FIXUP
 		if (msm_krait_need_wfe_fixup) {
 			local_save_flags(flags);
 			local_fiq_disable();
@@ -159,6 +163,9 @@ static inline void arch_spin_lock(arch_spinlock_t *lock)
 			isb();
 			local_irq_restore(flags);
 		}
+#else
+		wfe();
+#endif
 		lockval.tickets.owner = ACCESS_ONCE(lock->tickets.owner);
 	}
 
