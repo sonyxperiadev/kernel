@@ -17,12 +17,12 @@
 
 /dts-v1/;
 
-/include/ "msm8974pro-ab-pm8941.dtsi"
-/include/ "msm8974-mtp.dtsi"
-/include/ "msm8974pro-ab-shinano_common.dtsi"
-/include/ "msm8974pro-ab-shinano_castor_common.dtsi"
-/include/ "msm8974pro-ab-shinano_castor.dtsi"
-/include/ "dsi-panel-castor.dtsi"
+#include "msm8974pro-ab-pm8941.dtsi"
+#include "msm8974-mtp.dtsi"
+#include "msm8974pro-ab-shinano_common.dtsi"
+#include "msm8974pro-ab-shinano_castor_common.dtsi"
+#include "msm8974pro-ab-shinano_castor.dtsi"
+#include "dsi-panel-castor.dtsi"
 
 / {
 	model = "SoMC Castor ROW";
