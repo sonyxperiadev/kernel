@@ -119,6 +119,10 @@ struct div_data {
 	 * they are 2*N.
 	 */
 	bool is_half_divider;
+	/*
+	 * Skip odd dividers since the hardware may not support them.
+	 */
+	bool skip_odd_div;
 	unsigned int cached_div;
 };
 
