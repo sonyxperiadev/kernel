@@ -756,8 +756,8 @@
 	};
 };
 
-&usb3 {
-	qcom,dwc-hsphy-init = <0x00D0CC27>;
+&hsphy {
+	qcom,hsphy-init = <0x00D0CC27>;
 };
 
 &mdss_mdp {

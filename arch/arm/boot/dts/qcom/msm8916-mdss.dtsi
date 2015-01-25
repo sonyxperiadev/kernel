@@ -63,8 +63,10 @@
 		qcom,vbif-settings = <0x004 0x00000001>,
 				     <0x0d8 0x00000707>,
 				     <0x124 0x00000003>;
-		qcom,mdp-settings = <0x11e0 0x000000a5>,
-				    <0x11e4 0x00000055>;
+		qcom,mdp-settings = <0x000011e4 0x00000000>,
++				    <0x00065048 0x00000008>,
++				    <0x00065848 0x00000008>,
++				    <0x00066048 0x00000008>;
 
 		mdss_fb0: qcom,mdss_fb_primary {
 			cell-index = <0>;

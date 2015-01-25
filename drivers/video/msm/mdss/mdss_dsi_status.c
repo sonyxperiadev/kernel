@@ -155,7 +155,12 @@ static int fb_event_callback(struct notifier_block *self,
 {
 	struct fb_event *evdata = data;
 
-	if (event == FB_EVENT_BLANK && evdata) {
+	if (!evdata) {
+		pr_err("%s: event data not available\n", __func__);
+		return NOTIFY_BAD;
+	}
+
+	if (event == FB_EVENT_BLANK) {
 		int *blank = evdata->data;
 		struct dsi_status_data *pdata = container_of(self,
 				struct dsi_status_data, fb_notifier);
