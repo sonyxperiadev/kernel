@@ -45,6 +45,7 @@
 		qcom,mdss-dsi-underflow-color = <0xff>;
 		qcom,mdss-dsi-border-color = <0>;
 		qcom,mdss-dsi-pixel-packing = <0>;
+		somc,mdss-dsi-id-read-command = [06 01 00 01 05 00 02 A1 00];
 		qcom,mdss-dsi-on-command = [
 				29 01 00 00 00 00 06 F0 55 AA 52 08 00
 				23 01 00 00 00 00 02 B6 14
@@ -229,7 +230,7 @@
 		qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_dcs";
 		qcom,platform-reset-gpio = <&msmgpio 25 0>;
 		qcom,mdss-dsi-reset-sequence = <1 150>;
-		somc,panel-id = [00];
+		somc,panel-id = [ff];
 		somc,pwr-positive5-gpio = <&msmgpio 2 0>;
 		somc,pwr-negative5-gpio = <&msmgpio 3 0>;
 		somc,driver-ic = <4>;
@@ -932,9 +933,9 @@
 		somc,pwr-positive5-gpio = <&msmgpio 2 0>;
 		somc,pwr-negative5-gpio = <&msmgpio 3 0>;
 		somc,driver-ic = <4>;
-		somc,panel-detect = <1>;
 		somc,alt-panelid-cmd;
 		somc,dsi-restart-hack;
+		somc,panel-detect = <1>;
 		somc,panel-id-read-cmds;
 		somc,no-vsn-gpio;
 		somc,no-vsp-gpio;
@@ -1014,7 +1015,6 @@
 		somc,pwr-positive5-gpio = <&msmgpio 2 0>;
 		somc,pwr-negative5-gpio = <&msmgpio 3 0>;
 		somc,driver-ic = <4>;
-		somc,panel-detect = <1>;
 		somc,alt-panelid-cmd;
 		somc,dsi-restart-hack;
 		somc,panel-id-read-cmds;
