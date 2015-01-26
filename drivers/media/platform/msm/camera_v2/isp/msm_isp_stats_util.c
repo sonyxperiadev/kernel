@@ -1,5 +1,4 @@
 /* Copyright (c) 2013, The Linux Foundation. All rights reserved.
- * Copyright (C) 2013 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -368,20 +367,11 @@ static int msm_isp_stats_wait_for_cfg_done(struct vfe_device *vfe_dev)
 	int rc;
 	init_completion(&vfe_dev->stats_config_complete);
 	atomic_set(&vfe_dev->stats_data.stats_update, 2);
-#if defined(CONFIG_SONY_CAM_V4L2)
-	rc = wait_for_completion_timeout(
-		&vfe_dev->stats_config_complete,
-		msecs_to_jiffies(vfe_dev->timeout));
-#else
 	rc = wait_for_completion_timeout(
 		&vfe_dev->stats_config_complete,
 		msecs_to_jiffies(VFE_MAX_CFG_TIMEOUT));
-#endif
 	if (rc == 0) {
 		pr_err("%s: wait timeout\n", __func__);
-#if defined(CONFIG_SONY_CAM_V4L2)
-		vfe_dev->timeout = 100;
-#endif
 		rc = -1;
 	} else {
 		rc = 0;
@@ -500,6 +490,9 @@ int msm_isp_cfg_stats_stream(struct vfe_device *vfe_dev, void *arg)
 {
 	int rc = 0;
 	struct msm_vfe_stats_stream_cfg_cmd *stream_cfg_cmd = arg;
+	struct msm_vfe_stats_shared_data *stats_data = &vfe_dev->stats_data;
+	stats_data->stats_burst_len =  stream_cfg_cmd->stats_burst_len;
+
 	if (vfe_dev->stats_data.num_active_stream == 0)
 		vfe_dev->hw_info->vfe_ops.stats_ops.cfg_ub(vfe_dev);
 

@@ -1,5 +1,4 @@
 /* Copyright (c) 2011-2014, The Linux Foundation. All rights reserved.
- * Copyright (C) 2013 Sony Mobile Communications AB.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -29,7 +28,6 @@
 #define CDBG(fmt, args...) do { } while (0)
 #endif
 
-#if !defined(CONFIG_SONY_CAM_V4L2)
 static int32_t msm_camera_get_power_settimgs_from_sensor_lib(
 	struct msm_camera_power_ctrl_t *power_info,
 	struct msm_sensor_power_setting_array *power_setting_array)
@@ -102,7 +100,6 @@ FREE_UP:
 FAILED_1:
 	return rc;
 }
-#endif
 
 static int32_t msm_sensor_get_dt_data(struct device_node *of_node,
 	struct msm_sensor_ctrl_t *s_ctrl)
@@ -209,7 +206,6 @@ static int32_t msm_sensor_get_dt_data(struct device_node *of_node,
 	}
 
 
-#if !defined(CONFIG_SONY_CAM_V4L2)
 	rc = msm_camera_get_power_settimgs_from_sensor_lib(
 			&sensordata->power_info,
 			&s_ctrl->power_setting_array);
@@ -217,7 +213,6 @@ static int32_t msm_sensor_get_dt_data(struct device_node *of_node,
 		pr_err("%s failed %d\n", __func__, __LINE__);
 		goto FREE_VREG;
 	}
-#endif
 
 	sensordata->power_info.gpio_conf = kzalloc(
 			sizeof(struct msm_camera_gpio_conf), GFP_KERNEL);
@@ -775,9 +770,6 @@ int msm_sensor_config(struct msm_sensor_ctrl_t *s_ctrl, void __user *argp)
 		struct msm_camera_i2c_read_config read_config;
 		uint16_t local_data = 0;
 		uint16_t orig_slave_addr = 0, read_slave_addr = 0;
-#if defined(CONFIG_SONY_CAM_V4L2)
-		uint16_t orig_addr_type = 0;
-#endif
 		if (copy_from_user(&read_config,
 			(void *)cdata->cfg.setting,
 			sizeof(struct msm_camera_i2c_read_config))) {
@@ -805,18 +797,6 @@ int msm_sensor_config(struct msm_sensor_ctrl_t *s_ctrl, void __user *argp)
 			rc = -EFAULT;
 			break;
 		}
-#if defined(CONFIG_SONY_CAM_V4L2)
-		if (read_config.addr_type < MSM_CAMERA_I2C_ADDR_TYPE_MAX) {
-			orig_addr_type =
-				s_ctrl->sensor_i2c_client->addr_type;
-			s_ctrl->sensor_i2c_client->addr_type =
-				read_config.addr_type;
-		} else {
-			pr_err("%s: error: address type failed.", __func__);
-			rc = -EFAULT;
-			break;
-		}
-#endif
 		CDBG("%s:orig_slave_addr=0x%x, new_slave_addr=0x%x",
 				__func__, orig_slave_addr,
 				read_slave_addr >> 1);
@@ -834,16 +814,6 @@ int msm_sensor_config(struct msm_sensor_ctrl_t *s_ctrl, void __user *argp)
 			rc = -EFAULT;
 			break;
 		}
-#if defined(CONFIG_SONY_CAM_V4L2)
-		if (s_ctrl->sensor_i2c_client->cci_client) {
-			s_ctrl->sensor_i2c_client->cci_client->sid =
-				orig_slave_addr;
-		} else {
-			s_ctrl->sensor_i2c_client->client->addr =
-				orig_slave_addr;
-		}
-		s_ctrl->sensor_i2c_client->addr_type = orig_addr_type;
-#endif
 		break;
 	}
 	case CFG_SLAVE_WRITE_I2C_ARRAY: {
@@ -971,64 +941,6 @@ int msm_sensor_config(struct msm_sensor_ctrl_t *s_ctrl, void __user *argp)
 		kfree(reg_setting);
 		break;
 	}
-#if defined(CONFIG_SONY_CAM_V4L2)
-	case CFG_WRITE_I2C_SEQ_ARRAY_WITH_SID: {
-		struct msm_camera_i2c_seq_reg_setting conf_array;
-		struct msm_camera_i2c_seq_reg_array *reg_setting = NULL;
-		uint16_t orig_sid;
-		uint16_t orig_addr_type;
-
-		if (s_ctrl->sensor_state != MSM_SENSOR_POWER_UP) {
-			pr_err("%s:%d failed: invalid state %d\n", __func__,
-				__LINE__, s_ctrl->sensor_state);
-			rc = -EFAULT;
-			break;
-		}
-
-		if (copy_from_user(&conf_array,
-			(void *)cdata->cfg.setting,
-			sizeof(struct msm_camera_i2c_seq_reg_setting))) {
-			pr_err("%s:%d failed\n", __func__, __LINE__);
-			rc = -EFAULT;
-			break;
-		}
-
-		reg_setting = kzalloc(conf_array.size *
-			(sizeof(struct msm_camera_i2c_seq_reg_array)),
-			GFP_KERNEL);
-		if (!reg_setting) {
-			pr_err("%s:%d failed\n", __func__, __LINE__);
-			rc = -ENOMEM;
-			break;
-		}
-		if (copy_from_user(reg_setting, (void *)conf_array.reg_setting,
-			conf_array.size *
-			sizeof(struct msm_camera_i2c_seq_reg_array))) {
-			pr_err("%s:%d failed\n", __func__, __LINE__);
-			kfree(reg_setting);
-			rc = -EFAULT;
-			break;
-		}
-
-		conf_array.reg_setting = reg_setting;
-
-		orig_sid = s_ctrl->sensor_i2c_client->cci_client->sid;
-		orig_addr_type = s_ctrl->sensor_i2c_client->addr_type;
-
-		s_ctrl->sensor_i2c_client->addr_type = conf_array.addr_type;
-		s_ctrl->sensor_i2c_client->cci_client->sid
-		  = conf_array.slave_addr;
-		rc = s_ctrl->sensor_i2c_client->i2c_func_tbl->
-			i2c_write_seq_table(s_ctrl->sensor_i2c_client,
-			&conf_array);
-
-		s_ctrl->sensor_i2c_client->cci_client->sid = orig_sid;
-		s_ctrl->sensor_i2c_client->addr_type = orig_addr_type;
-
-		kfree(reg_setting);
-		break;
-	}
-#endif
 
 	case CFG_POWER_UP:
 		if (s_ctrl->sensor_state != MSM_SENSOR_POWER_DOWN) {
@@ -1048,13 +960,8 @@ int msm_sensor_config(struct msm_sensor_ctrl_t *s_ctrl, void __user *argp)
 				break;
 			}
 			s_ctrl->sensor_state = MSM_SENSOR_POWER_UP;
-#if defined(CONFIG_SONY_CAM_V4L2)
-			pr_info("%s:%d sensor state %d\n", __func__, __LINE__,
-				s_ctrl->sensor_state);
-#else
 			pr_err("%s:%d sensor state %d\n", __func__, __LINE__,
 				s_ctrl->sensor_state);
-#endif
 		} else {
 			rc = -EFAULT;
 		}
@@ -1080,13 +987,8 @@ int msm_sensor_config(struct msm_sensor_ctrl_t *s_ctrl, void __user *argp)
 				break;
 			}
 			s_ctrl->sensor_state = MSM_SENSOR_POWER_DOWN;
-#if defined(CONFIG_SONY_CAM_V4L2)
-			pr_info("%s:%d sensor state %d\n", __func__, __LINE__,
-				s_ctrl->sensor_state);
-#else
 			pr_err("%s:%d sensor state %d\n", __func__, __LINE__,
 				s_ctrl->sensor_state);
-#endif
 		} else {
 			rc = -EFAULT;
 		}
