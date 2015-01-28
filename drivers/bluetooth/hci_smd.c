@@ -484,9 +484,6 @@ static int hci_smd_register_smd(struct hci_smd_data *hsmd)
 	hdev->close = hci_smd_close;
 	hdev->send  = hci_smd_send_frame;
 
-	hdev->owner = THIS_MODULE;
-
-
 	tasklet_init(&hsmd->rx_task,
 			hci_smd_rx, (unsigned long) hsmd);
 	/*
