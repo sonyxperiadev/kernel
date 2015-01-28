@@ -479,7 +479,7 @@ static int hci_smd_register_smd(struct hci_smd_data *hsmd)
 
 	hsmd->hdev = hdev;
 	hdev->bus = HCI_SMD;
-	hdev->driver_data = NULL;
+	hci_set_drvdata(hdev, NULL);
 	hdev->open  = hci_smd_open;
 	hdev->close = hci_smd_close;
 	hdev->send  = hci_smd_send_frame;
