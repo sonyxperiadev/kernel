@@ -1188,6 +1188,11 @@ struct hci_ev_cmd_status {
 	__le16   opcode;
 } __packed;
 
+#define HCI_EV_HARDWARE_ERROR		0x10
+struct hci_ev_hardware_error {
+	__u8   hw_err_code;
+} __packed;
+
 #define HCI_EV_ROLE_CHANGE		0x12
 struct hci_ev_role_change {
 	__u8     status;
