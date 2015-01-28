@@ -2144,6 +2144,8 @@ struct hci_dev *hci_alloc_dev(void)
 	hdev->sniff_max_interval = 800;
 	hdev->sniff_min_interval = 80;
 
+	set_bit(HCI_SETUP, &hdev->flags);
+
 	mutex_init(&hdev->lock);
 	mutex_init(&hdev->req_lock);
 

@@ -838,18 +838,24 @@ static int set_powered(struct sock *sk, struct hci_dev *hdev, void *data,
 		goto failed;
 	}
 
-	cmd = mgmt_pending_add(sk, MGMT_OP_SET_POWERED, hdev, data, len);
-	if (!cmd) {
-		err = -ENOMEM;
-		goto failed;
-	}
+	/* Avoid queing power_on/off when the set up is going on via
+	 * hci_register_dev
+	 */
+	if (!test_bit(HCI_SETUP, &hdev->flags)) {
+		cmd = mgmt_pending_add(sk, MGMT_OP_SET_POWERED, hdev, data, len);
+		if (!cmd) {
+			err = -ENOMEM;
+			goto failed;
+		}
 
-	if (cp->val)
-		queue_work(hdev->req_workqueue, &hdev->power_on);
-	else
-		queue_work(hdev->req_workqueue, &hdev->power_off.work);
+		if (cp->val)
+			queue_work(hdev->req_workqueue, &hdev->power_on);
+		else
+			queue_work(hdev->req_workqueue, &hdev->power_off.work);
 
-	err = 0;
+		err = 0;
+	} else
+		err = cmd_status(sk, hdev->id, MGMT_OP_SET_POWERED, ENODEV);
 
 failed:
 	hci_dev_unlock(hdev);
