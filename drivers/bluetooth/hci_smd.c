@@ -147,13 +147,6 @@ static int hci_smd_close(struct hci_dev *hdev)
 		return -EPERM;
 }
 
-
-static void hci_smd_destruct(struct hci_dev *hdev)
-{
-	if (NULL != hdev->driver_data)
-		kfree(hdev->driver_data);
-}
-
 static void hci_smd_recv_data(void)
 {
 	int len = 0;
@@ -490,7 +483,7 @@ static int hci_smd_register_smd(struct hci_smd_data *hsmd)
 	hdev->open  = hci_smd_open;
 	hdev->close = hci_smd_close;
 	hdev->send  = hci_smd_send_frame;
-	hdev->destruct = hci_smd_destruct;
+
 	hdev->owner = THIS_MODULE;
 
 
