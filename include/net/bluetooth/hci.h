@@ -56,6 +56,7 @@
 #define HCI_RS232	4
 #define HCI_PCI		5
 #define HCI_SDIO	6
+#define HCI_SMD		7
 
 /* HCI controller types */
 #define HCI_BREDR	0x00
@@ -488,6 +489,11 @@ struct hci_cp_read_remote_ext_features {
 
 #define HCI_OP_READ_REMOTE_VERSION	0x041d
 struct hci_cp_read_remote_version {
+	__le16   handle;
+} __packed;
+
+#define HCI_OP_READ_CLOCK_OFFSET	0x041f
+struct hci_cp_read_clock_offset {
 	__le16   handle;
 } __packed;
 
@@ -1181,6 +1187,11 @@ struct hci_ev_cmd_status {
 	__u8     status;
 	__u8     ncmd;
 	__le16   opcode;
+} __packed;
+
+#define HCI_EV_HARDWARE_ERROR		0x10
+struct hci_ev_hardware_error {
+	__u8   hw_err_code;
 } __packed;
 
 #define HCI_EV_ROLE_CHANGE		0x12

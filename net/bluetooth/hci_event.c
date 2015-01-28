@@ -1714,6 +1714,8 @@ static void hci_conn_complete_evt(struct hci_dev *hdev, struct sk_buff *skb)
 		if (conn->type == ACL_LINK) {
 			struct hci_cp_read_remote_features cp;
 			cp.handle = ev->handle;
+			hci_send_cmd(hdev, HCI_OP_READ_CLOCK_OFFSET,
+				sizeof(cp), &cp);
 			hci_send_cmd(hdev, HCI_OP_READ_REMOTE_FEATURES,
 				     sizeof(cp), &cp);
 		}
@@ -2444,6 +2446,21 @@ static void hci_cmd_status_evt(struct hci_dev *hdev, struct sk_buff *skb)
 		if (!skb_queue_empty(&hdev->cmd_q))
 			queue_work(hdev->workqueue, &hdev->cmd_work);
 	}
+}
+
+static inline void hci_hardware_error_evt(struct hci_dev *hdev,
+					struct sk_buff *skb)
+{
+	struct hci_ev_hardware_error *ev = (void *) skb->data;
+
+	BT_ERR("hdev=%p, hw_err_code = %u", hdev, ev->hw_err_code);
+
+	if (hdev && hdev->dev_type == HCI_BREDR) {
+		hci_dev_lock(hdev);
+		mgmt_powered(hdev, 1);
+		hci_dev_unlock(hdev);
+	}
+
 }
 
 static void hci_role_change_evt(struct hci_dev *hdev, struct sk_buff *skb)
@@ -3768,6 +3785,10 @@ void hci_event_packet(struct hci_dev *hdev, struct sk_buff *skb)
 
 	case HCI_EV_CMD_STATUS:
 		hci_cmd_status_evt(hdev, skb);
+		break;
+
+	case HCI_EV_HARDWARE_ERROR:
+		hci_hardware_error_evt(hdev, skb);
 		break;
 
 	case HCI_EV_ROLE_CHANGE:
