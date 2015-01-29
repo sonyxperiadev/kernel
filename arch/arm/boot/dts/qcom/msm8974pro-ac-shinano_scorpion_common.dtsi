@@ -1045,6 +1045,7 @@
 			qcom,supply-pre-off-sleep = <0>;
 			qcom,supply-post-off-sleep = <0>;
 		};
+	};
 };
 
 &usb3 {
