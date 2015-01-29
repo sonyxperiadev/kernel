@@ -99,6 +99,7 @@ static void bcm_bt_lpm_exit_lpm(void);
 static int bcm4339_bt_rfkill_set_power(void *data, bool blocked)
 {
 	int regOnGpio;
+	int rc;
 
 	BT_DBG("Bluetooth device set power\n");
 
@@ -119,8 +120,12 @@ static int bcm4339_bt_rfkill_set_power(void *data, bool blocked)
 				regOnGpio);
 			return 0;
 		}
-		if (bt_batfet)
-			regulator_enable(bt_batfet);
+		if (bt_batfet) {
+			rc = regulator_enable(bt_batfet);
+			if (!rc)
+				pr_err("%s: failed to enable regulator bt_batfet\n",	
+									    __func__);
+		}
 		gpio_set_value(bcm4339_my_data->gpios[BT_DEV_WAKE_PIN], 1);
 		gpio_set_value(bcm4339_my_data->gpios[BT_REG_ON_PIN], 1);
 		gpio_request(bcm4339_my_data->gpios[BT_HOST_WAKE_PIN],
@@ -138,7 +143,7 @@ static int bcm4339_bt_rfkill_set_power(void *data, bool blocked)
 	}
 	bt_enabled = !blocked;
 
-	return 0;
+	return rc;
 }
 
 static const struct rfkill_ops bcm4339_bt_rfkill_ops = {
