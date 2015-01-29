@@ -2017,7 +2017,6 @@ static int dpcm_run_update_startup(struct snd_soc_pcm_runtime *fe, int stream)
 #ifdef CONFIG_MACH_SONY_SHINANO
 	if (stream == SNDRV_PCM_STREAM_PLAYBACK)
 		tfa98xx_speaker_amp_enable();
-}
 #endif
 	dpcm_dapm_stream_event(fe, stream, SND_SOC_DAPM_STREAM_NOP);
 
