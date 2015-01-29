@@ -1797,7 +1797,7 @@ static const struct dev_pm_ops tfa98xx_pm_ops = {
 };
 #endif
 
-static int __devinit tfa98xx_probe(struct platform_device *pdev)
+static int tfa98xx_probe(struct platform_device *pdev)
 {
 	int ret = 0;
 	pr_info("%s\n", __func__);
@@ -1809,7 +1809,7 @@ static int __devinit tfa98xx_probe(struct platform_device *pdev)
 		 tfa98xx_dais, ARRAY_SIZE(tfa98xx_dais));
 	return ret;
 }
-static int __devexit tfa98xx_remove(struct platform_device *pdev)
+static int tfa98xx_remove(struct platform_device *pdev)
 {
 	snd_soc_unregister_codec(&pdev->dev);
 	return 0;
