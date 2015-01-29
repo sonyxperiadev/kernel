@@ -930,9 +930,14 @@ static int mdss_mdp_image_setup(struct mdss_mdp_pipe *pipe,
 	if (mdss_dsi_panel_flip_ud()) {
 		if (pipe->mfd && pipe->mfd->panel_info &&
 			pipe->mfd->panel_info->pdest == DISPLAY_1)
+#ifndef CONFIG_MACH_SONY_EAGLE
 			dst_xy = ((pipe->mixer->height -
 				   (pipe->dst.y + pipe->dst.h)) << 16) |
 				pipe->dst.x;
+#else
+			dst_xy = (((960- dst.y - dst.h) << 16) |
+			(540- dst.x - dst.w));
+#endif
 		else
 			dst_xy = (pipe->dst.y << 16) | pipe->dst.x;
 	} else
