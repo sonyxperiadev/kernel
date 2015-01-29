@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -860,6 +860,9 @@ static struct mdss_mdp_pipe *mdss_mdp_pipe_init(struct mdss_mdp_mixer *mixer,
 
 	if (pipe && type == MDSS_MDP_PIPE_TYPE_CURSOR) {
 		kref_init(&pipe->kref);
+		INIT_LIST_HEAD(&pipe->buf_queue);
+		pr_debug("cursor: type=%x pnum=%d\n",
+			pipe->type, pipe->num);
 		goto cursor_done;
 	}
 
