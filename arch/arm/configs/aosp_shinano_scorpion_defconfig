@@ -578,3 +578,4 @@ CONFIG_BCM4339=y
 CONFIG_BCMDHD_FW_PATH="/system/vendor/firmware/fw_bcmdhd.bin"
 CONFIG_BCMDHD_NVRAM_PATH="/system/etc/wifi/bcmdhd.cal"
 CONFIG_ANDROID_INTF_ALARM_DEV=y
+CONFIG_MSM_PIL_SSR_GENERIC=y
