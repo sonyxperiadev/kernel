@@ -39,7 +39,7 @@
 #include <linux/wakelock.h>
 #include <linux/bcm4339_bt_lpm.h>
 #include <mach/gpiomux.h>
-#include <mach/msm_serial_hs.h>
+#include <linux/platform_data/msm_serial_hs.h>
 #include <net/bluetooth/bluetooth.h>
 
 #define D_BCM_BLUETOOTH_CONFIG_MATCH_TABLE   "bcm,bcm4339"
@@ -411,25 +411,16 @@ error_of_node:
 	return ret;
 }
 
-static int bcm4339_read_proc_proto(char *page, char **start, off_t offset,
-					int count, int *eof, void *data)
+static ssize_t bcm4339_read_proc_proto(struct seq_file *seq, void *v)
 {
-	unsigned long outbyte = 0;
-
 	BT_DBG("Bluetooth read proc request\n");
+	seq_printf(seq, "%s\n", bt_wake_request);
 
-	if (offset > 0) {
-		*eof = 1;
-		return 0;
-	}
-	outbyte = snprintf(page, 2, "%s", bt_wake_request);
-	BT_DBG("proc_read len = %lu\n", outbyte);
-	*eof = 1;
-	return outbyte;
+	return 0;
 }
 
-static int bcm4339_write_proc_proto(struct file *file, const char *buffer,
-					unsigned long count, void *data)
+static ssize_t bcm4339_write_proc_proto(struct file *file, const char __user *buffer,
+					size_t count, loff_t *pos)
 {
 	char proto;
 
@@ -455,6 +446,18 @@ static int bcm4339_write_proc_proto(struct file *file, const char *buffer,
 	/* claim that we wrote everything */
 	return count;
 }
+
+static int bcm4339_open_proc_proto(struct inode *inode, struct file *file)
+{
+	return single_open(file, bcm4339_read_proc_proto, PDE_DATA(inode));
+}
+
+static const struct file_operations bcm4339_proc_fops = {
+	.owner	= THIS_MODULE,
+	.open	= bcm4339_open_proc_proto,
+	.read	= seq_read,
+	.write	= bcm4339_write_proc_proto,
+};
 
 static void bcm4339_proc_exit(void)
 {
@@ -483,14 +486,12 @@ static int bcm4339_proc_init(void)
 	}
 
 	/* read/write proc entries */
-	ent = create_proc_entry("proto", 0, wakeup_dir);
+	ent = proc_create("proto", 0, wakeup_dir, &bcm4339_proc_fops);
 	if (ent == NULL) {
 		BT_ERR("Unable to create /proc/%s/proto entry\n", PROC_DIR);
 		retval = -ENOMEM;
 		goto fail;
 	}
-	ent->read_proc =  bcm4339_read_proc_proto;
-	ent->write_proc =  bcm4339_write_proc_proto;
 
 	return 0;
 fail:
