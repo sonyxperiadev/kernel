@@ -4,6 +4,38 @@
 
 menu "Misc devices"
 
+config SONY_JPROBE_PM
+	tristate "Idd PM jprobe driver"
+	depends on KPROBES && m
+	default n
+	help
+	  If you say yes here you will get idd pm_jprobe module
+	  that traces suspend / resume times. Buffer is exported
+	  in /sys/kernel/idd_jprobe_pm/probe path. This will be
+	  compiled as module only.
+
+config SONY_JPROBE_LMK
+	tristate "Idd low memory killer jprobe driver"
+	depends on KPROBES && m
+	select SONY_JPROBE_LMK_HOOK
+	default n
+	help
+	  If you say yes here you will get idd lowmemkiller_jprobe module
+	  that monitors what tasks were killed. Buffer is exported in
+	  /sys/kernel/idd_jprobe_lmk path. This will be compiled as module
+	  only.
+
+config SONY_JPROBE_LMK_HOOK
+	bool "Idd low memory killer jprobe hook"
+	depends on SONY_JPROBE_LMK
+	default n
+	help
+	  If you say yes here you will add idd lowmemkiller_jprobe hook
+	  that is required if you want to use jprobe for Low memory killer.
+	  This is needed as JPROBE registered at memory shrink routine
+	  doesn't provide enough information in its arguments.
+
+
 config SENSORS_LIS3LV02D
 	tristate
 	depends on INPUT

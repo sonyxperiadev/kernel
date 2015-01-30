@@ -55,6 +55,7 @@
  * LMK kill count is exported via debugfs ([debugfs]/almk/stat).
  *
  * Copyright (C) 2007-2008 Google, Inc.
+ * Copyright (C) 2014 Sony Mobile Communications AB.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -65,6 +66,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
+ * NOTE: This file has been modified by Sony Mobile Communications AB.
+ * Modifications are licensed under the License.
  */
 
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
@@ -81,6 +84,7 @@
 #include <linux/seq_file.h>
 #include <linux/sort.h>
 #include <linux/lowmemorykiller.h>
+#include <linux/string.h>
 
 /*
  * See Documentation/trace/postprocess/trace-almk-postprocess.pl
@@ -192,6 +196,15 @@ int selected_cmp(const void *a, const void *b)
 		return -1;
 	else
 		return 1;
+}
+#endif
+
+#ifdef CONFIG_SONY_JPROBE_LMK_HOOK
+#define JPROBE_LINE_SZ 80
+static char jprobe_buf[JPROBE_LINE_SZ];
+noinline void idd_jprobe_lmk_hook(char *buf)
+{
+	asm("");
 }
 #endif
 
@@ -426,6 +439,12 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 			     (long)(PAGE_SIZE / 1024),
 			     anon_other * (long)(PAGE_SIZE / 1024));
 		lowmem_deathpending_timeout = jiffies + HZ;
+#ifdef CONFIG_SONY_JPROBE_LMK_HOOK
+		scnprintf(jprobe_buf, JPROBE_LINE_SZ, "%d %s %d %s %d %d",
+			current->pid, current->comm, selected->pid,
+			selected->comm, selected_oom_score_adj,
+			selected_tasksize);
+#endif
 		send_sig(SIGKILL, selected, 0);
 		this_cpu_inc(lmk_stats.kill_count);
 		set_tsk_thread_flag(selected, TIF_MEMDIE);
@@ -434,6 +453,9 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 				current->comm, minfree, other_free,
 				other_file, cma_free,
 				cma_file, sc->gfp_mask);
+#ifdef CONFIG_SONY_JPROBE_LMK_HOOK
+		idd_jprobe_lmk_hook(jprobe_buf);
+#endif
 	} else {
 		trace_almk_end(-1, 0, current->comm, minfree,
 				other_free, other_file,
@@ -467,6 +489,12 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 
 			lowmem_deathpending_timeout = jiffies + HZ;
 			send_sig(SIGKILL, selected[i].task, 0);
+#ifdef CONFIG_SONY_JPROBE_LMK_HOOK
+			scnprintf(jprobe_buf, JPROBE_LINE_SZ, "%d %s %d %s %d %d",
+				current->pid, current->comm, selected->pid,
+				selected->comm, selected_oom_score_adj,
+				selected_tasksize);
+#endif
 			this_cpu_inc(lmk_stats.kill_count);
 			set_tsk_thread_flag(selected[i].task, TIF_MEMDIE);
 			rem -= selected[i].tasksize;
@@ -475,6 +503,9 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 				current->comm, minfree, other_free,
 				other_file, cma_free,
 				cma_file, sc->gfp_mask);
+#ifdef CONFIG_SONY_JPROBE_LMK_HOOK
+			idd_jprobe_lmk_hook(jprobe_buf);
+#endif
 		}
 	} else {
 		trace_almk_end(-1, 0, current->comm, minfree,
